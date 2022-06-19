@@ -1,4 +1,4 @@
-//===-- runtime/memory.cpp --------------------------------------*- C++ -*-===//
+//===-- runtime/memory.cpp ------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "memory.h"
+#include "flang/Runtime/memory.h"
 #include "terminator.h"
 #include <cstdlib>
 

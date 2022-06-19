@@ -1,8 +1,0 @@
-## Test archives do not convert to thin archives.
-
-# RUN: rm -rf %t && mkdir -p %t
-# RUN: llvm-ar qc %t/archive.a %s
-# RUN: not llvm-ar qT %t/archive.a %s 2>&1 | FileCheck %s
-# RUN: not llvm-ar rT %t/archive.a %s 2>&1 | FileCheck %s
-
-# CHECK: error: cannot convert a regular archive to a thin one

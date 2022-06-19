@@ -7,6 +7,27 @@ module attributes { dlti.dl_spec = #dlti.dl_spec<
 
 // -----
 
+// expected-error@below {{expected a dense i32 elements attribute}}
+module attributes {dlti.dl_spec = #dlti.dl_spec<
+#dlti.dl_entry<i32, dense<[64,128]> : vector<2xi64>>>
+} {}
+
+// -----
+
+// expected-error@below {{expected 1 or 2 elements}}
+module attributes {dlti.dl_spec = #dlti.dl_spec<
+#dlti.dl_entry<i32, dense<[64,64,64]> : vector<3xi32>>>
+} {}
+
+// -----
+
+// expected-error@below {{preferred alignment is expected to be greater than or equal to the abi alignment}}
+module attributes {dlti.dl_spec = #dlti.dl_spec<
+#dlti.dl_entry<i32, dense<[64,32]> : vector<2xi32>>>
+} {}
+
+// -----
+
 // expected-error@below {{the 'test' dialect does not support identifier data layout entries}}
 "test.op_with_data_layout"() { dlti.dl_spec = #dlti.dl_spec<
   #dlti.dl_entry<index, 32>,
@@ -17,7 +38,7 @@ module attributes { dlti.dl_spec = #dlti.dl_spec<
 // CHECK-LABEL: @index
 module @index attributes { dlti.dl_spec = #dlti.dl_spec<
   #dlti.dl_entry<index, 32>>} {
-  func @query() {
+  func.func @query() {
     // CHECK: bitsize = 32
     "test.data_layout_query"() : () -> index
     return
@@ -28,7 +49,7 @@ module @index attributes { dlti.dl_spec = #dlti.dl_spec<
 
 // CHECK-LABEL: @index_default
 module @index_default {
-  func @query() {
+  func.func @query() {
     // CHECK: bitsize = 64
     "test.data_layout_query"() : () -> index
     return

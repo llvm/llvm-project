@@ -11,22 +11,25 @@ SYNOPSIS
 DESCRIPTION
 -----------
 
-:program:`llvm-symbolizer` reads object file names and addresses from the
-command-line and prints corresponding source code locations to standard output.
+:program:`llvm-symbolizer` reads input names and addresses from the command-line
+and prints corresponding source code locations to standard output.
 
 If no address is specified on the command-line, it reads the addresses from
-standard input. If no object file is specified on the command-line, but
-addresses are, or if at any time an input value is not recognized, the input is
-simply echoed to the output.
+standard input. If no input name is specified on the command-line, but addresses
+are, or if at any time an input value is not recognized, the input is simply
+echoed to the output.
+
+Input names can be specified together with the addresses either on standard
+input or as positional arguments on the command-line. By default, input names
+are interpreted as object file paths. However, prefixing a name with
+``BUILDID:`` states that it is a hex build ID rather than a path. This will look
+up the corresponding debug binary. For consistency, prefixing a name with
+``FILE:`` explicitly states that it is an object file path (the default).
 
 A positional argument or standard input value can be preceded by "DATA" or
 "CODE" to indicate that the address should be symbolized as data or executable
 code respectively. If neither is specified, "CODE" is assumed. DATA is
 symbolized as address and symbol size rather than line number.
-
-Object files can be specified together with the addresses either on standard
-input or as positional arguments on the command-line, following any "DATA" or
-"CODE" prefix.
 
 :program:`llvm-symbolizer` parses options from the environment variable
 ``LLVM_SYMBOLIZER_OPTS`` after parsing options from the command line.
@@ -107,7 +110,7 @@ Example 3 - object specified with address:
 
 .. code-block:: console
 
-  $ llvm-symbolizer "test.elf 0x400490" "inlined.elf 0x400480"
+  $ llvm-symbolizer "test.elf 0x400490" "FILE:inlined.elf 0x400480"
   baz()
   /tmp/test.cpp:11:0
 
@@ -115,7 +118,7 @@ Example 3 - object specified with address:
   /tmp/test.cpp:8:10
 
   $ cat addr2.txt
-  test.elf 0x4004a0
+  FILE:test.elf 0x4004a0
   inlined.elf 0x400480
 
   $ llvm-symbolizer < addr2.txt
@@ -125,7 +128,29 @@ Example 3 - object specified with address:
   foo()
   /tmp/test.cpp:8:10
 
-Example 4 - CODE and DATA prefixes:
+Example 4 - BUILDID and FILE prefixes:
+
+.. code-block:: console
+
+  $ llvm-symbolizer "FILE:test.elf 0x400490" "DATA BUILDID:123456789abcdef 0x601028"
+  baz()
+  /tmp/test.cpp:11:0
+
+  bar
+  6295592 4
+
+  $ cat addr3.txt
+  FILE:test.elf 0x400490
+  DATA BUILDID:123456789abcdef 0x601028
+
+  $ llvm-symbolizer < addr3.txt
+  baz()
+  /tmp/test.cpp:11:0
+
+  bar
+  6295592 4
+
+Example 5 - CODE and DATA prefixes:
 
 .. code-block:: console
 
@@ -136,18 +161,18 @@ Example 4 - CODE and DATA prefixes:
   bar
   6295592 4
 
-  $ cat addr3.txt
+  $ cat addr4.txt
   CODE test.elf 0x4004a0
   DATA inlined.elf 0x601028
 
-  $ llvm-symbolizer < addr3.txt
+  $ llvm-symbolizer < addr4.txt
   main
   /tmp/test.cpp:15:0
 
   bar
   6295592 4
 
-Example 5 - path-style options:
+Example 6 - path-style options:
 
 This example uses the same source file as above, but the source file's
 full path is /tmp/foo/test.cpp and is compiled as follows. The first case
@@ -182,7 +207,19 @@ OPTIONS
 
   Print just the file's name without any directories, instead of the
   absolute path.
-  
+
+.. option:: --build-id
+
+  Look up the object using the given build ID, specified as a hexadecimal
+  string. Mutually exclusive with :option:`--obj`.
+
+.. option:: --debuginfod, --no-debuginfod
+
+  Whether or not to try debuginfod lookups for debug binaries. Unless specified,
+  debuginfod is only enabled if libcurl was compiled in (``LLVM_ENABLE_CURL``)
+  and at least one server URL was provided by the environment variable
+  ``DEBUGINFOD_URLS``.
+
 .. _llvm-symbolizer-opt-C:
 
 .. option:: --demangle, -C
@@ -232,7 +269,8 @@ OPTIONS
 .. option:: --obj <path>, --exe, -e
 
   Path to object file to be symbolized. If ``-`` is specified, read the object
-  directly from the standard input stream.
+  directly from the standard input stream. Mutually exclusive with
+  :option:`--build-id`.
 
 .. _llvm-symbolizer-opt-output-style:
 
@@ -241,7 +279,7 @@ OPTIONS
   Specify the preferred output style. Defaults to ``LLVM``. When the output
   style is set to ``GNU``, the tool follows the style of GNU's **addr2line**.
   The differences from the ``LLVM`` style are:
-  
+
   * Does not print the column of a source code location.
 
   * Does not add an empty line after the report for an address.
@@ -289,7 +327,7 @@ OPTIONS
             "FileName": "/tmp/test.cpp",
             "FunctionName": "baz()",
             "Line": 11,
-            "Source": "",
+            "StartAddress": "0x4004be",
             "StartFileName": "/tmp/test.cpp",
             "StartLine": 9
           },
@@ -299,7 +337,7 @@ OPTIONS
             "FileName": "/tmp/test.cpp",
             "FunctionName": "main",
             "Line": 15,
-            "Source": "",
+            "StartAddress": "0x4004be",
             "StartFileName": "/tmp/test.cpp",
             "StartLine": 14
           }
@@ -315,7 +353,7 @@ OPTIONS
             "FileName": "/tmp/test.cpp",
             "FunctionName": "foo()",
             "Line": 6,
-            "Source": "",
+            "StartAddress": "0x400486",
             "StartFileName": "/tmp/test.cpp",
             "StartLine": 5
           }

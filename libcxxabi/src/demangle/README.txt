@@ -4,41 +4,50 @@ Itanium Name Demangler Library
 Introduction
 ------------
 
-This directory contains the generic itanium name demangler library. The main
-purpose of the library is to demangle C++ symbols, i.e. convert the string
-"_Z1fv" into "f()". You can also use the CRTP base ManglingParser to perform
-some simple analysis on the mangled name, or (in LLVM) use the opaque
-ItaniumPartialDemangler to query the demangled AST.
+This directory contains the generic itanium name demangler
+library. The main purpose of the library is to demangle C++ symbols,
+i.e. convert the string "_Z1fv" into "f()". You can also use the CRTP
+base ManglingParser to perform some simple analysis on the mangled
+name, or (in LLVM) use the opaque ItaniumPartialDemangler to query the
+demangled AST.
 
 Why are there multiple copies of the this library in the source tree?
 ---------------------------------------------------------------------
 
-This directory is mirrored between libcxxabi/demangle and
-llvm/include/llvm/Demangle. The simple reason for this is that both projects
-need to demangle symbols, but neither can depend on each other. libcxxabi needs
-the demangler to implement __cxa_demangle, which is part of the itanium ABI
-spec. LLVM needs a copy for a bunch of places, but doesn't want to use the
-system's __cxa_demangle because it a) might not be available (i.e., on Windows),
-and b) probably isn't that up-to-date on the latest language features.
+The canonical sources are in libcxxabi/src/demangle and some of the
+files are copied to llvm/include/llvm/Demangle.  The simple reason for
+this comes from before the monorepo, and both [sub]projects need to
+demangle symbols, but neither can depend on each other.
 
-The copy of the demangler in LLVM has some extra stuff that aren't needed in
-libcxxabi (ie, the MSVC demangler, ItaniumPartialDemangler), which depend on the
-shared generic components. Despite these differences, we want to keep the "core"
-generic demangling library identical between both copies to simplify development
-and testing.
+* libcxxabi needs the demangler to implement __cxa_demangle, which is
+  part of the itanium ABI spec.
 
-If you're working on the generic library, then do the work first in libcxxabi,
-then run the cp-to-llvm.sh script in src/demangle. This script takes as an
-argument the path to llvm, and re-copies the changes you made to libcxxabi over.
-Note that this script just blindly overwrites all changes to the generic library
-in llvm, so be careful.
+* LLVM needs a copy for a bunch of places, and cannot rely on the
+  system's __cxa_demangle because it a) might not be available (i.e.,
+  on Windows), and b) may not be up-to-date on the latest language
+  features.
 
-Because the core demangler needs to work in libcxxabi, everything needs to be
-declared in an anonymous namespace (see DEMANGLE_NAMESPACE_BEGIN), and you can't
-introduce any code that depends on the libcxx dylib.
+The copy of the demangler in LLVM has some extra stuff that aren't
+needed in libcxxabi (ie, the MSVC demangler, ItaniumPartialDemangler),
+which depend on the shared generic components. Despite these
+differences, we want to keep the "core" generic demangling library
+identical between both copies to simplify development and testing.
 
-Hopefully, when LLVM becomes a monorepo, we can de-duplicate this code, and have
-both LLVM and libcxxabi depend on a shared demangler library.
+If you're working on the generic library, then do the work first in
+libcxxabi, then run the cp-to-llvm.sh script in src/demangle. This
+script takes as an optional argument the path to llvm, and copies the
+changes you made to libcxxabi over.  Note that this script just
+blindly overwrites all changes to the generic library in llvm, so be
+careful.
+
+Because the core demangler needs to work in libcxxabi, everything
+needs to be declared in an anonymous namespace (see
+DEMANGLE_NAMESPACE_BEGIN), and you can't introduce any code that
+depends on the libcxx dylib.
+
+FIXME: Now that LLVM is a monorepo, it should be possible to
+de-duplicate this code, and have both LLVM and libcxxabi depend on a
+shared demangler library.
 
 Testing
 -------

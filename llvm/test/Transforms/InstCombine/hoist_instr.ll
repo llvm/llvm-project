@@ -1,4 +1,4 @@
-; RUN: opt < %s -instcombine -S | FileCheck %s
+; RUN: opt < %s -passes=instcombine -S | FileCheck %s
 
 ;; This tests that the div is hoisted into the then block.
 define i32 @foo(i1 %C, i32 %A, i32 %B) {

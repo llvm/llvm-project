@@ -36,6 +36,7 @@ class WebAssemblySubtarget final : public WebAssemblyGenSubtargetInfo {
   enum SIMDEnum {
     NoSIMD,
     SIMD128,
+    RelaxedSIMD,
   } SIMDLevel = NoSIMD;
 
   bool HasAtomics = false;
@@ -47,6 +48,7 @@ class WebAssemblySubtarget final : public WebAssemblyGenSubtargetInfo {
   bool HasMutableGlobals = false;
   bool HasTailCall = false;
   bool HasReferenceTypes = false;
+  bool HasExtendedConst = false;
 
   /// What processor and OS we're targeting.
   Triple TargetTriple;
@@ -89,6 +91,7 @@ public:
   // Predicates used by WebAssemblyInstrInfo.td.
   bool hasAddr64() const { return TargetTriple.isArch64Bit(); }
   bool hasSIMD128() const { return SIMDLevel >= SIMD128; }
+  bool hasRelaxedSIMD() const { return SIMDLevel >= RelaxedSIMD; }
   bool hasAtomics() const { return HasAtomics; }
   bool hasNontrappingFPToInt() const { return HasNontrappingFPToInt; }
   bool hasSignExt() const { return HasSignExt; }

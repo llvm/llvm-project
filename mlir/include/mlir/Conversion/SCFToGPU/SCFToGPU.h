@@ -16,12 +16,12 @@ class ConversionTarget;
 struct LogicalResult;
 class MLIRContext;
 class Value;
+class Operation;
 class RewritePatternSet;
-using OwningRewritePatternList = RewritePatternSet;
 
 namespace scf {
 class ForOp;
-} // end namespace scf
+} // namespace scf
 
 /// Convert a perfect affine loop nest with the outermost loop identified by
 /// `forOp` into a gpu::Launch operation.  Map `numBlockDims` outer loops to
@@ -48,6 +48,9 @@ void populateParallelLoopToGPUPatterns(RewritePatternSet &patterns);
 /// Configures the rewrite target such that only `scf.parallel` operations that
 /// are not rewritten by the provided patterns are legal.
 void configureParallelLoopToGPULegality(ConversionTarget &target);
+
+/// Clean up after applyPartialConversion/applyFullConversion call.
+void finalizeParallelLoopToGPUConversion(Operation *op);
 
 } // namespace mlir
 

@@ -19,17 +19,12 @@
 #include "llvm/IR/InstIterator.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
-#include "llvm/IR/Intrinsics.h"
-#include "llvm/IR/User.h"
 #include "llvm/IR/Value.h"
-#include "llvm/Pass.h"
 #include "llvm/Support/Casting.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/FormattedStream.h"
 #include <algorithm>
-#include <memory>
 #include <tuple>
 
 using namespace llvm;
@@ -257,14 +252,12 @@ void StackLifetime::calculateLiveIntervals() {
       unsigned AllocaNo = It.second.AllocaNo;
 
       if (IsStart) {
-        assert(!Started.test(AllocaNo) || Start[AllocaNo] == BBStart);
         if (!Started.test(AllocaNo)) {
           Started.set(AllocaNo);
           Ended.reset(AllocaNo);
           Start[AllocaNo] = InstNo;
         }
       } else {
-        assert(!Ended.test(AllocaNo));
         if (Started.test(AllocaNo)) {
           LiveRanges[AllocaNo].addRange(Start[AllocaNo], InstNo);
           Started.reset(AllocaNo);
@@ -399,4 +392,20 @@ PreservedAnalyses StackLifetimePrinterPass::run(Function &F,
   SL.run();
   SL.print(OS);
   return PreservedAnalyses::all();
+}
+
+void StackLifetimePrinterPass::printPipeline(
+    raw_ostream &OS, function_ref<StringRef(StringRef)> MapClassName2PassName) {
+  static_cast<PassInfoMixin<StackLifetimePrinterPass> *>(this)->printPipeline(
+      OS, MapClassName2PassName);
+  OS << "<";
+  switch (Type) {
+  case StackLifetime::LivenessType::May:
+    OS << "may";
+    break;
+  case StackLifetime::LivenessType::Must:
+    OS << "must";
+    break;
+  }
+  OS << ">";
 }

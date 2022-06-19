@@ -1,0 +1,20 @@
+# This file is licensed under the Apache License v2.0 with LLVM Exceptions.
+# See https://llvm.org/LICENSE.txt for license information.
+# SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+
+package(
+    default_visibility = ["//visibility:public"],
+    licenses = ["notice"],
+)
+
+# The ld64 linker and lld-macho use the libunwind headers only for the constant
+# definitions, in order to parse and convert DWARF to the compact encoding.
+cc_library(
+    name = "unwind_headers_only",
+    hdrs = [
+        "include/__libunwind_config.h",
+        "include/libunwind.h",
+        "include/mach-o/compact_unwind_encoding.h",
+    ],
+    strip_include_prefix = "include",
+)

@@ -13,19 +13,14 @@
 #include "llvm/Analysis/Loads.h"
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/AssumeBundleQueries.h"
-#include "llvm/Analysis/CaptureTracking.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/MemoryBuiltins.h"
 #include "llvm/Analysis/MemoryLocation.h"
 #include "llvm/Analysis/ScalarEvolution.h"
 #include "llvm/Analysis/ScalarEvolutionExpressions.h"
-#include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/IR/DataLayout.h"
-#include "llvm/IR/GlobalAlias.h"
-#include "llvm/IR/GlobalVariable.h"
 #include "llvm/IR/IntrinsicInst.h"
-#include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/Operator.h"
 
@@ -147,7 +142,7 @@ static bool isDereferenceableAndAlignedPointer(
                                               Alignment, Size, DL, CtxI, DT,
                                               TLI, Visited, MaxDepth);
 
-  if (const AddrSpaceCastInst *ASC = dyn_cast<AddrSpaceCastInst>(V))
+  if (const AddrSpaceCastOperator *ASC = dyn_cast<AddrSpaceCastOperator>(V))
     return isDereferenceableAndAlignedPointer(ASC->getOperand(0), Alignment,
                                               Size, DL, CtxI, DT, TLI,
                                               Visited, MaxDepth);
@@ -208,7 +203,7 @@ bool llvm::isDereferenceableAndAlignedPointer(const Value *V, Align Alignment,
 }
 
 bool llvm::isDereferenceableAndAlignedPointer(const Value *V, Type *Ty,
-                                              MaybeAlign MA,
+                                              Align Alignment,
                                               const DataLayout &DL,
                                               const Instruction *CtxI,
                                               const DominatorTree *DT,
@@ -223,8 +218,6 @@ bool llvm::isDereferenceableAndAlignedPointer(const Value *V, Type *Ty,
   // determine the exact offset to the attributed variable, we can use that
   // information here.
 
-  // Require ABI alignment for loads without alignment specification
-  const Align Alignment = DL.getValueOrABITypeAlignment(MA, Ty);
   APInt AccessSize(DL.getPointerTypeSizeInBits(V->getType()),
                    DL.getTypeStoreSize(Ty));
   return isDereferenceableAndAlignedPointer(V, Alignment, AccessSize, DL, CtxI,
@@ -451,8 +444,8 @@ static bool areNonOverlapSameBaseLoadAndStore(const Value *LoadPtr,
                                               const Value *StorePtr,
                                               Type *StoreTy,
                                               const DataLayout &DL) {
-  APInt LoadOffset(DL.getTypeSizeInBits(LoadPtr->getType()), 0);
-  APInt StoreOffset(DL.getTypeSizeInBits(StorePtr->getType()), 0);
+  APInt LoadOffset(DL.getIndexTypeSizeInBits(LoadPtr->getType()), 0);
+  APInt StoreOffset(DL.getIndexTypeSizeInBits(StorePtr->getType()), 0);
   const Value *LoadBase = LoadPtr->stripAndAccumulateConstantOffsets(
       DL, LoadOffset, /* AllowNonInbounds */ false);
   const Value *StoreBase = StorePtr->stripAndAccumulateConstantOffsets(
@@ -511,8 +504,11 @@ static Value *getAvailableLoadStore(Instruction *Inst, const Value *Ptr,
     if (CastInst::isBitOrNoopPointerCastable(Val->getType(), AccessTy, DL))
       return Val;
 
-    if (auto *C = dyn_cast<Constant>(Val))
-      return ConstantFoldLoadThroughBitcast(C, AccessTy, DL);
+    TypeSize StoreSize = DL.getTypeSizeInBits(Val->getType());
+    TypeSize LoadSize = DL.getTypeSizeInBits(AccessTy);
+    if (TypeSize::isKnownLE(LoadSize, StoreSize))
+      if (auto *C = dyn_cast<Constant>(Val))
+        return ConstantFoldLoadFromConst(C, AccessTy, DL);
   }
 
   return nullptr;

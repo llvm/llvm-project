@@ -36,16 +36,21 @@ struct CommonFixture {
     EXPECT_FALSE(Unrecoverable);
   }
 
-  bool setupGenerator(uint16_t Version = 4, uint8_t AddrSize = 8) {
+  // Note: ASSERT_THAT_EXPECTED cannot be used in a non-void function, so
+  // setupGenerator() is split into two.
+  void setupGeneratorImpl(uint16_t Version, uint8_t AddrSize) {
     AddressSize = AddrSize;
-    Triple T =
-        getDefaultTargetTripleForAddrSize(AddressSize == 0 ? 8 : AddressSize);
+    Triple T = getDefaultTargetTripleForAddrSize(AddressSize ? AddressSize : 8);
     if (!isConfigurationSupported(T))
-      return false;
+      return;
     auto ExpectedGenerator = Generator::create(T, Version);
-    if (ExpectedGenerator)
-      Gen.reset(ExpectedGenerator->release());
-    return true;
+    ASSERT_THAT_EXPECTED(ExpectedGenerator, Succeeded());
+    Gen = std::move(*ExpectedGenerator);
+  }
+
+  bool setupGenerator(uint16_t Version = 4, uint8_t AddrSize = 8) {
+    setupGeneratorImpl(Version, AddrSize);
+    return Gen != nullptr;
   }
 
   void generate() {
@@ -60,8 +65,7 @@ struct CommonFixture {
   }
 
   std::unique_ptr<DWARFContext> createContext() {
-    if (!Gen)
-      return nullptr;
+    assert(Gen != nullptr && "Generator is not set up");
     StringRef FileBytes = Gen->generate();
     MemoryBufferRef FileBuffer(FileBytes, "dwarf");
     auto Obj = object::ObjectFile::createObjectFile(FileBuffer);
@@ -170,16 +174,20 @@ void checkDefaultPrologue(uint16_t Version, DwarfFormat Format,
   EXPECT_EQ(Prologue.StandardOpcodeLengths, ExpectedLengths);
   ASSERT_EQ(Prologue.IncludeDirectories.size(), 1u);
   ASSERT_EQ(Prologue.IncludeDirectories[0].getForm(), DW_FORM_string);
-  EXPECT_STREQ(*Prologue.IncludeDirectories[0].getAsCString(), "a dir");
+  EXPECT_STREQ(*toString(Prologue.IncludeDirectories[0]), "a dir");
   ASSERT_EQ(Prologue.FileNames.size(), 1u);
   ASSERT_EQ(Prologue.FileNames[0].Name.getForm(), DW_FORM_string);
   ASSERT_EQ(Prologue.FileNames[0].DirIdx, 0u);
-  EXPECT_STREQ(*Prologue.FileNames[0].Name.getAsCString(), "a file");
+  EXPECT_STREQ(*toString(Prologue.FileNames[0].Name), "a file");
 }
 
+#ifdef _AIX
+TEST_F(DebugLineBasicFixture, DISABLED_GetOrParseLineTableAtInvalidOffset) {
+#else
 TEST_F(DebugLineBasicFixture, GetOrParseLineTableAtInvalidOffset) {
+#endif
   if (!setupGenerator())
-    return;
+    GTEST_SKIP();
   generate();
 
   EXPECT_THAT_EXPECTED(
@@ -199,9 +207,14 @@ TEST_F(DebugLineBasicFixture, GetOrParseLineTableAtInvalidOffset) {
           "offset 0x00000001 is not a valid debug line section offset"));
 }
 
+#ifdef _AIX
+TEST_F(DebugLineBasicFixture,
+       DISABLED_GetOrParseLineTableAtInvalidOffsetAfterData) {
+#else
 TEST_F(DebugLineBasicFixture, GetOrParseLineTableAtInvalidOffsetAfterData) {
+#endif
   if (!setupGenerator())
-    return;
+    GTEST_SKIP();
 
   LineTable &LT = Gen->addLineTable();
   LT.setCustomPrologue({{0, LineTable::Byte}});
@@ -220,9 +233,13 @@ TEST_F(DebugLineBasicFixture, GetOrParseLineTableAtInvalidOffsetAfterData) {
           "offset 0x00000001 is not a valid debug line section offset"));
 }
 
+#ifdef _AIX
+TEST_P(DebugLineParameterisedFixture, DISABLED_PrologueGetLength) {
+#else
 TEST_P(DebugLineParameterisedFixture, PrologueGetLength) {
+#endif
   if (!setupGenerator(Version))
-    return;
+    GTEST_SKIP();
   LineTable &LT = Gen->addLineTable(Format);
   DWARFDebugLine::Prologue Prologue = LT.createBasicPrologue();
   LT.setPrologue(Prologue);
@@ -243,9 +260,13 @@ TEST_P(DebugLineParameterisedFixture, PrologueGetLength) {
   EXPECT_EQ((*ExpectedLineTable)->Prologue.getLength(), ExpectedLength);
 }
 
+#ifdef _AIX
+TEST_P(DebugLineParameterisedFixture, DISABLED_GetOrParseLineTableValidTable) {
+#else
 TEST_P(DebugLineParameterisedFixture, GetOrParseLineTableValidTable) {
+#endif
   if (!setupGenerator(Version))
-    return;
+    GTEST_SKIP();
 
   SCOPED_TRACE("Checking Version " + std::to_string(Version) + ", Format " +
                (Format == DWARF64 ? "DWARF64" : "DWARF32"));
@@ -309,9 +330,89 @@ TEST_P(DebugLineParameterisedFixture, GetOrParseLineTableValidTable) {
   // correctly.
 }
 
+#ifdef _AIX
+TEST_P(DebugLineParameterisedFixture, DISABLED_ClearLineValidTable) {
+#else
+TEST_P(DebugLineParameterisedFixture, ClearLineValidTable) {
+#endif
+  if (!setupGenerator(Version))
+    GTEST_SKIP();
+
+  SCOPED_TRACE("Checking Version " + std::to_string(Version) + ", Format " +
+               (Format == DWARF64 ? "DWARF64" : "DWARF32"));
+
+  LineTable &LT = Gen->addLineTable(Format);
+  LT.addExtendedOpcode(9, DW_LNE_set_address, {{0xadd4e55, LineTable::Quad}});
+  LT.addStandardOpcode(DW_LNS_copy, {});
+  LT.addByte(0xaa);
+  LT.addExtendedOpcode(1, DW_LNE_end_sequence, {});
+
+  LineTable &LT2 = Gen->addLineTable(Format);
+  LT2.addExtendedOpcode(9, DW_LNE_set_address, {{0x11223344, LineTable::Quad}});
+  LT2.addStandardOpcode(DW_LNS_copy, {});
+  LT2.addByte(0xbb);
+  LT2.addExtendedOpcode(1, DW_LNE_end_sequence, {});
+  LT2.addExtendedOpcode(9, DW_LNE_set_address, {{0x55667788, LineTable::Quad}});
+  LT2.addStandardOpcode(DW_LNS_copy, {});
+  LT2.addByte(0xcc);
+  LT2.addExtendedOpcode(1, DW_LNE_end_sequence, {});
+
+  generate();
+
+  // Check that we have what we expect before calling clearLineTable().
+  auto ExpectedLineTable = Line.getOrParseLineTable(LineData, 0, *Context,
+                                                    nullptr, RecordRecoverable);
+  ASSERT_TRUE((bool)ExpectedLineTable);
+  EXPECT_FALSE(Recoverable);
+  const DWARFDebugLine::LineTable *Expected = *ExpectedLineTable;
+  checkDefaultPrologue(Version, Format, Expected->Prologue, 16);
+  EXPECT_EQ(Expected->Sequences.size(), 1u);
+
+  uint64_t SecondOffset =
+      Expected->Prologue.sizeofTotalLength() + Expected->Prologue.TotalLength;
+  Recoverable = Error::success();
+  auto ExpectedLineTable2 = Line.getOrParseLineTable(
+      LineData, SecondOffset, *Context, nullptr, RecordRecoverable);
+  ASSERT_TRUE((bool)ExpectedLineTable2);
+  EXPECT_FALSE(Recoverable);
+  const DWARFDebugLine::LineTable *Expected2 = *ExpectedLineTable2;
+  checkDefaultPrologue(Version, Format, Expected2->Prologue, 32);
+  EXPECT_EQ(Expected2->Sequences.size(), 2u);
+
+  // Check that we no longer get the line tables after clearLineTable().
+  Line.clearLineTable(0);
+  Line.clearLineTable(SecondOffset);
+  EXPECT_EQ(Line.getLineTable(0), nullptr);
+  EXPECT_EQ(Line.getLineTable(SecondOffset), nullptr);
+
+  // Check that if the same offset is requested, the contents match what we
+  // had before.
+  Recoverable = Error::success();
+  auto ExpectedLineTable3 = Line.getOrParseLineTable(
+      LineData, 0, *Context, nullptr, RecordRecoverable);
+  ASSERT_TRUE((bool)ExpectedLineTable3);
+  EXPECT_FALSE(Recoverable);
+  const DWARFDebugLine::LineTable *Expected3 = *ExpectedLineTable3;
+  checkDefaultPrologue(Version, Format, Expected3->Prologue, 16);
+  EXPECT_EQ(Expected3->Sequences.size(), 1u);
+
+  Recoverable = Error::success();
+  auto ExpectedLineTable4 = Line.getOrParseLineTable(
+      LineData, SecondOffset, *Context, nullptr, RecordRecoverable);
+  ASSERT_TRUE((bool)ExpectedLineTable4);
+  EXPECT_FALSE(Recoverable);
+  const DWARFDebugLine::LineTable *Expected4 = *ExpectedLineTable4;
+  checkDefaultPrologue(Version, Format, Expected4->Prologue, 32);
+  EXPECT_EQ(Expected4->Sequences.size(), 2u);
+}
+
+#ifdef _AIX
+TEST_F(DebugLineBasicFixture, DISABLED_ErrorForReservedLength) {
+#else
 TEST_F(DebugLineBasicFixture, ErrorForReservedLength) {
+#endif
   if (!setupGenerator())
-    return;
+    GTEST_SKIP();
 
   LineTable &LT = Gen->addLineTable();
   LT.setCustomPrologue({{0xfffffff0, LineTable::Long}});
@@ -332,9 +433,14 @@ struct DebugLineUnsupportedVersionFixture : public TestWithParam<uint16_t>,
   uint16_t Version;
 };
 
+#ifdef _AIX
+TEST_P(DebugLineUnsupportedVersionFixture,
+       DISABLED_ErrorForUnsupportedVersion) {
+#else
 TEST_P(DebugLineUnsupportedVersionFixture, ErrorForUnsupportedVersion) {
+#endif
   if (!setupGenerator())
-    return;
+    GTEST_SKIP();
 
   LineTable &LT = Gen->addLineTable();
   LT.setCustomPrologue(
@@ -354,9 +460,13 @@ INSTANTIATE_TEST_SUITE_P(UnsupportedVersionTestParams,
                          Values(/*1 below min */ 1, /* 1 above max */ 6,
                                 /* Maximum possible */ 0xffff));
 
+#ifdef _AIX
+TEST_F(DebugLineBasicFixture, DISABLED_ErrorForInvalidV5IncludeDirTable) {
+#else
 TEST_F(DebugLineBasicFixture, ErrorForInvalidV5IncludeDirTable) {
+#endif
   if (!setupGenerator(5))
-    return;
+    GTEST_SKIP();
 
   LineTable &LT = Gen->addLineTable();
   LT.setCustomPrologue({
@@ -395,9 +505,13 @@ TEST_F(DebugLineBasicFixture, ErrorForInvalidV5IncludeDirTable) {
           "found"));
 }
 
+#ifdef _AIX
+TEST_P(DebugLineParameterisedFixture, DISABLED_ErrorForTooLargePrologueLength) {
+#else
 TEST_P(DebugLineParameterisedFixture, ErrorForTooLargePrologueLength) {
+#endif
   if (!setupGenerator(Version))
-    return;
+    GTEST_SKIP();
 
   SCOPED_TRACE("Checking Version " + std::to_string(Version) + ", Format " +
                (Format == DWARF64 ? "DWARF64" : "DWARF32"));
@@ -431,9 +545,13 @@ TEST_P(DebugLineParameterisedFixture, ErrorForTooLargePrologueLength) {
               .str()));
 }
 
+#ifdef _AIX
+TEST_P(DebugLineParameterisedFixture, DISABLED_ErrorForTooShortPrologueLength) {
+#else
 TEST_P(DebugLineParameterisedFixture, ErrorForTooShortPrologueLength) {
+#endif
   if (!setupGenerator(Version))
-    return;
+    GTEST_SKIP();
 
   SCOPED_TRACE("Checking Version " + std::to_string(Version) + ", Format " +
                (Format == DWARF64 ? "DWARF64" : "DWARF32"));
@@ -485,9 +603,14 @@ INSTANTIATE_TEST_SUITE_P(
            std::make_pair(4, DWARF64), // Test v4 fields and DWARF64.
            std::make_pair(5, DWARF32), std::make_pair(5, DWARF64)));
 
+#ifdef _AIX
+TEST_F(DebugLineBasicFixture,
+       DISABLED_ErrorForExtendedOpcodeLengthSmallerThanExpected) {
+#else
 TEST_F(DebugLineBasicFixture, ErrorForExtendedOpcodeLengthSmallerThanExpected) {
+#endif
   if (!setupGenerator())
-    return;
+    GTEST_SKIP();
 
   LineTable &LT = Gen->addLineTable();
   LT.addByte(0xaa);
@@ -514,9 +637,14 @@ TEST_F(DebugLineBasicFixture, ErrorForExtendedOpcodeLengthSmallerThanExpected) {
   EXPECT_EQ((*ExpectedLineTable)->Rows[1].Discriminator, DW_LNS_negate_stmt);
 }
 
+#ifdef _AIX
+TEST_F(DebugLineBasicFixture,
+       DISABLED_ErrorForExtendedOpcodeLengthLargerThanExpected) {
+#else
 TEST_F(DebugLineBasicFixture, ErrorForExtendedOpcodeLengthLargerThanExpected) {
+#endif
   if (!setupGenerator())
-    return;
+    GTEST_SKIP();
 
   LineTable &LT = Gen->addLineTable();
   LT.addByte(0xaa);
@@ -543,9 +671,13 @@ TEST_F(DebugLineBasicFixture, ErrorForExtendedOpcodeLengthLargerThanExpected) {
   EXPECT_EQ((*ExpectedLineTable)->Rows[2].IsStmt, 1u);
 }
 
+#ifdef _AIX
+TEST_F(DebugLineBasicFixture, DISABLED_ErrorForUnitLengthTooLarge) {
+#else
 TEST_F(DebugLineBasicFixture, ErrorForUnitLengthTooLarge) {
+#endif
   if (!setupGenerator())
-    return;
+    GTEST_SKIP();
 
   LineTable &Padding = Gen->addLineTable();
   // Add some padding to show that a non-zero offset is handled correctly.
@@ -572,9 +704,13 @@ TEST_F(DebugLineBasicFixture, ErrorForUnitLengthTooLarge) {
   EXPECT_EQ((*ExpectedLineTable)->Sequences.size(), 1u);
 }
 
+#ifdef _AIX
+TEST_F(DebugLineBasicFixture, DISABLED_ErrorForMismatchedAddressSize) {
+#else
 TEST_F(DebugLineBasicFixture, ErrorForMismatchedAddressSize) {
+#endif
   if (!setupGenerator(4, 8))
-    return;
+    GTEST_SKIP();
 
   LineTable &LT = Gen->addLineTable();
   // The line data extractor expects size 8 (Quad) addresses.
@@ -601,10 +737,15 @@ TEST_F(DebugLineBasicFixture, ErrorForMismatchedAddressSize) {
   EXPECT_EQ((*ExpectedLineTable)->Rows[1].Address.Address, Addr2);
 }
 
+#ifdef _AIX
+TEST_F(DebugLineBasicFixture,
+       DISABLED_ErrorForMismatchedAddressSizeUnsetInitialAddress) {
+#else
 TEST_F(DebugLineBasicFixture,
        ErrorForMismatchedAddressSizeUnsetInitialAddress) {
+#endif
   if (!setupGenerator(4, 0))
-    return;
+    GTEST_SKIP();
 
   LineTable &LT = Gen->addLineTable();
   uint64_t Addr1 = 0x11223344;
@@ -628,12 +769,17 @@ TEST_F(DebugLineBasicFixture,
   EXPECT_EQ((*ExpectedLineTable)->Rows[1].Address.Address, Addr2);
 }
 
+#ifdef _AIX
+TEST_F(DebugLineBasicFixture,
+       DISABLED_ErrorForUnsupportedAddressSizeInSetAddressLength) {
+#else
 TEST_F(DebugLineBasicFixture,
        ErrorForUnsupportedAddressSizeInSetAddressLength) {
+#endif
   // Use DWARF v4, and 0 for data extractor address size so that the address
   // size is derived from the opcode length.
   if (!setupGenerator(4, 0))
-    return;
+    GTEST_SKIP();
 
   LineTable &LT = Gen->addLineTable();
   // 4 == length of the extended opcode, i.e. 1 for the opcode itself and 3 for
@@ -661,11 +807,15 @@ TEST_F(DebugLineBasicFixture,
   EXPECT_EQ((*ExpectedLineTable)->Rows[0].Address.Address, 0u);
 }
 
+#ifdef _AIX
+TEST_F(DebugLineBasicFixture, DISABLED_ErrorForAddressSizeGreaterThanByteSize) {
+#else
 TEST_F(DebugLineBasicFixture, ErrorForAddressSizeGreaterThanByteSize) {
+#endif
   // Use DWARF v4, and 0 for data extractor address size so that the address
   // size is derived from the opcode length.
   if (!setupGenerator(4, 0))
-    return;
+    GTEST_SKIP();
 
   LineTable &LT = Gen->addLineTable();
   // Specifically use an operand size that has a trailing byte of a supported
@@ -685,11 +835,16 @@ TEST_F(DebugLineBasicFixture, ErrorForAddressSizeGreaterThanByteSize) {
   ASSERT_THAT_EXPECTED(ExpectedLineTable, Succeeded());
 }
 
+#ifdef _AIX
+TEST_F(DebugLineBasicFixture,
+       DISABLED_ErrorForUnsupportedAddressSizeDefinedInHeader) {
+#else
 TEST_F(DebugLineBasicFixture, ErrorForUnsupportedAddressSizeDefinedInHeader) {
+#endif
   // Use 0 for data extractor address size so that it does not clash with the
   // header address size.
   if (!setupGenerator(5, 0))
-    return;
+    GTEST_SKIP();
 
   LineTable &LT = Gen->addLineTable();
   // AddressSize + 1 == length of the extended opcode, i.e. 1 for the opcode
@@ -722,9 +877,13 @@ TEST_F(DebugLineBasicFixture, ErrorForUnsupportedAddressSizeDefinedInHeader) {
   EXPECT_EQ((*ExpectedLineTable)->Rows[0].Address.Address, 0u);
 }
 
+#ifdef _AIX
+TEST_F(DebugLineBasicFixture, DISABLED_CallbackUsedForUnterminatedSequence) {
+#else
 TEST_F(DebugLineBasicFixture, CallbackUsedForUnterminatedSequence) {
+#endif
   if (!setupGenerator())
-    return;
+    GTEST_SKIP();
 
   LineTable &LT = Gen->addLineTable();
   LT.addExtendedOpcode(9, DW_LNE_set_address,
@@ -869,7 +1028,7 @@ struct AdjustAddressFixtureBase : public CommonFixture {
 
   void runTest(bool CheckAdvancePC, Twine MsgSuffix) {
     if (!setupGenerator(Version))
-      return;
+      GTEST_SKIP();
 
     setupTables(/*AddAdvancePCFirstTable=*/CheckAdvancePC);
 
@@ -943,7 +1102,11 @@ struct MaxOpsPerInstFixture
   uint8_t MaxOpsPerInst;
 };
 
+#ifdef _AIX
+TEST_P(MaxOpsPerInstFixture, DISABLED_MaxOpsPerInstProblemsReportedCorrectly) {
+#else
 TEST_P(MaxOpsPerInstFixture, MaxOpsPerInstProblemsReportedCorrectly) {
+#endif
   runTest(/*CheckAdvancePC=*/true,
           "but the prologue maximum_operations_per_instruction value is " +
               Twine(unsigned(MaxOpsPerInst)) +
@@ -987,7 +1150,11 @@ struct LineRangeFixture : TestWithParam<std::tuple<uint8_t, bool>>,
   uint8_t LineRange;
 };
 
+#ifdef _AIX
+TEST_P(LineRangeFixture, DISABLED_LineRangeProblemsReportedCorrectly) {
+#else
 TEST_P(LineRangeFixture, LineRangeProblemsReportedCorrectly) {
+#endif
   runTest(/*CheckAdvancePC=*/false,
           "but the prologue line_range value is 0. The address and line will "
           "not be adjusted");
@@ -1022,7 +1189,11 @@ struct BadMinInstLenFixture : TestWithParam<std::tuple<uint8_t, bool>>,
   uint8_t MinInstLength;
 };
 
+#ifdef _AIX
+TEST_P(BadMinInstLenFixture, DISABLED_MinInstLengthProblemsReportedCorrectly) {
+#else
 TEST_P(BadMinInstLenFixture, MinInstLengthProblemsReportedCorrectly) {
+#endif
   runTest(/*CheckAdvancePC=*/true,
           "but the prologue minimum_instruction_length value is 0, which "
           "prevents any address advancing");
@@ -1033,9 +1204,13 @@ INSTANTIATE_TEST_SUITE_P(
     Values(std::make_tuple(0, true),    // Test zero value (error).
            std::make_tuple(1, false))); // Test non-zero value (no error).
 
+#ifdef _AIX
+TEST_F(DebugLineBasicFixture, DISABLED_ParserParsesCorrectly) {
+#else
 TEST_F(DebugLineBasicFixture, ParserParsesCorrectly) {
+#endif
   if (!setupGenerator())
-    return;
+    GTEST_SKIP();
 
   DWARFDebugLine::SectionParser Parser = setupParser();
 
@@ -1060,9 +1235,13 @@ TEST_F(DebugLineBasicFixture, ParserParsesCorrectly) {
   EXPECT_FALSE(Unrecoverable);
 }
 
+#ifdef _AIX
+TEST_F(DebugLineBasicFixture, DISABLED_ParserSkipsCorrectly) {
+#else
 TEST_F(DebugLineBasicFixture, ParserSkipsCorrectly) {
+#endif
   if (!setupGenerator())
-    return;
+    GTEST_SKIP();
 
   DWARFDebugLine::SectionParser Parser = setupParser();
 
@@ -1081,9 +1260,13 @@ TEST_F(DebugLineBasicFixture, ParserSkipsCorrectly) {
   EXPECT_FALSE(Unrecoverable);
 }
 
+#ifdef _AIX
+TEST_F(DebugLineBasicFixture, DISABLED_ParserAlwaysDoneForEmptySection) {
+#else
 TEST_F(DebugLineBasicFixture, ParserAlwaysDoneForEmptySection) {
+#endif
   if (!setupGenerator())
-    return;
+    GTEST_SKIP();
 
   generate();
   DWARFDebugLine::SectionParser Parser(LineData, *Context, Units);
@@ -1091,9 +1274,14 @@ TEST_F(DebugLineBasicFixture, ParserAlwaysDoneForEmptySection) {
   EXPECT_TRUE(Parser.done());
 }
 
+#ifdef _AIX
+TEST_F(DebugLineBasicFixture,
+       DISABLED_ParserMarkedAsDoneForBadLengthWhenParsing) {
+#else
 TEST_F(DebugLineBasicFixture, ParserMarkedAsDoneForBadLengthWhenParsing) {
+#endif
   if (!setupGenerator())
-    return;
+    GTEST_SKIP();
 
   LineTable &LT = Gen->addLineTable();
   LT.setCustomPrologue({{0xfffffff0, LineTable::Long}});
@@ -1114,9 +1302,14 @@ TEST_F(DebugLineBasicFixture, ParserMarkedAsDoneForBadLengthWhenParsing) {
           "reserved unit length of value 0xfffffff0"));
 }
 
+#ifdef _AIX
+TEST_F(DebugLineBasicFixture,
+       DISABLED_ParserMarkedAsDoneForBadLengthWhenSkipping) {
+#else
 TEST_F(DebugLineBasicFixture, ParserMarkedAsDoneForBadLengthWhenSkipping) {
+#endif
   if (!setupGenerator())
-    return;
+    GTEST_SKIP();
 
   LineTable &LT = Gen->addLineTable();
   LT.setCustomPrologue({{0xfffffff0, LineTable::Long}});
@@ -1137,9 +1330,14 @@ TEST_F(DebugLineBasicFixture, ParserMarkedAsDoneForBadLengthWhenSkipping) {
           "reserved unit length of value 0xfffffff0"));
 }
 
+#ifdef _AIX
+TEST_F(DebugLineBasicFixture,
+       DISABLED_ParserReportsFirstErrorInEachTableWhenParsing) {
+#else
 TEST_F(DebugLineBasicFixture, ParserReportsFirstErrorInEachTableWhenParsing) {
+#endif
   if (!setupGenerator())
-    return;
+    GTEST_SKIP();
 
   LineTable &LT = Gen->addLineTable(DWARF32);
   LT.setCustomPrologue({{2, LineTable::Long}, {0, LineTable::Half}});
@@ -1163,9 +1361,14 @@ TEST_F(DebugLineBasicFixture, ParserReportsFirstErrorInEachTableWhenParsing) {
                         "unsupported version 1"));
 }
 
+#ifdef _AIX
+TEST_F(DebugLineBasicFixture,
+       DISABLED_ParserReportsNonPrologueProblemsWhenParsing) {
+#else
 TEST_F(DebugLineBasicFixture, ParserReportsNonPrologueProblemsWhenParsing) {
+#endif
   if (!setupGenerator())
-    return;
+    GTEST_SKIP();
 
   LineTable &LT = Gen->addLineTable(DWARF32);
   LT.addExtendedOpcode(0x42, DW_LNE_end_sequence, {});
@@ -1195,10 +1398,15 @@ TEST_F(DebugLineBasicFixture, ParserReportsNonPrologueProblemsWhenParsing) {
   EXPECT_FALSE(Unrecoverable);
 }
 
+#ifdef _AIX
+TEST_F(DebugLineBasicFixture,
+       DISABLED_ParserReportsPrologueErrorsInEachTableWhenSkipping) {
+#else
 TEST_F(DebugLineBasicFixture,
        ParserReportsPrologueErrorsInEachTableWhenSkipping) {
+#endif
   if (!setupGenerator())
-    return;
+    GTEST_SKIP();
 
   LineTable &LT = Gen->addLineTable(DWARF32);
   LT.setCustomPrologue({{2, LineTable::Long}, {0, LineTable::Half}});
@@ -1222,9 +1430,14 @@ TEST_F(DebugLineBasicFixture,
                         "unsupported version 1"));
 }
 
+#ifdef _AIX
+TEST_F(DebugLineBasicFixture,
+       DISABLED_ParserIgnoresNonPrologueErrorsWhenSkipping) {
+#else
 TEST_F(DebugLineBasicFixture, ParserIgnoresNonPrologueErrorsWhenSkipping) {
+#endif
   if (!setupGenerator())
-    return;
+    GTEST_SKIP();
 
   LineTable &LT = Gen->addLineTable(DWARF32);
   LT.addExtendedOpcode(42, DW_LNE_end_sequence, {});
@@ -1238,9 +1451,13 @@ TEST_F(DebugLineBasicFixture, ParserIgnoresNonPrologueErrorsWhenSkipping) {
   EXPECT_FALSE(Unrecoverable);
 }
 
+#ifdef _AIX
+TEST_F(DebugLineBasicFixture, DISABLED_VerboseOutput) {
+#else
 TEST_F(DebugLineBasicFixture, VerboseOutput) {
+#endif
   if (!setupGenerator(5))
-    return;
+    GTEST_SKIP();
 
   LineTable &LT = Gen->addLineTable();
   LT.addByte(0); // Extended opcode with zero length.
@@ -1394,9 +1611,13 @@ struct TruncatedPrologueFixture
   StringRef ExpectedErr;
 };
 
+#ifdef _AIX
+TEST_P(TruncatedPrologueFixture, DISABLED_ErrorForTruncatedPrologue) {
+#else
 TEST_P(TruncatedPrologueFixture, ErrorForTruncatedPrologue) {
+#endif
   if (!setupGenerator(Version))
-    return;
+    GTEST_SKIP();
 
   LineTable &Padding = Gen->addLineTable();
   // Add some padding to show that a non-zero offset is handled correctly.
@@ -1571,9 +1792,14 @@ struct TruncatedExtendedOpcodeFixture
   uint64_t OpcodeLength;
 };
 
+#ifdef _AIX
+TEST_P(TruncatedExtendedOpcodeFixture,
+       DISABLED_ErrorForTruncatedExtendedOpcode) {
+#else
 TEST_P(TruncatedExtendedOpcodeFixture, ErrorForTruncatedExtendedOpcode) {
+#endif
   if (!setupGenerator())
-    return;
+    GTEST_SKIP();
   LineTable &LT = setupTable();
   LT.addExtendedOpcode(OpcodeLength, Opcode, Operands);
   runTest(0);
@@ -1650,9 +1876,14 @@ INSTANTIATE_TEST_SUITE_P(
             "unexpected end of data at offset 0x35 while reading [0x32, "
             "0x36)")));
 
+#ifdef _AIX
+TEST_P(TruncatedStandardOpcodeFixture,
+       DISABLED_ErrorForTruncatedStandardOpcode) {
+#else
 TEST_P(TruncatedStandardOpcodeFixture, ErrorForTruncatedStandardOpcode) {
+#endif
   if (!setupGenerator())
-    return;
+    GTEST_SKIP();
   LineTable &LT = setupTable();
   LT.addStandardOpcode(Opcode, Operands);
   runTest(Opcode);
@@ -1706,9 +1937,13 @@ INSTANTIATE_TEST_SUITE_P(
             "unable to decode LEB128 at offset 0x00000032: "
             "malformed uleb128, extends past end")));
 
+#ifdef _AIX
+TEST_F(DebugLineBasicFixture, DISABLED_PrintPathsProperly) {
+#else
 TEST_F(DebugLineBasicFixture, PrintPathsProperly) {
+#endif
   if (!setupGenerator(5))
-    return;
+    GTEST_SKIP();
 
   LineTable &LT = Gen->addLineTable();
   DWARFDebugLine::Prologue P = LT.createBasicPrologue();

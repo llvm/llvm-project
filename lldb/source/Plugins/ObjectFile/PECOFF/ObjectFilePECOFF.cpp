@@ -16,6 +16,7 @@
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Core/Section.h"
 #include "lldb/Core/StreamFile.h"
+#include "lldb/Interpreter/OptionValueProperties.h"
 #include "lldb/Symbol/ObjectFile.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Target/SectionLoadList.h"
@@ -23,6 +24,7 @@
 #include "lldb/Utility/ArchSpec.h"
 #include "lldb/Utility/DataBufferHeap.h"
 #include "lldb/Utility/FileSpec.h"
+#include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/StreamString.h"
 #include "lldb/Utility/Timer.h"
@@ -30,7 +32,9 @@
 #include "llvm/BinaryFormat/COFF.h"
 
 #include "llvm/Object/COFFImportFile.h"
+#include "llvm/Support/CRC.h"
 #include "llvm/Support/Error.h"
+#include "llvm/Support/Host.h"
 #include "llvm/Support/MemoryBuffer.h"
 
 #define IMAGE_DOS_SIGNATURE 0x5A4D    // MZ
@@ -43,10 +47,95 @@ using namespace lldb_private;
 
 LLDB_PLUGIN_DEFINE(ObjectFilePECOFF)
 
+namespace {
+
+static constexpr OptionEnumValueElement g_abi_enums[] = {
+    {
+        llvm::Triple::UnknownEnvironment,
+        "default",
+        "Use default target (if it is Windows) or MSVC",
+    },
+    {
+        llvm::Triple::MSVC,
+        "msvc",
+        "MSVC ABI",
+    },
+    {
+        llvm::Triple::GNU,
+        "gnu",
+        "MinGW / Itanium ABI",
+    },
+};
+
+#define LLDB_PROPERTIES_objectfilepecoff
+#include "ObjectFilePECOFFProperties.inc"
+
+enum {
+#define LLDB_PROPERTIES_objectfilepecoff
+#include "ObjectFilePECOFFPropertiesEnum.inc"
+};
+
+class PluginProperties : public Properties {
+public:
+  static ConstString GetSettingName() {
+    return ConstString(ObjectFilePECOFF::GetPluginNameStatic());
+  }
+
+  PluginProperties() {
+    m_collection_sp = std::make_shared<OptionValueProperties>(GetSettingName());
+    m_collection_sp->Initialize(g_objectfilepecoff_properties);
+  }
+
+  llvm::Triple::EnvironmentType ABI() const {
+    return (llvm::Triple::EnvironmentType)
+        m_collection_sp->GetPropertyAtIndexAsEnumeration(
+            nullptr, ePropertyABI, llvm::Triple::UnknownEnvironment);
+  }
+};
+
+static PluginProperties &GetGlobalPluginProperties() {
+  static PluginProperties g_settings;
+  return g_settings;
+}
+
+} // namespace
+
+static bool GetDebugLinkContents(const llvm::object::COFFObjectFile &coff_obj,
+                                 std::string &gnu_debuglink_file,
+                                 uint32_t &gnu_debuglink_crc) {
+  static ConstString g_sect_name_gnu_debuglink(".gnu_debuglink");
+  for (const auto &section : coff_obj.sections()) {
+    auto name = section.getName();
+    if (!name) {
+      llvm::consumeError(name.takeError());
+      continue;
+    }
+    if (*name == g_sect_name_gnu_debuglink.GetStringRef()) {
+      auto content = section.getContents();
+      if (!content) {
+        llvm::consumeError(content.takeError());
+        return false;
+      }
+      DataExtractor data(
+          content->data(), content->size(),
+          coff_obj.isLittleEndian() ? eByteOrderLittle : eByteOrderBig, 4);
+      lldb::offset_t gnu_debuglink_offset = 0;
+      gnu_debuglink_file = data.GetCStr(&gnu_debuglink_offset);
+      // Align to the next 4-byte offset
+      gnu_debuglink_offset = llvm::alignTo(gnu_debuglink_offset, 4);
+      data.GetU32(&gnu_debuglink_offset, &gnu_debuglink_crc, 1);
+      return true;
+    }
+  }
+  return false;
+}
+
 static UUID GetCoffUUID(llvm::object::COFFObjectFile &coff_obj) {
   const llvm::codeview::DebugInfo *pdb_info = nullptr;
   llvm::StringRef pdb_file;
 
+  // First, prefer to use the PDB build id. LLD generates this even for mingw
+  // targets without PDB output, and it does not get stripped either.
   if (!coff_obj.getDebugPDBInfo(pdb_info, pdb_file) && pdb_info) {
     if (pdb_info->PDB70.CVSignature == llvm::OMF::Signature::PDB70) {
       UUID::CvRecordPdb70 info;
@@ -56,37 +145,61 @@ static UUID GetCoffUUID(llvm::object::COFFObjectFile &coff_obj) {
     }
   }
 
-  return UUID();
+  std::string gnu_debuglink_file;
+  uint32_t gnu_debuglink_crc;
+
+  // The GNU linker normally does not write a PDB build id (unless requested
+  // with the --build-id option), so we should fall back to using the crc
+  // from .gnu_debuglink if it exists, just like how ObjectFileELF does it.
+  if (!GetDebugLinkContents(coff_obj, gnu_debuglink_file, gnu_debuglink_crc)) {
+    // If there is no .gnu_debuglink section, then this may be an object
+    // containing DWARF debug info for .gnu_debuglink, so calculate the crc of
+    // the object itself.
+    auto raw_data = coff_obj.getData();
+    LLDB_SCOPED_TIMERF(
+        "Calculating module crc32 %s with size %" PRIu64 " KiB",
+        FileSpec(coff_obj.getFileName()).GetLastPathComponent().AsCString(),
+        static_cast<lldb::offset_t>(raw_data.size()) / 1024);
+    gnu_debuglink_crc = llvm::crc32(0, llvm::arrayRefFromStringRef(raw_data));
+  }
+  // Use 4 bytes of crc from the .gnu_debuglink section.
+  llvm::support::ulittle32_t data(gnu_debuglink_crc);
+  return UUID::fromData(&data, sizeof(data));
 }
 
 char ObjectFilePECOFF::ID;
 
 void ObjectFilePECOFF::Initialize() {
-  PluginManager::RegisterPlugin(
-      GetPluginNameStatic(), GetPluginDescriptionStatic(), CreateInstance,
-      CreateMemoryInstance, GetModuleSpecifications, SaveCore);
+  PluginManager::RegisterPlugin(GetPluginNameStatic(),
+                                GetPluginDescriptionStatic(), CreateInstance,
+                                CreateMemoryInstance, GetModuleSpecifications,
+                                SaveCore, DebuggerInitialize);
+}
+
+void ObjectFilePECOFF::DebuggerInitialize(Debugger &debugger) {
+  if (!PluginManager::GetSettingForObjectFilePlugin(
+          debugger, PluginProperties::GetSettingName())) {
+    const bool is_global_setting = true;
+    PluginManager::CreateSettingForObjectFilePlugin(
+        debugger, GetGlobalPluginProperties().GetValueProperties(),
+        ConstString("Properties for the PE/COFF object-file plug-in."),
+        is_global_setting);
+  }
 }
 
 void ObjectFilePECOFF::Terminate() {
   PluginManager::UnregisterPlugin(CreateInstance);
 }
 
-lldb_private::ConstString ObjectFilePECOFF::GetPluginNameStatic() {
-  static ConstString g_name("pe-coff");
-  return g_name;
-}
-
-const char *ObjectFilePECOFF::GetPluginDescriptionStatic() {
+llvm::StringRef ObjectFilePECOFF::GetPluginDescriptionStatic() {
   return "Portable Executable and Common Object File Format object file reader "
          "(32 and 64 bit)";
 }
 
-ObjectFile *ObjectFilePECOFF::CreateInstance(const lldb::ModuleSP &module_sp,
-                                             DataBufferSP &data_sp,
-                                             lldb::offset_t data_offset,
-                                             const lldb_private::FileSpec *file_p,
-                                             lldb::offset_t file_offset,
-                                             lldb::offset_t length) {
+ObjectFile *ObjectFilePECOFF::CreateInstance(
+    const lldb::ModuleSP &module_sp, DataBufferSP data_sp,
+    lldb::offset_t data_offset, const lldb_private::FileSpec *file_p,
+    lldb::offset_t file_offset, lldb::offset_t length) {
   FileSpec file = file_p ? *file_p : FileSpec();
   if (!data_sp) {
     data_sp = MapFileData(file, length, file_offset);
@@ -117,7 +230,7 @@ ObjectFile *ObjectFilePECOFF::CreateInstance(const lldb::ModuleSP &module_sp,
 }
 
 ObjectFile *ObjectFilePECOFF::CreateMemoryInstance(
-    const lldb::ModuleSP &module_sp, lldb::DataBufferSP &data_sp,
+    const lldb::ModuleSP &module_sp, lldb::WritableDataBufferSP data_sp,
     const lldb::ProcessSP &process_sp, lldb::addr_t header_addr) {
   if (!data_sp || !ObjectFilePECOFF::MagicBytesMatch(data_sp))
     return nullptr;
@@ -137,7 +250,7 @@ size_t ObjectFilePECOFF::GetModuleSpecifications(
   if (!data_sp || !ObjectFilePECOFF::MagicBytesMatch(data_sp))
     return initial_count;
 
-  Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_OBJECT));
+  Log *log = GetLog(LLDBLog::Object);
 
   if (data_sp->GetByteSize() < length)
     if (DataBufferSP full_sp = MapFileData(file, -1, file_offset))
@@ -161,23 +274,41 @@ size_t ObjectFilePECOFF::GetModuleSpecifications(
   if (!uuid.IsValid())
     uuid = GetCoffUUID(*COFFObj);
 
+  static llvm::Triple::EnvironmentType default_env = [] {
+    auto def_target = llvm::Triple(
+        llvm::Triple::normalize(llvm::sys::getDefaultTargetTriple()));
+    if (def_target.getOS() == llvm::Triple::Win32 &&
+        def_target.getEnvironment() != llvm::Triple::UnknownEnvironment)
+      return def_target.getEnvironment();
+    return llvm::Triple::MSVC;
+  }();
+
+  llvm::Triple::EnvironmentType env = GetGlobalPluginProperties().ABI();
+  if (env == llvm::Triple::UnknownEnvironment)
+    env = default_env;
+
   switch (COFFObj->getMachine()) {
   case MachineAmd64:
     spec.SetTriple("x86_64-pc-windows");
+    spec.GetTriple().setEnvironment(env);
     specs.Append(module_spec);
     break;
   case MachineX86:
     spec.SetTriple("i386-pc-windows");
+    spec.GetTriple().setEnvironment(env);
     specs.Append(module_spec);
     spec.SetTriple("i686-pc-windows");
+    spec.GetTriple().setEnvironment(env);
     specs.Append(module_spec);
     break;
   case MachineArmNt:
     spec.SetTriple("armv7-pc-windows");
+    spec.GetTriple().setEnvironment(env);
     specs.Append(module_spec);
     break;
   case MachineArm64:
     spec.SetTriple("aarch64-pc-windows");
+    spec.GetTriple().setEnvironment(env);
     specs.Append(module_spec);
     break;
   default:
@@ -195,7 +326,7 @@ bool ObjectFilePECOFF::SaveCore(const lldb::ProcessSP &process_sp,
   return SaveMiniDump(process_sp, outfile, error);
 }
 
-bool ObjectFilePECOFF::MagicBytesMatch(DataBufferSP &data_sp) {
+bool ObjectFilePECOFF::MagicBytesMatch(DataBufferSP data_sp) {
   DataExtractor data(data_sp, eByteOrderLittle, 4);
   lldb::offset_t offset = 0;
   uint16_t magic = data.GetU16(&offset);
@@ -217,7 +348,7 @@ bool ObjectFilePECOFF::CreateBinary() {
   if (m_binary)
     return true;
 
-  Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_OBJECT));
+  Log *log = GetLog(LLDBLog::Object);
 
   auto binary = llvm::object::createBinary(llvm::MemoryBufferRef(
       toStringRef(m_data.GetData()), m_file.GetFilename().GetStringRef()));
@@ -240,7 +371,7 @@ bool ObjectFilePECOFF::CreateBinary() {
 }
 
 ObjectFilePECOFF::ObjectFilePECOFF(const lldb::ModuleSP &module_sp,
-                                   DataBufferSP &data_sp,
+                                   DataBufferSP data_sp,
                                    lldb::offset_t data_offset,
                                    const FileSpec *file,
                                    lldb::offset_t file_offset,
@@ -253,7 +384,7 @@ ObjectFilePECOFF::ObjectFilePECOFF(const lldb::ModuleSP &module_sp,
 }
 
 ObjectFilePECOFF::ObjectFilePECOFF(const lldb::ModuleSP &module_sp,
-                                   DataBufferSP &header_data_sp,
+                                   WritableDataBufferSP header_data_sp,
                                    const lldb::ProcessSP &process_sp,
                                    addr_t header_addr)
     : ObjectFile(module_sp, process_sp, header_addr, header_data_sp),
@@ -594,138 +725,125 @@ llvm::StringRef ObjectFilePECOFF::GetSectionName(const section_header_t &sect) {
   return hdr_name;
 }
 
-// GetNListSymtab
-Symtab *ObjectFilePECOFF::GetSymtab() {
-  ModuleSP module_sp(GetModule());
-  if (module_sp) {
-    std::lock_guard<std::recursive_mutex> guard(module_sp->GetMutex());
-    if (m_symtab_up == nullptr) {
-      SectionList *sect_list = GetSectionList();
-      m_symtab_up = std::make_unique<Symtab>(this);
-      std::lock_guard<std::recursive_mutex> guard(m_symtab_up->GetMutex());
+void ObjectFilePECOFF::ParseSymtab(Symtab &symtab) {
+  SectionList *sect_list = GetSectionList();
+  const uint32_t num_syms = m_coff_header.nsyms;
+  if (m_file && num_syms > 0 && m_coff_header.symoff > 0) {
+    const uint32_t symbol_size = 18;
+    const size_t symbol_data_size = num_syms * symbol_size;
+    // Include the 4-byte string table size at the end of the symbols
+    DataExtractor symtab_data =
+        ReadImageData(m_coff_header.symoff, symbol_data_size + 4);
+    lldb::offset_t offset = symbol_data_size;
+    const uint32_t strtab_size = symtab_data.GetU32(&offset);
+    if (strtab_size > 0) {
+      DataExtractor strtab_data = ReadImageData(
+          m_coff_header.symoff + symbol_data_size, strtab_size);
 
-      const uint32_t num_syms = m_coff_header.nsyms;
-
-      if (m_file && num_syms > 0 && m_coff_header.symoff > 0) {
-        const uint32_t symbol_size = 18;
-        const size_t symbol_data_size = num_syms * symbol_size;
-        // Include the 4-byte string table size at the end of the symbols
-        DataExtractor symtab_data =
-            ReadImageData(m_coff_header.symoff, symbol_data_size + 4);
-        lldb::offset_t offset = symbol_data_size;
-        const uint32_t strtab_size = symtab_data.GetU32(&offset);
-        if (strtab_size > 0) {
-          DataExtractor strtab_data = ReadImageData(
-              m_coff_header.symoff + symbol_data_size, strtab_size);
-
-          offset = 0;
-          std::string symbol_name;
-          Symbol *symbols = m_symtab_up->Resize(num_syms);
-          for (uint32_t i = 0; i < num_syms; ++i) {
-            coff_symbol_t symbol;
-            const uint32_t symbol_offset = offset;
-            const char *symbol_name_cstr = nullptr;
-            // If the first 4 bytes of the symbol string are zero, then they
-            // are followed by a 4-byte string table offset. Else these
-            // 8 bytes contain the symbol name
-            if (symtab_data.GetU32(&offset) == 0) {
-              // Long string that doesn't fit into the symbol table name, so
-              // now we must read the 4 byte string table offset
-              uint32_t strtab_offset = symtab_data.GetU32(&offset);
-              symbol_name_cstr = strtab_data.PeekCStr(strtab_offset);
-              symbol_name.assign(symbol_name_cstr);
-            } else {
-              // Short string that fits into the symbol table name which is 8
-              // bytes
-              offset += sizeof(symbol.name) - 4; // Skip remaining
-              symbol_name_cstr = symtab_data.PeekCStr(symbol_offset);
-              if (symbol_name_cstr == nullptr)
-                break;
-              symbol_name.assign(symbol_name_cstr, sizeof(symbol.name));
-            }
-            symbol.value = symtab_data.GetU32(&offset);
-            symbol.sect = symtab_data.GetU16(&offset);
-            symbol.type = symtab_data.GetU16(&offset);
-            symbol.storage = symtab_data.GetU8(&offset);
-            symbol.naux = symtab_data.GetU8(&offset);
-            symbols[i].GetMangled().SetValue(ConstString(symbol_name.c_str()));
-            if ((int16_t)symbol.sect >= 1) {
-              Address symbol_addr(sect_list->FindSectionByID(symbol.sect),
-                                  symbol.value);
-              symbols[i].GetAddressRef() = symbol_addr;
-              symbols[i].SetType(MapSymbolType(symbol.type));
-            }
-
-            if (symbol.naux > 0) {
-              i += symbol.naux;
-              offset += symbol.naux * symbol_size;
-            }
-          }
-        }
-      }
-
-      // Read export header
-      if (coff_data_dir_export_table < m_coff_header_opt.data_dirs.size() &&
-          m_coff_header_opt.data_dirs[coff_data_dir_export_table].vmsize > 0 &&
-          m_coff_header_opt.data_dirs[coff_data_dir_export_table].vmaddr > 0) {
-        export_directory_entry export_table;
-        uint32_t data_start =
-            m_coff_header_opt.data_dirs[coff_data_dir_export_table].vmaddr;
-
-        DataExtractor symtab_data = ReadImageDataByRVA(
-            data_start, m_coff_header_opt.data_dirs[0].vmsize);
-        lldb::offset_t offset = 0;
-
-        // Read export_table header
-        export_table.characteristics = symtab_data.GetU32(&offset);
-        export_table.time_date_stamp = symtab_data.GetU32(&offset);
-        export_table.major_version = symtab_data.GetU16(&offset);
-        export_table.minor_version = symtab_data.GetU16(&offset);
-        export_table.name = symtab_data.GetU32(&offset);
-        export_table.base = symtab_data.GetU32(&offset);
-        export_table.number_of_functions = symtab_data.GetU32(&offset);
-        export_table.number_of_names = symtab_data.GetU32(&offset);
-        export_table.address_of_functions = symtab_data.GetU32(&offset);
-        export_table.address_of_names = symtab_data.GetU32(&offset);
-        export_table.address_of_name_ordinals = symtab_data.GetU32(&offset);
-
-        bool has_ordinal = export_table.address_of_name_ordinals != 0;
-
-        lldb::offset_t name_offset = export_table.address_of_names - data_start;
-        lldb::offset_t name_ordinal_offset =
-            export_table.address_of_name_ordinals - data_start;
-
-        Symbol *symbols = m_symtab_up->Resize(export_table.number_of_names);
-
-        std::string symbol_name;
-
-        // Read each export table entry
-        for (size_t i = 0; i < export_table.number_of_names; ++i) {
-          uint32_t name_ordinal =
-              has_ordinal ? symtab_data.GetU16(&name_ordinal_offset) : i;
-          uint32_t name_address = symtab_data.GetU32(&name_offset);
-
-          const char *symbol_name_cstr =
-              symtab_data.PeekCStr(name_address - data_start);
+      offset = 0;
+      std::string symbol_name;
+      Symbol *symbols = symtab.Resize(num_syms);
+      for (uint32_t i = 0; i < num_syms; ++i) {
+        coff_symbol_t symbol;
+        const uint32_t symbol_offset = offset;
+        const char *symbol_name_cstr = nullptr;
+        // If the first 4 bytes of the symbol string are zero, then they
+        // are followed by a 4-byte string table offset. Else these
+        // 8 bytes contain the symbol name
+        if (symtab_data.GetU32(&offset) == 0) {
+          // Long string that doesn't fit into the symbol table name, so
+          // now we must read the 4 byte string table offset
+          uint32_t strtab_offset = symtab_data.GetU32(&offset);
+          symbol_name_cstr = strtab_data.PeekCStr(strtab_offset);
           symbol_name.assign(symbol_name_cstr);
-
-          lldb::offset_t function_offset = export_table.address_of_functions -
-                                           data_start +
-                                           sizeof(uint32_t) * name_ordinal;
-          uint32_t function_rva = symtab_data.GetU32(&function_offset);
-
-          Address symbol_addr(m_coff_header_opt.image_base + function_rva,
-                              sect_list);
-          symbols[i].GetMangled().SetValue(ConstString(symbol_name.c_str()));
+        } else {
+          // Short string that fits into the symbol table name which is 8
+          // bytes
+          offset += sizeof(symbol.name) - 4; // Skip remaining
+          symbol_name_cstr = symtab_data.PeekCStr(symbol_offset);
+          if (symbol_name_cstr == nullptr)
+            break;
+          symbol_name.assign(symbol_name_cstr, sizeof(symbol.name));
+        }
+        symbol.value = symtab_data.GetU32(&offset);
+        symbol.sect = symtab_data.GetU16(&offset);
+        symbol.type = symtab_data.GetU16(&offset);
+        symbol.storage = symtab_data.GetU8(&offset);
+        symbol.naux = symtab_data.GetU8(&offset);
+        symbols[i].GetMangled().SetValue(ConstString(symbol_name.c_str()));
+        if ((int16_t)symbol.sect >= 1) {
+          Address symbol_addr(sect_list->FindSectionByID(symbol.sect),
+                              symbol.value);
           symbols[i].GetAddressRef() = symbol_addr;
-          symbols[i].SetType(lldb::eSymbolTypeCode);
-          symbols[i].SetDebug(true);
+          symbols[i].SetType(MapSymbolType(symbol.type));
+        }
+
+        if (symbol.naux > 0) {
+          i += symbol.naux;
+          offset += symbol.naux * symbol_size;
         }
       }
-      m_symtab_up->CalculateSymbolSizes();
     }
   }
-  return m_symtab_up.get();
+
+  // Read export header
+  if (coff_data_dir_export_table < m_coff_header_opt.data_dirs.size() &&
+      m_coff_header_opt.data_dirs[coff_data_dir_export_table].vmsize > 0 &&
+      m_coff_header_opt.data_dirs[coff_data_dir_export_table].vmaddr > 0) {
+    export_directory_entry export_table;
+    uint32_t data_start =
+        m_coff_header_opt.data_dirs[coff_data_dir_export_table].vmaddr;
+
+    DataExtractor symtab_data = ReadImageDataByRVA(
+        data_start, m_coff_header_opt.data_dirs[0].vmsize);
+    lldb::offset_t offset = 0;
+
+    // Read export_table header
+    export_table.characteristics = symtab_data.GetU32(&offset);
+    export_table.time_date_stamp = symtab_data.GetU32(&offset);
+    export_table.major_version = symtab_data.GetU16(&offset);
+    export_table.minor_version = symtab_data.GetU16(&offset);
+    export_table.name = symtab_data.GetU32(&offset);
+    export_table.base = symtab_data.GetU32(&offset);
+    export_table.number_of_functions = symtab_data.GetU32(&offset);
+    export_table.number_of_names = symtab_data.GetU32(&offset);
+    export_table.address_of_functions = symtab_data.GetU32(&offset);
+    export_table.address_of_names = symtab_data.GetU32(&offset);
+    export_table.address_of_name_ordinals = symtab_data.GetU32(&offset);
+
+    bool has_ordinal = export_table.address_of_name_ordinals != 0;
+
+    lldb::offset_t name_offset = export_table.address_of_names - data_start;
+    lldb::offset_t name_ordinal_offset =
+        export_table.address_of_name_ordinals - data_start;
+
+    Symbol *symbols = symtab.Resize(export_table.number_of_names);
+
+    std::string symbol_name;
+
+    // Read each export table entry
+    for (size_t i = 0; i < export_table.number_of_names; ++i) {
+      uint32_t name_ordinal =
+          has_ordinal ? symtab_data.GetU16(&name_ordinal_offset) : i;
+      uint32_t name_address = symtab_data.GetU32(&name_offset);
+
+      const char *symbol_name_cstr =
+          symtab_data.PeekCStr(name_address - data_start);
+      symbol_name.assign(symbol_name_cstr);
+
+      lldb::offset_t function_offset = export_table.address_of_functions -
+                                        data_start +
+                                        sizeof(uint32_t) * name_ordinal;
+      uint32_t function_rva = symtab_data.GetU32(&function_offset);
+
+      Address symbol_addr(m_coff_header_opt.image_base + function_rva,
+                          sect_list);
+      symbols[i].GetMangled().SetValue(ConstString(symbol_name.c_str()));
+      symbols[i].GetAddressRef() = symbol_addr;
+      symbols[i].SetType(lldb::eSymbolTypeCode);
+      symbols[i].SetDebug(true);
+    }
+  }
 }
 
 std::unique_ptr<CallFrameInfo> ObjectFilePECOFF::CreateCallFrameInfo() {
@@ -889,6 +1007,14 @@ UUID ObjectFilePECOFF::GetUUID() {
   return m_uuid;
 }
 
+llvm::Optional<FileSpec> ObjectFilePECOFF::GetDebugLink() {
+  std::string gnu_debuglink_file;
+  uint32_t gnu_debuglink_crc;
+  if (GetDebugLinkContents(*m_binary, gnu_debuglink_file, gnu_debuglink_crc))
+    return FileSpec(gnu_debuglink_file);
+  return llvm::None;
+}
+
 uint32_t ObjectFilePECOFF::ParseDependentModules() {
   ModuleSP module_sp(GetModule());
   if (!module_sp)
@@ -902,7 +1028,7 @@ uint32_t ObjectFilePECOFF::ParseDependentModules() {
   if (!CreateBinary())
     return 0;
 
-  Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_OBJECT));
+  Log *log = GetLog(LLDBLog::Object);
   LLDB_LOG(log, "this = {0}, module = {1} ({2}), file = {3}, binary = {4}",
            this, GetModule().get(), GetModule()->GetSpecificationDescription(),
            m_file.GetPath(), m_binary.get());
@@ -1205,8 +1331,3 @@ ObjectFile::Type ObjectFilePECOFF::CalculateType() {
 }
 
 ObjectFile::Strata ObjectFilePECOFF::CalculateStrata() { return eStrataUser; }
-
-// PluginInterface protocol
-ConstString ObjectFilePECOFF::GetPluginName() { return GetPluginNameStatic(); }
-
-uint32_t ObjectFilePECOFF::GetPluginVersion() { return 1; }

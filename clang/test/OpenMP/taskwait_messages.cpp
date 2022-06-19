@@ -1,10 +1,11 @@
-// RUN: %clang_cc1 -verify -fopenmp -ferror-limit 100 %s -Wuninitialized
+// RUN: %clang_cc1 -verify -fopenmp -fopenmp-version=45 -ferror-limit 100 %s -Wuninitialized
 
-// RUN: %clang_cc1 -verify -fopenmp-simd -ferror-limit 100 %s -Wuninitialized
+// RUN: %clang_cc1 -verify -fopenmp-simd -fopenmp-version=45 -ferror-limit 100 %s -Wuninitialized
 
 template <class T>
 T tmain(T argc) {
 #pragma omp taskwait allocate(argc) // expected-error {{unexpected OpenMP clause 'allocate' in directive '#pragma omp taskwait'}}
+#pragma omp taskwait depend(in:argc) // expected-error {{unexpected OpenMP clause 'depend' in directive '#pragma omp taskwait'}}
   ;
 #pragma omp taskwait untied  // expected-error {{unexpected OpenMP clause 'untied' in directive '#pragma omp taskwait'}}
 #pragma omp taskwait unknown // expected-warning {{extra tokens at the end of '#pragma omp taskwait' are ignored}}

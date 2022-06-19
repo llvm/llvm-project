@@ -19,6 +19,8 @@
 #include "lldb/Utility/FileSpec.h"
 #include "lldb/Utility/UUID.h"
 #include "lldb/lldb-private.h"
+#include "llvm/ADT/Optional.h"
+#include "llvm/Support/Threading.h"
 #include "llvm/Support/VersionTuple.h"
 
 namespace lldb_private {
@@ -114,10 +116,10 @@ public:
   /// more than one architecture or object.
   ObjectFile(const lldb::ModuleSP &module_sp, const FileSpec *file_spec_ptr,
              lldb::offset_t file_offset, lldb::offset_t length,
-             const lldb::DataBufferSP &data_sp, lldb::offset_t data_offset);
+             lldb::DataBufferSP data_sp, lldb::offset_t data_offset);
 
   ObjectFile(const lldb::ModuleSP &module_sp, const lldb::ProcessSP &process_sp,
-             lldb::addr_t header_addr, lldb::DataBufferSP &data_sp);
+             lldb::addr_t header_addr, lldb::DataBufferSP data_sp);
 
   /// Destructor.
   ///
@@ -181,7 +183,7 @@ public:
   static lldb::ObjectFileSP FindPlugin(const lldb::ModuleSP &module_sp,
                                        const lldb::ProcessSP &process_sp,
                                        lldb::addr_t header_addr,
-                                       lldb::DataBufferSP &file_data_sp);
+                                       lldb::WritableDataBufferSP file_data_sp);
 
   static size_t
   GetModuleSpecifications(const FileSpec &file, lldb::offset_t file_offset,
@@ -322,12 +324,26 @@ public:
   /// Gets the symbol table for the currently selected architecture (and
   /// object for archives).
   ///
-  /// Symbol table parsing can be deferred by ObjectFile instances until this
-  /// accessor is called the first time.
+  /// This function will manage when ParseSymtab(...) is called to actually do
+  /// the symbol table parsing in each plug-in. This function will take care of
+  /// taking all the necessary locks and finalizing the symbol table when the
+  /// symbol table does get parsed.
   ///
   /// \return
   ///     The symbol table for this object file.
-  virtual Symtab *GetSymtab() = 0;
+  Symtab *GetSymtab();
+
+  /// Parse the symbol table into the provides symbol table object.
+  ///
+  /// Symbol table parsing will be done once when this function is called by
+  /// each object file plugin. All of the necessary locks will already be
+  /// acquired before this function is called and the symbol table object to
+  /// populate is supplied as an argument and doesn't need to be created by
+  /// each plug-in.
+  ///
+  /// \param
+  ///     The symbol table to populate.
+  virtual void ParseSymtab(Symtab &symtab) = 0;
 
   /// Perform relocations on the section if necessary.
   ///
@@ -511,11 +527,15 @@ public:
   /// binary is exactly which removes ambiguity when there are multiple
   /// binaries present in the captured memory pages.
   ///
-  /// \param[out] address
-  ///   If the address of the binary is specified, this will be set.
-  ///   This is an address is the virtual address space of the core file
-  ///   memory segments; it is not an offset into the object file.
-  ///   If no address is available, will be set to LLDB_INVALID_ADDRESS.
+  /// \param[out] value
+  ///   The address or offset (slide) where the binary is loaded in memory.
+  ///   LLDB_INVALID_ADDRESS for unspecified.  If an offset is given,
+  ///   this offset should be added to the binary's file address to get
+  ///   the load address.
+  ///
+  /// \param[out] value_is_offset
+  ///   Specifies if \b value is a load address, or an offset to calculate
+  ///   the load address.
   ///
   /// \param[out] uuid
   ///   If the uuid of the binary is specified, this will be set.
@@ -527,9 +547,11 @@ public:
   ///
   /// \return
   ///   Returns true if either address or uuid has been set.
-  virtual bool GetCorefileMainBinaryInfo(lldb::addr_t &address, UUID &uuid,
+  virtual bool GetCorefileMainBinaryInfo(lldb::addr_t &value,
+                                         bool &value_is_offset, UUID &uuid,
                                          ObjectFile::BinaryType &type) {
-    address = LLDB_INVALID_ADDRESS;
+    value = LLDB_INVALID_ADDRESS;
+    value_is_offset = false;
     uuid.Clear();
     return false;
   }
@@ -692,6 +714,15 @@ public:
     return false;
   }
 
+  /// Get a hash that can be used for caching object file releated information.
+  ///
+  /// Data for object files can be cached between runs of debug sessions and
+  /// a module can end up using a main file and a symbol file, both of which
+  /// can be object files. So we need a unique hash that identifies an object
+  /// file when storing cached data.
+  uint32_t GetCacheHash();
+
+
 protected:
   // Member variables.
   FileSpec m_file;
@@ -708,7 +739,13 @@ protected:
   const lldb::addr_t m_memory_addr;
   std::unique_ptr<lldb_private::SectionList> m_sections_up;
   std::unique_ptr<lldb_private::Symtab> m_symtab_up;
-  uint32_t m_synthetic_symbol_idx;
+  /// We need a llvm::once_flag that we can use to avoid locking the module
+  /// lock and deadlocking LLDB. See comments in ObjectFile::GetSymtab() for
+  /// the full details. We also need to be able to clear the symbol table, so we
+  /// need to use a std::unique_ptr to a llvm::once_flag so if we clear the
+  /// symbol table, we can have a new once flag to use when it is created again.
+  std::unique_ptr<llvm::once_flag> m_symtab_once_up;
+  llvm::Optional<uint32_t> m_cache_hash;
 
   /// Sets the architecture for a module.  At present the architecture can
   /// only be set if it is invalid.  It is not allowed to switch from one
@@ -722,7 +759,8 @@ protected:
   ///     false otherwise.
   bool SetModulesArchitecture(const ArchSpec &new_arch);
 
-  ConstString GetNextSyntheticSymbolName();
+  /// The number of bytes to read when going through the plugins.
+  static size_t g_initial_bytes_to_read;
 
   static lldb::DataBufferSP MapFileData(const FileSpec &file, uint64_t Size,
                                         uint64_t Offset);

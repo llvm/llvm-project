@@ -199,7 +199,7 @@ define i32 @call_custom_cb_with_ret(i32 %a, i32 %b) {
   ; CHECK: %labelreturn = alloca i[[#SBITS]], align [[#SBYTES]]
   ; CHECK: [[BS:%.*]] = load i[[#SBITS]], i[[#SBITS]]* inttoptr (i64 add (i64 ptrtoint ([[TLS_ARR]]* @__dfsan_arg_tls to i64), i64 2) to i[[#SBITS]]*), align 2
   ; CHECK: [[AS:%.*]] = load i[[#SBITS]], i[[#SBITS]]* bitcast ([[TLS_ARR]]* @__dfsan_arg_tls to i[[#SBITS]]*), align 2
-  ; CHECK: {{.*}} = call i32 @__dfso_custom_cb_with_ret(i32 (i32 (i32, i32)*, i32, i32, i[[#SBITS]], i[[#SBITS]], i[[#SBITS]]*, i32, i32, i32*)* @"dfst0$custom_cb_with_ret", i8* bitcast (i32 (i32, i32)* @cb_with_ret.dfsan to i8*), i32 %a, i32 %b, i[[#SBITS]] zeroext 0, i[[#SBITS]] zeroext [[AS]], i[[#SBITS]] zeroext [[BS]], i[[#SBITS]]* %labelreturn, i32 zeroext 0, i32 zeroext [[AO]], i32 zeroext [[BO]], i32* %originreturn)
+  ; CHECK: {{.*}} = call i32 @__dfso_custom_cb_with_ret(i32 (i32, i32)* @cb_with_ret.dfsan, i32 %a, i32 %b, i[[#SBITS]] zeroext 0, i[[#SBITS]] zeroext [[AS]], i[[#SBITS]] zeroext [[BS]], i[[#SBITS]]* %labelreturn, i32 zeroext 0, i32 zeroext [[AO]], i32 zeroext [[BO]], i32* %originreturn)
   ; CHECK: [[RS:%.*]] = load i[[#SBITS]], i[[#SBITS]]* %labelreturn, align [[#SBYTES]]
   ; CHECK: [[RO:%.*]] = load i32, i32* %originreturn, align 4
   ; CHECK: store i[[#SBITS]] [[RS]], i[[#SBITS]]* bitcast ([[TLS_ARR]]* @__dfsan_retval_tls to i[[#SBITS]]*), align 2
@@ -215,7 +215,7 @@ define void @call_custom_cb_without_ret(i32 %a, i32 %b) {
   ; CHECK: [[AO:%.*]] = load i32, i32* getelementptr inbounds ([200 x i32], [200 x i32]* @__dfsan_arg_origin_tls, i64 0, i64 0), align 4
   ; CHECK: [[BS:%.*]] = load i[[#SBITS]], i[[#SBITS]]* inttoptr (i64 add (i64 ptrtoint ([[TLS_ARR]]* @__dfsan_arg_tls to i64), i64 2) to i[[#SBITS]]*), align 2
   ; CHECK: [[AS:%.*]] = load i[[#SBITS]], i[[#SBITS]]* bitcast ([[TLS_ARR]]* @__dfsan_arg_tls to i[[#SBITS]]*), align 2
-  ; CHECK: call void @__dfso_custom_cb_without_ret(void (void (i32, i32)*, i32, i32, i[[#SBITS]], i[[#SBITS]], i32, i32)* @"dfst0$custom_cb_without_ret", i8* bitcast (void (i32, i32)* @cb_without_ret.dfsan to i8*), i32 %a, i32 %b, i[[#SBITS]] zeroext 0, i[[#SBITS]] zeroext [[AS]], i[[#SBITS]] zeroext [[BS]], i32 zeroext 0, i32 zeroext [[AO]], i32 zeroext [[BO]])
+  ; CHECK: call void @__dfso_custom_cb_without_ret(void (i32, i32)* @cb_without_ret.dfsan, i32 %a, i32 %b, i[[#SBITS]] zeroext 0, i[[#SBITS]] zeroext [[AS]], i[[#SBITS]] zeroext [[BS]], i32 zeroext 0, i32 zeroext [[AO]], i32 zeroext [[BO]])
   ; CHECK-NEXT: ret void
 
   call void @custom_cb_without_ret(void (i32, i32)* @cb_without_ret, i32 %a, i32 %b)
@@ -267,8 +267,7 @@ define void @call_custom_cb_without_ret(i32 %a, i32 %b) {
 ; CHECK-NEXT:  [[BS:%.*]] = load i[[#SBITS]], i[[#SBITS]]* inttoptr (i64 add (i64 ptrtoint ([[TLS_ARR]]* @__dfsan_arg_tls to i64), i64 4) to i[[#SBITS]]*), align 2
 ; CHECK-NEXT:  [[AS:%.*]] = load i[[#SBITS]], i[[#SBITS]]* inttoptr (i64 add (i64 ptrtoint ([[TLS_ARR]]* @__dfsan_arg_tls to i64), i64 2) to i[[#SBITS]]*), align 2
 ; CHECK-NEXT:  [[CS:%.*]] = load i[[#SBITS]], i[[#SBITS]]* bitcast ([[TLS_ARR]]* @__dfsan_arg_tls to i[[#SBITS]]*), align 2
-; CHECK-NEXT:  [[C:%.*]] = bitcast i32 (i32, i32)* %0 to i8*
-; CHECK-NEXT:  [[R:%.*]] = call i32 @__dfso_custom_cb_with_ret(i32 (i32 (i32, i32)*, i32, i32, i[[#SBITS]], i[[#SBITS]], i[[#SBITS]]*, i32, i32, i32*)* @"dfst0$custom_cb_with_ret", i8* [[C]], i32 %1, i32 %2, i[[#SBITS]] zeroext [[CS]], i[[#SBITS]] zeroext [[AS]], i[[#SBITS]] zeroext [[BS]], i[[#SBITS]]* %labelreturn, i32 zeroext [[CO]], i32 zeroext [[AO]], i32 zeroext [[BO]], i32* %originreturn)
+; CHECK-NEXT:  [[R:%.*]] = call i32 @__dfso_custom_cb_with_ret(i32 (i32, i32)* %0, i32 %1, i32 %2, i[[#SBITS]] zeroext [[CS]], i[[#SBITS]] zeroext [[AS]], i[[#SBITS]] zeroext [[BS]], i[[#SBITS]]* %labelreturn, i32 zeroext [[CO]], i32 zeroext [[AO]], i32 zeroext [[BO]], i32* %originreturn)
 ; CHECK-NEXT:  [[RS:%.*]] = load i[[#SBITS]], i[[#SBITS]]* %labelreturn, align [[#SBYTES]]
 ; CHECK-NEXT:  [[RO:%.*]] = load i32, i32* %originreturn, align 4
 ; CHECK-NEXT:  store i[[#SBITS]] [[RS]], i[[#SBITS]]* bitcast ([[TLS_ARR]]* @__dfsan_retval_tls to i[[#SBITS]]*), align 2
@@ -282,37 +281,16 @@ define void @call_custom_cb_without_ret(i32 %a, i32 %b) {
 ; CHECK-NEXT:  [[BS:%.*]] = load i[[#SBITS]], i[[#SBITS]]* inttoptr (i64 add (i64 ptrtoint ([[TLS_ARR]]* @__dfsan_arg_tls to i64), i64 4) to i[[#SBITS]]*), align 2
 ; CHECK-NEXT:  [[AS:%.*]] = load i[[#SBITS]], i[[#SBITS]]* inttoptr (i64 add (i64 ptrtoint ([[TLS_ARR]]* @__dfsan_arg_tls to i64), i64 2) to i[[#SBITS]]*), align 2
 ; CHECK-NEXT:  [[CS:%.*]] = load i[[#SBITS]], i[[#SBITS]]* bitcast ([[TLS_ARR]]* @__dfsan_arg_tls to i[[#SBITS]]*), align 2
-; CHECK-NEXT:  [[C:%.*]] = bitcast void (i32, i32)* %0 to i8*
-; CHECK-NEXT:  call void @__dfso_custom_cb_without_ret(void (void (i32, i32)*, i32, i32, i[[#SBITS]], i[[#SBITS]], i32, i32)* @"dfst0$custom_cb_without_ret", i8* [[C]], i32 %1, i32 %2, i[[#SBITS]] zeroext [[CS]], i[[#SBITS]] zeroext [[AS]], i[[#SBITS]] zeroext [[BS]], i32 zeroext [[CO]], i32 zeroext [[AO]], i32 zeroext [[BO]])
+; CHECK-NEXT:  call void @__dfso_custom_cb_without_ret(void (i32, i32)* %0, i32 %1, i32 %2, i[[#SBITS]] zeroext [[CS]], i[[#SBITS]] zeroext [[AS]], i[[#SBITS]] zeroext [[BS]], i32 zeroext [[CO]], i32 zeroext [[AO]], i32 zeroext [[BO]])
 ; CHECK-NEXT:  ret void
 
 ; CHECK: declare void @__dfso_custom_without_ret(i32, i32, i[[#SBITS]], i[[#SBITS]], i32, i32)
 
 ; CHECK: declare i32 @__dfso_custom_with_ret(i32, i32, i[[#SBITS]], i[[#SBITS]], i[[#SBITS]]*, i32, i32, i32*)
 
-; CHECK: declare i32 @__dfso_custom_cb_with_ret(i32 (i32 (i32, i32)*, i32, i32, i[[#SBITS]], i[[#SBITS]], i[[#SBITS]]*, i32, i32, i32*)*, i8*, i32, i32, i[[#SBITS]], i[[#SBITS]], i[[#SBITS]], i[[#SBITS]]*, i32, i32, i32, i32*)
+; CHECK: declare i32 @__dfso_custom_cb_with_ret(i32 (i32, i32)*, i32, i32, i[[#SBITS]], i[[#SBITS]], i[[#SBITS]], i[[#SBITS]]*, i32, i32, i32, i32*)
 
-; CHECK: define linkonce_odr i32 @"dfst0$custom_cb_with_ret"(i32 (i32, i32)* %0, i32 %1, i32 %2, i[[#SBITS]] %3, i[[#SBITS]] %4, i[[#SBITS]]* %5, i32 %6, i32 %7, i32* %8)
-; CHECK:   store i32 %6, i32* getelementptr inbounds ([200 x i32], [200 x i32]* @__dfsan_arg_origin_tls, i64 0, i64 0), align 4
-; CHECK-NEXT:  store i[[#SBITS]] %3, i[[#SBITS]]* bitcast ([[TLS_ARR]]* @__dfsan_arg_tls to i[[#SBITS]]*), align 2
-; CHECK-NEXT:  store i32 %7, i32* getelementptr inbounds ([200 x i32], [200 x i32]* @__dfsan_arg_origin_tls, i64 0, i64 1), align 4
-; CHECK-NEXT:  store i[[#SBITS]] %4, i[[#SBITS]]* inttoptr (i64 add (i64 ptrtoint ([[TLS_ARR]]* @__dfsan_arg_tls to i64), i64 2) to i[[#SBITS]]*), align 2
-; CHECK-NEXT:  %9 = call i32 %0(i32 %1, i32 %2)
-; CHECK-NEXT:  %_dfsret = load i[[#SBITS]], i[[#SBITS]]* bitcast ([[TLS_ARR]]* @__dfsan_retval_tls to i[[#SBITS]]*), align 2
-; CHECK-NEXT:  %_dfsret_o = load i32, i32* @__dfsan_retval_origin_tls, align 4
-; CHECK-NEXT:  store i[[#SBITS]] %_dfsret, i[[#SBITS]]* %5, align [[#SBYTES]]
-; CHECK-NEXT:  store i32 %_dfsret_o, i32* %8, align 4
-; CHECK-NEXT:  ret i32 %9
-
-; CHECK: declare void @__dfso_custom_cb_without_ret(void (void (i32, i32)*, i32, i32, i[[#SBITS]], i[[#SBITS]], i32, i32)*, i8*, i32, i32, i[[#SBITS]], i[[#SBITS]], i[[#SBITS]], i32, i32, i32)
-
-; CHECK: define linkonce_odr void @"dfst0$custom_cb_without_ret"(void (i32, i32)* %0, i32 %1, i32 %2, i[[#SBITS]] %3, i[[#SBITS]] %4, i32 %5, i32 %6)
-; CHECK:  store i32 %5, i32* getelementptr inbounds ([200 x i32], [200 x i32]* @__dfsan_arg_origin_tls, i64 0, i64 0), align 4
-; CHECK-NEXT:  store i[[#SBITS]] %3, i[[#SBITS]]* bitcast ([[TLS_ARR]]* @__dfsan_arg_tls to i[[#SBITS]]*), align 2
-; CHECK-NEXT:  store i32 %6, i32* getelementptr inbounds ([200 x i32], [200 x i32]* @__dfsan_arg_origin_tls, i64 0, i64 1), align 4
-; CHECK-NEXT:  store i[[#SBITS]] %4, i[[#SBITS]]* inttoptr (i64 add (i64 ptrtoint ([[TLS_ARR]]* @__dfsan_arg_tls to i64), i64 2) to i[[#SBITS]]*), align 2
-; CHECK-NEXT:  call void %0(i32 %1, i32 %2)
-; CHECK-NEXT:  ret void
+; CHECK: declare void @__dfso_custom_cb_without_ret(void (i32, i32)*, i32, i32, i[[#SBITS]], i[[#SBITS]], i[[#SBITS]], i32, i32, i32)
 
 ; CHECK: declare void @__dfso_custom_varg_without_ret(i32, i32, i[[#SBITS]], i[[#SBITS]], i[[#SBITS]]*, i32, i32, i32*, ...)
 

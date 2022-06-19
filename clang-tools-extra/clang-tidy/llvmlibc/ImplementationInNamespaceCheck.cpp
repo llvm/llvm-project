@@ -41,7 +41,6 @@ void ImplementationInNamespaceCheck::check(
   diag(MatchedDecl->getLocation(),
        "declaration must be declared within the '%0' namespace")
       << RequiredNamespace;
-  return;
 }
 
 } // namespace llvm_libc

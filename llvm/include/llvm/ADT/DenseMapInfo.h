@@ -5,18 +5,19 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-//
-// This file defines DenseMapInfo traits for DenseMap.
-//
+///
+/// \file
+/// This file defines DenseMapInfo traits for DenseMap.
+///
 //===----------------------------------------------------------------------===//
 
 #ifndef LLVM_ADT_DENSEMAPINFO_H
 #define LLVM_ADT_DENSEMAPINFO_H
 
-#include "llvm/ADT/Hashing.h"
 #include <cassert>
 #include <cstddef>
 #include <cstdint>
+#include <tuple>
 #include <utility>
 
 namespace llvm {
@@ -39,7 +40,12 @@ static inline unsigned combineHashValue(unsigned a, unsigned b) {
 
 } // end namespace detail
 
-template<typename T>
+/// An information struct used to provide DenseMap with the various necessary
+/// components for a given value type `T`. `Enable` is an optional additional
+/// parameter that is used to support SFINAE (generally using std::enable_if_t)
+/// in derived DenseMapInfo specializations; in non-SFINAE use cases this should
+/// just be `void`.
+template<typename T, typename Enable = void>
 struct DenseMapInfo {
   //static inline T getEmptyKey();
   //static inline T getTombstoneKey();
@@ -280,13 +286,6 @@ template <typename... Ts> struct DenseMapInfo<std::tuple<Ts...>> {
     std::integral_constant<bool, 0 == sizeof...(Ts)> atEnd;
     return isEqualImpl<0>(lhs, rhs, atEnd);
   }
-};
-
-template <> struct DenseMapInfo<hash_code> {
-  static inline hash_code getEmptyKey() { return hash_code(-1); }
-  static inline hash_code getTombstoneKey() { return hash_code(-2); }
-  static unsigned getHashValue(hash_code val) { return val; }
-  static bool isEqual(hash_code LHS, hash_code RHS) { return LHS == RHS; }
 };
 
 } // end namespace llvm

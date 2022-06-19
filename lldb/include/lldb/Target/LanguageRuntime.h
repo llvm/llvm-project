@@ -141,7 +141,7 @@ public:
     return false;
   }
 
-  virtual void SymbolsDidLoad(const ModuleList &module_list) { return; }
+  virtual void SymbolsDidLoad(const ModuleList &module_list) {}
 
   virtual lldb::ThreadPlanSP GetStepThroughTrampolinePlan(Thread &thread,
                                                           bool stop_others) = 0;
@@ -154,7 +154,7 @@ public:
     return llvm::None;
   }
 
-  virtual void ModulesDidLoad(const ModuleList &module_list) override {}
+  void ModulesDidLoad(const ModuleList &module_list) override {}
 
   // Called by ClangExpressionParser::PrepareForExecution to query for any
   // custom LLVM IR passes that need to be run before an expression is

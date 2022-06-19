@@ -1,12 +1,12 @@
-// RUN: %clang_cc1 -fobjc-runtime=macosx-10.10.0 -emit-llvm -o - %s -fno-objc-convert-messages-to-runtime-calls -fobjc-exceptions -fexceptions | FileCheck %s --check-prefix=MSGS
-// RUN: %clang_cc1 -fobjc-runtime=macosx-10.10.0 -emit-llvm -o - %s -fobjc-exceptions -fexceptions | FileCheck %s --check-prefix=CALLS
-// RUN: %clang_cc1 -fobjc-runtime=macosx-10.9.0 -emit-llvm -o - %s -fobjc-exceptions -fexceptions | FileCheck %s --check-prefix=MSGS
-// RUN: %clang_cc1 -fobjc-runtime=macosx-fragile-10.10.0 -emit-llvm -o - %s -fobjc-exceptions -fexceptions | FileCheck %s --check-prefix=MSGS
-// RUN: %clang_cc1 -fobjc-runtime=ios-8.0 -emit-llvm -o - %s -fobjc-exceptions -fexceptions | FileCheck %s --check-prefix=CALLS
-// RUN: %clang_cc1 -fobjc-runtime=ios-7.0 -emit-llvm -o - %s -fobjc-exceptions -fexceptions | FileCheck %s --check-prefix=MSGS
+// RUN: %clang_cc1 -no-opaque-pointers -fobjc-runtime=macosx-10.10.0 -emit-llvm -o - %s -fno-objc-convert-messages-to-runtime-calls -fobjc-exceptions -fexceptions | FileCheck %s --check-prefix=MSGS
+// RUN: %clang_cc1 -no-opaque-pointers -fobjc-runtime=macosx-10.10.0 -emit-llvm -o - %s -fobjc-exceptions -fexceptions | FileCheck %s --check-prefix=CALLS
+// RUN: %clang_cc1 -no-opaque-pointers -fobjc-runtime=macosx-10.9.0 -emit-llvm -o - %s -fobjc-exceptions -fexceptions | FileCheck %s --check-prefix=MSGS
+// RUN: %clang_cc1 -no-opaque-pointers -fobjc-runtime=macosx-fragile-10.10.0 -emit-llvm -o - %s -fobjc-exceptions -fexceptions | FileCheck %s --check-prefix=MSGS
+// RUN: %clang_cc1 -no-opaque-pointers -fobjc-runtime=ios-8.0 -emit-llvm -o - %s -fobjc-exceptions -fexceptions | FileCheck %s --check-prefix=CALLS
+// RUN: %clang_cc1 -no-opaque-pointers -fobjc-runtime=ios-7.0 -emit-llvm -o - %s -fobjc-exceptions -fexceptions | FileCheck %s --check-prefix=MSGS
 // Note: This line below is for tvos for which the driver passes through to use the ios9.0 runtime.
-// RUN: %clang_cc1 -fobjc-runtime=ios-9.0 -emit-llvm -o - %s -fobjc-exceptions -fexceptions | FileCheck %s --check-prefix=CALLS
-// RUN: %clang_cc1 -fobjc-runtime=watchos-2.0 -emit-llvm -o - %s -fobjc-exceptions -fexceptions | FileCheck %s --check-prefix=CALLS
+// RUN: %clang_cc1 -no-opaque-pointers -fobjc-runtime=ios-9.0 -emit-llvm -o - %s -fobjc-exceptions -fexceptions | FileCheck %s --check-prefix=CALLS
+// RUN: %clang_cc1 -no-opaque-pointers -fobjc-runtime=watchos-2.0 -emit-llvm -o - %s -fobjc-exceptions -fexceptions | FileCheck %s --check-prefix=CALLS
 
 #define nil (id)0
 
@@ -39,7 +39,7 @@ void test1(id x) {
 }
 
 // CHECK-LABEL: define {{.*}}void @check_invoke
-void check_invoke() {
+void check_invoke(void) {
   // MSGS: {{invoke.*@objc_msgSend}}
   // MSGS: {{invoke.*@objc_msgSend}}
   // CALLS: {{invoke.*@objc_alloc}}
@@ -77,7 +77,7 @@ void test2(void* x) {
 // Make sure we get a bitcast on the return type as the
 // call will return i8* which we have to cast to A*
 // CHECK-LABEL: define {{.*}}void @test_alloc_class_ptr
-A* test_alloc_class_ptr() {
+A* test_alloc_class_ptr(void) {
   // CALLS: {{call.*@objc_alloc}}
   // CALLS-NEXT: bitcast i8*
   // CALLS-NEXT: ret
@@ -87,7 +87,7 @@ A* test_alloc_class_ptr() {
 // Make sure we get a bitcast on the return type as the
 // call will return i8* which we have to cast to A*
 // CHECK-LABEL: define {{.*}}void @test_alloc_class_ptr
-A* test_allocWithZone_class_ptr() {
+A* test_allocWithZone_class_ptr(void) {
   // CALLS: {{call.*@objc_allocWithZone}}
   // CALLS-NEXT: bitcast i8*
   // CALLS-NEXT: ret
@@ -135,7 +135,7 @@ A* test_autorelease_class_ptr(B *b) {
 
 // Make sure we only accept pointer types
 // CHECK-LABEL: define {{.*}}void @test_allocWithZone_int
-C* test_allocWithZone_int() {
+C* test_allocWithZone_int(void) {
   // MSGS: {{call.*@objc_msgSend}}
   // CALLS: {{call.*@objc_msgSend}}
   return [C allocWithZone:3];
@@ -237,7 +237,7 @@ void testException_retain(NSObject *a) {
 
 
 // CHECK-LABEL: define {{.*}}void @testException_alloc(
-void testException_alloc() {
+void testException_alloc(void) {
   @try {
     // MSGS: {{invoke.*@objc_msgSend}}
     // CALLS: invoke{{.*}}@objc_alloc(i8* %
@@ -247,7 +247,7 @@ void testException_alloc() {
 }
 
 // CHECK-LABEL: define {{.*}}void @testException_allocWithZone
-void testException_allocWithZone() {
+void testException_allocWithZone(void) {
   @try {
     // MSGS: {{invoke.*@objc_msgSend}}
     // CALLS: invoke{{.*}}@objc_allocWithZone(i8* %

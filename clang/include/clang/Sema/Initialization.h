@@ -38,7 +38,6 @@
 
 namespace clang {
 
-class APValue;
 class CXXBaseSpecifier;
 class CXXConstructorDecl;
 class ObjCMethodDecl;
@@ -298,8 +297,8 @@ public:
 
   /// Create the initialization entity for the result of a function.
   static InitializedEntity InitializeResult(SourceLocation ReturnLoc,
-                                            QualType Type, bool NRVO) {
-    return InitializedEntity(EK_Result, ReturnLoc, Type, NRVO);
+                                            QualType Type) {
+    return InitializedEntity(EK_Result, ReturnLoc, Type);
   }
 
   static InitializedEntity InitializeStmtExprResult(SourceLocation ReturnLoc,
@@ -308,20 +307,20 @@ public:
   }
 
   static InitializedEntity InitializeBlock(SourceLocation BlockVarLoc,
-                                           QualType Type, bool NRVO) {
-    return InitializedEntity(EK_BlockElement, BlockVarLoc, Type, NRVO);
+                                           QualType Type) {
+    return InitializedEntity(EK_BlockElement, BlockVarLoc, Type);
   }
 
   static InitializedEntity InitializeLambdaToBlock(SourceLocation BlockVarLoc,
-                                                   QualType Type, bool NRVO) {
+                                                   QualType Type) {
     return InitializedEntity(EK_LambdaToBlockConversionBlockElement,
-                             BlockVarLoc, Type, NRVO);
+                             BlockVarLoc, Type);
   }
 
   /// Create the initialization entity for an exception object.
   static InitializedEntity InitializeException(SourceLocation ThrowLoc,
-                                               QualType Type, bool NRVO) {
-    return InitializedEntity(EK_Exception, ThrowLoc, Type, NRVO);
+                                               QualType Type) {
+    return InitializedEntity(EK_Exception, ThrowLoc, Type);
   }
 
   /// Create the initialization entity for an object allocated via new.
@@ -335,8 +334,15 @@ public:
   }
 
   /// Create the initialization entity for a temporary.
-  static InitializedEntity InitializeTemporary(TypeSourceInfo *TypeInfo) {
-    return InitializeTemporary(TypeInfo, TypeInfo->getType());
+  static InitializedEntity InitializeTemporary(ASTContext &Context,
+                                               TypeSourceInfo *TypeInfo) {
+    QualType Type = TypeInfo->getType();
+    if (Context.getLangOpts().OpenCLCPlusPlus) {
+      assert(!Type.hasAddressSpace() && "Temporary already has address space!");
+      Type = Context.getAddrSpaceQualType(Type, LangAS::opencl_private);
+    }
+
+    return InitializeTemporary(TypeInfo, Type);
   }
 
   /// Create the initialization entity for a temporary.
@@ -481,7 +487,7 @@ public:
 
   /// Determine whether this is an array new with an unknown bound.
   bool isVariableLengthArrayNew() const {
-    return getKind() == EK_New && dyn_cast_or_null<IncompleteArrayType>(
+    return getKind() == EK_New && isa_and_nonnull<IncompleteArrayType>(
                                       getType()->getAsArrayTypeUnsafe());
   }
 

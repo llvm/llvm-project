@@ -21,6 +21,7 @@
 #include "clang/StaticAnalyzer/Core/PathSensitive/SVals.h"
 #include "clang/StaticAnalyzer/Frontend/AnalysisConsumer.h"
 #include "clang/StaticAnalyzer/Frontend/CheckerRegistry.h"
+#include "clang/Testing/TestClangConfig.h"
 #include "clang/Tooling/Tooling.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringRef.h"
@@ -91,6 +92,16 @@ private:
   mutable SVals CollectedSVals;
 };
 
+static void expectSameSignAndBitWidth(QualType ExpectedTy, QualType ActualTy,
+                                      const ASTContext &Context) {
+  EXPECT_EQ(ExpectedTy->isUnsignedIntegerType(),
+            ActualTy->isUnsignedIntegerType());
+  EXPECT_EQ(Context.getTypeSize(ExpectedTy), Context.getTypeSize(ActualTy));
+}
+
+// Fixture class for parameterized SValTest
+class SValTest : public testing::TestWithParam<TestClangConfig> {};
+
 // SVAL_TEST is a combined way of providing a short code snippet and
 // to test some programmatic predicates on symbolic values produced by the
 // engine for the actual code.
@@ -135,7 +146,10 @@ private:
     });                                                                        \
   }                                                                            \
                                                                                \
-  TEST(SValTest, NAME) { runCheckerOnCode<add##NAME##SValCollector>(CODE); }   \
+  TEST_P(SValTest, NAME) {                                                     \
+    EXPECT_TRUE(runCheckerOnCodeWithArgs<add##NAME##SValCollector>(            \
+        CODE, GetParam().getCommandLineArgs()));                               \
+  }                                                                            \
   void NAME##SValCollector::test(ExprEngine &Engine,                           \
                                  const ASTContext &Context) const
 
@@ -154,27 +168,30 @@ void foo() {
 
   SVal Y = getByName("y");
   ASSERT_FALSE(Y.getType(Context).isNull());
-  EXPECT_EQ(Context.getUIntPtrType(), Y.getType(Context));
+  expectSameSignAndBitWidth(Context.getUIntPtrType(), Y.getType(Context),
+                            Context);
 }
 
 SVAL_TEST(GetLocAsIntType, R"(
 void foo(int *x) {
-  long int a = (long int)x;
-  unsigned b = (long unsigned)&a;
-  int c = (long int)nullptr;
+  long int a = (long long int)x;
+  unsigned b = (long long unsigned)&a;
+  int c = (long long int)nullptr;
 })") {
   SVal A = getByName("a");
   ASSERT_FALSE(A.getType(Context).isNull());
+
   // TODO: Turn it into signed long
-  EXPECT_EQ(Context.getUIntPtrType(), A.getType(Context));
+  expectSameSignAndBitWidth(Context.UnsignedLongTy, A.getType(Context),
+                            Context);
 
   SVal B = getByName("b");
   ASSERT_FALSE(B.getType(Context).isNull());
-  EXPECT_EQ(Context.UnsignedIntTy, B.getType(Context));
+  expectSameSignAndBitWidth(Context.UnsignedIntTy, B.getType(Context), Context);
 
   SVal C = getByName("c");
   ASSERT_FALSE(C.getType(Context).isNull());
-  EXPECT_EQ(Context.IntTy, C.getType(Context));
+  expectSameSignAndBitWidth(Context.IntTy, C.getType(Context), Context);
 }
 
 SVAL_TEST(GetSymExprType, R"(
@@ -360,6 +377,31 @@ void foo() {
   // TODO: Change to CharTy when we support symbolic casts
   EXPECT_EQ(Context.VoidPtrTy, B.getType(Context));
 }
+
+std::vector<TestClangConfig> allTestClangConfigs() {
+  std::vector<TestClangConfig> all_configs;
+  TestClangConfig config;
+  config.Language = Lang_CXX14;
+  for (std::string target :
+       {"i686-pc-windows-msvc",   "i686-apple-darwin9",
+        "x86_64-apple-darwin9",   "x86_64-scei-ps4",
+        "x86_64-windows-msvc",    "x86_64-unknown-linux",
+        "x86_64-apple-macosx",    "x86_64-apple-ios14.0",
+        "wasm32-unknown-unknown", "wasm64-unknown-unknown",
+        "thumb-pc-win32",         "sparc64-none-openbsd",
+        "sparc-none-none",        "riscv64-unknown-linux",
+        "ppc64-windows-msvc",     "powerpc-ibm-aix",
+        "powerpc64-ibm-aix",      "s390x-ibm-zos",
+        "armv7-pc-windows-msvc",  "aarch64-pc-windows-msvc",
+        "xcore-xmos-elf"}) {
+    config.Target = target;
+    all_configs.push_back(config);
+  }
+  return all_configs;
+}
+
+INSTANTIATE_TEST_SUITE_P(SValTests, SValTest,
+                         testing::ValuesIn(allTestClangConfigs()));
 
 } // namespace
 } // namespace ento

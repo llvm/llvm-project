@@ -6,7 +6,7 @@ define void @split_block_no_fallthrough(i64 %val) #0 {
 ; CHECK-LABEL: split_block_no_fallthrough:
 ; CHECK:       ; %bb.0: ; %bb
 ; CHECK-NEXT:    stp x29, x30, [sp, #-16]! ; 16-byte Folded Spill
-; CHECK-NEXT:    cmn x0, #5 ; =5
+; CHECK-NEXT:    cmn x0, #5
 ; CHECK-NEXT:    b.le LBB0_3
 ; CHECK-NEXT:  ; %bb.1: ; %b3
 ; CHECK-NEXT:    ldr w8, [x8]

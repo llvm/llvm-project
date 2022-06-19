@@ -62,11 +62,17 @@ config("cxxabi_config") {
   include_dirs = [
     "//libcxxabi/include",
 
-    # stdlib_stdexcept.cpp depends on libc++ internals.
-    "//libcxx",
+    # Some files depend on libc++ internals.
+    "//libcxx/src",
   ]
-  cflags_cc = [ "-nostdinc++" ]
-  defines = [ "_LIBCXXABI_BUILDING_LIBRARY" ]
+  cflags_cc = [
+    "-std=c++20",
+    "-nostdinc++",
+  ]
+  defines = [
+    "_LIBCXXABI_BUILDING_LIBRARY",
+    "_LIBCPP_BUILDING_LIBRARY",
+  ]
   if (target_os == "win") {
     defines += [ "_LIBCXXABI_DISABLE_VISIBILITY_ANNOTATIONS" ]
   }

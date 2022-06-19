@@ -49,7 +49,7 @@ typedef NS_ENUM(int, An_NS_ENUM_isdoxy1) { Red, Green, Blue };
 // embedded in declarators.
 
 #define DECLARE_FUNCTION() \
-    void functionFromMacro() { \
+    void functionFromMacro(void) { \
       typedef struct Struct_notdoxy Struct_notdoxy; \
     }
 

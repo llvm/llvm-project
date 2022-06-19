@@ -9,7 +9,7 @@
 #include "mlir/Conversion/ArmNeon2dToIntr/ArmNeon2dToIntr.h"
 #include "../PassDetail.h"
 #include "mlir/Dialect/ArmNeon/ArmNeonDialect.h"
-#include "mlir/Dialect/Vector/VectorOps.h"
+#include "mlir/Dialect/Vector/IR/VectorOps.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Pass/PassRegistry.h"
@@ -28,19 +28,19 @@ public:
   /// arm.neon.intr.sdot
   LogicalResult matchAndRewrite(Sdot2dOp op,
                                 PatternRewriter &rewriter) const override {
-    Type elemType = op.b().getType().cast<VectorType>().getElementType();
-    int length = op.b().getType().cast<VectorType>().getShape()[0] *
+    Type elemType = op.getB().getType().cast<VectorType>().getElementType();
+    int length = op.getB().getType().cast<VectorType>().getShape()[0] *
                  Sdot2dOp::kReductionSize;
     VectorType flattenedVectorType = VectorType::get({length}, elemType);
-    Value b2d = op.b();
-    Value c2d = op.c();
+    Value b2d = op.getB();
+    Value c2d = op.getC();
     Location loc = op.getLoc();
     Value b1d =
         rewriter.create<vector::ShapeCastOp>(loc, flattenedVectorType, b2d);
     Value c1d =
         rewriter.create<vector::ShapeCastOp>(loc, flattenedVectorType, c2d);
-    Value newOp =
-        rewriter.create<SdotOp>(loc, op.res().getType(), op.a(), b1d, c1d);
+    Value newOp = rewriter.create<SdotOp>(loc, op.getRes().getType(), op.getA(),
+                                          b1d, c1d);
     rewriter.replaceOp(op, {newOp});
     return success();
   }
@@ -49,27 +49,23 @@ public:
 class ConvertArmNeon2dToIntr
     : public ConvertArmNeon2dToIntrBase<ConvertArmNeon2dToIntr> {
   void runOnOperation() override {
-    auto func = getOperation();
     auto *context = &getContext();
 
     RewritePatternSet patterns(context);
     populateConvertArmNeon2dToIntrPatterns(patterns);
 
-    if (failed(applyPatternsAndFoldGreedily(func, std::move(patterns))))
+    if (failed(
+            applyPatternsAndFoldGreedily(getOperation(), std::move(patterns))))
       return signalPassFailure();
   }
 };
 
 } // namespace
 
-namespace mlir {
-
-void populateConvertArmNeon2dToIntrPatterns(RewritePatternSet &patterns) {
+void mlir::populateConvertArmNeon2dToIntrPatterns(RewritePatternSet &patterns) {
   patterns.add<Sdot2dLoweringPattern>(patterns.getContext());
 }
 
-std::unique_ptr<OperationPass<FuncOp>> createConvertArmNeon2dToIntrPass() {
+std::unique_ptr<Pass> mlir::createConvertArmNeon2dToIntrPass() {
   return std::make_unique<ConvertArmNeon2dToIntr>();
 }
-
-} // namespace mlir

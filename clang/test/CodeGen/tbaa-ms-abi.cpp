@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -triple i686-pc-win32 -disable-llvm-passes -emit-llvm -o - -O1 %s | FileCheck %s -check-prefixes=CHECK,OLD-PATH
-// RUN: %clang_cc1 -triple i686-pc-win32 -disable-llvm-passes -emit-llvm -new-struct-path-tbaa -o - -O1 %s | FileCheck %s -check-prefixes=CHECK,NEW-PATH
+// RUN: %clang_cc1 -no-opaque-pointers -triple i686-pc-win32 -disable-llvm-passes -emit-llvm -o - -O1 %s | FileCheck %s -check-prefixes=CHECK,OLD-PATH
+// RUN: %clang_cc1 -no-opaque-pointers -triple i686-pc-win32 -disable-llvm-passes -emit-llvm -new-struct-path-tbaa -o - -O1 %s | FileCheck %s -check-prefixes=CHECK,NEW-PATH
 //
 // Test that TBAA works in the Microsoft C++ ABI.  We used to error out while
 // attempting to mangle RTTI.

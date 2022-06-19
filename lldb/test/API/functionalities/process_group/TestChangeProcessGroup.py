@@ -10,8 +10,6 @@ from lldbsuite.test import lldbutil
 
 
 class ChangeProcessGroupTestCase(TestBase):
-
-    mydir = TestBase.compute_mydir(__file__)
     NO_DEBUG_INFO_TESTCASE = True
 
     def setUp(self):
@@ -24,7 +22,6 @@ class ChangeProcessGroupTestCase(TestBase):
     @skipIfWindows  # setpgid call does not exist on Windows
     @expectedFailureAndroid("http://llvm.org/pr23762", api_levels=[16])
     @expectedFailureNetBSD
-    @skipIfReproducer # File synchronization is not supported during replay.
     @skipIftvOS # fork not available on tvOS.
     @skipIfwatchOS # fork not available on watchOS.
     def test_setpgid(self):

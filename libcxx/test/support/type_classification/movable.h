@@ -66,14 +66,10 @@ struct not_quite_multi_param_move_ctor {
   not_quite_multi_param_move_ctor& operator=(not_quite_multi_param_move_ctor&&);
 };
 
-struct traditional_copy_assignment_only {
-  traditional_copy_assignment_only&
-  operator=(traditional_copy_assignment_only const&);
-};
-
-struct copy_assign_with_mutable_parameter {
-  copy_assign_with_mutable_parameter&
-  operator=(copy_assign_with_mutable_parameter&);
+struct copy_with_mutable_parameter {
+  copy_with_mutable_parameter(copy_with_mutable_parameter&);
+  copy_with_mutable_parameter&
+  operator=(copy_with_mutable_parameter&);
 };
 
 struct const_move_assignment {

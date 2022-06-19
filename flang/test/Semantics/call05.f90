@@ -1,5 +1,4 @@
-! RUN: %S/test_errors.sh %s %t %flang_fc1
-! REQUIRES: shell
+! RUN: %python %S/test_errors.py %s %flang_fc1
 ! Test 15.5.2.5 constraints and restrictions for POINTER & ALLOCATABLE
 ! arguments when both sides of the call have the same attributes.
 
@@ -116,6 +115,116 @@ module m
     call samp(dmp)
     !ERROR: Dummy and actual arguments must defer the same type parameters when POINTER or ALLOCATABLE
     call sama(dma)
+  end subroutine
+
+end module
+
+module m2
+
+  character(len=10), allocatable :: t1, t2, t3, t4
+  character(len=:), allocatable :: t5, t6, t7, t8(:)
+
+  character(len=10), pointer :: p1
+  character(len=:), pointer :: p2
+
+  integer, allocatable :: x(:)
+
+ contains
+
+  subroutine sma(a)
+    character(len=:), allocatable, intent(in) :: a
+  end
+
+  subroutine sma2(a)
+    character(len=10), allocatable, intent(in) :: a
+  end
+
+  subroutine smp(p)
+    character(len=:), pointer, intent(in) :: p
+  end
+
+  subroutine smp2(p)
+    character(len=10), pointer, intent(in) :: p
+  end
+
+  subroutine smb(b)
+    integer, allocatable, intent(in) :: b(:)
+  end
+
+  subroutine test()
+
+    !ERROR: Dummy and actual arguments must defer the same type parameters when POINTER or ALLOCATABLE
+    call sma(t1)
+
+    call sma2(t1) ! ok
+
+    !ERROR: Dummy and actual arguments must defer the same type parameters when POINTER or ALLOCATABLE
+    call smp(p1)
+
+    call smp2(p1) ! ok
+
+    !ERROR: ALLOCATABLE dummy argument 'a=' must be associated with an ALLOCATABLE actual argument
+    call sma(t2(:))
+
+    !ERROR: ALLOCATABLE dummy argument 'a=' must be associated with an ALLOCATABLE actual argument
+    call sma(t3(1))
+
+    !ERROR: ALLOCATABLE dummy argument 'a=' must be associated with an ALLOCATABLE actual argument
+    call sma(t4(1:2))
+
+    call sma(t5) ! ok
+
+    !ERROR: Dummy and actual arguments must defer the same type parameters when POINTER or ALLOCATABLE
+    call sma2(t5)
+
+    call smp(p2) ! ok
+
+    !ERROR: Dummy and actual arguments must defer the same type parameters when POINTER or ALLOCATABLE
+    call smp2(p2)
+
+    !ERROR: ALLOCATABLE dummy argument 'a=' must be associated with an ALLOCATABLE actual argument
+    call sma(t5(:))
+
+    !ERROR: ALLOCATABLE dummy argument 'a=' must be associated with an ALLOCATABLE actual argument
+    call sma(t6(1))
+
+    !ERROR: ALLOCATABLE dummy argument 'a=' must be associated with an ALLOCATABLE actual argument
+    call sma(t7(1:2))
+
+    !ERROR: ALLOCATABLE dummy argument 'a=' must be associated with an ALLOCATABLE actual argument
+    call sma(t8(1))
+
+    !ERROR: ALLOCATABLE dummy argument 'b=' must be associated with an ALLOCATABLE actual argument
+    call smb(x(:))
+
+    !ERROR: ALLOCATABLE dummy argument 'b=' must be associated with an ALLOCATABLE actual argument
+    call smb(x(2))
+
+    !ERROR: ALLOCATABLE dummy argument 'b=' must be associated with an ALLOCATABLE actual argument
+    call smb(x(1:2))
+
+  end subroutine
+
+end module
+
+module test
+  type t(l)
+    integer, len :: l
+    character(l) :: c
+  end type
+
+ contains
+
+  subroutine bar(p)
+    type(t(:)), allocatable :: p(:)
+  end subroutine
+
+  subroutine foo
+    type(t(10)), allocatable :: p(:)
+
+    !ERROR: Dummy and actual arguments must defer the same type parameters when POINTER or ALLOCATABLE
+    call bar(p)
+
   end subroutine
 
 end module

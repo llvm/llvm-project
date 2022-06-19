@@ -12,17 +12,23 @@
 // decls so that the dwarf generator can describe information needed for tail
 // call frame reconstrution.
 //
-// RUN: %clang -g -O2 -target x86_64-none-linux-gnu -ggdb -S -emit-llvm %s -o - \
+// RUN: %clang -gdwarf-4 -O2 -target x86_64-none-linux-gnu -ggdb -S -emit-llvm %s -o - \
 // RUN:   | FileCheck %s -check-prefix=DECLS-FOR-EXTERN
 //
 // Do not emit a subprogram for extern decls when entry values are disabled and
 // the tuning is not set to gdb.
 //
-// RUN: %clang -g -O2 -target x86_64-none-linux-gnu -gsce -S -emit-llvm %s -o - \
+// RUN: %clang -gdwarf-4 -O2 -target x86_64-none-linux-gnu -gsce -S -emit-llvm %s -o - \
 // RUN:   | FileCheck %s -check-prefix=NO-DECLS-FOR-EXTERN
 
 // DECLS-FOR-EXTERN-NOT: !DICompileUnit({{.*}}retainedTypes: !{{[0-9]+}}
+// DECLS-FOR-EXTERN: [[INT_TYPE:![0-9]+]] = !DIBasicType(name: "int",
 // DECLS-FOR-EXTERN: !DISubprogram(name: "fn1"
+// DECLS-FOR-EXTERN-SAME: type: [[FN1_TYPE:![0-9]+]],
+// DECLS-FOR-EXTERN: [[FN1_TYPE]] = !DISubroutineType(types: [[FN1_TYPES:![0-9]+]])
+// DECLS-FOR-EXTERN: [[FN1_TYPES]] = !{[[X_TYPE:![0-9]+]],
+// DECLS-FOR-EXTERN: [[X_TYPE]] = !DIDerivedType(tag: DW_TAG_typedef, name: "x",
+// DECLS-FOR-EXTERN-SAME: baseType: [[INT_TYPE]])
 // DECLS-FOR-EXTERN-NOT: !DISubprogram(name: "memcmp"
 // DECLS-FOR-EXTERN-NOT: !DISubprogram(name: "__some_reserved_name"
 
@@ -30,7 +36,8 @@
 // NO-DECLS-FOR-EXTERN-NOT: !DISubprogram(name: "memcmp"
 // NO-DECLS-FOR-EXTERN-NOT: !DISubprogram(name: "__some_reserved_name"
 
-extern int fn1(int a, int b);
+typedef int x;
+extern x fn1(int a, int b);
 extern int memcmp(const void *s1, const void *s2, unsigned long n);
 extern void __some_reserved_name(void);
 

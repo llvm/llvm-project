@@ -65,12 +65,6 @@ void SSAUpdaterBulk::AddUse(unsigned Var, Use *U) {
   Rewrites[Var].Uses.push_back(U);
 }
 
-/// Return true if the SSAUpdater already has a value for the specified variable
-/// in the specified block.
-bool SSAUpdaterBulk::HasValueForBlock(unsigned Var, BasicBlock *BB) {
-  return (Var < Rewrites.size()) ? Rewrites[Var].Defines.count(BB) : false;
-}
-
 // Compute value at the given block BB. We either should already know it, or we
 // should be able to recursively reach it going up dominator tree.
 Value *SSAUpdaterBulk::computeValueAt(BasicBlock *BB, RewriteInfo &R,

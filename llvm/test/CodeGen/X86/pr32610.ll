@@ -13,20 +13,20 @@ define void @pr32610(i32 %a0, i32 %a1) #0 {
 ; CHECK-NEXT:    pushl %ebp
 ; CHECK-NEXT:    movl %esp, %ebp
 ; CHECK-NEXT:    pushl %esi
-; CHECK-NEXT:    movl 8(%ebp), %ecx
-; CHECK-NEXT:    movl L_b$non_lazy_ptr, %edx
-; CHECK-NEXT:    xorl %eax, %eax
-; CHECK-NEXT:    cmpl (%edx), %ecx
-; CHECK-NEXT:    sete %al
+; CHECK-NEXT:    movl 8(%ebp), %edx
+; CHECK-NEXT:    movl L_b$non_lazy_ptr, %eax
+; CHECK-NEXT:    xorl %ecx, %ecx
+; CHECK-NEXT:    cmpl (%eax), %edx
+; CHECK-NEXT:    sete %cl
 ; CHECK-NEXT:    xorl %esi, %esi
 ; CHECK-NEXT:    incl %esi
 ; CHECK-NEXT:    cmpl $0, 12(%ebp)
-; CHECK-NEXT:    cmovel %esi, %eax
-; CHECK-NEXT:    cmpl (%edx), %ecx
-; CHECK-NEXT:    cmovnel %esi, %eax
-; CHECK-NEXT:    movl L_c$non_lazy_ptr, %ecx
-; CHECK-NEXT:    movl %eax, (%ecx)
-; CHECK-NEXT:    movl (%edx), %eax
+; CHECK-NEXT:    cmovel %esi, %ecx
+; CHECK-NEXT:    cmpl (%eax), %edx
+; CHECK-NEXT:    cmovnel %esi, %ecx
+; CHECK-NEXT:    movl L_c$non_lazy_ptr, %edx
+; CHECK-NEXT:    movl %ecx, (%edx)
+; CHECK-NEXT:    movl (%eax), %eax
 ; CHECK-NEXT:    testl %eax, %eax
 ; CHECK-NEXT:    movl $2, %ecx
 ; CHECK-NEXT:    cmovnel %eax, %ecx

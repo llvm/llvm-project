@@ -9,7 +9,6 @@ define void @test1(%struct.B* %p) personality i32 (...)* @__CxxFrameHandler3 {
 ; CHECK-LABEL: @test1(
 ; CHECK-NEXT:  invoke.cont:
 ; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr inbounds [[STRUCT_B:%.*]], %struct.B* [[P:%.*]], i64 0, i32 0
-; CHECK-NEXT:    [[GEP2:%.*]] = getelementptr inbounds [[STRUCT_B]], %struct.B* [[P]], i64 0, i32 1
 ; CHECK-NEXT:    [[TMP0:%.*]] = bitcast i64* [[GEP1]] to <2 x i64>*
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i64>, <2 x i64>* [[TMP0]], align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <2 x i64> [[TMP1]], i32 0

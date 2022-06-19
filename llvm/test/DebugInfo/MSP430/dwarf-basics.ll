@@ -56,7 +56,7 @@
 ; CHECK:         DW_AT_name    ("p")
 ; CHECK:         DW_AT_decl_file       ("/tmp{{[/\\]}}dwarf-basics.c")
 ; CHECK:         DW_AT_decl_line       (5)
-; CHECK:         DW_AT_type    (0x{{.*}} "X*")
+; CHECK:         DW_AT_type    (0x{{.*}} "X *")
 
 ; CHECK:       NULL
 
@@ -81,10 +81,10 @@
 
 ; CHECK:       DW_TAG_member
 ; CHECK:         DW_AT_name    ("a")
-; CHECK:         DW_AT_type    (0x{{.*}} "*")
+; CHECK:         DW_AT_type    (0x{{.*}} "void *")
 ; CHECK:         DW_AT_decl_file       ("/tmp{{[/\\]}}dwarf-basics.c")
 ; CHECK:         DW_AT_decl_line       (2)
-; CHECK:         DW_AT_data_member_location    (0x00)
+; CHECK:         DW_AT_data_member_location    (0)
 
 ; CHECK:       NULL
 

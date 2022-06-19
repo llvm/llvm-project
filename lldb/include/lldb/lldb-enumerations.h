@@ -749,6 +749,7 @@ enum BasicType {
   eBasicTypeUnsignedWChar,
   eBasicTypeChar16,
   eBasicTypeChar32,
+  eBasicTypeChar8,
   eBasicTypeShort,
   eBasicTypeUnsignedShort,
   eBasicTypeInt,
@@ -1137,7 +1138,23 @@ enum SaveCoreStyle {
   eSaveCoreUnspecified = 0,
   eSaveCoreFull = 1,
   eSaveCoreDirtyOnly = 2,
+  eSaveCoreStackOnly = 3,
 };
+
+// Type of counter values associated with instructions in a trace.
+enum TraceCounter {
+  // Timestamp counter, like the one offered by Intel CPUs (TSC).
+  eTraceCounterTSC,
+};
+
+// Events that might happen during a trace session.
+FLAGS_ENUM(TraceEvents){
+    // Tracing was paused. If instructions were executed after pausing
+    // and before resuming, the TraceCursor used to traverse the trace
+    // should provide an error signalinig this data loss.
+    eTraceEventPaused = (1u << 0),
+};
+LLDB_MARK_AS_BITMASK_ENUM(TraceEvents)
 
 } // namespace lldb
 

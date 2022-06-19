@@ -1,4 +1,5 @@
-; RUN: llc -filetype=asm %s -o - | FileCheck %s
+; RUN: llc -filetype=asm %s -o - -experimental-debug-variable-locations=false | FileCheck %s
+; RUN: llc -filetype=asm %s -o - -experimental-debug-variable-locations=true | FileCheck %s --check-prefixes=CHECK,INSTRREF
 
 ; Test the extension of debug ranges from predecessors.
 ; Generated from the source file LiveDebugValues.c:
@@ -29,8 +30,10 @@
 
 ; DBG_VALUE for variable "n" is extended into %bb.5 from its predecessors %bb.3
 ; and %bb.4.
-; CHECK:       .LBB0_5:
-; CHECK-NEXT:  #DEBUG_VALUE: main:n <- $ebx
+; CHECK:         .LBB0_5:
+; INSTRREF-NEXT: #DEBUG_VALUE: main:argc <- [DW_OP_LLVM_entry_value 1] $edi
+; INSTRREF-NEXT: #DEBUG_VALUE: main:argv <- [DW_OP_LLVM_entry_value 1] $rsi
+; CHECK-NEXT:    #DEBUG_VALUE: main:n <- $ebx
 ;   Other register values have been clobbered.
 ; CHECK-NOT:   #DEBUG_VALUE:
 ; CHECK:         movl    %e{{..}}, m(%rip)

@@ -12,20 +12,22 @@
 //===----------------------------------------------------------------------===//
 
 #include "msan.h"
+
 #include "msan_chained_origin_depot.h"
 #include "msan_origin.h"
+#include "msan_poisoning.h"
 #include "msan_report.h"
 #include "msan_thread.h"
-#include "msan_poisoning.h"
 #include "sanitizer_common/sanitizer_atomic.h"
 #include "sanitizer_common/sanitizer_common.h"
-#include "sanitizer_common/sanitizer_flags.h"
 #include "sanitizer_common/sanitizer_flag_parser.h"
+#include "sanitizer_common/sanitizer_flags.h"
+#include "sanitizer_common/sanitizer_interface_internal.h"
 #include "sanitizer_common/sanitizer_libc.h"
 #include "sanitizer_common/sanitizer_procmaps.h"
+#include "sanitizer_common/sanitizer_stackdepot.h"
 #include "sanitizer_common/sanitizer_stacktrace.h"
 #include "sanitizer_common/sanitizer_symbolizer.h"
-#include "sanitizer_common/sanitizer_stackdepot.h"
 #include "ubsan/ubsan_flags.h"
 #include "ubsan/ubsan_init.h"
 
@@ -67,8 +69,6 @@ THREADLOCAL u64 __msan_va_arg_overflow_size_tls;
 SANITIZER_INTERFACE_ATTRIBUTE
 THREADLOCAL u32 __msan_origin_tls;
 
-static THREADLOCAL int is_in_symbolizer;
-
 extern "C" SANITIZER_WEAK_ATTRIBUTE const int __msan_track_origins;
 
 int __msan_get_track_origins() {
@@ -79,15 +79,19 @@ extern "C" SANITIZER_WEAK_ATTRIBUTE const int __msan_keep_going;
 
 namespace __msan {
 
-void EnterSymbolizer() { ++is_in_symbolizer; }
-void ExitSymbolizer()  { --is_in_symbolizer; }
-bool IsInSymbolizer() { return is_in_symbolizer; }
+static THREADLOCAL int is_in_symbolizer_or_unwinder;
+static void EnterSymbolizerOrUnwider() { ++is_in_symbolizer_or_unwinder; }
+static void ExitSymbolizerOrUnwider() { --is_in_symbolizer_or_unwinder; }
+bool IsInSymbolizerOrUnwider() { return is_in_symbolizer_or_unwinder; }
+
+struct UnwinderScope {
+  UnwinderScope() { EnterSymbolizerOrUnwider(); }
+  ~UnwinderScope() { ExitSymbolizerOrUnwider(); }
+};
 
 static Flags msan_flags;
 
-Flags *flags() {
-  return &msan_flags;
-}
+Flags *flags() { return &msan_flags; }
 
 int msan_inited = 0;
 bool msan_init_is_running;
@@ -299,7 +303,7 @@ u32 ChainOrigin(u32 id, StackTrace *stack) {
   return chained.raw_id();
 }
 
-} // namespace __msan
+}  // namespace __msan
 
 void __sanitizer::BufferedStackTrace::UnwindImpl(
     uptr pc, uptr bp, void *context, bool request_fast, u32 max_depth) {
@@ -307,7 +311,7 @@ void __sanitizer::BufferedStackTrace::UnwindImpl(
   MsanThread *t = GetCurrentThread();
   if (!t || !StackTrace::WillUseFastUnwind(request_fast)) {
     // Block reports from our interceptors during _Unwind_Backtrace.
-    SymbolizerScope sym_scope;
+    UnwinderScope sym_scope;
     return Unwind(max_depth, pc, bp, context, t ? t->stack_top() : 0,
                   t ? t->stack_bottom() : 0, false);
   }
@@ -460,7 +464,8 @@ void __msan_init() {
     Die();
   }
 
-  Symbolizer::GetOrInit()->AddHooks(EnterSymbolizer, ExitSymbolizer);
+  Symbolizer::GetOrInit()->AddHooks(EnterSymbolizerOrUnwider,
+                                    ExitSymbolizerOrUnwider);
 
   InitializeCoverage(common_flags()->coverage, common_flags()->coverage_dir);
 
@@ -470,7 +475,7 @@ void __msan_init() {
 
   MsanThread *main_thread = MsanThread::Create(nullptr, nullptr);
   SetCurrentThread(main_thread);
-  main_thread->ThreadStart();
+  main_thread->Init();
 
 #if MSAN_CONTAINS_UBSAN
   __ubsan::InitAsPlugin();
@@ -515,6 +520,7 @@ void __msan_dump_shadow(const void *x, uptr size) {
   }
 
   unsigned char *s = (unsigned char*)MEM_TO_SHADOW(x);
+  Printf("%p[%p]  ", (void *)s, x);
   for (uptr i = 0; i < size; i++)
     Printf("%x%x ", s[i] >> 4, s[i] & 0xf);
   Printf("\n");
@@ -604,7 +610,7 @@ void __msan_set_alloca_origin4(void *a, uptr size, char *descr, uptr pc) {
     id = Origin::CreateStackOrigin(idx).raw_id();
     *id_ptr = id;
     if (print)
-      Printf("First time: idx=%d id=%d %s %p \n", idx, id, descr + 4, pc);
+      Printf("First time: idx=%d id=%d %s 0x%zx \n", idx, id, descr + 4, pc);
   }
   if (print)
     Printf("__msan_set_alloca_origin: descr=%s id=%x\n", descr + 4, id);

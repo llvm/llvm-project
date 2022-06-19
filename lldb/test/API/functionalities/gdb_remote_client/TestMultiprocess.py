@@ -3,10 +3,12 @@ import lldb
 import unittest
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test.decorators import *
-from gdbclientutils import *
+from lldbsuite.test.gdbclientutils import *
+from lldbsuite.test.lldbgdbclient import GDBRemoteTestBase
 
 
 class TestMultiprocess(GDBRemoteTestBase):
+
     def test_qfThreadInfo(self):
         class MyResponder(MockGDBServerResponder):
             def qfThreadInfo(self):

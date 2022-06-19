@@ -6,24 +6,22 @@
 //
 //===----------------------------------------------------------------------===//
 
-// UNSUPPORTED: no-exceptions
-
 // <algorithm>
 
 // template <class _Compare> struct __debug_less
 
 // __debug_less checks that a comparator actually provides a strict-weak ordering.
 
-struct DebugException {};
-
-#define _LIBCPP_DEBUG 0
-#define _LIBCPP_ASSERT(x, m) ((x) ? (void)0 : throw ::DebugException())
+// REQUIRES: has-unix-headers
+// UNSUPPORTED: !libcpp-has-debug-mode, c++03
 
 #include <algorithm>
-#include <iterator>
 #include <cassert>
+#include <functional>
+#include <iterator>
 
 #include "test_macros.h"
+#include "check_assertion.h"
 
 template <int ID>
 struct MyType {
@@ -50,14 +48,6 @@ struct GoodComparator : public CompareBase {
     bool operator()(ValueType const& lhs, ValueType const& rhs) const {
         ++CompareBase::called;
         return lhs < rhs;
-    }
-};
-
-template <class ValueType>
-struct BadComparator : public CompareBase {
-    bool operator()(ValueType const&, ValueType const&) const {
-        ++CompareBase::called;
-        return true;
     }
 };
 
@@ -136,29 +126,6 @@ void test_passing() {
 
         assert(d(one, three) == true);
         assert(called == 1);
-        called = 0;
-    }
-}
-
-void test_failing() {
-    int& called = CompareBase::called;
-    called = 0;
-    MT0 one(1);
-    MT0 two(2);
-
-    {
-        typedef BadComparator<MT0> C;
-        typedef __debug_less<C> D;
-        C c;
-        D d(c);
-
-        try {
-            d(one, two);
-            assert(false);
-        } catch (DebugException const&) {
-        }
-
-        assert(called == 2);
         called = 0;
     }
 }
@@ -270,7 +237,7 @@ void test_value_categories() {
     assert(dl(static_cast<int&&>(1), static_cast<const int&&>(2)));
 }
 
-#if TEST_STD_VER > 17
+#if TEST_STD_VER > 11
 constexpr bool test_constexpr() {
     std::less<> cmp{};
     __debug_less<std::less<> > dcmp(cmp);
@@ -282,12 +249,11 @@ constexpr bool test_constexpr() {
 
 int main(int, char**) {
     test_passing();
-    test_failing();
     test_upper_and_lower_bound();
     test_non_const_arg_cmp();
     test_value_iterator();
     test_value_categories();
-#if TEST_STD_VER > 17
+#if TEST_STD_VER > 11
     static_assert(test_constexpr(), "");
 #endif
     return 0;

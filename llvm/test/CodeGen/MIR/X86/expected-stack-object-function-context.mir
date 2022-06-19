@@ -1,0 +1,13 @@
+# RUN: not llc -march=x86-64 -run-pass=none -o /dev/null %s 2>&1 | FileCheck %s
+
+---
+name:            test
+frameInfo:
+  # CHECK: [[@LINE+1]]:22: expected a stack object
+  functionContext:  '0'
+stack:
+  - { id: 0, offset: -24, size: 8, alignment: 8 }
+body: |
+  bb.0:
+
+...

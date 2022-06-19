@@ -52,10 +52,9 @@ bool isSmallType() {
 // of type 'LastType' check that it can no longer be accessed.
 template <class LastType = int>
 void assertEmpty(std::any const& a) {
-    using namespace std;
     assert(!a.has_value());
     RTTI_ASSERT(a.type() == typeid(void));
-    assert(any_cast<LastType const>(&a) == nullptr);
+    assert(std::any_cast<LastType const>(&a) == nullptr);
 }
 
 template <class Type>
@@ -89,11 +88,9 @@ assertContains(std::any const& a, Value value) {
 template <class Type>
 _LIBCPP_AVAILABILITY_THROW_BAD_ANY_CAST
 void modifyValue(std::any& a, int value) {
-    using namespace std;
-    using namespace std::experimental;
     assert(a.has_value());
     assert(containsType<Type>(a));
-    any_cast<Type&>(a).value = value;
+    std::any_cast<Type&>(a).value = value;
 }
 
 // A test type that will trigger the small object optimization within 'any'.
@@ -422,11 +419,9 @@ static_assert(!IsSmallObject<large_tracked_t>::value, "must not be small");
 
 template <class Type, class ...Args>
 void assertArgsMatch(std::any const& a) {
-    using namespace std;
-    using namespace std::experimental;
     assert(a.has_value());
     assert(containsType<Type>(a));
-    assert(any_cast<Type const &>(a).arg_types == &makeArgumentID<Args...>());
+    assert(std::any_cast<Type const &>(a).arg_types == &makeArgumentID<Args...>());
 };
 
 

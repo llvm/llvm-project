@@ -40,4 +40,4 @@
 // DWARFv5-O-NOT: DW_TAG_subprogram
 // DWARFv5-DWO: DW_TAG_subprogram
 
-int main() {}
+int main(void) {}

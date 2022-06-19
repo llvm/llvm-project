@@ -13,11 +13,12 @@
 //===----------------------------------------------------------------------===//
 
 #include "AllocationState.h"
-#include "clang/StaticAnalyzer/Checkers/BuiltinCheckerRegistration.h"
 #include "InterCheckerAPI.h"
+#include "clang/StaticAnalyzer/Checkers/BuiltinCheckerRegistration.h"
 #include "clang/StaticAnalyzer/Core/BugReporter/BugType.h"
 #include "clang/StaticAnalyzer/Core/BugReporter/CommonBugCategories.h"
 #include "clang/StaticAnalyzer/Core/Checker.h"
+#include "clang/StaticAnalyzer/Core/PathSensitive/CallDescription.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/CallEvent.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/CheckerContext.h"
 
@@ -34,9 +35,9 @@ namespace {
 class InnerPointerChecker
     : public Checker<check::DeadSymbols, check::PostCall> {
 
-  CallDescription AppendFn, AssignFn, AddressofFn, ClearFn, CStrFn, DataFn,
-      DataMemberFn, EraseFn, InsertFn, PopBackFn, PushBackFn, ReplaceFn,
-      ReserveFn, ResizeFn, ShrinkToFitFn, SwapFn;
+  CallDescription AppendFn, AssignFn, AddressofFn, AddressofFn_, ClearFn,
+      CStrFn, DataFn, DataMemberFn, EraseFn, InsertFn, PopBackFn, PushBackFn,
+      ReplaceFn, ReserveFn, ResizeFn, ShrinkToFitFn, SwapFn;
 
 public:
   class InnerPointerBRVisitor : public BugReporterVisitor {
@@ -73,7 +74,7 @@ public:
   InnerPointerChecker()
       : AppendFn({"std", "basic_string", "append"}),
         AssignFn({"std", "basic_string", "assign"}),
-        AddressofFn({"std", "addressof"}),
+        AddressofFn({"std", "addressof"}), AddressofFn_({"std", "__addressof"}),
         ClearFn({"std", "basic_string", "clear"}),
         CStrFn({"std", "basic_string", "c_str"}), DataFn({"std", "data"}, 1),
         DataMemberFn({"std", "basic_string", "data"}),
@@ -125,19 +126,15 @@ bool InnerPointerChecker::isInvalidatingMemberFunction(
       return true;
     return false;
   }
-  return (isa<CXXDestructorCall>(Call) || Call.isCalled(AppendFn) ||
-          Call.isCalled(AssignFn) || Call.isCalled(ClearFn) ||
-          Call.isCalled(EraseFn) || Call.isCalled(InsertFn) ||
-          Call.isCalled(PopBackFn) || Call.isCalled(PushBackFn) ||
-          Call.isCalled(ReplaceFn) || Call.isCalled(ReserveFn) ||
-          Call.isCalled(ResizeFn) || Call.isCalled(ShrinkToFitFn) ||
-          Call.isCalled(SwapFn));
+  return isa<CXXDestructorCall>(Call) ||
+         matchesAny(Call, AppendFn, AssignFn, ClearFn, EraseFn, InsertFn,
+                    PopBackFn, PushBackFn, ReplaceFn, ReserveFn, ResizeFn,
+                    ShrinkToFitFn, SwapFn);
 }
 
 bool InnerPointerChecker::isInnerPointerAccessFunction(
     const CallEvent &Call) const {
-  return (Call.isCalled(CStrFn) || Call.isCalled(DataFn) ||
-          Call.isCalled(DataMemberFn));
+  return matchesAny(Call, CStrFn, DataFn, DataMemberFn);
 }
 
 void InnerPointerChecker::markPtrSymbolsReleased(const CallEvent &Call,
@@ -182,9 +179,9 @@ void InnerPointerChecker::checkFunctionArguments(const CallEvent &Call,
       if (!ArgRegion)
         continue;
 
-      // std::addressof function accepts a non-const reference as an argument,
+      // std::addressof functions accepts a non-const reference as an argument,
       // but doesn't modify it.
-      if (Call.isCalled(AddressofFn))
+      if (matchesAny(Call, AddressofFn, AddressofFn_))
         continue;
 
       markPtrSymbolsReleased(Call, State, ArgRegion, C);
@@ -323,8 +320,7 @@ PathDiagnosticPieceRef InnerPointerChecker::InnerPointerBRVisitor::VisitNode(
 
   SmallString<256> Buf;
   llvm::raw_svector_ostream OS(Buf);
-  OS << "Pointer to inner buffer of '" << ObjTy.getAsString()
-     << "' obtained here";
+  OS << "Pointer to inner buffer of '" << ObjTy << "' obtained here";
   PathDiagnosticLocation Pos(S, BRC.getSourceManager(),
                              N->getLocationContext());
   return std::make_shared<PathDiagnosticEventPiece>(Pos, OS.str(), true);

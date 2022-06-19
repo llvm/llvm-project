@@ -1,9 +1,8 @@
 //===------ unittests/ExtensibleRTTITest.cpp - Extensible RTTI Tests ------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -67,9 +66,9 @@ TEST(ExtensibleRTTI, cast) {
   MyDerivedType D;
   MyBaseType &BD = D;
 
-  cast<MyBaseType>(D);
-  cast<MyBaseType>(BD);
-  cast<MyDerivedType>(BD);
+  (void)cast<MyBaseType>(D);
+  (void)cast<MyBaseType>(BD);
+  (void)cast<MyDerivedType>(BD);
 }
 
 TEST(ExtensibleRTTI, dyn_cast) {

@@ -36,18 +36,17 @@
 
 // C89-ish modes.
 LANGSTANDARD(c89, "c89",
-             C, "ISO C 1990",
-             ImplicitInt)
+             C, "ISO C 1990", 0)
 LANGSTANDARD_ALIAS(c89, "c90")
 LANGSTANDARD_ALIAS(c89, "iso9899:1990")
 
 LANGSTANDARD(c94, "iso9899:199409",
              C, "ISO C 1990 with amendment 1",
-             Digraphs | ImplicitInt)
+             Digraphs)
 
 LANGSTANDARD(gnu89, "gnu89",
              C, "ISO C 1990 with GNU extensions",
-             LineComment | Digraphs | GNUMode | ImplicitInt)
+             LineComment | Digraphs | GNUMode)
 LANGSTANDARD_ALIAS(gnu89, "gnu90")
 
 // C99-ish modes
@@ -180,8 +179,15 @@ LANGSTANDARD(opencl20, "cl2.0",
 LANGSTANDARD(opencl30, "cl3.0",
              OpenCL, "OpenCL 3.0",
              LineComment | C99 | Digraphs | HexFloat | OpenCL)
-LANGSTANDARD(openclcpp, "clc++",
-             OpenCL, "C++ for OpenCL",
+
+LANGSTANDARD(openclcpp10, "clc++1.0",
+             OpenCL, "C++ for OpenCL 1.0",
+             LineComment | CPlusPlus | CPlusPlus11 | CPlusPlus14 | CPlusPlus17 |
+             Digraphs | HexFloat | OpenCL)
+LANGSTANDARD_ALIAS(openclcpp10, "clc++")
+
+LANGSTANDARD(openclcpp2021, "clc++2021",
+             OpenCL, "C++ for OpenCL 2021",
              LineComment | CPlusPlus | CPlusPlus11 | CPlusPlus14 | CPlusPlus17 |
              Digraphs | HexFloat | OpenCL)
 
@@ -190,7 +196,9 @@ LANGSTANDARD_ALIAS_DEPR(opencl11, "CL1.1")
 LANGSTANDARD_ALIAS_DEPR(opencl12, "CL1.2")
 LANGSTANDARD_ALIAS_DEPR(opencl20, "CL2.0")
 LANGSTANDARD_ALIAS_DEPR(opencl30, "CL3.0")
-LANGSTANDARD_ALIAS_DEPR(openclcpp, "CLC++")
+LANGSTANDARD_ALIAS_DEPR(openclcpp10, "CLC++")
+LANGSTANDARD_ALIAS_DEPR(openclcpp10, "CLC++1.0")
+LANGSTANDARD_ALIAS_DEPR(openclcpp2021, "CLC++2021")
 
 // CUDA
 LANGSTANDARD(cuda, "cuda", CUDA, "NVIDIA CUDA(tm)",
@@ -199,6 +207,36 @@ LANGSTANDARD(cuda, "cuda", CUDA, "NVIDIA CUDA(tm)",
 // HIP
 LANGSTANDARD(hip, "hip", HIP, "HIP",
              LineComment | CPlusPlus | CPlusPlus11 | CPlusPlus14 | Digraphs)
+
+// HLSL
+LANGSTANDARD(hlsl, "hlsl",
+             HLSL, "High Level Shader Language",
+             LineComment | HLSL | CPlusPlus )
+
+LANGSTANDARD(hlsl2015, "hlsl2015",
+             HLSL, "High Level Shader Language 2015",
+             LineComment | HLSL | CPlusPlus )
+
+LANGSTANDARD(hlsl2016, "hlsl2016",
+             HLSL, "High Level Shader Language 2016",
+             LineComment | HLSL | CPlusPlus )
+
+LANGSTANDARD(hlsl2017, "hlsl2017",
+             HLSL, "High Level Shader Language 2017",
+             LineComment | HLSL | CPlusPlus )
+
+LANGSTANDARD(hlsl2018, "hlsl2018",
+             HLSL, "High Level Shader Language 2018",
+             LineComment | HLSL | CPlusPlus )
+
+LANGSTANDARD(hlsl2021, "hlsl2021",
+             HLSL, "High Level Shader Language 2021",
+             LineComment | HLSL | CPlusPlus )
+
+LANGSTANDARD(hlsl202x, "hlsl202x",
+             HLSL, "High Level Shader Language 202x",
+             LineComment | HLSL | CPlusPlus | CPlusPlus11)
+
 
 #undef LANGSTANDARD
 #undef LANGSTANDARD_ALIAS

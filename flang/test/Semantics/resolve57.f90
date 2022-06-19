@@ -1,5 +1,4 @@
-! RUN: %S/test_errors.sh %s %t %flang_fc1
-! REQUIRES: shell
+! RUN: %python %S/test_errors.py %s %flang_fc1
 ! Tests for the last sentence of C1128:
 !A variable-name that is not permitted to appear in a variable definition
 !context shall not appear in a LOCAL or LOCAL_INIT locality-spec.
@@ -86,6 +85,13 @@ subroutine s6()
   end select
 
   select type ( a => func() )
+  type is ( point )
+    ! C1158 This is OK because 'a' is associated with a variable
+    do concurrent (i=1:5) local(a)
+    end do
+  end select
+
+  select type ( a => (func()) )
   type is ( point )
     ! C1158 This is not OK because 'a' is not associated with a variable
 !ERROR: 'a' may not appear in a locality-spec because it is not definable

@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -fkeep-static-consts -emit-llvm %s -o - -triple=x86_64-unknown-linux-gnu | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -fkeep-static-consts -emit-llvm %s -o - -triple=x86_64-unknown-linux-gnu | FileCheck %s
 
 // CHECK: @_ZL7srcvers = internal constant [4 x i8] c"xyz\00", align 1
 // CHECK: @_ZL8srcvers2 = internal constant [4 x i8] c"abc\00", align 1

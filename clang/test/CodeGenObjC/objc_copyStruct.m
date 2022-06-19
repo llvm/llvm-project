@@ -1,5 +1,5 @@
-// RUN: %clang -target x86_64-unknown-windows-msvc -fobjc-runtime=ios -Wno-objc-root-class -S -o - -emit-llvm %s | FileCheck %s
-// RUN: %clang -target x86_64-apple-ios -fobjc-runtime=ios -Wno-objc-root-class -S -o - -emit-llvm %s | FileCheck %s
+// RUN: %clang -Xclang -no-opaque-pointers -target x86_64-unknown-windows-msvc -fobjc-runtime=ios -Wno-objc-root-class -S -o - -emit-llvm %s | FileCheck %s
+// RUN: %clang -Xclang -no-opaque-pointers -target x86_64-apple-ios -fobjc-runtime=ios -Wno-objc-root-class -S -o - -emit-llvm %s | FileCheck %s
 
 struct S {
   float f, g;

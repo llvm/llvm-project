@@ -26,7 +26,7 @@ add_llvm_target(PowerPCCodeGen
   PPCBranchCoalescing.cpp
   PPCCallingConv.cpp
   PPCCCState.cpp
-  PPCCTRLoops.cpp
+  PPCCTRLoopsVerify.cpp
   PPCExpandAtomicPseudoInsts.cpp
   PPCHazardRecognizers.cpp
   PPCInstrInfo.cpp
@@ -55,6 +55,7 @@ add_llvm_target(PowerPCCodeGen
   PPCExpandISEL.cpp
   PPCPreEmitPeephole.cpp
   PPCLowerMASSVEntries.cpp
+  PPCGenScalarMASSEntries.cpp
   GISel/PPCCallLowering.cpp
   GISel/PPCRegisterBankInfo.cpp
   GISel/PPCLegalizerInfo.cpp

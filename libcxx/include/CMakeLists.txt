@@ -4,76 +4,124 @@ set(files
   __algorithm/any_of.h
   __algorithm/binary_search.h
   __algorithm/clamp.h
-  __algorithm/comp_ref_type.h
   __algorithm/comp.h
+  __algorithm/comp_ref_type.h
+  __algorithm/copy.h
   __algorithm/copy_backward.h
   __algorithm/copy_if.h
   __algorithm/copy_n.h
-  __algorithm/copy.h
-  __algorithm/count_if.h
   __algorithm/count.h
-  __algorithm/equal_range.h
+  __algorithm/count_if.h
   __algorithm/equal.h
-  __algorithm/fill_n.h
+  __algorithm/equal_range.h
   __algorithm/fill.h
+  __algorithm/fill_n.h
+  __algorithm/find.h
   __algorithm/find_end.h
   __algorithm/find_first_of.h
-  __algorithm/find_if_not.h
   __algorithm/find_if.h
-  __algorithm/find.h
-  __algorithm/for_each_n.h
+  __algorithm/find_if_not.h
   __algorithm/for_each.h
-  __algorithm/generate_n.h
+  __algorithm/for_each_n.h
   __algorithm/generate.h
+  __algorithm/generate_n.h
   __algorithm/half_positive.h
+  __algorithm/in_found_result.h
+  __algorithm/in_fun_result.h
+  __algorithm/in_in_out_result.h
+  __algorithm/in_in_result.h
+  __algorithm/in_out_out_result.h
+  __algorithm/in_out_result.h
   __algorithm/includes.h
   __algorithm/inplace_merge.h
-  __algorithm/is_heap_until.h
   __algorithm/is_heap.h
+  __algorithm/is_heap_until.h
   __algorithm/is_partitioned.h
   __algorithm/is_permutation.h
-  __algorithm/is_sorted_until.h
   __algorithm/is_sorted.h
+  __algorithm/is_sorted_until.h
   __algorithm/iter_swap.h
+  __algorithm/iterator_operations.h
   __algorithm/lexicographical_compare.h
   __algorithm/lower_bound.h
   __algorithm/make_heap.h
-  __algorithm/max_element.h
+  __algorithm/make_projected.h
   __algorithm/max.h
+  __algorithm/max_element.h
   __algorithm/merge.h
-  __algorithm/min_element.h
   __algorithm/min.h
-  __algorithm/minmax_element.h
+  __algorithm/min_element.h
+  __algorithm/min_max_result.h
   __algorithm/minmax.h
+  __algorithm/minmax_element.h
   __algorithm/mismatch.h
-  __algorithm/move_backward.h
   __algorithm/move.h
+  __algorithm/move_backward.h
   __algorithm/next_permutation.h
   __algorithm/none_of.h
   __algorithm/nth_element.h
-  __algorithm/partial_sort_copy.h
   __algorithm/partial_sort.h
+  __algorithm/partial_sort_copy.h
+  __algorithm/partition.h
   __algorithm/partition_copy.h
   __algorithm/partition_point.h
-  __algorithm/partition.h
   __algorithm/pop_heap.h
   __algorithm/prev_permutation.h
   __algorithm/push_heap.h
-  __algorithm/remove_copy_if.h
-  __algorithm/remove_copy.h
-  __algorithm/remove_if.h
+  __algorithm/ranges_adjacent_find.h
+  __algorithm/ranges_all_of.h
+  __algorithm/ranges_any_of.h
+  __algorithm/ranges_binary_search.h
+  __algorithm/ranges_copy.h
+  __algorithm/ranges_copy_backward.h
+  __algorithm/ranges_copy_if.h
+  __algorithm/ranges_copy_n.h
+  __algorithm/ranges_count.h
+  __algorithm/ranges_count_if.h
+  __algorithm/ranges_equal.h
+  __algorithm/ranges_fill.h
+  __algorithm/ranges_fill_n.h
+  __algorithm/ranges_find.h
+  __algorithm/ranges_find_first_of.h
+  __algorithm/ranges_find_if.h
+  __algorithm/ranges_find_if_not.h
+  __algorithm/ranges_for_each.h
+  __algorithm/ranges_for_each_n.h
+  __algorithm/ranges_is_partitioned.h
+  __algorithm/ranges_is_sorted.h
+  __algorithm/ranges_is_sorted_until.h
+  __algorithm/ranges_lexicographical_compare.h
+  __algorithm/ranges_lower_bound.h
+  __algorithm/ranges_max.h
+  __algorithm/ranges_max_element.h
+  __algorithm/ranges_min.h
+  __algorithm/ranges_min_element.h
+  __algorithm/ranges_minmax.h
+  __algorithm/ranges_minmax_element.h
+  __algorithm/ranges_mismatch.h
+  __algorithm/ranges_none_of.h
+  __algorithm/ranges_replace.h
+  __algorithm/ranges_replace_if.h
+  __algorithm/ranges_reverse.h
+  __algorithm/ranges_sort.h
+  __algorithm/ranges_swap_ranges.h
+  __algorithm/ranges_transform.h
+  __algorithm/ranges_upper_bound.h
   __algorithm/remove.h
-  __algorithm/replace_copy_if.h
-  __algorithm/replace_copy.h
-  __algorithm/replace_if.h
+  __algorithm/remove_copy.h
+  __algorithm/remove_copy_if.h
+  __algorithm/remove_if.h
   __algorithm/replace.h
-  __algorithm/reverse_copy.h
+  __algorithm/replace_copy.h
+  __algorithm/replace_copy_if.h
+  __algorithm/replace_if.h
   __algorithm/reverse.h
-  __algorithm/rotate_copy.h
+  __algorithm/reverse_copy.h
   __algorithm/rotate.h
+  __algorithm/rotate_copy.h
   __algorithm/sample.h
-  __algorithm/search_n.h
   __algorithm/search.h
+  __algorithm/search_n.h
   __algorithm/set_difference.h
   __algorithm/set_intersection.h
   __algorithm/set_symmetric_difference.h
@@ -82,34 +130,136 @@ set(files
   __algorithm/shift_right.h
   __algorithm/shuffle.h
   __algorithm/sift_down.h
-  __algorithm/sort_heap.h
   __algorithm/sort.h
+  __algorithm/sort_heap.h
   __algorithm/stable_partition.h
   __algorithm/stable_sort.h
   __algorithm/swap_ranges.h
   __algorithm/transform.h
-  __algorithm/unique_copy.h
   __algorithm/unique.h
+  __algorithm/unique_copy.h
   __algorithm/unwrap_iter.h
   __algorithm/upper_bound.h
+  __assert
   __availability
+  __bit/bit_cast.h
+  __bit/byteswap.h
   __bit_reference
   __bits
   __bsd_locale_defaults.h
   __bsd_locale_fallbacks.h
+  __charconv/chars_format.h
+  __charconv/from_chars_result.h
+  __charconv/tables.h
+  __charconv/to_chars_base_10.h
+  __charconv/to_chars_result.h
+  __chrono/calendar.h
+  __chrono/convert_to_timespec.h
+  __chrono/day.h
+  __chrono/duration.h
+  __chrono/file_clock.h
+  __chrono/hh_mm_ss.h
+  __chrono/high_resolution_clock.h
+  __chrono/literals.h
+  __chrono/month.h
+  __chrono/month_weekday.h
+  __chrono/monthday.h
+  __chrono/steady_clock.h
+  __chrono/system_clock.h
+  __chrono/time_point.h
+  __chrono/weekday.h
+  __chrono/year.h
+  __chrono/year_month.h
+  __chrono/year_month_day.h
+  __chrono/year_month_weekday.h
+  __compare/common_comparison_category.h
+  __compare/compare_partial_order_fallback.h
+  __compare/compare_strong_order_fallback.h
+  __compare/compare_three_way.h
+  __compare/compare_three_way_result.h
+  __compare/compare_weak_order_fallback.h
+  __compare/is_eq.h
+  __compare/ordering.h
+  __compare/partial_order.h
+  __compare/strong_order.h
+  __compare/synth_three_way.h
+  __compare/three_way_comparable.h
+  __compare/weak_order.h
+  __concepts/arithmetic.h
+  __concepts/assignable.h
+  __concepts/boolean_testable.h
+  __concepts/class_or_enum.h
+  __concepts/common_reference_with.h
+  __concepts/common_with.h
+  __concepts/constructible.h
+  __concepts/convertible_to.h
+  __concepts/copyable.h
+  __concepts/derived_from.h
+  __concepts/destructible.h
+  __concepts/different_from.h
+  __concepts/equality_comparable.h
+  __concepts/invocable.h
+  __concepts/movable.h
+  __concepts/predicate.h
+  __concepts/regular.h
+  __concepts/relation.h
+  __concepts/same_as.h
+  __concepts/semiregular.h
+  __concepts/swappable.h
+  __concepts/totally_ordered.h
   __config
+  __coroutine/coroutine_handle.h
+  __coroutine/coroutine_traits.h
+  __coroutine/noop_coroutine_handle.h
+  __coroutine/trivial_awaitables.h
   __debug
   __errc
+  __filesystem/copy_options.h
+  __filesystem/directory_entry.h
+  __filesystem/directory_iterator.h
+  __filesystem/directory_options.h
+  __filesystem/file_status.h
+  __filesystem/file_time_type.h
+  __filesystem/file_type.h
+  __filesystem/filesystem_error.h
+  __filesystem/operations.h
+  __filesystem/path.h
+  __filesystem/path_iterator.h
+  __filesystem/perm_options.h
+  __filesystem/perms.h
+  __filesystem/recursive_directory_iterator.h
+  __filesystem/space_info.h
+  __filesystem/u8path.h
+  __format/buffer.h
+  __format/concepts.h
+  __format/enable_insertable.h
+  __format/format_arg.h
+  __format/format_arg_store.h
+  __format/format_args.h
+  __format/format_context.h
   __format/format_error.h
+  __format/format_fwd.h
   __format/format_parse_context.h
-  __function_like.h
-  __functional_base
+  __format/format_string.h
+  __format/format_to_n_result.h
+  __format/formatter.h
+  __format/formatter_bool.h
+  __format/formatter_char.h
+  __format/formatter_floating_point.h
+  __format/formatter_integer.h
+  __format/formatter_integral.h
+  __format/formatter_pointer.h
+  __format/formatter_string.h
+  __format/parser_std_format_spec.h
   __functional/binary_function.h
   __functional/binary_negate.h
-  __functional/bind_front.h
   __functional/bind.h
+  __functional/bind_back.h
+  __functional/bind_front.h
   __functional/binder1st.h
   __functional/binder2nd.h
+  __functional/boyer_moore_searcher.h
+  __functional/compose.h
   __functional/default_searcher.h
   __functional/function.h
   __functional/hash.h
@@ -129,12 +279,16 @@ set(files
   __functional/unary_negate.h
   __functional/unwrap_ref.h
   __functional/weak_result_type.h
+  __fwd/span.h
+  __fwd/string_view.h
   __hash_table
+  __ios/fpos.h
   __iterator/access.h
   __iterator/advance.h
   __iterator/back_insert_iterator.h
   __iterator/common_iterator.h
   __iterator/concepts.h
+  __iterator/counted_iterator.h
   __iterator/data.h
   __iterator/default_sentinel.h
   __iterator/distance.h
@@ -142,79 +296,151 @@ set(files
   __iterator/erase_if_container.h
   __iterator/front_insert_iterator.h
   __iterator/incrementable_traits.h
+  __iterator/indirectly_comparable.h
   __iterator/insert_iterator.h
   __iterator/istream_iterator.h
   __iterator/istreambuf_iterator.h
   __iterator/iter_move.h
   __iterator/iter_swap.h
-  __iterator/iterator_traits.h
   __iterator/iterator.h
+  __iterator/iterator_traits.h
+  __iterator/mergeable.h
   __iterator/move_iterator.h
+  __iterator/move_sentinel.h
   __iterator/next.h
   __iterator/ostream_iterator.h
   __iterator/ostreambuf_iterator.h
+  __iterator/permutable.h
   __iterator/prev.h
   __iterator/projected.h
   __iterator/readable_traits.h
   __iterator/reverse_access.h
   __iterator/reverse_iterator.h
   __iterator/size.h
+  __iterator/sortable.h
+  __iterator/unreachable_sentinel.h
   __iterator/wrap_iter.h
-  __libcpp_version
   __locale
+  __mbstate_t.h
   __memory/addressof.h
+  __memory/allocate_at_least.h
   __memory/allocation_guard.h
+  __memory/allocator.h
   __memory/allocator_arg_t.h
   __memory/allocator_traits.h
-  __memory/allocator.h
+  __memory/assume_aligned.h
   __memory/auto_ptr.h
   __memory/compressed_pair.h
+  __memory/concepts.h
   __memory/construct_at.h
-  __memory/pointer_safety.h
   __memory/pointer_traits.h
+  __memory/ranges_construct_at.h
+  __memory/ranges_uninitialized_algorithms.h
   __memory/raw_storage_iterator.h
   __memory/shared_ptr.h
   __memory/temporary_buffer.h
   __memory/uninitialized_algorithms.h
   __memory/unique_ptr.h
   __memory/uses_allocator.h
+  __memory/voidify.h
   __mutex_base
   __node_handle
-  __nullptr
+  __numeric/accumulate.h
+  __numeric/adjacent_difference.h
+  __numeric/exclusive_scan.h
+  __numeric/gcd_lcm.h
+  __numeric/inclusive_scan.h
+  __numeric/inner_product.h
+  __numeric/iota.h
+  __numeric/midpoint.h
+  __numeric/partial_sum.h
+  __numeric/reduce.h
+  __numeric/transform_exclusive_scan.h
+  __numeric/transform_inclusive_scan.h
+  __numeric/transform_reduce.h
+  __random/bernoulli_distribution.h
+  __random/binomial_distribution.h
+  __random/cauchy_distribution.h
+  __random/chi_squared_distribution.h
+  __random/clamp_to_integral.h
+  __random/default_random_engine.h
+  __random/discard_block_engine.h
+  __random/discrete_distribution.h
+  __random/exponential_distribution.h
+  __random/extreme_value_distribution.h
+  __random/fisher_f_distribution.h
+  __random/gamma_distribution.h
+  __random/generate_canonical.h
+  __random/geometric_distribution.h
+  __random/independent_bits_engine.h
+  __random/is_seed_sequence.h
+  __random/is_valid.h
+  __random/knuth_b.h
+  __random/linear_congruential_engine.h
+  __random/log2.h
+  __random/lognormal_distribution.h
+  __random/mersenne_twister_engine.h
+  __random/negative_binomial_distribution.h
+  __random/normal_distribution.h
+  __random/piecewise_constant_distribution.h
+  __random/piecewise_linear_distribution.h
+  __random/poisson_distribution.h
+  __random/random_device.h
+  __random/ranlux.h
+  __random/seed_seq.h
+  __random/shuffle_order_engine.h
+  __random/student_t_distribution.h
+  __random/subtract_with_carry_engine.h
   __random/uniform_int_distribution.h
+  __random/uniform_random_bit_generator.h
+  __random/uniform_real_distribution.h
+  __random/weibull_distribution.h
   __ranges/access.h
   __ranges/all.h
   __ranges/common_view.h
   __ranges/concepts.h
   __ranges/copyable_box.h
+  __ranges/counted.h
   __ranges/dangling.h
   __ranges/data.h
   __ranges/drop_view.h
-  __ranges/empty_view.h
   __ranges/empty.h
+  __ranges/empty_view.h
   __ranges/enable_borrowed_range.h
   __ranges/enable_view.h
+  __ranges/filter_view.h
+  __ranges/iota_view.h
+  __ranges/join_view.h
+  __ranges/lazy_split_view.h
   __ranges/non_propagating_cache.h
+  __ranges/owning_view.h
+  __ranges/range_adaptor.h
+  __ranges/rbegin.h
   __ranges/ref_view.h
+  __ranges/rend.h
+  __ranges/reverse_view.h
+  __ranges/single_view.h
   __ranges/size.h
   __ranges/subrange.h
+  __ranges/take_view.h
   __ranges/transform_view.h
   __ranges/view_interface.h
+  __ranges/views.h
+  __ranges/zip_view.h
   __split_buffer
   __std_stream
-  __string
+  __string/char_traits.h
+  __string/extern_template_lists.h
   __support/android/locale_bionic.h
   __support/fuchsia/xlocale.h
   __support/ibm/gettod_zos.h
   __support/ibm/limits.h
-  __support/ibm/locale_mgmt_aix.h
   __support/ibm/locale_mgmt_zos.h
   __support/ibm/nanosleep.h
   __support/ibm/support.h
   __support/ibm/xlocale.h
   __support/musl/xlocale.h
   __support/newlib/xlocale.h
-  __support/nuttx/xlocale.h
   __support/openbsd/xlocale.h
   __support/solaris/floatingpoint.h
   __support/solaris/wchar.h
@@ -224,12 +450,111 @@ set(files
   __support/xlocale/__nop_locale_mgmt.h
   __support/xlocale/__posix_l_fallback.h
   __support/xlocale/__strtonum_fallback.h
+  __thread/poll_with_backoff.h
+  __thread/timed_backoff_policy.h
   __threading_support
   __tree
   __tuple
+  __type_traits/add_const.h
+  __type_traits/add_cv.h
+  __type_traits/add_lvalue_reference.h
+  __type_traits/add_pointer.h
+  __type_traits/add_rvalue_reference.h
+  __type_traits/add_volatile.h
+  __type_traits/alignment_of.h
+  __type_traits/apply_cv.h
+  __type_traits/conditional.h
+  __type_traits/conjunction.h
+  __type_traits/decay.h
+  __type_traits/disjunction.h
+  __type_traits/enable_if.h
+  __type_traits/extent.h
+  __type_traits/has_unique_object_representation.h
+  __type_traits/has_virtual_destructor.h
+  __type_traits/integral_constant.h
+  __type_traits/is_abstract.h
+  __type_traits/is_aggregate.h
+  __type_traits/is_arithmetic.h
+  __type_traits/is_array.h
+  __type_traits/is_assignable.h
+  __type_traits/is_base_of.h
+  __type_traits/is_bounded_array.h
+  __type_traits/is_callable.h
+  __type_traits/is_class.h
+  __type_traits/is_compound.h
+  __type_traits/is_const.h
+  __type_traits/is_constant_evaluated.h
+  __type_traits/is_constructible.h
+  __type_traits/is_convertible.h
+  __type_traits/is_copy_assignable.h
+  __type_traits/is_copy_constructible.h
+  __type_traits/is_core_convertible.h
+  __type_traits/is_default_constructible.h
+  __type_traits/is_destructible.h
+  __type_traits/is_empty.h
+  __type_traits/is_enum.h
+  __type_traits/is_final.h
+  __type_traits/is_floating_point.h
+  __type_traits/is_function.h
+  __type_traits/is_fundamental.h
+  __type_traits/is_integral.h
+  __type_traits/is_literal_type.h
+  __type_traits/is_member_function_pointer.h
+  __type_traits/is_member_object_pointer.h
+  __type_traits/is_member_pointer.h
+  __type_traits/is_move_assignable.h
+  __type_traits/is_move_constructible.h
+  __type_traits/is_nothrow_assignable.h
+  __type_traits/is_nothrow_constructible.h
+  __type_traits/is_nothrow_copy_assignable.h
+  __type_traits/is_nothrow_copy_constructible.h
+  __type_traits/is_nothrow_default_constructible.h
+  __type_traits/is_nothrow_destructible.h
+  __type_traits/is_nothrow_move_assignable.h
+  __type_traits/is_nothrow_move_constructible.h
+  __type_traits/is_null_pointer.h
+  __type_traits/is_object.h
+  __type_traits/is_pod.h
+  __type_traits/is_pointer.h
+  __type_traits/is_polymorphic.h
+  __type_traits/is_reference.h
+  __type_traits/is_reference_wrapper.h
+  __type_traits/is_referenceable.h
+  __type_traits/is_same.h
+  __type_traits/is_scalar.h
+  __type_traits/is_scoped_enum.h
+  __type_traits/is_signed.h
+  __type_traits/is_standard_layout.h
+  __type_traits/is_trivial.h
+  __type_traits/is_trivially_assignable.h
+  __type_traits/is_trivially_constructible.h
+  __type_traits/is_trivially_copy_assignable.h
+  __type_traits/is_trivially_copy_constructible.h
+  __type_traits/is_trivially_copyable.h
+  __type_traits/is_trivially_default_constructible.h
+  __type_traits/is_trivially_destructible.h
+  __type_traits/is_trivially_move_assignable.h
+  __type_traits/is_trivially_move_constructible.h
+  __type_traits/is_unbounded_array.h
+  __type_traits/is_union.h
+  __type_traits/is_unsigned.h
+  __type_traits/is_void.h
+  __type_traits/is_volatile.h
+  __type_traits/negation.h
+  __type_traits/rank.h
+  __type_traits/remove_all_extents.h
+  __type_traits/remove_const.h
+  __type_traits/remove_cv.h
+  __type_traits/remove_extent.h
+  __type_traits/remove_pointer.h
+  __type_traits/remove_reference.h
+  __type_traits/remove_volatile.h
+  __type_traits/type_identity.h
+  __type_traits/underlying_type.h
+  __type_traits/void_t.h
   __undef_macros
-  __utility/__decay_copy.h
   __utility/as_const.h
+  __utility/auto_cast.h
   __utility/cmp.h
   __utility/declval.h
   __utility/exchange.h
@@ -239,9 +564,12 @@ set(files
   __utility/move.h
   __utility/pair.h
   __utility/piecewise_construct.h
+  __utility/priority_tag.h
   __utility/rel_ops.h
   __utility/swap.h
   __utility/to_underlying.h
+  __utility/transaction.h
+  __utility/unreachable.h
   __variant/monostate.h
   algorithm
   any
@@ -269,6 +597,7 @@ set(files
   complex.h
   concepts
   condition_variable
+  coroutine
   csetjmp
   csignal
   cstdarg
@@ -281,6 +610,7 @@ set(files
   ctgmath
   ctime
   ctype.h
+  cuchar
   cwchar
   cwctype
   deque
@@ -292,7 +622,6 @@ set(files
   experimental/algorithm
   experimental/coroutine
   experimental/deque
-  experimental/filesystem
   experimental/forward_list
   experimental/functional
   experimental/iterator
@@ -337,7 +666,6 @@ set(files
   map
   math.h
   memory
-  module.modulemap
   mutex
   new
   numbers
@@ -346,7 +674,6 @@ set(files
   ostream
   queue
   random
-  ranges
   ranges
   ratio
   regex
@@ -358,6 +685,7 @@ set(files
   span
   sstream
   stack
+  stdatomic.h
   stdbool.h
   stddef.h
   stdexcept
@@ -366,8 +694,8 @@ set(files
   stdlib.h
   streambuf
   string
-  string_view
   string.h
+  string_view
   strstream
   system_error
   tgmath.h
@@ -376,6 +704,7 @@ set(files
   type_traits
   typeindex
   typeinfo
+  uchar.h
   unordered_map
   unordered_set
   utility
@@ -387,9 +716,17 @@ set(files
   wctype.h
   )
 
-configure_file("__config_site.in" "${LIBCXX_GENERATED_INCLUDE_TARGET_DIR}/__config_site" @ONLY)
+foreach(feature LIBCXX_ENABLE_FILESYSTEM LIBCXX_ENABLE_LOCALIZATION LIBCXX_ENABLE_THREADS LIBCXX_ENABLE_WIDE_CHARACTERS)
+  if (NOT ${${feature}})
+    set(requires_${feature} "requires LIBCXX_CONFIGURED_WITHOUT_SUPPORT_FOR_THIS_HEADER")
+  endif()
+endforeach()
 
-set(_all_includes "${LIBCXX_GENERATED_INCLUDE_TARGET_DIR}/__config_site")
+configure_file("__config_site.in" "${LIBCXX_GENERATED_INCLUDE_TARGET_DIR}/__config_site" @ONLY)
+configure_file("module.modulemap.in" "${LIBCXX_GENERATED_INCLUDE_DIR}/module.modulemap" @ONLY)
+
+set(_all_includes "${LIBCXX_GENERATED_INCLUDE_TARGET_DIR}/__config_site"
+                  "${LIBCXX_GENERATED_INCLUDE_DIR}/module.modulemap")
 foreach(f ${files})
   set(src "${CMAKE_CURRENT_SOURCE_DIR}/${f}")
   set(dst "${LIBCXX_GENERATED_INCLUDE_DIR}/${f}")
@@ -403,29 +740,25 @@ endforeach()
 add_custom_target(generate-cxx-headers ALL DEPENDS ${_all_includes})
 
 add_library(cxx-headers INTERFACE)
-add_dependencies(cxx-headers generate-cxx-headers ${LIBCXX_CXX_ABI_HEADER_TARGET})
-# TODO: Use target_include_directories once we figure out why that breaks the runtimes build
-if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "MSVC" OR "${CMAKE_CXX_SIMULATE_ID}" STREQUAL "MSVC")
-  target_compile_options(cxx-headers INTERFACE /I${LIBCXX_GENERATED_INCLUDE_DIR}
-                                     INTERFACE /I${LIBCXX_GENERATED_INCLUDE_TARGET_DIR})
-else()
-  target_compile_options(cxx-headers INTERFACE -I${LIBCXX_GENERATED_INCLUDE_DIR}
-                                     INTERFACE -I${LIBCXX_GENERATED_INCLUDE_TARGET_DIR})
-endif()
+target_link_libraries(cxx-headers INTERFACE libcxx-abi-headers)
+add_dependencies(cxx-headers generate-cxx-headers)
+target_include_directories(cxx-headers INTERFACE ${LIBCXX_GENERATED_INCLUDE_DIR}
+                                                 ${LIBCXX_GENERATED_INCLUDE_TARGET_DIR})
 
 if (LIBCXX_INSTALL_HEADERS)
   foreach(file ${files})
     get_filename_component(dir ${file} DIRECTORY)
     install(FILES ${file}
-      DESTINATION ${LIBCXX_INSTALL_INCLUDE_DIR}/${dir}
+      DESTINATION "${LIBCXX_INSTALL_INCLUDE_DIR}/${dir}"
       COMPONENT cxx-headers
       PERMISSIONS OWNER_READ OWNER_WRITE GROUP_READ WORLD_READ
     )
   endforeach()
 
-  # Install the generated __config_site.
-  install(FILES ${LIBCXX_GENERATED_INCLUDE_TARGET_DIR}/__config_site
-    DESTINATION ${LIBCXX_INSTALL_INCLUDE_TARGET_DIR}
+  # Install the generated __config_site and the generated modulemap file.
+  install(FILES "${LIBCXX_GENERATED_INCLUDE_TARGET_DIR}/__config_site"
+                "${LIBCXX_GENERATED_INCLUDE_DIR}/module.modulemap"
+    DESTINATION "${LIBCXX_INSTALL_INCLUDE_TARGET_DIR}"
     PERMISSIONS OWNER_READ OWNER_WRITE GROUP_READ WORLD_READ
     COMPONENT cxx-headers)
 

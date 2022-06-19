@@ -1,7 +1,7 @@
 // RUN: %clang_analyze_cc1 -analyze -triple x86_64-apple-darwin10 \
 // RUN:  -analyzer-checker=core,debug.ExprInspection -verify %s
 
-void clang_analyzer_warnIfReached();
+void clang_analyzer_warnIfReached(void);
 
 typedef struct {
   int value;

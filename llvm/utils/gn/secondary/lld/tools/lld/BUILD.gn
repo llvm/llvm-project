@@ -4,8 +4,6 @@ symlinks = [
   "lld-link",
   "ld.lld",
   "ld64.lld",
-  "ld64.lld.darwinnew",
-  "ld64.lld.darwinold",
   "wasm-ld",
 ]
 foreach(target, symlinks) {
@@ -18,7 +16,7 @@ foreach(target, symlinks) {
 
 # //:lld depends on this symlink target, see comment in //BUILD.gn.
 group("symlinks") {
-  deps = []
+  deps = [ ":lld" ]
   foreach(target, symlinks) {
     deps += [ ":$target" ]
   }
@@ -29,12 +27,12 @@ executable("lld") {
   deps = [
     "//lld/COFF",
     "//lld/ELF",
-    "//lld/MachO:MachO2",
+    "//lld/MachO:MachO",
     "//lld/MinGW",
-    "//lld/lib/Driver",
     "//lld/wasm",
     "//llvm/lib/Support",
     "//llvm/utils/gn/build/libs/xar",
   ]
+  assert_no_deps = [ "//llvm/lib/Debuginfod" ]
   sources = [ "lld.cpp" ]
 }

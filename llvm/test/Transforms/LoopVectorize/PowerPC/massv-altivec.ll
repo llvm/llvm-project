@@ -13,7 +13,7 @@ declare float @atanhf(float) #0
 ; Check that massv entries are not generated.
 define void @cbrt_f64(double* nocapture %varray) {
 ; CHECK-LABEL: @cbrt_f64(
-; CHECK-NOT: __cbrtd2_P8{{.*}}<2 x double>
+; CHECK-NOT: __cbrtd2{{.*}}<2 x double>
 ; CHECK: ret void
 ;
 entry:
@@ -36,7 +36,7 @@ for.end:
 
 define void @cbrt_f32(float* nocapture %varray) {
 ; CHECK-LABEL: @cbrt_f32(
-; CHECK-NOT: __cbrtf4_P8{{.*}}<4 x float>
+; CHECK-NOT: __cbrtf4{{.*}}<4 x float>
 ; CHECK: ret void
 ;
 entry:
@@ -59,7 +59,7 @@ for.end:
 
 define void @atanh_f64(double* nocapture %varray) {
 ; CHECK-LABEL: @atanh_f64(
-; CHECK-NOT: __atanhd2_P8{{.*}}<2 x double>
+; CHECK-NOT: __atanhd2{{.*}}<2 x double>
 ; CHECK: ret void
 ;
 entry:
@@ -82,7 +82,7 @@ for.end:
 
 define void @atanh_f32(float* nocapture %varray) {
 ; CHECK-LABEL: @atanh_f32(
-; CHECK-NOT: __atanhf4_P8{{.*}}<2 x double>
+; CHECK-NOT: __atanhf4{{.*}}<2 x double>
 ; CHECK: ret void
 ;
 entry:

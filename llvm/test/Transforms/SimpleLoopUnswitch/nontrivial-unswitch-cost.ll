@@ -2,8 +2,7 @@
 ;
 ; RUN: opt -passes='loop(simple-loop-unswitch<nontrivial>),verify<loops>' -unswitch-threshold=5 -S < %s | FileCheck %s
 ; RUN: opt -passes='loop-mssa(simple-loop-unswitch<nontrivial>),verify<loops>' -unswitch-threshold=5 -S < %s | FileCheck %s
-; RUN: opt -simple-loop-unswitch -enable-nontrivial-unswitch -unswitch-threshold=5 -S < %s | FileCheck %s
-; RUN: opt -simple-loop-unswitch -enable-nontrivial-unswitch -unswitch-threshold=5 -enable-mssa-loop-dependency=true -verify-memoryssa -S < %s | FileCheck %s
+; RUN: opt -simple-loop-unswitch -enable-nontrivial-unswitch -unswitch-threshold=5 -verify-memoryssa -S < %s | FileCheck %s
 
 declare void @a()
 declare void @b()
@@ -57,7 +56,8 @@ define void @test_unswitch(i1* %ptr, i1 %cond) {
 entry:
   br label %loop_begin
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    br i1 %cond, label %entry.split.us, label %entry.split
+; CHECK-NEXT:    [[FROZEN:%.+]] = freeze i1 %cond
+; CHECK-NEXT:    br i1 [[FROZEN]], label %entry.split.us, label %entry.split
 
 loop_begin:
   call void @x()
@@ -127,7 +127,8 @@ define void @test_unswitch_non_dup_code(i1* %ptr, i1 %cond) {
 entry:
   br label %loop_begin
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    br i1 %cond, label %entry.split.us, label %entry.split
+; CHECK-NEXT:    [[FROZEN:%.+]] = freeze i1 %cond
+; CHECK-NEXT:    br i1 [[FROZEN]], label %entry.split.us, label %entry.split
 
 loop_begin:
   call void @x()
@@ -208,7 +209,8 @@ define void @test_unswitch_non_dup_code_in_cfg(i1* %ptr, i1 %cond) {
 entry:
   br label %loop_begin
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    br i1 %cond, label %entry.split.us, label %entry.split
+; CHECK-NEXT:    [[FROZEN:%.+]] = freeze i1 %cond
+; CHECK-NEXT:    br i1 [[FROZEN]], label %entry.split.us, label %entry.split
 
 loop_begin:
   call void @x()
@@ -364,7 +366,8 @@ define void @test_unswitch_large_exit(i1* %ptr, i1 %cond) {
 entry:
   br label %loop_begin
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    br i1 %cond, label %entry.split.us, label %entry.split
+; CHECK-NEXT:    [[FROZEN:%.+]] = freeze i1 %cond
+; CHECK-NEXT:    br i1 [[FROZEN]], label %entry.split.us, label %entry.split
 
 loop_begin:
   call void @x()
@@ -441,7 +444,8 @@ define void @test_unswitch_dedicated_exiting(i1* %ptr, i1 %cond) {
 entry:
   br label %loop_begin
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    br i1 %cond, label %entry.split.us, label %entry.split
+; CHECK-NEXT:    [[FROZEN:%.+]] = freeze i1 %cond
+; CHECK-NEXT:    br i1 [[FROZEN]], label %entry.split.us, label %entry.split
 
 loop_begin:
   call void @x()

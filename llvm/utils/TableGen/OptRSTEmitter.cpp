@@ -8,15 +8,8 @@
 
 #include "OptEmitter.h"
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringMap.h"
-#include "llvm/ADT/Twine.h"
-#include "llvm/TableGen/Error.h"
 #include "llvm/TableGen/Record.h"
-#include "llvm/TableGen/TableGenBackend.h"
-#include <cctype>
-#include <cstring>
-#include <map>
 
 using namespace llvm;
 
@@ -67,18 +60,43 @@ void EmitOptRST(RecordKeeper &Records, raw_ostream &OS) {
       // Print the option name.
       OS << R->getValueAsString("Name");
 
+      StringRef MetaVarName;
       // Print the meta-variable.
       if (!isa<UnsetInit>(R->getValueInit("MetaVarName"))) {
+        MetaVarName = R->getValueAsString("MetaVarName");
+      } else if (!isa<UnsetInit>(R->getValueInit("Values")))
+        MetaVarName = "<value>";
+
+      if (!MetaVarName.empty()) {
         OS << '=';
-        OS.write_escaped(R->getValueAsString("MetaVarName"));
+        OS.write_escaped(MetaVarName);
       }
 
       OS << "\n\n";
 
+      std::string HelpText;
       // The option help text.
       if (!isa<UnsetInit>(R->getValueInit("HelpText"))) {
+        HelpText = R->getValueAsString("HelpText").trim().str();
+        if (!HelpText.empty() && HelpText.back() != '.')
+          HelpText.push_back('.');
+      }
+
+      if (!isa<UnsetInit>(R->getValueInit("Values"))) {
+        SmallVector<StringRef> Values;
+        SplitString(R->getValueAsString("Values"), Values, ",");
+        HelpText += (" " + MetaVarName + " must be '").str();
+
+        if (Values.size() > 1) {
+          HelpText += join(Values.begin(), Values.end() - 1, "', '");
+          HelpText += "' or '";
+        }
+        HelpText += (Values.front() + "'.").str();
+      }
+
+      if (!HelpText.empty()) {
         OS << ' ';
-        OS.write_escaped(R->getValueAsString("HelpText"));
+        OS.write_escaped(HelpText);
         OS << "\n\n";
       }
     }

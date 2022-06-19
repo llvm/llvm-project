@@ -8,8 +8,8 @@ define i8* @f1(i8* %x0, i8* %x1) {
   ; CHECK-NEXT: .cfi_def_cfa_offset 16
   ; CHECK-NEXT: .cfi_offset w30, -16
   ; CHECK-NEXT: mov x9, x0
-  ; CHECK-NEXT: bl __hwasan_check_x1_1
   ; CHECK-NEXT: mov x0, x1
+  ; CHECK-NEXT: bl __hwasan_check_x1_1
   ; CHECK-NEXT: ldr x30, [sp], #16
   ; CHECK-NEXT: ret
   call void @llvm.hwasan.check.memaccess(i8* %x0, i8* %x1, i32 1)

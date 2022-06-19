@@ -68,9 +68,8 @@ define float @v_powi_neg1_f32(float %l) {
 ; GCN-LABEL: v_powi_neg1_f32:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GCN-NEXT:    v_cvt_f32_i32_e32 v1, -1
 ; GCN-NEXT:    v_log_f32_e32 v0, v0
-; GCN-NEXT:    v_mul_legacy_f32_e32 v0, v0, v1
+; GCN-NEXT:    v_mul_legacy_f32_e32 v0, -1.0, v0
 ; GCN-NEXT:    v_exp_f32_e32 v0, v0
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
   %res = call float @llvm.powi.f32.i32(float %l, i32 -1)
@@ -82,8 +81,7 @@ define float @v_powi_2_f32(float %l) {
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-NEXT:    v_log_f32_e32 v0, v0
-; GCN-NEXT:    v_cvt_f32_ubyte0_e32 v1, 2
-; GCN-NEXT:    v_mul_legacy_f32_e32 v0, v0, v1
+; GCN-NEXT:    v_mul_legacy_f32_e32 v0, 2.0, v0
 ; GCN-NEXT:    v_exp_f32_e32 v0, v0
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
   %res = call float @llvm.powi.f32.i32(float %l, i32 2)
@@ -94,9 +92,8 @@ define float @v_powi_neg2_f32(float %l) {
 ; GCN-LABEL: v_powi_neg2_f32:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GCN-NEXT:    v_cvt_f32_i32_e32 v1, -2
 ; GCN-NEXT:    v_log_f32_e32 v0, v0
-; GCN-NEXT:    v_mul_legacy_f32_e32 v0, v0, v1
+; GCN-NEXT:    v_mul_legacy_f32_e32 v0, -2.0, v0
 ; GCN-NEXT:    v_exp_f32_e32 v0, v0
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
   %res = call float @llvm.powi.f32.i32(float %l, i32 -2)
@@ -108,8 +105,7 @@ define float @v_powi_4_f32(float %l) {
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-NEXT:    v_log_f32_e32 v0, v0
-; GCN-NEXT:    v_cvt_f32_ubyte0_e32 v1, 4
-; GCN-NEXT:    v_mul_legacy_f32_e32 v0, v0, v1
+; GCN-NEXT:    v_mul_legacy_f32_e32 v0, 4.0, v0
 ; GCN-NEXT:    v_exp_f32_e32 v0, v0
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
   %res = call float @llvm.powi.f32.i32(float %l, i32 4)
@@ -121,8 +117,7 @@ define float @v_powi_8_f32(float %l) {
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-NEXT:    v_log_f32_e32 v0, v0
-; GCN-NEXT:    v_cvt_f32_ubyte0_e32 v1, 8
-; GCN-NEXT:    v_mul_legacy_f32_e32 v0, v0, v1
+; GCN-NEXT:    v_mul_legacy_f32_e32 v0, 0x41000000, v0
 ; GCN-NEXT:    v_exp_f32_e32 v0, v0
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
   %res = call float @llvm.powi.f32.i32(float %l, i32 8)
@@ -134,8 +129,7 @@ define float @v_powi_16_f32(float %l) {
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-NEXT:    v_log_f32_e32 v0, v0
-; GCN-NEXT:    v_cvt_f32_ubyte0_e32 v1, 16
-; GCN-NEXT:    v_mul_legacy_f32_e32 v0, v0, v1
+; GCN-NEXT:    v_mul_legacy_f32_e32 v0, 0x41800000, v0
 ; GCN-NEXT:    v_exp_f32_e32 v0, v0
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
   %res = call float @llvm.powi.f32.i32(float %l, i32 16)
@@ -147,8 +141,7 @@ define float @v_powi_128_f32(float %l) {
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-NEXT:    v_log_f32_e32 v0, v0
-; GCN-NEXT:    v_cvt_f32_ubyte0_e32 v1, 0x80
-; GCN-NEXT:    v_mul_legacy_f32_e32 v0, v0, v1
+; GCN-NEXT:    v_mul_legacy_f32_e32 v0, 0x43000000, v0
 ; GCN-NEXT:    v_exp_f32_e32 v0, v0
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
   %res = call float @llvm.powi.f32.i32(float %l, i32 128)
@@ -159,9 +152,8 @@ define float @v_powi_neg128_f32(float %l) {
 ; GCN-LABEL: v_powi_neg128_f32:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GCN-NEXT:    v_cvt_f32_i32_e32 v1, 0xffffff80
 ; GCN-NEXT:    v_log_f32_e32 v0, v0
-; GCN-NEXT:    v_mul_legacy_f32_e32 v0, v0, v1
+; GCN-NEXT:    v_mul_legacy_f32_e32 v0, 0xc3000000, v0
 ; GCN-NEXT:    v_exp_f32_e32 v0, v0
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
   %res = call float @llvm.powi.f32.i32(float %l, i32 -128)

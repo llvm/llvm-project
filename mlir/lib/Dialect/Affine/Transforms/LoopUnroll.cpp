@@ -10,13 +10,13 @@
 //
 //===----------------------------------------------------------------------===//
 #include "PassDetail.h"
-#include "mlir/Analysis/LoopAnalysis.h"
+#include "mlir/Dialect/Affine/Analysis/LoopAnalysis.h"
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
+#include "mlir/Dialect/Affine/LoopUtils.h"
 #include "mlir/Dialect/Affine/Passes.h"
 #include "mlir/IR/AffineExpr.h"
 #include "mlir/IR/AffineMap.h"
 #include "mlir/IR/Builders.h"
-#include "mlir/Transforms/LoopUtils.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
@@ -41,8 +41,8 @@ struct LoopUnroll : public AffineLoopUnrollBase<LoopUnroll> {
 
   LoopUnroll() : getUnrollFactor(nullptr) {}
   LoopUnroll(const LoopUnroll &other)
-      : AffineLoopUnrollBase<LoopUnroll>(other),
-        getUnrollFactor(other.getUnrollFactor) {}
+
+      = default;
   explicit LoopUnroll(
       Optional<unsigned> unrollFactor = None, bool unrollUpToFactor = false,
       bool unrollFull = false,
@@ -54,27 +54,24 @@ struct LoopUnroll : public AffineLoopUnrollBase<LoopUnroll> {
     this->unrollFull = unrollFull;
   }
 
-  void runOnFunction() override;
+  void runOnOperation() override;
 
   /// Unroll this for op. Returns failure if nothing was done.
   LogicalResult runOnAffineForOp(AffineForOp forOp);
 };
-} // end anonymous namespace
+} // namespace
 
-/// Returns true if no other affine.for ops are nested within.
-static bool isInnermostAffineForOp(AffineForOp forOp) {
-  // Only for the innermost affine.for op's.
-  bool isInnermost = true;
-  forOp.walk([&](AffineForOp thisForOp) {
-    // Since this is a post order walk, we are able to conclude here.
-    isInnermost = (thisForOp == forOp);
-    return WalkResult::interrupt();
-  });
-  return isInnermost;
+/// Returns true if no other affine.for ops are nested within `op`.
+static bool isInnermostAffineForOp(AffineForOp op) {
+  return !op.getBody()
+              ->walk([&](AffineForOp nestedForOp) {
+                return WalkResult::interrupt();
+              })
+              .wasInterrupted();
 }
 
 /// Gathers loops that have no affine.for's nested within.
-static void gatherInnermostLoops(FuncOp f,
+static void gatherInnermostLoops(func::FuncOp f,
                                  SmallVectorImpl<AffineForOp> &loops) {
   f.walk([&](AffineForOp forOp) {
     if (isInnermostAffineForOp(forOp))
@@ -82,7 +79,11 @@ static void gatherInnermostLoops(FuncOp f,
   });
 }
 
-void LoopUnroll::runOnFunction() {
+void LoopUnroll::runOnOperation() {
+  func::FuncOp func = getOperation();
+  if (func.isExternal())
+    return;
+
   if (unrollFull && unrollFullThreshold.hasValue()) {
     // Store short loops as we walk.
     SmallVector<AffineForOp, 4> loops;
@@ -90,7 +91,7 @@ void LoopUnroll::runOnFunction() {
     // Gathers all loops with trip count <= minTripCount. Do a post order walk
     // so that loops are gathered from innermost to outermost (or else unrolling
     // an outer one may delete gathered inner ones).
-    getFunction().walk([&](AffineForOp forOp) {
+    getOperation().walk([&](AffineForOp forOp) {
       Optional<uint64_t> tripCount = getConstantTripCount(forOp);
       if (tripCount.hasValue() && tripCount.getValue() <= unrollFullThreshold)
         loops.push_back(forOp);
@@ -101,7 +102,6 @@ void LoopUnroll::runOnFunction() {
   }
 
   // If the call back is provided, we will recurse until no loops are found.
-  FuncOp func = getFunction();
   SmallVector<AffineForOp, 4> loops;
   for (unsigned i = 0; i < numRepetitions || getUnrollFactor; i++) {
     loops.clear();
@@ -132,7 +132,7 @@ LogicalResult LoopUnroll::runOnAffineForOp(AffineForOp forOp) {
   return loopUnrollByFactor(forOp, unrollFactor);
 }
 
-std::unique_ptr<OperationPass<FuncOp>> mlir::createLoopUnrollPass(
+std::unique_ptr<OperationPass<func::FuncOp>> mlir::createLoopUnrollPass(
     int unrollFactor, bool unrollUpToFactor, bool unrollFull,
     const std::function<unsigned(AffineForOp)> &getUnrollFactor) {
   return std::make_unique<LoopUnroll>(

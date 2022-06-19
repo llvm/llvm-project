@@ -21,7 +21,7 @@ namespace performance {
 /// can safely be converted to const references.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/performance-unnecessary-value-param.html
+/// http://clang.llvm.org/extra/clang-tidy/checks/performance/unnecessary-value-param.html
 class UnnecessaryValueParamCheck : public ClangTidyCheck {
 public:
   UnnecessaryValueParamCheck(StringRef Name, ClangTidyContext *Context);
@@ -42,7 +42,7 @@ private:
   llvm::DenseMap<const FunctionDecl *, FunctionParmMutationAnalyzer>
       MutationAnalyzers;
   utils::IncludeInserter Inserter;
-  const std::vector<std::string> AllowedTypes;
+  const std::vector<StringRef> AllowedTypes;
 };
 
 } // namespace performance

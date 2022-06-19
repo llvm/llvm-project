@@ -9,7 +9,7 @@
 // <string>
 
 // basic_string<charT,traits,Allocator>&
-//   assign(const basic_string<charT,traits>& str, size_type pos, size_type n=npos);
+//   assign(const basic_string<charT,traits>& str, size_type pos, size_type n=npos); // constexpr since C++20
 // the =npos was added for C++14
 
 #include <string>
@@ -20,7 +20,7 @@
 #include "min_allocator.h"
 
 template <class S>
-void
+TEST_CONSTEXPR_CXX20 void
 test(S s, S str, typename S::size_type pos, typename S::size_type n, S expected)
 {
     if (pos <= str.size())
@@ -30,7 +30,7 @@ test(S s, S str, typename S::size_type pos, typename S::size_type n, S expected)
         assert(s == expected);
     }
 #ifndef TEST_HAS_NO_EXCEPTIONS
-    else
+    else if (!TEST_IS_CONSTANT_EVALUATED)
     {
         try
         {
@@ -46,7 +46,7 @@ test(S s, S str, typename S::size_type pos, typename S::size_type n, S expected)
 }
 
 template <class S>
-void
+TEST_CONSTEXPR_CXX20 void
 test_npos(S s, S str, typename S::size_type pos, S expected)
 {
     if (pos <= str.size())
@@ -56,7 +56,7 @@ test_npos(S s, S str, typename S::size_type pos, S expected)
         assert(s == expected);
     }
 #ifndef TEST_HAS_NO_EXCEPTIONS
-    else
+    else if (!TEST_IS_CONSTANT_EVALUATED)
     {
         try
         {
@@ -71,9 +71,8 @@ test_npos(S s, S str, typename S::size_type pos, S expected)
 #endif
 }
 
-int main(int, char**)
-{
-    {
+TEST_CONSTEXPR_CXX20 bool test() {
+  {
     typedef std::string S;
     test(S(), S(), 0, 0, S());
     test(S(), S(), 1, 0, S());
@@ -96,9 +95,9 @@ int main(int, char**)
     test(S("12345678901234567890"), S("12345"), 1, 3, S("234"));
     test(S("12345678901234567890"), S("12345678901234567890"), 5, 10,
          S("6789012345"));
-    }
+  }
 #if TEST_STD_VER >= 11
-    {
+  {
     typedef std::basic_string<char, std::char_traits<char>, min_allocator<char>> S;
     test(S(), S(), 0, 0, S());
     test(S(), S(), 1, 0, S());
@@ -121,9 +120,9 @@ int main(int, char**)
     test(S("12345678901234567890"), S("12345"), 1, 3, S("234"));
     test(S("12345678901234567890"), S("12345678901234567890"), 5, 10,
          S("6789012345"));
-    }
+  }
 #endif
-    {
+  {
     typedef std::string S;
     test_npos(S(), S(), 0, S());
     test_npos(S(), S(), 1, S());
@@ -132,7 +131,17 @@ int main(int, char**)
     test_npos(S(), S("12345"), 3, S("45"));
     test_npos(S(), S("12345"), 5, S(""));
     test_npos(S(), S("12345"), 6, S("not happening"));
-    }
+  }
+
+  return true;
+}
+
+int main(int, char**)
+{
+  test();
+#if TEST_STD_VER > 17
+  static_assert(test());
+#endif
 
   return 0;
 }

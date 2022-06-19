@@ -5,11 +5,12 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-//
-// This file builds on the ADT/GraphTraits.h file to build a generic graph
-// post order iterator.  This should work over any graph type that has a
-// GraphTraits specialization.
-//
+///
+/// \file
+/// This file builds on the ADT/GraphTraits.h file to build a generic graph
+/// post order iterator.  This should work over any graph type that has a
+/// GraphTraits specialization.
+///
 //===----------------------------------------------------------------------===//
 
 #ifndef LLVM_ADT_POSTORDERITERATOR_H

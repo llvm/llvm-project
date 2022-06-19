@@ -9,8 +9,6 @@
 // This file defines the itinerary class data for the POWER9 processor.
 //
 //===----------------------------------------------------------------------===//
-include "PPCInstrInfo.td"
-
 def P9Model : SchedMachineModel {
   // The maximum number of instructions to be issued at the same time.
   // While a value of 8 is technically correct since 8 instructions can be
@@ -44,7 +42,7 @@ def P9Model : SchedMachineModel {
   // Power 9, paired vector mem ops, MMA, PC relative mem ops, or instructions
   // introduced in ISA 3.1.
   let UnsupportedFeatures = [HasSPE, PrefixInstrs, PairedVectorMemops, MMA,
-                             PCRelativeMemops, IsISA3_1];
+                             PCRelativeMemops, IsISA3_1, IsISAFuture];
 }
 
 let SchedModel = P9Model in {
@@ -406,7 +404,6 @@ let SchedModel = P9Model in {
   def P9_LoadAndALU2Op_7C : WriteSequence<[P9_LS_4C, P9_ALU_3C]>;
   def P9_LoadAndALU2Op_8C : WriteSequence<[P9_LS_5C, P9_ALU_3C]>;
   def P9_LoadAndPMOp_8C : WriteSequence<[P9_LS_5C, P9_PM_3C]>;
-  def P9_LoadAndLoadOp_8C : WriteSequence<[P9_LS_4C, P9_LS_4C]>;
   def P9_IntDivAndALUOp_18C_8 : WriteSequence<[P9_DIV_16C_8, P9_ALU_2C]>;
   def P9_IntDivAndALUOp_26C_8 : WriteSequence<[P9_DIV_24C_8, P9_ALU_2C]>;
   def P9_IntDivAndALUOp_42C_8 : WriteSequence<[P9_DIV_40C_8, P9_ALU_2C]>;

@@ -140,7 +140,7 @@ define i64 @stack_fold_movq_store(x86_mmx %a0) nounwind {
 ; CHECK-NEXT:    pushq %r12
 ; CHECK-NEXT:    pushq %rbx
 ; CHECK-NEXT:    paddb %mm0, %mm0
-; CHECK-NEXT:    movq %mm0, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Folded Spill
+; CHECK-NEXT:    movq %mm0, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
 ; CHECK-NEXT:    #APP
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:    #NO_APP

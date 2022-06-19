@@ -63,9 +63,9 @@
 
 // -----
 
-// Layout not supported for built-in types.
+// Layout not supported some built-in types.
 // expected-error@below {{unexpected data layout for a built-in type}}
-"test.op_with_data_layout"() { dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<i32, 32>> } : () -> ()
+"test.op_with_data_layout"() { dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<tensor<f32>, 32>> } : () -> ()
 
 // -----
 

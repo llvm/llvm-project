@@ -121,6 +121,7 @@ static bool emitOneBuilder(const Record &record, raw_ostream &os) {
   llvm::raw_string_ostream bs(builder);
   while (auto loc = findNextVariable(builderStrRef)) {
     auto name = loc.in(builderStrRef).drop_front();
+    auto getterName = op.getGetterName(name);
     // First, insert the non-matched part as is.
     bs << builderStrRef.substr(0, loc.pos);
     // Then, rewrite the name based on its kind.
@@ -128,13 +129,13 @@ static bool emitOneBuilder(const Record &record, raw_ostream &os) {
     if (isOperandName(op, name)) {
       auto result =
           isVariadicOperand
-              ? formatv("moduleTranslation.lookupValues(op.{0}())", name)
-              : formatv("moduleTranslation.lookupValue(op.{0}())", name);
+              ? formatv("moduleTranslation.lookupValues(op.{0}())", getterName)
+              : formatv("moduleTranslation.lookupValue(op.{0}())", getterName);
       bs << result;
     } else if (isAttributeName(op, name)) {
-      bs << formatv("op.{0}()", name);
+      bs << formatv("op.{0}()", getterName);
     } else if (isResultName(op, name)) {
-      bs << formatv("moduleTranslation.mapValue(op.{0}())", name);
+      bs << formatv("moduleTranslation.mapValue(op.{0}())", getterName);
     } else if (name == "_resultType") {
       bs << "moduleTranslation.convertType(op.getResult().getType())";
     } else if (name == "_hasResult") {
@@ -204,7 +205,28 @@ public:
     std::vector<LLVMEnumAttrCase> cases;
 
     for (auto &c : tblgen::EnumAttr::getAllCases())
-      cases.push_back(LLVMEnumAttrCase(c));
+      cases.emplace_back(c);
+
+    return cases;
+  }
+};
+
+// Wraper class around a Tablegen definition of a C-style LLVM enum attribute.
+class LLVMCEnumAttr : public tblgen::EnumAttr {
+public:
+  using tblgen::EnumAttr::EnumAttr;
+
+  // Returns the C++ enum name for the LLVM API.
+  StringRef getLLVMClassName() const {
+    return def->getValueAsString("llvmClassName");
+  }
+
+  // Returns all associated cases viewed as LLVM-specific enum cases.
+  std::vector<LLVMEnumAttrCase> getAllCases() const {
+    std::vector<LLVMEnumAttrCase> cases;
+
+    for (auto &c : tblgen::EnumAttr::getAllCases())
+      cases.emplace_back(c);
 
     return cases;
   }
@@ -233,6 +255,37 @@ static void emitOneEnumToConversion(const llvm::Record *record,
     os << formatv("  case {0}::{1}::{2}:\n", cppNamespace, cppClassName,
                   cppEnumerant);
     os << formatv("    return {0}::{1};\n", llvmClass, llvmEnumerant);
+  }
+
+  os << "  }\n";
+  os << formatv("  llvm_unreachable(\"unknown {0} type\");\n",
+                enumAttr.getEnumClassName());
+  os << "}\n\n";
+}
+
+// Emits conversion function "LLVMClass convertEnumToLLVM(Enum)" and containing
+// switch-based logic to convert from the MLIR LLVM dialect enum attribute case
+// (Enum) to the corresponding LLVM API C-style enumerant
+static void emitOneCEnumToConversion(const llvm::Record *record,
+                                     raw_ostream &os) {
+  LLVMCEnumAttr enumAttr(record);
+  StringRef llvmClass = enumAttr.getLLVMClassName();
+  StringRef cppClassName = enumAttr.getEnumClassName();
+  StringRef cppNamespace = enumAttr.getCppNamespace();
+
+  // Emit the function converting the enum attribute to its LLVM counterpart.
+  os << formatv("static LLVM_ATTRIBUTE_UNUSED int64_t "
+                "convert{0}ToLLVM({1}::{0} value) {{\n",
+                cppClassName, cppNamespace);
+  os << "  switch (value) {\n";
+
+  for (const auto &enumerant : enumAttr.getAllCases()) {
+    StringRef llvmEnumerant = enumerant.getLLVMEnumerant();
+    StringRef cppEnumerant = enumerant.getSymbol();
+    os << formatv("  case {0}::{1}::{2}:\n", cppNamespace, cppClassName,
+                  cppEnumerant);
+    os << formatv("    return static_cast<int64_t>({0}::{1});\n", llvmClass,
+                  llvmEnumerant);
   }
 
   os << "  }\n";
@@ -271,6 +324,38 @@ static void emitOneEnumFromConversion(const llvm::Record *record,
   os << "}\n\n";
 }
 
+// Emits conversion function "Enum convertEnumFromLLVM(LLVMEnum)" and
+// containing switch-based logic to convert from the LLVM API C-style enumerant
+// to MLIR LLVM dialect enum attribute (Enum).
+static void emitOneCEnumFromConversion(const llvm::Record *record,
+                                       raw_ostream &os) {
+  LLVMCEnumAttr enumAttr(record);
+  StringRef llvmClass = enumAttr.getLLVMClassName();
+  StringRef cppClassName = enumAttr.getEnumClassName();
+  StringRef cppNamespace = enumAttr.getCppNamespace();
+
+  // Emit the function converting the enum attribute from its LLVM counterpart.
+  os << formatv(
+      "inline LLVM_ATTRIBUTE_UNUSED {0}::{1} convert{1}FromLLVM(int64_t "
+      "value) {{\n",
+      cppNamespace, cppClassName, llvmClass);
+  os << "  switch (value) {\n";
+
+  for (const auto &enumerant : enumAttr.getAllCases()) {
+    StringRef llvmEnumerant = enumerant.getLLVMEnumerant();
+    StringRef cppEnumerant = enumerant.getSymbol();
+    os << formatv("  case static_cast<int64_t>({0}::{1}):\n", llvmClass,
+                  llvmEnumerant);
+    os << formatv("    return {0}::{1}::{2};\n", cppNamespace, cppClassName,
+                  cppEnumerant);
+  }
+
+  os << "  }\n";
+  os << formatv("  llvm_unreachable(\"unknown {0} type\");",
+                enumAttr.getLLVMClassName());
+  os << "}\n\n";
+}
+
 // Emits conversion functions between MLIR enum attribute case and corresponding
 // LLVM API enumerants for all registered LLVM dialect enum attributes.
 template <bool ConvertTo>
@@ -281,6 +366,27 @@ static bool emitEnumConversionDefs(const RecordKeeper &recordKeeper,
       emitOneEnumToConversion(def, os);
     else
       emitOneEnumFromConversion(def, os);
+
+  for (const auto *def :
+       recordKeeper.getAllDerivedDefinitions("LLVM_CEnumAttr"))
+    if (ConvertTo)
+      emitOneCEnumToConversion(def, os);
+    else
+      emitOneCEnumFromConversion(def, os);
+
+  return false;
+}
+
+static void emitIntrOpPair(const Record &record, raw_ostream &os) {
+  auto op = tblgen::Operator(record);
+  os << "{llvm::Intrinsic::" << record.getValueAsString("llvmEnumName") << ", "
+     << op.getQualCppClassName() << "::getOperationName()},\n";
+}
+
+static bool emitIntrOpPairs(const RecordKeeper &recordKeeper, raw_ostream &os) {
+  for (const auto *def :
+       recordKeeper.getAllDerivedDefinitions("LLVM_IntrOpBase"))
+    emitIntrOpPair(*def, os);
 
   return false;
 }
@@ -298,3 +404,8 @@ static mlir::GenRegistration
     genEnumFromLLVMConversion("gen-enum-from-llvmir-conversions",
                               "Generate conversions of EnumAttrs from LLVM IR",
                               emitEnumConversionDefs</*ConvertTo=*/false>);
+
+static mlir::GenRegistration
+    genLLVMIntrinsicToOpPairs("gen-llvmintrinsic-to-llvmirop-pairs",
+                              "Generate LLVM intrinsic to LLVMIR op pairs",
+                              emitIntrOpPairs);

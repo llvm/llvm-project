@@ -22,7 +22,7 @@ public:
 
   SBStructuredData(const lldb::EventSP &event_sp);
 
-  SBStructuredData(lldb_private::StructuredDataImpl *impl);
+  SBStructuredData(const lldb_private::StructuredDataImpl &impl);
 
   ~SBStructuredData();
 

@@ -13,6 +13,16 @@ namespace std {
   };
 }
 
+#if __cplusplus >= 201103L
+namespace dr1305 { // dr1305: yes
+struct Incomplete; // expected-note {{forward declaration of 'dr1305::Incomplete'}}
+struct Complete {};
+
+int incomplete = alignof(Incomplete(&)[]); // expected-error {{invalid application of 'alignof' to an incomplete type 'dr1305::Incomplete'}}
+int complete = alignof(Complete(&)[]);
+}
+#endif
+
 namespace dr1310 { // dr1310: 5
   struct S {} * sp = new S::S; // expected-error {{qualified reference to 'S' is a constructor name}}
   void f() {
@@ -324,7 +334,7 @@ namespace dr1388 { // dr1388: 4
   template<typename ...T> void g(T..., int); // expected-note 1+{{candidate}} expected-error 0-1{{C++11}}
   template<typename ...T, typename A> void h(T..., A); // expected-note 1+{{candidate}} expected-error 0-1{{C++11}}
 
-  void test_f() { 
+  void test_f() {
     f(0); // ok, trailing parameter pack deduced to empty
     f(0, 0); // expected-error {{no matching}}
     f<int>(0);
@@ -440,6 +450,13 @@ namespace dr1391 { // dr1391: partial
   }
 }
 
+namespace dr1394 { // dr1394: 15
+#if __cplusplus >= 201103L
+struct Incomplete;
+Incomplete f(Incomplete) = delete; // well-formed
+#endif
+}
+
 namespace dr1399 { // dr1399: dup 1388
   template<typename ...T> void f(T..., int, T...) {} // expected-note {{candidate}} expected-error 0-1{{C++11}}
   void g() {
@@ -448,3 +465,15 @@ namespace dr1399 { // dr1399: dup 1388
     f(0, 0, 0); // expected-error {{no match}}
   }
 }
+
+namespace dr1307 { // dr1307: 14
+#if __cplusplus >= 201103L
+void f(int const (&)[2]);
+void f(int const (&)[3]);
+
+void caller() {
+  // This should not be ambiguous, the 2nd overload is better.
+  f({1, 2, 3});
+}
+#endif // __cplusplus >= 201103L
+} // namespace dr1307

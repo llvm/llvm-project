@@ -194,6 +194,11 @@ public:
 #include "clang/AST/CommentNodes.inc"
   };
 
+  struct Argument {
+    SourceRange Range;
+    StringRef Text;
+  };
+
   Comment(CommentKind K,
           SourceLocation LocBegin,
           SourceLocation LocEnd) :
@@ -296,13 +301,6 @@ private:
 /// A command with word-like arguments that is considered inline content.
 class InlineCommandComment : public InlineContentComment {
 public:
-  struct Argument {
-    SourceRange Range;
-    StringRef Text;
-
-    Argument(SourceRange Range, StringRef Text) : Range(Range), Text(Text) { }
-  };
-
   /// The most appropriate rendering mode for this command, chosen on command
   /// semantics in Doxygen.
   enum RenderKind {
@@ -424,19 +422,13 @@ public:
 
     Attribute() { }
 
-    Attribute(SourceLocation NameLocBegin, StringRef Name) :
-        NameLocBegin(NameLocBegin), Name(Name),
-        EqualsLoc(SourceLocation()),
-        ValueRange(SourceRange()), Value(StringRef())
-    { }
+    Attribute(SourceLocation NameLocBegin, StringRef Name)
+        : NameLocBegin(NameLocBegin), Name(Name), EqualsLoc(SourceLocation()) {}
 
     Attribute(SourceLocation NameLocBegin, StringRef Name,
-              SourceLocation EqualsLoc,
-              SourceRange ValueRange, StringRef Value) :
-        NameLocBegin(NameLocBegin), Name(Name),
-        EqualsLoc(EqualsLoc),
-        ValueRange(ValueRange), Value(Value)
-    { }
+              SourceLocation EqualsLoc, SourceRange ValueRange, StringRef Value)
+        : NameLocBegin(NameLocBegin), Name(Name), EqualsLoc(EqualsLoc),
+          ValueRange(ValueRange), Value(Value) {}
 
     SourceLocation getNameLocEnd() const {
       return NameLocBegin.getLocWithOffset(Name.size());
@@ -594,15 +586,6 @@ private:
 /// arguments depends on command name) and a paragraph as an argument
 /// (e. g., \\brief).
 class BlockCommandComment : public BlockContentComment {
-public:
-  struct Argument {
-    SourceRange Range;
-    StringRef Text;
-
-    Argument() { }
-    Argument(SourceRange Range, StringRef Text) : Range(Range), Text(Text) { }
-  };
-
 protected:
   /// Word-like arguments.
   ArrayRef<Argument> Args;
@@ -1019,8 +1002,6 @@ struct DeclInfo {
     /// \li member function template,
     /// \li member function template specialization,
     /// \li ObjC method,
-    /// \li a typedef for a function pointer, member function pointer,
-    ///     ObjC block.
     FunctionKind,
 
     /// Something that we consider a "class":
@@ -1030,8 +1011,8 @@ struct DeclInfo {
     ClassKind,
 
     /// Something that we consider a "variable":
-    /// \li namespace scope variables;
-    /// \li static and non-static class data members;
+    /// \li namespace scope variables and variable templates;
+    /// \li static and non-static class data members and member templates;
     /// \li enumerators.
     VariableKind,
 
@@ -1076,6 +1057,9 @@ struct DeclInfo {
   /// Can be true only if \c IsFunctionDecl is true.
   unsigned IsClassMethod : 1;
 
+  /// Is \c CommentDecl something we consider a "function" that's variadic.
+  unsigned IsVariadic : 1;
+
   void fill();
 
   DeclKind getKind() const LLVM_READONLY {
@@ -1085,6 +1069,8 @@ struct DeclInfo {
   TemplateDeclKind getTemplateKind() const LLVM_READONLY {
     return static_cast<TemplateDeclKind>(TemplateKind);
   }
+
+  bool involvesFunctionType() const { return !ReturnType.isNull(); }
 };
 
 /// A full comment attached to a declaration, contains block content.

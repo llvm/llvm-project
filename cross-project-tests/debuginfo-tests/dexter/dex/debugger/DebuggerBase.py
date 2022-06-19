@@ -13,11 +13,25 @@ import traceback
 import unittest
 
 from types import SimpleNamespace
+from dex.command.CommandBase import StepExpectInfo
 from dex.dextIR import DebuggerIR, FrameIR, LocIR, StepIR, ValueIR
 from dex.utils.Exceptions import DebuggerException
-from dex.utils.Exceptions import NotYetLoadedDebuggerException
 from dex.utils.ReturnCode import ReturnCode
 
+def watch_is_active(watch_info: StepExpectInfo, path, frame_idx, line_no):
+    _, watch_path, watch_frame_idx, watch_line_range = watch_info
+    # If this watch should only be active for a specific file...
+    if watch_path and os.path.isfile(watch_path):
+        # If the current path does not match the expected file, this watch is
+        # not active.
+        if not (path and os.path.isfile(path) and
+                os.path.samefile(path, watch_path)):
+            return False
+    if watch_frame_idx != frame_idx:
+        return False
+    if watch_line_range and line_no not in list(watch_line_range):
+        return False
+    return True
 
 class DebuggerBase(object, metaclass=abc.ABCMeta):
     def __init__(self, context):
@@ -29,11 +43,10 @@ class DebuggerBase(object, metaclass=abc.ABCMeta):
 
         self._interface = None
         self.has_loaded = False
-        self._loading_error = NotYetLoadedDebuggerException()
+        self._loading_error = None
         try:
             self._interface = self._load_interface()
             self.has_loaded = True
-            self._loading_error = None
         except DebuggerException:
             self._loading_error = sys.exc_info()
 
@@ -154,10 +167,10 @@ class DebuggerBase(object, metaclass=abc.ABCMeta):
         pass
 
     @abc.abstractmethod
-    def delete_breakpoint(self, id):
-        """Delete a breakpoint by id.
+    def delete_breakpoints(self, ids):
+        """Delete a set of breakpoints by ids.
 
-        Raises a KeyError if no breakpoint with this id exists.
+        Raises a KeyError if, for any id, no breakpoint with that id exists.
         """
         pass
 
@@ -261,39 +274,46 @@ class TestDebuggerBase(unittest.TestCase):
     def test_add_breakpoint_no_source_root_dir(self):
         self.options.debugger_use_relative_paths = True
         self.options.source_root_dir = ''
-        self.dbg.add_breakpoint('/root/some_file', 12)
-        self.assertEqual('/root/some_file', self.dbg.breakpoint_file)
+        path = os.path.join(os.path.sep + 'root', 'some_file')
+        self.dbg.add_breakpoint(path, 12)
+        self.assertEqual(path, self.dbg.breakpoint_file)
 
     def test_add_breakpoint_with_source_root_dir(self):
         self.options.debugger_use_relative_paths = True
-        self.options.source_root_dir = '/my_root'
-        self.dbg.add_breakpoint('/my_root/some_file', 12)
+        self.options.source_root_dir = os.path.sep + 'my_root'
+        path = os.path.join(self.options.source_root_dir, 'some_file')
+        self.dbg.add_breakpoint(path, 12)
         self.assertEqual('some_file', self.dbg.breakpoint_file)
 
     def test_add_breakpoint_with_source_root_dir_slash_suffix(self):
         self.options.debugger_use_relative_paths = True
-        self.options.source_root_dir = '/my_root/'
-        self.dbg.add_breakpoint('/my_root/some_file', 12)
+        self.options.source_root_dir = os.path.sep + 'my_root' + os.path.sep
+        path = os.path.join(self.options.source_root_dir, 'some_file')
+        self.dbg.add_breakpoint(path, 12)
         self.assertEqual('some_file', self.dbg.breakpoint_file)
 
     def test_get_step_info_no_source_root_dir(self):
         self.options.debugger_use_relative_paths = True
-        self.dbg.step_info = self._new_step(['/root/some_file'])
-        self.assertEqual(['/root/some_file'],
+        path = os.path.join(os.path.sep + 'root', 'some_file')
+        self.dbg.step_info = self._new_step([path])
+        self.assertEqual([path],
             self._step_paths(self.dbg.get_step_info([], 0)))
 
     def test_get_step_info_no_frames(self):
         self.options.debugger_use_relative_paths = True
-        self.options.source_root_dir = '/my_root'
+        self.options.source_root_dir = os.path.sep + 'my_root'
         self.dbg.step_info = self._new_step([])
         self.assertEqual([],
             self._step_paths(self.dbg.get_step_info([], 0)))
 
     def test_get_step_info(self):
         self.options.debugger_use_relative_paths = True
-        self.options.source_root_dir = '/my_root'
-        self.options.source_files = ['/my_root/some_file']
+        self.options.source_root_dir = os.path.sep + 'my_root'
+        path = os.path.join(self.options.source_root_dir, 'some_file')
+        self.options.source_files = [path]
+        other_path = os.path.join(os.path.sep + 'other', 'file')
+        dbg_path = os.path.join(os.path.sep + 'dbg', 'some_file')
         self.dbg.step_info = self._new_step(
-            [None, '/other/file', '/dbg/some_file'])
-        self.assertEqual([None, '/other/file', '/my_root/some_file'],
+            [None, other_path, dbg_path])
+        self.assertEqual([None, other_path, path],
             self._step_paths(self.dbg.get_step_info([], 0)))

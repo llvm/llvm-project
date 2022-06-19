@@ -50,8 +50,11 @@ public:
 
   FmtContext() = default;
 
+  // Create a format context with a list of substitutions.
+  FmtContext(ArrayRef<std::pair<StringRef, StringRef>> subs);
+
   // Setter for custom placeholders
-  FmtContext &addSubst(StringRef placeholder, Twine subst);
+  FmtContext &addSubst(StringRef placeholder, const Twine &subst);
 
   // Setters for builtin placeholders
   FmtContext &withBuilder(Twine subst);
@@ -149,7 +152,7 @@ public:
   FmtObjectBase(const FmtObjectBase &that) = delete;
 
   FmtObjectBase(FmtObjectBase &&that)
-      : fmt(std::move(that.fmt)), context(that.context),
+      : fmt(that.fmt), context(that.context),
         adapters(), // adapters are initialized by FmtObject
         replacements(std::move(that.replacements)) {}
 
@@ -268,7 +271,7 @@ inline FmtStrVecObject tgfmt(StringRef fmt, const FmtContext *ctx,
   return FmtStrVecObject(fmt, ctx, params);
 }
 
-} // end namespace tblgen
-} // end namespace mlir
+} // namespace tblgen
+} // namespace mlir
 
 #endif // MLIR_TABLEGEN_FORMAT_H_

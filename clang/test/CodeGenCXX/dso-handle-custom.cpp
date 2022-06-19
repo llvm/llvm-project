@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -emit-llvm -fexceptions %s -o - | FileCheck %s --check-prefixes CHECK,CHECK-DEFAULT
-// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -emit-llvm -fexceptions %s -o - -DHIDDEN | FileCheck %s --check-prefixes CHECK,CHECK-HIDDEN
+// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-unknown-linux-gnu -emit-llvm -fexceptions %s -o - | FileCheck %s --check-prefixes CHECK,CHECK-DEFAULT
+// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-unknown-linux-gnu -emit-llvm -fexceptions %s -o - -DHIDDEN | FileCheck %s --check-prefixes CHECK,CHECK-HIDDEN
 
 class A {
 public:

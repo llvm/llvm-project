@@ -5,9 +5,10 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-//
-// This file contains some functions that are useful when dealing with strings.
-//
+///
+/// \file
+/// This file contains some functions that are useful when dealing with strings.
+///
 //===----------------------------------------------------------------------===//
 
 #ifndef LLVM_ADT_STRINGEXTRAS_H
@@ -29,14 +30,15 @@
 
 namespace llvm {
 
-template<typename T> class SmallVectorImpl;
 class raw_ostream;
 
 /// hexdigit - Return the hexadecimal character for the
 /// given number \p X (which should be less than 16).
 inline char hexdigit(unsigned X, bool LowerCase = false) {
-  const char HexChar = LowerCase ? 'a' : 'A';
-  return X < 10 ? '0' + X : HexChar + X - 10;
+  assert(X < 16);
+  static const char LUT[] = "0123456789ABCDEF";
+  const uint8_t Offset = LowerCase ? 32 : 0;
+  return LUT[X] | Offset;
 }
 
 /// Given an array of c-style strings terminated by a null pointer, construct
@@ -67,22 +69,27 @@ inline ArrayRef<uint8_t> arrayRefFromStringRef(StringRef Input) {
 ///
 /// If \p C is not a valid hex digit, -1U is returned.
 inline unsigned hexDigitValue(char C) {
-  struct HexTable {
-    unsigned LUT[255] = {};
-    constexpr HexTable() {
-      // Default initialize everything to invalid.
-      for (int i = 0; i < 255; ++i)
-        LUT[i] = ~0U;
-      // Initialize `0`-`9`.
-      for (int i = 0; i < 10; ++i)
-        LUT['0' + i] = i;
-      // Initialize `A`-`F` and `a`-`f`.
-      for (int i = 0; i < 6; ++i)
-        LUT['A' + i] = LUT['a' + i] = 10 + i;
-    }
+  /* clang-format off */
+  static const int16_t LUT[256] = {
+    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+     0,  1,  2,  3,  4,  5,  6,  7,  8,  9, -1, -1, -1, -1, -1, -1,  // '0'..'9'
+    -1, 10, 11, 12, 13, 14, 15, -1, -1, -1, -1, -1, -1, -1, -1, -1,  // 'A'..'F'
+    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+    -1, 10, 11, 12, 13, 14, 15, -1, -1, -1, -1, -1, -1, -1, -1, -1,  // 'a'..'f'
+    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
   };
-  constexpr HexTable Table;
-  return Table.LUT[static_cast<unsigned char>(C)];
+  /* clang-format on */
+  return LUT[static_cast<unsigned char>(C)];
 }
 
 /// Checks if character \p C is one of the 10 decimal digits.
@@ -142,13 +149,14 @@ inline char toUpper(char x) {
   return x;
 }
 
-inline std::string utohexstr(uint64_t X, bool LowerCase = false) {
+inline std::string utohexstr(uint64_t X, bool LowerCase = false,
+                             unsigned Width = 0) {
   char Buffer[17];
   char *BufPtr = std::end(Buffer);
 
   if (X == 0) *--BufPtr = '0';
 
-  while (X) {
+  for (unsigned i = 0; Width ? (i < Width) : X; ++i) {
     unsigned char Mod = static_cast<unsigned char>(X) & 15;
     *--BufPtr = hexdigit(Mod, LowerCase);
     X >>= 4;
@@ -159,23 +167,26 @@ inline std::string utohexstr(uint64_t X, bool LowerCase = false) {
 
 /// Convert buffer \p Input to its hexadecimal representation.
 /// The returned string is double the size of \p Input.
-inline std::string toHex(StringRef Input, bool LowerCase = false) {
-  static const char *const LUT = "0123456789ABCDEF";
-  const uint8_t Offset = LowerCase ? 32 : 0;
-  size_t Length = Input.size();
+inline void toHex(ArrayRef<uint8_t> Input, bool LowerCase,
+                  SmallVectorImpl<char> &Output) {
+  const size_t Length = Input.size();
+  Output.resize_for_overwrite(Length * 2);
 
-  std::string Output;
-  Output.reserve(2 * Length);
-  for (size_t i = 0; i < Length; ++i) {
-    const unsigned char c = Input[i];
-    Output.push_back(LUT[c >> 4] | Offset);
-    Output.push_back(LUT[c & 15] | Offset);
+  for (size_t i = 0; i < Length; i++) {
+    const uint8_t c = Input[i];
+    Output[i * 2    ] = hexdigit(c >> 4, LowerCase);
+    Output[i * 2 + 1] = hexdigit(c & 15, LowerCase);
   }
-  return Output;
 }
 
 inline std::string toHex(ArrayRef<uint8_t> Input, bool LowerCase = false) {
-  return toHex(toStringRef(Input), LowerCase);
+  SmallString<16> Output;
+  toHex(Input, LowerCase, Output);
+  return std::string(Output);
+}
+
+inline std::string toHex(StringRef Input, bool LowerCase = false) {
+  return toHex(arrayRefFromStringRef(Input), LowerCase);
 }
 
 /// Store the binary representation of the two provided values, \p MSB and
@@ -210,24 +221,31 @@ inline bool tryGetFromHex(StringRef Input, std::string &Output) {
   if (Input.empty())
     return true;
 
-  Output.reserve((Input.size() + 1) / 2);
+  // If the input string is not properly aligned on 2 nibbles we pad out the
+  // front with a 0 prefix; e.g. `ABC` -> `0ABC`.
+  Output.resize((Input.size() + 1) / 2);
+  char *OutputPtr = const_cast<char *>(Output.data());
   if (Input.size() % 2 == 1) {
     uint8_t Hex = 0;
     if (!tryGetHexFromNibbles('0', Input.front(), Hex))
       return false;
-
-    Output.push_back(Hex);
+    *OutputPtr++ = Hex;
     Input = Input.drop_front();
   }
 
-  assert(Input.size() % 2 == 0);
-  while (!Input.empty()) {
+  // Convert the nibble pairs (e.g. `9C`) into bytes (0x9C).
+  // With the padding above we know the input is aligned and the output expects
+  // exactly half as many bytes as nibbles in the input.
+  size_t InputSize = Input.size();
+  assert(InputSize % 2 == 0);
+  const char *InputPtr = Input.data();
+  for (size_t OutputIndex = 0; OutputIndex < InputSize / 2; ++OutputIndex) {
     uint8_t Hex = 0;
-    if (!tryGetHexFromNibbles(Input[0], Input[1], Hex))
+    if (!tryGetHexFromNibbles(InputPtr[OutputIndex * 2 + 0], // MSB
+                              InputPtr[OutputIndex * 2 + 1], // LSB
+                              Hex))
       return false;
-
-    Output.push_back(Hex);
-    Input = Input.drop_front(2);
+    OutputPtr[OutputIndex] = Hex;
   }
   return true;
 }
@@ -500,6 +518,83 @@ public:
     return Separator;
   }
 };
+
+/// A forward iterator over partitions of string over a separator.
+class SplittingIterator
+    : public iterator_facade_base<SplittingIterator, std::forward_iterator_tag,
+                                  StringRef> {
+  char SeparatorStorage;
+  StringRef Current;
+  StringRef Next;
+  StringRef Separator;
+
+public:
+  SplittingIterator(StringRef Str, StringRef Separator)
+      : Next(Str), Separator(Separator) {
+    ++*this;
+  }
+
+  SplittingIterator(StringRef Str, char Separator)
+      : SeparatorStorage(Separator), Next(Str),
+        Separator(&SeparatorStorage, 1) {
+    ++*this;
+  }
+
+  SplittingIterator(const SplittingIterator &R)
+      : SeparatorStorage(R.SeparatorStorage), Current(R.Current), Next(R.Next),
+        Separator(R.Separator) {
+    if (R.Separator.data() == &R.SeparatorStorage)
+      Separator = StringRef(&SeparatorStorage, 1);
+  }
+
+  SplittingIterator &operator=(const SplittingIterator &R) {
+    if (this == &R)
+      return *this;
+
+    SeparatorStorage = R.SeparatorStorage;
+    Current = R.Current;
+    Next = R.Next;
+    Separator = R.Separator;
+    if (R.Separator.data() == &R.SeparatorStorage)
+      Separator = StringRef(&SeparatorStorage, 1);
+    return *this;
+  }
+
+  bool operator==(const SplittingIterator &R) const {
+    assert(Separator == R.Separator);
+    return Current.data() == R.Current.data();
+  }
+
+  const StringRef &operator*() const { return Current; }
+
+  StringRef &operator*() { return Current; }
+
+  SplittingIterator &operator++() {
+    std::tie(Current, Next) = Next.split(Separator);
+    return *this;
+  }
+};
+
+/// Split the specified string over a separator and return a range-compatible
+/// iterable over its partitions.  Used to permit conveniently iterating
+/// over separated strings like so:
+///
+/// \code
+///   for (StringRef x : llvm::split("foo,bar,baz", ","))
+///     ...;
+/// \end
+///
+/// Note that the passed string must remain valid throuhgout lifetime
+/// of the iterators.
+inline iterator_range<SplittingIterator> split(StringRef Str, StringRef Separator) {
+  return {SplittingIterator(Str, Separator),
+          SplittingIterator(StringRef(), Separator)};
+}
+
+inline iterator_range<SplittingIterator> split(StringRef Str, char Separator) {
+  return {SplittingIterator(Str, Separator),
+          SplittingIterator(StringRef(), Separator)};
+}
 
 } // end namespace llvm
 

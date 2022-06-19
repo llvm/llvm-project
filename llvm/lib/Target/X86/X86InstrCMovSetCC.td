@@ -14,7 +14,7 @@
 
 // CMOV instructions.
 let isCodeGenOnly = 1, ForceDisassemble = 1 in {
-let Uses = [EFLAGS], Predicates = [HasCMov], Constraints = "$src1 = $dst",
+let Uses = [EFLAGS], Predicates = [HasCMOV], Constraints = "$src1 = $dst",
     isCommutable = 1, SchedRW = [WriteCMOV] in {
   def CMOV16rr
     : I<0x40, MRMSrcRegCC, (outs GR16:$dst), (ins GR16:$src1, GR16:$src2, ccode:$cond),
@@ -35,7 +35,7 @@ let Uses = [EFLAGS], Predicates = [HasCMov], Constraints = "$src1 = $dst",
               (X86cmov GR64:$src1, GR64:$src2, timm:$cond, EFLAGS))]>, TB;
 }
 
-let Uses = [EFLAGS], Predicates = [HasCMov], Constraints = "$src1 = $dst",
+let Uses = [EFLAGS], Predicates = [HasCMOV], Constraints = "$src1 = $dst",
     SchedRW = [WriteCMOV.Folded, WriteCMOV.ReadAfterFold] in {
   def CMOV16rm
     : I<0x40, MRMSrcMemCC, (outs GR16:$dst), (ins GR16:$src1, i16mem:$src2, ccode:$cond),
@@ -52,7 +52,7 @@ let Uses = [EFLAGS], Predicates = [HasCMov], Constraints = "$src1 = $dst",
         "cmov${cond}{q}\t{$src2, $dst|$dst, $src2}",
         [(set GR64:$dst, (X86cmov GR64:$src1, (loadi64 addr:$src2),
                                   timm:$cond, EFLAGS))]>, TB;
-} // Uses = [EFLAGS], Predicates = [HasCMov], Constraints = "$src1 = $dst"
+} // Uses = [EFLAGS], Predicates = [HasCMOV], Constraints = "$src1 = $dst"
 } // isCodeGenOnly = 1, ForceDisassemble = 1
 
 def inv_cond_XFORM : SDNodeXForm<imm, [{
@@ -63,7 +63,7 @@ def inv_cond_XFORM : SDNodeXForm<imm, [{
 
 // Conditional moves with folded loads with operands swapped and conditions
 // inverted.
-let Predicates = [HasCMov] in {
+let Predicates = [HasCMOV] in {
   def : Pat<(X86cmov (loadi16 addr:$src1), GR16:$src2, timm:$cond, EFLAGS),
             (CMOV16rm GR16:$src2, addr:$src1, (inv_cond_XFORM timm:$cond))>;
   def : Pat<(X86cmov (loadi32 addr:$src1), GR32:$src2, timm:$cond, EFLAGS),

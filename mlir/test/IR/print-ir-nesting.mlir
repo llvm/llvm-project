@@ -1,6 +1,6 @@
 // RUN: mlir-opt -test-print-nesting  -allow-unregistered-dialect %s | FileCheck %s
 
-// CHECK: visiting op: 'module' with 0 operands and 0 results
+// CHECK: visiting op: 'builtin.module' with 0 operands and 0 results
 // CHECK:  1 nested regions:
 // CHECK:   Region with 1 blocks:
 // CHECK:     Block with 0 arguments, 0 successors, and 2 operations

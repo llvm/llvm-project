@@ -17,8 +17,8 @@
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/CodeGen/TargetLowering.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
+#include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/SourceMgr.h"
-#include "llvm/Support/TargetRegistry.h"
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Target/TargetOptions.h"
@@ -45,10 +45,29 @@ TEST_F(AArch64GISelMITest, MatchIntConstantRegister) {
   if (!TM)
     return;
   auto MIBCst = B.buildConstant(LLT::scalar(64), 42);
-  Register Src0;
-  bool match = mi_match(MIBCst.getReg(0), *MRI, m_ICst(Src0));
+  Optional<ValueAndVReg> Src0;
+  bool match = mi_match(MIBCst.getReg(0), *MRI, m_GCst(Src0));
   EXPECT_TRUE(match);
-  EXPECT_EQ(Src0, MIBCst.getReg(0));
+  EXPECT_EQ(Src0->VReg, MIBCst.getReg(0));
+}
+
+TEST_F(AArch64GISelMITest, MatchIntConstantSplat) {
+  setUp();
+  if (!TM)
+    return;
+
+  LLT s64 = LLT::scalar(64);
+  LLT v4s64 = LLT::fixed_vector(4, s64);
+
+  MachineInstrBuilder FortyTwoSplat =
+      B.buildSplatVector(v4s64, B.buildConstant(s64, 42));
+  int64_t Cst;
+  EXPECT_TRUE(mi_match(FortyTwoSplat.getReg(0), *MRI, m_ICstOrSplat(Cst)));
+  EXPECT_EQ(Cst, 42);
+
+  MachineInstrBuilder NonConstantSplat =
+      B.buildBuildVector(v4s64, {Copies[0], Copies[0], Copies[0], Copies[0]});
+  EXPECT_FALSE(mi_match(NonConstantSplat.getReg(0), *MRI, m_ICstOrSplat(Cst)));
 }
 
 TEST_F(AArch64GISelMITest, MachineInstrPtrBind) {
@@ -499,8 +518,8 @@ TEST_F(AArch64GISelMITest, MatchMiscellaneous) {
   EXPECT_TRUE(mi_match(Reg, *MRI, m_OneNonDBGUse(m_GAdd(m_Reg(), m_Reg()))));
 
   // Add multiple debug uses of Reg.
-  B.buildInstr(TargetOpcode::DBG_VALUE, {}, {Reg})->getOperand(0).setIsDebug();
-  B.buildInstr(TargetOpcode::DBG_VALUE, {}, {Reg})->getOperand(0).setIsDebug();
+  B.buildInstr(TargetOpcode::DBG_VALUE, {}, {Reg});
+  B.buildInstr(TargetOpcode::DBG_VALUE, {}, {Reg});
 
   EXPECT_FALSE(mi_match(Reg, *MRI, m_OneUse(m_GAdd(m_Reg(), m_Reg()))));
   EXPECT_TRUE(mi_match(Reg, *MRI, m_OneNonDBGUse(m_GAdd(m_Reg(), m_Reg()))));
@@ -533,6 +552,67 @@ TEST_F(AArch64GISelMITest, MatchSpecificConstant) {
   EXPECT_FALSE(mi_match(MIBAdd.getReg(1), *MRI, m_SpecificICst(42)));
 }
 
+TEST_F(AArch64GISelMITest, MatchSpecificConstantSplat) {
+  setUp();
+  if (!TM)
+    return;
+
+  LLT s64 = LLT::scalar(64);
+  LLT v4s64 = LLT::fixed_vector(4, s64);
+
+  MachineInstrBuilder FortyTwoSplat =
+      B.buildSplatVector(v4s64, B.buildConstant(s64, 42));
+  MachineInstrBuilder FortyTwo = B.buildConstant(s64, 42);
+
+  EXPECT_TRUE(mi_match(FortyTwoSplat.getReg(0), *MRI, m_SpecificICstSplat(42)));
+  EXPECT_FALSE(
+      mi_match(FortyTwoSplat.getReg(0), *MRI, m_SpecificICstSplat(43)));
+  EXPECT_FALSE(mi_match(FortyTwo.getReg(0), *MRI, m_SpecificICstSplat(42)));
+
+  MachineInstrBuilder NonConstantSplat =
+      B.buildBuildVector(v4s64, {Copies[0], Copies[0], Copies[0], Copies[0]});
+
+  MachineInstrBuilder AddSplat =
+      B.buildAdd(v4s64, NonConstantSplat, FortyTwoSplat);
+  EXPECT_TRUE(mi_match(AddSplat.getReg(2), *MRI, m_SpecificICstSplat(42)));
+  EXPECT_FALSE(mi_match(AddSplat.getReg(2), *MRI, m_SpecificICstSplat(43)));
+  EXPECT_FALSE(mi_match(AddSplat.getReg(1), *MRI, m_SpecificICstSplat(42)));
+
+  MachineInstrBuilder Add = B.buildAdd(s64, Copies[0], FortyTwo);
+  EXPECT_FALSE(mi_match(Add.getReg(2), *MRI, m_SpecificICstSplat(42)));
+}
+
+TEST_F(AArch64GISelMITest, MatchSpecificConstantOrSplat) {
+  setUp();
+  if (!TM)
+    return;
+
+  LLT s64 = LLT::scalar(64);
+  LLT v4s64 = LLT::fixed_vector(4, s64);
+
+  MachineInstrBuilder FortyTwoSplat =
+      B.buildSplatVector(v4s64, B.buildConstant(s64, 42));
+  MachineInstrBuilder FortyTwo = B.buildConstant(s64, 42);
+
+  EXPECT_TRUE(
+      mi_match(FortyTwoSplat.getReg(0), *MRI, m_SpecificICstOrSplat(42)));
+  EXPECT_FALSE(
+      mi_match(FortyTwoSplat.getReg(0), *MRI, m_SpecificICstOrSplat(43)));
+  EXPECT_TRUE(mi_match(FortyTwo.getReg(0), *MRI, m_SpecificICstOrSplat(42)));
+
+  MachineInstrBuilder NonConstantSplat =
+      B.buildBuildVector(v4s64, {Copies[0], Copies[0], Copies[0], Copies[0]});
+
+  MachineInstrBuilder AddSplat =
+      B.buildAdd(v4s64, NonConstantSplat, FortyTwoSplat);
+  EXPECT_TRUE(mi_match(AddSplat.getReg(2), *MRI, m_SpecificICstOrSplat(42)));
+  EXPECT_FALSE(mi_match(AddSplat.getReg(2), *MRI, m_SpecificICstOrSplat(43)));
+  EXPECT_FALSE(mi_match(AddSplat.getReg(1), *MRI, m_SpecificICstOrSplat(42)));
+
+  MachineInstrBuilder Add = B.buildAdd(s64, Copies[0], FortyTwo);
+  EXPECT_TRUE(mi_match(Add.getReg(2), *MRI, m_SpecificICstOrSplat(42)));
+}
+
 TEST_F(AArch64GISelMITest, MatchZeroInt) {
   setUp();
   if (!TM)
@@ -553,6 +633,76 @@ TEST_F(AArch64GISelMITest, MatchAllOnesInt) {
 
   auto FortyTwo = B.buildConstant(LLT::scalar(64), 42);
   EXPECT_FALSE(mi_match(FortyTwo.getReg(0), *MRI, m_AllOnesInt()));
+}
+
+TEST_F(AArch64GISelMITest, MatchFPOrIntConst) {
+  setUp();
+  if (!TM)
+    return;
+
+  Register IntOne = B.buildConstant(LLT::scalar(64), 1).getReg(0);
+  Register FPOne = B.buildFConstant(LLT::scalar(64), 1.0).getReg(0);
+  Optional<ValueAndVReg> ValReg;
+  Optional<FPValueAndVReg> FValReg;
+
+  EXPECT_TRUE(mi_match(IntOne, *MRI, m_GCst(ValReg)));
+  EXPECT_EQ(IntOne, ValReg->VReg);
+  EXPECT_FALSE(mi_match(IntOne, *MRI, m_GFCst(FValReg)));
+
+  EXPECT_FALSE(mi_match(FPOne, *MRI, m_GCst(ValReg)));
+  EXPECT_TRUE(mi_match(FPOne, *MRI, m_GFCst(FValReg)));
+  EXPECT_EQ(FPOne, FValReg->VReg);
+}
+
+TEST_F(AArch64GISelMITest, MatchConstantSplat) {
+  setUp();
+  if (!TM)
+    return;
+
+  LLT s64 = LLT::scalar(64);
+  LLT v4s64 = LLT::fixed_vector(4, 64);
+
+  Register FPOne = B.buildFConstant(s64, 1.0).getReg(0);
+  Register FPZero = B.buildFConstant(s64, 0.0).getReg(0);
+  Register Undef = B.buildUndef(s64).getReg(0);
+  Optional<FPValueAndVReg> FValReg;
+
+  // GFCstOrSplatGFCstMatch allows undef as part of splat. Undef often comes
+  // from padding to legalize into available operation and then ignore added
+  // elements e.g. v3s64 to v4s64.
+
+  EXPECT_TRUE(mi_match(FPZero, *MRI, GFCstOrSplatGFCstMatch(FValReg)));
+  EXPECT_EQ(FPZero, FValReg->VReg);
+
+  EXPECT_FALSE(mi_match(Undef, *MRI, GFCstOrSplatGFCstMatch(FValReg)));
+
+  auto ZeroSplat = B.buildBuildVector(v4s64, {FPZero, FPZero, FPZero, FPZero});
+  EXPECT_TRUE(
+      mi_match(ZeroSplat.getReg(0), *MRI, GFCstOrSplatGFCstMatch(FValReg)));
+  EXPECT_EQ(FPZero, FValReg->VReg);
+
+  auto ZeroUndef = B.buildBuildVector(v4s64, {FPZero, FPZero, FPZero, Undef});
+  EXPECT_TRUE(
+      mi_match(ZeroUndef.getReg(0), *MRI, GFCstOrSplatGFCstMatch(FValReg)));
+  EXPECT_EQ(FPZero, FValReg->VReg);
+
+  // All undefs are not constant splat.
+  auto UndefSplat = B.buildBuildVector(v4s64, {Undef, Undef, Undef, Undef});
+  EXPECT_FALSE(
+      mi_match(UndefSplat.getReg(0), *MRI, GFCstOrSplatGFCstMatch(FValReg)));
+
+  auto ZeroOne = B.buildBuildVector(v4s64, {FPZero, FPZero, FPZero, FPOne});
+  EXPECT_FALSE(
+      mi_match(ZeroOne.getReg(0), *MRI, GFCstOrSplatGFCstMatch(FValReg)));
+
+  auto NonConstantSplat =
+      B.buildBuildVector(v4s64, {Copies[0], Copies[0], Copies[0], Copies[0]});
+  EXPECT_FALSE(mi_match(NonConstantSplat.getReg(0), *MRI,
+                        GFCstOrSplatGFCstMatch(FValReg)));
+
+  auto Mixed = B.buildBuildVector(v4s64, {FPZero, FPZero, FPZero, Copies[0]});
+  EXPECT_FALSE(
+      mi_match(Mixed.getReg(0), *MRI, GFCstOrSplatGFCstMatch(FValReg)));
 }
 
 TEST_F(AArch64GISelMITest, MatchNeg) {

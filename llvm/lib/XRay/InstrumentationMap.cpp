@@ -86,10 +86,8 @@ loadObj(StringRef Filename, object::OwningBinary<object::ObjectFile> &ObjFile,
         "Failed to find XRay instrumentation map.",
         std::make_error_code(std::errc::executable_format_error));
 
-  if (Expected<StringRef> E = I->getContents())
-    Contents = *E;
-  else
-    return E.takeError();
+  if (Error E = I->getContents().moveInto(Contents))
+    return E;
 
   RelocMap Relocs;
   if (ObjFile.getBinary()->isELF()) {
@@ -190,7 +188,7 @@ loadObj(StringRef Filename, object::OwningBinary<object::ObjectFile> &ObjFile,
         SledEntry::FunctionKinds::TAIL,
         SledEntry::FunctionKinds::LOG_ARGS_ENTER,
         SledEntry::FunctionKinds::CUSTOM_EVENT};
-    if (Kind >= sizeof(Kinds))
+    if (Kind >= sizeof(Kinds) / sizeof(Kinds[0]))
       return errorCodeToError(
           std::make_error_code(std::errc::executable_format_error));
     Entry.Kind = Kinds[Kind];

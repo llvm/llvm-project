@@ -16,12 +16,12 @@
 #include "llvm/CodeGen/Passes.h"
 #include "llvm/CodeGen/TargetLoweringObjectFileImpl.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
-#include "llvm/Support/TargetRegistry.h"
+#include "llvm/MC/TargetRegistry.h"
 
 using namespace llvm;
 
 static Reloc::Model getRelocModel(Optional<Reloc::Model> RM) {
-  return RM.getValueOr(Reloc::Static);
+  return RM.value_or(Reloc::Static);
 }
 
 /// ARCTargetMachine ctor - Create an ILP32 architecture model
@@ -84,6 +84,6 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeARCTarget() {
 }
 
 TargetTransformInfo
-ARCTargetMachine::getTargetTransformInfo(const Function &F) {
+ARCTargetMachine::getTargetTransformInfo(const Function &F) const {
   return TargetTransformInfo(ARCTTIImpl(this, F));
 }

@@ -258,6 +258,18 @@ s64 internal_simple_strtoll(const char *nptr, const char **endptr, int base) {
   }
 }
 
+uptr internal_wcslen(const wchar_t *s) {
+  uptr i = 0;
+  while (s[i]) i++;
+  return i;
+}
+
+uptr internal_wcsnlen(const wchar_t *s, uptr maxlen) {
+  uptr i = 0;
+  while (i < maxlen && s[i]) i++;
+  return i;
+}
+
 bool mem_is_zero(const char *beg, uptr size) {
   CHECK_LE(size, 1ULL << FIRST_32_SECOND_64(30, 40));  // Sanity check.
   const char *end = beg + size;

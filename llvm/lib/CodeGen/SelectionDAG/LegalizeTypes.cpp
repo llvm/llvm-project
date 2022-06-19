@@ -13,10 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "LegalizeTypes.h"
-#include "SDNodeDbgValue.h"
 #include "llvm/ADT/SetVector.h"
-#include "llvm/CodeGen/MachineFunction.h"
-#include "llvm/IR/CallingConv.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -28,7 +25,7 @@ using namespace llvm;
 static cl::opt<bool>
 EnableExpensiveChecks("enable-legalize-types-checking", cl::Hidden);
 
-/// Do extensive, expensive, sanity checking.
+/// Do extensive, expensive, basic correctness checking.
 void DAGTypeLegalizer::PerformExpensiveChecks() {
   // If a node is not processed, then none of its values should be mapped by any
   // of PromotedIntegers, ExpandedIntegers, ..., ReplacedValues.
@@ -83,49 +80,52 @@ void DAGTypeLegalizer::PerformExpensiveChecks() {
       SDValue Res(&Node, i);
       bool Failed = false;
       // Don't create a value in map.
-      auto ResId = (ValueToIdMap.count(Res)) ? ValueToIdMap[Res] : 0;
+      auto ResId = ValueToIdMap.lookup(Res);
 
       unsigned Mapped = 0;
-      if (ResId && (ReplacedValues.find(ResId) != ReplacedValues.end())) {
-        Mapped |= 1;
-        // Check that remapped values are only used by nodes marked NewNode.
-        for (SDNode::use_iterator UI = Node.use_begin(), UE = Node.use_end();
-             UI != UE; ++UI)
-          if (UI.getUse().getResNo() == i)
-            assert(UI->getNodeId() == NewNode &&
-                   "Remapped value has non-trivial use!");
+      if (ResId) {
+        auto I = ReplacedValues.find(ResId);
+        if (I != ReplacedValues.end()) {
+          Mapped |= 1;
+          // Check that remapped values are only used by nodes marked NewNode.
+          for (SDNode::use_iterator UI = Node.use_begin(), UE = Node.use_end();
+               UI != UE; ++UI)
+            if (UI.getUse().getResNo() == i)
+              assert(UI->getNodeId() == NewNode &&
+                     "Remapped value has non-trivial use!");
 
-        // Check that the final result of applying ReplacedValues is not
-        // marked NewNode.
-        auto NewValId = ReplacedValues[ResId];
-        auto I = ReplacedValues.find(NewValId);
-        while (I != ReplacedValues.end()) {
-          NewValId = I->second;
+          // Check that the final result of applying ReplacedValues is not
+          // marked NewNode.
+          auto NewValId = I->second;
           I = ReplacedValues.find(NewValId);
+          while (I != ReplacedValues.end()) {
+            NewValId = I->second;
+            I = ReplacedValues.find(NewValId);
+          }
+          SDValue NewVal = getSDValue(NewValId);
+          (void)NewVal;
+          assert(NewVal.getNode()->getNodeId() != NewNode &&
+                 "ReplacedValues maps to a new node!");
         }
-        SDValue NewVal = getSDValue(NewValId);
-        (void)NewVal;
-        assert(NewVal.getNode()->getNodeId() != NewNode &&
-               "ReplacedValues maps to a new node!");
+        if (PromotedIntegers.count(ResId))
+          Mapped |= 2;
+        if (SoftenedFloats.count(ResId))
+          Mapped |= 4;
+        if (ScalarizedVectors.count(ResId))
+          Mapped |= 8;
+        if (ExpandedIntegers.count(ResId))
+          Mapped |= 16;
+        if (ExpandedFloats.count(ResId))
+          Mapped |= 32;
+        if (SplitVectors.count(ResId))
+          Mapped |= 64;
+        if (WidenedVectors.count(ResId))
+          Mapped |= 128;
+        if (PromotedFloats.count(ResId))
+          Mapped |= 256;
+        if (SoftPromotedHalfs.count(ResId))
+          Mapped |= 512;
       }
-      if (ResId && PromotedIntegers.find(ResId) != PromotedIntegers.end())
-        Mapped |= 2;
-      if (ResId && SoftenedFloats.find(ResId) != SoftenedFloats.end())
-        Mapped |= 4;
-      if (ResId && ScalarizedVectors.find(ResId) != ScalarizedVectors.end())
-        Mapped |= 8;
-      if (ResId && ExpandedIntegers.find(ResId) != ExpandedIntegers.end())
-        Mapped |= 16;
-      if (ResId && ExpandedFloats.find(ResId) != ExpandedFloats.end())
-        Mapped |= 32;
-      if (ResId && SplitVectors.find(ResId) != SplitVectors.end())
-        Mapped |= 64;
-      if (ResId && WidenedVectors.find(ResId) != WidenedVectors.end())
-        Mapped |= 128;
-      if (ResId && PromotedFloats.find(ResId) != PromotedFloats.end())
-        Mapped |= 256;
-      if (ResId && SoftPromotedHalfs.find(ResId) != SoftPromotedHalfs.end())
-        Mapped |= 512;
 
       if (Node.getNodeId() != Processed) {
         // Since we allow ReplacedValues to map deleted nodes, it may map nodes
@@ -143,8 +143,16 @@ void DAGTypeLegalizer::PerformExpensiveChecks() {
         }
       } else {
         if (Mapped == 0) {
-          dbgs() << "Processed value not in any map!";
-          Failed = true;
+          SDValue NodeById = IdToValueMap.lookup(ResId);
+          // It is possible the node has been remapped to another node and had
+          // its Id updated in the Value to Id table. The node it remapped to
+          // may not have been processed yet. Look up the Id in the Id to Value
+          // table and re-check the Processed state. If the node hasn't been
+          // remapped we'll get the same state as we got earlier.
+          if (NodeById->getNodeId() == Processed) {
+            dbgs() << "Processed value not in any map!";
+            Failed = true;
+          }
         } else if (Mapped & (Mapped - 1)) {
           dbgs() << "Value in multiple maps!";
           Failed = true;
@@ -223,8 +231,7 @@ bool DAGTypeLegalizer::run() {
 #endif
       PerformExpensiveChecks();
 
-    SDNode *N = Worklist.back();
-    Worklist.pop_back();
+    SDNode *N = Worklist.pop_back_val();
     assert(N->getNodeId() == ReadyToProcess &&
            "Node should be ready if on worklist!");
 
@@ -302,7 +309,7 @@ ScanOperands:
       if (IgnoreNodeResults(N->getOperand(i).getNode()))
         continue;
 
-      const auto Op = N->getOperand(i);
+      const auto &Op = N->getOperand(i);
       LLVM_DEBUG(dbgs() << "Analyzing operand: "; Op.dump(&DAG));
       EVT OpVT = Op.getValueType();
       switch (getTypeAction(OpVT)) {
@@ -535,7 +542,8 @@ SDNode *DAGTypeLegalizer::AnalyzeNewNode(SDNode *N) {
       // The node morphed into a different node.  Normally for this to happen
       // the original node would have to be marked NewNode.  However this can
       // in theory momentarily not be the case while ReplaceValueWith is doing
-      // its stuff.  Mark the original node NewNode to help sanity checking.
+      // its stuff.  Mark the original node NewNode to help basic correctness
+      // checking.
       N->setNodeId(NewNode);
       if (M->getNodeId() != NewNode && M->getNodeId() != Unanalyzed)
         // It morphed into a previously analyzed node - nothing more to do.
@@ -1007,11 +1015,7 @@ SDValue DAGTypeLegalizer::JoinIntegers(SDValue Lo, SDValue Hi) {
 ///
 /// ValVT is the type of values that produced the boolean.
 SDValue DAGTypeLegalizer::PromoteTargetBoolean(SDValue Bool, EVT ValVT) {
-  SDLoc dl(Bool);
-  EVT BoolVT = getSetCCResultType(ValVT);
-  ISD::NodeType ExtendCode =
-      TargetLowering::getExtendForContent(TLI.getBooleanContents(ValVT));
-  return DAG.getNode(ExtendCode, dl, BoolVT, Bool);
+  return TLI.promoteTargetBoolean(DAG, Bool, ValVT);
 }
 
 /// Return the lower LoVT bits of Op in Lo and the upper HiVT bits in Hi.

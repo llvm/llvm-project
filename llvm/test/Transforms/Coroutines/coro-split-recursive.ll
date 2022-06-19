@@ -1,4 +1,5 @@
-; RUN: opt -passes='function(coro-early),cgscc(coro-split)' -S < %s | FileCheck %s
+; RUN: opt -passes='module(coro-early),cgscc(coro-split)' -opaque-pointers=0 -S < %s | FileCheck %s
+; RUN: opt -passes='module(coro-early),cgscc(coro-split)' -opaque-pointers=1 -S < %s | FileCheck %s
 
 declare token @llvm.coro.id(i32, i8* readnone, i8* nocapture readonly, i8*)
 
@@ -13,7 +14,7 @@ declare i8 @llvm.coro.suspend(token, i1)
 ; CHECK: call void @foo()
 ; CHECK-LABEL: define {{.*}}void @foo.destroy(
 
-define void @foo() {
+define void @foo() presplitcoroutine {
 entry:
   %__promise = alloca i32, align 8
   %0 = bitcast i32* %__promise to i8*

@@ -2,7 +2,4 @@
 #  See https://llvm.org/LICENSE.txt for license information.
 #  SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 
-from .._cext_loader import _load_extension
-
-_cextAllPasses = _load_extension("_mlirAllPassesRegistration")
-del _load_extension
+from .._mlir_libs import _mlirAllPassesRegistration as _cextAllPasses

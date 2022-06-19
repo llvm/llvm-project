@@ -1,11 +1,11 @@
-// RUN: %clang_cc1 -verify -fopenmp -x c++ -emit-llvm %s -fexceptions -fcxx-exceptions -triple x86_64-unknown-unknown -o - | FileCheck %s
-// RUN: %clang_cc1 -verify -fopenmp -ast-print %s | FileCheck %s --check-prefix=AST
-// RUN: %clang_cc1 -fopenmp -x c++ -std=c++11 -triple x86_64-unknown-unknown -fexceptions -fcxx-exceptions -emit-pch -verify -o %t %s
-// RUN: %clang_cc1 -fopenmp -x c++ -triple x86_64-unknown-unknown -fexceptions -fcxx-exceptions -std=c++11 -include-pch %t -verify=pch %s -emit-llvm -o - | FileCheck %s
-// RUN: %clang_cc1 -verify -triple x86_64-apple-darwin10 -fopenmp -fexceptions -fcxx-exceptions -debug-info-kind=line-tables-only -x c++ -emit-llvm %s -o - | FileCheck %s
-// RUN: %clang_cc1 -verify -fopenmp -fopenmp-enable-irbuilder -x c++ -emit-llvm %s -fexceptions -fcxx-exceptions -triple x86_64-unknown-unknown -o - | FileCheck %s
-// RUN: %clang_cc1 -fopenmp -fopenmp-enable-irbuilder -x c++ -std=c++11 -triple x86_64-unknown-unknown -fexceptions -fcxx-exceptions -emit-pch -verify -o %t %s
-// RUN: %clang_cc1 -fopenmp -fopenmp-enable-irbuilder -x c++ -triple x86_64-unknown-unknown -fexceptions -fcxx-exceptions -std=c++11 -include-pch %t -verify=pch %s -emit-llvm -o - | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -verify -fopenmp -x c++ -emit-llvm %s -fexceptions -fcxx-exceptions -triple x86_64-unknown-unknown -o - | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -verify -fopenmp -ast-print %s | FileCheck %s --check-prefix=AST
+// RUN: %clang_cc1 -no-opaque-pointers -fopenmp -x c++ -std=c++11 -triple x86_64-unknown-unknown -fexceptions -fcxx-exceptions -emit-pch -verify -o %t %s
+// RUN: %clang_cc1 -no-opaque-pointers -fopenmp -x c++ -triple x86_64-unknown-unknown -fexceptions -fcxx-exceptions -std=c++11 -include-pch %t -verify=pch %s -emit-llvm -o - | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -verify -triple x86_64-apple-darwin10 -fopenmp -fexceptions -fcxx-exceptions -debug-info-kind=line-tables-only -x c++ -emit-llvm %s -o - | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -verify -fopenmp -fopenmp-enable-irbuilder -x c++ -emit-llvm %s -fexceptions -fcxx-exceptions -triple x86_64-unknown-unknown -o - | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -fopenmp -fopenmp-enable-irbuilder -x c++ -std=c++11 -triple x86_64-unknown-unknown -fexceptions -fcxx-exceptions -emit-pch -verify -o %t %s
+// RUN: %clang_cc1 -no-opaque-pointers -fopenmp -fopenmp-enable-irbuilder -x c++ -triple x86_64-unknown-unknown -fexceptions -fcxx-exceptions -std=c++11 -include-pch %t -verify=pch %s -emit-llvm -o - | FileCheck %s
 
 // pch-no-diagnostics
 
@@ -67,41 +67,41 @@ int lambda_outer() {
 }
 #pragma omp end assumes
 
-// AST:      void foo() __attribute__((assume("no_openmp_routines,another_warning,after_invalid_clauses"))) __attribute__((assume("no_openmp"))) {
+// AST:      void foo() __attribute__((assume("omp_no_openmp_routines,ompx_another_warning,ompx_after_invalid_clauses"))) __attribute__((assume("omp_no_openmp"))) {
 // AST-NEXT: }
 // AST-NEXT: class BAR {
 // AST-NEXT: public:
-// AST-NEXT:     BAR() __attribute__((assume("range_bar_only"))) __attribute__((assume("range_bar_only_2"))) __attribute__((assume("no_openmp_routines,another_warning,after_invalid_clauses"))) __attribute__((assume("no_openmp")))     {
+// AST-NEXT:     BAR() __attribute__((assume("ompx_range_bar_only"))) __attribute__((assume("ompx_range_bar_only_2"))) __attribute__((assume("omp_no_openmp_routines,ompx_another_warning,ompx_after_invalid_clauses"))) __attribute__((assume("omp_no_openmp")))     {
 // AST-NEXT:     }
-// AST-NEXT:     void bar1() __attribute__((assume("range_bar_only"))) __attribute__((assume("range_bar_only_2"))) __attribute__((assume("no_openmp_routines,another_warning,after_invalid_clauses"))) __attribute__((assume("no_openmp")))     {
+// AST-NEXT:     void bar1() __attribute__((assume("ompx_range_bar_only"))) __attribute__((assume("ompx_range_bar_only_2"))) __attribute__((assume("omp_no_openmp_routines,ompx_another_warning,ompx_after_invalid_clauses"))) __attribute__((assume("omp_no_openmp")))     {
 // AST-NEXT:     }
-// AST-NEXT:     static void bar2() __attribute__((assume("range_bar_only"))) __attribute__((assume("range_bar_only_2"))) __attribute__((assume("no_openmp_routines,another_warning,after_invalid_clauses"))) __attribute__((assume("no_openmp")))     {
+// AST-NEXT:     static void bar2() __attribute__((assume("ompx_range_bar_only"))) __attribute__((assume("ompx_range_bar_only_2"))) __attribute__((assume("omp_no_openmp_routines,ompx_another_warning,ompx_after_invalid_clauses"))) __attribute__((assume("omp_no_openmp")))     {
 // AST-NEXT:     }
 // AST-NEXT: };
-// AST-NEXT: void bar() __attribute__((assume("range_bar_only"))) __attribute__((assume("range_bar_only_2"))) __attribute__((assume("no_openmp_routines,another_warning,after_invalid_clauses"))) __attribute__((assume("no_openmp"))) {
+// AST-NEXT: void bar() __attribute__((assume("ompx_range_bar_only"))) __attribute__((assume("ompx_range_bar_only_2"))) __attribute__((assume("omp_no_openmp_routines,ompx_another_warning,ompx_after_invalid_clauses"))) __attribute__((assume("omp_no_openmp"))) {
 // AST-NEXT:     BAR b;
 // AST-NEXT: }
-// AST-NEXT: void baz() __attribute__((assume("1234"))) __attribute__((assume("no_openmp_routines,another_warning,after_invalid_clauses"))) __attribute__((assume("no_openmp")));
+// AST-NEXT: void baz() __attribute__((assume("ompx_1234"))) __attribute__((assume("omp_no_openmp_routines,ompx_another_warning,ompx_after_invalid_clauses"))) __attribute__((assume("omp_no_openmp")));
 // AST-NEXT: template <typename T> class BAZ {
 // AST-NEXT: public:
-// AST-NEXT:     BAZ<T>() __attribute__((assume("1234"))) __attribute__((assume("no_openmp_routines,another_warning,after_invalid_clauses"))) __attribute__((assume("no_openmp")))     {
+// AST-NEXT:     BAZ<T>() __attribute__((assume("ompx_1234"))) __attribute__((assume("omp_no_openmp_routines,ompx_another_warning,ompx_after_invalid_clauses"))) __attribute__((assume("omp_no_openmp")))     {
 // AST-NEXT:     }
-// AST-NEXT:     void baz1() __attribute__((assume("1234"))) __attribute__((assume("no_openmp_routines,another_warning,after_invalid_clauses"))) __attribute__((assume("no_openmp")))     {
+// AST-NEXT:     void baz1() __attribute__((assume("ompx_1234"))) __attribute__((assume("omp_no_openmp_routines,ompx_another_warning,ompx_after_invalid_clauses"))) __attribute__((assume("omp_no_openmp")))     {
 // AST-NEXT:     }
-// AST-NEXT:     static void baz2() __attribute__((assume("1234"))) __attribute__((assume("no_openmp_routines,another_warning,after_invalid_clauses"))) __attribute__((assume("no_openmp")))     {
+// AST-NEXT:     static void baz2() __attribute__((assume("ompx_1234"))) __attribute__((assume("omp_no_openmp_routines,ompx_another_warning,ompx_after_invalid_clauses"))) __attribute__((assume("omp_no_openmp")))     {
 // AST-NEXT:     }
 // AST-NEXT: };
 // AST-NEXT: template<> class BAZ<float> {
 // AST-NEXT: public:
-// AST-NEXT:     BAZ() __attribute__((assume("1234"))) __attribute__((assume("no_openmp_routines,another_warning,after_invalid_clauses"))) __attribute__((assume("no_openmp"))) __attribute__((assume("no_openmp_routines,another_warning,after_invalid_clauses"))) __attribute__((assume("no_openmp")))    {
+// AST-NEXT:     BAZ() __attribute__((assume("ompx_1234"))) __attribute__((assume("omp_no_openmp_routines,ompx_another_warning,ompx_after_invalid_clauses"))) __attribute__((assume("omp_no_openmp"))) __attribute__((assume("omp_no_openmp_routines,ompx_another_warning,ompx_after_invalid_clauses"))) __attribute__((assume("omp_no_openmp")))    {
 // AST-NEXT:     }
-// AST-NEXT:     void baz1() __attribute__((assume("1234"))) __attribute__((assume("no_openmp_routines,another_warning,after_invalid_clauses"))) __attribute__((assume("no_openmp"))) __attribute__((assume("no_openmp_routines,another_warning,after_invalid_clauses"))) __attribute__((assume("no_openmp")));
-// AST-NEXT:     static void baz2() __attribute__((assume("1234"))) __attribute__((assume("no_openmp_routines,another_warning,after_invalid_clauses"))) __attribute__((assume("no_openmp"))) __attribute__((assume("no_openmp_routines,another_warning,after_invalid_clauses"))) __attribute__((assume("no_openmp")));
+// AST-NEXT:     void baz1() __attribute__((assume("ompx_1234"))) __attribute__((assume("omp_no_openmp_routines,ompx_another_warning,ompx_after_invalid_clauses"))) __attribute__((assume("omp_no_openmp"))) __attribute__((assume("omp_no_openmp_routines,ompx_another_warning,ompx_after_invalid_clauses"))) __attribute__((assume("omp_no_openmp")));
+// AST-NEXT:     static void baz2() __attribute__((assume("ompx_1234"))) __attribute__((assume("omp_no_openmp_routines,ompx_another_warning,ompx_after_invalid_clauses"))) __attribute__((assume("omp_no_openmp"))) __attribute__((assume("omp_no_openmp_routines,ompx_another_warning,ompx_after_invalid_clauses"))) __attribute__((assume("omp_no_openmp")));
 // AST-NEXT: };
-// AST-NEXT: void baz() __attribute__((assume("1234"))) __attribute__((assume("no_openmp_routines,another_warning,after_invalid_clauses"))) __attribute__((assume("no_openmp"))) {
+// AST-NEXT: void baz() __attribute__((assume("ompx_1234"))) __attribute__((assume("omp_no_openmp_routines,ompx_another_warning,ompx_after_invalid_clauses"))) __attribute__((assume("omp_no_openmp"))) {
 // AST-NEXT:     BAZ<float> b;
 // AST-NEXT: }
-// AST-NEXT: int lambda_outer() __attribute__((assume("lambda_assumption"))) __attribute__((assume("no_openmp_routines,another_warning,after_invalid_clauses"))) __attribute__((assume("no_openmp"))) {
+// AST-NEXT: int lambda_outer() __attribute__((assume("ompx_lambda_assumption"))) __attribute__((assume("omp_no_openmp_routines,ompx_another_warning,ompx_after_invalid_clauses"))) __attribute__((assume("omp_no_openmp"))) {
 // AST-NEXT:     auto lambda_inner = []() {
 // AST-NEXT:         return 42;
 // AST-NEXT:     };
@@ -140,26 +140,26 @@ int lambda_outer() {
 // CHECK-SAME: [[attr8:#[0-9]]]
 
 // CHECK:     attributes [[attr0]]
-// CHECK-SAME:  "llvm.assume"="no_openmp_routines,another_warning,after_invalid_clauses,no_openmp"
+// CHECK-SAME:  "llvm.assume"="omp_no_openmp_routines,ompx_another_warning,ompx_after_invalid_clauses,omp_no_openmp"
 // CHECK:     attributes [[attr1]]
-// CHECK-SAME:  "llvm.assume"="range_bar_only,range_bar_only_2,no_openmp_routines,another_warning,after_invalid_clauses,no_openmp"
+// CHECK-SAME:  "llvm.assume"="ompx_range_bar_only,ompx_range_bar_only_2,omp_no_openmp_routines,ompx_another_warning,ompx_after_invalid_clauses,omp_no_openmp"
 // CHECK:     attributes [[attr2]]
-// CHECK-SAME:  "llvm.assume"="range_bar_only,range_bar_only_2,no_openmp_routines,another_warning,after_invalid_clauses,no_openmp"
+// CHECK-SAME:  "llvm.assume"="ompx_range_bar_only,ompx_range_bar_only_2,omp_no_openmp_routines,ompx_another_warning,ompx_after_invalid_clauses,omp_no_openmp"
 // CHECK:     attributes [[attr3]]
-// CHECK-SAME:  "llvm.assume"="range_bar_only,range_bar_only_2,no_openmp_routines,another_warning,after_invalid_clauses,no_openmp"
+// CHECK-SAME:  "llvm.assume"="ompx_range_bar_only,ompx_range_bar_only_2,omp_no_openmp_routines,ompx_another_warning,ompx_after_invalid_clauses,omp_no_openmp"
 // CHECK:     attributes [[attr4]]
-// CHECK-SAME:  "llvm.assume"="1234,no_openmp_routines,another_warning,after_invalid_clauses,no_openmp,1234,no_openmp_routines,another_warning,after_invalid_clauses,no_openmp"
+// CHECK-SAME:  "llvm.assume"="ompx_1234,omp_no_openmp_routines,ompx_another_warning,ompx_after_invalid_clauses,omp_no_openmp,ompx_1234,omp_no_openmp_routines,ompx_another_warning,ompx_after_invalid_clauses,omp_no_openmp"
 // CHECK:     attributes [[attr5]]
-// CHECK-SAME:  "llvm.assume"="1234,no_openmp_routines,another_warning,after_invalid_clauses,no_openmp,no_openmp_routines,another_warning,after_invalid_clauses,no_openmp"
+// CHECK-SAME:  "llvm.assume"="ompx_1234,omp_no_openmp_routines,ompx_another_warning,ompx_after_invalid_clauses,omp_no_openmp,omp_no_openmp_routines,ompx_another_warning,ompx_after_invalid_clauses,omp_no_openmp"
 // CHECK:     attributes [[attr6]]
-// CHECK-SAME:  "llvm.assume"="1234,no_openmp_routines,another_warning,after_invalid_clauses,no_openmp,no_openmp_routines,another_warning,after_invalid_clauses,no_openmp"
+// CHECK-SAME:  "llvm.assume"="ompx_1234,omp_no_openmp_routines,ompx_another_warning,ompx_after_invalid_clauses,omp_no_openmp,omp_no_openmp_routines,ompx_another_warning,ompx_after_invalid_clauses,omp_no_openmp"
 // CHECK:     attributes [[attr7]]
-// CHECK-SAME:  "llvm.assume"="lambda_assumption,no_openmp_routines,another_warning,after_invalid_clauses,no_openmp"
+// CHECK-SAME:  "llvm.assume"="ompx_lambda_assumption,omp_no_openmp_routines,ompx_another_warning,ompx_after_invalid_clauses,omp_no_openmp"
 // CHECK:     attributes [[attr8]]
-// CHECK-SAME:  "llvm.assume"="lambda_assumption,no_openmp_routines,another_warning,after_invalid_clauses,no_openmp"
+// CHECK-SAME:  "llvm.assume"="ompx_lambda_assumption,omp_no_openmp_routines,ompx_another_warning,ompx_after_invalid_clauses,omp_no_openmp"
 // CHECK:     attributes [[attr9]]
-// CHECK-SAME:  "llvm.assume"="range_bar_only,range_bar_only_2,no_openmp_routines,another_warning,after_invalid_clauses,no_openmp"
+// CHECK-SAME:  "llvm.assume"="ompx_range_bar_only,ompx_range_bar_only_2,omp_no_openmp_routines,ompx_another_warning,ompx_after_invalid_clauses,omp_no_openmp"
 // CHECK:     attributes [[attr10]]
-// CHECK-SAME:  "llvm.assume"="1234,no_openmp_routines,another_warning,after_invalid_clauses,no_openmp,no_openmp_routines,another_warning,after_invalid_clauses,no_openmp"
+// CHECK-SAME:  "llvm.assume"="ompx_1234,omp_no_openmp_routines,ompx_another_warning,ompx_after_invalid_clauses,omp_no_openmp,omp_no_openmp_routines,ompx_another_warning,ompx_after_invalid_clauses,omp_no_openmp"
 // CHECK:     attributes [[attr11]]
-// CHECK-SAME:  "llvm.assume"="lambda_assumption,no_openmp_routines,another_warning,after_invalid_clauses,no_openmp"
+// CHECK-SAME:  "llvm.assume"="ompx_lambda_assumption,omp_no_openmp_routines,ompx_another_warning,ompx_after_invalid_clauses,omp_no_openmp"

@@ -42,11 +42,13 @@ int main(int, char**)
         char in[] = "ABC";
         t.setg(in, in+1, in+sizeof(in)/sizeof(in[0]));
     }
+#ifndef TEST_HAS_NO_WIDE_CHARACTERS
     {
         test<wchar_t> t;
         wchar_t in[] = L"ABC";
         t.setg(in, in+1, in+sizeof(in)/sizeof(in[0]));
     }
+#endif
 
   return 0;
 }

@@ -387,27 +387,16 @@ define <32 x i8> @splat_v32i8_pgso(<32 x i8> %x) !prof !14 {
 define <8 x i64> @pr23259() #1 {
 ; AVX-LABEL: pr23259:
 ; AVX:       # %bb.0: # %entry
-; AVX-NEXT:    pushq $1
-; AVX-NEXT:    .cfi_adjust_cfa_offset 8
-; AVX-NEXT:    popq %rax
-; AVX-NEXT:    .cfi_adjust_cfa_offset -8
-; AVX-NEXT:    vmovq %rax, %xmm0
-; AVX-NEXT:    vinsertf128 $1, %xmm0, %ymm0, %ymm1
-; AVX-NEXT:    vperm2f128 {{.*#+}} ymm0 = mem[2,3],ymm0[0,1]
-; AVX-NEXT:    vunpcklpd {{.*#+}} ymm0 = ymm0[0],ymm1[0],ymm0[2],ymm1[2]
+; AVX-NEXT:    vmovaps A+16(%rip), %xmm0
+; AVX-NEXT:    vblendps {{.*#+}} xmm0 = xmm0[0,1],mem[2,3]
+; AVX-NEXT:    vblendps {{.*#+}} ymm0 = ymm0[0,1,2,3],mem[4,5,6,7]
 ; AVX-NEXT:    vbroadcastsd {{.*#+}} ymm1 = [1,1,1,1]
 ; AVX-NEXT:    retq
 ;
 ; AVX2-LABEL: pr23259:
 ; AVX2:       # %bb.0: # %entry
-; AVX2-NEXT:    vmovdqa A(%rip), %ymm0
-; AVX2-NEXT:    pushq $1
-; AVX2-NEXT:    .cfi_adjust_cfa_offset 8
-; AVX2-NEXT:    popq %rax
-; AVX2-NEXT:    .cfi_adjust_cfa_offset -8
-; AVX2-NEXT:    vmovq %rax, %xmm1
-; AVX2-NEXT:    vpunpcklqdq {{.*#+}} ymm0 = ymm0[0],ymm1[0],ymm0[2],ymm1[2]
-; AVX2-NEXT:    vpermq {{.*#+}} ymm0 = ymm0[2,1,1,1]
+; AVX2-NEXT:    vmovaps A+16(%rip), %xmm0
+; AVX2-NEXT:    vblendps {{.*#+}} ymm0 = ymm0[0,1],mem[2,3,4,5,6,7]
 ; AVX2-NEXT:    vbroadcastsd {{.*#+}} ymm1 = [1,1,1,1]
 ; AVX2-NEXT:    retq
 entry:
@@ -417,8 +406,8 @@ entry:
   ret <8 x i64> %shuffle
 }
 
-attributes #0 = { optsize }
-attributes #1 = { minsize }
+attributes #0 = { nounwind optsize }
+attributes #1 = { nounwind minsize }
 
 !llvm.module.flags = !{!0}
 !0 = !{i32 1, !"ProfileSummary", !1}

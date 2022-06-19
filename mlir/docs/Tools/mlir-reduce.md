@@ -16,7 +16,7 @@ use it, the first thing you need to do is, provide a command which tells if an
 input is interesting, e.g., exhibits the characteristics that you would like to
 focus on. For example, you may want to see if `mlir-opt` invocation fails after
 it runs on the certain MLIR input. Afterwards, select your reduction strategy
-then `mlir-reduce` will do the remining works for you.
+then `mlir-reduce` will do the remaining works for you.
 
 ## How to Use it
 
@@ -120,7 +120,7 @@ int main(int argc, char **argv) {
 `mlir-reduce` is missing several features,
 
 *   `-reduction-tree` now only supports `Single-Path` traversal mode, extends it
-with different traveral strategies may reduce the input better.
-*   Produce the optimial result when interruped. The reduction process may take
+with different traversal strategies may reduce the input better.
+*   Produce the optimal result when interrupted. The reduction process may take
 a quite long time, it'll be better to get an optimal result so far while an
-interrup is triggered.
+interrupt is triggered.

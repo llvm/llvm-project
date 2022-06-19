@@ -57,9 +57,9 @@ define void @test_noalias(i32 %x, i32 addrspace(1)* %p, i32 addrspace(1)* %q) gc
 ; CHECK-NEXT: %p.relocated.casted = bitcast i8 addrspace(1)* %p.relocated to i32 addrspace(1)*
 ; CHECK-NEXT: store i32 %x, i32 addrspace(1)* %p.relocated.casted, align 16
 entry:
-  %y = load i32, i32 addrspace(1)* %q, align 16, !noalias !3
+  %y = load i32, i32 addrspace(1)* %q, align 16, !noalias !5
   call void @baz(i32 %x)
-  store i32 %x, i32 addrspace(1)* %p, align 16, !noalias !4
+  store i32 %x, i32 addrspace(1)* %p, align 16, !noalias !5
   ret void
 }
 
@@ -69,7 +69,7 @@ define void @test_dereferenceable(i32 addrspace(1)* addrspace(1)* %p, i32 %x, i3
 ; CHECK: %v1 = load i32 addrspace(1)*, i32 addrspace(1)* addrspace(1)* %p
 ; CHECK-NEXT: %v2 = load i32, i32 addrspace(1)* %v1
 ; CHECK: gc.statepoint
-  %v1 = load i32 addrspace(1)*, i32 addrspace(1)* addrspace(1)* %p, !dereferenceable !5
+  %v1 = load i32 addrspace(1)*, i32 addrspace(1)* addrspace(1)* %p, !dereferenceable !6
   %v2 = load i32, i32 addrspace(1)* %v1
   call void @baz(i32 %x)
   store i32 %v2, i32 addrspace(1)* %q, align 16
@@ -137,5 +137,6 @@ attributes #0 = { nounwind readonly }
 !1 = !{}
 !2 = !{i32 10, i32 1}
 !3 = !{!3}
-!4 = !{!4}
-!5 = !{i64 8}
+!4 = !{!4, !3}
+!5 = !{!4}
+!6 = !{i64 8}

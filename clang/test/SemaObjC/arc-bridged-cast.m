@@ -9,15 +9,15 @@ typedef const struct __CFString *CFStringRef;
 @interface NSString
 @end
 
-CFTypeRef CFCreateSomething();
-CFStringRef CFCreateString();
-CFTypeRef CFGetSomething();
-CFStringRef CFGetString();
+CFTypeRef CFCreateSomething(void);
+CFStringRef CFCreateString(void);
+CFTypeRef CFGetSomething(void);
+CFStringRef CFGetString(void);
 
-id CreateSomething();
-NSString *CreateNSString();
+id CreateSomething(void);
+NSString *CreateNSString(void);
 
-void from_cf() {
+void from_cf(void) {
   id obj1 = (__bridge_transfer id)CFCreateSomething();
   id obj2 = (__bridge_transfer NSString*)CFCreateString();
   (__bridge int*)CFCreateSomething(); // expected-error{{incompatible types casting 'CFTypeRef' (aka 'const void *') to 'int *' with a __bridge cast}}
@@ -36,7 +36,7 @@ void to_cf(id obj) {
   // CHECK: fix-it:"{{.*}}":{35:20-35:35}:"__bridge_retained"
 }
 
-CFTypeRef fixits() {
+CFTypeRef fixits(void) {
   id obj1 = (id)CFCreateSomething(); // expected-error{{cast of C pointer type 'CFTypeRef' (aka 'const void *') to Objective-C pointer type 'id' requires a bridged cast}} \
   // expected-note{{use __bridge to convert directly (no change in ownership)}} expected-note{{use CFBridgingRelease call to transfer ownership of a +1 'CFTypeRef' (aka 'const void *') into ARC}}
   // CHECK: fix-it:"{{.*}}":{40:17-40:17}:"CFBridgingRelease("
@@ -65,9 +65,9 @@ CFTypeRef fixitsWithSpace(id obj) {
 
 // rdar://problem/20107345
 typedef const struct __attribute__((objc_bridge(id))) __CFAnnotatedObject *CFAnnotatedObjectRef;
-CFAnnotatedObjectRef CFGetAnnotated();
+CFAnnotatedObjectRef CFGetAnnotated(void);
 
-void testObjCBridgeId() {
+void testObjCBridgeId(void) {
   id obj;
   obj = (__bridge id)CFGetAnnotated();
   obj = (__bridge NSString*)CFGetAnnotated();

@@ -12,9 +12,9 @@
 #include <functional>
 #include <string>
 
-#include "lldb/lldb-forward.h"
-
+#include "lldb/Core/Address.h"
 #include "lldb/Utility/DataExtractor.h"
+#include "lldb/lldb-forward.h"
 
 namespace lldb_private {
 namespace formatters {
@@ -105,21 +105,21 @@ public:
 
     ReadStringAndDumpToStreamOptions(ValueObject &valobj);
 
-    void SetLocation(uint64_t l) { m_location = l; }
+    void SetLocation(Address l) { m_location = std::move(l); }
 
-    uint64_t GetLocation() const { return m_location; }
+    const Address &GetLocation() const { return m_location; }
 
-    void SetProcessSP(lldb::ProcessSP p) { m_process_sp = std::move(p); }
+    void SetTargetSP(lldb::TargetSP t) { m_target_sp = std::move(t); }
 
-    lldb::ProcessSP GetProcessSP() const { return m_process_sp; }
+    lldb::TargetSP GetTargetSP() const { return m_target_sp; }
 
     void SetHasSourceSize(bool e) { m_has_source_size = e; }
 
     bool HasSourceSize() const { return m_has_source_size; }
 
   private:
-    uint64_t m_location = 0;
-    lldb::ProcessSP m_process_sp;
+    Address m_location;
+    lldb::TargetSP m_target_sp;
     /// True iff we know the source size of the string.
     bool m_has_source_size = false;
   };
@@ -133,9 +133,9 @@ public:
     ReadBufferAndDumpToStreamOptions(
         const ReadStringAndDumpToStreamOptions &options);
 
-    void SetData(DataExtractor d) { m_data = d; }
+    void SetData(DataExtractor &&d) { m_data = std::move(d); }
 
-    lldb_private::DataExtractor GetData() const { return m_data; }
+    const lldb_private::DataExtractor &GetData() const { return m_data; }
 
     void SetIsTruncated(bool t) { m_is_truncated = t; }
 

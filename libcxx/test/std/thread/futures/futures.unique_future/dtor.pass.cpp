@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 //
 // UNSUPPORTED: no-exceptions
-// UNSUPPORTED: libcpp-has-no-threads
+// UNSUPPORTED: no-threads
 // UNSUPPORTED: c++03
 
 // <future>
@@ -24,49 +24,50 @@
 
 int main(int, char**)
 {
-    assert(test_alloc_base::alloc_count == 0);
+    test_allocator_statistics alloc_stats;
+    assert(alloc_stats.alloc_count == 0);
     {
         typedef int T;
         std::future<T> f;
         {
-            std::promise<T> p(std::allocator_arg, test_allocator<T>());
-            assert(test_alloc_base::alloc_count == 1);
+            std::promise<T> p(std::allocator_arg, test_allocator<T>(&alloc_stats));
+            assert(alloc_stats.alloc_count == 1);
             f = p.get_future();
-            assert(test_alloc_base::alloc_count == 1);
+            assert(alloc_stats.alloc_count == 1);
             assert(f.valid());
         }
-        assert(test_alloc_base::alloc_count == 1);
+        assert(alloc_stats.alloc_count == 1);
         assert(f.valid());
     }
-    assert(test_alloc_base::alloc_count == 0);
+    assert(alloc_stats.alloc_count == 0);
     {
         typedef int& T;
         std::future<T> f;
         {
-            std::promise<T> p(std::allocator_arg, test_allocator<int>());
-            assert(test_alloc_base::alloc_count == 1);
+            std::promise<T> p(std::allocator_arg, test_allocator<int>(&alloc_stats));
+            assert(alloc_stats.alloc_count == 1);
             f = p.get_future();
-            assert(test_alloc_base::alloc_count == 1);
+            assert(alloc_stats.alloc_count == 1);
             assert(f.valid());
         }
-        assert(test_alloc_base::alloc_count == 1);
+        assert(alloc_stats.alloc_count == 1);
         assert(f.valid());
     }
-    assert(test_alloc_base::alloc_count == 0);
+    assert(alloc_stats.alloc_count == 0);
     {
         typedef void T;
         std::future<T> f;
         {
-            std::promise<T> p(std::allocator_arg, test_allocator<T>());
-            assert(test_alloc_base::alloc_count == 1);
+            std::promise<T> p(std::allocator_arg, test_allocator<T>(&alloc_stats));
+            assert(alloc_stats.alloc_count == 1);
             f = p.get_future();
-            assert(test_alloc_base::alloc_count == 1);
+            assert(alloc_stats.alloc_count == 1);
             assert(f.valid());
         }
-        assert(test_alloc_base::alloc_count == 1);
+        assert(alloc_stats.alloc_count == 1);
         assert(f.valid());
     }
-    assert(test_alloc_base::alloc_count == 0);
+    assert(alloc_stats.alloc_count == 0);
 
   return 0;
 }

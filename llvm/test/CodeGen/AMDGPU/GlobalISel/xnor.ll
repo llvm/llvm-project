@@ -25,12 +25,11 @@ entry:
 define amdgpu_ps i32 @scalar_xnor_v2i16_one_use(<2 x i16> inreg %a, <2 x i16> inreg %b) {
 ; GFX7-LABEL: scalar_xnor_v2i16_one_use:
 ; GFX7:       ; %bb.0: ; %entry
-; GFX7-NEXT:    s_mov_b32 s4, 0xffff
 ; GFX7-NEXT:    s_lshl_b32 s1, s1, 16
-; GFX7-NEXT:    s_and_b32 s0, s0, s4
+; GFX7-NEXT:    s_and_b32 s0, s0, 0xffff
 ; GFX7-NEXT:    s_or_b32 s0, s1, s0
 ; GFX7-NEXT:    s_lshl_b32 s1, s3, 16
-; GFX7-NEXT:    s_and_b32 s2, s2, s4
+; GFX7-NEXT:    s_and_b32 s2, s2, 0xffff
 ; GFX7-NEXT:    s_or_b32 s1, s1, s2
 ; GFX7-NEXT:    s_xor_b32 s0, s0, s1
 ; GFX7-NEXT:    s_xor_b32 s0, s0, -1
@@ -38,14 +37,14 @@ define amdgpu_ps i32 @scalar_xnor_v2i16_one_use(<2 x i16> inreg %a, <2 x i16> in
 ;
 ; GFX8-LABEL: scalar_xnor_v2i16_one_use:
 ; GFX8:       ; %bb.0: ; %entry
-; GFX8-NEXT:    s_xor_b32 s0, s0, s1
 ; GFX8-NEXT:    s_mov_b32 s2, 0xffff
-; GFX8-NEXT:    s_lshr_b32 s1, s0, 16
+; GFX8-NEXT:    s_xor_b32 s0, s0, s1
 ; GFX8-NEXT:    s_mov_b32 s3, s2
-; GFX8-NEXT:    s_and_b32 s0, s0, s2
+; GFX8-NEXT:    s_lshr_b32 s1, s0, 16
+; GFX8-NEXT:    s_and_b32 s0, s0, 0xffff
 ; GFX8-NEXT:    s_xor_b64 s[0:1], s[0:1], s[2:3]
 ; GFX8-NEXT:    s_lshl_b32 s1, s1, 16
-; GFX8-NEXT:    s_and_b32 s0, s0, s2
+; GFX8-NEXT:    s_and_b32 s0, s0, 0xffff
 ; GFX8-NEXT:    s_or_b32 s0, s1, s0
 ; GFX8-NEXT:    ; return to shader part epilog
 ;
@@ -117,18 +116,17 @@ define amdgpu_ps i64 @scalar_xnor_i64_one_use(i64 inreg %a, i64 inreg %b) {
 define amdgpu_ps i64 @scalar_xnor_v4i16_one_use(<4 x i16> inreg %a, <4 x i16> inreg %b) {
 ; GFX7-LABEL: scalar_xnor_v4i16_one_use:
 ; GFX7:       ; %bb.0:
-; GFX7-NEXT:    s_mov_b32 s8, 0xffff
 ; GFX7-NEXT:    s_lshl_b32 s1, s1, 16
-; GFX7-NEXT:    s_and_b32 s0, s0, s8
+; GFX7-NEXT:    s_and_b32 s0, s0, 0xffff
 ; GFX7-NEXT:    s_or_b32 s0, s1, s0
 ; GFX7-NEXT:    s_lshl_b32 s1, s3, 16
-; GFX7-NEXT:    s_and_b32 s2, s2, s8
+; GFX7-NEXT:    s_and_b32 s2, s2, 0xffff
 ; GFX7-NEXT:    s_or_b32 s1, s1, s2
-; GFX7-NEXT:    s_and_b32 s3, s4, s8
 ; GFX7-NEXT:    s_lshl_b32 s2, s5, 16
+; GFX7-NEXT:    s_and_b32 s3, s4, 0xffff
 ; GFX7-NEXT:    s_or_b32 s2, s2, s3
 ; GFX7-NEXT:    s_lshl_b32 s3, s7, 16
-; GFX7-NEXT:    s_and_b32 s4, s6, s8
+; GFX7-NEXT:    s_and_b32 s4, s6, 0xffff
 ; GFX7-NEXT:    s_or_b32 s3, s3, s4
 ; GFX7-NEXT:    s_mov_b32 s4, -1
 ; GFX7-NEXT:    s_mov_b32 s5, s4
@@ -138,20 +136,20 @@ define amdgpu_ps i64 @scalar_xnor_v4i16_one_use(<4 x i16> inreg %a, <4 x i16> in
 ;
 ; GFX8-LABEL: scalar_xnor_v4i16_one_use:
 ; GFX8:       ; %bb.0:
-; GFX8-NEXT:    s_xor_b64 s[0:1], s[0:1], s[2:3]
 ; GFX8-NEXT:    s_mov_b32 s4, 0xffff
-; GFX8-NEXT:    s_lshr_b32 s3, s0, 16
-; GFX8-NEXT:    s_and_b32 s2, s0, s4
+; GFX8-NEXT:    s_xor_b64 s[0:1], s[0:1], s[2:3]
 ; GFX8-NEXT:    s_mov_b32 s5, s4
+; GFX8-NEXT:    s_lshr_b32 s3, s0, 16
+; GFX8-NEXT:    s_and_b32 s2, s0, 0xffff
 ; GFX8-NEXT:    s_lshr_b32 s7, s1, 16
-; GFX8-NEXT:    s_and_b32 s6, s1, s4
+; GFX8-NEXT:    s_and_b32 s6, s1, 0xffff
 ; GFX8-NEXT:    s_xor_b64 s[0:1], s[2:3], s[4:5]
 ; GFX8-NEXT:    s_xor_b64 s[2:3], s[6:7], s[4:5]
 ; GFX8-NEXT:    s_lshl_b32 s1, s1, 16
-; GFX8-NEXT:    s_and_b32 s0, s0, s4
+; GFX8-NEXT:    s_and_b32 s0, s0, 0xffff
 ; GFX8-NEXT:    s_or_b32 s0, s1, s0
 ; GFX8-NEXT:    s_lshl_b32 s1, s3, 16
-; GFX8-NEXT:    s_and_b32 s2, s2, s4
+; GFX8-NEXT:    s_and_b32 s2, s2, 0xffff
 ; GFX8-NEXT:    s_or_b32 s1, s1, s2
 ; GFX8-NEXT:    ; return to shader part epilog
 ;
@@ -190,9 +188,6 @@ define amdgpu_ps <2 x i64> @scalar_xnor_i64_mul_use(i64 inreg %a, i64 inreg %b) 
 ; GCN-NEXT:    s_xor_b64 s[2:3], s[0:1], s[2:3]
 ; GCN-NEXT:    s_not_b64 s[4:5], s[2:3]
 ; GCN-NEXT:    s_add_u32 s2, s2, s0
-; GCN-NEXT:    s_cselect_b32 s0, 1, 0
-; GCN-NEXT:    s_and_b32 s0, s0, 1
-; GCN-NEXT:    s_cmp_lg_u32 s0, 0
 ; GCN-NEXT:    s_addc_u32 s3, s3, s1
 ; GCN-NEXT:    s_mov_b32 s0, s4
 ; GCN-NEXT:    s_mov_b32 s1, s5
@@ -203,11 +198,8 @@ define amdgpu_ps <2 x i64> @scalar_xnor_i64_mul_use(i64 inreg %a, i64 inreg %b) 
 ; GFX10-NEXT:    s_xor_b64 s[2:3], s[0:1], s[2:3]
 ; GFX10-NEXT:    s_not_b64 s[4:5], s[2:3]
 ; GFX10-NEXT:    s_add_u32 s2, s2, s0
-; GFX10-NEXT:    s_cselect_b32 s0, 1, 0
-; GFX10-NEXT:    s_and_b32 s0, s0, 1
-; GFX10-NEXT:    s_cmp_lg_u32 s0, 0
-; GFX10-NEXT:    s_mov_b32 s0, s4
 ; GFX10-NEXT:    s_addc_u32 s3, s3, s1
+; GFX10-NEXT:    s_mov_b32 s0, s4
 ; GFX10-NEXT:    s_mov_b32 s1, s5
 ; GFX10-NEXT:    ; return to shader part epilog
   %xor = xor i64 %a, %b

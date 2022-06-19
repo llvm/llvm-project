@@ -19,6 +19,14 @@ using namespace clang::driver::tools;
 using namespace clang;
 using namespace llvm::opt;
 
+/// Add -x lang to \p CmdArgs for \p Input.
+static void addDashXForInput(const ArgList &Args, const InputInfo &Input,
+                             ArgStringList &CmdArgs) {
+  CmdArgs.push_back("-x");
+  // Map the driver type to the frontend type.
+  CmdArgs.push_back(types::getTypeName(Input.getType()));
+}
+
 void Flang::AddFortranDialectOptions(const ArgList &Args,
                                      ArgStringList &CmdArgs) const {
   Args.AddAllArgs(
@@ -32,13 +40,15 @@ void Flang::AddFortranDialectOptions(const ArgList &Args,
                 options::OPT_fxor_operator, options::OPT_fno_xor_operator,
                 options::OPT_falternative_parameter_statement,
                 options::OPT_fdefault_real_8, options::OPT_fdefault_integer_8,
-                options::OPT_fdefault_double_8, options::OPT_flarge_sizes});
+                options::OPT_fdefault_double_8, options::OPT_flarge_sizes,
+                options::OPT_fno_automatic});
 }
 
 void Flang::AddPreprocessingOptions(const ArgList &Args,
                                     ArgStringList &CmdArgs) const {
-  Args.AddAllArgs(CmdArgs, {options::OPT_D, options::OPT_U, options::OPT_I,
-                            options::OPT_cpp, options::OPT_nocpp});
+  Args.AddAllArgs(CmdArgs,
+                  {options::OPT_P, options::OPT_D, options::OPT_U,
+                   options::OPT_I, options::OPT_cpp, options::OPT_nocpp});
 }
 
 void Flang::AddOtherOptions(const ArgList &Args, ArgStringList &CmdArgs) const {
@@ -52,21 +62,17 @@ void Flang::ConstructJob(Compilation &C, const JobAction &JA,
                          const InputInfo &Output, const InputInfoList &Inputs,
                          const ArgList &Args, const char *LinkingOutput) const {
   const auto &TC = getToolChain();
-  // TODO: Once code-generation is available, this will need to be commented
-  // out.
-  // const llvm::Triple &Triple = TC.getEffectiveTriple();
-  // const std::string &TripleStr = Triple.getTriple();
+  const llvm::Triple &Triple = TC.getEffectiveTriple();
+  const std::string &TripleStr = Triple.getTriple();
 
   ArgStringList CmdArgs;
 
   // Invoke ourselves in -fc1 mode.
   CmdArgs.push_back("-fc1");
 
-  // TODO: Once code-generation is available, this will need to be commented
-  // out.
   // Add the "effective" target triple.
-  // CmdArgs.push_back("-triple");
-  // CmdArgs.push_back(Args.MakeArgString(TripleStr));
+  CmdArgs.push_back("-triple");
+  CmdArgs.push_back(Args.MakeArgString(TripleStr));
 
   if (isa<PreprocessJobAction>(JA)) {
       CmdArgs.push_back("-E");
@@ -108,6 +114,18 @@ void Flang::ConstructJob(Compilation &C, const JobAction &JA,
   // Forward -Xflang arguments to -fc1
   Args.AddAllArgValues(CmdArgs, options::OPT_Xflang);
 
+  // Forward -mllvm options to the LLVM option parser. In practice, this means
+  // forwarding to `-fc1` as that's where the LLVM parser is run.
+  for (const Arg *A : Args.filtered(options::OPT_mllvm)) {
+    A->claim();
+    A->render(Args, CmdArgs);
+  }
+
+  for (const Arg *A : Args.filtered(options::OPT_mmlir)) {
+    A->claim();
+    A->render(Args, CmdArgs);
+  }
+
   if (Output.isFilename()) {
     CmdArgs.push_back("-o");
     CmdArgs.push_back(Output.getFilename());
@@ -116,6 +134,9 @@ void Flang::ConstructJob(Compilation &C, const JobAction &JA,
   }
 
   assert(Input.isFilename() && "Invalid input.");
+
+  addDashXForInput(Args, Input, CmdArgs);
+
   CmdArgs.push_back(Input.getFilename());
 
   const auto& D = C.getDriver();

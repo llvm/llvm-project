@@ -60,12 +60,15 @@ public:
   MinGW(const Driver &D, const llvm::Triple &Triple,
         const llvm::opt::ArgList &Args);
 
+  static void fixTripleArch(const Driver &D, llvm::Triple &Triple,
+                            const llvm::opt::ArgList &Args);
+
   bool HasNativeLLVMSupport() const override;
 
   bool IsIntegratedAssemblerDefault() const override;
   bool IsUnwindTablesDefault(const llvm::opt::ArgList &Args) const override;
   bool isPICDefault() const override;
-  bool isPIEDefault() const override;
+  bool isPIEDefault(const llvm::opt::ArgList &Args) const override;
   bool isPICDefaultForced() const override;
 
   SanitizerMask getSupportedSanitizers() const override;
@@ -87,6 +90,8 @@ public:
 
   void printVerboseInfo(raw_ostream &OS) const override;
 
+  unsigned GetDefaultDwarfVersion() const override { return 4; }
+
 protected:
   Tool *getTool(Action::ActionClass AC) const override;
   Tool *buildLinker() const override;
@@ -99,12 +104,10 @@ private:
   std::string Base;
   std::string GccLibDir;
   std::string Ver;
-  std::string Arch;
+  std::string SubdirName;
   mutable std::unique_ptr<tools::gcc::Preprocessor> Preprocessor;
   mutable std::unique_ptr<tools::gcc::Compiler> Compiler;
   void findGccLibDir();
-  llvm::ErrorOr<std::string> findGcc();
-  llvm::ErrorOr<std::string> findClangRelativeSysroot();
 
   bool NativeLLVMSupport;
 };

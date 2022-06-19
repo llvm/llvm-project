@@ -54,12 +54,24 @@ bool MipsInstrInfo::isZeroImm(const MachineOperand &op) const {
 
 /// insertNoop - If data hazard condition is found insert the target nop
 /// instruction.
-// FIXME: This appears to be dead code.
 void MipsInstrInfo::
 insertNoop(MachineBasicBlock &MBB, MachineBasicBlock::iterator MI) const
 {
   DebugLoc DL;
   BuildMI(MBB, MI, DL, get(Mips::NOP));
+}
+
+MachineInstrBuilder MipsInstrInfo::insertNop(MachineBasicBlock &MBB,
+                                             MachineBasicBlock::iterator MI,
+                                             DebugLoc DL) const {
+  assert(!Subtarget.inMips16Mode() &&
+         "insertNop does not support MIPS16e mode at this time");
+  const unsigned MMOpc =
+      Subtarget.hasMips32r6() ? Mips::SLL_MMR6 : Mips::SLL_MM;
+  const unsigned Opc = Subtarget.inMicroMipsMode() ? MMOpc : Mips::SLL;
+  return BuildMI(MBB, MI, DL, get(Opc), Mips::ZERO)
+      .addReg(Mips::ZERO)
+      .addImm(0);
 }
 
 MachineMemOperand *
@@ -568,9 +580,86 @@ bool MipsInstrInfo::SafeInForbiddenSlot(const MachineInstr &MI) const {
   return (MI.getDesc().TSFlags & MipsII::IsCTI) == 0;
 }
 
+bool MipsInstrInfo::SafeInFPUDelaySlot(const MachineInstr &MIInSlot,
+                                       const MachineInstr &FPUMI) const {
+  if (MIInSlot.isInlineAsm())
+    return false;
+
+  if (HasFPUDelaySlot(MIInSlot))
+    return false;
+
+  switch (MIInSlot.getOpcode()) {
+  case Mips::BC1F:
+  case Mips::BC1FL:
+  case Mips::BC1T:
+  case Mips::BC1TL:
+    return false;
+  }
+
+  for (const MachineOperand &Op : FPUMI.defs()) {
+    if (!Op.isReg())
+      continue;
+
+    bool Reads, Writes;
+    std::tie(Reads, Writes) = MIInSlot.readsWritesVirtualRegister(Op.getReg());
+
+    if (Reads || Writes)
+      return false;
+  }
+
+  return true;
+}
+
+/// Predicate for distinguishing instructions that are hazardous in a load delay
+/// slot. Consider inline assembly as unsafe as well.
+bool MipsInstrInfo::SafeInLoadDelaySlot(const MachineInstr &MIInSlot,
+                                        const MachineInstr &LoadMI) const {
+  if (MIInSlot.isInlineAsm())
+    return false;
+
+  return !llvm::any_of(LoadMI.defs(), [&](const MachineOperand &Op) {
+    return Op.isReg() && MIInSlot.readsRegister(Op.getReg());
+  });
+}
+
 /// Predicate for distingushing instructions that have forbidden slots.
 bool MipsInstrInfo::HasForbiddenSlot(const MachineInstr &MI) const {
   return (MI.getDesc().TSFlags & MipsII::HasForbiddenSlot) != 0;
+}
+
+/// Predicate for distingushing instructions that have FPU delay slots.
+bool MipsInstrInfo::HasFPUDelaySlot(const MachineInstr &MI) const {
+  switch (MI.getOpcode()) {
+  case Mips::MTC1:
+  case Mips::MFC1:
+  case Mips::MTC1_D64:
+  case Mips::MFC1_D64:
+  case Mips::DMTC1:
+  case Mips::DMFC1:
+  case Mips::FCMP_S32:
+  case Mips::FCMP_D32:
+  case Mips::FCMP_D64:
+    return true;
+
+  default:
+    return false;
+  }
+}
+
+/// Predicate for distingushing instructions that have load delay slots.
+bool MipsInstrInfo::HasLoadDelaySlot(const MachineInstr &MI) const {
+  switch (MI.getOpcode()) {
+  case Mips::LB:
+  case Mips::LBu:
+  case Mips::LH:
+  case Mips::LHu:
+  case Mips::LW:
+  case Mips::LWR:
+  case Mips::LWL:
+    return true;
+  default:
+    return false;
+  }
 }
 
 /// Return the number of bytes of code the specified instruction may be.
@@ -646,7 +735,7 @@ MipsInstrInfo::genInstrWithNewOpc(unsigned NewOpc,
       NewOpc == Mips::JIALC64) {
 
     if (NewOpc == Mips::JIALC || NewOpc == Mips::JIALC64)
-      MIB->RemoveOperand(0);
+      MIB->removeOperand(0);
 
     for (unsigned J = 0, E = I->getDesc().getNumOperands(); J < E; ++J) {
       MIB.add(I->getOperand(J));

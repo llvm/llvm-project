@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 // REQUIRES: locale.en_US.UTF-8
+// XFAIL: win32-broken-utf8-wchar-ctype
 
 // <locale>
 
@@ -59,6 +60,7 @@ int main(int, char**)
             assert(in[6] == '1');
         }
     }
+#ifndef TEST_HAS_NO_WIDE_CHARACTERS
     {
         std::locale l;
         {
@@ -95,6 +97,7 @@ int main(int, char**)
             assert(in[6] == L'1');
         }
     }
+#endif // TEST_HAS_NO_WIDE_CHARACTERS
 
   return 0;
 }

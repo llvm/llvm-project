@@ -1,4 +1,5 @@
-// RUN: %check_clang_tidy %s readability-static-accessed-through-instance %t
+// RUN: %check_clang_tidy %s readability-static-accessed-through-instance %t -- -- -isystem %S/Inputs/readability-static-accessed-through-instance
+#include <__clang_cuda_builtin_vars.h>
 
 struct C {
   static void foo();
@@ -197,6 +198,28 @@ void static_through_instance() {
   h<4>();
 }
 
+struct SP {
+  static int I;
+} P;
+
+void usep() {
+  P.I;
+  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: static member
+  // CHECK-FIXES: {{^}}  SP::I;{{$}}
+}
+
+namespace NSP {
+struct SP {
+  static int I;
+} P;
+} // namespace NSP
+
+void usensp() {
+  NSP::P.I;
+  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: static member
+  // CHECK-FIXES: {{^}}  NSP::SP::I;{{$}}
+}
+
 // Overloaded member access operator
 struct Q {
   static int K;
@@ -236,9 +259,9 @@ void use_anonymous() {
 
 namespace Outer {
   inline namespace Inline {
-    struct S {
-      static int I;
-    };
+  struct S {
+    static int I;
+  };
   }
 }
 
@@ -248,3 +271,17 @@ void use_inline() {
   // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: static member
   // CHECK-FIXES: {{^}}  Outer::S::I;{{$}}
 }
+
+// https://bugs.llvm.org/show_bug.cgi?id=48758
+namespace Bugzilla_48758 {
+
+unsigned int x1 = threadIdx.x;
+// CHECK-MESSAGES-NOT: :[[@LINE-1]]:10: warning: static member
+unsigned int x2 = blockIdx.x;
+// CHECK-MESSAGES-NOT: :[[@LINE-1]]:10: warning: static member
+unsigned int x3 = blockDim.x;
+// CHECK-MESSAGES-NOT: :[[@LINE-1]]:10: warning: static member
+unsigned int x4 = gridDim.x;
+// CHECK-MESSAGES-NOT: :[[@LINE-1]]:10: warning: static member
+
+} // namespace Bugzilla_48758

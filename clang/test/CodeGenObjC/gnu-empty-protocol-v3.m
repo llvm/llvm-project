@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple i686-pc-linux-gnu -fobjc-runtime=gnustep-1.9 -emit-llvm -o - %s | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -triple i686-pc-linux-gnu -fobjc-runtime=gnustep-1.9 -emit-llvm -o - %s | FileCheck %s
 
 @protocol X;
 

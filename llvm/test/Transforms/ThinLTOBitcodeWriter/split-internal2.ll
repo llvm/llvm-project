@@ -1,3 +1,4 @@
+; REQUIRES: x86-registered-target
 ; RUN: opt -thinlto-bc -thinlto-split-lto-unit -o %t %s
 ; RUN: llvm-modextract -b -n 0 -o %t0 %t
 ; RUN: llvm-modextract -b -n 1 -o %t1 %t
@@ -6,6 +7,8 @@
 ; RUN: llvm-dis -o - %t1 | FileCheck --check-prefix=M1 %s
 ; RUN: llvm-bcanalyzer -dump %t0 | FileCheck --check-prefix=BCA0 %s
 ; RUN: llvm-bcanalyzer -dump %t1 | FileCheck --check-prefix=BCA1 %s
+
+target triple = "x86_64-unknown-linux-gnu"
 
 ; ERROR: llvm-modextract: error: module index out of range; bitcode file contains 2 module(s)
 

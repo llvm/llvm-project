@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s -test-linalg-elementwise-fusion-patterns -split-input-file | FileCheck %s
+// RUN: mlir-opt %s -test-linalg-elementwise-fusion-patterns=fuse-generic-ops -split-input-file | FileCheck %s
 
 #map0 = affine_map<(d0, d1) -> (d0, d1)>
 #binary2Dpointwise = {
@@ -9,12 +9,12 @@
   indexing_maps = [#map0, #map0, #map0, #map0],
   iterator_types = ["parallel", "parallel"]
 }
-func @test_fusion_limit(
+func.func @test_fusion_limit(
     %arg0 : tensor<?x?xf32>, %arg1 : tensor<?x?xf32>, %arg2 : tensor<?x?xf32>,
     %arg3 : tensor<?x?xf32>, %arg4 : tensor<?x?xf32>, %arg5 : tensor<?x?xf32>)
     -> tensor<?x?xf32> {
-  %c0 = constant 0 : index
-  %c1 = constant 1 : index
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
   %d0 = tensor.dim %arg0, %c0 : tensor<?x?xf32>
   %d1 = tensor.dim %arg0, %c1 : tensor<?x?xf32>
   %init = linalg.init_tensor [%d0, %d1] : tensor<?x?xf32>
@@ -22,29 +22,29 @@ func @test_fusion_limit(
       ins(%arg0, %arg1 : tensor<?x?xf32>, tensor<?x?xf32>)
       outs(%init : tensor<?x?xf32>) {
     ^bb0(%arg6 : f32, %arg7 : f32, %arg8 : f32):
-       %1 = mulf %arg6, %arg7 : f32
+       %1 = arith.mulf %arg6, %arg7 : f32
        linalg.yield %1 : f32
     } -> tensor<?x?xf32>
   %2 = linalg.generic #binary2Dpointwise
       ins(%arg2, %arg3 : tensor<?x?xf32>, tensor<?x?xf32>)
       outs(%init : tensor<?x?xf32>) {
     ^bb0(%arg6 : f32, %arg7 : f32, %arg8 : f32):
-       %3 = mulf %arg6, %arg7 : f32
+       %3 = arith.mulf %arg6, %arg7 : f32
        linalg.yield %3 : f32
     } -> tensor<?x?xf32>
   %4 = linalg.generic #binary2Dpointwise
       ins(%arg4, %arg5 : tensor<?x?xf32>, tensor<?x?xf32>)
       outs(%init : tensor<?x?xf32>) {
     ^bb0(%arg6 : f32, %arg7 : f32, %arg8 : f32):
-       %5 = mulf %arg6, %arg7 : f32
+       %5 = arith.mulf %arg6, %arg7 : f32
        linalg.yield %5 : f32
     } -> tensor<?x?xf32>
   %6 = linalg.generic #ternary2Dpointwise
       ins(%0, %2, %4 : tensor<?x?xf32>, tensor<?x?xf32>, tensor<?x?xf32>)
       outs(%init : tensor<?x?xf32>) {
     ^bb0(%arg6 : f32, %arg7 : f32, %arg8 : f32, %arg9 : f32):
-       %7 = addf %arg6, %arg7 : f32
-       %8 = addf %7, %arg8 : f32
+       %7 = arith.addf %arg6, %arg7 : f32
+       %8 = arith.addf %7, %arg8 : f32
        linalg.yield %8 : f32
     } -> tensor<?x?xf32>
   return %6 : tensor<?x?xf32>

@@ -13,13 +13,12 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/DataTypes.h"
 #include <cassert>
+#include <memory>
 #include <string>
-#include <utility>
 #include <vector>
 
 namespace llvm {
 
-class Timer;
 class TimerGroup;
 class raw_ostream;
 
@@ -107,7 +106,7 @@ public:
   ~Timer();
 
   /// Create an uninitialized timer, client must use 'init'.
-  explicit Timer() {}
+  explicit Timer() = default;
   void init(StringRef TimerName, StringRef TimerDescription);
   void init(StringRef TimerName, StringRef TimerDescription, TimerGroup &tg);
 

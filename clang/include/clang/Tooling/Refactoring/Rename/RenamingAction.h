@@ -11,8 +11,8 @@
 ///
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_TOOLING_REFACTOR_RENAME_RENAMING_ACTION_H
-#define LLVM_CLANG_TOOLING_REFACTOR_RENAME_RENAMING_ACTION_H
+#ifndef LLVM_CLANG_TOOLING_REFACTORING_RENAME_RENAMINGACTION_H
+#define LLVM_CLANG_TOOLING_REFACTORING_RENAME_RENAMINGACTION_H
 
 #include "clang/Tooling/Refactoring.h"
 #include "clang/Tooling/Refactoring/AtomicChange.h"
@@ -23,7 +23,6 @@
 
 namespace clang {
 class ASTConsumer;
-class CompilerInstance;
 
 namespace tooling {
 
@@ -120,4 +119,4 @@ private:
 } // end namespace tooling
 } // end namespace clang
 
-#endif // LLVM_CLANG_TOOLING_REFACTOR_RENAME_RENAMING_ACTION_H
+#endif // LLVM_CLANG_TOOLING_REFACTORING_RENAME_RENAMINGACTION_H

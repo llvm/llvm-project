@@ -56,7 +56,7 @@ static int32_t WithRSAIndex(llvm::StringRef Arg) {
 
   uint32_t i;
   for (i = 0; i < 4; ++i)
-    if (Arg.find(RSA[i]) != llvm::StringRef::npos)
+    if (Arg.contains(RSA[i]))
       return i;
   return -1;
 }
@@ -149,8 +149,7 @@ public:
       : CommandObjectParsed(
             interpreter, "watchpoint list",
             "List all watchpoints at configurable levels of detail.", nullptr,
-            eCommandRequiresTarget),
-        m_options() {
+            eCommandRequiresTarget) {
     CommandArgumentEntry arg;
     CommandObject::AddIDsArgumentData(arg, eArgTypeWatchpointID,
                                       eArgTypeWatchpointIDRange);
@@ -165,7 +164,7 @@ public:
 
   class CommandOptions : public Options {
   public:
-    CommandOptions() : Options() {}
+    CommandOptions() = default;
 
     ~CommandOptions() override = default;
 
@@ -432,8 +431,7 @@ public:
       : CommandObjectParsed(interpreter, "watchpoint delete",
                             "Delete the specified watchpoint(s).  If no "
                             "watchpoints are specified, delete them all.",
-                            nullptr, eCommandRequiresTarget),
-        m_options() {
+                            nullptr, eCommandRequiresTarget) {
     CommandArgumentEntry arg;
     CommandObject::AddIDsArgumentData(arg, eArgTypeWatchpointID,
                                       eArgTypeWatchpointIDRange);
@@ -456,7 +454,7 @@ public:
 
   class CommandOptions : public Options {
   public:
-    CommandOptions() : Options() {}
+    CommandOptions() = default;
 
     ~CommandOptions() override = default;
 
@@ -556,8 +554,7 @@ public:
       : CommandObjectParsed(interpreter, "watchpoint ignore",
                             "Set ignore count on the specified watchpoint(s).  "
                             "If no watchpoints are specified, set them all.",
-                            nullptr, eCommandRequiresTarget),
-        m_options() {
+                            nullptr, eCommandRequiresTarget) {
     CommandArgumentEntry arg;
     CommandObject::AddIDsArgumentData(arg, eArgTypeWatchpointID,
                                       eArgTypeWatchpointIDRange);
@@ -580,7 +577,7 @@ public:
 
   class CommandOptions : public Options {
   public:
-    CommandOptions() : Options() {}
+    CommandOptions() = default;
 
     ~CommandOptions() override = default;
 
@@ -682,8 +679,7 @@ public:
             "If no watchpoint is specified, act on the last created "
             "watchpoint.  "
             "Passing an empty argument clears the modification.",
-            nullptr, eCommandRequiresTarget),
-        m_options() {
+            nullptr, eCommandRequiresTarget) {
     CommandArgumentEntry arg;
     CommandObject::AddIDsArgumentData(arg, eArgTypeWatchpointID,
                                       eArgTypeWatchpointIDRange);
@@ -706,7 +702,7 @@ public:
 
   class CommandOptions : public Options {
   public:
-    CommandOptions() : Options(), m_condition() {}
+    CommandOptions() = default;
 
     ~CommandOptions() override = default;
 
@@ -813,8 +809,7 @@ public:
             "to free up resources.",
             nullptr,
             eCommandRequiresFrame | eCommandTryTargetAPILock |
-                eCommandProcessMustBeLaunched | eCommandProcessMustBePaused),
-        m_option_group(), m_option_watchpoint() {
+                eCommandProcessMustBeLaunched | eCommandProcessMustBePaused) {
     SetHelpLong(
         R"(
 Examples:
@@ -1006,8 +1001,7 @@ public:
             "to free up resources.",
             "",
             eCommandRequiresFrame | eCommandTryTargetAPILock |
-                eCommandProcessMustBeLaunched | eCommandProcessMustBePaused),
-        m_option_group(), m_option_watchpoint() {
+                eCommandProcessMustBeLaunched | eCommandProcessMustBePaused) {
     SetHelpLong(
         R"(
 Examples:

@@ -24,15 +24,15 @@
 #include "llvm/IR/DebugLoc.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/InstrTypes.h"
-#include "llvm/IR/IntrinsicInst.h"
 #include "llvm/Support/MachineValueType.h"
-#include <algorithm>
 #include <cstdint>
 #include <utility>
 
 namespace llvm {
 
 class AllocaInst;
+class Instruction;
+class IntrinsicInst;
 class BasicBlock;
 class CallInst;
 class Constant;
@@ -212,17 +212,18 @@ protected:
   const TargetRegisterInfo &TRI;
   const TargetLibraryInfo *LibInfo;
   bool SkipTargetIndependentISel;
+  bool UseInstrRefDebugInfo = false;
 
   /// The position of the last instruction for materializing constants
   /// for use in the current block. It resets to EmitStartPt when it makes sense
   /// (for example, it's usually profitable to avoid function calls between the
   /// definition and the use)
-  MachineInstr *LastLocalValue;
+  MachineInstr *LastLocalValue = nullptr;
 
   /// The top most instruction in the current block that is allowed for
   /// emitting local variables. LastLocalValue resets to EmitStartPt when it
   /// makes sense (for example, on function calls)
-  MachineInstr *EmitStartPt;
+  MachineInstr *EmitStartPt = nullptr;
 
 public:
   virtual ~FastISel();
@@ -317,6 +318,12 @@ public:
 
   /// Reset InsertPt to the given old insert position.
   void leaveLocalValueArea(SavePoint Old);
+
+  /// Signal whether instruction referencing variable locations are desired for
+  /// this function's debug-info.
+  void useInstrRefDebugInfo(bool Flag) {
+    UseInstrRefDebugInfo = Flag;
+  }
 
 protected:
   explicit FastISel(FunctionLoweringInfo &FuncInfo,

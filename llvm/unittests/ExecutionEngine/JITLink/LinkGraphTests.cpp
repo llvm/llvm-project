@@ -15,9 +15,6 @@
 using namespace llvm;
 using namespace llvm::jitlink;
 
-static auto RWFlags =
-    sys::Memory::ProtectionFlags(sys::Memory::MF_READ | sys::Memory::MF_WRITE);
-
 static const char BlockContentBytes[] = {
     0x54, 0x68, 0x65, 0x72, 0x65, 0x20, 0x77, 0x61, 0x73, 0x20, 0x6d, 0x6f,
     0x76, 0x65, 0x6d, 0x65, 0x6e, 0x74, 0x20, 0x61, 0x74, 0x20, 0x74, 0x68,
@@ -78,33 +75,38 @@ TEST(LinkGraphTest, AddressAccess) {
   LinkGraph G("foo", Triple("x86_64-apple-darwin"), 8, support::little,
               getGenericEdgeKindName);
 
-  auto &Sec1 = G.createSection("__data.1", RWFlags);
-  auto &B1 = G.createContentBlock(Sec1, BlockContent, 0x1000, 8, 0);
+  auto &Sec1 = G.createSection("__data.1", MemProt::Read | MemProt::Write);
+  orc::ExecutorAddr B1Addr(0x1000);
+  auto &B1 = G.createContentBlock(Sec1, BlockContent, B1Addr, 8, 0);
   auto &S1 = G.addDefinedSymbol(B1, 4, "S1", 4, Linkage::Strong, Scope::Default,
                                 false, false);
   B1.addEdge(Edge::FirstRelocation, 8, S1, 0);
   auto &E1 = *B1.edges().begin();
 
-  EXPECT_EQ(B1.getAddress(), 0x1000U) << "Incorrect block address";
-  EXPECT_EQ(S1.getAddress(), 0x1004U) << "Incorrect symbol address";
-  EXPECT_EQ(B1.getFixupAddress(E1), 0x1008U) << "Incorrect fixup address";
+  EXPECT_EQ(B1.getAddress(), B1Addr) << "Incorrect block address";
+  EXPECT_EQ(S1.getAddress(), B1Addr + 4) << "Incorrect symbol address";
+  EXPECT_EQ(B1.getFixupAddress(E1), B1Addr + 8) << "Incorrect fixup address";
 }
 
 TEST(LinkGraphTest, BlockAndSymbolIteration) {
   // Check that we can iterate over blocks within Sections and across sections.
   LinkGraph G("foo", Triple("x86_64-apple-darwin"), 8, support::little,
               getGenericEdgeKindName);
-  auto &Sec1 = G.createSection("__data.1", RWFlags);
-  auto &B1 = G.createContentBlock(Sec1, BlockContent, 0x1000, 8, 0);
-  auto &B2 = G.createContentBlock(Sec1, BlockContent, 0x2000, 8, 0);
+  auto &Sec1 = G.createSection("__data.1", MemProt::Read | MemProt::Write);
+  orc::ExecutorAddr B1Addr(0x1000);
+  auto &B1 = G.createContentBlock(Sec1, BlockContent, B1Addr, 8, 0);
+  orc::ExecutorAddr B2Addr(0x1000);
+  auto &B2 = G.createContentBlock(Sec1, BlockContent, B2Addr, 8, 0);
   auto &S1 = G.addDefinedSymbol(B1, 0, "S1", 4, Linkage::Strong, Scope::Default,
                                 false, false);
   auto &S2 = G.addDefinedSymbol(B2, 4, "S2", 4, Linkage::Strong, Scope::Default,
                                 false, false);
 
-  auto &Sec2 = G.createSection("__data.2", RWFlags);
-  auto &B3 = G.createContentBlock(Sec2, BlockContent, 0x3000, 8, 0);
-  auto &B4 = G.createContentBlock(Sec2, BlockContent, 0x4000, 8, 0);
+  auto &Sec2 = G.createSection("__data.2", MemProt::Read | MemProt::Write);
+  orc::ExecutorAddr B3Addr(0x3000);
+  auto &B3 = G.createContentBlock(Sec2, BlockContent, B3Addr, 8, 0);
+  orc::ExecutorAddr B4Addr(0x4000);
+  auto &B4 = G.createContentBlock(Sec2, BlockContent, B4Addr, 8, 0);
   auto &S3 = G.addDefinedSymbol(B3, 0, "S3", 4, Linkage::Strong, Scope::Default,
                                 false, false);
   auto &S4 = G.addDefinedSymbol(B4, 4, "S4", 4, Linkage::Strong, Scope::Default,
@@ -141,10 +143,11 @@ TEST(LinkGraphTest, ContentAccessAndUpdate) {
   // Check that we can make a defined symbol external.
   LinkGraph G("foo", Triple("x86_64-apple-darwin"), 8, support::little,
               getGenericEdgeKindName);
-  auto &Sec = G.createSection("__data", RWFlags);
+  auto &Sec = G.createSection("__data", MemProt::Read | MemProt::Write);
 
   // Create an initial block.
-  auto &B = G.createContentBlock(Sec, BlockContent, 0x1000, 8, 0);
+  orc::ExecutorAddr BAddr(0x1000);
+  auto &B = G.createContentBlock(Sec, BlockContent, BAddr, 8, 0);
 
   EXPECT_FALSE(B.isContentMutable()) << "Content unexpectedly mutable";
   EXPECT_EQ(B.getContent().data(), BlockContent.data())
@@ -199,7 +202,8 @@ TEST(LinkGraphTest, ContentAccessAndUpdate) {
       << "Unexpected block content size";
 
   // Create an initially mutable block.
-  auto &B2 = G.createMutableContentBlock(Sec, MutableContent, 0x10000, 8, 0);
+  auto &B2 = G.createMutableContentBlock(Sec, MutableContent,
+                                         orc::ExecutorAddr(0x10000), 8, 0);
 
   EXPECT_TRUE(B2.isContentMutable()) << "Expected B2 content to be mutable";
 }
@@ -208,10 +212,11 @@ TEST(LinkGraphTest, MakeExternal) {
   // Check that we can make a defined symbol external.
   LinkGraph G("foo", Triple("x86_64-apple-darwin"), 8, support::little,
               getGenericEdgeKindName);
-  auto &Sec = G.createSection("__data", RWFlags);
+  auto &Sec = G.createSection("__data", MemProt::Read | MemProt::Write);
 
   // Create an initial block.
-  auto &B1 = G.createContentBlock(Sec, BlockContent, 0x1000, 8, 0);
+  auto &B1 =
+      G.createContentBlock(Sec, BlockContent, orc::ExecutorAddr(0x1000), 8, 0);
 
   // Add a symbol to the block.
   auto &S1 = G.addDefinedSymbol(B1, 0, "S1", 4, Linkage::Strong, Scope::Default,
@@ -221,7 +226,8 @@ TEST(LinkGraphTest, MakeExternal) {
   EXPECT_FALSE(S1.isExternal()) << "Symbol should not be external";
   EXPECT_FALSE(S1.isAbsolute()) << "Symbol should not be absolute";
   EXPECT_TRUE(&S1.getBlock()) << "Symbol should have a non-null block";
-  EXPECT_EQ(S1.getAddress(), 0x1000U) << "Unexpected symbol address";
+  EXPECT_EQ(S1.getAddress(), orc::ExecutorAddr(0x1000))
+      << "Unexpected symbol address";
 
   EXPECT_EQ(
       std::distance(G.defined_symbols().begin(), G.defined_symbols().end()), 1U)
@@ -238,7 +244,8 @@ TEST(LinkGraphTest, MakeExternal) {
   EXPECT_FALSE(S1.isDefined()) << "Symbol should not be defined";
   EXPECT_TRUE(S1.isExternal()) << "Symbol should be external";
   EXPECT_FALSE(S1.isAbsolute()) << "Symbol should not be absolute";
-  EXPECT_EQ(S1.getAddress(), 0U) << "Unexpected symbol address";
+  EXPECT_EQ(S1.getAddress(), orc::ExecutorAddr())
+      << "Unexpected symbol address";
 
   EXPECT_EQ(
       std::distance(G.defined_symbols().begin(), G.defined_symbols().end()), 0U)
@@ -253,10 +260,11 @@ TEST(LinkGraphTest, MakeDefined) {
   // Check that we can make an external symbol defined.
   LinkGraph G("foo", Triple("x86_64-apple-darwin"), 8, support::little,
               getGenericEdgeKindName);
-  auto &Sec = G.createSection("__data", RWFlags);
+  auto &Sec = G.createSection("__data", MemProt::Read | MemProt::Write);
 
   // Create an initial block.
-  auto &B1 = G.createContentBlock(Sec, BlockContent, 0x1000, 8, 0);
+  orc::ExecutorAddr B1Addr(0x1000);
+  auto &B1 = G.createContentBlock(Sec, BlockContent, B1Addr, 8, 0);
 
   // Add an external symbol.
   auto &S1 = G.addExternalSymbol("S1", 4, Linkage::Strong);
@@ -264,7 +272,8 @@ TEST(LinkGraphTest, MakeDefined) {
   EXPECT_FALSE(S1.isDefined()) << "Symbol should not be defined";
   EXPECT_TRUE(S1.isExternal()) << "Symbol should be external";
   EXPECT_FALSE(S1.isAbsolute()) << "Symbol should not be absolute";
-  EXPECT_EQ(S1.getAddress(), 0U) << "Unexpected symbol address";
+  EXPECT_EQ(S1.getAddress(), orc::ExecutorAddr())
+      << "Unexpected symbol address";
 
   EXPECT_EQ(
       std::distance(G.defined_symbols().begin(), G.defined_symbols().end()), 0U)
@@ -282,7 +291,8 @@ TEST(LinkGraphTest, MakeDefined) {
   EXPECT_FALSE(S1.isExternal()) << "Symbol should not be external";
   EXPECT_FALSE(S1.isAbsolute()) << "Symbol should not be absolute";
   EXPECT_TRUE(&S1.getBlock()) << "Symbol should have a non-null block";
-  EXPECT_EQ(S1.getAddress(), 0x1000U) << "Unexpected symbol address";
+  EXPECT_EQ(S1.getAddress(), orc::ExecutorAddr(0x1000U))
+      << "Unexpected symbol address";
 
   EXPECT_EQ(
       std::distance(G.defined_symbols().begin(), G.defined_symbols().end()), 1U)
@@ -297,12 +307,15 @@ TEST(LinkGraphTest, TransferDefinedSymbol) {
   // Check that we can transfer a defined symbol from one block to another.
   LinkGraph G("foo", Triple("x86_64-apple-darwin"), 8, support::little,
               getGenericEdgeKindName);
-  auto &Sec = G.createSection("__data", RWFlags);
+  auto &Sec = G.createSection("__data", MemProt::Read | MemProt::Write);
 
-  // Create an initial block.
-  auto &B1 = G.createContentBlock(Sec, BlockContent, 0x1000, 8, 0);
-  auto &B2 = G.createContentBlock(Sec, BlockContent, 0x2000, 8, 0);
-  auto &B3 = G.createContentBlock(Sec, BlockContent.slice(0, 32), 0x3000, 8, 0);
+  // Create initial blocks.
+  orc::ExecutorAddr B1Addr(0x1000);
+  auto &B1 = G.createContentBlock(Sec, BlockContent, B1Addr, 8, 0);
+  orc::ExecutorAddr B2Addr(0x2000);
+  auto &B2 = G.createContentBlock(Sec, BlockContent, B2Addr, 8, 0);
+  orc::ExecutorAddr B3Addr(0x3000);
+  auto &B3 = G.createContentBlock(Sec, BlockContent.slice(0, 32), B3Addr, 8, 0);
 
   // Add a symbol.
   auto &S1 = G.addDefinedSymbol(B1, 0, "S1", B1.getSize(), Linkage::Strong,
@@ -323,17 +336,51 @@ TEST(LinkGraphTest, TransferDefinedSymbol) {
   EXPECT_EQ(S1.getSize(), 16U) << "Size was not updated";
 }
 
+TEST(LinkGraphTest, TransferDefinedSymbolAcrossSections) {
+  // Check that we can transfer a defined symbol from an existing block in one
+  // section to another.
+  LinkGraph G("foo", Triple("x86_64-apple-darwin"), 8, support::little,
+              getGenericEdgeKindName);
+  auto &Sec1 = G.createSection("__data.1", MemProt::Read | MemProt::Write);
+  auto &Sec2 = G.createSection("__data.2", MemProt::Read | MemProt::Write);
+
+  // Create blocks in each section.
+  orc::ExecutorAddr B1Addr(0x1000);
+  auto &B1 = G.createContentBlock(Sec1, BlockContent, B1Addr, 8, 0);
+  orc::ExecutorAddr B2Addr(0x2000);
+  auto &B2 = G.createContentBlock(Sec2, BlockContent, B2Addr, 8, 0);
+
+  // Add a symbol to section 1.
+  auto &S1 = G.addDefinedSymbol(B1, 0, "S1", B1.getSize(), Linkage::Strong,
+                                Scope::Default, false, false);
+
+  // Transfer with zero offset, explicit size to section 2.
+  G.transferDefinedSymbol(S1, B2, 0, 64);
+
+  EXPECT_EQ(&S1.getBlock(), &B2) << "Block was not updated";
+  EXPECT_EQ(S1.getOffset(), 0U) << "Unexpected offset";
+  EXPECT_EQ(S1.getSize(), 64U) << "Size was not updated";
+
+  EXPECT_EQ(Sec1.symbols_size(), 0u) << "Symbol was not removed from Sec1";
+  EXPECT_EQ(Sec2.symbols_size(), 1u) << "Symbol was not added to Sec2";
+  if (Sec2.symbols_size() == 1) {
+    EXPECT_EQ(*Sec2.symbols().begin(), &S1) << "Unexpected symbol";
+  }
+}
+
 TEST(LinkGraphTest, TransferBlock) {
   // Check that we can transfer a block (and all associated symbols) from one
   // section to another.
   LinkGraph G("foo", Triple("x86_64-apple-darwin"), 8, support::little,
               getGenericEdgeKindName);
-  auto &Sec1 = G.createSection("__data.1", RWFlags);
-  auto &Sec2 = G.createSection("__data.2", RWFlags);
+  auto &Sec1 = G.createSection("__data.1", MemProt::Read | MemProt::Write);
+  auto &Sec2 = G.createSection("__data.2", MemProt::Read | MemProt::Write);
 
   // Create an initial block.
-  auto &B1 = G.createContentBlock(Sec1, BlockContent, 0x1000, 8, 0);
-  auto &B2 = G.createContentBlock(Sec1, BlockContent, 0x2000, 8, 0);
+  orc::ExecutorAddr B1Addr(0x1000);
+  auto &B1 = G.createContentBlock(Sec1, BlockContent, B1Addr, 8, 0);
+  orc::ExecutorAddr B2Addr(0x2000);
+  auto &B2 = G.createContentBlock(Sec1, BlockContent, B2Addr, 8, 0);
 
   // Add some symbols on B1...
   G.addDefinedSymbol(B1, 0, "S1", B1.getSize(), Linkage::Strong, Scope::Default,
@@ -372,14 +419,17 @@ TEST(LinkGraphTest, MergeSections) {
   // section to another.
   LinkGraph G("foo", Triple("x86_64-apple-darwin"), 8, support::little,
               getGenericEdgeKindName);
-  auto &Sec1 = G.createSection("__data.1", RWFlags);
-  auto &Sec2 = G.createSection("__data.2", RWFlags);
-  auto &Sec3 = G.createSection("__data.3", RWFlags);
+  auto &Sec1 = G.createSection("__data.1", MemProt::Read | MemProt::Write);
+  auto &Sec2 = G.createSection("__data.2", MemProt::Read | MemProt::Write);
+  auto &Sec3 = G.createSection("__data.3", MemProt::Read | MemProt::Write);
 
   // Create an initial block.
-  auto &B1 = G.createContentBlock(Sec1, BlockContent, 0x1000, 8, 0);
-  auto &B2 = G.createContentBlock(Sec2, BlockContent, 0x2000, 8, 0);
-  auto &B3 = G.createContentBlock(Sec3, BlockContent, 0x3000, 8, 0);
+  orc::ExecutorAddr B1Addr(0x1000);
+  auto &B1 = G.createContentBlock(Sec1, BlockContent, B1Addr, 8, 0);
+  orc::ExecutorAddr B2Addr(0x2000);
+  auto &B2 = G.createContentBlock(Sec2, BlockContent, B2Addr, 8, 0);
+  orc::ExecutorAddr B3Addr(0x3000);
+  auto &B3 = G.createContentBlock(Sec3, BlockContent, B3Addr, 8, 0);
 
   // Add a symbols for each block.
   G.addDefinedSymbol(B1, 0, "S1", B1.getSize(), Linkage::Strong, Scope::Default,
@@ -389,6 +439,8 @@ TEST(LinkGraphTest, MergeSections) {
   G.addDefinedSymbol(B3, 0, "S3", B2.getSize(), Linkage::Strong, Scope::Default,
                      false, false);
 
+  EXPECT_EQ(&B1.getSection(), &Sec1);
+  EXPECT_EQ(&B2.getSection(), &Sec2);
   EXPECT_EQ(G.sections_size(), 3U) << "Expected three sections initially";
   EXPECT_EQ(Sec1.blocks_size(), 1U) << "Expected one block in Sec1 initially";
   EXPECT_EQ(Sec1.symbols_size(), 1U) << "Expected one symbol in Sec1 initially";
@@ -400,6 +452,8 @@ TEST(LinkGraphTest, MergeSections) {
   // Check that self-merge is a no-op.
   G.mergeSections(Sec1, Sec1);
 
+  EXPECT_EQ(&B1.getSection(), &Sec1)
+      << "Expected B1.getSection() to remain unchanged";
   EXPECT_EQ(G.sections_size(), 3U)
       << "Expected three sections after first merge";
   EXPECT_EQ(Sec1.blocks_size(), 1U)
@@ -418,6 +472,8 @@ TEST(LinkGraphTest, MergeSections) {
   // Merge Sec2 into Sec1, removing Sec2.
   G.mergeSections(Sec1, Sec2);
 
+  EXPECT_EQ(&B2.getSection(), &Sec1)
+      << "Expected B2.getSection() to have been changed to &Sec1";
   EXPECT_EQ(G.sections_size(), 2U)
       << "Expected two sections after section merge";
   EXPECT_EQ(Sec1.blocks_size(), 2U)
@@ -446,10 +502,11 @@ TEST(LinkGraphTest, SplitBlock) {
   // Check that the LinkGraph::splitBlock test works as expected.
   LinkGraph G("foo", Triple("x86_64-apple-darwin"), 8, support::little,
               getGenericEdgeKindName);
-  auto &Sec = G.createSection("__data", RWFlags);
+  auto &Sec = G.createSection("__data", MemProt::Read | MemProt::Write);
 
   // Create the block to split.
-  auto &B1 = G.createContentBlock(Sec, BlockContent, 0x1000, 8, 0);
+  orc::ExecutorAddr B1Addr(0x1000);
+  auto &B1 = G.createContentBlock(Sec, BlockContent, B1Addr, 8, 0);
 
   // Add some symbols to the block.
   auto &S1 = G.addDefinedSymbol(B1, 0, "S1", 4, Linkage::Strong, Scope::Default,
@@ -460,10 +517,14 @@ TEST(LinkGraphTest, SplitBlock) {
                                 false, false);
   auto &S4 = G.addDefinedSymbol(B1, 12, "S4", 4, Linkage::Strong,
                                 Scope::Default, false, false);
+  // Add a symbol that extends beyond the split.
+  auto &S5 = G.addDefinedSymbol(B1, 0, "S5", 16, Linkage::Strong,
+                                Scope::Default, false, false);
 
   // Add an extra block, EB, and target symbols, and use these to add edges
   // from B1 to EB.
-  auto &EB = G.createContentBlock(Sec, BlockContent, 0x2000, 8, 0);
+  orc::ExecutorAddr EBAddr(0x2000);
+  auto &EB = G.createContentBlock(Sec, BlockContent, EBAddr, 8, 0);
   auto &ES1 = G.addDefinedSymbol(EB, 0, "TS1", 4, Linkage::Strong,
                                  Scope::Default, false, false);
   auto &ES2 = G.addDefinedSymbol(EB, 4, "TS2", 4, Linkage::Strong,
@@ -483,10 +544,10 @@ TEST(LinkGraphTest, SplitBlock) {
   auto &B2 = G.splitBlock(B1, 8);
 
   // Check that the block addresses and content matches what we would expect.
-  EXPECT_EQ(B1.getAddress(), 0x1008U);
+  EXPECT_EQ(B1.getAddress(), B1Addr + 8);
   EXPECT_EQ(B1.getContent(), BlockContent.slice(8));
 
-  EXPECT_EQ(B2.getAddress(), 0x1000U);
+  EXPECT_EQ(B2.getAddress(), B1Addr);
   EXPECT_EQ(B2.getContent(), BlockContent.slice(0, 8));
 
   // Check that symbols in B1 were transferred as expected:
@@ -504,6 +565,11 @@ TEST(LinkGraphTest, SplitBlock) {
 
   EXPECT_EQ(&S4.getBlock(), &B1);
   EXPECT_EQ(S4.getOffset(), 4U);
+
+  EXPECT_EQ(&S5.getBlock(), &B2);
+  EXPECT_EQ(S5.getOffset(), 0U);
+  // Size shrinks to fit.
+  EXPECT_EQ(S5.getSize(), 8U);
 
   // Check that edges in B1 have been transferred as expected:
   // Both blocks should now have two edges each at offsets 0 and 4.

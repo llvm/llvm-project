@@ -78,14 +78,17 @@ inline const Value *GetUnderlyingObjCPtr(const Value *V) {
 }
 
 /// A wrapper for GetUnderlyingObjCPtr used for results memoization.
-inline const Value *
-GetUnderlyingObjCPtrCached(const Value *V,
-                           DenseMap<const Value *, WeakTrackingVH> &Cache) {
-  if (auto InCache = Cache.lookup(V))
-    return InCache;
+inline const Value *GetUnderlyingObjCPtrCached(
+    const Value *V,
+    DenseMap<const Value *, std::pair<WeakVH, WeakTrackingVH>> &Cache) {
+  // The entry is invalid if either value handle is null.
+  auto InCache = Cache.lookup(V);
+  if (InCache.first && InCache.second)
+    return InCache.second;
 
   const Value *Computed = GetUnderlyingObjCPtr(V);
-  Cache[V] = const_cast<Value *>(Computed);
+  Cache[V] =
+      std::make_pair(const_cast<Value *>(V), const_cast<Value *>(Computed));
   return Computed;
 }
 
@@ -168,8 +171,8 @@ bool IsPotentialRetainableObjPtr(const Value *Op, AAResults &AA);
 /// Helper for GetARCInstKind. Determines what kind of construct CS
 /// is.
 inline ARCInstKind GetCallSiteClass(const CallBase &CB) {
-  for (auto I = CB.arg_begin(), E = CB.arg_end(); I != E; ++I)
-    if (IsPotentialRetainableObjPtr(*I))
+  for (const Use &U : CB.args())
+    if (IsPotentialRetainableObjPtr(U))
       return CB.onlyReadsMemory() ? ARCInstKind::User : ARCInstKind::CallOrUser;
 
   return CB.onlyReadsMemory() ? ARCInstKind::None : ARCInstKind::Call;
@@ -204,11 +207,10 @@ inline bool IsObjCIdentifiedObject(const Value *V) {
         return true;
 
       StringRef Section = GV->getSection();
-      if (Section.find("__message_refs") != StringRef::npos ||
-          Section.find("__objc_classrefs") != StringRef::npos ||
-          Section.find("__objc_superrefs") != StringRef::npos ||
-          Section.find("__objc_methname") != StringRef::npos ||
-          Section.find("__cstring") != StringRef::npos)
+      if (Section.contains("__message_refs") ||
+          Section.contains("__objc_classrefs") ||
+          Section.contains("__objc_superrefs") ||
+          Section.contains("__objc_methname") || Section.contains("__cstring"))
         return true;
     }
   }

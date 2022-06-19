@@ -100,7 +100,7 @@ static bool extractConstantMask(const Constant *C, unsigned MaskEltSizeInBits,
 
     // Only treat the element as UNDEF if all bits are UNDEF, otherwise
     // treat it as zero.
-    if (EltUndef.isAllOnesValue()) {
+    if (EltUndef.isAllOnes()) {
       UndefElts.setBit(i);
       RawMask[i] = 0;
       continue;

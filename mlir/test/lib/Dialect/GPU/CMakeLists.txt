@@ -3,22 +3,21 @@ add_mlir_library(MLIRGPUTestPasses
   TestConvertGPUKernelToCubin.cpp
   TestConvertGPUKernelToHsaco.cpp
   TestGpuMemoryPromotion.cpp
-  TestGpuParallelLoopMapping.cpp
   TestGpuRewrite.cpp
 
   EXCLUDE_FROM_LIBMLIR
 
   LINK_LIBS PUBLIC
-  MLIRAffine
+  MLIRAffineDialect
+  MLIRFuncDialect
   MLIRGPUOps
   MLIRGPUToGPURuntimeTransforms
   MLIRLLVMToLLVMIRTranslation
-  MLIRNVVMIR
+  MLIRNVVMDialect
   MLIRNVVMToLLVMIRTranslation
   MLIRPass
-  MLIRROCDLIR
+  MLIRROCDLDialect
   MLIRROCDLToLLVMIRTranslation
-  MLIRSCF
-  MLIRStandard
+  MLIRSCFDialect
   MLIRTransformUtils
   )

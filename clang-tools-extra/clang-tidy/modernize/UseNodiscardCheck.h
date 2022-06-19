@@ -30,7 +30,7 @@ namespace modernize {
 /// \endcode
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/modernize-use-nodiscard.html
+/// http://clang.llvm.org/extra/clang-tidy/checks/modernize/use-nodiscard.html
 class UseNodiscardCheck : public ClangTidyCheck {
 public:
   UseNodiscardCheck(StringRef Name, ClangTidyContext *Context);
@@ -40,7 +40,7 @@ public:
   void check(const ast_matchers::MatchFinder::MatchResult &Result) override;
 
 private:
-  const std::string NoDiscardMacro;
+  const StringRef NoDiscardMacro;
 };
 
 } // namespace modernize

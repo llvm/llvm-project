@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-// UNSUPPORTED: c++03
+// UNSUPPORTED: c++03 && !stdlib=libc++
 
 // <vector>
 
@@ -23,9 +23,10 @@
 
 int main(int, char**)
 {
+    test_allocator_statistics alloc_stats;
     {
-        std::vector<MoveOnly, test_allocator<MoveOnly> > l(test_allocator<MoveOnly>(5));
-        std::vector<MoveOnly, test_allocator<MoveOnly> > lo(test_allocator<MoveOnly>(5));
+        std::vector<MoveOnly, test_allocator<MoveOnly> > l(test_allocator<MoveOnly>(5, &alloc_stats));
+        std::vector<MoveOnly, test_allocator<MoveOnly> > lo(test_allocator<MoveOnly>(5, &alloc_stats));
         assert(is_contiguous_container_asan_correct(l));
         assert(is_contiguous_container_asan_correct(lo));
         for (int i = 1; i <= 3; ++i)
@@ -71,8 +72,8 @@ int main(int, char**)
         assert(is_contiguous_container_asan_correct(c2));
     }
     {
-        std::vector<MoveOnly, min_allocator<MoveOnly> > l(min_allocator<MoveOnly>{});
-        std::vector<MoveOnly, min_allocator<MoveOnly> > lo(min_allocator<MoveOnly>{});
+        std::vector<MoveOnly, min_allocator<MoveOnly> > l((min_allocator<MoveOnly>()));
+        std::vector<MoveOnly, min_allocator<MoveOnly> > lo((min_allocator<MoveOnly>()));
         assert(is_contiguous_container_asan_correct(l));
         assert(is_contiguous_container_asan_correct(lo));
         for (int i = 1; i <= 3; ++i)
@@ -90,34 +91,34 @@ int main(int, char**)
     }
     {
         int a1[] = {1, 3, 7, 9, 10};
-        std::vector<int, min_allocator<int>> c1(a1, a1+sizeof(a1)/sizeof(a1[0]));
+        std::vector<int, min_allocator<int> > c1(a1, a1+sizeof(a1)/sizeof(a1[0]));
         assert(is_contiguous_container_asan_correct(c1));
-        std::vector<int, min_allocator<int>>::const_iterator i = c1.begin();
-        std::vector<int, min_allocator<int>> c2 = std::move(c1);
+        std::vector<int, min_allocator<int> >::const_iterator i = c1.begin();
+        std::vector<int, min_allocator<int> > c2 = std::move(c1);
         assert(is_contiguous_container_asan_correct(c2));
-        std::vector<int, min_allocator<int>>::iterator j = c2.erase(i);
+        std::vector<int, min_allocator<int> >::iterator j = c2.erase(i);
         assert(*j == 3);
         assert(is_contiguous_container_asan_correct(c2));
     }
     {
-      test_alloc_base::clear();
+      alloc_stats.clear();
       using Vect = std::vector<int, test_allocator<int> >;
-      Vect v(test_allocator<int>(42, 101));
-      assert(test_alloc_base::count == 1);
-      assert(test_alloc_base::copied == 1);
-      assert(test_alloc_base::moved == 0);
+      Vect v(test_allocator<int>(42, 101, &alloc_stats));
+      assert(alloc_stats.count == 1);
+      assert(alloc_stats.copied == 1);
+      assert(alloc_stats.moved == 0);
       {
         const test_allocator<int>& a = v.get_allocator();
         assert(a.get_data() == 42);
         assert(a.get_id() == 101);
       }
-      assert(test_alloc_base::count == 1);
-      test_alloc_base::clear_ctor_counters();
+      assert(alloc_stats.count == 1);
+      alloc_stats.clear_ctor_counters();
 
       Vect v2 = std::move(v);
-      assert(test_alloc_base::count == 2);
-      assert(test_alloc_base::copied == 0);
-      assert(test_alloc_base::moved == 1);
+      assert(alloc_stats.count == 2);
+      assert(alloc_stats.copied == 0);
+      assert(alloc_stats.moved == 1);
       {
         const test_allocator<int>& a = v.get_allocator();
         assert(a.get_id() == test_alloc_base::moved_value);

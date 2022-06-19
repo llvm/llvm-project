@@ -108,12 +108,12 @@
 // RUN: %clang -target arm-linux-androideabi -### \
 // RUN:   -no-integrated-as -c %s 2>&1 \
 // RUN:   | FileCheck -check-prefix=CHECK-ARM-ANDROID %s
-// CHECK-ARM-ANDROID: as{{(.exe)?}}" "--noexecstack" "-EL" "-mfloat-abi=soft"
+// CHECK-ARM-ANDROID: as{{(.exe)?}}" "-EL" "-mfloat-abi=soft"
 //
 // RUN: %clang -target arm-linux-androideabi -march=armv7-a -### \
 // RUN:   -no-integrated-as -c %s 2>&1 \
 // RUN:   | FileCheck -check-prefix=CHECK-ARM-ANDROID-SOFTFP %s
-// CHECK-ARM-ANDROID-SOFTFP: as{{(.exe)?}}" "--noexecstack" "-EL" "-mfloat-abi=softfp" "-march=armv7-a"
+// CHECK-ARM-ANDROID-SOFTFP: as{{(.exe)?}}" "-EL" "-mfloat-abi=softfp" "-march=armv7-a"
 //
 // RUN: %clang -target arm-linux-eabi -mhard-float -### \
 // RUN:   -no-integrated-as -c %s 2>&1 \
@@ -164,7 +164,7 @@
 // CHECK-PPC-NO-MCPU-NOT: as{{.*}} "-mcpu=invalid-cpu"
 //
 // RUN: %clang -target sparc64-linux -mcpu=invalid-cpu -### \
-// RUN:   -no-integrated-as -c %s 2>&1 \
+// RUN:   -no-integrated-as -fno-pic -c %s 2>&1 \
 // RUN:   | FileCheck -check-prefix=CHECK-SPARCV9 %s
 // CHECK-SPARCV9: as
 // CHECK-SPARCV9: -64

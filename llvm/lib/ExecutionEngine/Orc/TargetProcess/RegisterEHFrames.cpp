@@ -1,9 +1,8 @@
 //===--------- RegisterEHFrames.cpp - Register EH frame sections ----------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -86,11 +85,11 @@ static Error deregisterFrameWrapper(const void *P) {
 }
 #endif
 
-#ifdef __APPLE__
+#if defined(HAVE_UNW_ADD_DYNAMIC_FDE) || defined(__APPLE__)
 
 template <typename HandleFDEFn>
-Error walkAppleEHFrameSection(const char *const SectionStart,
-                              size_t SectionSize, HandleFDEFn HandleFDE) {
+Error walkLibunwindEHFrameSection(const char *const SectionStart,
+                                  size_t SectionSize, HandleFDEFn HandleFDE) {
   const char *CurCFIRecord = SectionStart;
   const char *End = SectionStart + SectionSize;
   uint64_t Size = *reinterpret_cast<const uint32_t *>(CurCFIRecord);
@@ -124,16 +123,19 @@ Error walkAppleEHFrameSection(const char *const SectionStart,
   return Error::success();
 }
 
-#endif // __APPLE__
+#endif // HAVE_UNW_ADD_DYNAMIC_FDE || __APPLE__
 
 Error registerEHFrameSection(const void *EHFrameSectionAddr,
                              size_t EHFrameSectionSize) {
-#ifdef __APPLE__
-  // On Darwin __register_frame has to be called for each FDE entry.
-  return walkAppleEHFrameSection(static_cast<const char *>(EHFrameSectionAddr),
-                                 EHFrameSectionSize, registerFrameWrapper);
+  /* libgcc and libunwind __register_frame behave differently. We use the
+   * presence of __unw_add_dynamic_fde to detect libunwind. */
+#if defined(HAVE_UNW_ADD_DYNAMIC_FDE) || defined(__APPLE__)
+  // With libunwind, __register_frame has to be called for each FDE entry.
+  return walkLibunwindEHFrameSection(
+      static_cast<const char *>(EHFrameSectionAddr), EHFrameSectionSize,
+      registerFrameWrapper);
 #else
-  // On Linux __register_frame takes a single argument:
+  // With libgcc, __register_frame takes a single argument:
   // a pointer to the start of the .eh_frame section.
 
   // How can it find the end? Because crtendS.o is linked
@@ -144,9 +146,10 @@ Error registerEHFrameSection(const void *EHFrameSectionAddr,
 
 Error deregisterEHFrameSection(const void *EHFrameSectionAddr,
                                size_t EHFrameSectionSize) {
-#ifdef __APPLE__
-  return walkAppleEHFrameSection(static_cast<const char *>(EHFrameSectionAddr),
-                                 EHFrameSectionSize, deregisterFrameWrapper);
+#if defined(HAVE_UNW_ADD_DYNAMIC_FDE) || defined(__APPLE__)
+  return walkLibunwindEHFrameSection(
+      static_cast<const char *>(EHFrameSectionAddr), EHFrameSectionSize,
+      deregisterFrameWrapper);
 #else
   return deregisterFrameWrapper(EHFrameSectionAddr);
 #endif
@@ -155,26 +158,26 @@ Error deregisterEHFrameSection(const void *EHFrameSectionAddr,
 } // end namespace orc
 } // end namespace llvm
 
-static Error registerEHFrameWrapper(JITTargetAddress Addr, uint64_t Size) {
-  return llvm::orc::registerEHFrameSection(
-      jitTargetAddressToPointer<const void *>(Addr), Size);
+static Error registerEHFrameWrapper(ExecutorAddrRange EHFrame) {
+  return llvm::orc::registerEHFrameSection(EHFrame.Start.toPtr<const void *>(),
+                                           EHFrame.size());
 }
 
-static Error deregisterEHFrameWrapper(JITTargetAddress Addr, uint64_t Size) {
+static Error deregisterEHFrameWrapper(ExecutorAddrRange EHFrame) {
   return llvm::orc::deregisterEHFrameSection(
-      jitTargetAddressToPointer<const void *>(Addr), Size);
+      EHFrame.Start.toPtr<const void *>(), EHFrame.size());
 }
 
-extern "C" orc::shared::detail::CWrapperFunctionResult
+extern "C" orc::shared::CWrapperFunctionResult
 llvm_orc_registerEHFrameSectionWrapper(const char *Data, uint64_t Size) {
-  return WrapperFunction<SPSError(SPSExecutorAddress, uint64_t)>::handle(
+  return WrapperFunction<SPSError(SPSExecutorAddrRange)>::handle(
              Data, Size, registerEHFrameWrapper)
       .release();
 }
 
-extern "C" orc::shared::detail::CWrapperFunctionResult
+extern "C" orc::shared::CWrapperFunctionResult
 llvm_orc_deregisterEHFrameSectionWrapper(const char *Data, uint64_t Size) {
-  return WrapperFunction<SPSError(SPSExecutorAddress, uint64_t)>::handle(
+  return WrapperFunction<SPSError(SPSExecutorAddrRange)>::handle(
              Data, Size, deregisterEHFrameWrapper)
       .release();
 }

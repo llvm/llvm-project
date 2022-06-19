@@ -175,6 +175,44 @@ TEST(MathExtras, reverseBits) {
   EXPECT_EQ(0x5400000000000000ULL, reverseBits(NZ64));
 }
 
+TEST(MathExtras, isShiftedMask_32) {
+  EXPECT_FALSE(isShiftedMask_32(0x01010101));
+  EXPECT_TRUE(isShiftedMask_32(0xf0000000));
+  EXPECT_TRUE(isShiftedMask_32(0xffff0000));
+  EXPECT_TRUE(isShiftedMask_32(0xff << 1));
+
+  unsigned MaskIdx, MaskLen;
+  EXPECT_FALSE(isShiftedMask_32(0x01010101, MaskIdx, MaskLen));
+  EXPECT_TRUE(isShiftedMask_32(0xf0000000, MaskIdx, MaskLen));
+  EXPECT_EQ(28, (int)MaskIdx);
+  EXPECT_EQ(4, (int)MaskLen);
+  EXPECT_TRUE(isShiftedMask_32(0xffff0000, MaskIdx, MaskLen));
+  EXPECT_EQ(16, (int)MaskIdx);
+  EXPECT_EQ(16, (int)MaskLen);
+  EXPECT_TRUE(isShiftedMask_32(0xff << 1, MaskIdx, MaskLen));
+  EXPECT_EQ(1, (int)MaskIdx);
+  EXPECT_EQ(8, (int)MaskLen);
+}
+
+TEST(MathExtras, isShiftedMask_64) {
+  EXPECT_FALSE(isShiftedMask_64(0x0101010101010101ull));
+  EXPECT_TRUE(isShiftedMask_64(0xf000000000000000ull));
+  EXPECT_TRUE(isShiftedMask_64(0xffff000000000000ull));
+  EXPECT_TRUE(isShiftedMask_64(0xffull << 55));
+
+  unsigned MaskIdx, MaskLen;
+  EXPECT_FALSE(isShiftedMask_64(0x0101010101010101ull, MaskIdx, MaskLen));
+  EXPECT_TRUE(isShiftedMask_64(0xf000000000000000ull, MaskIdx, MaskLen));
+  EXPECT_EQ(60, (int)MaskIdx);
+  EXPECT_EQ(4, (int)MaskLen);
+  EXPECT_TRUE(isShiftedMask_64(0xffff000000000000ull, MaskIdx, MaskLen));
+  EXPECT_EQ(48, (int)MaskIdx);
+  EXPECT_EQ(16, (int)MaskLen);
+  EXPECT_TRUE(isShiftedMask_64(0xffull << 55, MaskIdx, MaskLen));
+  EXPECT_EQ(55, (int)MaskIdx);
+  EXPECT_EQ(8, (int)MaskLen);
+}
+
 TEST(MathExtras, isPowerOf2_32) {
   EXPECT_FALSE(isPowerOf2_32(0));
   EXPECT_TRUE(isPowerOf2_32(1 << 6));

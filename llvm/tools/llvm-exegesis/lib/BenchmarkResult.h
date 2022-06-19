@@ -91,6 +91,8 @@ struct InstructionBenchmark {
   class Error writeYaml(const LLVMState &State, const StringRef Filename);
 };
 
+bool operator==(const BenchmarkMeasure &A, const BenchmarkMeasure &B);
+
 //------------------------------------------------------------------------------
 // Utilities to work with Benchmark measures.
 

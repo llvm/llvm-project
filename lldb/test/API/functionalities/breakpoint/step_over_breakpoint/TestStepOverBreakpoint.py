@@ -14,8 +14,6 @@ from lldbsuite.test import lldbutil
 
 class StepOverBreakpointsTestCase(TestBase):
 
-    mydir = TestBase.compute_mydir(__file__)
-
     def setUp(self):
         TestBase.setUp(self)
 
@@ -51,7 +49,6 @@ class StepOverBreakpointsTestCase(TestBase):
         self.thread = lldbutil.get_one_thread_stopped_at_breakpoint(self.process, self.breakpoint1)
         self.assertIsNotNone(self.thread, "Didn't stop at breakpoint 1.")
 
-    @skipIfReproducer
     def test_step_instruction(self):
         # Count instructions between breakpoint_1 and breakpoint_4
         contextList = self.target.FindFunctions('main', lldb.eFunctionNameTypeAuto)
@@ -72,7 +69,7 @@ class StepOverBreakpointsTestCase(TestBase):
         while True:
             self.thread.StepInstruction(True)
             step_count = step_count + 1
-            self.assertEquals(self.process.GetState(), lldb.eStateStopped)
+            self.assertState(self.process.GetState(), lldb.eStateStopped)
             self.assertTrue(self.thread.GetStopReason() == lldb.eStopReasonPlanComplete or
                             self.thread.GetStopReason() == lldb.eStopReasonBreakpoint)
             if (self.thread.GetStopReason() == lldb.eStopReasonBreakpoint) :
@@ -84,24 +81,24 @@ class StepOverBreakpointsTestCase(TestBase):
 
         # Run the process until termination
         self.process.Continue()
-        self.assertEquals(self.process.GetState(), lldb.eStateExited)
+        self.assertState(self.process.GetState(), lldb.eStateExited)
 
     @skipIf(bugnumber="llvm.org/pr31972", hostoslist=["windows"])
     def test_step_over(self):
 
         self.thread.StepOver()
         # We should be stopped at the breakpoint_2 line with stop plan complete reason
-        self.assertEquals(self.process.GetState(), lldb.eStateStopped)
+        self.assertState(self.process.GetState(), lldb.eStateStopped)
         self.assertEquals(self.thread.GetStopReason(), lldb.eStopReasonPlanComplete)
 
         self.thread.StepOver()
         # We should be stopped at the breakpoint_3 line with stop plan complete reason
-        self.assertEquals(self.process.GetState(), lldb.eStateStopped)
+        self.assertState(self.process.GetState(), lldb.eStateStopped)
         self.assertEquals(self.thread.GetStopReason(), lldb.eStopReasonPlanComplete)
 
         self.thread.StepOver()
         # We should be stopped at the breakpoint_4
-        self.assertEquals(self.process.GetState(), lldb.eStateStopped)
+        self.assertState(self.process.GetState(), lldb.eStateStopped)
         self.assertEquals(self.thread.GetStopReason(), lldb.eStopReasonBreakpoint)
         thread1 = lldbutil.get_one_thread_stopped_at_breakpoint(self.process, self.breakpoint4)
         self.assertEquals(self.thread, thread1, "Didn't stop at breakpoint 4.")
@@ -114,5 +111,5 @@ class StepOverBreakpointsTestCase(TestBase):
 
         # Run the process until termination
         self.process.Continue()
-        self.assertEquals(self.process.GetState(), lldb.eStateExited)
+        self.assertState(self.process.GetState(), lldb.eStateExited)
 

@@ -129,6 +129,7 @@ namespace {
   };
 
   struct GroupInfo {
+    llvm::StringRef GroupName;
     std::vector<const Record*> DiagsInGroup;
     std::vector<std::string> SubGroups;
     unsigned IDNo;
@@ -174,6 +175,7 @@ static void groupDiagnostics(const std::vector<Record*> &Diags,
     Record *Group = DiagGroups[i];
     GroupInfo &GI =
         DiagsInGroup[std::string(Group->getValueAsString("GroupName"))];
+    GI.GroupName = Group->getName();
     GI.Defs.push_back(Group);
 
     std::vector<Record*> SubGroups = Group->getValueAsListOfDefs("SubGroups");
@@ -614,7 +616,7 @@ struct DiagnosticTextBuilder {
     return It->second.Root;
   }
 
-  LLVM_ATTRIBUTE_NORETURN void PrintFatalError(llvm::Twine const &Msg) const {
+  [[noreturn]] void PrintFatalError(llvm::Twine const &Msg) const {
     assert(EvaluatingRecord && "not evaluating a record?");
     llvm::PrintFatalError(EvaluatingRecord->getLoc(), Msg);
   }
@@ -1279,8 +1281,8 @@ void clang::EmitClangDiagsDefs(RecordKeeper &Records, raw_ostream &OS,
     OS << ", \"";
     OS.write_escaped(DiagTextBuilder.buildForDefinition(&R)) << '"';
 
-    // Warning associated with the diagnostic. This is stored as an index into
-    // the alphabetically sorted warning table.
+    // Warning group associated with the diagnostic. This is stored as an index
+    // into the alphabetically sorted warning group table.
     if (DefInit *DI = dyn_cast<DefInit>(R.getValueInit("Group"))) {
       std::map<std::string, GroupInfo>::iterator I = DiagsInGroup.find(
           std::string(DI->getDef()->getValueAsString("GroupName")));
@@ -1305,6 +1307,11 @@ void clang::EmitClangDiagsDefs(RecordKeeper &Records, raw_ostream &OS,
       OS << ", false";
 
     if (R.getValueAsBit("ShowInSystemHeader"))
+      OS << ", true";
+    else
+      OS << ", false";
+
+    if (R.getValueAsBit("ShowInSystemMacro"))
       OS << ", true";
     else
       OS << ", false";
@@ -1487,18 +1494,20 @@ static void emitDiagTable(std::map<std::string, GroupInfo> &DiagsInGroup,
   for (auto const &I: DiagsInGroup)
     MaxLen = std::max(MaxLen, (unsigned)I.first.size());
 
-  OS << "\n#ifdef GET_DIAG_TABLE\n";
+  OS << "\n#ifdef DIAG_ENTRY\n";
   unsigned SubGroupIndex = 1, DiagArrayIndex = 1;
   for (auto const &I: DiagsInGroup) {
     // Group option string.
-    OS << "  { /* ";
+    OS << "DIAG_ENTRY(";
+    OS << I.second.GroupName << " /* ";
+
     if (I.first.find_first_not_of("abcdefghijklmnopqrstuvwxyz"
                                    "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
                                    "0123456789!@#$%^*-+=:?") !=
         std::string::npos)
       PrintFatalError("Invalid character in diagnostic group '" + I.first +
                       "'");
-    OS << I.first << " */ " << std::string(MaxLen - I.first.size(), ' ');
+    OS << I.first << " */, ";
     // Store a pascal-style length byte at the beginning of the string.
     std::string Name = char(I.first.size()) + I.first;
     OS << GroupNames.GetOrAddStringOffset(Name, false) << ", ";
@@ -1517,7 +1526,7 @@ static void emitDiagTable(std::map<std::string, GroupInfo> &DiagsInGroup,
         DiagArrayIndex += DiagsInPedantic.size();
       DiagArrayIndex += V.size() + 1;
     } else {
-      OS << "/* Empty */     0, ";
+      OS << "0, ";
     }
 
     // Subgroups.
@@ -1525,17 +1534,25 @@ static void emitDiagTable(std::map<std::string, GroupInfo> &DiagsInGroup,
     const bool hasSubGroups =
         !SubGroups.empty() || (IsPedantic && !GroupsInPedantic.empty());
     if (hasSubGroups) {
-      OS << "/* DiagSubGroup" << I.second.IDNo << " */ " << SubGroupIndex;
+      OS << "/* DiagSubGroup" << I.second.IDNo << " */ " << SubGroupIndex
+         << ", ";
       if (IsPedantic)
         SubGroupIndex += GroupsInPedantic.size();
       SubGroupIndex += SubGroups.size() + 1;
     } else {
-      OS << "/* Empty */         0";
+      OS << "0, ";
     }
 
-    OS << " },\n";
+    std::string Documentation = I.second.Defs.back()
+                                    ->getValue("Documentation")
+                                    ->getValue()
+                                    ->getAsUnquotedString();
+
+    OS << "R\"(" << StringRef(Documentation).trim() << ")\"";
+
+    OS << ")\n";
   }
-  OS << "#endif // GET_DIAG_TABLE\n\n";
+  OS << "#endif // DIAG_ENTRY\n\n";
 }
 
 /// Emit the table of diagnostic categories.

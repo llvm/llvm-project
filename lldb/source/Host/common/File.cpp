@@ -23,17 +23,17 @@
 #include <unistd.h>
 #endif
 
-#include "llvm/Support/ConvertUTF.h"
-#include "llvm/Support/Errno.h"
-#include "llvm/Support/FileSystem.h"
-#include "llvm/Support/Process.h"
-
 #include "lldb/Host/Config.h"
 #include "lldb/Host/FileSystem.h"
 #include "lldb/Host/Host.h"
 #include "lldb/Utility/DataBufferHeap.h"
 #include "lldb/Utility/FileSpec.h"
 #include "lldb/Utility/Log.h"
+#include "lldb/Utility/VASPrintf.h"
+#include "llvm/Support/ConvertUTF.h"
+#include "llvm/Support/Errno.h"
+#include "llvm/Support/FileSystem.h"
+#include "llvm/Support/Process.h"
 
 using namespace lldb;
 using namespace lldb_private;
@@ -41,20 +41,23 @@ using llvm::Expected;
 
 Expected<const char *>
 File::GetStreamOpenModeFromOptions(File::OpenOptions options) {
+  File::OpenOptions rw =
+      options & (File::eOpenOptionReadOnly | File::eOpenOptionWriteOnly |
+                 File::eOpenOptionReadWrite);
+
   if (options & File::eOpenOptionAppend) {
-    if (options & File::eOpenOptionRead) {
+    if (rw == File::eOpenOptionReadWrite) {
       if (options & File::eOpenOptionCanCreateNewOnly)
         return "a+x";
       else
         return "a+";
-    } else if (options & File::eOpenOptionWrite) {
+    } else if (rw == File::eOpenOptionWriteOnly) {
       if (options & File::eOpenOptionCanCreateNewOnly)
         return "ax";
       else
         return "a";
     }
-  } else if (options & File::eOpenOptionRead &&
-             options & File::eOpenOptionWrite) {
+  } else if (rw == File::eOpenOptionReadWrite) {
     if (options & File::eOpenOptionCanCreate) {
       if (options & File::eOpenOptionCanCreateNewOnly)
         return "w+x";
@@ -62,10 +65,10 @@ File::GetStreamOpenModeFromOptions(File::OpenOptions options) {
         return "w+";
     } else
       return "r+";
-  } else if (options & File::eOpenOptionRead) {
-    return "r";
-  } else if (options & File::eOpenOptionWrite) {
+  } else if (rw == File::eOpenOptionWriteOnly) {
     return "w";
+  } else if (rw == File::eOpenOptionReadOnly) {
+    return "r";
   }
   return llvm::createStringError(
       llvm::inconvertibleErrorCode(),
@@ -75,19 +78,20 @@ File::GetStreamOpenModeFromOptions(File::OpenOptions options) {
 Expected<File::OpenOptions> File::GetOptionsFromMode(llvm::StringRef mode) {
   OpenOptions opts =
       llvm::StringSwitch<OpenOptions>(mode)
-          .Cases("r", "rb", eOpenOptionRead)
-          .Cases("w", "wb", eOpenOptionWrite)
+          .Cases("r", "rb", eOpenOptionReadOnly)
+          .Cases("w", "wb", eOpenOptionWriteOnly)
           .Cases("a", "ab",
-                 eOpenOptionWrite | eOpenOptionAppend | eOpenOptionCanCreate)
-          .Cases("r+", "rb+", "r+b", eOpenOptionRead | eOpenOptionWrite)
+                 eOpenOptionWriteOnly | eOpenOptionAppend |
+                 eOpenOptionCanCreate)
+          .Cases("r+", "rb+", "r+b", eOpenOptionReadWrite)
           .Cases("w+", "wb+", "w+b",
-                 eOpenOptionRead | eOpenOptionWrite | eOpenOptionCanCreate |
-                     eOpenOptionTruncate)
+                 eOpenOptionReadWrite | eOpenOptionCanCreate |
+                 eOpenOptionTruncate)
           .Cases("a+", "ab+", "a+b",
-                 eOpenOptionRead | eOpenOptionWrite | eOpenOptionAppend |
+                 eOpenOptionReadWrite | eOpenOptionAppend |
                      eOpenOptionCanCreate)
-          .Default(OpenOptions());
-  if (opts)
+          .Default(eOpenOptionInvalid);
+  if (opts != eOpenOptionInvalid)
     return opts;
   return llvm::createStringError(
       llvm::inconvertibleErrorCode(),
@@ -211,18 +215,13 @@ size_t File::Printf(const char *format, ...) {
 }
 
 size_t File::PrintfVarArg(const char *format, va_list args) {
-  size_t result = 0;
-  char *s = nullptr;
-  result = vasprintf(&s, format, args);
-  if (s != nullptr) {
-    if (result > 0) {
-      size_t s_len = result;
-      Write(s, s_len);
-      result = s_len;
-    }
-    free(s);
+  llvm::SmallString<0> s;
+  if (VASprintf(s, format, args)) {
+    size_t written = s.size();;
+    Write(s.data(), written);
+    return written;
   }
-  return result;
+  return 0;
 }
 
 Expected<File::OpenOptions> File::GetOptions() const {
@@ -310,9 +309,15 @@ Status NativeFile::Close() {
     if (m_own_stream) {
       if (::fclose(m_stream) == EOF)
         error.SetErrorToErrno();
-    } else if (m_options & eOpenOptionWrite) {
-      if (::fflush(m_stream) == EOF)
-        error.SetErrorToErrno();
+    } else {
+      File::OpenOptions rw =
+          m_options & (File::eOpenOptionReadOnly | File::eOpenOptionWriteOnly |
+                       File::eOpenOptionReadWrite);
+
+      if (rw == eOpenOptionWriteOnly || rw == eOpenOptionReadWrite) {
+        if (::fflush(m_stream) == EOF)
+          error.SetErrorToErrno();
+      }
     }
   }
   if (DescriptorIsValid() && m_own_descriptor) {
@@ -732,10 +737,15 @@ size_t NativeFile::PrintfVarArg(const char *format, va_list args) {
 
 mode_t File::ConvertOpenOptionsForPOSIXOpen(OpenOptions open_options) {
   mode_t mode = 0;
-  if (open_options & eOpenOptionRead && open_options & eOpenOptionWrite)
+  File::OpenOptions rw =
+      open_options & (File::eOpenOptionReadOnly | File::eOpenOptionWriteOnly |
+                      File::eOpenOptionReadWrite);
+  if (rw == eOpenOptionReadWrite)
     mode |= O_RDWR;
-  else if (open_options & eOpenOptionWrite)
+  else if (rw == eOpenOptionWriteOnly)
     mode |= O_WRONLY;
+  else if (rw == eOpenOptionReadOnly)
+    mode |= O_RDONLY;
 
   if (open_options & eOpenOptionAppend)
     mode |= O_APPEND;
@@ -754,5 +764,107 @@ mode_t File::ConvertOpenOptionsForPOSIXOpen(OpenOptions open_options) {
   return mode;
 }
 
+llvm::Expected<SerialPort::Options>
+SerialPort::OptionsFromURL(llvm::StringRef urlqs) {
+  SerialPort::Options serial_options;
+  for (llvm::StringRef x : llvm::split(urlqs, '&')) {
+    if (x.consume_front("baud=")) {
+      unsigned int baud_rate;
+      if (!llvm::to_integer(x, baud_rate, 10))
+        return llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                       "Invalid baud rate: %s",
+                                       x.str().c_str());
+      serial_options.BaudRate = baud_rate;
+    } else if (x.consume_front("parity=")) {
+      serial_options.Parity =
+          llvm::StringSwitch<llvm::Optional<Terminal::Parity>>(x)
+              .Case("no", Terminal::Parity::No)
+              .Case("even", Terminal::Parity::Even)
+              .Case("odd", Terminal::Parity::Odd)
+              .Case("mark", Terminal::Parity::Mark)
+              .Case("space", Terminal::Parity::Space)
+              .Default(llvm::None);
+      if (!serial_options.Parity)
+        return llvm::createStringError(
+            llvm::inconvertibleErrorCode(),
+            "Invalid parity (must be no, even, odd, mark or space): %s",
+            x.str().c_str());
+    } else if (x.consume_front("parity-check=")) {
+      serial_options.ParityCheck =
+          llvm::StringSwitch<llvm::Optional<Terminal::ParityCheck>>(x)
+              .Case("no", Terminal::ParityCheck::No)
+              .Case("replace", Terminal::ParityCheck::ReplaceWithNUL)
+              .Case("ignore", Terminal::ParityCheck::Ignore)
+              // "mark" mode is not currently supported as it requires special
+              // input processing
+              // .Case("mark", Terminal::ParityCheck::Mark)
+              .Default(llvm::None);
+      if (!serial_options.ParityCheck)
+        return llvm::createStringError(
+            llvm::inconvertibleErrorCode(),
+            "Invalid parity-check (must be no, replace, ignore or mark): %s",
+            x.str().c_str());
+    } else if (x.consume_front("stop-bits=")) {
+      unsigned int stop_bits;
+      if (!llvm::to_integer(x, stop_bits, 10) ||
+          (stop_bits != 1 && stop_bits != 2))
+        return llvm::createStringError(
+            llvm::inconvertibleErrorCode(),
+            "Invalid stop bit number (must be 1 or 2): %s", x.str().c_str());
+      serial_options.StopBits = stop_bits;
+    } else
+      return llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                     "Unknown parameter: %s", x.str().c_str());
+  }
+  return serial_options;
+}
+
+llvm::Expected<std::unique_ptr<SerialPort>>
+SerialPort::Create(int fd, OpenOptions options, Options serial_options,
+                   bool transfer_ownership) {
+  std::unique_ptr<SerialPort> out{
+      new SerialPort(fd, options, serial_options, transfer_ownership)};
+
+  if (!out->GetIsInteractive())
+    return llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                   "the specified file is not a teletype");
+
+  Terminal term{fd};
+  if (llvm::Error error = term.SetRaw())
+    return std::move(error);
+  if (serial_options.BaudRate) {
+    if (llvm::Error error =
+            term.SetBaudRate(serial_options.BaudRate.getValue()))
+      return std::move(error);
+  }
+  if (serial_options.Parity) {
+    if (llvm::Error error = term.SetParity(serial_options.Parity.getValue()))
+      return std::move(error);
+  }
+  if (serial_options.ParityCheck) {
+    if (llvm::Error error =
+            term.SetParityCheck(serial_options.ParityCheck.getValue()))
+      return std::move(error);
+  }
+  if (serial_options.StopBits) {
+    if (llvm::Error error =
+            term.SetStopBits(serial_options.StopBits.getValue()))
+      return std::move(error);
+  }
+
+  return std::move(out);
+}
+
+SerialPort::SerialPort(int fd, OpenOptions options,
+                       SerialPort::Options serial_options,
+                       bool transfer_ownership)
+    : NativeFile(fd, options, transfer_ownership), m_state(fd) {}
+
+Status SerialPort::Close() {
+  m_state.Restore();
+  return NativeFile::Close();
+}
+
 char File::ID = 0;
 char NativeFile::ID = 0;
+char SerialPort::ID = 0;

@@ -558,3 +558,16 @@ define float @fma_const_fmul(float %x) {
   %add1 = fadd contract float %mul1, %mul2
   ret float %add1
 }
+
+; Fold (fmul (fadd x, 1.0), y) -> (fma x, y, y) without FP specific command-line
+; options.
+define float @combine_fmul_distributive(float %x, float %y) {
+; CHECK-LABEL: combine_fmul_distributive:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vfmadd231ss %xmm0, %xmm1, %xmm0 # EVEX TO VEX Compression encoding: [0xc4,0xe2,0x71,0xb9,0xc0]
+; CHECK-NEXT:    # xmm0 = (xmm1 * xmm0) + xmm0
+; CHECK-NEXT:    retq # encoding: [0xc3]
+  %fadd = fadd ninf float %y, 1.0
+  %fmul = fmul contract float %fadd, %x
+  ret float %fmul
+}

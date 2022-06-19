@@ -14,10 +14,11 @@
 #include "llvm/ADT/Hashing.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/HashBuilder.h"
 #include <cstdint>
+#include <map>
 #include <string>
 #include <vector>
-#include <map>
 
 namespace clang {
 
@@ -142,6 +143,12 @@ public:
   /// file.
   unsigned ModuleMapFileHomeIsCwd : 1;
 
+  /// Set the base path of a built module file to be the current working
+  /// directory. This is useful for sharing module files across machines
+  /// that build with different paths without having to rewrite all
+  /// modulemap files to have working directory relative paths.
+  unsigned ModuleFileHomeIsCwd : 1;
+
   /// Also search for prebuilt implicit modules in the prebuilt module cache
   /// path.
   unsigned EnablePrebuiltImplicitModules : 1;
@@ -221,9 +228,9 @@ public:
   HeaderSearchOptions(StringRef _Sysroot = "/")
       : Sysroot(_Sysroot), ModuleFormat("raw"), DisableModuleHash(false),
         ImplicitModuleMaps(false), ModuleMapFileHomeIsCwd(false),
-        EnablePrebuiltImplicitModules(false), UseBuiltinIncludes(true),
-        UseStandardSystemIncludes(true), UseStandardCXXIncludes(true),
-        UseLibcxx(false), Verbose(false),
+        ModuleFileHomeIsCwd(false), EnablePrebuiltImplicitModules(false),
+        UseBuiltinIncludes(true), UseStandardSystemIncludes(true),
+        UseStandardCXXIncludes(true), UseLibcxx(false), Verbose(false),
         ModulesValidateOncePerBuildSession(false),
         ModulesValidateSystemHeaders(false),
         ValidateASTInputFilesContent(false), UseDebugInfo(false),
@@ -256,9 +263,21 @@ inline llvm::hash_code hash_value(const HeaderSearchOptions::Entry &E) {
   return llvm::hash_combine(E.Path, E.Group, E.IsFramework, E.IgnoreSysRoot);
 }
 
+template <typename HasherT, llvm::support::endianness Endianness>
+inline void addHash(llvm::HashBuilderImpl<HasherT, Endianness> &HBuilder,
+                    const HeaderSearchOptions::Entry &E) {
+  HBuilder.add(E.Path, E.Group, E.IsFramework, E.IgnoreSysRoot);
+}
+
 inline llvm::hash_code
 hash_value(const HeaderSearchOptions::SystemHeaderPrefix &SHP) {
   return llvm::hash_combine(SHP.Prefix, SHP.IsSystemHeader);
+}
+
+template <typename HasherT, llvm::support::endianness Endianness>
+inline void addHash(llvm::HashBuilderImpl<HasherT, Endianness> &HBuilder,
+                    const HeaderSearchOptions::SystemHeaderPrefix &SHP) {
+  HBuilder.add(SHP.Prefix, SHP.IsSystemHeader);
 }
 
 } // namespace clang

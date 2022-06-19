@@ -121,7 +121,7 @@ const MappingDesc kMemoryLayout[] = {
     // The mappings below are used only for 48-bits VMA.
     // TODO(unknown): 48-bit mapping ony covers the usual PIE, non-PIE
     // segments and some more segments totalizing 262144GB of VMA (which cover
-    // only 0.32% of all 48-bit VMA). Memory avaliability can be increase by
+    // only 0.32% of all 48-bit VMA). Memory availability can be increase by
     // adding multiple application segments like 39 and 42 mapping.
     {0x0040000000000ULL, 0x0041000000000ULL, MappingDesc::INVALID, "invalid"},
     {0x0041000000000ULL, 0x0042000000000ULL, MappingDesc::APP, "app-10"},
@@ -219,7 +219,7 @@ const MappingDesc kMemoryLayout[] = {
 #elif SANITIZER_NETBSD || (SANITIZER_LINUX && SANITIZER_WORDSIZE == 64)
 
 #ifdef MSAN_LINUX_X86_64_OLD_MAPPING
-// Requries PIE binary and ASLR enabled.
+// Requires PIE binary and ASLR enabled.
 // Main thread stack and DSOs at 0x7f0000000000 (sometimes 0x7e0000000000).
 // Heap at 0x600000000000.
 const MappingDesc kMemoryLayout[] = {
@@ -314,14 +314,7 @@ void InstallAtExitHandler();
 
 const char *GetStackOriginDescr(u32 id, uptr *pc);
 
-void EnterSymbolizer();
-void ExitSymbolizer();
-bool IsInSymbolizer();
-
-struct SymbolizerScope {
-  SymbolizerScope() { EnterSymbolizer(); }
-  ~SymbolizerScope() { ExitSymbolizer(); }
-};
+bool IsInSymbolizerOrUnwider();
 
 void PrintWarning(uptr pc, uptr bp);
 void PrintWarningWithOrigin(uptr pc, uptr bp, u32 origin);
@@ -381,22 +374,5 @@ void MsanTSDSet(void *tsd);
 void MsanTSDDtor(void *tsd);
 
 }  // namespace __msan
-
-#define MSAN_MALLOC_HOOK(ptr, size)       \
-  do {                                    \
-    if (&__sanitizer_malloc_hook) {       \
-      UnpoisonParam(2);                   \
-      __sanitizer_malloc_hook(ptr, size); \
-    }                                     \
-    RunMallocHooks(ptr, size);            \
-  } while (false)
-#define MSAN_FREE_HOOK(ptr)       \
-  do {                            \
-    if (&__sanitizer_free_hook) { \
-      UnpoisonParam(1);           \
-      __sanitizer_free_hook(ptr); \
-    }                             \
-    RunFreeHooks(ptr);            \
-  } while (false)
 
 #endif  // MSAN_H

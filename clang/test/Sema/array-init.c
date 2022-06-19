@@ -2,7 +2,7 @@
 // RUN: %clang_cc1 -std=gnu99 -fsyntax-only -Wgnu -Wc11-extensions -verify %s
 // REQUIRES: LP64
 
-extern int foof() = 1; // expected-error{{illegal initializer (only variables can be initialized)}}
+extern int foof(void) = 1; // expected-error{{illegal initializer (only variables can be initialized)}}
 
 static int x, y, z;
 
@@ -11,9 +11,9 @@ int ary2[] = { x, y, z }; // expected-error{{initializer element is not a compil
 
 extern int fileScopeExtern[3] = { 1, 3, 5 }; // expected-warning{{'extern' variable has an initializer}}
 
-static long ary3[] = { 1, "abc", 3, 4 }; // expected-warning{{incompatible pointer to integer conversion initializing 'long' with an expression of type 'char [4]'}}
+static long ary3[] = { 1, "abc", 3, 4 }; // expected-warning{{incompatible pointer to integer conversion initializing 'long' with an expression of type 'char[4]'}}
 
-void func() {
+void func(void) {
   int x = 1;
 
   typedef int TInt = 1; // expected-error{{illegal initializer (only variables can be initialized)}}
@@ -51,11 +51,11 @@ void func() {
   extern int blockScopeExtern[3] = { 1, 3, 5 }; // expected-error{{'extern' variable cannot have an initializer}}
   
   static long x2[3] = { 1.0,
-                        "abc", // expected-warning{{incompatible pointer to integer conversion initializing 'long' with an expression of type 'char [4]'}}
+                        "abc", // expected-warning{{incompatible pointer to integer conversion initializing 'long' with an expression of type 'char[4]'}}
                          5.8 }; // expected-warning {{implicit conversion from 'double' to 'long' changes value from 5.8 to 5}}
 }
 
-void test() {
+void test(void) {
   int y1[3] = { 
     { 1, 2, 3 } // expected-warning{{excess elements in scalar initializer}}
   };
@@ -74,7 +74,7 @@ void test() {
   };
 }
 
-void allLegalAndSynonymous() {
+void allLegalAndSynonymous(void) {
   short q[4][3][2] = {
     { 1 },
     { 2, 3 },
@@ -99,7 +99,7 @@ void allLegalAndSynonymous() {
   };
 }
 
-void legal() {
+void legal(void) {
   short q[][3][2] = {
     { 1 },
     { 2, 3 },
@@ -109,17 +109,17 @@ void legal() {
 }
 
 unsigned char asso_values[] = { 34 };
-int legal2() { 
+int legal2(void) { 
   return asso_values[0]; 
 }
 
-void illegal() {
-  short q2[4][][2] = { // expected-error{{array has incomplete element type 'short [][2]'}}
+void illegal(void) {
+  short q2[4][][2] = { // expected-error{{array has incomplete element type 'short[][2]'}}
     { 1, 0, 0, 0, 0, 0 },
     { 2, 3, 0, 0, 0, 0 },
     { 4, 5, 6 }
   };
-  short q3[4][3][] = { // expected-error{{array has incomplete element type 'short []'}}
+  short q3[4][3][] = { // expected-error{{array has incomplete element type 'short[]'}}
     { 
       { 1 },
     },
@@ -131,12 +131,12 @@ void illegal() {
       { 6 },
     },
   };
-  int a[][] = { 1, 2 }; // expected-error{{array has incomplete element type 'int []'}}
+  int a[][] = { 1, 2 }; // expected-error{{array has incomplete element type 'int[]'}}
 }
 
 typedef int AryT[];
 
-void testTypedef()
+void testTypedef(void)
 {
   AryT a = { 1, 2 }, b = { 3, 4, 5 };
   int a_sizecheck[(sizeof(a) / sizeof(int)) == 2? 1 : -1];
@@ -153,7 +153,7 @@ static char const zz[3] = "test"; // expected-warning{{initializer-string for ch
 static char const zz_quiet[3] = "test";
 #pragma clang diagnostic pop
 
-void charArrays() {
+void charArrays(void) {
   static char const test[] = "test";
   int test_sizecheck[(sizeof(test) / sizeof(char)) == 5? 1 : -1];
   static char const test2[] = { "weird stuff" };
@@ -168,17 +168,17 @@ void charArrays() {
   char c[] = { "Hello" };
   int l[sizeof(c) == 6 ? 1 : -1];
   
-  int i[] = { "Hello "}; // expected-warning{{incompatible pointer to integer conversion initializing 'int' with an expression of type 'char [7]'}}
+  int i[] = { "Hello "}; // expected-warning{{incompatible pointer to integer conversion initializing 'int' with an expression of type 'char[7]'}}
   char c2[] = { "Hello", "Good bye" }; //expected-warning{{excess elements in char array initializer}}
 
-  int i2[1] = { "Hello" }; //expected-warning{{incompatible pointer to integer conversion initializing 'int' with an expression of type 'char [6]'}}
+  int i2[1] = { "Hello" }; //expected-warning{{incompatible pointer to integer conversion initializing 'int' with an expression of type 'char[6]'}}
   char c3[5] = { "Hello" };
   char c4[4] = { "Hello" }; //expected-warning{{initializer-string for char array is too long}}
 
   int i3[] = {}; //expected-warning{{zero size arrays are an extension}} expected-warning{{use of GNU empty initializer extension}}
 }
 
-void variableArrayInit() {
+void variableArrayInit(void) {
   int a = 4;
   char strlit[a] = "foo"; //expected-error{{variable-sized object may not be initialized}}
   int b[a] = { 1, 2, 4 }; //expected-error{{variable-sized object may not be initialized}}
@@ -200,11 +200,11 @@ unsigned char r10[] = __extension__ (_Generic(0, int: (__extension__ "foo" )));
 int r11[0] = {}; //expected-warning{{zero size arrays are an extension}} expected-warning{{use of GNU empty initializer extension}}
 
 // Some struct tests
-void autoStructTest() {
+void autoStructTest(void) {
 struct s1 {char a; char b;} t1;
 struct s2 {struct s1 c;} t2 = { t1 };
 // The following is a less than great diagnostic (though it's on par with EDG).
-struct s1 t3[] = {t1, t1, "abc", 0}; //expected-warning{{incompatible pointer to integer conversion initializing 'char' with an expression of type 'char [4]'}}
+struct s1 t3[] = {t1, t1, "abc", 0}; //expected-warning{{incompatible pointer to integer conversion initializing 'char' with an expression of type 'char[4]'}}
 int t4[sizeof t3 == 6 ? 1 : -1];
 }
 struct foo { int z; } w;
@@ -226,15 +226,15 @@ int u1 = {}; //expected-warning{{use of GNU empty initializer extension}} expect
 int u2 = {{3}}; //expected-warning{{too many braces around scalar initializer}}
 
 // PR2362
-void varArray() {
+void varArray(void) {
   int c[][x] = { 0 }; //expected-error{{variable-sized object may not be initialized}}
 }
 
 // PR2151
-void emptyInit() {struct {} x[] = {6};} //expected-warning{{empty struct is a GNU extension}} \
+void emptyInit(void) {struct {} x[] = {6};} //expected-warning{{empty struct is a GNU extension}} \
 // expected-error{{initializer for aggregate with no elements}}
 
-void noNamedInit() {
+void noNamedInit(void) {
   struct {int:5;} x[] = {6}; //expected-error{{initializer for aggregate with no elements}} \
 // expected-warning {{struct without named members is a GNU extension}}
 }
@@ -255,13 +255,13 @@ struct soft_segment_descriptor gdt_segs[] = {
   { (long)xpto},
 };
 
-static void sppp_ipv6cp_up();
+static void sppp_ipv6cp_up(void);
 const struct {} ipcp = { sppp_ipv6cp_up }; //expected-warning{{empty struct is a GNU extension}} \
 // expected-warning{{excess elements in struct initializer}}
 
 struct _Matrix { union { float m[4][4]; }; }; //expected-warning{{anonymous unions are a C11 extension}}
 typedef struct _Matrix Matrix;
-void test_matrix() {
+void test_matrix(void) {
   const Matrix mat1 = {
     { { 1.0f, 2.0f, 3.0f, 4.0f,
         5.0f, 6.0f, 7.0f, 8.0f,
@@ -282,15 +282,15 @@ char badchararray[1] = { badchararray[0], "asdf" }; // expected-warning {{excess
 // Test the GNU extension for initializing an array from an array
 // compound literal. PR9261.
 typedef int int5[5];
-int a1[5] = (int[]){1, 2, 3, 4, 5}; // expected-warning{{initialization of an array of type 'int [5]' from a compound literal of type 'int [5]' is a GNU extension}}
-int a2[5] = (int[5]){1, 2, 3, 4, 5}; // expected-warning{{initialization of an array of type 'int [5]' from a compound literal of type 'int [5]' is a GNU extension}}
-int a3[] = ((int[]){1, 2, 3, 4, 5}); // expected-warning{{initialization of an array of type 'int []' from a compound literal of type 'int [5]' is a GNU extension}}
-int a4[] = (int[5]){1, 2, 3, 4, 5}; // expected-warning{{initialization of an array of type 'int []' from a compound literal of type 'int [5]' is a GNU extension}}
-int a5[] = (int5){1, 2, 3, 4, 5}; // expected-warning{{initialization of an array of type 'int []' from a compound literal of type 'int5' (aka 'int [5]') is a GNU extension}}
+int a1[5] = (int[]){1, 2, 3, 4, 5}; // expected-warning{{initialization of an array of type 'int[5]' from a compound literal of type 'int[5]' is a GNU extension}}
+int a2[5] = (int[5]){1, 2, 3, 4, 5}; // expected-warning{{initialization of an array of type 'int[5]' from a compound literal of type 'int[5]' is a GNU extension}}
+int a3[] = ((int[]){1, 2, 3, 4, 5}); // expected-warning{{initialization of an array of type 'int[]' from a compound literal of type 'int[5]' is a GNU extension}}
+int a4[] = (int[5]){1, 2, 3, 4, 5}; // expected-warning{{initialization of an array of type 'int[]' from a compound literal of type 'int[5]' is a GNU extension}}
+int a5[] = (int5){1, 2, 3, 4, 5}; // expected-warning{{initialization of an array of type 'int[]' from a compound literal of type 'int5' (aka 'int[5]') is a GNU extension}}
 
-int a6[5] = (int[]){1, 2, 3}; // expected-error{{cannot initialize array of type 'int [5]' with array of type 'int [3]'}}
+int a6[5] = (int[]){1, 2, 3}; // expected-error{{cannot initialize array of type 'int[5]' with array of type 'int[3]'}}
 
-int nonconst_value();
+int nonconst_value(void);
 int a7[5] = (int[5]){ 1,
                       2,
                       3,
@@ -301,6 +301,6 @@ int a7[5] = (int[5]){ 1,
 // <rdar://problem/10636946>
 __attribute__((weak)) const unsigned int test10_bound = 10;
 char test10_global[test10_bound]; // expected-error {{variable length array declaration not allowed at file scope}}
-void test10() {
+void test10(void) {
   char test10_local[test10_bound] = "help"; // expected-error {{variable-sized object may not be initialized}}
 }

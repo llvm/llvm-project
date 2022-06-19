@@ -1,11 +1,11 @@
-; RUN: llc -filetype=asm -o - -mtriple=mips-unknown-linux-gnu -function-sections < %s | FileCheck %s
-; RUN: llc -filetype=asm -o - -mtriple=mipsel-unknown-linux-gnu -function-sections < %s | FileCheck %s
+; RUN: llc -mtriple=mips-unknown-linux-gnu -function-sections < %s | FileCheck %s
+; RUN: llc -mtriple=mipsel-unknown-linux-gnu -function-sections < %s | FileCheck %s
 ; RUN: llc -filetype=obj -o %t -mtriple=mips-unknown-linux-gnu -function-sections < %s
 ; RUN: llvm-readobj --sections %t | FileCheck %s --check-prefix=CHECK-OBJ
 ; RUN: llc -filetype=obj -o %t -mtriple=mipsel-unknown-linux-gnu -function-sections < %s
 ; RUN: llvm-readobj --sections %t | FileCheck %s --check-prefix=CHECK-OBJ
-; RUN: llc -filetype=asm -o - -mtriple=mips64-unknown-linux-gnu -function-sections < %s | FileCheck %s
-; RUN: llc -filetype=asm -o - -mtriple=mips64el-unknown-linux-gnu -function-sections < %s | FileCheck %s
+; RUN: llc -mtriple=mips64-unknown-linux-gnu -function-sections < %s | FileCheck %s
+; RUN: llc -mtriple=mips64el-unknown-linux-gnu -function-sections < %s | FileCheck %s
 ; RUN: llc -filetype=obj -o %t -mtriple=mips64-unknown-linux-gnu -function-sections < %s
 ; RUN: llvm-readobj --sections %t | FileCheck %s --check-prefix=CHECK-OBJ
 ; RUN: llc -filetype=obj -o %t -mtriple=mips64el-unknown-linux-gnu -function-sections < %s

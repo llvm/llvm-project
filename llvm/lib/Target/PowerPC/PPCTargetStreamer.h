@@ -10,6 +10,7 @@
 #define LLVM_LIB_TARGET_POWERPC_PPCTARGETSTREAMER_H
 
 #include "llvm/ADT/StringRef.h"
+#include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCStreamer.h"
 
 namespace llvm {

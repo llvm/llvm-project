@@ -33,6 +33,7 @@ static const SimpleTypeEntry SimpleTypeNames[] = {
     {"wchar_t*", SimpleTypeKind::WideCharacter},
     {"char16_t*", SimpleTypeKind::Character16},
     {"char32_t*", SimpleTypeKind::Character32},
+    {"char8_t*", SimpleTypeKind::Character8},
     {"__int8*", SimpleTypeKind::SByte},
     {"unsigned __int8*", SimpleTypeKind::Byte},
     {"short*", SimpleTypeKind::Int16Short},

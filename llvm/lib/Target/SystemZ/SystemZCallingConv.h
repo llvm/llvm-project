@@ -27,6 +27,9 @@ namespace SystemZ {
 
   const unsigned XPLINK64NumArgFPRs = 4;
   extern const MCPhysReg XPLINK64ArgFPRs[XPLINK64NumArgFPRs];
+
+  const unsigned XPLINK64NumArgVRs = 8;
+  extern const MCPhysReg XPLINK64ArgVRs[XPLINK64NumArgVRs];
 } // end namespace SystemZ
 
 class SystemZCCState : public CCState {
@@ -124,7 +127,9 @@ inline bool CC_SystemZ_I128Indirect(unsigned &ValNo, MVT &ValVT,
   else
     llvm_unreachable("Unknown Calling Convention!");
 
-  unsigned Offset = Reg ? 0 : State.AllocateStack(8, Align(8));
+  unsigned Offset = Reg && !Subtarget.isTargetXPLINK64()
+                        ? 0
+                        : State.AllocateStack(8, Align(8));
 
   // Use that same location for all the pending parts.
   for (auto &It : PendingMembers) {
@@ -167,12 +172,6 @@ inline bool CC_XPLINK64_Allocate128BitVararg(unsigned &ValNo, MVT &ValVT,
                                              CCValAssign::LocInfo &LocInfo,
                                              ISD::ArgFlagsTy &ArgFlags,
                                              CCState &State) {
-  if (LocVT.getSizeInBits() < 128)
-    return false;
-
-  if (static_cast<SystemZCCState *>(&State)->IsFixed(ValNo))
-    return false;
-
   // For any C or C++ program, this should always be
   // false, since it is illegal to have a function
   // where the first argument is variadic. Therefore
@@ -185,20 +184,58 @@ inline bool CC_XPLINK64_Allocate128BitVararg(unsigned &ValNo, MVT &ValVT,
   bool AllocGPR3 = State.AllocateReg(SystemZ::R3D);
 
   // If GPR2 and GPR3 are available, then we may pass vararg in R2Q.
-  if (AllocGPR2 && AllocGPR3) {
-    State.addLoc(
-        CCValAssign::getReg(ValNo, ValVT, SystemZ::R2Q, LocVT, LocInfo));
+  // If only GPR3 is available, we need to set custom handling to copy
+  // hi bits into GPR3.
+  // Either way, we allocate on the stack.
+  if (AllocGPR3) {
+    // For f128 and vector var arg case, set the bitcast flag to bitcast to
+    // i128.
+    LocVT = MVT::i128;
+    LocInfo = CCValAssign::BCvt;
+    auto Offset = State.AllocateStack(16, Align(8));
+    if (AllocGPR2)
+      State.addLoc(
+          CCValAssign::getReg(ValNo, ValVT, SystemZ::R2Q, LocVT, LocInfo));
+    else
+      State.addLoc(
+          CCValAssign::getCustomMem(ValNo, ValVT, Offset, LocVT, LocInfo));
     return true;
   }
 
-  // If only GPR3 is available, we allocate on stack but need to
-  // set custom handling to copy hi bits into GPR3.
-  if (!AllocGPR2 && AllocGPR3) {
-    auto Offset = State.AllocateStack(16, Align(8));
-    State.addLoc(
-        CCValAssign::getCustomMem(ValNo, ValVT, Offset, LocVT, LocInfo));
-    return true;
+  return false;
+}
+
+inline bool CC_XPLINK64_Shadow_Stack(unsigned &ValNo, MVT &ValVT, MVT &LocVT,
+                                     CCValAssign::LocInfo &LocInfo,
+                                     ISD::ArgFlagsTy &ArgFlags,
+                                     CCState &State) {
+  ArrayRef<MCPhysReg> RegList;
+
+  switch (LocVT.SimpleTy) {
+  case MVT::i64:
+    RegList = SystemZ::XPLINK64ArgGPRs;
+    break;
+  case MVT::v16i8:
+  case MVT::v8i16:
+  case MVT::v4i32:
+  case MVT::v2i64:
+  case MVT::v4f32:
+  case MVT::v2f64:
+    RegList = SystemZ::XPLINK64ArgVRs;
+    break;
+  case MVT::f32:
+  case MVT::f64:
+  case MVT::f128:
+    RegList = SystemZ::XPLINK64ArgFPRs;
+    break;
+  default:
+    return false;
   }
+
+  unsigned UnallocatedRegisterIndex = State.getFirstUnallocated(RegList);
+  // Every time we can allocate a register, allocate on the stack.
+  if (UnallocatedRegisterIndex < RegList.size())
+    State.AllocateStack(LocVT.getSizeInBits() / 8, Align(8));
 
   return false;
 }

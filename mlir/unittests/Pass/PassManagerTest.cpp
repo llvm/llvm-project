@@ -7,10 +7,13 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Pass/PassManager.h"
+#include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/Pass/Pass.h"
 #include "gtest/gtest.h"
+
+#include <memory>
 
 using namespace mlir;
 using namespace mlir::detail;
@@ -18,22 +21,27 @@ using namespace mlir::detail;
 namespace {
 /// Analysis that operates on any operation.
 struct GenericAnalysis {
-  GenericAnalysis(Operation *op) : isFunc(isa<FuncOp>(op)) {}
+  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(GenericAnalysis)
+
+  GenericAnalysis(Operation *op) : isFunc(isa<func::FuncOp>(op)) {}
   const bool isFunc;
 };
 
 /// Analysis that operates on a specific operation.
 struct OpSpecificAnalysis {
-  OpSpecificAnalysis(FuncOp op) : isSecret(op.getName() == "secret") {}
+  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(OpSpecificAnalysis)
+
+  OpSpecificAnalysis(func::FuncOp op) : isSecret(op.getName() == "secret") {}
   const bool isSecret;
 };
 
-/// Simple pass to annotate a FuncOp with the results of analysis.
-/// Note: not using FunctionPass as it skip external functions.
+/// Simple pass to annotate a func::FuncOp with the results of analysis.
 struct AnnotateFunctionPass
-    : public PassWrapper<AnnotateFunctionPass, OperationPass<FuncOp>> {
+    : public PassWrapper<AnnotateFunctionPass, OperationPass<func::FuncOp>> {
+  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(AnnotateFunctionPass)
+
   void runOnOperation() override {
-    FuncOp op = getOperation();
+    func::FuncOp op = getOperation();
     Builder builder(op->getParentOfType<ModuleOp>());
 
     auto &ga = getAnalysis<GenericAnalysis>();
@@ -46,26 +54,27 @@ struct AnnotateFunctionPass
 
 TEST(PassManagerTest, OpSpecificAnalysis) {
   MLIRContext context;
+  context.loadDialect<func::FuncDialect>();
   Builder builder(&context);
 
   // Create a module with 2 functions.
-  OwningModuleRef module(ModuleOp::create(UnknownLoc::get(&context)));
+  OwningOpRef<ModuleOp> module(ModuleOp::create(UnknownLoc::get(&context)));
   for (StringRef name : {"secret", "not_secret"}) {
-    FuncOp func =
-        FuncOp::create(builder.getUnknownLoc(), name,
-                       builder.getFunctionType(llvm::None, llvm::None));
+    auto func =
+        func::FuncOp::create(builder.getUnknownLoc(), name,
+                             builder.getFunctionType(llvm::None, llvm::None));
     func.setPrivate();
     module->push_back(func);
   }
 
   // Instantiate and run our pass.
   PassManager pm(&context);
-  pm.addNestedPass<FuncOp>(std::make_unique<AnnotateFunctionPass>());
+  pm.addNestedPass<func::FuncOp>(std::make_unique<AnnotateFunctionPass>());
   LogicalResult result = pm.run(module.get());
   EXPECT_TRUE(succeeded(result));
 
   // Verify that each function got annotated with expected attributes.
-  for (FuncOp func : module->getOps<FuncOp>()) {
+  for (func::FuncOp func : module->getOps<func::FuncOp>()) {
     ASSERT_TRUE(func->getAttr("isFunc").isa<BoolAttr>());
     EXPECT_TRUE(func->getAttr("isFunc").cast<BoolAttr>().getValue());
 
@@ -77,9 +86,14 @@ TEST(PassManagerTest, OpSpecificAnalysis) {
 
 namespace {
 struct InvalidPass : Pass {
+  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(InvalidPass)
+
   InvalidPass() : Pass(TypeID::get<InvalidPass>(), StringRef("invalid_op")) {}
   StringRef getName() const override { return "Invalid Pass"; }
   void runOnOperation() override {}
+  bool canScheduleOn(RegisteredOperationName opName) const override {
+    return true;
+  }
 
   /// A clone method to create a copy of this pass.
   std::unique_ptr<Pass> clonePass() const override {
@@ -87,14 +101,14 @@ struct InvalidPass : Pass {
         *static_cast<const InvalidPass *>(this));
   }
 };
-} // anonymous namespace
+} // namespace
 
 TEST(PassManagerTest, InvalidPass) {
   MLIRContext context;
   context.allowUnregisteredDialects();
 
   // Create a module
-  OwningModuleRef module(ModuleOp::create(UnknownLoc::get(&context)));
+  OwningOpRef<ModuleOp> module(ModuleOp::create(UnknownLoc::get(&context)));
 
   // Add a single "invalid_op" operation
   OpBuilder builder(&module->getBodyRegion());
@@ -105,7 +119,7 @@ TEST(PassManagerTest, InvalidPass) {
   // check it later.
   std::unique_ptr<Diagnostic> diagnostic;
   context.getDiagEngine().registerHandler([&](Diagnostic &diag) {
-    diagnostic.reset(new Diagnostic(std::move(diag)));
+    diagnostic = std::make_unique<Diagnostic>(std::move(diag));
   });
 
   // Instantiate and run our pass.
@@ -118,8 +132,13 @@ TEST(PassManagerTest, InvalidPass) {
       diagnostic->str(),
       "'invalid_op' op trying to schedule a pass on an unregistered operation");
 
+  // Check that clearing the pass manager effectively removed the pass.
+  pm.clear();
+  result = pm.run(module.get());
+  EXPECT_TRUE(succeeded(result));
+
   // Check that adding the pass at the top-level triggers a fatal error.
   ASSERT_DEATH(pm.addPass(std::make_unique<InvalidPass>()), "");
 }
 
-} // end namespace
+} // namespace

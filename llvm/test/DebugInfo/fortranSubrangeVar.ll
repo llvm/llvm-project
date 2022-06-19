@@ -15,8 +15,8 @@
 ; CHECK-SAME: DW_OP_plus_uconst 0x50
 ; CHECK:     DW_TAG_subrange_type
 ; CHECK:                  DW_AT_lower_bound     ([[DIE3]])
-; CHEK-NEXT:              DW_AT_upper_bound     ([[DIE2]])
-; CHECK-NEXT              DW_AT_byte_stride     ([[DIE1]])
+; CHECK-NEXT:              DW_AT_upper_bound     ([[DIE2]])
+; CHECK-NEXT:              DW_AT_byte_stride     ([[DIE1]])
 
 
 ; ModuleID = 'fortsubrange.ll'

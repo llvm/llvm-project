@@ -51,7 +51,7 @@ tbuffer_store_format_xyzw v[1:4], off, ttmp[4:7], s0 format:[BUF_NUM_FORMAT_UINT
 // expected ')' in parentheses expression
 
 v_bfe_u32 v0, 1+(100, v1, v2
-// CHECK: error: expected ')' in parentheses expression
+// CHECK: :[[#@LINE-1]]:21: error: expected ')'
 // CHECK-NEXT:{{^}}v_bfe_u32 v0, 1+(100, v1, v2
 // CHECK-NEXT:{{^}}                    ^
 
@@ -604,10 +604,10 @@ image_load v[0:3], v[0:1], s[0:7] dmask:0xf dim:SQ_RSRC_IMG_3D
 // CHECK-NEXT:{{^}}^
 
 //==============================================================================
-// image data size does not match dmask and tfe
+// image data size does not match dmask, d16 and tfe
 
 image_load v[0:1], v0, s[0:7] dmask:0xf dim:SQ_RSRC_IMG_1D
-// CHECK: error: image data size does not match dmask and tfe
+// CHECK: error: image data size does not match dmask, d16 and tfe
 // CHECK-NEXT:{{^}}image_load v[0:1], v0, s[0:7] dmask:0xf dim:SQ_RSRC_IMG_1D
 // CHECK-NEXT:{{^}}^
 

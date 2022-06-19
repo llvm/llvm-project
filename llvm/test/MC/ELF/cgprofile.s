@@ -33,7 +33,8 @@ late3:
 
 # CHECK:      Name: .rel.llvm.call-graph-profile (28)
 # CHECK-NEXT: Type: SHT_REL (0x9)
-# CHECK-NEXT: Flags [ (0x0)
+# CHECK-NEXT: Flags [ (0x40)
+# CHECK-NEXT:   SHF_INFO_LINK
 # CHECK-NEXT: ]
 # CHECK-NEXT: Address: 0x0
 # CHECK-NEXT: Offset: 0x140

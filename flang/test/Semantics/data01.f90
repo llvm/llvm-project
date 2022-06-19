@@ -1,5 +1,4 @@
-! RUN: %S/test_errors.sh %s %t %flang_fc1
-! REQUIRES: shell
+! RUN: %python %S/test_errors.py %s %flang_fc1
 !Test for checking data constraints, C882-C887
 module m1
   type person
@@ -48,7 +47,7 @@ subroutine CheckValue
   !OK: constant structure constructor
   data myname(1) / person(1, 'Abcd Ijkl') /
   !C883
-  !ERROR: 'persn' is not an array
+  !ERROR: 'persn' must be an array or structure constructor if used with non-empty parentheses as a DATA statement constant
   data myname(2) / persn(2, 'Abcd Efgh') /
   !C884
   !ERROR: DATA statement value 'person(age=myage,name="Abcd Ijkl                ")' for 'myname(3_8)%age' is not a constant

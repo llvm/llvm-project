@@ -1,4 +1,3 @@
-// REQUIRES: clang-driver
 // REQUIRES: amdgpu-registered-target
 
 // Make sure the appropriate device specific library is available.
@@ -15,7 +14,7 @@
 // RUN:   --rocm-path=%S/Inputs/rocm %s 2>&1 \
 // RUN:   | FileCheck -check-prefixes=COMMON,NODEFAULTLIBS %s
 
-// GFX902-DEFAULTLIBS: error: cannot find ROCm device library for gfx902. Provide its path via --rocm-path or --rocm-device-lib-path, or pass -nogpulib to build without ROCm device library
+// GFX902-DEFAULTLIBS: error: cannot find ROCm device library for gfx902; provide its path via '--rocm-path' or '--rocm-device-lib-path', or pass '-nogpulib' to build without ROCm device library
 
 // NODEFAULTLIBS-NOT: error: cannot find
 

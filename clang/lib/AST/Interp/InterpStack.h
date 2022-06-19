@@ -69,7 +69,7 @@ private:
     return ((sizeof(T) + PtrAlign - 1) / PtrAlign) * PtrAlign;
   }
 
-  /// Grows the stack to accomodate a value and returns a pointer to it.
+  /// Grows the stack to accommodate a value and returns a pointer to it.
   void *grow(size_t Size);
   /// Returns a pointer from the top of the stack.
   void *peek(size_t Size);

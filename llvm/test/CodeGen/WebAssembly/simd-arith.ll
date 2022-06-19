@@ -659,6 +659,70 @@ define <8 x i16> @bitselect_v8i16(<8 x i16> %c, <8 x i16> %v1, <8 x i16> %v2) {
   ret <8 x i16> %a
 }
 
+; CHECK-LABEL: extmul_low_s_v8i16:
+; NO-SIMD128-NOT: i16x8
+; SIMD128-NEXT: .functype extmul_low_s_v8i16 (v128, v128) -> (v128){{$}}
+; SIMD128-SLOW-NEXT: i16x8.extmul_low_i8x16_s $push[[R:[0-9]+]]=, $0, $1{{$}}
+; SIMD128-SLOW-NEXT: return $pop[[R]]{{$}}
+define <8 x i16> @extmul_low_s_v8i16(<16 x i8> %v1, <16 x i8> %v2) {
+  %low1 = shufflevector <16 x i8> %v1, <16 x i8> undef,
+           <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+  %low2 = shufflevector <16 x i8> %v2, <16 x i8> undef,
+           <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+  %extended1 = sext <8 x i8> %low1 to <8 x i16>
+  %extended2 = sext <8 x i8> %low2 to <8 x i16>
+  %a = mul <8 x i16> %extended1, %extended2
+  ret <8 x i16> %a
+}
+
+; CHECK-LABEL: extmul_high_s_v8i16:
+; NO-SIMD128-NOT: i16x8
+; SIMD128-NEXT: .functype extmul_high_s_v8i16 (v128, v128) -> (v128){{$}}
+; SIMD128-SLOW-NEXT: i16x8.extmul_high_i8x16_s $push[[R:[0-9]+]]=, $0, $1{{$}}
+; SIMD128-SLOW-NEXT: return $pop[[R]]{{$}}
+define <8 x i16> @extmul_high_s_v8i16(<16 x i8> %v1, <16 x i8> %v2) {
+  %high1 = shufflevector <16 x i8> %v1, <16 x i8> undef,
+           <8 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+  %high2 = shufflevector <16 x i8> %v2, <16 x i8> undef,
+           <8 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+  %extended1 = sext <8 x i8> %high1 to <8 x i16>
+  %extended2 = sext <8 x i8> %high2 to <8 x i16>
+  %a = mul <8 x i16> %extended1, %extended2
+  ret <8 x i16> %a
+}
+
+; CHECK-LABEL: extmul_low_u_v8i16:
+; NO-SIMD128-NOT: i16x8
+; SIMD128-NEXT: .functype extmul_low_u_v8i16 (v128, v128) -> (v128){{$}}
+; SIMD128-SLOW-NEXT: i16x8.extmul_low_i8x16_u $push[[R:[0-9]+]]=, $0, $1{{$}}
+; SIMD128-SLOW-NEXT: return $pop[[R]]{{$}}
+define <8 x i16> @extmul_low_u_v8i16(<16 x i8> %v1, <16 x i8> %v2) {
+  %low1 = shufflevector <16 x i8> %v1, <16 x i8> undef,
+           <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+  %low2 = shufflevector <16 x i8> %v2, <16 x i8> undef,
+           <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+  %extended1 = zext <8 x i8> %low1 to <8 x i16>
+  %extended2 = zext <8 x i8> %low2 to <8 x i16>
+  %a = mul <8 x i16> %extended1, %extended2
+  ret <8 x i16> %a
+}
+
+; CHECK-LABEL: extmul_high_u_v8i16:
+; NO-SIMD128-NOT: i16x8
+; SIMD128-NEXT: .functype extmul_high_u_v8i16 (v128, v128) -> (v128){{$}}
+; SIMD128-SLOW-NEXT: i16x8.extmul_high_i8x16_u $push[[R:[0-9]+]]=, $0, $1{{$}}
+; SIMD128-SLOW-NEXT: return $pop[[R]]{{$}}
+define <8 x i16> @extmul_high_u_v8i16(<16 x i8> %v1, <16 x i8> %v2) {
+  %high1 = shufflevector <16 x i8> %v1, <16 x i8> undef,
+           <8 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+  %high2 = shufflevector <16 x i8> %v2, <16 x i8> undef,
+           <8 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+  %extended1 = zext <8 x i8> %high1 to <8 x i16>
+  %extended2 = zext <8 x i8> %high2 to <8 x i16>
+  %a = mul <8 x i16> %extended1, %extended2
+  ret <8 x i16> %a
+}
+
 ; ==============================================================================
 ; 4 x i32
 ; ==============================================================================
@@ -931,6 +995,70 @@ define <4 x i32> @bitselect_v4i32(<4 x i32> %c, <4 x i32> %v1, <4 x i32> %v2) {
   %inv_mask = xor <4 x i32> <i32 -1, i32 -1, i32 -1, i32 -1>, %c
   %masked_v2 = and <4 x i32> %inv_mask, %v2
   %a = or <4 x i32> %masked_v2, %masked_v1
+  ret <4 x i32> %a
+}
+
+; CHECK-LABEL: extmul_low_s_v4i32:
+; NO-SIMD128-NOT: i32x4
+; SIMD128-NEXT: .functype extmul_low_s_v4i32 (v128, v128) -> (v128){{$}}
+; SIMD128-SLOW-NEXT: i32x4.extmul_low_i16x8_s $push[[R:[0-9]+]]=, $0, $1{{$}}
+; SIMD128-SLOW-NEXT: return $pop[[R]]{{$}}
+define <4 x i32> @extmul_low_s_v4i32(<8 x i16> %v1, <8 x i16> %v2) {
+  %low1 = shufflevector <8 x i16> %v1, <8 x i16> undef,
+           <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  %low2 = shufflevector <8 x i16> %v2, <8 x i16> undef,
+           <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  %extended1 = sext <4 x i16> %low1 to <4 x i32>
+  %extended2 = sext <4 x i16> %low2 to <4 x i32>
+  %a = mul <4 x i32> %extended1, %extended2
+  ret <4 x i32> %a
+}
+
+; CHECK-LABEL: extmul_high_s_v4i32:
+; NO-SIMD128-NOT: i32x4
+; SIMD128-NEXT: .functype extmul_high_s_v4i32 (v128, v128) -> (v128){{$}}
+; SIMD128-SLOW-NEXT: i32x4.extmul_high_i16x8_s $push[[R:[0-9]+]]=, $0, $1{{$}}
+; SIMD128-SLOW-NEXT: return $pop[[R]]{{$}}
+define <4 x i32> @extmul_high_s_v4i32(<8 x i16> %v1, <8 x i16> %v2) {
+  %high1 = shufflevector <8 x i16> %v1, <8 x i16> undef,
+           <4 x i32> <i32 4, i32 5, i32 6, i32 7>
+  %high2 = shufflevector <8 x i16> %v2, <8 x i16> undef,
+           <4 x i32> <i32 4, i32 5, i32 6, i32 7>
+  %extended1 = sext <4 x i16> %high1 to <4 x i32>
+  %extended2 = sext <4 x i16> %high2 to <4 x i32>
+  %a = mul <4 x i32> %extended1, %extended2
+  ret <4 x i32> %a
+}
+
+; CHECK-LABEL: extmul_low_u_v4i32:
+; NO-SIMD128-NOT: i32x4
+; SIMD128-NEXT: .functype extmul_low_u_v4i32 (v128, v128) -> (v128){{$}}
+; SIMD128-SLOW-NEXT: i32x4.extmul_low_i16x8_u $push[[R:[0-9]+]]=, $0, $1{{$}}
+; SIMD128-SLOW-NEXT: return $pop[[R]]{{$}}
+define <4 x i32> @extmul_low_u_v4i32(<8 x i16> %v1, <8 x i16> %v2) {
+  %low1 = shufflevector <8 x i16> %v1, <8 x i16> undef,
+           <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  %low2 = shufflevector <8 x i16> %v2, <8 x i16> undef,
+           <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  %extended1 = zext <4 x i16> %low1 to <4 x i32>
+  %extended2 = zext <4 x i16> %low2 to <4 x i32>
+  %a = mul <4 x i32> %extended1, %extended2
+  ret <4 x i32> %a
+}
+
+; CHECK-LABEL: extmul_high_u_v4i32:
+; NO-SIMD128-NOT: i32x4
+; SIMD128-NEXT: .functype extmul_high_u_v4i32 (v128, v128) -> (v128){{$}}
+; SIMD128-SLOW-NEXT: i32x4.extmul_high_i16x8_u $push[[R:[0-9]+]]=, $0, $1{{$}}
+; SIMD128-SLOW-NEXT: return $pop[[R]]{{$}}
+define <4 x i32> @extmul_high_u_v4i32(<8 x i16> %v1, <8 x i16> %v2) {
+  %high1 = shufflevector <8 x i16> %v1, <8 x i16> undef,
+           <4 x i32> <i32 4, i32 5, i32 6, i32 7>
+  %high2 = shufflevector <8 x i16> %v2, <8 x i16> undef,
+           <4 x i32> <i32 4, i32 5, i32 6, i32 7>
+  %extended1 = zext <4 x i16> %high1 to <4 x i32>
+  %extended2 = zext <4 x i16> %high2 to <4 x i32>
+  %a = mul <4 x i32> %extended1, %extended2
   ret <4 x i32> %a
 }
 
@@ -1259,6 +1387,62 @@ define <2 x i64> @bitselect_v2i64(<2 x i64> %c, <2 x i64> %v1, <2 x i64> %v2) {
   %inv_mask = xor <2 x i64> <i64 -1, i64 -1>, %c
   %masked_v2 = and <2 x i64> %v2, %inv_mask
   %a = or <2 x i64> %masked_v2, %masked_v1
+  ret <2 x i64> %a
+}
+
+; CHECK-LABEL: extmul_low_s_v2i64:
+; NO-SIMD128-NOT: i64x2
+; SIMD128-NEXT: .functype extmul_low_s_v2i64 (v128, v128) -> (v128){{$}}
+; SIMD128-SLOW-NEXT: i64x2.extmul_low_i32x4_s $push[[R:[0-9]+]]=, $0, $1{{$}}
+; SIMD128-SLOW-NEXT: return $pop[[R]]{{$}}
+define <2 x i64> @extmul_low_s_v2i64(<4 x i32> %v1, <4 x i32> %v2) {
+  %low1 = shufflevector <4 x i32> %v1, <4 x i32> undef, <2 x i32> <i32 0, i32 1>
+  %low2 = shufflevector <4 x i32> %v2, <4 x i32> undef, <2 x i32> <i32 0, i32 1>
+  %extended1 = sext <2 x i32> %low1 to <2 x i64>
+  %extended2 = sext <2 x i32> %low2 to <2 x i64>
+  %a = mul <2 x i64> %extended1, %extended2
+  ret <2 x i64> %a
+}
+
+; CHECK-LABEL: extmul_high_s_v2i64:
+; NO-SIMD128-NOT: i64x2
+; SIMD128-NEXT: .functype extmul_high_s_v2i64 (v128, v128) -> (v128){{$}}
+; SIMD128-SLOW-NEXT: i64x2.extmul_high_i32x4_s $push[[R:[0-9]+]]=, $0, $1{{$}}
+; SIMD128-SLOW-NEXT: return $pop[[R]]{{$}}
+define <2 x i64> @extmul_high_s_v2i64(<4 x i32> %v1, <4 x i32> %v2) {
+  %high1 = shufflevector <4 x i32> %v1, <4 x i32> undef, <2 x i32> <i32 2, i32 3>
+  %high2 = shufflevector <4 x i32> %v2, <4 x i32> undef, <2 x i32> <i32 2, i32 3>
+  %extended1 = sext <2 x i32> %high1 to <2 x i64>
+  %extended2 = sext <2 x i32> %high2 to <2 x i64>
+  %a = mul <2 x i64> %extended1, %extended2
+  ret <2 x i64> %a
+}
+
+; CHECK-LABEL: extmul_low_u_v2i64:
+; NO-SIMD128-NOT: i64x2
+; SIMD128-NEXT: .functype extmul_low_u_v2i64 (v128, v128) -> (v128){{$}}
+; SIMD128-SLOW-NEXT: i64x2.extmul_low_i32x4_u $push[[R:[0-9]+]]=, $0, $1{{$}}
+; SIMD128-SLOW-NEXT: return $pop[[R]]{{$}}
+define <2 x i64> @extmul_low_u_v2i64(<4 x i32> %v1, <4 x i32> %v2) {
+  %low1 = shufflevector <4 x i32> %v1, <4 x i32> undef, <2 x i32> <i32 0, i32 1>
+  %low2 = shufflevector <4 x i32> %v2, <4 x i32> undef, <2 x i32> <i32 0, i32 1>
+  %extended1 = zext <2 x i32> %low1 to <2 x i64>
+  %extended2 = zext <2 x i32> %low2 to <2 x i64>
+  %a = mul <2 x i64> %extended1, %extended2
+  ret <2 x i64> %a
+}
+
+; CHECK-LABEL: extmul_high_u_v2i64:
+; NO-SIMD128-NOT: i64x2
+; SIMD128-NEXT: .functype extmul_high_u_v2i64 (v128, v128) -> (v128){{$}}
+; SIMD128-SLOW-NEXT: i64x2.extmul_high_i32x4_u $push[[R:[0-9]+]]=, $0, $1{{$}}
+; SIMD128-SLOW-NEXT: return $pop[[R]]{{$}}
+define <2 x i64> @extmul_high_u_v2i64(<4 x i32> %v1, <4 x i32> %v2) {
+  %high1 = shufflevector <4 x i32> %v1, <4 x i32> undef, <2 x i32> <i32 2, i32 3>
+  %high2 = shufflevector <4 x i32> %v2, <4 x i32> undef, <2 x i32> <i32 2, i32 3>
+  %extended1 = zext <2 x i32> %high1 to <2 x i64>
+  %extended2 = zext <2 x i32> %high2 to <2 x i64>
+  %a = mul <2 x i64> %extended1, %extended2
   ret <2 x i64> %a
 }
 

@@ -44,14 +44,14 @@ declare i32 @foo() #0
 define i32 @block_split(i32 %a, i32 %b) #0 {
 ; CHECK-LABEL: block_split:
 ; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    cmp w0, #5 ; =5
+; CHECK-NEXT:    cmp w0, #5
 ; CHECK-NEXT:    b.ne LBB1_1
 ; CHECK-NEXT:    b LBB1_2
 ; CHECK-NEXT:  LBB1_1: ; %lor.lhs.false
 ; CHECK-NEXT:    lsl w8, w1, #1
-; CHECK-NEXT:    cmp w1, #7 ; =7
+; CHECK-NEXT:    cmp w1, #7
 ; CHECK-NEXT:    csinc w8, w8, w1, lt
-; CHECK-NEXT:    cmp w8, #16 ; =16
+; CHECK-NEXT:    cmp w8, #16
 ; CHECK-NEXT:    b.le LBB1_2
 ; CHECK-NEXT:    b LBB1_3
 ; CHECK-NEXT:  LBB1_2: ; %if.then

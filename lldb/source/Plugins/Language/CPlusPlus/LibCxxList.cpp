@@ -158,8 +158,8 @@ public:
   bool Update() override;
 
 private:
-  lldb::addr_t m_node_address;
-  ValueObject *m_tail;
+  lldb::addr_t m_node_address = 0;
+  ValueObject *m_tail = nullptr;
 };
 
 } // end anonymous namespace
@@ -308,7 +308,7 @@ bool ForwardListFrontEnd::Update() {
 }
 
 ListFrontEnd::ListFrontEnd(lldb::ValueObjectSP valobj_sp)
-    : AbstractListFrontEnd(*valobj_sp), m_node_address(), m_tail(nullptr) {
+    : AbstractListFrontEnd(*valobj_sp) {
   if (valobj_sp)
     Update();
 }

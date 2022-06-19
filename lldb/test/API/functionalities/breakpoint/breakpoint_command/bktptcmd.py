@@ -17,6 +17,12 @@ def a_third_function(frame, bp_loc, extra_args, dict):
     se_string = se_value.GetStringValue(100)
     side_effect.fancier = se_string
 
+def a_list_function(frame, bp_loc, extra_args, dict):
+    se_value = extra_args.GetValueForKey("side_effect")
+    se_string = se_value.GetStringValue(100)
+    side_effect.from_list = se_string
+
+    
 def empty_extra_args(frame, bp_loc, extra_args, dict):
     if extra_args.IsValid():
         side_effect.not_so_fancy = "Extra args should not be valid"

@@ -25,6 +25,7 @@
 #include "lldb/Target/Target.h"
 #include "lldb/Target/Thread.h"
 #include "lldb/Utility/ConstString.h"
+#include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/Scalar.h"
 #include "lldb/Utility/Status.h"
@@ -91,18 +92,6 @@ void AppleObjCRuntimeV1::Initialize() {
 void AppleObjCRuntimeV1::Terminate() {
   PluginManager::UnregisterPlugin(CreateInstance);
 }
-
-lldb_private::ConstString AppleObjCRuntimeV1::GetPluginNameStatic() {
-  static ConstString g_name("apple-objc-v1");
-  return g_name;
-}
-
-// PluginInterface protocol
-ConstString AppleObjCRuntimeV1::GetPluginName() {
-  return GetPluginNameStatic();
-}
-
-uint32_t AppleObjCRuntimeV1::GetPluginVersion() { return 1; }
 
 BreakpointResolverSP
 AppleObjCRuntimeV1::CreateExceptionResolver(const BreakpointSP &bkpt,
@@ -233,7 +222,7 @@ void AppleObjCRuntimeV1::ClassDescriptorV1::Initialize(
     return;
   }
 
-  lldb::DataBufferSP buffer_sp(new DataBufferHeap(1024, 0));
+  lldb::WritableDataBufferSP buffer_sp(new DataBufferHeap(1024, 0));
 
   size_t count = process_sp->ReadCStringFromMemory(
       name_ptr, (char *)buffer_sp->GetBytes(), 1024, error);
@@ -244,7 +233,7 @@ void AppleObjCRuntimeV1::ClassDescriptorV1::Initialize(
   }
 
   if (count)
-    m_name = ConstString((char *)buffer_sp->GetBytes());
+    m_name = ConstString(reinterpret_cast<const char *>(buffer_sp->GetBytes()));
   else
     m_name = ConstString();
 
@@ -330,7 +319,7 @@ void AppleObjCRuntimeV1::UpdateISAToDescriptorMapIfNeeded() {
     // map, whether it was successful or not.
     m_isa_to_descriptor_stop_id = process->GetStopID();
 
-    Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_PROCESS));
+    Log *log = GetLog(LLDBLog::Process);
 
     ProcessSP process_sp = process->shared_from_this();
 

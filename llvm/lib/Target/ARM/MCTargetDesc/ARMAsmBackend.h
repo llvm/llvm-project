@@ -13,29 +13,23 @@
 #include "MCTargetDesc/ARMMCTargetDesc.h"
 #include "llvm/MC/MCAsmBackend.h"
 #include "llvm/MC/MCSubtargetInfo.h"
-#include "llvm/Support/TargetRegistry.h"
+#include "llvm/MC/TargetRegistry.h"
 
 namespace llvm {
 
 class ARMAsmBackend : public MCAsmBackend {
-  // The STI from the target triple the MCAsmBackend was instantiated with
-  // note that MCFragments may have a different local STI that should be
-  // used in preference.
-  const MCSubtargetInfo &STI;
   bool isThumbMode;    // Currently emitting Thumb code.
 public:
-  ARMAsmBackend(const Target &T, const MCSubtargetInfo &STI,
-                support::endianness Endian)
-      : MCAsmBackend(Endian), STI(STI),
-        isThumbMode(STI.getTargetTriple().isThumb()) {}
+  ARMAsmBackend(const Target &T, bool isThumb, support::endianness Endian)
+      : MCAsmBackend(Endian), isThumbMode(isThumb) {}
 
   unsigned getNumFixupKinds() const override {
     return ARM::NumTargetFixupKinds;
   }
 
-  // FIXME: this should be calculated per fragment as the STI may be
-  // different.
-  bool hasNOP() const { return STI.getFeatureBits()[ARM::HasV6T2Ops]; }
+  bool hasNOP(const MCSubtargetInfo *STI) const {
+    return STI->getFeatureBits()[ARM::HasV6T2Ops];
+  }
 
   Optional<MCFixupKind> getFixupKind(StringRef Name) const override;
 
@@ -69,7 +63,8 @@ public:
   void relaxInstruction(MCInst &Inst,
                         const MCSubtargetInfo &STI) const override;
 
-  bool writeNopData(raw_ostream &OS, uint64_t Count) const override;
+  bool writeNopData(raw_ostream &OS, uint64_t Count,
+                    const MCSubtargetInfo *STI) const override;
 
   void handleAssemblerFlag(MCAssemblerFlag Flag) override;
 

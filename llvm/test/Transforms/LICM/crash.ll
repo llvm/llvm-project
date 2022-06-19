@@ -1,5 +1,5 @@
 ; RUN: opt -licm -disable-output < %s
-; RUN: opt -aa-pipeline=basic-aa -passes='require<aa>,require<targetir>,require<scalar-evolution>,require<opt-remark-emit>,loop(licm)' -disable-output < %s
+; RUN: opt -aa-pipeline=basic-aa -passes='require<aa>,require<targetir>,require<scalar-evolution>,require<opt-remark-emit>,loop-mssa(licm)' -disable-output < %s
 
 target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f32:32:32-f64:64:64-v64:64:64-v128:128:128-a0:0:64-s0:64:64-f80:128:128-n8:16:32:64"
 target triple = "x86_64-apple-darwin10.0.0"
@@ -72,4 +72,16 @@ define void @test4() noreturn nounwind {
   store volatile i32* @g_47, i32** undef, align 8
   store i32 undef, i32* @g_47, align 4
   br label %1
+}
+
+; OSS-Fuzz #29050
+; https://bugs.chromium.org/p/oss-fuzz/issues/detail?id=29050
+define <2 x i177> @ossfuzz_29050(<2 x i177> %X) {
+bb:
+  br label %BB
+BB:
+  %I3 = insertelement <2 x i177> undef, i177 95780971304118053647396689196894323976171195136475135, i177 95780971304118053647396689196894323976171195136475135
+  br i1 true, label %BB, label %BB1
+BB1:
+  ret <2 x i177> %I3
 }

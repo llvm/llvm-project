@@ -17,12 +17,12 @@
 #include "clang/StaticAnalyzer/Core/BugReporter/BugType.h"
 #include "clang/StaticAnalyzer/Core/Checker.h"
 #include "clang/StaticAnalyzer/Core/CheckerManager.h"
+#include "clang/StaticAnalyzer/Core/PathSensitive/CallDescription.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/CallEvent.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/CheckerContext.h"
 
 using namespace clang;
 using namespace ento;
-using llvm::APSInt;
 
 namespace {
 class MmapWriteExecChecker : public Checker<check::PreCall> {
@@ -46,10 +46,10 @@ int MmapWriteExecChecker::ProtRead  = 0x01;
 
 void MmapWriteExecChecker::checkPreCall(const CallEvent &Call,
                                          CheckerContext &C) const {
-  if (Call.isCalled(MmapFn) || Call.isCalled(MprotectFn)) {
+  if (matchesAny(Call, MmapFn, MprotectFn)) {
     SVal ProtVal = Call.getArgSVal(2);
-    Optional<nonloc::ConcreteInt> ProtLoc = ProtVal.getAs<nonloc::ConcreteInt>();
-    int64_t Prot = ProtLoc->getValue().getSExtValue();
+    auto ProtLoc = ProtVal.castAs<nonloc::ConcreteInt>();
+    int64_t Prot = ProtLoc.getValue().getSExtValue();
     if (ProtExecOv != ProtExec)
       ProtExec = ProtExecOv;
     if (ProtReadOv != ProtRead)

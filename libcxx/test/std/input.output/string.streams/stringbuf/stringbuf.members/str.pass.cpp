@@ -26,12 +26,14 @@ int main(int, char**)
         buf.str("another test");
         assert(buf.str() == "another test");
     }
+#ifndef TEST_HAS_NO_WIDE_CHARACTERS
     {
         std::wstringbuf buf(L"testing");
         assert(buf.str() == L"testing");
         buf.str(L"another test");
         assert(buf.str() == L"another test");
     }
+#endif
 
   return 0;
 }

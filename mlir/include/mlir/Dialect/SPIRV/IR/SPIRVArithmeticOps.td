@@ -15,10 +15,11 @@
 #define MLIR_DIALECT_SPIRV_IR_ARITHMETIC_OPS
 
 include "mlir/Dialect/SPIRV/IR/SPIRVBase.td"
+include "mlir/Interfaces/InferTypeOpInterface.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
 
 class SPV_ArithmeticBinaryOp<string mnemonic, Type type,
-                       list<OpTrait> traits = []> :
+                       list<Trait> traits = []> :
       // Operands type same as result type.
       SPV_BinaryOp<mnemonic, type, type,
                    !listconcat(traits,
@@ -33,10 +34,11 @@ class SPV_ArithmeticBinaryOp<string mnemonic, Type type,
   let results = (outs
     SPV_ScalarOrVectorOrCoopMatrixOf<type>:$result
   );
+  let assemblyFormat = "operands attr-dict `:` type($result)";
 }
 
 class SPV_ArithmeticUnaryOp<string mnemonic, Type type,
-                            list<OpTrait> traits = []> :
+                            list<Trait> traits = []> :
       // Operand type same as result type.
       SPV_UnaryOp<mnemonic, type, type,
                    !listconcat(traits,
@@ -388,6 +390,57 @@ def SPV_ISubOp : SPV_ArithmeticBinaryOp<"ISub",
 
 // -----
 
+def SPV_ISubBorrowOp : SPV_BinaryOp<"ISubBorrow", SPV_AnyStruct, SPV_Integer,
+                                    [NoSideEffect]> {
+  let summary = [{
+    Result is the unsigned integer subtraction of Operand 2 from Operand 1,
+    and what it needed to borrow.
+  }];
+
+  let description = [{
+    Result Type must be from OpTypeStruct.  The struct must have two
+    members, and the two members must be the same type.  The member type
+    must be a scalar or vector of integer type, whose Signedness operand is
+    0.
+
+    Operand 1 and Operand 2 must have the same type as the members of Result
+    Type. These are consumed as unsigned integers.
+
+     Results are computed per component.
+
+    Member 0 of the result gets the low-order bits (full component width) of
+    the subtraction. That is, if Operand 1 is larger than Operand 2, member
+    0 gets the full value of the subtraction;  if Operand 2 is larger than
+    Operand 1, member 0 gets 2w + Operand 1 - Operand 2, where w is the
+    component width.
+
+    Member 1 of the result gets 0 if Operand 1 ≥ Operand 2, and gets 1
+    otherwise.
+
+    <!-- End of AutoGen section -->
+
+    #### Example:
+
+    ```mlir
+    %2 = spv.ISubBorrow %0, %1 : !spv.struct<(i32, i32)>
+    %2 = spv.ISubBorrow %0, %1 : !spv.struct<(vector<2xi32>, vector<2xi32>)>
+    ```
+  }];
+
+  let arguments = (ins
+    SPV_ScalarOrVectorOf<SPV_Integer>:$operand1,
+    SPV_ScalarOrVectorOf<SPV_Integer>:$operand2
+  );
+
+  let results = (outs
+    SPV_AnyStruct:$result
+  );
+
+  let hasVerifier = 1;
+}
+
+// -----
+
 def SPV_SDivOp : SPV_ArithmeticBinaryOp<"SDiv",
                                         SPV_Integer,
                                         [UsableInSpecConstantOp]> {
@@ -558,6 +611,40 @@ def SPV_UDivOp : SPV_ArithmeticBinaryOp<"UDiv",
 
     ```
   }];
+}
+
+// -----
+
+def SPV_VectorTimesScalarOp : SPV_Op<"VectorTimesScalar", [NoSideEffect]> {
+  let summary = "Scale a floating-point vector.";
+
+  let description = [{
+    Result Type must be a vector of floating-point type.
+
+     The type of Vector must be the same as Result Type. Each component of
+    Vector is multiplied by Scalar.
+
+    Scalar must have the same type as the Component Type in Result Type.
+
+    <!-- End of AutoGen section -->
+
+    #### Example:
+
+    ```mlir
+    %0 = spv.VectorTimesScalar %vector, %scalar : vector<4xf32>
+    ```
+  }];
+
+  let arguments = (ins
+    VectorOfLengthAndType<[2, 3, 4], [SPV_Float]>:$vector,
+    SPV_Float:$scalar
+  );
+
+  let results = (outs
+    VectorOfLengthAndType<[2, 3, 4], [SPV_Float]>:$result
+  );
+
+  let assemblyFormat = "operands attr-dict `:` `(` type(operands) `)` `->` type($result)";
 }
 
 // -----

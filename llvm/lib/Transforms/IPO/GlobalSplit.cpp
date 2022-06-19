@@ -154,11 +154,8 @@ static bool splitGlobals(Module &M) {
     return false;
 
   bool Changed = false;
-  for (auto I = M.global_begin(); I != M.global_end();) {
-    GlobalVariable &GV = *I;
-    ++I;
+  for (GlobalVariable &GV : llvm::make_early_inc_range(M.globals()))
     Changed |= splitGlobal(GV);
-  }
   return Changed;
 }
 

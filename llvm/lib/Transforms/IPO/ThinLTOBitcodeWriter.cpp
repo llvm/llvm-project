@@ -21,7 +21,6 @@
 #include "llvm/InitializePasses.h"
 #include "llvm/Object/ModuleSymbolTable.h"
 #include "llvm/Pass.h"
-#include "llvm/Support/ScopedPrinter.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/IPO.h"
 #include "llvm/Transforms/IPO/FunctionAttrs.h"
@@ -32,6 +31,19 @@
 using namespace llvm;
 
 namespace {
+
+// Determine if a promotion alias should be created for a symbol name.
+static bool allowPromotionAlias(const std::string &Name) {
+  // Promotion aliases are used only in inline assembly. It's safe to
+  // simply skip unusual names. Subset of MCAsmInfo::isAcceptableChar()
+  // and MCAsmInfoXCOFF::isAcceptableChar().
+  for (const char &C : Name) {
+    if (isAlnum(C) || C == '_' || C == '.')
+      continue;
+    return false;
+  }
+  return true;
+}
 
 // Promote each local-linkage entity defined by ExportM and used by ImportM by
 // changing visibility and appending the given ModuleId.
@@ -55,6 +67,7 @@ void promoteInternals(Module &ExportM, Module &ImportM, StringRef ModuleId,
       }
     }
 
+    std::string OldName = Name.str();
     std::string NewName = (Name + ModuleId).str();
 
     if (const auto *C = ExportGV.getComdat())
@@ -68,6 +81,14 @@ void promoteInternals(Module &ExportM, Module &ImportM, StringRef ModuleId,
     if (ImportGV) {
       ImportGV->setName(NewName);
       ImportGV->setVisibility(GlobalValue::HiddenVisibility);
+    }
+
+    if (isa<Function>(&ExportGV) && allowPromotionAlias(OldName)) {
+      // Create a local alias with the original name to avoid breaking
+      // references from inline assembly.
+      std::string Alias =
+          ".lto_set_conditional " + OldName + "," + NewName + "\n";
+      ExportM.appendModuleInlineAsm(Alias);
     }
   }
 
@@ -143,8 +164,7 @@ void simplifyExternals(Module &M) {
   FunctionType *EmptyFT =
       FunctionType::get(Type::getVoidTy(M.getContext()), false);
 
-  for (auto I = M.begin(), E = M.end(); I != E;) {
-    Function &F = *I++;
+  for (Function &F : llvm::make_early_inc_range(M)) {
     if (F.isDeclaration() && F.use_empty()) {
       F.eraseFromParent();
       continue;
@@ -160,16 +180,15 @@ void simplifyExternals(Module &M) {
                          F.getAddressSpace(), "", &M);
     NewF->copyAttributesFrom(&F);
     // Only copy function attribtues.
-    NewF->setAttributes(
-        AttributeList::get(M.getContext(), AttributeList::FunctionIndex,
-                           F.getAttributes().getFnAttributes()));
+    NewF->setAttributes(AttributeList::get(M.getContext(),
+                                           AttributeList::FunctionIndex,
+                                           F.getAttributes().getFnAttrs()));
     NewF->takeName(&F);
     F.replaceAllUsesWith(ConstantExpr::getBitCast(NewF, F.getType()));
     F.eraseFromParent();
   }
 
-  for (auto I = M.global_begin(), E = M.global_end(); I != E;) {
-    GlobalVariable &GV = *I++;
+  for (GlobalVariable &GV : llvm::make_early_inc_range(M.globals())) {
     if (GV.isDeclaration() && GV.use_empty()) {
       GV.eraseFromParent();
       continue;
@@ -291,7 +310,8 @@ void splitAndWriteThinLTOBitcode(
             return;
         }
         if (!F->isDeclaration() &&
-            computeFunctionBodyMemoryAccess(*F, AARGetter(*F)) == MAK_ReadNone)
+            computeFunctionBodyMemoryAccess(*F, AARGetter(*F)) ==
+                FMRB_DoesNotAccessMemory)
           EligibleVirtualFns.insert(F);
       });
     }
@@ -304,7 +324,8 @@ void splitAndWriteThinLTOBitcode(
             return true;
         if (auto *F = dyn_cast<Function>(GV))
           return EligibleVirtualFns.count(F);
-        if (auto *GVar = dyn_cast_or_null<GlobalVariable>(GV->getBaseObject()))
+        if (auto *GVar =
+                dyn_cast_or_null<GlobalVariable>(GV->getAliaseeObject()))
           return HasTypeMetadata(GVar);
         return false;
       }));
@@ -333,7 +354,7 @@ void splitAndWriteThinLTOBitcode(
   // Remove all globals with type metadata, globals with comdats that live in
   // MergedM, and aliases pointing to such globals from the thin LTO module.
   filterModule(&M, [&](const GlobalValue *GV) {
-    if (auto *GVar = dyn_cast_or_null<GlobalVariable>(GV->getBaseObject()))
+    if (auto *GVar = dyn_cast_or_null<GlobalVariable>(GV->getAliaseeObject()))
       if (HasTypeMetadata(GVar))
         return false;
     if (const auto *C = GV->getComdat())
@@ -514,18 +535,18 @@ void writeThinLTOBitcode(raw_ostream &OS, raw_ostream *ThinLinkOS,
   // the information that is needed by thin link will be written in the
   // given OS.
   if (ThinLinkOS && Index)
-    WriteThinLinkBitcodeToFile(M, *ThinLinkOS, *Index, ModHash);
+    writeThinLinkBitcodeToFile(M, *ThinLinkOS, *Index, ModHash);
 }
 
 class WriteThinLTOBitcode : public ModulePass {
   raw_ostream &OS; // raw_ostream to print on
   // The output stream on which to emit a minimized module for use
   // just in the thin link, if requested.
-  raw_ostream *ThinLinkOS;
+  raw_ostream *ThinLinkOS = nullptr;
 
 public:
   static char ID; // Pass identification, replacement for typeid
-  WriteThinLTOBitcode() : ModulePass(ID), OS(dbgs()), ThinLinkOS(nullptr) {
+  WriteThinLTOBitcode() : ModulePass(ID), OS(dbgs()) {
     initializeWriteThinLTOBitcodePass(*PassRegistry::getPassRegistry());
   }
 

@@ -1,12 +1,12 @@
-// RUN: mlir-opt %s -test-print-dominance -split-input-file 2>&1 | FileCheck %s
+// RUN: mlir-opt %s -pass-pipeline="func.func(test-print-dominance)" -split-input-file 2>&1 | FileCheck %s
 
 // CHECK-LABEL: Testing : func_condBranch
-func @func_condBranch(%cond : i1) {
-  cond_br %cond, ^bb1, ^bb2
+func.func @func_condBranch(%cond : i1) {
+  cf.cond_br %cond, ^bb1, ^bb2
 ^bb1:
-  br ^exit
+  cf.br ^exit
 ^bb2:
-  br ^exit
+  cf.br ^exit
 ^exit:
   return
 }
@@ -48,15 +48,15 @@ func @func_condBranch(%cond : i1) {
 // -----
 
 // CHECK-LABEL: Testing : func_loop
-func @func_loop(%arg0 : i32, %arg1 : i32) {
-  br ^loopHeader(%arg0 : i32)
+func.func @func_loop(%arg0 : i32, %arg1 : i32) {
+  cf.br ^loopHeader(%arg0 : i32)
 ^loopHeader(%counter : i32):
-  %lessThan = cmpi slt, %counter, %arg1 : i32
-  cond_br %lessThan, ^loopBody, ^exit
+  %lessThan = arith.cmpi slt, %counter, %arg1 : i32
+  cf.cond_br %lessThan, ^loopBody, ^exit
 ^loopBody:
-  %const0 = constant 1 : i32
-  %inc = addi %counter, %const0 : i32
-  br ^loopHeader(%inc : i32)
+  %const0 = arith.constant 1 : i32
+  %inc = arith.addi %counter, %const0 : i32
+  cf.br ^loopHeader(%inc : i32)
 ^exit:
   return
 }
@@ -90,7 +90,7 @@ func @func_loop(%arg0 : i32, %arg1 : i32) {
 // -----
 
 // CHECK-LABEL: Testing : nested_region
-func @nested_region(%arg0 : index, %arg1 : index, %arg2 : index) {
+func.func @nested_region(%arg0 : index, %arg1 : index, %arg2 : index) {
   scf.for %arg3 = %arg0 to %arg1 step %arg2 { }
   return
 }
@@ -109,7 +109,7 @@ func @nested_region(%arg0 : index, %arg1 : index, %arg2 : index) {
 // -----
 
 // CHECK-LABEL: Testing : nested_region2
-func @nested_region2(%arg0 : index, %arg1 : index, %arg2 : index) {
+func.func @nested_region2(%arg0 : index, %arg1 : index, %arg2 : index) {
   scf.for %arg3 = %arg0 to %arg1 step %arg2 {
     scf.for %arg4 = %arg0 to %arg1 step %arg2 {
       scf.for %arg5 = %arg0 to %arg1 step %arg2 { }
@@ -147,23 +147,23 @@ func @nested_region2(%arg0 : index, %arg1 : index, %arg2 : index) {
 // -----
 
 // CHECK-LABEL: Testing : func_loop_nested_region
-func @func_loop_nested_region(
+func.func @func_loop_nested_region(
   %arg0 : i32,
   %arg1 : i32,
   %arg2 : index,
   %arg3 : index,
   %arg4 : index) {
-  br ^loopHeader(%arg0 : i32)
+  cf.br ^loopHeader(%arg0 : i32)
 ^loopHeader(%counter : i32):
-  %lessThan = cmpi slt, %counter, %arg1 : i32
-  cond_br %lessThan, ^loopBody, ^exit
+  %lessThan = arith.cmpi slt, %counter, %arg1 : i32
+  cf.cond_br %lessThan, ^loopBody, ^exit
 ^loopBody:
-  %const0 = constant 1 : i32
-  %inc = addi %counter, %const0 : i32
+  %const0 = arith.constant 1 : i32
+  %inc = arith.addi %counter, %const0 : i32
   scf.for %arg5 = %arg2 to %arg3 step %arg4 {
     scf.for %arg6 = %arg2 to %arg3 step %arg4 { }
   }
-  br ^loopHeader(%inc : i32)
+  cf.br ^loopHeader(%inc : i32)
 ^exit:
   return
 }

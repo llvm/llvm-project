@@ -11,9 +11,11 @@ char buf2[1024];
 // This is an example code and integration test.
 void test_api(int cond, short row, short col) {
   //CHECK-LABEL: @test_api
-  //CHECK: call x86_amx @llvm.x86.tileloadd64.internal
-  //CHECK: call x86_amx @llvm.x86.tdpbssd.internal
-  //CHECK: call void @llvm.x86.tilestored64.internal
+  //CHECK-DAG: call x86_amx @llvm.x86.tileloadd64.internal
+  //CHECK-DAG: call <256 x i32> @llvm.x86.cast.tile.to.vector.v256i32(x86_amx {{%.*}})
+  //CHECK-DAG: call x86_amx @llvm.x86.cast.vector.to.tile.v256i32(<256 x i32> {{%.*}})
+  //CHECK-DAG: call x86_amx @llvm.x86.tdpbssd.internal
+  //CHECK-DAG: call void @llvm.x86.tilestored64.internal
   __tile1024i a = {row, 8};
   __tile1024i b = {8, col};
   __tile1024i c = {row, col};
@@ -33,65 +35,70 @@ void test_api(int cond, short row, short col) {
 
 void test_tile_loadd(short row, short col) {
   //CHECK-LABEL: @test_tile_loadd
-  //CHECK: call x86_amx @llvm.x86.tileloadd64.internal
-  //CHECK-NEXT: {{%.*}} = bitcast x86_amx {{%.*}} to <256 x i32>
+  //CHECK-DAG: call x86_amx @llvm.x86.tileloadd64.internal
+  //CHECK-DAG: call <256 x i32> @llvm.x86.cast.tile.to.vector.v256i32(x86_amx {{%.*}})
   __tile1024i a = {row, col};
   __tile_loadd(&a, buf, STRIDE);
 }
 
 void test_tile_stream_loadd(short row, short col) {
   //CHECK-LABEL: @test_tile_stream_loadd
-  //CHECK: call x86_amx @llvm.x86.tileloaddt164.internal
-  //CHECK-NEXT: {{%.*}} = bitcast x86_amx {{%.*}} to <256 x i32>
+  //CHECK-DAG: call x86_amx @llvm.x86.tileloaddt164.internal
+  //CHECK-DAG: call <256 x i32> @llvm.x86.cast.tile.to.vector.v256i32(x86_amx {{%.*}})
   __tile1024i a = {row, col};
   __tile_stream_loadd(&a, buf, STRIDE);
 }
 
 void test_tile_dpbssd(__tile1024i a, __tile1024i b, __tile1024i c) {
   //CHECK-LABEL: @test_tile_dpbssd
-  //CHECK: call x86_amx @llvm.x86.tdpbssd.internal
-  //CHECK-NEXT: {{%.*}} = bitcast x86_amx {{%.*}} to <256 x i32>
+  //CHECK-DAG: call x86_amx @llvm.x86.cast.vector.to.tile.v256i32(<256 x i32> {{%.*}})
+  //CHECK-DAG: call x86_amx @llvm.x86.tdpbssd.internal
+  //CHECK-DAG: call <256 x i32> @llvm.x86.cast.tile.to.vector.v256i32(x86_amx {{%.*}})
   __tile_dpbssd(&c, a, b);
 }
 
 void test_tile_dpbsud(__tile1024i a, __tile1024i b, __tile1024i c) {
   //CHECK-LABEL: @test_tile_dpbsud
-  //CHECK: call x86_amx @llvm.x86.tdpbsud.internal
-  //CHECK-NEXT: {{%.*}} = bitcast x86_amx {{%.*}} to <256 x i32>
+  //CHECK-DAG: call x86_amx @llvm.x86.cast.vector.to.tile.v256i32(<256 x i32> {{%.*}})
+  //CHECK-DAG: call x86_amx @llvm.x86.tdpbsud.internal
+  //CHECK-DAG: call <256 x i32> @llvm.x86.cast.tile.to.vector.v256i32(x86_amx {{%.*}})
   __tile_dpbsud(&c, a, b);
 }
 
 void test_tile_dpbusd(__tile1024i a, __tile1024i b, __tile1024i c) {
   //CHECK-LABEL: @test_tile_dpbusd
-  //CHECK: call x86_amx @llvm.x86.tdpbusd.internal
-  //CHECK-NEXT: {{%.*}} = bitcast x86_amx {{%.*}} to <256 x i32>
+  //CHECK-DAG: call x86_amx @llvm.x86.cast.vector.to.tile.v256i32(<256 x i32> {{%.*}})
+  //CHECK-DAG: call x86_amx @llvm.x86.tdpbusd.internal
+  //CHECK-DAG: call <256 x i32> @llvm.x86.cast.tile.to.vector.v256i32(x86_amx {{%.*}})
   __tile_dpbusd(&c, a, b);
 }
 
 void test_tile_dpbuud(__tile1024i a, __tile1024i b, __tile1024i c) {
   //CHECK-LABEL: @test_tile_dpbuud
-  //CHECK: call x86_amx @llvm.x86.tdpbuud.internal
-  //CHECK-NEXT: {{%.*}} = bitcast x86_amx {{%.*}} to <256 x i32>
+  //CHECK-DAG: call x86_amx @llvm.x86.cast.vector.to.tile.v256i32(<256 x i32> {{%.*}})
+  //CHECK-DAG: call x86_amx @llvm.x86.tdpbuud.internal
+  //CHECK-DAG: call <256 x i32> @llvm.x86.cast.tile.to.vector.v256i32(x86_amx {{%.*}})
   __tile_dpbuud(&c, a, b);
 }
 
 void test_tile_stored(__tile1024i c) {
   //CHECK-LABEL: @test_tile_stored
-  //CHECK: {{%.*}} = bitcast <256 x i32> {{%.*}} to x86_amx
-  //CHECK-NEXT: call void @llvm.x86.tilestored64.internal
+  //CHECK-DAG: call x86_amx @llvm.x86.cast.vector.to.tile.v256i32(<256 x i32> {{%.*}})
+  //CHECK-DAG: call void @llvm.x86.tilestored64.internal
   __tile_stored(buf, STRIDE, c);
 }
 
 void test_tile_zero(__tile1024i c) {
   //CHECK-LABEL: @test_tile_zero
-  //CHECK: call x86_amx @llvm.x86.tilezero.internal
-  //CHECK-NEXT bitcast x86_amx {{%.*}} to <256 x i32>
+  //CHECK-DAG: call x86_amx @llvm.x86.tilezero.internal
+  //CHECK-DAG: call <256 x i32> @llvm.x86.cast.tile.to.vector.v256i32(x86_amx {{%.*}})
   __tile_zero(&c);
 }
 
 void test_tile_dpbf16ps(__tile1024i a, __tile1024i b, __tile1024i c) {
   //CHECK-LABEL: @test_tile_dpbf16ps
-  //CHECK: call x86_amx @llvm.x86.tdpbf16ps.internal
-  //CHECK-NEXT: {{%.*}} = bitcast x86_amx {{%.*}} to <256 x i32>
+  //CHECK-DAG: call x86_amx @llvm.x86.cast.vector.to.tile.v256i32(<256 x i32> {{%.*}})
+  //CHECK-DAG: call x86_amx @llvm.x86.tdpbf16ps.internal
+  //CHECK-DAG: call <256 x i32> @llvm.x86.cast.tile.to.vector.v256i32(x86_amx {{%.*}})
   __tile_dpbf16ps(&a, b, c);
 }

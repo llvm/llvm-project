@@ -1,4 +1,4 @@
-// RUN: %clang_analyze_cc1 -triple %itanium_abi_triple -analyzer-checker=core,osx.cocoa.RetainCount -analyzer-store=region -analyzer-max-loop 6 -verify %s
+// RUN: %clang_analyze_cc1 -triple %itanium_abi_triple -analyzer-checker=core,osx.cocoa.RetainCount -analyzer-max-loop 6 -verify %s
 
 //===----------------------------------------------------------------------===//
 // The following code is reduced using delta-debugging from
@@ -104,7 +104,7 @@ struct foo {
 // temporarily "escape" retain counted objects stored to structs very eagerly
 // until we can properly tell whether they have escaped via a return value
 // or not.
-CFAbsoluteTime f4() {
+CFAbsoluteTime f4(void) {
   struct foo x;
   
   CFAbsoluteTime t = CFAbsoluteTimeGetCurrent();

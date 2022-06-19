@@ -9,7 +9,6 @@
 #ifndef LLVM_CODEGEN_CALCSPILLWEIGHTS_H
 #define LLVM_CODEGEN_CALCSPILLWEIGHTS_H
 
-#include "llvm/ADT/DenseMap.h"
 #include "llvm/CodeGen/SlotIndexes.h"
 
 namespace llvm {
@@ -65,20 +64,21 @@ class VirtRegMap;
     /// (re)compute li's spill weight and allocation hint.
     void calculateSpillWeightAndHint(LiveInterval &LI);
 
-    /// Compute future expected spill weight of a split artifact of LI
-    /// that will span between start and end slot indexes.
-    /// \param LI     The live interval to be split.
-    /// \param Start  The expected beginning of the split artifact. Instructions
-    ///               before start will not affect the weight.
-    /// \param End    The expected end of the split artifact. Instructions
-    ///               after end will not affect the weight.
-    /// \return The expected spill weight of the split artifact. Returns
-    /// negative weight for unspillable LI.
-    float futureWeight(LiveInterval &LI, SlotIndex Start, SlotIndex End);
-
     /// Compute spill weights and allocation hints for all virtual register
     /// live intervals.
     void calculateSpillWeightsAndHints();
+
+    /// Return the preferred allocation register for reg, given a COPY
+    /// instruction.
+    static Register copyHint(const MachineInstr *MI, unsigned Reg,
+                             const TargetRegisterInfo &TRI,
+                             const MachineRegisterInfo &MRI);
+
+    /// Determine if all values in LI are rematerializable.
+    static bool isRematerializable(const LiveInterval &LI,
+                                   const LiveIntervals &LIS,
+                                   const VirtRegMap &VRM,
+                                   const TargetInstrInfo &TII);
 
   protected:
     /// Helper function for weight calculations.

@@ -1,5 +1,5 @@
 ; Verify that section assignment is copied during SROA
-; RUN: opt < %s -globalopt -S | FileCheck %s
+; RUN: opt < %s -passes=globalopt -S | FileCheck %s
 ; CHECK: @G.0
 ; CHECK: section ".foo"
 ; CHECK: @G.1

@@ -1,4 +1,3 @@
-// -*- C++ -*-
 //===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
@@ -46,8 +45,10 @@
 #ifndef _MSC_VER
 #    include <tgmath.h>
 #endif
-#include <wchar.h>
-#include <wctype.h>
+#ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
+#   include <wchar.h>
+#   include <wctype.h>
+#endif
 
 int main(int argc, char **argv) {
   (void)argc;

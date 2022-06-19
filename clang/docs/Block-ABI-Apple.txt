@@ -1,1 +1,0 @@
-*NOTE* This document has moved to https://clang.llvm.org/docs/Block-ABI-Apple.html.

@@ -71,6 +71,6 @@ body:             |
     ; CHECK:  [0x0000000000000003,  0x0000000000000004): DW_OP_reg0 RAX)
     ; CHECK-NEXT: DW_AT_name    ("result")
     renamable $eax = KILL killed $eax, implicit-def $rax
-    RETQ killed $eax, debug-location !24
+    RET64 killed $eax, debug-location !24
 
 ...

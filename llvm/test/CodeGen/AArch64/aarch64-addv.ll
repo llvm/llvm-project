@@ -65,9 +65,7 @@ define i32 @oversized_ADDV_256(i8* noalias nocapture readonly %arg1, i8* noalias
 ; CHECK-NEXT:    ldr d0, [x0]
 ; CHECK-NEXT:    ldr d1, [x1]
 ; CHECK-NEXT:    uabdl v0.8h, v0.8b, v1.8b
-; CHECK-NEXT:    ushll v1.4s, v0.4h, #0
-; CHECK-NEXT:    uaddw2 v0.4s, v1.4s, v0.8h
-; CHECK-NEXT:    addv s0, v0.4s
+; CHECK-NEXT:    uaddlv s0, v0.8h
 ; CHECK-NEXT:    fmov w0, s0
 ; CHECK-NEXT:    ret
 entry:
@@ -92,8 +90,8 @@ define i32 @oversized_ADDV_512(<16 x i32>* %arr)  {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldp q0, q1, [x0, #32]
 ; CHECK-NEXT:    ldp q3, q2, [x0]
-; CHECK-NEXT:    add v1.4s, v2.4s, v1.4s
 ; CHECK-NEXT:    add v0.4s, v3.4s, v0.4s
+; CHECK-NEXT:    add v1.4s, v2.4s, v1.4s
 ; CHECK-NEXT:    add v0.4s, v0.4s, v1.4s
 ; CHECK-NEXT:    addv s0, v0.4s
 ; CHECK-NEXT:    fmov w0, s0

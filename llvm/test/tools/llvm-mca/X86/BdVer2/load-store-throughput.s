@@ -76,6 +76,7 @@ movaps %xmm3, (%rbx)
 # CHECK-NEXT: LQ      - Load queue full:                           0
 # CHECK-NEXT: SQ      - Store queue full:                          0
 # CHECK-NEXT: GROUP   - Static restrictions on the dispatch group: 0
+# CHECK-NEXT: USH     - Uncategorised Structural Hazard:           0
 
 # CHECK:      Dispatch Logic - number of cycles where we saw N micro opcodes dispatched:
 # CHECK-NEXT: [# dispatched], [# cycles]
@@ -193,6 +194,7 @@ movaps %xmm3, (%rbx)
 # CHECK-NEXT: LQ      - Load queue full:                           0
 # CHECK-NEXT: SQ      - Store queue full:                          0
 # CHECK-NEXT: GROUP   - Static restrictions on the dispatch group: 0
+# CHECK-NEXT: USH     - Uncategorised Structural Hazard:           0
 
 # CHECK:      Dispatch Logic - number of cycles where we saw N micro opcodes dispatched:
 # CHECK-NEXT: [# dispatched], [# cycles]
@@ -310,6 +312,7 @@ movaps %xmm3, (%rbx)
 # CHECK-NEXT: LQ      - Load queue full:                           0
 # CHECK-NEXT: SQ      - Store queue full:                          0
 # CHECK-NEXT: GROUP   - Static restrictions on the dispatch group: 0
+# CHECK-NEXT: USH     - Uncategorised Structural Hazard:           0
 
 # CHECK:      Dispatch Logic - number of cycles where we saw N micro opcodes dispatched:
 # CHECK-NEXT: [# dispatched], [# cycles]
@@ -427,6 +430,7 @@ movaps %xmm3, (%rbx)
 # CHECK-NEXT: LQ      - Load queue full:                           0
 # CHECK-NEXT: SQ      - Store queue full:                          0
 # CHECK-NEXT: GROUP   - Static restrictions on the dispatch group: 0
+# CHECK-NEXT: USH     - Uncategorised Structural Hazard:           0
 
 # CHECK:      Dispatch Logic - number of cycles where we saw N micro opcodes dispatched:
 # CHECK-NEXT: [# dispatched], [# cycles]
@@ -515,12 +519,12 @@ movaps %xmm3, (%rbx)
 
 # CHECK:      Iterations:        100
 # CHECK-NEXT: Instructions:      400
-# CHECK-NEXT: Total Cycles:      553
+# CHECK-NEXT: Total Cycles:      405
 # CHECK-NEXT: Total uOps:        400
 
 # CHECK:      Dispatch Width:    4
-# CHECK-NEXT: uOps Per Cycle:    0.72
-# CHECK-NEXT: IPC:               0.72
+# CHECK-NEXT: uOps Per Cycle:    0.99
+# CHECK-NEXT: IPC:               0.99
 # CHECK-NEXT: Block RThroughput: 4.0
 
 # CHECK:      Instruction Info:
@@ -540,24 +544,24 @@ movaps %xmm3, (%rbx)
 # CHECK:      Dynamic Dispatch Stall Cycles:
 # CHECK-NEXT: RAT     - Register unavailable:                      0
 # CHECK-NEXT: RCU     - Retire tokens unavailable:                 0
-# CHECK-NEXT: SCHEDQ  - Scheduler full:                            57  (10.3%)
+# CHECK-NEXT: SCHEDQ  - Scheduler full:                            347  (85.7%)
 # CHECK-NEXT: LQ      - Load queue full:                           0
-# CHECK-NEXT: SQ      - Store queue full:                          432  (78.1%)
+# CHECK-NEXT: SQ      - Store queue full:                          0
 # CHECK-NEXT: GROUP   - Static restrictions on the dispatch group: 0
+# CHECK-NEXT: USH     - Uncategorised Structural Hazard:           0
 
 # CHECK:      Dispatch Logic - number of cycles where we saw N micro opcodes dispatched:
 # CHECK-NEXT: [# dispatched], [# cycles]
-# CHECK-NEXT:  0,              364  (65.8%)
-# CHECK-NEXT:  1,              88  (15.9%)
-# CHECK-NEXT:  2,              4  (0.7%)
-# CHECK-NEXT:  3,              84  (15.2%)
-# CHECK-NEXT:  4,              13  (2.4%)
+# CHECK-NEXT:  0,              131  (32.3%)
+# CHECK-NEXT:  1,              174  (43.0%)
+# CHECK-NEXT:  2,              87  (21.5%)
+# CHECK-NEXT:  4,              13  (3.2%)
 
 # CHECK:      Schedulers - number of cycles where we saw N micro opcodes issued:
 # CHECK-NEXT: [# issued], [# cycles]
-# CHECK-NEXT:  0,          253  (45.8%)
-# CHECK-NEXT:  1,          200  (36.2%)
-# CHECK-NEXT:  2,          100  (18.1%)
+# CHECK-NEXT:  0,          105  (25.9%)
+# CHECK-NEXT:  1,          200  (49.4%)
+# CHECK-NEXT:  2,          100  (24.7%)
 
 # CHECK:      Scheduler's queue usage:
 # CHECK-NEXT: [1] Resource name.
@@ -566,10 +570,10 @@ movaps %xmm3, (%rbx)
 # CHECK-NEXT: [4] Total number of buffer entries.
 
 # CHECK:       [1]            [2]        [3]        [4]
-# CHECK-NEXT: PdEX             23         40         40
-# CHECK-NEXT: PdFPU            23         40         64
-# CHECK-NEXT: PdLoad           3          22         40
-# CHECK-NEXT: PdStore          22         24         24
+# CHECK-NEXT: PdEX             36         40         40
+# CHECK-NEXT: PdFPU            36         40         64
+# CHECK-NEXT: PdLoad           20         23         40
+# CHECK-NEXT: PdStore          19         22         24
 
 # CHECK:      Resources:
 # CHECK-NEXT: [0.0] - PdAGLU01
@@ -603,8 +607,8 @@ movaps %xmm3, (%rbx)
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0.0]  [0.1]  [1]    [2]    [3]    [4]    [5]    [6]    [7.0]  [7.1]  [8.0]  [8.1]  [9]    [10]   [11]   [12]   [13]   [14]   [15]   [16.0] [16.1] [17]   [18]   Instructions:
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -     3.00    -      -      -      -     1.00   movd	%mm0, (%rax)
-# CHECK-NEXT: 1.50   1.50    -      -      -      -      -      -      -      -      -     3.00    -      -      -     1.00    -      -      -      -     3.00    -      -     movd	(%rcx), %mm1
-# CHECK-NEXT: 1.50   1.50    -      -      -      -      -      -      -      -     3.00    -      -      -     1.00    -      -      -      -     3.00    -      -      -     movd	(%rdx), %mm2
+# CHECK-NEXT: 3.00    -      -      -      -      -      -      -      -      -      -     3.00    -      -      -     1.00    -      -      -      -     3.00    -      -     movd	(%rcx), %mm1
+# CHECK-NEXT:  -     3.00    -      -      -      -      -      -      -      -     3.00    -      -      -     1.00    -      -      -      -     3.00    -      -      -     movd	(%rdx), %mm2
 # CHECK-NEXT: 1.00    -      -      -      -      -      -      -      -      -      -      -      -     1.00    -      -     3.00    -      -      -      -      -     1.00   movd	%mm3, (%rbx)
 
 # CHECK:      Timeline view:
@@ -625,8 +629,8 @@ movaps %xmm3, (%rbx)
 # CHECK-NEXT: 0.     1     1.0    1.0    0.0       movd	%mm0, (%rax)
 # CHECK-NEXT: 1.     1     1.0    1.0    0.0       movd	(%rcx), %mm1
 # CHECK-NEXT: 2.     1     2.0    2.0    0.0       movd	(%rdx), %mm2
-# CHECK-NEXT: 3.     1     4.0    1.0    1.0       movd	%mm3, (%rbx)
-# CHECK-NEXT:        1     2.0    1.3    0.3       <total>
+# CHECK-NEXT: 3.     1     4.0    2.0    1.0       movd	%mm3, (%rbx)
+# CHECK-NEXT:        1     2.0    1.5    0.3       <total>
 
 # CHECK:      [5] Code Region
 
@@ -661,6 +665,7 @@ movaps %xmm3, (%rbx)
 # CHECK-NEXT: LQ      - Load queue full:                           0
 # CHECK-NEXT: SQ      - Store queue full:                          0
 # CHECK-NEXT: GROUP   - Static restrictions on the dispatch group: 0
+# CHECK-NEXT: USH     - Uncategorised Structural Hazard:           0
 
 # CHECK:      Dispatch Logic - number of cycles where we saw N micro opcodes dispatched:
 # CHECK-NEXT: [# dispatched], [# cycles]

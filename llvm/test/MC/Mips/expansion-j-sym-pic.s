@@ -38,9 +38,9 @@ local_label:
 # MICRO:  b      local_label      # encoding: [0x94,0x00,A,A]
 # MICRO:                          #   fixup A - offset: 0, value: local_label, kind: fixup_MICROMIPS_PC16_S1
 
-# ELF-O32:      10 00 ff ff     b       0
+# ELF-O32:      10 00 ff ff     b       0x0 <local_label>
 
-# ELF-NXX:      10 00 ff ff     b       0
+# ELF-NXX:      10 00 ff ff     b       0x0 <local_label>
 
   j weak_label
   nop
@@ -51,10 +51,10 @@ local_label:
 # MICRO:  b      weak_label       # encoding: [0x94,0x00,A,A]
 # MICRO:                          #   fixup A - offset: 0, value: weak_label, kind: fixup_MICROMIPS_PC16_S1
 
-# ELF-O32:      10 00 ff ff     b       0
+# ELF-O32:      10 00 ff ff     b       0x8 <local_label+0x8>
 # ELF-O32-NEXT:                 R_MIPS_PC16  weak_label
 
-# ELF-NXX:      10 00 00 00     b       4
+# ELF-NXX:      10 00 00 00     b       0xc <local_label+0xc>
 # ELF-N32-NEXT:                 R_MIPS_PC16  weak_label
 # ELF-N64-NEXT:                 R_MIPS_PC16/R_MIPS_NONE/R_MIPS_NONE  weak_label
 
@@ -67,10 +67,10 @@ local_label:
 # MICRO:  b      global_label     # encoding: [0x94,0x00,A,A]
 # MICRO:                          #   fixup A - offset: 0, value: global_label, kind: fixup_MICROMIPS_PC16_S1
 
-# ELF-O32:      10 00 ff ff     b       0
+# ELF-O32:      10 00 ff ff     b       0x10 <local_label+0x10>
 # ELF-O32-NEXT:         00000010:  R_MIPS_PC16  global_label
 
-# ELF-NXX:      10 00 00 00     b       4
+# ELF-NXX:      10 00 00 00     b       0x14 <local_label+0x14>
 # ELF-N32-NEXT:                 R_MIPS_PC16 global_label
 # ELF-N64-NEXT:                 R_MIPS_PC16/R_MIPS_NONE/R_MIPS_NONE  global_label
 
@@ -83,10 +83,10 @@ local_label:
 # MICRO:  b      .text            # encoding: [0x94,0x00,A,A]
 # MICRO:                          #   fixup A - offset: 0, value: .text, kind: fixup_MICROMIPS_PC16_S1
 
-# ELF-O32:      10 00 ff f9 	b	-24 <local_label>
+# ELF-O32:      10 00 ff f9 	b	0x0 <local_label>
 # ELF-O32-NEXT: 00 00 00 00 	nop
 
-# ELF-NXX:      10 00 ff f9 	b	-24 <local_label>
+# ELF-NXX:      10 00 ff f9 	b	0x0 <local_label>
 # ELF-NXX-NEXT: 00 00 00 00 	nop
 
   j 1f
@@ -98,9 +98,9 @@ local_label:
 # MICRO:  b      {{.*}}tmp0{{.*}} # encoding: [0x94,0x00,A,A]
 # MICRO:                          #   fixup A - offset: 0, value: {{.*}}tmp0{{.*}}, kind: fixup_MICROMIPS_PC16_S1
 
-# ELF-O32:      10 00 00 04     b       20 <local_label+0x34>
+# ELF-O32:      10 00 00 04     b       0x34 <local_label+0x34>
 
-# ELF-NXX:      10 00 00 04     b       20 <local_label+0x34>
+# ELF-NXX:      10 00 00 04     b       0x34 <local_label+0x34>
 
   .local forward_local
   j forward_local
@@ -112,9 +112,9 @@ local_label:
 # MICRO:  b      forward_local    # encoding: [0x94,0x00,A,A]
 # MICRO:                          #   fixup A - offset: 0, value: forward_local, kind: fixup_MICROMIPS_PC16_S1
 
-# ELF-O32:      10 00 00 04     b       20 <forward_local>
+# ELF-O32:      10 00 00 04     b       0x3c <forward_local>
 
-# ELF-NXX:      10 00 00 04     b       20 <forward_local>
+# ELF-NXX:      10 00 00 04     b       0x3c <forward_local>
 
   j 0x4
 
@@ -122,9 +122,9 @@ local_label:
 
 # MICRO:  b      4                # encoding: [0x94,0x00,0x00,0x02]
 
-# ELF-O32:      10 00 00 01     b       8
+# ELF-O32:      10 00 00 01     b       0x38 <local_label+0x38>
 
-# ELF-NXX:      10 00 00 01     b       8
+# ELF-NXX:      10 00 00 01     b       0x38 <local_label+0x38>
 
   .end local_label
 

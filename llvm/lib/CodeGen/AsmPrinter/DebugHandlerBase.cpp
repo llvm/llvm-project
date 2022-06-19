@@ -13,7 +13,6 @@
 
 #include "llvm/CodeGen/DebugHandlerBase.h"
 #include "llvm/ADT/Optional.h"
-#include "llvm/ADT/Twine.h"
 #include "llvm/CodeGen/AsmPrinter.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineInstr.h"
@@ -155,7 +154,8 @@ uint64_t DebugHandlerBase::getBaseTypeSize(const DIType *Ty) {
 
   if (Tag != dwarf::DW_TAG_member && Tag != dwarf::DW_TAG_typedef &&
       Tag != dwarf::DW_TAG_const_type && Tag != dwarf::DW_TAG_volatile_type &&
-      Tag != dwarf::DW_TAG_restrict_type && Tag != dwarf::DW_TAG_atomic_type)
+      Tag != dwarf::DW_TAG_restrict_type && Tag != dwarf::DW_TAG_atomic_type &&
+      Tag != dwarf::DW_TAG_immutable_type)
     return DDTy->getSizeInBits();
 
   DIType *BaseType = DDTy->getBaseType();
@@ -174,21 +174,26 @@ uint64_t DebugHandlerBase::getBaseTypeSize(const DIType *Ty) {
 }
 
 bool DebugHandlerBase::isUnsignedDIType(const DIType *Ty) {
-  // SROA may generate dbg value intrinsics to assign an unsigned value to a
-  // Fortran CHARACTER(1) type variables. Make them as unsigned.
   if (isa<DIStringType>(Ty)) {
-    assert((Ty->getSizeInBits()) == 8 && "Not a valid unsigned type!");
+    // Some transformations (e.g. instcombine) may decide to turn a Fortran
+    // character object into an integer, and later ones (e.g. SROA) may
+    // further inject a constant integer in a llvm.dbg.value call to track
+    // the object's value. Here we trust the transformations are doing the
+    // right thing, and treat the constant as unsigned to preserve that value
+    // (i.e. avoid sign extension).
     return true;
   }
-  if (auto *CTy = dyn_cast<DICompositeType>(Ty)) {
-    // FIXME: Enums without a fixed underlying type have unknown signedness
-    // here, leading to incorrectly emitted constants.
-    if (CTy->getTag() == dwarf::DW_TAG_enumeration_type)
-      return false;
 
-    // (Pieces of) aggregate types that get hacked apart by SROA may be
-    // represented by a constant. Encode them as unsigned bytes.
-    return true;
+  if (auto *CTy = dyn_cast<DICompositeType>(Ty)) {
+    if (CTy->getTag() == dwarf::DW_TAG_enumeration_type) {
+      if (!(Ty = CTy->getBaseType()))
+        // FIXME: Enums without a fixed underlying type have unknown signedness
+        // here, leading to incorrectly emitted constants.
+        return false;
+    } else
+      // (Pieces of) aggregate types that get hacked apart by SROA may be
+      // represented by a constant. Encode them as unsigned bytes.
+      return true;
   }
 
   if (auto *DTy = dyn_cast<DIDerivedType>(Ty)) {
@@ -205,7 +210,8 @@ bool DebugHandlerBase::isUnsignedDIType(const DIType *Ty) {
       return true;
     assert(T == dwarf::DW_TAG_typedef || T == dwarf::DW_TAG_const_type ||
            T == dwarf::DW_TAG_volatile_type ||
-           T == dwarf::DW_TAG_restrict_type || T == dwarf::DW_TAG_atomic_type);
+           T == dwarf::DW_TAG_restrict_type || T == dwarf::DW_TAG_atomic_type ||
+           T == dwarf::DW_TAG_immutable_type);
     assert(DTy->getBaseType() && "Expected valid base type");
     return isUnsignedDIType(DTy->getBaseType());
   }

@@ -16,7 +16,7 @@ class ObjCDataFormatterNSContainer(ObjCDataFormatterTestCase):
 
     def test_nscontainers_with_run_command(self):
         """Test formatters for  NS container classes."""
-        self.appkit_tester_impl(self.nscontainers_data_formatter_commands)
+        self.appkit_tester_impl(self.nscontainers_data_formatter_commands, False)
 
     def nscontainers_data_formatter_commands(self):
         self.expect(

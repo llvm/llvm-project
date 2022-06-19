@@ -115,8 +115,8 @@ define i32 @add_nosignbit_select_shl(i32 %x, i1 %cond, i32* %dst) {
 ; CHECK-LABEL: add_nosignbit_select_shl:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov w8, #2147418112
-; CHECK-NEXT:    add w8, w0, w8
 ; CHECK-NEXT:    tst w1, #0x1
+; CHECK-NEXT:    add w8, w0, w8
 ; CHECK-NEXT:    csel w8, w8, w0, ne
 ; CHECK-NEXT:    lsl w0, w8, #8
 ; CHECK-NEXT:    str w0, [x2]
@@ -242,8 +242,8 @@ define i32 @add_nosignbit_select_lshr(i32 %x, i1 %cond, i32* %dst) {
 ; CHECK-LABEL: add_nosignbit_select_lshr:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov w8, #2147418112
-; CHECK-NEXT:    add w8, w0, w8
 ; CHECK-NEXT:    tst w1, #0x1
+; CHECK-NEXT:    add w8, w0, w8
 ; CHECK-NEXT:    csel w8, w8, w0, ne
 ; CHECK-NEXT:    lsr w0, w8, #8
 ; CHECK-NEXT:    str w0, [x2]
@@ -369,8 +369,8 @@ define i32 @add_nosignbit_select_ashr(i32 %x, i1 %cond, i32* %dst) {
 ; CHECK-LABEL: add_nosignbit_select_ashr:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov w8, #2147418112
-; CHECK-NEXT:    add w8, w0, w8
 ; CHECK-NEXT:    tst w1, #0x1
+; CHECK-NEXT:    add w8, w0, w8
 ; CHECK-NEXT:    csel w8, w8, w0, ne
 ; CHECK-NEXT:    asr w0, w8, #8
 ; CHECK-NEXT:    str w0, [x2]

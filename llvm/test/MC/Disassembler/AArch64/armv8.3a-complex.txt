@@ -1,6 +1,8 @@
 # RUN: not llvm-mc -triple aarch64-none-linux-gnu -mattr=+v8.3a,-fullfp16 --disassemble < %s 2>%t | FileCheck %s --check-prefix=CHECK
 # RUN: FileCheck %s < %t --check-prefix=NO-FP16
 # RUN:     llvm-mc -triple aarch64-none-linux-gnu -mattr=+v8.3a,+fullfp16 --disassemble < %s 2>%t | FileCheck %s --check-prefix=CHECK --check-prefix=FP16
+# RUN: not llvm-mc -triple aarch64-none-linux-gnu -mattr=+v8r --disassemble < %s 2>%t | FileCheck %s --check-prefix=CHECK
+# RUN: FileCheck %s < %t --check-prefix=NO-FP16
 # RUN: not llvm-mc -triple aarch64-none-linux-gnu -mattr=-v8.3a,+fullfp16 --disassemble < %s 2>&1 | FileCheck %s --check-prefix=NO-V83A
 
 ###### FCMLA vector

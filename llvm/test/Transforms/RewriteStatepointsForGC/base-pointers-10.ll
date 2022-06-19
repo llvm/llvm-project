@@ -27,7 +27,7 @@ define void @select_of_phi(i64 addrspace(1)* %base_obj_x, i64 addrspace(1)* %bas
 ; CHECK:       merge:
 ; CHECK-NEXT:    [[NEXT_BASE:%.*]] = phi i64 addrspace(1)* [ [[DOT01]], [[TRUE]] ], [ [[DOT0]], [[FALSE]] ], !is_base_value !0
 ; CHECK-NEXT:    [[NEXT:%.*]] = phi i64 addrspace(1)* [ [[NEXT_X]], [[TRUE]] ], [ [[NEXT_Y]], [[FALSE]] ]
-; CHECK-NEXT:    [[STATEPOINT_TOKEN:%.*]] = call token (i64, i32, void ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidf(i64 2882400000, i32 0, void ()* @do_safepoint, i32 0, i32 0, i32 0, i32 0) [ "deopt"(i32 0, i32 -1, i32 0, i32 0, i32 0), "gc-live"(i64 addrspace(1)* [[NEXT_X]], i64 addrspace(1)* [[NEXT_Y]], i64 addrspace(1)* [[NEXT]], i64 addrspace(1)* [[DOT01]], i64 addrspace(1)* [[DOT0]], i64 addrspace(1)* [[NEXT_BASE]]) ]
+; CHECK-NEXT:    [[STATEPOINT_TOKEN:%.*]] = call token (i64, i32, void ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidf(i64 2882400000, i32 0, void ()* elementtype(void ()) @do_safepoint, i32 0, i32 0, i32 0, i32 0) [ "deopt"(i32 0, i32 -1, i32 0, i32 0, i32 0), "gc-live"(i64 addrspace(1)* [[NEXT_X]], i64 addrspace(1)* [[NEXT_Y]], i64 addrspace(1)* [[NEXT]], i64 addrspace(1)* [[DOT01]], i64 addrspace(1)* [[DOT0]], i64 addrspace(1)* [[NEXT_BASE]]) ]
 ; CHECK-NEXT:    [[NEXT_X_RELOCATED:%.*]] = call coldcc i8 addrspace(1)* @llvm.experimental.gc.relocate.p1i8(token [[STATEPOINT_TOKEN]], i32 3, i32 0)
 ; CHECK-NEXT:    [[NEXT_X_RELOCATED_CASTED]] = bitcast i8 addrspace(1)* [[NEXT_X_RELOCATED]] to i64 addrspace(1)*
 ; CHECK-NEXT:    [[NEXT_Y_RELOCATED:%.*]] = call coldcc i8 addrspace(1)* @llvm.experimental.gc.relocate.p1i8(token [[STATEPOINT_TOKEN]], i32 4, i32 1)

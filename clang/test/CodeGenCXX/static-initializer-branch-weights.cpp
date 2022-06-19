@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -emit-llvm -std=c++1z %s -o - -triple=x86_64-linux-gnu | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -emit-llvm -std=c++1z %s -o - -triple=x86_64-linux-gnu | FileCheck %s
 
 struct S { S(); ~S(); };
 

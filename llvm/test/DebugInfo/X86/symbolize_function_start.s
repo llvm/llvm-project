@@ -1,12 +1,12 @@
 # RUN: rm -rf %t
 # RUN: mkdir %t
-# RUN: llvm-mc -filetype=obj -triple=x86_64 -dwarf-version=4 %s -o %t/test.o
+# RUN: llvm-mc -filetype=obj -triple=x86_64 -dwarf-version=4 %s -o %t/test.o -split-dwarf-file %t/test.dwo
 # RUN: cd %t
 # RUN: llvm-symbolizer --verbose 0x0 --obj=test.o | FileCheck --check-prefix=SYM %s
 # RUN: llvm-dwarfdump -lookup=0x1 test.o | FileCheck --check-prefix=LOOKUP %s
 
 # SYM: Filename: .{{[/\\]}}.{{[/\\]}}./test.h
-# SYM: Function start filename: .{{[/\\]}}test.cpp
+# SYM: Function start filename: .{{[/\\]}}.{{[/\\]}}test.cpp
 
 # LOOKUP: Line info: line 0, column 0, start file 'test.cpp', start line 1
 
@@ -75,7 +75,7 @@ _Z2f1v:                                 # @_Z2f1v
 .Lskel_string0:
 	.asciz	"."                             # string offset=0
 .Lskel_string1:
-	.asciz	"test.o"                        # string offset=2
+	.asciz	"test.dwo"                      # string offset=2
 	.section	.debug_str.dwo,"eMS",@progbits,1
 .Linfo_string0:
 	.asciz	"_Z2f1v"                        # string offset=0
@@ -88,7 +88,7 @@ _Z2f1v:                                 # @_Z2f1v
 .Linfo_string4:
 	.asciz	"test.cpp"                      # string offset=115
 .Linfo_string5:
-	.asciz	"test.o"                        # string offset=124
+	.asciz	"test.dwo"                      # string offset=124
 	.section	.debug_str_offsets.dwo,"e",@progbits
 	.long	0
 	.long	7

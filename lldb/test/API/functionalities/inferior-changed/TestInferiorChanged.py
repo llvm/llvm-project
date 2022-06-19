@@ -12,11 +12,8 @@ from lldbsuite.test import lldbutil
 
 class ChangedInferiorTestCase(TestBase):
 
-    mydir = TestBase.compute_mydir(__file__)
-
     @skipIf(hostoslist=["windows"])
     @no_debug_info_test
-    @skipIfReproducer # VFS is a snapshot.
     def test_inferior_crashing(self):
         """Test lldb reloads the inferior after it was changed during the session."""
         self.build()

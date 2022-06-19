@@ -18,7 +18,7 @@ void xxx(int argc) {
     ;
 }
 
-struct S1; // expected-note {{declared here}} expected-note{{forward declaration of 'S1'}}
+struct S1; // expected-note {{declared here}} expected-note 2 {{forward declaration of 'S1'}}
 extern S1 a;
 class S2 {
   mutable int a;

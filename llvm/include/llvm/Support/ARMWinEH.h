@@ -199,13 +199,14 @@ inline bool EpilogueFolding(const RuntimeFunction &RF) {
 inline uint16_t StackAdjustment(const RuntimeFunction &RF) {
   uint16_t Adjustment = RF.StackAdjust();
   if (Adjustment >= 0x3f4)
-    return (Adjustment & 0x3) ? ((Adjustment & 0x3) << 2) - 1 : 0;
+    return (Adjustment & 0x3) + 1;
   return Adjustment;
 }
 
 /// SavedRegisterMask - Utility function to calculate the set of saved general
 /// purpose (r0-r15) and VFP (d0-d31) registers.
-std::pair<uint16_t, uint32_t> SavedRegisterMask(const RuntimeFunction &RF);
+std::pair<uint16_t, uint32_t> SavedRegisterMask(const RuntimeFunction &RF,
+                                                bool Prologue = true);
 
 /// RuntimeFunctionARM64 - An entry in the table of procedure data (.pdata)
 ///

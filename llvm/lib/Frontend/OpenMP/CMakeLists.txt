@@ -15,4 +15,7 @@ add_llvm_component_library(LLVMFrontendOpenMP
   Core
   Support
   TransformUtils
+  Analysis
+  MC
+  Scalar
   )

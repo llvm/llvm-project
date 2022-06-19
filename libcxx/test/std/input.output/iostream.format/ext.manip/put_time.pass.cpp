@@ -69,6 +69,7 @@ int main(int, char**)
         os << std::put_time(&t, "%a %b %d %H:%M:%S %Y");
         assert(sb.str() == "Sat Dec 31 23:55:59 2061");
     }
+#ifndef TEST_HAS_NO_WIDE_CHARACTERS
     {
         testbuf<wchar_t> sb;
         std::wostream os(&sb);
@@ -84,6 +85,7 @@ int main(int, char**)
         os << std::put_time(&t, L"%a %b %d %H:%M:%S %Y");
         assert(sb.str() == L"Sat Dec 31 23:55:59 2061");
     }
+#endif
 
   return 0;
 }

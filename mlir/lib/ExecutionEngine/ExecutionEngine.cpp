@@ -24,13 +24,12 @@
 #include "llvm/ExecutionEngine/Orc/IRTransformLayer.h"
 #include "llvm/ExecutionEngine/Orc/JITTargetMachineBuilder.h"
 #include "llvm/ExecutionEngine/Orc/RTDyldObjectLinkingLayer.h"
-#include "llvm/ExecutionEngine/SectionMemoryManager.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/MC/SubtargetFeature.h"
+#include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/Host.h"
-#include "llvm/Support/TargetRegistry.h"
 #include "llvm/Support/ToolOutputFile.h"
 
 #define DEBUG_TYPE "execution-engine"
@@ -58,27 +57,27 @@ using llvm::orc::ThreadSafeModule;
 using llvm::orc::TMOwningSimpleCompiler;
 
 /// Wrap a string into an llvm::StringError.
-static Error make_string_error(const Twine &message) {
+static Error makeStringError(const Twine &message) {
   return llvm::make_error<StringError>(message.str(),
                                        llvm::inconvertibleErrorCode());
 }
 
-void SimpleObjectCache::notifyObjectCompiled(const Module *M,
-                                             MemoryBufferRef ObjBuffer) {
-  cachedObjects[M->getModuleIdentifier()] = MemoryBuffer::getMemBufferCopy(
-      ObjBuffer.getBuffer(), ObjBuffer.getBufferIdentifier());
+void SimpleObjectCache::notifyObjectCompiled(const Module *m,
+                                             MemoryBufferRef objBuffer) {
+  cachedObjects[m->getModuleIdentifier()] = MemoryBuffer::getMemBufferCopy(
+      objBuffer.getBuffer(), objBuffer.getBufferIdentifier());
 }
 
-std::unique_ptr<MemoryBuffer> SimpleObjectCache::getObject(const Module *M) {
-  auto I = cachedObjects.find(M->getModuleIdentifier());
-  if (I == cachedObjects.end()) {
-    LLVM_DEBUG(dbgs() << "No object for " << M->getModuleIdentifier()
+std::unique_ptr<MemoryBuffer> SimpleObjectCache::getObject(const Module *m) {
+  auto i = cachedObjects.find(m->getModuleIdentifier());
+  if (i == cachedObjects.end()) {
+    LLVM_DEBUG(dbgs() << "No object for " << m->getModuleIdentifier()
                       << " in cache. Compiling.\n");
     return nullptr;
   }
-  LLVM_DEBUG(dbgs() << "Object for " << M->getModuleIdentifier()
+  LLVM_DEBUG(dbgs() << "Object for " << m->getModuleIdentifier()
                     << " loaded from cache.\n");
-  return MemoryBuffer::getMemBuffer(I->second->getMemBufferRef());
+  return MemoryBuffer::getMemBuffer(i->second->getMemBufferRef());
 }
 
 void SimpleObjectCache::dumpToObjectFile(StringRef outputFilename) {
@@ -98,6 +97,11 @@ void SimpleObjectCache::dumpToObjectFile(StringRef outputFilename) {
 }
 
 void ExecutionEngine::dumpToObjectFile(StringRef filename) {
+  if (cache == nullptr) {
+    llvm::errs() << "cannot dump ExecutionEngine object code to file: "
+                    "object cache is disabled\n";
+    return;
+  }
   cache->dumpToObjectFile(filename);
 }
 
@@ -114,7 +118,8 @@ bool ExecutionEngine::setupTargetTriple(Module *llvmModule) {
   // Setup the machine properties from the current architecture.
   auto targetTriple = llvm::sys::getDefaultTargetTriple();
   std::string errorMessage;
-  auto target = llvm::TargetRegistry::lookupTarget(targetTriple, errorMessage);
+  const auto *target =
+      llvm::TargetRegistry::lookupTarget(targetTriple, errorMessage);
   if (!target) {
     errs() << "NO target: " << errorMessage << "\n";
     return true;
@@ -160,7 +165,7 @@ static void packFunctionArguments(Module *module) {
 
     // Given a function `foo(<...>)`, define the interface function
     // `mlir_foo(i8**)`.
-    auto newType = llvm::FunctionType::get(
+    auto *newType = llvm::FunctionType::get(
         builder.getVoidTy(), builder.getInt8PtrTy()->getPointerTo(),
         /*isVarArg=*/false);
     auto newName = makePackedFunctionName(func.getName());
@@ -170,7 +175,7 @@ static void packFunctionArguments(Module *module) {
 
     // Extract the arguments from the type-erased argument list and cast them to
     // the proper types.
-    auto bb = llvm::BasicBlock::Create(ctx);
+    auto *bb = llvm::BasicBlock::Create(ctx);
     bb->insertInto(interfaceFunc);
     builder.SetInsertPoint(bb);
     llvm::Value *argList = interfaceFunc->arg_begin();
@@ -179,10 +184,10 @@ static void packFunctionArguments(Module *module) {
     for (auto &indexedArg : llvm::enumerate(func.args())) {
       llvm::Value *argIndex = llvm::Constant::getIntegerValue(
           builder.getInt64Ty(), APInt(64, indexedArg.index()));
-      llvm::Value *argPtrPtr = builder.CreateGEP(
-          builder.getInt8PtrTy(), argList, argIndex);
-      llvm::Value *argPtr = builder.CreateLoad(builder.getInt8PtrTy(),
-                                               argPtrPtr);
+      llvm::Value *argPtrPtr =
+          builder.CreateGEP(builder.getInt8PtrTy(), argList, argIndex);
+      llvm::Value *argPtr =
+          builder.CreateLoad(builder.getInt8PtrTy(), argPtrPtr);
       llvm::Type *argTy = indexedArg.value().getType();
       argPtr = builder.CreateBitCast(argPtr, argTy->getPointerTo());
       llvm::Value *arg = builder.CreateLoad(argTy, argPtr);
@@ -198,8 +203,8 @@ static void packFunctionArguments(Module *module) {
           builder.getInt64Ty(), APInt(64, llvm::size(func.args())));
       llvm::Value *retPtrPtr =
           builder.CreateGEP(builder.getInt8PtrTy(), argList, retIndex);
-      llvm::Value *retPtr = builder.CreateLoad(builder.getInt8PtrTy(),
-                                               retPtrPtr);
+      llvm::Value *retPtr =
+          builder.CreateLoad(builder.getInt8PtrTy(), retPtrPtr);
       retPtr = builder.CreateBitCast(retPtr, result->getType()->getPointerTo());
       builder.CreateStore(result, retPtr);
     }
@@ -216,28 +221,28 @@ ExecutionEngine::ExecutionEngine(bool enableObjectCache,
       gdbListener(enableGDBNotificationListener
                       ? llvm::JITEventListener::createGDBRegistrationListener()
                       : nullptr),
-      perfListener(enablePerfNotificationListener
-                       ? llvm::JITEventListener::createPerfJITEventListener()
-                       : nullptr) {}
+      perfListener(nullptr) {
+  if (enablePerfNotificationListener) {
+    if (auto *listener = llvm::JITEventListener::createPerfJITEventListener())
+      perfListener = listener;
+    else if (auto *listener =
+                 llvm::JITEventListener::createIntelJITEventListener())
+      perfListener = listener;
+  }
+}
 
-Expected<std::unique_ptr<ExecutionEngine>> ExecutionEngine::create(
-    ModuleOp m,
-    llvm::function_ref<std::unique_ptr<llvm::Module>(ModuleOp,
-                                                     llvm::LLVMContext &)>
-        llvmModuleBuilder,
-    llvm::function_ref<Error(llvm::Module *)> transformer,
-    Optional<llvm::CodeGenOpt::Level> jitCodeGenOptLevel,
-    ArrayRef<StringRef> sharedLibPaths, bool enableObjectCache,
-    bool enableGDBNotificationListener, bool enablePerfNotificationListener) {
+Expected<std::unique_ptr<ExecutionEngine>>
+ExecutionEngine::create(ModuleOp m, const ExecutionEngineOptions &options) {
   auto engine = std::make_unique<ExecutionEngine>(
-      enableObjectCache, enableGDBNotificationListener,
-      enablePerfNotificationListener);
+      options.enableObjectCache, options.enableGDBNotificationListener,
+      options.enablePerfNotificationListener);
 
   std::unique_ptr<llvm::LLVMContext> ctx(new llvm::LLVMContext);
-  auto llvmModule = llvmModuleBuilder ? llvmModuleBuilder(m, *ctx)
-                                      : translateModuleToLLVMIR(m, *ctx);
+  auto llvmModule = options.llvmModuleBuilder
+                        ? options.llvmModuleBuilder(m, *ctx)
+                        : translateModuleToLLVMIR(m, *ctx);
   if (!llvmModule)
-    return make_string_error("could not convert to LLVM IR");
+    return makeStringError("could not convert to LLVM IR");
   // FIXME: the triple should be passed to the translation or dialect conversion
   // instead of this.  Currently, the LLVM module created above has no triple
   // associated with it.
@@ -249,9 +254,11 @@ Expected<std::unique_ptr<ExecutionEngine>> ExecutionEngine::create(
   // Callback to create the object layer with symbol resolution to current
   // process and dynamically linked libraries.
   auto objectLinkingLayerCreator = [&](ExecutionSession &session,
-                                       const Triple &TT) {
+                                       const Triple &tt) {
     auto objectLayer = std::make_unique<RTDyldObjectLinkingLayer>(
-        session, []() { return std::make_unique<SectionMemoryManager>(); });
+        session, [sectionMemoryMapper = options.sectionMemoryMapper]() {
+          return std::make_unique<SectionMemoryManager>(sectionMemoryMapper);
+        });
 
     // Register JIT event listeners if they are enabled.
     if (engine->gdbListener)
@@ -269,14 +276,14 @@ Expected<std::unique_ptr<ExecutionEngine>> ExecutionEngine::create(
     }
 
     // Resolve symbols from shared libraries.
-    for (auto libPath : sharedLibPaths) {
+    for (auto libPath : options.sharedLibPaths) {
       auto mb = llvm::MemoryBuffer::getFile(libPath);
       if (!mb) {
         errs() << "Failed to create MemoryBuffer for: " << libPath
                << "\nError: " << mb.getError().message() << "\n";
         continue;
       }
-      auto &JD = session.createBareJITDylib(std::string(libPath));
+      auto &jd = session.createBareJITDylib(std::string(libPath));
       auto loaded = DynamicLibrarySearchGenerator::Load(
           libPath.data(), dataLayout.getGlobalPrefix());
       if (!loaded) {
@@ -284,8 +291,8 @@ Expected<std::unique_ptr<ExecutionEngine>> ExecutionEngine::create(
                << "\n";
         continue;
       }
-      JD.addGenerator(std::move(*loaded));
-      cantFail(objectLayer->add(JD, std::move(mb.get())));
+      jd.addGenerator(std::move(*loaded));
+      cantFail(objectLayer->add(jd, std::move(mb.get())));
     }
 
     return objectLayer;
@@ -293,14 +300,14 @@ Expected<std::unique_ptr<ExecutionEngine>> ExecutionEngine::create(
 
   // Callback to inspect the cache and recompile on demand. This follows Lang's
   // LLJITWithObjectCache example.
-  auto compileFunctionCreator = [&](JITTargetMachineBuilder JTMB)
+  auto compileFunctionCreator = [&](JITTargetMachineBuilder jtmb)
       -> Expected<std::unique_ptr<IRCompileLayer::IRCompiler>> {
-    if (jitCodeGenOptLevel)
-      JTMB.setCodeGenOptLevel(jitCodeGenOptLevel.getValue());
-    auto TM = JTMB.createTargetMachine();
-    if (!TM)
-      return TM.takeError();
-    return std::make_unique<TMOwningSimpleCompiler>(std::move(*TM),
+    if (options.jitCodeGenOptLevel)
+      jtmb.setCodeGenOptLevel(options.jitCodeGenOptLevel.getValue());
+    auto tm = jtmb.createTargetMachine();
+    if (!tm)
+      return tm.takeError();
+    return std::make_unique<TMOwningSimpleCompiler>(std::move(*tm),
                                                     engine->cache.get());
   };
 
@@ -313,9 +320,9 @@ Expected<std::unique_ptr<ExecutionEngine>> ExecutionEngine::create(
 
   // Add a ThreadSafemodule to the engine and return.
   ThreadSafeModule tsm(std::move(llvmModule), std::move(ctx));
-  if (transformer)
+  if (options.transformer)
     cantFail(tsm.withModuleDo(
-        [&](llvm::Module &module) { return transformer(&module); }));
+        [&](llvm::Module &module) { return options.transformer(&module); }));
   cantFail(jit->addIRModule(std::move(tsm)));
   engine->jit = std::move(jit);
 
@@ -328,8 +335,16 @@ Expected<std::unique_ptr<ExecutionEngine>> ExecutionEngine::create(
   return std::move(engine);
 }
 
-Expected<void (*)(void **)> ExecutionEngine::lookup(StringRef name) const {
-  auto expectedSymbol = jit->lookup(makePackedFunctionName(name));
+Expected<void (*)(void **)>
+ExecutionEngine::lookupPacked(StringRef name) const {
+  auto result = lookup(makePackedFunctionName(name));
+  if (!result)
+    return result.takeError();
+  return reinterpret_cast<void (*)(void **)>(result.get());
+}
+
+Expected<void *> ExecutionEngine::lookup(StringRef name) const {
+  auto expectedSymbol = jit->lookup(name);
 
   // JIT lookup may return an Error referring to strings stored internally by
   // the JIT. If the Error outlives the ExecutionEngine, it would want have a
@@ -342,19 +357,17 @@ Expected<void (*)(void **)> ExecutionEngine::lookup(StringRef name) const {
     llvm::raw_string_ostream os(errorMessage);
     llvm::handleAllErrors(expectedSymbol.takeError(),
                           [&os](llvm::ErrorInfoBase &ei) { ei.log(os); });
-    return make_string_error(os.str());
+    return makeStringError(os.str());
   }
 
-  auto rawFPtr = expectedSymbol->getAddress();
-  auto fptr = reinterpret_cast<void (*)(void **)>(rawFPtr);
-  if (!fptr)
-    return make_string_error("looked up function is null");
-  return fptr;
+  if (void *fptr = expectedSymbol->toPtr<void *>())
+    return fptr;
+  return makeStringError("looked up function is null");
 }
 
 Error ExecutionEngine::invokePacked(StringRef name,
                                     MutableArrayRef<void *> args) {
-  auto expectedFPtr = lookup(name);
+  auto expectedFPtr = lookupPacked(name);
   if (!expectedFPtr)
     return expectedFPtr.takeError();
   auto fptr = *expectedFPtr;

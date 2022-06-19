@@ -8,6 +8,7 @@
 
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/raw_ostream.h"
+#include "gmock/gmock.h"
 #include "gtest/gtest.h"
 
 using namespace llvm;
@@ -90,9 +91,15 @@ TEST(StringExtrasTest, ToAndFromHex) {
   EXPECT_EQ(EvenData, fromHex(EvenStr));
   EXPECT_EQ(StringRef(EvenStr).lower(), toHex(EvenData, true));
 
-  std::string InvalidStr = "A5ZX";
+  std::string InvalidStr = "A50\xFF";
   std::string IgnoredOutput;
   EXPECT_FALSE(tryGetFromHex(InvalidStr, IgnoredOutput));
+}
+
+TEST(StringExtrasTest, UINT64ToHex) {
+  EXPECT_EQ(utohexstr(0xA0u), "A0");
+  EXPECT_EQ(utohexstr(0xA0u, false, 4), "00A0");
+  EXPECT_EQ(utohexstr(0xA0u, false, 8), "000000A0");
 }
 
 TEST(StringExtrasTest, to_float) {
@@ -273,4 +280,50 @@ TEST(StringExtrasTest, toStringAPSInt) {
   EXPECT_EQ(toString(APSInt(APInt(8, 255), isUnsigned), 8), "-1");
   EXPECT_EQ(toString(APSInt(APInt(8, 255), isUnsigned), 10), "-1");
   EXPECT_EQ(toString(APSInt(APInt(8, 255), isUnsigned), 16), "-1");
+}
+
+TEST(StringExtrasTest, splitStringRef) {
+  auto Spl = split("foo<=>bar<=><=>baz", "<=>");
+  auto It = Spl.begin();
+  auto End = Spl.end();
+
+  ASSERT_NE(It, End);
+  EXPECT_EQ(*It, StringRef("foo"));
+  ASSERT_NE(++It, End);
+  EXPECT_EQ(*It, StringRef("bar"));
+  ASSERT_NE(++It, End);
+  EXPECT_EQ(*It, StringRef(""));
+  ASSERT_NE(++It, End);
+  EXPECT_EQ(*It, StringRef("baz"));
+  ASSERT_EQ(++It, End);
+}
+
+TEST(StringExtrasTest, splitStringRefForLoop) {
+  llvm::SmallVector<StringRef, 4> Result;
+  for (StringRef x : split("foo<=>bar<=><=>baz", "<=>"))
+    Result.push_back(x);
+  EXPECT_THAT(Result, testing::ElementsAre("foo", "bar", "", "baz"));
+}
+
+TEST(StringExtrasTest, splitChar) {
+  auto Spl = split("foo,bar,,baz", ',');
+  auto It = Spl.begin();
+  auto End = Spl.end();
+
+  ASSERT_NE(It, End);
+  EXPECT_EQ(*It, StringRef("foo"));
+  ASSERT_NE(++It, End);
+  EXPECT_EQ(*It, StringRef("bar"));
+  ASSERT_NE(++It, End);
+  EXPECT_EQ(*It, StringRef(""));
+  ASSERT_NE(++It, End);
+  EXPECT_EQ(*It, StringRef("baz"));
+  ASSERT_EQ(++It, End);
+}
+
+TEST(StringExtrasTest, splitCharForLoop) {
+  llvm::SmallVector<StringRef, 4> Result;
+  for (StringRef x : split("foo,bar,,baz", ','))
+    Result.push_back(x);
+  EXPECT_THAT(Result, testing::ElementsAre("foo", "bar", "", "baz"));
 }

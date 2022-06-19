@@ -45,7 +45,12 @@ FEATURE(leak_sanitizer,
 FEATURE(hwaddress_sanitizer,
         LangOpts.Sanitize.hasOneOf(SanitizerKind::HWAddress |
                                    SanitizerKind::KernelHWAddress))
-FEATURE(memtag_sanitizer, LangOpts.Sanitize.has(SanitizerKind::MemTag))
+FEATURE(memtag_stack,
+        LangOpts.Sanitize.has(SanitizerKind::MemtagStack))
+FEATURE(memtag_heap,
+        LangOpts.Sanitize.has(SanitizerKind::MemtagHeap))
+FEATURE(memtag_globals,
+        LangOpts.Sanitize.has(SanitizerKind::MemtagGlobals))
 FEATURE(xray_instrument, LangOpts.XRayInstrument)
 FEATURE(undefined_behavior_sanitizer,
         LangOpts.Sanitize.hasOneOf(SanitizerKind::Undefined))
@@ -58,6 +63,7 @@ FEATURE(attribute_availability_app_extension, true)
 FEATURE(attribute_availability_with_version_underscores, true)
 FEATURE(attribute_availability_tvos, true)
 FEATURE(attribute_availability_watchos, true)
+FEATURE(attribute_availability_driverkit, true)
 FEATURE(attribute_availability_with_strict, true)
 FEATURE(attribute_availability_with_replacement, true)
 FEATURE(attribute_availability_in_templates, true)
@@ -173,6 +179,7 @@ FEATURE(cxx_thread_local,
 FEATURE(cxx_trailing_return, LangOpts.CPlusPlus11)
 FEATURE(cxx_unicode_literals, LangOpts.CPlusPlus11)
 FEATURE(cxx_unrestricted_unions, LangOpts.CPlusPlus11)
+FEATURE(cxx_unstable, LangOpts.Unstable)
 FEATURE(cxx_user_literals, LangOpts.CPlusPlus11)
 FEATURE(cxx_variadic_templates, LangOpts.CPlusPlus11)
 // C++14 features
@@ -265,6 +272,9 @@ EXTENSION(matrix_types_scalar_division, true)
 EXTENSION(cxx_attributes_on_using_declarations, LangOpts.CPlusPlus11)
 
 FEATURE(cxx_abi_relative_vtable, LangOpts.CPlusPlus && LangOpts.RelativeCXXABIVTables)
+
+// CUDA/HIP Features
+FEATURE(cuda_noinline_keyword, LangOpts.CUDA)
 
 #undef EXTENSION
 #undef FEATURE

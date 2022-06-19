@@ -1,4 +1,4 @@
-; RUN: opt < %s -loop-vectorize -force-vector-width=4 -S -pass-remarks-missed='loop-vectorize' 2>&1 | FileCheck %s
+; RUN: opt < %s -passes=loop-vectorize -force-vector-width=4 -S -pass-remarks-missed='loop-vectorize' 2>&1 | FileCheck %s
 
 ; C/C++ code for control flow test
 ; int test(int *A, int Length) {

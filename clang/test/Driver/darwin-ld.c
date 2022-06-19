@@ -185,6 +185,15 @@
 // LINK_TVOS_KEXT: libclang_rt.cc_kext_tvos.a
 // LINK_TVOS_KEXT: libclang_rt.tvos.a
 
+// RUN: %clang -target x86-64-apple-driverkit19.0 -fuse-ld= -mlinker-version=400 -resource-dir=%S/Inputs/resource_dir -### %t.o 2> %t.log
+// RUN: FileCheck -check-prefix=LINK_DRIVERKIT %s < %t.log
+// LINK_DRIVERKIT: {{ld(.exe)?"}}
+// LINK_DRIVERKIT: -driverkit_version_min
+// LINK_DRIVERKIT-NOT: crt
+// LINK_DRIVERKIT-NOT: lgcc_s.1
+// LINK_DRIVERKIT-NOT: lSystem
+// LINK_DRIVERKIT: libclang_rt.driverkit.a
+
 // RUN: %clang -target armv7k-apple-watchos2.0 -fuse-ld= -mlinker-version=400 -mwatchos-version-min=2.0 -resource-dir=%S/Inputs/resource_dir -### %t.o 2> %t.log
 // RUN: FileCheck -check-prefix=LINK_WATCHOS_ARM %s < %t.log
 // LINK_WATCHOS_ARM: {{ld(.exe)?"}}
@@ -235,6 +244,9 @@
 
 // RUN: %clang -target x86_64-apple-darwin12 -rdynamic -### %t.o \
 // RUN:   -fuse-ld= -mlinker-version=137 2> %t.log
+// RUN: FileCheck -check-prefix=LINK_EXPORT_DYNAMIC %s < %t.log
+// RUN: %clang -target x86_64-apple-darwin12 -rdynamic -### %t.o \
+// RUN:   -fuse-ld=lld -B%S/Inputs/lld -mlinker-version=100 2> %t.log
 // RUN: FileCheck -check-prefix=LINK_EXPORT_DYNAMIC %s < %t.log
 // LINK_EXPORT_DYNAMIC: {{ld(.exe)?"}}
 // LINK_EXPORT_DYNAMIC: "-export_dynamic"
@@ -311,20 +323,10 @@
 // LINK_VERSION_DIGITS-NOT: invalid version number in '-mlinker-version=133.3'
 // LINK_VERSION_DIGITS-NOT: invalid version number in '-mlinker-version=133.3.0'
 // LINK_VERSION_DIGITS-NOT: invalid version number in '-mlinker-version=133.3.0.1'
-// LINK_VERSION_DIGITS-NOT: invalid version number in '-mlinker-version=133.3.0.1.2'
+// LINK_VERSION_DIGITS: invalid version number in '-mlinker-version=133.3.0.1.2'
 // LINK_VERSION_DIGITS: invalid version number in '-mlinker-version=133.3.0.1.2.6'
 // LINK_VERSION_DIGITS: invalid version number in '-mlinker-version=133.3.0.1.a'
 // LINK_VERSION_DIGITS: invalid version number in '-mlinker-version=133.3.0.1a'
-
-// RUN: %clang -target x86_64-apple-ios6.0 -miphoneos-version-min=6.0 -fprofile-instr-generate -### %t.o 2> %t.log
-// RUN: FileCheck -check-prefix=LINK_PROFILE_FIRST %s < %t.log
-// RUN: %clang -target x86_64-apple-darwin12 -fprofile-instr-generate -### %t.o 2> %t.log
-// RUN: FileCheck -check-prefix=LINK_PROFILE_FIRST %s < %t.log
-// RUN: %clang -target i386-apple-darwin9 -fprofile-instr-generate -### %t.o 2> %t.log
-// RUN: FileCheck -check-prefix=LINK_PROFILE_FIRST %s < %t.log
-// RUN: %clang -target arm64-apple-ios5.0 -miphoneos-version-min=5.0 -fprofile-instr-generate -### %t.o 2> %t.log
-// RUN: FileCheck -check-prefix=LINK_PROFILE_FIRST %s < %t.log
-// LINK_PROFILE_FIRST: {{ld(.exe)?"}} "{{[^"]+}}libclang_rt.profile_{{[a-z]+}}.a"
 
 // RUN: %clang -target x86_64-apple-darwin12 -fprofile-instr-generate -### %t.o 2> %t.log
 // RUN: FileCheck -check-prefix=PROFILE_SECTALIGN %s < %t.log

@@ -47,6 +47,7 @@ void test_to_string() {
     std::vector<std::bitset<N> > const cases = get_test_cases<N>();
     for (std::size_t c = 0; c != cases.size(); ++c) {
         std::bitset<N> const v = cases[c];
+#ifndef TEST_HAS_NO_WIDE_CHARACTERS
         {
             std::wstring s = v.template to_string<wchar_t, std::char_traits<wchar_t>, std::allocator<wchar_t> >();
             check_equal(s, v, L'0', L'1');
@@ -55,6 +56,7 @@ void test_to_string() {
             std::wstring s = v.template to_string<wchar_t, std::char_traits<wchar_t> >();
             check_equal(s, v, L'0', L'1');
         }
+#endif
         {
             std::string s = v.template to_string<char>();
             check_equal(s, v, '0', '1');
@@ -63,6 +65,7 @@ void test_to_string() {
             std::string s = v.to_string();
             check_equal(s, v, '0', '1');
         }
+#ifndef TEST_HAS_NO_WIDE_CHARACTERS
         {
             std::wstring s = v.template to_string<wchar_t, std::char_traits<wchar_t>, std::allocator<wchar_t> >('0');
             check_equal(s, v, L'0', L'1');
@@ -71,6 +74,7 @@ void test_to_string() {
             std::wstring s = v.template to_string<wchar_t, std::char_traits<wchar_t> >('0');
             check_equal(s, v, L'0', L'1');
         }
+#endif
         {
             std::string s = v.template to_string<char>('0');
             check_equal(s, v, '0', '1');
@@ -79,6 +83,7 @@ void test_to_string() {
             std::string s = v.to_string('0');
             check_equal(s, v, '0', '1');
         }
+#ifndef TEST_HAS_NO_WIDE_CHARACTERS
         {
             std::wstring s = v.template to_string<wchar_t, std::char_traits<wchar_t>, std::allocator<wchar_t> >('0', '1');
             check_equal(s, v, L'0', L'1');
@@ -87,6 +92,7 @@ void test_to_string() {
             std::wstring s = v.template to_string<wchar_t, std::char_traits<wchar_t> >('0', '1');
             check_equal(s, v, L'0', L'1');
         }
+#endif
         {
             std::string s = v.template to_string<char>('0', '1');
             check_equal(s, v, '0', '1');

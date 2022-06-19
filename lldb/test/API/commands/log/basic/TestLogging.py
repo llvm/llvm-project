@@ -12,16 +12,12 @@ from lldbsuite.test import lldbutil
 
 
 class LogTestCase(TestBase):
-
-    mydir = TestBase.compute_mydir(__file__)
     NO_DEBUG_INFO_TESTCASE = True
 
     def setUp(self):
         super(LogTestCase, self).setUp()
         self.log_file = self.getBuildArtifact("log-file.txt")
 
-        if configuration.is_reproducer_replay():
-            self.log_file = self.getReproducerRemappedPath(self.log_file)
 
     def test_file_writing(self):
         self.build()

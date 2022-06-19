@@ -40,6 +40,19 @@ define amdgpu_kernel void @lds_atomic_xchg_ret_f64_offset(double addrspace(1)* %
   ret void
 }
 
+; GCN-LABEL: {{^}}lds_atomic_xchg_ret_pointer_offset:
+; SICIVI: s_mov_b32 m0
+; GFX9-NOT: m0
+
+; GCN: ds_wrxchg_rtn_b64 {{.*}} offset:32
+; GCN: s_endpgm
+define amdgpu_kernel void @lds_atomic_xchg_ret_pointer_offset(i8* addrspace(1)* %out, i8* addrspace(3)* %ptr) nounwind {
+  %gep = getelementptr i8*, i8* addrspace(3)* %ptr, i32 4
+  %result = atomicrmw xchg i8* addrspace(3)* %gep, i8* null seq_cst
+  store i8* %result, i8* addrspace(1)* %out, align 8
+  ret void
+}
+
 ; GCN-LABEL: {{^}}lds_atomic_add_ret_i64:
 ; SICIVI: s_mov_b32 m0
 ; GFX9-NOT: m0
@@ -61,7 +74,7 @@ define amdgpu_kernel void @lds_atomic_add_ret_i64(i64 addrspace(1)* %out, i64 ad
 ; GCN-DAG: v_mov_b32_e32 v[[LOVDATA:[0-9]+]], 9
 ; GCN-DAG: v_mov_b32_e32 v[[HIVDATA:[0-9]+]], 0
 ; GCN-DAG: v_mov_b32_e32 [[VPTR:v[0-9]+]], [[PTR]]
-; GCN: ds_add_rtn_u64 [[RESULT:v\[[0-9]+:[0-9]+\]]], [[VPTR]], v{{\[}}[[LOVDATA]]:[[HIVDATA]]{{\]}} offset:32
+; GCN: ds_add_rtn_u64 [[RESULT:v\[[0-9]+:[0-9]+\]]], [[VPTR]], v[[[LOVDATA]]:[[HIVDATA]]] offset:32
 ; GCN: buffer_store_dwordx2 [[RESULT]],
 ; GCN: s_endpgm
 define amdgpu_kernel void @lds_atomic_add_ret_i64_offset(i64 addrspace(1)* %out, i64 addrspace(3)* %ptr) nounwind {
@@ -77,7 +90,7 @@ define amdgpu_kernel void @lds_atomic_add_ret_i64_offset(i64 addrspace(1)* %out,
 
 ; GCN-DAG: v_mov_b32_e32 v[[LOVDATA:[0-9]+]], 1{{$}}
 ; GCN-DAG: v_mov_b32_e32 v[[HIVDATA:[0-9]+]], 0{{$}}
-; GCN: ds_add_rtn_u64 [[RESULT:v\[[0-9]+:[0-9]+\]]], {{v[0-9]+}}, v{{\[}}[[LOVDATA]]:[[HIVDATA]]{{\]}}
+; GCN: ds_add_rtn_u64 [[RESULT:v\[[0-9]+:[0-9]+\]]], {{v[0-9]+}}, v[[[LOVDATA]]:[[HIVDATA]]]
 ; GCN: buffer_store_dwordx2 [[RESULT]],
 ; GCN: s_endpgm
 define amdgpu_kernel void @lds_atomic_add1_ret_i64(i64 addrspace(1)* %out, i64 addrspace(3)* %ptr) nounwind {
@@ -130,7 +143,7 @@ define amdgpu_kernel void @lds_atomic_sub_ret_i64_offset(i64 addrspace(1)* %out,
 
 ; GCN-DAG: v_mov_b32_e32 v[[LOVDATA:[0-9]+]], 1{{$}}
 ; GCN-DAG: v_mov_b32_e32 v[[HIVDATA:[0-9]+]], 0{{$}}
-; GCN: ds_sub_rtn_u64 [[RESULT:v\[[0-9]+:[0-9]+\]]], {{v[0-9]+}}, v{{\[}}[[LOVDATA]]:[[HIVDATA]]{{\]}}
+; GCN: ds_sub_rtn_u64 [[RESULT:v\[[0-9]+:[0-9]+\]]], {{v[0-9]+}}, v[[[LOVDATA]]:[[HIVDATA]]]
 ; GCN: buffer_store_dwordx2 [[RESULT]],
 ; GCN: s_endpgm
 define amdgpu_kernel void @lds_atomic_sub1_ret_i64(i64 addrspace(1)* %out, i64 addrspace(3)* %ptr) nounwind {
@@ -378,7 +391,7 @@ define amdgpu_kernel void @lds_atomic_add_noret_i64(i64 addrspace(3)* %ptr) noun
 ; GCN-DAG: v_mov_b32_e32 v[[LOVDATA:[0-9]+]], 9
 ; GCN-DAG: v_mov_b32_e32 v[[HIVDATA:[0-9]+]], 0
 ; GCN-DAG: v_mov_b32_e32 [[VPTR:v[0-9]+]], [[PTR]]
-; GCN: ds_add_u64 {{v[0-9]+}}, v{{\[}}[[LOVDATA]]:[[HIVDATA]]{{\]}} offset:32
+; GCN: ds_add_u64 {{v[0-9]+}}, v[[[LOVDATA]]:[[HIVDATA]]] offset:32
 ; GCN: s_endpgm
 define amdgpu_kernel void @lds_atomic_add_noret_i64_offset(i64 addrspace(3)* %ptr) nounwind {
   %gep = getelementptr i64, i64 addrspace(3)* %ptr, i64 4
@@ -392,7 +405,7 @@ define amdgpu_kernel void @lds_atomic_add_noret_i64_offset(i64 addrspace(3)* %pt
 
 ; GCN-DAG: v_mov_b32_e32 v[[LOVDATA:[0-9]+]], 1{{$}}
 ; GCN-DAG: v_mov_b32_e32 v[[HIVDATA:[0-9]+]], 0{{$}}
-; GCN: ds_add_u64 {{v[0-9]+}}, v{{\[}}[[LOVDATA]]:[[HIVDATA]]{{\]}}
+; GCN: ds_add_u64 {{v[0-9]+}}, v[[[LOVDATA]]:[[HIVDATA]]]
 ; GCN: s_endpgm
 define amdgpu_kernel void @lds_atomic_add1_noret_i64(i64 addrspace(3)* %ptr) nounwind {
   %result = atomicrmw add i64 addrspace(3)* %ptr, i64 1 seq_cst
@@ -440,7 +453,7 @@ define amdgpu_kernel void @lds_atomic_sub_noret_i64_offset(i64 addrspace(3)* %pt
 
 ; GCN-DAG: v_mov_b32_e32 v[[LOVDATA:[0-9]+]], 1{{$}}
 ; GCN-DAG: v_mov_b32_e32 v[[HIVDATA:[0-9]+]], 0{{$}}
-; GCN: ds_sub_u64 {{v[0-9]+}}, v{{\[}}[[LOVDATA]]:[[HIVDATA]]{{\]}}
+; GCN: ds_sub_u64 {{v[0-9]+}}, v[[[LOVDATA]]:[[HIVDATA]]]
 ; GCN: s_endpgm
 define amdgpu_kernel void @lds_atomic_sub1_noret_i64(i64 addrspace(3)* %ptr) nounwind {
   %result = atomicrmw sub i64 addrspace(3)* %ptr, i64 1 seq_cst

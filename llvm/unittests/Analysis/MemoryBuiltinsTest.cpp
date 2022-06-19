@@ -36,14 +36,10 @@ TEST(AllocSize, AllocationBuiltinsTest) {
       CallInst::Create(AllocSizeFn, {ConstantInt::get(ArgTy, 100)}));
 
   const TargetLibraryInfo *TLI = nullptr;
-  EXPECT_FALSE(isNoAliasFn(Caller.get(), TLI));
-  EXPECT_FALSE(isMallocLikeFn(Caller.get(), TLI));
-  EXPECT_FALSE(isCallocLikeFn(Caller.get(), TLI));
   EXPECT_FALSE(isAllocLikeFn(Caller.get(), TLI));
 
   // FIXME: We might be able to treat allocsize functions as general allocation
-  // functions. For the moment, being conservative seems better (and we'd have
-  // to plumb stuff around `isNoAliasFn`).
+  // functions.
   EXPECT_FALSE(isAllocationFn(Caller.get(), TLI));
 }
 }

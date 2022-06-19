@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "OrcTestCommon.h"
+#include "llvm/ADT/ScopeExit.h"
 #include "llvm/Config/llvm-config.h"
 #include "llvm/ExecutionEngine/Orc/Core.h"
 #include "llvm/ExecutionEngine/Orc/Shared/OrcError.h"
@@ -1409,7 +1410,8 @@ TEST(JITDylibTest, GetDFSLinkOrderTree) {
   // Test that DFS ordering behaves as expected when the linkage relationships
   // form a tree.
 
-  ExecutionSession ES;
+  ExecutionSession ES{std::make_unique<UnsupportedExecutorProcessControl>()};
+  auto _ = make_scope_exit([&]() { cantFail(ES.endSession()); });
 
   auto &LibA = ES.createBareJITDylib("A");
   auto &LibB = ES.createBareJITDylib("B");
@@ -1426,21 +1428,21 @@ TEST(JITDylibTest, GetDFSLinkOrderTree) {
   LibB.setLinkOrder(makeJITDylibSearchOrder({&LibD, &LibE}));
   LibC.setLinkOrder(makeJITDylibSearchOrder({&LibF}));
 
-  auto DFSOrderFromB = JITDylib::getDFSLinkOrder({&LibB});
+  auto DFSOrderFromB = cantFail(JITDylib::getDFSLinkOrder({&LibB}));
   EXPECT_TRUE(linkOrdersEqual(DFSOrderFromB, {&LibB, &LibD, &LibE}))
       << "Incorrect DFS link order for LibB";
 
-  auto DFSOrderFromA = JITDylib::getDFSLinkOrder({&LibA});
+  auto DFSOrderFromA = cantFail(JITDylib::getDFSLinkOrder({&LibA}));
   EXPECT_TRUE(linkOrdersEqual(DFSOrderFromA,
                               {&LibA, &LibB, &LibD, &LibE, &LibC, &LibF}))
       << "Incorrect DFS link order for libA";
 
-  auto DFSOrderFromAB = JITDylib::getDFSLinkOrder({&LibA, &LibB});
+  auto DFSOrderFromAB = cantFail(JITDylib::getDFSLinkOrder({&LibA, &LibB}));
   EXPECT_TRUE(linkOrdersEqual(DFSOrderFromAB,
                               {&LibA, &LibB, &LibD, &LibE, &LibC, &LibF}))
       << "Incorrect DFS link order for { libA, libB }";
 
-  auto DFSOrderFromBA = JITDylib::getDFSLinkOrder({&LibB, &LibA});
+  auto DFSOrderFromBA = cantFail(JITDylib::getDFSLinkOrder({&LibB, &LibA}));
   EXPECT_TRUE(linkOrdersEqual(DFSOrderFromBA,
                               {&LibB, &LibD, &LibE, &LibA, &LibC, &LibF}))
       << "Incorrect DFS link order for { libB, libA }";
@@ -1450,7 +1452,9 @@ TEST(JITDylibTest, GetDFSLinkOrderDiamond) {
   // Test that DFS ordering behaves as expected when the linkage relationships
   // contain a diamond.
 
-  ExecutionSession ES;
+  ExecutionSession ES{std::make_unique<UnsupportedExecutorProcessControl>()};
+  auto _ = make_scope_exit([&]() { cantFail(ES.endSession()); });
+
   auto &LibA = ES.createBareJITDylib("A");
   auto &LibB = ES.createBareJITDylib("B");
   auto &LibC = ES.createBareJITDylib("C");
@@ -1463,7 +1467,7 @@ TEST(JITDylibTest, GetDFSLinkOrderDiamond) {
   LibB.setLinkOrder(makeJITDylibSearchOrder({&LibD}));
   LibC.setLinkOrder(makeJITDylibSearchOrder({&LibD}));
 
-  auto DFSOrderFromA = JITDylib::getDFSLinkOrder({&LibA});
+  auto DFSOrderFromA = cantFail(JITDylib::getDFSLinkOrder({&LibA}));
   EXPECT_TRUE(linkOrdersEqual(DFSOrderFromA, {&LibA, &LibB, &LibD, &LibC}))
       << "Incorrect DFS link order for libA";
 }
@@ -1472,7 +1476,9 @@ TEST(JITDylibTest, GetDFSLinkOrderCycle) {
   // Test that DFS ordering behaves as expected when the linkage relationships
   // contain a cycle.
 
-  ExecutionSession ES;
+  ExecutionSession ES{std::make_unique<UnsupportedExecutorProcessControl>()};
+  auto _ = make_scope_exit([&]() { cantFail(ES.endSession()); });
+
   auto &LibA = ES.createBareJITDylib("A");
   auto &LibB = ES.createBareJITDylib("B");
   auto &LibC = ES.createBareJITDylib("C");
@@ -1483,17 +1489,103 @@ TEST(JITDylibTest, GetDFSLinkOrderCycle) {
   LibB.setLinkOrder(makeJITDylibSearchOrder({&LibC}));
   LibC.setLinkOrder(makeJITDylibSearchOrder({&LibA}));
 
-  auto DFSOrderFromA = JITDylib::getDFSLinkOrder({&LibA});
+  auto DFSOrderFromA = cantFail(JITDylib::getDFSLinkOrder({&LibA}));
   EXPECT_TRUE(linkOrdersEqual(DFSOrderFromA, {&LibA, &LibB, &LibC}))
       << "Incorrect DFS link order for libA";
 
-  auto DFSOrderFromB = JITDylib::getDFSLinkOrder({&LibB});
+  auto DFSOrderFromB = cantFail(JITDylib::getDFSLinkOrder({&LibB}));
   EXPECT_TRUE(linkOrdersEqual(DFSOrderFromB, {&LibB, &LibC, &LibA}))
       << "Incorrect DFS link order for libB";
 
-  auto DFSOrderFromC = JITDylib::getDFSLinkOrder({&LibC});
+  auto DFSOrderFromC = cantFail(JITDylib::getDFSLinkOrder({&LibC}));
   EXPECT_TRUE(linkOrdersEqual(DFSOrderFromC, {&LibC, &LibA, &LibB}))
       << "Incorrect DFS link order for libC";
+}
+
+TEST_F(CoreAPIsStandardTest, RemoveJITDylibs) {
+  // Foo will be fully materialized.
+  cantFail(JD.define(absoluteSymbols({{Foo, FooSym}})));
+
+  // Bar should not be materialized at all.
+  bool BarMaterializerDestroyed = false;
+  cantFail(JD.define(std::make_unique<SimpleMaterializationUnit>(
+      SymbolFlagsMap({{Bar, BarSym.getFlags()}}),
+      [&](std::unique_ptr<MaterializationResponsibility> MR) {
+        llvm_unreachable("Unexpected call to materialize");
+      },
+      nullptr,
+      [](const JITDylib &, SymbolStringPtr Name) {
+        llvm_unreachable("Unexpected call to discard");
+      },
+      [&]() { BarMaterializerDestroyed = true; })));
+
+  // Baz will be in the materializing state.
+  std::unique_ptr<MaterializationResponsibility> BazMR;
+  cantFail(JD.define(std::make_unique<SimpleMaterializationUnit>(
+      SymbolFlagsMap({{Baz, BazSym.getFlags()}}),
+      [&](std::unique_ptr<MaterializationResponsibility> MR) {
+        BazMR = std::move(MR);
+      })));
+
+  // Lookup to force materialization of Foo.
+  cantFail(ES.lookup(makeJITDylibSearchOrder(&JD), SymbolLookupSet({Foo})));
+
+  // Start a lookup to force materialization of Baz.
+  bool BazLookupFailed = false;
+  ES.lookup(
+      LookupKind::Static, makeJITDylibSearchOrder(&JD), SymbolLookupSet({Baz}),
+      SymbolState::Ready,
+      [&](Expected<SymbolMap> Result) {
+        if (!Result) {
+          BazLookupFailed = true;
+          consumeError(Result.takeError());
+        }
+      },
+      NoDependenciesToRegister);
+
+  // Remove the JITDylib.
+  auto Err = ES.removeJITDylib(JD);
+  EXPECT_THAT_ERROR(std::move(Err), Succeeded());
+
+  EXPECT_TRUE(BarMaterializerDestroyed);
+  EXPECT_TRUE(BazLookupFailed);
+
+  EXPECT_THAT_ERROR(BazMR->notifyResolved({{Baz, BazSym}}), Failed());
+
+  EXPECT_THAT_EXPECTED(JD.getDFSLinkOrder(), Failed());
+
+  BazMR->failMaterialization();
+}
+
+TEST(CoreAPIsExtraTest, SessionTeardownByFailedToMaterialize) {
+
+  auto RunTestCase = []() -> Error {
+    ExecutionSession ES{std::make_unique<UnsupportedExecutorProcessControl>(
+        std::make_shared<SymbolStringPool>())};
+    auto Foo = ES.intern("foo");
+    auto FooFlags = JITSymbolFlags::Exported;
+
+    auto &JD = ES.createBareJITDylib("Foo");
+    cantFail(JD.define(std::make_unique<SimpleMaterializationUnit>(
+        SymbolFlagsMap({{Foo, FooFlags}}),
+        [&](std::unique_ptr<MaterializationResponsibility> R) {
+          R->failMaterialization();
+        })));
+
+    auto Sym = ES.lookup({&JD}, Foo);
+    assert(!Sym && "Query should have failed");
+    cantFail(ES.endSession());
+    return Sym.takeError();
+  };
+
+  auto Err = RunTestCase();
+  EXPECT_TRUE(!!Err); // Expect that error occurred.
+  EXPECT_TRUE(
+      Err.isA<FailedToMaterialize>()); // Expect FailedToMaterialize error.
+
+  // Make sure that we can log errors, even though the session has been
+  // destroyed.
+  logAllUnhandledErrors(std::move(Err), nulls(), "");
 }
 
 } // namespace

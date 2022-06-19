@@ -6,13 +6,13 @@
 define i64 @foo(i64 %t, i64 %u) nounwind {
 ; CHECK-LABEL: foo:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    sub.l #20, %sp
+; CHECK-NEXT:    suba.l #20, %sp
 ; CHECK-NEXT:    move.l (36,%sp), (12,%sp)
 ; CHECK-NEXT:    move.l (32,%sp), (8,%sp)
 ; CHECK-NEXT:    move.l (28,%sp), (4,%sp)
 ; CHECK-NEXT:    move.l (24,%sp), (%sp)
-; CHECK-NEXT:    jsr __muldi3
-; CHECK-NEXT:    add.l #20, %sp
+; CHECK-NEXT:    jsr __muldi3@PLT
+; CHECK-NEXT:    adda.l #20, %sp
 ; CHECK-NEXT:    rts
   %k = mul i64 %t, %u
   ret i64 %k

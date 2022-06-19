@@ -24,8 +24,8 @@ int d2 [[noreturn]]; // expected-error {{'noreturn' attribute only applies to fu
 
 [[noreturn]] int e() { b2(); } // ok
 
-int f(); // expected-note {{declaration missing '[[noreturn]]' attribute is here}}
-[[noreturn]] int f(); // expected-error {{function declared '[[noreturn]]' after its first declaration}}
+int f(); // expected-note {{previous declaration is here}}
+[[noreturn]] int f(); // expected-error {{'noreturn' attribute does not appear on the first declaration}}
 int f();
 
 [[noreturn]] int g();

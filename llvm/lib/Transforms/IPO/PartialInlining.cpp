@@ -14,7 +14,6 @@
 #include "llvm/Transforms/IPO/PartialInlining.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
-#include "llvm/ADT/None.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
@@ -40,6 +39,7 @@
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/Module.h"
+#include "llvm/IR/Operator.h"
 #include "llvm/IR/User.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
@@ -55,8 +55,6 @@
 #include <algorithm>
 #include <cassert>
 #include <cstdint>
-#include <functional>
-#include <iterator>
 #include <memory>
 #include <tuple>
 #include <vector>
@@ -99,7 +97,7 @@ static cl::opt<bool>
 
 // This is an option used by testing:
 static cl::opt<bool> SkipCostAnalysis("skip-partial-inlining-cost-analysis",
-                                      cl::init(false), cl::ZeroOrMore,
+
                                       cl::ReallyHidden,
                                       cl::desc("Skip Cost Analysis"));
 // Used to determine if a cold region is worth outlining based on
@@ -129,7 +127,7 @@ static cl::opt<unsigned> MaxNumInlineBlocks(
 // Command line option to set the maximum number of partial inlining allowed
 // for the module. The default value of -1 means no limit.
 static cl::opt<int> MaxNumPartialInlining(
-    "max-partial-inlining", cl::init(-1), cl::Hidden, cl::ZeroOrMore,
+    "max-partial-inlining", cl::init(-1), cl::Hidden,
     cl::desc("Max number of partial inlining. The default is unlimited"));
 
 // Used only when PGO or user annotated branch data is absent. It is
@@ -137,7 +135,7 @@ static cl::opt<int> MaxNumPartialInlining(
 // produces larger value, the BFI value will be used.
 static cl::opt<int>
     OutlineRegionFreqPercent("outline-region-freq-percent", cl::init(75),
-                             cl::Hidden, cl::ZeroOrMore,
+                             cl::Hidden,
                              cl::desc("Relative frequency of outline region to "
                                       "the entry block"));
 
@@ -169,8 +167,7 @@ struct FunctionOutliningInfo {
 };
 
 struct FunctionOutliningMultiRegionInfo {
-  FunctionOutliningMultiRegionInfo()
-      : ORI() {}
+  FunctionOutliningMultiRegionInfo() = default;
 
   // Container for outline regions
   struct OutlineRegionInfo {
@@ -441,9 +438,7 @@ PartialInlinerImpl::computeOutliningColdRegionsInfo(
   };
 
   auto BBProfileCount = [BFI](BasicBlock *BB) {
-    return BFI->getBlockProfileCount(BB)
-               ? BFI->getBlockProfileCount(BB).getValue()
-               : 0;
+    return BFI->getBlockProfileCount(BB).value_or(0);
   };
 
   // Use the same computeBBInlineCost function to compute the cost savings of
@@ -643,8 +638,7 @@ PartialInlinerImpl::computeOutliningInfo(Function &F) const {
   if (!CandidateFound)
     return std::unique_ptr<FunctionOutliningInfo>();
 
-  // Do sanity check of the entries: threre should not
-  // be any successors (not in the entry set) other than
+  // There should not be any successors (not in the entry set) other than
   // {ReturnBlock, NonReturnBlock}
   assert(OutliningInfo->Entries[0] == &F.front() &&
          "Function Entry must be the first in Entries vector");
@@ -745,7 +739,7 @@ BranchProbability PartialInlinerImpl::getOutliningCallBBRelativeFreq(
   auto OutlineRegionRelFreq = BranchProbability::getBranchProbability(
       OutliningCallFreq.getFrequency(), EntryFreq.getFrequency());
 
-  if (hasProfileData(*Cloner.OrigFunc, *Cloner.ClonedOI.get()))
+  if (hasProfileData(*Cloner.OrigFunc, *Cloner.ClonedOI))
     return OutlineRegionRelFreq;
 
   // When profile data is not available, we need to be conservative in
@@ -974,6 +968,9 @@ void PartialInlinerImpl::computeCallsiteToProfCountMap(
   };
 
   for (User *User : Users) {
+    // Don't bother with BlockAddress used by CallBr for asm goto.
+    if (isa<BlockAddress>(User))
+      continue;
     CallBase *CB = getSupportedCallBase(User);
     Function *Caller = CB->getCaller();
     if (CurrentCaller != Caller) {
@@ -1413,10 +1410,14 @@ bool PartialInlinerImpl::tryPartialInline(FunctionCloner &Cloner) {
     computeCallsiteToProfCountMap(Cloner.ClonedFunc, CallSiteToProfCountMap);
 
   uint64_t CalleeEntryCountV =
-      (CalleeEntryCount ? CalleeEntryCount.getCount() : 0);
+      (CalleeEntryCount ? CalleeEntryCount->getCount() : 0);
 
   bool AnyInline = false;
   for (User *User : Users) {
+    // Don't bother with BlockAddress used by CallBr for asm goto.
+    if (isa<BlockAddress>(User))
+      continue;
+
     CallBase *CB = getSupportedCallBase(User);
 
     if (isLimitReached())
@@ -1461,8 +1462,8 @@ bool PartialInlinerImpl::tryPartialInline(FunctionCloner &Cloner) {
   if (AnyInline) {
     Cloner.IsFunctionInlined = true;
     if (CalleeEntryCount)
-      Cloner.OrigFunc->setEntryCount(
-          CalleeEntryCount.setCount(CalleeEntryCountV));
+      Cloner.OrigFunc->setEntryCount(Function::ProfileCount(
+          CalleeEntryCountV, CalleeEntryCount->getType()));
     OptimizationRemarkEmitter OrigFuncORE(Cloner.OrigFunc);
     OrigFuncORE.emit([&]() {
       return OptimizationRemark(DEBUG_TYPE, "PartiallyInlined", Cloner.OrigFunc)

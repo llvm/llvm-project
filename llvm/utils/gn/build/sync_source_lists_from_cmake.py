@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 """Helps to keep BUILD.gn files in sync with the corresponding CMakeLists.txt.
 
@@ -11,10 +11,8 @@ binaries have corresponding BUILD.gn files.
 
 If --write is passed, tries to write modified .gn files and adds one git
 commit for each cmake commit this merges. If an error is reported, the state
-of HEAD is unspecified; run `git reset --hard origin/master` if this happens.
+of HEAD is unspecified; run `git reset --hard origin/main` if this happens.
 """
-
-from __future__ import print_function
 
 from collections import defaultdict
 import os

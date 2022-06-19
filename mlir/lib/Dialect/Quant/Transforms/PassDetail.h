@@ -9,6 +9,7 @@
 #ifndef DIALECT_QUANT_TRANSFORMS_PASSDETAIL_H_
 #define DIALECT_QUANT_TRANSFORMS_PASSDETAIL_H_
 
+#include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Pass/Pass.h"
 
 namespace mlir {
@@ -16,6 +17,6 @@ namespace mlir {
 #define GEN_PASS_CLASSES
 #include "mlir/Dialect/Quant/Passes.h.inc"
 
-} // end namespace mlir
+} // namespace mlir
 
 #endif // DIALECT_QUANT_TRANSFORMS_PASSDETAIL_H_

@@ -1,4 +1,4 @@
-; RUN: opt -globalopt -S -o - < %s | FileCheck %s
+; RUN: opt -passes=globalopt -S -o - < %s | FileCheck %s
 ; The check here is that it doesn't crash.
 
 declare {}* @llvm.invariant.start.p0i8(i64 %size, i8* nocapture %ptr)

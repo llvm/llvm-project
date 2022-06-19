@@ -17,6 +17,8 @@
 #include "lldb/Host/FileSystem.h"
 #include "lldb/Interpreter/CommandCompletions.h"
 #include "lldb/Interpreter/CommandInterpreter.h"
+#include "lldb/Interpreter/CommandObject.h"
+#include "lldb/Interpreter/CommandObjectMultiword.h"
 #include "lldb/Interpreter/OptionValueProperties.h"
 #include "lldb/Symbol/CompileUnit.h"
 #include "lldb/Symbol/Variable.h"
@@ -127,7 +129,7 @@ class SourceFileCompleter : public Completer {
 public:
   SourceFileCompleter(CommandInterpreter &interpreter,
                       CompletionRequest &request)
-      : Completer(interpreter, request), m_matching_files() {
+      : Completer(interpreter, request) {
     FileSpec partial_spec(m_request.GetCursorArgumentPrefix());
     m_file_name = partial_spec.GetFilename().GetCString();
     m_dir_name = partial_spec.GetDirectory().GetCString();
@@ -213,10 +215,10 @@ public:
                                           Address *addr) override {
     if (context.module_sp) {
       SymbolContextList sc_list;
-      const bool include_symbols = true;
-      const bool include_inlines = true;
-      context.module_sp->FindFunctions(m_regex, include_symbols,
-                                       include_inlines, sc_list);
+      ModuleFunctionSearchOptions function_options;
+      function_options.include_symbols = true;
+      function_options.include_inlines = true;
+      context.module_sp->FindFunctions(m_regex, function_options, sc_list);
 
       SymbolContext sc;
       // Now add the functions & symbols to the list - only add if unique:
@@ -598,7 +600,7 @@ void CommandCompletions::VariablePath(CommandInterpreter &interpreter,
 void CommandCompletions::Registers(CommandInterpreter &interpreter,
                                    CompletionRequest &request,
                                    SearchFilter *searcher) {
-  std::string reg_prefix = "";
+  std::string reg_prefix;
   if (request.GetCursorArgumentPrefix().startswith("$"))
     reg_prefix = "$";
 
@@ -791,4 +793,61 @@ void CommandCompletions::TypeCategoryNames(CommandInterpreter &interpreter,
                                       category_sp->GetDescription());
         return true;
       });
+}
+
+void CommandCompletions::CompleteModifiableCmdPathArgs(
+    CommandInterpreter &interpreter, CompletionRequest &request,
+    OptionElementVector &opt_element_vector) {
+  // The only arguments constitute a command path, however, there might be
+  // options interspersed among the arguments, and we need to skip those.  Do that
+  // by copying the args vector, and just dropping all the option bits:
+  Args args = request.GetParsedLine();
+  std::vector<size_t> to_delete;
+  for (auto &elem : opt_element_vector) {
+    to_delete.push_back(elem.opt_pos);
+    if (elem.opt_arg_pos != 0)
+      to_delete.push_back(elem.opt_arg_pos);
+  }
+  sort(to_delete.begin(), to_delete.end(), std::greater<size_t>());
+  for (size_t idx : to_delete)
+    args.DeleteArgumentAtIndex(idx);
+
+  // At this point, we should only have args, so now lookup the command up to
+  // the cursor element.
+
+  // There's nothing here but options.  It doesn't seem very useful here to
+  // dump all the commands, so just return.
+  size_t num_args = args.GetArgumentCount();
+  if (num_args == 0)
+    return;
+
+  // There's just one argument, so we should complete its name:
+  StringList matches;
+  if (num_args == 1) {
+    interpreter.GetUserCommandObject(args.GetArgumentAtIndex(0), &matches,
+                                     nullptr);
+    request.AddCompletions(matches);
+    return;
+  }
+
+  // There was more than one path element, lets find the containing command:
+  Status error;
+  CommandObjectMultiword *mwc =
+      interpreter.VerifyUserMultiwordCmdPath(args, true, error);
+
+  // Something was wrong somewhere along the path, but I don't think there's
+  // a good way to go back and fill in the missing elements:
+  if (error.Fail())
+    return;
+
+  // This should never happen.  We already handled the case of one argument
+  // above, and we can only get Success & nullptr back if there's a one-word
+  // leaf.
+  assert(mwc != nullptr);
+
+  mwc->GetSubcommandObject(args.GetArgumentAtIndex(num_args - 1), &matches);
+  if (matches.GetSize() == 0)
+    return;
+
+  request.AddCompletions(matches);
 }

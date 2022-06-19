@@ -21,21 +21,23 @@ void test(void) {
   __builtin_add_overflow(1, 1, &q);  // expected-error {{result argument to overflow builtin must be a pointer to a non-const integer ('const unsigned int *' invalid)}}
 
   {
-    _ExtInt(128) x = 1;
-    _ExtInt(128) y = 1;
-    _ExtInt(128) result;
+    _BitInt(128) x = 1;
+    _BitInt(128) y = 1;
+    _BitInt(128) result;
+    _Bool status = __builtin_mul_overflow(x, y, &result); // expect ok
+  }
+#if __BITINT_MAXWIDTH__ > 128
+  {
+    unsigned _BitInt(129) x = 1;
+    unsigned _BitInt(129) y = 1;
+    unsigned _BitInt(129) result;
     _Bool status = __builtin_mul_overflow(x, y, &result); // expect ok
   }
   {
-    unsigned _ExtInt(129) x = 1;
-    unsigned _ExtInt(129) y = 1;
-    unsigned _ExtInt(129) result;
-    _Bool status = __builtin_mul_overflow(x, y, &result); // expect ok
+    _BitInt(129) x = 1;
+    _BitInt(129) y = 1;
+    _BitInt(129) result;
+    _Bool status = __builtin_mul_overflow(x, y, &result); // expected-error {{__builtin_mul_overflow does not support 'signed _BitInt' operands of more than 128 bits}}
   }
-  {
-    _ExtInt(129) x = 1;
-    _ExtInt(129) y = 1;
-    _ExtInt(129) result;
-    _Bool status = __builtin_mul_overflow(x, y, &result); // expected-error {{__builtin_mul_overflow does not support signed _ExtInt operands of more than 128 bits}}
-  }
+#endif
 }

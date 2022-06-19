@@ -8,6 +8,7 @@
 #include "ConfigFragment.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/SmallSet.h"
+#include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/SourceMgr.h"
@@ -65,6 +66,8 @@ public:
     Dict.handle("Style", [&](Node &N) { parse(F.Style, N); });
     Dict.handle("Diagnostics", [&](Node &N) { parse(F.Diagnostics, N); });
     Dict.handle("Completion", [&](Node &N) { parse(F.Completion, N); });
+    Dict.handle("Hover", [&](Node &N) { parse(F.Hover, N); });
+    Dict.handle("InlayHints", [&](Node &N) { parse(F.InlayHints, N); });
     Dict.parse(N);
     return !(N.failed() || HadError);
   }
@@ -89,6 +92,10 @@ private:
 
   void parse(Fragment::CompileFlagsBlock &F, Node &N) {
     DictParser Dict("CompileFlags", this);
+    Dict.handle("Compiler", [&](Node &N) {
+      if (auto Value = scalarValue(N, "Compiler"))
+        F.Compiler = std::move(*Value);
+    });
     Dict.handle("Add", [&](Node &N) {
       if (auto Values = scalarValues(N))
         F.Add = std::move(*Values);
@@ -118,6 +125,10 @@ private:
       if (auto Values = scalarValues(N))
         F.Suppress = std::move(*Values);
     });
+    Dict.handle("UnusedIncludes", [&](Node &N) {
+      F.UnusedIncludes = scalarValue(N, "UnusedIncludes");
+    });
+    Dict.handle("Includes", [&](Node &N) { parse(F.Includes, N); });
     Dict.handle("ClangTidy", [&](Node &N) { parse(F.ClangTidy, N); });
     Dict.parse(N);
   }
@@ -144,6 +155,15 @@ private:
     Dict.parse(N);
   }
 
+  void parse(Fragment::DiagnosticsBlock::IncludesBlock &F, Node &N) {
+    DictParser Dict("Includes", this);
+    Dict.handle("IgnoreHeader", [&](Node &N) {
+      if (auto Values = scalarValues(N))
+        F.IgnoreHeader = std::move(*Values);
+    });
+    Dict.parse(N);
+  }
+
   void parse(Fragment::IndexBlock &F, Node &N) {
     DictParser Dict("Index", this);
     Dict.handle("Background",
@@ -163,6 +183,10 @@ private:
       }
       F.External.emplace(std::move(External));
       F.External->Range = N.getSourceRange();
+    });
+    Dict.handle("StandardLibrary", [&](Node &N) {
+      if (auto StandardLibrary = boolValue(N, "StandardLibrary"))
+        F.StandardLibrary = *StandardLibrary;
     });
     Dict.parse(N);
   }
@@ -191,12 +215,38 @@ private:
   void parse(Fragment::CompletionBlock &F, Node &N) {
     DictParser Dict("Completion", this);
     Dict.handle("AllScopes", [&](Node &N) {
-      if (auto Value = scalarValue(N, "AllScopes")) {
-        if (auto AllScopes = llvm::yaml::parseBool(**Value))
-          F.AllScopes = *AllScopes;
-        else
-          warning("AllScopes should be a boolean", N);
-      }
+      if (auto AllScopes = boolValue(N, "AllScopes"))
+        F.AllScopes = *AllScopes;
+    });
+    Dict.parse(N);
+  }
+
+  void parse(Fragment::HoverBlock &F, Node &N) {
+    DictParser Dict("Hover", this);
+    Dict.handle("ShowAKA", [&](Node &N) {
+      if (auto ShowAKA = boolValue(N, "ShowAKA"))
+        F.ShowAKA = *ShowAKA;
+    });
+    Dict.parse(N);
+  }
+
+  void parse(Fragment::InlayHintsBlock &F, Node &N) {
+    DictParser Dict("InlayHints", this);
+    Dict.handle("Enabled", [&](Node &N) {
+      if (auto Value = boolValue(N, "Enabled"))
+        F.Enabled = *Value;
+    });
+    Dict.handle("ParameterNames", [&](Node &N) {
+      if (auto Value = boolValue(N, "ParameterNames"))
+        F.ParameterNames = *Value;
+    });
+    Dict.handle("DeducedTypes", [&](Node &N) {
+      if (auto Value = boolValue(N, "DeducedTypes"))
+        F.DeducedTypes = *Value;
+    });
+    Dict.handle("Designators", [&](Node &N) {
+      if (auto Value = boolValue(N, "Designators"))
+        F.Designators = *Value;
     });
     Dict.parse(N);
   }
@@ -307,6 +357,15 @@ private:
     if (auto *BS = llvm::dyn_cast<BlockScalarNode>(&N))
       return Located<std::string>(BS->getValue().str(), N.getSourceRange());
     warning(Desc + " should be scalar", N);
+    return llvm::None;
+  }
+
+  llvm::Optional<Located<bool>> boolValue(Node &N, llvm::StringRef Desc) {
+    if (auto Scalar = scalarValue(N, Desc)) {
+      if (auto Bool = llvm::yaml::parseBool(**Scalar))
+        return Located<bool>(*Bool, Scalar->Range);
+      warning(Desc + " should be a boolean", N);
+    }
     return llvm::None;
   }
 

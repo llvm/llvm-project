@@ -24,7 +24,7 @@ Error InstructionTables::execute(InstRef &IR) {
   UsedResources.clear();
 
   // Identify the resources consumed by this instruction.
-  for (const std::pair<const uint64_t, ResourceUsage> Resource :
+  for (const std::pair<uint64_t, ResourceUsage> &Resource :
        Desc.Resources) {
     // Skip zero-cycle resources (i.e., unused resources).
     if (!Resource.second.size())

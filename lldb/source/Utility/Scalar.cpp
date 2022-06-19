@@ -714,7 +714,7 @@ Status Scalar::SetValueFromData(const DataExtractor &data,
       return Status("insufficient data");
     m_type = e_int;
     m_integer =
-        APSInt(APInt::getNullValue(8 * byte_size), encoding == eEncodingUint);
+        APSInt(APInt::getZero(8 * byte_size), encoding == eEncodingUint);
     if (data.GetByteOrder() == endian::InlHostByteOrder()) {
       llvm::LoadIntFromMemory(m_integer, data.GetDataStart(), byte_size);
     } else {

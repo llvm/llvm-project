@@ -8,6 +8,7 @@
 
 #include "llvm/DebugInfo/PDB/Native/EnumTables.h"
 #include "llvm/DebugInfo/PDB/Native/RawConstants.h"
+#include "llvm/Support/ScopedPrinter.h"
 
 using namespace llvm;
 using namespace llvm::pdb;

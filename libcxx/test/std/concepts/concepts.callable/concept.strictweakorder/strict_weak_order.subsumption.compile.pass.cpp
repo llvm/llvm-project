@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17
-// UNSUPPORTED: libcpp-no-concepts
 
 // template<class F, class... Args>
 // concept strict_weak_order;
@@ -38,10 +37,8 @@ constexpr bool check_strict_weak_order_subsumes_relation() {
 }
 // clang-format on
 
-static_assert(
-    check_strict_weak_order_subsumes_relation<int (*)(int, int), int, int>());
-static_assert(check_strict_weak_order_subsumes_relation<int (*)(int, double),
-                                                        int, double>());
+static_assert(check_strict_weak_order_subsumes_relation<int (*)(int, int), int, int>());
+static_assert(check_strict_weak_order_subsumes_relation<int (*)(int, double), int, double>());
 static_assert(check_strict_weak_order_subsumes_relation<R, S1, S1>());
 static_assert(check_strict_weak_order_subsumes_relation<R, S1, S2>());
 
@@ -59,10 +56,8 @@ constexpr bool check_relation_subsumes_strict_weak_order() {
 }
 // clang-format on
 
-static_assert(
-    check_relation_subsumes_strict_weak_order<int (*)(int, int), int, int>());
-static_assert(check_relation_subsumes_strict_weak_order<int (*)(int, double),
-                                                        int, double>());
+static_assert(check_relation_subsumes_strict_weak_order<int (*)(int, int), int, int>());
+static_assert(check_relation_subsumes_strict_weak_order<int (*)(int, double), int, double>());
 static_assert(check_relation_subsumes_strict_weak_order<R, S1, S1>());
 static_assert(check_relation_subsumes_strict_weak_order<R, S1, S2>());
 
@@ -80,6 +75,5 @@ constexpr bool check_strict_weak_order_subsumes_itself() {
 }
 // clang-format on
 
-static_assert(
-    check_strict_weak_order_subsumes_itself<int (*)(int, int), int, int>());
+static_assert(check_strict_weak_order_subsumes_itself<int (*)(int, int), int, int>());
 static_assert(check_strict_weak_order_subsumes_itself<R, S1, S1>());

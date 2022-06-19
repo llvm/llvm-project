@@ -38,7 +38,7 @@ public:
   ShapeT()
       : Row(nullptr), Col(nullptr), RowImm(InvalidImmShape),
         ColImm(InvalidImmShape) {}
-  bool operator==(const ShapeT &Shape) {
+  bool operator==(const ShapeT &Shape) const {
     MachineOperand *R = Shape.Row;
     MachineOperand *C = Shape.Col;
     if (!R || !C)
@@ -52,7 +52,7 @@ public:
     return false;
   }
 
-  bool operator!=(const ShapeT &Shape) { return !(*this == Shape); }
+  bool operator!=(const ShapeT &Shape) const { return !(*this == Shape); }
 
   MachineOperand *getRow() const { return Row; }
 

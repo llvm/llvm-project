@@ -10,7 +10,8 @@
 // adds that blob as a string attribute of the module.
 //
 //===----------------------------------------------------------------------===//
-#include "mlir/Dialect/GPU/Passes.h"
+
+#include "mlir/Dialect/GPU/Transforms/Passes.h"
 
 #if MLIR_GPU_TO_CUBIN_PASS_ENABLE
 #include "mlir/Pass/Pass.h"
@@ -45,6 +46,8 @@ namespace {
 class SerializeToCubinPass
     : public PassWrapper<SerializeToCubinPass, gpu::SerializeToBlobPass> {
 public:
+  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(SerializeToCubinPass)
+
   SerializeToCubinPass();
 
   StringRef getArgument() const override { return "gpu-to-cubin"; }

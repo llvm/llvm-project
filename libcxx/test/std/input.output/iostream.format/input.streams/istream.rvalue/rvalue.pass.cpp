@@ -63,6 +63,7 @@ int main(int, char**)
         assert(&result == &is);
         assert(i.value == 123);
     }
+#ifndef TEST_HAS_NO_WIDE_CHARACTERS
     {
         testbuf<wchar_t> sb(L"   123");
         Int i = {0};
@@ -71,6 +72,7 @@ int main(int, char**)
         assert(&result == &is);
         assert(i.value == 123);
     }
+#endif
     {
         // test perfect forwarding
         assert(called == false);

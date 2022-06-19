@@ -37,8 +37,7 @@ test(typename S::size_type min_cap, typename S::size_type erased_index)
     assert(s.capacity() >= s.size());
 }
 
-int main(int, char**)
-{
+bool test() {
     {
     typedef std::string S;
     {
@@ -57,6 +56,13 @@ int main(int, char**)
     }
     }
 #endif
+
+  return true;
+}
+
+int main(int, char**)
+{
+  test();
 
   return 0;
 }

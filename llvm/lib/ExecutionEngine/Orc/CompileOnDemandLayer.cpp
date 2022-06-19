@@ -78,11 +78,10 @@ public:
       : IRMaterializationUnit(ES, MO, std::move(TSM)), Parent(Parent) {}
 
   PartitioningIRMaterializationUnit(
-      ThreadSafeModule TSM, SymbolFlagsMap SymbolFlags,
-      SymbolStringPtr InitSymbol, SymbolNameToDefinitionMap SymbolToDefinition,
+      ThreadSafeModule TSM, Interface I,
+      SymbolNameToDefinitionMap SymbolToDefinition,
       CompileOnDemandLayer &Parent)
-      : IRMaterializationUnit(std::move(TSM), std::move(SymbolFlags),
-                              std::move(InitSymbol),
+      : IRMaterializationUnit(std::move(TSM), std::move(I),
                               std::move(SymbolToDefinition)),
         Parent(Parent) {}
 
@@ -184,6 +183,8 @@ void CompileOnDemandLayer::emit(
 
 CompileOnDemandLayer::PerDylibResources &
 CompileOnDemandLayer::getPerDylibResources(JITDylib &TargetD) {
+  std::lock_guard<std::mutex> Lock(CODLayerMutex);
+
   auto I = DylibResources.find(&TargetD);
   if (I == DylibResources.end()) {
     auto &ImplD =
@@ -296,7 +297,9 @@ void CompileOnDemandLayer::emitPartition(
   if (GVsToExtract->empty()) {
     if (auto Err =
             R->replace(std::make_unique<PartitioningIRMaterializationUnit>(
-                std::move(TSM), R->getSymbols(), R->getInitializerSymbol(),
+                std::move(TSM),
+                MaterializationUnit::Interface(R->getSymbols(),
+                                               R->getInitializerSymbol()),
                 std::move(Defs), *this))) {
       getExecutionSession().reportError(std::move(Err));
       R->failMaterialization();

@@ -16,7 +16,10 @@ namespace __llvm_libc {
 
 LLVM_LIBC_FUNCTION(char *, strcat,
                    (char *__restrict dest, const char *__restrict src)) {
-  __llvm_libc::strcpy(dest + internal::string_length(dest), src);
+  size_t dest_length = internal::string_length(dest);
+  size_t src_length = internal::string_length(src);
+  __llvm_libc::strcpy(dest + dest_length, src);
+  dest[dest_length + src_length] = '\0';
   return dest;
 }
 

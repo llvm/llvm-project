@@ -1,4 +1,4 @@
-; RUN: opt < %s -deadargelim -dce -S > %t
+; RUN: opt < %s -passes='deadargelim,function(dce)' -S > %t
 ; RUN: cat %t | not grep DEAD
 ; RUN: cat %t | grep LIVE | count 4
 

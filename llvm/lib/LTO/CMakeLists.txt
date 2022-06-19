@@ -1,5 +1,4 @@
 add_llvm_component_library(LLVMLTO
-  Caching.cpp
   LTO.cpp
   LTOBackend.cpp
   LTOModule.cpp
@@ -25,6 +24,7 @@ add_llvm_component_library(LLVMLTO
   Extensions
   IPO
   InstCombine
+  Instrumentation
   Linker
   MC
   ObjCARC

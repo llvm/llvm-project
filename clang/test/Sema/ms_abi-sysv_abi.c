@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -fsyntax-only -verify -triple x86_64-pc-linux-gnu %s
+// RUN: %clang_cc1 -fsyntax-only -verify -triple x86_64-pc-linux-gnu -Wno-strict-prototypes %s
 
 // CC qualifier can be applied only to functions
 int __attribute__((ms_abi)) var1; // expected-warning{{'ms_abi' only applies to function types; type here is 'int'}}

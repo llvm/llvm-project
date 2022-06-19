@@ -41,6 +41,8 @@ struct EquivalenceObject {
       std::optional<ConstantSubscript> substringStart, parser::CharBlock source)
       : symbol{symbol}, subscripts{subscripts},
         substringStart{substringStart}, source{source} {}
+  explicit EquivalenceObject(Symbol &symbol)
+      : symbol{symbol}, source{symbol.name()} {}
 
   bool operator==(const EquivalenceObject &) const;
   bool operator<(const EquivalenceObject &) const;
@@ -57,8 +59,8 @@ class Scope {
   using mapType = std::map<SourceName, MutableSymbolRef>;
 
 public:
-  ENUM_CLASS(Kind, Global, Module, MainProgram, Subprogram, BlockData,
-      DerivedType, Block, Forall, ImpliedDos)
+  ENUM_CLASS(Kind, Global, IntrinsicModules, Module, MainProgram, Subprogram,
+      BlockData, DerivedType, Block, Forall, ImpliedDos)
   using ImportKind = common::ImportKind;
 
   // Create the Global scope -- the root of the scope tree
@@ -85,6 +87,10 @@ public:
   }
   Kind kind() const { return kind_; }
   bool IsGlobal() const { return kind_ == Kind::Global; }
+  bool IsIntrinsicModules() const { return kind_ == Kind::IntrinsicModules; }
+  bool IsTopLevel() const {
+    return kind_ == Kind::Global || kind_ == Kind::IntrinsicModules;
+  }
   bool IsModule() const {
     return kind_ == Kind::Module &&
         !symbol_->get<ModuleDetails>().isSubmodule();
@@ -98,6 +104,10 @@ public:
   bool IsParameterizedDerivedTypeInstantiation() const {
     return kind_ == Kind::DerivedType && !symbol_;
   }
+  /// Does this derived type have at least one kind parameter ?
+  bool IsDerivedTypeWithKindParameter() const;
+  /// Does this derived type have at least one length parameter ?
+  bool IsDerivedTypeWithLengthParameter() const;
   Symbol *symbol() { return symbol_; }
   const Symbol *symbol() const { return symbol_; }
   SemanticsContext &context() const { return context_; }

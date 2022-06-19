@@ -6,7 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/CodeGen/MachineLoopInfo.h"
 #include "llvm/CodeGen/MachineLoopUtils.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
@@ -90,25 +89,24 @@ MachineBasicBlock *llvm::PeelSingleBlockLoop(LoopPeelDirection Direction,
       if (Remaps.count(R))
         R = Remaps[R];
       OrigPhi.getOperand(InitRegIdx).setReg(R);
-      MI.RemoveOperand(LoopRegIdx + 1);
-      MI.RemoveOperand(LoopRegIdx + 0);
+      MI.removeOperand(LoopRegIdx + 1);
+      MI.removeOperand(LoopRegIdx + 0);
     } else {
       // When peeling back, the initial value is the loop-carried value from
       // the original loop.
       Register LoopReg = OrigPhi.getOperand(LoopRegIdx).getReg();
       MI.getOperand(LoopRegIdx).setReg(LoopReg);
-      MI.RemoveOperand(InitRegIdx + 1);
-      MI.RemoveOperand(InitRegIdx + 0);
+      MI.removeOperand(InitRegIdx + 1);
+      MI.removeOperand(InitRegIdx + 0);
     }
   }
 
   DebugLoc DL;
   if (Direction == LPD_Front) {
-    Preheader->replaceSuccessor(Loop, NewBB);
+    Preheader->ReplaceUsesOfBlockWith(Loop, NewBB);
     NewBB->addSuccessor(Loop);
     Loop->replacePhiUsesWith(Preheader, NewBB);
-    if (TII->removeBranch(*Preheader) > 0)
-      TII->insertBranch(*Preheader, NewBB, nullptr, {}, DL);
+    Preheader->updateTerminator(Loop);
     TII->removeBranch(*NewBB);
     TII->insertBranch(*NewBB, Loop, nullptr, {}, DL);
   } else {

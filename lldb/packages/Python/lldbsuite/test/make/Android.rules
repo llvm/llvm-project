@@ -66,8 +66,8 @@ OBJCOPY ?= $(GCC_TOOLCHAIN)/bin/$(TOOL_PREFIX)-objcopy
 ARCHIVER ?= $(GCC_TOOLCHAIN)/bin/$(TOOL_PREFIX)-ar
 
 ifeq "$(findstring clang,$(CC))" "clang"
-	ARCH_CFLAGS += -target $(TRIPLE) -gcc-toolchain $(GCC_TOOLCHAIN)
-	ARCH_LDFLAGS += -target $(TRIPLE) -gcc-toolchain $(GCC_TOOLCHAIN)
+	ARCH_CFLAGS += -target $(TRIPLE) --gcc-toolchain=$(GCC_TOOLCHAIN)
+	ARCH_LDFLAGS += -target $(TRIPLE) --gcc-toolchain=$(GCC_TOOLCHAIN)
 endif
 
 ARCH_CFLAGS += --sysroot=$(NDK_ROOT)/sysroot \

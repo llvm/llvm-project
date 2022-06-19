@@ -43,14 +43,14 @@ private:
     const auto &stmt{std::get<parser::Statement<parser::CaseStmt>>(c.t)};
     const parser::CaseStmt &caseStmt{stmt.statement};
     const auto &selector{std::get<parser::CaseSelector>(caseStmt.t)};
-    std::visit(
+    common::visit(
         common::visitors{
             [&](const std::list<parser::CaseValueRange> &ranges) {
               for (const auto &range : ranges) {
                 auto pair{ComputeBounds(range)};
                 if (pair.first && pair.second && *pair.first > *pair.second) {
                   context_.Say(stmt.source,
-                      "CASE has lower bound greater than upper bound"_en_US);
+                      "CASE has lower bound greater than upper bound"_warn_en_US);
                 } else {
                   if constexpr (T::category == TypeCategory::Logical) { // C1148
                     if ((pair.first || pair.second) &&
@@ -79,15 +79,31 @@ private:
       if (type && type->category() == caseExprType_.category() &&
           (type->category() != TypeCategory::Character ||
               type->kind() == caseExprType_.kind())) {
-        x->v = evaluate::Fold(context_.foldingContext(),
-            evaluate::ConvertToType(T::GetType(), std::move(*x->v)));
-        if (x->v) {
-          if (auto value{evaluate::GetScalarConstantValue<T>(*x->v)}) {
-            return *value;
+        parser::Messages buffer; // discarded folding messages
+        parser::ContextualMessages foldingMessages{expr.source, &buffer};
+        evaluate::FoldingContext foldingContext{
+            context_.foldingContext(), foldingMessages};
+        auto folded{evaluate::Fold(foldingContext, SomeExpr{*x->v})};
+        if (auto converted{evaluate::Fold(foldingContext,
+                evaluate::ConvertToType(T::GetType(), SomeExpr{folded}))}) {
+          if (auto value{evaluate::GetScalarConstantValue<T>(*converted)}) {
+            auto back{evaluate::Fold(foldingContext,
+                evaluate::ConvertToType(*type, SomeExpr{*converted}))};
+            if (back == folded) {
+              x->v = converted;
+              return value;
+            } else {
+              context_.Say(expr.source,
+                  "CASE value (%s) overflows type (%s) of SELECT CASE expression"_warn_en_US,
+                  folded.AsFortran(), caseExprType_.AsFortran());
+              hasErrors_ = true;
+              return std::nullopt;
+            }
           }
         }
-        context_.Say(
-            expr.source, "CASE value must be a constant scalar"_err_en_US);
+        context_.Say(expr.source,
+            "CASE value (%s) must be a constant scalar"_err_en_US,
+            x->v->AsFortran());
       } else {
         std::string typeStr{type ? type->AsFortran() : "typeless"s};
         context_.Say(expr.source,
@@ -101,25 +117,26 @@ private:
 
   using PairOfValues = std::pair<std::optional<Value>, std::optional<Value>>;
   PairOfValues ComputeBounds(const parser::CaseValueRange &range) {
-    return std::visit(common::visitors{
-                          [&](const parser::CaseValue &x) {
-                            auto value{GetValue(x)};
-                            return PairOfValues{value, value};
-                          },
-                          [&](const parser::CaseValueRange::Range &x) {
-                            std::optional<Value> lo, hi;
-                            if (x.lower) {
-                              lo = GetValue(*x.lower);
-                            }
-                            if (x.upper) {
-                              hi = GetValue(*x.upper);
-                            }
-                            if ((x.lower && !lo) || (x.upper && !hi)) {
-                              return PairOfValues{}; // error case
-                            }
-                            return PairOfValues{std::move(lo), std::move(hi)};
-                          },
-                      },
+    return common::visit(
+        common::visitors{
+            [&](const parser::CaseValue &x) {
+              auto value{GetValue(x)};
+              return PairOfValues{value, value};
+            },
+            [&](const parser::CaseValueRange::Range &x) {
+              std::optional<Value> lo, hi;
+              if (x.lower) {
+                lo = GetValue(*x.lower);
+              }
+              if (x.upper) {
+                hi = GetValue(*x.upper);
+              }
+              if ((x.lower && !lo) || (x.upper && !hi)) {
+                return PairOfValues{}; // error case
+              }
+              return PairOfValues{std::move(lo), std::move(hi)};
+            },
+        },
         range.u);
   }
 
@@ -224,7 +241,7 @@ void CaseChecker::Enter(const parser::CaseConstruct &construct) {
   const auto &selectCase{selectCaseStmt.statement};
   const auto &selectExpr{
       std::get<parser::Scalar<parser::Expr>>(selectCase.t).thing};
-  const auto *x{GetExpr(selectExpr)};
+  const auto *x{GetExpr(context_, selectExpr)};
   if (!x) {
     return; // expression semantics failed
   }

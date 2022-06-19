@@ -1,9 +1,5 @@
 // RUN: c-index-test -retain-excluded-conditional-blocks %s | FileCheck %s
 
-#include <stdint.h>
-
-// CHECK: TypedefDecl=intptr_t
-
 // CHECK: [[@LINE+1]]:12: ObjCInterfaceDecl=MyCls
 @interface MyCls
 // CHECK: [[@LINE+1]]:8: ObjCInstanceMethodDecl=some_meth

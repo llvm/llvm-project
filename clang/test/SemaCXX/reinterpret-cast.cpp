@@ -132,7 +132,7 @@ void const_arrays() {
   const STRING *s;
   const char *c;
 
-  (void)reinterpret_cast<char *>(s); // expected-error {{reinterpret_cast from 'const STRING *' (aka 'char const (*)[10]') to 'char *' casts away qualifiers}}
+  (void)reinterpret_cast<char *>(s); // expected-error {{reinterpret_cast from 'const STRING *' (aka 'const char (*)[10]') to 'char *' casts away qualifiers}}
   (void)reinterpret_cast<const STRING *>(c);
 }
 
@@ -221,7 +221,7 @@ void dereference_reinterpret_cast() {
   (void)*reinterpret_cast<void*>(&f); // expected-warning {{ISO C++ does not allow}}
 }
 
-void reinterpret_cast_whitelist () {
+void reinterpret_cast_allowlist () {
   // the dynamic type of the object
   int a;
   float b;

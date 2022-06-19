@@ -138,12 +138,12 @@ bb4:
 define i64 @test_or_unpredictable(i32 %a, i32 %b) {
 ; CHECK-LABEL: test_or_unpredictable:
 ; CHECK:       ; %bb.0: ; %bb1
-; CHECK-NEXT:    cmp w0, #0 ; =0
+; CHECK-NEXT:    cmp w0, #0
+; CHECK-NEXT:    mov x0, xzr
 ; CHECK-NEXT:    cset w8, eq
-; CHECK-NEXT:    cmp w1, #0 ; =0
+; CHECK-NEXT:    cmp w1, #0
 ; CHECK-NEXT:    cset w9, eq
 ; CHECK-NEXT:    orr w8, w8, w9
-; CHECK-NEXT:    mov x0, xzr
 ; CHECK-NEXT:    tbnz w8, #0, LBB4_2
 ; CHECK-NEXT:  ; %bb.1: ; %bb4
 ; CHECK-NEXT:    stp x29, x30, [sp, #-16]! ; 16-byte Folded Spill
@@ -153,6 +153,9 @@ define i64 @test_or_unpredictable(i32 %a, i32 %b) {
 ; CHECK-NEXT:    bl _bar
 ; CHECK-NEXT:    ldp x29, x30, [sp], #16 ; 16-byte Folded Reload
 ; CHECK-NEXT:  LBB4_2: ; %common.ret
+; CHECK-NEXT:    .cfi_def_cfa wsp, 0
+; CHECK-NEXT:    .cfi_same_value w30
+; CHECK-NEXT:    .cfi_same_value w29
 ; CHECK-NEXT:    ret
 bb1:
   %0 = icmp eq i32 %a, 0
@@ -171,12 +174,12 @@ bb4:
 define i64 @test_and_unpredictable(i32 %a, i32 %b) {
 ; CHECK-LABEL: test_and_unpredictable:
 ; CHECK:       ; %bb.0: ; %bb1
-; CHECK-NEXT:    cmp w0, #0 ; =0
+; CHECK-NEXT:    cmp w0, #0
+; CHECK-NEXT:    mov x0, xzr
 ; CHECK-NEXT:    cset w8, ne
-; CHECK-NEXT:    cmp w1, #0 ; =0
+; CHECK-NEXT:    cmp w1, #0
 ; CHECK-NEXT:    cset w9, ne
 ; CHECK-NEXT:    and w8, w8, w9
-; CHECK-NEXT:    mov x0, xzr
 ; CHECK-NEXT:    tbz w8, #0, LBB5_2
 ; CHECK-NEXT:  ; %bb.1: ; %bb4
 ; CHECK-NEXT:    stp x29, x30, [sp, #-16]! ; 16-byte Folded Spill
@@ -186,6 +189,9 @@ define i64 @test_and_unpredictable(i32 %a, i32 %b) {
 ; CHECK-NEXT:    bl _bar
 ; CHECK-NEXT:    ldp x29, x30, [sp], #16 ; 16-byte Folded Reload
 ; CHECK-NEXT:  LBB5_2: ; %common.ret
+; CHECK-NEXT:    .cfi_def_cfa wsp, 0
+; CHECK-NEXT:    .cfi_same_value w30
+; CHECK-NEXT:    .cfi_same_value w29
 ; CHECK-NEXT:    ret
 bb1:
   %0 = icmp ne i32 %a, 0

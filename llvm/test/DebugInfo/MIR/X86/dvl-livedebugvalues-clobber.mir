@@ -1,4 +1,4 @@
-# RUN: llc -mtriple=x86_64-- -run-pass livedebugvalues -o - %s | FileCheck %s --implicit-check-not=DBG_VALUE_LIST
+# RUN: llc -mtriple=x86_64-- -run-pass livedebugvalues -o - %s -experimental-debug-variable-locations=false | FileCheck %s --implicit-check-not=DBG_VALUE_LIST
 #
 # Test that even after a move, clobbering a register terminates a DBG_VALUE_LIST.
 # Check the same for DBG_VALUE $noreg.
@@ -100,7 +100,7 @@ body:             |
 
   bb.4:
     liveins: $rbx, $rsi
-    RETQ $rbx, debug-location !17
+    RET64 $rbx, debug-location !17
 
 ...
 

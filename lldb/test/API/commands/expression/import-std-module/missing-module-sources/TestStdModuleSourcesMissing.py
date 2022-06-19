@@ -11,13 +11,12 @@ import shutil
 
 class TestCase(TestBase):
 
-    mydir = TestBase.compute_mydir(__file__)
-
     # We only emulate a fake libc++ in this test and don't use the real libc++,
     # but we still add the libc++ category so that this test is only run in
     # test configurations where libc++ is actually supposed to be tested.
     @add_test_categories(["libc++"])
     @skipIf(compiler=no_match("clang"))
+    @skipIfRemote
     def test(self):
         # The path to our temporary target root that contains the temporary
         # module sources.

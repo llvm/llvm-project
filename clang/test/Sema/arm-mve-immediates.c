@@ -1,5 +1,7 @@
 // RUN: %clang_cc1 -triple thumbv8.1m.main-none-none-eabi -fallow-half-arguments-and-returns -target-feature +mve.fp -verify -fsyntax-only %s
 
+// REQUIRES: aarch64-registered-target || arm-registered-target
+
 #include <arm_mve.h>
 
 void test_load_offsets(uint32x4_t addr32, uint64x2_t addr64)

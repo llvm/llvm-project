@@ -280,8 +280,8 @@ TEST(FunctionCallTrieTest, MergeInto) {
 
   // We use a different allocator here to make sure that we're able to transfer
   // data into a FunctionCallTrie which uses a different allocator. This
-  // reflects the inteded usage scenario for when we're collecting profiles that
-  // aggregate across threads.
+  // reflects the intended usage scenario for when we're collecting profiles
+  // that aggregate across threads.
   auto B = FunctionCallTrie::InitAllocators();
   FunctionCallTrie Merged(B);
 

@@ -11,6 +11,7 @@
 
 #include <type_traits>
 #include <cassert>
+#include <initializer_list>
 
 #include "test_macros.h"
 #include "test_workarounds.h"
@@ -23,9 +24,9 @@ template <bool, class T>
 struct DepType : T {};
 
 struct NullBase {
-#ifndef TEST_WORKAROUND_C1XX_BROKEN_ZA_CTOR_CHECK
+#ifndef TEST_WORKAROUND_MSVC_BROKEN_ZA_CTOR_CHECK
 protected:
-#endif // !TEST_WORKAROUND_C1XX_BROKEN_ZA_CTOR_CHECK
+#endif // !TEST_WORKAROUND_MSVC_BROKEN_ZA_CTOR_CHECK
   NullBase() = default;
   NullBase(NullBase const&) = default;
   NullBase& operator=(NullBase const&) = default;
@@ -92,9 +93,9 @@ struct TestBase {
       ++assigned; ++value_assigned;
       return *this;
     }
-#ifndef TEST_WORKAROUND_C1XX_BROKEN_ZA_CTOR_CHECK
+#ifndef TEST_WORKAROUND_MSVC_BROKEN_ZA_CTOR_CHECK
 protected:
-#endif // !TEST_WORKAROUND_C1XX_BROKEN_ZA_CTOR_CHECK
+#endif // !TEST_WORKAROUND_MSVC_BROKEN_ZA_CTOR_CHECK
     ~TestBase() {
       assert(value != -999); assert(alive > 0);
       --alive; ++destroyed; value = -999;
@@ -157,9 +158,9 @@ struct ValueBase {
     }
     //~ValueBase() { assert(value != -999); value = -999; }
     int value;
-#ifndef TEST_WORKAROUND_C1XX_BROKEN_ZA_CTOR_CHECK
+#ifndef TEST_WORKAROUND_MSVC_BROKEN_ZA_CTOR_CHECK
 protected:
-#endif // !TEST_WORKAROUND_C1XX_BROKEN_ZA_CTOR_CHECK
+#endif // !TEST_WORKAROUND_MSVC_BROKEN_ZA_CTOR_CHECK
     constexpr static int check_value(int const& val) {
 #if TEST_STD_VER < 14
       return val == -1 || val == 999 ? (TEST_THROW(42), 0) : val;
@@ -212,9 +213,9 @@ struct TrivialValueBase {
     template <bool Dummy = true, typename std::enable_if<Dummy && !Explicit, bool>::type = true>
     constexpr TrivialValueBase(std::initializer_list<int>& il, int = 0) : value(static_cast<int>(il.size())) {}
     int value;
-#ifndef TEST_WORKAROUND_C1XX_BROKEN_ZA_CTOR_CHECK
+#ifndef TEST_WORKAROUND_MSVC_BROKEN_ZA_CTOR_CHECK
 protected:
-#endif // !TEST_WORKAROUND_C1XX_BROKEN_ZA_CTOR_CHECK
+#endif // !TEST_WORKAROUND_MSVC_BROKEN_ZA_CTOR_CHECK
     constexpr TrivialValueBase() noexcept : value(0) {}
 };
 

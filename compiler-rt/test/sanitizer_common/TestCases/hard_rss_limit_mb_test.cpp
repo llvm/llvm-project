@@ -7,16 +7,15 @@
 // RUN: %env_tool_opts=hard_rss_limit_mb=100:can_use_proc_maps_statm=0 not %run %t 2>&1 | FileCheck %s
 //
 // Run w/o limit or with a large enough limit should pass:
-// RUN: %env_tool_opts=hard_rss_limit_mb=1000 %run %t
+// RUN: %env_tool_opts=hard_rss_limit_mb=4000 %run %t
 // RUN: %run %t
 //
-// FIXME: make it work for other sanitizers.
-// XFAIL: lsan
-// XFAIL: tsan
-// XFAIL: msan
+// Ubsan does not intercept pthread_create.
 // XFAIL: ubsan
-
 // UNSUPPORTED: freebsd, solaris, darwin
+
+// THUMB starts background thead only for Asan.
+// XFAIL: thumb && !asan
 
 #include <string.h>
 #include <stdio.h>

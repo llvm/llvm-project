@@ -38,7 +38,7 @@ int main() {
   // Make sure the following 3 are the same between the host and device compile.
   // Note that these are NOT the same value as eachother, they differ by the
   // signature.
-  // CHECK: private unnamed_addr constant [22 x i8] c"_ZTSZ4mainEUlvE10000_\00"
-  // CHECK: private unnamed_addr constant [22 x i8] c"_ZTSZ4mainEUliE10000_\00"
-  // CHECK: private unnamed_addr constant [22 x i8] c"_ZTSZ4mainEUldE10000_\00"
+  // CHECK: private unnamed_addr constant [17 x i8] c"_ZTSZ4mainEUlvE_\00"
+  // CHECK: private unnamed_addr constant [17 x i8] c"_ZTSZ4mainEUliE_\00"
+  // CHECK: private unnamed_addr constant [17 x i8] c"_ZTSZ4mainEUldE_\00"
 }

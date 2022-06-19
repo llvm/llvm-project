@@ -6,7 +6,7 @@
 int *p = 0;
 int *q = '\0'; // expected-warning{{expression which evaluates to zero treated as a null pointer constant}}
 int *r = (1 - 1); // expected-warning{{expression which evaluates to zero treated as a null pointer constant}}
-void f() {
+void f(void) {
   p = 0;
   q = '\0'; // expected-warning{{expression which evaluates to zero treated as a null pointer constant}}
   r = 1 - 1; // expected-warning{{expression which evaluates to zero treated as a null pointer constant}}

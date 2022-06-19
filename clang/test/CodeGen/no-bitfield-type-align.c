@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple x86_64-apple-darwin -fno-bitfield-type-align -emit-llvm -o - %s | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-apple-darwin -fno-bitfield-type-align -emit-llvm -o - %s | FileCheck %s
 
 // CHECK: %[[STRUCT_S:.*]] = type { i32 }
 
@@ -9,7 +9,7 @@ struct S {
   unsigned short  f2:15;
 };
 
-// CHECK: define{{.*}} void @test_zero_width_bitfield(%[[STRUCT_S]]* %[[A:.*]])
+// CHECK: define{{.*}} void @test_zero_width_bitfield(%[[STRUCT_S]]* noundef %[[A:.*]])
 // CHECK: %[[BF_LOAD:.*]] = load i32, i32* %[[V1:.*]], align 1
 // CHECK: %[[BF_CLEAR:.*]] = and i32 %[[BF_LOAD]], 32767
 // CHECK: %[[BF_CAST:.*]] = trunc i32 %[[BF_CLEAR]] to i16

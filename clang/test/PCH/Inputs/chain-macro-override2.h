@@ -5,4 +5,4 @@
 int x;
 #undef h2
 
-int h3();
+int h3(void);

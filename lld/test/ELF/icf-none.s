@@ -1,9 +1,7 @@
 # REQUIRES: x86
 
 # RUN: llvm-mc -filetype=obj -triple=x86_64-unknown-linux %s -o %t
-# RUN: ld.lld %t -o /dev/null --icf=all --icf=none --verbose 2>&1 | FileCheck %s
-
-# CHECK-NOT: selected section '.text.f1'
+# RUN: ld.lld %t -o /dev/null --icf=all --icf=none --print-icf-sections | count 0
 
 .globl _start, f1, f2
 _start:

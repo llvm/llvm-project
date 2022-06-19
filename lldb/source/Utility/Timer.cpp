@@ -33,8 +33,6 @@ static std::atomic<Timer::Category *> g_categories;
 /// Allows llvm::Timer to emit signposts when supported.
 static llvm::ManagedStatic<llvm::SignpostEmitter> Signposts;
 
-llvm::SignpostEmitter &lldb_private::GetSignposts() { return *Signposts; }
-
 std::atomic<bool> Timer::g_quiet(true);
 std::atomic<unsigned> Timer::g_display_depth(0);
 static std::mutex &GetFileMutex() {
@@ -61,10 +59,11 @@ void Timer::SetQuiet(bool value) { g_quiet = value; }
 
 Timer::Timer(Timer::Category &category, const char *format, ...)
     : m_category(category), m_total_start(std::chrono::steady_clock::now()) {
+  Signposts->startInterval(this, m_category.GetName());
   TimerStack &stack = GetTimerStackForCurrentThread();
 
   stack.push_back(this);
-  if (g_quiet && stack.size() <= g_display_depth) {
+  if (!g_quiet && stack.size() <= g_display_depth) {
     std::lock_guard<std::mutex> lock(GetFileMutex());
 
     // Indent
@@ -87,8 +86,10 @@ Timer::~Timer() {
   auto total_dur = stop_time - m_total_start;
   auto timer_dur = total_dur - m_child_duration;
 
+  Signposts->endInterval(this, m_category.GetName());
+
   TimerStack &stack = GetTimerStackForCurrentThread();
-  if (g_quiet && stack.size() <= g_display_depth) {
+  if (!g_quiet && stack.size() <= g_display_depth) {
     std::lock_guard<std::mutex> lock(GetFileMutex());
     ::fprintf(stdout, "%*s%.9f sec (%.9f sec)\n",
               int(stack.size() - 1) * TIMER_INDENT_AMOUNT, "",

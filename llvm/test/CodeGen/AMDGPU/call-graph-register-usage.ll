@@ -17,9 +17,10 @@ define void @use_vcc() #1 {
 ; GCN: v_writelane_b32 v40, s30, 0
 ; GCN: v_writelane_b32 v40, s31, 1
 ; GCN: s_swappc_b64
-; GCN: v_readlane_b32 s4, v40, 0
-; GCN: v_readlane_b32 s5, v40, 1
+; GCN: v_readlane_b32 s31, v40, 1
+; GCN: v_readlane_b32 s30, v40, 0
 ; GCN: v_readlane_b32 s33, v40, 2
+; GCN: s_setpc_b64 s[30:31]
 ; GCN: ; NumSgprs: 36
 ; GCN: ; NumVgprs: 41
 define void @indirect_use_vcc() #1 {
@@ -199,7 +200,7 @@ define amdgpu_kernel void @usage_external_recurse() #0 {
 }
 
 ; GCN-LABEL: {{^}}direct_recursion_use_stack:
-; GCN: ScratchSize: 2064
+; GCN: ScratchSize: 18448{{$}}
 define void @direct_recursion_use_stack(i32 %val) #2 {
   %alloca = alloca [512 x i32], align 4, addrspace(5)
   call void asm sideeffect "; use $0", "v"([512 x i32] addrspace(5)* %alloca) #0
@@ -218,7 +219,7 @@ ret:
 ; GCN-LABEL: {{^}}usage_direct_recursion:
 ; GCN: is_ptr64 = 1
 ; GCN: is_dynamic_callstack = 1
-; GCN: workitem_private_segment_byte_size = 2064
+; GCN: workitem_private_segment_byte_size = 18448{{$}}
 define amdgpu_kernel void @usage_direct_recursion(i32 %n) #0 {
   call void @direct_recursion_use_stack(i32 %n)
   ret void

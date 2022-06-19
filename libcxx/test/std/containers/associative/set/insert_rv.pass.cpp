@@ -41,13 +41,13 @@ int main(int, char**)
 
         r = m.insert(M::value_type(3));
         assert(r.second);
-        assert(r.first == prev(m.end()));
+        assert(r.first == std::prev(m.end()));
         assert(m.size() == 3);
         assert(*r.first == 3);
 
         r = m.insert(M::value_type(3));
         assert(!r.second);
-        assert(r.first == prev(m.end()));
+        assert(r.first == std::prev(m.end()));
         assert(m.size() == 3);
         assert(*r.first == 3);
     }
@@ -69,13 +69,13 @@ int main(int, char**)
 
         r = m.insert(M::value_type(3));
         assert(r.second);
-        assert(r.first == prev(m.end()));
+        assert(r.first == std::prev(m.end()));
         assert(m.size() == 3);
         assert(*r.first == 3);
 
         r = m.insert(M::value_type(3));
         assert(!r.second);
-        assert(r.first == prev(m.end()));
+        assert(r.first == std::prev(m.end()));
         assert(m.size() == 3);
         assert(*r.first == 3);
     }

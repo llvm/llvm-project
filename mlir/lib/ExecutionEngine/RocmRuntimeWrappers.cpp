@@ -30,16 +30,18 @@
     fprintf(stderr, "'%s' failed with '%s'\n", #expr, name);                   \
   }(expr)
 
+thread_local static int32_t defaultDevice = 0;
+
 // Sets the `Context` for the duration of the instance and restores the previous
 // context on destruction.
 class ScopedContext {
 public:
   ScopedContext() {
-    // Static reference to HIP primary context for device ordinal 0.
+    // Static reference to HIP primary context for device ordinal defaultDevice.
     static hipCtx_t context = [] {
       HIP_REPORT_IF_ERROR(hipInit(/*flags=*/0));
       hipDevice_t device;
-      HIP_REPORT_IF_ERROR(hipDeviceGet(&device, /*ordinal=*/0));
+      HIP_REPORT_IF_ERROR(hipDeviceGet(&device, /*ordinal=*/defaultDevice));
       hipCtx_t ctx;
       HIP_REPORT_IF_ERROR(hipDevicePrimaryCtxRetain(&ctx, device));
       return ctx;
@@ -133,12 +135,17 @@ extern "C" void mgpuMemFree(void *ptr, hipStream_t /*stream*/) {
   HIP_REPORT_IF_ERROR(hipFree(ptr));
 }
 
-extern "C" void mgpuMemcpy(void *dst, void *src, uint64_t sizeBytes,
+extern "C" void mgpuMemcpy(void *dst, void *src, size_t sizeBytes,
                            hipStream_t stream) {
   HIP_REPORT_IF_ERROR(
       hipMemcpyAsync(dst, src, sizeBytes, hipMemcpyDefault, stream));
 }
 
+extern "C" void mgpuMemset32(void *dst, int value, size_t count,
+                             hipStream_t stream) {
+  HIP_REPORT_IF_ERROR(hipMemsetD32Async(reinterpret_cast<hipDeviceptr_t>(dst),
+                                        value, count, stream));
+}
 /// Helper functions for writing mlir example code
 
 // Allows to register byte array with the ROCM runtime. Helpful until we have
@@ -193,4 +200,9 @@ mgpuMemGetDeviceMemRef1dInt32(int32_t *allocated, int32_t *aligned,
   int32_t *devicePtr = nullptr;
   mgpuMemGetDevicePointer(aligned, &devicePtr);
   return {devicePtr, devicePtr, offset, {size}, {stride}};
+}
+
+extern "C" void mgpuSetDefaultDevice(int32_t device) {
+  defaultDevice = device;
+  HIP_REPORT_IF_ERROR(hipSetDevice(device));
 }

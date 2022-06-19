@@ -20,6 +20,10 @@ Optional<XCOFF::StorageMappingClass>
 getXCOFFSymbolCsectSMC(const object::XCOFFObjectFile *Obj,
                        const object::SymbolRef &Sym);
 
+Optional<object::SymbolRef>
+getXCOFFSymbolContainingSymbolRef(const object::XCOFFObjectFile *Obj,
+                                  const object::SymbolRef &Sym);
+
 bool isLabel(const object::XCOFFObjectFile *Obj, const object::SymbolRef &Sym);
 
 std::string getXCOFFSymbolDescription(const SymbolInfoTy &SymbolInfo,

@@ -5,7 +5,7 @@ template<typename T> using A = char; // expected-error {{type alias template red
 template<typename T1, typename T2> using A = T1; // expected-error {{too many template parameters in template redeclaration}}
 
 template<typename T1, typename T2> using B = T1; // expected-note {{previous}}
-template<typename T2, typename T1> using B = T1; // expected-error {{type alias template redefinition with different types}}
+template<typename T2, typename T1> using B = T1; // expected-error {{type alias template redefinition with different types ('T1' (aka 'type-parameter-0-1') vs 'T1' (aka 'type-parameter-0-0'))}}
 
 
 template<typename> struct S;

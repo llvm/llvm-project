@@ -10,10 +10,10 @@
 /// tests can be debugified without affecting the output MIR.
 //===----------------------------------------------------------------------===//
 
-#include "llvm/CodeGen/MachineFunctionPass.h"
+#include "llvm/CodeGen/MachineBasicBlock.h"
+#include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineModuleInfo.h"
 #include "llvm/CodeGen/Passes.h"
-#include "llvm/IR/DebugInfo.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Transforms/Utils/Debugify.h"
@@ -50,29 +50,26 @@ struct StripDebugMachineModule : public ModulePass {
         continue;
       MachineFunction &MF = *MaybeMF;
       for (MachineBasicBlock &MBB : MF) {
-        for (MachineBasicBlock::iterator I = MBB.begin(), E = MBB.end();
-             I != E;) {
-          if (I->isDebugInstr()) {
+        for (MachineInstr &MI : llvm::make_early_inc_range(MBB)) {
+          if (MI.isDebugInstr()) {
             // FIXME: We should remove all of them. However, AArch64 emits an
             //        invalid `DBG_VALUE $lr` with only one operand instead of
             //        the usual three and has a test that depends on it's
             //        preservation. Preserve it for now.
-            if (I->getNumOperands() > 1) {
-              LLVM_DEBUG(dbgs() << "Removing debug instruction " << *I);
-              I = MBB.erase(I);
+            if (MI.getNumOperands() > 1) {
+              LLVM_DEBUG(dbgs() << "Removing debug instruction " << MI);
+              MBB.erase(&MI);
               Changed |= true;
               continue;
             }
           }
-          if (I->getDebugLoc()) {
-            LLVM_DEBUG(dbgs() << "Removing location " << *I);
-            I->setDebugLoc(DebugLoc());
+          if (MI.getDebugLoc()) {
+            LLVM_DEBUG(dbgs() << "Removing location " << MI);
+            MI.setDebugLoc(DebugLoc());
             Changed |= true;
-            ++I;
             continue;
           }
-          LLVM_DEBUG(dbgs() << "Keeping " << *I);
-          ++I;
+          LLVM_DEBUG(dbgs() << "Keeping " << MI);
         }
       }
     }

@@ -49,3 +49,10 @@ spv.module Logical GLSL450 requires #spv.vce<v1.0, [Shader], []> {
   spv.GlobalVariable @var bind(0, 0) {restrict} : !spv.ptr<!spv.struct<(!spv.array<4xf32, stride=4>[0])>, StorageBuffer>
 }
 
+// -----
+
+spv.module Logical GLSL450 requires #spv.vce<v1.0, [Shader], []> {
+  // CHECK: relaxed_precision
+  spv.GlobalVariable @var {location = 0 : i32, relaxed_precision} : !spv.ptr<vector<4xf32>, Output>
+}
+

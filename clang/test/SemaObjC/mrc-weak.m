@@ -41,7 +41,7 @@ __attribute__((objc_root_class))
 @synthesize sd = _sd;
 @end
 
-void test_goto() {
+void test_goto(void) {
   goto after; // expected-error {{cannot jump from this goto statement to its label}}
   __weak id x; // expected-note {{jump bypasses initialization of __weak variable}}}
 after:

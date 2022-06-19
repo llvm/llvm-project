@@ -41,7 +41,6 @@ typedef struct _GPR {
 #reg, alt, sizeof(((GPR *)nullptr)->reg), GPR_OFFSET(reg), eEncodingUint,  \
         eFormatHex,                                                            \
         {kind1, kind2, kind3, kind4, lldb_##reg##_i386 }, nullptr, nullptr,    \
-         nullptr, 0                                                            \
   }
 
 // clang-format off

@@ -11,6 +11,21 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Object/RelocationResolver.h"
+#include "llvm/ADT/Triple.h"
+#include "llvm/ADT/Twine.h"
+#include "llvm/BinaryFormat/COFF.h"
+#include "llvm/BinaryFormat/ELF.h"
+#include "llvm/BinaryFormat/MachO.h"
+#include "llvm/BinaryFormat/Wasm.h"
+#include "llvm/Object/ELFObjectFile.h"
+#include "llvm/Object/ELFTypes.h"
+#include "llvm/Object/ObjectFile.h"
+#include "llvm/Object/SymbolicFile.h"
+#include "llvm/Support/Casting.h"
+#include "llvm/Support/Error.h"
+#include "llvm/Support/ErrorHandling.h"
+#include <cassert>
+#include <vector>
 
 namespace llvm {
 namespace object {
@@ -18,7 +33,7 @@ namespace object {
 static int64_t getELFAddend(RelocationRef R) {
   Expected<int64_t> AddendOrErr = ELFRelocationRef(R).getAddend();
   handleAllErrors(AddendOrErr.takeError(), [](const ErrorInfoBase &EI) {
-    report_fatal_error(EI.message());
+    report_fatal_error(Twine(EI.message()));
   });
   return *AddendOrErr;
 }
@@ -63,6 +78,7 @@ static bool supportsAArch64(uint64_t Type) {
   switch (Type) {
   case ELF::R_AARCH64_ABS32:
   case ELF::R_AARCH64_ABS64:
+  case ELF::R_AARCH64_PREL16:
   case ELF::R_AARCH64_PREL32:
   case ELF::R_AARCH64_PREL64:
     return true;
@@ -78,6 +94,8 @@ static uint64_t resolveAArch64(uint64_t Type, uint64_t Offset, uint64_t S,
     return (S + Addend) & 0xFFFFFFFF;
   case ELF::R_AARCH64_ABS64:
     return S + Addend;
+  case ELF::R_AARCH64_PREL16:
+    return (S + Addend - Offset) & 0xFFFF;
   case ELF::R_AARCH64_PREL32:
     return (S + Addend - Offset) & 0xFFFFFFFF;
   case ELF::R_AARCH64_PREL64:
@@ -468,6 +486,31 @@ static uint64_t resolveRISCV(uint64_t Type, uint64_t Offset, uint64_t S,
   }
 }
 
+static bool supportsCSKY(uint64_t Type) {
+  switch (Type) {
+  case ELF::R_CKCORE_NONE:
+  case ELF::R_CKCORE_ADDR32:
+  case ELF::R_CKCORE_PCREL32:
+    return true;
+  default:
+    return false;
+  }
+}
+
+static uint64_t resolveCSKY(uint64_t Type, uint64_t Offset, uint64_t S,
+                            uint64_t LocData, int64_t Addend) {
+  switch (Type) {
+  case ELF::R_CKCORE_NONE:
+    return LocData;
+  case ELF::R_CKCORE_ADDR32:
+    return (S + Addend) & 0xFFFFFFFF;
+  case ELF::R_CKCORE_PCREL32:
+    return (S + Addend - Offset) & 0xFFFFFFFF;
+  default:
+    llvm_unreachable("Invalid relocation type");
+  }
+}
+
 static bool supportsCOFFX86(uint64_t Type) {
   switch (Type) {
   case COFF::IMAGE_REL_I386_SECREL:
@@ -715,6 +758,8 @@ getRelocationResolver(const ObjectFile &Obj) {
       return {supportsHexagon, resolveHexagon};
     case Triple::riscv32:
       return {supportsRISCV, resolveRISCV};
+    case Triple::csky:
+      return {supportsCSKY, resolveCSKY};
     default:
       return {nullptr, nullptr};
     }

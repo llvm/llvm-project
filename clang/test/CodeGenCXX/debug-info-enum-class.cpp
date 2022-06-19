@@ -25,7 +25,7 @@ D d;
 // CHECK-NOT:              offset:
 // CHECK-SAME:             flags: DIFlagEnumClass
 // CHECK-SAME:             ){{$}}
-// CHECK: ![[ULONG]] = !DIBasicType(name: "long unsigned int"
+// CHECK: ![[ULONG]] = !DIBasicType(name: "unsigned long"
 // CHECK: !DICompositeType(tag: DW_TAG_enumeration_type, name: "C"
 // CHECK-SAME:             line: 5
 // CHECK-SAME:             baseType: ![[ULONG:[0-9]+]]

@@ -20,7 +20,7 @@ using namespace object;
 
 namespace {
 
-static const EnumEntry<unsigned> WasmSymbolTypes[] = {
+const EnumEntry<unsigned> WasmSymbolTypes[] = {
 #define ENUM_ENTRY(X)                                                          \
   { #X, wasm::WASM_SYMBOL_TYPE_##X }
     ENUM_ENTRY(FUNCTION), ENUM_ENTRY(DATA), ENUM_ENTRY(GLOBAL),
@@ -28,7 +28,7 @@ static const EnumEntry<unsigned> WasmSymbolTypes[] = {
 #undef ENUM_ENTRY
 };
 
-static const EnumEntry<uint32_t> WasmSectionTypes[] = {
+const EnumEntry<uint32_t> WasmSectionTypes[] = {
 #define ENUM_ENTRY(X)                                                          \
   { #X, wasm::WASM_SEC_##X }
     ENUM_ENTRY(CUSTOM),   ENUM_ENTRY(TYPE),      ENUM_ENTRY(IMPORT),
@@ -39,7 +39,7 @@ static const EnumEntry<uint32_t> WasmSectionTypes[] = {
 #undef ENUM_ENTRY
 };
 
-static const EnumEntry<unsigned> WasmSymbolFlags[] = {
+const EnumEntry<unsigned> WasmSymbolFlags[] = {
 #define ENUM_ENTRY(X)                                                          \
   { #X, wasm::WASM_SYMBOL_##X }
   ENUM_ENTRY(BINDING_GLOBAL),
@@ -179,11 +179,16 @@ void WasmDumper::printSectionHeaders() {
         if (!Seg.Name.empty())
           W.printString("Name", Seg.Name);
         W.printNumber("Size", static_cast<uint64_t>(Seg.Content.size()));
-        if (Seg.Offset.Opcode == wasm::WASM_OPCODE_I32_CONST)
-          W.printNumber("Offset", Seg.Offset.Value.Int32);
-        else if (Seg.Offset.Opcode == wasm::WASM_OPCODE_I64_CONST)
-          W.printNumber("Offset", Seg.Offset.Value.Int64);
-        else
+        if (Seg.Offset.Extended)
+          llvm_unreachable("extended const exprs not supported");
+        else if (Seg.Offset.Inst.Opcode == wasm::WASM_OPCODE_I32_CONST)
+          W.printNumber("Offset", Seg.Offset.Inst.Value.Int32);
+        else if (Seg.Offset.Inst.Opcode == wasm::WASM_OPCODE_I64_CONST)
+          W.printNumber("Offset", Seg.Offset.Inst.Value.Int64);
+        else if (Seg.Offset.Inst.Opcode == wasm::WASM_OPCODE_GLOBAL_GET) {
+          ListScope Group(W, "Offset");
+          W.printNumber("Global", Seg.Offset.Inst.Value.Global);
+        } else
           llvm_unreachable("unknown init expr opcode");
       }
       break;

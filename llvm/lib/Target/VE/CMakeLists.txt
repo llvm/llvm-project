@@ -16,6 +16,7 @@ add_public_tablegen_target(VECommonTableGen)
 add_llvm_target(VECodeGen
   LVLGen.cpp
   VEAsmPrinter.cpp
+  VECustomDAG.cpp
   VEFrameLowering.cpp
   VEISelDAGToDAG.cpp
   VEISelLowering.cpp
@@ -25,6 +26,7 @@ add_llvm_target(VECodeGen
   VERegisterInfo.cpp
   VESubtarget.cpp
   VETargetMachine.cpp
+  VVPISelLowering.cpp
 
   LINK_COMPONENTS
   Analysis

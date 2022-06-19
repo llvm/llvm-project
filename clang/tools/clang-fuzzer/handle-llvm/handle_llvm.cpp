@@ -35,11 +35,11 @@
 #include "llvm/IR/Module.h"
 #include "llvm/IR/Verifier.h"
 #include "llvm/IRReader/IRReader.h"
+#include "llvm/MC/TargetRegistry.h"
 #include "llvm/Pass.h"
 #include "llvm/PassRegistry.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/SourceMgr.h"
-#include "llvm/Support/TargetRegistry.h"
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Transforms/IPO.h"
@@ -139,7 +139,7 @@ static std::string OptLLVM(const std::string &IR, CodeGenOpt::Level OLvl) {
 
   Passes.run(*M);
 
-  return OS.str();
+  return outString;
 }
 
 // Takes a function and runs it on a set of inputs
@@ -227,6 +227,4 @@ void clang_fuzzer::HandleLLVM(const std::string &IR,
 
   if (memcmp(OptArrays, UnoptArrays, kTotalSize))
     ErrorAndExit("!!!BUG!!!");
-
-  return;
 }

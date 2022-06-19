@@ -1,5 +1,5 @@
-; RUN: opt < %s -debug-only=loop-vectorize -loop-vectorize -vectorizer-maximize-bandwidth -O2 -mtriple=powerpc64-unknown-linux -S -mcpu=pwr8 2>&1 | FileCheck %s --check-prefixes=CHECK,CHECK-PWR8
-; RUN: opt < %s -debug-only=loop-vectorize -loop-vectorize -vectorizer-maximize-bandwidth -O2 -mtriple=powerpc64le-unknown-linux -S -mcpu=pwr9 2>&1 | FileCheck %s --check-prefixes=CHECK,CHECK-PWR9
+; RUN: opt < %s -debug-only=loop-vectorize -passes='function(loop-vectorize),default<O2>' -vectorizer-maximize-bandwidth -mtriple=powerpc64-unknown-linux -S -mcpu=pwr8 2>&1 | FileCheck %s --check-prefixes=CHECK,CHECK-PWR8
+; RUN: opt < %s -debug-only=loop-vectorize -passes='function(loop-vectorize),default<O2>' -vectorizer-maximize-bandwidth -mtriple=powerpc64le-unknown-linux -S -mcpu=pwr9 2>&1 | FileCheck %s --check-prefixes=CHECK,CHECK-PWR9
 ; REQUIRES: asserts
 
 @a = global [1024 x i8] zeroinitializer, align 16
@@ -8,9 +8,9 @@
 define i32 @foo() {
 ; CHECK-LABEL: foo
 
-; CHECK-PWR8: Setting best plan to VF=16, UF=4
+; CHECK-PWR8: Executing best plan with VF=16, UF=4
 
-; CHECK-PWR9: Setting best plan to VF=8, UF=8
+; CHECK-PWR9: Executing best plan with VF=8, UF=8
 
 
 entry:
@@ -46,7 +46,7 @@ define i32 @goo() {
 
 ; CHECK-LABEL: goo
 
-; CHECK: Setting best plan to VF=16, UF=4
+; CHECK: Executing best plan with VF=16, UF=4
 
 entry:
   br label %for.body
@@ -79,7 +79,7 @@ for.body:                                         ; preds = %for.body, %entry
 define i64 @bar(i64* nocapture %a) {
 ; CHECK-LABEL: bar
 
-; CHECK: Setting best plan to VF=2, UF=12
+; CHECK: Executing best plan with VF=2, UF=12
 
 entry:
   br label %for.body
@@ -107,7 +107,7 @@ for.body:
 
 define void @hoo(i32 %n) {
 ; CHECK-LABEL: hoo
-; CHECK: Setting best plan to VF=1, UF=12
+; CHECK: Executing best plan with VF=1, UF=12
 
 entry:
   br label %for.body

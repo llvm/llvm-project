@@ -1,4 +1,3 @@
-; RUN: opt -lower-matrix-intrinsics -S < %s | FileCheck %s
 ; RUN: opt -passes='lower-matrix-intrinsics' -S < %s | FileCheck %s
 
 define void @strided_store_volatile(<6 x i32> %in, i32* %out) {

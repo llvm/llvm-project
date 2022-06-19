@@ -10,15 +10,6 @@
 
 // UNSUPPORTED: sanitizer-new-delete, c++03, c++11, c++14
 
-// None of the current GCC compilers support this.
-// UNSUPPORTED: gcc-5, gcc-6
-
-// Aligned allocation was not provided before macosx10.14 and as a result we
-// get availability errors when the deployment target is older than macosx10.14.
-// However, support for that was broken prior to Clang 8 and AppleClang 11.
-// UNSUPPORTED: apple-clang-9, apple-clang-10
-// UNSUPPORTED: clang-5, clang-6, clang-7
-
 // Libcxx when built for z/OS doesn't contain the aligned allocation functions,
 // nor does the dynamic library shipped with z/OS.
 // UNSUPPORTED: target={{.+}}-zos{{.*}}

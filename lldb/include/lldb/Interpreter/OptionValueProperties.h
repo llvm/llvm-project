@@ -114,6 +114,9 @@ public:
   GetPropertyAtIndexAsOptionValueLanguage(const ExecutionContext *exe_ctx,
                                           uint32_t idx) const;
 
+  bool SetPropertyAtIndexAsLanguage(const ExecutionContext *exe_ctx,
+                                    uint32_t idx, lldb::LanguageType lang);
+
   bool GetPropertyAtIndexAsArgs(const ExecutionContext *exe_ctx, uint32_t idx,
                                 Args &args) const;
 
@@ -147,6 +150,10 @@ public:
 
   OptionValueSInt64 *
   GetPropertyAtIndexAsOptionValueSInt64(const ExecutionContext *exe_ctx,
+                                        uint32_t idx) const;
+
+  OptionValueUInt64 *
+  GetPropertyAtIndexAsOptionValueUInt64(const ExecutionContext *exe_ctx,
                                         uint32_t idx) const;
 
   int64_t GetPropertyAtIndexAsSInt64(const ExecutionContext *exe_ctx,

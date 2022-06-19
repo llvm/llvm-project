@@ -18,7 +18,7 @@
 ;  4       return foo();
 ;  5     }
 
-; CHECK: remark: /tmp/s.c:4:10: foo inlined into bar with (cost={{[0-9\-]+}}, threshold={{[0-9]+}})
+; CHECK: remark: /tmp/s.c:4:10: 'foo' inlined into 'bar' with (cost={{[0-9\-]+}}, threshold={{[0-9]+}})
 ; THRESHOLD-NOT: remark
 
 ; ModuleID = '/tmp/s.c'

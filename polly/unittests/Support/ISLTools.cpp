@@ -19,7 +19,7 @@ TEST(Support, isl_iterator) {
       Ctx, "{ [x, y] : 0 <= x <= 5 and y >= 0 and x <= 4 and y <= 3 + x }");
   isl::set S = A.unite(B);
 
-  ASSERT_EQ(S.n_basic_set(), 2);
+  ASSERT_EQ(S.n_basic_set().release(), 2);
   std::vector<isl::basic_set> Sets;
   for (auto BS : S.get_basic_set_list())
     Sets.push_back(BS);

@@ -9,13 +9,13 @@ define <8 x i16> @sink_zext(<8 x i8> %a, <8 x i8> %b, i1 %c) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br i1 [[C:%.*]], label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]]
 ; CHECK:       if.then:
-; CHECK-NEXT:    [[ZB_1:%.*]] = zext <8 x i8> [[B:%.*]] to <8 x i16>
 ; CHECK-NEXT:    [[TMP0:%.*]] = zext <8 x i8> [[A:%.*]] to <8 x i16>
+; CHECK-NEXT:    [[ZB_1:%.*]] = zext <8 x i8> [[B:%.*]] to <8 x i16>
 ; CHECK-NEXT:    [[RES_1:%.*]] = add <8 x i16> [[TMP0]], [[ZB_1]]
 ; CHECK-NEXT:    ret <8 x i16> [[RES_1]]
 ; CHECK:       if.else:
-; CHECK-NEXT:    [[ZB_2:%.*]] = zext <8 x i8> [[B]] to <8 x i16>
 ; CHECK-NEXT:    [[TMP1:%.*]] = zext <8 x i8> [[A]] to <8 x i16>
+; CHECK-NEXT:    [[ZB_2:%.*]] = zext <8 x i8> [[B]] to <8 x i16>
 ; CHECK-NEXT:    [[RES_2:%.*]] = sub <8 x i16> [[TMP1]], [[ZB_2]]
 ; CHECK-NEXT:    ret <8 x i16> [[RES_2]]
 ;
@@ -39,13 +39,13 @@ define <8 x i16> @sink_sext(<8 x i8> %a, <8 x i8> %b, i1 %c) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br i1 [[C:%.*]], label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]]
 ; CHECK:       if.then:
-; CHECK-NEXT:    [[ZB_1:%.*]] = sext <8 x i8> [[B:%.*]] to <8 x i16>
 ; CHECK-NEXT:    [[TMP0:%.*]] = sext <8 x i8> [[A:%.*]] to <8 x i16>
+; CHECK-NEXT:    [[ZB_1:%.*]] = sext <8 x i8> [[B:%.*]] to <8 x i16>
 ; CHECK-NEXT:    [[RES_1:%.*]] = add <8 x i16> [[TMP0]], [[ZB_1]]
 ; CHECK-NEXT:    ret <8 x i16> [[RES_1]]
 ; CHECK:       if.else:
-; CHECK-NEXT:    [[ZB_2:%.*]] = sext <8 x i8> [[B]] to <8 x i16>
 ; CHECK-NEXT:    [[TMP1:%.*]] = sext <8 x i8> [[A]] to <8 x i16>
+; CHECK-NEXT:    [[ZB_2:%.*]] = sext <8 x i8> [[B]] to <8 x i16>
 ; CHECK-NEXT:    [[RES_2:%.*]] = sub <8 x i16> [[TMP1]], [[ZB_2]]
 ; CHECK-NEXT:    ret <8 x i16> [[RES_2]]
 ;
@@ -69,8 +69,8 @@ define <8 x i16> @do_not_sink_nonfree_zext(<8 x i8> %a, <8 x i8> %b, i1 %c) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br i1 [[C:%.*]], label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]]
 ; CHECK:       if.then:
-; CHECK-NEXT:    [[ZB_1:%.*]] = sext <8 x i8> [[B:%.*]] to <8 x i16>
 ; CHECK-NEXT:    [[TMP0:%.*]] = sext <8 x i8> [[A:%.*]] to <8 x i16>
+; CHECK-NEXT:    [[ZB_1:%.*]] = sext <8 x i8> [[B:%.*]] to <8 x i16>
 ; CHECK-NEXT:    [[RES_1:%.*]] = add <8 x i16> [[TMP0]], [[ZB_1]]
 ; CHECK-NEXT:    ret <8 x i16> [[RES_1]]
 ; CHECK:       if.else:
@@ -96,8 +96,8 @@ define <8 x i16> @do_not_sink_nonfree_sext(<8 x i8> %a, <8 x i8> %b, i1 %c) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br i1 [[C:%.*]], label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]]
 ; CHECK:       if.then:
-; CHECK-NEXT:    [[ZB_1:%.*]] = sext <8 x i8> [[B:%.*]] to <8 x i16>
 ; CHECK-NEXT:    [[TMP0:%.*]] = sext <8 x i8> [[A:%.*]] to <8 x i16>
+; CHECK-NEXT:    [[ZB_1:%.*]] = sext <8 x i8> [[B:%.*]] to <8 x i16>
 ; CHECK-NEXT:    [[RES_1:%.*]] = add <8 x i16> [[TMP0]], [[ZB_1]]
 ; CHECK-NEXT:    ret <8 x i16> [[RES_1]]
 ; CHECK:       if.else:
@@ -124,13 +124,13 @@ define <8 x i16> @sink_shufflevector_umull(<16 x i8> %a, <16 x i8> %b) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br i1 undef, label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]]
 ; CHECK:       if.then:
-; CHECK-NEXT:    [[S2:%.*]] = shufflevector <16 x i8> [[B:%.*]], <16 x i8> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
 ; CHECK-NEXT:    [[TMP0:%.*]] = shufflevector <16 x i8> [[A:%.*]], <16 x i8> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+; CHECK-NEXT:    [[S2:%.*]] = shufflevector <16 x i8> [[B:%.*]], <16 x i8> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
 ; CHECK-NEXT:    [[VMULL0:%.*]] = tail call <8 x i16> @llvm.aarch64.neon.umull.v8i16(<8 x i8> [[TMP0]], <8 x i8> [[S2]])
 ; CHECK-NEXT:    ret <8 x i16> [[VMULL0]]
 ; CHECK:       if.else:
-; CHECK-NEXT:    [[S4:%.*]] = shufflevector <16 x i8> [[B]], <16 x i8> poison, <8 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
 ; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <16 x i8> [[A]], <16 x i8> poison, <8 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+; CHECK-NEXT:    [[S4:%.*]] = shufflevector <16 x i8> [[B]], <16 x i8> poison, <8 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
 ; CHECK-NEXT:    [[VMULL1:%.*]] = tail call <8 x i16> @llvm.aarch64.neon.umull.v8i16(<8 x i8> [[TMP1]], <8 x i8> [[S4]])
 ; CHECK-NEXT:    ret <8 x i16> [[VMULL1]]
 ;
@@ -154,20 +154,20 @@ if.else:
 define <8 x i16> @sink_shufflevector_ext_subadd(<16 x i8> %a, <16 x i8> %b) {
 ; CHECK-LABEL: @sink_shufflevector_ext_subadd(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[S1:%.*]] = shufflevector <16 x i8> [[A:%.*]], <16 x i8> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
-; CHECK-NEXT:    [[S3:%.*]] = shufflevector <16 x i8> [[A]], <16 x i8> poison, <8 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
 ; CHECK-NEXT:    br i1 undef, label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]]
 ; CHECK:       if.then:
+; CHECK-NEXT:    [[TMP0:%.*]] = shufflevector <16 x i8> [[A:%.*]], <16 x i8> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+; CHECK-NEXT:    [[TMP1:%.*]] = zext <8 x i8> [[TMP0]] to <8 x i16>
 ; CHECK-NEXT:    [[S2:%.*]] = shufflevector <16 x i8> [[B:%.*]], <16 x i8> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
 ; CHECK-NEXT:    [[Z2:%.*]] = zext <8 x i8> [[S2]] to <8 x i16>
-; CHECK-NEXT:    [[TMP0:%.*]] = zext <8 x i8> [[S1]] to <8 x i16>
-; CHECK-NEXT:    [[RES1:%.*]] = add <8 x i16> [[TMP0]], [[Z2]]
+; CHECK-NEXT:    [[RES1:%.*]] = add <8 x i16> [[TMP1]], [[Z2]]
 ; CHECK-NEXT:    ret <8 x i16> [[RES1]]
 ; CHECK:       if.else:
+; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <16 x i8> [[A]], <16 x i8> poison, <8 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+; CHECK-NEXT:    [[TMP3:%.*]] = sext <8 x i8> [[TMP2]] to <8 x i16>
 ; CHECK-NEXT:    [[S4:%.*]] = shufflevector <16 x i8> [[B]], <16 x i8> poison, <8 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
 ; CHECK-NEXT:    [[Z4:%.*]] = sext <8 x i8> [[S4]] to <8 x i16>
-; CHECK-NEXT:    [[TMP1:%.*]] = sext <8 x i8> [[S3]] to <8 x i16>
-; CHECK-NEXT:    [[RES2:%.*]] = sub <8 x i16> [[TMP1]], [[Z4]]
+; CHECK-NEXT:    [[RES2:%.*]] = sub <8 x i16> [[TMP3]], [[Z4]]
 ; CHECK-NEXT:    ret <8 x i16> [[RES2]]
 ;
 entry:
@@ -197,22 +197,23 @@ declare void @user1(<8 x i16>)
 define <8 x i16> @sink_shufflevector_ext_subadd_multiuse(<16 x i8> %a, <16 x i8> %b) {
 ; CHECK-LABEL: @sink_shufflevector_ext_subadd_multiuse(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[S1:%.*]] = shufflevector <16 x i8> [[A:%.*]], <16 x i8> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
-; CHECK-NEXT:    [[S3:%.*]] = shufflevector <16 x i8> [[A]], <16 x i8> poison, <8 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+; CHECK-NEXT:    [[S3:%.*]] = shufflevector <16 x i8> [[A:%.*]], <16 x i8> poison, <8 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
 ; CHECK-NEXT:    [[Z3:%.*]] = sext <8 x i8> [[S3]] to <8 x i16>
 ; CHECK-NEXT:    call void @user1(<8 x i16> [[Z3]])
 ; CHECK-NEXT:    br i1 undef, label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]]
 ; CHECK:       if.then:
+; CHECK-NEXT:    [[TMP0:%.*]] = shufflevector <16 x i8> [[A]], <16 x i8> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+; CHECK-NEXT:    [[TMP1:%.*]] = zext <8 x i8> [[TMP0]] to <8 x i16>
 ; CHECK-NEXT:    [[S2:%.*]] = shufflevector <16 x i8> [[B:%.*]], <16 x i8> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
 ; CHECK-NEXT:    [[Z2:%.*]] = zext <8 x i8> [[S2]] to <8 x i16>
-; CHECK-NEXT:    [[TMP0:%.*]] = zext <8 x i8> [[S1]] to <8 x i16>
-; CHECK-NEXT:    [[RES1:%.*]] = add <8 x i16> [[TMP0]], [[Z2]]
+; CHECK-NEXT:    [[RES1:%.*]] = add <8 x i16> [[TMP1]], [[Z2]]
 ; CHECK-NEXT:    ret <8 x i16> [[RES1]]
 ; CHECK:       if.else:
+; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <16 x i8> [[A]], <16 x i8> poison, <8 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+; CHECK-NEXT:    [[TMP3:%.*]] = sext <8 x i8> [[TMP2]] to <8 x i16>
 ; CHECK-NEXT:    [[S4:%.*]] = shufflevector <16 x i8> [[B]], <16 x i8> poison, <8 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
 ; CHECK-NEXT:    [[Z4:%.*]] = sext <8 x i8> [[S4]] to <8 x i16>
-; CHECK-NEXT:    [[TMP1:%.*]] = sext <8 x i8> [[S3]] to <8 x i16>
-; CHECK-NEXT:    [[RES2:%.*]] = sub <8 x i16> [[TMP1]], [[Z4]]
+; CHECK-NEXT:    [[RES2:%.*]] = sub <8 x i16> [[TMP3]], [[Z4]]
 ; CHECK-NEXT:    ret <8 x i16> [[RES2]]
 ;
 entry:

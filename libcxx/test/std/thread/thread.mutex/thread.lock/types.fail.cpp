@@ -8,11 +8,7 @@
 //===----------------------------------------------------------------------===//
 
 // UNSUPPORTED: c++03
-// UNSUPPORTED: libcpp-has-no-threads
-
-// Before GCC 6, aggregate initialization kicks in.
-// See https://stackoverflow.com/q/41799015/627587.
-// UNSUPPORTED: gcc-5
+// UNSUPPORTED: no-threads
 
 // <mutex>
 

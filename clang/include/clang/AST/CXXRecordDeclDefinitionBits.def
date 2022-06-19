@@ -112,6 +112,9 @@ FIELD(HasVariantMembers, 1, NO_MERGE)
 /// True if there no non-field members declared by the user.
 FIELD(HasOnlyCMembers, 1, NO_MERGE)
 
+/// True if there is an '__init' method defined by the user.
+FIELD(HasInitMethod, 1, NO_MERGE)
+
 /// True if any field has an in-class initializer, including those
 /// within anonymous unions or structs.
 FIELD(HasInClassInitializer, 1, NO_MERGE)

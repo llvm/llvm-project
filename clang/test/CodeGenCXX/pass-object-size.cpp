@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple x86_64-apple-darwin -emit-llvm -O0 %s -o - 2>&1 -std=c++11 | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-apple-darwin -emit-llvm -O0 %s -o - 2>&1 -std=c++11 | FileCheck %s
 
 int gi;
 
@@ -20,10 +20,10 @@ void Lambdas(char *ptr) {
   gi = L2(ptr);
 }
 
-// CHECK-DAG: define internal i64 @"_ZZN7lambdas7LambdasEPcENK3$_0clEPvU17pass_object_size0"
-// CHECK-NOT: call i64 @llvm.objectsize
-// CHECK-DAG: define internal i64 @"_ZZN7lambdas7LambdasEPcENK3$_1clEPvU17pass_object_size0"
-// CHECK-NOT: call i64 @llvm.objectsize
+// CHECK-DAG: define internal noundef i64 @"_ZZN7lambdas7LambdasEPcENK3$_0clEPvU17pass_object_size0"
+// CHECK-NOT: call noundef i64 @llvm.objectsize
+// CHECK-DAG: define internal noundef i64 @"_ZZN7lambdas7LambdasEPcENK3$_1clEPvU17pass_object_size0"
+// CHECK-NOT: call noundef i64 @llvm.objectsize
 }
 
 // This is here instead of in Sema/ because we need to check to make sure the

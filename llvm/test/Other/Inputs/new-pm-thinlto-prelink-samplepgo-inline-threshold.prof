@@ -1,0 +1,16 @@
+_Z3sumii:105580:5279
+ 0: 5279
+ 1: 5279
+ 2: 5279
+_Z4sum1ii:105580:5279
+ 0: 5279
+ 1: 5279
+ 2: 5279
+main:225715:0
+ 2.1: 5553
+ 3: 4522
+ # This indicates that at line 3 of this function, the 'then' branch
+ # of the conditional is taken (discriminator '1').
+ 3.1: 5752 _Z3sumii:5860
+ 4: 20 _Z4sum1ii:20
+ 4.1: 11504 _Z4sum1ii:11720

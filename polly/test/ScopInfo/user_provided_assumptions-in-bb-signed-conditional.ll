@@ -1,5 +1,5 @@
 ; RUN: opt %loadPolly -pass-remarks-analysis="polly-scops" -polly-scops -disable-output < %s 2>&1 | FileCheck %s --check-prefix=REMARK
-; RUN: opt %loadPolly -polly-scops -analyze < %s | FileCheck %s
+; RUN: opt %loadPolly -polly-print-scops -disable-output < %s | FileCheck %s
 ;
 ; REMARK: remark: <unknown>:0:0: Use user assumption: [n, b] -> {  : n <= 100 or (b = 0 and n >= 101) }
 ;

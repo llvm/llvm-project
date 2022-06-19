@@ -21,7 +21,7 @@ namespace llvm {
 bool canPeel(Loop *L);
 
 bool peelLoop(Loop *L, unsigned PeelCount, LoopInfo *LI, ScalarEvolution *SE,
-              DominatorTree *DT, AssumptionCache *AC, bool PreserveLCSSA);
+              DominatorTree &DT, AssumptionCache *AC, bool PreserveLCSSA);
 
 TargetTransformInfo::PeelingPreferences
 gatherPeelingPreferences(Loop *L, ScalarEvolution &SE,
@@ -32,8 +32,8 @@ gatherPeelingPreferences(Loop *L, ScalarEvolution &SE,
 
 void computePeelCount(Loop *L, unsigned LoopSize,
                       TargetTransformInfo::PeelingPreferences &PP,
-                      unsigned &TripCount, ScalarEvolution &SE,
-                      unsigned Threshold = UINT_MAX);
+                      unsigned TripCount, DominatorTree &DT,
+                      ScalarEvolution &SE, unsigned Threshold = UINT_MAX);
 
 } // end namespace llvm
 

@@ -3,10 +3,14 @@
 #  SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 
 # Simply a wrapper around the extension module of the same name.
-from ._cext_loader import _cext
+from ._mlir_libs import _mlirExecutionEngine as _execution_engine
 import ctypes
 
-class ExecutionEngine(_cext.execution_engine.ExecutionEngine):
+__all__ = [
+  "ExecutionEngine",
+]
+
+class ExecutionEngine(_execution_engine.ExecutionEngine):
 
   def lookup(self, name):
     """Lookup a function emitted with the `llvm.emit_c_interface`
@@ -35,5 +39,5 @@ class ExecutionEngine(_cext.execution_engine.ExecutionEngine):
     under the provided `name`. The `ctypes_callback` must be a
     `CFuncType` that outlives the execution engine.
     """
-    callback = ctypes.cast(ctypes_callback, ctypes.c_void_p).value
+    callback = ctypes.cast(ctypes_callback, ctypes.c_void_p)
     self.raw_register_runtime("_mlir_ciface_" + name, callback)

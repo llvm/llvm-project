@@ -30,13 +30,16 @@ class MemoryBuffer;
 class ModulePass;
 class Pass;
 class TargetMachine;
-class TargetRegisterClass;
 class raw_ostream;
 
 } // End llvm namespace
 
 // List of target independent CodeGen pass IDs.
 namespace llvm {
+
+  /// AtomicExpandPass - At IR level this pass replace atomic instructions with
+  /// __atomic_* library calls, or target specific instruction which implement the
+  /// same semantics in a way which better fits the target backend.
   FunctionPass *createAtomicExpandPass();
 
   /// createUnreachableBlockEliminationPass - The LLVM code generator does not
@@ -48,10 +51,8 @@ namespace llvm {
   FunctionPass *createUnreachableBlockEliminationPass();
 
   /// createBasicBlockSections Pass - This pass assigns sections to machine
-  /// basic blocks and is enabled with -fbasic-block-sections. Buf is a memory
-  /// buffer that contains the list of functions and basic block ids to
-  /// selectively enable basic block sections.
-  MachineFunctionPass *createBasicBlockSectionsPass(const MemoryBuffer *Buf);
+  /// basic blocks and is enabled with -fbasic-block-sections.
+  MachineFunctionPass *createBasicBlockSectionsPass();
 
   /// createMachineFunctionSplitterPass - This pass splits machine functions
   /// using profile information.
@@ -170,6 +171,9 @@ namespace llvm {
 
   /// This pass adds flow sensitive discriminators.
   extern char &MIRAddFSDiscriminatorsID;
+
+  /// This pass reads flow sensitive profile.
+  extern char &MIRProfileLoaderPassID;
 
   /// FastRegisterAllocation Pass - This pass register allocates as fast as
   /// possible. It is best suited for debug code where live ranges are short.
@@ -324,6 +328,8 @@ namespace llvm {
   /// MachineCopyPropagation - This pass performs copy propagation on
   /// machine instructions.
   extern char &MachineCopyPropagationID;
+
+  MachineFunctionPass *createMachineCopyPropagationPass(bool UseCopyInstr);
 
   /// PeepholeOptimizer - This pass performs peephole optimizations -
   /// like extension and comparison eliminations.
@@ -488,6 +494,9 @@ namespace llvm {
   // This pass expands indirectbr instructions.
   FunctionPass *createIndirectBrExpandPass();
 
+  /// Creates CFI Fixup pass. \see CFIFixup.cpp
+  FunctionPass *createCFIFixup();
+
   /// Creates CFI Instruction Inserter pass. \see CFIInstrInserter.cpp
   FunctionPass *createCFIInstrInserter();
 
@@ -512,6 +521,11 @@ namespace llvm {
   /// sequence number of this pass (starting from 1).
   FunctionPass *
   createMIRAddFSDiscriminatorsPass(sampleprof::FSDiscriminatorPass P);
+
+  /// Read Flow Sensitive Profile.
+  FunctionPass *createMIRProfileLoaderPass(std::string File,
+                                           std::string RemappingFile,
+                                           sampleprof::FSDiscriminatorPass P);
 
   /// Creates MIR Debugify pass. \see MachineDebugify.cpp
   ModulePass *createDebugifyMachineModulePass();
@@ -539,6 +553,16 @@ namespace llvm {
   /// The pass transforms amx intrinsics to scalar operation if the function has
   /// optnone attribute or it is O0.
   FunctionPass *createX86LowerAMXIntrinsicsPass();
+
+  /// When learning an eviction policy, extract score(reward) information,
+  /// otherwise this does nothing
+  FunctionPass *createRegAllocScoringPass();
+
+  /// JMC instrument pass.
+  ModulePass *createJMCInstrumenterPass();
+
+  /// This pass converts conditional moves to conditional jumps when profitable.
+  FunctionPass *createSelectOptimizePass();
 } // End llvm namespace
 
 #endif

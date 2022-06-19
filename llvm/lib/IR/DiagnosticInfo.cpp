@@ -1,4 +1,4 @@
-//===- llvm/Support/DiagnosticInfo.cpp - Diagnostic Definitions -*- C++ -*-===//
+//===- llvm/IR/DiagnosticInfo.cpp - Diagnostic Definitions ------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -12,7 +12,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/IR/DiagnosticInfo.h"
-#include "LLVMContextImpl.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/ADT/iterator_range.h"
@@ -24,22 +23,19 @@
 #include "llvm/IR/Function.h"
 #include "llvm/IR/GlobalValue.h"
 #include "llvm/IR/Instruction.h"
+#include "llvm/IR/Instructions.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Metadata.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/Value.h"
 #include "llvm/Support/Casting.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/InstructionCost.h"
 #include "llvm/Support/Path.h"
-#include "llvm/Support/Regex.h"
 #include "llvm/Support/ScopedPrinter.h"
 #include "llvm/Support/raw_ostream.h"
 #include <atomic>
-#include <cassert>
-#include <memory>
 #include <string>
 
 using namespace llvm;
@@ -70,10 +66,8 @@ void DiagnosticInfoInlineAsm::print(DiagnosticPrinter &DP) const {
 }
 
 void DiagnosticInfoResourceLimit::print(DiagnosticPrinter &DP) const {
-  DP << getResourceName() << " (" << getResourceSize() << ") exceeds limit";
-  if (getResourceLimit() != 0)
-    DP << " (" << getResourceLimit() << ')';
-  DP << " in function '" << getFunction() << '\'';
+  DP << getResourceName() << " (" << getResourceSize() << ") exceeds limit ("
+     << getResourceLimit() << ") in function '" << getFunction() << '\'';
 }
 
 void DiagnosticInfoDebugMetadataVersion::print(DiagnosticPrinter &DP) const {
@@ -399,5 +393,48 @@ std::string DiagnosticInfoOptimizationBase::getMsg() const {
   return OS.str();
 }
 
+DiagnosticInfoMisExpect::DiagnosticInfoMisExpect(const Instruction *Inst,
+                                                 Twine &Msg)
+    : DiagnosticInfoWithLocationBase(DK_MisExpect, DS_Warning,
+                                     *Inst->getParent()->getParent(),
+                                     Inst->getDebugLoc()),
+      Msg(Msg) {}
+
+void DiagnosticInfoMisExpect::print(DiagnosticPrinter &DP) const {
+  DP << getLocationStr() << ": " << getMsg();
+}
+
 void OptimizationRemarkAnalysisFPCommute::anchor() {}
 void OptimizationRemarkAnalysisAliasing::anchor() {}
+
+void llvm::diagnoseDontCall(const CallInst &CI) {
+  auto *F = CI.getCalledFunction();
+  if (!F)
+    return;
+
+  for (int i = 0; i != 2; ++i) {
+    auto AttrName = i == 0 ? "dontcall-error" : "dontcall-warn";
+    auto Sev = i == 0 ? DS_Error : DS_Warning;
+
+    if (F->hasFnAttribute(AttrName)) {
+      unsigned LocCookie = 0;
+      auto A = F->getFnAttribute(AttrName);
+      if (MDNode *MD = CI.getMetadata("srcloc"))
+        LocCookie =
+            mdconst::extract<ConstantInt>(MD->getOperand(0))->getZExtValue();
+      DiagnosticInfoDontCall D(F->getName(), A.getValueAsString(), Sev,
+                               LocCookie);
+      F->getContext().diagnose(D);
+    }
+  }
+}
+
+void DiagnosticInfoDontCall::print(DiagnosticPrinter &DP) const {
+  DP << "call to " << getFunctionName() << " marked \"dontcall-";
+  if (getSeverity() == DiagnosticSeverity::DS_Error)
+    DP << "error\"";
+  else
+    DP << "warn\"";
+  if (!getNote().empty())
+    DP << ": " << getNote();
+}

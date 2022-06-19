@@ -1,4 +1,5 @@
-; RUN: llc < %s | FileCheck %s
+; RUN: llc < %s -experimental-debug-variable-locations=false | FileCheck %s
+; RUN: llc < %s -experimental-debug-variable-locations=true | FileCheck %s
 
 ; Make sure we insert DW_OP_deref when spilling indirect DBG_VALUE instructions.
 ; In this example, 'nt' is passed by address because it is not trivially

@@ -73,7 +73,7 @@ def SRL64 : SDNodeXForm<imm, [{
 //
 
 let Interpretation64Bit = 1, isCodeGenOnly = 1 in {
-let isTerminator = 1, isBarrier = 1, PPC970_Unit = 7 in {
+let isTerminator = 1, isBarrier = 1, PPC970_Unit = 7, hasSideEffects = 0 in {
   let isReturn = 1, isPredicable = 1, Uses = [LR8, RM] in
     def BLR8 : XLForm_2_ext<19, 16, 20, 0, 0, (outs), (ins), "blr", IIC_BrB,
                             [(retflag)]>, Requires<[In64BitMode]>;
@@ -100,7 +100,7 @@ let Defs = [LR8] in
   def MovePCtoLR8 : PPCEmitTimePseudo<(outs), (ins), "#MovePCtoLR8", []>,
                     PPC970_Unit_BRU;
 
-let isBranch = 1, isTerminator = 1, hasCtrlDep = 1, PPC970_Unit = 7 in {
+let isBranch = 1, isTerminator = 1, hasCtrlDep = 1, PPC970_Unit = 7, hasSideEffects = 0 in {
   let Defs = [CTR8], Uses = [CTR8] in {
     def BDZ8  : BForm_1<16, 18, 0, 0, (outs), (ins condbrtarget:$dst),
                         "bdz $dst">;
@@ -118,7 +118,7 @@ let isBranch = 1, isTerminator = 1, hasCtrlDep = 1, PPC970_Unit = 7 in {
 
 
 
-let isCall = 1, PPC970_Unit = 7, Defs = [LR8] in {
+let isCall = 1, PPC970_Unit = 7, Defs = [LR8], hasSideEffects = 0 in {
   // Convenient aliases for call instructions
   let Uses = [RM] in {
     def BL8  : IForm<18, 0, 1, (outs), (ins calltarget:$func),
@@ -178,6 +178,39 @@ let isCall = 1, PPC970_Unit = 7, Defs = [LR8] in {
   }
 }
 
+let isCall = 1, PPC970_Unit = 7, Defs = [LR8, RM], hasSideEffects = 0,
+    isCodeGenOnly = 1, Uses = [RM] in {
+  // Convenient aliases for call instructions
+  def BL8_RM  : IForm<18, 0, 1, (outs), (ins calltarget:$func),
+                      "bl $func", IIC_BrB, []>;  // See Pat patterns below.
+
+  def BLA8_RM : IForm<18, 1, 1, (outs), (ins abscalltarget:$func),
+                      "bla $func", IIC_BrB, [(PPCcall_rm (i64 imm:$func))]>;
+  def BL8_NOP_RM  : IForm_and_DForm_4_zero<18, 0, 1, 24,
+                           (outs), (ins calltarget:$func),
+                           "bl $func\n\tnop", IIC_BrB, []>;
+
+  def BLA8_NOP_RM : IForm_and_DForm_4_zero<18, 1, 1, 24,
+                           (outs), (ins abscalltarget:$func),
+                           "bla $func\n\tnop", IIC_BrB,
+                           [(PPCcall_nop_rm (i64 imm:$func))]>;
+  let Predicates = [PCRelativeMemops] in {
+    // BL8_NOTOC means that the caller does not use the TOC pointer and if
+    // it does use R2 then it is just a caller saved register. Therefore it is
+    // safe to emit only the bl and not the nop for this instruction. The
+    // linker will not try to restore R2 after the call.
+    def BL8_NOTOC_RM : IForm<18, 0, 1, (outs),
+                             (ins calltarget:$func),
+                             "bl $func", IIC_BrB, []>;
+  }
+  let Uses = [CTR8, RM] in {
+    let isPredicable = 1 in
+      def BCTRL8_RM : XLForm_2_ext<19, 528, 20, 0, 1, (outs), (ins),
+                                   "bctrl", IIC_BrB, [(PPCbctrl_rm)]>,
+                   Requires<[In64BitMode]>;
+  }
+}
+
 let isCall = 1, PPC970_Unit = 7, isCodeGenOnly = 1,
     Defs = [LR8, X2], Uses = [CTR8, RM], RST = 2 in {
   def BCTRL8_LDinto_toc :
@@ -188,12 +221,22 @@ let isCall = 1, PPC970_Unit = 7, isCodeGenOnly = 1,
     Requires<[In64BitMode]>;
 }
 
+let isCall = 1, PPC970_Unit = 7, isCodeGenOnly = 1,
+    Defs = [LR8, X2, RM], Uses = [CTR8, RM], RST = 2 in {
+  def BCTRL8_LDinto_toc_RM :
+    XLForm_2_ext_and_DSForm_1<19, 528, 20, 0, 1, 58, 0, (outs),
+                              (ins memrix:$src),
+                              "bctrl\n\tld 2, $src", IIC_BrB,
+                              [(PPCbctrl_load_toc_rm iaddrX4:$src)]>,
+    Requires<[In64BitMode]>;
+}
+
 } // Interpretation64Bit
 
 // FIXME: Duplicating this for the asm parser should be unnecessary, but the
 // previous definition must be marked as CodeGen only to prevent decoding
 // conflicts.
-let Interpretation64Bit = 1, isAsmParserOnly = 1 in
+let Interpretation64Bit = 1, isAsmParserOnly = 1, hasSideEffects = 0 in
 let isCall = 1, PPC970_Unit = 7, Defs = [LR8], Uses = [RM] in
 def BL8_TLS_ : IForm<18, 0, 1, (outs), (ins tlscall:$func),
                      "bl $func", IIC_BrB, []>;
@@ -214,11 +257,31 @@ def : Pat<(PPCcall_notoc (i64 tglobaladdr:$dst)),
 def : Pat<(PPCcall_notoc (i64 texternalsym:$dst)),
           (BL8_NOTOC texternalsym:$dst)>;
 
+def : Pat<(PPCcall_rm (i64 tglobaladdr:$dst)),
+          (BL8_RM tglobaladdr:$dst)>;
+def : Pat<(PPCcall_nop_rm (i64 tglobaladdr:$dst)),
+          (BL8_NOP_RM tglobaladdr:$dst)>;
+
+def : Pat<(PPCcall_rm (i64 texternalsym:$dst)),
+          (BL8_RM texternalsym:$dst)>;
+def : Pat<(PPCcall_nop_rm (i64 texternalsym:$dst)),
+          (BL8_NOP_RM texternalsym:$dst)>;
+
+def : Pat<(PPCcall_notoc_rm (i64 tglobaladdr:$dst)),
+          (BL8_NOTOC_RM tglobaladdr:$dst)>;
+def : Pat<(PPCcall_notoc_rm (i64 texternalsym:$dst)),
+          (BL8_NOTOC_RM texternalsym:$dst)>;
+
 // Calls for AIX
 def : Pat<(PPCcall (i64 mcsym:$dst)),
           (BL8 mcsym:$dst)>;
 def : Pat<(PPCcall_nop (i64 mcsym:$dst)),
           (BL8_NOP mcsym:$dst)>;
+
+def : Pat<(PPCcall_rm (i64 mcsym:$dst)),
+          (BL8_RM mcsym:$dst)>;
+def : Pat<(PPCcall_nop_rm (i64 mcsym:$dst)),
+          (BL8_NOP_RM mcsym:$dst)>;
 
 // Atomic operations
 // FIXME: some of these might be used with constant operands. This will result
@@ -408,6 +471,7 @@ def TCRETURNri8 : PPCEmitTimePseudo<(outs), (ins CTRRC8:$dst, i32imm:$offset),
                  "#TC_RETURNr8 $dst $offset",
                  []>;
 
+let hasSideEffects = 0 in {
 let isTerminator = 1, isBarrier = 1, PPC970_Unit = 7, isBranch = 1,
     isIndirectBranch = 1, isCall = 1, isReturn = 1, Uses = [CTR8, RM] in
 def TAILBCTR8 : XLForm_2_ext<19, 528, 20, 0, 0, (outs), (ins), "bctr", IIC_BrB,
@@ -425,6 +489,7 @@ let isBranch = 1, isTerminator = 1, hasCtrlDep = 1, PPC970_Unit = 7,
 def TAILBA8   : IForm<18, 0, 0, (outs), (ins abscalltarget:$dst),
                   "ba $dst", IIC_BrB,
                   []>;
+}
 } // Interpretation64Bit
 
 def : Pat<(PPCtc_return (i64 tglobaladdr:$dst),  imm:$imm),
@@ -638,7 +703,7 @@ def XORIS8  : DForm_4<27, (outs g8rc:$dst), (ins g8rc:$src1, u16imm64:$src2),
                    [(set i64:$dst, (xor i64:$src1, imm16ShiftedZExt:$src2))]>;
 
 let isCommutable = 1 in
-defm ADD8  : XOForm_1rx<31, 266, 0, (outs g8rc:$rT), (ins g8rc:$rA, g8rc:$rB),
+defm ADD8  : XOForm_1rx<31, 266, (outs g8rc:$rT), (ins g8rc:$rA, g8rc:$rB),
                         "add", "$rT, $rA, $rB", IIC_IntSimple,
                         [(set i64:$rT, (add i64:$rA, i64:$rB))]>;
 // ADD8 has a special form: reg = ADD8(reg, sym@tls) for use by the
@@ -708,6 +773,11 @@ def ADDIS8 : DForm_2<15, (outs g8rc:$rD), (ins g8rc_nox0:$rA, s17imm64:$imm),
                      "addis $rD, $rA, $imm", IIC_IntSimple,
                      [(set i64:$rD, (add i64:$rA, imm16ShiftedSExt:$imm))]>;
 
+def LA8     : DForm_2<14, (outs g8rc:$rD), (ins g8rc_nox0:$rA, s16imm64:$sym),
+                     "la $rD, $sym($rA)", IIC_IntGeneral,
+                     [(set i64:$rD, (add i64:$rA,
+                                    (PPClo tglobaladdr:$sym, 0)))]>;
+
 let Defs = [CARRY] in {
 def SUBFIC8: DForm_2< 8, (outs g8rc:$rD), (ins g8rc:$rA, s16imm64:$imm),
                      "subfic $rD, $rA, $imm", IIC_IntGeneral,
@@ -717,7 +787,7 @@ defm SUBFC8 : XOForm_1rc<31, 8, 0, (outs g8rc:$rT), (ins g8rc:$rA, g8rc:$rB),
                         "subfc", "$rT, $rA, $rB", IIC_IntGeneral,
                         [(set i64:$rT, (subc i64:$rB, i64:$rA))]>,
                         PPC970_DGroup_Cracked;
-defm SUBF8 : XOForm_1rx<31, 40, 0, (outs g8rc:$rT), (ins g8rc:$rA, g8rc:$rB),
+defm SUBF8 : XOForm_1rx<31, 40, (outs g8rc:$rT), (ins g8rc:$rA, g8rc:$rB),
                         "subf", "$rT, $rA, $rB", IIC_IntGeneral,
                         [(set i64:$rT, (sub i64:$rB, i64:$rA))]>;
 defm NEG8    : XOForm_3r<31, 104, 0, (outs g8rc:$rT), (ins g8rc:$rA),
@@ -944,8 +1014,6 @@ let Interpretation64Bit = 1, isCodeGenOnly = 1 in {
   def SETB8 : XForm_44<31, 128, (outs g8rc:$RT), (ins crrc:$BFA),
                        "setb $RT, $BFA", IIC_IntGeneral>, isPPC64;
 }
-def DARN : XForm_45<31, 755, (outs g8rc:$RT), (ins u2imm:$L),
-                     "darn $RT, $L", IIC_LdStLD>, isPPC64;
 def ADDPCIS : DXForm<19, 2, (outs g8rc:$RT), (ins i32imm:$D),
                      "addpcis $RT, $D", IIC_BrB, []>, isPPC64;
 def MODSD : XForm_8<31, 777, (outs g8rc:$rT), (ins g8rc:$rA, g8rc:$rB),
@@ -961,13 +1029,18 @@ defm DIVDEU : XOForm_1rcr<31, 393, 0, (outs g8rc:$rT), (ins g8rc:$rA, g8rc:$rB),
                           [(set i64:$rT, (int_ppc_divdeu g8rc:$rA, g8rc:$rB))]>,
                           isPPC64, Requires<[HasExtDiv]>;
 let isCommutable = 1 in
-defm MULLD : XOForm_1rx<31, 233, 0, (outs g8rc:$rT), (ins g8rc:$rA, g8rc:$rB),
+defm MULLD : XOForm_1rx<31, 233, (outs g8rc:$rT), (ins g8rc:$rA, g8rc:$rB),
                         "mulld", "$rT, $rA, $rB", IIC_IntMulHD,
                         [(set i64:$rT, (mul i64:$rA, i64:$rB))]>, isPPC64;
 let Interpretation64Bit = 1, isCodeGenOnly = 1 in
 def MULLI8 : DForm_2<7, (outs g8rc:$rD), (ins g8rc:$rA, s16imm64:$imm),
                        "mulli $rD, $rA, $imm", IIC_IntMulLI,
                        [(set i64:$rD, (mul i64:$rA, imm64SExt16:$imm))]>;
+}
+
+let hasSideEffects = 1 in {
+def DARN : XForm_45<31, 755, (outs g8rc:$RT), (ins u2imm:$L),
+                    "darn $RT, $L", IIC_LdStLD>, isPPC64;
 }
 
 let hasSideEffects = 0 in {
@@ -1300,9 +1373,12 @@ def LDtocBA: PPCEmitTimePseudo<(outs g8rc:$rD), (ins tocentry:$disp, g8rc:$reg),
 def LDX  : XForm_1_memOp<31,  21, (outs g8rc:$rD), (ins memrr:$src),
                         "ldx $rD, $src", IIC_LdStLD,
                         [(set i64:$rD, (load XForm:$src))]>, isPPC64;
+
+let Predicates = [IsISA2_06] in {
 def LDBRX : XForm_1_memOp<31,  532, (outs g8rc:$rD), (ins memrr:$src),
                           "ldbrx $rD, $src", IIC_LdStLoad,
                           [(set i64:$rD, (PPClbrx ForceXForm:$src, i64))]>, isPPC64;
+}
 
 let mayLoad = 1, hasSideEffects = 0, isCodeGenOnly = 1 in {
 def LHBRX8 : XForm_1_memOp<31, 790, (outs g8rc:$rD), (ins memrr:$src),
@@ -1323,10 +1399,6 @@ def LDUX : XForm_1_memOp<31, 53, (outs g8rc:$rD, ptr_rc_nor0:$ea_result),
                         "ldux $rD, $addr", IIC_LdStLDUX,
                         []>, RegConstraint<"$addr.ptrreg = $ea_result">,
                         NoEncode<"$ea_result">, isPPC64;
-
-def LDMX : XForm_1<31, 309, (outs g8rc:$rD), (ins memrr:$src),
-                   "ldmx $rD, $src", IIC_LdStLD, []>, isPPC64,
-                   Requires<[IsISA3_0]>;
 }
 
 let mayLoad = 1, hasNoSchedulingInfo = 1 in {
@@ -1340,11 +1412,24 @@ def LQ   : DQForm_RTp5_RA17_MEM<56, 0,
                                 []>,
                                 RegConstraint<"@earlyclobber $RTp">,
                                 isPPC64;
+// We don't really have LQX in the ISA, make a pseudo one so that we can
+// handle x-form during isel. Make it pre-ra may expose
+// oppotunities to some opts(CSE, LICM and etc.) for the result of adding
+// RA and RB.
+def LQX_PSEUDO : PPCCustomInserterPseudo<(outs g8prc:$RTp),
+                                         (ins memrr:$src), "#LQX_PSEUDO", []>;
+
 def RESTORE_QUADWORD : PPCEmitTimePseudo<(outs g8prc:$RTp), (ins memrix:$src),
                                          "#RESTORE_QUADWORD", []>;
 }
 
 }
+
+def : Pat<(int_ppc_atomic_load_i128 iaddrX16:$src),
+          (SPLIT_QUADWORD (LQ memrix16:$src))>;
+
+def : Pat<(int_ppc_atomic_load_i128 ForceXForm:$src),
+          (SPLIT_QUADWORD (LQX_PSEUDO memrr:$src))>;
 
 // Support for medium and large code model.
 let hasSideEffects = 0 in {
@@ -1354,6 +1439,13 @@ def ADDIStocHA8: PPCEmitTimePseudo<(outs g8rc:$rD), (ins g8rc_nox0:$reg, tocentr
 def ADDItocL: PPCEmitTimePseudo<(outs g8rc:$rD), (ins g8rc_nox0:$reg, tocentry:$disp),
                      "#ADDItocL", []>, isPPC64;
 }
+
+// Local Data Transform
+def ADDItoc8 : PPCEmitTimePseudo<(outs g8rc:$rD), (ins tocentry:$disp, g8rc_nox0:$reg),
+                   "#ADDItoc8",
+                   [(set i64:$rD,
+                     (PPCtoc_entry tglobaladdr:$disp, i64:$reg))]>, isPPC64;
+
 let mayLoad = 1 in
 def LDtocL: PPCEmitTimePseudo<(outs g8rc:$rD), (ins tocentry:$disp, g8rc_nox0:$reg),
                    "#LDtocL", []>, isPPC64;
@@ -1523,10 +1615,13 @@ def STDX  : XForm_8_memOp<31, 149, (outs), (ins g8rc:$rS, memrr:$dst),
                           "stdx $rS, $dst", IIC_LdStSTD,
                           [(store i64:$rS, XForm:$dst)]>, isPPC64,
                           PPC970_DGroup_Cracked;
+
+let Predicates = [IsISA2_06] in {
 def STDBRX: XForm_8_memOp<31, 660, (outs), (ins g8rc:$rS, memrr:$dst),
                           "stdbrx $rS, $dst", IIC_LdStStore,
                           [(PPCstbrx i64:$rS, ForceXForm:$dst, i64)]>, isPPC64,
                           PPC970_DGroup_Cracked;
+}
 
 let mayStore = 1, hasNoSchedulingInfo = 1 in {
 // Normal 16-byte stores.
@@ -1534,11 +1629,27 @@ let mayStore = 1, hasNoSchedulingInfo = 1 in {
 def STQ : DSForm_1<62, 2, (outs), (ins g8prc:$RSp, memrix:$dst),
                    "stq $RSp, $dst", IIC_LdStSTQ,
                    []>, isPPC64;
+
+def STQX_PSEUDO : PPCCustomInserterPseudo<(outs),
+                                          (ins g8prc:$RSp, memrr:$dst),
+                                          "#STQX_PSEUDO", []>;
+
 def SPILL_QUADWORD : PPCEmitTimePseudo<(outs), (ins g8prc:$RSp, memrix:$dst),
                                        "#SPILL_QUADWORD", []>;
 }
 
 }
+
+def BUILD_QUADWORD : PPCPostRAExpPseudo<
+                       (outs g8prc:$RTp),
+                       (ins g8rc:$lo, g8rc:$hi),
+                       "#BUILD_QUADWORD", []>;
+
+def : Pat<(int_ppc_atomic_store_i128 i64:$lo, i64:$hi, DSForm:$dst),
+          (STQ (BUILD_QUADWORD g8rc:$lo, g8rc:$hi), memrix:$dst)>;
+
+def : Pat<(int_ppc_atomic_store_i128 i64:$lo, i64:$hi, ForceXForm:$dst),
+          (STQX_PSEUDO (BUILD_QUADWORD g8rc:$lo, g8rc:$hi), memrr:$dst)>;
 
 // Stores with Update (pre-inc).
 let PPC970_Unit = 2, mayStore = 1, mayLoad = 0 in {
@@ -1648,27 +1759,35 @@ defm FCTIWUZ : XForm_26r<63, 143, (outs f8rc:$frD), (ins f8rc:$frB),
 
 // These instructions store a hash computed from the value of the link register
 // and the value of the stack pointer.
-let mayStore = 1 in {
-def HASHST : XForm_XD6_RA5_RB5<31, 722, (outs),
-                               (ins g8rc:$RB, memrihash:$D_RA_XD),
-                               "hashst $RB, $D_RA_XD", IIC_IntGeneral, []>;
-def HASHSTP : XForm_XD6_RA5_RB5<31, 658, (outs),
+let mayStore = 1, Interpretation64Bit = 1, isCodeGenOnly = 1 in {
+def HASHST8 : XForm_XD6_RA5_RB5<31, 722, (outs),
                                 (ins g8rc:$RB, memrihash:$D_RA_XD),
-                                "hashstp $RB, $D_RA_XD", IIC_IntGeneral, []>;
+                                "hashst $RB, $D_RA_XD", IIC_IntGeneral, []>;
+def HASHSTP8 : XForm_XD6_RA5_RB5<31, 658, (outs),
+                                 (ins g8rc:$RB, memrihash:$D_RA_XD),
+                                 "hashstp $RB, $D_RA_XD", IIC_IntGeneral, []>;
 }
 
 // These instructions check a hash computed from the value of the link register
 // and the value of the stack pointer. The hasSideEffects flag is needed as the
 // instruction may TRAP if the hash does not match the hash stored at the
 // specified address.
-let mayLoad = 1, hasSideEffects = 1 in {
-def HASHCHK : XForm_XD6_RA5_RB5<31, 754, (outs),
-                                (ins g8rc:$RB, memrihash:$D_RA_XD),
-                                "hashchk $RB, $D_RA_XD", IIC_IntGeneral, []>;
-def HASHCHKP : XForm_XD6_RA5_RB5<31, 690, (outs),
+let mayLoad = 1, hasSideEffects = 1,
+    Interpretation64Bit = 1, isCodeGenOnly = 1 in {
+def HASHCHK8 : XForm_XD6_RA5_RB5<31, 754, (outs),
                                  (ins g8rc:$RB, memrihash:$D_RA_XD),
-                                 "hashchkp $RB, $D_RA_XD", IIC_IntGeneral, []>;
+                                 "hashchk $RB, $D_RA_XD", IIC_IntGeneral, []>;
+def HASHCHKP8 : XForm_XD6_RA5_RB5<31, 690, (outs),
+                                  (ins g8rc:$RB, memrihash:$D_RA_XD),
+                                  "hashchkp $RB, $D_RA_XD", IIC_IntGeneral, []>;
 }
+
+let Interpretation64Bit = 1, isCodeGenOnly = 1, hasSideEffects = 1 in
+def ADDEX8 : Z23Form_RTAB5_CY2<31, 170, (outs g8rc:$rT),
+                              (ins g8rc:$rA, g8rc:$rB, u2imm:$CY),
+                              "addex $rT, $rA, $rB, $CY", IIC_IntGeneral,
+                              [(set i64:$rT, (int_ppc_addex i64:$rA, i64:$rB,
+                                                            timm:$CY))]>;
 
 //===----------------------------------------------------------------------===//
 // Instruction Patterns
@@ -1833,8 +1952,6 @@ def SLBSYNC : XForm_0<31, 338, (outs), (ins), "slbsync", IIC_SprSLBSYNC, []>;
 
 def : Pat<(int_ppc_stdcx ForceXForm:$dst, g8rc:$A),
           (STDCX g8rc:$A, ForceXForm:$dst)>;
-def : Pat<(int_ppc_tdw g8rc:$A, g8rc:$B, i32:$IMM),
-          (TD $IMM, $A, $B)>;
 
 // trapd
 def : Pat<(int_ppc_trapd g8rc:$A),

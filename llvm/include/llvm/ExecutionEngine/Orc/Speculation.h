@@ -175,9 +175,8 @@ public:
   using ResultEval = std::function<IRlikiesStrRef(Function &)>;
   using TargetAndLikelies = DenseMap<SymbolStringPtr, SymbolNameSet>;
 
-  IRSpeculationLayer(ExecutionSession &ES, IRCompileLayer &BaseLayer,
-                     Speculator &Spec, MangleAndInterner &Mangle,
-                     ResultEval Interpreter)
+  IRSpeculationLayer(ExecutionSession &ES, IRLayer &BaseLayer, Speculator &Spec,
+                     MangleAndInterner &Mangle, ResultEval Interpreter)
       : IRLayer(ES, BaseLayer.getManglingOptions()), NextLayer(BaseLayer),
         S(Spec), Mangle(Mangle), QueryAnalysis(Interpreter) {}
 
@@ -198,7 +197,7 @@ private:
     return InternedNames;
   }
 
-  IRCompileLayer &NextLayer;
+  IRLayer &NextLayer;
   Speculator &S;
   MangleAndInterner &Mangle;
   ResultEval QueryAnalysis;

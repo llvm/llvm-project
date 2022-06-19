@@ -1,10 +1,3 @@
-# With B extension:
-# RUN: llvm-mc %s -triple=riscv32 -mattr=+experimental-b -show-encoding \
-# RUN:     | FileCheck -check-prefix=CHECK-ASM %s
-# RUN: llvm-mc -filetype=obj -triple=riscv32 -mattr=+experimental-b < %s \
-# RUN:     | llvm-objdump --mattr=+experimental-b -d -r - \
-# RUN:     | FileCheck --check-prefix=CHECK-OBJ %s
-
 # With Bitmanip permutation extension:
 # RUN: llvm-mc %s -triple=riscv32 -mattr=+experimental-zbp -show-encoding \
 # RUN:     | FileCheck -check-prefix=CHECK-ASM %s
@@ -20,3 +13,9 @@ pack t0, t1, x0
 # CHECK-OBJ: rev8 t0, t1
 # CHECK-ASM: encoding: [0x93,0x52,0x83,0x69]
 grevi t0, t1, 24
+# CHECK-ASM-AND-OBJ: zip t0, t1
+# CHECK-ASM: encoding: [0x93,0x12,0xf3,0x08]
+zip x5, x6
+# CHECK-ASM-AND-OBJ: unzip t0, t1
+# CHECK-ASM: encoding: [0x93,0x52,0xf3,0x08]
+unzip x5, x6

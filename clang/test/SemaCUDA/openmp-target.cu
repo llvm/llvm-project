@@ -1,8 +1,8 @@
 // RUN: %clang_cc1 -triple x86_64 -verify=expected,dev \
 // RUN:            -verify-ignore-unexpected=note \
-// RUN:            -fopenmp -fopenmp-version=50 -o - %s
+// RUN:            -fopenmp -fopenmp-version=50 -fopenmp-targets=amdgcn-amd-amdhsa -o - %s
 // RUN: %clang_cc1 -triple x86_64 -verify -verify-ignore-unexpected=note\
-// RUN:            -fopenmp -fopenmp-version=50 -o - -x c++ %s
+// RUN:            -fopenmp -fopenmp-version=50 -fopenmp-targets=amdgcn-amd-amdhsa -o - -x c++ %s
 // RUN: %clang_cc1 -triple x86_64 -verify=dev -verify-ignore-unexpected=note\
 // RUN:            -fcuda-is-device -o - %s
 

@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 #
 #===- git-clang-format - ClangFormat Git Integration ---------*- python -*--===#
 #
@@ -32,12 +32,23 @@ import re
 import subprocess
 import sys
 
-usage = 'git clang-format [OPTIONS] [<commit>] [<commit>] [--] [<file>...]'
+usage = ('git clang-format [OPTIONS] [<commit>] [<commit>|--staged] '
+         '[--] [<file>...]')
 
 desc = '''
 If zero or one commits are given, run clang-format on all lines that differ
 between the working directory and <commit>, which defaults to HEAD.  Changes are
-only applied to the working directory.
+only applied to the working directory, or in the stage/index.
+
+Examples:
+  To format staged changes, i.e everything that's been `git add`ed:
+    git clang-format
+
+  To also format everything touched in the most recent commit:
+    git clang-format HEAD~1
+
+  If you're on a branch off main, to format everything touched on your branch:
+    git clang-format main
 
 If two commits are given (requires --diff), run clang-format on all lines in the
 second <commit> that differ from the first <commit>.
@@ -78,6 +89,7 @@ def main():
       'm',  # ObjC
       'mm',  # ObjC++
       'cc', 'cp', 'cpp', 'c++', 'cxx', 'hh', 'hpp', 'hxx',  # C++
+      'ccm', 'cppm', 'cxxm', 'c++m',  # C++ Modules
       'cu', 'cuh',  # CUDA
       # Other languages that clang-format supports
       'proto', 'protodevel',  # Protocol Buffers
@@ -99,6 +111,8 @@ def main():
                  help='default commit to use if none is specified'),
   p.add_argument('--diff', action='store_true',
                  help='print a diff instead of applying the changes')
+  p.add_argument('--diffstat', action='store_true',
+                 help='print a diffstat instead of applying the changes')
   p.add_argument('--extensions',
                  default=config.get('clangformat.extensions',
                                     default_extensions),
@@ -110,6 +124,8 @@ def main():
                  help='select hunks interactively')
   p.add_argument('-q', '--quiet', action='count', default=0,
                  help='print less information')
+  p.add_argument('--staged', '--cached', action='store_true',
+                 help='format lines in the stage instead of the working dir')
   p.add_argument('--style',
                  default=config.get('clangformat.style', None),
                  help='passed to clang-format'),
@@ -129,12 +145,14 @@ def main():
 
   commits, files = interpret_args(opts.args, dash_dash, opts.commit)
   if len(commits) > 1:
+    if opts.staged:
+      die('--staged is not allowed when two commits are given')
     if not opts.diff:
       die('--diff is required when two commits are given')
   else:
     if len(commits) > 2:
       die('at most two commits allowed; %d given' % len(commits))
-  changed_lines = compute_diff_and_extract_lines(commits, files)
+  changed_lines = compute_diff_and_extract_lines(commits, files, opts.staged)
   if opts.verbose >= 1:
     ignored_files = set(changed_lines)
   filter_by_extension(changed_lines, opts.extensions.lower().split(','))
@@ -153,10 +171,12 @@ def main():
       print('Running clang-format on the following files:')
       for filename in changed_lines:
         print('    %s' % filename)
+
   if not changed_lines:
     if opts.verbose >= 0:
       print('no modified files to format')
-    return
+    return 0
+
   if len(commits) > 1:
     old_tree = commits[1]
     new_tree = run_clang_format_and_save_to_tree(changed_lines,
@@ -171,11 +191,16 @@ def main():
   if opts.verbose >= 1:
     print('old tree: %s' % old_tree)
     print('new tree: %s' % new_tree)
+
   if old_tree == new_tree:
     if opts.verbose >= 0:
       print('clang-format did not modify any files')
-  elif opts.diff:
+    return 0
+
+  if opts.diff:
     print_diff(old_tree, new_tree)
+  elif opts.diffstat:
+    print_diffstat(old_tree, new_tree)
   else:
     changed_files = apply_changes(old_tree, new_tree, force=opts.force,
                                   patch_mode=opts.patch)
@@ -183,6 +208,8 @@ def main():
       print('changed files:')
       for filename in changed_files:
         print('    %s' % filename)
+
+  return 1
 
 
 def load_git_config(non_string_options=None):
@@ -271,9 +298,9 @@ def get_object_type(value):
   return convert_string(stdout.strip())
 
 
-def compute_diff_and_extract_lines(commits, files):
+def compute_diff_and_extract_lines(commits, files, staged):
   """Calls compute_diff() followed by extract_lines()."""
-  diff_process = compute_diff(commits, files)
+  diff_process = compute_diff(commits, files, staged)
   changed_lines = extract_lines(diff_process.stdout)
   diff_process.stdout.close()
   diff_process.wait()
@@ -283,17 +310,21 @@ def compute_diff_and_extract_lines(commits, files):
   return changed_lines
 
 
-def compute_diff(commits, files):
+def compute_diff(commits, files, staged):
   """Return a subprocess object producing the diff from `commits`.
 
   The return value's `stdin` file object will produce a patch with the
-  differences between the working directory and the first commit if a single
-  one was specified, or the difference between both specified commits, filtered
-  on `files` (if non-empty).  Zero context lines are used in the patch."""
+  differences between the working directory (or stage if --staged is used) and
+  the first commit if a single one was specified, or the difference between
+  both specified commits, filtered on `files` (if non-empty).
+  Zero context lines are used in the patch."""
   git_tool = 'diff-index'
+  extra_args = []
   if len(commits) > 1:
     git_tool = 'diff-tree'
-  cmd = ['git', git_tool, '-p', '-U0'] + commits + ['--']
+  elif staged:
+    extra_args += ['--cached']
+  cmd = ['git', git_tool, '-p', '-U0'] + extra_args + commits + ['--']
   cmd.extend(files)
   p = subprocess.Popen(cmd, stdin=subprocess.PIPE, stdout=subprocess.PIPE)
   p.stdin.close()
@@ -321,8 +352,11 @@ def extract_lines(patch_file):
       line_count = 1
       if match.group(3):
         line_count = int(match.group(3))
-      if line_count > 0:
-        matches.setdefault(filename, []).append(Range(start_line, line_count))
+      if line_count == 0:
+        line_count = 1
+      if start_line == 0:
+        continue
+      matches.setdefault(filename, []).append(Range(start_line, line_count))
   return matches
 
 
@@ -505,6 +539,17 @@ def print_diff(old_tree, new_tree):
   subprocess.check_call(['git', 'diff', '--diff-filter=M', old_tree, new_tree,
                          '--'])
 
+def print_diffstat(old_tree, new_tree):
+  """Print the diffstat between the two trees to stdout."""
+  # We use the porcelain 'diff' and not plumbing 'diff-tree' because the output
+  # is expected to be viewed by the user, and only the former does nice things
+  # like color and pagination.
+  #
+  # We also only print modified files since `new_tree` only contains the files
+  # that were modified, so unmodified files would show as deleted without the
+  # filter.
+  subprocess.check_call(['git', 'diff', '--diff-filter=M', '--stat', old_tree, new_tree,
+                         '--'])
 
 def apply_changes(old_tree, new_tree, force=False, patch_mode=False):
   """Apply the changes in `new_tree` to the working directory.
@@ -593,4 +638,4 @@ def convert_string(bytes_input):
         return str(bytes_input)
 
 if __name__ == '__main__':
-  main()
+  sys.exit(main())

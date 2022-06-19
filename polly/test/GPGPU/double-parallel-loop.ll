@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -polly-scops -analyze < %s | FileCheck %s
+; RUN: opt %loadPolly -polly-print-scops -disable-outout < %s | FileCheck %s
 ; RUN: opt %loadPolly -polly-codegen-ppcg -polly-acc-dump-schedule \
 ; RUN: -disable-output < %s | \
 ; RUN: FileCheck -check-prefix=SCHED %s

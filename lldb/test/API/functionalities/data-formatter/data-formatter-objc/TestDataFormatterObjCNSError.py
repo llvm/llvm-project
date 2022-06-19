@@ -16,7 +16,12 @@ class ObjCDataFormatterNSError(ObjCDataFormatterTestCase):
 
     def test_nserror_with_run_command(self):
         """Test formatters for NSError."""
-        self.appkit_tester_impl(self.nserror_data_formatter_commands)
+        self.appkit_tester_impl(self.nserror_data_formatter_commands, True)
+
+    @skipUnlessDarwin
+    def test_nserror_with_run_command_no_const(self):
+        """Test formatters for NSError."""
+        self.appkit_tester_impl(self.nserror_data_formatter_commands, False)
 
     def nserror_data_formatter_commands(self):
         self.expect(

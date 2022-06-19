@@ -1382,13 +1382,23 @@ define <2 x i64> @load_sext_2i1_to_2i64(<2 x i1> *%ptr) {
 ; AVX2-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm1[0],xmm0[0]
 ; AVX2-NEXT:    retq
 ;
-; AVX512-LABEL: load_sext_2i1_to_2i64:
-; AVX512:       # %bb.0: # %entry
-; AVX512-NEXT:    kmovw (%rdi), %k1
-; AVX512-NEXT:    vpternlogq $255, %zmm0, %zmm0, %zmm0 {%k1} {z}
-; AVX512-NEXT:    # kill: def $xmm0 killed $xmm0 killed $zmm0
-; AVX512-NEXT:    vzeroupper
-; AVX512-NEXT:    retq
+; AVX512F-LABEL: load_sext_2i1_to_2i64:
+; AVX512F:       # %bb.0: # %entry
+; AVX512F-NEXT:    movzbl (%rdi), %eax
+; AVX512F-NEXT:    kmovw %eax, %k1
+; AVX512F-NEXT:    vpternlogq $255, %zmm0, %zmm0, %zmm0 {%k1} {z}
+; AVX512F-NEXT:    # kill: def $xmm0 killed $xmm0 killed $zmm0
+; AVX512F-NEXT:    vzeroupper
+; AVX512F-NEXT:    retq
+;
+; AVX512BW-LABEL: load_sext_2i1_to_2i64:
+; AVX512BW:       # %bb.0: # %entry
+; AVX512BW-NEXT:    movzbl (%rdi), %eax
+; AVX512BW-NEXT:    kmovd %eax, %k1
+; AVX512BW-NEXT:    vpternlogq $255, %zmm0, %zmm0, %zmm0 {%k1} {z}
+; AVX512BW-NEXT:    # kill: def $xmm0 killed $xmm0 killed $zmm0
+; AVX512BW-NEXT:    vzeroupper
+; AVX512BW-NEXT:    retq
 ;
 ; X86-SSE2-LABEL: load_sext_2i1_to_2i64:
 ; X86-SSE2:       # %bb.0: # %entry
@@ -1619,13 +1629,23 @@ define <4 x i32> @load_sext_4i1_to_4i32(<4 x i1> *%ptr) {
 ; AVX2-NEXT:    vpinsrd $3, %eax, %xmm0, %xmm0
 ; AVX2-NEXT:    retq
 ;
-; AVX512-LABEL: load_sext_4i1_to_4i32:
-; AVX512:       # %bb.0: # %entry
-; AVX512-NEXT:    kmovw (%rdi), %k1
-; AVX512-NEXT:    vpternlogd $255, %zmm0, %zmm0, %zmm0 {%k1} {z}
-; AVX512-NEXT:    # kill: def $xmm0 killed $xmm0 killed $zmm0
-; AVX512-NEXT:    vzeroupper
-; AVX512-NEXT:    retq
+; AVX512F-LABEL: load_sext_4i1_to_4i32:
+; AVX512F:       # %bb.0: # %entry
+; AVX512F-NEXT:    movzbl (%rdi), %eax
+; AVX512F-NEXT:    kmovw %eax, %k1
+; AVX512F-NEXT:    vpternlogd $255, %zmm0, %zmm0, %zmm0 {%k1} {z}
+; AVX512F-NEXT:    # kill: def $xmm0 killed $xmm0 killed $zmm0
+; AVX512F-NEXT:    vzeroupper
+; AVX512F-NEXT:    retq
+;
+; AVX512BW-LABEL: load_sext_4i1_to_4i32:
+; AVX512BW:       # %bb.0: # %entry
+; AVX512BW-NEXT:    movzbl (%rdi), %eax
+; AVX512BW-NEXT:    kmovd %eax, %k1
+; AVX512BW-NEXT:    vpternlogd $255, %zmm0, %zmm0, %zmm0 {%k1} {z}
+; AVX512BW-NEXT:    # kill: def $xmm0 killed $xmm0 killed $zmm0
+; AVX512BW-NEXT:    vzeroupper
+; AVX512BW-NEXT:    retq
 ;
 ; X86-SSE2-LABEL: load_sext_4i1_to_4i32:
 ; X86-SSE2:       # %bb.0: # %entry
@@ -1882,12 +1902,21 @@ define <4 x i64> @load_sext_4i1_to_4i64(<4 x i1> *%ptr) {
 ; AVX2-NEXT:    vinserti128 $1, %xmm0, %ymm1, %ymm0
 ; AVX2-NEXT:    retq
 ;
-; AVX512-LABEL: load_sext_4i1_to_4i64:
-; AVX512:       # %bb.0: # %entry
-; AVX512-NEXT:    kmovw (%rdi), %k1
-; AVX512-NEXT:    vpternlogq $255, %zmm0, %zmm0, %zmm0 {%k1} {z}
-; AVX512-NEXT:    # kill: def $ymm0 killed $ymm0 killed $zmm0
-; AVX512-NEXT:    retq
+; AVX512F-LABEL: load_sext_4i1_to_4i64:
+; AVX512F:       # %bb.0: # %entry
+; AVX512F-NEXT:    movzbl (%rdi), %eax
+; AVX512F-NEXT:    kmovw %eax, %k1
+; AVX512F-NEXT:    vpternlogq $255, %zmm0, %zmm0, %zmm0 {%k1} {z}
+; AVX512F-NEXT:    # kill: def $ymm0 killed $ymm0 killed $zmm0
+; AVX512F-NEXT:    retq
+;
+; AVX512BW-LABEL: load_sext_4i1_to_4i64:
+; AVX512BW:       # %bb.0: # %entry
+; AVX512BW-NEXT:    movzbl (%rdi), %eax
+; AVX512BW-NEXT:    kmovd %eax, %k1
+; AVX512BW-NEXT:    vpternlogq $255, %zmm0, %zmm0, %zmm0 {%k1} {z}
+; AVX512BW-NEXT:    # kill: def $ymm0 killed $ymm0 killed $zmm0
+; AVX512BW-NEXT:    retq
 ;
 ; X86-SSE2-LABEL: load_sext_4i1_to_4i64:
 ; X86-SSE2:       # %bb.0: # %entry
@@ -2105,7 +2134,8 @@ define <2 x i64> @load_sext_4i8_to_4i64_extract(<4 x i8> *%ptr) {
 define <8 x i16> @load_sext_8i1_to_8i16(<8 x i1> *%ptr) {
 ; SSE-LABEL: load_sext_8i1_to_8i16:
 ; SSE:       # %bb.0: # %entry
-; SSE-NEXT:    movd {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; SSE-NEXT:    movzbl (%rdi), %eax
+; SSE-NEXT:    movd %eax, %xmm0
 ; SSE-NEXT:    pshuflw {{.*#+}} xmm0 = xmm0[0,0,0,0,4,5,6,7]
 ; SSE-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,0,0,0]
 ; SSE-NEXT:    movdqa {{.*#+}} xmm1 = [1,2,4,8,16,32,64,128]
@@ -2115,7 +2145,8 @@ define <8 x i16> @load_sext_8i1_to_8i16(<8 x i1> *%ptr) {
 ;
 ; AVX1-LABEL: load_sext_8i1_to_8i16:
 ; AVX1:       # %bb.0: # %entry
-; AVX1-NEXT:    vmovd {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; AVX1-NEXT:    movzbl (%rdi), %eax
+; AVX1-NEXT:    vmovd %eax, %xmm0
 ; AVX1-NEXT:    vpshuflw {{.*#+}} xmm0 = xmm0[0,0,0,0,4,5,6,7]
 ; AVX1-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,0,0,0]
 ; AVX1-NEXT:    vmovdqa {{.*#+}} xmm1 = [1,2,4,8,16,32,64,128]
@@ -2133,7 +2164,8 @@ define <8 x i16> @load_sext_8i1_to_8i16(<8 x i1> *%ptr) {
 ;
 ; AVX512F-LABEL: load_sext_8i1_to_8i16:
 ; AVX512F:       # %bb.0: # %entry
-; AVX512F-NEXT:    kmovw (%rdi), %k1
+; AVX512F-NEXT:    movzbl (%rdi), %eax
+; AVX512F-NEXT:    kmovw %eax, %k1
 ; AVX512F-NEXT:    vpternlogd $255, %zmm0, %zmm0, %zmm0 {%k1} {z}
 ; AVX512F-NEXT:    vpmovdw %zmm0, %ymm0
 ; AVX512F-NEXT:    # kill: def $xmm0 killed $xmm0 killed $ymm0
@@ -2142,7 +2174,8 @@ define <8 x i16> @load_sext_8i1_to_8i16(<8 x i1> *%ptr) {
 ;
 ; AVX512BW-LABEL: load_sext_8i1_to_8i16:
 ; AVX512BW:       # %bb.0: # %entry
-; AVX512BW-NEXT:    kmovw (%rdi), %k0
+; AVX512BW-NEXT:    movzbl (%rdi), %eax
+; AVX512BW-NEXT:    kmovd %eax, %k0
 ; AVX512BW-NEXT:    vpmovm2w %k0, %zmm0
 ; AVX512BW-NEXT:    # kill: def $xmm0 killed $xmm0 killed $zmm0
 ; AVX512BW-NEXT:    vzeroupper
@@ -2151,7 +2184,8 @@ define <8 x i16> @load_sext_8i1_to_8i16(<8 x i1> *%ptr) {
 ; X86-SSE-LABEL: load_sext_8i1_to_8i16:
 ; X86-SSE:       # %bb.0: # %entry
 ; X86-SSE-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-SSE-NEXT:    movd {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; X86-SSE-NEXT:    movzbl (%eax), %eax
+; X86-SSE-NEXT:    movd %eax, %xmm0
 ; X86-SSE-NEXT:    pshuflw {{.*#+}} xmm0 = xmm0[0,0,0,0,4,5,6,7]
 ; X86-SSE-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,0,0,0]
 ; X86-SSE-NEXT:    movdqa {{.*#+}} xmm1 = [1,2,4,8,16,32,64,128]
@@ -2316,7 +2350,8 @@ entry:
 define <8 x i32> @load_sext_8i1_to_8i32(<8 x i1> *%ptr) {
 ; SSE-LABEL: load_sext_8i1_to_8i32:
 ; SSE:       # %bb.0: # %entry
-; SSE-NEXT:    movd {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; SSE-NEXT:    movzbl (%rdi), %eax
+; SSE-NEXT:    movd %eax, %xmm0
 ; SSE-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[0,0,0,0]
 ; SSE-NEXT:    movdqa {{.*#+}} xmm2 = [1,2,4,8]
 ; SSE-NEXT:    movdqa %xmm1, %xmm0
@@ -2329,8 +2364,9 @@ define <8 x i32> @load_sext_8i1_to_8i32(<8 x i1> *%ptr) {
 ;
 ; AVX1-LABEL: load_sext_8i1_to_8i32:
 ; AVX1:       # %bb.0: # %entry
-; AVX1-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; AVX1-NEXT:    vpermilps {{.*#+}} xmm0 = xmm0[0,0,0,0]
+; AVX1-NEXT:    movzbl (%rdi), %eax
+; AVX1-NEXT:    vmovd %eax, %xmm0
+; AVX1-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,0,0,0]
 ; AVX1-NEXT:    vinsertf128 $1, %xmm0, %ymm0, %ymm0
 ; AVX1-NEXT:    vandps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0
 ; AVX1-NEXT:    vpcmpeqd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm1
@@ -2347,17 +2383,27 @@ define <8 x i32> @load_sext_8i1_to_8i32(<8 x i1> *%ptr) {
 ; AVX2-NEXT:    vpcmpeqd %ymm1, %ymm0, %ymm0
 ; AVX2-NEXT:    retq
 ;
-; AVX512-LABEL: load_sext_8i1_to_8i32:
-; AVX512:       # %bb.0: # %entry
-; AVX512-NEXT:    kmovw (%rdi), %k1
-; AVX512-NEXT:    vpternlogd $255, %zmm0, %zmm0, %zmm0 {%k1} {z}
-; AVX512-NEXT:    # kill: def $ymm0 killed $ymm0 killed $zmm0
-; AVX512-NEXT:    retq
+; AVX512F-LABEL: load_sext_8i1_to_8i32:
+; AVX512F:       # %bb.0: # %entry
+; AVX512F-NEXT:    movzbl (%rdi), %eax
+; AVX512F-NEXT:    kmovw %eax, %k1
+; AVX512F-NEXT:    vpternlogd $255, %zmm0, %zmm0, %zmm0 {%k1} {z}
+; AVX512F-NEXT:    # kill: def $ymm0 killed $ymm0 killed $zmm0
+; AVX512F-NEXT:    retq
+;
+; AVX512BW-LABEL: load_sext_8i1_to_8i32:
+; AVX512BW:       # %bb.0: # %entry
+; AVX512BW-NEXT:    movzbl (%rdi), %eax
+; AVX512BW-NEXT:    kmovd %eax, %k1
+; AVX512BW-NEXT:    vpternlogd $255, %zmm0, %zmm0, %zmm0 {%k1} {z}
+; AVX512BW-NEXT:    # kill: def $ymm0 killed $ymm0 killed $zmm0
+; AVX512BW-NEXT:    retq
 ;
 ; X86-SSE-LABEL: load_sext_8i1_to_8i32:
 ; X86-SSE:       # %bb.0: # %entry
 ; X86-SSE-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-SSE-NEXT:    movd {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; X86-SSE-NEXT:    movzbl (%eax), %eax
+; X86-SSE-NEXT:    movd %eax, %xmm0
 ; X86-SSE-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[0,0,0,0]
 ; X86-SSE-NEXT:    movdqa {{.*#+}} xmm2 = [1,2,4,8]
 ; X86-SSE-NEXT:    movdqa %xmm1, %xmm0
@@ -2443,7 +2489,8 @@ entry:
 define <16 x i8> @load_sext_16i1_to_16i8(<16 x i1> *%ptr) nounwind readnone {
 ; SSE2-LABEL: load_sext_16i1_to_16i8:
 ; SSE2:       # %bb.0: # %entry
-; SSE2-NEXT:    movd {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; SSE2-NEXT:    movzwl (%rdi), %eax
+; SSE2-NEXT:    movd %eax, %xmm0
 ; SSE2-NEXT:    punpcklbw {{.*#+}} xmm0 = xmm0[0,0,1,1,2,2,3,3,4,4,5,5,6,6,7,7]
 ; SSE2-NEXT:    pshuflw {{.*#+}} xmm0 = xmm0[0,0,1,1,4,5,6,7]
 ; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,0,1,1]
@@ -2454,7 +2501,8 @@ define <16 x i8> @load_sext_16i1_to_16i8(<16 x i1> *%ptr) nounwind readnone {
 ;
 ; SSSE3-LABEL: load_sext_16i1_to_16i8:
 ; SSSE3:       # %bb.0: # %entry
-; SSSE3-NEXT:    movd {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; SSSE3-NEXT:    movzwl (%rdi), %eax
+; SSSE3-NEXT:    movd %eax, %xmm0
 ; SSSE3-NEXT:    pshufb {{.*#+}} xmm0 = xmm0[0,0,0,0,0,0,0,0,1,1,1,1,1,1,1,1]
 ; SSSE3-NEXT:    movdqa {{.*#+}} xmm1 = [1,2,4,8,16,32,64,128,1,2,4,8,16,32,64,128]
 ; SSSE3-NEXT:    pand %xmm1, %xmm0
@@ -2463,7 +2511,8 @@ define <16 x i8> @load_sext_16i1_to_16i8(<16 x i1> *%ptr) nounwind readnone {
 ;
 ; SSE41-LABEL: load_sext_16i1_to_16i8:
 ; SSE41:       # %bb.0: # %entry
-; SSE41-NEXT:    movd {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; SSE41-NEXT:    movzwl (%rdi), %eax
+; SSE41-NEXT:    movd %eax, %xmm0
 ; SSE41-NEXT:    pshufb {{.*#+}} xmm0 = xmm0[0,0,0,0,0,0,0,0,1,1,1,1,1,1,1,1]
 ; SSE41-NEXT:    movdqa {{.*#+}} xmm1 = [1,2,4,8,16,32,64,128,1,2,4,8,16,32,64,128]
 ; SSE41-NEXT:    pand %xmm1, %xmm0
@@ -2472,7 +2521,8 @@ define <16 x i8> @load_sext_16i1_to_16i8(<16 x i1> *%ptr) nounwind readnone {
 ;
 ; AVX1-LABEL: load_sext_16i1_to_16i8:
 ; AVX1:       # %bb.0: # %entry
-; AVX1-NEXT:    vmovd {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; AVX1-NEXT:    movzwl (%rdi), %eax
+; AVX1-NEXT:    vmovd %eax, %xmm0
 ; AVX1-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[0,0,0,0,0,0,0,0,1,1,1,1,1,1,1,1]
 ; AVX1-NEXT:    vmovddup {{.*#+}} xmm1 = [9241421688590303745,9241421688590303745]
 ; AVX1-NEXT:    # xmm1 = mem[0,0]
@@ -2482,7 +2532,8 @@ define <16 x i8> @load_sext_16i1_to_16i8(<16 x i1> *%ptr) nounwind readnone {
 ;
 ; AVX2-LABEL: load_sext_16i1_to_16i8:
 ; AVX2:       # %bb.0: # %entry
-; AVX2-NEXT:    vmovd {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; AVX2-NEXT:    movzwl (%rdi), %eax
+; AVX2-NEXT:    vmovd %eax, %xmm0
 ; AVX2-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[0,0,0,0,0,0,0,0,1,1,1,1,1,1,1,1]
 ; AVX2-NEXT:    vpbroadcastq {{.*#+}} xmm1 = [9241421688590303745,9241421688590303745]
 ; AVX2-NEXT:    vpand %xmm1, %xmm0, %xmm0
@@ -2508,7 +2559,8 @@ define <16 x i8> @load_sext_16i1_to_16i8(<16 x i1> *%ptr) nounwind readnone {
 ; X86-SSE2-LABEL: load_sext_16i1_to_16i8:
 ; X86-SSE2:       # %bb.0: # %entry
 ; X86-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-SSE2-NEXT:    movd {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; X86-SSE2-NEXT:    movzwl (%eax), %eax
+; X86-SSE2-NEXT:    movd %eax, %xmm0
 ; X86-SSE2-NEXT:    punpcklbw {{.*#+}} xmm0 = xmm0[0,0,1,1,2,2,3,3,4,4,5,5,6,6,7,7]
 ; X86-SSE2-NEXT:    pshuflw {{.*#+}} xmm0 = xmm0[0,0,1,1,4,5,6,7]
 ; X86-SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,0,1,1]
@@ -2520,7 +2572,8 @@ define <16 x i8> @load_sext_16i1_to_16i8(<16 x i1> *%ptr) nounwind readnone {
 ; X86-SSE41-LABEL: load_sext_16i1_to_16i8:
 ; X86-SSE41:       # %bb.0: # %entry
 ; X86-SSE41-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-SSE41-NEXT:    movd {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; X86-SSE41-NEXT:    movzwl (%eax), %eax
+; X86-SSE41-NEXT:    movd %eax, %xmm0
 ; X86-SSE41-NEXT:    pshufb {{.*#+}} xmm0 = xmm0[0,0,0,0,0,0,0,0,1,1,1,1,1,1,1,1]
 ; X86-SSE41-NEXT:    movdqa {{.*#+}} xmm1 = [1,2,4,8,16,32,64,128,1,2,4,8,16,32,64,128]
 ; X86-SSE41-NEXT:    pand %xmm1, %xmm0
@@ -2535,7 +2588,8 @@ entry:
 define <16 x i16> @load_sext_16i1_to_16i16(<16 x i1> *%ptr) {
 ; SSE-LABEL: load_sext_16i1_to_16i16:
 ; SSE:       # %bb.0: # %entry
-; SSE-NEXT:    movd {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; SSE-NEXT:    movzwl (%rdi), %eax
+; SSE-NEXT:    movd %eax, %xmm0
 ; SSE-NEXT:    pshuflw {{.*#+}} xmm0 = xmm0[0,0,0,0,4,5,6,7]
 ; SSE-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[0,0,0,0]
 ; SSE-NEXT:    movdqa {{.*#+}} xmm2 = [1,2,4,8,16,32,64,128]
@@ -2549,7 +2603,8 @@ define <16 x i16> @load_sext_16i1_to_16i16(<16 x i1> *%ptr) {
 ;
 ; AVX1-LABEL: load_sext_16i1_to_16i16:
 ; AVX1:       # %bb.0: # %entry
-; AVX1-NEXT:    vmovd {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; AVX1-NEXT:    movzwl (%rdi), %eax
+; AVX1-NEXT:    vmovd %eax, %xmm0
 ; AVX1-NEXT:    vpshuflw {{.*#+}} xmm0 = xmm0[0,0,0,0,4,5,6,7]
 ; AVX1-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,0,0,0]
 ; AVX1-NEXT:    vinsertf128 $1, %xmm0, %ymm0, %ymm0
@@ -2585,7 +2640,8 @@ define <16 x i16> @load_sext_16i1_to_16i16(<16 x i1> *%ptr) {
 ; X86-SSE-LABEL: load_sext_16i1_to_16i16:
 ; X86-SSE:       # %bb.0: # %entry
 ; X86-SSE-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-SSE-NEXT:    movd {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; X86-SSE-NEXT:    movzwl (%eax), %eax
+; X86-SSE-NEXT:    movd %eax, %xmm0
 ; X86-SSE-NEXT:    pshuflw {{.*#+}} xmm0 = xmm0[0,0,0,0,4,5,6,7]
 ; X86-SSE-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[0,0,0,0]
 ; X86-SSE-NEXT:    movdqa {{.*#+}} xmm2 = [1,2,4,8,16,32,64,128]
@@ -3561,26 +3617,26 @@ define <4 x i32> @sext_4i17_to_4i32(<4 x i17>* %ptr) {
 ;
 ; X86-SSE2-LABEL: sext_4i17_to_4i32:
 ; X86-SSE2:       # %bb.0:
-; X86-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-SSE2-NEXT:    movl (%eax), %ecx
-; X86-SSE2-NEXT:    movl 4(%eax), %edx
-; X86-SSE2-NEXT:    movl 8(%eax), %eax
-; X86-SSE2-NEXT:    shldl $13, %edx, %eax
-; X86-SSE2-NEXT:    shll $15, %eax
-; X86-SSE2-NEXT:    sarl $15, %eax
-; X86-SSE2-NEXT:    movd %eax, %xmm0
-; X86-SSE2-NEXT:    movl %edx, %eax
-; X86-SSE2-NEXT:    shll $13, %eax
-; X86-SSE2-NEXT:    sarl $15, %eax
-; X86-SSE2-NEXT:    movd %eax, %xmm1
+; X86-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; X86-SSE2-NEXT:    movl (%edx), %ecx
+; X86-SSE2-NEXT:    movl 4(%edx), %eax
+; X86-SSE2-NEXT:    movl 8(%edx), %edx
+; X86-SSE2-NEXT:    shldl $13, %eax, %edx
+; X86-SSE2-NEXT:    shll $15, %edx
+; X86-SSE2-NEXT:    sarl $15, %edx
+; X86-SSE2-NEXT:    movd %edx, %xmm0
+; X86-SSE2-NEXT:    movl %eax, %edx
+; X86-SSE2-NEXT:    shll $13, %edx
+; X86-SSE2-NEXT:    sarl $15, %edx
+; X86-SSE2-NEXT:    movd %edx, %xmm1
 ; X86-SSE2-NEXT:    punpckldq {{.*#+}} xmm1 = xmm1[0],xmm0[0],xmm1[1],xmm0[1]
-; X86-SSE2-NEXT:    shldl $15, %ecx, %edx
+; X86-SSE2-NEXT:    shldl $15, %ecx, %eax
 ; X86-SSE2-NEXT:    shll $15, %ecx
 ; X86-SSE2-NEXT:    sarl $15, %ecx
 ; X86-SSE2-NEXT:    movd %ecx, %xmm0
-; X86-SSE2-NEXT:    shll $15, %edx
-; X86-SSE2-NEXT:    sarl $15, %edx
-; X86-SSE2-NEXT:    movd %edx, %xmm2
+; X86-SSE2-NEXT:    shll $15, %eax
+; X86-SSE2-NEXT:    sarl $15, %eax
+; X86-SSE2-NEXT:    movd %eax, %xmm2
 ; X86-SSE2-NEXT:    punpckldq {{.*#+}} xmm0 = xmm0[0],xmm2[0],xmm0[1],xmm2[1]
 ; X86-SSE2-NEXT:    punpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm1[0]
 ; X86-SSE2-NEXT:    retl
@@ -3590,25 +3646,25 @@ define <4 x i32> @sext_4i17_to_4i32(<4 x i17>* %ptr) {
 ; X86-SSE41-NEXT:    pushl %esi
 ; X86-SSE41-NEXT:    .cfi_def_cfa_offset 8
 ; X86-SSE41-NEXT:    .cfi_offset %esi, -8
-; X86-SSE41-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-SSE41-NEXT:    movl (%eax), %ecx
-; X86-SSE41-NEXT:    movl 4(%eax), %edx
-; X86-SSE41-NEXT:    movl %edx, %esi
-; X86-SSE41-NEXT:    movl 8(%eax), %eax
-; X86-SSE41-NEXT:    shldl $13, %edx, %eax
-; X86-SSE41-NEXT:    shldl $15, %ecx, %edx
-; X86-SSE41-NEXT:    shll $15, %edx
-; X86-SSE41-NEXT:    sarl $15, %edx
+; X86-SSE41-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; X86-SSE41-NEXT:    movl (%edx), %eax
+; X86-SSE41-NEXT:    movl 4(%edx), %ecx
+; X86-SSE41-NEXT:    movl %ecx, %esi
+; X86-SSE41-NEXT:    movl 8(%edx), %edx
+; X86-SSE41-NEXT:    shldl $13, %ecx, %edx
+; X86-SSE41-NEXT:    shldl $15, %eax, %ecx
 ; X86-SSE41-NEXT:    shll $15, %ecx
 ; X86-SSE41-NEXT:    sarl $15, %ecx
-; X86-SSE41-NEXT:    movd %ecx, %xmm0
-; X86-SSE41-NEXT:    pinsrd $1, %edx, %xmm0
+; X86-SSE41-NEXT:    shll $15, %eax
+; X86-SSE41-NEXT:    sarl $15, %eax
+; X86-SSE41-NEXT:    movd %eax, %xmm0
+; X86-SSE41-NEXT:    pinsrd $1, %ecx, %xmm0
 ; X86-SSE41-NEXT:    shll $13, %esi
 ; X86-SSE41-NEXT:    sarl $15, %esi
 ; X86-SSE41-NEXT:    pinsrd $2, %esi, %xmm0
-; X86-SSE41-NEXT:    shll $15, %eax
-; X86-SSE41-NEXT:    sarl $15, %eax
-; X86-SSE41-NEXT:    pinsrd $3, %eax, %xmm0
+; X86-SSE41-NEXT:    shll $15, %edx
+; X86-SSE41-NEXT:    sarl $15, %edx
+; X86-SSE41-NEXT:    pinsrd $3, %edx, %xmm0
 ; X86-SSE41-NEXT:    popl %esi
 ; X86-SSE41-NEXT:    .cfi_def_cfa_offset 4
 ; X86-SSE41-NEXT:    retl

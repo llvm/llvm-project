@@ -41,7 +41,6 @@
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
 #include <cassert>
-#include <cstddef>
 #include <cstdint>
 #include <cstring>
 #include <ctime>
@@ -55,6 +54,8 @@ using llvm::support::endian::write32le;
 #define DEBUG_TYPE "WinCOFFObjectWriter"
 
 namespace {
+
+constexpr int OffsetLabelIntervalBits = 20;
 
 using name = SmallString<COFF::NameSize>;
 
@@ -120,6 +121,8 @@ public:
   relocations Relocations;
 
   COFFSection(StringRef Name) : Name(std::string(Name)) {}
+
+  SmallVector<COFFSymbol *, 1> OffsetSymbols;
 };
 
 class WinCOFFObjectWriter : public MCObjectWriter {
@@ -149,10 +152,9 @@ public:
   symbol_list WeakDefaults;
 
   bool UseBigObj;
+  bool UseOffsetLabels = false;
 
-  bool EmitAddrsigSection = false;
   MCSectionCOFF *AddrsigSection;
-  std::vector<const MCSymbol *> AddrsigSyms;
 
   MCSectionCOFF *CGProfileSection = nullptr;
 
@@ -174,7 +176,7 @@ public:
   COFFSymbol *GetOrCreateCOFFSymbol(const MCSymbol *Symbol);
   COFFSection *createSection(StringRef Name);
 
-  void defineSection(MCSectionCOFF const &Sec);
+  void defineSection(MCSectionCOFF const &Sec, const MCAsmLayout &Layout);
 
   COFFSymbol *getLinkedSymbol(const MCSymbol &Symbol);
   void DefineSymbol(const MCSymbol &Symbol, MCAssembler &Assembler,
@@ -216,11 +218,6 @@ public:
   void assignSectionNumbers();
   void assignFileOffsets(MCAssembler &Asm, const MCAsmLayout &Layout);
 
-  void emitAddrsigSection() override { EmitAddrsigSection = true; }
-  void addAddrsigSymbol(const MCSymbol *Sym) override {
-    AddrsigSyms.push_back(Sym);
-  }
-
   uint64_t writeObject(MCAssembler &Asm, const MCAsmLayout &Layout) override;
 };
 
@@ -244,6 +241,11 @@ WinCOFFObjectWriter::WinCOFFObjectWriter(
     std::unique_ptr<MCWinCOFFObjectTargetWriter> MOTW, raw_pwrite_stream &OS)
     : W(OS, support::little), TargetObjectWriter(std::move(MOTW)) {
   Header.Machine = TargetObjectWriter->getMachine();
+  // Some relocations on ARM64 (the 21 bit ADRP relocations) have a slightly
+  // limited range for the immediate offset (+/- 1 MB); create extra offset
+  // label symbols with regular intervals to allow referencing a
+  // non-temporary symbol that is close enough.
+  UseOffsetLabels = Header.Machine == COFF::IMAGE_FILE_MACHINE_ARM64;
 }
 
 COFFSymbol *WinCOFFObjectWriter::createSymbol(StringRef Name) {
@@ -299,7 +301,8 @@ static uint32_t getAlignment(const MCSectionCOFF &Sec) {
 
 /// This function takes a section data object from the assembler
 /// and creates the associated COFF section staging object.
-void WinCOFFObjectWriter::defineSection(const MCSectionCOFF &MCSec) {
+void WinCOFFObjectWriter::defineSection(const MCSectionCOFF &MCSec,
+                                        const MCAsmLayout &Layout) {
   COFFSection *Section = createSection(MCSec.getName());
   COFFSymbol *Symbol = createSymbol(MCSec.getName());
   Section->Symbol = Symbol;
@@ -329,6 +332,20 @@ void WinCOFFObjectWriter::defineSection(const MCSectionCOFF &MCSec) {
   // Bind internal COFF section to MC section.
   Section->MCSection = &MCSec;
   SectionMap[&MCSec] = Section;
+
+  if (UseOffsetLabels && !MCSec.getFragmentList().empty()) {
+    const uint32_t Interval = 1 << OffsetLabelIntervalBits;
+    uint32_t N = 1;
+    for (uint32_t Off = Interval, E = Layout.getSectionAddressSize(&MCSec);
+         Off < E; Off += Interval) {
+      auto Name = ("$L" + MCSec.getName() + "_" + Twine(N++)).str();
+      COFFSymbol *Label = createSymbol(Name);
+      Label->Section = Section;
+      Label->Data.StorageClass = COFF::IMAGE_SYM_CLASS_LABEL;
+      Label->Data.Value = Off;
+      Section->OffsetSymbols.push_back(Label);
+    }
+  }
 }
 
 static uint64_t getSymbolValue(const MCSymbol &Symbol,
@@ -427,32 +444,6 @@ void WinCOFFObjectWriter::DefineSymbol(const MCSymbol &MCSym,
   Sym->MC = &MCSym;
 }
 
-// Maximum offsets for different string table entry encodings.
-enum : unsigned { Max7DecimalOffset = 9999999U };
-enum : uint64_t { MaxBase64Offset = 0xFFFFFFFFFULL }; // 64^6, including 0
-
-// Encode a string table entry offset in base 64, padded to 6 chars, and
-// prefixed with a double slash: '//AAAAAA', '//AAAAAB', ...
-// Buffer must be at least 8 bytes large. No terminating null appended.
-static void encodeBase64StringEntry(char *Buffer, uint64_t Value) {
-  assert(Value > Max7DecimalOffset && Value <= MaxBase64Offset &&
-         "Illegal section name encoding for value");
-
-  static const char Alphabet[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
-                                 "abcdefghijklmnopqrstuvwxyz"
-                                 "0123456789+/";
-
-  Buffer[0] = '/';
-  Buffer[1] = '/';
-
-  char *Ptr = Buffer + 7;
-  for (unsigned i = 0; i < 6; ++i) {
-    unsigned Rem = Value % 64;
-    Value /= 64;
-    *(Ptr--) = Alphabet[Rem];
-  }
-}
-
 void WinCOFFObjectWriter::SetSectionName(COFFSection &S) {
   if (S.Name.size() <= COFF::NameSize) {
     std::memcpy(S.Header.Name, S.Name.c_str(), S.Name.size());
@@ -460,19 +451,8 @@ void WinCOFFObjectWriter::SetSectionName(COFFSection &S) {
   }
 
   uint64_t StringTableEntry = Strings.getOffset(S.Name);
-  if (StringTableEntry <= Max7DecimalOffset) {
-    SmallVector<char, COFF::NameSize> Buffer;
-    Twine('/').concat(Twine(StringTableEntry)).toVector(Buffer);
-    assert(Buffer.size() <= COFF::NameSize && Buffer.size() >= 2);
-    std::memcpy(S.Header.Name, Buffer.data(), Buffer.size());
-    return;
-  }
-  if (StringTableEntry <= MaxBase64Offset) {
-    // Starting with 10,000,000, offsets are encoded as base64.
-    encodeBase64StringEntry(S.Header.Name, StringTableEntry);
-    return;
-  }
-  report_fatal_error("COFF string table is greater than 64 GB.");
+  if (!COFF::encodeSectionName(S.Header.Name, StringTableEntry))
+    report_fatal_error("COFF string table is greater than 64 GB.");
 }
 
 void WinCOFFObjectWriter::SetSymbolName(COFFSymbol &S) {
@@ -688,7 +668,7 @@ void WinCOFFObjectWriter::executePostLayoutBinding(MCAssembler &Asm,
   // "Define" each section & symbol. This creates section & symbol
   // entries in the staging area.
   for (const auto &Section : Asm)
-    defineSection(static_cast<const MCSectionCOFF &>(Section));
+    defineSection(static_cast<const MCSectionCOFF &>(Section), Layout);
 
   for (const MCSymbol &Symbol : Asm.symbols())
     if (!Symbol.isTemporary())
@@ -774,8 +754,23 @@ void WinCOFFObjectWriter::recordRelocation(MCAssembler &Asm,
     assert(
         SectionMap.find(TargetSection) != SectionMap.end() &&
         "Section must already have been defined in executePostLayoutBinding!");
-    Reloc.Symb = SectionMap[TargetSection]->Symbol;
+    COFFSection *Section = SectionMap[TargetSection];
+    Reloc.Symb = Section->Symbol;
     FixedValue += Layout.getSymbolOffset(A);
+    // Technically, we should do the final adjustments of FixedValue (below)
+    // before picking an offset symbol, otherwise we might choose one which
+    // is slightly too far away. The relocations where it really matters
+    // (arm64 adrp relocations) don't get any offset though.
+    if (UseOffsetLabels && !Section->OffsetSymbols.empty()) {
+      uint64_t LabelIndex = FixedValue >> OffsetLabelIntervalBits;
+      if (LabelIndex > 0) {
+        if (LabelIndex <= Section->OffsetSymbols.size())
+          Reloc.Symb = Section->OffsetSymbols[LabelIndex - 1];
+        else
+          Reloc.Symb = Section->OffsetSymbols.back();
+        FixedValue -= Reloc.Symb->Data.Value;
+      }
+    }
   } else {
     assert(
         SymbolMap.find(&A) != SymbolMap.end() &&
@@ -963,7 +958,7 @@ void WinCOFFObjectWriter::assignFileOffsets(MCAssembler &Asm,
   for (const auto &Section : Asm) {
     COFFSection *Sec = SectionMap[&Section];
 
-    if (Sec->Number == -1)
+    if (!Sec || Sec->Number == -1)
       continue;
 
     Sec->Header.SizeOfRawData = Layout.getSectionAddressSize(&Section);

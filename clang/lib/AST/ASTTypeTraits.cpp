@@ -14,9 +14,12 @@
 
 #include "clang/AST/ASTTypeTraits.h"
 #include "clang/AST/ASTContext.h"
+#include "clang/AST/Attr.h"
 #include "clang/AST/DeclCXX.h"
+#include "clang/AST/DeclObjC.h"
 #include "clang/AST/NestedNameSpecifier.h"
 #include "clang/AST/OpenMPClause.h"
+#include "clang/AST/TypeLoc.h"
 
 using namespace clang;
 
@@ -24,9 +27,12 @@ const ASTNodeKind::KindInfo ASTNodeKind::AllKindInfo[] = {
     {NKI_None, "<None>"},
     {NKI_None, "TemplateArgument"},
     {NKI_None, "TemplateArgumentLoc"},
+    {NKI_None, "LambdaCapture"},
     {NKI_None, "TemplateName"},
     {NKI_None, "NestedNameSpecifierLoc"},
     {NKI_None, "QualType"},
+#define TYPELOC(CLASS, PARENT) {NKI_##PARENT, #CLASS "TypeLoc"},
+#include "clang/AST/TypeLocNodes.def"
     {NKI_None, "TypeLoc"},
     {NKI_None, "CXXBaseSpecifier"},
     {NKI_None, "CXXCtorInitializer"},
@@ -44,6 +50,10 @@ const ASTNodeKind::KindInfo ASTNodeKind::AllKindInfo[] = {
 #define GEN_CLANG_CLAUSE_CLASS
 #define CLAUSE_CLASS(Enum, Str, Class) {NKI_OMPClause, #Class},
 #include "llvm/Frontend/OpenMP/OMP.inc"
+    {NKI_None, "Attr"},
+#define ATTR(A) {NKI_Attr, #A "Attr"},
+#include "clang/Basic/AttrList.inc"
+    {NKI_None, "ObjCProtocolLoc"},
 };
 
 bool ASTNodeKind::isBaseOf(ASTNodeKind Other, unsigned *Distance) const {
@@ -123,6 +133,17 @@ ASTNodeKind ASTNodeKind::getFromNode(const Type &T) {
   llvm_unreachable("invalid type kind");
  }
 
+ ASTNodeKind ASTNodeKind::getFromNode(const TypeLoc &T) {
+   switch (T.getTypeLocClass()) {
+#define ABSTRACT_TYPELOC(CLASS, PARENT)
+#define TYPELOC(CLASS, PARENT)                                                 \
+  case TypeLoc::CLASS:                                                         \
+    return ASTNodeKind(NKI_##CLASS##TypeLoc);
+#include "clang/AST/TypeLocNodes.def"
+   }
+   llvm_unreachable("invalid typeloc kind");
+ }
+
 ASTNodeKind ASTNodeKind::getFromNode(const OMPClause &C) {
   switch (C.getClauseKind()) {
 #define GEN_CLANG_CLAUSE_CLASS
@@ -134,7 +155,17 @@ ASTNodeKind ASTNodeKind::getFromNode(const OMPClause &C) {
     llvm_unreachable("unexpected OpenMP clause kind");
 #include "llvm/Frontend/OpenMP/OMP.inc"
   }
-  llvm_unreachable("invalid stmt kind");
+  llvm_unreachable("invalid omp clause kind");
+}
+
+ASTNodeKind ASTNodeKind::getFromNode(const Attr &A) {
+  switch (A.getKind()) {
+#define ATTR(A)                                                                \
+  case attr::A:                                                                \
+    return ASTNodeKind(NKI_##A##Attr);
+#include "clang/Basic/AttrList.inc"
+  }
+  llvm_unreachable("invalid attr kind");
 }
 
 void DynTypedNode::print(llvm::raw_ostream &OS,
@@ -162,6 +193,10 @@ void DynTypedNode::print(llvm::raw_ostream &OS,
     S->printPretty(OS, nullptr, PP);
   else if (const Type *T = get<Type>())
     QualType(T, 0).print(OS, PP);
+  else if (const Attr *A = get<Attr>())
+    A->printPretty(OS, PP);
+  else if (const ObjCProtocolLoc *P = get<ObjCProtocolLoc>())
+    P->getProtocol()->print(OS, PP);
   else
     OS << "Unable to print values of type " << NodeKind.asStringRef() << "\n";
 }
@@ -195,5 +230,9 @@ SourceRange DynTypedNode::getSourceRange() const {
     return SourceRange(C->getBeginLoc(), C->getEndLoc());
   if (const auto *CBS = get<CXXBaseSpecifier>())
     return CBS->getSourceRange();
+  if (const auto *A = get<Attr>())
+    return A->getRange();
+  if (const ObjCProtocolLoc *P = get<ObjCProtocolLoc>())
+    return P->getSourceRange();
   return SourceRange();
 }

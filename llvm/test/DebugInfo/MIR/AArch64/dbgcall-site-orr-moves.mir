@@ -72,10 +72,9 @@
   !llvm.module.flags = !{!15, !16, !17}
   !llvm.ident = !{!18}
 
-  !0 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1, producer: "clang version 10.0.0 (ssh://gerritmirror.rnd.ki.sw.ericsson.se:29418/flextools/llvm-project.git f76e863b549ddccd5e917e2f3ff50646915654d2)", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, enums: !2, retainedTypes: !3, nameTableKind: None)
+  !0 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1, producer: "clang version 10.0.0 (ssh://gerritmirror.rnd.ki.sw.ericsson.se:29418/flextools/llvm-project.git f76e863b549ddccd5e917e2f3ff50646915654d2)", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, enums: !2, nameTableKind: None)
   !1 = !DIFile(filename: "orrxrs.c", directory: "/repo/edasten/llvm-project/llvm")
   !2 = !{}
-  !3 = !{!4, !8, !12}
   !4 = !DISubprogram(name: "call_int", scope: !1, file: !1, line: 1, type: !5, flags: DIFlagPrototyped, spFlags: DISPFlagOptimized, retainedNodes: !2)
   !5 = !DISubroutineType(types: !6)
   !6 = !{null, !7}

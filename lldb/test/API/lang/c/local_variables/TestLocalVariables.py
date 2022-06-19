@@ -14,8 +14,6 @@ from lldbsuite.test import lldbutil
 
 class LocalVariablesTestCase(TestBase):
 
-    mydir = TestBase.compute_mydir(__file__)
-
     def setUp(self):
         # Call super's setUp().
         TestBase.setUp(self)
@@ -48,8 +46,7 @@ class LocalVariablesTestCase(TestBase):
                              'stop reason = breakpoint'])
 
         # The breakpoint should have a hit count of 1.
-        self.expect("breakpoint list -f", BREAKPOINT_HIT_ONCE,
-                    substrs=[' resolved, hit count = 1'])
+        lldbutil.check_breakpoint(self, bpno = 1, expected_hit_count = 1)
 
         self.expect("frame variable i", VARIABLES_DISPLAYED_CORRECTLY,
                     substrs=['(unsigned int) i = 10'])

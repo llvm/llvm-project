@@ -1,5 +1,4 @@
-@ RUN: llvm-mc < %s -triple armv7a -mattr=+vfp3,+neon,+fp16,+hwdiv-arm,+hwdiv -filetype=obj | llvm-objdump --triple=arm -d - | FileCheck %s
-@ RUN: llvm-mc < %s -triple armv7a -mattr=+vfp3,+neon,+fp16,+hwdiv-arm,+hwdiv -filetype=obj | llvm-objdump --triple=thumb -d - | FileCheck %s --check-prefix=CHECK-THUMB
+@ RUN: llvm-mc < %s -triple armv7a -mattr=+vfp3,+neon,+fp16,+hwdiv-arm,+hwdiv -filetype=obj | llvm-objdump -d - | FileCheck %s
 
 .eabi_attribute Tag_FP_arch, 0 // disallow vfp
 
@@ -15,6 +14,7 @@ vfp3:
 
 @CHECK-LABEL: vfp3
 @CHECK-NOT: 00 0a b6 ee vmov.f32 s0, #5.000000e-01
+@CHECK: unknown
 
 neon:
   vmla.f32 d0, d1, d2
@@ -28,6 +28,7 @@ fp16:
 
 @CHECK-LABEL: fp16
 @CHECK-NOT: 02 07 b6 f3  vcvt.f32.f16 q0, d2
+@CHECK: unknown
 
 div_arm:
   udiv r0, r1, r2
@@ -41,4 +42,5 @@ div_thumb:
   udiv r0, r1, r2
 
 @CHECK-LABEL: div_thumb
-@CHECK-THUMB-NOT: b1 fb f2 f0 udiv r0, r1, r2
+@CHECK-NOT: b1 fb f2 f0 udiv r0, r1, r2
+@CHECK: unknown

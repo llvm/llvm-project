@@ -24,7 +24,6 @@ bool parseFoo(Foo &F) {
   // class-note@-1 {{The value 0 is assigned to 'F.Field'}}
   return !MCAsmParser::Error();
   // class-note@-1 {{'MCAsmParser::Error' returns true}}
-  // class-note@-2 {{Returning zero, which participates in a condition later}}
 }
 
 bool parseFile() {
@@ -58,7 +57,6 @@ namespace test_break {
 struct MCAsmParser {
   static bool Error() {
     return false; // class-note {{'MCAsmParser::Error' returns false}}
-    // class-note@-1 {{Returning zero, which participates in a condition later}}
   }
 };
 
@@ -74,7 +72,6 @@ bool parseFoo(Foo &F) {
   return MCAsmParser::Error();
   // class-note@-1 {{Calling 'MCAsmParser::Error'}}
   // class-note@-2 {{Returning from 'MCAsmParser::Error'}}
-  // class-note@-3 {{Returning zero, which participates in a condition later}}
 }
 
 bool parseFile() {

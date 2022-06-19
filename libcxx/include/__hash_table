@@ -7,22 +7,25 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP__HASH_TABLE
-#define _LIBCPP__HASH_TABLE
+#ifndef _LIBCPP___HASH_TABLE
+#define _LIBCPP___HASH_TABLE
 
+#include <__algorithm/max.h>
+#include <__algorithm/min.h>
+#include <__assert>
 #include <__bits> // __libcpp_clz
 #include <__config>
 #include <__debug>
-#include <algorithm>
+#include <__functional/hash.h>
+#include <__iterator/iterator_traits.h>
+#include <__utility/swap.h>
 #include <cmath>
 #include <initializer_list>
-#include <iterator>
 #include <memory>
 #include <type_traits>
-#include <utility>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
-#pragma GCC system_header
+#  pragma GCC system_header
 #endif
 
 _LIBCPP_PUSH_MACROS
@@ -44,7 +47,7 @@ template <class ..._Args>
 struct __is_hash_value_type : false_type {};
 
 template <class _One>
-struct __is_hash_value_type<_One> : __is_hash_value_type_imp<typename __uncvref<_One>::type> {};
+struct __is_hash_value_type<_One> : __is_hash_value_type_imp<__uncvref_t<_One> > {};
 
 _LIBCPP_FUNC_VIS
 size_t __next_prime(size_t __n);
@@ -288,17 +291,15 @@ public:
     typedef typename _NodeTypes::__node_value_type_pointer pointer;
 
     _LIBCPP_INLINE_VISIBILITY __hash_iterator() _NOEXCEPT : __node_(nullptr) {
-#if _LIBCPP_DEBUG_LEVEL == 2
-        __get_db()->__insert_i(this);
-#endif
+        _VSTD::__debug_db_insert_i(this);
     }
 
-#if _LIBCPP_DEBUG_LEVEL == 2
+#ifdef _LIBCPP_ENABLE_DEBUG_MODE
     _LIBCPP_INLINE_VISIBILITY
     __hash_iterator(const __hash_iterator& __i)
         : __node_(__i.__node_)
     {
-        __get_db()->__iterator_copy(this, &__i);
+        __get_db()->__iterator_copy(this, _VSTD::addressof(__i));
     }
 
     _LIBCPP_INLINE_VISIBILITY
@@ -310,14 +311,14 @@ public:
     _LIBCPP_INLINE_VISIBILITY
     __hash_iterator& operator=(const __hash_iterator& __i)
     {
-        if (this != &__i)
+        if (this != _VSTD::addressof(__i))
         {
-            __get_db()->__iterator_copy(this, &__i);
+            __get_db()->__iterator_copy(this, _VSTD::addressof(__i));
             __node_ = __i.__node_;
         }
         return *this;
     }
-#endif // _LIBCPP_DEBUG_LEVEL == 2
+#endif // _LIBCPP_ENABLE_DEBUG_MODE
 
     _LIBCPP_INLINE_VISIBILITY
     reference operator*() const {
@@ -359,19 +360,15 @@ public:
         {return !(__x == __y);}
 
 private:
-#if _LIBCPP_DEBUG_LEVEL == 2
     _LIBCPP_INLINE_VISIBILITY
-    __hash_iterator(__next_pointer __node, const void* __c) _NOEXCEPT
+    explicit __hash_iterator(__next_pointer __node, const void* __c) _NOEXCEPT
         : __node_(__node)
         {
+            (void)__c;
+#ifdef _LIBCPP_ENABLE_DEBUG_MODE
             __get_db()->__insert_ic(this, __c);
-        }
-#else
-    _LIBCPP_INLINE_VISIBILITY
-    __hash_iterator(__next_pointer __node) _NOEXCEPT
-        : __node_(__node)
-        {}
 #endif
+        }
     template <class, class, class, class> friend class __hash_table;
     template <class> friend class _LIBCPP_TEMPLATE_VIS __hash_const_iterator;
     template <class> friend class _LIBCPP_TEMPLATE_VIS __hash_map_iterator;
@@ -400,26 +397,24 @@ public:
 
 
     _LIBCPP_INLINE_VISIBILITY __hash_const_iterator() _NOEXCEPT : __node_(nullptr) {
-#if _LIBCPP_DEBUG_LEVEL == 2
-        __get_db()->__insert_i(this);
-#endif
+        _VSTD::__debug_db_insert_i(this);
     }
 
     _LIBCPP_INLINE_VISIBILITY
     __hash_const_iterator(const __non_const_iterator& __x) _NOEXCEPT
         : __node_(__x.__node_)
     {
-#if _LIBCPP_DEBUG_LEVEL == 2
-        __get_db()->__iterator_copy(this, &__x);
+#ifdef _LIBCPP_ENABLE_DEBUG_MODE
+        __get_db()->__iterator_copy(this, _VSTD::addressof(__x));
 #endif
     }
 
-#if _LIBCPP_DEBUG_LEVEL == 2
+#ifdef _LIBCPP_ENABLE_DEBUG_MODE
     _LIBCPP_INLINE_VISIBILITY
     __hash_const_iterator(const __hash_const_iterator& __i)
         : __node_(__i.__node_)
     {
-        __get_db()->__iterator_copy(this, &__i);
+        __get_db()->__iterator_copy(this, _VSTD::addressof(__i));
     }
 
     _LIBCPP_INLINE_VISIBILITY
@@ -431,14 +426,14 @@ public:
     _LIBCPP_INLINE_VISIBILITY
     __hash_const_iterator& operator=(const __hash_const_iterator& __i)
     {
-        if (this != &__i)
+        if (this != _VSTD::addressof(__i))
         {
-            __get_db()->__iterator_copy(this, &__i);
+            __get_db()->__iterator_copy(this, _VSTD::addressof(__i));
             __node_ = __i.__node_;
         }
         return *this;
     }
-#endif // _LIBCPP_DEBUG_LEVEL == 2
+#endif // _LIBCPP_ENABLE_DEBUG_MODE
 
     _LIBCPP_INLINE_VISIBILITY
     reference operator*() const {
@@ -479,19 +474,15 @@ public:
         {return !(__x == __y);}
 
 private:
-#if _LIBCPP_DEBUG_LEVEL == 2
     _LIBCPP_INLINE_VISIBILITY
-    __hash_const_iterator(__next_pointer __node, const void* __c) _NOEXCEPT
+    explicit __hash_const_iterator(__next_pointer __node, const void* __c) _NOEXCEPT
         : __node_(__node)
         {
+            (void)__c;
+#ifdef _LIBCPP_ENABLE_DEBUG_MODE
             __get_db()->__insert_ic(this, __c);
-        }
-#else
-    _LIBCPP_INLINE_VISIBILITY
-    __hash_const_iterator(__next_pointer __node) _NOEXCEPT
-        : __node_(__node)
-        {}
 #endif
+        }
     template <class, class, class, class> friend class __hash_table;
     template <class> friend class _LIBCPP_TEMPLATE_VIS __hash_map_const_iterator;
     template <class, class, class, class, class> friend class _LIBCPP_TEMPLATE_VIS unordered_map;
@@ -517,19 +508,17 @@ public:
     typedef typename _NodeTypes::__node_value_type_pointer      pointer;
 
     _LIBCPP_INLINE_VISIBILITY __hash_local_iterator() _NOEXCEPT : __node_(nullptr) {
-#if _LIBCPP_DEBUG_LEVEL == 2
-        __get_db()->__insert_i(this);
-#endif
+        _VSTD::__debug_db_insert_i(this);
     }
 
-#if _LIBCPP_DEBUG_LEVEL == 2
+#ifdef _LIBCPP_ENABLE_DEBUG_MODE
     _LIBCPP_INLINE_VISIBILITY
     __hash_local_iterator(const __hash_local_iterator& __i)
         : __node_(__i.__node_),
           __bucket_(__i.__bucket_),
           __bucket_count_(__i.__bucket_count_)
     {
-        __get_db()->__iterator_copy(this, &__i);
+        __get_db()->__iterator_copy(this, _VSTD::addressof(__i));
     }
 
     _LIBCPP_INLINE_VISIBILITY
@@ -541,16 +530,16 @@ public:
     _LIBCPP_INLINE_VISIBILITY
     __hash_local_iterator& operator=(const __hash_local_iterator& __i)
     {
-        if (this != &__i)
+        if (this != _VSTD::addressof(__i))
         {
-            __get_db()->__iterator_copy(this, &__i);
+            __get_db()->__iterator_copy(this, _VSTD::addressof(__i));
             __node_ = __i.__node_;
             __bucket_ = __i.__bucket_;
             __bucket_count_ = __i.__bucket_count_;
         }
         return *this;
     }
-#endif // _LIBCPP_DEBUG_LEVEL == 2
+#endif // _LIBCPP_ENABLE_DEBUG_MODE
 
     _LIBCPP_INLINE_VISIBILITY
     reference operator*() const {
@@ -594,30 +583,20 @@ public:
         {return !(__x == __y);}
 
 private:
-#if _LIBCPP_DEBUG_LEVEL == 2
     _LIBCPP_INLINE_VISIBILITY
-    __hash_local_iterator(__next_pointer __node, size_t __bucket,
-                          size_t __bucket_count, const void* __c) _NOEXCEPT
+    explicit __hash_local_iterator(__next_pointer __node, size_t __bucket,
+                                   size_t __bucket_count, const void* __c) _NOEXCEPT
         : __node_(__node),
           __bucket_(__bucket),
           __bucket_count_(__bucket_count)
         {
+            (void)__c;
+#ifdef _LIBCPP_ENABLE_DEBUG_MODE
             __get_db()->__insert_ic(this, __c);
-            if (__node_ != nullptr)
-                __node_ = __node_->__next_;
-        }
-#else
-    _LIBCPP_INLINE_VISIBILITY
-    __hash_local_iterator(__next_pointer __node, size_t __bucket,
-                          size_t __bucket_count) _NOEXCEPT
-        : __node_(__node),
-          __bucket_(__bucket),
-          __bucket_count_(__bucket_count)
-        {
-            if (__node_ != nullptr)
-                __node_ = __node_->__next_;
-        }
 #endif
+            if (__node_ != nullptr)
+                __node_ = __node_->__next_;
+        }
     template <class, class, class, class> friend class __hash_table;
     template <class> friend class _LIBCPP_TEMPLATE_VIS __hash_const_local_iterator;
     template <class> friend class _LIBCPP_TEMPLATE_VIS __hash_map_iterator;
@@ -651,9 +630,7 @@ public:
 
 
     _LIBCPP_INLINE_VISIBILITY __hash_const_local_iterator() _NOEXCEPT : __node_(nullptr) {
-#if _LIBCPP_DEBUG_LEVEL == 2
-        __get_db()->__insert_i(this);
-#endif
+        _VSTD::__debug_db_insert_i(this);
     }
 
     _LIBCPP_INLINE_VISIBILITY
@@ -662,19 +639,19 @@ public:
           __bucket_(__x.__bucket_),
           __bucket_count_(__x.__bucket_count_)
     {
-#if _LIBCPP_DEBUG_LEVEL == 2
-        __get_db()->__iterator_copy(this, &__x);
+#ifdef _LIBCPP_ENABLE_DEBUG_MODE
+        __get_db()->__iterator_copy(this, _VSTD::addressof(__x));
 #endif
     }
 
-#if _LIBCPP_DEBUG_LEVEL == 2
+#ifdef _LIBCPP_ENABLE_DEBUG_MODE
     _LIBCPP_INLINE_VISIBILITY
     __hash_const_local_iterator(const __hash_const_local_iterator& __i)
         : __node_(__i.__node_),
           __bucket_(__i.__bucket_),
           __bucket_count_(__i.__bucket_count_)
     {
-        __get_db()->__iterator_copy(this, &__i);
+        __get_db()->__iterator_copy(this, _VSTD::addressof(__i));
     }
 
     _LIBCPP_INLINE_VISIBILITY
@@ -686,16 +663,16 @@ public:
     _LIBCPP_INLINE_VISIBILITY
     __hash_const_local_iterator& operator=(const __hash_const_local_iterator& __i)
     {
-        if (this != &__i)
+        if (this != _VSTD::addressof(__i))
         {
-            __get_db()->__iterator_copy(this, &__i);
+            __get_db()->__iterator_copy(this, _VSTD::addressof(__i));
             __node_ = __i.__node_;
             __bucket_ = __i.__bucket_;
             __bucket_count_ = __i.__bucket_count_;
         }
         return *this;
     }
-#endif // _LIBCPP_DEBUG_LEVEL == 2
+#endif // _LIBCPP_ENABLE_DEBUG_MODE
 
     _LIBCPP_INLINE_VISIBILITY
     reference operator*() const {
@@ -739,30 +716,20 @@ public:
         {return !(__x == __y);}
 
 private:
-#if _LIBCPP_DEBUG_LEVEL == 2
     _LIBCPP_INLINE_VISIBILITY
-    __hash_const_local_iterator(__next_pointer __node, size_t __bucket,
-                                size_t __bucket_count, const void* __c) _NOEXCEPT
-        : __node_(__node),
+    explicit __hash_const_local_iterator(__next_pointer __node_ptr, size_t __bucket,
+                                         size_t __bucket_count, const void* __c) _NOEXCEPT
+        : __node_(__node_ptr),
           __bucket_(__bucket),
           __bucket_count_(__bucket_count)
         {
+            (void)__c;
+#ifdef _LIBCPP_ENABLE_DEBUG_MODE
             __get_db()->__insert_ic(this, __c);
-            if (__node_ != nullptr)
-                __node_ = __node_->__next_;
-        }
-#else
-    _LIBCPP_INLINE_VISIBILITY
-    __hash_const_local_iterator(__next_pointer __node, size_t __bucket,
-                                size_t __bucket_count) _NOEXCEPT
-        : __node_(__node),
-          __bucket_(__bucket),
-          __bucket_count_(__bucket_count)
-        {
-            if (__node_ != nullptr)
-                __node_ = __node_->__next_;
-        }
 #endif
+            if (__node_ != nullptr)
+                __node_ = __node_->__next_;
+        }
     template <class, class, class, class> friend class __hash_table;
     template <class> friend class _LIBCPP_TEMPLATE_VIS __hash_map_const_iterator;
 };
@@ -1284,11 +1251,7 @@ public:
     {
         _LIBCPP_ASSERT(__n < bucket_count(),
             "unordered container::begin(n) called with n >= bucket_count()");
-#if _LIBCPP_DEBUG_LEVEL == 2
         return local_iterator(__bucket_list_[__n], __n, bucket_count(), this);
-#else
-        return local_iterator(__bucket_list_[__n], __n, bucket_count());
-#endif
     }
 
     _LIBCPP_INLINE_VISIBILITY
@@ -1297,11 +1260,7 @@ public:
     {
         _LIBCPP_ASSERT(__n < bucket_count(),
             "unordered container::end(n) called with n >= bucket_count()");
-#if _LIBCPP_DEBUG_LEVEL == 2
         return local_iterator(nullptr, __n, bucket_count(), this);
-#else
-        return local_iterator(nullptr, __n, bucket_count());
-#endif
     }
 
     _LIBCPP_INLINE_VISIBILITY
@@ -1310,11 +1269,7 @@ public:
     {
         _LIBCPP_ASSERT(__n < bucket_count(),
             "unordered container::cbegin(n) called with n >= bucket_count()");
-#if _LIBCPP_DEBUG_LEVEL == 2
         return const_local_iterator(__bucket_list_[__n], __n, bucket_count(), this);
-#else
-        return const_local_iterator(__bucket_list_[__n], __n, bucket_count());
-#endif
     }
 
     _LIBCPP_INLINE_VISIBILITY
@@ -1323,21 +1278,17 @@ public:
     {
         _LIBCPP_ASSERT(__n < bucket_count(),
             "unordered container::cend(n) called with n >= bucket_count()");
-#if _LIBCPP_DEBUG_LEVEL == 2
         return const_local_iterator(nullptr, __n, bucket_count(), this);
-#else
-        return const_local_iterator(nullptr, __n, bucket_count());
-#endif
     }
 
-#if _LIBCPP_DEBUG_LEVEL == 2
+#ifdef _LIBCPP_ENABLE_DEBUG_MODE
 
     bool __dereferenceable(const const_iterator* __i) const;
     bool __decrementable(const const_iterator* __i) const;
     bool __addable(const const_iterator* __i, ptrdiff_t __n) const;
     bool __subscriptable(const const_iterator* __i, ptrdiff_t __n) const;
 
-#endif // _LIBCPP_DEBUG_LEVEL == 2
+#endif // _LIBCPP_ENABLE_DEBUG_MODE
 
 private:
     void __rehash(size_type __n);
@@ -1517,9 +1468,7 @@ __hash_table<_Tp, _Hash, _Equal, _Alloc>::~__hash_table()
 #endif
 
     __deallocate_node(__p1_.first().__next_);
-#if _LIBCPP_DEBUG_LEVEL == 2
-    __get_db()->__erase_c(this);
-#endif
+    std::__debug_db_erase_c(this);
 }
 
 template <class _Tp, class _Hash, class _Equal, class _Alloc>
@@ -1541,7 +1490,7 @@ template <class _Tp, class _Hash, class _Equal, class _Alloc>
 __hash_table<_Tp, _Hash, _Equal, _Alloc>&
 __hash_table<_Tp, _Hash, _Equal, _Alloc>::operator=(const __hash_table& __u)
 {
-    if (this != &__u)
+    if (this != _VSTD::addressof(__u))
     {
         __copy_assign_alloc(__u);
         hash_function() = __u.hash_function();
@@ -1561,7 +1510,7 @@ __hash_table<_Tp, _Hash, _Equal, _Alloc>::__deallocate_node(__next_pointer __np)
     while (__np != nullptr)
     {
         __next_pointer __next = __np->__next_;
-#if _LIBCPP_DEBUG_LEVEL == 2
+#ifdef _LIBCPP_ENABLE_DEBUG_MODE
         __c_node* __c = __get_db()->__find_c_and_lock(this);
         for (__i_node** __p = __c->end_; __p != __c->beg_; )
         {
@@ -1622,9 +1571,7 @@ __hash_table<_Tp, _Hash, _Equal, _Alloc>::__move_assign(
         __u.__p1_.first().__next_ = nullptr;
         __u.size() = 0;
     }
-#if _LIBCPP_DEBUG_LEVEL == 2
-    __get_db()->swap(this, &__u);
-#endif
+    std::__debug_db_swap(this, std::addressof(__u));
 }
 
 template <class _Tp, class _Hash, class _Equal, class _Alloc>
@@ -1774,11 +1721,7 @@ inline
 typename __hash_table<_Tp, _Hash, _Equal, _Alloc>::iterator
 __hash_table<_Tp, _Hash, _Equal, _Alloc>::begin() _NOEXCEPT
 {
-#if _LIBCPP_DEBUG_LEVEL == 2
     return iterator(__p1_.first().__next_, this);
-#else
-    return iterator(__p1_.first().__next_);
-#endif
 }
 
 template <class _Tp, class _Hash, class _Equal, class _Alloc>
@@ -1786,11 +1729,7 @@ inline
 typename __hash_table<_Tp, _Hash, _Equal, _Alloc>::iterator
 __hash_table<_Tp, _Hash, _Equal, _Alloc>::end() _NOEXCEPT
 {
-#if _LIBCPP_DEBUG_LEVEL == 2
     return iterator(nullptr, this);
-#else
-    return iterator(nullptr);
-#endif
 }
 
 template <class _Tp, class _Hash, class _Equal, class _Alloc>
@@ -1798,11 +1737,7 @@ inline
 typename __hash_table<_Tp, _Hash, _Equal, _Alloc>::const_iterator
 __hash_table<_Tp, _Hash, _Equal, _Alloc>::begin() const _NOEXCEPT
 {
-#if _LIBCPP_DEBUG_LEVEL == 2
     return const_iterator(__p1_.first().__next_, this);
-#else
-    return const_iterator(__p1_.first().__next_);
-#endif
 }
 
 template <class _Tp, class _Hash, class _Equal, class _Alloc>
@@ -1810,11 +1745,7 @@ inline
 typename __hash_table<_Tp, _Hash, _Equal, _Alloc>::const_iterator
 __hash_table<_Tp, _Hash, _Equal, _Alloc>::end() const _NOEXCEPT
 {
-#if _LIBCPP_DEBUG_LEVEL == 2
     return const_iterator(nullptr, this);
-#else
-    return const_iterator(nullptr);
-#endif
 }
 
 template <class _Tp, class _Hash, class _Equal, class _Alloc>
@@ -1919,11 +1850,7 @@ __hash_table<_Tp, _Hash, _Equal, _Alloc>::__node_insert_unique(__node_pointer __
         __existing_node = __nd->__ptr();
         __inserted = true;
     }
-#if _LIBCPP_DEBUG_LEVEL == 2
     return pair<iterator, bool>(iterator(__existing_node, this), __inserted);
-#else
-    return pair<iterator, bool>(iterator(__existing_node), __inserted);
-#endif
 }
 
 // Prepare the container for an insertion of the value __cp_val with the hash
@@ -2017,11 +1944,7 @@ __hash_table<_Tp, _Hash, _Equal, _Alloc>::__node_insert_multi(__node_pointer __c
     __next_pointer __pn = __node_insert_multi_prepare(__cp->__hash(), __cp->__value_);
     __node_insert_multi_perform(__cp, __pn);
 
-#if _LIBCPP_DEBUG_LEVEL == 2
     return iterator(__cp->__ptr(), this);
-#else
-    return iterator(__cp->__ptr());
-#endif
 }
 
 template <class _Tp, class _Hash, class _Equal, class _Alloc>
@@ -2029,11 +1952,9 @@ typename __hash_table<_Tp, _Hash, _Equal, _Alloc>::iterator
 __hash_table<_Tp, _Hash, _Equal, _Alloc>::__node_insert_multi(
         const_iterator __p, __node_pointer __cp)
 {
-#if _LIBCPP_DEBUG_LEVEL == 2
-    _LIBCPP_ASSERT(__get_const_db()->__find_c_from_i(&__p) == this,
-        "unordered container::emplace_hint(const_iterator, args...) called with an iterator not"
-        " referring to this unordered container");
-#endif
+    _LIBCPP_DEBUG_ASSERT(__get_const_db()->__find_c_from_i(_VSTD::addressof(__p)) == this,
+                         "unordered container::emplace_hint(const_iterator, args...) called with an iterator not"
+                         " referring to this unordered container");
     if (__p != end() && key_eq()(*__p, __cp->__value_))
     {
         __next_pointer __np = __p.__node_;
@@ -2052,11 +1973,7 @@ __hash_table<_Tp, _Hash, _Equal, _Alloc>::__node_insert_multi(
         __cp->__next_ = __np;
         __pp->__next_ = static_cast<__next_pointer>(__cp);
         ++size();
-#if _LIBCPP_DEBUG_LEVEL == 2
         return iterator(static_cast<__next_pointer>(__cp), this);
-#else
-        return iterator(static_cast<__next_pointer>(__cp));
-#endif
     }
     return __node_insert_multi(__cp);
 }
@@ -2122,11 +2039,7 @@ __hash_table<_Tp, _Hash, _Equal, _Alloc>::__emplace_unique_key_args(_Key const& 
         __inserted = true;
     }
 __done:
-#if _LIBCPP_DEBUG_LEVEL == 2
     return pair<iterator, bool>(iterator(__nd, this), __inserted);
-#else
-    return pair<iterator, bool>(iterator(__nd), __inserted);
-#endif
 }
 
 template <class _Tp, class _Hash, class _Equal, class _Alloc>
@@ -2158,11 +2071,9 @@ typename __hash_table<_Tp, _Hash, _Equal, _Alloc>::iterator
 __hash_table<_Tp, _Hash, _Equal, _Alloc>::__emplace_hint_multi(
         const_iterator __p, _Args&&... __args)
 {
-#if _LIBCPP_DEBUG_LEVEL == 2
-    _LIBCPP_ASSERT(__get_const_db()->__find_c_from_i(&__p) == this,
-        "unordered container::emplace_hint(const_iterator, args...) called with an iterator not"
-        " referring to this unordered container");
-#endif
+    _LIBCPP_DEBUG_ASSERT(__get_const_db()->__find_c_from_i(_VSTD::addressof(__p)) == this,
+                         "unordered container::emplace_hint(const_iterator, args...) called with an iterator not"
+                         " referring to this unordered container");
     __node_holder __h = __construct_node(_VSTD::forward<_Args>(__args)...);
     iterator __r = __node_insert_multi(__p, __h.get());
     __h.release();
@@ -2330,9 +2241,7 @@ template <class _Tp, class _Hash, class _Equal, class _Alloc>
 void
 __hash_table<_Tp, _Hash, _Equal, _Alloc>::__rehash(size_type __nbc)
 {
-#if _LIBCPP_DEBUG_LEVEL == 2
-    __get_db()->__invalidate_all(this);
-#endif
+    std::__debug_db_invalidate_all(this);
     __pointer_allocator& __npa = __bucket_list_.get_deleter().__alloc();
     __bucket_list_.reset(__nbc > 0 ?
                       __pointer_alloc_traits::allocate(__npa, __nbc) : nullptr);
@@ -2348,7 +2257,7 @@ __hash_table<_Tp, _Hash, _Equal, _Alloc>::__rehash(size_type __nbc)
             size_type __chash = __constrain_hash(__cp->__hash(), __nbc);
             __bucket_list_[__chash] = __pp;
             size_type __phash = __chash;
-            for (__pp = __cp, __cp = __cp->__next_; __cp != nullptr;
+            for (__pp = __cp, void(), __cp = __cp->__next_; __cp != nullptr;
                                                            __cp = __pp->__next_)
             {
                 __chash = __constrain_hash(__cp->__hash(), __nbc);
@@ -2401,11 +2310,7 @@ __hash_table<_Tp, _Hash, _Equal, _Alloc>::find(const _Key& __k)
             {
                 if ((__nd->__hash() == __hash)
                     && key_eq()(__nd->__upcast()->__value_, __k))
-#if _LIBCPP_DEBUG_LEVEL == 2
                     return iterator(__nd, this);
-#else
-                    return iterator(__nd);
-#endif
             }
         }
     }
@@ -2432,11 +2337,7 @@ __hash_table<_Tp, _Hash, _Equal, _Alloc>::find(const _Key& __k) const
             {
                 if ((__nd->__hash() == __hash)
                     && key_eq()(__nd->__upcast()->__value_, __k))
-#if _LIBCPP_DEBUG_LEVEL == 2
                     return const_iterator(__nd, this);
-#else
-                    return const_iterator(__nd);
-#endif
             }
         }
 
@@ -2484,16 +2385,12 @@ typename __hash_table<_Tp, _Hash, _Equal, _Alloc>::iterator
 __hash_table<_Tp, _Hash, _Equal, _Alloc>::erase(const_iterator __p)
 {
     __next_pointer __np = __p.__node_;
-#if _LIBCPP_DEBUG_LEVEL == 2
-    _LIBCPP_ASSERT(__get_const_db()->__find_c_from_i(&__p) == this,
-        "unordered container erase(iterator) called with an iterator not"
-        " referring to this container");
+    _LIBCPP_DEBUG_ASSERT(__get_const_db()->__find_c_from_i(_VSTD::addressof(__p)) == this,
+                         "unordered container erase(iterator) called with an iterator not"
+                         " referring to this container");
     _LIBCPP_ASSERT(__p != end(),
-        "unordered container erase(iterator) called with a non-dereferenceable iterator");
+                   "unordered container erase(iterator) called with a non-dereferenceable iterator");
     iterator __r(__np, this);
-#else
-    iterator __r(__np);
-#endif
     ++__r;
     remove(__p);
     return __r;
@@ -2504,25 +2401,19 @@ typename __hash_table<_Tp, _Hash, _Equal, _Alloc>::iterator
 __hash_table<_Tp, _Hash, _Equal, _Alloc>::erase(const_iterator __first,
                                                 const_iterator __last)
 {
-#if _LIBCPP_DEBUG_LEVEL == 2
-    _LIBCPP_ASSERT(__get_const_db()->__find_c_from_i(&__first) == this,
-        "unordered container::erase(iterator, iterator) called with an iterator not"
-        " referring to this container");
-    _LIBCPP_ASSERT(__get_const_db()->__find_c_from_i(&__last) == this,
-        "unordered container::erase(iterator, iterator) called with an iterator not"
-        " referring to this container");
-#endif
+    _LIBCPP_DEBUG_ASSERT(__get_const_db()->__find_c_from_i(_VSTD::addressof(__first)) == this,
+                         "unordered container::erase(iterator, iterator) called with an iterator not"
+                         " referring to this container");
+    _LIBCPP_DEBUG_ASSERT(__get_const_db()->__find_c_from_i(_VSTD::addressof(__last)) == this,
+                         "unordered container::erase(iterator, iterator) called with an iterator not"
+                         " referring to this container");
     for (const_iterator __p = __first; __first != __last; __p = __first)
     {
         ++__first;
         erase(__p);
     }
     __next_pointer __np = __last.__node_;
-#if _LIBCPP_DEBUG_LEVEL == 2
     return iterator (__np, this);
-#else
-    return iterator (__np);
-#endif
 }
 
 template <class _Tp, class _Hash, class _Equal, class _Alloc>
@@ -2589,7 +2480,7 @@ __hash_table<_Tp, _Hash, _Equal, _Alloc>::remove(const_iterator __p) _NOEXCEPT
     __pn->__next_ = __cn->__next_;
     __cn->__next_ = nullptr;
     --size();
-#if _LIBCPP_DEBUG_LEVEL == 2
+#ifdef _LIBCPP_ENABLE_DEBUG_MODE
     __c_node* __c = __get_db()->__find_c_and_lock(this);
     for (__i_node** __dp = __c->end_; __dp != __c->beg_; )
     {
@@ -2740,9 +2631,7 @@ __hash_table<_Tp, _Hash, _Equal, _Alloc>::swap(__hash_table& __u)
     if (__u.size() > 0)
         __u.__bucket_list_[__constrain_hash(__u.__p1_.first().__next_->__hash(), __u.bucket_count())] =
             __u.__p1_.first().__ptr();
-#if _LIBCPP_DEBUG_LEVEL == 2
-    __get_db()->swap(this, &__u);
-#endif
+    std::__debug_db_swap(this, std::addressof(__u));
 }
 
 template <class _Tp, class _Hash, class _Equal, class _Alloc>
@@ -2758,7 +2647,7 @@ __hash_table<_Tp, _Hash, _Equal, _Alloc>::bucket_size(size_type __n) const
     {
         for (__np = __np->__next_; __np != nullptr &&
                                    __constrain_hash(__np->__hash(), __bc) == __n;
-                                                    __np = __np->__next_, ++__r)
+                                                    __np = __np->__next_, (void) ++__r)
             ;
     }
     return __r;
@@ -2774,7 +2663,7 @@ swap(__hash_table<_Tp, _Hash, _Equal, _Alloc>& __x,
     __x.swap(__y);
 }
 
-#if _LIBCPP_DEBUG_LEVEL == 2
+#ifdef _LIBCPP_ENABLE_DEBUG_MODE
 
 template <class _Tp, class _Hash, class _Equal, class _Alloc>
 bool
@@ -2804,10 +2693,10 @@ __hash_table<_Tp, _Hash, _Equal, _Alloc>::__subscriptable(const const_iterator*,
     return false;
 }
 
-#endif // _LIBCPP_DEBUG_LEVEL == 2
+#endif // _LIBCPP_ENABLE_DEBUG_MODE
 
 _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS
 
-#endif // _LIBCPP__HASH_TABLE
+#endif // _LIBCPP___HASH_TABLE

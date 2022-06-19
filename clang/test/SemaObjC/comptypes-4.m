@@ -1,12 +1,12 @@
 // RUN: %clang_cc1 -fsyntax-only -verify %s
 
-extern void foo();
+extern void foo(void);
 
 @protocol MyProtocol @end
 
 @interface MyClass @end
 
-int main()
+int main(void)
 {
   MyClass <MyProtocol> *obj_p;
   MyClass *obj_cp;

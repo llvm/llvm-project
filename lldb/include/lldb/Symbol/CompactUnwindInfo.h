@@ -86,7 +86,7 @@ private:
                                            // valid for (start of the function)
     uint32_t valid_range_offset_end =
         0; // the offset of the start of the next function
-    FunctionInfo() : lsda_address(), personality_ptr_address() {}
+    FunctionInfo() = default;
   };
 
   struct UnwindHeader {
@@ -138,9 +138,10 @@ private:
 
   ObjectFile &m_objfile;
   lldb::SectionSP m_section_sp;
-  lldb::DataBufferSP m_section_contents_if_encrypted; // if the binary is
-                                                      // encrypted, read the
-                                                      // sect contents
+  lldb::WritableDataBufferSP
+      m_section_contents_if_encrypted; // if the binary is
+                                       // encrypted, read the
+                                       // sect contents
   // out of live memory and cache them here
   std::mutex m_mutex;
   std::vector<UnwindIndex> m_indexes;

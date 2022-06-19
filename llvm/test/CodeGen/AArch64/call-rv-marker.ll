@@ -1,9 +1,8 @@
 ; RUN: llc -o - %s | FileCheck --check-prefix=SELDAG --check-prefix=CHECK %s
 ; RUN: llc -global-isel -o - %s | FileCheck --check-prefix=GISEL --check-prefix=CHECK %s
 
-; TODO: support marker generation with GlobalISel
 target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
-target triple = "arm64-apple-iphoneos"
+target triple = "arm64-apple-ios"
 
 declare i8* @foo0(i32)
 declare i8* @foo1()
@@ -25,43 +24,54 @@ declare void @llvm.lifetime.end.p0i8(i64 immarg, i8* nocapture)
 @g = dso_local global i8* null, align 8
 @fptr = dso_local global i8* ()* null, align 8
 
-define dso_local i8* @rv_marker_1() {
-; CHECK-LABEL:    rv_marker_1:
-; CHECK:           .cfi_offset w30, -16
-; CHECK-NEXT:      bl foo1
-; SELDAG-NEXT:     mov x29, x29
-; GISEL-NOT:       mov x29, x29
+define dso_local i8* @rv_marker_1_retain() {
+; CHECK-LABEL: _rv_marker_1_retain:
+; CHECK:         bl _foo1
+; CHECK-NEXT:    mov x29, x29
+; CHECK-NEXT:    bl _objc_retainAutoreleasedReturnValue
 ;
 entry:
-  %call = call i8* @foo1() [ "clang.arc.attachedcall"(i64 0) ]
+  %call = call i8* @foo1() [ "clang.arc.attachedcall"(i8* (i8*)* @objc_retainAutoreleasedReturnValue) ]
+  ret i8* %call
+}
+
+define dso_local i8* @rv_marker_1_unsafeClaim() {
+; CHECK-LABEL: _rv_marker_1_unsafeClaim:
+; CHECK:         bl _foo1
+; CHECK-NEXT:    mov x29, x29
+; CHECK-NEXT:    bl _objc_unsafeClaimAutoreleasedReturnValue
+;
+entry:
+  %call = call i8* @foo1() [ "clang.arc.attachedcall"(i8* (i8*)* @objc_unsafeClaimAutoreleasedReturnValue) ]
   ret i8* %call
 }
 
 define dso_local void @rv_marker_2_select(i32 %c) {
-; CHECK-LABEL: rv_marker_2_select:
+; CHECK-LABEL: _rv_marker_2_select:
 ; SELDAG:        cinc  w0, w8, eq
 ; GISEL:         csinc w0, w8, wzr, eq
-; CHECK-NEXT:    bl  foo0
-; SELDAG-NEXT:   mov x29, x29
-; CHECK-NEXT:    ldr x30, [sp], #16
-; CHECK-NEXT:    b  foo2
+; CHECK-NEXT:    bl _foo0
+; CHECK-NEXT:    mov x29, x29
+; CHECK-NEXT:    bl _objc_retainAutoreleasedReturnValue
+; CHECK-NEXT:    ldp x29, x30, [sp], #16
+; CHECK-NEXT:    b _foo2
 ;
 entry:
   %tobool.not = icmp eq i32 %c, 0
   %.sink = select i1 %tobool.not, i32 2, i32 1
-  %call1 = call i8* @foo0(i32 %.sink) [ "clang.arc.attachedcall"(i64 0) ]
+  %call1 = call i8* @foo0(i32 %.sink) [ "clang.arc.attachedcall"(i8* (i8*)* @objc_retainAutoreleasedReturnValue) ]
   tail call void @foo2(i8* %call1)
   ret void
 }
 
 define dso_local void @rv_marker_3() personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*) {
-; CHECK-LABEL: rv_marker_3
-; CHECK:         .cfi_offset w30, -32
-; CHECK-NEXT:    bl  foo1
-; SELDAG-NEXT:   mov x29, x29
+; CHECK-LABEL: _rv_marker_3:
+; CHECK:         bl _foo1
+; CHECK-NEXT:    mov x29, x29
+; CHECK-NEXT:    bl _objc_retainAutoreleasedReturnValue
 ;
 entry:
-  %call = call i8* @foo1() [ "clang.arc.attachedcall"(i64 0) ]
+  %call = call i8* @foo1() [ "clang.arc.attachedcall"(i8* (i8*)* @objc_retainAutoreleasedReturnValue) ]
   invoke void @objc_object(i8* %call) #5
           to label %invoke.cont unwind label %lpad
 
@@ -77,17 +87,18 @@ lpad:                                             ; preds = %entry
 }
 
 define dso_local void @rv_marker_4() personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*) {
-; CHECK-LABEL: rv_marker_4
-; CHECK:       .Ltmp3:
-; CHECK-NEXT:     bl  foo1
-; SELDAG-NEXT:    mov x29, x29
-; CHECK-NEXT: .Ltmp4:
+; CHECK-LABEL: _rv_marker_4:
+; CHECK:       Ltmp3:
+; CHECK-NEXT:    bl _foo1
+; CHECK-NEXT:    mov x29, x29
+; CHECK-NEXT:    bl _objc_retainAutoreleasedReturnValue
+; CHECK-NEXT:  Ltmp4:
 ;
 entry:
   %s = alloca %struct.S, align 1
   %0 = getelementptr inbounds %struct.S, %struct.S* %s, i64 0, i32 0
   call void @llvm.lifetime.start.p0i8(i64 1, i8* nonnull %0) #2
-  %call = invoke i8* @foo1() [ "clang.arc.attachedcall"(i64 0) ]
+  %call = invoke i8* @foo1() [ "clang.arc.attachedcall"(i8* (i8*)* @objc_retainAutoreleasedReturnValue) ]
           to label %invoke.cont unwind label %lpad
 
 invoke.cont:                                      ; preds = %entry
@@ -119,15 +130,14 @@ ehcleanup:                                        ; preds = %lpad1, %lpad
 }
 
 define dso_local i8* @rv_marker_5_indirect_call() {
-; CHECK-LABEL: rv_marker_5_indirect_call
+; CHECK-LABEL: _rv_marker_5_indirect_call:
 ; CHECK:         ldr [[ADDR:x[0-9]+]], [
 ; CHECK-NEXT:    blr [[ADDR]]
-; SLEDAG-NEXT:   mov x29, x29
-; GISEL-NOT:     mov x29, x29
-;
+; CHECK-NEXT:    mov x29, x29
+; CHECK-NEXT:    bl _objc_retainAutoreleasedReturnValue
 entry:
   %0 = load i8* ()*, i8* ()** @fptr, align 8
-  %call = call i8* %0() [ "clang.arc.attachedcall"(i64 0) ]
+  %call = call i8* %0() [ "clang.arc.attachedcall"(i8* (i8*)* @objc_retainAutoreleasedReturnValue) ]
   tail call void @foo2(i8* %call)
   ret i8* %call
 }
@@ -135,15 +145,17 @@ entry:
 declare i8* @foo(i64, i64, i64)
 
 define dso_local void @rv_marker_multiarg(i64 %a, i64 %b, i64 %c) {
-; CHECK-LABEL: rv_marker_multiarg
-; CHECK:        mov [[TMP:x[0-9]+]], x0
-; CHECK-NEXT:   mov x0, x2
-; CHECK-NEXT:   mov x2, [[TMP]]
-; CHECK-NEXT:   bl  foo
-; SELDAG-NEXT:  mov x29, x29
-; GISEL-NOT:    mov x29, x29
-  call i8* @foo(i64 %c, i64 %b, i64 %a) [ "clang.arc.attachedcall"(i64 0) ]
+; CHECK-LABEL: _rv_marker_multiarg:
+; CHECK:         mov [[TMP:x[0-9]+]], x0
+; CHECK-NEXT:    mov x0, x2
+; CHECK-NEXT:    mov x2, [[TMP]]
+; CHECK-NEXT:    bl  _foo
+; CHECK-NEXT:    mov x29, x29
+; CHECK-NEXT:    bl _objc_retainAutoreleasedReturnValue
+  call i8* @foo(i64 %c, i64 %b, i64 %a) [ "clang.arc.attachedcall"(i8* (i8*)* @objc_retainAutoreleasedReturnValue) ]
   ret void
 }
 
+declare i8* @objc_retainAutoreleasedReturnValue(i8*)
+declare i8* @objc_unsafeClaimAutoreleasedReturnValue(i8*)
 declare i32 @__gxx_personality_v0(...)

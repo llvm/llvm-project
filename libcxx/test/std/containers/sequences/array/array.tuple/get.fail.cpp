@@ -6,25 +6,17 @@
 //
 //===----------------------------------------------------------------------===//
 
-// GCC 5 does not evaluate static assertions dependent on a template parameter.
-// UNSUPPORTED: gcc-5
-
 // <array>
 
 // template <size_t I, class T, size_t N> T& get(array<T, N>& a);
 
 // Prevent -Warray-bounds from issuing a diagnostic when testing with clang verify.
-#if defined(__clang__)
-#pragma clang diagnostic ignored "-Warray-bounds"
-#endif
+// ADDITIONAL_COMPILE_FLAGS: -Wno-array-bounds
 
 #include <array>
 #include <cassert>
 
-
-// std::array is explicitly allowed to be initialized with A a = { init-list };.
-// Disable the missing braces warning for this reason.
-#include "disable_missing_braces_warning.h"
+#include "test_macros.h"
 
 int main(int, char**)
 {

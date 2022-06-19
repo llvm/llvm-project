@@ -49,7 +49,7 @@ __attribute ((deprecated)) // expected-note {{'DEPRECATED' has been explicitly m
 +(id)new;
 @end
 
-void foo() {
+void foo(void) {
   [DEPRECATED new]; // expected-warning {{'DEPRECATED' is deprecated}}
 }
 

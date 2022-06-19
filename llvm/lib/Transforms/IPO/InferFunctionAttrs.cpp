@@ -9,11 +9,8 @@
 #include "llvm/Transforms/IPO/InferFunctionAttrs.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/IR/Function.h"
-#include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Module.h"
 #include "llvm/InitializePasses.h"
-#include "llvm/Support/Debug.h"
-#include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/Utils/BuildLibCalls.h"
 #include "llvm/Transforms/Utils/Local.h"
 using namespace llvm;
@@ -32,7 +29,7 @@ static bool inferAllPrototypeAttributes(
     // explicitly visited by CGSCC passes in the new pass manager.)
     if (F.isDeclaration() && !F.hasOptNone()) {
       if (!F.hasFnAttribute(Attribute::NoBuiltin))
-        Changed |= inferLibFuncAttributes(F, GetTLI(F));
+        Changed |= inferNonMandatoryLibFuncAttrs(F, GetTLI(F));
       Changed |= inferAttributesFromOthers(F);
     }
 

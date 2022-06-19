@@ -13,8 +13,6 @@ from lldbsuite.test import lldbtest
 
 class PlatformProcessCrashInfoTestCase(TestBase):
 
-    mydir = TestBase.compute_mydir(__file__)
-
     def setUp(self):
         TestBase.setUp(self)
         self.runCmd("settings set auto-confirm true")
@@ -63,7 +61,7 @@ class PlatformProcessCrashInfoTestCase(TestBase):
 
         error = crash_info.GetAsJSON(stream)
 
-        self.assertTrue(error.Success())
+        self.assertSuccess(error)
 
         self.assertTrue(crash_info.IsValid())
 

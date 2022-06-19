@@ -10,16 +10,17 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef MLIR_CONVERSION_STANDARDTOSPIRV_LINALGTOSPIRVPASS_H
-#define MLIR_CONVERSION_STANDARDTOSPIRV_LINALGTOSPIRVPASS_H
+#ifndef MLIR_CONVERSION_LINALGTOSPIRV_LINALGTOSPIRVPASS_H
+#define MLIR_CONVERSION_LINALGTOSPIRV_LINALGTOSPIRVPASS_H
 
 #include "mlir/Pass/Pass.h"
 
 namespace mlir {
+class ModuleOp;
 
 /// Creates and returns a pass to convert Linalg ops to SPIR-V ops.
 std::unique_ptr<OperationPass<ModuleOp>> createLinalgToSPIRVPass();
 
 } // namespace mlir
 
-#endif // MLIR_CONVERSION_STANDARDTOSPIRV_LINALGTOSPIRVPASS_H
+#endif // MLIR_CONVERSION_LINALGTOSPIRV_LINALGTOSPIRVPASS_H

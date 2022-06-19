@@ -1,6 +1,4 @@
-! Verify that reading from stdin works as expected
-
-! REQUIRES: new-flang-driver
+! Verify that reading from stdin works as expected - Fortran input
 
 !--------------------------
 ! FLANG DRIVER (flang)
@@ -30,8 +28,8 @@
 !-------------------------
 ! EXPECTED OUTPUT for `-E`
 !-------------------------
-! PP-NOT-DEFINED: program b
-! PP-DEFINED: program a
+! PP-NOT-DEFINED: Program B
+! PP-DEFINED: Program A
 
 !-------------------------------
 ! EXPECTED OUTPUT for `-test-io`

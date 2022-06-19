@@ -17,16 +17,15 @@
 #define LLVM_UTILS_TABLEGEN_CODEGENTARGET_H
 
 #include "CodeGenHwModes.h"
-#include "CodeGenInstruction.h"
 #include "CodeGenRegisters.h"
 #include "InfoByHwMode.h"
 #include "SDNodeProperties.h"
-#include "llvm/Support/raw_ostream.h"
-#include "llvm/TableGen/Record.h"
-#include <algorithm>
 
 namespace llvm {
 
+class RecordKeeper;
+class Record;
+class CodeGenInstruction;
 struct CodeGenRegister;
 class CodeGenSchedModels;
 class CodeGenTarget;
@@ -202,7 +201,7 @@ private:
 /// ComplexPattern - ComplexPattern info, corresponding to the ComplexPattern
 /// tablegen class in TargetSelectionDAG.td
 class ComplexPattern {
-  MVT::SimpleValueType Ty;
+  Record *Ty;
   unsigned NumOperands;
   std::string SelectFunc;
   std::vector<Record*> RootNodes;
@@ -211,7 +210,7 @@ class ComplexPattern {
 public:
   ComplexPattern(Record *R);
 
-  MVT::SimpleValueType getValueType() const { return Ty; }
+  Record *getValueType() const { return Ty; }
   unsigned getNumOperands() const { return NumOperands; }
   const std::string &getSelectFunc() const { return SelectFunc; }
   const std::vector<Record*> &getRootNodes() const {

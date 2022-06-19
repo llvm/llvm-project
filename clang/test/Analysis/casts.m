@@ -1,4 +1,4 @@
-// RUN: %clang_analyze_cc1 -analyzer-checker=core,alpha.core -analyzer-store=region -verify %s
+// RUN: %clang_analyze_cc1 -analyzer-checker=core,alpha.core -verify %s
 // expected-no-diagnostics
 
 // Test function pointer casts.
@@ -41,6 +41,6 @@ adium_media_ready_cb(RDR10087620 *InObj)
 
 
 // PR16690
-_Bool testLocAsIntegerToBool() {
+_Bool testLocAsIntegerToBool(void) {
   return (long long)&testLocAsIntegerToBool;
 }

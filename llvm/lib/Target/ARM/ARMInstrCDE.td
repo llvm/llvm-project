@@ -612,14 +612,14 @@ multiclass VCXPredicatedPat_m<MVEVectorVTInfo VTI> {
                                     (VTI.Vec MQPR:$inactive), timm:$imm,
                                     (VTI.Pred VCCR:$pred))),
             (VTI.Vec (CDE_VCX1_vec p_imm:$coproc, imm_12b:$imm, ARMVCCThen,
-                                    (VTI.Pred VCCR:$pred),
+                                    (VTI.Pred VCCR:$pred), zero_reg,
                                     (VTI.Vec MQPR:$inactive)))>;
   def : Pat<(VTI.Vec (int_arm_cde_vcx1qa_predicated timm:$coproc,
                                     (VTI.Vec MQPR:$acc), timm:$imm,
                                     (VTI.Pred VCCR:$pred))),
             (VTI.Vec (CDE_VCX1A_vec p_imm:$coproc, (VTI.Vec MQPR:$acc),
                                     imm_12b:$imm, ARMVCCThen,
-                                    (VTI.Pred VCCR:$pred)))>;
+                                    (VTI.Pred VCCR:$pred), zero_reg))>;
 
   def : Pat<(VTI.Vec (int_arm_cde_vcx2q_predicated timm:$coproc,
                                     (VTI.Vec MQPR:$inactive),
@@ -627,7 +627,7 @@ multiclass VCXPredicatedPat_m<MVEVectorVTInfo VTI> {
                                     (VTI.Pred VCCR:$pred))),
             (VTI.Vec (CDE_VCX2_vec p_imm:$coproc, (v16i8 MQPR:$n),
                                     imm_7b:$imm, ARMVCCThen,
-                                    (VTI.Pred VCCR:$pred),
+                                    (VTI.Pred VCCR:$pred), zero_reg,
                                     (VTI.Vec MQPR:$inactive)))>;
   def : Pat<(VTI.Vec (int_arm_cde_vcx2qa_predicated timm:$coproc,
                                     (VTI.Vec MQPR:$acc),
@@ -635,7 +635,7 @@ multiclass VCXPredicatedPat_m<MVEVectorVTInfo VTI> {
                                     (VTI.Pred VCCR:$pred))),
             (VTI.Vec (CDE_VCX2A_vec p_imm:$coproc, (VTI.Vec MQPR:$acc),
                                     (v16i8 MQPR:$n), timm:$imm, ARMVCCThen,
-                                    (VTI.Pred VCCR:$pred)))>;
+                                    (VTI.Pred VCCR:$pred), zero_reg))>;
 
   def : Pat<(VTI.Vec (int_arm_cde_vcx3q_predicated timm:$coproc,
                                     (VTI.Vec MQPR:$inactive),
@@ -645,7 +645,7 @@ multiclass VCXPredicatedPat_m<MVEVectorVTInfo VTI> {
             (VTI.Vec (CDE_VCX3_vec p_imm:$coproc, (v16i8 MQPR:$n),
                                     (v16i8 MQPR:$m),
                                     imm_4b:$imm, ARMVCCThen,
-                                    (VTI.Pred VCCR:$pred),
+                                    (VTI.Pred VCCR:$pred), zero_reg,
                                     (VTI.Vec MQPR:$inactive)))>;
   def : Pat<(VTI.Vec (int_arm_cde_vcx3qa_predicated timm:$coproc,
                                     (VTI.Vec MQPR:$acc),
@@ -654,7 +654,7 @@ multiclass VCXPredicatedPat_m<MVEVectorVTInfo VTI> {
             (VTI.Vec (CDE_VCX3A_vec p_imm:$coproc, (VTI.Vec MQPR:$acc),
                                     (v16i8 MQPR:$n), (v16i8 MQPR:$m),
                                     imm_4b:$imm, ARMVCCThen,
-                                    (VTI.Pred VCCR:$pred)))>;
+                                    (VTI.Pred VCCR:$pred), zero_reg))>;
 }
 
 let Predicates = [HasCDE, HasMVEInt] in

@@ -1,4 +1,4 @@
-; RUN: opt -S -globaldce < %s | FileCheck %s
+; RUN: opt -S -passes=globaldce < %s | FileCheck %s
 
 @L = internal unnamed_addr constant [3 x i8*] [i8* blockaddress(@test1, %L1), i8* blockaddress(@test1, %L2), i8* null], align 16
 

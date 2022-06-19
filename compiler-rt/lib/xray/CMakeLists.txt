@@ -73,6 +73,11 @@ set(powerpc64le_SOURCES
   xray_trampoline_powerpc64_asm.S
   )
 
+set(hexagon_SOURCES
+  xray_hexagon.cpp
+  xray_trampoline_hexagon.S
+  )
+
 set(XRAY_IMPL_HEADERS
   xray_allocator.h
   xray_basic_flags.h
@@ -111,6 +116,7 @@ set(XRAY_ALL_SOURCE_FILES
   ${x86_64_SOURCES}
   ${arm_SOURCES}
   ${armhf_SOURCES}
+  ${hexagon_SOURCES}
   ${mips_SOURCES}
   ${mipsel_SOURCES}
   ${mips64_SOURCES}
@@ -134,6 +140,9 @@ include_directories(../../include)
 
 set(XRAY_CFLAGS ${COMPILER_RT_COMMON_CFLAGS})
 set(XRAY_COMMON_DEFINITIONS XRAY_HAS_EXCEPTIONS=1)
+
+# Too many existing bugs, needs cleanup.
+append_list_if(COMPILER_RT_HAS_WNO_FORMAT -Wno-format XRAY_CFLAGS)
 
 # We don't need RTTI in XRay, so turn that off.
 append_rtti_flag(OFF XRAY_CFLAGS)

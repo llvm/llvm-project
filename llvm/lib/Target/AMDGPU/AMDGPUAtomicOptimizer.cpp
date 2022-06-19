@@ -311,6 +311,12 @@ Value *AMDGPUAtomicOptimizer::buildReduction(IRBuilder<> &B,
   if (ST->isWave32())
     return V;
 
+  if (ST->hasPermLane64()) {
+    // Reduce across the upper and lower 32 lanes.
+    return buildNonAtomicBinOp(
+        B, Op, V, B.CreateIntrinsic(Intrinsic::amdgcn_permlane64, {}, V));
+  }
+
   // Pick an arbitrary lane from 0..31 and an arbitrary lane from 32..63 and
   // combine them with a scalar operation.
   Function *ReadLane =
@@ -541,7 +547,7 @@ void AMDGPUAtomicOptimizer::optimizeAtomic(Instruction &I,
       if (NeedResult)
         ExclScan = buildShiftRight(B, NewV, Identity);
 
-      // Read the value from the last lane, which has accumlated the values of
+      // Read the value from the last lane, which has accumulated the values of
       // each active lane in the wavefront. This will be our new value which we
       // will provide to the atomic operation.
       Value *const LastLaneIdx = B.getInt32(ST->getWavefrontSize() - 1);

@@ -35,9 +35,6 @@ unsigned IntegerSet::getNumInequalities() const {
 }
 
 bool IntegerSet::isEmptyIntegerSet() const {
-  // This will only work if uniquing is on.
-  static_assert(kUniquingThreshold >= 1,
-                "uniquing threshold should be at least one");
   return *this == getEmptySet(set->dimCount, set->symbolCount, getContext());
 }
 

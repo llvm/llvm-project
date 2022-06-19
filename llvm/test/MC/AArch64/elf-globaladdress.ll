@@ -42,12 +42,12 @@ define dso_local void @address() {
 ; OBJ: Relocations [
 ; OBJ:   Section {{.*}} .rela.text {
 ; OBJ:     0x{{[0-9,A-F]+}} R_AARCH64_ADR_PREL_PG_HI21   var8
-; OBJ:     0x{{[0-9,A-F]+}} R_AARCH64_LDST8_ABS_LO12_NC  var8
 ; OBJ:     0x{{[0-9,A-F]+}} R_AARCH64_ADR_PREL_PG_HI21   var16
-; OBJ:     0x{{[0-9,A-F]+}} R_AARCH64_LDST16_ABS_LO12_NC var16
+; OBJ:     0x{{[0-9,A-F]+}} R_AARCH64_LDST8_ABS_LO12_NC  var8
 ; OBJ:     0x{{[0-9,A-F]+}} R_AARCH64_ADR_PREL_PG_HI21   var32
-; OBJ:     0x{{[0-9,A-F]+}} R_AARCH64_LDST32_ABS_LO12_NC var32
+; OBJ:     0x{{[0-9,A-F]+}} R_AARCH64_LDST16_ABS_LO12_NC var16
 ; OBJ:     0x{{[0-9,A-F]+}} R_AARCH64_ADR_PREL_PG_HI21   var64
+; OBJ:     0x{{[0-9,A-F]+}} R_AARCH64_LDST32_ABS_LO12_NC var32
 ; OBJ:     0x{{[0-9,A-F]+}} R_AARCH64_LDST64_ABS_LO12_NC var64
 
 ; This is on the store, so not really important, but it stops the next

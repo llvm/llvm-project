@@ -1,8 +1,7 @@
 // Test that registers of running threads are included in the root set.
-// RUN: LSAN_BASE="report_objects=1:use_stacks=0"
 // RUN: %clangxx_lsan -pthread %s -o %t
-// RUN: %env_lsan_opts=$LSAN_BASE:"use_registers=0" not %run %t 2>&1 | FileCheck %s
-// RUN: %env_lsan_opts=$LSAN_BASE:"use_registers=1" %run %t 2>&1
+// RUN: %env_lsan_opts="report_objects=1:use_stacks=0:use_registers=0" not %run %t 2>&1 | FileCheck %s
+// RUN: %env_lsan_opts="report_objects=1:use_stacks=0:use_registers=1" %run %t 2>&1
 // RUN: %env_lsan_opts="" %run %t 2>&1
 
 #include "sanitizer_common/print_address.h"
@@ -37,9 +36,11 @@ extern "C" void *registers_thread_func(void *arg) {
       :
       : "r"(p));
 #elif defined(__aarch64__)
-  // x9-10are used. x11-12 are probably used.
-  // So we pick x13 to be safe.
-  asm("mov x13, %0"
+  // x9-10 are used. x11-12 are probably used.
+  // So we pick x13 to be safe and x14 as a backup.
+  // (x13 known to be used on Ubuntu Focal)
+  asm("mov x13, %0\n"
+      "mov x14, %0"
       :
       : "r"(p));
 #elif defined(__powerpc__)

@@ -20,7 +20,7 @@ namespace bugprone {
 /// swapped (or badly ordered) arguments.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/bugprone-easily-swappable-parameters.html
+/// http://clang.llvm.org/extra/clang-tidy/checks/bugprone/easily-swappable-parameters.html
 class EasilySwappableParametersCheck : public ClangTidyCheck {
 public:
   EasilySwappableParametersCheck(StringRef Name, ClangTidyContext *Context);
@@ -33,11 +33,11 @@ public:
   const std::size_t MinimumLength;
 
   /// The parameter names (as written in the source text) to be ignored.
-  const std::vector<std::string> IgnoredParameterNames;
+  const std::vector<StringRef> IgnoredParameterNames;
 
   /// The parameter typename suffixes (as written in the source code) to be
   /// ignored.
-  const std::vector<std::string> IgnoredParameterTypeSuffixes;
+  const std::vector<StringRef> IgnoredParameterTypeSuffixes;
 
   /// Whether to consider differently qualified versions of the same type
   /// mixable.

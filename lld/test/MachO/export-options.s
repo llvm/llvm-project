@@ -9,9 +9,26 @@
 # RUN: not %lld -dylib %t/default.o -o /dev/null \
 # RUN:         -exported_symbol a -unexported_symbol b 2>&1 | \
 # RUN:     FileCheck --check-prefix=CONFLICT %s
+#
+# RUN: not %lld -dylib %t/default.o -o /dev/null \
+# RUN:         -exported_symbols_list /dev/null -unexported_symbol b 2>&1 | \
+# RUN:     FileCheck --check-prefix=CONFLICT %s
+#
+# RUN: not %lld -dylib %t/default.o -o /dev/null \
+# RUN:         -no_exported_symbols -unexported_symbol b 2>&1 | \
+# RUN:     FileCheck --check-prefix=CONFLICT %s
+#
+# RUN: not %lld -dylib %t/default.o -o /dev/null \
+# RUN:         -no_exported_symbols -exported_symbol b 2>&1 | \
+# RUN:     FileCheck --check-prefix=CONFLICT-NO-EXPORTS %s
+#
+# RUN: not %lld -dylib %t/default.o -o /dev/null \
+# RUN:         -no_exported_symbols -exported_symbols_list %t/literals.txt 2>&1 | \
+# RUN:     FileCheck --check-prefix=CONFLICT-NO-EXPORTS %s
 
 # CONFLICT: error: cannot use both -exported_symbol* and -unexported_symbol* options
-# CONFLICT-NEXT: >>> ignoring unexports
+
+# CONFLICT-NO-EXPORTS: error: cannot use both -exported_symbol* and -no_exported_symbols options
 
 ## Check that an exported literal name with no symbol definition yields an error
 ## but that an exported glob-pattern with no matching symbol definition is OK
@@ -42,11 +59,17 @@
 # EXPORT-DAG: g     F __TEXT,__text _keep_lazy
 
 ## Check that exported symbol is global
-# RUN: not %lld -dylib %t/default.o -o /dev/null \
+# RUN: %no-fatal-warnings-lld -dylib %t/default.o -o %t/hidden-export \
 # RUN:         -exported_symbol _private_extern 2>&1 | \
 # RUN:     FileCheck --check-prefix=PRIVATE %s
 
-# PRIVATE: error: cannot export hidden symbol _private_extern
+# PRIVATE: warning: cannot export hidden symbol _private_extern
+
+## Check that we still hide the other symbols despite the warning
+# RUN: llvm-objdump --macho --exports-trie %t/hidden-export | \
+# RUN:     FileCheck --check-prefix=EMPTY-TRIE %s
+# EMPTY-TRIE:       Exports trie:
+# EMPTY-TRIE-EMPTY:
 
 ## Check that the export trie is unaltered
 # RUN: %lld -dylib %t/default.o -o %t/default
@@ -113,6 +136,60 @@
 # GLOBBY-DAG: globby_also
 # GLOBBY-NOT: literal_only
 
+# RUN: llvm-mc -filetype=obj -triple=x86_64-apple-macos \
+# RUN:     %t/autohide.s -o %t/autohide.o
+# RUN: llvm-mc -filetype=obj -triple=x86_64-apple-macos \
+# RUN:     %t/autohide-private-extern.s -o %t/autohide-private-extern.o
+# RUN: llvm-mc -filetype=obj -triple=x86_64-apple-macos \
+# RUN:     %t/glob-private-extern.s -o %t/glob-private-extern.o
+# RUN: llvm-mc -filetype=obj -triple=x86_64-apple-macos \
+# RUN:     %t/weak-private-extern.s -o %t/weak-private-extern.o
+## Test that we can export the autohide symbol but not when it's also
+## private-extern
+# RUN: %lld -dylib -exported_symbol "_foo" %t/autohide.o -o %t/exp-autohide.dylib
+# RUN: llvm-nm -g %t/exp-autohide.dylib | FileCheck %s --check-prefix=EXP-AUTOHIDE
+
+# RUN: not %lld -dylib -exported_symbol "_foo" %t/autohide-private-extern.o \
+# RUN:   -o /dev/null  2>&1 | FileCheck %s --check-prefix=AUTOHIDE-PRIVATE
+
+# RUN: not %lld -dylib -exported_symbol "_foo" %t/autohide.o \
+# RUN:   %t/glob-private-extern.o -o /dev/null 2>&1 | \
+# RUN:   FileCheck %s --check-prefix=AUTOHIDE-PRIVATE
+
+# RUN: not %lld -dylib -exported_symbol "_foo" %t/autohide.o \
+# RUN:   %t/weak-private-extern.o -o /dev/null 2>&1 | \
+# RUN:   FileCheck %s --check-prefix=AUTOHIDE-PRIVATE
+
+## Test that exported hidden symbols are still treated as a liveness root.
+## This previously used to crash when enabling -dead_strip since it's unconventional
+## to add treat private extern symbols as a liveness root.
+# RUN: %no-fatal-warnings-lld -dylib -exported_symbol "_foo" %t/autohide-private-extern.o \
+# RUN:   -dead_strip -o %t/exported-hidden
+# RUN: llvm-nm -m %t/exported-hidden | FileCheck %s --check-prefix=AUTOHIDE-PRIVATE-DEAD-STRIP
+
+# RUN: %no-fatal-warnings-lld -dylib -exported_symbol "_foo" %t/autohide.o \
+# RUN:   -dead_strip %t/glob-private-extern.o -o %t/exported-hidden
+# RUN: llvm-nm -m %t/exported-hidden | FileCheck %s --check-prefix=AUTOHIDE-PRIVATE-DEAD-STRIP
+
+# RUN: %no-fatal-warnings-lld -dylib -exported_symbol "_foo" %t/autohide.o \
+# RUN:   -dead_strip %t/weak-private-extern.o -o %t/exported-hidden
+# RUN: llvm-nm -m %t/exported-hidden | FileCheck %s --check-prefix=AUTOHIDE-PRIVATE-DEAD-STRIP
+
+# EXP-AUTOHIDE: T _foo
+# AUTOHIDE-PRIVATE: error: cannot export hidden symbol _foo
+# AUTOHIDE-PRIVATE-DEAD-STRIP: (__TEXT,__text) non-external (was a private external) _foo
+
+## Test not exporting any symbols
+# RUN: %lld -dylib %t/symdefs.o -o %t/noexports -exported_symbols_list /dev/null
+# RUN: llvm-objdump --macho --exports-trie %t/noexports | FileCheck --check-prefix=NOEXPORTS %s
+# RUN: %lld -dylib %t/symdefs.o -o %t/noexports -no_exported_symbols
+# RUN: llvm-objdump --macho --exports-trie %t/noexports | FileCheck --check-prefix=NOEXPORTS %s
+
+# NOEXPORTS-NOT: globby_also
+# NOEXPORTS-NOT: globby_only
+# NOEXPORTS-NOT: literal_also
+# NOEXPORTS-NOT: literal_only
+
 #--- default.s
 
 .globl _keep_globl, _hide_globl
@@ -158,3 +235,29 @@ globby_also:
   l?ter[aeiou]l_*[^y] # comment
 
   *gl?bby_*
+
+#--- autohide.s
+.globl _foo
+.weak_def_can_be_hidden _foo
+_foo:
+  retq
+
+#--- autohide-private-extern.s
+.globl _foo
+.weak_def_can_be_hidden _foo
+.private_extern _foo
+_foo:
+  retq
+
+#--- glob-private-extern.s
+.global _foo
+.private_extern _foo
+_foo:
+  retq
+
+#--- weak-private-extern.s
+.global _foo
+.weak_definition _foo
+.private_extern _foo
+_foo:
+  retq

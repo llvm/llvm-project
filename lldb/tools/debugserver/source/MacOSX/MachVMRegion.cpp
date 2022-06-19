@@ -182,3 +182,43 @@ uint32_t MachVMRegion::GetDNBPermissions() const {
     dnb_permissions |= eMemoryPermissionsExecutable;
   return dnb_permissions;
 }
+
+std::vector<std::string> MachVMRegion::GetMemoryTypes() const {
+  std::vector<std::string> types;
+  if (m_data.user_tag == VM_MEMORY_STACK) {
+    if (m_data.protection == VM_PROT_NONE) {
+      types.push_back("stack-guard");
+    } else {
+      types.push_back("stack");
+    }
+  }
+  if (m_data.user_tag == VM_MEMORY_MALLOC) {
+    if (m_data.protection == VM_PROT_NONE)
+      types.push_back("malloc-guard");
+    else if (m_data.share_mode == SM_EMPTY)
+      types.push_back("malloc-reserved");
+    else
+      types.push_back("malloc-metadata");
+  }
+  if (m_data.user_tag == VM_MEMORY_MALLOC_NANO ||
+      m_data.user_tag == VM_MEMORY_MALLOC_TINY ||
+      m_data.user_tag == VM_MEMORY_MALLOC_SMALL ||
+      m_data.user_tag == VM_MEMORY_MALLOC_LARGE ||
+      m_data.user_tag == VM_MEMORY_MALLOC_LARGE_REUSED ||
+      m_data.user_tag == VM_MEMORY_MALLOC_LARGE_REUSABLE ||
+      m_data.user_tag == VM_MEMORY_MALLOC_HUGE ||
+      m_data.user_tag == VM_MEMORY_REALLOC ||
+      m_data.user_tag == VM_MEMORY_SBRK) {
+    types.push_back("heap");
+    if (m_data.user_tag == VM_MEMORY_MALLOC_TINY) {
+      types.push_back("malloc-tiny");
+    }
+    if (m_data.user_tag == VM_MEMORY_MALLOC_LARGE) {
+      types.push_back("malloc-large");
+    }
+    if (m_data.user_tag == VM_MEMORY_MALLOC_SMALL) {
+      types.push_back("malloc-small");
+    }
+  }
+  return types;
+}

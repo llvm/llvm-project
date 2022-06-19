@@ -12,11 +12,13 @@
 #include "lldb/Expression/DiagnosticManager.h"
 #include "lldb/Expression/FunctionCaller.h"
 #include "lldb/Expression/UtilityFunction.h"
+#include "lldb/Target/ABI.h"
 #include "lldb/Target/ExecutionContext.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Target/Thread.h"
 #include "lldb/Target/ThreadPlanRunToAddress.h"
 #include "lldb/Target/ThreadPlanStepOut.h"
+#include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
 
 #include "Plugins/LanguageRuntime/ObjC/ObjCLanguageRuntime.h"
@@ -30,13 +32,15 @@ using namespace lldb_private;
 AppleThreadPlanStepThroughObjCTrampoline::
     AppleThreadPlanStepThroughObjCTrampoline(
         Thread &thread, AppleObjCTrampolineHandler &trampoline_handler,
-        ValueList &input_values, lldb::addr_t isa_addr, lldb::addr_t sel_addr)
+        ValueList &input_values, lldb::addr_t isa_addr, lldb::addr_t sel_addr,
+        lldb::addr_t sel_str_addr, llvm::StringRef sel_str)
     : ThreadPlan(ThreadPlan::eKindGeneric,
                  "MacOSX Step through ObjC Trampoline", thread, eVoteNoOpinion,
                  eVoteNoOpinion),
       m_trampoline_handler(trampoline_handler),
       m_args_addr(LLDB_INVALID_ADDRESS), m_input_values(input_values),
-      m_isa_addr(isa_addr), m_sel_addr(sel_addr), m_impl_function(nullptr) {}
+      m_isa_addr(isa_addr), m_sel_addr(sel_addr), m_impl_function(nullptr),
+      m_sel_str_addr(sel_str_addr), m_sel_str(sel_str) {}
 
 // Destructor
 AppleThreadPlanStepThroughObjCTrampoline::
@@ -124,8 +128,10 @@ bool AppleThreadPlanStepThroughObjCTrampoline::ShouldStop(Event *event_ptr) {
     }
   }
 
-  // Second stage, if all went well with the function calling, then fetch the
-  // target address, and queue up a "run to that address" plan.
+  // Second stage, if all went well with the function calling,  get the
+  // implementation function address, and queue up a "run to that address" plan.
+  Log *log = GetLog(LLDBLog::Step);
+
   if (!m_run_to_sp) {
     Value target_addr_value;
     ExecutionContext exc_ctx;
@@ -134,9 +140,12 @@ bool AppleThreadPlanStepThroughObjCTrampoline::ShouldStop(Event *event_ptr) {
                                           target_addr_value);
     m_impl_function->DeallocateFunctionResults(exc_ctx, m_args_addr);
     lldb::addr_t target_addr = target_addr_value.GetScalar().ULongLong();
+
+    if (ABISP abi_sp = GetThread().GetProcess()->GetABI()) {
+      target_addr = abi_sp->FixCodeAddress(target_addr);
+    }
     Address target_so_addr;
     target_so_addr.SetOpcodeLoadAddress(target_addr, exc_ctx.GetTargetPtr());
-    Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_STEP));
     if (target_addr == 0) {
       LLDB_LOGF(log, "Got target implementation of 0x0, stopping.");
       SetPlanComplete();
@@ -168,13 +177,25 @@ bool AppleThreadPlanStepThroughObjCTrampoline::ShouldStop(Event *event_ptr) {
     ObjCLanguageRuntime *objc_runtime =
         ObjCLanguageRuntime::Get(*GetThread().GetProcess());
     assert(objc_runtime != nullptr);
-    objc_runtime->AddToMethodCache(m_isa_addr, m_sel_addr, target_addr);
-    LLDB_LOGF(log,
-              "Adding {isa-addr=0x%" PRIx64 ", sel-addr=0x%" PRIx64
-              "} = addr=0x%" PRIx64 " to cache.",
-              m_isa_addr, m_sel_addr, target_addr);
-
-    // Extract the target address from the value:
+    if (m_sel_str_addr != LLDB_INVALID_ADDRESS) {
+      // Cache the string -> implementation and free the string in the target.
+      Status dealloc_error =
+          GetThread().GetProcess()->DeallocateMemory(m_sel_str_addr);
+      // For now just log this:
+      if (dealloc_error.Fail())
+        LLDB_LOG(log, "Failed to deallocate the sel str at {0} - error: {1}",
+                 m_sel_str_addr, dealloc_error);
+      objc_runtime->AddToMethodCache(m_isa_addr, m_sel_str, target_addr);
+      LLDB_LOG(log,
+               "Adding \\{isa-addr={0}, sel-addr={1}\\} = addr={2} to cache.",
+               m_isa_addr, m_sel_str, target_addr);
+    } else {
+      objc_runtime->AddToMethodCache(m_isa_addr, m_sel_addr, target_addr);
+      LLDB_LOGF(log,
+                "Adding {isa-addr=0x%" PRIx64 ", sel-addr=0x%" PRIx64
+                "} = addr=0x%" PRIx64 " to cache.",
+                m_isa_addr, m_sel_addr, target_addr);
+    }
 
     m_run_to_sp = std::make_shared<ThreadPlanRunToAddress>(
         GetThread(), target_so_addr, false);
@@ -349,7 +370,7 @@ bool AppleThreadPlanStepThroughDirectDispatch::ShouldStop(Event *event_ptr) {
   // If we have a step through plan, then w're in the process of getting 
   // through an ObjC msgSend.  If we arrived at the target function, then 
   // check whether we have debug info, and if we do, stop.
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_STEP));
+  Log *log = GetLog(LLDBLog::Step);
 
   if (m_objc_step_through_sp && m_objc_step_through_sp->IsPlanComplete()) {
     // If the plan failed for some reason, we should probably just let the

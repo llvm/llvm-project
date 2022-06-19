@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple x86_64-unknown-freebsd -S -emit-llvm -fobjc-runtime=gnustep-2.0 -o - %s | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-unknown-freebsd -S -emit-llvm -fobjc-runtime=gnustep-2.0 -o - %s | FileCheck %s
 
 @protocol X
 @optional
@@ -33,7 +33,7 @@
 // CHECK: define{{.*}} i8* @x()
 // CHECK:   = load 
 // CHECK-SAME: @._OBJC_REF_PROTOCOL_X, align 8
-void *x()
+void *x(void)
 {
 	return @protocol(X);
 }

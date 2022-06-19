@@ -34,7 +34,7 @@
 // CHECK-DAG: BRDA:53,0,1,5
 // CHECK-NOT: BRDA
 // CHECK: BRF:30
-// CHECK: BFH:26
+// CHECK: BRH:26
 
 // Check recursive macro-expansions.
 // RUN: llvm-profdata merge %S/Inputs/branch-macros.proftext -o %t.profdata
@@ -70,4 +70,4 @@
 // MACROS-NOT: BRDA:37
 // MACROS-NOT: BRDA
 // MACROS: BRF:40
-// MACROS: BFH:24
+// MACROS: BRH:24

@@ -46,18 +46,20 @@ static StringRef convertZlibCodeToString(int Code) {
 
 bool zlib::isAvailable() { return true; }
 
-Error zlib::compress(StringRef InputBuffer,
-                     SmallVectorImpl<char> &CompressedBuffer, int Level) {
+void zlib::compress(StringRef InputBuffer,
+                    SmallVectorImpl<char> &CompressedBuffer, int Level) {
   unsigned long CompressedSize = ::compressBound(InputBuffer.size());
-  CompressedBuffer.reserve(CompressedSize);
+  CompressedBuffer.resize_for_overwrite(CompressedSize);
   int Res =
       ::compress2((Bytef *)CompressedBuffer.data(), &CompressedSize,
                   (const Bytef *)InputBuffer.data(), InputBuffer.size(), Level);
+  if (Res == Z_MEM_ERROR)
+    report_bad_alloc_error("Allocation failed");
+  assert(Res == Z_OK);
   // Tell MemorySanitizer that zlib output buffer is fully initialized.
   // This avoids a false report when running LLVM with uninstrumented ZLib.
   __msan_unpoison(CompressedBuffer.data(), CompressedSize);
-  CompressedBuffer.set_size(CompressedSize);
-  return Res ? createError(convertZlibCodeToString(Res)) : Error::success();
+  CompressedBuffer.truncate(CompressedSize);
 }
 
 Error zlib::uncompress(StringRef InputBuffer, char *UncompressedBuffer,
@@ -74,10 +76,10 @@ Error zlib::uncompress(StringRef InputBuffer, char *UncompressedBuffer,
 Error zlib::uncompress(StringRef InputBuffer,
                        SmallVectorImpl<char> &UncompressedBuffer,
                        size_t UncompressedSize) {
-  UncompressedBuffer.reserve(UncompressedSize);
+  UncompressedBuffer.resize_for_overwrite(UncompressedSize);
   Error E =
       uncompress(InputBuffer, UncompressedBuffer.data(), UncompressedSize);
-  UncompressedBuffer.set_size(UncompressedSize);
+  UncompressedBuffer.truncate(UncompressedSize);
   return E;
 }
 
@@ -87,8 +89,8 @@ uint32_t zlib::crc32(StringRef Buffer) {
 
 #else
 bool zlib::isAvailable() { return false; }
-Error zlib::compress(StringRef InputBuffer,
-                     SmallVectorImpl<char> &CompressedBuffer, int Level) {
+void zlib::compress(StringRef InputBuffer,
+                    SmallVectorImpl<char> &CompressedBuffer, int Level) {
   llvm_unreachable("zlib::compress is unavailable");
 }
 Error zlib::uncompress(StringRef InputBuffer, char *UncompressedBuffer,

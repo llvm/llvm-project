@@ -1,5 +1,4 @@
-! RUN: %S/test_errors.sh %s %t %flang_fc1
-! REQUIRES: shell
+! RUN: %python %S/test_errors.py %s %flang_fc1
 ! Tests for the ASSOCIATED() and NULL() intrinsics
 subroutine assoc()
 
@@ -12,6 +11,14 @@ subroutine assoc()
       integer, intent(in) :: x
     end function
   end interface
+
+  type :: t1
+    integer :: n
+  end type t1
+  type :: t2
+    type(t1) :: t1arr(2)
+    type(t1), pointer :: t1ptr(:)
+  end type t2
 
   contains
   integer function intFunc(x)
@@ -28,13 +35,18 @@ subroutine assoc()
     pureFunc = 343
   end function pureFunc
 
-  elemental integer function elementalFunc()
-    elementalFunc = 343
+  elemental integer function elementalFunc(n)
+    integer, value :: n
+    elementalFunc = n
   end function elementalFunc
 
   subroutine subr(i)
     integer :: i
   end subroutine subr
+
+  subroutine subrCannotBeCalledfromImplicit(i)
+    integer :: i(:)
+  end subroutine subrCannotBeCalledfromImplicit
 
   subroutine test()
     integer :: intVar
@@ -55,7 +67,12 @@ subroutine assoc()
     procedure(subrInt) :: subProc
     procedure(subrInt), pointer :: subProcPointer
     procedure(), pointer :: implicitProcPointer
+    procedure(subrCannotBeCalledfromImplicit), pointer :: cannotBeCalledfromImplicitPointer
     logical :: lVar
+    type(t1) :: t1x
+    type(t1), target :: t1xtarget
+    type(t2) :: t2x
+    type(t2), target :: t2xtarget
 
     !ERROR: missing mandatory 'pointer=' argument
     lVar = associated()
@@ -86,6 +103,15 @@ subroutine assoc()
     intPointerVar1 => intVar
     !ERROR: TARGET= argument 'intvar' must have either the POINTER or the TARGET attribute
     lVar = associated(intPointerVar1, intVar)
+
+    !ERROR: TARGET= argument 't1x%n' must have either the POINTER or the TARGET attribute
+    lVar = associated(intPointerVar1, t1x%n)
+    lVar = associated(intPointerVar1, t1xtarget%n) ! ok
+    !ERROR: TARGET= argument 't2x%t1arr(1_8)%n' must have either the POINTER or the TARGET attribute
+    lVar = associated(intPointerVar1, t2x%t1arr(1)%n)
+    lVar = associated(intPointerVar1, t2x%t1ptr(1)%n) ! ok
+    lVar = associated(intPointerVar1, t2xtarget%t1arr(1)%n) ! ok
+    lVar = associated(intPointerVar1, t2xtarget%t1ptr(1)%n) ! ok
 
     ! Procedure pointer tests
     intprocPointer1 => intProc !OK
@@ -133,10 +159,8 @@ subroutine assoc()
     realProcPointer1 => intProc
     !ERROR: Procedure pointer 'realprocpointer1' associated with incompatible procedure designator 'intproc'
     lvar = associated(realProcPointer1, intProc)
-    !ERROR: Procedure pointer 'subprocpointer' with explicit interface may not be associated with procedure designator 'externalproc' with implicit interface
-    subProcPointer => externalProc
-    !ERROR: Procedure pointer 'subprocpointer' with explicit interface may not be associated with procedure designator 'externalproc' with implicit interface
-    lvar = associated(subProcPointer, externalProc)
+    subProcPointer => externalProc ! OK to associate a procedure pointer  with an explicit interface to a procedure with an implicit interface
+    lvar = associated(subProcPointer, externalProc) ! OK to associate a procedure pointer with an explicit interface to a procedure with an implicit interface
     !ERROR: Subroutine pointer 'subprocpointer' may not be associated with function designator 'intproc'
     subProcPointer => intProc
     !ERROR: Subroutine pointer 'subprocpointer' may not be associated with function designator 'intproc'
@@ -145,9 +169,13 @@ subroutine assoc()
     intProcPointer1 => subProc
     !ERROR: Function pointer 'intprocpointer1' may not be associated with subroutine designator 'subproc'
     lvar = associated(intProcPointer1, subProc)
-    !ERROR: Procedure pointer 'implicitprocpointer' with implicit interface may not be associated with procedure designator 'subr' with explicit interface
-    implicitProcPointer => subr
-    !ERROR: Procedure pointer 'implicitprocpointer' with implicit interface may not be associated with procedure designator 'subr' with explicit interface
-    lvar = associated(implicitProcPointer, subr)
+    implicitProcPointer => subr ! OK for an implicit point to point to an explicit proc
+    lvar = associated(implicitProcPointer, subr) ! OK
+    !ERROR: Procedure pointer 'implicitprocpointer' with implicit interface may not be associated with procedure designator 'subrcannotbecalledfromimplicit' with explicit interface that cannot be called via an implicit interface
+    lvar = associated(implicitProcPointer, subrCannotBeCalledFromImplicit)
+    !ERROR: Procedure pointer 'cannotbecalledfromimplicitpointer' with explicit interface that cannot be called via an implicit interface cannot be associated with procedure designator with an implicit interface
+    cannotBeCalledfromImplicitPointer => externalProc
+    !ERROR: Procedure pointer 'cannotbecalledfromimplicitpointer' with explicit interface that cannot be called via an implicit interface cannot be associated with procedure designator with an implicit interface
+    lvar = associated(cannotBeCalledfromImplicitPointer, externalProc)
   end subroutine test
 end subroutine assoc

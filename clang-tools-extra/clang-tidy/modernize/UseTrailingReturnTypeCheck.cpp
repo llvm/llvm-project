@@ -1,9 +1,8 @@
 //===--- UseTrailingReturnTypeCheck.cpp - clang-tidy-----------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -71,6 +70,13 @@ public:
                 TL.getAs<TypedefTypeLoc>().getTypePtr()->getDecl()->getName()))
           return false;
         break;
+      case TypeLoc::Using:
+        if (visitUnqualName(TL.getAs<UsingTypeLoc>()
+                                .getTypePtr()
+                                ->getFoundDecl()
+                                ->getName()))
+          return false;
+        break;
       default:
         break;
       }
@@ -79,7 +85,7 @@ public:
     return RecursiveASTVisitor<UnqualNameVisitor>::TraverseTypeLoc(TL);
   }
 
-  // Replace the base method in order to call ower own
+  // Replace the base method in order to call our own
   // TraverseTypeLoc().
   bool TraverseQualifiedTypeLoc(QualifiedTypeLoc TL) {
     return TraverseTypeLoc(TL.getUnqualifiedLoc());
@@ -173,8 +179,8 @@ static llvm::Optional<ClassifiedToken>
 classifyToken(const FunctionDecl &F, Preprocessor &PP, Token Tok) {
   ClassifiedToken CT;
   CT.T = Tok;
-  CT.isQualifier = true;
-  CT.isSpecifier = true;
+  CT.IsQualifier = true;
+  CT.IsSpecifier = true;
   bool ContainsQualifiers = false;
   bool ContainsSpecifiers = false;
   bool ContainsSomethingElse = false;
@@ -194,8 +200,8 @@ classifyToken(const FunctionDecl &F, Preprocessor &PP, Token Tok) {
 
     bool Qual = isCvr(T);
     bool Spec = isSpecifier(T);
-    CT.isQualifier &= Qual;
-    CT.isSpecifier &= Spec;
+    CT.IsQualifier &= Qual;
+    CT.IsSpecifier &= Spec;
     ContainsQualifiers |= Qual;
     ContainsSpecifiers |= Spec;
     ContainsSomethingElse |= !Qual && !Spec;
@@ -279,34 +285,6 @@ SourceRange UseTrailingReturnTypeCheck::findReturnTypeAndCVSourceRange(
     return {};
   }
 
-  // If the return type is a constrained 'auto' or 'decltype(auto)', we need to
-  // include the tokens after the concept. Unfortunately, the source range of an
-  // AutoTypeLoc, if it is constrained, does not include the 'auto' or
-  // 'decltype(auto)'. If the return type is a plain 'decltype(...)', the
-  // source range only contains the first 'decltype' token.
-  auto ATL = ReturnLoc.getAs<AutoTypeLoc>();
-  if ((ATL && (ATL.isConstrained() ||
-               ATL.getAutoKeyword() == AutoTypeKeyword::DecltypeAuto)) ||
-      ReturnLoc.getAs<DecltypeTypeLoc>()) {
-    SourceLocation End =
-        expandIfMacroId(ReturnLoc.getSourceRange().getEnd(), SM);
-    SourceLocation BeginNameF = expandIfMacroId(F.getLocation(), SM);
-
-    // Extend the ReturnTypeRange until the last token before the function
-    // name.
-    std::pair<FileID, unsigned> Loc = SM.getDecomposedLoc(End);
-    StringRef File = SM.getBufferData(Loc.first);
-    const char *TokenBegin = File.data() + Loc.second;
-    Lexer Lexer(SM.getLocForStartOfFile(Loc.first), LangOpts, File.begin(),
-                TokenBegin, File.end());
-    Token T;
-    SourceLocation LastTLoc = End;
-    while (!Lexer.LexFromRawLexer(T) &&
-           SM.isBeforeInTranslationUnit(T.getLocation(), BeginNameF)) {
-      LastTLoc = T.getLocation();
-    }
-    ReturnTypeRange.setEnd(LastTLoc);
-  }
 
   // If the return type has no local qualifiers, it's source range is accurate.
   if (!hasAnyNestedLocalQualifiers(F.getReturnType()))
@@ -330,7 +308,7 @@ SourceRange UseTrailingReturnTypeCheck::findReturnTypeAndCVSourceRange(
         !ExtendedLeft) {
       assert(I <= size_t(std::numeric_limits<int>::max()) &&
              "Integer overflow detected");
-      for (int J = static_cast<int>(I) - 1; J >= 0 && Tokens[J].isQualifier;
+      for (int J = static_cast<int>(I) - 1; J >= 0 && Tokens[J].IsQualifier;
            J--)
         ReturnTypeRange.setBegin(Tokens[J].T.getLocation());
       ExtendedLeft = true;
@@ -338,7 +316,7 @@ SourceRange UseTrailingReturnTypeCheck::findReturnTypeAndCVSourceRange(
     // If we found the end of the return type, include right qualifiers.
     if (SM.isBeforeInTranslationUnit(ReturnTypeRange.getEnd(),
                                      Tokens[I].T.getLocation())) {
-      for (size_t J = I; J < Tokens.size() && Tokens[J].isQualifier; J++)
+      for (size_t J = I; J < Tokens.size() && Tokens[J].IsQualifier; J++)
         ReturnTypeRange.setEnd(Tokens[J].T.getLocation());
       break;
     }
@@ -381,7 +359,7 @@ void UseTrailingReturnTypeCheck::keepSpecifiers(
         SM.isBeforeInTranslationUnit(ReturnTypeCVRange.getEnd(),
                                      CT.T.getLocation()))
       continue;
-    if (!CT.isSpecifier)
+    if (!CT.IsSpecifier)
       continue;
 
     // Add the token to 'auto' and remove it from the return type, including
@@ -426,14 +404,17 @@ void UseTrailingReturnTypeCheck::check(const MatchFinder::MatchResult &Result) {
   const auto *Fr = Result.Nodes.getNodeAs<FriendDecl>("Friend");
   assert(F && "Matcher is expected to find only FunctionDecls");
 
-  if (F->getLocation().isInvalid())
+  // Three-way comparison operator<=> is syntactic sugar and generates implicit
+  // nodes for all other operators.
+  if (F->getLocation().isInvalid() || F->isImplicit())
     return;
 
-  // Skip functions which return just 'auto'.
+  // Skip functions which return 'auto' and defaulted operators.
   const auto *AT = F->getDeclaredReturnType()->getAs<AutoType>();
-  if (AT != nullptr && !AT->isConstrained() &&
-      AT->getKeyword() == AutoTypeKeyword::Auto &&
-      !hasAnyNestedLocalQualifiers(F->getDeclaredReturnType()))
+  if (AT != nullptr &&
+      ((!AT->isConstrained() && AT->getKeyword() == AutoTypeKeyword::Auto &&
+        !hasAnyNestedLocalQualifiers(F->getDeclaredReturnType())) ||
+       F->isDefaulted()))
     return;
 
   // TODO: implement those

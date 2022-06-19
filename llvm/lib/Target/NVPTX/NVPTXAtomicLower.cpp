@@ -17,7 +17,7 @@
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/InstIterator.h"
 #include "llvm/IR/Instructions.h"
-#include "llvm/Transforms/Scalar/LowerAtomic.h"
+#include "llvm/Transforms/Utils/LowerAtomic.h"
 
 #include "MCTargetDesc/NVPTXBaseInfo.h"
 using namespace llvm;

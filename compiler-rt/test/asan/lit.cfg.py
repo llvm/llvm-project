@@ -59,9 +59,9 @@ config.name = 'AddressSanitizer' + config.name_suffix
 # Platform-specific default ASAN_OPTIONS for lit tests.
 default_asan_opts = list(config.default_sanitizer_opts)
 
-# On Darwin, leak checking is not enabled by default. Enable for x86_64
+# On Darwin, leak checking is not enabled by default. Enable on macOS
 # tests to prevent regressions
-if config.host_os == 'Darwin' and config.target_arch == 'x86_64':
+if config.host_os == 'Darwin' and config.apple_platform == 'osx':
   default_asan_opts += ['detect_leaks=1']
 
 default_asan_opts_str = ':'.join(default_asan_opts)
@@ -167,14 +167,6 @@ if platform.system() == 'Windows':
   config.substitutions.append( ("%asan_cxx_lib", base_lib % "_cxx") )
   config.substitutions.append( ("%asan_dll_thunk", base_lib % "_dll_thunk") )
 
-if platform.system() == 'Windows':
-  # Don't use -std=c++11 on Windows, as the driver will detect the appropriate
-  # default needed to use with the STL.
-  config.substitutions.append(("%stdcxx11 ", ""))
-else:
-  # Some tests uses C++11 features such as lambdas and need to pass -std=c++11.
-  config.substitutions.append(("%stdcxx11 ", "-std=c++11 "))
-
 # FIXME: De-hardcode this path.
 asan_source_dir = os.path.join(
   get_required_attr(config, "compiler_rt_src_root"), "lib", "asan")
@@ -211,7 +203,7 @@ if not config.arm_thumb:
 # Turn on leak detection on 64-bit Linux.
 leak_detection_android = config.android and 'android-thread-properties-api' in config.available_features and (config.target_arch in ['x86_64', 'i386', 'i686', 'aarch64'])
 leak_detection_linux = (config.host_os == 'Linux') and (not config.android) and (config.target_arch in ['x86_64', 'i386', 'riscv64'])
-leak_detection_mac = (config.host_os == 'Darwin') and (config.target_arch == 'x86_64')
+leak_detection_mac = (config.host_os == 'Darwin') and (config.apple_platform == 'osx')
 leak_detection_netbsd = (config.host_os == 'NetBSD') and (config.target_arch in ['x86_64', 'i386'])
 if leak_detection_android or leak_detection_linux or leak_detection_mac or leak_detection_netbsd:
   config.available_features.add('leak-detection')

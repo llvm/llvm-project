@@ -12,6 +12,8 @@
 
 // streambuf *rdbuf(streambuf *bytebuf);
 
+// XFAIL: no-wide-characters
+
 #include <locale>
 #include <codecvt>
 #include <sstream>

@@ -20,7 +20,7 @@ using namespace llvm;
 
 namespace {
 
-static std::string toHex(StringRef Input) {
+static std::string toHex(ArrayRef<uint8_t> Input) {
   static const char *const LUT = "0123456789abcdef";
   size_t Length = Input.size();
 

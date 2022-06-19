@@ -99,4 +99,4 @@ define amdgpu_kernel void @global_atomic_fadd_f32_wrong_subtarget(float addrspac
   ret void
 }
 
-attributes #0 = { "target-cpu"="gfx803" "target-features"="+atomic-fadd-insts" }
+attributes #0 = { "target-cpu"="gfx803" "target-features"="+atomic-fadd-no-rtn-insts"}

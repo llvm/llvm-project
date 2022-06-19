@@ -1,0 +1,13 @@
+# RUN: not llc -march=amdgcn -run-pass=none -o /dev/null %s 2>&1 | \
+# RUN:   FileCheck --strict-whitespace %s
+
+---
+name: extra_reg_operand
+body: |
+  bb.0:
+    ; CHECK: [[@LINE+3]]:17: too many operands for instruction
+    ; CHECK-NEXT: {{^}}    S_ENDPGM 0, undef $vgpr0
+    ; CHECK-NEXT: {{^}}                ^
+    S_ENDPGM 0, undef $vgpr0
+
+...

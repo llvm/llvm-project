@@ -315,18 +315,18 @@ define <8 x i16> @testInvalidExtend(<16 x i8> %a) {
 ; CHECK-LE-NEXT:    mtvsrd 36, 6
 ; CHECK-LE-NEXT:    extsb 9, 9
 ; CHECK-LE-NEXT:    extsb 10, 10
-; CHECK-LE-NEXT:    mtvsrd 37, 10
 ; CHECK-LE-NEXT:    vmrghh 2, 3, 2
 ; CHECK-LE-NEXT:    mtvsrd 35, 5
 ; CHECK-LE-NEXT:    vmrghh 3, 4, 3
-; CHECK-LE-NEXT:    mtvsrd 36, 8
-; CHECK-LE-NEXT:    vmrglw 2, 3, 2
-; CHECK-LE-NEXT:    mtvsrd 35, 7
+; CHECK-LE-NEXT:    mtvsrd 36, 10
+; CHECK-LE-NEXT:    xxmrglw 0, 35, 34
+; CHECK-LE-NEXT:    mtvsrd 34, 7
+; CHECK-LE-NEXT:    mtvsrd 35, 8
+; CHECK-LE-NEXT:    vmrghh 2, 3, 2
+; CHECK-LE-NEXT:    mtvsrd 35, 9
 ; CHECK-LE-NEXT:    vmrghh 3, 4, 3
-; CHECK-LE-NEXT:    mtvsrd 36, 9
-; CHECK-LE-NEXT:    vmrghh 4, 5, 4
-; CHECK-LE-NEXT:    vmrglw 3, 4, 3
-; CHECK-LE-NEXT:    xxmrgld 34, 35, 34
+; CHECK-LE-NEXT:    xxmrglw 1, 35, 34
+; CHECK-LE-NEXT:    xxmrgld 34, 1, 0
 ; CHECK-LE-NEXT:    blr
 ;
 ; CHECK-BE-LABEL: testInvalidExtend:
@@ -359,20 +359,20 @@ define <8 x i16> @testInvalidExtend(<16 x i8> %a) {
 ; CHECK-BE-NEXT:    mtvsrwz 34, 10
 ; CHECK-BE-NEXT:    mtvsrwz 37, 7
 ; CHECK-BE-NEXT:    extsb 6, 6
-; CHECK-BE-NEXT:    mtvsrwz 32, 3
 ; CHECK-BE-NEXT:    addi 9, 9, .LCPI11_0@toc@l
 ; CHECK-BE-NEXT:    lxv 36, 0(9)
 ; CHECK-BE-NEXT:    vperm 2, 3, 2, 4
 ; CHECK-BE-NEXT:    mtvsrwz 35, 8
 ; CHECK-BE-NEXT:    vperm 3, 5, 3, 4
-; CHECK-BE-NEXT:    mtvsrwz 37, 5
-; CHECK-BE-NEXT:    vmrghw 2, 3, 2
-; CHECK-BE-NEXT:    mtvsrwz 35, 6
+; CHECK-BE-NEXT:    mtvsrwz 37, 3
+; CHECK-BE-NEXT:    xxmrghw 0, 35, 34
+; CHECK-BE-NEXT:    mtvsrwz 34, 6
+; CHECK-BE-NEXT:    mtvsrwz 35, 5
+; CHECK-BE-NEXT:    vperm 2, 3, 2, 4
+; CHECK-BE-NEXT:    mtvsrwz 35, 4
 ; CHECK-BE-NEXT:    vperm 3, 5, 3, 4
-; CHECK-BE-NEXT:    mtvsrwz 37, 4
-; CHECK-BE-NEXT:    vperm 4, 0, 5, 4
-; CHECK-BE-NEXT:    vmrghw 3, 4, 3
-; CHECK-BE-NEXT:    xxmrghd 34, 35, 34
+; CHECK-BE-NEXT:    xxmrghw 1, 35, 34
+; CHECK-BE-NEXT:    xxmrghd 34, 1, 0
 ; CHECK-BE-NEXT:    blr
 entry:
 

@@ -15,6 +15,7 @@
 #include "lldb/lldb-private.h"
 
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/Error.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/WithColor.h"
 
@@ -132,15 +133,17 @@ public:
 
   void SetError(const Status &error, const char *fallback_error_cstr = nullptr);
 
-  lldb::ReturnStatus GetStatus();
+  void SetError(llvm::Error error);
+
+  lldb::ReturnStatus GetStatus() const;
 
   void SetStatus(lldb::ReturnStatus status);
 
-  bool Succeeded();
+  bool Succeeded() const;
 
-  bool HasResult();
+  bool HasResult() const;
 
-  bool GetDidChangeProcessState();
+  bool GetDidChangeProcessState() const;
 
   void SetDidChangeProcessState(bool b);
 

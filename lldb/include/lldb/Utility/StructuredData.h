@@ -351,7 +351,17 @@ public:
 
   class Dictionary : public Object {
   public:
-    Dictionary() : Object(lldb::eStructuredDataTypeDictionary), m_dict() {}
+    Dictionary() : Object(lldb::eStructuredDataTypeDictionary) {}
+
+    Dictionary(ObjectSP obj_sp) : Object(lldb::eStructuredDataTypeDictionary) {
+      if (!obj_sp || obj_sp->GetType() != lldb::eStructuredDataTypeDictionary) {
+        SetType(lldb::eStructuredDataTypeInvalid);
+        return;
+      }
+
+      Dictionary *dict = obj_sp->GetAsDictionary();
+      m_dict = dict->m_dict;
+    }
 
     ~Dictionary() override = default;
 
@@ -365,15 +375,15 @@ public:
       }
     }
 
-    ObjectSP GetKeys() const {
-      auto object_sp = std::make_shared<Array>();
+    ArraySP GetKeys() const {
+      auto array_sp = std::make_shared<Array>();
       collection::const_iterator iter;
       for (iter = m_dict.begin(); iter != m_dict.end(); ++iter) {
         auto key_object_sp = std::make_shared<String>();
         key_object_sp->SetValue(iter->first.AsCString());
-        object_sp->Push(key_object_sp);
+        array_sp->Push(key_object_sp);
       }
-      return object_sp;
+      return array_sp;
     }
 
     ObjectSP GetValueForKey(llvm::StringRef key) const {

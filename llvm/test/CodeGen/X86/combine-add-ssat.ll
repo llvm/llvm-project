@@ -77,11 +77,10 @@ define <8 x i16> @combine_constfold_undef_v8i16() {
 define i32 @combine_constant_i32(i32 %a0) {
 ; CHECK-LABEL: combine_constant_i32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    xorl %eax, %eax
-; CHECK-NEXT:    movl %edi, %ecx
-; CHECK-NEXT:    incl %ecx
-; CHECK-NEXT:    setns %al
-; CHECK-NEXT:    addl $2147483647, %eax # imm = 0x7FFFFFFF
+; CHECK-NEXT:    # kill: def $edi killed $edi def $rdi
+; CHECK-NEXT:    leal 1(%rdi), %eax
+; CHECK-NEXT:    sarl $31, %eax
+; CHECK-NEXT:    addl $-2147483648, %eax # imm = 0x80000000
 ; CHECK-NEXT:    incl %edi
 ; CHECK-NEXT:    cmovnol %edi, %eax
 ; CHECK-NEXT:    retq
@@ -125,13 +124,13 @@ define <8 x i16> @combine_zero_v8i16(<8 x i16> %a0) {
 define i32 @combine_no_overflow_i32(i32 %a0, i32 %a1) {
 ; CHECK-LABEL: combine_no_overflow_i32:
 ; CHECK:       # %bb.0:
+; CHECK-NEXT:    # kill: def $esi killed $esi def $rsi
+; CHECK-NEXT:    # kill: def $edi killed $edi def $rdi
 ; CHECK-NEXT:    sarl $16, %edi
 ; CHECK-NEXT:    shrl $16, %esi
-; CHECK-NEXT:    xorl %eax, %eax
-; CHECK-NEXT:    movl %edi, %ecx
-; CHECK-NEXT:    addl %esi, %ecx
-; CHECK-NEXT:    setns %al
-; CHECK-NEXT:    addl $2147483647, %eax # imm = 0x7FFFFFFF
+; CHECK-NEXT:    leal (%rdi,%rsi), %eax
+; CHECK-NEXT:    sarl $31, %eax
+; CHECK-NEXT:    addl $-2147483648, %eax # imm = 0x80000000
 ; CHECK-NEXT:    addl %edi, %esi
 ; CHECK-NEXT:    cmovnol %esi, %eax
 ; CHECK-NEXT:    retq
@@ -159,4 +158,23 @@ define <8 x i16> @combine_no_overflow_v8i16(<8 x i16> %a0, <8 x i16> %a1) {
   %2 = lshr <8 x i16> %a1, <i16 10, i16 10, i16 10, i16 10, i16 10, i16 10, i16 10, i16 10>
   %3 = call <8 x i16> @llvm.sadd.sat.v8i16(<8 x i16> %1, <8 x i16> %2)
   ret <8 x i16> %3
+}
+
+; fold (sadd_sat (shuffle x, u, m), (shuffle y, u, m)) -> (shuffle (sadd_sat x, y), u, m)
+define <8 x i16> @combine_shuffle_shuffle_v8i16(<8 x i16> %x0, <8 x i16> %y0) {
+; SSE-LABEL: combine_shuffle_shuffle_v8i16:
+; SSE:       # %bb.0:
+; SSE-NEXT:    paddsw %xmm1, %xmm0
+; SSE-NEXT:    pshuflw {{.*#+}} xmm0 = xmm0[3,2,1,0,4,5,6,7]
+; SSE-NEXT:    retq
+;
+; AVX-LABEL: combine_shuffle_shuffle_v8i16:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vpaddsw %xmm1, %xmm0, %xmm0
+; AVX-NEXT:    vpshuflw {{.*#+}} xmm0 = xmm0[3,2,1,0,4,5,6,7]
+; AVX-NEXT:    retq
+  %x1= shufflevector <8 x i16> %x0, <8 x i16> poison, <8 x i32> <i32 3, i32 2, i32 1, i32 0, i32 4, i32 5, i32 6, i32 7>
+  %y1 = shufflevector <8 x i16> %y0, <8 x i16> poison, <8 x i32> <i32 3, i32 2, i32 1, i32 0, i32 4, i32 5, i32 6, i32 7>
+  %res = tail call <8 x i16> @llvm.sadd.sat.v8i16(<8 x i16> %x1, <8 x i16> %y1)
+  ret <8 x i16> %res
 }

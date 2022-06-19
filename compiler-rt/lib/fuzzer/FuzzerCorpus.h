@@ -39,13 +39,13 @@ struct InputInfo {
   bool MayDeleteFile = false;
   bool Reduced = false;
   bool HasFocusFunction = false;
-  Vector<uint32_t> UniqFeatureSet;
-  Vector<uint8_t> DataFlowTraceForFocusFunction;
+  std::vector<uint32_t> UniqFeatureSet;
+  std::vector<uint8_t> DataFlowTraceForFocusFunction;
   // Power schedule.
   bool NeedsEnergyUpdate = false;
   double Energy = 0.0;
   double SumIncidence = 0.0;
-  Vector<std::pair<uint32_t, uint16_t>> FeatureFreqs;
+  std::vector<std::pair<uint32_t, uint16_t>> FeatureFreqs;
 
   // Delete feature Idx and its frequency from FeatureFreqs.
   bool DeleteFeatureFreq(uint32_t Idx) {
@@ -209,7 +209,7 @@ public:
   InputInfo *AddToCorpus(const Unit &U, size_t NumFeatures, bool MayDeleteFile,
                          bool HasFocusFunction, bool NeverReduce,
                          std::chrono::microseconds TimeOfUnit,
-                         const Vector<uint32_t> &FeatureSet,
+                         const std::vector<uint32_t> &FeatureSet,
                          const DataFlowTrace &DFT, const InputInfo *BaseII) {
     assert(!U.empty());
     if (FeatureDebug)
@@ -258,7 +258,7 @@ public:
   }
 
   // Debug-only
-  void PrintFeatureSet(const Vector<uint32_t> &FeatureSet) {
+  void PrintFeatureSet(const std::vector<uint32_t> &FeatureSet) {
     if (!FeatureDebug) return;
     Printf("{");
     for (uint32_t Feature: FeatureSet)
@@ -284,7 +284,8 @@ public:
     }
   }
 
-  void Replace(InputInfo *II, const Unit &U) {
+  void Replace(InputInfo *II, const Unit &U,
+               std::chrono::microseconds TimeOfUnit) {
     assert(II->U.size() > U.size());
     Hashes.erase(Sha1ToString(II->Sha1));
     DeleteFile(*II);
@@ -292,6 +293,7 @@ public:
     Hashes.insert(Sha1ToString(II->Sha1));
     II->U = U;
     II->Reduced = true;
+    II->TimeOfUnit = TimeOfUnit;
     DistributionNeedsUpdate = true;
   }
 
@@ -325,7 +327,8 @@ public:
       const auto &II = *Inputs[i];
       Printf("  [% 3zd %s] sz: % 5zd runs: % 5zd succ: % 5zd focus: %d\n", i,
              Sha1ToString(II.Sha1).c_str(), II.U.size(),
-             II.NumExecutedMutations, II.NumSuccessfullMutations, II.HasFocusFunction);
+             II.NumExecutedMutations, II.NumSuccessfullMutations,
+             II.HasFocusFunction);
     }
   }
 
@@ -563,11 +566,11 @@ private:
   }
   std::piecewise_constant_distribution<double> CorpusDistribution;
 
-  Vector<double> Intervals;
-  Vector<double> Weights;
+  std::vector<double> Intervals;
+  std::vector<double> Weights;
 
   std::unordered_set<std::string> Hashes;
-  Vector<InputInfo*> Inputs;
+  std::vector<InputInfo *> Inputs;
 
   size_t NumAddedFeatures = 0;
   size_t NumUpdatedFeatures = 0;
@@ -577,7 +580,7 @@ private:
   bool DistributionNeedsUpdate = true;
   uint16_t FreqOfMostAbundantRareFeature = 0;
   uint16_t GlobalFeatureFreqs[kFeatureSetSize] = {};
-  Vector<uint32_t> RareFeatures;
+  std::vector<uint32_t> RareFeatures;
 
   std::string OutputCorpus;
 };

@@ -1,4 +1,4 @@
-//===-- runtime/character.cpp -----------------------------------*- C++ -*-===//
+//===-- runtime/character.cpp ---------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,13 +6,13 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "character.h"
-#include "cpp-type.h"
-#include "descriptor.h"
+#include "flang/Runtime/character.h"
 #include "terminator.h"
 #include "tools.h"
 #include "flang/Common/bit-population-count.h"
 #include "flang/Common/uint128.h"
+#include "flang/Runtime/cpp-type.h"
+#include "flang/Runtime/descriptor.h"
 #include <algorithm>
 #include <cstring>
 
@@ -253,7 +253,7 @@ static void LenTrimKind(Descriptor &result, const Descriptor &string, int kind,
         result, string, terminator);
     break;
   default:
-    terminator.Crash("LEN_TRIM: bad KIND=%d", kind);
+    terminator.Crash("not yet implemented: LEN_TRIM: KIND=%d", kind);
   }
 }
 
@@ -454,7 +454,7 @@ static void GeneralCharFuncKind(Descriptor &result, const Descriptor &string,
         result, string, arg, back, terminator);
     break;
   default:
-    terminator.Crash("INDEX/SCAN/VERIFY: bad KIND=%d", kind);
+    terminator.Crash("not yet implemented: INDEX/SCAN/VERIFY: KIND=%d", kind);
   }
 }
 
@@ -953,8 +953,12 @@ void RTNAME(Scan)(Descriptor &result, const Descriptor &string,
 }
 
 void RTNAME(Repeat)(Descriptor &result, const Descriptor &string,
-    std::size_t ncopies, const char *sourceFile, int sourceLine) {
+    std::int64_t ncopies, const char *sourceFile, int sourceLine) {
   Terminator terminator{sourceFile, sourceLine};
+  if (ncopies < 0) {
+    terminator.Crash(
+        "REPEAT has negative NCOPIES=%jd", static_cast<std::intmax_t>(ncopies));
+  }
   std::size_t origBytes{string.ElementBytes()};
   result.Establish(string.type(), origBytes * ncopies, nullptr, 0, nullptr,
       CFI_attribute_allocatable);

@@ -52,12 +52,30 @@ TYPE_PARSER(construct<OmpMapType>(
 TYPE_PARSER(construct<OmpMapClause>(
     maybe(Parser<OmpMapType>{}), Parser<OmpObjectList>{}))
 
-// 2.15.5.2 defaultmap -> DEFAULTMAP (TOFROM:SCALAR)
+// [OpenMP 5.0]
+// 2.19.7.2 defaultmap(implicit-behavior[:variable-category])
+//  implicit-behavior -> ALLOC | TO | FROM | TOFROM | FIRSRTPRIVATE | NONE |
+//  DEFAULT
+//  variable-category -> SCALAR | AGGREGATE | ALLOCATABLE | POINTER
 TYPE_PARSER(construct<OmpDefaultmapClause>(
     construct<OmpDefaultmapClause::ImplicitBehavior>(
-        "TOFROM" >> pure(OmpDefaultmapClause::ImplicitBehavior::Tofrom)),
-    maybe(":" >> construct<OmpDefaultmapClause::VariableCategory>("SCALAR" >>
-                     pure(OmpDefaultmapClause::VariableCategory::Scalar)))))
+        "ALLOC" >> pure(OmpDefaultmapClause::ImplicitBehavior::Alloc) ||
+        "TO"_id >> pure(OmpDefaultmapClause::ImplicitBehavior::To) ||
+        "FROM" >> pure(OmpDefaultmapClause::ImplicitBehavior::From) ||
+        "TOFROM" >> pure(OmpDefaultmapClause::ImplicitBehavior::Tofrom) ||
+        "FIRSTPRIVATE" >>
+            pure(OmpDefaultmapClause::ImplicitBehavior::Firstprivate) ||
+        "NONE" >> pure(OmpDefaultmapClause::ImplicitBehavior::None) ||
+        "DEFAULT" >> pure(OmpDefaultmapClause::ImplicitBehavior::Default)),
+    maybe(":" >>
+        construct<OmpDefaultmapClause::VariableCategory>(
+            "SCALAR" >> pure(OmpDefaultmapClause::VariableCategory::Scalar) ||
+            "AGGREGATE" >>
+                pure(OmpDefaultmapClause::VariableCategory::Aggregate) ||
+            "ALLOCATABLE" >>
+                pure(OmpDefaultmapClause::VariableCategory::Allocatable) ||
+            "POINTER" >>
+                pure(OmpDefaultmapClause::VariableCategory::Pointer)))))
 
 // 2.7.1 SCHEDULE ([modifier1 [, modifier2]:]kind[, chunk_size])
 //       Modifier ->  MONITONIC | NONMONOTONIC | SIMD
@@ -102,6 +120,10 @@ TYPE_PARSER(construct<OmpReductionOperator>(Parser<DefinedOperator>{}) ||
     construct<OmpReductionOperator>(Parser<ProcedureDesignator>{}))
 
 TYPE_PARSER(construct<OmpReductionClause>(
+    Parser<OmpReductionOperator>{} / ":", Parser<OmpObjectList>{}))
+
+// OMP 5.0 2.19.5.6 IN_REDUCTION (reduction-identifier: variable-name-list)
+TYPE_PARSER(construct<OmpInReductionClause>(
     Parser<OmpReductionOperator>{} / ":", Parser<OmpObjectList>{}))
 
 // OMP 5.0 2.11.4  ALLOCATE ([allocator:] variable-name-list)
@@ -203,6 +225,8 @@ TYPE_PARSER(
                  parenthesized(Parser<OmpMapClause>{}))) ||
     "MERGEABLE" >> construct<OmpClause>(construct<OmpClause::Mergeable>()) ||
     "NOGROUP" >> construct<OmpClause>(construct<OmpClause::Nogroup>()) ||
+    "NONTEMPORAL" >> construct<OmpClause>(construct<OmpClause::Nontemporal>(
+                         parenthesized(nonemptyList(name)))) ||
     "NOTINBRANCH" >>
         construct<OmpClause>(construct<OmpClause::Notinbranch>()) ||
     "NOWAIT" >> construct<OmpClause>(construct<OmpClause::Nowait>()) ||
@@ -222,6 +246,8 @@ TYPE_PARSER(
                        parenthesized(Parser<OmpProcBindClause>{}))) ||
     "REDUCTION" >> construct<OmpClause>(construct<OmpClause::Reduction>(
                        parenthesized(Parser<OmpReductionClause>{}))) ||
+    "IN_REDUCTION" >> construct<OmpClause>(construct<OmpClause::InReduction>(
+                          parenthesized(Parser<OmpInReductionClause>{}))) ||
     "TASK_REDUCTION" >>
         construct<OmpClause>(construct<OmpClause::TaskReduction>(
             parenthesized(Parser<OmpReductionClause>{}))) ||
@@ -467,7 +493,7 @@ TYPE_PARSER(startOmpLine >>
         verbatim("END CRITICAL"_tok), maybe(parenthesized(name)))) /
         endOmpLine)
 TYPE_PARSER(sourced(construct<OmpCriticalDirective>(verbatim("CRITICAL"_tok),
-                maybe(parenthesized(name)), maybe(Parser<OmpClause>{}))) /
+                maybe(parenthesized(name)), Parser<OmpClauseList>{})) /
     endOmpLine)
 
 TYPE_PARSER(construct<OpenMPCriticalConstruct>(
@@ -527,11 +553,15 @@ TYPE_PARSER(
                         Parser<OmpClauseList>{})))
 
 // OMP SECTION-BLOCK
-TYPE_PARSER(maybe(startOmpLine >> "SECTION"_tok / endOmpLine) >>
-    construct<OmpSectionBlocks>(
-        nonemptySeparated(block, startOmpLine >> "SECTION"_tok / endOmpLine)))
 
-// OMP SECTIONS (2.7.2), PARALLEL SECTIONS (2.11.2)
+TYPE_PARSER(construct<OpenMPSectionConstruct>(block))
+
+TYPE_PARSER(maybe(startOmpLine >> "SECTION"_tok / endOmpLine) >>
+    construct<OmpSectionBlocks>(nonemptySeparated(
+        construct<OpenMPConstruct>(sourced(Parser<OpenMPSectionConstruct>{})),
+        startOmpLine >> "SECTION"_tok / endOmpLine)))
+
+// OMP SECTIONS (OpenMP 5.0 - 2.8.1), PARALLEL SECTIONS (OpenMP 5.0 - 2.13.3)
 TYPE_PARSER(construct<OpenMPSectionsConstruct>(
     Parser<OmpBeginSectionsDirective>{} / endOmpLine,
     Parser<OmpSectionBlocks>{}, Parser<OmpEndSectionsDirective>{} / endOmpLine))

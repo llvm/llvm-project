@@ -21,7 +21,6 @@ int main(int, char**)
   }
   { // test for <iosfwd>
     test_typedef<std::ios>();
-    test_typedef<std::wios>();
     test_typedef<std::istream>();
     test_typedef<std::ostream>();
     test_typedef<std::iostream>();

@@ -15,7 +15,6 @@
 #include "llvm/Object/ModuleSymbolTable.h"
 #include "RecordStreamer.h"
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Triple.h"
@@ -27,7 +26,6 @@
 #include "llvm/IR/Module.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCContext.h"
-#include "llvm/MC/MCDirectives.h"
 #include "llvm/MC/MCInstrInfo.h"
 #include "llvm/MC/MCObjectFileInfo.h"
 #include "llvm/MC/MCParser/MCAsmParser.h"
@@ -36,14 +34,13 @@
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/MC/MCSymbol.h"
 #include "llvm/MC/MCTargetOptions.h"
+#include "llvm/MC/TargetRegistry.h"
 #include "llvm/Object/SymbolicFile.h"
 #include "llvm/Support/Casting.h"
-#include "llvm/Support/CodeGen.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/SMLoc.h"
 #include "llvm/Support/SourceMgr.h"
-#include "llvm/Support/TargetRegistry.h"
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
 #include <cassert>
@@ -99,7 +96,11 @@ initializeRecordStreamer(const Module &M,
   if (!MCII)
     return;
 
-  MCContext MCCtx(TT, MAI.get(), MRI.get(), STI.get());
+  std::unique_ptr<MemoryBuffer> Buffer(MemoryBuffer::getMemBuffer(InlineAsm));
+  SourceMgr SrcMgr;
+  SrcMgr.AddNewSourceBuffer(std::move(Buffer), SMLoc());
+
+  MCContext MCCtx(TT, MAI.get(), MRI.get(), STI.get(), &SrcMgr);
   std::unique_ptr<MCObjectFileInfo> MOFI(
       T->createMCObjectFileInfo(MCCtx, /*PIC=*/false));
   MOFI->setSDKVersion(M.getSDKVersion());
@@ -107,9 +108,6 @@ initializeRecordStreamer(const Module &M,
   RecordStreamer Streamer(MCCtx, M);
   T->createNullTargetStreamer(Streamer);
 
-  std::unique_ptr<MemoryBuffer> Buffer(MemoryBuffer::getMemBuffer(InlineAsm));
-  SourceMgr SrcMgr;
-  SrcMgr.AddNewSourceBuffer(std::move(Buffer), SMLoc());
   std::unique_ptr<MCAsmParser> Parser(
       createMCAsmParser(SrcMgr, MCCtx, Streamer, *MAI));
 
@@ -203,8 +201,9 @@ uint32_t ModuleSymbolTable::getSymbolFlags(Symbol S) const {
     if (GVar->isConstant())
       Res |= BasicSymbolRef::SF_Const;
   }
-  if (dyn_cast_or_null<Function>(GV->getBaseObject()))
-    Res |= BasicSymbolRef::SF_Executable;
+  if (const GlobalObject *GO = GV->getAliaseeObject())
+    if (isa<Function>(GO) || isa<GlobalIFunc>(GO))
+      Res |= BasicSymbolRef::SF_Executable;
   if (isa<GlobalAlias>(GV))
     Res |= BasicSymbolRef::SF_Indirect;
   if (GV->hasPrivateLinkage())

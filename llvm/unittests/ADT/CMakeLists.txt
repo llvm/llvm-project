@@ -15,12 +15,14 @@ add_llvm_unittest(ADTTests
   BreadthFirstIteratorTest.cpp
   BumpPtrListTest.cpp
   CoalescingBitVectorTest.cpp
+  CombinationGeneratorTest.cpp
   DAGDeltaAlgorithmTest.cpp
   DeltaAlgorithmTest.cpp
   DenseMapTest.cpp
   DenseSetTest.cpp
   DepthFirstIteratorTest.cpp
   DirectedGraphTest.cpp
+  EditDistanceTest.cpp
   EnumeratedArrayTest.cpp
   EquivalenceClassesTest.cpp
   FallibleIteratorTest.cpp
@@ -78,7 +80,6 @@ add_llvm_unittest(ADTTests
   TwineTest.cpp
   TypeSwitchTest.cpp
   TypeTraitsTest.cpp
-  WaymarkingTest.cpp
   )
 
 target_link_libraries(ADTTests PRIVATE LLVMTestingSupport)

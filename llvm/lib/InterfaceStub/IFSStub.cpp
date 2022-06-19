@@ -8,7 +8,7 @@
 
 #include "llvm/InterfaceStub/IFSStub.h"
 #include "llvm/BinaryFormat/ELF.h"
-#include "llvm/Support/Error.h"
+#include "llvm/Support/ErrorHandling.h"
 
 using namespace llvm;
 using namespace llvm::ifs;
@@ -29,7 +29,7 @@ IFSStub::IFSStub(IFSStub &&Stub) {
   Symbols = std::move(Stub.Symbols);
 }
 
-IFSStubTriple::IFSStubTriple(IFSStubTriple const &Stub) {
+IFSStubTriple::IFSStubTriple(IFSStubTriple const &Stub) : IFSStub() {
   IfsVersion = Stub.IfsVersion;
   Target = Stub.Target;
   SoName = Stub.SoName;

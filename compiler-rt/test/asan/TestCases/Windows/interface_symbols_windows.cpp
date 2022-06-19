@@ -13,16 +13,16 @@
 // RUN:   | sed -e s/@.*// > %t.exports
 //
 // [BEWARE: be really careful with the sed commands, as this test can be run
-//  from different environemnts with different shells and seds]
+//  from different environments with different shells and seds]
 //
-// RUN: grep -e "INTERFACE_FUNCTION"                                           \
+// RUN: grep -e "^INTERFACE_FUNCTION"                                          \
 // RUN:  %p/../../../../lib/asan/asan_interface.inc                            \
 // RUN:  %p/../../../../lib/ubsan/ubsan_interface.inc                          \
 // RUN:  %p/../../../../lib/sanitizer_common/sanitizer_common_interface.inc    \
 // RUN:  %p/../../../../lib/sanitizer_common/sanitizer_coverage_interface.inc  \
 // RUN:  | sed -e "s/.*(//" -e "s/).*//" > %t.imports1
 //
-// RUN: grep -e "INTERFACE_WEAK_FUNCTION"                                      \
+// RUN: grep -e "^INTERFACE_WEAK_FUNCTION"                                     \
 // RUN:  %p/../../../../lib/asan/asan_interface.inc                            \
 // RUN:  %p/../../../../lib/ubsan/ubsan_interface.inc                          \
 // RUN:  %p/../../../../lib/sanitizer_common/sanitizer_common_interface.inc    \

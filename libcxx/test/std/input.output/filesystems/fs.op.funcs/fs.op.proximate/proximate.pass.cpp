@@ -6,8 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-// XFAIL: LIBCXX-DEBUG-FIXME
-
 // UNSUPPORTED: c++03
 
 // <filesystem>
@@ -28,7 +26,7 @@
 
 static int count_path_elems(const fs::path& p) {
   int count = 0;
-  for (auto& elem : p) {
+  for (auto&& elem : p) {
     if (elem != p.root_name() && elem != "/" && elem != "")
       ++count;
   }

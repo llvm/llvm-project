@@ -9,14 +9,15 @@
 #include "src/ctype/ispunct.h"
 
 #include "src/__support/common.h"
-#include "src/ctype/ctype_utils.h"
+#include "src/__support/ctype_utils.h"
 
 namespace __llvm_libc {
 
 // TODO: Currently restricted to default locale.
 // These should be extended using locale information.
 LLVM_LIBC_FUNCTION(int, ispunct, (int c)) {
-  return !internal::isalnum(c) && internal::isgraph(c);
+  const unsigned ch = static_cast<unsigned>(c);
+  return static_cast<int>(!internal::isalnum(ch) && internal::isgraph(ch));
 }
 
 } // namespace __llvm_libc

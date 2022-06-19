@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 //
 // This file contains structs based on the LSP specification at
-// https://github.com/Microsoft/language-server-protocol/blob/master/protocol.md
+// https://github.com/Microsoft/language-server-protocol/blob/main/protocol.md
 //
 // This is not meant to be a complete implementation, new interfaces are added
 // when they're needed.
@@ -28,12 +28,18 @@
 #include "support/MemoryTree.h"
 #include "clang/Index/IndexSymbol.h"
 #include "llvm/ADT/Optional.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/JSON.h"
 #include "llvm/Support/raw_ostream.h"
 #include <bitset>
 #include <memory>
 #include <string>
 #include <vector>
+
+// This file is using the LSP syntax for identifier names which is different
+// from the LLVM coding standard. To avoid the clang-tidy warnings, we're
+// disabling one check here.
+// NOLINTBEGIN(readability-identifier-naming)
 
 namespace clang {
 namespace clangd {
@@ -432,6 +438,11 @@ struct ClientCapabilities {
   /// textDocument.signatureHelp.signatureInformation.parameterInformation.labelOffsetSupport
   bool OffsetsInSignatureHelp = false;
 
+  /// The documentation format that should be used for
+  /// textDocument/signatureHelp.
+  /// textDocument.signatureHelp.signatureInformation.documentationFormat
+  MarkupKind SignatureHelpDocumentationFormat = MarkupKind::PlainText;
+
   /// The supported set of CompletionItemKinds for textDocument/completion.
   /// textDocument.completion.completionItemKind.valueSet
   llvm::Optional<CompletionItemKindBitset> CompletionItemKinds;
@@ -811,6 +822,26 @@ struct DiagnosticRelatedInformation {
 };
 llvm::json::Value toJSON(const DiagnosticRelatedInformation &);
 
+enum DiagnosticTag {
+  /// Unused or unnecessary code.
+  ///
+  /// Clients are allowed to render diagnostics with this tag faded out instead
+  /// of having an error squiggle.
+  Unnecessary = 1,
+  /// Deprecated or obsolete code.
+  ///
+  /// Clients are allowed to rendered diagnostics with this tag strike through.
+  Deprecated = 2,
+};
+llvm::json::Value toJSON(DiagnosticTag Tag);
+
+/// Structure to capture a description for an error code.
+struct CodeDescription {
+  /// An URI to open with more information about the diagnostic error.
+  std::string href;
+};
+llvm::json::Value toJSON(const CodeDescription &);
+
 struct CodeAction;
 struct Diagnostic {
   /// The range at which the message applies.
@@ -823,12 +854,18 @@ struct Diagnostic {
   /// The diagnostic's code. Can be omitted.
   std::string code;
 
+  /// An optional property to describe the error code.
+  llvm::Optional<CodeDescription> codeDescription;
+
   /// A human-readable string describing the source of this
   /// diagnostic, e.g. 'typescript' or 'super lint'.
   std::string source;
 
   /// The diagnostic's message.
   std::string message;
+
+  /// Additional metadata about the diagnostic.
+  llvm::SmallVector<DiagnosticTag, 1> tags;
 
   /// An array of related diagnostic information, e.g. when symbol-names within
   /// a scope collide all definitions can be marked via this property.
@@ -847,7 +884,7 @@ struct Diagnostic {
 
   /// A data entry field that is preserved between a
   /// `textDocument/publishDiagnostics` notification
-  /// and`textDocument/codeAction` request.
+  /// and `textDocument/codeAction` request.
   /// Mutating users should associate their data with a unique key they can use
   /// to retrieve later on.
   llvm::json::Object data;
@@ -1155,7 +1192,7 @@ enum class InsertTextFormat {
   /// typing in one will update others too.
   ///
   /// See also:
-  /// https//github.com/Microsoft/vscode/blob/master/src/vs/editor/contrib/snippet/common/snippet.md
+  /// https://github.com/Microsoft/vscode/blob/main/src/vs/editor/contrib/snippet/snippet.md
   Snippet = 2,
 };
 
@@ -1261,7 +1298,7 @@ struct SignatureInformation {
   std::string label;
 
   /// The documentation of this signature. Optional.
-  std::string documentation;
+  MarkupContent documentation;
 
   /// The parameters of this signature.
   std::vector<ParameterInformation> parameters;
@@ -1485,26 +1522,41 @@ struct CallHierarchyOutgoingCall {
 };
 llvm::json::Value toJSON(const CallHierarchyOutgoingCall &);
 
-/// The parameter of a `textDocument/inlayHints` request.
+/// A parameter literal used in inlay hint requests.
 struct InlayHintsParams {
-  /// The text document for which inlay hints are requested.
+  /// The text document.
   TextDocumentIdentifier textDocument;
+
+  /// The visible document range for which inlay hints should be computed.
+  ///
+  /// None is a clangd extension, which hints for computing hints on the whole
+  /// file.
+  llvm::Optional<Range> range;
 };
 bool fromJSON(const llvm::json::Value &, InlayHintsParams &, llvm::json::Path);
 
-/// A set of predefined hint kinds.
+/// Inlay hint kinds.
 enum class InlayHintKind {
-  /// The hint corresponds to parameter information.
-  /// An example of a parameter hint is a hint in this position:
-  ///    func(^arg);
-  /// which shows the name of the corresponding parameter.
-  ParameterHint,
-
-  /// The hint corresponds to information about a deduced type.
+  /// An inlay hint that for a type annotation.
+  ///
   /// An example of a type hint is a hint in this position:
   ///    auto var ^ = expr;
   /// which shows the deduced type of the variable.
-  TypeHint,
+  Type = 1,
+
+  /// An inlay hint that is for a parameter.
+  ///
+  /// An example of a parameter hint is a hint in this position:
+  ///    func(^arg);
+  /// which shows the name of the corresponding parameter.
+  Parameter = 2,
+
+  /// A hint before an element of an aggregate braced initializer list,
+  /// indicating what it is initializing.
+  ///   Pair{^1, ^2};
+  /// Uses designator syntax, e.g. `.first:`.
+  /// This is a clangd extension.
+  Designator = 3,
 
   /// Other ideas for hints that are not currently implemented:
   ///
@@ -1512,25 +1564,48 @@ enum class InlayHintKind {
   ///   in a chain of function calls.
   /// * Hints indicating implicit conversions or implicit constructor calls.
 };
-llvm::json::Value toJSON(InlayHintKind);
+llvm::json::Value toJSON(const InlayHintKind &);
 
-/// An annotation to be displayed inline next to a range of source code.
+/// Inlay hint information.
 struct InlayHint {
-  /// The range of source code to which the hint applies.
-  /// We provide the entire range, rather than just the endpoint
-  /// relevant to `position` (e.g. the start of the range for
-  /// InlayHintPosition::Before), to give clients the flexibility
-  /// to make choices like only displaying the hint while the cursor
-  /// is over the range, rather than displaying it all the time.
-  Range range;
+  /// The position of this hint.
+  Position position;
 
-  /// The type of hint.
+  /// The label of this hint. A human readable string or an array of
+  /// InlayHintLabelPart label parts.
+  ///
+  /// *Note* that neither the string nor the label part can be empty.
+  std::string label;
+
+  /// The kind of this hint. Can be omitted in which case the client should fall
+  /// back to a reasonable default.
   InlayHintKind kind;
 
-  /// The label that is displayed in the editor.
-  std::string label;
+  /// Render padding before the hint.
+  ///
+  /// Note: Padding should use the editor's background color, not the
+  /// background color of the hint itself. That means padding can be used
+  /// to visually align/separate an inlay hint.
+  bool paddingLeft = false;
+
+  /// Render padding after the hint.
+  ///
+  /// Note: Padding should use the editor's background color, not the
+  /// background color of the hint itself. That means padding can be used
+  /// to visually align/separate an inlay hint.
+  bool paddingRight = false;
+
+  /// The range of source code to which the hint applies.
+  ///
+  /// For example, a parameter hint may have the argument as its range.
+  /// The range allows clients more flexibility of when/how to display the hint.
+  /// This is an (unserialized) clangd extension.
+  Range range;
 };
 llvm::json::Value toJSON(const InlayHint &);
+bool operator==(const InlayHint &, const InlayHint &);
+bool operator<(const InlayHint &, const InlayHint &);
+llvm::raw_ostream &operator<<(llvm::raw_ostream &, InlayHintKind);
 
 struct ReferenceContext {
   /// Include the declaration of the current symbol.
@@ -1774,5 +1849,7 @@ template <> struct format_provider<clang::clangd::Position> {
   }
 };
 } // namespace llvm
+
+// NOLINTEND(readability-identifier-naming)
 
 #endif

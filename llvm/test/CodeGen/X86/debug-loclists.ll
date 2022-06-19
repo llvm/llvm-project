@@ -1,31 +1,31 @@
-; RUN: llc -mtriple=x86_64-pc-linux -filetype=obj -function-sections -o %t < %s
+; RUN: llc -mtriple=x86_64-pc-linux -filetype=obj -function-sections -o %t -experimental-debug-variable-locations=true < %s
 ; RUN: llvm-dwarfdump -v -debug-info -debug-loclists %t | \
 ; RUN:   FileCheck %s --check-prefixes=CHECK,DWARF32
 
-; RUN: llc -dwarf64 -mtriple=x86_64-pc-linux -filetype=obj -function-sections -o %t < %s
+; RUN: llc -dwarf64 -mtriple=x86_64-pc-linux -filetype=obj -function-sections -o %t -experimental-debug-variable-locations=true < %s
 ; RUN: llvm-dwarfdump -v -debug-info -debug-loclists %t | \
 ; RUN:   FileCheck %s --check-prefixes=CHECK,DWARF64
 
-; RUN: llc -dwarf-version=5 -split-dwarf-file=foo.dwo -mtriple=x86_64-pc-linux -filetype=obj -function-sections -o %t < %s
+; RUN: llc -dwarf-version=5 -split-dwarf-file=foo.dwo -mtriple=x86_64-pc-linux -filetype=obj -function-sections -o %t -experimental-debug-variable-locations=true < %s
 ; RUN: llvm-dwarfdump -v -debug-info -debug-loclists %t | \
 ; RUN:   FileCheck %s --check-prefixes=DWO,DWO32
 
-; RUN: llc -dwarf64 -dwarf-version=5 -split-dwarf-file=foo.dwo -mtriple=x86_64-pc-linux -filetype=obj -function-sections -o %t < %s
+; RUN: llc -dwarf64 -dwarf-version=5 -split-dwarf-file=foo.dwo -mtriple=x86_64-pc-linux -filetype=obj -function-sections -o %t -experimental-debug-variable-locations=true < %s
 ; RUN: llvm-dwarfdump -v -debug-info -debug-loclists %t | \
 ; RUN:   FileCheck %s --check-prefixes=DWO,DWO64
 
 ; CHECK:        DW_TAG_variable
 ; DWARF32-NEXT:   DW_AT_location [DW_FORM_loclistx]   (indexed (0x0) loclist = 0x00000018:
 ; DWARF64-NEXT:   DW_AT_location [DW_FORM_loclistx]   (indexed (0x0) loclist = 0x0000002c:
+; CHECK-NEXT:       [0x0000000000000000, 0x0000000000000003) ".text._Z2f1ii": DW_OP_consts +5, DW_OP_stack_value)
+; CHECK-NEXT:     DW_AT_name {{.*}} "x"
+
+; CHECK:        DW_TAG_variable
+; DWARF32-NEXT:   DW_AT_location [DW_FORM_loclistx]   (indexed (0x1) loclist = 0x00000020:
+; DWARF64-NEXT:   DW_AT_location [DW_FORM_loclistx]   (indexed (0x1) loclist = 0x00000034:
 ; CHECK-NEXT:       [0x0000000000000000, 0x0000000000000003) ".text._Z2f1ii": DW_OP_consts +3, DW_OP_stack_value
 ; CHECK-NEXT:       [0x0000000000000003, 0x0000000000000004) ".text._Z2f1ii": DW_OP_consts +4, DW_OP_stack_value)
 ; CHECK-NEXT:     DW_AT_name {{.*}} "y"
-
-; CHECK:        DW_TAG_variable
-; DWARF32-NEXT:   DW_AT_location [DW_FORM_loclistx]   (indexed (0x1) loclist = 0x00000029:
-; DWARF64-NEXT:   DW_AT_location [DW_FORM_loclistx]   (indexed (0x1) loclist = 0x0000003d:
-; CHECK-NEXT:       [0x0000000000000000, 0x0000000000000003) ".text._Z2f1ii": DW_OP_consts +5, DW_OP_stack_value)
-; CHECK-NEXT:     DW_AT_name {{.*}} "x"
 
 ; CHECK:        DW_TAG_variable
 ; DWARF32-NEXT:   DW_AT_location [DW_FORM_loclistx]   (indexed (0x2) loclist = 0x00000031:
@@ -43,29 +43,31 @@
 
 ; CHECK-NEXT:   offsets: [
 ; DWARF32-NEXT: 0x0000000c => 0x00000018
-; DWARF32-NEXT: 0x0000001d => 0x00000029
+; DWARF32-NEXT: 0x00000014 => 0x00000020
 ; DWARF32-NEXT: 0x00000025 => 0x00000031
 ; DWARF64-NEXT: 0x0000000000000018 => 0x0000002c
-; DWARF64-NEXT: 0x0000000000000029 => 0x0000003d
+; DWARF64-NEXT: 0x0000000000000020 => 0x00000034
 ; DWARF64-NEXT: 0x0000000000000031 => 0x00000045
 ; CHECK-NEXT:   ]
+
+; DWARF32-NEXT: 0x00000018:
+; DWARF64-NEXT: 0x0000002c:
+
+; Show that startx_length can be used when the address range starts at the start of the function.
+
+; CHECK-NEXT:             DW_LLE_startx_length (0x0000000000000000, 0x0000000000000003): DW_OP_consts +5, DW_OP_stack_value
+; CHECK-NEXT:             DW_LLE_end_of_list   ()
 
 ; Don't use startx_length if there's more than one entry, because the shared
 ; base address will be useful for both the range that does start at the start of
 ; the function, and the one that doesn't.
 
-; DWARF32-NEXT: 0x00000018:
-; DWARF64-NEXT: 0x0000002c:
+; DWARF32:      0x00000020:
+; DWARF64:      0x00000034:
+
 ; CHECK-NEXT:             DW_LLE_base_addressx (0x0000000000000000)
 ; CHECK-NEXT:             DW_LLE_offset_pair   (0x0000000000000000, 0x0000000000000003): DW_OP_consts +3, DW_OP_stack_value
 ; CHECK-NEXT:             DW_LLE_offset_pair   (0x0000000000000003, 0x0000000000000004): DW_OP_consts +4, DW_OP_stack_value
-; CHECK-NEXT:             DW_LLE_end_of_list   ()
-
-; Show that startx_length can be used when the address range starts at the start of the function.
-
-; DWARF32:      0x00000029:
-; DWARF64:      0x0000003d:
-; CHECK-NEXT:             DW_LLE_startx_length (0x0000000000000000, 0x0000000000000003): DW_OP_consts +5, DW_OP_stack_value
 ; CHECK-NEXT:             DW_LLE_end_of_list   ()
 
 ; And use a base address when the range doesn't start at an existing/useful

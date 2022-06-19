@@ -34,10 +34,12 @@
 #include "llvm/Remarks/RemarkSerializer.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/Regex.h"
-#include "llvm/Support/raw_ostream.h"
 #include <memory>
 
 namespace llvm {
+
+class raw_ostream;
+
 namespace remarks {
 class RemarkStreamer final {
   /// The regex used to filter remarks based on the passes that emit them.

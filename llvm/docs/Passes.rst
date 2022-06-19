@@ -876,6 +876,14 @@ This pass expects :ref:`LICM <passes-licm>` to be run before it to hoist
 invariant conditions out of the loop, to make the unswitching opportunity
 obvious.
 
+``-lower-global-dtors``: Lower global destructors
+------------------------------------------------------------
+
+This pass lowers global module destructors (``llvm.global_dtors``) by creating
+wrapper functions that are registered as global constructors in
+``llvm.global_ctors`` and which contain a call to ``__cxa_atexit`` to register
+their destructor functions.
+
 ``-loweratomic``: Lower atomic intrinsics to non-atomic form
 ------------------------------------------------------------
 
@@ -924,7 +932,7 @@ calls, or transforming sets of stores into ``memset``\ s.
 ``-mergefunc``: Merge Functions
 -------------------------------
 
-This pass looks for equivalent functions that are mergable and folds them.
+This pass looks for equivalent functions that are mergeable and folds them.
 
 Total-ordering is introduced among the functions set: we define comparison
 that answers for every two functions which of them is greater. It allows to

@@ -1,4 +1,4 @@
-; RUN: opt -S -deadargelim < %s | FileCheck %s
+; RUN: opt -S -passes=deadargelim < %s | FileCheck %s
 target triple = "x86_64-pc-windows-msvc"
 
 define internal void @callee(i8*) {

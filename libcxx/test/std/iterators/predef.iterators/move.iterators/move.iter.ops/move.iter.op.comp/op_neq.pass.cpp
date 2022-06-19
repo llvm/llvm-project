@@ -23,40 +23,66 @@
 #include "test_macros.h"
 #include "test_iterators.h"
 
+// In C++17, move_iterator's operator!= calls the underlying iterator's operator!=
+// In C++20, move_iterator's operator== calls the underlying iterator's operator==
+struct CustomIt {
+  using value_type = int;
+  using difference_type = int;
+  using reference = int&;
+  using pointer = int*;
+  using iterator_category = std::input_iterator_tag;
+  CustomIt() = default;
+  TEST_CONSTEXPR_CXX17 explicit CustomIt(int* p) : p_(p) {}
+  int& operator*() const;
+  CustomIt& operator++();
+  CustomIt operator++(int);
+#if TEST_STD_VER > 17
+  friend constexpr bool operator==(const CustomIt& a, const CustomIt& b) { return a.p_ == b.p_; }
+  friend bool operator!=(const CustomIt& a, const CustomIt& b) = delete;
+#else
+  friend TEST_CONSTEXPR_CXX17 bool operator!=(const CustomIt& a, const CustomIt& b) { return a.p_ != b.p_; }
+#endif
+  int *p_ = nullptr;
+};
+
 template <class It>
-void
-test(It l, It r, bool x)
+TEST_CONSTEXPR_CXX17 void test_one()
 {
-    const std::move_iterator<It> r1(l);
-    const std::move_iterator<It> r2(r);
-    assert((r1 != r2) == x);
+  int a[] = {3, 1, 4};
+  const std::move_iterator<It> r1 = std::move_iterator<It>(It(a));
+  const std::move_iterator<It> r2 = std::move_iterator<It>(It(a));
+  const std::move_iterator<It> r3 = std::move_iterator<It>(It(a + 2));
+  ASSERT_SAME_TYPE(decltype(r1 != r2), bool);
+  assert(!(r1 != r1));
+  assert(!(r1 != r2));
+  assert(!(r2 != r1));
+  assert( (r1 != r3));
+  assert( (r3 != r1));
+}
+
+TEST_CONSTEXPR_CXX17 bool test()
+{
+  test_one<CustomIt>();
+  test_one<cpp17_input_iterator<int*> >();
+  test_one<forward_iterator<int*> >();
+  test_one<bidirectional_iterator<int*> >();
+  test_one<random_access_iterator<int*> >();
+  test_one<int*>();
+  test_one<const int*>();
+
+#if TEST_STD_VER > 17
+  test_one<contiguous_iterator<int*>>();
+  test_one<three_way_contiguous_iterator<int*>>();
+#endif
+
+  return true;
 }
 
 int main(int, char**)
 {
-    char s[] = "1234567890";
-    test(cpp17_input_iterator<char*>(s), cpp17_input_iterator<char*>(s), false);
-    test(cpp17_input_iterator<char*>(s), cpp17_input_iterator<char*>(s+1), true);
-    test(forward_iterator<char*>(s), forward_iterator<char*>(s), false);
-    test(forward_iterator<char*>(s), forward_iterator<char*>(s+1), true);
-    test(bidirectional_iterator<char*>(s), bidirectional_iterator<char*>(s), false);
-    test(bidirectional_iterator<char*>(s), bidirectional_iterator<char*>(s+1), true);
-    test(random_access_iterator<char*>(s), random_access_iterator<char*>(s), false);
-    test(random_access_iterator<char*>(s), random_access_iterator<char*>(s+1), true);
-    test(s, s, false);
-    test(s, s+1, true);
-
+  test();
 #if TEST_STD_VER > 14
-    {
-    constexpr const char *p = "123456789";
-    typedef std::move_iterator<const char *> MI;
-    constexpr MI it1 = std::make_move_iterator(p);
-    constexpr MI it2 = std::make_move_iterator(p + 5);
-    constexpr MI it3 = std::make_move_iterator(p);
-    static_assert( (it1 != it2), "");
-    static_assert(!(it1 != it3), "");
-    static_assert( (it2 != it3), "");
-    }
+  static_assert(test());
 #endif
 
   return 0;

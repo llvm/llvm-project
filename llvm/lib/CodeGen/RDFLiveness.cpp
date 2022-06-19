@@ -22,6 +22,7 @@
 // and Embedded Architectures and Compilers", 8 (4),
 // <10.1145/2086696.2086706>. <hal-00647369>
 //
+#include "llvm/CodeGen/RDFLiveness.h"
 #include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/STLExtras.h"
@@ -32,14 +33,12 @@
 #include "llvm/CodeGen/MachineDominators.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineInstr.h"
-#include "llvm/CodeGen/RDFLiveness.h"
 #include "llvm/CodeGen/RDFGraph.h"
 #include "llvm/CodeGen/RDFRegisters.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/MC/LaneBitmask.h"
 #include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/Support/CommandLine.h"
-#include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
@@ -171,7 +170,7 @@ NodeList Liveness::getAllReachingDefs(RegisterRef RefRR,
 
   SmallSet<NodeId,32> Defs;
 
-  // Remove all non-phi defs that are not aliased to RefRR, and segregate
+  // Remove all non-phi defs that are not aliased to RefRR, and separate
   // the the remaining defs into buckets for containing blocks.
   std::map<NodeId, NodeAddr<InstrNode*>> Owners;
   std::map<MachineBasicBlock*, SmallVector<NodeId,32>> Blocks;
@@ -341,9 +340,8 @@ Liveness::getAllReachingDefsRecImpl(RegisterRef RefRR, NodeAddr<RefNode*> RefA,
     if (!(DA.Addr->getFlags() & NodeAttrs::PhiRef))
       continue;
     NodeAddr<PhiNode*> PA = DA.Addr->getOwner(DFG);
-    if (Visited.count(PA.Id))
+    if (!Visited.insert(PA.Id).second)
       continue;
-    Visited.insert(PA.Id);
     // Go over all phi uses and get the reaching defs for each use.
     for (auto U : PA.Addr->members_if(DFG.IsRef<NodeAttrs::Use>, DFG)) {
       const auto &T = getAllReachingDefsRecImpl(RefRR, U, Visited, TmpDefs,

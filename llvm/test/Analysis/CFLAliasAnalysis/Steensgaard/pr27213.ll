@@ -1,4 +1,3 @@
-; RUN: opt < %s -disable-basic-aa -cfl-steens-aa -aa-eval -print-may-aliases -disable-output 2>&1 | FileCheck %s
 ; RUN: opt < %s -aa-pipeline=cfl-steens-aa -passes=aa-eval -print-may-aliases -disable-output 2>&1 | FileCheck %s
 
 ; CHECK-LABEL:     Function: foo
@@ -17,6 +16,7 @@ entry:
 define void @bar(i32* %A, i32* %B) {
 entry:
   store i32 0, i32* %A, align 4
+  load i32, i32* %B
   %arrayidx = getelementptr inbounds i32, i32* %B, i64 1
   store i32 0, i32* %arrayidx, align 4
   ret void

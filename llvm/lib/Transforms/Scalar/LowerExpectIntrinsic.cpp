@@ -21,12 +21,11 @@
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/MDBuilder.h"
-#include "llvm/IR/Metadata.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/CommandLine.h"
-#include "llvm/Support/Debug.h"
 #include "llvm/Transforms/Scalar.h"
+#include "llvm/Transforms/Utils/MisExpect.h"
 
 using namespace llvm;
 
@@ -64,7 +63,7 @@ getBranchWeight(Intrinsic::ID IntrinsicID, CallInst *CI, int BranchCount) {
     // __builtin_expect_with_probability
     assert(CI->getNumOperands() >= 3 &&
            "expect with probability must have 3 arguments");
-    ConstantFP *Confidence = dyn_cast<ConstantFP>(CI->getArgOperand(2));
+    auto *Confidence = cast<ConstantFP>(CI->getArgOperand(2));
     double TrueProb = Confidence->getValueAPF().convertToDouble();
     assert((TrueProb >= 0.0 && TrueProb <= 1.0) &&
            "probability value must be in the range [0.0, 1.0]");
@@ -100,6 +99,8 @@ static bool handleSwitchExpect(SwitchInst &SI) {
 
   uint64_t Index = (Case == *SI.case_default()) ? 0 : Case.getCaseIndex() + 1;
   Weights[Index] = LikelyBranchWeightVal;
+
+  misexpect::checkExpectAnnotations(SI, Weights, /*IsFrontend=*/true);
 
   SI.setCondition(ArgValue);
 
@@ -315,19 +316,24 @@ template <class BrSelInst> static bool handleBrSelExpect(BrSelInst &BSI) {
   std::tie(LikelyBranchWeightVal, UnlikelyBranchWeightVal) =
       getBranchWeight(Fn->getIntrinsicID(), CI, 2);
 
+  SmallVector<uint32_t, 4> ExpectedWeights;
   if ((ExpectedValue->getZExtValue() == ValueComparedTo) ==
       (Predicate == CmpInst::ICMP_EQ)) {
     Node =
         MDB.createBranchWeights(LikelyBranchWeightVal, UnlikelyBranchWeightVal);
+    ExpectedWeights = {LikelyBranchWeightVal, UnlikelyBranchWeightVal};
   } else {
     Node =
         MDB.createBranchWeights(UnlikelyBranchWeightVal, LikelyBranchWeightVal);
+    ExpectedWeights = {UnlikelyBranchWeightVal, LikelyBranchWeightVal};
   }
 
   if (CmpI)
     CmpI->setOperand(0, ArgValue);
   else
     BSI.setCondition(ArgValue);
+
+  misexpect::checkFrontendInstrumentation(BSI, ExpectedWeights);
 
   BSI.setMetadata(LLVMContext::MD_prof, Node);
 
@@ -357,11 +363,10 @@ static bool lowerExpectIntrinsic(Function &F) {
     // Remove llvm.expect intrinsics. Iterate backwards in order
     // to process select instructions before the intrinsic gets
     // removed.
-    for (auto BI = BB.rbegin(), BE = BB.rend(); BI != BE;) {
-      Instruction *Inst = &*BI++;
-      CallInst *CI = dyn_cast<CallInst>(Inst);
+    for (Instruction &Inst : llvm::make_early_inc_range(llvm::reverse(BB))) {
+      CallInst *CI = dyn_cast<CallInst>(&Inst);
       if (!CI) {
-        if (SelectInst *SI = dyn_cast<SelectInst>(Inst)) {
+        if (SelectInst *SI = dyn_cast<SelectInst>(&Inst)) {
           if (handleBrSelExpect(*SI))
             ExpectIntrinsicsHandled++;
         }
@@ -410,7 +415,7 @@ public:
 
   bool runOnFunction(Function &F) override { return lowerExpectIntrinsic(F); }
 };
-}
+} // namespace
 
 char LowerExpectIntrinsic::ID = 0;
 INITIALIZE_PASS(LowerExpectIntrinsic, "lower-expect",

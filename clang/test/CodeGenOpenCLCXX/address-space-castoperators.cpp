@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 %s -triple spir-unknown-unknown -cl-std=clc++ -emit-llvm -O0 -o - | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers %s -triple spir-unknown-unknown -cl-std=clc++ -emit-llvm -O0 -o - | FileCheck %s
 
 void test_reinterpret_cast(){
 __private float x;

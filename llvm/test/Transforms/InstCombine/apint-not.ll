@@ -1,7 +1,7 @@
 ; This test makes sure that the xor instructions are properly eliminated
 ; when arbitrary precision integers are used.
 
-; RUN: opt < %s -instcombine -S | not grep xor
+; RUN: opt < %s -passes=instcombine -S | not grep xor
 
 define i33 @test1(i33 %A) {
 	%B = xor i33 %A, -1

@@ -1,5 +1,4 @@
-; RUN: llc < %s
-; REQUIRES: default_triple
+; RUN: llc -mtriple=x86_64 < %s
 
 	%Env = type i8*
 

@@ -11,11 +11,15 @@
 
 #include "llvm/DebugInfo/CodeView/CodeView.h"
 #include "llvm/DebugInfo/CodeView/DebugSubsection.h"
-#include "llvm/Support/BinaryStreamReader.h"
+#include "llvm/Support/BinaryStreamArray.h"
+#include "llvm/Support/BinaryStreamRef.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/Error.h"
 
 namespace llvm {
+class BinaryStreamReader;
+class BinaryStreamWriter;
+
 namespace codeview {
 class DebugFrameDataSubsectionRef final : public DebugSubsectionRef {
 public:

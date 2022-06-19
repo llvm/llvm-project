@@ -37,7 +37,7 @@ namespace {
 /// that the analysis of accesses in a statement is becoming too complex. Chosen
 /// to be relatively small because all the common cases should access only few
 /// array elements per statement.
-static int const SimplifyMaxDisjuncts = 4;
+static unsigned const SimplifyMaxDisjuncts = 4;
 
 TWO_STATISTICS(ScopsProcessed, "Number of SCoPs processed");
 TWO_STATISTICS(ScopsModified, "Number of SCoPs simplified");
@@ -95,18 +95,19 @@ static isl::union_map underapproximatedAddMap(isl::union_map UMap,
 
   // Fast path: If known that we cannot exceed the disjunct limit, just add
   // them.
-  if (isl_map_n_basic_map(PrevMap.get()) + isl_map_n_basic_map(Map.get()) <=
+  if (unsignedFromIslSize(PrevMap.n_basic_map()) +
+          unsignedFromIslSize(Map.n_basic_map()) <=
       SimplifyMaxDisjuncts)
     return UMap.unite(Map);
 
   isl::map Result = isl::map::empty(PrevMap.get_space());
   for (isl::basic_map BMap : PrevMap.get_basic_map_list()) {
-    if (Result.n_basic_map() > SimplifyMaxDisjuncts)
+    if (unsignedFromIslSize(Result.n_basic_map()) > SimplifyMaxDisjuncts)
       break;
     Result = Result.unite(BMap);
   }
   for (isl::basic_map BMap : Map.get_basic_map_list()) {
-    if (isl_map_n_basic_map(Result.get()) > SimplifyMaxDisjuncts)
+    if (unsignedFromIslSize(Result.n_basic_map()) > SimplifyMaxDisjuncts)
       break;
     Result = Result.unite(BMap);
   }
@@ -118,7 +119,7 @@ static isl::union_map underapproximatedAddMap(isl::union_map UMap,
   return UResult;
 }
 
-class SimplifyImpl {
+class SimplifyImpl final {
 private:
   /// The invocation id (if there are multiple instances in the pass manager's
   /// pipeline) to determine which statistics to update.
@@ -753,7 +754,7 @@ void SimplifyImpl::printScop(raw_ostream &OS, Scop &S) const {
   printAccesses(OS);
 }
 
-class SimplifyWrapperPass : public ScopPass {
+class SimplifyWrapperPass final : public ScopPass {
 public:
   static char ID;
   int CallNo;
@@ -849,3 +850,49 @@ INITIALIZE_PASS_BEGIN(SimplifyWrapperPass, "polly-simplify", "Polly - Simplify",
 INITIALIZE_PASS_DEPENDENCY(LoopInfoWrapperPass)
 INITIALIZE_PASS_END(SimplifyWrapperPass, "polly-simplify", "Polly - Simplify",
                     false, false)
+
+//===----------------------------------------------------------------------===//
+
+namespace {
+/// Print result from SimplifyWrapperPass.
+class SimplifyPrinterLegacyPass final : public ScopPass {
+public:
+  static char ID;
+
+  SimplifyPrinterLegacyPass() : SimplifyPrinterLegacyPass(outs()) {}
+  explicit SimplifyPrinterLegacyPass(llvm::raw_ostream &OS)
+      : ScopPass(ID), OS(OS) {}
+
+  bool runOnScop(Scop &S) override {
+    SimplifyWrapperPass &P = getAnalysis<SimplifyWrapperPass>();
+
+    OS << "Printing analysis '" << P.getPassName() << "' for region: '"
+       << S.getRegion().getNameStr() << "' in function '"
+       << S.getFunction().getName() << "':\n";
+    P.printScop(OS, S);
+
+    return false;
+  }
+
+  void getAnalysisUsage(AnalysisUsage &AU) const override {
+    ScopPass::getAnalysisUsage(AU);
+    AU.addRequired<SimplifyWrapperPass>();
+    AU.setPreservesAll();
+  }
+
+private:
+  llvm::raw_ostream &OS;
+};
+
+char SimplifyPrinterLegacyPass::ID = 0;
+} // namespace
+
+Pass *polly::createSimplifyPrinterLegacyPass(raw_ostream &OS) {
+  return new SimplifyPrinterLegacyPass(OS);
+}
+
+INITIALIZE_PASS_BEGIN(SimplifyPrinterLegacyPass, "polly-print-simplify",
+                      "Polly - Print Simplify actions", false, false)
+INITIALIZE_PASS_DEPENDENCY(SimplifyWrapperPass)
+INITIALIZE_PASS_END(SimplifyPrinterLegacyPass, "polly-print-simplify",
+                    "Polly - Print Simplify actions", false, false)

@@ -2,15 +2,17 @@
 
 ## Check for the following:
 ## (1) address match between thunk definitions and call destinations
-## (2) address match between thunk page+offset computations and function definitions
+## (2) address match between thunk page+offset computations and function
+##     definitions
 ## (3) a second thunk is created when the first one goes out of range
-## (4) early calls to a dylib stub use a thunk, and later calls the stub directly
+## (4) early calls to a dylib stub use a thunk, and later calls the stub
+##     directly
 ## Notes:
 ## 0x4000000 = 64 Mi = half the magnitude of the forward-branch range
 
 # RUN: rm -rf %t; mkdir %t
 # RUN: llvm-mc -filetype=obj -triple=arm64-apple-darwin %s -o %t/input.o
-# RUN: %lld -arch arm64 -lSystem -o %t/thunk %t/input.o
+# RUN: %lld -arch arm64 -dead_strip -lSystem -o %t/thunk %t/input.o
 # RUN: llvm-objdump -d --no-show-raw-insn %t/thunk | FileCheck %s
 
 # CHECK: Disassembly of section __TEXT,__text:

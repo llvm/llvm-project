@@ -23,9 +23,11 @@ static inline void __kmp_node_deref(kmp_info_t *thread, kmp_depnode_t *node) {
     return;
 
   kmp_int32 n = KMP_ATOMIC_DEC(&node->dn.nrefs) - 1;
-  // TODO: temporarily disable assertion until the bug with dependences is fixed
-  //  KMP_DEBUG_ASSERT(n >= 0);
+  KMP_DEBUG_ASSERT(n >= 0);
   if (n == 0) {
+#if USE_ITT_BUILD && USE_ITT_NOTIFY
+    __itt_sync_destroy(node);
+#endif
     KMP_ASSERT(node->dn.nrefs == 0);
 #if USE_FAST_MEMORY
     __kmp_fast_free(thread, node);
@@ -74,6 +76,8 @@ static inline void __kmp_dephash_free_entries(kmp_info_t *thread,
       h->buckets[i] = 0;
     }
   }
+  __kmp_node_deref(thread, h->last_all);
+  h->last_all = NULL;
 }
 
 static inline void __kmp_dephash_free(kmp_info_t *thread, kmp_dephash_t *h) {
@@ -124,11 +128,17 @@ static inline void __kmp_release_deps(kmp_int32 gtid, kmp_taskdata_t *task) {
   kmp_taskdata_t *next_taskdata;
   for (kmp_depnode_list_t *p = node->dn.successors; p; p = next) {
     kmp_depnode_t *successor = p->node;
+#if USE_ITT_BUILD && USE_ITT_NOTIFY
+    __itt_sync_releasing(successor);
+#endif
     kmp_int32 npredecessors = KMP_ATOMIC_DEC(&successor->dn.npredecessors) - 1;
 
     // successor task can be NULL for wait_depends or because deps are still
     // being processed
     if (npredecessors == 0) {
+#if USE_ITT_BUILD && USE_ITT_NOTIFY
+      __itt_sync_acquired(successor);
+#endif
       KMP_MB();
       if (successor->dn.task) {
         KA_TRACE(20, ("__kmp_release_deps: T#%d successor %p of %p scheduled "
@@ -145,9 +155,10 @@ static inline void __kmp_release_deps(kmp_int32 gtid, kmp_taskdata_t *task) {
           // encountering thread's queue; otherwise, it can be pushed to its own
           // queue.
           if (!next_taskdata->td_flags.hidden_helper) {
-            __kmpc_give_task(
-                successor->dn.task,
-                __kmp_tid_from_gtid(next_taskdata->encountering_gtid));
+            kmp_int32 encountering_gtid =
+                next_taskdata->td_alloc_thread->th.th_info.ds.ds_gtid;
+            kmp_int32 encountering_tid = __kmp_tid_from_gtid(encountering_gtid);
+            __kmpc_give_task(successor->dn.task, encountering_tid);
           } else {
             __kmp_omp_task(gtid, successor->dn.task, false);
           }

@@ -13,8 +13,6 @@ from lldbsuite.test import lldbutil
 
 class Char1632TestCase(TestBase):
 
-    mydir = TestBase.compute_mydir(__file__)
-
     def setUp(self):
         # Call super's setUp().
         TestBase.setUp(self)
@@ -72,8 +70,8 @@ class Char1632TestCase(TestBase):
         self.expect(
             "frame variable as16 as32",
             patterns=[
-                '\(char16_t \[[0-9]+\]\) as16 = ',
-                '\(char32_t \[[0-9]+\]\) as32 = '],
+                '\(char16_t\[[0-9]+\]\) as16 = ',
+                '\(char32_t\[[0-9]+\]\) as32 = '],
             substrs=[
                 'u"ﺸﺵۻ"',
                 'U"ЕЙРГЖО"'])
@@ -100,8 +98,8 @@ class Char1632TestCase(TestBase):
         self.expect(
             "frame variable as16 as32",
             patterns=[
-                '\(char16_t \[[0-9]+\]\) as16 = ',
-                '\(char32_t \[[0-9]+\]\) as32 = '],
+                '\(char16_t\[[0-9]+\]\) as16 = ',
+                '\(char32_t\[[0-9]+\]\) as32 = '],
             substrs=[
                 '"色ハ匂ヘト散リヌルヲ"',
                 '"෴"'])

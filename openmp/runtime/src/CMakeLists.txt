@@ -46,9 +46,6 @@ include_directories(
   ${LIBOMP_INC_DIR}
   ${LIBOMP_SRC_DIR}/thirdparty/ittnotify
 )
-if(${LIBOMP_USE_HWLOC})
-  include_directories(${LIBOMP_HWLOC_INSTALL_DIR}/include)
-endif()
 
 # Building with time profiling support requires LLVM directory includes.
 if(LIBOMP_PROFILING_SUPPORT)
@@ -157,12 +154,41 @@ else()
   # libomp must be a C++ library such that it can link libLLVMSupport
   set(LIBOMP_LINKER_LANGUAGE CXX)
 endif()
+if(${LIBOMP_USE_HWLOC})
+  target_include_directories(omp
+                             PUBLIC
+			     "$<BUILD_INTERFACE:${LIBOMP_HWLOC_INCLUDE_DIR}>"
+			     "$<INSTALL_INTERFACE:${LIBOMP_HWLOC_INCLUDE_DIR}>"
+  )
+endif()
 
-set_target_properties(omp PROPERTIES
-  PREFIX "" SUFFIX "" OUTPUT_NAME "${LIBOMP_LIB_FILE}"
-  LINK_FLAGS "${LIBOMP_CONFIGURED_LDFLAGS}"
-  LINKER_LANGUAGE ${LIBOMP_LINKER_LANGUAGE}
-)
+if(OPENMP_MSVC_NAME_SCHEME)
+  if(uppercase_CMAKE_BUILD_TYPE STREQUAL "DEBUG")
+    set(LIBOMP_PDB_NAME ${LIBOMP_DEFAULT_LIB_NAME}${MSVC_TOOLS_VERSION}d.${LIBOMP_ARCH})
+    set(LIBOMP_LIB_FILE ${LIBOMP_PDB_NAME}${LIBOMP_LIBRARY_SUFFIX})
+  else()
+    # ${LIBOMP_LIB_NAME} is ${LIBOMP_DEFAULT_LIB_NAME}${MSVC_TOOLS_VERSION}.${LIBOMP_ARCH}
+    set(LIBOMP_PDB_NAME ${LIBOMP_LIB_NAME})
+  endif()
+
+  # in debug
+  # LIBOMP_LIB_FILE should be LIBOMP_LIB_FILE_DBG = ${LIBOMP_LIB_NAME_DBG}${LIBOMP_LIBRARY_SUFFIX}
+  #						= ${LIBOMP_DEFAULT_LIB_NAME}${MSVC_TOOLS_VERSION}d.${LIBOMP_ARCH}${LIBOMP_LIBRARY_SUFFIX}
+  # COMPILE_PDB_NAME/PDB_NAME should be LIBOMP_LIB_NAME_DBG = ${LIBOMP_DEFAULT_LIB_NAME}${MSVC_TOOLS_VERSION}d.${LIBOMP_ARCH}
+  set_target_properties(omp PROPERTIES
+    PREFIX "" SUFFIX "" OUTPUT_NAME "${LIBOMP_LIB_FILE}"
+    PDB_NAME "${LIBOMP_PDB_NAME}"
+    COMPILE_PDB_NAME "${LIBOMP_PDB_NAME}"
+    LINK_FLAGS "${LIBOMP_CONFIGURED_LDFLAGS}"
+    LINKER_LANGUAGE ${LIBOMP_LINKER_LANGUAGE}
+ )
+else()
+  set_target_properties(omp PROPERTIES
+    PREFIX "" SUFFIX "" OUTPUT_NAME "${LIBOMP_LIB_FILE}"
+    LINK_FLAGS "${LIBOMP_CONFIGURED_LDFLAGS}"
+    LINKER_LANGUAGE ${LIBOMP_LINKER_LANGUAGE}
+  )
+endif()
 
 # Get the library's location within the build tree for the unit tester
 if(NOT WIN32)
@@ -216,8 +242,23 @@ if(WIN32)
   # the import library is "re-linked" to include kmp_import.cpp which prevents
   # linking of both Visual Studio OpenMP and newly built OpenMP
   set_source_files_properties(kmp_import.cpp PROPERTIES COMPILE_FLAGS "${LIBOMP_CONFIGURED_CXXFLAGS}")
-  set(LIBOMP_IMP_LIB_FILE ${LIBOMP_LIB_NAME}${CMAKE_IMPORT_LIBRARY_SUFFIX})
-  set(LIBOMP_GENERATED_IMP_LIB_FILENAME ${LIBOMP_LIB_FILE}${CMAKE_STATIC_LIBRARY_SUFFIX})
+
+  # On debug LIBOMP_IMP_LIB_FILE should be LIBOMP_IMP_LIB_FILE_DBG = ${LIBOMP_DEFAULT_LIB_NAME_DBG}${CMAKE_STATIC_LIBRARY_SUFFIX}
+  # 									${LIBOMP_DEFAULT_LIB_NAME}d${CMAKE_STATIC_LIBRARY_SUFFIX}
+  # and the ARCHIVE_OUTPUT_NAME of ompdbg should be ${LIBOMP_DEFAULT_LIB_NAME_DBG}${LIBOMP_LIBRARY_SUFFIX}${CMAKE_STATIC_LIBRARY_SUFFIX}
+
+  if(OPENMP_MSVC_NAME_SCHEME)
+    if(uppercase_CMAKE_BUILD_TYPE STREQUAL "DEBUG")
+      set(LIBOMP_IMP_LIB_FILE ${LIBOMP_DEFAULT_LIB_NAME}d${CMAKE_STATIC_LIBRARY_SUFFIX})
+      set(LIBOMP_GENERATED_IMP_LIB_FILENAME ${LIBOMP_DEFAULT_LIB_NAME}d${LIBOMP_LIBRARY_SUFFIX}${CMAKE_STATIC_LIBRARY_SUFFIX})
+    else()
+      set(LIBOMP_IMP_LIB_FILE ${LIBOMP_DEFAULT_LIB_NAME}${CMAKE_IMPORT_LIBRARY_SUFFIX})
+      set(LIBOMP_GENERATED_IMP_LIB_FILENAME ${LIBOMP_DEFAULT_LIB_NAME}${LIBOMP_LIBRARY_SUFFIX}${CMAKE_STATIC_LIBRARY_SUFFIX})
+    endif()
+  else()
+    set(LIBOMP_IMP_LIB_FILE ${LIBOMP_LIB_NAME}${CMAKE_IMPORT_LIBRARY_SUFFIX})
+    set(LIBOMP_GENERATED_IMP_LIB_FILENAME ${LIBOMP_LIB_FILE}${CMAKE_STATIC_LIBRARY_SUFFIX})
+  endif()
   set_target_properties(omp PROPERTIES
     VERSION ${LIBOMP_VERSION_MAJOR}.${LIBOMP_VERSION_MINOR} # uses /version flag
     IMPORT_PREFIX "" IMPORT_SUFFIX "" # control generated import library name when building omp
@@ -309,21 +350,21 @@ add_dependencies(libomp-micro-tests libomp-test-deps)
 # We want to install libomp in DESTDIR/CMAKE_INSTALL_PREFIX/lib
 # We want to install headers in DESTDIR/CMAKE_INSTALL_PREFIX/include
 if(${OPENMP_STANDALONE_BUILD})
-  set(LIBOMP_HEADERS_INSTALL_PATH include)
+  set(LIBOMP_HEADERS_INSTALL_PATH "${CMAKE_INSTALL_INCLUDEDIR}")
 else()
   string(REGEX MATCH "[0-9]+\\.[0-9]+(\\.[0-9]+)?" CLANG_VERSION ${PACKAGE_VERSION})
   set(LIBOMP_HEADERS_INSTALL_PATH "${OPENMP_INSTALL_LIBDIR}/clang/${CLANG_VERSION}/include")
 endif()
 if(WIN32)
-  install(TARGETS omp RUNTIME DESTINATION bin)
+  install(TARGETS omp RUNTIME DESTINATION "${CMAKE_INSTALL_BINDIR}")
   install(TARGETS ${LIBOMP_IMP_LIB_TARGET} ARCHIVE DESTINATION "${OPENMP_INSTALL_LIBDIR}")
   # Create aliases (regular copies) of the library for backwards compatibility
   set(LIBOMP_ALIASES "libiomp5md")
   foreach(alias IN LISTS LIBOMP_ALIASES)
     install(CODE "execute_process(COMMAND \"\${CMAKE_COMMAND}\" -E copy \"${LIBOMP_LIB_FILE}\"
-      \"${alias}${LIBOMP_LIBRARY_SUFFIX}\" WORKING_DIRECTORY \${CMAKE_INSTALL_PREFIX}/bin)")
+      \"${alias}${LIBOMP_LIBRARY_SUFFIX}\" WORKING_DIRECTORY \"\${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_BINDIR}\")")
     install(CODE "execute_process(COMMAND \"\${CMAKE_COMMAND}\" -E copy \"${LIBOMP_IMP_LIB_FILE}\"
-      \"${alias}${CMAKE_STATIC_LIBRARY_SUFFIX}\" WORKING_DIRECTORY \${CMAKE_INSTALL_PREFIX}/${OPENMP_INSTALL_LIBDIR})")
+      \"${alias}${CMAKE_STATIC_LIBRARY_SUFFIX}\" WORKING_DIRECTORY \"\${CMAKE_INSTALL_PREFIX}/${OPENMP_INSTALL_LIBDIR}\")")
   endforeach()
 else()
 
@@ -335,7 +376,7 @@ else()
     foreach(alias IN LISTS LIBOMP_ALIASES)
       install(CODE "execute_process(COMMAND \"\${CMAKE_COMMAND}\" -E create_symlink \"${LIBOMP_LIB_FILE}\"
         \"${alias}${LIBOMP_LIBRARY_SUFFIX}\" WORKING_DIRECTORY
-        \$ENV{DESTDIR}\${CMAKE_INSTALL_PREFIX}/${OPENMP_INSTALL_LIBDIR})")
+        \"\$ENV{DESTDIR}\${CMAKE_INSTALL_PREFIX}/${OPENMP_INSTALL_LIBDIR}\")")
     endforeach()
   endif()
 endif()

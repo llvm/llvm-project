@@ -284,9 +284,8 @@ define i64 @t4(i64 %val, i64 %shamt) nounwind {
 define i64 @t5_cse(i64 %val, i64 %shamt, i64*%dst) nounwind {
 ; X64-NOBMI2-LABEL: t5_cse:
 ; X64-NOBMI2:       # %bb.0:
-; X64-NOBMI2-NEXT:    movq %rsi, %rcx
 ; X64-NOBMI2-NEXT:    movq %rdi, %rax
-; X64-NOBMI2-NEXT:    addq $32, %rcx
+; X64-NOBMI2-NEXT:    leaq 32(%rsi), %rcx
 ; X64-NOBMI2-NEXT:    movq %rcx, (%rdx)
 ; X64-NOBMI2-NEXT:    negq %rcx
 ; X64-NOBMI2-NEXT:    # kill: def $cl killed $cl killed $rcx
@@ -337,20 +336,20 @@ define i64 @t5_cse(i64 %val, i64 %shamt, i64*%dst) nounwind {
 ; X32-BMI2-NEXT:    pushl %ebx
 ; X32-BMI2-NEXT:    pushl %edi
 ; X32-BMI2-NEXT:    pushl %esi
-; X32-BMI2-NEXT:    movl {{[0-9]+}}(%esp), %esi
+; X32-BMI2-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X32-BMI2-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; X32-BMI2-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X32-BMI2-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X32-BMI2-NEXT:    movl {{[0-9]+}}(%esp), %edi
-; X32-BMI2-NEXT:    movl %eax, %ebx
-; X32-BMI2-NEXT:    addl $32, %ebx
-; X32-BMI2-NEXT:    adcl $0, %edi
-; X32-BMI2-NEXT:    movl %ebx, (%ecx)
-; X32-BMI2-NEXT:    movl %edi, 4(%ecx)
+; X32-BMI2-NEXT:    movl {{[0-9]+}}(%esp), %ebx
+; X32-BMI2-NEXT:    movl {{[0-9]+}}(%esp), %esi
+; X32-BMI2-NEXT:    movl %ebx, %edi
+; X32-BMI2-NEXT:    addl $32, %edi
+; X32-BMI2-NEXT:    adcl $0, %esi
+; X32-BMI2-NEXT:    movl %edi, (%ecx)
+; X32-BMI2-NEXT:    movl %esi, 4(%ecx)
 ; X32-BMI2-NEXT:    movb $32, %cl
-; X32-BMI2-NEXT:    subb %al, %cl
-; X32-BMI2-NEXT:    shldl %cl, %esi, %edx
-; X32-BMI2-NEXT:    shlxl %ecx, %esi, %eax
+; X32-BMI2-NEXT:    subb %bl, %cl
+; X32-BMI2-NEXT:    shldl %cl, %eax, %edx
+; X32-BMI2-NEXT:    shlxl %ecx, %eax, %eax
 ; X32-BMI2-NEXT:    testb $32, %cl
 ; X32-BMI2-NEXT:    je .LBB5_2
 ; X32-BMI2-NEXT:  # %bb.1:

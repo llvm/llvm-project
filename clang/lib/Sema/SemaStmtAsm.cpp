@@ -296,9 +296,9 @@ StmtResult Sema::ActOnGCCAsmStmt(SourceLocation AsmLoc, bool IsSimple,
         checkExprMemoryConstraintCompat(*this, OutputExpr, Info, false))
       return StmtError();
 
-    // Disallow _ExtInt, since the backends tend to have difficulties with
-    // non-normal sizes.
-    if (OutputExpr->getType()->isExtIntType())
+    // Disallow bit-precise integer types, since the backends tend to have
+    // difficulties with abnormal sizes.
+    if (OutputExpr->getType()->isBitIntType())
       return StmtError(
           Diag(OutputExpr->getBeginLoc(), diag::err_asm_invalid_type)
           << OutputExpr->getType() << 0 /*Input*/
@@ -393,30 +393,31 @@ StmtResult Sema::ActOnGCCAsmStmt(SourceLocation AsmLoc, bool IsSimple,
                               diag::err_asm_invalid_lvalue_in_input)
                          << Info.getConstraintStr()
                          << InputExpr->getSourceRange());
-    } else if (Info.requiresImmediateConstant() && !Info.allowsRegister()) {
-      if (!InputExpr->isValueDependent()) {
-        Expr::EvalResult EVResult;
-        if (InputExpr->EvaluateAsRValue(EVResult, Context, true)) {
-          // For compatibility with GCC, we also allow pointers that would be
-          // integral constant expressions if they were cast to int.
-          llvm::APSInt IntResult;
-          if (EVResult.Val.toIntegralConstant(IntResult, InputExpr->getType(),
-                                               Context))
-            if (!Info.isValidAsmImmediate(IntResult))
-              return StmtError(Diag(InputExpr->getBeginLoc(),
-                                    diag::err_invalid_asm_value_for_constraint)
-                               << toString(IntResult, 10)
-                               << Info.getConstraintStr()
-                               << InputExpr->getSourceRange());
-        }
-      }
-
     } else {
       ExprResult Result = DefaultFunctionArrayLvalueConversion(Exprs[i]);
       if (Result.isInvalid())
         return StmtError();
 
-      Exprs[i] = Result.get();
+      InputExpr = Exprs[i] = Result.get();
+
+      if (Info.requiresImmediateConstant() && !Info.allowsRegister()) {
+        if (!InputExpr->isValueDependent()) {
+          Expr::EvalResult EVResult;
+          if (InputExpr->EvaluateAsRValue(EVResult, Context, true)) {
+            // For compatibility with GCC, we also allow pointers that would be
+            // integral constant expressions if they were cast to int.
+            llvm::APSInt IntResult;
+            if (EVResult.Val.toIntegralConstant(IntResult, InputExpr->getType(),
+                                                Context))
+              if (!Info.isValidAsmImmediate(IntResult))
+                return StmtError(
+                    Diag(InputExpr->getBeginLoc(),
+                         diag::err_invalid_asm_value_for_constraint)
+                    << toString(IntResult, 10) << Info.getConstraintStr()
+                    << InputExpr->getSourceRange());
+          }
+        }
+      }
     }
 
     if (Info.allowsRegister()) {
@@ -428,7 +429,7 @@ StmtResult Sema::ActOnGCCAsmStmt(SourceLocation AsmLoc, bool IsSimple,
       }
     }
 
-    if (InputExpr->getType()->isExtIntType())
+    if (InputExpr->getType()->isBitIntType())
       return StmtError(
           Diag(InputExpr->getBeginLoc(), diag::err_asm_invalid_type)
           << InputExpr->getType() << 1 /*Output*/
@@ -666,8 +667,17 @@ StmtResult Sema::ActOnGCCAsmStmt(SourceLocation AsmLoc, bool IsSimple,
     // output was a register, just extend the shorter one to the size of the
     // larger one.
     if (!SmallerValueMentioned && InputDomain != AD_Other &&
-        OutputConstraintInfos[TiedTo].allowsRegister())
+        OutputConstraintInfos[TiedTo].allowsRegister()) {
+      // FIXME: GCC supports the OutSize to be 128 at maximum. Currently codegen
+      // crash when the size larger than the register size. So we limit it here.
+      if (OutTy->isStructureType() &&
+          Context.getIntTypeForBitwidth(OutSize, /*Signed*/ false).isNull()) {
+        targetDiag(OutputExpr->getExprLoc(), diag::err_store_value_to_reg);
+        return NS;
+      }
+
       continue;
+    }
 
     // Either both of the operands were mentioned or the smaller one was
     // mentioned.  One more special case that we'll allow: if the tied input is
@@ -706,10 +716,7 @@ StmtResult Sema::ActOnGCCAsmStmt(SourceLocation AsmLoc, bool IsSimple,
       NamedOperandList.emplace_back(
           std::make_pair(Names[i]->getName(), Exprs[i]));
   // Sort NamedOperandList.
-  std::stable_sort(NamedOperandList.begin(), NamedOperandList.end(),
-              [](const NamedOperand &LHS, const NamedOperand &RHS) {
-                return LHS.first < RHS.first;
-              });
+  llvm::stable_sort(NamedOperandList, llvm::less_first());
   // Find adjacent duplicate operand.
   SmallVector<NamedOperand, 4>::iterator Found =
       std::adjacent_find(begin(NamedOperandList), end(NamedOperandList),
@@ -726,6 +733,9 @@ StmtResult Sema::ActOnGCCAsmStmt(SourceLocation AsmLoc, bool IsSimple,
   }
   if (NS->isAsmGoto())
     setFunctionHasBranchIntoScope();
+
+  CleanupVarDeclMarking();
+  DiscardCleanupsInEvaluationContext();
   return NS;
 }
 
@@ -923,7 +933,7 @@ StmtResult Sema::ActOnMSAsmStmt(SourceLocation AsmLoc, SourceLocation LBraceLoc,
   setFunctionHasBranchProtectedScope();
 
   for (uint64_t I = 0; I < NumOutputs + NumInputs; ++I) {
-    if (Exprs[I]->getType()->isExtIntType())
+    if (Exprs[I]->getType()->isBitIntType())
       return StmtError(
           Diag(Exprs[I]->getBeginLoc(), diag::err_asm_invalid_type)
           << Exprs[I]->getType() << (I < NumOutputs)

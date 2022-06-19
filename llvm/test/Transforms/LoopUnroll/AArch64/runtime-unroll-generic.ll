@@ -6,21 +6,21 @@
 define void @runtime_unroll_generic(i32 %arg_0, i32* %arg_1, i16* %arg_2, i16* %arg_3) {
 ; CHECK-A55-LABEL: @runtime_unroll_generic(
 ; CHECK-A55-NEXT:  entry:
+; CHECK-A55-NEXT:    [[CMP52_NOT:%.*]] = icmp eq i32 [[ARG_0:%.*]], 0
+; CHECK-A55-NEXT:    br i1 [[CMP52_NOT]], label [[FOR_END:%.*]], label [[FOR_BODY6_LR_PH:%.*]]
+; CHECK-A55:       for.body6.lr.ph:
 ; CHECK-A55-NEXT:    [[ARRAYIDX10:%.*]] = getelementptr inbounds i16, i16* [[ARG_2:%.*]], i64 undef
 ; CHECK-A55-NEXT:    [[ARRAYIDX14:%.*]] = getelementptr inbounds i16, i16* [[ARG_3:%.*]], i64 undef
 ; CHECK-A55-NEXT:    [[ARRAYIDX20:%.*]] = getelementptr inbounds i32, i32* [[ARG_1:%.*]], i64 undef
-; CHECK-A55-NEXT:    [[CMP52_NOT:%.*]] = icmp eq i32 [[ARG_0:%.*]], 0
-; CHECK-A55-NEXT:    br i1 [[CMP52_NOT]], label [[FOR_END:%.*]], label [[FOR_BODY6_PREHEADER:%.*]]
-; CHECK-A55:       for.body6.preheader:
 ; CHECK-A55-NEXT:    [[TMP0:%.*]] = add i32 [[ARG_0]], -1
 ; CHECK-A55-NEXT:    [[XTRAITER:%.*]] = and i32 [[ARG_0]], 3
 ; CHECK-A55-NEXT:    [[TMP1:%.*]] = icmp ult i32 [[TMP0]], 3
-; CHECK-A55-NEXT:    br i1 [[TMP1]], label [[FOR_END_LOOPEXIT_UNR_LCSSA:%.*]], label [[FOR_BODY6_PREHEADER_NEW:%.*]]
-; CHECK-A55:       for.body6.preheader.new:
+; CHECK-A55-NEXT:    br i1 [[TMP1]], label [[FOR_END_LOOPEXIT_UNR_LCSSA:%.*]], label [[FOR_BODY6_LR_PH_NEW:%.*]]
+; CHECK-A55:       for.body6.lr.ph.new:
 ; CHECK-A55-NEXT:    [[UNROLL_ITER:%.*]] = and i32 [[ARG_0]], -4
 ; CHECK-A55-NEXT:    br label [[FOR_BODY6:%.*]]
 ; CHECK-A55:       for.body6:
-; CHECK-A55-NEXT:    [[NITER:%.*]] = phi i32 [ [[UNROLL_ITER]], [[FOR_BODY6_PREHEADER_NEW]] ], [ [[NITER_NSUB_3:%.*]], [[FOR_BODY6]] ]
+; CHECK-A55-NEXT:    [[NITER:%.*]] = phi i32 [ 0, [[FOR_BODY6_LR_PH_NEW]] ], [ [[NITER_NEXT_3:%.*]], [[FOR_BODY6]] ]
 ; CHECK-A55-NEXT:    [[TMP2:%.*]] = load i16, i16* [[ARRAYIDX10]], align 2
 ; CHECK-A55-NEXT:    [[CONV:%.*]] = sext i16 [[TMP2]] to i32
 ; CHECK-A55-NEXT:    [[TMP3:%.*]] = load i16, i16* [[ARRAYIDX14]], align 2
@@ -50,8 +50,8 @@ define void @runtime_unroll_generic(i32 %arg_0, i32* %arg_1, i16* %arg_2, i16* %
 ; CHECK-A55-NEXT:    [[MUL16_3:%.*]] = mul nsw i32 [[CONV15_3]], [[CONV_3]]
 ; CHECK-A55-NEXT:    [[ADD21_3:%.*]] = add nsw i32 [[MUL16_3]], [[ADD21_2]]
 ; CHECK-A55-NEXT:    store i32 [[ADD21_3]], i32* [[ARRAYIDX20]], align 4
-; CHECK-A55-NEXT:    [[NITER_NSUB_3]] = add i32 [[NITER]], -4
-; CHECK-A55-NEXT:    [[NITER_NCMP_3_NOT:%.*]] = icmp eq i32 [[NITER_NSUB_3]], 0
+; CHECK-A55-NEXT:    [[NITER_NEXT_3]] = add i32 [[NITER]], 4
+; CHECK-A55-NEXT:    [[NITER_NCMP_3_NOT:%.*]] = icmp eq i32 [[NITER_NEXT_3]], [[UNROLL_ITER]]
 ; CHECK-A55-NEXT:    br i1 [[NITER_NCMP_3_NOT]], label [[FOR_END_LOOPEXIT_UNR_LCSSA]], label [[FOR_BODY6]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK-A55:       for.end.loopexit.unr-lcssa:
 ; CHECK-A55-NEXT:    [[LCMP_MOD_NOT:%.*]] = icmp eq i32 [[XTRAITER]], 0
@@ -67,8 +67,6 @@ define void @runtime_unroll_generic(i32 %arg_0, i32* %arg_1, i16* %arg_2, i16* %
 ; CHECK-A55-NEXT:    store i32 [[ADD21_EPIL]], i32* [[ARRAYIDX20]], align 4
 ; CHECK-A55-NEXT:    [[EPIL_ITER_CMP_NOT:%.*]] = icmp eq i32 [[XTRAITER]], 1
 ; CHECK-A55-NEXT:    br i1 [[EPIL_ITER_CMP_NOT]], label [[FOR_END]], label [[FOR_BODY6_EPIL_1:%.*]]
-; CHECK-A55:       for.end:
-; CHECK-A55-NEXT:    ret void
 ; CHECK-A55:       for.body6.epil.1:
 ; CHECK-A55-NEXT:    [[TMP14:%.*]] = load i16, i16* [[ARRAYIDX10]], align 2
 ; CHECK-A55-NEXT:    [[CONV_EPIL_1:%.*]] = sext i16 [[TMP14]] to i32
@@ -90,16 +88,20 @@ define void @runtime_unroll_generic(i32 %arg_0, i32* %arg_1, i16* %arg_2, i16* %
 ; CHECK-A55-NEXT:    [[ADD21_EPIL_2:%.*]] = add nsw i32 [[MUL16_EPIL_2]], [[TMP19]]
 ; CHECK-A55-NEXT:    store i32 [[ADD21_EPIL_2]], i32* [[ARRAYIDX20]], align 4
 ; CHECK-A55-NEXT:    br label [[FOR_END]]
+; CHECK-A55:       for.end:
+; CHECK-A55-NEXT:    ret void
 ;
 ; CHECK-GENERIC-LABEL: @runtime_unroll_generic(
 ; CHECK-GENERIC-NEXT:  entry:
+; CHECK-GENERIC-NEXT:    [[CMP52_NOT:%.*]] = icmp eq i32 [[ARG_0:%.*]], 0
+; CHECK-GENERIC-NEXT:    br i1 [[CMP52_NOT]], label [[FOR_END:%.*]], label [[FOR_BODY6_LR_PH:%.*]]
+; CHECK-GENERIC:       for.body6.lr.ph:
 ; CHECK-GENERIC-NEXT:    [[ARRAYIDX10:%.*]] = getelementptr inbounds i16, i16* [[ARG_2:%.*]], i64 undef
 ; CHECK-GENERIC-NEXT:    [[ARRAYIDX14:%.*]] = getelementptr inbounds i16, i16* [[ARG_3:%.*]], i64 undef
 ; CHECK-GENERIC-NEXT:    [[ARRAYIDX20:%.*]] = getelementptr inbounds i32, i32* [[ARG_1:%.*]], i64 undef
-; CHECK-GENERIC-NEXT:    [[CMP52_NOT:%.*]] = icmp eq i32 [[ARG_0:%.*]], 0
-; CHECK-GENERIC-NEXT:    br i1 [[CMP52_NOT]], label [[FOR_END:%.*]], label [[FOR_BODY6:%.*]]
+; CHECK-GENERIC-NEXT:    br label [[FOR_BODY6:%.*]]
 ; CHECK-GENERIC:       for.body6:
-; CHECK-GENERIC-NEXT:    [[K_03:%.*]] = phi i32 [ [[INC:%.*]], [[FOR_BODY6]] ], [ 0, [[ENTRY:%.*]] ]
+; CHECK-GENERIC-NEXT:    [[K_03:%.*]] = phi i32 [ 0, [[FOR_BODY6_LR_PH]] ], [ [[INC:%.*]], [[FOR_BODY6]] ]
 ; CHECK-GENERIC-NEXT:    [[TMP0:%.*]] = load i16, i16* [[ARRAYIDX10]], align 2
 ; CHECK-GENERIC-NEXT:    [[CONV:%.*]] = sext i16 [[TMP0]] to i32
 ; CHECK-GENERIC-NEXT:    [[TMP1:%.*]] = load i16, i16* [[ARRAYIDX14]], align 2

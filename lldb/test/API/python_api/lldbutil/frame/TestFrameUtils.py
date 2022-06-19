@@ -13,8 +13,6 @@ from lldbsuite.test import lldbutil
 
 class FrameUtilsTestCase(TestBase):
 
-    mydir = TestBase.compute_mydir(__file__)
-
     def setUp(self):
         # Call super's setUp().
         TestBase.setUp(self)
@@ -39,8 +37,8 @@ class FrameUtilsTestCase(TestBase):
 
         if not process:
             self.fail("SBTarget.LaunchProcess() failed")
-        self.assertEqual(process.GetState(), lldb.eStateStopped,
-                        PROCESS_STOPPED)
+        self.assertState(process.GetState(), lldb.eStateStopped,
+                         PROCESS_STOPPED)
 
         import lldbsuite.test.lldbutil as lldbutil
         thread = lldbutil.get_stopped_thread(

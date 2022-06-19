@@ -77,6 +77,16 @@ int main(int, char**)
             i->second = 2.5;
             assert(i->second == 2.5);
         }
+        assert(i == m.end());
+        for (int j = m.size(); j >= 1; --j)
+        {
+            --i;
+            assert(i->first == j);
+            assert(i->second == 2.5);
+            i->second = 1;
+            assert(i->second == 1);
+        }
+        assert(i == m.begin());
     }
     {
         typedef std::pair<const int, double> V;
@@ -119,6 +129,14 @@ int main(int, char**)
             assert(i->first == j);
             assert(i->second == 1);
         }
+        assert(i == m.end());
+        for (int j = m.size(); j >= 1; --j)
+        {
+            --i;
+            assert(i->first == j);
+            assert(i->second == 1);
+        }
+        assert(i == m.begin());
     }
 #if TEST_STD_VER >= 11
     {
@@ -164,6 +182,16 @@ int main(int, char**)
             i->second = 2.5;
             assert(i->second == 2.5);
         }
+        assert(i == m.end());
+        for (int j = m.size(); j >= 1; --j)
+        {
+            --i;
+            assert(i->first == j);
+            assert(i->second == 2.5);
+            i->second = 1;
+            assert(i->second == 1);
+        }
+        assert(i == m.begin());
     }
     {
         typedef std::pair<const int, double> V;
@@ -206,6 +234,14 @@ int main(int, char**)
             assert(i->first == j);
             assert(i->second == 1);
         }
+        assert(i == m.end());
+        for (int j = m.size(); j >= 1; --j)
+        {
+            --i;
+            assert(i->first == j);
+            assert(i->second == 1);
+        }
+        assert(i == m.begin());
     }
 #endif
 #if TEST_STD_VER > 11

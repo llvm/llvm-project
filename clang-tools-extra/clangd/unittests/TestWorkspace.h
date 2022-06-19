@@ -13,12 +13,10 @@
 //
 //===---------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_TOOLS_EXTRA_UNITTESTS_CLANGD_TESTWORKSPACE_H
-#define LLVM_CLANG_TOOLS_EXTRA_UNITTESTS_CLANGD_TESTWORKSPACE_H
+#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANGD_UNITTESTS_TESTWORKSPACE_H
+#define LLVM_CLANG_TOOLS_EXTRA_CLANGD_UNITTESTS_TESTWORKSPACE_H
 
-#include "TestFS.h"
 #include "TestTU.h"
-#include "index/FileIndex.h"
 #include "index/Index.h"
 #include "llvm/ADT/StringRef.h"
 #include <string>
@@ -56,4 +54,4 @@ private:
 } // namespace clangd
 } // namespace clang
 
-#endif // LLVM_CLANG_TOOLS_EXTRA_UNITTESTS_CLANGD_TESTWORKSPACE_H
+#endif // LLVM_CLANG_TOOLS_EXTRA_CLANGD_UNITTESTS_TESTWORKSPACE_H

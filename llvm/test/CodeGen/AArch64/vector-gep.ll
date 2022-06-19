@@ -10,9 +10,9 @@ target triple = "arm64_32-apple-watchos2.0.0"
 define <2 x i8*> @vector_gep(<2 x i8*> %0) {
 ; CHECK-LABEL: vector_gep:
 ; CHECK:         adrp x[[REG8:[123]?[0-9]]], lCPI0_0@PAGE
-; CHECK:         ldr q[[REG1:[0-9]+]], [x[[REG8]], lCPI0_0@PAGEOFF]
-; CHECK:         add v[[REG0:[0-9]+]].2d, v[[REG0]].2d, v[[REG1]].2d
-; CHECK:         movi v[[REG1]].2d, #0x000000ffffffff
+; CHECK:         movi v[[REG1:[0-9]+]].2d, #0x000000ffffffff
+; CHECK:         ldr q[[REG2:[0-9]+]], [x[[REG8]], lCPI0_0@PAGEOFF]
+; CHECK:         add v[[REG0:[0-9]+]].2d, v[[REG0]].2d, v[[REG2]].2d
 ; CHECK:         and v[[REG0]].16b, v[[REG0]].16b, v[[REG1]].16b
 ; CHECK:         ret
 entry:

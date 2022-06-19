@@ -12,7 +12,7 @@
 
 #include "ARCSubtarget.h"
 #include "ARC.h"
-#include "llvm/Support/TargetRegistry.h"
+#include "llvm/MC/TargetRegistry.h"
 
 using namespace llvm;
 
@@ -26,5 +26,5 @@ void ARCSubtarget::anchor() {}
 
 ARCSubtarget::ARCSubtarget(const Triple &TT, const std::string &CPU,
                            const std::string &FS, const TargetMachine &TM)
-    : ARCGenSubtargetInfo(TT, CPU, /*TuneCPU=*/CPU, FS), FrameLowering(*this),
-      TLInfo(TM, *this) {}
+    : ARCGenSubtargetInfo(TT, CPU, /*TuneCPU=*/CPU, FS), InstrInfo(*this),
+      FrameLowering(*this), TLInfo(TM, *this) {}

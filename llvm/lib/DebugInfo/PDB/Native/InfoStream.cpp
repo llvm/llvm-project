@@ -7,8 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/DebugInfo/PDB/Native/InfoStream.h"
-#include "llvm/ADT/BitVector.h"
-#include "llvm/ADT/SmallVector.h"
 #include "llvm/DebugInfo/PDB/Native/RawConstants.h"
 #include "llvm/DebugInfo/PDB/Native/RawError.h"
 #include "llvm/DebugInfo/PDB/Native/RawTypes.h"
@@ -16,7 +14,7 @@
 
 using namespace llvm;
 using namespace llvm::codeview;
-using namespace llvm::msf;
+// using namespace llvm::msf;
 using namespace llvm::pdb;
 
 InfoStream::InfoStream(std::unique_ptr<BinaryStream> Stream)

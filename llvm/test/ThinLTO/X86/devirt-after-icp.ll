@@ -44,27 +44,7 @@
 
 ; RUN: opt -thinlto-bc -thinlto-split-lto-unit -o %t.o %s
 
-; Legacy PM
 ; RUN: llvm-lto2 run %t.o -save-temps -pass-remarks=. \
-; RUN:   -whole-program-visibility \
-; RUN:   -o %t3 \
-; RUN:   -r=%t.o,_Z3bazP1A,px \
-; RUN:   -r=%t.o,_ZN1A3fooEv, \
-; RUN:   -r=%t.o,_ZN1A3barEv, \
-; RUN:   -r=%t.o,_ZN1B3fooEv, \
-; RUN:   -r=%t.o,_ZN1B3barEv, \
-; RUN:   -r=%t.o,_ZTV1A, \
-; RUN:   -r=%t.o,_ZTV1B, \
-; RUN:   -r=%t.o,_ZN1A3fooEv, \
-; RUN:   -r=%t.o,_ZN1A3barEv, \
-; RUN:   -r=%t.o,_ZN1B3fooEv, \
-; RUN:   -r=%t.o,_ZN1B3barEv, \
-; RUN:   -r=%t.o,_ZTV1A,px \
-; RUN:   -r=%t.o,_ZTV1B,px 2>&1 | FileCheck %s --check-prefix=REMARK
-; RUN: llvm-dis %t3.1.4.opt.bc -o - | FileCheck %s --check-prefix=CHECK-IR
-
-; New PM
-; RUN: llvm-lto2 run %t.o -save-temps -use-new-pm -pass-remarks=. \
 ; RUN:   -whole-program-visibility \
 ; RUN:   -o %t3 \
 ; RUN:   -r=%t.o,_Z3bazP1A,px \
@@ -120,7 +100,7 @@ if.true.direct_targ:                              ; preds = %entry
   %8 = load i32 (%class.B*)*, i32 (%class.B*)** %vfn.i, align 8
 ; Call to bar() can be devirtualized to call to B::bar(), since it was
 ; inlined from B::foo() after ICP introduced the guarded promotion.
-; CHECK-IR: %call.i = tail call i32 @_ZN1B3barEv(%class.B* %3)
+; CHECK-IR: %call.i = tail call i32 @_ZN1B3barEv(ptr nonnull %a)
   %call.i = tail call i32 %8(%class.B* %5)
   br label %if.end.icp
 

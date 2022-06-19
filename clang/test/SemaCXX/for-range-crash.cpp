@@ -8,7 +8,7 @@ error e; // expected-error {{unknown type name}}
 template <typename>
 class Bar {
   Bar<int> *variables_to_modify;
-  foo() { // expected-error {{C++ requires a type specifier for all declarations}}
+  foo() { // expected-error {{a type specifier is required for all declarations}}
     for (auto *c : *variables_to_modify)
       delete c;
   }

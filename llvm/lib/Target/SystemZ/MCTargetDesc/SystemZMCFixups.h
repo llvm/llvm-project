@@ -20,6 +20,8 @@ enum FixupKind {
   FK_390_PC24DBL,
   FK_390_PC32DBL,
   FK_390_TLS_CALL,
+  FK_390_12,
+  FK_390_20,
 
   // Marker
   LastTargetFixupKind,

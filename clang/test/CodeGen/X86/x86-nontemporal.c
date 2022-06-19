@@ -1,8 +1,8 @@
-// RUN: %clang_cc1 -ffreestanding %s -triple=x86_64-apple-darwin -target-feature +sse4.1 -target-feature +avx -target-feature +avx2 -target-feature +avx512f -emit-llvm -o - -Wall -Werror | FileCheck %s --check-prefix=CHECK
-// RUN: %clang_cc1 -ffreestanding %s -triple=x86_64-apple-darwin -target-feature +sse4.1 -target-feature +avx -target-feature +avx2 -target-feature +avx512f -fno-signed-char -emit-llvm -o - -Wall -Werror | FileCheck %s --check-prefix=CHECK
+// RUN: %clang_cc1 -no-opaque-pointers -ffreestanding %s -triple=x86_64-apple-darwin -target-feature +sse4.1 -target-feature +avx -target-feature +avx2 -target-feature +avx512f -emit-llvm -o - -Wall -Werror | FileCheck %s --check-prefix=CHECK
+// RUN: %clang_cc1 -no-opaque-pointers -ffreestanding %s -triple=x86_64-apple-darwin -target-feature +sse4.1 -target-feature +avx -target-feature +avx2 -target-feature +avx512f -fno-signed-char -emit-llvm -o - -Wall -Werror | FileCheck %s --check-prefix=CHECK
 
-// RUN: %clang_cc1 -ffreestanding %s -triple=x86_64-apple-darwin -target-feature +sse4.1 -target-feature +avx -target-feature +avx2 -target-feature +avx512f -emit-llvm -o - -Wall -Werror -fmax-type-align=16 | FileCheck %s --check-prefix=CHECK
-// RUN: %clang_cc1 -ffreestanding %s -triple=x86_64-apple-darwin -target-feature +sse4.1 -target-feature +avx -target-feature +avx2 -target-feature +avx512f -fno-signed-char -emit-llvm -o - -Wall -Werror -fmax-type-align=16 | FileCheck %s --check-prefix=CHECK
+// RUN: %clang_cc1 -no-opaque-pointers -ffreestanding %s -triple=x86_64-apple-darwin -target-feature +sse4.1 -target-feature +avx -target-feature +avx2 -target-feature +avx512f -emit-llvm -o - -Wall -Werror -fmax-type-align=16 | FileCheck %s --check-prefix=CHECK
+// RUN: %clang_cc1 -no-opaque-pointers -ffreestanding %s -triple=x86_64-apple-darwin -target-feature +sse4.1 -target-feature +avx -target-feature +avx2 -target-feature +avx512f -fno-signed-char -emit-llvm -o - -Wall -Werror -fmax-type-align=16 | FileCheck %s --check-prefix=CHECK
 
 #include <immintrin.h>
 

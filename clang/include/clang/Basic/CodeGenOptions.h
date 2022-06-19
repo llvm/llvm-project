@@ -97,6 +97,11 @@ public:
     Embed_Marker    // Embed a marker as a placeholder for bitcode.
   };
 
+  enum InlineAsmDialectKind {
+    IAD_ATT,
+    IAD_Intel,
+  };
+
   // This field stores one of the allowed values for the option
   // -fbasic-block-sections=.  The allowed values with this option are:
   // {"labels", "all", "list=<file>", "none"}.
@@ -123,6 +128,13 @@ public:
     None,        // Omit all frame pointers.
     NonLeaf,     // Keep non-leaf frame pointers.
     All,         // Keep all frame pointers.
+  };
+
+  enum class SwiftAsyncFramePointerKind {
+    Auto, // Choose Swift async extended frame info based on deployment target.
+    Always, // Unconditionally emit Swift async extended frame info.
+    Never,  // Don't emit Swift async extended frame info.
+    Default = Always,
   };
 
   enum FiniteLoopsKind {
@@ -215,6 +227,9 @@ public:
   /// Output filename for the split debug info, not used in the skeleton CU.
   std::string SplitDwarfOutput;
 
+  /// Output filename used in the COFF debug information.
+  std::string ObjectFilenameForDebug;
+
   /// The name of the relocation model to use.
   llvm::Reloc::Model RelocationModel;
 
@@ -261,6 +276,10 @@ public:
   /// CUDA runtime back-end for incorporating them into host-side object file.
   std::string CudaGpuBinaryFileName;
 
+  /// List of filenames passed in using the -fembed-offload-object option. These
+  /// are offloading binaries containing device images and metadata.
+  std::vector<std::string> OffloadObjects;
+
   /// The name of the file to which the backend should save YAML optimization
   /// records.
   std::string OptRecordFile;
@@ -292,7 +311,7 @@ public:
     std::shared_ptr<llvm::Regex> Regex;
 
     /// By default, optimization remark is missing.
-    OptRemark() : Kind(RK_Missing), Pattern(""), Regex(nullptr) {}
+    OptRemark() : Kind(RK_Missing), Regex(nullptr) {}
 
     /// Returns true iff the optimization remark holds a valid regular
     /// expression.
@@ -383,7 +402,7 @@ public:
   /// Executable and command-line used to create a given CompilerInvocation.
   /// Most of the time this will be the full -cc1 command.
   const char *Argv0 = nullptr;
-  ArrayRef<const char *> CommandLineArgs;
+  std::vector<std::string> CommandLineArgs;
 
   /// The minimum hotness value a diagnostic needs in order to be included in
   /// optimization diagnostics.
@@ -399,6 +418,10 @@ public:
   ///
   /// If threshold option is not specified, it is disabled by default.
   Optional<uint64_t> DiagnosticsHotnessThreshold = 0;
+
+  /// The maximum percentage profiling weights can deviate from the expected
+  /// values in order to be included in misexpect diagnostics.
+  Optional<uint64_t> DiagnosticsMisExpectTolerance = 0;
 
 public:
   // Define accessors/mutators for code generation options of enumeration type.
@@ -456,7 +479,8 @@ public:
   // Check if any one of SanitizeCoverage* is enabled.
   bool hasSanitizeCoverage() const {
     return SanitizeCoverageType || SanitizeCoverageIndirectCalls ||
-           SanitizeCoverageTraceCmp;
+           SanitizeCoverageTraceCmp || SanitizeCoverageTraceLoads ||
+           SanitizeCoverageTraceStores;
   }
 };
 

@@ -22,12 +22,13 @@ body: |
     liveins: $x0
     ; CHECK-LABEL: name: load_only_uses_fp
     ; CHECK: liveins: $x0
-    ; CHECK: [[COPY:%[0-9]+]]:gpr(p0) = COPY $x0
-    ; CHECK: [[C:%[0-9]+]]:fpr(s32) = G_FCONSTANT float 2.000000e+00
-    ; CHECK: [[LOAD:%[0-9]+]]:fpr(s32) = G_LOAD [[COPY]](p0) :: (load (s32))
-    ; CHECK: [[FCMP:%[0-9]+]]:gpr(s32) = G_FCMP floatpred(uno), [[C]](s32), [[LOAD]]
-    ; CHECK: $w0 = COPY [[FCMP]](s32)
-    ; CHECK: RET_ReallyLR implicit $w0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr(p0) = COPY $x0
+    ; CHECK-NEXT: [[C:%[0-9]+]]:fpr(s32) = G_FCONSTANT float 2.000000e+00
+    ; CHECK-NEXT: [[LOAD:%[0-9]+]]:fpr(s32) = G_LOAD [[COPY]](p0) :: (load (s32))
+    ; CHECK-NEXT: [[FCMP:%[0-9]+]]:gpr(s32) = G_FCMP floatpred(uno), [[C]](s32), [[LOAD]]
+    ; CHECK-NEXT: $w0 = COPY [[FCMP]](s32)
+    ; CHECK-NEXT: RET_ReallyLR implicit $w0
     %0:_(p0) = COPY $x0
     %1:_(s32) = G_FCONSTANT float 2.0
     %2:_(s32) = G_LOAD %0 :: (load (s32))
@@ -45,12 +46,13 @@ body:             |
     liveins: $x0
     ; CHECK-LABEL: name: unmerge_only_uses_fp
     ; CHECK: liveins: $x0
-    ; CHECK: [[COPY:%[0-9]+]]:gpr(s64) = COPY $x0
-    ; CHECK: [[COPY1:%[0-9]+]]:fpr(s64) = COPY [[COPY]](s64)
-    ; CHECK: [[UV:%[0-9]+]]:fpr(s32), [[UV1:%[0-9]+]]:fpr(s32) = G_UNMERGE_VALUES [[COPY1]](s64)
-    ; CHECK: [[FCMP:%[0-9]+]]:gpr(s32) = G_FCMP floatpred(uno), [[UV]](s32), [[UV1]]
-    ; CHECK: $w0 = COPY [[FCMP]](s32)
-    ; CHECK: RET_ReallyLR implicit $w0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr(s64) = COPY $x0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:fpr(s64) = COPY [[COPY]](s64)
+    ; CHECK-NEXT: [[UV:%[0-9]+]]:fpr(s32), [[UV1:%[0-9]+]]:fpr(s32) = G_UNMERGE_VALUES [[COPY1]](s64)
+    ; CHECK-NEXT: [[FCMP:%[0-9]+]]:gpr(s32) = G_FCMP floatpred(uno), [[UV]](s32), [[UV1]]
+    ; CHECK-NEXT: $w0 = COPY [[FCMP]](s32)
+    ; CHECK-NEXT: RET_ReallyLR implicit $w0
     %0:_(s64) = COPY $x0
     %1:_(s32), %2:_(s32) = G_UNMERGE_VALUES %0(s64)
     %3:_(s32) = G_FCMP floatpred(uno), %1, %2
@@ -67,10 +69,11 @@ body: |
     liveins: $x0, $w1
     ; CHECK-LABEL: name: store_defined_by_fp
     ; CHECK: liveins: $x0, $w1
-    ; CHECK: [[COPY:%[0-9]+]]:gpr(p0) = COPY $x0
-    ; CHECK: [[COPY1:%[0-9]+]]:gpr(s32) = COPY $w1
-    ; CHECK: [[SITOFP:%[0-9]+]]:fpr(s32) = G_SITOFP [[COPY1]](s32)
-    ; CHECK: G_STORE [[SITOFP]](s32), [[COPY]](p0) :: (store (s32))
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr(p0) = COPY $x0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:gpr(s32) = COPY $w1
+    ; CHECK-NEXT: [[SITOFP:%[0-9]+]]:fpr(s32) = G_SITOFP [[COPY1]](s32)
+    ; CHECK-NEXT: G_STORE [[SITOFP]](s32), [[COPY]](p0) :: (store (s32))
     %0:_(p0) = COPY $x0
     %1:_(s32) = COPY $w1
     %2:_(s32) = G_SITOFP %1
@@ -86,14 +89,15 @@ body:             |
     liveins: $w0, $w1, $w2
     ; CHECK-LABEL: name: select_defined_by_fp_using_fp
     ; CHECK: liveins: $w0, $w1, $w2
-    ; CHECK: [[COPY:%[0-9]+]]:gpr(s32) = COPY $w0
-    ; CHECK: [[TRUNC:%[0-9]+]]:gpr(s1) = G_TRUNC %2(s32)
-    ; CHECK: [[COPY1:%[0-9]+]]:gpr(s32) = COPY $w1
-    ; CHECK: [[COPY2:%[0-9]+]]:gpr(s32) = COPY $w2
-    ; CHECK: [[SITOFP:%[0-9]+]]:fpr(s32) = G_SITOFP [[COPY1]](s32)
-    ; CHECK: [[COPY3:%[0-9]+]]:fpr(s32) = COPY [[COPY2]](s32)
-    ; CHECK: [[SELECT:%[0-9]+]]:fpr(s32) = G_SELECT [[TRUNC]](s1), [[COPY3]], [[SITOFP]]
-    ; CHECK: [[FPTOSI:%[0-9]+]]:gpr(s32) = G_FPTOSI [[SELECT]](s32)
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr(s32) = COPY $w0
+    ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:gpr(s1) = G_TRUNC %2(s32)
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:gpr(s32) = COPY $w1
+    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:gpr(s32) = COPY $w2
+    ; CHECK-NEXT: [[SITOFP:%[0-9]+]]:fpr(s32) = G_SITOFP [[COPY1]](s32)
+    ; CHECK-NEXT: [[COPY3:%[0-9]+]]:fpr(s32) = COPY [[COPY2]](s32)
+    ; CHECK-NEXT: [[SELECT:%[0-9]+]]:fpr(s32) = G_SELECT [[TRUNC]](s1), [[COPY3]], [[SITOFP]]
+    ; CHECK-NEXT: [[FPTOSI:%[0-9]+]]:gpr(s32) = G_FPTOSI [[SELECT]](s32)
     %0:_(s32) = COPY $w0
     %1:_(s1) = G_TRUNC %3(s32)
     %2:_(s32) = COPY $w1
@@ -110,22 +114,26 @@ tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: load_used_by_phi_fpr
   ; CHECK: bb.0:
-  ; CHECK:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
-  ; CHECK:   liveins: $x0, $s0, $s1, $w0, $w1
-  ; CHECK:   %cond_wide:gpr(s32) = COPY $w0
-  ; CHECK:   %cond:gpr(s1) = G_TRUNC %cond_wide(s32)
-  ; CHECK:   %fpr_copy:fpr(s32) = COPY $s0
-  ; CHECK:   %ptr:gpr(p0) = COPY $x0
-  ; CHECK:   G_BRCOND %cond(s1), %bb.1
-  ; CHECK:   G_BR %bb.2
-  ; CHECK: bb.1:
-  ; CHECK:   successors: %bb.2(0x80000000)
-  ; CHECK:   %load:fpr(s32) = G_LOAD %ptr(p0) :: (load (s32))
-  ; CHECK:   G_BR %bb.2
-  ; CHECK: bb.2:
-  ; CHECK:   %phi:fpr(s32) = G_PHI %fpr_copy(s32), %bb.0, %load(s32), %bb.1
-  ; CHECK:   $s0 = COPY %phi(s32)
-  ; CHECK:   RET_ReallyLR implicit $s0
+  ; CHECK-NEXT:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
+  ; CHECK-NEXT:   liveins: $x0, $s0, $s1, $w0, $w1
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   %cond_wide:gpr(s32) = COPY $w0
+  ; CHECK-NEXT:   %cond:gpr(s1) = G_TRUNC %cond_wide(s32)
+  ; CHECK-NEXT:   %fpr_copy:fpr(s32) = COPY $s0
+  ; CHECK-NEXT:   %ptr:gpr(p0) = COPY $x0
+  ; CHECK-NEXT:   G_BRCOND %cond(s1), %bb.1
+  ; CHECK-NEXT:   G_BR %bb.2
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.1:
+  ; CHECK-NEXT:   successors: %bb.2(0x80000000)
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   %load:fpr(s32) = G_LOAD %ptr(p0) :: (load (s32))
+  ; CHECK-NEXT:   G_BR %bb.2
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.2:
+  ; CHECK-NEXT:   %phi:fpr(s32) = G_PHI %fpr_copy(s32), %bb.0, %load(s32), %bb.1
+  ; CHECK-NEXT:   $s0 = COPY %phi(s32)
+  ; CHECK-NEXT:   RET_ReallyLR implicit $s0
   bb.0:
     successors: %bb.1(0x40000000), %bb.2(0x40000000)
     liveins: $x0, $s0, $s1, $w0, $w1
@@ -152,22 +160,26 @@ tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: load_used_by_phi_gpr
   ; CHECK: bb.0:
-  ; CHECK:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
-  ; CHECK:   liveins: $x0, $s0, $s1, $w0, $w1
-  ; CHECK:   %cond_wide:gpr(s32) = COPY $w0
-  ; CHECK:   %cond:gpr(s1) = G_TRUNC %cond_wide(s32)
-  ; CHECK:   %gpr_copy:gpr(s32) = COPY $w1
-  ; CHECK:   %ptr:gpr(p0) = COPY $x0
-  ; CHECK:   G_BRCOND %cond(s1), %bb.1
-  ; CHECK:   G_BR %bb.2
-  ; CHECK: bb.1:
-  ; CHECK:   successors: %bb.2(0x80000000)
-  ; CHECK:   %load:gpr(s32) = G_LOAD %ptr(p0) :: (load (s32))
-  ; CHECK:   G_BR %bb.2
-  ; CHECK: bb.2:
-  ; CHECK:   %phi:gpr(s32) = G_PHI %gpr_copy(s32), %bb.0, %load(s32), %bb.1
-  ; CHECK:   $s0 = COPY %phi(s32)
-  ; CHECK:   RET_ReallyLR implicit $s0
+  ; CHECK-NEXT:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
+  ; CHECK-NEXT:   liveins: $x0, $s0, $s1, $w0, $w1
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   %cond_wide:gpr(s32) = COPY $w0
+  ; CHECK-NEXT:   %cond:gpr(s1) = G_TRUNC %cond_wide(s32)
+  ; CHECK-NEXT:   %gpr_copy:gpr(s32) = COPY $w1
+  ; CHECK-NEXT:   %ptr:gpr(p0) = COPY $x0
+  ; CHECK-NEXT:   G_BRCOND %cond(s1), %bb.1
+  ; CHECK-NEXT:   G_BR %bb.2
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.1:
+  ; CHECK-NEXT:   successors: %bb.2(0x80000000)
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   %load:gpr(s32) = G_LOAD %ptr(p0) :: (load (s32))
+  ; CHECK-NEXT:   G_BR %bb.2
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.2:
+  ; CHECK-NEXT:   %phi:gpr(s32) = G_PHI %gpr_copy(s32), %bb.0, %load(s32), %bb.1
+  ; CHECK-NEXT:   $s0 = COPY %phi(s32)
+  ; CHECK-NEXT:   RET_ReallyLR implicit $s0
   bb.0:
     successors: %bb.1(0x40000000), %bb.2(0x40000000)
     liveins: $x0, $s0, $s1, $w0, $w1
@@ -194,23 +206,27 @@ tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: select_used_by_phi_fpr
   ; CHECK: bb.0:
-  ; CHECK:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
-  ; CHECK:   liveins: $s0, $s1, $w0, $w1
-  ; CHECK:   %cond_wide:gpr(s32) = COPY $w0
-  ; CHECK:   %cond:gpr(s1) = G_TRUNC %cond_wide(s32)
-  ; CHECK:   %fpr_copy:fpr(s32) = COPY $s0
-  ; CHECK:   %gpr_copy:gpr(s32) = COPY $w1
-  ; CHECK:   G_BRCOND %cond(s1), %bb.1
-  ; CHECK:   G_BR %bb.2
-  ; CHECK: bb.1:
-  ; CHECK:   successors: %bb.2(0x80000000)
-  ; CHECK:   [[COPY:%[0-9]+]]:fpr(s32) = COPY %gpr_copy(s32)
-  ; CHECK:   %select:fpr(s32) = G_SELECT %cond(s1), %fpr_copy, [[COPY]]
-  ; CHECK:   G_BR %bb.2
-  ; CHECK: bb.2:
-  ; CHECK:   %phi:fpr(s32) = G_PHI %fpr_copy(s32), %bb.0, %select(s32), %bb.1
-  ; CHECK:   $w0 = COPY %phi(s32)
-  ; CHECK:   RET_ReallyLR implicit $w0
+  ; CHECK-NEXT:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
+  ; CHECK-NEXT:   liveins: $s0, $s1, $w0, $w1
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   %cond_wide:gpr(s32) = COPY $w0
+  ; CHECK-NEXT:   %cond:gpr(s1) = G_TRUNC %cond_wide(s32)
+  ; CHECK-NEXT:   %fpr_copy:fpr(s32) = COPY $s0
+  ; CHECK-NEXT:   %gpr_copy:gpr(s32) = COPY $w1
+  ; CHECK-NEXT:   G_BRCOND %cond(s1), %bb.1
+  ; CHECK-NEXT:   G_BR %bb.2
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.1:
+  ; CHECK-NEXT:   successors: %bb.2(0x80000000)
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:fpr(s32) = COPY %gpr_copy(s32)
+  ; CHECK-NEXT:   %select:fpr(s32) = G_SELECT %cond(s1), %fpr_copy, [[COPY]]
+  ; CHECK-NEXT:   G_BR %bb.2
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.2:
+  ; CHECK-NEXT:   %phi:fpr(s32) = G_PHI %fpr_copy(s32), %bb.0, %select(s32), %bb.1
+  ; CHECK-NEXT:   $w0 = COPY %phi(s32)
+  ; CHECK-NEXT:   RET_ReallyLR implicit $w0
   ; The G_SELECT and G_PHI should end up with the same register bank.
   ;
   bb.0:
@@ -239,23 +255,27 @@ tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: select_used_by_phi_gpr
   ; CHECK: bb.0:
-  ; CHECK:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
-  ; CHECK:   liveins: $s0, $s1, $w0, $w1
-  ; CHECK:   %cond_wide:gpr(s32) = COPY $w0
-  ; CHECK:   %cond:gpr(s1) = G_TRUNC %cond_wide(s32)
-  ; CHECK:   %fpr_copy:fpr(s32) = COPY $s0
-  ; CHECK:   %gpr_copy:gpr(s32) = COPY $w1
-  ; CHECK:   G_BRCOND %cond(s1), %bb.1
-  ; CHECK:   G_BR %bb.2
-  ; CHECK: bb.1:
-  ; CHECK:   successors: %bb.2(0x80000000)
-  ; CHECK:   [[COPY:%[0-9]+]]:gpr(s32) = COPY %fpr_copy(s32)
-  ; CHECK:   %select:gpr(s32) = G_SELECT %cond(s1), [[COPY]], %gpr_copy
-  ; CHECK:   G_BR %bb.2
-  ; CHECK: bb.2:
-  ; CHECK:   %phi:gpr(s32) = G_PHI %gpr_copy(s32), %bb.0, %select(s32), %bb.1
-  ; CHECK:   $s0 = COPY %phi(s32)
-  ; CHECK:   RET_ReallyLR implicit $s0
+  ; CHECK-NEXT:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
+  ; CHECK-NEXT:   liveins: $s0, $s1, $w0, $w1
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   %cond_wide:gpr(s32) = COPY $w0
+  ; CHECK-NEXT:   %cond:gpr(s1) = G_TRUNC %cond_wide(s32)
+  ; CHECK-NEXT:   %fpr_copy:fpr(s32) = COPY $s0
+  ; CHECK-NEXT:   %gpr_copy:gpr(s32) = COPY $w1
+  ; CHECK-NEXT:   G_BRCOND %cond(s1), %bb.1
+  ; CHECK-NEXT:   G_BR %bb.2
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.1:
+  ; CHECK-NEXT:   successors: %bb.2(0x80000000)
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:gpr(s32) = COPY %fpr_copy(s32)
+  ; CHECK-NEXT:   %select:gpr(s32) = G_SELECT %cond(s1), [[COPY]], %gpr_copy
+  ; CHECK-NEXT:   G_BR %bb.2
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.2:
+  ; CHECK-NEXT:   %phi:gpr(s32) = G_PHI %gpr_copy(s32), %bb.0, %select(s32), %bb.1
+  ; CHECK-NEXT:   $s0 = COPY %phi(s32)
+  ; CHECK-NEXT:   RET_ReallyLR implicit $s0
   ; The G_SELECT and G_PHI should end up with the same register bank.
   ;
   bb.0:
@@ -285,23 +305,27 @@ tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: unmerge_used_by_phi_fpr
   ; CHECK: bb.0:
-  ; CHECK:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
-  ; CHECK:   liveins: $x0, $s0, $s1, $w0, $w1
-  ; CHECK:   %cond_wide:gpr(s32) = COPY $w0
-  ; CHECK:   %cond:gpr(s1) = G_TRUNC %cond_wide(s32)
-  ; CHECK:   %fpr_copy:fpr(s32) = COPY $s0
-  ; CHECK:   %unmerge_src:gpr(s64) = COPY $x0
-  ; CHECK:   G_BRCOND %cond(s1), %bb.1
-  ; CHECK:   G_BR %bb.2
-  ; CHECK: bb.1:
-  ; CHECK:   successors: %bb.2(0x80000000)
-  ; CHECK:   [[COPY:%[0-9]+]]:fpr(s64) = COPY %unmerge_src(s64)
-  ; CHECK:   %unmerge_1:fpr(s32), %unmerge_2:fpr(s32) = G_UNMERGE_VALUES [[COPY]](s64)
-  ; CHECK:   G_BR %bb.2
-  ; CHECK: bb.2:
-  ; CHECK:   %phi:fpr(s32) = G_PHI %fpr_copy(s32), %bb.0, %unmerge_1(s32), %bb.1
-  ; CHECK:   $s0 = COPY %phi(s32)
-  ; CHECK:   RET_ReallyLR implicit $s0
+  ; CHECK-NEXT:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
+  ; CHECK-NEXT:   liveins: $x0, $s0, $s1, $w0, $w1
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   %cond_wide:gpr(s32) = COPY $w0
+  ; CHECK-NEXT:   %cond:gpr(s1) = G_TRUNC %cond_wide(s32)
+  ; CHECK-NEXT:   %fpr_copy:fpr(s32) = COPY $s0
+  ; CHECK-NEXT:   %unmerge_src:gpr(s64) = COPY $x0
+  ; CHECK-NEXT:   G_BRCOND %cond(s1), %bb.1
+  ; CHECK-NEXT:   G_BR %bb.2
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.1:
+  ; CHECK-NEXT:   successors: %bb.2(0x80000000)
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:fpr(s64) = COPY %unmerge_src(s64)
+  ; CHECK-NEXT:   %unmerge_1:fpr(s32), %unmerge_2:fpr(s32) = G_UNMERGE_VALUES [[COPY]](s64)
+  ; CHECK-NEXT:   G_BR %bb.2
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.2:
+  ; CHECK-NEXT:   %phi:fpr(s32) = G_PHI %fpr_copy(s32), %bb.0, %unmerge_1(s32), %bb.1
+  ; CHECK-NEXT:   $s0 = COPY %phi(s32)
+  ; CHECK-NEXT:   RET_ReallyLR implicit $s0
   bb.0:
     successors: %bb.1(0x40000000), %bb.2(0x40000000)
     liveins: $x0, $s0, $s1, $w0, $w1
@@ -328,22 +352,26 @@ tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: unmerge_used_by_phi_gpr
   ; CHECK: bb.0:
-  ; CHECK:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
-  ; CHECK:   liveins: $x0, $s0, $s1, $w0, $w1
-  ; CHECK:   %cond_wide:gpr(s32) = COPY $w0
-  ; CHECK:   %cond:gpr(s1) = G_TRUNC %cond_wide(s32)
-  ; CHECK:   %gpr_copy:gpr(s32) = COPY $w1
-  ; CHECK:   %unmerge_src:gpr(s64) = COPY $x0
-  ; CHECK:   G_BRCOND %cond(s1), %bb.1
-  ; CHECK:   G_BR %bb.2
-  ; CHECK: bb.1:
-  ; CHECK:   successors: %bb.2(0x80000000)
-  ; CHECK:   %unmerge_1:gpr(s32), %unmerge_2:gpr(s32) = G_UNMERGE_VALUES %unmerge_src(s64)
-  ; CHECK:   G_BR %bb.2
-  ; CHECK: bb.2:
-  ; CHECK:   %phi:gpr(s32) = G_PHI %gpr_copy(s32), %bb.0, %unmerge_1(s32), %bb.1
-  ; CHECK:   $s0 = COPY %phi(s32)
-  ; CHECK:   RET_ReallyLR implicit $s0
+  ; CHECK-NEXT:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
+  ; CHECK-NEXT:   liveins: $x0, $s0, $s1, $w0, $w1
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   %cond_wide:gpr(s32) = COPY $w0
+  ; CHECK-NEXT:   %cond:gpr(s1) = G_TRUNC %cond_wide(s32)
+  ; CHECK-NEXT:   %gpr_copy:gpr(s32) = COPY $w1
+  ; CHECK-NEXT:   %unmerge_src:gpr(s64) = COPY $x0
+  ; CHECK-NEXT:   G_BRCOND %cond(s1), %bb.1
+  ; CHECK-NEXT:   G_BR %bb.2
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.1:
+  ; CHECK-NEXT:   successors: %bb.2(0x80000000)
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   %unmerge_1:gpr(s32), %unmerge_2:gpr(s32) = G_UNMERGE_VALUES %unmerge_src(s64)
+  ; CHECK-NEXT:   G_BR %bb.2
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.2:
+  ; CHECK-NEXT:   %phi:gpr(s32) = G_PHI %gpr_copy(s32), %bb.0, %unmerge_1(s32), %bb.1
+  ; CHECK-NEXT:   $s0 = COPY %phi(s32)
+  ; CHECK-NEXT:   RET_ReallyLR implicit $s0
   bb.0:
     successors: %bb.1(0x40000000), %bb.2(0x40000000)
     liveins: $x0, $s0, $s1, $w0, $w1
@@ -374,11 +402,12 @@ body: |
     ; The sitofp should assign both src and dest to FPR, resulting in no copies.
     ; CHECK-LABEL: name: load_used_by_sitofp
     ; CHECK: liveins: $x0
-    ; CHECK: [[COPY:%[0-9]+]]:gpr(p0) = COPY $x0
-    ; CHECK: [[LOAD:%[0-9]+]]:fpr(s32) = G_LOAD [[COPY]](p0) :: (load (s32))
-    ; CHECK: [[SITOFP:%[0-9]+]]:fpr(s32) = G_SITOFP [[LOAD]](s32)
-    ; CHECK: $s0 = COPY [[SITOFP]](s32)
-    ; CHECK: RET_ReallyLR implicit $s0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr(p0) = COPY $x0
+    ; CHECK-NEXT: [[LOAD:%[0-9]+]]:fpr(s32) = G_LOAD [[COPY]](p0) :: (load (s32))
+    ; CHECK-NEXT: [[SITOFP:%[0-9]+]]:fpr(s32) = G_SITOFP [[LOAD]](s32)
+    ; CHECK-NEXT: $s0 = COPY [[SITOFP]](s32)
+    ; CHECK-NEXT: RET_ReallyLR implicit $s0
     %0:_(p0) = COPY $x0
     %1:_(s32) = G_LOAD %0 :: (load (s32))
     %2:_(s32) = G_SITOFP %1:_(s32)
@@ -394,11 +423,12 @@ body: |
     liveins: $x0
     ; CHECK-LABEL: name: load_used_by_uitofp
     ; CHECK: liveins: $x0
-    ; CHECK: [[COPY:%[0-9]+]]:gpr(p0) = COPY $x0
-    ; CHECK: [[LOAD:%[0-9]+]]:fpr(s32) = G_LOAD [[COPY]](p0) :: (load (s32))
-    ; CHECK: [[UITOFP:%[0-9]+]]:fpr(s32) = G_UITOFP [[LOAD]](s32)
-    ; CHECK: $s0 = COPY [[UITOFP]](s32)
-    ; CHECK: RET_ReallyLR implicit $s0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr(p0) = COPY $x0
+    ; CHECK-NEXT: [[LOAD:%[0-9]+]]:fpr(s32) = G_LOAD [[COPY]](p0) :: (load (s32))
+    ; CHECK-NEXT: [[UITOFP:%[0-9]+]]:fpr(s32) = G_UITOFP [[LOAD]](s32)
+    ; CHECK-NEXT: $s0 = COPY [[UITOFP]](s32)
+    ; CHECK-NEXT: RET_ReallyLR implicit $s0
     %0:_(p0) = COPY $x0
     %1:_(s32) = G_LOAD %0 :: (load (s32))
     %2:_(s32) = G_UITOFP %1:_(s32)

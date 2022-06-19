@@ -48,6 +48,9 @@ public:
     // without adding related code to TableGen/ClangAttrEmitter.cpp.
     /// Context-sensitive version of a keyword attribute.
     AS_ContextSensitiveKeyword,
+
+    /// <vardecl> : <semantic>
+    AS_HLSLSemantic,
   };
   enum Kind {
 #define PARSED_ATTR(NAME) AT_##NAME,
@@ -66,7 +69,7 @@ private:
   // Corresponds to the Kind enum.
   unsigned AttrKind : 16;
   /// Corresponds to the Syntax enum.
-  unsigned SyntaxUsed : 3;
+  unsigned SyntaxUsed : 4;
   unsigned SpellingIndex : 4;
 
 protected:
@@ -143,9 +146,25 @@ public:
   bool isMicrosoftAttribute() const { return SyntaxUsed == AS_Microsoft; }
 
   bool isGNUScope() const;
+  bool isClangScope() const;
 
   bool isAlignasAttribute() const {
     // FIXME: Use a better mechanism to determine this.
+    // We use this in `isCXX11Attribute` below, so it _should_ only return
+    // true for the `alignas` spelling, but it currently also returns true
+    // for the `_Alignas` spelling, which only exists in C11. Distinguishing
+    // between the two is important because they behave differently:
+    // - `alignas` may only appear in the attribute-specifier-seq before
+    //   the decl-specifier-seq and is therefore associated with the
+    //   declaration.
+    // - `_Alignas` may appear anywhere within the declaration-specifiers
+    //   and is therefore associated with the `DeclSpec`.
+    // It's not clear how best to fix this:
+    // - We have the necessary information in the form of the `SpellingIndex`,
+    //   but we would need to compare against AlignedAttr::Keyword_alignas,
+    //   and we can't depend on clang/AST/Attr.h here.
+    // - We could test `getAttrName()->getName() == "alignas"`, but this is
+    //   inefficient.
     return getParsedKind() == AT_Aligned && isKeywordAttribute();
   }
 
@@ -160,6 +179,8 @@ public:
   bool isStandardAttributeSyntax() const {
     return isCXX11Attribute() || isC2xAttribute();
   }
+
+  bool isGNUAttribute() const { return SyntaxUsed == AS_GNU; }
 
   bool isKeywordAttribute() const {
     return SyntaxUsed == AS_Keyword || SyntaxUsed == AS_ContextSensitiveKeyword;

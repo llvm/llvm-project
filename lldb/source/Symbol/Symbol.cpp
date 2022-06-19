@@ -17,6 +17,7 @@
 #include "lldb/Symbol/Symtab.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Target/Target.h"
+#include "lldb/Utility/DataEncoder.h"
 #include "lldb/Utility/Stream.h"
 
 using namespace lldb;
@@ -30,19 +31,18 @@ Symbol::Symbol()
       m_is_weak(false), m_type(eSymbolTypeInvalid), m_mangled(),
       m_addr_range() {}
 
-Symbol::Symbol(uint32_t symID, llvm::StringRef name, SymbolType type, bool external,
-               bool is_debug, bool is_trampoline, bool is_artificial,
-               const lldb::SectionSP &section_sp, addr_t offset, addr_t size,
-               bool size_is_valid, bool contains_linker_annotations,
-               uint32_t flags)
-    : SymbolContextScope(), m_uid(symID), m_type_data(0),
-      m_type_data_resolved(false), m_is_synthetic(is_artificial),
-      m_is_debug(is_debug), m_is_external(external), m_size_is_sibling(false),
+Symbol::Symbol(uint32_t symID, llvm::StringRef name, SymbolType type,
+               bool external, bool is_debug, bool is_trampoline,
+               bool is_artificial, const lldb::SectionSP &section_sp,
+               addr_t offset, addr_t size, bool size_is_valid,
+               bool contains_linker_annotations, uint32_t flags)
+    : SymbolContextScope(), m_uid(symID), m_type_data_resolved(false),
+      m_is_synthetic(is_artificial), m_is_debug(is_debug),
+      m_is_external(external), m_size_is_sibling(false),
       m_size_is_synthesized(false), m_size_is_valid(size_is_valid || size > 0),
       m_demangled_is_synthesized(false),
       m_contains_linker_annotations(contains_linker_annotations),
-      m_is_weak(false), m_type(type),
-      m_mangled(name),
+      m_is_weak(false), m_type(type), m_mangled(name),
       m_addr_range(section_sp, offset, size), m_flags(flags) {}
 
 Symbol::Symbol(uint32_t symID, const Mangled &mangled, SymbolType type,
@@ -50,14 +50,14 @@ Symbol::Symbol(uint32_t symID, const Mangled &mangled, SymbolType type,
                bool is_artificial, const AddressRange &range,
                bool size_is_valid, bool contains_linker_annotations,
                uint32_t flags)
-    : SymbolContextScope(), m_uid(symID), m_type_data(0),
-      m_type_data_resolved(false), m_is_synthetic(is_artificial),
-      m_is_debug(is_debug), m_is_external(external), m_size_is_sibling(false),
+    : SymbolContextScope(), m_uid(symID), m_type_data_resolved(false),
+      m_is_synthetic(is_artificial), m_is_debug(is_debug),
+      m_is_external(external), m_size_is_sibling(false),
       m_size_is_synthesized(false),
       m_size_is_valid(size_is_valid || range.GetByteSize() > 0),
       m_demangled_is_synthesized(false),
-      m_contains_linker_annotations(contains_linker_annotations), 
-      m_is_weak(false), m_type(type), m_mangled(mangled), m_addr_range(range), 
+      m_contains_linker_annotations(contains_linker_annotations),
+      m_is_weak(false), m_type(type), m_mangled(mangled), m_addr_range(range),
       m_flags(flags) {}
 
 Symbol::Symbol(const Symbol &rhs)
@@ -115,11 +115,12 @@ void Symbol::Clear() {
 }
 
 bool Symbol::ValueIsAddress() const {
-  return m_addr_range.GetBaseAddress().GetSection().get() != nullptr;
+  return m_addr_range.GetBaseAddress().GetSection().get() != nullptr ||
+         m_type == eSymbolTypeAbsolute;
 }
 
 ConstString Symbol::GetDisplayName() const {
-  return m_mangled.GetDisplayDemangledName();
+  return GetMangled().GetDisplayDemangledName();
 }
 
 ConstString Symbol::GetReExportedSymbolName() const {
@@ -202,7 +203,7 @@ void Symbol::GetDescription(Stream *s, lldb::DescriptionLevel level,
       s->Printf(", value = 0x%16.16" PRIx64,
                 m_addr_range.GetBaseAddress().GetOffset());
   }
-  ConstString demangled = m_mangled.GetDemangledName();
+  ConstString demangled = GetMangled().GetDemangledName();
   if (demangled)
     s->Printf(", name=\"%s\"", demangled.AsCString());
   if (m_mangled.GetMangledName())
@@ -218,7 +219,7 @@ void Symbol::Dump(Stream *s, Target *target, uint32_t index,
   // Make sure the size of the symbol is up to date before dumping
   GetByteSize();
 
-  ConstString name = m_mangled.GetName(name_preference);
+  ConstString name = GetMangled().GetName(name_preference);
   if (ValueIsAddress()) {
     if (!m_addr_range.GetBaseAddress().Dump(s, nullptr,
                                             Address::DumpStyleFileAddress))
@@ -330,9 +331,11 @@ uint32_t Symbol::GetPrologueByteSize() {
 }
 
 bool Symbol::Compare(ConstString name, SymbolType type) const {
-  if (type == eSymbolTypeAny || m_type == type)
-    return m_mangled.GetMangledName() == name ||
-           m_mangled.GetDemangledName() == name;
+  if (type == eSymbolTypeAny || m_type == type) {
+    const Mangled &mangled = GetMangled();
+    return mangled.GetMangledName() == name ||
+           mangled.GetDemangledName() == name;
+  }
   return false;
 }
 
@@ -495,10 +498,10 @@ lldb::addr_t Symbol::GetLoadAddress(Target *target) const {
     return LLDB_INVALID_ADDRESS;
 }
 
-ConstString Symbol::GetName() const { return m_mangled.GetName(); }
+ConstString Symbol::GetName() const { return GetMangled().GetName(); }
 
 ConstString Symbol::GetNameNoArguments() const {
-  return m_mangled.GetName(Mangled::ePreferDemangledWithoutArguments);
+  return GetMangled().GetName(Mangled::ePreferDemangledWithoutArguments);
 }
 
 lldb::addr_t Symbol::ResolveCallableAddress(Target &target) const {
@@ -564,4 +567,159 @@ bool Symbol::GetDisassembly(const ExecutionContext &exe_ctx, const char *flavor,
 
 bool Symbol::ContainsFileAddress(lldb::addr_t file_addr) const {
   return m_addr_range.ContainsFileAddress(file_addr);
+}
+
+bool Symbol::IsSyntheticWithAutoGeneratedName() const {
+  if (!IsSynthetic())
+    return false;
+  if (!m_mangled)
+    return true;
+  ConstString demangled = m_mangled.GetDemangledName();
+  return demangled.GetStringRef().startswith(GetSyntheticSymbolPrefix());
+}
+
+void Symbol::SynthesizeNameIfNeeded() const {
+  if (m_is_synthetic && !m_mangled) {
+    // Synthetic symbol names don't mean anything, but they do uniquely
+    // identify individual symbols so we give them a unique name. The name
+    // starts with the synthetic symbol prefix, followed by a unique number.
+    // Typically the UserID of a real symbol is the symbol table index of the
+    // symbol in the object file's symbol table(s), so it will be the same
+    // every time you read in the object file. We want the same persistence for
+    // synthetic symbols so that users can identify them across multiple debug
+    // sessions, to understand crashes in those symbols and to reliably set
+    // breakpoints on them.
+    llvm::SmallString<256> name;
+    llvm::raw_svector_ostream os(name);
+    os << GetSyntheticSymbolPrefix() << GetID();
+    m_mangled.SetDemangledName(ConstString(os.str()));
+  }
+}
+
+bool Symbol::Decode(const DataExtractor &data, lldb::offset_t *offset_ptr,
+                    const SectionList *section_list,
+                    const StringTableReader &strtab) {
+  if (!data.ValidOffsetForDataOfSize(*offset_ptr, 8))
+    return false;
+  m_uid = data.GetU32(offset_ptr);
+  m_type_data = data.GetU16(offset_ptr);
+  const uint16_t bitfields = data.GetU16(offset_ptr);
+  m_type_data_resolved = (1u << 15 & bitfields) != 0;
+  m_is_synthetic = (1u << 14 & bitfields) != 0;
+  m_is_debug = (1u << 13 & bitfields) != 0;
+  m_is_external = (1u << 12 & bitfields) != 0;
+  m_size_is_sibling = (1u << 11 & bitfields) != 0;
+  m_size_is_synthesized = (1u << 10 & bitfields) != 0;
+  m_size_is_valid = (1u << 9 & bitfields) != 0;
+  m_demangled_is_synthesized = (1u << 8 & bitfields) != 0;
+  m_contains_linker_annotations = (1u << 7 & bitfields) != 0;
+  m_is_weak = (1u << 6 & bitfields) != 0;
+  m_type = bitfields & 0x003f;
+  if (!m_mangled.Decode(data, offset_ptr, strtab))
+    return false;
+  if (!data.ValidOffsetForDataOfSize(*offset_ptr, 20))
+    return false;
+  const bool is_addr = data.GetU8(offset_ptr) != 0;
+  const uint64_t value = data.GetU64(offset_ptr);
+  if (is_addr) {
+    m_addr_range.GetBaseAddress().ResolveAddressUsingFileSections(
+        value, section_list);
+  } else {
+    m_addr_range.GetBaseAddress().Clear();
+    m_addr_range.GetBaseAddress().SetOffset(value);
+  }
+  m_addr_range.SetByteSize(data.GetU64(offset_ptr));
+  m_flags =  data.GetU32(offset_ptr);
+  return true;
+}
+
+/// The encoding format for the symbol is as follows:
+///
+/// uint32_t m_uid;
+/// uint16_t m_type_data;
+/// uint16_t bitfield_data;
+/// Mangled mangled;
+/// uint8_t is_addr;
+/// uint64_t file_addr_or_value;
+/// uint64_t size;
+/// uint32_t flags;
+///
+/// The only tricky thing in this encoding is encoding all of the bits in the
+/// bitfields. We use a trick to store all bitfields as a 16 bit value and we
+/// do the same thing when decoding the symbol. There are test that ensure this
+/// encoding works for each individual bit. Everything else is very easy to
+/// store.
+void Symbol::Encode(DataEncoder &file, ConstStringTable &strtab) const {
+  file.AppendU32(m_uid);
+  file.AppendU16(m_type_data);
+  uint16_t bitfields = m_type;
+  if (m_type_data_resolved)
+    bitfields |= 1u << 15;
+  if (m_is_synthetic)
+    bitfields |= 1u << 14;
+  if (m_is_debug)
+    bitfields |= 1u << 13;
+  if (m_is_external)
+    bitfields |= 1u << 12;
+  if (m_size_is_sibling)
+    bitfields |= 1u << 11;
+  if (m_size_is_synthesized)
+    bitfields |= 1u << 10;
+  if (m_size_is_valid)
+    bitfields |= 1u << 9;
+  if (m_demangled_is_synthesized)
+    bitfields |= 1u << 8;
+  if (m_contains_linker_annotations)
+    bitfields |= 1u << 7;
+  if (m_is_weak)
+    bitfields |= 1u << 6;
+  file.AppendU16(bitfields);
+  m_mangled.Encode(file, strtab);
+  // A symbol's value might be an address, or it might be a constant. If the
+  // symbol's base address doesn't have a section, then it is a constant value.
+  // If it does have a section, we will encode the file address and re-resolve
+  // the address when we decode it.
+  bool is_addr = m_addr_range.GetBaseAddress().GetSection().get() != nullptr;
+  file.AppendU8(is_addr);
+  file.AppendU64(m_addr_range.GetBaseAddress().GetFileAddress());
+  file.AppendU64(m_addr_range.GetByteSize());
+  file.AppendU32(m_flags);
+}
+
+bool Symbol::operator==(const Symbol &rhs) const {
+  if (m_uid != rhs.m_uid)
+    return false;
+  if (m_type_data != rhs.m_type_data)
+    return false;
+  if (m_type_data_resolved != rhs.m_type_data_resolved)
+    return false;
+  if (m_is_synthetic != rhs.m_is_synthetic)
+    return false;
+  if (m_is_debug != rhs.m_is_debug)
+    return false;
+  if (m_is_external != rhs.m_is_external)
+    return false;
+  if (m_size_is_sibling != rhs.m_size_is_sibling)
+    return false;
+  if (m_size_is_synthesized != rhs.m_size_is_synthesized)
+    return false;
+  if (m_size_is_valid != rhs.m_size_is_valid)
+    return false;
+  if (m_demangled_is_synthesized != rhs.m_demangled_is_synthesized)
+    return false;
+  if (m_contains_linker_annotations != rhs.m_contains_linker_annotations)
+    return false;
+  if (m_is_weak != rhs.m_is_weak)
+    return false;
+  if (m_type != rhs.m_type)
+    return false;
+  if (m_mangled != rhs.m_mangled)
+    return false;
+  if (m_addr_range.GetBaseAddress() != rhs.m_addr_range.GetBaseAddress())
+    return false;
+  if (m_addr_range.GetByteSize() != rhs.m_addr_range.GetByteSize())
+    return false;
+  if (m_flags != rhs.m_flags)
+    return false;
+  return true;
 }

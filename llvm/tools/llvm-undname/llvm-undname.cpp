@@ -46,6 +46,9 @@ cl::opt<bool> NoReturnType("no-return-type", cl::Optional,
 cl::opt<bool> NoMemberType("no-member-type", cl::Optional,
                            cl::desc("skip member types"), cl::Hidden,
                            cl::init(false), cl::cat(UndNameCategory));
+cl::opt<bool> NoVariableType("no-variable-type", cl::Optional,
+                             cl::desc("skip variable types"), cl::Hidden,
+                             cl::init(false), cl::cat(UndNameCategory));
 cl::opt<std::string> RawFile("raw-file", cl::Optional,
                              cl::desc("for fuzzer data"), cl::Hidden,
                              cl::cat(UndNameCategory));
@@ -53,7 +56,7 @@ cl::opt<bool> WarnTrailing("warn-trailing", cl::Optional,
                            cl::desc("warn on trailing characters"), cl::Hidden,
                            cl::init(false), cl::cat(UndNameCategory));
 cl::list<std::string> Symbols(cl::Positional, cl::desc("<input symbols>"),
-                              cl::ZeroOrMore, cl::cat(UndNameCategory));
+                              cl::cat(UndNameCategory));
 
 static bool msDemangle(const std::string &S) {
   int Status;
@@ -68,6 +71,8 @@ static bool msDemangle(const std::string &S) {
     Flags = MSDemangleFlags(Flags | MSDF_NoReturnType);
   if (NoMemberType)
     Flags = MSDemangleFlags(Flags | MSDF_NoMemberType);
+  if (NoVariableType)
+    Flags = MSDemangleFlags(Flags | MSDF_NoVariableType);
 
   size_t NRead;
   char *ResultBuf =

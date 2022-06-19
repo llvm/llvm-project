@@ -97,10 +97,8 @@ static const uint32_t g_vsx_regnums_ppc64le[] = {
     LLDB_INVALID_REGNUM // register sets need to end with this flag
 };
 
-namespace {
 // Number of register sets provided by this context.
-enum { k_num_register_sets = 4 };
-}
+static constexpr int k_num_register_sets = 4;
 
 static const RegisterSet g_reg_sets_ppc64le[k_num_register_sets] = {
     {"General Purpose Registers", "gpr", k_num_gpr_registers_ppc64le,
@@ -351,7 +349,7 @@ Status NativeRegisterContextLinux_ppc64le::WriteRegister(
 }
 
 Status NativeRegisterContextLinux_ppc64le::ReadAllRegisterValues(
-    lldb::DataBufferSP &data_sp) {
+    lldb::WritableDataBufferSP &data_sp) {
   Status error;
 
   data_sp.reset(new DataBufferHeap(REG_CONTEXT_SIZE, 0));
@@ -402,7 +400,7 @@ Status NativeRegisterContextLinux_ppc64le::WriteAllRegisterValues(
     return error;
   }
 
-  uint8_t *src = data_sp->GetBytes();
+  const uint8_t *src = data_sp->GetBytes();
   if (src == nullptr) {
     error.SetErrorStringWithFormat("NativeRegisterContextLinux_ppc64le::%s "
                                    "DataBuffer::GetBytes() returned a null "
@@ -501,7 +499,7 @@ bool NativeRegisterContextLinux_ppc64le::IsVSX(unsigned reg) {
 }
 
 uint32_t NativeRegisterContextLinux_ppc64le::NumSupportedHardwareWatchpoints() {
-  Log *log(ProcessPOSIXLog::GetLogIfAllCategoriesSet(POSIX_LOG_WATCHPOINTS));
+  Log *log = GetLog(POSIXLog::Watchpoints);
 
   // Read hardware breakpoint and watchpoint information.
   Status error = ReadHardwareDebugInfo();
@@ -515,7 +513,7 @@ uint32_t NativeRegisterContextLinux_ppc64le::NumSupportedHardwareWatchpoints() {
 
 uint32_t NativeRegisterContextLinux_ppc64le::SetHardwareWatchpoint(
     lldb::addr_t addr, size_t size, uint32_t watch_flags) {
-  Log *log(ProcessPOSIXLog::GetLogIfAllCategoriesSet(POSIX_LOG_WATCHPOINTS));
+  Log *log = GetLog(POSIXLog::Watchpoints);
   LLDB_LOG(log, "addr: {0:x}, size: {1:x} watch_flags: {2:x}", addr, size,
            watch_flags);
 
@@ -602,7 +600,7 @@ uint32_t NativeRegisterContextLinux_ppc64le::SetHardwareWatchpoint(
 
 bool NativeRegisterContextLinux_ppc64le::ClearHardwareWatchpoint(
     uint32_t wp_index) {
-  Log *log(ProcessPOSIXLog::GetLogIfAllCategoriesSet(POSIX_LOG_WATCHPOINTS));
+  Log *log = GetLog(POSIXLog::Watchpoints);
   LLDB_LOG(log, "wp_index: {0}", wp_index);
 
   // Read hardware breakpoint and watchpoint information.
@@ -642,7 +640,7 @@ bool NativeRegisterContextLinux_ppc64le::ClearHardwareWatchpoint(
 
 uint32_t
 NativeRegisterContextLinux_ppc64le::GetWatchpointSize(uint32_t wp_index) {
-  Log *log(ProcessPOSIXLog::GetLogIfAllCategoriesSet(POSIX_LOG_WATCHPOINTS));
+  Log *log = GetLog(POSIXLog::Watchpoints);
   LLDB_LOG(log, "wp_index: {0}", wp_index);
 
   unsigned control = (m_hwp_regs[wp_index].control >> 5) & 0xff;
@@ -655,7 +653,7 @@ NativeRegisterContextLinux_ppc64le::GetWatchpointSize(uint32_t wp_index) {
 
 bool NativeRegisterContextLinux_ppc64le::WatchpointIsEnabled(
     uint32_t wp_index) {
-  Log *log(ProcessPOSIXLog::GetLogIfAllCategoriesSet(POSIX_LOG_WATCHPOINTS));
+  Log *log = GetLog(POSIXLog::Watchpoints);
   LLDB_LOG(log, "wp_index: {0}", wp_index);
 
   return !!((m_hwp_regs[wp_index].control & 0x1) == 0x1);
@@ -663,7 +661,7 @@ bool NativeRegisterContextLinux_ppc64le::WatchpointIsEnabled(
 
 Status NativeRegisterContextLinux_ppc64le::GetWatchpointHitIndex(
     uint32_t &wp_index, lldb::addr_t trap_addr) {
-  Log *log(ProcessPOSIXLog::GetLogIfAllCategoriesSet(POSIX_LOG_WATCHPOINTS));
+  Log *log = GetLog(POSIXLog::Watchpoints);
   LLDB_LOG(log, "wp_index: {0}, trap_addr: {1:x}", wp_index, trap_addr);
 
   uint32_t watch_size;
@@ -686,7 +684,7 @@ Status NativeRegisterContextLinux_ppc64le::GetWatchpointHitIndex(
 
 lldb::addr_t
 NativeRegisterContextLinux_ppc64le::GetWatchpointAddress(uint32_t wp_index) {
-  Log *log(ProcessPOSIXLog::GetLogIfAllCategoriesSet(POSIX_LOG_WATCHPOINTS));
+  Log *log = GetLog(POSIXLog::Watchpoints);
   LLDB_LOG(log, "wp_index: {0}", wp_index);
 
   if (wp_index >= m_max_hwp_supported)
@@ -700,7 +698,7 @@ NativeRegisterContextLinux_ppc64le::GetWatchpointAddress(uint32_t wp_index) {
 
 lldb::addr_t
 NativeRegisterContextLinux_ppc64le::GetWatchpointHitAddress(uint32_t wp_index) {
-  Log *log(ProcessPOSIXLog::GetLogIfAllCategoriesSet(POSIX_LOG_WATCHPOINTS));
+  Log *log = GetLog(POSIXLog::Watchpoints);
   LLDB_LOG(log, "wp_index: {0}", wp_index);
 
   if (wp_index >= m_max_hwp_supported)

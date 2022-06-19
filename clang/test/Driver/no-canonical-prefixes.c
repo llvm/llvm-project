@@ -10,8 +10,20 @@
 // RUN: rm -f %t.fake
 // RUN: ln -sf %t.real %t.fake
 // RUN: cd %t.fake
-// RUN: ./test-clang -v -S %s 2>&1 | FileCheck --check-prefix=CANONICAL %s
-// RUN: ./test-clang -v -S %s -no-canonical-prefixes 2>&1 | FileCheck --check-prefix=NON-CANONICAL %s
+// RUN: ./test-clang -v -S %s 2>&1 \
+// RUN:     | FileCheck --check-prefix=CANONICAL %s
+// RUN: ./test-clang -v -S %s 2>&1 \
+// RUN:     -no-canonical-prefixes \
+// RUN:     | FileCheck --check-prefix=NON-CANONICAL %s
+// RUN: ./test-clang -v -S %s 2>&1 \
+// RUN:     -no-canonical-prefixes \
+// RUN:     -canonical-prefixes \
+// RUN:     | FileCheck --check-prefix=CANONICAL %s
+// RUN: ./test-clang -v -S %s 2>&1 \
+// RUN:     -no-canonical-prefixes \
+// RUN:     -canonical-prefixes \
+// RUN:     -no-canonical-prefixes \
+// RUN:     | FileCheck --check-prefix=NON-CANONICAL %s
 //
 // FIXME: This should really be '.real'.
 // CANONICAL: InstalledDir: {{.*}}.fake

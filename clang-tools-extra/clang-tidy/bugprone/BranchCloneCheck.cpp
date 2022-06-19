@@ -1,9 +1,8 @@
 //===--- BranchCloneCheck.cpp - clang-tidy --------------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -44,7 +43,7 @@ static bool areSwitchBranchesIdentical(const SwitchBranch LHS,
   for (size_t I = 0, Size = LHS.size(); I < Size; I++) {
     // NOTE: We strip goto labels and annotations in addition to stripping
     // the `case X:` or `default:` labels, but it is very unlikely that this
-    // would casue false positives in real-world code.
+    // would cause false positives in real-world code.
     if (!areStatementsIdentical(LHS[I]->stripLabelLikeStatements(),
                                 RHS[I]->stripLabelLikeStatements(), Context)) {
       return false;
@@ -188,10 +187,10 @@ void BranchCloneCheck::check(const MatchFinder::MatchResult &Result) {
         Branches.back().push_back(S);
     }
 
-    auto End = Branches.end();
-    auto BeginCurrent = Branches.begin();
+    auto *End = Branches.end();
+    auto *BeginCurrent = Branches.begin();
     while (BeginCurrent < End) {
-      auto EndCurrent = BeginCurrent + 1;
+      auto *EndCurrent = BeginCurrent + 1;
       while (EndCurrent < End &&
              areSwitchBranchesIdentical(*BeginCurrent, *EndCurrent, Context)) {
         ++EndCurrent;

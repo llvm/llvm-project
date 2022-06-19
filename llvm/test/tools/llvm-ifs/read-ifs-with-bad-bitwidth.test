@@ -1,6 +1,6 @@
 ## Test reading TBE file with bad bit width.
 
-# RUN: not llvm-ifs --output-format=IFS --output=- %s 2>&1 | FileCheck %s
+# RUN: not llvm-ifs --output-ifs=- %s 2>&1 | FileCheck %s
 
 --- !ifs-v1
 SoName: somelib.so

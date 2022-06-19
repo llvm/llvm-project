@@ -1,6 +1,6 @@
-// RUN: %clang_cc1 -fopenmp -x c++ %s -verify -debug-info-kind=limited -emit-llvm -o - -triple powerpc64le-unknown-linux-gnu -std=c++98 -fnoopenmp-use-tls | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -fopenmp -x c++ %s -verify -debug-info-kind=limited -emit-llvm -o - -triple powerpc64le-unknown-linux-gnu -std=c++98 -fnoopenmp-use-tls | FileCheck %s
 
-// RUN: %clang_cc1 -fopenmp-simd -x c++ %s -verify -debug-info-kind=limited -emit-llvm -o - -triple powerpc64le-unknown-linux-gnu -std=c++98 -fnoopenmp-use-tls | FileCheck --check-prefix SIMD-ONLY0 %s
+// RUN: %clang_cc1 -no-opaque-pointers -fopenmp-simd -x c++ %s -verify -debug-info-kind=limited -emit-llvm -o - -triple powerpc64le-unknown-linux-gnu -std=c++98 -fnoopenmp-use-tls | FileCheck --check-prefix SIMD-ONLY0 %s
 // SIMD-ONLY0-NOT: {{__kmpc|__tgt}}
 // expected-no-diagnostics
 
@@ -95,9 +95,9 @@ sum = 0.0;
 // CHECK-DAG:    [[TMP32:%.*]] = ptrtoint %struct.S* [[ARRAYIDX6]] to i64
 // CHECK-DAG:    [[TMP33:%.*]] = ptrtoint %struct.S* [[ARRAYIDX5]] to i64
 // CHECK-DAG:    [[TMP34:%.*]] = sub i64 [[TMP32]], [[TMP33]]
-// CHECK-DAG:    [[TMP35:%.*]] = sdiv exact i64 [[TMP34]], ptrtoint (float* getelementptr (float, float* null, i32 1) to i64)
+// CHECK-DAG:    [[TMP35:%.*]] = sdiv exact i64 [[TMP34]], ptrtoint (%struct.S* getelementptr (%struct.S, %struct.S* null, i32 1) to i64)
 // CHECK-DAG:    [[TMP36:%.*]] = add nuw i64 [[TMP35]], 1
-// CHECK-DAG:    [[TMP37:%.*]] = mul nuw i64 [[TMP36]], ptrtoint (float* getelementptr (float, float* null, i32 1) to i64)
+// CHECK-DAG:    [[TMP37:%.*]] = mul nuw i64 [[TMP36]], ptrtoint (%struct.S* getelementptr (%struct.S, %struct.S* null, i32 1) to i64)
 // CHECK-DAG:    store i64 [[TMP37]], i64* [[TMP38:%[^,]+]],
 // CHECK-DAG:    [[TMP38]] = getelementptr inbounds %struct.kmp_taskred_input_t, %struct.kmp_taskred_input_t* [[DOTRD_INPUT_GEP_4]], i32 0, i32 2
 // CHECK-DAG:    [[TMP39:%.*]] = getelementptr inbounds %struct.kmp_taskred_input_t, %struct.kmp_taskred_input_t* [[DOTRD_INPUT_GEP_4]], i32 0, i32 3
@@ -163,51 +163,51 @@ sum = 0.0;
 
 // CHECK:    ret i32
 
-// CHECK: define internal void @[[RED_INIT1]](i8* noalias %{{.+}}, i8* noalias %{{.+}})
+// CHECK: define internal void @[[RED_INIT1]](i8* noalias noundef %{{.+}}, i8* noalias noundef %{{.+}})
 // CHECK: store float 0.000000e+00, float* %
 // CHECK: ret void
 
-// CHECK: define internal void @[[RED_COMB1]](i8* %0, i8* %1)
+// CHECK: define internal void @[[RED_COMB1]](i8* noundef %0, i8* noundef %1)
 // CHECK: fadd float %
 // CHECK: store float %{{.+}}, float* %
 // CHECK: ret void
 
-// CHECK: define internal void @[[RED_INIT2]](i8* noalias %{{.+}}, i8* noalias %{{.+}})
+// CHECK: define internal void @[[RED_INIT2]](i8* noalias noundef %{{.+}}, i8* noalias noundef %{{.+}})
 // CHECK: call i8* @__kmpc_threadprivate_cached(
 // CHECK: call void [[OMP_INIT1:@.+]](
 // CHECK: ret void
 
-// CHECK: define internal void [[OMP_COMB1:@.+]](%struct.S* noalias %0, %struct.S* noalias %1)
+// CHECK: define internal void [[OMP_COMB1:@.+]](%struct.S* noalias noundef %0, %struct.S* noalias noundef %1)
 // CHECK: fadd float %
 
-// CHECK: define internal void [[OMP_INIT1]](%struct.S* noalias %0, %struct.S* noalias %1)
+// CHECK: define internal void [[OMP_INIT1]](%struct.S* noalias noundef %0, %struct.S* noalias noundef %1)
 // CHECK: call void @llvm.memcpy.p0i8.p0i8.i64(
 
-// CHECK: define internal void @[[RED_FINI2]](i8* %0)
+// CHECK: define internal void @[[RED_FINI2]](i8* noundef %0)
 // CHECK: call i8* @__kmpc_threadprivate_cached(
 // CHECK: call void @
 // CHECK: ret void
 
-// CHECK: define internal void @[[RED_COMB2]](i8* %0, i8* %1)
+// CHECK: define internal void @[[RED_COMB2]](i8* noundef %0, i8* noundef %1)
 // CHECK: call i8* @__kmpc_threadprivate_cached(
 // CHECK: call void [[OMP_COMB1]](
 // CHECK: ret void
 
-// CHECK: define internal void @[[RED_INIT3]](i8* noalias %{{.+}}, i8* noalias %{{.+}})
+// CHECK: define internal void @[[RED_INIT3]](i8* noalias noundef %{{.+}}, i8* noalias noundef %{{.+}})
 // CHECK: store float 0.000000e+00, float* %
 // CHECK: ret void
 
-// CHECK: define internal void @[[RED_COMB3]](i8* %0, i8* %1)
+// CHECK: define internal void @[[RED_COMB3]](i8* noundef %0, i8* noundef %1)
 // CHECK: fadd float %
 // CHECK: store float %{{.+}}, float* %
 // CHECK: ret void
 
-// CHECK: define internal void @[[RED_INIT4]](i8* noalias %{{.+}}, i8* noalias %{{.+}})
+// CHECK: define internal void @[[RED_INIT4]](i8* noalias noundef %{{.+}}, i8* noalias noundef %{{.+}})
 // CHECK: call i8* @__kmpc_threadprivate_cached(
 // CHECK: store float 0.000000e+00, float* %
 // CHECK: ret void
 
-// CHECK: define internal void @[[RED_COMB4]](i8* %0, i8* %1)
+// CHECK: define internal void @[[RED_COMB4]](i8* noundef %0, i8* noundef %1)
 // CHECK: call i8* @__kmpc_threadprivate_cached(
 // CHECK: fadd float %
 // CHECK: store float %{{.+}}, float* %

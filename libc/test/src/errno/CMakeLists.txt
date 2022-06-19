@@ -1,3 +1,7 @@
+if(NOT LLVM_LIBC_FULL_BUILD)
+  return()
+endif()
+
 add_libc_testsuite(libc_errno_unittests)
 
 add_libc_unittest(
@@ -7,5 +11,5 @@ add_libc_unittest(
   SRCS
     errno_test.cpp
   DEPENDS
-    libc.src.errno.__errno_location
+    libc.src.errno.errno
 )

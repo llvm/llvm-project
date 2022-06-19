@@ -30,6 +30,7 @@ public:
   };
 
   explicit InitialImage(std::size_t bytes) : data_(bytes) {}
+  InitialImage(InitialImage &&that) = default;
 
   std::size_t size() const { return data_.size(); }
 
@@ -48,6 +49,8 @@ public:
           bytes !=
               x.values().size() * static_cast<std::size_t>(*elementBytes)) {
         return SizeMismatch;
+      } else if (bytes == 0) {
+        return Ok;
       } else {
         std::memcpy(&data_.at(offset), &x.values().at(0), bytes);
         return Ok;
@@ -65,6 +68,8 @@ public:
       auto elementBytes{bytes > 0 ? bytes / elements : 0};
       if (elements * elementBytes != bytes) {
         return SizeMismatch;
+      } else if (bytes == 0) {
+        return Ok;
       } else {
         for (auto at{x.lbounds()}; elements-- > 0; x.IncrementSubscripts(at)) {
           auto scalar{x.At(at)}; // this is a std string; size() in chars
@@ -75,7 +80,7 @@ public:
               (scalarBytes > elementBytes && elements != 0)) {
             return SizeMismatch;
           }
-          std::memcpy(&data_[offset], scalar.data(), elementBytes);
+          std::memcpy(&data_.at(offset), scalar.data(), elementBytes);
           offset += elementBytes;
         }
         return Ok;
@@ -87,25 +92,23 @@ public:
   template <typename T>
   Result Add(ConstantSubscript offset, std::size_t bytes, const Expr<T> &x,
       FoldingContext &c) {
-    return std::visit(
+    return common::visit(
         [&](const auto &y) { return Add(offset, bytes, y, c); }, x.u);
   }
 
   void AddPointer(ConstantSubscript, const Expr<SomeType> &);
 
-  void Incorporate(ConstantSubscript, const InitialImage &);
+  void Incorporate(ConstantSubscript toOffset, const InitialImage &from,
+      ConstantSubscript fromOffset, ConstantSubscript bytes);
 
   // Conversions to constant initializers
   std::optional<Expr<SomeType>> AsConstant(FoldingContext &,
       const DynamicType &, const ConstantSubscripts &,
       ConstantSubscript offset = 0) const;
-  std::optional<Expr<SomeType>> AsConstantDataPointer(
-      const DynamicType &, ConstantSubscript offset = 0) const;
-  const ProcedureDesignator &AsConstantProcPointer(
+  std::optional<Expr<SomeType>> AsConstantPointer(
       ConstantSubscript offset = 0) const;
 
   friend class AsConstantHelper;
-  friend class AsConstantDataPointerHelper;
 
 private:
   std::vector<char> data_;

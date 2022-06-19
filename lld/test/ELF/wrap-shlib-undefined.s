@@ -24,11 +24,10 @@
 # RUN: llvm-readelf --dyn-syms %t2 | FileCheck %s --check-prefix=CHECK2
 
 ## See wrap-plt2.s why __wrap_foo is retained.
-# CHECK2:      Symbol table '.dynsym' contains 4 entries:
+# CHECK2:      Symbol table '.dynsym' contains 3 entries:
 # CHECK2:      NOTYPE  LOCAL  DEFAULT  UND
 # CHECK2-NEXT: NOTYPE  GLOBAL DEFAULT  UND bar
 # CHECK2-NEXT: NOTYPE  GLOBAL DEFAULT  UND __wrap_foo
-# CHECK2-NEXT: NOTYPE  GLOBAL DEFAULT    6 foo
 
 ## __wrap_bar is undefined.
 # RUN: ld.lld -shared %t/main.o --wrap=bar -o %t3.so

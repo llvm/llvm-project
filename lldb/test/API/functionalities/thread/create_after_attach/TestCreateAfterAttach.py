@@ -12,8 +12,6 @@ from lldbsuite.test import lldbutil
 
 class CreateAfterAttachTestCase(TestBase):
 
-    mydir = TestBase.compute_mydir(__file__)
-
     def setUp(self):
         # Call super's setUp().
         TestBase.setUp(self)
@@ -28,7 +26,7 @@ class CreateAfterAttachTestCase(TestBase):
     @expectedFailureNetBSD
     def test_create_after_attach(self):
         """Test thread creation after process attach."""
-        self.build(dictionary=self.getBuildFlags(use_cpp11=False))
+        self.build()
         exe = self.getBuildArtifact("a.out")
 
         # Spawn a new process

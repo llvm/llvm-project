@@ -148,6 +148,12 @@ ScriptInterpreterLua::ScriptInterpreterLua(Debugger &debugger)
 
 ScriptInterpreterLua::~ScriptInterpreterLua() = default;
 
+StructuredData::DictionarySP ScriptInterpreterLua::GetInterpreterInfo() {
+  auto info = std::make_shared<StructuredData::Dictionary>();
+  info->AddStringItem("language", "lua");
+  return info;
+}
+
 bool ScriptInterpreterLua::ExecuteOneLine(llvm::StringRef command,
                                           CommandReturnObject *result,
                                           const ExecuteScriptOptions &options) {
@@ -211,7 +217,6 @@ bool ScriptInterpreterLua::LoadScriptingModule(
     lldb_private::Status &error, StructuredData::ObjectSP *module_sp,
     FileSpec extra_search_dir) {
 
-  FileSystem::Instance().Collect(filename);
   if (llvm::Error e = m_lua->LoadModule(filename)) {
     error.SetErrorStringWithFormatv("lua failed to import '{0}': {1}\n",
                                     filename, llvm::toString(std::move(e)));
@@ -387,19 +392,8 @@ ScriptInterpreterLua::CreateInstance(Debugger &debugger) {
   return std::make_shared<ScriptInterpreterLua>(debugger);
 }
 
-lldb_private::ConstString ScriptInterpreterLua::GetPluginNameStatic() {
-  static ConstString g_name("script-lua");
-  return g_name;
-}
-
-const char *ScriptInterpreterLua::GetPluginDescriptionStatic() {
+llvm::StringRef ScriptInterpreterLua::GetPluginDescriptionStatic() {
   return "Lua script interpreter";
 }
-
-lldb_private::ConstString ScriptInterpreterLua::GetPluginName() {
-  return GetPluginNameStatic();
-}
-
-uint32_t ScriptInterpreterLua::GetPluginVersion() { return 1; }
 
 Lua &ScriptInterpreterLua::GetLua() { return *m_lua; }

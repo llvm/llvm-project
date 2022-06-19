@@ -10,8 +10,6 @@ from lldbsuite.test import lldbutil
 
 class BSDArchivesTestCase(TestBase):
 
-    mydir = TestBase.compute_mydir(__file__)
-
     def setUp(self):
         # Call super's setUp().
         TestBase.setUp(self)
@@ -24,6 +22,7 @@ class BSDArchivesTestCase(TestBase):
     @expectedFailureAll(
         oslist=["windows"],
         bugnumber="llvm.org/pr24527.  Makefile.rules doesn't know how to build static libs on Windows")
+    @expectedFailureAll(remote=True)
     def test(self):
         """Break inside a() and b() defined within libfoo.a."""
         self.build()

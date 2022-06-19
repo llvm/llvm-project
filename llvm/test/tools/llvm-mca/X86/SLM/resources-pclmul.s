@@ -13,8 +13,8 @@ pclmulqdq     $11, (%rax), %xmm2
 # CHECK-NEXT: [6]: HasSideEffects (U)
 
 # CHECK:      [1]    [2]    [3]    [4]    [5]    [6]    Instructions:
-# CHECK-NEXT:  1      10    10.00                       pclmulqdq	$11, %xmm0, %xmm2
-# CHECK-NEXT:  1      13    10.00   *                   pclmulqdq	$11, (%rax), %xmm2
+# CHECK-NEXT:  8      10    10.00                       pclmulqdq	$11, %xmm0, %xmm2
+# CHECK-NEXT:  9      13    10.00   *                   pclmulqdq	$11, (%rax), %xmm2
 
 # CHECK:      Resources:
 # CHECK-NEXT: [0]   - SLMDivider

@@ -41,7 +41,6 @@ body:             |
     ; MIPS32: liveins: $a0
     ; MIPS32: [[COPY:%[0-9]+]]:_(s32) = COPY $a0
     ; MIPS32: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 31
-    ; MIPS32: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
     ; MIPS32: [[ASHR:%[0-9]+]]:_(s32) = G_ASHR [[COPY]], [[C]](s32)
     ; MIPS32: $v0 = COPY [[COPY]](s32)
     ; MIPS32: $v1 = COPY [[ASHR]](s32)

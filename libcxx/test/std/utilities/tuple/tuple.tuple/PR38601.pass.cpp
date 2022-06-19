@@ -22,7 +22,7 @@ struct Derived : Base {
     int x_;
 };
 
-int main() {
+int main(int, char**) {
     Derived d(1, 2, 3);
     Base b = static_cast<Base>(d);
     assert(std::get<0>(b) == 2);

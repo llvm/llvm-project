@@ -22,6 +22,7 @@
 #include "llvm/ADT/Triple.h"
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/BinaryFormat/MachO.h"
+#include "llvm/BinaryFormat/Swift.h"
 #include "llvm/MC/SubtargetFeature.h"
 #include "llvm/Object/Binary.h"
 #include "llvm/Object/ObjectFile.h"
@@ -259,6 +260,124 @@ private:
 };
 using bind_iterator = content_iterator<MachOBindEntry>;
 
+/// ChainedFixupTarget holds all the information about an external symbol
+/// necessary to bind this binary to that symbol. These values are referenced
+/// indirectly by chained fixup binds. This structure captures values from all
+/// import and symbol formats.
+///
+/// Be aware there are two notions of weak here:
+///   WeakImport == true
+///     The associated bind may be set to 0 if this symbol is missing from its
+///     parent library. This is called a "weak import."
+///   LibOrdinal == BIND_SPECIAL_DYLIB_WEAK_LOOKUP
+///     This symbol may be coalesced with other libraries vending the same
+///     symbol. E.g., C++'s "operator new". This is called a "weak bind."
+struct ChainedFixupTarget {
+public:
+  ChainedFixupTarget(int LibOrdinal, StringRef Symbol, uint64_t Addend,
+                     bool WeakImport)
+      : LibOrdinal(LibOrdinal), SymbolName(Symbol), Addend(Addend),
+        WeakImport(WeakImport) {}
+
+  int libOrdinal() { return LibOrdinal; }
+  StringRef symbolName() { return SymbolName; }
+  uint64_t addend() { return Addend; }
+  bool weakImport() { return WeakImport; }
+  bool weakBind() {
+    return LibOrdinal == MachO::BIND_SPECIAL_DYLIB_WEAK_LOOKUP;
+  }
+
+private:
+  int LibOrdinal;
+  StringRef SymbolName;
+  uint64_t Addend;
+  bool WeakImport;
+};
+
+/// MachOAbstractFixupEntry is an abstract class representing a fixup in a
+/// MH_DYLDLINK file. Fixups generally represent rebases and binds. Binds also
+/// subdivide into additional subtypes (weak, lazy, reexport).
+///
+/// The two concrete subclasses of MachOAbstractFixupEntry are:
+///
+///   MachORebaseBindEntry   - for dyld opcode-based tables, including threaded-
+///                            rebase, where rebases are mixed in with other
+///                            bind opcodes.
+///   MachOChainedFixupEntry - for pointer chains embedded in data pages.
+class MachOAbstractFixupEntry {
+public:
+  MachOAbstractFixupEntry(Error *Err, const MachOObjectFile *O);
+
+  int32_t segmentIndex() const;
+  uint64_t segmentOffset() const;
+  uint64_t segmentAddress() const;
+  StringRef segmentName() const;
+  StringRef sectionName() const;
+  StringRef typeName() const;
+  StringRef symbolName() const;
+  uint32_t flags() const;
+  int64_t addend() const;
+  int ordinal() const;
+
+  /// \return the location of this fixup as a VM Address. For the VM
+  /// Address this fixup is pointing to, use pointerValue().
+  uint64_t address() const;
+
+  /// \return the VM Address pointed to by this fixup. Use
+  /// pointerValue() to compare against other VM Addresses, such as
+  /// section addresses or segment vmaddrs.
+  uint64_t pointerValue() const { return PointerValue; }
+
+  /// \return the raw "on-disk" representation of the fixup. For
+  /// Threaded rebases and Chained pointers these values are generally
+  /// encoded into various different pointer formats. This value is
+  /// exposed in API for tools that want to display and annotate the
+  /// raw bits.
+  uint64_t rawValue() const { return RawValue; }
+
+  void moveNext();
+
+protected:
+  Error *E;
+  const MachOObjectFile *O;
+  uint64_t SegmentOffset = 0;
+  int32_t SegmentIndex = -1;
+  StringRef SymbolName;
+  int32_t Ordinal = 0;
+  uint32_t Flags = 0;
+  int64_t Addend = 0;
+  uint64_t PointerValue = 0;
+  uint64_t RawValue = 0;
+  bool Done = false;
+
+  void moveToFirst();
+  void moveToEnd();
+
+  /// \return the vm address of the start of __TEXT segment.
+  uint64_t textAddress() const { return TextAddress; }
+
+private:
+  uint64_t TextAddress;
+};
+
+class MachOChainedFixupEntry : public MachOAbstractFixupEntry {
+public:
+  enum class FixupKind { All, Bind, WeakBind, Rebase };
+
+  MachOChainedFixupEntry(Error *Err, const MachOObjectFile *O, bool Parse);
+
+  bool operator==(const MachOChainedFixupEntry &) const;
+
+  void moveNext();
+  void moveToFirst();
+  void moveToEnd();
+
+private:
+  std::vector<ChainedFixupTarget> FixupTargets;
+  uint32_t FixupIndex = 0;
+};
+using fixup_iterator = content_iterator<MachOChainedFixupEntry>;
+
 class MachOObjectFile : public ObjectFile {
 public:
   struct LoadCommandInfo {
@@ -271,6 +390,8 @@ public:
   static Expected<std::unique_ptr<MachOObjectFile>>
   create(MemoryBufferRef Object, bool IsLittleEndian, bool Is64Bits,
          uint32_t UniversalCputype = 0, uint32_t UniversalIndex = 0);
+
+  static bool isMachOPairedReloc(uint64_t RelocType, uint64_t Arch);
 
   void moveSymbolNext(DataRefImpl &Symb) const override;
 
@@ -310,6 +431,9 @@ public:
   bool isSectionVirtual(DataRefImpl Sec) const override;
   bool isSectionBitcode(DataRefImpl Sec) const override;
   bool isDebugSection(DataRefImpl Sec) const override;
+
+  /// Return the raw contents of an entire segment.
+  ArrayRef<uint8_t> getSegmentContents(StringRef SegmentName) const;
 
   /// When dsymutil generates the companion file, it strips all unnecessary
   /// sections (e.g. everything in the _TEXT segment) by omitting their body
@@ -397,6 +521,9 @@ public:
 
   /// For use iterating over all bind table entries.
   iterator_range<bind_iterator> bindTable(Error &Err);
+
+  /// For iterating over all chained fixups.
+  iterator_range<fixup_iterator> fixupTable(Error &Err);
 
   /// For use iterating over all lazy bind table entries.
   iterator_range<bind_iterator> lazyBindTable(Error &Err);
@@ -558,7 +685,12 @@ public:
   ArrayRef<uint8_t> getDyldInfoBindOpcodes() const;
   ArrayRef<uint8_t> getDyldInfoWeakBindOpcodes() const;
   ArrayRef<uint8_t> getDyldInfoLazyBindOpcodes() const;
+  /// If the optional is None, no header was found, but the object was well-formed.
+  Expected<Optional<MachO::dyld_chained_fixups_header>>
+  getChainedFixupsHeader() const;
+  Expected<std::vector<ChainedFixupTarget>> getDyldChainedFixupTargets() const;
   ArrayRef<uint8_t> getDyldInfoExportsTrie() const;
+  SmallVector<uint64_t> getFunctionStarts() const;
   ArrayRef<uint8_t> getUuid() const;
 
   StringRef getStringTableData() const;
@@ -579,6 +711,9 @@ public:
   bool isRelocatableObject() const override;
 
   StringRef mapDebugSectionName(StringRef Name) const override;
+
+  llvm::binaryformat::Swift5ReflectionSectionKind
+  mapReflectionSectionNameToEnumValue(StringRef SectionName) const override;
 
   bool hasPageZeroSegment() const { return HasPageZeroSegment; }
 
@@ -649,6 +784,13 @@ public:
     return std::string(std::string(Version.str()));
   }
 
+  /// If the input path is a .dSYM bundle (as created by the dsymutil tool),
+  /// return the paths to the object files found in the bundle, otherwise return
+  /// an empty vector. If the path appears to be a .dSYM bundle but no objects
+  /// were found or there was a filesystem error, then return an error.
+  static Expected<std::vector<std::string>>
+  findDsymObjectMembers(StringRef Path);
+
 private:
   MachOObjectFile(MemoryBufferRef Object, bool IsLittleEndian, bool Is64Bits,
                   Error &Err, uint32_t UniversalCputype = 0,
@@ -675,6 +817,8 @@ private:
   const char *DataInCodeLoadCmd = nullptr;
   const char *LinkOptHintsLoadCmd = nullptr;
   const char *DyldInfoLoadCmd = nullptr;
+  const char *FuncStartsLoadCmd = nullptr;
+  const char *DyldChainedFixupsLoadCmd = nullptr;
   const char *UuidLoadCmd = nullptr;
   bool HasPageZeroSegment = false;
 };

@@ -689,3 +689,64 @@ L1:
 L2:
   ret <vscale x 8 x double> %illegal
 }
+
+define <vscale x 8 x i63> @wide_8i63(i1 %b, <vscale x 16 x i8> %legal, <vscale x 8 x i63> %illegal) nounwind {
+; CHECK-LABEL: wide_8i63:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    tbnz w0, #0, .LBB21_2
+; CHECK-NEXT:  // %bb.1: // %L2
+; CHECK-NEXT:    mov z0.d, z1.d
+; CHECK-NEXT:    mov z1.d, z2.d
+; CHECK-NEXT:    mov z2.d, z3.d
+; CHECK-NEXT:    mov z3.d, z4.d
+; CHECK-NEXT:    ret
+; CHECK-NEXT:  .LBB21_2: // %L1
+; CHECK-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; CHECK-NEXT:    bl bar
+  br i1 %b, label %L1, label %L2
+L1:
+  call aarch64_sve_vector_pcs void @bar()
+  unreachable
+L2:
+  ret <vscale x 8 x i63> %illegal
+}
+
+define <vscale x 7 x i63> @wide_7i63(i1 %b, <vscale x 16 x i8> %legal, <vscale x 7 x i63> %illegal) nounwind {
+; CHECK-LABEL: wide_7i63:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    tbnz w0, #0, .LBB22_2
+; CHECK-NEXT:  // %bb.1: // %L2
+; CHECK-NEXT:    mov z0.d, z1.d
+; CHECK-NEXT:    mov z1.d, z2.d
+; CHECK-NEXT:    mov z2.d, z3.d
+; CHECK-NEXT:    mov z3.d, z4.d
+; CHECK-NEXT:    ret
+; CHECK-NEXT:  .LBB22_2: // %L1
+; CHECK-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; CHECK-NEXT:    bl bar
+  br i1 %b, label %L1, label %L2
+L1:
+  call aarch64_sve_vector_pcs void @bar()
+  unreachable
+L2:
+  ret <vscale x 7 x i63> %illegal
+}
+
+define <vscale x 7 x i31> @wide_7i31(i1 %b, <vscale x 16 x i8> %legal, <vscale x 7 x i31> %illegal) nounwind {
+; CHECK-LABEL: wide_7i31:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    tbnz w0, #0, .LBB23_2
+; CHECK-NEXT:  // %bb.1: // %L2
+; CHECK-NEXT:    mov z0.d, z1.d
+; CHECK-NEXT:    mov z1.d, z2.d
+; CHECK-NEXT:    ret
+; CHECK-NEXT:  .LBB23_2: // %L1
+; CHECK-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; CHECK-NEXT:    bl bar
+  br i1 %b, label %L1, label %L2
+L1:
+  call aarch64_sve_vector_pcs void @bar()
+  unreachable
+L2:
+  ret <vscale x 7 x i31> %illegal
+}

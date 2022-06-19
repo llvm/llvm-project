@@ -6,9 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "TestTU.h"
 #include "TweakTesting.h"
-#include "gmock/gmock-matchers.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 
@@ -23,6 +21,7 @@ TEST_F(PopulateSwitchTest, Test) {
     CodeContext Context;
     llvm::StringRef TestSource;
     llvm::StringRef ExpectedSource;
+    llvm::StringRef FileName = "TestTU.cpp";
   };
 
   Case Cases[]{
@@ -93,6 +92,12 @@ TEST_F(PopulateSwitchTest, Test) {
           // Selection on switch condition
           Function,
           R""(enum Enum {A}; switch (^A) {})"",
+          R""(enum Enum {A}; switch (A) {case A:break;})"",
+      },
+      {
+          // Selection of whole switch condition
+          Function,
+          R""(enum Enum {A}; switch ([[A]]) {})"",
           R""(enum Enum {A}; switch (A) {case A:break;})"",
       },
       {
@@ -200,10 +205,43 @@ TEST_F(PopulateSwitchTest, Test) {
           R""(template<typename T> void f() {enum Enum {A}; ^switch (A) {}})"",
           "unavailable",
       },
+      {// C: Only filling in missing enumerators
+       Function,
+       R""(
+            enum CEnum {A,B,C};
+            enum CEnum val = A;
+            ^switch (val) {case B:break;}
+          )"",
+       R""(
+            enum CEnum {A,B,C};
+            enum CEnum val = A;
+            switch (val) {case B:break;case A:case C:break;}
+          )"",
+       "TestTU.c"},
+      {// C: Only filling in missing enumerators w/ typedefs
+       Function,
+       R""(
+            typedef unsigned long UInteger;
+            enum ControlState : UInteger;
+            typedef enum ControlState ControlState;
+            enum ControlState : UInteger {A,B,C};
+            ControlState controlState = A;
+            switch (^controlState) {case A:break;}
+          )"",
+       R""(
+            typedef unsigned long UInteger;
+            enum ControlState : UInteger;
+            typedef enum ControlState ControlState;
+            enum ControlState : UInteger {A,B,C};
+            ControlState controlState = A;
+            switch (controlState) {case A:break;case B:case C:break;}
+          )"",
+       "TestTU.c"},
   };
 
   for (const auto &Case : Cases) {
     Context = Case.Context;
+    FileName = Case.FileName;
     EXPECT_EQ(apply(Case.TestSource), Case.ExpectedSource);
   }
 }

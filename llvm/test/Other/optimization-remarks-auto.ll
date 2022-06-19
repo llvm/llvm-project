@@ -2,7 +2,7 @@
 ;;
 ;; new PM
 ; RUN: rm -f %t.yaml %t.hot.yaml
-; RUN: opt < %s --disable-output --enable-new-pm \
+; RUN: opt < %s --disable-output \
 ; RUN: --passes='inline' \
 ; RUN: --pass-remarks-output=%t.yaml --pass-remarks-filter='inline' \
 ; RUN: --pass-remarks-with-hotness
@@ -10,14 +10,14 @@
 ; RUN: FileCheck %s -check-prefix=YAML-MISS < %t.yaml
 
 ;; test 'auto' threshold
-; RUN: opt < %s --disable-output --enable-new-pm --inline-enable-cost-benefit-analysis=0 \
+; RUN: opt < %s --disable-output --inline-enable-cost-benefit-analysis=0 \
 ; RUN: --passes='module(print-profile-summary,cgscc(inline))' \
 ; RUN: --pass-remarks-output=%t.hot.yaml --pass-remarks-filter='inline' \
 ; RUN: --pass-remarks-with-hotness --pass-remarks-hotness-threshold=auto 2>&1 | FileCheck %s
 ; RUN: FileCheck %s -check-prefix=YAML-PASS < %t.hot.yaml
 ; RUN: not FileCheck %s -check-prefix=YAML-MISS < %t.hot.yaml
 
-; RUN: opt < %s --disable-output --enable-new-pm --inline-enable-cost-benefit-analysis=0  \
+; RUN: opt < %s --disable-output --inline-enable-cost-benefit-analysis=0  \
 ; RUN: --passes='module(print-profile-summary,cgscc(inline))' \
 ; RUN: --pass-remarks=inline --pass-remarks-missed=inline --pass-remarks-analysis=inline \
 ; RUN: --pass-remarks-with-hotness --pass-remarks-hotness-threshold=auto 2>&1 | FileCheck %s -check-prefix=CHECK-RPASS
@@ -34,8 +34,8 @@
 ; YAML-MISS-NEXT: Function:        caller2
 ; YAML-MISS-NEXT: Hotness:         1
 
-; CHECK-RPASS: callee1 inlined into caller1 with (cost=-30, threshold=4500) (hotness: 400)
-; CHECK-RPASS-NOT: callee2 not inlined into caller2 because it should never be inlined (cost=never): noinline function attribute (hotness: 1)
+; CHECK-RPASS: 'callee1' inlined into 'caller1' with (cost=-30, threshold=4500) (hotness: 400)
+; CHECK-RPASS-NOT: 'callee2' not inlined into 'caller2' because it should never be inlined (cost=never): noinline function attribute (hotness: 1)
 
 define void @callee1() !prof !20 {
 ; CHECK: callee1 :hot

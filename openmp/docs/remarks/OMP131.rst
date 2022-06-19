@@ -7,13 +7,16 @@ This optimization remark indicates that a generic-mode kernel on the device was
 specialized for the given target region. When offloading in generic-mode, a
 state machine is required to schedule the work between the parallel worker
 threads. This optimization specializes the state machine in cases where there is
-a known number of parallel regions inside the kernel.
+a known number of parallel regions inside the kernel. A much simpler state
+machine can be used if it is known that there is no nested parallelism and the
+number of regions to schedule is a static amount.
 
 Examples
 --------
 
 This optimization should occur on any generic-mode kernel that has visibility on
-all parallel regions, but cannot be moved to SPMD-mode.
+all parallel regions, but cannot be moved to SPMD-mode and has no nested
+parallelism.
 
 .. code-block:: c++
 

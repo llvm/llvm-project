@@ -295,6 +295,99 @@ public:
     return get(Opcode).TSFlags & PPCII::Prefixed;
   }
 
+  /// Check if Opcode corresponds to a call instruction that should be marked
+  /// with the NOTOC relocation.
+  bool isNoTOCCallInstr(unsigned Opcode) const {
+    if (!get(Opcode).isCall())
+      return false;
+
+    switch (Opcode) {
+    default:
+#ifndef NDEBUG
+      llvm_unreachable("Unknown call opcode");
+#endif
+      return false;
+    case PPC::BL8_NOTOC:
+    case PPC::BL8_NOTOC_TLS:
+    case PPC::BL8_NOTOC_RM:
+      return true;
+#ifndef NDEBUG
+    case PPC::BL8:
+    case PPC::BL:
+    case PPC::BL8_TLS:
+    case PPC::BL_TLS:
+    case PPC::BLA8:
+    case PPC::BLA:
+    case PPC::BCCL:
+    case PPC::BCCLA:
+    case PPC::BCL:
+    case PPC::BCLn:
+    case PPC::BL8_NOP:
+    case PPC::BL_NOP:
+    case PPC::BL8_NOP_TLS:
+    case PPC::BLA8_NOP:
+    case PPC::BCTRL8:
+    case PPC::BCTRL:
+    case PPC::BCCCTRL8:
+    case PPC::BCCCTRL:
+    case PPC::BCCTRL8:
+    case PPC::BCCTRL:
+    case PPC::BCCTRL8n:
+    case PPC::BCCTRLn:
+    case PPC::BL8_RM:
+    case PPC::BLA8_RM:
+    case PPC::BL8_NOP_RM:
+    case PPC::BLA8_NOP_RM:
+    case PPC::BCTRL8_RM:
+    case PPC::BCTRL8_LDinto_toc:
+    case PPC::BCTRL8_LDinto_toc_RM:
+    case PPC::BL8_TLS_:
+    case PPC::TCRETURNdi8:
+    case PPC::TCRETURNai8:
+    case PPC::TCRETURNri8:
+    case PPC::TAILBCTR8:
+    case PPC::TAILB8:
+    case PPC::TAILBA8:
+    case PPC::BCLalways:
+    case PPC::BLRL:
+    case PPC::BCCLRL:
+    case PPC::BCLRL:
+    case PPC::BCLRLn:
+    case PPC::BDZL:
+    case PPC::BDNZL:
+    case PPC::BDZLA:
+    case PPC::BDNZLA:
+    case PPC::BDZLp:
+    case PPC::BDNZLp:
+    case PPC::BDZLAp:
+    case PPC::BDNZLAp:
+    case PPC::BDZLm:
+    case PPC::BDNZLm:
+    case PPC::BDZLAm:
+    case PPC::BDNZLAm:
+    case PPC::BDZLRL:
+    case PPC::BDNZLRL:
+    case PPC::BDZLRLp:
+    case PPC::BDNZLRLp:
+    case PPC::BDZLRLm:
+    case PPC::BDNZLRLm:
+    case PPC::BL_RM:
+    case PPC::BLA_RM:
+    case PPC::BL_NOP_RM:
+    case PPC::BCTRL_RM:
+    case PPC::TCRETURNdi:
+    case PPC::TCRETURNai:
+    case PPC::TCRETURNri:
+    case PPC::BCTRL_LWZinto_toc:
+    case PPC::BCTRL_LWZinto_toc_RM:
+    case PPC::TAILBCTR:
+    case PPC::TAILB:
+    case PPC::TAILBA:
+      return false;
+#endif
+    }
+  }
+
   static bool isSameClassPhysRegCopy(unsigned Opcode) {
     unsigned CopyOpcodes[] = {PPC::OR,        PPC::OR8,   PPC::FMR,
                               PPC::VOR,       PPC::XXLOR, PPC::XXLORf,
@@ -393,7 +486,9 @@ public:
                              MachineInstr &NewMI1,
                              MachineInstr &NewMI2) const override;
 
-  void setSpecialOperandAttr(MachineInstr &MI, uint16_t Flags) const override;
+  // PowerPC specific version of setSpecialOperandAttr that copies Flags to MI
+  // and clears nuw, nsw, and exact flags.
+  void setSpecialOperandAttr(MachineInstr &MI, uint16_t Flags) const;
 
   bool isCoalescableExtInstr(const MachineInstr &MI,
                              Register &SrcReg, Register &DstReg,
@@ -524,10 +619,11 @@ public:
   // Comparison optimization.
 
   bool analyzeCompare(const MachineInstr &MI, Register &SrcReg,
-                      Register &SrcReg2, int &Mask, int &Value) const override;
+                      Register &SrcReg2, int64_t &Mask,
+                      int64_t &Value) const override;
 
   bool optimizeCompareInstr(MachineInstr &CmpInstr, Register SrcReg,
-                            Register SrcReg2, int Mask, int Value,
+                            Register SrcReg2, int64_t Mask, int64_t Value,
                             const MachineRegisterInfo *MRI) const override;
 
 
@@ -649,6 +745,12 @@ public:
   // \p SeenIntermediate is set to true if uses between DefMI and \p MI exist.
   MachineInstr *getDefMIPostRA(unsigned Reg, MachineInstr &MI,
                                bool &SeenIntermediateUse) const;
+
+  // Materialize immediate after RA.
+  void materializeImmPostRA(MachineBasicBlock &MBB,
+                            MachineBasicBlock::iterator MBBI,
+                            const DebugLoc &DL, Register Reg,
+                            int64_t Imm) const;
 
   /// getRegNumForOperand - some operands use different numbering schemes
   /// for the same registers. For example, a VSX instruction may have any of

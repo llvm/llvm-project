@@ -25,19 +25,19 @@ Modifiers
 DS Modifiers
 ------------
 
-.. _amdgpu_synid_ds_offset8:
+.. _amdgpu_synid_ds_offset80:
 
-offset8
+offset0
 ~~~~~~~
 
-Specifies an immediate unsigned 8-bit offset, in bytes. The default value is 0.
+Specifies first 8-bit offset, in bytes. The default value is 0.
 
-Used with DS instructions which have 2 addresses.
+Used with DS instructions that expect two addresses.
 
     =================== ====================================================================
     Syntax              Description
     =================== ====================================================================
-    offset:{0..0xFF}    Specifies an unsigned 8-bit offset as a positive
+    offset0:{0..0xFF}   Specifies an unsigned 8-bit offset as a positive
                         :ref:`integer number <amdgpu_synid_integer_number>`
                         or an :ref:`absolute expression<amdgpu_synid_absolute_expression>`.
     =================== ====================================================================
@@ -46,18 +46,43 @@ Examples:
 
 .. parsed-literal::
 
-  offset:0xff
-  offset:2-x
-  offset:-x-y
+  offset0:0xff
+  offset0:2-x
+  offset0:-x-y
+
+.. _amdgpu_synid_ds_offset81:
+
+offset1
+~~~~~~~
+
+Specifies second 8-bit offset, in bytes. The default value is 0.
+
+Used with DS instructions that expect two addresses.
+
+    =================== ====================================================================
+    Syntax              Description
+    =================== ====================================================================
+    offset1:{0..0xFF}   Specifies an unsigned 8-bit offset as a positive
+                        :ref:`integer number <amdgpu_synid_integer_number>`
+                        or an :ref:`absolute expression<amdgpu_synid_absolute_expression>`.
+    =================== ====================================================================
+
+Examples:
+
+.. parsed-literal::
+
+  offset1:0xff
+  offset1:2-x
+  offset1:-x-y
 
 .. _amdgpu_synid_ds_offset16:
 
-offset16
-~~~~~~~~
+offset
+~~~~~~
 
-Specifies an immediate unsigned 16-bit offset, in bytes. The default value is 0.
+Specifies a 16-bit offset, in bytes. The default value is 0.
 
-Used with DS instructions which have 1 address.
+Used with DS instructions that expect a single address.
 
     ==================== ====================================================================
     Syntax               Description
@@ -338,6 +363,21 @@ nv
 ~~
 
 See a description :ref:`here<amdgpu_synid_nv>`.
+
+sc0
+~~~
+
+See a description :ref:`here<amdgpu_synid_sc0>`.
+
+sc1
+~~~
+
+See a description :ref:`here<amdgpu_synid_sc1>`.
+
+nt
+~~
+
+See a description :ref:`here<amdgpu_synid_nt>`.
 
 MIMG Modifiers
 --------------
@@ -631,6 +671,48 @@ See AMD documentation for details.
     Syntax                                   Description
     ======================================== ================================================
     tfe                                      Set tfe bit to 1.
+    ======================================== ================================================
+
+.. _amdgpu_synid_sc0:
+
+sc0
+~~~
+
+For atomics, sc0 indicates that the atomic operation returns a value.
+For other opcodes is is used together with :ref:`sc1<amdgpu_synid_sc1>` to specify cache
+policy. See AMD documentation for details.
+
+    ======================================== ================================================
+    Syntax                                   Description
+    ======================================== ================================================
+    sc0                                      Set sc0 bit to 1.
+    ======================================== ================================================
+
+.. _amdgpu_synid_sc1:
+
+sc1
+~~~
+
+This modifier is used together with :ref:`sc0<amdgpu_synid_sc0>` to specify cache
+policy.
+
+    ======================================== ================================================
+    Syntax                                   Description
+    ======================================== ================================================
+    sc1                                      Set sc1 bit to 1.
+    ======================================== ================================================
+
+.. _amdgpu_synid_nt:
+
+nt
+~~
+
+Indicates an operation with non-temporal data.
+
+    ======================================== ================================================
+    Syntax                                   Description
+    ======================================== ================================================
+    nt                                       Set nt bit to 1.
     ======================================== ================================================
 
 MUBUF/MTBUF Modifiers
@@ -1459,6 +1541,34 @@ Examples:
   op_sel:[0,0]
   op_sel:[0,1]
 
+.. _amdgpu_synid_dpp_op_sel:
+
+dpp_op_sel
+~~~~~~~~~~
+
+Special version of *op_sel* used for *permlane* opcodes to specify
+dpp-like mode bits - :ref:`fi<amdgpu_synid_fi16>` and
+:ref:`bound_ctrl<amdgpu_synid_bound_ctrl>`.
+
+GFX10 only.
+
+    ======================================== ============================================================
+    Syntax                                   Description
+    ======================================== ============================================================
+    op_sel:[{0..1},{0..1}]                   First bit specifies :ref:`fi<amdgpu_synid_fi16>`, second
+                                             bit specifies :ref:`bound_ctrl<amdgpu_synid_bound_ctrl>`.
+    ======================================== ============================================================
+
+Note: numeric values may be specified as either
+:ref:`integer numbers<amdgpu_synid_integer_number>` or
+:ref:`absolute expressions<amdgpu_synid_absolute_expression>`.
+
+Examples:
+
+.. parsed-literal::
+
+  op_sel:[0,0]
+
 .. _amdgpu_synid_clamp:
 
 clamp
@@ -1902,3 +2012,34 @@ Note: numeric value may be specified as either
 an :ref:`integer number<amdgpu_synid_integer_number>` or
 an :ref:`absolute expression<amdgpu_synid_absolute_expression>`.
 
+.. _amdgpu_synid_mfma_neg:
+
+neg
+~~~
+
+Indicates operands that must be negated before the operation.
+The number of values specified by this modifier must match the number of source
+operands. First value controls src0, second value controls src1 and so on.
+
+The value 0 indicates that the corresponding operand value is used unmodified,
+the value 1 indicates that the operand value must be negated before the operation.
+
+By default, operand values are used unmodified.
+
+This modifier is valid for floating point operands only.
+
+    =============================== ==================================================================
+    Syntax                          Description
+    =============================== ==================================================================
+    neg:[{0..1},{0..1},{0..1}]      Select operands which must be negated before the operation.
+    =============================== ==================================================================
+
+Note: numeric values may be specified as either
+:ref:`integer numbers<amdgpu_synid_integer_number>` or
+:ref:`absolute expressions<amdgpu_synid_absolute_expression>`.
+
+Examples:
+
+.. parsed-literal::
+
+  neg:[0,1,1]

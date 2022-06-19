@@ -8,8 +8,9 @@ add_mlir_conversion_library(MLIROpenACCToSCF
   MLIRConversionPassIncGen
 
   LINK_LIBS PUBLIC
+  MLIRArithmeticDialect
   MLIRIR
-  MLIROpenACC
+  MLIROpenACCDialect
+  MLIRSCFDialect
   MLIRTransforms
-  MLIRSCF
   )

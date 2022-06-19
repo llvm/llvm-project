@@ -93,7 +93,7 @@ namespace DeduceNonTypeTemplateArgsInArray {
 }
 
 namespace DeduceWithDefaultArgs {
-  template<template<typename...> class Container> void f(Container<int>); // expected-note {{deduced type 'X<[...], (default) int>' of 1st parameter does not match adjusted type 'X<[...], double>' of argument [with Container = X]}}
+  template<template<typename...> class Container> void f(Container<int>); // expected-note {{deduced type 'X<[...], (default) int>' of 1st parameter does not match adjusted type 'X<[...], double>' of argument [with Container = DeduceWithDefaultArgs::X]}}
   template<typename, typename = int> struct X {};
   void g() {
     // OK, use default argument for the second template parameter.

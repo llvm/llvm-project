@@ -10,7 +10,9 @@
 #define LLD_MACHO_OUTPUT_SEGMENT_H
 
 #include "OutputSection.h"
+#include "Symbols.h"
 #include "lld/Common/LLVM.h"
+#include "llvm/ADT/TinyPtrVector.h"
 
 #include <limits>
 #include <vector>
@@ -41,6 +43,7 @@ class OutputSegment {
 public:
   void addOutputSection(OutputSection *os);
   void sortOutputSections();
+  void assignAddressesToStartEndSymbols();
 
   const std::vector<OutputSection *> &getSections() const { return sections; }
   size_t numNonHiddenSections() const;
@@ -55,6 +58,9 @@ public:
   uint32_t initProt = 0;
   uint8_t index;
 
+  llvm::TinyPtrVector<Defined *> segmentStartSymbols;
+  llvm::TinyPtrVector<Defined *> segmentEndSymbols;
+
 private:
   std::vector<OutputSection *> sections;
 };
@@ -62,6 +68,7 @@ private:
 extern std::vector<OutputSegment *> outputSegments;
 
 void sortOutputSegments();
+void resetOutputSegments();
 
 OutputSegment *getOrCreateOutputSegment(StringRef name);
 

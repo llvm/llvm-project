@@ -1,8 +1,10 @@
-// RUN: %clangxx_asan -O1 -fsanitize-address-use-after-scope %s -o %t && \
+// This is the ASAN test of the same name ported to HWAsan.
+
+// RUN: %clangxx_hwasan -mllvm -hwasan-use-after-scope -O1 %s -o %t && \
 // RUN:     not %run %t 2>&1 | FileCheck %s
-//
-// Not expected to work yet with HWAsan.
-// XFAIL: *
+
+// REQUIRES: aarch64-target-arch
+// REQUIRES: stable-runtime
 
 int *p[3];
 
@@ -12,6 +14,7 @@ int main() {
     p[i] = &x;
   }
   return **p; // BOOM
-  // CHECK: ERROR: AddressSanitizer: stack-use-after-scope
+  // CHECK: ERROR: HWAddressSanitizer: tag-mismatch
   // CHECK: #0 0x{{.*}} in main {{.*}}.cpp:[[@LINE-2]]
+  // CHECK: Cause: stack tag-mismatch
 }

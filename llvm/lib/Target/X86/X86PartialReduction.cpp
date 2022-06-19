@@ -13,15 +13,18 @@
 //===----------------------------------------------------------------------===//
 
 #include "X86.h"
+#include "X86TargetMachine.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/IR/Constants.h"
-#include "llvm/IR/Instructions.h"
-#include "llvm/IR/IntrinsicsX86.h"
 #include "llvm/IR/IRBuilder.h"
+#include "llvm/IR/Instructions.h"
+#include "llvm/IR/IntrinsicInst.h"
+#include "llvm/IR/IntrinsicsX86.h"
 #include "llvm/IR/Operator.h"
+#include "llvm/IR/PatternMatch.h"
 #include "llvm/Pass.h"
-#include "X86TargetMachine.h"
+#include "llvm/Support/KnownBits.h"
 
 using namespace llvm;
 
@@ -49,7 +52,7 @@ public:
   }
 
 private:
-  bool tryMAddReplacement(Instruction *Op);
+  bool tryMAddReplacement(Instruction *Op, bool ReduceInOneBB);
   bool trySADReplacement(Instruction *Op);
 };
 }
@@ -63,7 +66,43 @@ char X86PartialReduction::ID = 0;
 INITIALIZE_PASS(X86PartialReduction, DEBUG_TYPE,
                 "X86 Partial Reduction", false, false)
 
-bool X86PartialReduction::tryMAddReplacement(Instruction *Op) {
+// This function should be aligned with detectExtMul() in X86ISelLowering.cpp.
+static bool matchVPDPBUSDPattern(const X86Subtarget *ST, BinaryOperator *Mul,
+                                 const DataLayout *DL) {
+  if (!ST->hasVNNI() && !ST->hasAVXVNNI())
+    return false;
+
+  Value *LHS = Mul->getOperand(0);
+  Value *RHS = Mul->getOperand(1);
+
+  if (isa<SExtInst>(LHS))
+    std::swap(LHS, RHS);
+
+  auto IsFreeTruncation = [&](Value *Op) {
+    if (auto *Cast = dyn_cast<CastInst>(Op)) {
+      if (Cast->getParent() == Mul->getParent() &&
+          (Cast->getOpcode() == Instruction::SExt ||
+           Cast->getOpcode() == Instruction::ZExt) &&
+          Cast->getOperand(0)->getType()->getScalarSizeInBits() <= 8)
+        return true;
+    }
+
+    return isa<Constant>(Op);
+  };
+
+  // (dpbusd (zext a), (sext, b)). Since the first operand should be unsigned
+  // value, we need to check LHS is zero extended value. RHS should be signed
+  // value, so we just check the signed bits.
+  if ((IsFreeTruncation(LHS) &&
+       computeKnownBits(LHS, *DL).countMaxActiveBits() <= 8) &&
+      (IsFreeTruncation(RHS) && ComputeMaxSignificantBits(RHS, *DL) <= 8))
+    return true;
+
+  return false;
+}
+
+bool X86PartialReduction::tryMAddReplacement(Instruction *Op,
+                                             bool ReduceInOneBB) {
   if (!ST->hasSSE2())
     return false;
 
@@ -81,6 +120,13 @@ bool X86PartialReduction::tryMAddReplacement(Instruction *Op) {
 
   Value *LHS = Mul->getOperand(0);
   Value *RHS = Mul->getOperand(1);
+
+  // If the target support VNNI, leave it to ISel to combine reduce operation
+  // to VNNI instruction.
+  // TODO: we can support transforming reduce to VNNI intrinsic for across block
+  // in this pass.
+  if (ReduceInOneBB && matchVPDPBUSDPattern(ST, Mul, DL))
+    return false;
 
   // LHS and RHS should be only used once or if they are the same then only
   // used twice. Only check this when SSE4.1 is enabled and we have zext/sext
@@ -176,16 +222,21 @@ bool X86PartialReduction::trySADReplacement(Instruction *Op) {
   if (!cast<VectorType>(Op->getType())->getElementType()->isIntegerTy(32))
     return false;
 
-  // Operand should be a select.
-  auto *SI = dyn_cast<SelectInst>(Op);
-  if (!SI)
-    return false;
+  Value *LHS;
+  if (match(Op, PatternMatch::m_Intrinsic<Intrinsic::abs>())) {
+    LHS = Op->getOperand(0);
+  } else {
+    // Operand should be a select.
+    auto *SI = dyn_cast<SelectInst>(Op);
+    if (!SI)
+      return false;
 
-  // Select needs to implement absolute value.
-  Value *LHS, *RHS;
-  auto SPR = matchSelectPattern(SI, LHS, RHS);
-  if (SPR.Flavor != SPF_ABS)
-    return false;
+    Value *RHS;
+    // Select needs to implement absolute value.
+    auto SPR = matchSelectPattern(SI, LHS, RHS);
+    if (SPR.Flavor != SPF_ABS)
+      return false;
+  }
 
   // Need a subtract of two values.
   auto *Sub = dyn_cast<BinaryOperator>(LHS);
@@ -209,7 +260,7 @@ bool X86PartialReduction::trySADReplacement(Instruction *Op) {
   if (!Op0 || !Op1)
     return false;
 
-  IRBuilder<> Builder(SI);
+  IRBuilder<> Builder(Op);
 
   auto *OpTy = cast<FixedVectorType>(Op->getType());
   unsigned NumElts = OpTy->getNumElements();
@@ -227,7 +278,7 @@ bool X86PartialReduction::trySADReplacement(Instruction *Op) {
     IntrinsicNumElts = 16;
   }
 
-  Function *PSADBWFn = Intrinsic::getDeclaration(SI->getModule(), IID);
+  Function *PSADBWFn = Intrinsic::getDeclaration(Op->getModule(), IID);
 
   if (NumElts < 16) {
     // Pad input with zeroes.
@@ -292,15 +343,17 @@ bool X86PartialReduction::trySADReplacement(Instruction *Op) {
     Ops[0] = Builder.CreateShuffleVector(Ops[0], Zero, ConcatMask);
   }
 
-  SI->replaceAllUsesWith(Ops[0]);
-  SI->eraseFromParent();
+  Op->replaceAllUsesWith(Ops[0]);
+  Op->eraseFromParent();
 
   return true;
 }
 
 // Walk backwards from the ExtractElementInst and determine if it is the end of
 // a horizontal reduction. Return the input to the reduction if we find one.
-static Value *matchAddReduction(const ExtractElementInst &EE) {
+static Value *matchAddReduction(const ExtractElementInst &EE,
+                                bool &ReduceInOneBB) {
+  ReduceInOneBB = true;
   // Make sure we're extracting index 0.
   auto *Index = dyn_cast<ConstantInt>(EE.getIndexOperand());
   if (!Index || !Index->isNullValue())
@@ -309,6 +362,8 @@ static Value *matchAddReduction(const ExtractElementInst &EE) {
   const auto *BO = dyn_cast<BinaryOperator>(EE.getVectorOperand());
   if (!BO || BO->getOpcode() != Instruction::Add || !BO->hasOneUse())
     return nullptr;
+  if (EE.getParent() != BO->getParent())
+    ReduceInOneBB = false;
 
   unsigned NumElems = cast<FixedVectorType>(BO->getType())->getNumElements();
   // Ensure the reduction size is a power of 2.
@@ -321,6 +376,8 @@ static Value *matchAddReduction(const ExtractElementInst &EE) {
     const auto *BO = dyn_cast<BinaryOperator>(Op);
     if (!BO || BO->getOpcode() != Instruction::Add)
       return nullptr;
+    if (EE.getParent() != BO->getParent())
+      ReduceInOneBB = false;
 
     // If this isn't the first add, then it should only have 2 users, the
     // shuffle and another add which we checked in the previous iteration.
@@ -460,9 +517,10 @@ bool X86PartialReduction::runOnFunction(Function &F) {
       if (!EE)
         continue;
 
+      bool ReduceInOneBB;
       // First find a reduction tree.
       // FIXME: Do we need to handle other opcodes than Add?
-      Value *Root = matchAddReduction(*EE);
+      Value *Root = matchAddReduction(*EE, ReduceInOneBB);
       if (!Root)
         continue;
 
@@ -470,7 +528,7 @@ bool X86PartialReduction::runOnFunction(Function &F) {
       collectLeaves(Root, Leaves);
 
       for (Instruction *I : Leaves) {
-        if (tryMAddReplacement(I)) {
+        if (tryMAddReplacement(I, ReduceInOneBB)) {
           MadeChange = true;
           continue;
         }

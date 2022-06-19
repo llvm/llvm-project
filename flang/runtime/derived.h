@@ -8,8 +8,8 @@
 
 // Internal runtime utilities for derived type operations.
 
-#ifndef FLANG_RUNTIME_DERIVED_H_
-#define FLANG_RUNTIME_DERIVED_H_
+#ifndef FORTRAN_RUNTIME_DERIVED_H_
+#define FORTRAN_RUNTIME_DERIVED_H_
 
 namespace Fortran::runtime::typeInfo {
 class DerivedType;
@@ -24,16 +24,12 @@ class Terminator;
 int Initialize(const Descriptor &, const typeInfo::DerivedType &, Terminator &,
     bool hasStat = false, const Descriptor *errMsg = nullptr);
 
+// Call FINAL subroutines, if any
+void Finalize(const Descriptor &, const typeInfo::DerivedType &derived);
+
 // Call FINAL subroutines, deallocate allocatable & automatic components.
 // Does not deallocate the original descriptor.
 void Destroy(const Descriptor &, bool finalize, const typeInfo::DerivedType &);
 
-// Assigns one object to another via intrinsic assignment (F'2018 10.2.1.3) or
-// defined assignment (10.2.1.4), as appropriate.  Performs scalar expansion
-// or allocatable reallocation as needed.  Does not perform intrinsic
-// assignment implicit type conversion.
-void Assign(Descriptor &, const Descriptor &, const typeInfo::DerivedType &,
-    Terminator &);
-
 } // namespace Fortran::runtime
-#endif // FLANG_RUNTIME_DERIVED_H_
+#endif // FORTRAN_RUNTIME_DERIVED_H_

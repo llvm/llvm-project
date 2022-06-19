@@ -1,9 +1,9 @@
 // RUN: %clang_cc1 -x c -fsyntax-only -verify -Wbool-operation %s
-// RUN: %clang_cc1 -x c -fsyntax-only -verify %s
-// RUN: %clang_cc1 -x c -fsyntax-only -fdiagnostics-parseable-fixits %s 2>&1 | FileCheck %s
+// RUN: %clang_cc1 -x c -fsyntax-only -verify -Wall %s
+// RUN: %clang_cc1 -x c -fsyntax-only -Wbool-operation -fdiagnostics-parseable-fixits %s 2>&1 | FileCheck %s
 // RUN: %clang_cc1 -x c++ -fsyntax-only -verify -Wbool-operation %s
-// RUN: %clang_cc1 -x c++ -fsyntax-only -verify %s
-// RUN: %clang_cc1 -x c++ -fsyntax-only -fdiagnostics-parseable-fixits %s 2>&1 | FileCheck %s
+// RUN: %clang_cc1 -x c++ -fsyntax-only -verify -Wall %s
+// RUN: %clang_cc1 -x c++ -fsyntax-only -Wbool-operation -fdiagnostics-parseable-fixits %s 2>&1 | FileCheck %s
 
 #ifdef __cplusplus
 typedef bool boolean;

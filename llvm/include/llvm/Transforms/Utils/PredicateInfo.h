@@ -51,11 +51,12 @@
 #define LLVM_TRANSFORMS_UTILS_PREDICATEINFO_H
 
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/ilist.h"
 #include "llvm/ADT/ilist_node.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/PassManager.h"
-#include "llvm/IR/Value.h"
+#include "llvm/IR/ValueHandle.h"
 #include "llvm/Pass.h"
 
 namespace llvm {
@@ -63,6 +64,7 @@ namespace llvm {
 class AssumptionCache;
 class DominatorTree;
 class Function;
+class Value;
 class IntrinsicInst;
 class raw_ostream;
 
@@ -176,7 +178,7 @@ public:
 class PredicateInfo {
 public:
   PredicateInfo(Function &, DominatorTree &, AssumptionCache &);
-  ~PredicateInfo() = default;
+  ~PredicateInfo();
 
   void verifyPredicateInfo() const;
 
@@ -203,6 +205,8 @@ private:
   // the Predicate Info, they belong to the ValueInfo structs in the ValueInfos
   // vector.
   DenseMap<const Value *, const PredicateBase *> PredicateMap;
+  // The set of ssa_copy declarations we created with our custom mangling.
+  SmallSet<AssertingVH<Function>, 20> CreatedDeclarations;
 };
 
 // This pass does eager building and then printing of PredicateInfo. It is used

@@ -45,6 +45,7 @@ class Target;
 class TypeList;
 class UUID;
 class VariableList;
+struct ModuleFunctionSearchOptions;
 
 class ModuleListProperties : public Properties {
   mutable llvm::sys::RWMutex m_symlink_paths_mutex;
@@ -59,6 +60,15 @@ public:
   bool SetClangModulesCachePath(const FileSpec &path);
   bool GetEnableExternalLookup() const;
   bool SetEnableExternalLookup(bool new_value);
+  bool GetEnableLLDBIndexCache() const;
+  bool SetEnableLLDBIndexCache(bool new_value);
+  uint64_t GetLLDBIndexCacheMaxByteSize();
+  uint64_t GetLLDBIndexCacheMaxPercent();
+  uint64_t GetLLDBIndexCacheExpirationDays();
+  FileSpec GetLLDBIndexCachePath() const;
+  bool SetLLDBIndexCachePath(const FileSpec &path);
+
+  bool GetLoadSymbolOnDemand();
 
   PathMappingList GetSymlinkMappings() const;
 };
@@ -158,7 +168,7 @@ public:
   ///     ModulesDidLoad may be deferred when adding multiple Modules
   ///     to the Target, but it must be called at the end,
   ///     before resuming execution.
-  bool AppendIfNeeded(const lldb::ModuleSP &module_sp, bool notify = true);
+  bool AppendIfNeeded(const lldb::ModuleSP &new_module, bool notify = true);
 
   void Append(const ModuleList &module_list);
 
@@ -252,7 +262,7 @@ public:
 
   /// \see Module::FindFunctions ()
   void FindFunctions(ConstString name, lldb::FunctionNameType name_type_mask,
-                     bool include_symbols, bool include_inlines,
+                     const ModuleFunctionSearchOptions &options,
                      SymbolContextList &sc_list) const;
 
   /// \see Module::FindFunctionSymbols ()
@@ -261,8 +271,9 @@ public:
                            SymbolContextList &sc_list);
 
   /// \see Module::FindFunctions ()
-  void FindFunctions(const RegularExpression &name, bool include_symbols,
-                     bool include_inlines, SymbolContextList &sc_list);
+  void FindFunctions(const RegularExpression &name,
+                     const ModuleFunctionSearchOptions &options,
+                     SymbolContextList &sc_list);
 
   /// Find global and static variables by name.
   ///

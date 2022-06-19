@@ -29,7 +29,6 @@
 
 namespace llvm {
 class StringRef;
-class LLVMContext;
 class TargetMachine;
 
 /// Helper to gather options relevant to the target machine creation
@@ -226,9 +225,6 @@ public:
     OptLevel = (NewOptLevel > 3) ? 3 : NewOptLevel;
   }
 
-  /// Enable or disable the new pass manager.
-  void setUseNewPM(unsigned Enabled) { UseNewPM = Enabled; }
-
   /// Enable or disable debug output for the new pass manager.
   void setDebugPassManager(unsigned Enabled) { DebugPassManager = Enabled; }
 
@@ -347,10 +343,6 @@ private:
 
   /// IR Optimization Level [0-3].
   unsigned OptLevel = 3;
-
-  /// Flag to indicate whether the new pass manager should be used for IR
-  /// optimizations.
-  bool UseNewPM = LLVM_ENABLE_NEW_PASS_MANAGER;
 
   /// Flag to indicate whether debug output should be enabled for the new pass
   /// manager.

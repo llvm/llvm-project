@@ -1,4 +1,4 @@
-// RUN: %clangxx_asan -fexceptions -O %s -o %t && %run %t
+// RUN: %clangxx_asan -fexceptions -O %s -o %t && %env_asan_opts=detect_stack_use_after_return=0 %run %t
 //
 // Test __sanitizer_annotate_contiguous_container.
 
@@ -40,7 +40,7 @@ void TestContainer(size_t capacity) {
     }
   }
 
-  // Don't forget to unpoison the whole thing before destroing/reallocating.
+  // Don't forget to unpoison the whole thing before destroying/reallocating.
   __sanitizer_annotate_contiguous_container(beg, end, mid, end);
   for (size_t idx = 0; idx < capacity; idx++)
     assert(!__asan_address_is_poisoned(beg + idx));

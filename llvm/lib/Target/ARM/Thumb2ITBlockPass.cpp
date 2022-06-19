@@ -226,9 +226,10 @@ bool Thumb2ITBlock::InsertITInstructions(MachineBasicBlock &MBB) {
     ARMCC::CondCodes OCC = ARMCC::getOppositeCondition(CC);
     unsigned Mask = 0, Pos = 3;
 
-    // v8 IT blocks are limited to one conditional op unless -arm-no-restrict-it
+    // IT blocks are limited to one conditional op if -arm-restrict-it
     // is set: skip the loop
     if (!restrictIT) {
+      LLVM_DEBUG(dbgs() << "Allowing complex IT block\n";);
       // Branches, including tricky ones like LDM_RET, need to end an IT
       // block so check the instruction we just put in the block.
       for (; MBBI != E && Pos &&
@@ -283,8 +284,7 @@ bool Thumb2ITBlock::InsertITInstructions(MachineBasicBlock &MBB) {
 }
 
 bool Thumb2ITBlock::runOnMachineFunction(MachineFunction &Fn) {
-  const ARMSubtarget &STI =
-      static_cast<const ARMSubtarget &>(Fn.getSubtarget());
+  const ARMSubtarget &STI = Fn.getSubtarget<ARMSubtarget>();
   if (!STI.isThumb2())
     return false;
   AFI = Fn.getInfo<ARMFunctionInfo>();

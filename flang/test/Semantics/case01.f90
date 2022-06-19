@@ -1,5 +1,4 @@
-! RUN: %S/test_errors.sh %s %t %flang_fc1
-! REQUIRES: shell
+! RUN: %python %S/test_errors.py %s %flang_fc1
 ! Test SELECT CASE Constraints: C1145, C1146, C1147, C1148, C1149
 program selectCaseProg
    implicit none
@@ -165,7 +164,7 @@ program selectCaseProg
 
 end program
 
-program test_overlap
+subroutine test_overlap
   integer :: i
   !OK: these cases do not overlap
   select case(i)
@@ -176,5 +175,26 @@ program test_overlap
     case(-1:)
     !ERROR: CASE (:0_4) conflicts with previous cases
     case(:0)
+  end select
+end
+
+subroutine test_overflow
+  integer :: j
+  select case(1_1)
+  case (127)
+  !WARN: CASE value (128_4) overflows type (INTEGER(1)) of SELECT CASE expression
+  case (128)
+  !WARN: CASE value (129_4) overflows type (INTEGER(1)) of SELECT CASE expression
+  !WARN: CASE value (130_4) overflows type (INTEGER(1)) of SELECT CASE expression
+  case (129:130)
+  !WARN: CASE value (-130_4) overflows type (INTEGER(1)) of SELECT CASE expression
+  !WARN: CASE value (-129_4) overflows type (INTEGER(1)) of SELECT CASE expression
+  case (-130:-129)
+  case (-128)
+  !ERROR: Must be a scalar value, but is a rank-1 array
+  case ([1, 2])
+  !ERROR: Must be a constant value
+  case (j)
+  case default
   end select
 end

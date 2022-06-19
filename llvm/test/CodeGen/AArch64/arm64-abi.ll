@@ -1,5 +1,6 @@
 ; RUN: llc     -mtriple=arm64-apple-darwin -mcpu=cyclone -enable-misched=false < %s | FileCheck %s
 ; RUN: llc -O0 -fast-isel -mtriple=arm64-apple-darwin                          < %s | FileCheck --check-prefix=FAST %s
+; RUN: llc -global-isel -mtriple=arm64-apple-darwin -verify-machineinstrs < %s | FileCheck %s --check-prefix=GISEL
 
 ; rdar://9932559
 define i64 @i8i16callee(i64 %a1, i64 %a2, i64 %a3, i8 signext %a4, i16 signext %a5, i64 %a6, i64 %a7, i64 %a8, i8 signext %b1, i16 signext %b2, i8 signext %b3, i8 signext %b4) nounwind readnone noinline {
@@ -16,6 +17,11 @@ entry:
 ; FAST-DAG: ldrsb  {{w[0-9]+}}, [sp, #4]
 ; FAST-DAG: ldrsh  {{w[0-9]+}}, [sp, #2]
 ; FAST-DAG: ldrsb  {{w[0-9]+}}, [sp]
+; GISEL-LABEL: i8i16callee:
+; GISEL-DAG: ldrsb  {{w[0-9]+}}, [sp, #5]
+; GISEL-DAG: ldrsb  {{w[0-9]+}}, [sp, #4]
+; GISEL-DAG: ldrsh  {{w[0-9]+}}, [sp, #2]
+; GISEL-DAG: ldrsb  {{w[0-9]+}}, [sp]
   %conv = sext i8 %a4 to i64
   %conv3 = sext i16 %a5 to i64
   %conv8 = sext i8 %b1 to i64
@@ -227,6 +233,9 @@ define i32 @i1_stack_incoming(i64 %a, i64 %b, i64 %c, i64 %d, i64 %e, i64 %f,
 ; CHECK-LABEL: i1_stack_incoming:
 ; CHECK: ldrb w0, [sp, #8]
 ; CHECK: ret
+; GISEL-LABEL: i1_stack_incoming:
+; GISEL: ldrb w0, [sp, #8]
+; GISEL: ret
   %v = zext i1 %j to i32
   ret i32 %v
 }

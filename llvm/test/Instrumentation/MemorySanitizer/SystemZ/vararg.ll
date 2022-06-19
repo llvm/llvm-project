@@ -1,5 +1,4 @@
 ; RUN: opt < %s -S -mcpu=z13 -passes=msan 2>&1 | FileCheck %s
-; RUN: opt < %s -msan -S -mcpu=z13 | FileCheck %s
 
 target datalayout = "E-m:e-i1:8:16-i8:8:16-i64:64-f128:64-a:8:16-n32:64"
 target triple = "s390x-unknown-linux-gnu"

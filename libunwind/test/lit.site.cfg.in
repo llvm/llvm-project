@@ -7,6 +7,7 @@ import site
 
 config.cxx_under_test           = "@CMAKE_CXX_COMPILER@"
 config.project_obj_root         = "@CMAKE_BINARY_DIR@"
+config.install_root             = "@CMAKE_BINARY_DIR@"
 config.libunwind_src_root       = "@LIBUNWIND_SOURCE_DIR@"
 config.libunwind_obj_root       = "@LIBUNWIND_BINARY_DIR@"
 config.abi_library_root         = "@LIBUNWIND_LIBRARY_DIR@"
@@ -24,9 +25,10 @@ config.libunwind_shared         = @LIBUNWIND_ENABLE_SHARED@
 config.enable_shared            = @LIBCXX_ENABLE_SHARED@
 config.arm_ehabi                = @LIBUNWIND_USES_ARM_EHABI@
 config.host_triple              = "@LLVM_HOST_TRIPLE@"
-config.sysroot                  = "@LIBUNWIND_SYSROOT@"
-config.gcc_toolchain            = "@LIBUNWIND_GCC_TOOLCHAIN@"
+config.sysroot                  = "@CMAKE_SYSROOT@"
+config.gcc_toolchain            = "@CMAKE_CXX_COMPILER_EXTERNAL_TOOLCHAIN@"
 config.cxx_ext_threads          = @LIBUNWIND_BUILD_EXTERNAL_THREAD_LIBRARY@
+config.x86_cet                  = @LIBUNWIND_ENABLE_CET@
 
 site.addsitedir(os.path.join(config.libunwind_src_root, 'test'))
 site.addsitedir(os.path.join(config.libcxx_src_root, 'utils'))
@@ -54,3 +56,6 @@ import libunwind.test.config
 configuration = libunwind.test.config.Configuration(lit_config, config)
 configuration.configure()
 configuration.print_config_info()
+
+lit_config.warning("This is a legacy testing configuration which will be removed in LLVM 16. "
+                   "Please use one of the configurations in libunwind/test/configs or define your own.")

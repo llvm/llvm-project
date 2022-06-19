@@ -6,17 +6,12 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANGD_INDEX_BACKGROUND_INDEX_LOADER_H
-#define LLVM_CLANG_TOOLS_EXTRA_CLANGD_INDEX_BACKGROUND_INDEX_LOADER_H
+#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANGD_INDEX_BACKGROUNDINDEXLOADER_H
+#define LLVM_CLANG_TOOLS_EXTRA_CLANGD_INDEX_BACKGROUNDINDEXLOADER_H
 
 #include "index/Background.h"
 #include "support/Path.h"
 #include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/Optional.h"
-#include "llvm/ADT/StringMap.h"
-#include "llvm/ADT/StringRef.h"
-#include "llvm/Support/VirtualFileSystem.h"
 #include <memory>
 #include <vector>
 

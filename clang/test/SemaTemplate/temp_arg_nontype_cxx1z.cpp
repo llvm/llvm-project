@@ -43,7 +43,7 @@ namespace Function {
   typedef A<void (*)(), i> d;
   typedef A<void (*)(), &i> d;
   typedef A<void (*)(), i<>> d;
-  typedef A<void (*)(), i<int>> e; // expected-error {{is not implicitly convertible}}
+  typedef A<void (*)(), i<int>> e; // expected-error {{value of type '<overloaded function type>' is not implicitly convertible to 'void (*)()'}}
 
   typedef A<void (*)(), 0> x; // expected-error {{not allowed in a converted constant}}
   typedef A<void (*)(), nullptr> y;

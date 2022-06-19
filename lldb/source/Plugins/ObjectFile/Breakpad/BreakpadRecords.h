@@ -20,7 +20,18 @@ namespace breakpad {
 
 class Record {
 public:
-  enum Kind { Module, Info, File, Func, Line, Public, StackCFI, StackWin };
+  enum Kind {
+    Module,
+    Info,
+    File,
+    Func,
+    Inline,
+    InlineOrigin,
+    Line,
+    Public,
+    StackCFI,
+    StackWin
+  };
 
   /// Attempt to guess the kind of the record present in the argument without
   /// doing a full parse. The returned kind will always be correct for valid
@@ -89,6 +100,23 @@ inline bool operator==(const FileRecord &L, const FileRecord &R) {
 }
 llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, const FileRecord &R);
 
+class InlineOriginRecord : public Record {
+public:
+  static llvm::Optional<InlineOriginRecord> parse(llvm::StringRef Line);
+  InlineOriginRecord(size_t Number, llvm::StringRef Name)
+      : Record(InlineOrigin), Number(Number), Name(Name) {}
+
+  size_t Number;
+  llvm::StringRef Name;
+};
+
+inline bool operator==(const InlineOriginRecord &L,
+                       const InlineOriginRecord &R) {
+  return L.Number == R.Number && L.Name == R.Name;
+}
+llvm::raw_ostream &operator<<(llvm::raw_ostream &OS,
+                              const InlineOriginRecord &R);
+
 class FuncRecord : public Record {
 public:
   static llvm::Optional<FuncRecord> parse(llvm::StringRef Line);
@@ -106,6 +134,26 @@ public:
 
 bool operator==(const FuncRecord &L, const FuncRecord &R);
 llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, const FuncRecord &R);
+
+class InlineRecord : public Record {
+public:
+  static llvm::Optional<InlineRecord> parse(llvm::StringRef Line);
+  InlineRecord(size_t InlineNestLevel, uint32_t CallSiteLineNum,
+               size_t CallSiteFileNum, size_t OriginNum)
+      : Record(Inline), InlineNestLevel(InlineNestLevel),
+        CallSiteLineNum(CallSiteLineNum), CallSiteFileNum(CallSiteFileNum),
+        OriginNum(OriginNum) {}
+
+  size_t InlineNestLevel;
+  uint32_t CallSiteLineNum;
+  size_t CallSiteFileNum;
+  size_t OriginNum;
+  // A vector of address range covered by this inline
+  std::vector<std::pair<lldb::addr_t, lldb::addr_t>> Ranges;
+};
+
+bool operator==(const InlineRecord &L, const InlineRecord &R);
+llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, const InlineRecord &R);
 
 class LineRecord : public Record {
 public:

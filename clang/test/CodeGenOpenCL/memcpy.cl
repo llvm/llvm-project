@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 %s -ffake-address-space-map -emit-llvm -o - | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers %s -ffake-address-space-map -emit-llvm -o - | FileCheck %s
 
 // CHECK-LABEL: @test
 // CHECK-NOT: addrspacecast

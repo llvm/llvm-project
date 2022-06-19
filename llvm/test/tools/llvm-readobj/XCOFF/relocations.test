@@ -1,0 +1,78 @@
+## Test how relocations are dumped.
+
+# RUN: yaml2obj %s -o %t
+# RUN: llvm-readobj --relocs --expand-relocs %t | \
+# RUN:   FileCheck %s --strict-whitespace --match-full-lines --check-prefix=RELOCSEXP
+# RUN: llvm-readobj --relocs %t | \
+# RUN:   FileCheck %s --strict-whitespace --match-full-lines --check-prefix=RELOCS
+
+#      RELOCSEXP:Relocations [
+# RELOCSEXP-NEXT:  Section (index: 1) .text {
+# RELOCSEXP-NEXT:    Relocation {
+# RELOCSEXP-NEXT:      Virtual Address: 0x80
+# RELOCSEXP-NEXT:      Symbol: foo (0)
+# RELOCSEXP-NEXT:      IsSigned: No
+# RELOCSEXP-NEXT:      FixupBitValue: 0
+# RELOCSEXP-NEXT:      Length: 22
+# RELOCSEXP-NEXT:      Type: R_POS (0x0)
+# RELOCSEXP-NEXT:    }
+# RELOCSEXP-NEXT:    Relocation {
+# RELOCSEXP-NEXT:      Virtual Address: 0x100
+# RELOCSEXP-NEXT:      Symbol: foo (0)
+# RELOCSEXP-NEXT:      IsSigned: No
+# RELOCSEXP-NEXT:      FixupBitValue: 0
+# RELOCSEXP-NEXT:      Length: 21
+# RELOCSEXP-NEXT:      Type: R_REL (0x2)
+# RELOCSEXP-NEXT:    }
+# RELOCSEXP-NEXT:  }
+# RELOCSEXP-NEXT:  Section (index: 2) .data {
+# RELOCSEXP-NEXT:    Relocation {
+# RELOCSEXP-NEXT:      Virtual Address: 0x200
+# RELOCSEXP-NEXT:      Symbol: bar (1)
+# RELOCSEXP-NEXT:      IsSigned: No
+# RELOCSEXP-NEXT:      FixupBitValue: 0
+# RELOCSEXP-NEXT:      Length: 20
+# RELOCSEXP-NEXT:      Type: R_TOC (0x3)
+# RELOCSEXP-NEXT:    }
+# RELOCSEXP-NEXT:  }
+# RELOCSEXP-NEXT:]
+
+#      RELOCS:Relocations [
+# RELOCS-NEXT:  Section (index: 1) .text {
+# RELOCS-NEXT:    0x80 R_POS foo(0) 0x15
+# RELOCS-NEXT:    0x100 R_REL foo(0) 0x14
+# RELOCS-NEXT:  }
+# RELOCS-NEXT:  Section (index: 2) .data {
+# RELOCS-NEXT:    0x200 R_TOC bar(1) 0x13
+# RELOCS-NEXT:  }
+# RELOCS-NEXT:]
+
+--- !XCOFF
+FileHeader:
+  MagicNumber: 0x01DF
+Sections:
+  - Name:  .text
+    Flags: [ STYP_TEXT ]
+    Relocations:
+      - Address: 0x80
+        Symbol:  0x0
+        Info:    0x15
+        Type:    0x0
+      - Address: 0x100
+        Symbol:  0x0
+        Info:    0x14
+        Type:    0x2
+  - Name:  .data
+    Flags: [ STYP_DATA ]
+    Relocations:
+      - Address: 0x200
+        Symbol:  0x1
+        Info:    0x13
+        Type:    0x3
+Symbols:
+  - Name:    foo
+    Value:   0x0
+    Section: .text
+  - Name:    bar
+    Value:   0x80
+    Section: .data

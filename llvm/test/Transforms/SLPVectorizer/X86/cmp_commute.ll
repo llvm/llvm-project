@@ -236,23 +236,12 @@ define <4 x i32> @fcmp_ogt_olt_v4i32(<4 x float> %a, float* %b) {
 
 define <4 x i32> @fcmp_ord_uno_v4i32(<4 x float> %a, float* %b) {
 ; CHECK-LABEL: @fcmp_ord_uno_v4i32(
-; CHECK-NEXT:    [[A0:%.*]] = extractelement <4 x float> [[A:%.*]], i32 0
-; CHECK-NEXT:    [[A3:%.*]] = extractelement <4 x float> [[A]], i32 3
-; CHECK-NEXT:    [[P1:%.*]] = getelementptr inbounds float, float* [[B:%.*]], i64 1
-; CHECK-NEXT:    [[P3:%.*]] = getelementptr inbounds float, float* [[B]], i64 3
-; CHECK-NEXT:    [[B0:%.*]] = load float, float* [[B]], align 4
-; CHECK-NEXT:    [[TMP1:%.*]] = bitcast float* [[P1]] to <2 x float>*
-; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x float>, <2 x float>* [[TMP1]], align 4
-; CHECK-NEXT:    [[B3:%.*]] = load float, float* [[P3]], align 4
-; CHECK-NEXT:    [[C0:%.*]] = fcmp ord float [[A0]], [[B0]]
-; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <4 x float> [[A]], <4 x float> undef, <2 x i32> <i32 1, i32 2>
-; CHECK-NEXT:    [[TMP4:%.*]] = fcmp uno <2 x float> [[TMP2]], [[TMP3]]
-; CHECK-NEXT:    [[C3:%.*]] = fcmp ord float [[A3]], [[B3]]
-; CHECK-NEXT:    [[D0:%.*]] = insertelement <4 x i1> undef, i1 [[C0]], i32 0
-; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <2 x i1> [[TMP4]], <2 x i1> poison, <4 x i32> <i32 0, i32 1, i32 undef, i32 undef>
-; CHECK-NEXT:    [[D21:%.*]] = shufflevector <4 x i1> [[D0]], <4 x i1> [[TMP5]], <4 x i32> <i32 0, i32 4, i32 5, i32 undef>
-; CHECK-NEXT:    [[D3:%.*]] = insertelement <4 x i1> [[D21]], i1 [[C3]], i32 3
-; CHECK-NEXT:    [[R:%.*]] = sext <4 x i1> [[D3]] to <4 x i32>
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast float* [[B:%.*]] to <4 x float>*
+; CHECK-NEXT:    [[TMP2:%.*]] = load <4 x float>, <4 x float>* [[TMP1]], align 4
+; CHECK-NEXT:    [[TMP3:%.*]] = fcmp ord <4 x float> [[TMP2]], [[A:%.*]]
+; CHECK-NEXT:    [[TMP4:%.*]] = fcmp uno <4 x float> [[TMP2]], [[A]]
+; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <4 x i1> [[TMP3]], <4 x i1> [[TMP4]], <4 x i32> <i32 0, i32 5, i32 6, i32 3>
+; CHECK-NEXT:    [[R:%.*]] = sext <4 x i1> [[TMP5]] to <4 x i32>
 ; CHECK-NEXT:    ret <4 x i32> [[R]]
 ;
   %a0 = extractelement <4 x float> %a, i32 0

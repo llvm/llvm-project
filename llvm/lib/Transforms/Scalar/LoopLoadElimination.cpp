@@ -34,7 +34,6 @@
 #include "llvm/Analysis/LoopAccessAnalysis.h"
 #include "llvm/Analysis/LoopAnalysisManager.h"
 #include "llvm/Analysis/LoopInfo.h"
-#include "llvm/Analysis/MemorySSA.h"
 #include "llvm/Analysis/ProfileSummaryInfo.h"
 #include "llvm/Analysis/ScalarEvolution.h"
 #include "llvm/Analysis/ScalarEvolutionExpressions.h"
@@ -62,7 +61,6 @@
 #include <algorithm>
 #include <cassert>
 #include <forward_list>
-#include <set>
 #include <tuple>
 #include <utility>
 
@@ -109,8 +107,8 @@ struct StoreToLoadForwardingCandidate {
     // Currently we only support accesses with unit stride.  FIXME: we should be
     // able to handle non unit stirde as well as long as the stride is equal to
     // the dependence distance.
-    if (getPtrStride(PSE, LoadPtr, L) != 1 ||
-        getPtrStride(PSE, StorePtr, L) != 1)
+    if (getPtrStride(PSE, LoadType, LoadPtr, L) != 1 ||
+        getPtrStride(PSE, LoadType, StorePtr, L) != 1)
       return false;
 
     auto &DL = Load->getParent()->getModule()->getDataLayout();
@@ -214,7 +212,8 @@ public:
         continue;
 
       // Only progagate the value if they are of the same type.
-      if (Store->getPointerOperandType() != Load->getPointerOperandType())
+      if (Store->getPointerOperandType() != Load->getPointerOperandType() ||
+          getLoadStoreType(Store) != getLoadStoreType(Load))
         continue;
 
       Candidates.emplace_front(Load, Store);
@@ -529,7 +528,7 @@ public:
       return false;
     }
 
-    if (LAI.getPSE().getUnionPredicate().getComplexity() >
+    if (LAI.getPSE().getPredicate().getComplexity() >
         LoadElimSCEVCheckThreshold) {
       LLVM_DEBUG(dbgs() << "Too many SCEV run-time checks needed.\n");
       return false;
@@ -540,7 +539,7 @@ public:
       return false;
     }
 
-    if (!Checks.empty() || !LAI.getPSE().getUnionPredicate().isAlwaysTrue()) {
+    if (!Checks.empty() || !LAI.getPSE().getPredicate().isAlwaysTrue()) {
       if (LAI.hasConvergentOp()) {
         LLVM_DEBUG(dbgs() << "Versioning is needed but not allowed with "
                              "convergent calls\n");
@@ -707,8 +706,12 @@ FunctionPass *llvm::createLoopLoadEliminationPass() {
 
 PreservedAnalyses LoopLoadEliminationPass::run(Function &F,
                                                FunctionAnalysisManager &AM) {
-  auto &SE = AM.getResult<ScalarEvolutionAnalysis>(F);
   auto &LI = AM.getResult<LoopAnalysis>(F);
+  // There are no loops in the function. Return before computing other expensive
+  // analyses.
+  if (LI.empty())
+    return PreservedAnalyses::all();
+  auto &SE = AM.getResult<ScalarEvolutionAnalysis>(F);
   auto &TTI = AM.getResult<TargetIRAnalysis>(F);
   auto &DT = AM.getResult<DominatorTreeAnalysis>(F);
   auto &TLI = AM.getResult<TargetLibraryAnalysis>(F);
@@ -718,15 +721,12 @@ PreservedAnalyses LoopLoadEliminationPass::run(Function &F,
   auto *PSI = MAMProxy.getCachedResult<ProfileSummaryAnalysis>(*F.getParent());
   auto *BFI = (PSI && PSI->hasProfileSummary()) ?
       &AM.getResult<BlockFrequencyAnalysis>(F) : nullptr;
-  MemorySSA *MSSA = EnableMSSALoopDependency
-                        ? &AM.getResult<MemorySSAAnalysis>(F).getMSSA()
-                        : nullptr;
 
   auto &LAM = AM.getResult<LoopAnalysisManagerFunctionProxy>(F).getManager();
   bool Changed = eliminateLoadsAcrossLoops(
       F, LI, DT, BFI, PSI, &SE, &AC, [&](Loop &L) -> const LoopAccessInfo & {
-        LoopStandardAnalysisResults AR = {AA,  AC,  DT,      LI,  SE,
-                                          TLI, TTI, nullptr, MSSA};
+        LoopStandardAnalysisResults AR = {AA,  AC,  DT,      LI,      SE,
+                                          TLI, TTI, nullptr, nullptr, nullptr};
         return LAM.getResult<LoopAccessAnalysis>(L, AR);
       });
 

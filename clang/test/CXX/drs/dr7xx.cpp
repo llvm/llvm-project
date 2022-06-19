@@ -26,12 +26,12 @@ namespace dr712 { // dr712: partial
         use(a);
         use((a));
         use(cond ? a : a);
-        use((cond, a)); // expected-warning 2{{unused}} FIXME: should only warn once
+        use((cond, a)); // expected-warning 2{{left operand of comma operator has no effect}} FIXME: should only warn once
 
         (void)a; // FIXME: expected-error {{declared in enclosing}}
         (void)(a); // FIXME: expected-error {{declared in enclosing}}
         (void)(cond ? a : a); // FIXME: expected-error 2{{declared in enclosing}}
-        (void)(cond, a); // FIXME: expected-error {{declared in enclosing}} expected-warning {{unused}}
+        (void)(cond, a); // FIXME: expected-error {{declared in enclosing}} expected-warning {{left operand of comma operator has no effect}}
       }
     };
   }

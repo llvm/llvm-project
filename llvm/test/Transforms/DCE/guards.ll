@@ -1,4 +1,4 @@
-; RUN: opt -dce -S < %s | FileCheck %s
+; RUN: opt -passes=dce -S < %s | FileCheck %s
 
 declare void @llvm.experimental.guard(i1,...)
 

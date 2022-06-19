@@ -43,7 +43,7 @@ public:
   Status WriteRegister(const RegisterInfo *reg_info,
                        const RegisterValue &reg_value) override;
 
-  Status ReadAllRegisterValues(lldb::DataBufferSP &data_sp) override;
+  Status ReadAllRegisterValues(lldb::WritableDataBufferSP &data_sp) override;
 
   Status WriteAllRegisterValues(const lldb::DataBufferSP &data_sp) override;
 
@@ -139,7 +139,7 @@ private:
 
   void *GetMTEControl() { return &m_mte_ctrl_reg; }
 
-  void *GetSVEBuffer();
+  void *GetSVEBuffer() { return m_sve_ptrace_payload.data(); };
 
   size_t GetSVEHeaderSize() { return sizeof(m_sve_header); }
 

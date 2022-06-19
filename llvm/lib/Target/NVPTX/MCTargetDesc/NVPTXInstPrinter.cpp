@@ -108,6 +108,10 @@ void NVPTXInstPrinter::printCvtMode(const MCInst *MI, int OpNum, raw_ostream &O,
     // SAT flag
     if (Imm & NVPTX::PTXCvtMode::SAT_FLAG)
       O << ".sat";
+  } else if (strcmp(Modifier, "relu") == 0) {
+    // RELU flag
+    if (Imm & NVPTX::PTXCvtMode::RELU_FLAG)
+      O << ".relu";
   } else if (strcmp(Modifier, "base") == 0) {
     // Default operand
     switch (Imm & NVPTX::PTXCvtMode::BASE_MASK) {
@@ -138,6 +142,9 @@ void NVPTXInstPrinter::printCvtMode(const MCInst *MI, int OpNum, raw_ostream &O,
       break;
     case NVPTX::PTXCvtMode::RP:
       O << ".rp";
+      break;
+    case NVPTX::PTXCvtMode::RNA:
+      O << ".rna";
       break;
     }
   } else {

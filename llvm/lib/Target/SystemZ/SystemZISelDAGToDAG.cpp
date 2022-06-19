@@ -62,8 +62,7 @@ struct SystemZAddressingMode {
   bool IncludesDynAlloc;
 
   SystemZAddressingMode(AddrForm form, DispRange dr)
-    : Form(form), DR(dr), Base(), Disp(0), Index(),
-      IncludesDynAlloc(false) {}
+      : Form(form), DR(dr), Disp(0), IncludesDynAlloc(false) {}
 
   // True if the address can have an index register.
   bool hasIndexField() { return Form != FormBD; }
@@ -969,7 +968,7 @@ bool SystemZDAGToDAGISel::tryRISBGZero(SDNode *N) {
     if (RISBG.Input.getOpcode() != ISD::ANY_EXTEND &&
         RISBG.Input.getOpcode() != ISD::TRUNCATE)
       Count += 1;
-  if (Count == 0)
+  if (Count == 0 || isa<ConstantSDNode>(RISBG.Input))
     return false;
 
   // Prefer to use normal shift instructions over RISBG, since they can handle
@@ -1473,7 +1472,7 @@ bool SystemZDAGToDAGISel::storeLoadIsAligned(SDNode *N) const {
   assert(MMO && "Expected a memory operand.");
 
   // The memory access must have a proper alignment and no index register.
-  if (MemAccess->getAlignment() < StoreSize ||
+  if (MemAccess->getAlign().value() < StoreSize ||
       !MemAccess->getOffset().isUndef())
     return false;
 
@@ -1684,16 +1683,19 @@ SelectInlineAsmMemoryOperand(const SDValue &Op,
     llvm_unreachable("Unexpected asm memory constraint");
   case InlineAsm::Constraint_i:
   case InlineAsm::Constraint_Q:
+  case InlineAsm::Constraint_ZQ:
     // Accept an address with a short displacement, but no index.
     Form = SystemZAddressingMode::FormBD;
     DispRange = SystemZAddressingMode::Disp12Only;
     break;
   case InlineAsm::Constraint_R:
+  case InlineAsm::Constraint_ZR:
     // Accept an address with a short displacement and an index.
     Form = SystemZAddressingMode::FormBDXNormal;
     DispRange = SystemZAddressingMode::Disp12Only;
     break;
   case InlineAsm::Constraint_S:
+  case InlineAsm::Constraint_ZS:
     // Accept an address with a long displacement, but no index.
     Form = SystemZAddressingMode::FormBD;
     DispRange = SystemZAddressingMode::Disp20Only;
@@ -1701,6 +1703,8 @@ SelectInlineAsmMemoryOperand(const SDValue &Op,
   case InlineAsm::Constraint_T:
   case InlineAsm::Constraint_m:
   case InlineAsm::Constraint_o:
+  case InlineAsm::Constraint_p:
+  case InlineAsm::Constraint_ZT:
     // Accept an address with a long displacement and an index.
     // m works the same as T, as this is the most general case.
     // We don't really have any special handling of "offsettable"

@@ -21,7 +21,7 @@ class PatternRewriter;
 
 namespace detail {
 class PDLByteCodeMutableState;
-} // end namespace detail
+} // namespace detail
 
 /// This class manages the application of a group of rewrite patterns, with a
 /// user-provided cost model.
@@ -75,6 +75,6 @@ private:
   std::unique_ptr<detail::PDLByteCodeMutableState> mutableByteCodeState;
 };
 
-} // end namespace mlir
+} // namespace mlir
 
 #endif // MLIR_REWRITE_PATTERNAPPLICATOR_H

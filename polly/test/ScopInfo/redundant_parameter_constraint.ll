@@ -1,9 +1,9 @@
-; RUN: opt %loadPolly -polly-scops -analyze < %s | FileCheck %s
+; RUN: opt %loadPolly -polly-print-scops -disable-output < %s | FileCheck %s
 ;
 ; The constraint that r2 has to be bigger than r1 is implicitly containted in
 ; the domain, hence we do not want to see it explicitly.
 ;
-; CHECK-NOT:  r2 >= 1 + r1 
+; CHECK-NOT:  r2 >= 1 + r1
 ;
 ;    void wraps(int *A, int p, short q, char r1, char r2) {
 ;      for (char i = r1; i < r2; i++)

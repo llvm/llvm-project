@@ -28,10 +28,10 @@ public:
   MemoryRegionInfo(RangeType range, OptionalBool read, OptionalBool write,
                    OptionalBool execute, OptionalBool mapped, ConstString name,
                    OptionalBool flash, lldb::offset_t blocksize,
-                   OptionalBool memory_tagged)
+                   OptionalBool memory_tagged, OptionalBool stack_memory)
       : m_range(range), m_read(read), m_write(write), m_execute(execute),
         m_mapped(mapped), m_name(name), m_flash(flash), m_blocksize(blocksize),
-        m_memory_tagged(memory_tagged) {}
+        m_memory_tagged(memory_tagged), m_is_stack_memory(stack_memory) {}
 
   RangeType &GetRange() { return m_range; }
 
@@ -98,7 +98,8 @@ public:
            m_mapped == rhs.m_mapped && m_name == rhs.m_name &&
            m_flash == rhs.m_flash && m_blocksize == rhs.m_blocksize &&
            m_memory_tagged == rhs.m_memory_tagged &&
-           m_pagesize == rhs.m_pagesize;
+           m_pagesize == rhs.m_pagesize &&
+           m_is_stack_memory == rhs.m_is_stack_memory;
   }
 
   bool operator!=(const MemoryRegionInfo &rhs) const { return !(*this == rhs); }
@@ -106,15 +107,19 @@ public:
   /// Get the target system's VM page size in bytes.
   /// \return
   ///     0 is returned if this information is unavailable.
-  int GetPageSize() { return m_pagesize; }
+  int GetPageSize() const { return m_pagesize; }
 
   /// Get a vector of target VM pages that are dirty -- that have been
   /// modified -- within this memory region.  This is an Optional return
   /// value; it will only be available if the remote stub was able to
   /// detail this.
-  llvm::Optional<std::vector<lldb::addr_t>> &GetDirtyPageList() {
+  const llvm::Optional<std::vector<lldb::addr_t>> &GetDirtyPageList() const {
     return m_dirty_pages;
   }
+
+  OptionalBool IsStackMemory() const { return m_is_stack_memory; }
+
+  void SetIsStackMemory(OptionalBool val) { m_is_stack_memory = val; }
 
   void SetPageSize(int pagesize) { m_pagesize = pagesize; }
 
@@ -134,6 +139,7 @@ protected:
   OptionalBool m_flash = eDontKnow;
   lldb::offset_t m_blocksize = 0;
   OptionalBool m_memory_tagged = eDontKnow;
+  OptionalBool m_is_stack_memory = eDontKnow;
   int m_pagesize = 0;
   llvm::Optional<std::vector<lldb::addr_t>> m_dirty_pages;
 };

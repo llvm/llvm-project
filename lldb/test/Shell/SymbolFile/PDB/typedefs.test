@@ -16,8 +16,7 @@ CHECK: SymbolFile pdb ([[MOD]])
 CHECK-DAG: name = "char32_t", size = 4, compiler_type = {{.*}} char32_t
 CHECK-DAG: name = "char16_t", size = 2, compiler_type = {{.*}} char16_t
 CHECK-DAG: Type{{.*}} , name = "unsigned long", size = 4, compiler_type = {{.*}} unsigned long
-CHECK-DAG: Type{{.*}} , size = 40, compiler_type = {{.*}} unsigned long [10]
-CHECK-DAG: Type{{.*}} , name = "ULongArrayTypedef", compiler_type = {{.*}} typedef ULongArrayTypedef
+CHECK-DAG: Type{{.*}} , size = 40, compiler_type = {{.*}} unsigned long[10]
 
 ; Note: compiler_type of `long double` is represented by the one for `double`
 CHECK-DAG: Type{{.*}} , name = "double", size = 8, compiler_type = {{.*}} double

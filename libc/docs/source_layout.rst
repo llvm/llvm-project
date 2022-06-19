@@ -14,7 +14,6 @@ directories::
         - src
         - test
         - utils
-        - www
 
 Each of these directories is explained in detail below.
 
@@ -31,7 +30,7 @@ The ``docs`` directory contains design docs and also informative documents like
 this document on source layout.
 
 The ``fuzzing`` directory
-----------------------
+-------------------------
 
 This directory contains fuzzing tests for the various components of llvm-libc. The
 directory structure within this directory mirrors the directory structure of the
@@ -85,15 +84,9 @@ toplevel ``libc`` directory itself. A test for, say the ``mmap`` function, lives
 in the directory ``test/src/sys/mman/`` as implementation of ``mmap`` lives in
 ``src/sys/mman``.
 
-The `utils` directory
----------------------
+The ``utils`` directory
+-----------------------
 
 This directory contains utilities used by other parts of the llvm-libc system.
 See the `README` files, in the sub-directories within this directory, to learn
 about the various utilities.
-
-The ``www`` directory
----------------------
-
-The ``www`` directory contains the HTML content of libc.llvm.org
-

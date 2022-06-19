@@ -146,26 +146,35 @@ define arm_aapcs_vfpcc <2 x i64> @load_v2i1(<2 x i1> *%src, <2 x i64> %a) {
 ; CHECK-LE-LABEL: load_v2i1:
 ; CHECK-LE:       @ %bb.0: @ %entry
 ; CHECK-LE-NEXT:    ldrb r0, [r0]
-; CHECK-LE-NEXT:    ubfx r1, r0, #1, #1
-; CHECK-LE-NEXT:    and r0, r0, #1
-; CHECK-LE-NEXT:    rsbs r1, r1, #0
-; CHECK-LE-NEXT:    rsbs r0, r0, #0
-; CHECK-LE-NEXT:    vmov q1[2], q1[0], r0, r1
-; CHECK-LE-NEXT:    vmov q1[3], q1[1], r0, r1
-; CHECK-LE-NEXT:    vand q0, q0, q1
+; CHECK-LE-NEXT:    vmov.i8 q1, #0x0
+; CHECK-LE-NEXT:    vmov.i8 q2, #0xff
+; CHECK-LE-NEXT:    vmsr p0, r0
+; CHECK-LE-NEXT:    vpsel q1, q2, q1
+; CHECK-LE-NEXT:    vmov.u8 r0, q1[1]
+; CHECK-LE-NEXT:    vmov.u8 r1, q1[0]
+; CHECK-LE-NEXT:    vmov q1[2], q1[0], r1, r0
+; CHECK-LE-NEXT:    vmov q1[3], q1[1], r1, r0
+; CHECK-LE-NEXT:    vcmp.i32 ne, q1, zr
+; CHECK-LE-NEXT:    vmov.i32 q1, #0x0
+; CHECK-LE-NEXT:    vpsel q0, q0, q1
 ; CHECK-LE-NEXT:    bx lr
 ;
 ; CHECK-BE-LABEL: load_v2i1:
 ; CHECK-BE:       @ %bb.0: @ %entry
 ; CHECK-BE-NEXT:    ldrb r0, [r0]
-; CHECK-BE-NEXT:    and r1, r0, #1
-; CHECK-BE-NEXT:    ubfx r0, r0, #1, #1
-; CHECK-BE-NEXT:    rsbs r1, r1, #0
-; CHECK-BE-NEXT:    rsbs r0, r0, #0
-; CHECK-BE-NEXT:    vmov q1[2], q1[0], r0, r1
-; CHECK-BE-NEXT:    vmov q1[3], q1[1], r0, r1
-; CHECK-BE-NEXT:    vrev64.32 q2, q1
-; CHECK-BE-NEXT:    vand q0, q0, q2
+; CHECK-BE-NEXT:    vmov.i8 q1, #0x0
+; CHECK-BE-NEXT:    vmov.i8 q2, #0xff
+; CHECK-BE-NEXT:    rbit r0, r0
+; CHECK-BE-NEXT:    lsrs r0, r0, #30
+; CHECK-BE-NEXT:    vmsr p0, r0
+; CHECK-BE-NEXT:    vpsel q1, q2, q1
+; CHECK-BE-NEXT:    vmov.u8 r0, q1[1]
+; CHECK-BE-NEXT:    vmov.u8 r1, q1[0]
+; CHECK-BE-NEXT:    vmov q1[2], q1[0], r1, r0
+; CHECK-BE-NEXT:    vmov q1[3], q1[1], r1, r0
+; CHECK-BE-NEXT:    vcmp.i32 ne, q1, zr
+; CHECK-BE-NEXT:    vmov.i32 q1, #0x0
+; CHECK-BE-NEXT:    vpsel q0, q0, q1
 ; CHECK-BE-NEXT:    bx lr
 entry:
   %c = load <2 x i1>, <2 x i1>* %src
@@ -320,16 +329,14 @@ define arm_aapcs_vfpcc void @store_v2i1(<2 x i1> *%dst, <2 x i64> %a) {
 ; CHECK-LE:       @ %bb.0: @ %entry
 ; CHECK-LE-NEXT:    vmov r1, r2, d0
 ; CHECK-LE-NEXT:    orrs r1, r2
-; CHECK-LE-NEXT:    vmov r2, r3, d1
-; CHECK-LE-NEXT:    cset r1, eq
-; CHECK-LE-NEXT:    orrs r2, r3
-; CHECK-LE-NEXT:    cset r2, eq
-; CHECK-LE-NEXT:    cmp r2, #0
-; CHECK-LE-NEXT:    it ne
-; CHECK-LE-NEXT:    mvnne r2, #1
+; CHECK-LE-NEXT:    mov.w r2, #0
+; CHECK-LE-NEXT:    csetm r1, eq
 ; CHECK-LE-NEXT:    bfi r2, r1, #0, #1
-; CHECK-LE-NEXT:    and r1, r2, #3
-; CHECK-LE-NEXT:    strb r1, [r0]
+; CHECK-LE-NEXT:    vmov r1, r3, d1
+; CHECK-LE-NEXT:    orrs r1, r3
+; CHECK-LE-NEXT:    csetm r1, eq
+; CHECK-LE-NEXT:    bfi r2, r1, #1, #1
+; CHECK-LE-NEXT:    strb r2, [r0]
 ; CHECK-LE-NEXT:    bx lr
 ;
 ; CHECK-BE-LABEL: store_v2i1:
@@ -337,16 +344,14 @@ define arm_aapcs_vfpcc void @store_v2i1(<2 x i1> *%dst, <2 x i64> %a) {
 ; CHECK-BE-NEXT:    vrev64.32 q1, q0
 ; CHECK-BE-NEXT:    vmov r1, r2, d3
 ; CHECK-BE-NEXT:    orrs r1, r2
-; CHECK-BE-NEXT:    vmov r2, r3, d2
-; CHECK-BE-NEXT:    cset r1, eq
-; CHECK-BE-NEXT:    orrs r2, r3
-; CHECK-BE-NEXT:    cset r2, eq
-; CHECK-BE-NEXT:    cmp r2, #0
-; CHECK-BE-NEXT:    it ne
-; CHECK-BE-NEXT:    mvnne r2, #1
+; CHECK-BE-NEXT:    mov.w r2, #0
+; CHECK-BE-NEXT:    csetm r1, eq
 ; CHECK-BE-NEXT:    bfi r2, r1, #0, #1
-; CHECK-BE-NEXT:    and r1, r2, #3
-; CHECK-BE-NEXT:    strb r1, [r0]
+; CHECK-BE-NEXT:    vmov r1, r3, d2
+; CHECK-BE-NEXT:    orrs r1, r3
+; CHECK-BE-NEXT:    csetm r1, eq
+; CHECK-BE-NEXT:    bfi r2, r1, #1, #1
+; CHECK-BE-NEXT:    strb r2, [r0]
 ; CHECK-BE-NEXT:    bx lr
 entry:
   %c = icmp eq <2 x i64> %a, zeroinitializer

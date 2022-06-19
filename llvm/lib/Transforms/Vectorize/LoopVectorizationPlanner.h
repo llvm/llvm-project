@@ -25,6 +25,7 @@
 #define LLVM_TRANSFORMS_VECTORIZE_LOOPVECTORIZATIONPLANNER_H
 
 #include "VPlan.h"
+#include "llvm/Support/InstructionCost.h"
 
 namespace llvm {
 
@@ -45,20 +46,21 @@ class VPBuilder {
   VPBasicBlock::iterator InsertPt = VPBasicBlock::iterator();
 
   VPInstruction *createInstruction(unsigned Opcode,
-                                   ArrayRef<VPValue *> Operands) {
-    VPInstruction *Instr = new VPInstruction(Opcode, Operands);
+                                   ArrayRef<VPValue *> Operands, DebugLoc DL) {
+    VPInstruction *Instr = new VPInstruction(Opcode, Operands, DL);
     if (BB)
       BB->insert(Instr, InsertPt);
     return Instr;
   }
 
   VPInstruction *createInstruction(unsigned Opcode,
-                                   std::initializer_list<VPValue *> Operands) {
-    return createInstruction(Opcode, ArrayRef<VPValue *>(Operands));
+                                   std::initializer_list<VPValue *> Operands,
+                                   DebugLoc DL) {
+    return createInstruction(Opcode, ArrayRef<VPValue *>(Operands), DL);
   }
 
 public:
-  VPBuilder() {}
+  VPBuilder() = default;
 
   /// Clear the insertion point: created instructions will not be inserted into
   /// a block.
@@ -123,30 +125,33 @@ public:
   /// its underlying Instruction.
   VPValue *createNaryOp(unsigned Opcode, ArrayRef<VPValue *> Operands,
                         Instruction *Inst = nullptr) {
-    VPInstruction *NewVPInst = createInstruction(Opcode, Operands);
+    DebugLoc DL;
+    if (Inst)
+      DL = Inst->getDebugLoc();
+    VPInstruction *NewVPInst = createInstruction(Opcode, Operands, DL);
     NewVPInst->setUnderlyingValue(Inst);
     return NewVPInst;
   }
-  VPValue *createNaryOp(unsigned Opcode,
-                        std::initializer_list<VPValue *> Operands,
-                        Instruction *Inst = nullptr) {
-    return createNaryOp(Opcode, ArrayRef<VPValue *>(Operands), Inst);
+  VPValue *createNaryOp(unsigned Opcode, ArrayRef<VPValue *> Operands,
+                        DebugLoc DL) {
+    return createInstruction(Opcode, Operands, DL);
   }
 
-  VPValue *createNot(VPValue *Operand) {
-    return createInstruction(VPInstruction::Not, {Operand});
+  VPValue *createNot(VPValue *Operand, DebugLoc DL) {
+    return createInstruction(VPInstruction::Not, {Operand}, DL);
   }
 
-  VPValue *createAnd(VPValue *LHS, VPValue *RHS) {
-    return createInstruction(Instruction::BinaryOps::And, {LHS, RHS});
+  VPValue *createAnd(VPValue *LHS, VPValue *RHS, DebugLoc DL) {
+    return createInstruction(Instruction::BinaryOps::And, {LHS, RHS}, DL);
   }
 
-  VPValue *createOr(VPValue *LHS, VPValue *RHS) {
-    return createInstruction(Instruction::BinaryOps::Or, {LHS, RHS});
+  VPValue *createOr(VPValue *LHS, VPValue *RHS, DebugLoc DL) {
+    return createInstruction(Instruction::BinaryOps::Or, {LHS, RHS}, DL);
   }
 
-  VPValue *createSelect(VPValue *Cond, VPValue *TrueVal, VPValue *FalseVal) {
-    return createNaryOp(Instruction::Select, {Cond, TrueVal, FalseVal});
+  VPValue *createSelect(VPValue *Cond, VPValue *TrueVal, VPValue *FalseVal,
+                        DebugLoc DL) {
+    return createNaryOp(Instruction::Select, {Cond, TrueVal, FalseVal}, DL);
   }
 
   //===--------------------------------------------------------------------===//
@@ -268,12 +273,6 @@ class LoopVectorizationPlanner {
   /// A builder used to construct the current plan.
   VPBuilder Builder;
 
-  /// The best number of elements of the vector types used in the
-  /// transformed loop. BestVF = None means that vectorization is
-  /// disabled.
-  Optional<ElementCount> BestVF = None;
-  unsigned BestUF = 0;
-
 public:
   LoopVectorizationPlanner(Loop *L, LoopInfo *LI, const TargetLibraryInfo *TLI,
                            const TargetTransformInfo *TTI,
@@ -295,12 +294,13 @@ public:
   /// VF and its cost.
   VectorizationFactor planInVPlanNativePath(ElementCount UserVF);
 
-  /// Finalize the best decision and dispose of all other VPlans.
-  void setBestPlan(ElementCount VF, unsigned UF);
+  /// Return the best VPlan for \p VF.
+  VPlan &getBestPlanFor(ElementCount VF) const;
 
   /// Generate the IR code for the body of the vectorized loop according to the
-  /// best selected VPlan.
-  void executePlan(InnerLoopVectorizer &LB, DominatorTree *DT);
+  /// best selected \p VF, \p UF and VPlan \p BestPlan.
+  void executePlan(ElementCount VF, unsigned UF, VPlan &BestPlan,
+                   InnerLoopVectorizer &LB, DominatorTree *DT);
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   void printPlans(raw_ostream &O);
@@ -308,12 +308,9 @@ public:
 
   /// Look through the existing plans and return true if we have one with all
   /// the vectorization factors in question.
-  bool hasPlanWithVFs(const ArrayRef<ElementCount> VFs) const {
-    return any_of(VPlans, [&](const VPlanPtr &Plan) {
-      return all_of(VFs, [&](const ElementCount &VF) {
-        return Plan->hasVF(VF);
-      });
-    });
+  bool hasPlanWithVF(ElementCount VF) const {
+    return any_of(VPlans,
+                  [&](const VPlanPtr &Plan) { return Plan->hasVF(VF); });
   }
 
   /// Test a \p Predicate on a \p Range of VF's. Return the value of applying
@@ -322,6 +319,9 @@ public:
   static bool
   getDecisionAndClampRange(const std::function<bool(ElementCount)> &Predicate,
                            VFRange &Range);
+
+  /// Check if the number of runtime checks exceeds the threshold.
+  bool requiresTooManyRuntimeChecks() const;
 
 protected:
   /// Collect the instructions from the original loop that would be trivially
@@ -351,13 +351,14 @@ private:
   /// legal to vectorize the loop. This method creates VPlans using VPRecipes.
   void buildVPlansWithVPRecipes(ElementCount MinVF, ElementCount MaxVF);
 
-  /// Adjust the recipes for any inloop reductions. The chain of instructions
-  /// leading from the loop exit instr to the phi need to be converted to
-  /// reductions, with one operand being vector and the other being the scalar
-  /// reduction chain.
-  void adjustRecipesForInLoopReductions(VPlanPtr &Plan,
-                                        VPRecipeBuilder &RecipeBuilder,
-                                        ElementCount MinVF);
+  // Adjust the recipes for reductions. For in-loop reductions the chain of
+  // instructions leading from the loop exit instr to the phi need to be
+  // converted to reductions, with one operand being vector and the other being
+  // the scalar reduction chain. For other reductions, a select is introduced
+  // between the phi and live-out recipes when folding the tail.
+  void adjustRecipesForReductions(VPBasicBlock *LatchVPBB, VPlanPtr &Plan,
+                                  VPRecipeBuilder &RecipeBuilder,
+                                  ElementCount MinVF);
 };
 
 } // namespace llvm

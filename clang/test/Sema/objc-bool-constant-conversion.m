@@ -6,7 +6,7 @@ typedef signed char BOOL;
 
 BOOL B;
 
-int main() {
+int main(void) {
   B = 0;
   B = 1;
   B = YES;

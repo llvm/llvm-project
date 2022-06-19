@@ -44,9 +44,9 @@ public:
 private:
   CompilerType m_element_type;
   CompilerType m_node_type;
-  ValueObject *m_tree;
-  size_t m_num_elements;
-  ValueObject *m_next_element;
+  ValueObject *m_tree = nullptr;
+  size_t m_num_elements = 0;
+  ValueObject *m_next_element = nullptr;
   std::vector<std::pair<ValueObject *, uint64_t>> m_elements_cache;
 };
 } // namespace formatters
@@ -54,17 +54,15 @@ private:
 
 lldb_private::formatters::LibcxxStdUnorderedMapSyntheticFrontEnd::
     LibcxxStdUnorderedMapSyntheticFrontEnd(lldb::ValueObjectSP valobj_sp)
-    : SyntheticChildrenFrontEnd(*valobj_sp), m_element_type(), m_tree(nullptr),
-      m_num_elements(0), m_next_element(nullptr), m_elements_cache() {
+    : SyntheticChildrenFrontEnd(*valobj_sp), m_element_type(),
+      m_elements_cache() {
   if (valobj_sp)
     Update();
 }
 
 size_t lldb_private::formatters::LibcxxStdUnorderedMapSyntheticFrontEnd::
     CalculateNumChildren() {
-  if (m_num_elements != UINT32_MAX)
-    return m_num_elements;
-  return 0;
+  return m_num_elements;
 }
 
 lldb::ValueObjectSP lldb_private::formatters::
@@ -160,7 +158,7 @@ lldb::ValueObjectSP lldb_private::formatters::
 
 bool lldb_private::formatters::LibcxxStdUnorderedMapSyntheticFrontEnd::
     Update() {
-  m_num_elements = UINT32_MAX;
+  m_num_elements = 0;
   m_next_element = nullptr;
   m_elements_cache.clear();
   ValueObjectSP table_sp =
@@ -195,8 +193,13 @@ bool lldb_private::formatters::LibcxxStdUnorderedMapSyntheticFrontEnd::
 
   if (!num_elements_sp)
     return false;
-  m_num_elements = num_elements_sp->GetValueAsUnsigned(0);
+
   m_tree = table_sp->GetChildAtNamePath(next_path).get();
+  if (m_tree == nullptr)
+    return false;
+
+  m_num_elements = num_elements_sp->GetValueAsUnsigned(0);
+
   if (m_num_elements > 0)
     m_next_element =
         table_sp->GetChildAtNamePath(next_path).get();

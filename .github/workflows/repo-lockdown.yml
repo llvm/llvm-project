@@ -1,0 +1,19 @@
+name: 'Repo Lockdown'
+on:
+  pull_request_target:
+    types: opened
+
+permissions:
+  pull-requests: write
+
+jobs:
+  action:
+    runs-on: ubuntu-latest
+    if: github.repository == 'llvm/llvm-project'
+    steps:
+      - uses: dessant/repo-lockdown@v2
+        with:
+          process-only: 'prs'
+          pr-comment: >
+            This repository does not accept pull requests.
+            Please follow http://llvm.org/docs/Contributing.html#how-to-submit-a-patch for contribution to LLVM.

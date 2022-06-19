@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -pass-remarks-analysis="polly-scops" -polly-scops -analyze < %s 2>&1 > /dev/null | FileCheck %s
+; RUN: opt %loadPolly -pass-remarks-analysis="polly-scops" -polly-print-scops -disable-output < %s 2>&1 > /dev/null | FileCheck %s
 ;
 ; Error statements (%bb33) do not require their uses to be verified.
 ; In this case it uses %tmp32 from %bb31 which is not available because

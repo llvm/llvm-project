@@ -19,7 +19,7 @@ namespace cert {
 /// object.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/cert-postfix-operator.html
+/// https://clang.llvm.org/extra/clang-tidy/checks/cert-dcl21-cpp.html
 class PostfixOperatorCheck : public ClangTidyCheck {
 public:
   PostfixOperatorCheck(StringRef Name, ClangTidyContext *Context)

@@ -1,4 +1,4 @@
-//===--------------------- test_fallback_malloc.cpp -----------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -10,6 +10,15 @@
 #include <deque>
 
 #include <__threading_support>
+
+// UNSUPPORTED: modules-build && no-threads
+
+// Necessary because we include a private source file of libc++abi, which
+// only understands _LIBCXXABI_HAS_NO_THREADS.
+#include "test_macros.h"
+#ifdef TEST_HAS_NO_THREADS
+# define _LIBCXXABI_HAS_NO_THREADS
+#endif
 
 typedef std::deque<void *> container;
 

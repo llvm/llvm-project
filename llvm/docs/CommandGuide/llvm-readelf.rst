@@ -20,7 +20,7 @@ input. Otherwise, it will read from the specified ``filenames``.
 OPTIONS
 -------
 
-.. option:: --all
+.. option:: --all, -a
 
  Equivalent to specifying all the main display options relevant to the file
  format.
@@ -41,6 +41,10 @@ OPTIONS
 .. option:: --demangle, -C
 
  Display demangled symbol names in the output.
+
+.. option:: --dependent-libraries
+
+ Display the dependent libraries section.
 
 .. option:: --dyn-relocations
 
@@ -68,9 +72,10 @@ OPTIONS
 
 .. option:: --elf-output-style=<value>
 
- Format ELF information in the specified style. Valid options are ``LLVM`` and
- ``GNU``. ``LLVM`` output is an expanded and structured format, whilst ``GNU``
- (the default) output mimics the equivalent GNU :program:`readelf` output.
+ Format ELF information in the specified style. Valid options are ``LLVM``,
+ ``GNU``, and ``JSON``. ``LLVM`` output is an expanded and structured format.
+ ``GNU`` (the default) output mimics the equivalent GNU :program:`readelf`
+ output. ``JSON`` is JSON formatted output intended for machine consumption.
 
 .. option:: --section-groups, -g
 
@@ -115,9 +120,18 @@ OPTIONS
 
  Display the needed libraries.
 
+.. option:: --no-demangle
+
+ Do not display demangled symbol names in the output. On by default.
+
 .. option:: --notes, -n
 
  Display all notes.
+
+.. option:: --pretty-print
+
+ When used with :option:`--elf-output-style`, JSON output will be formatted in
+ a more readable format.
 
 .. option:: --program-headers, --segments, -l
 
@@ -175,7 +189,7 @@ OPTIONS
 
 .. option:: --symbols, --syms, -s
 
- Display the symbol table.
+ Display the symbol table. Also display the dynamic symbol table when using GNU output style for ELF.
 
 .. option:: --unwind, -u
 
@@ -188,6 +202,10 @@ OPTIONS
 .. option:: --version-info, -V
 
  Display version sections.
+
+.. option:: --wide, -W
+
+ Ignored for GNU readelf compatibility. The output is already similar to when using -W with GNU readelf.
 
 .. option:: @<FILE>
 

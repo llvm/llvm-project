@@ -9,16 +9,13 @@
 #ifndef LLVM_DEBUGINFO_PDB_NATIVE_NATIVEENUMLINENUMBERS_H
 #define LLVM_DEBUGINFO_PDB_NATIVE_NATIVEENUMLINENUMBERS_H
 
-#include "llvm/DebugInfo/CodeView/DebugLinesSubsection.h"
-#include "llvm/DebugInfo/CodeView/DebugSubsectionRecord.h"
-#include "llvm/DebugInfo/CodeView/StringsAndChecksums.h"
 #include "llvm/DebugInfo/PDB/IPDBEnumChildren.h"
 #include "llvm/DebugInfo/PDB/IPDBLineNumber.h"
 #include "llvm/DebugInfo/PDB/Native/NativeLineNumber.h"
+#include <vector>
 
 namespace llvm {
 namespace pdb {
-class IPDBLineNumber;
 
 class NativeEnumLineNumbers : public IPDBEnumChildren<IPDBLineNumber> {
 public:

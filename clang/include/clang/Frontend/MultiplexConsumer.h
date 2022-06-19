@@ -40,6 +40,8 @@ public:
   void MacroDefinitionRead(serialization::PreprocessedEntityID,
                            MacroDefinitionRecord *MD) override;
   void ModuleRead(serialization::SubmoduleID ID, Module *Mod) override;
+  void ModuleImportRead(serialization::SubmoduleID ID,
+                        SourceLocation ImportLoc) override;
 
 private:
   std::vector<ASTDeserializationListener *> Listeners;

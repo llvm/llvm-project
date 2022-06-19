@@ -12,8 +12,6 @@ from lldbsuite.test import lldbutil
 
 class ReturnValueTestCase(TestBase):
 
-    mydir = TestBase.compute_mydir(__file__)
-
     def affected_by_pr33042(self):
         return ("clang" in self.getCompiler() and self.isAArch64() and
             self.getPlatform() == "linux")
@@ -22,9 +20,18 @@ class ReturnValueTestCase(TestBase):
         return (self.getArchitecture() in ["aarch64", "arm"] and
                 self.getPlatform() in ["freebsd", "linux"])
 
-    # ABIMacOSX_arm can't fetch simple values inside a structure
-    def affected_by_radar_34562999(self):
-        return (self.getArchitecture() == 'armv7' or self.getArchitecture() == 'armv7k') and self.platformIsDarwin()
+    # ABIMacOSX_arm64 and the SysV_arm64 don't restore the storage value for memory returns on function
+    # exit, so lldb shouldn't attempt to fetch memory for those return types, as there is
+    # no easy way to guarantee that they will be correct.  This is a list of the memory
+    # return functions defined in the test file:
+    arm_no_return_values = ["return_five_int", "return_one_int_one_double_one_int",
+                            "return_one_short_one_double_one_short", "return_vector_size_float32_32",
+                            "return_ext_vector_size_float32_8"]
+    def should_report_return_value(self, func_name):
+        abi = self.target.GetABIName()
+        if not abi in ["SysV-arm64", "ABIMacOSX_arm64", "macosx-arm"]:
+            return True
+        return not func_name in self.arm_no_return_values
 
     @expectedFailureAll(oslist=["freebsd"], archs=["i386"],
                         bugnumber="llvm.org/pr48376")
@@ -49,11 +56,11 @@ class ReturnValueTestCase(TestBase):
         # inner_sint returns the variable value, so capture that here:
         in_int = thread.GetFrameAtIndex(0).FindVariable(
             "value").GetValueAsSigned(error)
-        self.assertTrue(error.Success())
+        self.assertSuccess(error)
 
         thread.StepOut()
 
-        self.assertEquals(self.process.GetState(), lldb.eStateStopped)
+        self.assertState(self.process.GetState(), lldb.eStateStopped)
         self.assertEquals(thread.GetStopReason(), lldb.eStopReasonPlanComplete)
 
         frame = thread.GetFrameAtIndex(0)
@@ -64,7 +71,7 @@ class ReturnValueTestCase(TestBase):
         self.assertTrue(return_value.IsValid())
 
         ret_int = return_value.GetValueAsSigned(error)
-        self.assertTrue(error.Success())
+        self.assertSuccess(error)
         self.assertEquals(in_int, ret_int)
 
         # Run again and we will stop in inner_sint the second time outer_sint is called.
@@ -81,11 +88,11 @@ class ReturnValueTestCase(TestBase):
         fun_name = frame.GetFunctionName()
         self.assertEquals(fun_name, "outer_sint(int)")
         in_int = frame.FindVariable("value").GetValueAsSigned(error)
-        self.assertTrue(error.Success())
+        self.assertSuccess(error)
 
         thread.StepOutOfFrame(frame)
 
-        self.assertEquals(self.process.GetState(), lldb.eStateStopped)
+        self.assertState(self.process.GetState(), lldb.eStateStopped)
         self.assertEquals(thread.GetStopReason(), lldb.eStopReasonPlanComplete)
         frame = thread.GetFrameAtIndex(0)
         fun_name = frame.GetFunctionName()
@@ -94,7 +101,7 @@ class ReturnValueTestCase(TestBase):
         ret_value = thread.GetStopReturnValue()
         self.assertTrue(return_value.IsValid())
         ret_int = ret_value.GetValueAsSigned(error)
-        self.assertTrue(error.Success())
+        self.assertSuccess(error)
         self.assertEquals(2 * in_int, ret_int)
 
         # Now try some simple returns that have different types:
@@ -114,7 +121,7 @@ class ReturnValueTestCase(TestBase):
         in_float = float(in_value.GetValue())
         thread.StepOut()
 
-        self.assertEquals(self.process.GetState(), lldb.eStateStopped)
+        self.assertState(self.process.GetState(), lldb.eStateStopped)
         self.assertEquals(thread.GetStopReason(), lldb.eStopReasonPlanComplete)
 
         frame = thread.GetFrameAtIndex(0)
@@ -127,14 +134,13 @@ class ReturnValueTestCase(TestBase):
 
         #self.assertEqual(in_float, return_float)
 
-        if not self.affected_by_radar_34562999() and not self.affected_by_pr44132():
+        if not self.affected_by_pr44132():
             self.return_and_test_struct_value("return_one_int")
             self.return_and_test_struct_value("return_two_int")
             self.return_and_test_struct_value("return_three_int")
             self.return_and_test_struct_value("return_four_int")
             if not self.affected_by_pr33042():
                 self.return_and_test_struct_value("return_five_int")
-
             self.return_and_test_struct_value("return_two_double")
             self.return_and_test_struct_value("return_one_double_two_float")
             self.return_and_test_struct_value("return_one_int_one_float_one_int")
@@ -167,8 +173,7 @@ class ReturnValueTestCase(TestBase):
             "3.6"],
         archs=["i386"])
     @expectedFailureAll(compiler=["gcc"], archs=["x86_64", "i386"])
-    @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr24778")
-    @expectedFailureDarwin(archs=["arm64"]) # <rdar://problem/33976032> ABIMacOSX_arm64 doesn't get structs this big correctly
+    @expectedFailureAll(oslist=["windows"], archs=["i[3-6]86", "x86_64"], bugnumber="llvm.org/pr24778")
     def test_vector_values(self):
         self.build()
         exe = self.getBuildArtifact("a.out")
@@ -184,7 +189,6 @@ class ReturnValueTestCase(TestBase):
             None, None, self.get_process_working_directory())
         self.assertEqual(len(lldbutil.get_threads_stopped_at_breakpoint(
             self.process, main_bktp)), 1)
-
         self.return_and_test_struct_value("return_vector_size_float32_8")
         self.return_and_test_struct_value("return_vector_size_float32_16")
         if not self.affected_by_pr44132():
@@ -231,7 +235,7 @@ class ReturnValueTestCase(TestBase):
 
         # Set the breakpoint, run to it, finish out.
         bkpt = self.target.BreakpointCreateByName(func_name)
-        self.assertTrue(bkpt.GetNumResolvedLocations() > 0)
+        self.assertTrue(bkpt.GetNumResolvedLocations() > 0, "Got wrong number of locations for {0}".format(func_name))
 
         self.process.Continue()
 
@@ -257,7 +261,7 @@ class ReturnValueTestCase(TestBase):
 
         thread.StepOut()
 
-        self.assertEquals(self.process.GetState(), lldb.eStateStopped)
+        self.assertState(self.process.GetState(), lldb.eStateStopped)
         self.assertEquals(thread.GetStopReason(), lldb.eStopReasonPlanComplete)
 
         # Assuming all these functions step out to main.  Could figure out the caller dynamically
@@ -268,6 +272,9 @@ class ReturnValueTestCase(TestBase):
 
         frame = thread.GetFrameAtIndex(0)
         ret_value = thread.GetStopReturnValue()
+        if not self.should_report_return_value(func_name):
+            self.assertFalse(ret_value.IsValid(), "Shouldn't have gotten a value")
+            return
 
         self.assertTrue(ret_value.IsValid())
 

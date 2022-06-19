@@ -47,6 +47,17 @@ repository is to run:
   arc diff HEAD~
 
 
+Sometime you may want to create a draft revision to show the proof of concept
+or for experimental purposes, In that case you can use the `--draft` option. It
+will create a new draft revision. The good part is: it will not send mail to
+llvm-commit mailing list, patch reviewers, and all other subscribers, buildbot
+will also run on every patch update:
+
+::
+
+  arc diff --draft HEAD~
+
+
 If you later update your commit message, you need to add the `--verbatim`
 option to have `arc` update the description on Phabricator:
 
@@ -88,9 +99,9 @@ To upload a new patch:
 
 * Click *Differential*.
 * Click *+ Create Diff*.
-* Paste the text diff or browse to the patch file. Click *Create Diff*.
-* Leave this first Repository field blank. (We'll fill in the Repository
-  later, when sending the review.)
+* Paste the text diff or browse to the patch file. Leave this first Repository
+  field blank. (We'll fill in the Repository later, when sending the review.)
+  Click *Create Diff*.
 * Leave the drop down on *Create a new Revision...* and click *Continue*.
 * Enter a descriptive title and summary.  The title and summary are usually
   in the form of a :ref:`commit message <commit messages>`.
@@ -117,6 +128,95 @@ them to participate. Many people will see the email notification on cfe-commits
 or llvm-commits, and if the subject line suggests the patch is something they
 should look at, they will.
 
+.. _creating-a-patch-series:
+
+Creating a patch series
+-----------------------
+
+Chaining reviews together requires some manual work. There are two ways to do it
+(these are also described `here <https://moz-conduit.readthedocs.io/en/latest/arcanist-user.html#series-of-commits>`_
+along with some screenshots of what to expect).
+
+.. _using-the-web-interface:
+
+Using the web interface
+^^^^^^^^^^^^^^^^^^^^^^^
+
+This assumes that you've already created a Phabricator review for each commit,
+using `arc` or the web interface.
+
+* Go to what will be the last review in the series (the most recent).
+* Click "Edit Related Revisions" then "Edit Parent Revisions".
+* This will open a dialog where you will enter the patch number of the parent patch
+  (or patches). The patch number is of the form D<number> and you can find it by
+  looking at the URL for the review e.g. reviews.llvm/org/D12345.
+* Click "Save Parent Revisions" after entering them.
+* You should now see a "Stack" tab in the "Revision Contents" section of the web
+  interface, showing the parent patch that you added.
+
+Repeat this with each previous review until you reach the first in the series. This
+one won't have a parent since it's the start of the series.
+
+If you prefer to start with the first in the series and go forward, you can use the
+"Edit Child Revisions" option instead.
+
+.. _using-patch-summaries:
+
+Using patch summaries
+^^^^^^^^^^^^^^^^^^^^^
+
+This applies to new and existing reviews, uploaded with `arc` or the web interface.
+
+* Upload the first review and note its patch number, either with the web interface
+  or `arc`.
+* For each commit after that, add the following line to the commit message or patch
+  summary: "Depends on D<num>", where "<num>" is the patch number of the previous review.
+  This must be entirely on its own line, with a blank line before it.
+  For example::
+
+    [llvm] Example commit
+
+    Depends on D12345
+
+* If you want a single review to have multiple parent reviews then
+  add more with "and", for example: "Depends on D12344 and D12345".
+* Upload the commit with the web interface or `arc`
+  (``arc diff --verbatim`` to update an existing review).
+* You will see a "Stack" tab in the "Revision Contents" section of the review
+  in the web interface, showing the parent review.
+* Repeat these steps until you've uploaded or updated all the patches in
+  your series.
+
+When you push the patches, please remove the "Depends on" lines from the
+commit messages, since they add noise and duplicate git's implicit ordering.
+
+One frequently used workflow for creating a series of patches using patch summaries
+is based on git's rebasing. These steps assume that you have a series of commits that
+you have not posted for review, but can be adapted to update existing reviews.
+
+* git interactive rebase back to the first commit you want to upload for review::
+
+    git rebase -i HEAD~<number of commits you have written>
+
+* Mark all commits for editing by changing "pick" to "edit" in the instructions
+  git shows.
+* Start the rebase (usually by writing and closing the instructions).
+* For the first commit:
+
+  - Upload the current commit for a review (with ``arc diff`` or the web
+    interface).
+
+  - Continue to the next commit with ``git rebase --continue``
+
+* For the rest:
+
+  - Add the "Depends on..." line using ``git commit --amend``
+
+  - Upload for review.
+
+  - Continue the rebase.
+
+* Once the rebase is complete, you've created your patch series.
 
 .. _finding-potential-reviewers:
 
@@ -163,16 +263,21 @@ a change from Phabricator.
 Pre-merge testing
 -----------------
 
-The pre-merge tests are a continuous integration (CI) workflow. The workflow 
-checks the patches uploaded to Phabricator before a user merges them to the main 
-branch - thus the term *pre-merge testing*. 
+The pre-merge tests are a continuous integration (CI) workflow. The workflow
+checks the patches uploaded to Phabricator before a user merges them to the main
+branch - thus the term *pre-merge testing*.
 
 When a user uploads a patch to Phabricator, Phabricator triggers the checks and
-then displays the results. This way bugs in a patch are contained during the 
-code review stage and do not pollute the main branch. 
+then displays the results. This way bugs in a patch are contained during the
+code review stage and do not pollute the main branch.
 
-If you notice issues or have an idea on how to improve pre-merge checks, please 
-`create a new issue <https://github.com/google/llvm-premerge-checks/issues/new>`_ 
+Our goal with pre-merge testing is to report most true problems while strongly
+minimizing the number of false positive reports.  Our goal is that problems
+reported are always actionable.  If you notice a false positive, please report
+it so that we can identify the cause.
+
+If you notice issues or have an idea on how to improve pre-merge checks, please
+`create a new issue <https://github.com/google/llvm-premerge-checks/issues/new>`_
 or give a ❤️ to an existing one.
 
 Requirements
@@ -182,8 +287,8 @@ To get a patch on Phabricator tested, the build server must be able to apply the
 patch to the checked out git repository. Please make sure that either:
 
 * You set a git hash as ``sourceControlBaseRevision`` in Phabricator which is
-  available on the GitHub repository, 
-* **or** you define the dependencies of your patch in Phabricator, 
+  available on the GitHub repository,
+* **or** you define the dependencies of your patch in Phabricator,
 * **or** your patch can be applied to the main branch.
 
 Only then can the build server apply the patch locally and run the builds and
@@ -192,7 +297,7 @@ tests.
 Accessing build results
 ^^^^^^^^^^^^^^^^^^^^^^^
 Phabricator will automatically trigger a build for every new patch you upload or
-modify. Phabricator shows the build results at the top of the entry. Clicking on 
+modify. Phabricator shows the build results at the top of the entry. Clicking on
 the links (in the red box) will show more details:
 
   .. image:: Phabricator_premerge_results.png
@@ -204,6 +309,25 @@ If a unit test failed, this is shown below the build status. You can also expand
 the unit test to see the details:
 
   .. image:: Phabricator_premerge_unit_tests.png
+
+Opting Out
+^^^^^^^^^^
+
+In case you want to opt-out entirely of pre-merge testing, add yourself to the
+`OPT OUT project <https://reviews.llvm.org/project/view/83/>`_.  If you decide
+to opt-out, please let us know why, so we might be able to improve in the future.
+
+Operational Details
+^^^^^^^^^^^^^^^^^^^
+
+The code responsible for running the pre-merge flow can be found in the `external
+repository <https://github.com/google/llvm-premerge-checks>`_.  For enhancement
+ideas and most bugs, please file an issue on said repository.  For immediate
+operational problems, the point of contact is
+`Mikhail Goncharov <mailto:goncharo@google.com>`_.
+
+Background on the pre-merge infrastructure can be found in `this 2020 DevMeeting
+talk <https://llvm.org/devmtg/2020-09/slides/Goncharov-Pre-merge_checks.pdf>`_
 
 Committing a change
 -------------------

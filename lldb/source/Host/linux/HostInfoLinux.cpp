@@ -9,6 +9,7 @@
 #include "lldb/Host/linux/HostInfoLinux.h"
 #include "lldb/Host/Config.h"
 #include "lldb/Host/FileSystem.h"
+#include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
 
 #include "llvm/Support/Threading.h"
@@ -31,9 +32,9 @@ struct HostInfoLinuxFields {
   llvm::once_flag m_os_version_once_flag;
   llvm::VersionTuple m_os_version;
 };
+} // namespace
 
-HostInfoLinuxFields *g_fields = nullptr;
-}
+static HostInfoLinuxFields *g_fields = nullptr;
 
 void HostInfoLinux::Initialize(SharedLibraryDirectoryHelper *helper) {
   HostInfoPosix::Initialize(helper);
@@ -65,29 +66,14 @@ llvm::VersionTuple HostInfoLinux::GetOSVersion() {
   return g_fields->m_os_version;
 }
 
-bool HostInfoLinux::GetOSBuildString(std::string &s) {
+llvm::Optional<std::string> HostInfoLinux::GetOSBuildString() {
   struct utsname un;
   ::memset(&un, 0, sizeof(utsname));
-  s.clear();
 
   if (uname(&un) < 0)
-    return false;
+    return llvm::None;
 
-  s.assign(un.release);
-  return true;
-}
-
-bool HostInfoLinux::GetOSKernelDescription(std::string &s) {
-  struct utsname un;
-
-  ::memset(&un, 0, sizeof(utsname));
-  s.clear();
-
-  if (uname(&un) < 0)
-    return false;
-
-  s.assign(un.version);
-  return true;
+  return std::string(un.release);
 }
 
 llvm::StringRef HostInfoLinux::GetDistributionId() {
@@ -95,8 +81,7 @@ llvm::StringRef HostInfoLinux::GetDistributionId() {
   // Try to run 'lbs_release -i', and use that response for the distribution
   // id.
   llvm::call_once(g_fields->m_distribution_once_flag, []() {
-
-    Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_HOST));
+    Log *log = GetLog(LLDBLog::Host);
     LLDB_LOGF(log, "attempting to determine Linux distribution...");
 
     // check if the lsb_release command exists at one of the following paths

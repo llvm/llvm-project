@@ -11,9 +11,12 @@
 
 #include "mlir/Pass/Pass.h"
 
+#include "mlir/Conversion/GPUToROCDL/Runtimes.h"
+#include "mlir/IR/BuiltinOps.h"
+#include "mlir/IR/FunctionInterfaces.h"
+
 namespace mlir {
 class AffineDialect;
-class StandardOpsDialect;
 
 // Forward declaration from Dialect.h
 template <typename ConcreteDialect>
@@ -21,72 +24,92 @@ void registerDialect(DialectRegistry &registry);
 
 namespace acc {
 class OpenACCDialect;
-} // end namespace acc
+} // namespace acc
+
+namespace arith {
+class ArithmeticDialect;
+} // namespace arith
+
+namespace cf {
+class ControlFlowDialect;
+} // namespace cf
 
 namespace complex {
 class ComplexDialect;
-} // end namespace complex
+} // namespace complex
 
 namespace gpu {
 class GPUDialect;
 class GPUModuleOp;
-} // end namespace gpu
+} // namespace gpu
+
+namespace func {
+class FuncDialect;
+} // namespace func
+
+namespace linalg {
+class LinalgDialect;
+} // namespace linalg
 
 namespace LLVM {
 class LLVMDialect;
-} // end namespace LLVM
+} // namespace LLVM
+
+namespace nvgpu {
+class NVGPUDialect;
+}
 
 namespace NVVM {
 class NVVMDialect;
-} // end namespace NVVM
+} // namespace NVVM
 
 namespace math {
 class MathDialect;
-} // end namespace math
+} // namespace math
 
 namespace memref {
 class MemRefDialect;
-} // end namespace memref
+} // namespace memref
 
 namespace omp {
 class OpenMPDialect;
-} // end namespace omp
+} // namespace omp
 
 namespace pdl_interp {
 class PDLInterpDialect;
-} // end namespace pdl_interp
+} // namespace pdl_interp
 
 namespace ROCDL {
 class ROCDLDialect;
-} // end namespace ROCDL
+} // namespace ROCDL
 
 namespace scf {
 class SCFDialect;
-} // end namespace scf
+} // namespace scf
 
 namespace spirv {
 class SPIRVDialect;
-} // end namespace spirv
+} // namespace spirv
 
 namespace tensor {
 class TensorDialect;
-} // end namespace tensor
+} // namespace tensor
 
 namespace tosa {
 class TosaDialect;
-} // end namespace tosa
+} // namespace tosa
 
 namespace vector {
 class VectorDialect;
-} // end namespace vector
+} // namespace vector
 
 namespace arm_neon {
 class ArmNeonDialect;
-} // end namespace arm_neon
+} // namespace arm_neon
 
 #define GEN_PASS_CLASSES
 #include "mlir/Conversion/Passes.h.inc"
 
-} // end namespace mlir
+} // namespace mlir
 
 #endif // CONVERSION_PASSDETAIL_H_

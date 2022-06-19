@@ -54,8 +54,15 @@ C
 -
 
 **CFI**
+    This abbreviation has two meanings.
+    Either:
     Call Frame Information. Used in DWARF debug info and in C++ unwind info
     to show how the function prolog lays out the stack frame.
+
+    Or:
+    Control Flow Integrity. A general term for computer security techniques
+    that prevent a wide variety of malware attacks from redirecting the flow
+    of execution (the control flow) of a program.
 
 **CIE**
     Common Information Entry.  A kind of CFI used to reduce the size of FDEs.
@@ -151,6 +158,12 @@ I
     that occur in LLVM or Clang as they are compiling source code. For example,
     if a valid C++ source program were to trigger an assert in Clang when
     compiled, that could be referred to as an "ICE".
+
+**ICF**
+    Identical Code Folding
+
+**ICP**
+    Indirect Call Promotion
 
 **IPA**
     Inter-Procedural Analysis. Refers to any variety of code analysis that
@@ -308,4 +321,11 @@ T
 
 **TBAA**
     Type-Based Alias Analysis
+
+
+W
+-
+
+**WPD**
+    Whole Program Devirtualization
 

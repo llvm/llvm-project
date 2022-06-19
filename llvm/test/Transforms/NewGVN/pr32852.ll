@@ -1,6 +1,6 @@
 ; Make sure GVN doesn't incorrectly think the branch terminating
 ; bb2 has a constant condition.
-; RUN: opt -S -newgvn %s | FileCheck %s
+; RUN: opt -S -passes=newgvn %s | FileCheck %s
 
 @a = common global i32 0
 @patatino = private unnamed_addr constant [3 x i8] c"0\0A\00"

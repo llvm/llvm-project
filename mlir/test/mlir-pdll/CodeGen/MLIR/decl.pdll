@@ -1,0 +1,97 @@
+// RUN: mlir-pdll %s -I %S -split-input-file -x mlir | FileCheck %s
+
+//===----------------------------------------------------------------------===//
+// PatternDecl
+//===----------------------------------------------------------------------===//
+
+// CHECK: pdl.pattern : benefit(0) {
+Pattern => erase _: Op;
+
+// -----
+
+// CHECK: pdl.pattern @NamedPattern : benefit(0) {
+Pattern NamedPattern => erase _: Op;
+
+// -----
+
+// CHECK: pdl.pattern @NamedPattern : benefit(10) {
+Pattern NamedPattern with benefit(10), recursion => erase _: Op;
+
+// -----
+
+//===----------------------------------------------------------------------===//
+// VariableDecl
+//===----------------------------------------------------------------------===//
+
+// Test the case of a variable with an initializer.
+
+// CHECK: pdl.pattern @VarWithInit
+// CHECK: %[[INIT:.*]] = operation "test.op"
+// CHECK: rewrite %[[INIT]] {
+// CHECK:   erase %[[INIT]]
+Pattern VarWithInit {
+  let var = op<test.op>;
+  erase var;
+}
+
+// -----
+
+// Test range based constraints.
+
+// CHECK: pdl.pattern @VarWithRangeConstraints
+// CHECK: %[[OPERAND_TYPES:.*]] = types
+// CHECK: %[[OPERANDS:.*]] = operands : %[[OPERAND_TYPES]]
+// CHECK: %[[RESULT_TYPES:.*]] = types
+// CHECK: operation(%[[OPERANDS]] : !pdl.range<value>)  -> (%[[RESULT_TYPES]] : !pdl.range<type>)
+Pattern VarWithRangeConstraints {
+  erase op<>(operands: ValueRange<operandTypes: TypeRange>) -> (results: TypeRange);
+}
+
+// -----
+
+// Test single entity constraints.
+
+// CHECK: pdl.pattern @VarWithConstraints
+// CHECK: %[[OPERAND_TYPE:.*]] = type
+// CHECK: %[[OPERAND:.*]] = operand : %[[OPERAND_TYPES]]
+// CHECK: %[[ATTR_TYPE:.*]] = type
+// CHECK: %[[ATTR:.*]] = attribute : %[[ATTR_TYPE]]
+// CHECK: %[[RESULT_TYPE:.*]] = type
+// CHECK: operation(%[[OPERAND]] : !pdl.value)  {"attr" = %[[ATTR]]} -> (%[[RESULT_TYPE]] : !pdl.type)
+Pattern VarWithConstraints {
+  erase op<>(operand: Value<operandType: Type>) { attr = _: Attr<attrType: Type>} -> (result: Type);
+}
+
+// -----
+
+// Test op constraint.
+
+// CHECK: pdl.pattern @VarWithNoNameOpConstraint
+// CHECK: %[[OPERANDS:.*]] = operands
+// CHECK: %[[RESULT_TYPES:.*]] = types
+// CHECK: operation(%[[OPERANDS]] : !pdl.range<value>)  -> (%[[RESULT_TYPES]] : !pdl.range<type>)
+Pattern VarWithNoNameOpConstraint => erase _: Op;
+
+// CHECK: pdl.pattern @VarWithNamedOpConstraint
+// CHECK: %[[OPERANDS:.*]] = operands
+// CHECK: %[[RESULT_TYPES:.*]] = types
+// CHECK: operation "test.op"(%[[OPERANDS]] : !pdl.range<value>)  -> (%[[RESULT_TYPES]] : !pdl.range<type>)
+Pattern VarWithNamedOpConstraint => erase _: Op<test.op>;
+
+// -----
+
+// Test user defined constraints.
+
+// CHECK: pdl.pattern @VarWithUserConstraint
+// CHECK: %[[OPERANDS:.*]] = operands
+// CHECK: %[[RESULT_TYPES:.*]] = types
+// CHECK: %[[OP:.*]] = operation(%[[OPERANDS]] : !pdl.range<value>)  -> (%[[RESULT_TYPES]] : !pdl.range<type>)
+// CHECK: apply_native_constraint "NestedArgCst"(%[[OP]] : !pdl.operation)
+// CHECK: apply_native_constraint "NestedResCst"(%[[OP]] : !pdl.operation)
+// CHECK: apply_native_constraint "OpCst"(%[[OP]] : !pdl.operation)
+// CHECK: rewrite %[[OP]]
+Constraint NestedArgCst(op: Op);
+Constraint NestedResCst(op: Op);
+Constraint TestArgResCsts(op: NestedArgCst) -> NestedResCst => op;
+Constraint OpCst(op: Op);
+Pattern VarWithUserConstraint => erase _: [TestArgResCsts, OpCst];

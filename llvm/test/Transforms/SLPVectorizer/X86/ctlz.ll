@@ -44,20 +44,41 @@ define void @ctlz_2i64() #0 {
 }
 
 define void @ctlz_4i64() #0 {
-; CHECK-LABEL: @ctlz_4i64(
-; CHECK-NEXT:    [[LD0:%.*]] = load i64, i64* getelementptr inbounds ([4 x i64], [4 x i64]* @src64, i64 0, i64 0), align 4
-; CHECK-NEXT:    [[LD1:%.*]] = load i64, i64* getelementptr inbounds ([4 x i64], [4 x i64]* @src64, i64 0, i64 1), align 4
-; CHECK-NEXT:    [[LD2:%.*]] = load i64, i64* getelementptr inbounds ([4 x i64], [4 x i64]* @src64, i64 0, i64 2), align 4
-; CHECK-NEXT:    [[LD3:%.*]] = load i64, i64* getelementptr inbounds ([4 x i64], [4 x i64]* @src64, i64 0, i64 3), align 4
-; CHECK-NEXT:    [[CTLZ0:%.*]] = call i64 @llvm.ctlz.i64(i64 [[LD0]], i1 false)
-; CHECK-NEXT:    [[CTLZ1:%.*]] = call i64 @llvm.ctlz.i64(i64 [[LD1]], i1 false)
-; CHECK-NEXT:    [[CTLZ2:%.*]] = call i64 @llvm.ctlz.i64(i64 [[LD2]], i1 false)
-; CHECK-NEXT:    [[CTLZ3:%.*]] = call i64 @llvm.ctlz.i64(i64 [[LD3]], i1 false)
-; CHECK-NEXT:    store i64 [[CTLZ0]], i64* getelementptr inbounds ([4 x i64], [4 x i64]* @dst64, i64 0, i64 0), align 4
-; CHECK-NEXT:    store i64 [[CTLZ1]], i64* getelementptr inbounds ([4 x i64], [4 x i64]* @dst64, i64 0, i64 1), align 4
-; CHECK-NEXT:    store i64 [[CTLZ2]], i64* getelementptr inbounds ([4 x i64], [4 x i64]* @dst64, i64 0, i64 2), align 4
-; CHECK-NEXT:    store i64 [[CTLZ3]], i64* getelementptr inbounds ([4 x i64], [4 x i64]* @dst64, i64 0, i64 3), align 4
-; CHECK-NEXT:    ret void
+; SSE-LABEL: @ctlz_4i64(
+; SSE-NEXT:    [[LD0:%.*]] = load i64, i64* getelementptr inbounds ([4 x i64], [4 x i64]* @src64, i64 0, i64 0), align 4
+; SSE-NEXT:    [[LD1:%.*]] = load i64, i64* getelementptr inbounds ([4 x i64], [4 x i64]* @src64, i64 0, i64 1), align 4
+; SSE-NEXT:    [[LD2:%.*]] = load i64, i64* getelementptr inbounds ([4 x i64], [4 x i64]* @src64, i64 0, i64 2), align 4
+; SSE-NEXT:    [[LD3:%.*]] = load i64, i64* getelementptr inbounds ([4 x i64], [4 x i64]* @src64, i64 0, i64 3), align 4
+; SSE-NEXT:    [[CTLZ0:%.*]] = call i64 @llvm.ctlz.i64(i64 [[LD0]], i1 false)
+; SSE-NEXT:    [[CTLZ1:%.*]] = call i64 @llvm.ctlz.i64(i64 [[LD1]], i1 false)
+; SSE-NEXT:    [[CTLZ2:%.*]] = call i64 @llvm.ctlz.i64(i64 [[LD2]], i1 false)
+; SSE-NEXT:    [[CTLZ3:%.*]] = call i64 @llvm.ctlz.i64(i64 [[LD3]], i1 false)
+; SSE-NEXT:    store i64 [[CTLZ0]], i64* getelementptr inbounds ([4 x i64], [4 x i64]* @dst64, i64 0, i64 0), align 4
+; SSE-NEXT:    store i64 [[CTLZ1]], i64* getelementptr inbounds ([4 x i64], [4 x i64]* @dst64, i64 0, i64 1), align 4
+; SSE-NEXT:    store i64 [[CTLZ2]], i64* getelementptr inbounds ([4 x i64], [4 x i64]* @dst64, i64 0, i64 2), align 4
+; SSE-NEXT:    store i64 [[CTLZ3]], i64* getelementptr inbounds ([4 x i64], [4 x i64]* @dst64, i64 0, i64 3), align 4
+; SSE-NEXT:    ret void
+;
+; AVX1-LABEL: @ctlz_4i64(
+; AVX1-NEXT:    [[LD0:%.*]] = load i64, i64* getelementptr inbounds ([4 x i64], [4 x i64]* @src64, i64 0, i64 0), align 4
+; AVX1-NEXT:    [[LD1:%.*]] = load i64, i64* getelementptr inbounds ([4 x i64], [4 x i64]* @src64, i64 0, i64 1), align 4
+; AVX1-NEXT:    [[LD2:%.*]] = load i64, i64* getelementptr inbounds ([4 x i64], [4 x i64]* @src64, i64 0, i64 2), align 4
+; AVX1-NEXT:    [[LD3:%.*]] = load i64, i64* getelementptr inbounds ([4 x i64], [4 x i64]* @src64, i64 0, i64 3), align 4
+; AVX1-NEXT:    [[CTLZ0:%.*]] = call i64 @llvm.ctlz.i64(i64 [[LD0]], i1 false)
+; AVX1-NEXT:    [[CTLZ1:%.*]] = call i64 @llvm.ctlz.i64(i64 [[LD1]], i1 false)
+; AVX1-NEXT:    [[CTLZ2:%.*]] = call i64 @llvm.ctlz.i64(i64 [[LD2]], i1 false)
+; AVX1-NEXT:    [[CTLZ3:%.*]] = call i64 @llvm.ctlz.i64(i64 [[LD3]], i1 false)
+; AVX1-NEXT:    store i64 [[CTLZ0]], i64* getelementptr inbounds ([4 x i64], [4 x i64]* @dst64, i64 0, i64 0), align 4
+; AVX1-NEXT:    store i64 [[CTLZ1]], i64* getelementptr inbounds ([4 x i64], [4 x i64]* @dst64, i64 0, i64 1), align 4
+; AVX1-NEXT:    store i64 [[CTLZ2]], i64* getelementptr inbounds ([4 x i64], [4 x i64]* @dst64, i64 0, i64 2), align 4
+; AVX1-NEXT:    store i64 [[CTLZ3]], i64* getelementptr inbounds ([4 x i64], [4 x i64]* @dst64, i64 0, i64 3), align 4
+; AVX1-NEXT:    ret void
+;
+; AVX2-LABEL: @ctlz_4i64(
+; AVX2-NEXT:    [[TMP1:%.*]] = load <4 x i64>, <4 x i64>* bitcast ([4 x i64]* @src64 to <4 x i64>*), align 4
+; AVX2-NEXT:    [[TMP2:%.*]] = call <4 x i64> @llvm.ctlz.v4i64(<4 x i64> [[TMP1]], i1 false)
+; AVX2-NEXT:    store <4 x i64> [[TMP2]], <4 x i64>* bitcast ([4 x i64]* @dst64 to <4 x i64>*), align 4
+; AVX2-NEXT:    ret void
 ;
   %ld0 = load i64, i64* getelementptr inbounds ([4 x i64], [4 x i64]* @src64, i64 0, i64 0), align 4
   %ld1 = load i64, i64* getelementptr inbounds ([4 x i64], [4 x i64]* @src64, i64 0, i64 1), align 4
@@ -96,26 +117,11 @@ define void @ctlz_4i32() #0 {
 ; SSE42-NEXT:    store <4 x i32> [[TMP2]], <4 x i32>* bitcast ([8 x i32]* @dst32 to <4 x i32>*), align 4
 ; SSE42-NEXT:    ret void
 ;
-; AVX1-LABEL: @ctlz_4i32(
-; AVX1-NEXT:    [[TMP1:%.*]] = load <4 x i32>, <4 x i32>* bitcast ([8 x i32]* @src32 to <4 x i32>*), align 4
-; AVX1-NEXT:    [[TMP2:%.*]] = call <4 x i32> @llvm.ctlz.v4i32(<4 x i32> [[TMP1]], i1 false)
-; AVX1-NEXT:    store <4 x i32> [[TMP2]], <4 x i32>* bitcast ([8 x i32]* @dst32 to <4 x i32>*), align 4
-; AVX1-NEXT:    ret void
-;
-; AVX2-LABEL: @ctlz_4i32(
-; AVX2-NEXT:    [[LD0:%.*]] = load i32, i32* getelementptr inbounds ([8 x i32], [8 x i32]* @src32, i32 0, i64 0), align 4
-; AVX2-NEXT:    [[LD1:%.*]] = load i32, i32* getelementptr inbounds ([8 x i32], [8 x i32]* @src32, i32 0, i64 1), align 4
-; AVX2-NEXT:    [[LD2:%.*]] = load i32, i32* getelementptr inbounds ([8 x i32], [8 x i32]* @src32, i32 0, i64 2), align 4
-; AVX2-NEXT:    [[LD3:%.*]] = load i32, i32* getelementptr inbounds ([8 x i32], [8 x i32]* @src32, i32 0, i64 3), align 4
-; AVX2-NEXT:    [[CTLZ0:%.*]] = call i32 @llvm.ctlz.i32(i32 [[LD0]], i1 false)
-; AVX2-NEXT:    [[CTLZ1:%.*]] = call i32 @llvm.ctlz.i32(i32 [[LD1]], i1 false)
-; AVX2-NEXT:    [[CTLZ2:%.*]] = call i32 @llvm.ctlz.i32(i32 [[LD2]], i1 false)
-; AVX2-NEXT:    [[CTLZ3:%.*]] = call i32 @llvm.ctlz.i32(i32 [[LD3]], i1 false)
-; AVX2-NEXT:    store i32 [[CTLZ0]], i32* getelementptr inbounds ([8 x i32], [8 x i32]* @dst32, i32 0, i64 0), align 4
-; AVX2-NEXT:    store i32 [[CTLZ1]], i32* getelementptr inbounds ([8 x i32], [8 x i32]* @dst32, i32 0, i64 1), align 4
-; AVX2-NEXT:    store i32 [[CTLZ2]], i32* getelementptr inbounds ([8 x i32], [8 x i32]* @dst32, i32 0, i64 2), align 4
-; AVX2-NEXT:    store i32 [[CTLZ3]], i32* getelementptr inbounds ([8 x i32], [8 x i32]* @dst32, i32 0, i64 3), align 4
-; AVX2-NEXT:    ret void
+; AVX-LABEL: @ctlz_4i32(
+; AVX-NEXT:    [[TMP1:%.*]] = load <4 x i32>, <4 x i32>* bitcast ([8 x i32]* @src32 to <4 x i32>*), align 4
+; AVX-NEXT:    [[TMP2:%.*]] = call <4 x i32> @llvm.ctlz.v4i32(<4 x i32> [[TMP1]], i1 false)
+; AVX-NEXT:    store <4 x i32> [[TMP2]], <4 x i32>* bitcast ([8 x i32]* @dst32 to <4 x i32>*), align 4
+; AVX-NEXT:    ret void
 ;
   %ld0 = load i32, i32* getelementptr inbounds ([8 x i32], [8 x i32]* @src32, i32 0, i64 0), align 4
   %ld1 = load i32, i32* getelementptr inbounds ([8 x i32], [8 x i32]* @src32, i32 0, i64 1), align 4
@@ -162,10 +168,10 @@ define void @ctlz_8i32() #0 {
 ;
 ; SSE42-LABEL: @ctlz_8i32(
 ; SSE42-NEXT:    [[TMP1:%.*]] = load <4 x i32>, <4 x i32>* bitcast ([8 x i32]* @src32 to <4 x i32>*), align 2
-; SSE42-NEXT:    [[TMP2:%.*]] = load <4 x i32>, <4 x i32>* bitcast (i32* getelementptr inbounds ([8 x i32], [8 x i32]* @src32, i32 0, i64 4) to <4 x i32>*), align 2
-; SSE42-NEXT:    [[TMP3:%.*]] = call <4 x i32> @llvm.ctlz.v4i32(<4 x i32> [[TMP1]], i1 false)
-; SSE42-NEXT:    [[TMP4:%.*]] = call <4 x i32> @llvm.ctlz.v4i32(<4 x i32> [[TMP2]], i1 false)
-; SSE42-NEXT:    store <4 x i32> [[TMP3]], <4 x i32>* bitcast ([8 x i32]* @dst32 to <4 x i32>*), align 2
+; SSE42-NEXT:    [[TMP2:%.*]] = call <4 x i32> @llvm.ctlz.v4i32(<4 x i32> [[TMP1]], i1 false)
+; SSE42-NEXT:    store <4 x i32> [[TMP2]], <4 x i32>* bitcast ([8 x i32]* @dst32 to <4 x i32>*), align 2
+; SSE42-NEXT:    [[TMP3:%.*]] = load <4 x i32>, <4 x i32>* bitcast (i32* getelementptr inbounds ([8 x i32], [8 x i32]* @src32, i32 0, i64 4) to <4 x i32>*), align 2
+; SSE42-NEXT:    [[TMP4:%.*]] = call <4 x i32> @llvm.ctlz.v4i32(<4 x i32> [[TMP3]], i1 false)
 ; SSE42-NEXT:    store <4 x i32> [[TMP4]], <4 x i32>* bitcast (i32* getelementptr inbounds ([8 x i32], [8 x i32]* @dst32, i32 0, i64 4) to <4 x i32>*), align 2
 ; SSE42-NEXT:    ret void
 ;
@@ -239,10 +245,10 @@ define void @ctlz_8i16() #0 {
 define void @ctlz_16i16() #0 {
 ; SSE-LABEL: @ctlz_16i16(
 ; SSE-NEXT:    [[TMP1:%.*]] = load <8 x i16>, <8 x i16>* bitcast ([16 x i16]* @src16 to <8 x i16>*), align 2
-; SSE-NEXT:    [[TMP2:%.*]] = load <8 x i16>, <8 x i16>* bitcast (i16* getelementptr inbounds ([16 x i16], [16 x i16]* @src16, i16 0, i64 8) to <8 x i16>*), align 2
-; SSE-NEXT:    [[TMP3:%.*]] = call <8 x i16> @llvm.ctlz.v8i16(<8 x i16> [[TMP1]], i1 false)
-; SSE-NEXT:    [[TMP4:%.*]] = call <8 x i16> @llvm.ctlz.v8i16(<8 x i16> [[TMP2]], i1 false)
-; SSE-NEXT:    store <8 x i16> [[TMP3]], <8 x i16>* bitcast ([16 x i16]* @dst16 to <8 x i16>*), align 2
+; SSE-NEXT:    [[TMP2:%.*]] = call <8 x i16> @llvm.ctlz.v8i16(<8 x i16> [[TMP1]], i1 false)
+; SSE-NEXT:    store <8 x i16> [[TMP2]], <8 x i16>* bitcast ([16 x i16]* @dst16 to <8 x i16>*), align 2
+; SSE-NEXT:    [[TMP3:%.*]] = load <8 x i16>, <8 x i16>* bitcast (i16* getelementptr inbounds ([16 x i16], [16 x i16]* @src16, i16 0, i64 8) to <8 x i16>*), align 2
+; SSE-NEXT:    [[TMP4:%.*]] = call <8 x i16> @llvm.ctlz.v8i16(<8 x i16> [[TMP3]], i1 false)
 ; SSE-NEXT:    store <8 x i16> [[TMP4]], <8 x i16>* bitcast (i16* getelementptr inbounds ([16 x i16], [16 x i16]* @dst16, i16 0, i64 8) to <8 x i16>*), align 2
 ; SSE-NEXT:    ret void
 ;
@@ -364,10 +370,10 @@ define void @ctlz_16i8() #0 {
 define void @ctlz_32i8() #0 {
 ; SSE-LABEL: @ctlz_32i8(
 ; SSE-NEXT:    [[TMP1:%.*]] = load <16 x i8>, <16 x i8>* bitcast ([32 x i8]* @src8 to <16 x i8>*), align 1
-; SSE-NEXT:    [[TMP2:%.*]] = load <16 x i8>, <16 x i8>* bitcast (i8* getelementptr inbounds ([32 x i8], [32 x i8]* @src8, i8 0, i64 16) to <16 x i8>*), align 1
-; SSE-NEXT:    [[TMP3:%.*]] = call <16 x i8> @llvm.ctlz.v16i8(<16 x i8> [[TMP1]], i1 false)
-; SSE-NEXT:    [[TMP4:%.*]] = call <16 x i8> @llvm.ctlz.v16i8(<16 x i8> [[TMP2]], i1 false)
-; SSE-NEXT:    store <16 x i8> [[TMP3]], <16 x i8>* bitcast ([32 x i8]* @dst8 to <16 x i8>*), align 1
+; SSE-NEXT:    [[TMP2:%.*]] = call <16 x i8> @llvm.ctlz.v16i8(<16 x i8> [[TMP1]], i1 false)
+; SSE-NEXT:    store <16 x i8> [[TMP2]], <16 x i8>* bitcast ([32 x i8]* @dst8 to <16 x i8>*), align 1
+; SSE-NEXT:    [[TMP3:%.*]] = load <16 x i8>, <16 x i8>* bitcast (i8* getelementptr inbounds ([32 x i8], [32 x i8]* @src8, i8 0, i64 16) to <16 x i8>*), align 1
+; SSE-NEXT:    [[TMP4:%.*]] = call <16 x i8> @llvm.ctlz.v16i8(<16 x i8> [[TMP3]], i1 false)
 ; SSE-NEXT:    store <16 x i8> [[TMP4]], <16 x i8>* bitcast (i8* getelementptr inbounds ([32 x i8], [32 x i8]* @dst8, i8 0, i64 16) to <16 x i8>*), align 1
 ; SSE-NEXT:    ret void
 ;
@@ -500,20 +506,41 @@ define void @ctlz_undef_2i64() #0 {
 }
 
 define void @ctlz_undef_4i64() #0 {
-; CHECK-LABEL: @ctlz_undef_4i64(
-; CHECK-NEXT:    [[LD0:%.*]] = load i64, i64* getelementptr inbounds ([4 x i64], [4 x i64]* @src64, i64 0, i64 0), align 4
-; CHECK-NEXT:    [[LD1:%.*]] = load i64, i64* getelementptr inbounds ([4 x i64], [4 x i64]* @src64, i64 0, i64 1), align 4
-; CHECK-NEXT:    [[LD2:%.*]] = load i64, i64* getelementptr inbounds ([4 x i64], [4 x i64]* @src64, i64 0, i64 2), align 4
-; CHECK-NEXT:    [[LD3:%.*]] = load i64, i64* getelementptr inbounds ([4 x i64], [4 x i64]* @src64, i64 0, i64 3), align 4
-; CHECK-NEXT:    [[CTLZ0:%.*]] = call i64 @llvm.ctlz.i64(i64 [[LD0]], i1 true)
-; CHECK-NEXT:    [[CTLZ1:%.*]] = call i64 @llvm.ctlz.i64(i64 [[LD1]], i1 true)
-; CHECK-NEXT:    [[CTLZ2:%.*]] = call i64 @llvm.ctlz.i64(i64 [[LD2]], i1 true)
-; CHECK-NEXT:    [[CTLZ3:%.*]] = call i64 @llvm.ctlz.i64(i64 [[LD3]], i1 true)
-; CHECK-NEXT:    store i64 [[CTLZ0]], i64* getelementptr inbounds ([4 x i64], [4 x i64]* @dst64, i64 0, i64 0), align 4
-; CHECK-NEXT:    store i64 [[CTLZ1]], i64* getelementptr inbounds ([4 x i64], [4 x i64]* @dst64, i64 0, i64 1), align 4
-; CHECK-NEXT:    store i64 [[CTLZ2]], i64* getelementptr inbounds ([4 x i64], [4 x i64]* @dst64, i64 0, i64 2), align 4
-; CHECK-NEXT:    store i64 [[CTLZ3]], i64* getelementptr inbounds ([4 x i64], [4 x i64]* @dst64, i64 0, i64 3), align 4
-; CHECK-NEXT:    ret void
+; SSE-LABEL: @ctlz_undef_4i64(
+; SSE-NEXT:    [[LD0:%.*]] = load i64, i64* getelementptr inbounds ([4 x i64], [4 x i64]* @src64, i64 0, i64 0), align 4
+; SSE-NEXT:    [[LD1:%.*]] = load i64, i64* getelementptr inbounds ([4 x i64], [4 x i64]* @src64, i64 0, i64 1), align 4
+; SSE-NEXT:    [[LD2:%.*]] = load i64, i64* getelementptr inbounds ([4 x i64], [4 x i64]* @src64, i64 0, i64 2), align 4
+; SSE-NEXT:    [[LD3:%.*]] = load i64, i64* getelementptr inbounds ([4 x i64], [4 x i64]* @src64, i64 0, i64 3), align 4
+; SSE-NEXT:    [[CTLZ0:%.*]] = call i64 @llvm.ctlz.i64(i64 [[LD0]], i1 true)
+; SSE-NEXT:    [[CTLZ1:%.*]] = call i64 @llvm.ctlz.i64(i64 [[LD1]], i1 true)
+; SSE-NEXT:    [[CTLZ2:%.*]] = call i64 @llvm.ctlz.i64(i64 [[LD2]], i1 true)
+; SSE-NEXT:    [[CTLZ3:%.*]] = call i64 @llvm.ctlz.i64(i64 [[LD3]], i1 true)
+; SSE-NEXT:    store i64 [[CTLZ0]], i64* getelementptr inbounds ([4 x i64], [4 x i64]* @dst64, i64 0, i64 0), align 4
+; SSE-NEXT:    store i64 [[CTLZ1]], i64* getelementptr inbounds ([4 x i64], [4 x i64]* @dst64, i64 0, i64 1), align 4
+; SSE-NEXT:    store i64 [[CTLZ2]], i64* getelementptr inbounds ([4 x i64], [4 x i64]* @dst64, i64 0, i64 2), align 4
+; SSE-NEXT:    store i64 [[CTLZ3]], i64* getelementptr inbounds ([4 x i64], [4 x i64]* @dst64, i64 0, i64 3), align 4
+; SSE-NEXT:    ret void
+;
+; AVX1-LABEL: @ctlz_undef_4i64(
+; AVX1-NEXT:    [[LD0:%.*]] = load i64, i64* getelementptr inbounds ([4 x i64], [4 x i64]* @src64, i64 0, i64 0), align 4
+; AVX1-NEXT:    [[LD1:%.*]] = load i64, i64* getelementptr inbounds ([4 x i64], [4 x i64]* @src64, i64 0, i64 1), align 4
+; AVX1-NEXT:    [[LD2:%.*]] = load i64, i64* getelementptr inbounds ([4 x i64], [4 x i64]* @src64, i64 0, i64 2), align 4
+; AVX1-NEXT:    [[LD3:%.*]] = load i64, i64* getelementptr inbounds ([4 x i64], [4 x i64]* @src64, i64 0, i64 3), align 4
+; AVX1-NEXT:    [[CTLZ0:%.*]] = call i64 @llvm.ctlz.i64(i64 [[LD0]], i1 true)
+; AVX1-NEXT:    [[CTLZ1:%.*]] = call i64 @llvm.ctlz.i64(i64 [[LD1]], i1 true)
+; AVX1-NEXT:    [[CTLZ2:%.*]] = call i64 @llvm.ctlz.i64(i64 [[LD2]], i1 true)
+; AVX1-NEXT:    [[CTLZ3:%.*]] = call i64 @llvm.ctlz.i64(i64 [[LD3]], i1 true)
+; AVX1-NEXT:    store i64 [[CTLZ0]], i64* getelementptr inbounds ([4 x i64], [4 x i64]* @dst64, i64 0, i64 0), align 4
+; AVX1-NEXT:    store i64 [[CTLZ1]], i64* getelementptr inbounds ([4 x i64], [4 x i64]* @dst64, i64 0, i64 1), align 4
+; AVX1-NEXT:    store i64 [[CTLZ2]], i64* getelementptr inbounds ([4 x i64], [4 x i64]* @dst64, i64 0, i64 2), align 4
+; AVX1-NEXT:    store i64 [[CTLZ3]], i64* getelementptr inbounds ([4 x i64], [4 x i64]* @dst64, i64 0, i64 3), align 4
+; AVX1-NEXT:    ret void
+;
+; AVX2-LABEL: @ctlz_undef_4i64(
+; AVX2-NEXT:    [[TMP1:%.*]] = load <4 x i64>, <4 x i64>* bitcast ([4 x i64]* @src64 to <4 x i64>*), align 4
+; AVX2-NEXT:    [[TMP2:%.*]] = call <4 x i64> @llvm.ctlz.v4i64(<4 x i64> [[TMP1]], i1 true)
+; AVX2-NEXT:    store <4 x i64> [[TMP2]], <4 x i64>* bitcast ([4 x i64]* @dst64 to <4 x i64>*), align 4
+; AVX2-NEXT:    ret void
 ;
   %ld0 = load i64, i64* getelementptr inbounds ([4 x i64], [4 x i64]* @src64, i64 0, i64 0), align 4
   %ld1 = load i64, i64* getelementptr inbounds ([4 x i64], [4 x i64]* @src64, i64 0, i64 1), align 4
@@ -552,26 +579,11 @@ define void @ctlz_undef_4i32() #0 {
 ; SSE42-NEXT:    store <4 x i32> [[TMP2]], <4 x i32>* bitcast ([8 x i32]* @dst32 to <4 x i32>*), align 4
 ; SSE42-NEXT:    ret void
 ;
-; AVX1-LABEL: @ctlz_undef_4i32(
-; AVX1-NEXT:    [[TMP1:%.*]] = load <4 x i32>, <4 x i32>* bitcast ([8 x i32]* @src32 to <4 x i32>*), align 4
-; AVX1-NEXT:    [[TMP2:%.*]] = call <4 x i32> @llvm.ctlz.v4i32(<4 x i32> [[TMP1]], i1 true)
-; AVX1-NEXT:    store <4 x i32> [[TMP2]], <4 x i32>* bitcast ([8 x i32]* @dst32 to <4 x i32>*), align 4
-; AVX1-NEXT:    ret void
-;
-; AVX2-LABEL: @ctlz_undef_4i32(
-; AVX2-NEXT:    [[LD0:%.*]] = load i32, i32* getelementptr inbounds ([8 x i32], [8 x i32]* @src32, i32 0, i64 0), align 4
-; AVX2-NEXT:    [[LD1:%.*]] = load i32, i32* getelementptr inbounds ([8 x i32], [8 x i32]* @src32, i32 0, i64 1), align 4
-; AVX2-NEXT:    [[LD2:%.*]] = load i32, i32* getelementptr inbounds ([8 x i32], [8 x i32]* @src32, i32 0, i64 2), align 4
-; AVX2-NEXT:    [[LD3:%.*]] = load i32, i32* getelementptr inbounds ([8 x i32], [8 x i32]* @src32, i32 0, i64 3), align 4
-; AVX2-NEXT:    [[CTLZ0:%.*]] = call i32 @llvm.ctlz.i32(i32 [[LD0]], i1 true)
-; AVX2-NEXT:    [[CTLZ1:%.*]] = call i32 @llvm.ctlz.i32(i32 [[LD1]], i1 true)
-; AVX2-NEXT:    [[CTLZ2:%.*]] = call i32 @llvm.ctlz.i32(i32 [[LD2]], i1 true)
-; AVX2-NEXT:    [[CTLZ3:%.*]] = call i32 @llvm.ctlz.i32(i32 [[LD3]], i1 true)
-; AVX2-NEXT:    store i32 [[CTLZ0]], i32* getelementptr inbounds ([8 x i32], [8 x i32]* @dst32, i32 0, i64 0), align 4
-; AVX2-NEXT:    store i32 [[CTLZ1]], i32* getelementptr inbounds ([8 x i32], [8 x i32]* @dst32, i32 0, i64 1), align 4
-; AVX2-NEXT:    store i32 [[CTLZ2]], i32* getelementptr inbounds ([8 x i32], [8 x i32]* @dst32, i32 0, i64 2), align 4
-; AVX2-NEXT:    store i32 [[CTLZ3]], i32* getelementptr inbounds ([8 x i32], [8 x i32]* @dst32, i32 0, i64 3), align 4
-; AVX2-NEXT:    ret void
+; AVX-LABEL: @ctlz_undef_4i32(
+; AVX-NEXT:    [[TMP1:%.*]] = load <4 x i32>, <4 x i32>* bitcast ([8 x i32]* @src32 to <4 x i32>*), align 4
+; AVX-NEXT:    [[TMP2:%.*]] = call <4 x i32> @llvm.ctlz.v4i32(<4 x i32> [[TMP1]], i1 true)
+; AVX-NEXT:    store <4 x i32> [[TMP2]], <4 x i32>* bitcast ([8 x i32]* @dst32 to <4 x i32>*), align 4
+; AVX-NEXT:    ret void
 ;
   %ld0 = load i32, i32* getelementptr inbounds ([8 x i32], [8 x i32]* @src32, i32 0, i64 0), align 4
   %ld1 = load i32, i32* getelementptr inbounds ([8 x i32], [8 x i32]* @src32, i32 0, i64 1), align 4
@@ -618,10 +630,10 @@ define void @ctlz_undef_8i32() #0 {
 ;
 ; SSE42-LABEL: @ctlz_undef_8i32(
 ; SSE42-NEXT:    [[TMP1:%.*]] = load <4 x i32>, <4 x i32>* bitcast ([8 x i32]* @src32 to <4 x i32>*), align 2
-; SSE42-NEXT:    [[TMP2:%.*]] = load <4 x i32>, <4 x i32>* bitcast (i32* getelementptr inbounds ([8 x i32], [8 x i32]* @src32, i32 0, i64 4) to <4 x i32>*), align 2
-; SSE42-NEXT:    [[TMP3:%.*]] = call <4 x i32> @llvm.ctlz.v4i32(<4 x i32> [[TMP1]], i1 true)
-; SSE42-NEXT:    [[TMP4:%.*]] = call <4 x i32> @llvm.ctlz.v4i32(<4 x i32> [[TMP2]], i1 true)
-; SSE42-NEXT:    store <4 x i32> [[TMP3]], <4 x i32>* bitcast ([8 x i32]* @dst32 to <4 x i32>*), align 2
+; SSE42-NEXT:    [[TMP2:%.*]] = call <4 x i32> @llvm.ctlz.v4i32(<4 x i32> [[TMP1]], i1 true)
+; SSE42-NEXT:    store <4 x i32> [[TMP2]], <4 x i32>* bitcast ([8 x i32]* @dst32 to <4 x i32>*), align 2
+; SSE42-NEXT:    [[TMP3:%.*]] = load <4 x i32>, <4 x i32>* bitcast (i32* getelementptr inbounds ([8 x i32], [8 x i32]* @src32, i32 0, i64 4) to <4 x i32>*), align 2
+; SSE42-NEXT:    [[TMP4:%.*]] = call <4 x i32> @llvm.ctlz.v4i32(<4 x i32> [[TMP3]], i1 true)
 ; SSE42-NEXT:    store <4 x i32> [[TMP4]], <4 x i32>* bitcast (i32* getelementptr inbounds ([8 x i32], [8 x i32]* @dst32, i32 0, i64 4) to <4 x i32>*), align 2
 ; SSE42-NEXT:    ret void
 ;
@@ -695,10 +707,10 @@ define void @ctlz_undef_8i16() #0 {
 define void @ctlz_undef_16i16() #0 {
 ; SSE-LABEL: @ctlz_undef_16i16(
 ; SSE-NEXT:    [[TMP1:%.*]] = load <8 x i16>, <8 x i16>* bitcast ([16 x i16]* @src16 to <8 x i16>*), align 2
-; SSE-NEXT:    [[TMP2:%.*]] = load <8 x i16>, <8 x i16>* bitcast (i16* getelementptr inbounds ([16 x i16], [16 x i16]* @src16, i16 0, i64 8) to <8 x i16>*), align 2
-; SSE-NEXT:    [[TMP3:%.*]] = call <8 x i16> @llvm.ctlz.v8i16(<8 x i16> [[TMP1]], i1 true)
-; SSE-NEXT:    [[TMP4:%.*]] = call <8 x i16> @llvm.ctlz.v8i16(<8 x i16> [[TMP2]], i1 true)
-; SSE-NEXT:    store <8 x i16> [[TMP3]], <8 x i16>* bitcast ([16 x i16]* @dst16 to <8 x i16>*), align 2
+; SSE-NEXT:    [[TMP2:%.*]] = call <8 x i16> @llvm.ctlz.v8i16(<8 x i16> [[TMP1]], i1 true)
+; SSE-NEXT:    store <8 x i16> [[TMP2]], <8 x i16>* bitcast ([16 x i16]* @dst16 to <8 x i16>*), align 2
+; SSE-NEXT:    [[TMP3:%.*]] = load <8 x i16>, <8 x i16>* bitcast (i16* getelementptr inbounds ([16 x i16], [16 x i16]* @src16, i16 0, i64 8) to <8 x i16>*), align 2
+; SSE-NEXT:    [[TMP4:%.*]] = call <8 x i16> @llvm.ctlz.v8i16(<8 x i16> [[TMP3]], i1 true)
 ; SSE-NEXT:    store <8 x i16> [[TMP4]], <8 x i16>* bitcast (i16* getelementptr inbounds ([16 x i16], [16 x i16]* @dst16, i16 0, i64 8) to <8 x i16>*), align 2
 ; SSE-NEXT:    ret void
 ;
@@ -820,10 +832,10 @@ define void @ctlz_undef_16i8() #0 {
 define void @ctlz_undef_32i8() #0 {
 ; SSE-LABEL: @ctlz_undef_32i8(
 ; SSE-NEXT:    [[TMP1:%.*]] = load <16 x i8>, <16 x i8>* bitcast ([32 x i8]* @src8 to <16 x i8>*), align 1
-; SSE-NEXT:    [[TMP2:%.*]] = load <16 x i8>, <16 x i8>* bitcast (i8* getelementptr inbounds ([32 x i8], [32 x i8]* @src8, i8 0, i64 16) to <16 x i8>*), align 1
-; SSE-NEXT:    [[TMP3:%.*]] = call <16 x i8> @llvm.ctlz.v16i8(<16 x i8> [[TMP1]], i1 true)
-; SSE-NEXT:    [[TMP4:%.*]] = call <16 x i8> @llvm.ctlz.v16i8(<16 x i8> [[TMP2]], i1 true)
-; SSE-NEXT:    store <16 x i8> [[TMP3]], <16 x i8>* bitcast ([32 x i8]* @dst8 to <16 x i8>*), align 1
+; SSE-NEXT:    [[TMP2:%.*]] = call <16 x i8> @llvm.ctlz.v16i8(<16 x i8> [[TMP1]], i1 true)
+; SSE-NEXT:    store <16 x i8> [[TMP2]], <16 x i8>* bitcast ([32 x i8]* @dst8 to <16 x i8>*), align 1
+; SSE-NEXT:    [[TMP3:%.*]] = load <16 x i8>, <16 x i8>* bitcast (i8* getelementptr inbounds ([32 x i8], [32 x i8]* @src8, i8 0, i64 16) to <16 x i8>*), align 1
+; SSE-NEXT:    [[TMP4:%.*]] = call <16 x i8> @llvm.ctlz.v16i8(<16 x i8> [[TMP3]], i1 true)
 ; SSE-NEXT:    store <16 x i8> [[TMP4]], <16 x i8>* bitcast (i8* getelementptr inbounds ([32 x i8], [32 x i8]* @dst8, i8 0, i64 16) to <16 x i8>*), align 1
 ; SSE-NEXT:    ret void
 ;

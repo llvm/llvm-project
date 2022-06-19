@@ -1,6 +1,4 @@
-; RUN: opt %loadPolly -polly-scops -polly-invariant-load-hoisting \
-; RUN: -analyze < %s | \
-; RUN: FileCheck -check-prefix=SCOP %s
+; RUN: opt %loadPolly -polly-invariant-load-hoisting -polly-print-scops -disable-output < %s | FileCheck -check-prefix=SCOP %s
 
 ; RUN: opt %loadPolly -polly-codegen-ppcg -polly-invariant-load-hoisting \
 ; RUN: -S < %s | \
@@ -38,8 +36,7 @@
 ; kernel function.
 ; KERNEL-IR: define ptx_kernel void @FUNC_checkPrivatization_SCOP_0_KERNEL_0
 ; KERNEL-IR-SAME: (i8 addrspace(1)* %MemRef_A, i32 %tmp,
-; KERNEL-IR-SAME: i32 %tmp2, i32 %polly.access.begin.load,
-; KERNEL-IR-SAME: i32 %polly.access.end.load)
+; KERNEL-IR-SAME: i32 %tmp2, i32 %polly.access.begin.load)
 
 
 ; void checkScalarPointerOffload(int A[], int *begin, int *end) {

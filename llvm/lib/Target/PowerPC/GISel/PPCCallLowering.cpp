@@ -19,6 +19,7 @@
 #include "llvm/CodeGen/CallingConvLower.h"
 #include "llvm/CodeGen/GlobalISel/CallLowering.h"
 #include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
+#include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/TargetCallingConv.h"
 #include "llvm/Support/Debug.h"
 
@@ -80,7 +81,7 @@ bool PPCCallLowering::lowerFormalArguments(MachineIRBuilder &MIRBuilder,
 
 void PPCIncomingValueHandler::assignValueToReg(Register ValVReg,
                                                Register PhysReg,
-                                               CCValAssign &VA) {
+                                               CCValAssign VA) {
   markPhysRegUsed(PhysReg);
   IncomingValueHandler::assignValueToReg(ValVReg, PhysReg, VA);
 }

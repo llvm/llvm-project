@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 %s -emit-llvm -o - -triple=amdgcn-amd-amdhsa \
+// RUN: %clang_cc1 -no-opaque-pointers %s -emit-llvm -o - -triple=amdgcn-amd-amdhsa \
 // RUN:   -fcuda-is-device -target-cpu gfx906 -fnative-half-type \
 // RUN:   -fnative-half-arguments-and-returns | FileCheck %s
 

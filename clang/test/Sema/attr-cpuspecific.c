@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple x86_64-linux-gnu  -fsyntax-only -verify %s -Wnonnull
+// RUN: %clang_cc1 -triple x86_64-linux-gnu -Wno-strict-prototypes -fsyntax-only -verify %s -Wnonnull
 
 void __attribute__((cpu_specific(ivybridge))) no_default(void);
 void __attribute__((cpu_specific(sandybridge)))  no_default(void);
@@ -88,7 +88,8 @@ void __attribute__((target("default"))) addtl_attrs2(void);
 // expected-note@-2 {{previous declaration is here}}
 void __attribute__((cpu_specific(sandybridge))) addtl_attrs2(void);
 
-// expected-error@+2 {{multiversioning attributes cannot be combined}}
+// expected-error@+2 {{'cpu_dispatch' and 'cpu_specific' attributes are not compatible}}
+// expected-note@+1 {{conflicting attribute is here}}
 void __attribute((cpu_specific(sandybridge), cpu_dispatch(atom, sandybridge)))
 combine_attrs(void);
 
@@ -117,3 +118,66 @@ int use3(void) {
 int __attribute__((cpu_dispatch(pentium_iii, pentium_iii_no_xmm_regs))) dupe_p3(void);
 
 void __attribute__((cpu_specific(atom), nothrow, nonnull(1))) addtl_attrs(int*);
+
+int __attribute__((cpu_specific(atom))) bad_overload1(void);
+int __attribute__((cpu_specific(ivybridge))) bad_overload1(void);
+// expected-error@+1 {{function declaration is missing 'cpu_specific' or 'cpu_dispatch' attribute in a multiversioned function}}
+int bad_overload1(int);
+
+int bad_overload2(int);
+// expected-error@+2 {{conflicting types for 'bad_overload2'}}
+// expected-note@-2 {{previous declaration is here}}
+int __attribute__((cpu_specific(atom))) bad_overload2(void);
+int __attribute__((cpu_specific(ivybridge))) bad_overload2(void);
+
+int __attribute__((cpu_dispatch(generic))) bad_overload3(void);
+int __attribute__((cpu_specific(ivybridge))) bad_overload3(void);
+// expected-error@+1 {{function declaration is missing 'cpu_specific' or 'cpu_dispatch' attribute in a multiversioned function}}
+int bad_overload3(int);
+
+int bad_overload4(int);
+// expected-error@+2 {{conflicting types for 'bad_overload4'}}
+// expected-note@-2 {{previous declaration is here}}
+int __attribute__((cpu_dispatch(generic))) bad_overload4(void);
+int __attribute__((cpu_specific(ivybridge))) bad_overload4(void);
+
+// expected-error@+1 {{attribute 'cpu_specific' multiversioning cannot be combined with attribute 'overloadable'}}
+int __attribute__((__overloadable__)) __attribute__((cpu_specific(generic))) bad_overload5(void);
+int __attribute__((cpu_specific(ivybridge))) bad_overload5(void);
+
+int __attribute__((cpu_specific(generic))) bad_overload6(void);
+// expected-error@+1 {{attribute 'cpu_specific' multiversioning cannot be combined with attribute 'overloadable'}}
+int __attribute__((__overloadable__)) __attribute__((cpu_specific(ivybridge))) bad_overload6(void);
+
+int __attribute__((cpu_specific(atom))) good_overload1(void);
+int __attribute__((cpu_specific(ivybridge))) good_overload1(void);
+int __attribute__((__overloadable__)) good_overload1(int);
+
+int __attribute__((__overloadable__)) good_overload2(int);
+int __attribute__((cpu_specific(atom))) good_overload2(void);
+int __attribute__((cpu_specific(ivybridge))) good_overload2(void);
+
+// expected-error@+1 {{attribute 'cpu_specific' multiversioning cannot be combined with attribute 'overloadable'}}
+int __attribute__((__overloadable__)) __attribute__((cpu_specific(atom))) good_overload3(void);
+// expected-error@+1 {{attribute 'cpu_specific' multiversioning cannot be combined with attribute 'overloadable'}}
+int __attribute__((__overloadable__)) __attribute__((cpu_specific(ivybridge))) good_overload3(void);
+int good_overload3(int);
+
+int good_overload4(int);
+// expected-error@+1 {{attribute 'cpu_specific' multiversioning cannot be combined with attribute 'overloadable'}}
+int __attribute__((__overloadable__)) __attribute__((cpu_specific(atom))) good_overload4(void);
+// expected-error@+1 {{attribute 'cpu_specific' multiversioning cannot be combined with attribute 'overloadable'}}
+int __attribute__((__overloadable__)) __attribute__((cpu_specific(ivybridge))) good_overload4(void);
+
+// expected-error@+1 {{attribute 'cpu_specific' multiversioning cannot be combined with attribute 'overloadable'}}
+int __attribute__((__overloadable__)) __attribute__((cpu_specific(atom))) good_overload5(void);
+// expected-error@+1 {{attribute 'cpu_specific' multiversioning cannot be combined with attribute 'overloadable'}}
+int __attribute__((__overloadable__)) __attribute__((cpu_specific(ivybridge))) good_overload5(int);
+
+int __attribute__((cpu_specific(atom))) good_overload6(void);
+// expected-error@+1 {{attribute 'cpu_specific' multiversioning cannot be combined with attribute 'overloadable'}}
+int __attribute__((__overloadable__)) __attribute__((cpu_specific(ivybridge))) good_overload6(int);
+
+// expected-error@+1 {{attribute 'cpu_specific' multiversioning cannot be combined with attribute 'overloadable'}}
+int __attribute__((__overloadable__)) __attribute__((cpu_specific(atom))) good_overload7(void);
+int __attribute__((cpu_specific(ivybridge))) good_overload7(int);

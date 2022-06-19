@@ -16,7 +16,7 @@ static int func2() { return 2; }
 
 void *__attribute__((noinline))
 memcpy_f(void *dst, const void *src, size_t n) {
-// ARM and MIPS nartually align functions, but use the LSB for ISA selection
+// ARM and MIPS naturally align functions, but use the LSB for ISA selection
 // (THUMB, MIPS16/uMIPS respectively).  Ensure that the ISA bit is ignored in
 // the memcpy
 #if defined(__arm__) || defined(__mips__)
@@ -29,7 +29,11 @@ memcpy_f(void *dst, const void *src, size_t n) {
 
 int main()
 {
+#if defined(__ve__)
+    unsigned char execution_buffer[128] __attribute__((__aligned__(8)));
+#else
     unsigned char execution_buffer[128];
+#endif
     // mark stack page containing execution_buffer to be executable
     __enable_execute_stack(execution_buffer);
 	

@@ -44,11 +44,10 @@ entry:
 define void @t2(i8* nocapture %C) nounwind {
 entry:
 ; CHECK-LABEL: t2:
-; CHECK: vld1.8 {d{{[0-9]+}}, d{{[0-9]+}}}, [r2]!
-; CHECK: vld1.64 {d{{[0-9]+}}, d{{[0-9]+}}}, [r2]
-; CHECK: vst1.8 {d{{[0-9]+}}, d{{[0-9]+}}}, [r1]
-; CHECK: movs [[INC:r[0-9]+]], #32
-; CHECK: vst1.8 {d{{[0-9]+}}, d{{[0-9]+}}}, [r0], [[INC]]
+; CHECK: vld1.8 {d{{[0-9]+}}, d{{[0-9]+}}}, [r1]!
+; CHECK: vst1.8 {d{{[0-9]+}}, d{{[0-9]+}}}, [r0]!
+; CHECK: vld1.64 {d{{[0-9]+}}, d{{[0-9]+}}}, [r1]
+; CHECK: vst1.8 {d{{[0-9]+}}, d{{[0-9]+}}}, [r0]!
 ; CHECK: movw [[REG2:r[0-9]+]], #16716
 ; CHECK: movt [[REG2:r[0-9]+]], #72
 ; CHECK: str [[REG2]], [r0]

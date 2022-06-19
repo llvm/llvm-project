@@ -26,7 +26,7 @@ public:
   bool StopOthers() override;
   lldb::StateType GetPlanRunState() override;
   bool WillStop() override;
-  void WillPop() override;
+  void DidPop() override;
   bool MischiefManaged() override;
   void ThreadDestroyed() override;
   void SetAutoContinue(bool do_it);

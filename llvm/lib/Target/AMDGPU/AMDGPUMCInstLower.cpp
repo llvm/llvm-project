@@ -12,11 +12,11 @@
 //===----------------------------------------------------------------------===//
 //
 
+#include "AMDGPUMCInstLower.h"
 #include "AMDGPUAsmPrinter.h"
 #include "AMDGPUTargetMachine.h"
 #include "MCTargetDesc/AMDGPUInstPrinter.h"
 #include "MCTargetDesc/AMDGPUMCTargetDesc.h"
-#include "R600AsmPrinter.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/IR/Constants.h"
@@ -33,39 +33,6 @@
 #include <algorithm>
 
 using namespace llvm;
-
-namespace {
-
-class AMDGPUMCInstLower {
-  MCContext &Ctx;
-  const TargetSubtargetInfo &ST;
-  const AsmPrinter &AP;
-
-  const MCExpr *getLongBranchBlockExpr(const MachineBasicBlock &SrcBB,
-                                       const MachineOperand &MO) const;
-
-public:
-  AMDGPUMCInstLower(MCContext &ctx, const TargetSubtargetInfo &ST,
-                    const AsmPrinter &AP);
-
-  bool lowerOperand(const MachineOperand &MO, MCOperand &MCOp) const;
-
-  /// Lower a MachineInstr to an MCInst
-  void lower(const MachineInstr *MI, MCInst &OutMI) const;
-
-};
-
-class R600MCInstLower : public AMDGPUMCInstLower {
-public:
-  R600MCInstLower(MCContext &ctx, const R600Subtarget &ST,
-                  const AsmPrinter &AP);
-
-  /// Lower a MachineInstr to an MCInst
-  void lower(const MachineInstr *MI, MCInst &OutMI) const;
-};
-
-
-} // End anonymous namespace
 
 #include "AMDGPUGenMCPseudoLowering.inc"
 
@@ -95,54 +62,21 @@ static MCSymbolRefExpr::VariantKind getVariantKind(unsigned MOFlags) {
   }
 }
 
-const MCExpr *AMDGPUMCInstLower::getLongBranchBlockExpr(
-  const MachineBasicBlock &SrcBB,
-  const MachineOperand &MO) const {
-  const MCExpr *DestBBSym
-    = MCSymbolRefExpr::create(MO.getMBB()->getSymbol(), Ctx);
-  const MCExpr *SrcBBSym = MCSymbolRefExpr::create(SrcBB.getSymbol(), Ctx);
-
-  // FIXME: The first half of this assert should be removed. This should
-  // probably be PC relative instead of using the source block symbol, and
-  // therefore the indirect branch expansion should use a bundle.
-  assert(
-      skipDebugInstructionsForward(SrcBB.begin(), SrcBB.end())->getOpcode() ==
-          AMDGPU::S_GETPC_B64 &&
-      ST.getInstrInfo()->get(AMDGPU::S_GETPC_B64).Size == 4);
-
-  // s_getpc_b64 returns the address of next instruction.
-  const MCConstantExpr *One = MCConstantExpr::create(4, Ctx);
-  SrcBBSym = MCBinaryExpr::createAdd(SrcBBSym, One, Ctx);
-
-  if (MO.getTargetFlags() == SIInstrInfo::MO_LONG_BRANCH_FORWARD)
-    return MCBinaryExpr::createSub(DestBBSym, SrcBBSym, Ctx);
-
-  assert(MO.getTargetFlags() == SIInstrInfo::MO_LONG_BRANCH_BACKWARD);
-  return MCBinaryExpr::createSub(SrcBBSym, DestBBSym, Ctx);
-}
-
 bool AMDGPUMCInstLower::lowerOperand(const MachineOperand &MO,
                                      MCOperand &MCOp) const {
   switch (MO.getType()) {
   default:
-    llvm_unreachable("unknown operand type");
+    break;
   case MachineOperand::MO_Immediate:
     MCOp = MCOperand::createImm(MO.getImm());
     return true;
   case MachineOperand::MO_Register:
     MCOp = MCOperand::createReg(AMDGPU::getMCReg(MO.getReg(), ST));
     return true;
-  case MachineOperand::MO_MachineBasicBlock: {
-    if (MO.getTargetFlags() != 0) {
-      MCOp = MCOperand::createExpr(
-        getLongBranchBlockExpr(*MO.getParent()->getParent(), MO));
-    } else {
-      MCOp = MCOperand::createExpr(
+  case MachineOperand::MO_MachineBasicBlock:
+    MCOp = MCOperand::createExpr(
         MCSymbolRefExpr::create(MO.getMBB()->getSymbol(), Ctx));
-    }
-
     return true;
-  }
   case MachineOperand::MO_GlobalAddress: {
     const GlobalValue *GV = MO.getGlobal();
     SmallString<128> SymbolName;
@@ -168,7 +102,15 @@ bool AMDGPUMCInstLower::lowerOperand(const MachineOperand &MO,
   case MachineOperand::MO_RegisterMask:
     // Regmasks are like implicit defs.
     return false;
+  case MachineOperand::MO_MCSymbol:
+    if (MO.getTargetFlags() == SIInstrInfo::MO_FAR_BRANCH_OFFSET) {
+      MCSymbol *Sym = MO.getMCSymbol();
+      MCOp = MCOperand::createExpr(Sym->getVariableValue());
+      return true;
+    }
+    break;
   }
+  llvm_unreachable("unknown operand type");
 }
 
 void AMDGPUMCInstLower::lower(const MachineInstr *MI, MCInst &OutMI) const {
@@ -222,30 +164,6 @@ bool AMDGPUAsmPrinter::lowerOperand(const MachineOperand &MO,
   return MCInstLowering.lowerOperand(MO, MCOp);
 }
 
-static const MCExpr *lowerAddrSpaceCast(const TargetMachine &TM,
-                                        const Constant *CV,
-                                        MCContext &OutContext) {
-  // TargetMachine does not support llvm-style cast. Use C++-style cast.
-  // This is safe since TM is always of type AMDGPUTargetMachine or its
-  // derived class.
-  auto &AT = static_cast<const AMDGPUTargetMachine&>(TM);
-  auto *CE = dyn_cast<ConstantExpr>(CV);
-
-  // Lower null pointers in private and local address space.
-  // Clang generates addrspacecast for null pointers in private and local
-  // address space, which needs to be lowered.
-  if (CE && CE->getOpcode() == Instruction::AddrSpaceCast) {
-    auto Op = CE->getOperand(0);
-    auto SrcAddr = Op->getType()->getPointerAddressSpace();
-    if (Op->isNullValue() && AT.getNullPointerValue(SrcAddr) == 0) {
-      auto DstAddr = CE->getType()->getPointerAddressSpace();
-      return MCConstantExpr::create(AT.getNullPointerValue(DstAddr),
-        OutContext);
-    }
-  }
-  return nullptr;
-}
-
 const MCExpr *AMDGPUAsmPrinter::lowerConstant(const Constant *CV) {
   if (const MCExpr *E = lowerAddrSpaceCast(TM, CV, OutContext))
     return E;
@@ -289,9 +207,25 @@ void AMDGPUAsmPrinter::emitInstruction(const MachineInstr *MI) {
       return;
     }
 
+    if (MI->getOpcode() == AMDGPU::SCHED_BARRIER) {
+      if (isVerbose()) {
+        std::string HexString;
+        raw_string_ostream HexStream(HexString);
+        HexStream << format_hex(MI->getOperand(0).getImm(), 10, true);
+        OutStreamer->emitRawComment(" sched_barrier mask(" + HexString + ")");
+      }
+      return;
+    }
+
     if (MI->getOpcode() == AMDGPU::SI_MASKED_UNREACHABLE) {
       if (isVerbose())
         OutStreamer->emitRawComment(" divergent unreachable");
+      return;
+    }
+
+    if (MI->isMetaInstruction()) {
+      if (isVerbose())
+        OutStreamer->emitRawComment(" meta instruction");
       return;
     }
 
@@ -300,7 +234,7 @@ void AMDGPUAsmPrinter::emitInstruction(const MachineInstr *MI) {
     EmitToStreamer(*OutStreamer, TmpInst);
 
 #ifdef EXPENSIVE_CHECKS
-    // Sanity-check getInstSizeInBytes on explicitly specified CPUs (it cannot
+    // Check getInstSizeInBytes on explicitly specified CPUs (it cannot
     // work correctly for the generic CPU).
     //
     // The isPseudo check really shouldn't be here, but unfortunately there are
@@ -315,7 +249,7 @@ void AMDGPUAsmPrinter::emitInstruction(const MachineInstr *MI) {
       raw_svector_ostream CodeStream(CodeBytes);
 
       std::unique_ptr<MCCodeEmitter> InstEmitter(createSIMCCodeEmitter(
-          *STI.getInstrInfo(), *OutContext.getRegisterInfo(), OutContext));
+          *STI.getInstrInfo(), OutContext));
       InstEmitter->encodeInstruction(TmpInst, CodeStream, Fixups, STI);
 
       assert(CodeBytes.size() == STI.getInstrInfo()->getInstSizeInBytes(*MI));
@@ -352,48 +286,4 @@ void AMDGPUAsmPrinter::emitInstruction(const MachineInstr *MI) {
       DisasmLineMaxLen = std::max(DisasmLineMaxLen, DisasmLine.size());
     }
   }
-}
-
-R600MCInstLower::R600MCInstLower(MCContext &Ctx, const R600Subtarget &ST,
-                                 const AsmPrinter &AP) :
-        AMDGPUMCInstLower(Ctx, ST, AP) { }
-
-void R600MCInstLower::lower(const MachineInstr *MI, MCInst &OutMI) const {
-  OutMI.setOpcode(MI->getOpcode());
-  for (const MachineOperand &MO : MI->explicit_operands()) {
-    MCOperand MCOp;
-    lowerOperand(MO, MCOp);
-    OutMI.addOperand(MCOp);
-  }
-}
-
-void R600AsmPrinter::emitInstruction(const MachineInstr *MI) {
-  const R600Subtarget &STI = MF->getSubtarget<R600Subtarget>();
-  R600MCInstLower MCInstLowering(OutContext, STI, *this);
-
-  StringRef Err;
-  if (!STI.getInstrInfo()->verifyInstruction(*MI, Err)) {
-    LLVMContext &C = MI->getParent()->getParent()->getFunction().getContext();
-    C.emitError("Illegal instruction detected: " + Err);
-    MI->print(errs());
-  }
-
-  if (MI->isBundle()) {
-    const MachineBasicBlock *MBB = MI->getParent();
-    MachineBasicBlock::const_instr_iterator I = ++MI->getIterator();
-    while (I != MBB->instr_end() && I->isInsideBundle()) {
-      emitInstruction(&*I);
-      ++I;
-    }
-  } else {
-    MCInst TmpInst;
-    MCInstLowering.lower(MI, TmpInst);
-    EmitToStreamer(*OutStreamer, TmpInst);
- }
-}
-
-const MCExpr *R600AsmPrinter::lowerConstant(const Constant *CV) {
-  if (const MCExpr *E = lowerAddrSpaceCast(TM, CV, OutContext))
-    return E;
-  return AsmPrinter::lowerConstant(CV);
 }

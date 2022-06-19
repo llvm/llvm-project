@@ -1,4 +1,3 @@
-; RUN: opt -analyze -enable-new-pm=0 -scalar-evolution < %s  -o - -S | FileCheck %s
 ; RUN: opt -disable-output "-passes=print<scalar-evolution>" < %s  -o - -S 2>&1 | FileCheck %s
 
 target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"

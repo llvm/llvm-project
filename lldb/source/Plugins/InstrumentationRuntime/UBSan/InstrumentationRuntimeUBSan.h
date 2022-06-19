@@ -28,17 +28,15 @@ public:
 
   static void Terminate();
 
-  static lldb_private::ConstString GetPluginNameStatic();
+  static llvm::StringRef GetPluginNameStatic() {
+    return "UndefinedBehaviorSanitizer";
+  }
 
   static lldb::InstrumentationRuntimeType GetTypeStatic();
 
-  lldb_private::ConstString GetPluginName() override {
-    return GetPluginNameStatic();
-  }
+  llvm::StringRef GetPluginName() override { return GetPluginNameStatic(); }
 
   virtual lldb::InstrumentationRuntimeType GetType() { return GetTypeStatic(); }
-
-  uint32_t GetPluginVersion() override { return 1; }
 
   lldb::ThreadCollectionSP
   GetBacktracesFromExtendedStopInfo(StructuredData::ObjectSP info) override;

@@ -37,11 +37,16 @@ int main(int, char**)
         static_assert((std::is_same<SM::string_type, std::string>::value), "");
         static_assert((std::is_convertible<SM*, std::pair<char*, char*>*>::value), "");
 
+        static_assert((std::is_same<std::csub_match, std::sub_match<const char*> >::value), "");
+        static_assert((std::is_same<std::ssub_match, std::sub_match<std::string::const_iterator> >::value), "");
+
         SM sm;
         sm.first = nullptr;
         sm.second = nullptr;
         sm.matched = false;
     }
+
+#ifndef TEST_HAS_NO_WIDE_CHARACTERS
     {
         typedef std::sub_match<wchar_t*> SM;
         static_assert((std::is_same<SM::iterator, wchar_t*>::value), "");
@@ -50,17 +55,15 @@ int main(int, char**)
         static_assert((std::is_same<SM::string_type, std::wstring>::value), "");
         static_assert((std::is_convertible<SM*, std::pair<wchar_t*, wchar_t*>*>::value), "");
 
+        static_assert((std::is_same<std::wcsub_match, std::sub_match<const wchar_t*> >::value), "");
+        static_assert((std::is_same<std::wssub_match, std::sub_match<std::wstring::const_iterator> >::value), "");
+
         SM sm;
         sm.first = nullptr;
         sm.second = nullptr;
         sm.matched = false;
     }
-    {
-        static_assert((std::is_same<std::csub_match, std::sub_match<const char*> >::value), "");
-        static_assert((std::is_same<std::wcsub_match, std::sub_match<const wchar_t*> >::value), "");
-        static_assert((std::is_same<std::ssub_match, std::sub_match<std::string::const_iterator> >::value), "");
-        static_assert((std::is_same<std::wssub_match, std::sub_match<std::wstring::const_iterator> >::value), "");
-    }
+#endif
 
   return 0;
 }

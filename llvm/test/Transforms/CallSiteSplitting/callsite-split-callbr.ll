@@ -7,7 +7,7 @@
 define void @caller() {
 ; CHECK-LABEL: @caller(
 ; CHECK-NEXT:  Top:
-; CHECK-NEXT:    callbr void asm sideeffect "", "X,~{dirflag},~{fpsr},~{flags}"(i8* blockaddress(@caller, [[TOP_SPLIT:%.*]]))
+; CHECK-NEXT:    callbr void asm sideeffect "", "i,~{dirflag},~{fpsr},~{flags}"(i8* blockaddress(@caller, [[TOP_SPLIT:%.*]]))
 ; CHECK-NEXT:    to label [[NEXTCOND:%.*]] [label %Top.split]
 ; CHECK-LABEL: Top.split:
 ; CHECK-NEXT:    call void @callee(i1 false)
@@ -19,7 +19,7 @@ define void @caller() {
 ; CHECK-NEXT:    br label [[CALLSITEBB]]
 ; CHECK-LABEL: CallSiteBB:
 ; CHECK-NEXT:    [[PHI:%.*]] = phi i1 [ false, [[TOP_SPLIT]] ], [ true, [[NEXTCOND_SPLIT]] ]
-; CHECK-NEXT:    callbr void asm sideeffect "", "r,X,~{dirflag},~{fpsr},~{flags}"(i1 [[PHI]], i8* blockaddress(@caller, [[END2:%.*]]))
+; CHECK-NEXT:    callbr void asm sideeffect "", "r,i,~{dirflag},~{fpsr},~{flags}"(i1 [[PHI]], i8* blockaddress(@caller, [[END2:%.*]]))
 ; CHECK-NEXT:    to label [[END:%.*]] [label %End2]
 ; CHECK-LABEL: End:
 ; CHECK-NEXT:    ret void
@@ -27,7 +27,7 @@ define void @caller() {
 ; CHECK-NEXT:    ret void
 ;
 Top:
-  callbr void asm sideeffect "", "X,~{dirflag},~{fpsr},~{flags}"(i8* blockaddress(@caller, %CallSiteBB))
+  callbr void asm sideeffect "", "i,~{dirflag},~{fpsr},~{flags}"(i8* blockaddress(@caller, %CallSiteBB))
   to label %NextCond [label %CallSiteBB]
 
 NextCond:
@@ -36,7 +36,7 @@ NextCond:
 CallSiteBB:
   %phi = phi i1 [0, %Top],[1, %NextCond]
   call void @callee(i1 %phi)
-  callbr void asm sideeffect "", "r,X,~{dirflag},~{fpsr},~{flags}"(i1 %phi, i8* blockaddress(@caller, %End2))
+  callbr void asm sideeffect "", "r,i,~{dirflag},~{fpsr},~{flags}"(i1 %phi, i8* blockaddress(@caller, %End2))
   to label %End [label %End2]
 
 End:

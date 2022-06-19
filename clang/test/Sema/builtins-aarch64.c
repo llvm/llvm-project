@@ -15,7 +15,7 @@ void test_clear_cache_voids(void *start, void *end) {
   __clear_cache(start, end);
 }
 
-void test_clear_cache_no_args() {
+void test_clear_cache_no_args(void) {
   // AArch32 version of this is variadic (at least syntactically).
   // However, on AArch64 GCC does not permit this call and the
   // implementation I've seen would go disastrously wrong.

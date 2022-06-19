@@ -87,11 +87,11 @@ define i128 @test_v1i128(<1 x i128> %a) nounwind {
 define i64 @test_v2i64(<2 x i64> %a) nounwind {
 ; CHECK-LABEL: test_v2i64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:   mov     x8, v0.d[1]
-; CHECK-NEXT:   fmov    x9, d0
-; CHECK-NEXT:   cmp     x9, x8
-; CHECK-NEXT:   csel    x0, x9, x8, hi
-; CHECK-NEXT:   ret
+; CHECK-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
+; CHECK-NEXT:    cmhi d2, d0, d1
+; CHECK-NEXT:    bif v0.8b, v1.8b, v2.8b
+; CHECK-NEXT:    fmov x0, d0
+; CHECK-NEXT:    ret
   %b = call i64 @llvm.vector.reduce.umax.v2i64(<2 x i64> %a)
   ret i64 %b
 }
@@ -143,13 +143,13 @@ define i1 @test_v4i1(<4 x i1> %a) nounwind {
 ; CHECK-LABEL: test_v4i1:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-NEXT:    umov w10, v0.h[1]
-; CHECK-NEXT:    umov w11, v0.h[0]
-; CHECK-NEXT:    umov w9, v0.h[2]
-; CHECK-NEXT:    orr w10, w11, w10
-; CHECK-NEXT:    umov w8, v0.h[3]
-; CHECK-NEXT:    orr w9, w10, w9
+; CHECK-NEXT:    umov w8, v0.h[1]
+; CHECK-NEXT:    umov w9, v0.h[0]
+; CHECK-NEXT:    umov w10, v0.h[2]
+; CHECK-NEXT:    umov w11, v0.h[3]
 ; CHECK-NEXT:    orr w8, w9, w8
+; CHECK-NEXT:    orr w8, w8, w10
+; CHECK-NEXT:    orr w8, w8, w11
 ; CHECK-NEXT:    and w0, w8, #0x1
 ; CHECK-NEXT:    ret
   %b = call i1 @llvm.vector.reduce.umax.v4i1(<4 x i1> %a)
@@ -174,8 +174,8 @@ define i128 @test_v2i128(<2 x i128> %a) nounwind {
 ; CHECK-NEXT:    csel x8, x0, x2, hi
 ; CHECK-NEXT:    cmp x1, x3
 ; CHECK-NEXT:    csel x9, x0, x2, hi
-; CHECK-NEXT:    csel x0, x8, x9, eq
 ; CHECK-NEXT:    csel x1, x1, x3, hi
+; CHECK-NEXT:    csel x0, x8, x9, eq
 ; CHECK-NEXT:    ret
   %b = call i128 @llvm.vector.reduce.umax.v2i128(<2 x i128> %a)
   ret i128 %b

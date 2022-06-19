@@ -1,4 +1,4 @@
-; RUN: opt < %s -deadargelim -S | FileCheck %s
+; RUN: opt < %s -passes=deadargelim -S | FileCheck %s
 
 declare token @llvm.call.preallocated.setup(i32)
 declare i8* @llvm.call.preallocated.arg(token, i32)
@@ -79,5 +79,5 @@ define i32 @caller3() {
   ret i32 %v
 }
 
-; CHECK: attributes #0 = { nofree nosync nounwind willreturn }
+; CHECK: attributes #0 = { nocallback nofree nosync nounwind willreturn }
 ; CHECK: attributes #1 = { nounwind }

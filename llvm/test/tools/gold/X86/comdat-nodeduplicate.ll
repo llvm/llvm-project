@@ -8,7 +8,7 @@
 ; RUN: llvm-as %t/b.ll -o %t/b.bc
 ; RUN: llvm-as %t/c.ll -o %t/c.bc
 
-; RUN: %gold -plugin %llvmshlibdir/LLVMgold%shlibext --plugin-opt=save-temps \
+; RUN: %gold -m elf_x86_64 -plugin %llvmshlibdir/LLVMgold%shlibext --plugin-opt=save-temps \
 ; RUN:   -u foo %t/a.bc --start-lib %t/b.bc --end-lib -o %t/ab
 
 ; RUN: FileCheck %s --check-prefix=RESOL_AB < %t/ab.resolution.txt
@@ -20,7 +20,7 @@
 ; DATA: 0x[[#%x,]] 01000000 00000000  ........
 
 ;; __profc_foo from c.bc is non-prevailing and thus discarded.
-; RUN: %gold -plugin %llvmshlibdir/LLVMgold%shlibext --plugin-opt=save-temps \
+; RUN: %gold -m elf_x86_64 -plugin %llvmshlibdir/LLVMgold%shlibext --plugin-opt=save-temps \
 ; RUN:   -u foo -u c %t/a.bc --start-lib %t/b.bc %t/c.bc --end-lib -o %t/abc
 ; RUN: FileCheck %s --check-prefix=RESOL_ABC < %t/abc.resolution.txt
 ; RUN: llvm-readelf -x .data %t/abc | FileCheck %s --check-prefix=DATA
@@ -35,8 +35,9 @@
 ; RUN: opt --module-summary %t/b.ll -o %t/b.bc
 ; RUN: opt --module-summary %t/c.ll -o %t/c.bc
 
-; RUN: %gold -plugin %llvmshlibdir/LLVMgold%shlibext \
-; RUN:   -u foo %t/a.bc --start-lib %t/b.bc %t/c.bc --end-lib -o %t/abc
+;; gold from binutils>=2.27 discards b.bc:__profc_foo even in the absence of --gc-sections.
+; RUN: %gold -m elf_x86_64 -plugin %llvmshlibdir/LLVMgold%shlibext \
+; RUN:   -u foo %t/a.bc --start-lib %t/b.bc %t/c.bc --end-lib -o %t/abc --gc-sections
 ; RUN: llvm-readelf -x .data %t/abc | FileCheck %s --check-prefix=DATA
 
 ;--- a.ll

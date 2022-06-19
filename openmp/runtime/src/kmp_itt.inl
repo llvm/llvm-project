@@ -63,6 +63,49 @@ extern kmp_bootstrap_lock_t __kmp_itt_debug_lock;
 static kmp_bootstrap_lock_t metadata_lock =
     KMP_BOOTSTRAP_LOCK_INITIALIZER(metadata_lock);
 
+#if USE_ITT_NOTIFY
+LINKAGE size_t __kmp_itthash_hash(kmp_intptr_t addr, size_t hsize) {
+  return ((addr >> 6) ^ (addr >> 2)) % hsize;
+}
+LINKAGE kmp_itthash_entry *__kmp_itthash_find(kmp_info_t *thread,
+                                              kmp_itthash_t *h, ident_t *loc,
+                                              int team_size) {
+  kmp_itthash_entry_t *entry;
+  size_t bucket = __kmp_itthash_hash((kmp_intptr_t)loc, KMP_MAX_FRAME_DOMAINS);
+  for (entry = h->buckets[bucket]; entry; entry = entry->next_in_bucket)
+    if (entry->loc == loc && entry->team_size == team_size)
+      break;
+
+  if (entry == NULL) {
+    // two foreign threads could report frames concurrently
+    int cnt = KMP_TEST_THEN_INC32(&h->count);
+    if (cnt >= KMP_MAX_FRAME_DOMAINS) {
+      KMP_TEST_THEN_DEC32(&h->count); // revert the count
+      return entry; // too many entries
+    }
+    // create new entry
+    entry = (kmp_itthash_entry_t *)__kmp_thread_malloc(
+        thread, sizeof(kmp_itthash_entry_t));
+    entry->loc = loc;
+    entry->team_size = team_size;
+    entry->d = NULL;
+    entry->next_in_bucket = h->buckets[bucket];
+    while (!KMP_COMPARE_AND_STORE_PTR(&h->buckets[bucket],
+                                      entry->next_in_bucket, entry)) {
+      KMP_CPU_PAUSE();
+      entry->next_in_bucket = h->buckets[bucket];
+    }
+  }
+#if KMP_DEBUG
+  else {
+    // check the contents of the location info is unique
+    KMP_DEBUG_ASSERT(loc->psource == entry->loc->psource);
+  }
+#endif
+  return entry;
+}
+#endif
+
 /* Parallel region reporting.
  * __kmp_itt_region_forking should be called by primary thread of a team.
    Exact moment of call does not matter, but it should be completed before any
@@ -87,97 +130,53 @@ LINKAGE void __kmp_itt_region_forking(int gtid, int team_size, int barriers) {
     // The frame notifications are only supported for the outermost teams.
     return;
   }
-  ident_t *loc = __kmp_thread_from_gtid(gtid)->th.th_ident;
-  if (loc) {
-    // Use the reserved_2 field to store the index to the region domain.
-    // Assume that reserved_2 contains zero initially.  Since zero is special
-    // value here, store the index into domain array increased by 1.
-    if (loc->reserved_2 == 0) {
-      if (__kmp_region_domain_count < KMP_MAX_FRAME_DOMAINS) {
-        int frm =
-            KMP_TEST_THEN_INC32(&__kmp_region_domain_count); // get "old" value
-        if (frm >= KMP_MAX_FRAME_DOMAINS) {
-          KMP_TEST_THEN_DEC32(&__kmp_region_domain_count); // revert the count
-          return; // loc->reserved_2 is still 0
-        }
-        // if (!KMP_COMPARE_AND_STORE_ACQ32( &loc->reserved_2, 0, frm + 1 )) {
-        //    frm = loc->reserved_2 - 1;   // get value saved by other thread
-        //    for same loc
-        //} // AC: this block is to replace next unsynchronized line
+  kmp_info_t *th = __kmp_thread_from_gtid(gtid);
+  ident_t *loc = th->th.th_ident;
+  if (!loc) {
+    // no sense to report a region without location info
+    return;
+  }
+  kmp_itthash_entry *e;
+  e = __kmp_itthash_find(th, &__kmp_itt_region_domains, loc, team_size);
+  if (e == NULL)
+    return; // too many entries in the hash
+  if (e->d == NULL) {
+    // Transform compiler-generated region location into the format
+    // that the tools more or less standardized on:
+    //   "<func>$omp$parallel@[file:]<line>[:<col>]"
+    char *buff = NULL;
+    kmp_str_loc_t str_loc =
+        __kmp_str_loc_init(loc->psource, /* init_fname */ false);
+    buff = __kmp_str_format("%s$omp$parallel:%d@%s:%d:%d", str_loc.func,
+                            team_size, str_loc.file, str_loc.line, str_loc.col);
 
-        // We need to save indexes for both region and barrier frames. We'll use
-        // loc->reserved_2 field but put region index to the low two bytes and
-        // barrier indexes to the high two bytes. It is OK because
-        // KMP_MAX_FRAME_DOMAINS = 512.
-        loc->reserved_2 |= (frm + 1); // save "new" value
+    __itt_suppress_push(__itt_suppress_memory_errors);
+    e->d = __itt_domain_create(buff);
+    KMP_ASSERT(e->d != NULL);
+    __itt_suppress_pop();
 
-        // Transform compiler-generated region location into the format
-        // that the tools more or less standardized on:
-        //   "<func>$omp$parallel@[file:]<line>[:<col>]"
+    __kmp_str_free(&buff);
+    if (barriers) {
+      kmp_itthash_entry *e;
+      e = __kmp_itthash_find(th, &__kmp_itt_barrier_domains, loc, 0);
+      if (e != NULL) {
+        KMP_DEBUG_ASSERT(e->d == NULL);
         char *buff = NULL;
-        kmp_str_loc_t str_loc =
-            __kmp_str_loc_init(loc->psource, /* init_fname */ false);
-        buff = __kmp_str_format("%s$omp$parallel:%d@%s:%d:%d", str_loc.func,
-                                team_size, str_loc.file, str_loc.line,
-                                str_loc.col);
-
+        buff = __kmp_str_format("%s$omp$barrier@%s:%d", str_loc.func,
+                                str_loc.file, str_loc.line);
         __itt_suppress_push(__itt_suppress_memory_errors);
-        __kmp_itt_region_domains[frm] = __itt_domain_create(buff);
+        e->d = __itt_domain_create(buff);
+        KMP_ASSERT(e->d != NULL);
         __itt_suppress_pop();
-
         __kmp_str_free(&buff);
-        if (barriers) {
-          if (__kmp_barrier_domain_count < KMP_MAX_FRAME_DOMAINS) {
-            int frm = KMP_TEST_THEN_INC32(
-                &__kmp_barrier_domain_count); // get "old" value
-            if (frm >= KMP_MAX_FRAME_DOMAINS) {
-              KMP_TEST_THEN_DEC32(
-                  &__kmp_barrier_domain_count); // revert the count
-              return; // loc->reserved_2 is still 0
-            }
-            char *buff = NULL;
-            buff = __kmp_str_format("%s$omp$barrier@%s:%d", str_loc.func,
-                                    str_loc.file, str_loc.col);
-            __itt_suppress_push(__itt_suppress_memory_errors);
-            __kmp_itt_barrier_domains[frm] = __itt_domain_create(buff);
-            __itt_suppress_pop();
-            __kmp_str_free(&buff);
-            // Save the barrier frame index to the high two bytes.
-            loc->reserved_2 |= (frm + 1) << 16;
-          }
-        }
-        __kmp_str_loc_free(&str_loc);
-        __itt_frame_begin_v3(__kmp_itt_region_domains[frm], NULL);
-      }
-    } else { // Region domain exists for this location
-      // Check if team size was changed. Then create new region domain for this
-      // location
-      unsigned int frm = (loc->reserved_2 & 0x0000FFFF) - 1;
-      if ((frm < KMP_MAX_FRAME_DOMAINS) &&
-          (__kmp_itt_region_team_size[frm] != team_size)) {
-        char *buff = NULL;
-        kmp_str_loc_t str_loc = 
-            __kmp_str_loc_init(loc->psource, /* init_fname */ false);
-        buff = __kmp_str_format("%s$omp$parallel:%d@%s:%d:%d", str_loc.func,
-                                team_size, str_loc.file, str_loc.line,
-                                str_loc.col);
-
-        __itt_suppress_push(__itt_suppress_memory_errors);
-        __kmp_itt_region_domains[frm] = __itt_domain_create(buff);
-        __itt_suppress_pop();
-
-        __kmp_str_free(&buff);
-        __kmp_str_loc_free(&str_loc);
-        __kmp_itt_region_team_size[frm] = team_size;
-        __itt_frame_begin_v3(__kmp_itt_region_domains[frm], NULL);
-      } else { // Team size was not changed. Use existing domain.
-        __itt_frame_begin_v3(__kmp_itt_region_domains[frm], NULL);
       }
     }
-    KMP_ITT_DEBUG_LOCK();
-    KMP_ITT_DEBUG_PRINT("[frm beg] gtid=%d, idx=%x, loc:%p\n", gtid,
-                        loc->reserved_2, loc);
+    __kmp_str_loc_free(&str_loc);
   }
+  __itt_frame_begin_v3(e->d, NULL);
+  KMP_ITT_DEBUG_LOCK();
+  KMP_ITT_DEBUG_PRINT("[frm beg] gtid=%d, domain=%p, loc:%p\n", gtid, e->d,
+                      loc);
 #endif
 } // __kmp_itt_region_forking
 
@@ -186,6 +185,11 @@ LINKAGE void __kmp_itt_frame_submit(int gtid, __itt_timestamp begin,
                                     __itt_timestamp end, int imbalance,
                                     ident_t *loc, int team_size, int region) {
 #if USE_ITT_NOTIFY
+  if (!loc) {
+    // no sense to report a region without location info
+    return;
+  }
+  kmp_info_t *th = __kmp_thread_from_gtid(gtid);
   if (region) {
     kmp_team_t *team = __kmp_team_from_gtid(gtid);
     int serialized = (region == 2 ? 1 : 0);
@@ -193,132 +197,67 @@ LINKAGE void __kmp_itt_frame_submit(int gtid, __itt_timestamp begin,
       // The frame notifications are only supported for the outermost teams.
       return;
     }
-    // Check region domain has not been created before. It's index is saved in
-    // the low two bytes.
-    if ((loc->reserved_2 & 0x0000FFFF) == 0) {
-      if (__kmp_region_domain_count < KMP_MAX_FRAME_DOMAINS) {
-        int frm =
-            KMP_TEST_THEN_INC32(&__kmp_region_domain_count); // get "old" value
-        if (frm >= KMP_MAX_FRAME_DOMAINS) {
-          KMP_TEST_THEN_DEC32(&__kmp_region_domain_count); // revert the count
-          return; // loc->reserved_2 is still 0
-        }
+    // Check region domain has not been created before.
+    kmp_itthash_entry *e;
+    e = __kmp_itthash_find(th, &__kmp_itt_region_domains, loc, team_size);
+    if (e == NULL)
+      return; // too many entries in the hash
+    if (e->d == NULL) { // new entry, need to calculate domain
+      // Transform compiler-generated region location into the format
+      // that the tools more or less standardized on:
+      //   "<func>$omp$parallel:team_size@[file:]<line>[:<col>]"
+      char *buff = NULL;
+      kmp_str_loc_t str_loc =
+          __kmp_str_loc_init(loc->psource, /* init_fname */ false);
+      buff =
+          __kmp_str_format("%s$omp$parallel:%d@%s:%d:%d", str_loc.func,
+                           team_size, str_loc.file, str_loc.line, str_loc.col);
+      __itt_suppress_push(__itt_suppress_memory_errors);
+      e->d = __itt_domain_create(buff);
+      KMP_ASSERT(e->d != NULL);
+      __itt_suppress_pop();
 
-        // We need to save indexes for both region and barrier frames. We'll use
-        // loc->reserved_2 field but put region index to the low two bytes and
-        // barrier indexes to the high two bytes. It is OK because
-        // KMP_MAX_FRAME_DOMAINS = 512.
-        loc->reserved_2 |= (frm + 1); // save "new" value
-
-        // Transform compiler-generated region location into the format
-        // that the tools more or less standardized on:
-        //   "<func>$omp$parallel:team_size@[file:]<line>[:<col>]"
-        char *buff = NULL;
-        kmp_str_loc_t str_loc = 
-            __kmp_str_loc_init(loc->psource, /* init_fname */ false);
-        buff = __kmp_str_format("%s$omp$parallel:%d@%s:%d:%d", str_loc.func,
-                                team_size, str_loc.file, str_loc.line,
-                                str_loc.col);
-
-        __itt_suppress_push(__itt_suppress_memory_errors);
-        __kmp_itt_region_domains[frm] = __itt_domain_create(buff);
-        __itt_suppress_pop();
-
-        __kmp_str_free(&buff);
-        __kmp_str_loc_free(&str_loc);
-        __kmp_itt_region_team_size[frm] = team_size;
-        __itt_frame_submit_v3(__kmp_itt_region_domains[frm], NULL, begin, end);
-      }
-    } else { // Region domain exists for this location
-      // Check if team size was changed. Then create new region domain for this
-      // location
-      unsigned int frm = (loc->reserved_2 & 0x0000FFFF) - 1;
-      if (frm >= KMP_MAX_FRAME_DOMAINS)
-        return; // something's gone wrong, returning
-      if (__kmp_itt_region_team_size[frm] != team_size) {
-        char *buff = NULL;
-        kmp_str_loc_t str_loc = 
-            __kmp_str_loc_init(loc->psource, /* init_fname */ false);
-        buff = __kmp_str_format("%s$omp$parallel:%d@%s:%d:%d", str_loc.func,
-                                team_size, str_loc.file, str_loc.line,
-                                str_loc.col);
-
-        __itt_suppress_push(__itt_suppress_memory_errors);
-        __kmp_itt_region_domains[frm] = __itt_domain_create(buff);
-        __itt_suppress_pop();
-
-        __kmp_str_free(&buff);
-        __kmp_str_loc_free(&str_loc);
-        __kmp_itt_region_team_size[frm] = team_size;
-        __itt_frame_submit_v3(__kmp_itt_region_domains[frm], NULL, begin, end);
-      } else { // Team size was not changed. Use existing domain.
-        __itt_frame_submit_v3(__kmp_itt_region_domains[frm], NULL, begin, end);
-      }
+      __kmp_str_free(&buff);
+      __kmp_str_loc_free(&str_loc);
     }
+    __itt_frame_submit_v3(e->d, NULL, begin, end);
     KMP_ITT_DEBUG_LOCK();
     KMP_ITT_DEBUG_PRINT(
-        "[reg sub] gtid=%d, idx=%x, region:%d, loc:%p, beg:%llu, end:%llu\n",
-        gtid, loc->reserved_2, region, loc, begin, end);
+        "[reg sub] gtid=%d, domain=%p, region:%d, loc:%p, beg:%llu, end:%llu\n",
+        gtid, e->d, region, loc, begin, end);
     return;
   } else { // called for barrier reporting
-    if (loc) {
-      if ((loc->reserved_2 & 0xFFFF0000) == 0) {
-        if (__kmp_barrier_domain_count < KMP_MAX_FRAME_DOMAINS) {
-          int frm = KMP_TEST_THEN_INC32(
-              &__kmp_barrier_domain_count); // get "old" value
-          if (frm >= KMP_MAX_FRAME_DOMAINS) {
-            KMP_TEST_THEN_DEC32(
-                &__kmp_barrier_domain_count); // revert the count
-            return; // loc->reserved_2 is still 0
-          }
-          // Save the barrier frame index to the high two bytes.
-          loc->reserved_2 |= (frm + 1) << 16; // save "new" value
-
-          // Transform compiler-generated region location into the format
-          // that the tools more or less standardized on:
-          //   "<func>$omp$frame@[file:]<line>[:<col>]"
-          kmp_str_loc_t str_loc = 
-              __kmp_str_loc_init(loc->psource, /* init_fname */ false);
-          if (imbalance) {
-            char *buff_imb = NULL;
-            buff_imb = __kmp_str_format("%s$omp$barrier-imbalance:%d@%s:%d",
-                                        str_loc.func, team_size, str_loc.file,
-                                        str_loc.col);
-            __itt_suppress_push(__itt_suppress_memory_errors);
-            __kmp_itt_imbalance_domains[frm] = __itt_domain_create(buff_imb);
-            __itt_suppress_pop();
-            __itt_frame_submit_v3(__kmp_itt_imbalance_domains[frm], NULL, begin,
-                                  end);
-            __kmp_str_free(&buff_imb);
-          } else {
-            char *buff = NULL;
-            buff = __kmp_str_format("%s$omp$barrier@%s:%d", str_loc.func,
-                                    str_loc.file, str_loc.col);
-            __itt_suppress_push(__itt_suppress_memory_errors);
-            __kmp_itt_barrier_domains[frm] = __itt_domain_create(buff);
-            __itt_suppress_pop();
-            __itt_frame_submit_v3(__kmp_itt_barrier_domains[frm], NULL, begin,
-                                  end);
-            __kmp_str_free(&buff);
-          }
-          __kmp_str_loc_free(&str_loc);
-        }
-      } else { // if it is not 0 then it should be <= KMP_MAX_FRAME_DOMAINS
-        if (imbalance) {
-          __itt_frame_submit_v3(
-              __kmp_itt_imbalance_domains[(loc->reserved_2 >> 16) - 1], NULL,
-              begin, end);
-        } else {
-          __itt_frame_submit_v3(
-              __kmp_itt_barrier_domains[(loc->reserved_2 >> 16) - 1], NULL,
-              begin, end);
-        }
+    kmp_itthash_entry *e;
+    e = __kmp_itthash_find(th, &__kmp_itt_barrier_domains, loc, 0);
+    if (e == NULL)
+      return; // too many entries in the hash
+    if (e->d == NULL) { // new entry, need to calculate domain
+      // Transform compiler-generated region location into the format
+      // that the tools more or less standardized on:
+      //   "<func>$omp$frame@[file:]<line>[:<col>]"
+      kmp_str_loc_t str_loc =
+          __kmp_str_loc_init(loc->psource, /* init_fname */ false);
+      char *buff = NULL;
+      if (imbalance) {
+        buff =
+            __kmp_str_format("%s$omp$barrier-imbalance:%d@%s:%d", str_loc.func,
+                             team_size, str_loc.file, str_loc.line);
+      } else {
+        buff = __kmp_str_format("%s$omp$barrier@%s:%d", str_loc.func,
+                                str_loc.file, str_loc.line);
       }
-      KMP_ITT_DEBUG_LOCK();
-      KMP_ITT_DEBUG_PRINT(
-          "[frm sub] gtid=%d, idx=%x, loc:%p, beg:%llu, end:%llu\n", gtid,
-          loc->reserved_2, loc, begin, end);
+      __itt_suppress_push(__itt_suppress_memory_errors);
+      e->d = __itt_domain_create(buff);
+      KMP_ASSERT(e->d != NULL);
+      __itt_suppress_pop();
+      __kmp_str_free(&buff);
+      __kmp_str_loc_free(&str_loc);
     }
+    __itt_frame_submit_v3(e->d, NULL, begin, end);
+    KMP_ITT_DEBUG_LOCK();
+    KMP_ITT_DEBUG_PRINT(
+        "[frm sub] gtid=%d, domain=%p, loc:%p, beg:%llu, end:%llu\n", gtid,
+        e->d, loc, begin, end);
   }
 #endif
 } // __kmp_itt_frame_submit
@@ -432,15 +371,18 @@ LINKAGE void __kmp_itt_region_joined(int gtid) {
     // The frame notifications are only supported for the outermost teams.
     return;
   }
-  ident_t *loc = __kmp_thread_from_gtid(gtid)->th.th_ident;
-  if (loc && loc->reserved_2) {
-    unsigned int frm = (loc->reserved_2 & 0x0000FFFF) - 1;
-    if (frm < KMP_MAX_FRAME_DOMAINS) {
-      KMP_ITT_DEBUG_LOCK();
-      __itt_frame_end_v3(__kmp_itt_region_domains[frm], NULL);
-      KMP_ITT_DEBUG_PRINT("[frm end] gtid=%d, idx=%x, loc:%p\n", gtid,
-                          loc->reserved_2, loc);
-    }
+  kmp_info_t *th = __kmp_thread_from_gtid(gtid);
+  ident_t *loc = th->th.th_ident;
+  if (loc) {
+    kmp_itthash_entry *e = __kmp_itthash_find(th, &__kmp_itt_region_domains,
+                                              loc, th->th.th_team_nproc);
+    if (e == NULL)
+      return; // too many entries in the hash
+    KMP_DEBUG_ASSERT(e->d);
+    KMP_ITT_DEBUG_LOCK();
+    __itt_frame_end_v3(e->d, NULL);
+    KMP_ITT_DEBUG_PRINT("[frm end] gtid=%d, domain=%p, loc:%p\n", gtid, e->d,
+                        loc);
   }
 #endif
 } // __kmp_itt_region_joined

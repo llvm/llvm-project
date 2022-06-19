@@ -12,8 +12,8 @@
 ; YAML:      - INST_add:    '2'
 ; YAML:      - INST_b.:     '1'
 ; YAML:      - INST_ldr:    '1'
-; YAML:      - INST_movk:   '1'
-; YAML:      - INST_movz:   '1'
+; YAML:      - INST_orr:    '1'
+; YAML:      - INST_sub:   '1'
 ; YAML:      - INST_subs:   '1'
 
 ; YAML:      Name:            InstructionMix
@@ -29,17 +29,16 @@ define i32 @foo(i32* %ptr, i32 %x, i64 %y) !dbg !3 {
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    ldr w9, [x0]
 ; CHECK-NEXT:    mov x8, x0
-; CHECK-NEXT:    mov w10, #16959
-; CHECK-NEXT:    movk w10, #15, lsl #16
 ; CHECK-NEXT:    add w0, w9, w1
 ; CHECK-NEXT:    add x9, x0, x2
-; CHECK-NEXT:    cmp x9, x10
+; CHECK-NEXT:    sub x9, x9, #244, lsl #12 ; =999424
+; CHECK-NEXT:    cmp x9, #575
 ; CHECK-NEXT:    b.eq LBB0_2
 ; CHECK-NEXT:  ; %bb.1: ; %else
-; CHECK-NEXT:    mul w10, w0, w1
-; CHECK-NEXT:    mov w9, #10
-; CHECK-NEXT:    mul w0, w10, w1
-; CHECK-NEXT:    str w9, [x8]
+; CHECK-NEXT:    mul w9, w0, w1
+; CHECK-NEXT:    mov w10, #10
+; CHECK-NEXT:    mul w0, w9, w1
+; CHECK-NEXT:    str w10, [x8]
 ; CHECK-NEXT:  LBB0_2: ; %common.ret
 ; CHECK-NEXT:    ; kill: def $w0 killed $w0 killed $x0
 ; CHECK-NEXT:    ret

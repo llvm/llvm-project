@@ -49,8 +49,8 @@ namespace __asan {
   ASAN_READ_RANGE((ctx), (s),                                   \
     common_flags()->strict_string_checks ? (len) + 1 : (n))
 
-#define ASAN_READ_STRING(ctx, s, n)                             \
-  ASAN_READ_STRING_OF_LEN((ctx), (s), REAL(strlen)(s), (n))
+#  define ASAN_READ_STRING(ctx, s, n) \
+    ASAN_READ_STRING_OF_LEN((ctx), (s), internal_strlen(s), (n))
 
 static inline uptr MaybeRealStrnlen(const char *s, uptr maxlen) {
 #if SANITIZER_INTERCEPT_STRNLEN
@@ -103,7 +103,7 @@ DECLARE_REAL_AND_INTERCEPTOR(void, free, void *)
   do {                                                                         \
     if (asan_init_is_running)                                                  \
       return REAL(func)(__VA_ARGS__);                                          \
-    if (SANITIZER_MAC && UNLIKELY(!asan_inited))                               \
+    if (SANITIZER_APPLE && UNLIKELY(!asan_inited))                               \
       return REAL(func)(__VA_ARGS__);                                          \
     ENSURE_ASAN_INITED();                                                      \
   } while (false)
@@ -130,23 +130,24 @@ DECLARE_REAL_AND_INTERCEPTOR(void, free, void *)
 #define COMMON_INTERCEPTOR_BLOCK_REAL(name) REAL(name)
 // Strict init-order checking is dlopen-hostile:
 // https://github.com/google/sanitizers/issues/178
-#define COMMON_INTERCEPTOR_ON_DLOPEN(filename, flag)                           \
-  do {                                                                         \
-    if (flags()->strict_init_order)                                            \
-      StopInitOrderChecking();                                                 \
-    CheckNoDeepBind(filename, flag);                                           \
-  } while (false)
-#define COMMON_INTERCEPTOR_ON_EXIT(ctx) OnExit()
-#define COMMON_INTERCEPTOR_LIBRARY_LOADED(filename, handle)
-#define COMMON_INTERCEPTOR_LIBRARY_UNLOADED()
-#define COMMON_INTERCEPTOR_NOTHING_IS_INITIALIZED (!asan_inited)
-#define COMMON_INTERCEPTOR_GET_TLS_RANGE(begin, end)                           \
-  if (AsanThread *t = GetCurrentThread()) {                                    \
-    *begin = t->tls_begin();                                                   \
-    *end = t->tls_end();                                                       \
-  } else {                                                                     \
-    *begin = *end = 0;                                                         \
-  }
+#  define COMMON_INTERCEPTOR_DLOPEN(filename, flag) \
+    ({                                              \
+      if (flags()->strict_init_order)               \
+        StopInitOrderChecking();                    \
+      CheckNoDeepBind(filename, flag);              \
+      REAL(dlopen)(filename, flag);                 \
+    })
+#  define COMMON_INTERCEPTOR_ON_EXIT(ctx) OnExit()
+#  define COMMON_INTERCEPTOR_LIBRARY_LOADED(filename, handle)
+#  define COMMON_INTERCEPTOR_LIBRARY_UNLOADED()
+#  define COMMON_INTERCEPTOR_NOTHING_IS_INITIALIZED (!asan_inited)
+#  define COMMON_INTERCEPTOR_GET_TLS_RANGE(begin, end) \
+    if (AsanThread *t = GetCurrentThread()) {          \
+      *begin = t->tls_begin();                         \
+      *end = t->tls_end();                             \
+    } else {                                           \
+      *begin = *end = 0;                               \
+    }
 
 #define COMMON_INTERCEPTOR_MEMMOVE_IMPL(ctx, to, from, size) \
   do {                                                       \
@@ -354,7 +355,7 @@ INTERCEPTOR(_Unwind_Reason_Code, _Unwind_SjLj_RaiseException,
 INTERCEPTOR(char*, index, const char *string, int c)
   ALIAS(WRAPPER_NAME(strchr));
 # else
-#  if SANITIZER_MAC
+#  if SANITIZER_APPLE
 DECLARE_REAL(char*, index, const char *string, int c)
 OVERRIDE_FUNCTION(index, strchr);
 #  else
@@ -370,9 +371,9 @@ DEFINE_REAL(char*, index, const char *string, int c)
     ASAN_INTERCEPTOR_ENTER(ctx, strcat);
     ENSURE_ASAN_INITED();
     if (flags()->replace_str) {
-      uptr from_length = REAL(strlen)(from);
+      uptr from_length = internal_strlen(from);
       ASAN_READ_RANGE(ctx, from, from_length + 1);
-      uptr to_length = REAL(strlen)(to);
+      uptr to_length = internal_strlen(to);
       ASAN_READ_STRING_OF_LEN(ctx, to, to_length, to_length);
       ASAN_WRITE_RANGE(ctx, to + to_length, from_length + 1);
       // If the copying actually happens, the |from| string should not overlap
@@ -394,7 +395,7 @@ INTERCEPTOR(char*, strncat, char *to, const char *from, uptr size) {
     uptr from_length = MaybeRealStrnlen(from, size);
     uptr copy_length = Min(size, from_length + 1);
     ASAN_READ_RANGE(ctx, from, copy_length);
-    uptr to_length = REAL(strlen)(to);
+    uptr to_length = internal_strlen(to);
     ASAN_READ_STRING_OF_LEN(ctx, to, to_length, to_length);
     ASAN_WRITE_RANGE(ctx, to + to_length, from_length + 1);
     if (from_length > 0) {
@@ -408,7 +409,7 @@ INTERCEPTOR(char*, strncat, char *to, const char *from, uptr size) {
 INTERCEPTOR(char *, strcpy, char *to, const char *from) {
   void *ctx;
   ASAN_INTERCEPTOR_ENTER(ctx, strcpy);
-#if SANITIZER_MAC
+#if SANITIZER_APPLE
   if (UNLIKELY(!asan_inited))
     return REAL(strcpy)(to, from);
 #endif
@@ -419,7 +420,7 @@ INTERCEPTOR(char *, strcpy, char *to, const char *from) {
   }
   ENSURE_ASAN_INITED();
   if (flags()->replace_str) {
-    uptr from_size = REAL(strlen)(from) + 1;
+    uptr from_size = internal_strlen(from) + 1;
     CHECK_RANGES_OVERLAP("strcpy", to, from_size, from, from_size);
     ASAN_READ_RANGE(ctx, from, from_size);
     ASAN_WRITE_RANGE(ctx, to, from_size);
@@ -432,7 +433,7 @@ INTERCEPTOR(char*, strdup, const char *s) {
   ASAN_INTERCEPTOR_ENTER(ctx, strdup);
   if (UNLIKELY(!asan_inited)) return internal_strdup(s);
   ENSURE_ASAN_INITED();
-  uptr length = REAL(strlen)(s);
+  uptr length = internal_strlen(s);
   if (flags()->replace_str) {
     ASAN_READ_RANGE(ctx, s, length + 1);
   }
@@ -448,7 +449,7 @@ INTERCEPTOR(char*, __strdup, const char *s) {
   ASAN_INTERCEPTOR_ENTER(ctx, strdup);
   if (UNLIKELY(!asan_inited)) return internal_strdup(s);
   ENSURE_ASAN_INITED();
-  uptr length = REAL(strlen)(s);
+  uptr length = internal_strlen(s);
   if (flags()->replace_str) {
     ASAN_READ_RANGE(ctx, s, length + 1);
   }
@@ -488,7 +489,7 @@ INTERCEPTOR(long, strtol, const char *nptr, char **endptr, int base) {
 INTERCEPTOR(int, atoi, const char *nptr) {
   void *ctx;
   ASAN_INTERCEPTOR_ENTER(ctx, atoi);
-#if SANITIZER_MAC
+#if SANITIZER_APPLE
   if (UNLIKELY(!asan_inited)) return REAL(atoi)(nptr);
 #endif
   ENSURE_ASAN_INITED();
@@ -509,7 +510,7 @@ INTERCEPTOR(int, atoi, const char *nptr) {
 INTERCEPTOR(long, atol, const char *nptr) {
   void *ctx;
   ASAN_INTERCEPTOR_ENTER(ctx, atol);
-#if SANITIZER_MAC
+#if SANITIZER_APPLE
   if (UNLIKELY(!asan_inited)) return REAL(atol)(nptr);
 #endif
   ENSURE_ASAN_INITED();
@@ -562,7 +563,7 @@ static void AtCxaAtexit(void *unused) {
 #if ASAN_INTERCEPT___CXA_ATEXIT
 INTERCEPTOR(int, __cxa_atexit, void (*func)(void *), void *arg,
             void *dso_handle) {
-#if SANITIZER_MAC
+#if SANITIZER_APPLE
   if (UNLIKELY(!asan_inited)) return REAL(__cxa_atexit)(func, arg, dso_handle);
 #endif
   ENSURE_ASAN_INITED();
@@ -581,7 +582,7 @@ INTERCEPTOR(int, atexit, void (*func)()) {
 #if CAN_SANITIZE_LEAKS
   __lsan::ScopedInterceptorDisabler disabler;
 #endif
-  // Avoid calling real atexit as it is unrechable on at least on Linux.
+  // Avoid calling real atexit as it is unreachable on at least on Linux.
   int res = REAL(__cxa_atexit)((void (*)(void *a))func, nullptr, nullptr);
   REAL(__cxa_atexit)(AtCxaAtexit, nullptr, nullptr);
   return res;

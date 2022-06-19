@@ -7,7 +7,7 @@
 
 
 ; GCN-LABEL: {{^}}insert_vgpr_offset_multiple_in_block:
-; GCN-DAG: s_load_dwordx16 s{{\[}}[[S_ELT0:[0-9]+]]:[[S_ELT15:[0-9]+]]{{\]}}
+; GCN-DAG: s_load_dwordx16 s[[[S_ELT0:[0-9]+]]:[[S_ELT15:[0-9]+]]]
 ; GCN-DAG: {{buffer|flat|global}}_load_dword [[IDX0:v[0-9]+]]
 ; GCN-DAG: v_mov_b32 [[INS0:v[0-9]+]], 62
 

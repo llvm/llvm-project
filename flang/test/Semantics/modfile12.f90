@@ -1,5 +1,4 @@
-! RUN: %S/test_modfile.sh %s %t %flang_fc1
-! REQUIRES: shell
+! RUN: %python %S/test_modfile.py %s %flang_fc1
 module m
   integer(8), parameter :: a = 1, b = 2_8
   parameter(n=3,l=-3,e=1.0/3.0)

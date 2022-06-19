@@ -15,8 +15,8 @@
 #include "llvm/MC/MCObjectWriter.h"
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/MC/MCValue.h"
+#include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/EndianStream.h"
-#include "llvm/Support/TargetRegistry.h"
 
 using namespace llvm;
 
@@ -42,6 +42,7 @@ static uint64_t adjustFixupValue(unsigned Kind, uint64_t Value) {
   case VE::fixup_ve_tpoff_hi32:
     return (Value >> 32) & 0xffffffff;
   case VE::fixup_ve_reflong:
+  case VE::fixup_ve_srel32:
   case VE::fixup_ve_lo32:
   case VE::fixup_ve_pc_lo32:
   case VE::fixup_ve_got_lo32:
@@ -68,6 +69,7 @@ static unsigned getFixupKindNumBytes(unsigned Kind) {
   case FK_Data_4:
   case FK_PCRel_4:
   case VE::fixup_ve_reflong:
+  case VE::fixup_ve_srel32:
   case VE::fixup_ve_hi32:
   case VE::fixup_ve_lo32:
   case VE::fixup_ve_pc_hi32:
@@ -103,6 +105,7 @@ public:
     const static MCFixupKindInfo Infos[VE::NumTargetFixupKinds] = {
         // name, offset, bits, flags
         {"fixup_ve_reflong", 0, 32, 0},
+        {"fixup_ve_srel32", 0, 32, MCFixupKindInfo::FKF_IsPCRel},
         {"fixup_ve_hi32", 0, 32, 0},
         {"fixup_ve_lo32", 0, 32, 0},
         {"fixup_ve_pc_hi32", 0, 32, MCFixupKindInfo::FKF_IsPCRel},
@@ -164,7 +167,8 @@ public:
     llvm_unreachable("relaxInstruction() should not be called");
   }
 
-  bool writeNopData(raw_ostream &OS, uint64_t Count) const override {
+  bool writeNopData(raw_ostream &OS, uint64_t Count,
+                    const MCSubtargetInfo *STI) const override {
     if ((Count % 8) != 0)
       return false;
 

@@ -38,6 +38,7 @@ namespace lld {
 class DWARFCache;
 
 namespace coff {
+class COFFLinkerContext;
 
 std::vector<MemoryBufferRef> getArchiveMembers(llvm::object::Archive *file);
 
@@ -91,19 +92,26 @@ public:
   // Returns .drectve section contents if exist.
   StringRef getDirectives() { return directives; }
 
+  COFFLinkerContext &ctx;
+
 protected:
-  InputFile(Kind k, MemoryBufferRef m) : mb(m), fileKind(k) {}
+  InputFile(COFFLinkerContext &c, Kind k, MemoryBufferRef m, bool lazy = false)
+      : mb(m), ctx(c), fileKind(k), lazy(lazy) {}
 
   StringRef directives;
 
 private:
   const Kind fileKind;
+
+public:
+  // True if this is a lazy ObjFile or BitcodeFile.
+  bool lazy = false;
 };
 
 // .lib or .a file.
 class ArchiveFile : public InputFile {
 public:
-  explicit ArchiveFile(MemoryBufferRef m);
+  explicit ArchiveFile(COFFLinkerContext &ctx, MemoryBufferRef m);
   static bool classof(const InputFile *f) { return f->kind() == ArchiveKind; }
   void parse() override;
 
@@ -117,30 +125,14 @@ private:
   llvm::DenseSet<uint64_t> seen;
 };
 
-// .obj or .o file between -start-lib and -end-lib.
-class LazyObjFile : public InputFile {
-public:
-  explicit LazyObjFile(MemoryBufferRef m) : InputFile(LazyObjectKind, m) {}
-  static bool classof(const InputFile *f) {
-    return f->kind() == LazyObjectKind;
-  }
-  // Makes this object file part of the link.
-  void fetch();
-  // Adds the symbols in this file to the symbol table as LazyObject symbols.
-  void parse() override;
-
-private:
-  std::vector<Symbol *> symbols;
-};
-
 // .obj or .o file. This may be a member of an archive file.
 class ObjFile : public InputFile {
 public:
-  explicit ObjFile(MemoryBufferRef m) : InputFile(ObjectKind, m) {}
-  explicit ObjFile(MemoryBufferRef m, std::vector<Symbol *> &&symbols)
-      : InputFile(ObjectKind, m), symbols(std::move(symbols)) {}
+  explicit ObjFile(COFFLinkerContext &ctx, MemoryBufferRef m, bool lazy = false)
+      : InputFile(ctx, ObjectKind, m, lazy) {}
   static bool classof(const InputFile *f) { return f->kind() == ObjectKind; }
   void parse() override;
+  void parseLazy();
   MachineTypes getMachineType() override;
   ArrayRef<Chunk *> getChunks() { return chunks; }
   ArrayRef<SectionChunk *> getDebugChunks() { return debugChunks; }
@@ -174,8 +166,6 @@ public:
   void includeResourceChunks();
 
   bool isResourceObjFile() const { return !resourceChunks.empty(); }
-
-  static std::vector<ObjFile *> instances;
 
   // Flags in the absolute @feat.00 symbol if it is present. These usually
   // indicate if an object was compiled with certain security features enabled
@@ -227,6 +217,8 @@ private:
   const coff_section *getSection(COFFSymbolRef sym) {
     return getSection(sym.getSectionNumber());
   }
+
+  void enqueuePdbFile(StringRef path, ObjFile *fromFile);
 
   void initializeChunks();
   void initializeSymbols();
@@ -318,16 +310,13 @@ private:
 // stream.
 class PDBInputFile : public InputFile {
 public:
-  explicit PDBInputFile(MemoryBufferRef m);
+  explicit PDBInputFile(COFFLinkerContext &ctx, MemoryBufferRef m);
   ~PDBInputFile();
   static bool classof(const InputFile *f) { return f->kind() == PDBKind; }
   void parse() override;
 
-  static void enqueue(StringRef path, ObjFile *fromFile);
-
-  static PDBInputFile *findFromRecordPath(StringRef path, ObjFile *fromFile);
-
-  static std::map<std::string, PDBInputFile *> instances;
+  static PDBInputFile *findFromRecordPath(const COFFLinkerContext &ctx,
+                                          StringRef path, ObjFile *fromFile);
 
   // Record possible errors while opening the PDB file
   llvm::Optional<Error> loadErr;
@@ -344,11 +333,10 @@ public:
 // for details about the format.
 class ImportFile : public InputFile {
 public:
-  explicit ImportFile(MemoryBufferRef m) : InputFile(ImportKind, m) {}
+  explicit ImportFile(COFFLinkerContext &ctx, MemoryBufferRef m)
+      : InputFile(ctx, ImportKind, m) {}
 
   static bool classof(const InputFile *f) { return f->kind() == ImportKind; }
-
-  static std::vector<ImportFile *> instances;
 
   Symbol *impSym = nullptr;
   Symbol *thunkSym = nullptr;
@@ -377,16 +365,14 @@ public:
 // Used for LTO.
 class BitcodeFile : public InputFile {
 public:
-  BitcodeFile(MemoryBufferRef mb, StringRef archiveName,
-              uint64_t offsetInArchive);
-  explicit BitcodeFile(MemoryBufferRef m, StringRef archiveName,
-                       uint64_t offsetInArchive,
-                       std::vector<Symbol *> &&symbols);
+  explicit BitcodeFile(COFFLinkerContext &ctx, MemoryBufferRef mb,
+                       StringRef archiveName, uint64_t offsetInArchive,
+                       bool lazy);
   ~BitcodeFile();
   static bool classof(const InputFile *f) { return f->kind() == BitcodeKind; }
   ArrayRef<Symbol *> getSymbols() { return symbols; }
   MachineTypes getMachineType() override;
-  static std::vector<BitcodeFile *> instances;
+  void parseLazy();
   std::unique_ptr<llvm::lto::InputFile> obj;
 
 private:
@@ -398,7 +384,8 @@ private:
 // .dll file. MinGW only.
 class DLLFile : public InputFile {
 public:
-  explicit DLLFile(MemoryBufferRef m) : InputFile(DLLKind, m) {}
+  explicit DLLFile(COFFLinkerContext &ctx, MemoryBufferRef m)
+      : InputFile(ctx, DLLKind, m) {}
   static bool classof(const InputFile *f) { return f->kind() == DLLKind; }
   void parse() override;
   MachineTypes getMachineType() override;

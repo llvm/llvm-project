@@ -145,10 +145,11 @@ void TimelineView::printWaitTimeEntry(formatted_raw_ostream &OS,
 
   double AverageTime1, AverageTime2, AverageTime3;
   AverageTime1 =
-      (double)Entry.CyclesSpentInSchedulerQueue / CumulativeExecutions;
-  AverageTime2 = (double)Entry.CyclesSpentInSQWhileReady / CumulativeExecutions;
-  AverageTime3 =
-      (double)Entry.CyclesSpentAfterWBAndBeforeRetire / CumulativeExecutions;
+      (double)(Entry.CyclesSpentInSchedulerQueue * 10) / CumulativeExecutions;
+  AverageTime2 =
+      (double)(Entry.CyclesSpentInSQWhileReady * 10) / CumulativeExecutions;
+  AverageTime3 = (double)(Entry.CyclesSpentAfterWBAndBeforeRetire * 10) /
+                 CumulativeExecutions;
 
   OS << Executions;
   OS.PadToColumn(13);
@@ -157,18 +158,18 @@ void TimelineView::printWaitTimeEntry(formatted_raw_ostream &OS,
   if (!PrintingTotals)
     tryChangeColor(OS, Entry.CyclesSpentInSchedulerQueue, CumulativeExecutions,
                    BufferSize);
-  OS << format("%.1f", floor((AverageTime1 * 10) + 0.5) / 10);
+  OS << format("%.1f", floor(AverageTime1 + 0.5) / 10);
   OS.PadToColumn(20);
   if (!PrintingTotals)
     tryChangeColor(OS, Entry.CyclesSpentInSQWhileReady, CumulativeExecutions,
                    BufferSize);
-  OS << format("%.1f", floor((AverageTime2 * 10) + 0.5) / 10);
+  OS << format("%.1f", floor(AverageTime2 + 0.5) / 10);
   OS.PadToColumn(27);
   if (!PrintingTotals)
     tryChangeColor(OS, Entry.CyclesSpentAfterWBAndBeforeRetire,
                    CumulativeExecutions,
                    getSubTargetInfo().getSchedModel().MicroOpBufferSize);
-  OS << format("%.1f", floor((AverageTime3 * 10) + 0.5) / 10);
+  OS << format("%.1f", floor(AverageTime3 + 0.5) / 10);
 
   if (OS.has_colors())
     OS.resetColor();
@@ -295,8 +296,10 @@ void TimelineView::printTimeline(raw_ostream &OS) const {
       // attribute is set correctly whether or not it is greater
       // than timeline-max-cycles so we can use that to ensure
       // we don't early exit because of a 0 latency instruction.
-      if (Entry.CycleRetired == 0 && Entry.CycleExecuted != 0)
+      if (Entry.CycleRetired == 0 && Entry.CycleExecuted != 0) {
+        FOS << "Truncated display due to cycle limit\n";
         return;
+      }
 
       unsigned SourceIndex = IID % Source.size();
       printTimelineViewEntry(FOS, Entry, Iteration, SourceIndex);

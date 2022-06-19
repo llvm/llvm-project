@@ -48,7 +48,7 @@ RUN: llvm-nm %p/Inputs/archive-test.a-gnu-minimal
 
 
 And don't crash when asked to print a non-existing symtab.
-RUN: llvm-nm -M %p/Inputs/archive-test.a-gnu-minimal
+RUN: llvm-nm --print-armap %p/Inputs/archive-test.a-gnu-minimal
 
 Don't reject an empty archive.
 RUN: llvm-nm %p/Inputs/archive-test.a-empty

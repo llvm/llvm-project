@@ -14,8 +14,8 @@ void d(void);
 void __attribute__((force_align_arg_pointer)) d(void) {}
 
 // Attribute is ignored on function pointer types.
-void (__attribute__((force_align_arg_pointer)) *p)();
-typedef void (__attribute__((__force_align_arg_pointer__)) *p2)();
+void (__attribute__((force_align_arg_pointer)) *p)(void);
+typedef void (__attribute__((__force_align_arg_pointer__)) *p2)(void);
 // Attribute is also ignored on function typedefs.
 typedef void __attribute__((force_align_arg_pointer)) e(void);
 

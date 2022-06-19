@@ -86,6 +86,7 @@ private:
                           unsigned N);
   bool expandCALL_RVMARKER(MachineBasicBlock &MBB,
                            MachineBasicBlock::iterator MBBI);
+  bool expandCALL_BTI(MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI);
   bool expandStoreSwiftAsyncContext(MachineBasicBlock &MBB,
                                     MachineBasicBlock::iterator MBBI);
 };
@@ -102,9 +103,8 @@ INITIALIZE_PASS(AArch64ExpandPseudo, "aarch64-expand-pseudo",
 static void transferImpOps(MachineInstr &OldMI, MachineInstrBuilder &UseMI,
                            MachineInstrBuilder &DefMI) {
   const MCInstrDesc &Desc = OldMI.getDesc();
-  for (unsigned i = Desc.getNumOperands(), e = OldMI.getNumOperands(); i != e;
-       ++i) {
-    const MachineOperand &MO = OldMI.getOperand(i);
+  for (const MachineOperand &MO :
+       llvm::drop_begin(OldMI.operands(), Desc.getNumOperands())) {
     assert(MO.isReg() && MO.getReg());
     if (MO.isUse())
       UseMI.add(MO);
@@ -444,7 +444,7 @@ bool AArch64ExpandPseudo::expand_DestructiveOp(
   uint64_t FalseLanes = MI.getDesc().TSFlags & AArch64::FalseLanesMask;
   bool FalseZero = FalseLanes == AArch64::FalseLanesZero;
 
-  unsigned DstReg = MI.getOperand(0).getReg();
+  Register DstReg = MI.getOperand(0).getReg();
   bool DstIsDead = MI.getOperand(0).isDead();
 
   if (DType == AArch64::DestructiveBinary)
@@ -465,6 +465,9 @@ bool AArch64ExpandPseudo::expand_DestructiveOp(
   case AArch64::DestructiveBinary:
   case AArch64::DestructiveBinaryImm:
     std::tie(PredIdx, DOPIdx, SrcIdx) = std::make_tuple(1, 2, 3);
+    break;
+  case AArch64::DestructiveUnaryPassthru:
+    std::tie(PredIdx, DOPIdx, SrcIdx) = std::make_tuple(2, 3, 3);
     break;
   case AArch64::DestructiveTernaryCommWithRev:
     std::tie(PredIdx, DOPIdx, SrcIdx, Src2Idx) = std::make_tuple(1, 2, 3, 4);
@@ -494,6 +497,7 @@ bool AArch64ExpandPseudo::expand_DestructiveOp(
       DstReg != MI.getOperand(DOPIdx).getReg() ||
       MI.getOperand(DOPIdx).getReg() != MI.getOperand(SrcIdx).getReg();
     break;
+  case AArch64::DestructiveUnaryPassthru:
   case AArch64::DestructiveBinaryImm:
     DOPRegIsUnique = true;
     break;
@@ -578,6 +582,11 @@ bool AArch64ExpandPseudo::expand_DestructiveOp(
     .addReg(DstReg, RegState::Define | getDeadRegState(DstIsDead));
 
   switch (DType) {
+  case AArch64::DestructiveUnaryPassthru:
+    DOP.addReg(MI.getOperand(DOPIdx).getReg(), RegState::Kill)
+        .add(MI.getOperand(PredIdx))
+        .add(MI.getOperand(SrcIdx));
+    break;
   case AArch64::DestructiveBinaryImm:
   case AArch64::DestructiveBinaryComm:
   case AArch64::DestructiveBinaryCommWithRev:
@@ -701,20 +710,24 @@ bool AArch64ExpandPseudo::expandSVESpillFill(MachineBasicBlock &MBB,
 
 bool AArch64ExpandPseudo::expandCALL_RVMARKER(
     MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI) {
-  // Expand CALL_RVMARKER pseudo to a branch, followed by the special `mov x29,
-  // x29` marker. Mark the sequence as bundle, to avoid passes moving other code
-  // in between.
+  // Expand CALL_RVMARKER pseudo to:
+  // - a branch to the call target, followed by
+  // - the special `mov x29, x29` marker, and
+  // - another branch, to the runtime function
+  // Mark the sequence as bundle, to avoid passes moving other code in between.
   MachineInstr &MI = *MBBI;
 
   MachineInstr *OriginalCall;
-  MachineOperand &CallTarget = MI.getOperand(0);
+  MachineOperand &RVTarget = MI.getOperand(0);
+  MachineOperand &CallTarget = MI.getOperand(1);
   assert((CallTarget.isGlobal() || CallTarget.isReg()) &&
          "invalid operand for regular call");
+  assert(RVTarget.isGlobal() && "invalid operand for attached call");
   unsigned Opc = CallTarget.isGlobal() ? AArch64::BL : AArch64::BLR;
   OriginalCall = BuildMI(MBB, MBBI, MI.getDebugLoc(), TII->get(Opc)).getInstr();
   OriginalCall->addOperand(CallTarget);
 
-  unsigned RegMaskStartIdx = 1;
+  unsigned RegMaskStartIdx = 2;
   // Skip register arguments. Those are added during ISel, but are not
   // needed for the concrete branch.
   while (!MI.getOperand(RegMaskStartIdx).isRegMask()) {
@@ -724,20 +737,57 @@ bool AArch64ExpandPseudo::expandCALL_RVMARKER(
         MOP.getReg(), /*Def=*/false, /*Implicit=*/true));
     RegMaskStartIdx++;
   }
-  for (; RegMaskStartIdx < MI.getNumOperands(); ++RegMaskStartIdx)
-    OriginalCall->addOperand(MI.getOperand(RegMaskStartIdx));
+  for (const MachineOperand &MO :
+       llvm::drop_begin(MI.operands(), RegMaskStartIdx))
+    OriginalCall->addOperand(MO);
 
-  auto *Marker = BuildMI(MBB, MBBI, MI.getDebugLoc(), TII->get(AArch64::ORRXrs))
+  BuildMI(MBB, MBBI, MI.getDebugLoc(), TII->get(AArch64::ORRXrs))
                      .addReg(AArch64::FP, RegState::Define)
                      .addReg(AArch64::XZR)
                      .addReg(AArch64::FP)
-                     .addImm(0)
+                     .addImm(0);
+
+  auto *RVCall = BuildMI(MBB, MBBI, MI.getDebugLoc(), TII->get(AArch64::BL))
+                     .add(RVTarget)
                      .getInstr();
+
   if (MI.shouldUpdateCallSiteInfo())
-    MBB.getParent()->moveCallSiteInfo(&MI, Marker);
+    MBB.getParent()->moveCallSiteInfo(&MI, OriginalCall);
+
   MI.eraseFromParent();
   finalizeBundle(MBB, OriginalCall->getIterator(),
-                 std::next(Marker->getIterator()));
+                 std::next(RVCall->getIterator()));
+  return true;
+}
+
+bool AArch64ExpandPseudo::expandCALL_BTI(MachineBasicBlock &MBB,
+                                         MachineBasicBlock::iterator MBBI) {
+  // Expand CALL_BTI pseudo to:
+  // - a branch to the call target
+  // - a BTI instruction
+  // Mark the sequence as a bundle, to avoid passes moving other code in
+  // between.
+
+  MachineInstr &MI = *MBBI;
+  MachineOperand &CallTarget = MI.getOperand(0);
+  assert((CallTarget.isGlobal() || CallTarget.isReg()) &&
+         "invalid operand for regular call");
+  unsigned Opc = CallTarget.isGlobal() ? AArch64::BL : AArch64::BLR;
+  MachineInstr *Call =
+      BuildMI(MBB, MBBI, MI.getDebugLoc(), TII->get(Opc)).getInstr();
+  Call->addOperand(CallTarget);
+
+  MachineInstr *BTI =
+      BuildMI(MBB, MBBI, MI.getDebugLoc(), TII->get(AArch64::HINT))
+          // BTI J so that setjmp can to BR to this.
+          .addImm(36)
+          .getInstr();
+
+  if (MI.shouldUpdateCallSiteInfo())
+    MBB.getParent()->moveCallSiteInfo(&MI, Call);
+
+  MI.eraseFromParent();
+  finalizeBundle(MBB, Call->getIterator(), std::next(BTI->getIterator()));
   return true;
 }
 
@@ -928,12 +978,16 @@ bool AArch64ExpandPseudo::expandMI(MachineBasicBlock &MBB,
     case AArch64::ORRWrr:      Opcode = AArch64::ORRWrs; break;
     case AArch64::ORRXrr:      Opcode = AArch64::ORRXrs; break;
     }
-    MachineInstrBuilder MIB1 =
-        BuildMI(MBB, MBBI, MI.getDebugLoc(), TII->get(Opcode),
-                MI.getOperand(0).getReg())
-            .add(MI.getOperand(1))
-            .add(MI.getOperand(2))
-            .addImm(AArch64_AM::getShifterImm(AArch64_AM::LSL, 0));
+    MachineFunction &MF = *MBB.getParent();
+    // Try to create new inst without implicit operands added.
+    MachineInstr *NewMI = MF.CreateMachineInstr(
+        TII->get(Opcode), MI.getDebugLoc(), /*NoImplicit=*/true);
+    MBB.insert(MBBI, NewMI);
+    MachineInstrBuilder MIB1(MF, NewMI);
+    MIB1.addReg(MI.getOperand(0).getReg(), RegState::Define)
+        .add(MI.getOperand(1))
+        .add(MI.getOperand(2))
+        .addImm(AArch64_AM::getShifterImm(AArch64_AM::LSL, 0));
     transferImpOps(MI, MIB1, MIB1);
     MI.eraseFromParent();
     return true;
@@ -976,7 +1030,7 @@ bool AArch64ExpandPseudo::expandMI(MachineBasicBlock &MBB,
                    .addReg(DstReg, RegState::Kill)
                    .addReg(DstReg, DstFlags | RegState::Implicit);
       } else {
-        unsigned DstReg = MI.getOperand(0).getReg();
+        Register DstReg = MI.getOperand(0).getReg();
         MIB2 = BuildMI(MBB, MBBI, DL, TII->get(AArch64::LDRXui))
                    .add(MI.getOperand(0))
                    .addUse(DstReg, RegState::Kill);
@@ -1040,6 +1094,7 @@ bool AArch64ExpandPseudo::expandMI(MachineBasicBlock &MBB,
   case AArch64::MOVaddrEXT: {
     // Expand into ADRP + ADD.
     Register DstReg = MI.getOperand(0).getReg();
+    assert(DstReg != AArch64::XZR);
     MachineInstrBuilder MIB1 =
         BuildMI(MBB, MBBI, MI.getDebugLoc(), TII->get(AArch64::ADRP), DstReg)
             .add(MI.getOperand(1));
@@ -1215,6 +1270,8 @@ bool AArch64ExpandPseudo::expandMI(MachineBasicBlock &MBB,
      return expandSVESpillFill(MBB, MBBI, AArch64::LDR_ZXI, 2);
    case AArch64::BLR_RVMARKER:
      return expandCALL_RVMARKER(MBB, MBBI);
+   case AArch64::BLR_BTI:
+     return expandCALL_BTI(MBB, MBBI);
    case AArch64::StoreSwiftAsyncContext:
      return expandStoreSwiftAsyncContext(MBB, MBBI);
   }

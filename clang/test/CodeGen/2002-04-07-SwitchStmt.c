@@ -1,9 +1,9 @@
 // RUN: %clang_cc1 -emit-llvm %s  -o /dev/null
 
 int printf(const char *, ...);
-int foo();
+int foo(void);
 
-int main() {
+int main(void) {
   while (foo()) {
      switch (foo()) {
      case 0:

@@ -111,7 +111,7 @@ define float @v_constained_fma_f32_fpexcept_strict_fneg_fneg(float %x, float %y,
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX10-NEXT:    v_fma_f32 v0, -v1, -v0, v2
+; GFX10-NEXT:    v_fma_f32 v0, -v0, -v1, v2
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
   %neg.x = fneg float %x
   %neg.y = fneg float %y
@@ -130,7 +130,7 @@ define float @v_constained_fma_f32_fpexcept_strict_fabs_fabs(float %x, float %y,
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX10-NEXT:    v_fma_f32 v0, |v1|, |v0|, v2
+; GFX10-NEXT:    v_fma_f32 v0, |v0|, |v1|, v2
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
   %neg.x = call float @llvm.fabs.f32(float %x)
   %neg.y = call float @llvm.fabs.f32(float %y)
@@ -150,8 +150,8 @@ define <2 x float> @v_constained_fma_v2f32_fpexcept_strict_fneg_fneg(<2 x float>
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX10-NEXT:    v_fma_f32 v0, -v2, -v0, v4
-; GFX10-NEXT:    v_fma_f32 v1, -v3, -v1, v5
+; GFX10-NEXT:    v_fma_f32 v0, -v0, -v2, v4
+; GFX10-NEXT:    v_fma_f32 v1, -v1, -v3, v5
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
   %neg.x = fneg <2 x float> %x
   %neg.y = fneg <2 x float> %y

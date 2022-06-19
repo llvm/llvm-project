@@ -179,7 +179,7 @@ TEST(Error, HandleCustomError) {
     CaughtErrorInfo = CE.getInfo();
   });
 
-  EXPECT_TRUE(CaughtErrorInfo == 42) << "Wrong result from CustomError handler";
+  EXPECT_EQ(CaughtErrorInfo, 42) << "Wrong result from CustomError handler";
 }
 
 // Check that handler type deduction also works for handlers
@@ -253,7 +253,8 @@ TEST(Error, HandleCustomErrorWithCustomBaseClass) {
                     CaughtErrorExtraInfo = SE.getExtraInfo();
                   });
 
-  EXPECT_TRUE(CaughtErrorInfo == 42 && CaughtErrorExtraInfo == 7)
+  EXPECT_EQ(CaughtErrorInfo, 42) << "Wrong result from CustomSubError handler";
+  EXPECT_EQ(CaughtErrorExtraInfo, 7)
       << "Wrong result from CustomSubError handler";
 }
 
@@ -270,9 +271,9 @@ TEST(Error, FirstHandlerOnly) {
                   },
                   [&](const CustomError &CE) { DummyInfo = CE.getInfo(); });
 
-  EXPECT_TRUE(CaughtErrorInfo == 42 && CaughtErrorExtraInfo == 7 &&
-              DummyInfo == 0)
-      << "Activated the wrong Error handler(s)";
+  EXPECT_EQ(CaughtErrorInfo, 42) << "Activated the wrong Error handler(s)";
+  EXPECT_EQ(CaughtErrorExtraInfo, 7) << "Activated the wrong Error handler(s)";
+  EXPECT_EQ(DummyInfo, 0) << "Activated the wrong Error handler(s)";
 }
 
 // Check that general handlers shadow specific ones.
@@ -289,7 +290,11 @@ TEST(Error, HandlerShadowing) {
         DummyExtraInfo = SE.getExtraInfo();
       });
 
-  EXPECT_TRUE(CaughtErrorInfo == 42 && DummyInfo == 0 && DummyExtraInfo == 0)
+  EXPECT_EQ(CaughtErrorInfo, 42)
+      << "General Error handler did not shadow specific handler";
+  EXPECT_EQ(DummyInfo, 0)
+      << "General Error handler did not shadow specific handler";
+  EXPECT_EQ(DummyExtraInfo, 0)
       << "General Error handler did not shadow specific handler";
 }
 
@@ -317,9 +322,9 @@ TEST(Error, CheckJoinErrors) {
                     CustomErrorInfo1 = CE.getInfo();
                   });
 
-  EXPECT_TRUE(CustomErrorInfo1 == 7 && CustomErrorInfo2 == 42 &&
-              CustomErrorExtraInfo == 7)
-      << "Failed handling compound Error.";
+  EXPECT_EQ(CustomErrorInfo1, 7) << "Failed handling compound Error.";
+  EXPECT_EQ(CustomErrorInfo2, 42) << "Failed handling compound Error.";
+  EXPECT_EQ(CustomErrorExtraInfo, 7) << "Failed handling compound Error.";
 
   // Test appending a single item to a list.
   {
@@ -469,7 +474,7 @@ TEST(Error, createStringError) {
 }
 
 // Test that the ExitOnError utility works as expected.
-TEST(Error, ExitOnError) {
+TEST(ErrorDeathTest, ExitOnError) {
   ExitOnError ExitOnErr;
   ExitOnErr.setBanner("Error in tool:");
   ExitOnErr.setExitCodeMapper([](const Error &E) {
@@ -733,21 +738,19 @@ TEST(Error, ErrorCodeConversions) {
 
 // Test that error messages work.
 TEST(Error, ErrorMessage) {
-  EXPECT_EQ(toString(Error::success()).compare(""), 0);
+  EXPECT_EQ(toString(Error::success()), "");
 
   Error E1 = make_error<CustomError>(0);
-  EXPECT_EQ(toString(std::move(E1)).compare("CustomError {0}"), 0);
+  EXPECT_EQ(toString(std::move(E1)), "CustomError {0}");
 
   Error E2 = make_error<CustomError>(0);
   handleAllErrors(std::move(E2), [](const CustomError &CE) {
-    EXPECT_EQ(CE.message().compare("CustomError {0}"), 0);
+    EXPECT_EQ(CE.message(), "CustomError {0}");
   });
 
   Error E3 = joinErrors(make_error<CustomError>(0), make_error<CustomError>(1));
-  EXPECT_EQ(toString(std::move(E3))
-                .compare("CustomError {0}\n"
-                         "CustomError {1}"),
-            0);
+  EXPECT_EQ(toString(std::move(E3)), "CustomError {0}\n"
+                                     "CustomError {1}");
 }
 
 TEST(Error, Stream) {
@@ -933,12 +936,12 @@ TEST(Error, FileErrorTest) {
 
   Error E1 = make_error<CustomError>(1);
   Error FE1 = createFileError("file.bin", std::move(E1));
-  EXPECT_EQ(toString(std::move(FE1)).compare("'file.bin': CustomError {1}"), 0);
+  EXPECT_EQ(toString(std::move(FE1)), "'file.bin': CustomError {1}");
 
   Error E2 = make_error<CustomError>(2);
   Error FE2 = createFileError("file.bin", std::move(E2));
   handleAllErrors(std::move(FE2), [](const FileError &F) {
-    EXPECT_EQ(F.message().compare("'file.bin': CustomError {2}"), 0);
+    EXPECT_EQ(F.message(), "'file.bin': CustomError {2}");
   });
 
   Error E3 = make_error<CustomError>(3);
@@ -947,16 +950,49 @@ TEST(Error, FileErrorTest) {
     return F->takeError();
   });
   handleAllErrors(std::move(E31), [](const CustomError &C) {
-    EXPECT_EQ(C.message().compare("CustomError {3}"), 0);
+    EXPECT_EQ(C.message(), "CustomError {3}");
   });
 
   Error FE4 =
       joinErrors(createFileError("file.bin", make_error<CustomError>(41)),
                  createFileError("file2.bin", make_error<CustomError>(42)));
-  EXPECT_EQ(toString(std::move(FE4))
-                .compare("'file.bin': CustomError {41}\n"
-                         "'file2.bin': CustomError {42}"),
-            0);
+  EXPECT_EQ(toString(std::move(FE4)), "'file.bin': CustomError {41}\n"
+                                      "'file2.bin': CustomError {42}");
+
+  Error FE5 = createFileError("", make_error<CustomError>(5));
+  EXPECT_EQ(toString(std::move(FE5)), "'': CustomError {5}");
+
+  Error FE6 = createFileError("unused", make_error<CustomError>(6));
+  handleAllErrors(std::move(FE6), [](std::unique_ptr<FileError> F) {
+    EXPECT_EQ(F->messageWithoutFileInfo(), "CustomError {6}");
+  });
+}
+
+TEST(Error, FileErrorErrorCode) {
+  for (std::error_code EC : {
+           make_error_code(std::errc::not_supported),
+           make_error_code(std::errc::invalid_argument),
+           make_error_code(std::errc::no_such_file_or_directory),
+       }) {
+    EXPECT_EQ(EC, errorToErrorCode(
+                      createFileError("file.bin", EC)));
+    EXPECT_EQ(EC, errorToErrorCode(
+                      createFileError("file.bin", /*Line=*/5, EC)));
+    EXPECT_EQ(EC, errorToErrorCode(
+                      createFileError("file.bin", errorCodeToError(EC))));
+    EXPECT_EQ(EC, errorToErrorCode(
+                      createFileError("file.bin", /*Line=*/5, errorCodeToError(EC))));
+  }
+
+  // inconvertibleErrorCode() should be wrapped to avoid a fatal error.
+  EXPECT_EQ(
+      "A file error occurred.",
+      errorToErrorCode(createFileError("file.bin", inconvertibleErrorCode()))
+          .message());
+  EXPECT_EQ(
+      "A file error occurred.",
+      errorToErrorCode(createFileError("file.bin", /*Line=*/5, inconvertibleErrorCode()))
+          .message());
 }
 
 enum class test_error_code {
@@ -1010,25 +1046,89 @@ char TestDebugError::ID;
 
 TEST(Error, SubtypeStringErrorTest) {
   auto E1 = make_error<TestDebugError>(test_error_code::error_1);
-  EXPECT_EQ(toString(std::move(E1)).compare("Error 1."), 0);
+  EXPECT_EQ(toString(std::move(E1)), "Error 1.");
 
   auto E2 = make_error<TestDebugError>(test_error_code::error_1,
                                        "Detailed information");
-  EXPECT_EQ(toString(std::move(E2)).compare("Error 1. Detailed information"),
-            0);
+  EXPECT_EQ(toString(std::move(E2)), "Error 1. Detailed information");
 
   auto E3 = make_error<TestDebugError>(test_error_code::error_2);
   handleAllErrors(std::move(E3), [](const TestDebugError &F) {
-    EXPECT_EQ(F.message().compare("Error 2."), 0);
+    EXPECT_EQ(F.message(), "Error 2.");
   });
 
   auto E4 = joinErrors(make_error<TestDebugError>(test_error_code::error_1,
                                                   "Detailed information"),
                        make_error<TestDebugError>(test_error_code::error_2));
-  EXPECT_EQ(toString(std::move(E4))
-                .compare("Error 1. Detailed information\n"
-                         "Error 2."),
-            0);
+  EXPECT_EQ(toString(std::move(E4)), "Error 1. Detailed information\n"
+                                     "Error 2.");
+}
+
+static Error createAnyError() {
+  return errorCodeToError(test_error_code::unspecified);
+}
+
+struct MoveOnlyBox {
+  Optional<int> Box;
+
+  explicit MoveOnlyBox(int I) : Box(I) {}
+  MoveOnlyBox() = default;
+  MoveOnlyBox(MoveOnlyBox &&) = default;
+  MoveOnlyBox &operator=(MoveOnlyBox &&) = default;
+
+  MoveOnlyBox(const MoveOnlyBox &) = delete;
+  MoveOnlyBox &operator=(const MoveOnlyBox &) = delete;
+
+  bool operator==(const MoveOnlyBox &RHS) const {
+    if (bool(Box) != bool(RHS.Box))
+      return false;
+    return Box ? *Box == *RHS.Box : false;
+  }
+};
+
+TEST(Error, moveInto) {
+  // Use MoveOnlyBox as the T in Expected<T>.
+  auto make = [](int I) -> Expected<MoveOnlyBox> { return MoveOnlyBox(I); };
+  auto makeFailure = []() -> Expected<MoveOnlyBox> { return createAnyError(); };
+
+  {
+    MoveOnlyBox V;
+
+    // Failure with no prior value.
+    EXPECT_THAT_ERROR(makeFailure().moveInto(V), Failed());
+    EXPECT_EQ(None, V.Box);
+
+    // Success with no prior value.
+    EXPECT_THAT_ERROR(make(5).moveInto(V), Succeeded());
+    EXPECT_EQ(5, V.Box);
+
+    // Success with an existing value.
+    EXPECT_THAT_ERROR(make(7).moveInto(V), Succeeded());
+    EXPECT_EQ(7, V.Box);
+
+    // Failure with an existing value. Might be nice to assign a
+    // default-constructed value in this case, but for now it's being left
+    // alone.
+    EXPECT_THAT_ERROR(makeFailure().moveInto(V), Failed());
+    EXPECT_EQ(7, V.Box);
+  }
+
+  // Check that this works with optionals too.
+  {
+    // Same cases as above.
+    Optional<MoveOnlyBox> MaybeV;
+    EXPECT_THAT_ERROR(makeFailure().moveInto(MaybeV), Failed());
+    EXPECT_EQ(None, MaybeV);
+
+    EXPECT_THAT_ERROR(make(5).moveInto(MaybeV), Succeeded());
+    EXPECT_EQ(MoveOnlyBox(5), MaybeV);
+
+    EXPECT_THAT_ERROR(make(7).moveInto(MaybeV), Succeeded());
+    EXPECT_EQ(MoveOnlyBox(7), MaybeV);
+
+    EXPECT_THAT_ERROR(makeFailure().moveInto(MaybeV), Failed());
+    EXPECT_EQ(MoveOnlyBox(7), MaybeV);
+  }
 }
 
 } // namespace

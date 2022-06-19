@@ -35,7 +35,7 @@
 # CHECK-NEXT:   0x14000{{.*}}
 # CHECK-NEXT: ]
 
-# There should be no .gfids section in the output exectuable when we link with
+# There should be no .gfids section in the output executable when we link with
 # -guard:cf or with no -guard:cf/nolongjmp flag.
 # RUN: llvm-readobj --sections %t.exe | FileCheck %s --check-prefix NOGFIDSEC
 # RUN: lld-link %t.obj -out:%t.exe -opt:icf -entry:main

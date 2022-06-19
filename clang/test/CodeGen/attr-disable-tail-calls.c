@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple x86_64-apple-macosx10.7.0 %s -emit-llvm -mdisable-tail-calls -o - | FileCheck %s -check-prefix=DISABLE
+// RUN: %clang_cc1 -triple x86_64-apple-macosx10.7.0 %s -emit-llvm -fno-optimize-sibling-calls -o - | FileCheck %s -check-prefix=DISABLE
 // RUN: %clang_cc1 -triple x86_64-apple-macosx10.7.0 %s -emit-llvm -o - | FileCheck %s -check-prefix=ENABLE
 
 // DISABLE: define{{.*}} i32 @f1() [[ATTRTRUE:#[0-9]+]] {
@@ -6,11 +6,11 @@
 // ENABLE: define{{.*}} i32 @f1() [[ATTRFALSE:#[0-9]+]] {
 // ENABLE: define{{.*}} i32 @f2() [[ATTRTRUE:#[0-9]+]] {
 
-int f1() {
+int f1(void) {
   return 0;
 }
 
-int f2() __attribute__((disable_tail_calls)) {
+int f2(void) __attribute__((disable_tail_calls)) {
   return 0;
 }
 

@@ -1,6 +1,6 @@
 ; RUN: opt -aa-pipeline=basic-aa -passes='loop(loop-interchange)'       -S %s | FileCheck %s --check-prefixes INTC
-; RUN: opt -aa-pipeline=basic-aa -passes='loop(lnicm,loop-interchange)' -S %s | FileCheck %s --check-prefixes LNICM,CHECK
-; RUN: opt -aa-pipeline=basic-aa -passes='loop(licm,loop-interchange)'  -S %s | FileCheck %s --check-prefixes LICM,CHECK
+; RUN: opt -aa-pipeline=basic-aa -passes='loop-mssa(lnicm),loop(loop-interchange)' -S %s | FileCheck %s --check-prefixes LNICM,CHECK
+; RUN: opt -aa-pipeline=basic-aa -passes='loop-mssa(licm),loop(loop-interchange)'  -S %s | FileCheck %s --check-prefixes LICM,CHECK
 
 ; This test represents the following function:
 ; void test(int x[10][10], int y[10], int *z) {

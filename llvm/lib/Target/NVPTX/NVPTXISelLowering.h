@@ -451,6 +451,16 @@ public:
                           MachineFunction &MF,
                           unsigned Intrinsic) const override;
 
+  /// getFunctionParamOptimizedAlign - since function arguments are passed via
+  /// .param space, we may want to increase their alignment in a way that
+  /// ensures that we can effectively vectorize their loads & stores. We can
+  /// increase alignment only if the function has internal or has private
+  /// linkage as for other linkage types callers may already rely on default
+  /// alignment. To allow using 128-bit vectorized loads/stores, this function
+  /// ensures that alignment is 16 or greater.
+  Align getFunctionParamOptimizedAlign(const Function *F, Type *ArgTy,
+                                       const DataLayout &DL) const;
+
   /// isLegalAddressingMode - Return true if the addressing mode represented
   /// by AM is legal for this target, for a load/store of the specified type
   /// Used to guide target specific optimizations, like loop strength
@@ -550,6 +560,17 @@ public:
   // and avoids calling ctlz in that case.  We have a dedicated ctlz
   // instruction, so we say that ctlz is cheap to speculate.
   bool isCheapToSpeculateCtlz() const override { return true; }
+
+  AtomicExpansionKind shouldCastAtomicLoadInIR(LoadInst *LI) const override {
+    return AtomicExpansionKind::None;
+  }
+
+  AtomicExpansionKind shouldCastAtomicStoreInIR(StoreInst *SI) const override {
+    return AtomicExpansionKind::None;
+  }
+
+  AtomicExpansionKind
+  shouldExpandAtomicRMWInIR(AtomicRMWInst *AI) const override;
 
 private:
   const NVPTXSubtarget &STI; // cache the subtarget here

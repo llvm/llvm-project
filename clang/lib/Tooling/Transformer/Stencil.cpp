@@ -11,7 +11,6 @@
 #include "clang/AST/ASTTypeTraits.h"
 #include "clang/AST/Expr.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
-#include "clang/ASTMatchers/ASTMatchers.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Lex/Lexer.h"
 #include "clang/Tooling/Transformer/SourceCode.h"
@@ -27,14 +26,15 @@
 using namespace clang;
 using namespace transformer;
 
+using ast_matchers::BoundNodes;
 using ast_matchers::MatchFinder;
 using llvm::errc;
 using llvm::Error;
 using llvm::Expected;
 using llvm::StringError;
 
-static llvm::Expected<DynTypedNode>
-getNode(const ast_matchers::BoundNodes &Nodes, StringRef Id) {
+static llvm::Expected<DynTypedNode> getNode(const BoundNodes &Nodes,
+                                            StringRef Id) {
   auto &NodesMap = Nodes.getMap();
   auto It = NodesMap.find(Id);
   if (It == NodesMap.end())
@@ -53,39 +53,6 @@ static Error printNode(StringRef Id, const MatchFinder::MatchResult &Match,
   NodeOrErr->print(Os, PrintingPolicy(Match.Context->getLangOpts()));
   *Result += Os.str();
   return Error::success();
-}
-
-// FIXME: Consider memoizing this function using the `ASTContext`.
-static bool isSmartPointerType(QualType Ty, ASTContext &Context) {
-  using namespace ::clang::ast_matchers;
-
-  // Optimization: hard-code common smart-pointer types. This can/should be
-  // removed if we start caching the results of this function.
-  auto KnownSmartPointer =
-      cxxRecordDecl(hasAnyName("::std::unique_ptr", "::std::shared_ptr"));
-  const auto QuacksLikeASmartPointer = cxxRecordDecl(
-      hasMethod(cxxMethodDecl(hasOverloadedOperatorName("->"),
-                              returns(qualType(pointsTo(type()))))),
-      hasMethod(cxxMethodDecl(hasOverloadedOperatorName("*"),
-                              returns(qualType(references(type()))))));
-  const auto SmartPointer = qualType(hasDeclaration(
-      cxxRecordDecl(anyOf(KnownSmartPointer, QuacksLikeASmartPointer))));
-  return match(SmartPointer, Ty, Context).size() > 0;
-}
-
-// Identifies use of `operator*` on smart pointers, and returns the underlying
-// smart-pointer expression; otherwise, returns null.
-static const Expr *isSmartDereference(const Expr &E, ASTContext &Context) {
-  using namespace ::clang::ast_matchers;
-
-  const auto HasOverloadedArrow = cxxRecordDecl(hasMethod(cxxMethodDecl(
-      hasOverloadedOperatorName("->"), returns(qualType(pointsTo(type()))))));
-  // Verify it is a smart pointer by finding `operator->` in the class
-  // declaration.
-  auto Deref = cxxOperatorCallExpr(
-      hasOverloadedOperatorName("*"), hasUnaryOperand(expr().bind("arg")),
-      callee(cxxMethodDecl(ofClass(HasOverloadedArrow))));
-  return selectFirst<Expr>("arg", match(Deref, E, Context));
 }
 
 namespace {
@@ -195,7 +162,7 @@ public:
       break;
     case UnaryNodeOperator::MaybeDeref:
       if (E->getType()->isAnyPointerType() ||
-          isSmartPointerType(E->getType(), *Match.Context)) {
+          tooling::isKnownPointerLikeType(E->getType(), *Match.Context)) {
         // Strip off any operator->. This can only occur inside an actual arrow
         // member access, so we treat it as equivalent to an actual object
         // expression.
@@ -215,7 +182,7 @@ public:
       break;
     case UnaryNodeOperator::MaybeAddressOf:
       if (E->getType()->isAnyPointerType() ||
-          isSmartPointerType(E->getType(), *Match.Context)) {
+          tooling::isKnownPointerLikeType(E->getType(), *Match.Context)) {
         // Strip off any operator->. This can only occur inside an actual arrow
         // member access, so we treat it as equivalent to an actual object
         // expression.
@@ -310,34 +277,12 @@ public:
     if (E == nullptr)
       return llvm::make_error<StringError>(errc::invalid_argument,
                                            "Id not bound: " + BaseId);
-    if (!E->isImplicitCXXThis()) {
-      llvm::Optional<std::string> S;
-      if (E->getType()->isAnyPointerType() ||
-          isSmartPointerType(E->getType(), *Match.Context)) {
-        // Strip off any operator->. This can only occur inside an actual arrow
-        // member access, so we treat it as equivalent to an actual object
-        // expression.
-        if (const auto *OpCall = dyn_cast<clang::CXXOperatorCallExpr>(E)) {
-          if (OpCall->getOperator() == clang::OO_Arrow &&
-              OpCall->getNumArgs() == 1) {
-            E = OpCall->getArg(0);
-          }
-        }
-        S = tooling::buildArrow(*E, *Match.Context);
-      } else if (const auto *Operand = isSmartDereference(*E, *Match.Context)) {
-        // `buildDot` already handles the built-in dereference operator, so we
-        // only need to catch overloaded `operator*`.
-        S = tooling::buildArrow(*Operand, *Match.Context);
-      } else {
-        S = tooling::buildDot(*E, *Match.Context);
-      }
-      if (S.hasValue())
-        *Result += *S;
-      else
-        return llvm::make_error<StringError>(
-            errc::invalid_argument,
-            "Could not construct object text from ID: " + BaseId);
-    }
+    llvm::Optional<std::string> S = tooling::buildAccess(*E, *Match.Context);
+    if (!S.hasValue())
+      return llvm::make_error<StringError>(
+          errc::invalid_argument,
+          "Could not construct object text from ID: " + BaseId);
+    *Result += *S;
     return Member->eval(Match, Result);
   }
 };
@@ -364,6 +309,73 @@ public:
     return (M.find(Id) != M.end() ? TrueStencil : FalseStencil)
         ->eval(Match, Result);
   }
+};
+
+class SelectBoundStencil : public clang::transformer::StencilInterface {
+  static bool containsNoNullStencils(
+      const std::vector<std::pair<std::string, Stencil>> &Cases) {
+    for (const auto &S : Cases)
+      if (S.second == nullptr)
+        return false;
+    return true;
+  }
+
+public:
+  SelectBoundStencil(std::vector<std::pair<std::string, Stencil>> Cases,
+                     Stencil Default)
+      : CaseStencils(std::move(Cases)), DefaultStencil(std::move(Default)) {
+    assert(containsNoNullStencils(CaseStencils) &&
+           "cases of selectBound may not be null");
+  }
+  ~SelectBoundStencil() override{};
+
+  llvm::Error eval(const MatchFinder::MatchResult &match,
+                   std::string *result) const override {
+    const BoundNodes::IDToNodeMap &NodeMap = match.Nodes.getMap();
+    for (const auto &S : CaseStencils) {
+      if (NodeMap.count(S.first) > 0) {
+        return S.second->eval(match, result);
+      }
+    }
+
+    if (DefaultStencil != nullptr) {
+      return DefaultStencil->eval(match, result);
+    }
+
+    llvm::SmallVector<llvm::StringRef, 2> CaseIDs;
+    CaseIDs.reserve(CaseStencils.size());
+    for (const auto &S : CaseStencils)
+      CaseIDs.emplace_back(S.first);
+
+    return llvm::createStringError(
+        errc::result_out_of_range,
+        llvm::Twine("selectBound failed: no cases bound and no default: {") +
+            llvm::join(CaseIDs, ", ") + "}");
+  }
+
+  std::string toString() const override {
+    std::string Buffer;
+    llvm::raw_string_ostream Stream(Buffer);
+    Stream << "selectBound({";
+    bool First = true;
+    for (const auto &S : CaseStencils) {
+      if (First)
+        First = false;
+      else
+        Stream << "}, ";
+      Stream << "{\"" << S.first << "\", " << S.second->toString();
+    }
+    Stream << "}}";
+    if (DefaultStencil != nullptr) {
+      Stream << ", " << DefaultStencil->toString();
+    }
+    Stream << ")";
+    return Stream.str();
+  }
+
+private:
+  std::vector<std::pair<std::string, Stencil>> CaseStencils;
+  Stencil DefaultStencil;
 };
 
 class SequenceStencil : public StencilInterface {
@@ -460,6 +472,13 @@ Stencil transformer::ifBound(StringRef Id, Stencil TrueStencil,
                              Stencil FalseStencil) {
   return std::make_shared<IfBoundStencil>(Id, std::move(TrueStencil),
                                           std::move(FalseStencil));
+}
+
+Stencil transformer::selectBound(
+    std::vector<std::pair<std::string, Stencil>> CaseStencils,
+    Stencil DefaultStencil) {
+  return std::make_shared<SelectBoundStencil>(std::move(CaseStencils),
+                                              std::move(DefaultStencil));
 }
 
 Stencil transformer::run(MatchConsumer<std::string> Fn) {

@@ -36,19 +36,19 @@ def testParseSuccess():
     # A first import is expected to fail because the pass isn't registered
     # until we import mlir.transforms
     try:
-      pm = PassManager.parse("module(func(print-op-stats))")
+      pm = PassManager.parse("builtin.module(func.func(print-op-stats{json=false}))")
       # TODO: this error should be propagate to Python but the C API does not help right now.
       # CHECK: error: 'print-op-stats' does not refer to a registered pass or pass pipeline
     except ValueError as e:
-      # CHECK: ValueError exception: invalid pass pipeline 'module(func(print-op-stats))'.
+      # CHECK: ValueError exception: invalid pass pipeline 'builtin.module(func.func(print-op-stats{json=false}))'.
       log("ValueError exception:", e)
     else:
       log("Exception not produced")
 
     # This will register the pass and round-trip should be possible now.
     import mlir.transforms
-    pm = PassManager.parse("module(func(print-op-stats))")
-    # CHECK: Roundtrip: module(func(print-op-stats))
+    pm = PassManager.parse("builtin.module(func.func(print-op-stats{json=false}))")
+    # CHECK: Roundtrip: builtin.module(func.func(print-op-stats{json=false}))
     log("Roundtrip: ", pm)
 run(testParseSuccess)
 
@@ -71,10 +71,11 @@ run(testParseFail)
 def testInvalidNesting():
   with Context():
     try:
-      pm = PassManager.parse("func(view-op-graph)")
+      import mlir.all_passes_registration
+      pm = PassManager.parse("func.func(normalize-memrefs)")
     except ValueError as e:
-      # CHECK: Can't add pass 'ViewOpGraphPass' restricted to 'module' on a PassManager intended to run on 'func', did you intend to nest?
-      # CHECK: ValueError exception: invalid pass pipeline 'func(view-op-graph)'.
+      # CHECK: Can't add pass 'NormalizeMemRefs' restricted to 'builtin.module' on a PassManager intended to run on 'func.func', did you intend to nest?
+      # CHECK: ValueError exception: invalid pass pipeline 'func.func(normalize-memrefs)'.
       log("ValueError exception:", e)
     else:
       log("Exception not produced")
@@ -85,11 +86,11 @@ run(testInvalidNesting)
 # CHECK-LABEL: TEST: testRun
 def testRunPipeline():
   with Context():
-    pm = PassManager.parse("print-op-stats")
-    module = Module.parse(r"""func @successfulParse() { return }""")
+    pm = PassManager.parse("print-op-stats{json=false}")
+    module = Module.parse(r"""func.func @successfulParse() { return }""")
     pm.run(module)
 # CHECK: Operations encountered:
-# CHECK: func              , 1
-# CHECK: module            , 1
-# CHECK: std.return        , 1
+# CHECK: builtin.module    , 1
+# CHECK: func.func      , 1
+# CHECK: func.return        , 1
 run(testRunPipeline)

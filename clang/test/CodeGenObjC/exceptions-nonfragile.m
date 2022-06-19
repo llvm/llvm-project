@@ -3,8 +3,8 @@
 // rdar://problem/8535238
 // CHECK: declare void @objc_exception_rethrow()
 
-void protos() {
-  extern void foo();
+void protos(void) {
+  extern void foo(void);
   @try {
     foo();
   } @catch (id e) {
@@ -12,7 +12,7 @@ void protos() {
   }
 }
 
-void throwing() {
+void throwing(void) {
   @throw(@"error!");
 }
 

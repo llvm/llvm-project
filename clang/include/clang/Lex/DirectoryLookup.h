@@ -91,6 +91,10 @@ public:
     return isNormalDir() ? &u.Dir.getDirEntry() : nullptr;
   }
 
+  Optional<DirectoryEntryRef> getDirRef() const {
+    return isNormalDir() ? Optional<DirectoryEntryRef>(u.Dir) : None;
+  }
+
   /// getFrameworkDir - Return the directory that this framework refers to.
   ///
   const DirectoryEntry *getFrameworkDir() const {

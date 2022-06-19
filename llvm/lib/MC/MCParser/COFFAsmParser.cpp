@@ -13,11 +13,8 @@
 #include "llvm/BinaryFormat/COFF.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCDirectives.h"
-#include "llvm/MC/MCObjectFileInfo.h"
 #include "llvm/MC/MCParser/MCAsmLexer.h"
 #include "llvm/MC/MCParser/MCAsmParserExtension.h"
-#include "llvm/MC/MCParser/MCTargetAsmParser.h"
-#include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/MC/MCSectionCOFF.h"
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/SectionKind.h"
@@ -322,7 +319,7 @@ bool COFFAsmParser::ParseSectionSwitch(StringRef Section,
     return TokError("unexpected token in section switching directive");
   Lex();
 
-  getStreamer().SwitchSection(getContext().getCOFFSection(
+  getStreamer().switchSection(getContext().getCOFFSection(
       Section, Characteristics, Kind, COMDATSymName, Type));
 
   return false;
@@ -419,7 +416,7 @@ bool COFFAsmParser::ParseDirectiveDef(StringRef, SMLoc) {
 
   MCSymbol *Sym = getContext().getOrCreateSymbol(SymbolName);
 
-  getStreamer().BeginCOFFSymbolDef(Sym);
+  getStreamer().beginCOFFSymbolDef(Sym);
 
   Lex();
   return false;
@@ -434,7 +431,7 @@ bool COFFAsmParser::ParseDirectiveScl(StringRef, SMLoc) {
     return TokError("unexpected token in directive");
 
   Lex();
-  getStreamer().EmitCOFFSymbolStorageClass(SymbolStorageClass);
+  getStreamer().emitCOFFSymbolStorageClass(SymbolStorageClass);
   return false;
 }
 
@@ -447,13 +444,13 @@ bool COFFAsmParser::ParseDirectiveType(StringRef, SMLoc) {
     return TokError("unexpected token in directive");
 
   Lex();
-  getStreamer().EmitCOFFSymbolType(Type);
+  getStreamer().emitCOFFSymbolType(Type);
   return false;
 }
 
 bool COFFAsmParser::ParseDirectiveEndef(StringRef, SMLoc) {
   Lex();
-  getStreamer().EndCOFFSymbolDef();
+  getStreamer().endCOFFSymbolDef();
   return false;
 }
 
@@ -482,7 +479,7 @@ bool COFFAsmParser::ParseDirectiveSecRel32(StringRef, SMLoc) {
   MCSymbol *Symbol = getContext().getOrCreateSymbol(SymbolID);
 
   Lex();
-  getStreamer().EmitCOFFSecRel32(Symbol, Offset);
+  getStreamer().emitCOFFSecRel32(Symbol, Offset);
   return false;
 }
 
@@ -508,7 +505,7 @@ bool COFFAsmParser::ParseDirectiveRVA(StringRef, SMLoc) {
 
     MCSymbol *Symbol = getContext().getOrCreateSymbol(SymbolID);
 
-    getStreamer().EmitCOFFImgRel32(Symbol, Offset);
+    getStreamer().emitCOFFImgRel32(Symbol, Offset);
     return false;
   };
 
@@ -528,7 +525,7 @@ bool COFFAsmParser::ParseDirectiveSafeSEH(StringRef, SMLoc) {
   MCSymbol *Symbol = getContext().getOrCreateSymbol(SymbolID);
 
   Lex();
-  getStreamer().EmitCOFFSafeSEH(Symbol);
+  getStreamer().emitCOFFSafeSEH(Symbol);
   return false;
 }
 
@@ -543,7 +540,7 @@ bool COFFAsmParser::ParseDirectiveSecIdx(StringRef, SMLoc) {
   MCSymbol *Symbol = getContext().getOrCreateSymbol(SymbolID);
 
   Lex();
-  getStreamer().EmitCOFFSectionIndex(Symbol);
+  getStreamer().emitCOFFSectionIndex(Symbol);
   return false;
 }
 
@@ -558,7 +555,7 @@ bool COFFAsmParser::ParseDirectiveSymIdx(StringRef, SMLoc) {
   MCSymbol *Symbol = getContext().getOrCreateSymbol(SymbolID);
 
   Lex();
-  getStreamer().EmitCOFFSymbolIndex(Symbol);
+  getStreamer().emitCOFFSymbolIndex(Symbol);
   return false;
 }
 
@@ -621,31 +618,31 @@ bool COFFAsmParser::ParseSEHDirectiveStartProc(StringRef, SMLoc Loc) {
   MCSymbol *Symbol = getContext().getOrCreateSymbol(SymbolID);
 
   Lex();
-  getStreamer().EmitWinCFIStartProc(Symbol, Loc);
+  getStreamer().emitWinCFIStartProc(Symbol, Loc);
   return false;
 }
 
 bool COFFAsmParser::ParseSEHDirectiveEndProc(StringRef, SMLoc Loc) {
   Lex();
-  getStreamer().EmitWinCFIEndProc(Loc);
+  getStreamer().emitWinCFIEndProc(Loc);
   return false;
 }
 
 bool COFFAsmParser::ParseSEHDirectiveEndFuncletOrFunc(StringRef, SMLoc Loc) {
   Lex();
-  getStreamer().EmitWinCFIFuncletOrFuncEnd(Loc);
+  getStreamer().emitWinCFIFuncletOrFuncEnd(Loc);
   return false;
 }
 
 bool COFFAsmParser::ParseSEHDirectiveStartChained(StringRef, SMLoc Loc) {
   Lex();
-  getStreamer().EmitWinCFIStartChained(Loc);
+  getStreamer().emitWinCFIStartChained(Loc);
   return false;
 }
 
 bool COFFAsmParser::ParseSEHDirectiveEndChained(StringRef, SMLoc Loc) {
   Lex();
-  getStreamer().EmitWinCFIEndChained(Loc);
+  getStreamer().emitWinCFIEndChained(Loc);
   return false;
 }
 
@@ -671,13 +668,13 @@ bool COFFAsmParser::ParseSEHDirectiveHandler(StringRef, SMLoc Loc) {
   MCSymbol *handler = getContext().getOrCreateSymbol(SymbolID);
 
   Lex();
-  getStreamer().EmitWinEHHandler(handler, unwind, except, Loc);
+  getStreamer().emitWinEHHandler(handler, unwind, except, Loc);
   return false;
 }
 
 bool COFFAsmParser::ParseSEHDirectiveHandlerData(StringRef, SMLoc Loc) {
   Lex();
-  getStreamer().EmitWinEHHandlerData();
+  getStreamer().emitWinEHHandlerData();
   return false;
 }
 
@@ -690,20 +687,20 @@ bool COFFAsmParser::ParseSEHDirectiveAllocStack(StringRef, SMLoc Loc) {
     return TokError("unexpected token in directive");
 
   Lex();
-  getStreamer().EmitWinCFIAllocStack(Size, Loc);
+  getStreamer().emitWinCFIAllocStack(Size, Loc);
   return false;
 }
 
 bool COFFAsmParser::ParseSEHDirectiveEndProlog(StringRef, SMLoc Loc) {
   Lex();
-  getStreamer().EmitWinCFIEndProlog(Loc);
+  getStreamer().emitWinCFIEndProlog(Loc);
   return false;
 }
 
 bool COFFAsmParser::ParseAtUnwindOrAtExcept(bool &unwind, bool &except) {
   StringRef identifier;
-  if (getLexer().isNot(AsmToken::At))
-    return TokError("a handler attribute must begin with '@'");
+  if (getLexer().isNot(AsmToken::At) && getLexer().isNot(AsmToken::Percent))
+    return TokError("a handler attribute must begin with '@' or '%'");
   SMLoc startLoc = getLexer().getLoc();
   Lex();
   if (getParser().parseIdentifier(identifier))

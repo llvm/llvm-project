@@ -9,7 +9,6 @@
 #include "lldb/Interpreter/Property.h"
 
 #include "lldb/Core/UserSettingsController.h"
-#include "lldb/Host/StringConvert.h"
 #include "lldb/Interpreter/CommandInterpreter.h"
 #include "lldb/Interpreter/OptionArgParser.h"
 #include "lldb/Interpreter/OptionValues.h"
@@ -176,28 +175,32 @@ Property::Property(const PropertyDefinition &definition)
         std::make_shared<OptionValueRegex>(definition.default_cstr_value);
     break;
 
-  case OptionValue::eTypeSInt64:
+  case OptionValue::eTypeSInt64: {
     // "definition.default_uint_value" is the default integer value if
     // "definition.default_cstr_value" is NULL, otherwise interpret
     // "definition.default_cstr_value" as a string value that represents the
     // default value.
+    int64_t value = 0;
+    // FIXME: improve error handling for llvm::to_integer()
+    if (definition.default_cstr_value)
+      llvm::to_integer(definition.default_cstr_value, value);
     m_value_sp = std::make_shared<OptionValueSInt64>(
-        definition.default_cstr_value
-            ? StringConvert::ToSInt64(definition.default_cstr_value)
-            : definition.default_uint_value);
+        definition.default_cstr_value ? value : definition.default_uint_value);
     break;
-
-  case OptionValue::eTypeUInt64:
+  }
+  case OptionValue::eTypeUInt64: {
+    uint64_t value = 0;
+    // FIXME: improve error handling for llvm::to_integer()
+    if (definition.default_cstr_value)
+      llvm::to_integer(definition.default_cstr_value, value);
     // "definition.default_uint_value" is the default unsigned integer value if
     // "definition.default_cstr_value" is NULL, otherwise interpret
     // "definition.default_cstr_value" as a string value that represents the
     // default value.
     m_value_sp = std::make_shared<OptionValueUInt64>(
-        definition.default_cstr_value
-            ? StringConvert::ToUInt64(definition.default_cstr_value)
-            : definition.default_uint_value);
+        definition.default_cstr_value ? value : definition.default_uint_value);
     break;
-
+  }
   case OptionValue::eTypeUUID:
     // "definition.default_uint_value" is not used for a OptionValue::eTypeUUID
     // "definition.default_cstr_value" can contain a default UUID value
@@ -224,13 +227,13 @@ Property::Property(const PropertyDefinition &definition)
   }
 }
 
-Property::Property(ConstString name, ConstString desc,
-                   bool is_global, const lldb::OptionValueSP &value_sp)
+Property::Property(llvm::StringRef name, llvm::StringRef desc, bool is_global,
+                   const lldb::OptionValueSP &value_sp)
     : m_name(name), m_description(desc), m_value_sp(value_sp),
       m_is_global(is_global) {}
 
 bool Property::DumpQualifiedName(Stream &strm) const {
-  if (m_name) {
+  if (!m_name.empty()) {
     if (m_value_sp->DumpQualifiedName(strm))
       strm.PutChar('.');
     strm << m_name;
@@ -248,7 +251,7 @@ void Property::Dump(const ExecutionContext *exe_ctx, Stream &strm,
     if (dump_cmd && !transparent)
       strm << "settings set -f ";
     if (dump_desc || !transparent) {
-      if ((dump_mask & OptionValue::eDumpOptionName) && m_name) {
+      if ((dump_mask & OptionValue::eDumpOptionName) && !m_name.empty()) {
         DumpQualifiedName(strm);
         if (dump_mask & ~OptionValue::eDumpOptionName)
           strm.PutChar(' ');
@@ -292,8 +295,8 @@ void Property::DumpDescription(CommandInterpreter &interpreter, Stream &strm,
       interpreter.OutputFormattedHelpText(strm, qualified_name.GetString(),
                                           "--", desc, output_width);
     } else {
-      interpreter.OutputFormattedHelpText(strm, m_name.GetStringRef(), "--",
-                                          desc, output_width);
+      interpreter.OutputFormattedHelpText(strm, m_name, "--", desc,
+                                          output_width);
     }
   }
 }

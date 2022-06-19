@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple x86_64-darwin -std=c++11 -fobjc-arc -emit-llvm -o - %s | FileCheck %s --implicit-check-not "call\ "
+// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-darwin -std=c++11 -fobjc-arc -emit-llvm -o - %s | FileCheck %s --implicit-check-not "call\ "
 // rdar://problem/45805151
 
 struct Strong {
@@ -22,7 +22,7 @@ void f() {
   Inheritor({g()});
 }
 // CHECK-LABEL: define{{.*}} void @_Z1fv
-// CHECK:       %[[TMP:.*]] = call i8* @_Z1gv()
+// CHECK:       %[[TMP:.*]] = call noundef i8* @_Z1gv()
 // CHECK:       {{.*}} = notail call i8* @llvm.objc.retainAutoreleasedReturnValue(i8* %[[TMP]])
 // CHECK:       call void (%struct.Base*, i8*, ...) @_ZN4BaseC2E6Strongz(%struct.Base* {{.*}}, i8* {{.*}})
 // CHECK-NEXT:  call void @_ZN9InheritorD1Ev(%struct.Inheritor* {{.*}})

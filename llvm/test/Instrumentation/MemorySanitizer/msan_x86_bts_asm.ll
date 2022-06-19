@@ -2,11 +2,9 @@
 ; RUN: opt < %s -msan-kernel=1 -msan-check-access-address=0                    \
 ; RUN: -msan-handle-asm-conservative=0 -S -passes=msan 2>&1 | FileCheck        \
 ; RUN: "-check-prefix=CHECK" %s
-; RUN: opt < %s -msan -msan-kernel=1 -msan-check-access-address=0 -msan-handle-asm-conservative=0 -S | FileCheck -check-prefixes=CHECK %s
 ; RUN: opt < %s -msan-kernel=1 -msan-check-access-address=0                    \
 ; RUN: -msan-handle-asm-conservative=1 -S -passes=msan 2>&1 | FileCheck        \
 ; RUN: "-check-prefixes=CHECK,CHECK-CONS" %s
-; RUN: opt < %s -msan -msan-kernel=1 -msan-check-access-address=0 -msan-handle-asm-conservative=1 -S | FileCheck -check-prefixes=CHECK,CHECK-CONS %s
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
@@ -46,7 +44,7 @@ entry:
   store i64 0, i64* %nr, align 8
   store i64* %value, i64** %addr, align 8
   %0 = load i64, i64* %nr, align 8
-  call void asm "btsq $2, $1; setc $0", "=*qm,=*m,Ir,~{dirflag},~{fpsr},~{flags}"(i8* %bit, i64** %addr, i64 %0)
+  call void asm "btsq $2, $1; setc $0", "=*qm,=*m,Ir,~{dirflag},~{fpsr},~{flags}"(i8* elementtype(i8) %bit, i64** elementtype(i64*) %addr, i64 %0)
   %1 = load i8, i8* %bit, align 1
   %tobool = trunc i8 %1 to i1
   br i1 %tobool, label %if.then, label %if.else

@@ -13,15 +13,14 @@
 
 #include "test_iterators.h"
 
-#ifdef _LIBCPP_HAS_NO_RANGES
-#error "test/suppoort/test_range.h" can only be included in builds supporting ranges
+#if _LIBCPP_STD_VER < 17
+#error "test/support/test_range.h" can only be included in builds supporting ranges
 #endif
 
 struct sentinel {
   bool operator==(std::input_or_output_iterator auto const&) const;
 };
 
-// clang-format off
 template <template <class...> class I>
 requires std::input_or_output_iterator<I<int*> >
 struct test_range {
@@ -54,6 +53,30 @@ struct test_non_const_common_range {
   I<int*> end();
 };
 
-// clang-format on
+template <template <class...> class I>
+requires std::input_or_output_iterator<I<int*> >
+struct test_view : std::ranges::view_base {
+  I<int*> begin();
+  I<int const*> begin() const;
+  sentinel end();
+  sentinel end() const;
+};
+
+struct BorrowedRange {
+  int *begin() const;
+  int *end() const;
+  BorrowedRange(BorrowedRange&&) = delete;
+};
+template<> inline constexpr bool std::ranges::enable_borrowed_range<BorrowedRange> = true;
+static_assert(!std::ranges::view<BorrowedRange>);
+static_assert(std::ranges::borrowed_range<BorrowedRange>);
+
+using BorrowedView = std::ranges::empty_view<int>;
+static_assert(std::ranges::view<BorrowedView>);
+static_assert(std::ranges::borrowed_range<BorrowedView>);
+
+using NonBorrowedView = std::ranges::single_view<int>;
+static_assert(std::ranges::view<NonBorrowedView>);
+static_assert(!std::ranges::borrowed_range<NonBorrowedView>);
 
 #endif // LIBCXX_TEST_SUPPORT_TEST_RANGE_H

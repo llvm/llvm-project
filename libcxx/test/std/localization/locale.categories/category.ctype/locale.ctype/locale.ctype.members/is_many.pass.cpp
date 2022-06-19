@@ -12,6 +12,8 @@
 
 // const charT* do_is(const charT* low, const charT* high, mask* vec) const;
 
+// XFAIL: no-wide-characters
+
 #include <locale>
 #include <string>
 #include <vector>

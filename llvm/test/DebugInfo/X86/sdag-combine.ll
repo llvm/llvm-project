@@ -1,4 +1,5 @@
-; RUN: llc %s -stop-after=livedebugvars -o - | FileCheck %s
+; RUN: llc %s -stop-after=livedebugvars -o - -experimental-debug-variable-locations=false | FileCheck %s --check-prefix=CHECK
+; RUN: llc %s -stop-after=livedebugvars -o - -experimental-debug-variable-locations=true | FileCheck %s --check-prefix=INSTRREF
 source_filename = "/tmp/t.ll"
 target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-apple-macosx10.13"
@@ -15,7 +16,8 @@ define swiftcc void @g() #0 !dbg !5 {
 entry:
   %0 = alloca %TSb, align 1
   %1 = call swiftcc i1 @f(), !dbg !7
-  ; CHECK: DBG_VALUE $rcx, $noreg, !8, !DIExpression(), debug-location !7
+  ; CHECK: DBG_VALUE $rcx, $noreg, !8, !DIExpression(),
+  ; INSTRREF: DBG_VALUE $ecx, $noreg, !8, !DIExpression(),
   call void @llvm.dbg.value(metadata i1 %1, metadata !8, metadata !DIExpression()), !dbg !7
   %2 = getelementptr inbounds %TSb, %TSb* %0, i32 0, i32 0, !dbg !7
   store i1 %1, i1* %2, align 1, !dbg !7

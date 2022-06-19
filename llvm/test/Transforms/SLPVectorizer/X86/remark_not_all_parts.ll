@@ -13,24 +13,20 @@ define i32 @foo(i32* nocapture readonly %diff) #0 {
 ; CHECK-NEXT:    [[A_088:%.*]] = phi i32 [ 0, [[ENTRY]] ], [ [[ADD24:%.*]], [[FOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP1:%.*]] = shl i64 [[INDVARS_IV]], 3
 ; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, i32* [[DIFF:%.*]], i64 [[TMP1]]
-; CHECK-NEXT:    [[TMP2:%.*]] = load i32, i32* [[ARRAYIDX]], align 4
-; CHECK-NEXT:    [[TMP3:%.*]] = or i64 [[TMP1]], 4
-; CHECK-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds i32, i32* [[DIFF]], i64 [[TMP3]]
-; CHECK-NEXT:    [[TMP4:%.*]] = load i32, i32* [[ARRAYIDX2]], align 4
-; CHECK-NEXT:    [[ADD3:%.*]] = add nsw i32 [[TMP4]], [[TMP2]]
+; CHECK-NEXT:    [[TMP2:%.*]] = or i64 [[TMP1]], 4
+; CHECK-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds i32, i32* [[DIFF]], i64 [[TMP2]]
 ; CHECK-NEXT:    [[ARRAYIDX6:%.*]] = getelementptr inbounds [8 x [8 x i32]], [8 x [8 x i32]]* [[M2]], i64 0, i64 [[INDVARS_IV]], i64 0
-; CHECK-NEXT:    store i32 [[ADD3]], i32* [[ARRAYIDX6]], align 16
-; CHECK-NEXT:    [[ADD10:%.*]] = add nsw i32 [[ADD3]], [[A_088]]
-; CHECK-NEXT:    [[TMP5:%.*]] = or i64 [[TMP1]], 1
-; CHECK-NEXT:    [[ARRAYIDX13:%.*]] = getelementptr inbounds i32, i32* [[DIFF]], i64 [[TMP5]]
-; CHECK-NEXT:    [[TMP6:%.*]] = load i32, i32* [[ARRAYIDX13]], align 4
-; CHECK-NEXT:    [[TMP7:%.*]] = or i64 [[TMP1]], 5
-; CHECK-NEXT:    [[ARRAYIDX16:%.*]] = getelementptr inbounds i32, i32* [[DIFF]], i64 [[TMP7]]
-; CHECK-NEXT:    [[TMP8:%.*]] = load i32, i32* [[ARRAYIDX16]], align 4
-; CHECK-NEXT:    [[ADD17:%.*]] = add nsw i32 [[TMP8]], [[TMP6]]
-; CHECK-NEXT:    [[ARRAYIDX20:%.*]] = getelementptr inbounds [8 x [8 x i32]], [8 x [8 x i32]]* [[M2]], i64 0, i64 [[INDVARS_IV]], i64 1
-; CHECK-NEXT:    store i32 [[ADD17]], i32* [[ARRAYIDX20]], align 4
-; CHECK-NEXT:    [[ADD24]] = add nsw i32 [[ADD10]], [[ADD17]]
+; CHECK-NEXT:    [[TMP3:%.*]] = bitcast i32* [[ARRAYIDX]] to <2 x i32>*
+; CHECK-NEXT:    [[TMP4:%.*]] = load <2 x i32>, <2 x i32>* [[TMP3]], align 4
+; CHECK-NEXT:    [[TMP5:%.*]] = bitcast i32* [[ARRAYIDX2]] to <2 x i32>*
+; CHECK-NEXT:    [[TMP6:%.*]] = load <2 x i32>, <2 x i32>* [[TMP5]], align 4
+; CHECK-NEXT:    [[TMP7:%.*]] = add nsw <2 x i32> [[TMP6]], [[TMP4]]
+; CHECK-NEXT:    [[TMP8:%.*]] = extractelement <2 x i32> [[TMP7]], i32 0
+; CHECK-NEXT:    [[ADD10:%.*]] = add nsw i32 [[TMP8]], [[A_088]]
+; CHECK-NEXT:    [[TMP9:%.*]] = bitcast i32* [[ARRAYIDX6]] to <2 x i32>*
+; CHECK-NEXT:    store <2 x i32> [[TMP7]], <2 x i32>* [[TMP9]], align 16
+; CHECK-NEXT:    [[TMP10:%.*]] = extractelement <2 x i32> [[TMP7]], i32 1
+; CHECK-NEXT:    [[ADD24]] = add nsw i32 [[ADD10]], [[TMP10]]
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
 ; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i64 [[INDVARS_IV_NEXT]], 8
 ; CHECK-NEXT:    br i1 [[EXITCOND]], label [[FOR_END:%.*]], label [[FOR_BODY]]
@@ -68,11 +64,13 @@ for.body:                                         ; preds = %for.body, %entry
   %add24 = add nsw i32 %add10, %add17
 
   ; YAML:      Pass:            slp-vectorizer
-  ; YAML-NEXT: Name:            NotPossible
+  ; YAML-NEXT: Name:            StoresVectorized
   ; YAML-NEXT: Function:        foo
   ; YAML-NEXT: Args:
-  ; YAML-NEXT:   - String:          'Cannot SLP vectorize list: vectorization was impossible'
-  ; YAML-NEXT:   - String:          ' with available vectorization factors'
+  ; YAML-NEXT:   - String:          'Stores SLP vectorized with cost '
+  ; YAML-NEXT:   - Cost:            '-1'
+  ; YAML-NEXT:   - String:          ' and with tree size '
+  ; YAML-NEXT:   - TreeSize:        '4'
 
   %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
   %exitcond = icmp eq i64 %indvars.iv.next, 8

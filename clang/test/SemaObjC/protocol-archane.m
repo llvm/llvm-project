@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -fsyntax-only -verify -Wno-pointer-to-int-cast -Wno-objc-root-class %s
+// RUN: %clang_cc1 -fsyntax-only -verify -Wno-pointer-to-int-cast -Wno-objc-root-class -Wno-strict-prototypes %s
 // rdar://5986251
 
 @protocol SomeProtocol

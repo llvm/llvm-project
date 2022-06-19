@@ -103,9 +103,6 @@ def AMDGPUconstdata_ptr : SDNode<
 // This argument to this node is a dword address.
 def AMDGPUdwordaddr : SDNode<"AMDGPUISD::DWORDADDR", SDTIntUnaryOp>;
 
-// Force dependencies for vector trunc stores
-def R600dummy_chain : SDNode<"AMDGPUISD::DUMMY_CHAIN", SDTNone, [SDNPHasChain]>;
-
 def AMDGPUcos_impl : SDNode<"AMDGPUISD::COS_HW", SDTFPUnaryOp>;
 def AMDGPUsin_impl : SDNode<"AMDGPUISD::SIN_HW", SDTFPUnaryOp>;
 // out = a - floor(a)
@@ -282,11 +279,18 @@ def AMDGPUmul_i24_impl : SDNode<"AMDGPUISD::MUL_I24", SDTIntBinOp,
   [SDNPCommutative, SDNPAssociative]
 >;
 
-def AMDGPUmulhi_u24 : SDNode<"AMDGPUISD::MULHI_U24", SDTIntBinOp,
-  [SDNPCommutative, SDNPAssociative]
+// mulhi24 yields the high-order 16 bits of the 48-bit result. Here's an example
+// that shows mulhi24 is not associative:
+//
+// Given a = 0x10002, b = c = 0xffffff:
+// mulhi24(mulhi24(a, b), c) = mulhi24(0x100, 0xffffff) = 0
+// Which is not equal to:
+// mulhi24(a, mulhi24(b, c)) = mulhi24(0x10002, 0xffff) = 1
+def AMDGPUmulhi_u24_impl : SDNode<"AMDGPUISD::MULHI_U24", SDTIntBinOp,
+  [SDNPCommutative]
 >;
-def AMDGPUmulhi_i24 : SDNode<"AMDGPUISD::MULHI_I24", SDTIntBinOp,
-  [SDNPCommutative, SDNPAssociative]
+def AMDGPUmulhi_i24_impl : SDNode<"AMDGPUISD::MULHI_I24", SDTIntBinOp,
+  [SDNPCommutative]
 >;
 
 def AMDGPUmad_u24 : SDNode<"AMDGPUISD::MAD_U24", AMDGPUDTIntTernaryOp,
@@ -329,11 +333,6 @@ def AMDGPUExportOp : SDTypeProfile<0, 8, [
 ]>;
 
 
-def R600ExportOp : SDTypeProfile<0, 7, [SDTCisFP<0>, SDTCisInt<1>]>;
-
-def R600_EXPORT: SDNode<"AMDGPUISD::R600_EXPORT", R600ExportOp,
-  [SDNPHasChain, SDNPSideEffect]>;
-
 //===----------------------------------------------------------------------===//
 // Flow Control Profile Types
 //===----------------------------------------------------------------------===//
@@ -356,7 +355,7 @@ def AMDGPUendpgm : SDNode<"AMDGPUISD::ENDPGM", SDTNone,
 def AMDGPUreturn_to_epilog : SDNode<"AMDGPUISD::RETURN_TO_EPILOG", SDTNone,
     [SDNPHasChain, SDNPOptInGlue, SDNPVariadic]>;
 
-def AMDGPUret_flag : SDNode<"AMDGPUISD::RET_FLAG", SDTypeProfile<0, 1, [SDTCisPtrTy<0>]>,
+def AMDGPUret_flag : SDNode<"AMDGPUISD::RET_FLAG", SDTNone,
   [SDNPHasChain, SDNPOptInGlue, SDNPVariadic]
 >;
 
@@ -442,6 +441,14 @@ def AMDGPUmul_u24 : PatFrags<(ops node:$src0, node:$src1),
 def AMDGPUmul_i24 : PatFrags<(ops node:$src0, node:$src1),
   [(int_amdgcn_mul_i24 node:$src0, node:$src1),
    (AMDGPUmul_i24_impl node:$src0, node:$src1)]>;
+
+def AMDGPUmulhi_u24 : PatFrags<(ops node:$src0, node:$src1),
+  [(int_amdgcn_mulhi_u24 node:$src0, node:$src1),
+   (AMDGPUmulhi_u24_impl node:$src0, node:$src1)]>;
+
+def AMDGPUmulhi_i24 : PatFrags<(ops node:$src0, node:$src1),
+  [(int_amdgcn_mulhi_i24 node:$src0, node:$src1),
+   (AMDGPUmulhi_i24_impl node:$src0, node:$src1)]>;
 
 def AMDGPUbfe_i32 : PatFrags<(ops node:$src0, node:$src1, node:$src2),
   [(int_amdgcn_sbfe node:$src0, node:$src1, node:$src2),

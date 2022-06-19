@@ -23,84 +23,39 @@ further below. All passes in MLIR derive from `OperationPass` and adhere to the
 following restrictions; any noncompliance will lead to problematic behavior in
 multithreaded and other advanced scenarios:
 
-*   Modify any state referenced or relied upon outside the current being
-    operated on. This includes adding or removing operations from the parent
-    block, changing the attributes(depending on the contract of the current
-    operation)/operands/results/successors of the current operation.
-*   Modify the state of another operation not nested within the current
+*   Must not modify any state referenced or relied upon outside the current
+    operation being operated on. This includes adding or removing operations
+    from the parent block, changing the attributes(depending on the contract
+    of the current operation)/operands/results/successors of the current operation.
+*   Must not modify the state of another operation not nested within the current
     operation being operated on.
     *   Other threads may be operating on these operations simultaneously.
-*   Inspect the state of sibling operations.
+*   Must not inspect the state of sibling operations.
     *   Other threads may be modifying these operations in parallel.
     *   Inspecting the state of ancestor/parent operations is permitted.
-*   Maintain mutable pass state across invocations of `runOnOperation`. A pass
-    may be run on many different operations with no guarantee of execution
-    order.
+*   Must not maintain mutable pass state across invocations of `runOnOperation`.
+    A pass may be run on many different operations with no guarantee of
+    execution order.
     *   When multithreading, a specific pass instance may not even execute on
         all operations within the IR. As such, a pass should not rely on running
         on all operations.
-*   Maintain any global mutable state, e.g. static variables within the source
-    file. All mutable state should be maintained by an instance of the pass.
+*   Must not maintain any global mutable state, e.g. static variables within the
+    source file. All mutable state should be maintained by an instance of the
+    pass.
 *   Must be copy-constructible
     *   Multiple instances of the pass may be created by the pass manager to
         process operations in parallel.
 
-When creating an operation pass, there are two different types to choose from
-depending on the usage scenario:
+### Op-Agnostic Operation Passes
 
-### OperationPass : Op-Specific
+By default, an operation pass is `op-agnostic`, meaning that it operates on the
+operation type of the pass manager that it is added to. This means a pass may operate
+on many different types of operations. Agnostic passes should be written such that
+they do not make assumptions on the operation they run on. Examples of this type of pass are
+[Canonicalization](Pass.md/-canonicalize-canonicalize-operations)
+[Common Sub-Expression Elimination](Passes.md/#-cse-eliminate-common-sub-expressions).
 
-An `op-specific` operation pass operates explicitly on a given operation type.
-This operation type must adhere to the restrictions set by the pass manager for
-pass execution.
-
-To define an op-specific operation pass, a derived class must adhere to the
-following:
-
-*   Inherit from the CRTP class `OperationPass` and provide the operation type
-    as an additional template parameter.
-*   Override the virtual `void runOnOperation()` method.
-
-A simple pass may look like:
-
-```c++
-namespace {
-/// Here we utilize the CRTP `PassWrapper` utility class to provide some
-/// necessary utility hooks. This is only necessary for passes defined directly
-/// in C++. Passes defined declaratively use a cleaner mechanism for providing
-/// these utilities.
-struct MyFunctionPass : public PassWrapper<MyFunctionPass,
-                                           OperationPass<FuncOp>> {
-  void runOnOperation() override {
-    // Get the current FuncOp operation being operated on.
-    FuncOp f = getOperation();
-
-    // Walk the operations within the function.
-    f.walk([](Operation *inst) {
-      ....
-    });
-  }
-};
-} // end anonymous namespace
-
-/// Register this pass so that it can be built via from a textual pass pipeline.
-/// (Pass registration is discussed more below)
-void registerMyPass() {
-  PassRegistration<MyFunctionPass>();
-}
-```
-
-### OperationPass : Op-Agnostic
-
-An `op-agnostic` pass operates on the operation type of the pass manager that it
-is added to. This means that passes of this type may operate on several
-different operation types. Passes of this type are generally written generically
-using operation [interfaces](Interfaces.md) and [traits](Traits.md). Examples of
-this type of pass are
-[Common Sub-Expression Elimination](Passes.md/#-cse-eliminate-common-sub-expressions)
-and [Inlining](Passes.md/#-inline-inline-function-calls).
-
-To create an operation pass, a derived class must adhere to the following:
+To create an agnostic operation pass, a derived class must adhere to the following:
 
 *   Inherit from the CRTP class `OperationPass`.
 *   Override the virtual `void runOnOperation()` method.
@@ -121,13 +76,115 @@ struct MyOperationPass : public PassWrapper<MyOperationPass, OperationPass<>> {
 };
 ```
 
+### Filtered Operation Pass
+
+If a pass needs to constrain its execution to specific types or classes of operations,
+additional filtering may be applied on top. This transforms a once `agnostic` pass into
+one more specific to a certain context. There are various ways in which to filter the
+execution of a pass, and different contexts in which filtering may apply:
+
+### Operation Pass: Static Schedule Filtering
+
+Static filtering allows for applying additional constraints on the operation types a
+pass may be scheduled on. This type of filtering generally allows for building more
+constrained passes that can only be scheduled on operations that satisfy the necessary
+constraints. For example, this allows for specifying passes that only run on operations
+of a certain, those that provide a certain interface, trait, or some other constraint that
+applies to all instances of that operation type. Below is an example of a pass that only
+permits scheduling on operations that implement `FunctionOpInterface`:
+
+```c++
+struct MyFunctionPass : ... {
+  /// This method is used to provide additional static filtering, and returns if the
+  /// pass may be scheduled on the given operation type.
+  bool canScheduleOn(RegisteredOperationName opInfo) const override {
+    return opInfo.hasInterface<FunctionOpInterface>();
+  }
+
+  void runOnOperation() {
+    // Here we can freely cast to FunctionOpInterface, because our `canScheduleOn` ensures
+    // that our pass is only executed on operations implementing that interface.
+    FunctionOpInterface op = cast<FunctionOpInterface>(getOperation()); 
+  }
+};
+```
+
+When a pass with static filtering is added to an [`op-specific` pass manager](#oppassmanager),
+it asserts that the operation type of the pass manager satisfies the static constraints of the
+pass. When added to an [`op-agnostic` pass manager](#oppassmanager), that pass manager, and all
+passes contained within, inherits the static constraints of the pass. For example, if the pass
+filters on `FunctionOpInterface`, as in the `MyFunctionPass` example above, only operations that
+implement `FunctionOpInterface` will be considered when executing **any** passes within the pass
+manager. This invariant is important to keep in mind, as each pass added to an `op-agnostic` pass
+manager further constrains the operations that may be scheduled on it. Consider the following example:
+
+```mlir
+func.func @foo() {
+  // ...
+  return
+}
+
+module @someModule {
+  // ...
+}
+```
+
+If we were to apply the op-agnostic pipeline, `any(cse,my-function-pass)`, to the above MLIR snippet
+it would only run on the `foo` function operation. This is because the `my-function-pass` has a
+static filtering constraint to only schedule on operations implementing `FunctionOpInterface`. Remember
+that this constraint is inherited by the entire pass manager, so we never consider `someModule` for
+any of the passes, including `cse` which normally can be scheduled on any operation.
+
+#### Operation Pass: Static Filtering By Op Type
+
+In the above section, we detailed a general mechanism for statically filtering the types of operations
+that a pass may be scheduled on. Sugar is provided on top of that mechanism to simplify the definition
+of passes that are restricted to scheduling on a single operation type. In these cases, a pass simply
+needs to provide the type of operation to the `OperationPass` base class. This will automatically
+instill filtering on that operation type:
+
+```c++
+/// Here we utilize the CRTP `PassWrapper` utility class to provide some
+/// necessary utility hooks. This is only necessary for passes defined directly
+/// in C++. Passes defined declaratively use a cleaner mechanism for providing
+/// these utilities.
+struct MyFunctionPass : public PassWrapper<MyOperationPass, OperationPass<func::FuncOp>> {
+  void runOnOperation() {
+    // Get the current operation being operated on.
+    func::FuncOp op = getOperation();
+  }
+};
+```
+
+#### Operation Pass: Static Filtering By Interface
+
+In the above section, we detailed a general mechanism for statically filtering the types of operations
+that a pass may be scheduled on. Sugar is provided on top of that mechanism to simplify the definition
+of passes that are restricted to scheduling on a specific operation interface. In these cases, a pass
+simply needs to inherit from the `InterfacePass` base class. This class is similar to `OperationPass`,
+but expects the type of interface to operate on. This will automatically instill filtering on that
+interface type:
+
+```c++
+/// Here we utilize the CRTP `PassWrapper` utility class to provide some
+/// necessary utility hooks. This is only necessary for passes defined directly
+/// in C++. Passes defined declaratively use a cleaner mechanism for providing
+/// these utilities.
+struct MyFunctionPass : public PassWrapper<MyOperationPass, InterfacePass<FunctionOpInterface>> {
+  void runOnOperation() {
+    // Get the current operation being operated on.
+    FunctionOpInterface op = getOperation();
+  }
+};
+```
+
 ### Dependent Dialects
 
 Dialects must be loaded in the MLIRContext before entities from these dialects
 (operations, types, attributes, ...) can be created. Dialects must also be
 loaded before starting the execution of a multi-threaded pass pipeline. To this
 end, a pass that may create an entity from a dialect that isn't guaranteed to
-already ne loaded must express this by overriding the `getDependentDialects()`
+already be loaded must express this by overriding the `getDependentDialects()`
 method and declare this list of Dialects explicitly.
 
 ### Initialization
@@ -292,32 +349,33 @@ used to schedule passes to run at a specific level of nesting. The top-level
 
 ### OpPassManager
 
-An `OpPassManager` is essentially a collection of passes to execute on an
-operation of a specific type. This operation type must adhere to the following
-requirement:
+An `OpPassManager` is essentially a collection of passes anchored to execute on
+operations at a given level of nesting. A pass manager may be `op-specific`
+(anchored on a specific operation type), or `op-agnostic` (not restricted to any
+specific operation, and executed on any viable operation type). Operation types that
+anchor pass managers must adhere to the following requirement:
 
 *   Must be registered and marked
     [`IsolatedFromAbove`](Traits.md/#isolatedfromabove).
 
-    *   Passes are expected to not modify operations at or above the current
+    *   Passes are expected not to modify operations at or above the current
         operation being processed. If the operation is not isolated, it may
         inadvertently modify or traverse the SSA use-list of an operation it is
         not supposed to.
 
-Passes can be added to a pass manager via `addPass`. The pass must either be an
-`op-specific` pass operating on the same operation type as `OpPassManager`, or
-an `op-agnostic` pass.
+Passes can be added to a pass manager via `addPass`.
 
 An `OpPassManager` is generally created by explicitly nesting a pipeline within
-another existing `OpPassManager` via the `nest<>` method. This method takes the
-operation type that the nested pass manager will operate on. At the top-level, a
-`PassManager` acts as an `OpPassManager`. Nesting in this sense, corresponds to
-the [structural](Tutorials/UnderstandingTheIRStructure.md) nesting within
+another existing `OpPassManager` via the `nest<OpT>` or `nestAny` methods. The
+former method takes the operation type that the nested pass manager will operate on.
+The latter method nests an `op-agnostic` pass manager, that may run on any viable
+operation type. Nesting in this sense, corresponds to the
+[structural](Tutorials/UnderstandingTheIRStructure.md) nesting within
 [Regions](LangRef.md/#regions) of the IR.
 
 For example, the following `.mlir`:
 
-```
+```mlir
 module {
   spv.module "Logical" "GLSL450" {
     func @foo() {
@@ -330,9 +388,9 @@ module {
 Has the nesting structure of:
 
 ```
-`module`
+`builtin.module`
   `spv.module`
-    `function`
+    `spv.func`
 ```
 
 Below is an example of constructing a pipeline that operates on the above
@@ -343,7 +401,7 @@ structure:
 // explicitly specific, the default is the builtin `module` operation.
 PassManager pm(ctx);
 // Note: We could also create the above `PassManager` this way.
-PassManager pm(ctx, /*operationName=*/"module");
+PassManager pm(ctx, /*operationName=*/"builtin.module");
 
 // Add a pass on the top-level module operation.
 pm.addPass(std::make_unique<MyModulePass>());
@@ -355,8 +413,14 @@ nestedModulePM.addPass(std::make_unique<MySPIRVModulePass>());
 
 // Nest a pass manager that operates on functions within the nested SPIRV
 // module.
-OpPassManager &nestedFunctionPM = nestedModulePM.nest<FuncOp>();
+OpPassManager &nestedFunctionPM = nestedModulePM.nest<func::FuncOp>();
 nestedFunctionPM.addPass(std::make_unique<MyFunctionPass>());
+
+// Nest an op-agnostic pass manager. This will operate on any viable
+// operation, e.g. func.func, spv.func, spv.module, builtin.module, etc.
+OpPassManager &nestedAnyPM = nestedModulePM.nestAny();
+nestedFunctionPM.addPass(createCanonicalizePass());
+nestedFunctionPM.addPass(createCSEPass());
 
 // Run the pass manager on the top-level module.
 ModuleOp m = ...;
@@ -371,12 +435,15 @@ OpPassManager<ModuleOp>
   MyModulePass
   OpPassManager<spirv::ModuleOp>
     MySPIRVModulePass
-    OpPassManager<FuncOp>
+    OpPassManager<func::FuncOp>
       MyFunctionPass
+    OpPassManager<>
+      Canonicalizer
+      CSE
 ```
 
 These pipelines are then run over a single operation at a time. This means that,
-for example, given a series of consecutive passes on FuncOp, it will execute all
+for example, given a series of consecutive passes on func::FuncOp, it will execute all
 on the first function, then all on the second function, etc. until the entire
 program has been run through the passes. This provides several benefits:
 
@@ -405,7 +472,7 @@ top-level `PassManager::run` method. A simple example is shown below:
 void MyModulePass::runOnOperation() {
   ModuleOp module = getOperation();
   if (hasSomeSpecificProperty(module)) {
-    OpPassManager dynamicPM("module");
+    OpPassManager dynamicPM("builtin.module");
     ...; // Build the dynamic pipeline.
     if (failed(runPipeline(dynamicPM, module)))
       return signalPassFailure();
@@ -430,9 +497,12 @@ components are integrated with the dynamic pipeline being executed.
 MLIR provides a builtin mechanism for passes to specify options that configure
 its behavior. These options are parsed at pass construction time independently
 for each instance of the pass. Options are defined using the `Option<>` and
-`ListOption<>` classes, and follow the
+`ListOption<>` classes, and generally follow the
 [LLVM command line](https://llvm.org/docs/CommandLine.html) flag definition
-rules. See below for a few examples:
+rules. One major distinction from the LLVM command line functionality is that
+all `ListOption`s are comma-separated, and delimited sub-ranges within individual
+elements of the list may contain commas that are not treated as separators for the
+top-level list.
 
 ```c++
 struct MyPass ... {
@@ -444,8 +514,7 @@ struct MyPass ... {
   /// Any parameters after the description are forwarded to llvm::cl::list and
   /// llvm::cl::opt respectively.
   Option<int> exampleOption{*this, "flag-name", llvm::cl::desc("...")};
-  ListOption<int> exampleListOption{*this, "list-flag-name",
-                                    llvm::cl::desc("...")};
+  ListOption<int> exampleListOption{*this, "list-flag-name", llvm::cl::desc("...")};
 };
 ```
 
@@ -491,8 +560,8 @@ infrastructure as
 [`llvm::Statistic`](http://llvm.org/docs/ProgrammersManual.html#the-statistic-class-stats-option)
 and thus have similar usage constraints. Collected statistics can be dumped by
 the [pass manager](#pass-manager) programmatically via
-`PassManager::enableStatistics`; or via `-pass-statistics` and
-`-pass-statistics-display` on the command line.
+`PassManager::enableStatistics`; or via `-mlir-pass-statistics` and
+`-mlir-pass-statistics-display` on the command line.
 
 An example is shown below:
 
@@ -531,12 +600,12 @@ A pipeline view that models the structure of the pass manager, this is the
 default view:
 
 ```shell
-$ mlir-opt -pass-pipeline='func(my-pass,my-pass)' foo.mlir -pass-statistics
+$ mlir-opt -pass-pipeline='func.func(my-pass,my-pass)' foo.mlir -mlir-pass-statistics
 
 ===-------------------------------------------------------------------------===
                          ... Pass statistics report ...
 ===-------------------------------------------------------------------------===
-'func' Pipeline
+'func.func' Pipeline
   MyPass
     (S) 15 exampleStat - An example statistic
   VerifierPass
@@ -550,7 +619,7 @@ A list view that aggregates the statistics of all instances of a specific pass
 together:
 
 ```shell
-$ mlir-opt -pass-pipeline='func(my-pass, my-pass)' foo.mlir -pass-statistics -pass-statistics-display=list
+$ mlir-opt -pass-pipeline='func.func(my-pass, my-pass)' foo.mlir -mlir-pass-statistics -mlir-pass-statistics-display=list
 
 ===-------------------------------------------------------------------------===
                          ... Pass statistics report ...
@@ -649,14 +718,17 @@ defined as a series of names, each of which may in itself recursively contain a
 nested pipeline description. The syntax for this specification is as follows:
 
 ```ebnf
-pipeline          ::= op-name `(` pipeline-element (`,` pipeline-element)* `)`
+pipeline          ::= op-anchor `(` pipeline-element (`,` pipeline-element)* `)`
 pipeline-element  ::= pipeline | (pass-name | pass-pipeline-name) options?
 options           ::= '{' (key ('=' value)?)+ '}'
 ```
 
-*   `op-name`
-    *   This corresponds to the mnemonic name of an operation to run passes on,
-        e.g. `func` or `module`.
+*   `op-anchor`
+    *   This corresponds to the mnemonic name that anchors the execution of the
+        pass manager. This is either the name of an operation to run passes on,
+        e.g. `func.func` or `builtin.module`, or `any`, for op-agnostic pass
+        managers that execute on any viable operation (i.e. any operation that
+        can be used to anchor a pass manager).
 *   `pass-name` | `pass-pipeline-name`
     *   This corresponds to the argument of a registered pass or pass pipeline,
         e.g. `cse` or `canonicalize`.
@@ -669,13 +741,17 @@ options           ::= '{' (key ('=' value)?)+ '}'
 For example, the following pipeline:
 
 ```shell
-$ mlir-opt foo.mlir -cse -canonicalize -convert-std-to-llvm='use-bare-ptr-memref-call-conv=1'
+$ mlir-opt foo.mlir -cse -canonicalize -convert-func-to-llvm='use-bare-ptr-memref-call-conv=1'
 ```
 
 Can also be specified as (via the `-pass-pipeline` flag):
 
 ```shell
-$ mlir-opt foo.mlir -pass-pipeline='func(cse,canonicalize),convert-std-to-llvm{use-bare-ptr-memref-call-conv=1}'
+# Anchor the cse and canonicalize passes on the `func.func` operation.
+$ mlir-opt foo.mlir -pass-pipeline='func.func(cse,canonicalize),convert-func-to-llvm{use-bare-ptr-memref-call-conv=1}'
+
+# Anchor the cse and canonicalize passes on "any" viable root operation.
+$ mlir-opt foo.mlir -pass-pipeline='any(cse,canonicalize),convert-func-to-llvm{use-bare-ptr-memref-call-conv=1}'
 ```
 
 In order to support round-tripping a pass to the textual representation using
@@ -704,8 +780,7 @@ struct MyPass : PassWrapper<MyPass, OperationPass<ModuleOp>> {
       llvm::cl::desc("An example option"), llvm::cl::init(true)};
   ListOption<int64_t> listOption{
       *this, "example-list",
-      llvm::cl::desc("An example list option"), llvm::cl::ZeroOrMore,
-      llvm::cl::MiscFlags::CommaSeparated};
+      llvm::cl::desc("An example list option"), llvm::cl::ZeroOrMore};
 
   // Specify any statistics.
   Statistic statistic{this, "example-statistic", "An example statistic"};
@@ -741,8 +816,7 @@ def MyPass : Pass<"my-pass", "ModuleOp"> {
     Option<"option", "example-option", "bool", /*default=*/"true",
            "An example option">,
     ListOption<"listOption", "example-list", "int64_t",
-               "An example list option",
-               "llvm::cl::ZeroOrMore, llvm::cl::MiscFlags::CommaSeparated">
+               "An example list option", "llvm::cl::ZeroOrMore">
   ];
 
   // Specify any statistics.
@@ -817,7 +891,7 @@ string corresponding to the operation type that the pass operates on. The class
 contains the following fields:
 
 *   `summary`
-    -   A short one line summary of the pass, used as the description when
+    -   A short one-line summary of the pass, used as the description when
         registering the pass.
 *   `description`
     -   A longer, more detailed description of the pass. This is used when
@@ -846,7 +920,7 @@ class takes the following template parameters:
 *   default value
     -   The default option value.
 *   description
-    -   A one line description of the option.
+    -   A one-line description of the option.
 *   additional option flags
     -   A string containing any additional options necessary to construct the
         option.
@@ -869,7 +943,7 @@ The `ListOption` class takes the following fields:
 *   element type
     -   The C++ type of the list element.
 *   description
-    -   A one line description of the option.
+    -   A one-line description of the option.
 *   additional option flags
     -   A string containing any additional options necessary to construct the
         option.
@@ -878,8 +952,7 @@ The `ListOption` class takes the following fields:
 def MyPass : Pass<"my-pass"> {
   let options = [
     ListOption<"listOption", "example-list", "int64_t",
-               "An example list option",
-               "llvm::cl::ZeroOrMore, llvm::cl::MiscFlags::CommaSeparated">
+               "An example list option", "llvm::cl::ZeroOrMore">
   ];
 }
 ```
@@ -894,7 +967,7 @@ template parameters:
 *   display name
     -   The name used when displaying the statistic.
 *   description
-    -   A one line description of the statistic.
+    -   A one-line description of the statistic.
 
 ```tablegen
 def MyPass : Pass<"my-pass"> {
@@ -938,7 +1011,7 @@ PassInstrumentation instances may be registered directly with a
 Instrumentations added to the PassManager are run in a stack like fashion, i.e.
 the last instrumentation to execute a `runBefore*` hook will be the first to
 execute the respective `runAfter*` hook. The hooks of a `PassInstrumentation`
-class are guaranteed to be executed in a thread safe fashion, so additional
+class are guaranteed to be executed in a thread-safe fashion, so additional
 synchronization is not necessary. Below in an example instrumentation that
 counts the number of times the `DominanceInfo` analysis is computed:
 
@@ -996,7 +1069,7 @@ pipeline. This display mode is available in mlir-opt via
 `-mlir-timing-display=list`.
 
 ```shell
-$ mlir-opt foo.mlir -mlir-disable-threading -pass-pipeline='func(cse,canonicalize)' -convert-std-to-llvm -mlir-timing -mlir-timing-display=list
+$ mlir-opt foo.mlir -mlir-disable-threading -pass-pipeline='func.func(cse,canonicalize)' -convert-func-to-llvm -mlir-timing -mlir-timing-display=list
 
 ===-------------------------------------------------------------------------===
                       ... Pass execution timing report ...
@@ -1021,7 +1094,7 @@ the most time, and can also be used to identify when analyses are being
 invalidated and recomputed. This is the default display mode.
 
 ```shell
-$ mlir-opt foo.mlir -mlir-disable-threading -pass-pipeline='func(cse,canonicalize)' -convert-std-to-llvm -mlir-timing
+$ mlir-opt foo.mlir -mlir-disable-threading -pass-pipeline='func.func(cse,canonicalize)' -convert-func-to-llvm -mlir-timing
 
 ===-------------------------------------------------------------------------===
                       ... Pass execution timing report ...
@@ -1029,7 +1102,7 @@ $ mlir-opt foo.mlir -mlir-disable-threading -pass-pipeline='func(cse,canonicaliz
   Total Execution Time: 0.0249 seconds
 
    ---Wall Time---  --- Name ---
-   0.0058 ( 70.8%)  'func' Pipeline
+   0.0058 ( 70.8%)  'func.func' Pipeline
    0.0004 (  4.3%)    CSE
    0.0002 (  2.6%)      (A) DominanceInfo
    0.0004 (  4.8%)    VerifierPass
@@ -1052,7 +1125,7 @@ perceived time, or clock time, whereas the `User Time` will display the total
 cpu time.
 
 ```shell
-$ mlir-opt foo.mlir -pass-pipeline='func(cse,canonicalize)' -convert-std-to-llvm -mlir-timing
+$ mlir-opt foo.mlir -pass-pipeline='func.func(cse,canonicalize)' -convert-func-to-llvm -mlir-timing
 
 ===-------------------------------------------------------------------------===
                       ... Pass execution timing report ...
@@ -1060,7 +1133,7 @@ $ mlir-opt foo.mlir -pass-pipeline='func(cse,canonicalize)' -convert-std-to-llvm
   Total Execution Time: 0.0078 seconds
 
    ---User Time---   ---Wall Time---  --- Name ---
-   0.0177 ( 88.5%)     0.0057 ( 71.3%)  'func' Pipeline
+   0.0177 ( 88.5%)     0.0057 ( 71.3%)  'func.func' Pipeline
    0.0044 ( 22.0%)     0.0015 ( 18.9%)    CSE
    0.0029 ( 14.5%)     0.0012 ( 15.2%)      (A) DominanceInfo
    0.0038 ( 18.9%)     0.0015 ( 18.7%)    VerifierPass
@@ -1082,38 +1155,38 @@ instrumentation can be added directly to the PassManager via the
 `enableIRPrinting` method. `mlir-opt` provides a few useful flags for utilizing
 this instrumentation:
 
-*   `print-ir-before=(comma-separated-pass-list)`
+*   `mlir-print-ir-before=(comma-separated-pass-list)`
     *   Print the IR before each of the passes provided within the pass list.
-*   `print-ir-before-all`
+*   `mlir-print-ir-before-all`
     *   Print the IR before every pass in the pipeline.
 
 ```shell
-$ mlir-opt foo.mlir -pass-pipeline='func(cse)' -print-ir-before=cse
+$ mlir-opt foo.mlir -pass-pipeline='func.func(cse)' -mlir-print-ir-before=cse
 
 *** IR Dump Before CSE ***
-func @simple_constant() -> (i32, i32) {
-  %c1_i32 = constant 1 : i32
-  %c1_i32_0 = constant 1 : i32
+func.func @simple_constant() -> (i32, i32) {
+  %c1_i32 = arith.constant 1 : i32
+  %c1_i32_0 = arith.constant 1 : i32
   return %c1_i32, %c1_i32_0 : i32, i32
 }
 ```
 
-*   `print-ir-after=(comma-separated-pass-list)`
+*   `mlir-print-ir-after=(comma-separated-pass-list)`
     *   Print the IR after each of the passes provided within the pass list.
-*   `print-ir-after-all`
+*   `mlir-print-ir-after-all`
     *   Print the IR after every pass in the pipeline.
 
 ```shell
-$ mlir-opt foo.mlir -pass-pipeline='func(cse)' -print-ir-after=cse
+$ mlir-opt foo.mlir -pass-pipeline='func.func(cse)' -mlir-print-ir-after=cse
 
 *** IR Dump After CSE ***
-func @simple_constant() -> (i32, i32) {
-  %c1_i32 = constant 1 : i32
+func.func @simple_constant() -> (i32, i32) {
+  %c1_i32 = arith.constant 1 : i32
   return %c1_i32, %c1_i32 : i32, i32
 }
 ```
 
-*   `print-ir-after-change`
+*   `mlir-print-ir-after-change`
     *   Only print the IR after a pass if the pass mutated the IR. This helps to
         reduce the number of IR dumps for "uninteresting" passes.
     *   Note: Changes are detected by comparing a hash of the operation before
@@ -1121,61 +1194,61 @@ func @simple_constant() -> (i32, i32) {
         the IR, and in some rare cases may result in false-positives depending
         on the collision rate of the hash algorithm used.
     *   Note: This option should be used in unison with one of the other
-        'print-ir-after' options above, as this option alone does not enable
+        'mlir-print-ir-after' options above, as this option alone does not enable
         printing.
 
 ```shell
-$ mlir-opt foo.mlir -pass-pipeline='func(cse,cse)' -print-ir-after=cse -print-ir-after-change
+$ mlir-opt foo.mlir -pass-pipeline='func.func(cse,cse)' -mlir-print-ir-after=cse -mlir-print-ir-after-change
 
 *** IR Dump After CSE ***
-func @simple_constant() -> (i32, i32) {
-  %c1_i32 = constant 1 : i32
+func.func @simple_constant() -> (i32, i32) {
+  %c1_i32 = arith.constant 1 : i32
   return %c1_i32, %c1_i32 : i32, i32
 }
 ```
 
-*   `print-ir-after-failure`
+*   `mlir-print-ir-after-failure`
     *   Only print IR after a pass failure.
-    *   This option should *not* be used with the other `print-ir-after` flags
+    *   This option should *not* be used with the other `mlir-print-ir-after` flags
         above.
 
 ```shell
-$ mlir-opt foo.mlir -pass-pipeline='func(cse,bad-pass)' -print-ir-failure
+$ mlir-opt foo.mlir -pass-pipeline='func.func(cse,bad-pass)' -mlir-print-ir-after-failure
 
 *** IR Dump After BadPass Failed ***
-func @simple_constant() -> (i32, i32) {
-  %c1_i32 = constant 1 : i32
+func.func @simple_constant() -> (i32, i32) {
+  %c1_i32 = arith.constant 1 : i32
   return %c1_i32, %c1_i32 : i32, i32
 }
 ```
 
-*   `print-ir-module-scope`
+*   `mlir-print-ir-module-scope`
     *   Always print the top-level module operation, regardless of pass type or
         operation nesting level.
     *   Note: Printing at module scope should only be used when multi-threading
         is disabled(`-mlir-disable-threading`)
 
 ```shell
-$ mlir-opt foo.mlir -mlir-disable-threading -pass-pipeline='func(cse)' -print-ir-after=cse -print-ir-module-scope
+$ mlir-opt foo.mlir -mlir-disable-threading -pass-pipeline='func.func(cse)' -mlir-print-ir-after=cse -mlir-print-ir-module-scope
 
-*** IR Dump After CSE ***  ('func' operation: @bar)
-func @bar(%arg0: f32, %arg1: f32) -> f32 {
+*** IR Dump After CSE ***  ('func.func' operation: @bar)
+func.func @bar(%arg0: f32, %arg1: f32) -> f32 {
   ...
 }
 
-func @simple_constant() -> (i32, i32) {
-  %c1_i32 = constant 1 : i32
-  %c1_i32_0 = constant 1 : i32
+func.func @simple_constant() -> (i32, i32) {
+  %c1_i32 = arith.constant 1 : i32
+  %c1_i32_0 = arith.constant 1 : i32
   return %c1_i32, %c1_i32_0 : i32, i32
 }
 
-*** IR Dump After CSE ***  ('func' operation: @simple_constant)
-func @bar(%arg0: f32, %arg1: f32) -> f32 {
+*** IR Dump After CSE ***  ('func.func' operation: @simple_constant)
+func.func @bar(%arg0: f32, %arg1: f32) -> f32 {
   ...
 }
 
-func @simple_constant() -> (i32, i32) {
-  %c1_i32 = constant 1 : i32
+func.func @simple_constant() -> (i32, i32) {
+  %c1_i32 = arith.constant 1 : i32
   return %c1_i32, %c1_i32 : i32, i32
 }
 ```
@@ -1186,17 +1259,17 @@ The [pass manager](#pass-manager) in MLIR contains a builtin mechanism to
 generate reproducibles in the event of a crash, or a
 [pass failure](#pass-failure). This functionality can be enabled via
 `PassManager::enableCrashReproducerGeneration` or via the command line flag
-`pass-pipeline-crash-reproducer`. In either case, an argument is provided that
+`mlir-pass-pipeline-crash-reproducer`. In either case, an argument is provided that
 corresponds to the output `.mlir` file name that the reproducible should be
 written to. The reproducible contains the configuration of the pass manager that
 was executing, as well as the initial IR before any passes were run. A potential
 reproducible may have the form:
 
 ```mlir
-// configuration: -pass-pipeline='func(cse,canonicalize),inline' -verify-each
+// configuration: -pass-pipeline='func.func(cse,canonicalize),inline' -verify-each
 
 module {
-  func @foo() {
+  func.func @foo() {
     ...
   }
 }
@@ -1214,7 +1287,7 @@ to its stream.
 
 An additional flag may be passed to
 `PassManager::enableCrashReproducerGeneration`, and specified via
-`pass-pipeline-local-reproducer` on the command line, that signals that the pass
+`mlir-pass-pipeline-local-reproducer` on the command line, that signals that the pass
 manager should attempt to generate a "local" reproducer. This will attempt to
 generate a reproducer containing IR right before the pass that fails. This is
 useful for situations where the crash is known to be within a specific pass, or
@@ -1228,10 +1301,10 @@ For example, if the failure in the previous example came from `canonicalize`,
 the following reproducer will be generated:
 
 ```mlir
-// configuration: -pass-pipeline='func(canonicalize)' -verify-each -mlir-disable-threading
+// configuration: -pass-pipeline='func.func(canonicalize)' -verify-each -mlir-disable-threading
 
 module {
-  func @foo() {
+  func.func @foo() {
     ...
   }
 }

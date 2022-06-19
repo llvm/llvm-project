@@ -18,24 +18,27 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/ADT/StringSet.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/GlobalValue.h"
-#include "llvm/IR/Module.h"
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorOr.h"
 #include "llvm/Support/MathExtras.h"
-#include "llvm/Support/raw_ostream.h"
 #include <algorithm>
 #include <cstdint>
+#include <list>
 #include <map>
 #include <set>
+#include <sstream>
 #include <string>
 #include <system_error>
+#include <unordered_map>
 #include <utility>
 
 namespace llvm {
+
+class DILocation;
+class raw_ostream;
 
 const std::error_category &sampleprof_category();
 
@@ -52,7 +55,6 @@ enum class sampleprof_error {
   not_implemented,
   counter_overflow,
   ostream_seek_unsupported,
-  compress_failed,
   uncompress_failed,
   zlib_unavailable,
   hash_mismatch
@@ -104,10 +106,10 @@ static inline uint64_t SPMagic(SampleProfileFormat Format = SPF_Binary) {
 /// current Format uses MD5 to represent the string.
 static inline StringRef getRepInFormat(StringRef Name, bool UseMD5,
                                        std::string &GUIDBuf) {
-  if (Name.empty())
+  if (Name.empty() || !UseMD5)
     return Name;
   GUIDBuf = std::to_string(Function::getGUID(Name));
-  return UseMD5 ? StringRef(GUIDBuf) : Name;
+  return GUIDBuf;
 }
 
 static inline uint64_t SPVersion() { return 103; }
@@ -122,13 +124,14 @@ enum SecType {
   SecProfileSymbolList = 3,
   SecFuncOffsetTable = 4,
   SecFuncMetadata = 5,
+  SecCSNameTable = 6,
   // marker for the first type of profile.
   SecFuncProfileFirst = 32,
   SecLBRProfile = SecFuncProfileFirst
 };
 
 static inline std::string getSecName(SecType Type) {
-  switch (Type) {
+  switch ((int)Type) { // Avoid -Wcovered-switch-default
   case SecInValid:
     return "InvalidSection";
   case SecProfSummary:
@@ -141,10 +144,13 @@ static inline std::string getSecName(SecType Type) {
     return "FuncOffsetTableSection";
   case SecFuncMetadata:
     return "FunctionMetadata";
+  case SecCSNameTable:
+    return "CSNameTableSection";
   case SecLBRProfile:
     return "LBRProfileSection";
+  default:
+    return "UnknownSection";
   }
-  llvm_unreachable("A SecType has no name for output");
 }
 
 // Entry type of section header table used by SampleProfileExtBinaryBaseReader
@@ -188,18 +194,28 @@ enum class SecProfSummaryFlags : uint32_t {
   /// The common profile is usually merged from profiles collected
   /// from running other targets.
   SecFlagPartial = (1 << 0),
-  /// SecFlagContext means this is context-sensitive profile for
+  /// SecFlagContext means this is context-sensitive flat profile for
   /// CSSPGO
   SecFlagFullContext = (1 << 1),
   /// SecFlagFSDiscriminator means this profile uses flow-sensitive
   /// discriminators.
-  SecFlagFSDiscriminator = (1 << 2)
+  SecFlagFSDiscriminator = (1 << 2),
+  /// SecFlagIsPreInlined means this profile contains ShouldBeInlined
+  /// contexts thus this is CS preinliner computed.
+  SecFlagIsPreInlined = (1 << 4),
 };
 
 enum class SecFuncMetadataFlags : uint32_t {
   SecFlagInvalid = 0,
   SecFlagIsProbeBased = (1 << 0),
-  SecFlagHasAttribute = (1 << 1)
+  SecFlagHasAttribute = (1 << 1),
+};
+
+enum class SecFuncOffsetFlags : uint32_t {
+  SecFlagInvalid = 0,
+  // Store function offsets in an order of contexts. The order ensures that
+  // callee contexts of a given context laid out next to it.
+  SecFlagOrdered = (1 << 0),
 };
 
 // Verify section specific flag is used for the correct section.
@@ -222,6 +238,8 @@ static inline void verifySecFlag(SecType Type, SecFlagType Flag) {
     IsFlagLegal = std::is_same<SecFuncMetadataFlags, SecFlagType>();
     break;
   default:
+  case SecFuncOffsetTable:
+    IsFlagLegal = std::is_same<SecFuncOffsetFlags, SecFlagType>();
     break;
   }
   if (!IsFlagLegal)
@@ -324,6 +342,15 @@ public:
                       : sampleprof_error::success;
   }
 
+  /// Decrease the number of samples for this record by \p S. Return the amout
+  /// of samples actually decreased.
+  uint64_t removeSamples(uint64_t S) {
+    if (S > NumSamples)
+      S = NumSamples;
+    NumSamples -= S;
+    return S;
+  }
+
   /// Add called function \p F with samples \p S.
   /// Optionally scale sample count \p S by \p Weight.
   ///
@@ -339,6 +366,18 @@ public:
                       : sampleprof_error::success;
   }
 
+  /// Remove called function from the call target map. Return the target sample
+  /// count of the called function.
+  uint64_t removeCalledTarget(StringRef F) {
+    uint64_t Count = 0;
+    auto I = CallTargets.find(F);
+    if (I != CallTargets.end()) {
+      Count = I->second;
+      CallTargets.erase(I);
+    }
+    return Count;
+  }
+
   /// Return true if this sample record contains function calls.
   bool hasCalls() const { return !CallTargets.empty(); }
 
@@ -346,6 +385,13 @@ public:
   const CallTargetMap &getCallTargets() const { return CallTargets; }
   const SortedCallTargetSet getSortedCallTargets() const {
     return SortCallTargets(CallTargets);
+  }
+
+  uint64_t getCallTargetSum() const {
+    uint64_t Sum = 0;
+    for (const auto &I : CallTargets)
+      Sum += I.second;
+    return Sum;
   }
 
   /// Sort call targets in descending order of call frequency.
@@ -394,56 +440,127 @@ enum ContextAttributeMask {
   ContextNone = 0x0,
   ContextWasInlined = 0x1,      // Leaf of context was inlined in previous build
   ContextShouldBeInlined = 0x2, // Leaf of context should be inlined
+  ContextDuplicatedIntoBase =
+      0x4, // Leaf of context is duplicated into the base profile
+};
+
+// Represents a context frame with function name and line location
+struct SampleContextFrame {
+  StringRef FuncName;
+  LineLocation Location;
+
+  SampleContextFrame() : Location(0, 0) {}
+
+  SampleContextFrame(StringRef FuncName, LineLocation Location)
+      : FuncName(FuncName), Location(Location) {}
+
+  bool operator==(const SampleContextFrame &That) const {
+    return Location == That.Location && FuncName == That.FuncName;
+  }
+
+  bool operator!=(const SampleContextFrame &That) const {
+    return !(*this == That);
+  }
+
+  std::string toString(bool OutputLineLocation) const {
+    std::ostringstream OContextStr;
+    OContextStr << FuncName.str();
+    if (OutputLineLocation) {
+      OContextStr << ":" << Location.LineOffset;
+      if (Location.Discriminator)
+        OContextStr << "." << Location.Discriminator;
+    }
+    return OContextStr.str();
+  }
+};
+
+static inline hash_code hash_value(const SampleContextFrame &arg) {
+  return hash_combine(arg.FuncName, arg.Location.LineOffset,
+                      arg.Location.Discriminator);
+}
+
+using SampleContextFrameVector = SmallVector<SampleContextFrame, 1>;
+using SampleContextFrames = ArrayRef<SampleContextFrame>;
+
+struct SampleContextFrameHash {
+  uint64_t operator()(const SampleContextFrameVector &S) const {
+    return hash_combine_range(S.begin(), S.end());
+  }
 };
 
 // Sample context for FunctionSamples. It consists of the calling context,
 // the function name and context state. Internally sample context is represented
-// using StringRef, which is also the input for constructing a `SampleContext`.
+// using ArrayRef, which is also the input for constructing a `SampleContext`.
 // It can accept and represent both full context string as well as context-less
 // function name.
-// Example of full context string (note the wrapping `[]`):
-//    `[main:3 @ _Z5funcAi:1 @ _Z8funcLeafi]`
-// Example of context-less function name (same as AutoFDO):
-//    `_Z8funcLeafi`
+// For a CS profile, a full context vector can look like:
+//    `main:3 _Z5funcAi:1 _Z8funcLeafi`
+// For a base CS profile without calling context, the context vector should only
+// contain the leaf frame name.
+// For a non-CS profile, the context vector should be empty.
 class SampleContext {
 public:
   SampleContext() : State(UnknownContext), Attributes(ContextNone) {}
-  SampleContext(StringRef ContextStr, ContextStateMask CState = UnknownContext)
+
+  SampleContext(StringRef Name)
+      : Name(Name), State(UnknownContext), Attributes(ContextNone) {}
+
+  SampleContext(SampleContextFrames Context,
+                ContextStateMask CState = RawContext)
       : Attributes(ContextNone) {
-    setContext(ContextStr, CState);
+    assert(!Context.empty() && "Context is empty");
+    setContext(Context, CState);
   }
 
-  // Promote context by removing top frames (represented by `ContextStrToRemove`).
-  // Note that with string representation of context, the promotion is effectively
-  // a substr operation with `ContextStrToRemove` removed from left.
-  void promoteOnPath(StringRef ContextStrToRemove) {
-    assert(FullContext.startswith(ContextStrToRemove));
-
-    // Remove leading context and frame separator " @ ".
-    FullContext = FullContext.substr(ContextStrToRemove.size() + 3);
-    CallingContext = CallingContext.substr(ContextStrToRemove.size() + 3);
-  }
-
-  // Split the top context frame (left-most substr) from context.
-  static std::pair<StringRef, StringRef>
-  splitContextString(StringRef ContextStr) {
-    return ContextStr.split(" @ ");
-  }
-
-  // Reconstruct a new context with the last k frames, return the context-less
-  // name if K = 1
-  StringRef getContextWithLastKFrames(uint32_t K) {
-    if (K == 1)
-      return getNameWithoutContext();
-
-    size_t I = FullContext.size();
-    while (K--) {
-      I = FullContext.find_last_of(" @ ", I);
-      if (I == StringRef::npos)
-        return FullContext;
-      I -= 2;
+  // Give a context string, decode and populate internal states like
+  // Function name, Calling context and context state. Example of input
+  // `ContextStr`: `[main:3 @ _Z5funcAi:1 @ _Z8funcLeafi]`
+  SampleContext(StringRef ContextStr,
+                std::list<SampleContextFrameVector> &CSNameTable,
+                ContextStateMask CState = RawContext)
+      : Attributes(ContextNone) {
+    assert(!ContextStr.empty());
+    // Note that `[]` wrapped input indicates a full context string, otherwise
+    // it's treated as context-less function name only.
+    bool HasContext = ContextStr.startswith("[");
+    if (!HasContext) {
+      State = UnknownContext;
+      Name = ContextStr;
+    } else {
+      CSNameTable.emplace_back();
+      SampleContextFrameVector &Context = CSNameTable.back();
+      createCtxVectorFromStr(ContextStr, Context);
+      setContext(Context, CState);
     }
-    return FullContext.slice(I + 3, StringRef::npos);
+  }
+
+  /// Create a context vector from a given context string and save it in
+  /// `Context`.
+  static void createCtxVectorFromStr(StringRef ContextStr,
+                                     SampleContextFrameVector &Context) {
+    // Remove encapsulating '[' and ']' if any
+    ContextStr = ContextStr.substr(1, ContextStr.size() - 2);
+    StringRef ContextRemain = ContextStr;
+    StringRef ChildContext;
+    StringRef CalleeName;
+    while (!ContextRemain.empty()) {
+      auto ContextSplit = ContextRemain.split(" @ ");
+      ChildContext = ContextSplit.first;
+      ContextRemain = ContextSplit.second;
+      LineLocation CallSiteLoc(0, 0);
+      decodeContextString(ChildContext, CalleeName, CallSiteLoc);
+      Context.emplace_back(CalleeName, CallSiteLoc);
+    }
+  }
+
+  // Promote context by removing top frames with the length of
+  // `ContextFramesToRemove`. Note that with array representation of context,
+  // the promotion is effectively a slice operation with first
+  // `ContextFramesToRemove` elements removed from left.
+  void promoteOnPath(uint32_t ContextFramesToRemove) {
+    assert(ContextFramesToRemove <= FullContext.size() &&
+           "Cannot remove more than the whole context");
+    FullContext = FullContext.drop_front(ContextFramesToRemove);
   }
 
   // Decode context string for a frame to get function name and location.
@@ -469,7 +586,7 @@ public:
     }
   }
 
-  operator StringRef() const { return FullContext; }
+  operator SampleContextFrames() const { return FullContext; }
   bool hasAttribute(ContextAttributeMask A) { return Attributes & (uint32_t)A; }
   void setAttribute(ContextAttributeMask A) { Attributes |= (uint32_t)A; }
   uint32_t getAllAttributes() { return Attributes; }
@@ -478,59 +595,113 @@ public:
   void setState(ContextStateMask S) { State |= (uint32_t)S; }
   void clearState(ContextStateMask S) { State &= (uint32_t)~S; }
   bool hasContext() const { return State != UnknownContext; }
-  bool isBaseContext() const { return CallingContext.empty(); }
-  StringRef getNameWithoutContext() const { return Name; }
-  StringRef getCallingContext() const { return CallingContext; }
-  StringRef getNameWithContext() const { return FullContext; }
+  bool isBaseContext() const { return FullContext.size() == 1; }
+  StringRef getName() const { return Name; }
+  SampleContextFrames getContextFrames() const { return FullContext; }
 
-private:
-  // Give a context string, decode and populate internal states like
-  // Function name, Calling context and context state. Example of input
-  // `ContextStr`: `[main:3 @ _Z5funcAi:1 @ _Z8funcLeafi]`
-  void setContext(StringRef ContextStr, ContextStateMask CState) {
-    assert(!ContextStr.empty());
-    // Note that `[]` wrapped input indicates a full context string, otherwise
-    // it's treated as context-less function name only.
-    bool HasContext = ContextStr.startswith("[");
-    if (!HasContext && CState == UnknownContext) {
-      State = UnknownContext;
-      Name = FullContext = ContextStr;
-    } else {
-      // Assume raw context profile if unspecified
-      if (CState == UnknownContext)
-        State = RawContext;
-      else
-        State = CState;
-
-      // Remove encapsulating '[' and ']' if any
-      if (HasContext)
-        FullContext = ContextStr.substr(1, ContextStr.size() - 2);
-      else
-        FullContext = ContextStr;
-
-      // Caller is to the left of callee in context string
-      auto NameContext = FullContext.rsplit(" @ ");
-      if (NameContext.second.empty()) {
-        Name = NameContext.first;
-        CallingContext = NameContext.second;
-      } else {
-        Name = NameContext.second;
-        CallingContext = NameContext.first;
+  static std::string getContextString(SampleContextFrames Context,
+                                      bool IncludeLeafLineLocation = false) {
+    std::ostringstream OContextStr;
+    for (uint32_t I = 0; I < Context.size(); I++) {
+      if (OContextStr.str().size()) {
+        OContextStr << " @ ";
       }
+      OContextStr << Context[I].toString(I != Context.size() - 1 ||
+                                         IncludeLeafLineLocation);
     }
+    return OContextStr.str();
   }
 
-  // Full context string including calling context and leaf function name
-  StringRef FullContext;
-  // Function name for the associated sample profile
+  std::string toString() const {
+    if (!hasContext())
+      return Name.str();
+    return getContextString(FullContext, false);
+  }
+
+  uint64_t getHashCode() const {
+    return hasContext() ? hash_value(getContextFrames())
+                        : hash_value(getName());
+  }
+
+  /// Set the name of the function and clear the current context.
+  void setName(StringRef FunctionName) {
+    Name = FunctionName;
+    FullContext = SampleContextFrames();
+    State = UnknownContext;
+  }
+
+  void setContext(SampleContextFrames Context,
+                  ContextStateMask CState = RawContext) {
+    assert(CState != UnknownContext);
+    FullContext = Context;
+    Name = Context.back().FuncName;
+    State = CState;
+  }
+
+  bool operator==(const SampleContext &That) const {
+    return State == That.State && Name == That.Name &&
+           FullContext == That.FullContext;
+  }
+
+  bool operator!=(const SampleContext &That) const { return !(*this == That); }
+
+  bool operator<(const SampleContext &That) const {
+    if (State != That.State)
+      return State < That.State;
+
+    if (!hasContext()) {
+      return (Name.compare(That.Name)) == -1;
+    }
+
+    uint64_t I = 0;
+    while (I < std::min(FullContext.size(), That.FullContext.size())) {
+      auto &Context1 = FullContext[I];
+      auto &Context2 = That.FullContext[I];
+      auto V = Context1.FuncName.compare(Context2.FuncName);
+      if (V)
+        return V == -1;
+      if (Context1.Location != Context2.Location)
+        return Context1.Location < Context2.Location;
+      I++;
+    }
+
+    return FullContext.size() < That.FullContext.size();
+  }
+
+  struct Hash {
+    uint64_t operator()(const SampleContext &Context) const {
+      return Context.getHashCode();
+    }
+  };
+
+  bool IsPrefixOf(const SampleContext &That) const {
+    auto ThisContext = FullContext;
+    auto ThatContext = That.FullContext;
+    if (ThatContext.size() < ThisContext.size())
+      return false;
+    ThatContext = ThatContext.take_front(ThisContext.size());
+    // Compare Leaf frame first
+    if (ThisContext.back().FuncName != ThatContext.back().FuncName)
+      return false;
+    // Compare leading context
+    return ThisContext.drop_back() == ThatContext.drop_back();
+  }
+
+private:
+  /// Mangled name of the function.
   StringRef Name;
-  // Calling context (leaf function excluded) for the associated sample profile
-  StringRef CallingContext;
+  // Full context including calling context and leaf function name
+  SampleContextFrames FullContext;
   // State of the associated sample profile
   uint32_t State;
   // Attribute of the associated sample profile
   uint32_t Attributes;
 };
+
+static inline hash_code hash_value(const SampleContext &arg) {
+  return arg.hasContext() ? hash_value(arg.getContextFrames())
+                          : hash_value(arg.getName());
+}
 
 class FunctionSamples;
 class SampleProfileReaderItaniumRemapper;
@@ -561,6 +732,13 @@ public:
                       : sampleprof_error::success;
   }
 
+  void removeTotalSamples(uint64_t Num) {
+    if (TotalSamples < Num)
+      TotalSamples = 0;
+    else
+      TotalSamples -= Num;
+  }
+
   void setTotalSamples(uint64_t Num) { TotalSamples = Num; }
 
   sampleprof_error addHeadSamples(uint64_t Num, uint64_t Weight = 1) {
@@ -585,11 +763,64 @@ public:
         FName, Num, Weight);
   }
 
+  // Remove a call target and decrease the body sample correspondingly. Return
+  // the number of body samples actually decreased.
+  uint64_t removeCalledTargetAndBodySample(uint32_t LineOffset,
+                                           uint32_t Discriminator,
+                                           StringRef FName) {
+    uint64_t Count = 0;
+    auto I = BodySamples.find(LineLocation(LineOffset, Discriminator));
+    if (I != BodySamples.end()) {
+      Count = I->second.removeCalledTarget(FName);
+      Count = I->second.removeSamples(Count);
+      if (!I->second.getSamples())
+        BodySamples.erase(I);
+    }
+    return Count;
+  }
+
   sampleprof_error addBodySamplesForProbe(uint32_t Index, uint64_t Num,
                                           uint64_t Weight = 1) {
     SampleRecord S;
     S.addSamples(Num, Weight);
     return BodySamples[LineLocation(Index, 0)].merge(S, Weight);
+  }
+
+  // Accumulate all call target samples to update the body samples.
+  void updateCallsiteSamples() {
+    for (auto &I : BodySamples) {
+      uint64_t TargetSamples = I.second.getCallTargetSum();
+      // It's possible that the body sample count can be greater than the call
+      // target sum. E.g, if some call targets are external targets, they won't
+      // be considered valid call targets, but the body sample count which is
+      // from lbr ranges can actually include them.
+      if (TargetSamples > I.second.getSamples())
+        I.second.addSamples(TargetSamples - I.second.getSamples());
+    }
+  }
+
+  // Accumulate all body samples to set total samples.
+  void updateTotalSamples() {
+    setTotalSamples(0);
+    for (const auto &I : BodySamples)
+      addTotalSamples(I.second.getSamples());
+
+    for (auto &I : CallsiteSamples) {
+      for (auto &CS : I.second) {
+        CS.second.updateTotalSamples();
+        addTotalSamples(CS.second.getTotalSamples());
+      }
+    }
+  }
+
+  // Set current context and all callee contexts to be synthetic.
+  void SetContextSynthetic() {
+    Context.setState(SyntheticContext);
+    for (auto &I : CallsiteSamples) {
+      for (auto &CS : I.second) {
+        CS.second.SetContextSynthetic();
+      }
+    }
   }
 
   /// Return the number of samples collected at the given location.
@@ -709,10 +940,9 @@ public:
   /// Optionally scale samples by \p Weight.
   sampleprof_error merge(const FunctionSamples &Other, uint64_t Weight = 1) {
     sampleprof_error Result = sampleprof_error::success;
-    Name = Other.getName();
     if (!GUIDToFuncNameMap)
       GUIDToFuncNameMap = Other.GUIDToFuncNameMap;
-    if (Context.getNameWithContext().empty())
+    if (Context.getName().empty())
       Context = Other.getContext();
     if (FunctionHash == 0) {
       // Set the function hash code for the target profile.
@@ -758,7 +988,7 @@ public:
     };
     if (isDeclaration(SymbolMap.lookup(getFuncName()))) {
       // Add to the import list only when it's defined out of module.
-      S.insert(getGUID(Name));
+      S.insert(getGUID(getName()));
     }
     // Import hot CallTargets, which may not be available in IR because full
     // profile annotation cannot be done until backend compilation in ThinLTO.
@@ -775,18 +1005,13 @@ public:
   }
 
   /// Set the name of the function.
-  void setName(StringRef FunctionName) { Name = FunctionName; }
+  void setName(StringRef FunctionName) { Context.setName(FunctionName); }
 
   /// Return the function name.
-  StringRef getName() const { return Name; }
-
-  /// Return function name with context.
-  StringRef getNameWithContext() const {
-    return FunctionSamples::ProfileIsCS ? Context.getNameWithContext() : Name;
-  }
+  StringRef getName() const { return Context.getName(); }
 
   /// Return the original function name.
-  StringRef getFuncName() const { return getFuncName(Name); }
+  StringRef getFuncName() const { return getFuncName(getName()); }
 
   void setFunctionHash(uint64_t Hash) { FunctionHash = Hash; }
 
@@ -861,7 +1086,13 @@ public:
   /// instruction. This is wrapper of two scenarios, the probe-based profile and
   /// regular profile, to hide implementation details from the sample loader and
   /// the context tracker.
-  static LineLocation getCallSiteIdentifier(const DILocation *DIL);
+  static LineLocation getCallSiteIdentifier(const DILocation *DIL,
+                                            bool ProfileIsFS = false);
+
+  /// Returns a unique hash code for a combination of a callsite location and
+  /// the callee function name.
+  static uint64_t getCallSiteHash(StringRef CalleeName,
+                                  const LineLocation &Callsite);
 
   /// Get the FunctionSamples of the inline instance where DIL originates
   /// from.
@@ -882,11 +1113,11 @@ public:
 
   static bool ProfileIsCS;
 
+  static bool ProfileIsPreInlined;
+
   SampleContext &getContext() const { return Context; }
 
   void setContext(const SampleContext &FContext) { Context = FContext; }
-
-  static SampleProfileFormat Format;
 
   /// Whether the profile uses MD5 to represent string.
   static bool UseMD5;
@@ -913,9 +1144,6 @@ public:
   void findAllNames(DenseSet<StringRef> &NameSet) const;
 
 private:
-  /// Mangled name of the function.
-  StringRef Name;
-
   /// CFG hash value for the function.
   uint64_t FunctionHash = 0;
 
@@ -961,6 +1189,14 @@ private:
 
 raw_ostream &operator<<(raw_ostream &OS, const FunctionSamples &FS);
 
+using SampleProfileMap =
+    std::unordered_map<SampleContext, FunctionSamples, SampleContext::Hash>;
+
+using NameFunctionSamples = std::pair<SampleContext, const FunctionSamples *>;
+
+void sortFuncProfiles(const SampleProfileMap &ProfileMap,
+                      std::vector<NameFunctionSamples> &SortedProfiles);
+
 /// Sort a LocationT->SampleT map by LocationT.
 ///
 /// It produces a sorted list of <LocationT, SampleT> records by ascending
@@ -989,18 +1225,58 @@ private:
 /// sure ProfileMap's key is consistent with FunctionSample's name/context.
 class SampleContextTrimmer {
 public:
-  SampleContextTrimmer(StringMap<FunctionSamples> &Profiles)
-      : ProfileMap(Profiles){};
-  // Trim and merge cold context profile when requested.
+  SampleContextTrimmer(SampleProfileMap &Profiles) : ProfileMap(Profiles){};
+  // Trim and merge cold context profile when requested. TrimBaseProfileOnly
+  // should only be effective when TrimColdContext is true. On top of
+  // TrimColdContext, TrimBaseProfileOnly can be used to specify to trim all
+  // cold profiles or only cold base profiles. Trimming base profiles only is
+  // mainly to honor the preinliner decsion. Note that when MergeColdContext is
+  // true, preinliner decsion is not honored anyway so TrimBaseProfileOnly will
+  // be ignored.
   void trimAndMergeColdContextProfiles(uint64_t ColdCountThreshold,
                                        bool TrimColdContext,
                                        bool MergeColdContext,
-                                       uint32_t ColdContextFrameLength);
+                                       uint32_t ColdContextFrameLength,
+                                       bool TrimBaseProfileOnly);
   // Canonicalize context profile name and attributes.
   void canonicalizeContextProfiles();
 
 private:
-  StringMap<FunctionSamples> &ProfileMap;
+  SampleProfileMap &ProfileMap;
+};
+
+// CSProfileConverter converts a full context-sensitive flat sample profile into
+// a nested context-sensitive sample profile.
+class CSProfileConverter {
+public:
+  CSProfileConverter(SampleProfileMap &Profiles);
+  void convertProfiles();
+  struct FrameNode {
+    FrameNode(StringRef FName = StringRef(),
+              FunctionSamples *FSamples = nullptr,
+              LineLocation CallLoc = {0, 0})
+        : FuncName(FName), FuncSamples(FSamples), CallSiteLoc(CallLoc){};
+
+    // Map line+discriminator location to child frame
+    std::map<uint64_t, FrameNode> AllChildFrames;
+    // Function name for current frame
+    StringRef FuncName;
+    // Function Samples for current frame
+    FunctionSamples *FuncSamples;
+    // Callsite location in parent context
+    LineLocation CallSiteLoc;
+
+    FrameNode *getOrCreateChildFrame(const LineLocation &CallSite,
+                                     StringRef CalleeName);
+  };
+
+private:
+  // Nest all children profiles into the profile of Node.
+  void convertProfiles(FrameNode &Node);
+  FrameNode *getOrCreateContextPath(const SampleContext &Context);
+
+  SampleProfileMap &ProfileMap;
+  FrameNode RootFrame;
 };
 
 /// ProfileSymbolList records the list of function symbols shown up
@@ -1045,6 +1321,22 @@ private:
 };
 
 } // end namespace sampleprof
+
+using namespace sampleprof;
+// Provide DenseMapInfo for SampleContext.
+template <> struct DenseMapInfo<SampleContext> {
+  static inline SampleContext getEmptyKey() { return SampleContext(); }
+
+  static inline SampleContext getTombstoneKey() { return SampleContext("@"); }
+
+  static unsigned getHashValue(const SampleContext &Val) {
+    return Val.getHashCode();
+  }
+
+  static bool isEqual(const SampleContext &LHS, const SampleContext &RHS) {
+    return LHS == RHS;
+  }
+};
 } // end namespace llvm
 
 #endif // LLVM_PROFILEDATA_SAMPLEPROF_H

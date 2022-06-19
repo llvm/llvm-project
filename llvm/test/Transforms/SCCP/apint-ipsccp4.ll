@@ -1,8 +1,8 @@
 ; This test makes sure that these instructions are properly constant propagated.
 
-; RUN: opt < %s -ipsccp -S | not grep load
-; RUN: opt < %s -ipsccp -S | not grep add
-; RUN: opt < %s -ipsccp -S | not grep phi
+; RUN: opt < %s -passes=ipsccp -S | not grep load
+; RUN: opt < %s -passes=ipsccp -S | not grep add
+; RUN: opt < %s -passes=ipsccp -S | not grep phi
 
 
 @Y = constant [2 x { i212, float }] [ { i212, float } { i212 12, float 1.0 }, 

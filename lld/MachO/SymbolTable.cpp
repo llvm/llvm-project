@@ -10,6 +10,7 @@
 #include "ConcatOutputSection.h"
 #include "Config.h"
 #include "InputFiles.h"
+#include "InputSection.h"
 #include "Symbols.h"
 #include "SyntheticSections.h"
 #include "lld/Common/ErrorHandler.h"
@@ -48,8 +49,8 @@ Defined *SymbolTable::addDefined(StringRef name, InputFile *file,
                                  InputSection *isec, uint64_t value,
                                  uint64_t size, bool isWeakDef,
                                  bool isPrivateExtern, bool isThumb,
-                                 bool isReferencedDynamically,
-                                 bool noDeadStrip) {
+                                 bool isReferencedDynamically, bool noDeadStrip,
+                                 bool isWeakDefCanBeHidden) {
   Symbol *s;
   bool wasInserted;
   bool overridesWeakDef = false;
@@ -61,28 +62,32 @@ Defined *SymbolTable::addDefined(StringRef name, InputFile *file,
   if (!wasInserted) {
     if (auto *defined = dyn_cast<Defined>(s)) {
       if (isWeakDef) {
+        // See further comment in createDefined() in InputFiles.cpp
         if (defined->isWeakDef()) {
-          // Both old and new symbol weak (e.g. inline function in two TUs):
-          // If one of them isn't private extern, the merged symbol isn't.
           defined->privateExtern &= isPrivateExtern;
+          defined->weakDefCanBeHidden &= isWeakDefCanBeHidden;
           defined->referencedDynamically |= isReferencedDynamically;
           defined->noDeadStrip |= noDeadStrip;
-
-          // FIXME: Handle this for bitcode files.
-          // FIXME: We currently only do this if both symbols are weak.
-          //        We could do this if either is weak (but getting the
-          //        case where !isWeakDef && defined->isWeakDef() right
-          //        requires some care and testing).
-          if (auto concatIsec = dyn_cast_or_null<ConcatInputSection>(isec))
-            concatIsec->wasCoalesced = true;
         }
-
+        // FIXME: Handle this for bitcode files.
+        if (auto concatIsec = dyn_cast_or_null<ConcatInputSection>(isec))
+          concatIsec->wasCoalesced = true;
         return defined;
       }
-      if (!defined->isWeakDef())
-        error("duplicate symbol: " + name + "\n>>> defined in " +
+
+      if (defined->isWeakDef()) {
+        // FIXME: Handle this for bitcode files.
+        if (auto concatIsec =
+                dyn_cast_or_null<ConcatInputSection>(defined->isec)) {
+          concatIsec->wasCoalesced = true;
+          concatIsec->symbols.erase(llvm::find(concatIsec->symbols, defined));
+        }
+      } else {
+        error("duplicate symbol: " + toString(*defined) + "\n>>> defined in " +
               toString(defined->getFile()) + "\n>>> defined in " +
               toString(file));
+      }
+
     } else if (auto *dysym = dyn_cast<DylibSymbol>(s)) {
       overridesWeakDef = !isWeakDef && dysym->isWeakDef();
       dysym->unreference();
@@ -91,10 +96,16 @@ Defined *SymbolTable::addDefined(StringRef name, InputFile *file,
     // of a name conflict, we fall through to the replaceSymbol() call below.
   }
 
+  // With -flat_namespace, all extern symbols in dylibs are interposable.
+  // FIXME: Add support for `-interposable` (PR53680).
+  bool interposable = config->namespaceKind == NamespaceKind::flat &&
+                      config->outputType != MachO::MH_EXECUTE &&
+                      !isPrivateExtern;
   Defined *defined = replaceSymbol<Defined>(
       s, name, file, isec, value, size, isWeakDef, /*isExternal=*/true,
-      isPrivateExtern, isThumb, isReferencedDynamically, noDeadStrip);
-  defined->overridesWeakDef = overridesWeakDef;
+      isPrivateExtern, /*includeInSymtab=*/true, isThumb,
+      isReferencedDynamically, noDeadStrip, overridesWeakDef,
+      isWeakDefCanBeHidden, interposable);
   return defined;
 }
 
@@ -108,8 +119,10 @@ Symbol *SymbolTable::addUndefined(StringRef name, InputFile *file,
 
   if (wasInserted)
     replaceSymbol<Undefined>(s, name, file, refState);
-  else if (auto *lazy = dyn_cast<LazySymbol>(s))
+  else if (auto *lazy = dyn_cast<LazyArchive>(s))
     lazy->fetchArchiveMember();
+  else if (isa<LazyObject>(s))
+    extract(*s->getFile(), s->getName());
   else if (auto *dynsym = dyn_cast<DylibSymbol>(s))
     dynsym->reference(refState);
   else if (auto *undefined = dyn_cast<Undefined>(s))
@@ -173,16 +186,44 @@ Symbol *SymbolTable::addDynamicLookup(StringRef name) {
   return addDylib(name, /*file=*/nullptr, /*isWeakDef=*/false, /*isTlv=*/false);
 }
 
-Symbol *SymbolTable::addLazy(StringRef name, ArchiveFile *file,
-                             const object::Archive::Symbol &sym) {
+Symbol *SymbolTable::addLazyArchive(StringRef name, ArchiveFile *file,
+                                    const object::Archive::Symbol &sym) {
   Symbol *s;
   bool wasInserted;
   std::tie(s, wasInserted) = insert(name, file);
 
-  if (wasInserted)
-    replaceSymbol<LazySymbol>(s, file, sym);
-  else if (isa<Undefined>(s) || (isa<DylibSymbol>(s) && s->isWeakDef()))
+  if (wasInserted) {
+    replaceSymbol<LazyArchive>(s, file, sym);
+  } else if (isa<Undefined>(s)) {
     file->fetch(sym);
+  } else if (auto *dysym = dyn_cast<DylibSymbol>(s)) {
+    if (dysym->isWeakDef()) {
+      if (dysym->getRefState() != RefState::Unreferenced)
+        file->fetch(sym);
+      else
+        replaceSymbol<LazyArchive>(s, file, sym);
+    }
+  }
+  return s;
+}
+
+Symbol *SymbolTable::addLazyObject(StringRef name, InputFile &file) {
+  Symbol *s;
+  bool wasInserted;
+  std::tie(s, wasInserted) = insert(name, &file);
+
+  if (wasInserted) {
+    replaceSymbol<LazyObject>(s, file, name);
+  } else if (isa<Undefined>(s)) {
+    extract(file, name);
+  } else if (auto *dysym = dyn_cast<DylibSymbol>(s)) {
+    if (dysym->isWeakDef()) {
+      if (dysym->getRefState() != RefState::Unreferenced)
+        extract(file, name);
+      else
+        replaceSymbol<LazyObject>(s, file, name);
+    }
+  }
   return s;
 }
 
@@ -190,10 +231,12 @@ Defined *SymbolTable::addSynthetic(StringRef name, InputSection *isec,
                                    uint64_t value, bool isPrivateExtern,
                                    bool includeInSymtab,
                                    bool referencedDynamically) {
-  Defined *s = addDefined(name, nullptr, isec, value, /*size=*/0,
-                          /*isWeakDef=*/false, isPrivateExtern,
-                          /*isThumb=*/false, referencedDynamically,
-                          /*noDeadStrip=*/false);
+  assert(!isec || !isec->getFile()); // See makeSyntheticInputSection().
+  Defined *s =
+      addDefined(name, /*file=*/nullptr, isec, value, /*size=*/0,
+                 /*isWeakDef=*/false, isPrivateExtern, /*isThumb=*/false,
+                 referencedDynamically, /*noDeadStrip=*/false,
+                 /*isWeakDefCanBeHidden=*/false);
   s->includeInSymtab = includeInSymtab;
   return s;
 }
@@ -202,6 +245,12 @@ enum class Boundary {
   Start,
   End,
 };
+
+static Defined *createBoundarySymbol(const Undefined &sym) {
+  return symtab->addSynthetic(
+      sym.getName(), /*isec=*/nullptr, /*value=*/-1, /*isPrivateExtern=*/true,
+      /*includeInSymtab=*/false, /*referencedDynamically=*/false);
+}
 
 static void handleSectionBoundarySymbol(const Undefined &sym, StringRef segSect,
                                         Boundary which) {
@@ -224,7 +273,7 @@ static void handleSectionBoundarySymbol(const Undefined &sym, StringRef segSect,
     }
 
   if (!osec) {
-    ConcatInputSection *isec = make<ConcatInputSection>(segName, sectName);
+    ConcatInputSection *isec = makeSyntheticInputSection(segName, sectName);
 
     // This runs after markLive() and is only called for Undefineds that are
     // live. Marking the isec live ensures an OutputSection is created that the
@@ -238,65 +287,140 @@ static void handleSectionBoundarySymbol(const Undefined &sym, StringRef segSect,
     inputSections.push_back(isec);
   }
 
-  Defined *boundarySym = symtab->addSynthetic(
-      sym.getName(), /*isec=*/nullptr, /*value=*/-1, /*isPrivateExtern=*/true,
-      /*includeInSymtab=*/false, /*referencedDynamically=*/false);
   if (which == Boundary::Start)
-    osec->sectionStartSymbols.push_back(boundarySym);
+    osec->sectionStartSymbols.push_back(createBoundarySymbol(sym));
   else
-    osec->sectionEndSymbols.push_back(boundarySym);
+    osec->sectionEndSymbols.push_back(createBoundarySymbol(sym));
 }
 
 static void handleSegmentBoundarySymbol(const Undefined &sym, StringRef segName,
                                         Boundary which) {
-  // FIXME
-  error("segment$start$ and segment$end$ symbols are not yet implemented");
+  OutputSegment *seg = getOrCreateOutputSegment(segName);
+  if (which == Boundary::Start)
+    seg->segmentStartSymbols.push_back(createBoundarySymbol(sym));
+  else
+    seg->segmentEndSymbols.push_back(createBoundarySymbol(sym));
 }
 
-void lld::macho::treatUndefinedSymbol(const Undefined &sym, StringRef source) {
+// Try to find a definition for an undefined symbol.
+// Returns true if a definition was found and no diagnostics are needed.
+static bool recoverFromUndefinedSymbol(const Undefined &sym) {
   // Handle start/end symbols.
   StringRef name = sym.getName();
-  if (name.consume_front("section$start$"))
-    return handleSectionBoundarySymbol(sym, name, Boundary::Start);
-  if (name.consume_front("section$end$"))
-    return handleSectionBoundarySymbol(sym, name, Boundary::End);
-  if (name.consume_front("segment$start$"))
-    return handleSegmentBoundarySymbol(sym, name, Boundary::Start);
-  if (name.consume_front("segment$end$"))
-    return handleSegmentBoundarySymbol(sym, name, Boundary::End);
+  if (name.consume_front("section$start$")) {
+    handleSectionBoundarySymbol(sym, name, Boundary::Start);
+    return true;
+  }
+  if (name.consume_front("section$end$")) {
+    handleSectionBoundarySymbol(sym, name, Boundary::End);
+    return true;
+  }
+  if (name.consume_front("segment$start$")) {
+    handleSegmentBoundarySymbol(sym, name, Boundary::Start);
+    return true;
+  }
+  if (name.consume_front("segment$end$")) {
+    handleSegmentBoundarySymbol(sym, name, Boundary::End);
+    return true;
+  }
 
   // Handle -U.
   if (config->explicitDynamicLookups.count(sym.getName())) {
     symtab->addDynamicLookup(sym.getName());
-    return;
+    return true;
   }
 
   // Handle -undefined.
-  auto message = [source, &sym]() {
+  if (config->undefinedSymbolTreatment ==
+          UndefinedSymbolTreatment::dynamic_lookup ||
+      config->undefinedSymbolTreatment == UndefinedSymbolTreatment::suppress) {
+    symtab->addDynamicLookup(sym.getName());
+    return true;
+  }
+
+  // We do not return true here, as we still need to print diagnostics.
+  if (config->undefinedSymbolTreatment == UndefinedSymbolTreatment::warning)
+    symtab->addDynamicLookup(sym.getName());
+
+  return false;
+}
+
+namespace {
+struct UndefinedDiag {
+  struct SectionAndOffset {
+    const InputSection *isec;
+    uint64_t offset;
+  };
+
+  std::vector<SectionAndOffset> codeReferences;
+  std::vector<std::string> otherReferences;
+};
+
+MapVector<const Undefined *, UndefinedDiag> undefs;
+}
+
+void macho::reportPendingUndefinedSymbols() {
+  for (const auto &undef : undefs) {
+    const UndefinedDiag &locations = undef.second;
+
     std::string message = "undefined symbol";
     if (config->archMultiple)
       message += (" for arch " + getArchitectureName(config->arch())).str();
-    message += ": " + toString(sym);
-    if (!source.empty())
-      message += "\n>>> referenced by " + source.str();
+    message += ": " + toString(*undef.first);
+
+    const size_t maxUndefinedReferences = 3;
+    size_t i = 0;
+    for (const std::string &loc : locations.otherReferences) {
+      if (i >= maxUndefinedReferences)
+        break;
+      message += "\n>>> referenced by " + loc;
+      ++i;
+    }
+
+    for (const UndefinedDiag::SectionAndOffset &loc :
+         locations.codeReferences) {
+      if (i >= maxUndefinedReferences)
+        break;
+      // TODO: Get source file/line from debug information.
+      message += "\n>>> referenced by " + loc.isec->getLocation(loc.offset);
+      ++i;
+    }
+
+    size_t totalReferences =
+        locations.otherReferences.size() + locations.codeReferences.size();
+    if (totalReferences > i)
+      message +=
+          ("\n>>> referenced " + Twine(totalReferences - i) + " more times")
+              .str();
+
+    if (config->undefinedSymbolTreatment == UndefinedSymbolTreatment::error)
+      error(message);
+    else if (config->undefinedSymbolTreatment ==
+             UndefinedSymbolTreatment::warning)
+      warn(message);
     else
-      message += "\n>>> referenced by " + toString(sym.getFile());
-    return message;
-  };
-  switch (config->undefinedSymbolTreatment) {
-  case UndefinedSymbolTreatment::error:
-    error(message());
-    break;
-  case UndefinedSymbolTreatment::warning:
-    warn(message());
-    LLVM_FALLTHROUGH;
-  case UndefinedSymbolTreatment::dynamic_lookup:
-  case UndefinedSymbolTreatment::suppress:
-    symtab->addDynamicLookup(sym.getName());
-    break;
-  case UndefinedSymbolTreatment::unknown:
-    llvm_unreachable("unknown -undefined TREATMENT");
+      assert(false &&
+             "diagnostics make sense for -undefined error|warning only");
   }
+
+  // This function is called multiple times during execution. Clear the printed
+  // diagnostics to avoid printing the same things again the next time.
+  undefs.clear();
 }
 
-SymbolTable *macho::symtab;
+void macho::treatUndefinedSymbol(const Undefined &sym, StringRef source) {
+  if (recoverFromUndefinedSymbol(sym))
+    return;
+
+  undefs[&sym].otherReferences.push_back(source.str());
+}
+
+void macho::treatUndefinedSymbol(const Undefined &sym, const InputSection *isec,
+                                 uint64_t offset) {
+  if (recoverFromUndefinedSymbol(sym))
+    return;
+
+  undefs[&sym].codeReferences.push_back({isec, offset});
+}
+
+std::unique_ptr<SymbolTable> macho::symtab;

@@ -25,7 +25,6 @@
 #include "lldb/Utility/AnsiTerminal.h"
 #include "lldb/Utility/ConstString.h"
 #include "lldb/Utility/DataBuffer.h"
-#include "lldb/Utility/DataBufferLLVM.h"
 #include "lldb/Utility/RegularExpression.h"
 #include "lldb/Utility/Stream.h"
 #include "lldb/lldb-enumerations.h"
@@ -50,6 +49,14 @@ using namespace lldb_private;
 
 static inline bool is_newline_char(char ch) { return ch == '\n' || ch == '\r'; }
 
+static void resolve_tilde(FileSpec &file_spec) {
+  if (!FileSystem::Instance().Exists(file_spec) &&
+      file_spec.GetDirectory() &&
+      file_spec.GetDirectory().GetCString()[0] == '~') {
+    FileSystem::Instance().Resolve(file_spec);
+  }
+}
+
 // SourceManager constructor
 SourceManager::SourceManager(const TargetSP &target_sp)
     : m_last_line(0), m_last_count(0), m_default_set(false),
@@ -67,10 +74,13 @@ SourceManager::FileSP SourceManager::GetFile(const FileSpec &file_spec) {
   if (!file_spec)
     return nullptr;
 
+  FileSpec resolved_fspec = file_spec;
+  resolve_tilde(resolved_fspec);
+
   DebuggerSP debugger_sp(m_debugger_wp.lock());
   FileSP file_sp;
   if (debugger_sp && debugger_sp->GetUseSourceCache())
-    file_sp = debugger_sp->GetSourceFileCache().FindSourceFile(file_spec);
+    file_sp = debugger_sp->GetSourceFileCache().FindSourceFile(resolved_fspec);
 
   TargetSP target_sp(m_target_wp.lock());
 
@@ -88,9 +98,9 @@ SourceManager::FileSP SourceManager::GetFile(const FileSpec &file_spec) {
   // If file_sp is no good or it points to a non-existent file, reset it.
   if (!file_sp || !FileSystem::Instance().Exists(file_sp->GetFileSpec())) {
     if (target_sp)
-      file_sp = std::make_shared<File>(file_spec, target_sp.get());
+      file_sp = std::make_shared<File>(resolved_fspec, target_sp.get());
     else
-      file_sp = std::make_shared<File>(file_spec, debugger_sp);
+      file_sp = std::make_shared<File>(resolved_fspec, debugger_sp);
 
     if (debugger_sp && debugger_sp->GetUseSourceCache())
       debugger_sp->GetSourceFileCache().AddSourceFile(file_sp);
@@ -339,11 +349,14 @@ bool SourceManager::GetDefaultFileAndLine(FileSpec &file_spec, uint32_t &line) {
       if (executable_ptr) {
         SymbolContextList sc_list;
         ConstString main_name("main");
-        bool symbols_okay = false; // Force it to be a debug symbol.
-        bool inlines_okay = true;
+
+        ModuleFunctionSearchOptions function_options;
+        function_options.include_symbols =
+            false; // Force it to be a debug symbol.
+        function_options.include_inlines = true;
         executable_ptr->FindFunctions(main_name, CompilerDeclContext(),
-                                      lldb::eFunctionNameTypeBase, inlines_okay,
-                                      symbols_okay, sc_list);
+                                      lldb::eFunctionNameTypeBase,
+                                      function_options, sc_list);
         size_t num_matches = sc_list.GetSize();
         for (size_t idx = 0; idx < num_matches; idx++) {
           SymbolContext sc;
@@ -439,6 +452,7 @@ void SourceManager::File::CommonInitializer(const FileSpec &file_spec,
           }
         }
       }
+      resolve_tilde(m_file_spec);
       // Try remapping if m_file_spec does not correspond to an existing file.
       if (!FileSystem::Instance().Exists(m_file_spec)) {
         // Check target specific source remappings (i.e., the
@@ -642,7 +656,7 @@ bool SourceManager::File::CalculateLineOffsets(uint32_t line) {
       if (m_data_sp.get() == nullptr)
         return false;
 
-      const char *start = (char *)m_data_sp->GetBytes();
+      const char *start = (const char *)m_data_sp->GetBytes();
       if (start) {
         const char *end = start + m_data_sp->GetByteSize();
 
@@ -692,7 +706,7 @@ bool SourceManager::File::GetLine(uint32_t line_no, std::string &buffer) {
   if (end_offset == UINT32_MAX) {
     end_offset = m_data_sp->GetByteSize();
   }
-  buffer.assign((char *)m_data_sp->GetBytes() + start_offset,
+  buffer.assign((const char *)m_data_sp->GetBytes() + start_offset,
                 end_offset - start_offset);
 
   return true;

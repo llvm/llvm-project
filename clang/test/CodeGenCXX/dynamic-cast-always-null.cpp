@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -I%S %s -triple x86_64-apple-darwin10 -emit-llvm -fcxx-exceptions -fexceptions -std=c++11 -o - | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -I%S %s -triple x86_64-apple-darwin10 -emit-llvm -fcxx-exceptions -fexceptions -std=c++11 -o - | FileCheck %s
 struct A { virtual ~A(); };
 struct B final : A { };
 struct C { virtual ~C(); int c; };

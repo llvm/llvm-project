@@ -20,6 +20,7 @@
 class DWARFUnit;
 
 using namespace lldb_private;
+using namespace lldb_private::dwarf;
 
 void DWARFFormValue::Clear() {
   m_unit = nullptr;

@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -polly-detect -analyze \
+; RUN: opt %loadPolly -polly-print-detect -disable-output \
 ; RUN:   -polly-invariant-load-hoisting=true < %s | FileCheck %s
 ;
 ; CHECK-NOT: Valid Region for Scop

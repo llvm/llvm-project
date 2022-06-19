@@ -19,6 +19,6 @@ body: |
     liveins: $rdi
   ; CHECK: [[@LINE+1]]:64: expected an IR value reference
     $eax = MOV32rm killed $rdi, 1, _, 0, _ :: (load (s32) from a)
-    RETQ $eax
+    RET64 $eax
 ...
 

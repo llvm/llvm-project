@@ -2,14 +2,14 @@
 
 // PR6433 - Don't crash on va_arg(typedef).
 typedef double gdouble;
-void focus_changed_cb () {
+void focus_changed_cb (void) {
     __builtin_va_list pa;
     double mfloat;
     mfloat = __builtin_va_arg((pa), gdouble);
 }
 
 void vararg(int, ...);
-void function_as_vararg() {
+void function_as_vararg(void) {
   // CHECK: define {{.*}}function_as_vararg
   // CHECK-NOT: llvm.trap
   vararg(0, focus_changed_cb);

@@ -6,10 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-// UNSUPPORTED: c++03
-
-// GCC 5 does not evaluate static assertions dependent on a template parameter.
-// UNSUPPORTED: gcc-5
+// UNSUPPORTED: c++03 && !stdlib=libc++
 
 // <vector>
 
@@ -43,7 +40,7 @@ int main(int, char**) {
     x.emplace_back();
   }
   {
-    std::vector<BadUserNoCookie<2>> x;
+    std::vector<BadUserNoCookie<2> > x;
     BadUserNoCookie<2> c;
     x.push_back(c);
   }

@@ -10,11 +10,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef MLIR_TARGET_SPIRV_BINARY_UTILS_H_
-#define MLIR_TARGET_SPIRV_BINARY_UTILS_H_
+#ifndef MLIR_TARGET_SPIRV_SPIRVBINARYUTILS_H
+#define MLIR_TARGET_SPIRV_SPIRVBINARYUTILS_H
 
-#include "mlir/Dialect/SPIRV/IR/SPIRVOps.h"
-#include "mlir/Support/LogicalResult.h"
+#include "mlir/Dialect/SPIRV/IR/SPIRVEnums.h"
+#include "mlir/Support/LLVM.h"
 
 #include <cstdint>
 
@@ -39,9 +39,19 @@ void appendModuleHeader(SmallVectorImpl<uint32_t> &header,
 uint32_t getPrefixedOpcode(uint32_t wordCount, spirv::Opcode opcode);
 
 /// Encodes an SPIR-V `literal` string into the given `binary` vector.
-LogicalResult encodeStringLiteralInto(SmallVectorImpl<uint32_t> &binary,
-                                      StringRef literal);
-} // end namespace spirv
-} // end namespace mlir
+void encodeStringLiteralInto(SmallVectorImpl<uint32_t> &binary,
+                             StringRef literal);
 
-#endif // MLIR_TARGET_SPIRV_BINARY_UTILS_H_
+/// Decodes a string literal in `words` starting at `wordIndex`. Update the
+/// latter to point to the position in words after the string literal.
+inline StringRef decodeStringLiteral(ArrayRef<uint32_t> words,
+                                     unsigned &wordIndex) {
+  StringRef str(reinterpret_cast<const char *>(words.data() + wordIndex));
+  wordIndex += str.size() / 4 + 1;
+  return str;
+}
+
+} // namespace spirv
+} // namespace mlir
+
+#endif // MLIR_TARGET_SPIRV_SPIRVBINARYUTILS_H

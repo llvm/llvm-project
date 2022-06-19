@@ -33,7 +33,8 @@ namespace polly {
 /// The Dependences struct holds all dependence information we collect and
 /// compute for one SCoP. It also offers an interface that allows users to
 /// query only specific parts.
-struct Dependences {
+class Dependences final {
+public:
   // Granularities of the current dependence analysis
   enum AnalysisLevel {
     AL_Statement = 0,
@@ -124,6 +125,10 @@ struct Dependences {
   ///         dependences.
   bool isValidSchedule(Scop &S, const StatementToIslMapTy &NewSchedules) const;
 
+  /// Return true of the schedule @p NewSched is a schedule for @S that does not
+  /// violate any dependences.
+  bool isValidSchedule(Scop &S, isl::schedule NewSched) const;
+
   /// Print the stored dependence information.
   void print(llvm::raw_ostream &OS) const;
 
@@ -187,7 +192,7 @@ private:
   const AnalysisLevel Level;
 };
 
-struct DependenceAnalysis : public AnalysisInfoMixin<DependenceAnalysis> {
+struct DependenceAnalysis final : public AnalysisInfoMixin<DependenceAnalysis> {
   static AnalysisKey Key;
   struct Result {
     Scop &S;
@@ -208,8 +213,8 @@ struct DependenceAnalysis : public AnalysisInfoMixin<DependenceAnalysis> {
              ScopStandardAnalysisResults &SAR);
 };
 
-struct DependenceInfoPrinterPass
-    : public PassInfoMixin<DependenceInfoPrinterPass> {
+struct DependenceInfoPrinterPass final
+    : PassInfoMixin<DependenceInfoPrinterPass> {
   DependenceInfoPrinterPass(raw_ostream &OS) : OS(OS) {}
 
   PreservedAnalyses run(Scop &S, ScopAnalysisManager &,
@@ -218,7 +223,7 @@ struct DependenceInfoPrinterPass
   raw_ostream &OS;
 };
 
-class DependenceInfo : public ScopPass {
+class DependenceInfo final : public ScopPass {
 public:
   static char ID;
 
@@ -258,8 +263,11 @@ private:
   std::unique_ptr<Dependences> D[Dependences::NumAnalysisLevels];
 };
 
+llvm::Pass *createDependenceInfoPass();
+llvm::Pass *createDependenceInfoPrinterLegacyPass(llvm::raw_ostream &OS);
+
 /// Construct a new DependenceInfoWrapper pass.
-class DependenceInfoWrapperPass : public FunctionPass {
+class DependenceInfoWrapperPass final : public FunctionPass {
 public:
   static char ID;
 
@@ -297,11 +305,19 @@ private:
   /// Scop to Dependence map for the current function.
   ScopToDepsMapTy ScopToDepsMap;
 };
+
+llvm::Pass *createDependenceInfoWrapperPassPass();
+llvm::Pass *
+createDependenceInfoPrinterLegacyFunctionPass(llvm::raw_ostream &OS);
+
 } // namespace polly
 
 namespace llvm {
 void initializeDependenceInfoPass(llvm::PassRegistry &);
+void initializeDependenceInfoPrinterLegacyPassPass(llvm::PassRegistry &);
 void initializeDependenceInfoWrapperPassPass(llvm::PassRegistry &);
+void initializeDependenceInfoPrinterLegacyFunctionPassPass(
+    llvm::PassRegistry &);
 } // namespace llvm
 
 #endif

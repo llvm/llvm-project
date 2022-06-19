@@ -14,15 +14,16 @@
 #ifndef LLVM_SUPPORT_TARGETPARSER_H
 #define LLVM_SUPPORT_TARGETPARSER_H
 
+#include "llvm/ADT/StringRef.h"
+#include <cstdint>
 // FIXME: vector is used because that's what clang uses for subtarget feature
 // lists, but SmallVector would probably be better
-#include "llvm/ADT/Triple.h"
-#include "llvm/Support/ARMTargetParser.h"
-#include "llvm/Support/AArch64TargetParser.h"
 #include <vector>
 
 namespace llvm {
-class StringRef;
+
+template <typename T> class SmallVectorImpl;
+class Triple;
 
 // Target specific information in their own namespaces.
 // (ARM/AArch64/X86 are declared in ARM/AArch64/X86TargetParser.h)
@@ -85,6 +86,7 @@ enum GPUKind : uint32_t {
   GK_GFX909 = 65,
   GK_GFX90A = 66,
   GK_GFX90C = 67,
+  GK_GFX940 = 68,
 
   GK_GFX1010 = 71,
   GK_GFX1011 = 72,
@@ -96,9 +98,15 @@ enum GPUKind : uint32_t {
   GK_GFX1033 = 78,
   GK_GFX1034 = 79,
   GK_GFX1035 = 80,
+  GK_GFX1036 = 81,
+
+  GK_GFX1100 = 90,
+  GK_GFX1101 = 91,
+  GK_GFX1102 = 92,
+  GK_GFX1103 = 93,
 
   GK_AMDGCN_FIRST = GK_GFX600,
-  GK_AMDGCN_LAST = GK_GFX1035,
+  GK_AMDGCN_LAST = GK_GFX1103,
 };
 
 /// Instruction set architecture version.
@@ -157,12 +165,7 @@ enum CPUKind : unsigned {
 enum FeatureKind : unsigned {
   FK_INVALID = 0,
   FK_NONE = 1,
-  FK_STDEXTM = 1 << 2,
-  FK_STDEXTA = 1 << 3,
-  FK_STDEXTF = 1 << 4,
-  FK_STDEXTD = 1 << 5,
-  FK_STDEXTC = 1 << 6,
-  FK_64BIT = 1 << 7,
+  FK_64BIT = 1 << 2,
 };
 
 bool checkCPUKind(CPUKind Kind, bool IsRV64);
@@ -176,6 +179,18 @@ bool getCPUFeaturesExceptStdExt(CPUKind Kind, std::vector<StringRef> &Features);
 StringRef resolveTuneCPUAlias(StringRef TuneCPU, bool IsRV64);
 
 } // namespace RISCV
+
+namespace ARM {
+struct ParsedBranchProtection {
+  StringRef Scope;
+  StringRef Key;
+  bool BranchTargetEnforcement;
+};
+
+bool parseBranchProtection(StringRef Spec, ParsedBranchProtection &PBP,
+                           StringRef &Err);
+
+} // namespace ARM
 
 } // namespace llvm
 

@@ -68,34 +68,34 @@ unsigned invalid11(struct s *arg, int info_kind) {
   return __builtin_preserve_field_info(arg->a, info_kind); // expected-error {{__builtin_preserve_field_info argument 2 not a constant}}
 }
 
-unsigned valid12() {
+unsigned valid12(void) {
   const struct s t;
   return __builtin_preserve_type_info(t, 0) +
          __builtin_preserve_type_info(*(struct s *)0, 1);
 }
 
-unsigned valid13() {
+unsigned valid13(void) {
   __t t;
   return __builtin_preserve_type_info(t, 1) +
          __builtin_preserve_type_info(*(__t *)0, 0);
 }
 
-unsigned valid14() {
+unsigned valid14(void) {
   enum AA t;
   return __builtin_preserve_type_info(t, 0) +
          __builtin_preserve_type_info(*(enum AA *)0, 1);
 }
 
-unsigned valid15() {
+unsigned valid15(void) {
   return __builtin_preserve_enum_value(*(enum AA *)VAL1, 1) +
          __builtin_preserve_enum_value(*(enum AA *)VAL2, 1);
 }
 
-unsigned invalid16() {
+unsigned invalid16(void) {
   return __builtin_preserve_enum_value(*(enum AA *)0, 1); // expected-error {{__builtin_preserve_enum_value argument 1 invalid}}
 }
 
-unsigned invalid17() {
+unsigned invalid17(void) {
   return __builtin_preserve_enum_value(*(enum AA *)VAL10, 1); // expected-error {{__builtin_preserve_enum_value argument 1 invalid}}
 }
 

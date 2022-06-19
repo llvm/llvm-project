@@ -8,7 +8,6 @@
 
 // <unordered_map>
 // UNSUPPORTED: c++03, c++11, c++14
-// UNSUPPORTED: libcpp-no-deduction-guides
 
 // template<class InputIterator,
 //          class Hash = hash<iter-key-type<InputIterator>>,
@@ -62,6 +61,7 @@
 #include <type_traits>
 #include <unordered_map>
 
+#include "deduction_guides_sfinae_checks.h"
 #include "test_allocator.h"
 
 using P = std::pair<int, long>;
@@ -218,6 +218,8 @@ int main(int, char**)
     std::unordered_multimap m2{{value_type{1, 2}, {3, 4}}, 0};
     ASSERT_SAME_TYPE(decltype(m2), std::unordered_multimap<int, int>);
     }
+
+    UnorderedContainerDeductionGuidesSfinaeAway<std::unordered_multimap, std::unordered_multimap<int, long>>();
 
     return 0;
 }

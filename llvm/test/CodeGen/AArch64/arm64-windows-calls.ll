@@ -7,8 +7,8 @@
 define dso_local i64 @"?f1"() {
 entry:
 ; CHECK-LABEL: f1
-; CHECK: str xzr, [sp, #8]
-; CHECK: mov x0, xzr
+; CHECK-DAG: str xzr, [sp, #8]
+; CHECK-DAG: mov x0, xzr
 
   %retval = alloca %struct.S1, align 4
   %a = getelementptr inbounds %struct.S1, %struct.S1* %retval, i32 0, i32 0
@@ -29,10 +29,10 @@ entry:
 ; CHECK:         sub     sp, sp, #16
 ; CHECK-NEXT:    .seh_stackalloc 16
 ; CHECK-NEXT:    .seh_endprologue
-; CHECK-NEXT:    stp     xzr, xzr, [sp]
-; CHECK-NEXT:    mov     x0, xzr
-; CHECK-NEXT:    mov     x1, xzr
-; CHECK-NEXT:    .seh_startepilogue
+; CHECK-DAG:     stp     xzr, xzr, [sp]
+; CHECK-DAG:     mov     x0, xzr
+; CHECK-DAG:     mov     x1, xzr
+; CHECK:         .seh_startepilogue
 ; CHECK-NEXT:    add     sp, sp, #16
 
   %retval = alloca %struct.S2, align 4
@@ -90,8 +90,8 @@ entry:
 define dso_local void @"?inst@C"(%class.C* %this, %class.A* inreg noalias sret(%class.A) %agg.result) {
 entry:
 ; CHECK-LABEL: inst@C
-; CHECK: str x0, [sp, #8]
-; CHECK: mov x0, x1
+; CHECK-DAG: mov x0, x1
+; CHECK-DAG: str x8, [sp, #8]
 
   %this.addr = alloca %class.C*, align 8
   store %class.C* %this, %class.C** %this.addr, align 8
@@ -148,7 +148,8 @@ define void @call_copy_pod() {
   store %struct.Pod %x, %struct.Pod* @Pod
   ret void
   ; CHECK: bl copy_pod
-  ; CHECK-NEXT: stp d0, d1, [{{.*}}]
+  ; CHECK-NEXT: str d0, [{{.*}}]
+  ; CHECK-NEXT: str d1, [{{.*}}]
 }
 
 @NotCXX14Aggregate = external global %struct.NotCXX14Aggregate

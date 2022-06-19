@@ -3,8 +3,14 @@ set(LLVM_LINK_COMPONENTS
   AllTargetsCodeGens
   AllTargetsDescs
   AllTargetsInfos
+  Analysis
+  BitReader
+  BitWriter
+  CodeGen
   Core
   IRReader
+  MC
+  MIRParser
   Support
   Target
   TransformUtils
@@ -12,6 +18,7 @@ set(LLVM_LINK_COMPONENTS
 
 add_llvm_tool(llvm-reduce
   DeltaManager.cpp
+  ReducerWorkItem.cpp
   TestRunner.cpp
   deltas/Delta.cpp
   deltas/ReduceAliases.cpp
@@ -20,14 +27,24 @@ add_llvm_tool(llvm-reduce
   deltas/ReduceBasicBlocks.cpp
   deltas/ReduceFunctionBodies.cpp
   deltas/ReduceFunctions.cpp
+  deltas/ReduceGlobalObjects.cpp
   deltas/ReduceGlobalValues.cpp
   deltas/ReduceGlobalVarInitializers.cpp
   deltas/ReduceGlobalVars.cpp
   deltas/ReduceInstructions.cpp
   deltas/ReduceMetadata.cpp
-  deltas/ReduceModuleInlineAsm.cpp
+  deltas/ReduceModuleData.cpp
   deltas/ReduceOperandBundles.cpp
   deltas/ReduceSpecialGlobals.cpp
+  deltas/ReduceOperands.cpp
+  deltas/ReduceOperandsSkip.cpp
+  deltas/ReduceOperandsToArgs.cpp
+  deltas/ReduceInstructionsMIR.cpp
+  deltas/ReduceInstructionFlagsMIR.cpp
+  deltas/ReduceIRReferences.cpp
+  deltas/ReduceVirtualRegisters.cpp
+  deltas/ReduceRegisterUses.cpp
+  deltas/SimplifyInstructions.cpp
   llvm-reduce.cpp
 
   DEPENDS

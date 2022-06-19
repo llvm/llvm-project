@@ -1,4 +1,4 @@
-# RUN: llc -run-pass=livedebugvalues -o - %s | FileCheck %s
+# RUN: llc -run-pass=livedebugvalues -o - %s -experimental-debug-variable-locations=false | FileCheck %s
 #
 # This test is used to acknowledge situation when spill register is killed
 # in instruction after the spill occurs.
@@ -382,6 +382,6 @@ body:             |
     $r14 = POP64r implicit-def $rsp, implicit $rsp
     $r15 = POP64r implicit-def $rsp, implicit $rsp
     $rbp = POP64r implicit-def $rsp, implicit $rsp
-    RETQ $eax, debug-location !57
+    RET64 $eax, debug-location !57
 
 ...

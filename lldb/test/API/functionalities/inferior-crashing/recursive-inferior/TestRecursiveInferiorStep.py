@@ -10,9 +10,6 @@ from lldbsuite.test import lldbutil
 
 class CrashingRecursiveInferiorStepTestCase(TestBase):
 
-    mydir = TestBase.compute_mydir(__file__)
-
-    @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr24778")
     def test_recursive_inferior_crashing_step(self):
         """Test that stepping after a crash behaves correctly."""
         self.build()

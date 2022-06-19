@@ -31,7 +31,7 @@ struct ARM64_32 : ARM64Common {
   ARM64_32();
   void writeStub(uint8_t *buf, const Symbol &) const override;
   void writeStubHelperHeader(uint8_t *buf) const override;
-  void writeStubHelperEntry(uint8_t *buf, const DylibSymbol &,
+  void writeStubHelperEntry(uint8_t *buf, const Symbol &,
                             uint64_t entryAddr) const override;
   const RelocAttrs &getRelocAttrs(uint8_t type) const override;
 };
@@ -96,7 +96,7 @@ static constexpr uint32_t stubHelperEntryCode[] = {
     0x00000000, // 08: l0: .long 0
 };
 
-void ARM64_32::writeStubHelperEntry(uint8_t *buf8, const DylibSymbol &sym,
+void ARM64_32::writeStubHelperEntry(uint8_t *buf8, const Symbol &sym,
                                     uint64_t entryVA) const {
   ::writeStubHelperEntry(buf8, stubHelperEntryCode, sym, entryVA);
 }
@@ -104,6 +104,10 @@ void ARM64_32::writeStubHelperEntry(uint8_t *buf8, const DylibSymbol &sym,
 ARM64_32::ARM64_32() : ARM64Common(ILP32()) {
   cpuType = CPU_TYPE_ARM64_32;
   cpuSubtype = CPU_SUBTYPE_ARM64_V8;
+
+  modeDwarfEncoding = 0x04000000;              // UNWIND_ARM_MODE_DWARF
+  subtractorRelocType = GENERIC_RELOC_INVALID; // FIXME
+  unsignedRelocType = GENERIC_RELOC_INVALID;   // FIXME
 
   stubSize = sizeof(stubCode);
   stubHelperHeaderSize = sizeof(stubHelperHeaderCode);

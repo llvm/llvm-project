@@ -6,8 +6,6 @@
 // RUN: %run %t 2>&1 | FileCheck %s --check-prefixes=CHECK-NOTYPE,CHECK-NOTYPE-CPP
 // RUN: %env_ubsan_opts=report_error_type=1 %run %t 2>&1 | FileCheck %s --check-prefixes=CHECK-TYPE,CHECK-TYPE-CPP
 
-// REQUIRES: !ubsan-standalone && !ubsan-standalone-static
-
 #include <stdlib.h>
 
 int main(int argc, char *argv[]) {

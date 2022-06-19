@@ -65,7 +65,7 @@ attributes #2 = { nofree noinline norecurse nounwind writeonly }
 
 !0 = !{i32 2, !"Debug Info Version", i32 3}
 !1 = !{i32 1, !"wchar_size", i32 4}
-!2 = !{i32 1, !"branch-target-enforcement", i32 0}
-!3 = !{i32 1, !"sign-return-address", i32 1}
-!4 = !{i32 1, !"sign-return-address-all", i32 1}
-!5 = !{i32 1, !"sign-return-address-with-bkey", i32 1}
+!2 = !{i32 8, !"branch-target-enforcement", i32 0}
+!3 = !{i32 8, !"sign-return-address", i32 1}
+!4 = !{i32 8, !"sign-return-address-all", i32 1}
+!5 = !{i32 8, !"sign-return-address-with-bkey", i32 1}

@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple x86_64-pc-linux-gnu -emit-llvm < %s| FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-pc-linux-gnu -emit-llvm < %s| FileCheck %s
 
 // Test that we have the structure definition, the gep offsets, the name of the
 // global, the bit grab, and the icmp correct.
@@ -7,7 +7,7 @@ extern void a(const char *);
 // CHECK: @__cpu_model = external dso_local global { i32, i32, i32, [1 x i32] }
 // CHECK: @__cpu_features2 = external dso_local global i32
 
-int main() {
+int main(void) {
   __builtin_cpu_init();
 
   // CHECK: call void @__cpu_indicator_init

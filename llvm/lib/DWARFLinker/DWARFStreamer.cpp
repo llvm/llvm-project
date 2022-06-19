@@ -18,16 +18,16 @@
 #include "llvm/MC/MCSection.h"
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCSubtargetInfo.h"
-#include "llvm/MC/MCSymbol.h"
 #include "llvm/MC/MCTargetOptions.h"
 #include "llvm/MC/MCTargetOptionsCommandFlags.h"
+#include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/LEB128.h"
-#include "llvm/Support/TargetRegistry.h"
 #include "llvm/Target/TargetOptions.h"
 
 namespace llvm {
 
-bool DwarfStreamer::init(Triple TheTriple) {
+bool DwarfStreamer::init(Triple TheTriple,
+                         StringRef Swift5ReflectionSegmentName) {
   std::string ErrorStr;
   std::string TripleName;
   StringRef Context = "dwarf streamer init";
@@ -54,8 +54,9 @@ bool DwarfStreamer::init(Triple TheTriple) {
   if (!MSTI)
     return error("no subtarget info for target " + TripleName, Context), false;
 
-  MC.reset(new MCContext(TheTriple, MAI.get(), MRI.get(), MSTI.get()));
-  MOFI.reset(TheTarget->createMCObjectFileInfo(*MC, /*PIC=*/false));
+  MC.reset(new MCContext(TheTriple, MAI.get(), MRI.get(), MSTI.get(), nullptr,
+                         nullptr, true, Swift5ReflectionSegmentName));
+  MOFI.reset(TheTarget->createMCObjectFileInfo(*MC, /*PIC=*/false, false));
   MC->setObjectFileInfo(MOFI.get());
 
   MAB = TheTarget->createMCAsmBackend(*MSTI, *MRI, MCOptions);
@@ -66,7 +67,7 @@ bool DwarfStreamer::init(Triple TheTriple) {
   if (!MII)
     return error("no instr info info for target " + TripleName, Context), false;
 
-  MCE = TheTarget->createMCCodeEmitter(*MII, *MRI, *MC);
+  MCE = TheTarget->createMCCodeEmitter(*MII, *MC);
   if (!MCE)
     return error("no code emitter for target " + TripleName, Context), false;
 
@@ -112,10 +113,10 @@ bool DwarfStreamer::init(Triple TheTriple) {
   return true;
 }
 
-void DwarfStreamer::finish() { MS->Finish(); }
+void DwarfStreamer::finish() { MS->finish(); }
 
 void DwarfStreamer::switchToDebugInfoSection(unsigned DwarfVersion) {
-  MS->SwitchSection(MOFI->getDwarfInfoSection());
+  MS->switchSection(MOFI->getDwarfInfoSection());
   MC->setDwarfVersion(DwarfVersion);
 }
 
@@ -173,14 +174,14 @@ void DwarfStreamer::emitCompileUnitHeader(CompileUnit &Unit,
 void DwarfStreamer::emitAbbrevs(
     const std::vector<std::unique_ptr<DIEAbbrev>> &Abbrevs,
     unsigned DwarfVersion) {
-  MS->SwitchSection(MOFI->getDwarfAbbrevSection());
+  MS->switchSection(MOFI->getDwarfAbbrevSection());
   MC->setDwarfVersion(DwarfVersion);
   Asm->emitDwarfAbbrevs(Abbrevs);
 }
 
 /// Recursively emit the DIE tree rooted at \p Die.
 void DwarfStreamer::emitDIE(DIE &Die) {
-  MS->SwitchSection(MOFI->getDwarfInfoSection());
+  MS->switchSection(MOFI->getDwarfInfoSection());
   Asm->emitDwarfDIE(Die);
   DebugInfoSectionSize += Die.getSize();
 }
@@ -199,7 +200,7 @@ void DwarfStreamer::emitSectionContents(StringRef SecData, StringRef SecName) {
           .Default(nullptr);
 
   if (Section) {
-    MS->SwitchSection(Section);
+    MS->switchSection(Section);
 
     MS->emitBytes(SecData);
   }
@@ -219,7 +220,7 @@ void DwarfStreamer::emitPaperTrailWarningsDie(DIE &Die) {
 
 /// Emit the debug_str section stored in \p Pool.
 void DwarfStreamer::emitStrings(const NonRelocatableStringpool &Pool) {
-  Asm->OutStreamer->SwitchSection(MOFI->getDwarfStrSection());
+  Asm->OutStreamer->switchSection(MOFI->getDwarfStrSection());
   std::vector<DwarfStringPoolEntryRef> Entries = Pool.getEntriesForEmission();
   for (auto Entry : Entries) {
     // Emit the string itself.
@@ -231,7 +232,7 @@ void DwarfStreamer::emitStrings(const NonRelocatableStringpool &Pool) {
 #if 0
   if (DwarfVersion >= 5) {
     // Emit an empty string offset section.
-    Asm->OutStreamer->SwitchSection(MOFI->getDwarfStrOffSection());
+    Asm->OutStreamer->switchSection(MOFI->getDwarfStrOffSection());
     Asm->emitDwarfUnitLength(4, "Length of String Offsets Set");
     Asm->emitInt16(DwarfVersion);
     Asm->emitInt16(0);
@@ -254,7 +255,7 @@ void DwarfStreamer::emitDebugNames(
     UniqueIdToCuMap[CU.ID] = Id++;
   }
 
-  Asm->OutStreamer->SwitchSection(MOFI->getDwarfDebugNamesSection());
+  Asm->OutStreamer->switchSection(MOFI->getDwarfDebugNamesSection());
   emitDWARF5AccelTable(
       Asm.get(), Table, CompUnits,
       [&UniqueIdToCuMap](const DWARF5AccelTableStaticData &Entry) {
@@ -264,7 +265,7 @@ void DwarfStreamer::emitDebugNames(
 
 void DwarfStreamer::emitAppleNamespaces(
     AccelTable<AppleAccelTableStaticOffsetData> &Table) {
-  Asm->OutStreamer->SwitchSection(MOFI->getDwarfAccelNamespaceSection());
+  Asm->OutStreamer->switchSection(MOFI->getDwarfAccelNamespaceSection());
   auto *SectionBegin = Asm->createTempSymbol("namespac_begin");
   Asm->OutStreamer->emitLabel(SectionBegin);
   emitAppleAccelTable(Asm.get(), Table, "namespac", SectionBegin);
@@ -272,7 +273,7 @@ void DwarfStreamer::emitAppleNamespaces(
 
 void DwarfStreamer::emitAppleNames(
     AccelTable<AppleAccelTableStaticOffsetData> &Table) {
-  Asm->OutStreamer->SwitchSection(MOFI->getDwarfAccelNamesSection());
+  Asm->OutStreamer->switchSection(MOFI->getDwarfAccelNamesSection());
   auto *SectionBegin = Asm->createTempSymbol("names_begin");
   Asm->OutStreamer->emitLabel(SectionBegin);
   emitAppleAccelTable(Asm.get(), Table, "names", SectionBegin);
@@ -280,7 +281,7 @@ void DwarfStreamer::emitAppleNames(
 
 void DwarfStreamer::emitAppleObjc(
     AccelTable<AppleAccelTableStaticOffsetData> &Table) {
-  Asm->OutStreamer->SwitchSection(MOFI->getDwarfAccelObjCSection());
+  Asm->OutStreamer->switchSection(MOFI->getDwarfAccelObjCSection());
   auto *SectionBegin = Asm->createTempSymbol("objc_begin");
   Asm->OutStreamer->emitLabel(SectionBegin);
   emitAppleAccelTable(Asm.get(), Table, "objc", SectionBegin);
@@ -288,7 +289,7 @@ void DwarfStreamer::emitAppleObjc(
 
 void DwarfStreamer::emitAppleTypes(
     AccelTable<AppleAccelTableStaticTypeData> &Table) {
-  Asm->OutStreamer->SwitchSection(MOFI->getDwarfAccelTypesSection());
+  Asm->OutStreamer->switchSection(MOFI->getDwarfAccelTypesSection());
   auto *SectionBegin = Asm->createTempSymbol("types_begin");
   Asm->OutStreamer->emitLabel(SectionBegin);
   emitAppleAccelTable(Asm.get(), Table, "types", SectionBegin);
@@ -298,7 +299,19 @@ void DwarfStreamer::emitAppleTypes(
 void DwarfStreamer::emitSwiftAST(StringRef Buffer) {
   MCSection *SwiftASTSection = MOFI->getDwarfSwiftASTSection();
   SwiftASTSection->setAlignment(Align(32));
-  MS->SwitchSection(SwiftASTSection);
+  MS->switchSection(SwiftASTSection);
+  MS->emitBytes(Buffer);
+}
+
+void DwarfStreamer::emitSwiftReflectionSection(
+    llvm::binaryformat::Swift5ReflectionSectionKind ReflSectionKind,
+    StringRef Buffer, uint32_t Alignment, uint32_t Size) {
+  MCSection *ReflectionSection =
+      MOFI->getSwift5ReflectionSection(ReflSectionKind);
+  if (ReflectionSection == nullptr)
+    return;
+  ReflectionSection->setAlignment(Align(Alignment));
+  MS->switchSection(ReflectionSection);
   MS->emitBytes(Buffer);
 }
 
@@ -311,7 +324,7 @@ void DwarfStreamer::emitRangesEntries(
     const FunctionIntervals::const_iterator &FuncRange,
     const std::vector<DWARFDebugRangeList::RangeListEntry> &Entries,
     unsigned AddressSize) {
-  MS->SwitchSection(MC->getObjectFileInfo()->getDwarfRangesSection());
+  MS->switchSection(MC->getObjectFileInfo()->getDwarfRangesSection());
 
   // Offset each range by the right amount.
   int64_t PcOffset = Entries.empty() ? 0 : FuncRange.value() + UnitPcOffset;
@@ -363,7 +376,7 @@ void DwarfStreamer::emitUnitRangesEntries(CompileUnit &Unit,
   llvm::sort(Ranges);
 
   if (!Ranges.empty()) {
-    MS->SwitchSection(MC->getObjectFileInfo()->getDwarfARangesSection());
+    MS->switchSection(MC->getObjectFileInfo()->getDwarfARangesSection());
 
     MCSymbol *BeginLabel = Asm->createTempSymbol("Barange");
     MCSymbol *EndLabel = Asm->createTempSymbol("Earange");
@@ -405,7 +418,7 @@ void DwarfStreamer::emitUnitRangesEntries(CompileUnit &Unit,
   if (!DoDebugRanges)
     return;
 
-  MS->SwitchSection(MC->getObjectFileInfo()->getDwarfRangesSection());
+  MS->switchSection(MC->getObjectFileInfo()->getDwarfRangesSection());
   // Offset each range by the right amount.
   int64_t PcOffset = -Unit.getLowPc();
   // Emit coalesced ranges.
@@ -433,7 +446,7 @@ void DwarfStreamer::emitLocationsForUnit(
   if (Attributes.empty())
     return;
 
-  MS->SwitchSection(MC->getObjectFileInfo()->getDwarfLocSection());
+  MS->switchSection(MC->getObjectFileInfo()->getDwarfLocSection());
 
   unsigned AddressSize = Unit.getOrigUnit().getAddressByteSize();
   uint64_t BaseAddressMarker = (AddressSize == 8)
@@ -495,7 +508,7 @@ void DwarfStreamer::emitLineTableForUnit(MCDwarfLineTableParams Params,
                                          std::vector<DWARFDebugLine::Row> &Rows,
                                          unsigned PointerSize) {
   // Switch to the section where the table will be emitted into.
-  MS->SwitchSection(MC->getObjectFileInfo()->getDwarfLineSection());
+  MS->switchSection(MC->getObjectFileInfo()->getDwarfLineSection());
   MCSymbol *LineStartSym = MC->createTempSymbol();
   MCSymbol *LineEndSym = MC->createTempSymbol();
 
@@ -531,9 +544,7 @@ void DwarfStreamer::emitLineTableForUnit(MCDwarfLineTableParams Params,
 
   unsigned RowsSinceLastSequence = 0;
 
-  for (unsigned Idx = 0; Idx < Rows.size(); ++Idx) {
-    auto &Row = Rows[Idx];
-
+  for (DWARFDebugLine::Row &Row : Rows) {
     int64_t AddressDelta;
     if (Address == -1ULL) {
       MS->emitIntValue(dwarf::DW_LNS_extended_op, 1);
@@ -638,7 +649,7 @@ void DwarfStreamer::emitLineTableForUnit(MCDwarfLineTableParams Params,
 /// Copy the debug_line over to the updated binary while unobfuscating the file
 /// names and directories.
 void DwarfStreamer::translateLineTable(DataExtractor Data, uint64_t Offset) {
-  MS->SwitchSection(MC->getObjectFileInfo()->getDwarfLineSection());
+  MS->switchSection(MC->getObjectFileInfo()->getDwarfLineSection());
   StringRef Contents = Data.getData();
 
   // We have to deconstruct the line table header, because it contains to
@@ -726,7 +737,7 @@ void DwarfStreamer::emitPubSectionForUnit(
     return;
 
   // Start the dwarf pubnames section.
-  Asm->OutStreamer->SwitchSection(Sec);
+  Asm->OutStreamer->switchSection(Sec);
   MCSymbol *BeginLabel = Asm->createTempSymbol("pub" + SecName + "_begin");
   MCSymbol *EndLabel = Asm->createTempSymbol("pub" + SecName + "_end");
 
@@ -773,7 +784,7 @@ void DwarfStreamer::emitPubTypesForUnit(const CompileUnit &Unit) {
 
 /// Emit a CIE into the debug_frame section.
 void DwarfStreamer::emitCIE(StringRef CIEBytes) {
-  MS->SwitchSection(MC->getObjectFileInfo()->getDwarfFrameSection());
+  MS->switchSection(MC->getObjectFileInfo()->getDwarfFrameSection());
 
   MS->emitBytes(CIEBytes);
   FrameSectionSize += CIEBytes.size();
@@ -784,7 +795,7 @@ void DwarfStreamer::emitCIE(StringRef CIEBytes) {
 /// which will be replaced with the parameter values.
 void DwarfStreamer::emitFDE(uint32_t CIEOffset, uint32_t AddrSize,
                             uint32_t Address, StringRef FDEBytes) {
-  MS->SwitchSection(MC->getObjectFileInfo()->getDwarfFrameSection());
+  MS->switchSection(MC->getObjectFileInfo()->getDwarfFrameSection());
 
   MS->emitIntValue(FDEBytes.size() + 4 + AddrSize, 4);
   MS->emitIntValue(CIEOffset, 4);

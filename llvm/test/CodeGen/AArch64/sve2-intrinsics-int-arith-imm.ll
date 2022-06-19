@@ -404,8 +404,9 @@ define <vscale x 2 x i64> @uqsub_d_highimm(<vscale x 2 x i64> %a) {
 ; As uqsub_i32 but where pg is i8 based and thus compatible for i32.
 define <vscale x 4 x i32> @uqsub_i32_ptrue_all_b(<vscale x 4 x i32> %a) #0 {
 ; CHECK-LABEL: uqsub_i32_ptrue_all_b:
-; CHECK: uqsub z0.s, z0.s, #1
-; CHECK-NEXT: ret
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    uqsub z0.s, z0.s, #1 // =0x1
+; CHECK-NEXT:    ret
   %pg.b = tail call <vscale x 16 x i1> @llvm.aarch64.sve.ptrue.nxv16i1(i32 31)
   %pg.s = tail call <vscale x 4 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv4i1(<vscale x 16 x i1> %pg.b)
   %b = tail call <vscale x 4 x i32> @llvm.aarch64.sve.dup.x.nxv4i32(i32 1)
@@ -418,8 +419,9 @@ define <vscale x 4 x i32> @uqsub_i32_ptrue_all_b(<vscale x 4 x i32> %a) #0 {
 ; As uqsub_i32 but where pg is i16 based and thus compatible for i32.
 define <vscale x 4 x i32> @uqsub_i32_ptrue_all_h(<vscale x 4 x i32> %a) #0 {
 ; CHECK-LABEL: uqsub_i32_ptrue_all_h:
-; CHECK: uqsub z0.s, z0.s, #1
-; CHECK-NEXT: ret
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    uqsub z0.s, z0.s, #1 // =0x1
+; CHECK-NEXT:    ret
   %pg.h = tail call <vscale x 8 x i1> @llvm.aarch64.sve.ptrue.nxv8i1(i32 31)
   %pg.b = tail call <vscale x 16 x i1> @llvm.aarch64.sve.convert.to.svbool.nxv8i1(<vscale x 8 x i1> %pg.h)
   %pg.s = tail call <vscale x 4 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv4i1(<vscale x 16 x i1> %pg.b)
@@ -434,10 +436,11 @@ define <vscale x 4 x i32> @uqsub_i32_ptrue_all_h(<vscale x 4 x i32> %a) #0 {
 ; thus inactive lanes are important and the immediate form cannot be used.
 define <vscale x 4 x i32> @uqsub_i32_ptrue_all_d(<vscale x 4 x i32> %a) #0 {
 ; CHECK-LABEL: uqsub_i32_ptrue_all_d:
-; CHECK-DAG: ptrue [[PG:p[0-9]+]].d
-; CHECK-DAG: mov [[DUP:z[0-9]+]].s, #1
-; CHECK-DAG: uqsub z0.s, [[PG]]/m, z0.s, [[DUP]].s
-; CHECK-NEXT: ret
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    mov z1.s, #1 // =0x1
+; CHECK-NEXT:    uqsub z0.s, p0/m, z0.s, z1.s
+; CHECK-NEXT:    ret
   %pg.d = tail call <vscale x 2 x i1> @llvm.aarch64.sve.ptrue.nxv2i1(i32 31)
   %pg.b = tail call <vscale x 16 x i1> @llvm.aarch64.sve.convert.to.svbool.nxv2i1(<vscale x 2 x i1> %pg.d)
   %pg.s = tail call <vscale x 4 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv4i1(<vscale x 16 x i1> %pg.b)

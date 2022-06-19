@@ -19,12 +19,12 @@
 + (id) arrayWithObjects;
 @end
 
-NSArray func() {
+NSArray func(void) {
   NSArray P;
   return P;
 }
 
-NSArray (func2)() { return 0; }
+NSArray (func2)(void) { return 0; }
 
 #ifdef __cplusplus
 void test_result_type() {
@@ -32,6 +32,6 @@ void test_result_type() {
 }
 #endif
 
-int main() {
+int main(void) {
   	NSArray pluginNames = [NSArray arrayWithObjects];
 }

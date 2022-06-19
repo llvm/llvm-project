@@ -11,41 +11,27 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir/Dialect/GPU/ParallelLoopMapper.h"
+#include "mlir/Dialect/GPU/Transforms/ParallelLoopMapper.h"
 
-#include "mlir/Dialect/GPU/GPUDialect.h"
-#include "mlir/Dialect/GPU/Passes.h"
+#include "PassDetail.h"
+#include "mlir/Dialect/GPU/IR/GPUDialect.h"
+#include "mlir/Dialect/GPU/Transforms/Passes.h"
 #include "mlir/Dialect/SCF/SCF.h"
 #include "mlir/IR/AffineMap.h"
-#include "mlir/Pass/Pass.h"
 
-using namespace mlir;
-using namespace mlir::gpu;
-using namespace mlir::scf;
-
-#include "mlir/Dialect/GPU/ParallelLoopMapperAttr.cpp.inc"
-#include "mlir/Dialect/GPU/ParallelLoopMapperEnums.cpp.inc"
 namespace mlir {
-namespace gpu {
 
-StringRef getMappingAttrName() { return "mapping"; }
+using scf::ParallelOp;
 
-ParallelLoopDimMapping getParallelLoopDimMappingAttr(Processor processor,
-                                                     AffineMap map,
-                                                     AffineMap bound) {
-  MLIRContext *context = map.getContext();
-  OpBuilder builder(context);
-  return ParallelLoopDimMapping::get(
-      ProcessorAttr::get(builder.getContext(), processor),
-      AffineMapAttr::get(map), AffineMapAttr::get(bound), context);
-}
+StringRef gpu::getMappingAttrName() { return "mapping"; }
 
-LogicalResult setMappingAttr(scf::ParallelOp ploopOp,
-                             ArrayRef<ParallelLoopDimMapping> mapping) {
+LogicalResult
+gpu::setMappingAttr(ParallelOp ploopOp,
+                    ArrayRef<ParallelLoopDimMappingAttr> mapping) {
   // Verify that each processor is mapped to only once.
   llvm::DenseSet<gpu::Processor> specifiedMappings;
   for (auto dimAttr : mapping) {
-    gpu::Processor processor = getProcessor(dimAttr);
+    gpu::Processor processor = dimAttr.getProcessor();
     if (processor != gpu::Processor::Sequential &&
         specifiedMappings.count(processor))
       return ploopOp.emitError(
@@ -56,20 +42,17 @@ LogicalResult setMappingAttr(scf::ParallelOp ploopOp,
                    ArrayAttr::get(ploopOp.getContext(), mappingAsAttrs));
   return success();
 }
-} // namespace gpu
-} // namespace mlir
 
+namespace gpu {
 namespace {
-
 enum MappingLevel { MapGrid = 0, MapBlock = 1, Sequential = 2 };
+} // namespace
 
 static constexpr int kNumHardwareIds = 3;
 
-} // namespace
-
 /// Bounded increment on MappingLevel. Increments to the next
 /// level unless Sequential was already reached.
-MappingLevel &operator++(MappingLevel &mappingLevel) {
+static MappingLevel &operator++(MappingLevel &mappingLevel) {
   if (mappingLevel < Sequential) {
     mappingLevel = static_cast<MappingLevel>(mappingLevel + 1);
   }
@@ -82,8 +65,7 @@ MappingLevel &operator++(MappingLevel &mappingLevel) {
 /// TODO: Make this use x for the inner-most loop that is
 /// distributed to map to x, the next innermost to y and the next innermost to
 /// z.
-static gpu::Processor getHardwareIdForMapping(MappingLevel level,
-                                              int dimension) {
+static Processor getHardwareIdForMapping(MappingLevel level, int dimension) {
 
   if (dimension >= kNumHardwareIds || level == Sequential)
     return Processor::Sequential;
@@ -128,10 +110,10 @@ static void mapParallelOp(ParallelOp parallelOp,
 
   MLIRContext *ctx = parallelOp.getContext();
   Builder b(ctx);
-  SmallVector<ParallelLoopDimMapping, 4> attrs;
+  SmallVector<ParallelLoopDimMappingAttr, 4> attrs;
   attrs.reserve(parallelOp.getNumLoops());
   for (int i = 0, e = parallelOp.getNumLoops(); i < e; ++i) {
-    attrs.push_back(getParallelLoopDimMappingAttr(
+    attrs.push_back(b.getAttr<ParallelLoopDimMappingAttr>(
         getHardwareIdForMapping(mappingLevel, i), b.getDimIdentityMap(),
         b.getDimIdentityMap()));
   }
@@ -145,6 +127,21 @@ static void mapParallelOp(ParallelOp parallelOp,
   }
 }
 
-void mlir::greedilyMapParallelSCFToGPU(Region &region) {
-  region.walk([](ParallelOp parallelOp) { mapParallelOp(parallelOp); });
+namespace {
+struct GpuMapParallelLoopsPass
+    : public GpuMapParallelLoopsPassBase<GpuMapParallelLoopsPass> {
+  void runOnOperation() override {
+    for (Region &region : getOperation()->getRegions()) {
+      region.walk([](ParallelOp parallelOp) { mapParallelOp(parallelOp); });
+    }
+  }
+};
+
+} // namespace
+} // namespace gpu
+} // namespace mlir
+
+std::unique_ptr<mlir::OperationPass<mlir::func::FuncOp>>
+mlir::createGpuMapParallelLoopsPass() {
+  return std::make_unique<gpu::GpuMapParallelLoopsPass>();
 }

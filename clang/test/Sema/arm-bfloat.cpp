@@ -5,6 +5,8 @@
 // RUN: -triple arm-arm-none-eabi -target-cpu cortex-a53 \
 // RUN: -target-feature +bf16 -target-feature +neon %s
 
+// REQUIRES: aarch64-registered-target || arm-registered-target
+
 void test(bool b) {
   __bf16 bf16;
 

@@ -15,6 +15,17 @@
 // Instruction format superclass
 //===----------------------------------------------------------------------===//
 
+// Sub-register replication for packed broadcast.
+def: Pat<(i64 (repl_f32 f32:$val)),
+            (ORrr
+              (SRLri (f2l $val), 32),
+              (zero_i32 (f2l $val)))>;
+def: Pat<(i64 (repl_i32 i32:$val)),
+            (ORrr
+              (zero_f32 (i2l $val)),
+              (SLLri (i2l $val), 32))>;
+
+
 multiclass vbrd_elem32<ValueType v32, ValueType s32, SDPatternOperator ImmOp,
                        SDNodeXForm ImmCast, OutPatFrag SuperRegCast> {
   // VBRDil
@@ -89,3 +100,51 @@ defm : patterns_elem32<v256f32, f32, simm7fp, LO7FP, l2f, f2l>;
 
 defm : patterns_elem64<v256i64, i64, simm7, LO7>;
 defm : patterns_elem64<v256f64, f64, simm7fp, LO7FP>;
+
+defm : vbrd_elem64<v512i32, i64, simm7, LO7>;
+defm : vbrd_elem64<v512f32, i64, simm7, LO7>;
+defm : vbrd_elem64<v512i32, f64, simm7fp, LO7FP>;
+defm : vbrd_elem64<v512f32, f64, simm7fp, LO7FP>;
+
+class Mask_Binary<ValueType MaskVT, SDPatternOperator MaskOp, string InstName> :
+  Pat<(MaskVT (MaskOp MaskVT:$ma, MaskVT:$mb)), (!cast<Instruction>(InstName#"mm") $ma, $mb)>;
+
+def: Mask_Binary<v256i1, and, "ANDM">;
+def: Mask_Binary<v256i1, or,  "ORM">;
+def: Mask_Binary<v256i1, xor, "XORM">;
+
+///// Packing support /////
+
+// v256i1 <> v512i1
+def : Pat<(v256i1 (vec_unpack_lo v512i1:$vm, (i32 srcvalue))),
+          (EXTRACT_SUBREG $vm, sub_vm_odd)>;
+def : Pat<(v256i1 (vec_unpack_hi v512i1:$vm, (i32 srcvalue))),
+          (EXTRACT_SUBREG $vm, sub_vm_even)>;
+def : Pat<(v512i1 (vec_pack v256i1:$vlo, v256i1:$vhi, (i32 srcvalue))),
+          (INSERT_SUBREG (INSERT_SUBREG
+                         (v512i1 (IMPLICIT_DEF)),
+                         $vlo, sub_vm_odd),
+                         $vhi, sub_vm_even)>;
+
+// v256.32 <> v512.32
+multiclass Packing<ValueType PackVT> {
+  // no-op unpacks
+  def : Pat<(v256i32 (vec_unpack_lo PackVT:$vp, (i32 srcvalue))),
+            (COPY_TO_REGCLASS $vp, V64)>;
+  def : Pat<(v256f32 (vec_unpack_hi PackVT:$vp, (i32 srcvalue))),
+            (COPY_TO_REGCLASS $vp, V64)>;
+
+  // shuffle unpacks
+  def : Pat<(v256f32 (vec_unpack_lo PackVT:$vp, i32:$avl)),
+            (VSHFvvil $vp, $vp, 4, $avl)>; // always pick lo
+  def : Pat<(v256i32 (vec_unpack_hi PackVT:$vp, i32:$avl)),
+            (VSHFvvil $vp, $vp, 0, $avl)>; // always pick hi
+}
+
+defm : Packing<v512i32>;
+defm : Packing<v512f32>;
+
+def : Pat<(v512i32 (vec_pack v256i32:$vlo, v256i32:$vhi, i32:$avl)),
+          (VSHFvvil $vlo, $vhi, 13, $avl)>;
+def : Pat<(v512f32 (vec_pack v256f32:$vlo, v256f32:$vhi, i32:$avl)),
+          (VSHFvvil $vlo, $vhi, 8, $avl)>;

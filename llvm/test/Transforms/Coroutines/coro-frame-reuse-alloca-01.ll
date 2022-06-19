@@ -1,12 +1,12 @@
 ; Tests that variables in a Corotuine whose lifetime range is not overlapping each other
 ; re-use the same slot in Coroutine frame.
-; RUN: opt < %s -passes='cgscc(coro-split),simplifycfg,early-cse' -reuse-storage-in-coroutine-frame -S | FileCheck %s
+; RUN: opt < %s -passes='cgscc(coro-split<reuse-storage>),simplifycfg,early-cse' -S | FileCheck %s
 %"struct.task::promise_type" = type { i8 }
 %struct.awaitable = type { i8 }
 %struct.big_structure = type { [500 x i8] }
 declare i8* @malloc(i64)
 declare void @consume(%struct.big_structure*)
-define void @a(i1 zeroext %cond) "coroutine.presplit"="1" {
+define void @a(i1 zeroext %cond) presplitcoroutine {
 entry:
   %__promise = alloca %"struct.task::promise_type", align 1
   %a = alloca %struct.big_structure, align 1

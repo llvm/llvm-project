@@ -23,6 +23,7 @@
 #include "llvm/IR/PassManager.h"
 #include "llvm/IR/PredIteratorCache.h"
 #include "llvm/IR/ValueHandle.h"
+#include "llvm/Pass.h"
 
 namespace llvm {
 

@@ -9,8 +9,10 @@
 #include "MipsABIInfo.h"
 #include "MipsRegisterInfo.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/CodeGen/MachineMemOperand.h"
 #include "llvm/MC/MCTargetOptions.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/LowLevelTypeImpl.h"
 
 using namespace llvm;
 

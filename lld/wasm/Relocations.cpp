@@ -20,7 +20,8 @@ namespace lld {
 namespace wasm {
 
 static bool requiresGOTAccess(const Symbol *sym) {
-  if (!config->isPic)
+  if (!config->isPic &&
+      config->unresolvedSymbols != UnresolvedPolicy::ImportDynamic)
     return false;
   if (sym->isHidden() || sym->isLocal())
     return false;
@@ -32,17 +33,13 @@ static bool requiresGOTAccess(const Symbol *sym) {
 }
 
 static bool allowUndefined(const Symbol* sym) {
-  // Undefined functions and globals with explicit import name are allowed to be
-  // undefined at link time.
-  if (auto *f = dyn_cast<UndefinedFunction>(sym))
-    if (f->importName || config->importUndefined)
-      return true;
-  if (auto *g = dyn_cast<UndefinedGlobal>(sym))
-    if (g->importName)
-      return true;
-  if (auto *g = dyn_cast<UndefinedGlobal>(sym))
-    if (g->importName)
-      return true;
+  // Symbols with explicit import names are always allowed to be undefined at
+  // link time.
+  if (sym->importName)
+    return true;
+  if (isa<UndefinedFunction>(sym) && config->importUndefined)
+    return true;
+
   return config->allowUndefinedSymbols.count(sym->getName()) != 0;
 }
 
@@ -69,6 +66,8 @@ static void reportUndefined(Symbol *sym) {
           }
         }
       }
+      break;
+    case UnresolvedPolicy::ImportDynamic:
       break;
     }
   }
@@ -116,10 +115,21 @@ void scanRelocations(InputChunk *chunk) {
       break;
     case R_WASM_MEMORY_ADDR_TLS_SLEB:
     case R_WASM_MEMORY_ADDR_TLS_SLEB64:
+      if (!sym->isDefined()) {
+        error(toString(file) + ": relocation " + relocTypeToString(reloc.Type) +
+              " cannot be used against an undefined symbol `" + toString(*sym) +
+              "`");
+      }
       // In single-threaded builds TLS is lowered away and TLS data can be
       // merged with normal data and allowing TLS relocation in non-TLS
       // segments.
       if (config->sharedMemory) {
+        if (!sym->isTLS()) {
+          error(toString(file) + ": relocation " +
+                relocTypeToString(reloc.Type) +
+                " cannot be used against non-TLS symbol `" + toString(*sym) +
+                "`");
+        }
         if (auto *D = dyn_cast<DefinedData>(sym)) {
           if (!D->segment->outputSeg->isTLS()) {
             error(toString(file) + ": relocation " +
@@ -132,7 +142,9 @@ void scanRelocations(InputChunk *chunk) {
       break;
     }
 
-    if (config->isPic) {
+    if (config->isPic ||
+        (sym->isUndefined() &&
+         config->unresolvedSymbols == UnresolvedPolicy::ImportDynamic)) {
       switch (reloc.Type) {
       case R_WASM_TABLE_INDEX_SLEB:
       case R_WASM_TABLE_INDEX_SLEB64:
@@ -143,17 +155,8 @@ void scanRelocations(InputChunk *chunk) {
         // Certain relocation types can't be used when building PIC output,
         // since they would require absolute symbol addresses at link time.
         error(toString(file) + ": relocation " + relocTypeToString(reloc.Type) +
-              " cannot be used against symbol " + toString(*sym) +
-              "; recompile with -fPIC");
-        break;
-      case R_WASM_MEMORY_ADDR_TLS_SLEB:
-      case R_WASM_MEMORY_ADDR_TLS_SLEB64:
-        if (!sym->isDefined()) {
-          error(toString(file) +
-                ": TLS symbol is undefined, but TLS symbols cannot yet be "
-                "imported: `" +
-                toString(*sym) + "`");
-        }
+              " cannot be used against symbol `" + toString(*sym) +
+              "`; recompile with -fPIC");
         break;
       case R_WASM_TABLE_INDEX_I32:
       case R_WASM_TABLE_INDEX_I64:
@@ -161,7 +164,7 @@ void scanRelocations(InputChunk *chunk) {
       case R_WASM_MEMORY_ADDR_I64:
         // These relocation types are only present in the data section and
         // will be converted into code by `generateRelocationCode`.  This code
-        // requires the symbols to have GOT entires.
+        // requires the symbols to have GOT entries.
         if (requiresGOTAccess(sym))
           addGOTEntry(sym);
         break;

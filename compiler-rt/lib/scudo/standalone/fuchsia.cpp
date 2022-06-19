@@ -17,6 +17,7 @@
 #include <lib/sync/mutex.h> // for sync_mutex_t
 #include <stdlib.h>         // for getenv()
 #include <zircon/compiler.h>
+#include <zircon/process.h>
 #include <zircon/sanitizer.h>
 #include <zircon/syscalls.h>
 
@@ -88,6 +89,8 @@ void *map(void *Addr, uptr Size, const char *Name, uptr Flags,
   uintptr_t P;
   zx_vm_option_t MapFlags =
       ZX_VM_PERM_READ | ZX_VM_PERM_WRITE | ZX_VM_ALLOW_FAULTS;
+  if (Addr)
+    DCHECK(Data);
   const uint64_t Offset =
       Addr ? reinterpret_cast<uintptr_t>(Addr) - Data->VmarBase : 0;
   if (Offset)

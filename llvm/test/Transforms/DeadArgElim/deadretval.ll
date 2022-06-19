@@ -1,4 +1,4 @@
-; RUN: opt < %s -deadargelim -S | FileCheck %s
+; RUN: opt < %s -passes=deadargelim -S | FileCheck %s
 
 @g0 = global i8 0, align 8
 
@@ -32,10 +32,12 @@ define internal i8* @callee4(i8* %a0) {
 declare void @llvm.objc.clang.arc.noop.use(...)
 
 ; CHECK-LABEL: define i8* @test4(
-; CHECK: tail call i8* @callee4() [ "clang.arc.attachedcall"(i64 0) ]
+; CHECK: tail call i8* @callee4() [ "clang.arc.attachedcall"(i8* (i8*)* @llvm.objc.retainAutoreleasedReturnValue) ]
 
 define i8* @test4() {
-  %call = tail call i8* @callee4(i8* @g0) [ "clang.arc.attachedcall"(i64 0) ]
+  %call = tail call i8* @callee4(i8* @g0) [ "clang.arc.attachedcall"(i8* (i8*)* @llvm.objc.retainAutoreleasedReturnValue) ]
   call void (...) @llvm.objc.clang.arc.noop.use(i8* %call)
   ret i8* @g0
 }
+
+declare i8* @llvm.objc.retainAutoreleasedReturnValue(i8*)

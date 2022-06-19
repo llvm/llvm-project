@@ -721,16 +721,17 @@ define dso_local i32 @test_switch_jumptable_fallthrough(i32 %idx, i32* %a.ptr, i
 ; X64-NEXT:    jmpq *%rsi
 ; X64-NEXT:  .LBB7_2: # %bb0
 ; X64-NEXT:    cmovbeq %r10, %r9
-; X64-NEXT:    movl (%rsi), %eax
-; X64-NEXT:    orl %r9d, %eax
+; X64-NEXT:    movl (%rsi), %edi
+; X64-NEXT:    orl %r9d, %edi
 ; X64-NEXT:    movq $.LBB7_3, %rsi
 ; X64-NEXT:  .LBB7_3: # Block address taken
 ; X64-NEXT:    # %bb1
 ; X64-NEXT:    cmpq $.LBB7_3, %rsi
 ; X64-NEXT:    cmovneq %r10, %r9
-; X64-NEXT:    addl (%rdx), %eax
-; X64-NEXT:    orl %r9d, %eax
+; X64-NEXT:    addl (%rdx), %edi
+; X64-NEXT:    orl %r9d, %edi
 ; X64-NEXT:    movq $.LBB7_4, %rsi
+; X64-NEXT:    movl %edi, %eax
 ; X64-NEXT:  .LBB7_4: # Block address taken
 ; X64-NEXT:    # %bb2
 ; X64-NEXT:    cmpq $.LBB7_4, %rsi
@@ -764,24 +765,25 @@ define dso_local i32 @test_switch_jumptable_fallthrough(i32 %idx, i32* %a.ptr, i
 ; X64-PIC-NEXT:    cmovaq %r10, %r9
 ; X64-PIC-NEXT:    xorl %eax, %eax
 ; X64-PIC-NEXT:    movl %edi, %esi
-; X64-PIC-NEXT:    leaq .LJTI7_0(%rip), %rdi
-; X64-PIC-NEXT:    movslq (%rdi,%rsi,4), %rsi
-; X64-PIC-NEXT:    addq %rdi, %rsi
+; X64-PIC-NEXT:    leaq .LJTI7_0(%rip), %r11
+; X64-PIC-NEXT:    movslq (%r11,%rsi,4), %rsi
+; X64-PIC-NEXT:    addq %r11, %rsi
 ; X64-PIC-NEXT:    orq %r9, %rsi
 ; X64-PIC-NEXT:    jmpq *%rsi
 ; X64-PIC-NEXT:  .LBB7_2: # %bb0
 ; X64-PIC-NEXT:    cmovbeq %r10, %r9
-; X64-PIC-NEXT:    movl (%rsi), %eax
-; X64-PIC-NEXT:    orl %r9d, %eax
+; X64-PIC-NEXT:    movl (%rsi), %edi
+; X64-PIC-NEXT:    orl %r9d, %edi
 ; X64-PIC-NEXT:    leaq .LBB7_3(%rip), %rsi
 ; X64-PIC-NEXT:  .LBB7_3: # Block address taken
 ; X64-PIC-NEXT:    # %bb1
-; X64-PIC-NEXT:    leaq .LBB7_3(%rip), %rdi
-; X64-PIC-NEXT:    cmpq %rdi, %rsi
+; X64-PIC-NEXT:    leaq .LBB7_3(%rip), %rax
+; X64-PIC-NEXT:    cmpq %rax, %rsi
 ; X64-PIC-NEXT:    cmovneq %r10, %r9
-; X64-PIC-NEXT:    addl (%rdx), %eax
-; X64-PIC-NEXT:    orl %r9d, %eax
+; X64-PIC-NEXT:    addl (%rdx), %edi
+; X64-PIC-NEXT:    orl %r9d, %edi
 ; X64-PIC-NEXT:    leaq .LBB7_4(%rip), %rsi
+; X64-PIC-NEXT:    movl %edi, %eax
 ; X64-PIC-NEXT:  .LBB7_4: # Block address taken
 ; X64-PIC-NEXT:    # %bb2
 ; X64-PIC-NEXT:    leaq .LBB7_4(%rip), %rdx
@@ -839,14 +841,15 @@ define dso_local i32 @test_switch_jumptable_fallthrough(i32 %idx, i32* %a.ptr, i
 ; X64-RETPOLINE-NEXT:    jmp .LBB8_12
 ; X64-RETPOLINE-NEXT:  .LBB8_8:
 ; X64-RETPOLINE-NEXT:    cmoveq %r10, %r9
-; X64-RETPOLINE-NEXT:    movl (%rsi), %eax
-; X64-RETPOLINE-NEXT:    orl %r9d, %eax
+; X64-RETPOLINE-NEXT:    movl (%rsi), %edi
+; X64-RETPOLINE-NEXT:    orl %r9d, %edi
 ; X64-RETPOLINE-NEXT:    jmp .LBB8_9
 ; X64-RETPOLINE-NEXT:  .LBB8_2:
 ; X64-RETPOLINE-NEXT:    cmovneq %r10, %r9
 ; X64-RETPOLINE-NEXT:  .LBB8_9: # %bb1
-; X64-RETPOLINE-NEXT:    addl (%rdx), %eax
-; X64-RETPOLINE-NEXT:    orl %r9d, %eax
+; X64-RETPOLINE-NEXT:    addl (%rdx), %edi
+; X64-RETPOLINE-NEXT:    orl %r9d, %edi
+; X64-RETPOLINE-NEXT:    movl %edi, %eax
 ; X64-RETPOLINE-NEXT:  .LBB8_10: # %bb2
 ; X64-RETPOLINE-NEXT:    addl (%rcx), %eax
 ; X64-RETPOLINE-NEXT:    orl %r9d, %eax

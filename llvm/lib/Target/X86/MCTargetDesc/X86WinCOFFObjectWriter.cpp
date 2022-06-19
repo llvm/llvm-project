@@ -100,7 +100,7 @@ unsigned X86WinCOFFObjectWriter::getRelocType(MCContext &Ctx,
       if (Modifier == MCSymbolRefExpr::VK_COFF_IMGREL32)
         return COFF::IMAGE_REL_I386_DIR32NB;
       if (Modifier == MCSymbolRefExpr::VK_SECREL)
-        return COFF::IMAGE_REL_AMD64_SECREL;
+        return COFF::IMAGE_REL_I386_SECREL;
       return COFF::IMAGE_REL_I386_DIR32;
     case FK_SecRel_2:
       return COFF::IMAGE_REL_I386_SECTION;

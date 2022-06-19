@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -emit-llvm -triple x86_64-apple-darwin10 -o - %s | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -emit-llvm -triple x86_64-apple-darwin10 -o - %s | FileCheck %s
 
 // PR6024
 extern int i;
@@ -68,14 +68,14 @@ int get_int();
 // CHECK-LABEL: define{{.*}} nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) i8* @_Z24lvalue_integer_bool_castv()
 const bool &lvalue_integer_bool_cast() {
   if (i == 0)
-    // CHECK: call i32 @_Z7get_intv()
+    // CHECK: call noundef i32 @_Z7get_intv()
     // CHECK: store i8
     return (const bool&)get_int();
   else if (i == 1)
-    // CHECK: call i32 @_Z7get_intv()
+    // CHECK: call noundef i32 @_Z7get_intv()
     // CHECK: store i8
     return static_cast<const bool&>(get_int());
-  // CHECK: call i32 @_Z7get_intv()
+  // CHECK: call noundef i32 @_Z7get_intv()
   // CHECK: store i8
   return get_int();
 }
@@ -85,16 +85,16 @@ float get_float();
 // CHECK-LABEL: define{{.*}} nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) i8* @_Z25lvalue_floating_bool_castv()
 const bool &lvalue_floating_bool_cast() {
   if (i == 0)
-    // CHECK: call float @_Z9get_floatv()
+    // CHECK: call noundef float @_Z9get_floatv()
     // CHECK: fcmp une float
     // CHECK: store i8
     return (const bool&)get_float();
   else if (i == 1)
-    // CHECK: call float @_Z9get_floatv()
+    // CHECK: call noundef float @_Z9get_floatv()
     // CHECK: fcmp une float
     // CHECK: store i8
     return static_cast<const bool&>(get_float());
-  // CHECK: call float @_Z9get_floatv()
+  // CHECK: call noundef float @_Z9get_floatv()
   // CHECK: fcmp une float
   // CHECK: store i8
   return get_float();

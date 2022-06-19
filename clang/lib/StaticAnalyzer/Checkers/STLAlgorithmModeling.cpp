@@ -12,6 +12,7 @@
 
 #include "clang/StaticAnalyzer/Checkers/BuiltinCheckerRegistration.h"
 #include "clang/StaticAnalyzer/Core/Checker.h"
+#include "clang/StaticAnalyzer/Core/PathSensitive/CallDescription.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/CallEvent.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/CheckerContext.h"
 
@@ -130,7 +131,7 @@ void STLAlgorithmModeling::Find(CheckerContext &C, const CallExpr *CE,
                                         nonloc::SymbolVal(NewPos->getOffset()),
                                         nonloc::SymbolVal(Pos->getOffset()),
                                         SVB.getConditionType());
-    assert(GreaterOrEqual.getAs<DefinedSVal>() &&
+    assert(isa<DefinedSVal>(GreaterOrEqual) &&
            "Symbol comparison must be a `DefinedSVal`");
     StateFound = StateFound->assume(GreaterOrEqual.castAs<DefinedSVal>(), true);
   }
@@ -152,7 +153,7 @@ void STLAlgorithmModeling::Find(CheckerContext &C, const CallExpr *CE,
                               nonloc::SymbolVal(NewPos->getOffset()),
                               nonloc::SymbolVal(Pos->getOffset()),
                               SVB.getConditionType());
-    assert(Less.getAs<DefinedSVal>() &&
+    assert(isa<DefinedSVal>(Less) &&
            "Symbol comparison must be a `DefinedSVal`");
     StateFound = StateFound->assume(Less.castAs<DefinedSVal>(), true);
   }

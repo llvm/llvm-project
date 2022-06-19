@@ -20,30 +20,30 @@
 // ST1 arguments when returning values on the x87 stack.
 let isTerminator = 1, isReturn = 1, isBarrier = 1,
     hasCtrlDep = 1, FPForm = SpecialFP, SchedRW = [WriteJumpLd] in {
-  def RETL   : I   <0xC3, RawFrm, (outs), (ins variable_ops),
+  def RET32  : I   <0xC3, RawFrm, (outs), (ins variable_ops),
                     "ret{l}", []>, OpSize32, Requires<[Not64BitMode]>;
-  def RETQ   : I   <0xC3, RawFrm, (outs), (ins variable_ops),
+  def RET64  : I   <0xC3, RawFrm, (outs), (ins variable_ops),
                     "ret{q}", []>, OpSize32, Requires<[In64BitMode]>;
-  def RETW   : I   <0xC3, RawFrm, (outs), (ins),
+  def RET16  : I   <0xC3, RawFrm, (outs), (ins),
                     "ret{w}", []>, OpSize16;
-  def RETIL  : Ii16<0xC2, RawFrm, (outs), (ins i16imm:$amt, variable_ops),
+  def RETI32 : Ii16<0xC2, RawFrm, (outs), (ins i16imm:$amt, variable_ops),
                     "ret{l}\t$amt", []>, OpSize32, Requires<[Not64BitMode]>;
-  def RETIQ  : Ii16<0xC2, RawFrm, (outs), (ins i16imm:$amt, variable_ops),
+  def RETI64 : Ii16<0xC2, RawFrm, (outs), (ins i16imm:$amt, variable_ops),
                     "ret{q}\t$amt", []>, OpSize32, Requires<[In64BitMode]>;
-  def RETIW  : Ii16<0xC2, RawFrm, (outs), (ins i16imm:$amt),
+  def RETI16 : Ii16<0xC2, RawFrm, (outs), (ins i16imm:$amt),
                     "ret{w}\t$amt", []>, OpSize16;
-  def LRETL  : I   <0xCB, RawFrm, (outs), (ins),
+  def LRET32 : I   <0xCB, RawFrm, (outs), (ins),
                     "{l}ret{l|f}", []>, OpSize32;
-  def LRETQ  : RI  <0xCB, RawFrm, (outs), (ins),
+  def LRET64 : RI  <0xCB, RawFrm, (outs), (ins),
                     "{l}ret{|f}q", []>, Requires<[In64BitMode]>;
-  def LRETW  : I   <0xCB, RawFrm, (outs), (ins),
+  def LRET16 : I   <0xCB, RawFrm, (outs), (ins),
                     "{l}ret{w|f}", []>, OpSize16;
-  def LRETIL : Ii16<0xCA, RawFrm, (outs), (ins i16imm:$amt),
-                    "{l}ret{l|f}\t$amt", []>, OpSize32;
-  def LRETIQ : RIi16<0xCA, RawFrm, (outs), (ins i16imm:$amt),
-                    "{l}ret{|f}q\t$amt", []>, Requires<[In64BitMode]>;
-  def LRETIW : Ii16<0xCA, RawFrm, (outs), (ins i16imm:$amt),
-                    "{l}ret{w|f}\t$amt", []>, OpSize16;
+  def LRETI32 : Ii16<0xCA, RawFrm, (outs), (ins i16imm:$amt),
+                     "{l}ret{l|f}\t$amt", []>, OpSize32;
+  def LRETI64 : RIi16<0xCA, RawFrm, (outs), (ins i16imm:$amt),
+                      "{l}ret{|f}q\t$amt", []>, Requires<[In64BitMode]>;
+  def LRETI16 : Ii16<0xCA, RawFrm, (outs), (ins i16imm:$amt),
+                     "{l}ret{w|f}\t$amt", []>, OpSize16;
 
   // The machine return from interrupt instruction, but sometimes we need to
   // perform a post-epilogue stack adjustment. Codegen emits the pseudo form
@@ -147,7 +147,7 @@ let isBranch = 1, isTerminator = 1, isBarrier = 1, isIndirectBranch = 1 in {
 
   // Win64 wants indirect jumps leaving the function to have a REX_W prefix.
   // These are switched from TAILJMPr/m64_REX in MCInstLower.
-  let isCodeGenOnly = 1, hasREX_WPrefix = 1 in {
+  let isCodeGenOnly = 1, hasREX_W = 1 in {
     def JMP64r_REX : I<0xFF, MRM4r, (outs), (ins GR64:$dst),
                        "rex64 jmp{q}\t{*}$dst", []>, Sched<[WriteJump]>;
     let mayLoad = 1 in
@@ -384,7 +384,7 @@ let isCall = 1, isTerminator = 1, isReturn = 1, isBarrier = 1,
                            []>, Sched<[WriteJumpLd]>;
 
   // Win64 wants indirect jumps leaving the function to have a REX_W prefix.
-  let hasREX_WPrefix = 1 in {
+  let hasREX_W = 1 in {
     def TAILJMPr64_REX : PseudoI<(outs), (ins ptr_rc_tailcall:$dst),
                                  []>, Sched<[WriteJump]>;
 
@@ -419,15 +419,15 @@ let isPseudo = 1, isCall = 1, isCodeGenOnly = 1,
     Uses = [RSP, SSP],
     SchedRW = [WriteJump] in {
   def CALL64m_RVMARKER :
-     PseudoI<(outs), (ins i32imm:$sel, i64mem:$dst), [(X86call_rvmarker timm:$sel, (loadi64 addr:$dst))]>,
+     PseudoI<(outs), (ins i64imm:$rvfunc, i64mem:$dst), [(X86call_rvmarker tglobaladdr:$rvfunc, (loadi64 addr:$dst))]>,
              Requires<[In64BitMode]>;
 
   def CALL64r_RVMARKER :
-    PseudoI<(outs), (ins i32imm:$sel, GR64:$dst), [(X86call_rvmarker timm:$sel, GR64:$dst)]>,
+    PseudoI<(outs), (ins i64imm:$rvfunc, GR64:$dst), [(X86call_rvmarker tglobaladdr:$rvfunc, GR64:$dst)]>,
             Requires<[In64BitMode]>;
 
   def CALL64pcrel32_RVMARKER :
-    PseudoI<(outs), (ins i32imm:$sel, i64i32imm_brtarget:$dst), []>,
+    PseudoI<(outs), (ins i64imm:$rvfunc, i64i32imm_brtarget:$dst), []>,
             Requires<[In64BitMode]>;
 }
 

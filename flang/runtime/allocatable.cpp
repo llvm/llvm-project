@@ -6,11 +6,12 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "allocatable.h"
+#include "flang/Runtime/allocatable.h"
 #include "derived.h"
 #include "stat.h"
 #include "terminator.h"
 #include "type-info.h"
+#include "flang/Runtime/assign.h"
 
 namespace Fortran::runtime {
 extern "C" {
@@ -35,10 +36,6 @@ void RTNAME(AllocatableInitDerived)(Descriptor &descriptor,
   INTERNAL_CHECK(corank == 0);
   descriptor.Establish(
       derivedType, nullptr, rank, nullptr, CFI_attribute_allocatable);
-}
-
-void RTNAME(AllocatableAssign)(Descriptor &to, const Descriptor & /*from*/) {
-  INTERNAL_CHECK(false); // TODO: AllocatableAssign is not yet implemented
 }
 
 int RTNAME(MoveAlloc)(Descriptor &to, const Descriptor & /*from*/,

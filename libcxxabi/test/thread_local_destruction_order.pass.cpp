@@ -1,4 +1,4 @@
-//===-------------- thread_local_destruction_order.pass.cpp ---------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -7,10 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 // UNSUPPORTED: c++03
-// UNSUPPORTED: libcxxabi-no-threads
-
-// TODO: Investigate this failure
-// XFAIL: target=arm64-apple-{{.+}}
+// UNSUPPORTED: no-threads
 
 #include <cassert>
 #include <thread>

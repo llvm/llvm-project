@@ -1,5 +1,4 @@
-! RUN: %S/test_errors.sh %s %t %flang_fc1
-! REQUIRES: shell
+! RUN: %python %S/test_errors.py %s %flang_fc1
 module m1
   integer :: x
   integer :: y
@@ -13,7 +12,7 @@ module m2
   integer, parameter :: k2 = selected_int_kind(9)
 end
 
-program p1
+subroutine p1
   use m1
   use m2
   ! check that selected_int_kind is not use-associated

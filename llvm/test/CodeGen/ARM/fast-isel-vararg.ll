@@ -18,9 +18,9 @@ entry:
 ; ARM: VarArg
 ; ARM: mov [[FP:r[0-9]+]], sp
 ; ARM: sub sp, sp, #32
-; ARM: ldr r1, {{\[}}[[FP]], #-4]
-; ARM: ldr r2, {{\[}}[[FP]], #-8]
-; ARM: ldr r3, {{\[}}[[FP]], #-12]
+; ARM: ldr r1, [[[FP]], #-4]
+; ARM: ldr r2, [[[FP]], #-8]
+; ARM: ldr r3, [[[FP]], #-12]
 ; ARM: ldr [[Ra:r[0-9]+|lr]], [sp, #16]
 ; ARM: ldr [[Rb:[lr]+[0-9]*]], [sp, #12]
 ; ARM: movw r0, #5

@@ -1,18 +1,25 @@
-; RUN: llc < %s -mcpu=sm_20 | FileCheck %s
-
-target triple = "nvptx64-nvidia-cuda"
+; RUN: llc < %s -mtriple nvptx64 -mcpu=sm_20 -verify-machineinstrs | FileCheck %s --check-prefixes=CHECK,CHECK64
+; RUN: llc < %s -mtriple nvptx -mcpu=sm_20 -verify-machineinstrs | FileCheck %s --check-prefixes=CHECK,CHECK32
+; RUN: %if ptxas %{ llc < %s -mtriple nvptx64 -mcpu=sm_20 -verify-machineinstrs | %ptxas-verify %}
+; RUN: %if ptxas %{ llc < %s -mtriple nvptx -mcpu=sm_20 -verify-machineinstrs | %ptxas-verify %}
 
 %struct.ham = type { [4 x i32] }
 
 ; // Verify that load with static offset into parameter is done directly.
 ; CHECK-LABEL: .visible .entry static_offset
 ; CHECK-NOT:   .local
-; CHECK: ld.param.u64    [[result_addr:%rd[0-9]+]], [{{.*}}_param_0]
-; CHECK: mov.b64         %[[param_addr:rd[0-9]+]], {{.*}}_param_1
-; CHECK: mov.u64         %[[param_addr1:rd[0-9]+]], %[[param_addr]]
-; CHECK: cvta.to.global.u64 [[result_addr_g:%rd[0-9]+]], [[result_addr]]
+; CHECK64: ld.param.u64    [[result_addr:%rd[0-9]+]], [{{.*}}_param_0]
+; CHECK64: mov.b64         %[[param_addr:rd[0-9]+]], {{.*}}_param_1
+; CHECK64: mov.u64         %[[param_addr1:rd[0-9]+]], %[[param_addr]]
+; CHECK64: cvta.to.global.u64 [[result_addr_g:%rd[0-9]+]], [[result_addr]]
+;
+; CHECK32: ld.param.u32    [[result_addr:%r[0-9]+]], [{{.*}}_param_0]
+; CHECK32: mov.b32         %[[param_addr:r[0-9]+]], {{.*}}_param_1
+; CHECK32: mov.u32         %[[param_addr1:r[0-9]+]], %[[param_addr]]
+; CHECK32: cvta.to.global.u32 [[result_addr_g:%r[0-9]+]], [[result_addr]]
+;
 ; CHECK: ld.param.u32    [[value:%r[0-9]+]], [%[[param_addr1]]+12];
-; CHECK  st.global.u32   [[[result_addr_g]]], [[value]];
+; CHECK: st.global.u32   [[[result_addr_g]]], [[value]];
 ; Function Attrs: nofree norecurse nounwind willreturn mustprogress
 define dso_local void @static_offset(i32* nocapture %arg, %struct.ham* nocapture readonly byval(%struct.ham) align 4 %arg1, i32 %arg2) local_unnamed_addr #0 {
 bb:
@@ -32,13 +39,20 @@ bb6:                                              ; preds = %bb3, %bb
 ; // Verify that load with dynamic offset into parameter is also done directly.
 ; CHECK-LABEL: .visible .entry dynamic_offset
 ; CHECK-NOT:   .local
-; CHECK: ld.param.u64    [[result_addr:%rd[0-9]+]], [{{.*}}_param_0]
-; CHECK: mov.b64         %[[param_addr:rd[0-9]+]], {{.*}}_param_1
-; CHECK: mov.u64         %[[param_addr1:rd[0-9]+]], %[[param_addr]]
-; CHECK: cvta.to.global.u64 [[result_addr_g:%rd[0-9]+]], [[result_addr]]
-; CHECK: add.s64         %[[param_w_offset:rd[0-9]+]], %[[param_addr1]],
+; CHECK64: ld.param.u64    [[result_addr:%rd[0-9]+]], [{{.*}}_param_0]
+; CHECK64: mov.b64         %[[param_addr:rd[0-9]+]], {{.*}}_param_1
+; CHECK64: mov.u64         %[[param_addr1:rd[0-9]+]], %[[param_addr]]
+; CHECK64: cvta.to.global.u64 [[result_addr_g:%rd[0-9]+]], [[result_addr]]
+; CHECK64: add.s64         %[[param_w_offset:rd[0-9]+]], %[[param_addr1]],
+;
+; CHECK32: ld.param.u32    [[result_addr:%r[0-9]+]], [{{.*}}_param_0]
+; CHECK32: mov.b32         %[[param_addr:r[0-9]+]], {{.*}}_param_1
+; CHECK32: mov.u32         %[[param_addr1:r[0-9]+]], %[[param_addr]]
+; CHECK32: cvta.to.global.u32 [[result_addr_g:%r[0-9]+]], [[result_addr]]
+; CHECK32: add.s32         %[[param_w_offset:r[0-9]+]], %[[param_addr1]],
+;
 ; CHECK: ld.param.u32    [[value:%r[0-9]+]], [%[[param_w_offset]]];
-; CHECK  st.global.u32   [[[result_addr_g]]], [[value]];
+; CHECK: st.global.u32   [[[result_addr_g]]], [[value]];
 
 ; Function Attrs: nofree norecurse nounwind willreturn mustprogress
 define dso_local void @dynamic_offset(i32* nocapture %arg, %struct.ham* nocapture readonly byval(%struct.ham) align 4 %arg1, i32 %arg2) local_unnamed_addr #0 {
@@ -53,11 +67,17 @@ bb:
 ; Same as above, but with a bitcast present in the chain
 ; CHECK-LABEL:.visible .entry gep_bitcast
 ; CHECK-NOT: .local
-; CHECK-DAG: ld.param.u64    [[out:%rd[0-9]+]], [gep_bitcast_param_0]
-; CHECK-DAG: mov.b64         {{%rd[0-9]+}}, gep_bitcast_param_1
+; CHECK64-DAG: ld.param.u64    [[out:%rd[0-9]+]], [gep_bitcast_param_0]
+; CHECK64-DAG: mov.b64         {{%rd[0-9]+}}, gep_bitcast_param_1
+;
+; CHECK32-DAG: ld.param.u32    [[out:%r[0-9]+]], [gep_bitcast_param_0]
+; CHECK32-DAG: mov.b32         {{%r[0-9]+}}, gep_bitcast_param_1
+;
 ; CHECK-DAG: ld.param.u32    {{%r[0-9]+}}, [gep_bitcast_param_2]
-; CHECK:     ld.param.u8     [[value:%rs[0-9]+]], [{{%rd[0-9]+}}]
-; CHECK:     st.global.u8    [{{%rd[0-9]+}}], [[value]];
+; CHECK64:     ld.param.u8     [[value:%rs[0-9]+]], [{{%rd[0-9]+}}]
+; CHECK64:     st.global.u8    [{{%rd[0-9]+}}], [[value]];
+; CHECK32:     ld.param.u8     [[value:%rs[0-9]+]], [{{%r[0-9]+}}]
+; CHECK32:     st.global.u8    [{{%r[0-9]+}}], [[value]];
 ;
 ; Function Attrs: nofree norecurse nounwind willreturn mustprogress
 define dso_local void @gep_bitcast(i8* nocapture %out,  %struct.ham* nocapture readonly byval(%struct.ham) align 4 %in, i32 %n) local_unnamed_addr #0 {
@@ -73,11 +93,17 @@ bb:
 ; Same as above, but with an ASC(101) present in the chain
 ; CHECK-LABEL:.visible .entry gep_bitcast_asc
 ; CHECK-NOT: .local
-; CHECK-DAG: ld.param.u64    [[out:%rd[0-9]+]], [gep_bitcast_asc_param_0]
-; CHECK-DAG: mov.b64         {{%rd[0-9]+}}, gep_bitcast_asc_param_1
+; CHECK64-DAG: ld.param.u64    [[out:%rd[0-9]+]], [gep_bitcast_asc_param_0]
+; CHECK64-DAG: mov.b64         {{%rd[0-9]+}}, gep_bitcast_asc_param_1
+;
+; CHECK32-DAG: ld.param.u32    [[out:%r[0-9]+]], [gep_bitcast_asc_param_0]
+; CHECK32-DAG: mov.b32         {{%r[0-9]+}}, gep_bitcast_asc_param_1
+;
 ; CHECK-DAG: ld.param.u32    {{%r[0-9]+}}, [gep_bitcast_asc_param_2]
-; CHECK:     ld.param.u8     [[value:%rs[0-9]+]], [{{%rd[0-9]+}}]
-; CHECK:     st.global.u8    [{{%rd[0-9]+}}], [[value]];
+; CHECK64:     ld.param.u8     [[value:%rs[0-9]+]], [{{%rd[0-9]+}}]
+; CHECK64:     st.global.u8    [{{%rd[0-9]+}}], [[value]];
+; CHECK32:     ld.param.u8     [[value:%rs[0-9]+]], [{{%r[0-9]+}}]
+; CHECK32:     st.global.u8    [{{%r[0-9]+}}], [[value]];
 ;
 ; Function Attrs: nofree norecurse nounwind willreturn mustprogress
 define dso_local void @gep_bitcast_asc(i8* nocapture %out,  %struct.ham* nocapture readonly byval(%struct.ham) align 4 %in, i32 %n) local_unnamed_addr #0 {
@@ -95,8 +121,10 @@ bb:
 ; Verify that if the pointer escapes, then we do fall back onto using a temp copy.
 ; CHECK-LABEL: .visible .entry pointer_escapes
 ; CHECK: .local .align 8 .b8     __local_depot{{.*}}
-; CHECK: ld.param.u64    [[result_addr:%rd[0-9]+]], [{{.*}}_param_0]
-; CHECK: add.u64         %[[copy_addr:rd[0-9]+]], %SPL, 0;
+; CHECK64: ld.param.u64    [[result_addr:%rd[0-9]+]], [{{.*}}_param_0]
+; CHECK64: add.u64         %[[copy_addr:rd[0-9]+]], %SPL, 0;
+; CHECK32: ld.param.u32    [[result_addr:%r[0-9]+]], [{{.*}}_param_0]
+; CHECK32: add.u32         %[[copy_addr:r[0-9]+]], %SPL, 0;
 ; CHECK-DAG: ld.param.u32    %{{.*}}, [pointer_escapes_param_1+12];
 ; CHECK-DAG: ld.param.u32    %{{.*}}, [pointer_escapes_param_1+8];
 ; CHECK-DAG: ld.param.u32    %{{.*}}, [pointer_escapes_param_1+4];
@@ -105,10 +133,12 @@ bb:
 ; CHECK-DAG: st.local.u32    [%[[copy_addr]]+8],
 ; CHECK-DAG: st.local.u32    [%[[copy_addr]]+4],
 ; CHECK-DAG: st.local.u32    [%[[copy_addr]]],
-; CHECK: cvta.to.global.u64 [[result_addr_g:%rd[0-9]+]], [[result_addr]]
-; CHECK: add.s64         %[[copy_w_offset:rd[0-9]+]], %[[copy_addr]],
+; CHECK64: cvta.to.global.u64 [[result_addr_g:%rd[0-9]+]], [[result_addr]]
+; CHECK64: add.s64         %[[copy_w_offset:rd[0-9]+]], %[[copy_addr]],
+; CHECK32: cvta.to.global.u32 [[result_addr_g:%r[0-9]+]], [[result_addr]]
+; CHECK32: add.s32         %[[copy_w_offset:r[0-9]+]], %[[copy_addr]],
 ; CHECK: ld.local.u32    [[value:%r[0-9]+]], [%[[copy_w_offset]]];
-; CHECK  st.global.u32   [[[result_addr_g]]], [[value]];
+; CHECK: st.global.u32   [[[result_addr_g]]], [[value]];
 
 ; Function Attrs: convergent norecurse nounwind mustprogress
 define dso_local void @pointer_escapes(i32* nocapture %arg, %struct.ham* byval(%struct.ham) align 4 %arg1, i32 %arg2) local_unnamed_addr #1 {

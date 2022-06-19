@@ -92,7 +92,7 @@ namespace llvm {
      Note: we need to make the value different from semBogus as otherwise
      an unsafe optimization may collapse both values to a single address,
      and we heavily rely on them having distinct addresses.             */
-  static const fltSemantics semPPCDoubleDouble = {-1, 0, 0, 0};
+  static const fltSemantics semPPCDoubleDouble = {-1, 0, 0, 128};
 
   /* These are legacy semantics for the fallback, inaccrurate implementation of
      IBM double-double, if the accurate semPPCDoubleDouble doesn't handle the
@@ -1288,6 +1288,23 @@ IEEEFloat::compareAbsoluteValue(const IEEEFloat &rhs) const {
     return cmpEqual;
 }
 
+/* Set the least significant BITS bits of a bignum, clear the
+   rest.  */
+static void tcSetLeastSignificantBits(APInt::WordType *dst, unsigned parts,
+                                      unsigned bits) {
+  unsigned i = 0;
+  while (bits > APInt::APINT_BITS_PER_WORD) {
+    dst[i++] = ~(APInt::WordType)0;
+    bits -= APInt::APINT_BITS_PER_WORD;
+  }
+
+  if (bits)
+    dst[i++] = ~(APInt::WordType)0 >> (APInt::APINT_BITS_PER_WORD - bits);
+
+  while (i < parts)
+    dst[i++] = 0;
+}
+
 /* Handle overflow.  Sign is preserved.  We either become infinity or
    the largest finite number.  */
 IEEEFloat::opStatus IEEEFloat::handleOverflow(roundingMode rounding_mode) {
@@ -1303,8 +1320,8 @@ IEEEFloat::opStatus IEEEFloat::handleOverflow(roundingMode rounding_mode) {
   /* Otherwise we become the largest finite number.  */
   category = fcNormal;
   exponent = semantics->maxExponent;
-  APInt::tcSetLeastSignificantBits(significandParts(), partCount(),
-                                   semantics->precision);
+  tcSetLeastSignificantBits(significandParts(), partCount(),
+                            semantics->precision);
 
   return opInexact;
 }
@@ -2196,13 +2213,20 @@ IEEEFloat::opStatus IEEEFloat::convert(const fltSemantics &toSemantics,
   // when truncating from PowerPC double-double to double format), the
   // right shift could lose result mantissa bits.  Adjust exponent instead
   // of performing excessive shift.
+  // Also do a similar trick in case shifting denormal would produce zero
+  // significand as this case isn't handled correctly by normalize.
   if (shift < 0 && isFiniteNonZero()) {
-    int exponentChange = significandMSB() + 1 - fromSemantics.precision;
+    int omsb = significandMSB() + 1;
+    int exponentChange = omsb - fromSemantics.precision;
     if (exponent + exponentChange < toSemantics.minExponent)
       exponentChange = toSemantics.minExponent - exponent;
     if (exponentChange < shift)
       exponentChange = shift;
     if (exponentChange < 0) {
+      shift -= exponentChange;
+      exponent += exponentChange;
+    } else if (omsb <= -shift) {
+      exponentChange = omsb + shift - 1; // leave at least one bit set
       shift -= exponentChange;
       exponent += exponentChange;
     }
@@ -2412,7 +2436,7 @@ IEEEFloat::convertToInteger(MutableArrayRef<integerPart> parts,
     else
       bits = width - isSigned;
 
-    APInt::tcSetLeastSignificantBits(parts.data(), dstPartsCount, bits);
+    tcSetLeastSignificantBits(parts.data(), dstPartsCount, bits);
     if (sign && isSigned)
       APInt::tcShiftLeft(parts.data(), dstPartsCount, width - 1);
   }
@@ -3379,7 +3403,6 @@ double IEEEFloat::convertToDouble() const {
 ///  exponent = 0, integer bit 1 ("pseudodenormal")
 /// At the moment, the first three are treated as NaNs, the last one as Normal.
 void IEEEFloat::initFromF80LongDoubleAPInt(const APInt &api) {
-  assert(api.getBitWidth()==80);
   uint64_t i1 = api.getRawData()[0];
   uint64_t i2 = api.getRawData()[1];
   uint64_t myexponent = (i2 & 0x7fff);
@@ -3411,7 +3434,6 @@ void IEEEFloat::initFromF80LongDoubleAPInt(const APInt &api) {
 }
 
 void IEEEFloat::initFromPPCDoubleDoubleAPInt(const APInt &api) {
-  assert(api.getBitWidth()==128);
   uint64_t i1 = api.getRawData()[0];
   uint64_t i2 = api.getRawData()[1];
   opStatus fs;
@@ -3435,7 +3457,6 @@ void IEEEFloat::initFromPPCDoubleDoubleAPInt(const APInt &api) {
 }
 
 void IEEEFloat::initFromQuadrupleAPInt(const APInt &api) {
-  assert(api.getBitWidth()==128);
   uint64_t i1 = api.getRawData()[0];
   uint64_t i2 = api.getRawData()[1];
   uint64_t myexponent = (i2 >> 48) & 0x7fff;
@@ -3471,7 +3492,6 @@ void IEEEFloat::initFromQuadrupleAPInt(const APInt &api) {
 }
 
 void IEEEFloat::initFromDoubleAPInt(const APInt &api) {
-  assert(api.getBitWidth()==64);
   uint64_t i = *api.getRawData();
   uint64_t myexponent = (i >> 52) & 0x7ff;
   uint64_t mysignificand = i & 0xfffffffffffffLL;
@@ -3500,7 +3520,6 @@ void IEEEFloat::initFromDoubleAPInt(const APInt &api) {
 }
 
 void IEEEFloat::initFromFloatAPInt(const APInt &api) {
-  assert(api.getBitWidth()==32);
   uint32_t i = (uint32_t)*api.getRawData();
   uint32_t myexponent = (i >> 23) & 0xff;
   uint32_t mysignificand = i & 0x7fffff;
@@ -3529,7 +3548,6 @@ void IEEEFloat::initFromFloatAPInt(const APInt &api) {
 }
 
 void IEEEFloat::initFromBFloatAPInt(const APInt &api) {
-  assert(api.getBitWidth() == 16);
   uint32_t i = (uint32_t)*api.getRawData();
   uint32_t myexponent = (i >> 7) & 0xff;
   uint32_t mysignificand = i & 0x7f;
@@ -3558,7 +3576,6 @@ void IEEEFloat::initFromBFloatAPInt(const APInt &api) {
 }
 
 void IEEEFloat::initFromHalfAPInt(const APInt &api) {
-  assert(api.getBitWidth()==16);
   uint32_t i = (uint32_t)*api.getRawData();
   uint32_t myexponent = (i >> 10) & 0x1f;
   uint32_t mysignificand = i & 0x3ff;
@@ -3591,6 +3608,7 @@ void IEEEFloat::initFromHalfAPInt(const APInt &api) {
 /// isIEEE argument distinguishes between PPC128 and IEEE128 (not meaningful
 /// when the size is anything else).
 void IEEEFloat::initFromAPInt(const fltSemantics *Sem, const APInt &api) {
+  assert(api.getBitWidth() == Sem->sizeInBits);
   if (Sem == &semIEEEhalf)
     return initFromHalfAPInt(api);
   if (Sem == &semBFloat)
@@ -4847,9 +4865,8 @@ APFloat::opStatus APFloat::convert(const fltSemantics &ToSemantics,
   llvm_unreachable("Unexpected semantics");
 }
 
-APFloat APFloat::getAllOnesValue(const fltSemantics &Semantics,
-                                 unsigned BitWidth) {
-  return APFloat(Semantics, APInt::getAllOnesValue(BitWidth));
+APFloat APFloat::getAllOnesValue(const fltSemantics &Semantics) {
+  return APFloat(Semantics, APInt::getAllOnes(Semantics.sizeInBits));
 }
 
 void APFloat::print(raw_ostream &OS) const {

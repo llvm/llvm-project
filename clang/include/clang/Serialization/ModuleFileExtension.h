@@ -11,13 +11,14 @@
 
 #include "llvm/ADT/IntrusiveRefCntPtr.h"
 #include "llvm/Support/ExtensibleRTTI.h"
+#include "llvm/Support/HashBuilder.h"
+#include "llvm/Support/MD5.h"
 #include <memory>
 #include <string>
 
 namespace llvm {
 class BitstreamCursor;
 class BitstreamWriter;
-class hash_code;
 class raw_ostream;
 }
 
@@ -74,19 +75,20 @@ public:
   virtual ModuleFileExtensionMetadata getExtensionMetadata() const = 0;
 
   /// Hash information about the presence of this extension into the
-  /// module hash code.
+  /// module hash.
   ///
-  /// The module hash code is used to distinguish different variants
-  /// of a module that are incompatible. If the presence, absence, or
-  /// version of the module file extension should force the creation
-  /// of a separate set of module files, override this method to
-  /// combine that distinguishing information into the module hash
-  /// code.
+  /// The module hash is used to distinguish different variants of a module that
+  /// are incompatible. If the presence, absence, or version of the module file
+  /// extension should force the creation of a separate set of module files,
+  /// override this method to combine that distinguishing information into the
+  /// module hash.
   ///
-  /// The default implementation of this function simply returns the
-  /// hash code as given, so the presence/absence of this extension
-  /// does not distinguish module files.
-  virtual llvm::hash_code hashExtension(llvm::hash_code c) const;
+  /// The default implementation of this function simply does nothing, so the
+  /// presence/absence of this extension does not distinguish module files.
+  using ExtensionHashBuilder =
+      llvm::HashBuilderImpl<llvm::MD5,
+                            llvm::support::endian::system_endianness()>;
+  virtual void hashExtension(ExtensionHashBuilder &HBuilder) const;
 
   /// Create a new module file extension writer, which will be
   /// responsible for writing the extension contents into a particular
@@ -152,4 +154,4 @@ public:
 
 } // end namespace clang
 
-#endif // LLVM_CLANG_FRONTEND_MODULEFILEEXTENSION_H
+#endif // LLVM_CLANG_SERIALIZATION_MODULEFILEEXTENSION_H

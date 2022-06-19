@@ -14,6 +14,7 @@
 
 #include "lldb/Host/Config.h"
 #include "lldb/Host/MainLoop.h"
+#include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
 
 #include "llvm/Config/llvm-config.h"
@@ -53,9 +54,7 @@ static Status GetLastSocketError() {
   return EC;
 }
 
-namespace {
-const int kType = SOCK_STREAM;
-}
+static const int kType = SOCK_STREAM;
 
 TCPSocket::TCPSocket(bool should_close, bool child_processes_inherit)
     : Socket(ProtocolTcp, should_close, child_processes_inherit) {}
@@ -150,28 +149,28 @@ Status TCPSocket::CreateSocket(int domain) {
 
 Status TCPSocket::Connect(llvm::StringRef name) {
 
-  Log *log(lldb_private::GetLogIfAnyCategoriesSet(LIBLLDB_LOG_COMMUNICATION));
+  Log *log = GetLog(LLDBLog::Communication);
   LLDB_LOGF(log, "TCPSocket::%s (host/port = %s)", __FUNCTION__, name.data());
 
   Status error;
-  std::string host_str;
-  std::string port_str;
-  int32_t port = INT32_MIN;
-  if (!DecodeHostAndPort(name, host_str, port_str, port, &error))
-    return error;
+  llvm::Expected<HostAndPort> host_port = DecodeHostAndPort(name);
+  if (!host_port)
+    return Status(host_port.takeError());
 
-  std::vector<SocketAddress> addresses = SocketAddress::GetAddressInfo(
-      host_str.c_str(), nullptr, AF_UNSPEC, SOCK_STREAM, IPPROTO_TCP);
+  std::vector<SocketAddress> addresses =
+      SocketAddress::GetAddressInfo(host_port->hostname.c_str(), nullptr,
+                                    AF_UNSPEC, SOCK_STREAM, IPPROTO_TCP);
   for (SocketAddress &address : addresses) {
     error = CreateSocket(address.GetFamily());
     if (error.Fail())
       continue;
 
-    address.SetPort(port);
+    address.SetPort(host_port->port);
 
-    if (-1 == llvm::sys::RetryAfterSignal(-1, ::connect,
-          GetNativeSocket(), &address.sockaddr(), address.GetLength())) {
-      CLOSE_SOCKET(GetNativeSocket());
+    if (-1 == llvm::sys::RetryAfterSignal(-1, ::connect, GetNativeSocket(),
+                                          &address.sockaddr(),
+                                          address.GetLength())) {
+      Close();
       continue;
     }
 
@@ -186,20 +185,18 @@ Status TCPSocket::Connect(llvm::StringRef name) {
 }
 
 Status TCPSocket::Listen(llvm::StringRef name, int backlog) {
-  Log *log(lldb_private::GetLogIfAnyCategoriesSet(LIBLLDB_LOG_CONNECTION));
+  Log *log = GetLog(LLDBLog::Connection);
   LLDB_LOGF(log, "TCPSocket::%s (%s)", __FUNCTION__, name.data());
 
   Status error;
-  std::string host_str;
-  std::string port_str;
-  int32_t port = INT32_MIN;
-  if (!DecodeHostAndPort(name, host_str, port_str, port, &error))
-    return error;
+  llvm::Expected<HostAndPort> host_port = DecodeHostAndPort(name);
+  if (!host_port)
+    return Status(host_port.takeError());
 
-  if (host_str == "*")
-    host_str = "0.0.0.0";
+  if (host_port->hostname == "*")
+    host_port->hostname = "0.0.0.0";
   std::vector<SocketAddress> addresses = SocketAddress::GetAddressInfo(
-      host_str.c_str(), nullptr, AF_UNSPEC, SOCK_STREAM, IPPROTO_TCP);
+      host_port->hostname.c_str(), nullptr, AF_UNSPEC, SOCK_STREAM, IPPROTO_TCP);
   for (SocketAddress &address : addresses) {
     int fd = Socket::CreateSocket(address.GetFamily(), kType, IPPROTO_TCP,
                                   m_child_processes_inherit, error);
@@ -215,9 +212,9 @@ Status TCPSocket::Listen(llvm::StringRef name, int backlog) {
 
     SocketAddress listen_address = address;
     if(!listen_address.IsLocalhost())
-      listen_address.SetToAnyAddress(address.GetFamily(), port);
+      listen_address.SetToAnyAddress(address.GetFamily(), host_port->port);
     else
-      listen_address.SetPort(port);
+      listen_address.SetPort(host_port->port);
 
     int err =
         ::bind(fd, &listen_address.sockaddr(), listen_address.GetLength());
@@ -230,10 +227,10 @@ Status TCPSocket::Listen(llvm::StringRef name, int backlog) {
       continue;
     }
 
-    if (port == 0) {
+    if (host_port->port == 0) {
       socklen_t sa_len = address.GetLength();
       if (getsockname(fd, &address.sockaddr(), &sa_len) == 0)
-        port = address.GetPort();
+        host_port->port = address.GetPort();
     }
     m_listen_sockets[fd] = address;
   }

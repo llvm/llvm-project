@@ -1,11 +1,10 @@
 # REQUIRES: x86
 
-## FIXME: Add tests for segment$start$foo, segment$end$foo once implemented.
-
 # RUN: rm -rf %t; split-file %s %t
 
 # RUN: llvm-mc -filetype=obj -triple=x86_64-apple-darwin %t/main.s -o %t/main.o
 # RUN: llvm-mc -filetype=obj -triple=x86_64-apple-darwin %t/foo.s -o %t/foo.o
+# RUN: llvm-mc -filetype=obj -triple=x86_64-apple-darwin %t/seg.s -o %t/seg.o
 
 # RUN: %lld -lSystem %t/main.o %t/foo.o -o %t.out \
 # RUN:    -rename_section __FOO __bar __BAZ __quux \
@@ -68,6 +67,13 @@
 
 ## Test that the link succeeds with dead-stripping enabled too.
 # RUN: %lld -dead_strip -lSystem %t/main.o -o %t/stripped.out
+# RUN: llvm-objdump --macho --syms --section-headers %t/stripped.out > %t-stripped-dump.txt
+# RUN: llvm-objdump --macho -d --no-symbolic-operands --no-show-raw-insn %t/stripped.out >> %t-stripped-dump.txt
+# RUN: FileCheck --check-prefix=STRIP %s < %t-stripped-dump.txt
+
+## -u 'section$start$*' does not cause an undefined symbol error. This matches ld64.
+# RUN: %lld -dead_strip -lSystem %t/main.o -u 'section$start$__FOO$__notexist' -o %t/stripped1.out
+# RUN: llvm-objdump --section-headers %t/stripped1.out | FileCheck --check-prefix=STRIP2 %s
 
 ## (Fun fact: `-e 'section$start$__TEXT$__text -dead_strip` strips
 ## everything in the text section because markLive runs well before
@@ -76,6 +82,42 @@
 ## sets the entry point to the start of the now-empty text section
 ## and the output program crashes when running. This matches ld64's
 ## behavior.)
+
+# STRIP-LABEL: Sections:
+# STRIP-NEXT:  Idx Name           Size     VMA              Type
+# STRIP-NEXT:  0 __text           {{[0-9a-f]*}} [[#%x, TEXTSTART:]] TEXT
+# STRIP-NEXT:  1 __cstring        00000000      [[#%x, CSTRINGSTART:]] DATA
+# STRIP-NEXT:  2 __data           00000000
+# STRIP-NEXT:  3 __llvm_orderfile 00000000
+# STRIP-NEXT:  4 __mybss          00000000
+# STRIP-NEXT:  5 __bar            00000000
+# STRIP-NEXT:  6 __ever           00000000
+# STRIP-NEXT:  7 __lookup         00000000
+# STRIP-NEXT:  8 symbol           00000000
+# STRIP-NEXT:  9 __quux           00000000
+
+# STRIP-LABEL: SYMBOL TABLE:
+# STRIP-NOT:   section$start$__FOO$__bar
+
+# STRIP-LABEL: _main:
+# STRIP:      [[#%x, PC1:]]:
+# STRIP-SAME: leaq [[#%d, TEXTSTART - PC1 - 7]](%rip), %rax
+# STRIP-NEXT: [[#%x, PC2:]]:
+# STRIP-SAME: leaq [[#%d, CSTRINGSTART - PC2 - 7]](%rip), %rbx
+
+# STRIP2-LABEL: Sections:
+# STRIP2-NEXT:  Idx Name           Size     VMA              Type
+# STRIP2-NEXT:  0 __text           {{[0-9a-f]*}} [[#%x, TEXTSTART:]] TEXT
+# STRIP2-NEXT:  1 __cstring        00000000      [[#%x, CSTRINGSTART:]] DATA
+# STRIP2-NEXT:  2 __data           00000000
+# STRIP2-NEXT:  3 __llvm_orderfile 00000000
+# STRIP2-NEXT:  4 __mybss          00000000
+# STRIP2-NEXT:  5 __bar            00000000
+# STRIP2-NEXT:  6 __notexist       00000000
+# STRIP2-NEXT:  7 __ever           00000000
+# STRIP2-NEXT:  8 __lookup         00000000
+# STRIP2-NEXT:  9 symbol           00000000
+# STRIP2-NEXT:  10 __quux          00000000
 
 # CHECK-LABEL: Sections:
 # CHECK-NEXT:  Idx Name           Size     VMA              Type
@@ -170,6 +212,101 @@
 ## section$end$__TEXT$__text symbol.
 # CHECK: [[#%.16x, TEXTSTART]]
 # CHECK-NOT: [[#%.16x, TEXTEND]]
+
+###############################################################################
+## Test segment$start and segment$end.
+
+# RUN: %lld -lSystem %t/seg.o -o %t.seg.out \
+# RUN:    -rename_segment __FOO __BAZ \
+# RUN:    -rename_segment __WHAT __FOO \
+# RUN:    -u 'segment$start$__UFLAG_SEG' \
+# RUN:    -e 'segment$start$__TEXT'
+# RUN: llvm-objdump --macho --syms %t.seg.out > %t-seg-dump.txt
+## llvm-objdump can't dump segment names; use lld-otool for this.
+# RUN: llvm-otool -l %t.seg.out | grep -A6 LC_SEGMENT >> %t-seg-dump.txt
+# RUN: llvm-objdump --macho -d --no-symbolic-operands --no-show-raw-insn %t.seg.out >> %t-seg-dump.txt
+# RUN: llvm-objdump --macho --function-starts %t.out >> %t-seg-dump.txt
+# RUN: FileCheck %s --check-prefix=SEG < %t-seg-dump.txt
+
+# SEG-LABEL: SYMBOL TABLE:
+# SEG-NOT: segment$start$__TEXT
+# SEG-NOT: segment$end$__TEXT
+# SEG-NOT: segment$start$__FOO
+# SEG-NOT: segment$end$__FOO
+# SEG-NOT: segment$start$__BAZ
+# SEG-NOT: segment$end$__BAZ
+# SEG-NOT: segment$start$__WHAT
+# SEG-NOT: segment$end$__WHAT
+# SEG-NOT: segment$start$__UFLAG_SEG
+# SEG-NOT: segment$start$__UFLAG_SEG
+# SEG-DAG: segment$end$REGULAR
+# SEG-DAG: segment$start$REGULAR
+
+# SEG:           cmd LC_SEGMENT_64
+# SEG-NEXT:  cmdsize
+# SEG-NEXT:  segname __PAGEZERO
+
+# SEG:           cmd LC_SEGMENT_64
+# SEG-NEXT:  cmdsize
+# SEG-NEXT:  segname __TEXT
+# SEG-NEXT:   vmaddr 0x[[#%x, TEXTSTART:]]
+# SEG-NEXT:   vmsize 0x[[#%x, TEXTSIZE:]]
+
+# SEG:           cmd LC_SEGMENT_64
+# SEG-NEXT:  cmdsize
+# SEG-NEXT:  segname __BAZ
+# SEG-NEXT:   vmaddr 0x[[#%x, BAZSTART:]]
+# SEG-NEXT:   vmsize 0x[[#%x, BAZSIZE:]]
+
+# SEG:           cmd LC_SEGMENT_64
+# SEG-NEXT:  cmdsize
+# SEG-NEXT:  segname __FOO
+# SEG-NEXT:   vmaddr 0x[[#%x, FOOSTART:]]
+# SEG-NEXT:   vmsize 0x[[#%x, FOOSIZE:]]
+
+# SEG:           cmd LC_SEGMENT_64
+# SEG-NEXT:  cmdsize
+# SEG-NEXT:  segname __UFLAG_SEG
+# SEG-NEXT:   vmaddr 0x[[#%x, UFLAGSTART:]]
+# SEG-NEXT:   vmsize 0x0000000000000000
+
+# SEG:           cmd LC_SEGMENT_64
+# SEG-NEXT:  cmdsize
+# SEG-NEXT:  segname ASDF
+# SEG-NEXT:   vmaddr 0x[[#%x, ASDFSTART:]]
+# SEG-NEXT:   vmsize 0x0000000000000000
+
+# SEG: _main:
+
+## segment$start$__TEXT / segment$end$__TEXT
+# SEG:      [[#%x, PC1:]]:
+# SEG-SAME: leaq [[#%d, TEXTSTART - PC1 - 7]](%rip), %rax
+# SEG-NEXT: [[#%x, PC2:]]:
+# SEG-SAME: leaq [[#%d, TEXTSTART + TEXTSIZE - PC2 - 7]](%rip), %rbx
+
+## segment$start$__FOO / segment$end$__FOO, which is renamed to __BAZ
+# SEG:      [[#%x, PC3:]]:
+# SEG-SAME: leaq [[#%d, BAZSTART - PC3 - 7]](%rip), %rax
+# SEG-NEXT: [[#%x, PC4:]]:
+# SEG-SAME: leaq [[#%d, BAZSTART + BAZSIZE - PC4 - 7]](%rip), %rbx
+
+## segment$start$__BAZ / segment$end$__BAZ
+# SEG:      [[#%x, PC5:]]:
+# SEG-SAME: leaq [[#%d, BAZSTART - PC5 - 7]](%rip), %rax
+# SEG-NEXT: [[#%x, PC6:]]:
+# SEG-SAME: leaq [[#%d, BAZSTART + BAZSIZE - PC6 - 7]](%rip), %rbx
+
+## segment$start$__WHAT / segment$end$__WHAT, which is renamed to __FOO
+# SEG:      [[#%x, PC7:]]:
+# SEG-SAME: leaq [[#%d, FOOSTART - PC7 - 7]](%rip), %rax
+# SEG-NEXT: [[#%x, PC8:]]:
+# SEG-SAME: leaq [[#%d, FOOSTART + FOOSIZE - PC8 - 7]](%rip), %rbx
+
+## segment$start$ASDF / segment$end$ASDF
+# SEG:      [[#%x, PC9:]]:
+# SEG-SAME: leaq [[#%d, ASDFSTART - PC9 - 7]](%rip), %rax
+# SEG-NEXT: [[#%x, PC10:]]:
+# SEG-SAME: leaq [[#%d, ASDFSTART - PC10 - 7]](%rip), %rbx
 
 #--- order.txt
 _otherfun
@@ -270,5 +407,55 @@ section$start$ACTUAL$symbol:
 .globl section$end$ACTUAL$symbol
 section$end$ACTUAL$symbol:
 .fill 1
+
+.subsections_via_symbols
+
+#--- seg.s
+## Renamed to __BAZ,__bar by -rename_segment
+.section __FOO,__bar
+.space 1
+
+## Renamed to __FOO,__ever by -rename_segment
+.section __WHAT,__ever
+.space 1
+
+.text
+.globl segment$start$REGULAR
+segment$start$REGULAR:
+  retq
+
+.globl segment$end$REGULAR
+segment$end$REGULAR:
+  retq
+
+.globl _main
+_main:
+  movq segment$start$__TEXT@GOTPCREL(%rip), %rax
+  movq segment$end$__TEXT@GOTPCREL(%rip), %rbx
+
+  movq segment$start$__FOO@GOTPCREL(%rip), %rax
+  movq segment$end$__FOO@GOTPCREL(%rip), %rbx
+
+  movq segment$start$__BAZ@GOTPCREL(%rip), %rax
+  movq segment$end$__BAZ@GOTPCREL(%rip), %rbx
+
+  # (These two lines make ld64 crash linking the .o file.
+  # The rest of the test works with ld64 too.)
+  movq segment$start$__WHAT@GOTPCREL(%rip), %rax
+  movq segment$end$__WHAT@GOTPCREL(%rip), %rbx
+
+  # References to non-existing segments create that segment,
+  # without any sections in it.
+  movq segment$start$ASDF@GOTPCREL(%rip), %rax
+  movq segment$end$ASDF@GOTPCREL(%rip), %rbx
+
+  # Non-undefined symbols don't create segments.
+  callq segment$start$REGULAR
+  callq segment$end$REGULAR
+
+  ret
+
+.section __TEXT,__fill
+.space 578
 
 .subsections_via_symbols

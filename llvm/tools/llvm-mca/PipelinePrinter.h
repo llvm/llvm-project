@@ -16,11 +16,11 @@
 #ifndef LLVM_TOOLS_LLVM_MCA_PIPELINEPRINTER_H
 #define LLVM_TOOLS_LLVM_MCA_PIPELINEPRINTER_H
 
-#include "Views/View.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/MCA/Context.h"
 #include "llvm/MCA/Pipeline.h"
+#include "llvm/MCA/View.h"
 #include "llvm/Support/raw_ostream.h"
 
 #define DEBUG_TYPE "llvm-mca"
@@ -53,7 +53,7 @@ class PipelinePrinter {
 public:
   PipelinePrinter(Pipeline &Pipe, const CodeRegion &R, unsigned Idx,
                   const MCSubtargetInfo &STI, const PipelineOptions &PO)
-      : P(Pipe), Region(R), RegionIdx(Idx), STI(STI), PO(PO), Views() {}
+      : P(Pipe), Region(R), RegionIdx(Idx), STI(STI), PO(PO) {}
 
   void addView(std::unique_ptr<View> V) {
     P.addEventListener(V.get());

@@ -11,6 +11,7 @@
 #include "clang/Driver/DriverDiagnostic.h"
 #include "clang/Driver/Options.h"
 #include "llvm/Option/ArgList.h"
+#include "llvm/Support/AArch64TargetParser.h"
 #include "llvm/Support/TargetParser.h"
 #include "llvm/Support/Host.h"
 
@@ -79,10 +80,34 @@ static bool DecodeAArch64Features(const Driver &D, StringRef text,
     else
       return false;
 
-    // +sve implies +f32mm if the base architecture is v8.6A or v8.7A
-    // it isn't the case in general that sve implies both f64mm and f32mm
+    if (Feature == "sve2")
+      Features.push_back("+sve");
+    else if (Feature == "sve2-bitperm" || Feature == "sve2-sha3" ||
+             Feature == "sve2-aes" || Feature == "sve2-sm4") {
+      Features.push_back("+sve");
+      Features.push_back("+sve2");
+    } else if (Feature == "nosve") {
+      Features.push_back("-sve2");
+      Features.push_back("-sve2-bitperm");
+      Features.push_back("-sve2-sha3");
+      Features.push_back("-sve2-aes");
+      Features.push_back("-sve2-sm4");
+    } else if (Feature == "nosve2") {
+      Features.push_back("-sve2-bitperm");
+      Features.push_back("-sve2-sha3");
+      Features.push_back("-sve2-aes");
+      Features.push_back("-sve2-sm4");
+    }
+
+    // +sve implies +f32mm if the base architecture is >= v8.6A (except v9A)
+    // It isn't the case in general that sve implies both f64mm and f32mm
     if ((ArchKind == llvm::AArch64::ArchKind::ARMV8_6A ||
-         ArchKind == llvm::AArch64::ArchKind::ARMV8_7A) && Feature == "sve")
+         ArchKind == llvm::AArch64::ArchKind::ARMV8_7A ||
+         ArchKind == llvm::AArch64::ArchKind::ARMV8_8A ||
+         ArchKind == llvm::AArch64::ArchKind::ARMV9_1A ||
+         ArchKind == llvm::AArch64::ArchKind::ARMV9_2A ||
+         ArchKind == llvm::AArch64::ArchKind::ARMV9_3A) &&
+        Feature == "sve")
       Features.push_back("+f32mm");
   }
   return true;
@@ -126,9 +151,23 @@ getAArch64ArchFeaturesFromMarch(const Driver &D, StringRef March,
   std::pair<StringRef, StringRef> Split = StringRef(MarchLowerCase).split("+");
 
   llvm::AArch64::ArchKind ArchKind = llvm::AArch64::parseArch(Split.first);
+  if (Split.first == "native")
+    ArchKind = llvm::AArch64::getCPUArchKind(llvm::sys::getHostCPUName().str());
   if (ArchKind == llvm::AArch64::ArchKind::INVALID ||
-      !llvm::AArch64::getArchFeatures(ArchKind, Features) ||
-      (Split.second.size() &&
+      !llvm::AArch64::getArchFeatures(ArchKind, Features))
+    return false;
+
+  // Enable SVE2 by default on Armv9-A.
+  // It can still be disabled if +nosve2 is present.
+  // We must do this early so that DecodeAArch64Features has the correct state
+  if ((ArchKind == llvm::AArch64::ArchKind::ARMV9A ||
+       ArchKind == llvm::AArch64::ArchKind::ARMV9_1A ||
+       ArchKind == llvm::AArch64::ArchKind::ARMV9_2A)) {
+    Features.push_back("+sve");
+    Features.push_back("+sve2");
+  }
+
+  if ((Split.second.size() &&
        !DecodeAArch64Features(D, Split.second, Features, ArchKind)))
     return false;
 
@@ -191,7 +230,7 @@ void aarch64::getAArch64TargetFeatures(const Driver &D,
   bool success = true;
   // Enable NEON by default.
   Features.push_back("+neon");
-  llvm::StringRef WaMArch = "";
+  llvm::StringRef WaMArch;
   if (ForAS)
     for (const auto *A :
          Args.filtered(options::OPT_Wa_COMMA, options::OPT_Xassembler))
@@ -201,7 +240,7 @@ void aarch64::getAArch64TargetFeatures(const Driver &D,
   // Call getAArch64ArchFeaturesFromMarch only if "-Wa,-march=" or
   // "-Xassembler -march" is detected. Otherwise it may return false
   // and causes Clang to error out.
-  if (WaMArch.size())
+  if (!WaMArch.empty())
     success = getAArch64ArchFeaturesFromMarch(D, WaMArch, Args, Features);
   else if ((A = Args.getLastArg(options::OPT_march_EQ)))
     success = getAArch64ArchFeaturesFromMarch(D, A->getValue(), Args, Features);
@@ -210,6 +249,9 @@ void aarch64::getAArch64TargetFeatures(const Driver &D,
   else if (Args.hasArg(options::OPT_arch) || isCPUDeterminedByTriple(Triple))
     success = getAArch64ArchFeaturesFromMcpu(
         D, getAArch64TargetCPU(Args, Triple, A), Args, Features);
+  else
+    // Default to 'A' profile if the architecture is not specified.
+    success = getAArch64ArchFeaturesFromMarch(D, "armv8-a", Args, Features);
 
   if (success && (A = Args.getLastArg(clang::driver::options::OPT_mtune_EQ)))
     success =
@@ -222,8 +264,15 @@ void aarch64::getAArch64TargetFeatures(const Driver &D,
     success = getAArch64MicroArchFeaturesFromMcpu(
         D, getAArch64TargetCPU(Args, Triple, A), Args, Features);
 
-  if (!success)
-    D.Diag(diag::err_drv_clang_unsupported) << A->getAsString(Args);
+  if (!success) {
+    auto Diag = D.Diag(diag::err_drv_clang_unsupported);
+    // If "-Wa,-march=" is used, 'WaMArch' will contain the argument's value,
+    // while 'A' is uninitialized. Only dereference 'A' in the other case.
+    if (!WaMArch.empty())
+      Diag << "-march=" + WaMArch.str();
+    else
+      Diag << A->getAsString(Args);
+  }
 
   if (Args.getLastArg(options::OPT_mgeneral_regs_only)) {
     Features.push_back("-fp-armv8");
@@ -275,8 +324,8 @@ void aarch64::getAArch64TargetFeatures(const Driver &D,
           DisableComdat = true;
           continue;
         }
-        D.Diag(diag::err_invalid_sls_hardening)
-            << Scope << A->getAsString(Args);
+        D.Diag(diag::err_drv_unsupported_option_argument)
+            << A->getOption().getName() << Scope;
         break;
       }
     }
@@ -298,28 +347,85 @@ void aarch64::getAArch64TargetFeatures(const Driver &D,
       Features.push_back("-crc");
   }
 
+  int V8Version = -1;
+  int V9Version = -1;
+  bool HasNoSM4 = false;
+  bool HasNoSHA3 = false;
+  bool HasNoSHA2 = false;
+  bool HasNoAES = false;
+  bool HasSM4 = false;
+  bool HasSHA3 = false;
+  bool HasSHA2 = false;
+  bool HasAES = false;
+  bool HasCrypto = false;
+  bool HasNoCrypto = false;
+  int FullFP16Pos = -1;
+  int NoFullFP16Pos = -1;
+  int FP16FMLPos = -1;
+  int NoFP16FMLPos = -1;
+  int ArchFeatPos = -1;
+
+  for (auto I = Features.begin(), E = Features.end(); I != E; I++) {
+    if (*I == "+v8a")   V8Version = 0;
+    else if (*I == "+v8.1a") V8Version = 1;
+    else if (*I == "+v8.2a") V8Version = 2;
+    else if (*I == "+v8.3a") V8Version = 3;
+    else if (*I == "+v8.4a") V8Version = 4;
+    else if (*I == "+v8.5a") V8Version = 5;
+    else if (*I == "+v8.6a") V8Version = 6;
+    else if (*I == "+v8.7a") V8Version = 7;
+    else if (*I == "+v8.8a") V8Version = 8;
+    else if (*I == "+v8.9a") V8Version = 9;
+    else if (*I == "+v9a")   V9Version = 0;
+    else if (*I == "+v9.1a") V9Version = 1;
+    else if (*I == "+v9.2a") V9Version = 2;
+    else if (*I == "+v9.3a") V9Version = 3;
+    else if (*I == "+v9.4a") V9Version = 4;
+    else if (*I == "+sm4")  HasSM4 = true;
+    else if (*I == "+sha3") HasSHA3 = true;
+    else if (*I == "+sha2") HasSHA2 = true;
+    else if (*I == "+aes")  HasAES = true;
+    else if (*I == "-sm4")  HasNoSM4 = true;
+    else if (*I == "-sha3") HasNoSHA3 = true;
+    else if (*I == "-sha2") HasNoSHA2 = true;
+    else if (*I == "-aes")  HasNoAES = true;
+    else if (*I == "+fp16fml")  FP16FMLPos = I - Features.begin();
+    else if (*I == "-fp16fml")  NoFP16FMLPos = I - Features.begin();
+    else if (*I == "-fullfp16") NoFullFP16Pos = I - Features.begin();
+    else if (*I == "+fullfp16") FullFP16Pos = I - Features.begin();
+    // Whichever option comes after (right-most option) will win
+    else if (*I == "+crypto") {
+      HasCrypto = true;
+      HasNoCrypto = false;
+    } else if (*I == "-crypto") {
+      HasCrypto = false;
+      HasNoCrypto = true;
+    }
+    // Register the iterator position if this is an architecture feature
+    if (ArchFeatPos == -1 && (V8Version != -1 || V9Version != -1))
+      ArchFeatPos = I - Features.begin();
+  }
+
   // Handle (arch-dependent) fp16fml/fullfp16 relationship.
   // FIXME: this fp16fml option handling will be reimplemented after the
   // TargetParser rewrite.
-  const auto ItRNoFullFP16 = std::find(Features.rbegin(), Features.rend(), "-fullfp16");
-  const auto ItRFP16FML = std::find(Features.rbegin(), Features.rend(), "+fp16fml");
-  if (llvm::is_contained(Features, "+v8.4a")) {
-    const auto ItRFullFP16  = std::find(Features.rbegin(), Features.rend(), "+fullfp16");
-    if (ItRFullFP16 < ItRNoFullFP16 && ItRFullFP16 < ItRFP16FML) {
+  if (V8Version >= 4) {
+    // "-fullfp16" "+fullfp16" && "+fp16fml" "+fullfp16" && no "+fullfp16" "-fp16fml" = "+fp16fml"
+    if (FullFP16Pos > NoFullFP16Pos && FullFP16Pos > FP16FMLPos && FullFP16Pos > NoFP16FMLPos)
       // Only entangled feature that can be to the right of this +fullfp16 is -fp16fml.
       // Only append the +fp16fml if there is no -fp16fml after the +fullfp16.
-      if (std::find(Features.rbegin(), ItRFullFP16, "-fp16fml") == ItRFullFP16)
-        Features.push_back("+fp16fml");
-    }
+      Features.push_back("+fp16fml");
     else
       goto fp16_fml_fallthrough;
   } else {
 fp16_fml_fallthrough:
     // In both of these cases, putting the 'other' feature on the end of the vector will
     // result in the same effect as placing it immediately after the current feature.
-    if (ItRNoFullFP16 < ItRFP16FML)
+    // "+fp16fml"  "-fullfp16" = "-fp16fml"
+    if (NoFullFP16Pos > FP16FMLPos)
       Features.push_back("-fp16fml");
-    else if (ItRNoFullFP16 > ItRFP16FML)
+    // "-fullfp16" "+fp16fml" = "+fullfp16"
+    else if (NoFullFP16Pos < FP16FMLPos)
       Features.push_back("+fullfp16");
   }
 
@@ -328,48 +434,23 @@ fp16_fml_fallthrough:
   // Context sensitive meaning of Crypto:
   // 1) For Arch >= ARMv8.4a:  crypto = sm4 + sha3 + sha2 + aes
   // 2) For Arch <= ARMv8.3a:  crypto = sha2 + aes
-  const auto ItBegin = Features.begin();
-  const auto ItEnd = Features.end();
-  const auto ItRBegin = Features.rbegin();
-  const auto ItREnd = Features.rend();
-  const auto ItRCrypto = std::find(ItRBegin, ItREnd, "+crypto");
-  const auto ItRNoCrypto = std::find(ItRBegin, ItREnd, "-crypto");
-  const auto HasCrypto  = ItRCrypto != ItREnd;
-  const auto HasNoCrypto = ItRNoCrypto != ItREnd;
-  const ptrdiff_t PosCrypto = ItRCrypto - ItRBegin;
-  const ptrdiff_t PosNoCrypto = ItRNoCrypto - ItRBegin;
-
-  bool NoCrypto = false;
-  if (HasCrypto && HasNoCrypto) {
-    if (PosNoCrypto < PosCrypto)
-      NoCrypto = true;
-  }
-
-  if (std::find(ItBegin, ItEnd, "+v8.4a") != ItEnd) {
-    if (HasCrypto && !NoCrypto) {
+  if (V8Version >= 4 || V9Version >= 0) {
+    if (HasCrypto && !HasNoCrypto) {
       // Check if we have NOT disabled an algorithm with something like:
       //   +crypto, -algorithm
       // And if "-algorithm" does not occur, we enable that crypto algorithm.
-      const bool HasSM4  = (std::find(ItBegin, ItEnd, "-sm4") == ItEnd);
-      const bool HasSHA3 = (std::find(ItBegin, ItEnd, "-sha3") == ItEnd);
-      const bool HasSHA2 = (std::find(ItBegin, ItEnd, "-sha2") == ItEnd);
-      const bool HasAES  = (std::find(ItBegin, ItEnd, "-aes") == ItEnd);
-      if (HasSM4)
+      if (!HasNoSM4)
         Features.push_back("+sm4");
-      if (HasSHA3)
+      if (!HasNoSHA3)
         Features.push_back("+sha3");
-      if (HasSHA2)
+      if (!HasNoSHA2)
         Features.push_back("+sha2");
-      if (HasAES)
+      if (!HasNoAES)
         Features.push_back("+aes");
     } else if (HasNoCrypto) {
       // Check if we have NOT enabled a crypto algorithm with something like:
       //   -crypto, +algorithm
       // And if "+algorithm" does not occur, we disable that crypto algorithm.
-      const bool HasSM4  = (std::find(ItBegin, ItEnd, "+sm4") != ItEnd);
-      const bool HasSHA3 = (std::find(ItBegin, ItEnd, "+sha3") != ItEnd);
-      const bool HasSHA2 = (std::find(ItBegin, ItEnd, "+sha2") != ItEnd);
-      const bool HasAES  = (std::find(ItBegin, ItEnd, "+aes") != ItEnd);
       if (!HasSM4)
         Features.push_back("-sm4");
       if (!HasSHA3)
@@ -380,33 +461,34 @@ fp16_fml_fallthrough:
         Features.push_back("-aes");
     }
   } else {
-    if (HasCrypto && !NoCrypto) {
-      const bool HasSHA2 = (std::find(ItBegin, ItEnd, "-sha2") == ItEnd);
-      const bool HasAES = (std::find(ItBegin, ItEnd, "-aes") == ItEnd);
-      if (HasSHA2)
+    if (HasCrypto && !HasNoCrypto) {
+      if (!HasNoSHA2)
         Features.push_back("+sha2");
-      if (HasAES)
+      if (!HasNoAES)
         Features.push_back("+aes");
     } else if (HasNoCrypto) {
-      const bool HasSHA2 = (std::find(ItBegin, ItEnd, "+sha2") != ItEnd);
-      const bool HasAES  = (std::find(ItBegin, ItEnd, "+aes") != ItEnd);
-      const bool HasV82a = (std::find(ItBegin, ItEnd, "+v8.2a") != ItEnd);
-      const bool HasV83a = (std::find(ItBegin, ItEnd, "+v8.3a") != ItEnd);
-      const bool HasV84a = (std::find(ItBegin, ItEnd, "+v8.4a") != ItEnd);
       if (!HasSHA2)
         Features.push_back("-sha2");
       if (!HasAES)
         Features.push_back("-aes");
-      if (HasV82a || HasV83a || HasV84a) {
+      if (V8Version == 2 || V8Version == 3) {
         Features.push_back("-sm4");
         Features.push_back("-sha3");
       }
     }
   }
 
-  auto V8_6Pos = llvm::find(Features, "+v8.6a");
-  if (V8_6Pos != std::end(Features))
-    V8_6Pos = Features.insert(std::next(V8_6Pos), {"+i8mm", "+bf16"});
+  // FIXME: these insertions should ideally be automated using default
+  // extensions support from the backend target parser.
+  if (V8Version >= 6 || V9Version >= 1)
+    Features.insert(std::next(Features.begin() + ArchFeatPos),
+                    {"+i8mm", "+bf16"});
+
+  // For Armv8.8-a/Armv9.3-a or later, FEAT_HBC and FEAT_MOPS are enabled by
+  // default.
+  if (V8Version >= 8 || V9Version >= 3)
+    Features.insert(std::next(Features.begin() + ArchFeatPos),
+                    {"+hbc", "+mops"});
 
   if (Arg *A = Args.getLastArg(options::OPT_mno_unaligned_access,
                                options::OPT_munaligned_access)) {
@@ -519,4 +601,18 @@ fp16_fml_fallthrough:
 
   if (Args.hasArg(options::OPT_mno_neg_immediates))
     Features.push_back("+no-neg-immediates");
+
+  if (Arg *A = Args.getLastArg(options::OPT_mfix_cortex_a53_835769,
+                               options::OPT_mno_fix_cortex_a53_835769)) {
+    if (A->getOption().matches(options::OPT_mfix_cortex_a53_835769))
+      Features.push_back("+fix-cortex-a53-835769");
+    else
+      Features.push_back("-fix-cortex-a53-835769");
+  } else if (Triple.isAndroid()) {
+    // Enabled A53 errata (835769) workaround by default on android
+    Features.push_back("+fix-cortex-a53-835769");
+  }
+
+  if (Args.getLastArg(options::OPT_mno_bti_at_return_twice))
+    Features.push_back("+no-bti-at-return-twice");
 }

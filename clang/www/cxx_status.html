@@ -1,8 +1,8 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <meta http-equiv="Content-Type" content="text/html; charset=ISO-8859-1">
-  <title>Clang - C++20, C++17, C++14, C++11 and C++98 Status</title>
+  <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+  <title>Clang - C++ Programming Language Status</title>
   <link type="text/css" rel="stylesheet" href="menu.css">
   <link type="text/css" rel="stylesheet" href="content.css">
   <style type="text/css">
@@ -76,9 +76,9 @@ as they become available.</p>
 Specifications</a> that will help drive the future of the C++ programming
 language.</p>
 
-<p>The <a href="https://bugs.llvm.org/">LLVM bug tracker</a> contains Clang
-C++ components that track known bugs with Clang's language conformance in
-each language mode.</p>
+<p>The <a href="https://github.com/llvm/llvm-project/issues/">LLVM bug tracker</a> uses
+the "c++" label, as well as mode-specific labels such as "c++11", "c++14",
+and so on, to track known bugs with Clang's language conformance.</p>
 
 <h2 id="cxx98">C++98 implementation status</h2>
 
@@ -111,7 +111,7 @@ option. Clang's C++11 mode can be used with
       <td class="full" align="center">Clang 2.9</td>
       <tr> <!-- from Kona 2019-->
         <td><a href="https://wg21.link/p1825r0">P1825R0</a> (<a href="#dr">DR</a>)</td>
-        <td class="unreleased" align="center">Clang 13</td>
+        <td class="full" align="center">Clang 13</td>
       </tr>
     </tr>
     <tr>
@@ -906,13 +906,17 @@ code. This issue is expected to be rectified soon.
       <td class="full" align="center">Clang 9</td>
     </tr>
     <tr id="p0734">
-      <td rowspan="12">Concepts</td>
+      <td rowspan="13">Concepts</td>
       <td><a href="https://wg21.link/p0734r0">P0734R0</a></td>
       <td class="full" align="center">Clang 10</td>
     </tr>
       <tr> <!-- from Albuquerque -->
         <td><a href="https://wg21.link/p0857r0">P0857R0</a></td>
-        <td class="partial" align="center">Partial</td>
+        <td class="partial" align="center">
+          <details><summary>Partial</summary>
+            Constraining template template parameters is not yet supported.
+          </details>
+        </td>
       </tr>
       <tr> <!-- from San Diego -->
         <td><a href="https://wg21.link/p1084r2">P1084R2</a></td>
@@ -934,7 +938,7 @@ code. This issue is expected to be rectified soon.
       </tr>
       <tr> <!-- from Belfast -->
         <td><a href="https://wg21.link/p1972r0">P1972R0</a></td>
-        <td rowspan="5" class="none" align="center">No</td>
+        <td rowspan="4" class="full" align="center">Clang 10</td>
       </tr>
       <tr>
         <td><a href="https://wg21.link/p1980r0">P1980R0</a></td>
@@ -942,11 +946,20 @@ code. This issue is expected to be rectified soon.
       <tr> <!-- from Prague -->
         <td><a href="https://wg21.link/p2103r0">P2103R0</a></td>
       </tr>
+      <tr> <!-- from February 2022 -->
+        <td><a href="https://wg21.link/p2493r0">P2493R0</a></td>
+      </tr>
       <tr>
         <td><a href="https://wg21.link/p2092r0">P2092R0</a></td>
+        <td rowspan="1" class="partial" align="center">
+          <details><summary>Partial</summary>
+            <tt>typename</tt> not yet optional (depends on P0634R3).
+          </details>
+        </td>
       </tr>
       <tr>
         <td><a href="https://wg21.link/p2113r0">P2113R0</a></td>
+        <td rowspan="1" class="none" align="center">No</td>
       </tr>
     <!-- Albuquerque papers -->
     <tr>
@@ -996,12 +1009,12 @@ code. This issue is expected to be rectified soon.
       </tr>
       <tr>
         <td><a href="https://wg21.link/p2085r0">P2085R0</a></td>
-        <td class="none" align="center">No</td>
+        <td class="full" align="center">Clang 14</td>
       </tr>
     <tr>
       <td>Access checking on specializations</td>
       <td><a href="https://wg21.link/p0692r1">P0692R1</a></td>
-      <td class="partial" align="center">Partial</td>
+      <td class="full" align="center">Clang 14</td>
     </tr>
     <tr>
       <td>Default constructible and assignable stateless lambdas</td>
@@ -1011,7 +1024,11 @@ code. This issue is expected to be rectified soon.
     <tr>
       <td>Lambdas in unevaluated contexts</td>
       <td><a href="https://wg21.link/p0315r4">P0315R4</a></td>
-      <td class="partial" align="center">Clang 13</td>
+      <td class="partial" align="center">
+        <details><summary>Partial</summary>
+          temp.deduct/9 is not implemented yet.
+        </details>
+      </td>
     </tr>
     <!-- Jacksonville papers -->
     <tr>
@@ -1103,10 +1120,15 @@ code. This issue is expected to be rectified soon.
     <tr>
       <td rowspan=2>Immediate functions (<tt>consteval</tt>)</td>
       <td><a href="https://wg21.link/p1073r3">P1073R3</a></td>
-      <td rowspan=2 class="none" align="center">No</td>
+      <td class="partial" align="center">
+        <details><summary>Partial</summary>
+          Using consteval functions as default parameters is not yet supported.
+        </details>
+      </td>
     </tr>
       <tr> <!-- from Prague -->
         <td><a href="https://wg21.link/p1937r2">P1937R2</a></td>
+        <td class="full" align="center">Clang 14</td>
       </tr>
     <tr>
       <td><tt>std::is_constant_evaluated</tt></td>
@@ -1154,10 +1176,11 @@ code. This issue is expected to be rectified soon.
       </tr>
       <tr>
         <td><a href="https://wg21.link/p1811r0">P1811R0</a></td>
-        <td rowspan="2" class="none" align="center">No</td>
+        <td class="none" align="center">No</td>
       </tr>
       <tr>
         <td><a href="https://wg21.link/p1703r1">P1703R1</a></td>
+        <td class="none" align="center">Subsumed by P1857</td>
       </tr>
       <tr> <!-- from Belfast -->
         <td><a href="https://wg21.link/p1874r1">P1874R1</a></td>
@@ -1184,7 +1207,13 @@ code. This issue is expected to be rectified soon.
     <tr>
       <td>Coroutines</td>
       <td><a href="https://wg21.link/p0912r5">P0912R5</a></td>
-      <td class="partial" align="center">Partial</td>
+      <td class="partial" align="center">
+        <details><summary>Partial</summary>
+          The optimizer does not yet handle TLS with
+  <tt>__attribute__((const))</tt> attribute correctly. There can be issues where the
+  coroutine may resume on a different thread. <br \>This feature requires further
+  analysis of the C++ Standard to determine what work is necessary for conformance.
+        </details></td>
     </tr>
     <!-- Cologne 2019 papers -->
     <tr>
@@ -1205,7 +1234,7 @@ code. This issue is expected to be rectified soon.
     <tr>
       <td><tt>using enum</tt></td>
       <td><a href="https://wg21.link/p1099r5">P1099R5</a></td>
-      <td class="unreleased" align="center">Clang 13</td>
+      <td class="full" align="center">Clang 13</td>
     </tr>
     <tr>
       <td rowspan=2>Class template argument deduction for aggregates</td>
@@ -1223,7 +1252,7 @@ code. This issue is expected to be rectified soon.
     <tr>
       <td>Permit conversions to arrays of unknown bound</td>
       <td><a href="https://wg21.link/p0388r4">P0388R4</a></td>
-      <td class="none" align="center">No</td>
+      <td class="full" align="center">Clang 14</td>
     </tr>
     <tr>
       <td><tt>constinit</tt></td>
@@ -1239,7 +1268,7 @@ code. This issue is expected to be rectified soon.
     <tr>
       <td>More implicit moves</td>
       <td><a href="https://wg21.link/p1825r0">P1825R0</a> (<a href="#dr">DR</a>)</td>
-      <td class="unreleased" align="center">Clang 13</td>
+      <td class="full" align="center">Clang 13</td>
     </tr>
 </table>
 
@@ -1270,33 +1299,33 @@ C++20, informally referred to as C++2b.</p>
     <tr>
       <td>Literal suffix <tt>uz</tt>, <tt>z</tt> for <tt>size_t</tt>, <tt>ssize_t</tt></td>
       <td><a href="https://wg21.link/p0330r8">P0330R8</a></td>
-      <td class="unreleased" align="center">Clang 13</td>
+      <td class="full" align="center">Clang 13</td>
     </tr>
     <!-- Spring 2021 papers -->
     <tr>
       <td>Make <tt>()</tt> in lambdas optional in all cases</td>
       <td><a href="https://wg21.link/p1102r2">P1102R2</a></td>
-      <td class="unreleased" align="center">Clang 13</td>
+      <td class="full" align="center">Clang 13</td>
     </tr>
     <tr>
       <td>Simpler implicit move</td>
       <td><a href="https://wg21.link/p2266r1">P2266R1</a></td>
-      <td class="unreleased" align="center">Clang 13</td>
+      <td class="full" align="center">Clang 13</td>
     </tr>
     <tr>
       <td><tt>if consteval</tt></td>
       <td><a href="https://wg21.link/P1938R3">P1938R3</a></td>
-      <td class="none" align="center">No</td>
+      <td class="full" align="center">Clang 14</td>
     </tr>
     <tr>
       <td>Allow duplicate attributes</td>
       <td><a href="https://wg21.link/P2156R1">P2156R1</a></td>
-      <td class="unreleased" align="center">Clang 13</td>
+      <td class="full" align="center">Clang 13</td>
     </tr>
     <tr>
       <td>Narrowing contextual conversions to bool</td>
       <td><a href="https://wg21.link/P1401R5">P1401R5</a></td>
-      <td class="partial" align="center">Clang 13</td>
+      <td class="full" align="center">Clang 14</td>
     </tr>
     <tr>
       <td>Trimming whitespaces before line splicing</td>
@@ -1311,13 +1340,90 @@ C++20, informally referred to as C++2b.</p>
     <tr>
       <td>C++ identifier syntax using UAX 31</td>
       <td><a href="https://wg21.link/P1949R7">P1949R7</a></td>
-      <td class="none" align="center">No</td>
+      <td class="full" align="center">Clang 14</td>
     </tr>
     <tr>
       <td>Mixed string literal concatenation</td>
       <td><a href="https://wg21.link/p2201r1">P2201R1</a></td>
       <td class="full" align="center">Yes</td>
     </tr>
+    <!-- October 2021 papers -->
+    <tr>
+      <td>Deducing this</td>
+      <td><a href="https://wg21.link/P0847R7">P0847R7</a></td>
+      <td class="none" align="center">No</td>
+    </tr>
+    <tr>
+      <td>Change scope of lambda trailing-return-type</td>
+      <td><a href="https://wg21.link/P2036R3">P2036R3</a></td>
+      <td class="none" align="center">No</td>
+    </tr>
+    <tr>
+      <td>Multidimensional subscript operator</td>
+      <td><a href="https://wg21.link/P2128R6">P2128R6</a></td>
+      <td class="unreleased" align="center">Clang 15</td>
+    </tr>
+    <tr>
+      <td>Non-literal variables (and labels and gotos) in constexpr functions</td>
+      <td><a href="https://wg21.link/P2242R3">P2242R3</a></td>
+      <td class="unreleased" align="center">Clang 15</td>
+    </tr>
+    <tr>
+      <td>Character encoding of diagnostic text</td>
+      <td><a href="https://wg21.link/P2246R1">P2246R1</a></td>
+      <td class="full" align="center">Yes</td>
+    </tr>
+    <tr>
+      <td>Character sets and encodings</td>
+      <td><a href="https://wg21.link/P2314R4">P2314R4</a></td>
+      <td class="full" align="center">Yes</td>
+    </tr>
+    <tr>
+      <td>Consistent character literal encoding</td>
+      <td><a href="https://wg21.link/P2316R2">P2316R2</a></td>
+      <td class="full" align="center">Yes</td>
+    </tr>
+    <tr>
+      <td>Add support for preprocessing directives elifdef and elifndef</td>
+      <td><a href="https://wg21.link/P2334R1">P2334R1</a></td>
+      <td class="full" align="center">Clang 13</td>
+    </tr>
+    <tr>
+      <td>Extend init-statement to allow alias-declaration</td>
+      <td><a href="https://wg21.link/P2360R0">P2360R0</a></td>
+      <td class="full" align="center">Clang 14</td>
+    </tr>
+    <tr>
+      <td>auto(x): decay-copy in the language</td>
+      <td><a href="https://wg21.link/P0849R8">P0849R8</a></td>
+      <td class="unreleased" align="center">Clang 15</td>
+    </tr>
+    <!-- February 2022 papers -->
+    <tr>
+      <td>Attributes on Lambda-Expressions</td>
+      <td><a href="https://wg21.link/P2173R1">P2173R1</a></td>
+      <td class="full" align="center">Clang 13</td>
+    </tr>
+    <tr>
+      <td><tt>constexpr</tt> for <tt>&lt;cmath&gt;</tt> and <tt>&lt;cstdlib&gt;</tt></td>
+      <td><a href="https://wg21.link/P0533R9">P0533R9</a></td>
+      <td class="none" align="center">No</td>
+    </tr>
+    <tr>
+      <td>Type trait to determine if a reference binds to a temporary</td>
+      <td><a href="https://wg21.link/P2255R2">P2255R2</a></td>
+      <td class="partial" align="center">
+        <details><summary>Partial</summary>
+          Clang provides a <tt>__reference_binds_to_temporary</tt> type trait
+          builtin, with which the library facility can be partially implemented.
+          Both <tt>__reference_constructs_from_temporary</tt> and
+          <tt>__reference_converts_from_temporary</tt> builtins should be
+          provided, following the normal cross-vendor convention to implement
+          traits requiring compiler support directly.
+        </details></td>
+      </td>
+    </tr>
+
 </table>
 </details>
 

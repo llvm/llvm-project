@@ -7,9 +7,16 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/MC/MCSectionMachO.h"
-#include "llvm/MC/MCContext.h"
+#include "llvm/MC/SectionKind.h"
 #include "llvm/Support/raw_ostream.h"
-#include <cctype>
+
+namespace llvm {
+class MCAsmInfo;
+class MCExpr;
+class MCSymbol;
+class Triple;
+} // namespace llvm
+
 using namespace llvm;
 
 /// SectionTypeDescriptors - These are strings that describe the various section
@@ -95,7 +102,7 @@ MCSectionMachO::MCSectionMachO(StringRef Segment, StringRef Section,
   }
 }
 
-void MCSectionMachO::PrintSwitchToSection(const MCAsmInfo &MAI, const Triple &T,
+void MCSectionMachO::printSwitchToSection(const MCAsmInfo &MAI, const Triple &T,
                                           raw_ostream &OS,
                                           const MCExpr *Subsection) const {
   OS << "\t.section\t" << getSegmentName() << ',' << getName();
@@ -159,7 +166,7 @@ void MCSectionMachO::PrintSwitchToSection(const MCAsmInfo &MAI, const Triple &T,
   OS << '\n';
 }
 
-bool MCSectionMachO::UseCodeAlign() const {
+bool MCSectionMachO::useCodeAlign() const {
   return hasAttribute(MachO::S_ATTR_PURE_INSTRUCTIONS);
 }
 

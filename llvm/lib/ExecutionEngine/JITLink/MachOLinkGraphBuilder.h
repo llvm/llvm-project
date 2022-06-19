@@ -71,12 +71,13 @@ protected:
   public:
     char SectName[17];
     char SegName[17];
-    uint64_t Address = 0;
+    orc::ExecutorAddr Address;
     uint64_t Size = 0;
     uint64_t Alignment = 0;
     uint32_t Flags = 0;
     const char *Data = nullptr;
     Section *GraphSection = nullptr;
+    std::map<orc::ExecutorAddr, Symbol *> CanonicalSymbols;
   };
 
   using SectionParserFunction = std::function<Error(NormalizedSection &S)>;
@@ -125,30 +126,31 @@ protected:
   /// given index is out of range, or if no symbol has been added for the given
   /// index.
   Expected<NormalizedSymbol &> findSymbolByIndex(uint64_t Index) {
-    if (Index >= IndexToSymbol.size())
-      return make_error<JITLinkError>("Symbol index out of range");
-    auto *Sym = IndexToSymbol[Index];
-    if (!Sym)
+    auto I = IndexToSymbol.find(Index);
+    if (I == IndexToSymbol.end())
       return make_error<JITLinkError>("No symbol at index " +
                                       formatv("{0:d}", Index));
-    return *Sym;
+    assert(I->second && "Null symbol at index");
+    return *I->second;
   }
 
   /// Returns the symbol with the highest address not greater than the search
   /// address, or null if no such symbol exists.
-  Symbol *getSymbolByAddress(JITTargetAddress Address) {
-    auto I = AddrToCanonicalSymbol.upper_bound(Address);
-    if (I == AddrToCanonicalSymbol.begin())
+  Symbol *getSymbolByAddress(NormalizedSection &NSec,
+                             orc::ExecutorAddr Address) {
+    auto I = NSec.CanonicalSymbols.upper_bound(Address);
+    if (I == NSec.CanonicalSymbols.begin())
       return nullptr;
     return std::prev(I)->second;
   }
 
   /// Returns the symbol with the highest address not greater than the search
   /// address, or an error if no such symbol exists.
-  Expected<Symbol &> findSymbolByAddress(JITTargetAddress Address) {
-    auto *Sym = getSymbolByAddress(Address);
+  Expected<Symbol &> findSymbolByAddress(NormalizedSection &NSec,
+                                         orc::ExecutorAddr Address) {
+    auto *Sym = getSymbolByAddress(NSec, Address);
     if (Sym)
-      if (Address < Sym->getAddress() + Sym->getSize())
+      if (Address <= Sym->getAddress() + Sym->getSize())
         return *Sym;
     return make_error<JITLinkError>("No symbol covering address " +
                                     formatv("{0:x16}", Address));
@@ -179,8 +181,8 @@ private:
   static unsigned getPointerSize(const object::MachOObjectFile &Obj);
   static support::endianness getEndianness(const object::MachOObjectFile &Obj);
 
-  void setCanonicalSymbol(Symbol &Sym) {
-    auto *&CanonicalSymEntry = AddrToCanonicalSymbol[Sym.getAddress()];
+  void setCanonicalSymbol(NormalizedSection &NSec, Symbol &Sym) {
+    auto *&CanonicalSymEntry = NSec.CanonicalSymbols[Sym.getAddress()];
     // There should be no symbol at this address, or, if there is,
     // it should be a zero-sized symbol from an empty section (which
     // we can safely override).
@@ -190,8 +192,9 @@ private:
   }
 
   Section &getCommonSection();
-  void addSectionStartSymAndBlock(Section &GraphSec, uint64_t Address,
-                                  const char *Data, uint64_t Size,
+  void addSectionStartSymAndBlock(unsigned SecIndex, Section &GraphSec,
+                                  orc::ExecutorAddr Address, const char *Data,
+                                  orc::ExecutorAddrDiff Size,
                                   uint32_t Alignment, bool IsLive);
 
   Error createNormalizedSections();
@@ -227,8 +230,18 @@ private:
   Section *CommonSection = nullptr;
 
   DenseMap<uint32_t, NormalizedSymbol *> IndexToSymbol;
-  std::map<JITTargetAddress, Symbol *> AddrToCanonicalSymbol;
   StringMap<SectionParserFunction> CustomSectionParserFunctions;
+};
+
+/// A pass to split up __LD,__compact_unwind sections.
+class CompactUnwindSplitter {
+public:
+  CompactUnwindSplitter(StringRef CompactUnwindSectionName)
+      : CompactUnwindSectionName(CompactUnwindSectionName) {}
+  Error operator()(LinkGraph &G);
+
+private:
+  StringRef CompactUnwindSectionName;
 };
 
 } // end namespace jitlink

@@ -5,8 +5,10 @@
 ; CHECK-NEXT:        .long	241
 ; CHECK-NEXT:        .long	[[SUBSEC_END:.*]]-[[SUBSEC_START:.*]] # Subsection size
 ; CHECK-NEXT:        [[SUBSEC_START]]:
-; CHECK-NEXT:        .short	[[C1_END:.*]]-[[C1_START:.*]] # Record length
-; CHECK:             [[C1_END]]:
+; CHECK-NEXT:        .short	[[OBJNAME_END:.*]]-[[OBJNAME_START:.*]] # Record length
+; CHECK:             [[OBJNAME_END]]:
+; CHECK-NEXT:        .short	[[COMPILE3_END:.*]]-[[COMPILE3_START:.*]] # Record length
+; CHECK:             [[COMPILE3_END]]:
 ; CHECK-NEXT:        [[SUBSEC_END]]:
 ; CHECK-NEXT:        .p2align 2
 ; CHECK-NEXT:        .cv_filechecksums

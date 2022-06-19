@@ -15,7 +15,6 @@
 #endif
 #include "llvm/DebugInfo/PDB/Native/NativeSession.h"
 #include "llvm/Support/Error.h"
-#include "llvm/Support/MemoryBuffer.h"
 
 using namespace llvm;
 using namespace llvm::pdb;

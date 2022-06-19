@@ -1,7 +1,7 @@
-// RUN: %clang_cc1 -triple i386-apple-darwin9 %s -emit-llvm -o - | FileCheck -check-prefix CHECK-X32 %s
+// RUN: %clang_cc1 -no-opaque-pointers -triple i386-apple-darwin9 %s -emit-llvm -o - | FileCheck -check-prefix CHECK-X32 %s
 // CHECK-X32: %union.command = type <{ i8*, [2 x i8] }>
 
-// RUN: %clang_cc1 -triple x86_64-apple-darwin9 %s -emit-llvm -o - | FileCheck -check-prefix CHECK-X64 %s
+// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-apple-darwin9 %s -emit-llvm -o - | FileCheck -check-prefix CHECK-X64 %s
 // CHECK-X64: %union.command = type <{ i8*, [2 x i8] }>
 
 // <rdar://problem/7184250>

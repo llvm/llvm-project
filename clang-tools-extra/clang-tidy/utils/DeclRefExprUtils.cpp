@@ -48,7 +48,7 @@ constReferenceDeclRefExprs(const VarDecl &VarDecl, const Stmt &Stmt,
       declRefExpr(to(varDecl(equalsNode(&VarDecl)))).bind("declRef");
   auto ConstMethodCallee = callee(cxxMethodDecl(isConst()));
   // Match method call expressions where the variable is referenced as the this
-  // implicit object argument and opertor call expression for member operators
+  // implicit object argument and operator call expression for member operators
   // where the variable is the 0-th argument.
   auto Matches = match(
       findAll(expr(anyOf(cxxMemberCallExpr(ConstMethodCallee, on(DeclRefToVar)),

@@ -1,5 +1,5 @@
-; RUN: opt < %s -instcombine -S | grep "lshr.*3"
-; RUN: opt < %s -instcombine -S | grep "call .*%cond"
+; RUN: opt < %s -passes=instcombine -S | grep "lshr.*3"
+; RUN: opt < %s -passes=instcombine -S | grep "call .*%cond"
 ; PR2506
 
 ; We can simplify the operand of udiv to '8', but not the operand to the

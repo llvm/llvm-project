@@ -294,7 +294,7 @@ void test13(long double v) {
 }
 
 void test14(long l) {
-  // Fine because of the boolean whitelist.
+  // Fine because of the boolean allowlist.
   char c;
   c = (l == 4);
   c = ((l <= 4) && (l >= 0));
@@ -313,7 +313,7 @@ void test16(void) {
 }
 
 // PR 5938
-void test17() {
+void test17(void) {
   union {
     unsigned long long a : 8;
     unsigned long long b : 32;
@@ -327,7 +327,7 @@ void test17() {
 }
 
 // PR 5939
-void test18() {
+void test18(void) {
   union {
     unsigned long long a : 1;
     unsigned long long b;

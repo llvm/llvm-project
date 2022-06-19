@@ -13,6 +13,7 @@
 #include "Target.h"
 
 #include "lld/Common/ErrorHandler.h"
+#include "mach-o/compact_unwind_encoding.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/BinaryFormat/MachO.h"
@@ -31,7 +32,7 @@ struct ARM64 : ARM64Common {
   ARM64();
   void writeStub(uint8_t *buf, const Symbol &) const override;
   void writeStubHelperHeader(uint8_t *buf) const override;
-  void writeStubHelperEntry(uint8_t *buf, const DylibSymbol &,
+  void writeStubHelperEntry(uint8_t *buf, const Symbol &,
                             uint64_t entryAddr) const override;
   const RelocAttrs &getRelocAttrs(uint8_t type) const override;
   void populateThunk(InputSection *thunk, Symbol *funcSym) override;
@@ -100,7 +101,7 @@ static constexpr uint32_t stubHelperEntryCode[] = {
     0x00000000, // 08: l0: .long 0
 };
 
-void ARM64::writeStubHelperEntry(uint8_t *buf8, const DylibSymbol &sym,
+void ARM64::writeStubHelperEntry(uint8_t *buf8, const Symbol &sym,
                                  uint64_t entryVA) const {
   ::writeStubHelperEntry(buf8, stubHelperEntryCode, sym, entryVA);
 }
@@ -134,7 +135,17 @@ ARM64::ARM64() : ARM64Common(LP64()) {
 
   stubSize = sizeof(stubCode);
   thunkSize = sizeof(thunkCode);
-  branchRange = maxIntN(28) - thunkSize;
+
+  // Branch immediate is two's complement 26 bits, which is implicitly
+  // multiplied by 4 (since all functions are 4-aligned: The branch range
+  // is -4*(2**(26-1))..4*(2**(26-1) - 1).
+  backwardBranchRange = 128 * 1024 * 1024;
+  forwardBranchRange = backwardBranchRange - 4;
+
+  modeDwarfEncoding = UNWIND_ARM64_MODE_DWARF;
+  subtractorRelocType = ARM64_RELOC_SUBTRACTOR;
+  unsignedRelocType = ARM64_RELOC_UNSIGNED;
+
   stubHelperHeaderSize = sizeof(stubHelperHeaderCode);
   stubHelperEntrySize = sizeof(stubHelperEntryCode);
 }

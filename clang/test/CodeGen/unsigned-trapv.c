@@ -8,7 +8,7 @@
 // UNSIGNED: @test_signed
 // TRAPV: @test_signed
 // BOTH: @test_signed
-void test_signed() {
+void test_signed(void) {
   extern volatile int a, b, c;
   // UNSIGNED: add nsw i32
   // UNSIGNED-NOT: overflow
@@ -24,7 +24,7 @@ void test_signed() {
 // UNSIGNED: @test_unsigned
 // TRAPV: @test_unsigned
 // BOTH: @test_unsigned
-void test_unsigned() {
+void test_unsigned(void) {
   extern volatile unsigned x, y, z;
   // UNSIGNED: uadd.with.overflow.i32
   // UNSIGNED-NOT: llvm.trap

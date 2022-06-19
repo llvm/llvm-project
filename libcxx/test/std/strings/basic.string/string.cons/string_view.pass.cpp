@@ -8,20 +8,24 @@
 
 // <string>
 
-// explicit basic_string(basic_string_view<CharT, traits> sv, const Allocator& a = Allocator());
+// explicit basic_string(basic_string_view<CharT, traits> sv, const Allocator& a = Allocator()); // constexpr since C++20
 
-#include <string>
-#include <string_view>
-#include <stdexcept>
 #include <algorithm>
 #include <cassert>
+#include <stdexcept>
+#include <string_view>
+#include <string>
+#include <type_traits>
 
-#include "test_macros.h"
-#include "test_allocator.h"
 #include "min_allocator.h"
+#include "test_allocator.h"
+#include "test_macros.h"
+
+static_assert(!std::is_convertible<std::string_view, std::string const&>::value, "");
+static_assert(!std::is_convertible<std::string_view, std::string>::value, "");
 
 template <class charT>
-void
+TEST_CONSTEXPR_CXX20 void
 test(std::basic_string_view<charT> sv)
 {
     typedef std::basic_string<charT, std::char_traits<charT>, test_allocator<charT> > S;
@@ -47,7 +51,7 @@ test(std::basic_string_view<charT> sv)
 }
 
 template <class charT, class A>
-void
+TEST_CONSTEXPR_CXX20 void
 test(std::basic_string_view<charT> sv, const A& a)
 {
     typedef std::basic_string<charT, std::char_traits<charT>, A> S;
@@ -71,9 +75,8 @@ test(std::basic_string_view<charT> sv, const A& a)
   }
 }
 
-int main(int, char**)
-{
-    {
+TEST_CONSTEXPR_CXX20 bool test() {
+  {
     typedef test_allocator<char> A;
     typedef std::basic_string_view<char, std::char_traits<char> > SV;
 
@@ -88,9 +91,9 @@ int main(int, char**)
 
     test(SV("123456798012345679801234567980123456798012345679801234567980"));
     test(SV("123456798012345679801234567980123456798012345679801234567980"), A(2));
-    }
+  }
 #if TEST_STD_VER >= 11
-    {
+  {
     typedef min_allocator<char> A;
     typedef std::basic_string_view<char, std::char_traits<char> > SV;
 
@@ -105,7 +108,17 @@ int main(int, char**)
 
     test(SV("123456798012345679801234567980123456798012345679801234567980"));
     test(SV("123456798012345679801234567980123456798012345679801234567980"), A());
-    }
+  }
+#endif
+
+  return true;
+}
+
+int main(int, char**)
+{
+  test();
+#if TEST_STD_VER > 17
+  static_assert(test());
 #endif
 
   return 0;

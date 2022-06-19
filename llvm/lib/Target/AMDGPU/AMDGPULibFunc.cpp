@@ -352,7 +352,7 @@ const unsigned UnmangledFuncInfo::TableSize =
 static AMDGPULibFunc::Param getRetType(AMDGPULibFunc::EFuncId id,
                                        const AMDGPULibFunc::Param (&Leads)[2]) {
   AMDGPULibFunc::Param Res = Leads[0];
-  // TBD - This switch may require to be extended for other intriniscs
+  // TBD - This switch may require to be extended for other intrinsics
   switch (id) {
   case AMDGPULibFunc::EI_SINCOS:
     Res.PtrKind = AMDGPULibFunc::BYVALUE;
@@ -455,7 +455,8 @@ AMDGPULibFunc::Param ParamIterator::getNextParam() {
       break;
     }
 
-    default: llvm_unreachable("Unhandeled param rule");
+    default:
+      llvm_unreachable("Unhandled param rule");
     }
   }
   ++Index;
@@ -747,7 +748,8 @@ static const char *getItaniumTypeName(AMDGPULibFunc::EType T) {
   case AMDGPULibFunc::IMG3D:   return "11ocl_image3d";
   case AMDGPULibFunc::SAMPLER: return "11ocl_sampler";
   case AMDGPULibFunc::EVENT:   return "9ocl_event";
-  default: llvm_unreachable("Unhandeled param type");
+  default:
+    llvm_unreachable("Unhandled param type");
   }
   return nullptr;
 }
@@ -761,7 +763,7 @@ namespace {
 // substitution candidates from the grammar, but are explicitly excluded:
 // 1. <builtin-type> other than vendor extended types ..."
 
-// For the purpose of functions the following productions make sence for the
+// For the purpose of functions the following productions make sense for the
 // substitution:
 //  <type> ::= <builtin-type>
 //    ::= <class-enum-type>
@@ -774,11 +776,11 @@ namespace {
 // using <class-enum-type> production rule they're not used for substitution
 // because clang consider them as builtin types.
 //
-// DvNN_ type is GCC extension for vectors and is a subject for the substitution.
-
+// DvNN_ type is GCC extension for vectors and is a subject for the
+// substitution.
 
 class ItaniumMangler {
-  SmallVector<AMDGPULibFunc::Param, 10> Str; // list of accumulated substituions
+  SmallVector<AMDGPULibFunc::Param, 10> Str; // list of accumulated substitutions
   bool  UseAddrSpace;
 
   int findSubst(const AMDGPULibFunc::Param& P) const {
@@ -902,7 +904,7 @@ static Type* getIntrinsicParamType(
   case AMDGPULibFunc::EVENT:
     T = StructType::create(C,"ocl_event")->getPointerTo(); break;
   default:
-    llvm_unreachable("Unhandeled param type");
+    llvm_unreachable("Unhandled param type");
     return nullptr;
   }
   if (P.VectorSize > 1)
@@ -990,10 +992,8 @@ FunctionCallee AMDGPULibFunc::getOrInsertFunction(Module *M,
   } else {
     AttributeList Attr;
     LLVMContext &Ctx = M->getContext();
-    Attr = Attr.addAttribute(Ctx, AttributeList::FunctionIndex,
-                             Attribute::ReadOnly);
-    Attr = Attr.addAttribute(Ctx, AttributeList::FunctionIndex,
-                             Attribute::NoUnwind);
+    Attr = Attr.addFnAttribute(Ctx, Attribute::ReadOnly);
+    Attr = Attr.addFnAttribute(Ctx, Attribute::NoUnwind);
     C = M->getOrInsertFunction(FuncName, FuncTy, Attr);
   }
 

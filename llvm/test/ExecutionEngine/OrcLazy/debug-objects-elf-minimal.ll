@@ -1,9 +1,11 @@
+; REQUIRES: native && target-x86_64
+
 ; In-memory debug-object contains some basic DWARF
 ;
-; RUN: lli --jit-kind=orc-lazy --per-module-lazy --jit-linker=rtdyld \
+; RUN: lli --jit-linker=rtdyld \
 ; RUN:     --generate=__dump_jit_debug_objects %s | llvm-dwarfdump --diff - | FileCheck %s
 ;
-; RUN: lli --jit-kind=orc-lazy --per-module-lazy --jit-linker=jitlink \
+; RUN: lli --jit-linker=jitlink \
 ; RUN:     --generate=__dump_jit_debug_objects %s | llvm-dwarfdump --diff - | FileCheck %s
 ;
 ; CHECK: -:	file format elf64-x86-64
@@ -34,11 +36,11 @@
 
 ; Text section of the in-memory debug-object has a non-null load-address
 ;
-; RUN: lli --jit-kind=orc-lazy --per-module-lazy --jit-linker=rtdyld \
+; RUN: lli --jit-linker=rtdyld \
 ; RUN:     --generate=__dump_jit_debug_objects %s | llvm-objdump --section-headers - | \
 ; RUN:     FileCheck --check-prefix=CHECK_LOAD_ADDR %s
 ;
-; RUN: lli --jit-kind=orc-lazy --per-module-lazy --jit-linker=jitlink \
+; RUN: lli --jit-linker=jitlink \
 ; RUN:     --generate=__dump_jit_debug_objects %s | llvm-objdump --section-headers - | \
 ; RUN:     FileCheck --check-prefix=CHECK_LOAD_ADDR %s
 ;

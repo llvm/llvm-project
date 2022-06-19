@@ -49,15 +49,15 @@ private:
 
   bool isLossOfSign(const ImplicitCastExpr *Cast, CheckerContext &C) const;
 
-  void reportBug(ExplodedNode *N, CheckerContext &C, const char Msg[]) const;
+  void reportBug(ExplodedNode *N, const Expr *E, CheckerContext &C,
+                 const char Msg[]) const;
 };
 }
 
 void ConversionChecker::checkPreStmt(const ImplicitCastExpr *Cast,
                                      CheckerContext &C) const {
-  // TODO: For now we only warn about DeclRefExpr, to avoid noise. Warn for
-  // calculations also.
-  if (!isa<DeclRefExpr>(Cast->IgnoreParenImpCasts()))
+  // Don't warn for implicit conversions to bool
+  if (Cast->getType()->isBooleanType())
     return;
 
   // Don't warn for loss of sign/precision in macros.
@@ -69,6 +69,9 @@ void ConversionChecker::checkPreStmt(const ImplicitCastExpr *Cast,
   const Stmt *Parent = PM.getParent(Cast);
   if (!Parent)
     return;
+  // Dont warn if this is part of an explicit cast
+  if (isa<ExplicitCastExpr>(Parent))
+    return;
 
   bool LossOfSign = false;
   bool LossOfPrecision = false;
@@ -77,8 +80,10 @@ void ConversionChecker::checkPreStmt(const ImplicitCastExpr *Cast,
   if (const auto *B = dyn_cast<BinaryOperator>(Parent)) {
     BinaryOperator::Opcode Opc = B->getOpcode();
     if (Opc == BO_Assign) {
-      LossOfSign = isLossOfSign(Cast, C);
-      LossOfPrecision = isLossOfPrecision(Cast, Cast->getType(), C);
+      if (!Cast->IgnoreParenImpCasts()->isEvaluatable(C.getASTContext())) {
+        LossOfSign = isLossOfSign(Cast, C);
+        LossOfPrecision = isLossOfPrecision(Cast, Cast->getType(), C);
+      }
     } else if (Opc == BO_AddAssign || Opc == BO_SubAssign) {
       // No loss of sign.
       LossOfPrecision = isLossOfPrecision(Cast, B->getLHS()->getType(), C);
@@ -97,7 +102,12 @@ void ConversionChecker::checkPreStmt(const ImplicitCastExpr *Cast,
     } else if (B->isRelationalOp() || B->isMultiplicativeOp()) {
       LossOfSign = isLossOfSign(Cast, C);
     }
-  } else if (isa<DeclStmt>(Parent)) {
+  } else if (isa<DeclStmt, ReturnStmt>(Parent)) {
+    if (!Cast->IgnoreParenImpCasts()->isEvaluatable(C.getASTContext())) {
+      LossOfSign = isLossOfSign(Cast, C);
+      LossOfPrecision = isLossOfPrecision(Cast, Cast->getType(), C);
+    }
+  } else {
     LossOfSign = isLossOfSign(Cast, C);
     LossOfPrecision = isLossOfPrecision(Cast, Cast->getType(), C);
   }
@@ -108,20 +118,21 @@ void ConversionChecker::checkPreStmt(const ImplicitCastExpr *Cast,
     if (!N)
       return;
     if (LossOfSign)
-      reportBug(N, C, "Loss of sign in implicit conversion");
+      reportBug(N, Cast, C, "Loss of sign in implicit conversion");
     if (LossOfPrecision)
-      reportBug(N, C, "Loss of precision in implicit conversion");
+      reportBug(N, Cast, C, "Loss of precision in implicit conversion");
   }
 }
 
-void ConversionChecker::reportBug(ExplodedNode *N, CheckerContext &C,
-                                  const char Msg[]) const {
+void ConversionChecker::reportBug(ExplodedNode *N, const Expr *E,
+                                  CheckerContext &C, const char Msg[]) const {
   if (!BT)
     BT.reset(
         new BuiltinBug(this, "Conversion", "Possible loss of sign/precision."));
 
   // Generate a report for this bug.
   auto R = std::make_unique<PathSensitiveBugReport>(*BT, Msg, N);
+  bugreporter::trackExpressionValue(N, E, *R);
   C.emitReport(std::move(R));
 }
 

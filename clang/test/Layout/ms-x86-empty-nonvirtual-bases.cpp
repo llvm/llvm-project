@@ -148,7 +148,7 @@ struct I {
 };
 
 // CHECK-LABEL:   0 | struct I{{$}}
-// CHECK-NEXT:    0 |   int [0] i0
+// CHECK-NEXT:    0 |   int[0] i0
 // CHECK-NEXT:      | [sizeof={{1|4}}, align=4,
 // CHECK-NEXT:      |  nvsize=0, nvalign=4]
 
@@ -158,7 +158,7 @@ struct J : I {
 
 // CHECK-LABEL:  0 | struct J{{$}}
 // CHECK-NEXT:   0 |   struct I (base)
-// CHECK-NEXT:   0 |     int [0] i0
+// CHECK-NEXT:   0 |     int[0] i0
 // CHECK-NEXT:   0 |   int j
 // CHECK-NEXT:     | [sizeof=4, align=4,
 // CHECK-NEXT:     |  nvsize=4, nvalign=4]

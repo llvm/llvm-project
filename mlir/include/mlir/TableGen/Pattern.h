@@ -18,6 +18,7 @@
 #include "mlir/TableGen/Argument.h"
 #include "mlir/TableGen/Operator.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/Hashing.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringSet.h"
 
@@ -27,7 +28,7 @@ namespace llvm {
 class DagInit;
 class Init;
 class Record;
-} // end namespace llvm
+} // namespace llvm
 
 namespace mlir {
 namespace tblgen {
@@ -112,6 +113,9 @@ public:
   void print(raw_ostream &os) const;
 
 private:
+  friend llvm::DenseMapInfo<DagLeaf>;
+  const void *getAsOpaquePointer() const { return def; }
+
   // Returns true if the TableGen Init `def` in this DagLeaf is a DefInit and
   // also a subclass of the given `superclass`.
   bool isSubClassOf(StringRef superclass) const;
@@ -176,8 +180,14 @@ public:
   // Returns whether this DAG represents the location of an op creation.
   bool isLocationDirective() const;
 
+  // Returns whether this DAG is a return type specifier.
+  bool isReturnTypeDirective() const;
+
   // Returns true if this DAG node is wrapping native code call.
   bool isNativeCodeCall() const;
+
+  // Returns whether this DAG is an `either` specifier.
+  bool isEither() const;
 
   // Returns true if this DAG node is an operation.
   bool isOperation() const;
@@ -195,6 +205,7 @@ public:
 
 private:
   friend class SymbolInfoMap;
+  friend llvm::DenseMapInfo<DagNode>;
   const void *getAsOpaquePointer() const { return node; }
 
   const llvm::DagInit *node; // nullptr means null DagNode
@@ -234,14 +245,21 @@ private:
 // values in a suitable way.
 class SymbolInfoMap {
 public:
-  explicit SymbolInfoMap(ArrayRef<llvm::SMLoc> loc) : loc(loc) {}
+  explicit SymbolInfoMap(ArrayRef<SMLoc> loc) : loc(loc) {}
 
   // Class for information regarding a symbol.
   class SymbolInfo {
   public:
+    // Returns a type string of a variable.
+    std::string getVarTypeStr(StringRef name) const;
+
     // Returns a string for defining a variable named as `name` to store the
     // value bound by this symbol.
     std::string getVarDecl(StringRef name) const;
+
+    // Returns a string for defining an argument which passes the reference of
+    // the variable.
+    std::string getArgDecl(StringRef name) const;
 
     // Returns a variable name for the symbol named as `name`.
     std::string getVarName(StringRef name) const;
@@ -380,6 +398,8 @@ public:
   // with index `argIndex` for operator `op`.
   const_iterator findBoundSymbol(StringRef key, DagNode node,
                                  const Operator &op, int argIndex) const;
+  const_iterator findBoundSymbol(StringRef key,
+                                 const SymbolInfo &symbolInfo) const;
 
   // Returns the bounds of a range that includes all the elements which
   // bind to the `key`.
@@ -425,7 +445,7 @@ private:
 
   // Pattern instantiation location. This is intended to be used as parameter
   // to PrintFatalError() to report errors.
-  ArrayRef<llvm::SMLoc> loc;
+  ArrayRef<SMLoc> loc;
 };
 
 // Wrapper class providing helper methods for accessing MLIR Pattern defined
@@ -471,14 +491,14 @@ public:
   // pair).
   std::vector<IdentifierLine> getLocation() const;
 
-private:
-  // Helper function to verify variabld binding.
-  void verifyBind(bool result, StringRef symbolName);
-
   // Recursively collects all bound symbols inside the DAG tree rooted
   // at `tree` and updates the given `infoMap`.
   void collectBoundSymbols(DagNode tree, SymbolInfoMap &infoMap,
                            bool isSrcPattern);
+
+private:
+  // Helper function to verify variable binding.
+  void verifyBind(bool result, StringRef symbolName);
 
   // The TableGen definition of this pattern.
   const llvm::Record &def;
@@ -489,7 +509,45 @@ private:
   RecordOperatorMap *recordOpMap;
 };
 
-} // end namespace tblgen
-} // end namespace mlir
+} // namespace tblgen
+} // namespace mlir
+
+namespace llvm {
+template <>
+struct DenseMapInfo<mlir::tblgen::DagNode> {
+  static mlir::tblgen::DagNode getEmptyKey() {
+    return mlir::tblgen::DagNode(
+        llvm::DenseMapInfo<llvm::DagInit *>::getEmptyKey());
+  }
+  static mlir::tblgen::DagNode getTombstoneKey() {
+    return mlir::tblgen::DagNode(
+        llvm::DenseMapInfo<llvm::DagInit *>::getTombstoneKey());
+  }
+  static unsigned getHashValue(mlir::tblgen::DagNode node) {
+    return llvm::hash_value(node.getAsOpaquePointer());
+  }
+  static bool isEqual(mlir::tblgen::DagNode lhs, mlir::tblgen::DagNode rhs) {
+    return lhs.node == rhs.node;
+  }
+};
+
+template <>
+struct DenseMapInfo<mlir::tblgen::DagLeaf> {
+  static mlir::tblgen::DagLeaf getEmptyKey() {
+    return mlir::tblgen::DagLeaf(
+        llvm::DenseMapInfo<llvm::Init *>::getEmptyKey());
+  }
+  static mlir::tblgen::DagLeaf getTombstoneKey() {
+    return mlir::tblgen::DagLeaf(
+        llvm::DenseMapInfo<llvm::Init *>::getTombstoneKey());
+  }
+  static unsigned getHashValue(mlir::tblgen::DagLeaf leaf) {
+    return llvm::hash_value(leaf.getAsOpaquePointer());
+  }
+  static bool isEqual(mlir::tblgen::DagLeaf lhs, mlir::tblgen::DagLeaf rhs) {
+    return lhs.def == rhs.def;
+  }
+};
+} // namespace llvm
 
 #endif // MLIR_TABLEGEN_PATTERN_H_

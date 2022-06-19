@@ -271,8 +271,8 @@ void PostfixOperators(int *a, struct S b, struct S *c) {
 
   (int [4]){1, 2, 3, 4, };
   // CHECK: ImplicitCastExpr
-  // CHECK-NEXT: CompoundLiteralExpr 0x{{[^ ]*}} <col:3, col:25> 'int [4]' lvalue
-  // CHECK-NEXT: InitListExpr 0x{{[^ ]*}} <col:12, col:25> 'int [4]'
+  // CHECK-NEXT: CompoundLiteralExpr 0x{{[^ ]*}} <col:3, col:25> 'int[4]' lvalue
+  // CHECK-NEXT: InitListExpr 0x{{[^ ]*}} <col:12, col:25> 'int[4]'
   // CHECK-NEXT: IntegerLiteral 0x{{[^ ]*}} <col:13> 'int' 1
   // CHECK-NEXT: IntegerLiteral 0x{{[^ ]*}} <col:16> 'int' 2
   // CHECK-NEXT: IntegerLiteral 0x{{[^ ]*}} <col:19> 'int' 3
@@ -300,23 +300,23 @@ void PrimaryExpressions(int a) {
 
   "a";
   // ImplicitCastExpr
-  // CHECK: StringLiteral 0x{{[^ ]*}} <col:3> 'char [2]' lvalue "a"
+  // CHECK: StringLiteral 0x{{[^ ]*}} <col:3> 'char[2]' lvalue "a"
 
   L"a";
   // ImplicitCastExpr
-  // CHECK: StringLiteral 0x{{[^ ]*}} <col:3> 'int [2]' lvalue L"a"
+  // CHECK: StringLiteral 0x{{[^ ]*}} <col:3> 'int[2]' lvalue L"a"
 
   u8"a";
   // ImplicitCastExpr
-  // CHECK: StringLiteral 0x{{[^ ]*}} <col:3> 'char [2]' lvalue u8"a"
+  // CHECK: StringLiteral 0x{{[^ ]*}} <col:3> 'char[2]' lvalue u8"a"
 
   U"a";
   // ImplicitCastExpr
-  // CHECK: StringLiteral 0x{{[^ ]*}} <col:3> 'unsigned int [2]' lvalue U"a"
+  // CHECK: StringLiteral 0x{{[^ ]*}} <col:3> 'unsigned int[2]' lvalue U"a"
 
   u"a";
   // ImplicitCastExpr
-  // CHECK: StringLiteral 0x{{[^ ]*}} <col:3> 'unsigned short [2]' lvalue u"a"
+  // CHECK: StringLiteral 0x{{[^ ]*}} <col:3> 'unsigned short[2]' lvalue u"a"
 
   1;
   // CHECK: IntegerLiteral 0x{{[^ ]*}} <line:[[@LINE-1]]:3> 'int' 1

@@ -6,9 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-// GCC's __builtin_strlen isn't constexpr yet
-// XFAIL: (gcc-10 || gcc-11) && !(c++11 || c++14 || c++17)
-// UNSUPPORTED: LIBCXX-DEBUG-FIXME
+// UNSUPPORTED: !stdlib=libc++ && (c++03 || c++11 || c++14)
 
 // <string_view>
 
@@ -19,7 +17,6 @@
 // Requires: [s, s+rlen) is a valid range.
 // Effects: Equivalent to std::copy_n(begin() + pos, rlen, s).
 // Returns: rlen.
-
 
 #include <string_view>
 #include <algorithm>

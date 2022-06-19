@@ -8,10 +8,8 @@ struct S {
   S(T) {}
 };
 
-// CHECK: !DIGlobalVariable(name: "s1"
-// CHECK-SAME: type: [[TYPE_NUM:![0-9]+]]
-// CHECK: !DIGlobalVariable(name: "s2"
-// CHECK-SAME: type: [[TYPE_NUM]]
-// CHECK: [[TYPE_NUM]] = distinct !DICompositeType(tag: DW_TAG_structure_type, name: "S<int>",
+// CHECK-DAG: !DIGlobalVariable(name: "s1"{{.*}} type: [[TYPE_NUM:![0-9]+]]
+// CHECK-DAG: !DIGlobalVariable(name: "s2"{{.*}} type: [[TYPE_NUM]]
+// CHECK-DAG: [[TYPE_NUM]] = distinct !DICompositeType(tag: DW_TAG_structure_type, name: "S<int>",
 S s1(42);
 S<int> s2(42);

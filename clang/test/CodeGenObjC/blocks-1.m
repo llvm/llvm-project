@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 %s -emit-llvm -o - -fobjc-gc -fblocks -triple i386-apple-darwin10 -fobjc-runtime=macosx-fragile-10.5 | FileCheck %s --check-prefix=CHECK --check-prefix=OBJC
-// RUN: %clang_cc1 -x objective-c++ %s -emit-llvm -o - -fobjc-gc -fblocks -triple i386-apple-darwin10 -fobjc-runtime=macosx-fragile-10.5 | FileCheck %s --check-prefix=CHECK --check-prefix=OBJCXX
+// RUN: %clang_cc1 -no-opaque-pointers %s -emit-llvm -o - -fobjc-gc -fblocks -triple i386-apple-darwin10 -fobjc-runtime=macosx-fragile-10.5 | FileCheck %s --check-prefix=CHECK --check-prefix=OBJC
+// RUN: %clang_cc1 -no-opaque-pointers -x objective-c++ %s -emit-llvm -o - -fobjc-gc -fblocks -triple i386-apple-darwin10 -fobjc-runtime=macosx-fragile-10.5 | FileCheck %s --check-prefix=CHECK --check-prefix=OBJCXX
 
 // OBJC-LABEL: define{{.*}} void @test1(
 // OBJCXX-LABEL: define{{.*}} void @_Z5test1P12NSDictionary(
@@ -36,7 +36,7 @@ void test1(NSDictionary * dict) {
 @interface D
 @end
 
-void foo() {
+void foo(void) {
   __block __weak D *weakSelf;
   ^{ (void)weakSelf; };
   D *l;
@@ -46,7 +46,7 @@ void foo() {
 
 void (^__weak b)(void);
 
-void test2() {
+void test2(void) {
   __block int i = 0;
   b = ^ {  ++i; };
 }

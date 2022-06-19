@@ -1,4 +1,4 @@
-//===------------------------- unwind_06.cpp ------------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -14,7 +14,7 @@
 #include <stdio.h>
 
 // Suppress diagnostics about deprecated volatile operations
-#if defined(__GNUC__) && (__GNUC__ >= 10) && !defined(__clang__)
+#if defined(__GNUC__) && !defined(__clang__)
 # pragma GCC diagnostic ignored "-Wvolatile"
 #endif
 

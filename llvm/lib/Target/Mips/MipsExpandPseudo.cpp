@@ -892,13 +892,12 @@ bool MipsExpandPseudo::expandMBB(MachineBasicBlock &MBB) {
 }
 
 bool MipsExpandPseudo::runOnMachineFunction(MachineFunction &MF) {
-  STI = &static_cast<const MipsSubtarget &>(MF.getSubtarget());
+  STI = &MF.getSubtarget<MipsSubtarget>();
   TII = STI->getInstrInfo();
 
   bool Modified = false;
-  for (MachineFunction::iterator MFI = MF.begin(), E = MF.end(); MFI != E;
-       ++MFI)
-    Modified |= expandMBB(*MFI);
+  for (MachineBasicBlock &MBB : MF)
+    Modified |= expandMBB(MBB);
 
   if (Modified)
     MF.RenumberBlocks();

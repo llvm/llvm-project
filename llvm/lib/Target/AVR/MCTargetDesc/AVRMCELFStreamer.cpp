@@ -13,8 +13,8 @@
 #include "MCTargetDesc/AVRMCELFStreamer.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCExpr.h"
-#include "llvm/MC/MCSymbol.h"
 #include "llvm/MC/MCObjectWriter.h"
+#include "llvm/MC/MCSymbol.h"
 
 #define DEBUG_TYPE "avrmcelfstreamer"
 

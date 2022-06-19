@@ -28,6 +28,7 @@
 #include "lldb/Target/ThreadPlanRunToAddress.h"
 #include "lldb/Utility/DataBuffer.h"
 #include "lldb/Utility/DataBufferHeap.h"
+#include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/State.h"
 
@@ -166,7 +167,7 @@ void DynamicLoaderDarwin::UnloadImages(
   if (m_process->GetStopID() == m_dyld_image_infos_stop_id)
     return;
 
-  Log *log(lldb_private::GetLogIfAnyCategoriesSet(LIBLLDB_LOG_DYNAMIC_LOADER));
+  Log *log = GetLog(LLDBLog::DynamicLoader);
   Target &target = m_process->GetTarget();
   LLDB_LOGF(log, "Removing %" PRId64 " modules.",
             (uint64_t)solib_addresses.size());
@@ -209,7 +210,7 @@ void DynamicLoaderDarwin::UnloadImages(
 }
 
 void DynamicLoaderDarwin::UnloadAllImages() {
-  Log *log(lldb_private::GetLogIfAnyCategoriesSet(LIBLLDB_LOG_DYNAMIC_LOADER));
+  Log *log = GetLog(LLDBLog::DynamicLoader);
   ModuleList unloaded_modules_list;
 
   Target &target = m_process->GetTarget();
@@ -533,42 +534,25 @@ void DynamicLoaderDarwin::UpdateSpecialBinariesFromNewImageInfos(
   uint32_t exe_idx = UINT32_MAX;
   uint32_t dyld_idx = UINT32_MAX;
   Target &target = m_process->GetTarget();
-  Log *log(lldb_private::GetLogIfAnyCategoriesSet(LIBLLDB_LOG_DYNAMIC_LOADER));
+  Log *log = GetLog(LLDBLog::DynamicLoader);
   ConstString g_dyld_sim_filename("dyld_sim");
 
   ArchSpec target_arch = target.GetArchitecture();
   const size_t image_infos_size = image_infos.size();
   for (size_t i = 0; i < image_infos_size; i++) {
     if (image_infos[i].header.filetype == llvm::MachO::MH_DYLINKER) {
-      // In a "simulator" process (an x86 process that is 
-      // ios/tvos/watchos/bridgeos) we will have two dyld modules -- 
+      // In a "simulator" process we will have two dyld modules -- 
       // a "dyld" that we want to keep track of, and a "dyld_sim" which 
-      // we don't need to keep track of here. If the target is an x86 
-      // system and the OS of the dyld binary is ios/tvos/watchos/bridgeos, 
-      // then we are looking at dyld_sym.
+      // we don't need to keep track of here.  dyld_sim will have a non-macosx
+      // OS.
+      if (target_arch.GetTriple().getEnvironment() == llvm::Triple::Simulator &&
+          image_infos[i].os_type != llvm::Triple::OSType::MacOSX) {
+        continue;
+      }
 
-      // debugserver has only recently (late 2016) started sending up the os
-      // type for each binary it sees -- so if we don't have an os type, use a
-      // filename check as our next best guess.
-      if (image_infos[i].os_type == llvm::Triple::OSType::UnknownOS) {
-        if (image_infos[i].file_spec.GetFilename() != g_dyld_sim_filename) {
-          dyld_idx = i;
-        }
-      } else if (target_arch.GetTriple().getArch() == llvm::Triple::x86 ||
-                 target_arch.GetTriple().getArch() == llvm::Triple::x86_64) {
-        if (image_infos[i].os_type != llvm::Triple::OSType::IOS &&
-            image_infos[i].os_type != llvm::Triple::TvOS &&
-            image_infos[i].os_type != llvm::Triple::WatchOS) {
-            // NEED_BRIDGEOS_TRIPLE image_infos[i].os_type != llvm::Triple::BridgeOS) {
-          dyld_idx = i;
-        }
-      }
-      else {
-        // catch-all for any other environment -- trust that dyld is actually
-        // dyld
-        dyld_idx = i;
-      }
-    } else if (image_infos[i].header.filetype == llvm::MachO::MH_EXECUTE) {
+      dyld_idx = i;
+    } 
+    if (image_infos[i].header.filetype == llvm::MachO::MH_EXECUTE) {
       exe_idx = i;
     }
   }
@@ -627,12 +611,14 @@ ModuleSP DynamicLoaderDarwin::GetDYLDModule() {
   return dyld_sp;
 }
 
+void DynamicLoaderDarwin::ClearDYLDModule() { m_dyld_module_wp.reset(); }
+
 bool DynamicLoaderDarwin::AddModulesUsingImageInfos(
     ImageInfo::collection &image_infos) {
   std::lock_guard<std::recursive_mutex> guard(m_mutex);
   // Now add these images to the main list.
   ModuleList loaded_module_list;
-  Log *log(lldb_private::GetLogIfAnyCategoriesSet(LIBLLDB_LOG_DYNAMIC_LOADER));
+  Log *log = GetLog(LLDBLog::DynamicLoader);
   Target &target = m_process->GetTarget();
   ModuleList &target_images = target.GetImages();
 
@@ -867,7 +853,7 @@ DynamicLoaderDarwin::GetStepThroughTrampolinePlan(Thread &thread,
   const SymbolContext &current_context =
       current_frame->GetSymbolContext(eSymbolContextSymbol);
   Symbol *current_symbol = current_context.symbol;
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_STEP));
+  Log *log = GetLog(LLDBLog::Step);
   TargetSP target_sp(thread.CalculateTarget());
 
   if (current_symbol != nullptr) {
@@ -1151,7 +1137,7 @@ DynamicLoaderDarwin::GetThreadLocalData(const lldb::ModuleSP module_sp,
 }
 
 bool DynamicLoaderDarwin::UseDYLDSPI(Process *process) {
-  Log *log(lldb_private::GetLogIfAnyCategoriesSet(LIBLLDB_LOG_DYNAMIC_LOADER));
+  Log *log = GetLog(LLDBLog::DynamicLoader);
   bool use_new_spi_interface = false;
 
   llvm::VersionTuple version = process->GetHostOSVersion();

@@ -24,7 +24,6 @@
 
 #include "llvm/Support/DataTypes.h"
 #include <cassert>
-#include <cstring>
 
 namespace llvm {
 namespace COFF {
@@ -730,6 +729,10 @@ enum CodeViewIdentifiers {
 inline bool isReservedSectionNumber(int32_t SectionNumber) {
   return SectionNumber <= 0;
 }
+
+/// Encode section name based on string table offset.
+/// The size of Out must be at least COFF::NameSize.
+bool encodeSectionName(char *Out, uint64_t Offset);
 
 } // End namespace COFF.
 } // End namespace llvm.

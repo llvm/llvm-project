@@ -1,4 +1,5 @@
 ; RUN: not llvm-as %s -o /dev/null 2>&1 | FileCheck %s
+; RUN: not llvm-as %s -opaque-pointers -o /dev/null 2>&1 | FileCheck %s
 
 ; Each musttail call should fail to validate.
 
@@ -43,13 +44,6 @@ declare void @mismatched_byval_callee({ i32 }*)
 define void @mismatched_byval({ i32 }* byval({ i32 }) %a) {
 ; CHECK: mismatched ABI impacting function attributes
   musttail call void @mismatched_byval_callee({ i32 }* %a)
-  ret void
-}
-
-declare void @mismatched_byval_callee2(ptr byval(i32))
-define void @mismatched_byval2(ptr byval(i64) %a) {
-; CHECK: mismatched ABI impacting function attributes
-  musttail call void @mismatched_byval_callee2(ptr byval(i32) %a)
   ret void
 }
 

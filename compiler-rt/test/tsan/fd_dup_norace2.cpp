@@ -17,7 +17,7 @@ void *Thread(void *x) {
   char buf;
   int n = read(fd, &buf, 1);
   if (n != 1) {
-    // This read can "legitimately" fail regadless of the fact that glibc claims
+    // This read can "legitimately" fail regardless of the fact that glibc claims
     // that "there is no instant in the middle of calling dup2 at which new is
     // closed and not yet a duplicate of old". Strace of the failing runs
     // looks as follows:

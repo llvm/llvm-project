@@ -8,7 +8,7 @@
 
 // <string>
 
-// basic_string substr(size_type pos = 0, size_type n = npos) const;
+// basic_string substr(size_type pos = 0, size_type n = npos) const; // constexpr since C++20
 
 #include <string>
 #include <stdexcept>
@@ -19,7 +19,7 @@
 #include "min_allocator.h"
 
 template <class S>
-void
+TEST_CONSTEXPR_CXX20 void
 test(const S& s, typename S::size_type pos, typename S::size_type n)
 {
     if (pos <= s.size())
@@ -32,7 +32,7 @@ test(const S& s, typename S::size_type pos, typename S::size_type n)
         assert(S::traits_type::compare(s.data()+pos, str.data(), rlen) == 0);
     }
 #ifndef TEST_HAS_NO_EXCEPTIONS
-    else
+    else if (!TEST_IS_CONSTANT_EVALUATED)
     {
         try
         {
@@ -47,8 +47,7 @@ test(const S& s, typename S::size_type pos, typename S::size_type n)
 #endif
 }
 
-int main(int, char**)
-{
+TEST_CONSTEXPR_CXX20 bool test() {
     {
     typedef std::string S;
     test(S(""), 0, 0);
@@ -172,6 +171,16 @@ int main(int, char**)
     test(S("lsaijeqhtrbgcdmpfkno"), 20, 0);
     test(S("dplqartnfgejichmoskb"), 21, 0);
     }
+#endif
+
+  return true;
+}
+
+int main(int, char**)
+{
+  test();
+#if TEST_STD_VER > 17
+  static_assert(test());
 #endif
 
   return 0;

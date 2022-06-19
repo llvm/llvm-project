@@ -32,8 +32,6 @@ public:
 
   /// .local
   virtual void emitLocal(ArrayRef<wasm::ValType> Types) = 0;
-  /// .endfunc
-  virtual void emitEndFunc() = 0;
   /// .functype
   virtual void emitFunctionType(const MCSymbolWasm *Sym) = 0;
   /// .indidx
@@ -66,7 +64,6 @@ public:
   WebAssemblyTargetAsmStreamer(MCStreamer &S, formatted_raw_ostream &OS);
 
   void emitLocal(ArrayRef<wasm::ValType> Types) override;
-  void emitEndFunc() override;
   void emitFunctionType(const MCSymbolWasm *Sym) override;
   void emitIndIdx(const MCExpr *Value) override;
   void emitGlobalType(const MCSymbolWasm *Sym) override;
@@ -83,7 +80,6 @@ public:
   explicit WebAssemblyTargetWasmStreamer(MCStreamer &S);
 
   void emitLocal(ArrayRef<wasm::ValType> Types) override;
-  void emitEndFunc() override;
   void emitFunctionType(const MCSymbolWasm *Sym) override {}
   void emitIndIdx(const MCExpr *Value) override;
   void emitGlobalType(const MCSymbolWasm *Sym) override {}
@@ -104,7 +100,6 @@ public:
       : WebAssemblyTargetStreamer(S) {}
 
   void emitLocal(ArrayRef<wasm::ValType>) override {}
-  void emitEndFunc() override {}
   void emitFunctionType(const MCSymbolWasm *) override {}
   void emitIndIdx(const MCExpr *) override {}
   void emitGlobalType(const MCSymbolWasm *) override {}

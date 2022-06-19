@@ -11,21 +11,32 @@
 //===----------------------------------------------------------------------===//
 
 #include "LLVMContextImpl.h"
+#include "AttributeImpl.h"
 #include "llvm/ADT/SetVector.h"
+#include "llvm/ADT/StringMapEntry.h"
+#include "llvm/ADT/iterator.h"
+#include "llvm/ADT/iterator_range.h"
+#include "llvm/IR/DiagnosticHandler.h"
+#include "llvm/IR/LLVMRemarkStreamer.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/OptBisect.h"
 #include "llvm/IR/Type.h"
+#include "llvm/IR/Use.h"
+#include "llvm/IR/User.h"
+#include "llvm/Remarks/RemarkStreamer.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/Compiler.h"
+#include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/ManagedStatic.h"
+#include "llvm/Support/TypeSize.h"
 #include <cassert>
 #include <utility>
 
 using namespace llvm;
 
 static cl::opt<bool>
-    ForceOpaquePointersCL("force-opaque-pointers",
-                          cl::desc("Force all pointers to be opaque pointers"),
-                          cl::init(false));
+    OpaquePointersCL("opaque-pointers", cl::desc("Use opaque pointers"),
+                     cl::init(true));
 
 LLVMContextImpl::LLVMContextImpl(LLVMContext &C)
     : DiagHandler(std::make_unique<DiagnosticHandler>()),
@@ -36,8 +47,11 @@ LLVMContextImpl::LLVMContextImpl(LLVMContext &C)
       X86_FP80Ty(C, Type::X86_FP80TyID), FP128Ty(C, Type::FP128TyID),
       PPC_FP128Ty(C, Type::PPC_FP128TyID), X86_MMXTy(C, Type::X86_MMXTyID),
       X86_AMXTy(C, Type::X86_AMXTyID), Int1Ty(C, 1), Int8Ty(C, 8),
-      Int16Ty(C, 16), Int32Ty(C, 32), Int64Ty(C, 64), Int128Ty(C, 128),
-      ForceOpaquePointers(ForceOpaquePointersCL) {}
+      Int16Ty(C, 16), Int32Ty(C, 32), Int64Ty(C, 64), Int128Ty(C, 128) {
+  if (OpaquePointersCL.getNumOccurrences()) {
+    OpaquePointers = OpaquePointersCL;
+  }
+}
 
 LLVMContextImpl::~LLVMContextImpl() {
   // NOTE: We need to delete the contents of OwnedModules, but Module's dtor
@@ -55,8 +69,15 @@ LLVMContextImpl::~LLVMContextImpl() {
 
   // Drop references for MDNodes.  Do this before Values get deleted to avoid
   // unnecessary RAUW when nodes are still unresolved.
-  for (auto *I : DistinctMDNodes)
+  for (auto *I : DistinctMDNodes) {
+    // We may have DIArgList that were uniqued, and as it has a custom
+    // implementation of dropAllReferences, it needs to be explicitly invoked.
+    if (auto *AL = dyn_cast<DIArgList>(I)) {
+      AL->dropAllReferences();
+      continue;
+    }
     I->dropAllReferences();
+  }
 #define HANDLE_MDNODE_LEAF_UNIQUABLE(CLASS)                                    \
   for (auto *I : CLASS##s)                                                     \
     I->dropAllReferences();
@@ -226,4 +247,20 @@ OptPassGate &LLVMContextImpl::getOptPassGate() const {
 
 void LLVMContextImpl::setOptPassGate(OptPassGate& OPG) {
   this->OPG = &OPG;
+}
+
+bool LLVMContextImpl::hasOpaquePointersValue() {
+  return OpaquePointers.hasValue();
+}
+
+bool LLVMContextImpl::getOpaquePointers() {
+  if (LLVM_UNLIKELY(!(OpaquePointers.hasValue())))
+    OpaquePointers = OpaquePointersCL;
+  return *OpaquePointers;
+}
+
+void LLVMContextImpl::setOpaquePointers(bool OP) {
+  assert((!OpaquePointers.hasValue() || OpaquePointers.getValue() == OP) &&
+         "Cannot change opaque pointers mode once set");
+  OpaquePointers = OP;
 }

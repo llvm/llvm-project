@@ -1,4 +1,5 @@
-; RUN: opt %loadPolly -polly-mse -analyze < %s | FileCheck %s
+; RUN: opt %loadPolly -polly-mse -polly-print-scops -disable-output < %s | FileCheck %s
+; RUN: opt %loadNPMPolly "-passes=scop(print<polly-mse>)" -disable-output < %s | FileCheck %s
 ;
 ; Verify that the accesses are correctly expanded for MemoryKind::Array
 ;
@@ -6,15 +7,15 @@
 ;
 ; #define Ni 2000
 ; #define Nj 3000
-; 
+;
 ; void tmp3(double A[Ni], double B[Nj]) {
 ;   int i,j;
 ;   double tmp = 6;
 ;   for (i = 0; i < Ni; i++) {
 ;
 ;     for(int h = 0; h<Nj; h++)
-;      B[h] = h; 
-;    
+;      B[h] = h;
+;
 ;     for(j = 0; j < Nj; j++) {
 ;      for(int k=0; k<Nj; k++) {
 ; 	tmp = i+k+j;

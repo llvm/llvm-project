@@ -1,26 +1,8 @@
-; RUN: opt %loadPolly -polly-opt-isl -analyze -polly-ast -polly-tile-sizes=256,16 < %s | FileCheck %s
-; RUN: opt %loadPolly -polly-opt-isl -analyze -polly-tiling=false -polly-ast -polly-tile-sizes=256,16 < %s | FileCheck %s --check-prefix=NOTILING
-
-; RUN: opt %loadPolly -polly-opt-isl -analyze \
-; RUN:                -polly-2nd-level-tiling -polly-ast \
-; RUN:                -polly-tile-sizes=256,16 \
-; RUN:                -polly-2nd-level-tile-sizes=16,8 < %s | \
-; RUN: FileCheck %s --check-prefix=TWOLEVEL
-
-; RUN: opt %loadPolly -polly-opt-isl -analyze \
-; RUN:                -polly-2nd-level-tiling -polly-ast \
-; RUN:                -polly-tile-sizes=256,16 \
-; RUN:                -polly-register-tiling \
-; RUN:                -polly-2nd-level-tile-sizes=16,8 < %s | \
-; RUN: FileCheck %s --check-prefix=TWO-PLUS-REGISTER
-
-; RUN: opt %loadPolly -polly-opt-isl -analyze \
-; RUN:                -polly-2nd-level-tiling -polly-ast \
-; RUN:                -polly-tile-sizes=256,16 \
-; RUN:                -polly-register-tiling -polly-register-tile-sizes=2,4 \
-; RUN:                -polly-vectorizer=polly \
-; RUN:                -polly-2nd-level-tile-sizes=16,8 < %s | \
-; RUN: FileCheck %s --check-prefix=TWO-PLUS-REGISTER-PLUS-VECTORIZATION
+; RUN: opt %loadPolly -polly-tile-sizes=256,16                                                                                                                                        -polly-opt-isl -polly-print-ast -disable-output < %s | FileCheck %s
+; RUN: opt %loadPolly -polly-tile-sizes=256,16 -polly-tiling=false                                                                                                                    -polly-opt-isl -polly-print-ast -disable-output < %s | FileCheck %s --check-prefix=NOTILING
+; RUN: opt %loadPolly -polly-tile-sizes=256,16 -polly-2nd-level-tiling -polly-2nd-level-tile-sizes=16,8                                                                               -polly-opt-isl -polly-print-ast -disable-output < %s | FileCheck %s --check-prefix=TWOLEVEL
+; RUN: opt %loadPolly -polly-tile-sizes=256,16 -polly-2nd-level-tiling -polly-2nd-level-tile-sizes=16,8 -polly-register-tiling                                                        -polly-opt-isl -polly-print-ast -disable-output < %s | FileCheck %s --check-prefix=TWO-PLUS-REGISTER
+; RUN: opt %loadPolly -polly-tile-sizes=256,16 -polly-2nd-level-tiling -polly-2nd-level-tile-sizes=16,8 -polly-register-tiling -polly-register-tile-sizes=2,4 -polly-vectorizer=polly -polly-opt-isl -polly-print-ast -disable-output < %s | FileCheck %s --check-prefix=TWO-PLUS-REGISTER-PLUS-VECTORIZATION
 
 ; CHECK: // 1st level tiling - Tiles
 ; CHECK: for (int c0 = 0; c0 <= 3; c0 += 1)

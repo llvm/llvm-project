@@ -1,4 +1,4 @@
-// RUN: %clang_analyze_cc1 -analyzer-checker=core,alpha.core -analyzer-store=region -verify -triple x86_64-apple-darwin9 -Wno-incomplete-implementation %s
+// RUN: %clang_analyze_cc1 -analyzer-checker=core,alpha.core -verify -triple x86_64-apple-darwin9 -Wno-incomplete-implementation %s
 // expected-no-diagnostics
 
 //===----------------------------------------------------------------------===//
@@ -50,7 +50,7 @@ typedef struct _NSZone NSZone;
 // Actual test case:
 //
 // The analyzer currently doesn't reason about ObjCKVCRefExpr.  Have both
-// GRExprEngine::Visit and GRExprEngine::VisitLValue have such expressions
+// ExprEngine::Visit and ExprEngine::VisitLValue have such expressions
 // evaluate to UnknownVal.
 //===----------------------------------------------------------------------===//
 

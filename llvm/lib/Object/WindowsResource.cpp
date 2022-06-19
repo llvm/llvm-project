@@ -12,13 +12,11 @@
 
 #include "llvm/Object/WindowsResource.h"
 #include "llvm/Object/COFF.h"
-#include "llvm/Support/FileOutputBuffer.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/ScopedPrinter.h"
 #include <ctime>
 #include <queue>
-#include <system_error>
 
 using namespace llvm;
 using namespace object;

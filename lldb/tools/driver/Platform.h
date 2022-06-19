@@ -9,19 +9,16 @@
 #ifndef LLDB_TOOLS_DRIVER_PLATFORM_H
 #define LLDB_TOOLS_DRIVER_PLATFORM_H
 
-#include "lldb/Host/Config.h"
-
 #if defined(_WIN32)
 
 #include <io.h>
 #if defined(_MSC_VER)
 #include <csignal>
 #endif
-#if HAVE_SYS_TYPES_H
-#include <sys/types.h>
-#endif
+
 #include "lldb/Host/windows/windows.h"
 #include <cinttypes>
+#include <sys/types.h>
 
 struct winsize {
   long ws_col;

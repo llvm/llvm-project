@@ -2,6 +2,7 @@
 // RUN: %clang %s -dM -E -target x86_64 -fno-asynchronous-unwind-tables | FileCheck %s --check-prefix=NO
 
 // RUN: %clang %s -dM -E -target x86_64 | FileCheck %s
+// RUN: %clang %s -dM -E -target x86_64 -funwind-tables -fno-asynchronous-unwind-tables -g | FileCheck %s
 // RUN: %clang %s -dM -E -target aarch64-apple-darwin | FileCheck %s
 // RUN: %clang %s -dM -E -target x86_64 -fno-asynchronous-unwind-tables -g | FileCheck %s
 // RUN: %clang %s -dM -E -target x86_64 -fno-asynchronous-unwind-tables -fexceptions | FileCheck %s

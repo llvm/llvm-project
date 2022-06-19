@@ -5,8 +5,6 @@ from lldbsuite.test import lldbutil
 
 class TestCase(TestBase):
 
-    mydir = TestBase.compute_mydir(__file__)
-
     @add_test_categories(["libc++"])
     @skipIf(compiler=no_match("clang"))
     def test(self):
@@ -48,16 +46,6 @@ class TestCase(TestBase):
         self.expect("expr --top-level -- int i = std::max(1, 2);", error=True,
                     substrs=["no member named 'max' in namespace 'std'"])
 
-        # Check that diagnostics from the first parse attempt don't show up
-        # in the C++ module parse attempt. In the expression below, we first
-        # fail to parse 'std::max'. Then we retry with a loaded C++ module
-        # and succeed to parse the 'std::max' part. However, the
-        # trailing 'unknown_identifier' will fail to parse even with the
-        # loaded module. The 'std::max' diagnostic from the first attempt
-        # however should not be shown to the user.
-        self.expect("expr std::max(1, 2); unknown_identifier", error=True,
-                    matching=False,
-                    substrs=["no member named 'max'"])
         # The proper diagnostic however should be shown on the retry.
         self.expect("expr std::max(1, 2); unknown_identifier", error=True,
                     substrs=["use of undeclared identifier 'unknown_identifier'"])

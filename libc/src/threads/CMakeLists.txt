@@ -11,35 +11,116 @@ add_entrypoint_object(
 
 add_entrypoint_object(
   thrd_create
-  ALIAS
+  SRCS
+    thrd_create.cpp
+  HDRS
+    thrd_create.h
   DEPENDS
-    .${LIBC_TARGET_OS}.thrd_create
+    libc.src.__support.threads.thread
+    libc.include.threads
+  COMPILE_OPTIONS
+    -O3
+    -fno-omit-frame-pointer # This allows us to sniff out the thread args from
+                            # the new thread's stack reliably.
 )
 
 add_entrypoint_object(
   thrd_join
-  ALIAS
+  SRCS
+    thrd_join.cpp
+  HDRS
+    thrd_join.h
   DEPENDS
-    .${LIBC_TARGET_OS}.thrd_join
+    libc.include.threads
+    libc.src.__support.threads.thread
+)
+
+add_entrypoint_object(
+  thrd_detach
+  SRCS
+    thrd_detach.cpp
+  HDRS
+    thrd_detach.h
+  DEPENDS
+    libc.include.threads
+    libc.src.__support.threads.thread
 )
 
 add_entrypoint_object(
   mtx_init
-  ALIAS
+  SRCS
+    mtx_init.cpp
+  HDRS
+    mtx_init.h
   DEPENDS
-    .${LIBC_TARGET_OS}.mtx_init
+    libc.include.threads
+    libc.src.__support.threads.mutex
+)
+
+add_entrypoint_object(
+  mtx_destroy
+  SRCS
+    mtx_destroy.cpp
+  HDRS
+    mtx_destroy.h
+  DEPENDS
+    libc.include.threads
+    libc.src.__support.threads.mutex
 )
 
 add_entrypoint_object(
   mtx_lock
-  ALIAS
+  SRCS
+    mtx_lock.cpp
+  HDRS
+    mtx_lock.h
   DEPENDS
-    .${LIBC_TARGET_OS}.mtx_lock
+    libc.include.threads
+    libc.src.__support.threads.mutex
 )
 
 add_entrypoint_object(
   mtx_unlock
+  SRCS
+    mtx_unlock.cpp
+  HDRS
+    mtx_unlock.h
+  DEPENDS
+    libc.include.threads
+    libc.src.__support.threads.mutex
+)
+
+add_entrypoint_object(
+  cnd_init
   ALIAS
   DEPENDS
-    .${LIBC_TARGET_OS}.mtx_unlock
+    .${LIBC_TARGET_OS}.cnd_init
+)
+
+add_entrypoint_object(
+  cnd_destroy
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.cnd_destroy
+)
+
+add_entrypoint_object(
+  cnd_wait
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.cnd_wait
+)
+
+add_entrypoint_object(
+  cnd_signal
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.cnd_signal
+)
+
+add_entrypoint_object(
+  cnd_broadcast
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.cnd_broadcast
 )

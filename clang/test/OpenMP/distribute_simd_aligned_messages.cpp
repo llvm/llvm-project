@@ -102,7 +102,7 @@ template<int LEN> int test_warn() {
   return 0;
 }
 
-struct S1; // expected-note 2 {{declared here}}
+struct S1; // expected-note 2 {{declared here}} // expected-note {{forward declaration of 'S1'}}
 extern S1 a; // expected-note {{'a' declared here}}
 class S2 {
   mutable int a;

@@ -8,7 +8,6 @@
 
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/BuiltinTypes.h"
-#include "mlir/IR/Identifier.h"
 #include "gtest/gtest.h"
 
 using namespace mlir;
@@ -152,7 +151,7 @@ TEST(DenseSplatTest, StringSplat) {
   MLIRContext context;
   context.allowUnregisteredDialects();
   Type stringType =
-      OpaqueType::get(Identifier::get("test", &context), "string");
+      OpaqueType::get(StringAttr::get(&context, "test"), "string");
   StringRef value = "test-string";
   testSplat(stringType, value);
 }
@@ -161,7 +160,7 @@ TEST(DenseSplatTest, StringAttrSplat) {
   MLIRContext context;
   context.allowUnregisteredDialects();
   Type stringType =
-      OpaqueType::get(Identifier::get("test", &context), "string");
+      OpaqueType::get(StringAttr::get(&context, "test"), "string");
   Attribute stringAttr = StringAttr::get("test-string", stringType);
   testSplat(stringType, stringAttr);
 }
@@ -202,7 +201,53 @@ TEST(DenseScalarTest, ExtractZeroRankElement) {
   RankedTensorType shape = RankedTensorType::get({}, intTy);
 
   auto attr = DenseElementsAttr::get(shape, llvm::makeArrayRef({elementValue}));
-  EXPECT_TRUE(attr.getValue({0}) == value);
+  EXPECT_TRUE(attr.getValues<Attribute>()[0] == value);
 }
 
-} // end namespace
+TEST(SparseElementsAttrTest, GetZero) {
+  MLIRContext context;
+  context.allowUnregisteredDialects();
+
+  IntegerType intTy = IntegerType::get(&context, 32);
+  FloatType floatTy = FloatType::getF32(&context);
+  Type stringTy = OpaqueType::get(StringAttr::get(&context, "test"), "string");
+
+  ShapedType tensorI32 = RankedTensorType::get({2, 2}, intTy);
+  ShapedType tensorF32 = RankedTensorType::get({2, 2}, floatTy);
+  ShapedType tensorString = RankedTensorType::get({2, 2}, stringTy);
+
+  auto indicesType =
+      RankedTensorType::get({1, 2}, IntegerType::get(&context, 64));
+  auto indices =
+      DenseIntElementsAttr::get(indicesType, {APInt(64, 0), APInt(64, 0)});
+
+  RankedTensorType intValueTy = RankedTensorType::get({1}, intTy);
+  auto intValue = DenseIntElementsAttr::get(intValueTy, {1});
+
+  RankedTensorType floatValueTy = RankedTensorType::get({1}, floatTy);
+  auto floatValue = DenseFPElementsAttr::get(floatValueTy, {1.0f});
+
+  RankedTensorType stringValueTy = RankedTensorType::get({1}, stringTy);
+  auto stringValue = DenseElementsAttr::get(stringValueTy, {StringRef("foo")});
+
+  auto sparseInt = SparseElementsAttr::get(tensorI32, indices, intValue);
+  auto sparseFloat = SparseElementsAttr::get(tensorF32, indices, floatValue);
+  auto sparseString =
+      SparseElementsAttr::get(tensorString, indices, stringValue);
+
+  // Only index (0, 0) contains an element, others are supposed to return
+  // the zero/empty value.
+  auto zeroIntValue = sparseInt.getValues<Attribute>()[{1, 1}];
+  EXPECT_EQ(zeroIntValue.cast<IntegerAttr>().getInt(), 0);
+  EXPECT_TRUE(zeroIntValue.getType() == intTy);
+
+  auto zeroFloatValue = sparseFloat.getValues<Attribute>()[{1, 1}];
+  EXPECT_EQ(zeroFloatValue.cast<FloatAttr>().getValueAsDouble(), 0.0f);
+  EXPECT_TRUE(zeroFloatValue.getType() == floatTy);
+
+  auto zeroStringValue = sparseString.getValues<Attribute>()[{1, 1}];
+  EXPECT_TRUE(zeroStringValue.cast<StringAttr>().getValue().empty());
+  EXPECT_TRUE(zeroStringValue.getType() == stringTy);
+}
+
+} // namespace

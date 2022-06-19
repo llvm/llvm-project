@@ -1596,8 +1596,13 @@ namespace CompoundLiteral {
   // Matching GCC, file-scope array compound literals initialized by constants
   // are lifetime-extended.
   constexpr int *p = (int*)(int[1]){3}; // expected-warning {{C99}}
-  static_assert(*p == 3, "");
+  static_assert(*p == 3, "");           // expected-error {{static_assert expression is not an integral constant expression}}
+                                        // expected-note@-1 {{subexpression not valid}}
+                                        // expected-note@-3 {{declared here}}
   static_assert((int[2]){1, 2}[1] == 2, ""); // expected-warning {{C99}}
+  // expected-error@-1 {{static_assert expression is not an integral constant expression}}
+  // expected-note@-2 {{subexpression not valid}}
+  // expected-note@-3 {{declared here}}
 
   // Other kinds are not.
   struct X { int a[2]; };
@@ -1939,20 +1944,16 @@ namespace Lifetime {
 
   constexpr int &get(int &&n) { return n; }
   // cxx2b-error@-1 {{non-const lvalue reference to type 'int' cannot bind to a temporary of type 'int'}}
-  // cxx2b-error@-2 {{no return statement in constexpr function}} See PR40598
   constexpr int &&get_rv(int &&n) { return static_cast<int&&>(n); }
   struct S {
     int &&r;
     int &s;
     int t;
-    constexpr S() : r(get_rv(0)), s(get(0)), t(r) {} // expected-note {{read of object outside its lifetime}}
-    constexpr S(int) : r(get_rv(0)), s(get(0)), t(s) {}
-    // cxx2b-warning@-1 {{reference 's' is not yet bound to a value when used here}}
-    // cxx2b-note@-2    {{read of uninitialized object is not allowed in a constant expression}}
-    // cxx11_20-note@-3 {{read of object outside its lifetime}}
+    constexpr S() : r(get_rv(0)), s(get(0)), t(r) {} // cxx11_20-note {{read of object outside its lifetime}}
+    constexpr S(int) : r(get_rv(0)), s(get(0)), t(s) {} // cxx11_20-note {{read of object outside its lifetime}}
   };
-  constexpr int k1 = S().t; // expected-error {{constant expression}} expected-note {{in call}}
-  constexpr int k2 = S(0).t; // expected-error {{constant expression}} expected-note {{in call}}
+  constexpr int k1 = S().t; // expected-error {{constant expression}} cxx11_20-note {{in call}}
+  constexpr int k2 = S(0).t; // expected-error {{constant expression}} cxx11_20-note {{in call}}
 
   struct Q {
     int n = 0;
@@ -2065,11 +2066,11 @@ namespace ZeroSizeTypes {
   constexpr int (*p1)[0] = 0, (*p2)[0] = 0;
   constexpr int k = p2 - p1;
   // expected-error@-1 {{constexpr variable 'k' must be initialized by a constant expression}}
-  // expected-note@-2 {{subtraction of pointers to type 'int [0]' of zero size}}
+  // expected-note@-2 {{subtraction of pointers to type 'int[0]' of zero size}}
 
   int arr[5][0];
   constexpr int f() { // expected-error {{never produces a constant expression}}
-    return &arr[3] - &arr[0]; // expected-note {{subtraction of pointers to type 'int [0]' of zero size}}
+    return &arr[3] - &arr[0]; // expected-note {{subtraction of pointers to type 'int[0]' of zero size}}
   }
 }
 
@@ -2387,9 +2388,11 @@ namespace flexible_array {
   static_assert(b[2].x == 3, "");
   static_assert(b[2].arr[0], ""); // expected-error {{constant expression}} expected-note {{array member without known bound}}
 
-  // If we ever start to accept this, we'll need to ensure we can
-  // constant-evaluate it properly.
-  constexpr A c = {1, 2, 3}; // expected-error {{initialization of flexible array member}}
+  // Flexible array initialization is currently not supported by constant
+  // evaluation. Make sure we emit an error message, for now.
+  constexpr A c = {1, 2, 3}; // expected-error {{constexpr variable 'c' must be initialized by a constant expression}}
+  // expected-note@-1 {{flexible array initialization is not yet supported}}
+  // expected-warning@-2 {{flexible array initialization is a GNU extension}}
 }
 
 void local_constexpr_var() {

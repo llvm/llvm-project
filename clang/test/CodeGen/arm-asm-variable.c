@@ -1,5 +1,5 @@
 // REQUIRES: arm-registered-target
-// RUN: %clang_cc1 -triple armv7-apple-darwin9 -emit-llvm -w -o - %s | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -triple armv7-apple-darwin9 -emit-llvm -w -o - %s | FileCheck %s
 
 typedef long long int64_t;
 typedef unsigned int uint32_t;

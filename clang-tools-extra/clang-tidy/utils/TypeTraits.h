@@ -37,7 +37,7 @@ bool hasNonTrivialMoveConstructor(QualType Type);
 /// Return true if `Type` has a non-trivial move assignment operator.
 bool hasNonTrivialMoveAssignment(QualType Type);
 
-} // type_traits
+} // namespace type_traits
 } // namespace utils
 } // namespace tidy
 } // namespace clang

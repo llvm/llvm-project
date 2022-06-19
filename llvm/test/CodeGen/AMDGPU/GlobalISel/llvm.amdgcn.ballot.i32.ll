@@ -2,6 +2,7 @@
 ; RUN: llc -march=amdgcn -mcpu=gfx1010 -mattr=+wavefrontsize32,-wavefrontsize64 -global-isel -verify-machineinstrs < %s | FileCheck %s
 
 declare i32 @llvm.amdgcn.ballot.i32(i1)
+declare i32 @llvm.ctpop.i32(i32)
 
 ; Test ballot(0)
 
@@ -68,4 +69,16 @@ define amdgpu_cs i32 @compare_floats(float %x, float %y) {
   %cmp = fcmp ogt float %x, %y
   %ballot = call i32 @llvm.amdgcn.ballot.i32(i1 %cmp)
   ret i32 %ballot
+}
+
+define amdgpu_cs i32 @ctpop_of_ballot(float %x, float %y) {
+; CHECK-LABEL: ctpop_of_ballot:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    v_cmp_gt_f32_e32 vcc_lo, v0, v1
+; CHECK-NEXT:    s_bcnt1_i32_b32 s0, vcc_lo
+; CHECK-NEXT:    ; return to shader part epilog
+  %cmp = fcmp ogt float %x, %y
+  %ballot = call i32 @llvm.amdgcn.ballot.i32(i1 %cmp)
+  %bcnt = call i32 @llvm.ctpop.i32(i32 %ballot)
+  ret i32 %bcnt
 }

@@ -1,5 +1,5 @@
 // RUN: %clang_cc1 -std=c++11 -triple i686-pc-win32 %s -fms-extensions -fno-rtti -emit-llvm -o - | FileCheck %s --check-prefix=CHECK --check-prefix=CHECK-CXX
-// RUN: %clang_cc1 -x c -triple i686-pc-win32 %s -fms-extensions -fno-rtti -emit-llvm -o - | FileCheck %s --check-prefix=CHECK --check-prefix=CHECK-C
+// RUN: %clang_cc1 -x c -Wno-strict-prototypes -triple i686-pc-win32 %s -fms-extensions -fno-rtti -emit-llvm -o - | FileCheck %s --check-prefix=CHECK --check-prefix=CHECK-C
 
 // Similar to predefined-expr.cpp, but not as exhaustive, since it's basically
 // equivalent to __PRETTY_FUNCTION__.

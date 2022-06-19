@@ -1,6 +1,6 @@
-# RUN: llvm-mc -triple=aarch64 -mattr=+fp-armv8 -disassemble < %s | FileCheck %s
-# RUN: llvm-mc -triple=arm64 -mattr=+fp-armv8 -disassemble < %s | FileCheck %s
-# RUN: llvm-mc -triple=arm64 -mattr=+fp-armv8,+fullfp16 -disassemble < %s | FileCheck %s --check-prefix=CHECK --check-prefix=FP16
+# RUN: llvm-mc -triple=aarch64 -mattr=+v8a,+fp-armv8 -disassemble < %s | FileCheck %s
+# RUN: llvm-mc -triple=arm64 -mattr=+v8a,+fp-armv8 -disassemble < %s | FileCheck %s
+# RUN: llvm-mc -triple=arm64 -mattr=+v8a,+fp-armv8,+fullfp16 -disassemble < %s | FileCheck %s --check-prefix=CHECK --check-prefix=FP16
 # RUN: llvm-mc -triple=arm64 -mattr=+v8.2a -disassemble < %s | FileCheck %s --check-prefix=CHECK-V82
 # RUN: llvm-mc -triple=arm64 -mattr=+v8.3a -disassemble < %s | FileCheck %s --check-prefix=CHECK-V83
 
@@ -3874,6 +3874,7 @@
 0x2c 0x9e 0x18 0xd5
 0x4c 0x9e 0x18 0xd5
 0x6c 0x9e 0x1b 0xd5
+0xcc 0x9e 0x18 0xd5
 0xc 0xa2 0x18 0xd5
 0xc 0xa2 0x1c 0xd5
 0xc 0xa2 0x1e 0xd5
@@ -4171,6 +4172,7 @@
 0x29 0x9e 0x38 0xd5
 0x49 0x9e 0x38 0xd5
 0x69 0x9e 0x3b 0xd5
+0xc9 0x9e 0x38 0xd5
 0x9 0xa2 0x38 0xd5
 0x9 0xa2 0x3c 0xd5
 0x9 0xa2 0x3e 0xd5

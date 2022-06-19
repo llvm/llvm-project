@@ -25,6 +25,12 @@
 
 LLVM_C_EXTERN_C_BEGIN
 
+/**
+ * @addtogroup LLVMCTarget
+ *
+ * @{
+ */
+
 typedef struct LLVMOpaqueTargetMachine *LLVMTargetMachineRef;
 typedef struct LLVMTarget *LLVMTargetRef;
 
@@ -130,7 +136,9 @@ void LLVMSetTargetMachineAsmVerbosity(LLVMTargetMachineRef T,
   wraps several c++ only classes (among them a file stream). Returns any
   error in ErrorMessage. Use LLVMDisposeMessage to dispose the message. */
 LLVMBool LLVMTargetMachineEmitToFile(LLVMTargetMachineRef T, LLVMModuleRef M,
-  char *Filename, LLVMCodeGenFileType codegen, char **ErrorMessage);
+                                     const char *Filename,
+                                     LLVMCodeGenFileType codegen,
+                                     char **ErrorMessage);
 
 /** Compile the LLVM IR stored in \p M and store the result in \p OutMemBuf. */
 LLVMBool LLVMTargetMachineEmitToMemoryBuffer(LLVMTargetMachineRef T, LLVMModuleRef M,
@@ -155,6 +163,10 @@ char* LLVMGetHostCPUFeatures(void);
 
 /** Adds the target-specific analysis passes to the pass manager. */
 void LLVMAddAnalysisPasses(LLVMTargetMachineRef T, LLVMPassManagerRef PM);
+
+/**
+ * @}
+ */
 
 LLVM_C_EXTERN_C_END
 

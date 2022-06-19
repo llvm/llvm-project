@@ -26,9 +26,9 @@ public:
 
   void InclusionDirective(SourceLocation HashLoc, const Token &IncludeTok,
                           StringRef FileName, bool IsAngled,
-                          CharSourceRange FilenameRange, const FileEntry *File,
-                          StringRef SearchPath, StringRef RelativePath,
-                          const Module *Imported,
+                          CharSourceRange FilenameRange,
+                          Optional<FileEntryRef> File, StringRef SearchPath,
+                          StringRef RelativePath, const Module *Imported,
                           SrcMgr::CharacteristicKind FileType) override;
   void EndOfMainFile() override;
 
@@ -66,10 +66,14 @@ static int getPriority(StringRef Filename, bool IsAngled, bool IsMainModule) {
       Filename.startswith("clang/") || Filename.startswith("clang-c/"))
     return 2;
 
-  // System headers are sorted to the end.
-  if (IsAngled || Filename.startswith("gtest/") ||
-      Filename.startswith("gmock/"))
+  // Put these between system and llvm headers to be consistent with LLVM
+  // clang-format style.
+  if (Filename.startswith("gtest/") || Filename.startswith("gmock/"))
     return 3;
+
+  // System headers are sorted to the end.
+  if (IsAngled)
+    return 4;
 
   // Other headers are inserted between the main module header and LLVM headers.
   return 1;
@@ -77,7 +81,7 @@ static int getPriority(StringRef Filename, bool IsAngled, bool IsMainModule) {
 
 void IncludeOrderPPCallbacks::InclusionDirective(
     SourceLocation HashLoc, const Token &IncludeTok, StringRef FileName,
-    bool IsAngled, CharSourceRange FilenameRange, const FileEntry *File,
+    bool IsAngled, CharSourceRange FilenameRange, Optional<FileEntryRef> File,
     StringRef SearchPath, StringRef RelativePath, const Module *Imported,
     SrcMgr::CharacteristicKind FileType) {
   // We recognize the first include as a special main module header and want

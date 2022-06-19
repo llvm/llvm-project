@@ -51,7 +51,8 @@ define i32 @add_const_add_const_extrause(i32 %arg) {
 ; X64-NEXT:    movl %edi, %ebx
 ; X64-NEXT:    leal 8(%rbx), %edi
 ; X64-NEXT:    callq use@PLT
-; X64-NEXT:    leal 10(%rbx), %eax
+; X64-NEXT:    addl $10, %ebx
+; X64-NEXT:    movl %ebx, %eax
 ; X64-NEXT:    popq %rbx
 ; X64-NEXT:    .cfi_def_cfa_offset 8
 ; X64-NEXT:    retq
@@ -173,7 +174,8 @@ define i32 @add_const_sub_const_extrause(i32 %arg) {
 ; X64-NEXT:    movl %edi, %ebx
 ; X64-NEXT:    leal 8(%rbx), %edi
 ; X64-NEXT:    callq use@PLT
-; X64-NEXT:    leal 6(%rbx), %eax
+; X64-NEXT:    addl $6, %ebx
+; X64-NEXT:    movl %ebx, %eax
 ; X64-NEXT:    popq %rbx
 ; X64-NEXT:    .cfi_def_cfa_offset 8
 ; X64-NEXT:    retq
@@ -427,7 +429,8 @@ define i32 @sub_const_add_const_extrause(i32 %arg) {
 ; X64-NEXT:    movl %edi, %ebx
 ; X64-NEXT:    leal -8(%rbx), %edi
 ; X64-NEXT:    callq use@PLT
-; X64-NEXT:    leal -6(%rbx), %eax
+; X64-NEXT:    addl $-6, %ebx
+; X64-NEXT:    movl %ebx, %eax
 ; X64-NEXT:    popq %rbx
 ; X64-NEXT:    .cfi_def_cfa_offset 8
 ; X64-NEXT:    retq
@@ -545,7 +548,8 @@ define i32 @sub_const_sub_const_extrause(i32 %arg) {
 ; X64-NEXT:    movl %edi, %ebx
 ; X64-NEXT:    leal -8(%rbx), %edi
 ; X64-NEXT:    callq use@PLT
-; X64-NEXT:    leal -10(%rbx), %eax
+; X64-NEXT:    addl $-10, %ebx
+; X64-NEXT:    movl %ebx, %eax
 ; X64-NEXT:    popq %rbx
 ; X64-NEXT:    .cfi_def_cfa_offset 8
 ; X64-NEXT:    retq

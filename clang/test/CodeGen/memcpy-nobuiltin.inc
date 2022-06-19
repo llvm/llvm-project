@@ -2,7 +2,7 @@
 extern void *memcpy(void *dest, void const *from, size_t n);
 
 #ifdef WITH_DECL
-inline void *memcpy(void *dest, void const *from, size_t n) {
+inline __attribute__((always_inline)) __attribute__((gnu_inline)) void *memcpy(void *dest, void const *from, size_t n) {
   char const *ifrom = from;
   char *idest = dest;
   while (n--)
@@ -11,7 +11,7 @@ inline void *memcpy(void *dest, void const *from, size_t n) {
 }
 #endif
 #ifdef WITH_SELF_REFERENCE_DECL
-inline void *memcpy(void *dest, void const *from, size_t n) {
+inline __attribute__((always_inline)) __attribute__((gnu_inline)) void *memcpy(void *dest, void const *from, size_t n) {
   if (n != 0)
     memcpy(dest, from, n);
   return dest;

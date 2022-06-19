@@ -125,6 +125,16 @@ int test_block_command5(int);
 /// \brief \c Aaa
 int test_block_command6(int);
 
+// We don't recognize comments in double quotes.
+/// "\brief \returns Aaa"
+int test_block_command7(int);
+
+// But only if they're single-line. (Doxygen treats multi-line quotes inconsistently.)
+// expected-warning@+1 {{empty paragraph passed to '\brief' command}}
+/// "\brief
+/// \returns Aaa"
+int test_block_command8(int);
+
 // expected-warning@+5 {{duplicated command '\brief'}} expected-note@+1 {{previous command '\brief' here}}
 /// \brief Aaa
 ///
@@ -177,6 +187,14 @@ int test_multiple_returns3(int);
 ///
 /// \return Ccc
 int test_multiple_returns4(int);
+
+
+/// expected-warning@+1 {{empty paragraph passed to '\retval' command}}
+/// \retval 0
+int test_retval_no_paragraph();
+
+/// \retval 0 Everything is fine.
+int test_retval_fine();
 
 
 // expected-warning@+1 {{'\param' command used in a comment that is not attached to a function declaration}}
@@ -1098,49 +1116,49 @@ template <typename B>
 void test_attach38<int>::test_attach39(int, B);
 
 // The inline comments expect a string after the command.
-// expected-warning@+1 {{'\a' command does not have a valid word argument}}
+// expected-warning@+1 {{'\a' command has no word arguments, expected 1}}
 /// \a
 int test_inline_no_argument_a_bad(int);
 
 /// \a A
 int test_inline_no_argument_a_good(int);
 
-// expected-warning@+1 {{'\anchor' command does not have a valid word argument}}
+// expected-warning@+1 {{'\anchor' command has no word arguments, expected 1}}
 /// \anchor
 int test_inline_no_argument_anchor_bad(int);
 
 /// \anchor A
 int test_inline_no_argument_anchor_good(int);
 
-// expected-warning@+1 {{'@b' command does not have a valid word argument}}
+// expected-warning@+1 {{'@b' command has no word arguments, expected 1}}
 /// @b
 int test_inline_no_argument_b_bad(int);
 
 /// @b A
 int test_inline_no_argument_b_good(int);
 
-// expected-warning@+1 {{'\c' command does not have a valid word argument}}
+// expected-warning@+1 {{'\c' command has no word arguments, expected 1}}
 /// \c
 int test_inline_no_argument_c_bad(int);
 
 /// \c A
 int test_inline_no_argument_c_good(int);
 
-// expected-warning@+1 {{'\e' command does not have a valid word argument}}
+// expected-warning@+1 {{'\e' command has no word arguments, expected 1}}
 /// \e
 int test_inline_no_argument_e_bad(int);
 
 /// \e A
 int test_inline_no_argument_e_good(int);
 
-// expected-warning@+1 {{'\em' command does not have a valid word argument}}
+// expected-warning@+1 {{'\em' command has no word arguments, expected 1}}
 /// \em
 int test_inline_no_argument_em_bad(int);
 
 /// \em A
 int test_inline_no_argument_em_good(int);
 
-// expected-warning@+1 {{'\p' command does not have a valid word argument}}
+// expected-warning@+1 {{'\p' command has no word arguments, expected 1}}
 /// \p
 int test_inline_no_argument_p_bad(int);
 
@@ -1323,6 +1341,17 @@ namespace AllowParamAndReturnsOnFunctionPointerVars {
  */
 int (*functionPointerVariable)(int i);
 
+#if __cplusplus >= 201402L
+/**
+ * functionPointerVariableTemplate
+ *
+ * @param i is something.
+ * @returns integer.
+ */
+template<typename T>
+int (*functionPointerVariableTemplate)(T i);
+#endif
+
 struct HasFields {
   /**
    * functionPointerField
@@ -1331,8 +1360,21 @@ struct HasFields {
    * @returns integer.
    */
   int (*functionPointerField)(int i);
+
+#if __cplusplus >= 201402L
+  /**
+   * functionPointerTemplateMember
+   *
+   * @tparam T some type.
+   * @param i is integer.
+   * @returns integer.
+   */
+  template<typename T>
+  static int (*functionPointerTemplateMember)(int i);
+#endif
 };
 
+// expected-warning@+5 {{parameter 'p' not found in the function declaration}}
 // expected-warning@+5 {{'\returns' command used in a comment that is attached to a function returning void}}
 /**
  * functionPointerVariable
@@ -1341,6 +1383,23 @@ struct HasFields {
  * \returns integer.
  */
 void (*functionPointerVariableThatLeadsNowhere)();
+
+#if __cplusplus >= 201402L
+// expected-warning@+8 {{template parameter 'X' not found in the template declaration}}
+// expected-note@+7 {{did you mean 'T'?}}
+// expected-warning@+7 {{parameter 'p' not found in the function declaration}}
+// expected-note@+6 {{did you mean 'x'?}}
+// expected-warning@+6 {{'\returns' command used in a comment that is attached to a function returning void}}
+/**
+ * functionPointerVariable
+ *
+ * \tparam X typo
+ * \param p not here.
+ * \returns integer.
+ */
+template<typename T>
+void (*functionPointerVariableTemplateThatLeadsNowhere)(T x);
+#endif
 
 // Still warn about param/returns commands for variables that don't specify
 // the type directly:
@@ -1406,6 +1465,17 @@ typedef void (*VariadicFnType)(int a, ...);
  * now should work too.
  */
 using VariadicFnType2 = void (*)(int a, ...);
+
+/*!
+ * Function pointer type variable.
+ *
+ * @param a
+ * works
+ *
+ * @param ...
+ * now should work too.
+ */
+void (*variadicFnVar)(int a, ...);
 
 // expected-warning@+2 {{empty paragraph passed to '@note' command}}
 /**

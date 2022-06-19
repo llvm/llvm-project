@@ -11,12 +11,12 @@ target triple = "x86_64"
 define i1 @bug(%Triple* nonnull dereferenceable(16) %lhs, %Triple* nonnull dereferenceable(16) %rhs) nofree nosync {
 ; CHECK-LABEL: @bug(
 ; CHECK-NEXT:  bb0:
-; CHECK-NEXT:    store i32 1, i32* @g, align 4
 ; CHECK-NEXT:    [[GEP:%.*]] = getelementptr [[TRIPLE:%.*]], %Triple* [[RHS:%.*]], i64 0, i32 0
 ; CHECK-NEXT:    [[L0_ADDR:%.*]] = getelementptr inbounds [[TRIPLE]], %Triple* [[LHS:%.*]], i64 0, i32 0
 ; CHECK-NEXT:    [[L0:%.*]] = load i32, i32* [[L0_ADDR]], align 4
 ; CHECK-NEXT:    [[R0_ADDR:%.*]] = getelementptr inbounds [[TRIPLE]], %Triple* [[RHS]], i64 0, i32 0
 ; CHECK-NEXT:    [[R0:%.*]] = load i32, i32* [[R0_ADDR]], align 4
+; CHECK-NEXT:    store i32 1, i32* @g, align 4
 ; CHECK-NEXT:    [[CMP0:%.*]] = icmp eq i32 [[L0]], [[R0]]
 ; CHECK-NEXT:    br i1 [[CMP0]], label %"bb1+bb2", label [[FINAL:%.*]]
 ; CHECK:       "bb1+bb2":
@@ -32,12 +32,12 @@ define i1 @bug(%Triple* nonnull dereferenceable(16) %lhs, %Triple* nonnull deref
 ; CHECK-NEXT:    ret i1 [[RET]]
 ;
 bb0:
-  store i32 1, i32* @g
   %gep = getelementptr %Triple, %Triple* %rhs, i64 0, i32 0
   %l0_addr = getelementptr inbounds %Triple, %Triple* %lhs, i64 0, i32 0
   %l0 = load i32, i32* %l0_addr, align 4
   %r0_addr = getelementptr inbounds %Triple, %Triple* %rhs, i64 0, i32 0
   %r0 = load i32, i32* %r0_addr, align 4
+  store i32 1, i32* @g
   %cmp0 = icmp eq i32 %l0, %r0
   br i1 %cmp0, label %bb1, label %final
 

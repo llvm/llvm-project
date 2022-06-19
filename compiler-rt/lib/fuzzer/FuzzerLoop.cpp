@@ -388,7 +388,7 @@ void Fuzzer::SetMaxMutationLen(size_t MaxMutationLen) {
 
 void Fuzzer::CheckExitOnSrcPosOrItem() {
   if (!Options.ExitOnSrcPos.empty()) {
-    static auto *PCsSet = new Set<uintptr_t>;
+    static auto *PCsSet = new std::set<uintptr_t>;
     auto HandlePC = [&](const TracePC::PCTableEntry *TE) {
       if (!PCsSet->insert(TE->PC).second)
         return;
@@ -413,8 +413,8 @@ void Fuzzer::CheckExitOnSrcPosOrItem() {
 void Fuzzer::RereadOutputCorpus(size_t MaxSize) {
   if (Options.OutputCorpus.empty() || !Options.ReloadIntervalSec)
     return;
-  Vector<Unit> AdditionalCorpus;
-  Vector<std::string> AdditionalCorpusPaths;
+  std::vector<Unit> AdditionalCorpus;
+  std::vector<std::string> AdditionalCorpusPaths;
   ReadDirToVectorOfUnits(
       Options.OutputCorpus.c_str(), &AdditionalCorpus,
       &EpochOfLastReadOfOutputCorpus, MaxSize,
@@ -457,7 +457,7 @@ void Fuzzer::PrintPulseAndReportSlowInput(const uint8_t *Data, size_t Size) {
 
 static void WriteFeatureSetToFile(const std::string &FeaturesDir,
                                   const std::string &FileName,
-                                  const Vector<uint32_t> &FeatureSet) {
+                                  const std::vector<uint32_t> &FeatureSet) {
   if (FeaturesDir.empty() || FeatureSet.empty()) return;
   WriteToFile(reinterpret_cast<const uint8_t *>(FeatureSet.data()),
               FeatureSet.size() * sizeof(FeatureSet[0]),
@@ -548,7 +548,7 @@ bool Fuzzer::RunOne(const uint8_t *Data, size_t Size, bool MayDeleteFile,
       FoundUniqFeaturesOfII == II->UniqFeatureSet.size() &&
       II->U.size() > Size) {
     auto OldFeaturesFile = Sha1ToString(II->Sha1);
-    Corpus.Replace(II, {Data, Data + Size});
+    Corpus.Replace(II, {Data, Data + Size}, TimeOfUnit);
     RenameFeatureSetFile(Options.FeaturesDir, OldFeaturesFile,
                          Sha1ToString(II->Sha1));
     return true;
@@ -784,7 +784,7 @@ void Fuzzer::PurgeAllocator() {
   LastAllocatorPurgeAttemptTime = system_clock::now();
 }
 
-void Fuzzer::ReadAndExecuteSeedCorpora(Vector<SizedFile> &CorporaFiles) {
+void Fuzzer::ReadAndExecuteSeedCorpora(std::vector<SizedFile> &CorporaFiles) {
   const size_t kMaxSaneLen = 1 << 20;
   const size_t kMinDefaultLen = 4096;
   size_t MaxSize = 0;
@@ -849,7 +849,7 @@ void Fuzzer::ReadAndExecuteSeedCorpora(Vector<SizedFile> &CorporaFiles) {
   }
 }
 
-void Fuzzer::Loop(Vector<SizedFile> &CorporaFiles) {
+void Fuzzer::Loop(std::vector<SizedFile> &CorporaFiles) {
   auto FocusFunctionOrAuto = Options.FocusFunction;
   DFT.Init(Options.DataFlowTrace, &FocusFunctionOrAuto, CorporaFiles,
            MD.GetRand());

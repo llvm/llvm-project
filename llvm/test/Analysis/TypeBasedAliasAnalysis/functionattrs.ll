@@ -15,7 +15,7 @@ define void @test0_yes(i32* %p) nounwind {
   ret void
 }
 
-; CHECK: define void @test0_no(i32* nocapture %p) #1 {
+; CHECK: define void @test0_no(i32* nocapture writeonly %p) #1 {
 define void @test0_no(i32* %p) nounwind {
   store i32 0, i32* %p, !tbaa !2
   ret void
@@ -49,7 +49,7 @@ define void @test2_yes(i8* %p, i8* %q, i64 %n) nounwind {
   ret void
 }
 
-; CHECK: define void @test2_no(i8* nocapture %p, i8* nocapture readonly %q, i64 %n) #5 {
+; CHECK: define void @test2_no(i8* nocapture writeonly %p, i8* nocapture readonly %q, i64 %n) #5 {
 define void @test2_no(i8* %p, i8* %q, i64 %n) nounwind {
   call void @llvm.memcpy.p0i8.p0i8.i64(i8* %p, i8* %q, i64 %n, i1 false), !tbaa !2
   ret void
@@ -73,12 +73,12 @@ declare void @callee(i32* %p) nounwind
 declare void @llvm.memcpy.p0i8.p0i8.i64(i8*, i8*, i64, i1) nounwind
 
 ; CHECK: attributes #0 = { mustprogress nofree norecurse nosync nounwind readnone willreturn }
-; CHECK: attributes #1 = { mustprogress nofree norecurse nosync nounwind willreturn writeonly }
+; CHECK: attributes #1 = { argmemonly mustprogress nofree norecurse nosync nounwind willreturn writeonly }
 ; CHECK: attributes #2 = { nofree nounwind readonly }
 ; CHECK: attributes #3 = { nounwind }
 ; CHECK: attributes #4 = { mustprogress nofree nosync nounwind readnone willreturn }
-; CHECK: attributes #5 = { mustprogress nofree nosync nounwind willreturn }
-; CHECK: attributes #6 = { mustprogress nofree norecurse nosync nounwind willreturn }
+; CHECK: attributes #5 = { argmemonly mustprogress nofree nosync nounwind willreturn }
+; CHECK: attributes #6 = { argmemonly mustprogress nofree norecurse nosync nounwind willreturn }
 ; CHECK: attributes #7 = { argmemonly nofree nounwind willreturn }
 
 ; Root note.

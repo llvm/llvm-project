@@ -1,0 +1,17 @@
+# Check for the replacement of calls to identical functions.
+
+REQUIRES: system-linux
+
+RUN: %clangxx %p/Inputs/bolt_icf.cpp -g -Wl,-q -o %t.exe
+RUN: llvm-bolt %t.exe --relocs -o %t --icf 2>&1 | FileCheck %s
+RUN: llvm-nm -n %t | FileCheck %s -check-prefix=CHECK-SYM
+
+CHECK: BOLT-INFO: ICF folded [[#]] out of [[#]] functions in [[#]] passes.
+
+# Check that symbols are updated correctly in the symbol table
+CHECK-SYM-DAG: [[#%x,FIZ:]] T _Z3fizv
+CHECK-SYM-DAG: [[#FIZ]]     T _Z3fazv
+CHECK-SYM-DAG: [[#%x,ZIP:]] T _Z3zipv
+CHECK-SYM-DAG: [[#ZIP]]     T _Z3zapv
+CHECK-SYM-DAG: [[#%x,FOO:]] T _Z3foov
+CHECK-SYM-DAG: [[#FOO]]     T _Z3barv

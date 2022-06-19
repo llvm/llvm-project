@@ -7,9 +7,9 @@
 # However, an equivalent situation can occur with buffer instructions as well.
 
 # CHECK-LABEL: name: scc_def_and_use_no_dependency
+# CHECK: DS_READ2_B32
 # CHECK: S_ADD_U32
 # CHECK: S_ADDC_U32
-# CHECK: DS_READ2_B32
 ---
 name:            scc_def_and_use_no_dependency
 machineFunctionInfo:

@@ -337,7 +337,7 @@ public:
 
   /// isDeclScope - Return true if this is the scope that the specified decl is
   /// declared in.
-  bool isDeclScope(const Decl *D) const { return DeclsInScope.count(D) != 0; }
+  bool isDeclScope(const Decl *D) const { return DeclsInScope.contains(D); }
 
   /// Get the entity corresponding to this scope.
   DeclContext *getEntity() const {
@@ -364,11 +364,15 @@ public:
   }
 
   /// isFunctionScope() - Return true if this scope is a function scope.
-  bool isFunctionScope() const { return (getFlags() & Scope::FnScope); }
+  bool isFunctionScope() const { return getFlags() & Scope::FnScope; }
 
   /// isClassScope - Return true if this scope is a class/struct/union scope.
-  bool isClassScope() const {
-    return (getFlags() & Scope::ClassScope);
+  bool isClassScope() const { return getFlags() & Scope::ClassScope; }
+
+  /// Determines whether this scope is between inheritance colon and the real
+  /// class/struct definition.
+  bool isClassInheritanceScope() const {
+    return getFlags() & Scope::ClassInheritanceScope;
   }
 
   /// isInCXXInlineMethodScope - Return true if this scope is a C++ inline
@@ -426,6 +430,9 @@ public:
     return getFlags() & Scope::AtCatchScope;
   }
 
+  /// isCatchScope - Return true if this scope is a C++ catch statement.
+  bool isCatchScope() const { return getFlags() & Scope::CatchScope; }
+
   /// isSwitchScope - Return true if this scope is a switch scope.
   bool isSwitchScope() const {
     for (const Scope *S = this; S; S = S->getParent()) {
@@ -469,8 +476,19 @@ public:
     return P && P->isOpenMPLoopDirectiveScope();
   }
 
+  /// Determine whether this scope is a while/do/for statement, which can have
+  /// continue statements embedded into it.
+  bool isContinueScope() const {
+    return getFlags() & ScopeFlags::ContinueScope;
+  }
+
   /// Determine whether this scope is a C++ 'try' block.
   bool isTryScope() const { return getFlags() & Scope::TryScope; }
+
+  /// Determine whether this scope is a function-level C++ try or catch scope.
+  bool isFnTryCatchScope() const {
+    return getFlags() & ScopeFlags::FnTryCatchScope;
+  }
 
   /// Determine whether this scope is a SEH '__try' block.
   bool isSEHTryScope() const { return getFlags() & Scope::SEHTryScope; }
@@ -482,6 +500,10 @@ public:
   bool isCompoundStmtScope() const {
     return getFlags() & Scope::CompoundStmtScope;
   }
+
+  /// Determine whether this scope is a controlling scope in a
+  /// if/switch/while/for statement.
+  bool isControlScope() const { return getFlags() & Scope::ControlScope; }
 
   /// Returns if rhs has a higher scope depth than this.
   ///

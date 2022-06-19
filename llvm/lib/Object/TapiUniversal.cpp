@@ -13,7 +13,8 @@
 #include "llvm/Object/TapiUniversal.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Object/Error.h"
-#include "llvm/Support/MemoryBuffer.h"
+#include "llvm/Object/TapiFile.h"
+#include "llvm/TextAPI/ArchitectureSet.h"
 #include "llvm/TextAPI/TextAPIReader.h"
 
 using namespace llvm;
@@ -47,7 +48,7 @@ TapiUniversal::~TapiUniversal() = default;
 Expected<std::unique_ptr<TapiFile>>
 TapiUniversal::ObjectForArch::getAsObjectFile() const {
   return std::unique_ptr<TapiFile>(new TapiFile(Parent->getMemoryBufferRef(),
-                                                *Parent->ParsedFile.get(),
+                                                *Parent->ParsedFile,
                                                 Parent->Libraries[Index].Arch));
 }
 

@@ -1,4 +1,4 @@
-! RUN: %flang_fc1 -fsyntax-only -fdebug-pre-fir-tree %s | FileCheck %s
+! RUN: %flang_fc1 -fdebug-pre-fir-tree %s | FileCheck %s
 
 ! Test Pre-FIR Tree captures all the coarray related statements
 
@@ -10,7 +10,7 @@ Subroutine test_coarray
   type(lock_type) :: alock
   real :: y[10,*]
   integer :: counter[*]
-  logical :: is_master
+  logical :: is_square
   ! CHECK: <<ChangeTeamConstruct>>
   change team(t, x[5,*] => y)
     ! CHECK: AssignmentStmt
@@ -61,10 +61,10 @@ Subroutine test_coarray
   end if
   ! CHECK: <<End IfConstruct>>
 
-  ! CHECK: <<IfConstruct>>
+  ! CHECK: <<IfConstruct!>>
   if (y<0.) then
     ! CHECK: FailImageStmt
    fail image
   end if
-  ! CHECK: <<End IfConstruct>>
+  ! CHECK: <<End IfConstruct!>>
 end

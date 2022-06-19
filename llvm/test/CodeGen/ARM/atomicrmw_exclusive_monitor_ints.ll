@@ -355,7 +355,7 @@ define i64 @test_xchg_i64() {
 ; EXPAND64-NOT: str
 ; EXPAND64: strexd
 ; THUMB1: bl __sync_lock_test_and_set_8
-; BASELINE64: bl __sync_val_compare_and_swap_8
+; BASELINE64: bl __atomic_exchange_8
 entry:
   %0 = atomicrmw xchg i64* @atomic_i64, i64 1 monotonic
   ret i64 %0
@@ -366,7 +366,7 @@ define i64 @test_add_i64() {
 ; EXPAND64-NOT: str
 ; EXPAND64: strexd
 ; THUMB1: bl __sync_fetch_and_add_8
-; BASELINE64: bl __sync_val_compare_and_swap_8
+; BASELINE64: bl __atomic_fetch_add_8
 entry:
   %0 = atomicrmw add i64* @atomic_i64, i64 1 monotonic
   ret i64 %0
@@ -377,7 +377,7 @@ define i64 @test_sub_i64() {
 ; EXPAND64-NOT: str
 ; EXPAND64: strexd
 ; THUMB1: bl __sync_fetch_and_sub_8
-; BASELINE64: bl __sync_val_compare_and_swap_8
+; BASELINE64: bl __atomic_fetch_sub_8
 entry:
   %0 = atomicrmw sub i64* @atomic_i64, i64 1 monotonic
   ret i64 %0
@@ -388,7 +388,7 @@ define i64 @test_and_i64() {
 ; EXPAND64-NOT: str
 ; EXPAND64: strexd
 ; THUMB1: bl __sync_fetch_and_and_8
-; BASELINE64: bl __sync_val_compare_and_swap_8
+; BASELINE64: bl __atomic_fetch_and_8
 entry:
   %0 = atomicrmw and i64* @atomic_i64, i64 1 monotonic
   ret i64 %0
@@ -399,7 +399,7 @@ define i64 @test_nand_i64() {
 ; EXPAND64-NOT: str
 ; EXPAND64: strexd
 ; THUMB1: bl __sync_fetch_and_nand_8
-; BASELINE64: bl __sync_val_compare_and_swap_8
+; BASELINE64: bl __atomic_fetch_nand_8
 entry:
   %0 = atomicrmw nand i64* @atomic_i64, i64 1 monotonic
   ret i64 %0
@@ -410,7 +410,7 @@ define i64 @test_or_i64() {
 ; EXPAND64-NOT: str
 ; EXPAND64: strexd
 ; THUMB1: bl __sync_fetch_and_or_8
-; BASELINE64: bl __sync_val_compare_and_swap_8
+; BASELINE64: bl __atomic_fetch_or_8
 entry:
   %0 = atomicrmw or i64* @atomic_i64, i64 1 monotonic
   ret i64 %0
@@ -421,7 +421,7 @@ define i64 @test_xor_i64() {
 ; EXPAND64-NOT: str
 ; EXPAND64: strexd
 ; THUMB1: bl __sync_fetch_and_xor_8
-; BASELINE64: bl __sync_val_compare_and_swap_8
+; BASELINE64: bl __atomic_fetch_xor_8
 entry:
   %0 = atomicrmw xor i64* @atomic_i64, i64 1 monotonic
   ret i64 %0
@@ -433,7 +433,7 @@ define i64 @test_max_i64() {
 ; EXPAND64-NOT: str
 ; EXPAND64: strexd
 ; THUMB1: bl __sync_fetch_and_max_8
-; BASELINE64: bl __sync_val_compare_and_swap_8
+; BASELINE64: bl __atomic_compare_exchange_8
 entry:
   %0 = atomicrmw max i64* @atomic_i64, i64 1 monotonic
   ret i64 %0
@@ -444,7 +444,7 @@ define i64 @test_min_i64() {
 ; EXPAND64-NOT: str
 ; EXPAND64: strexd
 ; THUMB1: bl __sync_fetch_and_min_8
-; BASELINE64: bl __sync_val_compare_and_swap_8
+; BASELINE64: bl __atomic_compare_exchange_8
 entry:
   %0 = atomicrmw min i64* @atomic_i64, i64 1 monotonic
   ret i64 %0
@@ -455,7 +455,7 @@ define i64 @test_umax_i64() {
 ; EXPAND64-NOT: str
 ; EXPAND64: strexd
 ; THUMB1: bl __sync_fetch_and_umax_8
-; BASELINE64: bl __sync_val_compare_and_swap_8
+; BASELINE64: bl __atomic_compare_exchange_8
 entry:
   %0 = atomicrmw umax i64* @atomic_i64, i64 1 monotonic
   ret i64 %0
@@ -466,7 +466,7 @@ define i64 @test_umin_i64() {
 ; EXPAND64-NOT: str
 ; EXPAND64: strexd
 ; THUMB1: bl __sync_fetch_and_umin_8
-; BASELINE64: bl __sync_val_compare_and_swap_8
+; BASELINE64: bl __atomic_compare_exchange_8
 entry:
   %0 = atomicrmw umin i64* @atomic_i64, i64 1 monotonic
   ret i64 %0

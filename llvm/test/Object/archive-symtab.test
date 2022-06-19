@@ -48,16 +48,21 @@ Symbols:
 
 # RUN: rm -f %t.a
 # RUN: llvm-ar rcsU %t.a %t.elf-x86-64 %t2.elf-x86-64
-# RUN: llvm-nm -M %t.a | FileCheck %s
+# RUN: llvm-nm --print-armap %t.a | FileCheck %s
 
 # RUN: rm -f %t.a
+# RUN: env SYM64_THRESHOLD=0 llvm-ar crTs %t.a %t.elf-x86-64 %t2.elf-x86-64
+# RUN: llvm-nm --print-armap  %t.a | FileCheck %s
+# RUN: grep '/SYM64/' %t.a
+ 
+# RUN: rm -f %t.a
 # RUN: env SYM64_THRESHOLD=836 llvm-ar rcsU %t.a %t.elf-x86-64 %t2.elf-x86-64
-# RUN: llvm-nm -M %t.a | FileCheck %s
+# RUN: llvm-nm --print-armap %t.a | FileCheck %s
 # RUN: grep '/SYM64/' %t.a
 
 # RUN: rm -f %t.a
 # RUN: env SYM64_THRESHOLD=837 llvm-ar rcsU %t.a %t.elf-x86-64 %t2.elf-x86-64
-# RUN: llvm-nm -M %t.a | FileCheck %s
+# RUN: llvm-nm --print-armap %t.a | FileCheck %s
 # RUN: not grep '/SYM64/' %t.a
 
 # CHECK: Archive map
@@ -69,7 +74,7 @@ Symbols:
 
 # RUN: rm -f %t.a
 # RUN: llvm-ar --format=gnu rcT %t.a %t.elf-x86-64 %t2.elf-x86-64
-# RUN: llvm-nm -M %t.a | FileCheck -DFILE=%/t.elf-x86-64 -DFILE2=%/t2.elf-x86-64 --check-prefix=THIN %s
+# RUN: llvm-nm --print-armap %t.a | FileCheck -DFILE=%/t.elf-x86-64 -DFILE2=%/t2.elf-x86-64 --check-prefix=THIN %s
 
 # THIN: Archive map
 # THIN-NEXT: main in [[FILE]]
@@ -89,17 +94,17 @@ Symbols:
 
 # RUN: rm -f %t.a
 # RUN: llvm-ar rcSU %t.a %t.elf-x86-64 %t2.elf-x86-64
-# RUN: llvm-nm -M %t.a | FileCheck %s --check-prefix=NOMAP
+# RUN: llvm-nm --print-armap %t.a | FileCheck %s --check-prefix=NOMAP
 
 # NOMAP-NOT: Archive map
 
 # RUN: llvm-ar s %t.a
-# RUN: llvm-nm -M %t.a | FileCheck %s
+# RUN: llvm-nm --print-armap %t.a | FileCheck %s
 
 ## Check that the archive does have a corrupt symbol table.
 # RUN: rm -f %t.a
 # RUN: cp %p/Inputs/archive-test.a-corrupt-symbol-table %t.a
-# RUN: llvm-nm -M %t.a | FileCheck %s --check-prefix=CORRUPT
+# RUN: llvm-nm --print-armap %t.a | FileCheck %s --check-prefix=CORRUPT
 
 # CORRUPT: Archive map
 # CORRUPT-NEXT: mbin in trivial-object-test.elf-x86-64
@@ -118,19 +123,19 @@ Symbols:
 
 ## Check that the we *don't* update the symbol table.
 # RUN: llvm-ar s %t.a
-# RUN: llvm-nm -M %t.a | FileCheck %s --check-prefix=CORRUPT
+# RUN: llvm-nm --print-armap %t.a | FileCheck %s --check-prefix=CORRUPT
 
 ## Repeat the test with llvm-ranlib.
 
 # RUN: rm -f %t.a
 # RUN: llvm-ar rcSU %t.a %t.elf-x86-64 %t2.elf-x86-64
-# RUN: llvm-nm -M %t.a | FileCheck %s --check-prefix=NOMAP
+# RUN: llvm-nm --print-armap %t.a | FileCheck %s --check-prefix=NOMAP
 
 # RUN: llvm-ranlib %t.a
-# RUN: llvm-nm -M %t.a | FileCheck %s
+# RUN: llvm-nm --print-armap %t.a | FileCheck %s
 
-# RUN: llvm-nm -M %p/Inputs/macho-archive-x86_64.a | FileCheck %s --check-prefix=BSD-MachO
-# RUN: llvm-nm -M %p/Inputs/macho-archive-unsorted-x86_64.a | FileCheck %s --check-prefix=BSD-MachO
+# RUN: llvm-nm --print-armap %p/Inputs/macho-archive-x86_64.a | FileCheck %s --check-prefix=BSD-MachO
+# RUN: llvm-nm --print-armap %p/Inputs/macho-archive-unsorted-x86_64.a | FileCheck %s --check-prefix=BSD-MachO
 
 # BSD-MachO: Archive map
 # BSD-MachO: _bar in bar.o
@@ -138,16 +143,16 @@ Symbols:
 
 # RUN: rm -f %t.a
 # RUN: llvm-ar --format=bsd rcsU %t.a %p/Inputs/trivial-object-test.macho-x86-64 %p/Inputs/trivial-object-test2.macho-x86-64
-# RUN: llvm-nm -M %t.a | FileCheck --check-prefix=MACHO %s
+# RUN: llvm-nm --print-armap %t.a | FileCheck --check-prefix=MACHO %s
 
 # RUN: rm -f %t.a
 # RUN: env SYM64_THRESHOLD=784 llvm-ar --format=darwin rcsU %t.a %p/Inputs/trivial-object-test.macho-x86-64 %p/Inputs/trivial-object-test2.macho-x86-64
-# RUN: llvm-nm -M %t.a | FileCheck --check-prefix=MACHO %s
+# RUN: llvm-nm --print-armap %t.a | FileCheck --check-prefix=MACHO %s
 # RUN: grep '__\.SYMDEF_64' %t.a
 
 # RUN: rm -f %t.a
 # RUN: env SYM64_THRESHOLD=785 llvm-ar --format=darwin rcsU %t.a %p/Inputs/trivial-object-test.macho-x86-64 %p/Inputs/trivial-object-test2.macho-x86-64
-# RUN: llvm-nm -M %t.a | FileCheck --check-prefix=MACHO %s
+# RUN: llvm-nm --print-armap %t.a | FileCheck --check-prefix=MACHO %s
 # RUN: not grep '__\.SYMDEF_64' %t.a
 
 # MACHO: Archive map
@@ -167,7 +172,7 @@ Symbols:
 # MACHO-NEXT: 0000000000000001 T _foo
 # MACHO-NEXT: 0000000000000002 T _main
 
-# RUN: llvm-nm -M %p/Inputs/macho-toc64-archive-x86_64.a | FileCheck --check-prefix=MACHO-TOC64 %s
+# RUN: llvm-nm --print-armap %p/Inputs/macho-toc64-archive-x86_64.a | FileCheck --check-prefix=MACHO-TOC64 %s
 
 # MACHO-TOC64: Archive map
 # MACHO-TOC64-NEXT: _test in test.o
@@ -175,7 +180,7 @@ Symbols:
 
 # RUN: rm -f %t.a
 # RUN: llvm-ar --format=gnu rcsU %t.a %p/Inputs/coff-short-import-code %p/Inputs/coff-short-import-data
-# RUN: llvm-nm -M %t.a | FileCheck --check-prefix=COFF-SHORT-IMPORT %s
+# RUN: llvm-nm --print-armap %t.a | FileCheck --check-prefix=COFF-SHORT-IMPORT %s
 
 # COFF-SHORT-IMPORT:      Archive map
 # COFF-SHORT-IMPORT-NEXT: __imp__foo in coff-short-import-code

@@ -34,24 +34,18 @@
 #include "llvm/ADT/SetOperations.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/AliasAnalysis.h"
-#include "llvm/Analysis/AliasSetTracker.h"
-#include "llvm/Analysis/BasicAliasAnalysis.h"
 #include "llvm/Analysis/BlockFrequencyInfo.h"
-#include "llvm/Analysis/Loads.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/LoopPass.h"
 #include "llvm/Analysis/MemorySSA.h"
 #include "llvm/Analysis/MemorySSAUpdater.h"
 #include "llvm/Analysis/ScalarEvolution.h"
-#include "llvm/Analysis/ScalarEvolutionAliasAnalysis.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/Instructions.h"
-#include "llvm/IR/LLVMContext.h"
-#include "llvm/IR/Metadata.h"
 #include "llvm/InitializePasses.h"
+#include "llvm/Support/BranchProbability.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Transforms/Scalar.h"
-#include "llvm/Transforms/Scalar/LoopPassManager.h"
 #include "llvm/Transforms/Utils/Local.h"
 #include "llvm/Transforms/Utils/LoopUtils.h"
 using namespace llvm;
@@ -69,14 +63,6 @@ static cl::opt<unsigned> SinkFrequencyPercentThreshold(
 static cl::opt<unsigned> MaxNumberOfUseBBsForSinking(
     "max-uses-for-sinking", cl::Hidden, cl::init(30),
     cl::desc("Do not sink instructions that have too many uses."));
-
-static cl::opt<bool> EnableMSSAInLoopSink(
-    "enable-mssa-in-loop-sink", cl::Hidden, cl::init(true),
-    cl::desc("Enable MemorySSA for LoopSink in new pass manager"));
-
-static cl::opt<bool> EnableMSSAInLegacyLoopSink(
-    "enable-mssa-in-legacy-loop-sink", cl::Hidden, cl::init(false),
-    cl::desc("Enable MemorySSA for LoopSink in legacy pass manager"));
 
 /// Return adjusted total frequency of \p BBs.
 ///
@@ -279,9 +265,8 @@ static bool sinkInstruction(
 static bool sinkLoopInvariantInstructions(Loop &L, AAResults &AA, LoopInfo &LI,
                                           DominatorTree &DT,
                                           BlockFrequencyInfo &BFI,
-                                          ScalarEvolution *SE,
-                                          AliasSetTracker *CurAST,
-                                          MemorySSA *MSSA) {
+                                          MemorySSA &MSSA,
+                                          ScalarEvolution *SE) {
   BasicBlock *Preheader = L.getLoopPreheader();
   assert(Preheader && "Expected loop to have preheader");
 
@@ -297,13 +282,8 @@ static bool sinkLoopInvariantInstructions(Loop &L, AAResults &AA, LoopInfo &LI,
       }))
     return false;
 
-  std::unique_ptr<MemorySSAUpdater> MSSAU;
-  std::unique_ptr<SinkAndHoistLICMFlags> LICMFlags;
-  if (MSSA) {
-    MSSAU = std::make_unique<MemorySSAUpdater>(MSSA);
-    LICMFlags =
-        std::make_unique<SinkAndHoistLICMFlags>(/*IsSink=*/true, &L, MSSA);
-  }
+  MemorySSAUpdater MSSAU(&MSSA);
+  SinkAndHoistLICMFlags LICMFlags(/*IsSink=*/true, &L, &MSSA);
 
   bool Changed = false;
 
@@ -323,29 +303,22 @@ static bool sinkLoopInvariantInstructions(Loop &L, AAResults &AA, LoopInfo &LI,
   // Traverse preheader's instructions in reverse order becaue if A depends
   // on B (A appears after B), A needs to be sinked first before B can be
   // sinked.
-  for (auto II = Preheader->rbegin(), E = Preheader->rend(); II != E;) {
-    Instruction *I = &*II++;
-    // No need to check for instruction's operands are loop invariant.
-    assert(L.hasLoopInvariantOperands(I) &&
-           "Insts in a loop's preheader should have loop invariant operands!");
-    if (!canSinkOrHoistInst(*I, &AA, &DT, &L, CurAST, MSSAU.get(), false,
-                            LICMFlags.get()))
+  for (Instruction &I : llvm::make_early_inc_range(llvm::reverse(*Preheader))) {
+    if (isa<PHINode>(&I))
       continue;
-    if (sinkInstruction(L, *I, ColdLoopBBs, LoopBlockNumber, LI, DT, BFI,
-                        MSSAU.get()))
+    // No need to check for instruction's operands are loop invariant.
+    assert(L.hasLoopInvariantOperands(&I) &&
+           "Insts in a loop's preheader should have loop invariant operands!");
+    if (!canSinkOrHoistInst(I, &AA, &DT, &L, MSSAU, false, LICMFlags))
+      continue;
+    if (sinkInstruction(L, I, ColdLoopBBs, LoopBlockNumber, LI, DT, BFI,
+                        &MSSAU))
       Changed = true;
   }
 
   if (Changed && SE)
     SE->forgetLoopDispositions(&L);
   return Changed;
-}
-
-static void computeAliasSet(Loop &L, BasicBlock &Preheader,
-                            AliasSetTracker &CurAST) {
-  for (BasicBlock *BB : L.blocks())
-    CurAST.add(*BB);
-  CurAST.add(Preheader);
 }
 
 PreservedAnalyses LoopSinkPass::run(Function &F, FunctionAnalysisManager &FAM) {
@@ -357,10 +330,7 @@ PreservedAnalyses LoopSinkPass::run(Function &F, FunctionAnalysisManager &FAM) {
   AAResults &AA = FAM.getResult<AAManager>(F);
   DominatorTree &DT = FAM.getResult<DominatorTreeAnalysis>(F);
   BlockFrequencyInfo &BFI = FAM.getResult<BlockFrequencyAnalysis>(F);
-
-  MemorySSA *MSSA = EnableMSSAInLoopSink
-                        ? &FAM.getResult<MemorySSAAnalysis>(F).getMSSA()
-                        : nullptr;
+  MemorySSA &MSSA = FAM.getResult<MemorySSAAnalysis>(F).getMSSA();
 
   // We want to do a postorder walk over the loops. Since loops are a tree this
   // is equivalent to a reversed preorder walk and preorder is easy to compute
@@ -382,18 +352,11 @@ PreservedAnalyses LoopSinkPass::run(Function &F, FunctionAnalysisManager &FAM) {
     if (!Preheader->getParent()->hasProfileData())
       continue;
 
-    std::unique_ptr<AliasSetTracker> CurAST;
-    if (!EnableMSSAInLoopSink) {
-      CurAST = std::make_unique<AliasSetTracker>(AA);
-      computeAliasSet(L, *Preheader, *CurAST.get());
-    }
-
     // Note that we don't pass SCEV here because it is only used to invalidate
     // loops in SCEV and we don't preserve (or request) SCEV at all making that
     // unnecessary.
-    Changed |= sinkLoopInvariantInstructions(L, AA, LI, DT, BFI,
-                                             /*ScalarEvolution*/ nullptr,
-                                             CurAST.get(), MSSA);
+    Changed |= sinkLoopInvariantInstructions(L, AA, LI, DT, BFI, MSSA,
+                                             /*ScalarEvolution*/ nullptr);
   } while (!PreorderLoops.empty());
 
   if (!Changed)
@@ -401,13 +364,10 @@ PreservedAnalyses LoopSinkPass::run(Function &F, FunctionAnalysisManager &FAM) {
 
   PreservedAnalyses PA;
   PA.preserveSet<CFGAnalyses>();
+  PA.preserve<MemorySSAAnalysis>();
 
-  if (MSSA) {
-    PA.preserve<MemorySSAAnalysis>();
-
-    if (VerifyMemorySSA)
-      MSSA->verifyMemorySSA();
-  }
+  if (VerifyMemorySSA)
+    MSSA.verifyMemorySSA();
 
   return PA;
 }
@@ -433,24 +393,16 @@ struct LegacyLoopSinkPass : public LoopPass {
       return false;
 
     AAResults &AA = getAnalysis<AAResultsWrapperPass>().getAAResults();
+    MemorySSA &MSSA = getAnalysis<MemorySSAWrapperPass>().getMSSA();
     auto *SE = getAnalysisIfAvailable<ScalarEvolutionWrapperPass>();
-    std::unique_ptr<AliasSetTracker> CurAST;
-    MemorySSA *MSSA = nullptr;
-    if (EnableMSSAInLegacyLoopSink)
-      MSSA = &getAnalysis<MemorySSAWrapperPass>().getMSSA();
-    else {
-      CurAST = std::make_unique<AliasSetTracker>(AA);
-      computeAliasSet(*L, *Preheader, *CurAST.get());
-    }
-
     bool Changed = sinkLoopInvariantInstructions(
         *L, AA, getAnalysis<LoopInfoWrapperPass>().getLoopInfo(),
         getAnalysis<DominatorTreeWrapperPass>().getDomTree(),
         getAnalysis<BlockFrequencyInfoWrapperPass>().getBFI(),
-        SE ? &SE->getSE() : nullptr, CurAST.get(), MSSA);
+        MSSA, SE ? &SE->getSE() : nullptr);
 
-    if (MSSA && VerifyMemorySSA)
-      MSSA->verifyMemorySSA();
+    if (VerifyMemorySSA)
+      MSSA.verifyMemorySSA();
 
     return Changed;
   }
@@ -459,10 +411,8 @@ struct LegacyLoopSinkPass : public LoopPass {
     AU.setPreservesCFG();
     AU.addRequired<BlockFrequencyInfoWrapperPass>();
     getLoopAnalysisUsage(AU);
-    if (EnableMSSAInLegacyLoopSink) {
-      AU.addRequired<MemorySSAWrapperPass>();
-      AU.addPreserved<MemorySSAWrapperPass>();
-    }
+    AU.addRequired<MemorySSAWrapperPass>();
+    AU.addPreserved<MemorySSAWrapperPass>();
   }
 };
 }

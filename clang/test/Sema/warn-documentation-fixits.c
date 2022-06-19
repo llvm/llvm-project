@@ -4,7 +4,7 @@
 
 // expected-warning@+1 {{declaration is marked with '\deprecated' command but does not have a deprecation attribute}} expected-note@+2 {{add a deprecation attribute to the declaration to silence this warning}}
 /// \deprecated
-void test_deprecated_1();
+void test_deprecated_1(void);
 
 // expected-warning@+1 {{declaration is marked with '\deprecated' command but does not have a deprecation attribute}} expected-note@+2 {{add a deprecation attribute to the declaration to silence this warning}}
 /// \deprecated

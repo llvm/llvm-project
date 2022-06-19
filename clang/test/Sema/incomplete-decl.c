@@ -15,14 +15,14 @@ extern struct foo e;
 int ary[]; // expected-warning {{tentative array definition assumed to have one element}}
 struct foo bary[]; // expected-error {{array has incomplete element type 'struct foo'}}
 
-void func() {
+void func(void) {
   int ary[]; // expected-error{{definition of variable with array type needs an explicit size or an initializer}}
   void b; // expected-error {{variable has incomplete type 'void'}}
   struct foo f; // expected-error {{variable has incomplete type 'struct foo'}}
 }
 
 int h[]; // expected-warning {{tentative array definition assumed to have one element}}
-int (*i)[] = &h+1; // expected-error {{arithmetic on a pointer to an incomplete type 'int []'}}
+int (*i)[] = &h+1; // expected-error {{arithmetic on a pointer to an incomplete type 'int[]'}}
 
 struct bar j = {1}; // expected-error {{variable has incomplete type 'struct bar'}} \
     expected-note {{forward declaration of 'struct bar'}}

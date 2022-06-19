@@ -104,8 +104,8 @@ public:
       : Map(NumInitBuckets), Data() {}
   explicit ValueMap(const ExtraData &Data, unsigned NumInitBuckets = 64)
       : Map(NumInitBuckets), Data(Data) {}
-  // ValueMap can't be copied nor moved, beucase the callbacks store pointer
-  // to it.
+  // ValueMap can't be copied nor moved, because the callbacks store pointer to
+  // it.
   ValueMap(const ValueMap &) = delete;
   ValueMap(ValueMap &&) = delete;
   ValueMap &operator=(const ValueMap &) = delete;
@@ -141,7 +141,7 @@ public:
   size_type size() const { return Map.size(); }
 
   /// Grow the map so that it has at least Size buckets. Does not shrink
-  void resize(size_t Size) { Map.resize(Size); }
+  void reserve(size_t Size) { Map.reserve(Size); }
 
   void clear() {
     Map.clear();

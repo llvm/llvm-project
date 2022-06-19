@@ -11,7 +11,7 @@ entry:
   ret void
 
 ; CHECK: ldr [[TMP:r[0-3]]], [[F:\.[A-Z0-9_]+]]
-; CHECK: ldr [[CALLEE:r[0-3]]], {{\[}}[[TMP]]{{\]}}
+; CHECK: ldr [[CALLEE:r[0-3]]], [[[TMP]]]
 
 ; CHECK-V4T-NOT: blx
 ; CHECK-V4T: bl [[INDIRECT_PAD:\.Ltmp[0-9]+]]

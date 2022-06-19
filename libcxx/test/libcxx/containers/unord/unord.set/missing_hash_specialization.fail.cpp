@@ -13,9 +13,6 @@
 // newer.
 // UNSUPPORTED: c++11
 
-// Clang doesn't support filename wildcards in verify tests until 05eedf1f5b44.
-// UNSUPPORTED: clang-10
-
 // <unordered_set>
 
 // Test that we generate a reasonable diagnostic when the specified hash is

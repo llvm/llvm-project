@@ -1,7 +1,7 @@
-; RUN: opt -S %loadPolly -polly-dependences \
-; RUN:                   -analyze < %s | FileCheck %s
-; RUN: opt -S %loadPolly -polly-function-dependences \
-; RUN:                   -analyze < %s | FileCheck %s -check-prefix=FUNC
+; RUN: opt -S %loadPolly -polly-print-dependences \
+; RUN:                   -disable-output < %s | FileCheck %s
+; RUN: opt -S %loadPolly -polly-print-function-dependences \
+; RUN:                   -disable-output < %s | FileCheck %s -check-prefix=FUNC
 
 ; CHECK: RAW dependences:
 ; CHECK:   { Stmt_bb9[0] -> Stmt_bb10[0] }

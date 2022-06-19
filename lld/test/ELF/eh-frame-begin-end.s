@@ -10,7 +10,7 @@
 // CHECK-NEXT: Flags [
 // CHECK-NEXT:   SHF_ALLOC
 // CHECK-NEXT: ]
-// CHECK-NEXT: Address: 0x200120
+// CHECK-NEXT: Address:
 // CHECK-NEXT: Offset: 0x120
 // CHECK-NEXT: Size: 4
 

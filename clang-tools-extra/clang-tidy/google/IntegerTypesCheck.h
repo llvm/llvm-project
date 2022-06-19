@@ -27,7 +27,7 @@ namespace runtime {
 /// Corresponding cpplint.py check: 'runtime/int'.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/google-runtime-int.html
+/// http://clang.llvm.org/extra/clang-tidy/checks/google/runtime-int.html
 class IntegerTypesCheck : public ClangTidyCheck {
 public:
   IntegerTypesCheck(StringRef Name, ClangTidyContext *Context);
@@ -39,9 +39,9 @@ public:
   void storeOptions(ClangTidyOptions::OptionMap &Options) override;
 
 private:
-  const std::string UnsignedTypePrefix;
-  const std::string SignedTypePrefix;
-  const std::string TypeSuffix;
+  const StringRef UnsignedTypePrefix;
+  const StringRef SignedTypePrefix;
+  const StringRef TypeSuffix;
 
   std::unique_ptr<IdentifierTable> IdentTable;
 };

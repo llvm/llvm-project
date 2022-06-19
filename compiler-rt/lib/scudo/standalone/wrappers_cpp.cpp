@@ -12,11 +12,9 @@
 #if !SCUDO_ANDROID || !_BIONIC
 
 #include "allocator_config.h"
+#include "wrappers_c.h"
 
 #include <stdint.h>
-
-extern "C" void malloc_postinit();
-extern HIDDEN scudo::Allocator<scudo::Config, malloc_postinit> Allocator;
 
 namespace std {
 struct nothrow_t {};
@@ -56,26 +54,28 @@ INTERFACE WEAK void *operator new[](size_t size, std::align_val_t align,
                             static_cast<scudo::uptr>(align));
 }
 
-INTERFACE WEAK void operator delete(void *ptr)NOEXCEPT {
+INTERFACE WEAK void operator delete(void *ptr) NOEXCEPT {
   Allocator.deallocate(ptr, scudo::Chunk::Origin::New);
 }
 INTERFACE WEAK void operator delete[](void *ptr) NOEXCEPT {
   Allocator.deallocate(ptr, scudo::Chunk::Origin::NewArray);
 }
-INTERFACE WEAK void operator delete(void *ptr, std::nothrow_t const &)NOEXCEPT {
+INTERFACE WEAK void operator delete(void *ptr,
+                                    std::nothrow_t const &) NOEXCEPT {
   Allocator.deallocate(ptr, scudo::Chunk::Origin::New);
 }
 INTERFACE WEAK void operator delete[](void *ptr,
                                       std::nothrow_t const &) NOEXCEPT {
   Allocator.deallocate(ptr, scudo::Chunk::Origin::NewArray);
 }
-INTERFACE WEAK void operator delete(void *ptr, size_t size)NOEXCEPT {
+INTERFACE WEAK void operator delete(void *ptr, size_t size) NOEXCEPT {
   Allocator.deallocate(ptr, scudo::Chunk::Origin::New, size);
 }
 INTERFACE WEAK void operator delete[](void *ptr, size_t size) NOEXCEPT {
   Allocator.deallocate(ptr, scudo::Chunk::Origin::NewArray, size);
 }
-INTERFACE WEAK void operator delete(void *ptr, std::align_val_t align)NOEXCEPT {
+INTERFACE WEAK void operator delete(void *ptr,
+                                    std::align_val_t align) NOEXCEPT {
   Allocator.deallocate(ptr, scudo::Chunk::Origin::New, 0,
                        static_cast<scudo::uptr>(align));
 }
@@ -85,7 +85,7 @@ INTERFACE WEAK void operator delete[](void *ptr,
                        static_cast<scudo::uptr>(align));
 }
 INTERFACE WEAK void operator delete(void *ptr, std::align_val_t align,
-                                    std::nothrow_t const &)NOEXCEPT {
+                                    std::nothrow_t const &) NOEXCEPT {
   Allocator.deallocate(ptr, scudo::Chunk::Origin::New, 0,
                        static_cast<scudo::uptr>(align));
 }
@@ -95,7 +95,7 @@ INTERFACE WEAK void operator delete[](void *ptr, std::align_val_t align,
                        static_cast<scudo::uptr>(align));
 }
 INTERFACE WEAK void operator delete(void *ptr, size_t size,
-                                    std::align_val_t align)NOEXCEPT {
+                                    std::align_val_t align) NOEXCEPT {
   Allocator.deallocate(ptr, scudo::Chunk::Origin::New, size,
                        static_cast<scudo::uptr>(align));
 }

@@ -185,13 +185,21 @@ Language Selection and Mode Options
 
    ISO C++ 2017 with amendments and GNU extensions
 
-  | ``c++2a``
+  | ``c++20``
 
-   Working draft for ISO C++ 2020
+   ISO C++ 2020 with amendments
 
-  | ``gnu++2a``
+  | ``gnu++20``
 
-   Working draft for ISO C++ 2020 with GNU extensions
+   ISO C++ 2020 with amendments and GNU extensions
+
+  | ``c++2b``
+
+   Working draft for ISO C++ 2023
+
+  | ``gnu++2b``
+
+   Working draft for ISO C++ 2023 with GNU extensions
 
  The default C++ language standard is ``gnu++14``.
 
@@ -252,8 +260,24 @@ Language Selection and Mode Options
 
 .. option:: -fno-builtin
 
- Disable special handling and optimizations of builtin functions like
- :c:func:`strlen` and :c:func:`malloc`.
+ Disable special handling and optimizations of well-known library functions,
+ like :c:func:`strlen` and :c:func:`malloc`.
+
+.. option:: -fno-builtin-<function>
+
+ Disable special handling and optimizations for the specific library function.
+ For example, ``-fno-builtin-strlen`` removes any special handling for the
+ :c:func:`strlen` library function.
+
+.. option:: -fno-builtin-std-<function>
+
+ Disable special handling and optimizations for the specific C++ standard
+ library function in namespace ``std``. For example,
+ ``-fno-builtin-std-move_if_noexcept`` removes any special handling for the
+ :cpp:func:`std::move_if_noexcept` library function.
+
+ For C standard library functions that the C++ standard library also provides
+ in namespace ``std``, use :option:`-fno-builtin-\<function\>` instead.
 
 .. option:: -fmath-errno
 
@@ -323,7 +347,11 @@ number of cross compilers, or may only support a native target.
 
 .. option:: -arch <architecture>
 
-  Specify the architecture to build for.
+  Specify the architecture to build for (Mac OS X specific).
+
+.. option:: -target <architecture>
+
+  Specify the architecture to build for (all platforms).
 
 .. option:: -mmacosx-version-min=<version>
 
@@ -662,7 +690,7 @@ ENVIRONMENT
 BUGS
 ----
 
-To report bugs, please visit <https://bugs.llvm.org/>.  Most bug reports should
+To report bugs, please visit <https://github.com/llvm/llvm-project/issues/>.  Most bug reports should
 include preprocessed source files (use the :option:`-E` option) and the full
 output of the compiler, along with information to reproduce.
 

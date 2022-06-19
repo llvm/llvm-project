@@ -11,7 +11,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
-#include "mlir/Dialect/Linalg/IR/LinalgOps.h"
+#include "mlir/Dialect/Func/IR/FuncOps.h"
+#include "mlir/Dialect/Linalg/IR/Linalg.h"
 #include "mlir/Dialect/Linalg/Transforms/Hoisting.h"
 #include "mlir/Pass/Pass.h"
 
@@ -20,9 +21,11 @@ using namespace mlir::linalg;
 
 namespace {
 struct TestLinalgHoisting
-    : public PassWrapper<TestLinalgHoisting, FunctionPass> {
+    : public PassWrapper<TestLinalgHoisting, OperationPass<func::FuncOp>> {
+  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(TestLinalgHoisting)
+
   TestLinalgHoisting() = default;
-  TestLinalgHoisting(const TestLinalgHoisting &pass) {}
+  TestLinalgHoisting(const TestLinalgHoisting &pass) : PassWrapper(pass) {}
   void getDependentDialects(DialectRegistry &registry) const override {
     registry.insert<AffineDialect>();
   }
@@ -31,19 +34,19 @@ struct TestLinalgHoisting
     return "Test Linalg hoisting functions.";
   }
 
-  void runOnFunction() override;
+  void runOnOperation() override;
 
   Option<bool> testHoistRedundantTransfers{
       *this, "test-hoist-redundant-transfers",
       llvm::cl::desc("Test hoisting transfer_read/transfer_write pairs"),
       llvm::cl::init(false)};
 };
-} // end anonymous namespace
+} // namespace
 
-void TestLinalgHoisting::runOnFunction() {
+void TestLinalgHoisting::runOnOperation() {
   if (testHoistRedundantTransfers) {
-    hoistRedundantVectorTransfers(getFunction());
-    hoistRedundantVectorTransfersOnTensor(getFunction());
+    hoistRedundantVectorTransfers(getOperation());
+    hoistRedundantVectorTransfersOnTensor(getOperation());
     return;
   }
 }

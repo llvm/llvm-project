@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_TOOLS_LLVM_PROFGEN_PROFILEDCALLGRAPH_H
-#define LLVM_TOOLS_LLVM_PROFGEN_PROFILEDCALLGRAPH_H
+#ifndef LLVM_TRANSFORMS_IPO_PROFILEDCALLGRAPH_H
+#define LLVM_TRANSFORMS_IPO_PROFILEDCALLGRAPH_H
 
 #include "llvm/ADT/GraphTraits.h"
 #include "llvm/ADT/StringMap.h"
@@ -18,32 +18,55 @@
 #include <queue>
 #include <set>
 
-using namespace llvm;
-using namespace sampleprof;
-
 namespace llvm {
 namespace sampleprof {
 
-struct ProfiledCallGraphNode {
-  ProfiledCallGraphNode(StringRef FName = StringRef()) : Name(FName) {}
-  StringRef Name;
+struct ProfiledCallGraphNode;
 
-  struct ProfiledCallGraphNodeComparer {
-    bool operator()(const ProfiledCallGraphNode *L,
-                    const ProfiledCallGraphNode *R) const {
-      return L->Name < R->Name;
+struct ProfiledCallGraphEdge {
+  ProfiledCallGraphEdge(ProfiledCallGraphNode *Source,
+                        ProfiledCallGraphNode *Target, uint64_t Weight)
+      : Source(Source), Target(Target), Weight(Weight) {}
+  ProfiledCallGraphNode *Source;
+  ProfiledCallGraphNode *Target;
+  uint64_t Weight;
+
+  // The call destination is the only important data here,
+  // allow to transparently unwrap into it.
+  operator ProfiledCallGraphNode *() const { return Target; }
+};
+
+struct ProfiledCallGraphNode {
+
+  // Sort edges by callee names only since all edges to be compared are from
+  // same caller. Edge weights are not considered either because for the same
+  // callee only the edge with the largest weight is added to the edge set.
+  struct ProfiledCallGraphEdgeComparer {
+    bool operator()(const ProfiledCallGraphEdge &L,
+                    const ProfiledCallGraphEdge &R) const {
+      return L.Target->Name < R.Target->Name;
     }
   };
-  std::set<ProfiledCallGraphNode *, ProfiledCallGraphNodeComparer> Callees;
+
+  using edge = ProfiledCallGraphEdge;
+  using edges = std::set<edge, ProfiledCallGraphEdgeComparer>;
+  using iterator = edges::iterator;
+  using const_iterator = edges::const_iterator;
+
+  ProfiledCallGraphNode(StringRef FName = StringRef()) : Name(FName) {}
+
+  StringRef Name;
+  edges Edges;
 };
 
 class ProfiledCallGraph {
 public:
-  using iterator = std::set<ProfiledCallGraphNode *>::iterator;
+  using iterator = ProfiledCallGraphNode::iterator;
 
   // Constructor for non-CS profile.
-  ProfiledCallGraph(StringMap<FunctionSamples> &ProfileMap) {
-    assert(!FunctionSamples::ProfileIsCS && "CS profile is not handled here");
+  ProfiledCallGraph(SampleProfileMap &ProfileMap) {
+    assert(!FunctionSamples::ProfileIsCS &&
+           "CS flat profile is not handled here");
     for (const auto &Samples : ProfileMap) {
       addProfiledCalls(Samples.second);
     }
@@ -56,15 +79,16 @@ public:
     std::queue<ContextTrieNode *> Queue;
     for (auto &Child : ContextTracker.getRootContext().getAllChildContext()) {
       ContextTrieNode *Callee = &Child.second;
-      addProfiledFunction(Callee->getFuncName());
+      addProfiledFunction(ContextTracker.getFuncNameFor(Callee));
       Queue.push(Callee);
     }
 
     while (!Queue.empty()) {
       ContextTrieNode *Caller = Queue.front();
       Queue.pop();
-      // Add calls for context. When AddNodeWithSamplesOnly is true, both caller
-      // and callee need to have context profile.
+      FunctionSamples *CallerSamples = Caller->getFunctionSamples();
+
+      // Add calls for context.
       // Note that callsite target samples are completely ignored since they can
       // conflict with the context edges, which are formed by context
       // compression during profile generation, for cyclic SCCs. This may
@@ -72,32 +96,63 @@ public:
       // context-based one, which may in turn block context-based inlining.
       for (auto &Child : Caller->getAllChildContext()) {
         ContextTrieNode *Callee = &Child.second;
-        addProfiledFunction(Callee->getFuncName());
+        addProfiledFunction(ContextTracker.getFuncNameFor(Callee));
         Queue.push(Callee);
-        addProfiledCall(Caller->getFuncName(), Callee->getFuncName());
+
+        // Fetch edge weight from the profile.
+        uint64_t Weight;
+        FunctionSamples *CalleeSamples = Callee->getFunctionSamples();
+        if (!CalleeSamples || !CallerSamples) {
+          Weight = 0;
+        } else {
+          uint64_t CalleeEntryCount = CalleeSamples->getEntrySamples();
+          uint64_t CallsiteCount = 0;
+          LineLocation Callsite = Callee->getCallSiteLoc();
+          if (auto CallTargets = CallerSamples->findCallTargetMapAt(Callsite)) {
+            SampleRecord::CallTargetMap &TargetCounts = CallTargets.get();
+            auto It = TargetCounts.find(CalleeSamples->getName());
+            if (It != TargetCounts.end())
+              CallsiteCount = It->second;
+          }
+          Weight = std::max(CallsiteCount, CalleeEntryCount);
+        }
+
+        addProfiledCall(ContextTracker.getFuncNameFor(Caller),
+                        ContextTracker.getFuncNameFor(Callee), Weight);
       }
     }
   }
 
-  iterator begin() { return Root.Callees.begin(); }
-  iterator end() { return Root.Callees.end(); }
+  iterator begin() { return Root.Edges.begin(); }
+  iterator end() { return Root.Edges.end(); }
   ProfiledCallGraphNode *getEntryNode() { return &Root; }
   void addProfiledFunction(StringRef Name) {
     if (!ProfiledFunctions.count(Name)) {
       // Link to synthetic root to make sure every node is reachable
       // from root. This does not affect SCC order.
       ProfiledFunctions[Name] = ProfiledCallGraphNode(Name);
-      Root.Callees.insert(&ProfiledFunctions[Name]);
+      Root.Edges.emplace(&Root, &ProfiledFunctions[Name], 0);
     }
   }
 
-  void addProfiledCall(StringRef CallerName, StringRef CalleeName) {
+private:
+  void addProfiledCall(StringRef CallerName, StringRef CalleeName,
+                       uint64_t Weight = 0) {
     assert(ProfiledFunctions.count(CallerName));
     auto CalleeIt = ProfiledFunctions.find(CalleeName);
-    if (CalleeIt == ProfiledFunctions.end()) {
+    if (CalleeIt == ProfiledFunctions.end())
       return;
+    ProfiledCallGraphEdge Edge(&ProfiledFunctions[CallerName],
+                               &CalleeIt->second, Weight);
+    auto &Edges = ProfiledFunctions[CallerName].Edges;
+    auto EdgeIt = Edges.find(Edge);
+    if (EdgeIt == Edges.end()) {
+      Edges.insert(Edge);
+    } else if (EdgeIt->Weight < Edge.Weight) {
+      // Replace existing call edges with same target but smaller weight.
+      Edges.erase(EdgeIt);
+      Edges.insert(Edge);
     }
-    ProfiledFunctions[CallerName].Callees.insert(&CalleeIt->second);
   }
 
   void addProfiledCalls(const FunctionSamples &Samples) {
@@ -106,20 +161,20 @@ public:
     for (const auto &Sample : Samples.getBodySamples()) {
       for (const auto &Target : Sample.second.getCallTargets()) {
         addProfiledFunction(Target.first());
-        addProfiledCall(Samples.getFuncName(), Target.first());
+        addProfiledCall(Samples.getFuncName(), Target.first(), Target.second);
       }
     }
 
     for (const auto &CallsiteSamples : Samples.getCallsiteSamples()) {
       for (const auto &InlinedSamples : CallsiteSamples.second) {
         addProfiledFunction(InlinedSamples.first);
-        addProfiledCall(Samples.getFuncName(), InlinedSamples.first);
+        addProfiledCall(Samples.getFuncName(), InlinedSamples.first,
+                        InlinedSamples.second.getEntrySamples());
         addProfiledCalls(InlinedSamples.second);
       }
     }
   }
 
-private:
   ProfiledCallGraphNode Root;
   StringMap<ProfiledCallGraphNode> ProfiledFunctions;
 };
@@ -127,12 +182,14 @@ private:
 } // end namespace sampleprof
 
 template <> struct GraphTraits<ProfiledCallGraphNode *> {
+  using NodeType = ProfiledCallGraphNode;
   using NodeRef = ProfiledCallGraphNode *;
-  using ChildIteratorType = std::set<ProfiledCallGraphNode *>::iterator;
+  using EdgeType = NodeType::edge;
+  using ChildIteratorType = NodeType::const_iterator;
 
   static NodeRef getEntryNode(NodeRef PCGN) { return PCGN; }
-  static ChildIteratorType child_begin(NodeRef N) { return N->Callees.begin(); }
-  static ChildIteratorType child_end(NodeRef N) { return N->Callees.end(); }
+  static ChildIteratorType child_begin(NodeRef N) { return N->Edges.begin(); }
+  static ChildIteratorType child_end(NodeRef N) { return N->Edges.end(); }
 };
 
 template <>

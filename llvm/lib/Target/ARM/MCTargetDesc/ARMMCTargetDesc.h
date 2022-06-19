@@ -36,8 +36,6 @@ class MCTargetStreamer;
 class StringRef;
 class Target;
 class Triple;
-class raw_ostream;
-class raw_pwrite_stream;
 
 namespace ARM_MC {
 std::string ParseARMTriple(const Triple &TT, StringRef CPU);
@@ -73,13 +71,13 @@ MCTargetStreamer *createARMTargetAsmStreamer(MCStreamer &S,
                                              bool isVerboseAsm);
 MCTargetStreamer *createARMObjectTargetStreamer(MCStreamer &S,
                                                 const MCSubtargetInfo &STI);
+MCTargetStreamer *createARMObjectTargetELFStreamer(MCStreamer &S);
+MCTargetStreamer *createARMObjectTargetWinCOFFStreamer(MCStreamer &S);
 
 MCCodeEmitter *createARMLEMCCodeEmitter(const MCInstrInfo &MCII,
-                                        const MCRegisterInfo &MRI,
                                         MCContext &Ctx);
 
 MCCodeEmitter *createARMBEMCCodeEmitter(const MCInstrInfo &MCII,
-                                        const MCRegisterInfo &MRI,
                                         MCContext &Ctx);
 
 MCAsmBackend *createARMLEAsmBackend(const Target &T, const MCSubtargetInfo &STI,

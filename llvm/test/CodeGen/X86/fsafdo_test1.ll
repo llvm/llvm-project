@@ -2,9 +2,9 @@
 ;
 ; Check that fs-afdo discriminators are generated.
 ; CHECK: .loc    1 7 3 is_stmt 0 discriminator 2 # foo.c:7:3
-; Check: .loc    1 9 5 is_stmt 1 discriminator 2 # foo.c:9:5
-; CHECK: .loc    1 9 5 is_stmt 0 discriminator 268435458 # foo.c:9:5
-; CHECK: .loc    1 7 3 is_stmt 1 discriminator 3892314114 # foo.c:7:3
+; ChECK: .loc    1 9 5 is_stmt 1 discriminator 2 # foo.c:9:5
+; CHECK: .loc    1 9 5 is_stmt 0 discriminator 11266 # foo.c:9:5
+; CHECK: .loc    1 7 3 is_stmt 1 discriminator 11266 # foo.c:7:3
 ; Check that variable __llvm_fs_discriminator__ is generated.
 ; CHECK: .type   __llvm_fs_discriminator__,@object # @__llvm_fs_discriminator__
 ; CHECK: .section        .rodata,"a",@progbits
@@ -45,7 +45,7 @@ while.end4:
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!3, !4}
 
-!0 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1, isOptimized: true, emissionKind: LineTablesOnly)
+!0 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1, isOptimized: true, debugInfoForProfiling: true, emissionKind: LineTablesOnly)
 !1 = !DIFile(filename: "foo.c", directory: "b/")
 !2 = !{}
 !3 = !{i32 2, !"Dwarf Version", i32 4}

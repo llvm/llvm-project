@@ -14,6 +14,8 @@
 // template<class charT, class traits>
 //   basic_ostream<charT,traits>& operator<<(basic_ostream<charT,traits>& out, char c);
 
+// XFAIL: no-wide-characters
+
 #include <ostream>
 #include <cassert>
 
@@ -80,7 +82,7 @@ int main(int, char**)
         testbuf<wchar_t> sb;
         std::wostream os(&sb);
         os.width(5);
-        left(os);
+        std::left(os);
         char c = 'a';
         os << c;
         assert(sb.str() == L"a    ");

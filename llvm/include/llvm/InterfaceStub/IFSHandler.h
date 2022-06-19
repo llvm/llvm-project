@@ -19,6 +19,8 @@
 #include "llvm/Support/Error.h"
 #include "llvm/Support/VersionTuple.h"
 #include <memory>
+#include <string>
+#include <vector>
 
 namespace llvm {
 
@@ -50,6 +52,9 @@ Error validateIFSTarget(IFSStub &Stub, bool ParseTriple);
 /// Strips target platform information from the text stub.
 void stripIFSTarget(IFSStub &Stub, bool StripTriple, bool StripArch,
                     bool StripEndianness, bool StripBitWidth);
+
+Error filterIFSSyms(IFSStub &Stub, bool StripUndefined,
+                    const std::vector<std::string> &Exclude = {});
 
 /// Parse llvm triple string into a IFSTarget struct.
 IFSTarget parseTriple(StringRef TripleStr);

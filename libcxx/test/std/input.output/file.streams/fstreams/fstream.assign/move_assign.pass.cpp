@@ -25,7 +25,7 @@ int main(int, char**)
         std::fstream fso(temp.c_str(), std::ios_base::in | std::ios_base::out
                                                  | std::ios_base::trunc);
         std::fstream fs;
-        fs = move(fso);
+        fs = std::move(fso);
         double x = 0;
         fs << 3.25;
         fs.seekg(0);
@@ -33,11 +33,13 @@ int main(int, char**)
         assert(x == 3.25);
     }
     std::remove(temp.c_str());
+
+#ifndef TEST_HAS_NO_WIDE_CHARACTERS
     {
         std::wfstream fso(temp.c_str(), std::ios_base::in | std::ios_base::out
                                                   | std::ios_base::trunc);
         std::wfstream fs;
-        fs = move(fso);
+        fs = std::move(fso);
         double x = 0;
         fs << 3.25;
         fs.seekg(0);
@@ -45,6 +47,7 @@ int main(int, char**)
         assert(x == 3.25);
     }
     std::remove(temp.c_str());
+#endif
 
   return 0;
 }

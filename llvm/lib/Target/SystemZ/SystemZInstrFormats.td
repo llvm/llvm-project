@@ -1438,6 +1438,55 @@ class InstVRRi<bits<16> op, dag outs, dag ins, string asmstr, list<dag> pattern>
   let Inst{7-0}   = op{7-0};
 }
 
+class InstVRRj<bits<16> op, dag outs, dag ins, string asmstr, list<dag> pattern>
+  : InstSystemZ<6, outs, ins, asmstr, pattern> {
+  field bits<48> Inst;
+  field bits<48> SoftFail = 0;
+
+  bits<5> V1;
+  bits<5> V2;
+  bits<5> V3;
+  bits<4> M4;
+
+  let Inst{47-40} = op{15-8};
+  let Inst{39-36} = V1{3-0};
+  let Inst{35-32} = V2{3-0};
+  let Inst{31-28} = V3{3-0};
+  let Inst{27-24} = 0;
+  let Inst{23-20} = M4;
+  let Inst{19-16} = 0;
+  let Inst{15-12} = 0;
+  let Inst{11}    = V1{4};
+  let Inst{10}    = V2{4};
+  let Inst{9}     = V3{4};
+  let Inst{8}     = 0;
+  let Inst{7-0}   = op{7-0};
+}
+
+class InstVRRk<bits<16> op, dag outs, dag ins, string asmstr, list<dag> pattern>
+  : InstSystemZ<6, outs, ins, asmstr, pattern> {
+  field bits<48> Inst;
+  field bits<48> SoftFail = 0;
+
+  bits<5> V1;
+  bits<5> V2;
+  bits<4> M3;
+
+  let Inst{47-40} = op{15-8};
+  let Inst{39-36} = V1{3-0};
+  let Inst{35-32} = V2{3-0};
+  let Inst{31-28} = 0;
+  let Inst{27-24} = 0;
+  let Inst{23-20} = M3;
+  let Inst{19-16} = 0;
+  let Inst{15-12} = 0;
+  let Inst{11}    = V1{4};
+  let Inst{10}    = V2{4};
+  let Inst{9}     = 0;
+  let Inst{8}     = 0;
+  let Inst{7-0}   = op{7-0};
+}
+
 class InstVRSa<bits<16> op, dag outs, dag ins, string asmstr, list<dag> pattern>
   : InstSystemZ<6, outs, ins, asmstr, pattern> {
   field bits<48> Inst;
@@ -2780,6 +2829,16 @@ class SideEffectUnaryS<string mnemonic, bits<16> opcode,
   let AccessBytes = bytes;
 }
 
+class SideEffectUnarySIY<string mnemonic, bits<16> opcode,
+                         bits<5> bytes,
+                         AddressingMode mode = bdaddr20only>
+  : InstSIY<opcode, (outs), (ins mode:$BD1),
+            mnemonic#"\t$BD1", []> {
+  let mayLoad = 1;
+  let AccessBytes = bytes;
+  let I2 = 0;
+}
+
 class SideEffectAddressS<string mnemonic, bits<16> opcode,
                         SDPatternOperator operator,
                         AddressingMode mode = bdaddr12only>
@@ -3660,6 +3719,17 @@ class BinaryVRRb<string mnemonic, bits<16> opcode, SDPatternOperator operator,
   let M5 = modifier;
 }
 
+class BinaryExtraVRRb<string mnemonic, bits<16> opcode, bits<4> type = 0>
+  : InstVRRb<opcode, (outs VR128:$V1), (ins VR128:$V2, VR128:$V3, imm32zx4:$M5),
+             mnemonic#"\t$V1, $V2, $V3, $M5", []> {
+  let M4 = type;
+}
+
+class BinaryExtraVRRbGeneric<string mnemonic, bits<16> opcode>
+  : InstVRRb<opcode, (outs VR128:$V1),
+             (ins VR128:$V2, VR128:$V3, imm32zx4:$M4, imm32zx4:$M5),
+             mnemonic#"\t$V1, $V2, $V3, $M4, $M5", []>;
+
 // Declare a pair of instructions, one which sets CC and one which doesn't.
 // The CC-setting form ends with "S" and sets the low bit of M5.
 multiclass BinaryVRRbSPair<string mnemonic, bits<16> opcode,
@@ -3772,6 +3842,10 @@ class BinaryVRRi<string mnemonic, bits<16> opcode, RegisterOperand cls>
              mnemonic#"\t$R1, $V2, $M3", []> {
   let M4 = 0;
 }
+
+class BinaryVRRk<string mnemonic, bits<16> opcode>
+  : InstVRRk<opcode, (outs VR128:$V1), (ins VR128:$V2, imm32zx4:$M3),
+             mnemonic#"\t$V1, $V2, $M3", []>;
 
 class BinaryVRSa<string mnemonic, bits<16> opcode, SDPatternOperator operator,
                  TypedReg tr1, TypedReg tr2, bits<4> type>
@@ -4534,6 +4608,11 @@ class TernaryVRRi<string mnemonic, bits<16> opcode, RegisterOperand cls>
                                       imm32zx4:$M3, imm32zx4:$M4),
              mnemonic#"\t$R1, $V2, $M3, $M4", []>;
 
+class TernaryVRRj<string mnemonic, bits<16> opcode>
+  : InstVRRj<opcode, (outs VR128:$V1), (ins VR128:$V2,
+                                        VR128:$V3, imm32zx4:$M4),
+             mnemonic#"\t$V1, $V2, $V3, $M4", []>;
+
 class TernaryVRSbGeneric<string mnemonic, bits<16> opcode>
   : InstVRSb<opcode, (outs VR128:$V1),
              (ins VR128:$V1src, GR64:$R3, shift12only:$BD2, imm32zx4:$M4),
@@ -5177,6 +5256,16 @@ class RotateSelectAliasRIEf<RegisterOperand cls1, RegisterOperand cls2>
   let Constraints = "$R1 = $R1src";
 }
 
+class MemsetPseudo<DAGOperand lenop, DAGOperand byteop>
+  : Pseudo<(outs), (ins bdaddr12only:$dest, lenop:$length, byteop:$B),
+           [(z_memset_mvc bdaddr12only:$dest, lenop:$length, byteop:$B)]> {
+  let Defs = [CC];
+  let mayLoad = 1;
+  let mayStore = 1;
+  let usesCustomInserter = 1;
+  let hasNoSchedulingInfo = 1;
+}
+
 //===----------------------------------------------------------------------===//
 // Multiclasses that emit both real and pseudo instructions
 //===----------------------------------------------------------------------===//
@@ -5250,42 +5339,37 @@ multiclass CondUnaryRSYPseudoAndMemFold<string mnemonic,
 
 // Define an instruction that operates on two fixed-length blocks of memory,
 // and associated pseudo instructions for operating on blocks of any size.
-// The Sequence form uses a straight-line sequence of instructions and
-// the Loop form uses a loop of length-256 instructions followed by
-// another instruction to handle the excess.
-// The LoopVarLen form is for a loop with a non-constant length parameter.
-multiclass MemorySS<string mnemonic, bits<8> opcode,
-                    SDPatternOperator sequence, SDPatternOperator loop> {
+// There are two pseudos for the different cases of when the length is
+// constant or variable. The length operand of a pseudo is actually one less
+// than the intended number of bytes, since the register case needs to use an
+// EXRL with a target instruction that adds one to the length always.
+multiclass MemorySS<string mnemonic, bits<8> opcode, SDPatternOperator memop> {
   def "" : SideEffectBinarySSa<mnemonic, opcode>;
   let usesCustomInserter = 1, hasNoSchedulingInfo = 1, Defs = [CC] in {
-    def Sequence : Pseudo<(outs), (ins bdaddr12only:$dest, bdaddr12only:$src,
-                                       imm64:$length),
-                           [(sequence bdaddr12only:$dest, bdaddr12only:$src,
-                                      imm64:$length)]>;
-    def Loop : Pseudo<(outs), (ins bdaddr12only:$dest, bdaddr12only:$src,
-                                   imm64:$length, GR64:$count256),
-                      [(loop bdaddr12only:$dest, bdaddr12only:$src,
-                             imm64:$length, GR64:$count256)]>;
-    def LoopVarLen : Pseudo<(outs), (ins bdaddr12only:$dest, bdaddr12only:$src,
-                                         GR64:$length, GR64:$count256),
-                            [(loop bdaddr12only:$dest, bdaddr12only:$src,
-                                   GR64:$length, GR64:$count256)]>;
+    def Imm : Pseudo<(outs), (ins bdaddr12only:$dest, bdaddr12only:$src,
+                                  imm64:$length),
+                             [(memop bdaddr12only:$dest, bdaddr12only:$src,
+                                     imm64:$length)]>;
+    def Reg : Pseudo<(outs), (ins bdaddr12only:$dest, bdaddr12only:$src,
+                                  ADDR64:$length),
+                             [(memop bdaddr12only:$dest, bdaddr12only:$src,
+                                     ADDR64:$length)]>;
   }
 }
 
 // The same, but setting a CC result as comparison operator.
 multiclass CompareMemorySS<string mnemonic, bits<8> opcode,
-                          SDPatternOperator sequence, SDPatternOperator loop> {
+                           SDPatternOperator memop> {
   def "" : SideEffectBinarySSa<mnemonic, opcode>;
   let usesCustomInserter = 1, hasNoSchedulingInfo = 1 in {
-    def Sequence : Pseudo<(outs), (ins bdaddr12only:$dest, bdaddr12only:$src,
-                                       imm64:$length),
-                           [(set CC, (sequence bdaddr12only:$dest, bdaddr12only:$src,
-                                               imm64:$length))]>;
-    def Loop : Pseudo<(outs), (ins bdaddr12only:$dest, bdaddr12only:$src,
-                                   imm64:$length, GR64:$count256),
-                      [(set CC, (loop bdaddr12only:$dest, bdaddr12only:$src,
-                                      imm64:$length, GR64:$count256))]>;
+    def Imm : Pseudo<(outs), (ins bdaddr12only:$dest, bdaddr12only:$src,
+                                  imm64:$length),
+                          [(set CC, (memop bdaddr12only:$dest, bdaddr12only:$src,
+                                           imm64:$length))]>;
+    def Reg : Pseudo<(outs), (ins bdaddr12only:$dest, bdaddr12only:$src,
+                                  ADDR64:$length),
+                          [(set CC, (memop bdaddr12only:$dest, bdaddr12only:$src,
+                                           ADDR64:$length))]>;
   }
 }
 

@@ -18,7 +18,6 @@ class Error;
 namespace object {
 class COFFObjectFile;
 class COFFImportFile;
-class ObjectFile;
 class RelocationRef;
 } // namespace object
 
@@ -28,7 +27,7 @@ Error getCOFFRelocationValueString(const object::COFFObjectFile *Obj,
                                    llvm::SmallVectorImpl<char> &Result);
 
 void printCOFFUnwindInfo(const object::COFFObjectFile *O);
-void printCOFFFileHeader(const object::ObjectFile *O);
+void printCOFFFileHeader(const object::COFFObjectFile &Obj);
 void printCOFFSymbolTable(const object::COFFImportFile *I);
 void printCOFFSymbolTable(const object::COFFObjectFile *O);
 } // namespace objdump

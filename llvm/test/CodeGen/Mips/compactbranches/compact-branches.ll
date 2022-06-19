@@ -1,6 +1,6 @@
-; RUN: llc -march=mipsel -mcpu=mips32r6 -relocation-model=static \
+; RUN: llc -mtriple=mipsel -mcpu=mips32r6 -relocation-model=static \
 ; RUN:     -disable-mips-delay-filler < %s | FileCheck %s -check-prefix=STATIC32
-; RUN: llc -march=mipsel -mcpu=mips64r6 -relocation-model=pic -target-abi n64 \
+; RUN: llc -mtriple=mipsel -mcpu=mips64r6 -relocation-model=pic -target-abi n64 \
 ; RUN:     -disable-mips-delay-filler < %s | FileCheck %s -check-prefix=PIC
 
 ; Function Attrs: nounwind

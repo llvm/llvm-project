@@ -6,10 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-// <unordered_set>
 // UNSUPPORTED: c++03, c++11, c++14
-// UNSUPPORTED: libcpp-no-deduction-guides
-// UNSUPPORTED: apple-clang-9.1
+
+// <unordered_set>
 
 // template<class InputIterator,
 //        class Hash = hash<iter-value-type<InputIterator>>,
@@ -54,6 +53,7 @@
 #include <type_traits>
 #include <unordered_set>
 
+#include "deduction_guides_sfinae_checks.h"
 #include "test_allocator.h"
 
 int main(int, char**)
@@ -192,6 +192,8 @@ int main(int, char**)
     assert(std::is_permutation(s.begin(), s.end(), std::begin(expected_s), std::end(expected_s)));
     assert(s.get_allocator().get_id() == 42);
     }
+
+    UnorderedContainerDeductionGuidesSfinaeAway<std::unordered_set, std::unordered_set<int>>();
 
     return 0;
 }

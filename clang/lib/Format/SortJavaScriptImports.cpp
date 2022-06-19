@@ -78,6 +78,7 @@ struct JsModuleReference {
     ABSOLUTE,        // from 'something'
     RELATIVE_PARENT, // from '../*'
     RELATIVE,        // from './*'
+    ALIAS,           // import X = A.B;
   };
   ReferenceCategory Category = ReferenceCategory::SIDE_EFFECT;
   // The URL imported, e.g. `import .. from 'url';`. Empty for `export {a, b};`.
@@ -105,11 +106,14 @@ bool operator<(const JsModuleReference &LHS, const JsModuleReference &RHS) {
     return LHS.IsExport < RHS.IsExport;
   if (LHS.Category != RHS.Category)
     return LHS.Category < RHS.Category;
-  if (LHS.Category == JsModuleReference::ReferenceCategory::SIDE_EFFECT)
-    // Side effect imports might be ordering sensitive. Consider them equal so
-    // that they maintain their relative order in the stable sort below.
-    // This retains transitivity because LHS.Category == RHS.Category here.
+  if (LHS.Category == JsModuleReference::ReferenceCategory::SIDE_EFFECT ||
+      LHS.Category == JsModuleReference::ReferenceCategory::ALIAS) {
+    // Side effect imports and aliases might be ordering sensitive. Consider
+    // them equal so that they maintain their relative order in the stable sort
+    // below. This retains transitivity because LHS.Category == RHS.Category
+    // here.
     return false;
+  }
   // Empty URLs sort *last* (for export {...};).
   if (LHS.URL.empty() != RHS.URL.empty())
     return LHS.URL.empty() < RHS.URL.empty();
@@ -130,7 +134,10 @@ class JavaScriptImportSorter : public TokenAnalyzer {
 public:
   JavaScriptImportSorter(const Environment &Env, const FormatStyle &Style)
       : TokenAnalyzer(Env, Style),
-        FileContents(Env.getSourceManager().getBufferData(Env.getFileID())) {}
+        FileContents(Env.getSourceManager().getBufferData(Env.getFileID())) {
+    // FormatToken.Tok starts out in an uninitialized state.
+    invalidToken.Tok.startToken();
+  }
 
   std::pair<tooling::Replacements, unsigned>
   analyze(TokenAnnotator &Annotator,
@@ -165,8 +172,9 @@ public:
         // in a single group.
         if (!Reference.IsExport &&
             (Reference.IsExport != References[I + 1].IsExport ||
-             Reference.Category != References[I + 1].Category))
+             Reference.Category != References[I + 1].Category)) {
           ReferencesText += "\n";
+        }
       }
     }
     llvm::StringRef PreviousText = getSourceText(InsertionPoint);
@@ -181,15 +189,16 @@ public:
     // harmless and will be stripped by the subsequent formatting pass.
     // FIXME: A better long term fix is to re-calculate Ranges after sorting.
     unsigned PreviousSize = PreviousText.size();
-    while (ReferencesText.size() < PreviousSize) {
+    while (ReferencesText.size() < PreviousSize)
       ReferencesText += " ";
-    }
 
     // Separate references from the main code body of the file.
     if (FirstNonImportLine && FirstNonImportLine->First->NewlinesBefore < 2 &&
         !(FirstNonImportLine->First->is(tok::comment) &&
-          FirstNonImportLine->First->TokenText.trim() == "// clang-format on"))
+          FirstNonImportLine->First->TokenText.trim() ==
+              "// clang-format on")) {
       ReferencesText += "\n";
+    }
 
     LLVM_DEBUG(llvm::dbgs() << "Replacing imports:\n"
                             << PreviousText << "\nwith:\n"
@@ -229,7 +238,6 @@ private:
     if (!Current || Current == LineEnd->Next) {
       // Set the current token to an invalid token, so that further parsing on
       // this line fails.
-      invalidToken.Tok.setKind(tok::unknown);
       Current = &invalidToken;
     }
   }
@@ -260,13 +268,13 @@ private:
       while (Start != References.end() && Start->FormattingOff) {
         // Skip over all imports w/ disabled formatting.
         ReferencesSorted.push_back(*Start);
-        Start++;
+        ++Start;
       }
       SmallVector<JsModuleReference, 16> SortChunk;
       while (Start != References.end() && !Start->FormattingOff) {
         // Skip over all imports w/ disabled formatting.
         SortChunk.push_back(*Start);
-        Start++;
+        ++Start;
       }
       llvm::stable_sort(SortChunk);
       mergeModuleReferences(SortChunk);
@@ -338,10 +346,12 @@ private:
     // Stitch together the module reference start...
     Buffer += getSourceText(Reference.Range.getBegin(), Reference.SymbolsStart);
     // ... then the references in order ...
-    for (auto I = Symbols.begin(), E = Symbols.end(); I != E; ++I) {
-      if (I != Symbols.begin())
+    if (!Symbols.empty()) {
+      Buffer += getSourceText(Symbols.front().Range);
+      for (const JsImportedSymbol &Symbol : llvm::drop_begin(Symbols)) {
         Buffer += ",";
-      Buffer += getSourceText(I->Range);
+        Buffer += getSourceText(Symbol.Range);
+      }
     }
     // ... followed by the module reference end.
     Buffer += getSourceText(Reference.SymbolsEnd, Reference.Range.getEnd());
@@ -359,6 +369,7 @@ private:
     bool AnyImportAffected = false;
     bool FormattingOff = false;
     for (auto *Line : AnnotatedLines) {
+      assert(Line->First);
       Current = Line->First;
       LineEnd = Line->Last;
       // clang-format comments toggle formatting on/off.
@@ -382,11 +393,12 @@ private:
         Current = Current->Next;
       }
       skipComments();
-      if (Start.isInvalid() || References.empty())
+      if (Start.isInvalid() || References.empty()) {
         // After the first file level comment, consider line comments to be part
         // of the import that immediately follows them by using the previously
         // set Start.
         Start = Line->First->Tok.getLocation();
+      }
       if (!Current) {
         // Only comments on this line. Could be the first non-import line.
         FirstNonImportLine = Line;
@@ -395,6 +407,8 @@ private:
       JsModuleReference Reference;
       Reference.FormattingOff = FormattingOff;
       Reference.Range.setBegin(Start);
+      // References w/o a URL, e.g. export {A}, groups with RELATIVE.
+      Reference.Category = JsModuleReference::ReferenceCategory::RELATIVE;
       if (!parseModuleReference(Keywords, Reference)) {
         if (!FirstNonImportLine)
           FirstNonImportLine = Line; // if no comment before.
@@ -410,9 +424,8 @@ private:
                      << ", cat: " << Reference.Category
                      << ", url: " << Reference.URL
                      << ", prefix: " << Reference.Prefix;
-        for (size_t I = 0; I < Reference.Symbols.size(); ++I)
-          llvm::dbgs() << ", " << Reference.Symbols[I].Symbol << " as "
-                       << Reference.Symbols[I].Alias;
+        for (const JsImportedSymbol &Symbol : Reference.Symbols)
+          llvm::dbgs() << ", " << Symbol.Symbol << " as " << Symbol.Alias;
         llvm::dbgs() << ", text: " << getSourceText(Reference.Range);
         llvm::dbgs() << "}\n";
       });
@@ -454,16 +467,14 @@ private:
       // URL = TokenText without the quotes.
       Reference.URL =
           Current->TokenText.substr(1, Current->TokenText.size() - 2);
-      if (Reference.URL.startswith(".."))
+      if (Reference.URL.startswith("..")) {
         Reference.Category =
             JsModuleReference::ReferenceCategory::RELATIVE_PARENT;
-      else if (Reference.URL.startswith("."))
+      } else if (Reference.URL.startswith(".")) {
         Reference.Category = JsModuleReference::ReferenceCategory::RELATIVE;
-      else
+      } else {
         Reference.Category = JsModuleReference::ReferenceCategory::ABSOLUTE;
-    } else {
-      // w/o URL groups with "empty".
-      Reference.Category = JsModuleReference::ReferenceCategory::RELATIVE;
+      }
     }
     return true;
   }
@@ -499,6 +510,19 @@ private:
       nextToken();
       if (Current->is(Keywords.kw_from))
         return true;
+      // import X = A.B.C;
+      if (Current->is(tok::equal)) {
+        Reference.Category = JsModuleReference::ReferenceCategory::ALIAS;
+        nextToken();
+        while (Current->is(tok::identifier)) {
+          nextToken();
+          if (Current->is(tok::semi))
+            return true;
+          if (!Current->is(tok::period))
+            return false;
+          nextToken();
+        }
+      }
       if (Current->isNot(tok::comma))
         return false;
       nextToken(); // eat comma.
@@ -550,9 +574,10 @@ tooling::Replacements sortJavaScriptImports(const FormatStyle &Style,
                                             ArrayRef<tooling::Range> Ranges,
                                             StringRef FileName) {
   // FIXME: Cursor support.
-  return JavaScriptImportSorter(Environment(Code, FileName, Ranges), Style)
-      .process()
-      .first;
+  auto Env = Environment::make(Code, FileName, Ranges);
+  if (!Env)
+    return {};
+  return JavaScriptImportSorter(*Env, Style).process().first;
 }
 
 } // end namespace format

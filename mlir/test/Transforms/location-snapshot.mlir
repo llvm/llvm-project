@@ -11,7 +11,7 @@
 // TAG-NEXT: loc(fused["original", "tagged"("[[FILE]]":{{[0-9]+}}:{{[0-9]+}})])
 // TAG-NEXT: } loc(fused["original", "tagged"("[[FILE]]":{{[0-9]+}}:{{[0-9]+}})])
 
-func @function() -> i32 {
+func.func @function() -> i32 {
   %1 = "foo"() : () -> i32 loc("original")
   return %1 : i32 loc("original")
 } loc("original")

@@ -22,7 +22,7 @@
 # DIS:      1000: auipc gp, 3
 # DIS-NEXT:       addi gp, gp, -2048
 
-# ERR: error: relocation R_RISCV_PCREL_HI20 cannot be used against symbol __global_pointer$; recompile with -fPIC
+# ERR: error: relocation R_RISCV_PCREL_HI20 cannot be used against symbol '__global_pointer$'; recompile with -fPIC
 
 lla gp, __global_pointer$
 

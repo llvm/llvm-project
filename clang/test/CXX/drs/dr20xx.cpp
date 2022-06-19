@@ -221,7 +221,7 @@ namespace dr2083 { // dr2083: partial
         a.*&A::x; // expected-warning {{unused}}
         true ? a.x : a.y; // expected-warning {{unused}}
         (void)a.x;
-        a.x, discarded_lval(); // expected-warning {{unused}}
+        a.x, discarded_lval(); // expected-warning {{left operand of comma operator has no effect}}
 #if 1 // FIXME: These errors are all incorrect; the above code is valid.
       // expected-error@-6 {{enclosing function}}
       // expected-error@-6 {{enclosing function}}

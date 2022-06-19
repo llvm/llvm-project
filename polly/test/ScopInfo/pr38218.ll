@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -polly-scops -analyze < %s | FileCheck %s
+; RUN: opt %loadPolly -polly-print-scops -disable-output < %s | FileCheck %s
 ;
 ; This code causes the SCoP to be rejected because of an ERRORBLOCK
 ; assumption and made Polly crash (llvm.org/PR38219).

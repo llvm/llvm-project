@@ -596,7 +596,7 @@ define void @test_asm_memory(i32* %base.addr) {
 ; CHECK: add w[[ADDR:[0-9]+]], w0, #4
 ; CHECK: str wzr, [x[[ADDR]]
   %addr = getelementptr i32, i32* %base.addr, i32 1
-  call void asm sideeffect "str wzr, $0", "*m"(i32* %addr)
+  call void asm sideeffect "str wzr, $0", "*m"(i32* elementtype(i32) %addr)
   ret void
 }
 
@@ -606,7 +606,7 @@ define void @test_unsafe_asm_memory(i64 %val) {
 ; CHECK: str wzr, [x[[ADDR]]]
   %addr_int = trunc i64 %val to i32
   %addr = inttoptr i32 %addr_int to i32*
-  call void asm sideeffect "str wzr, $0", "*m"(i32* %addr)
+  call void asm sideeffect "str wzr, $0", "*m"(i32* elementtype(i32) %addr)
   ret void
 }
 
@@ -732,11 +732,26 @@ define { [18 x i8] }* @test_gep_nonpow2({ [18 x i8] }* %a0, i32 %a1) {
   ret { [18 x i8] }* %tmp0
 }
 
+define void @test_memset(i64 %in, i8 %value)  {
+; CHECK-LABEL: test_memset:
+; CHECK-DAG: and x8, x0, #0xffffffff
+; CHECK-DAG: lsr x2, x0, #32
+; CHECK-DAG: mov x0, x8
+; CHECK: b _memset
+
+  %ptr.i32 = trunc i64 %in to i32
+  %size.64 = lshr i64 %in, 32
+  %size = trunc i64 %size.64 to i32
+  %ptr = inttoptr i32 %ptr.i32 to i8*
+  tail call void @llvm.memset.p0i8.i32(i8* align 4 %ptr, i8 %value, i32 %size, i1 false)
+  ret void
+}
+
 define void @test_bzero(i64 %in)  {
 ; CHECK-LABEL: test_bzero:
 ; CHECK-DAG: lsr x1, x0, #32
 ; CHECK-DAG: and x0, x0, #0xffffffff
-; CHECK: bl _bzero
+; CHECK: b _bzero
 
   %ptr.i32 = trunc i64 %in to i32
   %size.64 = lshr i64 %in, 32

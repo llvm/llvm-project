@@ -10,6 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "mlir/IR/BuiltinOps.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Pass/PassManager.h"
 
@@ -20,6 +21,8 @@ namespace {
 class TestDynamicPipelinePass
     : public PassWrapper<TestDynamicPipelinePass, OperationPass<>> {
 public:
+  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(TestDynamicPipelinePass)
+
   StringRef getArgument() const final { return "test-dynamic-pipeline"; }
   StringRef getDescription() const final {
     return "Tests the dynamic pipeline feature by applying "
@@ -32,7 +35,7 @@ public:
     pm.getDependentDialects(registry);
   }
 
-  TestDynamicPipelinePass(){};
+  TestDynamicPipelinePass() = default;
   TestDynamicPipelinePass(const TestDynamicPipelinePass &) {}
 
   void runOnOperation() override {
@@ -56,16 +59,14 @@ public:
       llvm::errs() << "dynamic-pipeline skip op name: " << opName << "\n";
       return;
     }
-    if (!pm) {
-      pm = std::make_unique<OpPassManager>(currentOp->getName().getIdentifier(),
-                                           OpPassManager::Nesting::Implicit);
-      (void)parsePassPipeline(pipeline, *pm, llvm::errs());
-    }
+    OpPassManager pm(currentOp->getName().getIdentifier(),
+                     OpPassManager::Nesting::Implicit);
+    (void)parsePassPipeline(pipeline, pm, llvm::errs());
 
     // Check that running on the parent operation always immediately fails.
     if (runOnParent) {
       if (currentOp->getParentOp())
-        if (!failed(runPipeline(*pm, currentOp->getParentOp())))
+        if (!failed(runPipeline(pm, currentOp->getParentOp())))
           signalPassFailure();
       return;
     }
@@ -78,17 +79,15 @@ public:
           return;
         llvm::errs() << "Run on " << *op << "\n";
         // Run on the current operation
-        if (failed(runPipeline(*pm, op)))
+        if (failed(runPipeline(pm, op)))
           signalPassFailure();
       });
     } else {
       // Run on the current operation
-      if (failed(runPipeline(*pm, currentOp)))
+      if (failed(runPipeline(pm, currentOp)))
         signalPassFailure();
     }
   }
-
-  std::unique_ptr<OpPassManager> pm;
 
   Option<bool> runOnNestedOp{
       *this, "run-on-nested-operations",
@@ -103,7 +102,7 @@ public:
       llvm::cl::desc("The pipeline description that "
                      "will run on the filtered function.")};
   ListOption<std::string> opNames{
-      *this, "op-name", llvm::cl::MiscFlags::CommaSeparated,
+      *this, "op-name",
       llvm::cl::desc("List of function name to apply the pipeline to")};
 };
 } // namespace

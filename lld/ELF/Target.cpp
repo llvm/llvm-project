@@ -91,7 +91,7 @@ TargetInfo *elf::getTarget() {
   llvm_unreachable("unknown target machine");
 }
 
-template <class ELFT> static ErrorPlace getErrPlace(const uint8_t *loc) {
+ErrorPlace elf::getErrorPlace(const uint8_t *loc) {
   assert(loc != nullptr);
   for (InputSectionBase *d : inputSections) {
     auto *isec = cast<InputSection>(d);
@@ -106,25 +106,16 @@ template <class ELFT> static ErrorPlace getErrPlace(const uint8_t *loc) {
       assert(isa<SyntheticSection>(isec) && "No data but not synthetic?");
       continue;
     }
-    if (isecLoc <= loc && loc < isecLoc + isec->getSize())
-      return {isec, isec->template getLocation<ELFT>(loc - isecLoc) + ": "};
+    if (isecLoc <= loc && loc < isecLoc + isec->getSize()) {
+      std::string objLoc = isec->getLocation(loc - isecLoc);
+      // Return object file location and source file location.
+      // TODO: Refactor getSrcMsg not to take a variable.
+      Undefined dummy(nullptr, "", STB_LOCAL, 0, 0);
+      return {isec, objLoc + ": ",
+              isec->file ? isec->getSrcMsg(dummy, loc - isecLoc) : ""};
+    }
   }
   return {};
-}
-
-ErrorPlace elf::getErrorPlace(const uint8_t *loc) {
-  switch (config->ekind) {
-  case ELF32LEKind:
-    return getErrPlace<ELF32LE>(loc);
-  case ELF32BEKind:
-    return getErrPlace<ELF32BE>(loc);
-  case ELF64LEKind:
-    return getErrPlace<ELF64LE>(loc);
-  case ELF64BEKind:
-    return getErrPlace<ELF64BE>(loc);
-  default:
-    llvm_unreachable("unknown ELF type");
-  }
 }
 
 TargetInfo::~TargetInfo() {}
@@ -187,7 +178,7 @@ void TargetInfo::relaxTlsLdToLe(uint8_t *loc, const Relocation &rel,
 }
 
 uint64_t TargetInfo::getImageBase() const {
-  // Use -image-base if set. Fall back to the target default if not.
+  // Use --image-base if set. Fall back to the target default if not.
   if (config->imageBase)
     return *config->imageBase;
   return config->isPic ? 0 : defaultImageBase;

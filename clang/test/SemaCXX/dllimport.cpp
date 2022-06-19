@@ -7,6 +7,7 @@
 // RUN: %clang_cc1 -triple x86_64-windows-itanium -fsyntax-only -fms-extensions -verify -std=c++17 -Wunsupported-dll-base-class-template -DWI %s
 // RUN: %clang_cc1 -triple x86_64-scei-ps4        -fsyntax-only -fdeclspec      -verify -std=c++11 -Wunsupported-dll-base-class-template -DWI %s
 // RUN: %clang_cc1 -triple x86_64-scei-ps4        -fsyntax-only -fdeclspec      -verify -std=c++17 -Wunsupported-dll-base-class-template -DWI %s
+// RUN: %clang_cc1 -triple x86_64-sie-ps5         -fsyntax-only -fdeclspec      -verify -std=c++17 -Wunsupported-dll-base-class-template -DWI %s
 
 // Helper structs to make templates more expressive.
 struct ImplicitInst_Imported {};
@@ -267,7 +268,7 @@ template<> __declspec(dllimport) int VarTmpl<ExplicitSpec_Def_Imported> = 1; // 
 //===----------------------------------------------------------------------===//
 
 // Import function declaration. Check different placements.
-__attribute__((dllimport)) void decl1A(); // Sanity check with __attribute__
+__attribute__((dllimport)) void decl1A(); // Validation check with __attribute__
 __declspec(dllimport)      void decl1B();
 
 void __attribute__((dllimport)) decl2A();

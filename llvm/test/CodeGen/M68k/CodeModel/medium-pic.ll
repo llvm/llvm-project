@@ -48,10 +48,10 @@ declare i8* @malloc(i32)
 define void @test2() nounwind {
 ; CHECK-LABEL: test2:
 ; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    sub.l #4, %sp
+; CHECK-NEXT:    suba.l #4, %sp
 ; CHECK-NEXT:    move.l #40, (%sp)
 ; CHECK-NEXT:    jsr (malloc@PLT,%pc)
-; CHECK-NEXT:    add.l #4, %sp
+; CHECK-NEXT:    adda.l #4, %sp
 ; CHECK-NEXT:    rts
 entry:
     %ptr = call i8* @malloc(i32 40)
@@ -64,13 +64,13 @@ declare void(...)* @afoo(...)
 define void @test3() nounwind {
 ; CHECK-LABEL: test3:
 ; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    sub.l #4, %sp
+; CHECK-NEXT:    suba.l #4, %sp
 ; CHECK-NEXT:    jsr (afoo@PLT,%pc)
 ; CHECK-NEXT:    move.l %d0, %a0
 ; CHECK-NEXT:    move.l (pfoo@GOTPCREL,%pc), %a1
 ; CHECK-NEXT:    move.l %a0, (%a1)
 ; CHECK-NEXT:    jsr (%a0)
-; CHECK-NEXT:    add.l #4, %sp
+; CHECK-NEXT:    adda.l #4, %sp
 ; CHECK-NEXT:    rts
 entry:
     %tmp = call void(...)*(...) @afoo()
@@ -85,9 +85,9 @@ declare void @foo(...)
 define void @test4() nounwind {
 ; CHECK-LABEL: test4:
 ; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    sub.l #4, %sp
+; CHECK-NEXT:    suba.l #4, %sp
 ; CHECK-NEXT:    jsr (foo@PLT,%pc)
-; CHECK-NEXT:    add.l #4, %sp
+; CHECK-NEXT:    adda.l #4, %sp
 ; CHECK-NEXT:    rts
 entry:
     call void(...) @foo()
@@ -103,7 +103,7 @@ define void @test5() nounwind {
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    lea (_GLOBAL_OFFSET_TABLE_@GOTPCREL,%pc), %a0
 ; CHECK-NEXT:    move.l %a0, %a1
-; CHECK-NEXT:    add.l #dst6@GOTOFF, %a1
+; CHECK-NEXT:    adda.l #dst6@GOTOFF, %a1
 ; CHECK-NEXT:    move.l #ptr6@GOTOFF, %d0
 ; CHECK-NEXT:    move.l %a1, (0,%a0,%d0)
 ; CHECK-NEXT:    move.l #src6@GOTOFF, %d0
@@ -129,8 +129,10 @@ define void @test7(i32 %n.u) nounwind {
 ; CHECK-NEXT:    lea (_GLOBAL_OFFSET_TABLE_@GOTPCREL,%pc), %a0
 ; CHECK-NEXT:    lsl.l #2, %d0
 ; CHECK-NEXT:    move.l %a0, %a1
-; CHECK-NEXT:    add.l #.LJTI6_0@GOTOFF, %a1
-; CHECK-NEXT:    add.l (0,%a1,%d0), %a0
+; CHECK-NEXT:    adda.l #.LJTI6_0@GOTOFF, %a1
+; CHECK-NEXT:    move.l %a0, %d1
+; CHECK-NEXT:    add.l (0,%a1,%d0), %d1
+; CHECK-NEXT:    move.l %d1, %a0
 ; CHECK-NEXT:    jmp (%a0)
 ; CHECK-NEXT:  .LBB6_12: ; %bb2
 ; CHECK-NEXT:    bra foo6@PLT ; TAILCALL

@@ -1019,6 +1019,7 @@ BasicType
 .. py:data:: eBasicTypeUnsignedWChar
 .. py:data:: eBasicTypeChar16
 .. py:data:: eBasicTypeChar32
+.. py:data:: eBasicTypeChar8
 .. py:data:: eBasicTypeShort
 .. py:data:: eBasicTypeUnsignedShort
 .. py:data:: eBasicTypeInt

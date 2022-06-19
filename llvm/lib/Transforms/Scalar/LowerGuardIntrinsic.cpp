@@ -15,7 +15,6 @@
 #include "llvm/Transforms/Scalar/LowerGuardIntrinsic.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Analysis/GuardUtils.h"
-#include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/InstIterator.h"
 #include "llvm/IR/Instructions.h"
@@ -49,9 +48,13 @@ static bool lowerGuardIntrinsic(Function &F) {
     return false;
 
   SmallVector<CallInst *, 8> ToLower;
-  for (auto &I : instructions(F))
-    if (isGuard(&I))
-      ToLower.push_back(cast<CallInst>(&I));
+  // Traverse through the users of GuardDecl.
+  // This is presumably cheaper than traversing all instructions in the
+  // function.
+  for (auto *U : GuardDecl->users())
+    if (auto *CI = dyn_cast<CallInst>(U))
+      if (CI->getFunction() == &F)
+        ToLower.push_back(CI);
 
   if (ToLower.empty())
     return false;

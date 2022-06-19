@@ -2,7 +2,8 @@ from __future__ import print_function
 import lldb
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test.decorators import *
-from gdbclientutils import *
+from lldbsuite.test.gdbclientutils import *
+from lldbsuite.test.lldbgdbclient import GDBRemoteTestBase
 
 class MyResponder(MockGDBServerResponder):
     def qXferRead(self, obj, annex, offset, length):
@@ -127,6 +128,7 @@ class TestTargetXMLArch(GDBRemoteTestBase):
 
     @skipIfXmlSupportMissing
     @skipIfRemote
+    @skipIfLLVMTargetMissing("X86")
     def test_register_augmentation(self):
         """
         Test that we correctly associate the register info with the eh_frame

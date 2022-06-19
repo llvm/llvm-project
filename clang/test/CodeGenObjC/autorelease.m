@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -triple x86_64-apple-darwin10 -emit-llvm -fobjc-arc -fobjc-runtime=macosx-10.7 -fexceptions -fobjc-exceptions -o - %s | FileCheck %s
-// RUN: %clang_cc1 -triple x86_64-apple-darwin11 -emit-llvm -fobjc-runtime=macosx-10.7 -fexceptions -fobjc-exceptions -o - %s | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-apple-darwin10 -emit-llvm -fobjc-arc -fobjc-runtime=macosx-10.7 -fexceptions -fobjc-exceptions -o - %s | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-apple-darwin11 -emit-llvm -fobjc-runtime=macosx-10.7 -fexceptions -fobjc-exceptions -o - %s | FileCheck %s
 // rdar://8881826
 // rdar://9412038
 

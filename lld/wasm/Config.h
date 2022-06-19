@@ -18,7 +18,7 @@ namespace lld {
 namespace wasm {
 
 // For --unresolved-symbols.
-enum class UnresolvedPolicy { ReportError, Warn, Ignore };
+enum class UnresolvedPolicy { ReportError, Warn, Ignore, ImportDynamic };
 
 // This struct contains the global configuration for the linker.
 // Most fields are direct mapping from the command line options
@@ -35,6 +35,7 @@ struct Configuration {
   bool exportAll;
   bool exportDynamic;
   bool exportTable;
+  bool extendedConst;
   bool growableTable;
   bool gcSections;
   bool importMemory;
@@ -60,7 +61,6 @@ struct Configuration {
   unsigned ltoo;
   unsigned optimize;
   llvm::StringRef thinLTOJobs;
-  bool ltoNewPassManager;
   bool ltoDebugPassManager;
   UnresolvedPolicy unresolvedSymbols;
 
@@ -77,7 +77,7 @@ struct Configuration {
   llvm::Optional<std::vector<std::string>> features;
 
   // The following config options do not directly correspond to any
-  // particualr command line options.
+  // particular command line options.
 
   // True if we are creating position-independent code.
   bool isPic;
@@ -91,6 +91,10 @@ struct Configuration {
   // for shared libraries (since they always added to a dynamic offset at
   // runtime).
   uint32_t tableBase = 0;
+
+  // Will be set to true if bss data segments should be emitted. In most cases
+  // this is not necessary.
+  bool emitBssSegments = false;
 };
 
 // The only instance of Configuration struct.

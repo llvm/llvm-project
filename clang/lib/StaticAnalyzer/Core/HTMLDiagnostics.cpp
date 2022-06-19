@@ -27,6 +27,8 @@
 #include "clang/Rewrite/Core/Rewriter.h"
 #include "clang/StaticAnalyzer/Core/PathDiagnosticConsumers.h"
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/Sequence.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/iterator_range.h"
@@ -57,6 +59,8 @@ using namespace ento;
 
 namespace {
 
+class ArrowMap;
+
 class HTMLDiagnostics : public PathDiagnosticConsumer {
   PathDiagnosticConsumerOptions DiagOpts;
   std::string Directory;
@@ -77,59 +81,92 @@ public:
   void FlushDiagnosticsImpl(std::vector<const PathDiagnostic *> &Diags,
                             FilesMade *filesMade) override;
 
-  StringRef getName() const override {
-    return "HTMLDiagnostics";
-  }
+  StringRef getName() const override { return "HTMLDiagnostics"; }
 
   bool supportsCrossFileDiagnostics() const override {
     return SupportsCrossFileDiagnostics;
   }
 
-  unsigned ProcessMacroPiece(raw_ostream &os,
-                             const PathDiagnosticMacroPiece& P,
+  unsigned ProcessMacroPiece(raw_ostream &os, const PathDiagnosticMacroPiece &P,
                              unsigned num);
+
+  unsigned ProcessControlFlowPiece(Rewriter &R, FileID BugFileID,
+                                   const PathDiagnosticControlFlowPiece &P,
+                                   unsigned Number);
 
   void HandlePiece(Rewriter &R, FileID BugFileID, const PathDiagnosticPiece &P,
                    const std::vector<SourceRange> &PopUpRanges, unsigned num,
                    unsigned max);
 
-  void HighlightRange(Rewriter& R, FileID BugFileID, SourceRange Range,
+  void HighlightRange(Rewriter &R, FileID BugFileID, SourceRange Range,
                       const char *HighlightStart = "<span class=\"mrange\">",
                       const char *HighlightEnd = "</span>");
 
-  void ReportDiag(const PathDiagnostic& D,
-                  FilesMade *filesMade);
+  void ReportDiag(const PathDiagnostic &D, FilesMade *filesMade);
 
   // Generate the full HTML report
-  std::string GenerateHTML(const PathDiagnostic& D, Rewriter &R,
-                           const SourceManager& SMgr, const PathPieces& path,
+  std::string GenerateHTML(const PathDiagnostic &D, Rewriter &R,
+                           const SourceManager &SMgr, const PathPieces &path,
                            const char *declName);
 
   // Add HTML header/footers to file specified by FID
-  void FinalizeHTML(const PathDiagnostic& D, Rewriter &R,
-                    const SourceManager& SMgr, const PathPieces& path,
+  void FinalizeHTML(const PathDiagnostic &D, Rewriter &R,
+                    const SourceManager &SMgr, const PathPieces &path,
                     FileID FID, const FileEntry *Entry, const char *declName);
 
   // Rewrite the file specified by FID with HTML formatting.
-  void RewriteFile(Rewriter &R, const PathPieces& path, FileID FID);
+  void RewriteFile(Rewriter &R, const PathPieces &path, FileID FID);
 
+  PathGenerationScheme getGenerationScheme() const override {
+    return Everything;
+  }
 
 private:
+  void addArrowSVGs(Rewriter &R, FileID BugFileID,
+                    const ArrowMap &ArrowIndices);
+
   /// \return Javascript for displaying shortcuts help;
   StringRef showHelpJavascript();
 
   /// \return Javascript for navigating the HTML report using j/k keys.
   StringRef generateKeyboardNavigationJavascript();
 
+  /// \return Javascript for drawing control-flow arrows.
+  StringRef generateArrowDrawingJavascript();
+
   /// \return JavaScript for an option to only show relevant lines.
-  std::string showRelevantLinesJavascript(
-    const PathDiagnostic &D, const PathPieces &path);
+  std::string showRelevantLinesJavascript(const PathDiagnostic &D,
+                                          const PathPieces &path);
 
   /// Write executed lines from \p D in JSON format into \p os.
-  void dumpCoverageData(const PathDiagnostic &D,
-                        const PathPieces &path,
+  void dumpCoverageData(const PathDiagnostic &D, const PathPieces &path,
                         llvm::raw_string_ostream &os);
 };
+
+bool isArrowPiece(const PathDiagnosticPiece &P) {
+  return isa<PathDiagnosticControlFlowPiece>(P) && P.getString().empty();
+}
+
+unsigned getPathSizeWithoutArrows(const PathPieces &Path) {
+  unsigned TotalPieces = Path.size();
+  unsigned TotalArrowPieces = llvm::count_if(
+      Path, [](const PathDiagnosticPieceRef &P) { return isArrowPiece(*P); });
+  return TotalPieces - TotalArrowPieces;
+}
+
+class ArrowMap : public std::vector<unsigned> {
+  using Base = std::vector<unsigned>;
+
+public:
+  ArrowMap(unsigned Size) : Base(Size, 0) {}
+  unsigned getTotalNumberOfArrows() const { return at(0); }
+};
+
+llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, const ArrowMap &Indices) {
+  OS << "[ ";
+  llvm::interleave(Indices, OS, ",");
+  return OS << " ]";
+}
 
 } // namespace
 
@@ -208,6 +245,18 @@ void HTMLDiagnostics::FlushDiagnosticsImpl(
     ReportDiag(*Diag, filesMade);
 }
 
+static llvm::SmallString<32> getIssueHash(const PathDiagnostic &D,
+                                          const Preprocessor &PP) {
+  SourceManager &SMgr = PP.getSourceManager();
+  PathDiagnosticLocation UPDLoc = D.getUniqueingLoc();
+  FullSourceLoc L(SMgr.getExpansionLoc(UPDLoc.isValid()
+                                           ? UPDLoc.asLocation()
+                                           : D.getLocation().asLocation()),
+                  SMgr);
+  return getIssueHash(L, D.getCheckerName(), D.getBugType(),
+                      D.getDeclWithIssue(), PP.getLangOpts());
+}
+
 void HTMLDiagnostics::ReportDiag(const PathDiagnostic& D,
                                  FilesMade *filesMade) {
   // Create the HTML directory if it is missing.
@@ -233,11 +282,6 @@ void HTMLDiagnostics::ReportDiag(const PathDiagnostic& D,
 
   // Create a new rewriter to generate HTML.
   Rewriter R(const_cast<SourceManager&>(SMgr), PP.getLangOpts());
-
-  // The file for the first path element is considered the main report file, it
-  // will usually be equivalent to SMgr.getMainFileID(); however, it might be a
-  // header when -analyzer-opt-analyze-headers is used.
-  FileID ReportFile = path.front()->getLocation().asLocation().getExpansionLoc().getFileID();
 
   // Get the function/method name
   SmallString<128> declName("unknown");
@@ -265,46 +309,52 @@ void HTMLDiagnostics::ReportDiag(const PathDiagnostic& D,
 
   // Create a path for the target HTML file.
   int FD;
-  SmallString<128> Model, ResultPath;
 
-  if (!DiagOpts.ShouldWriteStableReportFilename) {
-      llvm::sys::path::append(Model, Directory, "report-%%%%%%.html");
-      if (std::error_code EC =
-          llvm::sys::fs::make_absolute(Model)) {
-          llvm::errs() << "warning: could not make '" << Model
-                       << "' absolute: " << EC.message() << '\n';
-        return;
-      }
-      if (std::error_code EC = llvm::sys::fs::createUniqueFile(
-              Model, FD, ResultPath, llvm::sys::fs::OF_Text)) {
-        llvm::errs() << "warning: could not create file in '" << Directory
-                     << "': " << EC.message() << '\n';
-        return;
-      }
-  } else {
-      int i = 1;
-      std::error_code EC;
-      do {
-          // Find a filename which is not already used
-          const FileEntry* Entry = SMgr.getFileEntryForID(ReportFile);
-          std::stringstream filename;
-          Model = "";
-          filename << "report-"
-                   << llvm::sys::path::filename(Entry->getName()).str()
-                   << "-" << declName.c_str()
-                   << "-" << offsetDecl
-                   << "-" << i << ".html";
-          llvm::sys::path::append(Model, Directory,
-                                  filename.str());
-          EC = llvm::sys::fs::openFileForReadWrite(
-              Model, FD, llvm::sys::fs::CD_CreateNew, llvm::sys::fs::OF_None);
-          if (EC && EC != llvm::errc::file_exists) {
-              llvm::errs() << "warning: could not create file '" << Model
-                           << "': " << EC.message() << '\n';
-              return;
-          }
-          i++;
-      } while (EC);
+  SmallString<128> FileNameStr;
+  llvm::raw_svector_ostream FileName(FileNameStr);
+  FileName << "report-";
+
+  // Historically, neither the stable report filename nor the unstable report
+  // filename were actually stable. That said, the stable report filename
+  // was more stable because it was mostly composed of information
+  // about the bug report instead of being completely random.
+  // Now both stable and unstable report filenames are in fact stable
+  // but the stable report filename is still more verbose.
+  if (DiagOpts.ShouldWriteVerboseReportFilename) {
+    // FIXME: This code relies on knowing what constitutes the issue hash.
+    // Otherwise deduplication won't work correctly.
+    FileID ReportFile =
+        path.back()->getLocation().asLocation().getExpansionLoc().getFileID();
+
+    const FileEntry *Entry = SMgr.getFileEntryForID(ReportFile);
+
+    FileName << llvm::sys::path::filename(Entry->getName()).str() << "-"
+             << declName.c_str() << "-" << offsetDecl << "-";
+  }
+
+  FileName << StringRef(getIssueHash(D, PP)).substr(0, 6).str() << ".html";
+
+  SmallString<128> ResultPath;
+  llvm::sys::path::append(ResultPath, Directory, FileName.str());
+  if (std::error_code EC = llvm::sys::fs::make_absolute(ResultPath)) {
+    llvm::errs() << "warning: could not make '" << ResultPath
+                 << "' absolute: " << EC.message() << '\n';
+    return;
+  }
+
+  if (std::error_code EC = llvm::sys::fs::openFileForReadWrite(
+          ResultPath, FD, llvm::sys::fs::CD_CreateNew,
+          llvm::sys::fs::OF_Text)) {
+    // Existence of the file corresponds to the situation where a different
+    // Clang instance has emitted a bug report with the same issue hash.
+    // This is an entirely normal situation that does not deserve a warning,
+    // as apart from hash collisions this can happen because the reports
+    // are in fact similar enough to be considered duplicates of each other.
+    if (EC != llvm::errc::file_exists) {
+      llvm::errs() << "warning: could not create file in '" << Directory
+                   << "': " << EC.message() << '\n';
+    }
+    return;
   }
 
   llvm::raw_fd_ostream os(FD, true);
@@ -360,7 +410,7 @@ std::string HTMLDiagnostics::GenerateHTML(const PathDiagnostic& D, Rewriter &R,
     }
 
     // Append files to the main report file in the order they appear in the path
-    for (auto I : llvm::make_range(FileIDs.begin() + 1, FileIDs.end())) {
+    for (auto I : llvm::drop_begin(FileIDs)) {
       std::string s;
       llvm::raw_string_ostream os(s);
 
@@ -387,7 +437,7 @@ std::string HTMLDiagnostics::GenerateHTML(const PathDiagnostic& D, Rewriter &R,
   for (auto BI : *Buf)
     os << BI;
 
-  return os.str();
+  return file;
 }
 
 void HTMLDiagnostics::dumpCoverageData(
@@ -452,10 +502,11 @@ window.addEventListener("keydown", function (event) {
   if (event.defaultPrevented) {
     return;
   }
-  if (event.key == "S") {
+  // SHIFT + S
+  if (event.shiftKey && event.keyCode == 83) {
     var checked = document.getElementsByName("showCounterexample")[0].checked;
     filterCounterexample(!checked);
-    document.getElementsByName("showCounterexample")[0].checked = !checked;
+    document.getElementsByName("showCounterexample")[0].click();
   } else {
     return;
   }
@@ -475,10 +526,15 @@ document.addEventListener("DOMContentLoaded", function() {
     <label for="showCounterexample">
        Show only relevant lines
     </label>
+    <input type="checkbox" name="showArrows"
+           id="showArrows" style="margin-left: 10px" />
+    <label for="showArrows">
+       Show control flow arrows
+    </label>
 </form>
 )<<<";
 
-  return os.str();
+  return s;
 }
 
 void HTMLDiagnostics::FinalizeHTML(const PathDiagnostic& D, Rewriter &R,
@@ -502,6 +558,9 @@ void HTMLDiagnostics::FinalizeHTML(const PathDiagnostic& D, Rewriter &R,
 
   R.InsertTextBefore(SMgr.getLocForStartOfFile(FID),
                      generateKeyboardNavigationJavascript());
+
+  R.InsertTextBefore(SMgr.getLocForStartOfFile(FID),
+                     generateArrowDrawingJavascript());
 
   // Checkbox and javascript for filtering the output to the counterexample.
   R.InsertTextBefore(SMgr.getLocForStartOfFile(FID),
@@ -570,6 +629,7 @@ void HTMLDiagnostics::FinalizeHTML(const PathDiagnostic& D, Rewriter &R,
   <a href="#" onclick="toggleHelp(); return false;">Close</a>
 </div>
 )<<<";
+
     R.InsertTextBefore(SMgr.getLocForStartOfFile(FID), os.str());
   }
 
@@ -591,7 +651,6 @@ void HTMLDiagnostics::FinalizeHTML(const PathDiagnostic& D, Rewriter &R,
                                              ? UPDLoc.asLocation()
                                              : D.getLocation().asLocation()),
                     SMgr);
-    const Decl *DeclWithIssue = D.getDeclWithIssue();
 
     StringRef BugCategory = D.getCategory();
     if (!BugCategory.empty())
@@ -603,9 +662,7 @@ void HTMLDiagnostics::FinalizeHTML(const PathDiagnostic& D, Rewriter &R,
 
     os  << "\n<!-- FUNCTIONNAME " <<  declName << " -->\n";
 
-    os << "\n<!-- ISSUEHASHCONTENTOFLINEINCONTEXT "
-       << getIssueHash(L, D.getCheckerName(), D.getBugType(), DeclWithIssue,
-                       PP.getLangOpts())
+    os << "\n<!-- ISSUEHASHCONTENTOFLINEINCONTEXT " << getIssueHash(D, PP)
        << " -->\n";
 
     os << "\n<!-- BUGLINE "
@@ -616,7 +673,7 @@ void HTMLDiagnostics::FinalizeHTML(const PathDiagnostic& D, Rewriter &R,
       << ColumnNumber
       << " -->\n";
 
-    os << "\n<!-- BUGPATHLENGTH " << path.size() << " -->\n";
+    os << "\n<!-- BUGPATHLENGTH " << getPathSizeWithoutArrows(path) << " -->\n";
 
     // Mark the end of the tags.
     os << "\n<!-- BUGMETAEND -->\n";
@@ -695,8 +752,7 @@ static void HandlePopUpPieceEndTag(Rewriter &R,
   Out << "</div></td><td>" << Piece.getString() << "</td></tr>";
 
   // If no report made at this range mark the variable and add the end tags.
-  if (std::find(PopUpRanges.begin(), PopUpRanges.end(), Range) ==
-      PopUpRanges.end()) {
+  if (!llvm::is_contained(PopUpRanges, Range)) {
     // Store that we create a report at this range.
     PopUpRanges.push_back(Range);
 
@@ -711,30 +767,33 @@ static void HandlePopUpPieceEndTag(Rewriter &R,
   }
 }
 
-void HTMLDiagnostics::RewriteFile(Rewriter &R,
-                                  const PathPieces& path, FileID FID) {
+void HTMLDiagnostics::RewriteFile(Rewriter &R, const PathPieces &path,
+                                  FileID FID) {
+
   // Process the path.
   // Maintain the counts of extra note pieces separately.
-  unsigned TotalPieces = path.size();
-  unsigned TotalNotePieces = std::count_if(
-      path.begin(), path.end(), [](const PathDiagnosticPieceRef &p) {
+  unsigned TotalPieces = getPathSizeWithoutArrows(path);
+  unsigned TotalNotePieces =
+      llvm::count_if(path, [](const PathDiagnosticPieceRef &p) {
         return isa<PathDiagnosticNotePiece>(*p);
       });
-  unsigned PopUpPieceCount = std::count_if(
-      path.begin(), path.end(), [](const PathDiagnosticPieceRef &p) {
+  unsigned PopUpPieceCount =
+      llvm::count_if(path, [](const PathDiagnosticPieceRef &p) {
         return isa<PathDiagnosticPopUpPiece>(*p);
       });
 
   unsigned TotalRegularPieces = TotalPieces - TotalNotePieces - PopUpPieceCount;
   unsigned NumRegularPieces = TotalRegularPieces;
   unsigned NumNotePieces = TotalNotePieces;
+  unsigned NumberOfArrows = 0;
   // Stores the count of the regular piece indices.
   std::map<int, int> IndexMap;
+  ArrowMap ArrowIndices(TotalRegularPieces + 1);
 
   // Stores the different ranges where we have reported something.
   std::vector<SourceRange> PopUpRanges;
-  for (auto I = path.rbegin(), E = path.rend(); I != E; ++I) {
-    const auto &Piece = *I->get();
+  for (const PathDiagnosticPieceRef &I : llvm::reverse(path)) {
+    const auto &Piece = *I.get();
 
     if (isa<PathDiagnosticPopUpPiece>(Piece)) {
       ++IndexMap[NumRegularPieces];
@@ -744,18 +803,40 @@ void HTMLDiagnostics::RewriteFile(Rewriter &R,
       // as a separate pass through the piece list.
       HandlePiece(R, FID, Piece, PopUpRanges, NumNotePieces, TotalNotePieces);
       --NumNotePieces;
+
+    } else if (isArrowPiece(Piece)) {
+      NumberOfArrows = ProcessControlFlowPiece(
+          R, FID, cast<PathDiagnosticControlFlowPiece>(Piece), NumberOfArrows);
+      ArrowIndices[NumRegularPieces] = NumberOfArrows;
+
     } else {
       HandlePiece(R, FID, Piece, PopUpRanges, NumRegularPieces,
                   TotalRegularPieces);
       --NumRegularPieces;
+      ArrowIndices[NumRegularPieces] = ArrowIndices[NumRegularPieces + 1];
     }
   }
+  ArrowIndices[0] = NumberOfArrows;
+
+  // At this point ArrowIndices represent the following data structure:
+  //   [a_0, a_1, ..., a_N]
+  // where N is the number of events in the path.
+  //
+  // Then for every event with index i \in [0, N - 1], we can say that
+  // arrows with indices \in [a_(i+1), a_i) correspond to that event.
+  // We can say that because arrows with these indices appeared in the
+  // path in between the i-th and the (i+1)-th events.
+  assert(ArrowIndices.back() == 0 &&
+         "No arrows should be after the last event");
+  // This assertion also guarantees that all indices in are <= NumberOfArrows.
+  assert(llvm::is_sorted(ArrowIndices, std::greater<unsigned>()) &&
+         "Incorrect arrow indices map");
 
   // Secondary indexing if we are having multiple pop-ups between two notes.
   // (e.g. [(13) 'a' is 'true'];  [(13.1) 'b' is 'false'];  [(13.2) 'c' is...)
   NumRegularPieces = TotalRegularPieces;
-  for (auto I = path.rbegin(), E = path.rend(); I != E; ++I) {
-    const auto &Piece = *I->get();
+  for (const PathDiagnosticPieceRef &I : llvm::reverse(path)) {
+    const auto &Piece = *I.get();
 
     if (const auto *PopUpP = dyn_cast<PathDiagnosticPopUpPiece>(&Piece)) {
       int PopUpPieceIndex = IndexMap[NumRegularPieces];
@@ -771,7 +852,7 @@ void HTMLDiagnostics::RewriteFile(Rewriter &R,
       if (PopUpPieceIndex > 0)
         --IndexMap[NumRegularPieces];
 
-    } else if (!isa<PathDiagnosticNotePiece>(Piece)) {
+    } else if (!isa<PathDiagnosticNotePiece>(Piece) && !isArrowPiece(Piece)) {
       --NumRegularPieces;
     }
   }
@@ -782,6 +863,8 @@ void HTMLDiagnostics::RewriteFile(Rewriter &R,
   // Add line numbers, header, footer, etc.
   html::EscapeText(R, FID);
   html::AddLineNumbers(R, FID);
+
+  addArrowSVGs(R, FID, ArrowIndices);
 
   // If we have a preprocessor, relex the file and syntax highlight.
   // We might not have a preprocessor if we come from a deserialized AST file,
@@ -1007,8 +1090,7 @@ void HTMLDiagnostics::HandlePiece(Rewriter &R, FileID BugFileID,
   ArrayRef<SourceRange> Ranges = P.getRanges();
   for (const auto &Range : Ranges) {
     // If we have already highlighted the range as a pop-up there is no work.
-    if (std::find(PopUpRanges.begin(), PopUpRanges.end(), Range) !=
-        PopUpRanges.end())
+    if (llvm::is_contained(PopUpRanges, Range))
       continue;
 
     HighlightRange(R, LPosInfo.first, Range);
@@ -1047,6 +1129,104 @@ unsigned HTMLDiagnostics::ProcessMacroPiece(raw_ostream &os,
   }
 
   return num;
+}
+
+void HTMLDiagnostics::addArrowSVGs(Rewriter &R, FileID BugFileID,
+                                   const ArrowMap &ArrowIndices) {
+  std::string S;
+  llvm::raw_string_ostream OS(S);
+
+  OS << R"<<<(
+<style type="text/css">
+  svg {
+      position:absolute;
+      top:0;
+      left:0;
+      height:100%;
+      width:100%;
+      pointer-events: none;
+      overflow: visible
+  }
+  .arrow {
+      stroke-opacity: 0.2;
+      stroke-width: 1;
+      marker-end: url(#arrowhead);
+  }
+
+  .arrow.selected {
+      stroke-opacity: 0.6;
+      stroke-width: 2;
+      marker-end: url(#arrowheadSelected);
+  }
+
+  .arrowhead {
+      orient: auto;
+      stroke: none;
+      opacity: 0.6;
+      fill: blue;
+  }
+</style>
+<svg xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <marker id="arrowheadSelected" class="arrowhead" opacity="0.6"
+            viewBox="0 0 10 10" refX="3" refY="5"
+            markerWidth="4" markerHeight="4">
+      <path d="M 0 0 L 10 5 L 0 10 z" />
+    </marker>
+    <marker id="arrowhead" class="arrowhead" opacity="0.2"
+            viewBox="0 0 10 10" refX="3" refY="5"
+            markerWidth="4" markerHeight="4">
+      <path d="M 0 0 L 10 5 L 0 10 z" />
+    </marker>
+  </defs>
+  <g id="arrows" fill="none" stroke="blue" visibility="hidden">
+)<<<";
+
+  for (unsigned Index : llvm::seq(0u, ArrowIndices.getTotalNumberOfArrows())) {
+    OS << "    <path class=\"arrow\" id=\"arrow" << Index << "\"/>\n";
+  }
+
+  OS << R"<<<(
+  </g>
+</svg>
+<script type='text/javascript'>
+const arrowIndices = )<<<";
+
+  OS << ArrowIndices << "\n</script>\n";
+
+  R.InsertTextBefore(R.getSourceMgr().getLocForStartOfFile(BugFileID),
+                     OS.str());
+}
+
+std::string getSpanBeginForControl(const char *ClassName, unsigned Index) {
+  std::string Result;
+  llvm::raw_string_ostream OS(Result);
+  OS << "<span id=\"" << ClassName << Index << "\">";
+  return Result;
+}
+
+std::string getSpanBeginForControlStart(unsigned Index) {
+  return getSpanBeginForControl("start", Index);
+}
+
+std::string getSpanBeginForControlEnd(unsigned Index) {
+  return getSpanBeginForControl("end", Index);
+}
+
+unsigned HTMLDiagnostics::ProcessControlFlowPiece(
+    Rewriter &R, FileID BugFileID, const PathDiagnosticControlFlowPiece &P,
+    unsigned Number) {
+  for (const PathDiagnosticLocationPair &LPair : P) {
+    std::string Start = getSpanBeginForControlStart(Number),
+                End = getSpanBeginForControlEnd(Number++);
+
+    HighlightRange(R, BugFileID, LPair.getStart().asRange().getBegin(),
+                   Start.c_str());
+    HighlightRange(R, BugFileID, LPair.getEnd().asRange().getBegin(),
+                   End.c_str());
+  }
+
+  return Number;
 }
 
 void HTMLDiagnostics::HighlightRange(Rewriter& R, FileID BugFileID,
@@ -1109,7 +1289,7 @@ document.addEventListener("DOMContentLoaded", function() {
 });
 
 var findNum = function() {
-    var s = document.querySelector(".selected");
+    var s = document.querySelector(".msg.selected");
     if (!s || s.id == "EndPath") {
         return 0;
     }
@@ -1117,14 +1297,32 @@ var findNum = function() {
     return out;
 };
 
+var classListAdd = function(el, theClass) {
+  if(!el.className.baseVal)
+    el.className += " " + theClass;
+  else
+    el.className.baseVal += " " + theClass;
+};
+
+var classListRemove = function(el, theClass) {
+  var className = (!el.className.baseVal) ?
+      el.className : el.className.baseVal;
+    className = className.replace(" " + theClass, "");
+  if(!el.className.baseVal)
+    el.className = className;
+  else
+    el.className.baseVal = className;
+};
+
 var scrollTo = function(el) {
     querySelectorAllArray(".selected").forEach(function(s) {
-        s.classList.remove("selected");
+      classListRemove(s, "selected");
     });
-    el.classList.add("selected");
+    classListAdd(el, "selected");
     window.scrollBy(0, el.getBoundingClientRect().top -
         (window.innerHeight / 2));
-}
+    highlightArrowsForSelectedEvent();
+};
 
 var move = function(num, up, numItems) {
   if (num == 1 && up || num == numItems - 1 && !up) {
@@ -1159,15 +1357,272 @@ window.addEventListener("keydown", function (event) {
   if (event.defaultPrevented) {
     return;
   }
-  if (event.key == "j") {
+  // key 'j'
+  if (event.keyCode == 74) {
     navigateTo(/*up=*/false);
-  } else if (event.key == "k") {
+  // key 'k'
+  } else if (event.keyCode == 75) {
     navigateTo(/*up=*/true);
   } else {
     return;
   }
   event.preventDefault();
 }, true);
+</script>
+  )<<<";
+}
+
+StringRef HTMLDiagnostics::generateArrowDrawingJavascript() {
+  return R"<<<(
+<script type='text/javascript'>
+// Return range of numbers from a range [lower, upper).
+function range(lower, upper) {
+  var array = [];
+  for (var i = lower; i <= upper; ++i) {
+      array.push(i);
+  }
+  return array;
+}
+
+var getRelatedArrowIndices = function(pathId) {
+  // HTML numeration of events is a bit different than it is in the path.
+  // Everything is rotated one step to the right, so the last element
+  // (error diagnostic) has index 0.
+  if (pathId == 0) {
+    // arrowIndices has at least 2 elements
+    pathId = arrowIndices.length - 1;
+  }
+
+  return range(arrowIndices[pathId], arrowIndices[pathId - 1]);
+}
+
+var highlightArrowsForSelectedEvent = function() {
+  const selectedNum = findNum();
+  const arrowIndicesToHighlight = getRelatedArrowIndices(selectedNum);
+  arrowIndicesToHighlight.forEach((index) => {
+    var arrow = document.querySelector("#arrow" + index);
+    if(arrow) {
+      classListAdd(arrow, "selected")
+    }
+  });
+}
+
+var getAbsoluteBoundingRect = function(element) {
+  const relative = element.getBoundingClientRect();
+  return {
+    left: relative.left + window.pageXOffset,
+    right: relative.right + window.pageXOffset,
+    top: relative.top + window.pageYOffset,
+    bottom: relative.bottom + window.pageYOffset,
+    height: relative.height,
+    width: relative.width
+  };
+}
+
+var drawArrow = function(index) {
+  // This function is based on the great answer from SO:
+  //   https://stackoverflow.com/a/39575674/11582326
+  var start = document.querySelector("#start" + index);
+  var end   = document.querySelector("#end" + index);
+  var arrow = document.querySelector("#arrow" + index);
+
+  var startRect = getAbsoluteBoundingRect(start);
+  var endRect   = getAbsoluteBoundingRect(end);
+
+  // It is an arrow from a token to itself, no need to visualize it.
+  if (startRect.top == endRect.top &&
+      startRect.left == endRect.left)
+    return;
+
+  // Each arrow is a very simple Bézier curve, with two nodes and
+  // two handles.  So, we need to calculate four points in the window:
+  //   * start node
+  var posStart    = { x: 0, y: 0 };
+  //   * end node
+  var posEnd      = { x: 0, y: 0 };
+  //   * handle for the start node
+  var startHandle = { x: 0, y: 0 };
+  //   * handle for the end node
+  var endHandle   = { x: 0, y: 0 };
+  // One can visualize it as follows:
+  //
+  //         start handle
+  //        /
+  //       X"""_.-""""X
+  //         .'        \
+  //        /           start node
+  //       |
+  //       |
+  //       |      end node
+  //        \    /
+  //         `->X
+  //        X-'
+  //         \
+  //          end handle
+  //
+  // NOTE: (0, 0) is the top left corner of the window.
+
+  // We have 3 similar, but still different scenarios to cover:
+  //
+  //   1. Two tokens on different lines.
+  //             -xxx
+  //           /
+  //           \
+  //             -> xxx
+  //      In this situation, we draw arrow on the left curving to the left.
+  //   2. Two tokens on the same line, and the destination is on the right.
+  //             ____
+  //            /    \
+  //           /      V
+  //        xxx        xxx
+  //      In this situation, we draw arrow above curving upwards.
+  //   3. Two tokens on the same line, and the destination is on the left.
+  //        xxx        xxx
+  //           ^      /
+  //            \____/
+  //      In this situation, we draw arrow below curving downwards.
+  const onDifferentLines = startRect.top <= endRect.top - 5 ||
+    startRect.top >= endRect.top + 5;
+  const leftToRight = startRect.left < endRect.left;
+
+  // NOTE: various magic constants are chosen empirically for
+  //       better positioning and look
+  if (onDifferentLines) {
+    // Case #1
+    const topToBottom = startRect.top < endRect.top;
+    posStart.x = startRect.left - 1;
+    // We don't want to start it at the top left corner of the token,
+    // it doesn't feel like this is where the arrow comes from.
+    // For this reason, we start it in the middle of the left side
+    // of the token.
+    posStart.y = startRect.top + startRect.height / 2;
+
+    // End node has arrow head and we give it a bit more space.
+    posEnd.x = endRect.left - 4;
+    posEnd.y = endRect.top;
+
+    // Utility object with x and y offsets for handles.
+    var curvature = {
+      // We want bottom-to-top arrow to curve a bit more, so it doesn't
+      // overlap much with top-to-bottom curves (much more frequent).
+      x: topToBottom ? 15 : 25,
+      y: Math.min((posEnd.y - posStart.y) / 3, 10)
+    }
+
+    // When destination is on the different line, we can make a
+    // curvier arrow because we have space for it.
+    // So, instead of using
+    //
+    //   startHandle.x = posStart.x - curvature.x
+    //   endHandle.x   = posEnd.x - curvature.x
+    //
+    // We use the leftmost of these two values for both handles.
+    startHandle.x = Math.min(posStart.x, posEnd.x) - curvature.x;
+    endHandle.x = startHandle.x;
+
+    // Curving downwards from the start node...
+    startHandle.y = posStart.y + curvature.y;
+    // ... and upwards from the end node.
+    endHandle.y = posEnd.y - curvature.y;
+
+  } else if (leftToRight) {
+    // Case #2
+    // Starting from the top right corner...
+    posStart.x = startRect.right - 1;
+    posStart.y = startRect.top;
+
+    // ...and ending at the top left corner of the end token.
+    posEnd.x = endRect.left + 1;
+    posEnd.y = endRect.top - 1;
+
+    // Utility object with x and y offsets for handles.
+    var curvature = {
+      x: Math.min((posEnd.x - posStart.x) / 3, 15),
+      y: 5
+    }
+
+    // Curving to the right...
+    startHandle.x = posStart.x + curvature.x;
+    // ... and upwards from the start node.
+    startHandle.y = posStart.y - curvature.y;
+
+    // And to the left...
+    endHandle.x = posEnd.x - curvature.x;
+    // ... and upwards from the end node.
+    endHandle.y = posEnd.y - curvature.y;
+
+  } else {
+    // Case #3
+    // Starting from the bottom right corner...
+    posStart.x = startRect.right;
+    posStart.y = startRect.bottom;
+
+    // ...and ending also at the bottom right corner, but of the end token.
+    posEnd.x = endRect.right - 1;
+    posEnd.y = endRect.bottom + 1;
+
+    // Utility object with x and y offsets for handles.
+    var curvature = {
+      x: Math.min((posStart.x - posEnd.x) / 3, 15),
+      y: 5
+    }
+
+    // Curving to the left...
+    startHandle.x = posStart.x - curvature.x;
+    // ... and downwards from the start node.
+    startHandle.y = posStart.y + curvature.y;
+
+    // And to the right...
+    endHandle.x = posEnd.x + curvature.x;
+    // ... and downwards from the end node.
+    endHandle.y = posEnd.y + curvature.y;
+  }
+
+  // Put it all together into a path.
+  // More information on the format:
+  //   https://developer.mozilla.org/en-US/docs/Web/SVG/Tutorial/Paths
+  var pathStr = "M" + posStart.x + "," + posStart.y + " " +
+    "C" + startHandle.x + "," + startHandle.y + " " +
+    endHandle.x + "," + endHandle.y + " " +
+    posEnd.x + "," + posEnd.y;
+
+  arrow.setAttribute("d", pathStr);
+};
+
+var drawArrows = function() {
+  const numOfArrows = document.querySelectorAll("path[id^=arrow]").length;
+  for (var i = 0; i < numOfArrows; ++i) {
+    drawArrow(i);
+  }
+}
+
+var toggleArrows = function(event) {
+  const arrows = document.querySelector("#arrows");
+  if (event.target.checked) {
+    arrows.setAttribute("visibility", "visible");
+  } else {
+    arrows.setAttribute("visibility", "hidden");
+  }
+}
+
+window.addEventListener("resize", drawArrows);
+document.addEventListener("DOMContentLoaded", function() {
+  // Whenever we show invocation, locations change, i.e. we
+  // need to redraw arrows.
+  document
+    .querySelector('input[id="showinvocation"]')
+    .addEventListener("click", drawArrows);
+  // Hiding irrelevant lines also should cause arrow rerender.
+  document
+    .querySelector('input[name="showCounterexample"]')
+    .addEventListener("change", drawArrows);
+  document
+    .querySelector('input[name="showArrows"]')
+    .addEventListener("change", toggleArrows);
+  drawArrows();
+  // Default highlighting for the last event.
+  highlightArrowsForSelectedEvent();
+});
 </script>
   )<<<";
 }

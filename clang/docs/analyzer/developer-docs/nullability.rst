@@ -4,7 +4,8 @@ Nullability Checks
 
 This document is a high level description of the nullablility checks.
 These checks intended to use the annotations that is described in this
-RFC: http://lists.cs.uiuc.edu/pipermail/cfe-dev/2015-March/041798.html.
+RFC: https://discourse.llvm.org/t/rfc-nullability-qualifiers/35672
+(`Mailman <https://lists.llvm.org/pipermail/cfe-dev/2015-March/041779.html>`_)
 
 Let's consider the following 2 categories:
 
@@ -27,7 +28,7 @@ Explicit cast from nullable to nonnul:
   anotherTakesNonNull(bar); // would be great to warn here, but not necessary(*)
 
 Because bar corresponds to the same symbol all the time it is not easy to implement the checker that way the cast only suppress the first call but not the second. For this reason in the first implementation after a contradictory cast happens, I will treat bar as nullable unspecified, this way all of the warnings will be suppressed. Treating the symbol as nullable unspecified also has an advantage that in case the takesNonNull function body is being inlined, the will be no warning, when the symbol is dereferenced. In case I have time after the initial version I might spend additional time to try to find a more sophisticated solution, in which we would produce the second warning (*).
- 
+
 **2) nonnull**
 
 * Dereferencing a nonnull, or sending message to it is ok.
@@ -77,11 +78,11 @@ A symbol may need to be treated differently inside an inlined body. For example,
   id obj = getNonnull();
   takesNullable(obj);
   takesNonnull(obj);
-  
+
   void takesNullable(nullable id obj) {
      obj->ivar // we should assume obj is nullable and warn here
   }
-           
+
 With no special treatment, when the takesNullable is inlined the analyzer will not warn when the obj symbol is dereferenced. One solution for this is to reanalyze takesNullable as a top level function to get possible violations. The alternative method, deducing nullability information from the arguments after inlining is not robust enough (for example there might be more parameters with different nullability, but in the given path the two parameters might end up being the same symbol or there can be nested functions that take different view of the nullability of the same symbol). So the symbol will remain nonnull to avoid false positives but the functions that takes nullable parameters will be analyzed separately as well without inlining.
 
 Annotations on multi level pointers

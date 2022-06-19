@@ -22,7 +22,7 @@
 #include "llvm-c/Support.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/Optional.h"
-#include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringExtras.h"
@@ -45,7 +45,6 @@
 #include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cstdlib>
-#include <map>
 #include <string>
 using namespace llvm;
 using namespace cl;
@@ -167,7 +166,7 @@ public:
   // This collects the different subcommands that have been registered.
   SmallPtrSet<SubCommand *, 4> RegisteredSubCommands;
 
-  CommandLineParser() : ActiveSubCommand(nullptr) {
+  CommandLineParser() {
     registerSubCommand(&*TopLevelSubCommand);
     registerSubCommand(&*AllSubCommands);
   }
@@ -419,7 +418,7 @@ public:
   }
 
 private:
-  SubCommand *ActiveSubCommand;
+  SubCommand *ActiveSubCommand = nullptr;
 
   Option *LookupOption(SubCommand &Sub, StringRef &Arg, StringRef &Value);
   Option *LookupLongOption(SubCommand &Sub, StringRef &Arg, StringRef &Value,
@@ -919,21 +918,34 @@ static size_t parseBackslash(StringRef Src, size_t I, SmallString<128> &Token) {
   return I - 1;
 }
 
-// Windows treats whitespace, double quotes, and backslashes specially.
+// Windows treats whitespace, double quotes, and backslashes specially, except
+// when parsing the first token of a full command line, in which case
+// backslashes are not special.
 static bool isWindowsSpecialChar(char C) {
   return isWhitespaceOrNull(C) || C == '\\' || C == '\"';
+}
+static bool isWindowsSpecialCharInCommandName(char C) {
+  return isWhitespaceOrNull(C) || C == '\"';
 }
 
 // Windows tokenization implementation. The implementation is designed to be
 // inlined and specialized for the two user entry points.
-static inline void
-tokenizeWindowsCommandLineImpl(StringRef Src, StringSaver &Saver,
-                               function_ref<void(StringRef)> AddToken,
-                               bool AlwaysCopy, function_ref<void()> MarkEOL) {
+static inline void tokenizeWindowsCommandLineImpl(
+    StringRef Src, StringSaver &Saver, function_ref<void(StringRef)> AddToken,
+    bool AlwaysCopy, function_ref<void()> MarkEOL, bool InitialCommandName) {
   SmallString<128> Token;
+
+  // Sometimes, this function will be handling a full command line including an
+  // executable pathname at the start. In that situation, the initial pathname
+  // needs different handling from the following arguments, because when
+  // CreateProcess or cmd.exe scans the pathname, it doesn't treat \ as
+  // escaping the quote character, whereas when libc scans the rest of the
+  // command line, it does.
+  bool CommandName = InitialCommandName;
 
   // Try to do as much work inside the state machine as possible.
   enum { INIT, UNQUOTED, QUOTED } State = INIT;
+
   for (size_t I = 0, E = Src.size(); I < E; ++I) {
     switch (State) {
     case INIT: {
@@ -948,19 +960,29 @@ tokenizeWindowsCommandLineImpl(StringRef Src, StringSaver &Saver,
       if (I >= E)
         break;
       size_t Start = I;
-      while (I < E && !isWindowsSpecialChar(Src[I]))
-        ++I;
+      if (CommandName) {
+        while (I < E && !isWindowsSpecialCharInCommandName(Src[I]))
+          ++I;
+      } else {
+        while (I < E && !isWindowsSpecialChar(Src[I]))
+          ++I;
+      }
       StringRef NormalChars = Src.slice(Start, I);
       if (I >= E || isWhitespaceOrNull(Src[I])) {
         // No special characters: slice out the substring and start the next
         // token. Copy the string if the caller asks us to.
         AddToken(AlwaysCopy ? Saver.save(NormalChars) : NormalChars);
-        if (I < E && Src[I] == '\n')
+        if (I < E && Src[I] == '\n') {
           MarkEOL();
+          CommandName = InitialCommandName;
+        } else {
+          CommandName = false;
+        }
       } else if (Src[I] == '\"') {
         Token += NormalChars;
         State = QUOTED;
       } else if (Src[I] == '\\') {
+        assert(!CommandName && "or else we'd have treated it as a normal char");
         Token += NormalChars;
         I = parseBackslash(Src, I, Token);
         State = UNQUOTED;
@@ -977,12 +999,16 @@ tokenizeWindowsCommandLineImpl(StringRef Src, StringSaver &Saver,
         // token.
         AddToken(Saver.save(Token.str()));
         Token.clear();
-        if (Src[I] == '\n')
+        if (Src[I] == '\n') {
+          CommandName = InitialCommandName;
           MarkEOL();
+        } else {
+          CommandName = false;
+        }
         State = INIT;
       } else if (Src[I] == '\"') {
         State = QUOTED;
-      } else if (Src[I] == '\\') {
+      } else if (Src[I] == '\\' && !CommandName) {
         I = parseBackslash(Src, I, Token);
       } else {
         Token.push_back(Src[I]);
@@ -1000,7 +1026,7 @@ tokenizeWindowsCommandLineImpl(StringRef Src, StringSaver &Saver,
           // Otherwise, end the quoted portion and return to the unquoted state.
           State = UNQUOTED;
         }
-      } else if (Src[I] == '\\') {
+      } else if (Src[I] == '\\' && !CommandName) {
         I = parseBackslash(Src, I, Token);
       } else {
         Token.push_back(Src[I]);
@@ -1009,7 +1035,7 @@ tokenizeWindowsCommandLineImpl(StringRef Src, StringSaver &Saver,
     }
   }
 
-  if (State == UNQUOTED)
+  if (State != INIT)
     AddToken(Saver.save(Token.str()));
 }
 
@@ -1022,7 +1048,7 @@ void cl::TokenizeWindowsCommandLine(StringRef Src, StringSaver &Saver,
       NewArgv.push_back(nullptr);
   };
   tokenizeWindowsCommandLineImpl(Src, Saver, AddToken,
-                                 /*AlwaysCopy=*/true, OnEOL);
+                                 /*AlwaysCopy=*/true, OnEOL, false);
 }
 
 void cl::TokenizeWindowsCommandLineNoCopy(StringRef Src, StringSaver &Saver,
@@ -1030,7 +1056,19 @@ void cl::TokenizeWindowsCommandLineNoCopy(StringRef Src, StringSaver &Saver,
   auto AddToken = [&](StringRef Tok) { NewArgv.push_back(Tok); };
   auto OnEOL = []() {};
   tokenizeWindowsCommandLineImpl(Src, Saver, AddToken, /*AlwaysCopy=*/false,
-                                 OnEOL);
+                                 OnEOL, false);
+}
+
+void cl::TokenizeWindowsCommandLineFull(StringRef Src, StringSaver &Saver,
+                                        SmallVectorImpl<const char *> &NewArgv,
+                                        bool MarkEOLs) {
+  auto AddToken = [&](StringRef Tok) { NewArgv.push_back(Tok.data()); };
+  auto OnEOL = [&]() {
+    if (MarkEOLs)
+      NewArgv.push_back(nullptr);
+  };
+  tokenizeWindowsCommandLineImpl(Src, Saver, AddToken,
+                                 /*AlwaysCopy=*/true, OnEOL, true);
 }
 
 void cl::tokenizeConfigFile(StringRef Source, StringSaver &Saver,
@@ -1078,11 +1116,45 @@ static bool hasUTF8ByteOrderMark(ArrayRef<char> S) {
   return (S.size() >= 3 && S[0] == '\xef' && S[1] == '\xbb' && S[2] == '\xbf');
 }
 
+// Substitute <CFGDIR> with the file's base path.
+static void ExpandBasePaths(StringRef BasePath, StringSaver &Saver,
+                            const char *&Arg) {
+  assert(sys::path::is_absolute(BasePath));
+  constexpr StringLiteral Token("<CFGDIR>");
+  const StringRef ArgString(Arg);
+
+  SmallString<128> ResponseFile;
+  StringRef::size_type StartPos = 0;
+  for (StringRef::size_type TokenPos = ArgString.find(Token);
+       TokenPos != StringRef::npos;
+       TokenPos = ArgString.find(Token, StartPos)) {
+    // Token may appear more than once per arg (e.g. comma-separated linker
+    // args). Support by using path-append on any subsequent appearances.
+    const StringRef LHS = ArgString.substr(StartPos, TokenPos - StartPos);
+    if (ResponseFile.empty())
+      ResponseFile = LHS;
+    else
+      llvm::sys::path::append(ResponseFile, LHS);
+    ResponseFile.append(BasePath);
+    StartPos = TokenPos + Token.size();
+  }
+
+  if (!ResponseFile.empty()) {
+    // Path-append the remaining arg substring if at least one token appeared.
+    const StringRef Remaining = ArgString.substr(StartPos);
+    if (!Remaining.empty())
+      llvm::sys::path::append(ResponseFile, Remaining);
+    Arg = Saver.save(ResponseFile.str()).data();
+  }
+}
+
 // FName must be an absolute path.
-static llvm::Error ExpandResponseFile(
-    StringRef FName, StringSaver &Saver, TokenizerCallback Tokenizer,
-    SmallVectorImpl<const char *> &NewArgv, bool MarkEOLs, bool RelativeNames,
-    llvm::vfs::FileSystem &FS) {
+static llvm::Error ExpandResponseFile(StringRef FName, StringSaver &Saver,
+                                      TokenizerCallback Tokenizer,
+                                      SmallVectorImpl<const char *> &NewArgv,
+                                      bool MarkEOLs, bool RelativeNames,
+                                      bool ExpandBasePath,
+                                      llvm::vfs::FileSystem &FS) {
   assert(sys::path::is_absolute(FName));
   llvm::ErrorOr<std::unique_ptr<MemoryBuffer>> MemBufOrErr =
       FS.getBufferForFile(FName);
@@ -1116,8 +1188,15 @@ static llvm::Error ExpandResponseFile(
   // file, replace the included response file names with their full paths
   // obtained by required resolution.
   for (auto &Arg : NewArgv) {
+    if (!Arg)
+      continue;
+
+    // Substitute <CFGDIR> with the file's base path.
+    if (ExpandBasePath)
+      ExpandBasePaths(BasePath, Saver, Arg);
+
     // Skip non-rsp file arguments.
-    if (!Arg || Arg[0] != '@')
+    if (Arg[0] != '@')
       continue;
 
     StringRef FileName(Arg + 1);
@@ -1129,7 +1208,7 @@ static llvm::Error ExpandResponseFile(
     ResponseFile.push_back('@');
     ResponseFile.append(BasePath);
     llvm::sys::path::append(ResponseFile, FileName);
-    Arg = Saver.save(ResponseFile.c_str()).data();
+    Arg = Saver.save(ResponseFile.str()).data();
   }
   return Error::success();
 }
@@ -1138,7 +1217,7 @@ static llvm::Error ExpandResponseFile(
 /// StringSaver and tokenization strategy.
 bool cl::ExpandResponseFiles(StringSaver &Saver, TokenizerCallback Tokenizer,
                              SmallVectorImpl<const char *> &Argv, bool MarkEOLs,
-                             bool RelativeNames,
+                             bool RelativeNames, bool ExpandBasePath,
                              llvm::Optional<llvm::StringRef> CurrentDir,
                              llvm::vfs::FileSystem &FS) {
   bool AllExpanded = true;
@@ -1218,7 +1297,7 @@ bool cl::ExpandResponseFiles(StringSaver &Saver, TokenizerCallback Tokenizer,
     SmallVector<const char *, 0> ExpandedArgv;
     if (llvm::Error Err =
             ExpandResponseFile(FName, Saver, Tokenizer, ExpandedArgv, MarkEOLs,
-                               RelativeNames, FS)) {
+                               RelativeNames, ExpandBasePath, FS)) {
       // We couldn't read this file, so we leave it in the argument stream and
       // move on.
       // TODO: The error should be propagated up the stack.
@@ -1250,11 +1329,11 @@ bool cl::ExpandResponseFiles(StringSaver &Saver, TokenizerCallback Tokenizer,
 
 bool cl::ExpandResponseFiles(StringSaver &Saver, TokenizerCallback Tokenizer,
                              SmallVectorImpl<const char *> &Argv, bool MarkEOLs,
-                             bool RelativeNames,
+                             bool RelativeNames, bool ExpandBasePath,
                              llvm::Optional<StringRef> CurrentDir) {
   return ExpandResponseFiles(Saver, std::move(Tokenizer), Argv, MarkEOLs,
-                             RelativeNames, std::move(CurrentDir),
-                             *vfs::getRealFileSystem());
+                             RelativeNames, ExpandBasePath,
+                             std::move(CurrentDir), *vfs::getRealFileSystem());
 }
 
 bool cl::expandResponseFiles(int Argc, const char *const *Argv,
@@ -1281,16 +1360,17 @@ bool cl::readConfigFile(StringRef CfgFile, StringSaver &Saver,
     llvm::sys::path::append(AbsPath, CfgFile);
     CfgFile = AbsPath.str();
   }
-  if (llvm::Error Err =
-          ExpandResponseFile(CfgFile, Saver, cl::tokenizeConfigFile, Argv,
-                             /*MarkEOLs=*/false, /*RelativeNames=*/true,
-                             *llvm::vfs::getRealFileSystem())) {
+  if (llvm::Error Err = ExpandResponseFile(
+          CfgFile, Saver, cl::tokenizeConfigFile, Argv,
+          /*MarkEOLs=*/false, /*RelativeNames=*/true, /*ExpandBasePath=*/true,
+          *llvm::vfs::getRealFileSystem())) {
     // TODO: The error should be propagated up the stack.
     llvm::consumeError(std::move(Err));
     return false;
   }
   return ExpandResponseFiles(Saver, cl::tokenizeConfigFile, Argv,
-                             /*MarkEOLs=*/false, /*RelativeNames=*/true);
+                             /*MarkEOLs=*/false, /*RelativeNames=*/true,
+                             /*ExpandBasePath=*/true, llvm::None);
 }
 
 static void initCommonOptions();
@@ -1321,12 +1401,20 @@ bool cl::ParseCommandLineOptions(int argc, const char *const *argv,
                                                Errs, LongOptionsUseDoubleDash);
 }
 
+/// Reset all options at least once, so that we can parse different options.
 void CommandLineParser::ResetAllOptionOccurrences() {
-  // So that we can parse different command lines multiple times in succession
-  // we reset all option values to look like they have never been seen before.
+  // Reset all option values to look like they have never been seen before.
+  // Options might be reset twice (they can be reference in both OptionsMap
+  // and one of the other members), but that does not harm.
   for (auto *SC : RegisteredSubCommands) {
     for (auto &O : SC->OptionsMap)
       O.second->reset();
+    for (Option *O : SC->PositionalOpts)
+      O->reset();
+    for (Option *O : SC->SinkOpts)
+      O->reset();
+    if (SC->ConsumeAfterOpt)
+      SC->ConsumeAfterOpt->reset();
   }
 }
 
@@ -1530,10 +1618,8 @@ bool CommandLineParser::ParseCommandLineOptions(int argc,
 
         ErrorParsing = true;
       } else {
-        for (SmallVectorImpl<Option *>::iterator I = SinkOpts.begin(),
-                                                 E = SinkOpts.end();
-             I != E; ++I)
-          (*I)->addOccurrence(i, "", StringRef(argv[i]));
+        for (Option *SinkOpt : SinkOpts)
+          SinkOpt->addOccurrence(i, "", StringRef(argv[i]));
       }
       continue;
     }
@@ -1689,21 +1775,6 @@ bool Option::addOccurrence(unsigned pos, StringRef ArgName, StringRef Value,
                            bool MultiArg) {
   if (!MultiArg)
     NumOccurrences++; // Increment the number of times we have been seen
-
-  switch (getNumOccurrencesFlag()) {
-  case Optional:
-    if (NumOccurrences > 1)
-      return error("may only occur zero or one times!", ArgName);
-    break;
-  case Required:
-    if (NumOccurrences > 1)
-      return error("must occur exactly one time!", ArgName);
-    LLVM_FALLTHROUGH;
-  case OneOrMore:
-  case ZeroOrMore:
-  case ConsumeAfter:
-    break;
-  }
 
   return handleOccurrence(pos, ArgName, Value);
 }
@@ -2189,7 +2260,7 @@ protected:
 
 public:
   explicit HelpPrinter(bool showHidden) : ShowHidden(showHidden) {}
-  virtual ~HelpPrinter() {}
+  virtual ~HelpPrinter() = default;
 
   // Invoke the printer.
   void operator=(bool Value) {
@@ -2291,27 +2362,17 @@ public:
 protected:
   void printOptions(StrOptionPairVector &Opts, size_t MaxArgLen) override {
     std::vector<OptionCategory *> SortedCategories;
-    std::map<OptionCategory *, std::vector<Option *>> CategorizedOptions;
+    DenseMap<OptionCategory *, std::vector<Option *>> CategorizedOptions;
 
     // Collect registered option categories into vector in preparation for
     // sorting.
-    for (auto I = GlobalParser->RegisteredOptionCategories.begin(),
-              E = GlobalParser->RegisteredOptionCategories.end();
-         I != E; ++I) {
-      SortedCategories.push_back(*I);
-    }
+    for (OptionCategory *Category : GlobalParser->RegisteredOptionCategories)
+      SortedCategories.push_back(Category);
 
     // Sort the different option categories alphabetically.
     assert(SortedCategories.size() > 0 && "No option categories registered!");
     array_pod_sort(SortedCategories.begin(), SortedCategories.end(),
                    OptionCategoryCompare);
-
-    // Create map to empty vectors.
-    for (std::vector<OptionCategory *>::const_iterator
-             I = SortedCategories.begin(),
-             E = SortedCategories.end();
-         I != E; ++I)
-      CategorizedOptions[*I] = std::vector<Option *>();
 
     // Walk through pre-sorted options and assign into categories.
     // Because the options are already alphabetically sorted the
@@ -2319,30 +2380,27 @@ protected:
     for (size_t I = 0, E = Opts.size(); I != E; ++I) {
       Option *Opt = Opts[I].second;
       for (auto &Cat : Opt->Categories) {
-        assert(CategorizedOptions.count(Cat) > 0 &&
+        assert(find(SortedCategories, Cat) != SortedCategories.end() &&
                "Option has an unregistered category");
         CategorizedOptions[Cat].push_back(Opt);
       }
     }
 
     // Now do printing.
-    for (std::vector<OptionCategory *>::const_iterator
-             Category = SortedCategories.begin(),
-             E = SortedCategories.end();
-         Category != E; ++Category) {
+    for (OptionCategory *Category : SortedCategories) {
       // Hide empty categories for --help, but show for --help-hidden.
-      const auto &CategoryOptions = CategorizedOptions[*Category];
+      const auto &CategoryOptions = CategorizedOptions[Category];
       bool IsEmptyCategory = CategoryOptions.empty();
       if (!ShowHidden && IsEmptyCategory)
         continue;
 
       // Print category information.
       outs() << "\n";
-      outs() << (*Category)->getName() << ":\n";
+      outs() << Category->getName() << ":\n";
 
       // Check if description is set.
-      if (!(*Category)->getDescription().empty())
-        outs() << (*Category)->getDescription() << "\n\n";
+      if (!Category->getDescription().empty())
+        outs() << Category->getDescription() << "\n\n";
       else
         outs() << "\n";
 
@@ -2410,11 +2468,7 @@ public:
 #else
     OS << "LLVM (http://llvm.org/):\n  ";
 #endif
-    OS << PACKAGE_NAME << " version " << PACKAGE_VERSION;
-#ifdef LLVM_VERSION_INFO
-    OS << " " << LLVM_VERSION_INFO;
-#endif
-    OS << "\n  ";
+    OS << PACKAGE_NAME << " version " << PACKAGE_VERSION << "\n  ";
 #if LLVM_IS_DEBUG_BUILD
     OS << "DEBUG build";
 #else
@@ -2633,6 +2687,7 @@ void cl::AddExtraVersionPrinter(VersionPrinterTy func) {
 }
 
 StringMap<Option *> &cl::getRegisteredOptions(SubCommand &Sub) {
+  initCommonOptions();
   auto &Subs = GlobalParser->RegisteredSubCommands;
   (void)Subs;
   assert(is_contained(Subs, &Sub));
@@ -2647,10 +2702,13 @@ cl::getRegisteredSubcommands() {
 void cl::HideUnrelatedOptions(cl::OptionCategory &Category, SubCommand &Sub) {
   initCommonOptions();
   for (auto &I : Sub.OptionsMap) {
+    bool Unrelated = true;
     for (auto &Cat : I.second->Categories) {
-      if (Cat != &Category && Cat != &CommonOptions->GenericCategory)
-        I.second->setHiddenFlag(cl::ReallyHidden);
+      if (Cat == &Category || Cat == &CommonOptions->GenericCategory)
+        Unrelated = false;
     }
+    if (Unrelated)
+      I.second->setHiddenFlag(cl::ReallyHidden);
   }
 }
 
@@ -2658,11 +2716,14 @@ void cl::HideUnrelatedOptions(ArrayRef<const cl::OptionCategory *> Categories,
                               SubCommand &Sub) {
   initCommonOptions();
   for (auto &I : Sub.OptionsMap) {
+    bool Unrelated = true;
     for (auto &Cat : I.second->Categories) {
-      if (!is_contained(Categories, Cat) &&
-          Cat != &CommonOptions->GenericCategory)
-        I.second->setHiddenFlag(cl::ReallyHidden);
+      if (is_contained(Categories, Cat) ||
+          Cat == &CommonOptions->GenericCategory)
+        Unrelated = false;
     }
+    if (Unrelated)
+      I.second->setHiddenFlag(cl::ReallyHidden);
   }
 }
 

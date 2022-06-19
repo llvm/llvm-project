@@ -7,7 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 // UNSUPPORTED: c++03, c++11
-// UNSUPPORTED: libcpp-has-no-localization
+// UNSUPPORTED: no-localization
+// UNSUPPORTED: !stdlib=libc++ && c++14
 
 // <iomanip>
 
@@ -22,12 +23,13 @@
 
 bool is_skipws ( const std::istream *is ) {
     return ( is->flags() & std::ios_base::skipws ) != 0;
-    }
+}
 
-
+#ifndef TEST_HAS_NO_WIDE_CHARACTERS
 bool is_skipws ( const std::wistream *is ) {
     return ( is->flags() & std::ios_base::skipws ) != 0;
-    }
+}
+#endif
 
 void round_trip ( const char *p ) {
     std::stringstream ss;
@@ -92,7 +94,7 @@ std::string unquote ( const char *p, char delim='"', char escape='\\' ) {
     return s;
 }
 
-
+#ifndef TEST_HAS_NO_WIDE_CHARACTERS
 void round_trip ( const wchar_t *p ) {
     std::wstringstream ss;
     bool skippingws = is_skipws ( &ss );
@@ -159,6 +161,7 @@ std::wstring unquote ( const wchar_t *p, wchar_t delim='"', wchar_t escape='\\' 
     ss >> std::quoted(s, delim, escape);
     return s;
 }
+#endif // TEST_HAS_NO_WIDE_CHARACTERS
 
 int main(int, char**)
 {
@@ -167,10 +170,12 @@ int main(int, char**)
     round_trip_d  (  "", 'q' );
     round_trip_e  (  "", 'q' );
 
+#ifndef TEST_HAS_NO_WIDE_CHARACTERS
     round_trip    ( L"" );
     round_trip_ws ( L"" );
     round_trip_d  ( L"", 'q' );
     round_trip_e  ( L"", 'q' );
+#endif
 
     round_trip    (  "Hi" );
     round_trip_ws (  "Hi" );
@@ -179,34 +184,42 @@ int main(int, char**)
     assert ( quote ( "Hi", '!' ) == "!Hi!" );
     assert ( quote ( "Hi!", '!' ) == R"(!Hi\!!)" );
 
+#ifndef TEST_HAS_NO_WIDE_CHARACTERS
     round_trip    ( L"Hi" );
     round_trip_ws ( L"Hi" );
     round_trip_d  ( L"Hi", '!' );
     round_trip_e  ( L"Hi", '!' );
     assert ( quote ( L"Hi", '!' )  == L"!Hi!" );
     assert ( quote ( L"Hi!", '!' ) == LR"(!Hi\!!)" );
+#endif
 
     round_trip    (  "Hi Mom" );
     round_trip_ws (  "Hi Mom" );
+
+#ifndef TEST_HAS_NO_WIDE_CHARACTERS
     round_trip    ( L"Hi Mom" );
     round_trip_ws ( L"Hi Mom" );
+#endif
 
     assert ( quote (  "" )  ==  "\"\"" );
-    assert ( quote ( L"" )  == L"\"\"" );
     assert ( quote (  "a" ) ==  "\"a\"" );
+#ifndef TEST_HAS_NO_WIDE_CHARACTERS
+    assert ( quote ( L"" )  == L"\"\"" );
     assert ( quote ( L"a" ) == L"\"a\"" );
+#endif
 
-//  missing end quote - must not hang
+    // missing end quote - must not hang
     assert ( unquote (  "\"abc" ) ==  "abc" );
-    assert ( unquote ( L"\"abc" ) == L"abc" );
-
     assert ( unquote (  "abc" ) == "abc" ); // no delimiter
-    assert ( unquote ( L"abc" ) == L"abc" ); // no delimiter
     assert ( unquote (  "abc def" ) ==  "abc" ); // no delimiter
-    assert ( unquote ( L"abc def" ) == L"abc" ); // no delimiter
-
     assert ( unquote (  "" ) ==  "" ); // nothing there
+
+#ifndef TEST_HAS_NO_WIDE_CHARACTERS
+    assert ( unquote ( L"\"abc" ) == L"abc" );
+    assert ( unquote ( L"abc" ) == L"abc" ); // no delimiter
+    assert ( unquote ( L"abc def" ) == L"abc" ); // no delimiter
     assert ( unquote ( L"" ) == L"" ); // nothing there
+#endif
 
     return 0;
 }

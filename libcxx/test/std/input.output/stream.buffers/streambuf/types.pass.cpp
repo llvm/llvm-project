@@ -32,11 +32,13 @@ int main(int, char**)
     static_assert((std::is_same<std::streambuf::pos_type, std::char_traits<char>::pos_type>::value), "");
     static_assert((std::is_same<std::streambuf::off_type, std::char_traits<char>::off_type>::value), "");
 
+#ifndef TEST_HAS_NO_WIDE_CHARACTERS
     static_assert((std::is_same<std::wstreambuf::char_type, wchar_t>::value), "");
     static_assert((std::is_same<std::wstreambuf::traits_type, std::char_traits<wchar_t> >::value), "");
     static_assert((std::is_same<std::wstreambuf::int_type, std::char_traits<wchar_t>::int_type>::value), "");
     static_assert((std::is_same<std::wstreambuf::pos_type, std::char_traits<wchar_t>::pos_type>::value), "");
     static_assert((std::is_same<std::wstreambuf::off_type, std::char_traits<wchar_t>::off_type>::value), "");
+#endif
 
   return 0;
 }

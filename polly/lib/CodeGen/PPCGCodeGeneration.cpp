@@ -22,6 +22,7 @@
 #include "polly/Options.h"
 #include "polly/ScopDetection.h"
 #include "polly/ScopInfo.h"
+#include "polly/Support/ISLTools.h"
 #include "polly/Support/SCEVValidator.h"
 #include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
@@ -31,8 +32,8 @@
 #include "llvm/IRReader/IRReader.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Linker/Linker.h"
+#include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/SourceMgr.h"
-#include "llvm/Support/TargetRegistry.h"
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Transforms/IPO/PassManagerBuilder.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
@@ -54,35 +55,29 @@ using namespace llvm;
 
 static cl::opt<bool> DumpSchedule("polly-acc-dump-schedule",
                                   cl::desc("Dump the computed GPU Schedule"),
-                                  cl::Hidden, cl::init(false), cl::ZeroOrMore,
-                                  cl::cat(PollyCategory));
+                                  cl::Hidden, cl::cat(PollyCategory));
 
 static cl::opt<bool>
     DumpCode("polly-acc-dump-code",
              cl::desc("Dump C code describing the GPU mapping"), cl::Hidden,
-             cl::init(false), cl::ZeroOrMore, cl::cat(PollyCategory));
+             cl::cat(PollyCategory));
 
 static cl::opt<bool> DumpKernelIR("polly-acc-dump-kernel-ir",
                                   cl::desc("Dump the kernel LLVM-IR"),
-                                  cl::Hidden, cl::init(false), cl::ZeroOrMore,
-                                  cl::cat(PollyCategory));
+                                  cl::Hidden, cl::cat(PollyCategory));
 
 static cl::opt<bool> DumpKernelASM("polly-acc-dump-kernel-asm",
                                    cl::desc("Dump the kernel assembly code"),
-                                   cl::Hidden, cl::init(false), cl::ZeroOrMore,
-                                   cl::cat(PollyCategory));
+                                   cl::Hidden, cl::cat(PollyCategory));
 
 static cl::opt<bool> FastMath("polly-acc-fastmath",
                               cl::desc("Allow unsafe math optimizations"),
-                              cl::Hidden, cl::init(false), cl::ZeroOrMore,
-                              cl::cat(PollyCategory));
+                              cl::Hidden, cl::cat(PollyCategory));
 static cl::opt<bool> SharedMemory("polly-acc-use-shared",
                                   cl::desc("Use shared memory"), cl::Hidden,
-                                  cl::init(false), cl::ZeroOrMore,
                                   cl::cat(PollyCategory));
 static cl::opt<bool> PrivateMemory("polly-acc-use-private",
                                    cl::desc("Use private memory"), cl::Hidden,
-                                   cl::init(false), cl::ZeroOrMore,
                                    cl::cat(PollyCategory));
 
 bool polly::PollyManagedMemory;
@@ -92,25 +87,24 @@ static cl::opt<bool, true>
                             " that all memory has been"
                             " declared as managed memory"),
                    cl::location(PollyManagedMemory), cl::Hidden,
-                   cl::init(false), cl::ZeroOrMore, cl::cat(PollyCategory));
+                   cl::init(false), cl::cat(PollyCategory));
 
 static cl::opt<bool>
     FailOnVerifyModuleFailure("polly-acc-fail-on-verify-module-failure",
                               cl::desc("Fail and generate a backtrace if"
                                        " verifyModule fails on the GPU "
                                        " kernel module."),
-                              cl::Hidden, cl::init(false), cl::ZeroOrMore,
-                              cl::cat(PollyCategory));
+                              cl::Hidden, cl::cat(PollyCategory));
 
 static cl::opt<std::string> CUDALibDevice(
     "polly-acc-libdevice", cl::desc("Path to CUDA libdevice"), cl::Hidden,
     cl::init("/usr/local/cuda/nvvm/libdevice/libdevice.compute_20.10.ll"),
-    cl::ZeroOrMore, cl::cat(PollyCategory));
+    cl::cat(PollyCategory));
 
 static cl::opt<std::string>
     CudaVersion("polly-acc-cuda-version",
                 cl::desc("The CUDA version to compile for"), cl::Hidden,
-                cl::init("sm_30"), cl::ZeroOrMore, cl::cat(PollyCategory));
+                cl::init("sm_30"), cl::cat(PollyCategory));
 
 static cl::opt<int>
     MinCompute("polly-acc-mincompute",
@@ -118,14 +112,15 @@ static cl::opt<int>
                cl::Hidden, cl::init(10 * 512 * 512));
 
 GPURuntime polly::GPURuntimeChoice;
-static cl::opt<GPURuntime, true> XGPURuntimeChoice(
-    "polly-gpu-runtime", cl::desc("The GPU Runtime API to target"),
-    cl::values(clEnumValN(GPURuntime::CUDA, "libcudart",
-                          "use the CUDA Runtime API"),
-               clEnumValN(GPURuntime::OpenCL, "libopencl",
-                          "use the OpenCL Runtime API")),
-    cl::location(polly::GPURuntimeChoice), cl::init(GPURuntime::CUDA),
-    cl::ZeroOrMore, cl::cat(PollyCategory));
+static cl::opt<GPURuntime, true>
+    XGPURuntimeChoice("polly-gpu-runtime",
+                      cl::desc("The GPU Runtime API to target"),
+                      cl::values(clEnumValN(GPURuntime::CUDA, "libcudart",
+                                            "use the CUDA Runtime API"),
+                                 clEnumValN(GPURuntime::OpenCL, "libopencl",
+                                            "use the OpenCL Runtime API")),
+                      cl::location(polly::GPURuntimeChoice),
+                      cl::init(GPURuntime::CUDA), cl::cat(PollyCategory));
 
 GPUArch polly::GPUArchChoice;
 static cl::opt<GPUArch, true>
@@ -137,8 +132,7 @@ static cl::opt<GPUArch, true>
                               clEnumValN(GPUArch::SPIR64, "spir64",
                                          "target SPIR 64-bit architecture")),
                    cl::location(polly::GPUArchChoice),
-                   cl::init(GPUArch::NVPTX64), cl::ZeroOrMore,
-                   cl::cat(PollyCategory));
+                   cl::init(GPUArch::NVPTX64), cl::cat(PollyCategory));
 
 extern bool polly::PerfMonitoring;
 
@@ -345,7 +339,7 @@ static int computeSizeInBytes(const Type *T) {
 /// for generating GPU specific user nodes.
 ///
 /// @see GPUNodeBuilder::createUser
-class GPUNodeBuilder : public IslNodeBuilder {
+class GPUNodeBuilder final : public IslNodeBuilder {
 public:
   GPUNodeBuilder(PollyIRBuilder &Builder, ScopAnnotator &Annotator,
                  const DataLayout &DL, LoopInfo &LI, ScalarEvolution &SE,
@@ -408,7 +402,7 @@ private:
   GPUArch Arch;
 
   /// Class to free isl_ids.
-  class IslIdDeleter {
+  class IslIdDeleter final {
   public:
     void operator()(__isl_take isl_id *Id) { isl_id_free(Id); };
   };
@@ -485,12 +479,13 @@ private:
   /// Store a specific kernel launch parameter in the array of kernel launch
   /// parameters.
   ///
+  /// @param ArrayTy    Array type of \p Parameters.
   /// @param Parameters The list of parameters in which to store.
   /// @param Param      The kernel launch parameter to store.
   /// @param Index      The index in the parameter list, at which to store the
   ///                   parameter.
-  void insertStoreParameter(Instruction *Parameters, Instruction *Param,
-                            int Index);
+  void insertStoreParameter(Type *ArrayTy, Instruction *Parameters,
+                            Instruction *Param, int Index);
 
   /// Create kernel launch parameters.
   ///
@@ -1124,11 +1119,11 @@ Value *GPUNodeBuilder::getArraySize(gpu_array_info *Array) {
   if (!gpu_array_is_scalar(Array)) {
     isl::multi_pw_aff ArrayBound = isl::manage_copy(Array->bound);
 
-    isl::pw_aff OffsetDimZero = ArrayBound.get_pw_aff(0);
+    isl::pw_aff OffsetDimZero = ArrayBound.at(0);
     isl::ast_expr Res = Build.expr_from(OffsetDimZero);
 
     for (unsigned int i = 1; i < Array->n_index; i++) {
-      isl::pw_aff Bound_I = ArrayBound.get_pw_aff(i);
+      isl::pw_aff Bound_I = ArrayBound.at(i);
       isl::ast_expr Expr = Build.expr_from(Bound_I);
       Res = Res.mul(Expr);
     }
@@ -1151,7 +1146,7 @@ Value *GPUNodeBuilder::getArrayOffset(gpu_array_info *Array) {
 
   isl::set ZeroSet = isl::set::universe(Min.get_space());
 
-  for (long i = 0, n = Min.tuple_dim(); i < n; i++)
+  for (unsigned i : rangeIslSize(0, Min.tuple_dim()))
     ZeroSet = ZeroSet.fix_si(isl::dim::set, i, 0);
 
   if (Min.is_subset(ZeroSet)) {
@@ -1160,7 +1155,7 @@ Value *GPUNodeBuilder::getArrayOffset(gpu_array_info *Array) {
 
   isl::ast_expr Result = isl::ast_expr::from_val(isl::val(Min.ctx(), 0));
 
-  for (long i = 0, n = Min.tuple_dim(); i < n; i++) {
+  for (unsigned i : rangeIslSize(0, Min.tuple_dim())) {
     if (i > 0) {
       isl::pw_aff Bound_I =
           isl::manage(isl_multi_pw_aff_get_pw_aff(Array->bound, i - 1));
@@ -1307,24 +1302,23 @@ void GPUNodeBuilder::createUser(__isl_take isl_ast_node *UserStmt) {
 }
 
 void GPUNodeBuilder::createFor(__isl_take isl_ast_node *Node) {
-  createForSequential(isl::manage(Node), false);
+  createForSequential(isl::manage(Node).as<isl::ast_node_for>(), false);
 }
 
 void GPUNodeBuilder::createKernelCopy(ppcg_kernel_stmt *KernelStmt) {
   isl_ast_expr *LocalIndex = isl_ast_expr_copy(KernelStmt->u.c.local_index);
-  LocalIndex = isl_ast_expr_address_of(LocalIndex);
-  Value *LocalAddr = ExprBuilder.create(LocalIndex);
+  auto LocalAddr = ExprBuilder.createAccessAddress(LocalIndex);
   isl_ast_expr *Index = isl_ast_expr_copy(KernelStmt->u.c.index);
-  Index = isl_ast_expr_address_of(Index);
-  Value *GlobalAddr = ExprBuilder.create(Index);
-  Type *IndexTy = cast<PointerType>(GlobalAddr->getType())->getElementType();
+  auto GlobalAddr = ExprBuilder.createAccessAddress(Index);
 
   if (KernelStmt->u.c.read) {
-    LoadInst *Load = Builder.CreateLoad(IndexTy, GlobalAddr, "shared.read");
-    Builder.CreateStore(Load, LocalAddr);
+    LoadInst *Load =
+        Builder.CreateLoad(GlobalAddr.second, GlobalAddr.first, "shared.read");
+    Builder.CreateStore(Load, LocalAddr.first);
   } else {
-    LoadInst *Load = Builder.CreateLoad(IndexTy, LocalAddr, "shared.write");
-    Builder.CreateStore(Load, GlobalAddr);
+    LoadInst *Load =
+        Builder.CreateLoad(LocalAddr.second, LocalAddr.first, "shared.write");
+    Builder.CreateStore(Load, GlobalAddr.first);
   }
 }
 
@@ -1596,7 +1590,7 @@ std::tuple<Value *, Value *> GPUNodeBuilder::getGridSizes(ppcg_kernel *Kernel) {
 
   isl::multi_pw_aff GridSizePwAffs = isl::manage_copy(Kernel->grid_size);
   for (long i = 0; i < Kernel->n_grid; i++) {
-    isl::pw_aff Size = GridSizePwAffs.get_pw_aff(i);
+    isl::pw_aff Size = GridSizePwAffs.at(i);
     isl::ast_expr GridSize = Context.expr_from(Size);
     Value *Res = ExprBuilder.create(GridSize.release());
     Res = Builder.CreateTrunc(Res, Builder.getInt32Ty());
@@ -1624,11 +1618,11 @@ GPUNodeBuilder::getBlockSizes(ppcg_kernel *Kernel) {
   return std::make_tuple(Sizes[0], Sizes[1], Sizes[2]);
 }
 
-void GPUNodeBuilder::insertStoreParameter(Instruction *Parameters,
+void GPUNodeBuilder::insertStoreParameter(Type *ArrayTy,
+                                          Instruction *Parameters,
                                           Instruction *Param, int Index) {
   Value *Slot = Builder.CreateGEP(
-      Parameters->getType()->getPointerElementType(), Parameters,
-      {Builder.getInt64(0), Builder.getInt64(Index)});
+      ArrayTy, Parameters, {Builder.getInt64(0), Builder.getInt64(Index)});
   Value *ParamTyped = Builder.CreatePointerCast(Param, Builder.getInt8PtrTy());
   Builder.CreateStore(ParamTyped, Slot);
 }
@@ -1729,7 +1723,7 @@ GPUNodeBuilder::createLaunchParameters(ppcg_kernel *Kernel, Function *F,
                        Launch + "_param_" + std::to_string(Index),
                        EntryBlock->getTerminator());
     Builder.CreateStore(Val, Param);
-    insertStoreParameter(Parameters, Param, Index);
+    insertStoreParameter(ArrayTy, Parameters, Param, Index);
     Index++;
   }
 
@@ -1750,7 +1744,7 @@ GPUNodeBuilder::createLaunchParameters(ppcg_kernel *Kernel, Function *F,
                        Launch + "_param_" + std::to_string(Index),
                        EntryBlock->getTerminator());
     Builder.CreateStore(Val, Param);
-    insertStoreParameter(Parameters, Param, Index);
+    insertStoreParameter(ArrayTy, Parameters, Param, Index);
     Index++;
   }
 
@@ -1763,7 +1757,7 @@ GPUNodeBuilder::createLaunchParameters(ppcg_kernel *Kernel, Function *F,
                        Launch + "_param_" + std::to_string(Index),
                        EntryBlock->getTerminator());
     Builder.CreateStore(Val, Param);
-    insertStoreParameter(Parameters, Param, Index);
+    insertStoreParameter(ArrayTy, Parameters, Param, Index);
     Index++;
   }
 
@@ -1775,7 +1769,7 @@ GPUNodeBuilder::createLaunchParameters(ppcg_kernel *Kernel, Function *F,
                          Launch + "_param_size_" + std::to_string(i),
                          EntryBlock->getTerminator());
       Builder.CreateStore(Val, Param);
-      insertStoreParameter(Parameters, Param, Index);
+      insertStoreParameter(ArrayTy, Parameters, Param, Index);
       Index++;
     }
   }
@@ -2557,7 +2551,7 @@ alignPwAffs(const std::vector<__isl_take isl_pw_aff *> &&PwAffs,
 }
 
 namespace {
-class PPCGCodeGeneration : public ScopPass {
+class PPCGCodeGeneration final : public ScopPass {
 public:
   static char ID;
 
@@ -2885,8 +2879,10 @@ public:
     isl::pw_aff Val = isl::aff::var_on_domain(LS, isl::dim::set, 0);
     isl::pw_aff OuterMin = AccessSet.dim_min(0);
     isl::pw_aff OuterMax = AccessSet.dim_max(0);
-    OuterMin = OuterMin.add_dims(isl::dim::in, Val.dim(isl::dim::in));
-    OuterMax = OuterMax.add_dims(isl::dim::in, Val.dim(isl::dim::in));
+    OuterMin = OuterMin.add_dims(isl::dim::in,
+                                 unsignedFromIslSize(Val.dim(isl::dim::in)));
+    OuterMax = OuterMax.add_dims(isl::dim::in,
+                                 unsignedFromIslSize(Val.dim(isl::dim::in)));
     OuterMin = OuterMin.set_tuple_id(isl::dim::in, Array->getBasePtrId());
     OuterMax = OuterMax.set_tuple_id(isl::dim::in, Array->getBasePtrId());
 
@@ -2910,7 +2906,8 @@ public:
 
       isl::pw_aff Val = isl::aff::var_on_domain(
           isl::local_space(Array->getSpace()), isl::dim::set, i);
-      PwAff = PwAff.add_dims(isl::dim::in, Val.dim(isl::dim::in));
+      PwAff = PwAff.add_dims(isl::dim::in,
+                             unsignedFromIslSize(Val.dim(isl::dim::in)));
       PwAff = PwAff.set_tuple_id(isl::dim::in, Val.get_tuple_id(isl::dim::in));
       isl::set Set = PwAff.gt_set(Val);
       Extent = Set.intersect(Extent);
@@ -3249,6 +3246,7 @@ public:
     PPCGGen->kernel_id = 0;
 
     // Set scheduling strategy to same strategy PPCG is using.
+    isl_options_set_schedule_serialize_sccs(PPCGGen->ctx, false);
     isl_options_set_schedule_outer_coincidence(PPCGGen->ctx, true);
     isl_options_set_schedule_maximize_band_depth(PPCGGen->ctx, true);
     isl_options_set_schedule_whole_component(PPCGGen->ctx, false);
@@ -3438,13 +3436,11 @@ public:
         continue;
 
       for (Value *Op : Inst.operands())
-        // Look for (<func-type>*) among operands of Inst
-        if (auto PtrTy = dyn_cast<PointerType>(Op->getType())) {
-          if (isa<FunctionType>(PtrTy->getElementType())) {
-            LLVM_DEBUG(dbgs()
-                       << Inst << " has illegal use of function in kernel.\n");
-            return true;
-          }
+        // Look for functions among operands of Inst.
+        if (isa<Function>(Op->stripPointerCasts())) {
+          LLVM_DEBUG(dbgs()
+                     << Inst << " has illegal use of function in kernel.\n");
+          return true;
         }
     }
     return false;

@@ -1,5 +1,5 @@
-; RUN: opt < %s -adce | llvm-dis
-; RUN: opt < %s -adce -verify-dom-info | llvm-dis
+; RUN: opt < %s -passes=adce | llvm-dis
+; RUN: opt < %s -passes=adce -verify-dom-info | llvm-dis
 
 define void @foo() {
 entry:

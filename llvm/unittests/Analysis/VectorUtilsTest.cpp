@@ -36,7 +36,7 @@ protected:
 
     // A failure here means that the test itself is buggy.
     if (!M)
-      report_fatal_error(os.str());
+      report_fatal_error(Twine(os.str()));
 
     Function *F = M->getFunction("test");
     if (F == nullptr)
@@ -498,12 +498,12 @@ protected:
   std::unique_ptr<Module> M;
   CallInst *CI;
   // Dummy shape with no parameters, overwritten by buildShape when invoked.
-  VFShape Shape = {/*VF*/ 2, /*IsScalable*/ false, /*Parameters*/ {}};
+  VFShape Shape = {/*VF*/ ElementCount::getFixed(2), /*Parameters*/ {}};
   VFShape Expected;
   SmallVector<VFParameter, 8> &ExpectedParams = Expected.Parameters;
 
-  void buildShape(unsigned VF, bool IsScalable, bool HasGlobalPred) {
-    Shape = VFShape::get(*CI, ElementCount::get(VF, IsScalable), HasGlobalPred);
+  void buildShape(ElementCount VF, bool HasGlobalPred) {
+    Shape = VFShape::get(*CI, VF, HasGlobalPred);
   }
 
   bool validParams(ArrayRef<VFParameter> Parameters) {
@@ -514,16 +514,16 @@ protected:
 };
 
 TEST_F(VFShapeAPITest, API_buildVFShape) {
-  buildShape(/*VF*/ 2, /*IsScalable*/ false, /*HasGlobalPred*/ false);
-  Expected = {/*VF*/ 2, /*IsScalable*/ false, /*Parameters*/ {
+  buildShape(/*VF*/ ElementCount::getFixed(2), /*HasGlobalPred*/ false);
+  Expected = {/*VF*/ ElementCount::getFixed(2), /*Parameters*/ {
                   {0, VFParamKind::Vector},
                   {1, VFParamKind::Vector},
                   {2, VFParamKind::Vector},
               }};
   EXPECT_EQ(Shape, Expected);
 
-  buildShape(/*VF*/ 4, /*IsScalable*/ false, /*HasGlobalPred*/ true);
-  Expected = {/*VF*/ 4, /*IsScalable*/ false, /*Parameters*/ {
+  buildShape(/*VF*/ ElementCount::getFixed(4), /*HasGlobalPred*/ true);
+  Expected = {/*VF*/ ElementCount::getFixed(4), /*Parameters*/ {
                   {0, VFParamKind::Vector},
                   {1, VFParamKind::Vector},
                   {2, VFParamKind::Vector},
@@ -531,8 +531,8 @@ TEST_F(VFShapeAPITest, API_buildVFShape) {
               }};
   EXPECT_EQ(Shape, Expected);
 
-  buildShape(/*VF*/ 16, /*IsScalable*/ true, /*HasGlobalPred*/ false);
-  Expected = {/*VF*/ 16, /*IsScalable*/ true, /*Parameters*/ {
+  buildShape(/*VF*/ ElementCount::getScalable(16), /*HasGlobalPred*/ false);
+  Expected = {/*VF*/ ElementCount::getScalable(16), /*Parameters*/ {
                   {0, VFParamKind::Vector},
                   {1, VFParamKind::Vector},
                   {2, VFParamKind::Vector},
@@ -541,7 +541,7 @@ TEST_F(VFShapeAPITest, API_buildVFShape) {
 }
 
 TEST_F(VFShapeAPITest, API_getScalarShape) {
-  buildShape(/*VF*/ 1, /*IsScalable*/ false, /*HasGlobalPred*/ false);
+  buildShape(/*VF*/ ElementCount::getFixed(1), /*HasGlobalPred*/ false);
   EXPECT_EQ(VFShape::getScalarShape(*CI), Shape);
 }
 
@@ -550,19 +550,19 @@ TEST_F(VFShapeAPITest, API_getVectorizedFunction) {
   EXPECT_EQ(VFDatabase(*CI).getVectorizedFunction(ScalarShape),
             M->getFunction("g"));
 
-  buildShape(/*VF*/ 1, /*IsScalable*/ true, /*HasGlobalPred*/ false);
+  buildShape(/*VF*/ ElementCount::getScalable(1), /*HasGlobalPred*/ false);
   EXPECT_EQ(VFDatabase(*CI).getVectorizedFunction(Shape), nullptr);
-  buildShape(/*VF*/ 1, /*IsScalable*/ false, /*HasGlobalPred*/ true);
+  buildShape(/*VF*/ ElementCount::getFixed(1), /*HasGlobalPred*/ true);
   EXPECT_EQ(VFDatabase(*CI).getVectorizedFunction(Shape), nullptr);
-  buildShape(/*VF*/ 1, /*IsScalable*/ true, /*HasGlobalPred*/ true);
+  buildShape(/*VF*/ ElementCount::getScalable(1), /*HasGlobalPred*/ true);
   EXPECT_EQ(VFDatabase(*CI).getVectorizedFunction(Shape), nullptr);
 }
 
 TEST_F(VFShapeAPITest, API_updateVFShape) {
 
-  buildShape(/*VF*/ 2, /*IsScalable*/ false, /*HasGlobalPred*/ false);
+  buildShape(/*VF*/ ElementCount::getFixed(2), /*HasGlobalPred*/ false);
   Shape.updateParam({0 /*Pos*/, VFParamKind::OMP_Linear, 1, Align(4)});
-  Expected = {/*VF*/ 2, /*IsScalable*/ false, /*Parameters*/ {
+  Expected = {/*VF*/ ElementCount::getFixed(2), /*Parameters*/ {
                   {0, VFParamKind::OMP_Linear, 1, Align(4)},
                   {1, VFParamKind::Vector},
                   {2, VFParamKind::Vector},
@@ -590,9 +590,9 @@ TEST_F(VFShapeAPITest, API_updateVFShape) {
 
 TEST_F(VFShapeAPITest, API_updateVFShape_GlobalPredicate) {
 
-  buildShape(/*VF*/ 2, /*IsScalable*/ true, /*HasGlobalPred*/ true);
+  buildShape(/*VF*/ ElementCount::getScalable(2), /*HasGlobalPred*/ true);
   Shape.updateParam({1 /*Pos*/, VFParamKind::OMP_Uniform});
-  Expected = {/*VF*/ 2, /*IsScalable*/ true,
+  Expected = {/*VF*/ ElementCount::getScalable(2),
               /*Parameters*/ {{0, VFParamKind::Vector},
                               {1, VFParamKind::OMP_Uniform},
                               {2, VFParamKind::Vector},

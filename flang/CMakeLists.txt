@@ -25,12 +25,14 @@ if (CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
   message("Building Flang as a standalone project.")
   project(Flang)
   set(FLANG_STANDALONE_BUILD ON)
+else()
+  set(FLANG_STANDALONE_BUILD OFF)
+endif()
 
-  # For in-tree builds, this variable is inherited from
-  # llvm-project/llvm/CMakeLists.txt. For out-of-tree builds, we need a
-  # separate definition.
-  option(FLANG_BUILD_NEW_DRIVER "Build the flang compiler driver" ON)
+# Must go below project(..)
+include(GNUInstallDirs)
 
+if (FLANG_STANDALONE_BUILD)
   set(FLANG_BINARY_DIR ${CMAKE_CURRENT_BINARY_DIR})
   if (NOT MSVC_IDE)
     set(LLVM_ENABLE_ASSERTIONS ${ENABLE_ASSERTIONS}
@@ -40,30 +42,28 @@ if (CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
   endif()
 
   # We need a pre-built/installed version of LLVM.
-  find_package(LLVM REQUIRED HINTS "${LLVM_CMAKE_PATH}")
+  find_package(LLVM REQUIRED HINTS "${LLVM_CMAKE_DIR}")
   # If the user specifies a relative path to LLVM_DIR, the calls to include
   # LLVM modules fail. Append the absolute path to LLVM_DIR instead.
   get_filename_component(LLVM_DIR_ABSOLUTE ${LLVM_DIR} REALPATH)
   list(APPEND CMAKE_MODULE_PATH ${LLVM_DIR_ABSOLUTE})
 
-  if(FLANG_BUILD_NEW_DRIVER)
-    # Users might specify a path to CLANG_DIR that's:
-    #   * a full path, or
-    #   * a path relative to the path of this script.
-    # Append the absolute path to CLANG_DIR so that find_package works in both
-    # cases.
-    get_filename_component(
-      CLANG_DIR_ABSOLUTE
-      ${CLANG_DIR}
-      REALPATH
-      ${CMAKE_CURRENT_SOURCE_DIR})
-    list(APPEND CMAKE_MODULE_PATH ${CLANG_DIR_ABSOLUTE})
+  # Users might specify a path to CLANG_DIR that's:
+  #   * a full path, or
+  #   * a path relative to the path of this script.
+  # Append the absolute path to CLANG_DIR so that find_package works in both
+  # cases.
+  get_filename_component(
+    CLANG_DIR_ABSOLUTE
+    ${CLANG_DIR}
+    REALPATH
+    ${CMAKE_CURRENT_SOURCE_DIR})
+  list(APPEND CMAKE_MODULE_PATH ${CLANG_DIR_ABSOLUTE})
 
-    # TODO: Remove when libclangDriver is lifted out of Clang
-    find_package(Clang REQUIRED PATHS "${CLANG_DIR_ABSOLUTE}" NO_DEFAULT_PATH)
-    if (NOT Clang_FOUND)
-      message(FATAL_ERROR "Failed to find Clang")
-    endif()
+  # TODO: Remove when libclangDriver is lifted out of Clang
+  find_package(Clang REQUIRED PATHS "${CLANG_DIR_ABSOLUTE}" NO_DEFAULT_PATH)
+  if (NOT Clang_FOUND)
+    message(FATAL_ERROR "Failed to find Clang")
   endif()
 
   # If LLVM links to zlib we need the imported targets so we can too.
@@ -79,10 +79,9 @@ if (CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
   include(AddLLVM)
   include(HandleLLVMOptions)
   include(VersionFromVCS)
+  include(GetErrcMessages)
 
-  if(FLANG_BUILD_NEW_DRIVER)
-    include(AddClang)
-  endif()
+  include(AddClang)
 
   include(TableGen)
   find_package(MLIR REQUIRED CONFIG)
@@ -141,18 +140,20 @@ if (CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
          "Generate build targets for the Flang unit tests."
          ON)
 
+  get_errc_messages(LLVM_LIT_ERRC_MESSAGES)
+
 #Handle unittests when out-of-tree
 #LLVM_BUILD_MAIN_SRC_DIR - Path to llvm source when out-of-tree.
   set(FLANG_GTEST_AVAIL 0)
   if (FLANG_INCLUDE_TESTS)
     set(UNITTEST_DIR ${LLVM_BUILD_MAIN_SRC_DIR}/utils/unittest)
     if(EXISTS ${UNITTEST_DIR}/googletest/include/gtest/gtest.h)
-      if (NOT TARGET gtest)
-        add_library(gtest
+      if (NOT TARGET llvm_gtest)
+        add_library(llvm_gtest
           ${UNITTEST_DIR}/googletest/src/gtest-all.cc
           ${UNITTEST_DIR}/googlemock/src/gmock-all.cc
           )
-        target_include_directories(gtest
+        target_include_directories(llvm_gtest
           PUBLIC
           "${UNITTEST_DIR}/googletest/include"
           "${UNITTEST_DIR}/googlemock/include"
@@ -162,9 +163,9 @@ if (CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
           "${UNITTEST_DIR}/googlemock"
           )
          find_package(Threads)
-         target_link_libraries(gtest PUBLIC Threads::Threads)
-        add_library(gtest_main ${UNITTEST_DIR}/UnitTestMain/TestMain.cpp)
-        target_link_libraries(gtest_main PUBLIC gtest)
+         target_link_libraries(llvm_gtest PUBLIC Threads::Threads)
+        add_library(llvm_gtest_main ${UNITTEST_DIR}/UnitTestMain/TestMain.cpp)
+        target_link_libraries(gtest_main PUBLIC llvm_gtest)
       endif()
       set(FLANG_GTEST_AVAIL 1)
     else()
@@ -183,7 +184,6 @@ if (CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
   endif()
 
 else()
-  set(FLANG_STANDALONE_BUILD OFF)
   option(FLANG_INCLUDE_TESTS
          "Generate build targets for the Flang unit tests."
          ${LLVM_INCLUDE_TESTS})
@@ -206,20 +206,18 @@ endif()
 set(FLANG_INTRINSIC_MODULES_DIR ${CMAKE_BINARY_DIR}/include/flang)
 set(FLANG_INCLUDE_DIR ${FLANG_BINARY_DIR}/include)
 
-if(FLANG_BUILD_NEW_DRIVER)
-    # TODO: Remove when libclangDriver is lifted out of Clang
-    if(FLANG_STANDALONE_BUILD)
-      set(CLANG_INCLUDE_DIR ${CLANG_INCLUDE_DIRS} )
-      # No need to specify TableGen output dir as that's embedded in CLANG_DIR
-    else()
-      set(CLANG_INCLUDE_DIR ${LLVM_MAIN_SRC_DIR}/../clang/include )
-      # Specify TableGen output dir for things like DiagnosticCommonKinds.inc,
-      # DiagnosticDriverKinds.inc (required for reporting diagnostics)
-      set(CLANG_TABLEGEN_OUTPUT_DIR ${CMAKE_BINARY_DIR}/tools/clang/include)
-      include_directories(SYSTEM ${CLANG_TABLEGEN_OUTPUT_DIR})
-    endif()
-    include_directories(SYSTEM ${CLANG_INCLUDE_DIR})
+# TODO: Remove when libclangDriver is lifted out of Clang
+if(FLANG_STANDALONE_BUILD)
+  set(CLANG_INCLUDE_DIR ${CLANG_INCLUDE_DIRS} )
+  # No need to specify TableGen output dir as that's embedded in CLANG_DIR
+else()
+  set(CLANG_INCLUDE_DIR ${LLVM_MAIN_SRC_DIR}/../clang/include )
+  # Specify TableGen output dir for things like DiagnosticCommonKinds.inc,
+  # DiagnosticDriverKinds.inc (required for reporting diagnostics)
+  set(CLANG_TABLEGEN_OUTPUT_DIR ${CMAKE_BINARY_DIR}/tools/clang/include)
+  include_directories(SYSTEM ${CLANG_TABLEGEN_OUTPUT_DIR})
 endif()
+include_directories(SYSTEM ${CLANG_INCLUDE_DIR})
 
 # tco tool and FIR lib output directories
 if(FLANG_STANDALONE_BUILD)
@@ -233,8 +231,15 @@ include_directories(BEFORE
   ${FLANG_BINARY_DIR}/include
   ${FLANG_SOURCE_DIR}/include)
 
+if(NOT DEFINED LLVM_COMMON_CMAKE_UTILS)
+  set(LLVM_COMMON_CMAKE_UTILS ${FLANG_SOURCE_DIR}/../cmake)
+endif()
+
 # Add Flang-centric modules to cmake path.
-list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake/modules")
+list(INSERT CMAKE_MODULE_PATH 0
+  "${FLANG_SOURCE_DIR}/cmake/modules"
+  "${LLVM_COMMON_CMAKE_UTILS}/Modules"
+  )
 include(AddFlang)
 
 if (NOT DEFAULT_SYSROOT)
@@ -302,6 +307,14 @@ set(FLANG_REPOSITORY_STRING "" CACHE STRING
 if (FLANG_REPOSITORY_STRING)
   add_definitions(-DFLANG_REPOSITORY_STRING="${FLANG_REPOSITORY_STRING}")
 endif()
+
+include(TestBigEndian)
+test_big_endian(IS_BIGENDIAN)
+if (IS_BIGENDIAN)
+  add_compile_definitions(FLANG_BIG_ENDIAN=1)
+else ()
+  add_compile_definitions(FLANG_LITTLE_ENDIAN=1)
+endif ()
 
 # Configure Flang's Version.inc file.
 configure_file(
@@ -401,6 +414,11 @@ if (FLANG_BUILD_TOOLS)
   add_subdirectory(tools)
 endif()
 add_subdirectory(runtime)
+
+option(FLANG_BUILD_EXAMPLES "Build Flang example programs by default." OFF)
+if (FLANG_BUILD_EXAMPLES AND FLANG_STANDALONE_BUILD)
+  message(FATAL_ERROR "Examples are not supported in out-of-tree builds.")
+endif()
 add_subdirectory(examples)
 
 if (FLANG_INCLUDE_TESTS)
@@ -439,7 +457,7 @@ endif()
 
 if (NOT LLVM_INSTALL_TOOLCHAIN_ONLY)
   install(DIRECTORY include/flang
-    DESTINATION include
+    DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}"
     COMPONENT flang-headers
     FILES_MATCHING
     PATTERN "*.def"
@@ -449,9 +467,9 @@ if (NOT LLVM_INSTALL_TOOLCHAIN_ONLY)
     PATTERN "config.h" EXCLUDE
     PATTERN ".git"     EXCLUDE
     PATTERN "CMakeFiles" EXCLUDE)
-    
+
   install(DIRECTORY ${FLANG_INCLUDE_DIR}/flang
-    DESTINATION include
+    DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}"
     COMPONENT flang-headers
     FILES_MATCHING
     PATTERN "*.inc"

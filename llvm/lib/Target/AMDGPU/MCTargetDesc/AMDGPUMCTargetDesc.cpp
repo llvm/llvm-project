@@ -16,8 +16,10 @@
 #include "AMDGPUInstPrinter.h"
 #include "AMDGPUMCAsmInfo.h"
 #include "AMDGPUTargetStreamer.h"
-#include "SIDefines.h"
+#include "R600InstPrinter.h"
+#include "R600MCTargetDesc.h"
 #include "TargetInfo/AMDGPUTargetInfo.h"
+#include "llvm/MC/LaneBitmask.h"
 #include "llvm/MC/MCAsmBackend.h"
 #include "llvm/MC/MCCodeEmitter.h"
 #include "llvm/MC/MCELFStreamer.h"
@@ -26,10 +28,10 @@
 #include "llvm/MC/MCInstrDesc.h"
 #include "llvm/MC/MCInstrInfo.h"
 #include "llvm/MC/MCObjectWriter.h"
-#include "llvm/MC/MCRegister.h"
+#include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCSubtargetInfo.h"
-#include "llvm/Support/TargetRegistry.h"
+#include "llvm/MC/TargetRegistry.h"
 
 using namespace llvm;
 

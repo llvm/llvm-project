@@ -1,7 +1,7 @@
 ; Fourth example from Doc/Coroutines.rst (coroutine promise)
-; RUN: opt < %s -passes='default<O2>' -enable-coroutines -S | FileCheck %s
+; RUN: opt < %s -passes='default<O2>' -S | FileCheck %s
 
-define i8* @f(i32 %n) {
+define i8* @f(i32 %n) presplitcoroutine {
 entry:
   %promise = alloca i32
   %pv = bitcast i32* %promise to i8*

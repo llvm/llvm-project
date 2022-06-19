@@ -12,7 +12,7 @@
 #define FORTRAN_RUNTIME_FILE_H_
 
 #include "io-error.h"
-#include "memory.h"
+#include "flang/Runtime/memory.h"
 #include <cinttypes>
 #include <optional>
 
@@ -28,18 +28,18 @@ public:
   using FileOffset = std::int64_t;
 
   const char *path() const { return path_.get(); }
-  void set_path(OwningPtr<char> &&, std::size_t bytes);
   std::size_t pathLength() const { return pathLength_; }
+  void set_path(OwningPtr<char> &&, std::size_t bytes);
   bool mayRead() const { return mayRead_; }
   bool mayWrite() const { return mayWrite_; }
   bool mayPosition() const { return mayPosition_; }
   bool mayAsynchronous() const { return mayAsynchronous_; }
   void set_mayAsynchronous(bool yes) { mayAsynchronous_ = yes; }
-  FileOffset position() const { return position_; }
   bool isTerminal() const { return isTerminal_; }
+  bool isWindowsTextFile() const { return isWindowsTextFile_; }
   std::optional<FileOffset> knownSize() const { return knownSize_; }
 
-  bool IsOpen() const { return fd_ >= 0; }
+  bool IsConnected() const { return fd_ >= 0; }
   void Open(OpenStatus, std::optional<Action>, Position, IoErrorHandler &);
   void Predefine(int fd);
   void Close(CloseStatus, IoErrorHandler &);
@@ -66,6 +66,9 @@ public:
   void Wait(int id, IoErrorHandler &);
   void WaitAll(IoErrorHandler &);
 
+  // INQUIRE(POSITION=)
+  Position InquirePosition() const;
+
 private:
   struct Pending {
     int id;
@@ -78,6 +81,11 @@ private:
   bool RawSeek(FileOffset);
   bool RawSeekToEnd();
   int PendingResult(const Terminator &, int);
+  void SetPosition(FileOffset pos) {
+    position_ = pos;
+    openPosition_.reset();
+  }
+  void CloseFd(IoErrorHandler &);
 
   int fd_{-1};
   OwningPtr<char> path_;
@@ -86,9 +94,11 @@ private:
   bool mayWrite_{false};
   bool mayPosition_{false};
   bool mayAsynchronous_{false};
+  std::optional<Position> openPosition_; // from Open(); reset after positioning
   FileOffset position_{0};
   std::optional<FileOffset> knownSize_;
   bool isTerminal_{false};
+  bool isWindowsTextFile_{false}; // expands LF to CR+LF on write
 
   int nextId_;
   OwningPtr<Pending> pending_;
@@ -99,5 +109,6 @@ bool IsExtant(const char *path);
 bool MayRead(const char *path);
 bool MayWrite(const char *path);
 bool MayReadAndWrite(const char *path);
+std::int64_t SizeInBytes(const char *path);
 } // namespace Fortran::runtime::io
 #endif // FORTRAN_RUNTIME_FILE_H_

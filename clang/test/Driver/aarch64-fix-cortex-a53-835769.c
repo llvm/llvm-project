@@ -8,6 +8,6 @@
 // RUN: %clang -target aarch64-android-eabi %s -### 2>&1 \
 // RUN:   | FileCheck --check-prefix=CHECK-YES %s
 
-// CHECK-DEF-NOT: "-mllvm" "-aarch64-fix-cortex-a53-835769"
-// CHECK-YES: "-mllvm" "-aarch64-fix-cortex-a53-835769=1"
-// CHECK-NO: "-mllvm" "-aarch64-fix-cortex-a53-835769=0"
+// CHECK-DEF-NOT: "{[+-]}fix-cortex-a53-835769"
+// CHECK-YES: "+fix-cortex-a53-835769"
+// CHECK-NO: "-fix-cortex-a53-835769"

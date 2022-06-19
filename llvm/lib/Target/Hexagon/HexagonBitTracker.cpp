@@ -189,7 +189,7 @@ bool HexagonEvaluator::evaluate(const MachineInstr &MI,
 
   unsigned NumDefs = 0;
 
-  // Sanity verification: there should not be any defs with subregisters.
+  // Basic correctness check: there should not be any defs with subregisters.
   for (const MachineOperand &MO : MI.operands()) {
     if (!MO.isReg() || !MO.isDef())
       continue;
@@ -491,6 +491,11 @@ bool HexagonEvaluator::evaluate(const MachineInstr &MI,
     case M2_maci: {
       RegisterCell M = eMLS(rc(2), rc(3));
       RegisterCell RC = eADD(rc(1), lo(M, W0));
+      return rr0(RC, Outputs);
+    }
+    case M2_mnaci: {
+      RegisterCell M = eMLS(rc(2), rc(3));
+      RegisterCell RC = eSUB(rc(1), lo(M, W0));
       return rr0(RC, Outputs);
     }
     case M2_mpysmi: {

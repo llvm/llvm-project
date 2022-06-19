@@ -133,7 +133,6 @@ class Configuration(object):
         self.configure_env()
         self.configure_coverage()
         self.configure_substitutions()
-        self.configure_features()
 
         libcxx.test.newconfig.configure(
             libcxx.test.params.DEFAULT_PARAMETERS,
@@ -159,15 +158,6 @@ class Configuration(object):
         self.lit_config.note("Running against the C++ Library at {}".format(self.cxx_runtime_root))
         self.lit_config.note("Linking against the ABI Library at {}".format(self.abi_library_root))
         self.lit_config.note("Running against the ABI Library at {}".format(self.abi_runtime_root))
-        sys.stderr.flush()  # Force flushing to avoid broken output on Windows
-
-    def get_test_format(self):
-        from libcxx.test.format import LibcxxTestFormat
-        return LibcxxTestFormat(
-            self.cxx,
-            self.use_clang_verify,
-            self.executor,
-            exec_env=self.exec_env)
 
     def configure_cxx(self):
         # Gather various compiler parameters.
@@ -231,16 +221,6 @@ class Configuration(object):
             else:
                 self.libcxx_obj_root = self.project_obj_root
 
-    def configure_features(self):
-        if self.target_info.is_windows():
-            if self.cxx_stdlib_under_test == 'libc++':
-                # LIBCXX-WINDOWS-FIXME is the feature name used to XFAIL the
-                # initial Windows failures until they can be properly diagnosed
-                # and fixed. This allows easier detection of new test failures
-                # and regressions. Note: New failures should not be suppressed
-                # using this feature. (Also see llvm.org/PR32730)
-                self.config.available_features.add('LIBCXX-WINDOWS-FIXME')
-
     def configure_compile_flags(self):
         self.configure_default_compile_flags()
         # Configure extra flags
@@ -297,11 +277,6 @@ class Configuration(object):
 
     def configure_compile_flags_header_includes(self):
         support_path = os.path.join(self.libcxx_src_root, 'test', 'support')
-        if self.cxx_stdlib_under_test != 'libstdc++' and \
-           not self.target_info.is_windows() and \
-           not self.target_info.is_zos():
-            self.cxx.compile_flags += [
-                '-include', os.path.join(support_path, 'nasty_macros.h')]
         if self.cxx_stdlib_under_test == 'msvc':
             self.cxx.compile_flags += [
                 '-include', os.path.join(support_path,
@@ -326,8 +301,8 @@ class Configuration(object):
         if triple is not None:
             cxx_target_headers = os.path.join(path, triple, cxx, version)
             if os.path.isdir(cxx_target_headers):
-                self.cxx.compile_flags += ['-I' + cxx_target_headers]
-        self.cxx.compile_flags += ['-I' + cxx_headers]
+                self.cxx.compile_flags += ['-I', cxx_target_headers]
+        self.cxx.compile_flags += ['-I', cxx_headers]
         if self.libcxx_obj_root is not None:
             cxxabi_headers = os.path.join(self.libcxx_obj_root, 'include',
                                           'c++build')
@@ -424,6 +399,8 @@ class Configuration(object):
                         self.cxx.link_flags += [abs_path]
                     else:
                         self.cxx.link_flags += ['-lc++abi']
+        elif cxx_abi == 'system-libcxxabi':
+            self.cxx.link_flags += ['-lc++abi']
         elif cxx_abi == 'libcxxrt':
             self.cxx.link_flags += ['-lcxxrt']
         elif cxx_abi == 'vcruntime':
@@ -435,7 +412,7 @@ class Configuration(object):
             # The compiler normally links in oldnames.lib too, but we've
             # specified -nostdlib above, so we need to specify it manually.
             self.cxx.link_flags += ['-loldnames']
-        elif cxx_abi == 'none' or cxx_abi == 'default':
+        elif cxx_abi == 'none':
             if self.target_info.is_windows():
                 debug_suffix = 'd' if self.debug_build else ''
                 self.cxx.link_flags += ['-lmsvcrt%s' % debug_suffix]

@@ -20,9 +20,8 @@
 using namespace lldb;
 using namespace lldb_private;
 
-namespace {
-void CreateEnvironmentBuffer(const Environment &env,
-                             std::vector<char> &buffer) {
+static void CreateEnvironmentBuffer(const Environment &env,
+                                    std::vector<char> &buffer) {
   // The buffer is a list of null-terminated UTF-16 strings, followed by an
   // extra L'\0' (two bytes of 0).  An empty environment must have one
   // empty string, followed by an extra L'\0'.
@@ -42,7 +41,7 @@ void CreateEnvironmentBuffer(const Environment &env,
   buffer.push_back(0);
 }
 
-bool GetFlattenedWindowsCommandString(Args args, std::wstring &command) {
+static bool GetFlattenedWindowsCommandString(Args args, std::wstring &command) {
   if (args.empty())
     return false;
 
@@ -58,7 +57,6 @@ bool GetFlattenedWindowsCommandString(Args args, std::wstring &command) {
   command = *result;
   return true;
 }
-} // namespace
 
 HostProcess
 ProcessLauncherWindows::LaunchProcess(const ProcessLaunchInfo &launch_info,

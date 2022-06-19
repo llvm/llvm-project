@@ -1,6 +1,6 @@
-; RUN: opt %loadPolly -polly-detect -polly-scops \
+; RUN: opt %loadPolly -polly-print-detect -polly-print-scops \
 ; RUN: -polly-invariant-load-hoisting=true \
-; RUN: -analyze < %s | FileCheck %s
+; RUN: -disable-output < %s | FileCheck %s
 
 ; CHECK-NOT: Function: foo_undereferanceable
 

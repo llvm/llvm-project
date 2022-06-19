@@ -31,9 +31,8 @@ define amdgpu_kernel void @madmk_f32(float addrspace(1)* noalias %out, float add
 ; GCN-DAG: buffer_load_dword [[VA:v[0-9]+]], {{v\[[0-9]+:[0-9]+\]}}, {{s\[[0-9]+:[0-9]+\]}}, 0 addr64 glc{{$}}
 ; GCN-DAG: buffer_load_dword [[VB:v[0-9]+]], {{v\[[0-9]+:[0-9]+\]}}, {{s\[[0-9]+:[0-9]+\]}}, 0 addr64 offset:4
 ; GCN-DAG: buffer_load_dword [[VC:v[0-9]+]], {{v\[[0-9]+:[0-9]+\]}}, {{s\[[0-9]+:[0-9]+\]}}, 0 addr64 offset:8
-; GCN-DAG: s_mov_b32 [[SK:s[0-9]+]], 0x41200000
-; GCN-DAG: v_mac_f32_e32 [[VB]], [[SK]], [[VA]]
-; GCN-DAG: v_mac_f32_e32 [[VC]], [[SK]], [[VA]]
+; GCN-DAG: v_mac_f32_e32 [[VB]], 0x41200000, [[VA]]
+; GCN-DAG: v_mac_f32_e32 [[VC]], 0x41200000, [[VA]]
 ; GCN: s_endpgm
 define amdgpu_kernel void @madmk_2_use_f32(float addrspace(1)* noalias %out, float addrspace(1)* noalias %in) #0 {
   %tid = tail call i32 @llvm.amdgcn.workitem.id.x() nounwind readnone

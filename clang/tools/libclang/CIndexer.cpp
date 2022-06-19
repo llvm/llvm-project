@@ -125,13 +125,23 @@ const std::string &CIndexer::getClangResourcesPath() {
 #elif defined(_AIX)
   getClangResourcesPathImplAIX(LibClangPath);
 #else
-  // This silly cast below avoids a C++ warning.
   Dl_info info;
-  if (dladdr((void *)(uintptr_t)clang_createTranslationUnit, &info) == 0)
-    llvm_unreachable("Call to dladdr() failed");
+  std::string Path;
+  // This silly cast below avoids a C++ warning.
+  if (dladdr((void *)(uintptr_t)clang_createTranslationUnit, &info) != 0) {
+    // We now have the CIndex directory, locate clang relative to it.
+    LibClangPath += info.dli_fname;
+  } else if (!(Path = llvm::sys::fs::getMainExecutable(nullptr, nullptr)).empty()) {
+    // If we can't get the path using dladdr, try to get the main executable
+    // path. This may be needed when we're statically linking libclang with
+    // musl libc, for example.
+    LibClangPath += Path;
+  } else {
+    // It's rather unlikely we end up here. But it could happen, so report an
+    // error instead of crashing.
+    llvm::report_fatal_error("could not locate Clang resource path");
+  }
 
-  // We now have the CIndex directory, locate clang relative to it.
-  LibClangPath += info.dli_fname;
 #endif
 
   // Cache our result.
@@ -166,7 +176,7 @@ LibclangInvocationReporter::LibclangInvocationReporter(
   if (llvm::sys::fs::createUniqueFile(TempPath, FD, TempPath,
                                       llvm::sys::fs::OF_Text))
     return;
-  File = std::string(TempPath.begin(), TempPath.end());
+  File = static_cast<std::string>(TempPath);
   llvm::raw_fd_ostream OS(FD, /*ShouldClose=*/true);
 
   // Write out the information about the invocation to it.

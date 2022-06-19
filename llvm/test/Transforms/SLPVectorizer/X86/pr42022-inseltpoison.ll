@@ -7,22 +7,13 @@
 define { <2 x float>, <2 x float> } @StructOfVectors(float *%Ptr) {
 ; CHECK-LABEL: @StructOfVectors(
 ; CHECK-NEXT:    [[GEP0:%.*]] = getelementptr inbounds float, float* [[PTR:%.*]], i64 0
-; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr inbounds float, float* [[PTR]], i64 1
-; CHECK-NEXT:    [[GEP2:%.*]] = getelementptr inbounds float, float* [[PTR]], i64 2
-; CHECK-NEXT:    [[GEP3:%.*]] = getelementptr inbounds float, float* [[PTR]], i64 3
 ; CHECK-NEXT:    [[TMP1:%.*]] = bitcast float* [[GEP0]] to <4 x float>*
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <4 x float>, <4 x float>* [[TMP1]], align 4
 ; CHECK-NEXT:    [[TMP3:%.*]] = fadd fast <4 x float> [[TMP2]], <float 1.100000e+01, float 1.200000e+01, float 1.300000e+01, float 1.400000e+01>
-; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <4 x float> [[TMP3]], i32 0
-; CHECK-NEXT:    [[VECIN0:%.*]] = insertelement <2 x float> poison, float [[TMP4]], i64 0
-; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <4 x float> [[TMP3]], i32 1
-; CHECK-NEXT:    [[VECIN1:%.*]] = insertelement <2 x float> [[VECIN0]], float [[TMP5]], i64 1
-; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <4 x float> [[TMP3]], i32 2
-; CHECK-NEXT:    [[VECIN2:%.*]] = insertelement <2 x float> poison, float [[TMP6]], i64 0
-; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <4 x float> [[TMP3]], i32 3
-; CHECK-NEXT:    [[VECIN3:%.*]] = insertelement <2 x float> [[VECIN2]], float [[TMP7]], i64 1
-; CHECK-NEXT:    [[RET0:%.*]] = insertvalue { <2 x float>, <2 x float> } undef, <2 x float> [[VECIN1]], 0
-; CHECK-NEXT:    [[RET1:%.*]] = insertvalue { <2 x float>, <2 x float> } [[RET0]], <2 x float> [[VECIN3]], 1
+; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <4 x float> [[TMP3]], <4 x float> poison, <2 x i32> <i32 0, i32 1>
+; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <4 x float> [[TMP3]], <4 x float> poison, <2 x i32> <i32 2, i32 3>
+; CHECK-NEXT:    [[RET0:%.*]] = insertvalue { <2 x float>, <2 x float> } undef, <2 x float> [[TMP4]], 0
+; CHECK-NEXT:    [[RET1:%.*]] = insertvalue { <2 x float>, <2 x float> } [[RET0]], <2 x float> [[TMP5]], 1
 ; CHECK-NEXT:    ret { <2 x float>, <2 x float> } [[RET1]]
 ;
   %GEP0 = getelementptr inbounds float, float* %Ptr, i64 0
@@ -55,9 +46,6 @@ define { <2 x float>, <2 x float> } @StructOfVectors(float *%Ptr) {
 define [2 x %StructTy] @ArrayOfStruct(float *%Ptr) {
 ; CHECK-LABEL: @ArrayOfStruct(
 ; CHECK-NEXT:    [[GEP0:%.*]] = getelementptr inbounds float, float* [[PTR:%.*]], i64 0
-; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr inbounds float, float* [[PTR]], i64 1
-; CHECK-NEXT:    [[GEP2:%.*]] = getelementptr inbounds float, float* [[PTR]], i64 2
-; CHECK-NEXT:    [[GEP3:%.*]] = getelementptr inbounds float, float* [[PTR]], i64 3
 ; CHECK-NEXT:    [[TMP1:%.*]] = bitcast float* [[GEP0]] to <4 x float>*
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <4 x float>, <4 x float>* [[TMP1]], align 4
 ; CHECK-NEXT:    [[TMP3:%.*]] = fadd fast <4 x float> [[TMP2]], <float 1.100000e+01, float 1.200000e+01, float 1.300000e+01, float 1.400000e+01>
@@ -101,9 +89,6 @@ define [2 x %StructTy] @ArrayOfStruct(float *%Ptr) {
 define {%StructTy, %StructTy} @StructOfStruct(float *%Ptr) {
 ; CHECK-LABEL: @StructOfStruct(
 ; CHECK-NEXT:    [[GEP0:%.*]] = getelementptr inbounds float, float* [[PTR:%.*]], i64 0
-; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr inbounds float, float* [[PTR]], i64 1
-; CHECK-NEXT:    [[GEP2:%.*]] = getelementptr inbounds float, float* [[PTR]], i64 2
-; CHECK-NEXT:    [[GEP3:%.*]] = getelementptr inbounds float, float* [[PTR]], i64 3
 ; CHECK-NEXT:    [[TMP1:%.*]] = bitcast float* [[GEP0]] to <4 x float>*
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <4 x float>, <4 x float>* [[TMP1]], align 4
 ; CHECK-NEXT:    [[TMP3:%.*]] = fadd fast <4 x float> [[TMP2]], <float 1.100000e+01, float 1.200000e+01, float 1.300000e+01, float 1.400000e+01>
@@ -194,13 +179,6 @@ define {%StructTy, float, float} @NonHomogeneousStruct(float *%Ptr) {
 define {%Struct2Ty, %Struct2Ty} @StructOfStructOfStruct(i16 *%Ptr) {
 ; CHECK-LABEL: @StructOfStructOfStruct(
 ; CHECK-NEXT:    [[GEP0:%.*]] = getelementptr inbounds i16, i16* [[PTR:%.*]], i64 0
-; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr inbounds i16, i16* [[PTR]], i64 1
-; CHECK-NEXT:    [[GEP2:%.*]] = getelementptr inbounds i16, i16* [[PTR]], i64 2
-; CHECK-NEXT:    [[GEP3:%.*]] = getelementptr inbounds i16, i16* [[PTR]], i64 3
-; CHECK-NEXT:    [[GEP4:%.*]] = getelementptr inbounds i16, i16* [[PTR]], i64 4
-; CHECK-NEXT:    [[GEP5:%.*]] = getelementptr inbounds i16, i16* [[PTR]], i64 5
-; CHECK-NEXT:    [[GEP6:%.*]] = getelementptr inbounds i16, i16* [[PTR]], i64 6
-; CHECK-NEXT:    [[GEP7:%.*]] = getelementptr inbounds i16, i16* [[PTR]], i64 7
 ; CHECK-NEXT:    [[TMP1:%.*]] = bitcast i16* [[GEP0]] to <8 x i16>*
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <8 x i16>, <8 x i16>* [[TMP1]], align 2
 ; CHECK-NEXT:    [[TMP3:%.*]] = add <8 x i16> [[TMP2]], <i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7, i16 8>

@@ -82,6 +82,9 @@ private:
   T* ptr_;
 };
 
+template<typename T, typename U>
+U& operator->*(const SmartPtr<T>& ptr, U T::*p) { return ptr->*p; }
+
 
 // For testing destructor calls and cleanup.
 class MyString {
@@ -280,12 +283,12 @@ void sls_fun_bad_6() {
 
 void sls_fun_bad_7() {
   sls_mu.Lock();
-  while (getBool()) {
+  while (getBool()) { // \
+        expected-warning{{expecting mutex 'sls_mu' to be held at start of each loop}}
     sls_mu.Unlock();
     if (getBool()) {
       if (getBool()) {
-        continue; // \
-        expected-warning{{expecting mutex 'sls_mu' to be held at start of each loop}}
+        continue;
       }
     }
     sls_mu.Lock(); // expected-note {{mutex acquired here}}
@@ -332,13 +335,14 @@ void sls_fun_bad_12() {
     sls_mu.Unlock();
     if (getBool()) {
       if (getBool()) {
-        break; // expected-warning{{mutex 'sls_mu' is not held on every path through here}}
+        break;
       }
     }
     sls_mu.Lock();
   }
   sls_mu.Unlock(); // \
-    // expected-warning{{releasing mutex 'sls_mu' that was not held}}
+    expected-warning{{mutex 'sls_mu' is not held on every path through here}} \
+    expected-warning{{releasing mutex 'sls_mu' that was not held}}
 }
 
 //-----------------------------------------//
@@ -2086,13 +2090,13 @@ namespace GoingNative {
   mutex m;
   void test() {
     m.lock();
-    while (foo()) {
+    while (foo()) { // expected-warning {{expecting mutex 'm' to be held at start of each loop}}
       m.unlock();
       // ...
       if (bar()) {
         // ...
         if (foo())
-          continue; // expected-warning {{expecting mutex 'm' to be held at start of each loop}}
+          continue;
         //...
       }
       // ...
@@ -2551,7 +2555,7 @@ void test2(Bar* b1, Bar* b2) {
 }
 
 
-// Sanity check -- lock the mutex directly, but use attributes that call getMu()
+// Lock the mutex directly, but use attributes that call getMu()
 // Also lock the mutex using getFooMu, which calls a lock_returned function.
 void test3(Bar* b1, Bar* b2) {
   b1->mu_.Lock();
@@ -2789,6 +2793,25 @@ void loopRelease() {
   }
 }
 
+void loopPromote() {
+  RelockableMutexLock scope(&mu, SharedTraits{});
+  for (unsigned i = 1; i < 10; ++i) {
+    x = 1; // expected-warning {{writing variable 'x' requires holding mutex 'mu' exclusively}}
+    if (i == 5)
+      scope.PromoteShared();
+  }
+}
+
+void loopDemote() {
+  RelockableMutexLock scope(&mu, ExclusiveTraits{}); // expected-note {{the other acquisition of mutex 'mu' is here}}
+  // We have to warn on this join point despite the lock being managed ...
+  for (unsigned i = 1; i < 10; ++i) {
+    x = 1; // ... because we might miss that this doesn't always happen under exclusive lock.
+    if (i == 5)
+      scope.DemoteExclusive(); // expected-warning {{mutex 'mu' is acquired exclusively and shared in the same scope}}
+  }
+}
+
 void loopAcquireContinue() {
   RelockableMutexLock scope(&mu, DeferTraits{});
   for (unsigned i = 1; i < 10; ++i) {
@@ -2803,11 +2826,34 @@ void loopAcquireContinue() {
 void loopReleaseContinue() {
   RelockableMutexLock scope(&mu, ExclusiveTraits{}); // expected-note {{mutex acquired here}}
   // We have to warn on this join point despite the lock being managed ...
-  for (unsigned i = 1; i < 10; ++i) {
+  for (unsigned i = 1; i < 10; ++i) { // expected-warning {{expecting mutex 'mu' to be held at start of each loop}}
     x = 1; // ... because we might miss that this doesn't always happen under lock.
     if (i == 5) {
       scope.Unlock();
-      continue; // expected-warning {{expecting mutex 'mu' to be held at start of each loop}}
+      continue;
+    }
+  }
+}
+
+void loopPromoteContinue() {
+  RelockableMutexLock scope(&mu, SharedTraits{});
+  for (unsigned i = 1; i < 10; ++i) {
+    x = 1; // expected-warning {{writing variable 'x' requires holding mutex 'mu' exclusively}}
+    if (i == 5) {
+      scope.PromoteShared();
+      continue;
+    }
+  }
+}
+
+void loopDemoteContinue() {
+  RelockableMutexLock scope(&mu, ExclusiveTraits{}); // expected-note {{the other acquisition of mutex 'mu' is here}}
+  // We have to warn on this join point despite the lock being managed ...
+  for (unsigned i = 1; i < 10; ++i) {
+    x = 1; // ... because we might miss that this doesn't always happen under exclusive lock.
+    if (i == 5) {
+      scope.DemoteExclusive(); // expected-warning {{mutex 'mu' is acquired exclusively and shared in the same scope}}
+      continue;
     }
   }
 }
@@ -3819,8 +3865,8 @@ class Foo {
     }
     a = 0; // \
       // expected-warning {{writing variable 'a' requires holding mutex 'mu_' exclusively}}
-    endNoWarnOnWrites();  // \
-      // expected-warning {{releasing mutex '*' that was not held}}
+    endNoWarnOnWrites(); // \
+      // expected-warning {{releasing wildcard '*' that was not held}}
   }
 
 
@@ -4295,6 +4341,21 @@ public:
 
   void operator()() { }
 
+  Data& operator+=(int);
+  Data& operator-=(int);
+  Data& operator*=(int);
+  Data& operator/=(int);
+  Data& operator%=(int);
+  Data& operator^=(int);
+  Data& operator&=(int);
+  Data& operator|=(int);
+  Data& operator<<=(int);
+  Data& operator>>=(int);
+  Data& operator++();
+  Data& operator++(int);
+  Data& operator--();
+  Data& operator--(int);
+
 private:
   int dat;
 };
@@ -4361,6 +4422,20 @@ public:
                           // expected-warning {{reading variable 'datap1_' requires holding mutex 'mu_'}}
     data_ = *datap2_;     // expected-warning {{writing variable 'data_' requires holding mutex 'mu_' exclusively}} \
                           // expected-warning {{reading the value pointed to by 'datap2_' requires holding mutex 'mu_'}}
+    data_ += 1;           // expected-warning {{writing variable 'data_' requires holding mutex 'mu_' exclusively}}
+    data_ -= 1;           // expected-warning {{writing variable 'data_' requires holding mutex 'mu_' exclusively}}
+    data_ *= 1;           // expected-warning {{writing variable 'data_' requires holding mutex 'mu_' exclusively}}
+    data_ /= 1;           // expected-warning {{writing variable 'data_' requires holding mutex 'mu_' exclusively}}
+    data_ %= 1;           // expected-warning {{writing variable 'data_' requires holding mutex 'mu_' exclusively}}
+    data_ ^= 1;           // expected-warning {{writing variable 'data_' requires holding mutex 'mu_' exclusively}}
+    data_ &= 1;           // expected-warning {{writing variable 'data_' requires holding mutex 'mu_' exclusively}}
+    data_ |= 1;           // expected-warning {{writing variable 'data_' requires holding mutex 'mu_' exclusively}}
+    data_ <<= 1;          // expected-warning {{writing variable 'data_' requires holding mutex 'mu_' exclusively}}
+    data_ >>= 1;          // expected-warning {{writing variable 'data_' requires holding mutex 'mu_' exclusively}}
+    ++data_;              // expected-warning {{writing variable 'data_' requires holding mutex 'mu_' exclusively}}
+    data_++;              // expected-warning {{writing variable 'data_' requires holding mutex 'mu_' exclusively}}
+    --data_;              // expected-warning {{writing variable 'data_' requires holding mutex 'mu_' exclusively}}
+    data_--;              // expected-warning {{writing variable 'data_' requires holding mutex 'mu_' exclusively}}
 
     data_[0] = 0;         // expected-warning {{reading variable 'data_' requires holding mutex 'mu_'}}
     (*datap2_)[0] = 0;    // expected-warning {{reading the value pointed to by 'datap2_' requires holding mutex 'mu_'}}
@@ -4787,7 +4862,7 @@ class Cell {
 
 
 // This mainly duplicates earlier tests, but just to make sure...
-class PtGuardedBySanityTest {
+class PtGuardedByCorrectnessTest {
   Mutex  mu1;
   Mutex  mu2;
   int*   a GUARDED_BY(mu1) PT_GUARDED_BY(mu2);
@@ -4880,6 +4955,8 @@ class SmartPtr_PtGuardedBy_Test {
   SmartPtr<int>  sp GUARDED_BY(mu1) PT_GUARDED_BY(mu2);
   SmartPtr<Cell> sq GUARDED_BY(mu1) PT_GUARDED_BY(mu2);
 
+  static constexpr int Cell::*pa = &Cell::a;
+
   void test1() {
     mu1.ReaderLock();
     mu2.Lock();
@@ -4888,6 +4965,7 @@ class SmartPtr_PtGuardedBy_Test {
     if (*sp == 0) doSomething();
     *sp = 0;
     sq->a = 0;
+    sq->*pa = 0;
 
     if (sp[0] == 0) doSomething();
     sp[0] = 0;
@@ -4903,6 +4981,7 @@ class SmartPtr_PtGuardedBy_Test {
     if (*sp == 0) doSomething();   // expected-warning {{reading variable 'sp' requires holding mutex 'mu1'}}
     *sp = 0;                       // expected-warning {{reading variable 'sp' requires holding mutex 'mu1'}}
     sq->a = 0;                     // expected-warning {{reading variable 'sq' requires holding mutex 'mu1'}}
+    sq->*pa = 0;                   // expected-warning {{reading variable 'sq' requires holding mutex 'mu1'}}
 
     if (sp[0] == 0) doSomething();   // expected-warning {{reading variable 'sp' requires holding mutex 'mu1'}}
     sp[0] = 0;                       // expected-warning {{reading variable 'sp' requires holding mutex 'mu1'}}
@@ -4919,6 +4998,7 @@ class SmartPtr_PtGuardedBy_Test {
     if (*sp == 0) doSomething();   // expected-warning {{reading the value pointed to by 'sp' requires holding mutex 'mu2'}}
     *sp = 0;                       // expected-warning {{reading the value pointed to by 'sp' requires holding mutex 'mu2'}}
     sq->a = 0;                     // expected-warning {{reading the value pointed to by 'sq' requires holding mutex 'mu2'}}
+    sq->*pa = 0;                   // expected-warning {{reading the value pointed to by 'sq' requires holding mutex 'mu2'}}
 
     if (sp[0] == 0) doSomething();   // expected-warning {{reading the value pointed to by 'sp' requires holding mutex 'mu2'}}
     sp[0] = 0;                       // expected-warning {{reading the value pointed to by 'sp' requires holding mutex 'mu2'}}

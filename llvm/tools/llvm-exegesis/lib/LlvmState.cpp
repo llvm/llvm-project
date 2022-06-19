@@ -13,8 +13,8 @@
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCFixup.h"
 #include "llvm/MC/MCObjectFileInfo.h"
+#include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/Host.h"
-#include "llvm/Support/TargetRegistry.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Target/TargetOptions.h"
@@ -67,8 +67,7 @@ bool LLVMState::canAssemble(const MCInst &Inst) const {
                     TheTargetMachine->getMCSubtargetInfo());
   std::unique_ptr<const MCCodeEmitter> CodeEmitter(
       TheTargetMachine->getTarget().createMCCodeEmitter(
-          *TheTargetMachine->getMCInstrInfo(), *TheTargetMachine->getMCRegisterInfo(),
-          Context));
+          *TheTargetMachine->getMCInstrInfo(), Context));
   assert(CodeEmitter && "unable to create code emitter");
   SmallVector<char, 16> Tmp;
   raw_svector_ostream OS(Tmp);

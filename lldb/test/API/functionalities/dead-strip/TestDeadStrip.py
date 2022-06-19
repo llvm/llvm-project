@@ -12,8 +12,6 @@ from lldbsuite.test import lldbutil
 
 class DeadStripTestCase(TestBase):
 
-    mydir = TestBase.compute_mydir(__file__)
-
     @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr44429")
     def test(self):
         """Test breakpoint works correctly with dead-code stripping."""
@@ -42,8 +40,7 @@ class DeadStripTestCase(TestBase):
                              'stop reason = breakpoint'])
 
         # The breakpoint should have a hit count of 1.
-        self.expect("breakpoint list -f 1", BREAKPOINT_HIT_ONCE,
-                    substrs=[' resolved, hit count = 1'])
+        lldbutil.check_breakpoint(self, bpno = 1, expected_hit_count = 1)
 
         self.runCmd("continue")
 
@@ -54,5 +51,4 @@ class DeadStripTestCase(TestBase):
                              'stop reason = breakpoint'])
 
         # The breakpoint should have a hit count of 1.
-        self.expect("breakpoint list -f 3", BREAKPOINT_HIT_ONCE,
-                    substrs=[' resolved, hit count = 1'])
+        lldbutil.check_breakpoint(self, bpno = 3, expected_hit_count = 1)

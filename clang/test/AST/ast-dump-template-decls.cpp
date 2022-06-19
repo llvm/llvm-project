@@ -90,7 +90,7 @@ struct T {};
 
 template <decltype(auto)>
 // CHECK: ClassTemplateDecl 0x{{[^ ]*}} <line:[[@LINE-1]]:1, line:[[@LINE+2]]:11> col:8 U
-// CHECK-NEXT: NonTypeTemplateParmDecl 0x{{[^ ]*}} <line:[[@LINE-2]]:11> col:25 'decltype(auto)' depth 0 index 0
+// CHECK-NEXT: NonTypeTemplateParmDecl 0x{{[^ ]*}} <line:[[@LINE-2]]:11, col:24> col:25 'decltype(auto)' depth 0 index 0
 struct U {};
 
 template <typename Ty>
@@ -108,3 +108,22 @@ template <typename Uy>
 // CHECK: FunctionTemplateDecl 0x{{[^ ]*}} parent 0x{{[^ ]*}} prev 0x{{[^ ]*}} <line:[[@LINE-1]]:1, line:[[@LINE+2]]:18> col:13 f
 // CHECK-NEXT: TemplateTypeParmDecl 0x{{[^ ]*}} <line:[[@LINE-2]]:11, col:20> col:20 typename depth 1 index 0 Uy
 void V<Ty>::f() {}
+
+namespace PR55886 {
+template <class T> struct C {
+  template <class U> using type1 = U(T);
+};
+using type2 = typename C<int>::type1<void>;
+// CHECK:      TypeAliasDecl 0x{{[^ ]*}} <line:[[@LINE-1]]:1, col:42> col:7 type2 'typename C<int>::type1<void>':'void (int)'
+// CHECK-NEXT: ElaboratedType 0x{{[^ ]*}} 'typename C<int>::type1<void>' sugar
+// CHECK-NEXT: TemplateSpecializationType 0x{{[^ ]*}} 'type1<void>' sugar alias type1
+// CHECK-NEXT: TemplateArgument type 'void'
+// CHECK-NEXT: BuiltinType 0x{{[^ ]*}} 'void'
+// CHECK-NEXT: FunctionProtoType 0x{{[^ ]*}} 'void (int)' cdecl
+// CHECK-NEXT: SubstTemplateTypeParmType 0x{{[^ ]*}} 'void' sugar
+// CHECK-NEXT: TemplateTypeParmType 0x{{[^ ]*}} 'U' dependent depth 0 index 0
+// CHECK-NEXT: TemplateTypeParm 0x{{[^ ]*}} 'U'
+// CHECK-NEXT: BuiltinType 0x{{[^ ]*}} 'void'
+// CHECK-NEXT: SubstTemplateTypeParmType 0x{{[^ ]*}} 'int' sugar
+// CHECK-NEXT: TemplateTypeParmType 0x{{[^ ]*}} 'T' dependent depth 0 index 0
+} // namespace PR55886

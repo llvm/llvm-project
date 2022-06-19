@@ -11,8 +11,8 @@ class VSCodeTestCaseBase(TestBase):
 
     def create_debug_adaptor(self, lldbVSCodeEnv=None):
         '''Create the Visual Studio Code debug adaptor'''
-        self.assertTrue(os.path.exists(self.lldbVSCodeExec),
-                        'lldb-vscode must exist')
+        self.assertTrue(is_exe(self.lldbVSCodeExec),
+                        'lldb-vscode must exist and be executable')
         log_file_path = self.getBuildArtifact('vscode.txt')
         self.vscode = vscode.DebugAdaptor(
             executable=self.lldbVSCodeExec, init_commands=self.setUpCommands(),
@@ -251,7 +251,7 @@ class VSCodeTestCaseBase(TestBase):
                initCommands=None, preRunCommands=None, stopCommands=None,
                exitCommands=None, attachCommands=None, coreFile=None,
                disconnectAutomatically=True, terminateCommands=None,
-               postRunCommands=None):
+               postRunCommands=None, sourceMap=None):
         '''Build the default Makefile target, create the VSCode debug adaptor,
            and attach to the process.
         '''
@@ -271,7 +271,8 @@ class VSCodeTestCaseBase(TestBase):
             initCommands=initCommands, preRunCommands=preRunCommands,
             stopCommands=stopCommands, exitCommands=exitCommands,
             attachCommands=attachCommands, terminateCommands=terminateCommands,
-            coreFile=coreFile, postRunCommands=postRunCommands)
+            coreFile=coreFile, postRunCommands=postRunCommands,
+            sourceMap=sourceMap)
         if not (response and response['success']):
             self.assertTrue(response['success'],
                             'attach failed (%s)' % (response['message']))

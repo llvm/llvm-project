@@ -73,15 +73,14 @@ def main(args):
       # TODO: This class layering is awkward.
       if isinstance(value, DefinedOpCallable):
         try:
-          linalg_config = LinalgOpConfig.from_linalg_op_def(value.model)
+          linalg_config = LinalgOpConfig.from_linalg_op_def(value.op_def)
         except Exception as e:
           raise ValueError(
-              f"Could not create LinalgOpConfig from {value.model}") from e
+              f"Could not create LinalgOpConfig from {value.op_def}") from e
         configs.extend(linalg_config)
 
   # Print.
   if args.format == "yaml":
-    print("# Auto-generated file. Do not edit!")
     print(yaml_dump_all(configs))
   elif args.format == "repr":
     for config in configs:

@@ -6,46 +6,78 @@
 //
 //===----------------------------------------------------------------------===//
 #include "Annotations.h"
+#include "Config.h"
 #include "InlayHints.h"
 #include "Protocol.h"
 #include "TestTU.h"
+#include "TestWorkspace.h"
 #include "XRefs.h"
+#include "support/Context.h"
+#include "llvm/ADT/StringRef.h"
+#include "llvm/Support/ScopedPrinter.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 
 namespace clang {
 namespace clangd {
 
-std::ostream &operator<<(std::ostream &Stream, const InlayHint &Hint) {
-  return Stream << Hint.label;
+llvm::raw_ostream &operator<<(llvm::raw_ostream &Stream,
+                              const InlayHint &Hint) {
+  return Stream << Hint.label << "@" << Hint.range;
 }
 
 namespace {
 
-using ::testing::UnorderedElementsAre;
+using ::testing::ElementsAre;
+using ::testing::IsEmpty;
 
 std::vector<InlayHint> hintsOfKind(ParsedAST &AST, InlayHintKind Kind) {
   std::vector<InlayHint> Result;
-  for (auto &Hint : inlayHints(AST)) {
+  for (auto &Hint : inlayHints(AST, /*RestrictRange=*/llvm::None)) {
     if (Hint.kind == Kind)
       Result.push_back(Hint);
   }
   return Result;
 }
 
+enum HintSide { Left, Right };
+
 struct ExpectedHint {
   std::string Label;
   std::string RangeName;
+  HintSide Side = Left;
 
-  friend std::ostream &operator<<(std::ostream &Stream,
-                                  const ExpectedHint &Hint) {
-    return Stream << Hint.RangeName << ": " << Hint.Label;
+  friend llvm::raw_ostream &operator<<(llvm::raw_ostream &Stream,
+                                       const ExpectedHint &Hint) {
+    return Stream << Hint.Label << "@$" << Hint.RangeName;
   }
 };
 
-MATCHER_P2(HintMatcher, Expected, Code, "") {
-  return arg.label == Expected.Label &&
-         arg.range == Code.range(Expected.RangeName);
+MATCHER_P2(HintMatcher, Expected, Code, llvm::to_string(Expected)) {
+  llvm::StringRef ExpectedView(Expected.Label);
+  if (arg.label != ExpectedView.trim(" ") ||
+      arg.paddingLeft != ExpectedView.startswith(" ") ||
+      arg.paddingRight != ExpectedView.endswith(" ")) {
+    *result_listener << "label is '" << arg.label << "'";
+    return false;
+  }
+  if (arg.range != Code.range(Expected.RangeName)) {
+    *result_listener << "range is " << llvm::to_string(arg.range) << " but $"
+                     << Expected.RangeName << " is "
+                     << llvm::to_string(Code.range(Expected.RangeName));
+    return false;
+  }
+  return true;
+}
+
+MATCHER_P(labelIs, Label, "") { return arg.label == Label; }
+
+Config noHintsConfig() {
+  Config C;
+  C.InlayHints.Parameters = false;
+  C.InlayHints.DeducedTypes = false;
+  C.InlayHints.Designators = false;
+  return C;
 }
 
 template <typename... ExpectedHints>
@@ -53,23 +85,41 @@ void assertHints(InlayHintKind Kind, llvm::StringRef AnnotatedSource,
                  ExpectedHints... Expected) {
   Annotations Source(AnnotatedSource);
   TestTU TU = TestTU::withCode(Source.code());
-  TU.ExtraArgs.push_back("-std=c++14");
+  TU.ExtraArgs.push_back("-std=c++20");
   auto AST = TU.build();
 
   EXPECT_THAT(hintsOfKind(AST, Kind),
-              UnorderedElementsAre(HintMatcher(Expected, Source)...));
+              ElementsAre(HintMatcher(Expected, Source)...));
+  // Sneak in a cross-cutting check that hints are disabled by config.
+  // We'll hit an assertion failure if addInlayHint still gets called.
+  WithContextValue WithCfg(Config::Key, noHintsConfig());
+  EXPECT_THAT(inlayHints(AST, llvm::None), IsEmpty());
 }
+
+// Hack to allow expression-statements operating on parameter packs in C++14.
+template <typename... T> void ignore(T &&...) {}
 
 template <typename... ExpectedHints>
 void assertParameterHints(llvm::StringRef AnnotatedSource,
                           ExpectedHints... Expected) {
-  assertHints(InlayHintKind::ParameterHint, AnnotatedSource, Expected...);
+  ignore(Expected.Side = Left...);
+  assertHints(InlayHintKind::Parameter, AnnotatedSource, Expected...);
 }
 
 template <typename... ExpectedHints>
 void assertTypeHints(llvm::StringRef AnnotatedSource,
                      ExpectedHints... Expected) {
-  assertHints(InlayHintKind::TypeHint, AnnotatedSource, Expected...);
+  ignore(Expected.Side = Right...);
+  assertHints(InlayHintKind::Type, AnnotatedSource, Expected...);
+}
+
+template <typename... ExpectedHints>
+void assertDesignatorHints(llvm::StringRef AnnotatedSource,
+                           ExpectedHints... Expected) {
+  Config Cfg;
+  Cfg.InlayHints.Designators = true;
+  WithContextValue WithCfg(Config::Key, std::move(Cfg));
+  assertHints(InlayHintKind::Designator, AnnotatedSource, Expected...);
 }
 
 TEST(ParameterHints, Smoke) {
@@ -86,6 +136,38 @@ TEST(ParameterHints, NoName) {
   // No hint for anonymous parameter.
   assertParameterHints(R"cpp(
     void foo(int);
+    void bar() {
+      foo(42);
+    }
+  )cpp");
+}
+
+TEST(ParameterHints, NoNameConstReference) {
+  // No hint for anonymous const l-value ref parameter.
+  assertParameterHints(R"cpp(
+    void foo(const int&);
+    void bar() {
+      foo(42);
+    }
+  )cpp");
+}
+
+TEST(ParameterHints, NoNameReference) {
+  // Reference hint for anonymous l-value ref parameter.
+  assertParameterHints(R"cpp(
+    void foo(int&);
+    void bar() {
+      int i;
+      foo($param[[i]]);
+    }
+  )cpp",
+                       ExpectedHint{"&: ", "param"});
+}
+
+TEST(ParameterHints, NoNameRValueReference) {
+  // No reference hint for anonymous r-value ref parameter.
+  assertParameterHints(R"cpp(
+    void foo(int&&);
     void bar() {
       foo(42);
     }
@@ -114,6 +196,66 @@ TEST(ParameterHints, NameMismatch) {
     void foo(int bad) {};
   )cpp",
                        ExpectedHint{"good: ", "good"});
+}
+
+TEST(ParameterHints, NameConstReference) {
+  // Only name hint for const l-value ref parameter.
+  assertParameterHints(R"cpp(
+    void foo(const int& param);
+    void bar() {
+      foo($param[[42]]);
+    }
+  )cpp",
+                       ExpectedHint{"param: ", "param"});
+}
+
+TEST(ParameterHints, NameTypeAliasConstReference) {
+  // Only name hint for const l-value ref parameter via type alias.
+  assertParameterHints(R"cpp(
+    using alias = const int&;
+    void foo(alias param);
+    void bar() {
+      int i;
+      foo($param[[i]]);
+    }
+  )cpp",
+                       ExpectedHint{"param: ", "param"});
+}
+
+TEST(ParameterHints, NameReference) {
+  // Reference and name hint for l-value ref parameter.
+  assertParameterHints(R"cpp(
+    void foo(int& param);
+    void bar() {
+      int i;
+      foo($param[[i]]);
+    }
+  )cpp",
+                       ExpectedHint{"&param: ", "param"});
+}
+
+TEST(ParameterHints, NameTypeAliasReference) {
+  // Reference and name hint for l-value ref parameter via type alias.
+  assertParameterHints(R"cpp(
+    using alias = int&;
+    void foo(alias param);
+    void bar() {
+      int i;
+      foo($param[[i]]);
+    }
+  )cpp",
+                       ExpectedHint{"&param: ", "param"});
+}
+
+TEST(ParameterHints, NameRValueReference) {
+  // Only name hint for r-value ref parameter.
+  assertParameterHints(R"cpp(
+    void foo(int&& param);
+    void bar() {
+      foo($param[[42]]);
+    }
+  )cpp",
+                       ExpectedHint{"param: ", "param"});
 }
 
 TEST(ParameterHints, Operator) {
@@ -253,6 +395,21 @@ TEST(ParameterHints, ArgMatchesParam) {
     };
   )cpp",
                        ExpectedHint{"param: ", "param"});
+}
+
+TEST(ParameterHints, ArgMatchesParamReference) {
+  assertParameterHints(R"cpp(
+    void foo(int& param);
+    void foo2(const int& param);
+    void bar() {
+      int param;
+      // show reference hint on mutable reference
+      foo($param[[param]]);
+      // but not on const reference
+      foo2(param);
+    }
+  )cpp",
+                       ExpectedHint{"&: ", "param"});
 }
 
 TEST(ParameterHints, LeadingUnderscore) {
@@ -398,6 +555,39 @@ TEST(ParameterHints, SetterFunctions) {
                        ExpectedHint{"timeout_millis: ", "timeout_millis"});
 }
 
+TEST(ParameterHints, BuiltinFunctions) {
+  // This prototype of std::forward is sufficient for clang to recognize it
+  assertParameterHints(R"cpp(
+    namespace std { template <typename T> T&& forward(T&); }
+    void foo() {
+      int i;
+      std::forward(i);
+    }
+  )cpp");
+}
+
+TEST(ParameterHints, IncludeAtNonGlobalScope) {
+  Annotations FooInc(R"cpp(
+    void bar() { foo(42); }
+  )cpp");
+  Annotations FooCC(R"cpp(
+    struct S {
+      void foo(int param);
+      #include "foo.inc"
+    };
+  )cpp");
+
+  TestWorkspace Workspace;
+  Workspace.addSource("foo.inc", FooInc.code());
+  Workspace.addMainFile("foo.cc", FooCC.code());
+
+  auto AST = Workspace.openFile("foo.cc");
+  ASSERT_TRUE(bool(AST));
+
+  // Ensure the hint for the call in foo.inc is NOT materialized in foo.cc.
+  EXPECT_EQ(hintsOfKind(*AST, InlayHintKind::Parameter).size(), 0u);
+}
+
 TEST(TypeHints, Smoke) {
   assertTypeHints(R"cpp(
     auto $waldo[[waldo]] = 42;
@@ -443,7 +633,14 @@ TEST(TypeHints, NoQualifiers) {
       }
     }
   )cpp",
-                  ExpectedHint{": S1", "x"}, ExpectedHint{": Inner<int>", "y"});
+                  ExpectedHint{": S1", "x"},
+                  // FIXME: We want to suppress scope specifiers
+                  //        here because we are into the whole
+                  //        brevity thing, but the ElaboratedType
+                  //        printer does not honor the SuppressScope
+                  //        flag by design, so we need to extend the
+                  //        PrintingPolicy to support this use case.
+                  ExpectedHint{": S2::Inner<int>", "y"});
 }
 
 TEST(TypeHints, Lambda) {
@@ -452,13 +649,19 @@ TEST(TypeHints, Lambda) {
   assertTypeHints(R"cpp(
     void f() {
       int cap = 42;
-      auto $L[[L]] = [cap, $init[[init]] = 1 + 1](int a) { 
+      auto $L[[L]] = [cap, $init[[init]] = 1 + 1](int a$ret[[)]] { 
         return a + cap + init; 
       };
     }
   )cpp",
                   ExpectedHint{": (lambda)", "L"},
-                  ExpectedHint{": int", "init"});
+                  ExpectedHint{": int", "init"}, ExpectedHint{"-> int", "ret"});
+
+  // Lambda return hint shown even if no param list.
+  // (The digraph :> is just a ] that doesn't conflict with the annotations).
+  assertTypeHints("auto $L[[x]] = <:$ret[[:>]]{return 42;};",
+                  ExpectedHint{": (lambda)", "L"},
+                  ExpectedHint{"-> int", "ret"});
 }
 
 // Structured bindings tests.
@@ -541,6 +744,11 @@ TEST(TypeHints, ReturnTypeDeduction) {
     // Do not hint `auto` for trailing return type.
     auto f3() -> int;
 
+    // Do not hint when a trailing return type is specified.
+    auto f4() -> auto* { return "foo"; }
+
+    auto f5($noreturn[[)]] {}
+
     // `auto` conversion operator
     struct A {
       operator auto($retConv[[)]] { return 42; }
@@ -553,7 +761,8 @@ TEST(TypeHints, ReturnTypeDeduction) {
     };
   )cpp",
       ExpectedHint{"-> int", "ret1a"}, ExpectedHint{"-> int", "ret1b"},
-      ExpectedHint{"-> int &", "ret2"}, ExpectedHint{"-> int", "retConv"});
+      ExpectedHint{"-> int &", "ret2"}, ExpectedHint{"-> void", "noreturn"},
+      ExpectedHint{"-> int", "retConv"});
 }
 
 TEST(TypeHints, DependentType) {
@@ -566,6 +775,142 @@ TEST(TypeHints, DependentType) {
       auto $var2[[var2]] = arg;
     }
   )cpp");
+}
+
+TEST(TypeHints, LongTypeName) {
+  assertTypeHints(R"cpp(
+    template <typename, typename, typename>
+    struct A {};
+    struct MultipleWords {};
+    A<MultipleWords, MultipleWords, MultipleWords> foo();
+    // Omit type hint past a certain length (currently 32)
+    auto var = foo();
+  )cpp");
+}
+
+TEST(TypeHints, DefaultTemplateArgs) {
+  assertTypeHints(R"cpp(
+    template <typename, typename = int>
+    struct A {};
+    A<float> foo();
+    auto $var[[var]] = foo();
+  )cpp",
+                  ExpectedHint{": A<float>", "var"});
+}
+
+TEST(TypeHints, Deduplication) {
+  assertTypeHints(R"cpp(
+    template <typename T>
+    void foo() {
+      auto $var[[var]] = 42;
+    }
+    template void foo<int>();
+    template void foo<float>();
+  )cpp",
+                  ExpectedHint{": int", "var"});
+}
+
+TEST(TypeHints, SinglyInstantiatedTemplate) {
+  assertTypeHints(R"cpp(
+    auto $lambda[[x]] = [](auto *$param[[y]], auto) { return 42; };
+    int m = x("foo", 3);
+  )cpp",
+                  ExpectedHint{": (lambda)", "lambda"},
+                  ExpectedHint{": const char *", "param"});
+
+  // No hint for packs, or auto params following packs
+  assertTypeHints(R"cpp(
+    int x(auto $a[[a]], auto... b, auto c) { return 42; }
+    int m = x<void*, char, float>(nullptr, 'c', 2.0, 2);
+  )cpp",
+                  ExpectedHint{": void *", "a"});
+}
+
+TEST(TypeHints, Aliased) {
+  // Check that we don't crash for functions without a FunctionTypeLoc.
+  // https://github.com/clangd/clangd/issues/1140
+  TestTU TU = TestTU::withCode("void foo(void){} extern typeof(foo) foo;");
+  TU.ExtraArgs.push_back("-xc");
+  auto AST = TU.build();
+
+  EXPECT_THAT(hintsOfKind(AST, InlayHintKind::Type), IsEmpty());
+}
+
+TEST(DesignatorHints, Basic) {
+  assertDesignatorHints(R"cpp(
+    struct S { int x, y, z; };
+    S s {$x[[1]], $y[[2+2]]};
+
+    int x[] = {$0[[0]], $1[[1]]};
+  )cpp",
+                        ExpectedHint{".x=", "x"}, ExpectedHint{".y=", "y"},
+                        ExpectedHint{"[0]=", "0"}, ExpectedHint{"[1]=", "1"});
+}
+
+TEST(DesignatorHints, Nested) {
+  assertDesignatorHints(R"cpp(
+    struct Inner { int x, y; };
+    struct Outer { Inner a, b; };
+    Outer o{ $a[[{ $x[[1]], $y[[2]] }]], $bx[[3]] };
+  )cpp",
+                        ExpectedHint{".a=", "a"}, ExpectedHint{".x=", "x"},
+                        ExpectedHint{".y=", "y"}, ExpectedHint{".b.x=", "bx"});
+}
+
+TEST(DesignatorHints, AnonymousRecord) {
+  assertDesignatorHints(R"cpp(
+    struct S {
+      union {
+        struct {
+          struct {
+            int y;
+          };
+        } x;
+      };
+    };
+    S s{$xy[[42]]};
+  )cpp",
+                        ExpectedHint{".x.y=", "xy"});
+}
+
+TEST(DesignatorHints, Suppression) {
+  assertDesignatorHints(R"cpp(
+    struct Point { int a, b, c, d, e, f, g, h; };
+    Point p{/*a=*/1, .c=2, /* .d = */3, $e[[4]]};
+  )cpp",
+                        ExpectedHint{".e=", "e"});
+}
+
+TEST(DesignatorHints, StdArray) {
+  // Designators for std::array should be [0] rather than .__elements[0].
+  // While technically correct, the designator is useless and horrible to read.
+  assertDesignatorHints(R"cpp(
+    template <typename T, int N> struct Array { T __elements[N]; };
+    Array<int, 2> x = {$0[[0]], $1[[1]]};
+  )cpp",
+                        ExpectedHint{"[0]=", "0"}, ExpectedHint{"[1]=", "1"});
+}
+
+TEST(DesignatorHints, OnlyAggregateInit) {
+  assertDesignatorHints(R"cpp(
+    struct Copyable { int x; } c;
+    Copyable d{c};
+
+    struct Constructible { Constructible(int x); };
+    Constructible x{42};
+  )cpp" /*no designator hints expected (but param hints!)*/);
+}
+
+TEST(InlayHints, RestrictRange) {
+  Annotations Code(R"cpp(
+    auto a = false;
+    [[auto b = 1;
+    auto c = '2';]]
+    auto d = 3.f;
+  )cpp");
+  auto AST = TestTU::withCode(Code.code()).build();
+  EXPECT_THAT(inlayHints(AST, Code.range()),
+              ElementsAre(labelIs(": int"), labelIs(": char")));
 }
 
 // FIXME: Low-hanging fruit where we could omit a type hint:

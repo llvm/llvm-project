@@ -9,7 +9,7 @@
 // UNSUPPORTED: c++03
 
 // These tests require locale for non-char paths
-// UNSUPPORTED: libcpp-has-no-localization
+// UNSUPPORTED: no-localization
 
 // <filesystem>
 
@@ -114,7 +114,7 @@ void test_sfinae() {
     static_assert(std::is_constructible<path, It>::value, "");
   }
   {
-    using It = output_iterator<const char*>;
+    using It = cpp17_output_iterator<const char*>;
     static_assert(!std::is_constructible<path, It>::value, "");
 
   }
@@ -129,7 +129,9 @@ int main(int, char**) {
 #if TEST_STD_VER > 17 && defined(__cpp_char8_t)
     RunTestCase<char8_t>(MS);
 #endif
+#ifndef TEST_HAS_NO_WIDE_CHARACTERS
     RunTestCase<wchar_t>(MS);
+#endif
     RunTestCase<char16_t>(MS);
     RunTestCase<char32_t>(MS);
   }

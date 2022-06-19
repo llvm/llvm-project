@@ -29,10 +29,11 @@ void UnusedRaiiCheck::registerMatchers(MatchFinder *Finder) {
   Finder->addMatcher(
       mapAnyOf(cxxConstructExpr, cxxUnresolvedConstructExpr)
           .with(hasParent(compoundStmt().bind("compound")),
-                anyOf(hasType(cxxRecordDecl(hasNonTrivialDestructor())),
-                      hasType(templateSpecializationType(
+                anyOf(hasType(hasCanonicalType(recordType(hasDeclaration(
+                          cxxRecordDecl(hasNonTrivialDestructor()))))),
+                      hasType(hasCanonicalType(templateSpecializationType(
                           hasDeclaration(classTemplateDecl(has(
-                              cxxRecordDecl(hasNonTrivialDestructor()))))))))
+                              cxxRecordDecl(hasNonTrivialDestructor())))))))))
           .bind("expr"),
       this);
 }
@@ -84,9 +85,9 @@ void UnusedRaiiCheck::check(const MatchFinder::MatchResult &Result) {
     auto SR = SourceRange(Node->getLParenLoc(), Node->getRParenLoc());
     auto DefaultConstruction = Node->getNumArgs() == 0;
     if (!DefaultConstruction) {
-      auto FirstArg = Node->getArg(0);
+      auto *FirstArg = Node->getArg(0);
       DefaultConstruction = isa<CXXDefaultArgExpr>(FirstArg);
-      if (auto ILE = dyn_cast<InitListExpr>(FirstArg)) {
+      if (auto *ILE = dyn_cast<InitListExpr>(FirstArg)) {
         DefaultConstruction = ILE->getNumInits() == 0;
         SR = SourceRange(ILE->getLBraceLoc(), ILE->getRBraceLoc());
       }

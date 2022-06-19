@@ -1,8 +1,8 @@
 ; RUN: opt < %s -O3 -S > %t
-; RUN:   grep undef %t | count 1
-; RUN:   grep 5 %t | count 1
-; RUN:   grep 7 %t | count 1
-; RUN:   grep 9 %t | count 1
+; RUN:   grep 'constant i32 undef' %t | count 1
+; RUN:   grep 'constant i32 5' %t | count 1
+; RUN:   grep 'i32 7' %t | count 1
+; RUN:   grep 'i32 9' %t | count 1
 
 	%0 = type { i32, i32 }		; type %0
 @a = weak constant i32 undef		; <i32*> [#uses=1]

@@ -1,4 +1,4 @@
-; RUN: opt < %s -deadargelim -dce -S > %t
+; RUN: opt < %s -passes='deadargelim,function(dce)' -S > %t
 ; RUN: cat %t | grep 123
 
 ; This test tries to catch wrongful removal of return values for a specific case

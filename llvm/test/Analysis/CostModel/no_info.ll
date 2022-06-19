@@ -1,4 +1,4 @@
-; RUN: opt < %s -cost-model -analyze | FileCheck %s
+; RUN: opt < %s -passes='print<cost-model>' 2>&1 -disable-output | FileCheck %s
 
 ; The cost model does not have any target information so it just makes boring
 ; assumptions.

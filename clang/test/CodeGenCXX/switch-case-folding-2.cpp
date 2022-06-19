@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple i386-unknown-unknown -emit-llvm %s -o - | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -triple i386-unknown-unknown -emit-llvm %s -o - | FileCheck %s
 
 extern int printf(const char*, ...);
 
@@ -8,7 +8,7 @@ int test(int val){
  case 4:
    do {
      switch (6) {
-       // CHECK: call i32 (i8*, ...) @_Z6printfPKcz
+       // CHECK: call noundef i32 (i8*, ...) @_Z6printfPKcz
        case 6: do { case 5: printf("bad\n"); } while (0);
      };
    } while (0);

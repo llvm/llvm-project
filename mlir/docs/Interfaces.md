@@ -37,7 +37,7 @@ utilities for registering an interface with a dialect so that it can be
 referenced later. Once the interface has been defined, dialects can override it
 using dialect-specific information. The interfaces defined by a dialect are
 registered via `addInterfaces<>`, a similar mechanism to Attributes, Operations,
-Types, etc
+Types, etc.
 
 ```c++
 /// Define a base inlining interface class to allow for dialects to opt-in to
@@ -77,8 +77,7 @@ or transformation without the need to determine the specific dialect subclass:
 
 ```c++
 Dialect *dialect = ...;
-if (DialectInlinerInterface *interface
-      = dialect->getRegisteredInterface<DialectInlinerInterface>()) {
+if (DialectInlinerInterface *interface = dyn_cast<DialectInlinerInterface>(dialect)) {
   // The dialect has provided an implementation of this interface.
   ...
 }
@@ -87,7 +86,7 @@ if (DialectInlinerInterface *interface
 #### DialectInterfaceCollection
 
 An additional utility is provided via `DialectInterfaceCollection`. This class
-allows for collecting all of the dialects that have registered a given interface
+allows collecting all of the dialects that have registered a given interface
 within an instance of the `MLIRContext`. This can be useful to hide and optimize
 the lookup of a registered dialect interface.
 
@@ -285,10 +284,10 @@ int main() {
   MLIRContext context;
   /* ... */;
 
-  // Register the interface model with the type in the given context before
-  // using it. The dialect contaiing the type is expected to have been loaded
+  // Attach the interface model to the type in the given context before
+  // using it. The dialect containing the type is expected to have been loaded
   // at this point.
-  IntegerType::registerInterface<ExternalModelExample>(context);
+  IntegerType::attachInterface<ExternalModelExample>(context);
 }
 ```
 
@@ -327,7 +326,7 @@ operations by overriding the `getRegisteredInterfaceForOp` method :
 
 ```c++
 void *TestDialect::getRegisteredInterfaceForOp(TypeID typeID,
-                                               Identifier opName) {
+                                               StringAttr opName) {
   if (typeID == TypeID::get<ExampleOpInterface>()) {
     if (isSupported(opName))
       return fallbackExampleOpInterface;
@@ -393,6 +392,18 @@ comprised of the following components:
         These declarations are _not_ implicitly visible in default
         implementations of interface methods, but static declarations may be
         accessed with full name qualification.
+*   Extra Shared Class Declarations (Optional: `extraSharedClassDeclaration`)
+    -   Additional C++ code that is injected into the declarations of both the
+        interface and the trait class. This allows for defining methods and more
+        that are exposed on both the interface and the trait class, e.g. to inject
+        utilties on both the interface and the derived entity implementing the
+        interface (e.g. attribute, operation, etc.).
+    -   In non-static methods, `$_attr`/`$_op`/`$_type`
+        (depending on the type of interface) may be used to refer to an
+        instance of the IR entity. In the interface declaration, the type of
+        the instance is the interface class. In the trait declaration, the
+        type of the instance is the concrete entity class
+        (e.g. `IntegerAttr`, `FuncOp`, etc.).
 
 `OpInterface` classes may additionally contain the following:
 
@@ -448,7 +459,7 @@ operation if the operation specifies the interface with
 
 Examples:
 
-~~~tablegen
+```tablegen
 def MyInterface : OpInterface<"MyInterface"> {
   let description = [{
     This is the description of the interface. It provides concrete information
@@ -606,7 +617,7 @@ def MyInterface : OpInterface<"MyInterface"> {
 }
 
 // Operation interfaces can optionally be wrapped inside
-// DeclareOpInterfaceMethods. This would result in autogenerating declarations
+// `DeclareOpInterfaceMethods`. This would result in autogenerating declarations
 // for members `foo`, `bar` and `fooStatic`. Methods with bodies are not
 // declared inside the op declaration but instead handled by the op interface
 // trait directly.
@@ -619,7 +630,7 @@ def OpWithInferTypeInterfaceOp : Op<...
 // the generation of a declaration for those methods.
 def OpWithOverrideInferTypeInterfaceOp : Op<...
     [DeclareOpInterfaceMethods<MyInterface, ["getNumWithDefault"]>]> { ... }
-~~~
+```
 
 Note: Existing operation interfaces defined in C++ can be accessed in the ODS
 framework via the `OpInterfaceTrait` class.

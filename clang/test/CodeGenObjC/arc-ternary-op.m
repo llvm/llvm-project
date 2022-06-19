@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple x86_64-apple-darwin10 -emit-llvm -fblocks -fobjc-arc -fobjc-runtime-has-weak -O2 -disable-llvm-passes -o - %s | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-apple-darwin10 -emit-llvm -fblocks -fobjc-arc -fobjc-runtime-has-weak -O2 -disable-llvm-passes -o - %s | FileCheck %s
 
 id g0, g1;
 
@@ -72,7 +72,7 @@ void test1(int cond) {
   // CHECK-NEXT: store i8* [[T0]], i8** [[TEMP1]]
   // CHECK-NEXT: br label
   // CHECK:      [[W:%.*]] = phi i8* [ [[T0]], {{%.*}} ], [ undef, {{%.*}} ]
-  // CHECK-NEXT: call void @test1_sink(i8** [[T1]])
+  // CHECK-NEXT: call void @test1_sink(i8** noundef [[T1]])
   // CHECK-NEXT: [[T0:%.*]] = icmp eq i8** [[ARG]], null
   // CHECK-NEXT: br i1 [[T0]],
   // CHECK:      [[T0:%.*]] = load i8*, i8** [[TEMP1]]
@@ -95,7 +95,7 @@ void test1(int cond) {
   // CHECK-NEXT: store i1 true, i1* [[CONDCLEANUP]]
   // CHECK-NEXT: store i8* [[T0]], i8** [[TEMP2]]
   // CHECK-NEXT: br label
-  // CHECK:      call void @test1_sink(i8** [[T1]])
+  // CHECK:      call void @test1_sink(i8** noundef [[T1]])
   // CHECK-NEXT: [[T0:%.*]] = icmp eq i8** [[ARG]], null
   // CHECK-NEXT: br i1 [[T0]],
   // CHECK:      [[T0:%.*]] = load i8*, i8** [[TEMP2]]
@@ -131,8 +131,8 @@ void test2(int cond) {
   // CHECK-NEXT: store i1 false, i1* [[RUN_CLEANUP]]
   // CHECK-NEXT: br i1
   //   Within true branch, cleanup enabled.
-  // CHECK:      [[T0:%.*]] = call i8* @test2_producer()
-  // CHECK-NEXT: [[T1:%.*]] = notail call i8* @llvm.objc.retainAutoreleasedReturnValue(i8* [[T0]])
+  // CHECK:      [[T1:%.*]] = call i8* @test2_producer() [ "clang.arc.attachedcall"(i8* (i8*)* @llvm.objc.retainAutoreleasedReturnValue) ]
+  // CHECK-NEXT: call void (...) @llvm.objc.clang.arc.noop.use(i8* [[T1]])
   // CHECK-NEXT: store i8* [[T1]], i8** [[CLEANUP_SAVE]]
   // CHECK-NEXT: store i1 true, i1* [[RUN_CLEANUP]]
   // CHECK-NEXT: br label

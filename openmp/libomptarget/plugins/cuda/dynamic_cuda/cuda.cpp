@@ -20,6 +20,8 @@
 
 #include <dlfcn.h>
 
+DLWRAP_INITIALIZE();
+
 DLWRAP_INTERNAL(cuInit, 1);
 
 DLWRAP(cuCtxGetDevice, 1);
@@ -27,6 +29,11 @@ DLWRAP(cuDeviceGet, 2);
 DLWRAP(cuDeviceGetAttribute, 3);
 DLWRAP(cuDeviceGetCount, 1);
 DLWRAP(cuFuncGetAttribute, 3);
+
+// Device info
+DLWRAP(cuDeviceGetName, 3);
+DLWRAP(cuDeviceTotalMem, 2);
+DLWRAP(cuDriverGetVersion, 1);
 
 DLWRAP(cuGetErrorString, 2);
 DLWRAP(cuLaunchKernel, 11);
@@ -63,6 +70,12 @@ DLWRAP(cuMemcpyPeerAsync, 6);
 
 DLWRAP(cuCtxGetLimit, 2);
 DLWRAP(cuCtxSetLimit, 2);
+
+DLWRAP(cuEventCreate, 2);
+DLWRAP(cuEventRecord, 2);
+DLWRAP(cuStreamWaitEvent, 3);
+DLWRAP(cuEventSynchronize, 1);
+DLWRAP(cuEventDestroy, 1);
 
 DLWRAP_FINALIZE();
 

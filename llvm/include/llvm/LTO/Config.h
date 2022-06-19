@@ -57,8 +57,8 @@ struct Config {
   unsigned OptLevel = 2;
   bool DisableVerify = false;
 
-  /// Use the new pass manager
-  bool UseNewPM = LLVM_ENABLE_NEW_PASS_MANAGER;
+  /// Use the standard optimization pipeline.
+  bool UseDefaultPipeline = false;
 
   /// Flag to indicate that the optimizer should not assume builtins are present
   /// on the target.
@@ -69,6 +69,9 @@ struct Config {
 
   /// Run PGO context sensitive IR instrumentation.
   bool RunCSIRInstr = false;
+
+  /// Turn on/off the warning about a hash mismatch in the PGO profile data.
+  bool PGOWarnMismatch = true;
 
   /// Asserts whether we can assume whole program visibility during the LTO
   /// link.
@@ -173,6 +176,10 @@ struct Config {
 
   /// Add FSAFDO discriminators.
   bool AddFSDiscriminator = false;
+
+  /// Use opaque pointer types. Used to call LLVMContext::setOpaquePointers
+  /// unless already set by the `-opaque-pointers` commandline option.
+  bool OpaquePointers = true;
 
   /// If this field is set, LTO will write input file paths and symbol
   /// resolutions here in llvm-lto2 command line flag format. This can be
@@ -285,6 +292,8 @@ struct LTOLLVMContext : LLVMContext {
     enableDebugTypeODRUniquing();
     setDiagnosticHandler(
         std::make_unique<LTOLLVMDiagnosticHandler>(&DiagHandler), true);
+    if (!hasSetOpaquePointersValue())
+      setOpaquePointers(C.OpaquePointers);
   }
   DiagnosticHandlerFunction DiagHandler;
 };

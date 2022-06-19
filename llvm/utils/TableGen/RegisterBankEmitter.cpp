@@ -17,7 +17,6 @@
 #include "llvm/TableGen/Record.h"
 #include "llvm/TableGen/TableGenBackend.h"
 
-#include "CodeGenHwModes.h"
 #include "CodeGenRegisters.h"
 #include "CodeGenTarget.h"
 
@@ -42,7 +41,7 @@ private:
 
 public:
   RegisterBank(const Record &TheDef)
-      : TheDef(TheDef), RCs(), RCWithLargestRegsSize(nullptr) {}
+      : TheDef(TheDef), RCWithLargestRegsSize(nullptr) {}
 
   /// Get the human-readable name for the bank.
   StringRef getName() const { return TheDef.getValueAsString("Name"); }
@@ -173,9 +172,8 @@ static void visitRegisterBankClasses(
     SmallPtrSetImpl<const CodeGenRegisterClass *> &VisitedRCs) {
 
   // Make sure we only visit each class once to avoid infinite loops.
-  if (VisitedRCs.count(RC))
+  if (!VisitedRCs.insert(RC).second)
     return;
-  VisitedRCs.insert(RC);
 
   // Visit each explicitly named class.
   VisitFn(RC, Kind.str());
@@ -267,9 +265,8 @@ void RegisterBankEmitter::emitBaseClassImplementation(
      << "::NumRegisterBanks) {\n"
      << "  // Assert that RegBank indices match their ID's\n"
      << "#ifndef NDEBUG\n"
-     << "  unsigned Index = 0;\n"
-     << "  for (const auto &RB : RegBanks)\n"
-     << "    assert(Index++ == RB->getID() && \"Index != ID\");\n"
+     << "  for (auto RB : enumerate(RegBanks))\n"
+     << "    assert(RB.index() == RB.value()->getID() && \"Index != ID\");\n"
      << "#endif // NDEBUG\n"
      << "}\n"
      << "} // end namespace llvm\n";

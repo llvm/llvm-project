@@ -62,7 +62,7 @@ define i16 @or_i16_ri(i16 zeroext %0, i16 zeroext %1) {
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl %eax, %ecx
-; X86-NEXT:    orl $-17, %ecx
+; X86-NEXT:    orl $65519, %ecx # imm = 0xFFEF
 ; X86-NEXT:    testw %cx, %cx
 ; X86-NEXT:    je .LBB2_2
 ; X86-NEXT:  # %bb.1:
@@ -74,8 +74,7 @@ define i16 @or_i16_ri(i16 zeroext %0, i16 zeroext %1) {
 ; X64-LABEL: or_i16_ri:
 ; X64:       # %bb.0:
 ; X64-NEXT:    movl %edi, %eax
-; X64-NEXT:    orl $-17, %eax
-; X64-NEXT:    testw %ax, %ax
+; X64-NEXT:    orl $65519, %eax # imm = 0xFFEF
 ; X64-NEXT:    cmovel %edi, %eax
 ; X64-NEXT:    # kill: def $ax killed $ax killed $eax
 ; X64-NEXT:    retq

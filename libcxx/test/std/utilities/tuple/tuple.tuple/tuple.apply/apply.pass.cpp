@@ -22,11 +22,6 @@
 #include "test_macros.h"
 #include "type_id.h"
 
-// std::array is explicitly allowed to be initialized with A a = { init-list };.
-// Disable the missing braces warning for this reason.
-#include "disable_missing_braces_warning.h"
-
-
 constexpr int constexpr_sum_fn() { return 0; }
 
 template <class ...Ints>

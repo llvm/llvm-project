@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -triple i686-windows-msvc -fms-extensions -fno-rtti -emit-llvm -std=c++1y -O0 -o - %s | FileCheck %s
-// RUN: %clang_cc1 -triple x86_64-windows-msvc -fms-extensions -fno-rtti -emit-llvm -std=c++1y -O0 -o - %s | FileCheck %s --check-prefix X64
+// RUN: %clang_cc1 -no-opaque-pointers -triple i686-windows-msvc -fms-extensions -fno-rtti -emit-llvm -std=c++1y -O0 -o - %s | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-windows-msvc -fms-extensions -fno-rtti -emit-llvm -std=c++1y -O0 -o - %s | FileCheck %s --check-prefix X64
 
 extern int __declspec(dllimport) var;
 extern void __declspec(dllimport) fun();

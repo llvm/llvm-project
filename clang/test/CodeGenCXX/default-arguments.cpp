@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 %s -triple=x86_64-apple-darwin10 -emit-llvm -o - | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers %s -triple=x86_64-apple-darwin10 -emit-llvm -o - | FileCheck %s
 
 // PR5484
 namespace PR5484 {
@@ -71,6 +71,6 @@ void f4() {
   }
   void g4(int a = 5, int b);
 
-  // CHECK: call void @_Z2g4ii(i32 5, i32 7)
+  // CHECK: call void @_Z2g4ii(i32 noundef 5, i32 noundef 7)
   g4();
 }

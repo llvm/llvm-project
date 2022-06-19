@@ -6,15 +6,18 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/AsmParser/Parser.h"
 #include "llvm/IR/Instructions.h"
+#include "llvm/ADT/CombinationGenerator.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Analysis/ValueTracking.h"
+#include "llvm/Analysis/VectorUtils.h"
+#include "llvm/AsmParser/Parser.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/DerivedTypes.h"
+#include "llvm/IR/FPEnv.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/LLVMContext.h"
@@ -23,6 +26,7 @@
 #include "llvm/IR/NoFolder.h"
 #include "llvm/IR/Operator.h"
 #include "llvm/Support/SourceMgr.h"
+#include "llvm-c/Core.h"
 #include "gmock/gmock-matchers.h"
 #include "gtest/gtest.h"
 #include <memory>
@@ -89,14 +93,13 @@ TEST_F(ModuleWithFunctionTest, CallInst) {
 
   // Make sure iteration over a call's arguments works as expected.
   unsigned Idx = 0;
-  for (Value *Arg : Call->arg_operands()) {
+  for (Value *Arg : Call->args()) {
     EXPECT_EQ(FArgTypes[Idx], Arg->getType());
     EXPECT_EQ(Call->getArgOperand(Idx)->getType(), Arg->getType());
     Idx++;
   }
 
-  Call->addAttribute(llvm::AttributeList::ReturnIndex,
-                     Attribute::get(Call->getContext(), "test-str-attr"));
+  Call->addRetAttr(Attribute::get(Call->getContext(), "test-str-attr"));
   EXPECT_TRUE(Call->hasRetAttr("test-str-attr"));
   EXPECT_FALSE(Call->hasRetAttr("not-on-call"));
 }
@@ -112,7 +115,7 @@ TEST_F(ModuleWithFunctionTest, InvokeInst) {
 
   // Make sure iteration over invoke's arguments works as expected.
   unsigned Idx = 0;
-  for (Value *Arg : Invoke->arg_operands()) {
+  for (Value *Arg : Invoke->args()) {
     EXPECT_EQ(FArgTypes[Idx], Arg->getType());
     EXPECT_EQ(Invoke->getArgOperand(Idx)->getType(), Arg->getType());
     Idx++;
@@ -389,6 +392,67 @@ TEST(InstructionsTest, CastInst) {
   delete BB;
 }
 
+TEST(InstructionsTest, CastCAPI) {
+  LLVMContext C;
+
+  Type *Int8Ty = Type::getInt8Ty(C);
+  Type *Int32Ty = Type::getInt32Ty(C);
+  Type *Int64Ty = Type::getInt64Ty(C);
+
+  Type *FloatTy = Type::getFloatTy(C);
+  Type *DoubleTy = Type::getDoubleTy(C);
+
+  Type *Int8PtrTy = PointerType::get(Int8Ty, 0);
+  Type *Int32PtrTy = PointerType::get(Int32Ty, 0);
+
+  const Constant *C8 = Constant::getNullValue(Int8Ty);
+  const Constant *C64 = Constant::getNullValue(Int64Ty);
+
+  EXPECT_EQ(LLVMBitCast,
+            LLVMGetCastOpcode(wrap(C64), true, wrap(Int64Ty), true));
+  EXPECT_EQ(LLVMTrunc, LLVMGetCastOpcode(wrap(C64), true, wrap(Int8Ty), true));
+  EXPECT_EQ(LLVMSExt, LLVMGetCastOpcode(wrap(C8), true, wrap(Int64Ty), true));
+  EXPECT_EQ(LLVMZExt, LLVMGetCastOpcode(wrap(C8), false, wrap(Int64Ty), true));
+
+  const Constant *CF32 = Constant::getNullValue(FloatTy);
+  const Constant *CF64 = Constant::getNullValue(DoubleTy);
+
+  EXPECT_EQ(LLVMFPToUI,
+            LLVMGetCastOpcode(wrap(CF32), true, wrap(Int8Ty), false));
+  EXPECT_EQ(LLVMFPToSI,
+            LLVMGetCastOpcode(wrap(CF32), true, wrap(Int8Ty), true));
+  EXPECT_EQ(LLVMUIToFP,
+            LLVMGetCastOpcode(wrap(C8), false, wrap(FloatTy), true));
+  EXPECT_EQ(LLVMSIToFP, LLVMGetCastOpcode(wrap(C8), true, wrap(FloatTy), true));
+  EXPECT_EQ(LLVMFPTrunc,
+            LLVMGetCastOpcode(wrap(CF64), true, wrap(FloatTy), true));
+  EXPECT_EQ(LLVMFPExt,
+            LLVMGetCastOpcode(wrap(CF32), true, wrap(DoubleTy), true));
+
+  const Constant *CPtr8 = Constant::getNullValue(Int8PtrTy);
+
+  EXPECT_EQ(LLVMPtrToInt,
+            LLVMGetCastOpcode(wrap(CPtr8), true, wrap(Int8Ty), true));
+  EXPECT_EQ(LLVMIntToPtr,
+            LLVMGetCastOpcode(wrap(C8), true, wrap(Int8PtrTy), true));
+
+  Type *V8x8Ty = FixedVectorType::get(Int8Ty, 8);
+  Type *V8x64Ty = FixedVectorType::get(Int64Ty, 8);
+  const Constant *CV8 = Constant::getNullValue(V8x8Ty);
+  const Constant *CV64 = Constant::getNullValue(V8x64Ty);
+
+  EXPECT_EQ(LLVMTrunc, LLVMGetCastOpcode(wrap(CV64), true, wrap(V8x8Ty), true));
+  EXPECT_EQ(LLVMSExt, LLVMGetCastOpcode(wrap(CV8), true, wrap(V8x64Ty), true));
+
+  Type *Int32PtrAS1Ty = PointerType::get(Int32Ty, 1);
+  Type *V2Int32PtrAS1Ty = FixedVectorType::get(Int32PtrAS1Ty, 2);
+  Type *V2Int32PtrTy = FixedVectorType::get(Int32PtrTy, 2);
+  const Constant *CV2ptr32 = Constant::getNullValue(V2Int32PtrTy);
+
+  EXPECT_EQ(LLVMAddrSpaceCast, LLVMGetCastOpcode(wrap(CV2ptr32), true,
+                                                 wrap(V2Int32PtrAS1Ty), true));
+}
+
 TEST(InstructionsTest, VectorGep) {
   LLVMContext C;
 
@@ -506,6 +570,59 @@ TEST(InstructionsTest, FPMathOperator) {
   I->deleteValue();
 }
 
+TEST(InstructionTest, ConstrainedTrans) {
+  LLVMContext Context;
+  std::unique_ptr<Module> M(new Module("MyModule", Context));
+  FunctionType *FTy =
+      FunctionType::get(Type::getVoidTy(Context),
+                        {Type::getFloatTy(Context), Type::getFloatTy(Context),
+                         Type::getInt32Ty(Context)},
+                        false);
+  auto *F = Function::Create(FTy, Function::ExternalLinkage, "", M.get());
+  auto *BB = BasicBlock::Create(Context, "bb", F);
+  IRBuilder<> Builder(Context);
+  Builder.SetInsertPoint(BB);
+  auto *Arg0 = F->arg_begin();
+  auto *Arg1 = F->arg_begin() + 1;
+
+  {
+    auto *I = cast<Instruction>(Builder.CreateFAdd(Arg0, Arg1));
+    EXPECT_EQ(Intrinsic::experimental_constrained_fadd,
+              getConstrainedIntrinsicID(*I));
+  }
+
+  {
+    auto *I = cast<Instruction>(
+        Builder.CreateFPToSI(Arg0, Type::getInt32Ty(Context)));
+    EXPECT_EQ(Intrinsic::experimental_constrained_fptosi,
+              getConstrainedIntrinsicID(*I));
+  }
+
+  {
+    auto *I = cast<Instruction>(Builder.CreateIntrinsic(
+        Intrinsic::ceil, {Type::getFloatTy(Context)}, {Arg0}));
+    EXPECT_EQ(Intrinsic::experimental_constrained_ceil,
+              getConstrainedIntrinsicID(*I));
+  }
+
+  {
+    auto *I = cast<Instruction>(Builder.CreateFCmpOEQ(Arg0, Arg1));
+    EXPECT_EQ(Intrinsic::experimental_constrained_fcmp,
+              getConstrainedIntrinsicID(*I));
+  }
+
+  {
+    auto *Arg2 = F->arg_begin() + 2;
+    auto *I = cast<Instruction>(Builder.CreateAdd(Arg2, Arg2));
+    EXPECT_EQ(Intrinsic::not_intrinsic, getConstrainedIntrinsicID(*I));
+  }
+
+  {
+    auto *I = cast<Instruction>(Builder.CreateConstrainedFPBinOp(
+        Intrinsic::experimental_constrained_fadd, Arg0, Arg0));
+    EXPECT_EQ(Intrinsic::not_intrinsic, getConstrainedIntrinsicID(*I));
+  }
+}
 
 TEST(InstructionsTest, isEliminableCastPair) {
   LLVMContext C;
@@ -613,7 +730,7 @@ TEST(InstructionsTest, CloneCall) {
 
   // Test cloning an attribute.
   {
-    AttrBuilder AB;
+    AttrBuilder AB(C);
     AB.addAttribute(Attribute::ReadOnly);
     Call->setAttributes(
         AttributeList::get(C, AttributeList::FunctionIndex, AB));
@@ -632,14 +749,14 @@ TEST(InstructionsTest, AlterCallBundles) {
   std::unique_ptr<CallInst> Call(
       CallInst::Create(FnTy, Callee, Args, OldBundle, "result"));
   Call->setTailCallKind(CallInst::TailCallKind::TCK_NoTail);
-  AttrBuilder AB;
+  AttrBuilder AB(C);
   AB.addAttribute(Attribute::Cold);
   Call->setAttributes(AttributeList::get(C, AttributeList::FunctionIndex, AB));
   Call->setDebugLoc(DebugLoc(MDNode::get(C, None)));
 
   OperandBundleDef NewBundle("after", ConstantInt::get(Int32Ty, 7));
   std::unique_ptr<CallInst> Clone(CallInst::Create(Call.get(), NewBundle));
-  EXPECT_EQ(Call->getNumArgOperands(), Clone->getNumArgOperands());
+  EXPECT_EQ(Call->arg_size(), Clone->arg_size());
   EXPECT_EQ(Call->getArgOperand(0), Clone->getArgOperand(0));
   EXPECT_EQ(Call->getCallingConv(), Clone->getCallingConv());
   EXPECT_EQ(Call->getTailCallKind(), Clone->getTailCallKind());
@@ -661,7 +778,7 @@ TEST(InstructionsTest, AlterInvokeBundles) {
   std::unique_ptr<InvokeInst> Invoke(
       InvokeInst::Create(FnTy, Callee, NormalDest.get(), UnwindDest.get(), Args,
                          OldBundle, "result"));
-  AttrBuilder AB;
+  AttrBuilder AB(C);
   AB.addAttribute(Attribute::Cold);
   Invoke->setAttributes(
       AttributeList::get(C, AttributeList::FunctionIndex, AB));
@@ -672,7 +789,7 @@ TEST(InstructionsTest, AlterInvokeBundles) {
       InvokeInst::Create(Invoke.get(), NewBundle));
   EXPECT_EQ(Invoke->getNormalDest(), Clone->getNormalDest());
   EXPECT_EQ(Invoke->getUnwindDest(), Clone->getUnwindDest());
-  EXPECT_EQ(Invoke->getNumArgOperands(), Clone->getNumArgOperands());
+  EXPECT_EQ(Invoke->arg_size(), Clone->arg_size());
   EXPECT_EQ(Invoke->getArgOperand(0), Clone->getArgOperand(0));
   EXPECT_EQ(Invoke->getCallingConv(), Clone->getCallingConv());
   EXPECT_TRUE(Clone->hasFnAttr(Attribute::AttrKind::Cold));
@@ -1114,6 +1231,103 @@ TEST(InstructionsTest, ShuffleMaskQueries) {
   EXPECT_FALSE(Id15->isIdentityWithExtract());
   EXPECT_FALSE(Id15->isConcat());
   delete Id15;
+}
+
+TEST(InstructionsTest, ShuffleMaskIsReplicationMask) {
+  for (int ReplicationFactor : seq_inclusive(1, 8)) {
+    for (int VF : seq_inclusive(1, 8)) {
+      const auto ReplicatedMask = createReplicatedMask(ReplicationFactor, VF);
+      int GuessedReplicationFactor = -1, GuessedVF = -1;
+      EXPECT_TRUE(ShuffleVectorInst::isReplicationMask(
+          ReplicatedMask, GuessedReplicationFactor, GuessedVF));
+      EXPECT_EQ(GuessedReplicationFactor, ReplicationFactor);
+      EXPECT_EQ(GuessedVF, VF);
+
+      for (int OpVF : seq_inclusive(VF, 2 * VF + 1)) {
+        LLVMContext Ctx;
+        Type *OpVFTy = FixedVectorType::get(IntegerType::getInt1Ty(Ctx), OpVF);
+        Value *Op = ConstantVector::getNullValue(OpVFTy);
+        ShuffleVectorInst *SVI = new ShuffleVectorInst(Op, Op, ReplicatedMask);
+        EXPECT_EQ(SVI->isReplicationMask(GuessedReplicationFactor, GuessedVF),
+                  OpVF == VF);
+        delete SVI;
+      }
+    }
+  }
+}
+
+TEST(InstructionsTest, ShuffleMaskIsReplicationMask_undef) {
+  for (int ReplicationFactor : seq_inclusive(1, 4)) {
+    for (int VF : seq_inclusive(1, 4)) {
+      const auto ReplicatedMask = createReplicatedMask(ReplicationFactor, VF);
+      int GuessedReplicationFactor = -1, GuessedVF = -1;
+
+      // If we change some mask elements to undef, we should still match.
+
+      SmallVector<SmallVector<bool>> ElementChoices(ReplicatedMask.size(),
+                                                    {false, true});
+
+      CombinationGenerator<bool, decltype(ElementChoices)::value_type,
+                           /*variable_smallsize=*/4>
+          G(ElementChoices);
+
+      G.generate([&](ArrayRef<bool> UndefOverrides) -> bool {
+        SmallVector<int> AdjustedMask;
+        AdjustedMask.reserve(ReplicatedMask.size());
+        for (auto I : zip(ReplicatedMask, UndefOverrides))
+          AdjustedMask.emplace_back(std::get<1>(I) ? -1 : std::get<0>(I));
+        assert(AdjustedMask.size() == ReplicatedMask.size() &&
+               "Size misprediction");
+
+        EXPECT_TRUE(ShuffleVectorInst::isReplicationMask(
+            AdjustedMask, GuessedReplicationFactor, GuessedVF));
+        // Do not check GuessedReplicationFactor and GuessedVF,
+        // with enough undef's we may deduce a different tuple.
+
+        return /*Abort=*/false;
+      });
+    }
+  }
+}
+
+TEST(InstructionsTest, ShuffleMaskIsReplicationMask_Exhaustive_Correctness) {
+  for (int ShufMaskNumElts : seq_inclusive(1, 6)) {
+    SmallVector<int> PossibleShufMaskElts;
+    PossibleShufMaskElts.reserve(ShufMaskNumElts + 2);
+    for (int PossibleShufMaskElt : seq_inclusive(-1, ShufMaskNumElts))
+      PossibleShufMaskElts.emplace_back(PossibleShufMaskElt);
+    assert(PossibleShufMaskElts.size() == ShufMaskNumElts + 2U &&
+           "Size misprediction");
+
+    SmallVector<SmallVector<int>> ElementChoices(ShufMaskNumElts,
+                                                 PossibleShufMaskElts);
+
+    CombinationGenerator<int, decltype(ElementChoices)::value_type,
+                         /*variable_smallsize=*/4>
+        G(ElementChoices);
+
+    G.generate([&](ArrayRef<int> Mask) -> bool {
+      int GuessedReplicationFactor = -1, GuessedVF = -1;
+      bool Match = ShuffleVectorInst::isReplicationMask(
+          Mask, GuessedReplicationFactor, GuessedVF);
+      if (!Match)
+        return /*Abort=*/false;
+
+      const auto ActualMask =
+          createReplicatedMask(GuessedReplicationFactor, GuessedVF);
+      EXPECT_EQ(Mask.size(), ActualMask.size());
+      for (auto I : zip(Mask, ActualMask)) {
+        int Elt = std::get<0>(I);
+        int ActualElt = std::get<0>(I);
+
+        if (Elt != -1) {
+          EXPECT_EQ(Elt, ActualElt);
+        }
+      }
+
+      return /*Abort=*/false;
+    });
+  }
 }
 
 TEST(InstructionsTest, GetSplat) {

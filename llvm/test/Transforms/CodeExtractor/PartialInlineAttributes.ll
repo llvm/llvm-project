@@ -66,18 +66,18 @@ entry:
   ret i32 %c3
 }
 
-; CHECK: define internal void @callee_writeonly.1.if.then(i32 %v, i32* %sub.out) [[FN_ATTRS0:#[0-9]+]]
-; CHECK: define internal void @callee_most.2.if.then(i32 %v, i32* %sub.out)  [[FN_ATTRS:#[0-9]+]]
+; CHECK: define internal void @callee_writeonly.1.if.then(i32 %v, ptr %sub.out) [[FN_ATTRS0:#[0-9]+]]
+; CHECK: define internal void @callee_most.2.if.then(i32 %v, ptr %sub.out)  [[FN_ATTRS:#[0-9]+]]
 
 ; attributes to preserve
 attributes #0 = {
   inlinehint minsize noduplicate noimplicitfloat norecurse noredzone nounwind
   nonlazybind optsize safestack sanitize_address sanitize_hwaddress sanitize_memory
-  sanitize_thread ssp sspreq sspstrong strictfp uwtable "foo"="bar"
+  sanitize_thread ssp sspreq sspstrong uwtable "foo"="bar"
   "patchable-function"="prologue-short-redirect" "probe-stack"="_foo_guard" "stack-probe-size"="4096" }
 
 ; CHECK: attributes [[FN_ATTRS0]] = { ssp
-; CHECK: attributes [[FN_ATTRS]] = { inlinehint minsize noduplicate noimplicitfloat norecurse noredzone nounwind nonlazybind optsize safestack sanitize_address sanitize_hwaddress sanitize_memory sanitize_thread ssp sspreq sspstrong strictfp uwtable "foo"="bar" "patchable-function"="prologue-short-redirect" "probe-stack"="_foo_guard" "stack-probe-size"="4096" }
+; CHECK: attributes [[FN_ATTRS]] = { inlinehint minsize noduplicate noimplicitfloat norecurse noredzone nounwind nonlazybind optsize safestack sanitize_address sanitize_hwaddress sanitize_memory sanitize_thread ssp sspreq sspstrong uwtable "foo"="bar" "patchable-function"="prologue-short-redirect" "probe-stack"="_foo_guard" "stack-probe-size"="4096" }
 
 ; attributes to drop
 attributes #1 = {

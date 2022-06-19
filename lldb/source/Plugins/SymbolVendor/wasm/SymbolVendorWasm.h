@@ -21,8 +21,8 @@ public:
 
   static void Initialize();
   static void Terminate();
-  static lldb_private::ConstString GetPluginNameStatic();
-  static const char *GetPluginDescriptionStatic();
+  static llvm::StringRef GetPluginNameStatic() { return "WASM"; }
+  static llvm::StringRef GetPluginDescriptionStatic();
 
   static lldb_private::SymbolVendor *
   CreateInstance(const lldb::ModuleSP &module_sp,
@@ -30,8 +30,7 @@ public:
 
   /// PluginInterface protocol.
   /// \{
-  lldb_private::ConstString GetPluginName() override;
-  uint32_t GetPluginVersion() override;
+  llvm::StringRef GetPluginName() override { return GetPluginNameStatic(); }
   /// \}
 };
 

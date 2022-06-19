@@ -1,4 +1,4 @@
-; RUN: not --crash opt %loadPolly -polly-stmt-granularity=bb -polly-scops -analyze -polly-import-jscop -polly-import-jscop-postfix=transformed < %s 2>&1 | FileCheck %s
+; RUN: not --crash opt %loadPolly -polly-stmt-granularity=bb -polly-import-jscop -polly-import-jscop-postfix=transformed -disable-output < %s 2>&1 | FileCheck %s
 ;
 ; #define Ni 1056
 ; #define Nj 1056

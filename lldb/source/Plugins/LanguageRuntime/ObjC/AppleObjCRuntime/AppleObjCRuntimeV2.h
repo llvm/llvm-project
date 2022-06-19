@@ -33,7 +33,7 @@ public:
   static lldb_private::LanguageRuntime *
   CreateInstance(Process *process, lldb::LanguageType language);
 
-  static lldb_private::ConstString GetPluginNameStatic();
+  static llvm::StringRef GetPluginNameStatic() { return "apple-objc-v2"; }
 
   static char ID;
 
@@ -54,9 +54,7 @@ public:
   llvm::Expected<std::unique_ptr<UtilityFunction>>
   CreateObjectChecker(std::string name, ExecutionContext &exe_ctx) override;
 
-  ConstString GetPluginName() override;
-
-  uint32_t GetPluginVersion() override;
+  llvm::StringRef GetPluginName() override { return GetPluginNameStatic(); }
 
   ObjCRuntimeVersions GetRuntimeVersion() const override {
     return ObjCRuntimeVersions::eAppleObjC_V2;
@@ -315,13 +313,15 @@ private:
   };
 
   /// We can read the class info from the Objective-C runtime using
-  /// gdb_objc_realized_classes or objc_copyRealizedClassList. The latter is
-  /// preferred because it includes lazily named classes, but it's not always
-  /// available or safe to call.
+  /// gdb_objc_realized_classes, objc_copyRealizedClassList or
+  /// objc_getRealizedClassList_trylock. The RealizedClassList variants are
+  /// preferred because they include lazily named classes, but they are not
+  /// always available or safe to call.
   ///
-  /// We potentially need both for the same process, because we may need to use
-  /// gdb_objc_realized_classes until dyld is initialized and then switch over
-  /// to objc_copyRealizedClassList for lazily named classes.
+  /// We potentially need more than one helper for the same process, because we
+  /// may need to use gdb_objc_realized_classes until dyld is initialized and
+  /// then switch over to objc_copyRealizedClassList or
+  /// objc_getRealizedClassList_trylock for lazily named classes.
   class DynamicClassInfoExtractor : public ClassInfoExtractor {
   public:
     DynamicClassInfoExtractor(AppleObjCRuntimeV2 &runtime)
@@ -331,11 +331,16 @@ private:
     UpdateISAToDescriptorMap(RemoteNXMapTable &hash_table);
 
   private:
-    enum Helper { gdb_objc_realized_classes, objc_copyRealizedClassList };
+    enum Helper {
+      gdb_objc_realized_classes,
+      objc_copyRealizedClassList,
+      objc_getRealizedClassList_trylock
+    };
 
-    /// Compute which helper to use. Prefer objc_copyRealizedClassList if it's
-    /// available and it's safe to call (i.e. dyld is fully initialized). Use
-    /// gdb_objc_realized_classes otherwise.
+    /// Compute which helper to use. If dyld is not yet fully initialized we
+    /// must use gdb_objc_realized_classes. Otherwise, we prefer
+    /// objc_getRealizedClassList_trylock and objc_copyRealizedClassList
+    /// respectively, depending on availability.
     Helper ComputeHelper() const;
 
     UtilityFunction *GetClassInfoUtilityFunction(ExecutionContext &exe_ctx,
@@ -343,23 +348,17 @@ private:
     lldb::addr_t &GetClassInfoArgs(Helper helper);
 
     std::unique_ptr<UtilityFunction>
-    GetClassInfoUtilityFunctionImpl(ExecutionContext &exe_ctx, std::string code,
-                                    std::string name);
+    GetClassInfoUtilityFunctionImpl(ExecutionContext &exe_ctx, Helper helper,
+                                    std::string code, std::string name);
 
-    /// Helper to read class info using the gdb_objc_realized_classes.
-    struct gdb_objc_realized_classes_helper {
+    struct UtilityFunctionHelper {
       std::unique_ptr<UtilityFunction> utility_function;
       lldb::addr_t args = LLDB_INVALID_ADDRESS;
     };
 
-    /// Helper to read class info using objc_copyRealizedClassList.
-    struct objc_copyRealizedClassList_helper {
-      std::unique_ptr<UtilityFunction> utility_function;
-      lldb::addr_t args = LLDB_INVALID_ADDRESS;
-    };
-
-    gdb_objc_realized_classes_helper m_gdb_objc_realized_classes_helper;
-    objc_copyRealizedClassList_helper m_objc_copyRealizedClassList_helper;
+    UtilityFunctionHelper m_gdb_objc_realized_classes_helper;
+    UtilityFunctionHelper m_objc_copyRealizedClassList_helper;
+    UtilityFunctionHelper m_objc_getRealizedClassList_trylock_helper;
   };
 
   /// Abstraction to read the Objective-C class info from the shared cache.
@@ -401,6 +400,7 @@ private:
   };
 
   void WarnIfNoClassesCached(SharedCacheWarningReason reason);
+  void WarnIfNoExpandedSharedCache();
 
   lldb::addr_t GetSharedCacheReadOnlyAddress();
   lldb::addr_t GetSharedCacheBaseAddress();
@@ -430,11 +430,13 @@ private:
   HashTableSignature m_hash_signature;
   bool m_has_object_getClass;
   bool m_has_objc_copyRealizedClassList;
+  bool m_has_objc_getRealizedClassList_trylock;
   bool m_loaded_objc_opt;
   std::unique_ptr<NonPointerISACache> m_non_pointer_isa_cache_up;
   std::unique_ptr<TaggedPointerVendor> m_tagged_pointer_vendor_up;
   EncodingToTypeSP m_encoding_to_type_sp;
-  bool m_noclasses_warning_emitted;
+  std::once_flag m_no_classes_cached_warning;
+  std::once_flag m_no_expanded_cache_warning;
   llvm::Optional<std::pair<lldb::addr_t, lldb::addr_t>> m_CFBoolean_values;
   uint64_t m_realized_class_generation_count;
 };

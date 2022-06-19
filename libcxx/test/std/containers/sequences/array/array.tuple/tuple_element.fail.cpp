@@ -10,17 +10,8 @@
 
 // tuple_element<I, array<T, N> >::type
 
-// Prevent -Warray-bounds from issuing a diagnostic when testing with clang verify.
-#if defined(__clang__)
-#pragma clang diagnostic ignored "-Warray-bounds"
-#endif
-
 #include <array>
 #include <cassert>
-
-// std::array is explicitly allowed to be initialized with A a = { init-list };.
-// Disable the missing braces warning for this reason.
-#include "disable_missing_braces_warning.h"
 
 int main(int, char**)
 {

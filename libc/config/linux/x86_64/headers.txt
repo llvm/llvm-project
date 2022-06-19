@@ -2,10 +2,13 @@ set(TARGET_PUBLIC_HEADERS
     libc.include.assert_h
     libc.include.ctype
     libc.include.errno
+    libc.include.fenv
+    libc.include.inttypes
     libc.include.math
     libc.include.signal
     libc.include.stdio
     libc.include.stdlib
+    libc.include.string
     libc.include.sys_mman
     libc.include.sys_syscall
     libc.include.threads

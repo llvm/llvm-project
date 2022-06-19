@@ -18,7 +18,6 @@
 #include "llvm/Analysis/CGSCCPassManager.h"
 #include "llvm/Analysis/ModuleSummaryAnalysis.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
-#include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/Bitcode/BitcodeReader.h"
 #include "llvm/Bitcode/BitcodeWriter.h"
 #include "llvm/IR/LLVMRemarkStreamer.h"
@@ -27,6 +26,7 @@
 #include "llvm/IR/Verifier.h"
 #include "llvm/LTO/LTO.h"
 #include "llvm/MC/SubtargetFeature.h"
+#include "llvm/MC/TargetRegistry.h"
 #include "llvm/Object/ModuleSymbolTable.h"
 #include "llvm/Passes/PassBuilder.h"
 #include "llvm/Passes/PassPlugin.h"
@@ -36,13 +36,10 @@
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Program.h"
-#include "llvm/Support/SmallVectorMemoryBuffer.h"
-#include "llvm/Support/TargetRegistry.h"
 #include "llvm/Support/ThreadPool.h"
+#include "llvm/Support/ToolOutputFile.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetMachine.h"
-#include "llvm/Transforms/IPO.h"
-#include "llvm/Transforms/IPO/PassManagerBuilder.h"
 #include "llvm/Transforms/Scalar/LoopPassManager.h"
 #include "llvm/Transforms/Utils/FunctionImportUtils.h"
 #include "llvm/Transforms/Utils/SplitModule.h"
@@ -74,7 +71,11 @@ static cl::opt<bool> ThinLTOAssumeMerged(
     cl::desc("Assume the input has already undergone ThinLTO function "
              "importing and the other pre-optimization pipeline changes."));
 
-LLVM_ATTRIBUTE_NORETURN static void reportOpenError(StringRef Path, Twine Msg) {
+namespace llvm {
+extern cl::opt<bool> NoPGOWarnMismatch;
+}
+
+[[noreturn]] static void reportOpenError(StringRef Path, Twine Msg) {
   errs() << "failed to open " << Path << ": " << Msg << '\n';
   errs().flush();
   exit(1);
@@ -141,7 +142,7 @@ Error Config::addSaveTemps(std::string OutputFileName,
         // directly and exit.
         if (EC)
           reportOpenError(Path, EC.message());
-        WriteIndexToFile(Index, OS);
+        writeIndexToFile(Index, OS);
 
         Path = OutputFileName + "index.dot";
         raw_fd_ostream OSDot(Path, EC, sys::fs::OpenFlags::OF_None);
@@ -221,10 +222,12 @@ static void runNewPMPasses(const Config &Conf, Module &Mod, TargetMachine *TM,
     PGOOpt = PGOOptions(Conf.CSIRProfile, "", Conf.ProfileRemapping,
                         PGOOptions::IRUse, PGOOptions::CSIRUse,
                         Conf.AddFSDiscriminator);
+    NoPGOWarnMismatch = !Conf.PGOWarnMismatch;
   } else if (Conf.AddFSDiscriminator) {
     PGOOpt = PGOOptions("", "", "", PGOOptions::NoAction,
                         PGOOptions::NoCSAction, true);
   }
+  TM->setPGOOption(PGOOpt);
 
   LoopAnalysisManager LAM;
   FunctionAnalysisManager FAM;
@@ -244,18 +247,16 @@ static void runNewPMPasses(const Config &Conf, Module &Mod, TargetMachine *TM,
     TLII->disableAllFunctions();
   FAM.registerPass([&] { return TargetLibraryAnalysis(*TLII); });
 
-  AAManager AA;
   // Parse a custom AA pipeline if asked to.
   if (!Conf.AAPipeline.empty()) {
+    AAManager AA;
     if (auto Err = PB.parseAAPipeline(AA, Conf.AAPipeline)) {
-      report_fatal_error("unable to parse AA pipeline description '" +
+      report_fatal_error(Twine("unable to parse AA pipeline description '") +
                          Conf.AAPipeline + "': " + toString(std::move(Err)));
     }
-  } else {
-    AA = PB.buildDefaultAAPipeline();
+    // Register the AA manager first so that our version is the one used.
+    FAM.registerPass([&] { return std::move(AA); });
   }
-  // Register the AA manager first so that our version is the one used.
-  FAM.registerPass([&] { return std::move(AA); });
 
   // Register all the basic analyses with the managers.
   PB.registerModuleAnalyses(MAM);
@@ -269,31 +270,33 @@ static void runNewPMPasses(const Config &Conf, Module &Mod, TargetMachine *TM,
   if (!Conf.DisableVerify)
     MPM.addPass(VerifierPass());
 
-  PassBuilder::OptimizationLevel OL;
+  OptimizationLevel OL;
 
   switch (OptLevel) {
   default:
     llvm_unreachable("Invalid optimization level");
   case 0:
-    OL = PassBuilder::OptimizationLevel::O0;
+    OL = OptimizationLevel::O0;
     break;
   case 1:
-    OL = PassBuilder::OptimizationLevel::O1;
+    OL = OptimizationLevel::O1;
     break;
   case 2:
-    OL = PassBuilder::OptimizationLevel::O2;
+    OL = OptimizationLevel::O2;
     break;
   case 3:
-    OL = PassBuilder::OptimizationLevel::O3;
+    OL = OptimizationLevel::O3;
     break;
   }
 
   // Parse a custom pipeline if asked to.
   if (!Conf.OptPipeline.empty()) {
     if (auto Err = PB.parsePassPipeline(MPM, Conf.OptPipeline)) {
-      report_fatal_error("unable to parse pass pipeline description '" +
+      report_fatal_error(Twine("unable to parse pass pipeline description '") +
                          Conf.OptPipeline + "': " + toString(std::move(Err)));
     }
+  } else if (Conf.UseDefaultPipeline) {
+    MPM.addPass(PB.buildPerModuleDefaultPipeline(OL));
   } else if (IsThinLTO) {
     MPM.addPass(PB.buildThinLTODefaultPipeline(OL, ImportSummary));
   } else {
@@ -304,39 +307,6 @@ static void runNewPMPasses(const Config &Conf, Module &Mod, TargetMachine *TM,
     MPM.addPass(VerifierPass());
 
   MPM.run(Mod, MAM);
-}
-
-static void runOldPMPasses(const Config &Conf, Module &Mod, TargetMachine *TM,
-                           bool IsThinLTO, ModuleSummaryIndex *ExportSummary,
-                           const ModuleSummaryIndex *ImportSummary) {
-  legacy::PassManager passes;
-  passes.add(createTargetTransformInfoWrapperPass(TM->getTargetIRAnalysis()));
-
-  PassManagerBuilder PMB;
-  PMB.LibraryInfo = new TargetLibraryInfoImpl(Triple(TM->getTargetTriple()));
-  if (Conf.Freestanding)
-    PMB.LibraryInfo->disableAllFunctions();
-  PMB.Inliner = createFunctionInliningPass();
-  PMB.ExportSummary = ExportSummary;
-  PMB.ImportSummary = ImportSummary;
-  // Unconditionally verify input since it is not verified before this
-  // point and has unknown origin.
-  PMB.VerifyInput = true;
-  PMB.VerifyOutput = !Conf.DisableVerify;
-  PMB.LoopVectorize = true;
-  PMB.SLPVectorize = true;
-  PMB.OptLevel = Conf.OptLevel;
-  PMB.PGOSampleUse = Conf.SampleProfile;
-  PMB.EnablePGOCSInstrGen = Conf.RunCSIRInstr;
-  if (!Conf.RunCSIRInstr && !Conf.CSIRProfile.empty()) {
-    PMB.EnablePGOCSInstrUse = true;
-    PMB.PGOInstrUse = Conf.CSIRProfile;
-  }
-  if (IsThinLTO)
-    PMB.populateThinLTOPassManager(passes);
-  else
-    PMB.populateLTOPassManager(passes);
-  passes.run(Mod);
 }
 
 bool lto::opt(const Config &Conf, TargetMachine *TM, unsigned Task, Module &Mod,
@@ -356,17 +326,13 @@ bool lto::opt(const Config &Conf, TargetMachine *TM, unsigned Task, Module &Mod,
       LLVM_DEBUG(
           dbgs() << "Post-(Thin)LTO merge bitcode embedding was requested, but "
                     "command line arguments are not available");
-    llvm::EmbedBitcodeInModule(Mod, llvm::MemoryBufferRef(),
+    llvm::embedBitcodeInModule(Mod, llvm::MemoryBufferRef(),
                                /*EmbedBitcode*/ true, /*EmbedCmdline*/ true,
                                /*Cmdline*/ CmdArgs);
   }
   // FIXME: Plumb the combined index into the new pass manager.
-  if (Conf.UseNewPM || !Conf.OptPipeline.empty()) {
-    runNewPMPasses(Conf, Mod, TM, Conf.OptLevel, IsThinLTO, ExportSummary,
-                   ImportSummary);
-  } else {
-    runOldPMPasses(Conf, Mod, TM, IsThinLTO, ExportSummary, ImportSummary);
-  }
+  runNewPMPasses(Conf, Mod, TM, Conf.OptLevel, IsThinLTO, ExportSummary,
+                 ImportSummary);
   return !Conf.PostOptModuleHook || Conf.PostOptModuleHook(Task, Mod);
 }
 
@@ -377,7 +343,7 @@ static void codegen(const Config &Conf, TargetMachine *TM,
     return;
 
   if (EmbedBitcode == LTOBitcodeEmbedding::EmbedOptimized)
-    llvm::EmbedBitcodeInModule(Mod, llvm::MemoryBufferRef(),
+    llvm::embedBitcodeInModule(Mod, llvm::MemoryBufferRef(),
                                /*EmbedBitcode*/ true,
                                /*EmbedCmdline*/ false,
                                /*CmdArgs*/ std::vector<uint8_t>());
@@ -387,8 +353,8 @@ static void codegen(const Config &Conf, TargetMachine *TM,
   if (!Conf.DwoDir.empty()) {
     std::error_code EC;
     if (auto EC = llvm::sys::fs::create_directories(Conf.DwoDir))
-      report_fatal_error("Failed to create directory " + Conf.DwoDir + ": " +
-                         EC.message());
+      report_fatal_error(Twine("Failed to create directory ") + Conf.DwoDir +
+                         ": " + EC.message());
 
     DwoFile = Conf.DwoDir;
     sys::path::append(DwoFile, std::to_string(Task) + ".dwo");
@@ -400,11 +366,19 @@ static void codegen(const Config &Conf, TargetMachine *TM,
     std::error_code EC;
     DwoOut = std::make_unique<ToolOutputFile>(DwoFile, EC, sys::fs::OF_None);
     if (EC)
-      report_fatal_error("Failed to open " + DwoFile + ": " + EC.message());
+      report_fatal_error(Twine("Failed to open ") + DwoFile + ": " +
+                         EC.message());
   }
 
-  auto Stream = AddStream(Task);
+  Expected<std::unique_ptr<CachedFileStream>> StreamOrErr = AddStream(Task);
+  if (Error Err = StreamOrErr.takeError())
+    report_fatal_error(std::move(Err));
+  std::unique_ptr<CachedFileStream> &Stream = *StreamOrErr;
+  TM->Options.ObjectFilenameForDebug = Stream->ObjectPathName;
+
   legacy::PassManager CodeGenPasses;
+  TargetLibraryInfoImpl TLII(Triple(Mod.getTargetTriple()));
+  CodeGenPasses.add(new TargetLibraryInfoWrapperPass(TLII));
   CodeGenPasses.add(
       createImmutableModuleSummaryIndexWrapperPass(&CombinedIndex));
   if (Conf.PreCodeGenPassesHook)
@@ -599,7 +573,7 @@ Error lto::thinBackend(const Config &Conf, unsigned Task, AddStreamFn AddStream,
 
   dropDeadSymbols(Mod, DefinedGlobals, CombinedIndex);
 
-  thinLTOResolvePrevailingInModule(Mod, DefinedGlobals);
+  thinLTOFinalizeInModule(Mod, DefinedGlobals, /*PropagateAttrs=*/true);
 
   if (Conf.PostPromoteModuleHook && !Conf.PostPromoteModuleHook(Task, Mod))
     return finalizeOptimizationRemarks(std::move(DiagnosticOutputFile));

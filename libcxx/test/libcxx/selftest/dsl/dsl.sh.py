@@ -6,22 +6,14 @@
 #
 #===----------------------------------------------------------------------===##
 
-# XFAIL: LIBCXX-WINDOWS-FIXME
-
 # Note: We prepend arguments with 'x' to avoid thinking there are too few
 #       arguments in case an argument is an empty string.
-# RUN: %{python} %s x%S \
-# RUN:              x%T \
-# RUN:              x%{escaped_exec} \
-# RUN:              x%{escaped_cxx} \
-# RUN:              x%{escaped_flags} \
-# RUN:              x%{escaped_compile_flags} \
-# RUN:              x%{escaped_link_flags}
-# END.
+# RUN: %{python} %s x%S x%T x%{substitutions}
 
 import base64
 import copy
 import os
+import pickle
 import platform
 import subprocess
 import sys
@@ -40,8 +32,13 @@ import lit.util
 # Steal some parameters from the config running this test so that we can
 # bootstrap our own TestingConfig.
 args = list(map(lambda s: s[1:], sys.argv[1:8])) # Remove the leading 'x'
-SOURCE_ROOT, EXEC_PATH, EXEC, CXX, FLAGS, COMPILE_FLAGS, LINK_FLAGS = args
+SOURCE_ROOT, EXEC_PATH, SUBSTITUTIONS = args
 sys.argv[1:8] = []
+
+# Decode the substitutions.
+SUBSTITUTIONS = pickle.loads(base64.b64decode(SUBSTITUTIONS))
+for s, sub in SUBSTITUTIONS:
+    print("Substitution '{}' is '{}'".format(s, sub))
 
 class SetupConfigs(unittest.TestCase):
     """
@@ -63,20 +60,14 @@ class SetupConfigs(unittest.TestCase):
             noExecute=False,
             debug=False,
             isWindows=platform.system() == 'Windows',
+            order='smart',
             params={})
 
         self.config = lit.TestingConfig.TestingConfig.fromdefaults(self.litConfig)
         self.config.test_source_root = SOURCE_ROOT
         self.config.test_exec_root = EXEC_PATH
         self.config.recursiveExpansionLimit = 10
-        base64Decode = lambda s: lit.util.to_string(base64.b64decode(s))
-        self.config.substitutions = [
-            ('%{cxx}', base64Decode(CXX)),
-            ('%{flags}', base64Decode(FLAGS)),
-            ('%{compile_flags}', base64Decode(COMPILE_FLAGS)),
-            ('%{link_flags}', base64Decode(LINK_FLAGS)),
-            ('%{exec}', base64Decode(EXEC))
-        ]
+        self.config.substitutions = copy.deepcopy(SUBSTITUTIONS)
 
     def getSubstitution(self, substitution):
         """
@@ -159,19 +150,19 @@ class TestProgramOutput(SetupConfigs):
         """
         self.assertEqual(dsl.programOutput(self.config, source), "")
 
-    def test_invalid_program_returns_None_1(self):
+    def test_program_that_fails_to_run_raises_runtime_error(self):
         # The program compiles, but exits with an error
         source = """
         int main(int, char**) { return 1; }
         """
-        self.assertEqual(dsl.programOutput(self.config, source), None)
+        self.assertRaises(dsl.ConfigurationRuntimeError, lambda: dsl.programOutput(self.config, source))
 
-    def test_invalid_program_returns_None_2(self):
+    def test_program_that_fails_to_compile_raises_compilation_error(self):
         # The program doesn't compile
         source = """
         int main(int, char**) { this doesnt compile }
         """
-        self.assertEqual(dsl.programOutput(self.config, source), None)
+        self.assertRaises(dsl.ConfigurationCompilationError, lambda: dsl.programOutput(self.config, source))
 
     def test_pass_arguments_to_program(self):
         source = """
@@ -196,6 +187,7 @@ class TestProgramOutput(SetupConfigs):
         #include <cstdio>
         int main(int, char**) {
             std::printf("MACRO=%u\\n", MACRO);
+            return 0;
         }
         """
         compileFlagsIndex = findIndex(self.config.substitutions, lambda x: x[0] == '%{compile_flags}')
@@ -209,6 +201,41 @@ class TestProgramOutput(SetupConfigs):
         output2 = dsl.programOutput(self.config, source)
         self.assertEqual(output2, "MACRO=2\n")
 
+    def test_program_stderr_is_not_conflated_with_stdout(self):
+        # Run a program that produces stdout output and stderr output too, making
+        # sure the stderr output does not pollute the stdout output.
+        source = """
+        #include <cstdio>
+        int main(int, char**) {
+            std::fprintf(stdout, "STDOUT-OUTPUT");
+            std::fprintf(stderr, "STDERR-OUTPUT");
+            return 0;
+        }
+        """
+        self.assertEqual(dsl.programOutput(self.config, source), "STDOUT-OUTPUT")
+
+
+class TestProgramSucceeds(SetupConfigs):
+    """
+    Tests for libcxx.test.dsl.programSucceeds
+    """
+    def test_success(self):
+        source = """
+        int main(int, char**) { return 0; }
+        """
+        self.assertTrue(dsl.programSucceeds(self.config, source))
+
+    def test_failure(self):
+        source = """
+        int main(int, char**) { return 1; }
+        """
+        self.assertFalse(dsl.programSucceeds(self.config, source))
+
+    def test_compile_failure(self):
+        source = """
+        this does not compile
+        """
+        self.assertRaises(dsl.ConfigurationCompilationError, lambda: dsl.programSucceeds(self.config, source))
 
 class TestHasLocale(SetupConfigs):
     """
@@ -223,7 +250,12 @@ class TestHasLocale(SetupConfigs):
             self.fail("checking for hasLocale should not explode")
 
     def test_nonexistent_locale(self):
-        self.assertFalse(dsl.hasAnyLocale(self.config, ['for_sure_this_is_not_an_existing_locale']))
+        self.assertFalse(dsl.hasAnyLocale(self.config, ['forsurethisisnotanexistinglocale']))
+
+    def test_localization_program_doesnt_compile(self):
+        compilerIndex = findIndex(self.config.substitutions, lambda x: x[0] == '%{cxx}')
+        self.config.substitutions[compilerIndex] = ('%{cxx}', 'this-is-certainly-not-a-valid-compiler!!')
+        self.assertRaises(dsl.ConfigurationCompilationError, lambda: dsl.hasAnyLocale(self.config, ['en_US.UTF-8']))
 
 
 class TestCompilerMacros(SetupConfigs):

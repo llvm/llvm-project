@@ -14,8 +14,6 @@ from lldbsuite.test import lldbutil
 
 class TypeAndTypeListTestCase(TestBase):
 
-    mydir = TestBase.compute_mydir(__file__)
-
     def setUp(self):
         # Call super's setUp().
         TestBase.setUp(self)
@@ -46,7 +44,7 @@ class TypeAndTypeListTestCase(TestBase):
         self.assertTrue(process, PROCESS_IS_VALID)
 
         # Get Frame #0.
-        self.assertEqual(process.GetState(), lldb.eStateStopped)
+        self.assertState(process.GetState(), lldb.eStateStopped)
         thread = lldbutil.get_stopped_thread(
             process, lldb.eStopReasonBreakpoint)
         self.assertTrue(
@@ -66,6 +64,7 @@ class TypeAndTypeListTestCase(TestBase):
             self.assertTrue(type)
             self.DebugSBType(type)
             self.assertFalse(type.IsAnonymousType(), "Task is not anonymous")
+            self.assertTrue(type.IsAggregateType(), "Task is aggregate")
             for field in type.fields:
                 if field.name == "type":
                     for enum_member in field.type.enum_members:
@@ -75,10 +74,12 @@ class TypeAndTypeListTestCase(TestBase):
                     self.assertFalse(
                         field.type.IsAnonymousType(),
                         "my_type_is_nameless is not an anonymous type")
+                    self.assertTrue(field.type.IsAggregateType())
                 elif field.name == "my_type_is_named":
                     self.assertFalse(
                         field.type.IsAnonymousType(),
                         "my_type_is_named has a named type")
+                    self.assertTrue(field.type.IsAggregateType())
                 elif field.name == None:
                     self.assertTrue(
                         field.type.IsAnonymousType(),
@@ -111,6 +112,7 @@ class TypeAndTypeListTestCase(TestBase):
         task_head_type = task_head.GetType()
         self.DebugSBType(task_head_type)
         self.assertTrue(task_head_type.IsPointerType())
+        self.assertFalse(task_head_type.IsAggregateType())
 
         self.assertEqual(task_head_type, task_pointer_type)
 
@@ -125,6 +127,7 @@ class TypeAndTypeListTestCase(TestBase):
         self.DebugSBValue(id)
         id_type = id.GetType()
         self.DebugSBType(id_type)
+        self.assertFalse(id_type.IsAggregateType())
 
         # SBType.GetBasicType() takes an enum 'BasicType'
         # (lldb-enumerations.h).
@@ -138,6 +141,7 @@ class TypeAndTypeListTestCase(TestBase):
         myint_arr_type = myint_arr.GetType()
         self.DebugSBType(myint_arr_type)
         self.assertTrue(myint_arr_type.IsArrayType())
+        self.assertTrue(myint_arr_type.IsAggregateType())
         myint_arr_element_type = myint_arr_type.GetArrayElementType()
         self.DebugSBType(myint_arr_element_type)
         myint_type = target.FindFirstType('myint')
@@ -150,11 +154,13 @@ class TypeAndTypeListTestCase(TestBase):
             self.assertTrue(enum_type)
             self.DebugSBType(enum_type)
             self.assertFalse(enum_type.IsScopedEnumerationType())
+            self.assertFalse(enum_type.IsAggregateType())
 
             scoped_enum_type = target.FindFirstType('ScopedEnumType')
             self.assertTrue(scoped_enum_type)
             self.DebugSBType(scoped_enum_type)
             self.assertTrue(scoped_enum_type.IsScopedEnumerationType())
+            self.assertFalse(scoped_enum_type.IsAggregateType())
             int_scoped_enum_type = scoped_enum_type.GetEnumerationIntegerType()
             self.assertTrue(int_scoped_enum_type)
             self.DebugSBType(int_scoped_enum_type)

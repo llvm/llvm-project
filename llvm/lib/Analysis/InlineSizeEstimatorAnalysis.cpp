@@ -1,9 +1,8 @@
 //===- InlineSizeEstimatorAnalysis.cpp - IR to native size from ML model --===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -16,33 +15,32 @@
 #ifdef LLVM_HAVE_TF_API
 #include "llvm/Analysis/Utils/TFUtils.h"
 #endif
-#include "llvm/Analysis/LoopInfo.h"
-#include "llvm/Analysis/TargetLibraryInfo.h"
-#include "llvm/Analysis/TargetTransformInfo.h"
-#include "llvm/IR/BasicBlock.h"
-#include "llvm/IR/Dominators.h"
 #include "llvm/IR/Function.h"
-#include "llvm/IR/Instructions.h"
 #include "llvm/IR/PassManager.h"
-#include "llvm/MC/MCAsmLayout.h"
-#include "llvm/Support/Casting.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/raw_ostream.h"
-
-#include <algorithm>
-#include <deque>
 
 using namespace llvm;
 
 AnalysisKey InlineSizeEstimatorAnalysis::Key;
 
-#define DEBUG_TYPE "inline-size-estimator"
-
 #ifdef LLVM_HAVE_TF_API
+#include "llvm/Analysis/LoopInfo.h"
+#include "llvm/Analysis/TargetLibraryInfo.h"
+#include "llvm/Analysis/TargetTransformInfo.h"
+#include "llvm/IR/BasicBlock.h"
+#include "llvm/IR/Dominators.h"
+#include "llvm/IR/Instructions.h"
+#include "llvm/MC/MCAsmLayout.h"
+#include "llvm/Support/Casting.h"
+#include "llvm/Support/CommandLine.h"
+#include <algorithm>
+#include <deque>
+
 cl::opt<std::string> TFIR2NativeModelPath(
     "ml-inliner-ir2native-model", cl::Hidden,
     cl::desc("Path to saved model evaluating native size from IR."));
 
+#define DEBUG_TYPE "inline-size-estimator"
 namespace {
 unsigned getMaxInstructionID() {
 #define LAST_OTHER_INST(NR) return NR;
@@ -262,10 +260,10 @@ InlineSizeEstimatorAnalysis::InlineSizeEstimatorAnalysis(
 namespace llvm {
 class TFModelEvaluator {};
 } // namespace llvm
-InlineSizeEstimatorAnalysis::InlineSizeEstimatorAnalysis() {}
+InlineSizeEstimatorAnalysis::InlineSizeEstimatorAnalysis() = default;
 InlineSizeEstimatorAnalysis ::InlineSizeEstimatorAnalysis(
     InlineSizeEstimatorAnalysis &&) {}
-InlineSizeEstimatorAnalysis::~InlineSizeEstimatorAnalysis() {}
+InlineSizeEstimatorAnalysis::~InlineSizeEstimatorAnalysis() = default;
 InlineSizeEstimatorAnalysis::Result
 InlineSizeEstimatorAnalysis::run(const Function &F,
                                  FunctionAnalysisManager &FAM) {

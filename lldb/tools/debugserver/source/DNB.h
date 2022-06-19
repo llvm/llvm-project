@@ -51,10 +51,14 @@ nub_process_t DNBProcessLaunch(
 
 nub_process_t DNBProcessGetPIDByName(const char *name);
 nub_process_t DNBProcessAttach(nub_process_t pid, struct timespec *timeout,
-                               bool unmask_signals, char *err_str,
+                               const RNBContext::IgnoredExceptions 
+                                   &ignored_exceptions, 
+                               char *err_str,
                                size_t err_len);
 nub_process_t DNBProcessAttachByName(const char *name, struct timespec *timeout,
-                                     bool unmask_signals, char *err_str,
+                                     const RNBContext::IgnoredExceptions 
+                                         &ignored_exceptions, 
+                                     char *err_str,
                                      size_t err_len);
 nub_process_t DNBProcessAttachWait(RNBContext *ctx, const char *wait_name,
                                    bool ignore_existing,

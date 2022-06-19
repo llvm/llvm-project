@@ -12,14 +12,18 @@
 
 #include "CSKYMCTargetDesc.h"
 #include "CSKYAsmBackend.h"
+#include "CSKYELFStreamer.h"
 #include "CSKYInstPrinter.h"
 #include "CSKYMCAsmInfo.h"
 #include "CSKYMCCodeEmitter.h"
+#include "CSKYTargetStreamer.h"
 #include "TargetInfo/CSKYTargetInfo.h"
+#include "llvm/MC/MCAssembler.h"
+#include "llvm/MC/MCInstrAnalysis.h"
 #include "llvm/MC/MCInstrInfo.h"
 #include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/MC/MCSubtargetInfo.h"
-#include "llvm/Support/TargetRegistry.h"
+#include "llvm/MC/TargetRegistry.h"
 
 #define GET_INSTRINFO_MC_DESC
 #include "CSKYGenInstrInfo.inc"
@@ -72,6 +76,81 @@ static MCSubtargetInfo *createCSKYMCSubtargetInfo(const Triple &TT,
   return createCSKYMCSubtargetInfoImpl(TT, CPUName, /*TuneCPU=*/CPUName, FS);
 }
 
+static MCTargetStreamer *
+createCSKYObjectTargetStreamer(MCStreamer &S, const MCSubtargetInfo &STI) {
+  const Triple &TT = STI.getTargetTriple();
+  if (TT.isOSBinFormatELF())
+    return new CSKYTargetELFStreamer(S, STI);
+  return nullptr;
+}
+
+static MCStreamer *createELFStreamer(const Triple &T, MCContext &Ctx,
+                                     std::unique_ptr<MCAsmBackend> &&MAB,
+                                     std::unique_ptr<MCObjectWriter> &&OW,
+                                     std::unique_ptr<MCCodeEmitter> &&Emitter,
+                                     bool RelaxAll) {
+  CSKYELFStreamer *S = new CSKYELFStreamer(Ctx, std::move(MAB), std::move(OW),
+                                           std::move(Emitter));
+
+  if (RelaxAll)
+    S->getAssembler().setRelaxAll(true);
+  return S;
+}
+
+static MCTargetStreamer *createCSKYAsmTargetStreamer(MCStreamer &S,
+                                                     formatted_raw_ostream &OS,
+                                                     MCInstPrinter *InstPrinter,
+                                                     bool isVerboseAsm) {
+  return new CSKYTargetAsmStreamer(S, OS);
+}
+
+static MCTargetStreamer *createCSKYNullTargetStreamer(MCStreamer &S) {
+  return new CSKYTargetStreamer(S);
+}
+
+namespace {
+
+class CSKYMCInstrAnalysis : public MCInstrAnalysis {
+public:
+  explicit CSKYMCInstrAnalysis(const MCInstrInfo *Info)
+      : MCInstrAnalysis(Info) {}
+
+  bool evaluateBranch(const MCInst &Inst, uint64_t Addr, uint64_t Size,
+                      uint64_t &Target) const override {
+    if (isConditionalBranch(Inst) || isUnconditionalBranch(Inst)) {
+      int64_t Imm;
+      Imm = Inst.getOperand(Inst.getNumOperands() - 1).getImm();
+      Target = Addr + Imm;
+      return true;
+    }
+
+    if (Inst.getOpcode() == CSKY::BSR32) {
+      Target = Addr + Inst.getOperand(0).getImm();
+      return true;
+    }
+
+    switch (Inst.getOpcode()) {
+    default:
+      return false;
+    case CSKY::LRW16:
+    case CSKY::LRW32:
+    case CSKY::JSRI32:
+    case CSKY::JMPI32:
+      int64_t Imm = Inst.getOperand(Inst.getNumOperands() - 1).getImm();
+      Target = ((Addr + Imm) & 0xFFFFFFFC);
+      return true;
+    }
+
+    return false;
+  }
+};
+
+} // end anonymous namespace
+
+static MCInstrAnalysis *createCSKYInstrAnalysis(const MCInstrInfo *Info) {
+  return new CSKYMCInstrAnalysis(Info);
+}
+
 extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeCSKYTargetMC() {
   auto &CSKYTarget = getTheCSKYTarget();
   TargetRegistry::RegisterMCAsmBackend(CSKYTarget, createCSKYAsmBackend);
@@ -82,4 +161,13 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeCSKYTargetMC() {
   TargetRegistry::RegisterMCInstPrinter(CSKYTarget, createCSKYMCInstPrinter);
   TargetRegistry::RegisterMCSubtargetInfo(CSKYTarget,
                                           createCSKYMCSubtargetInfo);
+  TargetRegistry::RegisterELFStreamer(CSKYTarget, createELFStreamer);
+  TargetRegistry::RegisterObjectTargetStreamer(CSKYTarget,
+                                               createCSKYObjectTargetStreamer);
+  TargetRegistry::RegisterAsmTargetStreamer(CSKYTarget,
+                                            createCSKYAsmTargetStreamer);
+  // Register the null target streamer.
+  TargetRegistry::RegisterNullTargetStreamer(CSKYTarget,
+                                             createCSKYNullTargetStreamer);
+  TargetRegistry::RegisterMCInstrAnalysis(CSKYTarget, createCSKYInstrAnalysis);
 }

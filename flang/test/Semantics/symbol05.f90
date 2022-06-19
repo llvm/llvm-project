@@ -1,5 +1,4 @@
-! RUN: %S/test_symbols.sh %s %t %flang_fc1
-! REQUIRES: shell
+! RUN: %python %S/test_symbols.py %s %flang_fc1
 ! Explicit and implicit entities in blocks
 
 !DEF: /s1 (Subroutine) Subprogram
@@ -49,10 +48,10 @@ subroutine s3
   !DEF: /s3/Block1/t DerivedType
   type :: t
    !DEF: /s3/Block1/t/x ObjectEntity REAL(4)
-   !DEF: /s3/Block1/t/ImpliedDos1/ImpliedDos1/i (Implicit) ObjectEntity INTEGER(4)
+   !DEF: /s3/Block1/t/ImpliedDos1/i (Implicit) ObjectEntity INTEGER(4)
    real :: x(10) = [(i, i=1,10)]
    !DEF: /s3/Block1/t/y ObjectEntity REAL(4)
-   !DEF: /s3/Block1/t/ImpliedDos2/ImpliedDos1/j ObjectEntity INTEGER(8)
+   !DEF: /s3/Block1/t/ImpliedDos2/j ObjectEntity INTEGER(8)
    real :: y(10) = [(j, j=1,10)]
   end type
  end block

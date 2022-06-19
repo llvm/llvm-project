@@ -15,10 +15,10 @@
 #ifndef LLVM_TRANSFORMS_SCALAR_PARTIALLYINLINELIBCALLS_H
 #define LLVM_TRANSFORMS_SCALAR_PARTIALLYINLINELIBCALLS_H
 
-#include "llvm/IR/Module.h"
 #include "llvm/IR/PassManager.h"
 
 namespace llvm {
+class Function;
 class PartiallyInlineLibCallsPass
     : public PassInfoMixin<PartiallyInlineLibCallsPass> {
 public:

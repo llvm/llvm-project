@@ -9,8 +9,6 @@ from lldbsuite.test import lldbutil
 
 class ImportStdModule(TestBase):
 
-    mydir = TestBase.compute_mydir(__file__)
-
     @add_test_categories(["libc++"])
     @skipIf(compiler=no_match("clang"))
     def test(self):
@@ -24,6 +22,8 @@ class ImportStdModule(TestBase):
         self.runCmd("settings set target.import-std-module true")
         # Calling some normal std functions that return non-template types.
         self.expect_expr("std::abs(-42)", result_type="int", result_value="42")
+        self.expect_expr("std::minmax<int>(1, 2).first", result_type="const int",
+            result_value="1")
         self.expect_expr("std::div(2, 1).quot",
                          result_type="int",
                          result_value="2")
@@ -50,7 +50,7 @@ class ImportStdModule(TestBase):
         self.runCmd("settings set target.import-std-module true")
         # These languages don't support C++ modules, so they shouldn't
         # be able to evaluate the expression.
-        self.expect("expr -l C -- std::abs(-42)", error=True)
-        self.expect("expr -l C99 -- std::abs(-42)", error=True)
-        self.expect("expr -l C11 -- std::abs(-42)", error=True)
-        self.expect("expr -l ObjC -- std::abs(-42)", error=True)
+        self.expect("expr -l C -- std::minmax<int>(1, 2).first", error=True)
+        self.expect("expr -l C99 -- std::minmax<int>(1, 2).first", error=True)
+        self.expect("expr -l C11 -- std::minmax<int>(1, 2).first", error=True)
+        self.expect("expr -l ObjC -- std::minmax<int>(1, 2).first", error=True)

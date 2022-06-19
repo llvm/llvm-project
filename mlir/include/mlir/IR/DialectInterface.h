@@ -35,7 +35,7 @@ public:
 protected:
   DialectInterfaceBase(Dialect *dialect) : BaseT(dialect, getInterfaceID()) {}
 };
-} // end namespace detail
+} // namespace detail
 
 /// This class represents an interface overridden for a single dialect.
 class DialectInterface {
@@ -111,20 +111,18 @@ protected:
   /// An iterator class that iterates the held interface objects of the given
   /// derived interface type.
   template <typename InterfaceT>
-  class iterator : public llvm::mapped_iterator<
-                       InterfaceVectorT::const_iterator,
-                       const InterfaceT &(*)(const DialectInterface *)> {
-    static const InterfaceT &remapIt(const DialectInterface *interface) {
+  struct iterator
+      : public llvm::mapped_iterator_base<iterator<InterfaceT>,
+                                          InterfaceVectorT::const_iterator,
+                                          const InterfaceT &> {
+    using llvm::mapped_iterator_base<iterator<InterfaceT>,
+                                     InterfaceVectorT::const_iterator,
+                                     const InterfaceT &>::mapped_iterator_base;
+
+    /// Map the element to the iterator result type.
+    const InterfaceT &mapElement(const DialectInterface *interface) const {
       return *static_cast<const InterfaceT *>(interface);
     }
-
-    iterator(InterfaceVectorT::const_iterator it)
-        : llvm::mapped_iterator<
-              InterfaceVectorT::const_iterator,
-              const InterfaceT &(*)(const DialectInterface *)>(it, &remapIt) {}
-
-    /// Allow access to the constructor.
-    friend DialectInterfaceCollectionBase;
   };
 
   /// Iterator access to the held interfaces.

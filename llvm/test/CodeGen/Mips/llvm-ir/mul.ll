@@ -230,7 +230,7 @@ define signext i128 @mul_i128(i128 signext %a, i128 signext %b) {
 entry:
 ; ALL-LABEL: mul_i128:
 
-  ; GP32:           lw      $25, %call16(__multi3)($gp)
+  ; GP32-NOT:       lw      $25, %call16(__multi3)($gp)
 
   ; GP64-NOT-R6:    dmult   $4, $7
   ; GP64-NOT-R6:    mflo    $[[T0:[0-9]+]]
@@ -249,7 +249,7 @@ entry:
   ; 64R6:           daddu   $2, $[[T1]], $[[T0]]
   ; 64R6-DAG:       dmul    $3, $5, $7
 
-  ; MM32:           lw      $25, %call16(__multi3)($16)
+  ; MM32-NOT:       lw      $25, %call16(__multi3)($16)
 
   %r = mul i128 %a, %b
   ret i128 %r

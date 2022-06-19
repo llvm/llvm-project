@@ -12,16 +12,13 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Support/FileUtilities.h"
-#include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/ErrorOr.h"
 #include "llvm/Support/MemoryBuffer.h"
-#include "llvm/Support/Path.h"
+#include "llvm/Support/Process.h"
 #include "llvm/Support/raw_ostream.h"
-#include <cctype>
-#include <cmath>
 #include <cstdint>
 #include <cstdlib>
 #include <cstring>
@@ -300,8 +297,7 @@ llvm::Error llvm::writeFileAtomically(
     std::function<llvm::Error(llvm::raw_ostream &)> Writer) {
   SmallString<128> GeneratedUniqPath;
   int TempFD;
-  if (sys::fs::createUniqueFile(TempPathModel.str(), TempFD,
-                                GeneratedUniqPath)) {
+  if (sys::fs::createUniqueFile(TempPathModel, TempFD, GeneratedUniqPath)) {
     return llvm::make_error<AtomicFileWriteError>(
         atomic_write_error::failed_to_create_uniq_file);
   }
@@ -319,13 +315,77 @@ llvm::Error llvm::writeFileAtomically(
         atomic_write_error::output_stream_error);
   }
 
-  if (sys::fs::rename(/*from=*/GeneratedUniqPath.c_str(),
-                      /*to=*/FinalPath.str().c_str())) {
+  if (sys::fs::rename(/*from=*/GeneratedUniqPath, /*to=*/FinalPath)) {
     return llvm::make_error<AtomicFileWriteError>(
         atomic_write_error::failed_to_rename_temp_file);
   }
 
   RemoveTmpFileOnFail.releaseFile();
+  return Error::success();
+}
+
+Expected<FilePermissionsApplier>
+FilePermissionsApplier::create(StringRef InputFilename) {
+  sys::fs::file_status Status;
+
+  if (InputFilename != "-") {
+    if (auto EC = sys::fs::status(InputFilename, Status))
+      return createFileError(InputFilename, EC);
+  } else {
+    Status.permissions(static_cast<sys::fs::perms>(0777));
+  }
+
+  return FilePermissionsApplier(InputFilename, Status);
+}
+
+Error FilePermissionsApplier::apply(
+    StringRef OutputFilename, bool CopyDates,
+    Optional<sys::fs::perms> OverwritePermissions) {
+  sys::fs::file_status Status = InputStatus;
+
+  if (OverwritePermissions)
+    Status.permissions(*OverwritePermissions);
+
+  int FD = 0;
+
+  // Writing to stdout should not be treated as an error here, just
+  // do not set access/modification times or permissions.
+  if (OutputFilename == "-")
+    return Error::success();
+
+  if (std::error_code EC = sys::fs::openFileForWrite(OutputFilename, FD,
+                                                     sys::fs::CD_OpenExisting))
+    return createFileError(OutputFilename, EC);
+
+  if (CopyDates)
+    if (std::error_code EC = sys::fs::setLastAccessAndModificationTime(
+            FD, Status.getLastAccessedTime(), Status.getLastModificationTime()))
+      return createFileError(OutputFilename, EC);
+
+  sys::fs::file_status OStat;
+  if (std::error_code EC = sys::fs::status(FD, OStat))
+    return createFileError(OutputFilename, EC);
+  if (OStat.type() == sys::fs::file_type::regular_file) {
+#ifndef _WIN32
+    // Keep ownership if llvm-objcopy is called under root.
+    if (OutputFilename == InputFilename && OStat.getUser() == 0)
+      sys::fs::changeFileOwnership(FD, Status.getUser(), Status.getGroup());
+#endif
+
+    sys::fs::perms Perm = Status.permissions();
+    if (OutputFilename != InputFilename)
+      Perm = static_cast<sys::fs::perms>(Perm & ~sys::fs::getUmask() & ~06000);
+#ifdef _WIN32
+    if (std::error_code EC = sys::fs::setPermissions(OutputFilename, Perm))
+#else
+    if (std::error_code EC = sys::fs::setPermissions(FD, Perm))
+#endif
+      return createFileError(OutputFilename, EC);
+  }
+
+  if (std::error_code EC = sys::Process::SafelyCloseFileDescriptor(FD))
+    return createFileError(OutputFilename, EC);
+
   return Error::success();
 }
 

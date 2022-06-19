@@ -15,6 +15,7 @@
 
 #include <numeric>
 #include <cassert>
+#include <cstdint>
 #include "test_macros.h"
 
 //  Users are not supposed to provide template argument lists for
@@ -53,7 +54,7 @@ int main(int, char**)
     test<uint32_t>();
     test<uint64_t>();
 
-#ifndef _LIBCPP_HAS_NO_INT128
+#ifndef TEST_HAS_NO_INT128
     test<__int128_t>();
     test<__uint128_t>();
 #endif

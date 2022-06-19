@@ -166,6 +166,18 @@ define void @st1_nxv4f16(half* %addr, i64 %off, <vscale x 4 x half> %val) {
   ret void
 }
 
+define void @st1_nxv4bf16(bfloat* %addr, i64 %off, <vscale x 4 x bfloat> %val) {
+; CHECK-LABEL: st1_nxv4bf16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.s
+; CHECK-NEXT:    st1h { z0.s }, p0, [x0, x1, lsl #1]
+; CHECK-NEXT:    ret
+  %ptr = getelementptr inbounds bfloat, bfloat* %addr, i64 %off
+  %ptrcast = bitcast bfloat* %ptr to <vscale x 4 x bfloat>*
+  store <vscale x 4 x bfloat> %val, <vscale x 4 x bfloat>* %ptrcast
+  ret void
+}
+
 define void @st1_nxv2f16(half* %addr, i64 %off, <vscale x 2 x half> %val) {
 ; CHECK-LABEL: st1_nxv2f16:
 ; CHECK:       // %bb.0:
@@ -175,6 +187,18 @@ define void @st1_nxv2f16(half* %addr, i64 %off, <vscale x 2 x half> %val) {
   %ptr = getelementptr inbounds half, half* %addr, i64 %off
   %ptrcast = bitcast half* %ptr to <vscale x 2 x half>*
   store <vscale x 2 x half> %val, <vscale x 2 x half>* %ptrcast
+  ret void
+}
+
+define void @st1_nxv2bf16(bfloat* %addr, i64 %off, <vscale x 2 x bfloat> %val) {
+; CHECK-LABEL: st1_nxv2bf16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    st1h { z0.d }, p0, [x0, x1, lsl #1]
+; CHECK-NEXT:    ret
+  %ptr = getelementptr inbounds bfloat, bfloat* %addr, i64 %off
+  %ptrcast = bitcast bfloat* %ptr to <vscale x 2 x bfloat>*
+  store <vscale x 2 x bfloat> %val, <vscale x 2 x bfloat>* %ptrcast
   ret void
 }
 

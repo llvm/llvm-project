@@ -5,6 +5,7 @@ import("//llvm/utils/gn/build/toolchain/compiler.gni")
 group("default") {
   deps = [
     "//clang-tools-extra/clangd/test",
+    "//clang-tools-extra/pseudo/test",
     "//clang-tools-extra/test",
     "//clang/test",
     "//clang/tools/scan-build",
@@ -12,6 +13,7 @@ group("default") {
     "//compiler-rt/include",
     "//compiler-rt/lib/scudo",
     "//lld/test",
+    "//lldb/test",
     "//llvm/test",
   ]
   if (current_os == "linux") {
@@ -19,6 +21,9 @@ group("default") {
       "//libcxx",
       "//libcxxabi",
     ]
+  }
+  if (current_os == "linux" || current_os == "win") {
+    deps += [ "//compiler-rt/test/asan" ]
   }
   if (current_os == "linux" || current_os == "android") {
     deps += [ "//compiler-rt/test/hwasan" ]
@@ -69,6 +74,15 @@ group("llvm-nm") {
 }
 group("llvm-cxxfilt") {
   deps = [ "//llvm/tools/llvm-cxxfilt:symlinks" ]
+}
+group("llvm-debuginfod-find") {
+  deps = [ "//llvm/tools/llvm-debuginfod-find:symlinks" ]
+}
+group("llvm-libtool-darwin") {
+  deps = [ "//llvm/tools/llvm-libtool-darwin:symlinks" ]
+}
+group("llvm-lipo") {
+  deps = [ "//llvm/tools/llvm-lipo:symlinks" ]
 }
 group("llvm-objcopy") {
   deps = [ "//llvm/tools/llvm-objcopy:symlinks" ]

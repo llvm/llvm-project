@@ -19,7 +19,6 @@
 #include "llvm/Support/MachineValueType.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/TypeSize.h"
-#include "llvm/Support/WithColor.h"
 #include <cassert>
 #include <cstdint>
 #include <string>
@@ -363,6 +362,12 @@ namespace llvm {
     TypeSize getStoreSize() const {
       TypeSize BaseSize = getSizeInBits();
       return {(BaseSize.getKnownMinSize() + 7) / 8, BaseSize.isScalable()};
+    }
+
+    // Return the number of bytes overwritten by a store of this value type or
+    // this value type's element type in the case of a vector.
+    uint64_t getScalarStoreSize() const {
+      return getScalarType().getStoreSize().getFixedSize();
     }
 
     /// Return the number of bits overwritten by a store of the specified value

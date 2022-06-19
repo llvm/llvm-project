@@ -23,9 +23,9 @@ public:
 
   static void Terminate();
 
-  static ConstString GetPluginNameStatic();
+  static llvm::StringRef GetPluginNameStatic() { return "ppc64"; }
 
-  static const char *GetPluginDescriptionStatic();
+  static llvm::StringRef GetPluginDescriptionStatic();
 
   static EmulateInstruction *CreateInstance(const ArchSpec &arch,
                                             InstructionType inst_type);
@@ -44,9 +44,7 @@ public:
     return false;
   }
 
-  ConstString GetPluginName() override;
-
-  uint32_t GetPluginVersion() override { return 1; }
+  llvm::StringRef GetPluginName() override { return GetPluginNameStatic(); }
 
   bool SetTargetTriple(const ArchSpec &arch) override;
 

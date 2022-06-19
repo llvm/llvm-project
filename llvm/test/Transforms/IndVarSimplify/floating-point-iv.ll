@@ -8,7 +8,7 @@ define void @test1() nounwind {
 ; CHECK:       bb:
 ; CHECK-NEXT:    [[IV_INT:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[DOTINT:%.*]], [[BB]] ]
 ; CHECK-NEXT:    [[INDVAR_CONV:%.*]] = sitofp i32 [[IV_INT]] to double
-; CHECK-NEXT:    [[TMP0:%.*]] = tail call i32 @foo(double [[INDVAR_CONV]]) [[ATTR0:#.*]]
+; CHECK-NEXT:    [[TMP0:%.*]] = tail call i32 @foo(double [[INDVAR_CONV]]) #[[ATTR0:[0-9]+]]
 ; CHECK-NEXT:    [[DOTINT]] = add nuw nsw i32 [[IV_INT]], 1
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp ult i32 [[DOTINT]], 10000
 ; CHECK-NEXT:    br i1 [[TMP1]], label [[BB]], label [[RETURN:%.*]]
@@ -38,7 +38,7 @@ define void @test2() nounwind {
 ; CHECK:       bb:
 ; CHECK-NEXT:    [[IV_INT:%.*]] = phi i32 [ -10, [[ENTRY:%.*]] ], [ [[DOTINT:%.*]], [[BB]] ]
 ; CHECK-NEXT:    [[INDVAR_CONV:%.*]] = sitofp i32 [[IV_INT]] to double
-; CHECK-NEXT:    [[TMP0:%.*]] = tail call i32 @foo(double [[INDVAR_CONV]]) [[ATTR0]]
+; CHECK-NEXT:    [[TMP0:%.*]] = tail call i32 @foo(double [[INDVAR_CONV]]) #[[ATTR0]]
 ; CHECK-NEXT:    [[DOTINT]] = add nsw i32 [[IV_INT]], 2
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp slt i32 [[DOTINT]], -1
 ; CHECK-NEXT:    br i1 [[TMP1]], label [[BB]], label [[RETURN:%.*]]
@@ -65,9 +65,7 @@ define void @test3() nounwind {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[BB:%.*]]
 ; CHECK:       bb:
-; CHECK-NEXT:    [[IV:%.*]] = phi double [ 0.000000e+00, [[ENTRY:%.*]] ], [ [[TMP1:%.*]], [[BB]] ]
-; CHECK-NEXT:    [[TMP0:%.*]] = tail call i32 @foo(double [[IV]]) [[ATTR0]]
-; CHECK-NEXT:    [[TMP1]] = fadd double [[IV]], 1.000000e+00
+; CHECK-NEXT:    [[TMP0:%.*]] = tail call i32 @foo(double 0.000000e+00) #[[ATTR0]]
 ; CHECK-NEXT:    br i1 false, label [[BB]], label [[RETURN:%.*]]
 ; CHECK:       return:
 ; CHECK-NEXT:    ret void
@@ -93,7 +91,7 @@ define void @test4() nounwind {
 ; CHECK:       bb:
 ; CHECK-NEXT:    [[IV_INT:%.*]] = phi i32 [ 40, [[ENTRY:%.*]] ], [ [[DOTINT:%.*]], [[BB]] ]
 ; CHECK-NEXT:    [[INDVAR_CONV:%.*]] = sitofp i32 [[IV_INT]] to double
-; CHECK-NEXT:    [[TMP0:%.*]] = tail call i32 @foo(double [[INDVAR_CONV]]) [[ATTR0]]
+; CHECK-NEXT:    [[TMP0:%.*]] = tail call i32 @foo(double [[INDVAR_CONV]]) #[[ATTR0]]
 ; CHECK-NEXT:    [[DOTINT]] = add nsw i32 [[IV_INT]], -1
 ; CHECK-NEXT:    br i1 false, label [[BB]], label [[RETURN:%.*]]
 ; CHECK:       return:
@@ -272,7 +270,7 @@ define void @fcmp1() nounwind {
 ; CHECK-NEXT:    br i1 [[CMP1]], label [[BACKEDGE]], label [[RETURN:%.*]]
 ; CHECK:       backedge:
 ; CHECK-NEXT:    [[IV_FP:%.*]] = sitofp i64 [[IV]] to double
-; CHECK-NEXT:    [[TMP0:%.*]] = tail call i32 @foo(double [[IV_FP]]) [[ATTR0]]
+; CHECK-NEXT:    [[TMP0:%.*]] = tail call i32 @foo(double [[IV_FP]]) #[[ATTR0]]
 ; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
 ; CHECK-NEXT:    [[CMP2:%.*]] = fcmp olt double [[IV_FP]], 1.000000e+04
 ; CHECK-NEXT:    br i1 [[CMP2]], label [[BB]], label [[RETURN]]
@@ -308,7 +306,7 @@ define void @fcmp2() nounwind {
 ; CHECK-NEXT:    br i1 [[CMP1]], label [[BACKEDGE]], label [[RETURN:%.*]]
 ; CHECK:       backedge:
 ; CHECK-NEXT:    [[IV_FP:%.*]] = sitofp i64 [[IV]] to double
-; CHECK-NEXT:    [[TMP0:%.*]] = tail call i32 @foo(double [[IV_FP]]) [[ATTR0]]
+; CHECK-NEXT:    [[TMP0:%.*]] = tail call i32 @foo(double [[IV_FP]]) #[[ATTR0]]
 ; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
 ; CHECK-NEXT:    [[CMP2:%.*]] = fcmp olt double [[IV_FP]], 1.000000e+04
 ; CHECK-NEXT:    br i1 [[CMP2]], label [[BB]], label [[RETURN]]
@@ -344,7 +342,7 @@ define void @fcmp_neg1() nounwind {
 ; CHECK-NEXT:    br i1 [[CMP1]], label [[BACKEDGE]], label [[RETURN:%.*]]
 ; CHECK:       backedge:
 ; CHECK-NEXT:    [[IV_FP:%.*]] = sitofp i64 [[IV]] to double
-; CHECK-NEXT:    [[TMP0:%.*]] = tail call i32 @foo(double [[IV_FP]]) [[ATTR0]]
+; CHECK-NEXT:    [[TMP0:%.*]] = tail call i32 @foo(double [[IV_FP]]) #[[ATTR0]]
 ; CHECK-NEXT:    [[IV_NEXT]] = add nuw i64 [[IV]], 1
 ; CHECK-NEXT:    [[CMP2:%.*]] = fcmp olt double [[IV_FP]], 1.000000e+04
 ; CHECK-NEXT:    br i1 [[CMP2]], label [[BB]], label [[RETURN]]

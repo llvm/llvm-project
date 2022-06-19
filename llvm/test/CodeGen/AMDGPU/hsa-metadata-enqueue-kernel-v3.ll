@@ -50,7 +50,7 @@ define amdgpu_kernel void @test_non_enqueue_kernel_caller(i8 %a) #0
 ; CHECK-NEXT:       - .address_space:  global
 ; CHECK-NEXT:         .offset:         32
 ; CHECK-NEXT:         .size:           8
-; CHECK-NEXT:         .value_kind:     hidden_none
+; CHECK-NEXT:         .value_kind:     hidden_hostcall_buffer
 ; CHECK-NEXT:       - .address_space:  global
 ; CHECK-NEXT:         .offset:         40
 ; CHECK-NEXT:         .size:           8
@@ -76,8 +76,8 @@ define amdgpu_kernel void @test_enqueue_kernel_caller(i8 %a) #1
 ; CHECK-NEXT: - 0
 ; CHECK-NOT:  amdhsa.printf:
 
-attributes #0 = { "amdgpu-implicitarg-num-bytes"="48" }
-attributes #1 = { "calls-enqueue-kernel" "amdgpu-implicitarg-num-bytes"="48" }
+attributes #0 = { optnone noinline "amdgpu-implicitarg-num-bytes"="48" }
+attributes #1 = { optnone noinline "calls-enqueue-kernel" "amdgpu-implicitarg-num-bytes"="48" }
 
 !1 = !{i32 0}
 !2 = !{!"none"}

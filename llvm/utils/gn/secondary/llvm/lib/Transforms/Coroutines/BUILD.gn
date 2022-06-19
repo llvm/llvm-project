@@ -11,6 +11,7 @@ static_library("Coroutines") {
   ]
   sources = [
     "CoroCleanup.cpp",
+    "CoroConditionalWrapper.cpp",
     "CoroEarly.cpp",
     "CoroElide.cpp",
     "CoroFrame.cpp",

@@ -138,7 +138,7 @@ static inline int compareResultD(double result,
 
 #if __LDBL_MANT_DIG__ == 113
 // return 0 if equal
-// use two 64-bit integers intead of one 128-bit integer
+// use two 64-bit integers instead of one 128-bit integer
 // because 128-bit integer constant can't be assigned directly
 static inline int compareResultLD(long double result,
                                   uint64_t expectedHi,

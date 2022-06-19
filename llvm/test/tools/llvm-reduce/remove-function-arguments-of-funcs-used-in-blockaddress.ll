@@ -1,4 +1,4 @@
-; RUN: llvm-reduce --test FileCheck --test-arg --check-prefixes=CHECK-ALL,CHECK-INTERESTINGNESS --test-arg %s --test-arg --input-file %s -o %t
+; RUN: llvm-reduce --delta-passes=arguments --test FileCheck --test-arg --check-prefixes=CHECK-ALL,CHECK-INTERESTINGNESS --test-arg %s --test-arg --input-file %s -o %t
 ; RUN: cat %t | FileCheck --check-prefixes=CHECK-ALL,CHECK-FINAL %s
 
 ; CHECK-INTERESTINGNESS: define void @func(
@@ -11,11 +11,11 @@ bb:
 
 ; CHECK-ALL: bb4
 bb4:
-; CHECK-INTERESTINGNESS; callbr void asm
-; CHECK-INTERESTINGNESS-SAME; blockaddress
-; CHECK-FINAL: callbr void asm sideeffect "", "X"(i8* blockaddress(@func, %bb11))
+; CHECK-INTERESTINGNESS: callbr void asm
+; CHECK-INTERESTINGNESS-SAME: blockaddress
+; CHECK-FINAL: callbr void asm sideeffect "", "i"(i8* blockaddress(@func, %bb11))
 ; CHECK-ALL: to label %bb5 [label %bb11]
-  callbr void asm sideeffect "", "X"(i8* blockaddress(@func, %bb11))
+  callbr void asm sideeffect "", "i"(i8* blockaddress(@func, %bb11))
           to label %bb5 [label %bb11]
 
 ; CHECK-ALL: bb5:

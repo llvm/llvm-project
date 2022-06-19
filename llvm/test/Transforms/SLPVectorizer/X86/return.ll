@@ -43,10 +43,8 @@ define double @return2(double* nocapture readonly %x) {
 ; CHECK-LABEL: @return2(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[ARRAYIDX1:%.*]] = getelementptr inbounds double, double* [[X:%.*]], i32 2
-; CHECK-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds double, double* [[X]], i32 1
 ; CHECK-NEXT:    [[TMP0:%.*]] = bitcast double* [[X]] to <2 x double>*
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x double>, <2 x double>* [[TMP0]], align 4
-; CHECK-NEXT:    [[ARRAYIDX3:%.*]] = getelementptr inbounds double, double* [[X]], i32 3
 ; CHECK-NEXT:    [[TMP2:%.*]] = bitcast double* [[ARRAYIDX1]] to <2 x double>*
 ; CHECK-NEXT:    [[TMP3:%.*]] = load <2 x double>, <2 x double>* [[TMP2]], align 4
 ; CHECK-NEXT:    [[TMP4:%.*]] = fadd <2 x double> [[TMP1]], [[TMP3]]

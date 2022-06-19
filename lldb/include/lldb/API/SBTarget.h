@@ -321,6 +321,8 @@ public:
   uint32_t GetAddressByteSize();
 
   const char *GetTriple();
+  
+  const char *GetABIName();
 
   /// Architecture data byte width accessor
   ///
@@ -335,6 +337,11 @@ public:
   /// The size in 8-bit (host) bytes of a minimum addressable
   /// unit from the Architecture's code bus
   uint32_t GetCodeByteSize();
+
+  /// Gets the target.max-children-count value
+  /// It should be used to limit the number of
+  /// children of large data structures to be displayed.
+  uint32_t GetMaximumNumberOfChildrenToDisplay() const;
 
   /// Set the base load address for a module section.
   ///

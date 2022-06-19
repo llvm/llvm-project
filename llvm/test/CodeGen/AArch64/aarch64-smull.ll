@@ -111,11 +111,11 @@ define <8 x i16> @amull_v8i8_v8i16(<8 x i8>* %A, <8 x i8>* %B) nounwind {
 define <4 x i32> @amull_v4i16_v4i32(<4 x i16>* %A, <4 x i16>* %B) nounwind {
 ; CHECK-LABEL: amull_v4i16_v4i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldr d0, [x0]
-; CHECK-NEXT:    ldr d1, [x1]
-; CHECK-NEXT:    smull v0.4s, v0.4h, v1.4h
-; CHECK-NEXT:    movi v1.2d, #0x00ffff0000ffff
-; CHECK-NEXT:    and v0.16b, v0.16b, v1.16b
+; CHECK-NEXT:    ldr d1, [x0]
+; CHECK-NEXT:    ldr d2, [x1]
+; CHECK-NEXT:    movi v0.2d, #0x00ffff0000ffff
+; CHECK-NEXT:    smull v1.4s, v1.4h, v2.4h
+; CHECK-NEXT:    and v0.16b, v1.16b, v0.16b
 ; CHECK-NEXT:    ret
   %tmp1 = load <4 x i16>, <4 x i16>* %A
   %tmp2 = load <4 x i16>, <4 x i16>* %B
@@ -129,11 +129,11 @@ define <4 x i32> @amull_v4i16_v4i32(<4 x i16>* %A, <4 x i16>* %B) nounwind {
 define <2 x i64> @amull_v2i32_v2i64(<2 x i32>* %A, <2 x i32>* %B) nounwind {
 ; CHECK-LABEL: amull_v2i32_v2i64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldr d0, [x0]
-; CHECK-NEXT:    ldr d1, [x1]
-; CHECK-NEXT:    smull v0.2d, v0.2s, v1.2s
-; CHECK-NEXT:    movi v1.2d, #0x000000ffffffff
-; CHECK-NEXT:    and v0.16b, v0.16b, v1.16b
+; CHECK-NEXT:    ldr d1, [x0]
+; CHECK-NEXT:    ldr d2, [x1]
+; CHECK-NEXT:    movi v0.2d, #0x000000ffffffff
+; CHECK-NEXT:    smull v1.2d, v1.2s, v2.2s
+; CHECK-NEXT:    and v0.16b, v1.16b, v0.16b
 ; CHECK-NEXT:    ret
   %tmp1 = load <2 x i32>, <2 x i32>* %A
   %tmp2 = load <2 x i32>, <2 x i32>* %B
@@ -147,8 +147,8 @@ define <2 x i64> @amull_v2i32_v2i64(<2 x i32>* %A, <2 x i32>* %B) nounwind {
 define <8 x i16> @smlal_v8i8_v8i16(<8 x i16>* %A, <8 x i8>* %B, <8 x i8>* %C) nounwind {
 ; CHECK-LABEL: smlal_v8i8_v8i16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldr q0, [x0]
 ; CHECK-NEXT:    ldr d1, [x1]
+; CHECK-NEXT:    ldr q0, [x0]
 ; CHECK-NEXT:    ldr d2, [x2]
 ; CHECK-NEXT:    smlal v0.8h, v1.8b, v2.8b
 ; CHECK-NEXT:    ret
@@ -165,8 +165,8 @@ define <8 x i16> @smlal_v8i8_v8i16(<8 x i16>* %A, <8 x i8>* %B, <8 x i8>* %C) no
 define <4 x i32> @smlal_v4i16_v4i32(<4 x i32>* %A, <4 x i16>* %B, <4 x i16>* %C) nounwind {
 ; CHECK-LABEL: smlal_v4i16_v4i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldr q0, [x0]
 ; CHECK-NEXT:    ldr d1, [x1]
+; CHECK-NEXT:    ldr q0, [x0]
 ; CHECK-NEXT:    ldr d2, [x2]
 ; CHECK-NEXT:    smlal v0.4s, v1.4h, v2.4h
 ; CHECK-NEXT:    ret
@@ -183,8 +183,8 @@ define <4 x i32> @smlal_v4i16_v4i32(<4 x i32>* %A, <4 x i16>* %B, <4 x i16>* %C)
 define <2 x i64> @smlal_v2i32_v2i64(<2 x i64>* %A, <2 x i32>* %B, <2 x i32>* %C) nounwind {
 ; CHECK-LABEL: smlal_v2i32_v2i64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldr q0, [x0]
 ; CHECK-NEXT:    ldr d1, [x1]
+; CHECK-NEXT:    ldr q0, [x0]
 ; CHECK-NEXT:    ldr d2, [x2]
 ; CHECK-NEXT:    smlal v0.2d, v1.2s, v2.2s
 ; CHECK-NEXT:    ret
@@ -201,8 +201,8 @@ define <2 x i64> @smlal_v2i32_v2i64(<2 x i64>* %A, <2 x i32>* %B, <2 x i32>* %C)
 define <8 x i16> @umlal_v8i8_v8i16(<8 x i16>* %A, <8 x i8>* %B, <8 x i8>* %C) nounwind {
 ; CHECK-LABEL: umlal_v8i8_v8i16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldr q0, [x0]
 ; CHECK-NEXT:    ldr d1, [x1]
+; CHECK-NEXT:    ldr q0, [x0]
 ; CHECK-NEXT:    ldr d2, [x2]
 ; CHECK-NEXT:    umlal v0.8h, v1.8b, v2.8b
 ; CHECK-NEXT:    ret
@@ -219,8 +219,8 @@ define <8 x i16> @umlal_v8i8_v8i16(<8 x i16>* %A, <8 x i8>* %B, <8 x i8>* %C) no
 define <4 x i32> @umlal_v4i16_v4i32(<4 x i32>* %A, <4 x i16>* %B, <4 x i16>* %C) nounwind {
 ; CHECK-LABEL: umlal_v4i16_v4i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldr q0, [x0]
 ; CHECK-NEXT:    ldr d1, [x1]
+; CHECK-NEXT:    ldr q0, [x0]
 ; CHECK-NEXT:    ldr d2, [x2]
 ; CHECK-NEXT:    umlal v0.4s, v1.4h, v2.4h
 ; CHECK-NEXT:    ret
@@ -237,8 +237,8 @@ define <4 x i32> @umlal_v4i16_v4i32(<4 x i32>* %A, <4 x i16>* %B, <4 x i16>* %C)
 define <2 x i64> @umlal_v2i32_v2i64(<2 x i64>* %A, <2 x i32>* %B, <2 x i32>* %C) nounwind {
 ; CHECK-LABEL: umlal_v2i32_v2i64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldr q0, [x0]
 ; CHECK-NEXT:    ldr d1, [x1]
+; CHECK-NEXT:    ldr q0, [x0]
 ; CHECK-NEXT:    ldr d2, [x2]
 ; CHECK-NEXT:    umlal v0.2d, v1.2s, v2.2s
 ; CHECK-NEXT:    ret
@@ -255,8 +255,8 @@ define <2 x i64> @umlal_v2i32_v2i64(<2 x i64>* %A, <2 x i32>* %B, <2 x i32>* %C)
 define <8 x i16> @amlal_v8i8_v8i16(<8 x i16>* %A, <8 x i8>* %B, <8 x i8>* %C) nounwind {
 ; CHECK-LABEL: amlal_v8i8_v8i16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldr q0, [x0]
 ; CHECK-NEXT:    ldr d1, [x1]
+; CHECK-NEXT:    ldr q0, [x0]
 ; CHECK-NEXT:    ldr d2, [x2]
 ; CHECK-NEXT:    smlal v0.8h, v1.8b, v2.8b
 ; CHECK-NEXT:    bic v0.8h, #255, lsl #8
@@ -275,12 +275,12 @@ define <8 x i16> @amlal_v8i8_v8i16(<8 x i16>* %A, <8 x i8>* %B, <8 x i8>* %C) no
 define <4 x i32> @amlal_v4i16_v4i32(<4 x i32>* %A, <4 x i16>* %B, <4 x i16>* %C) nounwind {
 ; CHECK-LABEL: amlal_v4i16_v4i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldr q0, [x0]
 ; CHECK-NEXT:    ldr d1, [x1]
-; CHECK-NEXT:    ldr d2, [x2]
-; CHECK-NEXT:    smlal v0.4s, v1.4h, v2.4h
-; CHECK-NEXT:    movi v1.2d, #0x00ffff0000ffff
-; CHECK-NEXT:    and v0.16b, v0.16b, v1.16b
+; CHECK-NEXT:    ldr q2, [x0]
+; CHECK-NEXT:    ldr d3, [x2]
+; CHECK-NEXT:    movi v0.2d, #0x00ffff0000ffff
+; CHECK-NEXT:    smlal v2.4s, v1.4h, v3.4h
+; CHECK-NEXT:    and v0.16b, v2.16b, v0.16b
 ; CHECK-NEXT:    ret
   %tmp1 = load <4 x i32>, <4 x i32>* %A
   %tmp2 = load <4 x i16>, <4 x i16>* %B
@@ -296,12 +296,12 @@ define <4 x i32> @amlal_v4i16_v4i32(<4 x i32>* %A, <4 x i16>* %B, <4 x i16>* %C)
 define <2 x i64> @amlal_v2i32_v2i64(<2 x i64>* %A, <2 x i32>* %B, <2 x i32>* %C) nounwind {
 ; CHECK-LABEL: amlal_v2i32_v2i64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldr q0, [x0]
 ; CHECK-NEXT:    ldr d1, [x1]
-; CHECK-NEXT:    ldr d2, [x2]
-; CHECK-NEXT:    smlal v0.2d, v1.2s, v2.2s
-; CHECK-NEXT:    movi v1.2d, #0x000000ffffffff
-; CHECK-NEXT:    and v0.16b, v0.16b, v1.16b
+; CHECK-NEXT:    ldr q2, [x0]
+; CHECK-NEXT:    ldr d3, [x2]
+; CHECK-NEXT:    movi v0.2d, #0x000000ffffffff
+; CHECK-NEXT:    smlal v2.2d, v1.2s, v3.2s
+; CHECK-NEXT:    and v0.16b, v2.16b, v0.16b
 ; CHECK-NEXT:    ret
   %tmp1 = load <2 x i64>, <2 x i64>* %A
   %tmp2 = load <2 x i32>, <2 x i32>* %B
@@ -317,8 +317,8 @@ define <2 x i64> @amlal_v2i32_v2i64(<2 x i64>* %A, <2 x i32>* %B, <2 x i32>* %C)
 define <8 x i16> @smlsl_v8i8_v8i16(<8 x i16>* %A, <8 x i8>* %B, <8 x i8>* %C) nounwind {
 ; CHECK-LABEL: smlsl_v8i8_v8i16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldr q0, [x0]
 ; CHECK-NEXT:    ldr d1, [x1]
+; CHECK-NEXT:    ldr q0, [x0]
 ; CHECK-NEXT:    ldr d2, [x2]
 ; CHECK-NEXT:    smlsl v0.8h, v1.8b, v2.8b
 ; CHECK-NEXT:    ret
@@ -335,8 +335,8 @@ define <8 x i16> @smlsl_v8i8_v8i16(<8 x i16>* %A, <8 x i8>* %B, <8 x i8>* %C) no
 define <4 x i32> @smlsl_v4i16_v4i32(<4 x i32>* %A, <4 x i16>* %B, <4 x i16>* %C) nounwind {
 ; CHECK-LABEL: smlsl_v4i16_v4i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldr q0, [x0]
 ; CHECK-NEXT:    ldr d1, [x1]
+; CHECK-NEXT:    ldr q0, [x0]
 ; CHECK-NEXT:    ldr d2, [x2]
 ; CHECK-NEXT:    smlsl v0.4s, v1.4h, v2.4h
 ; CHECK-NEXT:    ret
@@ -353,8 +353,8 @@ define <4 x i32> @smlsl_v4i16_v4i32(<4 x i32>* %A, <4 x i16>* %B, <4 x i16>* %C)
 define <2 x i64> @smlsl_v2i32_v2i64(<2 x i64>* %A, <2 x i32>* %B, <2 x i32>* %C) nounwind {
 ; CHECK-LABEL: smlsl_v2i32_v2i64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldr q0, [x0]
 ; CHECK-NEXT:    ldr d1, [x1]
+; CHECK-NEXT:    ldr q0, [x0]
 ; CHECK-NEXT:    ldr d2, [x2]
 ; CHECK-NEXT:    smlsl v0.2d, v1.2s, v2.2s
 ; CHECK-NEXT:    ret
@@ -371,8 +371,8 @@ define <2 x i64> @smlsl_v2i32_v2i64(<2 x i64>* %A, <2 x i32>* %B, <2 x i32>* %C)
 define <8 x i16> @umlsl_v8i8_v8i16(<8 x i16>* %A, <8 x i8>* %B, <8 x i8>* %C) nounwind {
 ; CHECK-LABEL: umlsl_v8i8_v8i16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldr q0, [x0]
 ; CHECK-NEXT:    ldr d1, [x1]
+; CHECK-NEXT:    ldr q0, [x0]
 ; CHECK-NEXT:    ldr d2, [x2]
 ; CHECK-NEXT:    umlsl v0.8h, v1.8b, v2.8b
 ; CHECK-NEXT:    ret
@@ -389,8 +389,8 @@ define <8 x i16> @umlsl_v8i8_v8i16(<8 x i16>* %A, <8 x i8>* %B, <8 x i8>* %C) no
 define <4 x i32> @umlsl_v4i16_v4i32(<4 x i32>* %A, <4 x i16>* %B, <4 x i16>* %C) nounwind {
 ; CHECK-LABEL: umlsl_v4i16_v4i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldr q0, [x0]
 ; CHECK-NEXT:    ldr d1, [x1]
+; CHECK-NEXT:    ldr q0, [x0]
 ; CHECK-NEXT:    ldr d2, [x2]
 ; CHECK-NEXT:    umlsl v0.4s, v1.4h, v2.4h
 ; CHECK-NEXT:    ret
@@ -407,8 +407,8 @@ define <4 x i32> @umlsl_v4i16_v4i32(<4 x i32>* %A, <4 x i16>* %B, <4 x i16>* %C)
 define <2 x i64> @umlsl_v2i32_v2i64(<2 x i64>* %A, <2 x i32>* %B, <2 x i32>* %C) nounwind {
 ; CHECK-LABEL: umlsl_v2i32_v2i64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldr q0, [x0]
 ; CHECK-NEXT:    ldr d1, [x1]
+; CHECK-NEXT:    ldr q0, [x0]
 ; CHECK-NEXT:    ldr d2, [x2]
 ; CHECK-NEXT:    umlsl v0.2d, v1.2s, v2.2s
 ; CHECK-NEXT:    ret
@@ -425,8 +425,8 @@ define <2 x i64> @umlsl_v2i32_v2i64(<2 x i64>* %A, <2 x i32>* %B, <2 x i32>* %C)
 define <8 x i16> @amlsl_v8i8_v8i16(<8 x i16>* %A, <8 x i8>* %B, <8 x i8>* %C) nounwind {
 ; CHECK-LABEL: amlsl_v8i8_v8i16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldr q0, [x0]
 ; CHECK-NEXT:    ldr d1, [x1]
+; CHECK-NEXT:    ldr q0, [x0]
 ; CHECK-NEXT:    ldr d2, [x2]
 ; CHECK-NEXT:    smlsl v0.8h, v1.8b, v2.8b
 ; CHECK-NEXT:    bic v0.8h, #255, lsl #8
@@ -445,12 +445,12 @@ define <8 x i16> @amlsl_v8i8_v8i16(<8 x i16>* %A, <8 x i8>* %B, <8 x i8>* %C) no
 define <4 x i32> @amlsl_v4i16_v4i32(<4 x i32>* %A, <4 x i16>* %B, <4 x i16>* %C) nounwind {
 ; CHECK-LABEL: amlsl_v4i16_v4i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldr q0, [x0]
 ; CHECK-NEXT:    ldr d1, [x1]
-; CHECK-NEXT:    ldr d2, [x2]
-; CHECK-NEXT:    smlsl v0.4s, v1.4h, v2.4h
-; CHECK-NEXT:    movi v1.2d, #0x00ffff0000ffff
-; CHECK-NEXT:    and v0.16b, v0.16b, v1.16b
+; CHECK-NEXT:    ldr q2, [x0]
+; CHECK-NEXT:    ldr d3, [x2]
+; CHECK-NEXT:    movi v0.2d, #0x00ffff0000ffff
+; CHECK-NEXT:    smlsl v2.4s, v1.4h, v3.4h
+; CHECK-NEXT:    and v0.16b, v2.16b, v0.16b
 ; CHECK-NEXT:    ret
   %tmp1 = load <4 x i32>, <4 x i32>* %A
   %tmp2 = load <4 x i16>, <4 x i16>* %B
@@ -466,12 +466,12 @@ define <4 x i32> @amlsl_v4i16_v4i32(<4 x i32>* %A, <4 x i16>* %B, <4 x i16>* %C)
 define <2 x i64> @amlsl_v2i32_v2i64(<2 x i64>* %A, <2 x i32>* %B, <2 x i32>* %C) nounwind {
 ; CHECK-LABEL: amlsl_v2i32_v2i64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldr q0, [x0]
 ; CHECK-NEXT:    ldr d1, [x1]
-; CHECK-NEXT:    ldr d2, [x2]
-; CHECK-NEXT:    smlsl v0.2d, v1.2s, v2.2s
-; CHECK-NEXT:    movi v1.2d, #0x000000ffffffff
-; CHECK-NEXT:    and v0.16b, v0.16b, v1.16b
+; CHECK-NEXT:    ldr q2, [x0]
+; CHECK-NEXT:    ldr d3, [x2]
+; CHECK-NEXT:    movi v0.2d, #0x000000ffffffff
+; CHECK-NEXT:    smlsl v2.2d, v1.2s, v3.2s
+; CHECK-NEXT:    and v0.16b, v2.16b, v0.16b
 ; CHECK-NEXT:    ret
   %tmp1 = load <2 x i64>, <2 x i64>* %A
   %tmp2 = load <2 x i32>, <2 x i32>* %B
@@ -599,9 +599,9 @@ define <4 x i32> @amull_extvec_v4i16_v4i32(<4 x i16> %arg) nounwind {
 ; CHECK-LABEL: amull_extvec_v4i16_v4i32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov w8, #1234
-; CHECK-NEXT:    dup v1.4h, w8
-; CHECK-NEXT:    smull v0.4s, v0.4h, v1.4h
 ; CHECK-NEXT:    movi v1.2d, #0x00ffff0000ffff
+; CHECK-NEXT:    dup v2.4h, w8
+; CHECK-NEXT:    smull v0.4s, v0.4h, v2.4h
 ; CHECK-NEXT:    and v0.16b, v0.16b, v1.16b
 ; CHECK-NEXT:    ret
   %tmp3 = zext <4 x i16> %arg to <4 x i32>
@@ -614,9 +614,9 @@ define <2 x i64> @amull_extvec_v2i32_v2i64(<2 x i32> %arg) nounwind {
 ; CHECK-LABEL: amull_extvec_v2i32_v2i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov w8, #1234
-; CHECK-NEXT:    dup v1.2s, w8
-; CHECK-NEXT:    smull v0.2d, v0.2s, v1.2s
 ; CHECK-NEXT:    movi v1.2d, #0x000000ffffffff
+; CHECK-NEXT:    dup v2.2s, w8
+; CHECK-NEXT:    smull v0.2d, v0.2s, v2.2s
 ; CHECK-NEXT:    and v0.16b, v0.16b, v1.16b
 ; CHECK-NEXT:    ret
   %tmp3 = zext <2 x i32> %arg to <2 x i64>
@@ -752,11 +752,11 @@ define <4 x i64> @smull2_i32(<4 x i32> %arg1, <4 x i32> %arg2) {
 define <16 x i16> @amull2_i8(<16 x i8> %arg1, <16 x i8> %arg2) {
 ; CHECK-LABEL: amull2_i8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    smull v2.8h, v0.8b, v1.8b
-; CHECK-NEXT:    smull2 v1.8h, v0.16b, v1.16b
+; CHECK-NEXT:    smull2 v2.8h, v0.16b, v1.16b
+; CHECK-NEXT:    smull v0.8h, v0.8b, v1.8b
 ; CHECK-NEXT:    bic v2.8h, #255, lsl #8
-; CHECK-NEXT:    bic v1.8h, #255, lsl #8
-; CHECK-NEXT:    mov v0.16b, v2.16b
+; CHECK-NEXT:    bic v0.8h, #255, lsl #8
+; CHECK-NEXT:    mov v1.16b, v2.16b
 ; CHECK-NEXT:    ret
   %arg1_ext = zext <16 x i8> %arg1 to <16 x i16>
   %arg2_ext = zext <16 x i8> %arg2 to <16 x i16>
@@ -768,11 +768,11 @@ define <16 x i16> @amull2_i8(<16 x i8> %arg1, <16 x i8> %arg2) {
 define <8 x i32> @amull2_i16(<8 x i16> %arg1, <8 x i16> %arg2) {
 ; CHECK-LABEL: amull2_i16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    smull v2.4s, v0.4h, v1.4h
-; CHECK-NEXT:    smull2 v0.4s, v0.8h, v1.8h
-; CHECK-NEXT:    movi v3.2d, #0x00ffff0000ffff
-; CHECK-NEXT:    and v1.16b, v0.16b, v3.16b
-; CHECK-NEXT:    and v0.16b, v2.16b, v3.16b
+; CHECK-NEXT:    movi v2.2d, #0x00ffff0000ffff
+; CHECK-NEXT:    smull2 v3.4s, v0.8h, v1.8h
+; CHECK-NEXT:    smull v0.4s, v0.4h, v1.4h
+; CHECK-NEXT:    and v1.16b, v3.16b, v2.16b
+; CHECK-NEXT:    and v0.16b, v0.16b, v2.16b
 ; CHECK-NEXT:    ret
   %arg1_ext = zext <8 x i16> %arg1 to <8 x i32>
   %arg2_ext = zext <8 x i16> %arg2 to <8 x i32>
@@ -784,11 +784,11 @@ define <8 x i32> @amull2_i16(<8 x i16> %arg1, <8 x i16> %arg2) {
 define <4 x i64> @amull2_i32(<4 x i32> %arg1, <4 x i32> %arg2) {
 ; CHECK-LABEL: amull2_i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    smull v2.2d, v0.2s, v1.2s
-; CHECK-NEXT:    smull2 v0.2d, v0.4s, v1.4s
-; CHECK-NEXT:    movi v3.2d, #0x000000ffffffff
-; CHECK-NEXT:    and v1.16b, v0.16b, v3.16b
-; CHECK-NEXT:    and v0.16b, v2.16b, v3.16b
+; CHECK-NEXT:    movi v2.2d, #0x000000ffffffff
+; CHECK-NEXT:    smull2 v3.2d, v0.4s, v1.4s
+; CHECK-NEXT:    smull v0.2d, v0.2s, v1.2s
+; CHECK-NEXT:    and v1.16b, v3.16b, v2.16b
+; CHECK-NEXT:    and v0.16b, v0.16b, v2.16b
 ; CHECK-NEXT:    ret
   %arg1_ext = zext <4 x i32> %arg1 to <4 x i64>
   %arg2_ext = zext <4 x i32> %arg2 to <4 x i64>

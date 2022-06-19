@@ -12,5 +12,5 @@ int main(void) {
   return 0;
 }
 
-// CHECK: Shadow map of [{{.*}}), 4 bytes:
+// CHECK: Shadow map [0x{{[0-9a-f]+}}, 0x{{[0-9a-f]+}}) of [0x{{[0-9a-f]+}}, 0x{{[0-9a-f]+}}), 4 bytes:
 // CHECK: 0x{{.*}}: 77654321 ........ ........ ........

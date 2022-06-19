@@ -5,13 +5,16 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANGD_INDEX_SYMBOL_COLLECTOR_H
-#define LLVM_CLANG_TOOLS_EXTRA_CLANGD_INDEX_SYMBOL_COLLECTOR_H
+#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANGD_INDEX_SYMBOLCOLLECTOR_H
+#define LLVM_CLANG_TOOLS_EXTRA_CLANGD_INDEX_SYMBOLCOLLECTOR_H
 
-#include "CanonicalIncludes.h"
 #include "CollectMacros.h"
-#include "Index.h"
-#include "SymbolOrigin.h"
+#include "index/CanonicalIncludes.h"
+#include "index/Ref.h"
+#include "index/Relation.h"
+#include "index/Symbol.h"
+#include "index/SymbolID.h"
+#include "index/SymbolOrigin.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/Decl.h"
 #include "clang/Basic/SourceLocation.h"
@@ -19,8 +22,8 @@
 #include "clang/Index/IndexDataConsumer.h"
 #include "clang/Index/IndexSymbol.h"
 #include "clang/Sema/CodeCompleteConsumer.h"
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
-#include "llvm/Support/Regex.h"
 #include <functional>
 
 namespace clang {
@@ -81,6 +84,9 @@ public:
     bool CollectMainFileSymbols = true;
     /// Collect references to main-file symbols.
     bool CollectMainFileRefs = false;
+    /// Collect symbols with reserved names, like __Vector_base.
+    /// This does not currently affect macros (many like _WIN32 are important!)
+    bool CollectReserved = false;
     /// If set to true, SymbolCollector will collect doc for all symbols.
     /// Note that documents of symbols being indexed for completion will always
     /// be collected regardless of this option.
@@ -100,8 +106,9 @@ public:
   void initialize(ASTContext &Ctx) override;
 
   void setPreprocessor(std::shared_ptr<Preprocessor> PP) override {
-    this->PP = std::move(PP);
+    this->PP = PP.get();
   }
+  void setPreprocessor(Preprocessor &PP) { this->PP = &PP; }
 
   bool
   handleDeclOccurrence(const Decl *D, index::SymbolRoleSet Roles,
@@ -137,6 +144,10 @@ private:
 
   llvm::Optional<std::string> getIncludeHeader(const Symbol &S, FileID);
 
+  SymbolID getSymbolIDCached(const Decl *D);
+  SymbolID getSymbolIDCached(const llvm::StringRef MacroName,
+                             const MacroInfo *MI, const SourceManager &SM);
+
   // All Symbols collected from the AST.
   SymbolSlab::Builder Symbols;
   // File IDs for Symbol.IncludeHeaders.
@@ -153,20 +164,20 @@ private:
   // All relations collected from the AST.
   RelationSlab::Builder Relations;
   ASTContext *ASTCtx;
-  std::shared_ptr<Preprocessor> PP;
+  Preprocessor *PP = nullptr;
   std::shared_ptr<GlobalCodeCompletionAllocator> CompletionAllocator;
   std::unique_ptr<CodeCompletionTUInfo> CompletionTUInfo;
   Options Opts;
   struct SymbolRef {
     SourceLocation Loc;
+    FileID FID;
     index::SymbolRoleSet Roles;
     const Decl *Container;
+    bool Spelled;
   };
+  void addRef(SymbolID ID, const SymbolRef &SR);
   // Symbols referenced from the current TU, flushed on finish().
-  llvm::DenseSet<const NamedDecl *> ReferencedDecls;
-  llvm::DenseSet<const IdentifierInfo *> ReferencedMacros;
-  llvm::DenseMap<const NamedDecl *, std::vector<SymbolRef>> DeclRefs;
-  llvm::DenseMap<SymbolID, std::vector<SymbolRef>> MacroRefs;
+  llvm::DenseSet<SymbolID> ReferencedSymbols;
   // Maps canonical declaration provided by clang to canonical declaration for
   // an index symbol, if clangd prefers a different declaration than that
   // provided by clang. For example, friend declaration might be considered
@@ -179,6 +190,8 @@ private:
   // to insert for which symbol, etc.
   class HeaderFileURICache;
   std::unique_ptr<HeaderFileURICache> HeaderFileURIs;
+  llvm::DenseMap<const Decl *, SymbolID> DeclToIDCache;
+  llvm::DenseMap<const MacroInfo *, SymbolID> MacroToIDCache;
 };
 
 } // namespace clangd

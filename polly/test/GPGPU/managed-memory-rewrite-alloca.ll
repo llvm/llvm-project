@@ -1,5 +1,4 @@
-; RUN: opt %loadPolly -analyze  -polly-process-unprofitable \
-; RUN: -polly-scops -polly-use-llvm-names < %s |  FileCheck %s --check-prefix=SCOP
+; RUN: opt %loadPolly -polly-print-scops -disable-output < %s | FileCheck %s --check-prefix=SCOP
 
 ; RUN: opt %loadPolly -S  -polly-process-unprofitable -polly-acc-mincompute=0 \
 ; RUN: -polly-target=gpu  -polly-codegen-ppcg -polly-acc-codegen-managed-memory \

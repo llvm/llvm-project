@@ -2,7 +2,7 @@
 ;;
 ;; new PM
 ; RUN: rm -f %t.yaml %t.hot.yaml
-; RUN: opt %s --enable-new-pm --passes='sample-profile,cgscc(inline)' \
+; RUN: opt %s --passes='sample-profile,cgscc(inline)' \
 ; RUN: --sample-profile-file=%S/Inputs/remarks-hotness.prof \
 ; RUN: -S --pass-remarks-filter=inline --pass-remarks-output=%t.yaml \
 ; RUN: -pass-remarks-with-hotness --disable-output
@@ -10,14 +10,14 @@
 ; RUN: FileCheck %s -check-prefix=YAML-MISS < %t.yaml
 
 ;; test 'auto' threshold
-; RUN: opt %s --enable-new-pm --passes='sample-profile,cgscc(inline)' \
+; RUN: opt %s --passes='sample-profile,cgscc(inline)' \
 ; RUN: --sample-profile-file=%S/Inputs/remarks-hotness.prof \
 ; RUN: -S --pass-remarks-filter=inline --pass-remarks-output=%t.hot.yaml \
 ; RUN: --pass-remarks-with-hotness --pass-remarks-hotness-threshold=auto --disable-output
 ; RUN: FileCheck %s -check-prefix=YAML-PASS < %t.hot.yaml
 ; RUN: not FileCheck %s -check-prefix=YAML-MISS < %t.hot.yaml
 
-; RUN: opt %s --enable-new-pm --passes='sample-profile,cgscc(inline)' \
+; RUN: opt %s --passes='sample-profile,cgscc(inline)' \
 ; RUN: --sample-profile-file=%S/Inputs/remarks-hotness.prof \
 ; RUN: -S --pass-remarks=inline --pass-remarks-missed=inline --pass-remarks-analysis=inline \
 ; RUN: --pass-remarks-with-hotness --pass-remarks-hotness-threshold=auto --disable-output 2>&1 | FileCheck %s -check-prefix=CHECK-RPASS
@@ -36,8 +36,8 @@
 ; YAML-MISS-NEXT: Function:        _Z7caller2v
 ; YAML-MISS-NEXT: Hotness:         2
 
-; CHECK-RPASS: _Z7callee1v inlined into _Z7caller1v with (cost=-30, threshold=4500) at callsite _Z7caller1v:1:10; (hotness: 401)
-; CHECK-RPASS-NOT: _Z7callee2v not inlined into _Z7caller2v because it should never be inlined (cost=never): noinline function attribute (hotness: 2)
+; CHECK-RPASS: '_Z7callee1v' inlined into '_Z7caller1v' with (cost=-30, threshold=4500) at callsite _Z7caller1v:1:10; (hotness: 401)
+; CHECK-RPASS-NOT: '_Z7callee2v' not inlined into '_Z7caller2v' because it should never be inlined (cost=never): noinline function attribute (hotness: 2)
 
 ; ModuleID = 'remarks-hotness.cpp'
 source_filename = "remarks-hotness.cpp"

@@ -12,8 +12,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANGD_INLAY_HINTS_H
-#define LLVM_CLANG_TOOLS_EXTRA_CLANGD_INLAY_HINTS_H
+#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANGD_INLAYHINTS_H
+#define LLVM_CLANG_TOOLS_EXTRA_CLANGD_INLAYHINTS_H
 
 #include "Protocol.h"
 #include <vector>
@@ -22,10 +22,12 @@ namespace clang {
 namespace clangd {
 class ParsedAST;
 
-// Compute and return all inlay hints for a file.
-std::vector<InlayHint> inlayHints(ParsedAST &AST);
+/// Compute and return inlay hints for a file.
+/// If RestrictRange is set, return only hints whose location is in that range.
+std::vector<InlayHint> inlayHints(ParsedAST &AST,
+                                  llvm::Optional<Range> RestrictRange);
 
 } // namespace clangd
 } // namespace clang
 
-#endif // LLVM_CLANG_TOOLS_EXTRA_CLANGD_INLAY_HINTS_H
+#endif // LLVM_CLANG_TOOLS_EXTRA_CLANGD_INLAYHINTS_H

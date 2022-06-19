@@ -107,6 +107,8 @@ protected:
   /// SEL is included in a header somewhere, in which case it will be whatever
   /// type is declared in that header, most likely {i8*, i8*}.
   llvm::PointerType *SelectorTy;
+  /// Element type of SelectorTy.
+  llvm::Type *SelectorElemTy;
   /// LLVM i8 type.  Cached here to avoid repeatedly getting it in all of the
   /// places where it's used
   llvm::IntegerType *Int8Ty;
@@ -128,6 +130,8 @@ protected:
   /// but if the runtime header declaring it is included then it may be a
   /// pointer to a structure.
   llvm::PointerType *IdTy;
+  /// Element type of IdTy.
+  llvm::Type *IdElemTy;
   /// Pointer to a pointer to an Objective-C object.  Used in the new ABI
   /// message lookup function and some GC-related functions.
   llvm::PointerType *PtrToIdTy;
@@ -313,12 +317,9 @@ protected:
   /// Ensures that the value has the required type, by inserting a bitcast if
   /// required.  This function lets us avoid inserting bitcasts that are
   /// redundant.
-  llvm::Value* EnforceType(CGBuilderTy &B, llvm::Value *V, llvm::Type *Ty) {
-    if (V->getType() == Ty) return V;
-    return B.CreateBitCast(V, Ty);
-  }
-  Address EnforceType(CGBuilderTy &B, Address V, llvm::Type *Ty) {
-    if (V.getType() == Ty) return V;
+  llvm::Value *EnforceType(CGBuilderTy &B, llvm::Value *V, llvm::Type *Ty) {
+    if (V->getType() == Ty)
+      return V;
     return B.CreateBitCast(V, Ty);
   }
 
@@ -700,8 +701,8 @@ protected:
   llvm::Value *LookupIMPSuper(CodeGenFunction &CGF, Address ObjCSuper,
                               llvm::Value *cmd, MessageSendInfo &MSI) override {
     CGBuilderTy &Builder = CGF.Builder;
-    llvm::Value *lookupArgs[] = {EnforceType(Builder, ObjCSuper,
-        PtrToObjCSuperTy).getPointer(), cmd};
+    llvm::Value *lookupArgs[] = {
+        EnforceType(Builder, ObjCSuper.getPointer(), PtrToObjCSuperTy), cmd};
     return CGF.EmitNounwindRuntimeCall(MsgLookupSuperFn, lookupArgs);
   }
 
@@ -978,7 +979,7 @@ class CGObjCGNUstep2 : public CGObjCGNUstep {
     // Look for an existing one
     llvm::StringMap<llvm::Constant*>::iterator old = ObjCStrings.find(Str);
     if (old != ObjCStrings.end())
-      return ConstantAddress(old->getValue(), Align);
+      return ConstantAddress(old->getValue(), IdElemTy, Align);
 
     bool isNonASCII = SL->containsNonAscii();
 
@@ -1000,7 +1001,7 @@ class CGObjCGNUstep2 : public CGObjCGNUstep {
       auto *ObjCStr = llvm::ConstantExpr::getIntToPtr(
           llvm::ConstantInt::get(Int64Ty, str), IdTy);
       ObjCStrings[Str] = ObjCStr;
-      return ConstantAddress(ObjCStr, Align);
+      return ConstantAddress(ObjCStr, IdElemTy, Align);
     }
 
     StringRef StringClass = CGM.getLangOpts().ObjCConstantStringClass;
@@ -1114,7 +1115,7 @@ class CGObjCGNUstep2 : public CGObjCGNUstep {
     llvm::Constant *ObjCStr = llvm::ConstantExpr::getBitCast(ObjCStrGV, IdTy);
     ObjCStrings[Str] = ObjCStr;
     ConstantStrings.push_back(ObjCStr);
-    return ConstantAddress(ObjCStr, Align);
+    return ConstantAddress(ObjCStr, IdElemTy, Align);
   }
 
   void PushProperty(ConstantArrayBuilder &PropertiesArray,
@@ -1206,8 +1207,10 @@ class CGObjCGNUstep2 : public CGObjCGNUstep {
                               llvm::Value *cmd, MessageSendInfo &MSI) override {
     // Don't access the slot unless we're trying to cache the result.
     CGBuilderTy &Builder = CGF.Builder;
-    llvm::Value *lookupArgs[] = {CGObjCGNU::EnforceType(Builder, ObjCSuper,
-        PtrToObjCSuperTy).getPointer(), cmd};
+    llvm::Value *lookupArgs[] = {CGObjCGNU::EnforceType(Builder,
+                                                        ObjCSuper.getPointer(),
+                                                        PtrToObjCSuperTy),
+                                 cmd};
     return CGF.EmitNounwindRuntimeCall(MsgLookupSuperFn, lookupArgs);
   }
 
@@ -1261,8 +1264,8 @@ class CGObjCGNUstep2 : public CGObjCGNUstep {
   llvm::Value *GetClassNamed(CodeGenFunction &CGF,
                              const std::string &Name,
                              bool isWeak) override {
-    return CGF.Builder.CreateLoad(Address(GetClassVar(Name, isWeak),
-          CGM.getPointerAlign()));
+    return CGF.Builder.CreateLoad(
+        Address(GetClassVar(Name, isWeak), IdTy, CGM.getPointerAlign()));
   }
   int32_t FlagsForOwnership(Qualifiers::ObjCLifetime Ownership) {
     // typedef enum {
@@ -2168,8 +2171,10 @@ CGObjCGNU::CGObjCGNU(CodeGenModule &cgm, unsigned runtimeABIVersion,
   QualType selTy = CGM.getContext().getObjCSelType();
   if (QualType() == selTy) {
     SelectorTy = PtrToInt8Ty;
+    SelectorElemTy = Int8Ty;
   } else {
     SelectorTy = cast<llvm::PointerType>(CGM.getTypes().ConvertType(selTy));
+    SelectorElemTy = CGM.getTypes().ConvertTypeForMem(selTy->getPointeeType());
   }
 
   PtrToIntTy = llvm::PointerType::getUnqual(IntTy);
@@ -2187,8 +2192,11 @@ CGObjCGNU::CGObjCGNU(CodeGenModule &cgm, unsigned runtimeABIVersion,
   if (UnqualIdTy != QualType()) {
     ASTIdTy = CGM.getContext().getCanonicalType(UnqualIdTy);
     IdTy = cast<llvm::PointerType>(CGM.getTypes().ConvertType(ASTIdTy));
+    IdElemTy = CGM.getTypes().ConvertTypeForMem(
+        ASTIdTy.getTypePtr()->getPointeeType());
   } else {
     IdTy = PtrToInt8Ty;
+    IdElemTy = Int8Ty;
   }
   PtrToIdTy = llvm::PointerType::getUnqual(IdTy);
   ProtocolTy = llvm::StructType::get(IdTy,
@@ -2345,9 +2353,10 @@ llvm::Value *CGObjCGNU::GetTypedSelector(CodeGenFunction &CGF, Selector Sel,
     }
   }
   if (!SelValue) {
-    SelValue = llvm::GlobalAlias::create(
-        SelectorTy->getElementType(), 0, llvm::GlobalValue::PrivateLinkage,
-        ".objc_selector_" + Sel.getAsString(), &TheModule);
+    SelValue = llvm::GlobalAlias::create(SelectorElemTy, 0,
+                                         llvm::GlobalValue::PrivateLinkage,
+                                         ".objc_selector_" + Sel.getAsString(),
+                                         &TheModule);
     Types.emplace_back(TypeEncoding, SelValue);
   }
 
@@ -2476,7 +2485,7 @@ ConstantAddress CGObjCGNU::GenerateConstantString(const StringLiteral *SL) {
   // Look for an existing one
   llvm::StringMap<llvm::Constant*>::iterator old = ObjCStrings.find(Str);
   if (old != ObjCStrings.end())
-    return ConstantAddress(old->getValue(), Align);
+    return ConstantAddress(old->getValue(), Int8Ty, Align);
 
   StringRef StringClass = CGM.getLangOpts().ObjCConstantStringClass;
 
@@ -2503,7 +2512,7 @@ ConstantAddress CGObjCGNU::GenerateConstantString(const StringLiteral *SL) {
   ObjCStr = llvm::ConstantExpr::getBitCast(ObjCStr, PtrToInt8Ty);
   ObjCStrings[Str] = ObjCStr;
   ConstantStrings.push_back(ObjCStr);
-  return ConstantAddress(ObjCStr, Align);
+  return ConstantAddress(ObjCStr, Int8Ty, Align);
 }
 
 ///Generates a message send where the super is the receiver.  This is a message
@@ -2574,14 +2583,14 @@ CGObjCGNU::GenerateMessageSendSuper(CodeGenFunction &CGF,
       if (IsClassMessage)  {
         if (!MetaClassPtrAlias) {
           MetaClassPtrAlias = llvm::GlobalAlias::create(
-              IdTy->getElementType(), 0, llvm::GlobalValue::InternalLinkage,
+              IdElemTy, 0, llvm::GlobalValue::InternalLinkage,
               ".objc_metaclass_ref" + Class->getNameAsString(), &TheModule);
         }
         ReceiverClass = MetaClassPtrAlias;
       } else {
         if (!ClassPtrAlias) {
           ClassPtrAlias = llvm::GlobalAlias::create(
-              IdTy->getElementType(), 0, llvm::GlobalValue::InternalLinkage,
+              IdElemTy, 0, llvm::GlobalValue::InternalLinkage,
               ".objc_class_ref" + Class->getNameAsString(), &TheModule);
         }
         ReceiverClass = ClassPtrAlias;
@@ -2606,8 +2615,6 @@ CGObjCGNU::GenerateMessageSendSuper(CodeGenFunction &CGF,
 
   Builder.CreateStore(Receiver, Builder.CreateStructGEP(ObjCSuper, 0));
   Builder.CreateStore(ReceiverClass, Builder.CreateStructGEP(ObjCSuper, 1));
-
-  ObjCSuper = EnforceType(Builder, ObjCSuper, PtrToObjCSuperTy);
 
   // Get the IMP
   llvm::Value *imp = LookupIMPSuper(CGF, ObjCSuper, cmd, MSI);
@@ -2651,35 +2658,6 @@ CGObjCGNU::GenerateMessageSend(CodeGenFunction &CGF,
     }
   }
 
-  // If the return type is something that goes in an integer register, the
-  // runtime will handle 0 returns.  For other cases, we fill in the 0 value
-  // ourselves.
-  //
-  // The language spec says the result of this kind of message send is
-  // undefined, but lots of people seem to have forgotten to read that
-  // paragraph and insist on sending messages to nil that have structure
-  // returns.  With GCC, this generates a random return value (whatever happens
-  // to be on the stack / in those registers at the time) on most platforms,
-  // and generates an illegal instruction trap on SPARC.  With LLVM it corrupts
-  // the stack.
-  bool isPointerSizedReturn = (ResultType->isAnyPointerType() ||
-      ResultType->isIntegralOrEnumerationType() || ResultType->isVoidType());
-
-  llvm::BasicBlock *startBB = nullptr;
-  llvm::BasicBlock *messageBB = nullptr;
-  llvm::BasicBlock *continueBB = nullptr;
-
-  if (!isPointerSizedReturn) {
-    startBB = Builder.GetInsertBlock();
-    messageBB = CGF.createBasicBlock("msgSend");
-    continueBB = CGF.createBasicBlock("continue");
-
-    llvm::Value *isNil = Builder.CreateICmpEQ(Receiver,
-            llvm::Constant::getNullValue(Receiver->getType()));
-    Builder.CreateCondBr(isNil, continueBB, messageBB);
-    CGF.EmitBlock(messageBB);
-  }
-
   IdTy = cast<llvm::PointerType>(CGM.getTypes().ConvertType(ASTIdTy));
   llvm::Value *cmd;
   if (Method)
@@ -2702,6 +2680,96 @@ CGObjCGNU::GenerateMessageSend(CodeGenFunction &CGF,
   ActualArgs.addFrom(CallArgs);
 
   MessageSendInfo MSI = getMessageSendInfo(Method, ResultType, ActualArgs);
+
+  // Message sends are expected to return a zero value when the
+  // receiver is nil.  At one point, this was only guaranteed for
+  // simple integer and pointer types, but expectations have grown
+  // over time.
+  //
+  // Given a nil receiver, the GNU runtime's message lookup will
+  // return a stub function that simply sets various return-value
+  // registers to zero and then returns.  That's good enough for us
+  // if and only if (1) the calling conventions of that stub are
+  // compatible with the signature we're using and (2) the registers
+  // it sets are sufficient to produce a zero value of the return type.
+  // Rather than doing a whole target-specific analysis, we assume it
+  // only works for void, integer, and pointer types, and in all
+  // other cases we do an explicit nil check is emitted code.  In
+  // addition to ensuring we produe a zero value for other types, this
+  // sidesteps the few outright CC incompatibilities we know about that
+  // could otherwise lead to crashes, like when a method is expected to
+  // return on the x87 floating point stack or adjust the stack pointer
+  // because of an indirect return.
+  bool hasParamDestroyedInCallee = false;
+  bool requiresExplicitZeroResult = false;
+  bool requiresNilReceiverCheck = [&] {
+    // We never need a check if we statically know the receiver isn't nil.
+    if (!canMessageReceiverBeNull(CGF, Method, /*IsSuper*/ false,
+                                  Class, Receiver))
+      return false;
+
+    // If there's a consumed argument, we need a nil check.
+    if (Method && Method->hasParamDestroyedInCallee()) {
+      hasParamDestroyedInCallee = true;
+    }
+
+    // If the return value isn't flagged as unused, and the result
+    // type isn't in our narrow set where we assume compatibility,
+    // we need a nil check to ensure a nil value.
+    if (!Return.isUnused()) {
+      if (ResultType->isVoidType()) {
+        // void results are definitely okay.
+      } else if (ResultType->hasPointerRepresentation() &&
+                 CGM.getTypes().isZeroInitializable(ResultType)) {
+        // Pointer types should be fine as long as they have
+        // bitwise-zero null pointers.  But do we need to worry
+        // about unusual address spaces?
+      } else if (ResultType->isIntegralOrEnumerationType()) {
+        // Bitwise zero should always be zero for integral types.
+        // FIXME: we probably need a size limit here, but we've
+        // never imposed one before
+      } else {
+        // Otherwise, use an explicit check just to be sure.
+        requiresExplicitZeroResult = true;
+      }
+    }
+
+    return hasParamDestroyedInCallee || requiresExplicitZeroResult;
+  }();
+
+  // We will need to explicitly zero-initialize an aggregate result slot
+  // if we generally require explicit zeroing and we have an aggregate
+  // result.
+  bool requiresExplicitAggZeroing =
+    requiresExplicitZeroResult && CGF.hasAggregateEvaluationKind(ResultType);
+
+  // The block we're going to end up in after any message send or nil path.
+  llvm::BasicBlock *continueBB = nullptr;
+  // The block that eventually branched to continueBB along the nil path.
+  llvm::BasicBlock *nilPathBB = nullptr;
+  // The block to do explicit work in along the nil path, if necessary.
+  llvm::BasicBlock *nilCleanupBB = nullptr;
+
+  // Emit the nil-receiver check.
+  if (requiresNilReceiverCheck) {
+    llvm::BasicBlock *messageBB = CGF.createBasicBlock("msgSend");
+    continueBB = CGF.createBasicBlock("continue");
+
+    // If we need to zero-initialize an aggregate result or destroy
+    // consumed arguments, we'll need a separate cleanup block.
+    // Otherwise we can just branch directly to the continuation block.
+    if (requiresExplicitAggZeroing || hasParamDestroyedInCallee) {
+      nilCleanupBB = CGF.createBasicBlock("nilReceiverCleanup");
+    } else {
+      nilPathBB = Builder.GetInsertBlock();
+    }
+
+    llvm::Value *isNil = Builder.CreateICmpEQ(Receiver,
+            llvm::Constant::getNullValue(Receiver->getType()));
+    Builder.CreateCondBr(isNil, nilCleanupBB ? nilCleanupBB : continueBB,
+                         messageBB);
+    CGF.EmitBlock(messageBB);
+  }
 
   // Get the IMP to call
   llvm::Value *imp;
@@ -2744,36 +2812,48 @@ CGObjCGNU::GenerateMessageSend(CodeGenFunction &CGF,
   RValue msgRet = CGF.EmitCall(MSI.CallInfo, callee, Return, ActualArgs, &call);
   call->setMetadata(msgSendMDKind, node);
 
-
-  if (!isPointerSizedReturn) {
-    messageBB = CGF.Builder.GetInsertBlock();
+  if (requiresNilReceiverCheck) {
+    llvm::BasicBlock *nonNilPathBB = CGF.Builder.GetInsertBlock();
     CGF.Builder.CreateBr(continueBB);
+
+    // Emit the nil path if we decided it was necessary above.
+    if (nilCleanupBB) {
+      CGF.EmitBlock(nilCleanupBB);
+
+      if (hasParamDestroyedInCallee) {
+        destroyCalleeDestroyedArguments(CGF, Method, CallArgs);
+      }
+
+      if (requiresExplicitAggZeroing) {
+        assert(msgRet.isAggregate());
+        Address addr = msgRet.getAggregateAddress();
+        CGF.EmitNullInitialization(addr, ResultType);
+      }
+
+      nilPathBB = CGF.Builder.GetInsertBlock();
+      CGF.Builder.CreateBr(continueBB);
+    }
+
+    // Enter the continuation block and emit a phi if required.
     CGF.EmitBlock(continueBB);
     if (msgRet.isScalar()) {
       llvm::Value *v = msgRet.getScalarVal();
       llvm::PHINode *phi = Builder.CreatePHI(v->getType(), 2);
-      phi->addIncoming(v, messageBB);
-      phi->addIncoming(llvm::Constant::getNullValue(v->getType()), startBB);
+      phi->addIncoming(v, nonNilPathBB);
+      phi->addIncoming(CGM.EmitNullConstant(ResultType), nilPathBB);
       msgRet = RValue::get(phi);
     } else if (msgRet.isAggregate()) {
-      Address v = msgRet.getAggregateAddress();
-      llvm::PHINode *phi = Builder.CreatePHI(v.getType(), 2);
-      llvm::Type *RetTy = v.getElementType();
-      Address NullVal = CGF.CreateTempAlloca(RetTy, v.getAlignment(), "null");
-      CGF.InitTempAlloca(NullVal, llvm::Constant::getNullValue(RetTy));
-      phi->addIncoming(v.getPointer(), messageBB);
-      phi->addIncoming(NullVal.getPointer(), startBB);
-      msgRet = RValue::getAggregate(Address(phi, v.getAlignment()));
+      // Aggregate zeroing is handled in nilCleanupBB when it's required.
     } else /* isComplex() */ {
       std::pair<llvm::Value*,llvm::Value*> v = msgRet.getComplexVal();
       llvm::PHINode *phi = Builder.CreatePHI(v.first->getType(), 2);
-      phi->addIncoming(v.first, messageBB);
+      phi->addIncoming(v.first, nonNilPathBB);
       phi->addIncoming(llvm::Constant::getNullValue(v.first->getType()),
-          startBB);
+                       nilPathBB);
       llvm::PHINode *phi2 = Builder.CreatePHI(v.second->getType(), 2);
-      phi2->addIncoming(v.second, messageBB);
+      phi2->addIncoming(v.second, nonNilPathBB);
       phi2->addIncoming(llvm::Constant::getNullValue(v.second->getType()),
-          startBB);
+                        nilPathBB);
       msgRet = RValue::getComplex(phi, phi2);
     }
   }
@@ -3630,8 +3710,7 @@ llvm::Function *CGObjCGNU::ModuleInitFunction() {
   // Add all referenced protocols to a category.
   GenerateProtocolHolderCategory();
 
-  llvm::StructType *selStructTy =
-    dyn_cast<llvm::StructType>(SelectorTy->getElementType());
+  llvm::StructType *selStructTy = dyn_cast<llvm::StructType>(SelectorElemTy);
   llvm::Type *selStructPtrTy = SelectorTy;
   if (!selStructTy) {
     selStructTy = llvm::StructType::get(CGM.getLLVMContext(),
@@ -3783,9 +3862,10 @@ llvm::Function *CGObjCGNU::ModuleInitFunction() {
 
     // The path to the source file where this module was declared
     SourceManager &SM = CGM.getContext().getSourceManager();
-    const FileEntry *mainFile = SM.getFileEntryForID(SM.getMainFileID());
+    Optional<FileEntryRef> mainFile =
+        SM.getFileEntryRefForID(SM.getMainFileID());
     std::string path =
-      (Twine(mainFile->getDir()->getName()) + "/" + mainFile->getName()).str();
+        (mainFile->getDir().getName() + "/" + mainFile->getName()).str();
     module.add(MakeConstantString(path, ".objc_source_file_name"));
     module.add(symtab);
 
@@ -3986,16 +4066,16 @@ void CGObjCGNU::EmitThrowStmt(CodeGenFunction &CGF,
 llvm::Value * CGObjCGNU::EmitObjCWeakRead(CodeGenFunction &CGF,
                                           Address AddrWeakObj) {
   CGBuilderTy &B = CGF.Builder;
-  AddrWeakObj = EnforceType(B, AddrWeakObj, PtrToIdTy);
-  return B.CreateCall(WeakReadFn, AddrWeakObj.getPointer());
+  return B.CreateCall(WeakReadFn,
+                      EnforceType(B, AddrWeakObj.getPointer(), PtrToIdTy));
 }
 
 void CGObjCGNU::EmitObjCWeakAssign(CodeGenFunction &CGF,
                                    llvm::Value *src, Address dst) {
   CGBuilderTy &B = CGF.Builder;
   src = EnforceType(B, src, IdTy);
-  dst = EnforceType(B, dst, PtrToIdTy);
-  B.CreateCall(WeakAssignFn, {src, dst.getPointer()});
+  llvm::Value *dstVal = EnforceType(B, dst.getPointer(), PtrToIdTy);
+  B.CreateCall(WeakAssignFn, {src, dstVal});
 }
 
 void CGObjCGNU::EmitObjCGlobalAssign(CodeGenFunction &CGF,
@@ -4003,10 +4083,10 @@ void CGObjCGNU::EmitObjCGlobalAssign(CodeGenFunction &CGF,
                                      bool threadlocal) {
   CGBuilderTy &B = CGF.Builder;
   src = EnforceType(B, src, IdTy);
-  dst = EnforceType(B, dst, PtrToIdTy);
+  llvm::Value *dstVal = EnforceType(B, dst.getPointer(), PtrToIdTy);
   // FIXME. Add threadloca assign API
   assert(!threadlocal && "EmitObjCGlobalAssign - Threal Local API NYI");
-  B.CreateCall(GlobalAssignFn, {src, dst.getPointer()});
+  B.CreateCall(GlobalAssignFn, {src, dstVal});
 }
 
 void CGObjCGNU::EmitObjCIvarAssign(CodeGenFunction &CGF,
@@ -4014,16 +4094,16 @@ void CGObjCGNU::EmitObjCIvarAssign(CodeGenFunction &CGF,
                                    llvm::Value *ivarOffset) {
   CGBuilderTy &B = CGF.Builder;
   src = EnforceType(B, src, IdTy);
-  dst = EnforceType(B, dst, IdTy);
-  B.CreateCall(IvarAssignFn, {src, dst.getPointer(), ivarOffset});
+  llvm::Value *dstVal = EnforceType(B, dst.getPointer(), IdTy);
+  B.CreateCall(IvarAssignFn, {src, dstVal, ivarOffset});
 }
 
 void CGObjCGNU::EmitObjCStrongCastAssign(CodeGenFunction &CGF,
                                          llvm::Value *src, Address dst) {
   CGBuilderTy &B = CGF.Builder;
   src = EnforceType(B, src, IdTy);
-  dst = EnforceType(B, dst, PtrToIdTy);
-  B.CreateCall(StrongCastAssignFn, {src, dst.getPointer()});
+  llvm::Value *dstVal = EnforceType(B, dst.getPointer(), PtrToIdTy);
+  B.CreateCall(StrongCastAssignFn, {src, dstVal});
 }
 
 void CGObjCGNU::EmitGCMemmoveCollectable(CodeGenFunction &CGF,
@@ -4031,10 +4111,10 @@ void CGObjCGNU::EmitGCMemmoveCollectable(CodeGenFunction &CGF,
                                          Address SrcPtr,
                                          llvm::Value *Size) {
   CGBuilderTy &B = CGF.Builder;
-  DestPtr = EnforceType(B, DestPtr, PtrTy);
-  SrcPtr = EnforceType(B, SrcPtr, PtrTy);
+  llvm::Value *DestPtrVal = EnforceType(B, DestPtr.getPointer(), PtrTy);
+  llvm::Value *SrcPtrVal = EnforceType(B, SrcPtr.getPointer(), PtrTy);
 
-  B.CreateCall(MemMoveFn, {DestPtr.getPointer(), SrcPtr.getPointer(), Size});
+  B.CreateCall(MemMoveFn, {DestPtrVal, SrcPtrVal, Size});
 }
 
 llvm::GlobalVariable *CGObjCGNU::ObjCIvarOffsetVariable(

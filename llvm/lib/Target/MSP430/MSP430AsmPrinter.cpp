@@ -32,7 +32,7 @@
 #include "llvm/MC/MCSectionELF.h"
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCSymbol.h"
-#include "llvm/Support/TargetRegistry.h"
+#include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/raw_ostream.h"
 using namespace llvm;
 
@@ -166,11 +166,11 @@ void MSP430AsmPrinter::EmitInterruptVectorSection(MachineFunction &ISR) {
   MCSection *IV = OutStreamer->getContext().getELFSection(
     "__interrupt_vector_" + IVIdx,
     ELF::SHT_PROGBITS, ELF::SHF_ALLOC | ELF::SHF_EXECINSTR);
-  OutStreamer->SwitchSection(IV);
+  OutStreamer->switchSection(IV);
 
   const MCSymbol *FunctionSymbol = getSymbol(F);
   OutStreamer->emitSymbolValue(FunctionSymbol, TM.getProgramPointerSize());
-  OutStreamer->SwitchSection(Cur);
+  OutStreamer->switchSection(Cur);
 }
 
 bool MSP430AsmPrinter::runOnMachineFunction(MachineFunction &MF) {

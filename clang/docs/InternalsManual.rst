@@ -685,7 +685,7 @@ use them to construct the ``-cc1`` job:
 
     void Clang::ConstructJob(const ArgList &Args /*...*/) const {
       ArgStringList CmdArgs;
-      // ... 
+      // ...
 
   +   for (const Arg *A : Args.filtered(OPT_fpass_plugin_EQ)) {
   +     CmdArgs.push_back(Args.MakeArgString(Twine("-fpass-plugin=") + A->getValue()));
@@ -2883,7 +2883,7 @@ are created implicitly. The following spellings are accepted:
 
 Subjects
 ~~~~~~~~
-Attributes appertain to one or more subjects. If the attribute attempts to 
+Attributes appertain to one or more subjects. If the attribute attempts to
 attach to a subject that is not in the subject list, a diagnostic is issued
 automatically. Whether the diagnostic is a warning or an error depends on how
 the attribute's ``SubjectList`` is defined, but the default behavior is to warn.
@@ -2914,7 +2914,7 @@ Documentation
 All attributes must have some form of documentation associated with them.
 Documentation is table generated on the public web server by a server-side
 process that runs daily. Generally, the documentation for an attribute is a
-stand-alone definition in `include/clang/Basic/AttrDocs.td 
+stand-alone definition in `include/clang/Basic/AttrDocs.td
 <https://github.com/llvm/llvm-project/blob/main/clang/include/clang/Basic/AttrDocs.td>`_
 that is named after the attribute being documented.
 
@@ -2932,7 +2932,7 @@ There are four predefined documentation categories: ``DocCatFunction`` for
 attributes that appertain to function-like subjects, ``DocCatVariable`` for
 attributes that appertain to variable-like subjects, ``DocCatType`` for type
 attributes, and ``DocCatStmt`` for statement attributes. A custom documentation
-category should be used for groups of attributes with similar functionality. 
+category should be used for groups of attributes with similar functionality.
 Custom categories are good for providing overview information for the attributes
 grouped under it. For instance, the consumed annotation attributes define a
 custom category, ``DocCatConsumed``, that explains what consumed annotations are
@@ -3265,4 +3265,3 @@ are similar.
      proper visitation for your expression, enabling various IDE features such
      as syntax highlighting, cross-referencing, and so on.  The
      ``c-index-test`` helper program can be used to test these features.
-

@@ -30,7 +30,6 @@
 #include "llvm/ADT/None.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/Support/Base64.h"
 #include "llvm/Support/Casting.h"
 #include <algorithm>
 
@@ -240,6 +239,12 @@ bool isAbstract(const Decl *D) {
   return false;
 }
 
+bool isVirtual(const Decl *D) {
+  if (const auto *CMD = llvm::dyn_cast<CXXMethodDecl>(D))
+    return CMD->isVirtual();
+  return false;
+}
+
 bool isDependent(const Decl *D) {
   if (isa<UnresolvedUsingValueDecl>(D))
     return true;
@@ -308,21 +313,26 @@ unsigned evaluateHighlightPriority(const HighlightingToken &Tok) {
 //
 // In particular, heuristically resolved dependent names get their heuristic
 // kind, plus the dependent modifier.
+llvm::Optional<HighlightingToken> resolveConflict(const HighlightingToken &A,
+                                                  const HighlightingToken &B) {
+  unsigned Priority1 = evaluateHighlightPriority(A);
+  unsigned Priority2 = evaluateHighlightPriority(B);
+  if (Priority1 == Priority2 && A.Kind != B.Kind)
+    return llvm::None;
+  auto Result = Priority1 > Priority2 ? A : B;
+  Result.Modifiers = A.Modifiers | B.Modifiers;
+  return Result;
+}
 llvm::Optional<HighlightingToken>
 resolveConflict(ArrayRef<HighlightingToken> Tokens) {
   if (Tokens.size() == 1)
     return Tokens[0];
 
-  if (Tokens.size() != 2)
-    return llvm::None;
-
-  unsigned Priority1 = evaluateHighlightPriority(Tokens[0]);
-  unsigned Priority2 = evaluateHighlightPriority(Tokens[1]);
-  if (Priority1 == Priority2 && Tokens[0].Kind != Tokens[1].Kind)
-    return llvm::None;
-  auto Result = Priority1 > Priority2 ? Tokens[0] : Tokens[1];
-  Result.Modifiers = Tokens[0].Modifiers | Tokens[1].Modifiers;
-  return Result;
+  assert(Tokens.size() >= 2);
+  Optional<HighlightingToken> Winner = resolveConflict(Tokens[0], Tokens[1]);
+  for (size_t I = 2; Winner && I < Tokens.size(); ++I)
+    Winner = resolveConflict(*Winner, Tokens[I]);
+  return Winner;
 }
 
 /// Consumes source locations and maps them to text ranges for highlightings.
@@ -333,15 +343,11 @@ public:
         LangOpts(AST.getLangOpts()) {}
 
   HighlightingToken &addToken(SourceLocation Loc, HighlightingKind Kind) {
-    Loc = getHighlightableSpellingToken(Loc, SourceMgr);
-    if (Loc.isInvalid())
+    auto Range = getRangeForSourceLocation(Loc);
+    if (!Range)
       return InvalidHighlightingToken;
-    const auto *Tok = TB.spelledTokenAt(Loc);
-    assert(Tok);
-    return addToken(
-        halfOpenToRange(SourceMgr,
-                        Tok->range(SourceMgr).toCharRange(SourceMgr)),
-        Kind);
+
+    return addToken(*Range, Kind);
   }
 
   HighlightingToken &addToken(Range R, HighlightingKind Kind) {
@@ -350,6 +356,11 @@ public:
     HT.Kind = Kind;
     Tokens.push_back(std::move(HT));
     return Tokens.back();
+  }
+
+  void addExtraModifier(SourceLocation Loc, HighlightingModifier Modifier) {
+    if (auto Range = getRangeForSourceLocation(Loc))
+      ExtraModifiers[*Range].push_back(Modifier);
   }
 
   std::vector<HighlightingToken> collect(ParsedAST &AST) && {
@@ -371,12 +382,22 @@ public:
             // this predicate would never fire.
             return T.R == TokRef.front().R;
           });
-      if (auto Resolved = resolveConflict(Conflicting))
+      if (auto Resolved = resolveConflict(Conflicting)) {
+        // Apply extra collected highlighting modifiers
+        auto Modifiers = ExtraModifiers.find(Resolved->R);
+        if (Modifiers != ExtraModifiers.end()) {
+          for (HighlightingModifier Mod : Modifiers->second) {
+            Resolved->addModifier(Mod);
+          }
+        }
+
         NonConflicting.push_back(*Resolved);
+      }
       // TokRef[Conflicting.size()] is the next token with a different range (or
       // the end of the Tokens).
       TokRef = TokRef.drop_front(Conflicting.size());
     }
+
     const auto &SM = AST.getSourceManager();
     StringRef MainCode = SM.getBufferOrFake(SM.getMainFileID()).getBuffer();
 
@@ -434,11 +455,24 @@ public:
   const HeuristicResolver *getResolver() const { return Resolver; }
 
 private:
+  llvm::Optional<Range> getRangeForSourceLocation(SourceLocation Loc) {
+    Loc = getHighlightableSpellingToken(Loc, SourceMgr);
+    if (Loc.isInvalid())
+      return llvm::None;
+
+    const auto *Tok = TB.spelledTokenAt(Loc);
+    assert(Tok);
+
+    return halfOpenToRange(SourceMgr,
+                           Tok->range(SourceMgr).toCharRange(SourceMgr));
+  }
+
   const syntax::TokenBuffer &TB;
   const SourceManager &SourceMgr;
   const LangOptions &LangOpts;
   std::vector<HighlightingToken> Tokens;
-  const HeuristicResolver *Resolver;
+  std::map<Range, llvm::SmallVector<HighlightingModifier, 1>> ExtraModifiers;
+  const HeuristicResolver *Resolver = nullptr;
   // returned from addToken(InvalidLoc)
   HighlightingToken InvalidHighlightingToken;
 };
@@ -490,6 +524,71 @@ class CollectExtraHighlightings
 public:
   CollectExtraHighlightings(HighlightingsBuilder &H) : H(H) {}
 
+  bool VisitCXXConstructExpr(CXXConstructExpr *E) {
+    highlightMutableReferenceArguments(E->getConstructor(),
+                                       {E->getArgs(), E->getNumArgs()});
+
+    return true;
+  }
+
+  bool VisitCallExpr(CallExpr *E) {
+    // Highlighting parameters passed by non-const reference does not really
+    // make sense for literals...
+    if (isa<UserDefinedLiteral>(E))
+      return true;
+
+    // FIXME ...here it would make sense though.
+    if (isa<CXXOperatorCallExpr>(E))
+      return true;
+
+    highlightMutableReferenceArguments(
+        dyn_cast_or_null<FunctionDecl>(E->getCalleeDecl()),
+        {E->getArgs(), E->getNumArgs()});
+
+    return true;
+  }
+
+  void
+  highlightMutableReferenceArguments(const FunctionDecl *FD,
+                                     llvm::ArrayRef<const Expr *const> Args) {
+    if (!FD)
+      return;
+
+    if (auto *ProtoType = FD->getType()->getAs<FunctionProtoType>()) {
+      // Iterate over the types of the function parameters.
+      // If any of them are non-const reference paramteres, add it as a
+      // highlighting modifier to the corresponding expression
+      for (size_t I = 0;
+           I < std::min(size_t(ProtoType->getNumParams()), Args.size()); ++I) {
+        auto T = ProtoType->getParamType(I);
+
+        // Is this parameter passed by non-const reference?
+        // FIXME The condition !T->idDependentType() could be relaxed a bit,
+        // e.g. std::vector<T>& is dependent but we would want to highlight it
+        if (T->isLValueReferenceType() &&
+            !T.getNonReferenceType().isConstQualified() &&
+            !T->isDependentType()) {
+          if (auto *Arg = Args[I]) {
+            llvm::Optional<SourceLocation> Location;
+
+            // FIXME Add "unwrapping" for ArraySubscriptExpr and UnaryOperator,
+            //  e.g. highlight `a` in `a[i]`
+            // FIXME Handle dependent expression types
+            if (auto *DR = dyn_cast<DeclRefExpr>(Arg)) {
+              Location = DR->getLocation();
+            } else if (auto *M = dyn_cast<MemberExpr>(Arg)) {
+              Location = M->getMemberLoc();
+            }
+
+            if (Location)
+              H.addExtraModifier(*Location,
+                                 HighlightingModifier::UsedAsMutableReference);
+          }
+        }
+      }
+    }
+  }
+
   bool VisitDecltypeTypeLoc(DecltypeTypeLoc L) {
     if (auto K = kindForType(L.getTypePtr(), H.getResolver())) {
       auto &Tok = H.addToken(L.getBeginLoc(), *K)
@@ -506,16 +605,24 @@ public:
     auto *AT = D->getType()->getContainedAutoType();
     if (!AT)
       return true;
-    if (auto K = kindForType(AT->getDeducedType().getTypePtrOrNull(),
-                             H.getResolver())) {
-      auto &Tok = H.addToken(D->getTypeSpecStartLoc(), *K)
-                      .addModifier(HighlightingModifier::Deduced);
-      const Type *Deduced = AT->getDeducedType().getTypePtrOrNull();
-      if (auto Mod = scopeModifier(Deduced))
-        Tok.addModifier(*Mod);
-      if (isDefaultLibrary(Deduced))
-        Tok.addModifier(HighlightingModifier::DefaultLibrary);
-    }
+    auto K =
+        kindForType(AT->getDeducedType().getTypePtrOrNull(), H.getResolver());
+    if (!K)
+      return true;
+    SourceLocation StartLoc = D->getTypeSpecStartLoc();
+    // The AutoType may not have a corresponding token, e.g. in the case of
+    // init-captures. In this case, StartLoc overlaps with the location
+    // of the decl itself, and producing a token for the type here would result
+    // in both it and the token for the decl being dropped due to conflict.
+    if (StartLoc == D->getLocation())
+      return true;
+    auto &Tok =
+        H.addToken(StartLoc, *K).addModifier(HighlightingModifier::Deduced);
+    const Type *Deduced = AT->getDeducedType().getTypePtrOrNull();
+    if (auto Mod = scopeModifier(Deduced))
+      Tok.addModifier(*Mod);
+    if (isDefaultLibrary(Deduced))
+      Tok.addModifier(HighlightingModifier::DefaultLibrary);
     return true;
   }
 
@@ -655,6 +762,7 @@ public:
     case TemplateName::QualifiedTemplate:
     case TemplateName::SubstTemplateTemplateParm:
     case TemplateName::SubstTemplateTemplateParmPack:
+    case TemplateName::UsingTemplate:
       // Names that could be resolved to a TemplateDecl are handled elsewhere.
       break;
     }
@@ -712,6 +820,8 @@ std::vector<HighlightingToken> getSemanticHighlightings(ParsedAST &AST) {
             Tok.addModifier(HighlightingModifier::Static);
           if (isAbstract(Decl))
             Tok.addModifier(HighlightingModifier::Abstract);
+          if (isVirtual(Decl))
+            Tok.addModifier(HighlightingModifier::Virtual);
           if (isDependent(Decl))
             Tok.addModifier(HighlightingModifier::DependentName);
           if (isDefaultLibrary(Decl))
@@ -803,7 +913,7 @@ bool operator==(const HighlightingToken &L, const HighlightingToken &R) {
          std::tie(R.R, R.Kind, R.Modifiers);
 }
 bool operator<(const HighlightingToken &L, const HighlightingToken &R) {
-  return std::tie(L.R, L.Kind, R.Modifiers) <
+  return std::tie(L.R, L.Kind, L.Modifiers) <
          std::tie(R.R, R.Kind, R.Modifiers);
 }
 
@@ -898,10 +1008,14 @@ llvm::StringRef toSemanticTokenModifier(HighlightingModifier Modifier) {
     return "deduced"; // nonstandard
   case HighlightingModifier::Abstract:
     return "abstract";
+  case HighlightingModifier::Virtual:
+    return "virtual";
   case HighlightingModifier::DependentName:
     return "dependentName"; // nonstandard
   case HighlightingModifier::DefaultLibrary:
     return "defaultLibrary";
+  case HighlightingModifier::UsedAsMutableReference:
+    return "usedAsMutableReference"; // nonstandard
   case HighlightingModifier::FunctionScope:
     return "functionScope"; // nonstandard
   case HighlightingModifier::ClassScope:

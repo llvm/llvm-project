@@ -1,6 +1,6 @@
 # REQUIRES: powerpc
 #
-# RUN: llvm-mc -triple=powerpc64le -filetype=obj %p/Inputs/ppc64-localentry.s -o %t
+# RUN: llvm-mc -triple=powerpc64 -filetype=obj %p/Inputs/ppc64-localentry.s -o %t
 # RUN: lldb-test breakpoints %t %s | FileCheck %s
 
 breakpoint set -n lfunc

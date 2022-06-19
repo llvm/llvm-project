@@ -54,9 +54,9 @@ define i32 @t2_commutative(i32 %ptr, i32 %alignment) nounwind {
 define i32 @t3_extrause0(i32 %ptr, i32 %alignment, i32* %mask_storage) nounwind {
 ; CHECK-LABEL: t3_extrause0:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    neg w9, w1
-; CHECK-NEXT:    sub w8, w1, #1 // =1
-; CHECK-NEXT:    and w0, w0, w9
+; CHECK-NEXT:    neg w8, w1
+; CHECK-NEXT:    and w0, w0, w8
+; CHECK-NEXT:    sub w8, w1, #1
 ; CHECK-NEXT:    str w8, [x2]
 ; CHECK-NEXT:    ret
   %mask = add i32 %alignment, -1
@@ -68,7 +68,7 @@ define i32 @t3_extrause0(i32 %ptr, i32 %alignment, i32* %mask_storage) nounwind 
 define i32 @n4_extrause1(i32 %ptr, i32 %alignment, i32* %bias_storage) nounwind {
 ; CHECK-LABEL: n4_extrause1:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    sub w8, w1, #1 // =1
+; CHECK-NEXT:    sub w8, w1, #1
 ; CHECK-NEXT:    and w8, w0, w8
 ; CHECK-NEXT:    sub w0, w0, w8
 ; CHECK-NEXT:    str w8, [x2]
@@ -82,11 +82,11 @@ define i32 @n4_extrause1(i32 %ptr, i32 %alignment, i32* %bias_storage) nounwind 
 define i32 @n5_extrause2(i32 %ptr, i32 %alignment, i32* %mask_storage, i32* %bias_storage) nounwind {
 ; CHECK-LABEL: n5_extrause2:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    sub w8, w1, #1 // =1
+; CHECK-NEXT:    sub w8, w1, #1
+; CHECK-NEXT:    and w9, w0, w8
+; CHECK-NEXT:    sub w0, w0, w9
 ; CHECK-NEXT:    str w8, [x2]
-; CHECK-NEXT:    and w8, w0, w8
-; CHECK-NEXT:    sub w0, w0, w8
-; CHECK-NEXT:    str w8, [x3]
+; CHECK-NEXT:    str w9, [x3]
 ; CHECK-NEXT:    ret
   %mask = add i32 %alignment, -1
   store i32 %mask, i32* %mask_storage
@@ -101,7 +101,7 @@ define i32 @n5_extrause2(i32 %ptr, i32 %alignment, i32* %mask_storage, i32* %bia
 define i32 @n6_different_ptrs(i32 %ptr0, i32 %ptr1, i32 %alignment) nounwind {
 ; CHECK-LABEL: n6_different_ptrs:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    sub w8, w2, #1 // =1
+; CHECK-NEXT:    sub w8, w2, #1
 ; CHECK-NEXT:    and w8, w1, w8
 ; CHECK-NEXT:    sub w0, w0, w8
 ; CHECK-NEXT:    ret
@@ -113,7 +113,7 @@ define i32 @n6_different_ptrs(i32 %ptr0, i32 %ptr1, i32 %alignment) nounwind {
 define i32 @n7_different_ptrs_commutative(i32 %ptr0, i32 %ptr1, i32 %alignment) nounwind {
 ; CHECK-LABEL: n7_different_ptrs_commutative:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    sub w8, w2, #1 // =1
+; CHECK-NEXT:    sub w8, w2, #1
 ; CHECK-NEXT:    and w8, w8, w1
 ; CHECK-NEXT:    sub w0, w0, w8
 ; CHECK-NEXT:    ret
@@ -126,7 +126,7 @@ define i32 @n7_different_ptrs_commutative(i32 %ptr0, i32 %ptr1, i32 %alignment) 
 define i32 @n8_not_lowbit_mask(i32 %ptr, i32 %alignment) nounwind {
 ; CHECK-LABEL: n8_not_lowbit_mask:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    add w8, w1, #1 // =1
+; CHECK-NEXT:    add w8, w1, #1
 ; CHECK-NEXT:    bic w0, w0, w8
 ; CHECK-NEXT:    ret
   %mask = add i32 %alignment, 1 ; not -1
@@ -138,7 +138,7 @@ define i32 @n8_not_lowbit_mask(i32 %ptr, i32 %alignment) nounwind {
 define i32 @n9_sub_is_not_commutative(i32 %ptr, i32 %alignment) nounwind {
 ; CHECK-LABEL: n9_sub_is_not_commutative:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    sub w8, w1, #1 // =1
+; CHECK-NEXT:    sub w8, w1, #1
 ; CHECK-NEXT:    and w8, w0, w8
 ; CHECK-NEXT:    sub w0, w8, w0
 ; CHECK-NEXT:    ret

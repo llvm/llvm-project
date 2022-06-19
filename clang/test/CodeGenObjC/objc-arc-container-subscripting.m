@@ -1,11 +1,11 @@
-// RUN: %clang_cc1 -fobjc-arc -emit-llvm -triple x86_64-apple-darwin -o - %s | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -fobjc-arc -emit-llvm -triple x86_64-apple-darwin -o - %s | FileCheck %s
 
 @interface NSMutableArray
 - (id)objectAtIndexedSubscript:(int)index;
 - (void)setObject:(id)object atIndexedSubscript:(int)index;
 @end
 
-id func() {
+id func(void) {
   NSMutableArray *array;
   array[3] = 0;
   return array[3];

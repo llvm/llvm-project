@@ -3,14 +3,15 @@ add_lldb_library(lldbPluginCPlusPlusLanguage PLUGIN
   CPlusPlusLanguage.cpp
   CPlusPlusNameParser.cpp
   CxxStringTypes.cpp
+  GenericBitset.cpp
+  GenericOptional.cpp
   LibCxx.cpp
   LibCxxAtomic.cpp
-  LibCxxBitset.cpp
   LibCxxInitializerList.cpp
   LibCxxList.cpp
   LibCxxMap.cpp
-  LibCxxOptional.cpp
   LibCxxQueue.cpp
+  LibCxxSpan.cpp
   LibCxxTuple.cpp
   LibCxxUnorderedMap.cpp
   LibCxxVariant.cpp

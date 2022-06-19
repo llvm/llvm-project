@@ -6,14 +6,12 @@
 //
 //===----------------------------------------------------------------------===//
 
-// GCC 5 does not evaluate static assertions dependent on a template parameter.
-// UNSUPPORTED: gcc-5
-
 // <memory>
 
 // shared_ptr
 
-// template<class T, class... Args> shared_ptr<T> make_shared(Args&&... args);
+// template<class T, class... Args>
+// shared_ptr<T> make_shared(Args&&... args);
 
 #include <memory>
 #include <cassert>

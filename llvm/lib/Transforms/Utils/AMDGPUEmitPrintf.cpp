@@ -22,19 +22,6 @@ using namespace llvm;
 
 #define DEBUG_TYPE "amdgpu-emit-printf"
 
-static bool isCString(const Value *Arg) {
-  auto Ty = Arg->getType();
-  auto PtrTy = dyn_cast<PointerType>(Ty);
-  if (!PtrTy)
-    return false;
-
-  auto IntTy = dyn_cast<IntegerType>(PtrTy->getElementType());
-  if (!IntTy)
-    return false;
-
-  return IntTy->getBitWidth() == 8;
-}
-
 static Value *fitArgInto64Bits(IRBuilder<> &Builder, Value *Arg) {
   auto Int64Ty = Builder.getInt64Ty();
   auto Ty = Arg->getType();
@@ -173,13 +160,15 @@ static Value *callAppendStringN(IRBuilder<> &Builder, Value *Desc, Value *Str,
 
 static Value *appendString(IRBuilder<> &Builder, Value *Desc, Value *Arg,
                            bool IsLast) {
+  Arg = Builder.CreateBitCast(
+      Arg, Builder.getInt8PtrTy(Arg->getType()->getPointerAddressSpace()));
   auto Length = getStrlenWithNull(Builder, Arg);
   return callAppendStringN(Builder, Desc, Arg, Length, IsLast);
 }
 
 static Value *processArg(IRBuilder<> &Builder, Value *Desc, Value *Arg,
                          bool SpecIsCString, bool IsLast) {
-  if (SpecIsCString && isCString(Arg)) {
+  if (SpecIsCString && isa<PointerType>(Arg->getType())) {
     return appendString(Builder, Desc, Arg, IsLast);
   }
   // If the format specifies a string but the argument is not, the frontend will

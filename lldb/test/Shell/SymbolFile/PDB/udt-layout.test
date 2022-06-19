@@ -2,8 +2,8 @@ REQUIRES: system-windows, lld
 RUN: %build --compiler=clang-cl --output=%t.exe %S/Inputs/UdtLayoutTest.cpp
 RUN: %lldb -b -s %S/Inputs/UdtLayoutTest.script -- %t.exe | FileCheck %s
 
-CHECK:(int) int C::abc = 123
-CHECK:(List [16]) ls = {
+CHECK:(int) C::abc = 123
+CHECK:(List[16]) ls = {
 CHECK:  [15] = {
 CHECK:    Prev = nullptr
 CHECK:    Next = nullptr

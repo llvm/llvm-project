@@ -1,6 +1,6 @@
-#include "../runtime/io-api.h"
-#include "../runtime/main.h"
-#include "../runtime/stop.h"
+#include "flang/Runtime/io-api.h"
+#include "flang/Runtime/main.h"
+#include "flang/Runtime/stop.h"
 #include <cstring>
 #include <limits>
 

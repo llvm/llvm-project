@@ -199,7 +199,7 @@ void Timer::stopTimer() {
   Running = false;
   Time += TimeRecord::getCurrentTime(false);
   Time -= StartTime;
-  Signposts->endInterval(this);
+  Signposts->endInterval(this, getName());
 }
 
 void Timer::clear() {
@@ -393,8 +393,7 @@ void TimerGroup::PrintQueuedTimers(raw_ostream &OS) {
   OS << "  --- Name ---\n";
 
   // Loop through all of the timing data, printing it out.
-  for (const PrintRecord &Record : make_range(TimersToPrint.rbegin(),
-                                              TimersToPrint.rend())) {
+  for (const PrintRecord &Record : llvm::reverse(TimersToPrint)) {
     Record.Time.print(Total, OS);
     OS << Record.Description << '\n';
   }

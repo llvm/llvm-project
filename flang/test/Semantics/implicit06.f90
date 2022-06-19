@@ -1,5 +1,4 @@
-! RUN: %S/test_errors.sh %s %t %flang_fc1
-! REQUIRES: shell
+! RUN: %python %S/test_errors.py %s %flang_fc1
 subroutine s1
   implicit integer(a-c)
   !ERROR: More than one implicit type specified for 'c'

@@ -19,7 +19,8 @@ defined3:
 // CHECK:          Index:
 // CHECK:          Name: .rela.text
 // CHECK-NEXT:     Type: SHT_RELA (0x4)
-// CHECK-NEXT:     Flags [ (0x0)
+// CHECK-NEXT:     Flags [
+// CHECK-NEXT:       SHF_INFO_LINK
 // CHECK-NEXT:     ]
 // CHECK-NEXT:     Address: 0x0
 // CHECK-NEXT:     Offset:

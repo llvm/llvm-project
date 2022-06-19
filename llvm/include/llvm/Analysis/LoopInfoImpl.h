@@ -14,7 +14,6 @@
 #ifndef LLVM_ANALYSIS_LOOPINFOIMPL_H
 #define LLVM_ANALYSIS_LOOPINFOIMPL_H
 
-#include "llvm/ADT/DepthFirstIterator.h"
 #include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SetOperations.h"
@@ -315,12 +314,11 @@ void LoopBase<BlockT, LoopT>::verifyLoop() const {
            "Loop block has no in-loop predecessors!");
 
     SmallVector<BlockT *, 2> OutsideLoopPreds;
-    std::for_each(GraphTraits<Inverse<BlockT *>>::child_begin(BB),
-                  GraphTraits<Inverse<BlockT *>>::child_end(BB),
-                  [&](BlockT *B) {
-                    if (!contains(B))
-                      OutsideLoopPreds.push_back(B);
-                  });
+    for (BlockT *B :
+         llvm::make_range(GraphTraits<Inverse<BlockT *>>::child_begin(BB),
+                          GraphTraits<Inverse<BlockT *>>::child_end(BB)))
+      if (!contains(B))
+        OutsideLoopPreds.push_back(B);
 
     if (BB == getHeader()) {
       assert(!OutsideLoopPreds.empty() && "Loop is unreachable!");
@@ -455,8 +453,7 @@ static void discoverAndMapSubloop(LoopT *L, ArrayRef<BlockT *> Backedges,
                                 InvBlockTraits::child_end(PredBB));
     } else {
       // This is a discovered block. Find its outermost discovered loop.
-      while (LoopT *Parent = Subloop->getParentLoop())
-        Subloop = Parent;
+      Subloop = Subloop->getOutermostLoop();
 
       // If it is already discovered to be a subloop of this loop, continue.
       if (Subloop == L)
@@ -574,7 +571,8 @@ void LoopInfoBase<BlockT, LoopT>::analyze(const DomTreeBase<BlockT> &DomTree) {
 }
 
 template <class BlockT, class LoopT>
-SmallVector<LoopT *, 4> LoopInfoBase<BlockT, LoopT>::getLoopsInPreorder() {
+SmallVector<LoopT *, 4>
+LoopInfoBase<BlockT, LoopT>::getLoopsInPreorder() const {
   SmallVector<LoopT *, 4> PreOrderLoops, PreOrderWorklist;
   // The outer-most loop actually goes into the result in the same relative
   // order as we walk it. But LoopInfo stores the top level loops in reverse
@@ -592,7 +590,7 @@ SmallVector<LoopT *, 4> LoopInfoBase<BlockT, LoopT>::getLoopsInPreorder() {
 
 template <class BlockT, class LoopT>
 SmallVector<LoopT *, 4>
-LoopInfoBase<BlockT, LoopT>::getLoopsInReverseSiblingPreorder() {
+LoopInfoBase<BlockT, LoopT>::getLoopsInReverseSiblingPreorder() const {
   SmallVector<LoopT *, 4> PreOrderLoops, PreOrderWorklist;
   // The outer-most loop actually goes into the result in the same relative
   // order as we walk it. LoopInfo stores the top level loops in reverse

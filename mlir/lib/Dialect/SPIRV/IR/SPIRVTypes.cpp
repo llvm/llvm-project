@@ -14,7 +14,6 @@
 #include "mlir/Dialect/SPIRV/IR/SPIRVDialect.h"
 #include "mlir/IR/Attributes.h"
 #include "mlir/IR/BuiltinTypes.h"
-#include "mlir/IR/Identifier.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/TypeSwitch.h"
 
@@ -550,14 +549,17 @@ void ScalarType::getCapabilities(
       static const Capability caps[] = {Capability::cap8};                     \
       ArrayRef<Capability> ref(caps, llvm::array_lengthof(caps));              \
       capabilities.push_back(ref);                                             \
-    } else if (bitwidth == 16) {                                               \
+      return;                                                                  \
+    }                                                                          \
+    if (bitwidth == 16) {                                                      \
       static const Capability caps[] = {Capability::cap16};                    \
       ArrayRef<Capability> ref(caps, llvm::array_lengthof(caps));              \
       capabilities.push_back(ref);                                             \
+      return;                                                                  \
     }                                                                          \
-    /* No requirements for other bitwidths */                                  \
-    return;                                                                    \
-  }
+    /* For 64-bit integers/floats, Int64/Float64 enables support for all */    \
+    /* storage classes. Fall through to the next section. */                   \
+  } break
 
   // This part only handles the cases where special bitwidths appearing in
   // interface storage classes.
@@ -574,8 +576,9 @@ void ScalarType::getCapabilities(
         static const Capability caps[] = {Capability::StorageInputOutput16};
         ArrayRef<Capability> ref(caps, llvm::array_lengthof(caps));
         capabilities.push_back(ref);
+        return;
       }
-      return;
+      break;
     }
     default:
       break;
@@ -595,22 +598,22 @@ void ScalarType::getCapabilities(
 
   if (auto intType = dyn_cast<IntegerType>()) {
     switch (bitwidth) {
-    case 32:
-    case 1:
-      break;
       WIDTH_CASE(Int, 8);
       WIDTH_CASE(Int, 16);
       WIDTH_CASE(Int, 64);
+    case 1:
+    case 32:
+      break;
     default:
       llvm_unreachable("invalid bitwidth to getCapabilities");
     }
   } else {
     assert(isa<FloatType>());
     switch (bitwidth) {
-    case 32:
-      break;
       WIDTH_CASE(Float, 16);
       WIDTH_CASE(Float, 64);
+    case 32:
+      break;
     default:
       llvm_unreachable("invalid bitwidth to getCapabilities");
     }
@@ -774,7 +777,7 @@ struct spirv::detail::StructTypeStorage : public TypeStorage {
   /// in order to mutate the storage object providing the actual content.
   StructTypeStorage(StringRef identifier)
       : memberTypesAndIsBodySet(nullptr, false), offsetInfo(nullptr),
-        numMemberDecorations(0), memberDecorationsInfo(nullptr),
+        numMembers(0), numMemberDecorations(0), memberDecorationsInfo(nullptr),
         identifier(identifier) {}
 
   /// Construct a storage object for a literal struct type. A struct type

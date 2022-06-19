@@ -82,6 +82,7 @@ public:
     return empty() ? BlockArgListType() : front().getArguments();
   }
 
+  /// Returns the argument types of the first block within the region.
   ValueTypeRange<BlockArgListType> getArgumentTypes();
 
   using args_iterator = BlockArgListType::iterator;
@@ -94,21 +95,26 @@ public:
   bool args_empty() { return getArguments().empty(); }
 
   /// Add one value to the argument list.
-  BlockArgument addArgument(Type type) { return front().addArgument(type); }
+  BlockArgument addArgument(Type type, Location loc) {
+    return front().addArgument(type, loc);
+  }
 
   /// Insert one value to the position in the argument list indicated by the
   /// given iterator. The existing arguments are shifted. The block is expected
   /// not to have predecessors.
-  BlockArgument insertArgument(args_iterator it, Type type) {
-    return front().insertArgument(it, type);
+  BlockArgument insertArgument(args_iterator it, Type type, Location loc) {
+    return front().insertArgument(it, type, loc);
   }
 
   /// Add one argument to the argument list for each type specified in the list.
-  iterator_range<args_iterator> addArguments(TypeRange types);
+  /// `locs` contains the locations for each of the new arguments, and must be
+  /// of equal size to `types`.
+  iterator_range<args_iterator> addArguments(TypeRange types,
+                                             ArrayRef<Location> locs);
 
   /// Add one value to the argument list at the specified position.
-  BlockArgument insertArgument(unsigned index, Type type) {
-    return front().insertArgument(index, type);
+  BlockArgument insertArgument(unsigned index, Type type, Location loc) {
+    return front().insertArgument(index, type, loc);
   }
 
   /// Erase the argument at 'index' and remove it from the argument list.
@@ -221,6 +227,11 @@ public:
   /// cloned blocks are appended to the back of dest. If the mapper
   /// contains entries for block arguments, these arguments are not included
   /// in the respective cloned block.
+  ///
+  /// Calling this method from multiple threads is generally safe if through the
+  /// process of cloning, no new uses of 'Value's from outside the region are
+  /// created. Using the mapper, it is possible to avoid adding uses to outside
+  /// operands by remapping them to 'Value's owned by the caller thread.
   void cloneInto(Region *dest, BlockAndValueMapping &mapper);
   /// Clone this region into 'dest' before the given position in 'dest'.
   void cloneInto(Region *dest, Region::iterator destPos,
@@ -229,6 +240,7 @@ public:
   /// Takes body of another region (that region will have no body after this
   /// operation completes).  The current body of this region is cleared.
   void takeBody(Region &other) {
+    dropAllReferences();
     blocks.clear();
     blocks.splice(blocks.end(), other.getBlocks());
   }
@@ -296,7 +308,7 @@ public:
 
   /// Displays the CFG in a window. This is for use from the debugger and
   /// depends on Graphviz to generate the graph.
-  /// This function is defined in ViewRegionGraph and only works with that
+  /// This function is defined in ViewOpGraph.cpp and only works with that
   /// target linked.
   void viewGraph(const Twine &regionName);
   void viewGraph();
@@ -315,11 +327,14 @@ private:
 /// parameter.
 class RegionRange
     : public llvm::detail::indexed_accessor_range_base<
-          RegionRange, PointerUnion<Region *, const std::unique_ptr<Region> *>,
+          RegionRange,
+          PointerUnion<Region *, const std::unique_ptr<Region> *, Region **>,
           Region *, Region *, Region *> {
-  /// The type representing the owner of this range. This is either a list of
-  /// values, operands, or results.
-  using OwnerT = PointerUnion<Region *, const std::unique_ptr<Region> *>;
+  /// The type representing the owner of this range. This is either an owning
+  /// list of regions, a list of region unique pointers, or a list of region
+  /// pointers.
+  using OwnerT =
+      PointerUnion<Region *, const std::unique_ptr<Region> *, Region **>;
 
 public:
   using RangeBaseT::RangeBaseT;
@@ -332,7 +347,14 @@ public:
   RegionRange(Arg &&arg)
       : RegionRange(ArrayRef<std::unique_ptr<Region>>(std::forward<Arg>(arg))) {
   }
+  template <typename Arg>
+  RegionRange(
+      Arg &&arg,
+      typename std::enable_if_t<
+          std::is_constructible<ArrayRef<Region *>, Arg>::value> * = nullptr)
+      : RegionRange(ArrayRef<Region *>(std::forward<Arg>(arg))) {}
   RegionRange(ArrayRef<std::unique_ptr<Region>> regions);
+  RegionRange(ArrayRef<Region *> regions);
 
 private:
   /// See `llvm::detail::indexed_accessor_range_base` for details.
@@ -344,6 +366,6 @@ private:
   friend RangeBaseT;
 };
 
-} // end namespace mlir
+} // namespace mlir
 
 #endif // MLIR_IR_REGION_H

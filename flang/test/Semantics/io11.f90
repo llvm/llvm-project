@@ -1,5 +1,4 @@
-! RUN: %S/test_errors.sh %s %t %flang_fc1
-! REQUIRES: shell
+! RUN: %python %S/test_errors.py %s %flang_fc1
 
 ! Tests for defined input/output.  See 12.6.4.8 and 15.4.3.2, and C777
 module m1
@@ -435,7 +434,6 @@ contains
     integer,intent(out) :: iostat
     character(*),intent(inout) :: iomsg
     read(unit,iotype,iostat=iostat,iomsg=iomsg) dtv%c
-    print *,v_list
   end subroutine
   !ERROR: Derived type 't' already has defined input/output procedure 'READUNFORMATTED'
   subroutine unformattedReadProc(dtv,unit,iostat,iomsg)
@@ -444,7 +442,6 @@ contains
     integer,intent(out) :: iostat
     character(*),intent(inout) :: iomsg
     read(unit,iotype,iostat=iostat,iomsg=iomsg) dtv%c
-    print *,v_list
   end subroutine
 end module
 
@@ -470,7 +467,6 @@ contains
     integer,intent(out) :: iostat
     character(*),intent(inout) :: iomsg
     read(unit,iotype,iostat=iostat,iomsg=iomsg) dtv%c
-    print *,v_list
   end subroutine
   subroutine unformattedWriteProc(dtv,unit,iostat,iomsg)
     class(t),intent(in) :: dtv
@@ -478,7 +474,6 @@ contains
     integer,intent(out) :: iostat
     character(*),intent(inout) :: iomsg
     write(unit,iotype,iostat=iostat,iomsg=iomsg) dtv%c
-    print *,v_list
   end subroutine
 end module
 
@@ -503,7 +498,6 @@ contains
     integer,intent(out) :: iostat
     character(*),intent(inout) :: iomsg
     read(unit,iotype,iostat=iostat,iomsg=iomsg) dtv%c
-    print *,v_list
   end subroutine
   !ERROR: Derived type 't' already has defined input/output procedure 'READUNFORMATTED'
   subroutine unformattedReadProc1(dtv,unit,iostat,iomsg)
@@ -512,7 +506,6 @@ contains
     integer,intent(out) :: iostat
     character(*),intent(inout) :: iomsg
     read(unit,iotype,iostat=iostat,iomsg=iomsg) dtv%c
-    print *,v_list
   end subroutine
 end module
 
@@ -537,7 +530,6 @@ contains
     integer,intent(out) :: iostat
     character(*),intent(inout) :: iomsg
     read(unit,iotype,iostat=iostat,iomsg=iomsg) dtv%c
-    print *,v_list
   end subroutine
   subroutine unformattedReadProc1(dtv,unit,iostat,iomsg)
     class(t(3)),intent(inout) :: dtv
@@ -545,7 +537,6 @@ contains
     integer,intent(out) :: iostat
     character(*),intent(inout) :: iomsg
     read(unit,iotype,iostat=iostat,iomsg=iomsg) dtv%c
-    print *,v_list
   end subroutine
 end module
 
@@ -570,7 +561,6 @@ contains
     integer,intent(out) :: iostat
     character(*),intent(inout) :: iomsg
     read(unit,iotype,iostat=iostat,iomsg=iomsg) dtv%c
-    print *,v_list
   end subroutine
   subroutine unformattedReadProc1(dtv,unit,iostat,iomsg)
     class(t(3)),intent(inout) :: dtv
@@ -578,7 +568,6 @@ contains
     integer,intent(out) :: iostat
     character(*),intent(inout) :: iomsg
     read(unit,iotype,iostat=iostat,iomsg=iomsg) dtv%c
-    print *,v_list
   end subroutine
 end module
 
@@ -603,7 +592,6 @@ contains
     integer,intent(out) :: iostat
     character(*),intent(inout) :: iomsg
     read(unit,iotype,iostat=iostat,iomsg=iomsg) dtv%c
-    print *,v_list
   end subroutine
   !ERROR: Derived type 't' already has defined input/output procedure 'READUNFORMATTED'
   subroutine unformattedReadProc1(dtv,unit,iostat,iomsg)
@@ -612,6 +600,38 @@ contains
     integer,intent(out) :: iostat
     character(*),intent(inout) :: iomsg
     read(unit,iotype,iostat=iostat,iomsg=iomsg) dtv%c
-    print *,v_list
   end subroutine
 end module
+
+module m25a
+  ! Test against false error when two defined I/O procedures exist
+  ! for the same type but are not both visible in the same scope.
+  type t
+    integer c
+  end type
+  interface read(unformatted)
+    module procedure unformattedReadProc1
+  end interface
+ contains
+  subroutine unformattedReadProc1(dtv,unit,iostat,iomsg)
+    class(t),intent(inout) :: dtv
+    integer,intent(in) :: unit
+    integer,intent(out) :: iostat
+    character(*),intent(inout) :: iomsg
+    read(unit,iotype,iostat=iostat,iomsg=iomsg) dtv%c
+  end subroutine
+end module
+subroutine m25b
+  use m25a, only: t
+  interface read(unformatted)
+    procedure unformattedReadProc2
+  end interface
+ contains
+  subroutine unformattedReadProc2(dtv,unit,iostat,iomsg)
+    class(t),intent(inout) :: dtv
+    integer,intent(in) :: unit
+    integer,intent(out) :: iostat
+    character(*),intent(inout) :: iomsg
+    read(unit,iotype,iostat=iostat,iomsg=iomsg) dtv%c
+  end subroutine
+end subroutine

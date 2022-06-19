@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 %s -fno-rtti -triple=i386-pc-win32 -emit-llvm -o %t.ll -fdump-vtable-layouts >%t
+// RUN: %clang_cc1 -no-opaque-pointers %s -fno-rtti -triple=i386-pc-win32 -emit-llvm -o %t.ll -fdump-vtable-layouts >%t
 // RUN: FileCheck %s < %t
 // RUN: FileCheck --check-prefix=BITCODE %s < %t.ll
 
@@ -158,7 +158,7 @@ struct C : public A, public B {
 void ffun(C &c) {
   // BITCODE: [[THIS1:%.+]] = bitcast %"struct.test4::C"* {{.*}} to i8*
   // BITCODE: [[THIS2:%.+]] = getelementptr inbounds i8, i8* [[THIS1]], i32 4
-  // BITCODE: call x86_thiscallcc {{.*}}(i8* [[THIS2]])
+  // BITCODE: call x86_thiscallcc {{.*}}(i8* noundef [[THIS2]])
   c.bar();
 }
 
@@ -166,7 +166,7 @@ void ffun(C &c) {
 void fop(C &c) {
   // BITCODE: [[THIS1:%.+]] = bitcast %"struct.test4::C"* {{.*}} to i8*
   // BITCODE: [[THIS2:%.+]] = getelementptr inbounds i8, i8* [[THIS1]], i32 4
-  // BITCODE: call x86_thiscallcc {{.*}}(i8* [[THIS2]])
+  // BITCODE: call x86_thiscallcc {{.*}}(i8* noundef [[THIS2]])
   -c;
 }
 

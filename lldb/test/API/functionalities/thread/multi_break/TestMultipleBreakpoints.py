@@ -12,8 +12,6 @@ from lldbsuite.test import lldbutil
 
 class MultipleBreakpointTestCase(TestBase):
 
-    mydir = TestBase.compute_mydir(__file__)
-
     def setUp(self):
         # Call super's setUp().
         TestBase.setUp(self)
@@ -33,7 +31,7 @@ class MultipleBreakpointTestCase(TestBase):
     @expectedFailureNetBSD
     def test(self):
         """Test simultaneous breakpoints in multiple threads."""
-        self.build(dictionary=self.getBuildFlags())
+        self.build()
         exe = self.getBuildArtifact("a.out")
         self.runCmd("file " + exe, CURRENT_EXECUTABLE_SET)
 

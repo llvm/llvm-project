@@ -33,9 +33,9 @@ module m
     type(t1) :: x(:)
   end subroutine
   impure elemental subroutine t2fe(x)
-    type(t2) :: x
+    type(t2), intent(in out) :: x
   end subroutine
-  impure elemental subroutine t3far(x)
+  subroutine t3far(x)
     type(t3) :: x(..)
   end subroutine
 end module

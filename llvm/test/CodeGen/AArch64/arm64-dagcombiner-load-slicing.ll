@@ -7,8 +7,8 @@
 
 ; CHECK-LABEL: @test
 ; CHECK: add [[BASE:x[0-9]+]], x0, x1, lsl #3
-; CHECK: ldp [[CPLX1_I:s[0-9]+]], [[CPLX1_R:s[0-9]+]], {{\[}}[[BASE]]]
-; CHECK: ldp [[CPLX2_I:s[0-9]+]], [[CPLX2_R:s[0-9]+]], {{\[}}[[BASE]], #64]
+; CHECK: ldp [[CPLX1_I:s[0-9]+]], [[CPLX1_R:s[0-9]+]], [[[BASE]]]
+; CHECK: ldp [[CPLX2_I:s[0-9]+]], [[CPLX2_R:s[0-9]+]], [[[BASE]], #64]
 ; CHECK: fadd {{s[0-9]+}}, [[CPLX2_I]], [[CPLX1_I]]
 ; CHECK: fadd {{s[0-9]+}}, [[CPLX2_R]], [[CPLX1_R]]
 ; CHECK: ret
@@ -39,8 +39,8 @@ entry:
 
 ; CHECK-LABEL: @test_int
 ; CHECK: add [[BASE:x[0-9]+]], x0, x1, lsl #3
-; CHECK: ldp [[CPLX1_I:w[0-9]+]], [[CPLX1_R:w[0-9]+]], {{\[}}[[BASE]]]
-; CHECK: ldp [[CPLX2_I:w[0-9]+]], [[CPLX2_R:w[0-9]+]], {{\[}}[[BASE]], #64]
+; CHECK: ldp [[CPLX1_I:w[0-9]+]], [[CPLX1_R:w[0-9]+]], [[[BASE]]]
+; CHECK: ldp [[CPLX2_I:w[0-9]+]], [[CPLX2_R:w[0-9]+]], [[[BASE]], #64]
 ; CHECK: add {{w[0-9]+}}, [[CPLX2_I]], [[CPLX1_I]]
 ; CHECK: add {{w[0-9]+}}, [[CPLX2_R]], [[CPLX1_R]]
 ; CHECK: ret
@@ -71,8 +71,8 @@ entry:
 
 ; CHECK-LABEL: @test_long
 ; CHECK: add [[BASE:x[0-9]+]], x0, x1, lsl #4
-; CHECK: ldp [[CPLX1_I:x[0-9]+]], [[CPLX1_R:x[0-9]+]], {{\[}}[[BASE]]]
-; CHECK: ldp [[CPLX2_I:x[0-9]+]], [[CPLX2_R:x[0-9]+]], {{\[}}[[BASE]], #128]
+; CHECK: ldp [[CPLX1_I:x[0-9]+]], [[CPLX1_R:x[0-9]+]], [[[BASE]]]
+; CHECK: ldp [[CPLX2_I:x[0-9]+]], [[CPLX2_R:x[0-9]+]], [[[BASE]], #128]
 ; CHECK: add {{x[0-9]+}}, [[CPLX2_I]], [[CPLX1_I]]
 ; CHECK: add {{x[0-9]+}}, [[CPLX2_R]], [[CPLX1_R]]
 ; CHECK: ret

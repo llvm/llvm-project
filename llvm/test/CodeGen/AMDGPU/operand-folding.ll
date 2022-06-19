@@ -1,4 +1,5 @@
 ; RUN: llc -march=amdgcn -mcpu=tahiti -verify-machineinstrs < %s | FileCheck %s
+; RUN: llc -march=amdgcn -mcpu=tahiti -verify-machineinstrs -early-live-intervals < %s | FileCheck %s
 
 ; CHECK-LABEL: {{^}}fold_sgpr:
 ; CHECK: v_add_i32_e32 v{{[0-9]+}}, vcc, s
@@ -44,7 +45,7 @@ endif:
 ; CHECK-DAG: s_addc_u32 [[HI:s[0-9]+]], s{{[0-9]+}}, 0
 ; CHECK-DAG: v_mov_b32_e32 v[[VLO:[0-9]+]], [[LO]]
 ; CHECK-DAG: v_mov_b32_e32 v[[VHI:[0-9]+]], [[HI]]
-; CHECK: buffer_store_dwordx2 v{{\[}}[[VLO]]:[[VHI]]{{\]}},
+; CHECK: buffer_store_dwordx2 v[[[VLO]]:[[VHI]]],
 
 define amdgpu_kernel void @fold_64bit_constant_add(i64 addrspace(1)* %out, i32 %cmp, i64 %val) #1 {
 entry:
@@ -88,11 +89,10 @@ entry:
   ret void
 }
 ; CHECK-LABEL: {{^}}vector_imm:
-; CHECK: s_movk_i32 [[IMM:s[0-9]+]], 0x64
-; CHECK: v_xor_b32_e32 v{{[0-9]}}, [[IMM]], v{{[0-9]}}
-; CHECK: v_xor_b32_e32 v{{[0-9]}}, [[IMM]], v{{[0-9]}}
-; CHECK: v_xor_b32_e32 v{{[0-9]}}, [[IMM]], v{{[0-9]}}
-; CHECK: v_xor_b32_e32 v{{[0-9]}}, [[IMM]], v{{[0-9]}}
+; CHECK: v_xor_b32_e32 v{{[0-9]}}, 0x64, v{{[0-9]}}
+; CHECK: v_xor_b32_e32 v{{[0-9]}}, 0x64, v{{[0-9]}}
+; CHECK: v_xor_b32_e32 v{{[0-9]}}, 0x64, v{{[0-9]}}
+; CHECK: v_xor_b32_e32 v{{[0-9]}}, 0x64, v{{[0-9]}}
 
 define amdgpu_kernel void @vector_imm(<4 x i32> addrspace(1)* %out) #1 {
 entry:
@@ -111,7 +111,7 @@ entry:
 
 ; A subregister use operand should not be tied.
 ; CHECK-LABEL: {{^}}no_fold_tied_subregister:
-; CHECK: buffer_load_dwordx2 v{{\[}}[[LO:[0-9]+]]:[[HI:[0-9]+]]{{\]}}
+; CHECK: buffer_load_dwordx2 v[[[LO:[0-9]+]]:[[HI:[0-9]+]]]
 ; CHECK: v_mac_f32_e32 v[[LO]], 0x41200000, v[[HI]]
 ; CHECK: buffer_store_dword v[[LO]]
 define amdgpu_kernel void @no_fold_tied_subregister() #1 {

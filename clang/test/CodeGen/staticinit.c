@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple i386-pc-linux-gnu -emit-llvm -o %t %s
+// RUN: %clang_cc1 -no-opaque-pointers -triple i386-pc-linux-gnu -emit-llvm -o %t %s
 // RUN: grep "g.b = internal global i8. getelementptr" %t
 
 struct AStruct { 
@@ -7,7 +7,7 @@ struct AStruct {
   double d;
 };
 
-void f() {
+void f(void) {
   static int i = 42;
   static int is[] = { 1, 2, 3, 4 };
   static char* str = "forty-two";
@@ -15,7 +15,7 @@ void f() {
   static struct AStruct myStruct = { 1, "two", 3.0 };
 }
 
-void g() {
+void g(void) {
   static char a[10];
   static char *b = a;
 }

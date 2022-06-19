@@ -85,16 +85,16 @@ define dso_local void @bar1() {
 ; CHECK-LABEL: bar1:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    adr x8, lsrc
-; CHECK-NEXT:    ldrb w8, [x8]
 ; CHECK-NEXT:    adr x9, ldst
+; CHECK-NEXT:    ldrb w8, [x8]
 ; CHECK-NEXT:    strb w8, [x9]
 ; CHECK-NEXT:    ret
 ;
 ; CHECK-GLOBISEL-LABEL: bar1:
 ; CHECK-GLOBISEL:       // %bb.0: // %entry
 ; CHECK-GLOBISEL-NEXT:    adr x8, lsrc
-; CHECK-GLOBISEL-NEXT:    ldrb w8, [x8]
 ; CHECK-GLOBISEL-NEXT:    adr x9, ldst
+; CHECK-GLOBISEL-NEXT:    ldrb w8, [x8]
 ; CHECK-GLOBISEL-NEXT:    strb w8, [x9]
 ; CHECK-GLOBISEL-NEXT:    ret
 entry:
@@ -128,8 +128,8 @@ define dso_local void @bar3() {
 ; CHECK-LABEL: bar3:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    adr x8, lsrc
-; CHECK-NEXT:    ldrb w8, [x8]
 ; CHECK-NEXT:    ldr x9, lptr
+; CHECK-NEXT:    ldrb w8, [x8]
 ; CHECK-NEXT:    strb w8, [x9]
 ; CHECK-NEXT:    ret
 ;
@@ -156,16 +156,16 @@ define dso_local void @baz1() {
 ; CHECK-LABEL: baz1:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    adr x8, lbsrc
-; CHECK-NEXT:    ldrb w8, [x8]
 ; CHECK-NEXT:    adr x9, lbdst
+; CHECK-NEXT:    ldrb w8, [x8]
 ; CHECK-NEXT:    strb w8, [x9]
 ; CHECK-NEXT:    ret
 ;
 ; CHECK-GLOBISEL-LABEL: baz1:
 ; CHECK-GLOBISEL:       // %bb.0: // %entry
 ; CHECK-GLOBISEL-NEXT:    adr x8, lbsrc
-; CHECK-GLOBISEL-NEXT:    ldrb w8, [x8]
 ; CHECK-GLOBISEL-NEXT:    adr x9, lbdst
+; CHECK-GLOBISEL-NEXT:    ldrb w8, [x8]
 ; CHECK-GLOBISEL-NEXT:    strb w8, [x9]
 ; CHECK-GLOBISEL-NEXT:    ret
 entry:
@@ -199,8 +199,8 @@ define dso_local void @baz3() {
 ; CHECK-LABEL: baz3:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    adr x8, lbsrc
-; CHECK-NEXT:    ldrb w8, [x8]
 ; CHECK-NEXT:    ldr x9, lptr
+; CHECK-NEXT:    ldrb w8, [x8]
 ; CHECK-NEXT:    strb w8, [x9]
 ; CHECK-NEXT:    ret
 ;

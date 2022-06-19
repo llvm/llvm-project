@@ -1,6 +1,6 @@
 ;; This test checks whether DW_OP_consts is emitted correctly.
 
-; RUN: llc %s -filetype=obj -o - | llvm-dwarfdump - | FileCheck %s
+; RUN: llc %s -mtriple=x86_64 -filetype=obj -o - | llvm-dwarfdump - | FileCheck %s
 
 ;; Test whether DW_AT_data_location is generated.
 ; CHECK-LABEL:  DW_TAG_array_type

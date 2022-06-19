@@ -27,6 +27,10 @@
 #include "llvm/Support/raw_ostream.h"
 #include <cassert>
 
+#ifdef EXPENSIVE_CHECKS
+#include "llvm/IR/StructuralHash.h"
+#endif
+
 using namespace llvm;
 
 #define DEBUG_TYPE "ir"
@@ -131,6 +135,12 @@ void Pass::print(raw_ostream &OS, const Module *) const {
 LLVM_DUMP_METHOD void Pass::dump() const {
   print(dbgs(), nullptr);
 }
+#endif
+
+#ifdef EXPENSIVE_CHECKS
+uint64_t Pass::structuralHash(Module &M) const { return StructuralHash(M); }
+
+uint64_t Pass::structuralHash(Function &F) const { return StructuralHash(F); }
 #endif
 
 //===----------------------------------------------------------------------===//

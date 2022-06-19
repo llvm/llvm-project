@@ -33,9 +33,9 @@ define i64 @func64(i64 %x, i64 %y, i64 %z) nounwind {
 define i16 @func16(i16 %x, i16 %y, i16 %z) nounwind {
 ; CHECK-LABEL: func16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    and w8, w0, #0xffff
-; CHECK-NEXT:    mul w9, w1, w2
-; CHECK-NEXT:    subs w8, w8, w9, uxth
+; CHECK-NEXT:    mul w8, w1, w2
+; CHECK-NEXT:    and w9, w0, #0xffff
+; CHECK-NEXT:    subs w8, w9, w8, uxth
 ; CHECK-NEXT:    csel w0, wzr, w8, lo
 ; CHECK-NEXT:    ret
   %a = mul i16 %y, %z
@@ -46,9 +46,9 @@ define i16 @func16(i16 %x, i16 %y, i16 %z) nounwind {
 define i8 @func8(i8 %x, i8 %y, i8 %z) nounwind {
 ; CHECK-LABEL: func8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    and w8, w0, #0xff
-; CHECK-NEXT:    mul w9, w1, w2
-; CHECK-NEXT:    subs w8, w8, w9, uxtb
+; CHECK-NEXT:    mul w8, w1, w2
+; CHECK-NEXT:    and w9, w0, #0xff
+; CHECK-NEXT:    subs w8, w9, w8, uxtb
 ; CHECK-NEXT:    csel w0, wzr, w8, lo
 ; CHECK-NEXT:    ret
   %a = mul i8 %y, %z
@@ -59,10 +59,10 @@ define i8 @func8(i8 %x, i8 %y, i8 %z) nounwind {
 define i4 @func4(i4 %x, i4 %y, i4 %z) nounwind {
 ; CHECK-LABEL: func4:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mul w9, w1, w2
-; CHECK-NEXT:    and w8, w0, #0xf
-; CHECK-NEXT:    and w9, w9, #0xf
-; CHECK-NEXT:    subs w8, w8, w9
+; CHECK-NEXT:    mul w8, w1, w2
+; CHECK-NEXT:    and w9, w0, #0xf
+; CHECK-NEXT:    and w8, w8, #0xf
+; CHECK-NEXT:    subs w8, w9, w8
 ; CHECK-NEXT:    csel w0, wzr, w8, lo
 ; CHECK-NEXT:    ret
   %a = mul i4 %y, %z

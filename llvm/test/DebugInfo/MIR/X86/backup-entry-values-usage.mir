@@ -1,0 +1,107 @@
+# RUN: llc -run-pass=livedebugvalues -emit-call-site-info -march=x86-64 -o - \
+# RUN:    %s  -experimental-debug-variable-locations=false | FileCheck %s
+
+## Test from PR47628.
+## Compiled from source:
+##  extern void bar(int);
+##  extern int side_effect, value;
+##  int foo(int param) {
+##    side_effect = param;
+##    param = value;
+##    bar(param);
+##    return 0;
+##  }
+## Using command:
+## $ clang m.c -O1 -g -c -mllvm -stop-before=livedebugvalues
+
+## Confirm that Backup Entry Value is not used for modified parameter "param".
+
+# CHECK: ![[PARAM:.*]] = !DILocalVariable(name: "param"
+# CHECK: renamable $edi = MOV32rm $rip, 1, $noreg
+# CHECK-NOT: DBG_VALUE $edi, $noreg, ![[PARAM]], !DIExpression(DW_OP_LLVM_entry_value, 1)
+# CHECK-NEXT: DBG_VALUE $edi, $noreg, ![[PARAM]], !DIExpression()
+# CHECK-NEXT: CALL64pcrel32 @bar
+# CHECK-NOT: DBG_VALUE $edi, $noreg, ![[PARAM]], !DIExpression(DW_OP_LLVM_entry_value, 1)
+
+--- |
+  ; ModuleID = 'm.c'
+  source_filename = "m.c"
+  target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
+  target triple = "x86_64-unknown-linux-gnu"
+  
+  @side_effect = external dso_local local_unnamed_addr global i32, align 4
+  @value = external dso_local local_unnamed_addr global i32, align 4
+  
+  ; Function Attrs: nounwind uwtable
+  define dso_local i32 @foo(i32 %param) local_unnamed_addr !dbg !8 {
+  entry:
+    call void @llvm.dbg.value(metadata i32 %param, metadata !13, metadata !DIExpression()), !dbg !14
+    store i32 %param, i32* @side_effect, align 4, !dbg !15, !tbaa !16
+    %0 = load i32, i32* @value, align 4, !dbg !20, !tbaa !16
+    call void @llvm.dbg.value(metadata i32 %0, metadata !13, metadata !DIExpression()), !dbg !14
+    call void @bar(i32 %0), !dbg !21
+    ret i32 0, !dbg !22
+  }
+  
+  declare !dbg !23 dso_local void @bar(i32) local_unnamed_addr
+  
+  ; Function Attrs: nofree nosync nounwind readnone speculatable willreturn
+  declare void @llvm.dbg.value(metadata, metadata, metadata)
+  
+  !llvm.dbg.cu = !{!0}
+  !llvm.module.flags = !{!3, !4, !5, !6}
+  !llvm.ident = !{!7}
+  
+  !0 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1, producer: "clang version 13.0.0", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, enums: !2, splitDebugInlining: false, nameTableKind: None)
+  !1 = !DIFile(filename: "m.c", directory: "/dir")
+  !2 = !{}
+  !3 = !{i32 7, !"Dwarf Version", i32 4}
+  !4 = !{i32 2, !"Debug Info Version", i32 3}
+  !5 = !{i32 1, !"wchar_size", i32 4}
+  !6 = !{i32 7, !"uwtable", i32 1}
+  !7 = !{!"clang version 13.0.0"}
+  !8 = distinct !DISubprogram(name: "foo", scope: !1, file: !1, line: 4, type: !9, scopeLine: 4, flags: DIFlagPrototyped | DIFlagAllCallsDescribed, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !0, retainedNodes: !12)
+  !9 = !DISubroutineType(types: !10)
+  !10 = !{!11, !11}
+  !11 = !DIBasicType(name: "int", size: 32, encoding: DW_ATE_signed)
+  !12 = !{!13}
+  !13 = !DILocalVariable(name: "param", arg: 1, scope: !8, file: !1, line: 4, type: !11)
+  !14 = !DILocation(line: 0, scope: !8)
+  !15 = !DILocation(line: 5, column: 17, scope: !8)
+  !16 = !{!17, !17, i64 0}
+  !17 = !{!"int", !18, i64 0}
+  !18 = !{!"omnipotent char", !19, i64 0}
+  !19 = !{!"Simple C/C++ TBAA"}
+  !20 = !DILocation(line: 6, column: 13, scope: !8)
+  !21 = !DILocation(line: 7, column: 5, scope: !8)
+  !22 = !DILocation(line: 8, column: 5, scope: !8)
+  !23 = !DISubprogram(name: "bar", scope: !1, file: !1, line: 1, type: !24, flags: DIFlagPrototyped, spFlags: DISPFlagOptimized, retainedNodes: !2)
+  !24 = !DISubroutineType(types: !25)
+  !25 = !{null, !11}
+
+...
+---
+name:            foo
+alignment:       16
+liveins:
+  - { reg: '$edi', virtual-reg: '' }
+callSites:
+  - { bb: 0, offset: 6, fwdArgRegs: 
+      - { arg: 0, reg: '$edi' } }
+body:             |
+  bb.0.entry:
+    liveins: $edi
+  
+    DBG_VALUE $edi, $noreg, !13, !DIExpression(), debug-location !14
+    frame-setup PUSH64r undef $rax, implicit-def $rsp, implicit $rsp
+    CFI_INSTRUCTION def_cfa_offset 16
+    MOV32mr $rip, 1, $noreg, @side_effect, $noreg, killed renamable $edi, debug-location !15 :: (store 4 into @side_effect, !tbaa !16)
+    renamable $edi = MOV32rm $rip, 1, $noreg, @value, $noreg, debug-location !20 :: (dereferenceable load 4 from @value, !tbaa !16)
+    DBG_VALUE $edi, $noreg, !13, !DIExpression(), debug-location !14
+    CALL64pcrel32 @bar, csr_64, implicit $rsp, implicit $ssp, implicit $edi, implicit-def $rsp, implicit-def $ssp, debug-location !21
+    $eax = XOR32rr undef $eax, undef $eax, implicit-def dead $eflags, debug-location !22
+    $rcx = frame-destroy POP64r implicit-def $rsp, implicit $rsp, debug-location !22
+    CFI_INSTRUCTION def_cfa_offset 8, debug-location !22
+    RET64 killed $eax, debug-location !22
+
+...

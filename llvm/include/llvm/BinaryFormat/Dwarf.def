@@ -248,6 +248,9 @@ HANDLE_DW_TAG(0x5103, ALTIUM_rev_carry_type, 0, ALTIUM, DW_KIND_NONE)
 // M16 __rom qualifier
 HANDLE_DW_TAG(0x5111, ALTIUM_rom, 0, ALTIUM, DW_KIND_NONE)
 
+// LLVM
+HANDLE_DW_TAG(0x6000, LLVM_annotation, 0, LLVM, DW_KIND_NONE)
+
 // Green Hills.
 HANDLE_DW_TAG(0x8004, GHS_namespace, 0, GHS, DW_KIND_NONE)
 HANDLE_DW_TAG(0x8005, GHS_using_namespace, 0, GHS, DW_KIND_NONE)
@@ -492,7 +495,8 @@ HANDLE_DW_AT(0x2133, GNU_addr_base, 0, GNU)
 HANDLE_DW_AT(0x2134, GNU_pubnames, 0, GNU)
 HANDLE_DW_AT(0x2135, GNU_pubtypes, 0, GNU)
 HANDLE_DW_AT(0x2136, GNU_discriminator, 0, GNU)
-HANDLE_DW_AT(0x2137, GNU_entry_view, 0, GNU)
+HANDLE_DW_AT(0x2137, GNU_locviews, 0, GNU)
+HANDLE_DW_AT(0x2138, GNU_entry_view, 0, GNU)
 
 HANDLE_DW_AT(0x2201, SUN_template, 0, SUN)
 // Conflicting:

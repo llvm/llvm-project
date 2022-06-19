@@ -19,6 +19,7 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/CodeGen/CallingConvLower.h"
 #include "llvm/CodeGen/MIRYamlMapping.h"
+#include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/IR/Function.h"
 #include "llvm/MC/MCLinkerOptimizationHint.h"
@@ -36,7 +37,7 @@ class MachineInstr;
 /// contains private AArch64-specific information for each MachineFunction.
 class AArch64FunctionInfo final : public MachineFunctionInfo {
   /// Backreference to the machine function.
-  MachineFunction &MF;
+  MachineFunction *MF;
 
   /// Number of bytes of arguments this function has on the stack. If the callee
   /// is expected to restore the argument stack this should be a multiple of 16,
@@ -115,7 +116,8 @@ class AArch64FunctionInfo final : public MachineFunctionInfo {
   /// SRetReturnReg - sret lowering includes returning the value of the
   /// returned struct in a register. This field holds the virtual register into
   /// which the sret argument is passed.
-  unsigned SRetReturnReg = 0;
+  Register SRetReturnReg;
+
   /// SVE stack size (for predicates and data vectors) are maintained here
   /// rather than in FrameInfo, as the placement and Stack IDs are target
   /// specific.
@@ -173,8 +175,21 @@ class AArch64FunctionInfo final : public MachineFunctionInfo {
   /// The stack slot where the Swift asynchronous context is stored.
   int SwiftAsyncContextFrameIdx = std::numeric_limits<int>::max();
 
+  bool IsMTETagged = false;
+
+  /// True if the function need unwind information.
+  mutable Optional<bool> NeedsDwarfUnwindInfo;
+
+  /// True if the function need asynchronous unwind information.
+  mutable Optional<bool> NeedsAsyncDwarfUnwindInfo;
+
 public:
   explicit AArch64FunctionInfo(MachineFunction &MF);
+
+  MachineFunctionInfo *
+  clone(BumpPtrAllocator &Allocator, MachineFunction &DestMF,
+        const DenseMap<MachineBasicBlock *, MachineBasicBlock *> &Src2DstMBB)
+      const override;
 
   void initializeBaseYamlFields(const yaml::AArch64FunctionInfo &YamlMFI);
 
@@ -395,6 +410,7 @@ public:
   bool shouldSignReturnAddress(bool SpillsLR) const;
 
   bool shouldSignWithBKey() const { return SignWithBKey; }
+  bool isMTETagged() const { return IsMTETagged; }
 
   bool branchTargetEnforcement() const { return BranchTargetEnforcement; }
 
@@ -407,6 +423,9 @@ public:
     SwiftAsyncContextFrameIdx = FI;
   }
   int getSwiftAsyncContextFrameIdx() const { return SwiftAsyncContextFrameIdx; }
+
+  bool needsDwarfUnwindInfo() const;
+  bool needsAsyncDwarfUnwindInfo() const;
 
 private:
   // Hold the lists of LOHs.

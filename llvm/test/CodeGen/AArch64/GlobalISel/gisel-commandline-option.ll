@@ -60,6 +60,10 @@
 ; ENABLED-O1-NEXT:  PreLegalizerCombiner
 ; VERIFY-O0-NEXT:  AArch64O0PreLegalizerCombiner
 ; VERIFY-NEXT:   Verify generated machine code
+; ENABLED-O1-NEXT: Basic Alias Analysis (stateless AA impl)
+; ENABLED-O1-NEXT: Function Alias Analysis Results 
+; ENABLED-O1-NEXT: LoadStoreOpt
+; ENABLED-O1-NEXT:  Analysis containing CSE Info
 ; VERIFY-O0-NEXT:  Analysis containing CSE Info
 ; ENABLED-NEXT:  Legalizer
 ; VERIFY-NEXT:   Verify generated machine code
@@ -67,7 +71,7 @@
 ; VERIFY-NEXT:   Verify generated machine code
 ; ENABLED-NEXT:  Localizer
 ; VERIFY-O0-NEXT:   Verify generated machine code
-; ENABLED-O1-NEXT: Analysis for ComputingKnownBits
+; ENABLED-NEXT: Analysis for ComputingKnownBits
 ; ENABLED-O1-NEXT: Lazy Branch Probability Analysis
 ; ENABLED-O1-NEXT: Lazy Block Frequency Analysis
 ; ENABLED-NEXT:  InstructionSelect

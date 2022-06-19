@@ -48,6 +48,7 @@ def CvtRN   : PatLeaf<(i32 0x5)>;
 def CvtRZ   : PatLeaf<(i32 0x6)>;
 def CvtRM   : PatLeaf<(i32 0x7)>;
 def CvtRP   : PatLeaf<(i32 0x8)>;
+def CvtRNA   : PatLeaf<(i32 0x9)>;
 
 def CvtNONE_FTZ : PatLeaf<(i32 0x10)>;
 def CvtRNI_FTZ  : PatLeaf<(i32 0x11)>;
@@ -61,6 +62,10 @@ def CvtRP_FTZ   : PatLeaf<(i32 0x18)>;
 
 def CvtSAT      : PatLeaf<(i32 0x20)>;
 def CvtSAT_FTZ  : PatLeaf<(i32 0x30)>;
+
+def CvtNONE_RELU   : PatLeaf<(i32 0x40)>;
+def CvtRN_RELU   : PatLeaf<(i32 0x45)>;
+def CvtRZ_RELU   : PatLeaf<(i32 0x46)>;
 
 def CvtMode : Operand<i32> {
   let PrintMethod = "printCvtMode";
@@ -140,6 +145,8 @@ def noHWROT32 : Predicate<"!Subtarget->hasHWROT32()">;
 def True : Predicate<"true">;
 
 def hasPTX31 : Predicate<"Subtarget->getPTXVersion() >= 31">;
+def hasPTX42 : Predicate<"Subtarget->getPTXVersion() >= 42">;
+def hasPTX43 : Predicate<"Subtarget->getPTXVersion() >= 43">;
 def hasPTX60 : Predicate<"Subtarget->getPTXVersion() >= 60">;
 def hasPTX61 : Predicate<"Subtarget->getPTXVersion() >= 61">;
 def hasPTX63 : Predicate<"Subtarget->getPTXVersion() >= 63">;
@@ -147,12 +154,16 @@ def hasPTX64 : Predicate<"Subtarget->getPTXVersion() >= 64">;
 def hasPTX65 : Predicate<"Subtarget->getPTXVersion() >= 65">;
 def hasPTX70 : Predicate<"Subtarget->getPTXVersion() >= 70">;
 def hasPTX71 : Predicate<"Subtarget->getPTXVersion() >= 71">;
+def hasPTX72 : Predicate<"Subtarget->getPTXVersion() >= 72">;
 
 def hasSM30 : Predicate<"Subtarget->getSmVersion() >= 30">;
+def hasSM32 : Predicate<"Subtarget->getSmVersion() >= 32">;
+def hasSM53 : Predicate<"Subtarget->getSmVersion() >= 53">;
 def hasSM70 : Predicate<"Subtarget->getSmVersion() >= 70">;
 def hasSM72 : Predicate<"Subtarget->getSmVersion() >= 72">;
 def hasSM75 : Predicate<"Subtarget->getSmVersion() >= 75">;
 def hasSM80 : Predicate<"Subtarget->getSmVersion() >= 80">;
+def hasSM86 : Predicate<"Subtarget->getSmVersion() >= 86">;
 
 // non-sync shfl instructions are not available on sm_70+ in PTX6.4+
 def hasSHFL : Predicate<"!(Subtarget->getSmVersion() >= 70" 
@@ -194,17 +205,29 @@ multiclass I3<string OpcStr, SDNode OpNode> {
               [(set Int16Regs:$dst, (OpNode Int16Regs:$a, (imm):$b))]>;
 }
 
-// Template for instructions which take 3 int32 args.  The instructions are
+// Template for instructions which take 3 int args.  The instructions are
 // named "<OpcStr>.s32" (e.g. "addc.cc.s32").
-multiclass ADD_SUB_INT_32<string OpcStr, SDNode OpNode> {
-   def i32rr :
-     NVPTXInst<(outs Int32Regs:$dst), (ins Int32Regs:$a, Int32Regs:$b),
-               !strconcat(OpcStr, ".s32 \t$dst, $a, $b;"),
-               [(set Int32Regs:$dst, (OpNode Int32Regs:$a, Int32Regs:$b))]>;
-   def i32ri :
-     NVPTXInst<(outs Int32Regs:$dst), (ins Int32Regs:$a, i32imm:$b),
-               !strconcat(OpcStr, ".s32 \t$dst, $a, $b;"),
-               [(set Int32Regs:$dst, (OpNode Int32Regs:$a, imm:$b))]>;
+multiclass ADD_SUB_INT_CARRY<string OpcStr, SDNode OpNode> {
+  let hasSideEffects = 1 in {
+    def i32rr :
+      NVPTXInst<(outs Int32Regs:$dst), (ins Int32Regs:$a, Int32Regs:$b),
+                !strconcat(OpcStr, ".s32 \t$dst, $a, $b;"),
+                [(set Int32Regs:$dst, (OpNode Int32Regs:$a, Int32Regs:$b))]>;
+    def i32ri :
+      NVPTXInst<(outs Int32Regs:$dst), (ins Int32Regs:$a, i32imm:$b),
+                !strconcat(OpcStr, ".s32 \t$dst, $a, $b;"),
+                [(set Int32Regs:$dst, (OpNode Int32Regs:$a, imm:$b))]>;
+    def i64rr :
+      NVPTXInst<(outs Int64Regs:$dst), (ins Int64Regs:$a, Int64Regs:$b),
+                !strconcat(OpcStr, ".s64 \t$dst, $a, $b;"),
+                [(set Int64Regs:$dst, (OpNode Int64Regs:$a, Int64Regs:$b))]>,
+      Requires<[hasPTX43]>;
+    def i64ri :
+      NVPTXInst<(outs Int64Regs:$dst), (ins Int64Regs:$a, i64imm:$b),
+                !strconcat(OpcStr, ".s64 \t$dst, $a, $b;"),
+                [(set Int64Regs:$dst, (OpNode Int64Regs:$a, imm:$b))]>,
+      Requires<[hasPTX43]>;
+  }
 }
 
 // Template for instructions which take three fp64 or fp32 args.  The
@@ -249,6 +272,32 @@ multiclass F3<string OpcStr, SDNode OpNode> {
                (ins Float32Regs:$a, f32imm:$b),
                !strconcat(OpcStr, ".f32 \t$dst, $a, $b;"),
                [(set Float32Regs:$dst, (OpNode Float32Regs:$a, fpimm:$b))]>;
+
+   def f16rr_ftz :
+     NVPTXInst<(outs Float16Regs:$dst),
+               (ins Float16Regs:$a, Float16Regs:$b),
+               !strconcat(OpcStr, ".ftz.f16 \t$dst, $a, $b;"),
+               [(set Float16Regs:$dst, (OpNode Float16Regs:$a, Float16Regs:$b))]>,
+               Requires<[useFP16Math, doF32FTZ]>;
+   def f16rr :
+     NVPTXInst<(outs Float16Regs:$dst),
+               (ins Float16Regs:$a, Float16Regs:$b),
+               !strconcat(OpcStr, ".f16 \t$dst, $a, $b;"),
+               [(set Float16Regs:$dst, (OpNode Float16Regs:$a, Float16Regs:$b))]>,
+               Requires<[useFP16Math]>;
+
+   def f16x2rr_ftz :
+     NVPTXInst<(outs Float16x2Regs:$dst),
+               (ins Float16x2Regs:$a, Float16x2Regs:$b),
+               !strconcat(OpcStr, ".ftz.f16x2 \t$dst, $a, $b;"),
+               [(set Float16x2Regs:$dst, (OpNode Float16x2Regs:$a, Float16x2Regs:$b))]>,
+               Requires<[useFP16Math, doF32FTZ]>;
+   def f16x2rr :
+     NVPTXInst<(outs Float16x2Regs:$dst),
+               (ins Float16x2Regs:$a, Float16x2Regs:$b),
+               !strconcat(OpcStr, ".f16x2 \t$dst, $a, $b;"),
+               [(set Float16x2Regs:$dst, (OpNode Float16x2Regs:$a, Float16x2Regs:$b))]>,
+               Requires<[useFP16Math]>;
 }
 
 // Template for instructions which take three FP args.  The
@@ -500,6 +549,29 @@ let hasSideEffects = false in {
                                     "cvt.s64.s16 \t$dst, $src;", []>;
   def CVT_INREG_s64_s32 : NVPTXInst<(outs Int64Regs:$dst), (ins Int64Regs:$src),
                                     "cvt.s64.s32 \t$dst, $src;", []>;
+
+multiclass CVT_FROM_FLOAT_SM80<string FromName, RegisterClass RC> {
+    def _f32 :
+      NVPTXInst<(outs RC:$dst),
+                (ins Float32Regs:$src, CvtMode:$mode),
+                !strconcat("cvt${mode:base}${mode:relu}.",
+                FromName, ".f32 \t$dst, $src;"), []>,
+                Requires<[hasPTX70, hasSM80]>;
+  }
+
+  defm CVT_bf16 : CVT_FROM_FLOAT_SM80<"bf16", Int16Regs>;
+
+    multiclass CVT_FROM_FLOAT_V2_SM80<string FromName, RegisterClass RC> {
+    def _f32 :
+      NVPTXInst<(outs RC:$dst),
+                (ins Float32Regs:$src1, Float32Regs:$src2,  CvtMode:$mode),
+                !strconcat("cvt${mode:base}${mode:relu}.",
+                FromName, ".f32 \t$dst, $src1, $src2;"), []>,
+    Requires<[hasPTX70, hasSM80]>;
+  }
+
+  defm CVT_f16x2 : CVT_FROM_FLOAT_V2_SM80<"f16x2", Float16x2Regs>;
+  defm CVT_bf16x2 : CVT_FROM_FLOAT_V2_SM80<"bf16x2", Int32Regs>;
 }
 
 //-----------------------------------
@@ -525,14 +597,13 @@ defm SUB_i1 : ADD_SUB_i1<sub>;
 defm ADD : I3<"add.s", add>;
 defm SUB : I3<"sub.s", sub>;
 
-// int32 addition and subtraction with carry-out.
-// FIXME: PTX 4.3 adds a 64-bit add.cc (and maybe also 64-bit addc.cc?).
-defm ADDCC : ADD_SUB_INT_32<"add.cc", addc>;
-defm SUBCC : ADD_SUB_INT_32<"sub.cc", subc>;
+// in32 and int64 addition and subtraction with carry-out.
+defm ADDCC : ADD_SUB_INT_CARRY<"add.cc", addc>;
+defm SUBCC : ADD_SUB_INT_CARRY<"sub.cc", subc>;
 
-// int32 addition and subtraction with carry-in and carry-out.
-defm ADDCCC : ADD_SUB_INT_32<"addc.cc", adde>;
-defm SUBCCC : ADD_SUB_INT_32<"subc.cc", sube>;
+// int32 and int64 addition and subtraction with carry-in and carry-out.
+defm ADDCCC : ADD_SUB_INT_CARRY<"addc.cc", adde>;
+defm SUBCCC : ADD_SUB_INT_CARRY<"subc.cc", sube>;
 
 defm MULT : I3<"mul.lo.s", mul>;
 
@@ -842,6 +913,9 @@ defm FMUL : F3_fma_component<"mul", fmul>;
 
 defm FMIN : F3<"min", fminnum>;
 defm FMAX : F3<"max", fmaxnum>;
+// Note: min.NaN.f64 and max.NaN.f64 do not actually exist.
+defm FMINNAN : F3<"min.NaN", fminimum>;
+defm FMAXNAN : F3<"max.NaN", fmaximum>;
 
 defm FABS  : F2<"abs", fabs>;
 defm FNEG  : F2<"neg", fneg>;
@@ -2247,8 +2321,18 @@ class MoveParamInst<NVPTXRegClass regclass, string asmstr> :
             !strconcat("mov", asmstr, " \t$dst, $src;"),
             [(set regclass:$dst, (MoveParam regclass:$src))]>;
 
+class MoveParamSymbolInst<NVPTXRegClass regclass, Operand srcty,
+                          string asmstr> :
+  NVPTXInst<(outs regclass:$dst), (ins srcty:$src),
+            !strconcat("mov", asmstr, " \t$dst, $src;"),
+            [(set regclass:$dst, (MoveParam texternalsym:$src))]>;
+
 def MoveParamI64 : MoveParamInst<Int64Regs, ".b64">;
 def MoveParamI32 : MoveParamInst<Int32Regs, ".b32">;
+
+def MoveParamSymbolI64 : MoveParamSymbolInst<Int64Regs, i64imm, ".b64">;
+def MoveParamSymbolI32 : MoveParamSymbolInst<Int32Regs, i32imm, ".b32">;
+
 def MoveParamI16 :
   NVPTXInst<(outs Int16Regs:$dst), (ins Int16Regs:$src),
             "cvt.u16.u32 \t$dst, $src;",
@@ -2586,6 +2670,8 @@ def BITCONVERT_64_I2F : F_BITCONVERT<"64", Int64Regs, Float64Regs>;
 def BITCONVERT_64_F2I : F_BITCONVERT<"64", Float64Regs, Int64Regs>;
 def BITCONVERT_32_I2F16x2 : F_BITCONVERT<"32", Int32Regs, Float16x2Regs>;
 def BITCONVERT_32_F16x22I : F_BITCONVERT<"32", Float16x2Regs, Int32Regs>;
+def BITCONVERT_32_F2F16x2 : F_BITCONVERT<"32", Float32Regs, Float16x2Regs>;
+def BITCONVERT_32_F16x22F : F_BITCONVERT<"32", Float16x2Regs, Float32Regs>;
 
 // NOTE: pred->fp are currently sub-optimal due to an issue in TableGen where
 // we cannot specify floating-point literals in isel patterns.  Therefore, we

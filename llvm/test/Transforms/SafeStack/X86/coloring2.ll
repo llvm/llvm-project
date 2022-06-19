@@ -513,9 +513,52 @@ l2:
   br label %l2
 }
 
+; This test checks for a bug where the stack coloring algorithm was not tracking
+; the live range of allocas through phi instructions, so it did not consider
+; alloca and alloca2 to be live at the same time.  As a result it was using
+; the same stack slot for both allocas.  To ensure this bug isn't present, we
+; check that there are 64 bytes allocated for the unsafe stack which is enough
+; space for both allocas.
+; CHECK-LABEL: @stack_coloring_liveness_bug
+define void @stack_coloring_liveness_bug(i32 %arg0) #0 {
+entry:
+; CHECK:        %[[USP:.*]] = load i8*, i8** @__safestack_unsafe_stack_ptr
+; CHECK-NEXT:   getelementptr i8, i8* %[[USP]], i32 -64
+  %alloca = alloca [32 x i8], align 16
+  %alloca2 = alloca [32 x i8], align 16
+  %cond = icmp eq i32 %arg0, 0
+  br i1 %cond, label %if, label %else
+
+if:
+  %alloca.if = bitcast [32 x i8]* %alloca to i8*
+  br label %end
+
+else:
+; CHECK:   getelementptr i8, i8* %[[USP]], i32 -32
+  %alloca.else = bitcast [32 x i8]* %alloca to i8*
+  call void @llvm.lifetime.start.p0i8(i64 32, i8* nonnull %alloca.else)
+  call void @capture8(i8* %alloca.else)
+  call void @llvm.lifetime.end.p0i8(i64 32, i8* nonnull %alloca.else)
+  br label %end
+
+end:
+; CHECK:   getelementptr i8, i8* %[[USP]], i32 -64
+  %alloca.end = phi i8* [ %alloca.if, %if], [%alloca.else, %else]
+  %alloca2.bitcast = bitcast [32 x i8]* %alloca2 to i8*
+  call void @llvm.lifetime.start.p0i8(i64 32, i8* nonnull %alloca2.bitcast)
+  call void @llvm.lifetime.start.p0i8(i64 32, i8* nonnull %alloca.end)
+  call void @capture2_8(i8* %alloca2.bitcast, i8* %alloca.end)
+  call void @llvm.lifetime.end.p0i8(i64 32, i8* nonnull %alloca2.bitcast)
+  call void @llvm.lifetime.end.p0i8(i64 32, i8* nonnull %alloca.end)
+  ret void
+}
+
+attributes #0 = { safestack }
+
 declare void @llvm.lifetime.start.p0i8(i64, i8* nocapture)
 declare void @llvm.lifetime.end.p0i8(i64, i8* nocapture)
 declare void @capture8(i8*)
 declare void @capture32(i32*)
 declare void @capture64(i64*)
 declare void @capture100x32([100 x i32]*)
+declare void @capture2_8(i8*, i8*)

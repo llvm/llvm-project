@@ -33,13 +33,13 @@
 @implementation TestB
 - (id)ivar {
   __attribute__((__blocks__(byref))) id value = ((void*)0);
-  void (^b)() = ^{ value = _ivar; };
+  void (^b)(void) = ^{ value = _ivar; };
   b();
   return value;
 }
 
 - (void)setIvar:(id)newValue {
-  void (^b)() = ^{ [_ivar release]; _ivar = [newValue retain]; };
+  void (^b)(void) = ^{ [_ivar release]; _ivar = [newValue retain]; };
   b();
 }
 @end

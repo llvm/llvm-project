@@ -1,7 +1,7 @@
-// RUN: %clang_cc1 -fsanitize=address -emit-llvm -o - -triple x86_64-linux %s | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -fsanitize=address -emit-llvm -o - -triple x86_64-linux %s | FileCheck %s
 
 // No alias on Windows but indicators should work.
-// RUN: %clang_cc1 -fsanitize=address -emit-llvm -o - -triple x86_64-windows-msvc %s | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -fsanitize=address -emit-llvm -o - -triple x86_64-windows-msvc %s | FileCheck %s
 
 static int global;
 

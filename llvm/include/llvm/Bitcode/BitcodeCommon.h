@@ -19,10 +19,14 @@
 namespace llvm {
 
 struct AllocaPackedValues {
-  using Align = Bitfield::Element<unsigned, 0, 5>;
-  using UsedWithInAlloca = Bitfield::Element<bool, Align::NextBit, 1>;
+  // We increased the number of bits needed to represent alignment to be more
+  // than 5, but to preserve backward compatibility we store the upper bits
+  // separately.
+  using AlignLower = Bitfield::Element<unsigned, 0, 5>;
+  using UsedWithInAlloca = Bitfield::Element<bool, AlignLower::NextBit, 1>;
   using ExplicitType = Bitfield::Element<bool, UsedWithInAlloca::NextBit, 1>;
   using SwiftError = Bitfield::Element<bool, ExplicitType::NextBit, 1>;
+  using AlignUpper = Bitfield::Element<unsigned, SwiftError::NextBit, 3>;
 };
 
 } // namespace llvm

@@ -8,7 +8,6 @@
 
 // <map>
 // UNSUPPORTED: c++03, c++11, c++14
-// UNSUPPORTED: libcpp-no-deduction-guides
 
 // template<class InputIterator,
 //          class Compare = less<iter-value-type<InputIterator>>,
@@ -33,6 +32,7 @@
 #include <map>
 #include <type_traits>
 
+#include "deduction_guides_sfinae_checks.h"
 #include "test_allocator.h"
 
 using P = std::pair<int, long>;
@@ -151,6 +151,8 @@ int main(int, char**)
     std::multimap m2{{value_type{1, 2}, {3, 4}}, std::less<int>()};
     ASSERT_SAME_TYPE(decltype(m2), std::multimap<int, int>);
     }
+
+    AssociativeContainerDeductionGuidesSfinaeAway<std::multimap, std::multimap<int, long>>();
 
     return 0;
 }

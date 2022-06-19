@@ -136,7 +136,6 @@ entry:
 define arm_aapcs_vfpcc <2 x double> @vdup_f64(double %src) {
 ; CHECK-LABEL: vdup_f64:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    @ kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    vmov.f32 s2, s0
 ; CHECK-NEXT:    vmov.f32 s3, s1
 ; CHECK-NEXT:    bx lr

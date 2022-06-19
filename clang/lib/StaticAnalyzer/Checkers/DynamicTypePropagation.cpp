@@ -56,9 +56,6 @@ class DynamicTypePropagation:
                     check::PreObjCMessage,
                     check::PostObjCMessage > {
 
-  const ObjCObjectType *getObjectTypeForAllocAndNew(const ObjCMessageExpr *MsgE,
-                                                    CheckerContext &C) const;
-
   /// Return a better dynamic type if one can be derived from the cast.
   const ObjCObjectPointerType *getBetterObjCType(const Expr *CastE,
                                                  CheckerContext &C) const;
@@ -108,7 +105,7 @@ public:
   void checkPostObjCMessage(const ObjCMethodCall &M, CheckerContext &C) const;
 
   /// This value is set to true, when the Generics checker is turned on.
-  DefaultBool CheckGenerics;
+  bool CheckGenerics = false;
   CheckerNameRef GenericCheckName;
 };
 
@@ -384,7 +381,7 @@ void DynamicTypePropagation::checkPostCall(const CallEvent &Call,
         // FIXME: Instead of relying on the ParentMap, we should have the
         // trigger-statement (InitListExpr in this case) available in this
         // callback, ideally as part of CallEvent.
-        if (dyn_cast_or_null<InitListExpr>(
+        if (isa_and_nonnull<InitListExpr>(
                 LCtx->getParentMap().getParent(Ctor->getOriginExpr())))
           return;
 

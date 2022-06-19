@@ -9,6 +9,7 @@
 #include "PassDetail.h"
 #include "mlir/IR/Diagnostics.h"
 #include "mlir/IR/Dialect.h"
+#include "mlir/IR/SymbolTable.h"
 #include "mlir/IR/Verifier.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Support/FileUtilities.h"
@@ -18,7 +19,6 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/CrashRecoveryContext.h"
 #include "llvm/Support/Mutex.h"
-#include "llvm/Support/Parallel.h"
 #include "llvm/Support/Signals.h"
 #include "llvm/Support/Threading.h"
 #include "llvm/Support/ToolOutputFile.h"
@@ -154,8 +154,7 @@ void RecoveryReproducerContext::crashHandler(void *) {
     context->generate(description);
 
     // Emit an error using information only available within the context.
-    context->preCrashOperation->getContext()->printOpOnDiagnostic(false);
-    context->preCrashOperation->emitError()
+    emitError(context->preCrashOperation->getLoc())
         << "A failure has been detected while processing the MLIR module:"
         << description;
   }
@@ -182,7 +181,7 @@ struct PassCrashReproducerGenerator::Impl {
 
   /// Flag indicating if reproducer generation should be localized to the
   /// failing pass.
-  bool localReproducer;
+  bool localReproducer = false;
 
   /// A record of all of the currently active reproducer contexts.
   SmallVector<std::unique_ptr<RecoveryReproducerContext>> activeContexts;
@@ -192,13 +191,13 @@ struct PassCrashReproducerGenerator::Impl {
   SetVector<std::pair<Pass *, Operation *>> runningPasses;
 
   /// Various pass manager flags that get emitted when generating a reproducer.
-  bool pmFlagVerifyPasses;
+  bool pmFlagVerifyPasses = false;
 };
 
 PassCrashReproducerGenerator::PassCrashReproducerGenerator(
     PassManager::ReproducerStreamFactory &streamFactory, bool localReproducer)
     : impl(std::make_unique<Impl>(streamFactory, localReproducer)) {}
-PassCrashReproducerGenerator::~PassCrashReproducerGenerator() {}
+PassCrashReproducerGenerator::~PassCrashReproducerGenerator() = default;
 
 void PassCrashReproducerGenerator::initialize(
     iterator_range<PassManager::pass_iterator> passes, Operation *op,
@@ -228,17 +227,17 @@ formatPassOpReproducerMessage(Diagnostic &os,
 
 void PassCrashReproducerGenerator::finalize(Operation *rootOp,
                                             LogicalResult executionResult) {
+  // Don't generate a reproducer if we have no active contexts.
+  if (impl->activeContexts.empty())
+    return;
+
   // If the pass manager execution succeeded, we don't generate any reproducers.
   if (succeeded(executionResult))
     return impl->activeContexts.clear();
 
-  MLIRContext *context = rootOp->getContext();
-  bool shouldPrintOnOp = context->shouldPrintOpOnDiagnostic();
-  context->printOpOnDiagnostic(false);
-  InFlightDiagnostic diag = rootOp->emitError()
+  InFlightDiagnostic diag = emitError(rootOp->getLoc())
                             << "Failures have been detected while "
                                "processing an MLIR pass pipeline";
-  context->printOpOnDiagnostic(shouldPrintOnOp);
 
   // If we are generating a global reproducer, we include all of the running
   // passes in the error message for the only active context.
@@ -346,25 +345,25 @@ struct CrashReproducerInstrumentation : public PassInstrumentation {
       : generator(generator) {}
   ~CrashReproducerInstrumentation() override = default;
 
-  /// A callback to run before a pass is executed.
   void runBeforePass(Pass *pass, Operation *op) override {
     if (!isa<OpToOpPassAdaptor>(pass))
       generator.prepareReproducerFor(pass, op);
   }
 
-  /// A callback to run after a pass is successfully executed. This function
-  /// takes a pointer to the pass to be executed, as well as the current
-  /// operation being operated on.
   void runAfterPass(Pass *pass, Operation *op) override {
     if (!isa<OpToOpPassAdaptor>(pass))
       generator.removeLastReproducerFor(pass, op);
+  }
+
+  void runAfterPassFailed(Pass *pass, Operation *op) override {
+    generator.finalize(op, /*executionResult=*/failure());
   }
 
 private:
   /// The generator used to create crash reproducers.
   PassCrashReproducerGenerator &generator;
 };
-} // end anonymous namespace
+} // namespace
 
 //===----------------------------------------------------------------------===//
 // FileReproducerStream
@@ -388,7 +387,7 @@ private:
   /// ToolOutputFile corresponding to opened `filename`.
   std::unique_ptr<llvm::ToolOutputFile> outputFile = nullptr;
 };
-} // end anonymous namespace
+} // namespace
 
 //===----------------------------------------------------------------------===//
 // PassManager

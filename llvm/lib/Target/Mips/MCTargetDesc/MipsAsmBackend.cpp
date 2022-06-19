@@ -197,7 +197,7 @@ static unsigned adjustFixupValue(const MCFixup &Fixup, uint64_t Value,
     Value = (int64_t)Value / 2;
     // We now check if Value can be encoded as a 26-bit signed immediate.
     if (!isInt<26>(Value)) {
-      Ctx.reportFatalError(Fixup.getLoc(), "out of range PC26 fixup");
+      Ctx.reportError(Fixup.getLoc(), "out of range PC26 fixup");
       return 0;
     }
     break;
@@ -518,7 +518,8 @@ getFixupKindInfo(MCFixupKind Kind) const {
 /// it should return an error.
 ///
 /// \return - True on success.
-bool MipsAsmBackend::writeNopData(raw_ostream &OS, uint64_t Count) const {
+bool MipsAsmBackend::writeNopData(raw_ostream &OS, uint64_t Count,
+                                  const MCSubtargetInfo *STI) const {
   // Check for a less than instruction size number of bytes
   // FIXME: 16 bit instructions are not handled yet here.
   // We shouldn't be using a hard coded number for instruction size.

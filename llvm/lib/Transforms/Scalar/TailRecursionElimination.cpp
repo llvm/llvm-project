@@ -53,11 +53,8 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/Statistic.h"
-#include "llvm/Analysis/CFG.h"
-#include "llvm/Analysis/CaptureTracking.h"
 #include "llvm/Analysis/DomTreeUpdater.h"
 #include "llvm/Analysis/GlobalsModRef.h"
-#include "llvm/Analysis/InlineCost.h"
 #include "llvm/Analysis/InstructionSimplify.h"
 #include "llvm/Analysis/Loads.h"
 #include "llvm/Analysis/OptimizationRemarkEmitter.h"
@@ -76,14 +73,12 @@
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Module.h"
-#include "llvm/IR/ValueHandle.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/Scalar.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
-#include "llvm/Transforms/Utils/Local.h"
 using namespace llvm;
 
 #define DEBUG_TYPE "tailcallelim"
@@ -248,10 +243,10 @@ static bool markTails(Function &F, OptimizationRemarkEmitter *ORE) {
           isa<PseudoProbeInst>(&I))
         continue;
 
-      // Special-case operand bundle "clang.arc.attachedcall".
+      // Special-case operand bundles "clang.arc.attachedcall" and "ptrauth".
       bool IsNoTail =
           CI->isNoTailCall() || CI->hasOperandBundlesOtherThan(
-                                    LLVMContext::OB_clang_arc_attachedcall);
+            {LLVMContext::OB_clang_arc_attachedcall, LLVMContext::OB_ptrauth});
 
       if (!IsNoTail && CI->doesNotAccessMemory()) {
         // A call to a readnone function whose arguments are all things computed
@@ -262,7 +257,7 @@ static bool markTails(Function &F, OptimizationRemarkEmitter *ORE) {
         // Note that this runs whether we know an alloca has escaped or not. If
         // it has, then we can't trust Tracker.AllocaUsers to be accurate.
         bool SafeToTail = true;
-        for (auto &Arg : CI->arg_operands()) {
+        for (auto &Arg : CI->args()) {
           if (isa<Constant>(Arg.getUser()))
             continue;
           if (Argument *A = dyn_cast<Argument>(Arg.getUser()))
@@ -584,8 +579,8 @@ void TailRecursionEliminator::insertAccumulator(Instruction *AccRecInstr) {
 // call instruction into the newly created temporarily variable.
 void TailRecursionEliminator::copyByValueOperandIntoLocalTemp(CallInst *CI,
                                                               int OpndIdx) {
-  PointerType *ArgTy = cast<PointerType>(CI->getArgOperand(OpndIdx)->getType());
-  Type *AggTy = ArgTy->getElementType();
+  Type *AggTy = CI->getParamByValType(OpndIdx);
+  assert(AggTy);
   const DataLayout &DL = F.getParent()->getDataLayout();
 
   // Get alignment of byVal operand.
@@ -611,8 +606,8 @@ void TailRecursionEliminator::copyByValueOperandIntoLocalTemp(CallInst *CI,
 // into the corresponding function argument location.
 void TailRecursionEliminator::copyLocalTempOfByValueOperandIntoArguments(
     CallInst *CI, int OpndIdx) {
-  PointerType *ArgTy = cast<PointerType>(CI->getArgOperand(OpndIdx)->getType());
-  Type *AggTy = ArgTy->getElementType();
+  Type *AggTy = CI->getParamByValType(OpndIdx);
+  assert(AggTy);
   const DataLayout &DL = F.getParent()->getDataLayout();
 
   // Get alignment of byVal operand.
@@ -667,7 +662,7 @@ bool TailRecursionEliminator::eliminateCall(CallInst *CI) {
     createTailRecurseLoopHeader(CI);
 
   // Copy values of ByVal operands into local temporarily variables.
-  for (unsigned I = 0, E = CI->getNumArgOperands(); I != E; ++I) {
+  for (unsigned I = 0, E = CI->arg_size(); I != E; ++I) {
     if (CI->isByValArgument(I))
       copyByValueOperandIntoLocalTemp(CI, I);
   }
@@ -675,7 +670,7 @@ bool TailRecursionEliminator::eliminateCall(CallInst *CI) {
   // Ok, now that we know we have a pseudo-entry block WITH all of the
   // required PHI nodes, add entries into the PHI node for the actual
   // parameters passed into the tail-recursive call.
-  for (unsigned I = 0, E = CI->getNumArgOperands(); I != E; ++I) {
+  for (unsigned I = 0, E = CI->arg_size(); I != E; ++I) {
     if (CI->isByValArgument(I)) {
       copyLocalTempOfByValueOperandIntoArguments(CI, I);
       ArgumentPHIs[I]->addIncoming(F.getArg(I), BB);
@@ -734,7 +729,7 @@ void TailRecursionEliminator::cleanupAndFinalize() {
   // call.
   for (PHINode *PN : ArgumentPHIs) {
     // If the PHI Node is a dynamic constant, replace it with the value it is.
-    if (Value *PNV = SimplifyInstruction(PN, F.getParent()->getDataLayout())) {
+    if (Value *PNV = simplifyInstruction(PN, F.getParent()->getDataLayout())) {
       PN->replaceAllUsesWith(PNV);
       PN->eraseFromParent();
     }

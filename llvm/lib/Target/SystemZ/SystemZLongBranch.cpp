@@ -135,10 +135,9 @@ class SystemZLongBranch : public MachineFunctionPass {
 public:
   static char ID;
 
-  SystemZLongBranch(const SystemZTargetMachine &tm)
-    : MachineFunctionPass(ID) {}
-
-  StringRef getPassName() const override { return "SystemZ Long Branch"; }
+  SystemZLongBranch() : MachineFunctionPass(ID) {
+    initializeSystemZLongBranchPass(*PassRegistry::getPassRegistry());
+  }
 
   bool runOnMachineFunction(MachineFunction &F) override;
 
@@ -173,6 +172,9 @@ const uint64_t MaxBackwardRange = 0x10000;
 const uint64_t MaxForwardRange = 0xfffe;
 
 } // end anonymous namespace
+
+INITIALIZE_PASS(SystemZLongBranch, DEBUG_TYPE, "SystemZ Long Branch", false,
+                false)
 
 // Position describes the state immediately before Block.  Update Block
 // accordingly and move Position to the end of the block's non-terminator
@@ -209,10 +211,24 @@ void SystemZLongBranch::skipTerminator(BlockPosition &Position,
     Position.Address += Terminator.ExtraRelaxSize;
 }
 
+static unsigned getInstSizeInBytes(const MachineInstr &MI,
+                                   const SystemZInstrInfo *TII) {
+  unsigned Size = TII->getInstSizeInBytes(MI);
+  assert((Size ||
+          // These do not have a size:
+          MI.isDebugOrPseudoInstr() || MI.isPosition() || MI.isKill() ||
+          MI.isImplicitDef() || MI.getOpcode() == SystemZ::MemBarrier ||
+          // These have a size that may be zero:
+          MI.isInlineAsm() || MI.getOpcode() == SystemZ::STACKMAP ||
+          MI.getOpcode() == SystemZ::PATCHPOINT) &&
+         "Missing size value for instruction.");
+  return Size;
+}
+
 // Return a description of terminator instruction MI.
 TerminatorInfo SystemZLongBranch::describeTerminator(MachineInstr &MI) {
   TerminatorInfo Terminator;
-  Terminator.Size = TII->getInstSizeInBytes(MI);
+  Terminator.Size = getInstSizeInBytes(MI, TII);
   if (MI.isConditionalBranch() || MI.isUnconditionalBranch()) {
     switch (MI.getOpcode()) {
     case SystemZ::J:
@@ -287,7 +303,7 @@ uint64_t SystemZLongBranch::initMBBInfo() {
     MachineBasicBlock::iterator MI = MBB->begin();
     MachineBasicBlock::iterator End = MBB->end();
     while (MI != End && !MI->isTerminator()) {
-      Block.Size += TII->getInstSizeInBytes(*MI);
+      Block.Size += getInstSizeInBytes(*MI, TII);
       ++MI;
     }
     skipNonTerminators(Position, Block);
@@ -467,5 +483,5 @@ bool SystemZLongBranch::runOnMachineFunction(MachineFunction &F) {
 }
 
 FunctionPass *llvm::createSystemZLongBranchPass(SystemZTargetMachine &TM) {
-  return new SystemZLongBranch(TM);
+  return new SystemZLongBranch();
 }

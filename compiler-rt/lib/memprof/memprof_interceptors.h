@@ -48,13 +48,13 @@ DECLARE_REAL(char *, strstr, const char *s1, const char *s2)
 #define MEMPROF_INTERCEPT_FUNC_VER(name, ver)                                  \
   do {                                                                         \
     if (!INTERCEPT_FUNCTION_VER(name, ver))                                    \
-      VReport(1, "MemProfiler: failed to intercept '%s@@%s'\n", #name, #ver);  \
+      VReport(1, "MemProfiler: failed to intercept '%s@@%s'\n", #name, ver);   \
   } while (0)
 #define MEMPROF_INTERCEPT_FUNC_VER_UNVERSIONED_FALLBACK(name, ver)             \
   do {                                                                         \
     if (!INTERCEPT_FUNCTION_VER(name, ver) && !INTERCEPT_FUNCTION(name))       \
       VReport(1, "MemProfiler: failed to intercept '%s@@%s' or '%s'\n", #name, \
-              #ver, #name);                                                    \
+              ver, #name);                                                     \
   } while (0)
 
 #endif // MEMPROF_INTERCEPTORS_H

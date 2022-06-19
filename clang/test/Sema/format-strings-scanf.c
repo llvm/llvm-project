@@ -68,7 +68,7 @@ void bad_length_modifiers(char *s, void *p, wchar_t *ws, long double *ld) {
 
 // Test that the scanf call site is where the warning is attached.  If the
 // format string is somewhere else, point to it in a note.
-void pr9751() {
+void pr9751(void) {
   int *i;
   char str[100];
   const char kFormat1[] = "%00d"; // expected-note{{format string is defined here}}}
@@ -190,7 +190,7 @@ void test_qualifiers(const int *cip, volatile int* vip,
   scanf("%d", (cip_t)0); // expected-warning{{format specifies type 'int *' but the argument has type 'cip_t' (aka 'const int *')}}
 }
 
-void test_size_types() {
+void test_size_types(void) {
   size_t s = 0;
   scanf("%zu", &s); // No warning.
 
@@ -210,7 +210,7 @@ void test_size_types() {
   scanf("%zn", &d3); // expected-warning-re{{format specifies type 'ssize_t *' (aka '{{.+}}') but the argument has type 'double *'}}
 }
 
-void test_ptrdiff_t_types() {
+void test_ptrdiff_t_types(void) {
   __UNSIGNED_PTRDIFF_TYPE__ p1 = 0;
   scanf("%tu", &p1); // No warning.
 

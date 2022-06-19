@@ -24,7 +24,7 @@
 
 @end
 
-int main() {
+int main(void) {
   TestClass *c = [TestClass new];
   return 0;
 }

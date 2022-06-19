@@ -1,8 +1,11 @@
-; RUN: llc %s -mtriple=x86_64-unknown-linux-gnu --dwarf-version=4 --basic-block-sections=none -filetype=obj -o - | llvm-dwarfdump - | FileCheck %s
-; RUN: llc %s -mtriple=x86_64-unknown-linux-gnu --dwarf-version=4 --basic-block-sections=all -filetype=obj -o - | llvm-dwarfdump - | FileCheck %s
-; RUN: llc %s -mtriple=x86_64-unknown-linux-gnu --dwarf-version=5 --basic-block-sections=none -filetype=obj -o - | llvm-dwarfdump - | FileCheck %s
-; RUN: llc %s -mtriple=x86_64-unknown-linux-gnu --dwarf-version=5 --basic-block-sections=all -filetype=obj -o - | llvm-dwarfdump - | FileCheck %s
+; RUN: llc %s -mtriple=x86_64-unknown-linux-gnu --dwarf-version=4 --basic-block-sections=none -filetype=obj -o - -experimental-debug-variable-locations=true | llvm-dwarfdump - | FileCheck %s
+; RUN: llc %s -mtriple=x86_64-unknown-linux-gnu --dwarf-version=4 --basic-block-sections=all -filetype=obj -o - -experimental-debug-variable-locations=true | llvm-dwarfdump - | FileCheck %s
+; RUN: llc %s -mtriple=x86_64-unknown-linux-gnu --dwarf-version=5 --basic-block-sections=none -filetype=obj -o - -experimental-debug-variable-locations=true | llvm-dwarfdump - | FileCheck %s
+; RUN: llc %s -mtriple=x86_64-unknown-linux-gnu --dwarf-version=5 --basic-block-sections=all -filetype=obj -o - -experimental-debug-variable-locations=true| llvm-dwarfdump - | FileCheck %s
 
+; CHECK:      DW_TAG_variable
+; CHECK-NOT:  DW_TAG
+; CHECK:      DW_AT_name ("tmp")
 ; CHECK:      DW_TAG_variable
 ; CHECK-NEXT: DW_AT_location
 ; CHECK-NEXT: [0x{{[0-9a-f]+}}, 0x{{[0-9a-f]+}}): DW_OP_reg3

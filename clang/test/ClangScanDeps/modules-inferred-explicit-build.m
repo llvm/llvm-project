@@ -6,15 +6,13 @@
 // RUN:   %S/Inputs/modules_inferred_cdb.json > %t.cdb
 //
 // RUN: clang-scan-deps -compilation-database %t.cdb -j 1 -format experimental-full \
-// RUN:   -mode preprocess-minimized-sources -generate-modules-path-args > %t.db
-// RUN: %python %S/../../utils/module-deps-to-rsp.py %t.db --module-name=Inferred > %t.inferred.cc1.rsp
-// RUN: %python %S/../../utils/module-deps-to-rsp.py %t.db --module-name=System > %t.system.cc1.rsp
-// RUN: %python %S/../../utils/module-deps-to-rsp.py %t.db --tu-index=0 > %t.tu.rsp
+// RUN:   -mode preprocess-dependency-directives -generate-modules-path-args > %t.db
+// RUN: %deps-to-rsp %t.db --module-name=Inferred > %t.inferred.cc1.rsp
+// RUN: %deps-to-rsp %t.db --module-name=System > %t.system.cc1.rsp
+// RUN: %deps-to-rsp %t.db --tu-index=0 > %t.tu.rsp
 // RUN: %clang @%t.inferred.cc1.rsp -pedantic -Werror
 // RUN: %clang @%t.system.cc1.rsp -pedantic -Werror
-// RUN: %clang -x objective-c -fsyntax-only %t.dir/modules_cdb_input.cpp \
-// RUN:   -F%S/Inputs/frameworks -fmodules -fimplicit-module-maps \
-// RUN:   -pedantic -Werror @%t.tu.rsp
+// RUN: %clang @%t.tu.rsp -pedantic -Werror
 
 #include <Inferred/Inferred.h>
 #include <System/System.h>

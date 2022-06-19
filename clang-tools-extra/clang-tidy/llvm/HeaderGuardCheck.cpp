@@ -8,6 +8,7 @@
 
 #include "HeaderGuardCheck.h"
 #include "clang/Tooling/Tooling.h"
+#include "llvm/Support/Path.h"
 
 namespace clang {
 namespace tidy {
@@ -20,6 +21,10 @@ LLVMHeaderGuardCheck::LLVMHeaderGuardCheck(StringRef Name,
 std::string LLVMHeaderGuardCheck::getHeaderGuard(StringRef Filename,
                                                  StringRef OldGuard) {
   std::string Guard = tooling::getAbsolutePath(Filename);
+
+  // When running under Windows, need to convert the path separators from
+  // `\` to `/`.
+  Guard = llvm::sys::path::convert_to_slash(Guard);
 
   // Sanitize the path. There are some rules for compatibility with the historic
   // style in include/llvm and include/clang which we want to preserve.
@@ -35,7 +40,7 @@ std::string LLVMHeaderGuardCheck::getHeaderGuard(StringRef Filename,
     Guard = Guard.substr(PosToolsClang + std::strlen("tools/"));
 
   // Unlike LLVM svn, LLVM git monorepo is named llvm-project, so we replace
-  // "/llvm-project/" with the cannonical "/llvm/".
+  // "/llvm-project/" with the canonical "/llvm/".
   const static StringRef LLVMProject = "/llvm-project/";
   size_t PosLLVMProject = Guard.rfind(std::string(LLVMProject));
   if (PosLLVMProject != StringRef::npos)

@@ -215,7 +215,7 @@ spv.module Logical GLSL450 {
   spv.func @foo(%arg0 : i32) -> i32 "None" {
     spv.ReturnValue %arg0 : i32
   }
-  
+
   spv.EntryPoint "GLCompute" @foo
   spv.ExecutionMode @foo "ContractionOff"
 }
@@ -383,7 +383,7 @@ spv.module Logical GLSL450 {
   spv.SpecConstant @foo = -5 : i32
 
   spv.func @bar() -> i32 "None" {
-    %0 = spv.mlir.referenceof @foo : i32 
+    %0 = spv.mlir.referenceof @foo : i32
     spv.ReturnValue %0 : i32
   }
 }

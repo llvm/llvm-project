@@ -76,35 +76,41 @@ void recordRemoval(const DeclStmt &Stmt, ASTContext &Context,
 }
 
 AST_MATCHER_FUNCTION_P(StatementMatcher, isConstRefReturningMethodCall,
-                       std::vector<std::string>, ExcludedContainerTypes) {
+                       std::vector<StringRef>, ExcludedContainerTypes) {
   // Match method call expressions where the `this` argument is only used as
   // const, this will be checked in `check()` part. This returned const
   // reference is highly likely to outlive the local const reference of the
   // variable being declared. The assumption is that the const reference being
   // returned either points to a global static variable or to a member of the
   // called object.
-  return cxxMemberCallExpr(
-      callee(cxxMethodDecl(returns(matchers::isReferenceToConst()))
-                 .bind(MethodDeclId)),
-      on(declRefExpr(to(
-          varDecl(
-              unless(hasType(qualType(hasCanonicalType(hasDeclaration(namedDecl(
-                  matchers::matchesAnyListedName(ExcludedContainerTypes))))))))
-              .bind(ObjectArgId)))));
+  const auto MethodDecl =
+      cxxMethodDecl(returns(hasCanonicalType(matchers::isReferenceToConst())))
+          .bind(MethodDeclId);
+  const auto ReceiverExpr = declRefExpr(to(varDecl().bind(ObjectArgId)));
+  const auto ReceiverType =
+      hasCanonicalType(recordType(hasDeclaration(namedDecl(
+          unless(matchers::matchesAnyListedName(ExcludedContainerTypes))))));
+
+  return expr(anyOf(
+      cxxMemberCallExpr(callee(MethodDecl), on(ReceiverExpr),
+                        thisPointerType(ReceiverType)),
+      cxxOperatorCallExpr(callee(MethodDecl), hasArgument(0, ReceiverExpr),
+                          hasArgument(0, hasType(ReceiverType)))));
 }
 
 AST_MATCHER_FUNCTION(StatementMatcher, isConstRefReturningFunctionCall) {
   // Only allow initialization of a const reference from a free function if it
   // has no arguments. Otherwise it could return an alias to one of its
   // arguments and the arguments need to be checked for const use as well.
-  return callExpr(callee(functionDecl(returns(matchers::isReferenceToConst()))
+  return callExpr(callee(functionDecl(returns(hasCanonicalType(
+                                          matchers::isReferenceToConst())))
                              .bind(FunctionDeclId)),
                   argumentCountIs(0), unless(callee(cxxMethodDecl())))
       .bind(InitFunctionCallId);
 }
 
 AST_MATCHER_FUNCTION_P(StatementMatcher, initializerReturnsReferenceToConst,
-                       std::vector<std::string>, ExcludedContainerTypes) {
+                       std::vector<StringRef>, ExcludedContainerTypes) {
   auto OldVarDeclRef =
       declRefExpr(to(varDecl(hasLocalStorage()).bind(OldVarDeclId)));
   return expr(
@@ -129,7 +135,7 @@ AST_MATCHER_FUNCTION_P(StatementMatcher, initializerReturnsReferenceToConst,
 // object arg or variable that is referenced is immutable as well.
 static bool isInitializingVariableImmutable(
     const VarDecl &InitializingVar, const Stmt &BlockStmt, ASTContext &Context,
-    const std::vector<std::string> &ExcludedContainerTypes) {
+    const std::vector<StringRef> &ExcludedContainerTypes) {
   if (!isOnlyUsedAsConst(InitializingVar, BlockStmt, Context))
     return false;
 

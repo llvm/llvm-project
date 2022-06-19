@@ -1,6 +1,6 @@
-; RUN: opt -S -bdce -instsimplify < %s | FileCheck %s
-; RUN: opt -S -instsimplify < %s | FileCheck %s -check-prefix=CHECK-IO
-; RUN: opt -S -debugify -bdce < %s | FileCheck %s -check-prefix=DEBUGIFY
+; RUN: opt -S -passes='bdce,instsimplify' < %s | FileCheck %s
+; RUN: opt -S -passes=instsimplify < %s | FileCheck %s -check-prefix=CHECK-IO
+; RUN: opt -S -passes='debugify,bdce' < %s | FileCheck %s -check-prefix=DEBUGIFY
 target datalayout = "E-m:e-i64:64-n32:64"
 target triple = "powerpc64-unknown-linux-gnu"
 

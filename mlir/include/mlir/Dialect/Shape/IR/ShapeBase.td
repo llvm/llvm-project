@@ -35,10 +35,12 @@ def ShapeDialect : Dialect {
   }];
 
   let cppNamespace = "::mlir::shape";
-  let dependentDialects = ["tensor::TensorDialect"];
+  let dependentDialects = ["arith::ArithmeticDialect", "tensor::TensorDialect"];
 
+  let useDefaultTypePrinterParser = 1;
   let hasConstantMaterializer = 1;
   let hasOperationAttrVerify = 1;
+  let emitAccessorPrefix = kEmitAccessorPrefix_Prefixed;
 }
 
 def Shape_ShapeType : DialectType<ShapeDialect,

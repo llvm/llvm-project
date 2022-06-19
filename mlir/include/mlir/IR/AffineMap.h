@@ -11,20 +11,23 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef MLIR_IR_AFFINE_MAP_H
-#define MLIR_IR_AFFINE_MAP_H
+#ifndef MLIR_IR_AFFINEMAP_H
+#define MLIR_IR_AFFINEMAP_H
 
 #include "mlir/IR/AffineExpr.h"
 #include "mlir/Support/LLVM.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMapInfo.h"
-#include "llvm/ADT/DenseSet.h"
+
+namespace llvm {
+class SmallBitVector;
+} // namespace llvm
 
 namespace mlir {
 
 namespace detail {
 struct AffineMapStorage;
-} // end namespace detail
+} // namespace detail
 
 class Attribute;
 struct LogicalResult;
@@ -39,7 +42,7 @@ class AffineMap {
 public:
   using ImplType = detail::AffineMapStorage;
 
-  constexpr AffineMap() : map(nullptr) {}
+  constexpr AffineMap() = default;
   explicit AffineMap(ImplType *map) : map(map) {}
 
   /// Returns a zero result affine map with no dimensions or symbols: () -> ().
@@ -162,6 +165,10 @@ public:
   /// when the caller knows it is safe to do so.
   unsigned getDimPosition(unsigned idx) const;
 
+  /// Extracts the permuted position where given input index resides.
+  /// Fails when called on a non-permutation.
+  unsigned getPermutedPosition(unsigned input) const;
+
   /// Return true if any affine expression involves AffineDimExpr `position`.
   bool isFunctionOfDim(unsigned position) const {
     return llvm::any_of(getResults(), [&](AffineExpr e) {
@@ -178,7 +185,7 @@ public:
 
   /// Walk all of the AffineExpr's in this mapping. Each node in an expression
   /// tree is visited in postorder.
-  void walkExprs(std::function<void(AffineExpr)> callback) const;
+  void walkExprs(llvm::function_ref<void(AffineExpr)> callback) const;
 
   /// This method substitutes any uses of dimensions and symbols (e.g.
   /// dim#0 with dimReplacements[0]) in subexpressions and returns the modified
@@ -207,24 +214,28 @@ public:
   AffineMap replace(const DenseMap<AffineExpr, AffineExpr> &map,
                     unsigned numResultDims, unsigned numResultSyms) const;
 
-  /// Replace dims[0 .. numDims - 1] by dims[shift .. shift + numDims - 1].
-  AffineMap shiftDims(unsigned shift) const {
-    return AffineMap::get(
-        getNumDims() + shift, getNumSymbols(),
-        llvm::to_vector<4>(llvm::map_range(
-            getResults(),
-            [&](AffineExpr e) { return e.shiftDims(getNumDims(), shift); })),
-        getContext());
+  /// Replace dims[offset ... numDims)
+  /// by dims[offset + shift ... shift + numDims).
+  AffineMap shiftDims(unsigned shift, unsigned offset = 0) const {
+    assert(offset <= getNumDims());
+    return AffineMap::get(getNumDims() + shift, getNumSymbols(),
+                          llvm::to_vector<4>(llvm::map_range(
+                              getResults(),
+                              [&](AffineExpr e) {
+                                return e.shiftDims(getNumDims(), shift, offset);
+                              })),
+                          getContext());
   }
 
-  /// Replace symbols[0 .. numSymbols - 1] by
-  ///         symbols[shift .. shift + numSymbols - 1].
-  AffineMap shiftSymbols(unsigned shift) const {
+  /// Replace symbols[offset ... numSymbols)
+  /// by symbols[offset + shift ... shift + numSymbols).
+  AffineMap shiftSymbols(unsigned shift, unsigned offset = 0) const {
     return AffineMap::get(getNumDims(), getNumSymbols() + shift,
                           llvm::to_vector<4>(llvm::map_range(
                               getResults(),
                               [&](AffineExpr e) {
-                                return e.shiftSymbols(getNumSymbols(), shift);
+                                return e.shiftSymbols(getNumSymbols(), shift,
+                                                      offset);
                               })),
                           getContext());
   }
@@ -265,8 +276,11 @@ public:
   SmallVector<int64_t, 4> compose(ArrayRef<int64_t> values) const;
 
   /// Returns true if the AffineMap represents a subset (i.e. a projection) of a
-  /// symbol-less permutation map.
-  bool isProjectedPermutation() const;
+  /// symbol-less permutation map. `allowZeroInResults` allows projected
+  /// permutation maps with constant zero result expressions.
+  /// TODO: Remove `allowZeroInResults` when constant zero result expressions
+  /// are broadly supported.
+  bool isProjectedPermutation(bool allowZeroInResults = false) const;
 
   /// Returns true if the AffineMap represents a symbol-less permutation map.
   bool isPermutation() const;
@@ -298,7 +312,7 @@ public:
   }
 
 private:
-  ImplType *map;
+  ImplType *map{nullptr};
 
   static AffineMap getImpl(unsigned dimCount, unsigned symbolCount,
                            ArrayRef<AffineExpr> results, MLIRContext *context);
@@ -312,7 +326,7 @@ inline ::llvm::hash_code hash_value(AffineMap arg) {
 /// A mutable affine map. Its affine expressions are however unique.
 struct MutableAffineMap {
 public:
-  MutableAffineMap() {}
+  MutableAffineMap() = default;
   MutableAffineMap(AffineMap map);
 
   ArrayRef<AffineExpr> getResults() const { return results; }
@@ -342,11 +356,11 @@ public:
 private:
   // Same meaning as AffineMap's fields.
   SmallVector<AffineExpr, 8> results;
-  unsigned numDims;
-  unsigned numSymbols;
+  unsigned numDims = 0;
+  unsigned numSymbols = 0;
   /// A pointer to the IR's context to store all newly created
   /// AffineExprStorage's.
-  MLIRContext *context;
+  MLIRContext *context = nullptr;
 };
 
 /// Simplifies an affine map by simplifying its underlying AffineExpr results.
@@ -361,8 +375,7 @@ AffineMap compressUnusedDims(AffineMap map);
 SmallVector<AffineMap> compressUnusedDims(ArrayRef<AffineMap> maps);
 
 /// Drop the dims that are not listed in `unusedDims`.
-AffineMap compressDims(AffineMap map,
-                       const llvm::SmallDenseSet<unsigned> &unusedDims);
+AffineMap compressDims(AffineMap map, const llvm::SmallBitVector &unusedDims);
 
 /// Drop the symbols that are not used.
 AffineMap compressUnusedSymbols(AffineMap map);
@@ -374,7 +387,7 @@ SmallVector<AffineMap> compressUnusedSymbols(ArrayRef<AffineMap> maps);
 
 /// Drop the symbols that are not listed in `unusedSymbols`.
 AffineMap compressSymbols(AffineMap map,
-                          const llvm::SmallDenseSet<unsigned> &unusedSymbols);
+                          const llvm::SmallBitVector &unusedSymbols);
 
 /// Returns a map with the same dimension and symbol count as `map`, but whose
 /// results are the unique affine expressions of `map`.
@@ -456,7 +469,18 @@ AffineMap inversePermutation(AffineMap map);
 /// ```mlir
 ///    affine_map<(d0) -> (0, 0, d0, 0)>
 /// ```
-AffineMap inverseAndBroadcastProjectedPermuation(AffineMap map);
+/// Example 4:
+///
+/// ```mlir
+///    affine_map<(d0, d1, d2) -> (d0, 0)>
+/// ```
+///
+/// returns:
+///
+/// ```mlir
+///    affine_map<(d0, d1) -> (d0, 0, 0)>
+/// ```
+AffineMap inverseAndBroadcastProjectedPermutation(AffineMap map);
 
 /// Concatenates a list of `maps` into a single AffineMap, stepping over
 /// potentially empty maps. Assumes each of the underlying map has 0 symbols.
@@ -499,29 +523,52 @@ AffineMap concatAffineMaps(ArrayRef<AffineMap> maps);
 ///    result               : affine_map<(d0, d1) -> (d0, 0)>
 ///
 /// This function also compresses unused symbols away.
-AffineMap
-getProjectedMap(AffineMap map,
-                const llvm::SmallDenseSet<unsigned> &projectedDimensions);
+AffineMap getProjectedMap(AffineMap map,
+                          const llvm::SmallBitVector &projectedDimensions);
 
 /// Apply a permutation from `map` to `source` and return the result.
 template <typename T>
-SmallVector<T> applyPermuationMap(AffineMap map, llvm::ArrayRef<T> source) {
+SmallVector<T> applyPermutationMap(AffineMap map, llvm::ArrayRef<T> source) {
   assert(map.isProjectedPermutation());
   assert(map.getNumInputs() == source.size());
   SmallVector<T> result;
   result.reserve(map.getNumResults());
-  for (unsigned i = 0, e = map.getNumResults(); i < e; ++i) {
-    unsigned dim = map.getDimPosition(i);
-    result.push_back(source[dim]);
+  for (AffineExpr expr : map.getResults()) {
+    if (auto dimExpr = expr.dyn_cast<AffineDimExpr>()) {
+      result.push_back(source[dimExpr.getPosition()]);
+    } else if (auto constExpr = expr.dyn_cast<AffineConstantExpr>()) {
+      assert(constExpr.getValue() == 0 &&
+             "Unexpected constant in projected permutation map");
+      result.push_back(0);
+    } else {
+      llvm_unreachable("Unexpected result in projected permutation map");
+    }
   }
   return result;
+}
+
+/// Calculates maxmimum dimension and symbol positions from the expressions
+/// in `exprsLists` and stores them in `maxDim` and `maxSym` respectively.
+template <typename AffineExprContainer>
+static void getMaxDimAndSymbol(ArrayRef<AffineExprContainer> exprsList,
+                               int64_t &maxDim, int64_t &maxSym) {
+  for (const auto &exprs : exprsList) {
+    for (auto expr : exprs) {
+      expr.walk([&maxDim, &maxSym](AffineExpr e) {
+        if (auto d = e.dyn_cast<AffineDimExpr>())
+          maxDim = std::max(maxDim, static_cast<int64_t>(d.getPosition()));
+        if (auto s = e.dyn_cast<AffineSymbolExpr>())
+          maxSym = std::max(maxSym, static_cast<int64_t>(s.getPosition()));
+      });
+    }
+  }
 }
 
 inline raw_ostream &operator<<(raw_ostream &os, AffineMap map) {
   map.print(os);
   return os;
 }
-} // end namespace mlir
+} // namespace mlir
 
 namespace llvm {
 
@@ -529,11 +576,11 @@ namespace llvm {
 template <>
 struct DenseMapInfo<mlir::AffineMap> {
   static mlir::AffineMap getEmptyKey() {
-    auto pointer = llvm::DenseMapInfo<void *>::getEmptyKey();
+    auto *pointer = llvm::DenseMapInfo<void *>::getEmptyKey();
     return mlir::AffineMap(static_cast<mlir::AffineMap::ImplType *>(pointer));
   }
   static mlir::AffineMap getTombstoneKey() {
-    auto pointer = llvm::DenseMapInfo<void *>::getTombstoneKey();
+    auto *pointer = llvm::DenseMapInfo<void *>::getTombstoneKey();
     return mlir::AffineMap(static_cast<mlir::AffineMap::ImplType *>(pointer));
   }
   static unsigned getHashValue(mlir::AffineMap val) {
@@ -546,4 +593,4 @@ struct DenseMapInfo<mlir::AffineMap> {
 
 } // namespace llvm
 
-#endif // MLIR_IR_AFFINE_MAP_H
+#endif // MLIR_IR_AFFINEMAP_H

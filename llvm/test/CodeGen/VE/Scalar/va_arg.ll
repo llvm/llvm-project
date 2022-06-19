@@ -14,22 +14,34 @@
 
 define i32 @func_vainout(i32, ...) {
 ; CHECK-LABEL: func_vainout:
-; CHECK:         ldl.sx %s1, 184(, %s9)
-; CHECK:         ld2b.sx %s19, 192(, %s9)
-; CHECK:         ld1b.sx %s22, 200(, %s9)
-; CHECK:         ldl.sx %s23, 208(, %s9)
-; CHECK:         ld2b.zx %s24, 216(, %s9)
-; CHECK:         ld1b.zx %s25, 224(, %s9)
-; CHECK:         ldu %s26, 236(, %s9)
-; CHECK:         ld %s27, 240(, %s9)
-; CHECK:         ld %s28, 248(, %s9)
-; CHECK:         ld %s29, 256(, %s9)
-; CHECK:         lea %s0, 279(, %s9)
-; CHECK:         and %s0, -16, %s0
-; CHECK:         lea %s2, 16(, %s0)
-; CHECK:         ld %s20, 8(, %s0)
-; CHECK:         ld %s21, (, %s0)
-; CHECK:         ld %s18, 16(, %s0)
+; CHECK:         ldl.sx %s{{.*}}, 184(, %s9)
+; CHECK:         ld2b.sx %s{{.*}}, 192(, %s9)
+; CHECK:         ld1b.sx %s{{.*}}, 200(, %s9)
+; CHECK:         ldl.sx %s{{.*}}, 208(, %s9)
+; CHECK:         ld2b.zx %s{{.*}}, 216(, %s9)
+; CHECK:         ld1b.zx %s{{.*}}, 224(, %s9)
+; CHECK:         ldu %s{{.*}}, 236(, %s9)
+; CHECK:         ld %s{{.*}}, 240(, %s9)
+; CHECK:         ld %s{{.*}}, 248(, %s9)
+; CHECK:         ld %s{{.*}}, 256(, %s9)
+; CHECK:         lea %{{.*}}, 279(, %s9)
+; CHECK:         and %{{.*}}, -16, %s0
+; CHECK:         lea %{{.*}}, 16(, %s0)
+; CHECK:         ld %s{{.*}}, 8(, %s0)
+; CHECK:         ld %s{{.*}}, (, %s0)
+; CHECK:         ld %s{{.*}}, 16(, %s0)
+; CHECK:         bsic
+; CHECK:         bsic
+; CHECK:         bsic
+; CHECK:         bsic
+; CHECK:         bsic
+; CHECK:         bsic
+; CHECK:         bsic
+; CHECK:         bsic
+; CHECK:         bsic
+; CHECK:         bsic
+; CHECK:         bsic
+; CHECK:         bsic
 
   %a = alloca i8*, align 8
   %a8 = bitcast i8** %a to i8*

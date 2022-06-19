@@ -531,7 +531,7 @@ void ExprEngine::handleConstructor(const Expr *E,
     // FIXME: Instead of relying on the ParentMap, we should have the
     // trigger-statement (InitListExpr in this case) passed down from CFG or
     // otherwise always available during construction.
-    if (dyn_cast_or_null<InitListExpr>(LCtx->getParentMap().getParent(E))) {
+    if (isa_and_nonnull<InitListExpr>(LCtx->getParentMap().getParent(E))) {
       MemRegionManager &MRMgr = getSValBuilder().getRegionManager();
       Target = loc::MemRegionVal(MRMgr.getCXXTempObjectRegion(E, LCtx));
       CallOpts.IsCtorOrDtorWithImproperlyModeledTargetRegion = true;
@@ -883,13 +883,10 @@ void ExprEngine::VisitCXXNewExpr(const CXXNewExpr *CNE, ExplodedNode *Pred,
     // where new can return NULL. If we end up supporting that option, we can
     // consider adding a check for it here.
     // C++11 [basic.stc.dynamic.allocation]p3.
-    if (FD) {
-      QualType Ty = FD->getType();
-      if (const auto *ProtoType = Ty->getAs<FunctionProtoType>())
-        if (!ProtoType->isNothrow())
-          if (auto dSymVal = symVal.getAs<DefinedOrUnknownSVal>())
-            State = State->assume(*dSymVal, true);
-    }
+    if (const auto *ProtoType = FD->getType()->getAs<FunctionProtoType>())
+      if (!ProtoType->isNothrow())
+        if (auto dSymVal = symVal.getAs<DefinedOrUnknownSVal>())
+          State = State->assume(*dSymVal, true);
   }
 
   StmtNodeBuilder Bldr(Pred, Dst, *currBldrCtx);
@@ -914,7 +911,7 @@ void ExprEngine::VisitCXXNewExpr(const CXXNewExpr *CNE, ExplodedNode *Pred,
   // CXXNewExpr, we need to make sure that the constructed object is not
   // immediately invalidated here. (The placement call should happen before
   // the constructor call anyway.)
-  if (FD && FD->isReservedGlobalPlacementOperator()) {
+  if (FD->isReservedGlobalPlacementOperator()) {
     // Non-array placement new should always return the placement location.
     SVal PlacementLoc = State->getSVal(CNE->getPlacementArg(0), LCtx);
     Result = svalBuilder.evalCast(PlacementLoc, CNE->getType(),
@@ -948,8 +945,17 @@ void ExprEngine::VisitCXXDeleteExpr(const CXXDeleteExpr *CDE,
 
   ExplodedNodeSet DstPreCall;
   getCheckerManager().runCheckersForPreCall(DstPreCall, Pred, *Call, *this);
+  ExplodedNodeSet DstPostCall;
 
-  getCheckerManager().runCheckersForPostCall(Dst, DstPreCall, *Call, *this);
+  if (AMgr.getAnalyzerOptions().MayInlineCXXAllocator) {
+    StmtNodeBuilder Bldr(DstPreCall, DstPostCall, *currBldrCtx);
+    for (ExplodedNode *I : DstPreCall) {
+      defaultEvalCall(Bldr, I, *Call);
+    }
+  } else {
+    DstPostCall = DstPreCall;
+  }
+  getCheckerManager().runCheckersForPostCall(Dst, DstPostCall, *Call, *this);
 }
 
 void ExprEngine::VisitCXXCatchStmt(const CXXCatchStmt *CS, ExplodedNode *Pred,

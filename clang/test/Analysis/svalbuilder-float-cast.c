@@ -1,4 +1,4 @@
-// RUN: %clang_analyze_cc1 -analyzer-checker debug.ExprInspection -verify %s
+// RUN: %clang_analyze_cc1 -analyzer-checker debug.ExprInspection -Wno-deprecated-non-prototype -verify %s
 void clang_analyzer_denote(int, const char *);
 void clang_analyzer_express(int);
 
@@ -13,7 +13,7 @@ void SymbolCast_of_float_type_aux(int *p) {
   clang_analyzer_express(*p); // expected-warning{{Not a symbol}}
 }
 
-void SymbolCast_of_float_type() {
+void SymbolCast_of_float_type(void) {
   extern float x;
   void (*f)() = SymbolCast_of_float_type_aux;
   f(&x);

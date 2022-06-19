@@ -75,7 +75,7 @@ int *getZeroIfNil(Test *x) {
   // expected-note@-2 {{Returning null pointer}}
 }
 
-void testReturnZeroIfNil() {
+void testReturnZeroIfNil(void) {
   *getZeroIfNil(0) = 1; // expected-warning{{Dereference of null pointer}}
   // expected-note@-1 {{Calling 'getZeroIfNil'}}
   // expected-note@-2 {{Passing nil object reference via 1st parameter 'x'}}
@@ -84,7 +84,7 @@ void testReturnZeroIfNil() {
 }
 
 
-int testDispatchSyncInlining() {
+int testDispatchSyncInlining(void) {
   extern dispatch_queue_t globalQueue;
 
   __block int x;
@@ -127,7 +127,7 @@ int testDispatchSyncInliningNoPruning(int coin) {
 - (int *)getPtr;
 @end
 
-id getNil() {
+id getNil(void) {
   return 0;
 }
 
@@ -163,7 +163,7 @@ id testCreateArrayLiteral(id myNil) {
 }
 
 // <rdar://problem/14611722>
-id testAutoreleaseTakesEffectInDispatch() {
+id testAutoreleaseTakesEffectInDispatch(void) {
   static dispatch_once_t token = 0;
   dispatch_once(&token, ^{});
 
@@ -178,7 +178,7 @@ id testAutoreleaseTakesEffectInDispatch() {
   // expected-note@-1 {{Object was autoreleased 2 times but the object has a +0 retain count}}
 }
 
-void testNullDereferenceInDispatch() {
+void testNullDereferenceInDispatch(void) {
   dispatch_once(0, ^{}); // no-warning, don't crash
 }
 

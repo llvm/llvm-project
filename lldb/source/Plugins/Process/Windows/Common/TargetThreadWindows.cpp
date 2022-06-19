@@ -12,8 +12,8 @@
 #include "lldb/Host/windows/windows.h"
 #include "lldb/Target/RegisterContext.h"
 #include "lldb/Target/Unwind.h"
+#include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
-#include "lldb/Utility/Logging.h"
 #include "lldb/Utility/State.h"
 
 #include "ProcessWindows.h"
@@ -61,7 +61,7 @@ RegisterContextSP
 TargetThreadWindows::CreateRegisterContextForFrame(StackFrame *frame) {
   RegisterContextSP reg_ctx_sp;
   uint32_t concrete_frame_idx = 0;
-  Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_THREAD));
+  Log *log = GetLog(LLDBLog::Thread);
 
   if (frame)
     concrete_frame_idx = frame->GetConcreteFrameIndex();
@@ -131,12 +131,29 @@ Status TargetThreadWindows::DoResume() {
     return Status();
 
   if (resume_state == eStateStepping) {
+    Log *log = GetLog(LLDBLog::Thread);
+
     uint32_t flags_index =
         GetRegisterContext()->ConvertRegisterKindToRegisterNumber(
             eRegisterKindGeneric, LLDB_REGNUM_GENERIC_FLAGS);
     uint64_t flags_value =
         GetRegisterContext()->ReadRegisterAsUnsigned(flags_index, 0);
-    flags_value |= 0x100; // Set the trap flag on the CPU
+    ProcessSP process = GetProcess();
+    const ArchSpec &arch = process->GetTarget().GetArchitecture();
+    switch (arch.GetMachine()) {
+    case llvm::Triple::x86:
+    case llvm::Triple::x86_64:
+      flags_value |= 0x100; // Set the trap flag on the CPU
+      break;
+    case llvm::Triple::aarch64:
+    case llvm::Triple::arm:
+    case llvm::Triple::thumb:
+      flags_value |= 0x200000; // The SS bit in PState
+      break;
+    default:
+      LLDB_LOG(log, "single stepping unsupported on this architecture");
+      break;
+    }
     GetRegisterContext()->WriteRegisterFromUnsigned(flags_index, flags_value);
   }
 

@@ -12,8 +12,6 @@ from lldbsuite.test import lldbutil
 
 class DynamicValueChildCountTestCase(TestBase):
 
-    mydir = TestBase.compute_mydir(__file__)
-
     def setUp(self):
         # Call super's setUp().
         TestBase.setUp(self)
@@ -34,7 +32,7 @@ class DynamicValueChildCountTestCase(TestBase):
     def test_get_dynamic_vals(self):
         """Test fetching C++ dynamic values from pointers & references."""
         """Get argument vals for the call stack when stopped on a breakpoint."""
-        self.build(dictionary=self.getBuildFlags())
+        self.build()
         exe = self.getBuildArtifact("a.out")
 
         # Create a target from the debugger.
@@ -65,8 +63,8 @@ class DynamicValueChildCountTestCase(TestBase):
         process = target.LaunchSimple(
             None, None, self.get_process_working_directory())
 
-        self.assertEquals(process.GetState(), lldb.eStateStopped,
-                        PROCESS_STOPPED)
+        self.assertState(process.GetState(), lldb.eStateStopped,
+                         PROCESS_STOPPED)
 
         b = self.frame().FindVariable("b").GetDynamicValue(lldb.eDynamicCanRunTarget)
         self.assertEquals(b.GetNumChildren(), 0, "b has 0 children")

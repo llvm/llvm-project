@@ -3,9 +3,9 @@
 # RUN: llc -start-before=machine-cp -O2 -filetype=asm -mtriple=x86_64-apple-macosx10.9.0 -o - %s | FileCheck %s
 
 # CHECK: Ltmp0:
-# CHECK: .loc 1 0 0 prologue_end
+# CHECK: .loc 1 0 0
 # CHECK-NOT: .loc 1 0 0
-# CHECK: .loc 1 37 1
+# CHECK: .loc 1 37 1 prologue_end
 
 --- |
   ; ModuleID = '<stdin>'

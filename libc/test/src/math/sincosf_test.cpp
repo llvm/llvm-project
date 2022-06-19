@@ -6,19 +6,19 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "src/__support/CPP/Array.h"
+#include "src/__support/FPUtil/FPBits.h"
 #include "src/math/sincosf.h"
 #include "test/src/math/sdcomp26094.h"
-#include "utils/CPP/Array.h"
-#include "utils/FPUtil/FPBits.h"
-#include "utils/FPUtil/TestHelpers.h"
 #include "utils/MPFRWrapper/MPFRUtils.h"
+#include "utils/UnitTest/FPMatcher.h"
 #include "utils/UnitTest/Test.h"
 #include <math.h>
 
 #include <errno.h>
 #include <stdint.h>
 
-using __llvm_libc::testing::sdcomp26094Values;
+using __llvm_libc::testing::SDCOMP26094_VALUES;
 using FPBits = __llvm_libc::fputil::FPBits<float>;
 
 namespace mpfr = __llvm_libc::testing::mpfr;
@@ -32,35 +32,33 @@ TEST(LlvmLibcSinCosfTest, SpecialNumbers) {
   __llvm_libc::sincosf(aNaN, &sin, &cos);
   EXPECT_FP_EQ(aNaN, cos);
   EXPECT_FP_EQ(aNaN, sin);
-  EXPECT_EQ(errno, 0);
+  EXPECT_MATH_ERRNO(0);
 
   __llvm_libc::sincosf(0.0f, &sin, &cos);
   EXPECT_FP_EQ(1.0f, cos);
   EXPECT_FP_EQ(0.0f, sin);
-  EXPECT_EQ(errno, 0);
+  EXPECT_MATH_ERRNO(0);
 
   __llvm_libc::sincosf(-0.0f, &sin, &cos);
   EXPECT_FP_EQ(1.0f, cos);
   EXPECT_FP_EQ(-0.0f, sin);
-  EXPECT_EQ(errno, 0);
+  EXPECT_MATH_ERRNO(0);
 
-  errno = 0;
   __llvm_libc::sincosf(inf, &sin, &cos);
   EXPECT_FP_EQ(aNaN, cos);
   EXPECT_FP_EQ(aNaN, sin);
-  EXPECT_EQ(errno, EDOM);
+  EXPECT_MATH_ERRNO(EDOM);
 
-  errno = 0;
-  __llvm_libc::sincosf(negInf, &sin, &cos);
+  __llvm_libc::sincosf(neg_inf, &sin, &cos);
   EXPECT_FP_EQ(aNaN, cos);
   EXPECT_FP_EQ(aNaN, sin);
-  EXPECT_EQ(errno, EDOM);
+  EXPECT_MATH_ERRNO(EDOM);
 }
 
 TEST(LlvmLibcSinCosfTest, InFloatRange) {
-  constexpr uint32_t count = 1000000;
-  constexpr uint32_t step = UINT32_MAX / count;
-  for (uint32_t i = 0, v = 0; i <= count; ++i, v += step) {
+  constexpr uint32_t COUNT = 1000000;
+  constexpr uint32_t STEP = UINT32_MAX / COUNT;
+  for (uint32_t i = 0, v = 0; i <= COUNT; ++i, v += STEP) {
     float x = float(FPBits((v)));
     if (isnan(x) || isinf(x))
       continue;
@@ -95,7 +93,7 @@ TEST(LlvmLibcSinCosfTest, SmallValues) {
 // SDCOMP-26094: check sinf in the cases for which the range reducer
 // returns values furthest beyond its nominal upper bound of pi/4.
 TEST(LlvmLibcSinCosfTest, SDCOMP_26094) {
-  for (uint32_t v : sdcomp26094Values) {
+  for (uint32_t v : SDCOMP26094_VALUES) {
     float x = float(FPBits((v)));
     float sin, cos;
     __llvm_libc::sincosf(x, &sin, &cos);

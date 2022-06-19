@@ -254,7 +254,10 @@ define void @test_call_stack() {
 ; CHECK-NEXT: isImmutable: true,
 ; CHECK: [[ADDR:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.[[SLOT]]
 ; CHECK: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[ADDR]](p0) :: (invariant load (s8) from %fixed-stack.[[SLOT]], align 16)
-; CHECK-NEXT: {{%[0-9]+}}:_(s1) = G_TRUNC [[LOAD]]
+; CHECK: [[TRUNC8:%[0-9]+]]:_(s8) = G_TRUNC [[LOAD]]
+; CHECK: [[TRUNCASSERT:%[0-9]+]]:_(s8) = G_ASSERT_ZEXT [[TRUNC8]], 1
+; CHECK: {{%[0-9]+}}:_(s1) = G_TRUNC [[TRUNCASSERT]]
+
 define void @test_mem_i1([8 x i64], i1 %in) {
   ret void
 }

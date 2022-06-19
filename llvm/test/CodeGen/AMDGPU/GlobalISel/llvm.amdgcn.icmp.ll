@@ -25,6 +25,17 @@ define amdgpu_ps void @test_intr_icmp_ne_i32(i32 addrspace(1)* %out, i32 %src) #
   store i32 %result, i32 addrspace(1)* %out
   ret void
 }
+
+define amdgpu_ps void @test_intr_icmp_i32_invalid_cc(i32 addrspace(1)* %out, i32 %src) #1 {
+; GCN-LABEL: test_intr_icmp_i32_invalid_cc:
+; GCN:       ; %bb.0:
+; GCN-NEXT:    global_store_dword v[0:1], v0, off
+; GCN-NEXT:    s_endpgm
+  %result = call i32 @llvm.amdgcn.icmp.i32.i32(i32 %src, i32 100, i32 9999)
+  store i32 %result, i32 addrspace(1)* %out
+  ret void
+}
+
 declare i64 @llvm.amdgcn.icmp.i64.i32(i32, i32, i32)
 declare i32 @llvm.amdgcn.icmp.i32.i32(i32, i32, i32)
 attributes #0 = { "target-features"="+wavefrontsize64" }

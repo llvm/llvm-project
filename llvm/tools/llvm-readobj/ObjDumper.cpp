@@ -13,6 +13,7 @@
 
 #include "ObjDumper.h"
 #include "llvm-readobj.h"
+#include "llvm/Object/Archive.h"
 #include "llvm/Object/ObjectFile.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/FormatVariadic.h"
@@ -52,9 +53,23 @@ static void printAsPrintable(raw_ostream &W, const uint8_t *Start, size_t Len) {
     W << (isPrint(Start[i]) ? static_cast<char>(Start[i]) : '.');
 }
 
-void ObjDumper::printAsStringList(StringRef StringContent) {
+void ObjDumper::printAsStringList(StringRef StringContent,
+                                  size_t StringDataOffset) {
+  size_t StrSize = StringContent.size();
+  if (StrSize == 0)
+    return;
+  if (StrSize < StringDataOffset) {
+    reportUniqueWarning("offset (0x" + Twine::utohexstr(StringDataOffset) +
+                        ") is past the end of the contents (size 0x" +
+                        Twine::utohexstr(StrSize) + ")");
+    return;
+  }
+
   const uint8_t *StrContent = StringContent.bytes_begin();
-  const uint8_t *CurrentWord = StrContent;
+  // Some formats contain additional metadata at the start which should not be
+  // interpreted as strings. Skip these bytes, but account for them in the
+  // string offsets.
+  const uint8_t *CurrentWord = StrContent + StringDataOffset;
   const uint8_t *StrEnd = StringContent.bytes_end();
 
   while (CurrentWord <= StrEnd) {
@@ -69,6 +84,18 @@ void ObjDumper::printAsStringList(StringRef StringContent) {
     W.startLine() << '\n';
     CurrentWord += WordSize + 1;
   }
+}
+
+void ObjDumper::printFileSummary(StringRef FileStr, object::ObjectFile &Obj,
+                                 ArrayRef<std::string> InputFilenames,
+                                 const object::Archive *A) {
+  W.startLine() << "\n";
+  W.printString("File", FileStr);
+  W.printString("Format", Obj.getFileFormatName());
+  W.printString("Arch", Triple::getArchTypeName(Obj.getArch()));
+  W.printString("AddressSize",
+                std::string(formatv("{0}bit", 8 * Obj.getBytesInAddress())));
+  this->printLoadName();
 }
 
 static std::vector<object::SectionRef>

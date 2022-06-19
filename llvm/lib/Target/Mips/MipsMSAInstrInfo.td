@@ -1308,8 +1308,8 @@ class MSA_2R_FILL_DESC_BASE<string instr_asm, ValueType VT,
   InstrItinClass Itinerary = itin;
 }
 
-class MSA_2R_FILL_PSEUDO_BASE<ValueType VT, SDPatternOperator OpNode,
-                              RegisterClass RCWD, RegisterClass RCWS = RCWD> :
+class MSA_2R_FILL_PSEUDO_BASE<SDPatternOperator OpNode,
+                              RegisterClass RCWD, RegisterClass RCWS> :
       MSAPseudo<(outs RCWD:$wd), (ins RCWS:$fs),
                 [(set RCWD:$wd, (OpNode RCWS:$fs))]> {
   let usesCustomInserter = 1;
@@ -2091,10 +2091,8 @@ class FILL_W_DESC : MSA_2R_FILL_DESC_BASE<"fill.w", v4i32, vsplati32,
 class FILL_D_DESC : MSA_2R_FILL_DESC_BASE<"fill.d", v2i64, vsplati64,
                                           MSA128DOpnd, GPR64Opnd>;
 
-class FILL_FW_PSEUDO_DESC : MSA_2R_FILL_PSEUDO_BASE<v4f32, vsplatf32, MSA128W,
-                                                    FGR32>;
-class FILL_FD_PSEUDO_DESC : MSA_2R_FILL_PSEUDO_BASE<v2f64, vsplatf64, MSA128D,
-                                                    FGR64>;
+class FILL_FW_PSEUDO_DESC : MSA_2R_FILL_PSEUDO_BASE<vsplatf32, MSA128W, FGR32>;
+class FILL_FD_PSEUDO_DESC : MSA_2R_FILL_PSEUDO_BASE<vsplatf64, MSA128D, FGR64>;
 
 class FLOG2_W_DESC : MSA_2RF_DESC_BASE<"flog2.w", flog2, MSA128WOpnd>;
 class FLOG2_D_DESC : MSA_2RF_DESC_BASE<"flog2.d", flog2, MSA128DOpnd>;
@@ -3755,8 +3753,7 @@ def : MSABitconvertReverseWInDPat<v4f32, v2f64, MSA128W>;
 // Pseudos used to implement BNZ.df, and BZ.df
 
 class MSA_CBRANCH_PSEUDO_DESC_BASE<SDPatternOperator OpNode, ValueType TyNode,
-                                   RegisterClass RCWS,
-                                   InstrItinClass itin = NoItinerary> :
+                                   RegisterClass RCWS> :
   MipsPseudo<(outs GPR32:$dst),
              (ins RCWS:$ws),
              [(set GPR32:$dst, (OpNode (TyNode RCWS:$ws)))]> {
@@ -3764,27 +3761,22 @@ class MSA_CBRANCH_PSEUDO_DESC_BASE<SDPatternOperator OpNode, ValueType TyNode,
   bit hasNoSchedulingInfo = 1;
 }
 
-def SNZ_B_PSEUDO : MSA_CBRANCH_PSEUDO_DESC_BASE<MipsVAllNonZero, v16i8,
-                                                MSA128B, NoItinerary>;
-def SNZ_H_PSEUDO : MSA_CBRANCH_PSEUDO_DESC_BASE<MipsVAllNonZero, v8i16,
-                                                MSA128H, NoItinerary>;
-def SNZ_W_PSEUDO : MSA_CBRANCH_PSEUDO_DESC_BASE<MipsVAllNonZero, v4i32,
-                                                MSA128W, NoItinerary>;
-def SNZ_D_PSEUDO : MSA_CBRANCH_PSEUDO_DESC_BASE<MipsVAllNonZero, v2i64,
-                                                MSA128D, NoItinerary>;
-def SNZ_V_PSEUDO : MSA_CBRANCH_PSEUDO_DESC_BASE<MipsVAnyNonZero, v16i8,
-                                                MSA128B, NoItinerary>;
+def SNZ_B_PSEUDO
+    : MSA_CBRANCH_PSEUDO_DESC_BASE<MipsVAllNonZero, v16i8, MSA128B>;
+def SNZ_H_PSEUDO
+    : MSA_CBRANCH_PSEUDO_DESC_BASE<MipsVAllNonZero, v8i16, MSA128H>;
+def SNZ_W_PSEUDO
+    : MSA_CBRANCH_PSEUDO_DESC_BASE<MipsVAllNonZero, v4i32, MSA128W>;
+def SNZ_D_PSEUDO
+    : MSA_CBRANCH_PSEUDO_DESC_BASE<MipsVAllNonZero, v2i64, MSA128D>;
+def SNZ_V_PSEUDO
+    : MSA_CBRANCH_PSEUDO_DESC_BASE<MipsVAnyNonZero, v16i8, MSA128B>;
 
-def SZ_B_PSEUDO : MSA_CBRANCH_PSEUDO_DESC_BASE<MipsVAllZero, v16i8,
-                                               MSA128B, NoItinerary>;
-def SZ_H_PSEUDO : MSA_CBRANCH_PSEUDO_DESC_BASE<MipsVAllZero, v8i16,
-                                               MSA128H, NoItinerary>;
-def SZ_W_PSEUDO : MSA_CBRANCH_PSEUDO_DESC_BASE<MipsVAllZero, v4i32,
-                                               MSA128W, NoItinerary>;
-def SZ_D_PSEUDO : MSA_CBRANCH_PSEUDO_DESC_BASE<MipsVAllZero, v2i64,
-                                               MSA128D, NoItinerary>;
-def SZ_V_PSEUDO : MSA_CBRANCH_PSEUDO_DESC_BASE<MipsVAnyZero, v16i8,
-                                               MSA128B, NoItinerary>;
+def SZ_B_PSEUDO : MSA_CBRANCH_PSEUDO_DESC_BASE<MipsVAllZero, v16i8, MSA128B>;
+def SZ_H_PSEUDO : MSA_CBRANCH_PSEUDO_DESC_BASE<MipsVAllZero, v8i16, MSA128H>;
+def SZ_W_PSEUDO : MSA_CBRANCH_PSEUDO_DESC_BASE<MipsVAllZero, v4i32, MSA128W>;
+def SZ_D_PSEUDO : MSA_CBRANCH_PSEUDO_DESC_BASE<MipsVAllZero, v2i64, MSA128D>;
+def SZ_V_PSEUDO : MSA_CBRANCH_PSEUDO_DESC_BASE<MipsVAnyZero, v16i8, MSA128B>;
 
 // Pseudoes used to implement transparent fp16 support.
 

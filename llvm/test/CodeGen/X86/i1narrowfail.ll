@@ -11,3 +11,14 @@ define void @foo(i64* %ptr) {
   store i64 %r12, i64* %ptr, align 8
   ret void
 }
+
+define void @foo_noalign(i64* %ptr) {
+; CHECK-LABEL: foo_noalign:
+; CHECK:       ## %bb.0:
+; CHECK-NEXT:    orb $16, (%rdi)
+; CHECK-NEXT:    retq
+  %r11 = load i64, i64* %ptr, align 1
+  %r12 = or i64 16, %r11
+  store i64 %r12, i64* %ptr, align 1
+  ret void
+}

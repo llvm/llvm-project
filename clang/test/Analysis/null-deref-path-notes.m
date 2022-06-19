@@ -1,5 +1,5 @@
-// RUN: %clang_analyze_cc1 -analyzer-checker=core -analyzer-store=region -analyzer-output=text -fblocks -verify -Wno-objc-root-class %s
-// RUN: %clang_analyze_cc1 -analyzer-checker=core -analyzer-store=region -analyzer-output=plist-multi-file -fblocks -Wno-objc-root-class %s -o %t
+// RUN: %clang_analyze_cc1 -analyzer-checker=core -analyzer-output=text -fblocks -verify -Wno-objc-root-class %s
+// RUN: %clang_analyze_cc1 -analyzer-checker=core -analyzer-output=plist-multi-file -fblocks -Wno-objc-root-class %s -o %t
 // RUN: %normalize_plist <%t | diff -ub %S/Inputs/expected-plists/null-deref-path-notes.m.plist -
 
 @interface Root {
@@ -41,7 +41,7 @@ void repeatedStores(int coin) {
   if (coin) {
     // expected-note@-1 {{Assuming 'coin' is 0}}
     // expected-note@-2 {{Taking false branch}}
-    extern int *getPointer();
+    extern int *getPointer(void);
     p = getPointer();
   } else {
     p = 0; // expected-note {{Null pointer value stored to 'p'}}

@@ -18,12 +18,14 @@
 #include "MipsTargetMachine.h"
 #include "llvm/CodeGen/Analysis.h"
 #include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
+#include "llvm/CodeGen/MachineFrameInfo.h"
 
 using namespace llvm;
 
 MipsCallLowering::MipsCallLowering(const MipsTargetLowering &TLI)
     : CallLowering(&TLI) {}
 
+namespace {
 struct MipsOutgoingValueAssigner : public CallLowering::OutgoingValueAssigner {
   /// This is the name of the function being called
   /// FIXME: Relying on this is unsound
@@ -80,7 +82,6 @@ struct MipsIncomingValueAssigner : public CallLowering::IncomingValueAssigner {
   }
 };
 
-namespace {
 class MipsIncomingValueHandler : public CallLowering::IncomingValueHandler {
   const MipsSubtarget &STI;
 
@@ -92,7 +93,7 @@ public:
 
 private:
   void assignValueToReg(Register ValVReg, Register PhysReg,
-                        CCValAssign &VA) override;
+                        CCValAssign VA) override;
 
   Register getStackAddress(uint64_t Size, int64_t Offset,
                            MachinePointerInfo &MPO,
@@ -101,7 +102,8 @@ private:
                             MachinePointerInfo &MPO, CCValAssign &VA) override;
 
   unsigned assignCustomValue(CallLowering::ArgInfo &Arg,
-                             ArrayRef<CCValAssign> VAs) override;
+                             ArrayRef<CCValAssign> VAs,
+                             std::function<void()> *Thunk = nullptr) override;
 
   virtual void markPhysRegUsed(unsigned PhysReg) {
     MIRBuilder.getMRI()->addLiveIn(PhysReg);
@@ -127,7 +129,7 @@ private:
 
 void MipsIncomingValueHandler::assignValueToReg(Register ValVReg,
                                                 Register PhysReg,
-                                                CCValAssign &VA) {
+                                                CCValAssign VA) {
   markPhysRegUsed(PhysReg);
   IncomingValueHandler::assignValueToReg(ValVReg, PhysReg, VA);
 }
@@ -163,7 +165,8 @@ void MipsIncomingValueHandler::assignValueToAddress(Register ValVReg,
 /// dependent on other arguments.
 unsigned
 MipsIncomingValueHandler::assignCustomValue(CallLowering::ArgInfo &Arg,
-                                            ArrayRef<CCValAssign> VAs) {
+                                            ArrayRef<CCValAssign> VAs,
+                                            std::function<void()> *Thunk) {
   const CCValAssign &VALo = VAs[0];
   const CCValAssign &VAHi = VAs[1];
 
@@ -197,7 +200,7 @@ public:
 
 private:
   void assignValueToReg(Register ValVReg, Register PhysReg,
-                        CCValAssign &VA) override;
+                        CCValAssign VA) override;
 
   Register getStackAddress(uint64_t Size, int64_t Offset,
                            MachinePointerInfo &MPO,
@@ -206,7 +209,8 @@ private:
   void assignValueToAddress(Register ValVReg, Register Addr, LLT MemTy,
                             MachinePointerInfo &MPO, CCValAssign &VA) override;
   unsigned assignCustomValue(CallLowering::ArgInfo &Arg,
-                             ArrayRef<CCValAssign> VAs) override;
+                             ArrayRef<CCValAssign> VAs,
+                             std::function<void()> *Thunk) override;
 
   MachineInstrBuilder &MIB;
 };
@@ -214,7 +218,7 @@ private:
 
 void MipsOutgoingValueHandler::assignValueToReg(Register ValVReg,
                                                 Register PhysReg,
-                                                CCValAssign &VA) {
+                                                CCValAssign VA) {
   Register ExtReg = extendRegister(ValVReg, VA);
   MIRBuilder.buildCopy(PhysReg, ExtReg);
   MIB.addUse(PhysReg, RegState::Implicit);
@@ -253,7 +257,8 @@ void MipsOutgoingValueHandler::assignValueToAddress(Register ValVReg,
 
 unsigned
 MipsOutgoingValueHandler::assignCustomValue(CallLowering::ArgInfo &Arg,
-                                            ArrayRef<CCValAssign> VAs) {
+                                            ArrayRef<CCValAssign> VAs,
+                                            std::function<void()> *Thunk) {
   const CCValAssign &VALo = VAs[0];
   const CCValAssign &VAHi = VAs[1];
 
@@ -271,6 +276,15 @@ MipsOutgoingValueHandler::assignCustomValue(CallLowering::ArgInfo &Arg,
   if (!STI.isLittle())
     std::swap(Lo, Hi);
 
+  // If we can return a thunk, just include the register copies. The unmerge can
+  // be emitted earlier.
+  if (Thunk) {
+    *Thunk = [=]() {
+      MIRBuilder.buildCopy(VALo.getLocReg(), Lo);
+      MIRBuilder.buildCopy(VAHi.getLocReg(), Hi);
+    };
+    return 2;
+  }
   MIRBuilder.buildCopy(VALo.getLocReg(), Lo);
   MIRBuilder.buildCopy(VAHi.getLocReg(), Hi);
   return 2;
@@ -527,8 +541,7 @@ bool MipsCallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
   }
   MIRBuilder.insertInstr(MIB);
   if (MIB->getOpcode() == Mips::JALRPseudo) {
-    const MipsSubtarget &STI =
-        static_cast<const MipsSubtarget &>(MIRBuilder.getMF().getSubtarget());
+    const MipsSubtarget &STI = MIRBuilder.getMF().getSubtarget<MipsSubtarget>();
     MIB.constrainAllUses(MIRBuilder.getTII(), *STI.getRegisterInfo(),
                          *STI.getRegBankInfo());
   }

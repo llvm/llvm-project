@@ -9,35 +9,35 @@
 #ifndef LLD_ELF_OUTPUT_SECTIONS_H
 #define LLD_ELF_OUTPUT_SECTIONS_H
 
-#include "Config.h"
 #include "InputSection.h"
 #include "LinkerScript.h"
-#include "Relocations.h"
 #include "lld/Common/LLVM.h"
-#include "llvm/MC/StringTableBuilder.h"
-#include "llvm/Object/ELF.h"
+
 #include <array>
 
 namespace lld {
 namespace elf {
 
 struct PhdrEntry;
-class InputSection;
-class InputSectionBase;
+
+struct CompressedData {
+  std::unique_ptr<SmallVector<uint8_t, 0>[]> shards;
+  uint32_t numShards = 0;
+  uint32_t checksum = 0;
+  uint64_t uncompressedSize;
+};
 
 // This represents a section in an output file.
 // It is composed of multiple InputSections.
 // The writer creates multiple OutputSections and assign them unique,
 // non-overlapping file offsets and VAs.
-class OutputSection final : public BaseCommand, public SectionBase {
+class OutputSection final : public SectionBase {
 public:
   OutputSection(StringRef name, uint32_t type, uint64_t flags);
 
   static bool classof(const SectionBase *s) {
     return s->kind() == SectionBase::Output;
   }
-
-  static bool classof(const BaseCommand *c);
 
   uint64_t getLMA() const { return ptLoad ? addr + ptLoad->lmaOffset : addr; }
   template <typename ELFT> void writeHeaderTo(typename ELFT::Shdr *sHdr);
@@ -82,15 +82,15 @@ public:
   Expr alignExpr;
   Expr lmaExpr;
   Expr subalignExpr;
-  std::vector<BaseCommand *> sectionCommands;
-  std::vector<StringRef> phdrs;
+  SmallVector<SectionCommand *, 0> commands;
+  SmallVector<StringRef, 0> phdrs;
   llvm::Optional<std::array<uint8_t, 4>> filler;
   ConstraintKind constraint = ConstraintKind::NoConstraint;
   std::string location;
   std::string memoryRegionName;
   std::string lmaRegionName;
   bool nonAlloc = false;
-  bool noload = false;
+  bool typeIsSet = false;
   bool expressionsUseSymbols = false;
   bool usedInExpression = false;
   bool inOverlay = false;
@@ -99,6 +99,10 @@ public:
   // if the section was later removed (e.g. because it is a synthetic section
   // that wasn't needed). This is needed for orphan placement.
   bool hasInputSections = false;
+
+  // The output section description is specified between DATA_SEGMENT_ALIGN and
+  // DATA_RELRO_END.
+  bool relro = false;
 
   void finalize();
   template <class ELFT> void writeTo(uint8_t *buf);
@@ -112,23 +116,31 @@ public:
 
 private:
   // Used for implementation of --compress-debug-sections option.
-  std::vector<uint8_t> zDebugHeader;
-  llvm::SmallVector<char, 0> compressedData;
+  CompressedData compressed;
 
   std::array<uint8_t, 4> getFiller();
+};
+
+struct OutputDesc final : SectionCommand {
+  OutputSection osec;
+  OutputDesc(StringRef name, uint32_t type, uint64_t flags)
+      : SectionCommand(OutputSectionKind), osec(name, type, flags) {}
+
+  static bool classof(const SectionCommand *c) {
+    return c->kind == OutputSectionKind;
+  }
 };
 
 int getPriority(StringRef s);
 
 InputSection *getFirstInputSection(const OutputSection *os);
-std::vector<InputSection *> getInputSections(const OutputSection *os);
+SmallVector<InputSection *, 0> getInputSections(const OutputSection &os);
 
 // All output sections that are handled by the linker specially are
 // globally accessible. Writer initializes them, so don't use them
 // until Writer is initialized.
 struct Out {
   static uint8_t *bufferStart;
-  static uint8_t first;
   static PhdrEntry *tlsPhdr;
   static OutputSection *elfHeader;
   static OutputSection *programHeaders;
@@ -139,7 +151,7 @@ struct Out {
 
 uint64_t getHeaderSize();
 
-extern std::vector<OutputSection *> outputSections;
+extern llvm::SmallVector<OutputSection *, 0> outputSections;
 } // namespace elf
 } // namespace lld
 

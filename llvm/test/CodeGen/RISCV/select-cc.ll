@@ -4,7 +4,7 @@
 ; RUN: llc -mtriple=riscv32 -mattr=+experimental-zbt -disable-block-placement -verify-machineinstrs < %s \
 ; RUN:   | FileCheck -check-prefix=RV32IBT %s
 
-define i32 @foo(i32 %a, i32 *%b) nounwind {
+define signext i32 @foo(i32 signext %a, i32 *%b) nounwind {
 ; RV32I-LABEL: foo:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    lw a2, 0(a1)
@@ -62,11 +62,23 @@ define i32 @foo(i32 %a, i32 *%b) nounwind {
 ; RV32I-NEXT:  # %bb.21:
 ; RV32I-NEXT:    mv a0, a2
 ; RV32I-NEXT:  .LBB0_22:
-; RV32I-NEXT:    lw a1, 0(a1)
+; RV32I-NEXT:    lw a3, 0(a1)
 ; RV32I-NEXT:    bgez a2, .LBB0_24
 ; RV32I-NEXT:  # %bb.23:
-; RV32I-NEXT:    mv a0, a1
+; RV32I-NEXT:    mv a0, a3
 ; RV32I-NEXT:  .LBB0_24:
+; RV32I-NEXT:    lw a3, 0(a1)
+; RV32I-NEXT:    li a4, 1024
+; RV32I-NEXT:    blt a4, a3, .LBB0_26
+; RV32I-NEXT:  # %bb.25:
+; RV32I-NEXT:    mv a0, a3
+; RV32I-NEXT:  .LBB0_26:
+; RV32I-NEXT:    lw a1, 0(a1)
+; RV32I-NEXT:    li a3, 2046
+; RV32I-NEXT:    bltu a3, a2, .LBB0_28
+; RV32I-NEXT:  # %bb.27:
+; RV32I-NEXT:    mv a0, a1
+; RV32I-NEXT:  .LBB0_28:
 ; RV32I-NEXT:    ret
 ;
 ; RV32IBT-LABEL: foo:
@@ -103,11 +115,16 @@ define i32 @foo(i32 %a, i32 *%b) nounwind {
 ; RV32IBT-NEXT:    slt a2, a3, a0
 ; RV32IBT-NEXT:    cmov a0, a2, a3, a0
 ; RV32IBT-NEXT:    slti a2, a5, 1
-; RV32IBT-NEXT:    lw a1, 0(a1)
+; RV32IBT-NEXT:    lw a3, 0(a1)
 ; RV32IBT-NEXT:    cmov a0, a2, a0, a5
-; RV32IBT-NEXT:    addi a2, zero, -1
-; RV32IBT-NEXT:    slt a2, a2, a5
-; RV32IBT-NEXT:    cmov a0, a2, a0, a1
+; RV32IBT-NEXT:    lw a2, 0(a1)
+; RV32IBT-NEXT:    slti a4, a5, 0
+; RV32IBT-NEXT:    cmov a0, a4, a3, a0
+; RV32IBT-NEXT:    lw a1, 0(a1)
+; RV32IBT-NEXT:    slti a3, a2, 1025
+; RV32IBT-NEXT:    cmov a0, a3, a2, a0
+; RV32IBT-NEXT:    sltiu a2, a5, 2047
+; RV32IBT-NEXT:    cmov a0, a2, a1, a0
 ; RV32IBT-NEXT:    ret
   %val1 = load volatile i32, i32* %b
   %tst1 = icmp eq i32 %a, %val1
@@ -157,5 +174,67 @@ define i32 @foo(i32 %a, i32 *%b) nounwind {
   %tst12 = icmp sgt i32 %val21, -1
   %val24 = select i1 %tst12, i32 %val22, i32 %val23
 
-  ret i32 %val24
+  %val25 = load volatile i32, i32* %b
+  %tst13 = icmp sgt i32 %val25, 1024
+  %val26 = select i1 %tst13, i32 %val24, i32 %val25
+
+  %val27 = load volatile i32, i32* %b
+  %tst14 = icmp ugt i32 %val21, 2046
+  %val28 = select i1 %tst14, i32 %val26, i32 %val27
+  ret i32 %val28
 }
+
+; Test that we can ComputeNumSignBits across basic blocks when the live out is
+; RISCVISD::SELECT_CC. There should be no slli+srai or sext.h in the output.
+define signext i16 @numsignbits(i16 signext %0, i16 signext %1, i16 signext %2, i16 signext %3) nounwind {
+; RV32I-LABEL: numsignbits:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    addi sp, sp, -16
+; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32I-NEXT:    sw s0, 8(sp) # 4-byte Folded Spill
+; RV32I-NEXT:    mv s0, a3
+; RV32I-NEXT:    beqz a0, .LBB1_2
+; RV32I-NEXT:  # %bb.1:
+; RV32I-NEXT:    mv s0, a2
+; RV32I-NEXT:  .LBB1_2:
+; RV32I-NEXT:    beqz a1, .LBB1_4
+; RV32I-NEXT:  # %bb.3:
+; RV32I-NEXT:    mv a0, s0
+; RV32I-NEXT:    call bar@plt
+; RV32I-NEXT:  .LBB1_4:
+; RV32I-NEXT:    mv a0, s0
+; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    addi sp, sp, 16
+; RV32I-NEXT:    ret
+;
+; RV32IBT-LABEL: numsignbits:
+; RV32IBT:       # %bb.0:
+; RV32IBT-NEXT:    addi sp, sp, -16
+; RV32IBT-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32IBT-NEXT:    sw s0, 8(sp) # 4-byte Folded Spill
+; RV32IBT-NEXT:    cmov s0, a0, a2, a3
+; RV32IBT-NEXT:    beqz a1, .LBB1_2
+; RV32IBT-NEXT:  # %bb.1:
+; RV32IBT-NEXT:    mv a0, s0
+; RV32IBT-NEXT:    call bar@plt
+; RV32IBT-NEXT:  .LBB1_2:
+; RV32IBT-NEXT:    mv a0, s0
+; RV32IBT-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32IBT-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
+; RV32IBT-NEXT:    addi sp, sp, 16
+; RV32IBT-NEXT:    ret
+  %5 = icmp eq i16 %0, 0
+  %6 = select i1 %5, i16 %3, i16 %2
+  %7 = icmp eq i16 %1, 0
+  br i1 %7, label %9, label %8
+
+8:                                                ; preds = %4
+  tail call void @bar(i16 signext %6)
+  br label %9
+
+9:                                                ; preds = %8, %4
+  ret i16 %6
+}
+
+declare void @bar(i16 signext)

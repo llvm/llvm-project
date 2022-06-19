@@ -55,13 +55,6 @@ def AsmPred3 : Predicate<"Pred3">, AssemblerPredicate<(any_of AsmCond3a, AsmCond
 
 def BigInst : RVInst<1, [AsmPred1]>;
 
-class CompressPat<dag input, dag output, list<Predicate> predicates> {
-  dag Input = input;
-  dag Output = output;
-  list<Predicate> Predicates = predicates;
-  bit isCompressOnly = false;
-}
-
 // COMPRESS-LABEL: static bool compressInst
 // COMPRESS: case arch::BigInst
 def SmallInst1 : RVInst16<1, []>;

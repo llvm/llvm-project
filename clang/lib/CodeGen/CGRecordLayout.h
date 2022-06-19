@@ -93,8 +93,8 @@ struct CGBitFieldInfo {
   CharUnits VolatileStorageOffset;
 
   CGBitFieldInfo()
-      : Offset(), Size(), IsSigned(), StorageSize(), StorageOffset(),
-        VolatileOffset(), VolatileStorageSize(), VolatileStorageOffset() {}
+      : Offset(), Size(), IsSigned(), StorageSize(), VolatileOffset(),
+        VolatileStorageSize() {}
 
   CGBitFieldInfo(unsigned Offset, unsigned Size, bool IsSigned,
                  unsigned StorageSize, CharUnits StorageOffset)
@@ -198,6 +198,12 @@ public:
     FD = FD->getCanonicalDecl();
     assert(FieldInfo.count(FD) && "Invalid field for record!");
     return FieldInfo.lookup(FD);
+  }
+
+  // Return whether the following non virtual base has a corresponding
+  // entry in the LLVM struct.
+  bool hasNonVirtualBaseLLVMField(const CXXRecordDecl *RD) const {
+    return NonVirtualBases.count(RD);
   }
 
   unsigned getNonVirtualBaseLLVMFieldNo(const CXXRecordDecl *RD) const {

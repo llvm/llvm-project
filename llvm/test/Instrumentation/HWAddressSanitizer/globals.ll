@@ -1,5 +1,5 @@
-; RUN: opt < %s -S -hwasan -mtriple=aarch64--linux-android29 | FileCheck --check-prefixes=CHECK,CHECK29 %s
-; RUN: opt < %s -S -hwasan -mtriple=aarch64--linux-android30 | FileCheck --check-prefixes=CHECK,CHECK30 %s
+; RUN: opt < %s -S -passes=hwasan -mtriple=aarch64--linux-android29 | FileCheck --check-prefixes=CHECK,CHECK29 %s
+; RUN: opt < %s -S -passes=hwasan -mtriple=aarch64--linux-android30 | FileCheck --check-prefixes=CHECK,CHECK30 %s
 
 ; CHECK29: @four = global
 

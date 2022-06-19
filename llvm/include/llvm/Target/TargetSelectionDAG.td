@@ -238,6 +238,16 @@ def SDTMaskedLoad: SDTypeProfile<1, 4, [       // masked load
   SDTCisSameNumEltsAs<0, 3>
 ]>;
 
+def SDTMaskedGather : SDTypeProfile<1, 4, [
+  SDTCisVec<0>, SDTCisSameAs<0, 1>, SDTCisVec<2>, SDTCisPtrTy<3>, SDTCisVec<4>,
+  SDTCisSameNumEltsAs<0, 2>, SDTCisSameNumEltsAs<0, 4>
+]>;
+
+def SDTMaskedScatter : SDTypeProfile<0, 4, [
+  SDTCisVec<0>, SDTCisVec<1>, SDTCisPtrTy<2>, SDTCisVec<3>,
+  SDTCisSameNumEltsAs<0, 1>, SDTCisSameNumEltsAs<0, 3>
+]>;
+
 def SDTVecShuffle : SDTypeProfile<1, 2, [
   SDTCisSameAs<0, 1>, SDTCisSameAs<1, 2>
 ]>;
@@ -295,10 +305,6 @@ def SDTAtomicStore : SDTypeProfile<0, 2, [
 ]>;
 def SDTAtomicLoad : SDTypeProfile<1, 1, [
   SDTCisInt<0>, SDTCisPtrTy<1>
-]>;
-
-def SDTConvertOp : SDTypeProfile<1, 5, [ //cvtss, su, us, uu, ff, fs, fu, sf, su
-  SDTCisVT<2, OtherVT>, SDTCisVT<3, OtherVT>, SDTCisPtrTy<4>, SDTCisPtrTy<5>
 ]>;
 
 class SDCallSeqStart<list<SDTypeConstraint> constraints> :
@@ -369,6 +375,10 @@ def mul        : SDNode<"ISD::MUL"       , SDTIntBinOp,
                         [SDNPCommutative, SDNPAssociative]>;
 def mulhs      : SDNode<"ISD::MULHS"     , SDTIntBinOp, [SDNPCommutative]>;
 def mulhu      : SDNode<"ISD::MULHU"     , SDTIntBinOp, [SDNPCommutative]>;
+def avgfloors  : SDNode<"ISD::AVGFLOORS" , SDTIntBinOp, [SDNPCommutative]>;
+def avgflooru  : SDNode<"ISD::AVGFLOORU" , SDTIntBinOp, [SDNPCommutative]>;
+def avgceils   : SDNode<"ISD::AVGCEILS"  , SDTIntBinOp, [SDNPCommutative]>;
+def avgceilu   : SDNode<"ISD::AVGCEILU"  , SDTIntBinOp, [SDNPCommutative]>;
 def abds       : SDNode<"ISD::ABDS"      , SDTIntBinOp, [SDNPCommutative]>;
 def abdu       : SDNode<"ISD::ABDU"      , SDTIntBinOp, [SDNPCommutative]>;
 def smullohi   : SDNode<"ISD::SMUL_LOHI" , SDTIntBinHiLoOp, [SDNPCommutative]>;
@@ -651,6 +661,12 @@ def masked_st    : SDNode<"ISD::MSTORE",  SDTMaskedStore,
                        [SDNPHasChain, SDNPMayStore, SDNPMemOperand]>;
 def masked_ld    : SDNode<"ISD::MLOAD",  SDTMaskedLoad,
                        [SDNPHasChain, SDNPMayLoad, SDNPMemOperand]>;
+
+def masked_gather : SDNode<"ISD::MGATHER", SDTMaskedGather,
+                           [SDNPHasChain, SDNPMayLoad, SDNPMemOperand]>;
+
+def masked_scatter : SDNode<"ISD::MSCATTER", SDTMaskedScatter,
+                            [SDNPHasChain, SDNPMayStore, SDNPMemOperand]>;
 
 // Do not use ld, st directly. Use load, extload, sextload, zextload, store,
 // and truncst (see below).
@@ -1049,6 +1065,10 @@ def extloadvi16 : PatFrag<(ops node:$ptr), (extload node:$ptr)> {
 def extloadvi32 : PatFrag<(ops node:$ptr), (extload node:$ptr)> {
   let IsLoad = true;
   let ScalarMemoryVT = i32;
+}
+def extloadvf16 : PatFrag<(ops node:$ptr), (extload node:$ptr)> {
+  let IsLoad = true;
+  let ScalarMemoryVT = f16;
 }
 def extloadvf32 : PatFrag<(ops node:$ptr), (extload node:$ptr)> {
   let IsLoad = true;
@@ -1472,7 +1492,7 @@ def any_fsetccs : PatFrags<(ops node:$lhs, node:$rhs, node:$pred),
                           [(strict_fsetccs node:$lhs, node:$rhs, node:$pred),
                            (setcc node:$lhs, node:$rhs, node:$pred)]>;
 
-multiclass binary_atomic_op_ord<SDNode atomic_op> {
+multiclass binary_atomic_op_ord {
   def NAME#_monotonic : PatFrag<(ops node:$ptr, node:$val),
       (!cast<SDPatternOperator>(NAME) node:$ptr, node:$val)> {
     let IsAtomic = true;
@@ -1500,7 +1520,7 @@ multiclass binary_atomic_op_ord<SDNode atomic_op> {
   }
 }
 
-multiclass ternary_atomic_op_ord<SDNode atomic_op> {
+multiclass ternary_atomic_op_ord {
   def NAME#_monotonic : PatFrag<(ops node:$ptr, node:$cmp, node:$val),
       (!cast<SDPatternOperator>(NAME) node:$ptr, node:$cmp, node:$val)> {
     let IsAtomic = true;
@@ -1550,10 +1570,10 @@ multiclass binary_atomic_op<SDNode atomic_op, bit IsInt = 1> {
     let MemoryVT = !if(IsInt, i64, f64);
   }
 
-  defm NAME#_8  : binary_atomic_op_ord<atomic_op>;
-  defm NAME#_16 : binary_atomic_op_ord<atomic_op>;
-  defm NAME#_32 : binary_atomic_op_ord<atomic_op>;
-  defm NAME#_64 : binary_atomic_op_ord<atomic_op>;
+  defm NAME#_8  : binary_atomic_op_ord;
+  defm NAME#_16 : binary_atomic_op_ord;
+  defm NAME#_32 : binary_atomic_op_ord;
+  defm NAME#_64 : binary_atomic_op_ord;
 }
 
 multiclass ternary_atomic_op<SDNode atomic_op> {
@@ -1578,10 +1598,10 @@ multiclass ternary_atomic_op<SDNode atomic_op> {
     let MemoryVT = i64;
   }
 
-  defm NAME#_8  : ternary_atomic_op_ord<atomic_op>;
-  defm NAME#_16 : ternary_atomic_op_ord<atomic_op>;
-  defm NAME#_32 : ternary_atomic_op_ord<atomic_op>;
-  defm NAME#_64 : ternary_atomic_op_ord<atomic_op>;
+  defm NAME#_8  : ternary_atomic_op_ord;
+  defm NAME#_16 : ternary_atomic_op_ord;
+  defm NAME#_32 : ternary_atomic_op_ord;
+  defm NAME#_64 : ternary_atomic_op_ord;
 }
 
 defm atomic_load_add  : binary_atomic_op<atomic_load_add>;
@@ -1623,6 +1643,124 @@ def atomic_load_64 :
   let IsAtomic = true;
   let MemoryVT = i64;
 }
+
+def nonext_masked_gather :
+  PatFrag<(ops node:$def, node:$pred, node:$ptr, node:$idx),
+          (masked_gather node:$def, node:$pred, node:$ptr, node:$idx), [{
+  return cast<MaskedGatherSDNode>(N)->getExtensionType() == ISD::NON_EXTLOAD;
+}]>;
+
+// Any extending masked gather fragments.
+def ext_masked_gather_i8 :
+  PatFrag<(ops node:$def, node:$pred, node:$ptr, node:$idx),
+          (masked_gather node:$def, node:$pred, node:$ptr, node:$idx), [{
+  auto MGN = cast<MaskedGatherSDNode>(N);
+  return MGN->getExtensionType() == ISD::EXTLOAD &&
+         MGN->getMemoryVT().getScalarType() == MVT::i8;
+}]>;
+def ext_masked_gather_i16 :
+  PatFrag<(ops node:$def, node:$pred, node:$ptr, node:$idx),
+          (masked_gather node:$def, node:$pred, node:$ptr, node:$idx), [{
+  auto MGN = cast<MaskedGatherSDNode>(N);
+  return MGN->getExtensionType() == ISD::EXTLOAD &&
+         MGN->getMemoryVT().getScalarType() == MVT::i16;
+}]>;
+def ext_masked_gather_i32 :
+  PatFrag<(ops node:$def, node:$pred, node:$ptr, node:$idx),
+          (masked_gather node:$def, node:$pred, node:$ptr, node:$idx), [{
+  auto MGN = cast<MaskedGatherSDNode>(N);
+  return MGN->getExtensionType() == ISD::EXTLOAD &&
+         MGN->getMemoryVT().getScalarType() == MVT::i32;
+}]>;
+
+// Sign extending masked gather fragments.
+def sext_masked_gather_i8 :
+  PatFrag<(ops node:$def, node:$pred, node:$ptr, node:$idx),
+          (masked_gather node:$def, node:$pred, node:$ptr, node:$idx), [{
+  auto MGN = cast<MaskedGatherSDNode>(N);
+  return MGN->getExtensionType() == ISD::SEXTLOAD &&
+         MGN->getMemoryVT().getScalarType() == MVT::i8;
+}]>;
+def sext_masked_gather_i16 :
+  PatFrag<(ops node:$def, node:$pred, node:$ptr, node:$idx),
+          (masked_gather node:$def, node:$pred, node:$ptr, node:$idx), [{
+  auto MGN = cast<MaskedGatherSDNode>(N);
+  return MGN->getExtensionType() == ISD::SEXTLOAD &&
+         MGN->getMemoryVT().getScalarType() == MVT::i16;
+}]>;
+def sext_masked_gather_i32 :
+  PatFrag<(ops node:$def, node:$pred, node:$ptr, node:$idx),
+          (masked_gather node:$def, node:$pred, node:$ptr, node:$idx), [{
+  auto MGN = cast<MaskedGatherSDNode>(N);
+  return MGN->getExtensionType() == ISD::SEXTLOAD &&
+         MGN->getMemoryVT().getScalarType() == MVT::i32;
+}]>;
+
+// Zero extending masked gather fragments.
+def zext_masked_gather_i8 :
+  PatFrag<(ops node:$def, node:$pred, node:$ptr, node:$idx),
+          (masked_gather node:$def, node:$pred, node:$ptr, node:$idx), [{
+  auto MGN = cast<MaskedGatherSDNode>(N);
+  return MGN->getExtensionType() == ISD::ZEXTLOAD &&
+         MGN->getMemoryVT().getScalarType() == MVT::i8;
+}]>;
+def zext_masked_gather_i16 :
+  PatFrag<(ops node:$def, node:$pred, node:$ptr, node:$idx),
+          (masked_gather node:$def, node:$pred, node:$ptr, node:$idx), [{
+  auto MGN = cast<MaskedGatherSDNode>(N);
+  return MGN->getExtensionType() == ISD::ZEXTLOAD &&
+         MGN->getMemoryVT().getScalarType() == MVT::i16;
+}]>;
+def zext_masked_gather_i32 :
+  PatFrag<(ops node:$def, node:$pred, node:$ptr, node:$idx),
+          (masked_gather node:$def, node:$pred, node:$ptr, node:$idx), [{
+  auto MGN = cast<MaskedGatherSDNode>(N);
+  return MGN->getExtensionType() == ISD::ZEXTLOAD &&
+         MGN->getMemoryVT().getScalarType() == MVT::i32;
+}]>;
+
+// Any/Zero extending masked gather fragments.
+def azext_masked_gather_i8 :
+  PatFrags<(ops node:$def, node:$pred, node:$ptr, node:$idx),
+           [(ext_masked_gather_i8 node:$def, node:$pred, node:$ptr, node:$idx),
+            (zext_masked_gather_i8 node:$def, node:$pred, node:$ptr, node:$idx)]>;
+def azext_masked_gather_i16 :
+  PatFrags<(ops node:$def, node:$pred, node:$ptr, node:$idx),
+           [(ext_masked_gather_i16 node:$def, node:$pred, node:$ptr, node:$idx),
+            (zext_masked_gather_i16 node:$def, node:$pred, node:$ptr, node:$idx)]>;
+def azext_masked_gather_i32 :
+  PatFrags<(ops node:$def, node:$pred, node:$ptr, node:$idx),
+           [(ext_masked_gather_i32 node:$def, node:$pred, node:$ptr, node:$idx),
+            (zext_masked_gather_i32 node:$def, node:$pred, node:$ptr, node:$idx)]>;
+
+def nontrunc_masked_scatter :
+  PatFrag<(ops node:$val, node:$pred, node:$ptr, node:$idx),
+          (masked_scatter node:$val, node:$pred, node:$ptr, node:$idx), [{
+  return !cast<MaskedScatterSDNode>(N)->isTruncatingStore();
+}]>;
+
+// Truncating masked scatter fragments.
+def trunc_masked_scatter_i8 :
+  PatFrag<(ops node:$val, node:$pred, node:$ptr, node:$idx),
+          (masked_scatter node:$val, node:$pred, node:$ptr, node:$idx), [{
+  auto MSN = cast<MaskedScatterSDNode>(N);
+  return MSN->isTruncatingStore() &&
+         MSN->getMemoryVT().getScalarType() == MVT::i8;
+}]>;
+def trunc_masked_scatter_i16 :
+  PatFrag<(ops node:$val, node:$pred, node:$ptr, node:$idx),
+          (masked_scatter node:$val, node:$pred, node:$ptr, node:$idx), [{
+  auto MSN = cast<MaskedScatterSDNode>(N);
+  return MSN->isTruncatingStore() &&
+         MSN->getMemoryVT().getScalarType() == MVT::i16;
+}]>;
+def trunc_masked_scatter_i32 :
+  PatFrag<(ops node:$val, node:$pred, node:$ptr, node:$idx),
+          (masked_scatter node:$val, node:$pred, node:$ptr, node:$idx), [{
+  auto MSN = cast<MaskedScatterSDNode>(N);
+  return MSN->isTruncatingStore() &&
+         MSN->getMemoryVT().getScalarType() == MVT::i32;
+}]>;
 
 //===----------------------------------------------------------------------===//
 // Selection DAG Pattern Support.

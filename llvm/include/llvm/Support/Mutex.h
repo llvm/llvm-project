@@ -36,7 +36,7 @@ namespace llvm
           return true;
         } else {
           // Single-threaded debugging code.  This would be racy in
-          // multithreaded mode, but provides not sanity checks in single
+          // multithreaded mode, but provides not basic checks in single
           // threaded mode.
           ++acquired;
           return true;
@@ -49,7 +49,7 @@ namespace llvm
           return true;
         } else {
           // Single-threaded debugging code.  This would be racy in
-          // multithreaded mode, but provides not sanity checks in single
+          // multithreaded mode, but provides not basic checks in single
           // threaded mode.
           assert(acquired && "Lock not acquired before release!");
           --acquired;

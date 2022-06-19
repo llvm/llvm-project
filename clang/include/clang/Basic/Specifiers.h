@@ -31,6 +31,15 @@ namespace clang {
   /// Define the kind of constexpr specifier.
   enum class ConstexprSpecKind { Unspecified, Constexpr, Consteval, Constinit };
 
+  /// In an if statement, this denotes whether the the statement is
+  /// a constexpr or consteval if statement.
+  enum class IfStatementKind : unsigned {
+    Ordinary,
+    Constexpr,
+    ConstevalNonNegated,
+    ConstevalNegated
+  };
+
   /// Specifies the width of a type, e.g., short, long, or long long.
   enum class TypeSpecifierWidth { Unspecified, Short, Long, LongLong };
 
@@ -50,7 +59,7 @@ namespace clang {
     TST_char32,       // C++11 char32_t
     TST_int,
     TST_int128,
-    TST_extint,       // Extended Int types.
+    TST_bitint,       // Bit-precise integer types.
     TST_half,         // OpenCL half, ARM NEON __fp16
     TST_Float16,      // C11 extension ISO/IEC TS 18661-3
     TST_Accum,        // ISO/IEC JTC1 SC22 WG14 N1169 Extension
@@ -59,6 +68,7 @@ namespace clang {
     TST_float,
     TST_double,
     TST_float128,
+    TST_ibm128,
     TST_bool,         // _Bool
     TST_decimal32,    // _Decimal32
     TST_decimal64,    // _Decimal64
@@ -270,6 +280,8 @@ namespace clang {
     CC_PreserveMost, // __attribute__((preserve_most))
     CC_PreserveAll,  // __attribute__((preserve_all))
     CC_AArch64VectorCall, // __attribute__((aarch64_vector_pcs))
+    CC_AArch64SVEPCS, // __attribute__((aarch64_sve_pcs))
+    CC_AMDGPUKernelCall, // __attribute__((amdgpu_kernel))
   };
 
   /// Checks whether the given calling convention supports variadic
@@ -314,7 +326,7 @@ namespace clang {
     Unspecified,
     // Generally behaves like Nullable, except when used in a block parameter
     // that was imported into a swift async method. There, swift will assume
-    // that the parameter can get null even if no error occured. _Nullable
+    // that the parameter can get null even if no error occurred. _Nullable
     // parameters are assumed to only get null on error.
     NullableResult,
   };

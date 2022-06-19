@@ -26,8 +26,6 @@ def ansi_color_surround_regex(inner_regex_text):
 
 class SourceManagerTestCase(TestBase):
 
-    mydir = TestBase.compute_mydir(__file__)
-
     NO_DEBUG_INFO_TESTCASE = True
 
     def setUp(self):
@@ -146,10 +144,6 @@ class SourceManagerTestCase(TestBase):
         main_c_hidden = os.path.join(hidden, "main-copy.c")
         os.rename(self.file, main_c_hidden)
 
-        if self.TraceOn():
-            system([["ls"]])
-            system([["ls", "hidden"]])
-
         # Set source remapping with invalid replace path and verify we get an
         # error
         self.expect(
@@ -172,7 +166,6 @@ class SourceManagerTestCase(TestBase):
                     substrs=['Hello world'])
 
     @skipIf(oslist=["windows"], bugnumber="llvm.org/pr44431")
-    @skipIfReproducer # VFS is a snapshot.
     def test_modify_source_file_while_debugging(self):
         """Modify a source file while debugging the executable."""
         self.build()
@@ -204,7 +197,6 @@ class SourceManagerTestCase(TestBase):
             SOURCE_DISPLAYED_CORRECTLY,
             substrs=['Hello world'])
 
-        
         # The '-b' option shows the line table locations from the debug information
         # that indicates valid places to set source level breakpoints.
 
@@ -270,3 +262,19 @@ class SourceManagerTestCase(TestBase):
                     substrs=['stopped',
                              'main-copy.c:%d' % self.line,
                              'stop reason = breakpoint'])
+
+    def test_artificial_source_location(self):
+        src_file = 'artificial_location.c'
+        d = {'C_SOURCES': src_file }
+        self.build(dictionary=d)
+
+        lldbutil.run_to_source_breakpoint(
+            self, 'main',
+            lldb.SBFileSpec(src_file, False))
+
+        self.expect("run", RUN_SUCCEEDED,
+                    substrs=['stop reason = breakpoint', '%s:%d' % (src_file,0),
+                             'Note: this address is compiler-generated code in '
+                             'function', 'that has no source code associated '
+                             'with it.'])
+

@@ -15,11 +15,8 @@
 #include "llvm/CodeGen/AsmPrinter.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineModuleInfo.h"
-#include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/IR/Constants.h"
-#include "llvm/IR/Instructions.h"
-#include "llvm/IR/Metadata.h"
-#include "llvm/MC/MCAsmInfo.h"
+#include "llvm/IR/InstrTypes.h"
 #include "llvm/MC/MCObjectFileInfo.h"
 #include "llvm/MC/MCStreamer.h"
 
@@ -27,9 +24,9 @@
 
 using namespace llvm;
 
-WinCFGuard::WinCFGuard(AsmPrinter *A) : AsmPrinterHandler(), Asm(A) {}
+WinCFGuard::WinCFGuard(AsmPrinter *A) : Asm(A) {}
 
-WinCFGuard::~WinCFGuard() {}
+WinCFGuard::~WinCFGuard() = default;
 
 void WinCFGuard::endFunction(const MachineFunction *MF) {
 
@@ -110,19 +107,19 @@ void WinCFGuard::endModule() {
 
   // Emit the symbol index of each GFIDs entry to form the .gfids section.
   auto &OS = *Asm->OutStreamer;
-  OS.SwitchSection(Asm->OutContext.getObjectFileInfo()->getGFIDsSection());
+  OS.switchSection(Asm->OutContext.getObjectFileInfo()->getGFIDsSection());
   for (const MCSymbol *S : GFIDsEntries)
-    OS.EmitCOFFSymbolIndex(S);
+    OS.emitCOFFSymbolIndex(S);
 
   // Emit the symbol index of each GIATs entry to form the .giats section.
-  OS.SwitchSection(Asm->OutContext.getObjectFileInfo()->getGIATsSection());
+  OS.switchSection(Asm->OutContext.getObjectFileInfo()->getGIATsSection());
   for (const MCSymbol *S : GIATsEntries) {
-    OS.EmitCOFFSymbolIndex(S);
+    OS.emitCOFFSymbolIndex(S);
   }
 
   // Emit the symbol index of each longjmp target to form the .gljmp section.
-  OS.SwitchSection(Asm->OutContext.getObjectFileInfo()->getGLJMPSection());
+  OS.switchSection(Asm->OutContext.getObjectFileInfo()->getGLJMPSection());
   for (const MCSymbol *S : LongjmpTargets) {
-    OS.EmitCOFFSymbolIndex(S);
+    OS.emitCOFFSymbolIndex(S);
   }
 }

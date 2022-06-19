@@ -9,6 +9,7 @@
 #include "mlir/Parser/AsmParserState.h"
 #include "mlir/IR/Operation.h"
 #include "mlir/IR/SymbolTable.h"
+#include "llvm/ADT/StringExtras.h"
 
 using namespace mlir;
 
@@ -19,12 +20,11 @@ using namespace mlir;
 struct AsmParserState::Impl {
   /// A map from a SymbolRefAttr to a range of uses.
   using SymbolUseMap =
-      DenseMap<Attribute, SmallVector<SmallVector<llvm::SMRange>, 0>>;
+      DenseMap<Attribute, SmallVector<SmallVector<SMRange>, 0>>;
 
   struct PartialOpDef {
     explicit PartialOpDef(const OperationName &opName) {
-      const auto *abstractOp = opName.getAbstractOperation();
-      if (abstractOp && abstractOp->hasTrait<OpTrait::SymbolTable>())
+      if (opName.hasTrait<OpTrait::SymbolTable>())
         symbolTable = std::make_unique<SymbolUseMap>();
     }
 
@@ -49,7 +49,7 @@ struct AsmParserState::Impl {
 
   /// A set of value definitions that are placeholders for forward references.
   /// This map should be empty if the parser finishes successfully.
-  DenseMap<Value, SmallVector<llvm::SMLoc>> placeholderValueUses;
+  DenseMap<Value, SmallVector<SMLoc>> placeholderValueUses;
 
   /// The symbol table operations within the IR.
   SmallVector<std::pair<Operation *, std::unique_ptr<SymbolUseMap>>>
@@ -76,7 +76,7 @@ void AsmParserState::Impl::resolveSymbolUses() {
               opAndUseMapIt.first, it.first.cast<SymbolRefAttr>(), symbolOps)))
         continue;
 
-      for (ArrayRef<llvm::SMRange> useRange : it.second) {
+      for (ArrayRef<SMRange> useRange : it.second) {
         for (const auto &symIt : llvm::zip(symbolOps, useRange)) {
           auto opIt = operationToIdx.find(std::get<0>(symIt));
           if (opIt != operationToIdx.end())
@@ -92,7 +92,7 @@ void AsmParserState::Impl::resolveSymbolUses() {
 //===----------------------------------------------------------------------===//
 
 AsmParserState::AsmParserState() : impl(std::make_unique<Impl>()) {}
-AsmParserState::~AsmParserState() {}
+AsmParserState::~AsmParserState() = default;
 AsmParserState &AsmParserState::operator=(AsmParserState &&other) {
   impl = std::move(other.impl);
   return *this;
@@ -122,19 +122,53 @@ auto AsmParserState::getOpDef(Operation *op) const
                                           : &*impl->operations[it->second];
 }
 
-llvm::SMRange AsmParserState::convertIdLocToRange(llvm::SMLoc loc) {
+/// Lex a string token whose contents start at the given `curPtr`. Returns the
+/// position at the end of the string, after a terminal or invalid character
+/// (e.g. `"` or `\0`).
+static const char *lexLocStringTok(const char *curPtr) {
+  while (char c = *curPtr++) {
+    // Check for various terminal characters.
+    if (StringRef("\"\n\v\f").contains(c))
+      return curPtr;
+
+    // Check for escape sequences.
+    if (c == '\\') {
+      // Check a few known escapes and \xx hex digits.
+      if (*curPtr == '"' || *curPtr == '\\' || *curPtr == 'n' || *curPtr == 't')
+        ++curPtr;
+      else if (llvm::isHexDigit(*curPtr) && llvm::isHexDigit(curPtr[1]))
+        curPtr += 2;
+      else
+        return curPtr;
+    }
+  }
+
+  // If we hit this point, we've reached the end of the buffer. Update the end
+  // pointer to not point past the buffer.
+  return curPtr - 1;
+}
+
+SMRange AsmParserState::convertIdLocToRange(SMLoc loc) {
   if (!loc.isValid())
-    return llvm::SMRange();
-
-  // Return if the given character is a valid identifier character.
-  auto isIdentifierChar = [](char c) {
-    return isalnum(c) || c == '$' || c == '.' || c == '_' || c == '-';
-  };
-
+    return SMRange();
   const char *curPtr = loc.getPointer();
-  while (*curPtr && isIdentifierChar(*(++curPtr)))
-    continue;
-  return llvm::SMRange(loc, llvm::SMLoc::getFromPointer(curPtr));
+
+  // Check if this is a string token.
+  if (*curPtr == '"') {
+    curPtr = lexLocStringTok(curPtr + 1);
+
+    // Otherwise, default to handling an identifier.
+  } else {
+    // Return if the given character is a valid identifier character.
+    auto isIdentifierChar = [](char c) {
+      return isalnum(c) || c == '$' || c == '.' || c == '_' || c == '-';
+    };
+
+    while (*curPtr && isIdentifierChar(*(++curPtr)))
+      continue;
+  }
+
+  return SMRange(loc, SMLoc::getFromPointer(curPtr));
 }
 
 //===----------------------------------------------------------------------===//
@@ -167,8 +201,8 @@ void AsmParserState::startOperationDefinition(const OperationName &opName) {
 }
 
 void AsmParserState::finalizeOperationDefinition(
-    Operation *op, llvm::SMRange nameLoc, llvm::SMLoc endLoc,
-    ArrayRef<std::pair<unsigned, llvm::SMLoc>> resultGroups) {
+    Operation *op, SMRange nameLoc, SMLoc endLoc,
+    ArrayRef<std::pair<unsigned, SMLoc>> resultGroups) {
   assert(!impl->partialOperations.empty() &&
          "expected valid partial operation definition");
   Impl::PartialOpDef partialOpDef = impl->partialOperations.pop_back_val();
@@ -211,7 +245,7 @@ void AsmParserState::finalizeRegionDefinition() {
     impl->symbolUseScopes.pop_back();
 }
 
-void AsmParserState::addDefinition(Block *block, llvm::SMLoc location) {
+void AsmParserState::addDefinition(Block *block, SMLoc location) {
   auto it = impl->blocksToIdx.find(block);
   if (it == impl->blocksToIdx.end()) {
     impl->blocksToIdx.try_emplace(block, impl->blocks.size());
@@ -226,7 +260,7 @@ void AsmParserState::addDefinition(Block *block, llvm::SMLoc location) {
 }
 
 void AsmParserState::addDefinition(BlockArgument blockArg,
-                                   llvm::SMLoc location) {
+                                   SMLoc location) {
   auto it = impl->blocksToIdx.find(blockArg.getOwner());
   assert(it != impl->blocksToIdx.end() &&
          "expected owner block to have an entry");
@@ -238,7 +272,7 @@ void AsmParserState::addDefinition(BlockArgument blockArg,
   def.arguments[argIdx] = SMDefinition(convertIdLocToRange(location));
 }
 
-void AsmParserState::addUses(Value value, ArrayRef<llvm::SMLoc> locations) {
+void AsmParserState::addUses(Value value, ArrayRef<SMLoc> locations) {
   // Handle the case where the value is an operation result.
   if (OpResult result = value.dyn_cast<OpResult>()) {
     // Check to see if a definition for the parent operation has been recorded.
@@ -258,9 +292,9 @@ void AsmParserState::addUses(Value value, ArrayRef<llvm::SMLoc> locations) {
     unsigned resultNo = result.getResultNumber();
     OperationDefinition &def = *impl->operations[existingIt->second];
     for (auto &resultGroup : llvm::reverse(def.resultGroups)) {
-      if (resultNo >= resultGroup.first) {
-        for (llvm::SMLoc loc : locations)
-          resultGroup.second.uses.push_back(convertIdLocToRange(loc));
+      if (resultNo >= resultGroup.startIndex) {
+        for (SMLoc loc : locations)
+          resultGroup.definition.uses.push_back(convertIdLocToRange(loc));
         return;
       }
     }
@@ -274,11 +308,11 @@ void AsmParserState::addUses(Value value, ArrayRef<llvm::SMLoc> locations) {
          "expected valid block definition for block argument");
   BlockDefinition &blockDef = *impl->blocks[existingIt->second];
   SMDefinition &argDef = blockDef.arguments[arg.getArgNumber()];
-  for (llvm::SMLoc loc : locations)
+  for (SMLoc loc : locations)
     argDef.uses.emplace_back(convertIdLocToRange(loc));
 }
 
-void AsmParserState::addUses(Block *block, ArrayRef<llvm::SMLoc> locations) {
+void AsmParserState::addUses(Block *block, ArrayRef<SMLoc> locations) {
   auto it = impl->blocksToIdx.find(block);
   if (it == impl->blocksToIdx.end()) {
     it = impl->blocksToIdx.try_emplace(block, impl->blocks.size()).first;
@@ -286,12 +320,12 @@ void AsmParserState::addUses(Block *block, ArrayRef<llvm::SMLoc> locations) {
   }
 
   BlockDefinition &def = *impl->blocks[it->second];
-  for (llvm::SMLoc loc : locations)
+  for (SMLoc loc : locations)
     def.definition.uses.push_back(convertIdLocToRange(loc));
 }
 
 void AsmParserState::addUses(SymbolRefAttr refAttr,
-                             ArrayRef<llvm::SMRange> locations) {
+                             ArrayRef<SMRange> locations) {
   // Ignore this symbol if no scopes are active.
   if (impl->symbolUseScopes.empty())
     return;

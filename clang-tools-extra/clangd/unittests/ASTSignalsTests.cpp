@@ -5,9 +5,8 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-#include "AST.h"
 
-#include "ParsedAST.h"
+#include "ASTSignals.h"
 #include "TestIndex.h"
 #include "TestTU.h"
 #include "llvm/ADT/StringRef.h"

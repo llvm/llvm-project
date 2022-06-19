@@ -1,6 +1,6 @@
 // RUN: %clang_cc1 -mllvm -emptyline-comment-coverage=false -fprofile-instrument=clang -fcoverage-mapping -dump-coverage-mapping -emit-llvm-only -main-file-name break.c %s | FileCheck %s
 
-int main() {         // CHECK: File 0, [[@LINE]]:12 -> {{[0-9]+}}:2 = #0
+int main(void) {     // CHECK: File 0, [[@LINE]]:16 -> {{[0-9]+}}:2 = #0
   int cnt = 0;       // CHECK-NEXT: File 0, [[@LINE+1]]:9 -> [[@LINE+1]]:18 = #0
   while(cnt < 100) { // CHECK: File 0, [[@LINE]]:20 -> [[@LINE+3]]:4 = #1
     break;           // CHECK-NEXT: Gap,File 0, [[@LINE]]:11 -> [[@LINE+1]]:5 = 0

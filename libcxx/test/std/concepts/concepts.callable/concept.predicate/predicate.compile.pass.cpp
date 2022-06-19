@@ -7,12 +7,12 @@
 //===----------------------------------------------------------------------===//
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17
-// UNSUPPORTED: libcpp-no-concepts
 
 // template<class F, class... Args>
 // concept predicate;
 
 #include <concepts>
+#include <type_traits>
 
 static_assert(std::predicate<bool()>);
 static_assert(std::predicate<bool (*)()>);

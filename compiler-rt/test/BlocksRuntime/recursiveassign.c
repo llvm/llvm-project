@@ -13,7 +13,7 @@
 
 // CONFIG  rdar://6639533
 
-// The compiler is prefetching x->forwarding before evaluting code that recomputes forwarding and so the value goes to a place that is never seen again.
+// The compiler is prefetching x->forwarding before evaluating code that recomputes forwarding and so the value goes to a place that is never seen again.
 
 #include <stdio.h>
 #include <stdlib.h>

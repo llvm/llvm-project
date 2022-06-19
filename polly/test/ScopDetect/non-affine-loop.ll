@@ -1,22 +1,8 @@
-; RUN: opt %loadPolly -polly-detect -polly-allow-nonaffine-branches \
-; RUN:     -polly-allow-nonaffine-loops=false \
-; RUN:     -analyze < %s | FileCheck %s --check-prefix=REJECTNONAFFINELOOPS
-; RUN: opt %loadPolly -polly-detect -polly-allow-nonaffine-branches \
-; RUN:     -polly-allow-nonaffine-loops=true \
-; RUN:     -analyze < %s | FileCheck %s --check-prefix=ALLOWNONAFFINELOOPS
-; RUN: opt %loadPolly -polly-detect -polly-allow-nonaffine-branches \
-; RUN:     -polly-allow-nonaffine-loops=false -polly-allow-nonaffine \
-; RUN:     -analyze < %s | FileCheck %s \
-; RUN:     --check-prefix=ALLOWNONAFFINEREGIONSANDACCESSES
-; RUN: opt %loadPolly -polly-detect -polly-allow-nonaffine-branches \
-; RUN:     -polly-allow-nonaffine-loops=true -polly-allow-nonaffine \
-; RUN:     -analyze < %s | FileCheck %s \
-; RUN:     --check-prefix=ALLOWNONAFFINELOOPSANDACCESSES
-; RUN: opt %loadPolly -polly-process-unprofitable=false \
-; RUN:     -polly-detect -polly-allow-nonaffine-branches \
-; RUN:     -polly-allow-nonaffine-loops=true -polly-allow-nonaffine \
-; RUN:     -analyze < %s | FileCheck %s \
-; RUN:     --check-prefix=PROFIT
+; RUN: opt %loadPolly -polly-allow-nonaffine-branches -polly-allow-nonaffine-loops=false                                                          -polly-print-detect -disable-output < %s | FileCheck %s --check-prefix=REJECTNONAFFINELOOPS
+; RUN: opt %loadPolly -polly-allow-nonaffine-branches -polly-allow-nonaffine-loops=true                                                           -polly-print-detect -disable-output < %s | FileCheck %s --check-prefix=ALLOWNONAFFINELOOPS
+; RUN: opt %loadPolly -polly-allow-nonaffine-branches -polly-allow-nonaffine-loops=false -polly-allow-nonaffine                                   -polly-print-detect -disable-output < %s | FileCheck %s --check-prefix=ALLOWNONAFFINEREGIONSANDACCESSES
+; RUN: opt %loadPolly -polly-allow-nonaffine-branches -polly-allow-nonaffine-loops=true  -polly-allow-nonaffine                                   -polly-print-detect -disable-output < %s | FileCheck %s --check-prefix=ALLOWNONAFFINELOOPSANDACCESSES
+; RUN: opt %loadPolly -polly-allow-nonaffine-branches -polly-allow-nonaffine-loops=true  -polly-allow-nonaffine -polly-process-unprofitable=false -polly-print-detect -disable-output < %s | FileCheck %s --check-prefix=PROFIT
 ;
 ; This function/region does contain a loop, however it is non-affine, hence the access
 ; A[i] is also. Furthermore, it is the only loop, thus when we over approximate

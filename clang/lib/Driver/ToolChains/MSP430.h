@@ -10,9 +10,9 @@
 #define LLVM_CLANG_LIB_DRIVER_TOOLCHAINS_MSP430_H
 
 #include "Gnu.h"
-#include "InputInfo.h"
 #include "clang/Driver/Driver.h"
 #include "clang/Driver/DriverDiagnostic.h"
+#include "clang/Driver/InputInfo.h"
 #include "clang/Driver/Tool.h"
 #include "clang/Driver/ToolChain.h"
 #include "llvm/ADT/StringRef.h"
@@ -37,7 +37,9 @@ public:
                              Action::OffloadKind) const override;
 
   bool isPICDefault() const override { return false; }
-  bool isPIEDefault() const override { return false; }
+  bool isPIEDefault(const llvm::opt::ArgList &Args) const override {
+    return false;
+  }
   bool isPICDefaultForced() const override { return true; }
 
   UnwindLibType

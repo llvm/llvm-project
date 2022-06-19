@@ -93,7 +93,7 @@ define void @register_constraints() {
 ; CHECK-LABEL: register_constraints:
 ; CHECK:         .cfi_startproc
 ; CHECK-NEXT:  ; %bb.0: ; %entry
-; CHECK-NEXT:    sub.l #4, %sp
+; CHECK-NEXT:    suba.l #4, %sp
 ; CHECK-NEXT:    .cfi_def_cfa_offset -8
 ; CHECK-NEXT:    ;APP
 ; CHECK-NEXT:    move.l #94, %d0
@@ -107,7 +107,7 @@ define void @register_constraints() {
 ; CHECK-NEXT:    move.l #66, %a0
 ; CHECK-NEXT:    ;NO_APP
 ; CHECK-NEXT:    move.l %a0, (0,%sp)
-; CHECK-NEXT:    add.l #4, %sp
+; CHECK-NEXT:    adda.l #4, %sp
 ; CHECK-NEXT:    rts
 entry:
   %out = alloca i32, align 4

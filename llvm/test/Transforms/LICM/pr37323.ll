@@ -1,5 +1,5 @@
 ;RUN: opt -verify-dom-info -loop-simplify -postdomtree -licm -adce -verify-loop-info -S -o - %s | FileCheck %s
-;RUN: opt -verify-dom-info -passes='loop-simplify,require<postdomtree>,require<opt-remark-emit>,loop(licm),function(adce)' -S -o - %s | FileCheck %s
+;RUN: opt -verify-dom-info -passes='loop-simplify,require<postdomtree>,require<opt-remark-emit>,loop-mssa(licm),function(adce)' -S -o - %s | FileCheck %s
 
 target triple = "x86_64-unknown-linux-gnu"
 

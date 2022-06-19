@@ -58,7 +58,9 @@ int main(int, char**)
     test<unsigned char>();
     test<char16_t>();
     test<char32_t>();
+#ifndef TEST_HAS_NO_WIDE_CHARACTERS
     test<wchar_t>();
+#endif
     test<short>();
     test<unsigned short>();
     test<int>();
@@ -108,7 +110,7 @@ int main(int, char**)
     test<uintmax_t>();
     test<uintptr_t>();
 
-#ifndef _LIBCPP_HAS_NO_INT128
+#ifndef TEST_HAS_NO_INT128
     test<__int128_t>();
     test<__uint128_t>();
 #endif

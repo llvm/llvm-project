@@ -1,5 +1,5 @@
 ! RUN: %flang -E %s 2>&1 | FileCheck %s
-! CHECK: if(kwm2 .eq. 777) then
+! CHECK: if (KWM2 .eq. 777) then
 ! KWM rescan with #undef, proving rescan after expansion
       integer, parameter :: KWM2 = 777, KWM = 667
 #define KWM2 666

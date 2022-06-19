@@ -1,7 +1,7 @@
-// RUN: %clang_cc1 -emit-llvm %s -o - -triple x86_64-linux-gnu | FileCheck %s --check-prefix=CHECK
-// RUN: %clang_cc1 -fsanitize=implicit-unsigned-integer-truncation,implicit-signed-integer-truncation -fno-sanitize-recover=implicit-unsigned-integer-truncation,implicit-signed-integer-truncation -emit-llvm %s -o - -triple x86_64-linux-gnu | FileCheck %s -implicit-check-not="call void @__ubsan_handle_implicit_conversion" --check-prefixes=CHECK,CHECK-SANITIZE,CHECK-SANITIZE-ANYRECOVER,CHECK-SANITIZE-NORECOVER,CHECK-SANITIZE-UNREACHABLE
-// RUN: %clang_cc1 -fsanitize=implicit-unsigned-integer-truncation,implicit-signed-integer-truncation -fsanitize-recover=implicit-unsigned-integer-truncation,implicit-signed-integer-truncation -emit-llvm %s -o - -triple x86_64-linux-gnu | FileCheck %s -implicit-check-not="call void @__ubsan_handle_implicit_conversion" --check-prefixes=CHECK,CHECK-SANITIZE,CHECK-SANITIZE-ANYRECOVER,CHECK-SANITIZE-RECOVER
-// RUN: %clang_cc1 -fsanitize=implicit-unsigned-integer-truncation,implicit-signed-integer-truncation -fsanitize-trap=implicit-unsigned-integer-truncation,implicit-signed-integer-truncation -emit-llvm %s -o - -triple x86_64-linux-gnu | FileCheck %s -implicit-check-not="call void @__ubsan_handle_implicit_conversion" --check-prefixes=CHECK,CHECK-SANITIZE,CHECK-SANITIZE-TRAP,CHECK-SANITIZE-UNREACHABLE
+// RUN: %clang_cc1 -no-opaque-pointers -emit-llvm %s -o - -triple x86_64-linux-gnu | FileCheck %s --check-prefix=CHECK
+// RUN: %clang_cc1 -no-opaque-pointers -fsanitize=implicit-unsigned-integer-truncation,implicit-signed-integer-truncation -fno-sanitize-recover=implicit-unsigned-integer-truncation,implicit-signed-integer-truncation -emit-llvm %s -o - -triple x86_64-linux-gnu | FileCheck %s -implicit-check-not="call void @__ubsan_handle_implicit_conversion" --check-prefixes=CHECK,CHECK-SANITIZE,CHECK-SANITIZE-ANYRECOVER,CHECK-SANITIZE-NORECOVER,CHECK-SANITIZE-UNREACHABLE
+// RUN: %clang_cc1 -no-opaque-pointers -fsanitize=implicit-unsigned-integer-truncation,implicit-signed-integer-truncation -fsanitize-recover=implicit-unsigned-integer-truncation,implicit-signed-integer-truncation -emit-llvm %s -o - -triple x86_64-linux-gnu | FileCheck %s -implicit-check-not="call void @__ubsan_handle_implicit_conversion" --check-prefixes=CHECK,CHECK-SANITIZE,CHECK-SANITIZE-ANYRECOVER,CHECK-SANITIZE-RECOVER
+// RUN: %clang_cc1 -no-opaque-pointers -fsanitize=implicit-unsigned-integer-truncation,implicit-signed-integer-truncation -fsanitize-trap=implicit-unsigned-integer-truncation,implicit-signed-integer-truncation -emit-llvm %s -o - -triple x86_64-linux-gnu | FileCheck %s -implicit-check-not="call void @__ubsan_handle_implicit_conversion" --check-prefixes=CHECK,CHECK-SANITIZE,CHECK-SANITIZE-TRAP,CHECK-SANITIZE-UNREACHABLE
 
 // CHECK-SANITIZE-ANYRECOVER: @[[UNSIGNED_INT:.*]] = {{.*}} c"'unsigned int'\00" }
 // CHECK-SANITIZE-ANYRECOVER: @[[UNSIGNED_CHAR:.*]] = {{.*}} c"'unsigned char'\00" }
@@ -158,25 +158,25 @@ unsigned char explicit_conversion_interference1(unsigned int c) {
 // Sanitization is explicitly disabled.
 // ========================================================================== //
 
-// CHECK-LABEL: @blacklist_0
-__attribute__((no_sanitize("undefined"))) unsigned char blacklist_0(unsigned int src) {
+// CHECK-LABEL: @ignorelist_0
+__attribute__((no_sanitize("undefined"))) unsigned char ignorelist_0(unsigned int src) {
   // We are not in "undefined" group, so that doesn't work.
   // CHECK-SANITIZE: call
   return src;
 }
 
-// CHECK-LABEL: @blacklist_1
-__attribute__((no_sanitize("integer"))) unsigned char blacklist_1(unsigned int src) {
+// CHECK-LABEL: @ignorelist_1
+__attribute__((no_sanitize("integer"))) unsigned char ignorelist_1(unsigned int src) {
   return src;
 }
 
-// CHECK-LABEL: @blacklist_2
-__attribute__((no_sanitize("implicit-conversion"))) unsigned char blacklist_2(unsigned int src) {
+// CHECK-LABEL: @ignorelist_2
+__attribute__((no_sanitize("implicit-conversion"))) unsigned char ignorelist_2(unsigned int src) {
   return src;
 }
 
-// CHECK-LABEL: @blacklist_3
-__attribute__((no_sanitize("implicit-integer-truncation"))) unsigned char blacklist_3(unsigned int src) {
+// CHECK-LABEL: @ignorelist_3
+__attribute__((no_sanitize("implicit-integer-truncation"))) unsigned char ignorelist_3(unsigned int src) {
   return src;
 }
 

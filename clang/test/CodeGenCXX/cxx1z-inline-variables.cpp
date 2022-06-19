@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -std=c++1z %s -emit-llvm -o - -triple x86_64-linux-gnu | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -std=c++1z %s -emit-llvm -o - -triple x86_64-linux-gnu | FileCheck %s
 
 struct Q {
   // CHECK: @_ZN1Q1kE = linkonce_odr constant i32 5, comdat
@@ -88,20 +88,18 @@ const int &yib = Y<int>::b;
 // CHECK-NOT: @_ZN1YIiE1cE
 
 // CHECK-LABEL: define {{.*}}global_var_init
-// CHECK: call i32 @_Z1fv
+// CHECK: call noundef i32 @_Z1fv
 
-// CHECK-LABEL: define {{.*}}global_var_init
-// CHECK-NOT: comdat
-// CHECK-SAME: {{$}}
+// CHECK-LABEL: define {{.*}}global_var_init{{.*}} comdat($b)
 // CHECK: load atomic {{.*}} acquire, align
 // CHECK: br
 // CHECK: __cxa_guard_acquire(i64* @_ZGV1b)
 // CHECK: br
-// CHECK: call i32 @_Z1fv
+// CHECK: call noundef i32 @_Z1fv
 // CHECK: __cxa_guard_release(i64* @_ZGV1b)
 
 // CHECK-LABEL: define {{.*}}global_var_init
-// CHECK: call i32 @_Z1fv
+// CHECK: call noundef i32 @_Z1fv
 
 template<typename T> inline int d = f();
 int e = d<int>;
@@ -109,7 +107,7 @@ int e = d<int>;
 // CHECK-LABEL: define {{.*}}global_var_init{{.*}}comdat
 // CHECK: _ZGV1dIiE
 // CHECK-NOT: __cxa_guard_acquire(i64* @_ZGV1b)
-// CHECK: call i32 @_Z1fv
+// CHECK: call noundef i32 @_Z1fv
 // CHECK-NOT: __cxa_guard_release(i64* @_ZGV1b)
 
 namespace PR35599 {

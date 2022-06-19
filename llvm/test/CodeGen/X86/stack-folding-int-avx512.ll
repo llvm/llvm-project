@@ -2037,7 +2037,8 @@ define <16 x i32> @stack_fold_pcmpeqd_mask(<16 x i32> %a0, <16 x i32> %a1, <16 x
 ; CHECK-NEXT:    kmovd %esi, %k1
 ; CHECK-NEXT:    vpcmpeqd {{[-0-9]+}}(%r{{[sb]}}p), %zmm0, %k1 {%k1} # 64-byte Folded Reload
 ; CHECK-NEXT:    vmovdqu64 {{[-0-9]+}}(%r{{[sb]}}p), %zmm0 # 64-byte Reload
-; CHECK-NEXT:    vpblendmd (%rsp), %zmm0, %zmm0 {%k1} # 64-byte Folded Reload
+; CHECK-NEXT:    vmovdqu64 (%rsp), %zmm1 # 64-byte Reload
+; CHECK-NEXT:    vmovdqa32 %zmm1, %zmm0 {%k1}
 ; CHECK-NEXT:    addq $136, %rsp
 ; CHECK-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-NEXT:    retq
@@ -2069,7 +2070,8 @@ define <16 x i32> @stack_fold_pcmpeqd_mask_commuted(<16 x i32> %a0, <16 x i32> %
 ; CHECK-NEXT:    kmovd %esi, %k1
 ; CHECK-NEXT:    vpcmpeqd {{[-0-9]+}}(%r{{[sb]}}p), %zmm0, %k1 {%k1} # 64-byte Folded Reload
 ; CHECK-NEXT:    vmovdqu64 {{[-0-9]+}}(%r{{[sb]}}p), %zmm0 # 64-byte Reload
-; CHECK-NEXT:    vpblendmd (%rsp), %zmm0, %zmm0 {%k1} # 64-byte Folded Reload
+; CHECK-NEXT:    vmovdqu64 (%rsp), %zmm1 # 64-byte Reload
+; CHECK-NEXT:    vmovdqa32 %zmm1, %zmm0 {%k1}
 ; CHECK-NEXT:    addq $136, %rsp
 ; CHECK-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-NEXT:    retq
@@ -2101,7 +2103,8 @@ define <16 x i32> @stack_fold_pcmpled_mask(<16 x i32> %a0, <16 x i32> %a1, <16 x
 ; CHECK-NEXT:    kmovd %esi, %k1
 ; CHECK-NEXT:    vpcmpled {{[-0-9]+}}(%r{{[sb]}}p), %zmm0, %k1 {%k1} # 64-byte Folded Reload
 ; CHECK-NEXT:    vmovdqu64 {{[-0-9]+}}(%r{{[sb]}}p), %zmm0 # 64-byte Reload
-; CHECK-NEXT:    vpblendmd (%rsp), %zmm0, %zmm0 {%k1} # 64-byte Folded Reload
+; CHECK-NEXT:    vmovdqu64 (%rsp), %zmm1 # 64-byte Reload
+; CHECK-NEXT:    vmovdqa32 %zmm1, %zmm0 {%k1}
 ; CHECK-NEXT:    addq $136, %rsp
 ; CHECK-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-NEXT:    retq

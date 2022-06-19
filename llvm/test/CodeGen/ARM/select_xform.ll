@@ -1,5 +1,5 @@
-; RUN: llc < %s -mtriple=arm-apple-darwin -mcpu=cortex-a8 | FileCheck %s -check-prefix=ARM
-; RUN: llc < %s -mtriple=thumb-apple-darwin -mcpu=cortex-a8 | FileCheck %s -check-prefix=T2
+; RUN: llc < %s -mtriple=arm-apple-darwin -mcpu=cortex-a8 | FileCheck %s -check-prefixes=CHECK,ARM
+; RUN: llc < %s -mtriple=thumb-apple-darwin -mcpu=cortex-a8 | FileCheck %s -check-prefixes=CHECK,T2
 ; rdar://8662825
 
 define i32 @t1(i32 %a, i32 %b, i32 %c) nounwind {
@@ -319,9 +319,10 @@ entry:
 
 define  <2 x i32> @t21(<2 x i32> %lhs, <2 x i32> %rhs) {
 ; CHECK-LABEL: t21:
-; CHECK-NOT: eor
-; CHECK: mvn
-; CHECK-NOT: eor
+; CHECK: vceq.i32
+; CHECK: veor
+; CHECK: vshl.i32 {{d[0-9]+}}, {{d[0-9]+}}, #31
+; CHECK: vshr.s32 {{d[0-9]+}}, {{d[0-9]+}}, #31
   %tst = icmp eq <2 x i32> %lhs, %rhs
   %ntst = xor <2 x i1> %tst, <i1 1 , i1 undef>
   %btst = sext <2 x i1> %ntst to <2 x i32>

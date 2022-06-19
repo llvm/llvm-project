@@ -25,7 +25,6 @@
 #include "llvm/IR/Module.h"
 #include "llvm/IR/Use.h"
 #include "llvm/IR/Value.h"
-#include "llvm/IR/ValueHandle.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
@@ -166,7 +165,7 @@ Value *SSAUpdater::GetValueInMiddleOfBlock(BasicBlock *BB) {
   // See if the PHI node can be merged to a single value.  This can happen in
   // loop cases when we get a PHI of itself and one other value.
   if (Value *V =
-          SimplifyInstruction(InsertedPHI, BB->getModule()->getDataLayout())) {
+          simplifyInstruction(InsertedPHI, BB->getModule()->getDataLayout())) {
     InsertedPHI->eraseFromParent();
     return V;
   }
@@ -446,6 +445,9 @@ void LoadAndStorePromoter::run(const SmallVectorImpl<Instruction *> &Insts) {
   // Now that everything is rewritten, delete the old instructions from the
   // function.  They should all be dead now.
   for (Instruction *User : Insts) {
+    if (!shouldDelete(User))
+      continue;
+
     // If this is a load that still has uses, then the load must have been added
     // as a live value in the SSAUpdate data structure for a block (e.g. because
     // the loaded value was stored later).  In this case, we need to recursively

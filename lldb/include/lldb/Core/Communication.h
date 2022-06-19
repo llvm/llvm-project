@@ -209,6 +209,22 @@ public:
   size_t Write(const void *src, size_t src_len, lldb::ConnectionStatus &status,
                Status *error_ptr);
 
+  /// Repeatedly attempt writing until either \a src_len bytes are written
+  /// or a permanent failure occurs.
+  ///
+  /// \param[in] src
+  ///     A source buffer that must be at least \a src_len bytes
+  ///     long.
+  ///
+  /// \param[in] src_len
+  ///     The number of bytes to attempt to write, and also the
+  ///     number of bytes are currently available in \a src.
+  ///
+  /// \return
+  ///     The number of bytes actually Written.
+  size_t WriteAll(const void *src, size_t src_len,
+                  lldb::ConnectionStatus &status, Status *error_ptr);
+
   /// Sets the connection that it to be used by this class.
   ///
   /// By making a communication class that uses different connections it
@@ -261,7 +277,7 @@ public:
   ///     \b True if the read thread is running, \b false otherwise.
   bool ReadThreadIsRunning();
 
-  /// The static read thread function. This function will call the "DoRead"
+  /// The read thread function. This function will call the "DoRead"
   /// function continuously and wait for data to become available. When data
   /// is received it will append the available data to the internal cache and
   /// broadcast a \b eBroadcastBitReadThreadGotBytes event.
@@ -273,7 +289,7 @@ public:
   ///     \b NULL.
   ///
   /// \see void Communication::ReadThreadGotBytes (const uint8_t *, size_t);
-  static lldb::thread_result_t ReadThread(lldb::thread_arg_t comm_ptr);
+  lldb::thread_result_t ReadThread();
 
   void SetReadThreadBytesReceivedCallback(ReadThreadBytesReceived callback,
                                           void *callback_baton);

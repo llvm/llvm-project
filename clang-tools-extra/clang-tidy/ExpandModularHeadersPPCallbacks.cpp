@@ -162,8 +162,9 @@ void ExpandModularHeadersPPCallbacks::FileChanged(
 void ExpandModularHeadersPPCallbacks::InclusionDirective(
     SourceLocation DirectiveLoc, const Token &IncludeToken,
     StringRef IncludedFilename, bool IsAngled, CharSourceRange FilenameRange,
-    const FileEntry *IncludedFile, StringRef SearchPath, StringRef RelativePath,
-    const Module *Imported, SrcMgr::CharacteristicKind FileType) {
+    Optional<FileEntryRef> IncludedFile, StringRef SearchPath,
+    StringRef RelativePath, const Module *Imported,
+    SrcMgr::CharacteristicKind FileType) {
   if (Imported) {
     serialization::ModuleFile *MF =
         Compiler.getASTReader()->getModuleManager().lookup(
@@ -234,7 +235,8 @@ void ExpandModularHeadersPPCallbacks::PragmaOpenCLExtension(
   parseToLocation(NameLoc);
 }
 void ExpandModularHeadersPPCallbacks::PragmaWarning(SourceLocation Loc,
-                                                    StringRef, ArrayRef<int>) {
+                                                    PragmaWarningSpecifier,
+                                                    ArrayRef<int>) {
   parseToLocation(Loc);
 }
 void ExpandModularHeadersPPCallbacks::PragmaWarningPush(SourceLocation Loc,

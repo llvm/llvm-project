@@ -15,6 +15,9 @@
 #include "sanitizer_common/sanitizer_fuchsia.h"
 #if SANITIZER_FUCHSIA
 
+#include <zircon/features.h>
+#include <zircon/syscalls.h>
+
 #include "hwasan.h"
 #include "hwasan_interface_internal.h"
 #include "hwasan_report.h"
@@ -33,6 +36,15 @@ namespace __hwasan {
 bool InitShadow() {
   __sanitizer::InitShadowBounds();
   CHECK_NE(__sanitizer::ShadowBounds.shadow_limit, 0);
+
+  // These variables are used by MemIsShadow for asserting we have a correct
+  // shadow address. On Fuchsia, we only have one region of shadow, so the
+  // bounds of Low shadow can be zero while High shadow represents the true
+  // bounds. Note that these are inclusive ranges.
+  kLowShadowStart = 0;
+  kLowShadowEnd = 0;
+  kHighShadowStart = __sanitizer::ShadowBounds.shadow_base;
+  kHighShadowEnd = __sanitizer::ShadowBounds.shadow_limit - 1;
 
   return true;
 }
@@ -121,7 +133,7 @@ static void ThreadCreateHook(void *hook, bool aborted) {
 static void ThreadStartHook(void *hook, thrd_t self) {
   Thread *thread = static_cast<Thread *>(hook);
   FinishThreadInitialization(thread);
-  thread->InitRandomState();
+  thread->EnsureRandomStateInited();
 }
 
 // This is the function that sets up the stack ring buffer and enables us to use
@@ -143,6 +155,14 @@ static void ThreadExitHook(void *hook, thrd_t self) {
   hwasanThreadList().ReleaseThread(thread);
 }
 
+uptr TagMemoryAligned(uptr p, uptr size, tag_t tag) {
+  CHECK(IsAligned(p, kShadowAlignment));
+  CHECK(IsAligned(size, kShadowAlignment));
+  __sanitizer_fill_shadow(p, size, tag,
+                          common_flags()->clear_shadow_mmap_threshold);
+  return AddTagToPointer(p, tag);
+}
+
 // Not implemented because Fuchsia does not use signal handlers.
 void HwasanOnDeadlySignal(int signo, void *info, void *context) {}
 
@@ -162,6 +182,23 @@ void HwasanTSDThreadInit() {}
 // HwasanAtExit are unimplemented for Fuchsia and effectively no-ops, so this
 // function is unneeded.
 void InstallAtExitHandler() {}
+
+void HwasanInstallAtForkHandler() {}
+
+void InitializeOsSupport() {
+#ifdef __aarch64__
+  uint32_t features = 0;
+  CHECK_EQ(zx_system_get_features(ZX_FEATURE_KIND_ADDRESS_TAGGING, &features),
+           ZX_OK);
+  if (features != ZX_ARM64_FEATURE_ADDRESS_TAGGING_TBI &&
+      flags()->fail_without_syscall_abi) {
+    Printf(
+        "FATAL: HWAddressSanitizer requires a kernel with tagged address "
+        "ABI.\n");
+    Die();
+  }
+#endif
+}
 
 }  // namespace __hwasan
 

@@ -15,8 +15,6 @@ import os
 
 class TestVSCode_setBreakpoints(lldbvscode_testcase.VSCodeTestCaseBase):
 
-    mydir = TestBase.compute_mydir(__file__)
-
     def setUp(self):
         lldbvscode_testcase.VSCodeTestCaseBase.setUp(self)
 

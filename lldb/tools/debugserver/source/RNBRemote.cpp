@@ -48,6 +48,7 @@
 #include <compression.h>
 
 #include <TargetConditionals.h>
+#include <algorithm>
 #include <iomanip>
 #include <memory>
 #include <sstream>
@@ -393,9 +394,12 @@ void RNBRemote::CreatePacketTable() {
                      "'G', 'p', and 'P') support having the thread ID appended "
                      "to the end of the command"));
   t.push_back(Packet(set_logging_mode, &RNBRemote::HandlePacket_QSetLogging,
-                     NULL, "QSetLogging:", "Check if register packets ('g', "
-                                           "'G', 'p', and 'P' support having "
-                                           "the thread ID prefix"));
+                     NULL, "QSetLogging:", "Turn on log channels in debugserver"));
+  t.push_back(Packet(set_ignored_exceptions, &RNBRemote::HandlePacket_QSetIgnoredExceptions,
+                     NULL, "QSetIgnoredExceptions:", "Set the exception types "
+                                           "debugserver won't wait for, allowing "
+                                           "them to be turned into the equivalent "
+                                           "BSD signals by the normal means."));
   t.push_back(Packet(
       set_max_packet_size, &RNBRemote::HandlePacket_QSetMaxPacketSize, NULL,
       "QSetMaxPacketSize:",
@@ -581,9 +585,8 @@ RNBRemote::SendAsyncJSONPacket(const JSONGenerator::Dictionary &dictionary) {
   // of these coming out at the wrong time (i.e. when the remote side
   // is not waiting for a process control completion response).
   stream << "JSON-async:";
-  dictionary.Dump(stream);
-  const std::string payload = binary_encode_string(stream.str());
-  return SendPacket(payload);
+  dictionary.DumpBinaryEscaped(stream);
+  return SendPacket(stream.str());
 }
 
 // Given a std::string packet contents to send, possibly encode/compress it.
@@ -2210,6 +2213,37 @@ rnb_err_t set_logging(const char *p) {
   return rnb_success;
 }
 
+rnb_err_t RNBRemote::HandlePacket_QSetIgnoredExceptions(const char *p) {
+  // We can't set the ignored exceptions if we have a running process:
+  if (m_ctx.HasValidProcessID())
+    return SendPacket("E35");
+
+  p += sizeof("QSetIgnoredExceptions:") - 1;
+  bool success = true;
+  while(1) {
+    const char *bar  = strchr(p, '|');
+    if (bar == nullptr) {
+      success = m_ctx.AddIgnoredException(p);
+      break;
+    } else {
+      std::string exc_str(p, bar - p);
+      if (exc_str.empty()) {
+        success = false;
+        break;
+      }
+
+      success = m_ctx.AddIgnoredException(exc_str.c_str());
+      if (!success)
+        break;
+      p = bar + 1;
+    }
+  }
+  if (success)
+    return SendPacket("OK");
+  else
+    return SendPacket("E36");
+}
+
 rnb_err_t RNBRemote::HandlePacket_QThreadSuffixSupported(const char *p) {
   m_thread_suffix_supported = true;
   return SendPacket("OK");
@@ -2792,6 +2826,7 @@ rnb_err_t RNBRemote::SendStopReplyPacketForThread(nub_thread_t tid) {
           ostrm << std::hex << "jstopinfo:";
           std::ostringstream json_strm;
           threads_info_sp->Dump(json_strm);
+          threads_info_sp->Clear();
           append_hexified_string(ostrm, json_strm.str());
           ostrm << ';';
         }
@@ -3462,7 +3497,8 @@ rnb_err_t RNBRemote::HandlePacket_qSupported(const char *p) {
   uint32_t max_packet_size = 128 * 1024; // 128KBytes is a reasonable max packet
                                          // size--debugger can always use less
   char buf[256];
-  snprintf(buf, sizeof(buf), "qXfer:features:read+;PacketSize=%x;qEcho+",
+  snprintf(buf, sizeof(buf),
+           "qXfer:features:read+;PacketSize=%x;qEcho+;native-signals+",
            max_packet_size);
 
   bool enable_compression = false;
@@ -3751,17 +3787,6 @@ rnb_err_t RNBRemote::HandlePacket_v(const char *p) {
     char err_str[1024] = {'\0'};
     std::string attach_name;
 
-    if (DNBDebugserverIsTranslated()) {
-      DNBLogError("debugserver is x86_64 binary running in translation, attach "
-                  "failed.");
-      std::string return_message = "E96;";
-      return_message +=
-          cstring_to_asciihex_string("debugserver is x86_64 binary running in "
-                                     "translation, attached failed.");
-      SendPacket(return_message.c_str());
-      return rnb_err;
-    }
-
     if (strstr(p, "vAttachWait;") == p) {
       p += strlen("vAttachWait;");
       if (!GetProcessNameFrom_vAttach(p, attach_name)) {
@@ -3800,8 +3825,8 @@ rnb_err_t RNBRemote::HandlePacket_v(const char *p) {
              "'%s'",
              getpid(), attach_name.c_str());
       attach_pid = DNBProcessAttachByName(attach_name.c_str(), NULL,
-                                          Context().GetUnmaskSignals(), err_str,
-                                          sizeof(err_str));
+                                          Context().GetIgnoredExceptions(), 
+                                          err_str, sizeof(err_str));
 
     } else if (strstr(p, "vAttach;") == p) {
       p += strlen("vAttach;");
@@ -3815,10 +3840,22 @@ rnb_err_t RNBRemote::HandlePacket_v(const char *p) {
         DNBLog("[LaunchAttach] START %d vAttach to pid %d", getpid(),
                pid_attaching_to);
         attach_pid = DNBProcessAttach(pid_attaching_to, &attach_timeout_abstime,
-                                      false, err_str, sizeof(err_str));
+                                      m_ctx.GetIgnoredExceptions(), 
+                                      err_str, sizeof(err_str));
       }
     } else {
       return HandlePacket_UNIMPLEMENTED(p);
+    }
+
+    if (attach_pid == INVALID_NUB_PROCESS_ARCH) {
+      DNBLogError("debugserver is x86_64 binary running in translation, attach "
+                  "failed.");
+      std::string return_message = "E96;";
+      return_message +=
+          cstring_to_asciihex_string("debugserver is x86_64 binary running in "
+                                     "translation, attach failed.");
+      SendPacket(return_message.c_str());
+      return rnb_err;
     }
 
     if (attach_pid != INVALID_NUB_PROCESS) {
@@ -3851,14 +3888,14 @@ rnb_err_t RNBRemote::HandlePacket_v(const char *p) {
           DNBLogError("Tried to attach to pid that doesn't exist");
           std::string return_message = "E96;";
           return_message += cstring_to_asciihex_string("no such process.");
-          return SendPacket(return_message.c_str());
+          return SendPacket(return_message);
         }
         if (process_is_already_being_debugged (pid_attaching_to)) {
           DNBLogError("Tried to attach to process already being debugged");
           std::string return_message = "E96;";
           return_message += cstring_to_asciihex_string("tried to attach to "
                                            "process already being debugged");
-          return SendPacket(return_message.c_str());
+          return SendPacket(return_message);
         }
         uid_t my_uid, process_uid;
         if (attach_failed_due_to_uid_mismatch (pid_attaching_to, 
@@ -3879,7 +3916,7 @@ rnb_err_t RNBRemote::HandlePacket_v(const char *p) {
                             + my_username + "' and process is running "
                             "as user '" + process_username + "'";
           return_message += cstring_to_asciihex_string(msg.c_str());
-          return SendPacket(return_message.c_str());
+          return SendPacket(return_message);
         }
         if (!login_session_has_gui_access() && !developer_mode_enabled()) {
           DNBLogError("Developer mode is not enabled and this is a "
@@ -3889,7 +3926,7 @@ rnb_err_t RNBRemote::HandlePacket_v(const char *p) {
                                            "not enabled on this machine "
                                            "and this is a non-interactive "
                                            "debug session.");
-          return SendPacket(return_message.c_str());
+          return SendPacket(return_message);
         }
         if (!login_session_has_gui_access()) {
           DNBLogError("This is a non-interactive session");
@@ -3898,7 +3935,7 @@ rnb_err_t RNBRemote::HandlePacket_v(const char *p) {
                                            "non-interactive debug session, "
                                            "cannot get permission to debug "
                                            "processes.");
-          return SendPacket(return_message.c_str());
+          return SendPacket(return_message);
         }
       }
 
@@ -3921,7 +3958,7 @@ rnb_err_t RNBRemote::HandlePacket_v(const char *p) {
       std::string default_return_msg = "E96;";
       default_return_msg += cstring_to_asciihex_string 
                               (error_explainer.c_str());
-      SendPacket (default_return_msg.c_str());
+      SendPacket (default_return_msg);
       DNBLogError("Attach failed: \"%s\".", err_str);
       return rnb_err;
     }
@@ -4306,10 +4343,19 @@ rnb_err_t RNBRemote::HandlePacket_MemoryRegionInfo(const char *p) {
         if (!first)
           ostrm << ",";
         first = false;
-        ostrm << "0x" << std::hex << addr;
+        ostrm << std::hex << addr;
       }
     }
     ostrm << ";";
+    if (!region_info.vm_types.empty()) {
+      ostrm << "type:";
+      for (size_t i = 0; i < region_info.vm_types.size(); i++) {
+        if (i)
+          ostrm << ",";
+        ostrm << region_info.vm_types[i];
+      }
+      ostrm << ";";
+    }
   }
   return SendPacket(ostrm.str());
 }
@@ -4336,7 +4382,7 @@ rnb_err_t RNBRemote::HandlePacket_GetProfileData(const char *p) {
 
   std::string data = DNBProcessGetProfileData(pid, scan_type);
   if (!data.empty()) {
-    return SendPacket(data.c_str());
+    return SendPacket(data);
   } else {
     return SendPacket("OK");
   }
@@ -4911,7 +4957,6 @@ void GenerateTargetXMLRegister(std::ostringstream &s, const uint32_t reg_num,
   const char *gdb_type = default_gdb_type;
   const char *default_lldb_format = "hex";
   const char *lldb_format = default_lldb_format;
-  const char *lldb_set = NULL;
 
   switch (reg.nub_info.type) {
   case Uint:
@@ -4979,8 +5024,6 @@ void GenerateTargetXMLRegister(std::ostringstream &s, const uint32_t reg_num,
     lldb_format = "vector-uint128";
     break;
   };
-  if (reg_set_info && reg.nub_info.set < num_reg_sets)
-    lldb_set = reg_set_info[reg.nub_info.set].name;
 
   uint32_t indent = 2;
 
@@ -5548,10 +5591,10 @@ rnb_err_t RNBRemote::HandlePacket_jThreadsInfo(const char *p) {
 
     if (threads_info_sp) {
       std::ostringstream strm;
-      threads_info_sp->Dump(strm);
-      std::string binary_packet = binary_encode_string(strm.str());
-      if (!binary_packet.empty())
-        return SendPacket(binary_packet.c_str());
+      threads_info_sp->DumpBinaryEscaped(strm);
+      threads_info_sp->Clear();
+      if (strm.str().size() > 0)
+        return SendPacket(strm.str());
     }
   }
   return SendPacket("E85");
@@ -5872,10 +5915,10 @@ RNBRemote::HandlePacket_jGetLoadedDynamicLibrariesInfos(const char *p) {
 
     if (json_sp.get()) {
       std::ostringstream json_str;
-      json_sp->Dump(json_str);
+      json_sp->DumpBinaryEscaped(json_str);
+      json_sp->Clear();
       if (json_str.str().size() > 0) {
-        std::string json_str_quoted = binary_encode_string(json_str.str());
-        return SendPacket(json_str_quoted.c_str());
+        return SendPacket(json_str.str());
       } else {
         SendPacket("E84");
       }
@@ -5905,10 +5948,10 @@ rnb_err_t RNBRemote::HandlePacket_jGetSharedCacheInfo(const char *p) {
 
     if (json_sp.get()) {
       std::ostringstream json_str;
-      json_sp->Dump(json_str);
+      json_sp->DumpBinaryEscaped(json_str);
+      json_sp->Clear();
       if (json_str.str().size() > 0) {
-        std::string json_str_quoted = binary_encode_string(json_str.str());
-        return SendPacket(json_str_quoted.c_str());
+        return SendPacket(json_str.str());
       } else {
         SendPacket("E86");
       }
@@ -6108,7 +6151,7 @@ rnb_err_t RNBRemote::HandlePacket_qSymbol(const char *command) {
     reply << "qSymbol:";
     for (size_t i = 0; i < symbol_name.size(); ++i)
       reply << RAWHEX8(symbol_name[i]);
-    return SendPacket(reply.str().c_str());
+    return SendPacket(reply.str());
   }
 }
 

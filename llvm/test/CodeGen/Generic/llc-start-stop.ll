@@ -1,3 +1,6 @@
+; NVPTX customizes the list of passes so the test cannot find what it expects
+; XFAIL: nvptx
+
 ; Note: -verify-machineinstrs is used in order to make this test compatible with EXPENSIVE_CHECKS.
 ; RUN: llc < %s -debug-pass=Structure -stop-after=loop-reduce -verify-machineinstrs -o /dev/null 2>&1 \
 ; RUN:   | FileCheck %s -check-prefix=STOP-AFTER
@@ -18,7 +21,7 @@
 ; START-AFTER-NEXT: Dominator Tree Construction
 
 ; RUN: llc < %s -debug-pass=Structure -start-before=loop-reduce -o /dev/null 2>&1 | FileCheck %s -check-prefix=START-BEFORE
-; START-BEFORE: -machine-branch-prob -domtree
+; START-BEFORE: -machine-branch-prob -regalloc-evict -domtree
 ; START-BEFORE: FunctionPass Manager
 ; START-BEFORE: Loop Strength Reduction
 ; START-BEFORE-NEXT: Basic Alias Analysis (stateless AA impl)

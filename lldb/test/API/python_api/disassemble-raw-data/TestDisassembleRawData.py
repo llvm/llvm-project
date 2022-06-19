@@ -14,11 +14,8 @@ from lldbsuite.test import lldbutil
 
 class DisassembleRawDataTestCase(TestBase):
 
-    mydir = TestBase.compute_mydir(__file__)
-
     @no_debug_info_test
     @skipIfRemote
-    @skipIfReproducer # GetInstructions is not instrumented.
     def test_disassemble_raw_data(self):
         """Test disassembling raw bytes with the API."""
         # Create a target from the debugger.
@@ -32,7 +29,7 @@ class DisassembleRawDataTestCase(TestBase):
         elif re.match("powerpc64le", arch):
             target = self.dbg.CreateTargetWithFileAndTargetTriple("", "powerpc64le")
             raw_bytes = bytearray([0x00, 0x00, 0x80, 0x38])
-        elif arch == "aarch64":
+        elif arch in ("aarch64", "arm64"):
             target = self.dbg.CreateTargetWithFileAndTargetTriple("", "aarch64")
             raw_bytes = bytearray([0x60, 0x0c, 0x80, 0x52])
         elif arch == "arm":
@@ -58,7 +55,7 @@ class DisassembleRawDataTestCase(TestBase):
         elif re.match("powerpc64le", arch):
             self.assertEqual(inst.GetMnemonic(target), "li")
             self.assertEqual(inst.GetOperands(target), "4, 0")
-        elif arch == "aarch64":
+        elif arch in ("aarch64", "arm64"):
             self.assertEqual(inst.GetMnemonic(target), "mov")
             self.assertEqual(inst.GetOperands(target), "w0, #0x63")
         elif arch == "arm":

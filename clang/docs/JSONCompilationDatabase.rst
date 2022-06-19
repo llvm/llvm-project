@@ -29,12 +29,22 @@ system is not necessarily the best solution:
 Supported Systems
 =================
 
+Clang has the ablity to generate compilation database fragments via
+the :option:`-MJ argument <clang -MJ\<arg>>`. You can concatenate those
+fragments together between ``[`` and ``]`` to create a compilation database.
+
 Currently `CMake <https://cmake.org>`_ (since 2.8.5) supports generation
 of compilation databases for Unix Makefile builds (Ninja builds in the
 works) with the option ``CMAKE_EXPORT_COMPILE_COMMANDS``.
 
 For projects on Linux, there is an alternative to intercept compiler
 calls with a tool called `Bear <https://github.com/rizsotto/Bear>`_.
+
+`Bazel <https://bazel.build>`_ can export a compilation database via 
+`this extractor extension 
+<https://github.com/hedronvision/bazel-compile-commands-extractor>`_.
+Bazel is otherwise resistant to Bear and other compiler-intercept
+techniques.
 
 Clang's tooling interface supports reading compilation databases; see
 the :doc:`LibTooling documentation <LibTooling>`. libclang and its
@@ -57,8 +67,13 @@ Example:
 
     [
       { "directory": "/home/user/llvm/build",
-        "command": "/usr/bin/clang++ -Irelative -DSOMEDEF=\"With spaces, quotes and \\-es.\" -c -o file.o file.cc",
+        "arguments": ["/usr/bin/clang++", "-Irelative", "-DSOMEDEF=With spaces, quotes and \\-es.", "-c", "-o", "file.o", "file.cc"],
         "file": "file.cc" },
+
+      { "directory": "/home/user/llvm/build",
+        "command": "/usr/bin/clang++ -Irelative -DSOMEDEF=\"With spaces, quotes and \\-es.\" -c -o file.o file.cc",
+        "file": "file2.cc" },
+
       ...
     ]
 
@@ -72,14 +87,17 @@ The contracts for each field in the command object are:
    compilation database. There can be multiple command objects for the
    same file, for example if the same source file is compiled with
    different configurations.
--  **command:** The compile command executed. After JSON unescaping,
-   this must be a valid command to rerun the exact compilation step for
-   the translation unit in the environment the build system uses.
-   Parameters use shell quoting and shell escaping of quotes, with '``"``'
-   and '``\``' being the only special characters. Shell expansion is not
-   supported.
--  **arguments:** The compile command executed as list of strings.
-   Either **arguments** or **command** is required.
+-  **arguments:** The compile command argv as list of strings.
+   This should run the compilation step for the translation unit ``file``.
+   ``arguments[0]`` should be the executable name, such as ``clang++``.
+   Arguments should not be escaped, but ready to pass to ``execvp()``.
+-  **command:** The compile command as a single shell-escaped string.
+   Arguments may be shell quoted and escaped following platform conventions,
+   with '``"``' and '``\``' being the only special characters. Shell expansion
+   is not supported.
+
+   Either **arguments** or **command** is required. **arguments** is preferred,
+   as shell (un)escaping is a possible source of errors.
 -  **output:** The name of the output created by this compilation step.
    This field is optional. It can be used to distinguish different processing
    modes of the same input file.

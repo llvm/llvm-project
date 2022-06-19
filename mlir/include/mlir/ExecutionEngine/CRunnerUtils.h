@@ -12,8 +12,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef EXECUTIONENGINE_CRUNNERUTILS_H_
-#define EXECUTIONENGINE_CRUNNERUTILS_H_
+#ifndef MLIR_EXECUTIONENGINE_CRUNNERUTILS_H
+#define MLIR_EXECUTIONENGINE_CRUNNERUTILS_H
 
 #ifdef _WIN32
 #ifndef MLIR_CRUNNERUTILS_EXPORT
@@ -27,7 +27,8 @@
 #endif // mlir_c_runner_utils_EXPORTS
 #endif // MLIR_CRUNNERUTILS_EXPORT
 #else  // _WIN32
-#define MLIR_CRUNNERUTILS_EXPORT
+// Non-windows: use visibility attributes.
+#define MLIR_CRUNNERUTILS_EXPORT __attribute__((visibility("default")))
 #define MLIR_CRUNNERUTILS_DEFINE_FUNCTIONS
 #endif // _WIN32
 
@@ -42,10 +43,10 @@
 namespace mlir {
 namespace detail {
 
-constexpr bool isPowerOf2(int N) { return (!(N & (N - 1))); }
+constexpr bool isPowerOf2(int n) { return (!(n & (n - 1))); }
 
-constexpr unsigned nextPowerOf2(int N) {
-  return (N <= 1) ? 1 : (isPowerOf2(N) ? N : (2 * nextPowerOf2((N + 1) / 2)));
+constexpr unsigned nextPowerOf2(int n) {
+  return (n <= 1) ? 1 : (isPowerOf2(n) ? n : (2 * nextPowerOf2((n + 1) / 2)));
 }
 
 template <typename T, int Dim, bool IsPowerOf2>
@@ -80,8 +81,8 @@ private:
   T vector[Dim];
   char padding[nextPowerOf2(sizeof(T[Dim])) - sizeof(T[Dim])];
 };
-} // end namespace detail
-} // end namespace mlir
+} // namespace detail
+} // namespace mlir
 
 // N-D vectors recurse down to 1-D.
 template <typename T, int Dim, int... Dims>
@@ -304,17 +305,16 @@ struct UnrankedMemRefType {
 template <typename T>
 class DynamicMemRefType {
 public:
-  explicit DynamicMemRefType(const StridedMemRefType<T, 0> &mem_ref)
-      : rank(0), basePtr(mem_ref.basePtr), data(mem_ref.data),
-        offset(mem_ref.offset), sizes(nullptr), strides(nullptr) {}
+  explicit DynamicMemRefType(const StridedMemRefType<T, 0> &memRef)
+      : rank(0), basePtr(memRef.basePtr), data(memRef.data),
+        offset(memRef.offset), sizes(nullptr), strides(nullptr) {}
   template <int N>
-  explicit DynamicMemRefType(const StridedMemRefType<T, N> &mem_ref)
-      : rank(N), basePtr(mem_ref.basePtr), data(mem_ref.data),
-        offset(mem_ref.offset), sizes(mem_ref.sizes), strides(mem_ref.strides) {
-  }
-  explicit DynamicMemRefType(const UnrankedMemRefType<T> &mem_ref)
-      : rank(mem_ref.rank) {
-    auto *desc = static_cast<StridedMemRefType<T, 1> *>(mem_ref.descriptor);
+  explicit DynamicMemRefType(const StridedMemRefType<T, N> &memRef)
+      : rank(N), basePtr(memRef.basePtr), data(memRef.data),
+        offset(memRef.offset), sizes(memRef.sizes), strides(memRef.strides) {}
+  explicit DynamicMemRefType(const ::UnrankedMemRefType<T> &memRef)
+      : rank(memRef.rank) {
+    auto *desc = static_cast<StridedMemRefType<T, 1> *>(memRef.descriptor);
     basePtr = desc->basePtr;
     data = desc->data;
     offset = desc->offset;
@@ -334,8 +334,8 @@ public:
 // Small runtime support library for memref.copy lowering during codegen.
 //===----------------------------------------------------------------------===//
 extern "C" MLIR_CRUNNERUTILS_EXPORT void
-memrefCopy(int64_t elemSize, UnrankedMemRefType<char> *src,
-           UnrankedMemRefType<char> *dst);
+memrefCopy(int64_t elemSize, ::UnrankedMemRefType<char> *src,
+           ::UnrankedMemRefType<char> *dst);
 
 //===----------------------------------------------------------------------===//
 // Small runtime support library for vector.print lowering during codegen.
@@ -352,7 +352,7 @@ extern "C" MLIR_CRUNNERUTILS_EXPORT void printNewline();
 //===----------------------------------------------------------------------===//
 // Small runtime support library for timing execution and printing GFLOPS
 //===----------------------------------------------------------------------===//
-extern "C" MLIR_CRUNNERUTILS_EXPORT void print_flops(double flops);
+extern "C" MLIR_CRUNNERUTILS_EXPORT void printFlops(double flops);
 extern "C" MLIR_CRUNNERUTILS_EXPORT double rtclock();
 
-#endif // EXECUTIONENGINE_CRUNNERUTILS_H_
+#endif // MLIR_EXECUTIONENGINE_CRUNNERUTILS_H

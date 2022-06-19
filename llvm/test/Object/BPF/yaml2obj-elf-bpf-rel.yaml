@@ -11,7 +11,7 @@
 # CHECK-NEXT: ]
 # CHECK:      StackSizes [
 # CHECK-NEXT:   Entry {
-# CHECK-NEXT:     Function: test
+# CHECK-NEXT:     Functions: [test]
 # CHECK-NEXT:     Size: 0x0
 # CHECK-NEXT:   }
 # CHECK-NEXT: ]

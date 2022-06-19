@@ -23,18 +23,24 @@ enum {
   KMP_GOMP_TASK_DEPENDS_FLAG = 8
 };
 
+enum {
+  KMP_GOMP_DEPOBJ_IN = 1,
+  KMP_GOMP_DEPOBJ_OUT = 2,
+  KMP_GOMP_DEPOBJ_INOUT = 3,
+  KMP_GOMP_DEPOBJ_MTXINOUTSET = 4
+};
+
 // This class helps convert gomp dependency info into
 // kmp_depend_info_t structures
 class kmp_gomp_depends_info_t {
   void **depend;
   kmp_int32 num_deps;
-  size_t num_out, num_mutexinout, num_in;
+  size_t num_out, num_mutexinout, num_in, num_depobj;
   size_t offset;
 
 public:
   kmp_gomp_depends_info_t(void **depend) : depend(depend) {
     size_t ndeps = (kmp_intptr_t)depend[0];
-    size_t num_doable;
     // GOMP taskdep structure:
     // if depend[0] != 0:
     // depend =  [ ndeps | nout | &out | ... | &out | &in | ... | &in ]
@@ -45,20 +51,16 @@ public:
     if (ndeps) {
       num_out = (kmp_intptr_t)depend[1];
       num_in = ndeps - num_out;
-      num_mutexinout = 0;
-      num_doable = ndeps;
+      num_mutexinout = num_depobj = 0;
       offset = 2;
     } else {
       ndeps = (kmp_intptr_t)depend[1];
       num_out = (kmp_intptr_t)depend[2];
       num_mutexinout = (kmp_intptr_t)depend[3];
       num_in = (kmp_intptr_t)depend[4];
-      num_doable = num_out + num_mutexinout + num_in;
+      num_depobj = ndeps - num_out - num_mutexinout - num_in;
+      KMP_ASSERT(num_depobj <= ndeps);
       offset = 5;
-    }
-    // TODO: Support gomp depobj
-    if (ndeps != num_doable) {
-      KMP_FATAL(GompFeatureNotSupported, "depobj");
     }
     num_deps = static_cast<kmp_int32>(ndeps);
   }
@@ -67,7 +69,6 @@ public:
     kmp_depend_info_t retval;
     memset(&retval, '\0', sizeof(retval));
     KMP_ASSERT(index < (size_t)num_deps);
-    retval.base_addr = (kmp_intptr_t)depend[offset + index];
     retval.len = 0;
     // Because inout and out are logically equivalent,
     // use inout and in dependency flags. GOMP does not provide a
@@ -75,10 +76,37 @@ public:
     if (index < num_out) {
       retval.flags.in = 1;
       retval.flags.out = 1;
+      retval.base_addr = (kmp_intptr_t)depend[offset + index];
     } else if (index >= num_out && index < (num_out + num_mutexinout)) {
       retval.flags.mtx = 1;
-    } else {
+      retval.base_addr = (kmp_intptr_t)depend[offset + index];
+    } else if (index >= (num_out + num_mutexinout) &&
+               index < (num_out + num_mutexinout + num_in)) {
       retval.flags.in = 1;
+      retval.base_addr = (kmp_intptr_t)depend[offset + index];
+    } else {
+      // depobj is a two element array (size of elements are size of pointer)
+      // depobj[0] = base_addr
+      // depobj[1] = type (in, out, inout, mutexinoutset, etc.)
+      kmp_intptr_t *depobj = (kmp_intptr_t *)depend[offset + index];
+      retval.base_addr = depobj[0];
+      switch (depobj[1]) {
+      case KMP_GOMP_DEPOBJ_IN:
+        retval.flags.in = 1;
+        break;
+      case KMP_GOMP_DEPOBJ_OUT:
+        retval.flags.out = 1;
+        break;
+      case KMP_GOMP_DEPOBJ_INOUT:
+        retval.flags.in = 1;
+        retval.flags.out = 1;
+        break;
+      case KMP_GOMP_DEPOBJ_MTXINOUTSET:
+        retval.flags.mtx = 1;
+        break;
+      default:
+        KMP_FATAL(GompFeatureNotSupported, "Unknown depobj type");
+      }
     }
     return retval;
   }
@@ -1206,7 +1234,7 @@ void KMP_EXPAND_NAME(KMP_API_NAME_GOMP_TASK)(void (*func)(void *), void *data,
 
   // The low-order bit is the "untied" flag
   if (!(gomp_flags & KMP_GOMP_TASK_UNTIED_FLAG)) {
-    input_flags->tiedness = 1;
+    input_flags->tiedness = TASK_TIED;
   }
   // The second low-order bit is the "final" flag
   if (gomp_flags & KMP_GOMP_TASK_FINAL_FLAG) {
@@ -1494,6 +1522,13 @@ void KMP_EXPAND_NAME(KMP_API_NAME_GOMP_PARALLEL_SECTIONS)(void (*task)(void *),
   KA_TRACE(20, ("GOMP_parallel_sections: T#%d\n", gtid));
 
 #if OMPT_SUPPORT
+  ompt_frame_t *task_frame;
+  kmp_info_t *thr;
+  if (ompt_enabled.enabled) {
+    thr = __kmp_threads[gtid];
+    task_frame = &(thr->th.th_current_task->ompt_task_info.frame);
+    task_frame->enter_frame.ptr = OMPT_GET_FRAME_ADDRESS(0);
+  }
   OMPT_STORE_RETURN_ADDRESS(gtid);
 #endif
 
@@ -1509,9 +1544,31 @@ void KMP_EXPAND_NAME(KMP_API_NAME_GOMP_PARALLEL_SECTIONS)(void (*task)(void *),
 
     KMP_DISPATCH_INIT(&loc, gtid, kmp_nm_dynamic_chunked, 1, count, 1, 1, TRUE);
   }
+
+#if OMPT_SUPPORT
+  ompt_frame_t *child_frame;
+  if (ompt_enabled.enabled) {
+    child_frame = &(thr->th.th_current_task->ompt_task_info.frame);
+    child_frame->exit_frame.ptr = OMPT_GET_FRAME_ADDRESS(0);
+  }
+#endif
+
   task(data);
+
+#if OMPT_SUPPORT
+  if (ompt_enabled.enabled) {
+    child_frame->exit_frame = ompt_data_none;
+  }
+#endif
+
   KMP_EXPAND_NAME(KMP_API_NAME_GOMP_PARALLEL_END)();
   KA_TRACE(20, ("GOMP_parallel_sections exit: T#%d\n", gtid));
+
+#if OMPT_SUPPORT
+  if (ompt_enabled.enabled) {
+    task_frame->enter_frame = ompt_data_none;
+  }
+#endif
 }
 
 #define PARALLEL_LOOP(func, schedule, ompt_pre, ompt_post)                     \
@@ -1738,7 +1795,7 @@ void __GOMP_taskloop(void (*func)(void *), void *data,
   KMP_ASSERT(arg_align > 0);
   // The low-order bit is the "untied" flag
   if (!(gomp_flags & 1)) {
-    input_flags->tiedness = 1;
+    input_flags->tiedness = TASK_TIED;
   }
   // The second low-order bit is the "final" flag
   if (gomp_flags & 2) {
@@ -2428,6 +2485,26 @@ void KMP_EXPAND_NAME(KMP_API_NAME_GOMP_WORKSHARE_TASK_REDUCTION_UNREGISTER)(
   }
 }
 
+// allocator construct
+void *KMP_EXPAND_NAME(KMP_API_NAME_GOMP_ALLOC)(size_t alignment, size_t size,
+                                               uintptr_t allocator) {
+  int gtid = __kmp_entry_gtid();
+  KA_TRACE(20, ("GOMP_alloc: T#%d\n", gtid));
+#if OMPT_SUPPORT && OMPT_OPTIONAL
+  OMPT_STORE_RETURN_ADDRESS(gtid);
+#endif
+  return __kmp_alloc(gtid, alignment, size, (omp_allocator_handle_t)allocator);
+}
+
+void KMP_EXPAND_NAME(KMP_API_NAME_GOMP_FREE)(void *ptr, uintptr_t allocator) {
+  int gtid = __kmp_entry_gtid();
+  KA_TRACE(20, ("GOMP_free: T#%d\n", gtid));
+#if OMPT_SUPPORT && OMPT_OPTIONAL
+  OMPT_STORE_RETURN_ADDRESS(gtid);
+#endif
+  return ___kmpc_free(gtid, ptr, (omp_allocator_handle_t)allocator);
+}
+
 /* The following sections of code create aliases for the GOMP_* functions, then
    create versioned symbols using the assembler directive .symver. This is only
    pertinent for ELF .so library. The KMP_VERSION_SYMBOL macro is defined in
@@ -2616,6 +2693,10 @@ KMP_VERSION_SYMBOL(KMP_API_NAME_GOMP_LOOP_ULL_ORDERED_START, 50, "GOMP_5.0");
 KMP_VERSION_SYMBOL(KMP_API_NAME_GOMP_SECTIONS2_START, 50, "GOMP_5.0");
 KMP_VERSION_SYMBOL(KMP_API_NAME_GOMP_WORKSHARE_TASK_REDUCTION_UNREGISTER, 50,
                    "GOMP_5.0");
+
+// GOMP_5.0.1 versioned symbols
+KMP_VERSION_SYMBOL(KMP_API_NAME_GOMP_ALLOC, 501, "GOMP_5.0.1");
+KMP_VERSION_SYMBOL(KMP_API_NAME_GOMP_FREE, 501, "GOMP_5.0.1");
 #endif // KMP_USE_VERSION_SYMBOLS
 
 #ifdef __cplusplus

@@ -1,5 +1,7 @@
 ; RUN: llc < %s -march=nvptx -mcpu=sm_20 | FileCheck %s
 ; RUN: llc < %s -march=nvptx64 -mcpu=sm_20 | FileCheck %s
+; RUN: %if ptxas %{ llc < %s -march=nvptx -mcpu=sm_20 | %ptxas-verify %}
+; RUN: %if ptxas %{ llc < %s -march=nvptx64 -mcpu=sm_20 | %ptxas-verify %}
 
 ; Test that we don't crash if we're compiling a module with function references,
 ; but without any functions in it.

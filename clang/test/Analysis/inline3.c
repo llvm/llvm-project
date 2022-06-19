@@ -5,11 +5,11 @@
 // Otherwise, block-level expr '1 && a' would not be block-level.
 int a;
 
-void f1() {
+void f1(void) {
   if (1 && a)
     return;
 }
 
-void f2() {
+void f2(void) {
   f1();
 }

@@ -1,5 +1,4 @@
-// RUN: %clang_cc1 -emit-llvm -fcf-protection=branch -triple i386-linux-gnu -o %t %s
-// RUN: FileCheck --input-file=%t %s
+// RUN: %clang_cc1 -no-opaque-pointers -emit-llvm -Wno-strict-prototypes -fcf-protection=branch -triple i386-linux-gnu %s -o - | FileCheck %s
 
 // CHECK: @t5 = weak{{.*}} global i32 2
 int t5 __attribute__((weak)) = 2;
@@ -32,41 +31,41 @@ void t9() __attribute__((weak, alias("__t8")));
 
 // CHECK: declare extern_weak i32 @t15()
 int __attribute__((weak_import)) t15(void);
-int t17() {
+int t17(void) {
   return t15() + t16;
 }
 
 // CHECK: define{{.*}} void @t1() [[NR:#[0-9]+]] {
-void t1() __attribute__((noreturn));
-void t1() { while (1) {} }
+void t1(void) __attribute__((noreturn));
+void t1(void) { while (1) {} }
 
 // CHECK: define{{.*}} void @t2() [[NUW:#[0-9]+]] {
-void t2() __attribute__((nothrow));
-void t2() {}
+void t2(void) __attribute__((nothrow));
+void t2(void) {}
 
 // CHECK: define weak{{.*}} void @t3() [[NUW]] {
-void t3() __attribute__((weak));
-void t3() {}
+void t3(void) __attribute__((weak));
+void t3(void) {}
 
 // CHECK: define hidden void @t4() [[NUW]] {
-void t4() __attribute__((visibility("hidden")));
-void t4() {}
+void t4(void) __attribute__((visibility("hidden")));
+void t4(void) {}
 
 // CHECK: define{{.*}} void @t7() [[NR]] {
-void t7() __attribute__((noreturn, nothrow));
-void t7() { while (1) {} }
+void t7(void) __attribute__((noreturn, nothrow));
+void t7(void) { while (1) {} }
 
 // CHECK: define{{.*}} void @t72() [[COLDDEF:#[0-9]+]] {
 void t71(void) __attribute__((cold));
-void t72() __attribute__((cold));
-void t72() { t71(); }
+void t72(void) __attribute__((cold));
+void t72(void) { t71(); }
 // CHECK: call void @t71() [[COLDSITE:#[0-9]+]]
 // CHECK: declare void @t71() [[COLDDECL:#[0-9]+]]
 
 // CHECK: define{{.*}} void @t82() [[HOTDEF:#[0-9]+]] {
 void t81(void) __attribute__((hot));
-void t82() __attribute__((hot));
-void t82() { t81(); }
+void t82(void) __attribute__((hot));
+void t82(void) { t81(); }
 // CHECK: call void @t81() [[HOTSITE:#[0-9]+]]
 // CHECK: declare void @t81() [[HOTDECL:#[0-9]+]]
 
@@ -79,9 +78,6 @@ void __attribute__((section("xSECT"))) t11(void) {}
 // CHECK: define{{.*}} i32 @t19() [[NUW]] {
 extern int t19(void) __attribute__((weak_import));
 int t19(void) {
-// RUN: %clang_cc1 -emit-llvm -fcf-protection=branch -triple i386-linux-gnu -o %t %s
-// RUN: %clang_cc1 -emit-llvm -fcf-protection=branch -triple i386-linux-gnu -o %t %s
-// RUN: %clang_cc1 -emit-llvm -fcf-protection=branch -triple i386-linux-gnu -o %t %s
   return 10;
 }
 
@@ -97,7 +93,7 @@ void t21(void) {
   fptr(10);
 }
 // CHECK: [[FPTRVAR:%[a-z0-9]+]] = load void (i32)*, void (i32)** @fptr
-// CHECK-NEXT: call x86_fastcallcc void [[FPTRVAR]](i32 inreg 10)
+// CHECK-NEXT: call x86_fastcallcc void [[FPTRVAR]](i32 inreg noundef 10)
 
 
 // PR9356: We might want to err on this, but for now at least make sure we

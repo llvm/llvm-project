@@ -29,8 +29,8 @@ define <4 x i16> @cttz_v4i16(<4 x i16> %a) nounwind {
 ; CHECK-NEXT:    movi v1.4h, #1
 ; CHECK-NEXT:    sub v1.4h, v0.4h, v1.4h
 ; CHECK-NEXT:    bic v0.8b, v1.8b, v0.8b
-; CHECK-NEXT:    clz v0.4h, v0.4h
 ; CHECK-NEXT:    movi v1.4h, #16
+; CHECK-NEXT:    clz v0.4h, v0.4h
 ; CHECK-NEXT:    sub v0.4h, v1.4h, v0.4h
 ; CHECK-NEXT:    ret
     %b = call <4 x i16> @llvm.cttz.v4i16(<4 x i16> %a, i1 true)
@@ -43,8 +43,8 @@ define <2 x i32> @cttz_v2i32(<2 x i32> %a) nounwind {
 ; CHECK-NEXT:    movi v1.2s, #1
 ; CHECK-NEXT:    sub v1.2s, v0.2s, v1.2s
 ; CHECK-NEXT:    bic v0.8b, v1.8b, v0.8b
-; CHECK-NEXT:    clz v0.2s, v0.2s
 ; CHECK-NEXT:    movi v1.2s, #32
+; CHECK-NEXT:    clz v0.2s, v0.2s
 ; CHECK-NEXT:    sub v0.2s, v1.2s, v0.2s
 ; CHECK-NEXT:    ret
     %b = call <2 x i32> @llvm.cttz.v2i32(<2 x i32> %a, i1 true)

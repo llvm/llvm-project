@@ -363,3 +363,25 @@ def CSR_64_AllRegs_VSX : CalleeSavedRegs<(add CSR_64_AllRegs_Altivec,
 
 def CSR_64_AllRegs_AIX_Dflt_VSX : CalleeSavedRegs<(add CSR_64_AllRegs_Altivec,
                                          (sequence "VSL%u", 0, 19))>;
+
+def CSR_ALL_VSRP : CalleeSavedRegs<(sequence "VSRp%u", 0, 31)>;
+
+def CSR_VSRP :
+  CalleeSavedRegs<(add VSRp26, VSRp27, VSRp28, VSRp29, VSRp30, VSRp31)>;
+
+def CSR_SVR432_VSRP : CalleeSavedRegs<(add CSR_SVR432_Altivec, CSR_VSRP)>;
+
+def CSR_SVR464_VSRP : CalleeSavedRegs<(add CSR_PPC64_Altivec, CSR_VSRP)>;
+
+def CSR_SVR464_R2_VSRP : CalleeSavedRegs<(add CSR_SVR464_VSRP, X2)>;
+
+def CSR_SVR32_ColdCC_VSRP : CalleeSavedRegs<(add CSR_SVR32_ColdCC_Altivec,
+                                            (sub CSR_ALL_VSRP, VSRp17))>;
+
+def CSR_SVR64_ColdCC_VSRP : CalleeSavedRegs<(add CSR_SVR64_ColdCC,
+                                            (sub CSR_ALL_VSRP, VSRp17))>;
+
+def CSR_SVR64_ColdCC_R2_VSRP : CalleeSavedRegs<(add CSR_SVR64_ColdCC_VSRP, X2)>;
+
+def CSR_64_AllRegs_VSRP :
+  CalleeSavedRegs<(add CSR_64_AllRegs_VSX, CSR_ALL_VSRP)>;

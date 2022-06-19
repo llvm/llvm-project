@@ -2434,15 +2434,16 @@ define double @uifdi(i32 %x) #0 {
 ;
 ; X86-SSE-LABEL: uifdi:
 ; X86-SSE:       # %bb.0: # %entry
-; X86-SSE-NEXT:    subl $12, %esp
-; X86-SSE-NEXT:    .cfi_def_cfa_offset 16
-; X86-SSE-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; X86-SSE-NEXT:    orpd {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
-; X86-SSE-NEXT:    subsd {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
-; X86-SSE-NEXT:    movsd %xmm0, (%esp)
-; X86-SSE-NEXT:    fldl (%esp)
+; X86-SSE-NEXT:    subl $20, %esp
+; X86-SSE-NEXT:    .cfi_def_cfa_offset 24
+; X86-SSE-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-SSE-NEXT:    movl %eax, (%esp)
+; X86-SSE-NEXT:    movl $0, {{[0-9]+}}(%esp)
+; X86-SSE-NEXT:    fildll (%esp)
+; X86-SSE-NEXT:    fstpl {{[0-9]+}}(%esp)
+; X86-SSE-NEXT:    fldl {{[0-9]+}}(%esp)
 ; X86-SSE-NEXT:    wait
-; X86-SSE-NEXT:    addl $12, %esp
+; X86-SSE-NEXT:    addl $20, %esp
 ; X86-SSE-NEXT:    .cfi_def_cfa_offset 4
 ; X86-SSE-NEXT:    retl
 ;
@@ -2655,16 +2656,16 @@ define float @uiffi(i32 %x) #0 {
 ;
 ; X86-SSE-LABEL: uiffi:
 ; X86-SSE:       # %bb.0: # %entry
-; X86-SSE-NEXT:    pushl %eax
-; X86-SSE-NEXT:    .cfi_def_cfa_offset 8
-; X86-SSE-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; X86-SSE-NEXT:    orpd {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
-; X86-SSE-NEXT:    subsd {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
-; X86-SSE-NEXT:    cvtsd2ss %xmm0, %xmm0
-; X86-SSE-NEXT:    movss %xmm0, (%esp)
-; X86-SSE-NEXT:    flds (%esp)
+; X86-SSE-NEXT:    subl $20, %esp
+; X86-SSE-NEXT:    .cfi_def_cfa_offset 24
+; X86-SSE-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-SSE-NEXT:    movl %eax, {{[0-9]+}}(%esp)
+; X86-SSE-NEXT:    movl $0, {{[0-9]+}}(%esp)
+; X86-SSE-NEXT:    fildll {{[0-9]+}}(%esp)
+; X86-SSE-NEXT:    fstps {{[0-9]+}}(%esp)
+; X86-SSE-NEXT:    flds {{[0-9]+}}(%esp)
 ; X86-SSE-NEXT:    wait
-; X86-SSE-NEXT:    popl %eax
+; X86-SSE-NEXT:    addl $20, %esp
 ; X86-SSE-NEXT:    .cfi_def_cfa_offset 4
 ; X86-SSE-NEXT:    retl
 ;

@@ -14,7 +14,6 @@
 #ifndef LLVM_SUPPORT_AARCH64TARGETPARSER_H
 #define LLVM_SUPPORT_AARCH64TARGETPARSER_H
 
-#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/ARMTargetParser.h"
 #include <vector>
@@ -69,6 +68,9 @@ enum ArchExtKind : uint64_t {
   AEK_SME =         1ULL << 37,
   AEK_SMEF64 =      1ULL << 38,
   AEK_SMEI64 =      1ULL << 39,
+  AEK_HBC =         1ULL << 40,
+  AEK_MOPS =        1ULL << 41,
+  AEK_PERFMON =     1ULL << 42,
 };
 
 enum class ArchKind {
@@ -136,15 +138,6 @@ ArchKind parseCPUArch(StringRef CPU);
 void fillValidCPUArchList(SmallVectorImpl<StringRef> &Values);
 
 bool isX18ReservedByDefault(const Triple &TT);
-
-struct ParsedBranchProtection {
-  StringRef Scope;
-  StringRef Key;
-  bool BranchTargetEnforcement;
-};
-
-bool parseBranchProtection(StringRef Spec, ParsedBranchProtection &PBP,
-                           StringRef &Err);
 
 } // namespace AArch64
 } // namespace llvm

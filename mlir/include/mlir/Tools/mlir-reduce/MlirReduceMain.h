@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef MLIR_TOOLS_MLIRREDUCE_MLIRREDUCEMAIN_H
-#define MLIR_TOOLS_MLIRREDUCE_MLIRREDUCEMAIN_H
+#ifndef MLIR_TOOLS_MLIR_REDUCE_MLIRREDUCEMAIN_H
+#define MLIR_TOOLS_MLIR_REDUCE_MLIRREDUCEMAIN_H
 
 #include "mlir/Support/LogicalResult.h"
 
@@ -17,6 +17,6 @@ class MLIRContext;
 
 LogicalResult mlirReduceMain(int argc, char **argv, MLIRContext &context);
 
-} // end namespace mlir
+} // namespace mlir
 
-#endif // MLIR_TOOLS_MLIRREDUCE_MLIRREDUCEMAIN_H
+#endif // MLIR_TOOLS_MLIR_REDUCE_MLIRREDUCEMAIN_H

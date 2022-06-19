@@ -10,7 +10,7 @@ bool foobool(int argc) {
   return argc;
 }
 
-struct S1; // expected-note 2 {{declared here}} expected-note 2 {{forward declaration of 'S1'}}
+struct S1; // expected-note 2 {{declared here}} expected-note 3 {{forward declaration of 'S1'}}
 extern S1 a;
 class S2 {
   mutable int a;
@@ -248,12 +248,12 @@ int main(int argc, char **argv) {
     foo();
 #pragma omp target
 #pragma omp teams
-#pragma omp distribute simd firstprivate(ba) // expected-warning {{Type 'const S2 [5]' is not trivially copyable and not guaranteed to be mapped correctly}}
+#pragma omp distribute simd firstprivate(ba) // expected-warning {{Type 'const S2[5]' is not trivially copyable and not guaranteed to be mapped correctly}}
   for (i = 0; i < argc; ++i)
     foo();
 #pragma omp target
 #pragma omp teams
-#pragma omp distribute simd firstprivate(ca) // expected-warning {{Type 'const S3 [5]' is not trivially copyable and not guaranteed to be mapped correctly}}
+#pragma omp distribute simd firstprivate(ca) // expected-warning {{Type 'const S3[5]' is not trivially copyable and not guaranteed to be mapped correctly}}
   for (i = 0; i < argc; ++i)
     foo();
 #pragma omp target

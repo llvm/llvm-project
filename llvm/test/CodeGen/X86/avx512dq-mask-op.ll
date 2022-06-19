@@ -33,11 +33,9 @@ define i8 @mand8(i8 %x, i8 %y) {
 ; CHECK-LABEL: mand8:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    movl %edi, %eax
-; CHECK-NEXT:    movl %eax, %ecx
-; CHECK-NEXT:    andb %sil, %cl
-; CHECK-NEXT:    xorb %sil, %al
-; CHECK-NEXT:    orb %cl, %al
-; CHECK-NEXT:    ## kill: def $al killed $al killed $eax
+; CHECK-NEXT:    andb %sil, %al
+; CHECK-NEXT:    xorb %sil, %dil
+; CHECK-NEXT:    orb %dil, %al
 ; CHECK-NEXT:    retq
   %ma = bitcast i8 %x to <8 x i1>
   %mb = bitcast i8 %y to <8 x i1>

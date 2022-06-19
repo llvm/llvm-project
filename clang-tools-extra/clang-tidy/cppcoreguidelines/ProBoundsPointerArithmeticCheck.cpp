@@ -20,9 +20,11 @@ void ProBoundsPointerArithmeticCheck::registerMatchers(MatchFinder *Finder) {
   if (!getLangOpts().CPlusPlus)
     return;
 
-  const auto AllPointerTypes = anyOf(
-      hasType(pointerType()), hasType(autoType(hasDeducedType(pointerType()))),
-      hasType(decltypeType(hasUnderlyingType(pointerType()))));
+  const auto AllPointerTypes =
+      anyOf(hasType(pointerType()),
+            hasType(autoType(
+                hasDeducedType(hasUnqualifiedDesugaredType(pointerType())))),
+            hasType(decltypeType(hasUnderlyingType(pointerType()))));
 
   // Flag all operators +, -, +=, -=, ++, -- that result in a pointer
   Finder->addMatcher(

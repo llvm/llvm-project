@@ -123,6 +123,8 @@ const Symbol *ProcedureDesignator::GetInterfaceSymbol() const {
     } else if (const auto *binding{
                    ultimate.detailsIf<semantics::ProcBindingDetails>()}) {
       return &binding->symbol();
+    } else if (ultimate.has<semantics::SubprogramDetails>()) {
+      return &ultimate;
     }
   }
   return nullptr;
@@ -155,18 +157,19 @@ const Component *ProcedureDesignator::GetComponent() const {
 }
 
 const Symbol *ProcedureDesignator::GetSymbol() const {
-  return std::visit(common::visitors{
-                        [](SymbolRef symbol) { return &*symbol; },
-                        [](const common::CopyableIndirection<Component> &c) {
-                          return &c.value().GetLastSymbol();
-                        },
-                        [](const auto &) -> const Symbol * { return nullptr; },
-                    },
+  return common::visit(
+      common::visitors{
+          [](SymbolRef symbol) { return &*symbol; },
+          [](const common::CopyableIndirection<Component> &c) {
+            return &c.value().GetLastSymbol();
+          },
+          [](const auto &) -> const Symbol * { return nullptr; },
+      },
       u);
 }
 
 std::string ProcedureDesignator::GetName() const {
-  return std::visit(
+  return common::visit(
       common::visitors{
           [](const SpecificIntrinsic &i) { return i.name; },
           [](const Symbol &symbol) { return symbol.name().ToString(); },
@@ -218,5 +221,4 @@ ProcedureRef::~ProcedureRef() {}
 
 void ProcedureRef::Deleter(ProcedureRef *p) { delete p; }
 
-FOR_EACH_SPECIFIC_TYPE(template class FunctionRef, )
 } // namespace Fortran::evaluate

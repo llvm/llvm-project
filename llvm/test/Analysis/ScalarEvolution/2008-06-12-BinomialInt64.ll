@@ -1,4 +1,3 @@
-; RUN: opt < %s -analyze -enable-new-pm=0 -scalar-evolution 2>/dev/null
 ; RUN: opt < %s -disable-output "-passes=print<scalar-evolution>" 2>/dev/null
 ; PR2433
 

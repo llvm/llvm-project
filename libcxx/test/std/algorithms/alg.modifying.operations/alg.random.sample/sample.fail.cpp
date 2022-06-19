@@ -8,9 +8,6 @@
 
 // UNSUPPORTED: c++03, c++11, c++14
 
-// Test failure not investigated on GCC 5.
-// UNSUPPORTED: gcc-5
-
 // <algorithm>
 
 // template <class PopulationIterator, class SampleIterator, class Distance,
@@ -39,7 +36,7 @@ int main(int, char**) {
   // expected-error-re@*:* {{static_assert failed{{( due to requirement '.*')?}} "SampleIterator must meet the requirements of RandomAccessIterator"}}
   // expected-error@*:* 2 {{does not provide a subscript operator}}
   // expected-error@*:* {{invalid operands}}
-  test<cpp17_input_iterator<int *>, output_iterator<int *> >();
+  test<cpp17_input_iterator<int *>, cpp17_output_iterator<int *> >();
 
   return 0;
 }

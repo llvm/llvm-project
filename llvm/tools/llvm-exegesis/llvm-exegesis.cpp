@@ -30,13 +30,13 @@
 #include "llvm/MC/MCParser/MCTargetAsmParser.h"
 #include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/MC/MCSubtargetInfo.h"
+#include "llvm/MC/TargetRegistry.h"
 #include "llvm/Object/ObjectFile.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Format.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/SourceMgr.h"
-#include "llvm/Support/TargetRegistry.h"
 #include "llvm/Support/TargetSelect.h"
 #include <algorithm>
 #include <string>
@@ -435,16 +435,19 @@ static void analysisMain() {
     return;
   }
 
+  std::unique_ptr<MCSubtargetInfo> SubtargetInfo(
+      TheTarget->createMCSubtargetInfo(Points[0].LLVMTriple, CpuName, ""));
+
   std::unique_ptr<MCInstrInfo> InstrInfo(TheTarget->createMCInstrInfo());
   assert(InstrInfo && "Unable to create instruction info!");
 
   const auto Clustering = ExitOnErr(InstructionBenchmarkClustering::create(
       Points, AnalysisClusteringAlgorithm, AnalysisDbscanNumPoints,
-      AnalysisClusteringEpsilon, InstrInfo->getNumOpcodes()));
+      AnalysisClusteringEpsilon, SubtargetInfo.get(), InstrInfo.get()));
 
-  const Analysis Analyzer(*TheTarget, std::move(InstrInfo), Clustering,
-                          AnalysisInconsistencyEpsilon,
-                          AnalysisDisplayUnstableOpcodes, CpuName);
+  const Analysis Analyzer(
+      *TheTarget, std::move(SubtargetInfo), std::move(InstrInfo), Clustering,
+      AnalysisInconsistencyEpsilon, AnalysisDisplayUnstableOpcodes, CpuName);
 
   maybeRunAnalysis<Analysis::PrintClusters>(Analyzer, "analysis clusters",
                                             AnalysisClustersOutputFile);

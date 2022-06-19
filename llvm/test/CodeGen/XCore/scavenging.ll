@@ -75,26 +75,26 @@ declare void @g(i32*, i32*)
 ; CHECK: ldaw r11, sp[0]
 ; scavenge r4 using SR spill slot
 ; CHECK: stw r4, sp[1]
-; CHECK: ldw r4, cp{{\[}}[[ARG5]]{{\]}}
+; CHECK: ldw r4, cp[[[ARG5]]]
 ; r11 used to load 5th argument
 ; CHECK: ldw r11, r11[r4]
 ; CHECK: ldaw r4, sp[0]
 ; scavenge r5 using SR spill slot
 ; CHECK: stw r5, sp[0]
-; CHECK: ldw r5, cp{{\[}}[[INDEX0]]{{\]}}
+; CHECK: ldw r5, cp[[[INDEX0]]]
 ; r4 & r5 used by InsertSPConstInst() to emit STW_l3r instruction.
 ; CHECK: stw r0, r4[r5]
 ; CHECK: ldaw r0, sp[0]
-; CHECK: ldw r5, cp{{\[}}[[INDEX1]]{{\]}}
+; CHECK: ldw r5, cp[[[INDEX1]]]
 ; CHECK: stw r1, r0[r5]
 ; CHECK: ldaw r0, sp[0]
-; CHECK: ldw r1, cp{{\[}}[[INDEX2]]{{\]}}
+; CHECK: ldw r1, cp[[[INDEX2]]]
 ; CHECK: stw r2, r0[r1]
 ; CHECK: ldaw r0, sp[0]
-; CHECK: ldw r1, cp{{\[}}[[INDEX3]]{{\]}}
+; CHECK: ldw r1, cp[[[INDEX3]]]
 ; CHECK: stw r3, r0[r1]
 ; CHECK: ldaw r0, sp[0]
-; CHECK: ldw r1, cp{{\[}}[[INDEX4]]{{\]}}
+; CHECK: ldw r1, cp[[[INDEX4]]]
 ; CHECK: stw r11, r0[r1]
 ; CHECK: ldaw sp, sp[65535]
 ; CHECK: ldw r4, sp[1]

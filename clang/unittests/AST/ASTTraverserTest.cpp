@@ -60,7 +60,7 @@ public:
     if (const auto *F = Init->getAnyMember()) {
       OS << " '" << F->getNameAsString() << "'";
     } else if (auto const *TSI = Init->getTypeSourceInfo()) {
-      OS << " '" << TSI->getType().getAsString() << "'";
+      OS << " '" << TSI->getType() << "'";
     }
   }
 
@@ -81,7 +81,7 @@ public:
     OS << "TemplateArgument";
     switch (A.getKind()) {
     case TemplateArgument::Type: {
-      OS << " type " << A.getAsType().getAsString();
+      OS << " type " << A.getAsType();
       break;
     }
     default:
@@ -111,7 +111,7 @@ template <typename... NodeType> std::string dumpASTString(NodeType &&... N) {
 
   Dumper.Visit(std::forward<NodeType &&>(N)...);
 
-  return OS.str();
+  return Buffer;
 }
 
 template <typename... NodeType>
@@ -126,7 +126,7 @@ std::string dumpASTString(TraversalKind TK, NodeType &&... N) {
 
   Dumper.Visit(std::forward<NodeType &&>(N)...);
 
-  return OS.str();
+  return Buffer;
 }
 
 const FunctionDecl *getFunctionNode(clang::ASTUnit *AST,
@@ -1157,6 +1157,46 @@ void decomposition()
     f = 42;
 }
 
+typedef __typeof(sizeof(int)) size_t;
+
+struct Pair
+{
+    int x, y;
+};
+
+// Note: these utilities are required to force binding to tuple like structure
+namespace std
+{
+    template <typename E>
+    struct tuple_size
+    {
+    };
+
+    template <>
+    struct tuple_size<Pair>
+    {
+        static constexpr size_t value = 2;
+    };
+
+    template <size_t I, class T>
+    struct tuple_element
+    {
+        using type = int;
+    };
+
+};
+
+template <size_t I>
+int &&get(Pair &&p);
+
+void decompTuple()
+{
+    Pair p{1, 2};
+    auto [a, b] = p;
+
+    a = 3;
+}
+
 )cpp",
                                        {"-std=c++20"});
 
@@ -1492,6 +1532,48 @@ DecompositionDecl ''
 |-BindingDecl 'f'
 |-BindingDecl 's'
 `-BindingDecl 't'
+)cpp");
+  }
+
+  {
+    auto FN = ast_matchers::match(
+        functionDecl(hasName("decompTuple"),
+                     hasDescendant(decompositionDecl().bind("decomp"))),
+        AST2->getASTContext());
+    EXPECT_EQ(FN.size(), 1u);
+
+    EXPECT_EQ(
+        dumpASTString(TK_AsIs, FN[0].getNodeAs<DecompositionDecl>("decomp")),
+        R"cpp(
+DecompositionDecl ''
+|-CXXConstructExpr
+| `-ImplicitCastExpr
+|   `-DeclRefExpr 'p'
+|-BindingDecl 'a'
+| |-VarDecl 'a'
+| | `-CallExpr
+| |   |-ImplicitCastExpr
+| |   | `-DeclRefExpr 'get'
+| |   `-ImplicitCastExpr
+| |     `-DeclRefExpr ''
+| `-DeclRefExpr 'a'
+`-BindingDecl 'b'
+  |-VarDecl 'b'
+  | `-CallExpr
+  |   |-ImplicitCastExpr
+  |   | `-DeclRefExpr 'get'
+  |   `-ImplicitCastExpr
+  |     `-DeclRefExpr ''
+  `-DeclRefExpr 'b'
+)cpp");
+
+    EXPECT_EQ(dumpASTString(TK_IgnoreUnlessSpelledInSource,
+                            FN[0].getNodeAs<DecompositionDecl>("decomp")),
+              R"cpp(
+DecompositionDecl ''
+|-DeclRefExpr 'p'
+|-BindingDecl 'a'
+`-BindingDecl 'b'
 )cpp");
   }
 }

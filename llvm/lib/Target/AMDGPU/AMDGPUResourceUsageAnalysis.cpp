@@ -27,8 +27,12 @@
 #include "AMDGPU.h"
 #include "GCNSubtarget.h"
 #include "SIMachineFunctionInfo.h"
+#include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/Analysis/CallGraph.h"
+#include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
+#include "llvm/IR/GlobalAlias.h"
+#include "llvm/IR/GlobalValue.h"
 #include "llvm/Target/TargetMachine.h"
 
 using namespace llvm;
@@ -61,7 +65,8 @@ static const Function *getCalleeFunction(const MachineOperand &Op) {
     assert(Op.getImm() == 0);
     return nullptr;
   }
-
+  if (auto *GA = dyn_cast<GlobalAlias>(Op.getGlobal()))
+    return cast<Function>(GA->getOperand(0));
   return cast<Function>(Op.getGlobal());
 }
 
@@ -83,34 +88,40 @@ int32_t AMDGPUResourceUsageAnalysis::SIFunctionResourceInfo::getTotalNumSGPRs(
 }
 
 int32_t AMDGPUResourceUsageAnalysis::SIFunctionResourceInfo::getTotalNumVGPRs(
-    const GCNSubtarget &ST) const {
-  if (ST.hasGFX90AInsts() && NumAGPR)
-    return alignTo(NumVGPR, 4) + NumAGPR;
-  return std::max(NumVGPR, NumAGPR);
+    const GCNSubtarget &ST, int32_t ArgNumAGPR, int32_t ArgNumVGPR) const {
+  return AMDGPU::getTotalNumVGPRs(ST.hasGFX90AInsts(), ArgNumAGPR, ArgNumVGPR);
 }
 
-bool AMDGPUResourceUsageAnalysis::runOnSCC(CallGraphSCC &SCC) {
+int32_t AMDGPUResourceUsageAnalysis::SIFunctionResourceInfo::getTotalNumVGPRs(
+    const GCNSubtarget &ST) const {
+  return getTotalNumVGPRs(ST, NumAGPR, NumVGPR);
+}
+
+bool AMDGPUResourceUsageAnalysis::runOnModule(Module &M) {
   auto *TPC = getAnalysisIfAvailable<TargetPassConfig>();
   if (!TPC)
     return false;
 
+  MachineModuleInfo &MMI = getAnalysis<MachineModuleInfoWrapperPass>().getMMI();
   const TargetMachine &TM = TPC->getTM<TargetMachine>();
   bool HasIndirectCall = false;
 
-  for (CallGraphNode *I : SCC) {
-    Function *F = I->getFunction();
+  CallGraph CG = CallGraph(M);
+  auto End = po_end(&CG);
+
+  for (auto IT = po_begin(&CG); IT != End; ++IT) {
+    Function *F = IT->getFunction();
     if (!F || F->isDeclaration())
       continue;
 
-    MachineModuleInfo &MMI =
-        getAnalysis<MachineModuleInfoWrapperPass>().getMMI();
-    MachineFunction &MF = MMI.getOrCreateMachineFunction(*F);
+    MachineFunction *MF = MMI.getMachineFunction(*F);
+    assert(MF && "function must have been generated already");
 
     auto CI = CallGraphResourceInfo.insert(
-        std::make_pair(&MF.getFunction(), SIFunctionResourceInfo()));
+        std::make_pair(F, SIFunctionResourceInfo()));
     SIFunctionResourceInfo &Info = CI.first->second;
     assert(CI.second && "should only be called once per function");
-    Info = analyzeResourceUsage(MF, TM);
+    Info = analyzeResourceUsage(*MF, TM);
     HasIndirectCall |= Info.HasIndirectCall;
   }
 
@@ -238,6 +249,7 @@ AMDGPUResourceUsageAnalysis::analyzeResourceUsage(
         case AMDGPU::SRC_PRIVATE_BASE:
         case AMDGPU::SRC_PRIVATE_LIMIT:
         case AMDGPU::SGPR_NULL:
+        case AMDGPU::SGPR_NULL64:
         case AMDGPU::MODE:
           continue;
 
@@ -444,6 +456,25 @@ AMDGPUResourceUsageAnalysis::analyzeResourceUsage(
         if (!IsIndirect)
           I = CallGraphResourceInfo.find(Callee);
 
+        // FIXME: Call site could have norecurse on it
+        if (!Callee || !Callee->doesNotRecurse()) {
+          Info.HasRecursion = true;
+
+          // TODO: If we happen to know there is no stack usage in the
+          // callgraph, we don't need to assume an infinitely growing stack.
+          if (!MI.isReturn()) {
+            // We don't need to assume an unknown stack size for tail calls.
+
+            // FIXME: This only benefits in the case where the kernel does not
+            // directly call the tail called function. If a kernel directly
+            // calls a tail recursive function, we'll assume maximum stack size
+            // based on the regular call instruction.
+            CalleeFrameSize =
+              std::max(CalleeFrameSize,
+                       static_cast<uint64_t>(AssumedStackSizeForExternalCall));
+          }
+        }
+
         if (IsIndirect || I == CallGraphResourceInfo.end()) {
           CalleeFrameSize =
               std::max(CalleeFrameSize,
@@ -468,10 +499,6 @@ AMDGPUResourceUsageAnalysis::analyzeResourceUsage(
           Info.HasRecursion |= I->second.HasRecursion;
           Info.HasIndirectCall |= I->second.HasIndirectCall;
         }
-
-        // FIXME: Call site could have norecurse on it
-        if (!Callee || !Callee->doesNotRecurse())
-          Info.HasRecursion = true;
       }
     }
   }

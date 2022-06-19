@@ -55,6 +55,7 @@ public:
     UndefinedDataKind,
     UndefinedGlobalKind,
     UndefinedTableKind,
+    UndefinedTagKind,
     LazyKind,
   };
 
@@ -66,7 +67,7 @@ public:
     return symbolKind == UndefinedFunctionKind ||
            symbolKind == UndefinedDataKind ||
            symbolKind == UndefinedGlobalKind ||
-           symbolKind == UndefinedTableKind;
+           symbolKind == UndefinedTableKind || symbolKind == UndefinedTagKind;
   }
 
   bool isLazy() const { return symbolKind == LazyKind; }
@@ -74,6 +75,7 @@ public:
   bool isLocal() const;
   bool isWeak() const;
   bool isHidden() const;
+  bool isTLS() const;
 
   // Returns true if this symbol exists in a discarded (due to COMDAT) section
   bool isDiscarded() const;
@@ -151,7 +153,7 @@ public:
   // are unreferenced except by other bitcode objects.
   bool isUsedInRegularObj : 1;
 
-  // True if ths symbol is explicitly marked for export (i.e. via the
+  // True if this symbol is explicitly marked for export (i.e. via the
   // -e/--export command line flag)
   bool forceExport : 1;
 
@@ -213,6 +215,12 @@ public:
   static bool classof(const Symbol *s) {
     return s->kind() == DefinedFunctionKind;
   }
+
+  // Get the function index to be used when exporting.  This only applies to
+  // defined functions and can be differ from the regular function index for
+  // weakly defined functions (that are imported and used via one index but
+  // defined and exported via another).
+  uint32_t getExportedFunctionIndex() const;
 
   InputFunction *function;
 };
@@ -430,9 +438,9 @@ public:
 // and is named '__cpp_exception' for linking.
 class TagSymbol : public Symbol {
 public:
-  static bool classof(const Symbol *s) { return s->kind() == DefinedTagKind; }
-
-  const WasmTagType *getTagType() const { return tagType; }
+  static bool classof(const Symbol *s) {
+    return s->kind() == DefinedTagKind || s->kind() == UndefinedTagKind;
+  }
 
   // Get/set the tag index
   uint32_t getTagIndex() const;
@@ -443,10 +451,9 @@ public:
 
 protected:
   TagSymbol(StringRef name, Kind k, uint32_t flags, InputFile *f,
-            const WasmTagType *tagType, const WasmSignature *sig)
-      : Symbol(name, k, flags, f), signature(sig), tagType(tagType) {}
+            const WasmSignature *sig)
+      : Symbol(name, k, flags, f), signature(sig) {}
 
-  const WasmTagType *tagType;
   uint32_t tagIndex = INVALID_INDEX;
 };
 
@@ -457,6 +464,19 @@ public:
   static bool classof(const Symbol *s) { return s->kind() == DefinedTagKind; }
 
   InputTag *tag;
+};
+
+class UndefinedTag : public TagSymbol {
+public:
+  UndefinedTag(StringRef name, llvm::Optional<StringRef> importName,
+               llvm::Optional<StringRef> importModule, uint32_t flags,
+               InputFile *file = nullptr, const WasmSignature *sig = nullptr)
+      : TagSymbol(name, UndefinedTagKind, flags, file, sig) {
+    this->importName = importName;
+    this->importModule = importModule;
+  }
+
+  static bool classof(const Symbol *s) { return s->kind() == UndefinedTagKind; }
 };
 
 // LazySymbol represents a symbol that is not yet in the link, but we know where
@@ -545,9 +565,14 @@ struct WasmSym {
   static DefinedFunction *applyDataRelocs;
 
   // __wasm_apply_global_relocs
-  // Function that applies relocations to data segment post-instantiation.
+  // Function that applies relocations to wasm globals post-instantiation.
   // Unlike __wasm_apply_data_relocs this needs to run on every thread.
   static DefinedFunction *applyGlobalRelocs;
+
+  // __wasm_apply_global_tls_relocs
+  // Like applyGlobalRelocs but for globals that hold TLS addresess.  These
+  // must be delayed until __wasm_init_tls.
+  static DefinedFunction *applyGlobalTLSRelocs;
 
   // __wasm_init_tls
   // Function that allocates thread-local storage and initializes it.

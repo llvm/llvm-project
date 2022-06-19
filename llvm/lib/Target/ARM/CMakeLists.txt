@@ -25,12 +25,14 @@ add_llvm_target(ARMCodeGen
   ARMBaseInstrInfo.cpp
   ARMBaseRegisterInfo.cpp
   ARMBasicBlockInfo.cpp
+  ARMBranchTargets.cpp
   ARMCallingConv.cpp
   ARMCallLowering.cpp
   ARMConstantIslandPass.cpp
   ARMConstantPoolValue.cpp
   ARMExpandPseudoInsts.cpp
   ARMFastISel.cpp
+  ARMFixCortexA57AES1742098Pass.cpp
   ARMFrameLowering.cpp
   ARMHazardRecognizer.cpp
   ARMInstructionSelector.cpp

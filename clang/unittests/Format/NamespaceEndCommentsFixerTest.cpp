@@ -68,6 +68,170 @@ TEST_F(NamespaceEndCommentsFixerTest, AddsEndComment) {
                                     "int i;\n"
                                     "int j;\n"
                                     "}"));
+  EXPECT_EQ("#define M(x) x##x\n"
+            "namespace M(x) {\n"
+            "int i;\n"
+            "int j;\n"
+            "}// namespace M(x)",
+            fixNamespaceEndComments("#define M(x) x##x\n"
+                                    "namespace M(x) {\n"
+                                    "int i;\n"
+                                    "int j;\n"
+                                    "}"));
+  EXPECT_EQ("#define M(x) x##x\n"
+            "namespace A::M(x) {\n"
+            "int i;\n"
+            "int j;\n"
+            "}// namespace A::M(x)",
+            fixNamespaceEndComments("#define M(x) x##x\n"
+                                    "namespace A::M(x) {\n"
+                                    "int i;\n"
+                                    "int j;\n"
+                                    "}"));
+  EXPECT_EQ("#define M(x) x##x\n"
+            "namespace M(x)::A {\n"
+            "int i;\n"
+            "int j;\n"
+            "}// namespace M(x)::A",
+            fixNamespaceEndComments("#define M(x) x##x\n"
+                                    "namespace M(x)::A {\n"
+                                    "int i;\n"
+                                    "int j;\n"
+                                    "}"));
+  EXPECT_EQ("#define M(x) x##x\n"
+            "namespace A::inline M(x)::B {\n"
+            "int i;\n"
+            "int j;\n"
+            "}// namespace A::inline M(x)::B",
+            fixNamespaceEndComments("#define M(x) x##x\n"
+                                    "namespace A::inline M(x)::B {\n"
+                                    "int i;\n"
+                                    "int j;\n"
+                                    "}"));
+  EXPECT_EQ("#define M(x) x##x\n"
+            "namespace [[deprecated(\"foo\")]] A::inline M(x)::A {\n"
+            "int i;\n"
+            "int j;\n"
+            "}// namespace A::inline M(x)::A",
+            fixNamespaceEndComments(
+                "#define M(x) x##x\n"
+                "namespace [[deprecated(\"foo\")]] A::inline M(x)::A {\n"
+                "int i;\n"
+                "int j;\n"
+                "}"));
+  EXPECT_EQ(
+      "namespace /* comment */ [[deprecated(\"foo\")]] /* comment */ A {\n"
+      "int i;\n"
+      "int j;\n"
+      "}// namespace A",
+      fixNamespaceEndComments(
+          "namespace /* comment */ [[deprecated(\"foo\")]] /* comment */ A {\n"
+          "int i;\n"
+          "int j;\n"
+          "}"));
+  EXPECT_EQ("namespace /* comment */ [[deprecated(\"foo\")]] A {\n"
+            "int i;\n"
+            "int j;\n"
+            "}// namespace A",
+            fixNamespaceEndComments(
+                "namespace /* comment */ [[deprecated(\"foo\")]] A {\n"
+                "int i;\n"
+                "int j;\n"
+                "}"));
+  EXPECT_EQ(
+      "#define M(x) x##x\n"
+      "namespace /* comment */ [[deprecated(\"foo\")]] /* comment */ M(x) {\n"
+      "int i;\n"
+      "int j;\n"
+      "}// namespace M(x)",
+      fixNamespaceEndComments("#define M(x) x##x\n"
+                              "namespace /* comment */ "
+                              "[[deprecated(\"foo\")]] /* comment */ M(x) {\n"
+                              "int i;\n"
+                              "int j;\n"
+                              "}"));
+  EXPECT_EQ("#define M(x) x##x\n"
+            "namespace /* comment */ [[deprecated(\"foo\")]] /* comment */ "
+            "A::M(x) {\n"
+            "int i;\n"
+            "int j;\n"
+            "}// namespace A::M(x)",
+            fixNamespaceEndComments(
+                "#define M(x) x##x\n"
+                "namespace /* comment */ "
+                "[[deprecated(\"foo\")]] /* comment */ A::M(x) {\n"
+                "int i;\n"
+                "int j;\n"
+                "}"));
+  EXPECT_EQ("#define M(x) x##x\n"
+            "namespace /* comment */ [[deprecated(\"foo\")]] /* comment */ "
+            "M(x) /* comment */ {\n"
+            "int i;\n"
+            "int j;\n"
+            "}// namespace M(x)",
+            fixNamespaceEndComments(
+                "#define M(x) x##x\n"
+                "namespace /* comment */ [[deprecated(\"foo\")]] /* comment "
+                "*/ M(x) /* comment */ {\n"
+                "int i;\n"
+                "int j;\n"
+                "}"));
+  EXPECT_EQ("#define M(x) x##x\n"
+            "namespace /* comment */ [[deprecated(\"foo\")]] /* comment */ "
+            "A::M(x) /* comment */ {\n"
+            "int i;\n"
+            "int j;\n"
+            "}// namespace A::M(x)",
+            fixNamespaceEndComments(
+                "#define M(x) x##x\n"
+                "namespace /* comment */ [[deprecated(\"foo\")]] /* comment "
+                "*/ A::M(x) /* comment */ {\n"
+                "int i;\n"
+                "int j;\n"
+                "}"));
+  EXPECT_EQ("#define M(x) x##x\n"
+            "namespace A M(x) {\n"
+            "int i;\n"
+            "int j;\n"
+            "}// namespace A M(x)",
+            fixNamespaceEndComments("#define M(x) x##x\n"
+                                    "namespace A M(x) {\n"
+                                    "int i;\n"
+                                    "int j;\n"
+                                    "}"));
+  EXPECT_EQ(
+      "#define B __attribute__((availability(macos, introduced=10.15)))\n"
+      "namespace A B {\n"
+      "int i;\n"
+      "int j;\n"
+      "}// namespace A B",
+      fixNamespaceEndComments(
+          "#define B __attribute__((availability(macos, introduced=10.15)))\n"
+          "namespace A B {\n"
+          "int i;\n"
+          "int j;\n"
+          "}"));
+  EXPECT_EQ("#define M(x) x##x\n"
+            "namespace A::B M(x) {\n"
+            "int i;\n"
+            "int j;\n"
+            "}// namespace A::B",
+            fixNamespaceEndComments("#define M(x) x##x\n"
+                                    "namespace A::B M(x) {\n"
+                                    "int i;\n"
+                                    "int j;\n"
+                                    "}"));
+  EXPECT_EQ(
+      "namespace A __attribute__((availability(macos, introduced=10.15))) {\n"
+      "int i;\n"
+      "int j;\n"
+      "}// namespace A",
+      fixNamespaceEndComments(
+          "namespace A __attribute__((availability(macos, introduced=10.15))) "
+          "{\n"
+          "int i;\n"
+          "int j;\n"
+          "}"));
   EXPECT_EQ("inline namespace A {\n"
             "int i;\n"
             "int j;\n"
@@ -256,6 +420,15 @@ TEST_F(NamespaceEndCommentsFixerTest, AddsEndComment) {
                                     "int j;\n"
                                     "};}",
                                     CompactNamespacesStyle));
+  EXPECT_EQ("namespace out { namespace {\n"
+            "int i;\n"
+            "int j;\n"
+            "}}// namespace out",
+            fixNamespaceEndComments("namespace out { namespace {\n"
+                                    "int i;\n"
+                                    "int j;\n"
+                                    "}}",
+                                    CompactNamespacesStyle));
 
   // Adds an end comment after a semicolon.
   EXPECT_EQ("namespace {\n"
@@ -284,6 +457,20 @@ TEST_F(NamespaceEndCommentsFixerTest, AddsEndComment) {
                                     "int j;\n"
                                     "};\n"
                                     "// unrelated"));
+}
+
+TEST_F(NamespaceEndCommentsFixerTest, WorksForObjCpp) {
+  FormatStyle ObjCppStyle = getLLVMStyle();
+  ObjCppStyle.Language = FormatStyle::LK_ObjC;
+  EXPECT_EQ("namespace {\n"
+            "int i;\n"
+            "int j;\n"
+            "}// namespace",
+            fixNamespaceEndComments("namespace {\n"
+                                    "int i;\n"
+                                    "int j;\n"
+                                    "}",
+                                    ObjCppStyle));
 }
 
 TEST_F(NamespaceEndCommentsFixerTest, AddsMacroEndComment) {
@@ -608,6 +795,11 @@ TEST_F(NamespaceEndCommentsFixerTest, UpdatesInvalidEndLineComment) {
             fixNamespaceEndComments("namespace out { namespace in {\n"
                                     "}// banamespace in\n"
                                     "} // namespace out",
+                                    CompactNamespacesStyle));
+  EXPECT_EQ("namespace out { namespace {\n"
+            "}} // namespace out",
+            fixNamespaceEndComments("namespace out { namespace {\n"
+                                    "}} // namespace out::",
                                     CompactNamespacesStyle));
 }
 
@@ -1182,6 +1374,82 @@ TEST_F(ShortNamespaceLinesTest, MultipleUnwrappedLine) {
                                     "int i;\n"
                                     "int j;\n"
                                     "int k;\n"
+                                    "}\n",
+                                    Style));
+}
+
+TEST_F(ShortNamespaceLinesTest, NamespaceAlias) {
+  auto Style = getLLVMStyle();
+
+  EXPECT_EQ("namespace n = nn;\n"
+            "{\n"
+            "  int i;\n"
+            "  int j;\n"
+            "}\n",
+            fixNamespaceEndComments("namespace n = nn;\n"
+                                    "{\n"
+                                    "  int i;\n"
+                                    "  int j;\n"
+                                    "}\n",
+                                    Style));
+
+  EXPECT_EQ("namespace n = nn; // comment\n"
+            "{\n"
+            "  int i;\n"
+            "  int j;\n"
+            "}\n",
+            fixNamespaceEndComments("namespace n = nn; // comment\n"
+                                    "{\n"
+                                    "  int i;\n"
+                                    "  int j;\n"
+                                    "}\n",
+                                    Style));
+
+  EXPECT_EQ("namespace n = nn; /* comment */\n"
+            "{\n"
+            "  int i;\n"
+            "  int j;\n"
+            "}\n",
+            fixNamespaceEndComments("namespace n = nn; /* comment */\n"
+                                    "{\n"
+                                    "  int i;\n"
+                                    "  int j;\n"
+                                    "}\n",
+                                    Style));
+
+  EXPECT_EQ(
+      "namespace n = nn; /* comment */ /* comment2 */\n"
+      "{\n"
+      "  int i;\n"
+      "  int j;\n"
+      "}\n",
+      fixNamespaceEndComments("namespace n = nn; /* comment */ /* comment2 */\n"
+                              "{\n"
+                              "  int i;\n"
+                              "  int j;\n"
+                              "}\n",
+                              Style));
+
+  EXPECT_EQ("namespace n = nn; {\n"
+            "  int i;\n"
+            "  int j;\n"
+            "}\n",
+            fixNamespaceEndComments("namespace n = nn; {\n"
+                                    "  int i;\n"
+                                    "  int j;\n"
+                                    "}\n",
+                                    Style));
+  EXPECT_EQ("int foo;\n"
+            "namespace n\n"
+            "{\n"
+            "  int i;\n"
+            "  int j;\n"
+            "}// namespace n\n",
+            fixNamespaceEndComments("int foo;\n"
+                                    "namespace n\n"
+                                    "{\n"
+                                    "  int i;\n"
+                                    "  int j;\n"
                                     "}\n",
                                     Style));
 }

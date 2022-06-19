@@ -1,5 +1,4 @@
-! RUN: %S/test_errors.sh %s %t %flang_fc1
-! REQUIRES: shell
+! RUN: %python %S/test_errors.py %s %flang_fc1
 ! Tests valid and invalid NULL initializers
 
 module m1
@@ -74,3 +73,25 @@ module m9b
   !ERROR: An initial data target must be a designator with constant subscripts
   data d2/null()/
 end module
+
+subroutine m10
+  real, pointer :: x, y
+  !ERROR: 'null' must be an array or structure constructor if used with non-empty parentheses as a DATA statement constant
+  data x/null(y)/
+end
+
+subroutine m11
+  type :: null
+    integer :: mold
+  end type
+  type(null) :: obj(2)
+  integer, parameter :: j = 0
+  data obj/null(mold=j), null(j)/ ! both fine
+end subroutine
+
+subroutine m12
+  integer, parameter :: j = 1
+  integer, target, save :: null(1)
+  integer, pointer :: p
+  data p/null(j)/ ! ok
+end subroutine

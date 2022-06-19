@@ -9,9 +9,10 @@
 #include "Serialization.h"
 #include "Headers.h"
 #include "RIFF.h"
-#include "SymbolLocation.h"
-#include "SymbolOrigin.h"
-#include "dex/Dex.h"
+#include "index/MemIndex.h"
+#include "index/SymbolLocation.h"
+#include "index/SymbolOrigin.h"
+#include "index/dex/Dex.h"
 #include "support/Logger.h"
 #include "support/Trace.h"
 #include "clang/Tooling/CompilationDatabase.h"
@@ -191,7 +192,7 @@ public:
     }
     if (llvm::zlib::isAvailable()) {
       llvm::SmallString<1> Compressed;
-      llvm::cantFail(llvm::zlib::compress(RawTable, Compressed));
+      llvm::zlib::compress(RawTable, Compressed);
       write32(RawTable.size(), OS);
       OS << Compressed;
     } else {
@@ -320,7 +321,6 @@ void writeSymbol(const Symbol &Sym, const StringTableOut &Strings,
   writeLocation(Sym.CanonicalDeclaration, Strings, OS);
   writeVar(Sym.References, OS);
   OS.write(static_cast<uint8_t>(Sym.Flags));
-  OS.write(static_cast<uint8_t>(Sym.Origin));
   writeVar(Strings.index(Sym.Signature), OS);
   writeVar(Strings.index(Sym.CompletionSnippetSuffix), OS);
   writeVar(Strings.index(Sym.Documentation), OS);
@@ -336,7 +336,8 @@ void writeSymbol(const Symbol &Sym, const StringTableOut &Strings,
     WriteInclude(Include);
 }
 
-Symbol readSymbol(Reader &Data, llvm::ArrayRef<llvm::StringRef> Strings) {
+Symbol readSymbol(Reader &Data, llvm::ArrayRef<llvm::StringRef> Strings,
+                  SymbolOrigin Origin) {
   Symbol Sym;
   Sym.ID = Data.consumeID();
   Sym.SymInfo.Kind = static_cast<index::SymbolKind>(Data.consume8());
@@ -348,7 +349,7 @@ Symbol readSymbol(Reader &Data, llvm::ArrayRef<llvm::StringRef> Strings) {
   Sym.CanonicalDeclaration = readLocation(Data, Strings);
   Sym.References = Data.consumeVar();
   Sym.Flags = static_cast<Symbol::SymbolFlag>(Data.consume8());
-  Sym.Origin = static_cast<SymbolOrigin>(Data.consume8());
+  Sym.Origin = Origin;
   Sym.Signature = Data.consumeString(Strings);
   Sym.CompletionSnippetSuffix = Data.consumeString(Strings);
   Sym.Documentation = Data.consumeString(Strings);
@@ -452,9 +453,10 @@ readCompileCommand(Reader CmdReader, llvm::ArrayRef<llvm::StringRef> Strings) {
 // The current versioning scheme is simple - non-current versions are rejected.
 // If you make a breaking change, bump this version number to invalidate stored
 // data. Later we may want to support some backward compatibility.
-constexpr static uint32_t Version = 16;
+constexpr static uint32_t Version = 17;
 
-llvm::Expected<IndexFileIn> readRIFF(llvm::StringRef Data) {
+llvm::Expected<IndexFileIn> readRIFF(llvm::StringRef Data,
+                                     SymbolOrigin Origin) {
   auto RIFF = riff::readFile(Data);
   if (!RIFF)
     return RIFF.takeError();
@@ -503,7 +505,7 @@ llvm::Expected<IndexFileIn> readRIFF(llvm::StringRef Data) {
     Reader SymbolReader(Chunks.lookup("symb"));
     SymbolSlab::Builder Symbols;
     while (!SymbolReader.eof())
-      Symbols.insert(readSymbol(SymbolReader, Strings->Strings));
+      Symbols.insert(readSymbol(SymbolReader, Strings->Strings, Origin));
     if (SymbolReader.err())
       return error("malformed or truncated symbol");
     Result.Symbols = std::move(Symbols).build();
@@ -670,7 +672,7 @@ void writeRIFF(const IndexFileOut &Data, llvm::raw_ostream &OS) {
 
 // Defined in YAMLSerialization.cpp.
 void writeYAML(const IndexFileOut &, llvm::raw_ostream &);
-llvm::Expected<IndexFileIn> readYAML(llvm::StringRef);
+llvm::Expected<IndexFileIn> readYAML(llvm::StringRef, SymbolOrigin Origin);
 
 llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, const IndexFileOut &O) {
   switch (O.Format) {
@@ -684,10 +686,12 @@ llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, const IndexFileOut &O) {
   return OS;
 }
 
-llvm::Expected<IndexFileIn> readIndexFile(llvm::StringRef Data) {
+llvm::Expected<IndexFileIn> readIndexFile(llvm::StringRef Data,
+                                          SymbolOrigin Origin) {
   if (Data.startswith("RIFF")) {
-    return readRIFF(Data);
-  } else if (auto YAMLContents = readYAML(Data)) {
+    return readRIFF(Data, Origin);
+  }
+  if (auto YAMLContents = readYAML(Data, Origin)) {
     return std::move(*YAMLContents);
   } else {
     return error("Not a RIFF file and failed to parse as YAML: {0}",
@@ -696,7 +700,7 @@ llvm::Expected<IndexFileIn> readIndexFile(llvm::StringRef Data) {
 }
 
 std::unique_ptr<SymbolIndex> loadIndex(llvm::StringRef SymbolFilename,
-                                       bool UseDex) {
+                                       SymbolOrigin Origin, bool UseDex) {
   trace::Span OverallTracer("LoadIndex");
   auto Buffer = llvm::MemoryBuffer::getFile(SymbolFilename);
   if (!Buffer) {
@@ -709,7 +713,7 @@ std::unique_ptr<SymbolIndex> loadIndex(llvm::StringRef SymbolFilename,
   RelationSlab Relations;
   {
     trace::Span Tracer("ParseIndex");
-    if (auto I = readIndexFile(Buffer->get()->getBuffer())) {
+    if (auto I = readIndexFile(Buffer->get()->getBuffer(), Origin)) {
       if (I->Symbols)
         Symbols = std::move(*I->Symbols);
       if (I->Refs)

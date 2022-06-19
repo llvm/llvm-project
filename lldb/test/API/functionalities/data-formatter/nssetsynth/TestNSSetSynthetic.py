@@ -12,8 +12,6 @@ from lldbsuite.test import lldbutil
 
 class NSSetSyntheticTestCase(TestBase):
 
-    mydir = TestBase.compute_mydir(__file__)
-
     def setUp(self):
         # Call super's setUp().
         TestBase.setUp(self)
@@ -24,6 +22,23 @@ class NSSetSyntheticTestCase(TestBase):
     def test_rdar12529957_with_run_command(self):
         """Test that NSSet reports its synthetic children properly."""
         self.build()
+        self.run_tests()
+
+    @skipUnlessDarwin
+    def test_rdar12529957_with_run_command_no_const(self):
+        """Test that NSSet reports its synthetic children properly."""
+        disable_constant_classes = {
+            'CC':
+            'xcrun clang',  # FIXME: Remove when flags are available upstream.
+            'CFLAGS_EXTRAS':
+            '-fno-constant-nsnumber-literals ' +
+            '-fno-constant-nsarray-literals ' +
+            '-fno-constant-nsdictionary-literals'
+        }
+        self.build(dictionary=disable_constant_classes)
+        self.run_tests()
+
+    def run_tests(self):
         self.runCmd("file " + self.getBuildArtifact("a.out"), CURRENT_EXECUTABLE_SET)
 
         lldbutil.run_break_set_by_file_and_line(

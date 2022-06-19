@@ -47,13 +47,13 @@ multiclass WebAssemblyLoad<WebAssemblyRegClass rc, string Name, int Opcode,
                  (ins P2Align:$p2align, offset32_op:$off, I32:$addr),
                  (outs), (ins P2Align:$p2align, offset32_op:$off),
                  [], !strconcat(Name, "\t$dst, ${off}(${addr})${p2align}"),
-                 !strconcat(Name, "\t${off}${p2align}"), Opcode, "false">,
+                 !strconcat(Name, "\t${off}${p2align}"), Opcode, false>,
                Requires<reqs>;
   defm "_A64": I<(outs rc:$dst),
                  (ins P2Align:$p2align, offset64_op:$off, I64:$addr),
                  (outs), (ins P2Align:$p2align, offset64_op:$off),
                  [], !strconcat(Name, "\t$dst, ${off}(${addr})${p2align}"),
-                 !strconcat(Name, "\t${off}${p2align}"), Opcode, "true">,
+                 !strconcat(Name, "\t${off}${p2align}"), Opcode, true>,
                Requires<reqs>;
   }
 }
@@ -117,10 +117,10 @@ defm : LoadPatOffsetOnly<f32, load, "LOAD_F32">;
 defm : LoadPatOffsetOnly<f64, load, "LOAD_F64">;
 
 multiclass LoadPatGlobalAddrOffOnly<ValueType ty, SDPatternOperator kind, string inst> {
-  def : Pat<(ty (kind (WebAssemblywrapper tglobaladdr:$off))),
+  def : Pat<(ty (kind (WebAssemblyWrapper tglobaladdr:$off))),
             (!cast<NI>(inst # "_A32") 0, tglobaladdr:$off, (CONST_I32 0))>,
         Requires<[IsNotPIC, HasAddr32]>;
-  def : Pat<(ty (kind (WebAssemblywrapper tglobaladdr:$off))),
+  def : Pat<(ty (kind (WebAssemblyWrapper tglobaladdr:$off))),
             (!cast<NI>(inst # "_A64") 0, tglobaladdr:$off, (CONST_I64 0))>,
         Requires<[IsNotPIC, HasAddr64]>;
 }
@@ -244,7 +244,7 @@ multiclass WebAssemblyStore<WebAssemblyRegClass rc, string Name, int Opcode,
                   (outs),
                   (ins P2Align:$p2align, offset32_op:$off), [],
                   !strconcat(Name, "\t${off}(${addr})${p2align}, $val"),
-                  !strconcat(Name, "\t${off}${p2align}"), Opcode, "false">,
+                  !strconcat(Name, "\t${off}${p2align}"), Opcode, false>,
                 Requires<reqs>;
   let mayStore = 1, UseNamedOperandTable = 1 in
   defm "_A64" : I<(outs),
@@ -252,7 +252,7 @@ multiclass WebAssemblyStore<WebAssemblyRegClass rc, string Name, int Opcode,
                   (outs),
                   (ins P2Align:$p2align, offset64_op:$off), [],
                   !strconcat(Name, "\t${off}(${addr})${p2align}, $val"),
-                  !strconcat(Name, "\t${off}${p2align}"), Opcode, "true">,
+                  !strconcat(Name, "\t${off}${p2align}"), Opcode, true>,
                 Requires<reqs>;
 }
 
@@ -313,11 +313,11 @@ defm : StorePatOffsetOnly<f32, store, "STORE_F32">;
 defm : StorePatOffsetOnly<f64, store, "STORE_F64">;
 
 multiclass StorePatGlobalAddrOffOnly<ValueType ty, PatFrag kind, string inst> {
-  def : Pat<(kind ty:$val, (WebAssemblywrapper tglobaladdr:$off)),
+  def : Pat<(kind ty:$val, (WebAssemblyWrapper tglobaladdr:$off)),
             (!cast<NI>(inst # "_A32") 0, tglobaladdr:$off, (CONST_I32 0),
              ty:$val)>,
         Requires<[IsNotPIC, HasAddr32]>;
-  def : Pat<(kind ty:$val, (WebAssemblywrapper tglobaladdr:$off)),
+  def : Pat<(kind ty:$val, (WebAssemblyWrapper tglobaladdr:$off)),
             (!cast<NI>(inst # "_A64") 0, tglobaladdr:$off, (CONST_I64 0),
              ty:$val)>,
         Requires<[IsNotPIC, HasAddr64]>;

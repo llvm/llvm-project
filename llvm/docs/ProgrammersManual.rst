@@ -214,7 +214,7 @@ character array and a length) and supports the common operations available on
 
 It can be implicitly constructed using a C style null-terminated string, an
 ``std::string``, or explicitly with a character pointer and length.  For
-example, the ``StringRef`` find function is declared as:
+example, the ``StringMap`` find function is declared as:
 
 .. code-block:: c++
 
@@ -285,7 +285,7 @@ to be formatted at compile time, so it does not need a format specifier such as
 strings, especially for platform-specific types like ``size_t`` or pointer types.
 Unlike both ``printf`` and Python, it additionally fails to compile if LLVM does
 not know how to format the type.  These two properties ensure that the function
-is both safer and simpler to use than traditional formatting methods such as 
+is both safer and simpler to use than traditional formatting methods such as
 the ``printf`` family of functions.
 
 Simple formatting
@@ -303,7 +303,7 @@ multiple times, possibly with different style and/or alignment options, in any o
 the value into, and the alignment of the value within the field.  It is specified as
 an optional **alignment style** followed by a positive integral **field width**.  The
 alignment style can be one of the characters ``-`` (left align), ``=`` (center align),
-or ``+`` (right align).  The default is right aligned.  
+or ``+`` (right align).  The default is right aligned.
 
 ``style`` is an optional string consisting of a type specific that controls the
 formatting of the value.  For example, to format a floating point value as a percentage,
@@ -318,7 +318,7 @@ There are two ways to customize the formatting behavior for a type.
    type ``T`` with the appropriate static format method.
 
   .. code-block:: c++
-  
+
     namespace llvm {
       template<>
       struct format_provider<MyFooBar> {
@@ -331,16 +331,16 @@ There are two ways to customize the formatting behavior for a type.
         std::string S = formatv("{0}", X);
       }
     }
-    
+
   This is a useful extensibility mechanism for adding support for formatting your own
   custom types with your own custom Style options.  But it does not help when you want
   to extend the mechanism for formatting a type that the library already knows how to
   format.  For that, we need something else.
-    
+
 2. Provide a **format adapter** inheriting from ``llvm::FormatAdapter<T>``.
 
   .. code-block:: c++
-  
+
     namespace anything {
       struct format_int_custom : public llvm::FormatAdapter<int> {
         explicit format_int_custom(int N) : llvm::FormatAdapter<int>(N) {}
@@ -354,7 +354,7 @@ There are two ways to customize the formatting behavior for a type.
         std::string S = formatv("{0}", anything::format_int_custom(42));
       }
     }
-    
+
   If the type is detected to be derived from ``FormatAdapter<T>``, ``formatv``
   will call the
   ``format`` method on the argument passing in the specified style.  This allows
@@ -369,28 +369,28 @@ doxygen documentation or by looking at the unit test suite.
 
 
 .. code-block:: c++
-  
+
   std::string S;
   // Simple formatting of basic types and implicit string conversion.
   S = formatv("{0} ({1:P})", 7, 0.35);  // S == "7 (35.00%)"
-  
+
   // Out-of-order referencing and multi-referencing
   outs() << formatv("{0} {2} {1} {0}", 1, "test", 3); // prints "1 3 test 1"
-  
+
   // Left, right, and center alignment
   S = formatv("{0,7}",  'a');  // S == "      a";
   S = formatv("{0,-7}", 'a');  // S == "a      ";
   S = formatv("{0,=7}", 'a');  // S == "   a   ";
   S = formatv("{0,+7}", 'a');  // S == "      a";
-  
+
   // Custom styles
   S = formatv("{0:N} - {0:x} - {1:E}", 12345, 123908342); // S == "12,345 - 0x3039 - 1.24E8"
-  
+
   // Adapters
   S = formatv("{0}", fmt_align(42, AlignStyle::Center, 7));  // S == "  42   "
   S = formatv("{0}", fmt_repeat("hi", 3)); // S == "hihihi"
   S = formatv("{0}", fmt_pad("hi", 2, 6)); // S == "  hi      "
-  
+
   // Ranges
   std::vector<int> V = {8, 9, 10};
   S = formatv("{0}", make_range(V.begin(), V.end())); // S == "8, 9, 10"
@@ -567,6 +567,46 @@ rewritten as:
 
 This second form is often more readable for functions that involve multiple
 ``Expected<T>`` values as it limits the indentation required.
+
+If an ``Expected<T>`` value will be moved into an existing variable then the
+``moveInto()`` method avoids the need to name an extra variable.  This is
+useful to enable ``operator->()`` the ``Expected<T>`` value has pointer-like
+semantics.  For example:
+
+.. code-block:: c++
+
+  Expected<std::unique_ptr<MemoryBuffer>> openBuffer(StringRef Path);
+  Error processBuffer(StringRef Buffer);
+
+  Error processBufferAtPath(StringRef Path) {
+    // Try to open a buffer.
+    std::unique_ptr<MemoryBuffer> MB;
+    if (auto Err = openBuffer(Path).moveInto(MB))
+      // On error, return the Error value.
+      return Err;
+    // On success, use MB.
+    return processBuffer(MB->getBuffer());
+  }
+
+This third form works with any type that can be assigned to from ``T&&``. This
+can be useful if the ``Expected<T>`` value needs to be stored an already-declared
+``Optional<T>``. For example:
+
+.. code-block:: c++
+
+  Expected<StringRef> extractClassName(StringRef Definition);
+  struct ClassData {
+    StringRef Definition;
+    Optional<StringRef> LazyName;
+    ...
+    Error initialize() {
+      if (auto Err = extractClassName(Path).moveInto(LazyName))
+        // On error, return the Error value.
+        return Err;
+      // On success, LazyName has been initialized.
+      ...
+    }
+  };
 
 All ``Error`` instances, whether success or failure, must be either checked or
 moved from (via ``std::move`` or a return) before they are destructed.
@@ -1223,7 +1263,7 @@ Define your statistic like this:
 
 .. code-block:: c++
 
-  #define DEBUG_TYPE "mypassname"   // This goes before any #includes.
+  #define DEBUG_TYPE "mypassname"   // This goes after any #includes.
   STATISTIC(NumXForms, "The # of times I did stuff");
 
 The ``STATISTIC`` macro defines a static variable, whose name is specified by
@@ -1665,14 +1705,15 @@ the traits class is informed when an element is inserted or removed from the
 list, and ``ilist``\ s are guaranteed to support a constant-time splice
 operation.
 
+An ``ilist`` and an ``iplist`` are ``using`` aliases to one another and the
+latter only currently exists for historical purposes.
+
 These properties are exactly what we want for things like ``Instruction``\ s and
 basic blocks, which is why these are implemented with ``ilist``\ s.
 
 Related classes of interest are explained in the following subsections:
 
 * :ref:`ilist_traits <dss_ilist_traits>`
-
-* :ref:`iplist <dss_iplist>`
 
 * :ref:`llvm/ADT/ilist_node.h <dss_ilist_node>`
 
@@ -1714,19 +1755,8 @@ For example:
 ilist_traits
 ^^^^^^^^^^^^
 
-``ilist_traits<T>`` is ``ilist<T>``'s customization mechanism. ``iplist<T>``
-(and consequently ``ilist<T>``) publicly derive from this traits class.
-
-.. _dss_iplist:
-
-iplist
-^^^^^^
-
-``iplist<T>`` is ``ilist<T>``'s base and as such supports a slightly narrower
-interface.  Notably, inserters from ``T&`` are absent.
-
-``ilist_traits<T>`` is a public base of this class and can be used for a wide
-variety of customizations.
+``ilist_traits<T>`` is ``ilist<T>``'s customization mechanism. ``ilist<T>``
+publicly derives from this traits class.
 
 .. _dss_ilist_node:
 
@@ -2158,10 +2188,9 @@ membership.
 Other Set-Like Container Options
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-The STL provides several other options, such as std::multiset and the various
-"hash_set" like containers (whether from C++ TR1 or from the SGI library).  We
-never use hash_set and unordered_set because they are generally very expensive
-(each insertion requires a malloc) and very non-portable.
+The STL provides several other options, such as std::multiset and
+std::unordered_set.  We never use containers like unordered_set because
+they are generally very expensive (each insertion requires a malloc).
 
 std::multiset is useful if you're not interested in elimination of duplicates,
 but has all the drawbacks of :ref:`std::set <dss_set>`.  A sorted vector
@@ -2349,10 +2378,9 @@ operations is logarithmic in the size of the original map.
 Other Map-Like Container Options
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-The STL provides several other options, such as std::multimap and the various
-"hash_map" like containers (whether from C++ TR1 or from the SGI library).  We
-never use hash_set and unordered_set because they are generally very expensive
-(each insertion requires a malloc) and very non-portable.
+The STL provides several other options, such as std::multimap and
+std::unordered_map.  We never use containers like unordered_map because
+they are generally very expensive (each insertion requires a malloc).
 
 std::multimap is useful if you want to map a key to multiple values, but has all
 the drawbacks of std::map.  A sorted vector or some other approach is almost
@@ -2360,10 +2388,10 @@ always better.
 
 .. _ds_bit:
 
-Bit storage containers (BitVector, SparseBitVector, CoalescingBitVector)
+Bit storage containers
 ------------------------------------------------------------------------
 
-There are three bit storage containers, and choosing when to use each is
+There are several bit storage containers, and choosing when to use each is
 relatively straightforward.
 
 One additional option is ``std::vector<bool>``: we discourage its use for two
@@ -4055,5 +4083,3 @@ The ``Argument`` class
 This subclass of Value defines the interface for incoming formal arguments to a
 function.  A Function maintains a list of its formal arguments.  An argument has
 a pointer to the parent Function.
-
-

@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -fno-rtti -emit-llvm %s -o - -mconstructor-aliases -triple=i386-pc-win32 | FileCheck %s
-// RUN: %clang_cc1 -fno-rtti -emit-llvm %s -o - -mconstructor-aliases -triple=i386-pc-win32 -fno-delete-null-pointer-checks | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -fno-rtti -emit-llvm %s -o - -mconstructor-aliases -triple=i386-pc-win32 | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -fno-rtti -emit-llvm %s -o - -mconstructor-aliases -triple=i386-pc-win32 -fno-delete-null-pointer-checks | FileCheck %s
 
 struct Left {
   virtual void left();
@@ -49,5 +49,5 @@ void call_right_override(ChildOverride *child) {
   //
   // CHECK: %[[RIGHT:.*]] = getelementptr inbounds i8, i8* %[[CHILD_i8]], i32 4
   // CHECK: %[[VFUN_VALUE:.*]] = load void (i8*)*, void (i8*)** %[[VFUN]]
-  // CHECK: call x86_thiscallcc void %[[VFUN_VALUE]](i8* %[[RIGHT]])
+  // CHECK: call x86_thiscallcc void %[[VFUN_VALUE]](i8* noundef %[[RIGHT]])
 }

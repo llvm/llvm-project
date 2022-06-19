@@ -1,4 +1,4 @@
-; RUN: opt < %s -S -ipsccp | FileCheck %s
+; RUN: opt < %s -S -passes=ipsccp | FileCheck %s
 ; PR5596
 
 ; IPSCCP should propagate the 0 argument, eliminate the switch, and propagate

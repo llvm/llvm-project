@@ -40,6 +40,7 @@ do.end:                                           ; preds = %cond.end
 ;CHECK: example1
 ;CHECK: load <4 x i32>
 ;CHECK-NEXT: shufflevector <4 x i32>
+;CHECK: sub nsw <4 x i32>
 ;CHECK: select <4 x i1>
 ;CHECK: store <4 x i32>
 ;CHECK: ret

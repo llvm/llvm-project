@@ -7,7 +7,7 @@ define i1 @andv_nxv32i1(<vscale x 32 x i1> %a) {
 ; CHECK-LABEL: andv_nxv32i1:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p2.b
-; CHECK-NEXT:    and p0.b, p2/z, p0.b, p1.b
+; CHECK-NEXT:    and p0.b, p0/z, p0.b, p1.b
 ; CHECK-NEXT:    not p0.b, p2/z, p0.b
 ; CHECK-NEXT:    ptest p2, p0.b
 ; CHECK-NEXT:    cset w0, eq
@@ -20,14 +20,15 @@ define i1 @andv_nxv64i1(<vscale x 64 x i1> %a) {
 ; CHECK-LABEL: andv_nxv64i1:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
-; CHECK-NEXT:    addvl sp, sp, #-1
-; CHECK-NEXT:    str p4, [sp, #7, mul vl] // 2-byte Folded Spill
-; CHECK-NEXT:    .cfi_escape 0x0f, 0x0c, 0x8f, 0x00, 0x11, 0x10, 0x22, 0x11, 0x08, 0x92, 0x2e, 0x00, 0x1e, 0x22 // sp + 16 + 8 * VG
+; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    .cfi_offset w29, -16
+; CHECK-NEXT:    addvl sp, sp, #-1
+; CHECK-NEXT:    .cfi_escape 0x0f, 0x0c, 0x8f, 0x00, 0x11, 0x10, 0x22, 0x11, 0x08, 0x92, 0x2e, 0x00, 0x1e, 0x22 // sp + 16 + 8 * VG
+; CHECK-NEXT:    and p1.b, p1/z, p1.b, p3.b
+; CHECK-NEXT:    and p0.b, p0/z, p0.b, p2.b
+; CHECK-NEXT:    str p4, [sp, #7, mul vl] // 2-byte Folded Spill
 ; CHECK-NEXT:    ptrue p4.b
-; CHECK-NEXT:    and p1.b, p4/z, p1.b, p3.b
-; CHECK-NEXT:    and p0.b, p4/z, p0.b, p2.b
-; CHECK-NEXT:    and p0.b, p4/z, p0.b, p1.b
+; CHECK-NEXT:    and p0.b, p0/z, p0.b, p1.b
 ; CHECK-NEXT:    not p0.b, p4/z, p0.b
 ; CHECK-NEXT:    ptest p4, p0.b
 ; CHECK-NEXT:    ldr p4, [sp, #7, mul vl] // 2-byte Folded Reload
@@ -44,9 +45,8 @@ define i1 @andv_nxv64i1(<vscale x 64 x i1> %a) {
 define i1 @orv_nxv32i1(<vscale x 32 x i1> %a) {
 ; CHECK-LABEL: orv_nxv32i1:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p2.b
-; CHECK-NEXT:    orr p0.b, p2/z, p0.b, p1.b
-; CHECK-NEXT:    ptest p2, p0.b
+; CHECK-NEXT:    sel p0.b, p0, p0.b, p1.b
+; CHECK-NEXT:    ptest p0, p0.b
 ; CHECK-NEXT:    cset w0, ne
 ; CHECK-NEXT:    ret
   %res = call i1 @llvm.vector.reduce.or.nxv32i1(<vscale x 32 x i1> %a)
@@ -73,7 +73,7 @@ define i1 @smaxv_nxv32i1(<vscale x 32 x i1> %a) {
 ; CHECK-LABEL: smaxv_nxv32i1:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p2.b
-; CHECK-NEXT:    and p0.b, p2/z, p0.b, p1.b
+; CHECK-NEXT:    and p0.b, p0/z, p0.b, p1.b
 ; CHECK-NEXT:    not p0.b, p2/z, p0.b
 ; CHECK-NEXT:    ptest p2, p0.b
 ; CHECK-NEXT:    cset w0, eq
@@ -87,9 +87,8 @@ define i1 @smaxv_nxv32i1(<vscale x 32 x i1> %a) {
 define i1 @sminv_nxv32i1(<vscale x 32 x i1> %a) {
 ; CHECK-LABEL: sminv_nxv32i1:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p2.b
-; CHECK-NEXT:    orr p0.b, p2/z, p0.b, p1.b
-; CHECK-NEXT:    ptest p2, p0.b
+; CHECK-NEXT:    sel p0.b, p0, p0.b, p1.b
+; CHECK-NEXT:    ptest p0, p0.b
 ; CHECK-NEXT:    cset w0, ne
 ; CHECK-NEXT:    ret
   %res = call i1 @llvm.vector.reduce.smin.nxv32i1(<vscale x 32 x i1> %a)
@@ -101,9 +100,8 @@ define i1 @sminv_nxv32i1(<vscale x 32 x i1> %a) {
 define i1 @umaxv_nxv32i1(<vscale x 32 x i1> %a) {
 ; CHECK-LABEL: umaxv_nxv32i1:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p2.b
-; CHECK-NEXT:    orr p0.b, p2/z, p0.b, p1.b
-; CHECK-NEXT:    ptest p2, p0.b
+; CHECK-NEXT:    sel p0.b, p0, p0.b, p1.b
+; CHECK-NEXT:    ptest p0, p0.b
 ; CHECK-NEXT:    cset w0, ne
 ; CHECK-NEXT:    ret
   %res = call i1 @llvm.vector.reduce.umax.nxv32i1(<vscale x 32 x i1> %a)
@@ -116,7 +114,7 @@ define i1 @uminv_nxv32i1(<vscale x 32 x i1> %a) {
 ; CHECK-LABEL: uminv_nxv32i1:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p2.b
-; CHECK-NEXT:    and p0.b, p2/z, p0.b, p1.b
+; CHECK-NEXT:    and p0.b, p0/z, p0.b, p1.b
 ; CHECK-NEXT:    not p0.b, p2/z, p0.b
 ; CHECK-NEXT:    ptest p2, p0.b
 ; CHECK-NEXT:    cset w0, eq

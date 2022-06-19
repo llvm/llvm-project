@@ -56,8 +56,6 @@
 #include "llvm/Analysis/BranchProbabilityInfo.h"
 #include "llvm/Analysis/LoopAnalysisManager.h"
 #include "llvm/Analysis/LoopInfo.h"
-#include "llvm/Analysis/LoopPass.h"
-#include "llvm/Analysis/PostDominators.h"
 #include "llvm/Analysis/ScalarEvolution.h"
 #include "llvm/Analysis/ScalarEvolutionExpressions.h"
 #include "llvm/IR/BasicBlock.h"
@@ -1763,10 +1761,14 @@ IntersectUnsignedRange(ScalarEvolution &SE,
 }
 
 PreservedAnalyses IRCEPass::run(Function &F, FunctionAnalysisManager &AM) {
-  auto &SE = AM.getResult<ScalarEvolutionAnalysis>(F);
   auto &DT = AM.getResult<DominatorTreeAnalysis>(F);
-  auto &BPI = AM.getResult<BranchProbabilityAnalysis>(F);
   LoopInfo &LI = AM.getResult<LoopAnalysis>(F);
+  // There are no loops in the function. Return before computing other expensive
+  // analyses.
+  if (LI.empty())
+    return PreservedAnalyses::all();
+  auto &SE = AM.getResult<ScalarEvolutionAnalysis>(F);
+  auto &BPI = AM.getResult<BranchProbabilityAnalysis>(F);
 
   // Get BFI analysis result on demand. Please note that modification of
   // CFG invalidates this analysis and we should handle it.

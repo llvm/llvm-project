@@ -82,12 +82,11 @@ define <4 x i64> @combine_vec_mul_pow2c(<4 x i64> %x) {
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    movdqa %xmm0, %xmm2
 ; SSE-NEXT:    psllq $1, %xmm2
-; SSE-NEXT:    pblendw {{.*#+}} xmm2 = xmm0[0,1,2,3],xmm2[4,5,6,7]
-; SSE-NEXT:    movdqa %xmm1, %xmm0
-; SSE-NEXT:    psllq $4, %xmm0
+; SSE-NEXT:    pblendw {{.*#+}} xmm0 = xmm0[0,1,2,3],xmm2[4,5,6,7]
+; SSE-NEXT:    movdqa %xmm1, %xmm2
+; SSE-NEXT:    psllq $4, %xmm2
 ; SSE-NEXT:    psllq $2, %xmm1
-; SSE-NEXT:    pblendw {{.*#+}} xmm1 = xmm1[0,1,2,3],xmm0[4,5,6,7]
-; SSE-NEXT:    movdqa %xmm2, %xmm0
+; SSE-NEXT:    pblendw {{.*#+}} xmm1 = xmm1[0,1,2,3],xmm2[4,5,6,7]
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: combine_vec_mul_pow2c:
@@ -362,6 +361,75 @@ define <2 x i64> @combine_mul_to_abs_v2i64(<2 x i64> %x) {
   ret <2 x i64> %m
 }
 
+; 'Quadratic Reciprocity' - and(mul(x,x),2) -> 0
+
+define i64 @combine_mul_self_knownbits(i64 %x) {
+; SSE-LABEL: combine_mul_self_knownbits:
+; SSE:       # %bb.0:
+; SSE-NEXT:    xorl %eax, %eax
+; SSE-NEXT:    retq
+;
+; AVX-LABEL: combine_mul_self_knownbits:
+; AVX:       # %bb.0:
+; AVX-NEXT:    xorl %eax, %eax
+; AVX-NEXT:    retq
+  %1 = mul i64 %x, %x
+  %2 = and i64 %1, 2
+  ret i64 %2
+}
+
+define <4 x i32> @combine_mul_self_knownbits_vector(<4 x i32> %x) {
+; SSE-LABEL: combine_mul_self_knownbits_vector:
+; SSE:       # %bb.0:
+; SSE-NEXT:    xorps %xmm0, %xmm0
+; SSE-NEXT:    retq
+;
+; AVX-LABEL: combine_mul_self_knownbits_vector:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vxorps %xmm0, %xmm0, %xmm0
+; AVX-NEXT:    retq
+  %1 = mul <4 x i32> %x, %x
+  %2 = and <4 x i32> %1, <i32 2, i32 2, i32 2, i32 2>
+  ret <4 x i32> %2
+}
+
+; mul(x,x) - bit[1] is 0, but if demanding the other bits the source must not be undef
+
+define i64 @combine_mul_self_demandedbits(i64 %x) {
+; SSE-LABEL: combine_mul_self_demandedbits:
+; SSE:       # %bb.0:
+; SSE-NEXT:    movq %rdi, %rax
+; SSE-NEXT:    imulq %rdi, %rax
+; SSE-NEXT:    andq $-3, %rax
+; SSE-NEXT:    retq
+;
+; AVX-LABEL: combine_mul_self_demandedbits:
+; AVX:       # %bb.0:
+; AVX-NEXT:    movq %rdi, %rax
+; AVX-NEXT:    imulq %rdi, %rax
+; AVX-NEXT:    andq $-3, %rax
+; AVX-NEXT:    retq
+  %1 = mul i64 %x, %x
+  %2 = and i64 %1, -3
+  ret i64 %2
+}
+
+define <4 x i32> @combine_mul_self_demandedbits_vector(<4 x i32> %x) {
+; SSE-LABEL: combine_mul_self_demandedbits_vector:
+; SSE:       # %bb.0:
+; SSE-NEXT:    pmulld %xmm0, %xmm0
+; SSE-NEXT:    retq
+;
+; AVX-LABEL: combine_mul_self_demandedbits_vector:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vpmulld %xmm0, %xmm0, %xmm0
+; AVX-NEXT:    retq
+  %1 = freeze <4 x i32> %x
+  %2 = mul <4 x i32> %1, %1
+  %3 = and <4 x i32> %2, <i32 -3, i32 -3, i32 -3, i32 -3>
+  ret <4 x i32> %3
+}
+
 ; This would infinite loop because DAGCombiner wants to turn this into a shift,
 ; but x86 lowering wants to avoid non-uniform vector shift amounts.
 
@@ -409,8 +477,8 @@ define <4 x i64> @fuzz15429(<4 x i64> %InVec) {
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vpsllvq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0
 ; AVX-NEXT:    movabsq $9223372036854775807, %rax # imm = 0x7FFFFFFFFFFFFFFF
-; AVX-NEXT:    vpinsrq $0, %rax, %xmm0, %xmm1
-; AVX-NEXT:    vpblendd {{.*#+}} ymm0 = ymm1[0,1,2,3],ymm0[4,5,6,7]
+; AVX-NEXT:    vmovq %rax, %xmm1
+; AVX-NEXT:    vpblendd {{.*#+}} ymm0 = ymm1[0,1],ymm0[2,3,4,5,6,7]
 ; AVX-NEXT:    retq
   %mul = mul <4 x i64> %InVec, <i64 1, i64 2, i64 4, i64 8>
   %I = insertelement <4 x i64> %mul, i64 9223372036854775807, i64 0

@@ -1,3 +1,4 @@
+// UNSUPPORTED: -zos, -aix
 // RUN: rm -rf %t
 // Test that only forward declarations are emitted for types defined in modules.
 

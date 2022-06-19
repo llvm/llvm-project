@@ -581,10 +581,9 @@ public:
 
   bool needsExtraLocalData() const {
     BuiltinType::Kind bk = getTypePtr()->getKind();
-    return (bk >= BuiltinType::UShort && bk <= BuiltinType::UInt128)
-      || (bk >= BuiltinType::Short && bk <= BuiltinType::Float128)
-      || bk == BuiltinType::UChar
-      || bk == BuiltinType::SChar;
+    return (bk >= BuiltinType::UShort && bk <= BuiltinType::UInt128) ||
+           (bk >= BuiltinType::Short && bk <= BuiltinType::Ibm128) ||
+           bk == BuiltinType::UChar || bk == BuiltinType::SChar;
   }
 
   unsigned getExtraLocalDataSize() const {
@@ -664,6 +663,16 @@ public:
       wbs.ModeAttr = false;
     }
   }
+};
+
+/// Wrapper for source info for types used via transparent aliases.
+class UsingTypeLoc : public InheritingConcreteTypeLoc<TypeSpecTypeLoc,
+                                                      UsingTypeLoc, UsingType> {
+public:
+  QualType getUnderlyingType() const {
+    return getTypePtr()->getUnderlyingType();
+  }
+  UsingShadowDecl *getFoundDecl() const { return getTypePtr()->getFoundDecl(); }
 };
 
 /// Wrapper for source info for typedefs.
@@ -890,6 +899,29 @@ public:
   QualType getInnerType() const {
     return getTypePtr()->getModifiedType();
   }
+};
+
+struct BTFTagAttributedLocInfo {}; // Nothing.
+
+/// Type source information for an btf_tag attributed type.
+class BTFTagAttributedTypeLoc
+    : public ConcreteTypeLoc<UnqualTypeLoc, BTFTagAttributedTypeLoc,
+                             BTFTagAttributedType, BTFTagAttributedLocInfo> {
+public:
+  TypeLoc getWrappedLoc() const { return getInnerTypeLoc(); }
+
+  /// The btf_type_tag attribute.
+  const BTFTypeTagAttr *getAttr() const { return getTypePtr()->getAttr(); }
+
+  template <typename T> T *getAttrAs() {
+    return dyn_cast_or_null<T>(getAttr());
+  }
+
+  SourceRange getLocalSourceRange() const;
+
+  void initializeLocal(ASTContext &Context, SourceLocation loc) {}
+
+  QualType getInnerType() const { return getTypePtr()->getWrappedType(); }
 };
 
 struct ObjCObjectTypeLocInfo {
@@ -1985,12 +2017,35 @@ public:
   void initializeLocal(ASTContext &Context, SourceLocation Loc);
 };
 
-// FIXME: location of the 'decltype' and parens.
-class DecltypeTypeLoc : public InheritingConcreteTypeLoc<TypeSpecTypeLoc,
-                                                         DecltypeTypeLoc,
-                                                         DecltypeType> {
+// decltype(expression) abc;
+// ~~~~~~~~                  DecltypeLoc
+//                    ~      RParenLoc
+// FIXME: add LParenLoc, it is tricky to support due to the limitation of
+// annotated-decltype token.
+struct DecltypeTypeLocInfo {
+  SourceLocation DecltypeLoc;
+  SourceLocation RParenLoc;
+};
+class DecltypeTypeLoc
+    : public ConcreteTypeLoc<UnqualTypeLoc, DecltypeTypeLoc, DecltypeType,
+                             DecltypeTypeLocInfo> {
 public:
   Expr *getUnderlyingExpr() const { return getTypePtr()->getUnderlyingExpr(); }
+
+  SourceLocation getDecltypeLoc() const { return getLocalData()->DecltypeLoc; }
+  void setDecltypeLoc(SourceLocation Loc) { getLocalData()->DecltypeLoc = Loc; }
+
+  SourceLocation getRParenLoc() const { return getLocalData()->RParenLoc; }
+  void setRParenLoc(SourceLocation Loc) { getLocalData()->RParenLoc = Loc; }
+
+  SourceRange getLocalSourceRange() const {
+    return SourceRange(getDecltypeLoc(), getRParenLoc());
+  }
+
+  void initializeLocal(ASTContext &Context, SourceLocation Loc) {
+    setDecltypeLoc(Loc);
+    setRParenLoc(Loc);
+  }
 };
 
 struct UnaryTransformTypeLocInfo {
@@ -2049,6 +2104,11 @@ struct AutoTypeLocInfo : TypeSpecLocInfo {
   NamedDecl *FoundDecl;
   SourceLocation LAngleLoc;
   SourceLocation RAngleLoc;
+
+  // For decltype(auto).
+  SourceLocation RParenLoc;
+
+  // Followed by a TemplateArgumentLocInfo[]
 };
 
 class AutoTypeLoc
@@ -2060,6 +2120,10 @@ public:
   AutoTypeKeyword getAutoKeyword() const {
     return getTypePtr()->getKeyword();
   }
+
+  bool isDecltypeAuto() const { return getTypePtr()->isDecltypeAuto(); }
+  SourceLocation getRParenLoc() const { return getLocalData()->RParenLoc; }
+  void setRParenLoc(SourceLocation Loc) { getLocalData()->RParenLoc = Loc; }
 
   bool isConstrained() const {
     return getTypePtr()->isConstrained();
@@ -2141,16 +2205,13 @@ public:
   }
 
   SourceRange getLocalSourceRange() const {
-    return{
-        isConstrained()
-          ? (getNestedNameSpecifierLoc()
-               ? getNestedNameSpecifierLoc().getBeginLoc()
-               : (getTemplateKWLoc().isValid()
-                  ? getTemplateKWLoc()
-                  : getConceptNameLoc()))
-          : getNameLoc(),
-        getNameLoc()
-    };
+    return {isConstrained()
+                ? (getNestedNameSpecifierLoc()
+                       ? getNestedNameSpecifierLoc().getBeginLoc()
+                       : (getTemplateKWLoc().isValid() ? getTemplateKWLoc()
+                                                       : getConceptNameLoc()))
+                : getNameLoc(),
+            isDecltypeAuto() ? getRParenLoc() : getNameLoc()};
   }
 
   void copy(AutoTypeLoc Loc) {
@@ -2551,6 +2612,8 @@ inline T TypeLoc::getAsAdjusted() const {
       Cur = PTL.getInnerLoc();
     else if (auto ATL = Cur.getAs<AttributedTypeLoc>())
       Cur = ATL.getModifiedLoc();
+    else if (auto ATL = Cur.getAs<BTFTagAttributedTypeLoc>())
+      Cur = ATL.getWrappedLoc();
     else if (auto ETL = Cur.getAs<ElaboratedTypeLoc>())
       Cur = ETL.getNamedTypeLoc();
     else if (auto ATL = Cur.getAs<AdjustedTypeLoc>())
@@ -2562,12 +2625,28 @@ inline T TypeLoc::getAsAdjusted() const {
   }
   return Cur.getAs<T>();
 }
-class ExtIntTypeLoc final
-    : public InheritingConcreteTypeLoc<TypeSpecTypeLoc, ExtIntTypeLoc,
-                                        ExtIntType> {};
-class DependentExtIntTypeLoc final
-    : public InheritingConcreteTypeLoc<TypeSpecTypeLoc, DependentExtIntTypeLoc,
-                                        DependentExtIntType> {};
+class BitIntTypeLoc final
+    : public InheritingConcreteTypeLoc<TypeSpecTypeLoc, BitIntTypeLoc,
+                                       BitIntType> {};
+class DependentBitIntTypeLoc final
+    : public InheritingConcreteTypeLoc<TypeSpecTypeLoc, DependentBitIntTypeLoc,
+                                       DependentBitIntType> {};
+
+class ObjCProtocolLoc {
+  ObjCProtocolDecl *Protocol = nullptr;
+  SourceLocation Loc = SourceLocation();
+
+public:
+  ObjCProtocolLoc(ObjCProtocolDecl *protocol, SourceLocation loc)
+      : Protocol(protocol), Loc(loc) {}
+  ObjCProtocolDecl *getProtocol() const { return Protocol; }
+  SourceLocation getLocation() const { return Loc; }
+
+  /// The source range is just the protocol name.
+  SourceRange getSourceRange() const LLVM_READONLY {
+    return SourceRange(Loc, Loc);
+  }
+};
 
 } // namespace clang
 

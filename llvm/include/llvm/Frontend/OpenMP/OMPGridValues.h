@@ -29,100 +29,89 @@ namespace omp {
 ///
 /// Example usage in clang:
 ///   const unsigned slot_size =
-///   ctx.GetTargetInfo().getGridValue(llvm::omp::GVIDX::GV_Warp_Size);
+///   ctx.GetTargetInfo().getGridValue().GV_Warp_Size;
 ///
 /// Example usage in libomptarget/deviceRTLs:
 ///   #include "llvm/Frontend/OpenMP/OMPGridValues.h"
 ///   #ifdef __AMDGPU__
-///     #define GRIDVAL AMDGPUGpuGridValues
+///     #define GRIDVAL AMDGPUGridValues
 ///   #else
-///     #define GRIDVAL NVPTXGpuGridValues
+///     #define GRIDVAL NVPTXGridValues
 ///   #endif
 ///   ... Then use this reference for GV_Warp_Size in the deviceRTL source.
-///   llvm::omp::GRIDVAL[llvm::omp::GVIDX::GV_Warp_Size]
+///   llvm::omp::GRIDVAL().GV_Warp_Size
 ///
 /// Example usage in libomptarget hsa plugin:
 ///   #include "llvm/Frontend/OpenMP/OMPGridValues.h"
-///   #define GRIDVAL AMDGPUGpuGridValues
+///   #define GRIDVAL AMDGPUGridValues
 ///   ... Then use this reference to access GV_Warp_Size in the hsa plugin.
-///   llvm::omp::GRIDVAL[llvm::omp::GVIDX::GV_Warp_Size]
+///   llvm::omp::GRIDVAL().GV_Warp_Size
 ///
 /// Example usage in libomptarget cuda plugin:
 ///    #include "llvm/Frontend/OpenMP/OMPGridValues.h"
-///    #define GRIDVAL NVPTXGpuGridValues
+///    #define GRIDVAL NVPTXGridValues
 ///   ... Then use this reference to access GV_Warp_Size in the cuda plugin.
-///    llvm::omp::GRIDVAL[llvm::omp::GVIDX::GV_Warp_Size]
+///    llvm::omp::GRIDVAL().GV_Warp_Size
 ///
-enum GVIDX {
-  /// The maximum number of workers in a kernel.
-  /// (THREAD_ABSOLUTE_LIMIT) - (GV_Warp_Size), might be issue for blockDim.z
-  GV_Threads,
+
+struct GV {
   /// The size reserved for data in a shared memory slot.
-  GV_Slot_Size,
+  const unsigned GV_Slot_Size;
   /// The default value of maximum number of threads in a worker warp.
-  GV_Warp_Size,
-  /// Alternate warp size for some AMDGCN architectures. Same as GV_Warp_Size
-  /// for NVPTX.
-  GV_Warp_Size_32,
-  /// The number of bits required to represent the max number of threads in warp
-  GV_Warp_Size_Log2,
-  /// GV_Warp_Size * GV_Slot_Size,
-  GV_Warp_Slot_Size,
+  const unsigned GV_Warp_Size;
+
+  constexpr unsigned warpSlotSize() const {
+    return GV_Warp_Size * GV_Slot_Size;
+  }
+
   /// the maximum number of teams.
-  GV_Max_Teams,
-  /// Global Memory Alignment
-  GV_Mem_Align,
-  /// (~0u >> (GV_Warp_Size - GV_Warp_Size_Log2))
-  GV_Warp_Size_Log2_Mask,
+  const unsigned GV_Max_Teams;
   // An alternative to the heavy data sharing infrastructure that uses global
   // memory is one that uses device __shared__ memory.  The amount of such space
   // (in bytes) reserved by the OpenMP runtime is noted here.
-  GV_SimpleBufferSize,
+  const unsigned GV_SimpleBufferSize;
   // The absolute maximum team size for a working group
-  GV_Max_WG_Size,
+  const unsigned GV_Max_WG_Size;
   // The default maximum team size for a working group
-  GV_Default_WG_Size,
-  // This is GV_Max_WG_Size / GV_WarpSize. 32 for NVPTX and 16 for AMDGCN.
-  GV_Max_Warp_Number,
-  /// The slot size that should be reserved for a working warp.
-  /// (~0u >> (GV_Warp_Size - GV_Warp_Size_Log2))
-  GV_Warp_Size_Log2_MaskL
+  const unsigned GV_Default_WG_Size;
+
+  constexpr unsigned maxWarpNumber() const {
+    return GV_Max_WG_Size / GV_Warp_Size;
+  }
 };
 
 /// For AMDGPU GPUs
-static constexpr unsigned AMDGPUGpuGridValues[] = {
-    448,       // GV_Threads
-    256,       // GV_Slot_Size
-    64,        // GV_Warp_Size
-    32,        // GV_Warp_Size_32
-    6,         // GV_Warp_Size_Log2
-    64 * 256,  // GV_Warp_Slot_Size
-    128,       // GV_Max_Teams
-    256,       // GV_Mem_Align
-    63,        // GV_Warp_Size_Log2_Mask
-    896,       // GV_SimpleBufferSize
-    1024,      // GV_Max_WG_Size,
-    256,       // GV_Defaut_WG_Size
-    1024 / 64, // GV_Max_WG_Size / GV_WarpSize
-    63         // GV_Warp_Size_Log2_MaskL
+static constexpr GV AMDGPUGridValues64 = {
+    256,  // GV_Slot_Size
+    64,   // GV_Warp_Size
+    128,  // GV_Max_Teams
+    896,  // GV_SimpleBufferSize
+    1024, // GV_Max_WG_Size,
+    256,  // GV_Default_WG_Size
 };
 
+static constexpr GV AMDGPUGridValues32 = {
+    256,  // GV_Slot_Size
+    32,   // GV_Warp_Size
+    128,  // GV_Max_Teams
+    896,  // GV_SimpleBufferSize
+    1024, // GV_Max_WG_Size,
+    256,  // GV_Default_WG_Size
+};
+
+template <unsigned wavesize> constexpr const GV &getAMDGPUGridValues() {
+  static_assert(wavesize == 32 || wavesize == 64, "");
+  return wavesize == 32 ? AMDGPUGridValues32 : AMDGPUGridValues64;
+}
+
 /// For Nvidia GPUs
-static constexpr unsigned NVPTXGpuGridValues[] = {
-    992,               // GV_Threads
-    256,               // GV_Slot_Size
-    32,                // GV_Warp_Size
-    32,                // GV_Warp_Size_32
-    5,                 // GV_Warp_Size_Log2
-    32 * 256,          // GV_Warp_Slot_Size
-    1024,              // GV_Max_Teams
-    256,               // GV_Mem_Align
-    (~0u >> (32 - 5)), // GV_Warp_Size_Log2_Mask
-    896,               // GV_SimpleBufferSize
-    1024,              // GV_Max_WG_Size
-    128,               // GV_Defaut_WG_Size
-    1024 / 32,         // GV_Max_WG_Size / GV_WarpSize
-    31                 // GV_Warp_Size_Log2_MaskL
+static constexpr GV NVPTXGridValues = {
+    256,  // GV_Slot_Size
+    32,   // GV_Warp_Size
+    1024, // GV_Max_Teams
+    896,  // GV_SimpleBufferSize
+    1024, // GV_Max_WG_Size
+    128,  // GV_Default_WG_Size
 };
 
 } // namespace omp

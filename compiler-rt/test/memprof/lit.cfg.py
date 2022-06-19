@@ -33,6 +33,7 @@ default_memprof_opts = list(config.default_sanitizer_opts)
 default_memprof_opts_str = ':'.join(default_memprof_opts)
 if default_memprof_opts_str:
   config.environment['MEMPROF_OPTIONS'] = default_memprof_opts_str
+  default_memprof_opts_str += ':'
 config.substitutions.append(('%env_memprof_opts=',
                              'env MEMPROF_OPTIONS=' + default_memprof_opts_str))
 
@@ -73,9 +74,6 @@ if config.memprof_dynamic:
   config.substitutions.append( ("%shared_libmemprof", shared_libmemprof_path) )
   config.substitutions.append( ("%clang_memprof_static ", build_invocation(clang_memprof_static_cflags)) )
   config.substitutions.append( ("%clangxx_memprof_static ", build_invocation(clang_memprof_static_cxxflags)) )
-
-# Some tests uses C++11 features such as lambdas and need to pass -std=c++11.
-config.substitutions.append(("%stdcxx11 ", '-std=c++11 '))
 
 config.substitutions.append( ("%libdl", libdl_flag) )
 

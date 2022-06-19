@@ -1,4 +1,3 @@
-// REQUIRES: clang-driver
 // REQUIRES: x86-registered-target
 // REQUIRES: nvptx-registered-target
 
@@ -9,4 +8,4 @@
 
 // CHECK-NOT: "ptxas"
 // CHECK: "/some/path/to/ptxas"
-// CHECK-SAME: "--gpu-name" "sm_20"
+// CHECK-SAME: "--gpu-name" "sm_35"

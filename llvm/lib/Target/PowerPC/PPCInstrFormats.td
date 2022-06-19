@@ -889,7 +889,7 @@ class XForm_16b<bits<6> opcode, bits<10> xo, dag OOL, dag IOL, string asmstr,
 }
 
 class XForm_htm0<bits<6> opcode, bits<10> xo, dag OOL, dag IOL,
-                 string asmstr, InstrItinClass itin, list<dag> pattern>
+                 string asmstr, InstrItinClass itin>
   : I<opcode, OOL, IOL, asmstr, itin> {
   bit R;
 
@@ -903,7 +903,7 @@ class XForm_htm0<bits<6> opcode, bits<10> xo, dag OOL, dag IOL,
 }
 
 class XForm_htm1<bits<6> opcode, bits<10> xo, dag OOL, dag IOL,
-                 string asmstr, InstrItinClass itin, list<dag> pattern>
+                 string asmstr, InstrItinClass itin>
   : I<opcode, OOL, IOL, asmstr, itin> {
   bit A;
 
@@ -916,7 +916,7 @@ class XForm_htm1<bits<6> opcode, bits<10> xo, dag OOL, dag IOL,
 }
 
 class XForm_htm2<bits<6> opcode, bits<10> xo, dag OOL, dag IOL, string asmstr,
-              InstrItinClass itin, list<dag> pattern>
+              InstrItinClass itin>
   : I<opcode, OOL, IOL, asmstr, itin> {
   bit L;
 
@@ -930,7 +930,7 @@ class XForm_htm2<bits<6> opcode, bits<10> xo, dag OOL, dag IOL, string asmstr,
 }
 
 class XForm_htm3<bits<6> opcode, bits<10> xo, dag OOL, dag IOL, string asmstr,
-              InstrItinClass itin, list<dag> pattern>
+              InstrItinClass itin>
   : I<opcode, OOL, IOL, asmstr, itin> {
   bits<3> BF;
 
@@ -2139,6 +2139,24 @@ class Z23Form_8<bits<6> opcode, bits<8> xo, dag OOL, dag IOL, string asmstr,
   let Inst{21-22} = idx;
   let Inst{23-30} = xo;
   let Inst{31}    = RC;
+}
+
+class Z23Form_RTAB5_CY2<bits<6> opcode, bits<8> xo, dag OOL, dag IOL,
+                        string asmstr, InstrItinClass itin, list<dag> pattern>
+         : I<opcode, OOL, IOL, asmstr, itin> {
+  bits<5> RT;
+  bits<5> RA;
+  bits<5> RB;
+  bits<2> CY;
+
+  let Pattern = pattern;
+
+  let Inst{6-10}  = RT;
+  let Inst{11-15} = RA;
+  let Inst{16-20} = RB;
+  let Inst{21-22} = CY;
+  let Inst{23-30} = xo;
+  let Inst{31} = 0;
 }
 
 //===----------------------------------------------------------------------===//

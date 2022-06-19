@@ -8,11 +8,11 @@ entry:
   br label %for.cond
 
 for.cond:                                         ; preds = %for.inc, %entry
-; It's ok to modify this test in the future should be able to split critical
+; It's ok to modify this test in the future should we be able to split critical
 ; edges here, just noting that this is the critical edge that we care about.
-; CHECK: callbr void asm sideeffect "", "X,X,~{dirflag},~{fpsr},~{flags}"(i8* blockaddress(@test1, %cond.true.i), i8* blockaddress(@test1, %for.end))
+; CHECK: callbr void asm sideeffect "", "i,i,~{dirflag},~{fpsr},~{flags}"(i8* blockaddress(@test1, %cond.true.i), i8* blockaddress(@test1, %for.end))
 ; CHECK-NEXT: to label %asm.fallthrough.i.i [label %cond.true.i, label %for.end]
-  callbr void asm sideeffect "", "X,X,~{dirflag},~{fpsr},~{flags}"(i8* blockaddress(@test1, %cond.true.i), i8* blockaddress(@test1, %for.end))
+  callbr void asm sideeffect "", "i,i,~{dirflag},~{fpsr},~{flags}"(i8* blockaddress(@test1, %cond.true.i), i8* blockaddress(@test1, %for.end))
           to label %asm.fallthrough.i.i [label %cond.true.i, label %for.end]
 
 asm.fallthrough.i.i:                              ; preds = %for.cond

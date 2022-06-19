@@ -7,8 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17
-// UNSUPPORTED: libcpp-no-concepts
-// UNSUPPORTED: gcc-10
+// UNSUPPORTED: libcpp-has-no-incomplete-ranges
 
 // Some basic examples of how drop_view might be used in the wild. This is a general
 // collection of sample algorithms and functions that try to mock general usage of
@@ -28,10 +27,10 @@
 template<class T>
 concept ValidDropView = requires { typename std::ranges::drop_view<T>; };
 
-static_assert( ValidDropView<ContiguousView>);
+static_assert( ValidDropView<MoveOnlyView>);
 static_assert(!ValidDropView<Range>);
 
-static_assert(!std::ranges::enable_borrowed_range<std::ranges::drop_view<ContiguousView>>);
+static_assert(!std::ranges::enable_borrowed_range<std::ranges::drop_view<MoveOnlyView>>);
 static_assert( std::ranges::enable_borrowed_range<std::ranges::drop_view<BorrowableView>>);
 
 template<std::ranges::view View>

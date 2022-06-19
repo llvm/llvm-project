@@ -2,13 +2,13 @@
 # Having an R_MIPS_64 relocation in eh_frame would previously crash LLD
 # RUN: llvm-mc -filetype=obj -triple=mips64-unknown-freebsd %s -o %t.o
 # RUN: llvm-readobj -r %t.o | FileCheck %s -check-prefix OBJ
-# RUN: ld.lld --eh-frame-hdr -shared -z notext -o %t.so %t.o
+# RUN: ld.lld --eh-frame-hdr -shared -z notext -o %t.so %t.o --no-check-dynamic-relocations
 # RUN: llvm-readobj -r %t.so | FileCheck %s -check-prefix PIC-RELOCS
 
 # Linking this as a PIE executable would also previously crash
 # RUN: llvm-mc -filetype=obj -triple=mips64-unknown-freebsd %S/Inputs/archive2.s -o %t-foo.o
 # -pie needs -z notext because of the R_MIPS_64 relocation
-# RUN: ld.lld --eh-frame-hdr -Bdynamic -pie -z notext -o %t-pie-dynamic.exe %t.o %t-foo.o
+# RUN: ld.lld --eh-frame-hdr -Bdynamic -pie -z notext -o %t-pie-dynamic.exe %t.o %t-foo.o --no-check-dynamic-relocations
 # RUN: llvm-readobj -r %t-pie-dynamic.exe | FileCheck %s -check-prefix PIC-RELOCS
 
 

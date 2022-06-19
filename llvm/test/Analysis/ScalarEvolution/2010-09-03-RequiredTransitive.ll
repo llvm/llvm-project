@@ -1,4 +1,3 @@
-; RUN: opt -indvars -scalar-evolution -analyze -enable-new-pm=0 < %s | FileCheck %s
 ; RUN: opt "-passes=loop(indvars),print<scalar-evolution>" -disable-output < %s 2>&1 | FileCheck %s
 ; This test checks if the SCEV analysis is printed out at all.
 ; It failed once as the RequiredTransitive option was not implemented

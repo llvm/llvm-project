@@ -19,16 +19,17 @@
 #include "llvm/CodeGen/CommandFlags.h"
 #include "llvm/Config/llvm-config.h"
 #include "llvm/IR/DiagnosticPrinter.h"
-#include "llvm/LTO/Caching.h"
 #include "llvm/LTO/LTO.h"
 #include "llvm/Passes/PassPlugin.h"
 #include "llvm/Remarks/HotnessThresholdParser.h"
+#include "llvm/Support/Caching.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/InitLLVM.h"
 #include "llvm/Support/PluginLoader.h"
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/Support/Threading.h"
+#include <atomic>
 
 using namespace llvm;
 using namespace lto;
@@ -36,9 +37,10 @@ using namespace lto;
 static codegen::RegisterCodeGenFlags CGF;
 
 static cl::opt<char>
-    OptLevel("O", cl::desc("Optimization level. [-O0, -O1, -O2, or -O3] "
-                           "(default = '-O2')"),
-             cl::Prefix, cl::ZeroOrMore, cl::init('2'));
+    OptLevel("O",
+             cl::desc("Optimization level. [-O0, -O1, -O2, or -O3] "
+                      "(default = '-O2')"),
+             cl::Prefix, cl::init('2'));
 
 static cl::opt<char> CGOptLevel(
     "cg-opt-level",
@@ -88,8 +90,7 @@ static cl::list<std::string> SymbolResolutions(
              "     runtime and is known to be in this linkage unit\n"
              " x - externally visible: the definition of this symbol is\n"
              "     visible outside of the LTO unit\n"
-             "A resolution for each symbol must be specified."),
-    cl::ZeroOrMore);
+             "A resolution for each symbol must be specified"));
 
 static cl::opt<std::string> OverrideTriple(
     "override-triple",
@@ -142,10 +143,9 @@ static cl::opt<bool>
                  cl::desc("Run PGO context sensitive IR instrumentation"),
                  cl::init(false), cl::Hidden);
 
-static cl::opt<bool>
-    UseNewPM("use-new-pm",
-             cl::desc("Run LTO passes using the new pass manager"),
-             cl::init(LLVM_ENABLE_NEW_PASS_MANAGER), cl::Hidden);
+static cl::opt<bool> LtoOpaquePointers("lto-opaque-pointers",
+                                       cl::desc("Enable opaque pointer types"),
+                                       cl::init(true), cl::Hidden);
 
 static cl::opt<bool>
     DebugPassManager("debug-pass-manager", cl::init(false), cl::Hidden,
@@ -236,13 +236,6 @@ static int run(int argc, char **argv) {
   std::vector<std::unique_ptr<MemoryBuffer>> MBs;
 
   Config Conf;
-  Conf.DiagHandler = [](const DiagnosticInfo &DI) {
-    DiagnosticPrinterRawOStream DP(errs());
-    DI.print(DP);
-    errs() << '\n';
-    if (DI.getSeverity() == DS_Error)
-      exit(1);
-  };
 
   Conf.CPU = codegen::getMCPU();
   Conf.Options = codegen::InitTargetOptionsFromCodeGenFlags(Triple());
@@ -273,7 +266,6 @@ static int run(int argc, char **argv) {
   Conf.AAPipeline = AAPipeline;
 
   Conf.OptLevel = OptLevel - '0';
-  Conf.UseNewPM = UseNewPM;
   Conf.Freestanding = EnableFreestanding;
   for (auto &PluginFN : PassPlugins)
     Conf.PassPlugins.push_back(PluginFN);
@@ -303,6 +295,7 @@ static int run(int argc, char **argv) {
   Conf.StatsFile = StatsFile;
   Conf.PTO.LoopVectorization = Conf.OptLevel > 1;
   Conf.PTO.SLPVectorization = Conf.OptLevel > 1;
+  Conf.OpaquePointers = LtoOpaquePointers;
 
   ThinBackend Backend;
   if (ThinLTODistributedIndexes)
@@ -314,9 +307,25 @@ static int run(int argc, char **argv) {
   else
     Backend = createInProcessThinBackend(
         llvm::heavyweight_hardware_concurrency(Threads));
+  // Track whether we hit an error; in particular, in the multi-threaded case,
+  // we can't exit() early because the rest of the threads wouldn't have had a
+  // change to be join-ed, and that would result in a "terminate called without
+  // an active exception". Altogether, this results in nondeterministic
+  // behavior. Instead, we don't exit in the multi-threaded case, but we make
+  // sure to report the error and then at the end (after joining cleanly)
+  // exit(1).
+  std::atomic<bool> HasErrors;
+  std::atomic_init(&HasErrors, false);
+  Conf.DiagHandler = [&](const DiagnosticInfo &DI) {
+    DiagnosticPrinterRawOStream DP(errs());
+    DI.print(DP);
+    errs() << '\n';
+    if (DI.getSeverity() == DS_Error)
+      HasErrors = true;
+  };
+
   LTO Lto(std::move(Conf), std::move(Backend));
 
-  bool HasErrors = false;
   for (std::string F : InputFilenames) {
     std::unique_ptr<MemoryBuffer> MB = check(MemoryBuffer::getFile(F), F);
     std::unique_ptr<InputFile> Input =
@@ -362,26 +371,26 @@ static int run(int argc, char **argv) {
   if (HasErrors)
     return 1;
 
-  auto AddStream =
-      [&](size_t Task) -> std::unique_ptr<lto::NativeObjectStream> {
+  auto AddStream = [&](size_t Task) -> std::unique_ptr<CachedFileStream> {
     std::string Path = OutputFilename + "." + utostr(Task);
 
     std::error_code EC;
     auto S = std::make_unique<raw_fd_ostream>(Path, EC, sys::fs::OF_None);
     check(EC, Path);
-    return std::make_unique<lto::NativeObjectStream>(std::move(S));
+    return std::make_unique<CachedFileStream>(std::move(S), Path);
   };
 
   auto AddBuffer = [&](size_t Task, std::unique_ptr<MemoryBuffer> MB) {
     *AddStream(Task)->OS << MB->getBuffer();
   };
 
-  NativeObjectCache Cache;
+  FileCache Cache;
   if (!CacheDir.empty())
-    Cache = check(localCache(CacheDir, AddBuffer), "failed to create cache");
+    Cache = check(localCache("ThinLTO", "Thin", CacheDir, AddBuffer),
+                  "failed to create cache");
 
   check(Lto.run(AddStream, Cache), "LTO::run failed");
-  return 0;
+  return static_cast<int>(HasErrors);
 }
 
 static int dumpSymtab(int argc, char **argv) {

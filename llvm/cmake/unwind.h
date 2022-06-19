@@ -5,3 +5,4 @@
 // exist in the runtime.
 extern void __register_frame(const void *fde);   // NOLINT
 extern void __deregister_frame(const void *fde); // NOLINT
+extern void __unw_add_dynamic_fde();             // NOLINT

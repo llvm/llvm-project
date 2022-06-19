@@ -18,11 +18,10 @@ This test serves two purposes:
 
 The list of warnings below should NEVER grow.  It should gradually shrink to 0.
 
-CHECK: Warnings without flags (68):
+CHECK: Warnings without flags (66):
 
 CHECK-NEXT:   ext_expected_semi_decl_list
 CHECK-NEXT:   ext_explicit_specialization_storage_class
-CHECK-NEXT:   ext_missing_declspec
 CHECK-NEXT:   ext_missing_whitespace_after_macro_name
 CHECK-NEXT:   ext_new_paren_array_nonconst
 CHECK-NEXT:   ext_plain_complex
@@ -50,7 +49,6 @@ CHECK-NEXT:   warn_drv_pch_not_first_include
 CHECK-NEXT:   warn_dup_category_def
 CHECK-NEXT:   warn_enum_value_overflow
 CHECK-NEXT:   warn_expected_qualified_after_typename
-CHECK-NEXT:   warn_extraneous_char_constant
 CHECK-NEXT:   warn_fe_backend_unsupported
 CHECK-NEXT:   warn_fe_cc_log_diagnostics_failure
 CHECK-NEXT:   warn_fe_cc_print_header_failure
@@ -91,4 +89,4 @@ CHECK-NEXT:   warn_weak_import
 
 The list of warnings in -Wpedantic should NEVER grow.
 
-CHECK: Number in -Wpedantic (not covered by other -W flags): 27
+CHECK: Number in -Wpedantic (not covered by other -W flags): 26

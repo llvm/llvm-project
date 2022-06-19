@@ -1,4 +1,4 @@
-add_mlir_dialect_library(MLIRSCF
+add_mlir_dialect_library(MLIRSCFDialect
   SCF.cpp
 
   ADDITIONAL_HEADER_DIRS
@@ -8,11 +8,14 @@ add_mlir_dialect_library(MLIRSCF
   MLIRSCFOpsIncGen
 
   LINK_LIBS PUBLIC
+  MLIRArithmeticDialect
+  MLIRBufferizationDialect
+  MLIRControlFlowDialect
   MLIRIR
   MLIRLoopLikeInterface
-  MLIRMemRef
   MLIRSideEffectInterfaces
-  MLIRStandard
   )
 
+add_subdirectory(TransformOps)
 add_subdirectory(Transforms)
+add_subdirectory(Utils)

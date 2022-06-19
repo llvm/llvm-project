@@ -25,8 +25,8 @@
 
 # CHECK: __Z1fv
 # CHECK: _main
-# NOOBJ: error: {{.*}}lib_thin.a: could not get the buffer for the member defining symbol f(): '{{.*}}lib.o':
-# NOOBJNODEMANGLE: error: {{.*}}lib_thin.a: could not get the buffer for the member defining symbol __Z1fv: '{{.*}}lib.o':
+# NOOBJ: error: {{.*}}lib_thin.a: could not get the member defining symbol f(): '{{.*}}lib.o': {{[N|n]}}o such file or directory
+# NOOBJNODEMANGLE: error: {{.*}}lib_thin.a: could not get the member defining symbol __Z1fv: '{{.*}}lib.o': {{[N|n]}}o such file or directory
 
 #--- mangled-symbol.s
 .globl  __Z1fv

@@ -43,7 +43,7 @@ void Test() {
   constexpr float arr_f[3][5] = {
       {1, 2, 3, 4, 5},
   };
-  // CHECK:  | `-VarDecl {{.*}} <line:{{.*}}, line:{{.*}}> line:{{.*}} arr_f 'float const[3][5]' constexpr cinit
+  // CHECK:  | `-VarDecl {{.*}} <line:{{.*}}, line:{{.*}}> line:{{.*}} arr_f 'const float[3][5]' constexpr cinit
   // CHECK-NEXT:  |   |-value: Array size=3
   // CHECK-NEXT:  |   | |-element: Array size=5
   // CHECK-NEXT:  |   | | |-elements: Float 1.000000e+00, Float 2.000000e+00, Float 3.000000e+00, Float 4.000000e+00
@@ -52,7 +52,7 @@ void Test() {
   // CHECK-NEXT:  |   |   `-filler: 5 x Float 0.000000e+00
 
   constexpr S0 arr_s0[2] = {{1, 2}, {3, 4}};
-  // CHECK:  | `-VarDecl {{.*}} <col:{{.*}}, col:{{.*}}> col:{{.*}} arr_s0 'S0 const[2]' constexpr cinit
+  // CHECK:  | `-VarDecl {{.*}} <col:{{.*}}, col:{{.*}}> col:{{.*}} arr_s0 'const S0[2]' constexpr cinit
   // CHECK-NEXT:  |   |-value: Array size=2
   // CHECK-NEXT:  |   | |-element: Struct
   // CHECK-NEXT:  |   | | `-field: Array size=2
@@ -62,12 +62,12 @@ void Test() {
   // CHECK-NEXT:  |   |     `-elements: Int 3, Int 4
 
   constexpr U0 arr_u0[2] = {{.i = 42}, {.f = 3.1415f}};
-  // CHECK:  | `-VarDecl {{.*}} <col:{{.*}}, col:{{.*}}> col:{{.*}} arr_u0 'U0 const[2]' constexpr cinit
+  // CHECK:  | `-VarDecl {{.*}} <col:{{.*}}, col:{{.*}}> col:{{.*}} arr_u0 'const U0[2]' constexpr cinit
   // CHECK-NEXT:  |   |-value: Array size=2
   // CHECK-NEXT:  |   | `-elements: Union .i Int 42, Union .f Float 3.141500e+00
 
   constexpr S1 arr_s1[2] = {};
-  // CHECK:    `-VarDecl {{.*}} <col:{{.*}}, col:{{.*}}> col:{{.*}} arr_s1 'S1 const[2]' constexpr cinit
+  // CHECK:    `-VarDecl {{.*}} <col:{{.*}}, col:{{.*}}> col:{{.*}} arr_s1 'const S1[2]' constexpr cinit
   // CHECK-NEXT:      |-value: Array size=2
   // CHECK-NEXT:      | |-element: Struct
   // CHECK-NEXT:      | | |-field: Struct

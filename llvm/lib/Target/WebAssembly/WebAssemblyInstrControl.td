@@ -130,8 +130,7 @@ let Predicates = [HasExceptionHandling] in {
 // Throwing an exception: throw / rethrow
 let isTerminator = 1, hasCtrlDep = 1, isBarrier = 1 in {
 defm THROW : I<(outs), (ins tag_op:$tag, variable_ops),
-               (outs), (ins tag_op:$tag),
-               [(WebAssemblythrow (WebAssemblywrapper texternalsym:$tag))],
+               (outs), (ins tag_op:$tag), [],
                "throw   \t$tag", "throw   \t$tag", 0x08>;
 defm RETHROW : NRI<(outs), (ins i32imm:$depth), [], "rethrow \t$depth", 0x09>;
 } // isTerminator = 1, hasCtrlDep = 1, isBarrier = 1
@@ -147,14 +146,10 @@ defm END_TRY : NRI<(outs), (ins), [], "end_try", 0x0b>;
 
 // Catching an exception: catch / catch_all
 let hasCtrlDep = 1, hasSideEffects = 1 in {
-// Currently 'catch' can only extract an i32, which is sufficient for C++
-// support, but according to the spec 'catch' can extract any number of values
-// based on the tag type.
-defm CATCH : I<(outs I32:$dst), (ins tag_op:$tag),
-               (outs), (ins tag_op:$tag),
-               [(set I32:$dst,
-                 (WebAssemblycatch (WebAssemblywrapper texternalsym:$tag)))],
-               "catch   \t$dst, $tag", "catch   \t$tag", 0x07>;
+let variadicOpsAreDefs = 1 in
+defm CATCH : I<(outs), (ins tag_op:$tag, variable_ops),
+               (outs), (ins tag_op:$tag), [],
+               "catch",  "catch   \t$tag", 0x07>;
 defm CATCH_ALL : NRI<(outs), (ins), [], "catch_all", 0x19>;
 }
 

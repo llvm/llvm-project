@@ -4,17 +4,7 @@
 
 ; RUN: opt -thinlto-bc -thinlto-split-lto-unit -o %t.o %s
 
-; Legacy PM
 ; RUN: llvm-lto2 run -save-temps %t.o \
-; RUN:   -o %t3 \
-; RUN:   -r=%t.o,test,px \
-; RUN:   -r=%t.o,_ZTV1B, \
-; RUN:   -r=%t.o,_ZN1B1fEi, \
-; RUN:   -r=%t.o,_ZTV1B,px
-; RUN: llvm-dis %t3.1.4.opt.bc -o - | FileCheck %s --check-prefix=CHECK-IR
-
-; New PM
-; RUN: llvm-lto2 run -save-temps %t.o -use-new-pm \
 ; RUN:   -o %t3 \
 ; RUN:   -r=%t.o,test,px \
 ; RUN:   -r=%t.o,_ZTV1B, \

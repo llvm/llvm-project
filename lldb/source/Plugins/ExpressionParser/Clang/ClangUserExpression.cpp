@@ -6,12 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "lldb/Host/Config.h"
-
 #include <cstdio>
-#if HAVE_SYS_TYPES_H
 #include <sys/types.h>
-#endif
 
 #include <cstdlib>
 #include <map>
@@ -53,6 +49,7 @@
 #include "lldb/Target/ThreadPlan.h"
 #include "lldb/Target/ThreadPlanCallUserExpression.h"
 #include "lldb/Utility/ConstString.h"
+#include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/StreamString.h"
 
@@ -93,7 +90,7 @@ ClangUserExpression::ClangUserExpression(
 ClangUserExpression::~ClangUserExpression() = default;
 
 void ClangUserExpression::ScanContext(ExecutionContext &exe_ctx, Status &err) {
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_EXPRESSIONS));
+  Log *log = GetLog(LLDBLog::Expressions);
 
   LLDB_LOGF(log, "ClangUserExpression::ScanContext()");
 
@@ -460,14 +457,14 @@ static bool SupportsCxxModuleImport(lldb::LanguageType language) {
 /// Utility method that puts a message into the expression log and
 /// returns an invalid module configuration.
 static CppModuleConfiguration LogConfigError(const std::string &msg) {
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_EXPRESSIONS));
+  Log *log = GetLog(LLDBLog::Expressions);
   LLDB_LOG(log, "[C++ module config] {0}", msg);
   return CppModuleConfiguration();
 }
 
 CppModuleConfiguration GetModuleConfig(lldb::LanguageType language,
                                        ExecutionContext &exe_ctx) {
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_EXPRESSIONS));
+  Log *log = GetLog(LLDBLog::Expressions);
 
   // Don't do anything if this is not a C++ module configuration.
   if (!SupportsCxxModuleImport(language))
@@ -520,7 +517,7 @@ CppModuleConfiguration GetModuleConfig(lldb::LanguageType language,
   // Try to create a configuration from the files. If there is no valid
   // configuration possible with the files, this just returns an invalid
   // configuration.
-  return CppModuleConfiguration(files);
+  return CppModuleConfiguration(files, target->GetArchitecture().GetTriple());
 }
 
 bool ClangUserExpression::PrepareForParsing(
@@ -625,7 +622,7 @@ bool ClangUserExpression::TryParse(
 }
 
 void ClangUserExpression::SetupCppModuleImports(ExecutionContext &exe_ctx) {
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_EXPRESSIONS));
+  Log *log = GetLog(LLDBLog::Expressions);
 
   CppModuleConfiguration module_config = GetModuleConfig(m_language, exe_ctx);
   m_imported_cpp_modules = module_config.GetImportedModules();
@@ -651,7 +648,7 @@ bool ClangUserExpression::Parse(DiagnosticManager &diagnostic_manager,
                                 lldb_private::ExecutionPolicy execution_policy,
                                 bool keep_result_in_memory,
                                 bool generate_debug_info) {
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_EXPRESSIONS));
+  Log *log = GetLog(LLDBLog::Expressions);
 
   if (!PrepareForParsing(diagnostic_manager, exe_ctx, /*for_completion*/ false))
     return false;
@@ -689,15 +686,22 @@ bool ClangUserExpression::Parse(DiagnosticManager &diagnostic_manager,
     SetupCppModuleImports(exe_ctx);
     // If we did load any modules, then retry parsing.
     if (!m_imported_cpp_modules.empty()) {
+      // Create a dedicated diagnostic manager for the second parse attempt.
+      // These diagnostics are only returned to the caller if using the fallback
+      // actually succeeded in getting the expression to parse. This prevents
+      // that module-specific issues regress diagnostic quality with the
+      // fallback mode.
+      DiagnosticManager retry_manager;
       // The module imports are injected into the source code wrapper,
       // so recreate those.
-      CreateSourceCode(diagnostic_manager, exe_ctx, m_imported_cpp_modules,
+      CreateSourceCode(retry_manager, exe_ctx, m_imported_cpp_modules,
                        /*for_completion*/ false);
-      // Clear the error diagnostics from the previous parse attempt.
-      diagnostic_manager.Clear();
-      parse_success = TryParse(diagnostic_manager, exe_scope, exe_ctx,
+      parse_success = TryParse(retry_manager, exe_scope, exe_ctx,
                                execution_policy, keep_result_in_memory,
                                generate_debug_info);
+      // Return the parse diagnostics if we were successful.
+      if (parse_success)
+        diagnostic_manager = std::move(retry_manager);
     }
   }
   if (!parse_success)
@@ -803,7 +807,7 @@ static void AbsPosToLineColumnPos(size_t abs_pos, llvm::StringRef code,
 bool ClangUserExpression::Complete(ExecutionContext &exe_ctx,
                                    CompletionRequest &request,
                                    unsigned complete_pos) {
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_EXPRESSIONS));
+  Log *log = GetLog(LLDBLog::Expressions);
 
   // We don't want any visible feedback when completing an expression. Mostly
   // because the results we get from an incomplete invocation are probably not
@@ -907,8 +911,8 @@ bool ClangUserExpression::AddArguments(ExecutionContext &exe_ctx,
 
     if (!object_ptr_error.Success()) {
       exe_ctx.GetTargetRef().GetDebugger().GetAsyncOutputStream()->Printf(
-          "warning: `%s' is not accessible (substituting 0)\n",
-          object_name.AsCString());
+          "warning: `%s' is not accessible (substituting 0). %s\n",
+          object_name.AsCString(), object_ptr_error.AsCString());
       object_ptr = 0;
     }
 

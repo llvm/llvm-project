@@ -18,7 +18,8 @@ define fp128 @loadConstant() {
 ; CHECK-P8:       # %bb.0: # %entry
 ; CHECK-P8-NEXT:    addis r3, r2, .LCPI0_0@toc@ha
 ; CHECK-P8-NEXT:    addi r3, r3, .LCPI0_0@toc@l
-; CHECK-P8-NEXT:    lvx v2, 0, r3
+; CHECK-P8-NEXT:    lxvd2x vs0, 0, r3
+; CHECK-P8-NEXT:    xxswapd v2, vs0
 ; CHECK-P8-NEXT:    blr
   entry:
     ret fp128 0xL00000000000000004001400000000000
@@ -46,7 +47,8 @@ define fp128 @loadConstant2(fp128 %a, fp128 %b) {
 ; CHECK-P8-NEXT:    nop
 ; CHECK-P8-NEXT:    addis r3, r2, .LCPI1_0@toc@ha
 ; CHECK-P8-NEXT:    addi r3, r3, .LCPI1_0@toc@l
-; CHECK-P8-NEXT:    lvx v3, 0, r3
+; CHECK-P8-NEXT:    lxvd2x vs0, 0, r3
+; CHECK-P8-NEXT:    xxswapd v3, vs0
 ; CHECK-P8-NEXT:    bl __addkf3
 ; CHECK-P8-NEXT:    nop
 ; CHECK-P8-NEXT:    addi r1, r1, 32
@@ -134,10 +136,12 @@ define fp128 @fp128Array(fp128* nocapture readonly %farray,
 ; CHECK-P8-NEXT:    .cfi_def_cfa_offset 32
 ; CHECK-P8-NEXT:    .cfi_offset lr, 16
 ; CHECK-P8-NEXT:    sldi r4, r4, 4
-; CHECK-P8-NEXT:    lvx v2, 0, r3
+; CHECK-P8-NEXT:    lxvd2x vs0, 0, r3
 ; CHECK-P8-NEXT:    add r4, r3, r4
 ; CHECK-P8-NEXT:    addi r4, r4, -16
-; CHECK-P8-NEXT:    lvx v3, 0, r4
+; CHECK-P8-NEXT:    lxvd2x vs1, 0, r4
+; CHECK-P8-NEXT:    xxswapd v2, vs0
+; CHECK-P8-NEXT:    xxswapd v3, vs1
 ; CHECK-P8-NEXT:    bl __addkf3
 ; CHECK-P8-NEXT:    nop
 ; CHECK-P8-NEXT:    addi r1, r1, 32
@@ -197,40 +201,38 @@ define fp128 @maxVecParam(fp128 %p1, fp128 %p2, fp128 %p3, fp128 %p4, fp128 %p5,
 ; CHECK-P8-NEXT:    li r3, 48
 ; CHECK-P8-NEXT:    stvx v21, r1, r3 # 16-byte Folded Spill
 ; CHECK-P8-NEXT:    li r3, 64
-; CHECK-P8-NEXT:    vmr v21, v4
 ; CHECK-P8-NEXT:    stvx v22, r1, r3 # 16-byte Folded Spill
 ; CHECK-P8-NEXT:    li r3, 80
-; CHECK-P8-NEXT:    vmr v22, v5
+; CHECK-P8-NEXT:    vmr v22, v4
 ; CHECK-P8-NEXT:    stvx v23, r1, r3 # 16-byte Folded Spill
 ; CHECK-P8-NEXT:    li r3, 96
-; CHECK-P8-NEXT:    vmr v23, v6
+; CHECK-P8-NEXT:    vmr v23, v5
 ; CHECK-P8-NEXT:    stvx v24, r1, r3 # 16-byte Folded Spill
 ; CHECK-P8-NEXT:    li r3, 112
-; CHECK-P8-NEXT:    vmr v24, v7
+; CHECK-P8-NEXT:    vmr v24, v6
 ; CHECK-P8-NEXT:    stvx v25, r1, r3 # 16-byte Folded Spill
 ; CHECK-P8-NEXT:    li r3, 128
-; CHECK-P8-NEXT:    vmr v25, v8
+; CHECK-P8-NEXT:    vmr v25, v7
 ; CHECK-P8-NEXT:    stvx v26, r1, r3 # 16-byte Folded Spill
 ; CHECK-P8-NEXT:    li r3, 144
-; CHECK-P8-NEXT:    vmr v26, v9
+; CHECK-P8-NEXT:    vmr v26, v8
 ; CHECK-P8-NEXT:    stvx v27, r1, r3 # 16-byte Folded Spill
 ; CHECK-P8-NEXT:    li r3, 160
-; CHECK-P8-NEXT:    vmr v27, v10
+; CHECK-P8-NEXT:    vmr v27, v9
 ; CHECK-P8-NEXT:    stvx v28, r1, r3 # 16-byte Folded Spill
 ; CHECK-P8-NEXT:    li r3, 176
-; CHECK-P8-NEXT:    vmr v28, v11
+; CHECK-P8-NEXT:    vmr v28, v10
 ; CHECK-P8-NEXT:    stvx v29, r1, r3 # 16-byte Folded Spill
 ; CHECK-P8-NEXT:    li r3, 192
+; CHECK-P8-NEXT:    vmr v29, v11
 ; CHECK-P8-NEXT:    stvx v30, r1, r3 # 16-byte Folded Spill
 ; CHECK-P8-NEXT:    li r3, 208
 ; CHECK-P8-NEXT:    vmr v30, v12
 ; CHECK-P8-NEXT:    stvx v31, r1, r3 # 16-byte Folded Spill
 ; CHECK-P8-NEXT:    addi r3, r1, 448
 ; CHECK-P8-NEXT:    vmr v31, v13
-; CHECK-P8-NEXT:    lvx v29, 0, r3
-; CHECK-P8-NEXT:    bl __addkf3
-; CHECK-P8-NEXT:    nop
-; CHECK-P8-NEXT:    vmr v3, v21
+; CHECK-P8-NEXT:    lxvd2x vs0, 0, r3
+; CHECK-P8-NEXT:    xxswapd v21, vs0
 ; CHECK-P8-NEXT:    bl __addkf3
 ; CHECK-P8-NEXT:    nop
 ; CHECK-P8-NEXT:    vmr v3, v22
@@ -254,13 +256,16 @@ define fp128 @maxVecParam(fp128 %p1, fp128 %p2, fp128 %p3, fp128 %p4, fp128 %p5,
 ; CHECK-P8-NEXT:    vmr v3, v28
 ; CHECK-P8-NEXT:    bl __addkf3
 ; CHECK-P8-NEXT:    nop
+; CHECK-P8-NEXT:    vmr v3, v29
+; CHECK-P8-NEXT:    bl __addkf3
+; CHECK-P8-NEXT:    nop
 ; CHECK-P8-NEXT:    vmr v3, v30
 ; CHECK-P8-NEXT:    bl __addkf3
 ; CHECK-P8-NEXT:    nop
 ; CHECK-P8-NEXT:    vmr v3, v31
 ; CHECK-P8-NEXT:    bl __addkf3
 ; CHECK-P8-NEXT:    nop
-; CHECK-P8-NEXT:    vmr v3, v29
+; CHECK-P8-NEXT:    vmr v3, v21
 ; CHECK-P8-NEXT:    bl __subkf3
 ; CHECK-P8-NEXT:    nop
 ; CHECK-P8-NEXT:    li r3, 208
@@ -429,7 +434,7 @@ define fp128 @mixParam_02(fp128 %p1, double %p2, i64* nocapture %p3,
 ; CHECK-P8-NEXT:    .cfi_offset v31, -32
 ; CHECK-P8-NEXT:    li r3, 48
 ; CHECK-P8-NEXT:    add r4, r7, r9
-; CHECK-P8-NEXT:    vmr v4, v2
+; CHECK-P8-NEXT:    vmr v3, v2
 ; CHECK-P8-NEXT:    stfd f31, 72(r1) # 8-byte Folded Spill
 ; CHECK-P8-NEXT:    stvx v31, r1, r3 # 16-byte Folded Spill
 ; CHECK-P8-NEXT:    lwz r3, 176(r1)
@@ -438,9 +443,9 @@ define fp128 @mixParam_02(fp128 %p1, double %p2, i64* nocapture %p3,
 ; CHECK-P8-NEXT:    add r3, r4, r3
 ; CHECK-P8-NEXT:    clrldi r3, r3, 32
 ; CHECK-P8-NEXT:    std r3, 0(r6)
-; CHECK-P8-NEXT:    lvx v3, 0, r8
-; CHECK-P8-NEXT:    vmr v2, v3
-; CHECK-P8-NEXT:    vmr v3, v4
+; CHECK-P8-NEXT:    lxvd2x vs0, 0, r8
+; CHECK-P8-NEXT:    xxswapd vs0, vs0
+; CHECK-P8-NEXT:    xxlor v2, vs0, vs0
 ; CHECK-P8-NEXT:    bl __addkf3
 ; CHECK-P8-NEXT:    nop
 ; CHECK-P8-NEXT:    fmr f1, f31
@@ -501,7 +506,7 @@ define fastcc fp128 @mixParam_02f(fp128 %p1, double %p2, i64* nocapture %p3,
 ; CHECK-P8-NEXT:    .cfi_offset f31, -8
 ; CHECK-P8-NEXT:    .cfi_offset v31, -32
 ; CHECK-P8-NEXT:    add r4, r4, r6
-; CHECK-P8-NEXT:    vmr v4, v2
+; CHECK-P8-NEXT:    vmr v3, v2
 ; CHECK-P8-NEXT:    li r9, 48
 ; CHECK-P8-NEXT:    stfd f31, 72(r1) # 8-byte Folded Spill
 ; CHECK-P8-NEXT:    add r4, r4, r7
@@ -510,9 +515,9 @@ define fastcc fp128 @mixParam_02f(fp128 %p1, double %p2, i64* nocapture %p3,
 ; CHECK-P8-NEXT:    add r4, r4, r8
 ; CHECK-P8-NEXT:    clrldi r4, r4, 32
 ; CHECK-P8-NEXT:    std r4, 0(r3)
-; CHECK-P8-NEXT:    lvx v3, 0, r5
-; CHECK-P8-NEXT:    vmr v2, v3
-; CHECK-P8-NEXT:    vmr v3, v4
+; CHECK-P8-NEXT:    lxvd2x vs0, 0, r5
+; CHECK-P8-NEXT:    xxswapd vs0, vs0
+; CHECK-P8-NEXT:    xxlor v2, vs0, vs0
 ; CHECK-P8-NEXT:    bl __addkf3
 ; CHECK-P8-NEXT:    nop
 ; CHECK-P8-NEXT:    fmr f1, f31
@@ -572,15 +577,18 @@ define void @mixParam_03(fp128 %f1, double* nocapture %d1, <4 x i32> %vec1,
 ; CHECK-P8-NEXT:    .cfi_offset lr, 16
 ; CHECK-P8-NEXT:    .cfi_offset r30, -16
 ; CHECK-P8-NEXT:    .cfi_offset v31, -32
+; CHECK-P8-NEXT:    xxswapd vs0, v2
+; CHECK-P8-NEXT:    xxswapd vs1, v3
 ; CHECK-P8-NEXT:    ld r4, 184(r1)
 ; CHECK-P8-NEXT:    li r3, 48
-; CHECK-P8-NEXT:    stvx v2, 0, r9
 ; CHECK-P8-NEXT:    std r30, 64(r1) # 8-byte Folded Spill
 ; CHECK-P8-NEXT:    mr r30, r5
 ; CHECK-P8-NEXT:    stvx v31, r1, r3 # 16-byte Folded Spill
 ; CHECK-P8-NEXT:    mr r3, r10
-; CHECK-P8-NEXT:    stvx v3, 0, r4
-; CHECK-P8-NEXT:    lvx v31, 0, r9
+; CHECK-P8-NEXT:    stxvd2x vs0, 0, r9
+; CHECK-P8-NEXT:    stxvd2x vs1, 0, r4
+; CHECK-P8-NEXT:    lxvd2x vs0, 0, r9
+; CHECK-P8-NEXT:    xxswapd v31, vs0
 ; CHECK-P8-NEXT:    bl __floatsikf
 ; CHECK-P8-NEXT:    nop
 ; CHECK-P8-NEXT:    vmr v3, v2
@@ -633,14 +641,17 @@ define fastcc void @mixParam_03f(fp128 %f1, double* nocapture %d1, <4 x i32> %ve
 ; CHECK-P8-NEXT:    .cfi_offset lr, 16
 ; CHECK-P8-NEXT:    .cfi_offset r30, -16
 ; CHECK-P8-NEXT:    .cfi_offset v31, -32
+; CHECK-P8-NEXT:    xxswapd vs0, v2
+; CHECK-P8-NEXT:    xxswapd vs1, v3
 ; CHECK-P8-NEXT:    li r6, 48
-; CHECK-P8-NEXT:    stvx v2, 0, r4
-; CHECK-P8-NEXT:    stvx v3, 0, r7
 ; CHECK-P8-NEXT:    std r30, 64(r1) # 8-byte Folded Spill
 ; CHECK-P8-NEXT:    mr r30, r3
 ; CHECK-P8-NEXT:    mr r3, r5
 ; CHECK-P8-NEXT:    stvx v31, r1, r6 # 16-byte Folded Spill
-; CHECK-P8-NEXT:    lvx v31, 0, r4
+; CHECK-P8-NEXT:    stxvd2x vs0, 0, r4
+; CHECK-P8-NEXT:    stxvd2x vs1, 0, r7
+; CHECK-P8-NEXT:    lxvd2x vs0, 0, r4
+; CHECK-P8-NEXT:    xxswapd v31, vs0
 ; CHECK-P8-NEXT:    bl __floatsikf
 ; CHECK-P8-NEXT:    nop
 ; CHECK-P8-NEXT:    vmr v3, v2

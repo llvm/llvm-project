@@ -11,7 +11,7 @@
 #include "lldb/Core/Section.h"
 #include "lldb/Core/ValueObject.h"
 #include "lldb/Host/HostInfo.h"
-#include "lldb/Host/StringConvert.h"
+#include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/Scalar.h"
 #include "lldb/Utility/UriParser.h"
@@ -59,7 +59,7 @@ void PlatformAndroid::Terminate() {
 }
 
 PlatformSP PlatformAndroid::CreateInstance(bool force, const ArchSpec *arch) {
-  Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_PLATFORM));
+  Log *log = GetLog(LLDBLog::Platform);
   if (log) {
     const char *arch_name;
     if (arch && arch->GetArchitectureName())
@@ -130,47 +130,29 @@ PlatformSP PlatformAndroid::CreateInstance(bool force, const ArchSpec *arch) {
 PlatformAndroid::PlatformAndroid(bool is_host)
     : PlatformLinux(is_host), m_sdk_version(0) {}
 
-ConstString PlatformAndroid::GetPluginNameStatic(bool is_host) {
-  if (is_host) {
-    static ConstString g_host_name(Platform::GetHostPlatformName());
-    return g_host_name;
-  } else {
-    static ConstString g_remote_name("remote-android");
-    return g_remote_name;
-  }
-}
-
-const char *PlatformAndroid::GetPluginDescriptionStatic(bool is_host) {
+llvm::StringRef PlatformAndroid::GetPluginDescriptionStatic(bool is_host) {
   if (is_host)
     return "Local Android user platform plug-in.";
-  else
-    return "Remote Android user platform plug-in.";
-}
-
-ConstString PlatformAndroid::GetPluginName() {
-  return GetPluginNameStatic(IsHost());
+  return "Remote Android user platform plug-in.";
 }
 
 Status PlatformAndroid::ConnectRemote(Args &args) {
   m_device_id.clear();
 
-  if (IsHost()) {
-    return Status("can't connect to the host platform '%s', always connected",
-                  GetPluginName().GetCString());
-  }
+  if (IsHost())
+    return Status("can't connect to the host platform, always connected");
 
   if (!m_remote_platform_sp)
     m_remote_platform_sp = PlatformSP(new PlatformAndroidRemoteGDBServer());
 
-  int port;
-  llvm::StringRef scheme, host, path;
   const char *url = args.GetArgumentAtIndex(0);
   if (!url)
     return Status("URL is null.");
-  if (!UriParser::Parse(url, scheme, host, port, path))
+  llvm::Optional<URI> parsed_url = URI::Parse(url);
+  if (!parsed_url)
     return Status("Invalid URL: %s", url);
-  if (host != "localhost")
-    m_device_id = std::string(host);
+  if (parsed_url->hostname != "localhost")
+    m_device_id = parsed_url->hostname.str();
 
   auto error = PlatformLinux::ConnectRemote(args);
   if (error.Success()) {
@@ -209,7 +191,7 @@ Status PlatformAndroid::GetFile(const FileSpec &source,
 
   auto source_file = source_spec.GetCString(false);
 
-  Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_PLATFORM));
+  Log *log = GetLog(LLDBLog::Platform);
   LLDB_LOGF(log, "Got mode == 0 on '%s': try to get file via 'shell cat'",
             source_file);
 
@@ -284,13 +266,14 @@ uint32_t PlatformAndroid::GetSdkVersion() {
   version_string = llvm::StringRef(version_string).trim().str();
 
   if (error.Fail() || version_string.empty()) {
-    Log *log = GetLogIfAllCategoriesSet(LIBLLDB_LOG_PLATFORM);
+    Log *log = GetLog(LLDBLog::Platform);
     LLDB_LOGF(log, "Get SDK version failed. (error: %s, output: %s)",
               error.AsCString(), version_string.c_str());
     return 0;
   }
 
-  m_sdk_version = StringConvert::ToUInt32(version_string.c_str());
+  // FIXME: improve error handling
+  llvm::to_integer(version_string, m_sdk_version);
   return m_sdk_version;
 }
 
@@ -331,7 +314,7 @@ Status PlatformAndroid::DownloadSymbolFile(const lldb::ModuleSP &module_sp,
     command.Printf("rm -rf %s", s->c_str());
     Status error = adb.Shell(command.GetData(), seconds(5), nullptr);
 
-    Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_PLATFORM));
+    Log *log = GetLog(LLDBLog::Platform);
     if (log && error.Fail())
       LLDB_LOGF(log, "Failed to remove temp directory: %s", error.AsCString());
   });

@@ -460,16 +460,3 @@ void ABIMacOSX_i386::Initialize() {
 void ABIMacOSX_i386::Terminate() {
   PluginManager::UnregisterPlugin(CreateInstance);
 }
-
-lldb_private::ConstString ABIMacOSX_i386::GetPluginNameStatic() {
-  static ConstString g_short_name("abi.macosx-i386");
-  return g_short_name;
-}
-
-// PluginInterface protocol
-
-lldb_private::ConstString ABIMacOSX_i386::GetPluginName() {
-  return GetPluginNameStatic();
-}
-
-uint32_t ABIMacOSX_i386::GetPluginVersion() { return 1; }

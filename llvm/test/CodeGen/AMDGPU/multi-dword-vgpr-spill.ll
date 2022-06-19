@@ -1,5 +1,5 @@
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 -enable-misched=0 -post-RA-scheduler=0 -stress-regalloc=8 < %s | FileCheck %s -check-prefixes=GCN,MUBUF
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 -enable-misched=0 -post-RA-scheduler=0 -stress-regalloc=8 -amdgpu-enable-flat-scratch < %s | FileCheck %s -check-prefixes=GCN,FLATSCR
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 -enable-misched=0 -post-RA-scheduler=0 -stress-regalloc=8 -mattr=+enable-flat-scratch < %s | FileCheck %s -check-prefixes=GCN,FLATSCR
 
 ; GCN-LABEL: spill_v2i32:
 ; MUBUF-DAG: buffer_store_dword v{{.*}} offset:16 ; 4-byte Folded Spill

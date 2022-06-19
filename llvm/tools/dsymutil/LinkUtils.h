@@ -30,6 +30,9 @@ struct LinkOptions {
   /// Statistics
   bool Statistics = false;
 
+  /// Verify the input DWARF.
+  bool VerifyInputDWARF = false;
+
   /// Skip emitting output
   bool NoOutput = false;
 
@@ -53,7 +56,7 @@ struct LinkOptions {
   OutputFileType FileType = OutputFileType::Object;
 
   /// The accelerator table kind
-  AccelTableKind TheAccelTableKind;
+  DwarfLinkerAccelTableKind TheAccelTableKind;
 
   /// -oso-prepend-path
   std::string PrependPath;

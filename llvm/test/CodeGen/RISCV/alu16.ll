@@ -44,20 +44,36 @@ define i16 @slti(i16 %a) nounwind {
 define i16 @sltiu(i16 %a) nounwind {
 ; RV32I-LABEL: sltiu:
 ; RV32I:       # %bb.0:
-; RV32I-NEXT:    lui a1, 16
-; RV32I-NEXT:    addi a1, a1, -1
-; RV32I-NEXT:    and a0, a0, a1
+; RV32I-NEXT:    slli a0, a0, 16
+; RV32I-NEXT:    srli a0, a0, 16
 ; RV32I-NEXT:    sltiu a0, a0, 3
 ; RV32I-NEXT:    ret
 ;
 ; RV64I-LABEL: sltiu:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    lui a1, 16
-; RV64I-NEXT:    addiw a1, a1, -1
-; RV64I-NEXT:    and a0, a0, a1
+; RV64I-NEXT:    slli a0, a0, 48
+; RV64I-NEXT:    srli a0, a0, 48
 ; RV64I-NEXT:    sltiu a0, a0, 3
 ; RV64I-NEXT:    ret
   %1 = icmp ult i16 %a, 3
+  %2 = zext i1 %1 to i16
+  ret i16 %2
+}
+
+; Make sure we avoid an AND, if the input of an unsigned compare is known
+; to be sign extended. This can occur due to InstCombine canonicalizing
+; x s>= 0 && x s< 10 to x u< 10.
+define i16 @sltiu_signext(i16 signext %a) nounwind {
+; RV32I-LABEL: sltiu_signext:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    sltiu a0, a0, 10
+; RV32I-NEXT:    ret
+;
+; RV64I-LABEL: sltiu_signext:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    sltiu a0, a0, 10
+; RV64I-NEXT:    ret
+  %1 = icmp ult i16 %a, 10
   %2 = zext i1 %1 to i16
   ret i16 %2
 }
@@ -256,17 +272,15 @@ define i16 @xor(i16 %a, i16 %b) nounwind {
 define i16 @srl(i16 %a, i16 %b) nounwind {
 ; RV32I-LABEL: srl:
 ; RV32I:       # %bb.0:
-; RV32I-NEXT:    lui a2, 16
-; RV32I-NEXT:    addi a2, a2, -1
-; RV32I-NEXT:    and a0, a0, a2
+; RV32I-NEXT:    slli a0, a0, 16
+; RV32I-NEXT:    srli a0, a0, 16
 ; RV32I-NEXT:    srl a0, a0, a1
 ; RV32I-NEXT:    ret
 ;
 ; RV64I-LABEL: srl:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    lui a2, 16
-; RV64I-NEXT:    addiw a2, a2, -1
-; RV64I-NEXT:    and a0, a0, a2
+; RV64I-NEXT:    slli a0, a0, 48
+; RV64I-NEXT:    srli a0, a0, 48
 ; RV64I-NEXT:    srl a0, a0, a1
 ; RV64I-NEXT:    ret
   %1 = lshr i16 %a, %b

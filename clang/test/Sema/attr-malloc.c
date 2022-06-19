@@ -14,8 +14,8 @@ int * returns_intptr(void) __attribute((malloc)); // no-warning
 typedef int * iptr;
 iptr  returns_iptr  (void) __attribute((malloc)); // no-warning
 
-__attribute((malloc)) void *(*f)(); //  expected-warning{{attribute only applies to functions}}
-__attribute((malloc)) int (*g)(); // expected-warning{{attribute only applies to functions}}
+__attribute((malloc)) void *(*f)(void); //  expected-warning{{attribute only applies to functions}}
+__attribute((malloc)) int (*g)(void); // expected-warning{{attribute only applies to functions}}
 
 __attribute((malloc))
 void * xalloc(unsigned n) { return malloc(n); } // no-warning

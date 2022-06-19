@@ -1,5 +1,5 @@
 // Test memory tagging extension intrinsics
-// RUN: %clang_cc1 -triple aarch64-none-linux-eabi -target-feature +mte -O3 -S -emit-llvm -o - %s  | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -triple aarch64-none-linux-eabi -target-feature +mte -O3 -S -emit-llvm -o - %s  | FileCheck %s
 #include <stddef.h>
 #include <arm_acle.h>
 

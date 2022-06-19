@@ -7,11 +7,18 @@
 //===----------------------------------------------------------------------===//
 
 #include "TestRunner.h"
+#include "ReducerWorkItem.h"
+#include "llvm/CodeGen/MachineFunction.h"
 
 using namespace llvm;
 
-TestRunner::TestRunner(StringRef TestName, const std::vector<std::string> &TestArgs)
-    : TestName(TestName), TestArgs(TestArgs) {
+TestRunner::TestRunner(StringRef TestName,
+                       const std::vector<std::string> &TestArgs,
+                       std::unique_ptr<ReducerWorkItem> Program,
+                       std::unique_ptr<TargetMachine> TM)
+    : TestName(TestName), TestArgs(TestArgs), Program(std::move(Program)),
+      TM(std::move(TM)) {
+  assert(this->Program && "Initialized with null program?");
 }
 
 /// Runs the interestingness test, passes file to be tested as first argument
@@ -39,4 +46,9 @@ int TestRunner::run(StringRef Filename) {
   }
 
   return !Result;
+}
+
+void TestRunner::setProgram(std::unique_ptr<ReducerWorkItem> P) {
+  assert(P && "Setting null program?");
+  Program = std::move(P);
 }

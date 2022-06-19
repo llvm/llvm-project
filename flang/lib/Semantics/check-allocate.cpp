@@ -128,10 +128,10 @@ static std::optional<AllocateCheckerInfo> CheckAllocateOptions(
   const parser::Expr *parserSourceExpr{nullptr};
   for (const parser::AllocOpt &allocOpt :
       std::get<std::list<parser::AllocOpt>>(allocateStmt.t)) {
-    std::visit(
+    common::visit(
         common::visitors{
             [&](const parser::StatOrErrmsg &statOrErr) {
-              std::visit(
+              common::visit(
                   common::visitors{
                       [&](const parser::StatVariable &) {
                         if (info.gotStat) { // C943
@@ -187,7 +187,7 @@ static std::optional<AllocateCheckerInfo> CheckAllocateOptions(
   }
 
   if (info.gotSource || info.gotMold) {
-    if (const auto *expr{GetExpr(DEREF(parserSourceExpr))}) {
+    if (const auto *expr{GetExpr(context, DEREF(parserSourceExpr))}) {
       parser::CharBlock at{parserSourceExpr->source};
       info.sourceExprType = expr->GetType();
       if (!info.sourceExprType) {
@@ -541,7 +541,7 @@ bool AllocationCheckerHelper::RunCoarrayRelatedChecks(
     CHECK(context.AnyFatalError());
     return false;
   }
-  if (IsCoarray(*symbol_)) {
+  if (evaluate::IsCoarray(*symbol_)) {
     if (allocateInfo_.gotTypeSpec) {
       // C938
       if (const DerivedTypeSpec *

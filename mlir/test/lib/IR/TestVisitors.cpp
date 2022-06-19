@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "mlir/IR/BuiltinOps.h"
 #include "mlir/Pass/Pass.h"
 
 using namespace mlir;
@@ -68,9 +69,9 @@ static void testPureCallbacks(Operation *op) {
 /// Tests erasure callbacks that skip the walk.
 static void testSkipErasureCallbacks(Operation *op) {
   auto skipOpErasure = [](Operation *op) {
-    // Do not erase module and function op. Otherwise there wouldn't be too
-    // much to test in pre-order.
-    if (isa<ModuleOp>(op) || isa<FuncOp>(op))
+    // Do not erase module and module children operations. Otherwise, there
+    // wouldn't be too much to test in pre-order.
+    if (isa<ModuleOp>(op) || isa<ModuleOp>(op->getParentOp()))
       return WalkResult::advance();
 
     llvm::outs() << "Erasing ";
@@ -81,10 +82,10 @@ static void testSkipErasureCallbacks(Operation *op) {
     return WalkResult::skip();
   };
   auto skipBlockErasure = [](Block *block) {
-    // Do not erase module and function blocks. Otherwise there wouldn't be
-    // too much to test in pre-order.
+    // Do not erase module and module children blocks. Otherwise there wouldn't
+    // be too much to test in pre-order.
     Operation *parentOp = block->getParentOp();
-    if (isa<ModuleOp>(parentOp) || isa<FuncOp>(parentOp))
+    if (isa<ModuleOp>(parentOp) || isa<ModuleOp>(parentOp->getParentOp()))
       return WalkResult::advance();
 
     llvm::outs() << "Erasing ";
@@ -152,6 +153,8 @@ namespace {
 /// This pass exercises the different configurations of the IR visitors.
 struct TestIRVisitorsPass
     : public PassWrapper<TestIRVisitorsPass, OperationPass<>> {
+  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(TestIRVisitorsPass)
+
   StringRef getArgument() const final { return "test-ir-visitors"; }
   StringRef getDescription() const final { return "Test various visitors."; }
   void runOnOperation() override {
@@ -161,7 +164,7 @@ struct TestIRVisitorsPass
     testNoSkipErasureCallbacks(op);
   }
 };
-} // end anonymous namespace
+} // namespace
 
 namespace mlir {
 namespace test {

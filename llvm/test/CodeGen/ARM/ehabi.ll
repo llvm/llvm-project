@@ -83,8 +83,12 @@
 ; RUN:   | FileCheck %s --check-prefix=DWARF-V7-FP-ELIM
 
 ; RUN: llc -mtriple thumbv7-windows-gnu \
-; RUN:     -filetype=asm -o - %s \
+; RUN:     -filetype=asm -exception-model=dwarf -o - %s \
 ; RUN:   | FileCheck %s --check-prefix=DWARF-WIN-FP-ELIM
+
+; RUN: llc -mtriple thumbv7-windows-gnu \
+; RUN:     -filetype=asm -o - %s \
+; RUN:   | FileCheck %s --check-prefix=SEH-WIN-FP-ELIM
 
 ;-------------------------------------------------------------------------------
 ; Test 1
@@ -181,10 +185,10 @@ declare void @_ZSt9terminatev()
 
 ; CHECK-V7-FP-LABEL: _Z4testiiiiiddddd:
 ; CHECK-V7-FP:   .fnstart
-; CHECK-V7-FP:   .save  {r4, r10, r11, lr}
-; CHECK-V7-FP:   push   {r4, r10, r11, lr}
-; CHECK-V7-FP:   .setfp r11, sp, #8
-; CHECK-V7-FP:   add    r11, sp, #8
+; CHECK-V7-FP:   .save  {r11, lr}
+; CHECK-V7-FP:   push   {r11, lr}
+; CHECK-V7-FP:   .setfp r11, sp
+; CHECK-V7-FP:   mov    r11, sp
 ; CHECK-V7-FP:   .vsave {d8, d9, d10, d11, d12}
 ; CHECK-V7-FP:   vpush  {d8, d9, d10, d11, d12}
 ; CHECK-V7-FP:   .pad   #24
@@ -195,8 +199,8 @@ declare void @_ZSt9terminatev()
 
 ; CHECK-V7-FP-ELIM-LABEL: _Z4testiiiiiddddd:
 ; CHECK-V7-FP-ELIM:   .fnstart
-; CHECK-V7-FP-ELIM:   .save  {r4, lr}
-; CHECK-V7-FP-ELIM:   push   {r4, lr}
+; CHECK-V7-FP-ELIM:   .save  {r11, lr}
+; CHECK-V7-FP-ELIM:   push   {r11, lr}
 ; CHECK-V7-FP-ELIM:   .vsave {d8, d9, d10, d11, d12}
 ; CHECK-V7-FP-ELIM:   vpush  {d8, d9, d10, d11, d12}
 ; CHECK-V7-FP-ELIM:   .pad   #24
@@ -254,33 +258,31 @@ declare void @_ZSt9terminatev()
 ; DWARF-V7-FP:    .cfi_startproc
 ; DWARF-V7-FP:    .cfi_personality 0, __gxx_personality_v0
 ; DWARF-V7-FP:    .cfi_lsda 0, .Lexception0
-; DWARF-V7-FP:    push {r4, r10, r11, lr}
-; DWARF-V7-FP:    .cfi_def_cfa_offset 16
+; DWARF-V7-FP:    push {r11, lr}
+; DWARF-V7-FP:    .cfi_def_cfa_offset 8
 ; DWARF-V7-FP:    .cfi_offset lr, -4
 ; DWARF-V7-FP:    .cfi_offset r11, -8
-; DWARF-V7-FP:    .cfi_offset r10, -12
-; DWARF-V7-FP:    .cfi_offset r4, -16
-; DWARF-V7-FP:    add r11, sp, #8
-; DWARF-V7-FP:    .cfi_def_cfa r11, 8
+; DWARF-V7-FP:    mov r11, sp
+; DWARF-V7-FP:    .cfi_def_cfa_register r11
 ; DWARF-V7-FP:    vpush {d8, d9, d10, d11, d12}
-; DWARF-V7-FP:    .cfi_offset d12, -24
-; DWARF-V7-FP:    .cfi_offset d11, -32
-; DWARF-V7-FP:    .cfi_offset d10, -40
-; DWARF-V7-FP:    .cfi_offset d9, -48
+; DWARF-V7-FP:    .cfi_offset d12, -16
+; DWARF-V7-FP:    .cfi_offset d11, -24
+; DWARF-V7-FP:    .cfi_offset d10, -32
+; DWARF-V7-FP:    .cfi_offset d9, -40
 ; DWARF-V7-FP:    sub sp, sp, #24
-; DWARF-V7-FP:    sub sp, r11, #48
+; DWARF-V7-FP:    sub sp, r11, #40
 ; DWARF-V7-FP:    vpop {d8, d9, d10, d11, d12}
-; DWARF-V7-FP:    pop {r4, r10, r11, pc}
+; DWARF-V7-FP:    pop {r11, pc}
 ; DWARF-V7-FP:    .cfi_endproc
 
 ; DWARF-V7-FP-ELIM-LABEL: _Z4testiiiiiddddd:
 ; DWARF-V7-FP-ELIM:    .cfi_startproc
 ; DWARF-V7-FP-ELIM:    .cfi_personality 0, __gxx_personality_v0
 ; DWARF-V7-FP-ELIM:    .cfi_lsda 0, .Lexception0
-; DWARF-V7-FP-ELIM:    push {r4, lr}
+; DWARF-V7-FP-ELIM:    push {r11, lr}
 ; DWARF-V7-FP-ELIM:    .cfi_def_cfa_offset 8
 ; DWARF-V7-FP-ELIM:    .cfi_offset lr, -4
-; DWARF-V7-FP-ELIM:    .cfi_offset r4, -8
+; DWARF-V7-FP-ELIM:    .cfi_offset r11, -8
 ; DWARF-V7-FP-ELIM:    vpush {d8, d9, d10, d11, d12}
 ; DWARF-V7-FP-ELIM:    .cfi_offset d12, -16
 ; DWARF-V7-FP-ELIM:    .cfi_offset d11, -24
@@ -290,7 +292,7 @@ declare void @_ZSt9terminatev()
 ; DWARF-V7-FP-ELIM:    .cfi_def_cfa_offset 72
 ; DWARF-V7-FP-ELIM:    add sp, sp, #24
 ; DWARF-V7-FP-ELIM:    vpop {d8, d9, d10, d11, d12}
-; DWARF-V7-FP-ELIM:    pop {r4, pc}
+; DWARF-V7-FP-ELIM:    pop {r11, pc}
 ; DWARF-V7-FP-ELIM:    .cfi_endproc
 
 ; DWARF-WIN-FP-ELIM-LABEL: _Z4testiiiiiddddd:
@@ -312,6 +314,26 @@ declare void @_ZSt9terminatev()
 ; DWARF-WIN-FP-ELIM:    vpop {d8, d9, d10, d11, d12}
 ; DWARF-WIN-FP-ELIM:    pop {r4, pc}
 ; DWARF-WIN-FP-ELIM:    .cfi_endproc
+
+; SEH-WIN-FP-ELIM-LABEL: _Z4testiiiiiddddd:
+; SEH-WIN-FP-ELIM:    .seh_proc _Z4testiiiiiddddd
+; SEH-WIN-FP-ELIM:    .seh_handler __gxx_personality_v0, %unwind, %except
+; SEH-WIN-FP-ELIM:    push {r4, lr}
+; SEH-WIN-FP-ELIM:    .seh_save_regs {r4, lr}
+; SEH-WIN-FP-ELIM:    vpush {d8, d9, d10, d11, d12}
+; SEH-WIN-FP-ELIM:    .seh_save_fregs {d8-d12}
+; SEH-WIN-FP-ELIM:    sub sp, #8
+; SEH-WIN-FP-ELIM:    .seh_stackalloc 8
+; SEH-WIN-FP-ELIM:    .seh_endprologue
+; SEH-WIN-FP-ELIM:    .seh_startepilogue
+; SEH-WIN-FP-ELIM:    add sp, #8
+; SEH-WIN-FP-ELIM:    .seh_stackalloc 8
+; SEH-WIN-FP-ELIM:    vpop {d8, d9, d10, d11, d12}
+; SEH-WIN-FP-ELIM:    .seh_save_fregs {d8-d12}
+; SEH-WIN-FP-ELIM:    pop {r4, pc}
+; SEH-WIN-FP-ELIM:    .seh_save_regs {r4, lr}
+; SEH-WIN-FP-ELIM:    .seh_endepilogue
+; SEH-WIN-FP-ELIM:    .seh_endproc
 
 ;-------------------------------------------------------------------------------
 ; Test 2
@@ -409,6 +431,16 @@ entry:
 ; DWARF-WIN-FP-ELIM:    .cfi_offset r11, -8
 ; DWARF-WIN-FP-ELIM:    pop.w  {r11, pc}
 ; DWARF-WIN-FP-ELIM:    .cfi_endproc
+
+; SEH-WIN-FP-ELIM-LABEL: test2:
+; SEH-WIN-FP-ELIM:    .seh_proc test2
+; SEH-WIN-FP-ELIM:    push.w {r11, lr}
+; SEH-WIN-FP-ELIM:    .seh_save_regs_w {r11, lr}
+; SEH-WIN-FP-ELIM:    .seh_endprologue
+; SEH-WIN-FP-ELIM:    .seh_startepilogue
+; SEH-WIN-FP-ELIM:    pop.w  {r11, pc}
+; SEH-WIN-FP-ELIM:    .seh_endepilogue
+; SEH-WIN-FP-ELIM:    .seh_endproc
 
 
 ;-------------------------------------------------------------------------------
@@ -527,6 +559,17 @@ entry:
 ; DWARF-WIN-FP-ELIM:    pop.w  {r4, r5, r11, pc}
 ; DWARF-WIN-FP-ELIM:    .cfi_endproc
 
+; SEH-WIN-FP-ELIM-LABEL: test3:
+; SEH-WIN-FP-ELIM:    .seh_proc test3
+; SEH-WIN-FP-ELIM:    push.w {r4, r5, r11, lr}
+; SEH-WIN-FP-ELIM:    .seh_save_regs_w {r4-r5, r11, lr}
+; SEH-WIN-FP-ELIM:    .seh_endprologue
+; SEH-WIN-FP-ELIM:    .seh_startepilogue
+; SEH-WIN-FP-ELIM:    pop.w  {r4, r5, r11, pc}
+; SEH-WIN-FP-ELIM:    .seh_save_regs_w {r4-r5, r11, lr}
+; SEH-WIN-FP-ELIM:    .seh_endepilogue
+; SEH-WIN-FP-ELIM:    .seh_endproc
+
 
 ;-------------------------------------------------------------------------------
 ; Test 4
@@ -589,3 +632,8 @@ entry:
 ; DWARF-WIN-FP-ELIM-NOT: .cfi_startproc
 ; DWARF-WIN-FP-ELIM:     bx lr
 ; DWARF-WIN-FP-ELIM-NOT: .cfi_endproc
+
+; SEH-WIN-FP-ELIM-LABEL: test4:
+; SEH-WIN-FP-ELIM-NOT: .seh_proc test4
+; SEH-WIN-FP-ELIM:     bx lr
+; SEH-WIN-FP-ELIM-NOT: .seh_endproc

@@ -72,11 +72,9 @@ Status FileSystem::ResolveSymbolicLink(const FileSpec &src, FileSpec &dst) {
 }
 
 FILE *FileSystem::Fopen(const char *path, const char *mode) {
-  Collect(path);
   return llvm::sys::RetryAfterSignal(nullptr, ::fopen, path, mode);
 }
 
 int FileSystem::Open(const char *path, int flags, int mode) {
-  Collect(path);
   return llvm::sys::RetryAfterSignal(-1, ::open, path, flags, mode);
 }

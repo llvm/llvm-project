@@ -21,6 +21,9 @@
 
 namespace llvm {
 
+class Function;
+class FunctionPass;
+
 class AggressiveInstCombinePass
     : public PassInfoMixin<AggressiveInstCombinePass> {
 

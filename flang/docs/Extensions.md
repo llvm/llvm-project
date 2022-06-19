@@ -31,7 +31,8 @@ accepted if enabled by command-line options.
   This conversion allows the results of the intrinsics like
   `SIZE` that (as mentioned below) may return non-default
   `INTEGER` results by default to be passed.  A warning is
-  emitted when truncation is possible.
+  emitted when truncation is possible.  These conversions
+  are not applied in calls to non-intrinsic generic procedures.
 * We are not strict on the contents of `BLOCK DATA` subprograms
   so long as they contain no executable code, no internal subprograms,
   and allocate no storage outside a named `COMMON` block.  (C1415)
@@ -58,6 +59,26 @@ write(buffer,*,delim="QUOTE") quotes
 print "('>',a10,'<')", buffer
 end
 ```
+* The name of the control variable in an implied DO loop in an array
+  constructor or DATA statement has a scope over the value-list only,
+  not the bounds of the implied DO loop.  It is not advisable to use
+  an object of the same name as the index variable in a bounds
+  expression, but it will work, instead of being needlessly undefined.
+* If both the `COUNT=` and the `COUNT_MAX=` optional arguments are
+  present on the same call to the intrinsic subroutine `SYSTEM_CLOCK`,
+  we require that their types have the same integer kind, since the
+  kind of these arguments is used to select the clock rate.  In common
+  with some other compilers, the clock rate varies from tenths of a
+  second to nanoseconds depending on argument kind and platform support.
+* If a dimension of a descriptor has zero extent in a call to
+  `CFI_section`, `CFI_setpointer` or `CFI_allocate`, the lower
+  bound on that dimension will be set to 1 for consistency with
+  the `LBOUND()` intrinsic function.
+* `-2147483648_4` is, strictly speaking, a non-conforming literal
+  constant on a machine with 32-bit two's-complement integers as
+  kind 4, because the grammar of Fortran expressions parses it as a
+  negation of a literal constant, not a negative literal constant.
+  This compiler accepts it with a portability warning.
 
 ## Extensions, deletions, and legacy features supported by default
 
@@ -66,11 +87,15 @@ end
 * `$` and `@` as legal characters in names
 * Initialization in type declaration statements using `/values/`
 * Kind specification with `*`, e.g. `REAL*4`
-* `DOUBLE COMPLEX`
+* `DOUBLE COMPLEX` as a synonym for `COMPLEX(KIND(0.D0))` --
+  but not when spelled `TYPE(DOUBLECOMPLEX)`.
 * Signed complex literal constants
-* DEC `STRUCTURE`, `RECORD`, `UNION`, and `MAP`
+* DEC `STRUCTURE`, `RECORD`, with '%FILL'; but `UNION`, and `MAP`
+  are not yet supported throughout compilation, and elicit a
+  "not yet implemented" message.
 * Structure field access with `.field`
-* `BYTE` as synonym for `INTEGER(KIND=1)`
+* `BYTE` as synonym for `INTEGER(KIND=1)`; but not when spelled `TYPE(BYTE)`.
+* When kind-param is used for REAL literals, allow a matching exponent letter
 * Quad precision REAL literals with `Q`
 * `X` prefix/suffix as synonym for `Z` on hexadecimal literals
 * `B`, `O`, `Z`, and `X` accepted as suffixes as well as prefixes
@@ -109,20 +134,26 @@ end
   files are easier to write and use.
 * $ and \ edit descriptors are supported in FORMAT to suppress newline
   output on user prompts.
+* Tabs in format strings (not `FORMAT` statements) are allowed on output.
 * REAL and DOUBLE PRECISION variable and bounds in DO loops
 * Integer literals without explicit kind specifiers that are out of range
   for the default kind of INTEGER are assumed to have the least larger kind
   that can hold them, if one exists.
 * BOZ literals can be used as INTEGER values in contexts where the type is
   unambiguous: the right hand sides of assigments and initializations
-  of INTEGER entities, and as actual arguments to a few intrinsic functions
-  (ACHAR, BTEST, CHAR).  BOZ literals are interpreted as default INTEGER
+  of INTEGER entities, as actual arguments to a few intrinsic functions
+  (ACHAR, BTEST, CHAR), and as actual arguments of references to
+  procedures with explicit interfaces whose corresponding dummy
+  argument has a numeric type to which the BOZ literal may be
+  converted.  BOZ literals are interpreted as default INTEGER only
   when they appear as the first items of array constructors with no
   explicit type.  Otherwise, they generally cannot be used if the type would
   not be known (e.g., `IAND(X'1',X'2')`).
 * BOZ literals can also be used as REAL values in some contexts where the
   type is unambiguous, such as initializations of REAL parameters.
-* EQUIVALENCE of numeric and character sequences (a ubiquitous extension)
+* EQUIVALENCE of numeric and character sequences (a ubiquitous extension),
+  as well as of sequences of non-default kinds of numeric types
+  with each other.
 * Values for whole anonymous parent components in structure constructors
   (e.g., `EXTENDEDTYPE(PARENTTYPE(1,2,3))` rather than `EXTENDEDTYPE(1,2,3)`
    or `EXTENDEDTYPE(PARENTTYPE=PARENTTYPE(1,2,3))`).
@@ -133,6 +164,7 @@ end
   the arguments as if they were operands to an intrinsic `+` operator,
   and defining the result type accordingly.
 * DOUBLE COMPLEX intrinsics DREAL, DCMPLX, DCONJG, and DIMAG.
+* The DFLOAT intrinsic function.
 * INT_PTR_KIND intrinsic returns the kind of c_intptr_t.
 * Restricted specific conversion intrinsics FLOAT, SNGL, IDINT, IFIX, DREAL,
   and DCMPLX accept arguments of any kind instead of only the default kind or
@@ -148,6 +180,10 @@ end
   hold true for definable arguments.
 * Assignment of `LOGICAL` to `INTEGER` and vice versa (but not other types) is
   allowed.  The values are normalized.
+* Static initialization of `LOGICAL` with `INTEGER` is allowed in `DATA` statements
+  and object initializers.
+  The results are *not* normalized to canonical `.TRUE.`/`.FALSE.`.
+  Static initialization of `INTEGER` with `LOGICAL` is also permitted.
 * An effectively empty source file (no program unit) is accepted and
   produces an empty relocatable output file.
 * A `RETURN` statement may appear in a main program.
@@ -161,6 +197,44 @@ end
   as default INTEGER if IMPLICIT NONE(TYPE) were absent.
 * OPEN(ACCESS='APPEND') is interpreted as OPEN(POSITION='APPEND')
   to ease porting from Sun Fortran.
+* Intrinsic subroutines EXIT([status]) and ABORT()
+* The definition of simple contiguity in 9.5.4 applies only to arrays;
+  we also treat scalars as being trivially contiguous, so that they
+  can be used in contexts like data targets in pointer assignments
+  with bounds remapping.
+* We support some combinations of specific procedures in generic
+  interfaces that a strict reading of the standard would preclude
+  when their calls must nonetheless be distinguishable.
+  Specifically, `ALLOCATABLE` dummy arguments are distinguishing
+  if an actual argument acceptable to one could not be passed to
+  the other & vice versa because exactly one is polymorphic or
+  exactly one is unlimited polymorphic).
+* External unit 0 is predefined and connected to the standard error output,
+  and defined as `ERROR_UNIT` in the intrinsic `ISO_FORTRAN_ENV` module.
+* Objects in blank COMMON may be initialized.
+* Initialization of COMMON blocks outside of BLOCK DATA subprograms.
+* Multiple specifications of the SAVE attribute on the same object
+  are allowed, with a warning.
+* Specific intrinsic functions BABS, IIABS, JIABS, KIABS, ZABS, and CDABS.
+* A `POINTER` component's type need not be a sequence type when
+  the component appears in a derived type with `SEQUENCE`.
+  (This case should probably be an exception to constraint C740 in
+  the standard.)
+* Format expressions that have type but are not character and not
+  integer scalars are accepted so long as they are simply contiguous.
+  This legacy extension supports pre-Fortran'77 usage in which
+  variables initialized in DATA statements with Hollerith literals
+  as modifiable formats.
+* At runtime, `NAMELIST` input will skip over `NAMELIST` groups
+  with other names, and will treat text before and between groups
+  as if they were comment lines, even if not begun with `!`.
+* Commas are required in FORMAT statements and character variables
+  only when they prevent ambiguity.
+* Legacy names `AND`, `OR`, and `XOR` are accepted as aliases for
+  the standard intrinsic functions `IAND`, `IOR`, and `IEOR`
+  respectively.
+* A digit count of d=0 is accepted in Ew.0, Dw.0, and Gw.0 output
+  editing if no nonzero scale factor (kP) is in effect.
 
 ### Extensions supported when enabled by options
 
@@ -210,6 +284,8 @@ end
 * USE association of a procedure interface within that same procedure's definition
 * NULL() as a structure constructor expression for an ALLOCATABLE component (PGI).
 * Conversion of LOGICAL to INTEGER in expressions.
+* Use of INTEGER data with the intrinsic logical operators `.NOT.`, `.AND.`, `.OR.`,
+  and `.XOR.`.
 * IF (integer expression) THEN ... END IF  (PGI/Intel)
 * Comparsion of LOGICAL with ==/.EQ. rather than .EQV. (also .NEQV.) (PGI/Intel)
 * Procedure pointers in COMMON blocks (PGI/Intel)
@@ -230,6 +306,8 @@ end
   related generics. Some accepted exceptions are listed above in the allowed extensions.
   PGI, Intel, and XLF support this in ways that are not numerically equivalent.
   PGI converts the arguments while Intel and XLF replace the specific by the related generic.
+* VMS listing control directives (`%LIST`, `%NOLIST`, `%EJECT`)
+* Continuation lines on `INCLUDE` lines
 
 ## Preprocessing behavior
 
@@ -256,3 +334,78 @@ end
   This Fortran 2008 feature might as well be viewed like an
   extension; no other compiler that we've tested can handle
   it yet.
+
+## Behavior in cases where the standard is ambiguous or indefinite
+
+* When an inner procedure of a subprogram uses the value or an attribute
+  of an undeclared name in a specification expression and that name does
+  not appear in the host, it is not clear in the standard whether that
+  name is an implicitly typed local variable of the inner procedure or a
+  host association with an implicitly typed local variable of the host.
+  For example:
+```
+module module
+ contains
+  subroutine host(j)
+    ! Although "m" never appears in the specification or executable
+    ! parts of this subroutine, both of its contained subroutines
+    ! might be accessing it via host association.
+    integer, intent(in out) :: j
+    call inner1(j)
+    call inner2(j)
+   contains
+    subroutine inner1(n)
+      integer(kind(m)), intent(in) :: n
+      m = n + 1
+    end subroutine
+    subroutine inner2(n)
+      integer(kind(m)), intent(out) :: n
+      n = m + 2
+    end subroutine
+  end subroutine
+end module
+
+program demo
+  use module
+  integer :: k
+  k = 0
+  call host(k)
+  print *, k, " should be 3"
+end
+
+```
+
+  Other Fortran compilers disagree in their interpretations of this example;
+  some seem to treat the references to `m` as if they were host associations
+  to an implicitly typed variable (and print `3`), while others seem to
+  treat them as references to implicitly typed local variabless, and
+  load uninitialized values.
+
+  In f18, we chose to emit an error message for this case since the standard
+  is unclear, the usage is not portable, and the issue can be easily resolved
+  by adding a declaration.
+
+* In subclause 7.5.6.2 of Fortran 2018 the standard defines a partial ordering
+  of the final subroutine calls for finalizable objects, their non-parent
+  components, and then their parent components.
+  (The object is finalized, then the non-parent components of each element,
+  and then the parent component.)
+  Some have argued that the standard permits an implementation
+  to finalize the parent component before finalizing an allocatable component in
+  the context of deallocation, and the next revision of the language may codify
+  this option.
+  In the interest of avoiding needless confusion, this compiler implements what
+  we believe to be the least surprising order of finalization.
+  Specifically: all non-parent components are finalized before
+  the parent, allocatable or not;
+  all finalization takes place before any deallocation;
+  and no object or subobject will be finalized more than once.
+
+* When `RECL=` is set via the `OPEN` statement for a sequential formatted input
+  file, it functions as an effective maximum record length.
+  Longer records, if any, will appear as if they had been truncated to
+  the value of `RECL=`.
+  (Other compilers ignore `RECL=`, signal an error, or apply effective truncation
+  to some forms of input in this situation.)
+  For sequential formatted output, RECL= serves as a limit on record lengths
+  that raises an error when it is exceeded.

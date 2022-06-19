@@ -1,5 +1,5 @@
-; RUN: opt %loadPolly -polly-stmt-granularity=bb -polly-scops -analyze \
-; RUN: -polly-allow-differing-element-types < %s | FileCheck %s
+; RUN: opt %loadPolly -polly-stmt-granularity=bb -polly-print-scops \
+; RUN: -polly-allow-differing-element-types -disable-output < %s | FileCheck %s
 ;
 ;    // Check that accessing one array with different types works.
 ;    void multiple_types(char *Short, char *Float, char *Double) {

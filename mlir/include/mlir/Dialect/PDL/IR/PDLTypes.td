@@ -13,6 +13,7 @@
 #ifndef MLIR_DIALECT_PDL_IR_PDLTYPES
 #define MLIR_DIALECT_PDL_IR_PDLTYPES
 
+include "mlir/IR/AttrTypeBase.td"
 include "mlir/Dialect/PDL/IR/PDLDialect.td"
 
 //===----------------------------------------------------------------------===//
@@ -66,6 +67,7 @@ def PDL_Range : PDL_Type<"Range", "range"> {
     }]>,
   ];
   let genVerifyDecl = 1;
+  let hasCustomAssemblyFormat = 1;
   let skipDefaultBuilders = 1;
 }
 

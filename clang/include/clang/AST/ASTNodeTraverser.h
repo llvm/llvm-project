@@ -386,6 +386,9 @@ public:
     // FIXME: AttrKind
     Visit(T->getModifiedType());
   }
+  void VisitBTFTagAttributedType(const BTFTagAttributedType *T) {
+    Visit(T->getWrappedType());
+  }
   void VisitSubstTemplateTypeParmType(const SubstTemplateTypeParmType *T) {
     Visit(T->getReplacedParameter());
   }
@@ -464,6 +467,10 @@ public:
   void VisitBindingDecl(const BindingDecl *D) {
     if (Traversal == TK_IgnoreUnlessSpelledInSource)
       return;
+
+    if (const auto *V = D->getHoldingVar())
+      Visit(V);
+
     if (const auto *E = D->getBinding())
       Visit(E);
   }

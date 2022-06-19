@@ -20,10 +20,10 @@
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineMemOperand.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
+#include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
-#include "llvm/Support/TargetRegistry.h"
 
 #define DEBUG_TYPE "ve-instr-info"
 
@@ -99,7 +99,7 @@ static bool isUncondBranchOpcode(int Opc) {
 
 #define BRKIND(NAME) (Opc == NAME##a || Opc == NAME##a_nt || Opc == NAME##a_t)
   // VE has other branch relative always instructions for word/double/float,
-  // but we use only long branches in our lower.  So, sanity check it here.
+  // but we use only long branches in our lower.  So, check it here.
   assert(!BRKIND(BRCFW) && !BRKIND(BRCFD) && !BRKIND(BRCFS) &&
          "Branch relative word/double/float always instructions should not be "
          "used!");
@@ -127,7 +127,7 @@ static bool isIndirectBranchOpcode(int Opc) {
 #define BRKIND(NAME)                                                           \
   (Opc == NAME##ari || Opc == NAME##ari_nt || Opc == NAME##ari_t)
   // VE has other branch always instructions for word/double/float, but
-  // we use only long branches in our lower.  So, sanity check it here.
+  // we use only long branches in our lower.  So, check it here.
   assert(!BRKIND(BCFW) && !BRKIND(BCFD) && !BRKIND(BCFS) &&
          "Branch word/double/float always instructions should not be used!");
   return BRKIND(BCFL);
@@ -248,7 +248,7 @@ unsigned VEInstrInfo::insertBranch(MachineBasicBlock &MBB,
   const TargetRegisterInfo *TRI = &getRegisterInfo();
   MachineFunction *MF = MBB.getParent();
   const MachineRegisterInfo &MRI = MF->getRegInfo();
-  unsigned Reg = Cond[2].getReg();
+  Register Reg = Cond[2].getReg();
   if (IsIntegerCC(Cond[0].getImm())) {
     if (TRI->getRegSizeInBits(Reg, MRI) == 32) {
       opc[0] = VE::BRCFWir;
@@ -811,7 +811,7 @@ static void expandPseudoVFMK(const TargetInstrInfo &TI, MachineInstr &MI) {
   // replace to pvfmk.w.up and pvfmk.w.lo
   // replace to pvfmk.s.up and pvfmk.s.lo
 
-  static std::map<unsigned, std::pair<unsigned, unsigned>> VFMKMap = {
+  static const std::pair<unsigned, std::pair<unsigned, unsigned>> VFMKMap[] = {
       {VE::VFMKyal, {VE::VFMKLal, VE::VFMKLal}},
       {VE::VFMKynal, {VE::VFMKLnal, VE::VFMKLnal}},
       {VE::VFMKWyvl, {VE::PVFMKWUPvl, VE::PVFMKWLOvl}},
@@ -822,8 +822,9 @@ static void expandPseudoVFMK(const TargetInstrInfo &TI, MachineInstr &MI) {
 
   unsigned Opcode = MI.getOpcode();
 
-  auto Found = VFMKMap.find(Opcode);
-  if (Found == VFMKMap.end())
+  const auto *Found =
+      llvm::find_if(VFMKMap, [&](auto P) { return P.first == Opcode; });
+  if (Found == std::end(VFMKMap))
     report_fatal_error("unexpected opcode for pseudo vfmk");
 
   unsigned OpcodeUpper = (*Found).second.first;
@@ -942,11 +943,11 @@ bool VEInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
     MachineInstrBuilder MIB =
         BuildMI(*MBB, MI, DL, get(VE::SVMmi), Dest).addReg(VMZ).addImm(Imm);
     MachineInstr *Inst = MIB.getInstr();
-    MI.eraseFromParent();
     if (KillSrc) {
       const TargetRegisterInfo *TRI = &getRegisterInfo();
       Inst->addRegisterKilled(MI.getOperand(1).getReg(), TRI, true);
     }
+    MI.eraseFromParent();
     return true;
   }
   case VE::VFMKyal:
@@ -956,6 +957,7 @@ bool VEInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
   case VE::VFMKSyvl:
   case VE::VFMKSyvyl:
     expandPseudoVFMK(*this, MI);
+    return true;
   }
   return false;
 }

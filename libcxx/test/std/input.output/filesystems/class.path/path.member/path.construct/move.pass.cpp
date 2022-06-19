@@ -15,8 +15,9 @@
 // path(path&&) noexcept
 
 #include "filesystem_include.h"
-#include <type_traits>
 #include <cassert>
+#include <string>
+#include <type_traits>
 
 #include "test_macros.h"
 #include "count_new.h"
@@ -28,9 +29,8 @@ int main(int, char**) {
   assert(globalMemCounter.checkOutstandingNewEq(0));
   const std::string s("we really really really really really really really "
                       "really really long string so that we allocate");
-  // On windows, the operator new from count_new.h can't override the default
-  // operator for calls within the libc++ DLL.
-  TEST_NOT_WIN32_DLL(assert(globalMemCounter.checkOutstandingNewEq(1)));
+  ASSERT_WITH_LIBRARY_INTERNAL_ALLOCATIONS(
+      globalMemCounter.checkOutstandingNewEq(1));
   const fs::path::string_type ps(s.begin(), s.end());
   path p(s);
   {

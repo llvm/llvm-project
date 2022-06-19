@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -std=c++11 -fobjc-arc -fblocks -triple x86_64-apple-darwin10.0.0 -fobjc-runtime-has-weak -emit-llvm -o - %s | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -std=c++11 -fobjc-arc -fblocks -triple x86_64-apple-darwin10.0.0 -fobjc-runtime-has-weak -emit-llvm -o - %s | FileCheck %s
 
 struct ObjCMember {
   id member;
@@ -151,7 +151,7 @@ void test_ObjCBlockMember_copy_assign(ObjCBlockMember m1, ObjCBlockMember m2) {
 }
 
 // Implicitly-generated copy assignment operator for ObjCBlockMember
-// CHECK:    define linkonce_odr nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) {{%.*}}* @_ZN15ObjCBlockMemberaSERKS_(
+// CHECK:    define linkonce_odr noundef nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) {{%.*}}* @_ZN15ObjCBlockMemberaSERKS_(
 // CHECK:      [[T0:%.*]] = getelementptr inbounds [[T:%.*]], [[T:%.*]]* {{%.*}}, i32 0, i32 0
 // CHECK-NEXT: [[T1:%.*]] = load i32 (i32)*, i32 (i32)** [[T0]], align 8
 // CHECK-NEXT: [[T2:%.*]] = bitcast i32 (i32)* [[T1]] to i8*

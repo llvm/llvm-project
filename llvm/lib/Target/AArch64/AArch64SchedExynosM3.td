@@ -254,7 +254,8 @@ def : WriteRes<WriteVST, [M3UnitS,
                                         let NumMicroOps = 1; }
 
 // ASIMD FP instructions.
-def : WriteRes<WriteV, [M3UnitNALU]> { let Latency = 3; }
+def : WriteRes<WriteVd, [M3UnitNALU]> { let Latency = 3; }
+def : WriteRes<WriteVq, [M3UnitNALU]> { let Latency = 3; }
 
 // Other miscellaneous instructions.
 def : WriteRes<WriteAtomic,  []> { let Unsupported = 1; }
@@ -277,6 +278,7 @@ def : ReadAdvance<ReadID,      0>;
 def : ReadAdvance<ReadExtrHi,  0>;
 def : ReadAdvance<ReadAdrBase, 0>;
 def : ReadAdvance<ReadVLD,     0>;
+def : ReadAdvance<ReadST,      0>;
 
 //===----------------------------------------------------------------------===//
 // Finer scheduling model.
@@ -667,7 +669,7 @@ def : InstRW<[M3WriteNEONB], (instregex "^DUPv.+gpr")>;
 def : InstRW<[M3WriteNSHF1], (instregex "^DUPv.+lane")>;
 def : InstRW<[M3WriteNSHF1], (instregex "^EXTv")>;
 def : InstRW<[M3WriteNSHF1], (instregex "^[SU]?Q?XTU?Nv")>;
-def : InstRW<[M3WriteNSHF1], (instregex "^CPY")>;
+def : InstRW<[M3WriteNSHF1], (instregex "^DUP(i8|i16|i32|i64)$")>;
 def : InstRW<[M3WriteNSHF1], (instregex "^INSv.+lane")>;
 def : InstRW<[M3WriteMOVI],  (instregex "^MOVI")>;
 def : InstRW<[M3WriteNALU1], (instregex "^FMOVv")>;

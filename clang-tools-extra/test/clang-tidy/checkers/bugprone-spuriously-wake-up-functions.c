@@ -161,4 +161,4 @@ void consume_list_element(void) {
   for (;; list_c.next == NULL)
     cnd_timedwait(&condition_c, &lock, &ts);
 }
-int main() { return 0; }
+int main(void) { return 0; }

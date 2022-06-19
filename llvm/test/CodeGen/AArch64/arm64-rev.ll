@@ -156,8 +156,7 @@ define i64 @test_rev_x_srl32_shift(i64 %a) {
 ;
 ; GISEL-LABEL: test_rev_x_srl32_shift:
 ; GISEL:       // %bb.0: // %entry
-; GISEL-NEXT:    lsl x8, x0, #33
-; GISEL-NEXT:    lsr x8, x8, #35
+; GISEL-NEXT:    ubfx x8, x0, #2, #29
 ; GISEL-NEXT:    rev x8, x8
 ; GISEL-NEXT:    lsr x0, x8, #32
 ; GISEL-NEXT:    ret
@@ -217,8 +216,7 @@ define i64 @test_rev16_x(i64 %a) nounwind {
 ; GISEL-LABEL: test_rev16_x:
 ; GISEL:       // %bb.0: // %entry
 ; GISEL-NEXT:    rev x8, x0
-; GISEL-NEXT:    lsl x9, x8, #48
-; GISEL-NEXT:    orr x0, x9, x8, lsr #16
+; GISEL-NEXT:    ror x0, x8, #16
 ; GISEL-NEXT:    ret
 entry:
   %0 = tail call i64 @llvm.bswap.i64(i64 %a)
@@ -236,9 +234,7 @@ define i64 @test_rev32_x(i64 %a) nounwind {
 ;
 ; GISEL-LABEL: test_rev32_x:
 ; GISEL:       // %bb.0: // %entry
-; GISEL-NEXT:    rev x8, x0
-; GISEL-NEXT:    lsl x9, x8, #32
-; GISEL-NEXT:    orr x0, x9, x8, lsr #32
+; GISEL-NEXT:    rev32 x0, x0
 ; GISEL-NEXT:    ret
 entry:
   %0 = tail call i64 @llvm.bswap.i64(i64 %a)
@@ -534,16 +530,16 @@ define <8 x i16> @test_vrev32Q16_undef(<8 x i16>* %A) nounwind {
 define void @test_vrev64(<4 x i16>* nocapture %source, <2 x i16>* nocapture %dst) nounwind ssp {
 ; CHECK-LABEL: test_vrev64:
 ; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    add x8, x1, #2
 ; CHECK-NEXT:    ldr q0, [x0]
-; CHECK-NEXT:    add x8, x1, #2 // =2
 ; CHECK-NEXT:    st1.h { v0 }[5], [x8]
 ; CHECK-NEXT:    st1.h { v0 }[6], [x1]
 ; CHECK-NEXT:    ret
 ;
 ; GISEL-LABEL: test_vrev64:
 ; GISEL:       // %bb.0: // %entry
+; GISEL-NEXT:    add x8, x1, #2
 ; GISEL-NEXT:    ldr q0, [x0]
-; GISEL-NEXT:    add x8, x1, #2 // =2
 ; GISEL-NEXT:    st1.h { v0 }[6], [x1]
 ; GISEL-NEXT:    st1.h { v0 }[5], [x8]
 ; GISEL-NEXT:    ret
@@ -562,21 +558,17 @@ entry:
 define void @float_vrev64(float* nocapture %source, <4 x float>* nocapture %dest) nounwind noinline ssp {
 ; CHECK-LABEL: float_vrev64:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    ldr q0, [x0]
-; CHECK-NEXT:    movi.2d v1, #0000000000000000
-; CHECK-NEXT:    dup.4s v1, v1[0]
-; CHECK-NEXT:    ext.16b v0, v0, v1, #12
-; CHECK-NEXT:    rev64.4s v0, v0
+; CHECK-NEXT:    movi.2d v0, #0000000000000000
+; CHECK-NEXT:    add x8, x0, #12
+; CHECK-NEXT:    dup.4s v0, v0[0]
+; CHECK-NEXT:    ld1.s { v0 }[1], [x8]
 ; CHECK-NEXT:    str q0, [x1, #176]
 ; CHECK-NEXT:    ret
 ;
 ; GISEL-LABEL: float_vrev64:
 ; GISEL:       // %bb.0: // %entry
-; GISEL-NEXT:    movi d0, #0000000000000000
-; GISEL-NEXT:    mov.s v0[1], v0[0]
-; GISEL-NEXT:    mov.s v0[2], v0[0]
 ; GISEL-NEXT:    adrp x8, .LCPI28_0
-; GISEL-NEXT:    mov.s v0[3], v0[0]
+; GISEL-NEXT:    movi d0, #0000000000000000
 ; GISEL-NEXT:    ldr q1, [x0]
 ; GISEL-NEXT:    ldr q2, [x8, :lo12:.LCPI28_0]
 ; GISEL-NEXT:    tbl.16b v0, { v0, v1 }, v2
@@ -607,3 +599,375 @@ define <4 x i32> @test_vrev32_bswap(<4 x i32> %source) nounwind {
 }
 
 declare <4 x i32> @llvm.bswap.v4i32(<4 x i32>) nounwind readnone
+
+; Reduced regression from D114354
+define void @test_rev16_truncstore() {
+; CHECK-LABEL: test_rev16_truncstore:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    cbnz wzr, .LBB30_2
+; CHECK-NEXT:  .LBB30_1: // %cleanup
+; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
+; CHECK-NEXT:    ldrh w8, [x8]
+; CHECK-NEXT:    rev16 w8, w8
+; CHECK-NEXT:    strh w8, [x8]
+; CHECK-NEXT:    cbz wzr, .LBB30_1
+; CHECK-NEXT:  .LBB30_2: // %fail
+; CHECK-NEXT:    ret
+;
+; GISEL-LABEL: test_rev16_truncstore:
+; GISEL:       // %bb.0: // %entry
+; GISEL-NEXT:    tbnz wzr, #0, .LBB30_2
+; GISEL-NEXT:  .LBB30_1: // %cleanup
+; GISEL-NEXT:    // =>This Inner Loop Header: Depth=1
+; GISEL-NEXT:    ldrh w8, [x8]
+; GISEL-NEXT:    rev w8, w8
+; GISEL-NEXT:    lsr w8, w8, #16
+; GISEL-NEXT:    strh w8, [x8]
+; GISEL-NEXT:    tbz wzr, #0, .LBB30_1
+; GISEL-NEXT:  .LBB30_2: // %fail
+; GISEL-NEXT:    ret
+entry:
+  br label %body
+
+body:
+  %out.6269.i = phi i16* [ undef, %cleanup ], [ undef, %entry ]
+  %0 = load i16, i16* undef, align 2
+  %1 = icmp eq i16 undef, -10240
+  br i1 %1, label %fail, label %cleanup
+
+cleanup:
+  %or130.i = call i16 @llvm.bswap.i16(i16 %0)
+  store i16 %or130.i, i16* %out.6269.i, align 2
+  br label %body
+
+fail:
+  ret void
+}
+declare i16 @llvm.bswap.i16(i16)
+
+; Reduced regression from D120192
+define void @test_bswap32_narrow(i32* %p0, i16* %p1) nounwind {
+; CHECK-LABEL: test_bswap32_narrow:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    stp x30, x19, [sp, #-16]! // 16-byte Folded Spill
+; CHECK-NEXT:    ldrh w8, [x0, #2]
+; CHECK-NEXT:    mov x19, x1
+; CHECK-NEXT:    rev16 w0, w8
+; CHECK-NEXT:    bl gid_tbl_len
+; CHECK-NEXT:    strh wzr, [x19]
+; CHECK-NEXT:    ldp x30, x19, [sp], #16 // 16-byte Folded Reload
+; CHECK-NEXT:    ret
+;
+; GISEL-LABEL: test_bswap32_narrow:
+; GISEL:       // %bb.0:
+; GISEL-NEXT:    stp x30, x19, [sp, #-16]! // 16-byte Folded Spill
+; GISEL-NEXT:    ldr w8, [x0]
+; GISEL-NEXT:    mov x19, x1
+; GISEL-NEXT:    and w8, w8, #0xffff0000
+; GISEL-NEXT:    rev w0, w8
+; GISEL-NEXT:    bl gid_tbl_len
+; GISEL-NEXT:    strh wzr, [x19]
+; GISEL-NEXT:    ldp x30, x19, [sp], #16 // 16-byte Folded Reload
+; GISEL-NEXT:    ret
+  %ld = load i32, i32* %p0, align 4
+  %and = and i32 %ld, -65536
+  %bswap = tail call i32 @llvm.bswap.i32(i32 %and)
+  %and16 = zext i32 %bswap to i64
+  %call17 = tail call i32 bitcast (i32 (...)* @gid_tbl_len to i32 (i64)*)(i64 %and16)
+  store i16 0, i16* %p1, align 4
+  ret void
+}
+declare i32 @gid_tbl_len(...)
+
+; 64-bit REV16 is *not* a swap then a 16-bit rotation:
+;   01234567 ->(bswap) 76543210 ->(rotr) 10765432
+;   01234567 ->(rev16) 10325476
+; Optimize patterns where rev16 can be generated for a 64-bit input.
+define i64 @test_rev16_x_hwbyteswaps(i64 %a) nounwind {
+; CHECK-LABEL: test_rev16_x_hwbyteswaps:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    rev16 x0, x0
+; CHECK-NEXT:    ret
+;
+; GISEL-LABEL: test_rev16_x_hwbyteswaps:
+; GISEL:       // %bb.0: // %entry
+; GISEL-NEXT:    rev16 x0, x0
+; GISEL-NEXT:    ret
+entry:
+  %0 = lshr i64 %a, 8
+  %1 = and i64 %0, 71777214294589695
+  %2 = shl i64 %a, 8
+  %3 = and i64 %2, -71777214294589696
+  %4 = or i64 %1, %3
+  ret i64 %4
+}
+
+; Optimize pattern with multiple and/or to a simple pattern which can enable generation of rev16.
+define i64 @test_rev16_x_hwbyteswaps_complex1(i64 %a) nounwind {
+; CHECK-LABEL: test_rev16_x_hwbyteswaps_complex1:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    lsr x8, x0, #48
+; CHECK-NEXT:    lsr x9, x0, #8
+; CHECK-NEXT:    lsr x10, x0, #32
+; CHECK-NEXT:    and x11, x9, #0xff000000000000
+; CHECK-NEXT:    lsr x12, x0, #16
+; CHECK-NEXT:    bfi x11, x8, #56, #8
+; CHECK-NEXT:    and x8, x9, #0xff00000000
+; CHECK-NEXT:    orr x8, x11, x8
+; CHECK-NEXT:    and x9, x9, #0xff0000
+; CHECK-NEXT:    bfi x8, x10, #40, #8
+; CHECK-NEXT:    orr x8, x8, x9
+; CHECK-NEXT:    ubfiz x9, x0, #8, #8
+; CHECK-NEXT:    bfi x8, x12, #24, #8
+; CHECK-NEXT:    bfxil x8, x0, #8, #8
+; CHECK-NEXT:    orr x0, x8, x9
+; CHECK-NEXT:    ret
+;
+; GISEL-LABEL: test_rev16_x_hwbyteswaps_complex1:
+; GISEL:       // %bb.0: // %entry
+; GISEL-NEXT:    lsr x8, x0, #8
+; GISEL-NEXT:    lsl x9, x0, #8
+; GISEL-NEXT:    and x10, x8, #0xff000000000000
+; GISEL-NEXT:    and x11, x9, #0xff00000000000000
+; GISEL-NEXT:    orr x10, x10, x11
+; GISEL-NEXT:    and x11, x8, #0xff00000000
+; GISEL-NEXT:    orr x10, x10, x11
+; GISEL-NEXT:    and x11, x9, #0xff0000000000
+; GISEL-NEXT:    orr x10, x10, x11
+; GISEL-NEXT:    and x11, x8, #0xff0000
+; GISEL-NEXT:    orr x10, x10, x11
+; GISEL-NEXT:    and x11, x9, #0xff000000
+; GISEL-NEXT:    orr x10, x10, x11
+; GISEL-NEXT:    and x8, x8, #0xff
+; GISEL-NEXT:    orr x8, x10, x8
+; GISEL-NEXT:    and x9, x9, #0xff00
+; GISEL-NEXT:    orr x0, x8, x9
+; GISEL-NEXT:    ret
+entry:
+  %0 = lshr i64 %a, 8
+  %1 = and i64 %0, 71776119061217280
+  %2 = shl i64 %a, 8
+  %3 = and i64 %2, -72057594037927936
+  %4 = or i64 %1, %3
+  %5 = and i64 %0, 1095216660480
+  %6 = or i64 %4, %5
+  %7 = and i64 %2, 280375465082880
+  %8 = or i64 %6, %7
+  %9 = and i64 %0, 16711680
+  %10 = or i64 %8, %9
+  %11 = and i64 %2, 4278190080
+  %12 = or i64 %10, %11
+  %13 = and i64 %0, 255
+  %14 = or i64 %12, %13
+  %15 = and i64 %2, 65280
+  %16 = or i64 %14, %15
+  ret i64 %16
+}
+
+define i64 @test_rev16_x_hwbyteswaps_complex2(i64 %a) nounwind {
+; CHECK-LABEL: test_rev16_x_hwbyteswaps_complex2:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    lsr x9, x0, #48
+; CHECK-NEXT:    lsr x10, x0, #32
+; CHECK-NEXT:    lsr x8, x0, #8
+; CHECK-NEXT:    lsr x11, x0, #16
+; CHECK-NEXT:    and x8, x8, #0xff00ff00ff00ff
+; CHECK-NEXT:    bfi x8, x9, #56, #8
+; CHECK-NEXT:    bfi x8, x10, #40, #8
+; CHECK-NEXT:    bfi x8, x11, #24, #8
+; CHECK-NEXT:    bfi x8, x0, #8, #8
+; CHECK-NEXT:    mov x0, x8
+; CHECK-NEXT:    ret
+;
+; GISEL-LABEL: test_rev16_x_hwbyteswaps_complex2:
+; GISEL:       // %bb.0: // %entry
+; GISEL-NEXT:    lsr x8, x0, #8
+; GISEL-NEXT:    lsl x10, x0, #8
+; GISEL-NEXT:    and x9, x8, #0xff000000000000
+; GISEL-NEXT:    and x11, x8, #0xff00000000
+; GISEL-NEXT:    orr x9, x9, x11
+; GISEL-NEXT:    and x11, x8, #0xff0000
+; GISEL-NEXT:    orr x9, x9, x11
+; GISEL-NEXT:    and x8, x8, #0xff
+; GISEL-NEXT:    orr x8, x9, x8
+; GISEL-NEXT:    and x9, x10, #0xff00000000000000
+; GISEL-NEXT:    orr x8, x8, x9
+; GISEL-NEXT:    and x9, x10, #0xff0000000000
+; GISEL-NEXT:    orr x8, x8, x9
+; GISEL-NEXT:    and x9, x10, #0xff000000
+; GISEL-NEXT:    orr x8, x8, x9
+; GISEL-NEXT:    and x9, x10, #0xff00
+; GISEL-NEXT:    orr x0, x8, x9
+; GISEL-NEXT:    ret
+entry:
+  %0 = lshr i64 %a, 8
+  %1 = and i64 %0, 71776119061217280
+  %2 = shl i64 %a, 8
+  %3 = and i64 %0, 1095216660480
+  %4 = or i64 %1, %3
+  %5 = and i64 %0, 16711680
+  %6 = or i64 %4, %5
+  %7 = and i64 %0, 255
+  %8 = or i64 %6, %7
+  %9 = and i64 %2, -72057594037927936
+  %10 = or i64 %8, %9
+  %11 = and i64 %2, 280375465082880
+  %12 = or i64 %10, %11
+  %13 = and i64 %2, 4278190080
+  %14 = or i64 %12, %13
+  %15 = and i64 %2, 65280
+  %16 = or i64 %14, %15
+  ret i64 %16
+}
+
+; Optimize pattern with multiple and/or to a simple pattern which can enable generation of rev16.
+define i64 @test_rev16_x_hwbyteswaps_complex3(i64 %a) nounwind {
+; CHECK-LABEL: test_rev16_x_hwbyteswaps_complex3:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    lsr x8, x0, #48
+; CHECK-NEXT:    lsr x9, x0, #8
+; CHECK-NEXT:    lsr x10, x0, #32
+; CHECK-NEXT:    and x11, x9, #0xff000000000000
+; CHECK-NEXT:    lsr x12, x0, #16
+; CHECK-NEXT:    bfi x11, x8, #56, #8
+; CHECK-NEXT:    and x8, x9, #0xff00000000
+; CHECK-NEXT:    orr x8, x8, x11
+; CHECK-NEXT:    and x9, x9, #0xff0000
+; CHECK-NEXT:    bfi x8, x10, #40, #8
+; CHECK-NEXT:    orr x8, x9, x8
+; CHECK-NEXT:    ubfiz x9, x0, #8, #8
+; CHECK-NEXT:    bfi x8, x12, #24, #8
+; CHECK-NEXT:    bfxil x8, x0, #8, #8
+; CHECK-NEXT:    orr x0, x9, x8
+; CHECK-NEXT:    ret
+;
+; GISEL-LABEL: test_rev16_x_hwbyteswaps_complex3:
+; GISEL:       // %bb.0: // %entry
+; GISEL-NEXT:    lsr x8, x0, #8
+; GISEL-NEXT:    lsl x9, x0, #8
+; GISEL-NEXT:    and x10, x8, #0xff000000000000
+; GISEL-NEXT:    and x11, x9, #0xff00000000000000
+; GISEL-NEXT:    orr x10, x11, x10
+; GISEL-NEXT:    and x11, x8, #0xff00000000
+; GISEL-NEXT:    orr x10, x11, x10
+; GISEL-NEXT:    and x11, x9, #0xff0000000000
+; GISEL-NEXT:    orr x10, x11, x10
+; GISEL-NEXT:    and x11, x8, #0xff0000
+; GISEL-NEXT:    orr x10, x11, x10
+; GISEL-NEXT:    and x11, x9, #0xff000000
+; GISEL-NEXT:    orr x10, x11, x10
+; GISEL-NEXT:    and x8, x8, #0xff
+; GISEL-NEXT:    orr x8, x8, x10
+; GISEL-NEXT:    and x9, x9, #0xff00
+; GISEL-NEXT:    orr x0, x9, x8
+; GISEL-NEXT:    ret
+entry:
+  %0 = lshr i64 %a, 8
+  %1 = and i64 %0, 71776119061217280
+  %2 = shl i64 %a, 8
+  %3 = and i64 %2, -72057594037927936
+  %4 = or i64 %3, %1
+  %5 = and i64 %0, 1095216660480
+  %6 = or i64 %5, %4
+  %7 = and i64 %2, 280375465082880
+  %8 = or i64 %7, %6
+  %9 = and i64 %0, 16711680
+  %10 = or i64 %9, %8
+  %11 = and i64 %2, 4278190080
+  %12 = or i64 %11, %10
+  %13 = and i64 %0, 255
+  %14 = or i64 %13, %12
+  %15 = and i64 %2, 65280
+  %16 = or i64 %15, %14
+  ret i64 %16
+}
+
+define i64 @test_or_and_combine1(i64 %a) nounwind {
+; CHECK-LABEL: test_or_and_combine1:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    lsr x8, x0, #24
+; CHECK-NEXT:    lsr x9, x0, #8
+; CHECK-NEXT:    and x10, x9, #0xff000000000000
+; CHECK-NEXT:    bfi x10, x8, #32, #8
+; CHECK-NEXT:    and x8, x9, #0xff0000
+; CHECK-NEXT:    orr x0, x10, x8
+; CHECK-NEXT:    ret
+;
+; GISEL-LABEL: test_or_and_combine1:
+; GISEL:       // %bb.0: // %entry
+; GISEL-NEXT:    lsr x8, x0, #8
+; GISEL-NEXT:    lsl x9, x0, #8
+; GISEL-NEXT:    and x10, x8, #0xff000000000000
+; GISEL-NEXT:    and x9, x9, #0xff00000000
+; GISEL-NEXT:    orr x9, x10, x9
+; GISEL-NEXT:    and x8, x8, #0xff0000
+; GISEL-NEXT:    orr x0, x9, x8
+; GISEL-NEXT:    ret
+entry:
+  %0 = lshr i64 %a, 8
+  %1 = and i64 %0, 71776119061217280
+  %2 = shl i64 %a, 8
+  %3 = and i64 %2, 1095216660480
+  %4 = or i64 %1, %3
+  %5 = and i64 %0, 16711680
+  %6 = or i64 %4, %5
+  ret i64 %6
+}
+
+define i64 @test_or_and_combine2(i64 %a, i64 %b) nounwind {
+; CHECK-LABEL: test_or_and_combine2:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    lsr x8, x0, #8
+; CHECK-NEXT:    lsl x10, x0, #8
+; CHECK-NEXT:    and x9, x8, #0xff000000000000
+; CHECK-NEXT:    and x8, x8, #0xff0000
+; CHECK-NEXT:    orr x9, x9, x10
+; CHECK-NEXT:    and x10, x10, #0xff00000000
+; CHECK-NEXT:    orr x9, x9, x10
+; CHECK-NEXT:    orr x0, x9, x8
+; CHECK-NEXT:    ret
+;
+; GISEL-LABEL: test_or_and_combine2:
+; GISEL:       // %bb.0: // %entry
+; GISEL-NEXT:    lsr x8, x0, #8
+; GISEL-NEXT:    lsl x10, x0, #8
+; GISEL-NEXT:    and x9, x8, #0xff000000000000
+; GISEL-NEXT:    and x8, x8, #0xff0000
+; GISEL-NEXT:    orr x9, x9, x10
+; GISEL-NEXT:    and x10, x10, #0xff00000000
+; GISEL-NEXT:    orr x9, x9, x10
+; GISEL-NEXT:    orr x0, x9, x8
+; GISEL-NEXT:    ret
+entry:
+  %0 = lshr i64 %a, 8
+  %1 = and i64 %0, 71776119061217280
+  %2 = shl i64 %a, 8
+  %3 = or i64 %1, %2
+  %4 = and i64 %2, 1095216660480
+  %5 = or i64 %3, %4
+  %6 = and i64 %0, 16711680
+  %7 = or i64 %5, %6
+  ret i64 %7
+}
+
+define i32 @pr55484(i32 %0) {
+; CHECK-LABEL: pr55484:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    lsr w8, w0, #8
+; CHECK-NEXT:    orr w8, w8, w0, lsl #8
+; CHECK-NEXT:    sxth w0, w8
+; CHECK-NEXT:    ret
+;
+; GISEL-LABEL: pr55484:
+; GISEL:       // %bb.0:
+; GISEL-NEXT:    lsl w8, w0, #8
+; GISEL-NEXT:    orr w8, w8, w0, lsr #8
+; GISEL-NEXT:    sxth w0, w8
+; GISEL-NEXT:    ret
+  %2 = lshr i32 %0, 8
+  %3 = shl i32 %0, 8
+  %4 = or i32 %2, %3
+  %5 = trunc i32 %4 to i16
+  %6 = sext i16 %5 to i32
+  ret i32 %6
+}

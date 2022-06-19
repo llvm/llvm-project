@@ -19,14 +19,14 @@ unsigned int test_pext_u32(unsigned int __X, unsigned int __Y) {
   return _pext_u32(__X, __Y);
 }
 
+#ifdef __i386__
 unsigned int test_mulx_u32(unsigned int __X, unsigned int __Y,
                                  unsigned int *__P) {
-  // CHECK: @test_mulx_u32
-  // CHECK-NOT: mul i64
   // B32: @test_mulx_u32
   // B32: mul i64
   return _mulx_u32(__X, __Y, __P);
 }
+#endif
 
 #ifdef __x86_64__
 unsigned long long test_bzhi_u64(unsigned long long __X, unsigned long long __Y) {

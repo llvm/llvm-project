@@ -18,7 +18,7 @@ namespace fuchsia {
 /// Multiple implementation inheritance is discouraged.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/fuchsia-multiple-inheritance.html
+/// http://clang.llvm.org/extra/clang-tidy/checks/fuchsia/multiple-inheritance.html
 class MultipleInheritanceCheck : public ClangTidyCheck {
 public:
   MultipleInheritanceCheck(StringRef Name, ClangTidyContext *Context)
@@ -32,8 +32,8 @@ public:
   void onEndOfTranslationUnit() override { InterfaceMap.clear(); }
 
 private:
-  void addNodeToInterfaceMap(const CXXRecordDecl *Node, bool isInterface);
-  bool getInterfaceStatus(const CXXRecordDecl *Node, bool &isInterface) const;
+  void addNodeToInterfaceMap(const CXXRecordDecl *Node, bool IsInterface);
+  bool getInterfaceStatus(const CXXRecordDecl *Node, bool &IsInterface) const;
   bool isCurrentClassInterface(const CXXRecordDecl *Node) const;
   bool isInterface(const CXXRecordDecl *Node);
 

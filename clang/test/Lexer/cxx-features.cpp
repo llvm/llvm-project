@@ -95,6 +95,10 @@
 #error "wrong value for __cpp_impl_three_way_comparison"
 #endif
 
+#if check(impl_coroutine, 0, 0, 0, 0, 201902L, 201902L)
+#error "wrong value for __cpp_impl_coroutine"
+#endif
+
 // init_captures checked below
 
 #if check(modules, 0, 0, 0, 0, 0, 0)
@@ -273,7 +277,7 @@
 #error "wrong value for __cpp_lambdas"
 #endif
 
-#if check(constexpr, 0, 200704, 201304, 201603, 201907, 201907)
+#if check(constexpr, 0, 200704, 201304, 201603, 201907, 202110)
 #error "wrong value for __cpp_constexpr"
 #endif
 

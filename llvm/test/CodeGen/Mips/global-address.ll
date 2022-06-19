@@ -1,14 +1,14 @@
-; RUN: llc -march=mipsel \
+; RUN: llc -mtriple=mipsel \
 ; RUN:     -relocation-model=pic < %s | FileCheck %s -check-prefix=PIC-O32
-; RUN: llc -march=mipsel -mtriple=mipsel-linux-gnu \
+; RUN: llc -mtriple=mipsel-linux-gnu \
 ; RUN:     -relocation-model=static < %s | FileCheck %s -check-prefix=STATIC-O32
-; RUN: llc -march=mips64el -mcpu=mips64r2 -target-abi n32 \
+; RUN: llc -mtriple=mips64el -mcpu=mips64r2 -target-abi n32 \
 ; RUN:     -relocation-model=pic < %s | FileCheck %s -check-prefix=PIC-N32
-; RUN: llc -march=mips64el -mcpu=mips64r2 -target-abi n32 \
+; RUN: llc -mtriple=mips64el -mcpu=mips64r2 -target-abi n32 \
 ; RUN:     -relocation-model=static < %s | FileCheck %s -check-prefix=STATIC-N32
-; RUN: llc -march=mips64el -mcpu=mips64r2 -target-abi n64 \
+; RUN: llc -mtriple=mips64el -mcpu=mips64r2 -target-abi n64 \
 ; RUN:     -relocation-model=pic < %s | FileCheck %s -check-prefix=PIC-N64
-; RUN: llc -march=mips64el -mcpu=mips64r2 -target-abi n64 \
+; RUN: llc -mtriple=mips64el -mcpu=mips64r2 -target-abi n64 \
 ; RUN:     -relocation-model=static < %s | FileCheck %s -check-prefix=STATIC-N64
 
 @s1 = internal unnamed_addr global i32 8, align 4

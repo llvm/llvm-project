@@ -1,20 +1,14 @@
 import("//llvm/utils/gn/build/symbol_exports.gni")
 import("//llvm/version.gni")
 
-lto_target_type = "shared_library"
-if (host_os != "mac" && host_os != "win") {
-  # ELF targets need -fPIC to build shared libs but they aren't on by default.
-  # For now, make libclang a static lib there.
-  lto_target_type = "static_library"
-}
-
 symbol_exports("exports") {
   exports_file = "lto.exports"
 }
 
-target(lto_target_type, "lto") {
+shared_library("lto") {
   output_name = "LTO"
   deps = [
+    ":exports",
     "//llvm/lib/Bitcode/Reader",
     "//llvm/lib/IR",
     "//llvm/lib/LTO",
@@ -28,10 +22,6 @@ target(lto_target_type, "lto") {
     "LTODisassembler.cpp",
     "lto.cpp",
   ]
-
-  if (lto_target_type == "shared_library") {
-    deps += [ ":exports" ]
-  }
 
   if (host_os == "mac") {
     ldflags = [

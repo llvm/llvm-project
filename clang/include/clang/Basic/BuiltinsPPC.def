@@ -64,8 +64,8 @@ BUILTIN(__builtin_ppc_fsqrt, "dd", "")
 BUILTIN(__builtin_ppc_fsqrts, "ff", "")
 BUILTIN(__builtin_ppc_compare_and_swap, "iiD*i*i", "")
 BUILTIN(__builtin_ppc_compare_and_swaplp, "iLiD*Li*Li", "")
-BUILTIN(__builtin_ppc_fetch_and_add, "UiUiD*Ui", "")
-BUILTIN(__builtin_ppc_fetch_and_addlp, "ULiULiD*ULi", "")
+BUILTIN(__builtin_ppc_fetch_and_add, "iiD*i", "")
+BUILTIN(__builtin_ppc_fetch_and_addlp, "LiLiD*Li", "")
 BUILTIN(__builtin_ppc_fetch_and_and, "UiUiD*Ui", "")
 BUILTIN(__builtin_ppc_fetch_and_andlp, "ULiULiD*ULi", "")
 BUILTIN(__builtin_ppc_fetch_and_or, "UiUiD*Ui", "")
@@ -74,8 +74,8 @@ BUILTIN(__builtin_ppc_fetch_and_swap, "UiUiD*Ui", "")
 BUILTIN(__builtin_ppc_fetch_and_swaplp, "ULiULiD*ULi", "")
 BUILTIN(__builtin_ppc_ldarx, "LiLiD*", "")
 BUILTIN(__builtin_ppc_lwarx, "iiD*", "")
-BUILTIN(__builtin_ppc_lharx, "isD*", "")
-BUILTIN(__builtin_ppc_lbarx, "UiUcD*", "")
+BUILTIN(__builtin_ppc_lharx, "ssD*", "")
+BUILTIN(__builtin_ppc_lbarx, "ccD*", "")
 BUILTIN(__builtin_ppc_stdcx, "iLiD*Li", "")
 BUILTIN(__builtin_ppc_stwcx, "iiD*i", "")
 BUILTIN(__builtin_ppc_sthcx, "isD*s", "")
@@ -96,6 +96,13 @@ BUILTIN(__builtin_ppc_swdiv_nochk, "ddd", "")
 BUILTIN(__builtin_ppc_swdivs_nochk, "fff", "")
 BUILTIN(__builtin_ppc_alignx, "vIivC*", "nc")
 BUILTIN(__builtin_ppc_rdlam, "UWiUWiUWiUWIi", "nc")
+BUILTIN(__builtin_ppc_compare_exp_uo, "idd", "")
+BUILTIN(__builtin_ppc_compare_exp_lt, "idd", "")
+BUILTIN(__builtin_ppc_compare_exp_gt, "idd", "")
+BUILTIN(__builtin_ppc_compare_exp_eq, "idd", "")
+BUILTIN(__builtin_ppc_test_data_class, "idIi", "t")
+BUILTIN(__builtin_ppc_swdiv, "ddd", "")
+BUILTIN(__builtin_ppc_swdivs, "fff", "")
 // Compare
 BUILTIN(__builtin_ppc_cmpeqb, "LLiLLiLLi", "")
 BUILTIN(__builtin_ppc_cmprb, "iCIiii", "")
@@ -110,11 +117,11 @@ BUILTIN(__builtin_ppc_maddhd, "LLiLLiLLiLLi", "")
 BUILTIN(__builtin_ppc_maddhdu, "ULLiULLiULLiULLi", "")
 BUILTIN(__builtin_ppc_maddld, "LLiLLiLLiLLi", "")
 // Rotate
-BUILTIN(__builtin_ppc_rlwnm, "UiUiIUiIUi", "")
+BUILTIN(__builtin_ppc_rlwnm, "UiUiUiIUi", "")
 BUILTIN(__builtin_ppc_rlwimi, "UiUiUiIUiIUi", "")
 BUILTIN(__builtin_ppc_rldimi, "ULLiULLiULLiIUiIULLi", "")
 // load
-BUILTIN(__builtin_ppc_load2r, "UiUs*", "")
+BUILTIN(__builtin_ppc_load2r, "UsUs*", "")
 BUILTIN(__builtin_ppc_load4r, "UiUi*", "")
 BUILTIN(__builtin_ppc_load8r, "ULLiULLi*", "")
 // store
@@ -144,6 +151,17 @@ BUILTIN(__builtin_ppc_mfspr, "ULiIi", "")
 BUILTIN(__builtin_ppc_mtmsr, "vUi", "")
 BUILTIN(__builtin_ppc_mtspr, "vIiULi", "")
 BUILTIN(__builtin_ppc_stfiw, "viC*d", "")
+BUILTIN(__builtin_ppc_addex, "LLiLLiLLiCIi", "")
+// select
+BUILTIN(__builtin_ppc_maxfe, "LdLdLdLd.", "t")
+BUILTIN(__builtin_ppc_maxfl, "dddd.", "t")
+BUILTIN(__builtin_ppc_maxfs, "ffff.", "t")
+BUILTIN(__builtin_ppc_minfe, "LdLdLdLd.", "t")
+BUILTIN(__builtin_ppc_minfl, "dddd.", "t")
+BUILTIN(__builtin_ppc_minfs, "ffff.", "t")
+// Floating Negative Absolute Value
+BUILTIN(__builtin_ppc_fnabs, "dd", "")
+BUILTIN(__builtin_ppc_fnabss, "ff", "")
 
 BUILTIN(__builtin_ppc_get_timebase, "ULLi", "n")
 
@@ -160,6 +178,9 @@ BUILTIN(__builtin_altivec_vaddeuqm, "V1ULLLiV1ULLLiV1ULLLiV1ULLLi","")
 BUILTIN(__builtin_altivec_vaddcuq, "V1ULLLiV1ULLLiV1ULLLi","")
 BUILTIN(__builtin_altivec_vaddecuq, "V1ULLLiV1ULLLiV1ULLLiV1ULLLi","")
 BUILTIN(__builtin_altivec_vadduqm, "V1ULLLiV16UcV16Uc","")
+BUILTIN(__builtin_altivec_vaddeuqm_c, "V16UcV16UcV16UcV16Uc","")
+BUILTIN(__builtin_altivec_vaddcuq_c, "V16UcV16UcV16Uc","")
+BUILTIN(__builtin_altivec_vaddecuq_c, "V16UcV16UcV16UcV16Uc","")
 
 BUILTIN(__builtin_altivec_vsubsbs, "V16ScV16ScV16Sc", "")
 BUILTIN(__builtin_altivec_vsububs, "V16UcV16UcV16Uc", "")
@@ -171,6 +192,9 @@ BUILTIN(__builtin_altivec_vsubeuqm, "V1ULLLiV1ULLLiV1ULLLiV1ULLLi","")
 BUILTIN(__builtin_altivec_vsubcuq, "V1ULLLiV1ULLLiV1ULLLi","")
 BUILTIN(__builtin_altivec_vsubecuq, "V1ULLLiV1ULLLiV1ULLLiV1ULLLi","")
 BUILTIN(__builtin_altivec_vsubuqm, "V1ULLLiV16UcV16Uc","")
+BUILTIN(__builtin_altivec_vsubeuqm_c, "V16UcV16UcV16UcV16Uc","")
+BUILTIN(__builtin_altivec_vsubcuq_c, "V16UcV16UcV16Uc","")
+BUILTIN(__builtin_altivec_vsubecuq_c, "V16UcV16UcV16UcV16Uc","")
 
 BUILTIN(__builtin_altivec_vavgsb, "V16ScV16ScV16Sc", "")
 BUILTIN(__builtin_altivec_vavgub, "V16UcV16UcV16Uc", "")
@@ -197,11 +221,11 @@ BUILTIN(__builtin_altivec_vexptefp, "V4fV4f", "")
 
 BUILTIN(__builtin_altivec_vrfim, "V4fV4f", "")
 
-BUILTIN(__builtin_altivec_lvx, "V4iivC*", "")
-BUILTIN(__builtin_altivec_lvxl, "V4iivC*", "")
-BUILTIN(__builtin_altivec_lvebx, "V16civC*", "")
-BUILTIN(__builtin_altivec_lvehx, "V8sivC*", "")
-BUILTIN(__builtin_altivec_lvewx, "V4iivC*", "")
+BUILTIN(__builtin_altivec_lvx, "V4iLivC*", "")
+BUILTIN(__builtin_altivec_lvxl, "V4iLivC*", "")
+BUILTIN(__builtin_altivec_lvebx, "V16cLivC*", "")
+BUILTIN(__builtin_altivec_lvehx, "V8sLivC*", "")
+BUILTIN(__builtin_altivec_lvewx, "V4iLivC*", "")
 
 BUILTIN(__builtin_altivec_vlogefp, "V4fV4f", "")
 
@@ -253,11 +277,11 @@ BUILTIN(__builtin_altivec_vpkudum, "V4UiV2ULLiV2ULLi", "")
 
 BUILTIN(__builtin_altivec_vperm_4si, "V4iV4iV4iV16Uc", "")
 
-BUILTIN(__builtin_altivec_stvx, "vV4iiv*", "")
-BUILTIN(__builtin_altivec_stvxl, "vV4iiv*", "")
-BUILTIN(__builtin_altivec_stvebx, "vV16civ*", "")
-BUILTIN(__builtin_altivec_stvehx, "vV8siv*", "")
-BUILTIN(__builtin_altivec_stvewx, "vV4iiv*", "")
+BUILTIN(__builtin_altivec_stvx, "vV4iLiv*", "")
+BUILTIN(__builtin_altivec_stvxl, "vV4iLiv*", "")
+BUILTIN(__builtin_altivec_stvebx, "vV16cLiv*", "")
+BUILTIN(__builtin_altivec_stvehx, "vV8sLiv*", "")
+BUILTIN(__builtin_altivec_stvewx, "vV4iLiv*", "")
 
 BUILTIN(__builtin_altivec_vcmpbfp, "V4iV4fV4f", "")
 
@@ -391,10 +415,12 @@ BUILTIN(__builtin_altivec_vcmpgtfp_p, "iiV4fV4f", "")
 
 BUILTIN(__builtin_altivec_vgbbd, "V16UcV16Uc", "")
 BUILTIN(__builtin_altivec_vbpermq, "V2ULLiV16UcV16Uc", "")
+BUILTIN(__builtin_altivec_vbpermd, "V2ULLiV2ULLiV16Uc", "")
 
 // P8 Crypto built-ins.
 BUILTIN(__builtin_altivec_crypto_vsbox, "V2ULLiV2ULLi", "")
 BUILTIN(__builtin_altivec_crypto_vpermxor, "V16UcV16UcV16UcV16Uc", "")
+BUILTIN(__builtin_altivec_crypto_vpermxor_be, "V16UcV16UcV16UcV16Uc", "")
 BUILTIN(__builtin_altivec_crypto_vshasigmaw, "V4UiV4UiIiIi", "")
 BUILTIN(__builtin_altivec_crypto_vshasigmad, "V2ULLiV2ULLiIiIi", "")
 BUILTIN(__builtin_altivec_crypto_vcipher, "V2ULLiV2ULLiV2ULLi", "")
@@ -414,6 +440,12 @@ BUILTIN(__builtin_altivec_vctzb, "V16UcV16Uc", "")
 BUILTIN(__builtin_altivec_vctzh, "V8UsV8Us", "")
 BUILTIN(__builtin_altivec_vctzw, "V4UiV4Ui", "")
 BUILTIN(__builtin_altivec_vctzd, "V2ULLiV2ULLi", "")
+
+// P8 BCD builtins.
+BUILTIN(__builtin_ppc_bcdadd, "V16UcV16UcV16UcIi", "")
+BUILTIN(__builtin_ppc_bcdsub, "V16UcV16UcV16UcIi", "")
+BUILTIN(__builtin_ppc_bcdadd_p, "iiV16UcV16Uc", "")
+BUILTIN(__builtin_ppc_bcdsub_p, "iiV16UcV16Uc", "")
 
 BUILTIN(__builtin_altivec_vclzlsbb, "SiV16Uc", "")
 BUILTIN(__builtin_altivec_vctzlsbb, "SiV16Uc", "")
@@ -498,12 +530,12 @@ BUILTIN(__builtin_altivec_vpdepd, "V2ULLiV2ULLiV2ULLi", "")
 BUILTIN(__builtin_altivec_vpextd, "V2ULLiV2ULLiV2ULLi", "")
 
 // P10 Vector String Isolate Built-ins.
-BUILTIN(__builtin_altivec_vstribr, "V16cV16c", "")
-BUILTIN(__builtin_altivec_vstribl, "V16cV16c", "")
+BUILTIN(__builtin_altivec_vstribr, "V16UcV16Uc", "")
+BUILTIN(__builtin_altivec_vstribl, "V16UcV16Uc", "")
 BUILTIN(__builtin_altivec_vstrihr, "V8sV8s", "")
 BUILTIN(__builtin_altivec_vstrihl, "V8sV8s", "")
-BUILTIN(__builtin_altivec_vstribr_p, "iiV16c", "")
-BUILTIN(__builtin_altivec_vstribl_p, "iiV16c", "")
+BUILTIN(__builtin_altivec_vstribr_p, "iiV16Uc", "")
+BUILTIN(__builtin_altivec_vstribl_p, "iiV16Uc", "")
 BUILTIN(__builtin_altivec_vstrihr_p, "iiV8s", "")
 BUILTIN(__builtin_altivec_vstrihl_p, "iiV8s", "")
 
@@ -514,8 +546,8 @@ BUILTIN(__builtin_altivec_vcfuged, "V2ULLiV2ULLiV2ULLi", "")
 BUILTIN(__builtin_altivec_vgnb, "ULLiV1ULLLiIi", "")
 
 // P10 Vector Clear Bytes built-ins.
-BUILTIN(__builtin_altivec_vclrlb, "V16cV16cUi", "")
-BUILTIN(__builtin_altivec_vclrrb, "V16cV16cUi", "")
+BUILTIN(__builtin_altivec_vclrlb, "V16UcV16UcUi", "")
+BUILTIN(__builtin_altivec_vclrrb, "V16UcV16UcUi", "")
 
 // P10 Vector Count Leading / Trailing Zeroes under bit Mask built-ins.
 BUILTIN(__builtin_altivec_vclzdm, "V2ULLiV2ULLiV2ULLi", "")
@@ -540,8 +572,10 @@ BUILTIN(__builtin_altivec_vinshvlx, "V8UsV8UsUiV8Us", "")
 BUILTIN(__builtin_altivec_vinshvrx, "V8UsV8UsUiV8Us", "")
 BUILTIN(__builtin_altivec_vinswvlx, "V4UiV4UiUiV4Ui", "")
 BUILTIN(__builtin_altivec_vinswvrx, "V4UiV4UiUiV4Ui", "")
-BUILTIN(__builtin_altivec_vec_replace_elt, "V4UiV4UiUiIi", "t")
-BUILTIN(__builtin_altivec_vec_replace_unaligned, "V4UiV4UiUiIi", "t")
+BUILTIN(__builtin_altivec_vinsw, "V16UcV16UcUiIi", "")
+BUILTIN(__builtin_altivec_vinsd, "V16UcV16UcULLiIi", "")
+BUILTIN(__builtin_altivec_vinsw_elt, "V16UcV16UcUiiC", "")
+BUILTIN(__builtin_altivec_vinsd_elt, "V16UcV16UcULLiiC", "")
 
 // P10 Vector Extract built-ins.
 BUILTIN(__builtin_altivec_vextdubvlx, "V2ULLiV16UcV16UcUi", "")
@@ -559,13 +593,13 @@ BUILTIN(__builtin_altivec_vrlqnm, "V1ULLLiV1ULLLiV1ULLLi", "")
 
 // VSX built-ins.
 
-BUILTIN(__builtin_vsx_lxvd2x, "V2divC*", "")
-BUILTIN(__builtin_vsx_lxvw4x, "V4iivC*", "")
+BUILTIN(__builtin_vsx_lxvd2x, "V2dLivC*", "")
+BUILTIN(__builtin_vsx_lxvw4x, "V4iLivC*", "")
 BUILTIN(__builtin_vsx_lxvd2x_be, "V2dSLLivC*", "")
 BUILTIN(__builtin_vsx_lxvw4x_be, "V4iSLLivC*", "")
 
-BUILTIN(__builtin_vsx_stxvd2x, "vV2div*", "")
-BUILTIN(__builtin_vsx_stxvw4x, "vV4iiv*", "")
+BUILTIN(__builtin_vsx_stxvd2x, "vV2dLiv*", "")
+BUILTIN(__builtin_vsx_stxvw4x, "vV4iLiv*", "")
 BUILTIN(__builtin_vsx_stxvd2x_be, "vV2dSLLivC*", "")
 BUILTIN(__builtin_vsx_stxvw4x_be, "vV4iSLLivC*", "")
 
@@ -573,6 +607,8 @@ BUILTIN(__builtin_vsx_lxvl, "V4ivC*ULLi", "")
 BUILTIN(__builtin_vsx_lxvll, "V4ivC*ULLi", "")
 BUILTIN(__builtin_vsx_stxvl, "vV4iv*ULLi", "")
 BUILTIN(__builtin_vsx_stxvll, "vV4iv*ULLi", "")
+BUILTIN(__builtin_vsx_ldrmb, "V16UcCc*Ii", "")
+BUILTIN(__builtin_vsx_strmb, "vCc*IiV16Uc", "")
 
 BUILTIN(__builtin_vsx_xvmaxdp, "V2dV2dV2d", "")
 BUILTIN(__builtin_vsx_xvmaxsp, "V4fV4fV4f", "")
@@ -769,6 +805,10 @@ BUILTIN(__builtin_cfuged, "ULLiULLiULLi", "")
 BUILTIN(__builtin_cntlzdm, "ULLiULLiULLi", "")
 BUILTIN(__builtin_cnttzdm, "ULLiULLiULLi", "")
 
+// Double-double (un)pack
+BUILTIN(__builtin_unpack_longdouble, "dLdIi", "")
+BUILTIN(__builtin_pack_longdouble, "Lddd", "")
+
 // Generate random number
 BUILTIN(__builtin_darn, "LLi", "")
 BUILTIN(__builtin_darn_raw, "LLi", "")
@@ -810,18 +850,20 @@ BUILTIN(__builtin_dcbf, "vvC*", "")
 // its given accumulator.
 
 // Provided builtins with _mma_ prefix for compatibility.
-CUSTOM_BUILTIN(mma_lxvp, vsx_lxvp, "W256SLLiW256C*", false)
-CUSTOM_BUILTIN(mma_stxvp, vsx_stxvp, "vW256SLLiW256C*", false)
+CUSTOM_BUILTIN(mma_lxvp, vsx_lxvp, "W256SLiW256C*", false)
+CUSTOM_BUILTIN(mma_stxvp, vsx_stxvp, "vW256SLiW256*", false)
 CUSTOM_BUILTIN(mma_assemble_pair, vsx_assemble_pair, "vW256*VV", false)
 CUSTOM_BUILTIN(mma_disassemble_pair, vsx_disassemble_pair, "vv*W256*", false)
+CUSTOM_BUILTIN(vsx_build_pair, vsx_assemble_pair,  "vW256*VV", false)
+CUSTOM_BUILTIN(mma_build_acc, mma_assemble_acc, "vW512*VVVV", false)
 
 // UNALIASED_CUSTOM_BUILTIN macro is used for built-ins that have
 // the same name as that of the intrinsic they generate, i.e. the
 // ID and INTR are the same.
 // This avoids repeating the ID and INTR in the macro expression.
 
-UNALIASED_CUSTOM_BUILTIN(vsx_lxvp, "W256SLLiW256C*", false)
-UNALIASED_CUSTOM_BUILTIN(vsx_stxvp, "vW256SLLiW256C*", false)
+UNALIASED_CUSTOM_BUILTIN(vsx_lxvp, "W256SLiW256C*", false)
+UNALIASED_CUSTOM_BUILTIN(vsx_stxvp, "vW256SLiW256*", false)
 UNALIASED_CUSTOM_BUILTIN(vsx_assemble_pair, "vW256*VV", false)
 UNALIASED_CUSTOM_BUILTIN(vsx_disassemble_pair, "vv*W256*", false)
 

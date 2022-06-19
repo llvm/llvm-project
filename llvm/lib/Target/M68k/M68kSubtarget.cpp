@@ -1,4 +1,4 @@
-//===-- M68kSubtarget.cpp - M68k Subtarget Information ------*- C++ -*-===//
+//===-- M68kSubtarget.cpp - M68k Subtarget Information ----------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -12,9 +12,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "M68kSubtarget.h"
-#include "GlSel/M68kCallLowering.h"
-#include "GlSel/M68kLegalizerInfo.h"
-#include "GlSel/M68kRegisterBankInfo.h"
+#include "GISel/M68kCallLowering.h"
+#include "GISel/M68kLegalizerInfo.h"
+#include "GISel/M68kRegisterBankInfo.h"
 
 #include "M68k.h"
 #include "M68kMachineFunction.h"
@@ -24,9 +24,9 @@
 #include "llvm/CodeGen/MachineJumpTableInfo.h"
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/Function.h"
+#include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ErrorHandling.h"
-#include "llvm/Support/TargetRegistry.h"
 
 using namespace llvm;
 

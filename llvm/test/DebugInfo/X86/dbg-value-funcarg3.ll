@@ -1,4 +1,5 @@
-; RUN: llc -mtriple=x86_64-unknown-linux-gnu -start-after=codegenprepare -stop-before=finalize-isel -o - %s | FileCheck %s
+; RUN: llc -mtriple=x86_64-unknown-linux-gnu -start-after=codegenprepare -stop-before=finalize-isel -o - %s -experimental-debug-variable-locations=false | FileCheck %s
+; RUN: llc -mtriple=x86_64-unknown-linux-gnu -start-after=codegenprepare -stop-before=finalize-isel -o - %s -experimental-debug-variable-locations=true | FileCheck %s --check-prefixes=INSTRREF
 
 ; Input to this test looked like this and was compiled using: clang -g -O1 -mllvm -stop-after=codegenprepare -S
 ;
@@ -10,6 +11,7 @@
 ; Catch metadata references for involved variables.
 ;
 ; CHECK-DAG: ![[T1:.*]] = !DILocalVariable(name: "t1"
+; INSTRREF-DAG: ![[T1:.*]] = !DILocalVariable(name: "t1"
 
 
 define dso_local i32 @fn1(i64 %t1) local_unnamed_addr #0 !dbg !7 {
@@ -23,6 +25,17 @@ define dso_local i32 @fn1(i64 %t1) local_unnamed_addr #0 !dbg !7 {
 ; CHECK-NEXT: %1:gr32 = COPY %0.sub_32bit
 ; CHECK-NEXT: COPY
 ; CHECK-NEXT: RET
+;
+;; For instr-ref, no copies should be considered. Because argumenst are
+;; Special, we don't label them in the same way, and currently emit a
+;; DBG_VALUE for the physreg.
+; INSTRREF-LABEL: name:            fn1
+; INSTRREF: DBG_VALUE $rdi, $noreg, ![[T1]], !DIExpression(),
+; INSTRREF-NEXT: %0:gr64 = COPY $rdi
+; INSTRREF-NEXT: %1:gr32 = COPY %0.sub_32bit
+; INSTRREF-NEXT: COPY
+; INSTRREF-NEXT: RET
+
 entry:
   call void @llvm.dbg.value(metadata i64 %t1, metadata !13, metadata !DIExpression()), !dbg !14
   %0 = trunc i64 %t1 to i32, !dbg !15

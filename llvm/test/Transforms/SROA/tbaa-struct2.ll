@@ -1,4 +1,4 @@
-; RUN: opt -S -sroa %s | FileCheck %s
+; RUN: opt -S -passes=sroa %s | FileCheck %s
 
 ; SROA should correctly offset `!tbaa.struct` metadata
 

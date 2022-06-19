@@ -19,13 +19,14 @@ namespace scudo {
 // small vectors. The current implementation supports only POD types.
 template <typename T> class VectorNoCtor {
 public:
-  void init(uptr InitialCapacity = 0) {
-    Data = reinterpret_cast<T *>(&LocalData[0]);
+  constexpr void init(uptr InitialCapacity = 0) {
+    Data = &LocalData[0];
     CapacityBytes = sizeof(LocalData);
-    reserve(InitialCapacity);
+    if (InitialCapacity > capacity())
+      reserve(InitialCapacity);
   }
   void destroy() {
-    if (Data != reinterpret_cast<T *>(&LocalData[0]))
+    if (Data != &LocalData[0])
       unmap(Data, CapacityBytes);
   }
   T &operator[](uptr I) {
@@ -55,7 +56,7 @@ public:
   uptr size() const { return Size; }
   const T *data() const { return Data; }
   T *data() { return Data; }
-  uptr capacity() const { return CapacityBytes / sizeof(T); }
+  constexpr uptr capacity() const { return CapacityBytes / sizeof(T); }
   void reserve(uptr NewSize) {
     // Never downsize internal buffer.
     if (NewSize > capacity())
@@ -91,14 +92,14 @@ private:
   }
 
   T *Data = nullptr;
-  u8 LocalData[256] = {};
+  T LocalData[256 / sizeof(T)] = {};
   uptr CapacityBytes = 0;
   uptr Size = 0;
 };
 
 template <typename T> class Vector : public VectorNoCtor<T> {
 public:
-  Vector() { VectorNoCtor<T>::init(); }
+  constexpr Vector() { VectorNoCtor<T>::init(); }
   explicit Vector(uptr Count) {
     VectorNoCtor<T>::init(Count);
     this->resize(Count);

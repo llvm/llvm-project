@@ -11,9 +11,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Dialect/Linalg/Analysis/DependenceAnalysis.h"
-#include "mlir/Dialect/Linalg/IR/LinalgOps.h"
-#include "mlir/Dialect/MemRef/IR/MemRef.h"
-#include "mlir/Dialect/StandardOps/IR/Ops.h"
+#include "mlir/Dialect/Bufferization/IR/Bufferization.h"
+#include "mlir/Dialect/Func/IR/FuncOps.h"
+#include "mlir/Dialect/Linalg/IR/Linalg.h"
 #include "mlir/IR/BuiltinOps.h"
 
 #include "llvm/Support/CommandLine.h"
@@ -49,7 +49,7 @@ Value Aliases::find(Value v) {
     // the aliasing further.
     if (isa<RegionBranchOpInterface>(defOp))
       return v;
-    if (isa<memref::BufferCastOp>(defOp))
+    if (isa<bufferization::ToMemrefOp>(defOp))
       return v;
 
     if (auto memEffect = dyn_cast<MemoryEffectOpInterface>(defOp)) {
@@ -94,7 +94,7 @@ StringRef LinalgDependenceGraph::getDependenceTypeStr(DependenceType depType) {
 }
 
 LinalgDependenceGraph
-LinalgDependenceGraph::buildDependenceGraph(Aliases &aliases, FuncOp f) {
+LinalgDependenceGraph::buildDependenceGraph(Aliases &aliases, func::FuncOp f) {
   SmallVector<LinalgOp, 8> linalgOps;
   f.walk([&](LinalgOp op) { linalgOps.push_back(op); });
   return LinalgDependenceGraph(aliases, linalgOps);
@@ -103,7 +103,7 @@ LinalgDependenceGraph::buildDependenceGraph(Aliases &aliases, FuncOp f) {
 LinalgDependenceGraph::LinalgDependenceGraph(Aliases &aliases,
                                              ArrayRef<LinalgOp> ops)
     : aliases(aliases), linalgOps(ops.begin(), ops.end()) {
-  for (auto en : llvm::enumerate(linalgOps)) {
+  for (const auto &en : llvm::enumerate(linalgOps)) {
     linalgOpPositions.insert(
         std::make_pair(en.value().getOperation(), en.index()));
   }

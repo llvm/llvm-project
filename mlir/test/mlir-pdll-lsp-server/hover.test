@@ -1,0 +1,181 @@
+// RUN: mlir-pdll-lsp-server -pdll-extra-dir %S -pdll-extra-dir %S/../../include -lit-test < %s | FileCheck %s
+{"jsonrpc":"2.0","id":0,"method":"initialize","params":{"processId":123,"rootPath":"pdll","capabilities":{},"trace":"off"}}
+// -----
+{"jsonrpc":"2.0","method":"textDocument/didOpen","params":{"textDocument":{
+  "uri":"test:///foo.pdll",
+  "languageId":"pdll",
+  "version":1,
+  "text":"Constraint FooCst();\n// This is documentation for the rewriter.\n/// And even more docs.\nRewrite FooRewrite(op: Op) -> Op;\nPattern Foo {\nlet root: Op;\nerase root;\n}\n#include \"include/included.td\"\n#include \"include/included.pdll\""
+}}}
+// -----
+// Hover on a variable.
+{"jsonrpc":"2.0","id":1,"method":"textDocument/hover","params":{
+  "textDocument":{"uri":"test:///foo.pdll"},
+  "position":{"line":5,"character":6}
+}}
+//      CHECK:  "id": 1,
+// CHECK-NEXT:  "jsonrpc": "2.0",
+// CHECK-NEXT:  "result": {
+// CHECK-NEXT:    "contents": {
+// CHECK-NEXT:      "kind": "markdown",
+// CHECK-NEXT:      "value": "**Variable**: `root`\n***\nType: `Op`\n"
+// CHECK-NEXT:    },
+// CHECK-NEXT:    "range": {
+// CHECK-NEXT:      "end": {
+// CHECK-NEXT:        "character": 8,
+// CHECK-NEXT:        "line": 5
+// CHECK-NEXT:      },
+// CHECK-NEXT:      "start": {
+// CHECK-NEXT:        "character": 4,
+// CHECK-NEXT:        "line": 5
+// CHECK-NEXT:      }
+// CHECK-NEXT:    }
+// CHECK-NEXT:  }
+// -----
+// Hover on a pattern.
+{"jsonrpc":"2.0","id":1,"method":"textDocument/hover","params":{
+  "textDocument":{"uri":"test:///foo.pdll"},
+  "position":{"line":4,"character":9}
+}}
+//      CHECK:  "id": 1,
+// CHECK-NEXT:  "jsonrpc": "2.0",
+// CHECK-NEXT:  "result": {
+// CHECK-NEXT:    "contents": {
+// CHECK-NEXT:      "kind": "markdown",
+// CHECK-NEXT:      "value": "**Pattern**: `Foo`\n***\nRootOp: `Op`\n"
+// CHECK-NEXT:    },
+// CHECK-NEXT:    "range": {
+// CHECK-NEXT:      "end": {
+// CHECK-NEXT:        "character": 11,
+// CHECK-NEXT:        "line": 4
+// CHECK-NEXT:      },
+// CHECK-NEXT:      "start": {
+// CHECK-NEXT:        "character": 8,
+// CHECK-NEXT:        "line": 4
+// CHECK-NEXT:      }
+// CHECK-NEXT:    }
+// CHECK-NEXT:  }
+// -----
+// Hover on a core constraint.
+{"jsonrpc":"2.0","id":1,"method":"textDocument/hover","params":{
+  "textDocument":{"uri":"test:///foo.pdll"},
+  "position":{"line":5,"character":11}
+}}
+//      CHECK:  "id": 1,
+// CHECK-NEXT:  "jsonrpc": "2.0",
+// CHECK-NEXT:  "result": {
+// CHECK-NEXT:    "contents": {
+// CHECK-NEXT:      "kind": "markdown",
+// CHECK-NEXT:      "value": "**Constraint**: `Op`\n"
+// CHECK-NEXT:    },
+// CHECK-NEXT:    "range": {
+// CHECK-NEXT:      "end": {
+// CHECK-NEXT:        "character": 12,
+// CHECK-NEXT:        "line": 5
+// CHECK-NEXT:      },
+// CHECK-NEXT:      "start": {
+// CHECK-NEXT:        "character": 10,
+// CHECK-NEXT:        "line": 5
+// CHECK-NEXT:      }
+// CHECK-NEXT:    }
+// CHECK-NEXT:  }
+// -----
+// Hover on a user constraint.
+{"jsonrpc":"2.0","id":1,"method":"textDocument/hover","params":{
+  "textDocument":{"uri":"test:///foo.pdll"},
+  "position":{"line":0,"character":14}
+}}
+//      CHECK:  "id": 1,
+// CHECK-NEXT:  "jsonrpc": "2.0",
+// CHECK-NEXT:  "result": {
+// CHECK-NEXT:    "contents": {
+// CHECK-NEXT:      "kind": "markdown",
+// CHECK-NEXT:      "value": "**Constraint**: `FooCst`\n***\n"
+// CHECK-NEXT:    },
+// CHECK-NEXT:    "range": {
+// CHECK-NEXT:      "end": {
+// CHECK-NEXT:        "character": 17,
+// CHECK-NEXT:        "line": 0
+// CHECK-NEXT:      },
+// CHECK-NEXT:      "start": {
+// CHECK-NEXT:        "character": 11,
+// CHECK-NEXT:        "line": 0
+// CHECK-NEXT:      }
+// CHECK-NEXT:    }
+// CHECK-NEXT:  }
+// -----
+// Hover on a user rewrite.
+{"jsonrpc":"2.0","id":1,"method":"textDocument/hover","params":{
+  "textDocument":{"uri":"test:///foo.pdll"},
+  "position":{"line":3,"character":11}
+}}
+//      CHECK:  "id": 1,
+// CHECK-NEXT:  "jsonrpc": "2.0",
+// CHECK-NEXT:  "result": {
+// CHECK-NEXT:    "contents": {
+// CHECK-NEXT:      "kind": "markdown",
+// CHECK-NEXT:      "value": "**Rewrite**: `FooRewrite`\n***\nParameters:\n* op: `Op`\n***\nResults:\n* `Op`\n***\n\n This is documentation for the rewriter.\n And even more docs.\n"
+// CHECK-NEXT:    },
+// CHECK-NEXT:    "range": {
+// CHECK-NEXT:      "end": {
+// CHECK-NEXT:        "character": 18,
+// CHECK-NEXT:        "line": 3
+// CHECK-NEXT:      },
+// CHECK-NEXT:      "start": {
+// CHECK-NEXT:        "character": 8,
+// CHECK-NEXT:        "line": 3
+// CHECK-NEXT:      }
+// CHECK-NEXT:    }
+// CHECK-NEXT:  }
+// -----
+// Hover on an include file.
+{"jsonrpc":"2.0","id":1,"method":"textDocument/hover","params":{
+  "textDocument":{"uri":"test:///foo.pdll"},
+  "position":{"line":8,"character":15}
+}}
+//      CHECK:  "id": 1,
+// CHECK-NEXT:  "jsonrpc": "2.0",
+// CHECK-NEXT:  "result": {
+// CHECK-NEXT:    "contents": {
+// CHECK-NEXT:      "kind": "markdown",
+// CHECK-NEXT:      "value": "`included.td`\n***\n{{.*}}included.td"
+// CHECK-NEXT:    },
+// CHECK-NEXT:    "range": {
+// CHECK-NEXT:      "end": {
+// CHECK-NEXT:        "character": 30,
+// CHECK-NEXT:        "line": 8
+// CHECK-NEXT:      },
+// CHECK-NEXT:      "start": {
+// CHECK-NEXT:        "character": 9,
+// CHECK-NEXT:        "line": 8
+// CHECK-NEXT:      }
+// CHECK-NEXT:    }
+// CHECK-NEXT:  }
+// -----
+// Hover on an include file.
+{"jsonrpc":"2.0","id":1,"method":"textDocument/hover","params":{
+  "textDocument":{"uri":"test:///foo.pdll"},
+  "position":{"line":9,"character":15}
+}}
+//      CHECK:  "id": 1,
+// CHECK-NEXT:  "jsonrpc": "2.0",
+// CHECK-NEXT:  "result": {
+// CHECK-NEXT:    "contents": {
+// CHECK-NEXT:      "kind": "markdown",
+// CHECK-NEXT:      "value": "`included.pdll`\n***\n{{.*}}included.pdll"
+// CHECK-NEXT:    },
+// CHECK-NEXT:    "range": {
+// CHECK-NEXT:      "end": {
+// CHECK-NEXT:        "character": 32,
+// CHECK-NEXT:        "line": 9
+// CHECK-NEXT:      },
+// CHECK-NEXT:      "start": {
+// CHECK-NEXT:        "character": 9,
+// CHECK-NEXT:        "line": 9
+// CHECK-NEXT:      }
+// CHECK-NEXT:    }
+// CHECK-NEXT:  }
+// -----
+{"jsonrpc":"2.0","id":7,"method":"shutdown"}
+// -----
+{"jsonrpc":"2.0","method":"exit"}

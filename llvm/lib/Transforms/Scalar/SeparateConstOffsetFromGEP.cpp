@@ -189,7 +189,6 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
-#include "llvm/Target/TargetMachine.h"
 #include "llvm/Transforms/Scalar.h"
 #include "llvm/Transforms/Utils/Local.h"
 #include <cassert>
@@ -648,13 +647,13 @@ Value *ConstantOffsetExtractor::applyExts(Value *V) {
   Value *Current = V;
   // ExtInsts is built in the use-def order. Therefore, we apply them to V
   // in the reversed order.
-  for (auto I = ExtInsts.rbegin(), E = ExtInsts.rend(); I != E; ++I) {
+  for (CastInst *I : llvm::reverse(ExtInsts)) {
     if (Constant *C = dyn_cast<Constant>(Current)) {
       // If Current is a constant, apply s/zext using ConstantExpr::getCast.
       // ConstantExpr::getCast emits a ConstantInt if C is a ConstantInt.
-      Current = ConstantExpr::getCast((*I)->getOpcode(), C, (*I)->getType());
+      Current = ConstantExpr::getCast(I->getOpcode(), C, I->getType());
     } else {
-      Instruction *Ext = (*I)->clone();
+      Instruction *Ext = I->clone();
       Ext->setOperand(0, Current);
       Ext->insertBefore(IP);
       Current = Ext;
@@ -1164,8 +1163,11 @@ bool SeparateConstOffsetFromGEP::run(Function &F) {
   DL = &F.getParent()->getDataLayout();
   bool Changed = false;
   for (BasicBlock &B : F) {
-    for (BasicBlock::iterator I = B.begin(), IE = B.end(); I != IE;)
-      if (GetElementPtrInst *GEP = dyn_cast<GetElementPtrInst>(I++))
+    if (!DT->isReachableFromEntry(&B))
+      continue;
+
+    for (Instruction &I : llvm::make_early_inc_range(B))
+      if (GetElementPtrInst *GEP = dyn_cast<GetElementPtrInst>(&I))
         Changed |= splitGEP(GEP);
     // No need to split GEP ConstantExprs because all its indices are constant
     // already.
@@ -1258,10 +1260,8 @@ bool SeparateConstOffsetFromGEP::reuniteExts(Function &F) {
   DominatingSubs.clear();
   for (const auto Node : depth_first(DT)) {
     BasicBlock *BB = Node->getBlock();
-    for (auto I = BB->begin(); I != BB->end(); ) {
-      Instruction *Cur = &*I++;
-      Changed |= reuniteExts(Cur);
-    }
+    for (Instruction &I : llvm::make_early_inc_range(*BB))
+      Changed |= reuniteExts(&I);
   }
   return Changed;
 }

@@ -60,7 +60,7 @@ public:
 
   void DiscardAllPlans();
 
-  void DiscardConsultingMasterPlans();
+  void DiscardConsultingControllingPlans();
 
   lldb::ThreadPlanSP GetCurrentPlan() const;
 
@@ -123,11 +123,13 @@ public:
               bool check_for_new = true);
 
   void AddThread(Thread &thread) {
+    std::lock_guard<std::recursive_mutex> guard(m_stack_map_mutex);
     lldb::tid_t tid = thread.GetID();
     m_plans_list.emplace(tid, thread);
   }
 
   bool RemoveTID(lldb::tid_t tid) {
+    std::lock_guard<std::recursive_mutex> guard(m_stack_map_mutex);
     auto result = m_plans_list.find(tid);
     if (result == m_plans_list.end())
       return false;
@@ -137,6 +139,7 @@ public:
   }
 
   ThreadPlanStack *Find(lldb::tid_t tid) {
+    std::lock_guard<std::recursive_mutex> guard(m_stack_map_mutex);
     auto result = m_plans_list.find(tid);
     if (result == m_plans_list.end())
       return nullptr;
@@ -154,6 +157,7 @@ public:
   }
 
   void Clear() {
+    std::lock_guard<std::recursive_mutex> guard(m_stack_map_mutex);
     for (auto &plan : m_plans_list)
       plan.second.ThreadDestroyed(nullptr);
     m_plans_list.clear();
@@ -172,8 +176,10 @@ public:
 
 private:
   Process &m_process;
+  mutable std::recursive_mutex m_stack_map_mutex;
   using PlansList = std::unordered_map<lldb::tid_t, ThreadPlanStack>;
   PlansList m_plans_list;
+  
 };
 
 } // namespace lldb_private

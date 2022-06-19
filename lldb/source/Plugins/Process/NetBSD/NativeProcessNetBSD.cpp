@@ -59,7 +59,7 @@ llvm::Expected<std::unique_ptr<NativeProcessProtocol>>
 NativeProcessNetBSD::Factory::Launch(ProcessLaunchInfo &launch_info,
                                      NativeDelegate &native_delegate,
                                      MainLoop &mainloop) const {
-  Log *log(ProcessPOSIXLog::GetLogIfAllCategoriesSet(POSIX_LOG_PROCESS));
+  Log *log = GetLog(POSIXLog::Process);
 
   Status status;
   ::pid_t pid = ProcessLauncherPosixFork()
@@ -113,7 +113,7 @@ llvm::Expected<std::unique_ptr<NativeProcessProtocol>>
 NativeProcessNetBSD::Factory::Attach(
     lldb::pid_t pid, NativeProcessProtocol::NativeDelegate &native_delegate,
     MainLoop &mainloop) const {
-  Log *log(ProcessPOSIXLog::GetLogIfAllCategoriesSet(POSIX_LOG_PROCESS));
+  Log *log = GetLog(POSIXLog::Process);
   LLDB_LOG(log, "pid = {0:x}", pid);
 
   // Retrieve the architecture for the running process.
@@ -136,7 +136,8 @@ NativeProcessNetBSD::Factory::Attach(
 NativeProcessNetBSD::Extension
 NativeProcessNetBSD::Factory::GetSupportedExtensions() const {
   return Extension::multiprocess | Extension::fork | Extension::vfork |
-         Extension::pass_signals | Extension::auxv | Extension::libraries_svr4;
+         Extension::pass_signals | Extension::auxv | Extension::libraries_svr4 |
+         Extension::savecore;
 }
 
 // Public Instance Methods
@@ -171,7 +172,7 @@ void NativeProcessNetBSD::MonitorCallback(lldb::pid_t pid, int signal) {
 }
 
 void NativeProcessNetBSD::MonitorExited(lldb::pid_t pid, WaitStatus status) {
-  Log *log(ProcessPOSIXLog::GetLogIfAllCategoriesSet(POSIX_LOG_PROCESS));
+  Log *log = GetLog(POSIXLog::Process);
 
   LLDB_LOG(log, "got exit signal({0}) , pid = {1}", status, pid);
 
@@ -206,7 +207,7 @@ void NativeProcessNetBSD::MonitorSIGSTOP(lldb::pid_t pid) {
 }
 
 void NativeProcessNetBSD::MonitorSIGTRAP(lldb::pid_t pid) {
-  Log *log(ProcessPOSIXLog::GetLogIfAllCategoriesSet(POSIX_LOG_PROCESS));
+  Log *log = GetLog(POSIXLog::Process);
   ptrace_siginfo_t info;
 
   const auto siginfo_err =
@@ -358,7 +359,7 @@ void NativeProcessNetBSD::MonitorSIGTRAP(lldb::pid_t pid) {
 }
 
 void NativeProcessNetBSD::MonitorSignal(lldb::pid_t pid, int signal) {
-  Log *log(ProcessPOSIXLog::GetLogIfAllCategoriesSet(POSIX_LOG_PROCESS));
+  Log *log = GetLog(POSIXLog::Process);
   ptrace_siginfo_t info;
 
   const auto siginfo_err =
@@ -382,7 +383,7 @@ void NativeProcessNetBSD::MonitorSignal(lldb::pid_t pid, int signal) {
 
 Status NativeProcessNetBSD::PtraceWrapper(int req, lldb::pid_t pid, void *addr,
                                           int data, int *result) {
-  Log *log(ProcessPOSIXLog::GetLogIfAllCategoriesSet(POSIX_LOG_PTRACE));
+  Log *log = GetLog(POSIXLog::Ptrace);
   Status error;
   int ret;
 
@@ -458,7 +459,7 @@ static llvm::Expected<ptrace_siginfo_t> ComputeSignalInfo(
 }
 
 Status NativeProcessNetBSD::Resume(const ResumeActionList &resume_actions) {
-  Log *log(ProcessPOSIXLog::GetLogIfAllCategoriesSet(POSIX_LOG_PROCESS));
+  Log *log = GetLog(POSIXLog::Process);
   LLDB_LOG(log, "pid {0}", GetID());
 
   Status ret;
@@ -561,7 +562,7 @@ Status NativeProcessNetBSD::Interrupt() {
 }
 
 Status NativeProcessNetBSD::Kill() {
-  Log *log(ProcessPOSIXLog::GetLogIfAllCategoriesSet(POSIX_LOG_PROCESS));
+  Log *log = GetLog(POSIXLog::Process);
   LLDB_LOG(log, "pid {0}", GetID());
 
   Status error;
@@ -653,7 +654,7 @@ Status NativeProcessNetBSD::GetMemoryRegionInfo(lldb::addr_t load_addr,
 }
 
 Status NativeProcessNetBSD::PopulateMemoryRegionCache() {
-  Log *log(ProcessPOSIXLog::GetLogIfAllCategoriesSet(POSIX_LOG_PROCESS));
+  Log *log = GetLog(POSIXLog::Process);
   // If our cache is empty, pull the latest.  There should always be at least
   // one memory region if memory region handling is supported.
   if (!m_mem_region_cache.empty()) {
@@ -771,7 +772,7 @@ Status NativeProcessNetBSD::GetFileLoadAddress(const llvm::StringRef &file_name,
 }
 
 void NativeProcessNetBSD::SigchldHandler() {
-  Log *log(ProcessPOSIXLog::GetLogIfAllCategoriesSet(POSIX_LOG_PROCESS));
+  Log *log = GetLog(POSIXLog::Process);
   int status;
   ::pid_t wait_pid = llvm::sys::RetryAfterSignal(-1, waitpid, GetID(), &status,
                                                  WALLSIG | WNOHANG);
@@ -816,7 +817,7 @@ bool NativeProcessNetBSD::HasThreadNoLock(lldb::tid_t thread_id) {
 }
 
 NativeThreadNetBSD &NativeProcessNetBSD::AddThread(lldb::tid_t thread_id) {
-  Log *log(ProcessPOSIXLog::GetLogIfAllCategoriesSet(POSIX_LOG_THREAD));
+  Log *log = GetLog(POSIXLog::Thread);
   LLDB_LOG(log, "pid {0} adding thread with tid {1}", GetID(), thread_id);
 
   assert(thread_id > 0);
@@ -832,7 +833,7 @@ NativeThreadNetBSD &NativeProcessNetBSD::AddThread(lldb::tid_t thread_id) {
 }
 
 void NativeProcessNetBSD::RemoveThread(lldb::tid_t thread_id) {
-  Log *log(ProcessPOSIXLog::GetLogIfAllCategoriesSet(POSIX_LOG_THREAD));
+  Log *log = GetLog(POSIXLog::Thread);
   LLDB_LOG(log, "pid {0} removing thread with tid {1}", GetID(), thread_id);
 
   assert(thread_id > 0);
@@ -881,7 +882,7 @@ Status NativeProcessNetBSD::ReadMemory(lldb::addr_t addr, void *buf,
   unsigned char *dst = static_cast<unsigned char *>(buf);
   struct ptrace_io_desc io;
 
-  Log *log(ProcessPOSIXLog::GetLogIfAllCategoriesSet(POSIX_LOG_MEMORY));
+  Log *log = GetLog(POSIXLog::Memory);
   LLDB_LOG(log, "addr = {0}, buf = {1}, size = {2}", addr, buf, size);
 
   bytes_read = 0;
@@ -909,7 +910,7 @@ Status NativeProcessNetBSD::WriteMemory(lldb::addr_t addr, const void *buf,
   Status error;
   struct ptrace_io_desc io;
 
-  Log *log(ProcessPOSIXLog::GetLogIfAllCategoriesSet(POSIX_LOG_MEMORY));
+  Log *log = GetLog(POSIXLog::Memory);
   LLDB_LOG(log, "addr = {0}, buf = {1}, size = {2}", addr, buf, size);
 
   bytes_written = 0;
@@ -1012,7 +1013,7 @@ Status NativeProcessNetBSD::ReinitializeThreads() {
 
 void NativeProcessNetBSD::MonitorClone(::pid_t child_pid, bool is_vfork,
                                        NativeThreadNetBSD &parent_thread) {
-  Log *log(ProcessPOSIXLog::GetLogIfAllCategoriesSet(POSIX_LOG_PROCESS));
+  Log *log = GetLog(POSIXLog::Process);
   LLDB_LOG(log, "clone, child_pid={0}", child_pid);
 
   int status;
@@ -1072,4 +1073,28 @@ void NativeProcessNetBSD::MonitorClone(::pid_t child_pid, bool is_vfork,
       SetState(StateType::eStateInvalid);
     }
   }
+}
+
+llvm::Expected<std::string>
+NativeProcessNetBSD::SaveCore(llvm::StringRef path_hint) {
+  llvm::SmallString<128> path{path_hint};
+  Status error;
+
+  // Try with the suggested path first.
+  if (!path.empty()) {
+    error = PtraceWrapper(PT_DUMPCORE, GetID(), path.data(), path.size());
+    if (!error.Fail())
+      return path.str().str();
+
+    // If the request errored, fall back to a generic temporary file.
+  }
+
+  if (std::error_code errc =
+          llvm::sys::fs::createTemporaryFile("lldb", "core", path))
+    return llvm::createStringError(errc, "Unable to create a temporary file");
+
+  error = PtraceWrapper(PT_DUMPCORE, GetID(), path.data(), path.size());
+  if (error.Fail())
+    return error.ToError();
+  return path.str().str();
 }

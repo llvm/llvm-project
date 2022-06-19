@@ -30,7 +30,7 @@ define i32 @matrix_row_col([100 x i32]* nocapture readonly %data, i32 %i, i32 %j
 ; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds [100 x i32], [100 x i32]* [[DATA:%.*]], i64 [[IDXPROM]], i64 [[TMP0]]
 ; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr inbounds i32, i32* [[TMP8]], i32 0
 ; CHECK-NEXT:    [[TMP10:%.*]] = bitcast i32* [[TMP9]] to <8 x i32>*
-; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <8 x i32>, <8 x i32>* [[TMP10]], align 4, [[TBAA1:!tbaa !.*]]
+; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <8 x i32>, <8 x i32>* [[TMP10]], align 4, !tbaa [[TBAA1:![0-9]+]]
 ; CHECK-NEXT:    [[TMP11:%.*]] = getelementptr inbounds [100 x i32], [100 x i32]* [[DATA]], i64 [[TMP0]], i64 [[IDXPROM5]]
 ; CHECK-NEXT:    [[TMP12:%.*]] = getelementptr inbounds [100 x i32], [100 x i32]* [[DATA]], i64 [[TMP1]], i64 [[IDXPROM5]]
 ; CHECK-NEXT:    [[TMP13:%.*]] = getelementptr inbounds [100 x i32], [100 x i32]* [[DATA]], i64 [[TMP2]], i64 [[IDXPROM5]]
@@ -39,14 +39,14 @@ define i32 @matrix_row_col([100 x i32]* nocapture readonly %data, i32 %i, i32 %j
 ; CHECK-NEXT:    [[TMP16:%.*]] = getelementptr inbounds [100 x i32], [100 x i32]* [[DATA]], i64 [[TMP5]], i64 [[IDXPROM5]]
 ; CHECK-NEXT:    [[TMP17:%.*]] = getelementptr inbounds [100 x i32], [100 x i32]* [[DATA]], i64 [[TMP6]], i64 [[IDXPROM5]]
 ; CHECK-NEXT:    [[TMP18:%.*]] = getelementptr inbounds [100 x i32], [100 x i32]* [[DATA]], i64 [[TMP7]], i64 [[IDXPROM5]]
-; CHECK-NEXT:    [[TMP19:%.*]] = load i32, i32* [[TMP11]], align 4, [[TBAA1]]
-; CHECK-NEXT:    [[TMP20:%.*]] = load i32, i32* [[TMP12]], align 4, [[TBAA1]]
-; CHECK-NEXT:    [[TMP21:%.*]] = load i32, i32* [[TMP13]], align 4, [[TBAA1]]
-; CHECK-NEXT:    [[TMP22:%.*]] = load i32, i32* [[TMP14]], align 4, [[TBAA1]]
-; CHECK-NEXT:    [[TMP23:%.*]] = load i32, i32* [[TMP15]], align 4, [[TBAA1]]
-; CHECK-NEXT:    [[TMP24:%.*]] = load i32, i32* [[TMP16]], align 4, [[TBAA1]]
-; CHECK-NEXT:    [[TMP25:%.*]] = load i32, i32* [[TMP17]], align 4, [[TBAA1]]
-; CHECK-NEXT:    [[TMP26:%.*]] = load i32, i32* [[TMP18]], align 4, [[TBAA1]]
+; CHECK-NEXT:    [[TMP19:%.*]] = load i32, i32* [[TMP11]], align 4, !tbaa [[TBAA1]]
+; CHECK-NEXT:    [[TMP20:%.*]] = load i32, i32* [[TMP12]], align 4, !tbaa [[TBAA1]]
+; CHECK-NEXT:    [[TMP21:%.*]] = load i32, i32* [[TMP13]], align 4, !tbaa [[TBAA1]]
+; CHECK-NEXT:    [[TMP22:%.*]] = load i32, i32* [[TMP14]], align 4, !tbaa [[TBAA1]]
+; CHECK-NEXT:    [[TMP23:%.*]] = load i32, i32* [[TMP15]], align 4, !tbaa [[TBAA1]]
+; CHECK-NEXT:    [[TMP24:%.*]] = load i32, i32* [[TMP16]], align 4, !tbaa [[TBAA1]]
+; CHECK-NEXT:    [[TMP25:%.*]] = load i32, i32* [[TMP17]], align 4, !tbaa [[TBAA1]]
+; CHECK-NEXT:    [[TMP26:%.*]] = load i32, i32* [[TMP18]], align 4, !tbaa [[TBAA1]]
 ; CHECK-NEXT:    [[TMP27:%.*]] = insertelement <8 x i32> poison, i32 [[TMP19]], i32 0
 ; CHECK-NEXT:    [[TMP28:%.*]] = insertelement <8 x i32> [[TMP27]], i32 [[TMP20]], i32 1
 ; CHECK-NEXT:    [[TMP29:%.*]] = insertelement <8 x i32> [[TMP28]], i32 [[TMP21]], i32 2
@@ -60,7 +60,7 @@ define i32 @matrix_row_col([100 x i32]* nocapture readonly %data, i32 %i, i32 %j
 ; CHECK-NEXT:    [[TMP37]] = add <8 x i32> [[TMP36]], [[TMP35]]
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 8
 ; CHECK-NEXT:    [[TMP38:%.*]] = icmp eq i64 [[INDEX_NEXT]], 96
-; CHECK-NEXT:    br i1 [[TMP38]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], [[LOOP5:!llvm.loop !.*]]
+; CHECK-NEXT:    br i1 [[TMP38]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP5:![0-9]+]]
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    [[TMP39:%.*]] = call i32 @llvm.vector.reduce.add.v8i32(<8 x i32> [[TMP37]])
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 100, 96
@@ -76,15 +76,15 @@ define i32 @matrix_row_col([100 x i32]* nocapture readonly %data, i32 %i, i32 %j
 ; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[INDVARS_IV_NEXT:%.*]], [[FOR_BODY]] ]
 ; CHECK-NEXT:    [[SUM_015:%.*]] = phi i32 [ [[BC_MERGE_RDX]], [[SCALAR_PH]] ], [ [[ADD7]], [[FOR_BODY]] ]
 ; CHECK-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds [100 x i32], [100 x i32]* [[DATA]], i64 [[IDXPROM]], i64 [[INDVARS_IV]]
-; CHECK-NEXT:    [[TMP40:%.*]] = load i32, i32* [[ARRAYIDX2]], align 4, [[TBAA1]]
+; CHECK-NEXT:    [[TMP40:%.*]] = load i32, i32* [[ARRAYIDX2]], align 4, !tbaa [[TBAA1]]
 ; CHECK-NEXT:    [[ARRAYIDX6:%.*]] = getelementptr inbounds [100 x i32], [100 x i32]* [[DATA]], i64 [[INDVARS_IV]], i64 [[IDXPROM5]]
-; CHECK-NEXT:    [[TMP41:%.*]] = load i32, i32* [[ARRAYIDX6]], align 4, [[TBAA1]]
+; CHECK-NEXT:    [[TMP41:%.*]] = load i32, i32* [[ARRAYIDX6]], align 4, !tbaa [[TBAA1]]
 ; CHECK-NEXT:    [[MUL:%.*]] = mul nsw i32 [[TMP41]], [[TMP40]]
 ; CHECK-NEXT:    [[ADD:%.*]] = add i32 [[SUM_015]], 4
 ; CHECK-NEXT:    [[ADD7]] = add i32 [[ADD]], [[MUL]]
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
 ; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i64 [[INDVARS_IV_NEXT]], 100
-; CHECK-NEXT:    br i1 [[EXITCOND]], label [[FOR_COND_CLEANUP]], label [[FOR_BODY]], [[LOOP7:!llvm.loop !.*]]
+; CHECK-NEXT:    br i1 [[EXITCOND]], label [[FOR_COND_CLEANUP]], label [[FOR_BODY]], !llvm.loop [[LOOP7:![0-9]+]]
 ;
 entry:
   %idxprom = sext i32 %i to i64

@@ -1,7 +1,7 @@
 # RUN: llvm-mc %s -filetype obj -triple x86_64-apple-darwin -o %t.o
 # RUN: llvm-dwarfdump -diff %t.o | FileCheck %s
 
-# CHECK: DW_AT_type ("A*")
+# CHECK: DW_AT_type ("A *")
 # CHECK: DW_AT_specification ("A")
 # CHECK: DW_AT_object_pointer ()
 

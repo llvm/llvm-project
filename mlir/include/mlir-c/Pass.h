@@ -15,6 +15,7 @@
 #define MLIR_C_PASS_H
 
 #include "mlir-c/IR.h"
+#include "mlir-c/Registration.h"
 #include "mlir-c/Support.h"
 
 #ifdef __cplusplus
@@ -41,10 +42,15 @@ extern "C" {
   typedef struct name name
 
 DEFINE_C_API_STRUCT(MlirPass, void);
+DEFINE_C_API_STRUCT(MlirExternalPass, void);
 DEFINE_C_API_STRUCT(MlirPassManager, void);
 DEFINE_C_API_STRUCT(MlirOpPassManager, void);
 
 #undef DEFINE_C_API_STRUCT
+
+//===----------------------------------------------------------------------===//
+// PassManager/OpPassManager APIs.
+//===----------------------------------------------------------------------===//
 
 /// Create a new top-level PassManager.
 MLIR_CAPI_EXPORTED MlirPassManager mlirPassManagerCreate(MlirContext ctx);
@@ -65,7 +71,7 @@ mlirPassManagerGetAsOpPassManager(MlirPassManager passManager);
 MLIR_CAPI_EXPORTED MlirLogicalResult
 mlirPassManagerRun(MlirPassManager passManager, MlirModule module);
 
-/// Enable print-ir-after-all.
+/// Enable mlir-print-ir-after-all.
 MLIR_CAPI_EXPORTED void
 mlirPassManagerEnableIRPrinting(MlirPassManager passManager);
 
@@ -111,6 +117,55 @@ MLIR_CAPI_EXPORTED void mlirPrintPassPipeline(MlirOpPassManager passManager,
 
 MLIR_CAPI_EXPORTED MlirLogicalResult
 mlirParsePassPipeline(MlirOpPassManager passManager, MlirStringRef pipeline);
+
+//===----------------------------------------------------------------------===//
+// External Pass API.
+//
+// This API allows to define passes outside of MLIR, not necessarily in
+// C++, and register them with the MLIR pass management infrastructure.
+//
+//===----------------------------------------------------------------------===//
+
+/// Structure of external `MlirPass` callbacks.
+/// All callbacks are required to be set unless otherwise specified.
+struct MlirExternalPassCallbacks {
+  /// This callback is called from the pass is created.
+  /// This is analogous to a C++ pass constructor.
+  void (*construct)(void *userData);
+
+  /// This callback is called when the pass is destroyed
+  /// This is analogous to a C++ pass destructor.
+  void (*destruct)(void *userData);
+
+  /// This callback is optional.
+  /// The callback is called before the pass is run, allowing a chance to
+  /// initialize any complex state necessary for running the pass.
+  /// See Pass::initialize(MLIRContext *).
+  MlirLogicalResult (*initialize)(MlirContext ctx, void *userData);
+
+  /// This callback is called when the pass is cloned.
+  /// See Pass::clonePass().
+  void *(*clone)(void *userData);
+
+  /// This callback is called when the pass is run.
+  /// See Pass::runOnOperation().
+  void (*run)(MlirOperation op, MlirExternalPass pass, void *userData);
+};
+typedef struct MlirExternalPassCallbacks MlirExternalPassCallbacks;
+
+/// Creates an external `MlirPass` that calls the supplied `callbacks` using the
+/// supplied `userData`. If `opName` is empty, the pass is a generic operation
+/// pass. Otherwise it is an operation pass specific to the specified pass name.
+MLIR_CAPI_EXPORTED MlirPass mlirCreateExternalPass(
+    MlirTypeID passID, MlirStringRef name, MlirStringRef argument,
+    MlirStringRef description, MlirStringRef opName,
+    intptr_t nDependentDialects, MlirDialectHandle *dependentDialects,
+    MlirExternalPassCallbacks callbacks, void *userData);
+
+/// This signals that the pass has failed. This is only valid to call during
+/// the `run` callback of `MlirExternalPassCallbacks`.
+/// See Pass::signalPassFailure().
+MLIR_CAPI_EXPORTED void mlirExternalPassSignalFailure(MlirExternalPass pass);
 
 #ifdef __cplusplus
 }

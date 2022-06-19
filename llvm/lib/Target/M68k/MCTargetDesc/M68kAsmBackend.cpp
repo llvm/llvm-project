@@ -1,4 +1,4 @@
-//===-- M68kAsmBackend.cpp - M68k Assembler Backend ---------*- C++ -*-===//
+//===-- M68kAsmBackend.cpp - M68k Assembler Backend -------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -29,9 +29,9 @@
 #include "llvm/MC/MCSectionELF.h"
 #include "llvm/MC/MCSectionMachO.h"
 #include "llvm/MC/MCSubtargetInfo.h"
+#include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/MathExtras.h"
-#include "llvm/Support/TargetRegistry.h"
 #include "llvm/Support/raw_ostream.h"
 
 using namespace llvm;
@@ -82,7 +82,8 @@ public:
 
   /// Write a sequence of optimal nops to the output, covering \p Count bytes.
   /// \return - true on success, false on failure
-  bool writeNopData(raw_ostream &OS, uint64_t Count) const override;
+  bool writeNopData(raw_ostream &OS, uint64_t Count,
+                    const MCSubtargetInfo *STI) const override;
 };
 } // end anonymous namespace
 
@@ -200,7 +201,8 @@ void M68kAsmBackend::relaxInstruction(MCInst &Inst,
   Inst.setOpcode(RelaxedOp);
 }
 
-bool M68kAsmBackend::writeNopData(raw_ostream &OS, uint64_t Count) const {
+bool M68kAsmBackend::writeNopData(raw_ostream &OS, uint64_t Count,
+                                  const MCSubtargetInfo *STI) const {
   // Cannot emit NOP with size being not multiple of 16 bits.
   if (Count % 2 != 0)
     return false;

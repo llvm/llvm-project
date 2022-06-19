@@ -25,13 +25,13 @@ def riscv_remuw : SDNode<"RISCVISD::REMUW", SDT_RISCVIntBinOpW>;
 //===----------------------------------------------------------------------===//
 
 let Predicates = [HasStdExtM] in {
-def MUL     : ALU_rr<0b0000001, 0b000, "mul">,
+def MUL     : ALU_rr<0b0000001, 0b000, "mul", /*Commutable*/1>,
               Sched<[WriteIMul, ReadIMul, ReadIMul]>;
-def MULH    : ALU_rr<0b0000001, 0b001, "mulh">,
+def MULH    : ALU_rr<0b0000001, 0b001, "mulh", /*Commutable*/1>,
               Sched<[WriteIMul, ReadIMul, ReadIMul]>;
 def MULHSU  : ALU_rr<0b0000001, 0b010, "mulhsu">,
               Sched<[WriteIMul, ReadIMul, ReadIMul]>;
-def MULHU   : ALU_rr<0b0000001, 0b011, "mulhu">,
+def MULHU   : ALU_rr<0b0000001, 0b011, "mulhu", /*Commutable*/1>,
               Sched<[WriteIMul, ReadIMul, ReadIMul]>;
 def DIV     : ALU_rr<0b0000001, 0b100, "div">,
               Sched<[WriteIDiv, ReadIDiv, ReadIDiv]>;
@@ -44,7 +44,7 @@ def REMU    : ALU_rr<0b0000001, 0b111, "remu">,
 } // Predicates = [HasStdExtM]
 
 let Predicates = [HasStdExtM, IsRV64] in {
-def MULW    : ALUW_rr<0b0000001, 0b000, "mulw">,
+def MULW    : ALUW_rr<0b0000001, 0b000, "mulw", /*Commutable*/1>,
               Sched<[WriteIMul32, ReadIMul32, ReadIMul32]>;
 def DIVW    : ALUW_rr<0b0000001, 0b100, "divw">,
               Sched<[WriteIDiv32, ReadIDiv32, ReadIDiv32]>;
@@ -72,8 +72,8 @@ def : PatGprGpr<urem, REMU>;
 } // Predicates = [HasStdExtM]
 
 let Predicates = [HasStdExtM, IsRV64] in {
-def : Pat<(sext_inreg (mul GPR:$rs1, GPR:$rs2), i32),
-          (MULW GPR:$rs1, GPR:$rs2)>;
+// Select W instructions if only the lower 32-bits of the result are used.
+def : PatGprGpr<binop_allwusers<mul>, MULW>;
 
 def : PatGprGpr<riscv_divw, DIVW>;
 def : PatGprGpr<riscv_divuw, DIVUW>;
@@ -101,15 +101,6 @@ let Predicates = [HasStdExtM, IsRV64, NotHasStdExtZba] in {
 // multiply where the inputs aren't known to be zero extended. We can shift the
 // inputs left by 32 and use a MULHU. This saves two SRLIs needed to finish
 // zeroing the upper 32 bits.
-// TODO: If one of the operands is zero extended and the other isn't, we might
-// still be better off shifting both left by 32.
 def : Pat<(i64 (mul (and GPR:$rs1, 0xffffffff), (and GPR:$rs2, 0xffffffff))),
           (MULHU (SLLI GPR:$rs1, 32), (SLLI GPR:$rs2, 32))>;
-// Prevent matching the first part of this pattern to mulw. The mul here has
-// additionals users or the ANDs would have been removed. The above pattern
-// will be used for the other users. If we form a mulw we'll keep the ANDs alive
-// and they'll still become SLLI+SRLI.
-def : Pat<(sext_inreg (mul (and GPR:$rs1, 0xffffffff),
-                           (and GPR:$rs2, 0xffffffff)), i32),
-          (ADDIW (MULHU (SLLI GPR:$rs1, 32), (SLLI GPR:$rs2, 32)), 0)>;
 } // Predicates = [HasStdExtM, IsRV64, NotHasStdExtZba]

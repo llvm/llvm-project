@@ -6,13 +6,13 @@
 //
 //===----------------------------------------------------------------------===//
 
-// UNSUPPORTED: clang-8
-
 // <string>
 
 // template<> struct char_traits<wchar_t>
 
 // static char_type* move(char_type* s1, const char_type* s2, size_t n);
+
+// UNSUPPORTED: no-wide-characters
 
 #include <string>
 #include <cassert>

@@ -33,6 +33,7 @@
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DIBuilder.h"
 #include "llvm/IR/DataLayout.h"
+#include "llvm/IR/DebugInfo.h"
 #include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Dominators.h"
@@ -52,7 +53,6 @@
 #include "llvm/IR/User.h"
 #include "llvm/IR/Value.h"
 #include "llvm/IR/Verifier.h"
-#include "llvm/Pass.h"
 #include "llvm/Support/BlockFrequency.h"
 #include "llvm/Support/BranchProbability.h"
 #include "llvm/Support/Casting.h"
@@ -61,12 +61,10 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
-#include "llvm/Transforms/Utils/Local.h"
 #include <cassert>
 #include <cstdint>
 #include <iterator>
 #include <map>
-#include <set>
 #include <utility>
 #include <vector>
 
@@ -248,9 +246,10 @@ CodeExtractor::CodeExtractor(ArrayRef<BasicBlock *> BBs, DominatorTree *DT,
                              bool AggregateArgs, BlockFrequencyInfo *BFI,
                              BranchProbabilityInfo *BPI, AssumptionCache *AC,
                              bool AllowVarArgs, bool AllowAlloca,
-                             std::string Suffix)
+                             BasicBlock *AllocationBlock, std::string Suffix)
     : DT(DT), AggregateArgs(AggregateArgs || AggregateArgsOpt), BFI(BFI),
-      BPI(BPI), AC(AC), AllowVarArgs(AllowVarArgs),
+      BPI(BPI), AC(AC), AllocationBlock(AllocationBlock),
+      AllowVarArgs(AllowVarArgs),
       Blocks(buildExtractionBlockSet(BBs, DT, AllowVarArgs, AllowAlloca)),
       Suffix(Suffix) {}
 
@@ -259,7 +258,7 @@ CodeExtractor::CodeExtractor(DominatorTree &DT, Loop &L, bool AggregateArgs,
                              BranchProbabilityInfo *BPI, AssumptionCache *AC,
                              std::string Suffix)
     : DT(&DT), AggregateArgs(AggregateArgs || AggregateArgsOpt), BFI(BFI),
-      BPI(BPI), AC(AC), AllowVarArgs(false),
+      BPI(BPI), AC(AC), AllocationBlock(nullptr), AllowVarArgs(false),
       Blocks(buildExtractionBlockSet(L.getBlocks(), &DT,
                                      /* AllowVarArgs */ false,
                                      /* AllowAlloca */ false)),
@@ -434,6 +433,7 @@ CodeExtractor::findOrCreateBlockForHoisting(BasicBlock *CommonExitBlock) {
   }
   // Now add the old exit block to the outline region.
   Blocks.insert(CommonExitBlock);
+  OldTargets.push_back(NewExitBlock);
   return CommonExitBlock;
 }
 
@@ -828,39 +828,54 @@ Function *CodeExtractor::constructFunction(const ValueSet &inputs,
   default: RetTy = Type::getInt16Ty(header->getContext()); break;
   }
 
-  std::vector<Type *> paramTy;
+  std::vector<Type *> ParamTy;
+  std::vector<Type *> AggParamTy;
+  ValueSet StructValues;
 
   // Add the types of the input values to the function's argument list
   for (Value *value : inputs) {
     LLVM_DEBUG(dbgs() << "value used in func: " << *value << "\n");
-    paramTy.push_back(value->getType());
+    if (AggregateArgs && !ExcludeArgsFromAggregate.contains(value)) {
+      AggParamTy.push_back(value->getType());
+      StructValues.insert(value);
+    } else
+      ParamTy.push_back(value->getType());
   }
 
   // Add the types of the output values to the function's argument list.
   for (Value *output : outputs) {
     LLVM_DEBUG(dbgs() << "instr used in func: " << *output << "\n");
-    if (AggregateArgs)
-      paramTy.push_back(output->getType());
-    else
-      paramTy.push_back(PointerType::getUnqual(output->getType()));
+    if (AggregateArgs && !ExcludeArgsFromAggregate.contains(output)) {
+      AggParamTy.push_back(output->getType());
+      StructValues.insert(output);
+    } else
+      ParamTy.push_back(PointerType::getUnqual(output->getType()));
+  }
+
+  assert(
+      (ParamTy.size() + AggParamTy.size()) ==
+          (inputs.size() + outputs.size()) &&
+      "Number of scalar and aggregate params does not match inputs, outputs");
+  assert((StructValues.empty() || AggregateArgs) &&
+         "Expeced StructValues only with AggregateArgs set");
+
+  // Concatenate scalar and aggregate params in ParamTy.
+  size_t NumScalarParams = ParamTy.size();
+  StructType *StructTy = nullptr;
+  if (AggregateArgs && !AggParamTy.empty()) {
+    StructTy = StructType::get(M->getContext(), AggParamTy);
+    ParamTy.push_back(PointerType::getUnqual(StructTy));
   }
 
   LLVM_DEBUG({
     dbgs() << "Function type: " << *RetTy << " f(";
-    for (Type *i : paramTy)
+    for (Type *i : ParamTy)
       dbgs() << *i << ", ";
     dbgs() << ")\n";
   });
 
-  StructType *StructTy = nullptr;
-  if (AggregateArgs && (inputs.size() + outputs.size() > 0)) {
-    StructTy = StructType::get(M->getContext(), paramTy);
-    paramTy.clear();
-    paramTy.push_back(PointerType::getUnqual(StructTy));
-  }
-  FunctionType *funcType =
-                  FunctionType::get(RetTy, paramTy,
-                                    AllowVarArgs && oldFunction->isVarArg());
+  FunctionType *funcType = FunctionType::get(
+      RetTy, ParamTy, AllowVarArgs && oldFunction->isVarArg());
 
   std::string SuffixToUse =
       Suffix.empty()
@@ -870,13 +885,6 @@ Function *CodeExtractor::constructFunction(const ValueSet &inputs,
   Function *newFunction = Function::Create(
       funcType, GlobalValue::InternalLinkage, oldFunction->getAddressSpace(),
       oldFunction->getName() + "." + SuffixToUse, M);
-  // If the old function is no-throw, so is the new one.
-  if (oldFunction->doesNotThrow())
-    newFunction->setDoesNotThrow();
-
-  // Inherit the uwtable attribute if we need to.
-  if (oldFunction->hasUWTable())
-    newFunction->setHasUWTable();
 
   // Inherit all of the target dependent attributes and white-listed
   // target independent attributes.
@@ -885,64 +893,40 @@ Function *CodeExtractor::constructFunction(const ValueSet &inputs,
   //  "target-features" attribute allowing it to be lowered.
   // FIXME: This should be changed to check to see if a specific
   //           attribute can not be inherited.
-  for (const auto &Attr : oldFunction->getAttributes().getFnAttributes()) {
+  for (const auto &Attr : oldFunction->getAttributes().getFnAttrs()) {
     if (Attr.isStringAttribute()) {
       if (Attr.getKindAsString() == "thunk")
         continue;
     } else
       switch (Attr.getKindAsEnum()) {
       // Those attributes cannot be propagated safely. Explicitly list them
-      // here so we get a warning if new attributes are added. This list also
-      // includes non-function attributes.
-      case Attribute::Alignment:
+      // here so we get a warning if new attributes are added.
       case Attribute::AllocSize:
       case Attribute::ArgMemOnly:
       case Attribute::Builtin:
-      case Attribute::ByVal:
       case Attribute::Convergent:
-      case Attribute::Dereferenceable:
-      case Attribute::DereferenceableOrNull:
-      case Attribute::ElementType:
-      case Attribute::InAlloca:
-      case Attribute::InReg:
       case Attribute::InaccessibleMemOnly:
       case Attribute::InaccessibleMemOrArgMemOnly:
       case Attribute::JumpTable:
       case Attribute::Naked:
-      case Attribute::Nest:
-      case Attribute::NoAlias:
       case Attribute::NoBuiltin:
-      case Attribute::NoCapture:
       case Attribute::NoMerge:
       case Attribute::NoReturn:
       case Attribute::NoSync:
-      case Attribute::NoUndef:
-      case Attribute::None:
-      case Attribute::NonNull:
-      case Attribute::Preallocated:
       case Attribute::ReadNone:
       case Attribute::ReadOnly:
-      case Attribute::Returned:
       case Attribute::ReturnsTwice:
-      case Attribute::SExt:
       case Attribute::Speculatable:
       case Attribute::StackAlignment:
-      case Attribute::StructRet:
-      case Attribute::SwiftError:
-      case Attribute::SwiftSelf:
-      case Attribute::SwiftAsync:
       case Attribute::WillReturn:
       case Attribute::WriteOnly:
-      case Attribute::ZExt:
-      case Attribute::ImmArg:
-      case Attribute::ByRef:
-      case Attribute::EndAttrKinds:
-      case Attribute::EmptyKey:
-      case Attribute::TombstoneKey:
+      case Attribute::AllocKind:
+      case Attribute::PresplitCoroutine:
         continue;
       // Those attributes should be safe to propagate to the extracted function.
       case Attribute::AlwaysInline:
       case Attribute::Cold:
+      case Attribute::DisableSanitizerInstrumentation:
       case Attribute::Hot:
       case Attribute::NoRecurse:
       case Attribute::InlineHint:
@@ -955,6 +939,7 @@ Function *CodeExtractor::constructFunction(const ValueSet &inputs,
       case Attribute::NonLazyBind:
       case Attribute::NoRedZone:
       case Attribute::NoUnwind:
+      case Attribute::NoSanitizeBounds:
       case Attribute::NoSanitizeCoverage:
       case Attribute::NullPointerIsValid:
       case Attribute::OptForFuzzing:
@@ -978,30 +963,64 @@ Function *CodeExtractor::constructFunction(const ValueSet &inputs,
       case Attribute::MustProgress:
       case Attribute::NoProfile:
         break;
+      // These attributes cannot be applied to functions.
+      case Attribute::Alignment:
+      case Attribute::AllocatedPointer:
+      case Attribute::AllocAlign:
+      case Attribute::ByVal:
+      case Attribute::Dereferenceable:
+      case Attribute::DereferenceableOrNull:
+      case Attribute::ElementType:
+      case Attribute::InAlloca:
+      case Attribute::InReg:
+      case Attribute::Nest:
+      case Attribute::NoAlias:
+      case Attribute::NoCapture:
+      case Attribute::NoUndef:
+      case Attribute::NonNull:
+      case Attribute::Preallocated:
+      case Attribute::Returned:
+      case Attribute::SExt:
+      case Attribute::StructRet:
+      case Attribute::SwiftError:
+      case Attribute::SwiftSelf:
+      case Attribute::SwiftAsync:
+      case Attribute::ZExt:
+      case Attribute::ImmArg:
+      case Attribute::ByRef:
+      //  These are not really attributes.
+      case Attribute::None:
+      case Attribute::EndAttrKinds:
+      case Attribute::EmptyKey:
+      case Attribute::TombstoneKey:
+        llvm_unreachable("Not a function attribute");
       }
 
     newFunction->addFnAttr(Attr);
   }
   newFunction->getBasicBlockList().push_back(newRootNode);
 
-  // Create an iterator to name all of the arguments we inserted.
-  Function::arg_iterator AI = newFunction->arg_begin();
+  // Create scalar and aggregate iterators to name all of the arguments we
+  // inserted.
+  Function::arg_iterator ScalarAI = newFunction->arg_begin();
+  Function::arg_iterator AggAI = std::next(ScalarAI, NumScalarParams);
 
   // Rewrite all users of the inputs in the extracted region to use the
   // arguments (or appropriate addressing into struct) instead.
-  for (unsigned i = 0, e = inputs.size(); i != e; ++i) {
+  for (unsigned i = 0, e = inputs.size(), aggIdx = 0; i != e; ++i) {
     Value *RewriteVal;
-    if (AggregateArgs) {
+    if (AggregateArgs && StructValues.contains(inputs[i])) {
       Value *Idx[2];
       Idx[0] = Constant::getNullValue(Type::getInt32Ty(header->getContext()));
-      Idx[1] = ConstantInt::get(Type::getInt32Ty(header->getContext()), i);
+      Idx[1] = ConstantInt::get(Type::getInt32Ty(header->getContext()), aggIdx);
       Instruction *TI = newFunction->begin()->getTerminator();
       GetElementPtrInst *GEP = GetElementPtrInst::Create(
-          StructTy, &*AI, Idx, "gep_" + inputs[i]->getName(), TI);
-      RewriteVal = new LoadInst(StructTy->getElementType(i), GEP,
+          StructTy, &*AggAI, Idx, "gep_" + inputs[i]->getName(), TI);
+      RewriteVal = new LoadInst(StructTy->getElementType(aggIdx), GEP,
                                 "loadgep_" + inputs[i]->getName(), TI);
+      ++aggIdx;
     } else
-      RewriteVal = &*AI++;
+      RewriteVal = &*ScalarAI++;
 
     std::vector<User *> Users(inputs[i]->user_begin(), inputs[i]->user_end());
     for (User *use : Users)
@@ -1011,12 +1030,14 @@ Function *CodeExtractor::constructFunction(const ValueSet &inputs,
   }
 
   // Set names for input and output arguments.
-  if (!AggregateArgs) {
-    AI = newFunction->arg_begin();
-    for (unsigned i = 0, e = inputs.size(); i != e; ++i, ++AI)
-      AI->setName(inputs[i]->getName());
-    for (unsigned i = 0, e = outputs.size(); i != e; ++i, ++AI)
-      AI->setName(outputs[i]->getName()+".out");
+  if (NumScalarParams) {
+    ScalarAI = newFunction->arg_begin();
+    for (unsigned i = 0, e = inputs.size(); i != e; ++i, ++ScalarAI)
+      if (!StructValues.contains(inputs[i]))
+        ScalarAI->setName(inputs[i]->getName());
+    for (unsigned i = 0, e = outputs.size(); i != e; ++i, ++ScalarAI)
+      if (!StructValues.contains(outputs[i]))
+        ScalarAI->setName(outputs[i]->getName() + ".out");
   }
 
   // Rewrite branches to basic blocks outside of the loop to new dummy blocks
@@ -1044,9 +1065,8 @@ static void eraseLifetimeMarkersOnInputs(const SetVector<BasicBlock *> &Blocks,
                                          const SetVector<Value *> &SunkAllocas,
                                          SetVector<Value *> &LifetimesStart) {
   for (BasicBlock *BB : Blocks) {
-    for (auto It = BB->begin(), End = BB->end(); It != End;) {
-      auto *II = dyn_cast<IntrinsicInst>(&*It);
-      ++It;
+    for (Instruction &I : llvm::make_early_inc_range(*BB)) {
+      auto *II = dyn_cast<IntrinsicInst>(&I);
       if (!II || !II->isLifetimeStartOrEnd())
         continue;
 
@@ -1125,7 +1145,8 @@ CallInst *CodeExtractor::emitCallAndSwitchStatement(Function *newFunction,
                                                     ValueSet &outputs) {
   // Emit a call to the new function, passing in: *pointer to struct (if
   // aggregating parameters), or plan inputs and allocated memory for outputs
-  std::vector<Value *> params, StructValues, ReloadOutputs, Reloads;
+  std::vector<Value *> params, ReloadOutputs, Reloads;
+  ValueSet StructValues;
 
   Module *M = newFunction->getParent();
   LLVMContext &Context = M->getContext();
@@ -1133,23 +1154,24 @@ CallInst *CodeExtractor::emitCallAndSwitchStatement(Function *newFunction,
   CallInst *call = nullptr;
 
   // Add inputs as params, or to be filled into the struct
-  unsigned ArgNo = 0;
+  unsigned ScalarInputArgNo = 0;
   SmallVector<unsigned, 1> SwiftErrorArgs;
   for (Value *input : inputs) {
-    if (AggregateArgs)
-      StructValues.push_back(input);
+    if (AggregateArgs && !ExcludeArgsFromAggregate.contains(input))
+      StructValues.insert(input);
     else {
       params.push_back(input);
       if (input->isSwiftError())
-        SwiftErrorArgs.push_back(ArgNo);
+        SwiftErrorArgs.push_back(ScalarInputArgNo);
     }
-    ++ArgNo;
+    ++ScalarInputArgNo;
   }
 
   // Create allocas for the outputs
+  unsigned ScalarOutputArgNo = 0;
   for (Value *output : outputs) {
-    if (AggregateArgs) {
-      StructValues.push_back(output);
+    if (AggregateArgs && !ExcludeArgsFromAggregate.contains(output)) {
+      StructValues.insert(output);
     } else {
       AllocaInst *alloca =
         new AllocaInst(output->getType(), DL.getAllocaAddrSpace(),
@@ -1157,31 +1179,38 @@ CallInst *CodeExtractor::emitCallAndSwitchStatement(Function *newFunction,
                        &codeReplacer->getParent()->front().front());
       ReloadOutputs.push_back(alloca);
       params.push_back(alloca);
+      ++ScalarOutputArgNo;
     }
   }
 
   StructType *StructArgTy = nullptr;
   AllocaInst *Struct = nullptr;
-  if (AggregateArgs && (inputs.size() + outputs.size() > 0)) {
+  unsigned NumAggregatedInputs = 0;
+  if (AggregateArgs && !StructValues.empty()) {
     std::vector<Type *> ArgTypes;
     for (Value *V : StructValues)
       ArgTypes.push_back(V->getType());
 
     // Allocate a struct at the beginning of this function
     StructArgTy = StructType::get(newFunction->getContext(), ArgTypes);
-    Struct = new AllocaInst(StructArgTy, DL.getAllocaAddrSpace(), nullptr,
-                            "structArg",
-                            &codeReplacer->getParent()->front().front());
+    Struct = new AllocaInst(
+        StructArgTy, DL.getAllocaAddrSpace(), nullptr, "structArg",
+        AllocationBlock ? &*AllocationBlock->getFirstInsertionPt()
+                        : &codeReplacer->getParent()->front().front());
     params.push_back(Struct);
 
-    for (unsigned i = 0, e = inputs.size(); i != e; ++i) {
-      Value *Idx[2];
-      Idx[0] = Constant::getNullValue(Type::getInt32Ty(Context));
-      Idx[1] = ConstantInt::get(Type::getInt32Ty(Context), i);
-      GetElementPtrInst *GEP = GetElementPtrInst::Create(
-          StructArgTy, Struct, Idx, "gep_" + StructValues[i]->getName());
-      codeReplacer->getInstList().push_back(GEP);
-      new StoreInst(StructValues[i], GEP, codeReplacer);
+    // Store aggregated inputs in the struct.
+    for (unsigned i = 0, e = StructValues.size(); i != e; ++i) {
+      if (inputs.contains(StructValues[i])) {
+        Value *Idx[2];
+        Idx[0] = Constant::getNullValue(Type::getInt32Ty(Context));
+        Idx[1] = ConstantInt::get(Type::getInt32Ty(Context), i);
+        GetElementPtrInst *GEP = GetElementPtrInst::Create(
+            StructArgTy, Struct, Idx, "gep_" + StructValues[i]->getName());
+        codeReplacer->getInstList().push_back(GEP);
+        new StoreInst(StructValues[i], GEP, codeReplacer);
+        NumAggregatedInputs++;
+      }
     }
   }
 
@@ -1204,24 +1233,24 @@ CallInst *CodeExtractor::emitCallAndSwitchStatement(Function *newFunction,
     newFunction->addParamAttr(SwiftErrArgNo, Attribute::SwiftError);
   }
 
-  Function::arg_iterator OutputArgBegin = newFunction->arg_begin();
-  unsigned FirstOut = inputs.size();
-  if (!AggregateArgs)
-    std::advance(OutputArgBegin, inputs.size());
-
-  // Reload the outputs passed in by reference.
-  for (unsigned i = 0, e = outputs.size(); i != e; ++i) {
+  // Reload the outputs passed in by reference, use the struct if output is in
+  // the aggregate or reload from the scalar argument.
+  for (unsigned i = 0, e = outputs.size(), scalarIdx = 0,
+                aggIdx = NumAggregatedInputs;
+       i != e; ++i) {
     Value *Output = nullptr;
-    if (AggregateArgs) {
+    if (AggregateArgs && StructValues.contains(outputs[i])) {
       Value *Idx[2];
       Idx[0] = Constant::getNullValue(Type::getInt32Ty(Context));
-      Idx[1] = ConstantInt::get(Type::getInt32Ty(Context), FirstOut + i);
+      Idx[1] = ConstantInt::get(Type::getInt32Ty(Context), aggIdx);
       GetElementPtrInst *GEP = GetElementPtrInst::Create(
           StructArgTy, Struct, Idx, "gep_reload_" + outputs[i]->getName());
       codeReplacer->getInstList().push_back(GEP);
       Output = GEP;
+      ++aggIdx;
     } else {
-      Output = ReloadOutputs[i];
+      Output = ReloadOutputs[scalarIdx];
+      ++scalarIdx;
     }
     LoadInst *load = new LoadInst(outputs[i]->getType(), Output,
                                   outputs[i]->getName() + ".reload",
@@ -1247,52 +1276,69 @@ CallInst *CodeExtractor::emitCallAndSwitchStatement(Function *newFunction,
   // not in the region to be extracted.
   std::map<BasicBlock *, BasicBlock *> ExitBlockMap;
 
+  // Iterate over the previously collected targets, and create new blocks inside
+  // the function to branch to.
   unsigned switchVal = 0;
+  for (BasicBlock *OldTarget : OldTargets) {
+    if (Blocks.count(OldTarget))
+      continue;
+    BasicBlock *&NewTarget = ExitBlockMap[OldTarget];
+    if (NewTarget)
+      continue;
+
+    // If we don't already have an exit stub for this non-extracted
+    // destination, create one now!
+    NewTarget = BasicBlock::Create(Context,
+                                    OldTarget->getName() + ".exitStub",
+                                    newFunction);
+    unsigned SuccNum = switchVal++;
+
+    Value *brVal = nullptr;
+    assert(NumExitBlocks < 0xffff && "too many exit blocks for switch");
+    switch (NumExitBlocks) {
+    case 0:
+    case 1: break;  // No value needed.
+    case 2:         // Conditional branch, return a bool
+      brVal = ConstantInt::get(Type::getInt1Ty(Context), !SuccNum);
+      break;
+    default:
+      brVal = ConstantInt::get(Type::getInt16Ty(Context), SuccNum);
+      break;
+    }
+
+    ReturnInst::Create(Context, brVal, NewTarget);
+
+    // Update the switch instruction.
+    TheSwitch->addCase(ConstantInt::get(Type::getInt16Ty(Context),
+                                        SuccNum),
+                        OldTarget);
+  }
+
   for (BasicBlock *Block : Blocks) {
     Instruction *TI = Block->getTerminator();
-    for (unsigned i = 0, e = TI->getNumSuccessors(); i != e; ++i)
-      if (!Blocks.count(TI->getSuccessor(i))) {
-        BasicBlock *OldTarget = TI->getSuccessor(i);
-        // add a new basic block which returns the appropriate value
-        BasicBlock *&NewTarget = ExitBlockMap[OldTarget];
-        if (!NewTarget) {
-          // If we don't already have an exit stub for this non-extracted
-          // destination, create one now!
-          NewTarget = BasicBlock::Create(Context,
-                                         OldTarget->getName() + ".exitStub",
-                                         newFunction);
-          unsigned SuccNum = switchVal++;
+    for (unsigned i = 0, e = TI->getNumSuccessors(); i != e; ++i) {
+      if (Blocks.count(TI->getSuccessor(i)))
+        continue;
+      BasicBlock *OldTarget = TI->getSuccessor(i);
+      // add a new basic block which returns the appropriate value
+      BasicBlock *NewTarget = ExitBlockMap[OldTarget];
+      assert(NewTarget && "Unknown target block!");
 
-          Value *brVal = nullptr;
-          switch (NumExitBlocks) {
-          case 0:
-          case 1: break;  // No value needed.
-          case 2:         // Conditional branch, return a bool
-            brVal = ConstantInt::get(Type::getInt1Ty(Context), !SuccNum);
-            break;
-          default:
-            brVal = ConstantInt::get(Type::getInt16Ty(Context), SuccNum);
-            break;
-          }
-
-          ReturnInst::Create(Context, brVal, NewTarget);
-
-          // Update the switch instruction.
-          TheSwitch->addCase(ConstantInt::get(Type::getInt16Ty(Context),
-                                              SuccNum),
-                             OldTarget);
-        }
-
-        // rewrite the original branch instruction with this new target
-        TI->setSuccessor(i, NewTarget);
-      }
+      // rewrite the original branch instruction with this new target
+      TI->setSuccessor(i, NewTarget);
+   }
   }
 
   // Store the arguments right after the definition of output value.
   // This should be proceeded after creating exit stubs to be ensure that invoke
   // result restore will be placed in the outlined function.
-  Function::arg_iterator OAI = OutputArgBegin;
-  for (unsigned i = 0, e = outputs.size(); i != e; ++i) {
+  Function::arg_iterator ScalarOutputArgBegin = newFunction->arg_begin();
+  std::advance(ScalarOutputArgBegin, ScalarInputArgNo);
+  Function::arg_iterator AggOutputArgBegin = newFunction->arg_begin();
+  std::advance(AggOutputArgBegin, ScalarInputArgNo + ScalarOutputArgNo);
+
+  for (unsigned i = 0, e = outputs.size(), aggIdx = NumAggregatedInputs; i != e;
+       ++i) {
     auto *OutI = dyn_cast<Instruction>(outputs[i]);
     if (!OutI)
       continue;
@@ -1312,23 +1358,27 @@ CallInst *CodeExtractor::emitCallAndSwitchStatement(Function *newFunction,
     assert((InsertBefore->getFunction() == newFunction ||
             Blocks.count(InsertBefore->getParent())) &&
            "InsertPt should be in new function");
-    assert(OAI != newFunction->arg_end() &&
-           "Number of output arguments should match "
-           "the amount of defined values");
-    if (AggregateArgs) {
+    if (AggregateArgs && StructValues.contains(outputs[i])) {
+      assert(AggOutputArgBegin != newFunction->arg_end() &&
+             "Number of aggregate output arguments should match "
+             "the number of defined values");
       Value *Idx[2];
       Idx[0] = Constant::getNullValue(Type::getInt32Ty(Context));
-      Idx[1] = ConstantInt::get(Type::getInt32Ty(Context), FirstOut + i);
+      Idx[1] = ConstantInt::get(Type::getInt32Ty(Context), aggIdx);
       GetElementPtrInst *GEP = GetElementPtrInst::Create(
-          StructArgTy, &*OAI, Idx, "gep_" + outputs[i]->getName(),
+          StructArgTy, &*AggOutputArgBegin, Idx, "gep_" + outputs[i]->getName(),
           InsertBefore);
       new StoreInst(outputs[i], GEP, InsertBefore);
+      ++aggIdx;
       // Since there should be only one struct argument aggregating
-      // all the output values, we shouldn't increment OAI, which always
-      // points to the struct argument, in this case.
+      // all the output values, we shouldn't increment AggOutputArgBegin, which
+      // always points to the struct argument, in this case.
     } else {
-      new StoreInst(outputs[i], &*OAI, InsertBefore);
-      ++OAI;
+      assert(ScalarOutputArgBegin != newFunction->arg_end() &&
+             "Number of scalar output arguments should match "
+             "the number of defined values");
+      new StoreInst(outputs[i], &*ScalarOutputArgBegin, InsertBefore);
+      ++ScalarOutputArgBegin;
     }
   }
 
@@ -1388,12 +1438,17 @@ void CodeExtractor::moveCodeToFunction(Function *newFunction) {
   Function::BasicBlockListType &oldBlocks = oldFunc->getBasicBlockList();
   Function::BasicBlockListType &newBlocks = newFunction->getBasicBlockList();
 
+  auto newFuncIt = newFunction->front().getIterator();
   for (BasicBlock *Block : Blocks) {
     // Delete the basic block from the old function, and the list of blocks
     oldBlocks.remove(Block);
 
     // Insert this basic block into the new function
-    newBlocks.push_back(Block);
+    // Insert the original blocks after the entry block created
+    // for the new function. The entry block may be followed
+    // by a set of exit blocks at this point, but these exit
+    // blocks better be placed at the end of the new function.
+    newFuncIt = newBlocks.insertAfter(newFuncIt, Block);
   }
 }
 
@@ -1569,6 +1624,13 @@ static void fixupDebugInfoPostExtraction(Function &OldFunc, Function &NewFunc,
 
 Function *
 CodeExtractor::extractCodeRegion(const CodeExtractorAnalysisCache &CEAC) {
+  ValueSet Inputs, Outputs;
+  return extractCodeRegion(CEAC, Inputs, Outputs);
+}
+
+Function *
+CodeExtractor::extractCodeRegion(const CodeExtractorAnalysisCache &CEAC,
+                                 ValueSet &inputs, ValueSet &outputs) {
   if (!isEligible())
     return nullptr;
 
@@ -1593,11 +1655,8 @@ CodeExtractor::extractCodeRegion(const CodeExtractorAnalysisCache &CEAC) {
   // Remove @llvm.assume calls that will be moved to the new function from the
   // old function's assumption cache.
   for (BasicBlock *Block : Blocks) {
-    for (auto It = Block->begin(), End = Block->end(); It != End;) {
-      Instruction *I = &*It;
-      ++It;
-
-      if (auto *AI = dyn_cast<AssumeInst>(I)) {
+    for (Instruction &I : llvm::make_early_inc_range(*Block)) {
+      if (auto *AI = dyn_cast<AssumeInst>(&I)) {
         if (AC)
           AC->unregisterAssumption(AI);
         AI->eraseFromParent();
@@ -1626,6 +1685,16 @@ CodeExtractor::extractCodeRegion(const CodeExtractorAnalysisCache &CEAC) {
     }
   }
   NumExitBlocks = ExitBlocks.size();
+
+  for (BasicBlock *Block : Blocks) {
+    Instruction *TI = Block->getTerminator();
+    for (unsigned i = 0, e = TI->getNumSuccessors(); i != e; ++i) {
+      if (Blocks.count(TI->getSuccessor(i)))
+        continue;
+      BasicBlock *OldTarget = TI->getSuccessor(i);
+      OldTargets.push_back(OldTarget);
+    }
+  }
 
   // If we have to split PHI nodes of the entry or exit blocks, do so now.
   severSplitPHINodesOfEntry(header);
@@ -1657,7 +1726,7 @@ CodeExtractor::extractCodeRegion(const CodeExtractorAnalysisCache &CEAC) {
   }
   newFuncRoot->getInstList().push_back(BranchI);
 
-  ValueSet inputs, outputs, SinkingCands, HoistingCands;
+  ValueSet SinkingCands, HoistingCands;
   BasicBlock *CommonExit = nullptr;
   findAllocas(CEAC, SinkingCands, HoistingCands, CommonExit);
   assert(HoistingCands.empty() || CommonExit);
@@ -1807,4 +1876,8 @@ bool CodeExtractor::verifyAssumptionCache(const Function &OldFunc,
     }
   }
   return false;
+}
+
+void CodeExtractor::excludeArgFromAggregate(Value *Arg) {
+  ExcludeArgsFromAggregate.insert(Arg);
 }

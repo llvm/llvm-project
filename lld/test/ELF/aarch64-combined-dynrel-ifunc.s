@@ -1,4 +1,4 @@
-// REQUIRES: AArch64
+// REQUIRES: aarch64
 // RUN: llvm-mc -filetype=obj -triple=aarch64-linux-gnu %p/Inputs/shared.s -o %t-lib.o
 // RUN: llvm-mc -filetype=obj -triple=aarch64-linux-gnu %s -o %t.o
 // RUN: ld.lld %t-lib.o --shared -o %t.so
@@ -42,10 +42,11 @@ main:
 // CHECK-NEXT:     Type: SHT_RELA
 // CHECK-NEXT:     Flags [
 // CHECK-NEXT:       SHF_ALLOC
+// CHECK-NEXT:       SHF_INFO_LINK
 // CHECK-NEXT:     ]
 // CHECK-NEXT:     Address:
 // CHECK-NEXT:     Offset:
 // CHECK-NEXT:     Size: 72
 
 // CHECK:      0x0000000000000008 RELASZ               72
-// CHECK:      0x0000000000000002 PLTRELSZ             48
+// CHECK:      0x0000000000000002 PLTRELSZ             24

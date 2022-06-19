@@ -34,7 +34,7 @@ struct ARM : TargetInfo {
 
   void writeStub(uint8_t *buf, const Symbol &) const override;
   void writeStubHelperHeader(uint8_t *buf) const override;
-  void writeStubHelperEntry(uint8_t *buf, const DylibSymbol &,
+  void writeStubHelperEntry(uint8_t *buf, const Symbol &,
                             uint64_t entryAddr) const override;
 
   void relaxGotLoad(uint8_t *loc, uint8_t type) const override;
@@ -116,7 +116,7 @@ void ARM::relocateOne(uint8_t *loc, const Reloc &r, uint64_t value,
         return;
       } else if (isBlx && !defined->thumb) {
         Bitfield::set<Cond>(base, 0xe); // unconditional BL
-        Bitfield::set<BitfieldFlag<24>>(base, 1);
+        Bitfield::set<BitfieldFlag<24>>(base, true);
         isBlx = false;
       }
     } else {
@@ -148,7 +148,7 @@ void ARM::writeStubHelperHeader(uint8_t *buf) const {
   fatal("TODO: implement this");
 }
 
-void ARM::writeStubHelperEntry(uint8_t *buf, const DylibSymbol &sym,
+void ARM::writeStubHelperEntry(uint8_t *buf, const Symbol &sym,
                                uint64_t entryAddr) const {
   fatal("TODO: implement this");
 }

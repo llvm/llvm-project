@@ -28,6 +28,7 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/CodeGen/LexicalScopes.h"
 #include "llvm/CodeGen/LiveInterval.h"
 #include "llvm/CodeGen/LiveIntervals.h"
@@ -38,11 +39,9 @@
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
-#include "llvm/CodeGen/Passes.h"
 #include "llvm/CodeGen/SlotIndexes.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/CodeGen/TargetOpcodes.h"
-#include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/CodeGen/VirtRegMap.h"
@@ -50,15 +49,12 @@
 #include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/DebugLoc.h"
 #include "llvm/IR/Function.h"
-#include "llvm/IR/Metadata.h"
 #include "llvm/InitializePasses.h"
-#include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
-#include "llvm/Target/TargetMachine.h"
 #include <algorithm>
 #include <cassert>
 #include <iterator>
@@ -152,7 +148,7 @@ public:
     }
   }
 
-  DbgVariableValue() : LocNoCount(0), WasIndirect(0), WasList(0) {}
+  DbgVariableValue() : LocNoCount(0), WasIndirect(false), WasList(false) {}
   DbgVariableValue(const DbgVariableValue &Other)
       : LocNoCount(Other.LocNoCount), WasIndirect(Other.getWasIndirect()),
         WasList(Other.getWasList()), Expression(Other.getExpression()) {
@@ -417,7 +413,7 @@ public:
   void addDef(SlotIndex Idx, ArrayRef<MachineOperand> LocMOs, bool IsIndirect,
               bool IsList, const DIExpression &Expr) {
     SmallVector<unsigned> Locs;
-    for (MachineOperand Op : LocMOs)
+    for (const MachineOperand &Op : LocMOs)
       Locs.push_back(getLocationNo(Op));
     DbgVariableValue DbgValue(Locs, IsIndirect, IsList, Expr);
     // Add a singular (Idx,Idx) -> value mapping.
@@ -822,9 +818,6 @@ bool LDVImpl::handleDebugValue(MachineInstr &MI, SlotIndex Idx) {
   // register that hasn't been defined yet. If we do not remove those here, then
   // the re-insertion of the DBG_VALUE instruction after register allocation
   // will be incorrect.
-  // TODO: If earlier passes are corrected to generate sane debug information
-  // (and if the machine verifier is improved to catch this), then these checks
-  // could be removed or replaced by asserts.
   bool Discard = false;
   for (const MachineOperand &Op : MI.debug_operands()) {
     if (Op.isReg() && Register::isVirtualRegister(Op.getReg())) {
@@ -1294,13 +1287,9 @@ bool LDVImpl::runOnMachineFunction(MachineFunction &mf, bool InstrRef) {
 
 static void removeDebugInstrs(MachineFunction &mf) {
   for (MachineBasicBlock &MBB : mf) {
-    for (auto MBBI = MBB.begin(), MBBE = MBB.end(); MBBI != MBBE; ) {
-      if (!MBBI->isDebugInstr()) {
-        ++MBBI;
-        continue;
-      }
-      MBBI = MBB.erase(MBBI);
-    }
+    for (MachineInstr &MI : llvm::make_early_inc_range(MBB))
+      if (MI.isDebugInstr())
+        MBB.erase(&MI);
   }
 }
 
@@ -1314,12 +1303,7 @@ bool LiveDebugVariables::runOnMachineFunction(MachineFunction &mf) {
 
   // Have we been asked to track variable locations using instruction
   // referencing?
-  bool InstrRef = false;
-  auto *TPC = getAnalysisIfAvailable<TargetPassConfig>();
-  if (TPC) {
-    auto &TM = TPC->getTM<TargetMachine>();
-    InstrRef = TM.Options.ValueTrackingVariableLocations;
-  }
+  bool InstrRef = mf.useDebugInstrRef();
 
   if (!pImpl)
     pImpl = new LDVImpl(this);
@@ -1350,8 +1334,8 @@ UserValue::splitLocation(unsigned OldLocNo, ArrayRef<Register> NewRegs,
   bool DidChange = false;
   LocMap::iterator LocMapI;
   LocMapI.setMap(locInts);
-  for (unsigned i = 0; i != NewRegs.size(); ++i) {
-    LiveInterval *LI = &LIS.getInterval(NewRegs[i]);
+  for (Register NewReg : NewRegs) {
+    LiveInterval *LI = &LIS.getInterval(NewReg);
     if (LI->empty())
       continue;
 
@@ -1509,8 +1493,8 @@ void LDVImpl::splitRegister(Register OldReg, ArrayRef<Register> NewRegs) {
 
   // Map all of the new virtual registers.
   UserValue *UV = lookupVirtReg(OldReg);
-  for (unsigned i = 0; i != NewRegs.size(); ++i)
-    mapVirtReg(NewRegs[i], UV);
+  for (Register NewReg : NewRegs)
+    mapVirtReg(NewReg, UV);
 }
 
 void LiveDebugVariables::
@@ -1866,16 +1850,33 @@ void LDVImpl::emitDebugValues(VirtRegMap *VRM) {
       const TargetRegisterClass *TRC = MRI.getRegClass(Reg);
       unsigned SpillSize, SpillOffset;
 
-      // Test whether this location is legal with the given subreg.
+      unsigned regSizeInBits = TRI->getRegSizeInBits(*TRC);
+      if (SubReg)
+        regSizeInBits = TRI->getSubRegIdxSize(SubReg);
+
+      // Test whether this location is legal with the given subreg. If the
+      // subregister has a nonzero offset, drop this location, it's too complex
+      // to describe. (TODO: future work).
       bool Success =
           TII->getStackSlotRange(TRC, SubReg, SpillSize, SpillOffset, *MF);
 
-      if (Success) {
+      if (Success && SpillOffset == 0) {
         auto Builder = BuildMI(*OrigMBB, OrigMBB->begin(), DebugLoc(),
                                TII->get(TargetOpcode::DBG_PHI));
         Builder.addFrameIndex(VRM->getStackSlot(Reg));
         Builder.addImm(InstNum);
+        // Record how large the original value is. The stack slot might be
+        // merged and altered during optimisation, but we will want to know how
+        // large the value is, at this DBG_PHI.
+        Builder.addImm(regSizeInBits);
       }
+
+      LLVM_DEBUG(
+      if (SpillOffset != 0) {
+        dbgs() << "DBG_PHI for Vreg " << Reg << " subreg " << SubReg <<
+                  " has nonzero offset\n";
+      }
+      );
     }
     // If there was no mapping for a value ID, it's optimized out. Create no
     // DBG_PHI, and any variables using this value will become optimized out.
@@ -1884,34 +1885,57 @@ void LDVImpl::emitDebugValues(VirtRegMap *VRM) {
 
   LLVM_DEBUG(dbgs() << "********** EMITTING INSTR REFERENCES **********\n");
 
-  // Re-insert any debug instrs back in the position they were. Ordering
-  // is preserved by vector. We must re-insert in the same order to ensure that
-  // debug instructions don't swap, which could re-order assignments.
-  for (auto &P : StashedDebugInstrs) {
-    SlotIndex Idx = P.Idx;
+  // Re-insert any debug instrs back in the position they were. We must
+  // re-insert in the same order to ensure that debug instructions don't swap,
+  // which could re-order assignments. Do so in a batch -- once we find the
+  // insert position, insert all instructions at the same SlotIdx. They are
+  // guaranteed to appear in-sequence in StashedDebugInstrs because we insert
+  // them in order.
+  for (auto StashIt = StashedDebugInstrs.begin();
+       StashIt != StashedDebugInstrs.end(); ++StashIt) {
+    SlotIndex Idx = StashIt->Idx;
+    MachineBasicBlock *MBB = StashIt->MBB;
+    MachineInstr *MI = StashIt->MI;
+
+    auto EmitInstsHere = [this, &StashIt, MBB, Idx,
+                          MI](MachineBasicBlock::iterator InsertPos) {
+      // Insert this debug instruction.
+      MBB->insert(InsertPos, MI);
+
+      // Look at subsequent stashed debug instructions: if they're at the same
+      // index, insert those too.
+      auto NextItem = std::next(StashIt);
+      while (NextItem != StashedDebugInstrs.end() && NextItem->Idx == Idx) {
+        assert(NextItem->MBB == MBB && "Instrs with same slot index should be"
+               "in the same block");
+        MBB->insert(InsertPos, NextItem->MI);
+        StashIt = NextItem;
+        NextItem = std::next(StashIt);
+      };
+    };
 
     // Start block index: find the first non-debug instr in the block, and
     // insert before it.
-    if (Idx == Slots->getMBBStartIdx(P.MBB)) {
+    if (Idx == Slots->getMBBStartIdx(MBB)) {
       MachineBasicBlock::iterator InsertPos =
-          findInsertLocation(P.MBB, Idx, *LIS, BBSkipInstsMap);
-      P.MBB->insert(InsertPos, P.MI);
+          findInsertLocation(MBB, Idx, *LIS, BBSkipInstsMap);
+      EmitInstsHere(InsertPos);
       continue;
     }
 
     if (MachineInstr *Pos = Slots->getInstructionFromIndex(Idx)) {
       // Insert at the end of any debug instructions.
       auto PostDebug = std::next(Pos->getIterator());
-      PostDebug = skipDebugInstructionsForward(PostDebug, P.MBB->instr_end());
-      P.MBB->insert(PostDebug, P.MI);
+      PostDebug = skipDebugInstructionsForward(PostDebug, MBB->instr_end());
+      EmitInstsHere(PostDebug);
     } else {
       // Insert position disappeared; walk forwards through slots until we
       // find a new one.
-      SlotIndex End = Slots->getMBBEndIdx(P.MBB);
+      SlotIndex End = Slots->getMBBEndIdx(MBB);
       for (; Idx < End; Idx = Slots->getNextNonNullIndex(Idx)) {
         Pos = Slots->getInstructionFromIndex(Idx);
         if (Pos) {
-          P.MBB->insert(Pos->getIterator(), P.MI);
+          EmitInstsHere(Pos->getIterator());
           break;
         }
       }
@@ -1920,8 +1944,8 @@ void LDVImpl::emitDebugValues(VirtRegMap *VRM) {
       // insert! It's not safe to discard any debug instructions; place them
       // in front of the first terminator, or in front of end().
       if (Idx >= End) {
-        auto TermIt = P.MBB->getFirstTerminator();
-        P.MBB->insert(TermIt, P.MI);
+        auto TermIt = MBB->getFirstTerminator();
+        EmitInstsHere(TermIt);
       }
     }
   }

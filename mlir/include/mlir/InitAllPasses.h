@@ -16,19 +16,25 @@
 
 #include "mlir/Conversion/Passes.h"
 #include "mlir/Dialect/Affine/Passes.h"
+#include "mlir/Dialect/Arithmetic/Transforms/Passes.h"
 #include "mlir/Dialect/Async/Passes.h"
-#include "mlir/Dialect/GPU/Passes.h"
+#include "mlir/Dialect/Bufferization/Transforms/Passes.h"
+#include "mlir/Dialect/Func/Transforms/Passes.h"
+#include "mlir/Dialect/GPU/Transforms/Passes.h"
 #include "mlir/Dialect/LLVMIR/Transforms/Passes.h"
 #include "mlir/Dialect/Linalg/Passes.h"
 #include "mlir/Dialect/MemRef/Transforms/Passes.h"
+#include "mlir/Dialect/NVGPU/Passes.h"
 #include "mlir/Dialect/Quant/Passes.h"
 #include "mlir/Dialect/SCF/Passes.h"
 #include "mlir/Dialect/SPIRV/Transforms/Passes.h"
 #include "mlir/Dialect/Shape/Transforms/Passes.h"
+#include "mlir/Dialect/SparseTensor/Pipelines/Passes.h"
 #include "mlir/Dialect/SparseTensor/Transforms/Passes.h"
-#include "mlir/Dialect/StandardOps/Transforms/Passes.h"
 #include "mlir/Dialect/Tensor/Transforms/Passes.h"
 #include "mlir/Dialect/Tosa/Transforms/Passes.h"
+#include "mlir/Dialect/Transform/Transforms/Passes.h"
+#include "mlir/Dialect/Vector/Transforms/Passes.h"
 #include "mlir/Transforms/Passes.h"
 
 #include <cstdlib>
@@ -52,10 +58,14 @@ inline void registerAllPasses() {
   // Dialect passes
   registerAffinePasses();
   registerAsyncPasses();
+  arith::registerArithmeticPasses();
+  bufferization::registerBufferizationPasses();
+  func::registerFuncPasses();
   registerGPUPasses();
   registerGpuSerializeToCubinPass();
   registerGpuSerializeToHsacoPass();
   registerLinalgPasses();
+  registerNVGPUPasses();
   registerSparseTensorPasses();
   LLVM::registerLLVMPasses();
   memref::registerMemRefPasses();
@@ -63,9 +73,13 @@ inline void registerAllPasses() {
   registerSCFPasses();
   registerShapePasses();
   spirv::registerSPIRVPasses();
-  registerStandardPasses();
   tensor::registerTensorPasses();
   tosa::registerTosaOptPasses();
+  transform::registerTransformPasses();
+  vector::registerVectorPasses();
+
+  // Dialect pipelines
+  sparse_tensor::registerSparseTensorPipelines();
 }
 
 } // namespace mlir

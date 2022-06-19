@@ -34,9 +34,7 @@ An example of a job definition is:
       queue: "libcxx-builders"
       os: "linux"
     retry:
-      automatic:
-        - exit_status: -1  # Agent was lost
-          limit: 2
+      [...]
 
 If you create your own agents, put them in the ``libcxx-builders`` queue and
 use agent tags to allow targetting your agents from the Buildkite pipeline

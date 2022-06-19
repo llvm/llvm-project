@@ -30,6 +30,7 @@ int main(int, char**)
         std::istreambuf_iterator<char> i(inf);
         assert(i != std::istreambuf_iterator<char>());
     }
+#ifndef TEST_HAS_NO_WIDE_CHARACTERS
     {
         std::wistringstream inf;
         std::istreambuf_iterator<wchar_t> i(inf);
@@ -40,6 +41,7 @@ int main(int, char**)
         std::istreambuf_iterator<wchar_t> i(inf);
         assert(i != std::istreambuf_iterator<wchar_t>());
     }
+#endif
 
   return 0;
 }

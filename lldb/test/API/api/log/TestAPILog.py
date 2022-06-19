@@ -11,8 +11,6 @@ from lldbsuite.test.lldbtest import *
 
 class APILogTestCase(TestBase):
 
-    mydir = TestBase.compute_mydir(__file__)
-
     NO_DEBUG_INFO_TESTCASE = True
 
     def test_api_log(self):
@@ -24,9 +22,6 @@ class APILogTestCase(TestBase):
         self.dbg.SetDefaultArchitecture(None)
         self.dbg.GetScriptingLanguage(None)
         target = self.dbg.CreateTarget(None)
-
-        if configuration.is_reproducer_replay():
-            logfile = self.getReproducerRemappedPath(logfile)
 
         self.assertTrue(os.path.isfile(logfile))
         with open(logfile, 'r') as f:

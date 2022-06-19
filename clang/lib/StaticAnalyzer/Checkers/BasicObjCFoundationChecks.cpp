@@ -12,7 +12,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "clang/StaticAnalyzer/Checkers/BuiltinCheckerRegistration.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/DeclObjC.h"
 #include "clang/AST/Expr.h"
@@ -20,9 +19,11 @@
 #include "clang/AST/StmtObjC.h"
 #include "clang/Analysis/DomainSpecific/CocoaConventions.h"
 #include "clang/Analysis/SelectorExtras.h"
+#include "clang/StaticAnalyzer/Checkers/BuiltinCheckerRegistration.h"
 #include "clang/StaticAnalyzer/Core/BugReporter/BugType.h"
 #include "clang/StaticAnalyzer/Core/Checker.h"
 #include "clang/StaticAnalyzer/Core/CheckerManager.h"
+#include "clang/StaticAnalyzer/Core/PathSensitive/CallDescription.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/CallEvent.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/CheckerContext.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/ExplodedGraph.h"
@@ -346,10 +347,6 @@ public:
   CFNumberChecker() : ICreate(nullptr), IGetValue(nullptr) {}
 
   void checkPreStmt(const CallExpr *CE, CheckerContext &C) const;
-
-private:
-  void EmitError(const TypedRegion* R, const Expr *Ex,
-                uint64_t SourceSize, uint64_t TargetSize, uint64_t NumberKind);
 };
 } // end anonymous namespace
 
@@ -445,7 +442,7 @@ void CFNumberChecker::checkPreStmt(const CallExpr *CE,
 
   // FIXME: We really should allow ranges of valid theType values, and
   //   bifurcate the state appropriately.
-  Optional<nonloc::ConcreteInt> V = TheTypeVal.getAs<nonloc::ConcreteInt>();
+  Optional<nonloc::ConcreteInt> V = dyn_cast<nonloc::ConcreteInt>(TheTypeVal);
   if (!V)
     return;
 
@@ -533,10 +530,12 @@ void CFNumberChecker::checkPreStmt(const CallExpr *CE,
 namespace {
 class CFRetainReleaseChecker : public Checker<check::PreCall> {
   mutable APIMisuse BT{this, "null passed to CF memory management function"};
-  CallDescription CFRetain{"CFRetain", 1},
-                  CFRelease{"CFRelease", 1},
-                  CFMakeCollectable{"CFMakeCollectable", 1},
-                  CFAutorelease{"CFAutorelease", 1};
+  const CallDescriptionSet ModelledCalls = {
+      {"CFRetain", 1},
+      {"CFRelease", 1},
+      {"CFMakeCollectable", 1},
+      {"CFAutorelease", 1},
+  };
 
 public:
   void checkPreCall(const CallEvent &Call, CheckerContext &C) const;
@@ -550,8 +549,7 @@ void CFRetainReleaseChecker::checkPreCall(const CallEvent &Call,
     return;
 
   // Check if we called CFRetain/CFRelease/CFMakeCollectable/CFAutorelease.
-  if (!(Call.isCalled(CFRetain) || Call.isCalled(CFRelease) ||
-        Call.isCalled(CFMakeCollectable) || Call.isCalled(CFAutorelease)))
+  if (!ModelledCalls.contains(Call))
     return;
 
   // Get the argument's value.
@@ -756,7 +754,7 @@ void VariadicMethodTypeChecker::checkPreObjCMessage(const ObjCMethodCall &msg,
       continue;
 
     // Ignore pointer constants.
-    if (msg.getArgSVal(I).getAs<loc::ConcreteInt>())
+    if (isa<loc::ConcreteInt>(msg.getArgSVal(I)))
       continue;
 
     // Ignore pointer types annotated with 'NSObject' attribute.
@@ -905,7 +903,7 @@ static ProgramStateRef checkElementNonNil(CheckerContext &C,
 
   // Go ahead and assume the value is non-nil.
   SVal Val = State->getSVal(*ElementLoc);
-  return State->assume(Val.castAs<DefinedOrUnknownSVal>(), true);
+  return State->assume(cast<DefinedOrUnknownSVal>(Val), true);
 }
 
 /// Returns NULL state if the collection is known to contain elements

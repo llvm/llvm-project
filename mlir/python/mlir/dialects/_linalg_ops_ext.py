@@ -2,13 +2,15 @@
 #  See https://llvm.org/LICENSE.txt for license information.
 #  SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 
-from typing import Optional, Sequence, Union
-from ..ir import *
-from ._ods_common import get_default_loc_context
-# TODO: resolve name collision for Linalg functionality that is injected inside
-# the _mlir.dialects.linalg directly via pybind.
-from _mlir.dialects.linalg import fill_builtin_region
+try:
+  from typing import Optional, Sequence, Union
+  from ..ir import *
+  from ._ods_common import get_default_loc_context
+  from .._mlir_libs._mlirDialectsLinalg import fill_builtin_region
+except ImportError as e:
+  raise RuntimeError("Error loading imports from extension module") from e
 
+from ._ods_common import get_op_result_or_value as _get_op_result_or_value
 
 def isa(cls: Type, ty: Type):
   try:
@@ -16,32 +18,6 @@ def isa(cls: Type, ty: Type):
     return True
   except ValueError:
     return False
-
-
-class FillOp:
-  """Extends the linalg.fill op."""
-
-  def __init__(self, output: Value, value: Value, *, loc=None, ip=None):
-    results = []
-    if isa(RankedTensorType, output.type):
-      results = [output.type]
-    op = self.build_generic(
-        results=results,
-        operands=[value, output],
-        attributes=None,
-        loc=loc,
-        ip=ip)
-    OpView.__init__(self, op)
-    linalgDialect = Context.current.get_dialect_descriptor("linalg")
-    fill_builtin_region(linalgDialect, self.operation)
-    # TODO: self.result is None. When len(results) == 1 we expect it to be
-    # results[0] as per _linalg_ops_gen.py. This seems like an orthogonal bug
-    # in the generator of _linalg_ops_gen.py where we have:
-    # ```
-    # def result(self):
-    #   return self.operation.results[0] \
-    #     if len(self.operation.results) > 1 else None
-    # ```
 
 
 class InitTensorOp:
@@ -74,12 +50,11 @@ class InitTensorOp:
     attributes["static_sizes"] = ArrayAttr.get(
         [IntegerAttr.get(i64_type, s) for s in static_size_ints],
         context=context)
-    op = self.build_generic(
-        results=[result_type],
-        operands=operands,
-        attributes=attributes,
-        loc=loc,
-        ip=ip)
+    op = self.build_generic(results=[result_type],
+                            operands=operands,
+                            attributes=attributes,
+                            loc=loc,
+                            ip=ip)
     OpView.__init__(self, op)
 
 
@@ -88,11 +63,10 @@ class StructuredOpMixin:
 
   def __init__(self, inputs, outputs=(), results=(), loc=None, ip=None):
     super().__init__(
-        self.build_generic(
-            results=list(results),
-            operands=[list(inputs), list(outputs)],
-            loc=loc,
-            ip=ip))
+        self.build_generic(results=list(results),
+                           operands=[list(inputs), list(outputs)],
+                           loc=loc,
+                           ip=ip))
 
 
 def select_opview_mixin(parent_opview_cls):

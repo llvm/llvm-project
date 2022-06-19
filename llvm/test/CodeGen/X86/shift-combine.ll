@@ -317,9 +317,9 @@ define dso_local i32 @ashr_add_shl_i32_i8_extra_use1(i32 %r, i32* %p) nounwind {
 ;
 ; X64-LABEL: ashr_add_shl_i32_i8_extra_use1:
 ; X64:       # %bb.0:
-; X64-NEXT:    movl %edi, %eax
-; X64-NEXT:    shll $24, %eax
-; X64-NEXT:    addl $33554432, %eax # imm = 0x2000000
+; X64-NEXT:    # kill: def $edi killed $edi def $rdi
+; X64-NEXT:    shll $24, %edi
+; X64-NEXT:    leal 33554432(%rdi), %eax
 ; X64-NEXT:    movl %eax, (%rsi)
 ; X64-NEXT:    sarl $24, %eax
 ; X64-NEXT:    retq
@@ -371,10 +371,10 @@ define dso_local i32 @ashr_add_shl_i32_i8_extra_use3(i32 %r, i32* %p1, i32* %p2)
 ;
 ; X64-LABEL: ashr_add_shl_i32_i8_extra_use3:
 ; X64:       # %bb.0:
-; X64-NEXT:    movl %edi, %eax
-; X64-NEXT:    shll $24, %eax
-; X64-NEXT:    movl %eax, (%rsi)
-; X64-NEXT:    addl $33554432, %eax # imm = 0x2000000
+; X64-NEXT:    # kill: def $edi killed $edi def $rdi
+; X64-NEXT:    shll $24, %edi
+; X64-NEXT:    movl %edi, (%rsi)
+; X64-NEXT:    leal 33554432(%rdi), %eax
 ; X64-NEXT:    movl %eax, (%rdx)
 ; X64-NEXT:    sarl $24, %eax
 ; X64-NEXT:    retq

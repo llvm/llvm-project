@@ -222,23 +222,23 @@ scratch_store_dword off, v2, s1 offset:12
 
 // FIXME: Should error about multiple offsets
 scratch_load_dword v1, v2, s1
-// GFX10-ERR: error: invalid operand for instruction
-// GFX9-ERR: error: invalid operand for instruction
+// GFX10-ERR: error: operands are not valid for this GPU or mode
+// GFX9-ERR: error: operands are not valid for this GPU or mode
 // VI-ERR: error: instruction not supported on this GPU
 
 scratch_load_dword v1, v2, s1 offset:32
-// GFX10-ERR: error: invalid operand for instruction
-// GFX9-ERR: error: invalid operand for instruction
+// GFX10-ERR: error: operands are not valid for this GPU or mode
+// GFX9-ERR: error: operands are not valid for this GPU or mode
 // VI-ERR: error: instruction not supported on this GPU
 
 scratch_store_dword v1, v2, s1
-// GFX10-ERR: error: invalid operand for instruction
-// GFX9-ERR: error: invalid operand for instruction
+// GFX10-ERR: error: operands are not valid for this GPU or mode
+// GFX9-ERR: error: operands are not valid for this GPU or mode
 // VI-ERR: error: instruction not supported on this GPU
 
 scratch_store_dword v1, v2, s1 offset:32
-// GFX10-ERR: error: invalid operand for instruction
-// GFX9-ERR: error: invalid operand for instruction
+// GFX10-ERR: error: operands are not valid for this GPU or mode
+// GFX9-ERR: error: operands are not valid for this GPU or mode
 // VI-ERR: error: instruction not supported on this GPU
 
 scratch_load_dword v1, off, exec_hi

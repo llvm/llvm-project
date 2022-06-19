@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+// UNSUPPORTED: !stdlib=libc++ && (c++03 || c++11 || c++14)
 
 // <string_view>
 
@@ -17,6 +18,8 @@
 
 #include <string_view>
 #include <cassert>
+#include <iterator>
+#include <limits>
 
 #include "test_macros.h"
 
@@ -42,6 +45,16 @@ void test1 () {
     assert ( sv1.empty());
     assert ( sv1.size() == sv1.length());
     assert ( sv1.max_size() > sv1.size());
+    }
+
+    // Sanity check max_size() -- a string_view can't store more bytes than a single object
+    // can contain. Any implementation that fails this check is certainly lying.
+    {
+        typedef typename SV::value_type CharT;
+        typedef typename SV::size_type Size;
+        SV sv;
+        assert(sv.max_size() <= std::numeric_limits<Size>::max() / sizeof(CharT));
+        LIBCPP_ASSERT(sv.max_size() == std::numeric_limits<Size>::max() / sizeof(CharT));
     }
 }
 
@@ -69,17 +82,21 @@ int main(int, char**) {
 #endif
     test1<std::u16string_view> ();
     test1<std::u32string_view> ();
+#ifndef TEST_HAS_NO_WIDE_CHARACTERS
     test1<std::wstring_view> ();
+#endif
 
     test2 ( "ABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDE", 105 );
     test2 ( "ABCDE", 5 );
     test2 ( "a", 1 );
     test2 ( "", 0 );
 
+#ifndef TEST_HAS_NO_WIDE_CHARACTERS
     test2 ( L"ABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDE", 105 );
     test2 ( L"ABCDE", 5 );
     test2 ( L"a", 1 );
     test2 ( L"", 0 );
+#endif
 
 #if defined(__cpp_lib_char8_t) && __cpp_lib_char8_t >= 201811L
     test2 ( u8"ABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDE", 105 );

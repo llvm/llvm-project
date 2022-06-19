@@ -1,5 +1,6 @@
 // REQUIRES: shell
 
+// RUN: rm -rf %t
 // RUN: mkdir -p %t/mod
 // RUN: touch %t/empty.h
 // RUN: cp %S/Inputs/preamble-reparse-changed-module/module.modulemap %t/mod

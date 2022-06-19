@@ -48,8 +48,12 @@ struct good : non_trivial {
 };
 good g;
 
+struct bad_const_inner {
+  int x;
+};
+
 struct bad_const {
-  const good g; // expected-note {{field 'g' of const-qualified type 'const good' would not be initialized}}
+  const bad_const_inner g; // expected-note {{field 'g' of const-qualified type 'const bad_const_inner' would not be initialized}}
 };
 bad_const bc; // expected-error {{call to implicitly-deleted default constructor}}
 

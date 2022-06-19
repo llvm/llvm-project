@@ -1,5 +1,5 @@
 get_property(conversion_libs GLOBAL PROPERTY MLIR_CONVERSION_LIBS)
-add_mlir_public_c_api_library(MLIRCAPIConversion
+add_mlir_upstream_c_api_library(MLIRCAPIConversion
   Passes.cpp
 
   LINK_LIBS PUBLIC

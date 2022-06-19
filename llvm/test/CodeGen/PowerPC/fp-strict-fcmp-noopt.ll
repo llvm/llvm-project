@@ -5,25 +5,19 @@
 define i32 @une_ppcf128(ppc_fp128 %a, ppc_fp128 %b) #0 {
 ; CHECK-LABEL: une_ppcf128:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    xscmpudp cr7, f1, f3
-; CHECK-NEXT:    mfocrf r3, 1
-; CHECK-NEXT:    rlwinm r3, r3, 31, 31, 31
-; CHECK-NEXT:    xscmpudp cr7, f2, f4
-; CHECK-NEXT:    mfocrf r4, 1
-; CHECK-NEXT:    rlwinm r4, r4, 31, 31, 31
-; CHECK-NEXT:    xori r4, r4, 1
-; CHECK-NEXT:    and r4, r3, r4
-; CHECK-NEXT:    xscmpudp cr7, f1, f3
-; CHECK-NEXT:    mfocrf r3, 1
-; CHECK-NEXT:    rlwinm r3, r3, 31, 31, 31
-; CHECK-NEXT:    xori r3, r3, 1
-; CHECK-NEXT:    xscmpudp cr7, f1, f3
-; CHECK-NEXT:    mfocrf r5, 1
-; CHECK-NEXT:    rlwinm r5, r5, 31, 31, 31
-; CHECK-NEXT:    xori r5, r5, 1
-; CHECK-NEXT:    and r3, r3, r5
-; CHECK-NEXT:    or r3, r3, r4
-; CHECK-NEXT:    # kill: def $r4 killed $r3
+; CHECK-NEXT:    fcmpu cr0, f1, f3
+; CHECK-NEXT:    crmove 4*cr5+lt, eq
+; CHECK-NEXT:    fcmpu cr1, f2, f4
+; CHECK-NEXT:    crmove 4*cr5+gt, 4*cr1+eq
+; CHECK-NEXT:    crnot 4*cr5+gt, 4*cr5+gt
+; CHECK-NEXT:    crand 4*cr5+gt, 4*cr5+lt, 4*cr5+gt
+; CHECK-NEXT:    crmove 4*cr5+lt, eq
+; CHECK-NEXT:    crnot 4*cr5+lt, 4*cr5+lt
+; CHECK-NEXT:    crand 4*cr5+lt, 4*cr5+lt, 4*cr5+lt
+; CHECK-NEXT:    cror 4*cr5+lt, 4*cr5+lt, 4*cr5+gt
+; CHECK-NEXT:    li r4, 0
+; CHECK-NEXT:    li r3, 1
+; CHECK-NEXT:    isel r3, r3, r4, 4*cr5+lt
 ; CHECK-NEXT:    clrldi r3, r3, 32
 ; CHECK-NEXT:    blr
 entry:
@@ -36,28 +30,19 @@ entry:
 define i32 @ogt_ppcf128(ppc_fp128 %a, ppc_fp128 %b) #0 {
 ; CHECK-LABEL: ogt_ppcf128:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    xscmpudp cr7, f1, f3
-; CHECK-NEXT:    mfocrf r3, 1
-; CHECK-NEXT:    rlwinm r3, r3, 31, 31, 31
-; CHECK-NEXT:    xscmpudp cr7, f2, f4
-; CHECK-NEXT:    mfocrf r4, 1
-; CHECK-NEXT:    rlwinm r4, r4, 30, 31, 31
-; CHECK-NEXT:    and r4, r3, r4
-; CHECK-NEXT:    xscmpudp cr0, f1, f3
-; CHECK-NEXT:    mfocrf r3, 128
-; CHECK-NEXT:    stw r3, -4(r1)
-; CHECK-NEXT:    xscmpudp cr7, f1, f3
-; CHECK-NEXT:    mfocrf r3, 1
-; CHECK-NEXT:    lwz r5, -4(r1)
-; CHECK-NEXT:    rotlwi r5, r5, 4
-; CHECK-NEXT:    mtocrf 1, r5
-; CHECK-NEXT:    rlwinm r5, r3, 30, 31, 31
-; CHECK-NEXT:    mfocrf r3, 1
-; CHECK-NEXT:    rlwinm r3, r3, 31, 31, 31
-; CHECK-NEXT:    xori r3, r3, 1
-; CHECK-NEXT:    and r3, r3, r5
-; CHECK-NEXT:    or r3, r3, r4
-; CHECK-NEXT:    # kill: def $r4 killed $r3
+; CHECK-NEXT:    fcmpu cr0, f1, f3
+; CHECK-NEXT:    crmove 4*cr5+lt, eq
+; CHECK-NEXT:    fcmpu cr1, f2, f4
+; CHECK-NEXT:    crmove 4*cr5+gt, 4*cr1+gt
+; CHECK-NEXT:    crand 4*cr5+gt, 4*cr5+lt, 4*cr5+gt
+; CHECK-NEXT:    crmove 4*cr5+lt, eq
+; CHECK-NEXT:    crnot 4*cr5+lt, 4*cr5+lt
+; CHECK-NEXT:    crmove 4*cr5+eq, gt
+; CHECK-NEXT:    crand 4*cr5+lt, 4*cr5+lt, 4*cr5+eq
+; CHECK-NEXT:    cror 4*cr5+lt, 4*cr5+lt, 4*cr5+gt
+; CHECK-NEXT:    li r4, 0
+; CHECK-NEXT:    li r3, 1
+; CHECK-NEXT:    isel r3, r3, r4, 4*cr5+lt
 ; CHECK-NEXT:    clrldi r3, r3, 32
 ; CHECK-NEXT:    blr
 entry:
@@ -69,12 +54,14 @@ entry:
 define i1 @test_f128(fp128 %a, fp128 %b) #0 {
 ; CHECK-LABEL: test_f128:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    xscmpuqp cr7, v2, v3
-; CHECK-NEXT:    mfocrf r3, 1
-; CHECK-NEXT:    rlwinm r3, r3, 31, 31, 31
-; CHECK-NEXT:    xori r4, r3, 1
-; CHECK-NEXT:    # implicit-def: $x3
-; CHECK-NEXT:    mr r3, r4
+; CHECK-NEXT:    xscmpuqp cr0, v2, v3
+; CHECK-NEXT:    crmove 4*cr5+lt, eq
+; CHECK-NEXT:    xscmpuqp cr0, v2, v3
+; CHECK-NEXT:    crmove 4*cr5+gt, eq
+; CHECK-NEXT:    crnor 4*cr5+lt, 4*cr5+lt, 4*cr5+gt
+; CHECK-NEXT:    li r4, 0
+; CHECK-NEXT:    li r3, 1
+; CHECK-NEXT:    isel r3, r3, r4, 4*cr5+lt
 ; CHECK-NEXT:    blr
 entry:
   %0 = call i1 @llvm.experimental.constrained.fcmp.f128(fp128 %a, fp128 %b, metadata !"une", metadata !"fpexcept.strict") #0
@@ -84,11 +71,9 @@ entry:
 define i1 @testbr_f64(double %a, double %b) #0 {
 ; CHECK-LABEL: testbr_f64:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    xscmpudp cr7, f1, f2
-; CHECK-NEXT:    mfocrf r3, 1
-; CHECK-NEXT:    rlwinm r3, r3, 31, 31, 31
-; CHECK-NEXT:    cmplwi r3, 0
-; CHECK-NEXT:    bne cr0, .LBB3_2
+; CHECK-NEXT:    fcmpu cr0, f1, f2
+; CHECK-NEXT:    crmove 4*cr5+lt, eq
+; CHECK-NEXT:    bc 12, 4*cr5+lt, .LBB3_2
 ; CHECK-NEXT:    b .LBB3_1
 ; CHECK-NEXT:  .LBB3_1: # %tr
 ; CHECK-NEXT:    li r3, -1
@@ -108,11 +93,9 @@ fl:
 define i1 @testbr_f32(float %a, float %b) #0 {
 ; CHECK-LABEL: testbr_f32:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    fcmpu cr7, f1, f2
-; CHECK-NEXT:    mfocrf r3, 1
-; CHECK-NEXT:    rlwinm r3, r3, 31, 31, 31
-; CHECK-NEXT:    cmplwi r3, 0
-; CHECK-NEXT:    bne cr0, .LBB4_2
+; CHECK-NEXT:    fcmpu cr0, f1, f2
+; CHECK-NEXT:    crmove 4*cr5+lt, eq
+; CHECK-NEXT:    bc 12, 4*cr5+lt, .LBB4_2
 ; CHECK-NEXT:    b .LBB4_1
 ; CHECK-NEXT:  .LBB4_1: # %tr
 ; CHECK-NEXT:    li r3, -1

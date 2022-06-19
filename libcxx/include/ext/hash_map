@@ -1,5 +1,5 @@
 // -*- C++ -*-
-//===-------------------------- hash_map ----------------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -201,12 +201,14 @@ template <class Key, class T, class Hash, class Pred, class Alloc>
 
 */
 
+#include <__assert> // all public C++ headers provide the assertion handler
 #include <__config>
 #include <__hash_table>
+#include <algorithm>
+#include <ext/__hash>
 #include <functional>
 #include <stdexcept>
 #include <type_traits>
-#include <ext/__hash>
 
 #if defined(__DEPRECATED) && __DEPRECATED
 #if defined(_LIBCPP_WARNING)
@@ -217,7 +219,7 @@ template <class Key, class T, class Hash, class Pred, class Alloc>
 #endif
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
-#pragma GCC system_header
+#  pragma GCC system_header
 #endif
 
 namespace __gnu_cxx {
@@ -979,6 +981,6 @@ operator!=(const hash_multimap<_Key, _Tp, _Hash, _Pred, _Alloc>& __x,
     return !(__x == __y);
 }
 
-} // __gnu_cxx
+} // namespace __gnu_cxx
 
 #endif // _LIBCPP_HASH_MAP

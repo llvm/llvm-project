@@ -1,17 +1,11 @@
-; RUN: opt -S -licm -loop-guard-widening -licm -debug-pass=Structure -enable-new-pm=0 < %s 2>&1 | FileCheck %s --check-prefixes=LPM,CHECK
-; RUN: opt -S -passes='licm,guard-widening,licm' -debug-pass-manager < %s 2>&1 | FileCheck %s --check-prefixes=NPM,CHECK
+; RUN: opt -S -passes='licm,guard-widening,licm' -verify-memoryssa -debug-pass-manager < %s 2>&1 | FileCheck %s
 
 ; Main point of this test is to check the scheduling -- there should be
 ; no analysis passes needed between LICM and LoopGuardWidening
 
-; LPM: Loop Pass Manager
-; LPM:   Loop Invariant Code Motion
-; LPM:   Widen guards (within a single loop, as a loop pass)
-; LPM:   Loop Invariant Code Motion
-
-; NPM: LICMPass
-; NPM-NEXT: GuardWideningPass
-; NPM-NEXT: LICMPass
+; CHECK: LICMPass
+; CHECK-NEXT: GuardWideningPass
+; CHECK-NEXT: LICMPass
 
 declare void @llvm.experimental.guard(i1,...)
 

@@ -1,0 +1,78 @@
+# This test uses the local debuginfod cache to test the symbolizer integration
+# with the debuginfod client.
+RUN: rm -rf %t
+RUN: mkdir %t
+
+# Produce a stripped copy of the input binary addr.exe
+RUN: llvm-objcopy --strip-debug %p/Inputs/addr.exe %t/addr.exe
+
+# Symbolizing the stripped binary should fail.
+RUN: env DEBUGINFOD_CACHE_PATH=%t llvm-symbolizer --print-address \
+RUN:   --obj=%t/addr.exe 0x40054d | FileCheck %s --check-prefix=NOTFOUND
+NOTFOUND: 0x40054d
+NOTFOUND-NEXT: main
+NOTFOUND-NEXT: ??:0:0
+
+# Use llvm-objcopy to write the debuginfo of the addr.exe binary to an
+# appropriately-named file in the llvm debuginfod cache. The filename is
+# determined by the debuginfod client's caching scheme, so it is manually
+# specified here as llvmcache-98...19
+RUN: llvm-objcopy --keep-section=.debug_info %p/Inputs/addr.exe \
+RUN:   %t/llvmcache-9800707741016212219
+
+# The symbolizer should call the debuginfod client library, which finds the
+# debuginfo placed in the cache, enabling symbolization of the address.
+RUN: env DEBUGINFOD_CACHE_PATH=%t llvm-symbolizer \
+RUN:   --obj=%t/addr.exe 0x40054d --debuginfod | \
+RUN:   FileCheck %s --check-prefix=FOUND
+FOUND: {{[/\]+}}tmp{{[/\]+}}x.c:14:0
+
+# This should also work if the build ID is provided via flag.
+RUN: env DEBUGINFOD_CACHE_PATH=%t llvm-symbolizer \
+RUN:   --build-id=127da749021c1fc1a58cba734a1f542cbe2b7ce4 0x40054d | \
+RUN:   FileCheck %s --check-prefix=FOUND
+
+# This should also work if the build ID is provided via stdin.
+RUN: env DEBUGINFOD_CACHE_PATH=%t llvm-symbolizer \
+RUN:   "BUILDID:127da749021c1fc1a58cba734a1f542cbe2b7ce4 0x40054d" | \
+RUN:   FileCheck %s --check-prefix=FOUND
+
+# Passing BUILDID twice is a syntax error.
+RUN: env DEBUGINFOD_CACHE_PATH=%t llvm-symbolizer \
+RUN:   "BUILDID:BUILDID:127da749021c1fc1a58cba734a1f542cbe2b7ce4 0x40054d" | \
+RUN:   FileCheck %s --check-prefix=BUILDIDBUILDID
+BUILDIDBUILDID: BUILDID:BUILDID:127da749021c1fc1a58cba734a1f542cbe2b7ce4 0x40054d
+
+# CODE should work preceding build ID.
+RUN: env DEBUGINFOD_CACHE_PATH=%t llvm-symbolizer \
+RUN:   "CODE BUILDID:127da749021c1fc1a58cba734a1f542cbe2b7ce4 0x40054d" | \
+RUN:   FileCheck %s --check-prefix=FOUND
+
+# The symbolizer shouldn't call the debuginfod library by default with no URLs.
+RUN: env DEBUGINFOD_CACHE_PATH=%t llvm-symbolizer --print-address \
+RUN:   --obj=%t/addr.exe 0x40054d | FileCheck %s --check-prefix=NOTFOUND
+
+# The symbolizer shouldn't call the debuginfod library if explicitly disabled.
+RUN: env DEBUGINFOD_CACHE_PATH=%t llvm-symbolizer \
+RUN:   --no-debuginfod \
+RUN:   "BUILDID:127da749021c1fc1a58cba734a1f542cbe2b7ce4 0x40054d" | \
+RUN:   FileCheck %s --check-prefix=NOTHINGFOUND
+NOTHINGFOUND:      ??
+NOTHINGFOUND-NEXT: ??:0:0
+
+# BUILDID shouldn't be parsed if --obj is given, just like regular filenames.
+RUN: env DEBUGINFOD_CACHE_PATH=%t llvm-symbolizer \
+RUN:   --obj=%t/addr.exe \
+RUN:   "BUILDID:127da749021c1fc1a58cba734a1f542cbe2b7ce4 0x40054d" | \
+RUN:   FileCheck %s --check-prefix=BUILDIDIGNORED
+BUILDIDIGNORED: BUILDID:127da749021c1fc1a58cba734a1f542cbe2b7ce4 0x40054d
+
+# Providing both BUILDID and FILE is a syntax error.
+RUN: env DEBUGINFOD_CACHE_PATH=%t llvm-symbolizer \
+RUN:   "BUILDID:FILE:127da749021c1fc1a58cba734a1f542cbe2b7ce4 0x40054d" | \
+RUN:   FileCheck %s --check-prefix=BUILDIDFILE
+BUILDIDFILE: BUILDID:FILE:127da749021c1fc1a58cba734a1f542cbe2b7ce4 0x40054d
+RUN: env DEBUGINFOD_CACHE_PATH=%t llvm-symbolizer \
+RUN:   "FILE:BUILDID:127da749021c1fc1a58cba734a1f542cbe2b7ce4 0x40054d" | \
+RUN:   FileCheck %s --check-prefix=FILEBUILDID
+FILEBUILDID: FILE:BUILDID:127da749021c1fc1a58cba734a1f542cbe2b7ce4 0x40054d

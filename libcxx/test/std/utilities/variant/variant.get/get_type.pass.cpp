@@ -1,4 +1,3 @@
-// -*- C++ -*-
 //===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
@@ -33,11 +32,7 @@ void test_const_lvalue_get() {
   {
     using V = std::variant<int, const long>;
     constexpr V v(42);
-#ifdef TEST_WORKAROUND_CONSTEXPR_IMPLIES_NOEXCEPT
-    ASSERT_NOEXCEPT(std::get<int>(v));
-#else
     ASSERT_NOT_NOEXCEPT(std::get<int>(v));
-#endif
     ASSERT_SAME_TYPE(decltype(std::get<int>(v)), const int &);
     static_assert(std::get<int>(v) == 42, "");
   }
@@ -51,11 +46,7 @@ void test_const_lvalue_get() {
   {
     using V = std::variant<int, const long>;
     constexpr V v(42l);
-#ifdef TEST_WORKAROUND_CONSTEXPR_IMPLIES_NOEXCEPT
-    ASSERT_NOEXCEPT(std::get<const long>(v));
-#else
     ASSERT_NOT_NOEXCEPT(std::get<const long>(v));
-#endif
     ASSERT_SAME_TYPE(decltype(std::get<const long>(v)), const long &);
     static_assert(std::get<const long>(v) == 42, "");
   }

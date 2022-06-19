@@ -101,7 +101,7 @@ extern void InlineThenExternThenDefFn();
 void InlineThenExternThenDefFn() {}
 
 // NORMAL-NOT: _Z17ExternAndConstexprFnv
-// MSVCCOMPAT-LABEL: define weak_odr dso_local i32 @"?ExternAndConstexprFn@@YAHXZ"
+// MSVCCOMPAT-LABEL: define weak_odr dso_local noundef i32 @"?ExternAndConstexprFn@@YAHXZ"
 extern constexpr int ExternAndConstexprFn() { return 0; }
 
 // NORMAL-NOT: _Z11ConstexprFnv

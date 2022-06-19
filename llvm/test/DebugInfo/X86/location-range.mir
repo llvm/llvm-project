@@ -133,12 +133,12 @@ body:             |
 
   bb.1.if.then:
     renamable $rax = MOV64rm $rip, 1, $noreg, @b, $noreg, debug-location !21 :: (dereferenceable load (s64) from @b)
-    RETQ $rax, debug-location !27
+    RET64 $rax, debug-location !27
 
   bb.2.if.end:
     DBG_VALUE 0, $noreg, !19, !DIExpression(), debug-location !27
     renamable $rax = MOV64rm $rip, 1, $noreg, @a, $noreg, debug-location !27 :: (dereferenceable load (s64) from @a)
-    RETQ $rax, debug-location !27
+    RET64 $rax, debug-location !27
 
 ...
 ---
@@ -147,6 +147,6 @@ body:             |
   bb.0.entry:
     $eax = MOVZX32rm16 $noreg, 1, $noreg, 0, $noreg, debug-location !48 :: (load (s16) from `i16* null`, align 1)
     DBG_VALUE $ax, $noreg, !39, !DIExpression(), debug-location !51
-    RETQ $ax, debug-location !51
+    RET64 $ax, debug-location !51
 
 ...

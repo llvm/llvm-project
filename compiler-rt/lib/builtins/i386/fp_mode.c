@@ -14,7 +14,7 @@
 #define X87_TOWARDZERO 0x0c00
 #define X87_RMODE_MASK (X87_TONEAREST | X87_UPWARD | X87_DOWNWARD | X87_TOWARDZERO)
 
-CRT_FE_ROUND_MODE __fe_getround() {
+CRT_FE_ROUND_MODE __fe_getround(void) {
   // Assume that the rounding mode state for the fpu agrees with the SSE unit.
   unsigned short cw;
   __asm__ __volatile__ ("fnstcw %0" : "=m" (cw));
@@ -32,7 +32,7 @@ CRT_FE_ROUND_MODE __fe_getround() {
   return CRT_FE_TONEAREST;
 }
 
-int __fe_raise_inexact() {
+int __fe_raise_inexact(void) {
   float f = 1.0f, g = 3.0f;
   __asm__ __volatile__ ("fdivs %1" : "+t" (f) : "m" (g));
   return 0;

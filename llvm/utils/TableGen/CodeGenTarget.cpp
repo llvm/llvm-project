@@ -14,16 +14,13 @@
 //===----------------------------------------------------------------------===//
 
 #include "CodeGenTarget.h"
-#include "CodeGenDAGPatterns.h"
+#include "CodeGenInstruction.h"
 #include "CodeGenIntrinsics.h"
 #include "CodeGenSchedule.h"
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/CommandLine.h"
-#include "llvm/Support/Timer.h"
 #include "llvm/TableGen/Error.h"
 #include "llvm/TableGen/Record.h"
-#include "llvm/TableGen/TableGenBackend.h"
 #include <algorithm>
 using namespace llvm;
 
@@ -56,9 +53,12 @@ StringRef llvm::getName(MVT::SimpleValueType T) {
 }
 
 StringRef llvm::getEnumName(MVT::SimpleValueType T) {
+  // clang-format off
   switch (T) {
   case MVT::Other:    return "MVT::Other";
   case MVT::i1:       return "MVT::i1";
+  case MVT::i2:       return "MVT::i2";
+  case MVT::i4:       return "MVT::i4";
   case MVT::i8:       return "MVT::i8";
   case MVT::i16:      return "MVT::i16";
   case MVT::i32:      return "MVT::i32";
@@ -77,6 +77,7 @@ StringRef llvm::getEnumName(MVT::SimpleValueType T) {
   case MVT::ppcf128:  return "MVT::ppcf128";
   case MVT::x86mmx:   return "MVT::x86mmx";
   case MVT::x86amx:   return "MVT::x86amx";
+  case MVT::i64x8:    return "MVT::i64x8";
   case MVT::Glue:     return "MVT::Glue";
   case MVT::isVoid:   return "MVT::isVoid";
   case MVT::v1i1:     return "MVT::v1i1";
@@ -90,6 +91,8 @@ StringRef llvm::getEnumName(MVT::SimpleValueType T) {
   case MVT::v256i1:   return "MVT::v256i1";
   case MVT::v512i1:   return "MVT::v512i1";
   case MVT::v1024i1:  return "MVT::v1024i1";
+  case MVT::v128i2:   return "MVT::v128i2";
+  case MVT::v64i4:    return "MVT::v64i4";
   case MVT::v1i8:     return "MVT::v1i8";
   case MVT::v2i8:     return "MVT::v2i8";
   case MVT::v4i8:     return "MVT::v4i8";
@@ -226,6 +229,8 @@ StringRef llvm::getEnumName(MVT::SimpleValueType T) {
   case MVT::nxv2bf16:  return "MVT::nxv2bf16";
   case MVT::nxv4bf16:  return "MVT::nxv4bf16";
   case MVT::nxv8bf16:  return "MVT::nxv8bf16";
+  case MVT::nxv16bf16: return "MVT::nxv16bf16";
+  case MVT::nxv32bf16: return "MVT::nxv32bf16";
   case MVT::nxv1f32:   return "MVT::nxv1f32";
   case MVT::nxv2f32:   return "MVT::nxv2f32";
   case MVT::nxv4f32:   return "MVT::nxv4f32";
@@ -244,6 +249,7 @@ StringRef llvm::getEnumName(MVT::SimpleValueType T) {
   case MVT::externref: return "MVT::externref";
   default: llvm_unreachable("ILLEGAL VALUE TYPE!");
   }
+  // clang-format on
 }
 
 /// getQualifiedName - Return the name of the specified record, with a
@@ -470,7 +476,7 @@ GetInstByName(const char *Name,
   return I->second.get();
 }
 
-static const char *const FixedInstrs[] = {
+static const char *FixedInstrs[] = {
 #define HANDLE_TARGET_OPCODE(OPC) #OPC,
 #include "llvm/Support/TargetOpcodes.def"
     nullptr};
@@ -554,7 +560,7 @@ void CodeGenTarget::reverseBitsForLittleEndianEncoding() {
       NewBits[middle] = BI->getBit(middle);
     }
 
-    BitsInit *NewBI = BitsInit::get(NewBits);
+    BitsInit *NewBI = BitsInit::get(Records, NewBits);
 
     // Update the bits in reversed order so that emitInstrOpBits will get the
     // correct endianness.
@@ -575,7 +581,7 @@ bool CodeGenTarget::guessInstructionProperties() const {
 // ComplexPattern implementation
 //
 ComplexPattern::ComplexPattern(Record *R) {
-  Ty          = ::getValueType(R->getValueAsDef("Ty"));
+  Ty          = R->getValueAsDef("Ty");
   NumOperands = R->getValueAsInt("NumOperands");
   SelectFunc = std::string(R->getValueAsString("SelectFunc"));
   RootNodes   = R->getValueAsListOfDefs("RootNodes");
@@ -665,6 +671,7 @@ CodeGenIntrinsic::CodeGenIntrinsic(Record *R,
   isCommutative = false;
   canThrow = false;
   isNoReturn = false;
+  isNoCallback = false;
   isNoSync = false;
   isNoFree = false;
   isWillReturn = false;
@@ -675,12 +682,11 @@ CodeGenIntrinsic::CodeGenIntrinsic(Record *R,
   isSpeculatable = false;
   hasSideEffects = false;
 
-  if (DefName.size() <= 4 ||
-      std::string(DefName.begin(), DefName.begin() + 4) != "int_")
+  if (DefName.size() <= 4 || DefName.substr(0, 4) != "int_")
     PrintFatalError(DefLoc,
                     "Intrinsic '" + DefName + "' does not start with 'int_'!");
 
-  EnumName = std::string(DefName.begin()+4, DefName.end());
+  EnumName = DefName.substr(4);
 
   if (R->getValue("GCCBuiltinName"))  // Ignore a missing GCCBuiltinName field.
     GCCBuiltinName = std::string(R->getValueAsString("GCCBuiltinName"));
@@ -698,8 +704,7 @@ CodeGenIntrinsic::CodeGenIntrinsic(Record *R,
       Name += (EnumName[i] == '_') ? '.' : EnumName[i];
   } else {
     // Verify it starts with "llvm.".
-    if (Name.size() <= 5 ||
-        std::string(Name.begin(), Name.begin() + 5) != "llvm.")
+    if (Name.size() <= 5 || Name.substr(0, 5) != "llvm.")
       PrintFatalError(DefLoc, "Intrinsic '" + DefName +
                                   "'s name does not start with 'llvm.'!");
   }
@@ -708,8 +713,7 @@ CodeGenIntrinsic::CodeGenIntrinsic(Record *R,
   // "llvm.<targetprefix>.".
   if (!TargetPrefix.empty()) {
     if (Name.size() < 6+TargetPrefix.size() ||
-        std::string(Name.begin() + 5, Name.begin() + 6 + TargetPrefix.size())
-        != (TargetPrefix + "."))
+        Name.substr(5, 1 + TargetPrefix.size()) != (TargetPrefix + "."))
       PrintFatalError(DefLoc, "Intrinsic '" + DefName +
                                   "' does not start with 'llvm." +
                                   TargetPrefix + ".'!");
@@ -866,6 +870,8 @@ void CodeGenIntrinsic::setProperty(Record *R) {
     isConvergent = true;
   else if (R->getName() == "IntrNoReturn")
     isNoReturn = true;
+  else if (R->getName() == "IntrNoCallback")
+    isNoCallback = true;
   else if (R->getName() == "IntrNoSync")
     isNoSync = true;
   else if (R->getName() == "IntrNoFree")

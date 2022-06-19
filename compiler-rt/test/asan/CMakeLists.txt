@@ -127,25 +127,31 @@ endif()
 
 # Add unit tests.
 if(COMPILER_RT_INCLUDE_TESTS)
-  set(ASAN_TEST_DYNAMIC False)
-  configure_lit_site_cfg(
-    ${CMAKE_CURRENT_SOURCE_DIR}/Unit/lit.site.cfg.py.in
-    ${CMAKE_CURRENT_BINARY_DIR}/Unit/lit.site.cfg.py)
-  if(COMPILER_RT_ASAN_HAS_STATIC_RUNTIME)
-    set(ASAN_TEST_DYNAMIC True)
+  foreach(arch ${ASAN_TEST_ARCH})
+    string(TOUPPER ${arch} ARCH_UPPER_CASE)
+    set(CONFIG_NAME ${ARCH_UPPER_CASE}${OS_NAME}Config)
+    set(CONFIG_NAME_DYNAMIC ${ARCH_UPPER_CASE}${OS_NAME}DynamicConfig)
+
+    set(ASAN_TEST_DYNAMIC False)
     configure_lit_site_cfg(
       ${CMAKE_CURRENT_SOURCE_DIR}/Unit/lit.site.cfg.py.in
-      ${CMAKE_CURRENT_BINARY_DIR}/Unit/dynamic/lit.site.cfg.py)
-  endif()
-  # FIXME: support unit test in the android test runner
-  if (NOT ANDROID)
-    list(APPEND ASAN_TEST_DEPS AsanUnitTests)
-    list(APPEND ASAN_TESTSUITES ${CMAKE_CURRENT_BINARY_DIR}/Unit)
+      ${CMAKE_CURRENT_BINARY_DIR}/Unit/${CONFIG_NAME}/lit.site.cfg.py)
     if(COMPILER_RT_ASAN_HAS_STATIC_RUNTIME)
-      list(APPEND ASAN_DYNAMIC_TEST_DEPS AsanDynamicUnitTests)
-      list(APPEND ASAN_DYNAMIC_TESTSUITES ${CMAKE_CURRENT_BINARY_DIR}/Unit/dynamic)
+      set(ASAN_TEST_DYNAMIC True)
+      configure_lit_site_cfg(
+        ${CMAKE_CURRENT_SOURCE_DIR}/Unit/lit.site.cfg.py.in
+        ${CMAKE_CURRENT_BINARY_DIR}/Unit/${CONFIG_NAME_DYNAMIC}/lit.site.cfg.py)
     endif()
-  endif()
+    # FIXME: support unit test in the android test runner
+    if (NOT ANDROID)
+      list(APPEND ASAN_TEST_DEPS AsanUnitTests)
+      list(APPEND ASAN_TESTSUITES ${CMAKE_CURRENT_BINARY_DIR}/Unit/${CONFIG_NAME})
+      if(COMPILER_RT_ASAN_HAS_STATIC_RUNTIME)
+        list(APPEND ASAN_DYNAMIC_TEST_DEPS AsanDynamicUnitTests)
+        list(APPEND ASAN_DYNAMIC_TESTSUITES ${CMAKE_CURRENT_BINARY_DIR}/Unit/${CONFIG_NAME_DYNAMIC})
+      endif()
+    endif()
+  endforeach()
 endif()
 
 if (SHADOW_MAPPING_UNRELIABLE)

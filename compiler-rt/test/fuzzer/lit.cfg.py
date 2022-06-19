@@ -7,6 +7,7 @@ config.test_format = lit.formats.ShTest(True)
 config.suffixes = ['.test']
 config.test_source_root = os.path.dirname(__file__)
 config.available_features.add(config.target_arch)
+lit_config.note(f'arch feature "{config.target_arch}" available')
 
 # Choose between lit's internal shell pipeline runner and a real shell.  If
 # LIT_USE_INTERNAL_SHELL is in the environment, we use that as an override.
@@ -56,6 +57,9 @@ if sys.platform.startswith('linux'):
   config.available_features.add('linux')
 else:
   lit_config.note('linux feature unavailable')
+
+if config.arm_thumb:
+  config.available_features.add('thumb')
 
 config.substitutions.append(('%build_dir', config.cmake_binary_dir))
 libfuzzer_src_root = os.path.join(config.compiler_rt_src_root, "lib", "fuzzer")

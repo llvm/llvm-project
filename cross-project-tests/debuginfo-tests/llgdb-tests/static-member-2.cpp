@@ -3,7 +3,7 @@
 // RUN: %test_debuginfo %s %t.out
 
 // FIXME: LLDB finds the wrong symbol for "C". rdar://problem/14933867
-// XFAIL: darwin
+// XFAIL: darwin, gdb-clang-incompatibility
 
 // DEBUGGER: delete breakpoints
 // DEBUGGER: break static-member.cpp:33

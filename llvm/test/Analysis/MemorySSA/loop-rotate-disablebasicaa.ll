@@ -1,4 +1,3 @@
-; RUN: opt -disable-basic-aa -enable-new-pm=0 -print-memoryssa -disable-output %s 2>&1 | FileCheck %s
 ; RUN: opt -passes='print<memoryssa>' -disable-output %s 2>&1 | FileCheck %s
 
 ; Note: if @foo is modelled as a MemoryDef, this test will assert with -loop-rotate, due to MemorySSA not

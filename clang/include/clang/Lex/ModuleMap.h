@@ -456,8 +456,11 @@ public:
   /// is effectively internal, but is exposed so HeaderSearch can call it.
   void resolveHeaderDirectives(const FileEntry *File) const;
 
-  /// Resolve all lazy header directives for the specified module.
-  void resolveHeaderDirectives(Module *Mod) const;
+  /// Resolve lazy header directives for the specified module. If File is
+  /// provided, only headers with same size and modtime are resolved. If File
+  /// is not set, all headers are resolved.
+  void resolveHeaderDirectives(Module *Mod,
+                               llvm::Optional<const FileEntry *> File) const;
 
   /// Reports errors if a module must not include a specific file.
   ///
@@ -476,7 +479,7 @@ public:
   void diagnoseHeaderInclusion(Module *RequestingModule,
                                bool RequestingModuleIsModuleInterface,
                                SourceLocation FilenameLoc, StringRef Filename,
-                               const FileEntry *File);
+                               FileEntryRef File);
 
   /// Determine whether the given header is part of a module
   /// marked 'unavailable'.
@@ -538,8 +541,11 @@ public:
   ///
   /// We model the global module fragment as a submodule of the module
   /// interface unit. Unfortunately, we can't create the module interface
-  /// unit's Module until later, because we don't know what it will be called.
-  Module *createGlobalModuleFragmentForModuleUnit(SourceLocation Loc);
+  /// unit's Module until later, because we don't know what it will be called
+  /// usually. See C++20 [module.unit]/7.2 for the case we could know its
+  /// parent.
+  Module *createGlobalModuleFragmentForModuleUnit(SourceLocation Loc,
+                                                  Module *Parent = nullptr);
 
   /// Create a global module fragment for a C++ module interface unit.
   Module *createPrivateModuleFragmentForInterfaceUnit(Module *Parent,
@@ -557,6 +563,10 @@ public:
 
   /// Create a header module from the specified list of headers.
   Module *createHeaderModule(StringRef Name, ArrayRef<Module::Header> Headers);
+
+  /// Create a C++20 header unit.
+  Module *createHeaderUnit(SourceLocation Loc, StringRef Name,
+                           Module::Header H);
 
   /// Infer the contents of a framework module map from the given
   /// framework directory.
@@ -579,6 +589,12 @@ public:
     assert(!ExistingModule->Parent && "expected top-level module");
     assert(ModuleScopeIDs.count(ExistingModule) && "unknown module");
     return ModuleScopeIDs[ExistingModule] < CurrentModuleScopeID;
+  }
+
+  /// Check whether a framework module can be inferred in the given directory.
+  bool canInferFrameworkModule(const DirectoryEntry *Dir) const {
+    auto It = InferredDirectories.find(Dir);
+    return It != InferredDirectories.end() && It->getSecond().InferModules;
   }
 
   /// Retrieve the module map file containing the definition of the given

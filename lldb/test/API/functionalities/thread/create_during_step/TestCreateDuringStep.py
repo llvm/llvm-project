@@ -12,8 +12,6 @@ from lldbsuite.test import lldbutil
 
 class CreateDuringStepTestCase(TestBase):
 
-    mydir = TestBase.compute_mydir(__file__)
-
     @expectedFailureAll(
         oslist=["linux"],
         bugnumber="llvm.org/pr15824 thread states not properly maintained")
@@ -29,7 +27,7 @@ class CreateDuringStepTestCase(TestBase):
     @expectedFailureNetBSD
     def test_step_inst(self):
         """Test thread creation during step-inst handling."""
-        self.build(dictionary=self.getBuildFlags())
+        self.build()
         self.create_during_step_base(
             "thread step-inst -m all-threads",
             'stop reason = instruction step')
@@ -49,7 +47,7 @@ class CreateDuringStepTestCase(TestBase):
     @expectedFailureNetBSD
     def test_step_over(self):
         """Test thread creation during step-over handling."""
-        self.build(dictionary=self.getBuildFlags())
+        self.build()
         self.create_during_step_base(
             "thread step-over -m all-threads",
             'stop reason = step over')
@@ -69,7 +67,7 @@ class CreateDuringStepTestCase(TestBase):
     @expectedFailureNetBSD
     def test_step_in(self):
         """Test thread creation during step-in handling."""
-        self.build(dictionary=self.getBuildFlags())
+        self.build()
         self.create_during_step_base(
             "thread step-in -m all-threads",
             'stop reason = step in')

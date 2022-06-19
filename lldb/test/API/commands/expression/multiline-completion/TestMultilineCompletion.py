@@ -9,8 +9,6 @@ from lldbsuite.test.lldbpexpect import PExpectTest
 
 class MultilineCompletionTest(PExpectTest):
 
-    mydir = TestBase.compute_mydir(__file__)
-
     def start_expression_editor(self):
         """ Starts the multiline expression editor. """
         self.child.send("expression\n")
@@ -31,6 +29,7 @@ class MultilineCompletionTest(PExpectTest):
     @skipIfAsan
     @skipIfEditlineSupportMissing
     @expectedFailureAll(oslist=['freebsd'], bugnumber='llvm.org/pr49408')
+    @skipIf(oslist=["linux"], archs=["arm", "aarch64"])
     def test_basic_completion(self):
         """Test that we can complete a simple multiline expression"""
         self.build()

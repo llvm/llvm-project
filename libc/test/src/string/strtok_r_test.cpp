@@ -81,6 +81,18 @@ TEST(LlvmLibcStrTokReentrantTest, ShouldNotGoPastNullTerminator) {
 }
 
 TEST(LlvmLibcStrTokReentrantTest,
+     ShouldReturnNullptrWhenBothSrcAndSaveptrAreNull) {
+  char *src = nullptr;
+  char *reserve = nullptr;
+  // Ensure that instead of crashing if src and reserve are null, nullptr is
+  // returned
+  ASSERT_STREQ(__llvm_libc::strtok_r(src, ",", &reserve), nullptr);
+  // And that neither src nor reserve are changed when that happens
+  ASSERT_STREQ(src, nullptr);
+  ASSERT_STREQ(reserve, nullptr);
+}
+
+TEST(LlvmLibcStrTokReentrantTest,
      SubsequentCallsShouldFindFollowingDelimiters) {
   char src[] = "12,34.56";
   char *reserve = nullptr;

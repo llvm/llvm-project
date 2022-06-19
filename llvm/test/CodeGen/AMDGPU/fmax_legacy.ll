@@ -157,8 +157,8 @@ define amdgpu_kernel void @test_fmax_legacy_ogt_v1f32(<1 x float> addrspace(1)* 
   %gep.0 = getelementptr <1 x float>, <1 x float> addrspace(1)* %in, i32 %tid
   %gep.1 = getelementptr <1 x float>, <1 x float> addrspace(1)* %gep.0, i32 1
 
-  %a = load <1 x float>, <1 x float> addrspace(1)* %gep.0
-  %b = load <1 x float>, <1 x float> addrspace(1)* %gep.1
+  %a = load volatile <1 x float>, <1 x float> addrspace(1)* %gep.0
+  %b = load volatile <1 x float>, <1 x float> addrspace(1)* %gep.1
 
   %cmp = fcmp ogt <1 x float> %a, %b
   %val = select <1 x i1> %cmp, <1 x float> %a, <1 x float> %b

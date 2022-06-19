@@ -9,7 +9,7 @@
 // This file declares the WasmObjectFile class, which implements the ObjectFile
 // interface for Wasm files.
 //
-// See: https://github.com/WebAssembly/design/blob/master/BinaryEncoding.md
+// See: https://github.com/WebAssembly/design/blob/main/BinaryEncoding.md
 //
 //===----------------------------------------------------------------------===//
 
@@ -37,15 +37,13 @@ public:
   WasmSymbol(const wasm::WasmSymbolInfo &Info,
              const wasm::WasmGlobalType *GlobalType,
              const wasm::WasmTableType *TableType,
-             const wasm::WasmTagType *TagType,
              const wasm::WasmSignature *Signature)
       : Info(Info), GlobalType(GlobalType), TableType(TableType),
-        TagType(TagType), Signature(Signature) {}
+        Signature(Signature) {}
 
   const wasm::WasmSymbolInfo &Info;
   const wasm::WasmGlobalType *GlobalType;
   const wasm::WasmTableType *TableType;
-  const wasm::WasmTagType *TagType;
   const wasm::WasmSignature *Signature;
 
   bool isTypeFunction() const {
@@ -138,7 +136,6 @@ public:
     return TargetFeatures;
   }
   ArrayRef<wasm::WasmSignature> types() const { return Signatures; }
-  ArrayRef<uint32_t> functionTypes() const { return FunctionTypes; }
   ArrayRef<wasm::WasmImport> imports() const { return Imports; }
   ArrayRef<wasm::WasmTable> tables() const { return Tables; }
   ArrayRef<wasm::WasmLimits> memories() const { return Memories; }
@@ -260,6 +257,7 @@ private:
 
   // Custom section types
   Error parseDylinkSection(ReadContext &Ctx);
+  Error parseDylink0Section(ReadContext &Ctx);
   Error parseNameSection(ReadContext &Ctx);
   Error parseLinkingSection(ReadContext &Ctx);
   Error parseLinkingSectionSymtab(ReadContext &Ctx);
@@ -274,7 +272,6 @@ private:
   wasm::WasmProducerInfo ProducerInfo;
   std::vector<wasm::WasmFeatureEntry> TargetFeatures;
   std::vector<wasm::WasmSignature> Signatures;
-  std::vector<uint32_t> FunctionTypes;
   std::vector<wasm::WasmTable> Tables;
   std::vector<wasm::WasmLimits> Memories;
   std::vector<wasm::WasmGlobal> Globals;

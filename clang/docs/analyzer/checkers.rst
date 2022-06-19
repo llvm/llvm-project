@@ -66,7 +66,20 @@ Check for null pointers passed as arguments to a function whose arguments are re
 
 core.NullDereference (C, C++, ObjC)
 """""""""""""""""""""""""""""""""""
-Check for dereferences of null pointers.
+Check for dereferences of null pointers. 
+
+This checker specifically does
+not report null pointer dereferences for x86 and x86-64 targets when the
+address space is 256 (x86 GS Segment), 257 (x86 FS Segment), or 258 (x86 SS
+segment). See `X86/X86-64 Language Extensions
+<https://clang.llvm.org/docs/LanguageExtensions.html#memory-references-to-specified-segments>`__
+for reference.
+
+The ``SuppressAddressSpaces`` option suppresses 
+warnings for null dereferences of all pointers with address spaces. You can
+disable this behavior with the option
+``-analyzer-config core.NullDereference:SuppressAddressSpaces=false``.
+*Defaults to true*.
 
 .. code-block:: objc
 
@@ -312,6 +325,31 @@ Check if default placement new is provided with pointers to sufficient storage c
 cplusplus.SelfAssignment (C++)
 """"""""""""""""""""""""""""""
 Checks C++ copy and move assignment operators for self assignment.
+
+.. _cplusplus-StringChecker:
+
+cplusplus.StringChecker (C++)
+"""""""""""""""""""""""""""""
+Checks std::string operations.
+
+Checks if the cstring pointer from which the ``std::string`` object is
+constructed is ``NULL`` or not.
+If the checker cannot reason about the nullness of the pointer it will assume
+that it was non-null to satisfy the precondition of the constructor.
+
+This checker is capable of checking the `SEI CERT C++ coding rule STR51-CPP.
+Do not attempt to create a std::string from a null pointer
+<https://wiki.sei.cmu.edu/confluence/x/E3s-BQ>`__.
+
+.. code-block:: cpp
+
+ #include <string>
+
+ void f(const char *p) {
+   if (!p) {
+     std::string msg(p); // warn: The parameter must not be null
+   }
+ }
 
 .. _deadcode-checkers:
 
@@ -909,9 +947,9 @@ Check the size argument passed into C string functions for common erroneous patt
      // warn: potential buffer overflow
  }
 
-.. _unix-cstrisng-NullArg:
+.. _unix-cstring-NullArg:
 
-unix.cstrisng.NullArg (C)
+unix.cstring.NullArg (C)
 """""""""""""""""""""""""
 Check for null pointers being passed as arguments to C string functions:
 ``strlen, strnlen, strcpy, strncpy, strcat, strncat, strcmp, strncmp, strcasecmp, strncasecmp``.
@@ -1838,6 +1876,20 @@ Method calls on a moved-from object and copying a moved-from object will be repo
    a.foo();            // warn: method call on a 'moved-from' object 'a'
  }
 
+.. _alpha-cplusplus-SmartPtr:
+
+alpha.cplusplus.SmartPtr (C++)
+""""""""""""""""""""""""""""""
+Check for dereference of null smart pointers.
+
+.. code-block:: cpp
+
+ void deref_smart_ptr() {
+   std::unique_ptr<int> P;
+   *P; // warn: dereference of a default constructed smart unique_ptr
+ }
+
+
 alpha.deadcode
 ^^^^^^^^^^^^^^
 .. _alpha-deadcode-UnreachableCode:
@@ -1870,19 +1922,6 @@ Check unreachable code.
  void test(id x) {
    return;
    [x retain]; // warn
- }
-
-.. _alpha-cplusplus-SmartPtr:
-
-alpha.cplusplus.SmartPtr (C++)
-""""""""""""""""""""""""""""""
-Check for dereference of null smart pointers.
-
-.. code-block:: cpp
-
- void deref_smart_ptr() {
-   std::unique_ptr<int> P;
-   *P; // warn: dereference of a default constructed smart unique_ptr
  }
 
 alpha.fuchsia
@@ -2047,37 +2086,6 @@ Warns against using one vs. many plural pattern in code when generating localize
 alpha.security
 ^^^^^^^^^^^^^^
 
-
-alpha.security.cert
-^^^^^^^^^^^^^^^^^^^
-
-SEI CERT checkers which tries to find errors based on their `C coding rules <https://wiki.sei.cmu.edu/confluence/display/c/2+Rules>`_.
-
-.. _alpha-security-cert-pos-checkers:
-
-alpha.security.cert.pos
-^^^^^^^^^^^^^^^^^^^^^^^
-
-SEI CERT checkers of `POSIX C coding rules <https://wiki.sei.cmu.edu/confluence/pages/viewpage.action?pageId=87152405>`_.
-
-.. _alpha-security-cert-pos-34c:
-
-alpha.security.cert.pos.34c
-"""""""""""""""""""""""""""
-Finds calls to the ``putenv`` function which pass a pointer to an automatic variable as the argument.
-
-.. code-block:: c
-
-  int func(const char *var) {
-    char env[1024];
-    int retval = snprintf(env, sizeof(env),"TEST=%s", var);
-    if (retval < 0 || (size_t)retval >= sizeof(env)) {
-        /* Handle error */
-    }
- 
-    return putenv(env); // putenv function should not be called with auto variables
-  }
-  
 .. _alpha-security-ArrayBound:
 
 alpha.security.ArrayBound (C)
@@ -2154,7 +2162,15 @@ Warn about buffer overflows (newer checker).
 
 alpha.security.MallocOverflow (C)
 """""""""""""""""""""""""""""""""
-Check for overflows in the arguments to malloc().
+Check for overflows in the arguments to ``malloc()``.
+It tries to catch ``malloc(n * c)`` patterns, where:
+
+ - ``n``: a variable or member access of an object
+ - ``c``: a constant foldable integral
+
+This checker was designed for code audits, so expect false-positive reports.
+One is supposed to silence this checker by ensuring proper bounds checking on
+the variable in question using e.g. an ``assert()`` or a branch.
 
 .. code-block:: c
 
@@ -2167,6 +2183,23 @@ Check for overflows in the arguments to malloc().
      return;
    void *p = malloc(n * sizeof(int)); // no warning
  }
+
+ void test3(int n) {
+   assert(n <= 100 && "Contract violated.");
+   void *p = malloc(n * sizeof(int)); // no warning
+ }
+
+Limitations:
+
+ - The checker won't warn for variables involved in explicit casts,
+   since that might limit the variable's domain.
+   E.g.: ``(unsigned char)int x`` would limit the domain to ``[0,255]``.
+   The checker will miss the true-positive cases when the explicit cast would
+   not tighten the domain to prevent the overflow in the subsequent
+   multiplication operation.
+
+ - It is an AST-based checker, thus it does not make use of the
+   path-sensitive taint-analysis.
 
 .. _alpha-security-MmapWriteExec:
 
@@ -2204,12 +2237,127 @@ Check for an out-of-bound pointer being returned to callers.
    return x; // warn: undefined or garbage returned
  }
 
+
+alpha.security.cert
+^^^^^^^^^^^^^^^^^^^
+
+SEI CERT checkers which tries to find errors based on their `C coding rules <https://wiki.sei.cmu.edu/confluence/display/c/2+Rules>`_.
+
+.. _alpha-security-cert-pos-checkers:
+
+alpha.security.cert.pos
+^^^^^^^^^^^^^^^^^^^^^^^
+
+SEI CERT checkers of `POSIX C coding rules <https://wiki.sei.cmu.edu/confluence/pages/viewpage.action?pageId=87152405>`_.
+
+.. _alpha-security-cert-pos-34c:
+
+alpha.security.cert.pos.34c
+"""""""""""""""""""""""""""
+Finds calls to the ``putenv`` function which pass a pointer to an automatic variable as the argument.
+
+.. code-block:: c
+
+  int func(const char *var) {
+    char env[1024];
+    int retval = snprintf(env, sizeof(env),"TEST=%s", var);
+    if (retval < 0 || (size_t)retval >= sizeof(env)) {
+        /* Handle error */
+    }
+
+    return putenv(env); // putenv function should not be called with auto variables
+  }
+
+Limitations:
+
+   - Technically, one can pass automatic variables to ``putenv``,
+     but one needs to ensure that the given environment key stays
+     alive until it's removed or overwritten.
+     Since the analyzer cannot keep track of which envvars get overwritten
+     and when, it needs to be slightly more aggressive and warn for such
+     cases too, leading in some cases to false-positive reports like this:
+
+     .. code-block:: c
+
+        void baz() {
+          char env[] = "NAME=value";
+          putenv(env); // false-positive warning: putenv function should not be called...
+          // More code...
+          putenv((char *)"NAME=anothervalue");
+          // This putenv call overwrites the previous entry, thus that can no longer dangle.
+        } // 'env' array becomes dead only here.
+
+alpha.security.cert.env
+^^^^^^^^^^^^^^^^^^^^^^^
+
+SEI CERT checkers of `Environment C coding rules <https://wiki.sei.cmu.edu/confluence/x/JdcxBQ>`_.
+
+.. _alpha-security-cert-env-InvalidPtr:
+
+alpha.security.cert.env.InvalidPtr
+""""""""""""""""""""""""""""""""""
+
+Corresponds to SEI CERT Rules ENV31-C and ENV34-C.
+
+ENV31-C:
+Rule is about the possible problem with `main` function's third argument, environment pointer,
+"envp". When enviornment array is modified using some modification function
+such as putenv, setenv or others, It may happen that memory is reallocated,
+however "envp" is not updated to reflect the changes and points to old memory
+region.
+
+ENV34-C:
+Some functions return a pointer to a statically allocated buffer.
+Consequently, subsequent call of these functions will invalidate previous
+pointer. These functions include: getenv, localeconv, asctime, setlocale, strerror
+
+.. code-block:: c
+
+  int main(int argc, const char *argv[], const char *envp[]) {
+    if (setenv("MY_NEW_VAR", "new_value", 1) != 0) {
+      // setenv call may invalidate 'envp'
+      /* Handle error */
+    }
+    if (envp != NULL) {
+      for (size_t i = 0; envp[i] != NULL; ++i) {
+        puts(envp[i]);
+        // envp may no longer point to the current environment
+        // this program has unanticipated behavior, since envp
+        // does not reflect changes made by setenv function.
+      }
+    }
+    return 0;
+  }
+
+  void previous_call_invalidation() {
+    char *p, *pp;
+
+    p = getenv("VAR");
+    pp = getenv("VAR2");
+    // subsequent call to 'getenv' invalidated previous one
+
+    *p;
+    // dereferencing invalid pointer
+  }
+
+alpha.security.taint
+^^^^^^^^^^^^^^^^^^^^
+
+Checkers implementing `taint analysis <https://en.wikipedia.org/wiki/Taint_checking>`_.
+
 .. _alpha-security-taint-TaintPropagation:
 
 alpha.security.taint.TaintPropagation (C, C++)
 """"""""""""""""""""""""""""""""""""""""""""""
-Generate taint information used by other checkers.
-A data is tainted when it comes from an unreliable source.
+
+Taint analysis identifies untrusted sources of information (taint sources), rules as to how the untrusted data flows along the execution path (propagation rules), and points of execution where the use of tainted data is risky (taints sinks).
+The most notable examples of taint sources are:
+
+  - network originating data
+  - environment variables
+  - database originating data
+
+``GenericTaintChecker`` is the main implementation checker for this rule, and it generates taint information used by other checkers.
 
 .. code-block:: c
 
@@ -2235,8 +2383,109 @@ A data is tainted when it comes from an unreliable source.
      // warn: untrusted data as buffer size
  }
 
+There are built-in sources, propagations and sinks defined in code inside ``GenericTaintChecker``.
+These operations are handled even if no external taint configuration is provided.
+
+Default sources defined by ``GenericTaintChecker``:
+ ``_IO_getc``, ``fdopen``, ``fopen``, ``freopen``, ``get_current_dir_name``, ``getch``, ``getchar``, ``getchar_unlocked``, ``getwd``, ``getcwd``, ``getgroups``, ``gethostname``, ``getlogin``, ``getlogin_r``, ``getnameinfo``, ``gets``, ``gets_s``, ``getseuserbyname``, ``readlink``, ``readlinkat``, ``scanf``, ``scanf_s``, ``socket``, ``wgetch``
+
+Default propagations defined by ``GenericTaintChecker``:
+``atoi``, ``atol``, ``atoll``, ``basename``, ``dirname``, ``fgetc``, ``fgetln``, ``fgets``, ``fnmatch``, ``fread``, ``fscanf``, ``fscanf_s``, ``index``, ``inflate``, ``isalnum``, ``isalpha``, ``isascii``, ``isblank``, ``iscntrl``, ``isdigit``, ``isgraph``, ``islower``, ``isprint``, ``ispunct``, ``isspace``, ``isupper``, ``isxdigit``, ``memchr``, ``memrchr``, ``sscanf``, ``getc``, ``getc_unlocked``, ``getdelim``, ``getline``, ``getw``, ``memcmp``, ``memcpy``, ``memmem``, ``memmove``, ``mbtowc``, ``pread``, ``qsort``, ``qsort_r``, ``rawmemchr``, ``read``, ``recv``, ``recvfrom``, ``rindex``, ``strcasestr``, ``strchr``, ``strchrnul``, ``strcasecmp``, ``strcmp``, ``strcspn``, ``strlen``, ``strncasecmp``, ``strncmp``, ``strndup``, ``strndupa``, ``strnlen``, ``strpbrk``, ``strrchr``, ``strsep``, ``strspn``, ``strstr``, ``strtol``, ``strtoll``, ``strtoul``, ``strtoull``, ``tolower``, ``toupper``, ``ttyname``, ``ttyname_r``, ``wctomb``, ``wcwidth``
+
+Default sinks defined in ``GenericTaintChecker``:
+``printf``, ``setproctitle``, ``system``, ``popen``, ``execl``, ``execle``, ``execlp``, ``execv``, ``execvp``, ``execvP``, ``execve``, ``dlopen``, ``memcpy``, ``memmove``, ``strncpy``, ``strndup``, ``malloc``, ``calloc``, ``alloca``, ``memccpy``, ``realloc``, ``bcopy``
+
+The user can configure taint sources, sinks, and propagation rules by providing a configuration file via checker option ``alpha.security.taint.TaintPropagation:Config``.
+
+External taint configuration is in `YAML <http://llvm.org/docs/YamlIO.html#introduction-to-yaml>`_ format. The taint-related options defined in the config file extend but do not override the built-in sources, rules, sinks.
+The format of the external taint configuration file is not stable, and could change without any notice even in a non-backward compatible way.
+
+For a more detailed description of configuration options, please see the :doc:`user-docs/TaintAnalysisConfiguration`. For an example see :ref:`clangsa-taint-configuration-example`.
+
 alpha.unix
 ^^^^^^^^^^^
+
+.. _alpha-unix-StdCLibraryFunctionArgs:
+
+alpha.unix.StdCLibraryFunctionArgs (C)
+""""""""""""""""""""""""""""""""""""""
+Check for calls of standard library functions that violate predefined argument
+constraints. For example, it is stated in the C standard that for the ``int
+isalnum(int ch)`` function the behavior is undefined if the value of ``ch`` is
+not representable as unsigned char and is not equal to ``EOF``.
+
+.. code-block:: c
+
+  void test_alnum_concrete(int v) {
+    int ret = isalnum(256); // \
+    // warning: Function argument constraint is not satisfied
+    (void)ret;
+  }
+
+If the argument's value is unknown then the value is assumed to hold the proper value range.
+
+.. code-block:: c
+
+  #define EOF -1
+  int test_alnum_symbolic(int x) {
+    int ret = isalnum(x);
+    // after the call, ret is assumed to be in the range [-1, 255]
+
+    if (ret > 255)      // impossible (infeasible branch)
+      if (x == 0)
+        return ret / x; // division by zero is not reported
+    return ret;
+  }
+
+If the user disables the checker then the argument violation warning is
+suppressed. However, the assumption about the argument is still modeled. This
+is because exploring an execution path that already contains undefined behavior
+is not valuable.
+
+There are different kind of constraints modeled: range constraint, not null
+constraint, buffer size constraint. A **range constraint** requires the
+argument's value to be in a specific range, see ``isalnum`` as an example above.
+A **not null constraint** requires the pointer argument to be non-null.
+
+A **buffer size** constraint specifies the minimum size of the buffer
+argument. The size might be a known constant. For example, ``asctime_r`` requires
+that the buffer argument's size must be greater than or equal to ``26`` bytes. In
+other cases, the size is denoted by another argument or as a multiplication of
+two arguments.
+For instance, ``size_t fread(void *ptr, size_t size, size_t nmemb, FILE *stream)``.
+Here, ``ptr`` is the buffer, and its minimum size is ``size * nmemb``
+
+.. code-block:: c
+
+  void buffer_size_constraint_violation(FILE *file) {
+    enum { BUFFER_SIZE = 1024 };
+    wchar_t wbuf[BUFFER_SIZE];
+
+    const size_t size = sizeof(*wbuf);   // 4
+    const size_t nitems = sizeof(wbuf);  // 4096
+
+    // Below we receive a warning because the 3rd parameter should be the
+    // number of elements to read, not the size in bytes. This case is a known
+    // vulnerability described by the ARR38-C SEI-CERT rule.
+    fread(wbuf, size, nitems, file);
+  }
+
+**Limitations**
+
+The checker is in alpha because the reports cannot provide notes about the
+values of the arguments. Without this information it is hard to confirm if the
+constraint is indeed violated. For example, consider the above case for
+``fread``. We display in the warning message that the size of the 1st arg
+should be equal to or less than the value of the 2nd arg times the 3rd arg.
+However, we fail to display the concrete values (``4`` and ``4096``) for those
+arguments.
+
+**Parameters**
+
+The checker models functions (and emits diagnostics) from the C standard by
+default. The ``ModelPOSIX`` option enables the checker to model (and emit
+diagnostics) for functions that are defined in the POSIX standard. This option
+is disabled by default.
 
 .. _alpha-unix-BlockInCriticalSection:
 
@@ -2408,13 +2657,45 @@ alpha.unix.cstring.OutOfBounds (C)
 """"""""""""""""""""""""""""""""""
 Check for out-of-bounds access in string functions; applies to:`` strncopy, strncat``.
 
-
 .. code-block:: c
 
  void test() {
    int y = strlen((char *)&test); // warn
  }
 
+.. _alpha-unix-cstring-UninitializedRead:
+
+alpha.unix.cstring.UninitializedRead (C)
+""""""""""""""""""""""""""""""""""""""""
+Check for uninitialized reads from common memory copy/manipulation functions such as:
+ ``memcpy, mempcpy, memmove, memcmp, strcmp, strncmp, strcpy, strlen, strsep`` and many more.
+
+.. code-block:: c 
+
+ void test() {
+  char src[10];
+  char dst[5];
+  memcpy(dst,src,sizeof(dst)); // warn: Bytes string function accesses uninitialized/garbage values
+ }
+
+Limitations:
+  
+   - Due to limitations of the memory modeling in the analyzer, one can likely
+     observe a lot of false-positive reports like this:
+
+      .. code-block:: c
+  
+        void false_positive() {
+          int src[] = {1, 2, 3, 4};
+          int dst[5] = {0};
+          memcpy(dst, src, 4 * sizeof(int)); // false-positive:
+          // The 'src' buffer was correctly initialized, yet we cannot conclude
+          // that since the analyzer could not see a direct initialization of the
+          // very last byte of the source buffer.
+        }
+  
+     More details at the corresponding `GitHub issue <https://github.com/llvm/llvm-project/issues/43459>`_.
+  
 .. _alpha-nondeterminism-PointerIteration:
 
 alpha.nondeterminism.PointerIteration (C++)

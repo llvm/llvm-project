@@ -8,7 +8,7 @@ extern int foo;
 
 #else
 
-void f() {
+void f(void) {
   int a = foo;
   // Make sure we parsed this by getting an error.
   int b = bar; // expected-error {{undeclared}}

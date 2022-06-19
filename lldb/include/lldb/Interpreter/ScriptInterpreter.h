@@ -11,6 +11,7 @@
 
 #include "lldb/API/SBData.h"
 #include "lldb/API/SBError.h"
+#include "lldb/API/SBMemoryRegionInfo.h"
 #include "lldb/Breakpoint/BreakpointOptions.h"
 #include "lldb/Core/Communication.h"
 #include "lldb/Core/PluginInterface.h"
@@ -147,6 +148,8 @@ public:
       lldb::ScriptedProcessInterfaceUP scripted_process_interface_up =
           std::make_unique<ScriptedProcessInterface>());
 
+  virtual StructuredData::DictionarySP GetInterpreterInfo();
+
   ~ScriptInterpreter() override = default;
 
   virtual bool Interrupt() { return false; }
@@ -271,7 +274,7 @@ public:
 
   virtual StructuredData::ObjectSP
   CreateScriptedThreadPlan(const char *class_name,
-                           StructuredDataImpl *args_data,
+                           const StructuredDataImpl &args_data,
                            std::string &error_str,
                            lldb::ThreadPlanSP thread_plan_sp) {
     return StructuredData::ObjectSP();
@@ -307,7 +310,7 @@ public:
 
   virtual StructuredData::GenericSP
   CreateScriptedBreakpointResolver(const char *class_name,
-                                   StructuredDataImpl *args_data,
+                                   const StructuredDataImpl &args_data,
                                    lldb::BreakpointSP &bkpt_sp) {
     return StructuredData::GenericSP();
   }
@@ -327,7 +330,7 @@ public:
 
   virtual StructuredData::GenericSP
   CreateScriptedStopHook(lldb::TargetSP target_sp, const char *class_name,
-                         StructuredDataImpl *args_data, Status &error) {
+                         const StructuredDataImpl &args_data, Status &error) {
     error.SetErrorString("Creating scripted stop-hooks with the current "
                          "script interpreter is not supported.");
     return StructuredData::GenericSP();
@@ -563,6 +566,9 @@ public:
   GetDataExtractorFromSBData(const lldb::SBData &data) const;
 
   Status GetStatusFromSBError(const lldb::SBError &error) const;
+
+  llvm::Optional<MemoryRegionInfo> GetOpaqueTypeFromSBMemoryRegionInfo(
+      const lldb::SBMemoryRegionInfo &mem_region) const;
 
 protected:
   Debugger &m_debugger;

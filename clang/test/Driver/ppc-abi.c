@@ -24,13 +24,9 @@
 // RUN: %clang -target powerpc64-unknown-openbsd %s -### 2>&1 | FileCheck --check-prefix=CHECK-ELFv2-BE-PIE %s
 // RUN: %clang -target powerpc64-linux-musl %s -### 2>&1 | FileCheck --check-prefix=CHECK-ELFv2-BE-PIE %s
 
-// CHECK-ELFv1: "-mrelocation-model" "static"
 // CHECK-ELFv1: "-target-abi" "elfv1"
-// CHECK-ELFv1-LE: "-mrelocation-model" "static"
 // CHECK-ELFv1-LE: "-target-abi" "elfv1"
-// CHECK-ELFv2: "-mrelocation-model" "static"
 // CHECK-ELFv2: "-target-abi" "elfv2"
-// CHECK-ELFv2-BE: "-mrelocation-model" "static"
 // CHECK-ELFv2-BE: "-target-abi" "elfv2"
 // CHECK-ELFv2-BE-PIE: "-mrelocation-model" "pic" "-pic-level" "2" "-pic-is-pie"
 // CHECK-ELFv2-BE-PIE: "-target-abi" "elfv2"
@@ -67,9 +63,6 @@
 // CHECK-ELFv1-IEEE: "-mabi=ieeelongdouble"
 // CHECK-ELFv1-IEEE: "-target-abi" "elfv1"
 
-// Check -mabi=ibmlongdouble is the default.
-// RUN: %clang -target powerpc64le-linux-gnu %s -### 2>&1 \
-// RUN:   | FileCheck -check-prefix=CHECK-ELFv2-IBM128 %s
 // RUN: %clang -target powerpc64le-linux-gnu %s -mabi=ibmlongdouble -### 2>&1 \
 // RUN:   | FileCheck -check-prefix=CHECK-ELFv2-IBM128 %s
 

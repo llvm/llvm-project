@@ -37,7 +37,7 @@
 /* This variable is an external reference to symbol defined by the compiler. */
 COMPILER_RT_VISIBILITY extern intptr_t INSTR_PROF_PROFILE_COUNTER_BIAS_VAR;
 
-COMPILER_RT_VISIBILITY unsigned lprofProfileDumped() {
+COMPILER_RT_VISIBILITY unsigned lprofProfileDumped(void) {
   return 1;
 }
 COMPILER_RT_VISIBILITY void lprofSetProfileDumped(unsigned Value) {}
@@ -52,7 +52,7 @@ static inline void lprofWrite(const char *fmt, ...) {
   int ret = vsnprintf(s, sizeof(s), fmt, ap);
   va_end(ap);
 
-  __sanitizer_log_write(s, ret + 1);
+  __sanitizer_log_write(s, ret);
 }
 
 struct lprofVMOWriterCtx {
@@ -116,12 +116,13 @@ void __llvm_profile_initialize(void) {
 
   const __llvm_profile_data *DataBegin = __llvm_profile_begin_data();
   const __llvm_profile_data *DataEnd = __llvm_profile_end_data();
-  const uint64_t *CountersBegin = __llvm_profile_begin_counters();
-  const uint64_t *CountersEnd = __llvm_profile_end_counters();
+  const char *CountersBegin = __llvm_profile_begin_counters();
+  const char *CountersEnd = __llvm_profile_end_counters();
   const uint64_t DataSize = __llvm_profile_get_data_size(DataBegin, DataEnd);
   const uint64_t CountersOffset =
-      sizeof(__llvm_profile_header) + (DataSize * sizeof(__llvm_profile_data));
-  uint64_t CountersSize = CountersEnd - CountersBegin;
+      sizeof(__llvm_profile_header) + __llvm_write_binary_ids(NULL) + DataSize;
+  uint64_t CountersSize =
+      __llvm_profile_get_counters_size(CountersBegin, CountersEnd);
 
   /* Don't publish a VMO if there are no counters. */
   if (!CountersSize)
@@ -177,9 +178,6 @@ void __llvm_profile_initialize(void) {
   /* Publish the VMO which contains profile data to the system. Note that this
    * also consumes the VMO handle. */
   __sanitizer_publish_data(ProfileSinkName, Vmo);
-
-  /* Use the dumpfile symbolizer markup element to write the name of VMO. */
-  lprofWrite("LLVM Profile: {{{dumpfile:%s:%s}}}\n", ProfileSinkName, VmoName);
 
   /* Update the profile fields based on the current mapping. */
   INSTR_PROF_PROFILE_COUNTER_BIAS_VAR =

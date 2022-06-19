@@ -29,7 +29,7 @@ static cl::list<std::string> InputFiles(cl::Positional, cl::OneOrMore,
 
 static cl::list<std::string> InputArgv("args", cl::Positional,
                                        cl::desc("<program arguments>..."),
-                                       cl::ZeroOrMore, cl::PositionalEatsArgs);
+                                       cl::PositionalEatsArgs);
 
 static cl::opt<unsigned> NumThreads("num-threads", cl::Optional,
                                     cl::desc("Number of compile threads"),
@@ -49,7 +49,11 @@ public:
     if (!DL)
       return DL.takeError();
 
-    auto ES = std::make_unique<ExecutionSession>();
+    auto EPC = SelfExecutorProcessControl::Create();
+    if (!EPC)
+      return EPC.takeError();
+
+    auto ES = std::make_unique<ExecutionSession>(std::move(*EPC));
 
     auto LCTMgr = createLocalLazyCallThroughManager(
         JTMB->getTargetTriple(), *ES,

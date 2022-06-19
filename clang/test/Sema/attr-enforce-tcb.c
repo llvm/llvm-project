@@ -13,7 +13,7 @@ void foo7 (void) PLACE_IN_TCB("bar3");
 void foo8 (void) PLACE_IN_TCB("bar") PLACE_IN_TCB("bar2");
 void foo9 (void);
 
-void foo1() {
+void foo1(void) {
     foo2(); // OK - function in same TCB
     foo3(); // expected-warning {{calling 'foo3' is a violation of trusted computing base 'bar'}}
     foo4(); // expected-warning {{calling 'foo4' is a violation of trusted computing base 'bar'}}
@@ -24,18 +24,18 @@ void foo1() {
 }
 
 // Normal use without any attributes works
-void foo3() {
+void foo3(void) {
     foo9(); // no-warning
 }
 
-void foo5() {
+void foo5(void) {
     // all calls should be okay, function in TCB leaf
     foo2(); // no-warning
     foo3(); // no-warning
     foo4(); // no-warning
 }
 
-void foo6() {
+void foo6(void) {
     foo1(); // expected-warning {{calling 'foo1' is a violation of trusted computing base 'bar2'}}
     foo4(); // expected-warning {{calling 'foo4' is a violation of trusted computing base 'bar'}}
     foo8(); // no-warning
@@ -45,10 +45,10 @@ void foo6() {
 }
 
 // Ensure that attribute merging works as expected across redeclarations.
-void foo10() PLACE_IN_TCB("bar");
-void foo10() PLACE_IN_TCB("bar2");
-void foo10() PLACE_IN_TCB("bar3");
-void foo10() {
+void foo10(void) PLACE_IN_TCB("bar");
+void foo10(void) PLACE_IN_TCB("bar2");
+void foo10(void) PLACE_IN_TCB("bar3");
+void foo10(void) {
   foo1(); // #2
     // expected-warning@#2 {{calling 'foo1' is a violation of trusted computing base 'bar2'}}
     // expected-warning@#2 {{calling 'foo1' is a violation of trusted computing base 'bar3'}}

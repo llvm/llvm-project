@@ -363,7 +363,7 @@ static bool shouldUseFrameHelper(MachineBasicBlock &MBB,
   int InstCount = RegCount / 2;
 
   // Do not use a helper call when not saving LR.
-  if (std::find(Regs.begin(), Regs.end(), AArch64::LR) == Regs.end())
+  if (!llvm::is_contained(Regs, AArch64::LR))
     return false;
 
   switch (Type) {

@@ -105,7 +105,7 @@ entry:
   %0 = shufflevector <4 x i32> %VA, <4 x i32> %VB, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
   ret <4 x i32> %0
 ; CHECK-LE-LABEL: @check_le_swap_vec_sldwi_va_vb_0
-; CHECK-LE; vmr 2, 3
+; CHECK-LE: vmr 2, 3
 ; CHECK-LE: blr
 }
 
@@ -211,7 +211,7 @@ entry:
   %0 = shufflevector <4 x i32> %VA, <4 x i32> %VB, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
   ret <4 x i32> %0
 ; CHECK-BE-LABEL: @check_be_swap_vec_sldwi_va_vb_0
-; CHECK-LE; vmr 2, 3
+; CHECK-LE: vmr 2, 3
 ; CHECK-BE: blr
 }
 

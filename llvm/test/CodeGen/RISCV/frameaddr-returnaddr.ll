@@ -16,8 +16,8 @@ define i8* @test_frameaddress_0() nounwind {
 ; RV32I-NEXT:    sw s0, 8(sp) # 4-byte Folded Spill
 ; RV32I-NEXT:    addi s0, sp, 16
 ; RV32I-NEXT:    mv a0, s0
-; RV32I-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    addi sp, sp, 16
 ; RV32I-NEXT:    ret
 ;
@@ -28,8 +28,8 @@ define i8* @test_frameaddress_0() nounwind {
 ; RV64I-NEXT:    sd s0, 0(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    addi s0, sp, 16
 ; RV64I-NEXT:    mv a0, s0
-; RV64I-NEXT:    ld s0, 0(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    ld s0, 0(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 16
 ; RV64I-NEXT:    ret
   %1 = call i8* @llvm.frameaddress(i32 0)
@@ -45,8 +45,8 @@ define i8* @test_frameaddress_2() nounwind {
 ; RV32I-NEXT:    addi s0, sp, 16
 ; RV32I-NEXT:    lw a0, -8(s0)
 ; RV32I-NEXT:    lw a0, -8(a0)
-; RV32I-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    addi sp, sp, 16
 ; RV32I-NEXT:    ret
 ;
@@ -58,8 +58,8 @@ define i8* @test_frameaddress_2() nounwind {
 ; RV64I-NEXT:    addi s0, sp, 16
 ; RV64I-NEXT:    ld a0, -16(s0)
 ; RV64I-NEXT:    ld a0, -16(a0)
-; RV64I-NEXT:    ld s0, 0(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    ld s0, 0(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 16
 ; RV64I-NEXT:    ret
   %1 = call i8* @llvm.frameaddress(i32 2)
@@ -78,8 +78,8 @@ define i8* @test_frameaddress_3_alloca() nounwind {
 ; RV32I-NEXT:    lw a0, -8(s0)
 ; RV32I-NEXT:    lw a0, -8(a0)
 ; RV32I-NEXT:    lw a0, -8(a0)
-; RV32I-NEXT:    lw s0, 104(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    lw ra, 108(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw s0, 104(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    addi sp, sp, 112
 ; RV32I-NEXT:    ret
 ;
@@ -94,8 +94,8 @@ define i8* @test_frameaddress_3_alloca() nounwind {
 ; RV64I-NEXT:    ld a0, -16(s0)
 ; RV64I-NEXT:    ld a0, -16(a0)
 ; RV64I-NEXT:    ld a0, -16(a0)
-; RV64I-NEXT:    ld s0, 112(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    ld ra, 120(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    ld s0, 112(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 128
 ; RV64I-NEXT:    ret
   %1 = alloca [100 x i8]
@@ -129,8 +129,8 @@ define i8* @test_returnaddress_2() nounwind {
 ; RV32I-NEXT:    lw a0, -8(s0)
 ; RV32I-NEXT:    lw a0, -8(a0)
 ; RV32I-NEXT:    lw a0, -4(a0)
-; RV32I-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    addi sp, sp, 16
 ; RV32I-NEXT:    ret
 ;
@@ -143,8 +143,8 @@ define i8* @test_returnaddress_2() nounwind {
 ; RV64I-NEXT:    ld a0, -16(s0)
 ; RV64I-NEXT:    ld a0, -16(a0)
 ; RV64I-NEXT:    ld a0, -8(a0)
-; RV64I-NEXT:    ld s0, 0(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    ld s0, 0(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 16
 ; RV64I-NEXT:    ret
   %1 = call i8* @llvm.returnaddress(i32 2)

@@ -130,8 +130,8 @@ layout.
 .. code-block:: c++
 
   TheModule->setDataLayout(TargetMachine->createDataLayout());
-  TheModule->setTargetTriple(TargetTriple);   
-  
+  TheModule->setTargetTriple(TargetTriple);
+
 Emit Object Code
 ================
 
@@ -179,7 +179,7 @@ Let's run it, and define a simple ``average`` function. Press Ctrl-D
 when you're done.
 
 ::
-   
+
     $ ./toy
     ready> def average(x y) (x + y) * 0.5;
     ^D

@@ -1,4 +1,4 @@
-//===--M68kExpandPseudo.cpp - Expand pseudo instructions ------*- C++ -*-===//
+//===-- M68kExpandPseudo.cpp - Expand pseudo instructions -------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -302,7 +302,7 @@ bool M68kExpandPseudo::ExpandMBB(MachineBasicBlock &MBB) {
 }
 
 bool M68kExpandPseudo::runOnMachineFunction(MachineFunction &MF) {
-  STI = &static_cast<const M68kSubtarget &>(MF.getSubtarget());
+  STI = &MF.getSubtarget<M68kSubtarget>();
   TII = STI->getInstrInfo();
   TRI = STI->getRegisterInfo();
   MFI = MF.getInfo<M68kMachineFunctionInfo>();

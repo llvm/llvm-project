@@ -24,13 +24,25 @@ class RemoteAwarePlatformTester : public RemoteAwarePlatform {
 public:
   using RemoteAwarePlatform::RemoteAwarePlatform;
 
-  MOCK_METHOD0(GetDescription, const char *());
-  MOCK_METHOD0(GetPluginVersion, uint32_t());
-  MOCK_METHOD0(GetPluginName, ConstString());
-  MOCK_METHOD2(GetSupportedArchitectureAtIndex, bool(uint32_t, ArchSpec &));
+  MOCK_METHOD0(GetDescription, llvm::StringRef());
+  MOCK_METHOD0(GetPluginName, llvm::StringRef());
+  MOCK_METHOD1(GetSupportedArchitectures,
+               std::vector<ArchSpec>(const ArchSpec &process_host_arch));
   MOCK_METHOD4(Attach,
                ProcessSP(ProcessAttachInfo &, Debugger &, Target *, Status &));
   MOCK_METHOD0(CalculateTrapHandlerSymbolNames, void());
+
+  MOCK_METHOD2(ResolveRemoteExecutable,
+               std::pair<Status, ModuleSP>(const ModuleSpec &,
+                                           const FileSpecList *));
+  Status ResolveRemoteExecutable(
+      const ModuleSpec &module_spec, lldb::ModuleSP &exe_module_sp,
+      const FileSpecList *module_search_paths_ptr) /*override*/
+  { // NOLINT(modernize-use-override)
+    auto pair = ResolveRemoteExecutable(module_spec, module_search_paths_ptr);
+    exe_module_sp = pair.second;
+    return pair.first;
+  }
 
   void SetRemotePlatform(lldb::PlatformSP platform) {
     m_remote_platform_sp = platform;
@@ -41,26 +53,14 @@ class TargetPlatformTester : public Platform {
 public:
   using Platform::Platform;
 
-  MOCK_METHOD0(GetDescription, const char *());
-  MOCK_METHOD0(GetPluginVersion, uint32_t());
-  MOCK_METHOD0(GetPluginName, ConstString());
-  MOCK_METHOD2(GetSupportedArchitectureAtIndex, bool(uint32_t, ArchSpec &));
+  MOCK_METHOD0(GetDescription, llvm::StringRef());
+  MOCK_METHOD0(GetPluginName, llvm::StringRef());
+  MOCK_METHOD1(GetSupportedArchitectures,
+               std::vector<ArchSpec>(const ArchSpec &process_host_arch));
   MOCK_METHOD4(Attach,
                ProcessSP(ProcessAttachInfo &, Debugger &, Target *, Status &));
   MOCK_METHOD0(CalculateTrapHandlerSymbolNames, void());
   MOCK_METHOD0(GetUserIDResolver, UserIDResolver &());
-
-  MOCK_METHOD2(ResolveExecutable,
-               std::pair<Status, ModuleSP>(const ModuleSpec &,
-                                           const FileSpecList *));
-  Status
-  ResolveExecutable(const ModuleSpec &module_spec,
-                    lldb::ModuleSP &exe_module_sp,
-                    const FileSpecList *module_search_paths_ptr) /*override*/ {
-    auto pair = ResolveExecutable(module_spec, module_search_paths_ptr);
-    exe_module_sp = pair.second;
-    return pair.first;
-  }
 };
 
 namespace {
@@ -75,15 +75,14 @@ TEST_F(RemoteAwarePlatformTest, TestResolveExecutabelOnClientByPlatform) {
   ModuleSpec executable_spec;
   ModuleSP expected_executable(new Module(executable_spec));
 
-  auto platform_sp = std::make_shared<TargetPlatformTester>(false);
-  EXPECT_CALL(*platform_sp, ResolveExecutable(_, _))
+  RemoteAwarePlatformTester platform(false);
+  static const ArchSpec process_host_arch;
+  EXPECT_CALL(platform, GetSupportedArchitectures(process_host_arch))
+      .WillRepeatedly(Return(std::vector<ArchSpec>()));
+  EXPECT_CALL(platform, ResolveRemoteExecutable(_, _))
       .WillRepeatedly(Return(std::make_pair(Status(), expected_executable)));
 
-  RemoteAwarePlatformTester platform(false);
-  EXPECT_CALL(platform, GetSupportedArchitectureAtIndex(_, _))
-      .WillRepeatedly(Return(false));
-
-  platform.SetRemotePlatform(platform_sp);
+  platform.SetRemotePlatform(std::make_shared<TargetPlatformTester>(false));
 
   ModuleSP resolved_sp;
   lldb_private::Status status =

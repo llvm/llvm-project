@@ -41,8 +41,6 @@ class ASTReader;
 class CodeCompleteConsumer;
 class DiagnosticsEngine;
 class DiagnosticConsumer;
-class ExternalASTSource;
-class FileEntry;
 class FileManager;
 class FrontendAction;
 class InMemoryModuleCache;
@@ -218,6 +216,9 @@ public:
   // FIXME: Eliminate the llvm_shutdown requirement, that should either be part
   // of the context or else not CompilerInstance specific.
   bool ExecuteAction(FrontendAction &Act);
+
+  /// Load the list of plugins requested in the \c FrontendOptions.
+  void LoadRequestedPlugins();
 
   /// }
   /// @name Compiler Invocation and Options

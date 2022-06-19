@@ -3,6 +3,6 @@
 
 #import <SomeFramework/public_header.h>
 
-void foo() {
+void foo(void) {
   from_framework();
 }

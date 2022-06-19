@@ -29,7 +29,7 @@
 //   __wasm_lpad_context.lpad_index = index;
 //   __wasm_lpad_context.lsda = wasm.lsda();
 //   _Unwind_CallPersonality(exn);
-//   selector = __wasm.landingpad_context.selector;
+//   selector = __wasm_lpad_context.selector;
 //   ...
 //
 //
@@ -77,20 +77,12 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/ADT/SetVector.h"
-#include "llvm/ADT/Statistic.h"
-#include "llvm/ADT/Triple.h"
-#include "llvm/Analysis/DomTreeUpdater.h"
+#include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/Passes.h"
-#include "llvm/CodeGen/TargetLowering.h"
-#include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/CodeGen/WasmEHFuncInfo.h"
-#include "llvm/IR/Dominators.h"
 #include "llvm/IR/IRBuilder.h"
-#include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/IntrinsicsWebAssembly.h"
 #include "llvm/InitializePasses.h"
-#include "llvm/Pass.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 
 using namespace llvm;
@@ -124,7 +116,6 @@ public:
   static char ID; // Pass identification, replacement for typeid
 
   WasmEHPrepare() : FunctionPass(ID) {}
-  void getAnalysisUsage(AnalysisUsage &AU) const override;
   bool doInitialization(Module &M) override;
   bool runOnFunction(Function &F) override;
 
@@ -137,15 +128,10 @@ public:
 char WasmEHPrepare::ID = 0;
 INITIALIZE_PASS_BEGIN(WasmEHPrepare, DEBUG_TYPE,
                       "Prepare WebAssembly exceptions", false, false)
-INITIALIZE_PASS_DEPENDENCY(DominatorTreeWrapperPass)
 INITIALIZE_PASS_END(WasmEHPrepare, DEBUG_TYPE, "Prepare WebAssembly exceptions",
                     false, false)
 
 FunctionPass *llvm::createWasmEHPass() { return new WasmEHPrepare(); }
-
-void WasmEHPrepare::getAnalysisUsage(AnalysisUsage &AU) const {
-  AU.addRequired<DominatorTreeWrapperPass>();
-}
 
 bool WasmEHPrepare::doInitialization(Module &M) {
   IRBuilder<> IRB(M.getContext());
@@ -159,14 +145,14 @@ bool WasmEHPrepare::doInitialization(Module &M) {
 // Erase the specified BBs if the BB does not have any remaining predecessors,
 // and also all its dead children.
 template <typename Container>
-static void eraseDeadBBsAndChildren(const Container &BBs, DomTreeUpdater *DTU) {
+static void eraseDeadBBsAndChildren(const Container &BBs) {
   SmallVector<BasicBlock *, 8> WL(BBs.begin(), BBs.end());
   while (!WL.empty()) {
     auto *BB = WL.pop_back_val();
     if (!pred_empty(BB))
       continue;
     WL.append(succ_begin(BB), succ_end(BB));
-    DeleteDeadBlock(BB, DTU);
+    DeleteDeadBlock(BB);
   }
 }
 
@@ -178,9 +164,6 @@ bool WasmEHPrepare::runOnFunction(Function &F) {
 }
 
 bool WasmEHPrepare::prepareThrows(Function &F) {
-  auto &DT = getAnalysis<DominatorTreeWrapperPass>().getDomTree();
-  DomTreeUpdater DTU(&DT, /*PostDominatorTree*/ nullptr,
-                     DomTreeUpdater::UpdateStrategy::Eager);
   Module &M = *F.getParent();
   IRBuilder<> IRB(F.getContext());
   bool Changed = false;
@@ -203,7 +186,7 @@ bool WasmEHPrepare::prepareThrows(Function &F) {
     InstList.erase(std::next(BasicBlock::iterator(ThrowI)), InstList.end());
     IRB.SetInsertPoint(BB);
     IRB.CreateUnreachable();
-    eraseDeadBBsAndChildren(Succs, &DTU);
+    eraseDeadBBsAndChildren(Succs);
   }
 
   return Changed;
@@ -229,9 +212,15 @@ bool WasmEHPrepare::prepareEHPads(Function &F) {
 
   assert(F.hasPersonalityFn() && "Personality function not found");
 
-  // __wasm_lpad_context global variable
+  // __wasm_lpad_context global variable.
+  // This variable should be thread local. If the target does not support TLS,
+  // we depend on CoalesceFeaturesAndStripAtomics to downgrade it to
+  // non-thread-local ones, in which case we don't allow this object to be
+  // linked with other objects using shared memory.
   LPadContextGV = cast<GlobalVariable>(
       M.getOrInsertGlobal("__wasm_lpad_context", LPadContextTy));
+  LPadContextGV->setThreadLocalMode(GlobalValue::GeneralDynamicTLSModel);
+
   LPadIndexField = IRB.CreateConstGEP2_32(LPadContextTy, LPadContextGV, 0, 0,
                                           "lpad_index_gep");
   LSDAField =
@@ -346,7 +335,7 @@ void WasmEHPrepare::prepareEHPad(BasicBlock *BB, bool NeedPersonality,
                                     OperandBundleDef("funclet", CPI));
   PersCI->setDoesNotThrow();
 
-  // Pseudocode: int selector = __wasm.landingpad_context.selector;
+  // Pseudocode: int selector = __wasm_lpad_context.selector;
   Instruction *Selector =
       IRB.CreateLoad(IRB.getInt32Ty(), SelectorField, "selector");
 

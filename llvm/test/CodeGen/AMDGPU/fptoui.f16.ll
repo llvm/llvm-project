@@ -42,7 +42,7 @@ entry:
 ; GCN: v_mov_b32_e32 v[[R_I64_High:[0-9]+]], 0
 ; GCN: v_cvt_f32_f16_e32 v[[A_F32:[0-9]+]], v[[A_F16]]
 ; GCN: v_cvt_u32_f32_e32 v[[R_I64_Low:[0-9]+]], v[[A_F32]]
-; GCN: buffer_store_dwordx2 v{{\[}}[[R_I64_Low]]{{\:}}[[R_I64_High]]{{\]}}
+; GCN: buffer_store_dwordx2 v[[[R_I64_Low]]{{\:}}[[R_I64_High]]]
 ; GCN: s_endpgm
 define amdgpu_kernel void @fptoui_f16_to_i64(
     i64 addrspace(1)* %r,
@@ -112,12 +112,12 @@ entry:
 ; SI: v_cvt_f32_f16_e32 v[[A_F32_1:[0-9]+]], v[[A_F16_1]]
 ; SI: v_cvt_u32_f32_e32 v[[R_I64_0_Low:[0-9]+]], v[[A_F32_0]]
 ; SI: v_cvt_u32_f32_e32 v[[R_I64_1_Low:[0-9]+]], v[[A_F32_1]]
-; VI: v_cvt_f32_f16_sdwa v[[A_F32_1:[0-9]+]], v[[A_F16_0]] dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1
 ; VI: v_cvt_f32_f16_e32 v[[A_F32_0:[0-9]+]], v[[A_F16_0]]
-; VI: v_cvt_u32_f32_e32 v[[R_I64_1_Low:[0-9]+]], v[[A_F32_1]]
+; VI: v_cvt_f32_f16_sdwa v[[A_F32_1:[0-9]+]], v[[A_F16_0]] dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1
 ; VI: v_cvt_u32_f32_e32 v[[R_I64_0_Low:[0-9]+]], v[[A_F32_0]]
+; VI: v_cvt_u32_f32_e32 v[[R_I64_1_Low:[0-9]+]], v[[A_F32_1]]
 ; GCN: v_mov_b32_e32 v[[R_I64_0_High:[0-9]+]], 0
-; GCN: buffer_store_dwordx4 v{{\[}}[[R_I64_0_Low]]{{\:}}[[R_I64_1_High]]{{\]}}
+; GCN: buffer_store_dwordx4 v[[[R_I64_0_Low]]{{\:}}[[R_I64_1_High]]]
 ; GCN: s_endpgm
 define amdgpu_kernel void @fptoui_v2f16_to_v2i64(
     <2 x i64> addrspace(1)* %r,
@@ -134,7 +134,7 @@ entry:
 ; SI: v_cmp_eq_f32_e32 vcc, 1.0, v{{[0-9]+}}
 ; SI: v_cndmask_b32_e64 v{{[0-9]+}}, 0, 1, vcc
 ; VI: v_cmp_eq_f16_e64 s{{\[[0-9]+:[0-9]+\]}}, 1.0, s{{[0-9]+}}
-; VI: v_cndmask_b32_e64 v{{[0-9]+}}, 0, 1, s[0:1]
+; VI: v_cndmask_b32_e64 v{{[0-9]+}}, 0, 1, s[4:5]
 define amdgpu_kernel void @fptoui_f16_to_i1(i1 addrspace(1)* %out, half %in) {
 entry:
   %conv = fptoui half %in to i1

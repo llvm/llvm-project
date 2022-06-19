@@ -7,9 +7,11 @@ static_library("JITLink") {
     "//llvm/lib/Support",
   ]
   sources = [
+    "DWARFRecordSectionSplitter.cpp",
     "EHFrameSupport.cpp",
     "ELF.cpp",
     "ELFLinkGraphBuilder.cpp",
+    "ELF_aarch64.cpp",
     "ELF_riscv.cpp",
     "ELF_x86_64.cpp",
     "JITLink.cpp",
@@ -19,6 +21,8 @@ static_library("JITLink") {
     "MachOLinkGraphBuilder.cpp",
     "MachO_arm64.cpp",
     "MachO_x86_64.cpp",
+    "MemoryFlags.cpp",
+    "aarch64.cpp",
     "riscv.cpp",
     "x86_64.cpp",
   ]

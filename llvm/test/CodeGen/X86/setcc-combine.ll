@@ -267,9 +267,9 @@ define void @test_i1_uge(i1 *%A2) {
 define i64 @PR40657(i8 %var2, i8 %var9) {
 ; CHECK-LABEL: PR40657:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    notb %sil
-; CHECK-NEXT:    addb %dil, %sil
-; CHECK-NEXT:    movzbl %sil, %eax
+; CHECK-NEXT:    addb %sil, %dil
+; CHECK-NEXT:    incb %dil
+; CHECK-NEXT:    movzbl %dil, %eax
 ; CHECK-NEXT:    andl $1, %eax
 ; CHECK-NEXT:    retq
   %var6 = trunc i8 %var9 to i1
@@ -326,11 +326,10 @@ define <4 x float> @sub_to_shift_to_add_vec(<4 x i32> %x, <4 x i32> %y, <4 x flo
 ; SSE2-LABEL: sub_to_shift_to_add_vec:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    paddd %xmm1, %xmm1
-; SSE2-NEXT:    pcmpeqd %xmm0, %xmm1
-; SSE2-NEXT:    pand %xmm1, %xmm2
-; SSE2-NEXT:    pandn %xmm3, %xmm1
-; SSE2-NEXT:    por %xmm2, %xmm1
-; SSE2-NEXT:    movdqa %xmm1, %xmm0
+; SSE2-NEXT:    pcmpeqd %xmm1, %xmm0
+; SSE2-NEXT:    pand %xmm0, %xmm2
+; SSE2-NEXT:    pandn %xmm3, %xmm0
+; SSE2-NEXT:    por %xmm2, %xmm0
 ; SSE2-NEXT:    retq
 ;
 ; SSE41-LABEL: sub_to_shift_to_add_vec:
@@ -360,3 +359,148 @@ define i64 @sub_constant_to_shift_to_add(i32 %x, i64 %s1, i64 %s2) {
   ret i64 %r
 }
 
+define float @olt(float %x) {
+; CHECK-LABEL: olt:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movaps {{.*#+}} xmm1 = [-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0]
+; CHECK-NEXT:    xorps %xmm0, %xmm1
+; CHECK-NEXT:    minss %xmm1, %xmm0
+; CHECK-NEXT:    retq
+  %cmp = fcmp olt float %x, 0.0
+  %neg = fneg float %x
+  %r = select i1 %cmp, float %x, float %neg
+  ret float %r
+}
+
+define double @ogt(double %x) {
+; CHECK-LABEL: ogt:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movapd {{.*#+}} xmm1 = [-0.0E+0,-0.0E+0]
+; CHECK-NEXT:    xorpd %xmm0, %xmm1
+; CHECK-NEXT:    maxsd %xmm1, %xmm0
+; CHECK-NEXT:    retq
+  %neg = fneg double %x
+  %cmp = fcmp ogt double %x, 0.0
+  %r = select i1 %cmp, double %x, double %neg
+  ret double %r
+}
+
+define <4 x float> @olt_swap(<4 x float> %x) {
+; CHECK-LABEL: olt_swap:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movaps {{.*#+}} xmm1 = [-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0]
+; CHECK-NEXT:    xorps %xmm0, %xmm1
+; CHECK-NEXT:    maxps %xmm0, %xmm1
+; CHECK-NEXT:    movaps %xmm1, %xmm0
+; CHECK-NEXT:    retq
+  %cmp = fcmp olt <4 x float> %x, zeroinitializer
+  %neg = fneg <4 x float> %x
+  %r = select <4 x i1> %cmp, <4 x float> %neg, <4 x float> %x
+  ret <4 x float> %r
+}
+
+define <2 x double> @ogt_swap(<2 x double> %x) {
+; CHECK-LABEL: ogt_swap:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movapd {{.*#+}} xmm1 = [-0.0E+0,-0.0E+0]
+; CHECK-NEXT:    xorpd %xmm0, %xmm1
+; CHECK-NEXT:    minpd %xmm0, %xmm1
+; CHECK-NEXT:    movapd %xmm1, %xmm0
+; CHECK-NEXT:    retq
+  %neg = fneg <2 x double> %x
+  %cmp = fcmp ogt <2 x double> %x, zeroinitializer
+  %r = select <2 x i1> %cmp, <2 x double> %neg, <2 x double> %x
+  ret <2 x double> %r
+}
+
+define <4 x float> @ole(<4 x float> %x) {
+; SSE2-LABEL: ole:
+; SSE2:       # %bb.0:
+; SSE2-NEXT:    movaps {{.*#+}} xmm2 = [-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0]
+; SSE2-NEXT:    xorps %xmm0, %xmm2
+; SSE2-NEXT:    movaps %xmm0, %xmm1
+; SSE2-NEXT:    cmpleps %xmm2, %xmm1
+; SSE2-NEXT:    andps %xmm1, %xmm2
+; SSE2-NEXT:    andnps %xmm0, %xmm1
+; SSE2-NEXT:    orps %xmm2, %xmm1
+; SSE2-NEXT:    movaps %xmm1, %xmm0
+; SSE2-NEXT:    retq
+;
+; SSE41-LABEL: ole:
+; SSE41:       # %bb.0:
+; SSE41-NEXT:    movaps %xmm0, %xmm1
+; SSE41-NEXT:    movaps {{.*#+}} xmm2 = [-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0]
+; SSE41-NEXT:    xorps %xmm0, %xmm2
+; SSE41-NEXT:    cmpleps %xmm2, %xmm0
+; SSE41-NEXT:    blendvps %xmm0, %xmm2, %xmm1
+; SSE41-NEXT:    movaps %xmm1, %xmm0
+; SSE41-NEXT:    retq
+  %cmp = fcmp ole <4 x float> %x, zeroinitializer
+  %neg = fneg <4 x float> %x
+  %r = select <4 x i1> %cmp, <4 x float> %neg, <4 x float> %x
+  ret <4 x float> %r
+}
+
+define <2 x double> @oge(<2 x double> %x) {
+; SSE2-LABEL: oge:
+; SSE2:       # %bb.0:
+; SSE2-NEXT:    movapd {{.*#+}} xmm2 = [-0.0E+0,-0.0E+0]
+; SSE2-NEXT:    xorpd %xmm0, %xmm2
+; SSE2-NEXT:    movapd %xmm2, %xmm1
+; SSE2-NEXT:    cmplepd %xmm0, %xmm1
+; SSE2-NEXT:    andpd %xmm1, %xmm2
+; SSE2-NEXT:    andnpd %xmm0, %xmm1
+; SSE2-NEXT:    orpd %xmm2, %xmm1
+; SSE2-NEXT:    movapd %xmm1, %xmm0
+; SSE2-NEXT:    retq
+;
+; SSE41-LABEL: oge:
+; SSE41:       # %bb.0:
+; SSE41-NEXT:    movapd %xmm0, %xmm1
+; SSE41-NEXT:    movapd {{.*#+}} xmm2 = [-0.0E+0,-0.0E+0]
+; SSE41-NEXT:    xorpd %xmm0, %xmm2
+; SSE41-NEXT:    movapd %xmm2, %xmm0
+; SSE41-NEXT:    cmplepd %xmm1, %xmm0
+; SSE41-NEXT:    blendvpd %xmm0, %xmm2, %xmm1
+; SSE41-NEXT:    movapd %xmm1, %xmm0
+; SSE41-NEXT:    retq
+  %neg = fneg <2 x double> %x
+  %cmp = fcmp oge <2 x double> %x, zeroinitializer
+  %r = select <2 x i1> %cmp, <2 x double> %neg, <2 x double> %x
+  ret <2 x double> %r
+}
+
+; negative test - don't create an fneg to replace 0.0 operand
+
+define double @ogt_no_fneg(double %x, double %y) {
+; CHECK-LABEL: ogt_no_fneg:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    xorpd %xmm2, %xmm2
+; CHECK-NEXT:    cmpltsd %xmm0, %xmm2
+; CHECK-NEXT:    andpd %xmm2, %xmm0
+; CHECK-NEXT:    andnpd %xmm1, %xmm2
+; CHECK-NEXT:    orpd %xmm2, %xmm0
+; CHECK-NEXT:    retq
+  %cmp = fcmp ogt double %x, 0.0
+  %r = select i1 %cmp, double %x, double %y
+  ret double %r
+}
+
+; negative test - can't change the setcc for non-zero constant
+
+define double @ogt_no_zero(double %x) {
+; CHECK-LABEL: ogt_no_zero:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movapd {{.*#+}} xmm1 = [-0.0E+0,-0.0E+0]
+; CHECK-NEXT:    xorpd %xmm0, %xmm1
+; CHECK-NEXT:    movsd {{.*#+}} xmm2 = mem[0],zero
+; CHECK-NEXT:    cmpltsd %xmm0, %xmm2
+; CHECK-NEXT:    andpd %xmm2, %xmm0
+; CHECK-NEXT:    andnpd %xmm1, %xmm2
+; CHECK-NEXT:    orpd %xmm2, %xmm0
+; CHECK-NEXT:    retq
+  %neg = fneg double %x
+  %cmp = fcmp ogt double %x, 1.0
+  %r = select i1 %cmp, double %x, double %neg
+  ret double %r
+}

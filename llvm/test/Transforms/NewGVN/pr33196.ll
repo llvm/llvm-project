@@ -1,4 +1,4 @@
-; RUN: opt -S -basic-aa -newgvn %s | FileCheck %s
+; RUN: opt -S -passes=newgvn %s | FileCheck %s
 
 ; CHECK: define i32 @main() {
 ; CHECK-NEXT: entry:

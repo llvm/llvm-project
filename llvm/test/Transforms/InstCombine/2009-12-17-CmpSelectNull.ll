@@ -1,4 +1,4 @@
-; RUN: opt < %s -instcombine -S | FileCheck %s
+; RUN: opt < %s -passes=instcombine -S | FileCheck %s
 
 @.str254 = internal constant [2 x i8] c".\00"
 @.str557 = internal constant [3 x i8] c"::\00"

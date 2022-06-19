@@ -1,4 +1,4 @@
-//===-- M68kRegisterInfo.cpp - CPU0 Register Information -----*- C++ -*--===//
+//===-- M68kRegisterInfo.cpp - CPU0 Register Information --------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -19,6 +19,7 @@
 
 #include "MCTargetDesc/M68kMCTargetDesc.h"
 
+#include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/Type.h"

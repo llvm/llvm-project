@@ -20,7 +20,7 @@ using namespace llvm;
 
 char SlotIndexes::ID = 0;
 
-SlotIndexes::SlotIndexes() : MachineFunctionPass(ID), mf(nullptr) {
+SlotIndexes::SlotIndexes() : MachineFunctionPass(ID) {
   initializeSlotIndexesPass(*PassRegistry::getPassRegistry());
 }
 

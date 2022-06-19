@@ -49,8 +49,6 @@ public:
   StringRef name;
   StringRef debugName;
 
-  StringRef getName() const { return name; }
-  StringRef getDebugName() const { return debugName; }
   Kind kind() const { return (Kind)sectionKind; }
 
   uint32_t getSize() const;
@@ -81,12 +79,7 @@ public:
   void writeRelocations(llvm::raw_ostream &os) const;
   void generateRelocationCode(raw_ostream &os) const;
 
-  bool isTLS() const {
-    // Older object files don't include WASM_SEG_FLAG_TLS and instead
-    // relied on the naming convention.
-    return flags & llvm::wasm::WASM_SEG_FLAG_TLS || name.startswith(".tdata") ||
-           name.startswith(".tbss");
-  }
+  bool isTLS() const { return flags & llvm::wasm::WASM_SEG_FLAG_TLS; }
 
   ObjFile *file;
   OutputSection *outputSec = nullptr;

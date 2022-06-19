@@ -28,11 +28,11 @@ require a few additions.
 
   cmake_minimum_required(VERSION 3.13.4)
   project(offloadTest VERSION 1.0 LANGUAGES CXX)
-  
+
   list(APPEND CMAKE_MODULE_PATH "${PATH_TO_OPENMP_INSTALL}/lib/cmake/openmp")
-  
+
   find_package(OpenMPTarget REQUIRED NVPTX)
-  
+
   add_executable(offload)
   target_link_libraries(offload PRIVATE OpenMPTarget::OpenMPTarget_NVPTX)
   target_sources(offload PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src/Main.cpp)

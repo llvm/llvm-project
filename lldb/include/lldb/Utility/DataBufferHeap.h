@@ -27,7 +27,7 @@ namespace lldb_private {
 /// pages in. Large amounts of data that comes from files should probably use
 /// DataBufferLLVM, which can intelligently determine when memory mapping is
 /// optimal.
-class DataBufferHeap : public DataBuffer {
+class DataBufferHeap : public WritableDataBuffer {
 public:
   /// Default constructor
   ///
@@ -54,17 +54,20 @@ public:
   ///     The number of bytes in \a src to copy.
   DataBufferHeap(const void *src, lldb::offset_t src_len);
 
+  /// Construct by making a copy of a DataBuffer.
+  ///
+  /// \param[in] data_buffer
+  ///     A read only data buffer to copy.
+  DataBufferHeap(const DataBuffer &data_buffer);
+
   /// Destructor.
   ///
   /// Virtual destructor since this class inherits from a pure virtual base
   /// class #DataBuffer.
   ~DataBufferHeap() override;
 
-  /// \copydoc DataBuffer::GetBytes()
-  uint8_t *GetBytes() override;
-
   /// \copydoc DataBuffer::GetBytes() const
-  const uint8_t *GetBytes() const override;
+  const uint8_t *GetBytesImpl() const override;
 
   /// \copydoc DataBuffer::GetByteSize() const
   lldb::offset_t GetByteSize() const override;
@@ -80,8 +83,8 @@ public:
   ///     to resize itself to.
   ///
   /// \return
-  ///     The size in bytes after that this heap buffer was
-  ///     successfully resized to.
+  ///     The size in bytes after this heap buffer was resized. If
+  ///     the resize failed the size will remain unchanged.
   lldb::offset_t SetByteSize(lldb::offset_t byte_size);
 
   /// Makes a copy of the \a src_len bytes in \a src.
@@ -99,6 +102,17 @@ public:
   void AppendData(const void *src, uint64_t src_len);
 
   void Clear();
+
+  /// LLVM RTTI support.
+  /// {
+  static char ID;
+  bool isA(const void *ClassID) const override {
+    return ClassID == &ID || WritableDataBuffer::isA(ClassID);
+  }
+  static bool classof(const DataBuffer *data_buffer) {
+    return data_buffer->isA(&ID);
+  }
+  /// }
 
 private:
   // This object uses a std::vector<uint8_t> to store its data. This takes care

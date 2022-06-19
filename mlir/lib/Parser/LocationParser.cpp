@@ -41,7 +41,7 @@ ParseResult Parser::parseCallSiteLocation(LocationAttr &loc) {
   // Parse the 'at'.
   if (getToken().isNot(Token::bare_identifier) ||
       getToken().getSpelling() != "at")
-    return emitError("expected 'at' in callsite location");
+    return emitWrongTokenError("expected 'at' in callsite location");
   consumeToken(Token::bare_identifier);
 
   // Parse the caller location.
@@ -66,7 +66,8 @@ ParseResult Parser::parseFusedLocation(LocationAttr &loc) {
   if (consumeIf(Token::less)) {
     metadata = parseAttribute();
     if (!metadata)
-      return emitError("expected valid attribute metadata");
+      return failure();
+
     // Parse the '>' token.
     if (parseToken(Token::greater,
                    "expected '>' after fused location metadata"))
@@ -82,9 +83,8 @@ ParseResult Parser::parseFusedLocation(LocationAttr &loc) {
     return success();
   };
 
-  if (parseToken(Token::l_square, "expected '[' in fused location") ||
-      parseCommaSeparatedList(parseElt) ||
-      parseToken(Token::r_square, "expected ']' in fused location"))
+  if (parseCommaSeparatedList(Delimiter::Square, parseElt,
+                              " in fused location"))
     return failure();
 
   // Return the fused location.
@@ -101,10 +101,12 @@ ParseResult Parser::parseNameOrFileLineColLocation(LocationAttr &loc) {
   if (consumeIf(Token::colon)) {
     // Parse the line number.
     if (getToken().isNot(Token::integer))
-      return emitError("expected integer line number in FileLineColLoc");
+      return emitWrongTokenError(
+          "expected integer line number in FileLineColLoc");
     auto line = getToken().getUnsignedIntegerValue();
     if (!line.hasValue())
-      return emitError("expected integer line number in FileLineColLoc");
+      return emitWrongTokenError(
+          "expected integer line number in FileLineColLoc");
     consumeToken(Token::integer);
 
     // Parse the ':'.
@@ -113,7 +115,8 @@ ParseResult Parser::parseNameOrFileLineColLocation(LocationAttr &loc) {
 
     // Parse the column number.
     if (getToken().isNot(Token::integer))
-      return emitError("expected integer column number in FileLineColLoc");
+      return emitWrongTokenError(
+          "expected integer column number in FileLineColLoc");
     auto column = getToken().getUnsignedIntegerValue();
     if (!column.hasValue())
       return emitError("expected integer column number in FileLineColLoc");
@@ -127,25 +130,19 @@ ParseResult Parser::parseNameOrFileLineColLocation(LocationAttr &loc) {
 
   // Check for a child location.
   if (consumeIf(Token::l_paren)) {
-    auto childSourceLoc = getToken().getLoc();
-
     // Parse the child location.
     LocationAttr childLoc;
     if (parseLocationInstance(childLoc))
       return failure();
 
-    // The child must not be another NameLoc.
-    if (childLoc.isa<NameLoc>())
-      return emitError(childSourceLoc,
-                       "child of NameLoc cannot be another NameLoc");
-    loc = NameLoc::get(Identifier::get(str, ctx), childLoc);
+    loc = NameLoc::get(StringAttr::get(ctx, str), childLoc);
 
     // Parse the closing ')'.
     if (parseToken(Token::r_paren,
                    "expected ')' after child location of NameLoc"))
       return failure();
   } else {
-    loc = NameLoc::get(Identifier::get(str, ctx));
+    loc = NameLoc::get(StringAttr::get(ctx, str));
   }
 
   return success();
@@ -158,7 +155,7 @@ ParseResult Parser::parseLocationInstance(LocationAttr &loc) {
 
   // Bare tokens required for other cases.
   if (!getToken().is(Token::bare_identifier))
-    return emitError("expected location instance");
+    return emitWrongTokenError("expected location instance");
 
   // Check for the 'callsite' signifying a callsite location.
   if (getToken().getSpelling() == "callsite")
@@ -175,5 +172,5 @@ ParseResult Parser::parseLocationInstance(LocationAttr &loc) {
     return success();
   }
 
-  return emitError("expected location instance");
+  return emitWrongTokenError("expected location instance");
 }

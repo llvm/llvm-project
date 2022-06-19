@@ -46,7 +46,7 @@ define i1 @test_spill_slot_size(i1 %a1, i2 %a2, i7 %a7, i8 %a8, i9 %a9, i15 %a15
 ; CHECK-NEXT:    retq
 
 entry:
-  %safepoint_token = call token (i64, i32, void ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidf(i64 0, i32 0, void ()* inttoptr (i64 140727162896504 to void ()*), i32 0, i32 0, i32 0, i32 0)
+  %safepoint_token = call token (i64, i32, void ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidf(i64 0, i32 0, void ()* elementtype(void ()) inttoptr (i64 140727162896504 to void ()*), i32 0, i32 0, i32 0, i32 0)
       [ "deopt"(i1 %a1, i2 %a2, i7 %a7, i8 %a8, i9 %a9, i15 %a15, i16 %a16, i32 %a32, i64 %a64, i128 %a128, i32 addrspace(1)* %obj1) ]
   ret i1 %a1
 }

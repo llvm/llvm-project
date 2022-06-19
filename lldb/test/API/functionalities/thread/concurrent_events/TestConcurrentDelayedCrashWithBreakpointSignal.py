@@ -9,13 +9,11 @@ from lldbsuite.test.lldbtest import TestBase
 @skipIfWindows
 class ConcurrentDelayedCrashWithBreakpointSignal(ConcurrentEventsBase):
 
-    mydir = ConcurrentEventsBase.compute_mydir(__file__)
-
     # Atomic sequences are not supported yet for MIPS in LLDB.
     @skipIf(triple='^mips')
     def test(self):
         """ Test a thread with a delayed crash while other threads generate a signal and hit a breakpoint. """
-        self.build(dictionary=self.getBuildFlags())
+        self.build()
         self.do_thread_actions(num_delay_crash_threads=1,
                                num_breakpoint_threads=1,
                                num_signal_threads=1)

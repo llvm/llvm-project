@@ -45,12 +45,12 @@ define void @caller_indirect_tail(i32 %a) nounwind {
 ; CHECK-NOT: tail callee_indirect2
 
 ; CHECK: lui a0, %hi(callee_indirect2)
-; CHECK-NEXT: addi a5, a0, %lo(callee_indirect2)
-; CHECK-NEXT: jr a5
+; CHECK-NEXT: addi t1, a0, %lo(callee_indirect2)
+; CHECK-NEXT: jr t1
 
 ; CHECK: lui a0, %hi(callee_indirect1)
-; CHECK-NEXT: addi a5, a0, %lo(callee_indirect1)
-; CHECK-NEXT: jr a5
+; CHECK-NEXT: addi t1, a0, %lo(callee_indirect1)
+; CHECK-NEXT: jr t1
 entry:
   %tobool = icmp eq i32 %a, 0
   %callee = select i1 %tobool, void ()* @callee_indirect1, void ()* @callee_indirect2

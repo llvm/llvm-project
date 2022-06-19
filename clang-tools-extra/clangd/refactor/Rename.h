@@ -11,9 +11,7 @@
 
 #include "Protocol.h"
 #include "SourceCode.h"
-#include "support/Path.h"
 #include "clang/Basic/LangOptions.h"
-#include "clang/Tooling/Core/Replacement.h"
 #include "llvm/Support/Error.h"
 
 namespace clang {

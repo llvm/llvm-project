@@ -27,21 +27,6 @@ int n8; // expected-error {{'alignas' must be specified on definition if it is s
 int n9; // expected-error {{'alignas' must be specified on definition if it is specified on any declaration}}
 alignas(4) extern int n9; // expected-note {{declared with 'alignas' attribute here}}
 
-
-enum alignas(2) E : char; // expected-note {{declared with 'alignas' attribute here}}
-enum E : char {}; // expected-error {{'alignas' must be specified on definition if it is specified on any declaration}}
-
-enum alignas(4) F : char; // expected-note {{previous declaration is here}}
-enum alignas(2) F : char; // expected-error {{redeclaration has different alignment requirement (2 vs 4)}}
-
-enum G : char;
-enum alignas(8) G : char {};
-enum G : char;
-
-enum H : char {}; // expected-error {{'alignas' must be specified on definition if it is specified on any declaration}}
-enum alignas(1) H : char; // expected-note {{declared with 'alignas' attribute here}}
-
-
 struct S;
 struct alignas(16) S; // expected-note {{declared with 'alignas' attribute here}}
 struct S;
@@ -72,15 +57,6 @@ template<int M, int N, int O, int P>
 alignas(O) alignas(P) char X<M, N, O, P>::Buffer[32]; // expected-error {{redeclaration has different alignment requirement (8 vs 2)}}
 char *x1848 = X<1,8,4,8>::Buffer; // ok
 char *x1248 = X<1,2,4,8>::Buffer; // expected-note {{in instantiation of}}
-
-template<int M, int N, int O, int P> struct Y {
-  enum alignas(M) alignas(N) E : char;
-};
-template<int M, int N, int O, int P>
-enum alignas(O) alignas(P) Y<M,N,O,P>::E : char { e };
-int y1848 = Y<1,8,4,8>::e;
-// FIXME: We should reject this.
-int y1248 = Y<1,2,4,8>::e;
 
 // Don't crash here.
 alignas(4) struct Incomplete incomplete; // expected-error {{incomplete type}} expected-note {{forward declaration}}

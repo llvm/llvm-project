@@ -1,4 +1,4 @@
-; RUN: opt -mem2reg -S -o - < %s | FileCheck %s
+; RUN: opt -passes=mem2reg -S -o - < %s | FileCheck %s
 
 declare void @llvm.lifetime.start.p0i8(i64 %size, i8* nocapture %ptr)
 declare void @llvm.lifetime.end.p0i8(i64 %size, i8* nocapture %ptr)

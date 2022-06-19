@@ -875,7 +875,7 @@ Error ResourceFileWriter::visitIconOrCursorResource(const RCResource *Base) {
     FileStr = IconRes->IconLoc;
     Type = IconCursorGroupType::Icon;
   } else {
-    auto *CursorRes = dyn_cast<CursorResource>(Base);
+    auto *CursorRes = cast<CursorResource>(Base);
     FileStr = CursorRes->CursorLoc;
     Type = IconCursorGroupType::Cursor;
   }
@@ -988,8 +988,8 @@ Error ResourceFileWriter::writeSingleDialogControl(const Control &Ctl,
 
   auto TypeInfo = Control::SupportedCtls.lookup(Ctl.Type);
   IntWithNotMask CtlStyle(TypeInfo.Style);
-  CtlStyle |= Ctl.Style.getValueOr(RCInt(0));
-  uint32_t CtlExtStyle = Ctl.ExtStyle.getValueOr(0);
+  CtlStyle |= Ctl.Style.value_or(RCInt(0));
+  uint32_t CtlExtStyle = Ctl.ExtStyle.value_or(0);
 
   // DIALOG(EX) item header prefix.
   if (!IsExtended) {
@@ -1003,7 +1003,7 @@ Error ResourceFileWriter::writeSingleDialogControl(const Control &Ctl,
       ulittle32_t HelpID;
       ulittle32_t ExtStyle;
       ulittle32_t Style;
-    } Prefix{ulittle32_t(Ctl.HelpID.getValueOr(0)), ulittle32_t(CtlExtStyle),
+    } Prefix{ulittle32_t(Ctl.HelpID.value_or(0)), ulittle32_t(CtlExtStyle),
              ulittle32_t(CtlStyle.getValue())};
     writeObject(Prefix);
   }
@@ -1059,7 +1059,7 @@ Error ResourceFileWriter::writeDialogBody(const RCResource *Base) {
   const uint32_t StyleFontFlag = 0x40;
   const uint32_t StyleCaptionFlag = 0x00C00000;
 
-  uint32_t UsedStyle = ObjectData.Style.getValueOr(DefaultStyle);
+  uint32_t UsedStyle = ObjectData.Style.value_or(DefaultStyle);
   if (ObjectData.Font)
     UsedStyle |= StyleFontFlag;
   else
@@ -1071,7 +1071,7 @@ Error ResourceFileWriter::writeDialogBody(const RCResource *Base) {
     UsedStyle |= StyleCaptionFlag;
 
   const uint16_t DialogExMagic = 0xFFFF;
-  uint32_t ExStyle = ObjectData.ExStyle.getValueOr(0);
+  uint32_t ExStyle = ObjectData.ExStyle.value_or(0);
 
   // Write DIALOG(EX) header prefix. These are pretty different.
   if (!Res->IsExtended) {

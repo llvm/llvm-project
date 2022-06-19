@@ -1,5 +1,5 @@
 #include "AArch64Subtarget.h"
-#include "llvm/Support/TargetRegistry.h"
+#include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/TargetSelect.h"
 
 #include "gtest/gtest.h"
@@ -26,6 +26,7 @@ std::unique_ptr<LLVMTargetMachine> createTargetMachine() {
 
 std::unique_ptr<AArch64InstrInfo> createInstrInfo(TargetMachine *TM) {
   AArch64Subtarget ST(TM->getTargetTriple(), std::string(TM->getTargetCPU()),
+                      std::string(TM->getTargetCPU()),
                       std::string(TM->getTargetFeatureString()), *TM,
                       /* isLittle */ false);
   return std::make_unique<AArch64InstrInfo>(ST);

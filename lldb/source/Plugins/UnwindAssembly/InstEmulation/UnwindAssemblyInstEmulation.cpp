@@ -21,6 +21,7 @@
 #include "lldb/Utility/ArchSpec.h"
 #include "lldb/Utility/DataBufferHeap.h"
 #include "lldb/Utility/DataExtractor.h"
+#include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/Status.h"
 #include "lldb/Utility/StreamString.h"
@@ -72,7 +73,7 @@ bool UnwindAssemblyInstEmulation::GetNonCallSiteUnwindPlanFromAssembly(
         m_arch, nullptr, nullptr, range.GetBaseAddress(), opcode_data,
         opcode_size, 99999, prefer_file_cache));
 
-    Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_UNWIND));
+    Log *log = GetLog(LLDBLog::Unwind);
 
     if (disasm_sp) {
 
@@ -333,13 +334,6 @@ UnwindAssemblyInstEmulation::CreateInstance(const ArchSpec &arch) {
   return nullptr;
 }
 
-// PluginInterface protocol in UnwindAssemblyParser_x86
-ConstString UnwindAssemblyInstEmulation::GetPluginName() {
-  return GetPluginNameStatic();
-}
-
-uint32_t UnwindAssemblyInstEmulation::GetPluginVersion() { return 1; }
-
 void UnwindAssemblyInstEmulation::Initialize() {
   PluginManager::RegisterPlugin(GetPluginNameStatic(),
                                 GetPluginDescriptionStatic(), CreateInstance);
@@ -349,12 +343,7 @@ void UnwindAssemblyInstEmulation::Terminate() {
   PluginManager::UnregisterPlugin(CreateInstance);
 }
 
-ConstString UnwindAssemblyInstEmulation::GetPluginNameStatic() {
-  static ConstString g_name("inst-emulation");
-  return g_name;
-}
-
-const char *UnwindAssemblyInstEmulation::GetPluginDescriptionStatic() {
+llvm::StringRef UnwindAssemblyInstEmulation::GetPluginDescriptionStatic() {
   return "Instruction emulation based unwind information.";
 }
 
@@ -391,7 +380,7 @@ size_t UnwindAssemblyInstEmulation::ReadMemory(
     EmulateInstruction *instruction, void *baton,
     const EmulateInstruction::Context &context, lldb::addr_t addr, void *dst,
     size_t dst_len) {
-  Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_UNWIND));
+  Log *log = GetLog(LLDBLog::Unwind);
 
   if (log && log->GetVerbose()) {
     StreamString strm;
@@ -423,7 +412,7 @@ size_t UnwindAssemblyInstEmulation::WriteMemory(
                      instruction->GetArchitecture().GetByteOrder(),
                      instruction->GetArchitecture().GetAddressByteSize());
 
-  Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_UNWIND));
+  Log *log = GetLog(LLDBLog::Unwind);
 
   if (log && log->GetVerbose()) {
     StreamString strm;
@@ -504,7 +493,7 @@ bool UnwindAssemblyInstEmulation::ReadRegister(EmulateInstruction *instruction,
                                                RegisterValue &reg_value) {
   bool synthetic = GetRegisterValue(*reg_info, reg_value);
 
-  Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_UNWIND));
+  Log *log = GetLog(LLDBLog::Unwind);
 
   if (log && log->GetVerbose()) {
 
@@ -530,7 +519,7 @@ bool UnwindAssemblyInstEmulation::WriteRegister(
 bool UnwindAssemblyInstEmulation::WriteRegister(
     EmulateInstruction *instruction, const EmulateInstruction::Context &context,
     const RegisterInfo *reg_info, const RegisterValue &reg_value) {
-  Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_UNWIND));
+  Log *log = GetLog(LLDBLog::Unwind);
 
   if (log && log->GetVerbose()) {
 
@@ -625,6 +614,26 @@ bool UnwindAssemblyInstEmulation::WriteRegister(
           m_curr_row->SetRegisterLocationToSame(reg_num,
                                                 false /*must_replace*/);
           m_curr_row_modified = true;
+
+          // FP has been restored to its original value, we are back
+          // to using SP to calculate the CFA.
+          if (m_fp_is_cfa) {
+            m_fp_is_cfa = false;
+            RegisterInfo sp_reg_info;
+            lldb::RegisterKind sp_reg_kind = eRegisterKindGeneric;
+            uint32_t sp_reg_num = LLDB_REGNUM_GENERIC_SP;
+            m_inst_emulator_up->GetRegisterInfo(sp_reg_kind, sp_reg_num,
+                                                sp_reg_info);
+            RegisterValue sp_reg_val;
+            if (GetRegisterValue(sp_reg_info, sp_reg_val)) {
+              m_cfa_reg_info = sp_reg_info;
+              const uint32_t cfa_reg_num =
+                  sp_reg_info.kinds[m_unwind_plan_ptr->GetRegisterKind()];
+              assert(cfa_reg_num != LLDB_INVALID_REGNUM);
+              m_curr_row->GetCFAValue().SetIsRegisterPlusOffset(
+                  cfa_reg_num, m_initial_sp - sp_reg_val.GetAsUInt64());
+            }
+          }
         }
         break;
       case EmulateInstruction::eInfoTypeISA:

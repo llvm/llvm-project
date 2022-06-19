@@ -7,9 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "Config.h"
-#include "TestTU.h"
 #include "TweakTesting.h"
-#include "gmock/gmock-matchers.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 
@@ -80,6 +78,19 @@ public:
   EXPECT_UNAVAILABLE(Header + "void fun() { one::two::f^f(); }");
 }
 
+TEST_F(AddUsingTest, Crash1072) {
+  // Used to crash when traversing catch(...)
+  // https://github.com/clangd/clangd/issues/1072
+  const char *Code = R"cpp(
+  namespace ns { class A; }
+  ns::^A *err;
+  void catchall() {
+    try {} catch(...) {}
+  }
+  )cpp";
+  EXPECT_AVAILABLE(Code);
+}
+
 TEST_F(AddUsingTest, Apply) {
   FileName = "test.cpp";
   struct {
@@ -91,7 +102,7 @@ TEST_F(AddUsingTest, Apply) {
 #include "test.hpp"
 namespace {
 void fun() {
-  ^o^n^e^:^:^t^w^o^:^:^f^f();
+  ^one::two::ff();
 }
 })cpp",
                 R"cpp(
@@ -109,7 +120,7 @@ void fun() {
 #include "test.hpp"
 namespace {
 void fun() {
-  ::on^e::t^wo::c^c inst;
+  ::one::t^wo::cc inst;
 }
 })cpp",
                 R"cpp(
@@ -127,7 +138,7 @@ void fun() {
 #include "test.hpp"
 
 void fun() {
-  on^e::t^wo::e^e inst;
+  one::two::e^e inst;
 })cpp",
                 R"cpp(
 #include "test.hpp"
@@ -174,7 +185,7 @@ namespace {
 using one::two::ff;
 
 void fun() {
-  o^ne::o^o();
+  o^ne::oo();
 }
 })cpp",
                 R"cpp(
@@ -444,11 +455,21 @@ one::t^wo::cc c;
 #include "test.hpp"
 using one::two::cc;using one::two::ee::ee_one;
 cc c;
+)cpp"},
+            // Template (like std::vector).
+            {R"cpp(
+#include "test.hpp"
+one::v^ec<int> foo;
+)cpp",
+             R"cpp(
+#include "test.hpp"
+using one::vec;
+
+vec<int> foo;
 )cpp"}};
   llvm::StringMap<std::string> EditedFiles;
   for (const auto &Case : Cases) {
-    for (const auto &SubCase : expandCases(Case.TestSource)) {
-      ExtraFiles["test.hpp"] = R"cpp(
+    ExtraFiles["test.hpp"] = R"cpp(
 namespace one {
 void oo() {}
 namespace two {
@@ -461,9 +482,9 @@ public:
 };
 }
 using uu = two::cc;
+template<typename T> struct vec {};
 })cpp";
-      EXPECT_EQ(apply(SubCase, &EditedFiles), Case.ExpectedSource);
-    }
+    EXPECT_EQ(apply(Case.TestSource, &EditedFiles), Case.ExpectedSource);
   }
 }
 

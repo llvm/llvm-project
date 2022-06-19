@@ -111,5 +111,13 @@ prologue2 non_split r10 0x100
 
 prologue2 non_split r11 0x200
 
+# CHECK: <prologue2_calls_non_split_hiddenr11>:
+# CHECK-NEXT: lea{{.*}} -16896(%rsp),{{.*}}%r11
+# CHECK: cmp{{.*}}%fs:{{[^,]*}},{{.*}}%r11
+# CHECK: jae{{.*$}}
+# CHECK-NEXT: callq{{.*}}<__morestack_non_split>
+
+prologue2 non_split_hidden r11 0x200
+
 	.section	.note.GNU-stack,"",@progbits
 	.section	.note.GNU-split-stack,"",@progbits

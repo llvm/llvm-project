@@ -1,5 +1,4 @@
-! RUN: %S/test_errors.sh %s %t %flang_fc1
-! REQUIRES: shell
+! RUN: %python %S/test_errors.py %s %flang_fc1
 ! Check that non-logical expressions are not allowed.
 ! Check that non-scalar expressions are not allowed.
 ! TODO: Insure all non-logicals are prohibited.

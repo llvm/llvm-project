@@ -220,10 +220,9 @@ define i16 @rot16_trunc(i32 %x, i32 %y) nounwind {
 ; X64-LABEL: rot16_trunc:
 ; X64:       # %bb.0:
 ; X64-NEXT:    movl %edi, %eax
-; X64-NEXT:    movl %edi, %ecx
-; X64-NEXT:    shrl $11, %ecx
-; X64-NEXT:    shll $5, %eax
-; X64-NEXT:    orl %ecx, %eax
+; X64-NEXT:    shrl $11, %eax
+; X64-NEXT:    shll $5, %edi
+; X64-NEXT:    orl %edi, %eax
 ; X64-NEXT:    # kill: def $ax killed $ax killed $eax
 ; X64-NEXT:    retq
 	%t0 = lshr i32 %x, 11

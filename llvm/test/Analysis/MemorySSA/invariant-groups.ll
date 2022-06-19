@@ -1,12 +1,44 @@
-; RUN: opt -basic-aa -print-memoryssa -verify-memoryssa -enable-new-pm=0 -analyze < %s 2>&1 | FileCheck %s
-; RUN: opt -aa-pipeline=basic-aa -passes='print<memoryssa>' -verify-memoryssa < %s 2>&1 | FileCheck %s
-;
-; Currently, MemorySSA doesn't support invariant groups. So, we should ignore
-; launder.invariant.group intrinsics entirely. We'll need to pay attention to
-; them when/if we decide to support invariant groups.
+; RUN: opt -aa-pipeline=basic-aa -passes='print<memoryssa-walker>' -verify-memoryssa < %s 2>&1 | FileCheck %s
 
 @g = external global i32
 
+; CHECK-LABEL: define {{.*}} @global(
+define i32 @global() {
+; CHECK: 1 = MemoryDef(liveOnEntry)
+; CHECK-NEXT: store i32 0
+  store i32 0, i32* @g, align 4, !invariant.group !0
+
+; CHECK: 2 = MemoryDef(1)
+; CHECK-NEXT: call void @clobber
+  call void @clobber(i32* @g)
+
+; FIXME: this could be clobbered by 1 if we walked the instruction list for loads/stores to @g.
+; But we can't look at the uses of @g in a function analysis.
+; CHECK: MemoryUse(2) {{.*}} clobbered by 2
+; CHECK-NEXT: %1 = load i32
+  %1 = load i32, i32* @g, align 4, !invariant.group !0
+  ret i32 %1
+}
+
+; CHECK-LABEL: define {{.*}} @global2(
+define i32 @global2() {
+; CHECK: 1 = MemoryDef(liveOnEntry)
+; CHECK-NEXT: store i32 0
+  store i32 0, i32* inttoptr (i64 ptrtoint (i32* @g to i64) to i32*), align 4, !invariant.group !0
+
+; CHECK: 2 = MemoryDef(1)
+; CHECK-NEXT: call void @clobber
+  call void @clobber(i32* inttoptr (i64 ptrtoint (i32* @g to i64) to i32*))
+
+; FIXME: this could be clobbered by 1 if we walked the instruction list for loads/stores to @g.
+; But we can't look at the uses of @g in a function analysis.
+; CHECK: MemoryUse(2) {{.*}} clobbered by 2
+; CHECK-NEXT: %1 = load i32
+  %1 = load i32, i32* inttoptr (i64 ptrtoint (i32* @g to i64) to i32*), align 4, !invariant.group !0
+  ret i32 %1
+}
+
+; CHECK-LABEL: define {{.*}} @foo(
 define i32 @foo(i32* %a) {
 ; CHECK: 1 = MemoryDef(liveOnEntry)
 ; CHECK-NEXT: store i32 0
@@ -30,6 +62,41 @@ define i32 @foo(i32* %a) {
   ret i32 %2
 }
 
+; CHECK-LABEL: define {{.*}} @volatile1(
+define void @volatile1(i32* %a) {
+; CHECK: 1 = MemoryDef(liveOnEntry)
+; CHECK-NEXT: store i32 0
+  store i32 0, i32* %a, align 4, !invariant.group !0
+
+; CHECK: 2 = MemoryDef(1)
+; CHECK-NEXT: call void @clobber
+  call void @clobber(i32* %a)
+
+; CHECK: 3 = MemoryDef(2){{.*}} clobbered by 2
+; CHECK-NEXT: load volatile
+  %b = load volatile i32, i32* %a, align 4, !invariant.group !0
+
+  ret void
+}
+
+; CHECK-LABEL: define {{.*}} @volatile2(
+define void @volatile2(i32* %a) {
+; CHECK: 1 = MemoryDef(liveOnEntry)
+; CHECK-NEXT: store volatile i32 0
+  store volatile i32 0, i32* %a, align 4, !invariant.group !0
+
+; CHECK: 2 = MemoryDef(1)
+; CHECK-NEXT: call void @clobber
+  call void @clobber(i32* %a)
+
+; CHECK: MemoryUse(2){{.*}} clobbered by 2
+; CHECK-NEXT: load i32
+  %b = load i32, i32* %a, align 4, !invariant.group !0
+
+  ret void
+}
+
+; CHECK-LABEL: define {{.*}} @skipBarrier(
 define i32 @skipBarrier(i32* %a) {
 ; CHECK: 1 = MemoryDef(liveOnEntry)
 ; CHECK-NEXT: store i32 0
@@ -48,6 +115,7 @@ define i32 @skipBarrier(i32* %a) {
   ret i32 %2
 }
 
+; CHECK-LABEL: define {{.*}} @skipBarrier2(
 define i32 @skipBarrier2(i32* %a) {
 
 ; CHECK: MemoryUse(liveOnEntry)
@@ -68,8 +136,7 @@ define i32 @skipBarrier2(i32* %a) {
 ; CHECK-NEXT: store i32 1
   store i32 1, i32* @g, align 4
 
-; FIXME: based on invariant.group it should be MemoryUse(liveOnEntry)
-; CHECK: MemoryUse(2)
+; CHECK: MemoryUse(2) {{.*}} clobbered by liveOnEntry
 ; CHECK-NEXT: %v3 = load i32
   %v3 = load i32, i32* %a32, align 4, !invariant.group !0
   %add = add nsw i32 %v2, %v3
@@ -77,6 +144,7 @@ define i32 @skipBarrier2(i32* %a) {
   ret i32 %add2
 }
 
+; CHECK-LABEL: define {{.*}} @handleInvariantGroups(
 define i32 @handleInvariantGroups(i32* %a) {
 ; CHECK: 1 = MemoryDef(liveOnEntry)
 ; CHECK-NEXT: store i32 0
@@ -99,14 +167,14 @@ define i32 @handleInvariantGroups(i32* %a) {
 ; CHECK-NEXT: store i32 2
   store i32 2, i32* @g, align 4
 
-; FIXME: This can be changed to MemoryUse(2)
-; CHECK: MemoryUse(4)
+; CHECK: MemoryUse(4) {{.*}} clobbered by 2
 ; CHECK-NEXT: %3 = load i32
   %3 = load i32, i32* %a32, align 4, !invariant.group !0
   %add = add nsw i32 %2, %3
   ret i32 %add
 }
 
+; CHECK-LABEL: define {{.*}} @loop(
 define i32 @loop(i1 %a) {
 entry:
   %0 = alloca i32, align 4
@@ -119,15 +187,13 @@ entry:
   br i1 %a, label %Loop.Body, label %Loop.End
 
 Loop.Body:
-; FIXME: MemoryUse(1)
-; CHECK: MemoryUse(2)
+; CHECK: MemoryUse(2) {{.*}} clobbered by 1
 ; CHECK-NEXT: %1 = load i32
   %1 = load i32, i32* %0, !invariant.group !0
   br i1 %a, label %Loop.End, label %Loop.Body
 
 Loop.End:
-; FIXME: MemoryUse(1)
-; CHECK: MemoryUse(2)
+; CHECK: MemoryUse(2) {{.*}} clobbered by 1
 ; CHECK-NEXT: %2 = load
   %2 = load i32, i32* %0, align 4, !invariant.group !0
   br i1 %a, label %Ret, label %Loop.Body
@@ -136,6 +202,7 @@ Ret:
   ret i32 %2
 }
 
+; CHECK-LABEL: define {{.*}} @loop2(
 define i8 @loop2(i8* %p) {
 entry:
 ; CHECK: 1 = MemoryDef(liveOnEntry)
@@ -151,13 +218,11 @@ entry:
   br i1 undef, label %Loop.Body, label %Loop.End
 
 Loop.Body:
-; 5 = MemoryPhi({entry,3},{Loop.Body,4},{Loop.End,6})
 ; CHECK: MemoryUse(6)
 ; CHECK-NEXT: %0 = load i8
   %0 = load i8, i8* %after, !invariant.group !0
 
-; FIXME: MemoryUse(1)
-; CHECK: MemoryUse(6)
+; CHECK: MemoryUse(6) {{.*}} clobbered by 1
 ; CHECK-NEXT: %1 = load i8
   %1 = load i8, i8* %p, !invariant.group !0
 
@@ -167,13 +232,11 @@ Loop.Body:
   br i1 undef, label %Loop.End, label %Loop.Body
 
 Loop.End:
-; 6 = MemoryPhi({entry,3},{Loop.Body,4})
 ; CHECK: MemoryUse(5)
 ; CHECK-NEXT: %2 = load
   %2 = load i8, i8* %after, align 4, !invariant.group !0
 
-; FIXME: MemoryUse(1)
-; CHECK: MemoryUse(5)
+; CHECK: MemoryUse(5) {{.*}} clobbered by 1
 ; CHECK-NEXT: %3 = load
   %3 = load i8, i8* %p, align 4, !invariant.group !0
   br i1 undef, label %Ret, label %Loop.Body
@@ -183,6 +246,7 @@ Ret:
 }
 
 
+; CHECK-LABEL: define {{.*}} @loop3(
 define i8 @loop3(i8* %p) {
 entry:
 ; CHECK: 1 = MemoryDef(liveOnEntry)
@@ -198,7 +262,6 @@ entry:
   br i1 undef, label %Loop.Body, label %Loop.End
 
 Loop.Body:
-; CHECK: 8 = MemoryPhi({entry,3},{Loop.Body,4},{Loop.next,5},{Loop.End,6})
 ; CHECK: MemoryUse(8)
 ; CHECK-NEXT: %0 = load i8
   %0 = load i8, i8* %after, !invariant.group !0
@@ -207,8 +270,7 @@ Loop.Body:
 ; CHECK-NEXT: call void @clobber8
   call void @clobber8(i8* %after)
 
-; FIXME: MemoryUse(8)
-; CHECK: MemoryUse(4)
+; CHECK: MemoryUse(4) {{.*}} clobbered by 8
 ; CHECK-NEXT: %1 = load i8
   %1 = load i8, i8* %after, !invariant.group !0
 
@@ -218,15 +280,13 @@ Loop.next:
 ; CHECK-NEXT: call void @clobber8
   call void @clobber8(i8* %after)
 
-; FIXME: MemoryUse(8)
-; CHECK: MemoryUse(5)
+; CHECK: MemoryUse(5) {{.*}} clobbered by 8
 ; CHECK-NEXT: %2 = load i8
   %2 = load i8, i8* %after, !invariant.group !0
 
   br i1 undef, label %Loop.End, label %Loop.Body
 
 Loop.End:
-; CHECK: 7 = MemoryPhi({entry,3},{Loop.next,5})
 ; CHECK: MemoryUse(7)
 ; CHECK-NEXT: %3 = load
   %3 = load i8, i8* %after, align 4, !invariant.group !0
@@ -235,8 +295,7 @@ Loop.End:
 ; CHECK-NEXT: call void @clobber8
   call void @clobber8(i8* %after)
 
-; FIXME: MemoryUse(7)
-; CHECK: MemoryUse(6)
+; CHECK: MemoryUse(6) {{.*}} clobbered by 7
 ; CHECK-NEXT: %4 = load
   %4 = load i8, i8* %after, align 4, !invariant.group !0
   br i1 undef, label %Ret, label %Loop.Body
@@ -245,6 +304,7 @@ Ret:
   ret i8 %3
 }
 
+; CHECK-LABEL: define {{.*}} @loop4(
 define i8 @loop4(i8* %p) {
 entry:
 ; CHECK: 1 = MemoryDef(liveOnEntry)
@@ -264,13 +324,11 @@ Loop.Pre:
   %0 = load i8, i8* %after, !invariant.group !0
   br label %Loop.Body
 Loop.Body:
-; CHECK: 6 = MemoryPhi({Loop.Pre,3},{Loop.Body,4},{Loop.End,5})
-; CHECK-NEXT: MemoryUse(6)
+; CHECK: MemoryUse(6)
 ; CHECK-NEXT: %1 = load i8
   %1 = load i8, i8* %after, !invariant.group !0
 
-; FIXME: MemoryUse(2)
-; CHECK: MemoryUse(6)
+; CHECK: MemoryUse(6) {{.*}} clobbered by 1
 ; CHECK-NEXT: %2 = load i8
   %2 = load i8, i8* %p, !invariant.group !0
 
@@ -279,13 +337,11 @@ Loop.Body:
   br i1 undef, label %Loop.End, label %Loop.Body
 
 Loop.End:
-; CHECK: 5 = MemoryPhi({entry,3},{Loop.Body,4})
-; CHECK-NEXT: MemoryUse(5)
+; CHECK: MemoryUse(5)
 ; CHECK-NEXT: %3 = load
   %3 = load i8, i8* %after, align 4, !invariant.group !0
 
-; FIXME: MemoryUse(2)
-; CHECK: MemoryUse(5)
+; CHECK: MemoryUse(5) {{.*}} clobbered by 1
 ; CHECK-NEXT: %4 = load
   %4 = load i8, i8* %p, align 4, !invariant.group !0
   br i1 undef, label %Ret, label %Loop.Body
@@ -295,7 +351,7 @@ Ret:
 }
 
 ; In the future we would like to CSE barriers if there is no clobber between.
-; CHECK-LABEL: define i8 @optimizable()
+; CHECK-LABEL: define {{.*}} @optimizable(
 define i8 @optimizable() {
 entry:
   %ptr = alloca i8
@@ -325,7 +381,7 @@ entry:
   ret i8 %v
 }
 
-; CHECK-LABEL: define i8 @unoptimizable2()
+; CHECK-LABEL: define {{.*}} @unoptimizable2()
 define i8 @unoptimizable2() {
   %ptr = alloca i8
 ; CHECK: 1 = MemoryDef(liveOnEntry)

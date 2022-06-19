@@ -25,3 +25,7 @@ void test() {
     int case; // expected-error {{expected member name or ';'}}
   };
 }
+struct Foo {
+  void bar(*decltype(1) aux); // expected-error {{a type specifier is required for all declarations}}. \
+                                 // expected-error {{expected ')'}} expected-note {{to match this '('}}
+};

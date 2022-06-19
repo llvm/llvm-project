@@ -13,8 +13,7 @@
 // template<class Y> operator auto_ptr_ref<Y>() throw();
 
 // REQUIRES: c++03 || c++11 || c++14
-
-#define _LIBCPP_DISABLE_DEPRECATION_WARNINGS
+// ADDITIONAL_COMPILE_FLAGS: -D_LIBCPP_DISABLE_DEPRECATION_WARNINGS
 
 #include <memory>
 #include <cassert>

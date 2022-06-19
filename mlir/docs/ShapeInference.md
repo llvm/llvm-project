@@ -215,7 +215,7 @@ impose a particular shape inference approach here.
 1.  Flow sensitive shape functions;
     *   To enable scalable/cheap shape inference, the shape functions do not
         intend to provide flow sensitive information. This facility could
-        potentially be built as part of shome higher order analysis that reuse
+        potentially be built as part of some higher order analysis that reuse
         the shape functions/constraints due to the shape functions.
 1.  All static functions are usable for dynamic/unknown shapes;
     *   More involved computations can be performed with statically known shapes
@@ -264,7 +264,7 @@ whatever language is the priority of this proposal.
 None. There are multiple different shape inference approaches that we could
 layer on top of these. From the most basic (always return unranked), to more
 useful (return fixed shape for constant inputs/arguments) to the more advanced
-(create logical conjuctions of algebraic statements between symbolic named
+(create logical conjunctions of algebraic statements between symbolic named
 values).
 
 ### Open points

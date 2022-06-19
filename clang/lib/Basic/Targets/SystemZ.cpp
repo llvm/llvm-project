@@ -59,6 +59,17 @@ bool SystemZTargetInfo::validateAsmConstraint(
   default:
     return false;
 
+  case 'Z':
+    switch (Name[1]) {
+    default:
+      return false;
+    case 'Q': // Address with base and unsigned 12-bit displacement
+    case 'R': // Likewise, plus an index
+    case 'S': // Address with base and signed 20-bit displacement
+    case 'T': // Likewise, plus an index
+      break;
+    }
+    LLVM_FALLTHROUGH;
   case 'a': // Address register
   case 'd': // Data register (equivalent to 'r')
   case 'f': // Floating-point register
@@ -92,7 +103,8 @@ static constexpr ISANameRevision ISARevisions[] = {
   {{"arch10"}, 10}, {{"zEC12"}, 10},
   {{"arch11"}, 11}, {{"z13"}, 11},
   {{"arch12"}, 12}, {{"z14"}, 12},
-  {{"arch13"}, 13}, {{"z15"}, 13}
+  {{"arch13"}, 13}, {{"z15"}, 13},
+  {{"arch14"}, 14}, {{"z16"}, 14},
 };
 
 int SystemZTargetInfo::getISARevision(StringRef Name) const {
@@ -120,6 +132,7 @@ bool SystemZTargetInfo::hasFeature(StringRef Feature) const {
       .Case("arch11", ISARevision >= 11)
       .Case("arch12", ISARevision >= 12)
       .Case("arch13", ISARevision >= 13)
+      .Case("arch14", ISARevision >= 14)
       .Case("htm", HasTransactionalExecution)
       .Case("vx", HasVector)
       .Default(false);
@@ -144,7 +157,7 @@ void SystemZTargetInfo::getTargetDefines(const LangOptions &Opts,
   if (HasVector)
     Builder.defineMacro("__VX__");
   if (Opts.ZVector)
-    Builder.defineMacro("__VEC__", "10303");
+    Builder.defineMacro("__VEC__", "10304");
 }
 
 ArrayRef<Builtin::Info> SystemZTargetInfo::getTargetBuiltins() const {

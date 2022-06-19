@@ -20,19 +20,18 @@
 //===----------------------------------------------------------------------===//
 
 #include "MarkLive.h"
+#include "InputFiles.h"
 #include "InputSection.h"
 #include "LinkerScript.h"
-#include "OutputSections.h"
 #include "SymbolTable.h"
 #include "Symbols.h"
 #include "SyntheticSections.h"
 #include "Target.h"
-#include "lld/Common/Memory.h"
+#include "lld/Common/CommonLinkerContext.h"
 #include "lld/Common/Strings.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Object/ELF.h"
 #include "llvm/Support/TimeProfiler.h"
-#include <functional>
 #include <vector>
 
 using namespace llvm;
@@ -68,15 +67,15 @@ private:
   SmallVector<InputSection *, 0> queue;
 
   // There are normally few input sections whose names are valid C
-  // identifiers, so we just store a std::vector instead of a multimap.
-  DenseMap<StringRef, std::vector<InputSectionBase *>> cNamedSections;
+  // identifiers, so we just store a SmallVector instead of a multimap.
+  DenseMap<StringRef, SmallVector<InputSectionBase *, 0>> cNamedSections;
 };
 } // namespace
 
 template <class ELFT>
 static uint64_t getAddend(InputSectionBase &sec,
                           const typename ELFT::Rel &rel) {
-  return target->getImplicitAddend(sec.data().begin() + rel.r_offset,
+  return target->getImplicitAddend(sec.rawData.begin() + rel.r_offset,
                                    rel.getType(config->isMips64EL));
 }
 
@@ -120,7 +119,7 @@ void MarkLive<ELFT>::resolveReloc(InputSectionBase &sec, RelTy &rel,
 
   if (auto *ss = dyn_cast<SharedSymbol>(&sym))
     if (!ss->isWeak())
-      ss->getFile().isNeeded = true;
+      cast<SharedFile>(ss->file)->isNeeded = true;
 
   for (InputSectionBase *sec : cNamedSections.lookup(sym.getName()))
     enqueue(sec, 0);
@@ -168,20 +167,21 @@ void MarkLive<ELFT>::scanEhFrameSection(EhInputSection &eh,
 // garbage-collected. This function returns true if a given section is such
 // section.
 static bool isReserved(InputSectionBase *sec) {
-  if (sec->nextInSectionGroup)
-    return false;
-
   switch (sec->type) {
   case SHT_FINI_ARRAY:
   case SHT_INIT_ARRAY:
   case SHT_PREINIT_ARRAY:
-  case SHT_NOTE:
     return true;
+  case SHT_NOTE:
+    // SHT_NOTE sections in a group are subject to garbage collection.
+    return !sec->nextInSectionGroup;
   default:
+    // Support SHT_PROGBITS .init_array (https://golang.org/issue/50295) and
+    // .init_array.N (https://github.com/rust-lang/rust/issues/92181) for a
+    // while.
     StringRef s = sec->name;
-    return s.startswith(".ctors") || s.startswith(".dtors") ||
-           s.startswith(".init") || s.startswith(".fini") ||
-           s.startswith(".jcr");
+    return s == ".init" || s == ".fini" || s.startswith(".init_array") ||
+           s == ".jcr" || s.startswith(".ctors") || s.startswith(".dtors");
   }
 }
 
@@ -198,7 +198,7 @@ void MarkLive<ELFT>::enqueue(InputSectionBase *sec, uint64_t offset) {
   // (splittable) sections, each piece of data has independent liveness bit.
   // So we explicitly tell it which offset is in use.
   if (auto *ms = dyn_cast<MergeInputSection>(sec))
-    ms->getSectionPiece(offset)->live = true;
+    ms->getSectionPiece(offset).live = true;
 
   // Set Sec->Partition to the meet (i.e. the "minimum") of Partition and
   // Sec->Partition in the following lattice: 1 < other < 0. If Sec->Partition
@@ -244,8 +244,6 @@ template <class ELFT> void MarkLive<ELFT>::run() {
   for (StringRef s : script->referencedSymbols)
     markSymbol(symtab->find(s));
 
-  // Preserve special sections and those which are specified in linker
-  // script KEEP command.
   for (InputSectionBase *sec : inputSections) {
     // Mark .eh_frame sections as live because there are usually no relocations
     // that point to .eh_frames. Otherwise, the garbage collector would drop
@@ -253,13 +251,13 @@ template <class ELFT> void MarkLive<ELFT>::run() {
     // referenced by .eh_frame sections, so we scan them for that here.
     if (auto *eh = dyn_cast<EhInputSection>(sec)) {
       eh->markLive();
-      if (!eh->numRelocations)
-        continue;
 
-      if (eh->areRelocsRela)
-        scanEhFrameSection(*eh, eh->template relas<ELFT>());
-      else
-        scanEhFrameSection(*eh, eh->template rels<ELFT>());
+      const RelsOrRelas<ELFT> rels = eh->template relsOrRelas<ELFT>();
+      if (rels.areRelocsRel())
+        scanEhFrameSection(*eh, rels.rels);
+      else if (rels.relas.size())
+        scanEhFrameSection(*eh, rels.relas);
+      continue;
     }
 
     if (sec->flags & SHF_GNU_RETAIN) {
@@ -269,6 +267,39 @@ template <class ELFT> void MarkLive<ELFT>::run() {
     if (sec->flags & SHF_LINK_ORDER)
       continue;
 
+    // Usually, non-SHF_ALLOC sections are not removed even if they are
+    // unreachable through relocations because reachability is not a good signal
+    // whether they are garbage or not (e.g. there is usually no section
+    // referring to a .comment section, but we want to keep it.) When a
+    // non-SHF_ALLOC section is retained, we also retain sections dependent on
+    // it.
+    //
+    // Note on SHF_LINK_ORDER: Such sections contain metadata and they
+    // have a reverse dependency on the InputSection they are linked with.
+    // We are able to garbage collect them.
+    //
+    // Note on SHF_REL{,A}: Such sections reach here only when -r
+    // or --emit-reloc were given. And they are subject of garbage
+    // collection because, if we remove a text section, we also
+    // remove its relocation section.
+    //
+    // Note on nextInSectionGroup: The ELF spec says that group sections are
+    // included or omitted as a unit. We take the interpretation that:
+    //
+    // - Group members (nextInSectionGroup != nullptr) are subject to garbage
+    //   collection.
+    // - Groups members are retained or discarded as a unit.
+    if (!(sec->flags & SHF_ALLOC)) {
+      bool isRel = sec->type == SHT_REL || sec->type == SHT_RELA;
+      if (!isRel && !sec->nextInSectionGroup) {
+        sec->markLive();
+        for (InputSection *isec : sec->dependentSections)
+          isec->markLive();
+      }
+    }
+
+    // Preserve special sections and those which are specified in linker
+    // script KEEP command.
     if (isReserved(sec) || script->shouldKeep(sec)) {
       enqueue(sec, 0);
     } else if ((!config->zStartStopGC || sec->name.startswith("__libc_")) &&
@@ -276,8 +307,8 @@ template <class ELFT> void MarkLive<ELFT>::run() {
       // As a workaround for glibc libc.a before 2.34
       // (https://sourceware.org/PR27492), retain __libc_atexit and similar
       // sections regardless of zStartStopGC.
-      cNamedSections[saver.save("__start_" + sec->name)].push_back(sec);
-      cNamedSections[saver.save("__stop_" + sec->name)].push_back(sec);
+      cNamedSections[saver().save("__start_" + sec->name)].push_back(sec);
+      cNamedSections[saver().save("__stop_" + sec->name)].push_back(sec);
     }
   }
 
@@ -289,13 +320,11 @@ template <class ELFT> void MarkLive<ELFT>::mark() {
   while (!queue.empty()) {
     InputSectionBase &sec = *queue.pop_back_val();
 
-    if (sec.areRelocsRela) {
-      for (const typename ELFT::Rela &rel : sec.template relas<ELFT>())
-        resolveReloc(sec, rel, false);
-    } else {
-      for (const typename ELFT::Rel &rel : sec.template rels<ELFT>())
-        resolveReloc(sec, rel, false);
-    }
+    const RelsOrRelas<ELFT> rels = sec.template relsOrRelas<ELFT>();
+    for (const typename ELFT::Rel &rel : rels.rels)
+      resolveReloc(sec, rel, false);
+    for (const typename ELFT::Rela &rel : rels.relas)
+      resolveReloc(sec, rel, false);
 
     for (InputSectionBase *isec : sec.dependentSections)
       enqueue(isec, 0);
@@ -316,7 +345,7 @@ template <class ELFT> void MarkLive<ELFT>::mark() {
 // to from __start_/__stop_ symbols because there will only be one set of
 // symbols for the whole program.
 template <class ELFT> void MarkLive<ELFT>::moveToMain() {
-  for (InputFile *file : objectFiles)
+  for (ELFFileBase *file : objectFiles)
     for (Symbol *s : file->getSymbols())
       if (auto *d = dyn_cast<Defined>(s))
         if ((d->type == STT_GNU_IFUNC || d->type == STT_TLS) && d->section &&
@@ -339,58 +368,18 @@ template <class ELFT> void MarkLive<ELFT>::moveToMain() {
 // so that they are emitted to the output file.
 template <class ELFT> void elf::markLive() {
   llvm::TimeTraceScope timeScope("markLive");
-  // If -gc-sections is not given, no sections are removed.
+  // If --gc-sections is not given, retain all input sections.
   if (!config->gcSections) {
-    for (InputSectionBase *sec : inputSections)
-      sec->markLive();
-
     // If a DSO defines a symbol referenced in a regular object, it is needed.
     for (Symbol *sym : symtab->symbols())
       if (auto *s = dyn_cast<SharedSymbol>(sym))
         if (s->isUsedInRegularObj && !s->isWeak())
-          s->getFile().isNeeded = true;
+          cast<SharedFile>(s->file)->isNeeded = true;
     return;
   }
 
-  // Otherwise, do mark-sweep GC.
-  //
-  // The -gc-sections option works only for SHF_ALLOC sections (sections that
-  // are memory-mapped at runtime). So we can unconditionally make non-SHF_ALLOC
-  // sections alive except SHF_LINK_ORDER, SHT_REL/SHT_RELA sections, and
-  // sections in a group.
-  //
-  // Usually, non-SHF_ALLOC sections are not removed even if they are
-  // unreachable through relocations because reachability is not a good signal
-  // whether they are garbage or not (e.g. there is usually no section referring
-  // to a .comment section, but we want to keep it.) When a non-SHF_ALLOC
-  // section is retained, we also retain sections dependent on it.
-  //
-  // Note on SHF_LINK_ORDER: Such sections contain metadata and they
-  // have a reverse dependency on the InputSection they are linked with.
-  // We are able to garbage collect them.
-  //
-  // Note on SHF_REL{,A}: Such sections reach here only when -r
-  // or -emit-reloc were given. And they are subject of garbage
-  // collection because, if we remove a text section, we also
-  // remove its relocation section.
-  //
-  // Note on nextInSectionGroup: The ELF spec says that group sections are
-  // included or omitted as a unit. We take the interpretation that:
-  //
-  // - Group members (nextInSectionGroup != nullptr) are subject to garbage
-  //   collection.
-  // - Groups members are retained or discarded as a unit.
-  for (InputSectionBase *sec : inputSections) {
-    bool isAlloc = (sec->flags & SHF_ALLOC);
-    bool isLinkOrder = (sec->flags & SHF_LINK_ORDER);
-    bool isRel = (sec->type == SHT_REL || sec->type == SHT_RELA);
-
-    if (!isAlloc && !isLinkOrder && !isRel && !sec->nextInSectionGroup) {
-      sec->markLive();
-      for (InputSection *isec : sec->dependentSections)
-        isec->markLive();
-    }
-  }
+  for (InputSectionBase *sec : inputSections)
+    sec->markDead();
 
   // Follow the graph to mark all live sections.
   for (unsigned curPart = 1; curPart <= partitions.size(); ++curPart)

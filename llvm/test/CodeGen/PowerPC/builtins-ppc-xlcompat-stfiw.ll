@@ -28,10 +28,6 @@ define dso_local void @test_stfiw(i32* %cia, double %da) {
 ; CHECK-32BIT:       # %bb.0: # %entry
 ; CHECK-32BIT-NEXT:    stfiwx 1, 0, 3
 ; CHECK-32BIT-NEXT:    blr
-; CHECK-PWR9-LABEL: test_stfiw:
-; CHECK-PWR9:       # %bb.0: # %entry
-; CHECK-PWR9-NEXT:    stxsiwx 1, 0, 3
-; CHECK-PWR9-NEXT:    blr
 entry:
   %0 = bitcast i32* %cia to i8*
   tail call void @llvm.ppc.stfiw(i8* %0, double %da)
@@ -53,10 +49,6 @@ define dso_local void @test_xl_stfiw(i32* %cia, double %da) {
 ; CHECK-32BIT:       # %bb.0: # %entry
 ; CHECK-32BIT-NEXT:    stfiwx 1, 0, 3
 ; CHECK-32BIT-NEXT:    blr
-; CHECK-PWR9-LABEL: test_xl_stfiw:
-; CHECK-PWR9:       # %bb.0: # %entry
-; CHECK-PWR9-NEXT:    stxsiwx 1, 0, 3
-; CHECK-PWR9-NEXT:    blr
 entry:
   %0 = bitcast i32* %cia to i8*
   tail call void @llvm.ppc.stfiw(i8* %0, double %da)

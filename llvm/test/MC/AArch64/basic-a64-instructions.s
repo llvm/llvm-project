@@ -1,4 +1,4 @@
-// RUN: llvm-mc -triple aarch64-none-linux-gnu -show-encoding -mattr=+fp-armv8 %s | FileCheck %s
+// RUN: llvm-mc -triple aarch64-none-linux-gnu -show-encoding -mattr=+v8a,+fp-armv8 %s | FileCheck %s
   .globl _func
 
 // Check that the assembler can handle the documented syntax from the ARM ARM.
@@ -1694,7 +1694,7 @@ _func:
 // CHECK: svc      #{{65535|0xffff}}          // encoding: [0xe1,0xff,0x1f,0xd4]
 
         hvc #1
-        smc #12000
+	smc #12000
         brk #12
         hlt #123
 // CHECK: hvc      #{{1|0x1}}                 // encoding: [0x22,0x00,0x00,0xd4]
@@ -1704,14 +1704,14 @@ _func:
 
         dcps1 #42
         dcps2 #9
-        dcps3 #1000
+	dcps3 #1000
 // CHECK: dcps1    #{{42|0x2a}}               // encoding: [0x41,0x05,0xa0,0xd4]
 // CHECK: dcps2    #{{9|0x9}}                 // encoding: [0x22,0x01,0xa0,0xd4]
 // CHECK: dcps3    #{{1000|0x3e8}}            // encoding: [0x03,0x7d,0xa0,0xd4]
 
         dcps1
         dcps2
-        dcps3
+	dcps3
 // CHECK: dcps1                               // encoding: [0x01,0x00,0xa0,0xd4]
 // CHECK: dcps2                               // encoding: [0x02,0x00,0xa0,0xd4]
 // CHECK: dcps3                               // encoding: [0x03,0x00,0xa0,0xd4]
@@ -4044,7 +4044,7 @@ _func:
 // CHECK: msr      {{tcr_el1|TCR_EL1}}, x12               // encoding: [0x4c,0x20,0x18,0xd5]
 // CHECK: msr      {{tcr_el2|TCR_EL2}}, x12               // encoding: [0x4c,0x20,0x1c,0xd5]
 // CHECK: msr      {{tcr_el3|TCR_EL3}}, x12               // encoding: [0x4c,0x20,0x1e,0xd5]
-// CHECK: msr      {{vttbr_el2|VTTBR_EL2}}, x12             // encoding: [0x0c,0x21,0x1c,0xd5]
+// CHECK: msr      {{vttbr_el2|VTTBR_EL2}}, x12            // encoding: [0x0c,0x21,0x1c,0xd5]
 // CHECK: msr      {{vtcr_el2|VTCR_EL2}}, x12              // encoding: [0x4c,0x21,0x1c,0xd5]
 // CHECK: msr      {{dacr32_el2|DACR32_EL2}}, x12            // encoding: [0x0c,0x30,0x1c,0xd5]
 // CHECK: msr      {{spsr_el1|SPSR_EL1}}, x12              // encoding: [0x0c,0x40,0x18,0xd5]
@@ -4392,6 +4392,7 @@ _func:
 	mrs x9, PMINTENSET_EL1
 	mrs x9, PMINTENCLR_EL1
 	mrs x9, PMOVSSET_EL0
+	mrs x9, PMMIR_EL1
 	mrs x9, MAIR_EL1
 	mrs x9, MAIR_EL2
 	mrs x9, MAIR_EL3
@@ -4694,6 +4695,7 @@ _func:
 // CHECK: mrs      x9, {{pmintenset_el1|PMINTENSET_EL1}}         // encoding: [0x29,0x9e,0x38,0xd5]
 // CHECK: mrs      x9, {{pmintenclr_el1|PMINTENCLR_EL1}}         // encoding: [0x49,0x9e,0x38,0xd5]
 // CHECK: mrs      x9, {{pmovsset_el0|PMOVSSET_EL0}}           // encoding: [0x69,0x9e,0x3b,0xd5]
+// CHECK: mrs      x9, {{pmmir_el1|PMMIR_EL1}}             // encoding: [0xc9,0x9e,0x38,0xd5]
 // CHECK: mrs      x9, {{mair_el1|MAIR_EL1}}               // encoding: [0x09,0xa2,0x38,0xd5]
 // CHECK: mrs      x9, {{mair_el2|MAIR_EL2}}               // encoding: [0x09,0xa2,0x3c,0xd5]
 // CHECK: mrs      x9, {{mair_el3|MAIR_EL3}}               // encoding: [0x09,0xa2,0x3e,0xd5]

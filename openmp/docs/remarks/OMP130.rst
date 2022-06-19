@@ -7,7 +7,7 @@ This optimization remark indicates that an unused state machine was removed from
 a target region. This occurs when there are no parallel regions inside of a
 target construct. Normally, a state machine is required to schedule the threads
 inside of a parallel region. If there are no parallel regions, the state machine
-is unnecessary because there is only a single thread active at any time. 
+is unnecessary because there is only a single thread active at any time.
 
 Examples
 --------

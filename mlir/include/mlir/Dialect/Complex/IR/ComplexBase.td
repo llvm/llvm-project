@@ -18,6 +18,10 @@ def Complex_Dialect : Dialect {
     The complex dialect is intended to hold complex numbers creation and
     arithmetic ops.
   }];
+
+  let dependentDialects = ["arith::ArithmeticDialect"];
+  let hasConstantMaterializer = 1;
+  let emitAccessorPrefix = kEmitAccessorPrefix_Prefixed;
 }
 
 #endif // COMPLEX_BASE

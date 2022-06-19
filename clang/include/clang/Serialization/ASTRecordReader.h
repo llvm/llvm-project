@@ -18,6 +18,7 @@
 #include "clang/AST/AbstractBasicReader.h"
 #include "clang/Lex/Token.h"
 #include "clang/Serialization/ASTReader.h"
+#include "clang/Serialization/SourceLocationEncoding.h"
 #include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/APSInt.h"
@@ -30,6 +31,7 @@ class OMPChildren;
 class ASTRecordReader
     : public serialization::DataStreamBasicReader<ASTRecordReader> {
   using ModuleFile = serialization::ModuleFile;
+  using LocSeq = SourceLocationSequence;
 
   ASTReader *Reader;
   ModuleFile *F;
@@ -160,8 +162,7 @@ public:
   TypeSourceInfo *readTypeSourceInfo();
 
   /// Reads the location information for a type.
-  void readTypeLoc(TypeLoc TL);
-
+  void readTypeLoc(TypeLoc TL, LocSeq *Seq = nullptr);
 
   /// Map a local type ID within a given AST file to a global type ID.
   serialization::TypeID getGlobalTypeID(unsigned LocalID) const {
@@ -271,13 +272,13 @@ public:
   void readOMPChildren(OMPChildren *Data);
 
   /// Read a source location, advancing Idx.
-  SourceLocation readSourceLocation() {
-    return Reader->ReadSourceLocation(*F, Record, Idx);
+  SourceLocation readSourceLocation(LocSeq *Seq = nullptr) {
+    return Reader->ReadSourceLocation(*F, Record, Idx, Seq);
   }
 
   /// Read a source range, advancing Idx.
-  SourceRange readSourceRange() {
-    return Reader->ReadSourceRange(*F, Record, Idx);
+  SourceRange readSourceRange(LocSeq *Seq = nullptr) {
+    return Reader->ReadSourceRange(*F, Record, Idx, Seq);
   }
 
   /// Read an arbitrary constant value, advancing Idx.
@@ -326,6 +327,11 @@ public:
   /// Reads attributes from the current stream position, advancing Idx.
   void readAttributes(AttrVec &Attrs);
 
+  /// Read an BTFTypeTagAttr object.
+  BTFTypeTagAttr *readBTFTypeTagAttr() {
+    return cast<BTFTypeTagAttr>(readAttr());
+  }
+
   /// Reads a token out of a record, advancing Idx.
   Token readToken() {
     return Reader->ReadToken(*F, Record, Idx);
@@ -350,7 +356,7 @@ struct SavedStreamPosition {
   ~SavedStreamPosition() {
     if (llvm::Error Err = Cursor.JumpToBit(Offset))
       llvm::report_fatal_error(
-          "Cursor should always be able to go back, failed: " +
+          llvm::Twine("Cursor should always be able to go back, failed: ") +
           toString(std::move(Err)));
   }
 

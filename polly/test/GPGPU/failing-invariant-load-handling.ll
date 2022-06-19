@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly < %s -analyze -polly-scops -polly-process-unprofitable -polly-invariant-load-hoisting | FileCheck %s -check-prefix=SCOPS
+; RUN: opt %loadPolly -polly-process-unprofitable -polly-invariant-load-hoisting -polly-print-scops -disable-output < %s | FileCheck %s -check-prefix=SCOPS
 ; RUN: opt %loadPolly -S < %s -polly-codegen-ppcg -polly-process-unprofitable -polly-invariant-load-hoisting | FileCheck %s -check-prefix=CODEGEN
 
 ; REQUIRES: pollyacc

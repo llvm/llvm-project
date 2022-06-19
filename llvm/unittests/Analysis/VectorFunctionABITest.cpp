@@ -43,12 +43,11 @@ private:
   //  CallInst *CI;
 protected:
   // Referencies to the parser output field.
-  unsigned &VF = Info.Shape.VF;
+  ElementCount &VF = Info.Shape.VF;
   VFISAKind &ISA = Info.ISA;
   SmallVector<VFParameter, 8> &Parameters = Info.Shape.Parameters;
   std::string &ScalarName = Info.ScalarName;
   std::string &VectorName = Info.VectorName;
-  bool &IsScalable = Info.Shape.IsScalable;
   // Invoke the parser. We need to make sure that a function exist in
   // the module because the parser fails if such function don't
   // exists. Every time this method is invoked the state of the test
@@ -175,10 +174,9 @@ TEST_F(VFABIParserTest, ScalarNameAndVectorName_03) {
 
 TEST_F(VFABIParserTest, Parse) {
   EXPECT_TRUE(invokeParser("_ZGVnN2vls2Ls27Us4Rs5l1L10U100R1000_sin"));
-  EXPECT_EQ(VF, (unsigned)2);
+  EXPECT_EQ(VF, ElementCount::getFixed(2));
   EXPECT_FALSE(IsMasked());
   EXPECT_EQ(ISA, VFISAKind::AdvancedSIMD);
-  EXPECT_FALSE(IsScalable);
   EXPECT_EQ(Parameters.size(), (unsigned)9);
   EXPECT_EQ(Parameters[0], VFParameter({0, VFParamKind::Vector, 0}));
   EXPECT_EQ(Parameters[1], VFParameter({1, VFParamKind::OMP_LinearPos, 2}));
@@ -195,9 +193,8 @@ TEST_F(VFABIParserTest, Parse) {
 
 TEST_F(VFABIParserTest, ParseVectorName) {
   EXPECT_TRUE(invokeParser("_ZGVnN2v_sin(my_v_sin)", "my_v_sin"));
-  EXPECT_EQ(VF, (unsigned)2);
+  EXPECT_EQ(VF, ElementCount::getFixed(2));
   EXPECT_FALSE(IsMasked());
-  EXPECT_FALSE(IsScalable);
   EXPECT_EQ(ISA, VFISAKind::AdvancedSIMD);
   EXPECT_EQ(Parameters.size(), (unsigned)1);
   EXPECT_EQ(Parameters[0], VFParameter({0, VFParamKind::Vector, 0}));
@@ -207,10 +204,9 @@ TEST_F(VFABIParserTest, ParseVectorName) {
 
 TEST_F(VFABIParserTest, LinearWithCompileTimeNegativeStep) {
   EXPECT_TRUE(invokeParser("_ZGVnN2ln1Ln10Un100Rn1000_sin"));
-  EXPECT_EQ(VF, (unsigned)2);
+  EXPECT_EQ(VF, ElementCount::getFixed(2));
   EXPECT_FALSE(IsMasked());
   EXPECT_EQ(ISA, VFISAKind::AdvancedSIMD);
-  EXPECT_FALSE(IsScalable);
   EXPECT_EQ(Parameters.size(), (unsigned)4);
   EXPECT_EQ(Parameters[0], VFParameter({0, VFParamKind::OMP_Linear, -1}));
   EXPECT_EQ(Parameters[1], VFParameter({1, VFParamKind::OMP_LinearVal, -10}));
@@ -224,9 +220,8 @@ TEST_F(VFABIParserTest, ParseScalableSVE) {
   EXPECT_TRUE(invokeParser(
       "_ZGVsMxv_sin(custom_vg)", "custom_vg",
       "<vscale x 2 x i32>(<vscale x 2 x i32>, <vscale x 2 x i1>)"));
-  EXPECT_EQ(VF, (unsigned)2);
+  EXPECT_EQ(VF, ElementCount::getScalable(2));
   EXPECT_TRUE(IsMasked());
-  EXPECT_TRUE(IsScalable);
   EXPECT_EQ(ISA, VFISAKind::SVE);
   EXPECT_EQ(ScalarName, "sin");
   EXPECT_EQ(VectorName, "custom_vg");
@@ -234,9 +229,8 @@ TEST_F(VFABIParserTest, ParseScalableSVE) {
 
 TEST_F(VFABIParserTest, ParseFixedWidthSVE) {
   EXPECT_TRUE(invokeParser("_ZGVsM2v_sin"));
-  EXPECT_EQ(VF, (unsigned)2);
+  EXPECT_EQ(VF, ElementCount::getFixed(2));
   EXPECT_TRUE(IsMasked());
-  EXPECT_FALSE(IsScalable);
   EXPECT_EQ(ISA, VFISAKind::SVE);
   EXPECT_EQ(ScalarName, "sin");
   EXPECT_EQ(VectorName, "_ZGVsM2v_sin");
@@ -332,10 +326,9 @@ TEST_F(VFABIParserTest, Align) {
 
 TEST_F(VFABIParserTest, ParseUniform) {
   EXPECT_TRUE(invokeParser("_ZGVnN2u_sin"));
-  EXPECT_EQ(VF, (unsigned)2);
+  EXPECT_EQ(VF, ElementCount::getFixed(2));
   EXPECT_FALSE(IsMasked());
   EXPECT_EQ(ISA, VFISAKind::AdvancedSIMD);
-  EXPECT_FALSE(IsScalable);
   EXPECT_EQ(Parameters.size(), (unsigned)1);
   EXPECT_EQ(Parameters[0], VFParameter({0, VFParamKind::OMP_Uniform, 0}));
   EXPECT_EQ(ScalarName, "sin");
@@ -363,9 +356,8 @@ TEST_F(VFABIParserTest, ISAIndependentMangling) {
 
 #define __COMMON_CHECKS                                                        \
   do {                                                                         \
-    EXPECT_EQ(VF, (unsigned)2);                                                \
+    EXPECT_EQ(VF, ElementCount::getFixed(2));                                  \
     EXPECT_FALSE(IsMasked());                                                  \
-    EXPECT_FALSE(IsScalable);                                                  \
     EXPECT_EQ(Parameters.size(), (unsigned)10);                                \
     EXPECT_EQ(Parameters, ExpectedParams);                                     \
     EXPECT_EQ(ScalarName, "sin");                                              \
@@ -438,9 +430,8 @@ TEST_F(VFABIParserTest, MissingVectorNameTermination) {
 
 TEST_F(VFABIParserTest, ParseMaskingNEON) {
   EXPECT_TRUE(invokeParser("_ZGVnM2v_sin"));
-  EXPECT_EQ(VF, (unsigned)2);
+  EXPECT_EQ(VF, ElementCount::getFixed(2));
   EXPECT_TRUE(IsMasked());
-  EXPECT_FALSE(IsScalable);
   EXPECT_EQ(ISA, VFISAKind::AdvancedSIMD);
   EXPECT_EQ(Parameters.size(), (unsigned)2);
   EXPECT_EQ(Parameters[0], VFParameter({0, VFParamKind::Vector}));
@@ -450,9 +441,8 @@ TEST_F(VFABIParserTest, ParseMaskingNEON) {
 
 TEST_F(VFABIParserTest, ParseMaskingSVE) {
   EXPECT_TRUE(invokeParser("_ZGVsM2v_sin"));
-  EXPECT_EQ(VF, (unsigned)2);
+  EXPECT_EQ(VF, ElementCount::getFixed(2));
   EXPECT_TRUE(IsMasked());
-  EXPECT_FALSE(IsScalable);
   EXPECT_EQ(ISA, VFISAKind::SVE);
   EXPECT_EQ(Parameters.size(), (unsigned)2);
   EXPECT_EQ(Parameters[0], VFParameter({0, VFParamKind::Vector}));
@@ -462,9 +452,8 @@ TEST_F(VFABIParserTest, ParseMaskingSVE) {
 
 TEST_F(VFABIParserTest, ParseMaskingSSE) {
   EXPECT_TRUE(invokeParser("_ZGVbM2v_sin"));
-  EXPECT_EQ(VF, (unsigned)2);
+  EXPECT_EQ(VF, ElementCount::getFixed(2));
   EXPECT_TRUE(IsMasked());
-  EXPECT_FALSE(IsScalable);
   EXPECT_EQ(ISA, VFISAKind::SSE);
   EXPECT_EQ(Parameters.size(), (unsigned)2);
   EXPECT_EQ(Parameters[0], VFParameter({0, VFParamKind::Vector}));
@@ -474,9 +463,8 @@ TEST_F(VFABIParserTest, ParseMaskingSSE) {
 
 TEST_F(VFABIParserTest, ParseMaskingAVX) {
   EXPECT_TRUE(invokeParser("_ZGVcM2v_sin"));
-  EXPECT_EQ(VF, (unsigned)2);
+  EXPECT_EQ(VF, ElementCount::getFixed(2));
   EXPECT_TRUE(IsMasked());
-  EXPECT_FALSE(IsScalable);
   EXPECT_EQ(ISA, VFISAKind::AVX);
   EXPECT_EQ(Parameters.size(), (unsigned)2);
   EXPECT_EQ(Parameters[0], VFParameter({0, VFParamKind::Vector}));
@@ -486,9 +474,8 @@ TEST_F(VFABIParserTest, ParseMaskingAVX) {
 
 TEST_F(VFABIParserTest, ParseMaskingAVX2) {
   EXPECT_TRUE(invokeParser("_ZGVdM2v_sin"));
-  EXPECT_EQ(VF, (unsigned)2);
+  EXPECT_EQ(VF, ElementCount::getFixed(2));
   EXPECT_TRUE(IsMasked());
-  EXPECT_FALSE(IsScalable);
   EXPECT_EQ(ISA, VFISAKind::AVX2);
   EXPECT_EQ(Parameters.size(), (unsigned)2);
   EXPECT_EQ(Parameters[0], VFParameter({0, VFParamKind::Vector}));
@@ -498,9 +485,8 @@ TEST_F(VFABIParserTest, ParseMaskingAVX2) {
 
 TEST_F(VFABIParserTest, ParseMaskingAVX512) {
   EXPECT_TRUE(invokeParser("_ZGVeM2v_sin"));
-  EXPECT_EQ(VF, (unsigned)2);
+  EXPECT_EQ(VF, ElementCount::getFixed(2));
   EXPECT_TRUE(IsMasked());
-  EXPECT_FALSE(IsScalable);
   EXPECT_EQ(ISA, VFISAKind::AVX512);
   EXPECT_EQ(Parameters.size(), (unsigned)2);
   EXPECT_EQ(Parameters[0], VFParameter({0, VFParamKind::Vector}));
@@ -511,9 +497,8 @@ TEST_F(VFABIParserTest, ParseMaskingAVX512) {
 TEST_F(VFABIParserTest, ParseMaskingLLVM) {
   EXPECT_TRUE(invokeParser("_ZGV_LLVM_M2v_sin(custom_vector_sin)",
                            "custom_vector_sin"));
-  EXPECT_EQ(VF, (unsigned)2);
+  EXPECT_EQ(VF, ElementCount::getFixed(2));
   EXPECT_TRUE(IsMasked());
-  EXPECT_FALSE(IsScalable);
   EXPECT_EQ(ISA, VFISAKind::LLVM);
   EXPECT_EQ(Parameters.size(), (unsigned)2);
   EXPECT_EQ(Parameters[0], VFParameter({0, VFParamKind::Vector}));
@@ -527,8 +512,7 @@ TEST_F(VFABIParserTest, ParseScalableMaskingLLVM) {
       "_ZGV_LLVM_Mxv_sin(custom_vector_sin)", "custom_vector_sin",
       "<vscale x 2 x i32> (<vscale x 2 x i32>, <vscale x 2 x i1>)"));
   EXPECT_TRUE(IsMasked());
-  EXPECT_EQ(VF, (unsigned)2);
-  EXPECT_TRUE(IsScalable);
+  EXPECT_EQ(VF, ElementCount::getScalable(2));
   EXPECT_EQ(ISA, VFISAKind::LLVM);
   EXPECT_EQ(Parameters.size(), (unsigned)2);
   EXPECT_EQ(Parameters[0], VFParameter({0, VFParamKind::Vector}));
@@ -541,9 +525,8 @@ TEST_F(VFABIParserTest, ParseScalableMaskingLLVMSincos) {
   EXPECT_TRUE(invokeParser("_ZGV_LLVM_Mxvl8l8_sincos(custom_vector_sincos)",
                            "custom_vector_sincos",
                            "void(<vscale x 2 x double>, double *, double *)"));
-  EXPECT_EQ(VF, (unsigned)2);
+  EXPECT_EQ(VF, ElementCount::getScalable(2));
   EXPECT_TRUE(IsMasked());
-  EXPECT_TRUE(IsScalable);
   EXPECT_EQ(ISA, VFISAKind::LLVM);
   EXPECT_EQ(Parameters.size(), (unsigned)4);
   EXPECT_EQ(Parameters[0], VFParameter({0, VFParamKind::Vector}));
@@ -597,9 +580,8 @@ TEST_F(VFABIParserTest, LLVM_InternalISA) {
 TEST_F(VFABIParserTest, IntrinsicsInLLVMIsa) {
   EXPECT_TRUE(invokeParser("_ZGV_LLVM_N4vv_llvm.pow.f32(__svml_powf4)",
                            "__svml_powf4"));
-  EXPECT_EQ(VF, (unsigned)4);
+  EXPECT_EQ(VF, ElementCount::getFixed(4));
   EXPECT_FALSE(IsMasked());
-  EXPECT_FALSE(IsScalable);
   EXPECT_EQ(ISA, VFISAKind::LLVM);
   EXPECT_EQ(Parameters.size(), (unsigned)2);
   EXPECT_EQ(Parameters[0], VFParameter({0, VFParamKind::Vector}));

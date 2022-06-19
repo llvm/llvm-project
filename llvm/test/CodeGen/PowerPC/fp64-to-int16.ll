@@ -7,11 +7,11 @@ define i1 @Test(double %a) {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    xscvdpsxws 0, 1
 ; CHECK-NEXT:    mffprwz 3, 0
-; CHECK-NEXT:    xori 3, 3, 65534
-; CHECK-NEXT:    cntlzw 3, 3
-; CHECK-NEXT:    srwi 4, 3, 5
-; CHECK-NEXT:    # implicit-def: $x3
-; CHECK-NEXT:    mr 3, 4
+; CHECK-NEXT:    cmplwi 3, 65534
+; CHECK-NEXT:    crmove 20, 2
+; CHECK-NEXT:    li 4, 0
+; CHECK-NEXT:    li 3, 1
+; CHECK-NEXT:    isel 3, 3, 4, 20
 ; CHECK-NEXT:    blr
 entry:
   %conv = fptoui double %a to i16

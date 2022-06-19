@@ -1,5 +1,4 @@
-! RUN: %S/test_errors.sh %s %t %flang_fc1
-! REQUIRES: shell
+! RUN: %python %S/test_errors.py %s %flang_fc1
 ! C709 An assumed-type entity shall be a dummy data object that does not have 
 ! the ALLOCATABLE, CODIMENSION, INTENT (OUT), POINTER, or VALUE attribute and 
 ! is not an explicit-shape array.

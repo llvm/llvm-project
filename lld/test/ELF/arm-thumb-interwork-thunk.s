@@ -11,10 +11,10 @@
 // RUN:       .R_ARM_THM_JUMP_callee_2 : { *(.R_ARM_THM_JUMP_callee_high) } \
 // RUN:       .got.plt 0x18b4 : {  }  } " > %t.script
 // RUN: ld.lld --script %t.script %t -o %t2
-// RUN: llvm-objdump -d --no-show-raw-insn --triple=thumbv7a-none-linux-gnueabi %t2 | FileCheck --check-prefix=CHECK-THUMB --check-prefix=CHECK-ABS-THUMB %s
+// RUN: llvm-objdump -d --no-show-raw-insn %t2 | FileCheck --check-prefix=CHECK-THUMB --check-prefix=CHECK-ABS-THUMB %s
 // RUN: llvm-objdump -d --no-show-raw-insn --triple=armv7a-none-linux-gnueabi %t2 | FileCheck --check-prefix=CHECK-ARM --check-prefix=CHECK-ARM-ABS-ARM %s
 // RUN: ld.lld --script %t.script %t -pie -o %t3
-// RUN: llvm-objdump -d --no-show-raw-insn --triple=thumbv7a-none-linux-gnueabi %t3 | FileCheck --check-prefix=CHECK-THUMB --check-prefix=CHECK-PI-THUMB %s
+// RUN: llvm-objdump -d --no-show-raw-insn %t3 | FileCheck --check-prefix=CHECK-THUMB --check-prefix=CHECK-PI-THUMB %s
 // RUN: llvm-objdump -d --no-show-raw-insn --triple=armv7a-none-linux-gnueabi %t3 | FileCheck --check-prefix=CHECK-ARM --check-prefix=CHECK-PI-ARM %s
 // RUN: ld.lld --script %t.script %t --shared -o %t4
 // RUN: llvm-readobj -S -r %t4 | FileCheck -check-prefix=CHECK-DSO-REL %s
@@ -139,15 +139,15 @@ arm_caller:
 // CHECK-ARM-PLT: Disassembly of section .arm_caller:
 // CHECK-ARM-PLT-EMPTY:
 // CHECK-ARM-PLT-NEXT: <arm_caller>:
-// CHECK-ARM-PLT-NEXT: 1300:        bl      0x1650
-// CHECK-ARM-PLT-NEXT: 1304:        bl      0x1650
-// CHECK-ARM-PLT-NEXT: 1308:        b       0x1650
-// CHECK-ARM-PLT-NEXT: 130c:        b       0x1650
+// CHECK-ARM-PLT-NEXT: 1300:        bl      0x1630
+// CHECK-ARM-PLT-NEXT: 1304:        bl      0x1630
+// CHECK-ARM-PLT-NEXT: 1308:        b       0x1630
+// CHECK-ARM-PLT-NEXT: 130c:        b       0x1630
 // CHECK-ARM-PLT-NEXT: 1310:        b       0x1660
 // CHECK-ARM-PLT-NEXT: 1314:        b       0x1670
-// CHECK-ARM-PLT-NEXT: 1318:        b       0x1680
-// CHECK-ARM-PLT-NEXT: 131c:        beq     0x1690
-// CHECK-ARM-PLT-NEXT: 1320:        bne     0x16a0
+// CHECK-ARM-PLT-NEXT: 1318:        b       0x1640
+// CHECK-ARM-PLT-NEXT: 131c:        beq     0x1680
+// CHECK-ARM-PLT-NEXT: 1320:        bne     0x1690
 // CHECK-ARM-PLT-NEXT: 1324:        bx      lr
 
  .section .thumb_caller, "ax", %progbits
@@ -229,8 +229,8 @@ thumb_caller:
 // CHECK-ARM-PLT: Disassembly of section .thumb_caller:
 // CHECK-ARM-PLT-EMPTY:
 // CHECK-ARM-PLT-NEXT: <thumb_caller>:
-// CHECK-ARM-PLT-NEXT: 1400: blx     0x1680
-// CHECK-ARM-PLT-NEXT: 1404: blx     0x1680
+// CHECK-ARM-PLT-NEXT: 1400: blx     0x1640
+// CHECK-ARM-PLT-NEXT: 1404: blx     0x1640
 // CHECK-ARM-PLT-NEXT: 1408: b.w     0x1420 <__ThumbV7PILongThunk_arm_callee1>
 // CHECK-ARM-PLT-NEXT: 140c: b.w     0x142c <__ThumbV7PILongThunk_arm_callee2>
 // CHECK-ARM-PLT-NEXT: 1410: b.w     0x1438 <__ThumbV7PILongThunk_arm_callee3>
@@ -365,11 +365,11 @@ _start:
 // CHECK-ARM-PLT-NEXT: 000016ac <$d>:
 // CHECK-ARM-PLT-NEXT:     16ac:     d4 d4 d4 d4     .word   0xd4d4d4d4
 
-// CHECK-DSO-REL:      0x18C0 R_ARM_JUMP_SLOT arm_caller
-// CHECK-DSO-REL-NEXT: 0x18C4 R_ARM_JUMP_SLOT thumb_caller
-// CHECK-DSO-REL-NEXT: 0x18C8 R_ARM_JUMP_SLOT thumb_callee1
+// CHECK-DSO-REL:      0x18C0 R_ARM_JUMP_SLOT thumb_callee1
+// CHECK-DSO-REL-NEXT: 0x18C4 R_ARM_JUMP_SLOT arm_callee1
+// CHECK-DSO-REL-NEXT: 0x18C8 R_ARM_JUMP_SLOT arm_caller
 // CHECK-DSO-REL-NEXT: 0x18CC R_ARM_JUMP_SLOT thumb_callee2
 // CHECK-DSO-REL-NEXT: 0x18D0 R_ARM_JUMP_SLOT thumb_callee3
-// CHECK-DSO-REL-NEXT: 0x18D4 R_ARM_JUMP_SLOT arm_callee1
-// CHECK-DSO-REL-NEXT: 0x18D8 R_ARM_JUMP_SLOT arm_callee2
-// CHECK-DSO-REL-NEXT: 0x18DC R_ARM_JUMP_SLOT arm_callee3
+// CHECK-DSO-REL-NEXT: 0x18D4 R_ARM_JUMP_SLOT arm_callee2
+// CHECK-DSO-REL-NEXT: 0x18D8 R_ARM_JUMP_SLOT arm_callee3
+// CHECK-DSO-REL-NEXT: 0x18DC R_ARM_JUMP_SLOT thumb_caller

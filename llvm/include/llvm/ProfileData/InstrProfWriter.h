@@ -15,11 +15,13 @@
 #define LLVM_PROFILEDATA_INSTRPROFWRITER_H
 
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/StringMap.h"
+#include "llvm/IR/GlobalValue.h"
 #include "llvm/ProfileData/InstrProf.h"
+#include "llvm/ProfileData/MemProf.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/Error.h"
-#include "llvm/Support/MemoryBuffer.h"
 #include <cstdint>
 #include <memory>
 
@@ -28,24 +30,33 @@ namespace llvm {
 /// Writer for instrumentation based profile data.
 class InstrProfRecordWriterTrait;
 class ProfOStream;
+class MemoryBuffer;
 class raw_fd_ostream;
 
 class InstrProfWriter {
 public:
   using ProfilingData = SmallDenseMap<uint64_t, InstrProfRecord>;
-  // PF_IRLevelWithCS is the profile from context sensitive IR instrumentation.
-  enum ProfKind { PF_Unknown = 0, PF_FE, PF_IRLevel, PF_IRLevelWithCS };
 
 private:
   bool Sparse;
   StringMap<ProfilingData> FunctionData;
-  ProfKind ProfileKind = PF_Unknown;
-  bool InstrEntryBBEnabled;
+
+  // A map to hold memprof data per function. The lower 64 bits obtained from
+  // the md5 hash of the function name is used to index into the map.
+  llvm::MapVector<GlobalValue::GUID, memprof::IndexedMemProfRecord>
+      MemProfRecordData;
+  // A map to hold frame id to frame mappings. The mappings are used to
+  // convert IndexedMemProfRecord to MemProfRecords with frame information
+  // inline.
+  llvm::MapVector<memprof::FrameId, memprof::Frame> MemProfFrameData;
+
+  // An enum describing the attributes of the profile.
+  InstrProfKind ProfileKind = InstrProfKind::Unknown;
   // Use raw pointer here for the incomplete type object.
   InstrProfRecordWriterTrait *InfoObj;
 
 public:
-  InstrProfWriter(bool Sparse = false, bool InstrEntryBBEnabled = false);
+  InstrProfWriter(bool Sparse = false);
   ~InstrProfWriter();
 
   StringMap<ProfilingData> &getProfileData() { return FunctionData; }
@@ -58,6 +69,15 @@ public:
   void addRecord(NamedInstrProfRecord &&I, function_ref<void(Error)> Warn) {
     addRecord(std::move(I), 1, Warn);
   }
+
+  /// Add a memprof record for a function identified by its \p Id.
+  void addMemProfRecord(const GlobalValue::GUID Id,
+                        const memprof::IndexedMemProfRecord &Record);
+
+  /// Add a memprof frame identified by the hash of the contents of the frame in
+  /// \p FrameId.
+  bool addMemProfFrame(const memprof::FrameId, const memprof::Frame &F,
+                       function_ref<void(Error)> Warn);
 
   /// Merge existing function counts from the given writer.
   void mergeRecordsFromWriter(InstrProfWriter &&IPW,
@@ -79,30 +99,45 @@ public:
   /// Write the profile, returning the raw data. For testing.
   std::unique_ptr<MemoryBuffer> writeBuffer();
 
-  /// Set the ProfileKind. Report error if mixing FE and IR level profiles.
-  /// \c WithCS indicates if this is for contenxt sensitive instrumentation.
-  Error setIsIRLevelProfile(bool IsIRLevel, bool WithCS) {
-    if (ProfileKind == PF_Unknown) {
-      if (IsIRLevel)
-        ProfileKind = WithCS ? PF_IRLevelWithCS : PF_IRLevel;
-      else
-        ProfileKind = PF_FE;
+  /// Update the attributes of the current profile from the attributes
+  /// specified. An error is returned if IR and FE profiles are mixed.
+  Error mergeProfileKind(const InstrProfKind Other) {
+    // If the kind is unset, this is the first profile we are merging so just
+    // set it to the given type.
+    if (ProfileKind == InstrProfKind::Unknown) {
+      ProfileKind = Other;
       return Error::success();
     }
 
-    if (((ProfileKind != PF_FE) && !IsIRLevel) ||
-        ((ProfileKind == PF_FE) && IsIRLevel))
+    // Returns true if merging is should fail assuming A and B are incompatible.
+    auto testIncompatible = [&](InstrProfKind A, InstrProfKind B) {
+      return (static_cast<bool>(ProfileKind & A) &&
+              static_cast<bool>(Other & B)) ||
+             (static_cast<bool>(ProfileKind & B) &&
+              static_cast<bool>(Other & A));
+    };
+
+    // Check if the profiles are in-compatible. Clang frontend profiles can't be
+    // merged with other profile types.
+    if (static_cast<bool>(
+            (ProfileKind & InstrProfKind::FrontendInstrumentation) ^
+            (Other & InstrProfKind::FrontendInstrumentation))) {
       return make_error<InstrProfError>(instrprof_error::unsupported_version);
+    }
+    if (testIncompatible(InstrProfKind::FunctionEntryOnly,
+                         InstrProfKind::FunctionEntryInstrumentation)) {
+      return make_error<InstrProfError>(
+          instrprof_error::unsupported_version,
+          "cannot merge FunctionEntryOnly profiles and BB profiles together");
+    }
 
-    // When merging a context-sensitive profile (WithCS == true) with an IRLevel
-    // profile, set the kind to PF_IRLevelWithCS.
-    if (ProfileKind == PF_IRLevel && WithCS)
-      ProfileKind = PF_IRLevelWithCS;
-
+    // Now we update the profile type with the bits that are set.
+    ProfileKind |= Other;
     return Error::success();
   }
 
-  void setInstrEntryBBEnabled(bool Enabled) { InstrEntryBBEnabled = Enabled; }
+  InstrProfKind getProfileKind() const { return ProfileKind; }
+
   // Internal interface for testing purpose only.
   void setValueProfDataEndianness(support::endianness Endianness);
   void setOutputSparse(bool Sparse);

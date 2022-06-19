@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 %s -fblocks -triple x86_64-apple-darwin -emit-llvm -o - | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers %s -fblocks -triple x86_64-apple-darwin -emit-llvm -o - | FileCheck %s
 
 // CHECK: %[[STRUCT_BLOCK_DESCRIPTOR:.*]] = type { i64, i64 }
 // CHECK: @[[BLOCK_DESCRIPTOR22:.*]] = internal constant { i64, i64, i8*, i8*, i8*, i8* } { i64 0, i64 36, i8* bitcast (void (i8*, i8*)* @__copy_helper_block_8_32c22_ZTSN12_GLOBAL__N_11BE to i8*), i8* bitcast (void (i8*)* @__destroy_helper_block_8_32c22_ZTSN12_GLOBAL__N_11BE to i8*), i8* getelementptr inbounds ([6 x i8], [6 x i8]* @{{.*}}, i32 0, i32 0), i8* null }, align 8
@@ -128,7 +128,7 @@ namespace test4 {
   // CHECK-NEXT: store i8* [[BLOCKDESC:%.*]], i8** {{.*}}, align 8
   // CHECK-NEXT: bitcast i8* [[BLOCKDESC]] to <{ i8*, i32, i32, i8*, %[[STRUCT_BLOCK_DESCRIPTOR]]* }>*
   // CHECK:      call void @_ZN5test41AC1Ev([[A]]* {{[^,]*}} [[TMP]])
-  // CHECK-NEXT: call void @_ZN5test43fooENS_1AE([[A]]* [[TMP]])
+  // CHECK-NEXT: call void @_ZN5test43fooENS_1AE([[A]]* noundef [[TMP]])
   // CHECK-NEXT: call void @_ZN5test41AD1Ev([[A]]* {{[^,]*}} [[TMP]])
   // CHECK-NEXT: ret void
 }
@@ -167,7 +167,7 @@ namespace test5 {
 
   // CHECK-NOT:  br
   // CHECK:      [[CAPTURE:%.*]] = getelementptr inbounds [[BLOCK_T]], [[BLOCK_T]]* [[BLOCK]], i32 0, i32 5
-  // CHECK-NEXT: call void @_ZN5test51AC1ERKS0_([[A]]* {{[^,]*}} [[CAPTURE]], [[A]]* nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) [[X]])
+  // CHECK-NEXT: call void @_ZN5test51AC1ERKS0_([[A]]* {{[^,]*}} [[CAPTURE]], [[A]]* noundef nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) [[X]])
   // CHECK-NEXT: store i1 true, i1* [[CLEANUP_ACTIVE]]
   // CHECK-NEXT: store [[A]]* [[CAPTURE]], [[A]]** [[COND_CLEANUP_SAVE]], align 8
   // CHECK-NEXT: bitcast [[BLOCK_T]]* [[BLOCK]] to void ()*

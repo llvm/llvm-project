@@ -19,12 +19,12 @@ class IncludeInserterCallback : public PPCallbacks {
 public:
   explicit IncludeInserterCallback(IncludeInserter *Inserter)
       : Inserter(Inserter) {}
-  // Implements PPCallbacks::InclusionDerective(). Records the names and source
+  // Implements PPCallbacks::InclusionDirective(). Records the names and source
   // locations of the inclusions in the main source file being processed.
   void InclusionDirective(SourceLocation HashLocation,
                           const Token &IncludeToken, StringRef FileNameRef,
                           bool IsAngled, CharSourceRange FileNameRange,
-                          const FileEntry * /*IncludedFile*/,
+                          Optional<FileEntryRef> /*IncludedFile*/,
                           StringRef /*SearchPath*/, StringRef /*RelativePath*/,
                           const Module * /*ImportedModule*/,
                           SrcMgr::CharacteristicKind /*FileType*/) override {
@@ -36,8 +36,9 @@ private:
   IncludeInserter *Inserter;
 };
 
-IncludeInserter::IncludeInserter(IncludeSorter::IncludeStyle Style)
-    : Style(Style) {}
+IncludeInserter::IncludeInserter(IncludeSorter::IncludeStyle Style,
+                                 bool SelfContainedDiags)
+    : Style(Style), SelfContainedDiags(SelfContainedDiags) {}
 
 void IncludeInserter::registerPreprocessor(Preprocessor *PP) {
   assert(PP && "PP shouldn't be null");
@@ -73,10 +74,12 @@ IncludeInserter::createIncludeInsertion(FileID FileID, llvm::StringRef Header) {
     return llvm::None;
   // We assume the same Header will never be included both angled and not
   // angled.
-  if (!InsertedHeaders[FileID].insert(Header).second)
+  // In self contained diags mode we don't track what headers we have already
+  // inserted.
+  if (!SelfContainedDiags && !InsertedHeaders[FileID].insert(Header).second)
     return llvm::None;
 
-  return getOrCreate(FileID).CreateIncludeInsertion(Header, IsAngled);
+  return getOrCreate(FileID).createIncludeInsertion(Header, IsAngled);
 }
 
 llvm::Optional<FixItHint>
@@ -92,7 +95,7 @@ void IncludeInserter::addInclude(StringRef FileName, bool IsAngled,
   assert(SourceMgr && "SourceMgr shouldn't be null; did you remember to call "
                       "registerPreprocessor()?");
   FileID FileID = SourceMgr->getFileID(HashLocation);
-  getOrCreate(FileID).AddInclude(FileName, IsAngled, HashLocation, EndLocation);
+  getOrCreate(FileID).addInclude(FileName, IsAngled, HashLocation, EndLocation);
 }
 
 } // namespace utils

@@ -36,7 +36,7 @@ using namespace lldb_private;
 class CommandObjectSourceInfo : public CommandObjectParsed {
   class CommandOptions : public Options {
   public:
-    CommandOptions() : Options() {}
+    CommandOptions() = default;
 
     ~CommandOptions() override = default;
 
@@ -118,8 +118,7 @@ public:
             "Display source line information for the current target "
             "process.  Defaults to instruction pointer in current stack "
             "frame.",
-            nullptr, eCommandRequiresTarget),
-        m_options() {}
+            nullptr, eCommandRequiresTarget) {}
 
   ~CommandObjectSourceInfo() override = default;
 
@@ -374,13 +373,16 @@ protected:
     Target *target = m_exe_ctx.GetTargetPtr();
     uint32_t addr_byte_size = target->GetArchitecture().GetAddressByteSize();
 
+    ModuleFunctionSearchOptions function_options;
+    function_options.include_symbols = false;
+    function_options.include_inlines = true;
+
     // Note: module_list can't be const& because FindFunctionSymbols isn't
     // const.
     ModuleList module_list =
         (m_module_list.GetSize() > 0) ? m_module_list : target->GetImages();
-    module_list.FindFunctions(name, eFunctionNameTypeAuto,
-                              /*include_symbols=*/false,
-                              /*include_inlines=*/true, sc_list_funcs);
+    module_list.FindFunctions(name, eFunctionNameTypeAuto, function_options,
+                              sc_list_funcs);
     size_t num_matches = sc_list_funcs.GetSize();
 
     if (!num_matches) {
@@ -621,7 +623,7 @@ protected:
 class CommandObjectSourceList : public CommandObjectParsed {
   class CommandOptions : public Options {
   public:
-    CommandOptions() : Options() {}
+    CommandOptions() = default;
 
     ~CommandOptions() override = default;
 
@@ -720,15 +722,14 @@ public:
       : CommandObjectParsed(interpreter, "source list",
                             "Display source code for the current target "
                             "process as specified by options.",
-                            nullptr, eCommandRequiresTarget),
-        m_options() {}
+                            nullptr, eCommandRequiresTarget) {}
 
   ~CommandObjectSourceList() override = default;
 
   Options *GetOptions() override { return &m_options; }
 
-  const char *GetRepeatCommand(Args &current_command_args,
-                               uint32_t index) override {
+  llvm::Optional<std::string> GetRepeatCommand(Args &current_command_args,
+                                               uint32_t index) override {
     // This is kind of gross, but the command hasn't been parsed yet so we
     // can't look at the option values for this invocation...  I have to scan
     // the arguments directly.
@@ -737,13 +738,13 @@ public:
           return e.ref() == "-r" || e.ref() == "--reverse";
         });
     if (iter == current_command_args.end())
-      return m_cmd_name.c_str();
+      return m_cmd_name;
 
     if (m_reverse_name.empty()) {
       m_reverse_name = m_cmd_name;
       m_reverse_name.append(" -r");
     }
-    return m_reverse_name.c_str();
+    return m_reverse_name;
   }
 
 protected:
@@ -754,7 +755,7 @@ protected:
     SourceInfo(ConstString name, const LineEntry &line_entry)
         : function(name), line_entry(line_entry) {}
 
-    SourceInfo() : function(), line_entry() {}
+    SourceInfo() = default;
 
     bool IsValid() const { return (bool)function && line_entry.IsValid(); }
 
@@ -874,11 +875,12 @@ protected:
   void FindMatchingFunctions(Target *target, ConstString name,
                              SymbolContextList &sc_list) {
     // Displaying the source for a symbol:
-    bool include_inlines = true;
-    bool include_symbols = false;
-
     if (m_options.num_lines == 0)
       m_options.num_lines = 10;
+
+    ModuleFunctionSearchOptions function_options;
+    function_options.include_symbols = true;
+    function_options.include_inlines = false;
 
     const size_t num_modules = m_options.modules.size();
     if (num_modules > 0) {
@@ -889,15 +891,14 @@ protected:
           ModuleSpec module_spec(module_file_spec);
           matching_modules.Clear();
           target->GetImages().FindModules(module_spec, matching_modules);
+
           matching_modules.FindFunctions(name, eFunctionNameTypeAuto,
-                                         include_symbols, include_inlines,
-                                         sc_list);
+                                         function_options, sc_list);
         }
       }
     } else {
       target->GetImages().FindFunctions(name, eFunctionNameTypeAuto,
-                                        include_symbols, include_inlines,
-                                        sc_list);
+                                        function_options, sc_list);
     }
   }
 

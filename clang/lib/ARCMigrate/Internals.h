@@ -154,13 +154,11 @@ public:
   std::vector<SourceLocation> &ARCMTMacroLocs;
   Optional<bool> EnableCFBridgeFns;
 
-  MigrationPass(ASTContext &Ctx, LangOptions::GCMode OrigGCMode,
-                Sema &sema, TransformActions &TA,
-                const CapturedDiagList &capturedDiags,
+  MigrationPass(ASTContext &Ctx, LangOptions::GCMode OrigGCMode, Sema &sema,
+                TransformActions &TA, const CapturedDiagList &capturedDiags,
                 std::vector<SourceLocation> &ARCMTMacroLocs)
-    : Ctx(Ctx), OrigGCMode(OrigGCMode), MigOptions(),
-      SemaRef(sema), TA(TA), CapturedDiags(capturedDiags),
-      ARCMTMacroLocs(ARCMTMacroLocs) { }
+      : Ctx(Ctx), OrigGCMode(OrigGCMode), SemaRef(sema), TA(TA),
+        CapturedDiags(capturedDiags), ARCMTMacroLocs(ARCMTMacroLocs) {}
 
   const CapturedDiagList &getDiags() const { return CapturedDiags; }
 

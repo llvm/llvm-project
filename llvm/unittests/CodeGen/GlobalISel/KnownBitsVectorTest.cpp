@@ -201,10 +201,11 @@ TEST_F(AArch64GISelMITest, TestKnownBitsVectorDecreasingCstPHIWithLoop) {
    %10:_(s8) = G_CONSTANT i8 5
    %11:_(<2 x s8>) = G_BUILD_VECTOR %10:_(s8), %10:_(s8)
    %12:_(s8) = G_CONSTANT i8 1
+   %16:_(<2 x s8>) = G_BUILD_VECTOR %12:_(s8), %12:_(s8)
 
    bb.12:
    %13:_(<2 x s8>) = PHI %11(<2 x s8>), %bb.10, %14(<2 x s8>), %bb.12
-   %14:_(<2 x s8>) = G_LSHR %13, %12
+   %14:_(<2 x s8>) = G_LSHR %13, %16
    %15:_(<2 x s8>) = COPY %14
    G_BR %bb.12
 )";
@@ -1016,7 +1017,7 @@ TEST_F(AArch64GISelMITest, TestVectorMetadata) {
   GISelKnownBits Info(*MF);
   KnownBits Res = Info.getKnownBits(And->getOperand(1).getReg());
 
-  EXPECT_TRUE(Res.One.isNullValue());
+  EXPECT_TRUE(Res.One.isZero());
 
   APInt Mask(Res.getBitWidth(), 1);
   Mask.flipAllBits();
@@ -1454,11 +1455,11 @@ TEST_F(AArch64GISelMITest, TestVectorInvalidQueries) {
   KnownBits EqSizeRes = Info.getKnownBits(EqSizedShl);
   KnownBits BiggerSizeRes = Info.getKnownBits(BiggerSizedShl);
 
-  EXPECT_TRUE(EqSizeRes.One.isNullValue());
-  EXPECT_TRUE(EqSizeRes.Zero.isNullValue());
+  EXPECT_TRUE(EqSizeRes.One.isZero());
+  EXPECT_TRUE(EqSizeRes.Zero.isZero());
 
-  EXPECT_TRUE(BiggerSizeRes.One.isNullValue());
-  EXPECT_TRUE(BiggerSizeRes.Zero.isNullValue());
+  EXPECT_TRUE(BiggerSizeRes.One.isZero());
+  EXPECT_TRUE(BiggerSizeRes.Zero.isZero());
 }
 
 TEST_F(AArch64GISelMITest, TestKnownBitsVectorAssertZext) {
@@ -1525,4 +1526,25 @@ TEST_F(AArch64GISelMITest, TestKnownBitsVectorAssertZext) {
   EXPECT_EQ(64u, Res.getBitWidth());
   EXPECT_EQ(0u, Res.One.getZExtValue());
   EXPECT_EQ(0xFFFFFFFFFFFFFFF8u, Res.Zero.getZExtValue());
+}
+
+TEST_F(AArch64GISelMITest, TestNumSignBitsUAddoOverflow) {
+  StringRef MIRString = R"(
+   %copy_x0:_(s64) = COPY $x0
+   %copy_x1:_(s64) = COPY $x1
+   %x0_x1:_(<2 x s64>) = G_BUILD_VECTOR %copy_x0, %copy_x1
+   %uaddo:_(<2 x s64>), %overflow:_(<2 x s32>) = G_UADDO %x0_x1, %x0_x1
+   %result:_(<2 x s32>) = COPY %overflow
+)";
+
+  setUp(MIRString);
+  if (!TM)
+    return;
+
+  Register CopyOverflow = Copies[Copies.size() - 1];
+
+  GISelKnownBits Info(*MF);
+
+  // Assert sign-extension from vector boolean
+  EXPECT_EQ(32u, Info.computeNumSignBits(CopyOverflow));
 }

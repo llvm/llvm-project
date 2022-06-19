@@ -231,5 +231,35 @@ struct T {
 
 struct U {
   U(const POD &M) : M(M) {}
+  // CHECK-FIXES: U(const POD &M) : M(M) {}
   POD M;
+};
+
+// The rewrite can't look through `typedefs` and `using`.
+// Test that we don't partially rewrite one decl without rewriting the other.
+using MovableConstRef = const Movable &;
+struct V {
+  V(MovableConstRef M);
+  // CHECK-FIXES: V(MovableConstRef M);
+  Movable M;
+};
+V::V(const Movable &M) : M(M) {}
+// CHECK-MESSAGES: :[[@LINE-1]]:6: warning: pass by value and use std::move
+// CHECK-FIXES: V::V(const Movable &M) : M(M) {}
+
+// Test with paired lvalue/rvalue overloads.
+struct W1 {
+  W1(const Movable &M) : M(M) {}
+  W1(Movable &&M);
+  Movable M;
+};
+struct W2 {
+  W2(const Movable &M, int) : M(M) {}
+  W2(Movable &&M, int);
+  Movable M;
+};
+struct W3 {
+  W3(const W1 &, const Movable &M) : M(M) {}
+  W3(W1 &&, Movable &&M);
+  Movable M;
 };

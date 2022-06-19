@@ -5,18 +5,18 @@
 // expected-no-diagnostics
 // rdar://17259812
 
-typedef void (^BT) ();
+typedef void (^BT) (void);
 
-BT foo()  __attribute__((ns_returns_retained));
+BT foo(void)  __attribute__((ns_returns_retained));
 
 @interface I
-BT foo()  __attribute__((ns_returns_retained));
+BT foo(void)  __attribute__((ns_returns_retained));
 - (BT) Meth __attribute__((ns_returns_retained));
 + (BT) ClsMeth __attribute__((ns_returns_retained));
 @end
 
 @implementation I
-BT foo()  __attribute__((ns_returns_retained)) {return ^{}; }
+BT foo(void)  __attribute__((ns_returns_retained)) {return ^{}; }
 - (BT) Meth {return ^{}; }
 + (BT) ClsMeth {return ^{}; }
 @end

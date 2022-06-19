@@ -20,6 +20,7 @@ add_llvm_unittest(DebugInfoDWARFTests
   DWARFDebugLineTest.cpp
   DWARFDieTest.cpp
   DWARFDieManualExtractTest.cpp
+  DWARFExpressionCopyBytesTest.cpp
   DWARFExpressionCompactPrinterTest.cpp
   DWARFFormValueTest.cpp
   DWARFListTableTest.cpp
@@ -27,3 +28,5 @@ add_llvm_unittest(DebugInfoDWARFTests
   )
 
 target_link_libraries(DebugInfoDWARFTests PRIVATE LLVMTestingSupport)
+
+set_property(TARGET DebugInfoDWARFTests PROPERTY FOLDER "Tests/UnitTests/DebugInfoTests")

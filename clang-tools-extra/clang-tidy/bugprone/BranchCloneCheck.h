@@ -1,9 +1,8 @@
 //===--- BranchCloneCheck.h - clang-tidy ------------------------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -23,7 +22,7 @@ namespace bugprone {
 /// the true and false expressions are Type I clones of each other.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/bugprone-branch-clone.html
+/// http://clang.llvm.org/extra/clang-tidy/checks/bugprone/branch-clone.html
 class BranchCloneCheck : public ClangTidyCheck {
 public:
   BranchCloneCheck(StringRef Name, ClangTidyContext *Context)

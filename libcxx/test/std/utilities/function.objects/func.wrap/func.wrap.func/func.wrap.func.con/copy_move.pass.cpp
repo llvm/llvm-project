@@ -6,7 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-// XFAIL: LIBCXX-WINDOWS-FIXME
+// FIXME: In MSVC mode, even "std::function<int(int)> f(aref);" causes
+// allocations.
+// XFAIL: target=x86_64-pc-windows-msvc && stdlib=libc++
 
 // <functional>
 

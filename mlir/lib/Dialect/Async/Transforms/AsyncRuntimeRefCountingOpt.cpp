@@ -13,7 +13,7 @@
 #include "PassDetail.h"
 #include "mlir/Dialect/Async/IR/Async.h"
 #include "mlir/Dialect/Async/Passes.h"
-#include "mlir/Dialect/StandardOps/IR/Ops.h"
+#include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/Support/Debug.h"
 
@@ -118,11 +118,11 @@ LogicalResult AsyncRuntimeRefCountingOptPass::optimizeReferenceCounting(
         //
         //   %token = ... : !async.token
         //
-        //   async.runtime.add_ref %token {count = 1 : i32} : !async.token
+        //   async.runtime.add_ref %token {count = 1 : i64} : !async.token
         //   call @pass_token(%token: !async.token, ...)
         //
         //   async.await %token : !async.token
-        //   async.runtime.drop_ref %token {count = 1 : i32} : !async.token
+        //   async.runtime.drop_ref %token {count = 1 : i64} : !async.token
         //
         // In this example if we'll cancel a pair of reference counting
         // operations we might end up with a deallocated token when we'll
@@ -139,7 +139,7 @@ LogicalResult AsyncRuntimeRefCountingOptPass::optimizeReferenceCounting(
             break;
 
           // Find the first function call user of the reference counted value.
-          Operation *functionCall = dyn_cast<CallOp>(user);
+          Operation *functionCall = dyn_cast<func::CallOp>(user);
           if (functionCall &&
               (!firstFunctionCallUser ||
                functionCall->isBeforeInBlock(firstFunctionCallUser))) {

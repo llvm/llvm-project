@@ -1,5 +1,4 @@
-! RUN: %S/test_errors.sh %s %t %flang_fc1
-! REQUIRES: shell
+! RUN: %python %S/test_errors.py %s %flang_fc1
 ! C815 An entity shall not be explicitly given any attribute more than once in 
 ! a scoping unit.
 !
@@ -20,6 +19,7 @@ module m
   !WARNING: Attribute 'PRIVATE' cannot be used more than once
   procedure(procFunc), private, pointer, private :: proc2
   !WARNING: Attribute 'BIND(C)' cannot be used more than once
+  !ERROR: An interface name with BIND attribute must be specified if the BIND attribute is specified in a procedure declaration statement
   procedure(procFunc), bind(c), pointer, bind(c) :: proc3
   !WARNING: Attribute 'PROTECTED' cannot be used more than once
   procedure(procFunc), protected, pointer, protected :: proc4

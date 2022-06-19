@@ -23,18 +23,18 @@ define <32 x i16> @combine_vpermt2var_32i16_identity_mask(<32 x i16> %x0, <32 x 
 ; X86:       # %bb.0:
 ; X86-NEXT:    vmovdqa64 {{.*#+}} zmm1 = [31,30,29,28,27,26,25,24,23,22,21,20,19,18,17,16,15,14,13,12,11,10,9,8,7,6,5,4,3,2,1,0]
 ; X86-NEXT:    kmovd {{[0-9]+}}(%esp), %k1
-; X86-NEXT:    vpermi2w %zmm0, %zmm0, %zmm1 {%k1} {z}
-; X86-NEXT:    vmovdqa64 {{.*#+}} zmm0 = [63,30,61,28,59,26,57,24,55,22,53,20,51,18,49,16,47,46,13,44,11,42,9,40,7,38,5,36,3,34,1,32]
-; X86-NEXT:    vpermi2w %zmm1, %zmm1, %zmm0 {%k1} {z}
+; X86-NEXT:    vpermt2w %zmm0, %zmm1, %zmm0 {%k1} {z}
+; X86-NEXT:    vmovdqa64 {{.*#+}} zmm1 = [63,30,61,28,59,26,57,24,55,22,53,20,51,18,49,16,47,46,13,44,11,42,9,40,7,38,5,36,3,34,1,32]
+; X86-NEXT:    vpermt2w %zmm0, %zmm1, %zmm0 {%k1} {z}
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: combine_vpermt2var_32i16_identity_mask:
 ; X64:       # %bb.0:
 ; X64-NEXT:    vmovdqa64 {{.*#+}} zmm1 = [31,30,29,28,27,26,25,24,23,22,21,20,19,18,17,16,15,14,13,12,11,10,9,8,7,6,5,4,3,2,1,0]
 ; X64-NEXT:    kmovd %edi, %k1
-; X64-NEXT:    vpermi2w %zmm0, %zmm0, %zmm1 {%k1} {z}
-; X64-NEXT:    vmovdqa64 {{.*#+}} zmm0 = [63,30,61,28,59,26,57,24,55,22,53,20,51,18,49,16,47,46,13,44,11,42,9,40,7,38,5,36,3,34,1,32]
-; X64-NEXT:    vpermi2w %zmm1, %zmm1, %zmm0 {%k1} {z}
+; X64-NEXT:    vpermt2w %zmm0, %zmm1, %zmm0 {%k1} {z}
+; X64-NEXT:    vmovdqa64 {{.*#+}} zmm1 = [63,30,61,28,59,26,57,24,55,22,53,20,51,18,49,16,47,46,13,44,11,42,9,40,7,38,5,36,3,34,1,32]
+; X64-NEXT:    vpermt2w %zmm0, %zmm1, %zmm0 {%k1} {z}
 ; X64-NEXT:    retq
   %res0 = call <32 x i16> @llvm.x86.avx512.maskz.vpermt2var.hi.512(<32 x i16> <i16 31, i16 30, i16 29, i16 28, i16 27, i16 26, i16 25, i16 24, i16 23, i16 22, i16 21, i16 20, i16 19, i16 18, i16 17, i16 16, i16 15, i16 14, i16 13, i16 12, i16 11, i16 10, i16 9, i16 8, i16 7, i16 6, i16 5, i16 4, i16 3, i16 2, i16 1, i16 0>, <32 x i16> %x0, <32 x i16> %x1, i32 %m)
   %res1 = call <32 x i16> @llvm.x86.avx512.maskz.vpermt2var.hi.512(<32 x i16> <i16 63, i16 30, i16 61, i16 28, i16 59, i16 26, i16 57, i16 24, i16 55, i16 22, i16 53, i16 20, i16 51, i16 18, i16 49, i16 16, i16 47, i16 46, i16 13, i16 44, i16 11, i16 42, i16 9, i16 40, i16 7, i16 38, i16 5, i16 36, i16 3, i16 34, i16 1, i16 32>, <32 x i16> %res0, <32 x i16> %res0, i32 %m)
@@ -54,9 +54,9 @@ define <64 x i8> @combine_pshufb_identity(<64 x i8> %x0) {
 define <64 x i8> @combine_pshufb_identity_mask(<64 x i8> %x0, i64 %m) {
 ; X86-LABEL: combine_pshufb_identity_mask:
 ; X86:       # %bb.0:
+; X86-NEXT:    kmovq {{[0-9]+}}(%esp), %k1
 ; X86-NEXT:    vpternlogd $255, %zmm1, %zmm1, %zmm1
 ; X86-NEXT:    vmovdqa64 {{.*#+}} zmm2 = [15,14,13,12,11,10,9,8,7,6,5,4,3,2,1,0,15,14,13,12,11,10,9,8,7,6,5,4,3,2,1,0,15,14,13,12,11,10,9,8,7,6,5,4,3,2,1,0,15,14,13,12,11,10,9,8,7,6,5,4,3,2,1,0]
-; X86-NEXT:    kmovq {{[0-9]+}}(%esp), %k1
 ; X86-NEXT:    vpternlogd $255, %zmm3, %zmm3, %zmm3
 ; X86-NEXT:    vpshufb %zmm2, %zmm0, %zmm3 {%k1}
 ; X86-NEXT:    vpshufb %zmm2, %zmm3, %zmm1 {%k1}
@@ -100,8 +100,8 @@ define <64 x i8> @combine_pshufb_as_pslldq(<64 x i8> %a0) {
 define <64 x i8> @combine_pshufb_as_pslldq_mask(<64 x i8> %a0, i64 %m) {
 ; X86-LABEL: combine_pshufb_as_pslldq_mask:
 ; X86:       # %bb.0:
-; X86-NEXT:    vpslldq {{.*#+}} zmm0 = zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zmm0[0,1,2,3,4,5],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zmm0[16,17,18,19,20,21],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zmm0[32,33,34,35,36,37],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zmm0[48,49,50,51,52,53]
 ; X86-NEXT:    kmovq {{[0-9]+}}(%esp), %k1
+; X86-NEXT:    vpslldq {{.*#+}} zmm0 = zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zmm0[0,1,2,3,4,5],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zmm0[16,17,18,19,20,21],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zmm0[32,33,34,35,36,37],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zmm0[48,49,50,51,52,53]
 ; X86-NEXT:    vmovdqu8 %zmm0, %zmm0 {%k1} {z}
 ; X86-NEXT:    retl
 ;
@@ -126,8 +126,8 @@ define <64 x i8> @combine_pshufb_as_psrldq(<64 x i8> %a0) {
 define <64 x i8> @combine_pshufb_as_psrldq_mask(<64 x i8> %a0, i64 %m) {
 ; X86-LABEL: combine_pshufb_as_psrldq_mask:
 ; X86:       # %bb.0:
-; X86-NEXT:    vpsrldq {{.*#+}} zmm0 = zmm0[15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zmm0[31],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zmm0[47],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zmm0[63],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
 ; X86-NEXT:    kmovq {{[0-9]+}}(%esp), %k1
+; X86-NEXT:    vpsrldq {{.*#+}} zmm0 = zmm0[15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zmm0[31],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zmm0[47],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zmm0[63],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
 ; X86-NEXT:    vmovdqu8 %zmm0, %zmm0 {%k1} {z}
 ; X86-NEXT:    retl
 ;
@@ -156,9 +156,9 @@ define <64 x i8> @combine_permi2q_pshufb_as_permi2d(<8 x i64> %a0, <8 x i64> %a1
 define <64 x i8> @combine_permi2q_pshufb_as_permi2d_mask(<8 x i64> %a0, <8 x i64> %a1, i64 %m) {
 ; X86-LABEL: combine_permi2q_pshufb_as_permi2d_mask:
 ; X86:       # %bb.0:
+; X86-NEXT:    kmovq {{[0-9]+}}(%esp), %k1
 ; X86-NEXT:    vmovdqa64 {{.*#+}} zmm2 = <7,0,u,u,5,0,u,u,u,u,12,0,u,u,14,0>
 ; X86-NEXT:    vpermi2q %zmm0, %zmm1, %zmm2
-; X86-NEXT:    kmovq {{[0-9]+}}(%esp), %k1
 ; X86-NEXT:    vpshufb {{.*#+}} zmm0 {%k1} {z} = zmm2[0,1,2,3,0,1,2,3,0,1,2,3,0,1,2,3,20,21,22,23,20,21,22,23,20,21,22,23,20,21,22,23,40,41,42,43,40,41,42,43,40,41,42,43,40,41,42,43,60,61,62,63,60,61,62,63,60,61,62,63,60,61,62,63]
 ; X86-NEXT:    retl
 ;

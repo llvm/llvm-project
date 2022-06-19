@@ -38,15 +38,21 @@ namespace charinfo {
   };
 } // end namespace charinfo
 
-/// Returns true if this is an ASCII character.
+/// Returns true if a byte is an ASCII character.
 LLVM_READNONE inline bool isASCII(char c) {
   return static_cast<unsigned char>(c) <= 127;
 }
 
+LLVM_READNONE inline bool isASCII(unsigned char c) { return c <= 127; }
+
+/// Returns true if a codepoint is an ASCII character.
+LLVM_READNONE inline bool isASCII(uint32_t c) { return c <= 127; }
+LLVM_READNONE inline bool isASCII(int64_t c) { return 0 <= c && c <= 127; }
+
 /// Returns true if this is a valid first character of a C identifier,
 /// which is [a-zA-Z_].
-LLVM_READONLY inline bool isIdentifierHead(unsigned char c,
-                                           bool AllowDollar = false) {
+LLVM_READONLY inline bool isAsciiIdentifierStart(unsigned char c,
+                                                 bool AllowDollar = false) {
   using namespace charinfo;
   if (InfoTable[c] & (CHAR_UPPER|CHAR_LOWER|CHAR_UNDER))
     return true;
@@ -55,8 +61,8 @@ LLVM_READONLY inline bool isIdentifierHead(unsigned char c,
 
 /// Returns true if this is a body character of a C identifier,
 /// which is [a-zA-Z0-9_].
-LLVM_READONLY inline bool isIdentifierBody(unsigned char c,
-                                           bool AllowDollar = false) {
+LLVM_READONLY inline bool isAsciiIdentifierContinue(unsigned char c,
+                                                    bool AllowDollar = false) {
   using namespace charinfo;
   if (InfoTable[c] & (CHAR_UPPER|CHAR_LOWER|CHAR_DIGIT|CHAR_UNDER))
     return true;
@@ -157,6 +163,44 @@ LLVM_READONLY inline bool isRawStringDelimBody(unsigned char c) {
                           CHAR_DIGIT|CHAR_UNDER|CHAR_RAWDEL)) != 0;
 }
 
+enum class EscapeChar {
+  Single = 1,
+  Double = 2,
+  SingleAndDouble = static_cast<int>(Single) | static_cast<int>(Double),
+};
+
+/// Return C-style escaped string for special characters, or an empty string if
+/// there is no such mapping.
+template <EscapeChar Opt, class CharT>
+LLVM_READONLY inline auto escapeCStyle(CharT Ch) -> StringRef {
+  switch (Ch) {
+  case '\\':
+    return "\\\\";
+  case '\'':
+    if ((static_cast<int>(Opt) & static_cast<int>(EscapeChar::Single)) == 0)
+      break;
+    return "\\'";
+  case '"':
+    if ((static_cast<int>(Opt) & static_cast<int>(EscapeChar::Double)) == 0)
+      break;
+    return "\\\"";
+  case '\a':
+    return "\\a";
+  case '\b':
+    return "\\b";
+  case '\f':
+    return "\\f";
+  case '\n':
+    return "\\n";
+  case '\r':
+    return "\\r";
+  case '\t':
+    return "\\t";
+  case '\v':
+    return "\\v";
+  }
+  return {};
+}
 
 /// Converts the given ASCII character to its lowercase equivalent.
 ///
@@ -181,13 +225,13 @@ LLVM_READONLY inline char toUppercase(char c) {
 ///
 /// Note that this is a very simple check; it does not accept UCNs as valid
 /// identifier characters.
-LLVM_READONLY inline bool isValidIdentifier(StringRef S,
-                                            bool AllowDollar = false) {
-  if (S.empty() || !isIdentifierHead(S[0], AllowDollar))
+LLVM_READONLY inline bool isValidAsciiIdentifier(StringRef S,
+                                                 bool AllowDollar = false) {
+  if (S.empty() || !isAsciiIdentifierStart(S[0], AllowDollar))
     return false;
 
   for (StringRef::iterator I = S.begin(), E = S.end(); I != E; ++I)
-    if (!isIdentifierBody(*I, AllowDollar))
+    if (!isAsciiIdentifierContinue(*I, AllowDollar))
       return false;
 
   return true;

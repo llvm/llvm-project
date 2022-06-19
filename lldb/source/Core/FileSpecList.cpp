@@ -16,7 +16,6 @@
 #include <cstdint>
 
 using namespace lldb_private;
-using namespace std;
 
 FileSpecList::FileSpecList() : m_files() {}
 

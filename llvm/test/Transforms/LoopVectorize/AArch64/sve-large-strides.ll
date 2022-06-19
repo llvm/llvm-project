@@ -1,6 +1,6 @@
-; RUN: opt -mtriple aarch64-linux-gnu -mattr=+sve -loop-vectorize -scalable-vectorization=on -dce -instcombine -S <%s | FileCheck %s
+; RUN: opt -mtriple aarch64-linux-gnu -mattr=+sve -loop-vectorize -dce -instcombine -S <%s | FileCheck %s
 
-define void @stride7_i32(i32* noalias nocapture %dst, i64 %n) {
+define void @stride7_i32(i32* noalias nocapture %dst, i64 %n) #0 {
 ; CHECK-LABEL: @stride7_i32(
 ; CHECK:      vector.body
 ; CHECK:        %[[VEC_IND:.*]] = phi <vscale x 4 x i64> [ %{{.*}}, %vector.ph ], [ %{{.*}}, %vector.body ]
@@ -27,7 +27,7 @@ for.end:                                          ; preds = %for.end.loopexit, %
   ret void
 }
 
-define void @stride7_f64(double* noalias nocapture %dst, i64 %n) {
+define void @stride7_f64(double* noalias nocapture %dst, i64 %n) #0 {
 ; CHECK-LABEL: @stride7_f64(
 ; CHECK:      vector.body
 ; CHECK:        %[[VEC_IND:.*]] = phi <vscale x 2 x i64> [ %{{.*}}, %vector.ph ], [ %{{.*}}, %vector.body ]
@@ -55,7 +55,7 @@ for.end:                                          ; preds = %for.end.loopexit, %
 }
 
 
-define void @cond_stride7_f64(double* noalias nocapture %dst, i64* noalias nocapture readonly %cond, i64 %n) {
+define void @cond_stride7_f64(double* noalias nocapture %dst, i64* noalias nocapture readonly %cond, i64 %n) #0 {
 ; CHECK-LABEL: @cond_stride7_f64(
 ; CHECK:      vector.body
 ; CHECK:        %[[MASK:.*]] = icmp ne <vscale x 2 x i64>
@@ -90,7 +90,7 @@ for.end:                                          ; preds = %for.end.loopexit, %
   ret void
 }
 
-
+attributes #0 = { vscale_range(1, 16) }
 !0 = distinct !{!0, !1, !2, !3, !4, !5}
 !1 = !{!"llvm.loop.mustprogress"}
 !2 = !{!"llvm.loop.vectorize.width", i32 4}

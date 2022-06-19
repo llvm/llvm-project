@@ -6,11 +6,10 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// UNSUPPORTED: libcpp-has-no-threads
+// UNSUPPORTED: no-threads
 // UNSUPPORTED: c++03, c++11
 
-// This test requires the dylib support introduced in D68480, which shipped in
-// macOS 11.0.
+// This test requires the dylib support introduced in D68480, which shipped in macOS 11.0.
 // XFAIL: use_system_cxx_lib && target={{.+}}-apple-macosx10.{{9|10|11|12|13|14|15}}
 
 // <semaphore>
@@ -18,9 +17,12 @@
 #include <semaphore>
 #include <chrono>
 #include <thread>
+#include <type_traits>
 
 #include "make_test_thread.h"
 #include "test_macros.h"
+
+static_assert(std::is_same<std::binary_semaphore, std::counting_semaphore<1>>::value, "");
 
 int main(int, char**)
 {

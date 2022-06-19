@@ -12,10 +12,7 @@ add_llvm_tool(llvm-pdbutil
   BytesOutputStyle.cpp
   DumpOutputStyle.cpp
   ExplainOutputStyle.cpp
-  InputFile.cpp
   llvm-pdbutil.cpp
-  FormatUtil.cpp
-  LinePrinter.cpp
   MinimalSymbolDumper.cpp
   MinimalTypeDumper.cpp
   PdbYaml.cpp

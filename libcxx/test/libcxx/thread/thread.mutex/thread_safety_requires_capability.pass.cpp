@@ -8,9 +8,9 @@
 
 // On Windows Clang bugs out when both __declspec and __attribute__ are present,
 // the processing goes awry preventing the definition of the types.
-// XFAIL: LIBCXX-WINDOWS-FIXME
+// XFAIL: msvc
 
-// UNSUPPORTED: libcpp-has-no-threads
+// UNSUPPORTED: no-threads
 // REQUIRES: thread-safety
 
 // <mutex>

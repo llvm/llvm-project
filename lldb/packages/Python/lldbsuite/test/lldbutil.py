@@ -730,6 +730,62 @@ def check_breakpoint_result(
             (out_module_name,
              module_name))
 
+def check_breakpoint(
+            test,
+            bpno,
+            expected_locations = None,
+            expected_resolved_count = None,
+            expected_hit_count = None,
+            location_id = None,
+            expected_location_resolved = True,
+            expected_location_hit_count = None):
+    """
+    Test breakpoint or breakpoint location.
+    Breakpoint resolved count is always checked. If not specified the assumption is that all locations 
+    should be resolved. 
+    To test a breakpoint location, breakpoint number (bpno) and location_id must be set. In this case
+    the resolved count for a breakpoint is not tested by default. The location is expected to be resolved,
+    unless expected_location_resolved is set to False.
+    test - test context
+    bpno - breakpoint number to test
+    expected_locations - expected number of locations for this breakpoint. If 'None' this parameter is not tested.
+    expected_resolved_count - expected resolved locations number for the breakpoint.  If 'None' - all locations should be resolved.
+    expected_hit_count - expected hit count for this breakpoint. If 'None' this parameter is not tested.
+    location_id - If not 'None' sets the location ID for the breakpoint to test.
+    expected_location_resolved - Extected resolved status for the location_id (True/False). Default - True.
+    expected_location_hit_count - Expected hit count for the breakpoint at location_id. Must be set if the location_id parameter is set.
+    """
+
+    if isinstance(test.target, lldb.SBTarget):
+        target = test.target
+    else:
+        target = test.target()
+    bkpt = target.FindBreakpointByID(bpno)
+
+    test.assertTrue(bkpt.IsValid(), "Breakpoint is not valid.")
+
+    if expected_locations is not None:
+        test.assertEquals(expected_locations, bkpt.GetNumLocations())
+
+    if expected_resolved_count is not None:
+        test.assertEquals(expected_resolved_count, bkpt.GetNumResolvedLocations())
+    else:
+        expected_resolved_count = bkpt.GetNumLocations()
+        if location_id is None:
+            test.assertEquals(expected_resolved_count, bkpt.GetNumResolvedLocations())
+
+    if expected_hit_count is not None:
+        test.assertEquals(expected_hit_count, bkpt.GetHitCount())
+
+    if location_id is not None:
+        loc_bkpt = bkpt.FindLocationByID(location_id)
+        test.assertTrue(loc_bkpt.IsValid(), "Breakpoint location is not valid.")
+        test.assertEquals(loc_bkpt.IsResolved(), expected_location_resolved)
+        if expected_location_hit_count is not None:
+            test.assertEquals(expected_location_hit_count, loc_bkpt.GetHitCount())
+
+
+
 # ==================================================
 # Utility functions related to Threads and Processes
 # ==================================================
@@ -953,7 +1009,8 @@ def run_to_source_breakpoint(test, bkpt_pattern, source_spec,
                              bkpt_module = None,
                              in_cwd = True,
                              only_one_thread = True,
-                             extra_images = None):
+                             extra_images = None,
+                             has_locations_before_run = True):
     """Start up a target, using exe_name as the executable, and run it to
        a breakpoint set by source regex bkpt_pattern.
 
@@ -964,9 +1021,10 @@ def run_to_source_breakpoint(test, bkpt_pattern, source_spec,
     # Set the breakpoints
     breakpoint = target.BreakpointCreateBySourceRegex(
             bkpt_pattern, source_spec, bkpt_module)
-    test.assertTrue(breakpoint.GetNumLocations() > 0,
-        'No locations found for source breakpoint: "%s", file: "%s", dir: "%s"'
-        %(bkpt_pattern, source_spec.GetFilename(), source_spec.GetDirectory()))
+    if has_locations_before_run:
+        test.assertTrue(breakpoint.GetNumLocations() > 0,
+                        'No locations found for source breakpoint: "%s", file: "%s", dir: "%s"'
+                        %(bkpt_pattern, source_spec.GetFilename(), source_spec.GetDirectory()))
     return run_to_breakpoint_do_run(test, target, breakpoint, launch_info,
                                     only_one_thread, extra_images)
 
@@ -1196,6 +1254,29 @@ def expect_state_changes(test, listener, process, states, timeout=30):
         test.assertEqual(
             lldb.SBProcess.GetStateFromEvent(event),
             expected_state)
+
+def start_listening_from(broadcaster, event_mask):
+    """Creates a listener for a specific event mask and add it to the source broadcaster."""
+
+    listener = lldb.SBListener("lldb.test.listener")
+    broadcaster.AddListener(listener, event_mask)
+    return listener
+
+def fetch_next_event(test, listener, broadcaster, timeout=10):
+    """Fetch one event from the listener and return it if it matches the provided broadcaster.
+    Fails otherwise."""
+
+    event = lldb.SBEvent()
+
+    if listener.WaitForEvent(timeout, event):
+        if event.BroadcasterMatchesRef(broadcaster):
+            return event
+
+        test.fail("received event '%s' from unexpected broadcaster '%s'." %
+                  (event.GetDescription(), event.GetBroadcaster().GetName()))
+
+    test.fail("couldn't fetch an event before reaching the timeout.")
+
 
 # ===================================
 # Utility functions related to Frames
@@ -1446,6 +1527,42 @@ def get_signal_number(signal_name):
     # No remote platform; fall back to using local python signals.
     return getattr(signal, signal_name)
 
+def get_actions_for_signal(testcase, signal_name, from_target=False, expected_absent=False):
+    """Returns a triple of (pass, stop, notify)"""
+    return_obj = lldb.SBCommandReturnObject()
+    command = "process handle {0}".format(signal_name)
+    if from_target:
+        command += " -t"
+    testcase.dbg.GetCommandInterpreter().HandleCommand(
+        command, return_obj)
+    match = re.match(
+        'NAME *PASS *STOP *NOTIFY.*(false|true|not set) *(false|true|not set) *(false|true|not set)',
+        return_obj.GetOutput(),
+        re.IGNORECASE | re.DOTALL)
+    if match and expected_absent:
+        testcase.fail('Signal "{0}" was supposed to be absent'.format(signal_name))
+    if not match:
+        if expected_absent:
+            return (None, None, None)
+        testcase.fail('Unable to retrieve default signal disposition.')
+    return (match.group(1), match.group(2), match.group(3))
+
+
+
+def set_actions_for_signal(testcase, signal_name, pass_action, stop_action, notify_action, expect_success=True):
+        return_obj = lldb.SBCommandReturnObject()
+        command = "process handle {0}".format(signal_name)
+        if pass_action != None:
+            command += " -p {0}".format(pass_action)
+        if stop_action != None:
+            command += " -s {0}".format(stop_action)
+        if notify_action != None:
+            command +=" -n {0}".format(notify_action)
+            
+        testcase.dbg.GetCommandInterpreter().HandleCommand(command, return_obj)
+        testcase.assertEqual(expect_success,
+            return_obj.Succeeded(), 
+            "Setting signal handling for {0} worked as expected".format(signal_name))
 
 class PrintableRegex(object):
 

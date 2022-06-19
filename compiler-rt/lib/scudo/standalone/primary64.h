@@ -89,7 +89,9 @@ public:
       RegionInfo *Region = getRegionInfo(I);
       *Region = {};
     }
-    unmap(reinterpret_cast<void *>(PrimaryBase), PrimarySize, UNMAP_ALL, &Data);
+    if (PrimaryBase)
+      unmap(reinterpret_cast<void *>(PrimaryBase), PrimarySize, UNMAP_ALL,
+            &Data);
     PrimaryBase = 0U;
   }
 
@@ -164,9 +166,9 @@ public:
       PoppedBlocks += Region->Stats.PoppedBlocks;
       PushedBlocks += Region->Stats.PushedBlocks;
     }
-    Str->append("Stats: SizeClassAllocator64: %zuM mapped (%zuM rss) in %zu "
+    Str->append("Stats: SizeClassAllocator64: %zuM mapped (%uM rss) in %zu "
                 "allocations; remains %zu\n",
-                TotalMapped >> 20, 0, PoppedBlocks,
+                TotalMapped >> 20, 0U, PoppedBlocks,
                 PoppedBlocks - PushedBlocks);
 
     for (uptr I = 0; I < NumClasses; I++)

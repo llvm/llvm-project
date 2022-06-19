@@ -1,4 +1,3 @@
-; RUN: opt < %s -asan -asan-module -enable-new-pm=0 -S | FileCheck %s
 ; RUN: opt < %s -passes='asan-pipeline' -S | FileCheck %s
 
 ; Source (-O0 -fsanitize=address -fsanitize-address-use-after-scope):

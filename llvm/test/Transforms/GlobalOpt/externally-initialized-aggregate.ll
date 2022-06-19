@@ -1,4 +1,4 @@
-; RUN: opt < %s -S -globalopt | FileCheck %s
+; RUN: opt < %s -S -passes=globalopt | FileCheck %s
 
 ; This global is externally_initialized, so if we split it into scalars we
 ; should keep that flag set on all of the new globals. This will prevent the

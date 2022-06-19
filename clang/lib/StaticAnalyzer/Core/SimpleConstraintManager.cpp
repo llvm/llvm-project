@@ -22,9 +22,9 @@ namespace ento {
 
 SimpleConstraintManager::~SimpleConstraintManager() {}
 
-ProgramStateRef SimpleConstraintManager::assume(ProgramStateRef State,
-                                                DefinedSVal Cond,
-                                                bool Assumption) {
+ProgramStateRef SimpleConstraintManager::assumeInternal(ProgramStateRef State,
+                                                        DefinedSVal Cond,
+                                                        bool Assumption) {
   // If we have a Loc value, cast it to a bool NonLoc first.
   if (Optional<Loc> LV = Cond.getAs<Loc>()) {
     SValBuilder &SVB = State->getStateManager().getSValBuilder();
@@ -44,7 +44,7 @@ ProgramStateRef SimpleConstraintManager::assume(ProgramStateRef State,
 ProgramStateRef SimpleConstraintManager::assume(ProgramStateRef State,
                                                 NonLoc Cond, bool Assumption) {
   State = assumeAux(State, Cond, Assumption);
-  if (NotifyAssumeClients && EE)
+  if (EE)
     return EE->processAssume(State, Cond, Assumption);
   return State;
 }
@@ -86,12 +86,12 @@ ProgramStateRef SimpleConstraintManager::assumeAux(ProgramStateRef State,
   }
 
   case nonloc::LocAsIntegerKind:
-    return assume(State, Cond.castAs<nonloc::LocAsInteger>().getLoc(),
-                  Assumption);
+    return assumeInternal(State, Cond.castAs<nonloc::LocAsInteger>().getLoc(),
+                          Assumption);
   } // end switch
 }
 
-ProgramStateRef SimpleConstraintManager::assumeInclusiveRange(
+ProgramStateRef SimpleConstraintManager::assumeInclusiveRangeInternal(
     ProgramStateRef State, NonLoc Value, const llvm::APSInt &From,
     const llvm::APSInt &To, bool InRange) {
 

@@ -33,13 +33,11 @@ class AAResults;
 class AllocaInst;
 class BasicBlock;
 class BlockFrequencyInfo;
-class CallInst;
 class CallGraph;
 class DebugInfoFinder;
 class DominatorTree;
 class Function;
 class Instruction;
-class InvokeInst;
 class Loop;
 class LoopInfo;
 class Module;
@@ -296,10 +294,10 @@ BasicBlock *DuplicateInstructionsInSplitBetween(BasicBlock *BB,
                                                 DomTreeUpdater &DTU);
 
 /// Updates profile information by adjusting the entry count by adding
-/// entryDelta then scaling callsite information by the new count divided by the
+/// EntryDelta then scaling callsite information by the new count divided by the
 /// old count. VMap is used during inlinng to also update the new clone
 void updateProfileCallee(
-    Function *Callee, int64_t entryDelta,
+    Function *Callee, int64_t EntryDelta,
     const ValueMap<const Value *, WeakTrackingVH> *VMap = nullptr);
 
 /// Find the 'llvm.experimental.noalias.scope.decl' intrinsics in the specified

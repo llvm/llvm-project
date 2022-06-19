@@ -1,7 +1,7 @@
 // RUN: mlir-opt %s -canonicalize -split-input-file | FileCheck %s
 
-func @testenterdataop(%a: memref<10xf32>) -> () {
-  %ifCond = constant true
+func.func @testenterdataop(%a: memref<10xf32>) -> () {
+  %ifCond = arith.constant true
   acc.enter_data if(%ifCond) create(%a: memref<10xf32>)
   return
 }
@@ -10,8 +10,8 @@ func @testenterdataop(%a: memref<10xf32>) -> () {
 
 // -----
 
-func @testenterdataop(%a: memref<10xf32>) -> () {
-  %ifCond = constant false
+func.func @testenterdataop(%a: memref<10xf32>) -> () {
+  %ifCond = arith.constant false
   acc.enter_data if(%ifCond) create(%a: memref<10xf32>)
   return
 }
@@ -21,8 +21,8 @@ func @testenterdataop(%a: memref<10xf32>) -> () {
 
 // -----
 
-func @testexitdataop(%a: memref<10xf32>) -> () {
-  %ifCond = constant true
+func.func @testexitdataop(%a: memref<10xf32>) -> () {
+  %ifCond = arith.constant true
   acc.exit_data if(%ifCond) delete(%a: memref<10xf32>)
   return
 }
@@ -31,8 +31,8 @@ func @testexitdataop(%a: memref<10xf32>) -> () {
 
 // -----
 
-func @testexitdataop(%a: memref<10xf32>) -> () {
-  %ifCond = constant false
+func.func @testexitdataop(%a: memref<10xf32>) -> () {
+  %ifCond = arith.constant false
   acc.exit_data if(%ifCond) delete(%a: memref<10xf32>)
   return
 }
@@ -42,8 +42,8 @@ func @testexitdataop(%a: memref<10xf32>) -> () {
 
 // -----
 
-func @testupdateop(%a: memref<10xf32>) -> () {
-  %ifCond = constant true
+func.func @testupdateop(%a: memref<10xf32>) -> () {
+  %ifCond = arith.constant true
   acc.update if(%ifCond) host(%a: memref<10xf32>)
   return
 }
@@ -52,8 +52,8 @@ func @testupdateop(%a: memref<10xf32>) -> () {
 
 // -----
 
-func @testupdateop(%a: memref<10xf32>) -> () {
-  %ifCond = constant false
+func.func @testupdateop(%a: memref<10xf32>) -> () {
+  %ifCond = arith.constant false
   acc.update if(%ifCond) host(%a: memref<10xf32>)
   return
 }
@@ -61,9 +61,9 @@ func @testupdateop(%a: memref<10xf32>) -> () {
 // CHECK: func @testupdateop
 // CHECK-NOT: acc.update
 
-// ----
+// -----
 
-func @testenterdataop(%a: memref<10xf32>, %ifCond: i1) -> () {
+func.func @testenterdataop(%a: memref<10xf32>, %ifCond: i1) -> () {
   acc.enter_data if(%ifCond) create(%a: memref<10xf32>)
   return
 }
@@ -73,7 +73,7 @@ func @testenterdataop(%a: memref<10xf32>, %ifCond: i1) -> () {
 
 // -----
 
-func @testexitdataop(%a: memref<10xf32>, %ifCond: i1) -> () {
+func.func @testexitdataop(%a: memref<10xf32>, %ifCond: i1) -> () {
   acc.exit_data if(%ifCond) delete(%a: memref<10xf32>)
   return
 }
@@ -83,7 +83,7 @@ func @testexitdataop(%a: memref<10xf32>, %ifCond: i1) -> () {
 
 // -----
 
-func @testupdateop(%a: memref<10xf32>, %ifCond: i1) -> () {
+func.func @testupdateop(%a: memref<10xf32>, %ifCond: i1) -> () {
   acc.update if(%ifCond) host(%a: memref<10xf32>)
   return
 }

@@ -27,7 +27,6 @@
 
 using namespace lldb;
 using namespace lldb_private;
-using namespace std;
 
 // Constructor
 DWARFDebugInfo::DWARFDebugInfo(SymbolFileDWARF &dwarf,
@@ -172,15 +171,6 @@ DWARFTypeUnit *DWARFDebugInfo::GetTypeUnitForHash(uint64_t hash) {
 bool DWARFDebugInfo::ContainsTypeUnits() {
   ParseUnitHeadersIfNeeded();
   return !m_type_hash_to_unit_index.empty();
-}
-
-DWARFDIE
-DWARFDebugInfo::GetDIEForDIEOffset(DIERef::Section section,
-                                   dw_offset_t die_offset) {
-  DWARFUnit *cu = GetUnitContainingDIEOffset(section, die_offset);
-  if (cu)
-    return cu->GetDIE(die_offset);
-  return DWARFDIE();
 }
 
 // GetDIE()

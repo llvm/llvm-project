@@ -146,7 +146,7 @@ namespace Templates {
   auto fwd_decl(); // expected-note {{candidate template ignored: could not match 'auto ()' against 'int ()'}}
   int g = fwd_decl<char>();
 
-  auto (*p)() = f1; // expected-error {{incompatible initializer}}
+  auto (*p)() = f1; // expected-error {{variable 'p' with type 'auto (*)()' has incompatible initializer of type '<overloaded function type>'}}
   auto (*q)() = f1<int>; // ok
 
   typedef decltype(f2(1.2)) dbl; // cxx14_20-note {{previous}}
@@ -300,7 +300,7 @@ namespace Constexpr {
   }
   struct NonLiteral { ~NonLiteral(); } nl; // cxx14-note {{user-provided destructor}}
   // cxx20_2b-note@-1 {{'NonLiteral' is not literal because its destructor is not constexpr}}
-  constexpr auto f2(int n) { return nl; } // expected-error {{return type 'Constexpr::NonLiteral' is not a literal type}}
+  constexpr auto f2(int n) { return nl; } // expected-error {{return type 'struct NonLiteral' is not a literal type}}
 }
 
 // It's not really clear whether these are valid, but this matches g++.

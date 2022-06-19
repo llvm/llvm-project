@@ -1,5 +1,4 @@
-; RUN: opt %loadPolly -polly-scops -analyze \
-; RUN: -polly-invariant-load-hoisting=true < %s | FileCheck %s
+; RUN: opt %loadPolly -polly-invariant-load-hoisting=true -polly-print-scops -disable-output < %s | FileCheck %s
 ;
 ;    void f(int *A, unsigned N) {
 ;      for (unsigned i = 0; i < N; i++)
@@ -9,13 +8,13 @@
 ; CHECK:         Invariant Accesses: {
 ; CHECK-NEXT:            ReadAccess :=	[Reduction Type: NONE] [Scalar: 0]
 ; CHECK-NEXT:                [N] -> { Stmt_for_body[i0] -> MemRef_A[o0] : -2 + 5N <= 3o0 <= 5N };
-; CHECK-NEXT:            Execution Context: [N] -> {  : 0 < N <= 1844674407370955161 }
+; CHECK-NEXT:            Execution Context: [N] -> {  : 0 < N <= 1383505805528216371 }
 ; CHECK-NEXT:    }
 ;
 ; CHECK:         Assumed Context:
 ; CHECK-NEXT:    [N] -> {  :  }
 ; CHECK-NEXT:    Invalid Context:
-; CHECK-NEXT:    [N] -> {  : N >= 1844674407370955162 }
+; CHECK-NEXT:    [N] -> { : N >= 1383505805528216372 }
 
 ; CHECK:         MustWriteAccess :=	[Reduction Type: NONE] [Scalar: 0]
 ; CHECK-NEXT:        [N] -> { Stmt_for_body[i0] -> MemRef_A[o0] : -2 + i0 <= 3o0 <= i0 };

@@ -16,7 +16,6 @@
 #define SANITIZER_COMMON_H
 
 #include "sanitizer_flags.h"
-#include "sanitizer_interface_internal.h"
 #include "sanitizer_internal_defs.h"
 #include "sanitizer_libc.h"
 #include "sanitizer_list.h"
@@ -171,8 +170,8 @@ void SetShadowRegionHugePageMode(uptr addr, uptr length);
 bool DontDumpShadowMemory(uptr addr, uptr length);
 // Check if the built VMA size matches the runtime one.
 void CheckVMASize();
-void RunMallocHooks(const void *ptr, uptr size);
-void RunFreeHooks(const void *ptr);
+void RunMallocHooks(void *ptr, uptr size);
+void RunFreeHooks(void *ptr);
 
 class ReservedAddressRange {
  public:
@@ -192,12 +191,13 @@ class ReservedAddressRange {
 };
 
 typedef void (*fill_profile_f)(uptr start, uptr rss, bool file,
-                               /*out*/uptr *stats, uptr stats_size);
+                               /*out*/ uptr *stats);
 
 // Parse the contents of /proc/self/smaps and generate a memory profile.
-// |cb| is a tool-specific callback that fills the |stats| array containing
-// |stats_size| elements.
-void GetMemoryProfile(fill_profile_f cb, uptr *stats, uptr stats_size);
+// |cb| is a tool-specific callback that fills the |stats| array.
+void GetMemoryProfile(fill_profile_f cb, uptr *stats);
+void ParseUnixMemoryProfile(fill_profile_f cb, uptr *stats, char *smaps,
+                            uptr smaps_len);
 
 // Simple low-level (mmap-based) allocator for internal use. Doesn't have
 // constructor, so all instances of LowLevelAllocator should be
@@ -222,8 +222,8 @@ void CatastrophicErrorWrite(const char *buffer, uptr length);
 void RawWrite(const char *buffer);
 bool ColorizeReports();
 void RemoveANSIEscapeSequencesFromString(char *buffer);
-void Printf(const char *format, ...);
-void Report(const char *format, ...);
+void Printf(const char *format, ...) FORMAT(1, 2);
+void Report(const char *format, ...) FORMAT(1, 2);
 void SetPrintfAndReportCallback(void (*callback)(const char *));
 #define VReport(level, ...)                                              \
   do {                                                                   \
@@ -237,12 +237,12 @@ void SetPrintfAndReportCallback(void (*callback)(const char *));
 // Lock sanitizer error reporting and protects against nested errors.
 class ScopedErrorReportLock {
  public:
-  ScopedErrorReportLock() ACQUIRE(mutex_) { Lock(); }
-  ~ScopedErrorReportLock() RELEASE(mutex_) { Unlock(); }
+  ScopedErrorReportLock() SANITIZER_ACQUIRE(mutex_) { Lock(); }
+  ~ScopedErrorReportLock() SANITIZER_RELEASE(mutex_) { Unlock(); }
 
-  static void Lock() ACQUIRE(mutex_);
-  static void Unlock() RELEASE(mutex_);
-  static void CheckLocked() CHECK_LOCKED(mutex_);
+  static void Lock() SANITIZER_ACQUIRE(mutex_);
+  static void Unlock() SANITIZER_RELEASE(mutex_);
+  static void CheckLocked() SANITIZER_CHECK_LOCKED(mutex_);
 
  private:
   static atomic_uintptr_t reporting_thread_;
@@ -285,7 +285,7 @@ void SetStackSizeLimitInBytes(uptr limit);
 bool AddressSpaceIsUnlimited();
 void SetAddressSpaceUnlimited();
 void AdjustStackSize(void *attr);
-void PlatformPrepareForSandboxing(__sanitizer_sandbox_arguments *args);
+void PlatformPrepareForSandboxing(void *args);
 void SetSandboxingCallback(void (*f)());
 
 void InitializeCoverage(bool enabled, const char *coverage_dir);
@@ -294,6 +294,7 @@ void InitTlsSize();
 uptr GetTlsSize();
 
 // Other
+void WaitForDebugger(unsigned seconds, const char *label);
 void SleepForSeconds(unsigned seconds);
 void SleepForMillis(unsigned millis);
 u64 NanoTime();
@@ -310,6 +311,18 @@ void NORETURN ReportMmapFailureAndDie(uptr size, const char *mem_type,
                                       const char *mmap_type, error_t err,
                                       bool raw_report = false);
 
+// Returns true if the platform-specific error reported is an OOM error.
+bool ErrorIsOOM(error_t err);
+
+// This reports an error in the form:
+//
+//   `ERROR: {{SanitizerToolName}}: out of memory: {{err_msg}}`
+//
+// Downstream tools that read sanitizer output will know that errors starting
+// in this format are specifically OOM errors.
+#define ERROR_OOM(err_msg, ...) \
+  Report("ERROR: %s: out of memory: " err_msg, SanitizerToolName, __VA_ARGS__)
+
 // Specific tools may override behavior of "Die" function to do tool-specific
 // job.
 typedef void (*DieCallbackType)(void);
@@ -324,12 +337,6 @@ bool RemoveDieCallback(DieCallbackType callback);
 void SetUserDieCallback(DieCallbackType callback);
 
 void SetCheckUnwindCallback(void (*callback)());
-
-// Callback will be called if soft_rss_limit_mb is given and the limit is
-// exceeded (exceeded==true) or if rss went down below the limit
-// (exceeded==false).
-// The callback should be registered once at the tool init time.
-void SetSoftRssLimitExceededCallback(void (*Callback)(bool exceeded));
 
 // Functions related to signal handling.
 typedef void (*SignalHandlerType)(int, void *, void *);
@@ -371,7 +378,7 @@ void ReportErrorSummary(const char *error_type, const AddressInfo &info,
 void ReportErrorSummary(const char *error_type, const StackTrace *trace,
                         const char *alt_tool_name = nullptr);
 
-void ReportMmapWriteExec(int prot);
+void ReportMmapWriteExec(int prot, int mflags);
 
 // Math
 #if SANITIZER_WINDOWS && !defined(__clang__) && !defined(__GNUC__)
@@ -419,9 +426,7 @@ inline uptr LeastSignificantSetBitIndex(uptr x) {
   return up;
 }
 
-inline bool IsPowerOfTwo(uptr x) {
-  return (x & (x - 1)) == 0;
-}
+inline constexpr bool IsPowerOfTwo(uptr x) { return (x & (x - 1)) == 0; }
 
 inline uptr RoundUpToPowerOfTwo(uptr size) {
   CHECK(size);
@@ -433,16 +438,16 @@ inline uptr RoundUpToPowerOfTwo(uptr size) {
   return 1ULL << (up + 1);
 }
 
-inline uptr RoundUpTo(uptr size, uptr boundary) {
+inline constexpr uptr RoundUpTo(uptr size, uptr boundary) {
   RAW_CHECK(IsPowerOfTwo(boundary));
   return (size + boundary - 1) & ~(boundary - 1);
 }
 
-inline uptr RoundDownTo(uptr x, uptr boundary) {
+inline constexpr uptr RoundDownTo(uptr x, uptr boundary) {
   return x & ~(boundary - 1);
 }
 
-inline bool IsAligned(uptr a, uptr alignment) {
+inline constexpr bool IsAligned(uptr a, uptr alignment) {
   return (a & (alignment - 1)) == 0;
 }
 
@@ -460,6 +465,10 @@ constexpr T Min(T a, T b) {
 template <class T>
 constexpr T Max(T a, T b) {
   return a > b ? a : b;
+}
+template <class T>
+constexpr T Abs(T a) {
+  return a < 0 ? -a : a;
 }
 template<class T> void Swap(T& a, T& b) {
   T tmp = a;
@@ -618,7 +627,7 @@ class InternalScopedString {
     buffer_.resize(1);
     buffer_[0] = '\0';
   }
-  void append(const char *format, ...);
+  void append(const char *format, ...) FORMAT(2, 3);
   const char *data() const { return buffer_.data(); }
   char *data() { return buffer_.data(); }
 
@@ -670,11 +679,9 @@ void Sort(T *v, uptr size, Compare comp = {}) {
 
 // Works like std::lower_bound: finds the first element that is not less
 // than the val.
-template <class Container,
+template <class Container, class T,
           class Compare = CompareLess<typename Container::value_type>>
-uptr InternalLowerBound(const Container &v,
-                        const typename Container::value_type &val,
-                        Compare comp = {}) {
+uptr InternalLowerBound(const Container &v, const T &val, Compare comp = {}) {
   uptr first = 0;
   uptr last = v.size();
   while (last > first) {
@@ -697,7 +704,8 @@ enum ModuleArch {
   kModuleArchARMV7S,
   kModuleArchARMV7K,
   kModuleArchARM64,
-  kModuleArchRISCV64
+  kModuleArchRISCV64,
+  kModuleArchHexagon
 };
 
 // Sorts and removes duplicates from the container.
@@ -721,12 +729,15 @@ void SortAndDedup(Container &v, Compare comp = {}) {
   v.resize(last + 1);
 }
 
+constexpr uptr kDefaultFileMaxSize = FIRST_32_SECOND_64(1 << 26, 1 << 28);
+
 // Opens the file 'file_name" and reads up to 'max_len' bytes.
 // The resulting buffer is mmaped and stored in '*buff'.
 // Returns true if file was successfully opened and read.
 bool ReadFileToVector(const char *file_name,
                       InternalMmapVectorNoCtor<char> *buff,
-                      uptr max_len = 1 << 26, error_t *errno_p = nullptr);
+                      uptr max_len = kDefaultFileMaxSize,
+                      error_t *errno_p = nullptr);
 
 // Opens the file 'file_name" and reads up to 'max_len' bytes.
 // This function is less I/O efficient than ReadFileToVector as it may reread
@@ -737,8 +748,11 @@ bool ReadFileToVector(const char *file_name,
 // The total number of read bytes is stored in '*read_len'.
 // Returns true if file was successfully opened and read.
 bool ReadFileToBuffer(const char *file_name, char **buff, uptr *buff_size,
-                      uptr *read_len, uptr max_len = 1 << 26,
+                      uptr *read_len, uptr max_len = kDefaultFileMaxSize,
                       error_t *errno_p = nullptr);
+
+int GetModuleAndOffsetForPc(uptr pc, char *module_name, uptr module_name_len,
+                            uptr *pc_offset);
 
 // When adding a new architecture, don't forget to also update
 // script/asan_symbolize.py and sanitizer_symbolizer_libcdep.cpp.
@@ -764,12 +778,14 @@ inline const char *ModuleArchToString(ModuleArch arch) {
       return "arm64";
     case kModuleArchRISCV64:
       return "riscv64";
+    case kModuleArchHexagon:
+      return "hexagon";
   }
   CHECK(0 && "Invalid module arch");
   return "";
 }
 
-const uptr kModuleUUIDSize = 16;
+const uptr kModuleUUIDSize = 32;
 const uptr kMaxSegName = 16;
 
 // Represents a binary loaded into virtual memory (e.g. this can be an
@@ -779,8 +795,9 @@ class LoadedModule {
   LoadedModule()
       : full_name_(nullptr),
         base_address_(0),
-        max_executable_address_(0),
+        max_address_(0),
         arch_(kModuleArchUnknown),
+        uuid_size_(0),
         instrumented_(false) {
     internal_memset(uuid_, 0, kModuleUUIDSize);
     ranges_.clear();
@@ -788,6 +805,7 @@ class LoadedModule {
   void set(const char *module_name, uptr base_address);
   void set(const char *module_name, uptr base_address, ModuleArch arch,
            u8 uuid[kModuleUUIDSize], bool instrumented);
+  void setUuid(const char *uuid, uptr size);
   void clear();
   void addAddressRange(uptr beg, uptr end, bool executable, bool writable,
                        const char *name = nullptr);
@@ -795,9 +813,10 @@ class LoadedModule {
 
   const char *full_name() const { return full_name_; }
   uptr base_address() const { return base_address_; }
-  uptr max_executable_address() const { return max_executable_address_; }
+  uptr max_address() const { return max_address_; }
   ModuleArch arch() const { return arch_; }
   const u8 *uuid() const { return uuid_; }
+  uptr uuid_size() const { return uuid_size_; }
   bool instrumented() const { return instrumented_; }
 
   struct AddressRange {
@@ -824,8 +843,9 @@ class LoadedModule {
  private:
   char *full_name_;  // Owned.
   uptr base_address_;
-  uptr max_executable_address_;
+  uptr max_address_;
   ModuleArch arch_;
+  uptr uuid_size_;
   u8 uuid_[kModuleUUIDSize];
   bool instrumented_;
   IntrusiveList<AddressRange> ranges_;
@@ -883,13 +903,13 @@ void WriteToSyslog(const char *buffer);
 #define SANITIZER_WIN_TRACE 0
 #endif
 
-#if SANITIZER_MAC || SANITIZER_WIN_TRACE
+#if SANITIZER_APPLE || SANITIZER_WIN_TRACE
 void LogFullErrorReport(const char *buffer);
 #else
 inline void LogFullErrorReport(const char *buffer) {}
 #endif
 
-#if SANITIZER_LINUX || SANITIZER_MAC
+#if SANITIZER_LINUX || SANITIZER_APPLE
 void WriteOneLineToSyslog(const char *s);
 void LogMessageOnPrintf(const char *str);
 #else
@@ -951,7 +971,7 @@ struct SignalContext {
   uptr sp;
   uptr bp;
   bool is_memory_access;
-  enum WriteFlag { UNKNOWN, READ, WRITE } write_flag;
+  enum WriteFlag { Unknown, Read, Write } write_flag;
 
   // In some cases the kernel cannot provide the true faulting address; `addr`
   // will be zero then.  This field allows to distinguish between these cases
@@ -1063,17 +1083,10 @@ class ArrayRef {
   T *end_ = nullptr;
 };
 
-#define PRINTF_128(v)                                                         \
-  (*((u8 *)&v + 0)), (*((u8 *)&v + 1)), (*((u8 *)&v + 2)), (*((u8 *)&v + 3)), \
-      (*((u8 *)&v + 4)), (*((u8 *)&v + 5)), (*((u8 *)&v + 6)),                \
-      (*((u8 *)&v + 7)), (*((u8 *)&v + 8)), (*((u8 *)&v + 9)),                \
-      (*((u8 *)&v + 10)), (*((u8 *)&v + 11)), (*((u8 *)&v + 12)),             \
-      (*((u8 *)&v + 13)), (*((u8 *)&v + 14)), (*((u8 *)&v + 15))
-
 }  // namespace __sanitizer
 
 inline void *operator new(__sanitizer::operator_new_size_type size,
-                          __sanitizer::LowLevelAllocator &alloc) {  // NOLINT
+                          __sanitizer::LowLevelAllocator &alloc) {
   return alloc.Allocate(size);
 }
 

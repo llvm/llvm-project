@@ -14,9 +14,18 @@
 // Add vector elements horizontally or vertically to ZA tile.
 //===----------------------------------------------------------------------===//
 
+def SDT_AArch64RDSVL  : SDTypeProfile<1, 1, [SDTCisInt<0>, SDTCisInt<1>]>;
+def AArch64rdsvl : SDNode<"AArch64ISD::RDSVL", SDT_AArch64RDSVL>;
+
 let Predicates = [HasSME] in {
+def RDSVLI_XI  : sve_int_read_vl_a<0b0, 0b11111, "rdsvl", /*streaming_sve=*/0b1>;
+def ADDSPL_XXI : sve_int_arith_vl<0b1, "addspl", /*streaming_sve=*/0b1>;
+def ADDSVL_XXI : sve_int_arith_vl<0b0, "addsvl", /*streaming_sve=*/0b1>;
+
 def ADDHA_MPPZ_S : sme_add_vector_to_tile_u32<0b0, "addha">;
 def ADDVA_MPPZ_S : sme_add_vector_to_tile_u32<0b1, "addva">;
+
+def : Pat<(AArch64rdsvl (i32 simm6_32b:$imm)), (RDSVLI_XI simm6_32b:$imm)>;
 }
 
 let Predicates = [HasSMEI64] in {
@@ -89,6 +98,12 @@ defm INSERT_MXIPZ  : sme_vector_to_tile<"mova">;
 defm EXTRACT_ZPMXI : sme_tile_to_vector<"mova">;
 
 //===----------------------------------------------------------------------===//
+// Zero instruction
+//===----------------------------------------------------------------------===//
+
+defm ZERO_M : sme_zero<"zero">;
+
+//===----------------------------------------------------------------------===//
 // Mode selection and state access instructions
 //===----------------------------------------------------------------------===//
 
@@ -132,6 +147,6 @@ def REVD_ZPmZ : sve2_int_perm_revd<"revd">;
 defm SCLAMP_ZZZ : sve2_clamp<"sclamp", 0b0>;
 defm UCLAMP_ZZZ : sve2_clamp<"uclamp", 0b1>;
 
-defm DUP_PPzPRI : sve2_int_perm_dup_p<"dup">;
+defm PSEL_PPPRI : sve2_int_perm_sel_p<"psel">;
 
 } // End let Predicates = [HasSME]

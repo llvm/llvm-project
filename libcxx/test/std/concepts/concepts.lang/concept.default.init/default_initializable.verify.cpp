@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17
-// UNSUPPORTED: libcpp-no-concepts
 
 // template<class T>
 //     concept default_initializable = constructible_from<T> &&
@@ -51,7 +50,7 @@ void test() {
     LIBCPP_STATIC_ASSERT(!std::__default_initializable<const int>);
     static_assert(!std::default_initializable<const int>);
 
-    const int x3[1]; // expected-error {{default initialization of an object of const type 'const int [1]'}}
+    const int x3[1]; // expected-error-re {{default initialization of an object of const type 'const int{{[ ]*}}[1]'}}
     const int y3[1]{};
     static_assert(std::constructible_from<const int[1]>);
     static_assert(brace_initializable<const int[1]>);

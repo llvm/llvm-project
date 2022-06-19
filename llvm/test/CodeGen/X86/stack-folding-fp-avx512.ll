@@ -336,7 +336,8 @@ define <8 x double> @stack_fold_cmppd_mask(<8 x double> %a0, <8 x double> %a1, <
 ; CHECK-NEXT:    kmovw %esi, %k1
 ; CHECK-NEXT:    kandb %k0, %k1, %k1
 ; CHECK-NEXT:    vmovupd {{[-0-9]+}}(%r{{[sb]}}p), %zmm0 # 64-byte Reload
-; CHECK-NEXT:    vblendmpd (%rsp), %zmm0, %zmm0 {%k1} # 64-byte Folded Reload
+; CHECK-NEXT:    vmovupd (%rsp), %zmm1  # 64-byte Reload
+; CHECK-NEXT:    vmovapd %zmm1, %zmm0 {%k1}
 ; CHECK-NEXT:    addq $136, %rsp
 ; CHECK-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-NEXT:    retq
@@ -369,7 +370,8 @@ define <8 x double> @stack_fold_cmppd_mask_commuted(<8 x double> %a0, <8 x doubl
 ; CHECK-NEXT:    kmovw %esi, %k1
 ; CHECK-NEXT:    kandb %k0, %k1, %k1
 ; CHECK-NEXT:    vmovupd {{[-0-9]+}}(%r{{[sb]}}p), %zmm0 # 64-byte Reload
-; CHECK-NEXT:    vblendmpd (%rsp), %zmm0, %zmm0 {%k1} # 64-byte Folded Reload
+; CHECK-NEXT:    vmovupd (%rsp), %zmm1 # 64-byte Reload
+; CHECK-NEXT:    vmovapd %zmm1, %zmm0 {%k1}
 ; CHECK-NEXT:    addq $136, %rsp
 ; CHECK-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-NEXT:    retq
@@ -421,7 +423,8 @@ define <16 x float> @stack_fold_cmpps_mask(<16 x float> %a0, <16 x float> %a1, <
 ; CHECK-NEXT:    kmovw %esi, %k1
 ; CHECK-NEXT:    kandw %k0, %k1, %k1
 ; CHECK-NEXT:    vmovups {{[-0-9]+}}(%r{{[sb]}}p), %zmm0 # 64-byte Reload
-; CHECK-NEXT:    vblendmps (%rsp), %zmm0, %zmm0 {%k1} # 64-byte Folded Reload
+; CHECK-NEXT:    vmovups (%rsp), %zmm1 # 64-byte Reload
+; CHECK-NEXT:    vmovaps %zmm1, %zmm0 {%k1}
 ; CHECK-NEXT:    addq $136, %rsp
 ; CHECK-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-NEXT:    retq
@@ -454,7 +457,8 @@ define <16 x float> @stack_fold_cmpps_mask_commuted(<16 x float> %a0, <16 x floa
 ; CHECK-NEXT:    kmovw %esi, %k1
 ; CHECK-NEXT:    kandw %k0, %k1, %k1
 ; CHECK-NEXT:    vmovups {{[-0-9]+}}(%r{{[sb]}}p), %zmm0 # 64-byte Reload
-; CHECK-NEXT:    vblendmps (%rsp), %zmm0, %zmm0 {%k1} # 64-byte Folded Reload
+; CHECK-NEXT:    vmovups (%rsp), %zmm1 # 64-byte Reload
+; CHECK-NEXT:    vmovaps %zmm1, %zmm0 {%k1}
 ; CHECK-NEXT:    addq $136, %rsp
 ; CHECK-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-NEXT:    retq

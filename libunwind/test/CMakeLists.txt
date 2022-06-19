@@ -11,7 +11,7 @@ if (NOT DEFINED LIBCXX_ENABLE_SHARED)
   set(LIBCXX_ENABLE_SHARED ON)
 endif()
 
-pythonize_bool(LIBUNWIND_BUILD_32_BITS)
+pythonize_bool(LIBUNWIND_ENABLE_CET)
 pythonize_bool(LIBCXX_ENABLE_SHARED)
 pythonize_bool(LIBUNWIND_ENABLE_SHARED)
 pythonize_bool(LIBUNWIND_ENABLE_THREADS)
@@ -36,12 +36,10 @@ if (LLVM_USE_SANITIZER)
   serialize_lit_param(use_sanitizer "\"${LLVM_USE_SANITIZER}\"")
 endif()
 
-if (LIBUNWIND_TARGET_TRIPLE)
-  serialize_lit_param(target_triple "\"${LIBUNWIND_TARGET_TRIPLE}\"")
-endif()
-
-if (LIBUNWIND_BUILD_32_BITS)
-  serialize_lit_param(enable_32bit True)
+if (CMAKE_CXX_COMPILER_TARGET)
+  serialize_lit_param(target_triple "\"${CMAKE_CXX_COMPILER_TARGET}\"")
+else()
+  serialize_lit_param(target_triple "\"${LLVM_DEFAULT_TARGET_TRIPLE}\"")
 endif()
 
 foreach(param IN LISTS LIBUNWIND_TEST_PARAMS)
@@ -49,6 +47,10 @@ foreach(param IN LISTS LIBUNWIND_TEST_PARAMS)
   string(REGEX REPLACE "(.+)=(.+)" "\\2" value "${param}")
   serialize_lit_param("${name}" "\"${value}\"")
 endforeach()
+
+configure_file("${CMAKE_CURRENT_SOURCE_DIR}/configs/cmake-bridge.cfg.in"
+               "${CMAKE_CURRENT_BINARY_DIR}/cmake-bridge.cfg"
+               @ONLY)
 
 configure_lit_site_cfg(
   "${LIBUNWIND_TEST_CONFIG}"

@@ -1,5 +1,26 @@
 include(GetLibraryName)
 
+# Ensure that libSupport does not carry any static global initializer.
+# libSupport can be embedded in use cases where we don't want to load all
+# cl::opt unless we want to parse the command line.
+# ManagedStatic can be used to enable lazy-initialization of globals.
+# We don't use `add_flag_if_supported` as instead of compiling an empty file we
+# check if the current platform is able to compile global std::mutex with this
+# flag (Linux can, Darwin can't for example).
+check_cxx_compiler_flag("-Werror=global-constructors" HAS_WERROR_GLOBAL_CTORS)
+if (HAS_WERROR_GLOBAL_CTORS)
+  SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Werror=global-constructors")
+  CHECK_CXX_SOURCE_COMPILES("
+  #include <mutex>
+  static std::mutex TestGlobalCtorDtor;
+  static std::recursive_mutex TestGlobalCtorDtor2;
+  int main() { (void)TestGlobalCtorDtor; (void)TestGlobalCtorDtor2; return 0;}
+  " LLVM_HAS_NOGLOBAL_CTOR_MUTEX)
+  if (NOT LLVM_HAS_NOGLOBAL_CTOR_MUTEX)
+    string(REPLACE "-Werror=global-constructors" "" CMAKE_CXX_FLAGS ${CMAKE_CXX_FLAGS})
+  endif()
+endif()
+
 if(LLVM_ENABLE_ZLIB)
   set(imported_libs ZLIB::ZLIB)
 endif()
@@ -24,7 +45,7 @@ elseif( CMAKE_HOST_UNIX )
     set(system_libs ${system_libs} ${Backtrace_LIBFILE})
   endif()
   if( LLVM_ENABLE_TERMINFO )
-    set(imported_libs ${imported_libs} "${TERMINFO_LIB}")
+    set(imported_libs ${imported_libs} Terminfo::terminfo)
   endif()
   if( LLVM_ENABLE_THREADS AND (HAVE_LIBATOMIC OR HAVE_CXX_LIBATOMICS64) )
     set(system_libs ${system_libs} atomic)
@@ -69,7 +90,7 @@ if(LLVM_INTEGRATED_CRT_ALLOC)
     add_definitions(-DENABLE_OVERRIDE -DENABLE_PRELOAD)
     set(ALLOCATOR_FILES "${LLVM_INTEGRATED_CRT_ALLOC}/rpmalloc/rpmalloc.c")
   elseif(LLVM_INTEGRATED_CRT_ALLOC MATCHES "snmalloc$")
-    set(ALLOCATOR_FILES "${LLVM_INTEGRATED_CRT_ALLOC}/src/override/malloc.cc" "${LLVM_INTEGRATED_CRT_ALLOC}/src/override/new.cc")
+    set(ALLOCATOR_FILES "${LLVM_INTEGRATED_CRT_ALLOC}/src/snmalloc/override/new.cc")
     set(system_libs ${system_libs} "mincore.lib" "-INCLUDE:malloc")
   elseif(LLVM_INTEGRATED_CRT_ALLOC MATCHES "mimalloc$")
     set(MIMALLOC_LIB "${LLVM_INTEGRATED_CRT_ALLOC}/out/msvc-x64/Release/mimalloc-static.lib")
@@ -80,7 +101,10 @@ if(LLVM_INTEGRATED_CRT_ALLOC)
   endif()
 endif()
 
+add_subdirectory(BLAKE3)
+
 add_llvm_component_library(LLVMSupport
+  AddressRanges.cpp
   AArch64TargetParser.cpp
   ABIBreak.cpp
   ARMTargetParser.cpp
@@ -102,6 +126,7 @@ add_llvm_component_library(LLVMSupport
   BranchProbability.cpp
   BuryPointer.cpp
   CachePruning.cpp
+  Caching.cpp
   circular_raw_ostream.cpp
   Chrono.cpp
   COM.cpp
@@ -112,10 +137,14 @@ add_llvm_component_library(LLVMSupport
   ConvertUTF.cpp
   ConvertUTFWrapper.cpp
   CrashRecoveryContext.cpp
+  CSKYAttributes.cpp
+  CSKYAttributeParser.cpp
+  CSKYTargetParser.cpp
   DataExtractor.cpp
   Debug.cpp
   DebugCounter.cpp
   DeltaAlgorithm.cpp
+  DivisionByConstantInfo.cpp
   DAGDeltaAlgorithm.cpp
   DJB.cpp
   ELFAttributeParser.cpp
@@ -150,6 +179,8 @@ add_llvm_component_library(LLVMSupport
   MemoryBuffer.cpp
   MemoryBufferRef.cpp
   MD5.cpp
+  MSP430Attributes.cpp
+  MSP430AttributeParser.cpp
   NativeFormatting.cpp
   OptimizedStructLayout.cpp
   Optional.cpp
@@ -160,6 +191,7 @@ add_llvm_component_library(LLVMSupport
   Regex.cpp
   RISCVAttributes.cpp
   RISCVAttributeParser.cpp
+  RISCVISAInfo.cpp
   ScaledNumber.cpp
   ScopedPrinter.cpp
   SHA1.cpp
@@ -206,6 +238,7 @@ add_llvm_component_library(LLVMSupport
   Z3Solver.cpp
 
   ${ALLOCATOR_FILES}
+  $<TARGET_OBJECTS:LLVMSupportBlake3>
 
 # System
   Atomic.cpp
@@ -218,7 +251,6 @@ add_llvm_component_library(LLVMSupport
   Program.cpp
   RWMutex.cpp
   Signals.cpp
-  TargetRegistry.cpp
   ThreadLocal.cpp
   Threading.cpp
   Valgrind.cpp
@@ -256,7 +288,10 @@ if(LLVM_ENABLE_ZLIB)
 endif()
 
 if(LLVM_ENABLE_TERMINFO)
-  get_library_name(${TERMINFO_LIB} terminfo_library)
+  if(NOT terminfo_library)
+    get_property(terminfo_library TARGET Terminfo::terminfo PROPERTY LOCATION)
+  endif()
+  get_library_name(${terminfo_library} terminfo_library)
   set(llvm_system_libs ${llvm_system_libs} "${terminfo_library}")
 endif()
 

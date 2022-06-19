@@ -11,7 +11,6 @@
 ; RUN: opt -S -o - -instcombine -globalopt -data-layout="e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64" < %s | FileCheck --check-prefix=TO %s
 
 ; "SCEV" - ScalarEvolution with default target layout
-; RUN: opt -analyze -scalar-evolution < %s -enable-new-pm=0 | FileCheck --check-prefix=SCEV %s
 ; RUN: opt -passes='print<scalar-evolution>' < %s -disable-output 2>&1 | FileCheck --check-prefix=SCEV %s
 
 
@@ -49,15 +48,15 @@
 ; simplifications on sizeof, alignof, and offsetof expressions. The
 ; target-dependent folder should fold these down to constants.
 
-; PLAIN: @a = constant i64 mul (i64 ptrtoint (double* getelementptr (double, double* null, i32 1) to i64), i64 2310)
-; PLAIN: @b = constant i64 ptrtoint (double* getelementptr ({ i1, double }, { i1, double }* null, i64 0, i32 1) to i64)
-; PLAIN: @c = constant i64 mul nuw (i64 ptrtoint (double* getelementptr (double, double* null, i32 1) to i64), i64 2)
-; PLAIN: @d = constant i64 mul nuw (i64 ptrtoint (double* getelementptr (double, double* null, i32 1) to i64), i64 11)
+; PLAIN: @a = constant i64 mul (i64 ptrtoint ({ [7 x double], [7 x double] }* getelementptr ({ [7 x double], [7 x double] }, { [7 x double], [7 x double] }* null, i64 11) to i64), i64 15)
+; PLAIN: @b = constant i64 ptrtoint ([13 x double]* getelementptr ({ i1, [13 x double] }, { i1, [13 x double] }* null, i64 0, i32 1) to i64)
+; PLAIN: @c = constant i64 ptrtoint (double* getelementptr ({ double, double, double, double }, { double, double, double, double }* null, i64 0, i32 2) to i64)
+; PLAIN: @d = constant i64 ptrtoint (double* getelementptr ([13 x double], [13 x double]* null, i64 0, i32 11) to i64)
 ; PLAIN: @e = constant i64 ptrtoint (double* getelementptr ({ double, float, double, double }, { double, float, double, double }* null, i64 0, i32 2) to i64)
-; PLAIN: @f = constant i64 1
-; PLAIN: @g = constant i64 ptrtoint (double* getelementptr ({ i1, double }, { i1, double }* null, i64 0, i32 1) to i64)
-; PLAIN: @h = constant i64 ptrtoint (i1** getelementptr (i1*, i1** null, i32 1) to i64)
-; PLAIN: @i = constant i64 ptrtoint (i1** getelementptr ({ i1, i1* }, { i1, i1* }* null, i64 0, i32 1) to i64)
+; PLAIN: @f = constant i64 ptrtoint (<{ i16, i128 }>* getelementptr ({ i1, <{ i16, i128 }> }, { i1, <{ i16, i128 }> }* null, i64 0, i32 1) to i64)
+; PLAIN: @g = constant i64 ptrtoint ({ double, double }* getelementptr ({ i1, { double, double } }, { i1, { double, double } }* null, i64 0, i32 1) to i64)
+; PLAIN: @h = constant i64 ptrtoint (double** getelementptr (double*, double** null, i64 1) to i64)
+; PLAIN: @i = constant i64 ptrtoint (double** getelementptr ({ i1, double* }, { i1, double* }* null, i64 0, i32 1) to i64)
 ; OPT: @a = local_unnamed_addr constant i64 18480
 ; OPT: @b = local_unnamed_addr constant i64 8
 ; OPT: @c = local_unnamed_addr constant i64 16
@@ -222,19 +221,19 @@ define i1* @hoo1() nounwind {
 }
 
 ; PLAIN: define i64 @fa() #0 {
-; PLAIN:   %t = bitcast i64 mul (i64 ptrtoint (double* getelementptr (double, double* null, i32 1) to i64), i64 2310) to i64
+; PLAIN:   %t = bitcast i64 mul (i64 ptrtoint ({ [7 x double], [7 x double] }* getelementptr ({ [7 x double], [7 x double] }, { [7 x double], [7 x double] }* null, i64 11) to i64), i64 15) to i64
 ; PLAIN:   ret i64 %t
 ; PLAIN: }
 ; PLAIN: define i64 @fb() #0 {
-; PLAIN:   %t = bitcast i64 ptrtoint (double* getelementptr ({ i1, double }, { i1, double }* null, i64 0, i32 1) to i64) to i64
+; PLAIN:   %t = bitcast i64 ptrtoint ([13 x double]* getelementptr ({ i1, [13 x double] }, { i1, [13 x double] }* null, i64 0, i32 1) to i64) to i64
 ; PLAIN:   ret i64 %t
 ; PLAIN: }
 ; PLAIN: define i64 @fc() #0 {
-; PLAIN:   %t = bitcast i64 mul nuw (i64 ptrtoint (double* getelementptr (double, double* null, i32 1) to i64), i64 2) to i64
+; PLAIN:   %t = bitcast i64 ptrtoint (double* getelementptr ({ double, double, double, double }, { double, double, double, double }* null, i64 0, i32 2) to i64) to i64
 ; PLAIN:   ret i64 %t
 ; PLAIN: }
 ; PLAIN: define i64 @fd() #0 {
-; PLAIN:   %t = bitcast i64 mul nuw (i64 ptrtoint (double* getelementptr (double, double* null, i32 1) to i64), i64 11) to i64
+; PLAIN:   %t = bitcast i64 ptrtoint (double* getelementptr ([13 x double], [13 x double]* null, i64 0, i32 11) to i64) to i64
 ; PLAIN:   ret i64 %t
 ; PLAIN: }
 ; PLAIN: define i64 @fe() #0 {
@@ -242,19 +241,19 @@ define i1* @hoo1() nounwind {
 ; PLAIN:   ret i64 %t
 ; PLAIN: }
 ; PLAIN: define i64 @ff() #0 {
-; PLAIN:   %t = bitcast i64 1 to i64
+; PLAIN:   %t = bitcast i64 ptrtoint (<{ i16, i128 }>* getelementptr ({ i1, <{ i16, i128 }> }, { i1, <{ i16, i128 }> }* null, i64 0, i32 1) to i64) to i64
 ; PLAIN:   ret i64 %t
 ; PLAIN: }
 ; PLAIN: define i64 @fg() #0 {
-; PLAIN:   %t = bitcast i64 ptrtoint (double* getelementptr ({ i1, double }, { i1, double }* null, i64 0, i32 1) to i64) to i64
+; PLAIN:   %t = bitcast i64 ptrtoint ({ double, double }* getelementptr ({ i1, { double, double } }, { i1, { double, double } }* null, i64 0, i32 1) to i64) to i64
 ; PLAIN:   ret i64 %t
 ; PLAIN: }
 ; PLAIN: define i64 @fh() #0 {
-; PLAIN:   %t = bitcast i64 ptrtoint (i1** getelementptr (i1*, i1** null, i32 1) to i64) to i64
+; PLAIN:   %t = bitcast i64 ptrtoint (double** getelementptr (double*, double** null, i32 1) to i64) to i64
 ; PLAIN:   ret i64 %t
 ; PLAIN: }
 ; PLAIN: define i64 @fi() #0 {
-; PLAIN:   %t = bitcast i64 ptrtoint (i1** getelementptr ({ i1, i1* }, { i1, i1* }* null, i64 0, i32 1) to i64) to i64
+; PLAIN:   %t = bitcast i64 ptrtoint (double** getelementptr ({ i1, double* }, { i1, double* }* null, i64 0, i32 1) to i64) to i64
 ; PLAIN:   ret i64 %t
 ; PLAIN: }
 ; OPT: define i64 @fa() local_unnamed_addr #0 {
@@ -311,32 +310,32 @@ define i1* @hoo1() nounwind {
 ; TO: define i64 @fi() local_unnamed_addr #0 {
 ; TO:   ret i64 8
 ; TO: }
-; SCEV: Classifying expressions for: @fa
-; SCEV:   %t = bitcast i64 mul (i64 ptrtoint (double* getelementptr (double, double* null, i32 1) to i64), i64 2310) to i64
+; SCEV-LABEL: Classifying expressions for: @fa
+; SCEV:   %t = bitcast i64 mul (i64 ptrtoint ({ [7 x double], [7 x double] }* getelementptr ({ [7 x double], [7 x double] }, { [7 x double], [7 x double] }* null, i64 11) to i64), i64 15) to i64
 ; SCEV:   -->  18480
-; SCEV: Classifying expressions for: @fb
-; SCEV:   %t = bitcast i64 ptrtoint (double* getelementptr ({ i1, double }, { i1, double }* null, i64 0, i32 1) to i64) to i64
+; SCEV-LABEL: Classifying expressions for: @fb
+; SCEV:  %t = bitcast i64 ptrtoint ([13 x double]* getelementptr ({ i1, [13 x double] }, { i1, [13 x double] }* null, i64 0, i32 1) to i64) to i64
 ; SCEV:   -->  8
-; SCEV: Classifying expressions for: @fc
-; SCEV:   %t = bitcast i64 mul nuw (i64 ptrtoint (double* getelementptr (double, double* null, i32 1) to i64), i64 2) to i64
+; SCEV-LABEL: Classifying expressions for: @fc
+; SCEV:  %t = bitcast i64 ptrtoint (double* getelementptr ({ double, double, double, double }, { double, double, double, double }* null, i64 0, i32 2) to i64) to i64
 ; SCEV:   -->  16
-; SCEV: Classifying expressions for: @fd
-; SCEV:   %t = bitcast i64 mul nuw (i64 ptrtoint (double* getelementptr (double, double* null, i32 1) to i64), i64 11) to i64
+; SCEV-LABEL: Classifying expressions for: @fd
+; SCEV:   %t = bitcast i64 ptrtoint (double* getelementptr ([13 x double], [13 x double]* null, i64 0, i32 11) to i64) to i64
 ; SCEV:   -->  88
-; SCEV: Classifying expressions for: @fe
+; SCEV-LABEL: Classifying expressions for: @fe
 ; SCEV:   %t = bitcast i64 ptrtoint (double* getelementptr ({ double, float, double, double }, { double, float, double, double }* null, i64 0, i32 2) to i64) to i64
 ; SCEV:   -->  16
-; SCEV: Classifying expressions for: @ff
-; SCEV:   %t = bitcast i64 1 to i64
+; SCEV-LABEL: Classifying expressions for: @ff
+; SCEV:   %t = bitcast i64 ptrtoint (<{ i16, i128 }>* getelementptr ({ i1, <{ i16, i128 }> }, { i1, <{ i16, i128 }> }* null, i64 0, i32 1) to i64) to i64
 ; SCEV:   -->  1
-; SCEV: Classifying expressions for: @fg
-; SCEV:   %t = bitcast i64 ptrtoint (double* getelementptr ({ i1, double }, { i1, double }* null, i64 0, i32 1) to i64) to i64
+; SCEV-LABEL: Classifying expressions for: @fg
+; SCEV:   %t = bitcast i64 ptrtoint ({ double, double }* getelementptr ({ i1, { double, double } }, { i1, { double, double } }* null, i64 0, i32 1) to i64) to i64
 ; SCEV:   -->  8
-; SCEV: Classifying expressions for: @fh
-; SCEV:   %t = bitcast i64 ptrtoint (i1** getelementptr (i1*, i1** null, i32 1) to i64) to i64
+; SCEV-LABEL: Classifying expressions for: @fh
+; SCEV:   %t = bitcast i64 ptrtoint (double** getelementptr (double*, double** null, i32 1) to i64) to i64
 ; SCEV:   --> 8
-; SCEV: Classifying expressions for: @fi
-; SCEV:   %t = bitcast i64 ptrtoint (i1** getelementptr ({ i1, i1* }, { i1, i1* }* null, i64 0, i32 1) to i64) to i64
+; SCEV-LABEL: Classifying expressions for: @fi
+; SCEV:   %t = bitcast i64 ptrtoint (double** getelementptr ({ i1, double* }, { i1, double* }* null, i64 0, i32 1) to i64) to i64
 ; SCEV:   --> 8
 
 define i64 @fa() nounwind {

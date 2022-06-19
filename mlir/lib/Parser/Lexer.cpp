@@ -12,16 +12,13 @@
 
 #include "Lexer.h"
 #include "mlir/IR/Diagnostics.h"
-#include "mlir/IR/Identifier.h"
 #include "mlir/IR/Location.h"
 #include "mlir/IR/MLIRContext.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/Support/SourceMgr.h"
-using namespace mlir;
 
-using llvm::SMLoc;
-using llvm::SourceMgr;
+using namespace mlir;
 
 // Returns true if 'c' is an allowable punctuation character: [$._-]
 // Returns false otherwise.
@@ -38,7 +35,7 @@ Lexer::Lexer(const llvm::SourceMgr &sourceMgr, MLIRContext *context)
 
 /// Encode the specified source location information into an attribute for
 /// attachment to the IR.
-Location Lexer::getEncodedSourceLocation(llvm::SMLoc loc) {
+Location Lexer::getEncodedSourceLocation(SMLoc loc) {
   auto &sourceMgr = getSourceMgr();
   unsigned mainFileID = sourceMgr.getMainFileID();
 
@@ -129,6 +126,9 @@ Token Lexer::lexToken() {
 
     case '?':
       return formToken(Token::question, tokStart);
+
+    case '|':
+      return formToken(Token::vertical_bar, tokStart);
 
     case '/':
       if (*curPtr == '/') {

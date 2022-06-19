@@ -10,7 +10,6 @@
 
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/BinaryFormat/Dwarf.h"
-#include "llvm/DebugInfo/DWARF/DWARFRelocMap.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/DJB.h"
 #include "llvm/Support/Errc.h"
@@ -767,7 +766,7 @@ LLVM_DUMP_METHOD void DWARFDebugNames::NameIndex::dump(ScopedPrinter &W) const {
   }
 
   W.startLine() << "Hash table not present\n";
-  for (NameTableEntry NTE : *this)
+  for (const NameTableEntry &NTE : *this)
     dumpName(W, NTE, None);
 }
 
@@ -799,7 +798,7 @@ DWARFDebugNames::ValueIterator::findEntryOffsetInCurrentIndex() {
   const Header &Hdr = CurrentIndex->Hdr;
   if (Hdr.BucketCount == 0) {
     // No Hash Table, We need to search through all names in the Name Index.
-    for (NameTableEntry NTE : *CurrentIndex) {
+    for (const NameTableEntry &NTE : *CurrentIndex) {
       if (NTE.getString() == Key)
         return NTE.getEntryOffset();
     }

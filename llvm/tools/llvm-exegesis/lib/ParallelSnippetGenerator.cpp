@@ -186,25 +186,59 @@ ParallelSnippetGenerator::generateCodeTemplates(
     return getSingleton(std::move(CT));
   }
   // No tied variables, we pick random values for defs.
+
+  // We don't want to accidentally serialize the instruction,
+  // so we must be sure that we don't pick a def that is an implicit use,
+  // or a use that is an implicit def, so record implicit regs now.
+  BitVector ImplicitUses(State.getRegInfo().getNumRegs());
+  BitVector ImplicitDefs(State.getRegInfo().getNumRegs());
+  for (const auto &Op : Instr.Operands) {
+    if (Op.isReg() && Op.isImplicit() && !Op.isMemory()) {
+      assert(Op.isImplicitReg() && "Not an implicit register operand?");
+      if (Op.isUse())
+        ImplicitUses.set(Op.getImplicitReg());
+      else {
+        assert(Op.isDef() && "Not a use and not a def?");
+        ImplicitDefs.set(Op.getImplicitReg());
+      }
+    }
+  }
+  const auto ImplicitUseAliases =
+      getAliasedBits(State.getRegInfo(), ImplicitUses);
+  const auto ImplicitDefAliases =
+      getAliasedBits(State.getRegInfo(), ImplicitDefs);
   BitVector Defs(State.getRegInfo().getNumRegs());
   for (const auto &Op : Instr.Operands) {
     if (Op.isReg() && Op.isExplicit() && Op.isDef() && !Op.isMemory()) {
       auto PossibleRegisters = Op.getRegisterAliasing().sourceBits();
-      // Do not use forbidden registers.
+      // Do not use forbidden registers and regs that are implicitly used.
+      // Note that we don't try to avoid using implicit defs explicitly.
       remove(PossibleRegisters, ForbiddenRegisters);
-      assert(PossibleRegisters.any() && "No register left to choose from");
+      remove(PossibleRegisters, ImplicitUseAliases);
+      if (!PossibleRegisters.any())
+        return make_error<StringError>(
+            Twine("no available registers:\ncandidates:\n")
+                .concat(debugString(State.getRegInfo(),
+                                    Op.getRegisterAliasing().sourceBits()))
+                .concat("\nforbidden:\n")
+                .concat(debugString(State.getRegInfo(), ForbiddenRegisters))
+                .concat("\nimplicit use:\n")
+                .concat(debugString(State.getRegInfo(), ImplicitUseAliases)),
+            inconvertibleErrorCode());
       const auto RandomReg = randomBit(PossibleRegisters);
       Defs.set(RandomReg);
       Variant.getValueFor(Op) = MCOperand::createReg(RandomReg);
     }
   }
   // And pick random use values that are not reserved and don't alias with defs.
+  // Note that we don't try to avoid using implicit uses explicitly.
   const auto DefAliases = getAliasedBits(State.getRegInfo(), Defs);
   for (const auto &Op : Instr.Operands) {
     if (Op.isReg() && Op.isExplicit() && Op.isUse() && !Op.isMemory()) {
       auto PossibleRegisters = Op.getRegisterAliasing().sourceBits();
       remove(PossibleRegisters, ForbiddenRegisters);
       remove(PossibleRegisters, DefAliases);
+      remove(PossibleRegisters, ImplicitDefAliases);
       assert(PossibleRegisters.any() && "No register left to choose from");
       const auto RandomReg = randomBit(PossibleRegisters);
       Variant.getValueFor(Op) = MCOperand::createReg(RandomReg);

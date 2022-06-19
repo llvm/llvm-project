@@ -145,7 +145,7 @@ static uint64_t getSectionLMA(const ELFFile<ELFT> &Obj,
                               const object::ELFSectionRef &Sec) {
   auto PhdrRangeOrErr = Obj.program_headers();
   if (!PhdrRangeOrErr)
-    report_fatal_error(toString(PhdrRangeOrErr.takeError()));
+    report_fatal_error(Twine(toString(PhdrRangeOrErr.takeError())));
 
   // Search for a PT_LOAD segment containing the requested section. Use this
   // segment's p_addr to calculate the section's LMA.
@@ -171,8 +171,12 @@ uint64_t objdump::getELFSectionLMA(const object::ELFSectionRef &Sec) {
 
 template <class ELFT>
 static void printDynamicSection(const ELFFile<ELFT> &Elf, StringRef Filename) {
-  ArrayRef<typename ELFT::Dyn> DynamicEntries =
-      unwrapOrError(Elf.dynamicEntries(), Filename);
+  auto DynamicEntriesOrErr = Elf.dynamicEntries();
+  if (!DynamicEntriesOrErr) {
+    reportWarning(toString(DynamicEntriesOrErr.takeError()), Filename);
+    return;
+  }
+  ArrayRef<typename ELFT::Dyn> DynamicEntries = *DynamicEntriesOrErr;
 
   // Find the maximum tag name length to format the value column properly.
   size_t MaxLen = 0;

@@ -8,7 +8,6 @@
 
 #include "PrettyCompilandDumper.h"
 
-#include "LinePrinter.h"
 #include "PrettyFunctionDumper.h"
 #include "llvm-pdbutil.h"
 

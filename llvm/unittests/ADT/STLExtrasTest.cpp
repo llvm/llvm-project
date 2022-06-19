@@ -9,6 +9,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include "gtest/gtest.h"
 
+#include <climits>
 #include <list>
 #include <vector>
 
@@ -307,6 +308,13 @@ TEST(STLExtrasTest, ToVector) {
     EXPECT_EQ(I, Enumerated[I].index());
     EXPECT_EQ(v[I], Enumerated[I].value());
   }
+
+  auto EnumeratedImplicitSize = to_vector(enumerate(v));
+  ASSERT_EQ(3u, EnumeratedImplicitSize.size());
+  for (size_t I = 0; I < v.size(); ++I) {
+    EXPECT_EQ(I, EnumeratedImplicitSize[I].index());
+    EXPECT_EQ(v[I], EnumeratedImplicitSize[I].value());
+  }
 }
 
 TEST(STLExtrasTest, ConcatRange) {
@@ -448,6 +456,30 @@ TEST(STLExtrasTest, DropBeginDefaultTest) {
     i += 1;
   }
   EXPECT_EQ(i, 5);
+}
+
+TEST(STLExtrasTest, DropEndTest) {
+  SmallVector<int, 5> vec{0, 1, 2, 3, 4};
+
+  for (int n = 0; n < 5; ++n) {
+    int i = 0;
+    for (auto &v : drop_end(vec, n)) {
+      EXPECT_EQ(v, i);
+      i += 1;
+    }
+    EXPECT_EQ(i, 5 - n);
+  }
+}
+
+TEST(STLExtrasTest, DropEndDefaultTest) {
+  SmallVector<int, 5> vec{0, 1, 2, 3, 4};
+
+  int i = 0;
+  for (auto &v : drop_end(vec)) {
+    EXPECT_EQ(v, i);
+    i += 1;
+  }
+  EXPECT_EQ(i, 4);
 }
 
 TEST(STLExtrasTest, EarlyIncrementTest) {
@@ -874,6 +906,116 @@ TEST(STLExtrasTest, MakeVisitorLifetimeSemanticsLValue) {
   EXPECT_EQ(1, Copies);
   EXPECT_EQ(0, Moves);
   EXPECT_EQ(2, Destructors);
+}
+
+TEST(STLExtrasTest, AllOfZip) {
+  std::vector<int> v1 = {0, 4, 2, 1};
+  std::vector<int> v2 = {1, 4, 3, 6};
+  EXPECT_TRUE(all_of_zip(v1, v2, [](int v1, int v2) { return v1 <= v2; }));
+  EXPECT_FALSE(all_of_zip(v1, v2, [](int L, int R) { return L < R; }));
+
+  // Triple vectors
+  std::vector<int> v3 = {1, 6, 5, 7};
+  EXPECT_EQ(true, all_of_zip(v1, v2, v3, [](int a, int b, int c) {
+              return a <= b && b <= c;
+            }));
+  EXPECT_EQ(false, all_of_zip(v1, v2, v3, [](int a, int b, int c) {
+              return a < b && b < c;
+            }));
+
+  // Shorter vector should fail even with an always-true predicate.
+  std::vector<int> v_short = {1, 4};
+  EXPECT_EQ(false, all_of_zip(v1, v_short, [](int, int) { return true; }));
+  EXPECT_EQ(false,
+            all_of_zip(v1, v2, v_short, [](int, int, int) { return true; }));
+}
+
+TEST(STLExtrasTest, TypesAreDistinct) {
+  EXPECT_TRUE((llvm::TypesAreDistinct<>::value));
+  EXPECT_TRUE((llvm::TypesAreDistinct<int>::value));
+  EXPECT_FALSE((llvm::TypesAreDistinct<int, int>::value));
+  EXPECT_TRUE((llvm::TypesAreDistinct<int, float>::value));
+  EXPECT_FALSE((llvm::TypesAreDistinct<int, float, int>::value));
+  EXPECT_TRUE((llvm::TypesAreDistinct<int, float, double>::value));
+  EXPECT_FALSE((llvm::TypesAreDistinct<int, float, double, float>::value));
+  EXPECT_TRUE((llvm::TypesAreDistinct<int, int *>::value));
+  EXPECT_TRUE((llvm::TypesAreDistinct<int, int &>::value));
+  EXPECT_TRUE((llvm::TypesAreDistinct<int, int &&>::value));
+  EXPECT_TRUE((llvm::TypesAreDistinct<int, const int>::value));
+}
+
+TEST(STLExtrasTest, FirstIndexOfType) {
+  EXPECT_EQ((llvm::FirstIndexOfType<int, int>::value), 0u);
+  EXPECT_EQ((llvm::FirstIndexOfType<int, int, int>::value), 0u);
+  EXPECT_EQ((llvm::FirstIndexOfType<int, float, int>::value), 1u);
+  EXPECT_EQ((llvm::FirstIndexOfType<int const *, float, int, int const *,
+                                    const int>::value),
+            2u);
+}
+
+TEST(STLExtrasTest, TypeAtIndex) {
+  EXPECT_TRUE((std::is_same<int, llvm::TypeAtIndex<0, int>>::value));
+  EXPECT_TRUE((std::is_same<int, llvm::TypeAtIndex<0, int, float>>::value));
+  EXPECT_TRUE((std::is_same<float, llvm::TypeAtIndex<1, int, float>>::value));
+  EXPECT_TRUE(
+      (std::is_same<float, llvm::TypeAtIndex<1, int, float, double>>::value));
+  EXPECT_TRUE(
+      (std::is_same<float, llvm::TypeAtIndex<1, int, float, double>>::value));
+  EXPECT_TRUE(
+      (std::is_same<double, llvm::TypeAtIndex<2, int, float, double>>::value));
+}
+
+enum Doggos {
+  Floofer,
+  Woofer,
+  SubWoofer,
+  Pupper,
+  Pupperino,
+  Longboi,
+};
+
+TEST(STLExtrasTest, IsContainedInitializerList) {
+  EXPECT_TRUE(is_contained({Woofer, SubWoofer}, Woofer));
+  EXPECT_TRUE(is_contained({Woofer, SubWoofer}, SubWoofer));
+  EXPECT_FALSE(is_contained({Woofer, SubWoofer}, Pupper));
+  EXPECT_FALSE(is_contained({}, Longboi));
+
+  static_assert(is_contained({Woofer, SubWoofer}, SubWoofer), "SubWoofer!");
+  static_assert(!is_contained({Woofer, SubWoofer}, Pupper), "Missing Pupper!");
+
+  EXPECT_TRUE(is_contained({1, 2, 3, 4}, 3));
+  EXPECT_FALSE(is_contained({1, 2, 3, 4}, 5));
+
+  static_assert(is_contained({1, 2, 3, 4}, 3), "It's there!");
+  static_assert(!is_contained({1, 2, 3, 4}, 5), "It's not there :(");
+}
+
+TEST(STLExtrasTest, addEnumValues) {
+  enum A { Zero = 0, One = 1 };
+  enum B { IntMax = INT_MAX, ULongLongMax = ULLONG_MAX };
+  enum class C : unsigned { Two = 2 };
+
+  // Non-fixed underlying types, with same underlying types
+  static_assert(addEnumValues(Zero, One) == 1,
+                "addEnumValues(Zero, One) failed.");
+  static_assert(addEnumValues(IntMax, ULongLongMax) ==
+                    INT_MAX + static_cast<unsigned long long>(ULLONG_MAX),
+                "addEnumValues(IntMax, ULongLongMax) failed.");
+  // Non-fixed underlying types, with different underlying types
+  static_assert(addEnumValues(Zero, IntMax) == INT_MAX,
+                "addEnumValues(Zero, IntMax) failed.");
+  static_assert(addEnumValues(One, ULongLongMax) ==
+                    1 + static_cast<unsigned long long>(ULLONG_MAX),
+                "addEnumValues(One, ULongLongMax) failed.");
+  // Non-fixed underlying type enum and fixed underlying type enum, with same
+  // underlying types
+  static_assert(addEnumValues(One, C::Two) == 3,
+                "addEnumValues(One, C::Two) failed.");
+  // Non-fixed underlying type enum and fixed underlying type enum, with
+  // different underlying types
+  static_assert(addEnumValues(ULongLongMax, C::Two) ==
+                    static_cast<unsigned long long>(ULLONG_MAX) + 2,
+                "addEnumValues(ULongLongMax, C::Two) failed.");
 }
 
 } // namespace

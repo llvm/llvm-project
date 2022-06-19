@@ -300,6 +300,7 @@ KEYWORD(if                          , KEYALL)
 KEYWORD(inline                      , KEYC99|KEYCXX|KEYGNU)
 KEYWORD(int                         , KEYALL)
 KEYWORD(_ExtInt                     , KEYALL)
+KEYWORD(_BitInt                     , KEYALL)
 KEYWORD(long                        , KEYALL)
 KEYWORD(register                    , KEYALL)
 KEYWORD(restrict                    , KEYC99)
@@ -431,6 +432,7 @@ KEYWORD(__builtin_FILE              , KEYALL)
 KEYWORD(__builtin_FUNCTION          , KEYALL)
 KEYWORD(__builtin_LINE              , KEYALL)
 KEYWORD(__builtin_COLUMN            , KEYALL)
+KEYWORD(__builtin_source_location   , KEYCXX)
 
 // __builtin_types_compatible_p is a GNU C extension that we handle like a C++
 // type trait.
@@ -438,6 +440,7 @@ TYPE_TRAIT_2(__builtin_types_compatible_p, TypeCompatible, KEYNOCXX)
 KEYWORD(__builtin_va_arg            , KEYALL)
 KEYWORD(__extension__               , KEYALL)
 KEYWORD(__float128                  , KEYALL)
+KEYWORD(__ibm128                    , KEYALL)
 KEYWORD(__imag                      , KEYALL)
 KEYWORD(__int128                    , KEYALL)
 KEYWORD(__label__                   , KEYALL)
@@ -508,6 +511,7 @@ TYPE_TRAIT_1(__has_unique_object_representations,
 KEYWORD(__underlying_type           , KEYCXX)
 
 // Clang-only C++ Type Traits
+TYPE_TRAIT_1(__is_trivially_relocatable, IsTriviallyRelocatable, KEYCXX)
 TYPE_TRAIT_2(__reference_binds_to_temporary, ReferenceBindsToTemporary, KEYCXX)
 
 // Embarcadero Expression Traits
@@ -595,6 +599,9 @@ KEYWORD(pipe                        , KEYOPENCLC | KEYOPENCLCXX)
 // C++ for OpenCL s2.3.1: addrspace_cast operator
 KEYWORD(addrspace_cast              , KEYOPENCLCXX)
 
+// CUDA/HIP function attributes
+KEYWORD(__noinline__                , KEYCUDA)
+
 // OpenMP Type Traits
 UNARY_EXPR_OR_TYPE_TRAIT(__builtin_omp_required_simd_align, OpenMPRequiredSimdAlign, KEYALL)
 
@@ -673,24 +680,39 @@ KEYWORD(__multiple_inheritance        , KEYMS)
 KEYWORD(__virtual_inheritance         , KEYMS)
 KEYWORD(__interface                   , KEYMS)
 ALIAS("__int8"           , char       , KEYMS)
-ALIAS("_int8"            , char       , KEYMS)
 ALIAS("__int16"          , short      , KEYMS)
-ALIAS("_int16"           , short      , KEYMS)
 ALIAS("__int32"          , int        , KEYMS)
-ALIAS("_int32"           , int        , KEYMS)
-ALIAS("_int64"           , __int64    , KEYMS)
 ALIAS("__wchar_t"        , wchar_t    , KEYMS)
-ALIAS("_asm"             , asm        , KEYMS)
-ALIAS("_alignof"         , __alignof  , KEYMS)
 ALIAS("__builtin_alignof", __alignof  , KEYMS)
-ALIAS("_cdecl"           , __cdecl    , KEYMS | KEYBORLAND)
-ALIAS("_fastcall"        , __fastcall , KEYMS | KEYBORLAND)
-ALIAS("_stdcall"         , __stdcall  , KEYMS | KEYBORLAND)
-ALIAS("_thiscall"        , __thiscall , KEYMS)
-ALIAS("_vectorcall"      , __vectorcall, KEYMS)
-ALIAS("_uuidof"          , __uuidof   , KEYMS | KEYBORLAND)
-ALIAS("_inline"          , inline     , KEYMS)
-ALIAS("_declspec"        , __declspec , KEYMS)
+
+// Microsoft single-underscore prefixed aliases for double-underscore prefixed
+// keywords.
+ALIAS("_asm"             , asm          , KEYMS)
+ALIAS("_alignof"         , __alignof    , KEYMS)
+ALIAS("_cdecl"           , __cdecl      , KEYMS | KEYBORLAND)
+ALIAS("_declspec"        , __declspec   , KEYMS)
+ALIAS("_fastcall"        , __fastcall   , KEYMS | KEYBORLAND)
+ALIAS("_finally"         , __finally    , KEYMSCOMPAT)
+ALIAS("_forceinline"     , __forceinline, KEYMSCOMPAT)
+ALIAS("_inline"          , inline       , KEYMS)
+ALIAS("_int8"            , char         , KEYMS)
+ALIAS("_int16"           , short        , KEYMS)
+ALIAS("_int32"           , int          , KEYMS)
+ALIAS("_int64"           , __int64      , KEYMS)
+ALIAS("_leave"           , __leave      , KEYMSCOMPAT)
+ALIAS("_multiple_inheritance", __multiple_inheritance, KEYMSCOMPAT)
+ALIAS("_ptr32"           , __ptr32      , KEYMSCOMPAT)
+ALIAS("_ptr64"           , __ptr64      , KEYMSCOMPAT)
+ALIAS("_restrict"        , restrict     , KEYMSCOMPAT)
+ALIAS("_stdcall"         , __stdcall    , KEYMS | KEYBORLAND)
+ALIAS("_thiscall"        , __thiscall   , KEYMS)
+ALIAS("_try"             , __try        , KEYMSCOMPAT)
+ALIAS("_vectorcall"      , __vectorcall , KEYMS)
+ALIAS("_unaligned"       , __unaligned  , KEYMSCOMPAT)
+ALIAS("_uptr"            , __uptr       , KEYMSCOMPAT)
+ALIAS("_uuidof"          , __uuidof     , KEYMS | KEYBORLAND)
+ALIAS("_virtual_inheritance", __virtual_inheritance, KEYMSCOMPAT)
+ALIAS("_w64"             , __w64        , KEYMSCOMPAT)
 
 // Borland Extensions which should be disabled in strict conformance mode.
 ALIAS("_pascal"      , __pascal   , KEYBORLAND)
@@ -827,10 +849,11 @@ PRAGMA_ANNOTATION(pragma_redefine_extname)
 // handles them.
 PRAGMA_ANNOTATION(pragma_fp_contract)
 
-// Annotation for #pragma STDC FENV_ACCESS
+// Annotations for #pragma STDC FENV_ACCESS and #pragma fenv_access (MS compat)
 // The lexer produces these so that they only take effect when the parser
 // handles them.
 PRAGMA_ANNOTATION(pragma_fenv_access)
+PRAGMA_ANNOTATION(pragma_fenv_access_ms)
 
 // Annotation for #pragma STDC FENV_ROUND
 // The lexer produces these so that they only take effect when the parser

@@ -10,16 +10,16 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef MLIR_DIALECT_SCF_H_
-#define MLIR_DIALECT_SCF_H_
+#ifndef MLIR_DIALECT_SCF_SCF_H
+#define MLIR_DIALECT_SCF_SCF_H
 
-#include "mlir/IR/Attributes.h"
 #include "mlir/IR/Builders.h"
-#include "mlir/IR/Dialect.h"
-#include "mlir/IR/OpDefinition.h"
+#include "mlir/IR/BuiltinTypes.h"
+#include "mlir/IR/RegionKindInterface.h"
 #include "mlir/Interfaces/ControlFlowInterfaces.h"
 #include "mlir/Interfaces/LoopLikeInterface.h"
 #include "mlir/Interfaces/SideEffectInterfaces.h"
+#include "mlir/Interfaces/ViewLikeInterface.h"
 
 namespace mlir {
 namespace scf {
@@ -48,6 +48,11 @@ ForOp getForInductionVarOwner(Value val);
 /// Returns the parallel loop parent of an induction variable. If the provided
 /// value is not an induction variable, then return nullptr.
 ParallelOp getParallelForInductionVarOwner(Value val);
+
+/// Return true if ops a and b (or their ancestors) are in mutually exclusive
+/// regions/blocks of an IfOp.
+// TODO: Consider moving this functionality to RegionBranchOpInterface.
+bool insideMutuallyExclusiveBranches(Operation *a, Operation *b);
 
 /// An owning vector of values, handy to return from functions.
 using ValueVector = std::vector<Value>;
@@ -86,10 +91,10 @@ LoopNest buildLoopNest(
 /// expect the body building functions to return their current value.
 /// The built nested scf::For are captured in `capturedLoops` when non-null.
 LoopNest buildLoopNest(OpBuilder &builder, Location loc, ValueRange lbs,
-                          ValueRange ubs, ValueRange steps,
-                          function_ref<void(OpBuilder &, Location, ValueRange)>
-                              bodyBuilder = nullptr);
+                       ValueRange ubs, ValueRange steps,
+                       function_ref<void(OpBuilder &, Location, ValueRange)>
+                           bodyBuilder = nullptr);
 
-} // end namespace scf
-} // end namespace mlir
-#endif // MLIR_DIALECT_SCF_H_
+} // namespace scf
+} // namespace mlir
+#endif // MLIR_DIALECT_SCF_SCF_H

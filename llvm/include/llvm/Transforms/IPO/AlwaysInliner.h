@@ -18,6 +18,9 @@
 
 namespace llvm {
 
+class Module;
+class Pass;
+
 /// Inlines functions marked as "always_inline".
 ///
 /// Note that this does not inline call sites marked as always_inline and does

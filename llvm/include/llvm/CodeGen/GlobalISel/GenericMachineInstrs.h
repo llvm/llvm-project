@@ -14,6 +14,7 @@
 #ifndef LLVM_CODEGEN_GLOBALISEL_GENERICMACHINEINSTRS_H
 #define LLVM_CODEGEN_GLOBALISEL_GENERICMACHINEINSTRS_H
 
+#include "llvm/IR/Instructions.h"
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineMemOperand.h"
 #include "llvm/CodeGen/TargetOpcodes.h"
@@ -28,7 +29,7 @@ public:
 
   /// Access the Idx'th operand as a register and return it.
   /// This assumes that the Idx'th operand is a Register type.
-  Register getReg(unsigned Idx) { return getOperand(Idx).getReg(); }
+  Register getReg(unsigned Idx) const { return getOperand(Idx).getReg(); }
 
   static bool classof(const MachineInstr *MI) {
     return isPreISelGenericOpcode(MI->getOpcode());
@@ -57,9 +58,9 @@ public:
   bool isUnordered() const { return getMMO().isUnordered(); }
 
   /// Returns the size in bytes of the memory access.
-  uint64_t getMemSize() { return getMMO().getSize();
+  uint64_t getMemSize() const { return getMMO().getSize();
   } /// Returns the size in bits of the memory access.
-  uint64_t getMemSizeInBits() { return getMMO().getSizeInBits(); }
+  uint64_t getMemSizeInBits() const { return getMMO().getSizeInBits(); }
 
   static bool classof(const MachineInstr *MI) {
     switch (MI->getOpcode()) {
@@ -133,6 +134,127 @@ public:
 
   static bool classof(const MachineInstr *MI) {
     return MI->getOpcode() == TargetOpcode::G_STORE;
+  }
+};
+
+/// Represents a G_UNMERGE_VALUES.
+class GUnmerge : public GenericMachineInstr {
+public:
+  /// Returns the number of def registers.
+  unsigned getNumDefs() const { return getNumOperands() - 1; }
+  /// Get the unmerge source register.
+  Register getSourceReg() const { return getOperand(getNumDefs()).getReg(); }
+
+  static bool classof(const MachineInstr *MI) {
+    return MI->getOpcode() == TargetOpcode::G_UNMERGE_VALUES;
+  }
+};
+
+/// Represents G_BUILD_VECTOR, G_CONCAT_VECTORS or G_MERGE_VALUES.
+/// All these have the common property of generating a single value from
+/// multiple sources.
+class GMergeLikeOp : public GenericMachineInstr {
+public:
+  /// Returns the number of source registers.
+  unsigned getNumSources() const { return getNumOperands() - 1; }
+  /// Returns the I'th source register.
+  Register getSourceReg(unsigned I) const { return getReg(I + 1); }
+
+  static bool classof(const MachineInstr *MI) {
+    switch (MI->getOpcode()) {
+    case TargetOpcode::G_MERGE_VALUES:
+    case TargetOpcode::G_CONCAT_VECTORS:
+    case TargetOpcode::G_BUILD_VECTOR:
+      return true;
+    default:
+      return false;
+    }
+  }
+};
+
+/// Represents a G_MERGE_VALUES.
+class GMerge : public GMergeLikeOp {
+public:
+  static bool classof(const MachineInstr *MI) {
+    return MI->getOpcode() == TargetOpcode::G_MERGE_VALUES;
+  }
+};
+
+/// Represents a G_CONCAT_VECTORS.
+class GConcatVectors : public GMergeLikeOp {
+public:
+  static bool classof(const MachineInstr *MI) {
+    return MI->getOpcode() == TargetOpcode::G_CONCAT_VECTORS;
+  }
+};
+
+/// Represents a G_BUILD_VECTOR.
+class GBuildVector : public GMergeLikeOp {
+public:
+  static bool classof(const MachineInstr *MI) {
+    return MI->getOpcode() == TargetOpcode::G_BUILD_VECTOR;
+  }
+};
+
+/// Represents a G_PTR_ADD.
+class GPtrAdd : public GenericMachineInstr {
+public:
+  Register getBaseReg() const { return getReg(1); }
+  Register getOffsetReg() const { return getReg(2); }
+
+  static bool classof(const MachineInstr *MI) {
+    return MI->getOpcode() == TargetOpcode::G_PTR_ADD;
+  }
+};
+
+/// Represents a G_IMPLICIT_DEF.
+class GImplicitDef : public GenericMachineInstr {
+public:
+  static bool classof(const MachineInstr *MI) {
+    return MI->getOpcode() == TargetOpcode::G_IMPLICIT_DEF;
+  }
+};
+
+/// Represents a G_SELECT.
+class GSelect : public GenericMachineInstr {
+public:
+  Register getCondReg() const { return getReg(1); }
+  Register getTrueReg() const { return getReg(2); }
+  Register getFalseReg() const { return getReg(3); }
+
+  static bool classof(const MachineInstr *MI) {
+    return MI->getOpcode() == TargetOpcode::G_SELECT;
+  }
+};
+
+/// Represent a G_ICMP or G_FCMP.
+class GAnyCmp : public GenericMachineInstr {
+public:
+  CmpInst::Predicate getCond() const {
+    return static_cast<CmpInst::Predicate>(getOperand(1).getPredicate());
+  }
+  Register getLHSReg() const { return getReg(2); }
+  Register getRHSReg() const { return getReg(3); }
+
+  static bool classof(const MachineInstr *MI) {
+    return MI->getOpcode() == TargetOpcode::G_ICMP ||
+           MI->getOpcode() == TargetOpcode::G_FCMP;
+  }
+};
+
+/// Represent a G_ICMP.
+class GICmp : public GAnyCmp {
+public:
+  static bool classof(const MachineInstr *MI) {
+    return MI->getOpcode() == TargetOpcode::G_ICMP;
+  }
+};
+
+/// Represent a G_FCMP.
+class GFCmp : public GAnyCmp {
+public:
+  static bool classof(const MachineInstr *MI) {
+    return MI->getOpcode() == TargetOpcode::G_FCMP;
   }
 };
 

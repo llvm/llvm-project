@@ -2,13 +2,13 @@ from __future__ import print_function
 import lldb
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test.decorators import *
-from gdbclientutils import *
+from lldbsuite.test.gdbclientutils import *
+from lldbsuite.test.lldbgdbclient import GDBRemoteTestBase
 
 
 class TestRestartBug(GDBRemoteTestBase):
 
     @expectedFailureAll(bugnumber="llvm.org/pr24530")
-    @skipIfReproducer # FIXME: Unexpected packet during (passive) replay
     def test(self):
         """
         Test auto-continue behavior when a process is interrupted to deliver
@@ -60,4 +60,4 @@ class TestRestartBug(GDBRemoteTestBase):
         # auto-continue after setting the breakpoint.
         self.assertEqual(self.server.responder.continueCount, 1)
         # And the process should end up in the stopped state.
-        self.assertEqual(process.GetState(), lldb.eStateStopped)
+        self.assertState(process.GetState(), lldb.eStateStopped)

@@ -5,8 +5,6 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-//
-// UNSUPPORTED: libcpp-has-no-threads
 
 // <atomic>
 
@@ -26,14 +24,14 @@ int main(int, char**)
         std::atomic_flag f;
         f.clear();
         f.test_and_set();
-        atomic_flag_clear(&f);
+        std::atomic_flag_clear(&f);
         assert(f.test_and_set() == 0);
     }
     {
         volatile std::atomic_flag f;
         f.clear();
         f.test_and_set();
-        atomic_flag_clear(&f);
+        std::atomic_flag_clear(&f);
         assert(f.test_and_set() == 0);
     }
 

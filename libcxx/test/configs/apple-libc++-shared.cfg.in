@@ -1,0 +1,33 @@
+# Testing configuration for Apple's system libc++.
+#
+# This configuration differs from a normal LLVM shared library configuration in
+# that we must use DYLD_LIBRARY_PATH to run the tests against the just-built library,
+# since Apple's libc++ has an absolute install_name.
+#
+# We also don't use a per-target include directory layout, so we have only one
+# include directory for the libc++ headers.
+
+lit_config.load_config(config, '@CMAKE_CURRENT_BINARY_DIR@/cmake-bridge.cfg')
+
+config.substitutions.append(('%{flags}',
+    '-isysroot {}'.format('@CMAKE_OSX_SYSROOT@') if '@CMAKE_OSX_SYSROOT@' else ''
+))
+config.substitutions.append(('%{compile_flags}',
+    '-nostdinc++ -I %{include} -I %{libcxx}/test/support'
+))
+config.substitutions.append(('%{link_flags}',
+    '-nostdlib++ -L %{lib} -lc++'
+))
+config.substitutions.append(('%{exec}',
+    '%{executor} --execdir %T --env DYLD_LIBRARY_PATH=%{lib} -- '
+))
+
+import os, site
+site.addsitedir(os.path.join('@LIBCXX_SOURCE_DIR@', 'utils'))
+import libcxx.test.params, libcxx.test.newconfig
+libcxx.test.newconfig.configure(
+    libcxx.test.params.DEFAULT_PARAMETERS,
+    libcxx.test.features.DEFAULT_FEATURES,
+    config,
+    lit_config
+)

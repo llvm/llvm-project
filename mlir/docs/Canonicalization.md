@@ -111,10 +111,11 @@ mechanism, and can be invoked directly anywhere with an `OpBuilder` via
 `OpBuilder::createOrFold`.
 
 `fold` has the restriction that no new operations may be created, and only the
-root operation may be replaced. It allows for updating an operation in-place, or
-returning a set of pre-existing values (or attributes) to replace the operation
-with. This ensures that the `fold` method is a truly "local" transformation, and
-can be invoked without the need for a pattern rewriter.
+root operation may be replaced (but not erased). It allows for updating an
+operation in-place, or returning a set of pre-existing values (or attributes) to
+replace the operation with. This ensures that the `fold` method is a truly
+"local" transformation, and can be invoked without the need for a pattern
+rewriter.
 
 In [ODS](OpDefinitions.md), an operation can set the `hasFolder` bit to generate
 a declaration for the `fold` method. This method takes on a different form,
@@ -161,6 +162,7 @@ Otherwise, the following is generated:
 ///     the operation, partial folding is not supported. The caller will remove
 ///     the operation and use those results instead.
 ///
+/// Note that this mechanism cannot be used to remove 0-result operations.
 LogicalResult MyOp::fold(ArrayRef<Attribute> operands,
                          SmallVectorImpl<OpFoldResult> &results) {
   ...
@@ -198,11 +200,11 @@ implement the `materializeConstant` hook. This hook takes in an `Attribute`
 value, generally returned by `fold`, and produces a "constant-like" operation
 that materializes that value.
 
-In [ODS](OpDefinitions.md), a dialect can set the `hasConstantMaterializer` bit
+In [ODS](DefiningDialects.md), a dialect can set the `hasConstantMaterializer` bit
 to generate a declaration for the `materializeConstant` method.
 
 ```tablegen
-def MyDialect_Dialect : ... {
+def MyDialect : ... {
   let hasConstantMaterializer = 1;
 }
 ```

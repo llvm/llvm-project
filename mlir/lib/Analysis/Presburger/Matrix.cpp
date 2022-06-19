@@ -7,9 +7,11 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Analysis/Presburger/Matrix.h"
+#include "mlir/Analysis/Presburger/Utils.h"
 #include "llvm/Support/MathExtras.h"
 
-namespace mlir {
+using namespace mlir;
+using namespace presburger;
 
 Matrix::Matrix(unsigned rows, unsigned columns, unsigned reservedRows,
                unsigned reservedColumns)
@@ -26,32 +28,6 @@ Matrix Matrix::identity(unsigned dimension) {
   return matrix;
 }
 
-int64_t &Matrix::at(unsigned row, unsigned column) {
-  assert(row < nRows && "Row outside of range");
-  assert(column < nColumns && "Column outside of range");
-  return data[row * nReservedColumns + column];
-}
-
-int64_t Matrix::at(unsigned row, unsigned column) const {
-  assert(row < nRows && "Row outside of range");
-  assert(column < nColumns && "Column outside of range");
-  return data[row * nReservedColumns + column];
-}
-
-int64_t &Matrix::operator()(unsigned row, unsigned column) {
-  return at(row, column);
-}
-
-int64_t Matrix::operator()(unsigned row, unsigned column) const {
-  return at(row, column);
-}
-
-unsigned Matrix::getNumRows() const { return nRows; }
-
-unsigned Matrix::getNumColumns() const { return nColumns; }
-
-unsigned Matrix::getNumReservedColumns() const { return nReservedColumns; }
-
 unsigned Matrix::getNumReservedRows() const {
   return data.capacity() / nReservedColumns;
 }
@@ -63,6 +39,26 @@ void Matrix::reserveRows(unsigned rows) {
 unsigned Matrix::appendExtraRow() {
   resizeVertically(nRows + 1);
   return nRows - 1;
+}
+
+unsigned Matrix::appendExtraRow(ArrayRef<int64_t> elems) {
+  assert(elems.size() == nColumns && "elems must match row length!");
+  unsigned row = appendExtraRow();
+  for (unsigned col = 0; col < nColumns; ++col)
+    at(row, col) = elems[col];
+  return row;
+}
+
+void Matrix::resizeHorizontally(unsigned newNColumns) {
+  if (newNColumns < nColumns)
+    removeColumns(newNColumns, nColumns - newNColumns);
+  if (newNColumns > nColumns)
+    insertColumns(nColumns, newNColumns - nColumns);
+}
+
+void Matrix::resize(unsigned newNRows, unsigned newNColumns) {
+  resizeHorizontally(newNColumns);
+  resizeVertically(newNRows);
 }
 
 void Matrix::resizeVertically(unsigned newNRows) {
@@ -88,6 +84,10 @@ void Matrix::swapColumns(unsigned column, unsigned otherColumn) {
     std::swap(at(row, column), at(row, otherColumn));
 }
 
+MutableArrayRef<int64_t> Matrix::getRow(unsigned row) {
+  return {&data[row * nReservedColumns], nColumns};
+}
+
 ArrayRef<int64_t> Matrix::getRow(unsigned row) const {
   return {&data[row * nReservedColumns], nColumns};
 }
@@ -109,14 +109,27 @@ void Matrix::insertColumns(unsigned pos, unsigned count) {
       unsigned r = ri;
       unsigned c = ci;
       int64_t &dest = data[r * nReservedColumns + c];
-      if (c >= nColumns)
+      if (c >= nColumns) { // NOLINT
+        // Out of bounds columns are zero-initialized. NOLINT because clang-tidy
+        // complains about this branch being the same as the c >= pos one.
+        //
+        // TODO: this case can be skipped if the number of reserved columns
+        // didn't change.
         dest = 0;
-      else if (c >= pos + count)
+      } else if (c >= pos + count) {
+        // Shift the data occuring after the inserted columns.
         dest = data[r * oldNReservedColumns + c - count];
-      else if (c >= pos)
+      } else if (c >= pos) {
+        // The inserted columns are also zero-initialized.
         dest = 0;
-      else
+      } else {
+        // The columns before the inserted columns stay at the same (row, col)
+        // but this corresponds to a different location in the linearized array
+        // if the number of reserved columns changed.
+        if (nReservedColumns == oldNReservedColumns)
+          break;
         dest = data[r * oldNReservedColumns + c];
+      }
     }
   }
 }
@@ -166,6 +179,11 @@ void Matrix::copyRow(unsigned sourceRow, unsigned targetRow) {
     at(targetRow, c) = at(sourceRow, c);
 }
 
+void Matrix::fillRow(unsigned row, int64_t value) {
+  for (unsigned col = 0; col < nColumns; ++col)
+    at(row, col) = value;
+}
+
 void Matrix::addToRow(unsigned sourceRow, unsigned targetRow, int64_t scale) {
   if (scale == 0)
     return;
@@ -184,6 +202,42 @@ void Matrix::addToColumn(unsigned sourceColumn, unsigned targetColumn,
 void Matrix::negateColumn(unsigned column) {
   for (unsigned row = 0, e = getNumRows(); row < e; ++row)
     at(row, column) = -at(row, column);
+}
+
+void Matrix::negateRow(unsigned row) {
+  for (unsigned column = 0, e = getNumColumns(); column < e; ++column)
+    at(row, column) = -at(row, column);
+}
+
+int64_t Matrix::normalizeRow(unsigned row, unsigned cols) {
+  return normalizeRange(getRow(row).slice(0, cols));
+}
+
+int64_t Matrix::normalizeRow(unsigned row) {
+  return normalizeRow(row, getNumColumns());
+}
+
+SmallVector<int64_t, 8>
+Matrix::preMultiplyWithRow(ArrayRef<int64_t> rowVec) const {
+  assert(rowVec.size() == getNumRows() && "Invalid row vector dimension!");
+
+  SmallVector<int64_t, 8> result(getNumColumns(), 0);
+  for (unsigned col = 0, e = getNumColumns(); col < e; ++col)
+    for (unsigned i = 0, e = getNumRows(); i < e; ++i)
+      result[col] += rowVec[i] * at(i, col);
+  return result;
+}
+
+SmallVector<int64_t, 8>
+Matrix::postMultiplyWithColumn(ArrayRef<int64_t> colVec) const {
+  assert(getNumColumns() == colVec.size() &&
+         "Invalid column vector dimension!");
+
+  SmallVector<int64_t, 8> result(getNumRows(), 0);
+  for (unsigned row = 0, e = getNumRows(); row < e; row++)
+    for (unsigned i = 0, e = getNumColumns(); i < e; i++)
+      result[row] += at(row, i) * colVec[i];
+  return result;
 }
 
 void Matrix::print(raw_ostream &os) const {
@@ -207,5 +261,3 @@ bool Matrix::hasConsistentState() const {
         return false;
   return true;
 }
-
-} // namespace mlir

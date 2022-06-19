@@ -20,12 +20,11 @@ from lldbsuite.test import lldbutil
 
 
 class ObjcOptimizedTestCase(TestBase):
-
-    mydir = TestBase.compute_mydir(__file__)
     myclass = "MyClass"
     mymethod = "description"
     method_spec = "-[%s %s]" % (myclass, mymethod)
 
+    @expectedFailureAll(remote=True)
     def test_break(self):
         """Test 'expr member' continues to work for optimized build."""
         self.build()

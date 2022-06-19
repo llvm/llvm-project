@@ -43,12 +43,12 @@ public:
 protected:
   Error grow() override;
 
-  using Allocation = jitlink::JITLinkMemoryManager::Allocation;
+  using FinalizedAlloc = jitlink::JITLinkMemoryManager::FinalizedAlloc;
 
   EPCIndirectionUtils &EPCIU;
   unsigned TrampolineSize = 0;
   unsigned TrampolinesPerPage = 0;
-  std::vector<std::unique_ptr<Allocation>> TrampolineBlocks;
+  std::vector<FinalizedAlloc> TrampolineBlocks;
 };
 
 class EPCIndirectStubsManager : public IndirectStubsManager,
@@ -88,13 +88,19 @@ EPCTrampolinePool::EPCTrampolinePool(EPCIndirectionUtils &EPCIU)
 }
 
 Error EPCTrampolinePool::deallocatePool() {
-  Error Err = Error::success();
-  for (auto &Alloc : TrampolineBlocks)
-    Err = joinErrors(std::move(Err), Alloc->deallocate());
-  return Err;
+  std::promise<MSVCPError> DeallocResultP;
+  auto DeallocResultF = DeallocResultP.get_future();
+
+  EPCIU.getExecutorProcessControl().getMemMgr().deallocate(
+      std::move(TrampolineBlocks),
+      [&](Error Err) { DeallocResultP.set_value(std::move(Err)); });
+
+  return DeallocResultF.get();
 }
 
 Error EPCTrampolinePool::grow() {
+  using namespace jitlink;
+
   assert(AvailableTrampolines.empty() &&
          "Grow called with trampolines still available");
 
@@ -102,34 +108,28 @@ Error EPCTrampolinePool::grow() {
   assert(ResolverAddress && "Resolver address can not be null");
 
   auto &EPC = EPCIU.getExecutorProcessControl();
-  constexpr auto TrampolinePagePermissions =
-      static_cast<sys::Memory::ProtectionFlags>(sys::Memory::MF_READ |
-                                                sys::Memory::MF_EXEC);
   auto PageSize = EPC.getPageSize();
-  jitlink::JITLinkMemoryManager::SegmentsRequestMap Request;
-  Request[TrampolinePagePermissions] = {PageSize, static_cast<size_t>(PageSize),
-                                        0};
-  auto Alloc = EPC.getMemMgr().allocate(nullptr, Request);
-
+  auto Alloc = SimpleSegmentAlloc::Create(
+      EPC.getMemMgr(), nullptr,
+      {{MemProt::Read | MemProt::Exec, {PageSize, Align(PageSize)}}});
   if (!Alloc)
     return Alloc.takeError();
 
   unsigned NumTrampolines = TrampolinesPerPage;
 
-  auto WorkingMemory = (*Alloc)->getWorkingMemory(TrampolinePagePermissions);
-  auto TargetAddress = (*Alloc)->getTargetMemory(TrampolinePagePermissions);
-
-  EPCIU.getABISupport().writeTrampolines(WorkingMemory.data(), TargetAddress,
+  auto SegInfo = Alloc->getSegInfo(MemProt::Read | MemProt::Exec);
+  EPCIU.getABISupport().writeTrampolines(SegInfo.WorkingMem.data(),
+                                         SegInfo.Addr.getValue(),
                                          ResolverAddress, NumTrampolines);
-
-  auto TargetAddr = (*Alloc)->getTargetMemory(TrampolinePagePermissions);
   for (unsigned I = 0; I < NumTrampolines; ++I)
-    AvailableTrampolines.push_back(TargetAddr + (I * TrampolineSize));
+    AvailableTrampolines.push_back(SegInfo.Addr.getValue() +
+                                   (I * TrampolineSize));
 
-  if (auto Err = (*Alloc)->finalize())
-    return Err;
+  auto FA = Alloc->finalize();
+  if (!FA)
+    return FA.takeError();
 
-  TrampolineBlocks.push_back(std::move(*Alloc));
+  TrampolineBlocks.push_back(std::move(*FA));
 
   return Error::success();
 }
@@ -162,16 +162,18 @@ Error EPCIndirectStubsManager::createStubs(const StubInitsMap &StubInits) {
     unsigned ASIdx = 0;
     std::vector<tpctypes::UInt32Write> PtrUpdates;
     for (auto &SI : StubInits)
-      PtrUpdates.push_back({(*AvailableStubInfos)[ASIdx++].PointerAddress,
-                            static_cast<uint32_t>(SI.second.first)});
+      PtrUpdates.push_back(
+          {ExecutorAddr((*AvailableStubInfos)[ASIdx++].PointerAddress),
+           static_cast<uint32_t>(SI.second.first)});
     return MemAccess.writeUInt32s(PtrUpdates);
   }
   case 8: {
     unsigned ASIdx = 0;
     std::vector<tpctypes::UInt64Write> PtrUpdates;
     for (auto &SI : StubInits)
-      PtrUpdates.push_back({(*AvailableStubInfos)[ASIdx++].PointerAddress,
-                            static_cast<uint64_t>(SI.second.first)});
+      PtrUpdates.push_back(
+          {ExecutorAddr((*AvailableStubInfos)[ASIdx++].PointerAddress),
+           static_cast<uint64_t>(SI.second.first)});
     return MemAccess.writeUInt64s(PtrUpdates);
   }
   default:
@@ -213,11 +215,11 @@ Error EPCIndirectStubsManager::updatePointer(StringRef Name,
   auto &MemAccess = EPCIU.getExecutorProcessControl().getMemoryAccess();
   switch (EPCIU.getABISupport().getPointerSize()) {
   case 4: {
-    tpctypes::UInt32Write PUpdate(PtrAddr, NewAddr);
+    tpctypes::UInt32Write PUpdate(ExecutorAddr(PtrAddr), NewAddr);
     return MemAccess.writeUInt32s(PUpdate);
   }
   case 8: {
-    tpctypes::UInt64Write PUpdate(PtrAddr, NewAddr);
+    tpctypes::UInt64Write PUpdate(ExecutorAddr(PtrAddr), NewAddr);
     return MemAccess.writeUInt64s(PUpdate);
   }
   default:
@@ -231,7 +233,7 @@ Error EPCIndirectStubsManager::updatePointer(StringRef Name,
 namespace llvm {
 namespace orc {
 
-EPCIndirectionUtils::ABISupport::~ABISupport() {}
+EPCIndirectionUtils::ABISupport::~ABISupport() = default;
 
 Expected<std::unique_ptr<EPCIndirectionUtils>>
 EPCIndirectionUtils::Create(ExecutorProcessControl &EPC) {
@@ -258,6 +260,9 @@ EPCIndirectionUtils::Create(ExecutorProcessControl &EPC) {
   case Triple::mips64el:
     return CreateWithABI<OrcMips64>(EPC);
 
+  case Triple::riscv64:
+    return CreateWithABI<OrcRiscv64>(EPC);
+
   case Triple::x86_64:
     if (TT.getOS() == Triple::OSType::Win32)
       return CreateWithABI<OrcX86_64_Win32>(EPC);
@@ -267,17 +272,17 @@ EPCIndirectionUtils::Create(ExecutorProcessControl &EPC) {
 }
 
 Error EPCIndirectionUtils::cleanup() {
-  Error Err = Error::success();
 
-  for (auto &A : IndirectStubAllocs)
-    Err = joinErrors(std::move(Err), A->deallocate());
+  auto &MemMgr = EPC.getMemMgr();
+  auto Err = MemMgr.deallocate(std::move(IndirectStubAllocs));
 
   if (TP)
     Err = joinErrors(std::move(Err),
                      static_cast<EPCTrampolinePool &>(*TP).deallocatePool());
 
   if (ResolverBlock)
-    Err = joinErrors(std::move(Err), ResolverBlock->deallocate());
+    Err =
+        joinErrors(std::move(Err), MemMgr.deallocate(std::move(ResolverBlock)));
 
   return Err;
 }
@@ -285,28 +290,29 @@ Error EPCIndirectionUtils::cleanup() {
 Expected<JITTargetAddress>
 EPCIndirectionUtils::writeResolverBlock(JITTargetAddress ReentryFnAddr,
                                         JITTargetAddress ReentryCtxAddr) {
+  using namespace jitlink;
+
   assert(ABI && "ABI can not be null");
-  constexpr auto ResolverBlockPermissions =
-      static_cast<sys::Memory::ProtectionFlags>(sys::Memory::MF_READ |
-                                                sys::Memory::MF_EXEC);
   auto ResolverSize = ABI->getResolverCodeSize();
 
-  jitlink::JITLinkMemoryManager::SegmentsRequestMap Request;
-  Request[ResolverBlockPermissions] = {EPC.getPageSize(),
-                                       static_cast<size_t>(ResolverSize), 0};
-  auto Alloc = EPC.getMemMgr().allocate(nullptr, Request);
+  auto Alloc =
+      SimpleSegmentAlloc::Create(EPC.getMemMgr(), nullptr,
+                                 {{MemProt::Read | MemProt::Exec,
+                                   {ResolverSize, Align(EPC.getPageSize())}}});
+
   if (!Alloc)
     return Alloc.takeError();
 
-  auto WorkingMemory = (*Alloc)->getWorkingMemory(ResolverBlockPermissions);
-  ResolverBlockAddr = (*Alloc)->getTargetMemory(ResolverBlockPermissions);
-  ABI->writeResolverCode(WorkingMemory.data(), ResolverBlockAddr, ReentryFnAddr,
-                         ReentryCtxAddr);
+  auto SegInfo = Alloc->getSegInfo(MemProt::Read | MemProt::Exec);
+  ResolverBlockAddr = SegInfo.Addr.getValue();
+  ABI->writeResolverCode(SegInfo.WorkingMem.data(), ResolverBlockAddr,
+                         ReentryFnAddr, ReentryCtxAddr);
 
-  if (auto Err = (*Alloc)->finalize())
-    return std::move(Err);
+  auto FA = Alloc->finalize();
+  if (!FA)
+    return FA.takeError();
 
-  ResolverBlock = std::move(*Alloc);
+  ResolverBlock = std::move(*FA);
   return ResolverBlockAddr;
 }
 
@@ -341,6 +347,7 @@ EPCIndirectionUtils::EPCIndirectionUtils(ExecutorProcessControl &EPC,
 
 Expected<EPCIndirectionUtils::IndirectStubInfoVector>
 EPCIndirectionUtils::getIndirectStubs(unsigned NumStubs) {
+  using namespace jitlink;
 
   std::lock_guard<std::mutex> Lock(EPCUIMutex);
 
@@ -350,42 +357,41 @@ EPCIndirectionUtils::getIndirectStubs(unsigned NumStubs) {
     auto PageSize = EPC.getPageSize();
     auto StubBytes = alignTo(NumStubsToAllocate * ABI->getStubSize(), PageSize);
     NumStubsToAllocate = StubBytes / ABI->getStubSize();
-    auto PointerBytes =
+    auto PtrBytes =
         alignTo(NumStubsToAllocate * ABI->getPointerSize(), PageSize);
 
-    constexpr auto StubPagePermissions =
-        static_cast<sys::Memory::ProtectionFlags>(sys::Memory::MF_READ |
-                                                  sys::Memory::MF_EXEC);
-    constexpr auto PointerPagePermissions =
-        static_cast<sys::Memory::ProtectionFlags>(sys::Memory::MF_READ |
-                                                  sys::Memory::MF_WRITE);
+    auto StubProt = MemProt::Read | MemProt::Exec;
+    auto PtrProt = MemProt::Read | MemProt::Write;
 
-    jitlink::JITLinkMemoryManager::SegmentsRequestMap Request;
-    Request[StubPagePermissions] = {PageSize, static_cast<size_t>(StubBytes),
-                                    0};
-    Request[PointerPagePermissions] = {PageSize, 0, PointerBytes};
-    auto Alloc = EPC.getMemMgr().allocate(nullptr, Request);
+    auto Alloc = SimpleSegmentAlloc::Create(
+        EPC.getMemMgr(), nullptr,
+        {{StubProt, {static_cast<size_t>(StubBytes), Align(PageSize)}},
+         {PtrProt, {static_cast<size_t>(PtrBytes), Align(PageSize)}}});
+
     if (!Alloc)
       return Alloc.takeError();
 
-    auto StubTargetAddr = (*Alloc)->getTargetMemory(StubPagePermissions);
-    auto PointerTargetAddr = (*Alloc)->getTargetMemory(PointerPagePermissions);
+    auto StubSeg = Alloc->getSegInfo(StubProt);
+    auto PtrSeg = Alloc->getSegInfo(PtrProt);
 
-    ABI->writeIndirectStubsBlock(
-        (*Alloc)->getWorkingMemory(StubPagePermissions).data(), StubTargetAddr,
-        PointerTargetAddr, NumStubsToAllocate);
+    ABI->writeIndirectStubsBlock(StubSeg.WorkingMem.data(),
+                                 StubSeg.Addr.getValue(),
+                                 PtrSeg.Addr.getValue(), NumStubsToAllocate);
 
-    if (auto Err = (*Alloc)->finalize())
-      return std::move(Err);
+    auto FA = Alloc->finalize();
+    if (!FA)
+      return FA.takeError();
 
+    IndirectStubAllocs.push_back(std::move(*FA));
+
+    auto StubExecutorAddr = StubSeg.Addr;
+    auto PtrExecutorAddr = PtrSeg.Addr;
     for (unsigned I = 0; I != NumStubsToAllocate; ++I) {
-      AvailableIndirectStubs.push_back(
-          IndirectStubInfo(StubTargetAddr, PointerTargetAddr));
-      StubTargetAddr += ABI->getStubSize();
-      PointerTargetAddr += ABI->getPointerSize();
+      AvailableIndirectStubs.push_back(IndirectStubInfo(
+          StubExecutorAddr.getValue(), PtrExecutorAddr.getValue()));
+      StubExecutorAddr += ABI->getStubSize();
+      PtrExecutorAddr += ABI->getPointerSize();
     }
-
-    IndirectStubAllocs.push_back(std::move(*Alloc));
   }
 
   assert(NumStubs <= AvailableIndirectStubs.size() &&

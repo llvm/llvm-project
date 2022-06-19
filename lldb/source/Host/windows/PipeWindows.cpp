@@ -22,10 +22,8 @@
 using namespace lldb;
 using namespace lldb_private;
 
-namespace {
-std::atomic<uint32_t> g_pipe_serial(0);
-constexpr llvm::StringLiteral g_pipe_name_prefix = "\\\\.\\Pipe\\";
-} // namespace
+static std::atomic<uint32_t> g_pipe_serial(0);
+static constexpr llvm::StringLiteral g_pipe_name_prefix = "\\\\.\\Pipe\\";
 
 PipeWindows::PipeWindows()
     : m_read(INVALID_HANDLE_VALUE), m_write(INVALID_HANDLE_VALUE),

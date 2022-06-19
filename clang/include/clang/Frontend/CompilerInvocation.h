@@ -50,6 +50,11 @@ class HeaderSearchOptions;
 class PreprocessorOptions;
 class TargetOptions;
 
+// This lets us create the DiagnosticsEngine with a properly-filled-out
+// DiagnosticOptions instance.
+std::unique_ptr<DiagnosticOptions>
+CreateAndPopulateDiagOpts(ArrayRef<const char *> Argv);
+
 /// Fill out Opts based on the options given in Args.
 ///
 /// Args must have been created from the OptTable returned by
@@ -213,19 +218,6 @@ public:
   /// \param MainAddr - The address of main (or some other function in the main
   /// executable), for finding the builtin compiler path.
   static std::string GetResourcesPath(const char *Argv0, void *MainAddr);
-
-  /// Set language defaults for the given input language and
-  /// language standard in the given LangOptions object.
-  ///
-  /// \param Opts - The LangOptions object to set up.
-  /// \param IK - The input language.
-  /// \param T - The target triple.
-  /// \param Includes - The affected list of included files.
-  /// \param LangStd - The input language standard.
-  static void
-  setLangDefaults(LangOptions &Opts, InputKind IK, const llvm::Triple &T,
-                  std::vector<std::string> &Includes,
-                  LangStandard::Kind LangStd = LangStandard::lang_unspecified);
 
   /// Retrieve a module hash string that is suitable for uniquely
   /// identifying the conditions under which the module was built.

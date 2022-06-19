@@ -38,7 +38,7 @@ private:
                         SmallVectorImpl<spirv::CompositeInsertOp> &insertions);
 };
 
-} // anonymous namespace
+} // namespace
 
 void RewriteInsertsPass::runOnOperation() {
   SmallVector<SmallVector<spirv::CompositeInsertOp, 4>, 4> workList;

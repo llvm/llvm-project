@@ -18,6 +18,12 @@
 #endif
 
 /**
+ * @addtogroup LLVMCDisassembler
+ *
+ * @{
+ */
+
+/**
  * An opaque reference to a disassembler context.
  */
 typedef void *LLVMDisasmContextRef;
@@ -32,15 +38,15 @@ typedef void *LLVMDisasmContextRef;
  * one operand with symbolic information.  To determine the symbolic operand
  * information for each operand, the bytes for the specific operand in the
  * instruction are specified by the Offset parameter and its byte widith is the
- * size parameter.  For instructions sets with fixed widths and one symbolic
- * operand per instruction, the Offset parameter will be zero and Size parameter
- * will be the instruction width.  The information is returned in TagBuf and is
- * Triple specific with its specific information defined by the value of
- * TagType for that Triple.  If symbolic information is returned the function
- * returns 1, otherwise it returns 0.
+ * OpSize parameter.  For instructions sets with fixed widths and one symbolic
+ * operand per instruction, the Offset parameter will be zero and InstSize
+ * parameter will be the instruction width.  The information is returned in
+ * TagBuf and is Triple specific with its specific information defined by the
+ * value of TagType for that Triple.  If symbolic information is returned the
+ * function * returns 1, otherwise it returns 0.
  */
-typedef int (*LLVMOpInfoCallback)(void *DisInfo, uint64_t PC,
-                                  uint64_t Offset, uint64_t Size,
+typedef int (*LLVMOpInfoCallback)(void *DisInfo, uint64_t PC, uint64_t Offset,
+                                  uint64_t OpSize, uint64_t InstSize,
                                   int TagType, void *TagBuf);
 
 /**
@@ -156,5 +162,9 @@ typedef const char *(*LLVMSymbolLookupCallback)(void *DisInfo,
 
 /* The output reference is to a C++ symbol name. */
 #define LLVMDisassembler_ReferenceType_DeMangled_Name 9
+
+/**
+ * @}
+ */
 
 #endif

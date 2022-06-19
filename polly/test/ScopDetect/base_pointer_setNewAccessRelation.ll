@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -disable-basic-aa -polly-detect -polly-import-jscop -polly-codegen -analyze < %s | FileCheck %s
+; RUN: opt %loadPolly -disable-basic-aa -polly-detect -polly-print-import-jscop -polly-codegen -disable-output < %s | FileCheck %s --allow-empty
 ;
 ; Polly codegen used to generate invalid code (referring to %ptr from the
 ; original region) when regeneration of the access function is necessary.

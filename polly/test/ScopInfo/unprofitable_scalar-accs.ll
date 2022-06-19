@@ -1,5 +1,5 @@
-; RUN: opt %loadPolly -polly-stmt-granularity=bb -polly-process-unprofitable=false -polly-unprofitable-scalar-accs=false -polly-scops -analyze < %s | FileCheck %s
-; RUN: opt %loadPolly -polly-stmt-granularity=bb -polly-process-unprofitable=false -polly-unprofitable-scalar-accs=true  -polly-scops -analyze < %s | FileCheck %s --check-prefix=HEURISTIC
+; RUN: opt %loadPolly -polly-stmt-granularity=bb -polly-process-unprofitable=false -polly-unprofitable-scalar-accs=false -polly-print-scops -disable-output < %s | FileCheck %s
+; RUN: opt %loadPolly -polly-stmt-granularity=bb -polly-process-unprofitable=false -polly-unprofitable-scalar-accs=true  -polly-print-scops -disable-output < %s | FileCheck %s --check-prefix=HEURISTIC
 
 ; Check the effect of -polly-unprofitable-scalar-accs
 

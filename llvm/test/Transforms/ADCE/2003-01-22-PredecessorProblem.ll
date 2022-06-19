@@ -1,6 +1,6 @@
 ; Testcase reduced from 197.parser by bugpoint
-; RUN: opt < %s -adce 
-; RUN: opt < %s -adce -adce-remove-loops -S | FileCheck %s
+; RUN: opt < %s -passes=adce
+; RUN: opt < %s -passes=adce -adce-remove-loops -S | FileCheck %s
 
 define void @conjunction_prune() {
 ; <label>:0

@@ -4,7 +4,7 @@ target datalayout = "e-m:w-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-pc-windows-msvc"
 
 declare i32 @__CxxFrameHandler3(...)
-declare void @throw() noreturn uwtable
+declare void @throw() uwtable
 declare i8* @getval()
 declare void @llvm.trap()
 

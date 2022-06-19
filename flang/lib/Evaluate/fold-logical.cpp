@@ -19,14 +19,14 @@ static Expr<T> FoldAllAny(FoldingContext &context, FunctionRef<T> &&ref,
     Scalar<T> identity) {
   static_assert(T::category == TypeCategory::Logical);
   using Element = Scalar<T>;
-  std::optional<ConstantSubscript> dim;
+  std::optional<int> dim;
   if (std::optional<Constant<T>> array{
           ProcessReductionArgs<T>(context, ref.arguments(), dim, identity,
               /*ARRAY(MASK)=*/0, /*DIM=*/1)}) {
     auto accumulator{[&](Element &element, const ConstantSubscripts &at) {
       element = (element.*operation)(array->At(at));
     }};
-    return Expr<T>{DoReduction(*array, dim, identity, accumulator)};
+    return Expr<T>{DoReduction<T>(*array, dim, identity, accumulator)};
   }
   return Expr<T>{std::move(ref)};
 }
@@ -40,6 +40,7 @@ Expr<Type<TypeCategory::Logical, KIND>> FoldIntrinsicFunction(
   auto *intrinsic{std::get_if<SpecificIntrinsic>(&funcRef.proc().u)};
   CHECK(intrinsic);
   std::string name{intrinsic->name};
+  using SameInt = Type<TypeCategory::Integer, KIND>;
   if (name == "all") {
     return FoldAllAny(
         context, std::move(funcRef), &Scalar<T>::AND, Scalar<T>{true});
@@ -59,7 +60,6 @@ Expr<Type<TypeCategory::Logical, KIND>> FoldIntrinsicFunction(
     }
     return gotConstant ? Expr<T>{false} : Expr<T>{std::move(funcRef)};
   } else if (name == "bge" || name == "bgt" || name == "ble" || name == "blt") {
-    using LargestInt = Type<TypeCategory::Integer, 16>;
     static_assert(std::is_same_v<Scalar<LargestInt>, BOZLiteralConstant>);
     // Arguments do not have to be of the same integer type. Convert all
     // arguments to the biggest integer type before comparing them to
@@ -89,6 +89,38 @@ Expr<Type<TypeCategory::Logical, KIND>> FoldIntrinsicFunction(
             [&fptr](const Scalar<LargestInt> &i, const Scalar<LargestInt> &j) {
               return Scalar<T>{std::invoke(fptr, i, j)};
             }));
+  } else if (name == "btest") {
+    if (const auto *ix{UnwrapExpr<Expr<SomeInteger>>(args[0])}) {
+      return common::visit(
+          [&](const auto &x) {
+            using IT = ResultType<decltype(x)>;
+            return FoldElementalIntrinsic<T, IT, SameInt>(context,
+                std::move(funcRef),
+                ScalarFunc<T, IT, SameInt>(
+                    [&](const Scalar<IT> &x, const Scalar<SameInt> &pos) {
+                      auto posVal{pos.ToInt64()};
+                      if (posVal < 0 || posVal >= x.bits) {
+                        context.messages().Say(
+                            "POS=%jd out of range for BTEST"_err_en_US,
+                            static_cast<std::intmax_t>(posVal));
+                      }
+                      return Scalar<T>{x.BTEST(posVal)};
+                    }));
+          },
+          ix->u);
+    }
+  } else if (name == "extends_type_of") {
+    // Type extension testing with EXTENDS_TYPE_OF() ignores any type
+    // parameters. Returns a constant truth value when the result is known now.
+    if (args[0] && args[1]) {
+      auto t0{args[0]->GetType()};
+      auto t1{args[1]->GetType()};
+      if (t0 && t1) {
+        if (auto result{t0->ExtendsTypeOf(*t1)}) {
+          return Expr<T>{*result};
+        }
+      }
+    }
   } else if (name == "isnan" || name == "__builtin_ieee_is_nan") {
     // A warning about an invalid argument is discarded from converting
     // the argument of isnan() / IEEE_IS_NAN().
@@ -98,6 +130,20 @@ Expr<Type<TypeCategory::Logical, KIND>> FoldIntrinsicFunction(
         ScalarFunc<T, DefaultReal>([](const Scalar<DefaultReal> &x) {
           return Scalar<T>{x.IsNotANumber()};
         }));
+  } else if (name == "__builtin_ieee_is_negative") {
+    auto restorer{context.messages().DiscardMessages()};
+    using DefaultReal = Type<TypeCategory::Real, 4>;
+    return FoldElementalIntrinsic<T, DefaultReal>(context, std::move(funcRef),
+        ScalarFunc<T, DefaultReal>([](const Scalar<DefaultReal> &x) {
+          return Scalar<T>{x.IsNegative()};
+        }));
+  } else if (name == "__builtin_ieee_is_normal") {
+    auto restorer{context.messages().DiscardMessages()};
+    using DefaultReal = Type<TypeCategory::Real, 4>;
+    return FoldElementalIntrinsic<T, DefaultReal>(context, std::move(funcRef),
+        ScalarFunc<T, DefaultReal>([](const Scalar<DefaultReal> &x) {
+          return Scalar<T>{x.IsNormal()};
+        }));
   } else if (name == "is_contiguous") {
     if (args.at(0)) {
       if (auto *expr{args[0]->UnwrapExpr()}) {
@@ -106,12 +152,38 @@ Expr<Type<TypeCategory::Logical, KIND>> FoldIntrinsicFunction(
         }
       }
     }
+  } else if (name == "lge" || name == "lgt" || name == "lle" || name == "llt") {
+    // Rewrite LGE/LGT/LLE/LLT into ASCII character relations
+    auto *cx0{UnwrapExpr<Expr<SomeCharacter>>(args[0])};
+    auto *cx1{UnwrapExpr<Expr<SomeCharacter>>(args[1])};
+    if (cx0 && cx1) {
+      return Fold(context,
+          ConvertToType<T>(
+              PackageRelation(name == "lge" ? RelationalOperator::GE
+                      : name == "lgt"       ? RelationalOperator::GT
+                      : name == "lle"       ? RelationalOperator::LE
+                                            : RelationalOperator::LT,
+                  ConvertToType<Ascii>(std::move(*cx0)),
+                  ConvertToType<Ascii>(std::move(*cx1)))));
+    }
   } else if (name == "logical") {
     if (auto *expr{UnwrapExpr<Expr<SomeLogical>>(args[0])}) {
       return Fold(context, ConvertToType<T>(std::move(*expr)));
     }
   } else if (name == "merge") {
     return FoldMerge<T>(context, std::move(funcRef));
+  } else if (name == "same_type_as") {
+    // Type equality testing with SAME_TYPE_AS() ignores any type parameters.
+    // Returns a constant truth value when the result is known now.
+    if (args[0] && args[1]) {
+      auto t0{args[0]->GetType()};
+      auto t1{args[1]->GetType()};
+      if (t0 && t1) {
+        if (auto result{t0->SameTypeAs(*t1)}) {
+          return Expr<T>{*result};
+        }
+      }
+    }
   } else if (name == "__builtin_ieee_support_datatype" ||
       name == "__builtin_ieee_support_denormal" ||
       name == "__builtin_ieee_support_divide" ||
@@ -125,10 +197,9 @@ Expr<Type<TypeCategory::Logical, KIND>> FoldIntrinsicFunction(
       name == "__builtin_ieee_support_underflow_control") {
     return Expr<T>{true};
   }
-  // TODO: btest, cshift, dot_product, eoshift, is_iostat_end,
-  // is_iostat_eor, lge, lgt, lle, llt, logical, matmul, out_of_range,
-  // pack, parity, spread, transfer, transpose, unpack, extends_type_of,
-  // same_type_as
+  // TODO: dot_product, is_iostat_end,
+  // is_iostat_eor, logical, matmul, out_of_range,
+  // parity, transfer
   return Expr<T>{std::move(funcRef)};
 }
 
@@ -165,7 +236,7 @@ Expr<LogicalResult> FoldOperation(
 
 Expr<LogicalResult> FoldOperation(
     FoldingContext &context, Relational<SomeType> &&relation) {
-  return std::visit(
+  return common::visit(
       [&](auto &&x) {
         return Expr<LogicalResult>{FoldOperation(context, std::move(x))};
       },
@@ -221,6 +292,9 @@ Expr<Type<TypeCategory::Logical, KIND>> FoldOperation(
   return Expr<LOGICAL>{std::move(operation)};
 }
 
+#ifdef _MSC_VER // disable bogus warning about missing definitions
+#pragma warning(disable : 4661)
+#endif
 FOR_EACH_LOGICAL_KIND(template class ExpressionBase, )
 template class ExpressionBase<SomeLogical>;
 } // namespace Fortran::evaluate

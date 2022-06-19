@@ -5,6 +5,8 @@
 // RUN:   -mfloat-abi hard -O0 -disable-O0-optnone \
 // RUN:   -S -emit-llvm -o - %s | opt -S -mem2reg | FileCheck %s
 
+// REQUIRES: aarch64-registered-target || arm-registered-target
+
 #include <arm_cde.h>
 
 // CHECK-LABEL: @test_vcx1q_u8(
@@ -153,8 +155,8 @@ float32x4_t test_vcx2qa_m(float32x4_t acc, float16x8_t n, mve_pred16_t p) {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = bitcast <4 x float> [[N:%.*]] to <16 x i8>
 // CHECK-NEXT:    [[TMP1:%.*]] = zext i16 [[P:%.*]] to i32
-// CHECK-NEXT:    [[TMP2:%.*]] = call <4 x i1> @llvm.arm.mve.pred.i2v.v4i1(i32 [[TMP1]])
-// CHECK-NEXT:    [[TMP3:%.*]] = call <2 x i64> @llvm.arm.cde.vcx3q.predicated.v2i64.v4i1(i32 1, <2 x i64> [[INACTIVE:%.*]], <16 x i8> [[TMP0]], <16 x i8> [[M:%.*]], i32 11, <4 x i1> [[TMP2]])
+// CHECK-NEXT:    [[TMP2:%.*]] = call <2 x i1> @llvm.arm.mve.pred.i2v.v2i1(i32 [[TMP1]])
+// CHECK-NEXT:    [[TMP3:%.*]] = call <2 x i64> @llvm.arm.cde.vcx3q.predicated.v2i64.v2i1(i32 1, <2 x i64> [[INACTIVE:%.*]], <16 x i8> [[TMP0]], <16 x i8> [[M:%.*]], i32 11, <2 x i1> [[TMP2]])
 // CHECK-NEXT:    ret <2 x i64> [[TMP3]]
 //
 int64x2_t test_vcx3q_m(int64x2_t inactive, float32x4_t n, int8x16_t m, mve_pred16_t p) {

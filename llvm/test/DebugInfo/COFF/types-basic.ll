@@ -511,14 +511,22 @@
 ; ASM: .asciz	"t.cpp"                 # StringData
 ; ASM: .byte	242
 ; ASM: .byte	241
-; ASM: # BuildInfo (0x1015)
+; ASM: # StringId (0x1015)
+; ASM: .short	0xa                     # Record length
+; ASM: .short	0x1605                  # Record kind: LF_STRING_ID
+; ASM: .long	0x0                     # Id
+; ASM: .byte    0                       # StringData
+; ASM: .byte	243
+; ASM: .byte	242
+; ASM: .byte	241
+; ASM: # BuildInfo (0x1016)
 ; ASM: .short	0x1a                    # Record length
 ; ASM: .short	0x1603                  # Record kind: LF_BUILDINFO
 ; ASM: .short	0x5                     # NumArgs
 ; ASM: .long	0x1013                  # Argument: D:\src\llvm\build
 ; ASM: .long	0x0                     # Argument
 ; ASM: .long	0x1014                  # Argument: t.cpp
-; ASM: .long	0x0                     # Argument
+; ASM: .long	0x1015                  # Argument
 ; ASM: .long	0x0                     # Argument
 ; ASM: .byte	242
 ; ASM: .byte	241
@@ -675,12 +683,12 @@ attributes #3 = { nounwind uwtable "disable-tail-calls"="false" "less-precise-fp
 !46 = !DIDerivedType(tag: DW_TAG_ptr_to_member_type, baseType: !41, size: 64, extraData: !37)
 !47 = !DILocation(line: 12, column: 13, scope: !7)
 !48 = !DILocalVariable(name: "l1", scope: !7, file: !1, line: 13, type: !49)
-!49 = !DIBasicType(name: "long int", size: 32, align: 32, encoding: DW_ATE_signed)
+!49 = !DIBasicType(name: "long", size: 32, align: 32, encoding: DW_ATE_signed)
 !50 = !DILocation(line: 13, column: 8, scope: !7)
 !51 = !DILocalVariable(name: "l2", scope: !7, file: !1, line: 14, type: !49)
 !52 = !DILocation(line: 14, column: 12, scope: !7)
 !53 = !DILocalVariable(name: "l3", scope: !7, file: !1, line: 15, type: !54)
-!54 = !DIBasicType(name: "long unsigned int", size: 32, align: 32, encoding: DW_ATE_unsigned)
+!54 = !DIBasicType(name: "unsigned long", size: 32, align: 32, encoding: DW_ATE_unsigned)
 !55 = !DILocation(line: 15, column: 17, scope: !7)
 !56 = !DILocalVariable(name: "l4", scope: !7, file: !1, line: 16, type: !54)
 !57 = !DILocation(line: 16, column: 21, scope: !7)

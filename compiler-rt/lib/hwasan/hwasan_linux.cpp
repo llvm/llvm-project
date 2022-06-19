@@ -15,30 +15,30 @@
 #include "sanitizer_common/sanitizer_platform.h"
 #if SANITIZER_FREEBSD || SANITIZER_LINUX || SANITIZER_NETBSD
 
-#include "hwasan.h"
-#include "hwasan_dynamic_shadow.h"
-#include "hwasan_interface_internal.h"
-#include "hwasan_mapping.h"
-#include "hwasan_report.h"
-#include "hwasan_thread.h"
-#include "hwasan_thread_list.h"
+#  include <dlfcn.h>
+#  include <elf.h>
+#  include <errno.h>
+#  include <link.h>
+#  include <pthread.h>
+#  include <signal.h>
+#  include <stdio.h>
+#  include <stdlib.h>
+#  include <sys/prctl.h>
+#  include <sys/resource.h>
+#  include <sys/time.h>
+#  include <unistd.h>
+#  include <unwind.h>
 
-#include <dlfcn.h>
-#include <elf.h>
-#include <link.h>
-#include <pthread.h>
-#include <signal.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <sys/resource.h>
-#include <sys/time.h>
-#include <unistd.h>
-#include <unwind.h>
-#include <sys/prctl.h>
-#include <errno.h>
-
-#include "sanitizer_common/sanitizer_common.h"
-#include "sanitizer_common/sanitizer_procmaps.h"
+#  include "hwasan.h"
+#  include "hwasan_dynamic_shadow.h"
+#  include "hwasan_interface_internal.h"
+#  include "hwasan_mapping.h"
+#  include "hwasan_report.h"
+#  include "hwasan_thread.h"
+#  include "hwasan_thread_list.h"
+#  include "sanitizer_common/sanitizer_common.h"
+#  include "sanitizer_common/sanitizer_procmaps.h"
+#  include "sanitizer_common/sanitizer_stackdepot.h"
 
 // Configurations of HWASAN_WITH_INTERCEPTORS and SANITIZER_ANDROID.
 //
@@ -50,10 +50,10 @@
 //    Tested with check-hwasan on x86_64-linux.
 // HWASAN_WITH_INTERCEPTORS=ON, SANITIZER_ANDROID=ON
 //    Tested with check-hwasan on aarch64-linux-android.
-#if !SANITIZER_ANDROID
+#  if !SANITIZER_ANDROID
 SANITIZER_INTERFACE_ATTRIBUTE
 THREADLOCAL uptr __hwasan_tls;
-#endif
+#  endif
 
 namespace __hwasan {
 
@@ -111,9 +111,9 @@ static void InitializeShadowBaseAddress(uptr shadow_size_bytes) {
 }
 
 void InitializeOsSupport() {
-#define PR_SET_TAGGED_ADDR_CTRL 55
-#define PR_GET_TAGGED_ADDR_CTRL 56
-#define PR_TAGGED_ADDR_ENABLE (1UL << 0)
+#  define PR_SET_TAGGED_ADDR_CTRL 55
+#  define PR_GET_TAGGED_ADDR_CTRL 56
+#  define PR_TAGGED_ADDR_ENABLE (1UL << 0)
   // Check we're running on a kernel that can use the tagged address ABI.
   int local_errno = 0;
   if (internal_iserror(internal_prctl(PR_GET_TAGGED_ADDR_CTRL, 0, 0, 0, 0),
@@ -164,9 +164,9 @@ void InitializeOsSupport() {
       Die();
     }
   }
-#undef PR_SET_TAGGED_ADDR_CTRL
-#undef PR_GET_TAGGED_ADDR_CTRL
-#undef PR_TAGGED_ADDR_ENABLE
+#  undef PR_SET_TAGGED_ADDR_CTRL
+#  undef PR_GET_TAGGED_ADDR_CTRL
+#  undef PR_TAGGED_ADDR_ENABLE
 }
 
 bool InitShadow() {
@@ -241,17 +241,16 @@ bool MemIsApp(uptr p) {
   CHECK(GetTagFromPointer(p) == 0);
 #  endif
 
-  return p >= kHighMemStart || (p >= kLowMemStart && p <= kLowMemEnd);
+  return (p >= kHighMemStart && p <= kHighMemEnd) ||
+         (p >= kLowMemStart && p <= kLowMemEnd);
 }
 
-void InstallAtExitHandler() {
-  atexit(HwasanAtExit);
-}
+void InstallAtExitHandler() { atexit(HwasanAtExit); }
 
 // ---------------------- TSD ---------------- {{{1
 
 extern "C" void __hwasan_thread_enter() {
-  hwasanThreadList().CreateCurrentThread()->InitRandomState();
+  hwasanThreadList().CreateCurrentThread()->EnsureRandomStateInited();
 }
 
 extern "C" void __hwasan_thread_exit() {
@@ -262,7 +261,7 @@ extern "C" void __hwasan_thread_exit() {
     hwasanThreadList().ReleaseThread(t);
 }
 
-#if HWASAN_WITH_INTERCEPTORS
+#  if HWASAN_WITH_INTERCEPTORS
 static pthread_key_t tsd_key;
 static bool tsd_key_inited = false;
 
@@ -286,22 +285,18 @@ void HwasanTSDInit() {
   tsd_key_inited = true;
   CHECK_EQ(0, pthread_key_create(&tsd_key, HwasanTSDDtor));
 }
-#else
+#  else
 void HwasanTSDInit() {}
 void HwasanTSDThreadInit() {}
-#endif
+#  endif
 
-#if SANITIZER_ANDROID
-uptr *GetCurrentThreadLongPtr() {
-  return (uptr *)get_android_tls_ptr();
-}
-#else
-uptr *GetCurrentThreadLongPtr() {
-  return &__hwasan_tls;
-}
-#endif
+#  if SANITIZER_ANDROID
+uptr *GetCurrentThreadLongPtr() { return (uptr *)get_android_tls_ptr(); }
+#  else
+uptr *GetCurrentThreadLongPtr() { return &__hwasan_tls; }
+#  endif
 
-#if SANITIZER_ANDROID
+#  if SANITIZER_ANDROID
 void AndroidTestTlsSlot() {
   uptr kMagicValue = 0x010203040A0B0C0D;
   uptr *tls_ptr = GetCurrentThreadLongPtr();
@@ -316,9 +311,9 @@ void AndroidTestTlsSlot() {
   }
   *tls_ptr = old_value;
 }
-#else
+#  else
 void AndroidTestTlsSlot() {}
-#endif
+#  endif
 
 static AccessInfo GetAccessInfo(siginfo_t *info, ucontext_t *uc) {
   // Access type is passed in a platform dependent way (see below) and encoded
@@ -326,32 +321,32 @@ static AccessInfo GetAccessInfo(siginfo_t *info, ucontext_t *uc) {
   // recoverable. Valid values of Y are 0 to 4, which are interpreted as
   // log2(access_size), and 0xF, which means that access size is passed via
   // platform dependent register (see below).
-#if defined(__aarch64__)
+#  if defined(__aarch64__)
   // Access type is encoded in BRK immediate as 0x900 + 0xXY. For Y == 0xF,
   // access size is stored in X1 register. Access address is always in X0
   // register.
   uptr pc = (uptr)info->si_addr;
   const unsigned code = ((*(u32 *)pc) >> 5) & 0xffff;
   if ((code & 0xff00) != 0x900)
-    return AccessInfo{}; // Not ours.
+    return AccessInfo{};  // Not ours.
 
   const bool is_store = code & 0x10;
   const bool recover = code & 0x20;
   const uptr addr = uc->uc_mcontext.regs[0];
   const unsigned size_log = code & 0xf;
   if (size_log > 4 && size_log != 0xf)
-    return AccessInfo{}; // Not ours.
+    return AccessInfo{};  // Not ours.
   const uptr size = size_log == 0xf ? uc->uc_mcontext.regs[1] : 1U << size_log;
 
-#elif defined(__x86_64__)
+#  elif defined(__x86_64__)
   // Access type is encoded in the instruction following INT3 as
   // NOP DWORD ptr [EAX + 0x40 + 0xXY]. For Y == 0xF, access size is stored in
   // RSI register. Access address is always in RDI register.
   uptr pc = (uptr)uc->uc_mcontext.gregs[REG_RIP];
-  uint8_t *nop = (uint8_t*)pc;
-  if (*nop != 0x0f || *(nop + 1) != 0x1f || *(nop + 2) != 0x40  ||
+  uint8_t *nop = (uint8_t *)pc;
+  if (*nop != 0x0f || *(nop + 1) != 0x1f || *(nop + 2) != 0x40 ||
       *(nop + 3) < 0x40)
-    return AccessInfo{}; // Not ours.
+    return AccessInfo{};  // Not ours.
   const unsigned code = *(nop + 3);
 
   const bool is_store = code & 0x10;
@@ -359,13 +354,13 @@ static AccessInfo GetAccessInfo(siginfo_t *info, ucontext_t *uc) {
   const uptr addr = uc->uc_mcontext.gregs[REG_RDI];
   const unsigned size_log = code & 0xf;
   if (size_log > 4 && size_log != 0xf)
-    return AccessInfo{}; // Not ours.
+    return AccessInfo{};  // Not ours.
   const uptr size =
       size_log == 0xf ? uc->uc_mcontext.gregs[REG_RSI] : 1U << size_log;
 
-#else
-# error Unsupported architecture
-#endif
+#  else
+#    error Unsupported architecture
+#  endif
 
   return AccessInfo{addr, size, is_store, !is_store, recover};
 }
@@ -378,12 +373,12 @@ static bool HwasanOnSIGTRAP(int signo, siginfo_t *info, ucontext_t *uc) {
   SignalContext sig{info, uc};
   HandleTagMismatch(ai, StackTrace::GetNextInstructionPc(sig.pc), sig.bp, uc);
 
-#if defined(__aarch64__)
+#  if defined(__aarch64__)
   uc->uc_mcontext.pc += 4;
-#elif defined(__x86_64__)
-#else
-# error Unsupported architecture
-#endif
+#  elif defined(__x86_64__)
+#  else
+#    error Unsupported architecture
+#  endif
   return true;
 }
 
@@ -396,7 +391,7 @@ static void OnStackUnwind(const SignalContext &sig, const void *,
 void HwasanOnDeadlySignal(int signo, void *info, void *context) {
   // Probably a tag mismatch.
   if (signo == SIGTRAP)
-    if (HwasanOnSIGTRAP(signo, (siginfo_t *)info, (ucontext_t*)context))
+    if (HwasanOnSIGTRAP(signo, (siginfo_t *)info, (ucontext_t *)context))
       return;
 
   HandleDeadlySignal(info, context, GetTid(), &OnStackUnwind, nullptr);
@@ -435,6 +430,18 @@ uptr TagMemoryAligned(uptr p, uptr size, tag_t tag) {
   return AddTagToPointer(p, tag);
 }
 
-} // namespace __hwasan
+void HwasanInstallAtForkHandler() {
+  auto before = []() {
+    HwasanAllocatorLock();
+    StackDepotLockAll();
+  };
+  auto after = []() {
+    StackDepotUnlockAll();
+    HwasanAllocatorUnlock();
+  };
+  pthread_atfork(before, after, after);
+}
 
-#endif // SANITIZER_FREEBSD || SANITIZER_LINUX || SANITIZER_NETBSD
+}  // namespace __hwasan
+
+#endif  // SANITIZER_FREEBSD || SANITIZER_LINUX || SANITIZER_NETBSD

@@ -15,6 +15,7 @@
 #include "llvm/ObjectYAML/DWARFYAML.h"
 #include "llvm/ObjectYAML/ELFYAML.h"
 #include "llvm/Support/DataExtractor.h"
+#include "llvm/Support/Errc.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/YAMLTraits.h"
 
@@ -201,15 +202,16 @@ bool ELFDumper<ELFT>::shouldPrintSection(const ELFYAML::Section &S,
     if (const ELFYAML::RawContentSection *RawSec =
             dyn_cast<const ELFYAML::RawContentSection>(&S)) {
       if (RawSec->Type != ELF::SHT_PROGBITS || RawSec->Link || RawSec->Info ||
-          RawSec->AddressAlign != 1 || RawSec->Address || RawSec->EntSize)
+          RawSec->AddressAlign != yaml::Hex64{1} || RawSec->Address ||
+          RawSec->EntSize)
         return true;
 
-      ELFYAML::ELF_SHF ShFlags = RawSec->Flags.getValueOr(ELFYAML::ELF_SHF(0));
+      ELFYAML::ELF_SHF ShFlags = RawSec->Flags.value_or(ELFYAML::ELF_SHF(0));
 
       if (SecName == "debug_str")
         return ShFlags != ELFYAML::ELF_SHF(ELF::SHF_MERGE | ELF::SHF_STRINGS);
 
-      return ShFlags != 0;
+      return ShFlags != ELFYAML::ELF_SHF{0};
     }
   }
 
@@ -224,7 +226,7 @@ bool ELFDumper<ELFT>::shouldPrintSection(const ELFYAML::Section &S,
   // are empty, which should not normally happen.
   if (S.Type == ELF::SHT_STRTAB || S.Type == ELF::SHT_SYMTAB ||
       S.Type == ELF::SHT_DYNSYM) {
-    return S.Size || S.Flags.getValueOr(ELFYAML::ELF_SHF(0)) & ELF::SHF_ALLOC;
+    return S.Size || S.Flags.value_or(ELFYAML::ELF_SHF(0)) & ELF::SHF_ALLOC;
   }
 
   return true;

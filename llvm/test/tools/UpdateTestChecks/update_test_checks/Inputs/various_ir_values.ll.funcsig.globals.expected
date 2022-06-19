@@ -249,8 +249,8 @@ attributes #3 = { nounwind }
 !61 = !{!"branch_weights", i32 1, i32 1048575}
 ;.
 ; CHECK: attributes #[[ATTR0]] = { nounwind uwtable "correctly-rounded-divide-sqrt-fp-math"="false" "denormal-fp-math"="ieee,ieee" "denormal-fp-math-f32"="ieee,ieee" "disable-tail-calls"="false" "frame-pointer"="none" "less-precise-fpmad"="false" "min-legal-vector-width"="0" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="x86-64" "target-features"="+cx8,+fxsr,+mmx,+sse,+sse2,+x87" "unsafe-fp-math"="false" "use-soft-float"="false" }
-; CHECK: attributes #[[ATTR1:[0-9]+]] = { nofree nosync nounwind readnone speculatable willreturn }
-; CHECK: attributes #[[ATTR2:[0-9]+]] = { argmemonly nofree nosync nounwind willreturn }
+; CHECK: attributes #[[ATTR1:[0-9]+]] = { nocallback nofree nosync nounwind readnone speculatable willreturn }
+; CHECK: attributes #[[ATTR2:[0-9]+]] = { argmemonly nocallback nofree nosync nounwind willreturn }
 ; CHECK: attributes #[[ATTR3]] = { nounwind }
 ;.
 ; CHECK: [[META0:![0-9]+]] = distinct !DICompileUnit(language: DW_LANG_C99, file: !1, producer: "clang version 11.0.0 (git@github.com:llvm/llvm-project.git 1d5da8cd30fce1c0a2c2fa6ba656dbfaa36192c8)", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, enums: !2, splitDebugInlining: false, nameTableKind: None)

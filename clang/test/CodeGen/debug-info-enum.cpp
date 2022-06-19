@@ -77,7 +77,7 @@ enum class E6 : signed long long {
 // CHECK-SAME: baseType: ![[LONG:[0-9]+]]
 // CHECK-SAME: DIFlagEnumClass
 // CHECK-SAME: elements: ![[ELTS6:[0-9]+]]
-// CHECK: ![[LONG]] = !DIBasicType(name: "long long int", size: 64, encoding: DW_ATE_signed)
+// CHECK: ![[LONG]] = !DIBasicType(name: "long long", size: 64, encoding: DW_ATE_signed)
 // CHECK: ![[ELTS6]] = !{![[A6:[0-9]+]], ![[B6:[0-9]+]]}
 // CHECK: ![[A6]] = !DIEnumerator(name: "A6", value: -9223372036854775808)
 // CHECK: ![[B6]] = !DIEnumerator(name: "B6", value: 9223372036854775807)
@@ -87,7 +87,7 @@ enum class E7 : unsigned long long { A7 = 18446744073709551615ULL } x7;
 // CHECK-SAME: baseType: ![[ULONG:[0-9]+]]
 // CHECK-SAME: DIFlagEnumClass
 // CHECK-SAME: elements: ![[ELTS7:[0-9]+]]
-// CHECK: ![[ULONG]] = !DIBasicType(name: "long long unsigned int", size: 64, encoding: DW_ATE_unsigned)
+// CHECK: ![[ULONG]] = !DIBasicType(name: "unsigned long long", size: 64, encoding: DW_ATE_unsigned)
 // CHECK: ![[ELTS7]] = !{![[A7:[0-9]+]]}
 // CHECK: ![[A7]] = !DIEnumerator(name: "A7", value: 18446744073709551615, isUnsigned: true)
 

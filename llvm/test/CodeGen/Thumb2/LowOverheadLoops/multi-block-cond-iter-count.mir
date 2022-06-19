@@ -233,10 +233,10 @@ body:             |
   ; CHECK: bb.3 (%ir-block.33):
   ; CHECK:   successors: %bb.3(0x7c000000), %bb.4(0x04000000)
   ; CHECK:   liveins: $lr, $r0, $r1, $r2
-  ; CHECK:   renamable $r1, renamable $q0 = MVE_VLDRWU32_post killed renamable $r1, 16, 0, $noreg
-  ; CHECK:   renamable $r2, renamable $q1 = MVE_VLDRWU32_post killed renamable $r2, 16, 0, $noreg
-  ; CHECK:   renamable $q0 = nsw MVE_VMULi32 killed renamable $q1, killed renamable $q0, 0, $noreg, undef renamable $q0
-  ; CHECK:   MVE_VSTRWU32 killed renamable $q0, killed renamable $r0, 0, 0, killed $noreg
+  ; CHECK:   renamable $r1, renamable $q0 = MVE_VLDRWU32_post killed renamable $r1, 16, 0, $noreg, $noreg
+  ; CHECK:   renamable $r2, renamable $q1 = MVE_VLDRWU32_post killed renamable $r2, 16, 0, $noreg, $noreg
+  ; CHECK:   renamable $q0 = nsw MVE_VMULi32 killed renamable $q1, killed renamable $q0, 0, $noreg, $noreg, undef renamable $q0
+  ; CHECK:   MVE_VSTRWU32 killed renamable $q0, killed renamable $r0, 0, 0, killed $noreg, $noreg
   ; CHECK:   $r0 = tMOVr $r2, 14 /* CC::al */, $noreg
   ; CHECK:   $lr = MVE_LETP killed renamable $lr, %bb.3
   ; CHECK: bb.4 (%ir-block.64):
@@ -358,14 +358,14 @@ body:             |
     successors: %bb.3(0x7c000000), %bb.4(0x04000000)
     liveins: $lr, $r0, $r1, $r2, $r3
 
-    renamable $vpr = MVE_VCTP32 renamable $r3, 0, $noreg
+    renamable $vpr = MVE_VCTP32 renamable $r3, 0, $noreg, $noreg
     MVE_VPST 4, implicit $vpr
-    renamable $r1, renamable $q0 = MVE_VLDRWU32_post killed renamable $r1, 16, 1, renamable $vpr
-    renamable $r2, renamable $q1 = MVE_VLDRWU32_post killed renamable $r2, 16, 1, renamable $vpr
+    renamable $r1, renamable $q0 = MVE_VLDRWU32_post killed renamable $r1, 16, 1, renamable $vpr, $noreg
+    renamable $r2, renamable $q1 = MVE_VLDRWU32_post killed renamable $r2, 16, 1, renamable $vpr, $noreg
     renamable $r3, dead $cpsr = tSUBi8 killed renamable $r3, 4, 14, $noreg
-    renamable $q0 = nsw MVE_VMULi32 killed renamable $q1, killed renamable $q0, 0, $noreg, undef renamable $q0
+    renamable $q0 = nsw MVE_VMULi32 killed renamable $q1, killed renamable $q0, 0, $noreg, $noreg, undef renamable $q0
     MVE_VPST 8, implicit $vpr
-    MVE_VSTRWU32 killed renamable $q0, killed renamable $r0, 0, 1, killed renamable $vpr
+    MVE_VSTRWU32 killed renamable $q0, killed renamable $r0, 0, 1, killed renamable $vpr, $noreg
     renamable $lr = t2LoopDec killed renamable $lr, 1
     $r0 = tMOVr $r2, 14, $noreg
     t2LoopEnd renamable $lr, %bb.3, implicit-def dead $cpsr

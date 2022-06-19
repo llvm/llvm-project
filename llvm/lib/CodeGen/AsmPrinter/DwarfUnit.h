@@ -25,9 +25,7 @@ namespace llvm {
 
 class ConstantFP;
 class ConstantInt;
-class DbgVariable;
 class DwarfCompileUnit;
-class MachineOperand;
 class MCDwarfDwoLineTable;
 class MCSymbol;
 
@@ -53,7 +51,7 @@ protected:
   DwarfFile *DU;
 
   /// An anonymous type for index type.  Owned by DIEUnit.
-  DIE *IndexTyDie;
+  DIE *IndexTyDie = nullptr;
 
   /// Tracks the mapping of unit level debug information variables to debug
   /// information entries.
@@ -226,6 +224,9 @@ public:
   /// Add thrown types.
   void addThrownTypes(DIE &Die, DINodeArray ThrownTypes);
 
+  /// Add the accessibility attribute.
+  void addAccess(DIE &Die, DINode::DIFlags Flags);
+
   /// Add a new type attribute to the specified entity.
   ///
   /// This takes and attribute parameter because DW_AT_friend attributes are
@@ -293,6 +294,9 @@ public:
   /// Add a Dwarf section label attribute data and value.
   void addSectionLabel(DIE &Die, dwarf::Attribute Attribute,
                        const MCSymbol *Label, const MCSymbol *Sec);
+
+  /// Add DW_TAG_LLVM_annotation.
+  void addAnnotation(DIE &Buffer, DINodeArray Annotations);
 
   /// Get context owner's DIE.
   DIE *createTypeDIE(const DICompositeType *Ty);

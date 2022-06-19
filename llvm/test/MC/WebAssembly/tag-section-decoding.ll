@@ -1,4 +1,4 @@
-; RUN: llc -filetype=obj -exception-model=wasm -mattr=+exception-handling %s -o - | obj2yaml | FileCheck %s
+; RUN: llc -filetype=obj -wasm-enable-eh -exception-model=wasm -mattr=+exception-handling %s -o - | obj2yaml | FileCheck %s
 
 ; This is a regression test for a decoding bug that happens when a tag's
 ; sigindex is greater than 63, so we put 63 dummy functions with different
@@ -339,7 +339,4 @@ define i32 @test_throw(i8* %p) {
 ; number with which its LEB128 and ULEB128 encodings are different, because its
 ; 7th least significant bit is not 0.
 ; CHECK:      - Type:            TAG
-; CHECK-NEXT:   Tags:
-; CHECK-NEXT:     - Index:           0
-; CHECK-NEXT:       Attribute:       0
-; CHECK-NEXT:       SigIndex:        64
+; CHEC-NEXT:    TagTypes:        [ 64 ]

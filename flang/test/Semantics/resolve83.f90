@@ -1,5 +1,4 @@
-! RUN: %S/test_errors.sh %s %t %flang_fc1
-! REQUIRES: shell
+! RUN: %python %S/test_errors.py %s %flang_fc1
 module m
 
   ! For C1543
@@ -29,7 +28,9 @@ contains
     end function realFunc
 
     !WARNING: Attribute 'ELEMENTAL' cannot be used more than once
-    elemental real elemental function elementalFunc()
+    elemental real elemental function elementalFunc(x)
+      real, value :: x
+      elementalFunc = x
     end function elementalFunc
 
     !WARNING: Attribute 'IMPURE' cannot be used more than once

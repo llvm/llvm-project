@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIB_TARGET_RISCV_MATINT_H
-#define LLVM_LIB_TARGET_RISCV_MATINT_H
+#ifndef LLVM_LIB_TARGET_RISCV_MCTARGETDESC_MATINT_H
+#define LLVM_LIB_TARGET_RISCV_MCTARGETDESC_MATINT_H
 
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/MC/SubtargetFeature.h"
@@ -15,14 +15,23 @@
 
 namespace llvm {
 class APInt;
-class MCSubtargetInfo;
 
 namespace RISCVMatInt {
+
+enum OpndKind {
+  RegImm, // ADDI/ADDIW/SLLI/SRLI/BSETI/BCLRI
+  Imm,    // LUI
+  RegReg, // SH1ADD/SH2ADD/SH3ADD
+  RegX0,  // ADD_UW
+};
+
 struct Inst {
   unsigned Opc;
   int64_t Imm;
 
   Inst(unsigned Opc, int64_t Imm) : Opc(Opc), Imm(Imm) {}
+
+  OpndKind getOpndKind() const;
 };
 using InstSeq = SmallVector<Inst, 8>;
 

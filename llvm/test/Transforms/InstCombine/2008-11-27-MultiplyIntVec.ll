@@ -1,4 +1,4 @@
-; RUN: opt < %s -instcombine -S | not grep mul
+; RUN: opt < %s -passes=instcombine -S | not grep mul
 
 define <2 x i8> @f(<2 x i8> %x) {
   %A = mul <2 x i8> %x, <i8 1, i8 1>

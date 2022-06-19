@@ -189,17 +189,6 @@ def create_parser():
         metavar='platform-working-dir',
         help='The directory to use on the remote platform.')
 
-    # Reproducer options
-    group = parser.add_argument_group('Reproducer options')
-    group.add_argument(
-        '--capture-path',
-        metavar='reproducer path',
-        help='The reproducer capture path')
-    group.add_argument(
-        '--replay-path',
-        metavar='reproducer path',
-        help='The reproducer replay path')
-
     # Test-suite behaviour
     group = parser.add_argument_group('Runtime behaviour options')
     X('-d', 'Suspend the process after launch to wait indefinitely for a debugger to attach')

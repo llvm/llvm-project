@@ -18,7 +18,7 @@ define i32 @sad8_32bit_icmp_sge(i8* nocapture readonly %cur, i8* nocapture reado
 ; AVX:       # %bb.0: # %entry
 ; AVX-NEXT:    vmovq {{.*#+}} xmm0 = mem[0],zero
 ; AVX-NEXT:    vmovq {{.*#+}} xmm1 = mem[0],zero
-; AVX-NEXT:    vpsadbw %xmm0, %xmm1, %xmm0
+; AVX-NEXT:    vpsadbw %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    vmovd %xmm0, %eax
 ; AVX-NEXT:    retq
 
@@ -60,7 +60,7 @@ define i32 @sad8_32bit_icmp_sgt(i8* nocapture readonly %cur, i8* nocapture reado
 ; AVX:       # %bb.0: # %entry
 ; AVX-NEXT:    vmovq {{.*#+}} xmm0 = mem[0],zero
 ; AVX-NEXT:    vmovq {{.*#+}} xmm1 = mem[0],zero
-; AVX-NEXT:    vpsadbw %xmm0, %xmm1, %xmm0
+; AVX-NEXT:    vpsadbw %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    vmovd %xmm0, %eax
 ; AVX-NEXT:    retq
 entry:
@@ -101,7 +101,7 @@ define i32 @sad8_32bit_icmp_sle(i8* nocapture readonly %cur, i8* nocapture reado
 ; AVX:       # %bb.0: # %entry
 ; AVX-NEXT:    vmovq {{.*#+}} xmm0 = mem[0],zero
 ; AVX-NEXT:    vmovq {{.*#+}} xmm1 = mem[0],zero
-; AVX-NEXT:    vpsadbw %xmm0, %xmm1, %xmm0
+; AVX-NEXT:    vpsadbw %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    vmovd %xmm0, %eax
 ; AVX-NEXT:    retq
 entry:
@@ -142,7 +142,7 @@ define i32 @sad8_32bit_icmp_slt(i8* nocapture readonly %cur, i8* nocapture reado
 ; AVX:       # %bb.0: # %entry
 ; AVX-NEXT:    vmovq {{.*#+}} xmm0 = mem[0],zero
 ; AVX-NEXT:    vmovq {{.*#+}} xmm1 = mem[0],zero
-; AVX-NEXT:    vpsadbw %xmm0, %xmm1, %xmm0
+; AVX-NEXT:    vpsadbw %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    vmovd %xmm0, %eax
 ; AVX-NEXT:    retq
 entry:
@@ -183,7 +183,7 @@ define i64 @sad8_64bit_icmp_sext_slt(i8* nocapture readonly %cur, i8* nocapture 
 ; AVX:       # %bb.0: # %entry
 ; AVX-NEXT:    vmovq {{.*#+}} xmm0 = mem[0],zero
 ; AVX-NEXT:    vmovq {{.*#+}} xmm1 = mem[0],zero
-; AVX-NEXT:    vpsadbw %xmm0, %xmm1, %xmm0
+; AVX-NEXT:    vpsadbw %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    vmovq %xmm0, %rax
 ; AVX-NEXT:    retq
 entry:
@@ -224,7 +224,7 @@ define i64 @sad8_64bit_icmp_zext_slt(i8* nocapture readonly %cur, i8* nocapture 
 ; AVX:       # %bb.0: # %entry
 ; AVX-NEXT:    vmovq {{.*#+}} xmm0 = mem[0],zero
 ; AVX-NEXT:    vmovq {{.*#+}} xmm1 = mem[0],zero
-; AVX-NEXT:    vpsadbw %xmm0, %xmm1, %xmm0
+; AVX-NEXT:    vpsadbw %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    vmovq %xmm0, %rax
 ; AVX-NEXT:    retq
 entry:
@@ -265,7 +265,7 @@ define i64 @sad8_early_64bit_icmp_zext_slt(i8* nocapture readonly %cur, i8* noca
 ; AVX:       # %bb.0: # %entry
 ; AVX-NEXT:    vmovq {{.*#+}} xmm0 = mem[0],zero
 ; AVX-NEXT:    vmovq {{.*#+}} xmm1 = mem[0],zero
-; AVX-NEXT:    vpsadbw %xmm0, %xmm1, %xmm0
+; AVX-NEXT:    vpsadbw %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    vmovq %xmm0, %rax
 ; AVX-NEXT:    retq
 entry:

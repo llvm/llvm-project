@@ -22,19 +22,19 @@
 #include "llvm/ADT/PointerIntPair.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
-#include "llvm/CodeGen/LiveInterval.h"
 #include "llvm/CodeGen/LiveIntervalCalc.h"
 #include "llvm/CodeGen/LiveIntervals.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/SlotIndexes.h"
-#include "llvm/MC/LaneBitmask.h"
 #include "llvm/Support/Compiler.h"
 #include <utility>
 
 namespace llvm {
 
 class AAResults;
+class LiveInterval;
+class LiveRange;
 class LiveIntervals;
 class LiveRangeEdit;
 class MachineBlockFrequencyInfo;
@@ -160,14 +160,11 @@ private:
   /// NumThroughBlocks - Number of live-through blocks.
   unsigned NumThroughBlocks;
 
-  /// DidRepairRange - analyze was forced to shrinkToUses().
-  bool DidRepairRange;
-
   // Sumarize statistics by counting instructions using CurLI.
   void analyzeUses();
 
   /// calcLiveBlockInfo - Compute per-block information about CurLI.
-  bool calcLiveBlockInfo();
+  void calcLiveBlockInfo();
 
 public:
   SplitAnalysis(const VirtRegMap &vrm, const LiveIntervals &lis,
@@ -176,11 +173,6 @@ public:
   /// analyze - set CurLI to the specified interval, and analyze how it may be
   /// split.
   void analyze(const LiveInterval *li);
-
-  /// didRepairRange() - Returns true if CurLI was invalid and has been repaired
-  /// by analyze(). This really shouldn't happen, but sometimes the coalescer
-  /// can create live ranges that end in mid-air.
-  bool didRepairRange() const { return DidRepairRange; }
 
   /// clear - clear all data structures so SplitAnalysis is ready to analyze a
   /// new interval.
@@ -354,19 +346,6 @@ private:
     return LICalc[SpillMode != SM_Partition && RegIdx != 0];
   }
 
-  /// Find a subrange corresponding to the exact lane mask @p LM in the live
-  /// interval @p LI. The interval @p LI is assumed to contain such a subrange.
-  /// This function is used to find corresponding subranges between the
-  /// original interval and the new intervals.
-  LiveInterval::SubRange &getSubRangeForMaskExact(LaneBitmask LM,
-                                                  LiveInterval &LI);
-
-  /// Find a subrange corresponding to the lane mask @p LM, or a superset of it,
-  /// in the live interval @p LI. The interval @p LI is assumed to contain such
-  /// a subrange.  This function is used to find corresponding subranges between
-  /// the original interval and the new intervals.
-  LiveInterval::SubRange &getSubRangeForMask(LaneBitmask LM, LiveInterval &LI);
-
   /// Add a segment to the interval LI for the value number VNI. If LI has
   /// subranges, corresponding segments will be added to them as well, but
   /// with newly created value numbers. If Original is true, dead def will
@@ -398,10 +377,8 @@ private:
 
   /// defFromParent - Define Reg from ParentVNI at UseIdx using either
   /// rematerialization or a COPY from parent. Return the new value.
-  VNInfo *defFromParent(unsigned RegIdx,
-                        VNInfo *ParentVNI,
-                        SlotIndex UseIdx,
-                        MachineBasicBlock &MBB,
+  VNInfo *defFromParent(unsigned RegIdx, const VNInfo *ParentVNI,
+                        SlotIndex UseIdx, MachineBasicBlock &MBB,
                         MachineBasicBlock::iterator I);
 
   /// removeBackCopies - Remove the copy instructions that defines the values

@@ -6,7 +6,7 @@
 - (int)two;
 @end
 
-int main ()
+int main (void)
 {
   return Test.one.two;
 }
@@ -24,7 +24,7 @@ __attribute__((objc_root_class))
 @end
 
 @interface Subclass : RootClass @end
-void Test1() { 
+void Test1(void) { 
     // now okay
     (void)RootClass.property;
     (void)Subclass.property;

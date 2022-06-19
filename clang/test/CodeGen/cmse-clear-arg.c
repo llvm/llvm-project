@@ -23,11 +23,11 @@ typedef struct T0 {
 void __attribute__((cmse_nonsecure_call)) (*g0)(T0);
 
 T0 t0;
-void f0() { g0(t0); }
+void f0(void) { g0(t0); }
 // CHECK:    define {{.*}} @f0()
 // CHECK-LE: %[[V0:.*]] = and i32 {{.*}}, 1
 // CHECK-BE: %[[V0:.*]] = and i32 {{.*}}, -2147483648
-// CHECK:    %[[V1:.*]] = insertvalue [1 x i32] undef, i32 %[[V0]], 0
+// CHECK:    %[[V1:.*]] = insertvalue [1 x i32] poison, i32 %[[V0]], 0
 // CHECK:    call {{.*}} void %0([1 x i32] %[[V1]])
 
 // LE: 11111111 111111.. 11111111 11111111 0xfffffcff/-769
@@ -42,11 +42,11 @@ typedef struct T8 {
 
 T8 t8;
 void __attribute__((cmse_nonsecure_call)) (*g8)(T8);
-void f8() { g8(t8); }
+void f8(void) { g8(t8); }
 // CHECK:    define {{.*}} @f8()
 // CHECK-LE: %[[V0:.*]] = and i32 {{.*}}, -769
 // CHECK-BE: %[[V0:.*]] = and i32 {{.*}}, -12582913
-// CHECK:    %[[V1:.*]] = insertvalue [1 x i32] undef, i32 %[[V0]], 0
+// CHECK:    %[[V1:.*]] = insertvalue [1 x i32] poison, i32 %[[V0]], 0
 // CHECK:    call {{.*}} void %0([1 x i32] %[[V1]])
 
 // LE(0): 11111111 ........ 11111111 11111111 0xffff00ff/-65281
@@ -62,32 +62,32 @@ typedef struct T15 {
 T15 t15;
 
 void __attribute__((cmse_nonsecure_call)) (*g15_0)(T15);
-void f15_0() {
+void f15_0(void) {
   g15_0(t15);
 }
 // CHECK: define {{.*}}@f15_0()
 // CHECK: %[[FN:.*]] = load {{.*}} @g15_0
 // CHECK-LE:  %cmse.clear = and i32 {{.*}}, -65281
 // CHECK-BE:  %cmse.clear = and i32 {{.*}}, -16711681
-// CHECK: %[[R0:.*]] = insertvalue [2 x i32] undef, i32 %cmse.clear, 0
+// CHECK: %[[R0:.*]] = insertvalue [2 x i32] poison, i32 %cmse.clear, 0
 // CHECK-LE: %cmse.clear1 = and i32 {{.*}}, 134215708
 // CHECK-BE: %cmse.clear1 = and i32 {{.*}}, 941621216
 // CHECK: %[[R1:.*]] = insertvalue [2 x i32] %[[R0]], i32 %cmse.clear1, 1
 // CHECK: call {{.*}} void %[[FN]]([2 x i32] %[[R1]])
 
 void __attribute__((cmse_nonsecure_call)) (*g15_1)(int, int, int, T15);
-void f15_1() {
+void f15_1(void) {
   g15_1(0, 1, 2, t15);
 }
 // CHECK: define {{.*}}@f15_1()
 // CHECK: %[[FN:.*]] = load {{.*}} @g15_1
 // CHECK-LE:  %cmse.clear = and i32 {{.*}}, -65281
 // CHECK-BE:  %cmse.clear = and i32 {{.*}}, -16711681
-// CHECK: %[[R0:.*]] = insertvalue [2 x i32] undef, i32 %cmse.clear, 0
+// CHECK: %[[R0:.*]] = insertvalue [2 x i32] poison, i32 %cmse.clear, 0
 // CHECK-LE: %cmse.clear1 = and i32 {{.*}}, 134215708
 // CHECK-BE: %cmse.clear1 = and i32 {{.*}}, 941621216
 // CHECK: %[[R1:.*]] = insertvalue [2 x i32] %[[R0]], i32 %cmse.clear1, 1
-// CHECK: call {{.*}} void %[[FN]](i32 0, i32 1, i32 2, [2 x i32] %[[R1]])
+// CHECK: call {{.*}} void %[[FN]](i32 noundef 0, i32 noundef 1, i32 noundef 2, [2 x i32] %[[R1]])
 
 // LE: 11111111 ........ 11111111 11111111 1111.... ...11111 ........ .111111.
 // LE: 0xff00fffff01f007e/9079291968726434047
@@ -103,14 +103,14 @@ typedef struct T16 {
 T16 t16;
 
 void __attribute__((cmse_nonsecure_call)) (*g16_0)(T16);
-void f16_0() {
+void f16_0(void) {
   g16_0(t16);
 }
 // CHECK: define {{.*}} @f16_0()
 // CHECK: %[[FN:.*]] = load {{.*}} @g16_0
 // CHECK-LE: %cmse.clear = and i64 {{.*}}, 9079291968726434047
 // CHECK-BE: %cmse.clear = and i64 {{.*}}, -71776123088273282
-// CHECK: %[[R:.*]] = insertvalue [1 x i64] undef, i64 %cmse.clear, 0
+// CHECK: %[[R:.*]] = insertvalue [1 x i64] poison, i64 %cmse.clear, 0
 // CHECK: call {{.*}} void %0([1 x i64] %[[R]])
 
 
@@ -133,14 +133,14 @@ typedef struct T18 {
 T18 t18;
 
 void __attribute__((cmse_nonsecure_call)) (*g18)(T18);
-void f18() {
+void f18(void) {
   g18(t18);
 }
 // CHECK:    define {{.*}} @f18()
 // CHECK:    %[[FN:.*]] = load {{.*}} @g18
 // CHECK-LE: %cmse.clear = and i32 {{.*}}, 32702963
 // CHECK-BE: %cmse.clear = and i32 {{.*}}, -813641856
-// CHECK:    %[[R0:.*]] = insertvalue [4 x i32] undef, i32 %cmse.clear, 0
+// CHECK:    %[[R0:.*]] = insertvalue [4 x i32] poison, i32 %cmse.clear, 0
 // CHECK-LE: %cmse.clear1 = and i32 {{.*}}, 32702963
 // CHECK-BE: %cmse.clear1 = and i32 {{.*}}, -813641856
 // CHECK:    %[[R1:.*]] = insertvalue [4 x i32] %[[R0]], i32 %cmse.clear1, 1
@@ -163,14 +163,14 @@ typedef union T19 {
 
 T19 t19;
 void __attribute__((cmse_nonsecure_call)) (*g19)(T19);
-void f19() {
+void f19(void) {
   g19(t19);
 }
 // CHECK:    define {{.*}} @f19()
 // CHECK:    %[[FN:.*]] = load {{.*}} @g19
 // CHECK-LE: %cmse.clear = and i32 {{.*}}, 943259647
 // CHECK-BE: %cmse.clear = and i32 {{.*}}, -58340
-// CHECK:    %[[R:.*]] = insertvalue [1 x i32] undef, i32 %cmse.clear, 0
+// CHECK:    %[[R:.*]] = insertvalue [1 x i32] poison, i32 %cmse.clear, 0
 // CHECK:    call {{.*}} void %[[FN]]([1 x i32] %[[R]])
 
 
@@ -180,7 +180,7 @@ typedef struct T20 {
 
 T20 t20;
 void __attribute__((cmse_nonsecure_call)) (*g20)(T20);
-void f20() {
+void f20(void) {
   g20(t20);
 }
 // CHECK: define {{.*}} @f20()

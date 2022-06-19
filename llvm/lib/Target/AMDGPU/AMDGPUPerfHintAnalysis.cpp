@@ -116,34 +116,29 @@ private:
 
   bool isGlobalAddr(const Value *V) const;
   bool isLocalAddr(const Value *V) const;
-  bool isConstantAddr(const Value *V) const;
 };
 
-static const Value *getMemoryInstrPtr(const Instruction *Inst) {
-  if (auto LI = dyn_cast<LoadInst>(Inst)) {
-    return LI->getPointerOperand();
-  }
-  if (auto SI = dyn_cast<StoreInst>(Inst)) {
-    return SI->getPointerOperand();
-  }
-  if (auto AI = dyn_cast<AtomicCmpXchgInst>(Inst)) {
-    return AI->getPointerOperand();
-  }
-  if (auto AI = dyn_cast<AtomicRMWInst>(Inst)) {
-    return AI->getPointerOperand();
-  }
-  if (auto MI = dyn_cast<AnyMemIntrinsic>(Inst)) {
-    return MI->getRawDest();
-  }
+static std::pair<const Value *, const Type *> getMemoryInstrPtrAndType(
+    const Instruction *Inst) {
+  if (auto LI = dyn_cast<LoadInst>(Inst))
+    return {LI->getPointerOperand(), LI->getType()};
+  if (auto SI = dyn_cast<StoreInst>(Inst))
+    return {SI->getPointerOperand(), SI->getValueOperand()->getType()};
+  if (auto AI = dyn_cast<AtomicCmpXchgInst>(Inst))
+    return {AI->getPointerOperand(), AI->getCompareOperand()->getType()};
+  if (auto AI = dyn_cast<AtomicRMWInst>(Inst))
+    return {AI->getPointerOperand(), AI->getValOperand()->getType()};
+  if (auto MI = dyn_cast<AnyMemIntrinsic>(Inst))
+    return {MI->getRawDest(), Type::getInt8Ty(MI->getContext())};
 
-  return nullptr;
+  return {nullptr, nullptr};
 }
 
 bool AMDGPUPerfHint::isIndirectAccess(const Instruction *Inst) const {
   LLVM_DEBUG(dbgs() << "[isIndirectAccess] " << *Inst << '\n');
   SmallSet<const Value *, 32> WorkSet;
   SmallSet<const Value *, 32> Visited;
-  if (const Value *MO = getMemoryInstrPtr(Inst)) {
+  if (const Value *MO = getMemoryInstrPtrAndType(Inst).first) {
     if (isGlobalAddr(MO))
       WorkSet.insert(MO);
   }
@@ -157,7 +152,7 @@ bool AMDGPUPerfHint::isIndirectAccess(const Instruction *Inst) const {
 
     if (auto LD = dyn_cast<LoadInst>(V)) {
       auto M = LD->getPointerOperand();
-      if (isGlobalAddr(M) || isLocalAddr(M) || isConstantAddr(M)) {
+      if (isGlobalAddr(M)) {
         LLVM_DEBUG(dbgs() << "    is IA\n");
         return true;
       }
@@ -209,10 +204,8 @@ AMDGPUPerfHintAnalysis::FuncInfo *AMDGPUPerfHint::visit(const Function &F) {
   for (auto &B : F) {
     LastAccess = MemAccessInfo();
     for (auto &I : B) {
-      if (const Value *Ptr = getMemoryInstrPtr(&I)) {
-        unsigned Size = divideCeil(
-            Ptr->getType()->getPointerElementType()->getPrimitiveSizeInBits(),
-            32);
+      if (const Type *Ty = getMemoryInstrPtrAndType(&I).second) {
+        unsigned Size = divideCeil(Ty->getPrimitiveSizeInBits(), 32);
         if (isIndirectAccess(&I))
           FI.IAMInstCost += Size;
         if (isLargeStride(&I))
@@ -273,19 +266,23 @@ bool AMDGPUPerfHint::runOnFunction(Function &F) {
                     << " LSMInst cost: " << Info->LSMInstCost << '\n'
                     << " TotalInst cost: " << Info->InstCost << '\n');
 
+  bool Changed = false;
+
   if (isMemBound(*Info)) {
     LLVM_DEBUG(dbgs() << F.getName() << " is memory bound\n");
     NumMemBound++;
     F.addFnAttr("amdgpu-memory-bound", "true");
+    Changed = true;
   }
 
   if (AMDGPU::isEntryFunctionCC(F.getCallingConv()) && needLimitWave(*Info)) {
     LLVM_DEBUG(dbgs() << F.getName() << " needs limit wave\n");
     NumLimitWave++;
     F.addFnAttr("amdgpu-wave-limiter", "true");
+    Changed = true;
   }
 
-  return true;
+  return Changed;
 }
 
 bool AMDGPUPerfHint::isMemBound(const AMDGPUPerfHintAnalysis::FuncInfo &FI) {
@@ -326,7 +323,7 @@ bool AMDGPUPerfHint::isLargeStride(const Instruction *Inst) {
 AMDGPUPerfHint::MemAccessInfo
 AMDGPUPerfHint::makeMemAccessInfo(Instruction *Inst) const {
   MemAccessInfo MAI;
-  const Value *MO = getMemoryInstrPtr(Inst);
+  const Value *MO = getMemoryInstrPtrAndType(Inst).first;
 
   LLVM_DEBUG(dbgs() << "[isLargeStride] MO: " << *MO << '\n');
   // Do not treat local-addr memory access as large stride.
@@ -336,15 +333,6 @@ AMDGPUPerfHint::makeMemAccessInfo(Instruction *Inst) const {
   MAI.V = MO;
   MAI.Base = GetPointerBaseWithConstantOffset(MO, MAI.Offset, *DL);
   return MAI;
-}
-
-bool AMDGPUPerfHint::isConstantAddr(const Value *V) const {
-  if (auto PT = dyn_cast<PointerType>(V->getType())) {
-    unsigned As = PT->getAddressSpace();
-    return As == AMDGPUAS::CONSTANT_ADDRESS ||
-           As == AMDGPUAS::CONSTANT_ADDRESS_32BIT;
-  }
-  return false;
 }
 
 bool AMDGPUPerfHint::MemAccessInfo::isLargeStride(

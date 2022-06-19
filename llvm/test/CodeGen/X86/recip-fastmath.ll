@@ -442,11 +442,10 @@ define <4 x float> @v4f32_one_step(<4 x float> %x) #1 {
 ;
 ; HASWELL-LABEL: v4f32_one_step:
 ; HASWELL:       # %bb.0:
-; HASWELL-NEXT:    vrcpps %xmm0, %xmm2
-; HASWELL-NEXT:    vbroadcastss {{.*#+}} xmm1 = [1.0E+0,1.0E+0,1.0E+0,1.0E+0]
-; HASWELL-NEXT:    vfmsub231ps {{.*#+}} xmm1 = (xmm2 * xmm0) - xmm1
-; HASWELL-NEXT:    vfnmadd132ps {{.*#+}} xmm1 = -(xmm1 * xmm2) + xmm2
-; HASWELL-NEXT:    vmovaps %xmm1, %xmm0
+; HASWELL-NEXT:    vrcpps %xmm0, %xmm1
+; HASWELL-NEXT:    vbroadcastss {{.*#+}} xmm2 = [1.0E+0,1.0E+0,1.0E+0,1.0E+0]
+; HASWELL-NEXT:    vfmsub213ps {{.*#+}} xmm0 = (xmm1 * xmm0) - xmm2
+; HASWELL-NEXT:    vfnmadd132ps {{.*#+}} xmm0 = -(xmm0 * xmm1) + xmm1
 ; HASWELL-NEXT:    retq
 ;
 ; HASWELL-NO-FMA-LABEL: v4f32_one_step:
@@ -461,11 +460,10 @@ define <4 x float> @v4f32_one_step(<4 x float> %x) #1 {
 ;
 ; KNL-LABEL: v4f32_one_step:
 ; KNL:       # %bb.0:
-; KNL-NEXT:    vrcpps %xmm0, %xmm2
-; KNL-NEXT:    vbroadcastss {{.*#+}} xmm1 = [1.0E+0,1.0E+0,1.0E+0,1.0E+0]
-; KNL-NEXT:    vfmsub231ps {{.*#+}} xmm1 = (xmm2 * xmm0) - xmm1
-; KNL-NEXT:    vfnmadd132ps {{.*#+}} xmm1 = -(xmm1 * xmm2) + xmm2
-; KNL-NEXT:    vmovaps %xmm1, %xmm0
+; KNL-NEXT:    vrcpps %xmm0, %xmm1
+; KNL-NEXT:    vbroadcastss {{.*#+}} xmm2 = [1.0E+0,1.0E+0,1.0E+0,1.0E+0]
+; KNL-NEXT:    vfmsub213ps {{.*#+}} xmm0 = (xmm1 * xmm0) - xmm2
+; KNL-NEXT:    vfnmadd132ps {{.*#+}} xmm0 = -(xmm0 * xmm1) + xmm1
 ; KNL-NEXT:    retq
 ;
 ; SKX-LABEL: v4f32_one_step:
@@ -812,11 +810,10 @@ define <8 x float> @v8f32_one_step(<8 x float> %x) #1 {
 ;
 ; HASWELL-LABEL: v8f32_one_step:
 ; HASWELL:       # %bb.0:
-; HASWELL-NEXT:    vrcpps %ymm0, %ymm2
-; HASWELL-NEXT:    vbroadcastss {{.*#+}} ymm1 = [1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0]
-; HASWELL-NEXT:    vfmsub231ps {{.*#+}} ymm1 = (ymm2 * ymm0) - ymm1
-; HASWELL-NEXT:    vfnmadd132ps {{.*#+}} ymm1 = -(ymm1 * ymm2) + ymm2
-; HASWELL-NEXT:    vmovaps %ymm1, %ymm0
+; HASWELL-NEXT:    vrcpps %ymm0, %ymm1
+; HASWELL-NEXT:    vbroadcastss {{.*#+}} ymm2 = [1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0]
+; HASWELL-NEXT:    vfmsub213ps {{.*#+}} ymm0 = (ymm1 * ymm0) - ymm2
+; HASWELL-NEXT:    vfnmadd132ps {{.*#+}} ymm0 = -(ymm0 * ymm1) + ymm1
 ; HASWELL-NEXT:    retq
 ;
 ; HASWELL-NO-FMA-LABEL: v8f32_one_step:
@@ -831,11 +828,10 @@ define <8 x float> @v8f32_one_step(<8 x float> %x) #1 {
 ;
 ; KNL-LABEL: v8f32_one_step:
 ; KNL:       # %bb.0:
-; KNL-NEXT:    vrcpps %ymm0, %ymm2
-; KNL-NEXT:    vbroadcastss {{.*#+}} ymm1 = [1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0]
-; KNL-NEXT:    vfmsub231ps {{.*#+}} ymm1 = (ymm2 * ymm0) - ymm1
-; KNL-NEXT:    vfnmadd132ps {{.*#+}} ymm1 = -(ymm1 * ymm2) + ymm2
-; KNL-NEXT:    vmovaps %ymm1, %ymm0
+; KNL-NEXT:    vrcpps %ymm0, %ymm1
+; KNL-NEXT:    vbroadcastss {{.*#+}} ymm2 = [1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0]
+; KNL-NEXT:    vfmsub213ps {{.*#+}} ymm0 = (ymm1 * ymm0) - ymm2
+; KNL-NEXT:    vfnmadd132ps {{.*#+}} ymm0 = -(ymm0 * ymm1) + ymm1
 ; KNL-NEXT:    retq
 ;
 ; SKX-LABEL: v8f32_one_step:
@@ -1147,13 +1143,13 @@ define <16 x float> @v16f32_one_step(<16 x float> %x) #1 {
 ; SANDY-NEXT:    vmulps %ymm2, %ymm0, %ymm0
 ; SANDY-NEXT:    vmovaps {{.*#+}} ymm3 = [1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0]
 ; SANDY-NEXT:    vsubps %ymm0, %ymm3, %ymm0
+; SANDY-NEXT:    vrcpps %ymm1, %ymm4
 ; SANDY-NEXT:    vmulps %ymm0, %ymm2, %ymm0
 ; SANDY-NEXT:    vaddps %ymm0, %ymm2, %ymm0
-; SANDY-NEXT:    vrcpps %ymm1, %ymm2
-; SANDY-NEXT:    vmulps %ymm2, %ymm1, %ymm1
+; SANDY-NEXT:    vmulps %ymm4, %ymm1, %ymm1
 ; SANDY-NEXT:    vsubps %ymm1, %ymm3, %ymm1
-; SANDY-NEXT:    vmulps %ymm1, %ymm2, %ymm1
-; SANDY-NEXT:    vaddps %ymm1, %ymm2, %ymm1
+; SANDY-NEXT:    vmulps %ymm1, %ymm4, %ymm1
+; SANDY-NEXT:    vaddps %ymm1, %ymm4, %ymm1
 ; SANDY-NEXT:    retq
 ;
 ; HASWELL-LABEL: v16f32_one_step:
@@ -1337,13 +1333,13 @@ define <16 x float> @v16f32_two_step(<16 x float> %x) #2 {
 ; SANDY-NEXT:    vaddps %ymm3, %ymm2, %ymm2
 ; SANDY-NEXT:    vmulps %ymm2, %ymm0, %ymm0
 ; SANDY-NEXT:    vsubps %ymm0, %ymm4, %ymm0
+; SANDY-NEXT:    vrcpps %ymm1, %ymm3
 ; SANDY-NEXT:    vmulps %ymm0, %ymm2, %ymm0
 ; SANDY-NEXT:    vaddps %ymm0, %ymm2, %ymm0
-; SANDY-NEXT:    vrcpps %ymm1, %ymm2
-; SANDY-NEXT:    vmulps %ymm2, %ymm1, %ymm3
-; SANDY-NEXT:    vsubps %ymm3, %ymm4, %ymm3
-; SANDY-NEXT:    vmulps %ymm3, %ymm2, %ymm3
-; SANDY-NEXT:    vaddps %ymm3, %ymm2, %ymm2
+; SANDY-NEXT:    vmulps %ymm3, %ymm1, %ymm2
+; SANDY-NEXT:    vsubps %ymm2, %ymm4, %ymm2
+; SANDY-NEXT:    vmulps %ymm2, %ymm3, %ymm2
+; SANDY-NEXT:    vaddps %ymm2, %ymm3, %ymm2
 ; SANDY-NEXT:    vmulps %ymm2, %ymm1, %ymm1
 ; SANDY-NEXT:    vsubps %ymm1, %ymm4, %ymm1
 ; SANDY-NEXT:    vmulps %ymm1, %ymm2, %ymm1

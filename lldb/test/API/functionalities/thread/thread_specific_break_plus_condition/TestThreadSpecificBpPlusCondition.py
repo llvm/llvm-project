@@ -13,13 +13,12 @@ from lldbsuite.test import lldbutil
 
 class ThreadSpecificBreakPlusConditionTestCase(TestBase):
 
-    mydir = TestBase.compute_mydir(__file__)
-
     # test frequently times out or hangs
     @skipIfDarwin
     # hits break in another thread in testrun
     @add_test_categories(['pyapi'])
     @expectedFlakeyNetBSD
+    @skipIfWindows # This test is flaky on Windows
     def test_python(self):
         """Test that we obey thread conditioned breakpoints."""
         self.build()

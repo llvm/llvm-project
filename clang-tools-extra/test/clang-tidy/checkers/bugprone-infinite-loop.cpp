@@ -1,5 +1,5 @@
 // RUN: %check_clang_tidy %s bugprone-infinite-loop %t \
-// RUN:                   -- -- -fexceptions -fblocks
+// RUN:                   -- -- -fexceptions -fblocks -fno-delayed-template-parsing
 
 void simple_infinite_loop1() {
   int i = 0;
@@ -590,4 +590,98 @@ void test_structured_bindings_bad() {
   for (; x < 10; ++y) {
       // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: this loop is infinite; none of its condition variables (x) are updated in the loop body [bugprone-infinite-loop]
   }
+}
+
+void test_volatile_cast() {
+  // This is a no-op cast. Clang ignores the qualifier, we should too.
+  for (int i = 0; (volatile int)i < 10;) {
+    // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: this loop is infinite; none of its condition variables (i) are updated in the loop body [bugprone-infinite-loop]
+  }
+}
+
+void test_volatile_concrete_address(int i, int size) {
+  // No warning. The value behind the volatile concrete address
+  // is beyond our control. It may change at any time.
+  for (; *((volatile int *)0x1234) < size;) {
+  }
+
+  for (; *((volatile int *)(0x1234 + i)) < size;) {
+  }
+
+  for (; **((volatile int **)0x1234) < size;) {
+  }
+
+  volatile int *x = (volatile int *)0x1234;
+  for (; *x < 10;) {
+  }
+
+  // FIXME: This one should probably also be suppressed.
+  // Whatever the developer is doing here, they can do that again anywhere else
+  // which basically makes it a global.
+  for (; *(int *)0x1234 < size;) {
+    // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: this loop is infinite; none of its condition variables (size) are updated in the loop body [bugprone-infinite-loop]
+  }
+}
+
+template <typename T>
+int some_template_fn() { return 1; }
+
+template <typename T>
+void test_dependent_condition() {
+  const int error = some_template_fn<T>();
+  do {
+  } while (false && error == 0);
+
+  const int val = some_template_fn<T>();
+  for (; !(val == 0 || true);) {
+  }
+
+  const int val2 = some_template_fn<T>();
+  for (; !(val2 == 0 || false);) {
+    // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: this loop is infinite; none of its condition variables (val2) are updated in the loop body [bugprone-infinite-loop]
+  }
+
+  const int val3 = some_template_fn<T>();
+  do {
+    // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: this loop is infinite; none of its condition variables (val3) are updated in the loop body [bugprone-infinite-loop]
+  } while (1, (true) && val3 == 1);
+
+  const int val4 = some_template_fn<T>();
+  do {
+  } while (1, (false) && val4 == 1);
+}
+
+void test_typeof() {
+  __typeof__({
+    for (int i = 0; i < 10; ++i) {
+    }
+    0;
+  }) x;
+}
+
+void test_typeof_infinite() {
+  __typeof__({
+    for (int i = 0; i < 10;) {
+    }
+    0;
+  }) x;
+}
+
+void test_typeof_while_infinite() {
+  __typeof__({
+    int i = 0;
+    while (i < 10) {
+    }
+    0;
+  }) x;
+}
+
+void test_typeof_dowhile_infinite() {
+  __typeof__({
+    int i = 0;
+    do {
+
+    } while (i < 10);
+    0;
+  }) x;
 }

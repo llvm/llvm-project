@@ -140,7 +140,7 @@ Status NativeRegisterContextFreeBSD_arm::WriteRegister(
 }
 
 Status NativeRegisterContextFreeBSD_arm::ReadAllRegisterValues(
-    lldb::DataBufferSP &data_sp) {
+    lldb::WritableDataBufferSP &data_sp) {
   Status error;
 
   error = ReadRegisterSet(RegisterInfoPOSIX_arm::GPRegSet);
@@ -177,7 +177,7 @@ Status NativeRegisterContextFreeBSD_arm::WriteAllRegisterValues(
     return error;
   }
 
-  uint8_t *src = data_sp->GetBytes();
+  const uint8_t *src = data_sp->GetBytes();
   if (src == nullptr) {
     error.SetErrorStringWithFormat("NativeRegisterContextFreeBSD_arm::%s "
                                    "DataBuffer::GetBytes() returned a null "

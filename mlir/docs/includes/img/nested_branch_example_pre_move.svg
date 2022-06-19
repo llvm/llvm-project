@@ -676,7 +676,7 @@
          id="tspan9336"
          x="137.07773"
          y="78.674141"
-         style="font-size:5.64444px;fill:#d40000;stroke-width:0.264583">%1 = alloc(%0)</tspan><tspan
+         style="font-size:5.64444px;fill:#d40000;stroke-width:0.264583">%1 = memref.alloc(%0)</tspan><tspan
          sodipodi:role="line"
          x="137.07773"
          y="85.729691"

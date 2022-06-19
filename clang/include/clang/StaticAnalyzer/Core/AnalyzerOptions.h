@@ -33,20 +33,6 @@ class CheckerBase;
 
 } // namespace ento
 
-/// Analysis - Set of available source code analyses.
-enum Analyses {
-#define ANALYSIS(NAME, CMDFLAG, DESC, SCOPE) NAME,
-#include "clang/StaticAnalyzer/Core/Analyses.def"
-NumAnalyses
-};
-
-/// AnalysisStores - Set of available analysis store models.
-enum AnalysisStores {
-#define ANALYSIS_STORE(NAME, CMDFLAG, DESC, CREATFN) NAME##Model,
-#include "clang/StaticAnalyzer/Core/Analyses.def"
-NumStores
-};
-
 /// AnalysisConstraints - Set of available constraint models.
 enum AnalysisConstraints {
 #define ANALYSIS_CONSTRAINTS(NAME, CMDFLAG, DESC, CREATFN) NAME##Model,
@@ -138,6 +124,8 @@ enum UserModeKind {
   UMK_Deep = 2
 };
 
+enum class CTUPhase1InliningKind { None, Small, All };
+
 /// Stores options for the analyzer from the command line.
 ///
 /// Some options are frontend flags (e.g.: -analyzer-output), but some are
@@ -205,7 +193,6 @@ public:
   /// A key-value table of use-specified configuration values.
   // TODO: This shouldn't be public.
   ConfigTable Config;
-  AnalysisStores AnalysisStoreOpt = RegionStoreModel;
   AnalysisConstraints AnalysisConstraintsOpt = RangeConstraintsModel;
   AnalysisDiagClients AnalysisDiagOpt = PD_HTML;
   AnalysisPurgeMode AnalysisPurgeOpt = PurgeStmt;
@@ -242,7 +229,6 @@ public:
   unsigned ShouldEmitErrorsOnInvalidConfigValue : 1;
   unsigned AnalyzeAll : 1;
   unsigned AnalyzerDisplayProgress : 1;
-  unsigned AnalyzeNestedBlocks : 1;
 
   unsigned eagerlyAssumeBinOpBifurcation : 1;
 
@@ -304,10 +290,10 @@ public:
         ShowCheckerOptionList(false), ShowCheckerOptionAlphaList(false),
         ShowCheckerOptionDeveloperList(false), ShowEnabledCheckerList(false),
         ShowConfigOptionsList(false), AnalyzeAll(false),
-        AnalyzerDisplayProgress(false), AnalyzeNestedBlocks(false),
-        eagerlyAssumeBinOpBifurcation(false), TrimGraph(false),
-        visualizeExplodedGraphWithGraphViz(false), UnoptimizedCFG(false),
-        PrintStats(false), NoRetryExhausted(false), AnalyzerWerror(false) {
+        AnalyzerDisplayProgress(false), eagerlyAssumeBinOpBifurcation(false),
+        TrimGraph(false), visualizeExplodedGraphWithGraphViz(false),
+        UnoptimizedCFG(false), PrintStats(false), NoRetryExhausted(false),
+        AnalyzerWerror(false) {
     llvm::sort(AnalyzerConfigCmdFlags);
   }
 
@@ -373,12 +359,8 @@ public:
                                    StringRef OptionName,
                                    bool SearchInParents = false) const;
 
-  /// Retrieves and sets the UserMode. This is a high-level option,
-  /// which is used to set other low-level options. It is not accessible
-  /// outside of AnalyzerOptions.
-  UserModeKind getUserMode() const;
-
   ExplorationStrategyKind getExplorationStrategy() const;
+  CTUPhase1InliningKind getCTUPhase1Inlining() const;
 
   /// Returns the inter-procedural analysis mode.
   IPAKind getIPAMode() const;
@@ -395,7 +377,11 @@ public:
     return {FullCompilerInvocation,
             ShouldDisplayMacroExpansions,
             ShouldSerializeStats,
-            ShouldWriteStableReportFilename,
+            // The stable report filename option is deprecated because
+            // file names are now always stable. Now the old option acts as
+            // an alias to the new verbose filename option because this
+            // closely mimics the behavior under the old option.
+            ShouldWriteStableReportFilename || ShouldWriteVerboseReportFilename,
             AnalyzerWerror,
             ShouldApplyFixIts,
             ShouldDisplayCheckerNameForText};
@@ -411,15 +397,6 @@ using AnalyzerOptionsRef = IntrusiveRefCntPtr<AnalyzerOptions>;
 //
 // For this reason, implement some methods in this header file.
 //===----------------------------------------------------------------------===//
-
-inline UserModeKind AnalyzerOptions::getUserMode() const {
-  auto K = llvm::StringSwitch<llvm::Optional<UserModeKind>>(UserMode)
-    .Case("shallow", UMK_Shallow)
-    .Case("deep", UMK_Deep)
-    .Default(None);
-  assert(K.hasValue() && "User mode is invalid.");
-  return K.getValue();
-}
 
 inline std::vector<StringRef>
 AnalyzerOptions::getRegisteredCheckers(bool IncludeExperimental) {

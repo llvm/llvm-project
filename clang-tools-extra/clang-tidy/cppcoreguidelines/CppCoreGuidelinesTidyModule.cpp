@@ -35,6 +35,7 @@
 #include "ProTypeVarargCheck.h"
 #include "SlicingCheck.h"
 #include "SpecialMemberFunctionsCheck.h"
+#include "VirtualClassDestructorCheck.h"
 
 namespace clang {
 namespace tidy {
@@ -94,6 +95,8 @@ public:
     CheckFactories.registerCheck<SlicingCheck>("cppcoreguidelines-slicing");
     CheckFactories.registerCheck<misc::UnconventionalAssignOperatorCheck>(
         "cppcoreguidelines-c-copy-assignment-signature");
+    CheckFactories.registerCheck<VirtualClassDestructorCheck>(
+        "cppcoreguidelines-virtual-class-destructor");
   }
 
   ClangTidyOptions getModuleOptions() override {
@@ -102,9 +105,6 @@ public:
 
     Opts["cppcoreguidelines-non-private-member-variables-in-classes."
          "IgnoreClassesWithAllMemberVariablesBeingPublic"] = "true";
-
-    Opts["cppcoreguidelines-explicit-virtual-functions."
-         "IgnoreDestructors"] = "true";
 
     return Options;
   }

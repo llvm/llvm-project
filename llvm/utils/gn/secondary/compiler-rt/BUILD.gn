@@ -7,17 +7,17 @@ import("//llvm/utils/gn/build/toolchain/compiler.gni")
 # toolchains and then lipo them together for the final output.
 if (current_os == "win") {
   supported_toolchains = [ "//llvm/utils/gn/build/toolchain:stage2_win" ]
+  supported_toolchains += [ "//llvm/utils/gn/build/toolchain:stage2_win_x86" ]
 } else {
   supported_toolchains = [ "//llvm/utils/gn/build/toolchain:stage2_unix" ]
 }
-if (android_ndk_path != "") {
-  supported_toolchains += [
-    "//llvm/utils/gn/build/toolchain:stage2_android_aarch64",
-    "//llvm/utils/gn/build/toolchain:stage2_android_arm",
-  ]
+supported_toolchains += supported_android_toolchains
+if (llvm_build_AArch64) {
+  supported_toolchains +=
+      [ "//llvm/utils/gn/build/toolchain:stage2_baremetal_aarch64" ]
 }
 group("compiler-rt") {
-  deps = []
+  deps = [ "//compiler-rt/include($host_toolchain)" ]
   foreach(toolchain, supported_toolchains) {
     deps += [ "//compiler-rt/lib($toolchain)" ]
   }

@@ -1,9 +1,9 @@
 // Check code generation
-// RUN: %clang_cc1 -verify -triple x86_64-pc-linux-gnu -fopenmp -fopenmp-version=51 -emit-llvm %s -o - | FileCheck %s --check-prefix=IR
+// RUN: %clang_cc1 -no-opaque-pointers -verify -triple x86_64-pc-linux-gnu -fopenmp -fopenmp-version=51 -emit-llvm %s -o - | FileCheck %s --check-prefix=IR
 
 // Check same results after serialization round-trip
-// RUN: %clang_cc1 -verify -triple x86_64-pc-linux-gnu -fopenmp -fopenmp-version=51 -emit-pch -o %t %s
-// RUN: %clang_cc1 -verify -triple x86_64-pc-linux-gnu -fopenmp -fopenmp-version=51 -include-pch %t -emit-llvm %s -o - | FileCheck %s --check-prefix=IR
+// RUN: %clang_cc1 -no-opaque-pointers -verify -triple x86_64-pc-linux-gnu -fopenmp -fopenmp-version=51 -emit-pch -o %t %s
+// RUN: %clang_cc1 -no-opaque-pointers -verify -triple x86_64-pc-linux-gnu -fopenmp -fopenmp-version=51 -include-pch %t -emit-llvm %s -o - | FileCheck %s --check-prefix=IR
 // expected-no-diagnostics
 
 #ifndef HEADER
@@ -129,14 +129,14 @@ extern "C" void body(...) {}
 // IR-NEXT:    %[[TMP24:.+]] = load i32, i32* %[[DOTUNROLL_INNER_IV__UNROLLED_IV_I]], align 4
 // IR-NEXT:    %[[TMP25:.+]] = load i32, i32* %[[DOTUNROLLED_IV__UNROLLED_IV_I18]], align 4
 // IR-NEXT:    %[[ADD23:.+]] = add i32 %[[TMP25]], 2
-// IR-NEXT:    %[[CMP24:.+]] = icmp ule i32 %[[TMP24]], %[[ADD23]]
+// IR-NEXT:    %[[CMP24:.+]] = icmp ult i32 %[[TMP24]], %[[ADD23]]
 // IR-NEXT:    br i1 %[[CMP24]], label %[[LAND_RHS:.+]], label %[[LAND_END:.+]]
 // IR-EMPTY:
 // IR-NEXT:  [[LAND_RHS]]:
 // IR-NEXT:    %[[TMP26:.+]] = load i32, i32* %[[DOTUNROLL_INNER_IV__UNROLLED_IV_I]], align 4
 // IR-NEXT:    %[[TMP27:.+]] = load i32, i32* %[[DOTCAPTURE_EXPR_8]], align 4
 // IR-NEXT:    %[[ADD25:.+]] = add i32 %[[TMP27]], 1
-// IR-NEXT:    %[[CMP26:.+]] = icmp ule i32 %[[TMP26]], %[[ADD25]]
+// IR-NEXT:    %[[CMP26:.+]] = icmp ult i32 %[[TMP26]], %[[ADD25]]
 // IR-NEXT:    br label %[[LAND_END]]
 // IR-EMPTY:
 // IR-NEXT:  [[LAND_END]]:
@@ -156,14 +156,14 @@ extern "C" void body(...) {}
 // IR-NEXT:    %[[TMP31:.+]] = load i32, i32* %[[DOTUNROLL_INNER_IV_I]], align 4
 // IR-NEXT:    %[[TMP32:.+]] = load i32, i32* %[[DOTUNROLLED_IV_I]], align 4
 // IR-NEXT:    %[[ADD30:.+]] = add i32 %[[TMP32]], 2
-// IR-NEXT:    %[[CMP31:.+]] = icmp ule i32 %[[TMP31]], %[[ADD30]]
+// IR-NEXT:    %[[CMP31:.+]] = icmp ult i32 %[[TMP31]], %[[ADD30]]
 // IR-NEXT:    br i1 %[[CMP31]], label %[[LAND_RHS32:.+]], label %[[LAND_END35:.+]]
 // IR-EMPTY:
 // IR-NEXT:  [[LAND_RHS32]]:
 // IR-NEXT:    %[[TMP33:.+]] = load i32, i32* %[[DOTUNROLL_INNER_IV_I]], align 4
 // IR-NEXT:    %[[TMP34:.+]] = load i32, i32* %[[DOTCAPTURE_EXPR_3]], align 4
 // IR-NEXT:    %[[ADD33:.+]] = add i32 %[[TMP34]], 1
-// IR-NEXT:    %[[CMP34:.+]] = icmp ule i32 %[[TMP33]], %[[ADD33]]
+// IR-NEXT:    %[[CMP34:.+]] = icmp ult i32 %[[TMP33]], %[[ADD33]]
 // IR-NEXT:    br label %[[LAND_END35]]
 // IR-EMPTY:
 // IR-NEXT:  [[LAND_END35]]:
@@ -181,7 +181,7 @@ extern "C" void body(...) {}
 // IR-NEXT:    %[[TMP40:.+]] = load i32, i32* %[[END_ADDR]], align 4
 // IR-NEXT:    %[[TMP41:.+]] = load i32, i32* %[[STEP_ADDR]], align 4
 // IR-NEXT:    %[[TMP42:.+]] = load i32, i32* %[[I]], align 4
-// IR-NEXT:    call void (...) @body(i32 %[[TMP39]], i32 %[[TMP40]], i32 %[[TMP41]], i32 %[[TMP42]])
+// IR-NEXT:    call void (...) @body(i32 noundef %[[TMP39]], i32 noundef %[[TMP40]], i32 noundef %[[TMP41]], i32 noundef %[[TMP42]])
 // IR-NEXT:    br label %[[FOR_INC:.+]]
 // IR-EMPTY:
 // IR-NEXT:  [[FOR_INC]]:

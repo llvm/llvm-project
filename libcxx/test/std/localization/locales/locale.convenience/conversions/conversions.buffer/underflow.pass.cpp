@@ -16,6 +16,8 @@
 
 // This test is not entirely portable
 
+// XFAIL: no-wide-characters
+
 #include <locale>
 #include <codecvt>
 #include <fstream>

@@ -6,8 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-// GCC 5 does not evaluate static assertions dependent on a template parameter.
-// UNSUPPORTED: gcc-5
 
 // UNSUPPORTED: c++03
 
@@ -15,6 +13,7 @@
 
 // Test that hash specializations for <string> require "char_traits<_CharT>" not just any "_Trait".
 
+#include <functional>
 #include <string>
 
 #include "test_macros.h"

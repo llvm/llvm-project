@@ -9,6 +9,8 @@
 # PRINT-NEXT: .reloc 0, R_390_64, .data+2
 # PRINT-NEXT: .reloc 0, R_390_GOTENT, foo+3
 # PRINT-NEXT: .reloc 0, R_390_PC32DBL, 6
+# PRINT-NEXT: .reloc 4, R_390_12, foo
+# PRINT-NEXT: .reloc 2, R_390_20, foo
 # PRINT:      .reloc 0, BFD_RELOC_NONE, 9
 # PRINT-NEXT: .reloc 0, BFD_RELOC_8, 9
 # PRINT-NEXT: .reloc 0, BFD_RELOC_16, 9
@@ -21,6 +23,8 @@
 # CHECK-NEXT: 0x0 R_390_64 .data 0x2
 # CHECK-NEXT: 0x0 R_390_GOTENT foo 0x3
 # CHECK-NEXT: 0x0 R_390_PC32DBL - 0x6
+# CHECK-NEXT: 0x4 R_390_12 foo 0x0
+# CHECK-NEXT: 0x2 R_390_20 foo 0x0
 # CHECK-NEXT: 0x0 R_390_NONE - 0x9
 # CHECK-NEXT: 0x0 R_390_8 - 0x9
 # CHECK-NEXT: 0x0 R_390_16 - 0x9
@@ -37,6 +41,8 @@
   .reloc 0, R_390_64, .data+2
   .reloc 0, R_390_GOTENT, foo+3
   .reloc 0, R_390_PC32DBL, 6
+  .reloc 4, R_390_12, foo
+  .reloc 2, R_390_20, foo
 
   .reloc 0, BFD_RELOC_NONE, 9
   .reloc 0, BFD_RELOC_8, 9

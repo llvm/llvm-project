@@ -12,30 +12,30 @@ extern "C" { // Disable name mangling.
 // Sanitization is explicitly disabled.
 // ========================================================================== //
 
-// CHECK-LABEL: @blacklist_0
-__attribute__((no_sanitize("undefined"))) unsigned int blacklist_0(signed int src) {
+// CHECK-LABEL: @ignorelist_0
+__attribute__((no_sanitize("undefined"))) unsigned int ignorelist_0(signed int src) {
   // We are not in "undefined" group, so that doesn't work.
   // CHECK-SANITIZE: call
   // CHECK: }
   return src;
 }
 
-// CHECK-LABEL: @blacklist_1
-__attribute__((no_sanitize("integer"))) unsigned int blacklist_1(signed int src) {
+// CHECK-LABEL: @ignorelist_1
+__attribute__((no_sanitize("integer"))) unsigned int ignorelist_1(signed int src) {
   // CHECK-SANITIZE-NOT: call
   // CHECK: }
   return src;
 }
 
-// CHECK-LABEL: @blacklist_2
-__attribute__((no_sanitize("implicit-conversion"))) unsigned int blacklist_2(signed int src) {
+// CHECK-LABEL: @ignorelist_2
+__attribute__((no_sanitize("implicit-conversion"))) unsigned int ignorelist_2(signed int src) {
   // CHECK-SANITIZE-NOT: call
   // CHECK: }
   return src;
 }
 
-// CHECK-LABEL: @blacklist_3
-__attribute__((no_sanitize("implicit-integer-sign-change"))) unsigned int blacklist_3(signed int src) {
+// CHECK-LABEL: @ignorelist_3
+__attribute__((no_sanitize("implicit-integer-sign-change"))) unsigned int ignorelist_3(signed int src) {
   // CHECK-SANITIZE-NOT: call
   // CHECK: }
   return src;

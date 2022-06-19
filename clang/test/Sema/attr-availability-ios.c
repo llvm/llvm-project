@@ -10,7 +10,7 @@ void f5(int) __attribute__((availability(ios,introduced=2.0))) __attribute__((av
 void f6(int) __attribute__((availability(ios,deprecated=3.0))); // expected-note {{'f6' has been explicitly marked deprecated here}}
 void f6(int) __attribute__((availability(iOS,introduced=2.0)));
 
-void test() {
+void test(void) {
   f0(0); // expected-warning{{'f0' is deprecated: first deprecated in iOS 2.1}}
   f1(0);
   f2(0); // expected-warning{{'f2' is deprecated: first deprecated in iOS 3.0}}

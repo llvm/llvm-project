@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -emit-llvm -triple x86_64 %s -o - | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -emit-llvm -triple x86_64 %s -o - | FileCheck %s
 
 /// Set !retain regardless of the target. The backend will lower !retain to
 /// SHF_GNU_RETAIN on ELF and ignore the metadata for other binary formats.
@@ -14,7 +14,7 @@
 
 const int c0 __attribute__((retain)) = 42;
 
-void foo() {
+void foo(void) {
   static int l0 __attribute__((retain)) = 2;
 }
 

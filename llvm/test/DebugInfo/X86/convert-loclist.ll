@@ -13,23 +13,37 @@
 ; often - add another IR file with a different DW_OP_convert that's otherwise
 ; identical and demonstrate that they have different DWO IDs.
 
-; SPLIT: 0x00000000: Compile Unit: {{.*}} DWO_id = 0xafd73565c68bc661
+; SPLIT: 0x00000000: Compile Unit: {{.*}} DWO_id = 0xa6edbf487b0a7acf
 
 ; Regression testing a fairly quirky bug where instead of hashing (see above),
 ; extra bytes would be emitted into the output assembly in no
 ; particular/intentional section - so let's check they don't show up at all:
 ; ASM-NOT: .asciz  "\200\200\200"
+; ASM:      .byte   10                              # Loc expr size
+; ASM-NEXT: .byte   17                              # DW_OP_consts
+; ASM-NEXT: .byte   7                               # 7
+; ASM-NEXT: .byte   48                              # DW_OP_lit0
+; ASM-NEXT: .byte   34                              # DW_OP_plus
+; ASM-NEXT: .byte   168                             # DW_OP_convert
+; ASM-NEXT: .asciz  "\232\200\200"                  #
+; ASM-NEXT: .byte   159                             # DW_OP_stack_value
+; ASM-NEXT: .byte   0                               # DW_LLE_end_of_list
+; ASM-NOT: .asciz  "\200\200\200"
 
 ; CHECK: 0x{{0*}}[[TYPE:.*]]: DW_TAG_base_type
 ; CHECK-NEXT:                   DW_AT_name ("DW_ATE_unsigned_32")
 
-; CHECK: DW_LLE_offset_pair ({{.*}}): DW_OP_consts +7, DW_OP_convert 0x[[TYPE]], DW_OP_stack_value
+; CHECK: DW_LLE_offset_pair ({{.*}}): DW_OP_consts +7, DW_OP_lit0, DW_OP_plus, DW_OP_convert 0x[[TYPE]], DW_OP_stack_value
 
 ; Function Attrs: uwtable
 define dso_local void @_Z2f2v() local_unnamed_addr #0 !dbg !11 {
 entry:
   tail call void @_Z2f1v(), !dbg !15
-  call void @llvm.dbg.value(metadata i32 7, metadata !13, metadata !DIExpression(DW_OP_LLVM_convert, 32, DW_ATE_unsigned, DW_OP_stack_value)), !dbg !16
+;; This test depends on "convert" surviving all the way to the final object.
+;; So, insert something before DW_OP_LLVM_convert that the expression folder
+;; will not attempt to eliminate.  At the moment, only "convert" ops are folded.
+;; If you have to change the expression, the expected DWO_id also changes.
+  call void @llvm.dbg.value(metadata i32 7, metadata !13, metadata !DIExpression(DW_OP_lit0, DW_OP_plus, DW_OP_LLVM_convert, 32, DW_ATE_unsigned, DW_OP_stack_value)), !dbg !16
   tail call void @_Z2f1v(), !dbg !17
   ret void, !dbg !18
 }
@@ -47,10 +61,9 @@ attributes #2 = { nounwind readnone speculatable willreturn }
 !llvm.module.flags = !{!7, !8, !9}
 !llvm.ident = !{!10}
 
-!0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus_14, file: !1, producer: "clang version 11.0.0 (git@github.com:llvm/llvm-project.git edc3f4f02e54c2ae1067f60f6a0ed6caf5b92ef6)", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, enums: !2, retainedTypes: !3, splitDebugInlining: false, nameTableKind: None)
+!0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus_14, file: !1, producer: "clang version 11.0.0 (git@github.com:llvm/llvm-project.git edc3f4f02e54c2ae1067f60f6a0ed6caf5b92ef6)", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, enums: !2, splitDebugInlining: false, nameTableKind: None)
 !1 = !DIFile(filename: "loc.cpp", directory: "/usr/local/google/home/blaikie/dev/scratch")
 !2 = !{}
-!3 = !{!4}
 !4 = !DISubprogram(name: "f1", linkageName: "_Z2f1v", scope: !1, file: !1, line: 1, type: !5, flags: DIFlagPrototyped, spFlags: DISPFlagOptimized, retainedNodes: !2)
 !5 = !DISubroutineType(types: !6)
 !6 = !{null}

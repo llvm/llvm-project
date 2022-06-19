@@ -77,7 +77,7 @@ public:
   /// that have '1' in Mask.
   /// Mask.size() should be >= Size.
   size_t MutateWithMask(uint8_t *Data, size_t Size, size_t MaxSize,
-                        const Vector<uint8_t> &Mask);
+                        const std::vector<uint8_t> &Mask);
 
   /// Applies one of the default mutations. Provided as a service
   /// to mutation authors.
@@ -104,7 +104,7 @@ public:
   size_t AddWordFromDictionary(Dictionary &D, uint8_t *Data, size_t Size,
                                size_t MaxSize);
   size_t MutateImpl(uint8_t *Data, size_t Size, size_t MaxSize,
-                    Vector<Mutator> &Mutators);
+                    std::vector<Mutator> &Mutators);
 
   size_t InsertPartOf(const uint8_t *From, size_t FromSize, uint8_t *To,
                       size_t ToSize, size_t MaxToSize);
@@ -133,22 +133,22 @@ public:
   // entries that led to successful discoveries in the past mutations.
   Dictionary PersistentAutoDictionary;
 
-  Vector<DictionaryEntry *> CurrentDictionaryEntrySequence;
+  std::vector<DictionaryEntry *> CurrentDictionaryEntrySequence;
 
   static const size_t kCmpDictionaryEntriesDequeSize = 16;
   DictionaryEntry CmpDictionaryEntriesDeque[kCmpDictionaryEntriesDequeSize];
   size_t CmpDictionaryEntriesDequeIdx = 0;
 
   const Unit *CrossOverWith = nullptr;
-  Vector<uint8_t> MutateInPlaceHere;
-  Vector<uint8_t> MutateWithMaskTemp;
+  std::vector<uint8_t> MutateInPlaceHere;
+  std::vector<uint8_t> MutateWithMaskTemp;
   // CustomCrossOver needs its own buffer as a custom implementation may call
   // LLVMFuzzerMutate, which in turn may resize MutateInPlaceHere.
-  Vector<uint8_t> CustomCrossOverInPlaceHere;
+  std::vector<uint8_t> CustomCrossOverInPlaceHere;
 
-  Vector<Mutator> Mutators;
-  Vector<Mutator> DefaultMutators;
-  Vector<Mutator> CurrentMutatorSequence;
+  std::vector<Mutator> Mutators;
+  std::vector<Mutator> DefaultMutators;
+  std::vector<Mutator> CurrentMutatorSequence;
 };
 
 }  // namespace fuzzer

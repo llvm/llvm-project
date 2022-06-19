@@ -5,11 +5,12 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-//
-//  This file provides Optional, a template class modeled in the spirit of
-//  OCaml's 'opt' variant.  The idea is to strongly type whether or not
-//  a value can be optional.
-//
+///
+/// \file
+///  This file provides Optional, a template class modeled in the spirit of
+///  OCaml's 'opt' variant.  The idea is to strongly type whether or not
+///  a value can be optional.
+///
 //===----------------------------------------------------------------------===//
 
 #ifndef LLVM_ADT_OPTIONAL_H
@@ -21,7 +22,6 @@
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/type_traits.h"
 #include <cassert>
-#include <memory>
 #include <new>
 #include <utility>
 
@@ -34,12 +34,12 @@ namespace optional_detail {
 /// Storage for any type.
 //
 // The specialization condition intentionally uses
-// llvm::is_trivially_copy_constructible instead of
-// std::is_trivially_copy_constructible.  GCC versions prior to 7.4 may
-// instantiate the copy constructor of `T` when
-// std::is_trivially_copy_constructible is instantiated.  This causes
-// compilation to fail if we query the trivially copy constructible property of
-// a class which is not copy constructible.
+// llvm::is_trivially_{copy/move}_constructible instead of
+// std::is_trivially_{copy/move}_constructible. GCC versions prior to 7.4 may
+// instantiate the copy/move constructor of `T` when
+// std::is_trivially_{copy/move}_constructible is instantiated.  This causes
+// compilation to fail if we query the trivially copy/move constructible
+// property of a class which is not copy/move constructible.
 //
 // The current implementation of OptionalStorage insists that in order to use
 // the trivial specialization, the value_type must be trivially copy
@@ -50,83 +50,95 @@ namespace optional_detail {
 //
 // The move constructible / assignable conditions emulate the remaining behavior
 // of std::is_trivially_copyable.
-template <typename T, bool = (llvm::is_trivially_copy_constructible<T>::value &&
-                              std::is_trivially_copy_assignable<T>::value &&
-                              (std::is_trivially_move_constructible<T>::value ||
-                               !std::is_move_constructible<T>::value) &&
-                              (std::is_trivially_move_assignable<T>::value ||
-                               !std::is_move_assignable<T>::value))>
+template <typename T,
+          bool = (llvm::is_trivially_copy_constructible<T>::value &&
+                  std::is_trivially_copy_assignable<T>::value &&
+                  (llvm::is_trivially_move_constructible<T>::value ||
+                   !std::is_move_constructible<T>::value) &&
+                  (std::is_trivially_move_assignable<T>::value ||
+                   !std::is_move_assignable<T>::value))>
 class OptionalStorage {
   union {
     char empty;
-    T value;
+    T val;
   };
-  bool hasVal;
+  bool hasVal = false;
 
 public:
   ~OptionalStorage() { reset(); }
 
-  constexpr OptionalStorage() noexcept : empty(), hasVal(false) {}
+  constexpr OptionalStorage() noexcept : empty() {}
 
   constexpr OptionalStorage(OptionalStorage const &other) : OptionalStorage() {
     if (other.hasValue()) {
-      emplace(other.value);
+      emplace(other.val);
     }
   }
   constexpr OptionalStorage(OptionalStorage &&other) : OptionalStorage() {
     if (other.hasValue()) {
-      emplace(std::move(other.value));
+      emplace(std::move(other.val));
     }
   }
 
   template <class... Args>
-  constexpr explicit OptionalStorage(in_place_t, Args &&... args)
-      : value(std::forward<Args>(args)...), hasVal(true) {}
+  constexpr explicit OptionalStorage(in_place_t, Args &&...args)
+      : val(std::forward<Args>(args)...), hasVal(true) {}
 
   void reset() noexcept {
     if (hasVal) {
-      value.~T();
+      val.~T();
       hasVal = false;
     }
   }
 
+  constexpr bool has_value() const noexcept { return hasVal; }
   constexpr bool hasValue() const noexcept { return hasVal; }
 
-  T &getValue() LLVM_LVALUE_FUNCTION noexcept {
+  T &value() &noexcept {
     assert(hasVal);
-    return value;
+    return val;
   }
-  constexpr T const &getValue() const LLVM_LVALUE_FUNCTION noexcept {
+  T &getValue() &noexcept {
     assert(hasVal);
-    return value;
+    return val;
   }
-#if LLVM_HAS_RVALUE_REFERENCE_THIS
-  T &&getValue() && noexcept {
+  constexpr T const &value() const &noexcept {
     assert(hasVal);
-    return std::move(value);
+    return val;
   }
-#endif
+  constexpr T const &getValue() const &noexcept {
+    assert(hasVal);
+    return val;
+  }
+  T &&value() &&noexcept {
+    assert(hasVal);
+    return std::move(val);
+  }
+  T &&getValue() &&noexcept {
+    assert(hasVal);
+    return std::move(val);
+  }
 
-  template <class... Args> void emplace(Args &&... args) {
+  template <class... Args> void emplace(Args &&...args) {
     reset();
-    ::new ((void *)std::addressof(value)) T(std::forward<Args>(args)...);
+    ::new ((void *)std::addressof(val)) T(std::forward<Args>(args)...);
     hasVal = true;
   }
 
   OptionalStorage &operator=(T const &y) {
     if (hasValue()) {
-      value = y;
+      val = y;
     } else {
-      ::new ((void *)std::addressof(value)) T(y);
+      ::new ((void *)std::addressof(val)) T(y);
       hasVal = true;
     }
     return *this;
   }
   OptionalStorage &operator=(T &&y) {
     if (hasValue()) {
-      value = std::move(y);
+      val = std::move(y);
     } else {
-      ::new ((void *)std::addressof(value)) T(std::move(y));
+      ::new ((void *)std::addressof(val)) T(std::move(y));
       hasVal = true;
     }
     return *this;
@@ -135,9 +147,9 @@ public:
   OptionalStorage &operator=(OptionalStorage const &other) {
     if (other.hasValue()) {
       if (hasValue()) {
-        value = other.value;
+        val = other.val;
       } else {
-        ::new ((void *)std::addressof(value)) T(other.value);
+        ::new ((void *)std::addressof(val)) T(other.val);
         hasVal = true;
       }
     } else {
@@ -149,9 +161,9 @@ public:
   OptionalStorage &operator=(OptionalStorage &&other) {
     if (other.hasValue()) {
       if (hasValue()) {
-        value = std::move(other.value);
+        val = std::move(other.val);
       } else {
-        ::new ((void *)std::addressof(value)) T(std::move(other.value));
+        ::new ((void *)std::addressof(val)) T(std::move(other.val));
         hasVal = true;
       }
     } else {
@@ -164,7 +176,7 @@ public:
 template <typename T> class OptionalStorage<T, true> {
   union {
     char empty;
-    T value;
+    T val;
   };
   bool hasVal = false;
 
@@ -180,53 +192,64 @@ public:
   OptionalStorage &operator=(OptionalStorage &&other) = default;
 
   template <class... Args>
-  constexpr explicit OptionalStorage(in_place_t, Args &&... args)
-      : value(std::forward<Args>(args)...), hasVal(true) {}
+  constexpr explicit OptionalStorage(in_place_t, Args &&...args)
+      : val(std::forward<Args>(args)...), hasVal(true) {}
 
   void reset() noexcept {
     if (hasVal) {
-      value.~T();
+      val.~T();
       hasVal = false;
     }
   }
 
+  constexpr bool has_value() const noexcept { return hasVal; }
   constexpr bool hasValue() const noexcept { return hasVal; }
 
-  T &getValue() LLVM_LVALUE_FUNCTION noexcept {
+  T &value() &noexcept {
     assert(hasVal);
-    return value;
+    return val;
   }
-  constexpr T const &getValue() const LLVM_LVALUE_FUNCTION noexcept {
+  T &getValue() &noexcept {
     assert(hasVal);
-    return value;
+    return val;
   }
-#if LLVM_HAS_RVALUE_REFERENCE_THIS
-  T &&getValue() && noexcept {
+  constexpr T const &value() const &noexcept {
     assert(hasVal);
-    return std::move(value);
+    return val;
   }
-#endif
+  constexpr T const &getValue() const &noexcept {
+    assert(hasVal);
+    return val;
+  }
+  T &&value() &&noexcept {
+    assert(hasVal);
+    return std::move(val);
+  }
+  T &&getValue() &&noexcept {
+    assert(hasVal);
+    return std::move(val);
+  }
 
-  template <class... Args> void emplace(Args &&... args) {
+  template <class... Args> void emplace(Args &&...args) {
     reset();
-    ::new ((void *)std::addressof(value)) T(std::forward<Args>(args)...);
+    ::new ((void *)std::addressof(val)) T(std::forward<Args>(args)...);
     hasVal = true;
   }
 
   OptionalStorage &operator=(T const &y) {
     if (hasValue()) {
-      value = y;
+      val = y;
     } else {
-      ::new ((void *)std::addressof(value)) T(y);
+      ::new ((void *)std::addressof(val)) T(y);
       hasVal = true;
     }
     return *this;
   }
   OptionalStorage &operator=(T &&y) {
     if (hasValue()) {
-      value = std::move(y);
+      val = std::move(y);
     } else {
-      ::new ((void *)std::addressof(value)) T(std::move(y));
+      ::new ((void *)std::addressof(val)) T(std::move(y));
       hasVal = true;
     }
     return *this;
@@ -241,7 +264,7 @@ template <typename T> class Optional {
 public:
   using value_type = T;
 
-  constexpr Optional() {}
+  constexpr Optional() = default;
   constexpr Optional(NoneType) {}
 
   constexpr Optional(const T &y) : Storage(in_place, y) {}
@@ -279,50 +302,53 @@ public:
 
   constexpr const T *getPointer() const { return &Storage.getValue(); }
   T *getPointer() { return &Storage.getValue(); }
-  constexpr const T &getValue() const LLVM_LVALUE_FUNCTION {
-    return Storage.getValue();
-  }
-  T &getValue() LLVM_LVALUE_FUNCTION { return Storage.getValue(); }
+  constexpr const T &value() const & { return Storage.getValue(); }
+  constexpr const T &getValue() const & { return Storage.getValue(); }
+  T &value() & { return Storage.getValue(); }
+  T &getValue() & { return Storage.getValue(); }
 
   constexpr explicit operator bool() const { return hasValue(); }
+  constexpr bool has_value() const { return Storage.hasValue(); }
   constexpr bool hasValue() const { return Storage.hasValue(); }
   constexpr const T *operator->() const { return getPointer(); }
   T *operator->() { return getPointer(); }
-  constexpr const T &operator*() const LLVM_LVALUE_FUNCTION {
-    return getValue();
-  }
-  T &operator*() LLVM_LVALUE_FUNCTION { return getValue(); }
+  constexpr const T &operator*() const & { return getValue(); }
+  T &operator*() & { return getValue(); }
 
-  template <typename U>
-  constexpr T getValueOr(U &&value) const LLVM_LVALUE_FUNCTION {
+  template <typename U> constexpr T value_or(U &&value) const & {
+    return hasValue() ? getValue() : std::forward<U>(value);
+  }
+  template <typename U> constexpr T getValueOr(U &&value) const & {
     return hasValue() ? getValue() : std::forward<U>(value);
   }
 
   /// Apply a function to the value if present; otherwise return None.
   template <class Function>
-  auto map(const Function &F) const LLVM_LVALUE_FUNCTION
-      -> Optional<decltype(F(getValue()))> {
-    if (*this) return F(getValue());
+  auto map(const Function &F) const & -> Optional<decltype(F(getValue()))> {
+    if (*this)
+      return F(getValue());
     return None;
   }
 
-#if LLVM_HAS_RVALUE_REFERENCE_THIS
+  T &&value() && { return std::move(Storage.getValue()); }
   T &&getValue() && { return std::move(Storage.getValue()); }
   T &&operator*() && { return std::move(Storage.getValue()); }
 
-  template <typename U>
-  T getValueOr(U &&value) && {
+  template <typename U> T value_or(U &&value) && {
+    return hasValue() ? std::move(getValue()) : std::forward<U>(value);
+  }
+  template <typename U> T getValueOr(U &&value) && {
     return hasValue() ? std::move(getValue()) : std::forward<U>(value);
   }
 
   /// Apply a function to the value if present; otherwise return None.
   template <class Function>
-  auto map(const Function &F) &&
-      -> Optional<decltype(F(std::move(*this).getValue()))> {
-    if (*this) return F(std::move(*this).getValue());
+  auto map(const Function &F)
+      && -> Optional<decltype(F(std::move(*this).getValue()))> {
+    if (*this)
+      return F(std::move(*this).getValue());
     return None;
   }
-#endif
 };
 
 template <class T> llvm::hash_code hash_value(const Optional<T> &O) {

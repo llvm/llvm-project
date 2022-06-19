@@ -10,8 +10,6 @@
 
 #include "PybindUtils.h"
 
-#include "Dialects.h"
-#include "ExecutionEngine.h"
 #include "Globals.h"
 #include "IRModule.h"
 #include "Pass.h"
@@ -27,18 +25,23 @@ using namespace mlir::python;
 PYBIND11_MODULE(_mlir, m) {
   m.doc() = "MLIR Python Native Extension";
 
-  py::class_<PyGlobals>(m, "_Globals")
+  py::class_<PyGlobals>(m, "_Globals", py::module_local())
       .def_property("dialect_search_modules",
                     &PyGlobals::getDialectSearchPrefixes,
                     &PyGlobals::setDialectSearchPrefixes)
-      .def("append_dialect_search_prefix",
-           [](PyGlobals &self, std::string moduleName) {
-             self.getDialectSearchPrefixes().push_back(std::move(moduleName));
-             self.clearImportCache();
-           })
+      .def(
+          "append_dialect_search_prefix",
+          [](PyGlobals &self, std::string moduleName) {
+            self.getDialectSearchPrefixes().push_back(std::move(moduleName));
+            self.clearImportCache();
+          },
+          py::arg("module_name"))
       .def("_register_dialect_impl", &PyGlobals::registerDialectImpl,
+           py::arg("dialect_namespace"), py::arg("dialect_class"),
            "Testing hook for directly registering a dialect")
       .def("_register_operation_impl", &PyGlobals::registerOperationImpl,
+           py::arg("operation_name"), py::arg("operation_class"),
+           py::arg("raw_opview_class"),
            "Testing hook for directly registering an operation");
 
   // Aside from making the globals accessible to python, having python manage
@@ -56,6 +59,7 @@ PYBIND11_MODULE(_mlir, m) {
         PyGlobals::get().registerDialectImpl(dialectNamespace, pyClass);
         return pyClass;
       },
+      py::arg("dialect_class"),
       "Class decorator for registering a custom Dialect wrapper");
   m.def(
       "register_operation",
@@ -79,29 +83,20 @@ PYBIND11_MODULE(_mlir, m) {
               return opClass;
             });
       },
-      "Class decorator for registering a custom Operation wrapper");
+      py::arg("dialect_class"),
+      "Produce a class decorator for registering an Operation class as part of "
+      "a dialect");
 
   // Define and populate IR submodule.
   auto irModule = m.def_submodule("ir", "MLIR IR Bindings");
   populateIRCore(irModule);
   populateIRAffine(irModule);
   populateIRAttributes(irModule);
+  populateIRInterfaces(irModule);
   populateIRTypes(irModule);
 
   // Define and populate PassManager submodule.
   auto passModule =
       m.def_submodule("passmanager", "MLIR Pass Management Bindings");
   populatePassManagerSubmodule(passModule);
-
-  // Define and populate ExecutionEngine submodule.
-  auto executionEngineModule =
-      m.def_submodule("execution_engine", "MLIR JIT Execution Engine");
-  populateExecutionEngineSubmodule(executionEngineModule);
-
-  // Define and populate dialect submodules.
-  auto dialectsModule = m.def_submodule("dialects");
-  auto linalgModule = dialectsModule.def_submodule("linalg");
-  populateDialectLinalgSubmodule(linalgModule);
-  populateDialectSparseTensorSubmodule(
-      dialectsModule.def_submodule("sparse_tensor"), irModule);
 }

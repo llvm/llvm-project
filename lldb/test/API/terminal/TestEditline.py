@@ -13,10 +13,9 @@ from lldbsuite.test.lldbpexpect import PExpectTest
 
 class EditlineTest(PExpectTest):
 
-    mydir = TestBase.compute_mydir(__file__)
-
     @skipIfAsan
     @skipIfEditlineSupportMissing
+    @skipIf(oslist=["linux"], archs=["arm", "aarch64"])
     def test_left_right_arrow(self):
         """Test that ctrl+left/right arrow navigates words correctly.
 

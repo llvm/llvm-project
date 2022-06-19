@@ -1,4 +1,4 @@
-; RUN: opt < %s -basic-aa -aa-eval -disable-output 2>/dev/null
+; RUN: opt < %s -aa-pipeline=basic-aa -passes=aa-eval -disable-output 2>/dev/null
 
 %struct..RefPoint = type { i32, { i32, i8, i8 } }
 %struct..RefRect = type { %struct..RefPoint, %struct..RefPoint }

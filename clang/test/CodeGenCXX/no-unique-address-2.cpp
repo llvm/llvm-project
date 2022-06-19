@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -std=c++2a %s -emit-llvm -o - -triple x86_64-linux-gnu | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -std=c++2a %s -emit-llvm -o - -triple x86_64-linux-gnu | FileCheck %s
 
 struct TriviallyCopyable {};
 

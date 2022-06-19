@@ -15,7 +15,6 @@
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/Compiler.h"
-#include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 
 using namespace llvm;
@@ -37,7 +36,7 @@ INITIALIZE_PASS_END(DominanceFrontierWrapperPass, "domfrontier",
                 "Dominance Frontier Construction", true, true)
 
 DominanceFrontierWrapperPass::DominanceFrontierWrapperPass()
-    : FunctionPass(ID), DF() {
+    : FunctionPass(ID) {
   initializeDominanceFrontierWrapperPassPass(*PassRegistry::getPassRegistry());
 }
 

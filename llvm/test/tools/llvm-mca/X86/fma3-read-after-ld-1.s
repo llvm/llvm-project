@@ -5,6 +5,8 @@
 
 # RUN: llvm-mca -mtriple=x86_64-unknown-unknown -mcpu=skylake -iterations=1 -resource-pressure=false -instruction-info=false -timeline < %s | FileCheck %s -check-prefixes=ALL,SKYLAKE
 
+# RUN: llvm-mca -mtriple=x86_64-unknown-unknown -mcpu=icelake-server -iterations=1 -resource-pressure=false -instruction-info=false -timeline < %s | FileCheck %s -check-prefixes=ALL,SKYLAKE
+
 # RUN: llvm-mca -mtriple=x86_64-unknown-unknown -mcpu=znver1 -iterations=1 -resource-pressure=false -instruction-info=false -timeline < %s | FileCheck %s -check-prefixes=ALL,ZNVER1
 
 # RUN: llvm-mca -mtriple=x86_64-unknown-unknown -mcpu=znver2 -iterations=1 -resource-pressure=false -instruction-info=false -timeline < %s | FileCheck %s -check-prefixes=ALL,ZNVER1
@@ -45,7 +47,7 @@ vfmadd213ps (%rdi), %xmm1, %xmm2
 # ZNVER1:       Dispatch Width:    4
 # ZNVER1-NEXT:  uOps Per Cycle:    0.13
 # ZNVER1-NEXT:  IPC:               0.13
-# ZNVER1-NEXT:  Block RThroughput: 1.0
+# ZNVER1-NEXT:  Block RThroughput: 0.5
 
 # ALL:          Timeline view:
 

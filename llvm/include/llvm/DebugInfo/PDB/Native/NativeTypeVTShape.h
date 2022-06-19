@@ -9,14 +9,15 @@
 #ifndef LLVM_DEBUGINFO_PDB_NATIVE_NATIVETYPEVTSHAPE_H
 #define LLVM_DEBUGINFO_PDB_NATIVE_NATIVETYPEVTSHAPE_H
 
-#include "llvm/ADT/Optional.h"
-#include "llvm/DebugInfo/CodeView/CodeView.h"
+#include "llvm/DebugInfo/CodeView/TypeIndex.h"
 #include "llvm/DebugInfo/CodeView/TypeRecord.h"
+#include "llvm/DebugInfo/PDB/IPDBRawSymbol.h"
 #include "llvm/DebugInfo/PDB/Native/NativeRawSymbol.h"
-#include "llvm/DebugInfo/PDB/Native/NativeSession.h"
+#include "llvm/DebugInfo/PDB/PDBTypes.h"
 
 namespace llvm {
 namespace pdb {
+class NativeSession;
 
 class NativeTypeVTShape : public NativeRawSymbol {
 public:

@@ -19,6 +19,7 @@
 #include "flang/Parser/message.h"
 #include <cinttypes>
 #include <map>
+#include <string>
 
 namespace Fortran::semantics {
 class DerivedTypeSpec;
@@ -37,6 +38,26 @@ ENUM_CLASS(Relation, Less, Equal, Greater, Unordered)
 template <typename A>
 static constexpr Ordering Compare(const A &x, const A &y) {
   if (x < y) {
+    return Ordering::Less;
+  } else if (x > y) {
+    return Ordering::Greater;
+  } else {
+    return Ordering::Equal;
+  }
+}
+
+template <typename CH>
+static constexpr Ordering Compare(
+    const std::basic_string<CH> &x, const std::basic_string<CH> &y) {
+  std::size_t xLen{x.size()}, yLen{y.size()};
+  using String = std::basic_string<CH>;
+  // Fortran CHARACTER comparison is defined with blank padding
+  // to extend a shorter operand.
+  if (xLen < yLen) {
+    return Compare(String{x}.append(yLen - xLen, CH{' '}), y);
+  } else if (xLen > yLen) {
+    return Compare(x, String{y}.append(xLen - yLen, CH{' '}));
+  } else if (x < y) {
     return Ordering::Less;
   } else if (x > y) {
     return Ordering::Greater;
@@ -99,7 +120,7 @@ static constexpr bool Satisfies(RelationalOperator op, Relation relation) {
   case Relation::Greater:
     return Satisfies(op, Ordering::Greater);
   case Relation::Unordered:
-    return false;
+    return op == RelationalOperator::NE;
   }
   return false; // silence g++ warning
 }
@@ -133,9 +154,9 @@ struct Rounding {
 
 static constexpr Rounding defaultRounding;
 
-#if __BYTE_ORDER__ == __ORDER_BIG_ENDIAN__
+#if FLANG_BIG_ENDIAN
 constexpr bool isHostLittleEndian{false};
-#elif __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__
+#elif FLANG_LITTLE_ENDIAN
 constexpr bool isHostLittleEndian{true};
 #else
 #error host endianness is not known
@@ -238,6 +259,11 @@ public:
   std::size_t maxAlignment() const { return maxAlignment_; }
   const semantics::DerivedTypeSpec *pdtInstance() const { return pdtInstance_; }
   const IntrinsicProcTable &intrinsics() const { return intrinsics_; }
+  bool inModuleFile() const { return inModuleFile_; }
+  FoldingContext &set_inModuleFile(bool yes = true) {
+    inModuleFile_ = yes;
+    return *this;
+  }
 
   ConstantSubscript &StartImpliedDo(parser::CharBlock, ConstantSubscript = 1);
   std::optional<ConstantSubscript> GetImpliedDo(parser::CharBlock) const;
@@ -261,6 +287,7 @@ private:
   static constexpr bool bigEndian_{false}; // TODO: configure for target
   static constexpr std::size_t maxAlignment_{8}; // TODO: configure for target
   const semantics::DerivedTypeSpec *pdtInstance_{nullptr};
+  bool inModuleFile_{false};
   std::map<parser::CharBlock, ConstantSubscript> impliedDos_;
 };
 

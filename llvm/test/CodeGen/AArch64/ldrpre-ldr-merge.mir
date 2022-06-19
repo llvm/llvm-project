@@ -14,13 +14,13 @@ body:             |
     liveins: $w0, $w1, $x1
     ; CHECK-LABEL: name: 1-ldrwpre-ldrwui-merge
     ; CHECK: liveins: $w0, $w1, $x1
-    ; CHECK: early-clobber $x1, renamable $w0, renamable $w1 = LDPWpre renamable $x1, 5 :: (load (s32))
-    ; CHECK: STPWi renamable $w0, renamable $w1, renamable $x1, 0 :: (store (s32))
+    ; CHECK: early-clobber $x1, renamable $w0, renamable $w2 = LDPWpre renamable $x1, 5 :: (load (s32))
+    ; CHECK: STPWi renamable $w0, renamable $w2, renamable $x1, 0 :: (store (s32))
     ; CHECK: RET undef $lr
     early-clobber renamable $x1, renamable $w0 = LDRWpre killed renamable $x1, 20 :: (load (s32))
-    renamable $w1 = LDRWui renamable $x1, 1 :: (load (s32))
+    renamable $w2 = LDRWui renamable $x1, 1 :: (load (s32))
     STRWui killed renamable $w0, renamable $x1, 0 :: (store (s32))
-    STRWui killed renamable $w1, renamable $x1, 1 :: (store (s32))
+    STRWui killed renamable $w2, renamable $x1, 1 :: (store (s32))
     RET undef $lr
 ...
 

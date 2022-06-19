@@ -117,23 +117,17 @@ enum NodeType : unsigned {
   // MachineMemOperands rather than one.
   MVC,
 
-  // Like MVC, but implemented as a loop that handles X*256 bytes
-  // followed by straight-line code to handle the rest (if any).
-  // The value of X is passed as an additional operand.
-  MVC_LOOP,
-
-  // Similar to MVC and MVC_LOOP, but for logic operations (AND, OR, XOR).
+  // Similar to MVC, but for logic operations (AND, OR, XOR).
   NC,
-  NC_LOOP,
   OC,
-  OC_LOOP,
   XC,
-  XC_LOOP,
 
   // Use CLC to compare two blocks of memory, with the same comments
-  // as for MVC and MVC_LOOP.
+  // as for MVC.
   CLC,
-  CLC_LOOP,
+
+  // Use MVC to set a block of memory after storing the first byte.
+  MEMSET_MVC,
 
   // Use an MVST-based sequence to implement stpcpy().
   STPCPY,
@@ -387,7 +381,6 @@ enum {
 } // end namespace SystemZICMP
 
 class SystemZSubtarget;
-class SystemZTargetMachine;
 
 class SystemZTargetLowering : public TargetLowering {
 public:
@@ -450,6 +443,11 @@ public:
                                   EVT VT) const override;
   bool isFPImmLegal(const APFloat &Imm, EVT VT,
                     bool ForCodeSize) const override;
+  bool ShouldShrinkFPConstant(EVT VT) const override {
+    // Do not shrink 64-bit FP constpool entries since LDEB is slower than
+    // LD, and having the full constant in memory enables reg/mem opcodes.
+    return VT != MVT::f64;
+  }
   bool hasInlineStackProbe(MachineFunction &MF) const override;
   bool isLegalICmpImmediate(int64_t Imm) const override;
   bool isLegalAddImmediate(int64_t Imm) const override;
@@ -459,6 +457,12 @@ public:
   bool allowsMisalignedMemoryAccesses(EVT VT, unsigned AS, Align Alignment,
                                       MachineMemOperand::Flags Flags,
                                       bool *Fast) const override;
+  bool
+  findOptimalMemOpLowering(std::vector<EVT> &MemOps, unsigned Limit,
+                           const MemOp &Op, unsigned DstAS, unsigned SrcAS,
+                           const AttributeList &FuncAttributes) const override;
+  EVT getOptimalMemOpType(const MemOp &Op,
+                          const AttributeList &FuncAttributes) const override;
   bool isTruncateFree(Type *, Type *) const override;
   bool isTruncateFree(EVT, EVT) const override;
 
@@ -468,6 +472,8 @@ public:
     // users of the math result.
     return VT == MVT::i32 || VT == MVT::i64;
   }
+
+  bool shouldConsiderGEPOffsetSplit() const override { return true; }
 
   const char *getTargetNodeName(unsigned Opcode) const override;
   std::pair<unsigned, const TargetRegisterClass *>
@@ -498,6 +504,19 @@ public:
         return InlineAsm::Constraint_S;
       case 'T':
         return InlineAsm::Constraint_T;
+      }
+    } else if (ConstraintCode.size() == 2 && ConstraintCode[0] == 'Z') {
+      switch (ConstraintCode[1]) {
+      default:
+        break;
+      case 'Q':
+        return InlineAsm::Constraint_ZQ;
+      case 'R':
+        return InlineAsm::Constraint_ZR;
+      case 'S':
+        return InlineAsm::Constraint_ZS;
+      case 'T':
+        return InlineAsm::Constraint_ZT;
       }
     }
     return TargetLowering::getInlineAsmMemConstraint(ConstraintCode);
@@ -554,6 +573,12 @@ public:
                                SmallVectorImpl<SDValue> &InVals) const override;
   SDValue LowerCall(CallLoweringInfo &CLI,
                     SmallVectorImpl<SDValue> &InVals) const override;
+
+  std::pair<SDValue, SDValue>
+  makeExternalCall(SDValue Chain, SelectionDAG &DAG, const char *CalleeName,
+                   EVT RetVT, ArrayRef<SDValue> Ops, CallingConv::ID CallConv,
+                   bool IsSigned, SDLoc DL, bool DoesNotReturn,
+                   bool IsReturnValueUsed) const;
 
   bool CanLowerReturn(CallingConv::ID CallConv, MachineFunction &MF,
                       bool isVarArg,
@@ -624,8 +649,12 @@ private:
   SDValue lowerFRAMEADDR(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerRETURNADDR(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerVASTART(SDValue Op, SelectionDAG &DAG) const;
+  SDValue lowerVASTART_ELF(SDValue Op, SelectionDAG &DAG) const;
+  SDValue lowerVASTART_XPLINK(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerVACOPY(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerDYNAMIC_STACKALLOC(SDValue Op, SelectionDAG &DAG) const;
+  SDValue lowerDYNAMIC_STACKALLOC_ELF(SDValue Op, SelectionDAG &DAG) const;
+  SDValue lowerDYNAMIC_STACKALLOC_XPLINK(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerGET_DYNAMIC_AREA_OFFSET(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerSMUL_LOHI(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerUMUL_LOHI(SDValue Op, SelectionDAG &DAG) const;
@@ -659,6 +688,7 @@ private:
   SDValue lowerSIGN_EXTEND_VECTOR_INREG(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerZERO_EXTEND_VECTOR_INREG(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerShift(SDValue Op, SelectionDAG &DAG, unsigned ByScalar) const;
+  SDValue lowerIS_FPCLASS(SDValue Op, SelectionDAG &DAG) const;
 
   bool canTreatAsByteVector(EVT VT) const;
   SDValue combineExtract(const SDLoc &DL, EVT ElemVT, EVT VecVT, SDValue OrigOp,
@@ -718,7 +748,8 @@ private:
   MachineBasicBlock *emitAtomicCmpSwapW(MachineInstr &MI,
                                         MachineBasicBlock *BB) const;
   MachineBasicBlock *emitMemMemWrapper(MachineInstr &MI, MachineBasicBlock *BB,
-                                       unsigned Opcode) const;
+                                       unsigned Opcode,
+                                       bool IsMemset = false) const;
   MachineBasicBlock *emitStringWrapper(MachineInstr &MI, MachineBasicBlock *BB,
                                        unsigned Opcode) const;
   MachineBasicBlock *emitTransactionBegin(MachineInstr &MI,
@@ -744,12 +775,15 @@ private:
   APInt SplatUndef;          // Bits correspoding to undef operands of the BVN.
   unsigned SplatBitSize = 0;
   bool isFP128 = false;
-
 public:
   unsigned Opcode = 0;
   SmallVector<unsigned, 2> OpVals;
   MVT VecVT;
-  SystemZVectorConstantInfo(APFloat FPImm);
+  SystemZVectorConstantInfo(APInt IntImm);
+  SystemZVectorConstantInfo(APFloat FPImm)
+      : SystemZVectorConstantInfo(FPImm.bitcastToAPInt()) {
+    isFP128 = (&FPImm.getSemantics() == &APFloat::IEEEquad());
+  }
   SystemZVectorConstantInfo(BuildVectorSDNode *BVN);
   bool isVectorConstantLegal(const SystemZSubtarget &Subtarget);
 };

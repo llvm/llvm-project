@@ -530,8 +530,8 @@ namespace TwosComplementShifts {
   using int32 = __INT32_TYPE__;
   static_assert(uint32(int32(0x1234) << 16) == 0x12340000);
   static_assert(uint32(int32(0x1234) << 19) == 0x91a00000);
-  static_assert(uint32(int32(0x1234) << 20) == 0x23400000); // expected-warning {{requires 34 bits}}
-  static_assert(uint32(int32(0x1234) << 24) == 0x34000000); // expected-warning {{requires 38 bits}}
+  static_assert(uint32(int32(0x1234) << 20) == 0x23400000);
+  static_assert(uint32(int32(0x1234) << 24) == 0x34000000);
   static_assert(uint32(int32(-1) << 31) == 0x80000000);
 
   static_assert(-1 >> 1 == -1);
@@ -745,7 +745,7 @@ namespace dtor {
   // Ensure that we can handle temporary cleanups for array temporaries.
   struct ArrElem { constexpr ~ArrElem() {} };
   using Arr = ArrElem[3];
-  static_assert((Arr{}, true));
+  static_assert(((void)Arr{}, true));
 }
 
 namespace dynamic_alloc {
@@ -816,15 +816,15 @@ namespace dynamic_alloc {
     S *p = new T[3]{&a, &a, &a}; // expected-note 2{{heap allocation}}
     switch (mode) {
     case 0:
-      delete p; // expected-note {{non-array delete used to delete pointer to array object of type 'T [3]'}}
+      delete p; // expected-note {{non-array delete used to delete pointer to array object of type 'T[3]'}}
       break;
     case 1:
       // FIXME: This diagnosic isn't great; we should mention the cast to S*
       // somewhere in here.
-      delete[] p; // expected-note {{delete of pointer to subobject '&{*new T [3]#0}[0]'}}
+      delete[] p; // expected-note {{delete of pointer to subobject '&{*new T[3]#0}[0]'}}
       break;
     case 2:
-      delete (T*)p; // expected-note {{non-array delete used to delete pointer to array object of type 'T [3]'}}
+      delete (T*)p; // expected-note {{non-array delete used to delete pointer to array object of type 'T[3]'}}
       break;
     case 3:
       delete[] (T*)p;
@@ -1033,7 +1033,7 @@ namespace delete_random_things {
   struct A { int n; };
   static_assert((delete &(new A)->n, true)); // expected-error {{}} expected-note {{delete of pointer to subobject '&{*new delete_random_things::A#0}.n'}}
   static_assert((delete (new int + 1), true)); // expected-error {{}} expected-note {{delete of pointer '&{*new int#0} + 1' that does not point to complete object}}
-  static_assert((delete[] (new int[3] + 1), true)); // expected-error {{}} expected-note {{delete of pointer to subobject '&{*new int [3]#0}[1]'}}
+  static_assert((delete[] (new int[3] + 1), true)); // expected-error {{}} expected-note {{delete of pointer to subobject '&{*new int[3]#0}[1]'}}
   static_assert((delete &(int&)(int&&)0, true)); // expected-error {{}} expected-note {{delete of pointer '&0' that does not point to a heap-allocated object}} expected-note {{temporary created here}}
 }
 
@@ -1446,4 +1446,30 @@ namespace PR48582 {
   };
   constexpr bool b = [a = S(), b = S()] { return a.p == b.p; }();
   static_assert(!b);
+}
+
+namespace PR45879 {
+  struct A { int n; };
+  struct B { A a; };
+  constexpr A a = (A() = B().a);
+
+  union C {
+    int n;
+    A a;
+  };
+
+  constexpr bool f() {
+    C c = {.n = 1};
+    c.a = B{2}.a;
+    return c.a.n == 2;
+  }
+  static_assert(f());
+
+  // Only syntactic assignments change the active union member.
+  constexpr bool g() { // expected-error {{never produces a constant expression}}
+    C c = {.n = 1};
+    c.a.operator=(B{2}.a); // expected-note 2{{member call on member 'a' of union with active member 'n' is not allowed in a constant expression}}
+    return c.a.n == 2;
+  }
+  static_assert(g()); // expected-error {{constant expression}} expected-note {{in call}}
 }

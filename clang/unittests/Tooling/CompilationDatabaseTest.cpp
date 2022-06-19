@@ -739,6 +739,9 @@ protected:
     EXPECT_EQ(Results[0].CommandLine.back(), MakeNative ? path(F) : F)
         << "Last arg should be the file";
     Results[0].CommandLine.pop_back();
+    EXPECT_EQ(Results[0].CommandLine.back(), "--")
+        << "Second-last arg should be --";
+    Results[0].CommandLine.pop_back();
     return llvm::join(Results[0].CommandLine, " ");
   }
 
@@ -826,23 +829,19 @@ TEST_F(InterpolateTest, StripDoubleDash) {
   EXPECT_EQ(getCommand("dir/bar.cpp"), "clang -D dir/foo.cpp -Wall -std=c++14");
 }
 
-TEST_F(InterpolateTest, InsertDoubleDash) {
-  add("dir/foo.cpp", "-o foo.o -std=c++14 -Wall");
-  EXPECT_EQ(getCommand("-dir/bar.cpp", false),
-            "clang -D dir/foo.cpp -Wall -std=c++14 --");
-}
-
-TEST_F(InterpolateTest, InsertDoubleDashForClangCL) {
-  add("dir/foo.cpp", "clang-cl", "/std:c++14 /W4");
-  EXPECT_EQ(getCommand("/dir/bar.cpp", false),
-            "clang-cl -D dir/foo.cpp /W4 /std:c++14 --");
-}
-
 TEST_F(InterpolateTest, Case) {
   add("FOO/BAR/BAZ/SHOUT.cc");
   add("foo/bar/baz/quiet.cc");
   // Case mismatches are completely ignored, so we choose the name match.
   EXPECT_EQ(getProxy("foo/bar/baz/shout.C"), "FOO/BAR/BAZ/SHOUT.cc");
+}
+
+TEST_F(InterpolateTest, LanguagePreference) {
+  add("foo/bar/baz/exact.C");
+  add("foo/bar/baz/exact.c");
+  add("other/random/path.cpp");
+  // Proxies for ".H" files are ".C" files, and not ".c files".
+  EXPECT_EQ(getProxy("foo/bar/baz/exact.H"), "foo/bar/baz/exact.C");
 }
 
 TEST_F(InterpolateTest, Aliasing) {
@@ -879,7 +878,7 @@ TEST(TransferCompileCommandTest, Smoke) {
   CompileCommand Transferred = transferCompileCommand(std::move(Cmd), "foo.h");
   EXPECT_EQ(Transferred.Filename, "foo.h");
   EXPECT_THAT(Transferred.CommandLine,
-              ElementsAre("clang", "-Wall", "-x", "c++-header", "foo.h"));
+              ElementsAre("clang", "-Wall", "-x", "c++-header", "--", "foo.h"));
   EXPECT_EQ(Transferred.Directory, "dir");
 }
 

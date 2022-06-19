@@ -1,4 +1,4 @@
-; RUN: opt < %s -adce -disable-output
+; RUN: opt < %s -passes=adce -disable-output
 
 define void @test() personality i32 (...)* @__gxx_personality_v0 {
         br i1 false, label %then, label %endif

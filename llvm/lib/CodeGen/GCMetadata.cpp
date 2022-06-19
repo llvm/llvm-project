@@ -11,16 +11,13 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/CodeGen/GCMetadata.h"
-#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/CodeGen/Passes.h"
 #include "llvm/IR/Function.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/MC/MCSymbol.h"
 #include "llvm/Pass.h"
-#include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
-#include <algorithm>
 #include <cassert>
 #include <memory>
 #include <string>
@@ -145,24 +142,9 @@ GCStrategy *GCModuleInfo::getGCStrategy(const StringRef Name) {
   if (NMI != GCStrategyMap.end())
     return NMI->getValue();
 
-  for (auto& Entry : GCRegistry::entries()) {
-    if (Name == Entry.getName()) {
-      std::unique_ptr<GCStrategy> S = Entry.instantiate();
-      S->Name = std::string(Name);
-      GCStrategyMap[Name] = S.get();
-      GCStrategyList.push_back(std::move(S));
-      return GCStrategyList.back().get();
-    }
-  }
-
-  if (GCRegistry::begin() == GCRegistry::end()) {
-    // In normal operation, the registry should not be empty.  There should
-    // be the builtin GCs if nothing else.  The most likely scenario here is
-    // that we got here without running the initializers used by the Registry
-    // itself and it's registration mechanism.
-    const std::string error = ("unsupported GC: " + Name).str() +
-      " (did you remember to link and initialize the CodeGen library?)";
-    report_fatal_error(error);
-  } else
-    report_fatal_error(std::string("unsupported GC: ") + Name);
+  std::unique_ptr<GCStrategy> S = llvm::getGCStrategy(Name);
+  S->Name = std::string(Name);
+  GCStrategyMap[Name] = S.get();
+  GCStrategyList.push_back(std::move(S));
+  return GCStrategyList.back().get();
 }

@@ -69,10 +69,8 @@ and from the command line.
  This option controls the behavior when using more than one prefix as specified
  by :option:`--check-prefix` or :option:`--check-prefixes`, and some of these
  prefixes are missing in the test file. If true, this is allowed, if false,
- FileCheck will report an error, listing the missing prefixes.
-
- It is currently, temporarily, true by default, and will be subsequently
- switched to false.
+ FileCheck will report an error, listing the missing prefixes. The default value
+ is false.
 
 .. option:: --input-file filename
 
@@ -431,7 +429,7 @@ However, this would be a bad test: if the value for ``foo`` changes, the test
 would still pass because the "``CHECK: Value: 1``" line would match the value
 from ``baz``. To fix this, you could add ``CHECK-NEXT`` matchers for every
 ``FieldN:`` line, but that would be verbose, and need to be updated when
-``Field4`` is added. A more succint way to write the test using the
+``Field4`` is added. A more succinct way to write the test using the
 "``CHECK-SAME:``" matcher would be as follows:
 
 .. code-block:: text

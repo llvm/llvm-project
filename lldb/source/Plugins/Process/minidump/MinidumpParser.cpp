@@ -12,6 +12,7 @@
 
 #include "Plugins/Process/Utility/LinuxProcMaps.h"
 #include "lldb/Utility/LLDBAssert.h"
+#include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
 
 // C includes
@@ -84,8 +85,7 @@ llvm::ArrayRef<minidump::Thread> MinidumpParser::GetThreads() {
   if (ExpectedThreads)
     return *ExpectedThreads;
 
-  LLDB_LOG_ERROR(GetLogIfAnyCategoriesSet(LIBLLDB_LOG_THREAD),
-                 ExpectedThreads.takeError(),
+  LLDB_LOG_ERROR(GetLog(LLDBLog::Thread), ExpectedThreads.takeError(),
                  "Failed to read thread list: {0}");
   return {};
 }
@@ -141,8 +141,7 @@ ArchSpec MinidumpParser::GetArchitecture() {
   llvm::Expected<const SystemInfo &> system_info = m_file->getSystemInfo();
 
   if (!system_info) {
-    LLDB_LOG_ERROR(GetLogIfAnyCategoriesSet(LIBLLDB_LOG_PROCESS),
-                   system_info.takeError(),
+    LLDB_LOG_ERROR(GetLog(LLDBLog::Process), system_info.takeError(),
                    "Failed to read SystemInfo stream: {0}");
     return m_arch;
   }
@@ -200,8 +199,7 @@ ArchSpec MinidumpParser::GetArchitecture() {
     triple.setOS(llvm::Triple::OSType::UnknownOS);
     auto ExpectedCSD = m_file->getString(system_info->CSDVersionRVA);
     if (!ExpectedCSD) {
-      LLDB_LOG_ERROR(GetLogIfAnyCategoriesSet(LIBLLDB_LOG_PROCESS),
-                     ExpectedCSD.takeError(),
+      LLDB_LOG_ERROR(GetLog(LLDBLog::Process), ExpectedCSD.takeError(),
                      "Failed to CSD Version string: {0}");
     } else {
       if (ExpectedCSD->find("Linux") != std::string::npos)
@@ -251,8 +249,7 @@ llvm::ArrayRef<minidump::Module> MinidumpParser::GetModuleList() {
   if (ExpectedModules)
     return *ExpectedModules;
 
-  LLDB_LOG_ERROR(GetLogIfAnyCategoriesSet(LIBLLDB_LOG_MODULES),
-                 ExpectedModules.takeError(),
+  LLDB_LOG_ERROR(GetLog(LLDBLog::Modules), ExpectedModules.takeError(),
                  "Failed to read module list: {0}");
   return {};
 }
@@ -264,7 +261,7 @@ CreateRegionsCacheFromLinuxMaps(MinidumpParser &parser,
   if (data.empty())
     return false;
 
-  Log *log = lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_EXPRESSIONS);
+  Log *log = GetLog(LLDBLog::Expressions);
   ParseLinuxMapRegions(
       llvm::toStringRef(data),
       [&regions, &log](llvm::Expected<MemoryRegionInfo> region) -> bool {
@@ -345,7 +342,7 @@ static bool CheckForLinuxExecutable(ConstString path,
 }
 
 std::vector<const minidump::Module *> MinidumpParser::GetFilteredModuleList() {
-  Log *log = GetLogIfAnyCategoriesSet(LIBLLDB_LOG_MODULES);
+  Log *log = GetLog(LLDBLog::Modules);
   auto ExpectedModules = GetMinidumpFile().getModuleList();
   if (!ExpectedModules) {
     LLDB_LOG_ERROR(log, ExpectedModules.takeError(),
@@ -425,8 +422,7 @@ const minidump::ExceptionStream *MinidumpParser::GetExceptionStream() {
   if (ExpectedStream)
     return &*ExpectedStream;
 
-  LLDB_LOG_ERROR(GetLogIfAnyCategoriesSet(LIBLLDB_LOG_PROCESS),
-                 ExpectedStream.takeError(),
+  LLDB_LOG_ERROR(GetLog(LLDBLog::Process), ExpectedStream.takeError(),
                  "Failed to read minidump exception stream: {0}");
   return nullptr;
 }
@@ -434,7 +430,7 @@ const minidump::ExceptionStream *MinidumpParser::GetExceptionStream() {
 llvm::Optional<minidump::Range>
 MinidumpParser::FindMemoryRange(lldb::addr_t addr) {
   llvm::ArrayRef<uint8_t> data64 = GetStream(StreamType::Memory64List);
-  Log *log = GetLogIfAnyCategoriesSet(LIBLLDB_LOG_MODULES);
+  Log *log = GetLog(LLDBLog::Modules);
 
   auto ExpectedMemory = GetMinidumpFile().getMemoryList();
   if (!ExpectedMemory) {
@@ -519,7 +515,7 @@ llvm::ArrayRef<uint8_t> MinidumpParser::GetMemory(lldb::addr_t addr,
 static bool
 CreateRegionsCacheFromMemoryInfoList(MinidumpParser &parser,
                                      std::vector<MemoryRegionInfo> &regions) {
-  Log *log = GetLogIfAnyCategoriesSet(LIBLLDB_LOG_MODULES);
+  Log *log = GetLog(LLDBLog::Modules);
   auto ExpectedInfo = parser.GetMinidumpFile().getMemoryInfoList();
   if (!ExpectedInfo) {
     LLDB_LOG_ERROR(log, ExpectedInfo.takeError(),
@@ -556,7 +552,7 @@ CreateRegionsCacheFromMemoryInfoList(MinidumpParser &parser,
 static bool
 CreateRegionsCacheFromMemoryList(MinidumpParser &parser,
                                  std::vector<MemoryRegionInfo> &regions) {
-  Log *log = GetLogIfAnyCategoriesSet(LIBLLDB_LOG_MODULES);
+  Log *log = GetLog(LLDBLog::Modules);
   auto ExpectedMemory = parser.GetMinidumpFile().getMemoryList();
   if (!ExpectedMemory) {
     LLDB_LOG_ERROR(log, ExpectedMemory.takeError(),

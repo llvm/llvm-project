@@ -1,4 +1,8 @@
-// RUN: %clang_cc1 %s -triple=powerpc64le-unknown-linux -target-feature +altivec -target-feature +vsx -verify -verify-ignore-unexpected=note -pedantic -fsyntax-only
+// RUN: %clang_cc1 %s -triple=powerpc64le-unknown-linux -target-feature +altivec \
+// RUN:  -target-feature +vsx -verify -verify-ignore-unexpected=note -pedantic -fsyntax-only
+// RUN: %clang_cc1 %s -triple=powerpc64le-unknown-linux -target-feature +altivec \
+// RUN:  -target-feature +vsx -verify -verify-ignore-unexpected=note -pedantic -fsyntax-only \
+// RUN:  -target-cpu pwr8
 
 typedef signed char __v16sc __attribute__((__vector_size__(16)));
 typedef unsigned char __v16uc __attribute__((__vector_size__(16)));
@@ -20,9 +24,6 @@ __v8us *__attribute__((__overloadable__)) convert1(vector unsigned short);
 __v4si *__attribute__((__overloadable__)) convert1(vector signed int);
 __v4ui *__attribute__((__overloadable__)) convert1(vector unsigned int);
 __v2sll *__attribute__((__overloadable__)) convert1(vector signed long long);
-__v2ull *__attribute__((__overloadable__)) convert1(vector unsigned long long);
-__v1slll *__attribute__((__overloadable__)) convert1(vector signed __int128);
-__v1ulll *__attribute__((__overloadable__)) convert1(vector unsigned __int128);
 __v4f *__attribute__((__overloadable__)) convert1(vector float);
 __v2d *__attribute__((__overloadable__)) convert1(vector double);
 void __attribute__((__overloadable__)) convert1(vector bool int);
@@ -36,12 +37,18 @@ vector signed int *__attribute__((__overloadable__)) convert2(__v4si);
 vector unsigned int *__attribute__((__overloadable__)) convert2(__v4ui);
 vector signed long long *__attribute__((__overloadable__)) convert2(__v2sll);
 vector unsigned long long *__attribute__((__overloadable__)) convert2(__v2ull);
-vector signed __int128 *__attribute__((__overloadable__)) convert2(__v1slll);
-vector unsigned __int128 *__attribute__((__overloadable__)) convert2(__v1ulll);
 vector float *__attribute__((__overloadable__)) convert2(__v4f);
 vector double *__attribute__((__overloadable__)) convert2(__v2d);
 
-void test() {
+#ifdef __POWER8_VECTOR__
+__v1slll *__attribute__((__overloadable__)) convert1(vector signed __int128);
+__v1ulll *__attribute__((__overloadable__)) convert1(vector unsigned __int128);
+__v2ull *__attribute__((__overloadable__)) convert1(vector unsigned long long);
+vector signed __int128 *__attribute__((__overloadable__)) convert2(__v1slll);
+vector unsigned __int128 *__attribute__((__overloadable__)) convert2(__v1ulll);
+#endif
+
+void test(void) {
   __v16sc gv1;
   __v16uc gv2;
   __v8ss gv3;
@@ -49,11 +56,14 @@ void test() {
   __v4si gv5;
   __v4ui gv6;
   __v2sll gv7;
+  __v4f gv11;
+  __v2d gv12;
+
+#ifdef __POWER8_VECTOR__
   __v2ull gv8;
   __v1slll gv9;
   __v1ulll gv10;
-  __v4f gv11;
-  __v2d gv12;
+#endif
 
   vector signed char av1;
   vector unsigned char av2;
@@ -63,8 +73,10 @@ void test() {
   vector unsigned int av6;
   vector signed long long av7;
   vector unsigned long long av8;
+#ifdef __POWER8_VECTOR__
   vector signed __int128 av9;
   vector unsigned __int128 av10;
+#endif
   vector float av11;
   vector double av12;
   vector bool int av13;
@@ -77,9 +89,11 @@ void test() {
   __v4si *gv5_p = convert1(gv5);
   __v4ui *gv6_p = convert1(gv6);
   __v2sll *gv7_p = convert1(gv7);
+#ifdef __POWER8_VECTOR__
   __v2ull *gv8_p = convert1(gv8);
   __v1slll *gv9_p = convert1(gv9);
   __v1ulll *gv10_p = convert1(gv10);
+#endif
   __v4f *gv11_p = convert1(gv11);
   __v2d *gv12_p = convert1(gv12);
 
@@ -91,8 +105,10 @@ void test() {
   vector unsigned int *av6_p = convert2(av6);
   vector signed long long *av7_p = convert2(av7);
   vector unsigned long long *av8_p = convert2(av8);
+#ifdef __POWER8_VECTOR__
   vector signed __int128 *av9_p = convert2(av9);
   vector unsigned __int128 *av10_p = convert2(av10);
+#endif
   vector float *av11_p = convert2(av11);
   vector double *av12_p = convert2(av12);
   convert2(av13); // expected-error {{call to 'convert2' is ambiguous}}

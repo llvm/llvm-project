@@ -11,12 +11,9 @@ from lldbsuite.test.lldbtest import *
 
 class TestScriptedResolver(TestBase):
 
-    mydir = TestBase.compute_mydir(__file__)
-
     NO_DEBUG_INFO_TESTCASE = True
 
     @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr24528")
-    @skipIfReproducer # FIXME: Unexpected packet during (active) replay
     def test_scripted_resolver(self):
         """Use a scripted resolver to set a by symbol name breakpoint"""
         self.build()
@@ -72,7 +69,7 @@ class TestScriptedResolver(TestBase):
         json_stream.Print(json_string)
         extra_args = lldb.SBStructuredData()
         error = extra_args.SetFromJSON(json_stream)
-        self.assertTrue(error.Success(), "Error making SBStructuredData: %s"%(error.GetCString()))
+        self.assertSuccess(error, "Error making SBStructuredData")
         return extra_args
 
     def do_test(self):

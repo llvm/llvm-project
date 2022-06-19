@@ -13,14 +13,15 @@
 #include "Target.h"
 
 #include "llvm/BinaryFormat/MachO.h"
+#include "llvm/Bitcode/BitcodeReader.h"
 
 using namespace llvm;
 using namespace llvm::MachO;
 using namespace lld;
 using namespace lld::macho;
 
-template <class LP> static bool hasObjCSection(MemoryBufferRef mb) {
-  using Section = typename LP::section;
+template <class LP> static bool objectHasObjCSection(MemoryBufferRef mb) {
+  using SectionHeader = typename LP::section;
 
   auto *hdr =
       reinterpret_cast<const typename LP::mach_header *>(mb.getBufferStart());
@@ -29,16 +30,17 @@ template <class LP> static bool hasObjCSection(MemoryBufferRef mb) {
 
   if (const auto *c =
           findCommand<typename LP::segment_command>(hdr, LP::segmentLCType)) {
-    auto sectionHeaders =
-        ArrayRef<Section>{reinterpret_cast<const Section *>(c + 1), c->nsects};
-    for (const Section &sec : sectionHeaders) {
-      StringRef sectname(sec.sectname,
-                         strnlen(sec.sectname, sizeof(sec.sectname)));
-      StringRef segname(sec.segname, strnlen(sec.segname, sizeof(sec.segname)));
+    auto sectionHeaders = ArrayRef<SectionHeader>{
+        reinterpret_cast<const SectionHeader *>(c + 1), c->nsects};
+    for (const SectionHeader &secHead : sectionHeaders) {
+      StringRef sectname(secHead.sectname,
+                         strnlen(secHead.sectname, sizeof(secHead.sectname)));
+      StringRef segname(secHead.segname,
+                        strnlen(secHead.segname, sizeof(secHead.segname)));
       if ((segname == segment_names::data &&
            sectname == section_names::objcCatList) ||
           (segname == segment_names::text &&
-           sectname == section_names::swift)) {
+           sectname.startswith(section_names::swift))) {
         return true;
       }
     }
@@ -46,9 +48,20 @@ template <class LP> static bool hasObjCSection(MemoryBufferRef mb) {
   return false;
 }
 
-bool macho::hasObjCSection(MemoryBufferRef mb) {
+static bool objectHasObjCSection(MemoryBufferRef mb) {
   if (target->wordSize == 8)
-    return ::hasObjCSection<LP64>(mb);
+    return ::objectHasObjCSection<LP64>(mb);
   else
-    return ::hasObjCSection<ILP32>(mb);
+    return ::objectHasObjCSection<ILP32>(mb);
+}
+
+bool macho::hasObjCSection(MemoryBufferRef mb) {
+  switch (identify_magic(mb.getBuffer())) {
+  case file_magic::macho_object:
+    return objectHasObjCSection(mb);
+  case file_magic::bitcode:
+    return check(isBitcodeContainingObjCCategory(mb));
+  default:
+    return false;
+  }
 }

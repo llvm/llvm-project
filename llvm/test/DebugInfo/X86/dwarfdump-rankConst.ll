@@ -1,6 +1,6 @@
 ;; This test checks whether DW_AT_rank attribute accepts DIExpression.
 
-; RUN: llc %s -filetype=obj -o %t.o
+; RUN: llc %s -mtriple=x86_64 -filetype=obj -o %t.o
 ; RUN: llvm-dwarfdump  %t.o | FileCheck %s
 
 ;; Test whether DW_AT_data_location is generated.

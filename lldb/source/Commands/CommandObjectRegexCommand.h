@@ -39,6 +39,11 @@ public:
 protected:
   bool DoExecute(llvm::StringRef command, CommandReturnObject &result) override;
 
+  /// Substitute variables of the format %\d+ in the input string.
+  static llvm::Expected<std::string> SubstituteVariables(
+      llvm::StringRef input,
+      const llvm::SmallVectorImpl<llvm::StringRef> &replacements);
+
   struct Entry {
     RegularExpression regex;
     std::string command;

@@ -47,10 +47,28 @@ define i32 @smax_v4i32(i32) {
 }
 
 define i32 @smax_v8i32(i32) {
-; CHECK-LABEL: @smax_v8i32(
-; CHECK-NEXT:    [[TMP2:%.*]] = load <8 x i32>, <8 x i32>* bitcast ([32 x i32]* @arr to <8 x i32>*), align 16
-; CHECK-NEXT:    [[TMP3:%.*]] = call i32 @llvm.vector.reduce.smax.v8i32(<8 x i32> [[TMP2]])
-; CHECK-NEXT:    ret i32 [[TMP3]]
+; SSE-LABEL: @smax_v8i32(
+; SSE-NEXT:    [[TMP2:%.*]] = load i32, i32* getelementptr inbounds ([32 x i32], [32 x i32]* @arr, i64 0, i64 0), align 16
+; SSE-NEXT:    [[TMP3:%.*]] = load i32, i32* getelementptr inbounds ([32 x i32], [32 x i32]* @arr, i64 0, i64 1), align 4
+; SSE-NEXT:    [[TMP4:%.*]] = load i32, i32* getelementptr inbounds ([32 x i32], [32 x i32]* @arr, i64 0, i64 2), align 8
+; SSE-NEXT:    [[TMP5:%.*]] = load i32, i32* getelementptr inbounds ([32 x i32], [32 x i32]* @arr, i64 0, i64 3), align 4
+; SSE-NEXT:    [[TMP6:%.*]] = load i32, i32* getelementptr inbounds ([32 x i32], [32 x i32]* @arr, i64 0, i64 4), align 16
+; SSE-NEXT:    [[TMP7:%.*]] = load i32, i32* getelementptr inbounds ([32 x i32], [32 x i32]* @arr, i64 0, i64 5), align 4
+; SSE-NEXT:    [[TMP8:%.*]] = load i32, i32* getelementptr inbounds ([32 x i32], [32 x i32]* @arr, i64 0, i64 6), align 8
+; SSE-NEXT:    [[TMP9:%.*]] = load i32, i32* getelementptr inbounds ([32 x i32], [32 x i32]* @arr, i64 0, i64 7), align 4
+; SSE-NEXT:    [[TMP10:%.*]] = call i32 @llvm.smax.i32(i32 [[TMP2]], i32 [[TMP3]])
+; SSE-NEXT:    [[TMP11:%.*]] = call i32 @llvm.smax.i32(i32 [[TMP10]], i32 [[TMP4]])
+; SSE-NEXT:    [[TMP12:%.*]] = call i32 @llvm.smax.i32(i32 [[TMP11]], i32 [[TMP5]])
+; SSE-NEXT:    [[TMP13:%.*]] = call i32 @llvm.smax.i32(i32 [[TMP12]], i32 [[TMP6]])
+; SSE-NEXT:    [[TMP14:%.*]] = call i32 @llvm.smax.i32(i32 [[TMP13]], i32 [[TMP7]])
+; SSE-NEXT:    [[TMP15:%.*]] = call i32 @llvm.smax.i32(i32 [[TMP14]], i32 [[TMP8]])
+; SSE-NEXT:    [[TMP16:%.*]] = call i32 @llvm.smax.i32(i32 [[TMP15]], i32 [[TMP9]])
+; SSE-NEXT:    ret i32 [[TMP16]]
+;
+; AVX-LABEL: @smax_v8i32(
+; AVX-NEXT:    [[TMP2:%.*]] = load <8 x i32>, <8 x i32>* bitcast ([32 x i32]* @arr to <8 x i32>*), align 16
+; AVX-NEXT:    [[TMP3:%.*]] = call i32 @llvm.vector.reduce.smax.v8i32(<8 x i32> [[TMP2]])
+; AVX-NEXT:    ret i32 [[TMP3]]
 ;
   %2 = load i32, i32* getelementptr inbounds ([32 x i32], [32 x i32]* @arr, i64 0, i64 0), align 16
   %3 = load i32, i32* getelementptr inbounds ([32 x i32], [32 x i32]* @arr, i64 0, i64 1), align 4

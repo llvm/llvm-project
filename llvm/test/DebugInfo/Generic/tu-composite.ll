@@ -2,46 +2,46 @@
 ; RUN: llvm-dwarfdump -v -debug-info %t | FileCheck %s
 ; CHECK: [[TYPE:.*]]: DW_TAG_structure_type
 ; Make sure we correctly handle containing type of a struct being a type identifier.
-; CHECK-NEXT: DW_AT_containing_type [DW_FORM_ref4]       (cu + {{.*}} => {[[TYPE]]})
-; CHECK-NEXT: DW_AT_name [DW_FORM_strp] {{.*}}= "C")
+; CHECK-NEXT: DW_AT_containing_type [DW_FORM_ref4]       (cu + {{.*}} => {[[TYPE]]} "C")
+; CHECK-NEXT: DW_AT_name {{.*}}"C"
 
 ; Make sure we correctly handle context of a subprogram being a type identifier.
 ; CHECK: [[SP:.*]]: DW_TAG_subprogram
-; CHECK: DW_AT_name [DW_FORM_strp] {{.*}}= "foo")
+; CHECK: DW_AT_name {{.*}}"foo"
 ; Make sure we correctly handle containing type of a subprogram being a type identifier.
-; CHECK: DW_AT_containing_type [DW_FORM_ref4]       (cu + {{.*}} => {[[TYPE]]})
+; CHECK: DW_AT_containing_type [DW_FORM_ref4]       (cu + {{.*}} => {[[TYPE]]} "C")
 ; CHECK: DW_TAG_formal_parameter
 ; CHECK: NULL
 ; CHECK: NULL
 
 ; CHECK: [[TYPE2:.*]]: DW_TAG_structure_type
-; CHECK: DW_AT_name [DW_FORM_strp] {{.*}}= "bar")
+; CHECK: DW_AT_name {{.*}}"bar"
 ; CHECK: DW_TAG_structure_type
-; CHECK: DW_AT_name [DW_FORM_strp] {{.*}}= "D")
+; CHECK: DW_AT_name {{.*}}"D"
 ; CHECK: DW_TAG_member
-; CHECK: DW_AT_name [DW_FORM_strp] {{.*}}= "a") 
+; CHECK: DW_AT_name {{.*}}"a"
 ; Make sure we correctly handle context of a struct being a type identifier.
 ; CHECK: DW_TAG_structure_type
-; CHECK-NEXT: DW_AT_name [DW_FORM_strp] {{.*}}= "Nested")
+; CHECK-NEXT: DW_AT_name {{.*}}"Nested"
 ; CHECK: DW_TAG_structure_type
-; CHECK-NEXT: DW_AT_name [DW_FORM_strp] {{.*}}= "Nested2")
+; CHECK-NEXT: DW_AT_name {{.*}}"Nested2"
 ; CHECK-NEXT: DW_AT_declaration [DW_FORM_flag]      (0x01)
 ; CHECK: DW_TAG_structure_type
-; CHECK-NEXT: DW_AT_name [DW_FORM_strp] {{.*}}= "virt<bar>")
+; CHECK-NEXT: DW_AT_name {{.*}}"virt<bar>"
 ; Make sure we correctly handle type of a template_type being a type identifier.
 ; CHECK: DW_TAG_template_type_parameter
 ; CHECK-NEXT: DW_AT_type [DW_FORM_ref4] (cu + {{.*}} => {[[TYPE2]]}
-; CHECK-NEXT: DW_AT_name [DW_FORM_strp] {{.*}}= "T")
+; CHECK-NEXT: DW_AT_name {{.*}}"T"
 ; Make sure we correctly handle derived-from of a typedef being a type identifier.
 ; CHECK: DW_TAG_typedef
 ; CHECK-NEXT: DW_AT_type [DW_FORM_ref4] (cu + {{.*}} => {[[TYPE2]]}
-; CHECK: DW_AT_name [DW_FORM_strp] {{.*}}= "baz2")
+; CHECK: DW_AT_name {{.*}}"baz2"
 ; Make sure we correctly handle derived-from of a pointer type being a type identifier.
 ; CHECK: DW_TAG_pointer_type
 ; CHECK: DW_AT_type [DW_FORM_ref4] (cu + {{.*}} => {[[TYPE]]}
 ; CHECK: DW_TAG_typedef
 ; CHECK-NEXT: DW_AT_type [DW_FORM_ref4] (cu + {{.*}} => {[[TYPE2]]}
-; CHECK: DW_AT_name [DW_FORM_strp] {{.*}}= "baz")
+; CHECK: DW_AT_name {{.*}}"baz"
 ; Make sure we correctly handle derived-from of an array type being a type identifier.
 ; CHECK: DW_TAG_array_type
 ; CHECK-NEXT: DW_AT_type [DW_FORM_ref4] (cu + {{.*}} => {[[TYPE2]]}
@@ -154,7 +154,7 @@ attributes #1 = { nounwind readnone }
 !32 = distinct !DISubprogram(name: "test", linkageName: "_Z4testv", line: 20, isLocal: false, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: false, unit: !0, scopeLine: 20, file: !1, scope: !7, type: !33, retainedNodes: !2)
 !33 = !DISubroutineType(types: !34)
 !34 = !{null}
-!35 = !{i32 2, !"Dwarf Version", i32 2}
+!35 = !{i32 2, !"Dwarf Version", i32 3}
 !36 = !DILocalVariable(name: "this", arg: 1, flags: DIFlagArtificial | DIFlagObjectPointer, scope: !31, type: !37)
 !37 = !DIDerivedType(tag: DW_TAG_pointer_type, size: 64, align: 64, baseType: !4)
 !38 = !DILocation(line: 0, scope: !31)

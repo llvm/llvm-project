@@ -31,7 +31,7 @@ SANITIZER_INTERFACE_ATTRIBUTE
 void __msan_warning();
 
 // Print a warning and die.
-// Intrumentation inserts calls to this function when building in "fast" mode
+// Instrumentation inserts calls to this function when building in "fast" mode
 // (i.e. -mllvm -msan-keep-going)
 SANITIZER_INTERFACE_ATTRIBUTE __attribute__((noreturn))
 void __msan_warning_noreturn();

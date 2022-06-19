@@ -18,8 +18,8 @@
 !-----------------------
 ! EXPECTED OUTPUT
 !-----------------------
-! CHECK: prescanner-diag.f90:27:20: #include: extra stuff ignored after file name
-! CHECK: prescanner-diag.f90:28:20: #include: extra stuff ignored after file name
+! CHECK: prescanner-diag.f90:27:20: portability: #include: extra stuff ignored after file name
+! CHECK: prescanner-diag.f90:28:20: portability: #include: extra stuff ignored after file name
 
 !-------
 ! INPUT

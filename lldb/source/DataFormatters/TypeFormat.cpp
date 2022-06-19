@@ -77,7 +77,8 @@ bool TypeFormatImpl_Format::FormatObject(ValueObject *valobj,
             if (target_sp) {
               size_t max_len = target_sp->GetMaximumSizeOfStringSummary();
               Status error;
-              DataBufferSP buffer_sp(new DataBufferHeap(max_len + 1, 0));
+              WritableDataBufferSP buffer_sp(
+                  new DataBufferHeap(max_len + 1, 0));
               Address address(valobj->GetPointerValue());
               if (target_sp->ReadCStringFromMemory(
                       address, (char *)buffer_sp->GetBytes(), max_len, error) &&

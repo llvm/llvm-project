@@ -70,12 +70,11 @@ define dso_local i32 @testCompare1(%struct.tree_common* nocapture readonly %arg1
 ; LE-NEXT:    blr
 ;
 ; CHECK-P10-LE-LABEL: testCompare1:
-; CHECK-P10-LE:         .localentry testCompare1, 1
-; CHECK-P10-LE-NEXT:  # %bb.0: # %entry
+; CHECK-P10-LE:       # %bb.0: # %entry
 ; CHECK-P10-LE-NEXT:    plbz r4, testCompare1@PCREL(0), 1
 ; CHECK-P10-LE-NEXT:    lbz r3, 0(r3)
-; CHECK-P10-LE-NEXT:    clrlwi r3, r3, 31
 ; CHECK-P10-LE-NEXT:    clrlwi r4, r4, 31
+; CHECK-P10-LE-NEXT:    clrlwi r3, r3, 31
 ; CHECK-P10-LE-NEXT:    cmplw r4, r3
 ; CHECK-P10-LE-NEXT:    setbc r3, gt
 ; CHECK-P10-LE-NEXT:    b fn2@notoc
@@ -122,14 +121,13 @@ define dso_local i32 @testCompare1(%struct.tree_common* nocapture readonly %arg1
 ; CHECK-P10-CMP-LE-NEXT:    blr
 ;
 ; CHECK-P10-CMP-BE-LABEL: testCompare1:
-; CHECK-P10-CMP-BE:         .localentry testCompare1, 1
-; CHECK-P10-CMP-BE-NEXT:  # %bb.0: # %entry
+; CHECK-P10-CMP-BE:       # %bb.0: # %entry
 ; CHECK-P10-CMP-BE-NEXT:    plbz r4, testCompare1@PCREL(0), 1
 ; CHECK-P10-CMP-BE-NEXT:    lbz r3, 0(r3)
-; CHECK-P10-CMP-BE-NEXT:    clrlwi r3, r3, 31
 ; CHECK-P10-CMP-BE-NEXT:    clrlwi r4, r4, 31
-; CHECK-P10-CMP-BE-NEXT:    clrldi r3, r3, 32
+; CHECK-P10-CMP-BE-NEXT:    clrlwi r3, r3, 31
 ; CHECK-P10-CMP-BE-NEXT:    clrldi r4, r4, 32
+; CHECK-P10-CMP-BE-NEXT:    clrldi r3, r3, 32
 ; CHECK-P10-CMP-BE-NEXT:    sub r3, r3, r4
 ; CHECK-P10-CMP-BE-NEXT:    rldicl r3, r3, 1, 63
 ; CHECK-P10-CMP-BE-NEXT:    b fn2@notoc

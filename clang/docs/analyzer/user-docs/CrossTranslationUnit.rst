@@ -81,12 +81,12 @@ of `foo.cpp`:
   $
 
 The next step is to create a CTU index file which holds the `USR` name and location of external definitions in the
-source files:
+source files in format `<USR-Length>:<USR> <File-Path>`:
 
 .. code-block:: bash
 
   $ clang-extdef-mapping -p . foo.cpp
-  c:@F@foo# /path/to/your/project/foo.cpp
+  9:c:@F@foo# /path/to/your/project/foo.cpp
   $ clang-extdef-mapping -p . foo.cpp > externalDefMap.txt
 
 We have to modify `externalDefMap.txt` to contain the name of the `.ast` files instead of the source files:
@@ -261,15 +261,15 @@ The compilation database:
 The `invocation list`:
 
 .. code-block:: bash
-  
-  "/path/to/your/project/foo.cpp": 
+
+  "/path/to/your/project/foo.cpp":
     - "clang++"
     - "-c"
     - "/path/to/your/project/foo.cpp"
     - "-o"
     - "/path/to/your/project/foo.o"
 
-  "/path/to/your/project/main.cpp": 
+  "/path/to/your/project/main.cpp":
     - "clang++"
     - "-c"
     - "/path/to/your/project/main.cpp"
@@ -278,12 +278,12 @@ The `invocation list`:
 
 We'd like to analyze `main.cpp` and discover the division by zero bug.
 As we are using On-demand mode, we only need to create a CTU index file which holds the `USR` name and location of
-external definitions in the source files:
+external definitions in the source files in format `<USR-Length>:<USR> <File-Path>`:
 
 .. code-block:: bash
 
   $ clang-extdef-mapping -p . foo.cpp
-  c:@F@foo# /path/to/your/project/foo.cpp
+  9:c:@F@foo# /path/to/your/project/foo.cpp
   $ clang-extdef-mapping -p . foo.cpp > externalDefMap.txt
 
 Now everything is available for the CTU analysis.
@@ -374,4 +374,3 @@ We actively develop CTU with CodeChecker as the driver for feature, `scan-build-
 `scan-build-py` has various errors and issues, expect it to work only with the very basic projects only.
 
 Currently On-demand analysis is not supported with `scan-build-py`.
-

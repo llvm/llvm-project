@@ -80,13 +80,11 @@ struct VFParameter {
 /// represent vector functions. in particular, it is not attached to
 /// any target-specific ABI.
 struct VFShape {
-  unsigned VF;     // Vectorization factor.
-  bool IsScalable; // True if the function is a scalable function.
+  ElementCount VF;                        // Vectorization factor.
   SmallVector<VFParameter, 8> Parameters; // List of parameter information.
   // Comparison operator.
   bool operator==(const VFShape &Other) const {
-    return std::tie(VF, IsScalable, Parameters) ==
-           std::tie(Other.VF, Other.IsScalable, Other.Parameters);
+    return std::tie(VF, Parameters) == std::tie(Other.VF, Other.Parameters);
   }
 
   /// Update the parameter in position P.ParamPos to P.
@@ -115,9 +113,9 @@ struct VFShape {
       Parameters.push_back(
           VFParameter({CI.arg_size(), VFParamKind::GlobalPredicate}));
 
-    return {EC.getKnownMinValue(), EC.isScalable(), Parameters};
+    return {EC, Parameters};
   }
-  /// Sanity check on the Parameters in the VFShape.
+  /// Validation check on the Parameters in the VFShape.
   bool hasValidParameterList() const;
 };
 
@@ -311,16 +309,16 @@ inline Type *ToVectorTy(Type *Scalar, unsigned VF) {
 /// Identify if the intrinsic is trivially vectorizable.
 /// This method returns true if the intrinsic's argument types are all scalars
 /// for the scalar form of the intrinsic and all vectors (or scalars handled by
-/// hasVectorInstrinsicScalarOpd) for the vector form of the intrinsic.
+/// isVectorIntrinsicWithScalarOpAtArg) for the vector form of the intrinsic.
 bool isTriviallyVectorizable(Intrinsic::ID ID);
 
 /// Identifies if the vector form of the intrinsic has a scalar operand.
-bool hasVectorInstrinsicScalarOpd(Intrinsic::ID ID, unsigned ScalarOpdIdx);
+bool isVectorIntrinsicWithScalarOpAtArg(Intrinsic::ID ID,
+                                        unsigned ScalarOpdIdx);
 
-/// Identifies if the vector form of the intrinsic has a scalar operand that has
+/// Identifies if the vector form of the intrinsic has a operand that has
 /// an overloaded type.
-bool hasVectorInstrinsicOverloadedScalarOpd(Intrinsic::ID ID,
-                                            unsigned ScalarOpdIdx);
+bool isVectorIntrinsicWithOverloadTypeAtArg(Intrinsic::ID ID, unsigned OpdIdx);
 
 /// Returns intrinsic ID for call.
 /// For the input call instruction it finds mapping intrinsic and returns
@@ -399,6 +397,24 @@ void narrowShuffleMaskElts(int Scale, ArrayRef<int> Mask,
 /// divide evenly (scale down) to map to wider vector elements.
 bool widenShuffleMaskElts(int Scale, ArrayRef<int> Mask,
                           SmallVectorImpl<int> &ScaledMask);
+
+/// Splits and processes shuffle mask depending on the number of input and
+/// output registers. The function does 2 main things: 1) splits the
+/// source/destination vectors into real registers; 2) do the mask analysis to
+/// identify which real registers are permuted. Then the function processes
+/// resulting registers mask using provided action items. If no input register
+/// is defined, \p NoInputAction action is used. If only 1 input register is
+/// used, \p SingleInputAction is used, otherwise \p ManyInputsAction is used to
+/// process > 2 input registers and masks.
+/// \param Mask Original shuffle mask.
+/// \param NumOfSrcRegs Number of source registers.
+/// \param NumOfDestRegs Number of destination registers.
+/// \param NumOfUsedRegs Number of actually used destination registers.
+void processShuffleMasks(
+    ArrayRef<int> Mask, unsigned NumOfSrcRegs, unsigned NumOfDestRegs,
+    unsigned NumOfUsedRegs, function_ref<void()> NoInputAction,
+    function_ref<void(ArrayRef<int>, unsigned, unsigned)> SingleInputAction,
+    function_ref<void(ArrayRef<int>, unsigned, unsigned)> ManyInputsAction);
 
 /// Compute a map of integer instructions to their minimum legal type
 /// size.
@@ -534,6 +550,12 @@ llvm::SmallVector<int, 16> createStrideMask(unsigned Start, unsigned Stride,
 ///   <0, 1, 2, 3, undef, undef, undef, undef>
 llvm::SmallVector<int, 16>
 createSequentialMask(unsigned Start, unsigned NumInts, unsigned NumUndefs);
+
+/// Given a shuffle mask for a binary shuffle, create the equivalent shuffle
+/// mask assuming both operands are identical. This assumes that the unary
+/// shuffle will use elements from operand 0 (operand 1 will be unused).
+llvm::SmallVector<int, 16> createUnaryMask(ArrayRef<int> Mask,
+                                           unsigned NumElts);
 
 /// Concatenate a list of vectors.
 ///
@@ -688,10 +710,8 @@ public:
     if (getMember(getFactor() - 1))
       return false;
 
-    // We have a group with gaps. It therefore cannot be a group of stores,
-    // and it can't be a reversed access, because such groups get invalidated.
-    assert(!getMember(0)->mayWriteToMemory() &&
-           "Group should have been invalidated");
+    // We have a group with gaps. It therefore can't be a reversed access,
+    // because such groups get invalidated (TODO).
     assert(!isReverse() && "Group should have been invalidated");
 
     // This is a group of loads, with gaps, and without a last-member

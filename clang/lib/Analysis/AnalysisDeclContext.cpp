@@ -352,7 +352,7 @@ std::string AnalysisDeclContext::getFunctionName(const Decl *D) {
       for (const auto &P : FD->parameters()) {
         if (P != *FD->param_begin())
           OS << ", ";
-        OS << P->getType().getAsString();
+        OS << P->getType();
       }
       OS << ')';
     }
@@ -387,7 +387,7 @@ std::string AnalysisDeclContext::getFunctionName(const Decl *D) {
     OS << ' ' << OMD->getSelector().getAsString() << ']';
   }
 
-  return OS.str();
+  return Str;
 }
 
 LocationContextManager &AnalysisDeclContext::getLocationContextManager() {

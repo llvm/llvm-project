@@ -4,6 +4,6 @@
 // NORNGBSE-NOT: rangesBaseAddress
 // RNGBSE: !DICompileUnit({{.*}}, rangesBaseAddress: true
 
-void f1() {
+void f1(void) {
 }
 

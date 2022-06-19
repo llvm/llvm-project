@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -polly-scops %s -analyze | FileCheck %s
+; RUN: opt %loadPolly -polly-print-scops -disable-output < %s | FileCheck %s
 target datalayout = "e-m:e-i64:64-i128:128-n8:16:32:64-S128"
 target triple = "aarch64--linux-android"
 
@@ -8,9 +8,9 @@ target triple = "aarch64--linux-android"
 ; CHECK-NEXT: [p_0] -> { Stmt_for_body8_us_us95_i[i0] : 0 <= i0 <= 4 };
 ; CHECK-NEXT: Schedule :=
 ; CHECK-NEXT: [p_0] -> { Stmt_for_body8_us_us95_i[i0] -> [i0] };
-; CHECK-NEXT; MustWriteAccess := [Reduction Type: NONE] [Scalar: 0]
-; CHECK-NEXT; [p_0] -> { Stmt_for_body8_us_us95_i[i0] -> MemRef_0[1 + p_0] };
-; CHECK-NEXT }
+; CHECK-NEXT: MustWriteAccess := [Reduction Type: NONE] [Scalar: 0]
+; CHECK-NEXT: [p_0] -> { Stmt_for_body8_us_us95_i[i0] -> MemRef0[1 - p_0] };
+; CHECK-NEXT: }
 
 define void @test1() unnamed_addr align 2 {
 entry:

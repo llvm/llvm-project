@@ -328,6 +328,6 @@ body:             |
     CFI_INSTRUCTION def_cfa_offset 16
     $rbp = frame-destroy POP64r implicit-def $rsp, implicit $rsp
     CFI_INSTRUCTION def_cfa_offset 8
-    RETQ
+    RET64
 
 ...

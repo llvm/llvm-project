@@ -13,7 +13,6 @@ class UniversalTestCase(TestBase):
     """Test aspects of lldb commands on universal binaries."""
 
     NO_DEBUG_INFO_TESTCASE = True
-    mydir = TestBase.compute_mydir(__file__)
 
     def setUp(self):
         # Call super's setUp().
@@ -26,6 +25,7 @@ class UniversalTestCase(TestBase):
     @unittest2.skipUnless(hasattr(os, "uname") and os.uname()[4] in
                           ['x86_64'], "requires x86_64")
     @skipIfDarwinEmbedded # this test file assumes we're targetting an x86 system
+    @skipIf(compiler="clang", compiler_version=['<', '7.0'])
     def test_sbdebugger_create_target_with_file_and_target_triple(self):
         """Test the SBDebugger.CreateTargetWithFileAndTargetTriple() API."""
         # Invoke the default build rule.
@@ -50,6 +50,7 @@ class UniversalTestCase(TestBase):
     @unittest2.skipUnless(hasattr(os, "uname") and os.uname()[4] in
                           ['x86_64'], "requires x86_64")
     @skipIfDarwinEmbedded # this test file assumes we're targetting an x86 system
+    @skipIf(compiler="clang", compiler_version=['<', '7.0'])
     def test_process_launch_for_universal(self):
         """Test process launch of a universal binary."""
         from lldbsuite.test.lldbutil import print_registers
@@ -140,7 +141,7 @@ class UniversalTestCase(TestBase):
         empty_listener = lldb.SBListener()
         process = target.AttachToProcessWithID(
             empty_listener, popen.pid, error)
-        self.assertTrue(error.Success(), "Attached to process.")
+        self.assertSuccess(error, "Attached to process.")
 
         self.expect("image list -A -b", substrs=["x86_64h testit"])
 

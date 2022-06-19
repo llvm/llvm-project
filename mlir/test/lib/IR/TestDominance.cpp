@@ -13,6 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/IR/Dominance.h"
+#include "mlir/IR/SymbolTable.h"
 #include "mlir/Pass/Pass.h"
 
 using namespace mlir;
@@ -90,15 +91,18 @@ private:
   DenseMap<Block *, size_t> blockIds;
 };
 
-struct TestDominancePass : public PassWrapper<TestDominancePass, FunctionPass> {
+struct TestDominancePass
+    : public PassWrapper<TestDominancePass, InterfacePass<SymbolOpInterface>> {
+  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(TestDominancePass)
+
   StringRef getArgument() const final { return "test-print-dominance"; }
   StringRef getDescription() const final {
     return "Print the dominance information for multiple regions.";
   }
 
-  void runOnFunction() override {
-    llvm::errs() << "Testing : " << getFunction().getName() << "\n";
-    DominanceTest dominanceTest(getFunction());
+  void runOnOperation() override {
+    llvm::errs() << "Testing : " << getOperation().getName() << "\n";
+    DominanceTest dominanceTest(getOperation());
 
     // Print dominance information.
     llvm::errs() << "--- DominanceInfo ---\n";
@@ -120,7 +124,7 @@ struct TestDominancePass : public PassWrapper<TestDominancePass, FunctionPass> {
   }
 };
 
-} // end anonymous namespace
+} // namespace
 
 namespace mlir {
 namespace test {

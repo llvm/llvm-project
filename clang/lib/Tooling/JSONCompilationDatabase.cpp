@@ -135,15 +135,12 @@ class CommandLineArgumentParser {
 std::vector<std::string> unescapeCommandLine(JSONCommandLineSyntax Syntax,
                                              StringRef EscapedCommandLine) {
   if (Syntax == JSONCommandLineSyntax::AutoDetect) {
+#ifdef _WIN32
+    // Assume Windows command line parsing on Win32
+    Syntax = JSONCommandLineSyntax::Windows;
+#else
     Syntax = JSONCommandLineSyntax::Gnu;
-    llvm::Triple Triple(llvm::sys::getProcessTriple());
-    if (Triple.getOS() == llvm::Triple::OSType::Win32) {
-      // Assume Windows command line parsing on Win32 unless the triple
-      // explicitly tells us otherwise.
-      if (!Triple.hasEnvironment() ||
-          Triple.getEnvironment() == llvm::Triple::EnvironmentType::MSVC)
-        Syntax = JSONCommandLineSyntax::Windows;
-    }
+#endif
   }
 
   if (Syntax == JSONCommandLineSyntax::Windows) {

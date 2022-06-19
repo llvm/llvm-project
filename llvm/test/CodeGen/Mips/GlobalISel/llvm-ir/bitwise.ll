@@ -307,7 +307,6 @@ define  i16 @shl_i16(i16 %a) {
 ; MIPS32-LABEL: shl_i16:
 ; MIPS32:       # %bb.0: # %entry
 ; MIPS32-NEXT:    ori $1, $zero, 2
-; MIPS32-NEXT:    andi $1, $1, 65535
 ; MIPS32-NEXT:    sllv $2, $4, $1
 ; MIPS32-NEXT:    jr $ra
 ; MIPS32-NEXT:    nop
@@ -319,8 +318,7 @@ entry:
 define i8 @ashr_i8(i8 %a) {
 ; MIPS32-LABEL: ashr_i8:
 ; MIPS32:       # %bb.0: # %entry
-; MIPS32-NEXT:    ori $1, $zero, 2
-; MIPS32-NEXT:    andi $2, $1, 255
+; MIPS32-NEXT:    ori $2, $zero, 2
 ; MIPS32-NEXT:    sll $1, $4, 24
 ; MIPS32-NEXT:    sra $1, $1, 24
 ; MIPS32-NEXT:    srav $2, $1, $2
@@ -334,8 +332,7 @@ entry:
 define i16 @lshr_i16(i16 %a) {
 ; MIPS32-LABEL: lshr_i16:
 ; MIPS32:       # %bb.0: # %entry
-; MIPS32-NEXT:    ori $1, $zero, 2
-; MIPS32-NEXT:    andi $2, $1, 65535
+; MIPS32-NEXT:    ori $2, $zero, 2
 ; MIPS32-NEXT:    andi $1, $4, 65535
 ; MIPS32-NEXT:    srlv $2, $1, $2
 ; MIPS32-NEXT:    jr $ra

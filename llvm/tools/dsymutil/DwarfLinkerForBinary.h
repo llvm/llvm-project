@@ -12,6 +12,7 @@
 #include "BinaryHolder.h"
 #include "DebugMap.h"
 #include "LinkUtils.h"
+#include "MachOUtils.h"
 #include "llvm/DWARFLinker/DWARFLinker.h"
 #include "llvm/DWARFLinker/DWARFLinkerCompileUnit.h"
 #include "llvm/DWARFLinker/DWARFLinkerDeclContext.h"
@@ -138,8 +139,6 @@ private:
     }
     virtual ~AddressManager() override { clear(); }
 
-    virtual bool areRelocationsResolved() const override { return true; }
-
     bool hasValidRelocs() override {
       return !ValidDebugInfoRelocs.empty() || !ValidDebugAddrRelocs.empty();
     }
@@ -170,10 +169,10 @@ private:
                               uint64_t StartOffset, uint64_t EndOffset,
                               CompileUnit::DIEInfo &Info);
 
-    bool hasLiveMemoryLocation(const DWARFDie &DIE,
-                               CompileUnit::DIEInfo &Info) override;
-    bool hasLiveAddressRange(const DWARFDie &DIE,
-                             CompileUnit::DIEInfo &Info) override;
+    bool isLiveVariable(const DWARFDie &DIE,
+                        CompileUnit::DIEInfo &Info) override;
+    bool isLiveSubprogram(const DWARFDie &DIE,
+                          CompileUnit::DIEInfo &Info) override;
 
     bool applyValidRelocs(MutableArrayRef<char> Data, uint64_t BaseOffset,
                           bool IsLittleEndian) override;
@@ -202,6 +201,20 @@ private:
   ErrorOr<DWARFFile &> loadObject(const DebugMapObject &Obj,
                                   const DebugMap &DebugMap,
                                   remarks::RemarkLinker &RL);
+
+  void collectRelocationsToApplyToSwiftReflectionSections(
+      const object::SectionRef &Section, StringRef &Contents,
+      const llvm::object::MachOObjectFile *MO,
+      const std::vector<uint64_t> &SectionToOffsetInDwarf,
+      const llvm::dsymutil::DebugMapObject *Obj,
+      std::vector<MachOUtils::DwarfRelocationApplicationInfo>
+          &RelocationsToApply) const;
+
+  void copySwiftReflectionMetadata(
+      const llvm::dsymutil::DebugMapObject *Obj, DwarfStreamer *Streamer,
+      std::vector<uint64_t> &SectionToOffsetInDwarf,
+      std::vector<MachOUtils::DwarfRelocationApplicationInfo>
+          &RelocationsToApply);
 
   raw_fd_ostream &OutFile;
   BinaryHolder &BinHolder;

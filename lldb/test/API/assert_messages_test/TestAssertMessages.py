@@ -6,12 +6,11 @@ Test the format of API test suite assert failure messages
 import lldb
 import lldbsuite.test.lldbutil as lldbutil
 from lldbsuite.test.lldbtest import *
+from lldbsuite.test.decorators import *
 from textwrap import dedent
 
 
 class AssertMessagesTestCase(TestBase):
-
-    mydir = TestBase.compute_mydir(__file__)
     NO_DEBUG_INFO_TESTCASE = True
 
     def assert_expect_fails_with(self, cmd, expect_args, expected_msg):
@@ -24,6 +23,7 @@ class AssertMessagesTestCase(TestBase):
         else:
             self.fail("Initial expect should have raised AssertionError!")
 
+    @expectedFailureAll(remote=True)
     def test_createTestTarget(self):
         try:
            self.createTestTarget("doesnt_exist")

@@ -1,4 +1,4 @@
-; RUN: opt < %s -instcombine -S | FileCheck %s
+; RUN: opt < %s -passes=instcombine -S | FileCheck %s
 ; CHECK: sext
 ; Don't fold zero/sign extensions with a bitcast between a vector and scalar.
 

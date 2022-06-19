@@ -12,14 +12,15 @@
 #include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/Optional.h"
-#include "llvm/IR/Function.h"
 #include "llvm/IR/InstrTypes.h"
-#include "llvm/IR/Module.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/Pass.h"
 
 namespace llvm {
+
 template <typename T> class ArrayRef;
+class Function;
+class Module;
 class Triple;
 
 /// Describes a possible vectorization of a function.
@@ -49,7 +50,7 @@ class TargetLibraryInfoImpl {
   friend class TargetLibraryInfo;
 
   unsigned char AvailableArray[(NumLibFuncs+3)/4];
-  llvm::DenseMap<unsigned, std::string> CustomNames;
+  DenseMap<unsigned, std::string> CustomNames;
   static StringLiteral const StandardNames[NumLibFuncs];
   bool ShouldExtI32Param, ShouldExtI32Return, ShouldSignExtI32Param;
   unsigned SizeOfInt;
@@ -76,7 +77,7 @@ class TargetLibraryInfoImpl {
   /// Return true if the function type FTy is valid for the library function
   /// F, regardless of whether the function is available.
   bool isValidProtoForLibFunc(const FunctionType &FTy, LibFunc F,
-                              const DataLayout *DL) const;
+                              const Module &M) const;
 
 public:
   /// List of known vector-functions libraries.
@@ -115,6 +116,8 @@ public:
   ///
   /// If it is one of the known library functions, return true and set F to the
   /// corresponding value.
+  ///
+  /// FDecl is assumed to have a parent Module when using this function.
   bool getLibFunc(const Function &FDecl, LibFunc &F) const;
 
   /// Forces a function to be marked as unavailable.
@@ -238,7 +241,7 @@ public:
     else {
       // Disable individual libc/libm calls in TargetLibraryInfo.
       LibFunc LF;
-      AttributeSet FnAttrs = (*F)->getAttributes().getFnAttributes();
+      AttributeSet FnAttrs = (*F)->getAttributes().getFnAttrs();
       for (const Attribute &Attr : FnAttrs) {
         if (!Attr.isStringAttribute())
           continue;
@@ -252,15 +255,10 @@ public:
   }
 
   // Provide value semantics.
-  TargetLibraryInfo(const TargetLibraryInfo &TLI)
-      : Impl(TLI.Impl), OverrideAsUnavailable(TLI.OverrideAsUnavailable) {}
+  TargetLibraryInfo(const TargetLibraryInfo &TLI) = default;
   TargetLibraryInfo(TargetLibraryInfo &&TLI)
       : Impl(TLI.Impl), OverrideAsUnavailable(TLI.OverrideAsUnavailable) {}
-  TargetLibraryInfo &operator=(const TargetLibraryInfo &TLI) {
-    Impl = TLI.Impl;
-    OverrideAsUnavailable = TLI.OverrideAsUnavailable;
-    return *this;
-  }
+  TargetLibraryInfo &operator=(const TargetLibraryInfo &TLI) = default;
   TargetLibraryInfo &operator=(TargetLibraryInfo &&TLI) {
     Impl = TLI.Impl;
     OverrideAsUnavailable = TLI.OverrideAsUnavailable;
@@ -280,6 +278,13 @@ public:
     // We can inline if the union of the caller and callee's nobuiltin
     // attributes is no stricter than the caller's nobuiltin attributes.
     return B == OverrideAsUnavailable;
+  }
+
+  /// Return true if the function type FTy is valid for the library function
+  /// F, regardless of whether the function is available.
+  bool isValidProtoForLibFunc(const FunctionType &FTy, LibFunc F,
+                              const Module &M) const {
+    return Impl->isValidProtoForLibFunc(FTy, F, M);
   }
 
   /// Searches for a particular function name.
@@ -443,7 +448,7 @@ public:
   ///
   /// This will use the module's triple to construct the library info for that
   /// module.
-  TargetLibraryAnalysis() {}
+  TargetLibraryAnalysis() = default;
 
   /// Construct a library analysis with baseline Module-level info.
   ///

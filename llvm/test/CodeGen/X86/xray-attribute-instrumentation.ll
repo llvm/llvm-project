@@ -1,7 +1,6 @@
-; RUN: llc -verify-machineinstrs -filetype=asm -o - -mtriple=x86_64-unknown-linux-gnu < %s | FileCheck %s
-; RUN: llc -verify-machineinstrs -filetype=asm -o - \
-; RUN:     -mtriple=x86_64-unknown-linux-gnu -relocation-model=pic < %s | FileCheck %s
-; RUN: llc -verify-machineinstrs -filetype=asm -o - -mtriple=x86_64-darwin-unknown    < %s | FileCheck %s
+; RUN: llc -mtriple=x86_64-unknown-linux-gnu < %s | FileCheck %s
+; RUN: llc -mtriple=x86_64-unknown-linux-gnu -relocation-model=pic < %s | FileCheck %s
+; RUN: llc -mtriple=x86_64-darwin-unknown    < %s | FileCheck %s
 
 define i32 @foo() nounwind noinline uwtable "function-instrument"="xray-always" {
 ; CHECK:       .p2align 1, 0x90

@@ -23,9 +23,11 @@ int main(int, char**)
     {
         std::ofstream fs;
     }
+#ifndef TEST_HAS_NO_WIDE_CHARACTERS
     {
         std::wofstream fs;
     }
+#endif
 
   return 0;
 }

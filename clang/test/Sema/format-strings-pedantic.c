@@ -5,7 +5,7 @@
 __attribute__((format(printf, 1, 2)))
 int printf(const char *restrict, ...);
 
-int main() {
+int main(void) {
   printf("%p", (int *)0); // expected-warning {{format specifies type 'void *' but the argument has type 'int *'}}
   printf("%p", (void *)0);
 
@@ -15,6 +15,6 @@ int main() {
 #endif
 
 #ifdef __cplusplus
-  printf("%p", nullptr); // expected-warning {{format specifies type 'void *' but the argument has type 'nullptr_t'}}
+  printf("%p", nullptr); // expected-warning {{format specifies type 'void *' but the argument has type 'std::nullptr_t'}}
 #endif
 }

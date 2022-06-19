@@ -14,6 +14,7 @@
 #include "llvm/MC/MCInstPrinter.h"
 #include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/MC/MCSubtargetInfo.h"
+#include "llvm/MC/MCSymbol.h"
 #include "llvm/Support/FormattedStream.h"
 
 using namespace llvm;
@@ -236,7 +237,7 @@ bool X86WinCOFFTargetStreamer::emitFPOStackAlloc(unsigned StackAlloc, SMLoc L) {
 bool X86WinCOFFTargetStreamer::emitFPOStackAlign(unsigned Align, SMLoc L) {
   if (checkInFPOPrologue(L))
     return true;
-  if (!llvm::any_of(CurFPOData->Instructions, [](const FPOInstruction &Inst) {
+  if (llvm::none_of(CurFPOData->Instructions, [](const FPOInstruction &Inst) {
         return Inst.Op == FPOInstruction::SetFrame;
       })) {
     getContext().reportError(

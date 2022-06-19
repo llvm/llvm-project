@@ -13,6 +13,8 @@
 #include "lldb/Utility/ConstString.h"
 #include "lldb/Utility/Status.h"
 
+#include "ScriptedThread.h"
+
 #include <mutex>
 
 namespace lldb_private {
@@ -23,17 +25,15 @@ protected:
   public:
     ScriptedProcessInfo(const ProcessLaunchInfo &launch_info) {
       m_class_name = launch_info.GetScriptedProcessClassName();
-      m_dictionary_sp = launch_info.GetScriptedProcessDictionarySP();
+      m_args_sp = launch_info.GetScriptedProcessDictionarySP();
     }
 
     std::string GetClassName() const { return m_class_name; }
-    StructuredData::DictionarySP GetDictionarySP() const {
-      return m_dictionary_sp;
-    }
+    StructuredData::DictionarySP GetArgsSP() const { return m_args_sp; }
 
   private:
     std::string m_class_name;
-    StructuredData::DictionarySP m_dictionary_sp;
+    StructuredData::DictionarySP m_args_sp;
   };
 
 public:
@@ -46,9 +46,9 @@ public:
 
   static void Terminate();
 
-  static ConstString GetPluginNameStatic();
+  static llvm::StringRef GetPluginNameStatic() { return "ScriptedProcess"; }
 
-  static const char *GetPluginDescriptionStatic();
+  static llvm::StringRef GetPluginDescriptionStatic();
 
   ScriptedProcess(lldb::TargetSP target_sp, lldb::ListenerSP listener_sp,
                   const ScriptedProcess::ScriptedProcessInfo &launch_info,
@@ -61,9 +61,7 @@ public:
 
   DynamicLoader *GetDynamicLoader() override { return nullptr; }
 
-  ConstString GetPluginName() override;
-
-  uint32_t GetPluginVersion() override;
+  llvm::StringRef GetPluginName() override { return GetPluginNameStatic(); }
 
   SystemRuntime *GetSystemRuntime() override { return nullptr; }
 
@@ -77,7 +75,7 @@ public:
 
   Status DoDestroy() override;
 
-  void RefreshStateAfterStop() override{};
+  void RefreshStateAfterStop() override;
 
   bool IsAlive() override;
 
@@ -86,13 +84,13 @@ public:
 
   ArchSpec GetArchitecture();
 
-  Status GetMemoryRegionInfo(lldb::addr_t load_addr,
-                             MemoryRegionInfo &range_info) override;
-
   Status
   GetMemoryRegions(lldb_private::MemoryRegionInfos &region_list) override;
 
   bool GetProcessInfo(ProcessInstanceInfo &info) override;
+
+  lldb_private::StructuredData::ObjectSP
+  GetLoadedDynamicLibrariesInfos() override;
 
 protected:
   Status DoStop();
@@ -102,7 +100,12 @@ protected:
   bool DoUpdateThreadList(ThreadList &old_thread_list,
                           ThreadList &new_thread_list) override;
 
+  Status DoGetMemoryRegionInfo(lldb::addr_t load_addr,
+                               MemoryRegionInfo &range_info) override;
+
 private:
+  friend class ScriptedThread;
+
   void CheckInterpreterAndScriptObject() const;
   ScriptedProcessInterface &GetInterface() const;
   static bool IsScriptLanguageSupported(lldb::ScriptLanguage language);

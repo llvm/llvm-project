@@ -9,7 +9,7 @@ define { i128, i8 } @muloti_test(i128 %l, i128 %r) unnamed_addr #0 {
 ; ARMV6-NEXT:    sub sp, sp, #28
 ; ARMV6-NEXT:    ldr r7, [sp, #72]
 ; ARMV6-NEXT:    mov r6, r0
-; ARMV6-NEXT:    str r0, [sp, #8]            @ 4-byte Spill
+; ARMV6-NEXT:    str r0, [sp, #8] @ 4-byte Spill
 ; ARMV6-NEXT:    ldr r4, [sp, #84]
 ; ARMV6-NEXT:    umull r1, r0, r2, r7
 ; ARMV6-NEXT:    mov lr, r7
@@ -17,16 +17,16 @@ define { i128, i8 } @muloti_test(i128 %l, i128 %r) unnamed_addr #0 {
 ; ARMV6-NEXT:    str r1, [r6]
 ; ARMV6-NEXT:    ldr r6, [sp, #80]
 ; ARMV6-NEXT:    umull r1, r7, r3, r6
-; ARMV6-NEXT:    str r7, [sp, #12]           @ 4-byte Spill
+; ARMV6-NEXT:    str r7, [sp, #12] @ 4-byte Spill
 ; ARMV6-NEXT:    add r1, r5, r1
 ; ARMV6-NEXT:    umull r7, r5, r6, r2
 ; ARMV6-NEXT:    mov r6, lr
-; ARMV6-NEXT:    str r7, [sp, #16]           @ 4-byte Spill
+; ARMV6-NEXT:    str r7, [sp, #16] @ 4-byte Spill
 ; ARMV6-NEXT:    mov r7, #0
 ; ARMV6-NEXT:    adds r1, r5, r1
-; ARMV6-NEXT:    str r1, [sp, #4]            @ 4-byte Spill
+; ARMV6-NEXT:    str r1, [sp, #4] @ 4-byte Spill
 ; ARMV6-NEXT:    adc r1, r7, #0
-; ARMV6-NEXT:    str r1, [sp, #24]           @ 4-byte Spill
+; ARMV6-NEXT:    str r1, [sp, #24] @ 4-byte Spill
 ; ARMV6-NEXT:    ldr r1, [sp, #64]
 ; ARMV6-NEXT:    ldr r7, [sp, #76]
 ; ARMV6-NEXT:    ldr r5, [sp, #64]
@@ -40,15 +40,15 @@ define { i128, i8 } @muloti_test(i128 %l, i128 %r) unnamed_addr #0 {
 ; ARMV6-NEXT:    adds r12, lr, r12
 ; ARMV6-NEXT:    umull r2, lr, r2, r7
 ; ARMV6-NEXT:    adc r6, r6, #0
-; ARMV6-NEXT:    str r6, [sp, #20]           @ 4-byte Spill
-; ARMV6-NEXT:    ldr r6, [sp, #16]           @ 4-byte Reload
+; ARMV6-NEXT:    str r6, [sp, #20] @ 4-byte Spill
+; ARMV6-NEXT:    ldr r6, [sp, #16] @ 4-byte Reload
 ; ARMV6-NEXT:    adds r11, r11, r6
-; ARMV6-NEXT:    ldr r6, [sp, #4]            @ 4-byte Reload
+; ARMV6-NEXT:    ldr r6, [sp, #4] @ 4-byte Reload
 ; ARMV6-NEXT:    adc r6, r12, r6
 ; ARMV6-NEXT:    mov r12, #0
 ; ARMV6-NEXT:    umlal r0, r12, r3, r5
-; ARMV6-NEXT:    ldr r5, [sp, #8]            @ 4-byte Reload
-; ARMV6-NEXT:    str r6, [sp, #16]           @ 4-byte Spill
+; ARMV6-NEXT:    ldr r5, [sp, #8] @ 4-byte Reload
+; ARMV6-NEXT:    str r6, [sp, #16] @ 4-byte Spill
 ; ARMV6-NEXT:    ldr r6, [sp, #64]
 ; ARMV6-NEXT:    adds r0, r2, r0
 ; ARMV6-NEXT:    str r0, [r5, #4]
@@ -62,7 +62,7 @@ define { i128, i8 } @muloti_test(i128 %l, i128 %r) unnamed_addr #0 {
 ; ARMV6-NEXT:    orrs r12, r6, r4
 ; ARMV6-NEXT:    movne r12, #1
 ; ARMV6-NEXT:    cmp r9, #0
-; ARMV6-NEXT:    ldr r6, [sp, #12]           @ 4-byte Reload
+; ARMV6-NEXT:    ldr r6, [sp, #12] @ 4-byte Reload
 ; ARMV6-NEXT:    movne r9, #1
 ; ARMV6-NEXT:    cmp r8, #0
 ; ARMV6-NEXT:    movne r8, #1
@@ -81,17 +81,17 @@ define { i128, i8 } @muloti_test(i128 %l, i128 %r) unnamed_addr #0 {
 ; ARMV6-NEXT:    adds r0, r0, r11
 ; ARMV6-NEXT:    str r0, [r5, #8]
 ; ARMV6-NEXT:    and r1, r1, r7
-; ARMV6-NEXT:    ldr r0, [sp, #16]           @ 4-byte Reload
+; ARMV6-NEXT:    ldr r0, [sp, #16] @ 4-byte Reload
 ; ARMV6-NEXT:    orr r1, r1, r8
 ; ARMV6-NEXT:    orr r1, r1, r9
 ; ARMV6-NEXT:    adcs r0, r2, r0
 ; ARMV6-NEXT:    str r0, [r5, #12]
 ; ARMV6-NEXT:    and r0, r4, r3
-; ARMV6-NEXT:    ldr r2, [sp, #24]           @ 4-byte Reload
+; ARMV6-NEXT:    ldr r2, [sp, #24] @ 4-byte Reload
 ; ARMV6-NEXT:    orr r0, r0, r10
 ; ARMV6-NEXT:    orr r0, r0, r6
 ; ARMV6-NEXT:    orr r0, r0, r2
-; ARMV6-NEXT:    ldr r2, [sp, #20]           @ 4-byte Reload
+; ARMV6-NEXT:    ldr r2, [sp, #20] @ 4-byte Reload
 ; ARMV6-NEXT:    orr r1, r1, r2
 ; ARMV6-NEXT:    and r2, lr, r12
 ; ARMV6-NEXT:    orr r1, r2, r1
@@ -115,51 +115,51 @@ define { i128, i8 } @muloti_test(i128 %l, i128 %r) unnamed_addr #0 {
 ; ARMV7-NEXT:    ldr r9, [sp, #76]
 ; ARMV7-NEXT:    umull r4, lr, r5, r1
 ; ARMV7-NEXT:    umull r0, r7, r2, r10
-; ARMV7-NEXT:    str r4, [sp, #24]           @ 4-byte Spill
+; ARMV7-NEXT:    str r4, [sp, #24] @ 4-byte Spill
 ; ARMV7-NEXT:    ldr r4, [sp, #88]
 ; ARMV7-NEXT:    umull r1, r6, r1, r10
-; ARMV7-NEXT:    str r0, [sp, #32]           @ 4-byte Spill
+; ARMV7-NEXT:    str r0, [sp, #32] @ 4-byte Spill
 ; ARMV7-NEXT:    umull r11, r0, r2, r5
-; ARMV7-NEXT:    str r6, [sp, #20]           @ 4-byte Spill
-; ARMV7-NEXT:    str r1, [sp, #28]           @ 4-byte Spill
+; ARMV7-NEXT:    str r6, [sp, #20] @ 4-byte Spill
+; ARMV7-NEXT:    str r1, [sp, #28] @ 4-byte Spill
 ; ARMV7-NEXT:    umull r6, r12, r3, r4
 ; ARMV7-NEXT:    ldr r1, [sp, #92]
-; ARMV7-NEXT:    str r0, [sp, #8]            @ 4-byte Spill
+; ARMV7-NEXT:    str r0, [sp, #8] @ 4-byte Spill
 ; ARMV7-NEXT:    mov r0, #0
 ; ARMV7-NEXT:    umlal r7, r0, r3, r10
-; ARMV7-NEXT:    str r6, [sp, #16]           @ 4-byte Spill
+; ARMV7-NEXT:    str r6, [sp, #16] @ 4-byte Spill
 ; ARMV7-NEXT:    umull r6, r1, r1, r2
 ; ARMV7-NEXT:    umull r2, r4, r4, r2
-; ARMV7-NEXT:    str r6, [sp, #4]            @ 4-byte Spill
-; ARMV7-NEXT:    str r2, [sp, #12]           @ 4-byte Spill
+; ARMV7-NEXT:    str r6, [sp, #4] @ 4-byte Spill
+; ARMV7-NEXT:    str r2, [sp, #12] @ 4-byte Spill
 ; ARMV7-NEXT:    adds r2, r11, r7
-; ARMV7-NEXT:    ldr r7, [sp, #8]            @ 4-byte Reload
+; ARMV7-NEXT:    ldr r7, [sp, #8] @ 4-byte Reload
 ; ARMV7-NEXT:    mov r11, #0
-; ARMV7-NEXT:    str r4, [sp]                @ 4-byte Spill
+; ARMV7-NEXT:    str r4, [sp] @ 4-byte Spill
 ; ARMV7-NEXT:    umull r6, r4, r9, r10
 ; ARMV7-NEXT:    adcs r9, r0, r7
-; ARMV7-NEXT:    ldr r0, [sp, #32]           @ 4-byte Reload
+; ARMV7-NEXT:    ldr r0, [sp, #32] @ 4-byte Reload
 ; ARMV7-NEXT:    adc r10, r11, #0
 ; ARMV7-NEXT:    stm r8, {r0, r2}
-; ARMV7-NEXT:    ldr r0, [sp, #24]           @ 4-byte Reload
+; ARMV7-NEXT:    ldr r0, [sp, #24] @ 4-byte Reload
 ; ARMV7-NEXT:    umlal r9, r10, r3, r5
-; ARMV7-NEXT:    ldr r2, [sp, #20]           @ 4-byte Reload
+; ARMV7-NEXT:    ldr r2, [sp, #20] @ 4-byte Reload
 ; ARMV7-NEXT:    add r0, r6, r0
-; ARMV7-NEXT:    adds r2, r2, r0
-; ARMV7-NEXT:    ldr r6, [sp, #4]            @ 4-byte Reload
-; ARMV7-NEXT:    adc r0, r11, #0
-; ARMV7-NEXT:    str r0, [sp, #32]           @ 4-byte Spill
-; ARMV7-NEXT:    ldr r0, [sp, #16]           @ 4-byte Reload
-; ARMV7-NEXT:    ldr r7, [sp, #28]           @ 4-byte Reload
-; ARMV7-NEXT:    add r0, r6, r0
-; ARMV7-NEXT:    ldr r6, [sp]                @ 4-byte Reload
-; ARMV7-NEXT:    adds r0, r6, r0
-; ARMV7-NEXT:    ldr r6, [sp, #12]           @ 4-byte Reload
+; ARMV7-NEXT:    adds r0, r2, r0
+; ARMV7-NEXT:    ldr r6, [sp, #4] @ 4-byte Reload
+; ARMV7-NEXT:    adc r2, r11, #0
+; ARMV7-NEXT:    str r2, [sp, #32] @ 4-byte Spill
+; ARMV7-NEXT:    ldr r2, [sp, #16] @ 4-byte Reload
+; ARMV7-NEXT:    ldr r7, [sp, #28] @ 4-byte Reload
+; ARMV7-NEXT:    add r2, r6, r2
+; ARMV7-NEXT:    ldr r6, [sp] @ 4-byte Reload
+; ARMV7-NEXT:    adds r2, r6, r2
+; ARMV7-NEXT:    ldr r6, [sp, #12] @ 4-byte Reload
 ; ARMV7-NEXT:    adc r11, r11, #0
 ; ARMV7-NEXT:    adds r7, r7, r6
 ; ARMV7-NEXT:    ldr r6, [sp, #92]
-; ARMV7-NEXT:    adc r0, r2, r0
-; ARMV7-NEXT:    str r0, [sp, #28]           @ 4-byte Spill
+; ARMV7-NEXT:    adc r0, r0, r2
+; ARMV7-NEXT:    str r0, [sp, #28] @ 4-byte Spill
 ; ARMV7-NEXT:    ldr r0, [sp, #92]
 ; ARMV7-NEXT:    cmp r3, #0
 ; ARMV7-NEXT:    movwne r3, #1
@@ -195,11 +195,11 @@ define { i128, i8 } @muloti_test(i128 %l, i128 %r) unnamed_addr #0 {
 ; ARMV7-NEXT:    adds r7, r9, r7
 ; ARMV7-NEXT:    str r7, [r8, #8]
 ; ARMV7-NEXT:    and r2, r2, r3
-; ARMV7-NEXT:    ldr r7, [sp, #28]           @ 4-byte Reload
+; ARMV7-NEXT:    ldr r7, [sp, #28] @ 4-byte Reload
 ; ARMV7-NEXT:    orr r0, r0, r11
 ; ARMV7-NEXT:    adcs r7, r10, r7
 ; ARMV7-NEXT:    str r7, [r8, #12]
-; ARMV7-NEXT:    ldr r7, [sp, #32]           @ 4-byte Reload
+; ARMV7-NEXT:    ldr r7, [sp, #32] @ 4-byte Reload
 ; ARMV7-NEXT:    orr r1, r1, r7
 ; ARMV7-NEXT:    orr r1, r2, r1
 ; ARMV7-NEXT:    orr r0, r1, r0

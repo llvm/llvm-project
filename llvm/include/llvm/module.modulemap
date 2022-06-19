@@ -4,6 +4,7 @@ module LLVM_Analysis {
   module * { export * }
 
   // This is intended for (repeated) textual inclusion.
+  textual header "Analysis/ScalarFuncs.def"
   textual header "Analysis/TargetLibraryInfo.def"
   textual header "Analysis/VecFuncs.def"
 }
@@ -60,6 +61,7 @@ module LLVM_BinaryFormat {
     textual header "BinaryFormat/DynamicTags.def"
     textual header "BinaryFormat/MachO.def"
     textual header "BinaryFormat/MinidumpConstants.def"
+    textual header "BinaryFormat/Swift.def"
     textual header "BinaryFormat/ELFRelocs/AArch64.def"
     textual header "BinaryFormat/ELFRelocs/AMDGPU.def"
     textual header "BinaryFormat/ELFRelocs/ARM.def"
@@ -70,6 +72,7 @@ module LLVM_BinaryFormat {
     textual header "BinaryFormat/ELFRelocs/Hexagon.def"
     textual header "BinaryFormat/ELFRelocs/i386.def"
     textual header "BinaryFormat/ELFRelocs/Lanai.def"
+    textual header "BinaryFormat/ELFRelocs/LoongArch.def"
     textual header "BinaryFormat/ELFRelocs/M68k.def"
     textual header "BinaryFormat/ELFRelocs/Mips.def"
     textual header "BinaryFormat/ELFRelocs/MSP430.def"
@@ -181,21 +184,9 @@ module LLVM_ExecutionEngine {
   // translation unit (or none) and aren't part of this module.
   exclude header "ExecutionEngine/MCJIT.h"
   exclude header "ExecutionEngine/Interpreter.h"
-  exclude header "ExecutionEngine/OrcMCJITReplacement.h"
-
-  // FIXME: These exclude directives were added as a workaround for
-  //        <rdar://problem/29247092> and should be removed once it is fixed.
-  exclude header "ExecutionEngine/Orc/OrcRemoteTargetRPCAPI.h"
-  exclude header "ExecutionEngine/Orc/OrcRemoteTargetClient.h"
-  exclude header "ExecutionEngine/Orc/OrcRemoteTargetServer.h"
-  exclude header "ExecutionEngine/Orc/RemoteObjectLayer.h"
 
   // Exclude headers from LLVM_OrcSupport.
   exclude header "ExecutionEngine/Orc/Shared/OrcError.h"
-  exclude header "ExecutionEngine/Orc/RPC/RPCUtils.h"
-  exclude header "ExecutionEngine/Orc/RPC/RPCSerialization.h"
-  exclude header "ExecutionEngine/Orc/RPC/RawByteChannel.h"
-
 }
 
 module LLVM_FileCheck {
@@ -221,9 +212,6 @@ module LLVM_OrcSupport {
   requires cplusplus
 
   header "ExecutionEngine/Orc/Shared/OrcError.h"
-  header "ExecutionEngine/Orc/Shared/RPCUtils.h"
-  header "ExecutionEngine/Orc/Shared/Serialization.h"
-  header "ExecutionEngine/Orc/Shared/RawByteChannel.h"
 
   export *
 }
@@ -266,6 +254,8 @@ module LLVM_intrinsic_gen {
   module IR_Function { header "IR/Function.h" export * }
   module IR_InstrTypes { header "IR/InstrTypes.h" export * }
   module IR_Instructions { header "IR/Instructions.h" export * }
+  module IR_TypeFinder { header "IR/TypeFinder.h" export * }
+  module IR_VectorBuilder { header "IR/VectorBuilder.h" export * }
 
 
   // Intrinsics.h
@@ -344,7 +334,6 @@ module LLVM_MC {
 module LLVM_MC_TableGen {
   requires cplusplus
   module MC_LaneBitmask { header "MC/LaneBitmask.h" export * }
-  module MC_FixedLenDisassembler { header "MC/MCFixedLenDisassembler.h" export * }
   module MC_InstrItineraries { header "MC/MCInstrItineraries.h" export * }
   module MC_Schedule { header "MC/MCSchedule.h" export * }
   module MC_SubtargetFeature { header "MC/SubtargetFeature.h" export * }
@@ -369,6 +358,8 @@ module LLVM_ProfileData {
   module * { export * }
 
   textual header "ProfileData/InstrProfData.inc"
+  textual header "ProfileData/MemProfData.inc"
+  textual header "ProfileData/MIBEntryDef.inc"
 }
 
 // FIXME: Mislayered?
@@ -389,6 +380,9 @@ module LLVM_Transforms {
   umbrella "Transforms"
 
   module * { export * }
+
+  // Requires DEBUG_TYPE to be defined by including file.
+  exclude header "Transforms/Utils/InstructionWorklist.h"
 }
 
 extern module LLVM_Extern_Utils_DataTypes "module.extern.modulemap"
@@ -419,6 +413,7 @@ module LLVM_Utils {
     // These are intended for textual inclusion.
     textual header "Support/AArch64TargetParser.def"
     textual header "Support/ARMTargetParser.def"
+    textual header "Support/CSKYTargetParser.def"
     textual header "Support/RISCVTargetParser.def"
     textual header "Support/TargetOpcodes.def"
     textual header "Support/X86TargetParser.def"

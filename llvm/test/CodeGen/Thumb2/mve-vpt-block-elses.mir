@@ -67,181 +67,181 @@ body:             |
 
     ; CHECK-LABEL: name: vpt_block_else
     ; CHECK: liveins: $q0, $q1, $q2
-    ; CHECK: $q3 = MVE_VORR $q2, $q2, 0, $noreg, undef $q3
+    ; CHECK: $q3 = MVE_VORR $q2, $q2, 0, $noreg, $noreg, undef $q3
     ; CHECK: BUNDLE implicit-def dead $vpr, implicit-def $q3, implicit-def $d6, implicit-def $s12, implicit-def $s13, implicit-def $d7, implicit-def $s14, implicit-def $s15, implicit killed $q0, implicit $q2, implicit $q1, implicit killed $q3, implicit $zr {
     ; CHECK:   MVE_VPTv4s32 7, renamable $q0, renamable $q2, 10, implicit-def $vpr
-    ; CHECK:   renamable $q3 = MVE_VMAXs32 renamable $q0, renamable $q1, 1, internal renamable $vpr, killed renamable $q3
-    ; CHECK:   renamable $vpr = MVE_VCMPs32r killed renamable $q0, $zr, 12, 1, internal killed renamable $vpr
-    ; CHECK:   renamable $vpr = MVE_VCMPs32r renamable $q1, $zr, 12, 2, internal killed renamable $vpr
-    ; CHECK:   renamable $q3 = MVE_VORR renamable $q2, renamable $q2, 2, internal killed renamable $vpr, internal renamable $q3
+    ; CHECK:   renamable $q3 = MVE_VMAXs32 renamable $q0, renamable $q1, 1, internal renamable $vpr, $noreg, killed renamable $q3
+    ; CHECK:   renamable $vpr = MVE_VCMPs32r killed renamable $q0, $zr, 12, 1, internal killed renamable $vpr, $noreg
+    ; CHECK:   renamable $vpr = MVE_VCMPs32r renamable $q1, $zr, 12, 2, internal killed renamable $vpr, $noreg
+    ; CHECK:   renamable $q3 = MVE_VORR renamable $q2, renamable $q2, 2, internal killed renamable $vpr, $noreg, internal renamable $q3
     ; CHECK: }
-    ; CHECK: $q0 = MVE_VORR $q3, $q3, 0, $noreg, undef $q0
-    ; CHECK: $q3 = MVE_VORR $q2, $q2, 0, $noreg, undef $q3
+    ; CHECK: $q0 = MVE_VORR $q3, $q3, 0, $noreg, $noreg, undef $q0
+    ; CHECK: $q3 = MVE_VORR $q2, $q2, 0, $noreg, $noreg, undef $q3
     ; CHECK: BUNDLE implicit-def dead $vpr, implicit-def $q3, implicit-def $d6, implicit-def $s12, implicit-def $s13, implicit-def $d7, implicit-def $s14, implicit-def $s15, implicit killed $q0, implicit $q2, implicit $q1, implicit killed $q3, implicit $zr {
     ; CHECK:   MVE_VPTv4s32 7, renamable $q0, renamable $q2, 10, implicit-def $vpr
-    ; CHECK:   renamable $q3 = MVE_VMAXs32 renamable $q0, renamable $q1, 1, internal renamable $vpr, killed renamable $q3
-    ; CHECK:   renamable $vpr = MVE_VCMPs32r killed renamable $q0, $zr, 12, 1, internal killed renamable $vpr
-    ; CHECK:   renamable $q3 = MVE_VORR renamable $q2, renamable $q2, 2, internal renamable $vpr, internal renamable $q3
-    ; CHECK:   renamable $q3 = MVE_VORR renamable $q2, renamable $q2, 2, internal killed renamable $vpr, internal renamable $q3
+    ; CHECK:   renamable $q3 = MVE_VMAXs32 renamable $q0, renamable $q1, 1, internal renamable $vpr, $noreg, killed renamable $q3
+    ; CHECK:   renamable $vpr = MVE_VCMPs32r killed renamable $q0, $zr, 12, 1, internal killed renamable $vpr, $noreg
+    ; CHECK:   renamable $q3 = MVE_VORR renamable $q2, renamable $q2, 2, internal renamable $vpr, $noreg, internal renamable $q3
+    ; CHECK:   renamable $q3 = MVE_VORR renamable $q2, renamable $q2, 2, internal killed renamable $vpr, $noreg, internal renamable $q3
     ; CHECK: }
-    ; CHECK: $q0 = MVE_VORR $q3, $q3, 0, $noreg, undef $q0
-    ; CHECK: $q3 = MVE_VORR $q2, $q2, 0, $noreg, undef $q3
+    ; CHECK: $q0 = MVE_VORR $q3, $q3, 0, $noreg, $noreg, undef $q0
+    ; CHECK: $q3 = MVE_VORR $q2, $q2, 0, $noreg, $noreg, undef $q3
     ; CHECK: BUNDLE implicit-def dead $vpr, implicit-def $q3, implicit-def $d6, implicit-def $s12, implicit-def $s13, implicit-def $d7, implicit-def $s14, implicit-def $s15, implicit $q0, implicit $q2, implicit $q1, implicit killed $q3, implicit $zr {
     ; CHECK:   MVE_VPTv4s32 15, renamable $q0, renamable $q2, 10, implicit-def $vpr
-    ; CHECK:   renamable $q3 = MVE_VMAXs32 renamable $q0, renamable $q1, 1, internal renamable $vpr, killed renamable $q3
-    ; CHECK:   renamable $q3 = MVE_VORR renamable $q2, renamable $q2, 2, internal renamable $vpr, internal renamable $q3
-    ; CHECK:   renamable $vpr = MVE_VCMPs32r renamable $q1, $zr, 12, 2, internal killed renamable $vpr
-    ; CHECK:   renamable $q3 = MVE_VORR renamable $q2, renamable $q2, 2, internal killed renamable $vpr, internal killed renamable $q3
+    ; CHECK:   renamable $q3 = MVE_VMAXs32 renamable $q0, renamable $q1, 1, internal renamable $vpr, $noreg, killed renamable $q3
+    ; CHECK:   renamable $q3 = MVE_VORR renamable $q2, renamable $q2, 2, internal renamable $vpr, $noreg, internal renamable $q3
+    ; CHECK:   renamable $vpr = MVE_VCMPs32r renamable $q1, $zr, 12, 2, internal killed renamable $vpr, $noreg
+    ; CHECK:   renamable $q3 = MVE_VORR renamable $q2, renamable $q2, 2, internal killed renamable $vpr, $noreg, internal killed renamable $q3
     ; CHECK: }
-    ; CHECK: $q0 = MVE_VORR killed $q3, killed $q3, 0, $noreg, undef $q0
-    ; CHECK: $q3 = MVE_VORR $q2, $q2, 0, $noreg, undef $q3
+    ; CHECK: $q0 = MVE_VORR killed $q3, killed $q3, 0, $noreg, $noreg, undef $q0
+    ; CHECK: $q3 = MVE_VORR $q2, $q2, 0, $noreg, $noreg, undef $q3
     ; CHECK: BUNDLE implicit-def dead $vpr, implicit-def $q3, implicit-def $d6, implicit-def $s12, implicit-def $s13, implicit-def $d7, implicit-def $s14, implicit-def $s15, implicit $q0, implicit $q2, implicit $q1, implicit killed $q3, implicit $zr {
     ; CHECK:   MVE_VPTv4s32 15, renamable $q0, renamable $q2, 10, implicit-def $vpr
-    ; CHECK:   renamable $q3 = MVE_VMAXs32 renamable $q0, renamable $q1, 1, internal renamable $vpr, killed renamable $q3
-    ; CHECK:   renamable $vpr = MVE_VCMPs32r renamable $q1, $zr, 12, 2, internal killed renamable $vpr
-    ; CHECK:   renamable $q3 = MVE_VORR renamable $q2, renamable $q2, 2, internal renamable $vpr, internal renamable $q3
-    ; CHECK:   renamable $q3 = MVE_VORR renamable $q2, renamable $q2, 2, internal killed renamable $vpr, internal killed renamable $q3
+    ; CHECK:   renamable $q3 = MVE_VMAXs32 renamable $q0, renamable $q1, 1, internal renamable $vpr, $noreg, killed renamable $q3
+    ; CHECK:   renamable $vpr = MVE_VCMPs32r renamable $q1, $zr, 12, 2, internal killed renamable $vpr, $noreg
+    ; CHECK:   renamable $q3 = MVE_VORR renamable $q2, renamable $q2, 2, internal renamable $vpr, $noreg, internal renamable $q3
+    ; CHECK:   renamable $q3 = MVE_VORR renamable $q2, renamable $q2, 2, internal killed renamable $vpr, $noreg, internal killed renamable $q3
     ; CHECK: }
-    ; CHECK: $q0 = MVE_VORR killed $q3, killed $q3, 0, $noreg, undef $q0
-    ; CHECK: $q3 = MVE_VORR $q2, $q2, 0, $noreg, undef $q3
+    ; CHECK: $q0 = MVE_VORR killed $q3, killed $q3, 0, $noreg, $noreg, undef $q0
+    ; CHECK: $q3 = MVE_VORR $q2, $q2, 0, $noreg, $noreg, undef $q3
     ; CHECK: BUNDLE implicit-def dead $vpr, implicit-def $q3, implicit-def $d6, implicit-def $s12, implicit-def $s13, implicit-def $d7, implicit-def $s14, implicit-def $s15, implicit $q0, implicit $q2, implicit $q1, implicit killed $q3 {
     ; CHECK:   MVE_VPTv4s32 15, renamable $q0, renamable $q2, 10, implicit-def $vpr
-    ; CHECK:   renamable $q3 = MVE_VMAXs32 renamable $q0, renamable $q1, 1, internal renamable $vpr, killed renamable $q3
-    ; CHECK:   renamable $q3 = MVE_VORR renamable $q2, renamable $q2, 2, internal renamable $vpr, internal renamable $q3
-    ; CHECK:   renamable $q3 = MVE_VORR renamable $q2, renamable $q2, 2, internal renamable $vpr, internal renamable $q3
-    ; CHECK:   renamable $q3 = MVE_VORR renamable $q2, renamable $q2, 2, internal killed renamable $vpr, internal killed renamable $q3
+    ; CHECK:   renamable $q3 = MVE_VMAXs32 renamable $q0, renamable $q1, 1, internal renamable $vpr, $noreg, killed renamable $q3
+    ; CHECK:   renamable $q3 = MVE_VORR renamable $q2, renamable $q2, 2, internal renamable $vpr, $noreg, internal renamable $q3
+    ; CHECK:   renamable $q3 = MVE_VORR renamable $q2, renamable $q2, 2, internal renamable $vpr, $noreg, internal renamable $q3
+    ; CHECK:   renamable $q3 = MVE_VORR renamable $q2, renamable $q2, 2, internal killed renamable $vpr, $noreg, internal killed renamable $q3
     ; CHECK: }
-    ; CHECK: $q0 = MVE_VORR killed $q3, killed $q3, 0, $noreg, undef $q0
-    ; CHECK: $q3 = MVE_VORR $q2, $q2, 0, $noreg, undef $q3
+    ; CHECK: $q0 = MVE_VORR killed $q3, killed $q3, 0, $noreg, $noreg, undef $q0
+    ; CHECK: $q3 = MVE_VORR $q2, $q2, 0, $noreg, $noreg, undef $q3
     ; CHECK: BUNDLE implicit-def dead $vpr, implicit-def $q3, implicit-def $d6, implicit-def $s12, implicit-def $s13, implicit-def $d7, implicit-def $s14, implicit-def $s15, implicit $q0, implicit $q2, implicit $q1, implicit killed $q3 {
     ; CHECK:   MVE_VPTv4s32 14, renamable $q0, renamable $q2, 10, implicit-def $vpr
-    ; CHECK:   renamable $q3 = MVE_VMAXs32 renamable $q0, renamable $q1, 1, internal renamable $vpr, killed renamable $q3
-    ; CHECK:   renamable $q3 = MVE_VORR renamable $q2, renamable $q2, 2, internal renamable $vpr, internal renamable $q3
-    ; CHECK:   renamable $q3 = MVE_VORR renamable $q2, renamable $q2, 2, internal killed renamable $vpr, internal killed renamable $q3
+    ; CHECK:   renamable $q3 = MVE_VMAXs32 renamable $q0, renamable $q1, 1, internal renamable $vpr, $noreg, killed renamable $q3
+    ; CHECK:   renamable $q3 = MVE_VORR renamable $q2, renamable $q2, 2, internal renamable $vpr, $noreg, internal renamable $q3
+    ; CHECK:   renamable $q3 = MVE_VORR renamable $q2, renamable $q2, 2, internal killed renamable $vpr, $noreg, internal killed renamable $q3
     ; CHECK: }
-    ; CHECK: $q0 = MVE_VORR killed $q3, killed $q3, 0, $noreg, undef $q0
-    ; CHECK: $q3 = MVE_VORR $q2, $q2, 0, $noreg, undef $q3
+    ; CHECK: $q0 = MVE_VORR killed $q3, killed $q3, 0, $noreg, $noreg, undef $q0
+    ; CHECK: $q3 = MVE_VORR $q2, $q2, 0, $noreg, $noreg, undef $q3
     ; CHECK: BUNDLE implicit-def dead $vpr, implicit-def $q3, implicit-def $d6, implicit-def $s12, implicit-def $s13, implicit-def $d7, implicit-def $s14, implicit-def $s15, implicit $q0, implicit $q2, implicit $q1, implicit killed $q3, implicit $zr {
     ; CHECK:   MVE_VPTv4s32 14, renamable $q0, renamable $q2, 10, implicit-def $vpr
-    ; CHECK:   renamable $q3 = MVE_VMAXs32 renamable $q0, renamable $q1, 1, internal renamable $vpr, killed renamable $q3
-    ; CHECK:   renamable $vpr = MVE_VCMPs32r renamable $q1, $zr, 12, 2, internal killed renamable $vpr
-    ; CHECK:   renamable $q3 = MVE_VORR renamable $q2, renamable $q2, 2, internal killed renamable $vpr, internal killed renamable $q3
+    ; CHECK:   renamable $q3 = MVE_VMAXs32 renamable $q0, renamable $q1, 1, internal renamable $vpr, $noreg, killed renamable $q3
+    ; CHECK:   renamable $vpr = MVE_VCMPs32r renamable $q1, $zr, 12, 2, internal killed renamable $vpr, $noreg
+    ; CHECK:   renamable $q3 = MVE_VORR renamable $q2, renamable $q2, 2, internal killed renamable $vpr, $noreg, internal killed renamable $q3
     ; CHECK: }
-    ; CHECK: $q0 = MVE_VORR killed $q3, killed $q3, 0, $noreg, undef $q0
-    ; CHECK: $q3 = MVE_VORR $q2, $q2, 0, $noreg, undef $q3
+    ; CHECK: $q0 = MVE_VORR killed $q3, killed $q3, 0, $noreg, $noreg, undef $q0
+    ; CHECK: $q3 = MVE_VORR $q2, $q2, 0, $noreg, $noreg, undef $q3
     ; CHECK: BUNDLE implicit-def dead $vpr, implicit-def $q3, implicit-def $d6, implicit-def $s12, implicit-def $s13, implicit-def $d7, implicit-def $s14, implicit-def $s15, implicit $q0, implicit $q2, implicit $q1, implicit killed $q3 {
     ; CHECK:   MVE_VPTv4s32 6, renamable $q0, renamable $q2, 10, implicit-def $vpr
-    ; CHECK:   renamable $q3 = MVE_VMAXs32 renamable $q0, renamable $q1, 1, internal renamable $vpr, killed renamable $q3
-    ; CHECK:   renamable $q3 = MVE_VORR renamable $q2, renamable $q2, 1, internal renamable $vpr, internal killed renamable $q3
-    ; CHECK:   renamable $q3 = MVE_VORR renamable $q2, renamable $q2, 2, internal killed renamable $vpr, internal killed renamable $q3
+    ; CHECK:   renamable $q3 = MVE_VMAXs32 renamable $q0, renamable $q1, 1, internal renamable $vpr, $noreg, killed renamable $q3
+    ; CHECK:   renamable $q3 = MVE_VORR renamable $q2, renamable $q2, 1, internal renamable $vpr, $noreg, internal killed renamable $q3
+    ; CHECK:   renamable $q3 = MVE_VORR renamable $q2, renamable $q2, 2, internal killed renamable $vpr, $noreg, internal killed renamable $q3
     ; CHECK: }
-    ; CHECK: $q0 = MVE_VORR killed $q3, killed $q3, 0, $noreg, undef $q0
-    ; CHECK: $q3 = MVE_VORR $q2, $q2, 0, $noreg, undef $q3
+    ; CHECK: $q0 = MVE_VORR killed $q3, killed $q3, 0, $noreg, $noreg, undef $q0
+    ; CHECK: $q3 = MVE_VORR $q2, $q2, 0, $noreg, $noreg, undef $q3
     ; CHECK: BUNDLE implicit-def $vpr, implicit-def $q3, implicit-def $d6, implicit-def $s12, implicit-def $s13, implicit-def $d7, implicit-def $s14, implicit-def $s15, implicit $q0, implicit $q2, implicit killed $q3 {
     ; CHECK:   MVE_VPTv4s32 11, renamable $q0, renamable $q2, 10, implicit-def $vpr
-    ; CHECK:   renamable $q3 = MVE_VORR renamable $q2, renamable $q2, 1, internal renamable $vpr, killed renamable $q3
-    ; CHECK:   renamable $q3 = MVE_VORR renamable $q2, renamable $q2, 2, internal renamable $vpr, internal killed renamable $q3
-    ; CHECK:   renamable $q3 = MVE_VORR renamable $q2, renamable $q2, 1, internal renamable $vpr, internal killed renamable $q3
-    ; CHECK:   renamable $q3 = MVE_VORR renamable $q2, renamable $q2, 2, internal renamable $vpr, internal killed renamable $q3
+    ; CHECK:   renamable $q3 = MVE_VORR renamable $q2, renamable $q2, 1, internal renamable $vpr, $noreg, killed renamable $q3
+    ; CHECK:   renamable $q3 = MVE_VORR renamable $q2, renamable $q2, 2, internal renamable $vpr, $noreg, internal killed renamable $q3
+    ; CHECK:   renamable $q3 = MVE_VORR renamable $q2, renamable $q2, 1, internal renamable $vpr, $noreg, internal killed renamable $q3
+    ; CHECK:   renamable $q3 = MVE_VORR renamable $q2, renamable $q2, 2, internal renamable $vpr, $noreg, internal killed renamable $q3
     ; CHECK: }
-    ; CHECK: $q0 = MVE_VORR killed $q3, killed $q3, 0, $noreg, undef $q0
-    ; CHECK: $q3 = MVE_VORR $q2, $q2, 0, $noreg, undef $q3
+    ; CHECK: $q0 = MVE_VORR killed $q3, killed $q3, 0, $noreg, $noreg, undef $q0
+    ; CHECK: $q3 = MVE_VORR $q2, $q2, 0, $noreg, $noreg, undef $q3
     ; CHECK: BUNDLE implicit-def $vpr, implicit-def $q3, implicit-def $d6, implicit-def $s12, implicit-def $s13, implicit-def $d7, implicit-def $s14, implicit-def $s15, implicit $q0, implicit $q2, implicit killed $q3 {
     ; CHECK:   MVE_VPTv4s32 13, renamable $q0, renamable $q2, 10, implicit-def $vpr
-    ; CHECK:   renamable $q3 = MVE_VORR renamable $q2, renamable $q2, 1, internal renamable $vpr, killed renamable $q3
-    ; CHECK:   renamable $vpr = MVE_VCMPs32 renamable $q0, renamable $q2, 11, 2, internal killed renamable $vpr
-    ; CHECK:   renamable $q3 = MVE_VORR renamable $q2, renamable $q2, 2, internal renamable $vpr, internal killed renamable $q3
-    ; CHECK:   renamable $vpr = MVE_VCMPs32 renamable $q0, renamable $q2, 11, 1, internal killed renamable $vpr
+    ; CHECK:   renamable $q3 = MVE_VORR renamable $q2, renamable $q2, 1, internal renamable $vpr, $noreg, killed renamable $q3
+    ; CHECK:   renamable $vpr = MVE_VCMPs32 renamable $q0, renamable $q2, 11, 2, internal killed renamable $vpr, $noreg
+    ; CHECK:   renamable $q3 = MVE_VORR renamable $q2, renamable $q2, 2, internal renamable $vpr, $noreg, internal killed renamable $q3
+    ; CHECK:   renamable $vpr = MVE_VCMPs32 renamable $q0, renamable $q2, 11, 1, internal killed renamable $vpr, $noreg
     ; CHECK: }
     ; CHECK: tBX_RET 14 /* CC::al */, $noreg, implicit $q0
-    renamable $vpr = MVE_VCMPs32 renamable $q0, renamable $q2, 10, 0, $noreg
-    $q3 = MVE_VORR $q2, $q2, 0, $noreg, undef $q3
-    renamable $q3 = MVE_VMAXs32 renamable $q0, renamable $q1, 1, renamable $vpr, killed renamable $q3
-    renamable $vpr = MVE_VCMPs32r killed renamable $q0, $zr, 12, 1, killed renamable $vpr
-    renamable $vpr = MVE_VPNOT killed renamable $vpr, 0, $noreg
-    renamable $vpr = MVE_VCMPs32r renamable $q1, $zr, 12, 1, killed renamable $vpr
-    renamable $q3 = MVE_VORR renamable $q2, renamable $q2, 1, killed renamable $vpr, renamable $q3
-    $q0 = MVE_VORR $q3, $q3, 0, $noreg, undef $q0
+    renamable $vpr = MVE_VCMPs32 renamable $q0, renamable $q2, 10, 0, $noreg, $noreg
+    $q3 = MVE_VORR $q2, $q2, 0, $noreg, $noreg, undef $q3
+    renamable $q3 = MVE_VMAXs32 renamable $q0, renamable $q1, 1, renamable $vpr, $noreg, killed renamable $q3
+    renamable $vpr = MVE_VCMPs32r killed renamable $q0, $zr, 12, 1, killed renamable $vpr, $noreg
+    renamable $vpr = MVE_VPNOT killed renamable $vpr, 0, $noreg, $noreg
+    renamable $vpr = MVE_VCMPs32r renamable $q1, $zr, 12, 1, killed renamable $vpr, $noreg
+    renamable $q3 = MVE_VORR renamable $q2, renamable $q2, 1, killed renamable $vpr, $noreg, renamable $q3
+    $q0 = MVE_VORR $q3, $q3, 0, $noreg, $noreg, undef $q0
 
-    renamable $vpr = MVE_VCMPs32 renamable $q0, renamable $q2, 10, 0, $noreg
-    $q3 = MVE_VORR $q2, $q2, 0, $noreg, undef $q3
-    renamable $q3 = MVE_VMAXs32 renamable $q0, renamable $q1, 1, renamable $vpr, killed renamable $q3
-    renamable $vpr = MVE_VCMPs32r killed renamable $q0, $zr, 12, 1, killed renamable $vpr
-    renamable $vpr = MVE_VPNOT killed renamable $vpr, 0, $noreg
-    renamable $q3 = MVE_VORR renamable $q2, renamable $q2, 1, renamable $vpr, renamable $q3
-    renamable $q3 = MVE_VORR renamable $q2, renamable $q2, 1, killed renamable $vpr, renamable $q3
-    $q0 = MVE_VORR $q3, $q3, 0, $noreg, undef $q0
+    renamable $vpr = MVE_VCMPs32 renamable $q0, renamable $q2, 10, 0, $noreg, $noreg
+    $q3 = MVE_VORR $q2, $q2, 0, $noreg, $noreg, undef $q3
+    renamable $q3 = MVE_VMAXs32 renamable $q0, renamable $q1, 1, renamable $vpr, $noreg, killed renamable $q3
+    renamable $vpr = MVE_VCMPs32r killed renamable $q0, $zr, 12, 1, killed renamable $vpr, $noreg
+    renamable $vpr = MVE_VPNOT killed renamable $vpr, 0, $noreg, $noreg
+    renamable $q3 = MVE_VORR renamable $q2, renamable $q2, 1, renamable $vpr, $noreg, renamable $q3
+    renamable $q3 = MVE_VORR renamable $q2, renamable $q2, 1, killed renamable $vpr, $noreg, renamable $q3
+    $q0 = MVE_VORR $q3, $q3, 0, $noreg, $noreg, undef $q0
 
-    renamable $vpr = MVE_VCMPs32 renamable $q0, renamable $q2, 10, 0, $noreg
-    $q3 = MVE_VORR $q2, $q2, 0, $noreg, undef $q3
-    renamable $q3 = MVE_VMAXs32 renamable $q0, renamable $q1, 1, renamable $vpr, killed renamable $q3
-    renamable $vpr = MVE_VPNOT killed renamable $vpr, 0, $noreg
-    renamable $q3 = MVE_VORR renamable $q2, renamable $q2, 1, renamable $vpr, renamable $q3
-    renamable $vpr = MVE_VCMPs32r renamable $q1, $zr, 12, 1, killed renamable $vpr
-    renamable $q3 = MVE_VORR renamable $q2, renamable $q2, 1, killed renamable $vpr, killed renamable $q3
-    $q0 = MVE_VORR killed $q3, killed $q3, 0, $noreg, undef $q0
+    renamable $vpr = MVE_VCMPs32 renamable $q0, renamable $q2, 10, 0, $noreg, $noreg
+    $q3 = MVE_VORR $q2, $q2, 0, $noreg, $noreg, undef $q3
+    renamable $q3 = MVE_VMAXs32 renamable $q0, renamable $q1, 1, renamable $vpr, $noreg, killed renamable $q3
+    renamable $vpr = MVE_VPNOT killed renamable $vpr, 0, $noreg, $noreg
+    renamable $q3 = MVE_VORR renamable $q2, renamable $q2, 1, renamable $vpr, $noreg, renamable $q3
+    renamable $vpr = MVE_VCMPs32r renamable $q1, $zr, 12, 1, killed renamable $vpr, $noreg
+    renamable $q3 = MVE_VORR renamable $q2, renamable $q2, 1, killed renamable $vpr, $noreg, killed renamable $q3
+    $q0 = MVE_VORR killed $q3, killed $q3, 0, $noreg, $noreg, undef $q0
 
-    renamable $vpr = MVE_VCMPs32 renamable $q0, renamable $q2, 10, 0, $noreg
-    $q3 = MVE_VORR $q2, $q2, 0, $noreg, undef $q3
-    renamable $q3 = MVE_VMAXs32 renamable $q0, renamable $q1, 1, renamable $vpr, killed renamable $q3
-    renamable $vpr = MVE_VPNOT killed renamable $vpr, 0, $noreg
-    renamable $vpr = MVE_VCMPs32r renamable $q1, $zr, 12, 1, killed renamable $vpr
-    renamable $q3 = MVE_VORR renamable $q2, renamable $q2, 1, renamable $vpr, renamable $q3
-    renamable $q3 = MVE_VORR renamable $q2, renamable $q2, 1, killed renamable $vpr, killed renamable $q3
-    $q0 = MVE_VORR killed $q3, killed $q3, 0, $noreg, undef $q0
+    renamable $vpr = MVE_VCMPs32 renamable $q0, renamable $q2, 10, 0, $noreg, $noreg
+    $q3 = MVE_VORR $q2, $q2, 0, $noreg, $noreg, undef $q3
+    renamable $q3 = MVE_VMAXs32 renamable $q0, renamable $q1, 1, renamable $vpr, $noreg, killed renamable $q3
+    renamable $vpr = MVE_VPNOT killed renamable $vpr, 0, $noreg, $noreg
+    renamable $vpr = MVE_VCMPs32r renamable $q1, $zr, 12, 1, killed renamable $vpr, $noreg
+    renamable $q3 = MVE_VORR renamable $q2, renamable $q2, 1, renamable $vpr, $noreg, renamable $q3
+    renamable $q3 = MVE_VORR renamable $q2, renamable $q2, 1, killed renamable $vpr, $noreg, killed renamable $q3
+    $q0 = MVE_VORR killed $q3, killed $q3, 0, $noreg, $noreg, undef $q0
 
-    renamable $vpr = MVE_VCMPs32 renamable $q0, renamable $q2, 10, 0, $noreg
-    $q3 = MVE_VORR $q2, $q2, 0, $noreg, undef $q3
-    renamable $q3 = MVE_VMAXs32 renamable $q0, renamable $q1, 1, renamable $vpr, killed renamable $q3
-    renamable $vpr = MVE_VPNOT killed renamable $vpr, 0, $noreg
-    renamable $q3 = MVE_VORR renamable $q2, renamable $q2, 1, renamable $vpr, renamable $q3
-    renamable $q3 = MVE_VORR renamable $q2, renamable $q2, 1, renamable $vpr, renamable $q3
-    renamable $q3 = MVE_VORR renamable $q2, renamable $q2, 1, killed renamable $vpr, killed renamable $q3
-    $q0 = MVE_VORR killed $q3, killed $q3, 0, $noreg, undef $q0
+    renamable $vpr = MVE_VCMPs32 renamable $q0, renamable $q2, 10, 0, $noreg, $noreg
+    $q3 = MVE_VORR $q2, $q2, 0, $noreg, $noreg, undef $q3
+    renamable $q3 = MVE_VMAXs32 renamable $q0, renamable $q1, 1, renamable $vpr, $noreg, killed renamable $q3
+    renamable $vpr = MVE_VPNOT killed renamable $vpr, 0, $noreg, $noreg
+    renamable $q3 = MVE_VORR renamable $q2, renamable $q2, 1, renamable $vpr, $noreg, renamable $q3
+    renamable $q3 = MVE_VORR renamable $q2, renamable $q2, 1, renamable $vpr, $noreg, renamable $q3
+    renamable $q3 = MVE_VORR renamable $q2, renamable $q2, 1, killed renamable $vpr, $noreg, killed renamable $q3
+    $q0 = MVE_VORR killed $q3, killed $q3, 0, $noreg, $noreg, undef $q0
 
-    renamable $vpr = MVE_VCMPs32 renamable $q0, renamable $q2, 10, 0, $noreg
-    $q3 = MVE_VORR $q2, $q2, 0, $noreg, undef $q3
-    renamable $q3 = MVE_VMAXs32 renamable $q0, renamable $q1, 1, renamable $vpr, killed renamable $q3
-    renamable $vpr = MVE_VPNOT killed renamable $vpr, 0, $noreg
-    renamable $q3 = MVE_VORR renamable $q2, renamable $q2, 1, renamable $vpr, renamable $q3
-    renamable $q3 = MVE_VORR renamable $q2, renamable $q2, 1, killed renamable $vpr, killed renamable $q3
-    $q0 = MVE_VORR killed $q3, killed $q3, 0, $noreg, undef $q0
+    renamable $vpr = MVE_VCMPs32 renamable $q0, renamable $q2, 10, 0, $noreg, $noreg
+    $q3 = MVE_VORR $q2, $q2, 0, $noreg, $noreg, undef $q3
+    renamable $q3 = MVE_VMAXs32 renamable $q0, renamable $q1, 1, renamable $vpr, $noreg, killed renamable $q3
+    renamable $vpr = MVE_VPNOT killed renamable $vpr, 0, $noreg, $noreg
+    renamable $q3 = MVE_VORR renamable $q2, renamable $q2, 1, renamable $vpr, $noreg, renamable $q3
+    renamable $q3 = MVE_VORR renamable $q2, renamable $q2, 1, killed renamable $vpr, $noreg, killed renamable $q3
+    $q0 = MVE_VORR killed $q3, killed $q3, 0, $noreg, $noreg, undef $q0
 
-    renamable $vpr = MVE_VCMPs32 renamable $q0, renamable $q2, 10, 0, $noreg
-    $q3 = MVE_VORR $q2, $q2, 0, $noreg, undef $q3
-    renamable $q3 = MVE_VMAXs32 renamable $q0, renamable $q1, 1, renamable $vpr, killed renamable $q3
-    renamable $vpr = MVE_VPNOT killed renamable $vpr, 0, $noreg
-    renamable $vpr = MVE_VCMPs32r renamable $q1, $zr, 12, 1, killed renamable $vpr
-    renamable $q3 = MVE_VORR renamable $q2, renamable $q2, 1, killed renamable $vpr, killed renamable $q3
-    $q0 = MVE_VORR killed $q3, killed $q3, 0, $noreg, undef $q0
+    renamable $vpr = MVE_VCMPs32 renamable $q0, renamable $q2, 10, 0, $noreg, $noreg
+    $q3 = MVE_VORR $q2, $q2, 0, $noreg, $noreg, undef $q3
+    renamable $q3 = MVE_VMAXs32 renamable $q0, renamable $q1, 1, renamable $vpr, $noreg, killed renamable $q3
+    renamable $vpr = MVE_VPNOT killed renamable $vpr, 0, $noreg, $noreg
+    renamable $vpr = MVE_VCMPs32r renamable $q1, $zr, 12, 1, killed renamable $vpr, $noreg
+    renamable $q3 = MVE_VORR renamable $q2, renamable $q2, 1, killed renamable $vpr, $noreg, killed renamable $q3
+    $q0 = MVE_VORR killed $q3, killed $q3, 0, $noreg, $noreg, undef $q0
 
-    renamable $vpr = MVE_VCMPs32 renamable $q0, renamable $q2, 10, 0, $noreg
-    $q3 = MVE_VORR $q2, $q2, 0, $noreg, undef $q3
-    renamable $q3 = MVE_VMAXs32 renamable $q0, renamable $q1, 1, renamable $vpr, killed renamable $q3
-    renamable $q3 = MVE_VORR renamable $q2, renamable $q2, 1, renamable $vpr, killed renamable $q3
-    renamable $vpr = MVE_VPNOT killed renamable $vpr, 0, $noreg
-    renamable $q3 = MVE_VORR renamable $q2, renamable $q2, 1, killed renamable $vpr, killed renamable $q3
-    $q0 = MVE_VORR killed $q3, killed $q3, 0, $noreg, undef $q0
+    renamable $vpr = MVE_VCMPs32 renamable $q0, renamable $q2, 10, 0, $noreg, $noreg
+    $q3 = MVE_VORR $q2, $q2, 0, $noreg, $noreg, undef $q3
+    renamable $q3 = MVE_VMAXs32 renamable $q0, renamable $q1, 1, renamable $vpr, $noreg, killed renamable $q3
+    renamable $q3 = MVE_VORR renamable $q2, renamable $q2, 1, renamable $vpr, $noreg, killed renamable $q3
+    renamable $vpr = MVE_VPNOT killed renamable $vpr, 0, $noreg, $noreg
+    renamable $q3 = MVE_VORR renamable $q2, renamable $q2, 1, killed renamable $vpr, $noreg, killed renamable $q3
+    $q0 = MVE_VORR killed $q3, killed $q3, 0, $noreg, $noreg, undef $q0
 
-    $q3 = MVE_VORR $q2, $q2, 0, $noreg, undef $q3
-    renamable $vpr = MVE_VCMPs32 renamable $q0, renamable $q2, 10, 0, $noreg
-    renamable $q3 = MVE_VORR renamable $q2, renamable $q2, 1, renamable $vpr, killed renamable $q3
-    renamable $vpr = MVE_VPNOT killed renamable $vpr, 0, $noreg
-    renamable $q3 = MVE_VORR renamable $q2, renamable $q2, 1, renamable $vpr, killed renamable $q3
-    renamable $vpr = MVE_VPNOT killed renamable $vpr, 0, $noreg
-    renamable $q3 = MVE_VORR renamable $q2, renamable $q2, 1, renamable $vpr, killed renamable $q3
-    renamable $vpr = MVE_VPNOT killed renamable $vpr, 0, $noreg
-    renamable $q3 = MVE_VORR renamable $q2, renamable $q2, 1, renamable $vpr, killed renamable $q3
-    $q0 = MVE_VORR killed $q3, killed $q3, 0, $noreg, undef $q0
+    $q3 = MVE_VORR $q2, $q2, 0, $noreg, $noreg, undef $q3
+    renamable $vpr = MVE_VCMPs32 renamable $q0, renamable $q2, 10, 0, $noreg, $noreg
+    renamable $q3 = MVE_VORR renamable $q2, renamable $q2, 1, renamable $vpr, $noreg, killed renamable $q3
+    renamable $vpr = MVE_VPNOT killed renamable $vpr, 0, $noreg, $noreg
+    renamable $q3 = MVE_VORR renamable $q2, renamable $q2, 1, renamable $vpr, $noreg, killed renamable $q3
+    renamable $vpr = MVE_VPNOT killed renamable $vpr, 0, $noreg, $noreg
+    renamable $q3 = MVE_VORR renamable $q2, renamable $q2, 1, renamable $vpr, $noreg, killed renamable $q3
+    renamable $vpr = MVE_VPNOT killed renamable $vpr, 0, $noreg, $noreg
+    renamable $q3 = MVE_VORR renamable $q2, renamable $q2, 1, renamable $vpr, $noreg, killed renamable $q3
+    $q0 = MVE_VORR killed $q3, killed $q3, 0, $noreg, $noreg, undef $q0
 
-    $q3 = MVE_VORR $q2, $q2, 0, $noreg, undef $q3
-    renamable $vpr = MVE_VCMPs32 renamable $q0, renamable $q2, 10, 0, $noreg
-    renamable $q3 = MVE_VORR renamable $q2, renamable $q2, 1, renamable $vpr, killed renamable $q3
-    renamable $vpr = MVE_VPNOT killed renamable $vpr, 0, $noreg
-    renamable $vpr = MVE_VCMPs32 renamable $q0, renamable $q2, 11, 1, killed renamable $vpr
-    renamable $q3 = MVE_VORR renamable $q2, renamable $q2, 1, renamable $vpr, killed renamable $q3
-    renamable $vpr = MVE_VPNOT killed renamable $vpr, 0, $noreg
-    renamable $vpr = MVE_VCMPs32 renamable $q0, renamable $q2, 11, 1, killed renamable $vpr
+    $q3 = MVE_VORR $q2, $q2, 0, $noreg, $noreg, undef $q3
+    renamable $vpr = MVE_VCMPs32 renamable $q0, renamable $q2, 10, 0, $noreg, $noreg
+    renamable $q3 = MVE_VORR renamable $q2, renamable $q2, 1, renamable $vpr, $noreg, killed renamable $q3
+    renamable $vpr = MVE_VPNOT killed renamable $vpr, 0, $noreg, $noreg
+    renamable $vpr = MVE_VCMPs32 renamable $q0, renamable $q2, 11, 1, killed renamable $vpr, $noreg
+    renamable $q3 = MVE_VORR renamable $q2, renamable $q2, 1, renamable $vpr, $noreg, killed renamable $q3
+    renamable $vpr = MVE_VPNOT killed renamable $vpr, 0, $noreg, $noreg
+    renamable $vpr = MVE_VCMPs32 renamable $q0, renamable $q2, 11, 1, killed renamable $vpr, $noreg
 
     tBX_RET 14, $noreg, implicit $q0
 

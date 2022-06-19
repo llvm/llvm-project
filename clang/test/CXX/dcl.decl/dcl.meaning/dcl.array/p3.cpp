@@ -8,9 +8,9 @@
 namespace test0 {
   extern "C" int array[];
   void declare() { extern int array[100]; }
-  int value1 = sizeof(array); // expected-error {{invalid application of 'sizeof' to an incomplete type 'int []'}}
+  int value1 = sizeof(array); // expected-error {{invalid application of 'sizeof' to an incomplete type 'int[]'}}
   extern "C" int array[];
-  int value2 = sizeof(array); // expected-error {{invalid application of 'sizeof' to an incomplete type 'int []'}}
+  int value2 = sizeof(array); // expected-error {{invalid application of 'sizeof' to an incomplete type 'int[]'}}
 }
 
 namespace test1 {
@@ -18,21 +18,21 @@ namespace test1 {
   void test() {
     { extern int array[100]; }
     extern int array[];
-    int x = sizeof(array); // expected-error {{invalid application of 'sizeof' to an incomplete type 'int []'}}
+    int x = sizeof(array); // expected-error {{invalid application of 'sizeof' to an incomplete type 'int[]'}}
   }
 }
 
 namespace test2 {
   void declare() { extern int array[100]; }
   extern int array[];
-  int value = sizeof(array); // expected-error {{invalid application of 'sizeof' to an incomplete type 'int []'}}
+  int value = sizeof(array); // expected-error {{invalid application of 'sizeof' to an incomplete type 'int[]'}}
 }
 
 namespace test3 {
   void test() {
     { extern int array[100]; }
     extern int array[];
-    int x = sizeof(array); // expected-error {{invalid application of 'sizeof' to an incomplete type 'int []'}}
+    int x = sizeof(array); // expected-error {{invalid application of 'sizeof' to an incomplete type 'int[]'}}
   }
 }
 
@@ -42,7 +42,7 @@ namespace test4 {
     extern int array[100];
     int x = sizeof(array);
   }
-  int y = sizeof(array); // expected-error {{invalid application of 'sizeof' to an incomplete type 'int []'}}
+  int y = sizeof(array); // expected-error {{invalid application of 'sizeof' to an incomplete type 'int[]'}}
 }
 
 namespace test5 {
@@ -58,7 +58,7 @@ namespace test6 {
     extern int array[100];
     {
       extern int array[];
-      int x = sizeof(array); // expected-error {{invalid application of 'sizeof' to an incomplete type 'int []'}}
+      int x = sizeof(array); // expected-error {{invalid application of 'sizeof' to an incomplete type 'int[]'}}
     }
     int y = sizeof(array);
     extern int array[];
@@ -70,7 +70,7 @@ namespace test7 {
   extern int array[100];
   void test() {
     extern int array[];
-    int x = sizeof(array); // expected-error {{invalid application of 'sizeof' to an incomplete type 'int []'}}
+    int x = sizeof(array); // expected-error {{invalid application of 'sizeof' to an incomplete type 'int[]'}}
   }
   int y = sizeof(array);
   extern int array[];
@@ -83,9 +83,9 @@ namespace test8 {
     extern int array[100];
     int x = sizeof(array);
   }
-  int y = sizeof(array); // expected-error {{invalid application of 'sizeof' to an incomplete type 'int []'}}
+  int y = sizeof(array); // expected-error {{invalid application of 'sizeof' to an incomplete type 'int[]'}}
   extern int array[];
-  int z = sizeof(array); // expected-error {{invalid application of 'sizeof' to an incomplete type 'int []'}}
+  int z = sizeof(array); // expected-error {{invalid application of 'sizeof' to an incomplete type 'int[]'}}
 }
 
 namespace dependent {
@@ -145,7 +145,7 @@ namespace dependent {
 
   template<typename T, typename U> void l() {
     extern T arrX; // expected-note {{previous}}
-    extern U arrX; // expected-error {{different type: 'int [4]' vs 'int [3]'}}
+    extern U arrX; // expected-error {{different type: 'int[4]' vs 'int[3]'}}
     (void)sizeof(arrX); // expected-error {{incomplete}}
   }
 
@@ -210,4 +210,4 @@ namespace use_outside_ns {
 
 extern int arr[];
 void f1() { extern int arr[2]; } // expected-note {{previous}}
-void f2() { extern int arr[3]; } // expected-error {{different type: 'int [3]' vs 'int [2]'}}
+void f2() { extern int arr[3]; } // expected-error {{different type: 'int[3]' vs 'int[2]'}}

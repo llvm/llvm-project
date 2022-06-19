@@ -166,15 +166,15 @@ entry:
 }
 
 ; GCN-LABEL: {{^}}fmul_v4f16:
-; GFX9: buffer_load_dwordx2 v{{\[}}[[B_LO:[0-9]+]]:[[B_HI:[0-9]+]]{{\]}}
-; GFX9: buffer_load_dwordx2 v{{\[}}[[A_LO:[0-9]+]]:[[A_HI:[0-9]+]]{{\]}}
+; GFX9: buffer_load_dwordx2 v[[[B_LO:[0-9]+]]:[[B_HI:[0-9]+]]]
+; GFX9: buffer_load_dwordx2 v[[[A_LO:[0-9]+]]:[[A_HI:[0-9]+]]]
 
 ; GFX9-DAG: v_pk_mul_f16 v[[MUL_LO:[0-9]+]], v[[A_LO]], v[[B_LO]]
 ; GFX9-DAG: v_pk_mul_f16 v[[MUL_HI:[0-9]+]], v[[A_HI]], v[[B_HI]]
-; GFX9: buffer_store_dwordx2 v{{\[}}[[MUL_LO]]:[[MUL_HI]]{{\]}}
+; GFX9: buffer_store_dwordx2 v[[[MUL_LO]]:[[MUL_HI]]]
 
-; VI: buffer_load_dwordx2 v{{\[}}[[A_LO:[0-9]+]]:[[A_HI:[0-9]+]]{{\]}}
-; VI: buffer_load_dwordx2 v{{\[}}[[B_LO:[0-9]+]]:[[B_HI:[0-9]+]]{{\]}}
+; VI: buffer_load_dwordx2 v[[[A_LO:[0-9]+]]:[[A_HI:[0-9]+]]]
+; VI: buffer_load_dwordx2 v[[[B_LO:[0-9]+]]:[[B_HI:[0-9]+]]]
 ; VI: v_mul_f16_sdwa
 ; VI: v_mul_f16_e32
 ; VI: v_mul_f16_sdwa
@@ -194,13 +194,13 @@ entry:
 }
 
 ; GCN-LABEL: {{^}}fmul_v4f16_imm_a:
-; GFX89-DAG: buffer_load_dwordx2 v{{\[}}[[A_LO:[0-9]+]]:[[A_HI:[0-9]+]]{{\]}}
+; GFX89-DAG: buffer_load_dwordx2 v[[[A_LO:[0-9]+]]:[[A_HI:[0-9]+]]]
 ; GFX9-DAG: s_mov_b32 [[K1:s[0-9]+]], 0x44004200
 ; GFX9-DAG: s_mov_b32 [[K0:s[0-9]+]], 0x40004800
 
 ; GFX9-DAG: v_pk_mul_f16 v[[MUL_LO:[0-9]+]], v[[A_LO]], [[K0]]
 ; GFX9-DAG: v_pk_mul_f16 v[[MUL_HI:[0-9]+]], v[[A_HI]], [[K1]]
-; GFX9: buffer_store_dwordx2 v{{\[}}[[MUL_LO]]:[[MUL_HI]]{{\]}}
+; GFX9: buffer_store_dwordx2 v[[[MUL_LO]]:[[MUL_HI]]]
 
 ; VI-DAG: v_mov_b32_e32 [[K4:v[0-9]+]], 0x4400
 
@@ -212,7 +212,7 @@ entry:
 ; VI-DAG: v_or_b32_e32 v[[OR0:[0-9]+]], v[[MUL_LO_LO]], v[[MUL_LO_HI]]
 ; VI-DAG: v_or_b32_e32 v[[OR1:[0-9]+]], v[[MUL_HI_LO]], v[[MUL_HI_HI]]
 
-; VI: buffer_store_dwordx2 v{{\[}}[[OR0]]:[[OR1]]{{\]}}
+; VI: buffer_store_dwordx2 v[[[OR0]]:[[OR1]]]
 define amdgpu_kernel void @fmul_v4f16_imm_a(
     <4 x half> addrspace(1)* %r,
     <4 x half> addrspace(1)* %b) {

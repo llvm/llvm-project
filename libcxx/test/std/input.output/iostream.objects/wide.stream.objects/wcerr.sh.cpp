@@ -10,8 +10,9 @@
 
 // istream wcerr;
 
-// XFAIL: LIBCXX-WINDOWS-FIXME
+// XFAIL: no-wide-characters
 
+// UNSUPPORTED: executor-has-no-bash
 // FILE_DEPENDENCIES: ../check-stderr.sh
 // RUN: %{build}
 // RUN: %{exec} bash check-stderr.sh "%t.exe" "1234"
@@ -24,11 +25,6 @@
 int main(int, char**) {
     std::wcerr << L"1234";
     assert(std::wcerr.flags() & std::ios_base::unitbuf);
-
-#ifdef _LIBCPP_HAS_NO_STDOUT
-    assert(std::wcerr.tie() == NULL);
-#else
     assert(std::wcerr.tie() == &std::wcout);
-#endif
     return 0;
 }

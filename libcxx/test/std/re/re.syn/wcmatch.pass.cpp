@@ -10,6 +10,8 @@
 
 // typedef match_results<const wchar_t*>   wcmatch;
 
+// XFAIL: no-wide-characters
+
 #include <regex>
 #include <type_traits>
 #include "test_macros.h"

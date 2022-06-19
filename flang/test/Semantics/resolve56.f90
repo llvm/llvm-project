@@ -1,5 +1,4 @@
-! RUN: %S/test_errors.sh %s %t %flang_fc1
-! REQUIRES: shell
+! RUN: %python %S/test_errors.py %s %flang_fc1
 ! Test that associations constructs can be correctly combined. The intrinsic
 ! functions are not what is tested here, they are only use to reveal the types
 ! of local variables.

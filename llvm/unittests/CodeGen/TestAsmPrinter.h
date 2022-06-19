@@ -44,7 +44,7 @@ public:
                void(const MCExpr *Value, unsigned Size, SMLoc Loc));
   MOCK_METHOD3(emitAbsoluteSymbolDiff,
                void(const MCSymbol *Hi, const MCSymbol *Lo, unsigned Size));
-  MOCK_METHOD2(EmitCOFFSecRel32, void(MCSymbol const *Symbol, uint64_t Offset));
+  MOCK_METHOD2(emitCOFFSecRel32, void(MCSymbol const *Symbol, uint64_t Offset));
 };
 
 class TestAsmPrinter {

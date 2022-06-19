@@ -8,9 +8,11 @@ def run(f):
   f()
   gc.collect()
   assert Context._get_live_count() == 0
+  return f
 
 
 # CHECK-LABEL: TEST: testAffineExprCapsule
+@run
 def testAffineExprCapsule():
   with Context() as ctx:
     affine_expr = AffineExpr.get_constant(42)
@@ -24,10 +26,9 @@ def testAffineExprCapsule():
   assert affine_expr == affine_expr_2
   assert affine_expr_2.context == ctx
 
-run(testAffineExprCapsule)
-
 
 # CHECK-LABEL: TEST: testAffineExprEq
+@run
 def testAffineExprEq():
   with Context():
     a1 = AffineExpr.get_constant(42)
@@ -44,10 +45,9 @@ def testAffineExprEq():
     # CHECK: False
     print(a1 == "foo")
 
-run(testAffineExprEq)
-
 
 # CHECK-LABEL: TEST: testAffineExprContext
+@run
 def testAffineExprContext():
   with Context():
     a1 = AffineExpr.get_constant(42)
@@ -61,6 +61,7 @@ run(testAffineExprContext)
 
 
 # CHECK-LABEL: TEST: testAffineExprConstant
+@run
 def testAffineExprConstant():
   with Context():
     a1 = AffineExpr.get_constant(42)
@@ -77,10 +78,9 @@ def testAffineExprConstant():
 
     assert a1 == a2
 
-run(testAffineExprConstant)
-
 
 # CHECK-LABEL: TEST: testAffineExprDim
+@run
 def testAffineExprDim():
   with Context():
     d1 = AffineExpr.get_dim(1)
@@ -100,10 +100,9 @@ def testAffineExprDim():
     assert d1 == d11
     assert d1 != d2
 
-run(testAffineExprDim)
-
 
 # CHECK-LABEL: TEST: testAffineExprSymbol
+@run
 def testAffineExprSymbol():
   with Context():
     s1 = AffineExpr.get_symbol(1)
@@ -123,10 +122,9 @@ def testAffineExprSymbol():
     assert s1 == s11
     assert s1 != s2
 
-run(testAffineExprSymbol)
-
 
 # CHECK-LABEL: TEST: testAffineAddExpr
+@run
 def testAffineAddExpr():
   with Context():
     d1 = AffineDimExpr.get(1)
@@ -139,14 +137,21 @@ def testAffineAddExpr():
     # CHECK: d1 + d2
     print(d12op)
 
+    d1cst_op = d1 + 2
+    # CHECK: d1 + 2
+    print(d1cst_op)
+
+    d1cst_op2 = 2 + d1
+    # CHECK: d1 + 2
+    print(d1cst_op2)
+
     assert d12 == d12op
     assert d12.lhs == d1
     assert d12.rhs == d2
 
-run(testAffineAddExpr)
-
 
 # CHECK-LABEL: TEST: testAffineMulExpr
+@run
 def testAffineMulExpr():
   with Context():
     d1 = AffineDimExpr.get(1)
@@ -159,14 +164,22 @@ def testAffineMulExpr():
     op = d1 * c2
     print(op)
 
+    # CHECK: d1 * 2
+    op_cst = d1 * 2
+    print(op_cst)
+
+    # CHECK: d1 * 2
+    op_cst2 = 2 * d1
+    print(op_cst2)
+
     assert expr == op
+    assert expr == op_cst
     assert expr.lhs == d1
     assert expr.rhs == c2
 
-run(testAffineMulExpr)
-
 
 # CHECK-LABEL: TEST: testAffineModExpr
+@run
 def testAffineModExpr():
   with Context():
     d1 = AffineDimExpr.get(1)
@@ -179,14 +192,35 @@ def testAffineModExpr():
     op = d1 % c2
     print(op)
 
+    # CHECK: d1 mod 2
+    op_cst = d1 % 2
+    print(op_cst)
+
+    # CHECK: 2 mod d1
+    print(2 % d1)
+
     assert expr == op
+    assert expr == op_cst
     assert expr.lhs == d1
     assert expr.rhs == c2
 
-run(testAffineModExpr)
+    expr2 = AffineExpr.get_mod(c2, d1)
+    expr3 = AffineExpr.get_mod(2, d1)
+    expr4 = AffineExpr.get_mod(d1, 2)
+
+    # CHECK: 2 mod d1
+    print(expr2)
+    # CHECK: 2 mod d1
+    print(expr3)
+    # CHECK: d1 mod 2
+    print(expr4)
+
+    assert expr2 == expr3
+    assert expr4 == expr
 
 
 # CHECK-LABEL: TEST: testAffineFloorDivExpr
+@run
 def testAffineFloorDivExpr():
   with Context():
     d1 = AffineDimExpr.get(1)
@@ -198,10 +232,23 @@ def testAffineFloorDivExpr():
     assert expr.lhs == d1
     assert expr.rhs == c2
 
-run(testAffineFloorDivExpr)
+    expr2 = AffineExpr.get_floor_div(c2, d1)
+    expr3 = AffineExpr.get_floor_div(2, d1)
+    expr4 = AffineExpr.get_floor_div(d1, 2)
+
+    # CHECK: 2 floordiv d1
+    print(expr2)
+    # CHECK: 2 floordiv d1
+    print(expr3)
+    # CHECK: d1 floordiv 2
+    print(expr4)
+
+    assert expr2 == expr3
+    assert expr4 == expr
 
 
 # CHECK-LABEL: TEST: testAffineCeilDivExpr
+@run
 def testAffineCeilDivExpr():
   with Context():
     d1 = AffineDimExpr.get(1)
@@ -213,10 +260,23 @@ def testAffineCeilDivExpr():
     assert expr.lhs == d1
     assert expr.rhs == c2
 
-run(testAffineCeilDivExpr)
+    expr2 = AffineExpr.get_ceil_div(c2, d1)
+    expr3 = AffineExpr.get_ceil_div(2, d1)
+    expr4 = AffineExpr.get_ceil_div(d1, 2)
+
+    # CHECK: 2 ceildiv d1
+    print(expr2)
+    # CHECK: 2 ceildiv d1
+    print(expr3)
+    # CHECK: d1 ceildiv 2
+    print(expr4)
+
+    assert expr2 == expr3
+    assert expr4 == expr
 
 
 # CHECK-LABEL: TEST: testAffineExprSub
+@run
 def testAffineExprSub():
   with Context():
     d1 = AffineDimExpr.get(1)
@@ -232,9 +292,17 @@ def testAffineExprSub():
     # CHECK: -1
     print(rhs.rhs)
 
-run(testAffineExprSub)
+    # CHECK: d1 - 42
+    print(d1 - 42)
+    # CHECK: -d1 + 42
+    print(42 - d1)
 
+    c42 = AffineConstantExpr.get(42)
+    assert d1 - 42 == d1 - c42
+    assert 42 - d1 == c42 - d1
 
+# CHECK-LABEL: TEST: testClassHierarchy
+@run
 def testClassHierarchy():
   with Context():
     d1 = AffineDimExpr.get(1)
@@ -272,4 +340,63 @@ def testClassHierarchy():
       # CHECK: Cannot cast affine expression to AffineBinaryExpr
       print(e)
 
-run(testClassHierarchy)
+# CHECK-LABEL: TEST: testIsInstance
+@run
+def testIsInstance():
+  with Context():
+    d1 = AffineDimExpr.get(1)
+    c2 = AffineConstantExpr.get(2)
+    add = AffineAddExpr.get(d1, c2)
+    mul = AffineMulExpr.get(d1, c2)
+
+    # CHECK: True
+    print(AffineDimExpr.isinstance(d1))
+    # CHECK: False
+    print(AffineConstantExpr.isinstance(d1))
+    # CHECK: True
+    print(AffineConstantExpr.isinstance(c2))
+    # CHECK: False
+    print(AffineMulExpr.isinstance(c2))
+    # CHECK: True
+    print(AffineAddExpr.isinstance(add))
+    # CHECK: False
+    print(AffineMulExpr.isinstance(add))
+    # CHECK: True
+    print(AffineMulExpr.isinstance(mul))
+    # CHECK: False
+    print(AffineAddExpr.isinstance(mul))
+
+
+# CHECK-LABEL: TEST: testCompose
+@run
+def testCompose():
+  with Context():
+    # d0 + d2.
+    expr = AffineAddExpr.get(AffineDimExpr.get(0), AffineDimExpr.get(2))
+
+    # (d0, d1, d2)[s0, s1] -> (d0 + s1, d1 + s0, d0 + d1 + d2)
+    map1 = AffineAddExpr.get(AffineDimExpr.get(0), AffineSymbolExpr.get(1))
+    map2 = AffineAddExpr.get(AffineDimExpr.get(1), AffineSymbolExpr.get(0))
+    map3 = AffineAddExpr.get(
+        AffineAddExpr.get(AffineDimExpr.get(0), AffineDimExpr.get(1)),
+        AffineDimExpr.get(2))
+    map = AffineMap.get(3, 2, [map1, map2, map3])
+
+    # CHECK: d0 + s1 + d0 + d1 + d2
+    print(expr.compose(map))
+
+
+# CHECK-LABEL: TEST: testHash
+@run
+def testHash():
+  with Context():
+    d0 = AffineDimExpr.get(0)
+    s1 = AffineSymbolExpr.get(1)
+    assert hash(d0) == hash(AffineDimExpr.get(0))
+    assert hash(d0 + s1) == hash(AffineAddExpr.get(d0, s1))
+
+    dictionary = dict()
+    dictionary[d0] = 0
+    dictionary[s1] = 1
+    assert d0 in dictionary
+    assert s1 in dictionary

@@ -64,7 +64,8 @@ HexagonTTIImpl::getPopcntSupport(unsigned IntTyWidthInBit) const {
 
 // The Hexagon target can unroll loops with run-time trip counts.
 void HexagonTTIImpl::getUnrollingPreferences(Loop *L, ScalarEvolution &SE,
-                                             TTI::UnrollingPreferences &UP) {
+                                             TTI::UnrollingPreferences &UP,
+                                             OptimizationRemarkEmitter *ORE) {
   UP.Runtime = UP.Partial = true;
 }
 
@@ -222,7 +223,8 @@ HexagonTTIImpl::getMaskedMemoryOpCost(unsigned Opcode, Type *Src,
 
 InstructionCost HexagonTTIImpl::getShuffleCost(TTI::ShuffleKind Kind, Type *Tp,
                                                ArrayRef<int> Mask, int Index,
-                                               Type *SubTp) {
+                                               Type *SubTp,
+                                               ArrayRef<const Value *> Args) {
   return 1;
 }
 

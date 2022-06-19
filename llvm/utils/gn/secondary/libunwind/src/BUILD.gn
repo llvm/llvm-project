@@ -21,6 +21,8 @@ if (current_os == "mac") {
 }
 
 unwind_sources = [
+  "../include/unwind_arm_ehabi.h",
+  "../include/unwind_itanium.h",
   "AddressSpace.hpp",
   "CompactUnwinder.hpp",
   "DwarfInstructions.hpp",
@@ -36,7 +38,9 @@ unwind_sources = [
   "UnwindLevel1.c",
   "UnwindRegistersRestore.S",
   "UnwindRegistersSave.S",
+  "Unwind_AIXExtras.cpp",
   "assembly.h",
+  "cet_unwind.h",
   "config.h",
   "dwarf2.h",
   "libunwind.cpp",

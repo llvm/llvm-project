@@ -44,15 +44,15 @@ entry:
 define amdgpu_kernel void @write_ds_sub0_offset0_global_clamp_bit(float %dummy.val) #0 {
 ; CI-LABEL: write_ds_sub0_offset0_global_clamp_bit:
 ; CI:       ; %bb.0: ; %entry
-; CI-NEXT:    s_load_dword s0, s[0:1], 0x9
+; CI-NEXT:    s_load_dword s0, s[0:1], 0x0
 ; CI-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
 ; CI-NEXT:    v_sub_i32_e32 v0, vcc, 0, v0
 ; CI-NEXT:    s_mov_b64 vcc, 0
-; CI-NEXT:    v_mov_b32_e32 v2, 0x7b
 ; CI-NEXT:    s_waitcnt lgkmcnt(0)
 ; CI-NEXT:    v_mov_b32_e32 v1, s0
 ; CI-NEXT:    s_mov_b32 s0, 0
 ; CI-NEXT:    v_div_fmas_f32 v1, v1, v1, v1
+; CI-NEXT:    v_mov_b32_e32 v2, 0x7b
 ; CI-NEXT:    s_mov_b32 m0, -1
 ; CI-NEXT:    s_mov_b32 s3, 0xf000
 ; CI-NEXT:    s_mov_b32 s2, -1
@@ -64,7 +64,7 @@ define amdgpu_kernel void @write_ds_sub0_offset0_global_clamp_bit(float %dummy.v
 ;
 ; GFX9-LABEL: write_ds_sub0_offset0_global_clamp_bit:
 ; GFX9:       ; %bb.0: ; %entry
-; GFX9-NEXT:    s_load_dword s0, s[0:1], 0x24
+; GFX9-NEXT:    s_load_dword s0, s[0:1], 0x0
 ; GFX9-NEXT:    s_mov_b64 vcc, 0
 ; GFX9-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
 ; GFX9-NEXT:    v_sub_u32_e32 v3, 0, v0
@@ -81,7 +81,7 @@ define amdgpu_kernel void @write_ds_sub0_offset0_global_clamp_bit(float %dummy.v
 ;
 ; GFX10-LABEL: write_ds_sub0_offset0_global_clamp_bit:
 ; GFX10:       ; %bb.0: ; %entry
-; GFX10-NEXT:    s_load_dword s0, s[0:1], 0x24
+; GFX10-NEXT:    s_load_dword s0, s[0:1], 0x0
 ; GFX10-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
 ; GFX10-NEXT:    s_mov_b32 vcc_lo, 0
 ; GFX10-NEXT:    v_mov_b32_e32 v3, 0x7b
@@ -274,10 +274,11 @@ define amdgpu_kernel void @add_x_shl_neg_to_sub_misaligned_i64_max_offset() #1 {
 ; GFX10-LABEL: add_x_shl_neg_to_sub_misaligned_i64_max_offset:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
-; GFX10-NEXT:    v_mov_b32_e32 v1, 0x7b
-; GFX10-NEXT:    v_mov_b32_e32 v2, 0
-; GFX10-NEXT:    v_sub_nc_u32_e32 v0, 0x3fb, v0
-; GFX10-NEXT:    ds_write2_b32 v0, v1, v2 offset1:1
+; GFX10-NEXT:    v_mov_b32_e32 v1, 0
+; GFX10-NEXT:    v_mov_b32_e32 v2, 0x7b
+; GFX10-NEXT:    v_sub_nc_u32_e32 v0, 0, v0
+; GFX10-NEXT:    ds_write_b32 v0, v1 offset:1023
+; GFX10-NEXT:    ds_write_b32 v0, v2 offset:1019
 ; GFX10-NEXT:    s_endpgm
   %x.i = call i32 @llvm.amdgcn.workitem.id.x() #0
   %neg = sub i32 0, %x.i
@@ -291,15 +292,15 @@ define amdgpu_kernel void @add_x_shl_neg_to_sub_misaligned_i64_max_offset() #1 {
 define amdgpu_kernel void @add_x_shl_neg_to_sub_misaligned_i64_max_offset_clamp_bit(float %dummy.val) #1 {
 ; CI-LABEL: add_x_shl_neg_to_sub_misaligned_i64_max_offset_clamp_bit:
 ; CI:       ; %bb.0:
-; CI-NEXT:    s_load_dword s0, s[0:1], 0x9
+; CI-NEXT:    s_load_dword s0, s[0:1], 0x0
 ; CI-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
 ; CI-NEXT:    v_sub_i32_e32 v0, vcc, 0x3fb, v0
 ; CI-NEXT:    s_mov_b64 vcc, 0
-; CI-NEXT:    v_mov_b32_e32 v2, 0x7b
 ; CI-NEXT:    s_waitcnt lgkmcnt(0)
 ; CI-NEXT:    v_mov_b32_e32 v1, s0
 ; CI-NEXT:    s_mov_b32 s0, 0
 ; CI-NEXT:    v_div_fmas_f32 v1, v1, v1, v1
+; CI-NEXT:    v_mov_b32_e32 v2, 0x7b
 ; CI-NEXT:    v_mov_b32_e32 v3, 0
 ; CI-NEXT:    s_mov_b32 m0, -1
 ; CI-NEXT:    s_mov_b32 s3, 0xf000
@@ -312,7 +313,7 @@ define amdgpu_kernel void @add_x_shl_neg_to_sub_misaligned_i64_max_offset_clamp_
 ;
 ; GFX9-LABEL: add_x_shl_neg_to_sub_misaligned_i64_max_offset_clamp_bit:
 ; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_load_dword s0, s[0:1], 0x24
+; GFX9-NEXT:    s_load_dword s0, s[0:1], 0x0
 ; GFX9-NEXT:    s_mov_b64 vcc, 0
 ; GFX9-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
 ; GFX9-NEXT:    v_sub_u32_e32 v3, 0x3fb, v0
@@ -330,15 +331,16 @@ define amdgpu_kernel void @add_x_shl_neg_to_sub_misaligned_i64_max_offset_clamp_
 ;
 ; GFX10-LABEL: add_x_shl_neg_to_sub_misaligned_i64_max_offset_clamp_bit:
 ; GFX10:       ; %bb.0:
-; GFX10-NEXT:    s_load_dword s0, s[0:1], 0x24
+; GFX10-NEXT:    s_load_dword s0, s[0:1], 0x0
 ; GFX10-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
 ; GFX10-NEXT:    s_mov_b32 vcc_lo, 0
-; GFX10-NEXT:    v_mov_b32_e32 v3, 0x7b
-; GFX10-NEXT:    v_mov_b32_e32 v4, 0
-; GFX10-NEXT:    v_sub_nc_u32_e32 v2, 0x3fb, v0
+; GFX10-NEXT:    v_mov_b32_e32 v3, 0
+; GFX10-NEXT:    v_mov_b32_e32 v4, 0x7b
+; GFX10-NEXT:    v_sub_nc_u32_e32 v2, 0, v0
 ; GFX10-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX10-NEXT:    v_mov_b32_e32 v1, 0
-; GFX10-NEXT:    ds_write2_b32 v2, v3, v4 offset1:1
+; GFX10-NEXT:    ds_write_b32 v2, v3 offset:1023
+; GFX10-NEXT:    ds_write_b32 v2, v4 offset:1019
 ; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX10-NEXT:    v_div_fmas_f32 v5, s0, s0, s0
 ; GFX10-NEXT:    global_store_dword v[0:1], v5, off
@@ -378,10 +380,11 @@ define amdgpu_kernel void @add_x_shl_neg_to_sub_misaligned_i64_max_offset_p1() #
 ; GFX10-LABEL: add_x_shl_neg_to_sub_misaligned_i64_max_offset_p1:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
-; GFX10-NEXT:    v_mov_b32_e32 v1, 0x7b
-; GFX10-NEXT:    v_mov_b32_e32 v2, 0
-; GFX10-NEXT:    v_sub_nc_u32_e32 v0, 0x3fc, v0
-; GFX10-NEXT:    ds_write2_b32 v0, v1, v2 offset1:1
+; GFX10-NEXT:    v_mov_b32_e32 v1, 0
+; GFX10-NEXT:    v_mov_b32_e32 v2, 0x7b
+; GFX10-NEXT:    v_sub_nc_u32_e32 v0, 0, v0
+; GFX10-NEXT:    v_add_nc_u32_e32 v0, 0x200, v0
+; GFX10-NEXT:    ds_write2_b32 v0, v2, v1 offset0:127 offset1:128
 ; GFX10-NEXT:    s_endpgm
   %x.i = call i32 @llvm.amdgcn.workitem.id.x() #0
   %neg = sub i32 0, %x.i

@@ -5,6 +5,7 @@ set(ORC_TEST_DEPS ${SANITIZER_COMMON_LIT_TEST_DEPS})
 
 set(ORC_TEST_ARCH ${ORC_SUPPORTED_ARCH})
 if (COMPILER_RT_BUILD_ORC AND COMPILER_RT_HAS_ORC)
+  list(APPEND ORC_TEST_DEPS orc)
   foreach(arch ${ORC_TEST_ARCH})
     set(ORC_TEST_TARGET_ARCH ${arch})
     string(TOLOWER "-${arch}-${OS_NAME}" ORC_TEST_CONFIG_SUFFIX)
@@ -19,7 +20,7 @@ if (COMPILER_RT_BUILD_ORC AND COMPILER_RT_HAS_ORC)
   endforeach()
 endif()
 
-add_lit_testsuite(check-orc "Running the ORC runtime tests"
+add_lit_testsuite(check-orc-rt "Running the ORC runtime tests"
   ${ORC_TESTSUITES}
   DEPENDS ${ORC_TEST_DEPS})
-set_target_properties(check-orc PROPERTIES FOLDER "Compiler-RT Misc")
+set_target_properties(check-orc-rt PROPERTIES FOLDER "Compiler-RT Misc")

@@ -6,7 +6,7 @@ RUN: echo hello-a      > a/foo.txt
 RUN: echo hello-b      > b/foo.txt
 RUN: echo hello-parent > foo.txt
 
-# Sanity test that P is accepted.
+# Verify that P is accepted.
 RUN: rm -f noop.a && llvm-ar rcP noop.a foo.txt
 RUN: llvm-ar p noop.a | FileCheck %s --check-prefix=ACCEPT
 

@@ -13,4 +13,4 @@
 #ifdef _MSC_VER
 #include <intrin.h>
 #endif
-void f() { __nop(); __dmb(0); __wfi(); }
+void f(void) { __nop(); __dmb(0); __wfi(); }

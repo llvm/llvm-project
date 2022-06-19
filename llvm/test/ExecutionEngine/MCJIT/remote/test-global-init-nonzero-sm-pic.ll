@@ -6,7 +6,7 @@
 
 @count = global i32 1, align 4
 
-define i32 @main() nounwind uwtable {
+define i32 @main() nounwind {
 entry:
   %retval = alloca i32, align 4
   %i = alloca i32, align 4

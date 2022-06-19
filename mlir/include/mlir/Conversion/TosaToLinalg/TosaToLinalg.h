@@ -19,16 +19,21 @@
 namespace mlir {
 namespace tosa {
 
-std::unique_ptr<Pass> createTosaToLinalgOnTensors();
+std::unique_ptr<Pass> createTosaToLinalg();
+std::unique_ptr<Pass> createTosaToLinalgNamed();
 
 /// Populates passes to convert from TOSA to Linalg on buffers. At the end of
 /// the pass, the function will only contain linalg ops or standard ops if the
-/// pipeline succeeds.
-void addTosaToLinalgOnTensorsPasses(OpPassManager &pm);
+/// pipeline succeeds.  The option to disable decompositions is available for
+/// benchmarking performance improvements from the canonicalizations.
+void addTosaToLinalgPasses(OpPassManager &pm,
+                           bool disableTosaDecompositions = false);
 
 /// Populates conversion passes from TOSA dialect to Linalg dialect.
-void populateTosaToLinalgOnTensorsConversionPatterns(
-    RewritePatternSet *patterns);
+void populateTosaToLinalgConversionPatterns(RewritePatternSet *patterns);
+
+/// Populates conversion passes from TOSA dialect to Linalg named operations.
+void populateTosaToLinalgNamedConversionPatterns(RewritePatternSet *patterns);
 
 } // namespace tosa
 } // namespace mlir

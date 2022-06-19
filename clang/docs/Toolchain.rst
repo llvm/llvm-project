@@ -230,7 +230,7 @@ libunwind (LLVM)
 ^^^^^^^^^^^^^^^^
 
 LLVM's unwinder library is part of the llvm-project git repository. To
-build it, pass ``-DLLVM_ENABLE_PROJECTS=libunwind`` to the cmake invocation.
+build it, pass ``-DLLVM_ENABLE_RUNTIMES=libunwind`` to the cmake invocation.
 
 If using libc++abi, you may need to configure it to use libunwind
 rather than libgcc_s by passing ``-DLIBCXXABI_USE_LLVM_UNWINDER=YES``
@@ -312,7 +312,7 @@ library version of libstdc++ contains a copy of libsupc++.
 
 .. note::
 
-  Clang does not currently automatically link against libatomic when statically
+  Clang does not currently automatically link against libsupc++ when statically
   linking libstdc++. You may need to manually add ``-lsupc++`` to support this
   configuration when using ``-static`` or ``-static-libstdc++``.
 

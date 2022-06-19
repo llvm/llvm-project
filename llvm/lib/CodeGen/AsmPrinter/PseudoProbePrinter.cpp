@@ -13,12 +13,14 @@
 #include "PseudoProbePrinter.h"
 #include "llvm/CodeGen/AsmPrinter.h"
 #include "llvm/IR/DebugInfoMetadata.h"
-#include "llvm/IR/Module.h"
+#include "llvm/IR/Function.h"
 #include "llvm/IR/PseudoProbe.h"
 #include "llvm/MC/MCPseudoProbe.h"
 #include "llvm/MC/MCStreamer.h"
 
 using namespace llvm;
+
+PseudoProbeHandler::~PseudoProbeHandler() = default;
 
 void PseudoProbeHandler::emitPseudoProbe(uint64_t Guid, uint64_t Index,
                                          uint64_t Type, uint64_t Attr,
@@ -35,14 +37,16 @@ void PseudoProbeHandler::emitPseudoProbe(uint64_t Guid, uint64_t Index,
     auto Name = SP->getLinkageName();
     if (Name.empty())
       Name = SP->getName();
-    uint64_t CallerGuid = Function::getGUID(Name);
+    // Use caching to avoid redundant md5 computation for build speed.
+    uint64_t &CallerGuid = NameGuidMap[Name];
+    if (!CallerGuid)
+      CallerGuid = Function::getGUID(Name);
     uint64_t CallerProbeId = PseudoProbeDwarfDiscriminator::extractProbeIndex(
         InlinedAt->getDiscriminator());
     ReversedInlineStack.emplace_back(CallerGuid, CallerProbeId);
     InlinedAt = InlinedAt->getInlinedAt();
   }
 
-  SmallVector<InlineSite, 8> InlineStack(ReversedInlineStack.rbegin(),
-                                         ReversedInlineStack.rend());
+  SmallVector<InlineSite, 8> InlineStack(llvm::reverse(ReversedInlineStack));
   Asm->OutStreamer->emitPseudoProbe(Guid, Index, Type, Attr, InlineStack);
 }

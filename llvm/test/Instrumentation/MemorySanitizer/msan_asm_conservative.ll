@@ -2,11 +2,9 @@
 ; RUN: opt < %s -msan-kernel=1 -msan-check-access-address=0                    \
 ; RUN: -msan-handle-asm-conservative=0 -S -passes=msan 2>&1 | FileCheck        \
 ; RUN: "-check-prefix=CHECK" %s
-; RUN: opt < %s -msan -msan-kernel=1 -msan-check-access-address=0 -msan-handle-asm-conservative=0 -S | FileCheck -check-prefixes=CHECK %s
 ; RUN: opt < %s -msan-kernel=1 -msan-check-access-address=0                    \
 ; RUN: -msan-handle-asm-conservative=1 -S -passes=msan 2>&1 | FileCheck        \
 ; RUN: "-check-prefixes=CHECK,CHECK-CONS" %s
-; RUN: opt < %s -msan -msan-kernel=1 -msan-check-access-address=0 -msan-handle-asm-conservative=1 -S | FileCheck -check-prefixes=CHECK,CHECK-CONS %s
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
@@ -180,14 +178,14 @@ entry:
 ;  asm("" : "=m" (id1), "=m" (id2) : "m" (is1), "m"(is2))
 define dso_local void @f_2i_2o_mem() sanitize_memory {
 entry:
-  call void asm "", "=*m,=*m,*m,*m,~{dirflag},~{fpsr},~{flags}"(i32* @id1, i32* @id2, i32* @is1, i32* @is2)
+  call void asm "", "=*m,=*m,*m,*m,~{dirflag},~{fpsr},~{flags}"(i32* elementtype(i32) @id1, i32* elementtype(i32) @id2, i32* elementtype(i32) @is1, i32* elementtype(i32) @is2)
   ret void
 }
 
 ; CHECK-LABEL: @f_2i_2o_mem
 ; CHECK-CONS: call void @__msan_instrument_asm_store({{.*}}@id1{{.*}}, i64 4)
 ; CHECK-CONS: call void @__msan_instrument_asm_store({{.*}}@id2{{.*}}, i64 4)
-; CHECK: call void asm "", "=*m,=*m,*m,*m,~{dirflag},~{fpsr},~{flags}"(i32* @id1, i32* @id2, i32* @is1, i32* @is2)
+; CHECK: call void asm "", "=*m,=*m,*m,*m,~{dirflag},~{fpsr},~{flags}"(i32* elementtype(i32) @id1, i32* elementtype(i32) @id2, i32* elementtype(i32) @is1, i32* elementtype(i32) @is2)
 
 
 ; Same input and output passed as both memory and register:
@@ -195,7 +193,7 @@ entry:
 define dso_local void @f_1i_1o_memreg() sanitize_memory {
 entry:
   %0 = load i32, i32* @is1, align 4
-  %1 = call i32 asm "", "=r,=*m,r,*m,~{dirflag},~{fpsr},~{flags}"(i32* @id1, i32 %0, i32* @is1)
+  %1 = call i32 asm "", "=r,=*m,r,*m,~{dirflag},~{fpsr},~{flags}"(i32* elementtype(i32) @id1, i32 %0, i32* elementtype(i32) @is1)
   store i32 %1, i32* @id1, align 4
   ret void
 }
@@ -204,14 +202,14 @@ entry:
 ; CHECK: [[IS1_F7:%.*]] = load i32, i32* @is1, align 4
 ; CHECK-CONS: call void @__msan_instrument_asm_store({{.*}}@id1{{.*}}, i64 4)
 ; CHECK: call void @__msan_warning
-; CHECK: call i32 asm "", "=r,=*m,r,*m,~{dirflag},~{fpsr},~{flags}"(i32* @id1, i32 [[IS1_F7]], i32* @is1)
+; CHECK: call i32 asm "", "=r,=*m,r,*m,~{dirflag},~{fpsr},~{flags}"(i32* elementtype(i32) @id1, i32 [[IS1_F7]], i32* elementtype(i32) @is1)
 
 
 ; Three outputs, first and last returned via regs, second via mem:
 ;  asm("" : "=r" (id1), "=m"(id2), "=r" (id3):);
 define dso_local void @f_3o_reg_mem_reg() sanitize_memory {
 entry:
-  %0 = call { i32, i32 } asm "", "=r,=*m,=r,~{dirflag},~{fpsr},~{flags}"(i32* @id2)
+  %0 = call { i32, i32 } asm "", "=r,=*m,=r,~{dirflag},~{fpsr},~{flags}"(i32* elementtype(i32) @id2)
   %asmresult = extractvalue { i32, i32 } %0, 0
   %asmresult1 = extractvalue { i32, i32 } %0, 1
   store i32 %asmresult, i32* @id1, align 4
@@ -221,7 +219,7 @@ entry:
 
 ; CHECK-LABEL: @f_3o_reg_mem_reg
 ; CHECK-CONS: call void @__msan_instrument_asm_store({{.*}}@id2{{.*}}), i64 4)
-; CHECK: call { i32, i32 } asm "", "=r,=*m,=r,~{dirflag},~{fpsr},~{flags}"(i32* @id2)
+; CHECK: call { i32, i32 } asm "", "=r,=*m,=r,~{dirflag},~{fpsr},~{flags}"(i32* elementtype(i32) @id2)
 
 
 ; Three inputs and three outputs of different types: a pair, a char, a function pointer.
@@ -232,7 +230,7 @@ entry:
   %0 = load i64, i64* bitcast (%struct.pair* @pair1 to i64*), align 4
   %1 = load i8, i8* @c1, align 1
   %2 = load i8* (i8*, i8*, i32)*, i8* (i8*, i8*, i32)** @memcpy_s1, align 8
-  %3 = call { i8, i8* (i8*, i8*, i32)* } asm "", "=*r,=r,=r,r,r,r,~{dirflag},~{fpsr},~{flags}"(%struct.pair* @pair2, i64 %0, i8 %1, i8* (i8*, i8*, i32)* %2)
+  %3 = call { i8, i8* (i8*, i8*, i32)* } asm "", "=*r,=r,=r,r,r,r,~{dirflag},~{fpsr},~{flags}"(%struct.pair* elementtype(%struct.pair) @pair2, i64 %0, i8 %1, i8* (i8*, i8*, i32)* %2)
   %asmresult = extractvalue { i8, i8* (i8*, i8*, i32)* } %3, 0
   %asmresult1 = extractvalue { i8, i8* (i8*, i8*, i32)* } %3, 1
   store i8 %asmresult, i8* @c2, align 1
@@ -248,14 +246,14 @@ entry:
 ; CHECK: call void @__msan_warning
 ; CHECK: call void @__msan_warning
 ; CHECK: call void @__msan_warning
-; CHECK: call { i8, i8* (i8*, i8*, i32)* } asm "", "=*r,=r,=r,r,r,r,~{dirflag},~{fpsr},~{flags}"(%struct.pair* @pair2, {{.*}}[[PAIR1_F9]], i8 [[C1_F9]], {{.*}} [[MEMCPY_S1_F9]])
+; CHECK: call { i8, i8* (i8*, i8*, i32)* } asm "", "=*r,=r,=r,r,r,r,~{dirflag},~{fpsr},~{flags}"(%struct.pair* elementtype(%struct.pair) @pair2, {{.*}}[[PAIR1_F9]], i8 [[C1_F9]], {{.*}} [[MEMCPY_S1_F9]])
 
 ; Three inputs and three outputs of different types: a pair, a char, a function pointer.
 ; Everything is passed in memory:
 ;  asm("" : "=m" (pair2), "=m" (c2), "=m" (memcpy_d1) : "m"(pair1), "m"(c1), "m"(memcpy_s1));
 define dso_local void @f_3i_3o_complex_mem() sanitize_memory {
 entry:
-  call void asm "", "=*m,=*m,=*m,*m,*m,*m,~{dirflag},~{fpsr},~{flags}"(%struct.pair* @pair2, i8* @c2, i8* (i8*, i8*, i32)** @memcpy_d1, %struct.pair* @pair1, i8* @c1, i8* (i8*, i8*, i32)** @memcpy_s1)
+  call void asm "", "=*m,=*m,=*m,*m,*m,*m,~{dirflag},~{fpsr},~{flags}"(%struct.pair* elementtype(%struct.pair) @pair2, i8* elementtype(i8) @c2, i8* (i8*, i8*, i32)** elementtype(i8* (i8*, i8*, i32)*) @memcpy_d1, %struct.pair* elementtype(%struct.pair) @pair1, i8* elementtype(i8) @c1, i8* (i8*, i8*, i32)** elementtype(i8* (i8*, i8*, i32)*) @memcpy_s1)
   ret void
 }
 
@@ -263,7 +261,7 @@ entry:
 ; CHECK-CONS: call void @__msan_instrument_asm_store({{.*}}@pair2{{.*}}, i64 8)
 ; CHECK-CONS: call void @__msan_instrument_asm_store({{.*}}@c2{{.*}}, i64 1)
 ; CHECK-CONS: call void @__msan_instrument_asm_store({{.*}}@memcpy_d1{{.*}}, i64 8)
-; CHECK: call void asm "", "=*m,=*m,=*m,*m,*m,*m,~{dirflag},~{fpsr},~{flags}"(%struct.pair* @pair2, i8* @c2, i8* (i8*, i8*, i32)** @memcpy_d1, %struct.pair* @pair1, i8* @c1, i8* (i8*, i8*, i32)** @memcpy_s1)
+; CHECK: call void asm "", "=*m,=*m,=*m,*m,*m,*m,~{dirflag},~{fpsr},~{flags}"(%struct.pair* elementtype(%struct.pair) @pair2, i8* elementtype(i8) @c2, i8* (i8*, i8*, i32)** elementtype(i8* (i8*, i8*, i32)*) @memcpy_d1, %struct.pair* elementtype(%struct.pair) @pair1, i8* elementtype(i8) @c1, i8* (i8*, i8*, i32)** elementtype(i8* (i8*, i8*, i32)*) @memcpy_s1)
 
 
 ; A simple asm goto construct to check that callbr is handled correctly:
@@ -278,7 +276,7 @@ entry:
 ; and the compiler doesn't crash.
 define dso_local i32 @asm_goto(i32 %n) sanitize_memory {
 entry:
-  callbr void asm sideeffect "cmp $0, $1; jnz ${2:l}", "r,r,X,~{dirflag},~{fpsr},~{flags}"(i32 %n, i32 1, i8* blockaddress(@asm_goto, %skip_label))
+  callbr void asm sideeffect "cmp $0, $1; jnz ${2:l}", "r,r,i,~{dirflag},~{fpsr},~{flags}"(i32 %n, i32 1, i8* blockaddress(@asm_goto, %skip_label))
           to label %cleanup [label %skip_label]
 
 skip_label:                                       ; preds = %entry

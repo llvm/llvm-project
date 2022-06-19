@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 //
 /// \file
-/// This pass combines split register tuple initialization into a single psuedo:
+/// This pass combines split register tuple initialization into a single pseudo:
 ///
 ///   undef %0.sub1:sreg_64 = S_MOV_B32 1
 ///   %0.sub0:sreg_64 = S_MOV_B32 2
@@ -40,6 +40,7 @@ namespace {
 class GCNPreRAOptimizations : public MachineFunctionPass {
 private:
   const SIInstrInfo *TII;
+  const SIRegisterInfo *TRI;
   MachineRegisterInfo *MRI;
   LiveIntervals *LIS;
 
@@ -85,32 +86,107 @@ bool GCNPreRAOptimizations::processReg(Register Reg) {
   MachineInstr *Def0 = nullptr;
   MachineInstr *Def1 = nullptr;
   uint64_t Init = 0;
+  bool Changed = false;
+  SmallSet<Register, 32> ModifiedRegs;
+  bool IsAGPRDst = TRI->isAGPRClass(MRI->getRegClass(Reg));
 
   for (MachineInstr &I : MRI->def_instructions(Reg)) {
-    if (I.getOpcode() != AMDGPU::S_MOV_B32 || I.getOperand(0).getReg() != Reg ||
-        !I.getOperand(1).isImm() || I.getNumOperands() != 2)
-      return false;
-
-    switch (I.getOperand(0).getSubReg()) {
+    switch (I.getOpcode()) {
     default:
       return false;
-    case AMDGPU::sub0:
-      if (Def0)
-        return false;
-      Def0 = &I;
-      Init |= I.getOperand(1).getImm() & 0xffffffff;
+    case AMDGPU::V_ACCVGPR_WRITE_B32_e64:
       break;
-    case AMDGPU::sub1:
-      if (Def1)
+    case AMDGPU::COPY: {
+      // Some subtargets cannot do an AGPR to AGPR copy directly, and need an
+      // intermdiate temporary VGPR register. Try to find the defining
+      // accvgpr_write to avoid temporary registers.
+
+      if (!IsAGPRDst)
         return false;
-      Def1 = &I;
-      Init |= static_cast<uint64_t>(I.getOperand(1).getImm()) << 32;
+
+      Register SrcReg = I.getOperand(1).getReg();
+
+      if (!SrcReg.isVirtual())
+        break;
+
+      // Check if source of copy is from another AGPR.
+      bool IsAGPRSrc = TRI->isAGPRClass(MRI->getRegClass(SrcReg));
+      if (!IsAGPRSrc)
+        break;
+
+      // def_instructions() does not look at subregs so it may give us a
+      // different instruction that defines the same vreg but different subreg
+      // so we have to manually check subreg.
+      Register SrcSubReg = I.getOperand(1).getSubReg();
+      for (auto &Def : MRI->def_instructions(SrcReg)) {
+        if (SrcSubReg != Def.getOperand(0).getSubReg())
+          continue;
+
+        if (Def.getOpcode() == AMDGPU::V_ACCVGPR_WRITE_B32_e64) {
+          MachineOperand DefSrcMO = Def.getOperand(1);
+
+          // Immediates are not an issue and can be propagated in
+          // postrapseudos pass. Only handle cases where defining
+          // accvgpr_write source is a vreg.
+          if (DefSrcMO.isReg() && DefSrcMO.getReg().isVirtual()) {
+            // Propagate source reg of accvgpr write to this copy instruction
+            I.getOperand(1).setReg(DefSrcMO.getReg());
+            I.getOperand(1).setSubReg(DefSrcMO.getSubReg());
+
+            // Reg uses were changed, collect unique set of registers to update
+            // live intervals at the end.
+            ModifiedRegs.insert(DefSrcMO.getReg());
+            ModifiedRegs.insert(SrcReg);
+
+            Changed = true;
+          }
+
+          // Found the defining accvgpr_write, stop looking any further.
+          break;
+        }
+      }
+      break;
+    }
+    case AMDGPU::S_MOV_B32:
+      if (I.getOperand(0).getReg() != Reg || !I.getOperand(1).isImm() ||
+          I.getNumOperands() != 2)
+        return false;
+
+      switch (I.getOperand(0).getSubReg()) {
+      default:
+        return false;
+      case AMDGPU::sub0:
+        if (Def0)
+          return false;
+        Def0 = &I;
+        Init |= I.getOperand(1).getImm() & 0xffffffff;
+        break;
+      case AMDGPU::sub1:
+        if (Def1)
+          return false;
+        Def1 = &I;
+        Init |= static_cast<uint64_t>(I.getOperand(1).getImm()) << 32;
+        break;
+      }
       break;
     }
   }
 
+  // For AGPR reg, check if live intervals need to be updated.
+  if (IsAGPRDst) {
+    if (Changed) {
+      for (Register RegToUpdate : ModifiedRegs) {
+        LIS->removeInterval(RegToUpdate);
+        LIS->createAndComputeVirtRegInterval(RegToUpdate);
+      }
+    }
+
+    return Changed;
+  }
+
+  // For SGPR reg, check if we can combine instructions.
   if (!Def0 || !Def1 || Def0->getParent() != Def1->getParent())
-    return false;
+    return Changed;
 
   LLVM_DEBUG(dbgs() << "Combining:\n  " << *Def0 << "  " << *Def1
                     << "    =>\n");
@@ -144,7 +220,7 @@ bool GCNPreRAOptimizations::runOnMachineFunction(MachineFunction &MF) {
   TII = ST.getInstrInfo();
   MRI = &MF.getRegInfo();
   LIS = &getAnalysis<LiveIntervals>();
-  const SIRegisterInfo *TRI = ST.getRegisterInfo();
+  TRI = ST.getRegisterInfo();
 
   bool Changed = false;
 
@@ -153,8 +229,10 @@ bool GCNPreRAOptimizations::runOnMachineFunction(MachineFunction &MF) {
     if (!LIS->hasInterval(Reg))
       continue;
     const TargetRegisterClass *RC = MRI->getRegClass(Reg);
-    if (RC->MC->getSizeInBits() != 64 || !TRI->isSGPRClass(RC))
+    if ((RC->MC->getSizeInBits() != 64 || !TRI->isSGPRClass(RC)) &&
+        (ST.hasGFX90AInsts() || !TRI->isAGPRClass(RC)))
       continue;
+
     Changed |= processReg(Reg);
   }
 

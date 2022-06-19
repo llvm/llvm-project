@@ -13,7 +13,7 @@ define void @foo() {
 ; CHECK:       bb1:
 ; CHECK-NEXT:    [[LS1_PH:%.*]] = phi float* [ [[_TMP1:%.*]], [[BB1]] ], [ undef, [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    [[LS2_PH:%.*]] = phi float* [ [[_TMP2:%.*]], [[BB1]] ], [ undef, [[ENTRY]] ]
-; CHECK-NEXT:    store float undef, float* [[LS1_PH]]
+; CHECK-NEXT:    store float undef, float* [[LS1_PH]], align 4
 ; CHECK-NEXT:    [[_TMP1]] = getelementptr float, float* [[LS1_PH]], i32 1
 ; CHECK-NEXT:    [[_TMP2]] = getelementptr float, float* [[LS2_PH]], i64 4
 ; CHECK-NEXT:    br i1 false, label [[BB1]], label [[BB2:%.*]]

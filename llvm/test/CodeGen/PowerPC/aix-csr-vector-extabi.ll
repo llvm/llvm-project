@@ -276,7 +276,7 @@ define dso_local void @fprs_gprs_vecregs() {
 ; ASM32-DAG:     addi 1, 1, 448
 ; ASM32:         blr
 
-; ASM64-LABEL    .fprs_gprs_vecregs:
+; ASM64-LABEL:    .fprs_gprs_vecregs:
 
 ; ASM64:         stdu 1, -544(1)
 ; ASM64-DAG:     li {{[0-9]+}}, 64

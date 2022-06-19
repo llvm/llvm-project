@@ -5,11 +5,9 @@
 define i64 @imm1_Oz(i32 %x, i32 %y) minsize nounwind {
 ; CHECK-LABEL: imm1_Oz:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    # kill: def $esi killed $esi def $rsi
-; CHECK-NEXT:    # kill: def $edi killed $edi def $rdi
-; CHECK-NEXT:    leal 1(%rdi), %eax
-; CHECK-NEXT:    incl %esi
-; CHECK-NEXT:    addq %rsi, %rax
+; CHECK:         incl %edi
+; CHECK-NEXT:    leal 1(%rsi), %eax
+; CHECK-NEXT:    addq %rdi, %rax
 ; CHECK-NEXT:    retq
   %x1 = add i32 %x, 1
   %y1 = add i32 %y, 1
@@ -22,11 +20,9 @@ define i64 @imm1_Oz(i32 %x, i32 %y) minsize nounwind {
 define i64 @imm1_Os(i32 %x, i32 %y) optsize nounwind {
 ; CHECK-LABEL: imm1_Os:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    # kill: def $esi killed $esi def $rsi
-; CHECK-NEXT:    # kill: def $edi killed $edi def $rdi
-; CHECK-NEXT:    leal 1(%rdi), %eax
-; CHECK-NEXT:    incl %esi
-; CHECK-NEXT:    addq %rsi, %rax
+; CHECK:         incl %edi
+; CHECK-NEXT:    leal 1(%rsi), %eax
+; CHECK-NEXT:    addq %rdi, %rax
 ; CHECK-NEXT:    retq
   %x1 = add i32 %x, 1
   %y1 = add i32 %y, 1
@@ -41,18 +37,18 @@ define i64 @imm1_O2(i32 %x, i32 %y) nounwind {
 ; FAST-INCDEC:       # %bb.0:
 ; FAST-INCDEC-NEXT:    # kill: def $esi killed $esi def $rsi
 ; FAST-INCDEC-NEXT:    # kill: def $edi killed $edi def $rdi
-; FAST-INCDEC-NEXT:    leal 1(%rdi), %eax
-; FAST-INCDEC-NEXT:    incl %esi
-; FAST-INCDEC-NEXT:    addq %rsi, %rax
+; FAST-INCDEC-NEXT:    incl %edi
+; FAST-INCDEC-NEXT:    leal 1(%rsi), %eax
+; FAST-INCDEC-NEXT:    addq %rdi, %rax
 ; FAST-INCDEC-NEXT:    retq
 ;
 ; SLOW-INCDEC-LABEL: imm1_O2:
 ; SLOW-INCDEC:       # %bb.0:
-; SLOW-INCDEC-NEXT:    # kill: def $esi killed $esi def $rsi
 ; SLOW-INCDEC-NEXT:    # kill: def $edi killed $edi def $rdi
-; SLOW-INCDEC-NEXT:    leal 1(%rdi), %eax
-; SLOW-INCDEC-NEXT:    addl $1, %esi
-; SLOW-INCDEC-NEXT:    addq %rsi, %rax
+; SLOW-INCDEC-NEXT:    # kill: def $esi killed $esi def $rsi
+; SLOW-INCDEC-NEXT:    addl $1, %edi
+; SLOW-INCDEC-NEXT:    leal 1(%rsi), %eax
+; SLOW-INCDEC-NEXT:    addq %rdi, %rax
 ; SLOW-INCDEC-NEXT:    retq
   %x1 = add i32 %x, 1
   %y1 = add i32 %y, 1

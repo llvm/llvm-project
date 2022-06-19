@@ -5,6 +5,6 @@
 
 #define CFSTR __builtin___CFStringMakeConstantString
 
-void foo() {
+void foo(void) {
   CFSTR("überhund");
 }

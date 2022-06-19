@@ -23,7 +23,7 @@ using namespace llvm;
 #include "NVPTXGenSubtargetInfo.inc"
 
 static cl::opt<bool>
-    NoF16Math("nvptx-no-f16-math", cl::ZeroOrMore, cl::Hidden,
+    NoF16Math("nvptx-no-f16-math", cl::Hidden,
               cl::desc("NVPTX Specific: Disable generation of f16 math ops."),
               cl::init(false));
 
@@ -49,8 +49,8 @@ NVPTXSubtarget::NVPTXSubtarget(const Triple &TT, const std::string &CPU,
                                const std::string &FS,
                                const NVPTXTargetMachine &TM)
     : NVPTXGenSubtargetInfo(TT, CPU, /*TuneCPU*/ CPU, FS), PTXVersion(0),
-      SmVersion(20), TM(TM), InstrInfo(),
-      TLInfo(TM, initializeSubtargetDependencies(CPU, FS)), FrameLowering() {}
+      SmVersion(20), TM(TM),
+      TLInfo(TM, initializeSubtargetDependencies(CPU, FS)) {}
 
 bool NVPTXSubtarget::hasImageHandles() const {
   // Enable handles for Kepler+, where CUDA supports indirect surfaces and

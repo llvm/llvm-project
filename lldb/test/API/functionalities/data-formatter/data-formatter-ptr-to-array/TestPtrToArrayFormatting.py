@@ -11,8 +11,6 @@ import lldbsuite.test.lldbutil as lldbutil
 
 class PtrToArrayDataFormatterTestCase(TestBase):
 
-    mydir = TestBase.compute_mydir(__file__)
-
     def test_with_run_command(self):
         """Test that LLDB handles the clang typeclass Paren correctly."""
         self.build()
@@ -48,7 +46,7 @@ class PtrToArrayDataFormatterTestCase(TestBase):
         self.addTearDownHook(cleanup)
 
         self.expect('p *(int (*)[3])foo',
-                    substrs=['(int [3]) $', '[0] = 1', '[1] = 2', '[2] = 3'])
+                    substrs=['(int[3]) $', '[0] = 1', '[1] = 2', '[2] = 3'])
 
         self.expect('p *(int (*)[3])foo', matching=False,
                     substrs=['01 00 00 00 02 00 00 00 03 00 00 00'])

@@ -8,7 +8,7 @@
 
 // <string>
 
-// int compare(size_type pos, size_type n1, const charT *s) const;
+// int compare(size_type pos, size_type n1, const charT *s) const; // constexpr since C++20
 
 #include <string>
 #include <stdexcept>
@@ -18,7 +18,7 @@
 
 #include "test_macros.h"
 
-int sign(int x)
+TEST_CONSTEXPR_CXX20 int sign(int x)
 {
     if (x == 0)
         return 0;
@@ -28,14 +28,14 @@ int sign(int x)
 }
 
 template <class S>
-void
+TEST_CONSTEXPR_CXX20 void
 test(const S& s, typename S::size_type pos1, typename S::size_type n1,
      const typename S::value_type* str, int x)
 {
     if (pos1 <= s.size())
         assert(sign(s.compare(pos1, n1, str)) == sign(x));
 #ifndef TEST_HAS_NO_EXCEPTIONS
-    else
+    else if (!TEST_IS_CONSTANT_EVALUATED)
     {
         try
         {
@@ -51,7 +51,7 @@ test(const S& s, typename S::size_type pos1, typename S::size_type n1,
 }
 
 template <class S>
-void test0()
+TEST_CONSTEXPR_CXX20 void test0()
 {
     test(S(""), 0, 0, "", 0);
     test(S(""), 0, 0, "abcde", -5);
@@ -156,7 +156,7 @@ void test0()
 }
 
 template <class S>
-void test1()
+TEST_CONSTEXPR_CXX20 void test1()
 {
     test(S("abcde"), 6, 0, "", 0);
     test(S("abcde"), 6, 0, "abcde", 0);
@@ -261,7 +261,7 @@ void test1()
 }
 
 template <class S>
-void test2()
+TEST_CONSTEXPR_CXX20 void test2()
 {
     test(S("abcdefghijklmnopqrst"), 0, 0, "", 0);
     test(S("abcdefghijklmnopqrst"), 0, 0, "abcde", -5);
@@ -361,21 +361,30 @@ void test2()
     test(S("abcdefghijklmnopqrst"), 21, 0, "abcdefghijklmnopqrst", 0);
 }
 
-int main(int, char**)
-{
-    {
+TEST_CONSTEXPR_CXX20 bool test() {
+  {
     typedef std::string S;
     test0<S>();
     test1<S>();
     test2<S>();
-    }
+  }
 #if TEST_STD_VER >= 11
-    {
+  {
     typedef std::basic_string<char, std::char_traits<char>, min_allocator<char>> S;
     test0<S>();
     test1<S>();
     test2<S>();
-    }
+  }
+#endif
+
+  return true;
+}
+
+int main(int, char**)
+{
+  test();
+#if TEST_STD_VER > 17
+  static_assert(test());
 #endif
 
   return 0;

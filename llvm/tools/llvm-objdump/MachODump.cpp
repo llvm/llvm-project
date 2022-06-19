@@ -33,6 +33,7 @@
 #include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/MC/MCTargetOptions.h"
+#include "llvm/MC/TargetRegistry.h"
 #include "llvm/Object/MachO.h"
 #include "llvm/Object/MachOUniversal.h"
 #include "llvm/Option/ArgList.h"
@@ -44,7 +45,6 @@
 #include "llvm/Support/GraphWriter.h"
 #include "llvm/Support/LEB128.h"
 #include "llvm/Support/MemoryBuffer.h"
-#include "llvm/Support/TargetRegistry.h"
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/Support/ToolOutputFile.h"
 #include "llvm/Support/WithColor.h"
@@ -81,6 +81,7 @@ bool objdump::DataInCode;
 bool objdump::FunctionStarts;
 bool objdump::LinkOptHints;
 bool objdump::InfoPlist;
+bool objdump::DyldInfo;
 bool objdump::DylibsUsed;
 bool objdump::DylibId;
 bool objdump::Verbose;
@@ -111,6 +112,7 @@ void objdump::parseMachOOptions(const llvm::opt::InputArgList &InputArgs) {
   FunctionStarts = InputArgs.hasArg(OBJDUMP_function_starts);
   LinkOptHints = InputArgs.hasArg(OBJDUMP_link_opt_hints);
   InfoPlist = InputArgs.hasArg(OBJDUMP_info_plist);
+  DyldInfo = InputArgs.hasArg(OBJDUMP_dyld_info);
   DylibsUsed = InputArgs.hasArg(OBJDUMP_dylibs_used);
   DylibId = InputArgs.hasArg(OBJDUMP_dylib_id);
   Verbose = !InputArgs.hasArg(OBJDUMP_non_verbose);
@@ -188,8 +190,12 @@ typedef DiceTable::iterator dice_table_iterator;
 namespace {
 struct ScopedXarFile {
   xar_t xar;
-  ScopedXarFile(const char *filename, int32_t flags)
-      : xar(xar_open(filename, flags)) {}
+  ScopedXarFile(const char *filename, int32_t flags) {
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
+    xar = xar_open(filename, flags);
+#pragma clang diagnostic pop
+  }
   ~ScopedXarFile() {
     if (xar)
       xar_close(xar);
@@ -917,10 +923,10 @@ static void PrintRelocationEntries(const MachOObjectFile *O,
           else {
             SymbolRef Symbol = *O->getSymbolByIndex(r_symbolnum);
             Expected<StringRef> SymNameNext = Symbol.getName();
-            const char *name = NULL;
+            const char *name = nullptr;
             if (SymNameNext)
               name = SymNameNext->data();
-            if (name == NULL)
+            if (name == nullptr)
               outs() << format("?(%d)\n", r_symbolnum);
             else
               outs() << name << "\n";
@@ -1176,6 +1182,20 @@ static void PrintLinkOptHints(MachOObjectFile *O) {
         return;
     }
   }
+}
+
+static void printMachOChainedFixups(object::MachOObjectFile *Obj) {
+  Error Err = Error::success();
+  for (const object::MachOChainedFixupEntry &Entry : Obj->fixupTable(Err)) {
+    (void)Entry;
+  }
+  if (Err)
+    reportError(std::move(Err), Obj->getFileName());
+}
+
+static void PrintDyldInfo(MachOObjectFile *O) {
+  outs() << "dyld information:" << '\n';
+  printMachOChainedFixups(O);
 }
 
 static void PrintDylibs(MachOObjectFile *O, bool JustId) {
@@ -1896,8 +1916,8 @@ static void ProcessMachO(StringRef Name, MachOObjectFile *MachOOF,
   // UniversalHeaders or ArchiveHeaders.
   if (Disassemble || Relocations || PrivateHeaders || ExportsTrie || Rebase ||
       Bind || SymbolTable || LazyBind || WeakBind || IndirectSymbols ||
-      DataInCode || FunctionStarts || LinkOptHints || DylibsUsed || DylibId ||
-      Rpaths || ObjcMetaData || (!FilterSections.empty())) {
+      DataInCode || FunctionStarts || LinkOptHints || DyldInfo || DylibsUsed ||
+      DylibId || Rpaths || ObjcMetaData || (!FilterSections.empty())) {
     if (LeadingHeaders) {
       outs() << Name;
       if (!ArchiveMemberName.empty())
@@ -1966,6 +1986,8 @@ static void ProcessMachO(StringRef Name, MachOObjectFile *MachOOF,
     DumpSectionContents(FileName, MachOOF, Verbose);
   if (InfoPlist)
     DumpInfoPlistSectionContents(FileName, MachOOF);
+  if (DyldInfo)
+    PrintDyldInfo(MachOOF);
   if (DylibsUsed)
     PrintDylibs(MachOOF, false);
   if (DylibId)
@@ -2586,7 +2608,8 @@ struct DisassembleInfo {
 // value of TagType is currently 1 (for the LLVMOpInfo1 struct). If symbolic
 // information is returned then this function returns 1 else it returns 0.
 static int SymbolizerGetOpInfo(void *DisInfo, uint64_t Pc, uint64_t Offset,
-                               uint64_t Size, int TagType, void *TagBuf) {
+                               uint64_t OpSize, uint64_t InstSize, int TagType,
+                               void *TagBuf) {
   struct DisassembleInfo *info = (struct DisassembleInfo *)DisInfo;
   struct LLVMOpInfo1 *op_info = (struct LLVMOpInfo1 *)TagBuf;
   uint64_t value = op_info->Value;
@@ -2603,7 +2626,7 @@ static int SymbolizerGetOpInfo(void *DisInfo, uint64_t Pc, uint64_t Offset,
 
   unsigned int Arch = info->O->getArch();
   if (Arch == Triple::x86) {
-    if (Size != 1 && Size != 2 && Size != 4 && Size != 0)
+    if (OpSize != 1 && OpSize != 2 && OpSize != 4 && OpSize != 0)
       return 0;
     if (info->O->getHeader().filetype != MachO::MH_OBJECT) {
       // TODO:
@@ -2683,7 +2706,7 @@ static int SymbolizerGetOpInfo(void *DisInfo, uint64_t Pc, uint64_t Offset,
     return 0;
   }
   if (Arch == Triple::x86_64) {
-    if (Size != 1 && Size != 2 && Size != 4 && Size != 0)
+    if (OpSize != 1 && OpSize != 2 && OpSize != 4 && OpSize != 0)
       return 0;
     // For non MH_OBJECT types, like MH_KEXT_BUNDLE, Search the external
     // relocation entries of a linked image (if any) for an entry that matches
@@ -2715,7 +2738,7 @@ static int SymbolizerGetOpInfo(void *DisInfo, uint64_t Pc, uint64_t Offset,
         // adds the Pc.  But for x86_64 external relocation entries the Value
         // is the offset from the external symbol.
         if (info->O->getAnyRelocationPCRel(RE))
-          op_info->Value -= Pc + Offset + Size;
+          op_info->Value -= Pc + InstSize;
         const char *name =
             unwrapOrError(Symbol.getName(), info->O->getFileName()).data();
         op_info->AddSymbol.Present = 1;
@@ -2753,7 +2776,7 @@ static int SymbolizerGetOpInfo(void *DisInfo, uint64_t Pc, uint64_t Offset,
       // adds the Pc.  But for x86_64 external relocation entries the Value
       // is the offset from the external symbol.
       if (info->O->getAnyRelocationPCRel(RE))
-        op_info->Value -= Pc + Offset + Size;
+        op_info->Value -= Pc + InstSize;
       const char *name =
           unwrapOrError(Symbol.getName(), info->O->getFileName()).data();
       unsigned Type = info->O->getAnyRelocationType(RE);
@@ -2781,7 +2804,7 @@ static int SymbolizerGetOpInfo(void *DisInfo, uint64_t Pc, uint64_t Offset,
     return 0;
   }
   if (Arch == Triple::arm) {
-    if (Offset != 0 || (Size != 4 && Size != 2))
+    if (Offset != 0 || (InstSize != 4 && InstSize != 2))
       return 0;
     if (info->O->getHeader().filetype != MachO::MH_OBJECT) {
       // TODO:
@@ -2918,7 +2941,7 @@ static int SymbolizerGetOpInfo(void *DisInfo, uint64_t Pc, uint64_t Offset,
     return 1;
   }
   if (Arch == Triple::aarch64) {
-    if (Offset != 0 || Size != 4)
+    if (Offset != 0 || InstSize != 4)
       return 0;
     if (info->O->getHeader().filetype != MachO::MH_OBJECT) {
       // TODO:
@@ -9141,14 +9164,20 @@ static void PrintNoteLoadCommand(MachO::note_command Nt) {
   outs() << "      size " << Nt.size << "\n";
 }
 
-static void PrintBuildToolVersion(MachO::build_tool_version bv) {
-  outs() << "      tool " << MachOObjectFile::getBuildTool(bv.tool) << "\n";
+static void PrintBuildToolVersion(MachO::build_tool_version bv, bool verbose) {
+  outs() << "      tool ";
+  if (verbose)
+    outs() << MachOObjectFile::getBuildTool(bv.tool);
+  else
+    outs() << bv.tool;
+  outs() << "\n";
   outs() << "   version " << MachOObjectFile::getVersionString(bv.version)
          << "\n";
 }
 
 static void PrintBuildVersionLoadCommand(const MachOObjectFile *obj,
-                                         MachO::build_version_command bd) {
+                                         MachO::build_version_command bd,
+                                         bool verbose) {
   outs() << "       cmd LC_BUILD_VERSION\n";
   outs() << "   cmdsize " << bd.cmdsize;
   if (bd.cmdsize !=
@@ -9157,8 +9186,12 @@ static void PrintBuildVersionLoadCommand(const MachOObjectFile *obj,
     outs() << " Incorrect size\n";
   else
     outs() << "\n";
-  outs() << "  platform " << MachOObjectFile::getBuildPlatform(bd.platform)
-         << "\n";
+  outs() << "  platform ";
+  if (verbose)
+    outs() << MachOObjectFile::getBuildPlatform(bd.platform);
+  else
+    outs() << bd.platform;
+  outs() << "\n";
   if (bd.sdk)
     outs() << "       sdk " << MachOObjectFile::getVersionString(bd.sdk)
            << "\n";
@@ -9169,7 +9202,7 @@ static void PrintBuildVersionLoadCommand(const MachOObjectFile *obj,
   outs() << "    ntools " << bd.ntools << "\n";
   for (unsigned i = 0; i < bd.ntools; ++i) {
     MachO::build_tool_version bv = obj->getBuildToolVersion(i);
-    PrintBuildToolVersion(bv);
+    PrintBuildToolVersion(bv, verbose);
   }
 }
 
@@ -10053,6 +10086,10 @@ static void PrintLinkEditDataCommand(MachO::linkedit_data_command ld,
     outs() << "      cmd LC_DYLIB_CODE_SIGN_DRS\n";
   else if (ld.cmd == MachO::LC_LINKER_OPTIMIZATION_HINT)
     outs() << "      cmd LC_LINKER_OPTIMIZATION_HINT\n";
+  else if (ld.cmd == MachO::LC_DYLD_EXPORTS_TRIE)
+    outs() << "      cmd LC_DYLD_EXPORTS_TRIE\n";
+  else if (ld.cmd == MachO::LC_DYLD_CHAINED_FIXUPS)
+    outs() << "      cmd LC_DYLD_CHAINED_FIXUPS\n";
   else
     outs() << "      cmd " << ld.cmd << " (?)\n";
   outs() << "  cmdsize " << ld.cmdsize;
@@ -10142,7 +10179,7 @@ static void PrintLoadCommands(const MachOObjectFile *Obj, uint32_t filetype,
     } else if (Command.C.cmd == MachO::LC_BUILD_VERSION) {
       MachO::build_version_command Bv =
           Obj->getBuildVersionLoadCommand(Command);
-      PrintBuildVersionLoadCommand(Obj, Bv);
+      PrintBuildVersionLoadCommand(Obj, Bv, verbose);
     } else if (Command.C.cmd == MachO::LC_SOURCE_VERSION) {
       MachO::source_version_command Sd = Obj->getSourceVersionCommand(Command);
       PrintSourceVersionCommand(Sd);
@@ -10196,7 +10233,9 @@ static void PrintLoadCommands(const MachOObjectFile *Obj, uint32_t filetype,
                Command.C.cmd == MachO::LC_FUNCTION_STARTS ||
                Command.C.cmd == MachO::LC_DATA_IN_CODE ||
                Command.C.cmd == MachO::LC_DYLIB_CODE_SIGN_DRS ||
-               Command.C.cmd == MachO::LC_LINKER_OPTIMIZATION_HINT) {
+               Command.C.cmd == MachO::LC_LINKER_OPTIMIZATION_HINT ||
+               Command.C.cmd == MachO::LC_DYLD_EXPORTS_TRIE ||
+               Command.C.cmd == MachO::LC_DYLD_CHAINED_FIXUPS) {
       MachO::linkedit_data_command Ld =
           Obj->getLinkeditDataLoadCommand(Command);
       PrintLinkEditDataCommand(Ld, Buf.size());
@@ -10225,12 +10264,12 @@ static void PrintMachHeader(const MachOObjectFile *Obj, bool verbose) {
 }
 
 void objdump::printMachOFileHeader(const object::ObjectFile *Obj) {
-  const MachOObjectFile *file = dyn_cast<const MachOObjectFile>(Obj);
+  const MachOObjectFile *file = cast<const MachOObjectFile>(Obj);
   PrintMachHeader(file, Verbose);
 }
 
 void objdump::printMachOLoadCommands(const object::ObjectFile *Obj) {
-  const MachOObjectFile *file = dyn_cast<const MachOObjectFile>(Obj);
+  const MachOObjectFile *file = cast<const MachOObjectFile>(Obj);
   uint32_t filetype = 0;
   uint32_t cputype = 0;
   if (file->is64Bit()) {

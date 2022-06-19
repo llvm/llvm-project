@@ -1,4 +1,3 @@
-; RUN: opt -print-memderefs -analyze -S < %s -enable-new-pm=0 -use-dereferenceable-at-point-semantics=1 | FileCheck %s --check-prefixes=CHECK
 ; RUN: opt -passes=print-memderefs -S < %s -disable-output  -use-dereferenceable-at-point-semantics=1 2>&1 | FileCheck %s --check-prefixes=CHECK
 
 target datalayout = "e-i32:32:64"

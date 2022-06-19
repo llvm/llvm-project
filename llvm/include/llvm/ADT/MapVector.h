@@ -5,12 +5,13 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-//
-// This file implements a map that provides insertion order iteration. The
-// interface is purposefully minimal. The key is assumed to be cheap to copy
-// and 2 copies are kept, one for indexing in a DenseMap, one for iteration in
-// a std::vector.
-//
+///
+/// \file
+/// This file implements a map that provides insertion order iteration. The
+/// interface is purposefully minimal. The key is assumed to be cheap to copy
+/// and 2 copies are kept, one for indexing in a DenseMap, one for iteration in
+/// a std::vector.
+///
 //===----------------------------------------------------------------------===//
 
 #ifndef LLVM_ADT_MAPVECTOR_H
@@ -18,7 +19,6 @@
 
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallVector.h"
-#include <algorithm>
 #include <cassert>
 #include <cstddef>
 #include <iterator>
@@ -43,6 +43,7 @@ class MapVector {
       "The mapped_type of the specified Map must be an integral type");
 
 public:
+  using key_type = KeyT;
   using value_type = typename VectorType::value_type;
   using size_type = typename VectorType::size_type;
 

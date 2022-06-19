@@ -10,8 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_LIB_STATICANALYZER_CORE_RANGEDCONSTRAINTMANAGER_H
-#define LLVM_CLANG_LIB_STATICANALYZER_CORE_RANGEDCONSTRAINTMANAGER_H
+#ifndef LLVM_CLANG_STATICANALYZER_CORE_PATHSENSITIVE_RANGEDCONSTRAINTMANAGER_H
+#define LLVM_CLANG_STATICANALYZER_CORE_PATHSENSITIVE_RANGEDCONSTRAINTMANAGER_H
 
 #include "clang/StaticAnalyzer/Core/PathSensitive/ProgramState.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/ProgramStateTrait.h"
@@ -48,6 +48,7 @@ public:
     ID.AddPointer(&To());
   }
   void dump(raw_ostream &OS) const;
+  void dump() const;
 
   // In order to keep non-overlapping ranges sorted, we can compare only From
   // points.
@@ -139,6 +140,30 @@ public:
     /// Complexity: O(N)
     ///             where N = size(Original)
     RangeSet add(RangeSet Original, const llvm::APSInt &Point);
+    /// Create a new set which is a union of two given ranges.
+    /// Possible intersections are not checked here.
+    ///
+    /// Complexity: O(N + M)
+    ///             where N = size(LHS), M = size(RHS)
+    RangeSet unite(RangeSet LHS, RangeSet RHS);
+    /// Create a new set by uniting given range set with the given range.
+    /// All intersections and adjacent ranges are handled here.
+    ///
+    /// Complexity: O(N)
+    ///             where N = size(Original)
+    RangeSet unite(RangeSet Original, Range Element);
+    /// Create a new set by uniting given range set with the given point.
+    /// All intersections and adjacent ranges are handled here.
+    ///
+    /// Complexity: O(N)
+    ///             where N = size(Original)
+    RangeSet unite(RangeSet Original, llvm::APSInt Point);
+    /// Create a new set by uniting given range set with the given range
+    /// between points. All intersections and adjacent ranges are handled here.
+    ///
+    /// Complexity: O(N)
+    ///             where N = size(Original)
+    RangeSet unite(RangeSet Original, llvm::APSInt From, llvm::APSInt To);
 
     RangeSet getEmptySet() { return &EmptySet; }
 
@@ -212,6 +237,29 @@ public:
     /// Complexity: O(N)
     ///             where N = size(What)
     RangeSet negate(RangeSet What);
+    /// Performs promotions, truncations and conversions of the given set.
+    ///
+    /// This function is optimized for each of the six cast cases:
+    /// - noop
+    /// - conversion
+    /// - truncation
+    /// - truncation-conversion
+    /// - promotion
+    /// - promotion-conversion
+    ///
+    /// NOTE: This function is NOT self-inverse for truncations, because of
+    ///       the higher bits loss:
+    ///     - castTo(castTo(OrigRangeOfInt, char), int) != OrigRangeOfInt.
+    ///     - castTo(castTo(OrigRangeOfChar, int), char) == OrigRangeOfChar.
+    ///       But it is self-inverse for all the rest casts.
+    ///
+    /// Complexity:
+    ///     - Noop                               O(1);
+    ///     - Truncation                         O(N^2);
+    ///     - Another case                       O(N);
+    ///     where N = size(What)
+    RangeSet castTo(RangeSet What, APSIntType Ty);
+    RangeSet castTo(RangeSet What, QualType T);
 
     /// Return associated value factory.
     BasicValueFactory &getValueFactory() const { return ValueFactory; }
@@ -223,6 +271,25 @@ public:
     ContainerType *construct(ContainerType &&From);
 
     RangeSet intersect(const ContainerType &LHS, const ContainerType &RHS);
+    /// NOTE: This function relies on the fact that all values in the
+    /// containers are persistent (created via BasicValueFactory::getValue).
+    ContainerType unite(const ContainerType &LHS, const ContainerType &RHS);
+
+    /// This is a helper function for `castTo` method. Implies not to be used
+    /// separately.
+    /// Performs a truncation case of a cast operation.
+    ContainerType truncateTo(RangeSet What, APSIntType Ty);
+
+    /// This is a helper function for `castTo` method. Implies not to be used
+    /// separately.
+    /// Performs a conversion case and a promotion-conversion case for signeds
+    /// of a cast operation.
+    ContainerType convertTo(RangeSet What, APSIntType Ty);
+
+    /// This is a helper function for `castTo` method. Implies not to be used
+    /// separately.
+    /// Performs a promotion for unsigneds only.
+    ContainerType promoteTo(RangeSet What, APSIntType Ty);
 
     // Many operations include producing new APSInt values and that's why
     // we need this factory.
@@ -275,13 +342,37 @@ public:
   /// Complexity: O(1)
   const llvm::APSInt &getMaxValue() const;
 
+  bool isUnsigned() const;
+  uint32_t getBitWidth() const;
+  APSIntType getAPSIntType() const;
+
   /// Test whether the given point is contained by any of the ranges.
   ///
   /// Complexity: O(logN)
   ///             where N = size(this)
   bool contains(llvm::APSInt Point) const { return containsImpl(Point); }
 
+  bool containsZero() const {
+    APSIntType T{getMinValue()};
+    return contains(T.getZeroValue());
+  }
+
+  /// Test if the range is the [0,0] range.
+  ///
+  /// Complexity: O(1)
+  bool encodesFalseRange() const {
+    const llvm::APSInt *Constant = getConcreteValue();
+    return Constant && Constant->isZero();
+  }
+
+  /// Test if the range doesn't contain zero.
+  ///
+  /// Complexity: O(logN)
+  ///             where N = size(this)
+  bool encodesTrueRange() const { return !containsZero(); }
+
   void dump(raw_ostream &OS) const;
+  void dump() const;
 
   bool operator==(const RangeSet &Other) const { return *Impl == *Other.Impl; }
   bool operator!=(const RangeSet &Other) const { return !(*this == Other); }
@@ -387,10 +478,21 @@ private:
   static void computeAdjustment(SymbolRef &Sym, llvm::APSInt &Adjustment);
 };
 
-/// Try to simplify a given symbolic expression's associated value based on the
-/// constraints in State. This is needed because the Environment bindings are
-/// not getting updated when a new constraint is added to the State.
+/// Try to simplify a given symbolic expression based on the constraints in
+/// State. This is needed because the Environment bindings are not getting
+/// updated when a new constraint is added to the State. If the symbol is
+/// simplified to a non-symbol (e.g. to a constant) then the original symbol
+/// is returned. We use this function in the family of assumeSymNE/EQ/LT/../GE
+/// functions where we can work only with symbols. Use the other function
+/// (simplifyToSVal) if you are interested in a simplification that may yield
+/// a concrete constant value.
 SymbolRef simplify(ProgramStateRef State, SymbolRef Sym);
+
+/// Try to simplify a given symbolic expression's associated `SVal` based on the
+/// constraints in State. This is very similar to `simplify`, but this function
+/// always returns the simplified SVal. The simplified SVal might be a single
+/// constant (i.e. `ConcreteInt`).
+SVal simplifyToSVal(ProgramStateRef State, SymbolRef Sym);
 
 } // namespace ento
 } // namespace clang

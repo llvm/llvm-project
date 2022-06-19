@@ -37,7 +37,7 @@ class RewritePatternSet;
 ///    affine.for %I = 0 to 9 {
 ///      %dim = dim %A, 0 : memref<?x?x?xf32>
 ///      %add = affine.apply %I + %a
-///      %cmp = cmpi "slt", %add, %dim : index
+///      %cmp = arith.cmpi "slt", %add, %dim : index
 ///      scf.if %cmp {
 ///        %vec_2d = load %1[%I] : memref<9xvector<17x15xf32>>
 ///        vector.transfer_write %vec_2d, %A[%add, %b, %c] :
@@ -46,35 +46,35 @@ class RewritePatternSet;
 ///
 /// When applying the pattern a second time, the existing alloca() operation
 /// is reused and only a second vector.type_cast is added.
-
 struct VectorTransferToSCFOptions {
+  /// Minimal rank to which vector transfer are lowered.
   unsigned targetRank = 1;
-  bool lowerPermutationMaps = false;
-  bool lowerTensors = false;
-  bool unroll = false;
-
-  VectorTransferToSCFOptions &setLowerPermutationMaps(bool l) {
-    lowerPermutationMaps = l;
-    return *this;
-  }
-
-  VectorTransferToSCFOptions &setLowerTensors(bool l) {
-    lowerTensors = l;
-    return *this;
-  }
-
   VectorTransferToSCFOptions &setTargetRank(unsigned r) {
     targetRank = r;
     return *this;
   }
-
-  VectorTransferToSCFOptions &setUnroll(bool u) {
+  ///
+  bool lowerPermutationMaps = false;
+  VectorTransferToSCFOptions &enableLowerPermutationMaps(bool l = true) {
+    lowerPermutationMaps = l;
+    return *this;
+  }
+  /// Allows vector transfers that operated on tensors to be lowered (this is an
+  /// uncommon alternative).
+  bool lowerTensors = false;
+  VectorTransferToSCFOptions &enableLowerTensors(bool l = true) {
+    lowerTensors = l;
+    return *this;
+  }
+  /// Triggers full unrolling (vs iterating with a loop) during transfer to scf.
+  bool unroll = false;
+  VectorTransferToSCFOptions &enableFullUnroll(bool u = true) {
     unroll = u;
     return *this;
   }
 };
 
-/// Collect a set of patterns to convert from the Vector dialect to SCF + std.
+/// Collect a set of patterns to convert from the Vector dialect to SCF + func.
 void populateVectorToSCFConversionPatterns(
     RewritePatternSet &patterns,
     const VectorTransferToSCFOptions &options = VectorTransferToSCFOptions());

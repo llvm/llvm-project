@@ -3,7 +3,6 @@
 ; first instruction.  Breaking on the instrumented function in a debugger
 ; would then stop at that instruction, before the prologue is finished.
 
-; RUN: opt < %s -asan -asan-module -enable-new-pm=0 -S | FileCheck %s
 ; RUN: opt < %s -passes='asan-pipeline' -S | FileCheck %s
 ; 1: void f(int *arg) {
 ; 2: }

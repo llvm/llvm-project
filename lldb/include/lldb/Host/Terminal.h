@@ -10,15 +10,35 @@
 #define LLDB_HOST_TERMINAL_H
 #if defined(__cplusplus)
 
-#include "lldb/Host/Config.h"
 #include "lldb/lldb-private.h"
-
-struct termios;
+#include "llvm/Support/Error.h"
 
 namespace lldb_private {
 
+class TerminalState;
+
 class Terminal {
 public:
+  enum class Parity {
+    No,
+    Even,
+    Odd,
+    Space,
+    Mark,
+  };
+
+  enum class ParityCheck {
+    // No parity checking
+    No,
+    // Replace erraneous bytes with NUL
+    ReplaceWithNUL,
+    // Ignore erraneous bytes
+    Ignore,
+    // Mark erraneous bytes by prepending them with \xFF\x00; real \xFF
+    // is escaped to \xFF\xFF
+    Mark,
+  };
+
   Terminal(int fd = -1) : m_fd(fd) {}
 
   ~Terminal() = default;
@@ -33,25 +53,54 @@ public:
 
   void Clear() { m_fd = -1; }
 
-  bool SetEcho(bool enabled);
+  llvm::Error SetEcho(bool enabled);
 
-  bool SetCanonical(bool enabled);
+  llvm::Error SetCanonical(bool enabled);
+
+  llvm::Error SetRaw();
+
+  llvm::Error SetBaudRate(unsigned int baud_rate);
+
+  llvm::Error SetStopBits(unsigned int stop_bits);
+
+  llvm::Error SetParity(Parity parity);
+
+  llvm::Error SetParityCheck(ParityCheck parity_check);
+
+  llvm::Error SetHardwareFlowControl(bool enabled);
 
 protected:
+  struct Data;
+
   int m_fd; // This may or may not be a terminal file descriptor
+
+  llvm::Expected<Data> GetData();
+  llvm::Error SetData(const Data &data);
+
+  friend class TerminalState;
 };
 
-/// \class State Terminal.h "lldb/Host/Terminal.h"
-/// A terminal state saving/restoring class.
+/// \class TerminalState Terminal.h "lldb/Host/Terminal.h"
+/// A RAII-friendly terminal state saving/restoring class.
 ///
 /// This class can be used to remember the terminal state for a file
 /// descriptor and later restore that state as it originally was.
 class TerminalState {
 public:
-  /// Default constructor
-  TerminalState();
+  /// Construct a new instance and optionally save terminal state.
+  ///
+  /// \param[in] term
+  ///     The Terminal instance holding the file descriptor to save the state
+  ///     of.  If the instance is not associated with a fd, no state will
+  ///     be saved.
+  ///
+  /// \param[in] save_process_group
+  ///     If \b true, save the process group settings, else do not
+  ///     save the process group settings for a TTY.
+  TerminalState(Terminal term = -1, bool save_process_group = false);
 
-  /// Destructor
+  /// Destroy the instance, restoring terminal state if saved.  If restoring
+  /// state is undesirable, the instance needs to be reset before destruction.
   ~TerminalState();
 
   /// Save the TTY state for \a fd.
@@ -60,8 +109,8 @@ public:
   /// "save_process_group" is true, attempt to save the process group info for
   /// the TTY.
   ///
-  /// \param[in] fd
-  ///     The file descriptor to save the state of.
+  /// \param[in] term
+  ///     The Terminal instance holding fd to save.
   ///
   /// \param[in] save_process_group
   ///     If \b true, save the process group settings, else do not
@@ -70,7 +119,7 @@ public:
   /// \return
   ///     Returns \b true if \a fd describes a TTY and if the state
   ///     was able to be saved, \b false otherwise.
-  bool Save(int fd, bool save_process_group);
+  bool Save(Terminal term, bool save_process_group);
 
   /// Restore the TTY state to the cached state.
   ///
@@ -115,66 +164,10 @@ protected:
   bool ProcessGroupIsValid() const;
 
   // Member variables
-  Terminal m_tty; ///< A terminal
-  int m_tflags = -1; ///< Cached tflags information.
-#if LLDB_ENABLE_TERMIOS
-  std::unique_ptr<struct termios>
-      m_termios_up; ///< Cached terminal state information.
-#endif
-  lldb::pid_t m_process_group = -1; ///< Cached process group information.
-};
-
-/// \class TerminalStateSwitcher Terminal.h "lldb/Host/Terminal.h"
-/// A TTY state switching class.
-///
-/// This class can be used to remember 2 TTY states for a given file
-/// descriptor and switch between the two states.
-class TerminalStateSwitcher {
-public:
-  /// Constructor
-  TerminalStateSwitcher();
-
-  /// Destructor
-  ~TerminalStateSwitcher();
-
-  /// Get the number of possible states to save.
-  ///
-  /// \return
-  ///     The number of states that this TTY switcher object contains.
-  uint32_t GetNumberOfStates() const;
-
-  /// Restore the TTY state for state at index \a idx.
-  ///
-  /// \return
-  ///     Returns \b true if the TTY state was successfully restored,
-  ///     \b false otherwise.
-  bool Restore(uint32_t idx) const;
-
-  /// Save the TTY state information for the state at index \a idx. The TTY
-  /// state is saved for the file descriptor \a fd and the process group
-  /// information will also be saved if requested by \a save_process_group.
-  ///
-  /// \param[in] idx
-  ///     The index into the state array where the state should be
-  ///     saved.
-  ///
-  /// \param[in] fd
-  ///     The file descriptor for which to save the settings.
-  ///
-  /// \param[in] save_process_group
-  ///     If \b true, save the process group information for the TTY.
-  ///
-  /// \return
-  ///     Returns \b true if the save was successful, \b false
-  ///     otherwise.
-  bool Save(uint32_t idx, int fd, bool save_process_group);
-
-protected:
-  // Member variables
-  mutable uint32_t m_currentState =
-      UINT32_MAX; ///< The currently active TTY state index.
-  TerminalState
-      m_ttystates[2]; ///< The array of TTY states that holds saved TTY info.
+  Terminal m_tty;                         ///< A terminal
+  int m_tflags = -1;                      ///< Cached tflags information.
+  std::unique_ptr<Terminal::Data> m_data; ///< Platform-specific implementation.
+  lldb::pid_t m_process_group = -1;       ///< Cached process group information.
 };
 
 } // namespace lldb_private

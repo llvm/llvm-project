@@ -91,6 +91,8 @@ public:
 
   bool SupportHardwareSingleStepping() const;
 
+  llvm::Expected<std::string> SaveCore(llvm::StringRef path_hint) override;
+
 protected:
   llvm::Expected<llvm::ArrayRef<uint8_t>>
   GetSoftwareBreakpointTrapOpcode(size_t size_hint) override;

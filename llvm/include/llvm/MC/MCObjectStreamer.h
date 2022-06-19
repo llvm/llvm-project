@@ -11,11 +11,17 @@
 
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallVector.h"
-#include "llvm/MC/MCAssembler.h"
+#include "llvm/MC/MCFixup.h"
+#include "llvm/MC/MCFragment.h"
 #include "llvm/MC/MCSection.h"
 #include "llvm/MC/MCStreamer.h"
 
 namespace llvm {
+class MCContext;
+class MCInst;
+class MCObjectWriter;
+class MCSymbol;
+struct MCDwarfFrameInfo;
 class MCAssembler;
 class MCCodeEmitter;
 class MCSubtargetInfo;
@@ -49,6 +55,16 @@ class MCObjectStreamer : public MCStreamer {
         : Sym(McSym), Fixup(McFixup), DF(F) {}
   };
   SmallVector<PendingMCFixup, 2> PendingFixups;
+
+  struct PendingAssignment {
+    MCSymbol *Symbol;
+    const MCExpr *Value;
+  };
+
+  /// A list of conditional assignments we may need to emit if the target
+  /// symbol is later emitted.
+  DenseMap<const MCSymbol *, SmallVector<PendingAssignment, 1>>
+      pendingAssignments;
 
   virtual void emitInstToData(const MCInst &Inst, const MCSubtargetInfo&) = 0;
   void emitCFIStartProcImpl(MCDwarfFrameInfo &Frame) override;
@@ -118,6 +134,8 @@ public:
   virtual void emitLabelAtPos(MCSymbol *Symbol, SMLoc Loc, MCFragment *F,
                               uint64_t Offset);
   void emitAssignment(MCSymbol *Symbol, const MCExpr *Value) override;
+  void emitConditionalAssignment(MCSymbol *Symbol,
+                                 const MCExpr *Value) override;
   void emitValueImpl(const MCExpr *Value, unsigned Size,
                      SMLoc Loc = SMLoc()) override;
   void emitULEB128Value(const MCExpr *Value) override;
@@ -137,7 +155,7 @@ public:
   void emitValueToAlignment(unsigned ByteAlignment, int64_t Value = 0,
                             unsigned ValueSize = 1,
                             unsigned MaxBytesToEmit = 0) override;
-  void emitCodeAlignment(unsigned ByteAlignment,
+  void emitCodeAlignment(unsigned ByteAlignment, const MCSubtargetInfo *STI,
                          unsigned MaxBytesToEmit = 0) override;
   void emitValueToOffset(const MCExpr *Offset, unsigned char Value,
                          SMLoc Loc) override;
@@ -181,8 +199,8 @@ public:
                 SMLoc Loc = SMLoc()) override;
   void emitFill(const MCExpr &NumValues, int64_t Size, int64_t Expr,
                 SMLoc Loc = SMLoc()) override;
-  void emitNops(int64_t NumBytes, int64_t ControlledNopLength,
-                SMLoc Loc) override;
+  void emitNops(int64_t NumBytes, int64_t ControlledNopLength, SMLoc Loc,
+                const MCSubtargetInfo &STI) override;
   void emitFileDirective(StringRef Filename) override;
   void emitFileDirective(StringRef Filename, StringRef CompilerVerion,
                          StringRef TimeStamp, StringRef Description) override;
@@ -208,6 +226,10 @@ public:
                                        const MCSymbol *Lo) override;
 
   bool mayHaveInstructions(MCSection &Sec) const override;
+
+  /// Emits pending conditional assignments that depend on \p Symbol
+  /// being emitted.
+  void emitPendingAssignments(MCSymbol *Symbol);
 };
 
 } // end namespace llvm

@@ -21,7 +21,7 @@ name:            compute
 body: |
   bb.0.body:
     $eax = IMUL32rri8 $edi, 11, implicit-def $eflags
-    RETQ $eax
+    RET64 $eax
 ...
 ---
 name:            foo
@@ -36,5 +36,5 @@ body: |
     $rdx = frame-setup frame-destroy POP64r implicit-def $rsp, implicit $rsp
     ; CHECK: $rdx = frame-setup frame-destroy POP64r
     $rdx = frame-destroy frame-setup POP64r implicit-def $rsp, implicit $rsp
-    RETQ $eax
+    RET64 $eax
 ...

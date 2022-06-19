@@ -373,7 +373,7 @@ CV_REGISTER(AMD64_K7, 765)
 
 CV_REGISTER(ARM_NOREG, 0)
 
-// General purpose 32-bit integer regisers
+// General purpose 32-bit integer registers
 
 CV_REGISTER(ARM_R0, 10)
 CV_REGISTER(ARM_R1, 11)

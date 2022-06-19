@@ -76,8 +76,8 @@ void mlir::getUsedValuesDefinedAbove(MutableArrayRef<Region> regions,
 /// Erase the unreachable blocks within the provided regions. Returns success
 /// if any blocks were erased, failure otherwise.
 // TODO: We could likely merge this with the DCE algorithm below.
-static LogicalResult eraseUnreachableBlocks(RewriterBase &rewriter,
-                                            MutableArrayRef<Region> regions) {
+LogicalResult mlir::eraseUnreachableBlocks(RewriterBase &rewriter,
+                                           MutableArrayRef<Region> regions) {
   // Set of blocks found to be reachable within a given region.
   llvm::df_iterator_default_set<Block *, 16> reachable;
   // If any blocks were found to be dead.
@@ -223,12 +223,14 @@ static void propagateTerminatorLiveness(Operation *op, LiveMap &liveMap) {
     return;
   }
 
-  // If we can't reason about the operands to a successor, conservatively mark
-  // all arguments as live.
+  // If we can't reason about the operand to a successor, conservatively mark
+  // it as live.
   for (unsigned i = 0, e = op->getNumSuccessors(); i != e; ++i) {
-    if (!branchInterface.getMutableSuccessorOperands(i))
-      for (BlockArgument arg : op->getSuccessor(i)->getArguments())
-        liveMap.setProvedLive(arg);
+    SuccessorOperands successorOperands =
+        branchInterface.getSuccessorOperands(i);
+    for (unsigned opI = 0, opE = successorOperands.getProducedOperandCount();
+         opI != opE; ++opI)
+      liveMap.setProvedLive(op->getSuccessor(i)->getArgument(opI));
   }
 }
 
@@ -291,18 +293,15 @@ static void eraseTerminatorSuccessorOperands(Operation *terminator,
     // since it will promote later operands of the terminator being erased
     // first, reducing the quadratic-ness.
     unsigned succ = succE - succI - 1;
-    Optional<MutableOperandRange> succOperands =
-        branchOp.getMutableSuccessorOperands(succ);
-    if (!succOperands)
-      continue;
+    SuccessorOperands succOperands = branchOp.getSuccessorOperands(succ);
     Block *successor = terminator->getSuccessor(succ);
 
-    for (unsigned argI = 0, argE = succOperands->size(); argI < argE; ++argI) {
+    for (unsigned argI = 0, argE = succOperands.size(); argI < argE; ++argI) {
       // Iterating args in reverse is needed for correctness, to avoid
       // shifting later args when earlier args are erased.
       unsigned arg = argE - argI - 1;
       if (!liveMap.wasProvenLive(successor->getArgument(arg)))
-        succOperands->erase(arg);
+        succOperands.erase(arg);
     }
   }
 }
@@ -364,8 +363,8 @@ static LogicalResult deleteDeadness(RewriterBase &rewriter,
 //
 // This function returns success if any operations or arguments were deleted,
 // failure otherwise.
-static LogicalResult runRegionDCE(RewriterBase &rewriter,
-                                  MutableArrayRef<Region> regions) {
+LogicalResult mlir::runRegionDCE(RewriterBase &rewriter,
+                                 MutableArrayRef<Region> regions) {
   LiveMap liveMap;
   do {
     liveMap.resetChanged();
@@ -417,7 +416,7 @@ struct BlockEquivalenceData {
   /// produced within the block before this operation.
   DenseMap<Operation *, unsigned> opOrderIndex;
 };
-} // end anonymous namespace
+} // namespace
 
 BlockEquivalenceData::BlockEquivalenceData(Block *block)
     : block(block), hash(0) {
@@ -428,7 +427,9 @@ BlockEquivalenceData::BlockEquivalenceData(Block *block)
       orderIt += numResults;
     }
     auto opHash = OperationEquivalence::computeHash(
-        &op, OperationEquivalence::Flags::IgnoreOperands);
+        &op, OperationEquivalence::ignoreHashValue,
+        OperationEquivalence::ignoreHashValue,
+        OperationEquivalence::IgnoreLocations);
     hash = llvm::hash_combine(hash, opHash);
   }
 }
@@ -475,7 +476,7 @@ private:
   /// replaced by arguments when the cluster gets merged.
   std::set<std::pair<int, int>> operandsToMerge;
 };
-} // end anonymous namespace
+} // namespace
 
 LogicalResult BlockMergeCluster::addToCluster(BlockEquivalenceData &blockData) {
   if (leaderData.hash != blockData.hash)
@@ -491,7 +492,9 @@ LogicalResult BlockMergeCluster::addToCluster(BlockEquivalenceData &blockData) {
   for (int opI = 0; lhsIt != lhsE && rhsIt != rhsE; ++lhsIt, ++rhsIt, ++opI) {
     // Check that the operations are equivalent.
     if (!OperationEquivalence::isEquivalentTo(
-            &*lhsIt, &*rhsIt, OperationEquivalence::Flags::IgnoreOperands))
+            &*lhsIt, &*rhsIt, OperationEquivalence::ignoreValueEquivalence,
+            OperationEquivalence::ignoreValueEquivalence,
+            OperationEquivalence::Flags::IgnoreLocations))
       return failure();
 
     // Compare the operands of the two operations. If the operand is within
@@ -514,6 +517,23 @@ LogicalResult BlockMergeCluster::addToCluster(BlockEquivalenceData &blockData) {
       // Let the operands differ if they are defined in a different block. These
       // will become new arguments if the blocks get merged.
       if (!lhsIsInBlock) {
+
+        // Check whether the operands aren't the result of an immediate
+        // predecessors terminator. In that case we are not able to use it as a
+        // successor operand when branching to the merged block as it does not
+        // dominate its producing operation.
+        auto isValidSuccessorArg = [](Block *block, Value operand) {
+          if (operand.getDefiningOp() !=
+              operand.getParentBlock()->getTerminator())
+            return true;
+          return !llvm::is_contained(block->getPredecessors(),
+                                     operand.getParentBlock());
+        };
+
+        if (!isValidSuccessorArg(leaderBlock, lhsOperand) ||
+            !isValidSuccessorArg(mergeBlock, rhsOperand))
+          return failure();
+
         mismatchedOperands.emplace_back(opI, operand);
         continue;
       }
@@ -549,8 +569,7 @@ LogicalResult BlockMergeCluster::addToCluster(BlockEquivalenceData &blockData) {
 /// their operands updated.
 static bool ableToUpdatePredOperands(Block *block) {
   for (auto it = block->pred_begin(), e = block->pred_end(); it != e; ++it) {
-    auto branch = dyn_cast<BranchOpInterface>((*it)->getTerminator());
-    if (!branch || !branch.getMutableSuccessorOperands(it.getSuccessorIndex()))
+    if (!isa<BranchOpInterface>((*it)->getTerminator()))
       return false;
   }
   return true;
@@ -585,7 +604,7 @@ LogicalResult BlockMergeCluster::merge(RewriterBase &rewriter) {
         1 + blocksToMerge.size(),
         SmallVector<Value, 8>(operandsToMerge.size()));
     unsigned curOpIndex = 0;
-    for (auto it : llvm::enumerate(operandsToMerge)) {
+    for (const auto &it : llvm::enumerate(operandsToMerge)) {
       unsigned nextOpOffset = it.value().first - curOpIndex;
       curOpIndex = it.value().first;
 
@@ -597,8 +616,11 @@ LogicalResult BlockMergeCluster::merge(RewriterBase &rewriter) {
         newArguments[i][it.index()] = operand.get();
 
         // Update the operand and insert an argument if this is the leader.
-        if (i == 0)
-          operand.set(leaderBlock->addArgument(operand.get().getType()));
+        if (i == 0) {
+          Value operandVal = operand.get();
+          operand.set(leaderBlock->addArgument(operandVal.getType(),
+                                               operandVal.getLoc()));
+        }
       }
     }
     // Update the predecessors for each of the blocks.
@@ -607,7 +629,7 @@ LogicalResult BlockMergeCluster::merge(RewriterBase &rewriter) {
            predIt != predE; ++predIt) {
         auto branch = cast<BranchOpInterface>((*predIt)->getTerminator());
         unsigned succIndex = predIt.getSuccessorIndex();
-        branch.getMutableSuccessorOperands(succIndex)->append(
+        branch.getSuccessorOperands(succIndex).append(
             newArguments[clusterIndex]);
       }
     };

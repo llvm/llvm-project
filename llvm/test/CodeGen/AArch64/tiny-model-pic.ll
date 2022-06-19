@@ -149,16 +149,16 @@ define dso_preemptable void @bar1() {
 ; CHECK-PIC-LABEL: bar1:
 ; CHECK-PIC:       // %bb.0: // %entry
 ; CHECK-PIC-NEXT:    adr x8, lsrc
-; CHECK-PIC-NEXT:    ldrb w8, [x8]
 ; CHECK-PIC-NEXT:    adr x9, ldst
+; CHECK-PIC-NEXT:    ldrb w8, [x8]
 ; CHECK-PIC-NEXT:    strb w8, [x9]
 ; CHECK-PIC-NEXT:    ret
 ;
 ; CHECK-PIC-GLOBISEL-LABEL: bar1:
 ; CHECK-PIC-GLOBISEL:       // %bb.0: // %entry
 ; CHECK-PIC-GLOBISEL-NEXT:    adr x8, lsrc
-; CHECK-PIC-GLOBISEL-NEXT:    ldrb w8, [x8]
 ; CHECK-PIC-GLOBISEL-NEXT:    adr x9, ldst
+; CHECK-PIC-GLOBISEL-NEXT:    ldrb w8, [x8]
 ; CHECK-PIC-GLOBISEL-NEXT:    strb w8, [x9]
 ; CHECK-PIC-GLOBISEL-NEXT:    ret
 entry:
@@ -223,8 +223,8 @@ define dso_preemptable void @bar3() {
 ; CHECK-PIC-LABEL: bar3:
 ; CHECK-PIC:       // %bb.0: // %entry
 ; CHECK-PIC-NEXT:    adr x8, lsrc
-; CHECK-PIC-NEXT:    ldrb w8, [x8]
 ; CHECK-PIC-NEXT:    ldr x9, lptr
+; CHECK-PIC-NEXT:    ldrb w8, [x8]
 ; CHECK-PIC-NEXT:    strb w8, [x9]
 ; CHECK-PIC-NEXT:    ret
 ;
@@ -267,16 +267,16 @@ define dso_preemptable void @baz1() {
 ; CHECK-PIC-LABEL: baz1:
 ; CHECK-PIC:       // %bb.0: // %entry
 ; CHECK-PIC-NEXT:    adr x8, lbsrc
-; CHECK-PIC-NEXT:    ldrb w8, [x8]
 ; CHECK-PIC-NEXT:    adr x9, lbdst
+; CHECK-PIC-NEXT:    ldrb w8, [x8]
 ; CHECK-PIC-NEXT:    strb w8, [x9]
 ; CHECK-PIC-NEXT:    ret
 ;
 ; CHECK-PIC-GLOBISEL-LABEL: baz1:
 ; CHECK-PIC-GLOBISEL:       // %bb.0: // %entry
 ; CHECK-PIC-GLOBISEL-NEXT:    adr x8, lbsrc
-; CHECK-PIC-GLOBISEL-NEXT:    ldrb w8, [x8]
 ; CHECK-PIC-GLOBISEL-NEXT:    adr x9, lbdst
+; CHECK-PIC-GLOBISEL-NEXT:    ldrb w8, [x8]
 ; CHECK-PIC-GLOBISEL-NEXT:    strb w8, [x9]
 ; CHECK-PIC-GLOBISEL-NEXT:    ret
 entry:
@@ -341,8 +341,8 @@ define dso_preemptable void @baz3() {
 ; CHECK-PIC-LABEL: baz3:
 ; CHECK-PIC:       // %bb.0: // %entry
 ; CHECK-PIC-NEXT:    adr x8, lbsrc
-; CHECK-PIC-NEXT:    ldrb w8, [x8]
 ; CHECK-PIC-NEXT:    ldr x9, lptr
+; CHECK-PIC-NEXT:    ldrb w8, [x8]
 ; CHECK-PIC-NEXT:    strb w8, [x9]
 ; CHECK-PIC-NEXT:    ret
 ;

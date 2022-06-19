@@ -18,7 +18,7 @@ namespace abseil {
 // Find potential incorrect uses of integer division of absl::Duration objects.
 //
 // For the user-facing documentation see: 
-// http://clang.llvm.org/extra/clang-tidy/checks/abseil-duration-division.html
+// http://clang.llvm.org/extra/clang-tidy/checks/abseil/duration-division.html
 
 class DurationDivisionCheck : public ClangTidyCheck {
 public:
@@ -26,8 +26,8 @@ public:
   bool isLanguageVersionSupported(const LangOptions &LangOpts) const override {
     return LangOpts.CPlusPlus;
   }
-  void registerMatchers(ast_matchers::MatchFinder *finder) override;
-  void check(const ast_matchers::MatchFinder::MatchResult &result) override;
+  void registerMatchers(ast_matchers::MatchFinder *Finder) override;
+  void check(const ast_matchers::MatchFinder::MatchResult &Result) override;
 };
 
 } // namespace abseil

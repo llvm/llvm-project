@@ -388,9 +388,7 @@ define <4 x half> @v4f16_func_void() #0 {
 ; FIXME: Mixing buffer and global
 ; FIXME: Should not scalarize
 ; GCN-LABEL: {{^}}v5i16_func_void:
-; GFX9: buffer_load_dwordx2 v[0:1]
-; GFX9-NEXT: s_nop 0
-; GFX9-NEXT: global_load_short_d16 v2
+; GFX9: buffer_load_dwordx4 v[0:3]
 ; GFX9-NEXT: s_waitcnt
 ; GFX9-NEXT: s_setpc_b64
 define <5 x i16> @v5i16_func_void() #0 {

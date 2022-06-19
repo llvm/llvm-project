@@ -9,11 +9,11 @@
 ; CHECK-NEXT:   .byte 0
 ; CHECK-NEXT:   .hword 0
 ; Num Functions
-; CHECK-NEXT:   .word 14
+; CHECK-NEXT:   .word 15
 ; Num LargeConstants
-; CHECK-NEXT:   .word 3
+; CHECK-NEXT:   .word 4
 ; Num Callsites
-; CHECK-NEXT:   .word 18
+; CHECK-NEXT:   .word 19
 
 ; Functions and stack size
 ; CHECK-NEXT:   .xword constantargs
@@ -58,11 +58,15 @@
 ; CHECK-NEXT:   .xword needsStackRealignment
 ; CHECK-NEXT:   .xword -1
 ; CHECK-NEXT:   .xword 1
+; CHECK-NEXT:   .xword floats
+; CHECK-NEXT:   .xword 32
+; CHECK-NEXT:   .xword 1
 
 ; Large Constants
 ; CHECK-NEXT:   .xword   2147483648
 ; CHECK-NEXT:   .xword   4294967295
 ; CHECK-NEXT:   .xword   4294967296
+; CHECK-NEXT:   .xword   4294967297
 
 ; Callsites
 ; Constant arguments
@@ -70,7 +74,7 @@
 ; CHECK-NEXT:   .xword   1
 ; CHECK-NEXT:   .word   .L{{.*}}-constantargs
 ; CHECK-NEXT:   .hword  0
-; CHECK-NEXT:   .hword  12
+; CHECK-NEXT:   .hword  14
 ; SmallConstant
 ; CHECK-NEXT:   .byte   4
 ; CHECK-NEXT:   .byte   0
@@ -155,11 +159,25 @@
 ; CHECK-NEXT:   .hword  0
 ; CHECK-NEXT:   .hword  0
 ; CHECK-NEXT:   .word   -1
+; SmallConstant
+; CHECK-NEXT:   .byte   4
+; CHECK-NEXT:   .byte   0
+; CHECK-NEXT:   .hword  8
+; CHECK-NEXT:   .hword  0
+; CHECK-NEXT:   .hword  0
+; CHECK-NEXT:   .word   66
+; LargeConstant at index 2
+; CHECK-NEXT:   .byte   5
+; CHECK-NEXT:   .byte   0
+; CHECK-NEXT:   .hword  8
+; CHECK-NEXT:   .hword  0
+; CHECK-NEXT:   .hword  0
+; CHECK-NEXT:   .word   3
 
 define void @constantargs() {
 entry:
   %0 = inttoptr i64 12345 to i8*
-  tail call void (i64, i32, i8*, i32, ...) @llvm.experimental.patchpoint.void(i64 1, i32 16, i8* %0, i32 0, i16 65535, i16 -1, i32 65536, i32 2000000000, i32 2147483647, i32 -1, i32 4294967295, i32 4294967296, i64 2147483648, i64 4294967295, i64 4294967296, i64 -1)
+  tail call void (i64, i32, i8*, i32, ...) @llvm.experimental.patchpoint.void(i64 1, i32 16, i8* %0, i32 0, i16 65535, i16 -1, i32 65536, i32 2000000000, i32 2147483647, i32 -1, i32 4294967295, i32 4294967296, i64 2147483648, i64 4294967295, i64 4294967296, i64 -1, i128 66, i128 4294967297)
   ret void
 }
 
@@ -486,6 +504,60 @@ define void @needsStackRealignment() {
   ret void
 }
 declare void @escape_values(...)
+
+; CHECK-LABEL:  .word .L{{.*}}-floats
+; CHECK-NEXT:   .hword 0
+; Num Locations
+; CHECK-NEXT:   .hword 6
+; Loc 0: constant float stored to FP register
+; CHECK-NEXT:   .byte   1
+; CHECK-NEXT:   .byte   0
+; CHECK-NEXT:   .hword  4
+; CHECK-NEXT:   .hword  {{.*}}
+; CHECK-NEXT:   .hword  0
+; CHECK-NEXT:   .word   0
+; Loc 0: constant double stored to FP register
+; CHECK-NEXT:   .byte   1
+; CHECK-NEXT:   .byte   0
+; CHECK-NEXT:   .hword  8
+; CHECK-NEXT:   .hword  {{.*}}
+; CHECK-NEXT:   .hword  0
+; CHECK-NEXT:   .word   0
+; Loc 1: float value in FP register
+; CHECK-NEXT:   .byte   1
+; CHECK-NEXT:   .byte   0
+; CHECK-NEXT:   .hword  4
+; CHECK-NEXT:   .hword  {{.*}}
+; CHECK-NEXT:   .hword  0
+; CHECK-NEXT:   .word   0
+; Loc 2: double value in FP register
+; CHECK-NEXT:   .byte   1
+; CHECK-NEXT:   .byte   0
+; CHECK-NEXT:   .hword  8
+; CHECK-NEXT:   .hword  {{.*}}
+; CHECK-NEXT:   .hword  0
+; CHECK-NEXT:   .word   0
+; Loc 3: float on stack
+; CHECK-NEXT:   .byte   2
+; CHECK-NEXT:   .byte   0
+; CHECK-NEXT:   .hword  8
+; CHECK-NEXT:   .hword  {{.*}}
+; CHECK-NEXT:   .hword  0
+; CHECK-NEXT:   .word   -{{.*}}
+; Loc 4: double on stack
+; CHECK-NEXT:   .byte   2
+; CHECK-NEXT:   .byte   0
+; CHECK-NEXT:   .hword  8
+; CHECK-NEXT:   .hword  {{.*}}
+; CHECK-NEXT:   .hword  0
+; CHECK-NEXT:   .word   -{{.*}}
+define void @floats(float %f, double %g) {
+  %ff = alloca float
+  %gg = alloca double
+  call void (i64, i32, ...) @llvm.experimental.stackmap(i64 888, i32 0, float 1.25,
+    double 1.5, float %f, double %g, float* %ff, double* %gg)
+  ret void
+}
 
 declare void @llvm.experimental.stackmap(i64, i32, ...)
 declare void @llvm.experimental.patchpoint.void(i64, i32, i8*, i32, ...)

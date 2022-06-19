@@ -114,7 +114,10 @@ MCAsmInfo::getExprForFDESymbol(const MCSymbol *Sym,
 }
 
 bool MCAsmInfo::isAcceptableChar(char C) const {
-  return isAlnum(C) || C == '_' || C == '$' || C == '.' || C == '@';
+  if (C == '@')
+    return doesAllowAtInName();
+
+  return isAlnum(C) || C == '_' || C == '$' || C == '.';
 }
 
 bool MCAsmInfo::isValidUnquotedName(StringRef Name) const {

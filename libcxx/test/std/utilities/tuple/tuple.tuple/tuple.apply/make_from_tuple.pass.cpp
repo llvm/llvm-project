@@ -21,10 +21,6 @@
 #include "test_macros.h"
 #include "type_id.h"
 
-// std::array is explicitly allowed to be initialized with A a = { init-list };.
-// Disable the missing braces warning for this reason.
-#include "disable_missing_braces_warning.h"
-
 template <class Tuple>
 struct ConstexprConstructibleFromTuple {
   template <class ...Args>

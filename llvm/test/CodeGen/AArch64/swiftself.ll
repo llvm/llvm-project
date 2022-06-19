@@ -51,10 +51,10 @@ define void @swiftself_passthrough(i8* swiftself %addr0) {
 ; CHECK-LABEL: swiftself_tail:
 ; OPTAARCH64: b {{_?}}swiftself_param
 ; OPTAARCH64-NOT: ret
-; OPTARM64_32: bl {{_?}}swiftself_param
+; OPTARM64_32: b {{_?}}swiftself_param
 define i8* @swiftself_tail(i8* swiftself %addr0) {
   call void asm sideeffect "", "~{x20}"()
-  %res = tail call i8* @swiftself_param(i8* swiftself %addr0)
+  %res = musttail call i8* @swiftself_param(i8* swiftself %addr0)
   ret i8* %res
 }
 
@@ -77,14 +77,14 @@ declare swiftcc i8* @thisreturn_attribute(i8* returned swiftself)
 ; OPTAARCH64-DAG: ldr  x20, [x20]
 ; OPTAARCH64-DAG: mov [[CSREG:x[1-9].*]], x8
 ; OPTAARCH64: bl {{_?}}thisreturn_attribute
-; OPTAARCH64: str x0, {{\[}}[[CSREG]]
+; OPTAARCH64: str x0, [[[CSREG]]
 ; OPTAARCH64: ret
 
 ; OPTARM64_32-LABEL: swiftself_nothisreturn:
 ; OPTARM64_32-DAG: ldr  w20, [x20]
 ; OPTARM64_32-DAG: mov [[CSREG:x[1-9].*]], x8
 ; OPTARM64_32: bl {{_?}}thisreturn_attribute
-; OPTARM64_32: str w0, {{\[}}[[CSREG]]
+; OPTARM64_32: str w0, [[[CSREG]]
 ; OPTARM64_32: ret
 define hidden swiftcc void @swiftself_nothisreturn(i8** noalias nocapture sret(i8*), i8** noalias nocapture readonly swiftself) {
 entry:

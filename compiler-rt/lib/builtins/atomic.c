@@ -92,6 +92,8 @@ __inline static void lock(Lock *l) { OSSpinLockLock(l); }
 static Lock locks[SPINLOCK_COUNT]; // initialized to OS_SPINLOCK_INIT which is 0
 
 #else
+_Static_assert(__atomic_always_lock_free(sizeof(uintptr_t), 0),
+               "Implementation assumes lock-free pointer-size cmpxchg");
 typedef _Atomic(uintptr_t) Lock;
 /// Unlock a lock.  This is a release operation.
 __inline static void unlock(Lock *l) {
@@ -336,6 +338,18 @@ OPTIMISED_CASES
     return tmp;                                                                \
   }
 
+#define ATOMIC_RMW_NAND(n, lockfree, type)                                     \
+  type __atomic_fetch_nand_##n(type *ptr, type val, int model) {               \
+    if (lockfree(ptr))                                                         \
+      return __c11_atomic_fetch_nand((_Atomic(type) *)ptr, val, model);        \
+    Lock *l = lock_for_pointer(ptr);                                           \
+    lock(l);                                                                   \
+    type tmp = *ptr;                                                           \
+    *ptr = ~(tmp & val);                                                       \
+    unlock(l);                                                                 \
+    return tmp;                                                                \
+  }
+
 #define OPTIMISED_CASE(n, lockfree, type) ATOMIC_RMW(n, lockfree, type, add, +)
 OPTIMISED_CASES
 #undef OPTIMISED_CASE
@@ -351,3 +365,9 @@ OPTIMISED_CASES
 #define OPTIMISED_CASE(n, lockfree, type) ATOMIC_RMW(n, lockfree, type, xor, ^)
 OPTIMISED_CASES
 #undef OPTIMISED_CASE
+// Allow build with clang without __c11_atomic_fetch_nand builtin (pre-14)
+#if __has_builtin(__c11_atomic_fetch_nand)
+#define OPTIMISED_CASE(n, lockfree, type) ATOMIC_RMW_NAND(n, lockfree, type)
+OPTIMISED_CASES
+#undef OPTIMISED_CASE
+#endif

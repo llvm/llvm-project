@@ -203,8 +203,8 @@ define <4 x i1> @vec_4xi32_nonsplat_eq(<4 x i32> %x, <4 x i32> %y) nounwind {
 ; CHECK-LABEL: vec_4xi32_nonsplat_eq:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    adrp x8, .LCPI13_0
-; CHECK-NEXT:    ldr q2, [x8, :lo12:.LCPI13_0]
 ; CHECK-NEXT:    neg v1.4s, v1.4s
+; CHECK-NEXT:    ldr q2, [x8, :lo12:.LCPI13_0]
 ; CHECK-NEXT:    ushl v1.4s, v2.4s, v1.4s
 ; CHECK-NEXT:    and v0.16b, v1.16b, v0.16b
 ; CHECK-NEXT:    cmeq v0.4s, v0.4s, #0
@@ -233,8 +233,8 @@ define <4 x i1> @vec_4xi32_nonsplat_undef0_eq(<4 x i32> %x, <4 x i32> %y) nounwi
 define <4 x i1> @vec_4xi32_nonsplat_undef1_eq(<4 x i32> %x, <4 x i32> %y) nounwind {
 ; CHECK-LABEL: vec_4xi32_nonsplat_undef1_eq:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    neg v1.4s, v1.4s
 ; CHECK-NEXT:    movi v2.4s, #1
+; CHECK-NEXT:    neg v1.4s, v1.4s
 ; CHECK-NEXT:    ushl v1.4s, v2.4s, v1.4s
 ; CHECK-NEXT:    and v0.16b, v1.16b, v0.16b
 ; CHECK-NEXT:    cmeq v0.4s, v0.4s, #0
@@ -248,8 +248,8 @@ define <4 x i1> @vec_4xi32_nonsplat_undef1_eq(<4 x i32> %x, <4 x i32> %y) nounwi
 define <4 x i1> @vec_4xi32_nonsplat_undef2_eq(<4 x i32> %x, <4 x i32> %y) nounwind {
 ; CHECK-LABEL: vec_4xi32_nonsplat_undef2_eq:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    neg v1.4s, v1.4s
 ; CHECK-NEXT:    movi v2.4s, #1
+; CHECK-NEXT:    neg v1.4s, v1.4s
 ; CHECK-NEXT:    ushl v1.4s, v2.4s, v1.4s
 ; CHECK-NEXT:    and v0.16b, v1.16b, v0.16b
 ; CHECK-NEXT:    cmeq v0.4s, v0.4s, #0
@@ -301,7 +301,7 @@ define i1 @scalar_i32_x_is_const2_eq(i32 %y) nounwind {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov w8, #1
 ; CHECK-NEXT:    lsr w8, w8, w0
-; CHECK-NEXT:    cmp w8, #0 // =0
+; CHECK-NEXT:    cmp w8, #0
 ; CHECK-NEXT:    cset w0, eq
 ; CHECK-NEXT:    ret
   %t0 = lshr i32 1, %y
@@ -328,7 +328,7 @@ define i1 @scalar_i8_signbit_eq_with_nonzero(i8 %x, i8 %y) nounwind {
 ; CHECK-NEXT:    // kill: def $w1 killed $w1 def $x1
 ; CHECK-NEXT:    lsr w8, w8, w1
 ; CHECK-NEXT:    and w8, w8, w0
-; CHECK-NEXT:    cmp w8, #1 // =1
+; CHECK-NEXT:    cmp w8, #1
 ; CHECK-NEXT:    cset w0, eq
 ; CHECK-NEXT:    ret
   %t0 = lshr i8 128, %y

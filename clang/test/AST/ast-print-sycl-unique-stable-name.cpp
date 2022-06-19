@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -ast-print -fsycl-is-device %s -o - -triple spir64-sycldevice | FileCheck %s
+// RUN: %clang_cc1 -ast-print -fsycl-is-device %s -o - | FileCheck %s
 
 template <typename T>
 void WrappedInTemplate(T t) {

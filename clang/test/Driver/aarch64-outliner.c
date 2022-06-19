@@ -4,5 +4,5 @@
 // RUN: %clang -target aarch64 -moutline -mno-outline -S %s -### 2>&1 | FileCheck %s -check-prefix=OFF
 // OFF: "-mllvm" "-enable-machine-outliner=never"
 // RUN: %clang -target x86_64 -moutline -S %s -### 2>&1 | FileCheck %s -check-prefix=WARN
-// WARN: warning: The 'x86_64' architecture does not support -moutline; flag ignored [-Woption-ignored]
+// WARN: warning: 'x86_64' does not support '-moutline'; flag ignored [-Woption-ignored]
 // WARN-NOT: "-mllvm" "-enable-machine-outliner"

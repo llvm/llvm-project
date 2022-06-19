@@ -16,9 +16,10 @@
 #ifndef LLVM_LIB_TARGET_WEBASSEMBLY_ASMPARSER_TYPECHECK_H
 #define LLVM_LIB_TARGET_WEBASSEMBLY_ASMPARSER_TYPECHECK_H
 
-#include "llvm/MC/MCParser/MCAsmParser.h"
-#include "llvm/MC/MCInstrInfo.h"
 #include "llvm/BinaryFormat/Wasm.h"
+#include "llvm/MC/MCInstrInfo.h"
+#include "llvm/MC/MCParser/MCAsmParser.h"
+#include "llvm/MC/MCParser/MCTargetAsmParser.h"
 #include "llvm/MC/MCSymbol.h"
 
 namespace llvm {
@@ -32,24 +33,20 @@ class WebAssemblyAsmTypeCheck final {
   SmallVector<wasm::ValType, 4> ReturnTypes;
   wasm::WasmSignature LastSig;
   bool TypeErrorThisFunction = false;
+  bool Unreachable = false;
   bool is64;
-
-  void Clear() {
-    Stack.clear();
-    LocalTypes.clear();
-    ReturnTypes.clear();
-    TypeErrorThisFunction = false;
-  }
 
   void dumpTypeStack(Twine Msg);
   bool typeError(SMLoc ErrorLoc, const Twine &Msg);
   bool popType(SMLoc ErrorLoc, Optional<wasm::ValType> EVT);
+  bool popRefType(SMLoc ErrorLoc);
   bool getLocal(SMLoc ErrorLoc, const MCInst &Inst, wasm::ValType &Type);
-  bool checkEnd(SMLoc ErrorLoc);
+  bool checkEnd(SMLoc ErrorLoc, bool PopVals = false);
   bool checkSig(SMLoc ErrorLoc, const wasm::WasmSignature &Sig);
   bool getSymRef(SMLoc ErrorLoc, const MCInst &Inst,
                  const MCSymbolRefExpr *&SymRef);
   bool getGlobal(SMLoc ErrorLoc, const MCInst &Inst, wasm::ValType &Type);
+  bool getTable(SMLoc ErrorLoc, const MCInst &Inst, wasm::ValType &Type);
 
 public:
   WebAssemblyAsmTypeCheck(MCAsmParser &Parser, const MCInstrInfo &MII, bool is64);
@@ -57,8 +54,16 @@ public:
   void funcDecl(const wasm::WasmSignature &Sig);
   void localDecl(const SmallVector<wasm::ValType, 4> &Locals);
   void setLastSig(const wasm::WasmSignature &Sig) { LastSig = Sig; }
-  void endOfFunction(SMLoc ErrorLoc);
-  bool typeCheck(SMLoc ErrorLoc, const MCInst &Inst);
+  bool endOfFunction(SMLoc ErrorLoc);
+  bool typeCheck(SMLoc ErrorLoc, const MCInst &Inst, OperandVector &Operands);
+
+  void Clear() {
+    Stack.clear();
+    LocalTypes.clear();
+    ReturnTypes.clear();
+    TypeErrorThisFunction = false;
+    Unreachable = false;
+  }
 };
 
 } // end namespace llvm

@@ -360,22 +360,17 @@ findPotentialBlockers(MachineInstr *LoadInst) {
   if (BlockCount < InspectionLimit) {
     MachineBasicBlock *MBB = LoadInst->getParent();
     int LimitLeft = InspectionLimit - BlockCount;
-    for (MachineBasicBlock::pred_iterator PB = MBB->pred_begin(),
-                                          PE = MBB->pred_end();
-         PB != PE; ++PB) {
-      MachineBasicBlock *PMBB = *PB;
+    for (MachineBasicBlock *PMBB : MBB->predecessors()) {
       int PredCount = 0;
-      for (MachineBasicBlock::reverse_iterator PBInst = PMBB->rbegin(),
-                                               PME = PMBB->rend();
-           PBInst != PME; ++PBInst) {
-        if (PBInst->isMetaInstruction())
+      for (MachineInstr &PBInst : llvm::reverse(*PMBB)) {
+        if (PBInst.isMetaInstruction())
           continue;
         PredCount++;
         if (PredCount >= LimitLeft)
           break;
-        if (PBInst->getDesc().isCall())
+        if (PBInst.getDesc().isCall())
           break;
-        PotentialBlockers.push_back(&*PBInst);
+        PotentialBlockers.push_back(&PBInst);
       }
     }
   }
@@ -542,9 +537,8 @@ void X86AvoidSFBPass::findPotentiallylBlockedCopies(MachineFunction &MF) {
       int DefVR = MI.getOperand(0).getReg();
       if (!MRI->hasOneNonDBGUse(DefVR))
         continue;
-      for (auto UI = MRI->use_nodbg_begin(DefVR), UE = MRI->use_nodbg_end();
-           UI != UE;) {
-        MachineOperand &StoreMO = *UI++;
+      for (MachineOperand &StoreMO :
+           llvm::make_early_inc_range(MRI->use_nodbg_operands(DefVR))) {
         MachineInstr &StoreMI = *StoreMO.getParent();
         // Skip cases where the memcpy may overlap.
         if (StoreMI.getParent() == MI.getParent() &&

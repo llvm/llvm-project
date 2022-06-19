@@ -22,8 +22,8 @@ add_llvm_target(AVRCodeGen
   AVRISelDAGToDAG.cpp
   AVRISelLowering.cpp
   AVRMCInstLower.cpp
-  AVRRelaxMemOperations.cpp
   AVRRegisterInfo.cpp
+  AVRShiftExpand.cpp
   AVRSubtarget.cpp
   AVRTargetMachine.cpp
   AVRTargetObjectFile.cpp

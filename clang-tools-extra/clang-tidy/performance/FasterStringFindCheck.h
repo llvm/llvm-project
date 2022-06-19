@@ -23,7 +23,7 @@ namespace performance {
 /// The character literal overload is more efficient.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/performance-faster-string-find.html
+/// http://clang.llvm.org/extra/clang-tidy/checks/performance/faster-string-find.html
 class FasterStringFindCheck : public ClangTidyCheck {
 public:
   FasterStringFindCheck(StringRef Name, ClangTidyContext *Context);
@@ -35,7 +35,7 @@ public:
   void storeOptions(ClangTidyOptions::OptionMap &Opts) override;
 
 private:
-  const std::vector<std::string> StringLikeClasses;
+  const std::vector<StringRef> StringLikeClasses;
 };
 
 } // namespace performance

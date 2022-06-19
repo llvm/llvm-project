@@ -50,7 +50,7 @@ C<int> c;
 
 namespace qualified_friend {
   void f(int); // expected-note 2{{type mismatch at 1st parameter}}
-  template<typename T> void f(T*); // expected-note 2{{could not match 'type-parameter-0-0 *' against 'double'}}
+  template<typename T> void f(T*); // expected-note 2{{could not match 'T *' against 'double'}}
   template<typename T> void nondep();
 
   template<typename> struct X1 {
@@ -66,7 +66,7 @@ namespace qualified_friend {
 
   struct Y {
     void f(int); // expected-note 2{{type mismatch at 1st parameter}}
-    template<typename T> void f(T*); // expected-note 2{{could not match 'type-parameter-0-0 *' against 'double'}}
+    template<typename T> void f(T*); // expected-note 2{{could not match 'T *' against 'double'}}
     template<typename T> void nondep();
   };
 
@@ -146,5 +146,5 @@ namespace PR42513_comment3 {
   template<typename X> struct T { friend auto f(X*) { return nullptr; } };
   struct X1 { friend auto f(X1*); };
   template struct T<X1>;
-  int n = f((X1*)nullptr); // expected-error {{cannot initialize a variable of type 'int' with an rvalue of type 'nullptr_t'}}
+  int n = f((X1*)nullptr); // expected-error {{cannot initialize a variable of type 'int' with an rvalue of type 'std::nullptr_t'}}
 }

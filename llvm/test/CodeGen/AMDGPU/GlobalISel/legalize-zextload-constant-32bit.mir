@@ -11,11 +11,11 @@ body: |
 
     ; CI-LABEL: name: test_zextload_constant32bit_s64_s32_align4
     ; CI: [[COPY:%[0-9]+]]:_(p6) = COPY $sgpr0
-    ; CI: [[C:%[0-9]+]]:_(p6) = G_CONSTANT i32 0
-    ; CI: [[MV:%[0-9]+]]:_(p4) = G_MERGE_VALUES [[COPY]](p6), [[C]](p6)
-    ; CI: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[MV]](p4) :: (load (s32), addrspace 6)
-    ; CI: [[ZEXT:%[0-9]+]]:_(s64) = G_ZEXT [[LOAD]](s32)
-    ; CI: $vgpr0_vgpr1 = COPY [[ZEXT]](s64)
+    ; CI-NEXT: [[C:%[0-9]+]]:_(p6) = G_CONSTANT i32 0
+    ; CI-NEXT: [[MV:%[0-9]+]]:_(p4) = G_MERGE_VALUES [[COPY]](p6), [[C]](p6)
+    ; CI-NEXT: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[MV]](p4) :: (load (s32), addrspace 6)
+    ; CI-NEXT: [[ZEXT:%[0-9]+]]:_(s64) = G_ZEXT [[LOAD]](s32)
+    ; CI-NEXT: $vgpr0_vgpr1 = COPY [[ZEXT]](s64)
     %0:_(p6) = COPY $sgpr0
     %1:_(s64) = G_ZEXTLOAD %0 :: (load (s32), align 4, addrspace 6)
     $vgpr0_vgpr1 = COPY %1
@@ -29,11 +29,11 @@ body: |
 
     ; CI-LABEL: name: test_zextload_constant32bit_s64_s32_align2
     ; CI: [[COPY:%[0-9]+]]:_(p6) = COPY $sgpr0
-    ; CI: [[C:%[0-9]+]]:_(p6) = G_CONSTANT i32 0
-    ; CI: [[MV:%[0-9]+]]:_(p4) = G_MERGE_VALUES [[COPY]](p6), [[C]](p6)
-    ; CI: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[MV]](p4) :: (load (s32), align 2, addrspace 6)
-    ; CI: [[ZEXT:%[0-9]+]]:_(s64) = G_ZEXT [[LOAD]](s32)
-    ; CI: $vgpr0_vgpr1 = COPY [[ZEXT]](s64)
+    ; CI-NEXT: [[C:%[0-9]+]]:_(p6) = G_CONSTANT i32 0
+    ; CI-NEXT: [[MV:%[0-9]+]]:_(p4) = G_MERGE_VALUES [[COPY]](p6), [[C]](p6)
+    ; CI-NEXT: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[MV]](p4) :: (load (s32), align 2, addrspace 6)
+    ; CI-NEXT: [[ZEXT:%[0-9]+]]:_(s64) = G_ZEXT [[LOAD]](s32)
+    ; CI-NEXT: $vgpr0_vgpr1 = COPY [[ZEXT]](s64)
     %0:_(p6) = COPY $sgpr0
     %1:_(s64) = G_ZEXTLOAD %0 :: (load (s32), align 2, addrspace 6)
     $vgpr0_vgpr1 = COPY %1
@@ -47,11 +47,11 @@ body: |
 
     ; CI-LABEL: name: test_zextload_constant32bit_s64_s32_align1
     ; CI: [[COPY:%[0-9]+]]:_(p6) = COPY $sgpr0
-    ; CI: [[C:%[0-9]+]]:_(p6) = G_CONSTANT i32 0
-    ; CI: [[MV:%[0-9]+]]:_(p4) = G_MERGE_VALUES [[COPY]](p6), [[C]](p6)
-    ; CI: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[MV]](p4) :: (load (s32), align 1, addrspace 6)
-    ; CI: [[ZEXT:%[0-9]+]]:_(s64) = G_ZEXT [[LOAD]](s32)
-    ; CI: $vgpr0_vgpr1 = COPY [[ZEXT]](s64)
+    ; CI-NEXT: [[C:%[0-9]+]]:_(p6) = G_CONSTANT i32 0
+    ; CI-NEXT: [[MV:%[0-9]+]]:_(p4) = G_MERGE_VALUES [[COPY]](p6), [[C]](p6)
+    ; CI-NEXT: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[MV]](p4) :: (load (s32), align 1, addrspace 6)
+    ; CI-NEXT: [[ZEXT:%[0-9]+]]:_(s64) = G_ZEXT [[LOAD]](s32)
+    ; CI-NEXT: $vgpr0_vgpr1 = COPY [[ZEXT]](s64)
     %0:_(p6) = COPY $sgpr0
     %1:_(s64) = G_ZEXTLOAD %0 :: (load (s32), align 1, addrspace 6)
     $vgpr0_vgpr1 = COPY %1
@@ -65,10 +65,10 @@ body: |
 
     ; CI-LABEL: name: test_zextload_constant32bit_s32_s8_align1
     ; CI: [[COPY:%[0-9]+]]:_(p6) = COPY $sgpr0
-    ; CI: [[C:%[0-9]+]]:_(p6) = G_CONSTANT i32 0
-    ; CI: [[MV:%[0-9]+]]:_(p4) = G_MERGE_VALUES [[COPY]](p6), [[C]](p6)
-    ; CI: [[ZEXTLOAD:%[0-9]+]]:_(s32) = G_ZEXTLOAD [[MV]](p4) :: (load (s8), addrspace 6)
-    ; CI: $vgpr0 = COPY [[ZEXTLOAD]](s32)
+    ; CI-NEXT: [[C:%[0-9]+]]:_(p6) = G_CONSTANT i32 0
+    ; CI-NEXT: [[MV:%[0-9]+]]:_(p4) = G_MERGE_VALUES [[COPY]](p6), [[C]](p6)
+    ; CI-NEXT: [[ZEXTLOAD:%[0-9]+]]:_(s32) = G_ZEXTLOAD [[MV]](p4) :: (load (s8), addrspace 6)
+    ; CI-NEXT: $vgpr0 = COPY [[ZEXTLOAD]](s32)
     %0:_(p6) = COPY $sgpr0
     %1:_(s32) = G_ZEXTLOAD %0 :: (load (s8), align 1, addrspace 6)
     $vgpr0 = COPY %1
@@ -82,10 +82,10 @@ body: |
 
     ; CI-LABEL: name: test_zextload_constant32bit_s32_s16_align2
     ; CI: [[COPY:%[0-9]+]]:_(p6) = COPY $sgpr0
-    ; CI: [[C:%[0-9]+]]:_(p6) = G_CONSTANT i32 0
-    ; CI: [[MV:%[0-9]+]]:_(p4) = G_MERGE_VALUES [[COPY]](p6), [[C]](p6)
-    ; CI: [[ZEXTLOAD:%[0-9]+]]:_(s32) = G_ZEXTLOAD [[MV]](p4) :: (load (s16), addrspace 6)
-    ; CI: $vgpr0 = COPY [[ZEXTLOAD]](s32)
+    ; CI-NEXT: [[C:%[0-9]+]]:_(p6) = G_CONSTANT i32 0
+    ; CI-NEXT: [[MV:%[0-9]+]]:_(p4) = G_MERGE_VALUES [[COPY]](p6), [[C]](p6)
+    ; CI-NEXT: [[ZEXTLOAD:%[0-9]+]]:_(s32) = G_ZEXTLOAD [[MV]](p4) :: (load (s16), addrspace 6)
+    ; CI-NEXT: $vgpr0 = COPY [[ZEXTLOAD]](s32)
     %0:_(p6) = COPY $sgpr0
     %1:_(s32) = G_ZEXTLOAD %0 :: (load (s16), align 2, addrspace 6)
     $vgpr0 = COPY %1
@@ -99,10 +99,10 @@ body: |
 
     ; CI-LABEL: name: test_zextload_constant32bit_s32_s16_align1
     ; CI: [[COPY:%[0-9]+]]:_(p6) = COPY $sgpr0
-    ; CI: [[C:%[0-9]+]]:_(p6) = G_CONSTANT i32 0
-    ; CI: [[MV:%[0-9]+]]:_(p4) = G_MERGE_VALUES [[COPY]](p6), [[C]](p6)
-    ; CI: [[ZEXTLOAD:%[0-9]+]]:_(s32) = G_ZEXTLOAD [[MV]](p4) :: (load (s16), align 1, addrspace 6)
-    ; CI: $vgpr0 = COPY [[ZEXTLOAD]](s32)
+    ; CI-NEXT: [[C:%[0-9]+]]:_(p6) = G_CONSTANT i32 0
+    ; CI-NEXT: [[MV:%[0-9]+]]:_(p4) = G_MERGE_VALUES [[COPY]](p6), [[C]](p6)
+    ; CI-NEXT: [[ZEXTLOAD:%[0-9]+]]:_(s32) = G_ZEXTLOAD [[MV]](p4) :: (load (s16), align 1, addrspace 6)
+    ; CI-NEXT: $vgpr0 = COPY [[ZEXTLOAD]](s32)
     %0:_(p6) = COPY $sgpr0
     %1:_(s32) = G_ZEXTLOAD %0 :: (load (s16), align 1, addrspace 6)
     $vgpr0 = COPY %1

@@ -35,6 +35,10 @@ def DLTI_Dialect : Dialect {
     constexpr const static ::llvm::StringLiteral
     kDataLayoutEndiannessLittle = "little";
   }];
+
+  let useDefaultAttributePrinterParser = 1;
+
+  let emitAccessorPrefix = kEmitAccessorPrefix_Both;
 }
 
 def DLTI_DataLayoutEntryAttr : DialectAttr<

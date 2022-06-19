@@ -1,4 +1,3 @@
-; RUN: opt < %s -sample-profile -sample-profile-file=%S/Inputs/branch.prof | opt -analyze -branch-prob -enable-new-pm=0 | FileCheck %s
 ; RUN: opt < %s -passes=sample-profile -sample-profile-file=%S/Inputs/branch.prof | opt -passes='print<branch-prob>' -disable-output 2>&1 | FileCheck %s
 ; RUN: opt < %s -passes=sample-profile -sample-profile-file=%S/Inputs/branch.prof -overwrite-existing-weights=1 | opt -passes='print<branch-prob>' -disable-output 2>&1 | FileCheck %s  --check-prefix=OVW
 

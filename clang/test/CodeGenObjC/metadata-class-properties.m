@@ -1,6 +1,6 @@
-// RUN: %clang_cc1 -triple x86_64-apple-macosx10.11  -emit-llvm -o - %s | FileCheck %s
-// RUN: %clang_cc1 -triple x86_64-apple-macosx10.10  -emit-llvm -o - %s | FileCheck -check-prefix=CHECK-NULL %s
-// RUN: %clang_cc1 -triple x86_64-apple-macosx10.11  -emit-llvm -o - -fobjc-runtime=macosx-fragile-10.5 %s | FileCheck -check-prefix=CHECK-FRAGILE %s
+// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-apple-macosx10.11  -emit-llvm -o - %s | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-apple-macosx10.10  -emit-llvm -o - %s | FileCheck -check-prefix=CHECK-NULL %s
+// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-apple-macosx10.11  -emit-llvm -o - -fobjc-runtime=macosx-fragile-10.5 %s | FileCheck -check-prefix=CHECK-FRAGILE %s
 
 // CHECK: @"_OBJC_$_CLASS_PROP_LIST_Proto" = internal global {{.*}} section "__DATA, __objc_const", align 8
 // CHECK: @"_OBJC_PROTOCOL_$_Proto" = {{.*}} global %struct._protocol_t { {{.*}} i32 96, i32 {{.*}} @"_OBJC_$_CLASS_PROP_LIST_Proto" {{.*}} }

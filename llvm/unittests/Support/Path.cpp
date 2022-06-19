@@ -15,6 +15,7 @@
 #include "llvm/Config/llvm-config.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/ConvertUTF.h"
+#include "llvm/Support/Duration.h"
 #include "llvm/Support/Errc.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FileSystem.h"
@@ -23,6 +24,7 @@
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Testing/Support/Error.h"
+#include "llvm/Testing/Support/SupportHelpers.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 
@@ -63,11 +65,38 @@ using namespace llvm::sys;
 
 namespace {
 
+void checkSeparators(StringRef Path) {
+#ifdef _WIN32
+  char UndesiredSeparator = sys::path::get_separator()[0] == '/' ? '\\' : '/';
+  ASSERT_EQ(Path.find(UndesiredSeparator), StringRef::npos);
+#endif
+}
+
 struct FileDescriptorCloser {
   explicit FileDescriptorCloser(int FD) : FD(FD) {}
   ~FileDescriptorCloser() { ::close(FD); }
   int FD;
 };
+
+TEST(is_style_Style, Works) {
+  using namespace llvm::sys::path;
+  // Check platform-independent results.
+  EXPECT_TRUE(is_style_posix(Style::posix));
+  EXPECT_TRUE(is_style_windows(Style::windows));
+  EXPECT_TRUE(is_style_windows(Style::windows_slash));
+  EXPECT_FALSE(is_style_posix(Style::windows));
+  EXPECT_FALSE(is_style_posix(Style::windows_slash));
+  EXPECT_FALSE(is_style_windows(Style::posix));
+
+  // Check platform-dependent results.
+#if defined(_WIN32)
+  EXPECT_FALSE(is_style_posix(Style::native));
+  EXPECT_TRUE(is_style_windows(Style::native));
+#else
+  EXPECT_TRUE(is_style_posix(Style::native));
+  EXPECT_FALSE(is_style_windows(Style::native));
+#endif
+}
 
 TEST(is_separator, Works) {
   EXPECT_TRUE(path::is_separator('/'));
@@ -76,13 +105,17 @@ TEST(is_separator, Works) {
   EXPECT_FALSE(path::is_separator(' '));
 
   EXPECT_TRUE(path::is_separator('\\', path::Style::windows));
+  EXPECT_TRUE(path::is_separator('\\', path::Style::windows_slash));
   EXPECT_FALSE(path::is_separator('\\', path::Style::posix));
 
-#ifdef _WIN32
-  EXPECT_TRUE(path::is_separator('\\'));
-#else
-  EXPECT_FALSE(path::is_separator('\\'));
-#endif
+  EXPECT_EQ(path::is_style_windows(path::Style::native),
+            path::is_separator('\\'));
+}
+
+TEST(get_separator, Works) {
+  EXPECT_EQ(path::get_separator(path::Style::posix), "/");
+  EXPECT_EQ(path::get_separator(path::Style::windows_backslash), "\\");
+  EXPECT_EQ(path::get_separator(path::Style::windows_slash), "/");
 }
 
 TEST(is_absolute_gnu, Works) {
@@ -107,6 +140,10 @@ TEST(is_absolute_gnu, Works) {
               std::get<1>(Path));
     EXPECT_EQ(path::is_absolute_gnu(std::get<0>(Path), path::Style::windows),
               std::get<2>(Path));
+
+    constexpr int Native = is_style_posix(path::Style::native) ? 1 : 2;
+    EXPECT_EQ(path::is_absolute_gnu(std::get<0>(Path), path::Style::native),
+              std::get<Native>(Path));
   }
 }
 
@@ -363,6 +400,8 @@ TEST(Support, PathIterator) {
               testing::ElementsAre("/", ".c", ".d", "..", "."));
   EXPECT_THAT(GetComponents("c:\\c\\e\\foo.txt", path::Style::windows),
               testing::ElementsAre("c:", "\\", "c", "e", "foo.txt"));
+  EXPECT_THAT(GetComponents("c:\\c\\e\\foo.txt", path::Style::windows_slash),
+              testing::ElementsAre("c:", "\\", "c", "e", "foo.txt"));
   EXPECT_THAT(GetComponents("//net/"), testing::ElementsAre("//net", "/"));
   EXPECT_THAT(GetComponents("//net/c/foo.txt"),
               testing::ElementsAre("//net", "/", "c", "foo.txt"));
@@ -405,6 +444,9 @@ std::string getEnvWin(const wchar_t *Var) {
     ArrayRef<char> ref{reinterpret_cast<char const *>(path),
                        pathLen * sizeof(wchar_t)};
     convertUTF16ToUTF8String(ref, expected);
+    SmallString<32> Buf(expected);
+    path::make_preferred(Buf);
+    expected.assign(Buf.begin(), Buf.end());
   }
   return expected;
 }
@@ -442,12 +484,12 @@ TEST(Support, HomeDirectory) {
 #endif
   // Do not try to test it if we don't know what to expect.
   // On Windows we use something better than env vars.
-  if (!expected.empty()) {
-    SmallString<128> HomeDir;
-    auto status = path::home_directory(HomeDir);
-    EXPECT_TRUE(status);
-    EXPECT_EQ(expected, HomeDir);
-  }
+  if (expected.empty())
+    GTEST_SKIP();
+  SmallString<128> HomeDir;
+  auto status = path::home_directory(HomeDir);
+  EXPECT_TRUE(status);
+  EXPECT_EQ(expected, HomeDir);
 }
 
 // Apple has their own solution for this.
@@ -522,21 +564,21 @@ TEST(Support, ConfigDirectory) {
 TEST(Support, ConfigDirectory) {
   std::string Expected = getEnvWin(L"LOCALAPPDATA");
   // Do not try to test it if we don't know what to expect.
-  if (!Expected.empty()) {
-    SmallString<128> CacheDir;
-    EXPECT_TRUE(path::user_config_directory(CacheDir));
-    EXPECT_EQ(Expected, CacheDir);
-  }
+  if (Expected.empty())
+    GTEST_SKIP();
+  SmallString<128> CacheDir;
+  EXPECT_TRUE(path::user_config_directory(CacheDir));
+  EXPECT_EQ(Expected, CacheDir);
 }
 
 TEST(Support, CacheDirectory) {
   std::string Expected = getEnvWin(L"LOCALAPPDATA");
   // Do not try to test it if we don't know what to expect.
-  if (!Expected.empty()) {
-    SmallString<128> CacheDir;
-    EXPECT_TRUE(path::cache_directory(CacheDir));
-    EXPECT_EQ(Expected, CacheDir);
-  }
+  if (Expected.empty())
+    GTEST_SKIP();
+  SmallString<128> CacheDir;
+  EXPECT_TRUE(path::cache_directory(CacheDir));
+  EXPECT_EQ(Expected, CacheDir);
 }
 #endif
 
@@ -552,9 +594,15 @@ TEST(Support, TempDirectory) {
 #ifdef _WIN32
 static std::string path2regex(std::string Path) {
   size_t Pos = 0;
+  bool Forward = path::get_separator()[0] == '/';
   while ((Pos = Path.find('\\', Pos)) != std::string::npos) {
-    Path.replace(Pos, 1, "\\\\");
-    Pos += 2;
+    if (Forward) {
+      Path.replace(Pos, 1, "/");
+      Pos += 1;
+    } else {
+      Path.replace(Pos, 1, "\\\\");
+      Pos += 2;
+    }
   }
   return Path;
 }
@@ -701,10 +749,12 @@ TEST_F(FileSystemTest, RealPath) {
   // how we specified it.  Make sure to compare against the real_path of the
   // TestDirectory, and not just the value of TestDirectory.
   ASSERT_NO_ERROR(fs::real_path(TestDirectory, RealBase));
+  checkSeparators(RealBase);
   path::native(Twine(RealBase) + "/test1/test2", Expected);
 
   ASSERT_NO_ERROR(fs::real_path(
       Twine(TestDirectory) + "/././test1/../test1/test2/./test3/..", Actual));
+  checkSeparators(Actual);
 
   EXPECT_EQ(Expected, Actual);
 
@@ -713,7 +763,9 @@ TEST_F(FileSystemTest, RealPath) {
   // This can fail if $HOME is not set and getpwuid fails.
   bool Result = llvm::sys::path::home_directory(HomeDir);
   if (Result) {
+    checkSeparators(HomeDir);
     ASSERT_NO_ERROR(fs::real_path(HomeDir, Expected));
+    checkSeparators(Expected);
     ASSERT_NO_ERROR(fs::real_path("~", Actual, true));
     EXPECT_EQ(Expected, Actual);
     ASSERT_NO_ERROR(fs::real_path("~/", Actual, true));
@@ -1405,10 +1457,25 @@ TEST(Support, NormalizePath) {
   for (auto &T : Tests) {
     SmallString<64> Win(std::get<0>(T));
     SmallString<64> Posix(Win);
+    SmallString<64> WinSlash(Win);
     path::native(Win, path::Style::windows);
     path::native(Posix, path::Style::posix);
+    path::native(WinSlash, path::Style::windows_slash);
     EXPECT_EQ(std::get<1>(T), Win);
     EXPECT_EQ(std::get<2>(T), Posix);
+    EXPECT_EQ(std::get<2>(T), WinSlash);
+  }
+
+  for (auto &T : Tests) {
+    SmallString<64> WinBackslash(std::get<0>(T));
+    SmallString<64> Posix(WinBackslash);
+    SmallString<64> WinSlash(WinBackslash);
+    path::make_preferred(WinBackslash, path::Style::windows_backslash);
+    path::make_preferred(Posix, path::Style::posix);
+    path::make_preferred(WinSlash, path::Style::windows_slash);
+    EXPECT_EQ(std::get<1>(T), WinBackslash);
+    EXPECT_EQ(std::get<0>(T), Posix); // Posix remains unchanged here
+    EXPECT_EQ(std::get<2>(T), WinSlash);
   }
 
 #if defined(_WIN32)
@@ -1417,8 +1484,13 @@ TEST(Support, NormalizePath) {
 
   const char *Path7a = "~/aaa";
   SmallString<64> Path7(Path7a);
-  path::native(Path7);
+  path::native(Path7, path::Style::windows_backslash);
   EXPECT_TRUE(Path7.endswith("\\aaa"));
+  EXPECT_TRUE(Path7.startswith(PathHome));
+  EXPECT_EQ(Path7.size(), PathHome.size() + strlen(Path7a + 1));
+  Path7 = Path7a;
+  path::native(Path7, path::Style::windows_slash);
+  EXPECT_TRUE(Path7.endswith("/aaa"));
   EXPECT_TRUE(Path7.startswith(PathHome));
   EXPECT_EQ(Path7.size(), PathHome.size() + strlen(Path7a + 1));
 
@@ -1434,7 +1506,7 @@ TEST(Support, NormalizePath) {
 
   const char *Path10a = "aaa/~/b";
   SmallString<64> Path10(Path10a);
-  path::native(Path10);
+  path::native(Path10, path::Style::windows_backslash);
   EXPECT_EQ(Path10, "aaa\\~\\b");
 #endif
 }
@@ -1472,16 +1544,14 @@ TEST(Support, RemoveDots) {
   EXPECT_EQ("C:\\a\\c", remove_dots("C:\\foo\\bar//..\\..\\a\\c", true,
                                     path::Style::windows));
 
-  // FIXME: These leading forward slashes are emergent behavior. VFS depends on
-  // this behavior now.
-  EXPECT_EQ("C:/bar",
+  EXPECT_EQ("C:\\bar",
             remove_dots("C:/foo/../bar", true, path::Style::windows));
-  EXPECT_EQ("C:/foo\\bar",
+  EXPECT_EQ("C:\\foo\\bar",
             remove_dots("C:/foo/bar", true, path::Style::windows));
-  EXPECT_EQ("C:/foo\\bar",
+  EXPECT_EQ("C:\\foo\\bar",
             remove_dots("C:/foo\\bar", true, path::Style::windows));
-  EXPECT_EQ("/", remove_dots("/", true, path::Style::windows));
-  EXPECT_EQ("C:/", remove_dots("C:/", true, path::Style::windows));
+  EXPECT_EQ("\\", remove_dots("/", true, path::Style::windows));
+  EXPECT_EQ("C:\\", remove_dots("C:/", true, path::Style::windows));
 
   // Some clients of remove_dots expect it to remove trailing slashes. Again,
   // this is emergent behavior that VFS relies on, and not inherently part of
@@ -1492,7 +1562,8 @@ TEST(Support, RemoveDots) {
             remove_dots("/foo/bar/", true, path::Style::posix));
 
   // A double separator is rewritten.
-  EXPECT_EQ("C:/foo\\bar", remove_dots("C:/foo//bar", true, path::Style::windows));
+  EXPECT_EQ("C:\\foo\\bar",
+            remove_dots("C:/foo//bar", true, path::Style::windows));
 
   SmallString<64> Path1(".\\.\\c");
   EXPECT_TRUE(path::remove_dots(Path1, true, path::Style::windows));
@@ -1878,6 +1949,53 @@ TEST_F(FileSystemTest, readNativeFile) {
   EXPECT_THAT_EXPECTED(Read(6), HasValue("01234"));
 }
 
+TEST_F(FileSystemTest, readNativeFileToEOF) {
+  constexpr StringLiteral Content = "0123456789";
+  createFileWithData(NonExistantFile, false, fs::CD_CreateNew, Content);
+  FileRemover Cleanup(NonExistantFile);
+  const auto &Read = [&](SmallVectorImpl<char> &V,
+                         Optional<ssize_t> ChunkSize) {
+    Expected<fs::file_t> FD = fs::openNativeFileForRead(NonExistantFile);
+    if (!FD)
+      return FD.takeError();
+    auto Close = make_scope_exit([&] { fs::closeFile(*FD); });
+    if (ChunkSize)
+      return fs::readNativeFileToEOF(*FD, V, *ChunkSize);
+    return fs::readNativeFileToEOF(*FD, V);
+  };
+
+  // Check basic operation.
+  {
+    SmallString<0> NoSmall;
+    SmallString<fs::DefaultReadChunkSize + Content.size()> StaysSmall;
+    SmallVectorImpl<char> *Vectors[] = {
+        static_cast<SmallVectorImpl<char> *>(&NoSmall),
+        static_cast<SmallVectorImpl<char> *>(&StaysSmall),
+    };
+    for (SmallVectorImpl<char> *V : Vectors) {
+      ASSERT_THAT_ERROR(Read(*V, None), Succeeded());
+      ASSERT_EQ(Content, StringRef(V->begin(), V->size()));
+    }
+    ASSERT_EQ(fs::DefaultReadChunkSize + Content.size(), StaysSmall.capacity());
+
+    // Check appending.
+    {
+      constexpr StringLiteral Prefix = "prefix-";
+      for (SmallVectorImpl<char> *V : Vectors) {
+        V->assign(Prefix.begin(), Prefix.end());
+        ASSERT_THAT_ERROR(Read(*V, None), Succeeded());
+        ASSERT_EQ((Prefix + Content).str(), StringRef(V->begin(), V->size()));
+      }
+    }
+  }
+
+  // Check that the chunk size (if specified) is respected.
+  SmallString<Content.size() + 5> SmallChunks;
+  ASSERT_THAT_ERROR(Read(SmallChunks, 5), Succeeded());
+  ASSERT_EQ(SmallChunks, Content);
+  ASSERT_EQ(Content.size() + 5, SmallChunks.capacity());
+}
+
 TEST_F(FileSystemTest, readNativeFileSlice) {
   createFileWithData(NonExistantFile, false, fs::CD_CreateNew, "01234");
   FileRemover Cleanup(NonExistantFile);
@@ -2197,7 +2315,7 @@ TEST_F(FileSystemTest, widenPath) {
   for (size_t i = 0; i < NumChars; ++i)
     Input += Pi;
   // Check that UTF-8 length already exceeds MAX_PATH.
-  EXPECT_TRUE(Input.size() > MAX_PATH);
+  EXPECT_GT(Input.size(), (size_t)MAX_PATH);
   SmallVector<wchar_t, MAX_PATH + 16> Result;
   ASSERT_NO_ERROR(windows::widenPath(Input, Result));
   // Result should not start with the long path prefix.
@@ -2214,6 +2332,30 @@ TEST_F(FileSystemTest, widenPath) {
                   LongPathPrefix.end());
 
   ASSERT_NO_ERROR(windows::widenPath(Input, Result));
+  EXPECT_EQ(Result, Expected);
+  // Pass a path with forward slashes, check that it ends up with
+  // backslashes when widened with the long path prefix.
+  SmallString<MAX_PATH + 16> InputForward(Input);
+  path::make_preferred(InputForward, path::Style::windows_slash);
+  ASSERT_NO_ERROR(windows::widenPath(InputForward, Result));
+  EXPECT_EQ(Result, Expected);
+
+  // Pass a path which has the long path prefix prepended originally, but
+  // which is short enough to not require the long path prefix. If such a
+  // path is passed with forward slashes, make sure it gets normalized to
+  // backslashes.
+  SmallString<MAX_PATH + 16> PrefixedPath("\\\\?\\C:\\foldername");
+  ASSERT_NO_ERROR(windows::UTF8ToUTF16(PrefixedPath, Expected));
+  // Mangle the input to forward slashes.
+  path::make_preferred(PrefixedPath, path::Style::windows_slash);
+  ASSERT_NO_ERROR(windows::widenPath(PrefixedPath, Result));
+  EXPECT_EQ(Result, Expected);
+
+  // A short path with an inconsistent prefix is passed through as-is; this
+  // is a degenerate case that we currently don't care about handling.
+  PrefixedPath.assign("/\\?/C:/foldername");
+  ASSERT_NO_ERROR(windows::UTF8ToUTF16(PrefixedPath, Expected));
+  ASSERT_NO_ERROR(windows::widenPath(PrefixedPath, Result));
   EXPECT_EQ(Result, Expected);
 
   // Test that UNC paths are handled correctly.
@@ -2300,5 +2442,62 @@ TEST_F(FileSystemTest, FileLocker) {
   ASSERT_NO_ERROR(fs::unlockFile(FD));
 }
 #endif
+
+TEST_F(FileSystemTest, CopyFile) {
+  unittest::TempDir RootTestDirectory("CopyFileTest", /*Unique=*/true);
+
+  SmallVector<std::string> Data;
+  SmallVector<SmallString<128>> Sources;
+  for (int I = 0, E = 3; I != E; ++I) {
+    Data.push_back(Twine(I).str());
+    Sources.emplace_back(RootTestDirectory.path());
+    path::append(Sources.back(), "source" + Data.back() + ".txt");
+    createFileWithData(Sources.back(), /*ShouldExistBefore=*/false,
+                       fs::CD_CreateNew, Data.back());
+  }
+
+  // Copy the first file to a non-existing file.
+  SmallString<128> Destination(RootTestDirectory.path());
+  path::append(Destination, "destination");
+  ASSERT_FALSE(fs::exists(Destination));
+  fs::copy_file(Sources[0], Destination);
+  verifyFileContents(Destination, Data[0]);
+
+  // Copy the second file to an existing file.
+  fs::copy_file(Sources[1], Destination);
+  verifyFileContents(Destination, Data[1]);
+
+  // Note: The remaining logic is targeted at a potential failure case related
+  // to file cloning and symlinks on Darwin. On Windows, fs::create_link() does
+  // not return success here so the test is skipped.
+#if !defined(_WIN32)
+  // Set up a symlink to the third file.
+  SmallString<128> Symlink(RootTestDirectory.path());
+  path::append(Symlink, "symlink");
+  ASSERT_NO_ERROR(fs::create_link(path::filename(Sources[2]), Symlink));
+  verifyFileContents(Symlink, Data[2]);
+
+  // fs::getUniqueID() should follow symlinks. Otherwise, this isn't good test
+  // coverage.
+  fs::UniqueID SymlinkID;
+  fs::UniqueID Data2ID;
+  ASSERT_NO_ERROR(fs::getUniqueID(Symlink, SymlinkID));
+  ASSERT_NO_ERROR(fs::getUniqueID(Sources[2], Data2ID));
+  ASSERT_EQ(SymlinkID, Data2ID);
+
+  // Copy the third file through the symlink.
+  fs::copy_file(Symlink, Destination);
+  verifyFileContents(Destination, Data[2]);
+
+  // Confirm the destination is not a link to the original file, and not a
+  // symlink.
+  bool IsDestinationSymlink;
+  ASSERT_NO_ERROR(fs::is_symlink_file(Destination, IsDestinationSymlink));
+  ASSERT_FALSE(IsDestinationSymlink);
+  fs::UniqueID DestinationID;
+  ASSERT_NO_ERROR(fs::getUniqueID(Destination, DestinationID));
+  ASSERT_NE(SymlinkID, DestinationID);
+#endif
+}
 
 } // anonymous namespace

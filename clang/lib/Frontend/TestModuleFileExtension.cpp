@@ -93,16 +93,14 @@ TestModuleFileExtension::getExtensionMetadata() const {
   return { BlockName, MajorVersion, MinorVersion, UserInfo };
 }
 
-llvm::hash_code TestModuleFileExtension::hashExtension(
-                  llvm::hash_code Code) const {
+void TestModuleFileExtension::hashExtension(
+    ExtensionHashBuilder &HBuilder) const {
   if (Hashed) {
-    Code = llvm::hash_combine(Code, BlockName);
-    Code = llvm::hash_combine(Code, MajorVersion);
-    Code = llvm::hash_combine(Code, MinorVersion);
-    Code = llvm::hash_combine(Code, UserInfo);
+    HBuilder.add(BlockName);
+    HBuilder.add(MajorVersion);
+    HBuilder.add(MinorVersion);
+    HBuilder.add(UserInfo);
   }
-
-  return Code;
 }
 
 std::unique_ptr<ModuleFileExtensionWriter>
@@ -135,5 +133,5 @@ std::string TestModuleFileExtension::str() const {
   llvm::raw_string_ostream OS(Buffer);
   OS << BlockName << ":" << MajorVersion << ":" << MinorVersion << ":" << Hashed
      << ":" << UserInfo;
-  return OS.str();
+  return Buffer;
 }

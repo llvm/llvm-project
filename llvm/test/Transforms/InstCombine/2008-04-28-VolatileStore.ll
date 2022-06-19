@@ -1,4 +1,4 @@
-; RUN: opt < %s -instcombine -S | grep "store volatile"
+; RUN: opt < %s -passes=instcombine -S | grep "store volatile"
 
 define void @test() {
 	%votf = alloca <4 x float>		; <<4 x float>*> [#uses=1]

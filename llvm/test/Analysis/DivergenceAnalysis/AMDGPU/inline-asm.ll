@@ -1,5 +1,3 @@
-; RUN: opt -mtriple=amdgcn-unknown-amdhsa -mcpu=tahiti -enable-new-pm=0 -analyze -divergence -use-gpu-divergence-analysis %s | FileCheck %s
-; RUN: opt -mtriple=amdgcn-unknown-amdhsa -mcpu=gfx908 -enable-new-pm=0 -analyze -divergence -use-gpu-divergence-analysis %s | FileCheck %s
 ; RUN: opt -mtriple amdgcn-unknown-amdhsa -mcpu=tahiti -passes='print<divergence>' -disable-output %s 2>&1 | FileCheck %s
 ; RUN: opt -mtriple amdgcn-unknown-amdhsa -mcpu=gfx908 -passes='print<divergence>' -disable-output %s 2>&1 | FileCheck %s
 ; Make sure nothing crashes on targets with or without AGPRs

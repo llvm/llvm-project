@@ -66,10 +66,10 @@ int CloseProcessPipe(FILE *F);
 const void *SearchMemory(const void *haystack, size_t haystacklen,
                          const void *needle, size_t needlelen);
 
-std::string CloneArgsWithoutX(const Vector<std::string> &Args,
+std::string CloneArgsWithoutX(const std::vector<std::string> &Args,
                               const char *X1, const char *X2);
 
-inline std::string CloneArgsWithoutX(const Vector<std::string> &Args,
+inline std::string CloneArgsWithoutX(const std::vector<std::string> &Args,
                                      const char *X) {
   return CloneArgsWithoutX(Args, X, X);
 }

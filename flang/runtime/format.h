@@ -51,6 +51,9 @@ struct DataEdit {
     return descriptor == ListDirected || descriptor == ListDirectedRealPart ||
         descriptor == ListDirectedImaginaryPart;
   }
+  constexpr bool IsNamelist() const {
+    return IsListDirected() && modes.inNamelist;
+  }
 
   static constexpr char DefinedDerivedType{'d'}; // DT user-defined derived type
 
@@ -83,11 +86,6 @@ public:
   FormatControl(const Terminator &, const CharType *format,
       std::size_t formatLength, int maxHeight = maxMaxHeight);
 
-  // Determines the max parenthesis nesting level by scanning and validating
-  // the FORMAT string.
-  static int GetMaxParenthesisNesting(
-      IoErrorHandler &, const CharType *format, std::size_t formatLength);
-
   // For attempting to allocate in a user-supplied stack area
   static std::size_t GetNeededSize(int maxHeight) {
     return sizeof(FormatControl) -
@@ -113,7 +111,9 @@ private:
   };
 
   void SkipBlanks() {
-    while (offset_ < formatLength_ && format_[offset_] == ' ') {
+    while (offset_ < formatLength_ &&
+        (format_[offset_] == ' ' || format_[offset_] == '\t' ||
+            format_[offset_] == '\v')) {
       ++offset_;
     }
   }
@@ -124,8 +124,13 @@ private:
   CharType GetNextChar(IoErrorHandler &handler) {
     SkipBlanks();
     if (offset_ >= formatLength_) {
-      handler.SignalError(
-          IostatErrorInFormat, "FORMAT missing at least one ')'");
+      if (formatLength_ == 0) {
+        handler.SignalError(
+            IostatErrorInFormat, "Empty or badly assigned FORMAT");
+      } else {
+        handler.SignalError(
+            IostatErrorInFormat, "FORMAT missing at least one ')'");
+      }
       return '\n';
     }
     return format_[offset_++];
@@ -141,6 +146,15 @@ private:
 
   static constexpr CharType Capitalize(CharType ch) {
     return ch >= 'a' && ch <= 'z' ? ch + 'A' - 'a' : ch;
+  }
+
+  void ReportBadFormat(Context &context, const char *msg, int offset) const {
+    if constexpr (std::is_same_v<CharType, char>) {
+      context.SignalError(IostatErrorInFormat,
+          "%s; at offset %d in format '%s'", msg, offset, format_);
+    } else {
+      context.SignalError(IostatErrorInFormat, "%s; at offset %d", msg, offset);
+    }
   }
 
   // Data members are arranged and typed so as to reduce size.

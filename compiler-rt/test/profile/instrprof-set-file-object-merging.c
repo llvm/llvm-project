@@ -1,6 +1,6 @@
 // Test that the specified output merges the profiling data.
 // Run the program twice so that the counters accumulate.
-// RUN: %clang -fprofile-instr-generate -fcoverage-mapping -o %t %s
+// RUN: %clang_profgen -fcoverage-mapping -o %t %s
 // RUN: rm -f %t.merging.profraw %t.merging.profdata
 // RUN: %run %t %t.merging.profraw
 // RUN: %run %t %t.merging.profraw

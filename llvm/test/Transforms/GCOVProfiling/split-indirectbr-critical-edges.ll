@@ -33,6 +33,11 @@ indirect.preheader:                               ; preds = %for.cond
 indirect:                                         ; preds = %indirect.preheader, %indirect
   indirectbr i8* %2, [label %indirect, label %end]
 
+indirect2:
+  ; For this test we do not want critical edges split. Adding a 2nd `indirectbr`
+  ; does the trick.
+  indirectbr i8* %2, [label %indirect, label %end]
+
 end:                                              ; preds = %indirect
   ret i32 0, !dbg !22
 }

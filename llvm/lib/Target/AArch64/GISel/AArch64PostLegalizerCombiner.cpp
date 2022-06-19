@@ -20,10 +20,13 @@
 //===----------------------------------------------------------------------===//
 
 #include "AArch64TargetMachine.h"
+#include "llvm/CodeGen/GlobalISel/CSEInfo.h"
 #include "llvm/CodeGen/GlobalISel/Combiner.h"
 #include "llvm/CodeGen/GlobalISel/CombinerHelper.h"
 #include "llvm/CodeGen/GlobalISel/CombinerInfo.h"
+#include "llvm/CodeGen/GlobalISel/GISelChangeObserver.h"
 #include "llvm/CodeGen/GlobalISel/GISelKnownBits.h"
+#include "llvm/CodeGen/GlobalISel/GenericMachineInstrs.h"
 #include "llvm/CodeGen/GlobalISel/MIPatternMatch.h"
 #include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
 #include "llvm/CodeGen/GlobalISel/Utils.h"
@@ -54,7 +57,7 @@ bool matchExtractVecEltPairwiseAdd(
   Register Src2 = MI.getOperand(2).getReg();
   LLT DstTy = MRI.getType(MI.getOperand(0).getReg());
 
-  auto Cst = getConstantVRegValWithLookThrough(Src2, MRI);
+  auto Cst = getIConstantVRegValWithLookThrough(Src2, MRI);
   if (!Cst || Cst->Value != 0)
     return false;
   // SDAG also checks for FullFP16, but this looks to be beneficial anyway.
@@ -128,11 +131,11 @@ bool matchAArch64MulConstCombine(
   const LLT Ty = MRI.getType(LHS);
 
   // The below optimizations require a constant RHS.
-  auto Const = getConstantVRegValWithLookThrough(RHS, MRI);
+  auto Const = getIConstantVRegValWithLookThrough(RHS, MRI);
   if (!Const)
     return false;
 
-  const APInt ConstValue = Const->Value.sextOrSelf(Ty.getSizeInBits());
+  APInt ConstValue = Const->Value.sext(Ty.getSizeInBits());
   // The following code is ported from AArch64ISelLowering.
   // Multiplication of a power of two plus/minus one can be done more
   // cheaply as as shift+add/sub. For now, this is true unilaterally. If
@@ -238,6 +241,92 @@ bool applyAArch64MulConstCombine(
   ApplyFn(B, MI.getOperand(0).getReg());
   MI.eraseFromParent();
   return true;
+}
+
+/// Try to fold a G_MERGE_VALUES of 2 s32 sources, where the second source
+/// is a zero, into a G_ZEXT of the first.
+bool matchFoldMergeToZext(MachineInstr &MI, MachineRegisterInfo &MRI) {
+  auto &Merge = cast<GMerge>(MI);
+  LLT SrcTy = MRI.getType(Merge.getSourceReg(0));
+  if (SrcTy != LLT::scalar(32) || Merge.getNumSources() != 2)
+    return false;
+  return mi_match(Merge.getSourceReg(1), MRI, m_SpecificICst(0));
+}
+
+void applyFoldMergeToZext(MachineInstr &MI, MachineRegisterInfo &MRI,
+                          MachineIRBuilder &B, GISelChangeObserver &Observer) {
+  // Mutate %d(s64) = G_MERGE_VALUES %a(s32), 0(s32)
+  //  ->
+  // %d(s64) = G_ZEXT %a(s32)
+  Observer.changingInstr(MI);
+  MI.setDesc(B.getTII().get(TargetOpcode::G_ZEXT));
+  MI.removeOperand(2);
+  Observer.changedInstr(MI);
+}
+
+/// \returns True if a G_ANYEXT instruction \p MI should be mutated to a G_ZEXT
+/// instruction.
+static bool matchMutateAnyExtToZExt(MachineInstr &MI, MachineRegisterInfo &MRI) {
+  // If this is coming from a scalar compare then we can use a G_ZEXT instead of
+  // a G_ANYEXT:
+  //
+  // %cmp:_(s32) = G_[I|F]CMP ... <-- produces 0/1.
+  // %ext:_(s64) = G_ANYEXT %cmp(s32)
+  //
+  // By doing this, we can leverage more KnownBits combines.
+  assert(MI.getOpcode() == TargetOpcode::G_ANYEXT);
+  Register Dst = MI.getOperand(0).getReg();
+  Register Src = MI.getOperand(1).getReg();
+  return MRI.getType(Dst).isScalar() &&
+         mi_match(Src, MRI,
+                  m_any_of(m_GICmp(m_Pred(), m_Reg(), m_Reg()),
+                           m_GFCmp(m_Pred(), m_Reg(), m_Reg())));
+}
+
+static void applyMutateAnyExtToZExt(MachineInstr &MI, MachineRegisterInfo &MRI,
+                              MachineIRBuilder &B,
+                              GISelChangeObserver &Observer) {
+  Observer.changingInstr(MI);
+  MI.setDesc(B.getTII().get(TargetOpcode::G_ZEXT));
+  Observer.changedInstr(MI);
+}
+
+/// Match a 128b store of zero and split it into two 64 bit stores, for
+/// size/performance reasons.
+static bool matchSplitStoreZero128(MachineInstr &MI, MachineRegisterInfo &MRI) {
+  GStore &Store = cast<GStore>(MI);
+  if (!Store.isSimple())
+    return false;
+  LLT ValTy = MRI.getType(Store.getValueReg());
+  if (!ValTy.isVector() || ValTy.getSizeInBits() != 128)
+    return false;
+  if (ValTy.getSizeInBits() != Store.getMemSizeInBits())
+    return false; // Don't split truncating stores.
+  if (!MRI.hasOneNonDBGUse(Store.getValueReg()))
+    return false;
+  auto MaybeCst = isConstantOrConstantSplatVector(
+      *MRI.getVRegDef(Store.getValueReg()), MRI);
+  return MaybeCst && MaybeCst->isZero();
+}
+
+static void applySplitStoreZero128(MachineInstr &MI, MachineRegisterInfo &MRI,
+                                   MachineIRBuilder &B,
+                                   GISelChangeObserver &Observer) {
+  B.setInstrAndDebugLoc(MI);
+  GStore &Store = cast<GStore>(MI);
+  assert(MRI.getType(Store.getValueReg()).isVector() &&
+         "Expected a vector store value");
+  LLT NewTy = LLT::scalar(64);
+  Register PtrReg = Store.getPointerReg();
+  auto Zero = B.buildConstant(NewTy, 0);
+  auto HighPtr = B.buildPtrAdd(MRI.getType(PtrReg), PtrReg,
+                               B.buildConstant(LLT::scalar(64), 8));
+  auto &MF = *MI.getMF();
+  auto *LowMMO = MF.getMachineMemOperand(&Store.getMMO(), 0, NewTy);
+  auto *HighMMO = MF.getMachineMemOperand(&Store.getMMO(), 8, NewTy);
+  B.buildStore(Zero, PtrReg, *LowMMO);
+  B.buildStore(Zero, HighPtr, *HighMMO);
+  Store.eraseFromParent();
 }
 
 #define AARCH64POSTLEGALIZERCOMBINERHELPER_GENCOMBINERHELPER_DEPS

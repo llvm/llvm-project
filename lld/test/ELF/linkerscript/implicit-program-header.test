@@ -7,9 +7,9 @@
 # RUN: llvm-readelf -l %t1 | FileCheck %s
 
 # CHECK:      Segment Sections...
-# CHECK-NEXT:   00     .dynsym .hash .dynstr .foo .text .dynamic
-# CHECK-NEXT:   01     .foo
-# CHECK-NEXT:   02     .foo
+# CHECK-NEXT:   00     .text
+# CHECK-NEXT:   01     .foo .dynsym .hash .dynstr .dynamic
+# CHECK-NEXT:   02     .foo .dynsym .hash .dynstr .dynamic
 
 PHDRS {
   ph_write PT_LOAD FLAGS(2);
@@ -18,7 +18,7 @@ PHDRS {
 }
 
 SECTIONS {
+  .text : { *(.text) } : ph_write
   .bar : { *(.bar) } : ph_exec : ph_note
   .foo : { *(.foo) }
-  .text : { *(.text) } : ph_write
 }

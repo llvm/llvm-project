@@ -1,5 +1,4 @@
-// RUN: %clang_cc1 %s -fsyntax-only -verify -verify=c2x -pedantic
-// RUN: %clang_cc1 %s -fsyntax-only -std=c2x -verify -pedantic
+// RUN: %clang_cc1 %s -fsyntax-only -verify -verify=c2x -pedantic -Wno-strict-prototypes
 
 // PR1892, PR11354
 void f(double a[restrict][5]) { __typeof(a) x = 10; } // expected-warning {{(aka 'double (*restrict)[5]')}}
@@ -19,7 +18,7 @@ void h (const char *fmt, ...) {} // expected-error{{conflicting types for 'h'}}
 
 // PR1965
 int t5(b);          // expected-error {{parameter list without types}}
-int t6(int x, g);   // expected-warning {{type specifier missing, defaults to 'int'}}
+int t6(int x, g);   // expected-error {{type specifier missing, defaults to 'int'}}
 
 int t7(, );       // expected-error {{expected parameter declarator}} expected-error {{expected parameter declarator}}
 int t8(, int a);  // expected-error {{expected parameter declarator}}
@@ -42,8 +41,8 @@ int t14() {
 }
 
 // <rdar://problem/6097326>
-y(y) { return y; } // expected-warning{{parameter 'y' was not declared, defaulting to type 'int'}} \
-                   // expected-warning{{type specifier missing, defaults to 'int'}}
+y(y) { return y; } // expected-error{{parameter 'y' was not declared, defaults to 'int'; ISO C99 and later do not support implicit int}} \
+                   // expected-error{{type specifier missing, defaults to 'int'}}
 
 
 // PR3137, <rdar://problem/6127293>

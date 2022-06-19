@@ -1,8 +1,8 @@
-// RUN: mlir-opt %s -convert-complex-to-standard -convert-complex-to-llvm -convert-math-to-llvm -convert-std-to-llvm | FileCheck %s
+// RUN: mlir-opt %s -pass-pipeline="func.func(convert-complex-to-standard),convert-complex-to-llvm,func.func(convert-math-to-llvm,convert-arith-to-llvm),convert-func-to-llvm,reconcile-unrealized-casts" | FileCheck %s
 
 // CHECK-LABEL: llvm.func @complex_abs
 // CHECK-SAME: %[[ARG:.*]]: ![[C_TY:.*]])
-func @complex_abs(%arg: complex<f32>) -> f32 {
+func.func @complex_abs(%arg: complex<f32>) -> f32 {
   %abs = complex.abs %arg: complex<f32>
   return %abs : f32
 }
@@ -16,7 +16,7 @@ func @complex_abs(%arg: complex<f32>) -> f32 {
 
 // CHECK-LABEL: llvm.func @complex_eq
 // CHECK-SAME: %[[LHS:.*]]: ![[C_TY:.*]], %[[RHS:.*]]: ![[C_TY:.*]])
-func @complex_eq(%lhs: complex<f32>, %rhs: complex<f32>) -> i1 {
+func.func @complex_eq(%lhs: complex<f32>, %rhs: complex<f32>) -> i1 {
   %eq = complex.eq %lhs, %rhs: complex<f32>
   return %eq : i1
 }
@@ -31,7 +31,7 @@ func @complex_eq(%lhs: complex<f32>, %rhs: complex<f32>) -> i1 {
 
 // CHECK-LABEL: llvm.func @complex_neq
 // CHECK-SAME: %[[LHS:.*]]: ![[C_TY:.*]], %[[RHS:.*]]: ![[C_TY:.*]])
-func @complex_neq(%lhs: complex<f32>, %rhs: complex<f32>) -> i1 {
+func.func @complex_neq(%lhs: complex<f32>, %rhs: complex<f32>) -> i1 {
   %neq = complex.neq %lhs, %rhs: complex<f32>
   return %neq : i1
 }

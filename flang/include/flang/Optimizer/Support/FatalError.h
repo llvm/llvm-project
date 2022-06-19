@@ -20,8 +20,8 @@ namespace fir {
 
 /// Fatal error reporting helper. Report a fatal error with a source location
 /// and immediately abort flang.
-LLVM_ATTRIBUTE_NORETURN inline void emitFatalError(mlir::Location loc,
-                                                   const llvm::Twine &message) {
+[[noreturn]] inline void emitFatalError(mlir::Location loc,
+                                        const llvm::Twine &message) {
   mlir::emitError(loc, message);
   llvm::report_fatal_error("aborting");
 }

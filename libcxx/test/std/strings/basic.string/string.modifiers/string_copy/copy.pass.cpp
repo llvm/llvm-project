@@ -8,7 +8,7 @@
 
 // <string>
 
-// size_type copy(charT* s, size_type n, size_type pos = 0) const;
+// size_type copy(charT* s, size_type n, size_type pos = 0) const; // constexpr since C++20
 
 #include <string>
 #include <stdexcept>
@@ -19,7 +19,7 @@
 #include "min_allocator.h"
 
 template <class S>
-void
+TEST_CONSTEXPR_CXX20 void
 test(S str, typename S::value_type* s, typename S::size_type n,
      typename S::size_type pos)
 {
@@ -33,7 +33,7 @@ test(S str, typename S::value_type* s, typename S::size_type n,
             assert(S::traits_type::eq(cs[pos+r], s[r]));
     }
 #ifndef TEST_HAS_NO_EXCEPTIONS
-    else
+    else if (!TEST_IS_CONSTANT_EVALUATED)
     {
         try
         {
@@ -49,9 +49,8 @@ test(S str, typename S::value_type* s, typename S::size_type n,
 #endif
 }
 
-int main(int, char**)
-{
-    {
+TEST_CONSTEXPR_CXX20 bool test() {
+  {
     typedef std::string S;
     char s[50];
     test(S(""), s, 0, 0);
@@ -112,9 +111,9 @@ int main(int, char**)
     test(S("abcdefghijklmnopqrst"), s, 20, 0);
     test(S("abcdefghijklmnopqrst"), s, 20, 1);
     test(S("abcdefghijklmnopqrst"), s, 21, 0);
-    }
+  }
 #if TEST_STD_VER >= 11
-    {
+  {
     typedef std::basic_string<char, std::char_traits<char>, min_allocator<char>> S;
     char s[50];
     test(S(""), s, 0, 0);
@@ -175,7 +174,17 @@ int main(int, char**)
     test(S("abcdefghijklmnopqrst"), s, 20, 0);
     test(S("abcdefghijklmnopqrst"), s, 20, 1);
     test(S("abcdefghijklmnopqrst"), s, 21, 0);
-    }
+  }
+#endif
+
+  return true;
+}
+
+int main(int, char**)
+{
+  test();
+#if TEST_STD_VER > 17
+  static_assert(test());
 #endif
 
   return 0;

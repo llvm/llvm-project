@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 %s -emit-llvm -triple x86_64-apple-darwin -o - | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers %s -emit-llvm -triple x86_64-apple-darwin -o - | FileCheck %s
 // rdar://12459358
 @interface NSObject 
 -(id)copy;

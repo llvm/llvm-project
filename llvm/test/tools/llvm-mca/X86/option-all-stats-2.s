@@ -35,6 +35,7 @@ add %eax, %eax
 # FULL-NEXT: LQ      - Load queue full:                           0
 # FULL-NEXT: SQ      - Store queue full:                          0
 # FULL-NEXT: GROUP   - Static restrictions on the dispatch group: 0
+# FULL-NEXT: USH     - Uncategorised Structural Hazard:           0
 
 # FULL:      Dispatch Logic - number of cycles where we saw N micro opcodes dispatched:
 # FULL-NEXT: [# dispatched], [# cycles]

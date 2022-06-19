@@ -23,7 +23,7 @@ namespace cppcoreguidelines {
 ///     for the latter
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/cppcoreguidelines-slicing.html
+/// http://clang.llvm.org/extra/clang-tidy/checks/cppcoreguidelines/slicing.html
 class SlicingCheck : public ClangTidyCheck {
 public:
   SlicingCheck(StringRef Name, ClangTidyContext *Context)
@@ -32,7 +32,7 @@ public:
   void check(const ast_matchers::MatchFinder::MatchResult &Result) override;
 
 private:
-  void DiagnoseSlicedOverriddenMethods(const Expr &call,
+  void diagnoseSlicedOverriddenMethods(const Expr &Call,
                                        const CXXRecordDecl &DerivedDecl,
                                        const CXXRecordDecl &BaseDecl);
 };

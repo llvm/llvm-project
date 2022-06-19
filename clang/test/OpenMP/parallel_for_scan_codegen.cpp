@@ -1,10 +1,10 @@
-// RUN: %clang_cc1 -verify -fopenmp -x c++ -triple x86_64-unknown-unknown -emit-llvm %s -o - | FileCheck %s
-// RUN: %clang_cc1 -fopenmp -x c++ -std=c++11 -triple x86_64-unknown-unknown -emit-pch -o %t %s
-// RUN: %clang_cc1 -fopenmp -x c++ -triple x86_64-unknown-unknown -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -verify -fopenmp -x c++ -triple x86_64-unknown-unknown -emit-llvm %s -o - | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -fopenmp -x c++ -std=c++11 -triple x86_64-unknown-unknown -emit-pch -o %t %s
+// RUN: %clang_cc1 -no-opaque-pointers -fopenmp -x c++ -triple x86_64-unknown-unknown -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck %s
 
-// RUN: %clang_cc1 -verify -fopenmp-simd -x c++ -triple x86_64-unknown-unknown -emit-llvm %s -o - | FileCheck --check-prefix SIMD-ONLY0 %s
-// RUN: %clang_cc1 -fopenmp-simd -x c++ -std=c++11 -triple x86_64-unknown-unknown -emit-pch -o %t %s
-// RUN: %clang_cc1 -fopenmp-simd -x c++ -triple x86_64-unknown-unknown -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck --check-prefix SIMD-ONLY0 %s
+// RUN: %clang_cc1 -no-opaque-pointers -verify -fopenmp-simd -x c++ -triple x86_64-unknown-unknown -emit-llvm %s -o - | FileCheck --check-prefix SIMD-ONLY0 %s
+// RUN: %clang_cc1 -no-opaque-pointers -fopenmp-simd -x c++ -std=c++11 -triple x86_64-unknown-unknown -emit-pch -o %t %s
+// RUN: %clang_cc1 -no-opaque-pointers -fopenmp-simd -x c++ -triple x86_64-unknown-unknown -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck --check-prefix SIMD-ONLY0 %s
 // SIMD-ONLY0-NOT: {{__kmpc|__tgt}}
 // expected-no-diagnostics
 #ifndef HEADER
@@ -13,7 +13,7 @@
 void foo(int n);
 void bar();
 
-// CHECK: define{{.*}} void @{{.*}}baz{{.*}}(i32 %n)
+// CHECK: define{{.*}} void @{{.*}}baz{{.*}}(i32 noundef %n)
 void baz(int n) {
   static float a[10];
   static double b;
@@ -27,6 +27,13 @@ void baz(int n) {
   // CHECK: [[B_BUF:%.+]] = alloca double, i64 10,
 
   // CHECK: call void (%struct.ident_t*, i32, void (i32*, i32*, ...)*, ...) @__kmpc_fork_call(
+  // CHECK: [[LAST:%.+]] = mul nsw i64 9, %
+  // CHECK: [[LAST_REF:%.+]] = getelementptr inbounds float, float* [[A_BUF]], i64 [[LAST]]
+  // CHECK: [[BC:%.+]] = bitcast float* [[LAST_REF]] to i8*
+  // CHECK: call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 16 bitcast ([10 x float]* @_ZZ3baziE1a to i8*), i8* align 4 [[BC]], i64 %{{.+}}, i1 false)
+  // CHECK: [[LAST_REF_B:%.+]] = getelementptr inbounds double, double* [[B_BUF]], i64 9
+  // CHECK: [[LAST_VAL:%.+]] = load double, double* [[LAST_REF_B]],
+  // CHECK: store double [[LAST_VAL]], double* @_ZZ3baziE1b,
 
   // CHECK: [[A_BUF_SIZE:%.+]] = mul nuw i64 10, [[NUM_ELEMS:%[^,]+]]
 

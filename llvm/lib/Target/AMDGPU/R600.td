@@ -34,6 +34,7 @@ def ALU_NULL : FuncUnit;
 include "AMDGPUFeatures.td"
 include "R600Schedule.td"
 include "R600Processors.td"
+include "R600InstrInfo.td"
 include "AMDGPUInstrInfo.td"
 include "AMDGPUInstructions.td"
 include "R600Instructions.td"

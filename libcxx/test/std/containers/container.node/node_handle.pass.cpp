@@ -15,29 +15,27 @@
 #include "test_macros.h"
 #include "min_allocator.h"
 
-using namespace std;
-
 // [container.node.overview] Table 83.
 template <class K, class T, class C1, class C2, class H1, class H2, class E1, class E2, class A_set, class A_map>
 struct node_compatibility_table
 {
     static constexpr bool value =
-        is_same_v<typename map<K, T, C1, A_map>::node_type,               typename map<K, T, C2, A_map>::node_type> &&
-        is_same_v<typename map<K, T, C1, A_map>::node_type,               typename multimap<K, T, C2, A_map>::node_type> &&
-        is_same_v<typename set<K, C1, A_set>::node_type,                  typename set<K, C2, A_set>::node_type> &&
-        is_same_v<typename set<K, C1, A_set>::node_type,                  typename multiset<K, C2, A_set>::node_type> &&
-        is_same_v<typename unordered_map<K, T, H1, E1, A_map>::node_type, typename unordered_map<K, T, H2, E2, A_map>::node_type> &&
-        is_same_v<typename unordered_map<K, T, H1, E1, A_map>::node_type, typename unordered_multimap<K, T, H2, E2, A_map>::node_type> &&
-        is_same_v<typename unordered_set<K, H1, E1, A_set>::node_type,    typename unordered_set<K, H2, E2, A_set>::node_type> &&
-        is_same_v<typename unordered_set<K, H1, E1, A_set>::node_type,    typename unordered_multiset<K, H2, E2, A_set>::node_type>;
+        std::is_same_v<typename std::map<K, T, C1, A_map>::node_type,               typename std::map<K, T, C2, A_map>::node_type> &&
+        std::is_same_v<typename std::map<K, T, C1, A_map>::node_type,               typename std::multimap<K, T, C2, A_map>::node_type> &&
+        std::is_same_v<typename std::set<K, C1, A_set>::node_type,                  typename std::set<K, C2, A_set>::node_type> &&
+        std::is_same_v<typename std::set<K, C1, A_set>::node_type,                  typename std::multiset<K, C2, A_set>::node_type> &&
+        std::is_same_v<typename std::unordered_map<K, T, H1, E1, A_map>::node_type, typename std::unordered_map<K, T, H2, E2, A_map>::node_type> &&
+        std::is_same_v<typename std::unordered_map<K, T, H1, E1, A_map>::node_type, typename std::unordered_multimap<K, T, H2, E2, A_map>::node_type> &&
+        std::is_same_v<typename std::unordered_set<K, H1, E1, A_set>::node_type,    typename std::unordered_set<K, H2, E2, A_set>::node_type> &&
+        std::is_same_v<typename std::unordered_set<K, H1, E1, A_set>::node_type,    typename std::unordered_multiset<K, H2, E2, A_set>::node_type>;
 };
 
 template <class T> struct my_hash
 {
     using argument_type = T;
-    using result_type = size_t;
+    using result_type = std::size_t;
     my_hash() = default;
-    size_t operator()(const T&) const {return 0;}
+    std::size_t operator()(const T&) const {return 0;}
 };
 
 template <class T> struct my_compare
@@ -66,9 +64,9 @@ namespace std
 template <> struct hash<Static>
 {
     using argument_type = Static;
-    using result_type = size_t;
+    using result_type = std::size_t;
     hash() = default;
-    size_t operator()(const Static&) const;
+    std::size_t operator()(const Static&) const;
 };
 }
 
@@ -82,8 +80,8 @@ static_assert(node_compatibility_table<
 static_assert(
     node_compatibility_table<int, int, std::less<int>, my_compare<int>,
                              std::hash<int>, my_hash<int>, std::equal_to<int>,
-                             my_equal<int>, allocator<int>,
-                             allocator<std::pair<const int, int>>>::value,
+                             my_equal<int>, std::allocator<int>,
+                             std::allocator<std::pair<const int, int>>>::value,
     "");
 
 static_assert(node_compatibility_table<

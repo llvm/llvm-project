@@ -189,20 +189,6 @@ public:
   bool trackedNodeIsUsed() const { return TrackedNodeIsUsed; }
 };
 
-/// Convert St3foo to NSt3fooE so that equivalences naming one also affect the
-/// other.
-template<>
-struct CanonicalizerAllocator::MakeNodeImpl<
-           itanium_demangle::StdQualifiedName> {
-  CanonicalizerAllocator &Self;
-  Node *make(Node *Child) {
-    Node *StdNamespace = Self.makeNode<itanium_demangle::NameType>("std");
-    if (!StdNamespace)
-      return nullptr;
-    return Self.makeNode<itanium_demangle::NestedName>(StdNamespace, Child);
-  }
-};
-
 // FIXME: Also expand built-in substitutions?
 
 using CanonicalizingDemangler =

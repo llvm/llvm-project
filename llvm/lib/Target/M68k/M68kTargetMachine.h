@@ -1,4 +1,4 @@
-//===-- M68kTargetMachine.h - Define TargetMachine for M68k ----- C++ -===//
+//===-- M68kTargetMachine.h - Define TargetMachine for M68k -----*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -53,4 +53,4 @@ public:
 };
 } // namespace llvm
 
-#endif
+#endif // LLVM_LIB_TARGET_M68K_M68KTARGETMACHINE_H

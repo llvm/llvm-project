@@ -21,6 +21,7 @@ def disassemble(debugger, command, result, dict):
             print("<%s + %-4u> 0x%x %8s  %s" % (name, inst_offset, inst_addr, inst.mnemonic, inst.operands))
 
 # Install the command when the module gets imported
-lldb.debugger.HandleCommand(
-    'command script add -f gdb_disassemble.disassemble gdb-disassemble')
-print('Installed "gdb-disassemble" command for disassembly')
+def __lldb_init_module(debugger, internal_dict):
+    debugger.HandleCommand(
+        'command script add -f gdb_disassemble.disassemble gdb-disassemble')
+    print('Installed "gdb-disassemble" command for disassembly')

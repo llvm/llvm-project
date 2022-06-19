@@ -60,11 +60,11 @@ else()
       $<TARGET_FILE:clang-ast-dump>
         # Skip this in debug mode because parsing AST.h is too slow
         --skip-processing=${skip_expensive_processing}
-        -I ${CMAKE_BINARY_DIR}/lib/clang/${CLANG_VERSION}/include
-        -I ${CMAKE_SOURCE_DIR}/../clang/include
-        -I ${CMAKE_BINARY_DIR}/tools/clang/include
-        -I ${CMAKE_BINARY_DIR}/include
-        -I ${CMAKE_SOURCE_DIR}/include
+        -I ${LLVM_BINARY_DIR}/lib/clang/${CLANG_VERSION}/include
+        -I ${CLANG_SOURCE_DIR}/include
+        -I ${LLVM_BINARY_DIR}/tools/clang/include
+        -I ${LLVM_BINARY_DIR}/include
+        -I ${LLVM_SOURCE_DIR}/include
         ${implicitDirs}
         --json-output-path ${CMAKE_CURRENT_BINARY_DIR}/ASTNodeAPI.json
   )

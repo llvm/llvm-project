@@ -1,4 +1,4 @@
-; RUN: opt < %s -S -instcombine > %t
+; RUN: opt < %s -S -passes=instcombine > %t
 ; RUN: grep "= getelementptr" %t | count 20
 ; RUN: grep "= phi" %t | count 13
 

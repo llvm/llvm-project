@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 %s -triple=amdgcn-amd-amdhsa -emit-llvm -o - | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers %s -triple=amdgcn-amd-amdhsa -emit-llvm -o - | FileCheck %s
 
 template<typename T, unsigned int n> struct my_vector_base;
 

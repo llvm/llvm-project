@@ -18,12 +18,6 @@
 
 # MISSING: for the -o option: requires a value!
 
-## Passing in two output files:
-# RUN: not llvm-libtool-darwin -static %t.input -o %t.lib1 -o %t.lib2 2>&1 | \
-# RUN:   FileCheck %s --check-prefix=DOUBLE-OUTPUT
-
-# DOUBLE-OUTPUT: for the -o option: may only occur zero or one times!
-
 ## Input file not found:
 # RUN: not llvm-libtool-darwin -static -o %t.lib %t.missing 2>&1 | \
 # RUN:   FileCheck %s --check-prefix=NO-FILE -DFILE=%t.missing -DMSG=%errc_ENOENT

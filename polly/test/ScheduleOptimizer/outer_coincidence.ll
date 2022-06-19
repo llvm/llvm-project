@@ -1,5 +1,5 @@
-; RUN: opt %loadPolly -polly-opt-isl -polly-ast -polly-tiling=0 -polly-parallel -polly-opt-outer-coincidence=no -analyze < %s | FileCheck %s
-; RUN: opt %loadPolly -polly-opt-isl -polly-ast -polly-tiling=0 -polly-parallel -polly-opt-outer-coincidence=yes -analyze < %s | FileCheck %s --check-prefix=OUTER
+; RUN: opt %loadPolly -polly-tiling=0 -polly-parallel -polly-opt-outer-coincidence=no  -polly-opt-isl -polly-print-ast -disable-output < %s | FileCheck %s
+; RUN: opt %loadPolly -polly-tiling=0 -polly-parallel -polly-opt-outer-coincidence=yes -polly-opt-isl -polly-print-ast -disable-output < %s | FileCheck %s --check-prefix=OUTER
 
 ; By skewing, the diagonal can be made parallel. ISL does this when the Check
 ; the 'outer_coincidence' option is enabled.

@@ -1,4 +1,4 @@
-; RUN: opt < %s -instcombine -S | grep load | count 3
+; RUN: opt < %s -passes=instcombine -S | grep load | count 3
 ; PR2471
 
 declare i32 @x(i32*)

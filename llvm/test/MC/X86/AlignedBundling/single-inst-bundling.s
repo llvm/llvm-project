@@ -44,7 +44,7 @@ foo:
 .L_RET:
   ret
 
-# Just sanity checking that data fills don't drive bundling crazy
+# Just verifying that data fills don't drive bundling crazy
   .data
   .byte 40
   .byte 98

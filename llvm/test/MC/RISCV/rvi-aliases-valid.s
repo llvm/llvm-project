@@ -38,7 +38,7 @@
 nop
 
 # CHECK-S-OBJ-NOALIAS: addi t6, zero, 0
-# CHECK-S-OBJ: mv t6, zero
+# CHECK-S-OBJ: li t6, 0
 mv x31, zero
 # CHECK-S-OBJ-NOALIAS: addi a2, a3, 0
 # CHECK-S-OBJ: mv a2, a3
@@ -256,6 +256,18 @@ sfence.vma
 # CHECK-S-OBJ-NOALIAS: sfence.vma a0, zero
 # CHECK-S-OBJ: sfence.vma a0
 sfence.vma a0
+# CHECK-S-OBJ-NOALIAS: hfence.gvma zero, zero
+# CHECK-S-OBJ: hfence.gvma
+hfence.gvma
+# CHECK-S-OBJ-NOALIAS: hfence.gvma a0, zero
+# CHECK-S-OBJ: hfence.gvma a0
+hfence.gvma a0
+# CHECK-S-OBJ-NOALIAS: hfence.vvma zero, zero
+# CHECK-S-OBJ: hfence.vvma
+hfence.vvma
+# CHECK-S-OBJ-NOALIAS: hfence.vvma a0, zero
+# CHECK-S-OBJ: hfence.vvma a0
+hfence.vvma a0
 
 # The following aliases are accepted as input but the canonical form
 # of the instruction will always be printed.

@@ -22,6 +22,8 @@ namespace llvm {
 
 namespace codeview {
 
+struct GUID;
+
 namespace detail {
 
 class GuidAdapter final : public FormatAdapter<ArrayRef<uint8_t>> {

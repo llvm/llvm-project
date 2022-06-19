@@ -42,10 +42,10 @@ declare i8* @malloc(i32)
 define void @test2() nounwind {
 ; CHECK-LABEL: test2:
 ; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    sub.l #4, %sp
+; CHECK-NEXT:    suba.l #4, %sp
 ; CHECK-NEXT:    move.l #40, (%sp)
 ; CHECK-NEXT:    jsr malloc@PLT
-; CHECK-NEXT:    add.l #4, %sp
+; CHECK-NEXT:    adda.l #4, %sp
 ; CHECK-NEXT:    rts
 entry:
     %ptr = call i8* @malloc(i32 40)
@@ -59,12 +59,12 @@ declare void(...)* @afoo(...)
 define void @test3() nounwind {
 ; CHECK-LABEL: test3:
 ; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    sub.l #4, %sp
+; CHECK-NEXT:    suba.l #4, %sp
 ; CHECK-NEXT:    jsr afoo@PLT
 ; CHECK-NEXT:    move.l %d0, %a0
 ; CHECK-NEXT:    move.l %a0, pfoo
 ; CHECK-NEXT:    jsr (%a0)
-; CHECK-NEXT:    add.l #4, %sp
+; CHECK-NEXT:    adda.l #4, %sp
 ; CHECK-NEXT:    rts
 entry:
     %tmp = call void(...)*(...) @afoo()
@@ -79,9 +79,9 @@ declare void @foo(...)
 define void @test4() nounwind {
 ; CHECK-LABEL: test4:
 ; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    sub.l #4, %sp
+; CHECK-NEXT:    suba.l #4, %sp
 ; CHECK-NEXT:    jsr foo@PLT
-; CHECK-NEXT:    add.l #4, %sp
+; CHECK-NEXT:    adda.l #4, %sp
 ; CHECK-NEXT:    rts
 entry:
     call void(...) @foo()

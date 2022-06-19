@@ -14,13 +14,14 @@
 #ifndef LLVM_ANALYSIS_LOOPPASS_H
 #define LLVM_ANALYSIS_LOOPPASS_H
 
-#include "llvm/Analysis/LoopInfo.h"
 #include "llvm/IR/LegacyPassManagers.h"
 #include "llvm/Pass.h"
 #include <deque>
 
 namespace llvm {
 
+class Loop;
+class LoopInfo;
 class LPPassManager;
 class Function;
 

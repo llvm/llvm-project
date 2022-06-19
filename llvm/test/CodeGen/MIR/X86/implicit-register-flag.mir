@@ -40,11 +40,11 @@ body: |
   bb.1.less:
     ; CHECK: $eax = MOV32r0 implicit-def $eflags
     $eax = MOV32r0 implicit-def $eflags
-    RETQ $eax
+    RET64 $eax
 
   bb.2.exit:
     $eax = COPY $edi
-    RETQ $eax
+    RET64 $eax
 ...
 ---
 name:            implicit_subregister1
@@ -55,7 +55,7 @@ body: |
   ; CHECK-LABEL: name: implicit_subregister1
   ; CHECK: dead $eax = XOR32rr undef $eax, undef $eax, implicit-def dead $eflags, implicit-def $al
     dead $eax = XOR32rr undef $eax, undef $eax, implicit-def dead $eflags, implicit-def $al
-    RETQ killed $al
+    RET64 killed $al
 ...
 ---
 name:            implicit_subregister2
@@ -64,5 +64,5 @@ body: |
   ; CHECK-LABEL: name: implicit_subregister2
   ; CHECK: dead $r15 = XOR64rr undef $r15, undef $r15, implicit-def dead $eflags, implicit-def $r15w
     dead $r15 = XOR64rr undef $r15, undef $r15, implicit-def dead $eflags, implicit-def $r15w
-    RETQ killed $r15w
+    RET64 killed $r15w
 ...

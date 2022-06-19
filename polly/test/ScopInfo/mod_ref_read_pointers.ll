@@ -1,7 +1,7 @@
-; RUN: opt %loadPolly -basic-aa -polly-scops -analyze -polly-allow-modref-calls \
-; RUN: < %s | FileCheck %s
+; RUN: opt %loadPolly -basic-aa -polly-print-scops -polly-allow-modref-calls \
+; RUN:     -disable-output < %s | FileCheck %s
 ; RUN: opt %loadPolly -basic-aa -polly-codegen -disable-output \
-; RUN: -polly-allow-modref-calls < %s
+; RUN:     -polly-allow-modref-calls < %s
 ;
 ; Check that the call to func will "read" not only the A array but also the
 ; B array. The reason is the readonly annotation of func.

@@ -10,12 +10,19 @@
 #define LLVM_MC_MCELFSTREAMER_H
 
 #include "llvm/ADT/SmallVector.h"
-#include "llvm/BinaryFormat/ELF.h"
 #include "llvm/MC/MCDirectives.h"
 #include "llvm/MC/MCObjectStreamer.h"
 
 namespace llvm {
 
+class MCContext;
+class MCDataFragment;
+class MCFragment;
+class MCObjectWriter;
+class MCSection;
+class MCSubtargetInfo;
+class MCSymbol;
+class MCSymbolRefExpr;
 class MCAsmBackend;
 class MCCodeEmitter;
 class MCExpr;
@@ -39,7 +46,7 @@ public:
   /// \name MCStreamer Interface
   /// @{
 
-  void InitSections(bool NoExecStack) override;
+  void initSections(bool NoExecStack, const MCSubtargetInfo &STI) override;
   void changeSection(MCSection *Section, const MCExpr *Subsection) override;
   void emitLabel(MCSymbol *Symbol, SMLoc Loc = SMLoc()) override;
   void emitLabelAtPos(MCSymbol *Symbol, SMLoc Loc, MCFragment *F,

@@ -7,6 +7,7 @@
 string(TOUPPER "${CMAKE_BUILD_TYPE}" uppercase_CMAKE_BUILD_TYPE)
 
 include(CheckCompilerVersion)
+include(CheckProblematicConfigurations)
 include(HandleLLVMStdlib)
 include(CheckCCompilerFlag)
 include(CheckCXXCompilerFlag)
@@ -34,7 +35,7 @@ string(TOUPPER "${LLVM_ENABLE_LTO}" uppercase_LLVM_ENABLE_LTO)
 set(LLVM_PARALLEL_COMPILE_JOBS "" CACHE STRING
   "Define the maximum number of concurrent compilation jobs (Ninja only).")
 if(LLVM_PARALLEL_COMPILE_JOBS)
-  if(NOT CMAKE_GENERATOR STREQUAL "Ninja")
+  if(NOT CMAKE_GENERATOR MATCHES "Ninja")
     message(WARNING "Job pooling is only available with Ninja generators.")
   else()
     set_property(GLOBAL APPEND PROPERTY JOB_POOLS compile_job_pool=${LLVM_PARALLEL_COMPILE_JOBS})
@@ -44,7 +45,7 @@ endif()
 
 set(LLVM_PARALLEL_LINK_JOBS "" CACHE STRING
   "Define the maximum number of concurrent link jobs (Ninja only).")
-if(CMAKE_GENERATOR STREQUAL "Ninja")
+if(CMAKE_GENERATOR MATCHES "Ninja")
   if(NOT LLVM_PARALLEL_LINK_JOBS AND uppercase_LLVM_ENABLE_LTO STREQUAL "THIN")
     message(STATUS "ThinLTO provides its own parallel linking - limiting parallel link jobs to 2.")
     set(LLVM_PARALLEL_LINK_JOBS "2")
@@ -167,9 +168,6 @@ else()
 endif()
 
 if(APPLE)
-  if(LLVM_ENABLE_LLD AND LLVM_ENABLE_LTO)
-    message(FATAL_ERROR "lld does not support LTO on Darwin")
-  endif()
   # Darwin-specific linker flags for loadable modules.
   set(CMAKE_MODULE_LINKER_FLAGS "${CMAKE_MODULE_LINKER_FLAGS} -Wl,-flat_namespace -Wl,-undefined -Wl,suppress")
 endif()
@@ -192,13 +190,15 @@ if(${CMAKE_SYSTEM_NAME} MATCHES "Linux")
                     ERROR_QUIET
                     )
     if(${RANLIB_RESULT} EQUAL 0)
-      set(CMAKE_C_ARCHIVE_CREATE "<CMAKE_AR> Dqc <TARGET> <LINK_FLAGS> <OBJECTS>")
+      set(CMAKE_C_ARCHIVE_CREATE "<CMAKE_AR> Dqc <TARGET> <LINK_FLAGS> <OBJECTS>"
+          CACHE STRING "archive create command")
       set(CMAKE_C_ARCHIVE_APPEND "<CMAKE_AR> Dq  <TARGET> <LINK_FLAGS> <OBJECTS>")
-      set(CMAKE_C_ARCHIVE_FINISH "<CMAKE_RANLIB> -D <TARGET>")
+      set(CMAKE_C_ARCHIVE_FINISH "<CMAKE_RANLIB> -D <TARGET>" CACHE STRING "ranlib command")
 
-      set(CMAKE_CXX_ARCHIVE_CREATE "<CMAKE_AR> Dqc <TARGET> <LINK_FLAGS> <OBJECTS>")
+      set(CMAKE_CXX_ARCHIVE_CREATE "<CMAKE_AR> Dqc <TARGET> <LINK_FLAGS> <OBJECTS>"
+          CACHE STRING "archive create command")
       set(CMAKE_CXX_ARCHIVE_APPEND "<CMAKE_AR> Dq  <TARGET> <LINK_FLAGS> <OBJECTS>")
-      set(CMAKE_CXX_ARCHIVE_FINISH "<CMAKE_RANLIB> -D <TARGET>")
+      set(CMAKE_CXX_ARCHIVE_FINISH "<CMAKE_RANLIB> -D <TARGET>" CACHE STRING "ranlib command")
     endif()
     file(REMOVE ${CMAKE_BINARY_DIR}/t.a)
   endif()
@@ -278,6 +278,17 @@ function(add_flag_or_print_warning flag name)
   endif()
 endfunction()
 
+function(has_msvc_incremental_no_flag flags incr_no_flag_on)
+  set(${incr_no_flag_on} OFF PARENT_SCOPE)
+  string(FIND "${flags}" "/INCREMENTAL" idx REVERSE)
+  if (${idx} GREATER -1)
+    string(SUBSTRING "${flags}" ${idx} 15 no_flag)
+    if (${no_flag} MATCHES "/INCREMENTAL:NO")
+      set(${incr_no_flag_on} ON PARENT_SCOPE)
+    endif()
+  endif()
+endfunction()
+
 if( LLVM_ENABLE_LLD )
   if ( LLVM_USE_LINKER )
     message(FATAL_ERROR "LLVM_ENABLE_LLD and LLVM_USE_LINKER can't be set at the same time")
@@ -316,12 +327,11 @@ if( LLVM_ENABLE_PIC )
     # Note: GCC<10.3 has a bug on SystemZ.
     #
     # Note: Clang allows IPO for -fPIC so this optimization is less effective.
-    # Older Clang may support -fno-semantic-interposition but it used local
-    # aliases to optimize global variables, which is incompatible with copy
-    # relocations due to -fno-pic.
+    # Clang 13 has a bug related to -fsanitize-coverage
+    # -fno-semantic-interposition (https://reviews.llvm.org/D117183).
     if ((CMAKE_COMPILER_IS_GNUCXX AND
          NOT (LLVM_NATIVE_ARCH STREQUAL "SystemZ" AND CMAKE_CXX_COMPILER_VERSION VERSION_LESS 10.3))
-       OR (CMAKE_CXX_COMPILER_ID MATCHES "Clang" AND CMAKE_CXX_COMPILER_VERSION GREATER_EQUAL 13))
+       OR (CMAKE_CXX_COMPILER_ID MATCHES "Clang" AND CMAKE_CXX_COMPILER_VERSION GREATER_EQUAL 14))
       add_flag_if_supported("-fno-semantic-interposition" FNO_SEMANTIC_INTERPOSITION)
     endif()
   endif()
@@ -341,9 +351,9 @@ if( LLVM_ENABLE_PIC )
   endif()
 endif()
 
-if(NOT WIN32 AND NOT CYGWIN AND NOT (${CMAKE_SYSTEM_NAME} MATCHES "AIX" AND CMAKE_CXX_COMPILER_ID STREQUAL "GNU"))
+if(NOT WIN32 AND NOT CYGWIN AND NOT (${CMAKE_SYSTEM_NAME} MATCHES "AIX"))
   # MinGW warns if -fvisibility-inlines-hidden is used.
-  # GCC on AIX warns if -fvisibility-inlines-hidden is used.
+  # GCC on AIX warns if -fvisibility-inlines-hidden is used and Clang on AIX doesn't currently support visibility.
   check_cxx_compiler_flag("-fvisibility-inlines-hidden" SUPPORTS_FVISIBILITY_INLINES_HIDDEN_FLAG)
   append_if(SUPPORTS_FVISIBILITY_INLINES_HIDDEN_FLAG "-fvisibility-inlines-hidden" CMAKE_CXX_FLAGS)
 endif()
@@ -458,9 +468,6 @@ if( MSVC )
     -D_UNICODE
   )
 
-  # Allow setting clang-cl's /winsysroot flag.
-  set(LLVM_WINSYSROOT "" CACHE STRING
-    "If set, argument to clang-cl's /winsysroot")
   if (LLVM_WINSYSROOT)
     if (NOT CLANG_CL)
       message(ERROR "LLVM_WINSYSROOT requires clang-cl")
@@ -494,8 +501,13 @@ if( MSVC )
   endif()
 
   # Get all linker flags in upper case form so we can search them.
-  set(all_linker_flags_uppercase
-    "${CMAKE_EXE_LINKER_FLAGS} ${CMAKE_MODULE_LINKER_FLAGS} ${CMAKE_SHARED_LINKER_FLAGS}")
+  string(CONCAT all_linker_flags_uppercase
+     ${CMAKE_EXE_LINKER_FLAGS_${uppercase_CMAKE_BUILD_TYPE}} " "
+     ${CMAKE_EXE_LINKER_FLAGS} " "
+     ${CMAKE_MODULE_LINKER_FLAGS_${uppercase_CMAKE_BUILD_TYPE}} " "
+     ${CMAKE_MODULE_LINKER_FLAGS} " "
+     ${CMAKE_SHARED_LINKER_FLAGS_${uppercase_CMAKE_BUILD_TYPE}} " "
+     ${CMAKE_SHARED_LINKER_FLAGS})
   string(TOUPPER "${all_linker_flags_uppercase}" all_linker_flags_uppercase)
 
   if (CLANG_CL AND LINKER_IS_LLD)
@@ -535,11 +547,13 @@ if( MSVC )
     if (SUPPORTS_BREPRO)
       # Check if /INCREMENTAL is passed to the linker and complain that it
       # won't work with /Brepro.
-      string(FIND "${all_linker_flags_uppercase}" "/INCREMENTAL" linker_flag_idx)
-      if (${linker_flag_idx} GREATER -1)
-        message(WARNING "/Brepro not compatible with /INCREMENTAL linking - builds will be non-deterministic")
-      else()
+      has_msvc_incremental_no_flag("${CMAKE_EXE_LINKER_FLAGS_${uppercase_CMAKE_BUILD_TYPE}} ${CMAKE_EXE_LINKER_FLAGS}" NO_INCR_EXE)
+      has_msvc_incremental_no_flag("${CMAKE_MODULE_LINKER_FLAGS_${uppercase_CMAKE_BUILD_TYPE}} ${CMAKE_MODULE_LINKER_FLAGS}" NO_INCR_MODULE)
+      has_msvc_incremental_no_flag("${CMAKE_SHARED_LINKER_FLAGS_${uppercase_CMAKE_BUILD_TYPE}} ${CMAKE_SHARED_LINKER_FLAGS}" NO_INCR_SHARED)
+      if (NO_INCR_EXE AND NO_INCR_MODULE AND NO_INCR_SHARED)
         append("/Brepro" CMAKE_C_FLAGS CMAKE_CXX_FLAGS)
+      else()
+        message(WARNING "/Brepro not compatible with /INCREMENTAL linking - builds will be non-deterministic")
       endif()
     endif()
   endif()
@@ -736,28 +750,19 @@ if (LLVM_ENABLE_WARNINGS AND (LLVM_COMPILER_IS_GCC_COMPATIBLE OR CLANG_CL))
   check_cxx_compiler_flag("-Wnoexcept-type" CXX_SUPPORTS_NOEXCEPT_TYPE_FLAG)
   append_if(CXX_SUPPORTS_NOEXCEPT_TYPE_FLAG "-Wno-noexcept-type" CMAKE_CXX_FLAGS)
 
-  # Check if -Wnon-virtual-dtor warns even though the class is marked final.
-  # If it does, don't add it. So it won't be added on clang 3.4 and older.
-  # This also catches cases when -Wnon-virtual-dtor isn't supported by
-  # the compiler at all.  This flag is not activated for gcc since it will
-  # incorrectly identify a protected non-virtual base when there is a friend
-  # declaration. Don't activate this in general on Windows as this warning has
-  # too many false positives on COM-style classes, which are destroyed with
-  # Release() (PR32286).
-  if (NOT CMAKE_COMPILER_IS_GNUCXX AND NOT WIN32)
-    set(OLD_CMAKE_REQUIRED_FLAGS ${CMAKE_REQUIRED_FLAGS})
-    set(CMAKE_REQUIRED_FLAGS "${CMAKE_REQUIRED_FLAGS} -std=c++11 -Werror=non-virtual-dtor")
-    CHECK_CXX_SOURCE_COMPILES("class base {public: virtual void anchor();protected: ~base();};
-                               class derived final : public base { public: ~derived();};
-                               int main() { return 0; }"
-                              CXX_WONT_WARN_ON_FINAL_NONVIRTUALDTOR)
-    set(CMAKE_REQUIRED_FLAGS ${OLD_CMAKE_REQUIRED_FLAGS})
-    append_if(CXX_WONT_WARN_ON_FINAL_NONVIRTUALDTOR
-              "-Wnon-virtual-dtor" CMAKE_CXX_FLAGS)
-  endif()
+  # Check if -Wnon-virtual-dtor warns for a class marked final, when it has a
+  # friend declaration. If it does, don't add -Wnon-virtual-dtor. The case is
+  # considered unhelpful (https://gcc.gnu.org/PR102168).
+  set(OLD_CMAKE_REQUIRED_FLAGS ${CMAKE_REQUIRED_FLAGS})
+  set(CMAKE_REQUIRED_FLAGS "${CMAKE_REQUIRED_FLAGS} -Werror=non-virtual-dtor")
+  CHECK_CXX_SOURCE_COMPILES("class f {};
+                             class base {friend f; public: virtual void anchor();protected: ~base();};
+                             int main() { return 0; }"
+                            CXX_WONT_WARN_ON_FINAL_NONVIRTUALDTOR)
+  set(CMAKE_REQUIRED_FLAGS ${OLD_CMAKE_REQUIRED_FLAGS})
+  append_if(CXX_WONT_WARN_ON_FINAL_NONVIRTUALDTOR "-Wnon-virtual-dtor" CMAKE_CXX_FLAGS)
 
-  # Enable -Wdelete-non-virtual-dtor if available.
-  add_flag_if_supported("-Wdelete-non-virtual-dtor" DELETE_NON_VIRTUAL_DTOR_FLAG)
+  append("-Wdelete-non-virtual-dtor" CMAKE_CXX_FLAGS)
 
   # Enable -Wsuggest-override if it's available, and only if it doesn't
   # suggest adding 'override' to functions that are already marked 'final'
@@ -809,12 +814,20 @@ macro(append_common_sanitizer_flags)
     if (uppercase_CMAKE_BUILD_TYPE STREQUAL "DEBUG" AND LLVM_OPTIMIZE_SANITIZED_BUILDS)
       add_flag_if_supported("-O1" O1)
     endif()
-  elseif (CLANG_CL)
-    # Keep frame pointers around.
-    append("/Oy-" CMAKE_C_FLAGS CMAKE_CXX_FLAGS)
+  else()
     # Always ask the linker to produce symbols with asan.
     append("/Z7" CMAKE_C_FLAGS CMAKE_CXX_FLAGS)
-    append("-debug" CMAKE_EXE_LINKER_FLAGS CMAKE_MODULE_LINKER_FLAGS CMAKE_SHARED_LINKER_FLAGS)
+    append("/debug" CMAKE_EXE_LINKER_FLAGS CMAKE_MODULE_LINKER_FLAGS CMAKE_SHARED_LINKER_FLAGS)
+    # Not compatible with /INCREMENTAL link.
+    foreach (flags_opt_to_scrub
+        CMAKE_EXE_LINKER_FLAGS CMAKE_MODULE_LINKER_FLAGS CMAKE_SHARED_LINKER_FLAGS)
+      string (REGEX REPLACE "(^| )/INCREMENTAL($| )" " /INCREMENTAL:NO "
+        "${flags_opt_to_scrub}" "${${flags_opt_to_scrub}}")
+    endforeach()
+    if (LLVM_HOST_TRIPLE MATCHES "i[2-6]86-.*")
+      # Keep frame pointers around.
+      append("/Oy-" CMAKE_C_FLAGS CMAKE_CXX_FLAGS)
+    endif()
   endif()
 endmacro()
 
@@ -870,7 +883,31 @@ if(LLVM_USE_SANITIZER)
   elseif(MSVC)
     if (LLVM_USE_SANITIZER STREQUAL "Address")
       append_common_sanitizer_flags()
-      append("-fsanitize=address" CMAKE_C_FLAGS CMAKE_CXX_FLAGS)
+      append("/fsanitize=address" CMAKE_C_FLAGS CMAKE_CXX_FLAGS)
+      if (NOT CLANG_CL)
+        # Not compatible with /RTC flags.
+        foreach (flags_opt_to_scrub
+            CMAKE_CXX_FLAGS_${uppercase_CMAKE_BUILD_TYPE} CMAKE_C_FLAGS_${uppercase_CMAKE_BUILD_TYPE})
+          string (REGEX REPLACE "(^| )/RTC[1csu]*($| )" " "
+            "${flags_opt_to_scrub}" "${${flags_opt_to_scrub}}")
+        endforeach()
+      endif()
+      if (LINKER_IS_LLD_LINK)
+        if (LLVM_HOST_TRIPLE MATCHES "i[2-6]86-.*")
+          set(arch "i386")
+        else()
+          set(arch "x86_64")
+        endif()
+        if (${LLVM_USE_CRT_${uppercase_CMAKE_BUILD_TYPE}} MATCHES "^(MT|MTd)$")
+          append("/wholearchive:clang_rt.asan-${arch}.lib /wholearchive:clang_rt.asan_cxx-${arch}.lib"
+            CMAKE_EXE_LINKER_FLAGS)
+          append("/wholearchive:clang_rt.asan_dll_thunk-${arch}.lib"
+            CMAKE_MODULE_LINKER_FLAGS CMAKE_SHARED_LINKER_FLAGS)
+        else()
+          append("clang_rt.asan_dynamic-${arch}.lib /wholearchive:clang_rt.asan_dynamic_runtime_thunk-${arch}.lib"
+            CMAKE_EXE_LINKER_FLAGS CMAKE_MODULE_LINKER_FLAGS CMAKE_SHARED_LINKER_FLAGS)
+        endif()
+      endif()
     else()
       message(FATAL_ERROR "This sanitizer not yet supported in the MSVC environment: ${LLVM_USE_SANITIZER}")
     endif()
@@ -885,9 +922,11 @@ if(LLVM_USE_SANITIZER)
     append("-fsanitize=fuzzer-no-link" CMAKE_C_FLAGS CMAKE_CXX_FLAGS)
   endif()
   if (LLVM_USE_SANITIZER MATCHES ".*Undefined.*")
-    set(BLACKLIST_FILE "${CMAKE_SOURCE_DIR}/utils/sanitizers/ubsan_blacklist.txt")
-    if (EXISTS "${BLACKLIST_FILE}")
-      append("-fsanitize-blacklist=${BLACKLIST_FILE}"
+    set(IGNORELIST_FILE "${CMAKE_SOURCE_DIR}/utils/sanitizers/ubsan_ignorelist.txt")
+    if (EXISTS "${IGNORELIST_FILE}")
+      # Use this option name version since -fsanitize-ignorelist is only
+      # accepted with clang 13.0 or newer.
+      append("-fsanitize-blacklist=${IGNORELIST_FILE}"
              CMAKE_C_FLAGS CMAKE_CXX_FLAGS)
     endif()
   endif()
@@ -901,6 +940,10 @@ if (LLVM_USE_SPLIT_DWARF AND
   if (CMAKE_CXX_COMPILER_ID MATCHES "Clang" OR
       CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
     add_compile_options(-gsplit-dwarf)
+  include(LLVMCheckLinkerFlag)
+  llvm_check_linker_flag(CXX "-Wl,--gdb-index" LINKER_SUPPORTS_GDB_INDEX)
+  append_if(LINKER_SUPPORTS_GDB_INDEX "-Wl,--gdb-index"
+    CMAKE_EXE_LINKER_FLAGS CMAKE_MODULE_LINKER_FLAGS CMAKE_SHARED_LINKER_FLAGS)
   endif()
 endif()
 
@@ -910,7 +953,7 @@ add_definitions( -D__STDC_LIMIT_MACROS )
 
 # clang and gcc don't default-print colored diagnostics when invoked from Ninja.
 if (UNIX AND
-    CMAKE_GENERATOR STREQUAL "Ninja" AND
+    CMAKE_GENERATOR MATCHES "Ninja" AND
     (CMAKE_CXX_COMPILER_ID MATCHES "Clang" OR
      (CMAKE_CXX_COMPILER_ID STREQUAL "GNU" AND
       NOT (CMAKE_CXX_COMPILER_VERSION VERSION_LESS 4.9))))
@@ -918,7 +961,7 @@ if (UNIX AND
 endif()
 
 # lld doesn't print colored diagnostics when invoked from Ninja
-if (UNIX AND CMAKE_GENERATOR STREQUAL "Ninja")
+if (UNIX AND CMAKE_GENERATOR MATCHES "Ninja")
   include(LLVMCheckLinkerFlag)
   llvm_check_linker_flag(CXX "-Wl,--color-diagnostics" LINKER_SUPPORTS_COLOR_DIAGNOSTICS)
   append_if(LINKER_SUPPORTS_COLOR_DIAGNOSTICS "-Wl,--color-diagnostics"
@@ -962,16 +1005,6 @@ option(LLVM_ENABLE_EH "Enable Exception handling" OFF)
 option(LLVM_ENABLE_RTTI "Enable run time type information" OFF)
 if(LLVM_ENABLE_EH AND NOT LLVM_ENABLE_RTTI)
   message(FATAL_ERROR "Exception handling requires RTTI. You must set LLVM_ENABLE_RTTI to ON")
-endif()
-
-option(LLVM_USE_NEWPM "Build LLVM using the experimental new pass manager" Off)
-mark_as_advanced(LLVM_USE_NEWPM)
-if (LLVM_USE_NEWPM)
-  append("-fexperimental-new-pass-manager"
-    CMAKE_CXX_FLAGS
-    CMAKE_C_FLAGS
-    CMAKE_EXE_LINKER_FLAGS
-    CMAKE_SHARED_LINKER_FLAGS)
 endif()
 
 option(LLVM_ENABLE_IR_PGO "Build LLVM and tools with IR PGO instrumentation (deprecated)" Off)
@@ -1072,6 +1105,8 @@ if (LLVM_BUILD_INSTRUMENTED AND LLVM_BUILD_INSTRUMENTED_COVERAGE)
   message(FATAL_ERROR "LLVM_BUILD_INSTRUMENTED and LLVM_BUILD_INSTRUMENTED_COVERAGE cannot both be specified")
 endif()
 
+set(LLVM_THINLTO_CACHE_PATH "${PROJECT_BINARY_DIR}/lto.cache" CACHE STRING "Set ThinLTO cache path. This can be used when building LLVM from several different directiories.")
+
 if(LLVM_ENABLE_LTO AND LLVM_ON_WIN32 AND NOT LINKER_IS_LLD_LINK AND NOT MINGW)
   message(FATAL_ERROR "When compiling for Windows, LLVM_ENABLE_LTO requires using lld as the linker (point CMAKE_LINKER at lld-link.exe)")
 endif()
@@ -1085,16 +1120,16 @@ if(uppercase_LLVM_ENABLE_LTO STREQUAL "THIN")
   # improves incremental build time.
   # FIXME: We should move all this logic into the clang driver.
   if(APPLE)
-    append("-Wl,-cache_path_lto,${PROJECT_BINARY_DIR}/lto.cache"
+    append("-Wl,-cache_path_lto,${LLVM_THINLTO_CACHE_PATH}"
            CMAKE_EXE_LINKER_FLAGS CMAKE_SHARED_LINKER_FLAGS)
   elseif((UNIX OR MINGW) AND LLVM_USE_LINKER STREQUAL "lld")
-    append("-Wl,--thinlto-cache-dir=${PROJECT_BINARY_DIR}/lto.cache"
+    append("-Wl,--thinlto-cache-dir=${LLVM_THINLTO_CACHE_PATH}"
            CMAKE_EXE_LINKER_FLAGS CMAKE_SHARED_LINKER_FLAGS)
   elseif(LLVM_USE_LINKER STREQUAL "gold")
-    append("-Wl,--plugin-opt,cache-dir=${PROJECT_BINARY_DIR}/lto.cache"
+    append("-Wl,--plugin-opt,cache-dir=${LLVM_THINLTO_CACHE_PATH}"
            CMAKE_EXE_LINKER_FLAGS CMAKE_SHARED_LINKER_FLAGS)
   elseif(LINKER_IS_LLD_LINK)
-    append("/lldltocache:${PROJECT_BINARY_DIR}/lto.cache"
+    append("/lldltocache:${LLVM_THINLTO_CACHE_PATH}"
            CMAKE_EXE_LINKER_FLAGS CMAKE_SHARED_LINKER_FLAGS)
   endif()
 elseif(uppercase_LLVM_ENABLE_LTO STREQUAL "FULL")

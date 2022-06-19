@@ -17,7 +17,6 @@
 #include "llvm/ADT/StringSet.h"
 #include "llvm/TableGen/Error.h"
 #include "llvm/TableGen/Record.h"
-#include "llvm/TableGen/TableGenBackend.h"
 
 using namespace llvm;
 
@@ -368,8 +367,7 @@ void GenerateCaseForVersionedClauses(const std::vector<Record *> &Clauses,
 
     const auto ClauseFormattedName = VerClause.getClause().getFormattedName();
 
-    if (Cases.find(ClauseFormattedName) == Cases.end()) {
-      Cases.insert(ClauseFormattedName);
+    if (Cases.insert(ClauseFormattedName).second) {
       OS << "        case " << DirLang.getClausePrefix() << ClauseFormattedName
          << ":\n";
       OS << "          return " << VerClause.getMinVersion()

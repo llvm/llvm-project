@@ -5,8 +5,7 @@
 ; and does not get inlined. Another callsite to an identical callee that
 ; is not cold gets inlined because cost is below the inline-threshold.
 
-define void @callee() {
-  call void @extern()
+define void @callee() "function-inline-cost"="10" {
   call void @extern()
   ret void
 }

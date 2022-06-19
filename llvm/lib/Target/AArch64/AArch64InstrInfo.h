@@ -26,7 +26,6 @@
 namespace llvm {
 
 class AArch64Subtarget;
-class AArch64TargetMachine;
 
 static const MachineMemOperand::Flags MOSuppressPair =
     MachineMemOperand::MOTargetFlag1;
@@ -103,6 +102,21 @@ public:
 
   /// Returns whether the instruction is a pre-indexed load/store.
   static bool isPreLdSt(const MachineInstr &MI);
+
+  /// Returns whether the instruction is a paired load/store.
+  static bool isPairedLdSt(const MachineInstr &MI);
+
+  /// Returns the base register operator of a load/store.
+  static const MachineOperand &getLdStBaseOp(const MachineInstr &MI);
+
+  /// Returns the the immediate offset operator of a load/store.
+  static const MachineOperand &getLdStOffsetOp(const MachineInstr &MI);
+
+  /// Returns whether the instruction is FP or NEON.
+  static bool isFpOrNEON(const MachineInstr &MI);
+
+  /// Returns whether the instruction is in Q form (128 bit operands)
+  static bool isQForm(const MachineInstr &MI);
 
   /// Returns the index for the immediate for a given instruction.
   static unsigned getLoadStoreImmIdx(unsigned Opc);
@@ -227,12 +241,12 @@ public:
   /// in SrcReg and SrcReg2, and the value it compares against in CmpValue.
   /// Return true if the comparison instruction can be analyzed.
   bool analyzeCompare(const MachineInstr &MI, Register &SrcReg,
-                      Register &SrcReg2, int &CmpMask,
-                      int &CmpValue) const override;
+                      Register &SrcReg2, int64_t &CmpMask,
+                      int64_t &CmpValue) const override;
   /// optimizeCompareInstr - Convert the instruction supplying the argument to
   /// the comparison into one that sets the zero bit in the flags register.
   bool optimizeCompareInstr(MachineInstr &CmpInstr, Register SrcReg,
-                            Register SrcReg2, int CmpMask, int CmpValue,
+                            Register SrcReg2, int64_t CmpMask, int64_t CmpValue,
                             const MachineRegisterInfo *MRI) const override;
   bool optimizeCondBranch(MachineInstr &MI) const override;
 
@@ -284,7 +298,7 @@ public:
   MachineBasicBlock::iterator
   insertOutlinedCall(Module &M, MachineBasicBlock &MBB,
                      MachineBasicBlock::iterator &It, MachineFunction &MF,
-                     const outliner::Candidate &C) const override;
+                     outliner::Candidate &C) const override;
   bool shouldOutlineFromFunctionByDefault(MachineFunction &MF) const override;
   /// Returns the vector element size (B, H, S or D) of an SVE opcode.
   uint64_t getElementSizeForOpcode(unsigned Opc) const;
@@ -348,7 +362,7 @@ private:
 
   /// Returns an unused general-purpose register which can be used for
   /// constructing an outlined call if one exists. Returns 0 otherwise.
-  unsigned findRegisterToSaveLRTo(const outliner::Candidate &C) const;
+  Register findRegisterToSaveLRTo(outliner::Candidate &C) const;
 
   /// Remove a ptest of a predicate-generating operation that already sets, or
   /// can be made to set, the condition codes in an identical manner
@@ -357,11 +371,44 @@ private:
                           const MachineRegisterInfo *MRI) const;
 };
 
+struct UsedNZCV {
+  bool N = false;
+  bool Z = false;
+  bool C = false;
+  bool V = false;
+
+  UsedNZCV() = default;
+
+  UsedNZCV &operator|=(const UsedNZCV &UsedFlags) {
+    this->N |= UsedFlags.N;
+    this->Z |= UsedFlags.Z;
+    this->C |= UsedFlags.C;
+    this->V |= UsedFlags.V;
+    return *this;
+  }
+};
+
+/// \returns Conditions flags used after \p CmpInstr in its MachineBB if  NZCV
+/// flags are not alive in successors of the same \p CmpInstr and \p MI parent.
+/// \returns None otherwise.
+///
+/// Collect instructions using that flags in \p CCUseInstrs if provided.
+Optional<UsedNZCV>
+examineCFlagsUse(MachineInstr &MI, MachineInstr &CmpInstr,
+                 const TargetRegisterInfo &TRI,
+                 SmallVectorImpl<MachineInstr *> *CCUseInstrs = nullptr);
+
 /// Return true if there is an instruction /after/ \p DefMI and before \p UseMI
 /// which either reads or clobbers NZCV.
 bool isNZCVTouchedInInstructionRange(const MachineInstr &DefMI,
                                      const MachineInstr &UseMI,
                                      const TargetRegisterInfo *TRI);
+
+MCCFIInstruction createDefCFA(const TargetRegisterInfo &TRI, unsigned FrameReg,
+                              unsigned Reg, const StackOffset &Offset,
+                              bool LastAdjustmentWasScalable = true);
+MCCFIInstruction createCFAOffset(const TargetRegisterInfo &MRI, unsigned Reg,
+                                 const StackOffset &OffsetFromDefCFA);
 
 /// emitFrameOffset - Emit instructions as needed to set DestReg to SrcReg
 /// plus Offset.  This is intended to be used from within the prolog/epilog
@@ -372,7 +419,9 @@ void emitFrameOffset(MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
                      StackOffset Offset, const TargetInstrInfo *TII,
                      MachineInstr::MIFlag = MachineInstr::NoFlags,
                      bool SetNZCV = false, bool NeedsWinCFI = false,
-                     bool *HasWinCFI = nullptr);
+                     bool *HasWinCFI = nullptr, bool EmitCFAOffset = false,
+                     StackOffset InitialOffset = {},
+                     unsigned FrameReg = AArch64::SP);
 
 /// rewriteAArch64FrameIndex - Rewrite MI to access 'Offset' bytes from the
 /// FP. Return false if the offset could not be handled directly in MI, and
@@ -482,6 +531,7 @@ enum DestructiveInstType {
   DestructiveBinaryComm         = TSFLAG_DESTRUCTIVE_INST_TYPE(0x6),
   DestructiveBinaryCommWithRev  = TSFLAG_DESTRUCTIVE_INST_TYPE(0x7),
   DestructiveTernaryCommWithRev = TSFLAG_DESTRUCTIVE_INST_TYPE(0x8),
+  DestructiveUnaryPassthru      = TSFLAG_DESTRUCTIVE_INST_TYPE(0x9),
 };
 
 enum FalseLaneType {

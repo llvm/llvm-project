@@ -55,10 +55,8 @@ TGLexer::TGLexer(SourceMgr &SM, ArrayRef<std::string> Macros) : SrcMgr(SM) {
       std::make_unique<std::vector<PreprocessorControlDesc>>());
 
   // Put all macros defined in the command line into the DefinedMacros set.
-  std::for_each(Macros.begin(), Macros.end(),
-                [this](const std::string &MacroName) {
-                  DefinedMacros.insert(MacroName);
-                });
+  for (const std::string &MacroName : Macros)
+    DefinedMacros.insert(MacroName);
 }
 
 SMLoc TGLexer::getLoc() const {
@@ -1017,12 +1015,10 @@ void TGLexer::prepSkipToLineEnd() {
 }
 
 bool TGLexer::prepIsProcessingEnabled() {
-  for (auto I = PrepIncludeStack.back()->rbegin(),
-            E = PrepIncludeStack.back()->rend();
-       I != E; ++I) {
-    if (!I->IsDefined)
+  for (const PreprocessorControlDesc &I :
+       llvm::reverse(*PrepIncludeStack.back()))
+    if (!I.IsDefined)
       return false;
-  }
 
   return true;
 }

@@ -59,6 +59,8 @@
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/Twine.h"
+#include "llvm/Analysis/OptimizationRemarkEmitter.h"
+#include "llvm/CodeGen/LivePhysRegs.h"
 #include "llvm/CodeGen/MachineModuleInfo.h"
 #include "llvm/CodeGen/MachineOptimizationRemarkEmitter.h"
 #include "llvm/CodeGen/Passes.h"
@@ -82,8 +84,16 @@ using namespace llvm;
 using namespace ore;
 using namespace outliner;
 
+// Statistics for outlined functions.
 STATISTIC(NumOutlined, "Number of candidates outlined");
 STATISTIC(FunctionsCreated, "Number of functions created");
+
+// Statistics for instruction mapping.
+STATISTIC(NumLegalInUnsignedVec, "Number of legal instrs in unsigned vector");
+STATISTIC(NumIllegalInUnsignedVec,
+          "Number of illegal instrs in unsigned vector");
+STATISTIC(NumInvisible, "Number of invisible instrs in unsigned vector");
+STATISTIC(UnsignedVecSize, "Size of unsigned vector");
 
 // Set to true if the user wants the outliner to run on linkonceodr linkage
 // functions. This is false by default because the linker can dedupe linkonceodr
@@ -188,6 +198,8 @@ struct InstructionMapper {
     assert(LegalInstrNumber != DenseMapInfo<unsigned>::getTombstoneKey() &&
            "Tried to assign DenseMap tombstone or empty key to instruction.");
 
+    // Statistics.
+    ++NumLegalInUnsignedVec;
     return MINumber;
   }
 
@@ -215,6 +227,8 @@ struct InstructionMapper {
     InstrListForMBB.push_back(It);
     UnsignedVecForMBB.push_back(IllegalInstrNumber);
     IllegalInstrNumber--;
+    // Statistics.
+    ++NumIllegalInUnsignedVec;
 
     assert(LegalInstrNumber < IllegalInstrNumber &&
            "Instruction mapping overflow!");
@@ -293,6 +307,7 @@ struct InstructionMapper {
       case InstrType::Invisible:
         // Normally this is set by mapTo(Blah)Unsigned, but we just want to
         // skip this instruction. So, unset the flag here.
+        ++NumInvisible;
         AddedIllegalLastTime = false;
         break;
       }
@@ -617,20 +632,20 @@ MachineFunction *MachineOutliner::createOutlinedFunction(
   F->addFnAttr(Attribute::OptimizeForSize);
   F->addFnAttr(Attribute::MinSize);
 
-  // Include target features from an arbitrary candidate for the outlined
-  // function. This makes sure the outlined function knows what kinds of
-  // instructions are going into it. This is fine, since all parent functions
-  // must necessarily support the instructions that are in the outlined region.
   Candidate &FirstCand = OF.Candidates.front();
-  const Function &ParentFn = FirstCand.getMF()->getFunction();
-  if (ParentFn.hasFnAttribute("target-features"))
-    F->addFnAttr(ParentFn.getFnAttribute("target-features"));
+  const TargetInstrInfo &TII =
+      *FirstCand.getMF()->getSubtarget().getInstrInfo();
 
-  // Set nounwind, so we don't generate eh_frame.
-  if (llvm::all_of(OF.Candidates, [](const outliner::Candidate &C) {
-        return C.getMF()->getFunction().hasFnAttribute(Attribute::NoUnwind);
-      }))
-    F->addFnAttr(Attribute::NoUnwind);
+  TII.mergeOutliningCandidateAttributes(*F, OF.Candidates);
+
+  // Set uwtable, so we generate eh_frame.
+  UWTableKind UW = std::accumulate(
+      OF.Candidates.cbegin(), OF.Candidates.cend(), UWTableKind::None,
+      [](UWTableKind K, const outliner::Candidate &C) {
+        return std::max(K, C.getMF()->getFunction().getUWTableKind());
+      });
+  if (UW != UWTableKind::None)
+    F->setUWTableKind(UW);
 
   BasicBlock *EntryBB = BasicBlock::Create(C, "entry", F);
   IRBuilder<> Builder(EntryBB);
@@ -639,8 +654,6 @@ MachineFunction *MachineOutliner::createOutlinedFunction(
   MachineModuleInfo &MMI = getAnalysis<MachineModuleInfoWrapperPass>().getMMI();
   MachineFunction &MF = MMI.getOrCreateMachineFunction(*F);
   MachineBasicBlock &MBB = *MF.CreateMachineBasicBlock();
-  const TargetSubtargetInfo &STI = MF.getSubtarget();
-  const TargetInstrInfo &TII = *STI.getInstrInfo();
 
   // Insert the new function into the module.
   MF.insert(MF.begin(), &MBB);
@@ -652,17 +665,20 @@ MachineFunction *MachineOutliner::createOutlinedFunction(
        ++I) {
     if (I->isDebugInstr())
       continue;
-    MachineInstr *NewMI = MF.CloneMachineInstr(&*I);
-    if (I->isCFIInstruction()) {
-      unsigned CFIIndex = NewMI->getOperand(0).getCFIIndex();
-      MCCFIInstruction CFI = Instrs[CFIIndex];
-      (void)MF.addFrameInst(CFI);
-    }
-    NewMI->dropMemRefs(MF);
 
     // Don't keep debug information for outlined instructions.
-    NewMI->setDebugLoc(DebugLoc());
-    MBB.insert(MBB.end(), NewMI);
+    auto DL = DebugLoc();
+    if (I->isCFIInstruction()) {
+      unsigned CFIIndex = I->getOperand(0).getCFIIndex();
+      MCCFIInstruction CFI = Instrs[CFIIndex];
+      BuildMI(MBB, MBB.end(), DL, TII.get(TargetOpcode::CFI_INSTRUCTION))
+          .addCFIIndex(MF.addFrameInst(CFI));
+    } else {
+      MachineInstr *NewMI = MF.CloneMachineInstr(&*I);
+      NewMI->dropMemRefs(MF);
+      NewMI->setDebugLoc(DL);
+      MBB.insert(MBB.end(), NewMI);
+    }
   }
 
   // Set normal properties for a late MachineFunction.
@@ -798,6 +814,7 @@ bool MachineOutliner::outline(Module &M,
                  Last = std::next(CallInst.getReverse());
              Iter != Last; Iter++) {
           MachineInstr *MI = &*Iter;
+          SmallSet<Register, 2> InstrUseRegs;
           for (MachineOperand &MOP : MI->operands()) {
             // Skip over anything that isn't a register.
             if (!MOP.isReg())
@@ -806,7 +823,8 @@ bool MachineOutliner::outline(Module &M,
             if (MOP.isDef()) {
               // Introduce DefRegs set to skip the redundant register.
               DefRegs.insert(MOP.getReg());
-              if (!MOP.isDead() && UseRegs.count(MOP.getReg()))
+              if (UseRegs.count(MOP.getReg()) &&
+                  !InstrUseRegs.count(MOP.getReg()))
                 // Since the regiester is modeled as defined,
                 // it is not necessary to be put in use register set.
                 UseRegs.erase(MOP.getReg());
@@ -814,6 +832,7 @@ bool MachineOutliner::outline(Module &M,
               // Any register which is not undefined should
               // be put in the use register set.
               UseRegs.insert(MOP.getReg());
+              InstrUseRegs.insert(MOP.getReg());
             }
           }
           if (MI->isCandidateForCallSiteEntry())
@@ -839,9 +858,10 @@ bool MachineOutliner::outline(Module &M,
       MBB.erase(std::next(StartIt), std::next(EndIt));
 
       // Keep track of what we removed by marking them all as -1.
-      std::for_each(Mapper.UnsignedVec.begin() + C.getStartIdx(),
-                    Mapper.UnsignedVec.begin() + C.getEndIdx() + 1,
-                    [](unsigned &I) { I = static_cast<unsigned>(-1); });
+      for (unsigned &I :
+           llvm::make_range(Mapper.UnsignedVec.begin() + C.getStartIdx(),
+                            Mapper.UnsignedVec.begin() + C.getEndIdx() + 1))
+        I = static_cast<unsigned>(-1);
       OutlinedSomething = true;
 
       // Statistics.
@@ -904,6 +924,9 @@ void MachineOutliner::populateMapper(InstructionMapper &Mapper, Module &M,
       // MBB is suitable for outlining. Map it to a list of unsigneds.
       Mapper.convertToUnsignedVec(MBB, *TII);
     }
+
+    // Statistics.
+    UnsignedVecSize = Mapper.UnsignedVec.size();
   }
 }
 

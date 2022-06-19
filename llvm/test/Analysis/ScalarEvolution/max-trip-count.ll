@@ -1,4 +1,3 @@
-; RUN: opt < %s -analyze -enable-new-pm=0 -scalar-evolution | FileCheck %s
 ; RUN: opt < %s -disable-output "-passes=print<scalar-evolution>" 2>&1 | FileCheck %s
 
 ; ScalarEvolution should be able to understand the loop and eliminate the casts.
@@ -456,9 +455,9 @@ loop.exit:
   ret void
 }
 
-define void @max_overflow(i8 %n) mustprogress {
-; CHECK-LABEL: Determining loop execution counts for: @max_overflow
-; CHECK: Loop %loop: backedge-taken count is (-126 + (126 smax %n))<nsw>
+define void @max_overflow_se(i8 %n) mustprogress {
+; CHECK-LABEL: Determining loop execution counts for: @max_overflow_se
+; CHECK: Loop %loop: backedge-taken count is 0
 ; CHECK: Loop %loop: max backedge-taken count is 0
 entry:
   br label %loop
@@ -472,6 +471,33 @@ loop:
 exit:
   ret void
 }
+
+; Show that we correctly realize that %i can overflow here as long as
+; the early exit is taken before we branch on poison.
+define void @max_overflow_me(i8 %n) mustprogress {
+; CHECK-LABEL: Determining loop execution counts for: @max_overflow_me
+; CHECK: Loop %loop: <multiple exits> Unpredictable backedge-taken count.
+; CHECK:   exit count for loop: 1
+; CHECK:   exit count for latch: ***COULDNOTCOMPUTE***
+; CHECK: Loop %loop: max backedge-taken count is 1
+entry:
+  br label %loop
+
+loop:
+  %i = phi i8 [ 63, %entry ], [ %i.next, %latch ]
+  %j = phi i8 [  0, %entry ], [ %j.next, %latch ]
+  %early.exit = icmp ne i8 %j, 1
+  br i1 %early.exit, label %latch, label %exit
+latch:
+  %i.next = add nsw i8 %i, 63
+  %j.next = add nsw nuw i8 %j, 1
+  %t = icmp slt i8 %i.next, %n
+  br i1 %t, label %loop, label %exit
+
+exit:
+  ret void
+}
+
 
 ; Max backedge-taken count is zero.
 define void @bool_stride(i1 %s, i1 %n) mustprogress {
@@ -490,3 +516,38 @@ loop:
 exit:
   ret void
 }
+
+; This is a case where our max-backedge taken count logic happens to be
+; able to prove a zero btc, but our symbolic logic doesn't due to a lack
+; of context sensativity.
+define void @ne_zero_max_btc(i32 %a) {
+; CHECK-LABEL: Determining loop execution counts for: @ne_zero_max_btc
+; CHECK: Loop %for.body: backedge-taken count is 0
+; CHECK: Loop %for.body: max backedge-taken count is 0
+entry:
+  %cmp = icmp slt i32 %a, 1
+  %spec.select = select i1 %cmp, i32 %a, i32 1
+  %cmp8 = icmp sgt i32 %a, 0
+  br i1 %cmp8, label %for.body.preheader, label %loopexit
+
+for.body.preheader:                         ; preds = %if.then4.i.i
+  %umax = call i32 @llvm.umax.i32(i32 %spec.select, i32 1)
+  %umax.i.i = zext i32 %umax to i64
+  br label %for.body
+
+for.body:                                   ; preds = %for.inc, %for.body.preheader
+  %indvars.iv = phi i64 [ 0, %for.body.preheader ], [ %indvars.iv.next, %for.inc ]
+  call void @unknown()
+  br label %for.inc
+
+for.inc:                                    ; preds = %for.body
+  %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
+  %exitcond.i.not.i534 = icmp ne i64 %indvars.iv.next, %umax.i.i
+  br i1 %exitcond.i.not.i534, label %for.body, label %loopexit
+
+loopexit:
+  ret void
+}
+
+declare void @unknown()
+declare i32 @llvm.umax.i32(i32, i32)

@@ -7,13 +7,13 @@ define <8 x i16> @sink_zext(<8 x i8> %a, <8 x i8> %b, i1 %c) {
 ; NEON-NEXT:  entry:
 ; NEON-NEXT:    br i1 [[C:%.*]], label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]]
 ; NEON:       if.then:
-; NEON-NEXT:    [[ZB_1:%.*]] = zext <8 x i8> [[B:%.*]] to <8 x i16>
 ; NEON-NEXT:    [[TMP0:%.*]] = zext <8 x i8> [[A:%.*]] to <8 x i16>
+; NEON-NEXT:    [[ZB_1:%.*]] = zext <8 x i8> [[B:%.*]] to <8 x i16>
 ; NEON-NEXT:    [[RES_1:%.*]] = add <8 x i16> [[TMP0]], [[ZB_1]]
 ; NEON-NEXT:    ret <8 x i16> [[RES_1]]
 ; NEON:       if.else:
-; NEON-NEXT:    [[ZB_2:%.*]] = zext <8 x i8> [[B]] to <8 x i16>
 ; NEON-NEXT:    [[TMP1:%.*]] = zext <8 x i8> [[A]] to <8 x i16>
+; NEON-NEXT:    [[ZB_2:%.*]] = zext <8 x i8> [[B]] to <8 x i16>
 ; NEON-NEXT:    [[RES_2:%.*]] = sub <8 x i16> [[TMP1]], [[ZB_2]]
 ; NEON-NEXT:    ret <8 x i16> [[RES_2]]
 ;
@@ -50,13 +50,13 @@ define <8 x i16> @sink_sext(<8 x i8> %a, <8 x i8> %b, i1 %c) {
 ; NEON-NEXT:  entry:
 ; NEON-NEXT:    br i1 [[C:%.*]], label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]]
 ; NEON:       if.then:
-; NEON-NEXT:    [[ZB_1:%.*]] = sext <8 x i8> [[B:%.*]] to <8 x i16>
 ; NEON-NEXT:    [[TMP0:%.*]] = sext <8 x i8> [[A:%.*]] to <8 x i16>
+; NEON-NEXT:    [[ZB_1:%.*]] = sext <8 x i8> [[B:%.*]] to <8 x i16>
 ; NEON-NEXT:    [[RES_1:%.*]] = add <8 x i16> [[TMP0]], [[ZB_1]]
 ; NEON-NEXT:    ret <8 x i16> [[RES_1]]
 ; NEON:       if.else:
-; NEON-NEXT:    [[ZB_2:%.*]] = sext <8 x i8> [[B]] to <8 x i16>
 ; NEON-NEXT:    [[TMP1:%.*]] = sext <8 x i8> [[A]] to <8 x i16>
+; NEON-NEXT:    [[ZB_2:%.*]] = sext <8 x i8> [[B]] to <8 x i16>
 ; NEON-NEXT:    [[RES_2:%.*]] = sub <8 x i16> [[TMP1]], [[ZB_2]]
 ; NEON-NEXT:    ret <8 x i16> [[RES_2]]
 ;
@@ -180,14 +180,14 @@ define <8 x i16> @sink_shufflevector_ext_subadd_multiuse(<16 x i8> %a, <16 x i8>
 ; NEON-NEXT:    br i1 undef, label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]]
 ; NEON:       if.then:
 ; NEON-NEXT:    [[S2:%.*]] = shufflevector <16 x i8> [[B:%.*]], <16 x i8> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
-; NEON-NEXT:    [[Z2:%.*]] = zext <8 x i8> [[S2]] to <8 x i16>
 ; NEON-NEXT:    [[TMP0:%.*]] = zext <8 x i8> [[S1]] to <8 x i16>
+; NEON-NEXT:    [[Z2:%.*]] = zext <8 x i8> [[S2]] to <8 x i16>
 ; NEON-NEXT:    [[RES1:%.*]] = add <8 x i16> [[TMP0]], [[Z2]]
 ; NEON-NEXT:    ret <8 x i16> [[RES1]]
 ; NEON:       if.else:
 ; NEON-NEXT:    [[S4:%.*]] = shufflevector <16 x i8> [[B]], <16 x i8> poison, <8 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
-; NEON-NEXT:    [[Z4:%.*]] = sext <8 x i8> [[S4]] to <8 x i16>
 ; NEON-NEXT:    [[TMP1:%.*]] = sext <8 x i8> [[S3]] to <8 x i16>
+; NEON-NEXT:    [[Z4:%.*]] = sext <8 x i8> [[S4]] to <8 x i16>
 ; NEON-NEXT:    [[RES2:%.*]] = sub <8 x i16> [[TMP1]], [[Z4]]
 ; NEON-NEXT:    ret <8 x i16> [[RES2]]
 ;

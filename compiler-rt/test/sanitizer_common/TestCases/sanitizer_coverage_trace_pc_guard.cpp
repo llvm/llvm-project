@@ -1,8 +1,8 @@
 // Tests trace pc guard coverage collection.
 
-// REQUIRES: has_sancovcc,stable-runtime
-// UNSUPPORTED: ubsan,i386-darwin
-// XFAIL: tsan,powerpc64,s390x,mips
+// REQUIRES: has_sancovcc
+// UNSUPPORTED: ubsan,i386-darwin,powerpc64,s390x,thumb
+// XFAIL: tsan
 // XFAIL: android && asan
 
 // RUN: DIR=%t_workdir

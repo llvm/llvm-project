@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -x c++ %s -O0 -triple=x86_64-apple-darwin -target-feature +avx2 -fmax-type-align=16 -emit-llvm -o - -Werror | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -x c++ %s -O0 -triple=x86_64-apple-darwin -target-feature +avx2 -fmax-type-align=16 -emit-llvm -o - -Werror | FileCheck %s
 // rdar://16254558
 
 typedef float AVX2Float __attribute__((__vector_size__(32)));
@@ -13,7 +13,7 @@ volatile float TestAlign(void)
 }
 
 // CHECK: [[R:%.*]] = alloca <8 x float>, align 32
-// CHECK-NEXT:  [[CALL:%.*]] = call noalias nonnull i8* @_Znwm(i64 32)
+// CHECK-NEXT:  [[CALL:%.*]] = call noalias noundef nonnull i8* @_Znwm(i64 noundef 32)
 // CHECK-NEXT:  [[ZERO:%.*]] = bitcast i8* [[CALL]] to <8 x float>*
 // CHECK-NEXT:  store <8 x float>* [[ZERO]], <8 x float>** [[P:%.*]], align 8
 // CHECK-NEXT:  [[ONE:%.*]] = load <8 x float>*, <8 x float>** [[P]], align 8
@@ -42,7 +42,7 @@ volatile float TestAlign2(void)
 }
 
 // CHECK: [[R:%.*]] = alloca <8 x float>, align 32
-// CHECK-NEXT:  [[CALL:%.*]] = call noalias nonnull i8* @_Znwm(i64 32)
+// CHECK-NEXT:  [[CALL:%.*]] = call noalias noundef nonnull i8* @_Znwm(i64 noundef 32)
 // CHECK-NEXT:  [[ZERO:%.*]] = bitcast i8* [[CALL]] to <8 x float>*
 // CHECK-NEXT:  store <8 x float>* [[ZERO]], <8 x float>** [[P:%.*]], align 8
 // CHECK-NEXT:  [[ONE:%.*]] = load <8 x float>*, <8 x float>** [[P]], align 8

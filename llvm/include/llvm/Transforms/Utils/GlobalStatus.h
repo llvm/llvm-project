@@ -9,6 +9,7 @@
 #ifndef LLVM_TRANSFORMS_UTILS_GLOBALSTATUS_H
 #define LLVM_TRANSFORMS_UTILS_GLOBALSTATUS_H
 
+#include "llvm/IR/Instructions.h"
 #include "llvm/Support/AtomicOrdering.h"
 
 namespace llvm {
@@ -45,7 +46,7 @@ struct GlobalStatus {
 
     /// This global is stored to, but only its initializer and one other value
     /// is ever stored to it.  If this global isStoredOnce, we track the value
-    /// stored to it in StoredOnceValue below.  This is only tracked for scalar
+    /// stored to it via StoredOnceStore below.  This is only tracked for scalar
     /// globals.
     StoredOnce,
 
@@ -55,18 +56,22 @@ struct GlobalStatus {
   } StoredType = NotStored;
 
   /// If only one value (besides the initializer constant) is ever stored to
-  /// this global, keep track of what value it is.
-  Value *StoredOnceValue = nullptr;
+  /// this global, keep track of what value it is via the store instruction.
+  const StoreInst *StoredOnceStore = nullptr;
+
+  /// If only one value (besides the initializer constant) is ever stored to
+  /// this global return the stored value.
+  Value *getStoredOnceValue() const {
+    return (StoredType == StoredOnce && StoredOnceStore)
+               ? StoredOnceStore->getOperand(0)
+               : nullptr;
+  }
 
   /// These start out null/false.  When the first accessing function is noticed,
   /// it is recorded. When a second different accessing function is noticed,
   /// HasMultipleAccessingFunctions is set to true.
   const Function *AccessingFunction = nullptr;
   bool HasMultipleAccessingFunctions = false;
-
-  /// Set to true if this global has a user that is not an instruction (e.g. a
-  /// constant expr or GV initializer).
-  bool HasNonInstructionUser = false;
 
   /// Set to the strongest atomic ordering requirement.
   AtomicOrdering Ordering = AtomicOrdering::NotAtomic;

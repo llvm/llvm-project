@@ -13,9 +13,14 @@
 #ifndef FORTRAN_LOWER_OPENMP_H
 #define FORTRAN_LOWER_OPENMP_H
 
+#include <cinttypes>
+
 namespace Fortran {
 namespace parser {
 struct OpenMPConstruct;
+struct OpenMPDeclarativeConstruct;
+struct OmpEndLoopDirective;
+struct OmpClauseList;
 } // namespace parser
 
 namespace lower {
@@ -24,10 +29,15 @@ class AbstractConverter;
 
 namespace pft {
 struct Evaluation;
+struct Variable;
 } // namespace pft
 
 void genOpenMPConstruct(AbstractConverter &, pft::Evaluation &,
                         const parser::OpenMPConstruct &);
+void genOpenMPDeclarativeConstruct(AbstractConverter &, pft::Evaluation &,
+                                   const parser::OpenMPDeclarativeConstruct &);
+int64_t getCollapseValue(const Fortran::parser::OmpClauseList &clauseList);
+void genThreadprivateOp(AbstractConverter &, const pft::Variable &);
 
 } // namespace lower
 } // namespace Fortran

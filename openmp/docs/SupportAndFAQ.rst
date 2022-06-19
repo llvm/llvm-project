@@ -103,13 +103,13 @@ OpenMP's perspective. Rocr is an implementation of `HSA
   SOURCE_DIR=same-as-llvm-source # e.g. the checkout of llvm-project, next to openmp
   BUILD_DIR=somewhere
   INSTALL_PREFIX=same-as-llvm-install
-  
+
   cd $SOURCE_DIR
-  git clone git@github.com:RadeonOpenCompute/ROCT-Thunk-Interface.git -b roc-4.1.x \
+  git clone git@github.com:RadeonOpenCompute/ROCT-Thunk-Interface.git -b roc-4.2.x \
     --single-branch
-  git clone git@github.com:RadeonOpenCompute/ROCR-Runtime.git -b rocm-4.1.x \
+  git clone git@github.com:RadeonOpenCompute/ROCR-Runtime.git -b rocm-4.2.x \
     --single-branch
-  
+
   cd $BUILD_DIR && mkdir roct && cd roct
   cmake $SOURCE_DIR/ROCT-Thunk-Interface/ -DCMAKE_INSTALL_PREFIX=$INSTALL_PREFIX \
     -DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS=OFF
@@ -122,7 +122,7 @@ OpenMP's perspective. Rocr is an implementation of `HSA
   make && make install
 
 ``IMAGE_SUPPORT`` requires building rocr with clang and is not used by openmp.
-    
+
 Provided cmake's find_package can find the ROCR-Runtime package, LLVM will
 build a tool ``bin/amdgpu-arch`` which will print a string like ``gfx906`` when
 run if it recognises a GPU on the local system. LLVM will also build a shared
@@ -136,12 +136,10 @@ With those libraries installed, then LLVM build and installed, try:
 
 Q: What are the known limitations of OpenMP AMDGPU offload?
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-LD_LIBRARY_PATH is presently required to find the openmp libraries.
+LD_LIBRARY_PATH or rpath/runpath are required to find libomp.so and libomptarget.so
 
-There is no libc. That is, malloc and printf do not exist. Also no libm, so
-functions like cos(double) will not work from target regions.
-
-Cards from the gfx10 line, 'navi', that use wave32 are not yet implemented.
+There is no libc. That is, malloc and printf do not exist. Libm is implemented in terms
+of the rocm device library, which will be searched for if linking with '-lm'.
 
 Some versions of the driver for the radeon vii (gfx906) will error unless the
 environment variable 'export HSA_IGNORE_SRAMECC_MISREPORT=1' is set.
@@ -149,6 +147,60 @@ environment variable 'export HSA_IGNORE_SRAMECC_MISREPORT=1' is set.
 It is a recent addition to LLVM and the implementation differs from that which
 has been shipping in ROCm and AOMP for some time. Early adopters will encounter
 bugs.
+
+Q: What are the LLVM components used in offloading and how are they found?
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+The libraries used by an executable compiled for target offloading are:
+
+- ``libomp.so`` (or similar), the host openmp runtime
+- ``libomptarget.so``, the target-agnostic target offloading openmp runtime
+- plugins loaded by libomptarget.so:
+
+  - ``libomptarget.rtl.amdgpu.so``
+  - ``libomptarget.rtl.cuda.so``
+  - ``libomptarget.rtl.x86_64.so``
+  - ``libomptarget.rtl.ve.so``
+  - and others
+
+- dependencies of those plugins, e.g. cuda/rocr for nvptx/amdgpu
+
+The compiled executable is dynamically linked against a host runtime, e.g.
+``libomp.so``, and against the target offloading runtime, ``libomptarget.so``. These
+are found like any other dynamic library, by setting rpath or runpath on the
+executable, by setting ``LD_LIBRARY_PATH``, or by adding them to the system search.
+
+``libomptarget.so`` has rpath or runpath (whichever the system default is) set to
+``$ORIGIN``, and the plugins are located next to it, so it will find the plugins
+without any environment variables set. If ``LD_LIBRARY_PATH`` is set, whether it
+overrides which plugin is found depends on whether your system treats ``-Wl,-rpath``
+as RPATH or RUNPATH.
+
+The plugins will try to find their dependencies in plugin-dependent fashion.
+
+The cuda plugin is dynamically linked against libcuda if cmake found it at
+compiler build time. Otherwise it will attempt to dlopen ``libcuda.so``. It does
+not have rpath set.
+
+The amdgpu plugin is linked against ROCr if cmake found it at compiler build
+time. Otherwise it will attempt to dlopen ``libhsa-runtime64.so``. It has rpath
+set to ``$ORIGIN``, so installing ``libhsa-runtime64.so`` in the same directory is a
+way to locate it without environment variables.
+
+In addition to those, there is a compiler runtime library called deviceRTL.
+This is compiled from mostly common code into an architecture specific
+bitcode library, e.g. ``libomptarget-nvptx-sm_70.bc``.
+
+Clang and the deviceRTL need to match closely as the interface between them
+changes frequently. Using both from the same monorepo checkout is strongly
+recommended.
+
+Unlike the host side which lets environment variables select components, the
+deviceRTL that is located in the clang lib directory is preferred. Only if
+it is absent, the ``LIBRARY_PATH`` environment variable is searched to find a
+bitcode file with the right name. This can be overridden by passing a clang
+flag, ``--libomptarget-nvptx-bc-path`` or ``--libomptarget-amdgcn-bc-path``. That
+can specify a directory or an exact bitcode file to use.
+
 
 Q: Does OpenMP offloading support work in pre-packaged LLVM releases?
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -190,7 +242,7 @@ that are exposed through LLVM/Clang to the user as well.
 Q: What is a way to debug errors from mapping memory to a target device?
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-An experimental way to debug these errors is to use :ref:`remote process 
+An experimental way to debug these errors is to use :ref:`remote process
 offloading <remote_offloading_plugin>`.
 By using ``libomptarget.rtl.rpc.so`` and ``openmp-offloading-server``, it is
 possible to explicitly perform memory transfers between processes on the host
@@ -240,7 +292,7 @@ offloading provided by LLVM. It will attempt to find OpenMP target offloading
 support for your compiler. The flags necessary for OpenMP target offloading will
 be loaded into the ``OpenMPTarget::OpenMPTarget_<device>`` target or the
 ``OpenMPTarget_<device>_FLAGS`` variable if successful. Currently supported
-devices are ``AMDGPU`` and ``NVPTX``. 
+devices are ``AMDGPU`` and ``NVPTX``.
 
 To use this module, simply add the path to CMake's current module path and call
 ``find_package``. The module will be installed with your OpenMP installation by
@@ -251,11 +303,11 @@ require a few additions.
 
   cmake_minimum_required(VERSION 3.13.4)
   project(offloadTest VERSION 1.0 LANGUAGES CXX)
-  
+
   list(APPEND CMAKE_MODULE_PATH "${PATH_TO_OPENMP_INSTALL}/lib/cmake/openmp")
-  
+
   find_package(OpenMPTarget REQUIRED NVPTX)
-  
+
   add_executable(offload)
   target_link_libraries(offload PRIVATE OpenMPTarget::OpenMPTarget_NVPTX)
   target_sources(offload PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src/Main.cpp)
@@ -264,3 +316,16 @@ Using this module requires at least CMake version 3.13.4. Supported languages
 are C and C++ with Fortran support planned in the future. Compiler support is
 best for Clang but this module should work for other compiler vendors such as
 IBM, GNU.
+
+Q: What does 'Stack size for entry function cannot be statically determined' mean?
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+This is a warning that the Nvidia tools will sometimes emit if the offloading
+region is too complex. Normally, the CUDA tools attempt to statically determine
+how much stack memory each thread. This way when the kernel is launched each
+thread will have as much memory as it needs. If the control flow of the kernel
+is too complex, containing recursive calls or nested parallelism, this analysis
+can fail. If this warning is triggered it means that the kernel may run out of
+stack memory during execution and crash. The environment variable
+``LIBOMPTARGET_STACK_SIZE`` can be used to increase the stack size if this
+occurs.

@@ -1,0 +1,10 @@
+# REQUIRES: native && system-linux
+# clone() tests fails on arm64 Linux, PR #49899
+# UNSUPPORTED: system-linux && target-aarch64
+# RUN: %clangxx_host %p/Inputs/fork.cpp -DTEST_CLONE -o %t
+# RUN: %lldb -b -s %s %t | FileCheck %s
+settings set target.process.follow-fork-mode child
+settings set target.process.stop-on-exec false
+b parent_func
+process launch
+# CHECK: function run in exec'd child

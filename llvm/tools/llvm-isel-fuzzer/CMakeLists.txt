@@ -9,6 +9,7 @@ set(LLVM_LINK_COMPONENTS
     BitWriter
     CodeGen
     Core
+    FuzzerCLI
     FuzzMutate
     IRReader
     MC

@@ -4,9 +4,8 @@
 ; RUN: llc -mtriple powerpc-ibm-aix-xcoff -filetype=obj -o %t.o < %s
 ; RUN: llvm-readobj --syms %t.o | FileCheck --check-prefix=SYMS %s
 
-; RUN: not --crash llc -mtriple powerpc64-ibm-aix-xcoff -filetype=obj < %s 2>&1 | \
-; RUN: FileCheck --check-prefix=OBJ64 %s
-; OBJ64: LLVM ERROR: 64-bit XCOFF object files are not supported yet.
+; RUN: llc -mtriple powerpc64-ibm-aix-xcoff -filetype=obj -o %t64.o < %s
+; RUN: llvm-readobj --syms %t64.o | FileCheck --check-prefix=SYMS %s
 
 @a = external global i32, align 4
 @b = external global i64, align 8

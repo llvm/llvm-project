@@ -27,6 +27,7 @@
 // Workaround for clang-5 (PR41549)
 #if defined(__clang_major__)
 #if __clang_major__ <= 5
+#include "llvm/ADT/DenseMapInfo.h"
 #include "llvm/ADT/SmallVector.h"
 #endif
 #endif
@@ -41,12 +42,13 @@ class Twine;
 
 // Containers.
 template <typename T> class ArrayRef;
+class BitVector;
 namespace detail {
 template <typename KeyT, typename ValueT> struct DenseMapPair;
 } // namespace detail
 template <typename KeyT, typename ValueT, typename KeyInfoT, typename BucketT>
 class DenseMap;
-template <typename T> struct DenseMapInfo;
+template <typename T, typename Enable> struct DenseMapInfo;
 template <typename ValueT, typename ValueInfoT> class DenseSet;
 class MallocAllocator;
 template <typename T> class MutableArrayRef;
@@ -69,7 +71,9 @@ class APFloat;
 template <typename Fn> class function_ref;
 template <typename IteratorT> class iterator_range;
 class raw_ostream;
-} // end namespace llvm
+class SMLoc;
+class SMRange;
+} // namespace llvm
 
 namespace mlir {
 // Casting operators.
@@ -90,7 +94,9 @@ using llvm::Twine;
 //
 // Containers.
 using llvm::ArrayRef;
-using llvm::DenseMapInfo;
+using llvm::BitVector;
+template <typename T, typename Enable = void>
+using DenseMapInfo = llvm::DenseMapInfo<T, Enable>;
 template <typename KeyT, typename ValueT,
           typename KeyInfoT = DenseMapInfo<KeyT>,
           typename BucketT = llvm::detail::DenseMapPair<KeyT, ValueT>>
@@ -123,6 +129,8 @@ using llvm::APSInt;
 template <typename Fn> using function_ref = llvm::function_ref<Fn>;
 using llvm::iterator_range;
 using llvm::raw_ostream;
+using llvm::SMLoc;
+using llvm::SMRange;
 } // namespace mlir
 
 #endif // MLIR_SUPPORT_LLVM_H

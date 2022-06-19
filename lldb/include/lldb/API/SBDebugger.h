@@ -33,7 +33,11 @@ public:
 
 class LLDB_API SBDebugger {
 public:
-  FLAGS_ANONYMOUS_ENUM(){eBroadcastBitProgress = (1 << 0)};
+  FLAGS_ANONYMOUS_ENUM(){
+      eBroadcastBitProgress = (1 << 0),
+      eBroadcastBitWarning = (1 << 1),
+      eBroadcastBitError = (1 << 2),
+  };
 
   SBDebugger();
 
@@ -79,11 +83,16 @@ public:
                                           uint64_t &completed, uint64_t &total,
                                           bool &is_debugger_specific);
 
+  static lldb::SBStructuredData
+  GetDiagnosticFromEvent(const lldb::SBEvent &event);
+
   lldb::SBDebugger &operator=(const lldb::SBDebugger &rhs);
 
   static void Initialize();
 
   static lldb::SBError InitializeWithErrorHandling();
+
+  static void PrintStackTraceOnError();
 
   static void Terminate();
 
@@ -125,6 +134,8 @@ public:
   FILE *GetOutputFileHandle();
 
   FILE *GetErrorFileHandle();
+
+  SBError SetInputString(const char *data);
 
   SBError SetInputFile(SBFile file);
 
@@ -247,6 +258,8 @@ public:
 
   lldb::ScriptLanguage GetScriptingLanguage(const char *script_language_name);
 
+  SBStructuredData GetScriptInterpreterInfo(ScriptLanguage);
+
   static const char *GetVersionString();
 
   static const char *StateAsCString(lldb::StateType state);
@@ -301,6 +314,10 @@ public:
   lldb::ScriptLanguage GetScriptLanguage() const;
 
   void SetScriptLanguage(lldb::ScriptLanguage script_lang);
+
+  lldb::LanguageType GetREPLLanguage() const;
+
+  void SetREPLLanguage(lldb::LanguageType repl_lang);
 
   bool GetCloseInputOnEOF() const;
 

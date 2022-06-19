@@ -29,8 +29,8 @@ std::string LineEditor::getDefaultHistoryPath(StringRef ProgName) {
   return std::string();
 }
 
-LineEditor::CompleterConcept::~CompleterConcept() {}
-LineEditor::ListCompleterConcept::~ListCompleterConcept() {}
+LineEditor::CompleterConcept::~CompleterConcept() = default;
+LineEditor::ListCompleterConcept::~ListCompleterConcept() = default;
 
 std::string LineEditor::ListCompleterConcept::getCommonPrefix(
     const std::vector<Completion> &Comps) {
@@ -69,9 +69,8 @@ LineEditor::ListCompleterConcept::complete(StringRef Buffer, size_t Pos) const {
   // common prefix will then be empty.
   if (CommonPrefix.empty()) {
     Action.Kind = CompletionAction::AK_ShowCompletions;
-    for (std::vector<Completion>::iterator I = Comps.begin(), E = Comps.end();
-         I != E; ++I)
-      Action.Completions.push_back(I->DisplayText);
+    for (const Completion &Comp : Comps)
+      Action.Completions.push_back(Comp.DisplayText);
   } else {
     Action.Kind = CompletionAction::AK_Insert;
     Action.Text = CommonPrefix;

@@ -15,41 +15,22 @@
 #define PLATFORM_SUPPORT_H
 
 // locale names
-#ifdef _WIN32
-    // WARNING: Windows does not support UTF-8 codepages.
-    // Locales are "converted" using https://docs.moodle.org/dev/Table_of_locales
-#   define LOCALE_en_US           "en-US"
-#   define LOCALE_en_US_UTF_8     "en-US"
-#   define LOCALE_cs_CZ_ISO8859_2 "cs-CZ"
-#   define LOCALE_fr_FR_UTF_8     "fr-FR"
-#   define LOCALE_fr_CA_ISO8859_1 "fr-CA"
-#   define LOCALE_ru_RU_UTF_8     "ru-RU"
-#   define LOCALE_zh_CN_UTF_8     "zh-CN"
-#elif defined(__CloudABI__)
-    // Timezones are integrated into locales through LC_TIMEZONE_MASK on
-    // CloudABI. LC_ALL_MASK can only be used if a timezone has also been
-    // provided. UTC should be all right.
-#   define LOCALE_en_US           "en_US"
-#   define LOCALE_en_US_UTF_8     "en_US.UTF-8@UTC"
-#   define LOCALE_fr_FR_UTF_8     "fr_FR.UTF-8@UTC"
-#   define LOCALE_fr_CA_ISO8859_1 "fr_CA.ISO-8859-1@UTC"
-#   define LOCALE_cs_CZ_ISO8859_2 "cs_CZ.ISO-8859-2@UTC"
-#   define LOCALE_ru_RU_UTF_8     "ru_RU.UTF-8@UTC"
-#   define LOCALE_zh_CN_UTF_8     "zh_CN.UTF-8@UTC"
+#define LOCALE_en_US           "en_US"
+#define LOCALE_en_US_UTF_8     "en_US.UTF-8"
+#define LOCALE_fr_FR_UTF_8     "fr_FR.UTF-8"
+#ifdef __linux__
+#    define LOCALE_fr_CA_ISO8859_1 "fr_CA.ISO-8859-1"
+#    define LOCALE_cs_CZ_ISO8859_2 "cs_CZ.ISO-8859-2"
+#elif defined(_WIN32)
+#    define LOCALE_fr_CA_ISO8859_1 "fr-CA"
+#    define LOCALE_cs_CZ_ISO8859_2 "cs-CZ"
 #else
-#   define LOCALE_en_US           "en_US"
-#   define LOCALE_en_US_UTF_8     "en_US.UTF-8"
-#   define LOCALE_fr_FR_UTF_8     "fr_FR.UTF-8"
-#   ifdef __linux__
-#       define LOCALE_fr_CA_ISO8859_1 "fr_CA.ISO-8859-1"
-#       define LOCALE_cs_CZ_ISO8859_2 "cs_CZ.ISO-8859-2"
-#   else
-#       define LOCALE_fr_CA_ISO8859_1 "fr_CA.ISO8859-1"
-#       define LOCALE_cs_CZ_ISO8859_2 "cs_CZ.ISO8859-2"
-#   endif
-#   define LOCALE_ru_RU_UTF_8     "ru_RU.UTF-8"
-#   define LOCALE_zh_CN_UTF_8     "zh_CN.UTF-8"
+#    define LOCALE_fr_CA_ISO8859_1 "fr_CA.ISO8859-1"
+#    define LOCALE_cs_CZ_ISO8859_2 "cs_CZ.ISO8859-2"
 #endif
+#define LOCALE_ja_JP_UTF_8     "ja_JP.UTF-8"
+#define LOCALE_ru_RU_UTF_8     "ru_RU.UTF-8"
+#define LOCALE_zh_CN_UTF_8     "zh_CN.UTF-8"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -57,11 +38,15 @@
 #include <locale>
 #include <string>
 #if defined(_WIN32)
-#   define WIN32_LEAN_AND_MEAN // Reduce overhead of including windows.h
 #   include <io.h> // _mktemp_s
-#   include <windows.h> // MAX_PATH, GetTempPath, GetTempFileName
+#   include <fcntl.h> // _O_EXCL, ...
+#   include <sys/stat.h> // _S_IREAD, ...
 #else
 #   include <unistd.h> // close
+#endif
+
+#if defined(_CS_GNU_LIBC_VERSION)
+# include <string.h> // strverscmp
 #endif
 
 #if defined(_NEWLIB_VERSION) && defined(__STRICT_ANSI__)
@@ -71,20 +56,22 @@ extern "C" {
 }
 #endif
 
-#ifndef __CloudABI__
 inline
 std::string get_temp_file_name()
 {
-#if defined(__MINGW32__)
-    char Path[MAX_PATH + 1];
-    char FN[MAX_PATH + 1];
-    do { } while (0 == GetTempPath(MAX_PATH+1, Path));
-    do { } while (0 == GetTempFileName(Path, "libcxx", 0, FN));
-    return FN;
-#elif defined(_WIN32)
-    char Name[] = "libcxx.XXXXXX";
-    if (_mktemp_s(Name, sizeof(Name)) != 0) abort();
-    return Name;
+#if defined(_WIN32)
+    while (true) {
+        char Name[] = "libcxx.XXXXXX";
+        if (_mktemp_s(Name, sizeof(Name)) != 0) abort();
+        int fd = _open(Name, _O_RDWR | _O_CREAT | _O_EXCL, _S_IREAD | _S_IWRITE);
+        if (fd != -1) {
+            _close(fd);
+            return Name;
+        }
+        if (errno == EEXIST)
+            continue;
+        abort();
+    }
 #else
     std::string Name;
     int FD = -1;
@@ -109,8 +96,6 @@ std::wstring get_wide_temp_file_name()
         get_temp_file_name());
 }
 #endif // _LIBCPP_HAS_OPEN_WITH_WCHAR
-
-#endif // __CloudABI__
 
 #if defined(_CS_GNU_LIBC_VERSION)
 inline bool glibc_version_less_than(char const* version) {

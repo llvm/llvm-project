@@ -9,14 +9,13 @@ from lldbsuite.test.lldbpexpect import PExpectTest
 
 class GuiViewLargeCommandTest(PExpectTest):
 
-    mydir = TestBase.compute_mydir(__file__)
-
     # PExpect uses many timeouts internally and doesn't play well
     # under ASAN on a loaded machine..
     @skipIfAsan
     @skipIfCursesSupportMissing
     @skipIfRemote # "run" command will not work correctly for remote debug
     @expectedFailureNetBSD
+    @skipIf(oslist=["linux"], archs=["arm", "aarch64"])
     def test_gui(self):
         self.build()
 
@@ -30,9 +29,8 @@ class GuiViewLargeCommandTest(PExpectTest):
         right_key = chr(27)+'OC'
         ctrl_l = chr(12)
 
-        # Start the GUI and close the welcome window.
+        # Start the GUI.
         self.child.sendline("gui")
-        self.child.send(escape_key)
 
         # Check the sources window.
         self.child.expect_exact("Sources")

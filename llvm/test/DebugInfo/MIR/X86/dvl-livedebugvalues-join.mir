@@ -1,4 +1,4 @@
-# RUN: llc -mtriple=x86_64-- -run-pass livedebugvalues -o - %s | FileCheck %s --implicit-check-not=DBG_VALUE_LIST
+# RUN: llc -mtriple=x86_64-- -run-pass livedebugvalues -o - %s -experimental-debug-variable-locations=false | FileCheck %s --implicit-check-not=DBG_VALUE_LIST
 #
 # Test a series of joins, where:
 #  * The locations agree, although registers have changed,
@@ -154,7 +154,7 @@ body:             |
   bb.10:
     liveins: $rdi, $rsi
     ; Should _not_ be a live-in loc here.
-    RETQ
+    RET64
 
 ...
 

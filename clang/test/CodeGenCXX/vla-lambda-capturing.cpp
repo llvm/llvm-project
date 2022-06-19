@@ -1,6 +1,6 @@
-// RUN: %clang_cc1 %s -std=c++11 -emit-llvm -o - | FileCheck %s
-// RUN: %clang_cc1 %s -std=c++11 -emit-pch -o %t
-// RUN: %clang_cc1 %s -std=c++11 -include-pch %t -emit-llvm -o - | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers %s -std=c++11 -emit-llvm -o - | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers %s -std=c++11 -emit-pch -o %t
+// RUN: %clang_cc1 -no-opaque-pointers %s -std=c++11 -include-pch %t -emit-llvm -o - | FileCheck %s
 
 #ifndef HEADER
 #define HEADER
@@ -70,11 +70,11 @@ void b(intptr_t n, T arg) {
 
 // CHECK-LABEL: @main
 int main() {
-  // CHECK:       call {{.*}}void [[G]]([[INTPTR_T]] [[INTPTR_T_ATTR:(signext )?]]1)
+  // CHECK:       call {{.*}}void [[G]]([[INTPTR_T]] noundef [[INTPTR_T_ATTR:(signext )?]]1)
   g((intptr_t)1);
-  // CHECK:       call {{.*}}void [[F_INT:@.+]]([[INTPTR_T]] [[INTPTR_T_ATTR]]1, [[INTPTR_T]] [[INTPTR_T_ATTR]]2)
+  // CHECK:       call {{.*}}void [[F_INT:@.+]]([[INTPTR_T]] noundef [[INTPTR_T_ATTR]]1, [[INTPTR_T]] noundef [[INTPTR_T_ATTR]]2)
   f((intptr_t)1, (intptr_t)2);
-  // CHECK:       call {{.*}}void [[B_INT:@.+]]([[INTPTR_T]] [[INTPTR_T_ATTR]]12, [[INTPTR_T]] [[INTPTR_T_ATTR]]13)
+  // CHECK:       call {{.*}}void [[B_INT:@.+]]([[INTPTR_T]] noundef [[INTPTR_T_ATTR]]12, [[INTPTR_T]] noundef [[INTPTR_T_ATTR]]13)
   b((intptr_t)12, (intptr_t)13);
   // CHECK:       ret i32 0
   return 0;

@@ -9,14 +9,14 @@
 
 // <string>
 
-//   constexpr bool contains(const CharT *x) const;
+// constexpr bool contains(const CharT *x) const;
 
 #include <string>
 #include <cassert>
 
 #include "test_macros.h"
 
-void test()
+constexpr bool test()
 {
     using S = std::string;
 
@@ -61,11 +61,14 @@ void test()
     assert(!sNot.contains("abcde"));
     assert( sNot.contains("xyz"));
     assert(!sNot.contains("zyx"));
+
+    return true;
 }
 
 int main(int, char**)
 {
-    test();
+  test();
+  static_assert(test());
 
-    return 0;
+  return 0;
 }

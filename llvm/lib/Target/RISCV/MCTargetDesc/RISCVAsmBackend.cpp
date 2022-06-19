@@ -352,8 +352,9 @@ bool RISCVAsmBackend::mayNeedRelaxation(const MCInst &Inst,
   return getRelaxedOpcode(Inst.getOpcode()) != Inst.getOpcode();
 }
 
-bool RISCVAsmBackend::writeNopData(raw_ostream &OS, uint64_t Count) const {
-  bool HasStdExtC = STI.getFeatureBits()[RISCV::FeatureStdExtC];
+bool RISCVAsmBackend::writeNopData(raw_ostream &OS, uint64_t Count,
+                                   const MCSubtargetInfo *STI) const {
+  bool HasStdExtC = STI->getFeatureBits()[RISCV::FeatureStdExtC];
   unsigned MinNopLen = HasStdExtC ? 2 : 4;
 
   if ((Count % MinNopLen) != 0)
@@ -582,16 +583,17 @@ void RISCVAsmBackend::applyFixup(const MCAssembler &Asm, const MCFixup &Fixup,
 bool RISCVAsmBackend::shouldInsertExtraNopBytesForCodeAlign(
     const MCAlignFragment &AF, unsigned &Size) {
   // Calculate Nops Size only when linker relaxation enabled.
-  if (!STI.getFeatureBits()[RISCV::FeatureRelax])
+  const MCSubtargetInfo *STI = AF.getSubtargetInfo();
+  if (!STI->getFeatureBits()[RISCV::FeatureRelax])
     return false;
 
-  bool HasStdExtC = STI.getFeatureBits()[RISCV::FeatureStdExtC];
+  bool HasStdExtC = STI->getFeatureBits()[RISCV::FeatureStdExtC];
   unsigned MinNopLen = HasStdExtC ? 2 : 4;
 
   if (AF.getAlignment() <= MinNopLen) {
     return false;
   } else {
-    Size = AF.getAlignment() - MinNopLen;
+    Size = AF.getAlignment().value() - MinNopLen;
     return true;
   }
 }
@@ -605,7 +607,8 @@ bool RISCVAsmBackend::shouldInsertFixupForCodeAlign(MCAssembler &Asm,
                                                     const MCAsmLayout &Layout,
                                                     MCAlignFragment &AF) {
   // Insert the fixup only when linker relaxation enabled.
-  if (!STI.getFeatureBits()[RISCV::FeatureRelax])
+  const MCSubtargetInfo *STI = AF.getSubtargetInfo();
+  if (!STI->getFeatureBits()[RISCV::FeatureRelax])
     return false;
 
   // Calculate total Nops we need to insert. If there are none to insert

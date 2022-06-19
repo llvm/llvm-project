@@ -56,3 +56,11 @@ int has_no_volatile_attribute();
 
 #if __has_cpp_attribute(selectany) // expected-error {{function-like macro '__has_cpp_attribute' is not defined}}
 #endif
+
+// Test that macro expansion of the builtin argument works.
+#define F fallthrough
+
+#if __has_attribute(F)
+int has_fallthrough;
+#endif
+// CHECK: int has_fallthrough;

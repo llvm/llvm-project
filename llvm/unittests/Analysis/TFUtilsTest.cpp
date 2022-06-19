@@ -7,8 +7,11 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Analysis/Utils/TFUtils.h"
+#include "google/protobuf/struct.pb.h"
 #include "tensorflow/core/example/example.pb.h"
 #include "tensorflow/core/example/feature.pb.h"
+#include "llvm/Analysis/ModelUnderTrainingRunner.h"
+#include "llvm/Analysis/TensorSpec.h"
 #include "llvm/AsmParser/Parser.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/Instructions.h"
@@ -101,48 +104,34 @@ TEST(TFUtilsTest, EvalError) {
   EXPECT_FALSE(Evaluator.isValid());
 }
 
-TEST(TFUtilsTest, JSONParsing) {
-  auto Value = json::parse(
-      R"({"name": "tensor_name", 
-        "port": 2, 
-        "type": "int32_t", 
-        "shape":[1,4]
-        })");
-  EXPECT_TRUE(!!Value);
-  LLVMContext Ctx;
-  Optional<TensorSpec> Spec = getTensorSpecFromJSON(Ctx, *Value);
-  EXPECT_TRUE(Spec.hasValue());
-  EXPECT_EQ(*Spec, TensorSpec::createSpec<int32_t>("tensor_name", {1, 4}, 2));
-}
+TEST(TFUtilsTest, UnsupportedFeature) {
+  const static int64_t KnownSize = 214;
+  std::vector<TensorSpec> InputSpecs{
+      TensorSpec::createSpec<int32_t>("serving_default_input_1",
+                                      {1, KnownSize}),
+      TensorSpec::createSpec<float>("this_feature_does_not_exist", {2, 5})};
 
-TEST(TFUtilsTest, JSONParsingInvalidTensorType) {
-  auto Value = json::parse(
-      R"(
-        {"name": "tensor_name", 
-        "port": 2, 
-        "type": "no such type", 
-        "shape":[1,4]
-        }
-      )");
-  EXPECT_TRUE(!!Value);
   LLVMContext Ctx;
-  auto Spec = getTensorSpecFromJSON(Ctx, *Value);
-  EXPECT_FALSE(Spec.hasValue());
-}
+  auto Evaluator = ModelUnderTrainingRunner::createAndEnsureValid(
+      Ctx, getModelPath(), "StatefulPartitionedCall", InputSpecs,
+      {LoggedFeatureSpec{
+          TensorSpec::createSpec<float>("StatefulPartitionedCall", {1}),
+          None}});
+  int32_t *V = Evaluator->getTensor<int32_t>(0);
+  // Fill it up with 1s, we know the output.
+  for (auto I = 0; I < KnownSize; ++I)
+    V[I] = 1;
 
-TEST(TFUtilsTest, TensorSpecSizesAndTypes) {
-  auto Spec1D = TensorSpec::createSpec<int16_t>("Hi1", {1});
-  auto Spec2D = TensorSpec::createSpec<int16_t>("Hi2", {1, 1});
-  auto Spec1DLarge = TensorSpec::createSpec<float>("Hi3", {10});
-  auto Spec3DLarge = TensorSpec::createSpec<float>("Hi3", {2, 4, 10});
-  EXPECT_TRUE(Spec1D.isElementType<int16_t>());
-  EXPECT_FALSE(Spec3DLarge.isElementType<double>());
-  EXPECT_EQ(Spec1D.getElementCount(), 1U);
-  EXPECT_EQ(Spec2D.getElementCount(), 1U);
-  EXPECT_EQ(Spec1DLarge.getElementCount(), 10U);
-  EXPECT_EQ(Spec3DLarge.getElementCount(), 80U);
-  EXPECT_EQ(Spec3DLarge.getElementByteSize(), sizeof(float));
-  EXPECT_EQ(Spec1D.getElementByteSize(), sizeof(int16_t));
+  float *F = Evaluator->getTensor<float>(1);
+  for (auto I = 0; I < 2 * 5; ++I)
+    F[I] = 3.14 + I;
+  float Ret = Evaluator->evaluate<float>();
+  EXPECT_EQ(static_cast<int64_t>(Ret), 80);
+  // The input vector should be unchanged
+  for (auto I = 0; I < KnownSize; ++I)
+    EXPECT_EQ(V[I], 1);
+  for (auto I = 0; I < 2 * 5; ++I)
+    EXPECT_FLOAT_EQ(F[I], 3.14 + I);
 }
 
 #define PROTO_CHECKER(FNAME, TYPE, INDEX, EXP)                                 \
@@ -179,10 +168,10 @@ TEST(TFUtilsTest, Logger) {
   L.logFloatReward(-3.0);
   std::string Result;
   raw_string_ostream OS(Result);
-  L.print(OS);
+  L.flush(OS);
 
   tensorflow::SequenceExample Expected;
-  EXPECT_TRUE(Expected.ParseFromString(Result));
+  ASSERT_TRUE(Expected.ParseFromString(Result));
   PROTO_CHECKER("the_float", float_list, 0, F00);
   PROTO_CHECKER("the_float", float_list, 1, F10);
   PROTO_CHECKER("alternate_name", int64_list, 0, F01);
@@ -215,10 +204,10 @@ TEST(TFUtilsTest, LoggerInt32FeaturesAndReward) {
   L.logInt32Reward(-3);
   std::string Result;
   raw_string_ostream OS(Result);
-  L.print(OS);
+  L.flush(OS);
 
   tensorflow::SequenceExample Expected;
-  EXPECT_TRUE(Expected.ParseFromString(Result));
+  ASSERT_TRUE(Expected.ParseFromString(Result));
   PROTO_CHECKER("the_float", float_list, 0, F00);
   PROTO_CHECKER("the_float", float_list, 1, F10);
   PROTO_CHECKER("alternate_name", int64_list, 0, F01);
@@ -250,9 +239,9 @@ TEST(TFUtilsTest, LoggerNoReward) {
 
   std::string Result;
   raw_string_ostream OS(Result);
-  L.print(OS);
+  L.flush(OS);
   tensorflow::SequenceExample Expected;
-  EXPECT_TRUE(Expected.ParseFromString(Result));
+  ASSERT_TRUE(Expected.ParseFromString(Result));
   PROTO_CHECKER("the_float", float_list, 0, F00);
   PROTO_CHECKER("the_float", float_list, 1, F10);
   PROTO_CHECKER("alternate_name", int64_list, 0, F01);
@@ -274,12 +263,41 @@ TEST(TFUtilsTest, LoggerFinalReward) {
   L.logFloatFinalReward(3.14);
   std::string Result;
   raw_string_ostream OS(Result);
-  L.print(OS);
+  L.flush(OS);
   const float Zero[]{0.0};
   const float R[]{3.14};
   tensorflow::SequenceExample Expected;
-  EXPECT_TRUE(Expected.ParseFromString(Result));
+  ASSERT_TRUE(Expected.ParseFromString(Result));
   PROTO_CHECKER("reward", float_list, 0, Zero);
   PROTO_CHECKER("reward", float_list, 1, Zero);
   PROTO_CHECKER("reward", float_list, 2, R);
+}
+
+TEST(TFUtilsTest, LoggerGroup) {
+  std::vector<LoggedFeatureSpec> Features;
+  Features.push_back({TensorSpec::createSpec<float>("the_float", {1}), None});
+  Features.push_back({TensorSpec::createSpec<int64_t>("the_int", {1}), None});
+
+  auto Rewards = TensorSpec::createSpec<float>("reward", {1});
+  StringMap<std::unique_ptr<Logger>> Loggers;
+  std::vector<std::string> Names{"a", "b"};
+  size_t Bump = 0;
+  for (auto Name : Names) {
+    auto L = std::make_unique<Logger>(Features, Rewards, true);
+    for (int64_t I = 0; I < 3; ++I) {
+      float F = static_cast<float>(I) + Bump;
+      L->logFloatValue(0, &F);
+      L->logInt64Value(1, &I);
+    }
+    L->logFloatFinalReward(3.14 + Bump);
+    Loggers.insert(std::make_pair(Name, std::move(L)));
+  }
+  std::string Result;
+  raw_string_ostream OS(Result);
+  Logger::flushLogs(OS, Loggers);
+  google::protobuf::Struct Expected;
+  ASSERT_TRUE(Expected.ParseFromString(Result));
+  EXPECT_EQ(Expected.fields_size(), 2);
+  EXPECT_TRUE(Expected.fields().contains("a"));
+  EXPECT_TRUE(Expected.fields().contains("b"));
 }

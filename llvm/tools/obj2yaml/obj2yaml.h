@@ -20,19 +20,22 @@
 #include "llvm/Support/MemoryBufferRef.h"
 #include <system_error>
 
+enum RawSegments : unsigned { none = 0, data = 1, linkedit = 1 << 1 };
 std::error_code coff2yaml(llvm::raw_ostream &Out,
                           const llvm::object::COFFObjectFile &Obj);
 llvm::Error elf2yaml(llvm::raw_ostream &Out,
                          const llvm::object::ObjectFile &Obj);
-llvm::Error macho2yaml(llvm::raw_ostream &Out,
-                           const llvm::object::Binary &Obj);
+llvm::Error macho2yaml(llvm::raw_ostream &Out, const llvm::object::Binary &Obj,
+                       unsigned RawSegments);
 llvm::Error minidump2yaml(llvm::raw_ostream &Out,
                           const llvm::object::MinidumpFile &Obj);
-std::error_code xcoff2yaml(llvm::raw_ostream &Out,
-                           const llvm::object::XCOFFObjectFile &Obj);
+llvm::Error xcoff2yaml(llvm::raw_ostream &Out,
+                       const llvm::object::XCOFFObjectFile &Obj);
 std::error_code wasm2yaml(llvm::raw_ostream &Out,
                           const llvm::object::WasmObjectFile &Obj);
 llvm::Error archive2yaml(llvm::raw_ostream &Out, llvm::MemoryBufferRef Source);
+llvm::Error dxcontainer2yaml(llvm::raw_ostream &Out,
+                             llvm::MemoryBufferRef Source);
 
 // Forward decls for dwarf2yaml
 namespace llvm {

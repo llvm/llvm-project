@@ -13,11 +13,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Transforms/Utils/SimplifyIndVar.h"
-#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/LoopInfo.h"
-#include "llvm/IR/DataLayout.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Instructions.h"
@@ -58,7 +56,7 @@ namespace {
     SCEVExpander     &Rewriter;
     SmallVectorImpl<WeakTrackingVH> &DeadInsts;
 
-    bool Changed;
+    bool Changed = false;
 
   public:
     SimplifyIndvar(Loop *Loop, ScalarEvolution *SE, DominatorTree *DT,
@@ -66,7 +64,7 @@ namespace {
                    SCEVExpander &Rewriter,
                    SmallVectorImpl<WeakTrackingVH> &Dead)
         : L(Loop), LI(LI), SE(SE), DT(DT), TTI(TTI), Rewriter(Rewriter),
-          DeadInsts(Dead), Changed(false) {
+          DeadInsts(Dead) {
       assert(LI && "IV simplification requires LoopInfo");
     }
 
@@ -161,11 +159,12 @@ Value *SimplifyIndvar::foldIVUser(Instruction *UseInst, Instruction *IVOperand) 
       D = ConstantInt::get(UseInst->getContext(),
                            APInt::getOneBitSet(BitWidth, D->getZExtValue()));
     }
-    FoldedExpr = SE->getUDivExpr(SE->getSCEV(IVSrc), SE->getSCEV(D));
+    const auto *LHS = SE->getSCEV(IVSrc);
+    const auto *RHS = SE->getSCEV(D);
+    FoldedExpr = SE->getUDivExpr(LHS, RHS);
     // We might have 'exact' flag set at this point which will no longer be
     // correct after we make the replacement.
-    if (UseInst->isExact() &&
-        SE->getSCEV(IVSrc) != SE->getMulExpr(FoldedExpr, SE->getSCEV(D)))
+    if (UseInst->isExact() && LHS != SE->getMulExpr(FoldedExpr, RHS))
       MustDropExactFlag = true;
   }
   // We have something that might fold it's operand. Compare SCEVs.
@@ -872,6 +871,7 @@ void SimplifyIndvar::simplifyUsers(PHINode *CurrIV, IVVisitor *V) {
     Instruction *IVOperand = UseOper.second;
     for (unsigned N = 0; IVOperand; ++N) {
       assert(N <= Simplified.size() && "runaway iteration");
+      (void) N;
 
       Value *NewOper = foldIVUser(UseInst, IVOperand);
       if (!NewOper)
@@ -942,6 +942,7 @@ bool simplifyLoopIVs(Loop *L, ScalarEvolution *SE, DominatorTree *DT,
 
 } // namespace llvm
 
+namespace {
 //===----------------------------------------------------------------------===//
 // Widen Induction Variables - Extend the width of an IV to cover its
 // widest uses.
@@ -1072,7 +1073,7 @@ protected:
 private:
   SmallVector<NarrowIVDefUse, 8> NarrowIVUsers;
 };
-
+} // namespace
 
 /// Determine the insertion point for this user. By default, insert immediately
 /// before the user. SCEVExpander or LICM will hoist loop invariants out of the
@@ -1756,10 +1757,6 @@ Instruction *WidenIV::widenIVUse(WidenIV::NarrowIVDefUse DU, SCEVExpander &Rewri
     truncateIVUse(DU, DT, LI);
     return nullptr;
   }
-  // Assume block terminators cannot evaluate to a recurrence. We can't to
-  // insert a Trunc after a terminator if there happens to be a critical edge.
-  assert(DU.NarrowUse != DU.NarrowUse->getParent()->getTerminator() &&
-         "SCEV is not expected to evaluate a block terminator");
 
   // Reuse the IV increment that SCEVExpander created as long as it dominates
   // NarrowUse.

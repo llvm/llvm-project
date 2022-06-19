@@ -1,4 +1,4 @@
-//===- ReplaceWithVeclib.h - Replace vector instrinsics with veclib calls -===//
+//===- ReplaceWithVeclib.h - Replace vector intrinsics with veclib calls --===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -16,8 +16,11 @@
 
 #include "llvm/IR/PassManager.h"
 #include "llvm/InitializePasses.h"
+#include "llvm/Pass.h"
+#include "llvm/PassRegistry.h"
 
 namespace llvm {
+class Function;
 struct ReplaceWithVeclib : public PassInfoMixin<ReplaceWithVeclib> {
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
 };

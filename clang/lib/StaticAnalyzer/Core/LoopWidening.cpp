@@ -45,8 +45,7 @@ ProgramStateRef getWidenedLoopState(ProgramStateRef PrevState,
                                     const LocationContext *LCtx,
                                     unsigned BlockCount, const Stmt *LoopStmt) {
 
-  assert(isa<ForStmt>(LoopStmt) || isa<WhileStmt>(LoopStmt) ||
-         isa<DoStmt>(LoopStmt));
+  assert((isa<ForStmt, WhileStmt, DoStmt>(LoopStmt)));
 
   // Invalidate values in the current state.
   // TODO Make this more conservative by only invalidating values that might

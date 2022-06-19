@@ -271,6 +271,12 @@ BB2:
 s_sub_u32 vcc_lo, vcc_lo, (BB2+4)-BB1
 // VI: s_sub_u32 vcc_lo, vcc_lo, (BB2+4)-BB1 ; encoding: [0x6a,0xff,0xea,0x80,A,A,A,A]
 // VI-NEXT: ;   fixup A - offset: 4, value: (BB2+4)-BB1, kind: FK_Data_4
+s_add_u32 vcc_lo, vcc_lo, (BB2-BB1)&4294967295
+// VI: s_add_u32 vcc_lo, vcc_lo, (BB2-BB1)&4294967295 ; encoding: [0x6a,0xff,0x6a,0x80,A,A,A,A]
+// VI-NEXT: ;   fixup A - offset: 4, value: (BB2-BB1)&4294967295, kind: FK_Data_4
+s_addc_u32 vcc_hi, vcc_hi, (BB2-BB1)>>32
+// VI: s_addc_u32 vcc_hi, vcc_hi, (BB2-BB1)>>32 ; encoding: [0x6b,0xff,0x6b,0x82,A,A,A,A]
+// VI-NEXT: ;   fixup A - offset: 4, value: (BB2-BB1)>>32, kind: FK_Data_4
 
 t=1
 s_sub_u32 s0, s0, -t

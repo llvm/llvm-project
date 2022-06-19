@@ -38,6 +38,8 @@ class Tosa_QuantizedType<string n, list<int> params, bit signed>
 // Used to express accumulator results or compare results.
 //===----------------------------------------------------------------------===//
 
+def Tosa_UInt8 : UI<8>;
+
 def Tosa_Int8 : I<8>;
 def Tosa_Int16 : I<16>;
 def Tosa_Int32 : I<32>;
@@ -54,6 +56,7 @@ def Tosa_Bool : I<1>;
 
 // No unsigned unquantized int types.
 def Tosa_Int : AnyTypeOf<[Tosa_Bool,
+                          Tosa_UInt8,
                           Tosa_SignedInt]>;
 
 def Tosa_Int32Or64 : AnyTypeOf<[Tosa_Int32,
@@ -74,7 +77,8 @@ def Tosa_Int32Or64 : AnyTypeOf<[Tosa_Int32,
 def Tosa_QuantizedInt	: AnyTypeOf<[ Tosa_QuantizedType<"uint8", [8], 0>,
                                      Tosa_QuantizedType<"int4", [4, 0], 1>,
                                      Tosa_QuantizedType<"int8", [8, 0], 1>,
-                                     Tosa_QuantizedType<"int16", [16, 0], 1>]>;
+                                     Tosa_QuantizedType<"int16", [16, 0], 1>,
+                                     Tosa_QuantizedType<"int32", [32, 0], 1>]>;
 
 //===----------------------------------------------------------------------===//
 // Floating-point types.
@@ -113,20 +117,32 @@ class Tosa_TensorOfOrNone<list<Type> allowedTypes, string description = ""> :
 // Tensor types with constrained ranks.
 //===----------------------------------------------------------------------===//
 
-// Must be listed rank.
-def Tosa_Tensor1D : 1DTensorOf<[Tosa_AnyNumber]>;
-def Tosa_Tensor2D : 2DTensorOf<[Tosa_AnyNumber]>;
-def Tosa_Tensor3D : 3DTensorOf<[Tosa_AnyNumber]>;
-def Tosa_Tensor4D : 4DTensorOf<[Tosa_AnyNumber]>;
-def Tosa_Tensor5D : TensorRankOf<[Tosa_AnyNumber], [5]>;
+// Rank-0 (scalar) tensor
+def Tosa_ScalarTensor : TensorRankOf<[Tosa_AnyNumber], [0]>;
+
+// We include unranked tensors as a supported type for all possible tosa
+// Tensors as unranked does not guarantee invalid. If unranked tensors exist
+// they should be shape propagate used Tosa's shape inference pass and verified
+// to not include any remaining unranked tensors.
+def Tosa_UnrankedTensor : UnrankedTensorOf<[Tosa_AnyNumber]>;
+
+def Tosa_Tensor1D : AnyTypeOf<[Tosa_UnrankedTensor, 1DTensorOf<[Tosa_AnyNumber]>]>;
+def Tosa_Tensor2D : AnyTypeOf<[Tosa_UnrankedTensor, 2DTensorOf<[Tosa_AnyNumber]>]>;
+def Tosa_Tensor3D : AnyTypeOf<[Tosa_UnrankedTensor, 3DTensorOf<[Tosa_AnyNumber]>]>;
+def Tosa_Tensor4D : AnyTypeOf<[Tosa_UnrankedTensor, 4DTensorOf<[Tosa_AnyNumber]>]>;
+def Tosa_Tensor5D : AnyTypeOf<[Tosa_UnrankedTensor, TensorRankOf<[Tosa_AnyNumber], [5]>]>;
 
 // Ranked tensors up to given rank.
-def Tosa_Tensor1Dto4D : TensorRankOf<[Tosa_AnyNumber], [1,2,3,4]>;
-def Tosa_Tensor1Dto6D : TensorRankOf<[Tosa_AnyNumber], [1,2,3,4,5,6]>;
+def Tosa_Tensor1Dto4D : AnyTypeOf<[
+  Tosa_UnrankedTensor, TensorRankOf<[Tosa_AnyNumber], [1,2,3,4]>]>;
+def Tosa_Tensor1Dto6D : AnyTypeOf<[
+  Tosa_UnrankedTensor, TensorRankOf<[Tosa_AnyNumber], [1,2,3,4,5,6]>]>;
 
-def Tosa_TensorUpto4D : TensorRankOf<[Tosa_AnyNumber], [0,1,2,3,4]>;
+def Tosa_TensorUpto4D : AnyTypeOf<[
+  Tosa_UnrankedTensor, TensorRankOf<[Tosa_AnyNumber], [0,1,2,3,4]>]>;
 
-def Tosa_Int32TensorUpto4D : TensorRankOf<[Tosa_Int32], [0,1,2,3,4]>;
+def Tosa_Int32TensorUpto4D : AnyTypeOf<[
+  Tosa_UnrankedTensor, TensorRankOf<[Tosa_Int32], [0,1,2,3,4]>]>;
 
 //===----------------------------------------------------------------------===//
 // Generic scalar, vector, or tensor of a particular type.
@@ -136,8 +152,9 @@ class Tosa_TypeLike<list<Type> types, string description = ""> : TypeConstraint<
      AnyTypeOf<types>.predicate,
      VectorOf<types>.predicate,
      TensorOf<types>.predicate]>,
-     "signless-integer-32-like">;
+     description>;
 
+def Tosa_IntLike : Tosa_TypeLike<[Tosa_Int], "signless-integer-like">;
 def Tosa_Int8Like : Tosa_TypeLike<[Tosa_Int8], "signless-integer-8-bit-like">;
 def Tosa_Int16Like : Tosa_TypeLike<[Tosa_Int16], "signless-integer-16-bit-like">;
 def Tosa_Int32Like : Tosa_TypeLike<[Tosa_Int32], "signless-integer-32-bit-like">;

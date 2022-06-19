@@ -101,3 +101,7 @@ AEABI_RTABI double __aeabi_l2d(di_int a) { return __floatdidf(a); }
 COMPILER_RT_ALIAS(__floatdidf, __aeabi_l2d)
 #endif
 #endif
+
+#if defined(__MINGW32__) && defined(__arm__)
+COMPILER_RT_ALIAS(__floatdidf, __i64tod)
+#endif

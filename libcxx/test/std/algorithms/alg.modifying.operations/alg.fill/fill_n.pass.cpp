@@ -39,38 +39,37 @@ template <class Iter>
 void
 test_char()
 {
-    const unsigned n = 4;
-    char ca[n] = {0};
-    assert(std::fill_n(Iter(ca), UDI(n), char(1)) == std::next(Iter(ca), n));
-    assert(ca[0] == 1);
-    assert(ca[1] == 1);
-    assert(ca[2] == 1);
-    assert(ca[3] == 1);
+    char a[4] = {};
+    Iter it = std::fill_n(Iter(a), UDI(4), char(1));
+    assert(base(it) == a + 4);
+    assert(a[0] == 1);
+    assert(a[1] == 1);
+    assert(a[2] == 1);
+    assert(a[3] == 1);
 }
 
 template <class Iter>
 void
 test_int()
 {
-    const unsigned n = 4;
-    int ia[n] = {0};
-    assert(std::fill_n(Iter(ia), UDI(n), 1) == std::next(Iter(ia), n));
-    assert(ia[0] == 1);
-    assert(ia[1] == 1);
-    assert(ia[2] == 1);
-    assert(ia[3] == 1);
+    int a[4] = {};
+    Iter it = std::fill_n(Iter(a), UDI(4), 1);
+    assert(base(it) == a + 4);
+    assert(a[0] == 1);
+    assert(a[1] == 1);
+    assert(a[2] == 1);
+    assert(a[3] == 1);
 }
 
 void
 test_int_array()
 {
-    const unsigned n = 4;
-    int ia[n] = {0};
-    assert(std::fill_n(ia, UDI(n), static_cast<char>(1)) == std::next(ia, n));
-    assert(ia[0] == 1);
-    assert(ia[1] == 1);
-    assert(ia[2] == 1);
-    assert(ia[3] == 1);
+    int a[4] = {};
+    assert(std::fill_n(a, UDI(4), static_cast<char>(1)) == a + 4);
+    assert(a[0] == 1);
+    assert(a[1] == 1);
+    assert(a[2] == 1);
+    assert(a[3] == 1);
 }
 
 struct source {
@@ -83,13 +82,12 @@ struct source {
 void
 test_int_array_struct_source()
 {
-    const unsigned n = 4;
-    int ia[n] = {0};
-    assert(std::fill_n(ia, UDI(n), source()) == std::next(ia, n));
-    assert(ia[0] == 0);
-    assert(ia[1] == 1);
-    assert(ia[2] == 2);
-    assert(ia[3] == 3);
+    int a[4] = {};
+    assert(std::fill_n(a, UDI(4), source()) == a + 4);
+    assert(a[0] == 0);
+    assert(a[1] == 1);
+    assert(a[2] == 2);
+    assert(a[3] == 3);
 }
 
 struct test1 {
@@ -101,9 +99,8 @@ struct test1 {
 void
 test_struct_array()
 {
-    const unsigned n = 4;
-    test1 test1a[n] = {0};
-    assert(std::fill_n(test1a, UDI(n), static_cast<char>(10)) == std::next(test1a, n));
+    test1 test1a[4] = {};
+    assert(std::fill_n(test1a, UDI(4), static_cast<char>(10)) == test1a + 4);
     assert(test1a[0].c == 11);
     assert(test1a[1].c == 11);
     assert(test1a[2].c == 11);
@@ -150,11 +147,13 @@ void test6()
 
 int main(int, char**)
 {
+    test_char<cpp17_output_iterator<char*> >();
     test_char<forward_iterator<char*> >();
     test_char<bidirectional_iterator<char*> >();
     test_char<random_access_iterator<char*> >();
     test_char<char*>();
 
+    test_int<cpp17_output_iterator<int*> >();
     test_int<forward_iterator<int*> >();
     test_int<bidirectional_iterator<int*> >();
     test_int<random_access_iterator<int*> >();

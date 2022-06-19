@@ -38,6 +38,7 @@ int main(int, char**)
         os << std::setprecision(10);
         assert(os.precision() == 10);
     }
+#ifndef TEST_HAS_NO_WIDE_CHARACTERS
     {
         testbuf<wchar_t> sb;
         std::wistream is(&sb);
@@ -50,6 +51,7 @@ int main(int, char**)
         os << std::setprecision(10);
         assert(os.precision() == 10);
     }
+#endif
 
   return 0;
 }

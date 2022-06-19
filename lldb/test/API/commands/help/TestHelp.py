@@ -15,8 +15,6 @@ from lldbsuite.test import lldbutil
 
 class HelpCommandTestCase(TestBase):
 
-    mydir = TestBase.compute_mydir(__file__)
-
     @no_debug_info_test
     def test_simplehelp(self):
         """A simple test of 'help' command and its output."""
@@ -103,6 +101,13 @@ class HelpCommandTestCase(TestBase):
         # 'image' is an alias for 'target modules'.
         self.expect("help image du line", substrs=[
                     'Dump the line table for one or more compilation units'])
+
+    @no_debug_info_test
+    def test_help_image_list_shows_positional_args(self):
+        """Command 'help image list' should describe positional args."""
+        # 'image' is an alias for 'target modules'.
+        self.expect("help image list", substrs=[
+                    '<shlib-name> [...]'])
 
     @no_debug_info_test
     def test_help_target_variable_syntax(self):
@@ -225,3 +230,91 @@ class HelpCommandTestCase(TestBase):
             "help format",
             matching=True,
             substrs=['<format> -- One of the format names'])
+
+    @no_debug_info_test
+    def test_help_option_group_format_options_usage(self):
+        """Test that help on commands that use OptionGroupFormat options provide relevant help specific to that command."""
+        self.expect(
+            "help memory read",
+            matching=True,
+            substrs=[
+                "-f <format> ( --format <format> )", "Specify a format to be used for display.",
+                "-s <byte-size> ( --size <byte-size> )", "The size in bytes to use when displaying with the selected format."])
+
+        self.expect(
+            "help memory write",
+            matching=True,
+            substrs=[
+                "-f <format> ( --format <format> )", "The format to use for each of the value to be written.",
+                "-s <byte-size> ( --size <byte-size> )", "The size in bytes to write from input file or each value."])
+
+    @no_debug_info_test
+    def test_help_shows_optional_short_options(self):
+        """Test that optional short options are printed and that they are in
+           alphabetical order with upper case options first."""
+        self.expect("help memory read",
+                    substrs=["memory read [-br]", "memory read [-AFLORTr]"])
+        self.expect("help target modules lookup",
+                    substrs=["target modules lookup [-Airv]"])
+
+    @no_debug_info_test
+    def test_help_shows_command_options_usage(self):
+        """Test that we start the usage section with a specific line."""
+        self.expect("help memory read", substrs=["Command Options Usage:\n  memory read"])
+
+    @no_debug_info_test
+    def test_help_detailed_information_spacing(self):
+        """Test that we put a break between the usage and the options help lines,
+           and between the options themselves."""
+        self.expect("help memory read", substrs=[
+                    "[<address-expression>]\n\n       -A ( --show-all-children )",
+                    # Starts with the end of the show-all-children line
+                    "to show.\n\n       -D"])
+
+    @no_debug_info_test
+    def test_help_detailed_information_ordering(self):
+        """Test that we order options alphabetically, upper case first."""
+        # You could test this with a simple regex like:
+        # <upper case>.*<later upper case>.*<lower case>.*<later lower case>
+        # Except that that could pass sometimes even with shuffled output.
+        # This makes sure that doesn't happen.
+
+        self.runCmd("help memory read")
+        got = self.res.GetOutput()
+        _, options_lines = got.split("Command Options Usage:")
+        options_lines = options_lines.lstrip().splitlines()
+
+        # Skip over "memory read [-xyz] lines.
+        while("memory read" in options_lines[0]):
+            options_lines.pop(0)
+        # Plus the newline after that.
+        options_lines.pop(0)
+
+        short_options = []
+        for line in options_lines:
+            # Ignore line breaks and descriptions.
+            # (not stripping the line here in case some line of the descriptions
+            # happens to start with "-")
+            if not line or not line.startswith("       -"):
+                continue
+            # This apears at the end after the options.
+            if "This command takes options and free form arguments." in line:
+                break
+            line = line.strip()
+            # The order of -- only options is not enforced so ignore their position.
+            if not line.startswith("--"):
+                # Save its short char name.
+                short_options.append(line[1])
+
+        self.assertEqual(sorted(short_options), short_options,
+                         "Short option help displayed in an incorrect order!")
+
+    @no_debug_info_test
+    def test_help_show_tags(self):
+        """ Check that memory find and memory read have the --show-tags option
+            but only memory read mentions binary output. """
+        self.expect("help memory read", patterns=[
+                    "--show-tags\n\s+Include memory tags in output "
+                    "\(does not apply to binary output\)."])
+        self.expect("help memory find", patterns=[
+                    "--show-tags\n\s+Include memory tags in output."])

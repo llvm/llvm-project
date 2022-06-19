@@ -34,14 +34,16 @@ build:generic_clang --repo_env=CC=clang
 # C++14 standard version is required.
 build:generic_clang --cxxopt=-std=c++14 --host_cxxopt=-std=c++14
 
+# Use `-Wall` and `-Werror` for Clang.
+build:generic_clang --copt=-Wall --copt=-Werror --host_copt=-Wall --host_copt=-Werror
+
 # The Clang available on MacOS has a warning that isn't clean on MLIR code. The
 # warning doesn't show up with more recent Clangs, so just disable for now.
 build:generic_clang --cxxopt=-Wno-range-loop-analysis --host_cxxopt=-Wno-range-loop-analysis
 
-# Use `-Wall` and `-Werror` for Clang.
-build:generic_clang --copt=-Wall --copt=-Werror --host_copt=-Wall --host_copt=-Werror
-# This doesn't appear to be enforced by any upstream bot.
-build:generic_clang --copt=-Wno-unused --host_copt=-Wno-unused
+# Build errors are not a helpful way to enforce deprecation in-repo and it is
+# not the point of the Bazel build to catch usage of deprecated APIs.
+build:generic_clang --copt=-Wno-deprecated --host_copt=-Wno-deprecated
 
 ###############################################################################
 # Options for "generic_gcc" builds: these options should generally apply to
@@ -57,6 +59,10 @@ build:generic_gcc --repo_env=CC=gcc
 # C++14 standard version is required.
 build:generic_gcc --cxxopt=-std=c++14 --host_cxxopt=-std=c++14
 
+# Build errors are not a helpful way to enforce deprecation in-repo and it is
+# not the point of the Bazel build to catch usage of deprecated APIs.
+build:generic_gcc --copt=-Wno-deprecated --host_copt=-Wno-deprecated
+
 # Disable GCC warnings that are noisy and/or false positives on LLVM code.
 # These need to be global as some code triggering these is in header files.
 build:generic_gcc --copt=-Wno-unused-parameter --host_copt=-Wno-unused-parameter
@@ -69,8 +75,25 @@ build:generic_gcc --copt=-Wno-misleading-indentation --host_copt=-Wno-misleading
 build:generic_gcc --copt=-Werror --host_copt=-Werror
 
 ###############################################################################
-# Windows specific flags for building with VC.
+# Generic Windows flags common to both MSVC and Clang.
 ###############################################################################
+
+# C++14 standard version is required.
+build:windows --cxxopt=/std:c++14 --host_cxxopt=/std:c++14
+
+# Other generic dialect flags.
+build:windows --copt=/Zc:strictStrings --host_copt=/Zc:strictStrings
+build:windows --copt=/Oi --host_copt=/Oi
+build:windows --cxxopt=/Zc:rvalueCast --host_cxxopt=/Zc:rvalueCast
+
+# Use the more flexible bigobj format for C++ files that have lots of symbols.
+build:windows --cxxopt=/bigobj --host_cxxopt=/bigobj
+
+###############################################################################
+# Windows specific flags for building with MSVC.
+###############################################################################
+
+build:msvc --config=windows
 
 build:msvc --copt=/WX --host_copt=/WX    # Treat warnings as errors...
 # ...but disable the ones that are violated
@@ -87,8 +110,31 @@ build:msvc --linkopt=/WX --host_linkopt=/WX # Treat warnings as errors...
 # ...but disable the ones that are violated.
 build:msvc --linkopt=/IGNORE:4001 --host_linkopt=/IGNORE:4001 # no object files
 
-# Yay for security warnings. Boo for non-standard.
-build:msvc --copt=/D_CRT_SECURE_NO_WARNINGS --host_copt=/D_CRT_SECURE_NO_WARNINGS
+###############################################################################
+# Options for Windows `clang-cl` builds.
+###############################################################################
+
+# We just start with the baseline Windows config as `clang-cl` doesn't accept
+# some of the generic Clang flags.
+build:clang-cl --config=windows
+
+# Switch from MSVC to the `clang-cl` compiler.
+build:clang-cl --compiler=clang-cl
+
+# Use Clang's internal warning flags instead of the ones that sometimes map
+# through to MSVC's flags.
+build:clang-cl --copt=/clang:-Wall --host_copt=/clang:-Wall
+build:clang-cl --copt=/clang:-Werror --host_copt=/clang:-Werror
+
+# This doesn't appear to be enforced by any upstream bot.
+build:clang-cl --copt=/clang:-Wno-unused --host_copt=/clang:-Wno-unused
+
+# There appears to be an unused constant in GoogleTest on Windows.
+build:clang-cl --copt=/clang:-Wno-unused-const-variable --host_copt=/clang:-Wno-unused-const-variable
+
+# Disable some warnings hit even with `clang-cl` in Clang's own code.
+build:clang-cl --copt=/clang:-Wno-inconsistent-dllimport --host_copt=/clang:-Wno-inconsistent-dllimport
+build:clang-cl --cxxopt=/clang:-Wno-c++11-narrowing --host_cxxopt=/clang:-Wno-c++11-narrowing
 
 ###############################################################################
 
@@ -118,7 +164,7 @@ build:rbe --action_env=BAZEL_DO_NOT_DETECT_CPP_TOOLCHAIN=1
 # Platform flags:
 # The toolchain container used for execution is defined in the target indicated
 # by "extra_execution_platforms", "host_platform" and "platforms".
-# More about platforms: https://docs.bazel.build/versions/master/platforms.html
+# More about platforms: https://docs.bazel.build/versions/main/platforms.html
 build:rbe --extra_toolchains=@rbe_default//config:cc-toolchain
 build:rbe --extra_execution_platforms=@rbe_default//config:platform
 build:rbe --host_platform=@rbe_default//config:platform

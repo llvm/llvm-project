@@ -1,6 +1,7 @@
-// RUN: %clang_cc1 %s -emit-llvm -o - -triple=x86_64-apple-darwin10 | FileCheck %s --check-prefix=CHECK --check-prefix=CHECK-NOCOMPAT
-// RUN: %clang_cc1 %s -emit-llvm -o - -triple=x86_64-apple-darwin10 -fclang-abi-compat=6.0 | FileCheck %s --check-prefix=CHECK --check-prefix=CHECK-V6COMPAT
-// RUN: %clang_cc1 %s -emit-llvm -o - -triple=x86_64-scei-ps4 | FileCheck %s --check-prefix=CHECK --check-prefix=CHECK-V6COMPAT
+// RUN: %clang_cc1 -no-opaque-pointers %s -emit-llvm -o - -triple=x86_64-apple-darwin10 | FileCheck %s --check-prefix=CHECK --check-prefix=CHECK-NOCOMPAT
+// RUN: %clang_cc1 -no-opaque-pointers %s -emit-llvm -o - -triple=x86_64-apple-darwin10 -fclang-abi-compat=6.0 | FileCheck %s --check-prefix=CHECK --check-prefix=CHECK-V6COMPAT
+// RUN: %clang_cc1 -no-opaque-pointers %s -emit-llvm -o - -triple=x86_64-scei-ps4 | FileCheck %s --check-prefix=CHECK --check-prefix=CHECK-V6COMPAT
+// RUN: %clang_cc1 -no-opaque-pointers %s -emit-llvm -o - -triple=x86_64-sie-ps5  | FileCheck %s --check-prefix=CHECK --check-prefix=CHECK-V6COMPAT
 
 extern int int_source();
 extern void int_sink(int x);
@@ -24,7 +25,7 @@ namespace test0 {
   // in a reference with an assumed alignment of 4.
   // CHECK-LABEL: @_ZN5test01aERNS_1BE
   void a(B &b) {
-    // CHECK: [[CALL:%.*]] = call i32 @_Z10int_sourcev()
+    // CHECK: [[CALL:%.*]] = call noundef i32 @_Z10int_sourcev()
     // CHECK: [[B_P:%.*]] = load [[B:%.*]]*, [[B]]**
     // CHECK: [[FIELD_P:%.*]] = bitcast [[B]]* [[B_P]] to i8*
     // CHECK: [[TRUNC:%.*]] = trunc i32 [[CALL]] to i8
@@ -41,7 +42,7 @@ namespace test0 {
     // CHECK: [[T0:%.*]] = shl i8 [[VALUE]], 6
     // CHECK: [[T1:%.*]] = ashr i8 [[T0]], 6
     // CHECK: [[T2:%.*]] = sext i8 [[T1]] to i32
-    // CHECK: call void @_Z8int_sinki(i32 [[T2]])
+    // CHECK: call void @_Z8int_sinki(i32 noundef [[T2]])
     int_sink(b.onebit);
   }
 
@@ -49,7 +50,7 @@ namespace test0 {
   // in a reference/pointer with an assumed alignment of 2.
   // CHECK-LABEL: @_ZN5test01bERNS_1CE
   void b(C &c) {
-    // CHECK: [[CALL:%.*]] = call i32 @_Z10int_sourcev()
+    // CHECK: [[CALL:%.*]] = call noundef i32 @_Z10int_sourcev()
     // CHECK: [[C_P:%.*]] = load [[C:%.*]]*, [[C]]**
     // CHECK: [[T0:%.*]] = bitcast [[C]]* [[C_P]] to i8*
     // CHECK: [[T1:%.*]] = getelementptr inbounds i8, i8* [[T0]], i64 8
@@ -75,13 +76,13 @@ namespace test0 {
     // CHECK: [[T0:%.*]] = shl i8 [[VALUE]], 6
     // CHECK: [[T1:%.*]] = ashr i8 [[T0]], 6
     // CHECK: [[T2:%.*]] = sext i8 [[T1]] to i32
-    // CHECK: call void @_Z8int_sinki(i32 [[T2]])
+    // CHECK: call void @_Z8int_sinki(i32 noundef [[T2]])
     int_sink(c.onebit);
   }
 
   // CHECK-LABEL: @_ZN5test01cEPNS_1CE
   void c(C *c) {
-    // CHECK: [[CALL:%.*]] = call i32 @_Z10int_sourcev()
+    // CHECK: [[CALL:%.*]] = call noundef i32 @_Z10int_sourcev()
     // CHECK: [[C_P:%.*]] = load [[C]]*, [[C]]**
     // CHECK: [[T0:%.*]] = bitcast [[C]]* [[C_P]] to i8*
     // CHECK: [[T1:%.*]] = getelementptr inbounds i8, i8* [[T0]], i64 8
@@ -107,7 +108,7 @@ namespace test0 {
     // CHECK: [[T0:%.*]] = shl i8 [[VALUE]], 6
     // CHECK: [[T1:%.*]] = ashr i8 [[T0]], 6
     // CHECK: [[T2:%.*]] = sext i8 [[T1]] to i32
-    // CHECK: call void @_Z8int_sinki(i32 [[T2]])
+    // CHECK: call void @_Z8int_sinki(i32 noundef [[T2]])
     int_sink(c->onebit);
   }
 
@@ -119,7 +120,7 @@ namespace test0 {
     // CHECK-NOCOMPAT: [[C_P:%.*]] = alloca [[C:%.*]], align 4
     C c;
 
-    // CHECK: [[CALL:%.*]] = call i32 @_Z10int_sourcev()
+    // CHECK: [[CALL:%.*]] = call noundef i32 @_Z10int_sourcev()
     // CHECK: [[T0:%.*]] = bitcast [[C]]* [[C_P]] to i8*
     // CHECK: [[T1:%.*]] = getelementptr inbounds i8, i8* [[T0]], i64 8
     // CHECK: [[B_P:%.*]] = bitcast i8* [[T1]] to [[B]]*
@@ -143,7 +144,7 @@ namespace test0 {
     // CHECK: [[T0:%.*]] = shl i8 [[VALUE]], 6
     // CHECK: [[T1:%.*]] = ashr i8 [[T0]], 6
     // CHECK: [[T2:%.*]] = sext i8 [[T1]] to i32
-    // CHECK: call void @_Z8int_sinki(i32 [[T2]])
+    // CHECK: call void @_Z8int_sinki(i32 noundef [[T2]])
     int_sink(c.onebit);
   }
 
@@ -154,7 +155,7 @@ namespace test0 {
     // CHECK: [[C_P:%.*]] = alloca [[C:%.*]], align 16
     __attribute__((aligned(16))) C c;
 
-    // CHECK: [[CALL:%.*]] = call i32 @_Z10int_sourcev()
+    // CHECK: [[CALL:%.*]] = call noundef i32 @_Z10int_sourcev()
     // CHECK: [[T0:%.*]] = bitcast [[C]]* [[C_P]] to i8*
     // CHECK: [[T1:%.*]] = getelementptr inbounds i8, i8* [[T0]], i64 8
     // CHECK: [[B_P:%.*]] = bitcast i8* [[T1]] to [[B]]*
@@ -175,7 +176,7 @@ namespace test0 {
     // CHECK: [[T0:%.*]] = shl i8 [[VALUE]], 6
     // CHECK: [[T1:%.*]] = ashr i8 [[T0]], 6
     // CHECK: [[T2:%.*]] = sext i8 [[T1]] to i32
-    // CHECK: call void @_Z8int_sinki(i32 [[T2]])
+    // CHECK: call void @_Z8int_sinki(i32 noundef [[T2]])
     int_sink(c.onebit);
   }
 }

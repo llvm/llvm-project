@@ -25,15 +25,11 @@ class PlatformAppleSimulatorTest : public ::testing::Test {
 #ifdef __APPLE__
 
 static void testSimPlatformArchHasSimEnvironment(llvm::StringRef name) {
-  Status error;
-  auto platform_sp = Platform::Create(ConstString(name), error);
+  auto platform_sp = Platform::Create(name);
   ASSERT_TRUE(platform_sp);
   int num_arches = 0;
 
-  while (true) {
-    ArchSpec arch;
-    if (!platform_sp->GetSupportedArchitectureAtIndex(num_arches, arch))
-      break;
+  for (auto arch : platform_sp->GetSupportedArchitectures({})) {
     EXPECT_EQ(arch.GetTriple().getEnvironment(), llvm::Triple::Simulator);
     num_arches++;
   }
@@ -58,12 +54,12 @@ TEST_F(PlatformAppleSimulatorTest, TestHostPlatformToSim) {
   };
 
   for (auto sim : sim_platforms) {
+    PlatformList list;
     ArchSpec arch = platform_arch;
     arch.GetTriple().setOS(sim);
     arch.GetTriple().setEnvironment(llvm::Triple::Simulator);
 
-    Status error;
-    auto platform_sp = Platform::Create(arch, nullptr, error);
+    auto platform_sp = list.GetOrCreate(arch, {}, nullptr);
     EXPECT_TRUE(platform_sp);
   }
 }

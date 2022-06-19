@@ -130,7 +130,7 @@ mlir/lib/Conversion/GPUCommon.
 Each conversion typically exists in a separate library, declared with
 add_mlir_conversion_library().  Conversion libraries typically depend
 on their source and target dialects, but may also depend on other
-dialects (e.g. MLIRStandard).  Typically this dependence is specified
+dialects (e.g. MLIRFunc).  Typically this dependence is specified
 using target_link_libraries() and the PUBLIC keyword.  For instance:
 
 ```cmake

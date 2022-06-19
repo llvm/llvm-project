@@ -1,5 +1,5 @@
 ! RUN: %flang -E %s 2>&1 | FileCheck %s
-! CHECK: res=kwm
+! CHECK: res = KWM
 * KWM split across continuation, clipped after column 72
       integer, parameter :: KWM = 666
 #define KWM 777

@@ -1,16 +1,16 @@
-// RUN: %clang_cc1 -verify -fopenmp -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -triple powerpc64le-unknown-unknown -emit-llvm %s -o - | FileCheck %s --check-prefix CK1 --check-prefix CK1-64
-// RUN: %clang_cc1 -fopenmp -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -std=c++11 -triple powerpc64le-unknown-unknown -emit-pch -o %t %s
-// RUN: %clang_cc1 -fopenmp -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -triple powerpc64le-unknown-unknown -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck %s  --check-prefix CK1 --check-prefix CK1-64
-// RUN: %clang_cc1 -verify -fopenmp -fopenmp-targets=i386-pc-linux-gnu -x c++ -triple i386-unknown-unknown -emit-llvm %s -o - | FileCheck %s  --check-prefix CK1 --check-prefix CK1-32
-// RUN: %clang_cc1 -fopenmp -fopenmp-targets=i386-pc-linux-gnu -x c++ -std=c++11 -triple i386-unknown-unknown -emit-pch -o %t %s
-// RUN: %clang_cc1 -fopenmp -fopenmp-targets=i386-pc-linux-gnu -x c++ -triple i386-unknown-unknown -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck %s  --check-prefix CK1 --check-prefix CK1-32
+// RUN: %clang_cc1 -no-opaque-pointers -verify -fopenmp -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -triple powerpc64le-unknown-unknown -emit-llvm %s -o - | FileCheck %s --check-prefix CK1 --check-prefix CK1-64
+// RUN: %clang_cc1 -no-opaque-pointers -fopenmp -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -std=c++11 -triple powerpc64le-unknown-unknown -emit-pch -o %t %s
+// RUN: %clang_cc1 -no-opaque-pointers -fopenmp -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -triple powerpc64le-unknown-unknown -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck %s  --check-prefix CK1 --check-prefix CK1-64
+// RUN: %clang_cc1 -no-opaque-pointers -verify -fopenmp -fopenmp-targets=i386-pc-linux-gnu -x c++ -triple i386-unknown-unknown -emit-llvm %s -o - | FileCheck %s  --check-prefix CK1 --check-prefix CK1-32
+// RUN: %clang_cc1 -no-opaque-pointers -fopenmp -fopenmp-targets=i386-pc-linux-gnu -x c++ -std=c++11 -triple i386-unknown-unknown -emit-pch -o %t %s
+// RUN: %clang_cc1 -no-opaque-pointers -fopenmp -fopenmp-targets=i386-pc-linux-gnu -x c++ -triple i386-unknown-unknown -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck %s  --check-prefix CK1 --check-prefix CK1-32
 
-// RUN: %clang_cc1 -verify -fopenmp-simd -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -triple powerpc64le-unknown-unknown -emit-llvm %s -o - | FileCheck --check-prefix SIMD-ONLY0 %s
-// RUN: %clang_cc1 -fopenmp-simd -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -std=c++11 -triple powerpc64le-unknown-unknown -emit-pch -o %t %s
-// RUN: %clang_cc1 -fopenmp-simd -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -triple powerpc64le-unknown-unknown -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck --check-prefix SIMD-ONLY0 %s
-// RUN: %clang_cc1 -verify -fopenmp-simd -fopenmp-targets=i386-pc-linux-gnu -x c++ -triple i386-unknown-unknown -emit-llvm %s -o - | FileCheck --check-prefix SIMD-ONLY0 %s
-// RUN: %clang_cc1 -fopenmp-simd -fopenmp-targets=i386-pc-linux-gnu -x c++ -std=c++11 -triple i386-unknown-unknown -emit-pch -o %t %s
-// RUN: %clang_cc1 -fopenmp-simd -fopenmp-targets=i386-pc-linux-gnu -x c++ -triple i386-unknown-unknown -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck --check-prefix SIMD-ONLY0 %s
+// RUN: %clang_cc1 -no-opaque-pointers -verify -fopenmp-simd -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -triple powerpc64le-unknown-unknown -emit-llvm %s -o - | FileCheck --check-prefix SIMD-ONLY0 %s
+// RUN: %clang_cc1 -no-opaque-pointers -fopenmp-simd -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -std=c++11 -triple powerpc64le-unknown-unknown -emit-pch -o %t %s
+// RUN: %clang_cc1 -no-opaque-pointers -fopenmp-simd -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -triple powerpc64le-unknown-unknown -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck --check-prefix SIMD-ONLY0 %s
+// RUN: %clang_cc1 -no-opaque-pointers -verify -fopenmp-simd -fopenmp-targets=i386-pc-linux-gnu -x c++ -triple i386-unknown-unknown -emit-llvm %s -o - | FileCheck --check-prefix SIMD-ONLY0 %s
+// RUN: %clang_cc1 -no-opaque-pointers -fopenmp-simd -fopenmp-targets=i386-pc-linux-gnu -x c++ -std=c++11 -triple i386-unknown-unknown -emit-pch -o %t %s
+// RUN: %clang_cc1 -no-opaque-pointers -fopenmp-simd -fopenmp-targets=i386-pc-linux-gnu -x c++ -triple i386-unknown-unknown -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck --check-prefix SIMD-ONLY0 %s
 // SIMD-ONLY0-NOT: {{__kmpc|__tgt}}
 
 // expected-no-diagnostics
@@ -37,7 +37,7 @@ double gc[100];
 
 // CK1: [[MTYPE03:@.+]] = {{.+}}constant [1 x i64] [i64 2]
 
-// CK1: [[SIZE04:@.+]] = {{.+}}constant [2 x i64] [i64 sdiv exact (i64 sub (i64 ptrtoint (double** getelementptr (double*, double** getelementptr inbounds (%struct.ST, %struct.ST* @gb, i32 0, i32 1), i32 1) to i64), i64 ptrtoint (double** getelementptr inbounds (%struct.ST, %struct.ST* @gb, i32 0, i32 1) to i64)), i64 ptrtoint (i8* getelementptr (i8, i8* null, i32 1) to i64)), i64 24]
+// CK1: [[SIZE04:@.+]] = {{.+}}constant [2 x i64] [i64 0, i64 24]
 // CK1: [[MTYPE04:@.+]] = {{.+}}constant [2 x i64] [i64 0, i64 281474976710673]
 
 // CK1-LABEL: _Z3fooi
@@ -94,9 +94,9 @@ void foo(int arg) {
   // CK1-32: [[BC_PRIVS_PTRS:%.+]] = bitcast [1 x i8*]* [[PRIVS_PTRS]] to i8*
   // CK1-32: [[BC_PTRS:%.+]] = bitcast i8** [[GEPP0]] to i8*
   // CK1-32: call void @llvm.memcpy.p0i8.p0i8.i[[sz]](i8* align {{8|4}} [[BC_PRIVS_PTRS]], i8* align {{8|4}} [[BC_PTRS]], i[[sz]] {{8|4}}, i1 false)
+  // CK1: [[BC_ADR:%.+]] = ptrtoint i32* %{{.+}} to i[[sz]]
   // CK1: [[DEP:%.+]] = getelementptr %struct.kmp_depend_info, %struct.kmp_depend_info* [[MAIN_DEP:%.+]], i[[sz]] 0
   // CK1: [[DEP_ADR:%.+]] = getelementptr inbounds %struct.kmp_depend_info, %struct.kmp_depend_info* [[DEP]], i32 0, i32 0
-  // CK1: [[BC_ADR:%.+]] = ptrtoint i32* %{{.+}} to i[[sz]]
   // CK1: store i[[sz]] [[BC_ADR]], i[[sz]]* [[DEP_ADR]],
   // CK1: [[DEP_SIZE:%.+]] = getelementptr inbounds %struct.kmp_depend_info, %struct.kmp_depend_info* [[DEP]], i32 0, i32 1
   // CK1: store i[[sz]] 4, i[[sz]]* [[DEP_SIZE]],
@@ -160,17 +160,17 @@ void foo(int arg) {
   // CK1-32: [[BC_PRIVS_PTRS:%.+]] = bitcast [1 x i8*]* [[PRIVS_PTRS]] to i8*
   // CK1-32: [[BC_PTRS:%.+]] = bitcast i8** [[GEPP0]] to i8*
   // CK1-32: call void @llvm.memcpy.p0i8.p0i8.i[[sz]](i8* align {{8|4}} [[BC_PRIVS_PTRS]], i8* align {{8|4}} [[BC_PTRS]], i[[sz]] {{8|4}}, i1 false)
+  // CK1: [[BC_ADR:%.+]] = ptrtoint i32* %{{.+}} to i[[sz]]
   // CK1: [[DEP:%.+]] = getelementptr %struct.kmp_depend_info, %struct.kmp_depend_info* [[MAIN_DEP:%.+]], i[[sz]] 0
   // CK1: [[DEP_ADR:%.+]] = getelementptr inbounds %struct.kmp_depend_info, %struct.kmp_depend_info* [[DEP]], i32 0, i32 0
-  // CK1: [[BC_ADR:%.+]] = ptrtoint i32* %{{.+}} to i[[sz]]
   // CK1: store i[[sz]] [[BC_ADR]], i[[sz]]* [[DEP_ADR]],
   // CK1: [[DEP_SIZE:%.+]] = getelementptr inbounds %struct.kmp_depend_info, %struct.kmp_depend_info* [[DEP]], i32 0, i32 1
   // CK1: store i[[sz]] 4, i[[sz]]* [[DEP_SIZE]],
   // CK1: [[DEP_ATTRS:%.+]] = getelementptr inbounds %struct.kmp_depend_info, %struct.kmp_depend_info* [[DEP]], i32 0, i32 2
   // CK1: store i8 3, i8* [[DEP_ATTRS]]
+  // CK1: [[BC_ADR:%.+]] = ptrtoint i32* %{{.+}} to i[[sz]]
   // CK1: [[DEP:%.+]] = getelementptr %struct.kmp_depend_info, %struct.kmp_depend_info* [[MAIN_DEP]], i[[sz]] 1
   // CK1: [[DEP_ADR:%.+]] = getelementptr inbounds %struct.kmp_depend_info, %struct.kmp_depend_info* [[DEP]], i32 0, i32 0
-  // CK1: [[BC_ADR:%.+]] = ptrtoint i32* %{{.+}} to i[[sz]]
   // CK1: store i[[sz]] [[BC_ADR]], i[[sz]]* [[DEP_ADR]],
   // CK1: [[DEP_SIZE:%.+]] = getelementptr inbounds %struct.kmp_depend_info, %struct.kmp_depend_info* [[DEP]], i32 0, i32 1
   // CK1: store i[[sz]] 4, i[[sz]]* [[DEP_SIZE]],
@@ -241,25 +241,25 @@ void foo(int arg) {
   // CK1-32: [[BC_PRIVS_PTRS:%.+]] = bitcast [1 x i8*]* [[PRIVS_PTRS]] to i8*
   // CK1-32: [[BC_PTRS:%.+]] = bitcast i8** [[GEPP0]] to i8*
   // CK1-32: call void @llvm.memcpy.p0i8.p0i8.i[[sz]](i8* align {{8|4}} [[BC_PRIVS_PTRS]], i8* align {{8|4}} [[BC_PTRS]], i[[sz]] {{8|4}}, i1 false)
+  // CK1: [[BC_ADR:%.+]] = ptrtoint float* %{{.+}} to i[[sz]]
   // CK1: [[DEP:%.+]] = getelementptr %struct.kmp_depend_info, %struct.kmp_depend_info* [[MAIN_DEP:%.+]], i[[sz]] 0
   // CK1: [[DEP_ADR:%.+]] = getelementptr inbounds %struct.kmp_depend_info, %struct.kmp_depend_info* [[DEP]], i32 0, i32 0
-  // CK1: [[BC_ADR:%.+]] = ptrtoint float* %{{.+}} to i[[sz]]
   // CK1: store i[[sz]] [[BC_ADR]], i[[sz]]* [[DEP_ADR]],
   // CK1: [[DEP_SIZE:%.+]] = getelementptr inbounds %struct.kmp_depend_info, %struct.kmp_depend_info* [[DEP]], i32 0, i32 1
   // CK1: store i[[sz]] %{{.+}}, i[[sz]]* [[DEP_SIZE]],
   // CK1: [[DEP_ATTRS:%.+]] = getelementptr inbounds %struct.kmp_depend_info, %struct.kmp_depend_info* [[DEP]], i32 0, i32 2
   // CK1: store i8 3, i8* [[DEP_ATTRS]]
+  // CK1: [[BC_ADR:%.+]] = ptrtoint i32* %{{.+}} to i[[sz]]
   // CK1: [[DEP:%.+]] = getelementptr %struct.kmp_depend_info, %struct.kmp_depend_info* [[MAIN_DEP]], i[[sz]] 1
   // CK1: [[DEP_ADR:%.+]] = getelementptr inbounds %struct.kmp_depend_info, %struct.kmp_depend_info* [[DEP]], i32 0, i32 0
-  // CK1: [[BC_ADR:%.+]] = ptrtoint i32* %{{.+}} to i[[sz]]
   // CK1: store i[[sz]] [[BC_ADR]], i[[sz]]* [[DEP_ADR]],
   // CK1: [[DEP_SIZE:%.+]] = getelementptr inbounds %struct.kmp_depend_info, %struct.kmp_depend_info* [[DEP]], i32 0, i32 1
   // CK1: store i[[sz]] 4, i[[sz]]* [[DEP_SIZE]],
   // CK1: [[DEP_ATTRS:%.+]] = getelementptr inbounds %struct.kmp_depend_info, %struct.kmp_depend_info* [[DEP]], i32 0, i32 2
   // CK1: store i8 3, i8* [[DEP_ATTRS]]
+  // CK1: [[BC_ADR:%.+]] = ptrtoint i32* %{{.+}} to i[[sz]]
   // CK1: [[DEP:%.+]] = getelementptr %struct.kmp_depend_info, %struct.kmp_depend_info* [[MAIN_DEP]], i[[sz]] 2
   // CK1: [[DEP_ADR:%.+]] = getelementptr inbounds %struct.kmp_depend_info, %struct.kmp_depend_info* [[DEP]], i32 0, i32 0
-  // CK1: [[BC_ADR:%.+]] = ptrtoint i32* %{{.+}} to i[[sz]]
   // CK1: store i[[sz]] [[BC_ADR]], i[[sz]]* [[DEP_ADR]],
   // CK1: [[DEP_SIZE:%.+]] = getelementptr inbounds %struct.kmp_depend_info, %struct.kmp_depend_info* [[DEP]], i32 0, i32 1
   // CK1: store i[[sz]] 4, i[[sz]]* [[DEP_SIZE]],
@@ -290,6 +290,8 @@ void foo(int arg) {
   // CK1: [[P0:%.+]] = getelementptr inbounds [2 x i8*], [2 x i8*]* [[P:%.+]], i32 0, i32 0
   // CK1: [[P0_BC:%.+]] = bitcast i8** [[P0]] to double***
   // CK1: store double** getelementptr inbounds (%struct.ST, %struct.ST* @gb, i32 0, i32 1), double*** [[P0_BC]],
+  // CK1: [[PS0:%.+]] = getelementptr inbounds [2 x i64], [2 x i64]* [[PS:%.+]], i32 0, i32 0
+  // CK1: store i64 sdiv exact (i64 sub (i64 ptrtoint (double** getelementptr (double*, double** getelementptr inbounds (%struct.ST, %struct.ST* @gb, i32 0, i32 1), i32 1) to i64), i64 ptrtoint (double** getelementptr inbounds (%struct.ST, %struct.ST* @gb, i32 0, i32 1) to i64)), i64 ptrtoint (i8* getelementptr (i8, i8* null, i32 1) to i64)), i64* [[PS0]],
   // CK1: [[BP1:%.+]] = getelementptr inbounds [2 x i8*], [2 x i8*]* [[BP]], i32 0, i32 1
   // CK1: [[BP1_BC:%.+]] = bitcast i8** [[BP1]] to double***
   // CK1: store double** getelementptr inbounds (%struct.ST, %struct.ST* @gb, i32 0, i32 1), double*** [[BP1_BC]],
@@ -298,6 +300,7 @@ void foo(int arg) {
   // CK1: store double* %{{.+}}, double** [[P1_BC]],
   // CK1: [[GEPBP0:%.+]] = getelementptr inbounds [2 x i8*], [2 x i8*]* [[BP]], i32 0, i32 0
   // CK1: [[GEPP0:%.+]] = getelementptr inbounds [2 x i8*], [2 x i8*]* [[P]], i32 0, i32 0
+  // CK1: [[GEPS0:%.+]] = getelementptr inbounds [2 x i64], [2 x i64]* [[PS]], i32 0, i32 0
   // CK1: [[RES:%.+]] = call i8* @__kmpc_omp_task_alloc(%struct.ident_t* {{.+}}, i32 {{.+}}, i32 1, i[[sz]] {{88|52}}, i[[sz]] 1, i32 (i32, i8*)* bitcast (i32 (i32, %struct.kmp_task_t_with_privates{{.+}}*)* [[TASK_ENTRY4:@.+]] to i32 (i32, i8*)*))
   // CK1: [[RES_BC:%.+]] = bitcast i8* [[RES]] to %struct.kmp_task_t_with_privates{{.+}}*
   // CK1: [[TASK_T:%.+]] = getelementptr inbounds %struct.kmp_task_t_with_privates{{.+}}, %struct.kmp_task_t_with_privates{{.+}}* [[RES_BC]], i32 0, i32 0
@@ -312,10 +315,12 @@ void foo(int arg) {
   // CK1-64: call void @llvm.memcpy.p0i8.p0i8.i[[sz]](i8* align {{8|4}} [[BC_PRIVS_PTRS]], i8* align {{8|4}} [[BC_PTRS]], i[[sz]] {{16|8}}, i1 false)
   // CK1-64: [[PRIVS_SIZES:%.+]] = getelementptr inbounds %struct..kmp_privates.t{{.+}}, %struct..kmp_privates.t{{.+}}* [[PRIVS]], i32 0, i32 2
   // CK1-64: [[BC_PRIVS_SIZES:%.+]] = bitcast [2 x i[[sz]]]* [[PRIVS_SIZES]] to i8*
-  // CK1-64: call void @llvm.memcpy.p0i8.p0i8.i[[sz]](i8* align {{8|4}} [[BC_PRIVS_SIZES]], i8* align {{8|4}} bitcast ([2 x i[[sz]]]* [[SIZE04]] to i8*), i[[sz]] {{16|8}}, i1 false)
+  // CK1-64: [[BC_SIZES:%.+]] = bitcast i64* [[GEPS0]] to i8*
+  // CK1-64: call void @llvm.memcpy.p0i8.p0i8.i[[sz]](i8* align {{8|4}} [[BC_PRIVS_SIZES]], i8* align {{8|4}} [[BC_SIZES]], i[[sz]] {{16|8}}, i1 false)
   // CK1-32: [[PRIVS_SIZES:%.+]] = getelementptr inbounds %struct..kmp_privates.t{{.+}}, %struct..kmp_privates.t{{.+}}* [[PRIVS]], i32 0, i32 0
   // CK1-32: [[BC_PRIVS_SIZES:%.+]] = bitcast [2 x i64]* [[PRIVS_SIZES]] to i8*
-  // CK1-32: call void @llvm.memcpy.p0i8.p0i8.i[[sz]](i8* align {{8|4}} [[BC_PRIVS_SIZES]], i8* align {{8|4}} bitcast ([2 x i64]* [[SIZE04]] to i8*), i[[sz]] {{16|8}}, i1 false)
+  // CK1-32: [[BC_SIZES:%.+]] = bitcast i64* [[GEPS0]] to i8*
+  // CK1-32: call void @llvm.memcpy.p0i8.p0i8.i[[sz]](i8* align {{8|4}} [[BC_PRIVS_SIZES]], i8* align {{8|4}} [[BC_SIZES]], i[[sz]] {{16|8}}, i1 false)
   // CK1-32: [[PRIVS_BASEPTRS:%.+]] = getelementptr inbounds %struct..kmp_privates.t{{.+}}, %struct..kmp_privates.t{{.+}}* [[PRIVS]], i32 0, i32 1
   // CK1-32: [[BC_PRIVS_BASEPTRS:%.+]] = bitcast [2 x i8*]* [[PRIVS_BASEPTRS]] to i8*
   // CK1-32: [[BC_BASEPTRS:%.+]] = bitcast i8** [[GEPBP0]] to i8*
@@ -324,25 +329,26 @@ void foo(int arg) {
   // CK1-32: [[BC_PRIVS_PTRS:%.+]] = bitcast [2 x i8*]* [[PRIVS_PTRS]] to i8*
   // CK1-32: [[BC_PTRS:%.+]] = bitcast i8** [[GEPP0]] to i8*
   // CK1-32: call void @llvm.memcpy.p0i8.p0i8.i[[sz]](i8* align {{8|4}} [[BC_PRIVS_PTRS]], i8* align {{8|4}} [[BC_PTRS]], i[[sz]] {{16|8}}, i1 false)
+  // CK1: %{{.+}} = sub nuw
+  // CK1: [[BC_ADR:%.+]] = ptrtoint double* %{{.+}} to i[[sz]]
   // CK1: [[DEP:%.+]] = getelementptr %struct.kmp_depend_info, %struct.kmp_depend_info* [[MAIN_DEP:%.+]], i[[sz]] 0
   // CK1: [[DEP_ADR:%.+]] = getelementptr inbounds %struct.kmp_depend_info, %struct.kmp_depend_info* [[DEP]], i32 0, i32 0
-  // CK1: [[BC_ADR:%.+]] = ptrtoint double* %{{.+}} to i[[sz]]
   // CK1: store i[[sz]] [[BC_ADR]], i[[sz]]* [[DEP_ADR]],
   // CK1: [[DEP_SIZE:%.+]] = getelementptr inbounds %struct.kmp_depend_info, %struct.kmp_depend_info* [[DEP]], i32 0, i32 1
   // CK1: store i[[sz]] %{{.+}}, i[[sz]]* [[DEP_SIZE]],
   // CK1: [[DEP_ATTRS:%.+]] = getelementptr inbounds %struct.kmp_depend_info, %struct.kmp_depend_info* [[DEP]], i32 0, i32 2
   // CK1: store i8 1, i8* [[DEP_ATTRS]]
+  // CK1: [[BC_ADR:%.+]] = ptrtoint i32* %{{.+}} to i[[sz]]
   // CK1: [[DEP:%.+]] = getelementptr %struct.kmp_depend_info, %struct.kmp_depend_info* [[MAIN_DEP]], i[[sz]] 1
   // CK1: [[DEP_ADR:%.+]] = getelementptr inbounds %struct.kmp_depend_info, %struct.kmp_depend_info* [[DEP]], i32 0, i32 0
-  // CK1: [[BC_ADR:%.+]] = ptrtoint i32* %{{.+}} to i[[sz]]
   // CK1: store i[[sz]] [[BC_ADR]], i[[sz]]* [[DEP_ADR]],
   // CK1: [[DEP_SIZE:%.+]] = getelementptr inbounds %struct.kmp_depend_info, %struct.kmp_depend_info* [[DEP]], i32 0, i32 1
   // CK1: store i[[sz]] 4, i[[sz]]* [[DEP_SIZE]],
   // CK1: [[DEP_ATTRS:%.+]] = getelementptr inbounds %struct.kmp_depend_info, %struct.kmp_depend_info* [[DEP]], i32 0, i32 2
   // CK1: store i8 1, i8* [[DEP_ATTRS]]
+  // CK1: [[BC_ADR:%.+]] = ptrtoint float* %{{.+}} to i[[sz]]
   // CK1: [[DEP:%.+]] = getelementptr %struct.kmp_depend_info, %struct.kmp_depend_info* [[MAIN_DEP]], i[[sz]] 2
   // CK1: [[DEP_ADR:%.+]] = getelementptr inbounds %struct.kmp_depend_info, %struct.kmp_depend_info* [[DEP]], i32 0, i32 0
-  // CK1: [[BC_ADR:%.+]] = ptrtoint float* %{{.+}} to i[[sz]]
   // CK1: store i[[sz]] [[BC_ADR]], i[[sz]]* [[DEP_ADR]],
   // CK1: [[DEP_SIZE:%.+]] = getelementptr inbounds %struct.kmp_depend_info, %struct.kmp_depend_info* [[DEP]], i32 0, i32 1
   // CK1: store i[[sz]] %{{.+}}, i[[sz]]* [[DEP_SIZE]],
@@ -355,9 +361,9 @@ void foo(int arg) {
   // CK1: store i[[sz]] 800, i[[sz]]* [[DEP_SIZE]],
   // CK1: [[DEP_ATTRS:%.+]] = getelementptr inbounds %struct.kmp_depend_info, %struct.kmp_depend_info* [[DEP]], i32 0, i32 2
   // CK1: store i8 1, i8* [[DEP_ATTRS]]
+  // CK1: [[BC_ADR:%.+]] = ptrtoint i32* %{{.+}} to i[[sz]]
   // CK1: [[DEP:%.+]] = getelementptr %struct.kmp_depend_info, %struct.kmp_depend_info* [[MAIN_DEP]], i[[sz]] 4
   // CK1: [[DEP_ADR:%.+]] = getelementptr inbounds %struct.kmp_depend_info, %struct.kmp_depend_info* [[DEP]], i32 0, i32 0
-  // CK1: [[BC_ADR:%.+]] = ptrtoint i32* %{{.+}} to i[[sz]]
   // CK1: store i[[sz]] [[BC_ADR]], i[[sz]]* [[DEP_ADR]],
   // CK1: [[DEP_SIZE:%.+]] = getelementptr inbounds %struct.kmp_depend_info, %struct.kmp_depend_info* [[DEP]], i32 0, i32 1
   // CK1: store i[[sz]] 4, i[[sz]]* [[DEP_SIZE]],
@@ -372,7 +378,7 @@ void foo(int arg) {
   {++arg;}
 }
 
-// CK1: define internal{{.*}} i32 [[TASK_ENTRY0]](i32{{.*}}, %struct.kmp_task_t_with_privates* noalias %1)
+// CK1: define internal{{.*}} i32 [[TASK_ENTRY0]](i32{{.*}}, %struct.kmp_task_t_with_privates* noalias noundef %1)
 // CK1-DAG: call void @__tgt_target_data_update_nowait_mapper(%struct.ident_t* @{{.+}}, i64 [[DEV:%[^,]+]], i32 1, i8** [[GEPBP:%.+]], i8** [[GEPP:%.+]], i64* [[GEPS:%.+]], {{.+}}getelementptr {{.+}}[1 x i{{.+}}]* [[MTYPE00]]{{.+}}, i8** null)
 // CK1-DAG: [[DEV]] = sext i32 [[DEVi32:%[^,]+]] to i64
 // CK1-DAG: [[DEVi32]] = load i32, i32* %{{[^,]+}},
@@ -387,7 +393,7 @@ void foo(int arg) {
 // CK1: ret i32 0
 // CK1: }
 
-// CK1: define internal{{.*}} i32 [[TASK_ENTRY2]](i32{{.*}}, %struct.kmp_task_t_with_privates{{.+}}* noalias %1)
+// CK1: define internal{{.*}} i32 [[TASK_ENTRY2]](i32{{.*}}, %struct.kmp_task_t_with_privates{{.+}}* noalias noundef %1)
 // CK1-DAG: call void @__tgt_target_data_update_mapper(%struct.ident_t* @{{.+}}, i64 4, i32 1, i8** [[GEPBP:%.+]], i8** [[GEPP:%.+]], i64* [[GEPS:%.+]], {{.+}}getelementptr {{.+}}[1 x i{{.+}}]* [[MTYPE02]]{{.+}}, i8** null)
 // CK1-DAG: [[GEPBP]] = getelementptr inbounds {{.+}}[[BP:%[^,]+]]
 // CK1-DAG: [[GEPP]] = getelementptr inbounds {{.+}}[[P:%[^,]+]]
@@ -400,7 +406,7 @@ void foo(int arg) {
 // CK1: ret i32 0
 // CK1: }
 
-// CK1: define internal{{.*}} i32 [[TASK_ENTRY3]](i32{{.*}}, %struct.kmp_task_t_with_privates{{.+}}* noalias %1)
+// CK1: define internal{{.*}} i32 [[TASK_ENTRY3]](i32{{.*}}, %struct.kmp_task_t_with_privates{{.+}}* noalias noundef %1)
 // CK1-DAG: call void @__tgt_target_data_update_mapper(%struct.ident_t* @{{.+}}, i64 -1, i32 1, i8** [[GEPBP:%.+]], i8** [[GEPP:%.+]], i64* [[GEPS:%.+]], {{.+}}getelementptr {{.+}}[1 x i{{.+}}]* [[MTYPE03]]{{.+}}, i8** null)
 // CK1-DAG: [[GEPBP]] = getelementptr inbounds {{.+}}[[BP:%[^,]+]]
 // CK1-DAG: [[GEPP]] = getelementptr inbounds {{.+}}[[P:%[^,]+]]
@@ -414,7 +420,7 @@ void foo(int arg) {
 // CK1: ret i32 0
 // CK1: }
 
-// CK1: define internal{{.*}} i32 [[TASK_ENTRY4]](i32{{.*}}, %struct.kmp_task_t_with_privates{{.+}}* noalias %1)
+// CK1: define internal{{.*}} i32 [[TASK_ENTRY4]](i32{{.*}}, %struct.kmp_task_t_with_privates{{.+}}* noalias noundef %1)
 // CK1-DAG: call void @__tgt_target_data_update_mapper(%struct.ident_t* @{{.+}}, i64 -1, i32 2, i8** [[GEPBP:%.+]], i8** [[GEPP:%.+]], i64* [[GEPS:%.+]], {{.+}}getelementptr {{.+}}[2 x i{{.+}}]* [[MTYPE04]]{{.+}}, i8** null)
 // CK1-DAG: [[GEPBP]] = getelementptr inbounds {{.+}}[[BP:%[^,]+]]
 // CK1-DAG: [[GEPP]] = getelementptr inbounds {{.+}}[[P:%[^,]+]]

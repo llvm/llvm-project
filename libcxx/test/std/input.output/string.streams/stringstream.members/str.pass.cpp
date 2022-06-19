@@ -40,6 +40,7 @@ int main(int, char**)
         ss << i << ' ' << 321;
         assert(ss.str() == "89 3219 ");
     }
+#ifndef TEST_HAS_NO_WIDE_CHARACTERS
     {
         std::wstringstream ss(L" 123 456 ");
         assert(ss.rdbuf() != 0);
@@ -60,6 +61,7 @@ int main(int, char**)
         ss << i << ' ' << 321;
         assert(ss.str() == L"89 3219 ");
     }
+#endif
     {
         std::stringstream ss;
         ss.write("\xd1", 1);

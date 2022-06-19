@@ -48,7 +48,7 @@ int redef[10];
 int redef[];  // expected-note {{previous definition is here}}
 int redef[11]; // expected-error{{redefinition of 'redef'}}
 
-void func() {
+void func(void) {
   extern int i6; // expected-note {{previous declaration is here}}
   static int i6; // expected-error{{static declaration of 'i6' follows non-static declaration}}
 }

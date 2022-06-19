@@ -229,6 +229,56 @@ TEST_F(TargetDeclTest, UsingDecl) {
     )cpp";
   EXPECT_DECLS("UnresolvedUsingValueDecl", {"using Base<T>::waldo", Rel::Alias},
                {"void waldo()"});
+
+  Code = R"cpp(
+    namespace ns {
+    template<typename T> class S {};
+    }
+
+    using ns::S;
+
+    template<typename T>
+    using A = [[S]]<T>;
+  )cpp";
+  EXPECT_DECLS("TemplateSpecializationTypeLoc", {"using ns::S", Rel::Alias},
+               {"template <typename T> class S"},
+               {"class S", Rel::TemplatePattern});
+
+  Code = R"cpp(
+    namespace ns {
+    template<typename T> class S {};
+    }
+
+    using ns::S;
+    template <template <typename> class T> class X {};
+    using B = X<[[S]]>;
+  )cpp";
+  EXPECT_DECLS("TemplateArgumentLoc", {"using ns::S", Rel::Alias},
+               {"template <typename T> class S"});
+
+  Code = R"cpp(
+    namespace ns {
+    template<typename T> class S { public: S(T); };
+    }
+
+    using ns::S;
+    [[S]] s(123);
+  )cpp";
+  Flags.push_back("-std=c++17"); // For CTAD feature.
+  EXPECT_DECLS("DeducedTemplateSpecializationTypeLoc",
+               {"using ns::S", Rel::Alias}, {"template <typename T> class S"},
+               {"class S", Rel::TemplatePattern});
+
+  Code = R"cpp(
+    template<typename T>
+    class Foo { public: class foo {}; };
+    template <class T> class A : public Foo<T> {
+      using typename Foo<T>::foo;
+      [[foo]] abc;
+    };
+  )cpp";
+  EXPECT_DECLS("UnresolvedUsingTypeLoc",
+               {"using typename Foo<T>::foo", Rel::Alias});
 }
 
 TEST_F(TargetDeclTest, BaseSpecifier) {
@@ -339,6 +389,15 @@ TEST_F(TargetDeclTest, Types) {
     void foo() { [[T<int>]] x; }
   )cpp";
   EXPECT_DECLS("TemplateSpecializationTypeLoc", "template <typename> class T");
+  Flags.clear();
+
+  Code = R"cpp(
+  template<template<typename> class ...T>
+  class C {
+    C<[[T...]]> foo;
+    };
+  )cpp";
+  EXPECT_DECLS("TemplateArgumentLoc", {"template <typename> class ...T"});
   Flags.clear();
 
   Code = R"cpp(
@@ -498,6 +557,50 @@ TEST_F(TargetDeclTest, Concept) {
   )cpp";
   EXPECT_DECLS("ConceptSpecializationExpr",
                {"template <typename T, typename U> concept Fooable = true"});
+}
+
+TEST_F(TargetDeclTest, Coroutine) {
+  Flags.push_back("-std=c++20");
+
+  Code = R"cpp(
+    namespace std::experimental {
+    template <typename, typename...> struct coroutine_traits;
+    template <typename> struct coroutine_handle {
+      template <typename U>
+      coroutine_handle(coroutine_handle<U>&&) noexcept;
+      static coroutine_handle from_address(void* __addr) noexcept;
+    };
+    } // namespace std::experimental
+
+    struct executor {};
+    struct awaitable {};
+    struct awaitable_frame {
+      awaitable get_return_object();
+      void return_void();
+      void unhandled_exception();
+      struct result_t {
+        ~result_t();
+        bool await_ready() const noexcept;
+        void await_suspend(std::experimental::coroutine_handle<void>) noexcept;
+        void await_resume() const noexcept;
+      };
+      result_t initial_suspend() noexcept;
+      result_t final_suspend() noexcept;
+      result_t await_transform(executor) noexcept;
+    };
+
+    namespace std::experimental {
+    template <>
+    struct coroutine_traits<awaitable> {
+      typedef awaitable_frame promise_type;
+    };
+    } // namespace std::experimental
+
+    awaitable foo() {
+      co_await [[executor]]();
+    }
+  )cpp";
+  EXPECT_DECLS("RecordTypeLoc", "struct executor");
 }
 
 TEST_F(TargetDeclTest, FunctionTemplate) {
@@ -937,11 +1040,9 @@ TEST_F(TargetDeclTest, ObjC) {
   EXPECT_DECLS("ObjCCategoryImplDecl", "@interface Foo(Ext)");
 
   Code = R"cpp(
-    @protocol Foo
-    @end
-    void test([[id<Foo>]] p);
+    void test(id</*error-ok*/[[InvalidProtocol]]> p);
   )cpp";
-  EXPECT_DECLS("ObjCObjectTypeLoc", "@protocol Foo");
+  EXPECT_DECLS("ParmVarDecl", "id p");
 
   Code = R"cpp(
     @class C;
@@ -957,7 +1058,7 @@ TEST_F(TargetDeclTest, ObjC) {
     @end
     void test(C<[[Foo]]> *p);
   )cpp";
-  EXPECT_DECLS("ObjCObjectTypeLoc", "@protocol Foo");
+  EXPECT_DECLS("ObjCProtocolLoc", "@protocol Foo");
 
   Code = R"cpp(
     @class C;
@@ -967,8 +1068,17 @@ TEST_F(TargetDeclTest, ObjC) {
     @end
     void test(C<[[Foo]], Bar> *p);
   )cpp";
-  // FIXME: We currently can't disambiguate between multiple protocols.
-  EXPECT_DECLS("ObjCObjectTypeLoc", "@protocol Foo", "@protocol Bar");
+  EXPECT_DECLS("ObjCProtocolLoc", "@protocol Foo");
+
+  Code = R"cpp(
+    @class C;
+    @protocol Foo
+    @end
+    @protocol Bar
+    @end
+    void test(C<Foo, [[Bar]]> *p);
+  )cpp";
+  EXPECT_DECLS("ObjCProtocolLoc", "@protocol Bar");
 
   Code = R"cpp(
     @interface Foo
@@ -995,6 +1105,20 @@ TEST_F(TargetDeclTest, ObjC) {
     }
   )cpp";
   EXPECT_DECLS("ObjCPropertyRefExpr", "+ (id)sharedInstance");
+
+  Code = R"cpp(
+    @interface Foo
+    + ([[id]])sharedInstance;
+    @end
+  )cpp";
+  EXPECT_DECLS("TypedefTypeLoc");
+
+  Code = R"cpp(
+    @interface Foo
+    + ([[instancetype]])sharedInstance;
+    @end
+  )cpp";
+  EXPECT_DECLS("TypedefTypeLoc");
 }
 
 class FindExplicitReferencesTest : public ::testing::Test {
@@ -1260,11 +1384,7 @@ TEST_F(FindExplicitReferencesTest, All) {
         "0: targets = {x}, decl\n"
         "1: targets = {vector}\n"
         "2: targets = {x}\n"},
-// Handle UnresolvedLookupExpr.
-// FIXME
-// This case fails when expensive checks are enabled.
-// Seems like the order of ns1::func and ns2::func isn't defined.
-#ifndef EXPENSIVE_CHECKS
+       // Handle UnresolvedLookupExpr.
        {R"cpp(
             namespace ns1 { void func(char*); }
             namespace ns2 { void func(int*); }
@@ -1278,7 +1398,6 @@ TEST_F(FindExplicitReferencesTest, All) {
         )cpp",
         "0: targets = {ns1::func, ns2::func}\n"
         "1: targets = {t}\n"},
-#endif
        // Handle UnresolvedMemberExpr.
        {R"cpp(
             struct X {

@@ -32,15 +32,13 @@ using namespace __ubsan;
 // Windows.
 // TODO(yln): This is a temporary workaround. GetStackTrace functions will be
 // removed in the future.
-void ubsan_GetStackTrace(BufferedStackTrace *stack, uptr max_depth,
-                         uptr pc, uptr bp, void *context, bool fast) {
+void ubsan_GetStackTrace(BufferedStackTrace *stack, uptr max_depth, uptr pc,
+                         uptr bp, void *context, bool request_fast) {
   uptr top = 0;
   uptr bottom = 0;
-  if (StackTrace::WillUseFastUnwind(fast)) {
-    GetThreadStackTopAndBottom(false, &top, &bottom);
-    stack->Unwind(max_depth, pc, bp, nullptr, top, bottom, true);
-  } else
-    stack->Unwind(max_depth, pc, bp, context, 0, 0, false);
+  GetThreadStackTopAndBottom(false, &top, &bottom);
+  bool fast = StackTrace::WillUseFastUnwind(request_fast);
+  stack->Unwind(max_depth, pc, bp, context, top, bottom, fast);
 }
 
 static void MaybePrintStackTrace(uptr pc, uptr bp) {
@@ -157,7 +155,7 @@ static void RenderLocation(InternalScopedString *Buffer, Location Loc) {
     return;
   }
   case Location::LK_Memory:
-    Buffer->append("%p", Loc.getMemoryLocation());
+    Buffer->append("%p", reinterpret_cast<void *>(Loc.getMemoryLocation()));
     return;
   case Location::LK_Symbolized: {
     const AddressInfo &Info = Loc.getSymbolizedStack()->info;
@@ -169,7 +167,7 @@ static void RenderLocation(InternalScopedString *Buffer, Location Loc) {
       RenderModuleLocation(Buffer, Info.module, Info.module_offset,
                            Info.module_arch, common_flags()->strip_path_prefix);
     else
-      Buffer->append("%p", Info.address);
+      Buffer->append("%p", reinterpret_cast<void *>(Info.address));
     return;
   }
   case Location::LK_Null:
@@ -286,7 +284,7 @@ static void PrintMemorySnippet(const Decorator &Decor, MemoryLocation Loc,
   Buffer.append("\n");
 
   // Emit highlights.
-  Buffer.append(Decor.Highlight());
+  Buffer.append("%s", Decor.Highlight());
   Range *InRange = upperBound(Min, Ranges, NumRanges);
   for (uptr P = Min; P != Max; ++P) {
     char Pad = ' ', Byte = ' ';
@@ -355,7 +353,7 @@ Diag::~Diag() {
     Buffer.clear();
   }
 
-  Buffer.append(Decor.Bold());
+  Buffer.append("%s", Decor.Bold());
   RenderLocation(&Buffer, Loc);
   Buffer.append(":");
 

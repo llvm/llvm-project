@@ -28,7 +28,7 @@ bool foobool(int argc) {
   return argc;
 }
 
-struct S1; // expected-note {{declared here}} expected-note 4 {{forward declaration of 'S1'}}
+struct S1; // expected-note {{declared here}} expected-note 6 {{forward declaration of 'S1'}}
 extern S1 a;
 class S2 {
   mutable int a;

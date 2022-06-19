@@ -10,6 +10,8 @@
 #include "DWARFUnit.h"
 #include "DWARFDebugInfo.h"
 
+using namespace lldb_private::dwarf;
+
 DWARFAttributes::DWARFAttributes() : m_infos() {}
 
 DWARFAttributes::~DWARFAttributes() = default;

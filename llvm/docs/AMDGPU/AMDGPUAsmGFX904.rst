@@ -38,21 +38,19 @@ VOP3P
 
 .. parsed-literal::
 
-    **INSTRUCTION**                    **DST**       **SRC0**       **SRC1**       **SRC2**           **MODIFIERS**
-    \ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|
-    v_fma_mix_f32                  :ref:`vdst<amdgpu_synid904_vdst32_0>`,     :ref:`src0<amdgpu_synid904_src32_0>`::ref:`m<amdgpu_synid904_mod_vop3_abs_neg>`::ref:`fx<amdgpu_synid904_mad_type_dev>`, :ref:`src1<amdgpu_synid904_src32_1>`::ref:`m<amdgpu_synid904_mod_vop3_abs_neg>`::ref:`fx<amdgpu_synid904_mad_type_dev>`, :ref:`src2<amdgpu_synid904_src32_1>`::ref:`m<amdgpu_synid904_mod_vop3_abs_neg>`::ref:`fx<amdgpu_synid904_mad_type_dev>`      :ref:`m_op_sel<amdgpu_synid_mad_mix_op_sel>` :ref:`m_op_sel_hi<amdgpu_synid_mad_mix_op_sel_hi>` :ref:`clamp<amdgpu_synid_clamp>`
-    v_fma_mixhi_f16                :ref:`vdst<amdgpu_synid904_vdst32_0>`,     :ref:`src0<amdgpu_synid904_src32_0>`::ref:`m<amdgpu_synid904_mod_vop3_abs_neg>`::ref:`fx<amdgpu_synid904_mad_type_dev>`, :ref:`src1<amdgpu_synid904_src32_1>`::ref:`m<amdgpu_synid904_mod_vop3_abs_neg>`::ref:`fx<amdgpu_synid904_mad_type_dev>`, :ref:`src2<amdgpu_synid904_src32_1>`::ref:`m<amdgpu_synid904_mod_vop3_abs_neg>`::ref:`fx<amdgpu_synid904_mad_type_dev>`      :ref:`m_op_sel<amdgpu_synid_mad_mix_op_sel>` :ref:`m_op_sel_hi<amdgpu_synid_mad_mix_op_sel_hi>` :ref:`clamp<amdgpu_synid_clamp>`
-    v_fma_mixlo_f16                :ref:`vdst<amdgpu_synid904_vdst32_0>`,     :ref:`src0<amdgpu_synid904_src32_0>`::ref:`m<amdgpu_synid904_mod_vop3_abs_neg>`::ref:`fx<amdgpu_synid904_mad_type_dev>`, :ref:`src1<amdgpu_synid904_src32_1>`::ref:`m<amdgpu_synid904_mod_vop3_abs_neg>`::ref:`fx<amdgpu_synid904_mad_type_dev>`, :ref:`src2<amdgpu_synid904_src32_1>`::ref:`m<amdgpu_synid904_mod_vop3_abs_neg>`::ref:`fx<amdgpu_synid904_mad_type_dev>`      :ref:`m_op_sel<amdgpu_synid_mad_mix_op_sel>` :ref:`m_op_sel_hi<amdgpu_synid_mad_mix_op_sel_hi>` :ref:`clamp<amdgpu_synid_clamp>`
+    **INSTRUCTION**                    **DST**       **SRC0**       **SRC1**       **SRC2**       **MODIFIERS**
+    \ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|
+    v_fma_mix_f32                  :ref:`vdst<amdgpu_synid_gfx904_vdst>`,     :ref:`src0<amdgpu_synid_gfx904_src>`::ref:`m<amdgpu_synid_gfx904_m>`::ref:`fx<amdgpu_synid_gfx904_fx_operand>`, :ref:`src1<amdgpu_synid_gfx904_src_1>`::ref:`m<amdgpu_synid_gfx904_m>`::ref:`fx<amdgpu_synid_gfx904_fx_operand>`, :ref:`src2<amdgpu_synid_gfx904_src_1>`::ref:`m<amdgpu_synid_gfx904_m>`::ref:`fx<amdgpu_synid_gfx904_fx_operand>`  :ref:`m_op_sel<amdgpu_synid_mad_mix_op_sel>` :ref:`m_op_sel_hi<amdgpu_synid_mad_mix_op_sel_hi>` :ref:`clamp<amdgpu_synid_clamp>`
+    v_fma_mixhi_f16                :ref:`vdst<amdgpu_synid_gfx904_vdst>`,     :ref:`src0<amdgpu_synid_gfx904_src>`::ref:`m<amdgpu_synid_gfx904_m>`::ref:`fx<amdgpu_synid_gfx904_fx_operand>`, :ref:`src1<amdgpu_synid_gfx904_src_1>`::ref:`m<amdgpu_synid_gfx904_m>`::ref:`fx<amdgpu_synid_gfx904_fx_operand>`, :ref:`src2<amdgpu_synid_gfx904_src_1>`::ref:`m<amdgpu_synid_gfx904_m>`::ref:`fx<amdgpu_synid_gfx904_fx_operand>`  :ref:`m_op_sel<amdgpu_synid_mad_mix_op_sel>` :ref:`m_op_sel_hi<amdgpu_synid_mad_mix_op_sel_hi>` :ref:`clamp<amdgpu_synid_clamp>`
+    v_fma_mixlo_f16                :ref:`vdst<amdgpu_synid_gfx904_vdst>`,     :ref:`src0<amdgpu_synid_gfx904_src>`::ref:`m<amdgpu_synid_gfx904_m>`::ref:`fx<amdgpu_synid_gfx904_fx_operand>`, :ref:`src1<amdgpu_synid_gfx904_src_1>`::ref:`m<amdgpu_synid_gfx904_m>`::ref:`fx<amdgpu_synid_gfx904_fx_operand>`, :ref:`src2<amdgpu_synid_gfx904_src_1>`::ref:`m<amdgpu_synid_gfx904_m>`::ref:`fx<amdgpu_synid_gfx904_fx_operand>`  :ref:`m_op_sel<amdgpu_synid_mad_mix_op_sel>` :ref:`m_op_sel_hi<amdgpu_synid_mad_mix_op_sel_hi>` :ref:`clamp<amdgpu_synid_clamp>`
 
 .. |---| unicode:: U+02014 .. em dash
-
 
 .. toctree::
     :hidden:
 
-    AMDGPUAsmGFX9
-    gfx904_src32_0
-    gfx904_src32_1
-    gfx904_vdst32_0
-    gfx904_mad_type_dev
-    gfx904_mod_vop3_abs_neg
+    gfx904_fx_operand
+    gfx904_m
+    gfx904_src
+    gfx904_src_1
+    gfx904_vdst

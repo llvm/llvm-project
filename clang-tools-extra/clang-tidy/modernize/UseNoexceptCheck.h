@@ -28,7 +28,7 @@ namespace modernize {
 /// \endcode
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/modernize-use-noexcept.html
+/// http://clang.llvm.org/extra/clang-tidy/checks/modernize/use-noexcept.html
 class UseNoexceptCheck : public ClangTidyCheck {
 public:
   UseNoexceptCheck(StringRef Name, ClangTidyContext *Context);
@@ -40,7 +40,7 @@ public:
   void check(const ast_matchers::MatchFinder::MatchResult &Result) override;
 
 private:
-  const std::string NoexceptMacro;
+  const StringRef NoexceptMacro;
   const bool UseNoexceptFalse;
 };
 

@@ -402,7 +402,7 @@ bool SIOptimizeExecMaskingPreRA::runOnMachineFunction(MachineFunction &MF) {
     }
 
     // If the only user of a logical operation is move to exec, fold it now
-    // to prevent forming of saveexec. I.e:
+    // to prevent forming of saveexec. I.e.:
     //
     //    %0:sreg_64 = COPY $exec
     //    %1:sreg_64 = S_AND_B64 %0:sreg_64, %2:sreg_64

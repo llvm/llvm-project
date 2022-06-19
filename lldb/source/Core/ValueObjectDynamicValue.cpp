@@ -16,8 +16,8 @@
 #include "lldb/Target/Process.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Utility/DataExtractor.h"
+#include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
-#include "lldb/Utility/Logging.h"
 #include "lldb/Utility/Scalar.h"
 #include "lldb/Utility/Status.h"
 #include "lldb/lldb-types.h"
@@ -34,10 +34,6 @@ ValueObjectDynamicValue::ValueObjectDynamicValue(
     : ValueObject(parent), m_address(), m_dynamic_type_info(),
       m_use_dynamic(use_dynamic) {
   SetName(parent.GetName());
-}
-
-ValueObjectDynamicValue::~ValueObjectDynamicValue() {
-  m_owning_valobj_sp.reset();
 }
 
 CompilerType ValueObjectDynamicValue::GetCompilerTypeImpl() {
@@ -205,7 +201,7 @@ bool ValueObjectDynamicValue::UpdateValue() {
 
   Value old_value(m_value);
 
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_TYPES));
+  Log *log = GetLog(LLDBLog::Types);
 
   bool has_changed_type = false;
 

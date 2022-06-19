@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -triple x86_64-linux-gnu -emit-llvm %s -o - | FileCheck %s --check-prefix=LINUX
-// RUN: %clang_cc1 -triple x86_64-windows-pc -emit-llvm %s -o - | FileCheck %s --check-prefix=WINDOWS
+// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-linux-gnu -emit-llvm %s -o - | FileCheck %s --check-prefix=LINUX
+// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-windows-pc -emit-llvm %s -o - | FileCheck %s --check-prefix=WINDOWS
 int __attribute__((target("sse4.2"))) foo(int i) { return 0; }
 int __attribute__((target("arch=sandybridge"))) foo(int);
 int __attribute__((target("arch=ivybridge"))) foo(int i) {return 1;}
@@ -8,7 +8,7 @@ int __attribute__((target("default"))) foo(int i) { return 2; }
 typedef int (*FuncPtr)(int);
 void func(FuncPtr);
 
-int bar() {
+int bar(void) {
   func(foo);
   FuncPtr Free = &foo;
   FuncPtr Free2 = foo;
@@ -33,12 +33,12 @@ int bar() {
 // WINDOWS: ret i32 2
 
 // LINUX: define{{.*}} i32 @bar()
-// LINUX: call void @func(i32 (i32)* @foo.ifunc)
+// LINUX: call void @func(i32 (i32)* noundef @foo.ifunc)
 // LINUX: store i32 (i32)* @foo.ifunc
 // LINUX: store i32 (i32)* @foo.ifunc
 
 // WINDOWS: define dso_local i32 @bar()
-// WINDOWS: call void @func(i32 (i32)* @foo.resolver)
+// WINDOWS: call void @func(i32 (i32)* noundef @foo.resolver)
 // WINDOWS: store i32 (i32)* @foo.resolver
 // WINDOWS: store i32 (i32)* @foo.resolver
 

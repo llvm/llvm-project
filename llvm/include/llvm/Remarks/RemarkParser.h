@@ -13,9 +13,7 @@
 #ifndef LLVM_REMARKS_REMARKPARSER_H
 #define LLVM_REMARKS_REMARKPARSER_H
 
-#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/Remarks/Remark.h"
 #include "llvm/Remarks/RemarkFormat.h"
 #include "llvm/Support/Error.h"
 #include <memory>
@@ -23,11 +21,13 @@
 namespace llvm {
 namespace remarks {
 
+struct Remark;
+
 class EndOfFileError : public ErrorInfo<EndOfFileError> {
 public:
   static char ID;
 
-  EndOfFileError() {}
+  EndOfFileError() = default;
 
   void log(raw_ostream &OS) const override { OS << "End of file reached."; }
   std::error_code convertToErrorCode() const override {

@@ -1,4 +1,4 @@
-// RUN: %clang_analyze_cc1 -analyzer-checker=core,unix.Malloc -analyzer-store=region -analyzer-max-loop 4 -verify %s
+// RUN: %clang_analyze_cc1 -analyzer-checker=core,unix.Malloc -analyzer-max-loop 4 -verify %s
 #include "Inputs/system-header-simulator.h"
 
 typedef __typeof(sizeof(int)) size_t;
@@ -93,7 +93,7 @@ void coverage9(int *x) {
   y = (*x);  // no warning
 }
 
-static void empty_function(){
+static void empty_function(void){
 }
 int use_empty_function(int x) {
     x = 0;

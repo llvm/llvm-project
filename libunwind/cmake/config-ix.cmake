@@ -2,8 +2,14 @@ include(CMakePushCheckState)
 include(CheckCCompilerFlag)
 include(CheckCXXCompilerFlag)
 include(CheckLibraryExists)
+include(LLVMCheckCompilerLinkerFlag)
 include(CheckSymbolExists)
 include(CheckCSourceCompiles)
+
+# The compiler driver may be implicitly trying to link against libunwind, which
+# might not work if libunwind doesn't exist yet. Try to check if
+# --unwindlib=none is supported, and use that if possible.
+llvm_check_compiler_linker_flag(C "--unwindlib=none" CXX_SUPPORTS_UNWINDLIB_EQ_NONE_FLAG)
 
 check_library_exists(c fopen "" LIBUNWIND_HAS_C_LIB)
 
@@ -25,22 +31,24 @@ endif()
 # required for the link to go through. We remove sanitizers from the
 # configuration checks to avoid spurious link errors.
 
-check_c_compiler_flag(-nostdlib++ LIBUNWIND_SUPPORTS_NOSTDLIBXX_FLAG)
-if (LIBUNWIND_SUPPORTS_NOSTDLIBXX_FLAG)
+llvm_check_compiler_linker_flag(C "-nostdlib++" CXX_SUPPORTS_NOSTDLIBXX_FLAG)
+if (CXX_SUPPORTS_NOSTDLIBXX_FLAG)
   set(CMAKE_REQUIRED_FLAGS "${CMAKE_REQUIRED_FLAGS} -nostdlib++")
 else()
-  check_c_compiler_flag(-nodefaultlibs LIBUNWIND_SUPPORTS_NODEFAULTLIBS_FLAG)
-  if (LIBUNWIND_SUPPORTS_NODEFAULTLIBS_FLAG)
+  llvm_check_compiler_linker_flag(C "-nodefaultlibs" C_SUPPORTS_NODEFAULTLIBS_FLAG)
+  if (C_SUPPORTS_NODEFAULTLIBS_FLAG)
     set(CMAKE_REQUIRED_FLAGS "${CMAKE_REQUIRED_FLAGS} -nodefaultlibs")
   endif()
 endif()
 
-if (LIBUNWIND_SUPPORTS_NOSTDLIBXX_FLAG OR LIBUNWIND_SUPPORTS_NODEFAULTLIBS_FLAG)
+if (CXX_SUPPORTS_NOSTDLIBXX_FLAG OR C_SUPPORTS_NODEFAULTLIBS_FLAG)
   if (LIBUNWIND_HAS_C_LIB)
     list(APPEND CMAKE_REQUIRED_LIBRARIES c)
   endif ()
   if (LIBUNWIND_USE_COMPILER_RT)
-    find_compiler_rt_library(builtins LIBUNWIND_BUILTINS_LIBRARY)
+    include(HandleCompilerRT)
+    find_compiler_rt_library(builtins LIBUNWIND_BUILTINS_LIBRARY
+                             FLAGS ${LIBUNWIND_COMPILE_FLAGS})
     list(APPEND CMAKE_REQUIRED_LIBRARIES "${LIBUNWIND_BUILTINS_LIBRARY}")
   else ()
     if (LIBUNWIND_HAS_GCC_S_LIB)
@@ -67,7 +75,7 @@ if (LIBUNWIND_SUPPORTS_NOSTDLIBXX_FLAG OR LIBUNWIND_SUPPORTS_NODEFAULTLIBS_FLAG)
     set(CMAKE_REQUIRED_FLAGS "${CMAKE_REQUIRED_FLAGS} -fno-sanitize=all")
   endif ()
   if (CMAKE_C_FLAGS MATCHES -fsanitize-coverage OR CMAKE_CXX_FLAGS MATCHES -fsanitize-coverage)
-    set(CMAKE_REQUIRED_FLAGS "${CMAKE_REQUIRED_FLAGS} -fno-sanitize-coverage=edge,trace-cmp,indirect-calls,8bit-counters")
+    set(CMAKE_REQUIRED_FLAGS "${CMAKE_REQUIRED_FLAGS} -fsanitize-coverage=0")
   endif ()
 endif ()
 
@@ -78,12 +86,12 @@ if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
   check_c_source_compiles("
 #pragma comment(lib, \"c\")
 int main() { return 0; }
-" LIBUNWIND_HAS_COMMENT_LIB_PRAGMA)
+" C_SUPPORTS_COMMENT_LIB_PRAGMA)
   cmake_pop_check_state()
 endif()
 
 # Check compiler flags
-check_cxx_compiler_flag(-nostdinc++ LIBUNWIND_HAS_NOSTDINCXX_FLAG)
+check_cxx_compiler_flag(-nostdinc++ CXX_SUPPORTS_NOSTDINCXX_FLAG)
 
 # Check symbols
 check_symbol_exists(__arm__ "" LIBUNWIND_TARGET_ARM)

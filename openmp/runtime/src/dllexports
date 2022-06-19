@@ -393,6 +393,8 @@ kmpc_set_disp_num_buffers                   267
         __kmpc_error                        281
         __kmpc_masked                       282
         __kmpc_end_masked                   283
+        __kmpc_scope                        286
+        __kmpc_end_scope                    287
 %endif
 
 # User API entry points that have both lower- and upper- case versions for Fortran.
@@ -523,6 +525,7 @@ kmp_set_disp_num_buffers                    890
         __kmpc_set_default_allocator
         __kmpc_get_default_allocator
         __kmpc_alloc
+        __kmpc_aligned_alloc
         __kmpc_calloc
         __kmpc_realloc
         __kmpc_free
@@ -548,6 +551,12 @@ kmp_set_disp_num_buffers                    890
     omp_display_env                         733
     omp_calloc                              776
     omp_realloc                             777
+    omp_aligned_alloc                       778
+    omp_aligned_calloc                      806
+    omp_get_interop_int                     807
+    omp_get_interop_ptr                     808
+    omp_get_interop_str                     809
+    omp_in_explicit_task                    769
 
     omp_null_allocator                     DATA
     omp_default_mem_alloc                  DATA
@@ -558,7 +567,7 @@ kmp_set_disp_num_buffers                    890
     omp_cgroup_mem_alloc                   DATA
     omp_pteam_mem_alloc                    DATA
     omp_thread_mem_alloc                   DATA
-    # Preview of target memory support
+
     llvm_omp_target_host_mem_alloc         DATA
     llvm_omp_target_shared_mem_alloc       DATA
     llvm_omp_target_device_mem_alloc       DATA
@@ -568,7 +577,7 @@ kmp_set_disp_num_buffers                    890
     omp_const_mem_space                    DATA
     omp_high_bw_mem_space                  DATA
     omp_low_lat_mem_space                  DATA
-    # Preview of target memory support
+
     llvm_omp_target_host_mem_space         DATA
     llvm_omp_target_shared_mem_space       DATA
     llvm_omp_target_device_mem_space       DATA
@@ -1215,6 +1224,29 @@ kmp_set_disp_num_buffers                    890
     __kmpc_atomic_fixed8u_sub_fp
     __kmpc_atomic_fixed8u_mul_fp
     %endif
+
+    # OpenMP 5.1 atomics
+    __kmpc_atomic_float10_max              2139
+    __kmpc_atomic_float10_min              2140
+    __kmpc_atomic_float10_max_cpt          2141
+    __kmpc_atomic_float10_min_cpt          2142
+
+    __kmpc_atomic_bool_1_cas               2143
+    __kmpc_atomic_bool_2_cas               2144
+    __kmpc_atomic_bool_4_cas               2145
+    __kmpc_atomic_bool_8_cas               2146
+    __kmpc_atomic_val_1_cas                2147
+    __kmpc_atomic_val_2_cas                2148
+    __kmpc_atomic_val_4_cas                2149
+    __kmpc_atomic_val_8_cas                2150
+    __kmpc_atomic_bool_1_cas_cpt           2151
+    __kmpc_atomic_bool_2_cas_cpt           2152
+    __kmpc_atomic_bool_4_cas_cpt           2153
+    __kmpc_atomic_bool_8_cas_cpt           2154
+    __kmpc_atomic_val_1_cas_cpt            2155
+    __kmpc_atomic_val_2_cas_cpt            2156
+    __kmpc_atomic_val_4_cas_cpt            2157
+    __kmpc_atomic_val_8_cas_cpt            2158
 
 %endif
 

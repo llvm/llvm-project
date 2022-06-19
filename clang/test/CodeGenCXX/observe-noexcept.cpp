@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple  powerpc64le-unknown-unknown -std=c++11 -fopenmp -fexceptions -fcxx-exceptions -O0 -emit-llvm %s -o - | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -triple  powerpc64le-unknown-unknown -std=c++11 -fopenmp -fexceptions -fcxx-exceptions -O0 -emit-llvm %s -o - | FileCheck %s
 
 // Check that regions that install a terminate scope in the exception stack can
 // correctly generate complex arithmetic.
@@ -7,7 +7,7 @@
 void ffcomplex (int a) {
   double _Complex dc = (double)a;
 
-  // CHECK: call { double, double } @__muldc3(double %{{.+}}, double %{{.+}}, double %{{.+}}, double %{{.+}})
+  // CHECK: call noundef { double, double } @__muldc3(double noundef %{{.+}}, double noundef %{{.+}}, double noundef %{{.+}}, double noundef %{{.+}})
   dc *= dc;
   // CHECK: call {{.+}} @__kmpc_fork_call({{.+}} [[REGNAME1:@.*]] to void (i32*, i32*, ...)*), { double, double }* %{{.+}})
   #pragma omp parallel
@@ -19,7 +19,7 @@ void ffcomplex (int a) {
 
 // CHECK: define internal {{.+}}[[REGNAME1]](
 // CHECK-NOT: invoke
-// CHECK: call { double, double } @__muldc3(double %{{.+}}, double %{{.+}}, double %{{.+}}, double %{{.+}})
+// CHECK: call noundef { double, double } @__muldc3(double noundef %{{.+}}, double noundef %{{.+}}, double noundef %{{.+}}, double noundef %{{.+}})
 // CHECK-NOT: invoke
 // CHECK: ret void
 

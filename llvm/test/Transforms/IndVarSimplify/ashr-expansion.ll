@@ -46,11 +46,11 @@ define float @ashr_equivalent_expansion(i64 %x, float* %ptr) {
 ; CHECK-LABEL: @ashr_equivalent_expansion(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[ABS_X:%.*]] = call i64 @llvm.abs.i64(i64 [[X:%.*]], i1 false)
+; CHECK-NEXT:    [[DIV:%.*]] = udiv exact i64 [[ABS_X]], 16
 ; CHECK-NEXT:    [[T0:%.*]] = call i64 @llvm.smax.i64(i64 [[X]], i64 -1)
 ; CHECK-NEXT:    [[T1:%.*]] = call i64 @llvm.smin.i64(i64 [[T0]], i64 1)
-; CHECK-NEXT:    [[TMP0:%.*]] = lshr i64 [[ABS_X]], 4
-; CHECK-NEXT:    [[TMP1:%.*]] = mul i64 [[T1]], [[TMP0]]
-; CHECK-NEXT:    [[UMAX:%.*]] = call i64 @llvm.umax.i64(i64 [[TMP1]], i64 1)
+; CHECK-NEXT:    [[BOUND:%.*]] = mul nsw i64 [[DIV]], [[T1]]
+; CHECK-NEXT:    [[UMAX:%.*]] = call i64 @llvm.umax.i64(i64 [[BOUND]], i64 1)
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[LOOP]] ]
@@ -97,8 +97,8 @@ define float @no_ashr_due_to_missing_exact_udiv(i64 %x, float* %ptr) {
 ; CHECK-NEXT:    [[DIV:%.*]] = udiv i64 [[ABS_X]], 16
 ; CHECK-NEXT:    [[T0:%.*]] = call i64 @llvm.smax.i64(i64 [[X]], i64 -1)
 ; CHECK-NEXT:    [[T1:%.*]] = call i64 @llvm.smin.i64(i64 [[T0]], i64 1)
-; CHECK-NEXT:    [[TMP0:%.*]] = mul i64 [[T1]], [[DIV]]
-; CHECK-NEXT:    [[UMAX:%.*]] = call i64 @llvm.umax.i64(i64 [[TMP0]], i64 1)
+; CHECK-NEXT:    [[BOUND:%.*]] = mul nsw i64 [[DIV]], [[T1]]
+; CHECK-NEXT:    [[UMAX:%.*]] = call i64 @llvm.umax.i64(i64 [[BOUND]], i64 1)
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[LOOP]] ]
@@ -145,8 +145,8 @@ define float @no_ashr_due_to_different_ops(i64 %x, i64 %y, float* %ptr) {
 ; CHECK-NEXT:    [[DIV:%.*]] = udiv i64 [[ABS_X]], 16
 ; CHECK-NEXT:    [[T0:%.*]] = call i64 @llvm.smax.i64(i64 [[Y:%.*]], i64 -1)
 ; CHECK-NEXT:    [[T1:%.*]] = call i64 @llvm.smin.i64(i64 [[T0]], i64 1)
-; CHECK-NEXT:    [[TMP0:%.*]] = mul i64 [[T1]], [[DIV]]
-; CHECK-NEXT:    [[UMAX:%.*]] = call i64 @llvm.umax.i64(i64 [[TMP0]], i64 1)
+; CHECK-NEXT:    [[BOUND:%.*]] = mul nsw i64 [[DIV]], [[T1]]
+; CHECK-NEXT:    [[UMAX:%.*]] = call i64 @llvm.umax.i64(i64 [[BOUND]], i64 1)
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[LOOP]] ]

@@ -31,13 +31,10 @@
 #include "llvm/IR/Function.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
-#include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Module.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
-#include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
-#include "llvm/Target/TargetOptions.h"
 #include <algorithm>
 using namespace llvm;
 
@@ -57,7 +54,7 @@ static bool isUsedOutsideOfDefiningBlock(const Instruction *I) {
   return false;
 }
 
-static ISD::NodeType getPreferredExtendForValue(const Value *V) {
+static ISD::NodeType getPreferredExtendForValue(const Instruction *I) {
   // For the users of the source value being used for compare instruction, if
   // the number of signed predicate is greater than unsigned predicate, we
   // prefer to use SIGN_EXTEND.
@@ -67,7 +64,7 @@ static ISD::NodeType getPreferredExtendForValue(const Value *V) {
   // can be exposed.
   ISD::NodeType ExtendKind = ISD::ANY_EXTEND;
   unsigned NumOfSigned = 0, NumOfUnsigned = 0;
-  for (const User *U : V->users()) {
+  for (const User *U : I->users()) {
     if (const auto *CI = dyn_cast<CmpInst>(U)) {
       NumOfSigned += CI->isSigned();
       NumOfUnsigned += CI->isUnsigned();
@@ -448,9 +445,14 @@ void FunctionLoweringInfo::ComputePHILiveOutRegInfo(const PHINode *PN) {
   IntVT = TLI->getTypeToTransformTo(PN->getContext(), IntVT);
   unsigned BitWidth = IntVT.getSizeInBits();
 
-  Register DestReg = ValueMap[PN];
-  if (!Register::isVirtualRegister(DestReg))
+  auto It = ValueMap.find(PN);
+  if (It == ValueMap.end())
     return;
+
+  Register DestReg = It->second;
+  if (DestReg == 0)
+    return
+  assert(Register::isVirtualRegister(DestReg) && "Expected a virtual reg");
   LiveOutRegInfo.grow(DestReg);
   LiveOutInfo &DestLOI = LiveOutRegInfo[DestReg];
 
@@ -462,7 +464,11 @@ void FunctionLoweringInfo::ComputePHILiveOutRegInfo(const PHINode *PN) {
   }
 
   if (ConstantInt *CI = dyn_cast<ConstantInt>(V)) {
-    APInt Val = CI->getValue().zextOrTrunc(BitWidth);
+    APInt Val;
+    if (TLI->signExtendConstant(CI))
+      Val = CI->getValue().sext(BitWidth);
+    else
+      Val = CI->getValue().zext(BitWidth);
     DestLOI.NumSignBits = Val.getNumSignBits();
     DestLOI.Known = KnownBits::makeConstant(Val);
   } else {
@@ -494,7 +500,11 @@ void FunctionLoweringInfo::ComputePHILiveOutRegInfo(const PHINode *PN) {
     }
 
     if (ConstantInt *CI = dyn_cast<ConstantInt>(V)) {
-      APInt Val = CI->getValue().zextOrTrunc(BitWidth);
+      APInt Val;
+      if (TLI->signExtendConstant(CI))
+        Val = CI->getValue().sext(BitWidth);
+      else
+        Val = CI->getValue().zext(BitWidth);
       DestLOI.NumSignBits = std::min(DestLOI.NumSignBits, Val.getNumSignBits());
       DestLOI.Known.Zero &= ~Val;
       DestLOI.Known.One &= Val;

@@ -59,10 +59,10 @@ void ThunkInserter<Derived>::createThunkFunction(MachineModuleInfo &MMI,
 
   // Add Attributes so that we don't create a frame, unwind information, or
   // inline.
-  AttrBuilder B;
+  AttrBuilder B(Ctx);
   B.addAttribute(llvm::Attribute::NoUnwind);
   B.addAttribute(llvm::Attribute::Naked);
-  F->addAttributes(llvm::AttributeList::FunctionIndex, B);
+  F->addFnAttrs(B);
 
   // Populate our function a bit so that we can verify.
   BasicBlock *Entry = BasicBlock::Create(Ctx, "entry", F);

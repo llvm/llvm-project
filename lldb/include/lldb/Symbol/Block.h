@@ -338,6 +338,8 @@ public:
 
   Block *FindBlockByID(lldb::user_id_t block_id);
 
+  Block *FindInnermostBlockByOffset(const lldb::addr_t offset);
+
   size_t GetNumRanges() const { return m_ranges.GetSize(); }
 
   bool GetRangeContainingOffset(const lldb::addr_t offset, Range &range);

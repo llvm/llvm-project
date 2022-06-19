@@ -31,6 +31,20 @@ set(SWIG_COMMON_FLAGS
   ${DARWIN_EXTRAS}
 )
 
+function(create_relative_symlink swig_target dest_file output_dir output_name)
+  get_filename_component(dest_file ${dest_file} ABSOLUTE)
+  get_filename_component(output_dir ${output_dir} ABSOLUTE)
+  file(RELATIVE_PATH rel_dest_file ${output_dir} ${dest_file})
+  if(CMAKE_HOST_UNIX)
+    set(LLVM_LINK_OR_COPY create_symlink)
+  else()
+    set(LLVM_LINK_OR_COPY copy)
+  endif()
+  add_custom_command(TARGET ${swig_target} POST_BUILD VERBATIM
+    COMMAND ${CMAKE_COMMAND} -E ${LLVM_LINK_OR_COPY} ${rel_dest_file} ${output_name}
+    WORKING_DIRECTORY ${output_dir})
+endfunction()
+
 if (LLDB_ENABLE_PYTHON)
   add_subdirectory(python)
 endif()

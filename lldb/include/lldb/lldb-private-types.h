@@ -51,19 +51,15 @@ struct RegisterInfo {
   /// List of registers (terminated with LLDB_INVALID_REGNUM). If this value is
   /// not null, all registers in this list will be read first, at which point
   /// the value for this register will be valid. For example, the value list
-  /// for ah would be eax (x86) or rax (x64).
-  uint32_t *value_regs; //
+  /// for ah would be eax (x86) or rax (x64). Register numbers are
+  /// of eRegisterKindLLDB. If multiple registers are listed, the final
+  /// value will be the concatenation of them.
+  uint32_t *value_regs;
   /// List of registers (terminated with LLDB_INVALID_REGNUM). If this value is
   /// not null, all registers in this list will be invalidated when the value of
   /// this register changes. For example, the invalidate list for eax would be
   /// rax ax, ah, and al.
   uint32_t *invalidate_regs;
-  /// A DWARF expression that when evaluated gives the byte size of this
-  /// register.
-  const uint8_t *dynamic_size_dwarf_expr_bytes;
-  /// The length of the DWARF expression in bytes in the
-  /// dynamic_size_dwarf_expr_bytes member.
-  size_t dynamic_size_dwarf_len;
 
   llvm::ArrayRef<uint8_t> data(const uint8_t *context_base) const {
     return llvm::ArrayRef<uint8_t>(context_base + byte_offset, byte_size);

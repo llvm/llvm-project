@@ -843,6 +843,20 @@ v_madak_f32 v0, shared_base, v0, 0x11213141
 // NOGCN: error: invalid operand (violates constant bus restrictions)
 v_madak_f32 v0, scc, v0, 0x11213141
 
+// NOGCN: error: only one literal operand is allowed
+v_madak_f32 v0, 0xff32ff, v0, 0x11213141
+
+// NOGCN: error: only one literal operand is allowed
+v_madmk_f32 v0, 0xff32ff, 0x11213141, v0
+
+// NOSICI: error: instruction not supported on this GPU
+// NOGFX89: error: only one literal operand is allowed
+v_madak_f16 v0, 0xff32, v0, 0x1122
+
+// NOSICI: error: instruction not supported on this GPU
+// NOGFX89: error: only one literal operand is allowed
+v_madmk_f16 v0, 0xff32, 0x1122, v0
+
 // NOSICIVI: error: register not available on this GPU
 // NOGFX9: error: invalid operand (violates constant bus restrictions)
 v_cmp_eq_f32 s[0:1], private_base, private_limit

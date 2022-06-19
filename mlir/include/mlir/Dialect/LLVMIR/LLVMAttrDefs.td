@@ -9,8 +9,8 @@
 #ifndef LLVMIR_ATTRDEFS
 #define LLVMIR_ATTRDEFS
 
+include "mlir/IR/AttrTypeBase.td"
 include "mlir/Dialect/LLVMIR/LLVMOpBase.td"
-
 
 // All of the attributes will extend this class.
 class LLVM_Attr<string name> : AttrDef<LLVM_Dialect, name>;
@@ -20,10 +20,28 @@ def FastmathFlagsAttr : LLVM_Attr<"FMF"> {
   let mnemonic = "fastmath";
 
   // List of type parameters.
-  let parameters = (
-    ins
+  let parameters = (ins
     "FastmathFlags":$flags
   );
+  let hasCustomAssemblyFormat = 1;
+}
+
+// Attribute definition for the LLVM Linkage enum.
+def LinkageAttr : LLVM_Attr<"Linkage"> {
+  let mnemonic = "linkage";
+  let parameters = (ins
+    "linkage::Linkage":$linkage
+  );
+  let hasCustomAssemblyFormat = 1;
+}
+
+// Attribute definition for the LLVM Linkage enum.
+def CConvAttr : LLVM_Attr<"CConv"> {
+  let mnemonic = "cconv";
+  let parameters = (ins
+    "CConv":$CallingConv
+  );
+  let hasCustomAssemblyFormat = 1;
 }
 
 def LoopOptionsAttr : LLVM_Attr<"LoopOptions"> {
@@ -39,8 +57,7 @@ def LoopOptionsAttr : LLVM_Attr<"LoopOptions"> {
   }];
 
   // List of type parameters.
-  let parameters = (
-    ins
+  let parameters = (ins
     ArrayRefParameter<"std::pair<LoopOptionCase, int64_t>", "">:$options
   );
 
@@ -57,6 +74,7 @@ def LoopOptionsAttr : LLVM_Attr<"LoopOptions"> {
     AttrBuilder<(ins "ArrayRef<std::pair<LoopOptionCase, int64_t>>":$sortedOptions)>,
     AttrBuilder<(ins "LoopOptionsAttrBuilder &":$optionBuilders)>
   ];
+  let hasCustomAssemblyFormat = 1;
   let skipDefaultBuilders = 1;
 }
 

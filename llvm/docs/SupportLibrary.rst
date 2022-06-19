@@ -58,7 +58,7 @@ Don't Expose System Headers
 ---------------------------
 
 The Support Library must shield LLVM from **all** system headers. To obtain
-system level functionality, LLVM source must 
+system level functionality, LLVM source must
 ``#include "llvm/Support/Thing.h"`` and nothing else. This means that
 ``Thing.h`` cannot expose any system header files. This protects LLVM from
 accidentally using system specific functionality and only allows it via
@@ -226,7 +226,7 @@ functionality needs to include the correct implementation using a set of
   #endif
 
 The implementation in ``lib/Support/Unix/Path.inc`` should handle all Unix
-variants. The implementation in ``lib/Support/Windows/Path.inc`` should handle 
+variants. The implementation in ``lib/Support/Windows/Path.inc`` should handle
 all Windows variants.  What this does is quickly inc the basic class
 of operating system that will provide the implementation. The specific details
 for a given platform must still be determined through the use of ``#ifdef``.

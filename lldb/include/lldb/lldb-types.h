@@ -89,6 +89,7 @@ typedef int32_t break_id_t;
 typedef int32_t watch_id_t;
 typedef void *opaque_compiler_type_t;
 typedef uint64_t queue_id_t;
+typedef uint32_t cpu_id_t; // CPU core id
 } // namespace lldb
 
 #endif // LLDB_LLDB_TYPES_H

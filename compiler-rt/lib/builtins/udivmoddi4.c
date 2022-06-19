@@ -21,7 +21,7 @@
 // MSVC throws a warning about mod 0 here, disable it for builds that
 // warn-as-error
 #pragma warning(push)
-#pragma warning(disable : 4724)
+#pragma warning(disable : 4723 4724)
 #endif
 
 COMPILER_RT_ABI du_int __udivmoddi4(du_int a, du_int b, du_int *rem) {
@@ -82,7 +82,7 @@ COMPILER_RT_ABI du_int __udivmoddi4(du_int a, du_int b, du_int *rem) {
         r.s.high = n.s.high & (d.s.high - 1);
         *rem = r.all;
       }
-      return n.s.high >> __builtin_ctz(d.s.high);
+      return n.s.high >> ctzsi(d.s.high);
     }
     // K K
     // ---
@@ -112,7 +112,7 @@ COMPILER_RT_ABI du_int __udivmoddi4(du_int a, du_int b, du_int *rem) {
           *rem = n.s.low & (d.s.low - 1);
         if (d.s.low == 1)
           return n.all;
-        sr = __builtin_ctz(d.s.low);
+        sr = ctzsi(d.s.low);
         q.s.high = n.s.high >> sr;
         q.s.low = (n.s.high << (n_uword_bits - sr)) | (n.s.low >> sr);
         return q.all;

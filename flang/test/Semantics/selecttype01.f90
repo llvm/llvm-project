@@ -1,5 +1,4 @@
-! RUN: %S/test_errors.sh %s %t %flang_fc1
-! REQUIRES: shell
+! RUN: %python %S/test_errors.py %s %flang_fc1
 ! Test for checking select type constraints,
 module m1
   use ISO_C_BINDING
@@ -186,6 +185,24 @@ subroutine CheckC1162
     type is (unrelated)
   end select
 end
+
+module c1162a
+  type pdt(kind,len)
+    integer, kind :: kind
+    integer, len :: len
+  end type
+ contains
+  subroutine foo(x)
+    class(pdt(kind=1,len=:)), allocatable :: x
+    select type (x)
+    type is (pdt(kind=1, len=*))
+    !ERROR: Type specification 'pdt(kind=2_4,len=*)' must be an extension of TYPE 'pdt(kind=1_4,len=:)'
+    type is (pdt(kind=2, len=*))
+    !ERROR: Type specification 'pdt(kind=*,len=*)' must be an extension of TYPE 'pdt(kind=1_4,len=:)'
+    type is (pdt(kind=*, len=*))
+    end select
+  end subroutine
+end module
 
 subroutine CheckC1163
   use m1

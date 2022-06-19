@@ -15,10 +15,6 @@ using namespace lldb;
 
 LLDB_PLUGIN_DEFINE(ArchitectureAArch64)
 
-ConstString ArchitectureAArch64::GetPluginNameStatic() {
-  return ConstString("aarch64");
-}
-
 void ArchitectureAArch64::Initialize() {
   PluginManager::RegisterPlugin(GetPluginNameStatic(),
                                 "AArch64-specific algorithms",
@@ -38,8 +34,3 @@ ArchitectureAArch64::Create(const ArchSpec &arch) {
   }
   return std::unique_ptr<Architecture>(new ArchitectureAArch64());
 }
-
-ConstString ArchitectureAArch64::GetPluginName() {
-  return GetPluginNameStatic();
-}
-uint32_t ArchitectureAArch64::GetPluginVersion() { return 1; }

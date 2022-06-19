@@ -70,10 +70,10 @@ entry:
 define <4 x i32> @add_soft(<4 x i32> %src1, <4 x i32> %src2) {
 ; CHECK-LE-LABEL: add_soft:
 ; CHECK-LE:       @ %bb.0: @ %entry
-; CHECK-LE-NEXT:    vmov d1, r2, r3
 ; CHECK-LE-NEXT:    vmov d0, r0, r1
 ; CHECK-LE-NEXT:    mov r0, sp
 ; CHECK-LE-NEXT:    vldrw.u32 q1, [r0]
+; CHECK-LE-NEXT:    vmov d1, r2, r3
 ; CHECK-LE-NEXT:    vadd.i32 q0, q0, q1
 ; CHECK-LE-NEXT:    vmov r0, r1, d0
 ; CHECK-LE-NEXT:    vmov r2, r3, d1
@@ -81,9 +81,9 @@ define <4 x i32> @add_soft(<4 x i32> %src1, <4 x i32> %src2) {
 ;
 ; CHECK-BE-LABEL: add_soft:
 ; CHECK-BE:       @ %bb.0: @ %entry
-; CHECK-BE-NEXT:    vmov d1, r3, r2
 ; CHECK-BE-NEXT:    vmov d0, r1, r0
 ; CHECK-BE-NEXT:    mov r0, sp
+; CHECK-BE-NEXT:    vmov d1, r3, r2
 ; CHECK-BE-NEXT:    vrev64.32 q1, q0
 ; CHECK-BE-NEXT:    vldrw.u32 q0, [r0]
 ; CHECK-BE-NEXT:    vadd.i32 q0, q1, q0
@@ -268,9 +268,9 @@ entry:
 define arm_aapcs_vfpcc <4 x i32> @test(i32* %data) {
 ; CHECK-LE-LABEL: test:
 ; CHECK-LE:       @ %bb.0: @ %entry
-; CHECK-LE-NEXT:    vldrw.u32 q1, [r0, #32]
-; CHECK-LE-NEXT:    vmov.i32 q0, #0x1
-; CHECK-LE-NEXT:    vadd.i32 q1, q1, q0
+; CHECK-LE-NEXT:    vldrw.u32 q0, [r0, #32]
+; CHECK-LE-NEXT:    movs r0, #1
+; CHECK-LE-NEXT:    vadd.i32 q1, q0, r0
 ; CHECK-LE-NEXT:    @APP
 ; CHECK-LE-NEXT:    vmullb.s32 q0, q1, q1
 ; CHECK-LE-NEXT:    @NO_APP
@@ -278,8 +278,9 @@ define arm_aapcs_vfpcc <4 x i32> @test(i32* %data) {
 ;
 ; CHECK-BE-LABEL: test:
 ; CHECK-BE:       @ %bb.0: @ %entry
+; CHECK-BE-NEXT:    movs r1, #1
 ; CHECK-BE-NEXT:    vldrw.u32 q1, [r0, #32]
-; CHECK-BE-NEXT:    vmov.i32 q0, #0x1
+; CHECK-BE-NEXT:    vdup.32 q0, r1
 ; CHECK-BE-NEXT:    vadd.i32 q0, q1, q0
 ; CHECK-BE-NEXT:    vrev32.8 q0, q0
 ; CHECK-BE-NEXT:    @APP

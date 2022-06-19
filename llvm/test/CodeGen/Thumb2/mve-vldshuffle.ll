@@ -30,9 +30,9 @@ define void @arm_cmplx_mag_squared_f16(half* nocapture readonly %pSrc, half* noc
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    vld20.16 {q0, q1}, [r0]
 ; CHECK-NEXT:    vld21.16 {q0, q1}, [r0]!
-; CHECK-NEXT:    vmul.f16 q2, q0, q0
-; CHECK-NEXT:    vfma.f16 q2, q1, q1
-; CHECK-NEXT:    vstrb.8 q2, [r1], #16
+; CHECK-NEXT:    vmul.f16 q0, q0, q0
+; CHECK-NEXT:    vfma.f16 q0, q1, q1
+; CHECK-NEXT:    vstrb.8 q0, [r1], #16
 ; CHECK-NEXT:    le lr, .LBB0_4
 ; CHECK-NEXT:  @ %bb.5: @ %middle.block
 ; CHECK-NEXT:    cmp r4, r2
@@ -159,9 +159,9 @@ define void @arm_cmplx_mag_squared_f32(float* nocapture readonly %pSrc, float* n
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    vld20.32 {q0, q1}, [r0]
 ; CHECK-NEXT:    vld21.32 {q0, q1}, [r0]!
-; CHECK-NEXT:    vmul.f32 q2, q0, q0
-; CHECK-NEXT:    vfma.f32 q2, q1, q1
-; CHECK-NEXT:    vstrb.8 q2, [r1], #16
+; CHECK-NEXT:    vmul.f32 q0, q0, q0
+; CHECK-NEXT:    vfma.f32 q0, q1, q1
+; CHECK-NEXT:    vstrb.8 q0, [r1], #16
 ; CHECK-NEXT:    le lr, .LBB1_4
 ; CHECK-NEXT:  @ %bb.5: @ %middle.block
 ; CHECK-NEXT:    cmp r4, r2

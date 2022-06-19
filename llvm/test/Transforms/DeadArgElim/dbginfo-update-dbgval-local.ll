@@ -1,12 +1,12 @@
-; RUN: opt -deadargelim -S < %s | FileCheck %s
+; RUN: opt -passes=deadargelim -S < %s | FileCheck %s
 
 ; Verify that the dbg.value intrinsics that use the dead argument and return
-; value are marked as undef to indicate that the values are optimized out.
+; value are marked as poison to indicate that the values are optimized out.
 
 ; Reproducer for PR23260.
 
 ; CHECK-LABEL: define internal void @bar()
-; CHECK: call void @llvm.dbg.value(metadata i32 undef, metadata ![[LOCAL1:[0-9]+]]
+; CHECK: call void @llvm.dbg.value(metadata i32 poison, metadata ![[LOCAL1:[0-9]+]]
 ; CHECK: call void @sink()
 
 ; Function Attrs: alwaysinline nounwind uwtable
@@ -19,7 +19,7 @@ entry:
 
 ; CHECK-LABEL: define void @foo()
 ; CHECK: call void @bar()
-; CHECK: call void @llvm.dbg.value(metadata i32 undef, metadata ![[LOCAL2:[0-9]+]]
+; CHECK: call void @llvm.dbg.value(metadata i32 poison, metadata ![[LOCAL2:[0-9]+]]
 ; CHECK: call void @bar()
 
 ; Function Attrs: nounwind uwtable

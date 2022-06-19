@@ -233,7 +233,6 @@ void PredicateExpander::expandReturnStatement(raw_ostream &OS,
   SS << "return ";
   expandPredicate(SS, Rec);
   SS << ";";
-  SS.flush();
   OS << Buffer;
 }
 
@@ -276,7 +275,6 @@ void PredicateExpander::expandOpcodeSwitchStatement(raw_ostream &OS,
 
   SS.indent(getIndentLevel() * 2);
   SS << "} // end of switch-stmt";
-  SS.flush();
   OS << Buffer;
 }
 
@@ -470,7 +468,7 @@ void STIPredicateExpander::expandOpcodeGroup(raw_ostream &OS, const OpcodeGroup 
     increaseIndentLevel();
     OS.indent(getIndentLevel() * 2);
     if (ShouldUpdateOpcodeMask) {
-      if (PI.OperandMask.isNullValue())
+      if (PI.OperandMask.isZero())
         OS << "Mask.clearAllBits();\n";
       else
         OS << "Mask = " << PI.OperandMask << ";\n";

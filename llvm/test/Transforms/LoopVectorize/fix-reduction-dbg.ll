@@ -1,7 +1,7 @@
 ; Confirm that the line numbers for the middle.block operations are all the
 ; same as the start of the loop.
 
-; RUN: opt -S -loop-vectorize -force-vector-width=4 -force-vector-interleave=4 <%s | FileCheck %s
+; RUN: opt -S -passes=loop-vectorize -force-vector-width=4 -force-vector-interleave=4 <%s | FileCheck %s
 ;
 ; CHECK: middle.block:
 ; CHECK-NEXT: %{{.*}}= add <4 x i32>{{.*}}, !dbg ![[DL:[0-9]+]]

@@ -686,10 +686,10 @@ static void ompt_tsan_implicit_task(ompt_scope_endpoint_t endpoint,
 #endif
     assert(Data->RefCount == 1 &&
            "All tasks should have finished at the implicit barrier!");
-    Data->Delete();
     if (type & ompt_task_initial) {
-      ToParallelData(parallel_data)->Delete();
+      Data->Team->Delete();
     }
+    Data->Delete();
     TsanFuncExit();
     break;
   }
@@ -1001,6 +1001,10 @@ static void ompt_tsan_dependences(ompt_data_t *task_data,
   if (ndeps > 0) {
     // Copy the data to use it in task_switch and task_end.
     TaskData *Data = ToTaskData(task_data);
+    if (!Data->Parent) {
+      // Return since doacross dependences are not supported yet.
+      return;
+    }
     if (!Data->Parent->DependencyMap)
       Data->Parent->DependencyMap =
           new std::unordered_map<void *, DependencyData *>();

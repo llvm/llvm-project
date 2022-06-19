@@ -17,12 +17,12 @@
 #include "MipsFrameLowering.h"
 #include "MipsISelLowering.h"
 #include "MipsInstrInfo.h"
+#include "llvm/CodeGen/GlobalISel/CallLowering.h"
+#include "llvm/CodeGen/GlobalISel/InstructionSelector.h"
+#include "llvm/CodeGen/GlobalISel/LegalizerInfo.h"
+#include "llvm/CodeGen/RegisterBankInfo.h"
 #include "llvm/CodeGen/SelectionDAGTargetInfo.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
-#include "llvm/CodeGen/GlobalISel/CallLowering.h"
-#include "llvm/CodeGen/GlobalISel/LegalizerInfo.h"
-#include "llvm/CodeGen/GlobalISel/RegisterBankInfo.h"
-#include "llvm/CodeGen/GlobalISel/InstructionSelector.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/MC/MCInstrItineraries.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -58,6 +58,9 @@ class MipsSubtarget : public MipsGenSubtargetInfo {
 
   // Used to avoid printing ginv warnings multiple times.
   static bool GINVWarningPrinted;
+
+  // Used to avoid printing Mips1 warnings multiple times.
+  static bool MIPS1WarningPrinted;
 
   // Used to avoid printing virt warnings multiple times.
   static bool VirtWarningPrinted;

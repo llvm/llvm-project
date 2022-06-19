@@ -63,24 +63,24 @@ define arm_aapcs_vfpcc void @k() {
 ; CHECK-NEXT:  .LBB0_5: @ %vector.body105.preheader
 ; CHECK-NEXT:    vldrw.u32 q0, [r8]
 ; CHECK-NEXT:    vldrw.u32 q1, [r9]
-; CHECK-NEXT:    vmov.i32 q2, #0x8
+; CHECK-NEXT:    movs r0, #8
 ; CHECK-NEXT:  .LBB0_6: @ %vector.body105
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    vadd.i32 q1, q1, q2
-; CHECK-NEXT:    vadd.i32 q0, q0, q2
+; CHECK-NEXT:    vadd.i32 q1, q1, r0
+; CHECK-NEXT:    vadd.i32 q0, q0, r0
 ; CHECK-NEXT:    cbz r6, .LBB0_7
 ; CHECK-NEXT:    le .LBB0_6
 ; CHECK-NEXT:  .LBB0_7: @ %vector.body115.ph
 ; CHECK-NEXT:    vldrw.u32 q0, [r9]
+; CHECK-NEXT:    movs r0, #4
 ; CHECK-NEXT:    vstrw.32 q0, [sp] @ 16-byte Spill
 ; CHECK-NEXT:    @APP
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:    @NO_APP
-; CHECK-NEXT:    vldrw.u32 q1, [sp] @ 16-byte Reload
-; CHECK-NEXT:    vmov.i32 q0, #0x4
+; CHECK-NEXT:    vldrw.u32 q0, [sp] @ 16-byte Reload
 ; CHECK-NEXT:  .LBB0_8: @ %vector.body115
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    vadd.i32 q1, q1, q0
+; CHECK-NEXT:    vadd.i32 q0, q0, r0
 ; CHECK-NEXT:    b .LBB0_8
 ; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  @ %bb.9:
@@ -152,40 +152,39 @@ define dso_local i32 @e() #0 {
 ; CHECK-NEXT:    .pad #408
 ; CHECK-NEXT:    sub sp, #408
 ; CHECK-NEXT:    movw r7, :lower16:.L_MergedGlobals
-; CHECK-NEXT:    vldr s12, .LCPI1_0
-; CHECK-NEXT:    movt r7, :upper16:.L_MergedGlobals
 ; CHECK-NEXT:    vldr s15, .LCPI1_1
-; CHECK-NEXT:    mov r3, r7
-; CHECK-NEXT:    mov r4, r7
-; CHECK-NEXT:    ldr r0, [r3, #4]!
+; CHECK-NEXT:    movt r7, :upper16:.L_MergedGlobals
 ; CHECK-NEXT:    movw r2, :lower16:e
+; CHECK-NEXT:    mov r4, r7
+; CHECK-NEXT:    mov r3, r7
 ; CHECK-NEXT:    ldr r6, [r4, #8]!
-; CHECK-NEXT:    vmov r5, s15
-; CHECK-NEXT:    vmov s13, r3
 ; CHECK-NEXT:    vmov.i32 q0, #0x0
-; CHECK-NEXT:    movt r2, :upper16:e
+; CHECK-NEXT:    ldr r0, [r3, #4]!
 ; CHECK-NEXT:    vstrw.32 q0, [sp] @ 16-byte Spill
+; CHECK-NEXT:    movt r2, :upper16:e
+; CHECK-NEXT:    vmov r5, s15
 ; CHECK-NEXT:    vmov q0[2], q0[0], r4, r4
-; CHECK-NEXT:    vmov s21, r2
-; CHECK-NEXT:    vmov.f32 s14, s13
+; CHECK-NEXT:    vmov s13, r3
+; CHECK-NEXT:    vldr s12, .LCPI1_0
 ; CHECK-NEXT:    vmov q0[3], q0[1], r5, r2
-; CHECK-NEXT:    vmov.f32 s20, s12
 ; CHECK-NEXT:    vdup.32 q7, r3
 ; CHECK-NEXT:    vmov q6[2], q6[0], r3, r5
-; CHECK-NEXT:    vmov.f32 s22, s13
 ; CHECK-NEXT:    vstrw.32 q0, [sp, #92]
 ; CHECK-NEXT:    vmov q0, q7
 ; CHECK-NEXT:    vmov q6[3], q6[1], r3, r2
 ; CHECK-NEXT:    vmov q4, q7
 ; CHECK-NEXT:    vmov.32 q0[0], r2
 ; CHECK-NEXT:    vmov.32 q7[1], r2
-; CHECK-NEXT:    vmov.f32 s23, s15
+; CHECK-NEXT:    vmov s21, r2
 ; CHECK-NEXT:    movs r1, #64
+; CHECK-NEXT:    vmov.f32 s20, s12
 ; CHECK-NEXT:    str r0, [sp, #40]
-; CHECK-NEXT:    vstrw.32 q5, [r0]
+; CHECK-NEXT:    vmov.f32 s22, s13
 ; CHECK-NEXT:    str r6, [r0]
-; CHECK-NEXT:    vstrw.32 q7, [r0]
+; CHECK-NEXT:    vmov.f32 s23, s15
 ; CHECK-NEXT:    str r0, [r0]
+; CHECK-NEXT:    vstrw.32 q5, [r0]
+; CHECK-NEXT:    vstrw.32 q7, [r0]
 ; CHECK-NEXT:    vstrw.32 q0, [r0]
 ; CHECK-NEXT:    vstrw.32 q6, [r0]
 ; CHECK-NEXT:    mov.w r8, #0
@@ -193,6 +192,7 @@ define dso_local i32 @e() #0 {
 ; CHECK-NEXT:    vmov q2[2], q2[0], r3, r3
 ; CHECK-NEXT:    mov.w r12, #4
 ; CHECK-NEXT:    vmov q1[3], q1[1], r2, r4
+; CHECK-NEXT:    vmov.f32 s14, s13
 ; CHECK-NEXT:    vmov q2[3], q2[1], r4, r5
 ; CHECK-NEXT:    vmov.32 q4[0], r8
 ; CHECK-NEXT:    @ implicit-def: $r2

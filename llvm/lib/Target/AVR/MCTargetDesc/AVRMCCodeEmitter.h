@@ -109,7 +109,6 @@ private:
   MCContext &Ctx;
 };
 
-} // end namespace of llvm.
+} // namespace llvm
 
 #endif // LLVM_AVR_CODE_EMITTER_H
-

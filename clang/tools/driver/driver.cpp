@@ -120,7 +120,7 @@ static void ApplyOneQAOverride(raw_ostream &OS,
     OS << "### Adding argument " << Str << " at end\n";
     Args.push_back(Str);
   } else if (Edit[0] == 's' && Edit[1] == '/' && Edit.endswith("/") &&
-             Edit.slice(2, Edit.size()-1).find('/') != StringRef::npos) {
+             Edit.slice(2, Edit.size() - 1).contains('/')) {
     StringRef MatchPattern = Edit.substr(2).split('/').first;
     StringRef ReplPattern = Edit.substr(2).split('/').second;
     ReplPattern = ReplPattern.slice(0, ReplPattern.size()-1);
@@ -278,27 +278,6 @@ static void FixupDiagPrefixExeName(TextDiagnosticPrinter *DiagClient,
   DiagClient->setPrefix(std::string(ExeBasename));
 }
 
-// This lets us create the DiagnosticsEngine with a properly-filled-out
-// DiagnosticOptions instance.
-static DiagnosticOptions *
-CreateAndPopulateDiagOpts(ArrayRef<const char *> argv, bool &UseNewCC1Process) {
-  auto *DiagOpts = new DiagnosticOptions;
-  unsigned MissingArgIndex, MissingArgCount;
-  InputArgList Args = getDriverOptTable().ParseArgs(
-      argv.slice(1), MissingArgIndex, MissingArgCount);
-  // We ignore MissingArgCount and the return value of ParseDiagnosticArgs.
-  // Any errors that would be diagnosed here will also be diagnosed later,
-  // when the DiagnosticsEngine actually exists.
-  (void)ParseDiagnosticArgs(*DiagOpts, Args);
-
-  UseNewCC1Process =
-      Args.hasFlag(clang::driver::options::OPT_fno_integrated_cc1,
-                   clang::driver::options::OPT_fintegrated_cc1,
-                   /*Default=*/CLANG_SPAWN_CC1);
-
-  return DiagOpts;
-}
-
 static void SetInstallDir(SmallVectorImpl<const char *> &argv,
                           Driver &TheDriver, bool CanonicalPrefixes) {
   // Attempt to find the original path used to invoke the driver, to determine
@@ -348,7 +327,7 @@ static int ExecuteCC1Tool(SmallVectorImpl<const char *> &ArgV) {
   return 1;
 }
 
-int main(int Argc, const char **Argv) {
+int clang_main(int Argc, char **Argv) {
   noteBottomOfStack();
   llvm::InitLLVM X(Argc, Argv);
   llvm::setBugReportMsg("PLEASE submit a bug report to " BUG_REPORT_URL
@@ -360,7 +339,6 @@ int main(int Argc, const char **Argv) {
     return 1;
 
   llvm::InitializeAllTargets();
-  auto TargetAndMode = ToolChain::getTargetAndModeFromProgramName(Args[0]);
 
   llvm::BumpPtrAllocator A;
   llvm::StringSaver Saver(A);
@@ -372,13 +350,8 @@ int main(int Argc, const char **Argv) {
   // have to manually search for a --driver-mode=cl argument the hard way.
   // Finally, our -cc1 tools don't care which tokenization mode we use because
   // response files written by clang will tokenize the same way in either mode.
-  bool ClangCLMode = false;
-  if (StringRef(TargetAndMode.DriverMode).equals("--driver-mode=cl") ||
-      llvm::find_if(Args, [](const char *F) {
-        return F && strcmp(F, "--driver-mode=cl") == 0;
-      }) != Args.end()) {
-    ClangCLMode = true;
-  }
+  bool ClangCLMode =
+      IsClangCL(getDriverMode(Args[0], llvm::makeArrayRef(Args).slice(1)));
   enum { Default, POSIX, Windows } RSPQuoting = Default;
   for (const char *F : Args) {
     if (strcmp(F, "--rsp-quoting=posix") == 0)
@@ -404,8 +377,8 @@ int main(int Argc, const char **Argv) {
 
   // Handle -cc1 integrated tools, even if -cc1 was expanded from a response
   // file.
-  auto FirstArg = std::find_if(Args.begin() + 1, Args.end(),
-                               [](const char *A) { return A != nullptr; });
+  auto FirstArg = llvm::find_if(llvm::drop_begin(Args),
+                                [](const char *A) { return A != nullptr; });
   if (FirstArg != Args.end() && StringRef(*FirstArg).startswith("-cc1")) {
     // If -cc1 came from a response file, remove the EOL sentinels.
     if (MarkEOLs) {
@@ -422,10 +395,10 @@ int main(int Argc, const char **Argv) {
     // Skip end-of-line response file markers
     if (Args[i] == nullptr)
       continue;
-    if (StringRef(Args[i]) == "-no-canonical-prefixes") {
+    if (StringRef(Args[i]) == "-canonical-prefixes")
+      CanonicalPrefixes = true;
+    else if (StringRef(Args[i]) == "-no-canonical-prefixes")
       CanonicalPrefixes = false;
-      break;
-    }
   }
 
   // Handle CL and _CL_ which permits additional command line options to be
@@ -465,10 +438,15 @@ int main(int Argc, const char **Argv) {
   // should spawn a new clang subprocess (old behavior).
   // Not having an additional process saves some execution time of Windows,
   // and makes debugging and profiling easier.
-  bool UseNewCC1Process;
+  bool UseNewCC1Process = CLANG_SPAWN_CC1;
+  for (const char *Arg : Args)
+    UseNewCC1Process = llvm::StringSwitch<bool>(Arg)
+                           .Case("-fno-integrated-cc1", true)
+                           .Case("-fintegrated-cc1", false)
+                           .Default(UseNewCC1Process);
 
   IntrusiveRefCntPtr<DiagnosticOptions> DiagOpts =
-      CreateAndPopulateDiagOpts(Args, UseNewCC1Process);
+      CreateAndPopulateDiagOpts(Args);
 
   TextDiagnosticPrinter *DiagClient
     = new TextDiagnosticPrinter(llvm::errs(), &*DiagOpts);
@@ -490,6 +468,7 @@ int main(int Argc, const char **Argv) {
 
   Driver TheDriver(Path, llvm::sys::getDefaultTargetTriple(), Diags);
   SetInstallDir(Args, TheDriver, CanonicalPrefixes);
+  auto TargetAndMode = ToolChain::getTargetAndModeFromProgramName(Args[0]);
   TheDriver.setTargetAndMode(TargetAndMode);
 
   insertTargetAndModeArgs(TargetAndMode, Args, SavedStrings);
@@ -503,32 +482,39 @@ int main(int Argc, const char **Argv) {
   }
 
   std::unique_ptr<Compilation> C(TheDriver.BuildCompilation(Args));
+
+  Driver::ReproLevel ReproLevel = Driver::ReproLevel::OnCrash;
+  if (Arg *A = C->getArgs().getLastArg(options::OPT_gen_reproducer_eq)) {
+    auto Level = llvm::StringSwitch<Optional<Driver::ReproLevel>>(A->getValue())
+                     .Case("off", Driver::ReproLevel::Off)
+                     .Case("crash", Driver::ReproLevel::OnCrash)
+                     .Case("error", Driver::ReproLevel::OnError)
+                     .Case("always", Driver::ReproLevel::Always)
+                     .Default(None);
+    if (!Level) {
+      llvm::errs() << "Unknown value for " << A->getSpelling() << ": '"
+                   << A->getValue() << "'\n";
+      return 1;
+    }
+    ReproLevel = *Level;
+  }
+  if (!!::getenv("FORCE_CLANG_DIAGNOSTICS_CRASH"))
+    ReproLevel = Driver::ReproLevel::Always;
+
   int Res = 1;
   bool IsCrash = false;
+  Driver::CommandStatus CommandStatus = Driver::CommandStatus::Ok;
+  // Pretend the first command failed if ReproStatus is Always.
+  const Command *FailingCommand = nullptr;
+  if (!C->getJobs().empty())
+    FailingCommand = &*C->getJobs().begin();
   if (C && !C->containsError()) {
     SmallVector<std::pair<int, const Command *>, 4> FailingCommands;
     Res = TheDriver.ExecuteCompilation(*C, FailingCommands);
 
-    // Force a crash to test the diagnostics.
-    if (TheDriver.GenReproducer) {
-      Diags.Report(diag::err_drv_force_crash)
-        << !::getenv("FORCE_CLANG_DIAGNOSTICS_CRASH");
-
-      // Pretend that every command failed.
-      FailingCommands.clear();
-      for (const auto &J : C->getJobs())
-        if (const Command *C = dyn_cast<Command>(&J))
-          FailingCommands.push_back(std::make_pair(-1, C));
-
-      // Print the bug report message that would be printed if we did actually
-      // crash, but only if we're crashing due to FORCE_CLANG_DIAGNOSTICS_CRASH.
-      if (::getenv("FORCE_CLANG_DIAGNOSTICS_CRASH"))
-        llvm::dbgs() << llvm::getBugReportMsg();
-    }
-
     for (const auto &P : FailingCommands) {
       int CommandRes = P.first;
-      const Command *FailingCommand = P.second;
+      FailingCommand = P.second;
       if (!Res)
         Res = CommandRes;
 
@@ -547,12 +533,21 @@ int main(int Argc, const char **Argv) {
       // https://pubs.opengroup.org/onlinepubs/9699919799/xrat/V4_xcu_chap02.html
       IsCrash |= CommandRes > 128;
 #endif
-      if (IsCrash) {
-        TheDriver.generateCompilationDiagnostics(*C, *FailingCommand);
+      CommandStatus =
+          IsCrash ? Driver::CommandStatus::Crash : Driver::CommandStatus::Error;
+      if (IsCrash)
         break;
-      }
     }
   }
+
+  // Print the bug report message that would be printed if we did actually
+  // crash, but only if we're crashing due to FORCE_CLANG_DIAGNOSTICS_CRASH.
+  if (::getenv("FORCE_CLANG_DIAGNOSTICS_CRASH"))
+    llvm::dbgs() << llvm::getBugReportMsg();
+  if (FailingCommand != nullptr &&
+    TheDriver.maybeGenerateCompilationDiagnostics(CommandStatus, ReproLevel,
+                                                  *C, *FailingCommand))
+    Res = 1;
 
   Diags.getClient()->finish();
 

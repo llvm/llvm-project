@@ -15,7 +15,7 @@
 #include "sanitizer_common/sanitizer_libc.h"
 #include "lsan_common.h"
 
-#if CAN_SANITIZE_LEAKS && SANITIZER_MAC
+#if CAN_SANITIZE_LEAKS && SANITIZER_APPLE
 
 #include "sanitizer_common/sanitizer_allocator_internal.h"
 #include "lsan_allocator.h"
@@ -143,16 +143,16 @@ void ProcessGlobalRegions(Frontier *frontier) {
 }
 
 void ProcessPlatformSpecificAllocations(Frontier *frontier) {
-  unsigned depth = 1;
-  vm_size_t size = 0;
   vm_address_t address = 0;
   kern_return_t err = KERN_SUCCESS;
-  mach_msg_type_number_t count = VM_REGION_SUBMAP_INFO_COUNT_64;
 
-  InternalMmapVector<RootRegion> const *root_regions = GetRootRegions();
+  InternalMmapVectorNoCtor<RootRegion> const *root_regions = GetRootRegions();
 
   while (err == KERN_SUCCESS) {
+    vm_size_t size = 0;
+    unsigned depth = 1;
     struct vm_region_submap_info_64 info;
+    mach_msg_type_number_t count = VM_REGION_SUBMAP_INFO_COUNT_64;
     err = vm_region_recurse_64(mach_task_self(), &address, &size, &depth,
                                (vm_region_info_t)&info, &count);
 
@@ -195,13 +195,10 @@ void HandleLeaks() {}
 
 void LockStuffAndStopTheWorld(StopTheWorldCallback callback,
                               CheckForLeaksParam *argument) {
-  LockThreadRegistry();
-  LockAllocator();
+  ScopedStopTheWorldLock lock;
   StopTheWorld(callback, argument);
-  UnlockAllocator();
-  UnlockThreadRegistry();
 }
 
 } // namespace __lsan
 
-#endif // CAN_SANITIZE_LEAKS && SANITIZER_MAC
+#endif // CAN_SANITIZE_LEAKS && SANITIZER_APPLE

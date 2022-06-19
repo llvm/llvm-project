@@ -21,7 +21,7 @@
 namespace llvm {
 class DefInit;
 class Record;
-} // end namespace llvm
+} // namespace llvm
 
 namespace mlir {
 namespace tblgen {
@@ -32,7 +32,7 @@ class Type;
 // in TableGen.
 class AttrConstraint : public Constraint {
 public:
-  explicit AttrConstraint(const llvm::Record *record);
+  using Constraint::Constraint;
 
   static bool classof(const Constraint *c) { return c->getKind() == CK_Attr; }
 
@@ -50,7 +50,7 @@ public:
   explicit Attribute(const llvm::DefInit *init);
 
   // Returns the storage type if set. Returns the default storage type
-  // ("Attribute") otherwise.
+  // ("::mlir::Attribute") otherwise.
   StringRef getStorageType() const;
 
   // Returns the return type for this attribute.
@@ -141,9 +141,6 @@ public:
   explicit EnumAttrCase(const llvm::Record *record);
   explicit EnumAttrCase(const llvm::DefInit *init);
 
-  // Returns true if this EnumAttrCase is backed by a StringAttr.
-  bool isStrCase() const;
-
   // Returns the symbol of this enum attribute case.
   StringRef getSymbol() const;
 
@@ -206,6 +203,7 @@ public:
   bool genSpecializedAttr() const;
   llvm::Record *getBaseAttrClass() const;
   StringRef getSpecializedAttrClassName() const;
+  bool printBitEnumPrimaryGroups() const;
 };
 
 class StructFieldAttr {
@@ -241,7 +239,7 @@ public:
 // Name of infer type op interface.
 extern const char *inferTypeOpInterface;
 
-} // end namespace tblgen
-} // end namespace mlir
+} // namespace tblgen
+} // namespace mlir
 
 #endif // MLIR_TABLEGEN_ATTRIBUTE_H_

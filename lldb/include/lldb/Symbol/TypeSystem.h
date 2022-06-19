@@ -91,7 +91,6 @@ public:
 
   virtual SymbolFile *GetSymbolFile() const { return m_sym_file; }
 
-  // Returns true if the symbol file changed during the set accessor.
   virtual void SetSymbolFile(SymbolFile *sym_file) { m_sym_file = sym_file; }
 
   // CompilerDecl functions
@@ -391,6 +390,12 @@ public:
   virtual void DumpTypeDescription(
       lldb::opaque_compiler_type_t type, Stream *s,
       lldb::DescriptionLevel level = lldb::eDescriptionLevelFull) = 0;
+
+  /// Dump a textual representation of the internal TypeSystem state to the
+  /// given stream.
+  ///
+  /// This should not modify the state of the TypeSystem if possible.
+  virtual void Dump(llvm::raw_ostream &output) = 0;
 
   // TODO: These methods appear unused. Should they be removed?
 

@@ -8,12 +8,11 @@
 # RUN: llvm-objdump --macho --section="__DATA,ptrs" --syms %t/test | FileCheck %s
 # RUN: llvm-readobj --section-headers %t/test | FileCheck %s --check-prefix=HEADER
 
-## Make sure we only have 3 deduplicated strings in __cstring, and that they
-## are 16-byte-aligned.
+## Make sure we only have 3 deduplicated strings in __cstring.
 # STR: Contents of (__TEXT,__cstring) section
-# STR: {{.*}}0 foo
-# STR: {{.*}}0 barbaz
-# STR: {{.*}}0 {{$}}
+# STR: {{[[:xdigit:]]+}} foo
+# STR: {{[[:xdigit:]]+}} barbaz
+# STR: {{[[:xdigit:]]+}} {{$}}
 
 ## Make sure both symbol and section relocations point to the right thing.
 # CHECK:      Contents of (__DATA,ptrs) section

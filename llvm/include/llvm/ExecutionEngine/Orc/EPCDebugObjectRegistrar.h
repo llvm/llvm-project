@@ -14,7 +14,8 @@
 #define LLVM_EXECUTIONENGINE_ORC_EPCDEBUGOBJECTREGISTRAR_H
 
 #include "llvm/ExecutionEngine/JITSymbol.h"
-#include "llvm/ExecutionEngine/Orc/ExecutorProcessControl.h"
+#include "llvm/ExecutionEngine/Orc/Shared/ExecutorAddress.h"
+#include "llvm/ExecutionEngine/Orc/Shared/WrapperFunctionUtils.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/Memory.h"
 
@@ -22,41 +23,36 @@
 #include <memory>
 #include <vector>
 
-using namespace llvm::orc::shared;
-
 namespace llvm {
 namespace orc {
+
+class ExecutionSession;
 
 /// Abstract interface for registering debug objects in the executor process.
 class DebugObjectRegistrar {
 public:
-  virtual Error registerDebugObject(sys::MemoryBlock) = 0;
-  virtual ~DebugObjectRegistrar() {}
+  virtual Error registerDebugObject(ExecutorAddrRange TargetMem) = 0;
+  virtual ~DebugObjectRegistrar() = default;
 };
 
 /// Use ExecutorProcessControl to register debug objects locally or in a remote
 /// executor process.
 class EPCDebugObjectRegistrar : public DebugObjectRegistrar {
 public:
-  EPCDebugObjectRegistrar(ExecutorProcessControl &EPC,
-                          JITTargetAddress RegisterFn)
-      : EPC(EPC), RegisterFn(RegisterFn) {}
+  EPCDebugObjectRegistrar(ExecutionSession &ES, ExecutorAddr RegisterFn)
+      : ES(ES), RegisterFn(RegisterFn) {}
 
-  Error registerDebugObject(sys::MemoryBlock TargetMem) override {
-    return WrapperFunction<void(SPSExecutorAddress, uint64_t)>::call(
-        EPCCaller(EPC, RegisterFn), pointerToJITTargetAddress(TargetMem.base()),
-        static_cast<uint64_t>(TargetMem.allocatedSize()));
-  }
+  Error registerDebugObject(ExecutorAddrRange TargetMem) override;
 
 private:
-  ExecutorProcessControl &EPC;
-  JITTargetAddress RegisterFn;
+  ExecutionSession &ES;
+  ExecutorAddr RegisterFn;
 };
 
 /// Create a ExecutorProcessControl-based DebugObjectRegistrar that emits debug
 /// objects to the GDB JIT interface.
 Expected<std::unique_ptr<EPCDebugObjectRegistrar>>
-createJITLoaderGDBRegistrar(ExecutorProcessControl &EPC);
+createJITLoaderGDBRegistrar(ExecutionSession &ES);
 
 } // end namespace orc
 } // end namespace llvm

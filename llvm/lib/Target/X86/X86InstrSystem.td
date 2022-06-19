@@ -25,18 +25,18 @@ let mayLoad = 1, mayStore = 0, hasSideEffects = 1, isTrap = 1 in {
   def TRAP    : I<0x0B, RawFrm, (outs), (ins), "ud2", [(trap)]>, TB;
 
   def UD1Wm   : I<0xB9, MRMSrcMem, (outs), (ins GR16:$src1, i16mem:$src2),
-                  "ud1{w} {$src2, $src1|$src1, $src2}", []>, TB, OpSize16;
+                  "ud1{w}\t{$src2, $src1|$src1, $src2}", []>, TB, OpSize16;
   def UD1Lm   : I<0xB9, MRMSrcMem, (outs), (ins GR32:$src1, i32mem:$src2),
-                  "ud1{l} {$src2, $src1|$src1, $src2}", []>, TB, OpSize32;
+                  "ud1{l}\t{$src2, $src1|$src1, $src2}", []>, TB, OpSize32;
   def UD1Qm   : RI<0xB9, MRMSrcMem, (outs), (ins GR64:$src1, i64mem:$src2),
-                   "ud1{q} {$src2, $src1|$src1, $src2}", []>, TB;
+                   "ud1{q}\t{$src2, $src1|$src1, $src2}", []>, TB;
 
   def UD1Wr   : I<0xB9, MRMSrcReg, (outs), (ins GR16:$src1, GR16:$src2),
-                  "ud1{w} {$src2, $src1|$src1, $src2}", []>, TB, OpSize16;
+                  "ud1{w}\t{$src2, $src1|$src1, $src2}", []>, TB, OpSize16;
   def UD1Lr   : I<0xB9, MRMSrcReg, (outs), (ins GR32:$src1, GR32:$src2),
-                  "ud1{l} {$src2, $src1|$src1, $src2}", []>, TB, OpSize32;
+                  "ud1{l}\t{$src2, $src1|$src1, $src2}", []>, TB, OpSize32;
   def UD1Qr   : RI<0xB9, MRMSrcReg, (outs), (ins GR64:$src1, GR64:$src2),
-                   "ud1{q} {$src2, $src1|$src1, $src2}", []>, TB;
+                   "ud1{q}\t{$src2, $src1|$src1, $src2}", []>, TB;
 }
 
 let isTerminator = 1 in
@@ -71,9 +71,9 @@ def SYSEXIT64 :RI<0x35, RawFrm, (outs), (ins), "sysexitq", []>, TB,
 } // SchedRW
 
 def : Pat<(debugtrap),
-          (INT3)>, Requires<[NotPS4]>;
+          (INT3)>, Requires<[NotPS]>;
 def : Pat<(debugtrap),
-          (INT (i8 0x41))>, Requires<[IsPS4]>;
+          (INT (i8 0x41))>, Requires<[IsPS]>;
 
 //===----------------------------------------------------------------------===//
 //  Input/Output Instructions.
@@ -529,16 +529,17 @@ let SchedRW = [WriteSystem] in {
 //===----------------------------------------------------------------------===//
 // XSAVE instructions
 let SchedRW = [WriteSystem] in {
-let Predicates = [HasXSAVE] in {
+// NOTE: No HasXSAVE predicate so that these can be used with _xgetbv/_xsetbv
+// on Windows without needing to enable the xsave feature to be compatible with
+// MSVC.
 let Defs = [EDX, EAX], Uses = [ECX] in
-  def XGETBV : I<0x01, MRM_D0, (outs), (ins), "xgetbv", []>, PS;
+def XGETBV : I<0x01, MRM_D0, (outs), (ins), "xgetbv", []>, PS;
 
 let Uses = [EDX, EAX, ECX] in
-  def XSETBV : I<0x01, MRM_D1, (outs), (ins),
-                "xsetbv",
-                [(int_x86_xsetbv ECX, EDX, EAX)]>, PS;
+def XSETBV : I<0x01, MRM_D1, (outs), (ins),
+              "xsetbv",
+              [(int_x86_xsetbv ECX, EDX, EAX)]>, PS;
 
-} // HasXSAVE
 
 let Uses = [EDX, EAX] in {
 def XSAVE : I<0xAE, MRM4m, (outs), (ins opaquemem:$dst),
@@ -583,7 +584,7 @@ def XRSTORS64 : RI<0xC7, MRM3m, (outs), (ins opaquemem:$dst),
 //===----------------------------------------------------------------------===//
 // VIA PadLock crypto instructions
 let Defs = [RAX, RDI], Uses = [RDX, RDI], SchedRW = [WriteSystem] in
-  def XSTORE : I<0xa7, MRM_C0, (outs), (ins), "xstore", []>, TB, REP;
+  def XSTORE : I<0xa7, MRM_C0, (outs), (ins), "xstore", []>, TB;
 
 def : InstAlias<"xstorerng", (XSTORE)>;
 

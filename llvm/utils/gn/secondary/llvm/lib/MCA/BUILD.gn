@@ -29,5 +29,6 @@ static_library("MCA") {
     "Stages/RetireStage.cpp",
     "Stages/Stage.cpp",
     "Support.cpp",
+    "View.cpp",
   ]
 }

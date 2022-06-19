@@ -13,8 +13,6 @@ from lldbsuite.test import lldbutil
 class MachCoreTestCase(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
 
-    mydir = TestBase.compute_mydir(__file__)
-
     # This was originally marked as expected failure on Windows, but it has
     # started timing out instead, so the expectedFailure attribute no longer
     # correctly tracks it: llvm.org/pr37371
@@ -58,4 +56,4 @@ class MachCoreTestCase(TestBase):
 
         # Verify that the correct thread is selected
         thread = process.GetSelectedThread()
-        self.assertEqual(thread.GetThreadID(), 0x333333333)
+        self.assertEqual(thread.GetThreadID(), 0x111111111)

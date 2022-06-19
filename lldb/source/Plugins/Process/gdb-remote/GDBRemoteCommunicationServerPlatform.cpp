@@ -30,6 +30,7 @@
 #include "lldb/Target/Platform.h"
 #include "lldb/Target/UnixSignals.h"
 #include "lldb/Utility/GDBRemote.h"
+#include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/StreamString.h"
 #include "lldb/Utility/StructuredData.h"
@@ -178,7 +179,7 @@ Status GDBRemoteCommunicationServerPlatform::LaunchGDBServer(
   if (hostname.empty())
     hostname = "127.0.0.1";
 
-  Log *log(GetLogIfAnyCategoriesSet(LIBLLDB_LOG_PLATFORM));
+  Log *log = GetLog(LLDBLog::Platform);
   LLDB_LOGF(log, "Launching debugserver with: %s:%u...", hostname.c_str(),
             *port);
 
@@ -187,8 +188,7 @@ Status GDBRemoteCommunicationServerPlatform::LaunchGDBServer(
   debugserver_launch_info.SetLaunchInSeparateProcessGroup(false);
   debugserver_launch_info.SetMonitorProcessCallback(
       std::bind(&GDBRemoteCommunicationServerPlatform::DebugserverProcessReaped,
-                this, std::placeholders::_1),
-      false);
+                this, std::placeholders::_1));
 
   std::ostringstream url;
 // debugserver does not accept the URL scheme prefix.
@@ -197,16 +197,9 @@ Status GDBRemoteCommunicationServerPlatform::LaunchGDBServer(
 #endif
   uint16_t *port_ptr = port.getPointer();
   if (m_socket_protocol == Socket::ProtocolTcp) {
-    llvm::StringRef platform_scheme;
-    llvm::StringRef platform_ip;
-    int platform_port;
-    llvm::StringRef platform_path;
     std::string platform_uri = GetConnection()->GetURI();
-    bool ok = UriParser::Parse(platform_uri, platform_scheme, platform_ip,
-                               platform_port, platform_path);
-    UNUSED_IF_ASSERT_DISABLED(ok);
-    assert(ok);
-    url << '[' << platform_ip.str() << "]:" << *port;
+    llvm::Optional<URI> parsed_uri = URI::Parse(platform_uri);
+    url << '[' << parsed_uri->hostname.str() << "]:" << *port;
   } else {
     socket_name = GetDomainSocketPath("gdbserver").GetPath();
     url << socket_name;
@@ -235,7 +228,7 @@ GDBRemoteCommunicationServerPlatform::Handle_qLaunchGDBServer(
   // Spawn a local debugserver as a platform so we can then attach or launch a
   // process...
 
-  Log *log(GetLogIfAnyCategoriesSet(LIBLLDB_LOG_PLATFORM));
+  Log *log = GetLog(LLDBLog::Platform);
   LLDB_LOGF(log, "GDBRemoteCommunicationServerPlatform::%s() called",
             __FUNCTION__);
 
@@ -523,12 +516,11 @@ GDBRemoteCommunicationServerPlatform::Handle_jSignalsInfo(
   return SendPacketNoLock(response.GetString());
 }
 
-bool GDBRemoteCommunicationServerPlatform::DebugserverProcessReaped(
+void GDBRemoteCommunicationServerPlatform::DebugserverProcessReaped(
     lldb::pid_t pid) {
   std::lock_guard<std::recursive_mutex> guard(m_spawned_pids_mutex);
   m_port_map.FreePortForProcess(pid);
   m_spawned_pids.erase(pid);
-  return true;
 }
 
 Status GDBRemoteCommunicationServerPlatform::LaunchProcess() {
@@ -539,11 +531,9 @@ Status GDBRemoteCommunicationServerPlatform::LaunchProcess() {
   // specify the process monitor if not already set.  This should generally be
   // what happens since we need to reap started processes.
   if (!m_process_launch_info.GetMonitorProcessCallback())
-    m_process_launch_info.SetMonitorProcessCallback(
-        std::bind(
-            &GDBRemoteCommunicationServerPlatform::DebugserverProcessReaped,
-            this, std::placeholders::_1),
-        false);
+    m_process_launch_info.SetMonitorProcessCallback(std::bind(
+        &GDBRemoteCommunicationServerPlatform::DebugserverProcessReaped, this,
+        std::placeholders::_1));
 
   Status error = Host::LaunchProcess(m_process_launch_info);
   if (!error.Success()) {

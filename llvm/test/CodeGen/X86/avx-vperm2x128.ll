@@ -124,9 +124,9 @@ define <32 x i8> @shuffle_v32i8_2323_domain(<32 x i8> %a, <32 x i8> %b) nounwind
 ;
 ; AVX2-LABEL: shuffle_v32i8_2323_domain:
 ; AVX2:       # %bb.0: # %entry
+; AVX2-NEXT:    vpermq {{.*#+}} ymm0 = ymm0[2,3,2,3]
 ; AVX2-NEXT:    vpcmpeqd %ymm1, %ymm1, %ymm1
 ; AVX2-NEXT:    vpsubb %ymm1, %ymm0, %ymm0
-; AVX2-NEXT:    vpermq {{.*#+}} ymm0 = ymm0[2,3,2,3]
 ; AVX2-NEXT:    retq
 entry:
   ; add forces execution domain
@@ -689,6 +689,32 @@ entry:
   %shuffle = shufflevector <8 x i32> %a, <8 x i32> %b, <8 x i32> <i32 4, i32 5, i32 6, i32 7, i32 12, i32 13, i32 14, i32 15>
   %res = add <8 x i32> %shuffle, <i32 1, i32 2, i32 3, i32 4, i32 1, i32 2, i32 3, i32 4>
   ret <8 x i32> %res
+}
+
+define void @PR50053(<4 x i64>* nocapture %0, <4 x i64>* nocapture readonly %1) {
+; ALL-LABEL: PR50053:
+; ALL:       # %bb.0:
+; ALL-NEXT:    vmovaps (%rsi), %ymm0
+; ALL-NEXT:    vinsertf128 $1, 32(%rsi), %ymm0, %ymm1
+; ALL-NEXT:    vinsertf128 $0, 48(%rsi), %ymm0, %ymm0
+; ALL-NEXT:    vmovaps %ymm1, (%rdi)
+; ALL-NEXT:    vmovaps %ymm0, 32(%rdi)
+; ALL-NEXT:    vzeroupper
+; ALL-NEXT:    retq
+  %3 = load <4 x i64>, <4 x i64>* %1, align 32
+  %4 = getelementptr inbounds <4 x i64>, <4 x i64>* %1, i64 1
+  %5 = bitcast <4 x i64>* %4 to <2 x i64>*
+  %6 = load <2 x i64>, <2 x i64>* %5, align 16
+  %7 = getelementptr inbounds <2 x i64>, <2 x i64>* %5, i64 1
+  %8 = load <2 x i64>, <2 x i64>* %7, align 16
+  %9 = shufflevector <2 x i64> %6, <2 x i64> poison, <4 x i32> <i32 0, i32 1, i32 undef, i32 undef>
+  %10 = shufflevector <4 x i64> %3, <4 x i64> %9, <4 x i32> <i32 0, i32 1, i32 4, i32 5>
+  store <4 x i64> %10, <4 x i64>* %0, align 32
+  %11 = shufflevector <2 x i64> %8, <2 x i64> poison, <4 x i32> <i32 0, i32 1, i32 undef, i32 undef>
+  %12 = shufflevector <4 x i64> %11, <4 x i64> %3, <4 x i32> <i32 0, i32 1, i32 6, i32 7>
+  %13 = getelementptr inbounds <4 x i64>, <4 x i64>* %0, i64 1
+  store <4 x i64> %12, <4 x i64>* %13, align 32
+  ret void
 }
 
 !llvm.module.flags = !{!0}

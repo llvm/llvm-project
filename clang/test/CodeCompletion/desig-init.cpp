@@ -77,3 +77,11 @@ namespace signature_regression {
   // CHECK-SIGNATURE-REGRESSION-NOT: OVERLOAD: [#int#]wrongFunction
 }
 
+struct WithAnon {
+  int outer;
+  struct { int inner; };
+};
+auto TestWithAnon = WithAnon { .inner = 2 };
+  // RUN: %clang_cc1 -fsyntax-only -code-completion-patterns -code-completion-at=%s:84:33 %s -o - -std=c++2a | FileCheck -check-prefix=CHECK-CC5 %s
+  // CHECK-CC5: COMPLETION: inner : [#int#]inner
+  // CHECK-CC5: COMPLETION: outer : [#int#]outer

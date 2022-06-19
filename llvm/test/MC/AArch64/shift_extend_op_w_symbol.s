@@ -1,6 +1,6 @@
 // RUN: not llvm-mc -triple aarch64-none-linux-gnu < %s > %t1 2> %t2
 // RUN: FileCheck < %t1 %s
-// RUN: FileCheck --check-prefix=CHECK-ERROR < %t2 %s
+// RUN: FileCheck --match-full-lines --strict-whitespace --check-prefix=CHECK-ERROR < %t2 %s
 
         .globl _func
 _func:
@@ -37,6 +37,6 @@ _func:
 
         add w1, w2, w3, lsl #IMM3
 
-// CHECK-ERROR: error: expected constant '#imm' after shift specifier
+// CHECK-ERROR:{{.*}}error: expected constant '#imm' after shift specifier
 // CHECK-ERROR:        add w1, w2, w3, lsl #IMM3
 // CHECK-ERROR:                             ^

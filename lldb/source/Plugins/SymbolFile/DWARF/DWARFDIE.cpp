@@ -15,6 +15,7 @@
 #include "DWARFUnit.h"
 
 using namespace lldb_private;
+using namespace lldb_private::dwarf;
 
 namespace {
 
@@ -447,4 +448,8 @@ bool DWARFDIE::GetDIENamesAndRanges(
         call_file, call_line, call_column, frame_base);
   } else
     return false;
+}
+
+llvm::iterator_range<DWARFDIE::child_iterator> DWARFDIE::children() const {
+  return llvm::make_range(child_iterator(*this), child_iterator());
 }

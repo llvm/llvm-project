@@ -9,28 +9,26 @@
 #ifndef LLVM_DEBUGINFO_DWARF_DWARFUNIT_H
 #define LLVM_DEBUGINFO_DWARF_DWARFUNIT_H
 
+#include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/BinaryFormat/Dwarf.h"
+#include "llvm/DebugInfo/DWARF/DWARFAddressRange.h"
+#include "llvm/DebugInfo/DWARF/DWARFDataExtractor.h"
 #include "llvm/DebugInfo/DWARF/DWARFDebugInfoEntry.h"
-#include "llvm/DebugInfo/DWARF/DWARFDebugLoc.h"
-#include "llvm/DebugInfo/DWARF/DWARFDebugRangeList.h"
-#include "llvm/DebugInfo/DWARF/DWARFDebugRnglists.h"
 #include "llvm/DebugInfo/DWARF/DWARFDie.h"
-#include "llvm/DebugInfo/DWARF/DWARFFormValue.h"
-#include "llvm/DebugInfo/DWARF/DWARFRelocMap.h"
-#include "llvm/DebugInfo/DWARF/DWARFSection.h"
+#include "llvm/DebugInfo/DWARF/DWARFLocationExpression.h"
 #include "llvm/DebugInfo/DWARF/DWARFUnitIndex.h"
 #include "llvm/Support/DataExtractor.h"
-#include <algorithm>
 #include <cassert>
 #include <cstddef>
 #include <cstdint>
 #include <map>
 #include <memory>
+#include <set>
 #include <utility>
 #include <vector>
 
@@ -40,6 +38,12 @@ class DWARFAbbreviationDeclarationSet;
 class DWARFContext;
 class DWARFDebugAbbrev;
 class DWARFUnit;
+class DWARFDebugRangeList;
+class DWARFLocationTable;
+class DWARFObject;
+class raw_ostream;
+struct DIDumpOptions;
+struct DWARFSection;
 
 /// Base class describing the header of any kind of "unit."  Some information
 /// is specific to certain unit types.  We separate this class out so we can
@@ -238,6 +242,11 @@ class DWARFUnit {
   /// std::map::upper_bound for address range lookup.
   std::map<uint64_t, std::pair<uint64_t, DWARFDie>> AddrDieMap;
 
+  /// Map from the location (interpreted DW_AT_location) of a DW_TAG_variable,
+  /// to the end address and the corresponding DIE.
+  std::map<uint64_t, std::pair<uint64_t, DWARFDie>> VariableDieMap;
+  DenseSet<uint64_t> RootsParsedForVariables;
+
   using die_iterator_range =
       iterator_range<std::vector<DWARFDebugInfoEntry>::iterator>;
 
@@ -320,6 +329,9 @@ public:
   /// Recursively update address to Die map.
   void updateAddressDieMap(DWARFDie Die);
 
+  /// Recursively update address to variable Die map.
+  void updateVariableDieMap(DWARFDie Die);
+
   void setRangesSection(const DWARFSection *RS, uint64_t Base) {
     RangeSection = RS;
     RangeSectionBase = Base;
@@ -331,7 +343,7 @@ public:
 
   Optional<object::SectionedAddress>
   getAddrOffsetSectionItem(uint32_t Index) const;
-  Optional<uint64_t> getStringOffsetSectionItem(uint32_t Index) const;
+  Expected<uint64_t> getStringOffsetSectionItem(uint32_t Index) const;
 
   DWARFDataExtractor getDebugInfoExtractor() const;
 
@@ -433,6 +445,10 @@ public:
   /// address. The pointer is alive as long as parsed compile unit DIEs are not
   /// cleared.
   DWARFDie getSubroutineForAddress(uint64_t Address);
+
+  /// Returns variable DIE for the address provided. The pointer is alive as
+  /// long as parsed compile unit DIEs are not cleared.
+  DWARFDie getVariableForAddress(uint64_t Address);
 
   /// getInlinedChainForAddress - fetches inlined chain for a given address.
   /// Returns empty chain if there is no subprogram containing address. The

@@ -15,25 +15,17 @@
 ; CHECK: @[[G:[a-zA-Z0-9_$"\\.-]+]] = constant i32 0
 ;.
 define internal i32 @a(i32* %x) {
-; CHECK: Function Attrs: nofree nosync nounwind readnone willreturn
-; CHECK-LABEL: define {{[^@]+}}@a
-; CHECK-SAME: () #[[ATTR0:[0-9]+]] {
-; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[V:%.*]] = load i32, i32* @G, align 4
-; CHECK-NEXT:    ret i32 [[V]]
-;
 entry:
   %v = load i32, i32* %x
   ret i32 %v
 }
 
 define i32 @b() {
-; CHECK: Function Attrs: nofree nosync nounwind readnone willreturn
+; CHECK: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
 ; CHECK-LABEL: define {{[^@]+}}@b
-; CHECK-SAME: () #[[ATTR0]] {
+; CHECK-SAME: () #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[V:%.*]] = call i32 @a() #[[ATTR0]]
-; CHECK-NEXT:    ret i32 [[V]]
+; CHECK-NEXT:    ret i32 0
 ;
 entry:
   %v = call i32 @a(i32* @G)
@@ -41,14 +33,11 @@ entry:
 }
 
 define i32 @c() {
-; CHECK: Function Attrs: nofree nosync nounwind readnone willreturn
+; CHECK: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
 ; CHECK-LABEL: define {{[^@]+}}@c
 ; CHECK-SAME: () #[[ATTR0]] {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[V1:%.*]] = call i32 @a() #[[ATTR0]]
-; CHECK-NEXT:    [[V2:%.*]] = call i32 @b() #[[ATTR0]]
-; CHECK-NEXT:    [[RESULT:%.*]] = add i32 [[V1]], [[V2]]
-; CHECK-NEXT:    ret i32 [[RESULT]]
+; CHECK-NEXT:    ret i32 0
 ;
 entry:
   %v1 = call i32 @a(i32* @G)
@@ -57,5 +46,5 @@ entry:
   ret i32 %result
 }
 ;.
-; CHECK: attributes #[[ATTR0]] = { nofree nosync nounwind readnone willreturn }
+; CHECK: attributes #[[ATTR0]] = { nofree norecurse nosync nounwind readnone willreturn }
 ;.

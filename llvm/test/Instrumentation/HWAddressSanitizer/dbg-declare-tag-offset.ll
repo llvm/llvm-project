@@ -1,4 +1,4 @@
-; RUN: opt -hwasan -S -o - %s | FileCheck %s
+; RUN: opt -passes=hwasan -S -o - %s | FileCheck %s
 
 target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
 target triple = "aarch64--linux-android"

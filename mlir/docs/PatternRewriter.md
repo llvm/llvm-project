@@ -232,7 +232,7 @@ creation, as well as many useful attribute and type construction methods.
 ## Pattern Application
 
 After a set of patterns have been defined, they are collected and provided to a
-specific driver for application. A driver consists of several high levels parts:
+specific driver for application. A driver consists of several high level parts:
 
 *   Input `RewritePatternSet`
 
@@ -342,6 +342,39 @@ match larger patterns with ambiguous pattern sets.
 Note: This driver is the one used by the [canonicalization](Canonicalization.md)
 [pass](Passes.md/#-canonicalize-canonicalize-operations) in MLIR.
 
+### Debugging
+
+To debug the execution of the greedy pattern rewrite driver,
+`-debug-only=greedy-rewriter` may be used. This command line flag activates
+LLVM's debug logging infrastructure solely for the greedy pattern rewriter. The
+output is formatted as a tree structure, mirroring the structure of the pattern
+application process. This output contains all of the actions performed by the
+rewriter, how operations get processed and patterns are applied, and why they
+fail.
+
+Example output is shown below:
+
+```
+//===-------------------------------------------===//
+Processing operation : 'cf.cond_br'(0x60f000001120) {
+  "cf.cond_br"(%arg0)[^bb2, ^bb2] {operand_segment_sizes = dense<[1, 0, 0]> : vector<3xi32>} : (i1) -> ()
+
+  * Pattern SimplifyConstCondBranchPred : 'cf.cond_br -> ()' {
+  } -> failure : pattern failed to match
+
+  * Pattern SimplifyCondBranchIdenticalSuccessors : 'cf.cond_br -> ()' {
+    ** Insert  : 'cf.br'(0x60b000003690)
+    ** Replace : 'cf.cond_br'(0x60f000001120)
+  } -> success : pattern applied successfully
+} -> success : pattern matched
+//===-------------------------------------------===//
+```
+
+This output is describing the processing of a `cf.cond_br` operation. We first
+try to apply the `SimplifyConstCondBranchPred`, which fails. From there, another
+pattern (`SimplifyCondBranchIdenticalSuccessors`) is applied that matches the
+`cf.cond_br` and replaces it with a `cf.br`.
+
 ## Debugging
 
 ### Pattern Filtering
@@ -406,12 +439,10 @@ below:
 
 ```tablegen
 ListOption<"disabledPatterns", "disable-patterns", "std::string",
-           "Labels of patterns that should be filtered out during application",
-           "llvm::cl::MiscFlags::CommaSeparated">,
+           "Labels of patterns that should be filtered out during application">,
 ListOption<"enabledPatterns", "enable-patterns", "std::string",
            "Labels of patterns that should be used during application, all "
-           "other patterns are filtered out",
-           "llvm::cl::MiscFlags::CommaSeparated">,
+           "other patterns are filtered out">,
 ```
 
 These options may be used to provide filtering behavior when constructing any

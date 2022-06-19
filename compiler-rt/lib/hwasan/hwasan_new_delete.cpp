@@ -22,21 +22,23 @@
 #if HWASAN_REPLACE_OPERATORS_NEW_AND_DELETE
 
 // TODO(alekseys): throw std::bad_alloc instead of dying on OOM.
-#define OPERATOR_NEW_BODY(nothrow) \
-  GET_MALLOC_STACK_TRACE; \
-  void *res = hwasan_malloc(size, &stack);\
-  if (!nothrow && UNLIKELY(!res)) ReportOutOfMemory(size, &stack);\
-  return res
-#define OPERATOR_NEW_ALIGN_BODY(nothrow)                                    \
-  GET_MALLOC_STACK_TRACE;                                                   \
-  void *res = hwasan_aligned_alloc(static_cast<uptr>(align), size, &stack); \
-  if (!nothrow && UNLIKELY(!res))                                           \
-    ReportOutOfMemory(size, &stack);                                        \
-  return res
+#  define OPERATOR_NEW_BODY(nothrow)         \
+    GET_MALLOC_STACK_TRACE;                  \
+    void *res = hwasan_malloc(size, &stack); \
+    if (!nothrow && UNLIKELY(!res))          \
+      ReportOutOfMemory(size, &stack);       \
+    return res
+#  define OPERATOR_NEW_ALIGN_BODY(nothrow)                               \
+    GET_MALLOC_STACK_TRACE;                                              \
+    void *res = hwasan_memalign(static_cast<uptr>(align), size, &stack); \
+    if (!nothrow && UNLIKELY(!res))                                      \
+      ReportOutOfMemory(size, &stack);                                   \
+    return res
 
-#define OPERATOR_DELETE_BODY \
-  GET_MALLOC_STACK_TRACE; \
-  if (ptr) hwasan_free(ptr, &stack)
+#  define OPERATOR_DELETE_BODY \
+    GET_MALLOC_STACK_TRACE;    \
+    if (ptr)                   \
+    hwasan_free(ptr, &stack)
 
 #elif defined(__ANDROID__)
 
@@ -44,8 +46,8 @@
 // since we previously released a runtime that intercepted these functions,
 // removing the interceptors would break ABI. Therefore we simply forward to
 // malloc and free.
-#define OPERATOR_NEW_BODY(nothrow) return malloc(size)
-#define OPERATOR_DELETE_BODY free(ptr)
+#  define OPERATOR_NEW_BODY(nothrow) return malloc(size)
+#  define OPERATOR_DELETE_BODY free(ptr)
 
 #endif
 
@@ -55,26 +57,27 @@ using namespace __hwasan;
 
 // Fake std::nothrow_t to avoid including <new>.
 namespace std {
-  struct nothrow_t {};
+struct nothrow_t {};
 }  // namespace std
 
-
-
-INTERCEPTOR_ATTRIBUTE SANITIZER_WEAK_ATTRIBUTE
-void *operator new(size_t size) { OPERATOR_NEW_BODY(false /*nothrow*/); }
-INTERCEPTOR_ATTRIBUTE SANITIZER_WEAK_ATTRIBUTE
-void *operator new[](size_t size) { OPERATOR_NEW_BODY(false /*nothrow*/); }
-INTERCEPTOR_ATTRIBUTE SANITIZER_WEAK_ATTRIBUTE
-void *operator new(size_t size, std::nothrow_t const&) {
+INTERCEPTOR_ATTRIBUTE SANITIZER_WEAK_ATTRIBUTE void *operator new(size_t size) {
+  OPERATOR_NEW_BODY(false /*nothrow*/);
+}
+INTERCEPTOR_ATTRIBUTE SANITIZER_WEAK_ATTRIBUTE void *operator new[](
+    size_t size) {
+  OPERATOR_NEW_BODY(false /*nothrow*/);
+}
+INTERCEPTOR_ATTRIBUTE SANITIZER_WEAK_ATTRIBUTE void *operator new(
+    size_t size, std::nothrow_t const &) {
   OPERATOR_NEW_BODY(true /*nothrow*/);
 }
-INTERCEPTOR_ATTRIBUTE SANITIZER_WEAK_ATTRIBUTE
-void *operator new[](size_t size, std::nothrow_t const&) {
+INTERCEPTOR_ATTRIBUTE SANITIZER_WEAK_ATTRIBUTE void *operator new[](
+    size_t size, std::nothrow_t const &) {
   OPERATOR_NEW_BODY(true /*nothrow*/);
 }
 
-INTERCEPTOR_ATTRIBUTE SANITIZER_WEAK_ATTRIBUTE void operator delete(void *ptr)
-    NOEXCEPT {
+INTERCEPTOR_ATTRIBUTE SANITIZER_WEAK_ATTRIBUTE void operator delete(
+    void *ptr) NOEXCEPT {
   OPERATOR_DELETE_BODY;
 }
 INTERCEPTOR_ATTRIBUTE SANITIZER_WEAK_ATTRIBUTE void operator delete[](

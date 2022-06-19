@@ -10,6 +10,7 @@
 #define LLVM_LIB_TARGET_SYSTEMZ_SYSTEMZREGISTERINFO_H
 
 #include "SystemZ.h"
+#include "llvm/CodeGen/TargetFrameLowering.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 
 #define GET_REGINFO_HEADER
@@ -44,9 +45,9 @@ inline bool isHighReg(unsigned int Reg) {
 /// It is abstract, all calling conventions must override and
 /// define the pure virtual member function defined in this class.
 class SystemZCallingConventionRegisters {
+
 public:
-  /// \returns the register that keeps the
-  /// return function address.
+  /// \returns the register that keeps the return function address.
   virtual int getReturnFunctionAddressRegister() = 0;
 
   /// \returns the register that keeps the
@@ -65,9 +66,15 @@ public:
   virtual const uint32_t *getCallPreservedMask(const MachineFunction &MF,
                                                CallingConv::ID CC) const = 0;
 
+  /// \returns the offset to the locals area.
+  virtual int getCallFrameSize() = 0;
+
+  /// \returns the stack pointer bias.
+  virtual int getStackPointerBias() = 0;
+
   /// Destroys the object. Bogus destructor allowing derived classes
   /// to override it.
-  virtual ~SystemZCallingConventionRegisters(){};
+  virtual ~SystemZCallingConventionRegisters() = default;
 };
 
 /// XPLINK64 calling convention specific use registers
@@ -82,14 +89,20 @@ public:
 
   int getFramePointerRegister() override final { return SystemZ::R8D; };
 
+  int getAddressOfCalleeRegister() { return SystemZ::R6D; };
+
   const MCPhysReg *
   getCalleeSavedRegs(const MachineFunction *MF) const override final;
 
   const uint32_t *getCallPreservedMask(const MachineFunction &MF,
                                        CallingConv::ID CC) const override final;
 
+  int getCallFrameSize() override final { return 128; }
+
+  int getStackPointerBias() override final { return 2048; }
+
   /// Destroys the object. Bogus destructor overriding base class destructor
-  ~SystemZXPLINK64Registers(){};
+  ~SystemZXPLINK64Registers() = default;
 };
 
 /// ELF calling convention specific use registers
@@ -110,8 +123,12 @@ public:
   const uint32_t *getCallPreservedMask(const MachineFunction &MF,
                                        CallingConv::ID CC) const override final;
 
+  int getCallFrameSize() override final { return SystemZMC::ELFCallFrameSize; }
+
+  int getStackPointerBias() override final { return 0; }
+
   /// Destroys the object. Bogus destructor overriding base class destructor
-  ~SystemZELFRegisters(){};
+  ~SystemZELFRegisters() = default;
 };
 
 struct SystemZRegisterInfo : public SystemZGenRegisterInfo {

@@ -49,7 +49,7 @@ static void AddBreakpointDescription(Stream *s, Breakpoint *bp,
 
 class lldb_private::BreakpointOptionGroup : public OptionGroup {
 public:
-  BreakpointOptionGroup() : OptionGroup(), m_bp_opts(false) {}
+  BreakpointOptionGroup() : m_bp_opts(false) {}
 
   ~BreakpointOptionGroup() override = default;
 
@@ -110,7 +110,19 @@ public:
     case 't': {
       lldb::tid_t thread_id = LLDB_INVALID_THREAD_ID;
       if (option_arg[0] != '\0') {
-        if (option_arg.getAsInteger(0, thread_id))
+        if (option_arg == "current") {
+          if (!execution_context) {
+            error.SetErrorStringWithFormat("No context to determine current "
+                                           "thread");
+          } else {
+            ThreadSP ctx_thread_sp = execution_context->GetThreadSP();
+            if (!ctx_thread_sp || !ctx_thread_sp->IsValid()) {
+              error.SetErrorStringWithFormat("No currently selected thread");
+            } else {
+              thread_id = ctx_thread_sp->GetID();
+            }
+          }
+        } else if (option_arg.getAsInteger(0, thread_id))
           error.SetErrorStringWithFormat("invalid thread id string '%s'",
                                          option_arg.str().c_str());
       }
@@ -167,7 +179,7 @@ public:
 
 class BreakpointDummyOptionGroup : public OptionGroup {
 public:
-  BreakpointDummyOptionGroup() : OptionGroup() {}
+  BreakpointDummyOptionGroup() = default;
 
   ~BreakpointDummyOptionGroup() override = default;
 
@@ -222,8 +234,7 @@ public:
             interpreter, "breakpoint set",
             "Sets a breakpoint or set of breakpoints in the executable.",
             "breakpoint set <cmd-options>"),
-        m_bp_opts(), m_python_class_options("scripted breakpoint", true, 'P'),
-        m_options() {
+        m_python_class_options("scripted breakpoint", true, 'P') {
     // We're picking up all the normal options, commands and disable.
     m_all_options.Append(&m_python_class_options,
                          LLDB_OPT_SET_1 | LLDB_OPT_SET_2, LLDB_OPT_SET_11);
@@ -241,9 +252,7 @@ public:
 
   class CommandOptions : public OptionGroup {
   public:
-    CommandOptions()
-        : OptionGroup(), m_condition(), m_filenames(), m_func_names(),
-          m_func_regexp(), m_source_text_regexp(), m_modules() {}
+    CommandOptions() = default;
 
     ~CommandOptions() override = default;
 
@@ -797,8 +806,7 @@ public:
                             "created breakpoint.  "
                             "With the exception of -e, -d and -i, passing an "
                             "empty argument clears the modification.",
-                            nullptr),
-        m_options() {
+                            nullptr) {
     CommandArgumentEntry arg;
     CommandObject::AddIDsArgumentData(arg, eArgTypeBreakpointID,
                                       eArgTypeBreakpointIDRange);
@@ -1088,8 +1096,7 @@ public:
       : CommandObjectParsed(
             interpreter, "breakpoint list",
             "List some or all breakpoints at configurable levels of detail.",
-            nullptr),
-        m_options() {
+            nullptr) {
     CommandArgumentEntry arg;
     CommandArgumentData bp_id_arg;
 
@@ -1111,7 +1118,7 @@ public:
 
   class CommandOptions : public Options {
   public:
-    CommandOptions() : Options() {}
+    CommandOptions() = default;
 
     ~CommandOptions() override = default;
 
@@ -1234,8 +1241,7 @@ public:
       : CommandObjectParsed(interpreter, "breakpoint clear",
                             "Delete or disable breakpoints matching the "
                             "specified source file and line.",
-                            "breakpoint clear <cmd-options>"),
-        m_options() {}
+                            "breakpoint clear <cmd-options>") {}
 
   ~CommandObjectBreakpointClear() override = default;
 
@@ -1243,7 +1249,7 @@ public:
 
   class CommandOptions : public Options {
   public:
-    CommandOptions() : Options(), m_filename() {}
+    CommandOptions() = default;
 
     ~CommandOptions() override = default;
 
@@ -1372,8 +1378,7 @@ public:
       : CommandObjectParsed(interpreter, "breakpoint delete",
                             "Delete the specified breakpoint(s).  If no "
                             "breakpoints are specified, delete them all.",
-                            nullptr),
-        m_options() {
+                            nullptr) {
     CommandArgumentEntry arg;
     CommandObject::AddIDsArgumentData(arg, eArgTypeBreakpointID,
                                       eArgTypeBreakpointIDRange);
@@ -1396,7 +1401,7 @@ public:
 
   class CommandOptions : public Options {
   public:
-    CommandOptions() : Options() {}
+    CommandOptions() = default;
 
     ~CommandOptions() override = default;
 
@@ -1458,6 +1463,7 @@ protected:
       return false;
     }
 
+    // Handle the delete all breakpoints case:
     if (command.empty() && !m_options.m_delete_disabled) {
       if (!m_options.m_force &&
           !m_interpreter.Confirm(
@@ -1471,67 +1477,73 @@ protected:
             (uint64_t)num_breakpoints, num_breakpoints > 1 ? "s" : "");
       }
       result.SetStatus(eReturnStatusSuccessFinishNoResult);
-    } else {
-      // Particular breakpoint selected; disable that breakpoint.
-      BreakpointIDList valid_bp_ids;
-      
-      if (m_options.m_delete_disabled) {
-        BreakpointIDList excluded_bp_ids;
+      return result.Succeeded();
+    }
+ 
+    // Either we have some kind of breakpoint specification(s),
+    // or we are handling "break disable --deleted".  Gather the list
+    // of breakpoints to delete here, the we'll delete them below.
+    BreakpointIDList valid_bp_ids;
+    
+    if (m_options.m_delete_disabled) {
+      BreakpointIDList excluded_bp_ids;
 
-        if (!command.empty()) {
-          CommandObjectMultiwordBreakpoint::VerifyBreakpointOrLocationIDs(
-              command, &target, result, &excluded_bp_ids,
-              BreakpointName::Permissions::PermissionKinds::deletePerm);
-        }
-        for (auto breakpoint_sp : breakpoints.Breakpoints()) {
-          if (!breakpoint_sp->IsEnabled() && breakpoint_sp->AllowDelete()) {
-            BreakpointID bp_id(breakpoint_sp->GetID());
-            size_t pos = 0;
-            if (!excluded_bp_ids.FindBreakpointID(bp_id, &pos))
-              valid_bp_ids.AddBreakpointID(breakpoint_sp->GetID());
-          }
-        }
-        if (valid_bp_ids.GetSize() == 0) {
-          result.AppendError("No disabled breakpoints.");
-          return false;
-        }
-      } else {
+      if (!command.empty()) {
         CommandObjectMultiwordBreakpoint::VerifyBreakpointOrLocationIDs(
-            command, &target, result, &valid_bp_ids,
+            command, &target, result, &excluded_bp_ids,
             BreakpointName::Permissions::PermissionKinds::deletePerm);
+        if (!result.Succeeded())
+          return false;
       }
-      
-      if (result.Succeeded()) {
-        int delete_count = 0;
-        int disable_count = 0;
-        const size_t count = valid_bp_ids.GetSize();
-        for (size_t i = 0; i < count; ++i) {
-          BreakpointID cur_bp_id = valid_bp_ids.GetBreakpointIDAtIndex(i);
 
-          if (cur_bp_id.GetBreakpointID() != LLDB_INVALID_BREAK_ID) {
-            if (cur_bp_id.GetLocationID() != LLDB_INVALID_BREAK_ID) {
-              Breakpoint *breakpoint =
-                  target.GetBreakpointByID(cur_bp_id.GetBreakpointID()).get();
-              BreakpointLocation *location =
-                  breakpoint->FindLocationByID(cur_bp_id.GetLocationID()).get();
-              // It makes no sense to try to delete individual locations, so we
-              // disable them instead.
-              if (location) {
-                location->SetEnabled(false);
-                ++disable_count;
-              }
-            } else {
-              target.RemoveBreakpointByID(cur_bp_id.GetBreakpointID());
-              ++delete_count;
-            }
-          }
+      for (auto breakpoint_sp : breakpoints.Breakpoints()) {
+        if (!breakpoint_sp->IsEnabled() && breakpoint_sp->AllowDelete()) {
+          BreakpointID bp_id(breakpoint_sp->GetID());
+          size_t pos = 0;
+          if (!excluded_bp_ids.FindBreakpointID(bp_id, &pos))
+            valid_bp_ids.AddBreakpointID(breakpoint_sp->GetID());
         }
-        result.AppendMessageWithFormat(
-            "%d breakpoints deleted; %d breakpoint locations disabled.\n",
-            delete_count, disable_count);
-        result.SetStatus(eReturnStatusSuccessFinishNoResult);
+      }
+      if (valid_bp_ids.GetSize() == 0) {
+        result.AppendError("No disabled breakpoints.");
+        return false;
+      }
+    } else {
+      CommandObjectMultiwordBreakpoint::VerifyBreakpointOrLocationIDs(
+          command, &target, result, &valid_bp_ids,
+          BreakpointName::Permissions::PermissionKinds::deletePerm);
+      if (!result.Succeeded())
+        return false;
+    }
+    
+    int delete_count = 0;
+    int disable_count = 0;
+    const size_t count = valid_bp_ids.GetSize();
+    for (size_t i = 0; i < count; ++i) {
+      BreakpointID cur_bp_id = valid_bp_ids.GetBreakpointIDAtIndex(i);
+
+      if (cur_bp_id.GetBreakpointID() != LLDB_INVALID_BREAK_ID) {
+        if (cur_bp_id.GetLocationID() != LLDB_INVALID_BREAK_ID) {
+          Breakpoint *breakpoint =
+              target.GetBreakpointByID(cur_bp_id.GetBreakpointID()).get();
+          BreakpointLocation *location =
+              breakpoint->FindLocationByID(cur_bp_id.GetLocationID()).get();
+          // It makes no sense to try to delete individual locations, so we
+          // disable them instead.
+          if (location) {
+            location->SetEnabled(false);
+            ++disable_count;
+          }
+        } else {
+          target.RemoveBreakpointByID(cur_bp_id.GetBreakpointID());
+          ++delete_count;
+        }
       }
     }
+    result.AppendMessageWithFormat(
+        "%d breakpoints deleted; %d breakpoint locations disabled.\n",
+        delete_count, disable_count);
+    result.SetStatus(eReturnStatusSuccessFinishNoResult);
     return result.Succeeded();
   }
 
@@ -1546,8 +1558,7 @@ private:
 class BreakpointNameOptionGroup : public OptionGroup {
 public:
   BreakpointNameOptionGroup()
-      : OptionGroup(), m_breakpoint(LLDB_INVALID_BREAK_ID), m_use_dummy(false) {
-  }
+      : m_breakpoint(LLDB_INVALID_BREAK_ID), m_use_dummy(false) {}
 
   ~BreakpointNameOptionGroup() override = default;
 
@@ -1607,7 +1618,7 @@ public:
 
 class BreakpointAccessOptionGroup : public OptionGroup {
 public:
-  BreakpointAccessOptionGroup() : OptionGroup() {}
+  BreakpointAccessOptionGroup() = default;
 
   ~BreakpointAccessOptionGroup() override = default;
 
@@ -1677,8 +1688,7 @@ public:
             "the breakpoint, otherwise only the options specified will be set "
             "on the name.",
             "breakpoint name configure <command-options> "
-            "<breakpoint-name-list>"),
-        m_bp_opts(), m_option_group() {
+            "<breakpoint-name-list>") {
     // Create the first variant for the first (and only) argument for this
     // command.
     CommandArgumentEntry arg1;
@@ -1768,8 +1778,7 @@ public:
   CommandObjectBreakpointNameAdd(CommandInterpreter &interpreter)
       : CommandObjectParsed(
             interpreter, "add", "Add a name to the breakpoints provided.",
-            "breakpoint name add <command-options> <breakpoint-id-list>"),
-        m_name_options(), m_option_group() {
+            "breakpoint name add <command-options> <breakpoint-id-list>") {
     // Create the first variant for the first (and only) argument for this
     // command.
     CommandArgumentEntry arg1;
@@ -1853,8 +1862,7 @@ public:
       : CommandObjectParsed(
             interpreter, "delete",
             "Delete a name from the breakpoints provided.",
-            "breakpoint name delete <command-options> <breakpoint-id-list>"),
-        m_name_options(), m_option_group() {
+            "breakpoint name delete <command-options> <breakpoint-id-list>") {
     // Create the first variant for the first (and only) argument for this
     // command.
     CommandArgumentEntry arg1;
@@ -1937,8 +1945,7 @@ public:
                             "List either the names for a breakpoint or info "
                             "about a given name.  With no arguments, lists all "
                             "names",
-                            "breakpoint name list <command-options>"),
-        m_name_options(), m_option_group() {
+                            "breakpoint name list <command-options>") {
     m_option_group.Append(&m_name_options, LLDB_OPT_SET_3, LLDB_OPT_SET_ALL);
     m_option_group.Finalize();
   }
@@ -2011,8 +2018,99 @@ class CommandObjectBreakpointName : public CommandObjectMultiword {
 public:
   CommandObjectBreakpointName(CommandInterpreter &interpreter)
       : CommandObjectMultiword(
-            interpreter, "name", "Commands to manage name tags for breakpoints",
-            "breakpoint name <subcommand> [<command-options>]") {
+            interpreter, "name", "Commands to manage breakpoint names") {
+  
+            
+    SetHelpLong(
+            R"(
+Breakpoint names provide a general tagging mechanism for breakpoints.  Each 
+breakpoint name can be added to any number of breakpoints, and each breakpoint 
+can have any number of breakpoint names attached to it. For instance:
+
+    (lldb) break name add -N MyName 1-10
+
+adds the name MyName to breakpoints 1-10, and:
+
+    (lldb) break set -n myFunc -N Name1 -N Name2
+
+adds two names to the breakpoint set at myFunc.
+
+They have a number of interrelated uses:
+
+1) They provide a stable way to refer to a breakpoint (e.g. in another 
+breakpoint's action). Using the breakpoint ID for this purpose is fragile, since
+it depends on the order of breakpoint creation.  Giving a name to the breakpoint
+you want to act on, and then referring to it by name, is more robust:
+
+    (lldb) break set -n myFunc -N BKPT1
+    (lldb) break set -n myOtherFunc -C "break disable BKPT1"
+
+2) This is actually just a specific use of a more general feature of breakpoint
+names.  The <breakpt-id-list> argument type used to specify one or more 
+breakpoints in most of the commands that deal with breakpoints also accepts 
+breakpoint names.  That allows you to refer to one breakpoint in a stable 
+manner, but also makes them a convenient grouping mechanism, allowing you to 
+easily act on a group of breakpoints by using their name, for instance disabling
+them all in one action:
+
+    (lldb) break set -n myFunc -N Group1
+    (lldb) break set -n myOtherFunc -N Group1
+    (lldb) break disable Group1
+    
+3) But breakpoint names are also entities in their own right, and can be 
+configured with all the modifiable attributes of a breakpoint.  Then when you 
+add a breakpoint name to a breakpoint, the breakpoint will be configured to 
+match the state of the breakpoint name.  The link between the name and the 
+breakpoints sharing it remains live, so if you change the configuration on the 
+name, it will also change the configurations on the breakpoints:
+
+    (lldb) break name configure -i 10 IgnoreSome
+    (lldb) break set -n myFunc -N IgnoreSome
+    (lldb) break list IgnoreSome
+    2: name = 'myFunc', locations = 0 (pending) Options: ignore: 10 enabled 
+      Names:
+        IgnoreSome
+    (lldb) break name configure -i 5 IgnoreSome
+    (lldb) break list IgnoreSome
+    2: name = 'myFunc', locations = 0 (pending) Options: ignore: 5 enabled 
+      Names:
+        IgnoreSome
+
+Options that are not configured on a breakpoint name don't affect the value of 
+those options on the breakpoints they are added to.  So for instance, if Name1
+has the -i option configured and Name2 the -c option, adding both names to a 
+breakpoint will set the -i option from Name1 and the -c option from Name2, and
+the other options will be unaltered.
+
+If you add multiple names to a breakpoint which have configured values for
+the same option, the last name added's value wins.
+
+The "liveness" of these settings is one way, from name to breakpoint.  
+If you use "break modify" to change an option that is also configured on a name 
+which that breakpoint has, the "break modify" command will override the setting 
+for that breakpoint, but won't change the value configured in the name or on the
+other breakpoints sharing that name.
+
+4) Breakpoint names are also a convenient way to copy option sets from one 
+breakpoint to another.  Using the -B option to "breakpoint name configure" makes
+a name configured with all the options of the original breakpoint.  Then 
+adding that name to another breakpoint copies over all the values from the 
+original breakpoint to the new one.
+
+5) You can also use breakpoint names to hide breakpoints from the breakpoint
+operations that act on all breakpoints: "break delete", "break disable" and 
+"break list".  You do that by specifying a "false" value for the 
+--allow-{list,delete,disable} options to "breakpoint name configure" and then 
+adding that name to a breakpoint.
+
+This won't keep the breakpoint from being deleted or disabled if you refer to it 
+specifically by ID. The point of the feature is to make sure users don't 
+inadvertently delete or disable useful breakpoints (e.g. ones an IDE is using
+for its own purposes) as part of a "delete all" or "disable all" operation.  The
+list hiding is because it's confusing for people to see breakpoints they 
+didn't set.
+
+)");
     CommandObjectSP add_command_object(
         new CommandObjectBreakpointNameAdd(interpreter));
     CommandObjectSP delete_command_object(
@@ -2044,8 +2142,7 @@ public:
       : CommandObjectParsed(interpreter, "breakpoint read",
                             "Read and set the breakpoints previously saved to "
                             "a file with \"breakpoint write\".  ",
-                            nullptr),
-        m_options() {}
+                            nullptr) {}
 
   ~CommandObjectBreakpointRead() override = default;
 
@@ -2053,7 +2150,7 @@ public:
 
   class CommandOptions : public Options {
   public:
-    CommandOptions() : Options() {}
+    CommandOptions() = default;
 
     ~CommandOptions() override = default;
 
@@ -2226,8 +2323,7 @@ public:
                             "Write the breakpoints listed to a file that can "
                             "be read in with \"breakpoint read\".  "
                             "If given no arguments, writes all breakpoints.",
-                            nullptr),
-        m_options() {
+                            nullptr) {
     CommandArgumentEntry arg;
     CommandObject::AddIDsArgumentData(arg, eArgTypeBreakpointID,
                                       eArgTypeBreakpointIDRange);
@@ -2250,7 +2346,7 @@ public:
 
   class CommandOptions : public Options {
   public:
-    CommandOptions() : Options() {}
+    CommandOptions() = default;
 
     ~CommandOptions() override = default;
 

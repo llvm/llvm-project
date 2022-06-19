@@ -35,7 +35,7 @@ ObjC-EXE: 0000000100000f1b	movq	0x10e(%rip), %rsi       ## Objc selector ref: da
 ObjC-EXE: 0000000100000f25	callq	0x100000f4a             ## Objc message: +[NSDate date]
 ObjC-EXE: 0000000100000f33	callq	0x100000f44             ## symbol stub for: _NSLog
 
-CXX-EXE: 00000001000014cb	callq	__ZNSt3__116__pad_and_outputIcNS_11char_traitsIcEEEENS_19ostreambuf_iteratorIT_T0_EES6_PKS4_S8_S8_RNS_8ios_baseES4_ ## std::__1::ostreambuf_iterator<char, std::__1::char_traits<char> > std::__1::__pad_and_output<char, std::__1::char_traits<char> >(std::__1::ostreambuf_iterator<char, std::__1::char_traits<char> >, char const*, char const*, char const*, std::__1::ios_base&, char)
+CXX-EXE: 00000001000014cb	callq	__ZNSt3__116__pad_and_outputIcNS_11char_traitsIcEEEENS_19ostreambuf_iteratorIT_T0_EES6_PKS4_S8_S8_RNS_8ios_baseES4_ ## std::__1::ostreambuf_iterator<char, std::__1::char_traits<char>> std::__1::__pad_and_output<char, std::__1::char_traits<char>>(std::__1::ostreambuf_iterator<char, std::__1::char_traits<char>>, char const*, char const*, char const*, std::__1::ios_base&, char)
 
 i386-OBJ: 0000002f	calll	_printf
 

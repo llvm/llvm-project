@@ -73,3 +73,12 @@ __attribute__((no_sanitize("kernel-hwaddress"))) int NoSanitizeKernelHWAddress()
 // CHECK-KASAN: {{Function Attrs: mustprogress noinline nounwind sanitize_address$}}
 // CHECK-HWASAN: {{Function Attrs: mustprogress noinline nounwind$}}
 // CHECK-KHWASAN: {{Function Attrs: mustprogress noinline nounwind$}}
+
+__attribute__((disable_sanitizer_instrumentation)) int DisableSanitizerInstrumentation() {
+  return 0;
+}
+// CHECK-NOASAN: {{Function Attrs: disable_sanitizer_instrumentation mustprogress noinline nounwind$}}
+// CHECK-ASAN: {{Function Attrs: disable_sanitizer_instrumentation mustprogress noinline nounwind$}}
+// CHECK-KASAN: {{Function Attrs: disable_sanitizer_instrumentation mustprogress noinline nounwind$}}
+// CHECK-HWASAN: {{Function Attrs: disable_sanitizer_instrumentation mustprogress noinline nounwind$}}
+// CHECK-KHWASAN: {{Function Attrs: disable_sanitizer_instrumentation mustprogress noinline nounwind$}}

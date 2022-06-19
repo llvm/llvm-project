@@ -277,14 +277,10 @@ define i528 @large_promotion(i528 %A) nounwind {
 ; CHECK-NEXT:    bswapl %ebp
 ; CHECK-NEXT:    shrdl $16, %ebp, %ebx
 ; CHECK-NEXT:    movl %ebx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; CHECK-NEXT:    bswapl %ecx
-; CHECK-NEXT:    shrdl $16, %ecx, %ebp
-; CHECK-NEXT:    movl %ebp, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; CHECK-NEXT:    bswapl %eax
-; CHECK-NEXT:    shrdl $16, %eax, %ecx
-; CHECK-NEXT:    movl %ecx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; CHECK-NEXT:    shrdl $16, %eax, %ebp
+; CHECK-NEXT:    movl %ebp, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; CHECK-NEXT:    bswapl %ecx
 ; CHECK-NEXT:    shrdl $16, %ecx, %eax
@@ -293,10 +289,14 @@ define i528 @large_promotion(i528 %A) nounwind {
 ; CHECK-NEXT:    bswapl %eax
 ; CHECK-NEXT:    shrdl $16, %eax, %ecx
 ; CHECK-NEXT:    movl %ecx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; CHECK-NEXT:    bswapl %ecx
+; CHECK-NEXT:    shrdl $16, %ecx, %eax
+; CHECK-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %ebp
 ; CHECK-NEXT:    bswapl %ebp
-; CHECK-NEXT:    shrdl $16, %ebp, %eax
-; CHECK-NEXT:    movl %eax, (%esp) # 4-byte Spill
+; CHECK-NEXT:    shrdl $16, %ebp, %ecx
+; CHECK-NEXT:    movl %ecx, (%esp) # 4-byte Spill
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %ebx
 ; CHECK-NEXT:    bswapl %ebx
 ; CHECK-NEXT:    shrdl $16, %ebx, %ebp
@@ -390,3 +390,30 @@ define i528 @large_promotion(i528 %A) nounwind {
   ret i528 %Z
 }
 declare i528 @llvm.bswap.i528(i528)
+
+define i32 @pr55484(i32 %0) {
+; CHECK-LABEL: pr55484:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; CHECK-NEXT:    movl %eax, %ecx
+; CHECK-NEXT:    shrl $8, %ecx
+; CHECK-NEXT:    shll $8, %eax
+; CHECK-NEXT:    orl %ecx, %eax
+; CHECK-NEXT:    cwtl
+; CHECK-NEXT:    retl
+;
+; CHECK64-LABEL: pr55484:
+; CHECK64:       # %bb.0:
+; CHECK64-NEXT:    movl %edi, %eax
+; CHECK64-NEXT:    shrl $8, %eax
+; CHECK64-NEXT:    shll $8, %edi
+; CHECK64-NEXT:    orl %eax, %edi
+; CHECK64-NEXT:    movswl %di, %eax
+; CHECK64-NEXT:    retq
+  %2 = lshr i32 %0, 8
+  %3 = shl i32 %0, 8
+  %4 = or i32 %2, %3
+  %5 = trunc i32 %4 to i16
+  %6 = sext i16 %5 to i32
+  ret i32 %6
+}

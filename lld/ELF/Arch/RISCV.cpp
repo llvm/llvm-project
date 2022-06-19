@@ -75,7 +75,6 @@ static uint32_t utype(uint32_t op, uint32_t rd, uint32_t imm) {
 
 RISCV::RISCV() {
   copyRel = R_RISCV_COPY;
-  noneRel = R_RISCV_NONE;
   pltRel = R_RISCV_JUMP_SLOT;
   relativeRel = R_RISCV_RELATIVE;
   iRelativeRel = R_RISCV_IRELATIVE;
@@ -93,7 +92,6 @@ RISCV::RISCV() {
   gotRel = symbolicRel;
 
   // .got[0] = _DYNAMIC
-  gotBaseSymInGotPlt = false;
   gotHeaderEntriesNum = 1;
 
   // .got.plt[0] = _dl_runtime_resolve, .got.plt[1] = link_map
@@ -263,7 +261,7 @@ RelExpr RISCV::getRelExpr(const RelType type, const Symbol &s,
   case R_RISCV_TLS_GD_HI20:
     return R_TLSGD_PC;
   case R_RISCV_TLS_GOT_HI20:
-    config->hasStaticTlsModel = true;
+    config->hasTlsIe = true;
     return R_GOT_PC;
   case R_RISCV_TPREL_HI20:
   case R_RISCV_TPREL_LO12_I:

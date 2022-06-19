@@ -9,15 +9,14 @@
 #ifndef LLVM_DEBUGINFO_PDB_NATIVE_INJECTEDSOURCESTREAM_H
 #define LLVM_DEBUGINFO_PDB_NATIVE_INJECTEDSOURCESTREAM_H
 
+#include "llvm/DebugInfo/MSF/MappedBlockStream.h"
 #include "llvm/DebugInfo/PDB/Native/HashTable.h"
-#include "llvm/DebugInfo/PDB/Native/RawTypes.h"
 #include "llvm/Support/Error.h"
 
 namespace llvm {
-namespace msf {
-class MappedBlockStream;
-}
 namespace pdb {
+struct SrcHeaderBlockEntry;
+struct SrcHeaderBlockHeader;
 class PDBStringTable;
 
 class InjectedSourceStream {
@@ -38,6 +37,6 @@ private:
   HashTable<SrcHeaderBlockEntry> InjectedSourceTable;
 };
 }
-}
+} // namespace llvm
 
 #endif

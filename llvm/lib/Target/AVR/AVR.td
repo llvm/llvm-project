@@ -45,8 +45,8 @@ include "AVRCallingConv.td"
 //===---------------------------------------------------------------------===//
 
 def AVRAsmWriter : AsmWriter {
- string AsmWriterClassName = "InstPrinter";
- bit isMCAsmWriter = 1;
+  string AsmWriterClassName = "InstPrinter";
+  bit isMCAsmWriter = 1;
 }
 
 //===---------------------------------------------------------------------===//
@@ -71,10 +71,9 @@ def AVRAsmParserVariant : AsmParserVariant {
 //===---------------------------------------------------------------------===//
 
 def AVR : Target {
-  let InstructionSet         = AVRInstrInfo;
-  let AssemblyWriters        = [AVRAsmWriter];
+  let InstructionSet = AVRInstrInfo;
+  let AssemblyWriters = [AVRAsmWriter];
 
-  let AssemblyParsers        = [AVRAsmParser];
+  let AssemblyParsers = [AVRAsmParser];
   let AssemblyParserVariants = [AVRAsmParserVariant];
 }
-

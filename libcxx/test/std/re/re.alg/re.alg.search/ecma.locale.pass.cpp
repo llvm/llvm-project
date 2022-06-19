@@ -8,6 +8,7 @@
 //
 // NetBSD does not support LC_COLLATE at the moment
 // XFAIL: netbsd
+// XFAIL: LIBCXX-AIX-FIXME
 
 // REQUIRES: locale.cs_CZ.ISO8859-2
 
@@ -71,6 +72,8 @@ int main(int, char**)
         assert(!std::regex_search(s, m, std::regex("[a[=M=]z]")));
         assert(m.size() == 0);
     }
+
+#ifndef TEST_HAS_NO_WIDE_CHARACTERS
     std::locale::global(std::locale(LOCALE_cs_CZ_ISO8859_2));
     {
         std::wcmatch m;
@@ -110,5 +113,7 @@ int main(int, char**)
         assert(!std::regex_search(s, m, std::wregex(L"[a[=M=]z]")));
         assert(m.size() == 0);
     }
+#endif // TEST_HAS_NO_WIDE_CHARACTERS
+
     return 0;
 }

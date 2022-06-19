@@ -1,7 +1,4 @@
 add_mlir_library(MLIRLspServerLib
-  lsp/Logging.cpp
-  lsp/Protocol.cpp
-  lsp/Transport.cpp
   LSPServer.cpp
   MLIRServer.cpp
   MlirLspServerMain.cpp
@@ -11,5 +8,6 @@ add_mlir_library(MLIRLspServerLib
 
   LINK_LIBS PUBLIC
   MLIRIR
+  MLIRLspServerSupportLib
   MLIRParser
   )

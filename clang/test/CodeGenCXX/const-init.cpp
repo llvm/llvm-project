@@ -1,6 +1,6 @@
-// RUN: %clang_cc1 -triple x86_64-apple-darwin -emit-llvm -o - %s | FileCheck %s
-// RUN: %clang_cc1 -triple x86_64-apple-darwin -emit-llvm -std=c++98 -o - %s | FileCheck %s
-// RUN: %clang_cc1 -triple x86_64-apple-darwin -emit-llvm -std=c++11 -o - %s | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-apple-darwin -emit-llvm -o - %s | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-apple-darwin -emit-llvm -std=c++98 -o - %s | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-apple-darwin -emit-llvm -std=c++11 -o - %s | FileCheck %s
 
 // CHECK: @a = global i32 10
 int a = 10;
@@ -83,6 +83,13 @@ int &i = reinterpret_cast<int&>(PR9558);
 int arr[2];
 // CHECK: @pastEnd = constant i32* bitcast (i8* getelementptr (i8, i8* bitcast ([2 x i32]* @arr to i8*), i64 8) to i32*)
 int &pastEnd = arr[2];
+
+// CHECK: @[[WCHAR_STR:.*]] = internal global [2 x i32] [i32 112, i32 0],
+// CHECK: @PR51105_a = global i32* {{.*}} @[[WCHAR_STR]],
+wchar_t *PR51105_a = (wchar_t[2]){ (L"p") };
+// CHECK: @[[CHAR_STR:.*]] = internal global [5 x i8] c"p\00\00\00\00",
+// CHECK: @PR51105_b = global i8* {{.*}} @[[CHAR_STR]],
+char *PR51105_b = (char [5]){ ("p") };
 
 struct X {
   long n : 8;

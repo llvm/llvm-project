@@ -189,8 +189,8 @@ vpxor  %ymm3, %ymm3, %ymm5
 # CHECK-NEXT:  1      0     0.25                        vpxor	%ymm3, %ymm3, %ymm5
 
 # CHECK:      Register File statistics:
-# CHECK-NEXT: Total number of mappings created:    79
-# CHECK-NEXT: Max number of mappings used:         24
+# CHECK-NEXT: Total number of mappings created:    24
+# CHECK-NEXT: Max number of mappings used:         14
 
 # CHECK:      Resources:
 # CHECK-NEXT: [0]   - BWDivider
@@ -350,13 +350,13 @@ vpxor  %ymm3, %ymm3, %ymm5
 # CHECK-NEXT: [0,57]    .    .    .   D=====eER   vandnpd	%ymm1, %ymm1, %ymm5
 # CHECK-NEXT: [0,58]    .    .    .   DeE-----R   vpandn	%ymm3, %ymm3, %ymm5
 # CHECK-NEXT: [0,59]    .    .    .   D-------R   xorps	%xmm0, %xmm0
-# CHECK-NEXT: [0,60]    .    .    .    D=E----R   xorpd	%xmm1, %xmm1
-# CHECK-NEXT: [0,61]    .    .    .    D=E----R   vxorps	%xmm2, %xmm2, %xmm2
-# CHECK-NEXT: [0,62]    .    .    .    D=E----R   vxorpd	%xmm1, %xmm1, %xmm1
-# CHECK-NEXT: [0,63]    .    .    .    D=E----R   vxorps	%ymm2, %ymm2, %ymm2
-# CHECK-NEXT: [0,64]    .    .    .    .DE----R   vxorpd	%ymm1, %ymm1, %ymm1
+# CHECK-NEXT: [0,60]    .    .    .    D------R   xorpd	%xmm1, %xmm1
+# CHECK-NEXT: [0,61]    .    .    .    D------R   vxorps	%xmm2, %xmm2, %xmm2
+# CHECK-NEXT: [0,62]    .    .    .    D------R   vxorpd	%xmm1, %xmm1, %xmm1
+# CHECK-NEXT: [0,63]    .    .    .    D------R   vxorps	%ymm2, %ymm2, %ymm2
+# CHECK-NEXT: [0,64]    .    .    .    .D-----R   vxorpd	%ymm1, %ymm1, %ymm1
 # CHECK-NEXT: [0,65]    .    .    .    .DeE---R   pxor	%mm2, %mm2
-# CHECK-NEXT: [0,66]    .    .    .    .DE----R   pxor	%xmm2, %xmm2
+# CHECK-NEXT: [0,66]    .    .    .    .D-----R   pxor	%xmm2, %xmm2
 # CHECK-NEXT: [0,67]    .    .    .    .D-----R   vpxor	%xmm3, %xmm3, %xmm3
 # CHECK-NEXT: [0,68]    .    .    .    . D----R   vpxor	%ymm3, %ymm3, %ymm3
 # CHECK-NEXT: [0,69]    .    .    .    . D----R   vxorps	%xmm4, %xmm4, %xmm5
@@ -433,13 +433,13 @@ vpxor  %ymm3, %ymm3, %ymm5
 # CHECK-NEXT: 57.    1     6.0    3.0    0.0       vandnpd	%ymm1, %ymm1, %ymm5
 # CHECK-NEXT: 58.    1     1.0    0.0    5.0       vpandn	%ymm3, %ymm3, %ymm5
 # CHECK-NEXT: 59.    1     0.0    0.0    7.0       xorps	%xmm0, %xmm0
-# CHECK-NEXT: 60.    1     2.0    0.0    4.0       xorpd	%xmm1, %xmm1
-# CHECK-NEXT: 61.    1     2.0    0.0    4.0       vxorps	%xmm2, %xmm2, %xmm2
-# CHECK-NEXT: 62.    1     2.0    0.0    4.0       vxorpd	%xmm1, %xmm1, %xmm1
-# CHECK-NEXT: 63.    1     2.0    0.0    4.0       vxorps	%ymm2, %ymm2, %ymm2
-# CHECK-NEXT: 64.    1     1.0    0.0    4.0       vxorpd	%ymm1, %ymm1, %ymm1
+# CHECK-NEXT: 60.    1     0.0    0.0    6.0       xorpd	%xmm1, %xmm1
+# CHECK-NEXT: 61.    1     0.0    0.0    6.0       vxorps	%xmm2, %xmm2, %xmm2
+# CHECK-NEXT: 62.    1     0.0    0.0    6.0       vxorpd	%xmm1, %xmm1, %xmm1
+# CHECK-NEXT: 63.    1     0.0    0.0    6.0       vxorps	%ymm2, %ymm2, %ymm2
+# CHECK-NEXT: 64.    1     0.0    0.0    5.0       vxorpd	%ymm1, %ymm1, %ymm1
 # CHECK-NEXT: 65.    1     1.0    1.0    3.0       pxor	%mm2, %mm2
-# CHECK-NEXT: 66.    1     1.0    0.0    4.0       pxor	%xmm2, %xmm2
+# CHECK-NEXT: 66.    1     0.0    0.0    5.0       pxor	%xmm2, %xmm2
 # CHECK-NEXT: 67.    1     0.0    0.0    5.0       vpxor	%xmm3, %xmm3, %xmm3
 # CHECK-NEXT: 68.    1     0.0    0.0    4.0       vpxor	%ymm3, %ymm3, %ymm3
 # CHECK-NEXT: 69.    1     0.0    0.0    4.0       vxorps	%xmm4, %xmm4, %xmm5
@@ -448,4 +448,4 @@ vpxor  %ymm3, %ymm3, %ymm5
 # CHECK-NEXT: 72.    1     0.0    0.0    3.0       vxorpd	%ymm1, %ymm1, %ymm3
 # CHECK-NEXT: 73.    1     0.0    0.0    3.0       vpxor	%xmm3, %xmm3, %xmm5
 # CHECK-NEXT: 74.    1     0.0    0.0    3.0       vpxor	%ymm3, %ymm3, %ymm5
-# CHECK-NEXT:        1     0.9    0.2    1.8       <total>
+# CHECK-NEXT:        1     0.8    0.2    1.9       <total>

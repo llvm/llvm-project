@@ -9,6 +9,8 @@
 
 // REQUIRES: stable-runtime
 
+extern void *memset(void *, int, __typeof__(sizeof(0)));
+
 __attribute__((noinline))
 void fct(volatile int *buffer)
 {

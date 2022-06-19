@@ -10,8 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef MLIR_TUTORIAL_TOY_PASSES_H
-#define MLIR_TUTORIAL_TOY_PASSES_H
+#ifndef TOY_PASSES_H
+#define TOY_PASSES_H
 
 #include <memory>
 
@@ -20,7 +20,7 @@ class Pass;
 
 namespace toy {
 std::unique_ptr<Pass> createShapeInferencePass();
-} // end namespace toy
-} // end namespace mlir
+} // namespace toy
+} // namespace mlir
 
-#endif // MLIR_TUTORIAL_TOY_PASSES_H
+#endif // TOY_PASSES_H

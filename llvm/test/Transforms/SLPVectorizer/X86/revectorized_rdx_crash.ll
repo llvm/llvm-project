@@ -19,35 +19,23 @@ define void @test() {
 ; CHECK:       for.cond.preheader:
 ; CHECK-NEXT:    [[I:%.*]] = getelementptr inbounds [100 x i32], [100 x i32]* undef, i64 0, i64 2
 ; CHECK-NEXT:    [[I1:%.*]] = getelementptr inbounds [100 x i32], [100 x i32]* undef, i64 0, i64 3
-; CHECK-NEXT:    [[I2:%.*]] = getelementptr inbounds [100 x i32], [100 x i32]* undef, i64 0, i64 4
-; CHECK-NEXT:    [[I3:%.*]] = getelementptr inbounds [100 x i32], [100 x i32]* undef, i64 0, i64 5
-; CHECK-NEXT:    [[I4:%.*]] = getelementptr inbounds [100 x i32], [100 x i32]* undef, i64 0, i64 6
-; CHECK-NEXT:    [[TMP0:%.*]] = bitcast i32* [[I]] to <2 x i32>*
-; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i32>, <2 x i32>* [[TMP0]], align 8
-; CHECK-NEXT:    [[TMP2:%.*]] = bitcast i32* [[I1]] to <2 x i32>*
-; CHECK-NEXT:    [[TMP3:%.*]] = load <2 x i32>, <2 x i32>* [[TMP2]], align 4
-; CHECK-NEXT:    [[TMP4:%.*]] = bitcast i32* [[I2]] to <2 x i32>*
-; CHECK-NEXT:    [[TMP5:%.*]] = load <2 x i32>, <2 x i32>* [[TMP4]], align 16
-; CHECK-NEXT:    [[TMP6:%.*]] = bitcast i32* [[I3]] to <2 x i32>*
-; CHECK-NEXT:    [[TMP7:%.*]] = load <2 x i32>, <2 x i32>* [[TMP6]], align 4
-; CHECK-NEXT:    [[TMP8:%.*]] = add <2 x i32> undef, [[TMP7]]
-; CHECK-NEXT:    [[TMP9:%.*]] = add <2 x i32> [[TMP8]], [[TMP5]]
-; CHECK-NEXT:    [[TMP10:%.*]] = add <2 x i32> [[TMP9]], [[TMP3]]
-; CHECK-NEXT:    [[TMP11:%.*]] = add <2 x i32> [[TMP10]], [[TMP1]]
-; CHECK-NEXT:    [[TMP12:%.*]] = add <2 x i32> [[TMP11]], undef
-; CHECK-NEXT:    [[TMP13:%.*]] = extractelement <2 x i32> [[TMP12]], i32 0
-; CHECK-NEXT:    [[TMP14:%.*]] = extractelement <2 x i32> [[TMP11]], i32 0
-; CHECK-NEXT:    [[I11:%.*]] = add i32 [[TMP14]], [[TMP13]]
-; CHECK-NEXT:    [[TMP15:%.*]] = extractelement <2 x i32> [[TMP12]], i32 1
-; CHECK-NEXT:    [[I18:%.*]] = add i32 [[TMP15]], [[I11]]
-; CHECK-NEXT:    [[I19:%.*]] = add i32 [[TMP15]], [[I18]]
-; CHECK-NEXT:    [[I20:%.*]] = add i32 undef, [[I19]]
-; CHECK-NEXT:    [[I21:%.*]] = add i32 undef, [[I20]]
-; CHECK-NEXT:    [[I22:%.*]] = add i32 undef, [[I21]]
-; CHECK-NEXT:    [[I23:%.*]] = add i32 undef, [[I22]]
+; CHECK-NEXT:    [[TMP0:%.*]] = bitcast i32* [[I]] to <4 x i32>*
+; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i32>, <4 x i32>* [[TMP0]], align 8
+; CHECK-NEXT:    [[TMP2:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[TMP1]])
+; CHECK-NEXT:    [[OP_RDX6:%.*]] = add i32 [[TMP2]], undef
+; CHECK-NEXT:    [[TMP3:%.*]] = bitcast i32* [[I1]] to <4 x i32>*
+; CHECK-NEXT:    [[TMP4:%.*]] = load <4 x i32>, <4 x i32>* [[TMP3]], align 4
+; CHECK-NEXT:    [[TMP5:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[TMP4]])
+; CHECK-NEXT:    [[OP_RDX5:%.*]] = add i32 [[TMP5]], undef
+; CHECK-NEXT:    [[TMP6:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> undef)
+; CHECK-NEXT:    [[OP_RDX:%.*]] = add i32 undef, [[OP_RDX6]]
+; CHECK-NEXT:    [[OP_RDX1:%.*]] = add i32 [[OP_RDX6]], [[OP_RDX5]]
+; CHECK-NEXT:    [[OP_RDX2:%.*]] = add i32 [[OP_RDX]], [[OP_RDX1]]
+; CHECK-NEXT:    [[OP_RDX3:%.*]] = add i32 [[OP_RDX2]], [[OP_RDX5]]
+; CHECK-NEXT:    [[OP_RDX4:%.*]] = add i32 [[TMP6]], [[OP_RDX3]]
 ; CHECK-NEXT:    br label [[IF_END]]
 ; CHECK:       if.end:
-; CHECK-NEXT:    [[R:%.*]] = phi i32 [ [[I23]], [[FOR_COND_PREHEADER]] ], [ undef, [[ENTRY:%.*]] ]
+; CHECK-NEXT:    [[R:%.*]] = phi i32 [ [[OP_RDX4]], [[FOR_COND_PREHEADER]] ], [ undef, [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    ret void
 ;
 entry:

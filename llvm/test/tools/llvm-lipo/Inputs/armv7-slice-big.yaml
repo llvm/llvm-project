@@ -263,7 +263,7 @@ LoadCommands:
   - cmd:             LC_LOAD_DYLINKER
     cmdsize:         28
     name:            12
-    PayloadString:   '/usr/lib/dyld'
+    Content:         '/usr/lib/dyld'
     ZeroPadBytes:    3
   - cmd:             LC_UUID
     cmdsize:         24
@@ -291,7 +291,7 @@ LoadCommands:
       timestamp:       2
       current_version: 26216708
       compatibility_version: 65536
-    PayloadString:   '/usr/lib/libc++.1.dylib'
+    Content:         '/usr/lib/libc++.1.dylib'
     ZeroPadBytes:    1
   - cmd:             LC_LOAD_DYLIB
     cmdsize:         68
@@ -300,7 +300,7 @@ LoadCommands:
       timestamp:       2
       current_version: 0
       compatibility_version: 0
-    PayloadString:   '@rpath/MobileConfig.framework/MobileConfig'
+    Content:         '@rpath/MobileConfig.framework/MobileConfig'
     ZeroPadBytes:    2
   - cmd:             LC_LOAD_DYLIB
     cmdsize:         84
@@ -309,7 +309,7 @@ LoadCommands:
       timestamp:       2
       current_version: 102895360
       compatibility_version: 19660800
-    PayloadString:   '/System/Library/Frameworks/Foundation.framework/Foundation'
+    Content:         '/System/Library/Frameworks/Foundation.framework/Foundation'
     ZeroPadBytes:    2
   - cmd:             LC_LOAD_DYLIB
     cmdsize:         76
@@ -318,7 +318,7 @@ LoadCommands:
       timestamp:       2
       current_version: 917504
       compatibility_version: 65536
-    PayloadString:   '/System/Library/Frameworks/MapKit.framework/MapKit'
+    Content:         '/System/Library/Frameworks/MapKit.framework/MapKit'
     ZeroPadBytes:    2
   - cmd:             LC_LOAD_DYLIB
     cmdsize:         84
@@ -327,7 +327,7 @@ LoadCommands:
       timestamp:       2
       current_version: 68352
       compatibility_version: 66048
-    PayloadString:   '/System/Library/Frameworks/QuartzCore.framework/QuartzCore'
+    Content:         '/System/Library/Frameworks/QuartzCore.framework/QuartzCore'
     ZeroPadBytes:    2
   - cmd:             LC_LOAD_DYLIB
     cmdsize:         76
@@ -336,7 +336,7 @@ LoadCommands:
       timestamp:       2
       current_version: 3997696000
       compatibility_version: 65536
-    PayloadString:   '/System/Library/Frameworks/UIKit.framework/UIKit'
+    Content:         '/System/Library/Frameworks/UIKit.framework/UIKit'
     ZeroPadBytes:    4
   - cmd:             LC_LOAD_DYLIB
     cmdsize:         52
@@ -345,7 +345,7 @@ LoadCommands:
       timestamp:       2
       current_version: 14942208
       compatibility_version: 65536
-    PayloadString:   '/usr/lib/libobjc.A.dylib'
+    Content:         '/usr/lib/libobjc.A.dylib'
     ZeroPadBytes:    4
   - cmd:             LC_LOAD_DYLIB
     cmdsize:         52
@@ -354,7 +354,7 @@ LoadCommands:
       timestamp:       2
       current_version: 82115073
       compatibility_version: 65536
-    PayloadString:   '/usr/lib/libSystem.B.dylib'
+    Content:         '/usr/lib/libSystem.B.dylib'
     ZeroPadBytes:    2
   - cmd:             LC_LOAD_DYLIB
     cmdsize:         92
@@ -363,17 +363,17 @@ LoadCommands:
       timestamp:       2
       current_version: 102895360
       compatibility_version: 9830400
-    PayloadString:   '/System/Library/Frameworks/CoreFoundation.framework/CoreFoundation'
+    Content:         '/System/Library/Frameworks/CoreFoundation.framework/CoreFoundation'
     ZeroPadBytes:    2
   - cmd:             LC_RPATH
     cmdsize:         28
     path:            12
-    PayloadString:   '/usr/lib/swift'
+    Content:         '/usr/lib/swift'
     ZeroPadBytes:    2
   - cmd:             LC_RPATH
     cmdsize:         40
     path:            12
-    PayloadString:   '@executable_path/Frameworks'
+    Content:         '@executable_path/Frameworks'
     ZeroPadBytes:    1
   - cmd:             LC_DATA_IN_CODE
     cmdsize:         16

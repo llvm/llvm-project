@@ -16,6 +16,7 @@
 #include <csignal>
 #include <cstdint>
 #include <cstdio>
+#include <string>
 #include <sys/syslimits.h>
 #include <unistd.h>
 #include <vector>
@@ -53,6 +54,7 @@ typedef uint32_t nub_event_t;
 typedef uint32_t nub_bool_t;
 
 #define INVALID_NUB_PROCESS ((nub_process_t)0)
+#define INVALID_NUB_PROCESS_ARCH ((nub_process_t)-1)
 #define INVALID_NUB_THREAD ((nub_thread_t)0)
 #define INVALID_NUB_WATCH_ID ((nub_watch_t)0)
 #define INVALID_NUB_HW_INDEX UINT32_MAX
@@ -318,11 +320,13 @@ struct DNBExecutableImageInfo {
 
 struct DNBRegionInfo {
 public:
-  DNBRegionInfo() : addr(0), size(0), permissions(0), dirty_pages() {}
+  DNBRegionInfo()
+      : addr(0), size(0), permissions(0), dirty_pages(), vm_types() {}
   nub_addr_t addr;
   nub_addr_t size;
   uint32_t permissions;
   std::vector<nub_addr_t> dirty_pages;
+  std::vector<std::string> vm_types;
 };
 
 enum DNBProfileDataScanType {

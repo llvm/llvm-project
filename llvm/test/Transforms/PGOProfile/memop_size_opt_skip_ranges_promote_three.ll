@@ -1,4 +1,3 @@
-; RUN: opt < %s -pgo-memop-opt -pgo-memop-count-threshold=100 -pgo-memop-percent-threshold=10 -S | FileCheck %s
 ; RUN: opt < %s -passes=pgo-memop-opt -pgo-memop-count-threshold=100 -pgo-memop-percent-threshold=10 -S | FileCheck %s
 
 define void @foo(i8* %dst, i8* %src, i8* %dst2, i8* %src2, i64 %n) !prof !27 {

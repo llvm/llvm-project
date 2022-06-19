@@ -2,7 +2,7 @@
 // expected-no-diagnostics
 enum A { A1, A2, A3 };
 typedef enum A A;
-void test() {
+void test(void) {
   A a;
   a++;
   a--;

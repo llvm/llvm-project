@@ -18,6 +18,7 @@
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/MC/MCInstrDesc.h"
 #include "llvm/MC/SubtargetFeature.h"
+#include "llvm/Support/RISCVISAInfo.h"
 
 namespace llvm {
 
@@ -68,17 +69,35 @@ enum {
   HasMergeOpMask = 1 << HasMergeOpShift,
 
   // Does this instruction have a SEW operand. It will be the last explicit
-  // operand. Used by RVV Pseudos.
+  // operand unless there is a vector policy operand. Used by RVV Pseudos.
   HasSEWOpShift = HasMergeOpShift + 1,
   HasSEWOpMask = 1 << HasSEWOpShift,
 
   // Does this instruction have a VL operand. It will be the second to last
-  // explicit operand. Used by RVV Pseudos.
+  // explicit operand unless there is a vector policy operand. Used by RVV
+  // Pseudos.
   HasVLOpShift = HasSEWOpShift + 1,
   HasVLOpMask = 1 << HasVLOpShift,
+
+  // Does this instruction have a vector policy operand. It will be the last
+  // explicit operand. Used by RVV Pseudos.
+  HasVecPolicyOpShift = HasVLOpShift + 1,
+  HasVecPolicyOpMask = 1 << HasVecPolicyOpShift,
+
+  // Is this instruction a vector widening reduction instruction. Used by RVV
+  // Pseudos.
+  IsRVVWideningReductionShift = HasVecPolicyOpShift + 1,
+  IsRVVWideningReductionMask = 1 << IsRVVWideningReductionShift,
+
+  // Does this instruction care about mask policy. If it is not, the mask policy
+  // could be either agnostic or undisturbed. For example, unmasked, store, and
+  // reduction operations result would not be affected by mask policy, so
+  // compiler has free to select either one.
+  UsesMaskPolicyShift = IsRVVWideningReductionShift + 1,
+  UsesMaskPolicyMask = 1 << UsesMaskPolicyShift,
 };
 
-// Match with the definitions in RISCVInstrFormatsV.td
+// Match with the definitions in RISCVInstrFormats.td
 enum VConstraintType {
   NoConstraint = 0,
   VS2Constraint = 0b001,
@@ -97,6 +116,11 @@ enum VLMUL : uint8_t {
   LMUL_F2
 };
 
+enum {
+  TAIL_AGNOSTIC = 1,
+  MASK_AGNOSTIC = 2,
+};
+
 // Helper functions to read TSFlags.
 /// \returns the format of the instruction.
 static inline unsigned getFormat(uint64_t TSFlags) {
@@ -104,8 +128,8 @@ static inline unsigned getFormat(uint64_t TSFlags) {
 }
 /// \returns the constraint for the instruction.
 static inline VConstraintType getConstraint(uint64_t TSFlags) {
-  return static_cast<VConstraintType>
-             ((TSFlags & ConstraintMask) >> ConstraintShift);
+  return static_cast<VConstraintType>((TSFlags & ConstraintMask) >>
+                                      ConstraintShift);
 }
 /// \returns the LMUL for the instruction.
 static inline VLMUL getLMul(uint64_t TSFlags) {
@@ -130,6 +154,38 @@ static inline bool hasSEWOp(uint64_t TSFlags) {
 /// \returns true if there is a VL operand for the instruction.
 static inline bool hasVLOp(uint64_t TSFlags) {
   return TSFlags & HasVLOpMask;
+}
+/// \returns true if there is a vector policy operand for this instruction.
+static inline bool hasVecPolicyOp(uint64_t TSFlags) {
+  return TSFlags & HasVecPolicyOpMask;
+}
+/// \returns true if it is a vector widening reduction instruction.
+static inline bool isRVVWideningReduction(uint64_t TSFlags) {
+  return TSFlags & IsRVVWideningReductionMask;
+}
+/// \returns true if mask policy is valid for the instruction.
+static inline bool usesMaskPolicy(uint64_t TSFlags) {
+  return TSFlags & UsesMaskPolicyMask;
+}
+
+static inline unsigned getVLOpNum(const MCInstrDesc &Desc) {
+  const uint64_t TSFlags = Desc.TSFlags;
+  // This method is only called if we expect to have a VL operand, and all
+  // instructions with VL also have SEW.
+  assert(hasSEWOp(TSFlags) && hasVLOp(TSFlags));
+  unsigned Offset = 2;
+  if (hasVecPolicyOp(TSFlags))
+    Offset = 3;
+  return Desc.getNumOperands() - Offset;
+}
+
+static inline unsigned getSEWOpNum(const MCInstrDesc &Desc) {
+  const uint64_t TSFlags = Desc.TSFlags;
+  assert(hasSEWOp(TSFlags));
+  unsigned Offset = 1;
+  if (hasVecPolicyOp(TSFlags))
+    Offset = 2;
+  return Desc.getNumOperands() - Offset;
 }
 
 // RISC-V Specific Machine Operand Flags
@@ -158,13 +214,17 @@ enum {
 namespace RISCVOp {
 enum OperandType : unsigned {
   OPERAND_FIRST_RISCV_IMM = MCOI::OPERAND_FIRST_TARGET,
-  OPERAND_UIMM4 = OPERAND_FIRST_RISCV_IMM,
+  OPERAND_UIMM2 = OPERAND_FIRST_RISCV_IMM,
+  OPERAND_UIMM3,
+  OPERAND_UIMM4,
   OPERAND_UIMM5,
+  OPERAND_UIMM7,
   OPERAND_UIMM12,
   OPERAND_SIMM12,
   OPERAND_UIMM20,
   OPERAND_UIMMLOG2XLEN,
-  OPERAND_LAST_RISCV_IMM = OPERAND_UIMMLOG2XLEN,
+  OPERAND_RVKRNUM,
+  OPERAND_LAST_RISCV_IMM = OPERAND_RVKRNUM,
   // Operand is either a register or uimm5, this is used by V extension pseudo
   // instructions to represent a value that be passed as AVL to either vsetvli
   // or vsetivli.
@@ -272,6 +332,16 @@ struct SysReg {
 #include "RISCVGenSearchableTables.inc"
 } // end namespace RISCVSysReg
 
+namespace RISCVInsnOpcode {
+struct RISCVOpcode {
+  const char *Name;
+  unsigned Value;
+};
+
+#define GET_RISCVOpcodesList_DECL
+#include "RISCVGenSearchableTables.inc"
+} // end namespace RISCVInsnOpcode
+
 namespace RISCVABI {
 
 enum ABI {
@@ -306,6 +376,9 @@ namespace RISCVFeatures {
 // triple. Exits with report_fatal_error if not.
 void validate(const Triple &TT, const FeatureBitset &FeatureBits);
 
+llvm::Expected<std::unique_ptr<RISCVISAInfo>>
+parseFeatureBits(bool IsRV64, const FeatureBitset &FeatureBits);
+
 } // namespace RISCVFeatures
 
 namespace RISCVVType {
@@ -330,9 +403,20 @@ inline static RISCVII::VLMUL getVLMUL(unsigned VType) {
 // Decode VLMUL into 1,2,4,8 and fractional indicator.
 std::pair<unsigned, bool> decodeVLMUL(RISCVII::VLMUL VLMUL);
 
+inline static RISCVII::VLMUL encodeLMUL(unsigned LMUL, bool Fractional) {
+  assert(isValidLMUL(LMUL, Fractional) && "Unsupported LMUL");
+  unsigned LmulLog2 = Log2_32(LMUL);
+  return static_cast<RISCVII::VLMUL>(Fractional ? 8 - LmulLog2 : LmulLog2);
+}
+
 inline static unsigned decodeVSEW(unsigned VSEW) {
   assert(VSEW < 8 && "Unexpected VSEW value");
   return 1 << (VSEW + 3);
+}
+
+inline static unsigned encodeSEW(unsigned SEW) {
+  assert(isValidSEW(SEW) && "Unexpected SEW value");
+  return Log2_32(SEW) - 3;
 }
 
 inline static unsigned getSEW(unsigned VType) {

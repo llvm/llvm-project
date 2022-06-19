@@ -33,14 +33,13 @@
 #include "llvm/Analysis/BasicAliasAnalysis.h"
 #include "llvm/Analysis/BranchProbabilityInfo.h"
 #include "llvm/Analysis/GlobalsModRef.h"
+#include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/LoopPass.h"
 #include "llvm/Analysis/MemorySSA.h"
 #include "llvm/Analysis/ScalarEvolution.h"
 #include "llvm/Analysis/ScalarEvolutionAliasAnalysis.h"
-#include "llvm/IR/Constants.h"
 #include "llvm/IR/DebugInfo.h"
 #include "llvm/IR/Dominators.h"
-#include "llvm/IR/Function.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
@@ -309,7 +308,7 @@ static void computeBlocksDominatingExits(
     // worklist, unless we visited it already.
     BasicBlock *IDomBB = DT.getNode(BB)->getIDom()->getBlock();
 
-    // Exit blocks can have an immediate dominator not beloinging to the
+    // Exit blocks can have an immediate dominator not belonging to the
     // loop. For an exit block to be immediately dominated by another block
     // outside the loop, it implies not all paths from that dominator, to the
     // exit block, go through the loop.
@@ -339,8 +338,10 @@ bool llvm::formLCSSA(Loop &L, const DominatorTree &DT, const LoopInfo *LI,
 
 #ifdef EXPENSIVE_CHECKS
   // Verify all sub-loops are in LCSSA form already.
-  for (Loop *SubLoop: L)
+  for (Loop *SubLoop: L) {
+    (void)SubLoop; // Silence unused variable warning.
     assert(SubLoop->isRecursivelyLCSSAForm(DT, *LI) && "Subloop not in LCSSA!");
+  }
 #endif
 
   SmallVector<BasicBlock *, 8> ExitBlocks;

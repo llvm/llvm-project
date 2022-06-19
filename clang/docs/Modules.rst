@@ -33,12 +33,12 @@ The ``#include`` mechanism provided by the C preprocessor is a very poor way to 
   code into headers.
 
 * **Fragility**: ``#include`` directives are treated as textual
-  inclusion by the preprocessor, and are therefore subject to any  
-  active macro definitions at the time of inclusion. If any of the 
-  active macro definitions happens to collide with a name in the 
-  library, it can break the library API or cause compilation failures 
-  in the library header itself. For an extreme example, 
-  ``#define std "The C++ Standard"`` and then include a standard  
+  inclusion by the preprocessor, and are therefore subject to any
+  active macro definitions at the time of inclusion. If any of the
+  active macro definitions happens to collide with a name in the
+  library, it can break the library API or cause compilation failures
+  in the library header itself. For an extreme example,
+  ``#define std "The C++ Standard"`` and then include a standard
   library header: the result is a horrific cascade of failures in the
   C++ Standard Library's implementation. More subtle real-world
   problems occur when the headers for two different libraries interact
@@ -158,7 +158,7 @@ Module maps are specified as separate files (each named ``module.modulemap``) al
 .. note::
 
   To actually see any benefits from modules, one first has to introduce module maps for the underlying C standard library and the libraries and headers on which it depends. The section `Modularizing a Platform`_ describes the steps one must take to write these module maps.
-  
+
 One can use module maps without modules to check the integrity of the use of header files. To do this, use the ``-fimplicit-module-maps`` option instead of the ``-fmodules`` option, or use ``-fmodule-map-file=`` option to explicitly specify the module map files to load.
 
 Compilation model
@@ -390,7 +390,7 @@ For example, suppose:
 
 * ``<stdio.h>`` defines a macro ``getc`` (and exports its ``#define``)
 * ``<cstdio>`` imports the ``<stdio.h>`` module and undefines the macro (and exports its ``#undef``)
-  
+
 The ``#undef`` overrides the ``#define``, and a source file that imports both modules *in any order* will not see ``getc`` defined as a macro.
 
 Module Map Language
@@ -447,7 +447,7 @@ As an example, the module map file for the C standard library might look a bit l
     // ...more headers follow...
   }
 
-Here, the top-level module ``std`` encompasses the whole C standard library. It has a number of submodules containing different parts of the standard library: ``complex`` for complex numbers, ``ctype`` for character types, etc. Each submodule lists one of more headers that provide the contents for that submodule. Finally, the ``export *`` command specifies that anything included by that submodule will be automatically re-exported. 
+Here, the top-level module ``std`` encompasses the whole C standard library. It has a number of submodules containing different parts of the standard library: ``complex`` for complex numbers, ``ctype`` for character types, etc. Each submodule lists one of more headers that provide the contents for that submodule. Finally, the ``export *`` command specifies that anything included by that submodule will be automatically re-exported.
 
 Lexical structure
 -----------------
@@ -646,7 +646,7 @@ A header with the ``umbrella`` specifier is called an umbrella header. An umbrel
 
 .. note::
     Any headers not included by the umbrella header should have
-    explicit ``header`` declarations. Use the   
+    explicit ``header`` declarations. Use the
     ``-Wincomplete-umbrella`` warning option to ask Clang to complain
     about headers not covered by the umbrella header or the module map.
 
@@ -691,7 +691,7 @@ An umbrella directory declaration specifies that all of the headers in the speci
 
   *umbrella-dir-declaration*:
     ``umbrella`` *string-literal*
-  
+
 The *string-literal* refers to a directory. When the module is built, all of the header files in that directory (and its subdirectories) are included in the module.
 
 An *umbrella-dir-declaration* shall not refer to the same directory as the location of an umbrella *header-declaration*. In other words, only a single kind of umbrella can be specified for a given directory.
@@ -719,7 +719,7 @@ A *submodule-declaration* that is an *inferred-submodule-declaration* describes 
 
   *inferred-submodule-declaration*:
     ``explicit``:sub:`opt` ``framework``:sub:`opt` ``module`` '*' *attributes*:sub:`opt` '{' *inferred-submodule-member** '}'
-  
+
   *inferred-submodule-member*:
     ``export`` '*'
 
@@ -729,9 +729,9 @@ For each header included by the umbrella header or in the umbrella directory tha
 
 * Have the same name as the header (without the file extension)
 * Have the ``explicit`` specifier, if the *inferred-submodule-declaration* has the ``explicit`` specifier
-* Have the ``framework`` specifier, if the    
+* Have the ``framework`` specifier, if the
   *inferred-submodule-declaration* has the ``framework`` specifier
-* Have the attributes specified by the \ *inferred-submodule-declaration* 
+* Have the attributes specified by the \ *inferred-submodule-declaration*
 * Contain a single *header-declaration* naming that header
 * Contain a single *export-declaration* ``export *``, if the \ *inferred-submodule-declaration* contains the \ *inferred-submodule-member* ``export *``
 
@@ -914,11 +914,11 @@ Each *identifier* in the *config-macro-list* specifies the name of a macro. The 
 
 A *config-macros-declaration* shall only be present on a top-level module, i.e., a module that is not nested within an enclosing module.
 
-The ``exhaustive`` attribute specifies that the list of macros in the *config-macros-declaration* is exhaustive, meaning that no other macro definition is intended to have an effect on the API of that module. 
+The ``exhaustive`` attribute specifies that the list of macros in the *config-macros-declaration* is exhaustive, meaning that no other macro definition is intended to have an effect on the API of that module.
 
 .. note::
 
-  The ``exhaustive`` attribute implies that any macro definitions 
+  The ``exhaustive`` attribute implies that any macro definitions
   for macros not listed as configuration macros should be ignored
   completely when building the module. As an optimization, the
   compiler could reduce the number of unique module variants by not
@@ -1062,7 +1062,7 @@ When writing a private module as part of a *framework*, it's recommended that:
 
 Modularizing a Platform
 =======================
-To get any benefit out of modules, one needs to introduce module maps for software libraries starting at the bottom of the stack. This typically means introducing a module map covering the operating system's headers and the C standard library headers (in ``/usr/include``, for a Unix system). 
+To get any benefit out of modules, one needs to introduce module maps for software libraries starting at the bottom of the stack. This typically means introducing a module map covering the operating system's headers and the C standard library headers (in ``/usr/include``, for a Unix system).
 
 The module maps will be written using the `module map language`_, which provides the tools necessary to describe the mapping between headers and modules. Because the set of headers differs from one system to the next, the module map will likely have to be somewhat customized for, e.g., a particular distribution and version of the operating system. Moreover, the system headers themselves may require some modification, if they exhibit any anti-patterns that break modules. Such common patterns are described below.
 

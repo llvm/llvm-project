@@ -33,7 +33,8 @@ endif()
 if(CMAKE_SYSTEM_NAME STREQUAL "Linux" AND
    COMPILER_RT_LIBCXX_PATH AND
    COMPILER_RT_LIBCXXABI_PATH)
-  list(APPEND LIBFUZZER_UNITTEST_CFLAGS -nostdinc++)
+  list(APPEND LIBFUZZER_UNITTEST_CFLAGS -nostdinc++ -fno-exceptions)
+  list(APPEND LIBFUZZER_UNITTEST_LINK_FLAGS -nostdlib++ -fno-exceptions)
 endif()
 
 if ("-fvisibility=hidden" IN_LIST LIBFUZZER_CFLAGS)
@@ -73,7 +74,7 @@ if(COMPILER_RT_DEFAULT_TARGET_ARCH IN_LIST FUZZER_SUPPORTED_ARCH)
     FuzzerUnitTests "Fuzzer-${arch}-Test" ${arch}
     SOURCES FuzzerUnittest.cpp ${COMPILER_RT_GTEST_SOURCE}
     RUNTIME ${LIBFUZZER_TEST_RUNTIME}
-    DEPS gtest ${LIBFUZZER_TEST_RUNTIME_DEPS} 
+    DEPS llvm_gtest ${LIBFUZZER_TEST_RUNTIME_DEPS}
     CFLAGS ${LIBFUZZER_UNITTEST_CFLAGS} ${LIBFUZZER_TEST_RUNTIME_CFLAGS}
     LINK_FLAGS ${LIBFUZZER_UNITTEST_LINK_FLAGS} ${LIBFUZZER_TEST_RUNTIME_LINK_FLAGS})
   set_target_properties(FuzzerUnitTests PROPERTIES
@@ -83,7 +84,7 @@ if(COMPILER_RT_DEFAULT_TARGET_ARCH IN_LIST FUZZER_SUPPORTED_ARCH)
   generate_compiler_rt_tests(FuzzedDataProviderTestObjects
     FuzzedDataProviderUnitTests "FuzzerUtils-${arch}-Test" ${arch}
     SOURCES FuzzedDataProviderUnittest.cpp ${COMPILER_RT_GTEST_SOURCE}
-    DEPS gtest ${LIBFUZZER_TEST_RUNTIME_DEPS} ${COMPILER_RT_SOURCE_DIR}/include/fuzzer/FuzzedDataProvider.h
+    DEPS llvm_gtest ${LIBFUZZER_TEST_RUNTIME_DEPS} ${COMPILER_RT_SOURCE_DIR}/include/fuzzer/FuzzedDataProvider.h
     CFLAGS ${LIBFUZZER_UNITTEST_CFLAGS} ${LIBFUZZER_TEST_RUNTIME_CFLAGS}
     LINK_FLAGS ${LIBFUZZER_UNITTEST_LINK_FLAGS} ${LIBFUZZER_TEST_RUNTIME_LINK_FLAGS})
   set_target_properties(FuzzedDataProviderUnitTests PROPERTIES

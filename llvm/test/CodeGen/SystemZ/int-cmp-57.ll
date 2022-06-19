@@ -82,7 +82,7 @@ define i32 @fun6(i32 %arg) {
 ; CHECK-LABEL: fun6:
 ; CHECK: afi
 ; CHECK-NEXT: chi
-; CHECK-NEXT: locrlh
+; CHECK-NEXT: locre
 bb:
   %tmp = add i32 %arg, -2147483648
   %tmp1 = icmp eq i32 %tmp, 0
@@ -94,7 +94,7 @@ define i32 @fun7(i32 %arg) {
 ; CHECK-LABEL: fun7:
 ; CHECK: afi
 ; CHECK-NEXT: chi
-; CHECK-NEXT: locrle
+; CHECK-NEXT: locrh
 bb:
   %tmp = add i32 %arg, -2147483648
   %tmp1 = icmp sgt i32 %tmp, 0

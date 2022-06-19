@@ -21,7 +21,7 @@
 # CHECK:      Disassembly of section .text:
 # CHECK-EMPTY:
 # CHECK-NEXT: <__start>:
-# CHECK-NEXT:    20000:       jal     131120
+# CHECK-NEXT:    20000:       jal     0x20030
 # CHECK-NEXT:    20004:       nop
 # CHECK-EMPTY:
 # CHECK-NEXT: Disassembly of section .plt:

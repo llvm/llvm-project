@@ -679,7 +679,7 @@ public:
   bool IsCStringContainer(bool check_pointer = false);
 
   std::pair<size_t, bool>
-  ReadPointedString(lldb::DataBufferSP &buffer_sp, Status &error,
+  ReadPointedString(lldb::WritableDataBufferSP &buffer_sp, Status &error,
                     uint32_t max_length = 0, bool honor_array = true,
                     lldb::Format item_format = lldb::eFormatCharArray);
 
@@ -795,7 +795,7 @@ protected:
 
   class ChildrenManager {
   public:
-    ChildrenManager() : m_mutex(), m_children() {}
+    ChildrenManager() = default;
 
     bool HasChildAtIndex(size_t idx) {
       std::lock_guard<std::recursive_mutex> guard(m_mutex);
@@ -1000,7 +1000,7 @@ protected:
   void SetPreferredDisplayLanguageIfNeeded(lldb::LanguageType);
 
 protected:
-  virtual void DoUpdateChildrenAddressType(ValueObject &valobj) { return; };
+  virtual void DoUpdateChildrenAddressType(ValueObject &valobj){};
 
 private:
   virtual CompilerType MaybeCalculateCompleteType();

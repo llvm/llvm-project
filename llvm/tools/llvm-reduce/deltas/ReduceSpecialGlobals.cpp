@@ -26,37 +26,17 @@ static StringRef SpecialGlobalNames[] = {"llvm.used", "llvm.compiler.used"};
 
 /// Removes all special globals aren't inside any of the
 /// desired Chunks.
-static void
-extractSpecialGlobalsFromModule(const std::vector<Chunk> &ChunksToKeep,
-                                Module *Program) {
-  Oracle O(ChunksToKeep);
-
+static void extractSpecialGlobalsFromModule(Oracle &O, Module &Program) {
   for (StringRef Name : SpecialGlobalNames) {
-    if (auto *Used = Program->getNamedGlobal(Name)) {
+    if (auto *Used = Program.getNamedGlobal(Name)) {
       Used->replaceAllUsesWith(UndefValue::get(Used->getType()));
       Used->eraseFromParent();
     }
   }
 }
 
-/// Counts the amount of special globals and prints their
-/// respective name & index
-static int countSpecialGlobals(Module *Program) {
-  // TODO: Silence index with --quiet flag
-  errs() << "----------------------------\n";
-  errs() << "Special Globals Index Reference:\n";
-  int Count = 0;
-  for (StringRef Name : SpecialGlobalNames) {
-    if (auto *Used = Program->getNamedGlobal(Name))
-      errs() << "\t" << ++Count << ": " << Used->getName() << "\n";
-  }
-  errs() << "----------------------------\n";
-  return Count;
-}
-
 void llvm::reduceSpecialGlobalsDeltaPass(TestRunner &Test) {
   errs() << "*** Reducing Special Globals ...\n";
-  int Functions = countSpecialGlobals(Test.getProgram());
-  runDeltaPass(Test, Functions, extractSpecialGlobalsFromModule);
+  runDeltaPass(Test, extractSpecialGlobalsFromModule);
   errs() << "----------------------------\n";
 }

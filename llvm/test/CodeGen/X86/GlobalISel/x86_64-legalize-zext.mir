@@ -124,8 +124,7 @@ body:             |
     ; CHECK: liveins: $edi
     ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY $edi
     ; CHECK: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 1
-    ; CHECK: [[COPY1:%[0-9]+]]:_(s32) = COPY [[COPY]](s32)
-    ; CHECK: [[AND:%[0-9]+]]:_(s32) = G_AND [[COPY1]], [[C]]
+    ; CHECK: [[AND:%[0-9]+]]:_(s32) = G_AND [[COPY]], [[C]]
     ; CHECK: $eax = COPY [[AND]](s32)
     ; CHECK: RET 0, implicit $eax
     %1:_(s32) = COPY $edi
@@ -205,8 +204,7 @@ body:             |
     ; CHECK: liveins: $edi
     ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY $edi
     ; CHECK: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 255
-    ; CHECK: [[COPY1:%[0-9]+]]:_(s32) = COPY [[COPY]](s32)
-    ; CHECK: [[AND:%[0-9]+]]:_(s32) = G_AND [[COPY1]], [[C]]
+    ; CHECK: [[AND:%[0-9]+]]:_(s32) = G_AND [[COPY]], [[C]]
     ; CHECK: $eax = COPY [[AND]](s32)
     ; CHECK: RET 0, implicit $eax
     %1:_(s32) = COPY $edi
@@ -259,8 +257,7 @@ body:             |
     ; CHECK: liveins: $edi
     ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY $edi
     ; CHECK: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 65535
-    ; CHECK: [[COPY1:%[0-9]+]]:_(s32) = COPY [[COPY]](s32)
-    ; CHECK: [[AND:%[0-9]+]]:_(s32) = G_AND [[COPY1]], [[C]]
+    ; CHECK: [[AND:%[0-9]+]]:_(s32) = G_AND [[COPY]], [[C]]
     ; CHECK: $eax = COPY [[AND]](s32)
     ; CHECK: RET 0, implicit $eax
     %1:_(s32) = COPY $edi

@@ -8,10 +8,15 @@
 
 // <array>
 
-// template <class T, size_t N >
+// template <class T, size_t N>
 // struct array
 
 // Test the size and alignment matches that of an array of a given type.
+
+// Ignore error about requesting a large alignment not being ABI compatible with older AIX systems.
+#if defined(_AIX)
+# pragma clang diagnostic ignored "-Waix-compat"
+#endif
 
 #include <array>
 #include <iterator>
@@ -19,7 +24,6 @@
 #include <cstddef>
 
 #include "test_macros.h"
-
 
 template <class T, size_t Size>
 struct MyArray {

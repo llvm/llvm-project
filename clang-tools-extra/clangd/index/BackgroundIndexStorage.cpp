@@ -11,10 +11,7 @@
 #include "support/Logger.h"
 #include "support/Path.h"
 #include "llvm/ADT/Optional.h"
-#include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/SmallString.h"
-#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/FileSystem.h"
@@ -58,7 +55,8 @@ public:
     auto Buffer = llvm::MemoryBuffer::getFile(ShardPath);
     if (!Buffer)
       return nullptr;
-    if (auto I = readIndexFile(Buffer->get()->getBuffer()))
+    if (auto I =
+            readIndexFile(Buffer->get()->getBuffer(), SymbolOrigin::Background))
       return std::make_unique<IndexFileIn>(std::move(*I));
     else
       elog("Error while reading shard {0}: {1}", ShardIdentifier,

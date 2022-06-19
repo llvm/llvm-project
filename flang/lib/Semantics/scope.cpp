@@ -285,7 +285,7 @@ void Scope::add_importName(const SourceName &name) {
 
 // true if name can be imported or host-associated from parent scope.
 bool Scope::CanImport(const SourceName &name) const {
-  if (IsGlobal() || parent_.IsGlobal()) {
+  if (IsTopLevel() || parent_.IsTopLevel()) {
     return false;
   }
   switch (GetImportKind()) {
@@ -306,7 +306,7 @@ const Scope *Scope::FindScope(parser::CharBlock source) const {
 
 Scope *Scope::FindScope(parser::CharBlock source) {
   bool isContained{sourceRange_.Contains(source)};
-  if (!isContained && !IsGlobal() && !IsModuleFile()) {
+  if (!isContained && !IsTopLevel() && !IsModuleFile()) {
     return nullptr;
   }
   for (auto &child : children_) {
@@ -314,7 +314,7 @@ Scope *Scope::FindScope(parser::CharBlock source) {
       return scope;
     }
   }
-  return isContained ? this : nullptr;
+  return isContained && !IsTopLevel() ? this : nullptr;
 }
 
 void Scope::AddSourceRange(const parser::CharBlock &source) {
@@ -357,21 +357,47 @@ bool Scope::IsStmtFunction() const {
   return symbol_ && symbol_->test(Symbol::Flag::StmtFunction);
 }
 
-bool Scope::IsParameterizedDerivedType() const {
-  if (!IsDerivedType()) {
+template <common::TypeParamAttr... ParamAttr> struct IsTypeParamHelper {
+  static_assert(sizeof...(ParamAttr) == 0, "must have one or zero template");
+  static bool IsParam(const Symbol &symbol) {
+    return symbol.has<TypeParamDetails>();
+  }
+};
+
+template <common::TypeParamAttr ParamAttr> struct IsTypeParamHelper<ParamAttr> {
+  static bool IsParam(const Symbol &symbol) {
+    if (const auto *typeParam{symbol.detailsIf<TypeParamDetails>()}) {
+      return typeParam->attr() == ParamAttr;
+    }
     return false;
   }
-  if (const Scope * parent{GetDerivedTypeParent()}) {
-    if (parent->IsParameterizedDerivedType()) {
-      return true;
+};
+
+template <common::TypeParamAttr... ParamAttr>
+static bool IsParameterizedDerivedTypeHelper(const Scope &scope) {
+  if (scope.IsDerivedType()) {
+    if (const Scope * parent{scope.GetDerivedTypeParent()}) {
+      if (IsParameterizedDerivedTypeHelper<ParamAttr...>(*parent)) {
+        return true;
+      }
     }
-  }
-  for (const auto &pair : symbols_) {
-    if (pair.second->has<TypeParamDetails>()) {
-      return true;
+    for (const auto &nameAndSymbolPair : scope) {
+      if (IsTypeParamHelper<ParamAttr...>::IsParam(*nameAndSymbolPair.second)) {
+        return true;
+      }
     }
   }
   return false;
+}
+
+bool Scope::IsParameterizedDerivedType() const {
+  return IsParameterizedDerivedTypeHelper<>(*this);
+}
+bool Scope::IsDerivedTypeWithLengthParameter() const {
+  return IsParameterizedDerivedTypeHelper<common::TypeParamAttr::Len>(*this);
+}
+bool Scope::IsDerivedTypeWithKindParameter() const {
+  return IsParameterizedDerivedTypeHelper<common::TypeParamAttr::Kind>(*this);
 }
 
 const DeclTypeSpec *Scope::FindInstantiatedDerivedType(

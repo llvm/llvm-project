@@ -15,7 +15,7 @@ define void @quux() gc "statepoint-example" {
 ; CHECK-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-NEXT:    retq
 bb1:
-  %tmp = call token (i64, i32, i8 addrspace(1)* (i8 addrspace(1)*, i32)*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_p1i8p1i8i32f(i64 2882400000, i32 0, i8 addrspace(1)* (i8 addrspace(1)*, i32)* nonnull @wombat, i32 2, i32 0, i8 addrspace(1)* undef, i32 4, i32 0, i32 0) [ "gc-live"() ]
+  %tmp = call token (i64, i32, i8 addrspace(1)* (i8 addrspace(1)*, i32)*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_p1i8p1i8i32f(i64 2882400000, i32 0, i8 addrspace(1)* (i8 addrspace(1)*, i32)* nonnull elementtype(i8 addrspace(1)* (i8 addrspace(1)*, i32)) @wombat, i32 2, i32 0, i8 addrspace(1)* undef, i32 4, i32 0, i32 0) [ "gc-live"() ]
   %tmp2 = tail call i8 addrspace(1)* @llvm.experimental.gc.result.p1i8(token %tmp)
   br label %bb2
 

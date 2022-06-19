@@ -1,5 +1,5 @@
 // -*- C++ -*-
-//===-------------------------- exception ---------------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -76,6 +76,7 @@ template <class E> void rethrow_if_nested(const E& e);
 
 */
 
+#include <__assert> // all public C++ headers provide the assertion handler
 #include <__availability>
 #include <__config>
 #include <__memory/addressof.h>
@@ -89,7 +90,7 @@ template <class E> void rethrow_if_nested(const E& e);
 #endif
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
-#pragma GCC system_header
+#  pragma GCC system_header
 #endif
 
 namespace std  // purposefully not using versioning namespace
@@ -189,15 +190,11 @@ make_exception_ptr(_Ep __e) _NOEXCEPT
 
 class _LIBCPP_TYPE_VIS exception_ptr
 {
-#if defined(__clang__)
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wunused-private-field"
-#endif
+_LIBCPP_DIAGNOSTIC_PUSH
+_LIBCPP_CLANG_DIAGNOSTIC_IGNORED("-Wunused-private-field")
     void* __ptr1_;
     void* __ptr2_;
-#if defined(__clang__)
-#pragma clang diagnostic pop
-#endif
+_LIBCPP_DIAGNOSTIC_POP
 public:
     exception_ptr() _NOEXCEPT;
     exception_ptr(nullptr_t) _NOEXCEPT;
@@ -304,10 +301,10 @@ throw_with_nested(_Tp&& __t)
 }
 
 template <class _From, class _To>
-struct __can_dynamic_cast : public _LIBCPP_BOOL_CONSTANT(
+struct __can_dynamic_cast : _BoolConstant<
               is_polymorphic<_From>::value &&
                  (!is_base_of<_To, _From>::value ||
-                   is_convertible<const _From*, const _To*>::value)) {};
+                   is_convertible<const _From*, const _To*>::value)> {};
 
 template <class _Ep>
 inline _LIBCPP_INLINE_VISIBILITY
@@ -328,6 +325,6 @@ rethrow_if_nested(const _Ep&,
 {
 }
 
-}  // std
+} // namespace std
 
 #endif // _LIBCPP_EXCEPTION

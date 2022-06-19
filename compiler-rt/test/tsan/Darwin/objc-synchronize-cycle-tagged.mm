@@ -15,7 +15,7 @@ int main(int argc, char* argv[]) {
 
   @autoreleasepool {
     NSObject* obj = [NSObject new];
-    NSObject* num1 = @7;
+    NSObject* num1 = [NSNumber numberWithInt:7];
     NSObject* num2 = [NSNumber numberWithInt:arg];
 
     assert(!isTaggedPtr(obj));

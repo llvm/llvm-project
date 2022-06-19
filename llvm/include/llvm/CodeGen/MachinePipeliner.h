@@ -40,12 +40,16 @@
 #ifndef LLVM_CODEGEN_MACHINEPIPELINER_H
 #define LLVM_CODEGEN_MACHINEPIPELINER_H
 
+#include "llvm/ADT/SetVector.h"
 #include "llvm/CodeGen/MachineDominators.h"
 #include "llvm/CodeGen/MachineOptimizationRemarkEmitter.h"
 #include "llvm/CodeGen/RegisterClassInfo.h"
 #include "llvm/CodeGen/ScheduleDAGInstrs.h"
+#include "llvm/CodeGen/ScheduleDAGMutation.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/InitializePasses.h"
+
+#include <deque>
 
 namespace llvm {
 
@@ -80,6 +84,8 @@ public:
     SmallVector<MachineOperand, 4> BrCond;
     MachineInstr *LoopInductionVar = nullptr;
     MachineInstr *LoopCompare = nullptr;
+    std::unique_ptr<TargetInstrInfo::PipelinerLoopInfo> LoopPipelinerInfo =
+        nullptr;
   };
   LoopInfo LI;
 
@@ -115,6 +121,7 @@ class SwingSchedulerDAG : public ScheduleDAGInstrs {
   LiveIntervals &LIS;
   const RegisterClassInfo &RegClassInfo;
   unsigned II_setByPragma = 0;
+  TargetInstrInfo::PipelinerLoopInfo *LoopPipelinerInfo = nullptr;
 
   /// A toplogical ordering of the SUnits, which is needed for changing
   /// dependences and iterating over the SUnits.
@@ -192,9 +199,11 @@ class SwingSchedulerDAG : public ScheduleDAGInstrs {
 
 public:
   SwingSchedulerDAG(MachinePipeliner &P, MachineLoop &L, LiveIntervals &lis,
-                    const RegisterClassInfo &rci, unsigned II)
+                    const RegisterClassInfo &rci, unsigned II,
+                    TargetInstrInfo::PipelinerLoopInfo *PLI)
       : ScheduleDAGInstrs(*P.MF, P.MLI, false), Pass(P), Loop(L), LIS(lis),
-        RegClassInfo(rci), II_setByPragma(II), Topo(SUnits, &ExitSU) {
+        RegClassInfo(rci), II_setByPragma(II), LoopPipelinerInfo(PLI),
+        Topo(SUnits, &ExitSU) {
     P.MF->getSubtarget().getSMSMutations(Mutations);
     if (SwpEnableCopyToPhi)
       Mutations.push_back(std::make_unique<CopyToPhiMutation>());
@@ -585,6 +594,13 @@ public:
     return ScheduledInstrs[cycle];
   }
 
+  SmallSet<SUnit *, 8>
+  computeUnpipelineableNodes(SwingSchedulerDAG *SSD,
+                             TargetInstrInfo::PipelinerLoopInfo *PLI);
+
+  bool
+  normalizeNonPipelinedInstructions(SwingSchedulerDAG *SSD,
+                                    TargetInstrInfo::PipelinerLoopInfo *PLI);
   bool isValidSchedule(SwingSchedulerDAG *SSD);
   void finalizeSchedule(SwingSchedulerDAG *SSD);
   void orderDependence(SwingSchedulerDAG *SSD, SUnit *SU,

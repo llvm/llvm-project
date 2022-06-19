@@ -9,18 +9,24 @@
 #include "llvm/Linker/IRMover.h"
 #include "LinkDiagnosticInfo.h"
 #include "llvm/ADT/SetVector.h"
+#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/Triple.h"
+#include "llvm/IR/AutoUpgrade.h"
 #include "llvm/IR/Constants.h"
-#include "llvm/IR/DebugInfo.h"
+#include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/DiagnosticPrinter.h"
+#include "llvm/IR/Function.h"
 #include "llvm/IR/GVMaterializer.h"
+#include "llvm/IR/GlobalValue.h"
 #include "llvm/IR/Intrinsics.h"
+#include "llvm/IR/Module.h"
 #include "llvm/IR/PseudoProbe.h"
 #include "llvm/IR/TypeFinder.h"
 #include "llvm/Object/ModuleSymbolTable.h"
 #include "llvm/Support/Error.h"
-#include "llvm/Transforms/Utils/Cloning.h"
+#include "llvm/Support/Path.h"
+#include "llvm/Transforms/Utils/ValueMapper.h"
 #include <utility>
 using namespace llvm;
 
@@ -380,7 +386,7 @@ class IRLinker {
   std::unique_ptr<Module> SrcM;
 
   /// See IRMover::move().
-  std::function<void(GlobalValue &, IRMover::ValueAdder)> AddLazyFor;
+  IRMover::LazyCallback AddLazyFor;
 
   TypeMapTy TypeMap;
   GlobalValueMaterializer GValMaterializer;
@@ -491,8 +497,8 @@ class IRLinker {
 
   void linkGlobalVariable(GlobalVariable &Dst, GlobalVariable &Src);
   Error linkFunctionBody(Function &Dst, Function &Src);
-  void linkIndirectSymbolBody(GlobalIndirectSymbol &Dst,
-                              GlobalIndirectSymbol &Src);
+  void linkAliasAliasee(GlobalAlias &Dst, GlobalAlias &Src);
+  void linkIFuncResolver(GlobalIFunc &Dst, GlobalIFunc &Src);
   Error linkGlobalValueBody(GlobalValue &Dst, GlobalValue &Src);
 
   /// Replace all types in the source AttributeList with the
@@ -503,7 +509,7 @@ class IRLinker {
   /// into the destination module.
   GlobalVariable *copyGlobalVariableProto(const GlobalVariable *SGVar);
   Function *copyFunctionProto(const Function *SF);
-  GlobalValue *copyGlobalIndirectSymbolProto(const GlobalIndirectSymbol *SGIS);
+  GlobalValue *copyIndirectSymbolProto(const GlobalValue *SGV);
 
   /// Perform "replace all uses with" operations. These work items need to be
   /// performed as part of materialization, but we postpone them to happen after
@@ -523,8 +529,7 @@ public:
   IRLinker(Module &DstM, MDMapT &SharedMDs,
            IRMover::IdentifiedStructTypeSet &Set, std::unique_ptr<Module> SrcM,
            ArrayRef<GlobalValue *> ValuesToLink,
-           std::function<void(GlobalValue &, IRMover::ValueAdder)> AddLazyFor,
-           bool IsPerformingImport)
+           IRMover::LazyCallback AddLazyFor, bool IsPerformingImport)
       : DstM(DstM), SrcM(std::move(SrcM)), AddLazyFor(std::move(AddLazyFor)),
         TypeMap(Set), GValMaterializer(*this), LValMaterializer(*this),
         SharedMDs(SharedMDs), IsPerformingImport(IsPerformingImport),
@@ -605,10 +610,14 @@ Value *IRLinker::materialize(Value *V, bool ForIndirectSymbol) {
   } else if (auto *V = dyn_cast<GlobalVariable>(New)) {
     if (V->hasInitializer() || V->hasAppendingLinkage())
       return New;
-  } else {
-    auto *IS = cast<GlobalIndirectSymbol>(New);
-    if (IS->getIndirectSymbol())
+  } else if (auto *GA = dyn_cast<GlobalAlias>(New)) {
+    if (GA->getAliasee())
       return New;
+  } else if (auto *GI = dyn_cast<GlobalIFunc>(New)) {
+    if (GI->getResolver())
+      return New;
+  } else {
+    llvm_unreachable("Invalid GlobalValue type");
   }
 
   // If the global is being linked for an indirect symbol, it may have already
@@ -641,19 +650,21 @@ GlobalVariable *IRLinker::copyGlobalVariableProto(const GlobalVariable *SGVar) {
                          /*init*/ nullptr, SGVar->getName(),
                          /*insertbefore*/ nullptr, SGVar->getThreadLocalMode(),
                          SGVar->getAddressSpace());
-  NewDGV->setAlignment(MaybeAlign(SGVar->getAlignment()));
+  NewDGV->setAlignment(SGVar->getAlign());
   NewDGV->copyAttributesFrom(SGVar);
   return NewDGV;
 }
 
 AttributeList IRLinker::mapAttributeTypes(LLVMContext &C, AttributeList Attrs) {
   for (unsigned i = 0; i < Attrs.getNumAttrSets(); ++i) {
-    for (Attribute::AttrKind TypedAttr :
-         {Attribute::ByVal, Attribute::StructRet, Attribute::ByRef,
-          Attribute::InAlloca}) {
-      if (Attrs.hasAttribute(i, TypedAttr)) {
-        if (Type *Ty = Attrs.getAttribute(i, TypedAttr).getValueAsType()) {
-          Attrs = Attrs.replaceAttributeType(C, i, TypedAttr, TypeMap.get(Ty));
+    for (int AttrIdx = Attribute::FirstTypeAttr;
+         AttrIdx <= Attribute::LastTypeAttr; AttrIdx++) {
+      Attribute::AttrKind TypedAttr = (Attribute::AttrKind)AttrIdx;
+      if (Attrs.hasAttributeAtIndex(i, TypedAttr)) {
+        if (Type *Ty =
+                Attrs.getAttributeAtIndex(i, TypedAttr).getValueAsType()) {
+          Attrs = Attrs.replaceAttributeTypeAtIndex(C, i, TypedAttr,
+                                                    TypeMap.get(Ty));
           break;
         }
       }
@@ -677,22 +688,28 @@ Function *IRLinker::copyFunctionProto(const Function *SF) {
 
 /// Set up prototypes for any indirect symbols that come over from the source
 /// module.
-GlobalValue *
-IRLinker::copyGlobalIndirectSymbolProto(const GlobalIndirectSymbol *SGIS) {
+GlobalValue *IRLinker::copyIndirectSymbolProto(const GlobalValue *SGV) {
   // If there is no linkage to be performed or we're linking from the source,
   // bring over SGA.
-  auto *Ty = TypeMap.get(SGIS->getValueType());
-  GlobalIndirectSymbol *GIS;
-  if (isa<GlobalAlias>(SGIS))
-    GIS = GlobalAlias::create(Ty, SGIS->getAddressSpace(),
-                              GlobalValue::ExternalLinkage, SGIS->getName(),
-                              &DstM);
-  else
-    GIS = GlobalIFunc::create(Ty, SGIS->getAddressSpace(),
-                              GlobalValue::ExternalLinkage, SGIS->getName(),
-                              nullptr, &DstM);
-  GIS->copyAttributesFrom(SGIS);
-  return GIS;
+  auto *Ty = TypeMap.get(SGV->getValueType());
+
+  if (auto *GA = dyn_cast<GlobalAlias>(SGV)) {
+    auto *DGA = GlobalAlias::create(Ty, SGV->getAddressSpace(),
+                                    GlobalValue::ExternalLinkage,
+                                    SGV->getName(), &DstM);
+    DGA->copyAttributesFrom(GA);
+    return DGA;
+  }
+
+  if (auto *GI = dyn_cast<GlobalIFunc>(SGV)) {
+    auto *DGI = GlobalIFunc::create(Ty, SGV->getAddressSpace(),
+                                    GlobalValue::ExternalLinkage,
+                                    SGV->getName(), nullptr, &DstM);
+    DGI->copyAttributesFrom(GI);
+    return DGI;
+  }
+
+  llvm_unreachable("Invalid source global value type");
 }
 
 GlobalValue *IRLinker::copyGlobalValueProto(const GlobalValue *SGV,
@@ -704,7 +721,7 @@ GlobalValue *IRLinker::copyGlobalValueProto(const GlobalValue *SGV,
     NewGV = copyFunctionProto(SF);
   } else {
     if (ForDefinition)
-      NewGV = copyGlobalIndirectSymbolProto(cast<GlobalIndirectSymbol>(SGV));
+      NewGV = copyIndirectSymbolProto(SGV);
     else if (SGV->getValueType()->isFunctionTy())
       NewGV =
           Function::Create(cast<FunctionType>(TypeMap.get(SGV->getValueType())),
@@ -864,7 +881,7 @@ IRLinker::linkAppendingVarProto(GlobalVariable *DstGV,
     if (DstGV->isConstant() != SrcGV->isConstant())
       return stringErr("Appending variables linked with different const'ness!");
 
-    if (DstGV->getAlignment() != SrcGV->getAlignment())
+    if (DstGV->getAlign() != SrcGV->getAlign())
       return stringErr(
           "Appending variables with different alignment need to be linked!");
 
@@ -974,10 +991,11 @@ bool IRLinker::shouldLink(GlobalValue *DGV, GlobalValue &SGV) {
   // Callback to the client to give a chance to lazily add the Global to the
   // list of value to link.
   bool LazilyAdded = false;
-  AddLazyFor(SGV, [this, &LazilyAdded](GlobalValue &GV) {
-    maybeAdd(&GV);
-    LazilyAdded = true;
-  });
+  if (AddLazyFor)
+    AddLazyFor(SGV, [this, &LazilyAdded](GlobalValue &GV) {
+      maybeAdd(&GV);
+      LazilyAdded = true;
+    });
   return LazilyAdded;
 }
 
@@ -1108,10 +1126,12 @@ Error IRLinker::linkFunctionBody(Function &Dst, Function &Src) {
   return Error::success();
 }
 
-void IRLinker::linkIndirectSymbolBody(GlobalIndirectSymbol &Dst,
-                                      GlobalIndirectSymbol &Src) {
-  Mapper.scheduleMapGlobalIndirectSymbol(Dst, *Src.getIndirectSymbol(),
-                                         IndirectSymbolMCID);
+void IRLinker::linkAliasAliasee(GlobalAlias &Dst, GlobalAlias &Src) {
+  Mapper.scheduleMapGlobalAlias(Dst, *Src.getAliasee(), IndirectSymbolMCID);
+}
+
+void IRLinker::linkIFuncResolver(GlobalIFunc &Dst, GlobalIFunc &Src) {
+  Mapper.scheduleMapGlobalIFunc(Dst, *Src.getResolver(), IndirectSymbolMCID);
 }
 
 Error IRLinker::linkGlobalValueBody(GlobalValue &Dst, GlobalValue &Src) {
@@ -1121,7 +1141,11 @@ Error IRLinker::linkGlobalValueBody(GlobalValue &Dst, GlobalValue &Src) {
     linkGlobalVariable(cast<GlobalVariable>(Dst), *GVar);
     return Error::success();
   }
-  linkIndirectSymbolBody(cast<GlobalIndirectSymbol>(Dst), cast<GlobalIndirectSymbol>(Src));
+  if (auto *GA = dyn_cast<GlobalAlias>(&Src)) {
+    linkAliasAliasee(cast<GlobalAlias>(Dst), *GA);
+    return Error::success();
+  }
+  linkIFuncResolver(cast<GlobalIFunc>(Dst), cast<GlobalIFunc>(Src));
   return Error::success();
 }
 
@@ -1210,8 +1234,15 @@ void IRLinker::linkNamedMDNodes() {
       continue;
     // Don't import pseudo probe descriptors here for thinLTO. They will be
     // emitted by the originating module.
-    if (IsPerformingImport && NMD.getName() == PseudoProbeDescMetadataName)
+    if (IsPerformingImport && NMD.getName() == PseudoProbeDescMetadataName) {
+      if (!DstM.getNamedMetadata(NMD.getName()))
+        emitWarning("Pseudo-probe ignored: source module '" +
+                    SrcM->getModuleIdentifier() +
+                    "' is compiled with -fpseudo-probe-for-profiling while "
+                    "destination module '" +
+                    DstM.getModuleIdentifier() + "' is not\n");
       continue;
+    }
     NamedMDNode *DestNMD = DstM.getOrInsertNamedMetadata(NMD.getName());
     // Add Src elements into Dest node.
     for (const MDNode *Op : NMD.operands())
@@ -1225,6 +1256,9 @@ Error IRLinker::linkModuleFlagsMetadata() {
   const NamedMDNode *SrcModFlags = SrcM->getModuleFlagsMetadata();
   if (!SrcModFlags)
     return Error::success();
+
+  // Check for module flag for updates before do anything.
+  UpgradeModuleFlags(*SrcM);
 
   // If the destination module doesn't have module flags yet, then just copy
   // over the source module's flags.
@@ -1308,11 +1342,15 @@ Error IRLinker::linkModuleFlagsMetadata() {
 
     // Diagnose inconsistent merge behavior types.
     if (SrcBehaviorValue != DstBehaviorValue) {
+      bool MinAndWarn = (SrcBehaviorValue == Module::Min &&
+                         DstBehaviorValue == Module::Warning) ||
+                        (DstBehaviorValue == Module::Min &&
+                         SrcBehaviorValue == Module::Warning);
       bool MaxAndWarn = (SrcBehaviorValue == Module::Max &&
                          DstBehaviorValue == Module::Warning) ||
                         (DstBehaviorValue == Module::Max &&
                          SrcBehaviorValue == Module::Warning);
-      if (!MaxAndWarn)
+      if (!(MaxAndWarn || MinAndWarn))
         return stringErr("linking module flags '" + ID->getString() +
                          "': IDs have conflicting behaviors in '" +
                          SrcM->getModuleIdentifier() + "' and '" +
@@ -1339,6 +1377,25 @@ Error IRLinker::linkModuleFlagsMetadata() {
           << *DstOp->getOperand(2) << "' from " << DstM.getModuleIdentifier()
           << ')';
       emitWarning(Str);
+    }
+
+    // Choose the minimum if either source or destination request Min behavior.
+    if (DstBehaviorValue == Module::Min || SrcBehaviorValue == Module::Min) {
+      ConstantInt *DstValue =
+          mdconst::extract<ConstantInt>(DstOp->getOperand(2));
+      ConstantInt *SrcValue =
+          mdconst::extract<ConstantInt>(SrcOp->getOperand(2));
+
+      // The resulting flag should have a Min behavior, and contain the minimum
+      // value from between the source and destination values.
+      Metadata *FlagOps[] = {
+          (DstBehaviorValue != Module::Min ? SrcOp : DstOp)->getOperand(0), ID,
+          (SrcValue->getZExtValue() < DstValue->getZExtValue() ? SrcOp : DstOp)
+              ->getOperand(2)};
+      MDNode *Flag = MDNode::get(DstM.getContext(), FlagOps);
+      DstModFlags->setOperand(DstIndex, Flag);
+      Flags[ID].first = Flag;
+      continue;
     }
 
     // Choose the maximum if either source or destination request Max behavior.
@@ -1443,7 +1500,39 @@ Error IRLinker::run() {
   if (DstM.getDataLayout().isDefault())
     DstM.setDataLayout(SrcM->getDataLayout());
 
-  if (SrcM->getDataLayout() != DstM.getDataLayout()) {
+  // Copy the target triple from the source to dest if the dest's is empty.
+  if (DstM.getTargetTriple().empty() && !SrcM->getTargetTriple().empty())
+    DstM.setTargetTriple(SrcM->getTargetTriple());
+
+  Triple SrcTriple(SrcM->getTargetTriple()), DstTriple(DstM.getTargetTriple());
+
+  // During CUDA compilation we have to link with the bitcode supplied with
+  // CUDA. libdevice bitcode either has no data layout set (pre-CUDA-11), or has
+  // the layout that is different from the one used by LLVM/clang (it does not
+  // include i128). Issuing a warning is not very helpful as there's not much
+  // the user can do about it.
+  bool EnableDLWarning = true;
+  bool EnableTripleWarning = true;
+  if (SrcTriple.isNVPTX() && DstTriple.isNVPTX()) {
+    std::string ModuleId = SrcM->getModuleIdentifier();
+    StringRef FileName = llvm::sys::path::filename(ModuleId);
+    bool SrcIsLibDevice =
+        FileName.startswith("libdevice") && FileName.endswith(".10.bc");
+    bool SrcHasLibDeviceDL =
+        (SrcM->getDataLayoutStr().empty() ||
+         SrcM->getDataLayoutStr() == "e-i64:64-v16:16-v32:32-n16:32:64");
+    // libdevice bitcode uses nvptx64-nvidia-gpulibs or just
+    // 'nvptx-unknown-unknown' triple (before CUDA-10.x) and is compatible with
+    // all NVPTX variants.
+    bool SrcHasLibDeviceTriple = (SrcTriple.getVendor() == Triple::NVIDIA &&
+                                  SrcTriple.getOSName() == "gpulibs") ||
+                                 (SrcTriple.getVendorName() == "unknown" &&
+                                  SrcTriple.getOSName() == "unknown");
+    EnableTripleWarning = !(SrcIsLibDevice && SrcHasLibDeviceTriple);
+    EnableDLWarning = !(SrcIsLibDevice && SrcHasLibDeviceDL);
+  }
+
+  if (EnableDLWarning && (SrcM->getDataLayout() != DstM.getDataLayout())) {
     emitWarning("Linking two modules of different data layouts: '" +
                 SrcM->getModuleIdentifier() + "' is '" +
                 SrcM->getDataLayoutStr() + "' whereas '" +
@@ -1451,13 +1540,7 @@ Error IRLinker::run() {
                 DstM.getDataLayoutStr() + "'\n");
   }
 
-  // Copy the target triple from the source to dest if the dest's is empty.
-  if (DstM.getTargetTriple().empty() && !SrcM->getTargetTriple().empty())
-    DstM.setTargetTriple(SrcM->getTargetTriple());
-
-  Triple SrcTriple(SrcM->getTargetTriple()), DstTriple(DstM.getTargetTriple());
-
-  if (!SrcM->getTargetTriple().empty()&&
+  if (EnableTripleWarning && !SrcM->getTargetTriple().empty() &&
       !SrcTriple.isCompatibleWith(DstTriple))
     emitWarning("Linking two modules of different target triples: '" +
                 SrcM->getModuleIdentifier() + "' is '" +
@@ -1628,10 +1711,9 @@ IRMover::IRMover(Module &M) : Composite(M) {
   }
 }
 
-Error IRMover::move(
-    std::unique_ptr<Module> Src, ArrayRef<GlobalValue *> ValuesToLink,
-    std::function<void(GlobalValue &, ValueAdder Add)> AddLazyFor,
-    bool IsPerformingImport) {
+Error IRMover::move(std::unique_ptr<Module> Src,
+                    ArrayRef<GlobalValue *> ValuesToLink,
+                    LazyCallback AddLazyFor, bool IsPerformingImport) {
   IRLinker TheIRLinker(Composite, SharedMDs, IdentifiedStructTypes,
                        std::move(Src), ValuesToLink, std::move(AddLazyFor),
                        IsPerformingImport);

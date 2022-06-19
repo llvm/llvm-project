@@ -56,19 +56,21 @@ int main(int, char**)
     {
         testbuf<char> sb;
         std::ostream os(&sb);
-        ends(os);
+        std::ends(os);
         assert(sb.str().size() == 1);
         assert(sb.str().back() == 0);
         assert(os.good());
     }
+#ifndef TEST_HAS_NO_WIDE_CHARACTERS
     {
         testbuf<wchar_t> sb;
         std::wostream os(&sb);
-        ends(os);
+        std::ends(os);
         assert(sb.str().size() == 1);
         assert(sb.str().back() == 0);
         assert(os.good());
     }
+#endif
 
   return 0;
 }

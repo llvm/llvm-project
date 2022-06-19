@@ -1,5 +1,7 @@
-# RUN: yaml2obj %s -o %t
-# RUN: obj2yaml %t | FileCheck %s
+# RUN: yaml2obj %s -o %t -DMACHINE=HEXAGON
+# RUN: obj2yaml %t | FileCheck %s -DMACHINE=HEXAGON -DNAME=SCOMMON_1
+# RUN: yaml2obj %s -o %t -DMACHINE=MIPS
+# RUN: obj2yaml %t | FileCheck %s -DMACHINE=MIPS -DNAME=TEXT
 
 ## Test checks that we are able to handle symbols with special/reserved indices.
 
@@ -15,7 +17,7 @@
 # CHECK-NEXT:     Section: .text
 # CHECK-NEXT:     Binding: STB_GLOBAL
 # CHECK-NEXT:   - Name:    processor_specific_index
-# CHECK-NEXT:     Index:   SHN_HEXAGON_SCOMMON_1
+# CHECK-NEXT:     Index:   SHN_[[MACHINE]]_[[NAME]]
 # CHECK-NEXT:     Binding: STB_GLOBAL
 # CHECK-NEXT:   - Name:    unknown_index
 # CHECK-NEXT:     Index:   0xFFFE
@@ -26,7 +28,7 @@ FileHeader:
   Class:           ELFCLASS64
   Data:            ELFDATA2LSB
   Type:            ET_EXEC
-  Machine:         EM_HEXAGON
+  Machine:         EM_[[MACHINE]]
 Sections:
   - Name: .text
     Type: SHT_PROGBITS
@@ -42,7 +44,7 @@ Symbols:
     Index:    0x1
     Binding:  STB_GLOBAL
   - Name:     processor_specific_index
-    Index:    SHN_HEXAGON_SCOMMON_1
+    Index:    0xff01
     Binding:  STB_GLOBAL
   - Name:     unknown_index
     Index:    0xfffe

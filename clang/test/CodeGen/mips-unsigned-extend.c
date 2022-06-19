@@ -5,11 +5,11 @@
 void foo(unsigned a) {
 }
 
-void foo1() {
+void foo1(void) {
   unsigned f = 0xffffffe0;
   foo(f);
 }
 
-// N64: call void @foo(i32 signext %{{[0-9]+}})
-// N32: call void @foo(i32 signext %{{[0-9]+}})
-// O32: call void @foo(i32 signext %{{[0-9]+}})
+// N64: call void @foo(i32 noundef signext %{{[0-9]+}})
+// N32: call void @foo(i32 noundef signext %{{[0-9]+}})
+// O32: call void @foo(i32 noundef signext %{{[0-9]+}})

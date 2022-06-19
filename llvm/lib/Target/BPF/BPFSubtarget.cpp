@@ -12,8 +12,8 @@
 
 #include "BPFSubtarget.h"
 #include "BPF.h"
+#include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/Host.h"
-#include "llvm/Support/TargetRegistry.h"
 
 using namespace llvm;
 
@@ -59,6 +59,6 @@ void BPFSubtarget::initSubtargetFeatures(StringRef CPU, StringRef FS) {
 
 BPFSubtarget::BPFSubtarget(const Triple &TT, const std::string &CPU,
                            const std::string &FS, const TargetMachine &TM)
-    : BPFGenSubtargetInfo(TT, CPU, /*TuneCPU*/ CPU, FS), InstrInfo(),
+    : BPFGenSubtargetInfo(TT, CPU, /*TuneCPU*/ CPU, FS),
       FrameLowering(initializeSubtargetDependencies(CPU, FS)),
       TLInfo(TM, *this) {}

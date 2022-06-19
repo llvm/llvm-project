@@ -45,7 +45,7 @@ void do_insert_cv_test()
     const VT v3(3, 3.5);
     r = m.insert(v3);
     assert(r.second);
-    assert(r.first == prev(m.end()));
+    assert(r.first == std::prev(m.end()));
     assert(m.size() == 3);
     assert(r.first->first == 3);
     assert(r.first->second == 3.5);
@@ -53,7 +53,7 @@ void do_insert_cv_test()
     const VT v4(3, 4.5);
     r = m.insert(v4);
     assert(!r.second);
-    assert(r.first == prev(m.end()));
+    assert(r.first == std::prev(m.end()));
     assert(m.size() == 3);
     assert(r.first->first == 3);
     assert(r.first->second == 3.5);

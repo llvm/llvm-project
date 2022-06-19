@@ -14,6 +14,8 @@
 #include "clang/Driver/Driver.h"
 #include "clang/Driver/DriverDiagnostic.h"
 #include "clang/Driver/Options.h"
+#include "clang/Driver/SanitizerArgs.h"
+#include "clang/Driver/ToolChain.h"
 #include "llvm/Option/ArgList.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Path.h"
@@ -82,7 +84,8 @@ void solaris::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     assert(Output.isNothing() && "Invalid output.");
   }
 
-  if (!Args.hasArg(options::OPT_nostdlib, options::OPT_nostartfiles)) {
+  if (!Args.hasArg(options::OPT_nostdlib, options::OPT_nostartfiles,
+                   options::OPT_r)) {
     if (!Args.hasArg(options::OPT_shared))
       CmdArgs.push_back(
           Args.MakeArgString(getToolChain().GetFilePath("crt1.o")));
@@ -122,7 +125,8 @@ void solaris::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   bool NeedsSanitizerDeps = addSanitizerRuntimes(getToolChain(), Args, CmdArgs);
   AddLinkerInputs(getToolChain(), Inputs, Args, CmdArgs, JA);
 
-  if (!Args.hasArg(options::OPT_nostdlib, options::OPT_nodefaultlibs)) {
+  if (!Args.hasArg(options::OPT_nostdlib, options::OPT_nodefaultlibs,
+                   options::OPT_r)) {
     if (getToolChain().ShouldLinkCXXStdlib(Args))
       getToolChain().AddCXXStdlibLibArgs(Args, CmdArgs);
     if (Args.hasArg(options::OPT_fstack_protector) ||
@@ -132,21 +136,40 @@ void solaris::Linker::ConstructJob(Compilation &C, const JobAction &JA,
       CmdArgs.push_back("-lssp_nonshared");
       CmdArgs.push_back("-lssp");
     }
+    // LLVM support for atomics on 32-bit SPARC V8+ is incomplete, so
+    // forcibly link with libatomic as a workaround.
+    if (getToolChain().getTriple().getArch() == llvm::Triple::sparc) {
+      CmdArgs.push_back(getAsNeededOption(getToolChain(), true));
+      CmdArgs.push_back("-latomic");
+      CmdArgs.push_back(getAsNeededOption(getToolChain(), false));
+    }
     CmdArgs.push_back("-lgcc_s");
     CmdArgs.push_back("-lc");
     if (!Args.hasArg(options::OPT_shared)) {
       CmdArgs.push_back("-lgcc");
       CmdArgs.push_back("-lm");
     }
-    if (NeedsSanitizerDeps)
+    if (NeedsSanitizerDeps) {
       linkSanitizerRuntimeDeps(getToolChain(), CmdArgs);
+
+      // Work around Solaris/amd64 ld bug when calling __tls_get_addr directly.
+      // However, ld -z relax=transtls is available since Solaris 11.2, but not
+      // in Illumos.
+      const SanitizerArgs &SA = getToolChain().getSanitizerArgs(Args);
+      if (getToolChain().getTriple().getArch() == llvm::Triple::x86_64 &&
+          (SA.needsAsanRt() || SA.needsStatsRt() ||
+           (SA.needsUbsanRt() && !SA.requiresMinimalRuntime())))
+        CmdArgs.push_back("-zrelax=transtls");
+    }
   }
 
-  if (!Args.hasArg(options::OPT_nostdlib, options::OPT_nostartfiles)) {
+  if (!Args.hasArg(options::OPT_nostdlib, options::OPT_nostartfiles,
+                   options::OPT_r)) {
     CmdArgs.push_back(
         Args.MakeArgString(getToolChain().GetFilePath("crtend.o")));
+    CmdArgs.push_back(
+        Args.MakeArgString(getToolChain().GetFilePath("crtn.o")));
   }
-  CmdArgs.push_back(Args.MakeArgString(getToolChain().GetFilePath("crtn.o")));
 
   getToolChain().addProfileRTLibs(Args, CmdArgs);
 

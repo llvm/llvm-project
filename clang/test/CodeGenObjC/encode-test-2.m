@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple=i686-apple-darwin9 -emit-llvm -o - %s | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -triple=i686-apple-darwin9 -emit-llvm -o - %s | FileCheck %s
 
 // CHECK: private unnamed_addr constant [7 x i8] c"@\22<X>\22\00",
 // CHECK: private unnamed_addr constant [10 x i8] c"@\22<X><Y>\22\00",
@@ -28,7 +28,7 @@ Class <X> IVAR_Classx;
 @implementation Intf 
 @end
 
-int main()
+int main(void)
 {
 	const char * en = @encode(Intf);
 }

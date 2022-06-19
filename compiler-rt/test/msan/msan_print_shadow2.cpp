@@ -22,28 +22,28 @@ int main(void) {
   return 0;
 }
 
-// CHECK: Shadow map of [0x{{.*}}, 0x{{.*}}), 1 bytes:
+// CHECK: Shadow map [0x{{.*}}, 0x{{.*}}) of [0x{{.*}}, 0x{{.*}}), 1 bytes:
 // CHECK-NO-ORIGINS:   0x{{.*}}: ff...... ........ ........ ........
 // CHECK-ORIGINS:   0x{{.*}}: ff...... ........ ........ ........  |A . . .|
 // CHECK-ORIGINS: Origin A (origin_id {{.*}}):
 
-// CHECK: Shadow map of [0x{{.*}}, 0x{{.*}}), 1 bytes:
+// CHECK: Shadow map [0x{{.*}}, 0x{{.*}}) of [0x{{.*}}, 0x{{.*}}), 1 bytes:
 // CHECK-NO-ORIGINS:   0x{{.*}}: ..ff.... ........ ........ ........
 // CHECK-ORIGINS:   0x{{.*}}: ..ff.... ........ ........ ........  |A . . .|
 // CHECK-ORIGINS: Origin A (origin_id {{.*}}):
 
-// CHECK: Shadow map of [0x{{.*}}, 0x{{.*}}), 1 bytes:
+// CHECK: Shadow map [0x{{.*}}, 0x{{.*}}) of [0x{{.*}}, 0x{{.*}}), 1 bytes:
 // CHECK-NO-ORIGINS:   0x{{.*}}: ......ff ........ ........ ........
 // CHECK-ORIGINS:   0x{{.*}}: ......ff ........ ........ ........  |A . . .|
 // CHECK-ORIGINS: Origin A (origin_id {{.*}}):
 
-// CHECK: Shadow map of [0x{{.*}}, 0x{{.*}}), 1 bytes:
+// CHECK: Shadow map [0x{{.*}}, 0x{{.*}}) of [0x{{.*}}, 0x{{.*}}), 1 bytes:
 // CHECK-NO-ORIGINS:   0x{{.*}}: ......ff ........ ........ ........
 // CHECK-ORIGINS:   0x{{.*}}: ......ff ........ ........ ........  |A . . .|
 // CHECK-ORIGINS: Origin A (origin_id {{.*}}):
 
-// CHECK: Shadow map of [0x{{.*}}, 0x{{.*}}), 0 bytes:
+// CHECK: Shadow map [0x{{.*}}, 0x{{.*}}) of [0x{{.*}}, 0x{{.*}}), 0 bytes:
 
-// CHECK: Shadow map of [0x{{.*}}, 0x{{.*}}), 3 bytes:
+// CHECK: Shadow map [0x{{.*}}, 0x{{.*}}) of [0x{{.*}}, 0x{{.*}}), 3 bytes:
 // CHECK-NO-ORIGINS:   0x{{.*}}: 000000.. ........ ........ ........
 // CHECK-ORIGINS:   0x{{.*}}: 000000.. ........ ........ ........  |. . . .|

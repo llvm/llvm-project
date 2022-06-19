@@ -9,16 +9,15 @@
 
 // <string>
 
-//   bool ends_with(basic_string_view x) const noexcept;
+// constexpr bool ends_with(basic_string_view x) const noexcept;
 
 #include <string>
 #include <cassert>
 
 #include "test_macros.h"
 
-int main(int, char**)
-{
-    {
+constexpr bool test() {
+  {
     typedef std::string S;
     typedef std::string_view SV;
     const char *s = "abcde";
@@ -67,7 +66,14 @@ int main(int, char**)
     assert (!sNot.ends_with(sv4));
     assert (!sNot.ends_with(sv5));
     assert ( sNot.ends_with(svNot));
-    }
+  }
+
+  return true;
+}
+
+int main(int, char**) {
+  test();
+  static_assert(test());
 
   return 0;
 }

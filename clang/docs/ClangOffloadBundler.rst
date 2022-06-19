@@ -30,9 +30,62 @@ includes an ``init`` function that will use the runtime corresponding to the
 offload kind (see :ref:`clang-offload-kind-table`) to load the offload code
 objects appropriate to the devices present when the host program is executed.
 
+Supported File Formats
+======================
+Several text and binary file formats are supported for bundling/unbundling. See
+:ref:`supported-file-formats-table` for a list of currently supported formats.
+
+  .. table:: Supported File Formats
+     :name: supported-file-formats-table
+
+     +--------------------+----------------+-------------+
+     | File Format        | File Extension | Text/Binary |
+     +====================+================+=============+
+     | CPP output         |        i       |     Text    |
+     +--------------------+----------------+-------------+
+     | C++ CPP output     |       ii       |     Text    |
+     +--------------------+----------------+-------------+
+     | CUDA/HIP output    |       cui      |     Text    |
+     +--------------------+----------------+-------------+
+     | Dependency         |        d       |     Text    |
+     +--------------------+----------------+-------------+
+     | LLVM               |       ll       |     Text    |
+     +--------------------+----------------+-------------+
+     | LLVM Bitcode       |       bc       |    Binary   |
+     +--------------------+----------------+-------------+
+     | Assembler          |        s       |     Text    |
+     +--------------------+----------------+-------------+
+     | Object             |        o       |    Binary   |
+     +--------------------+----------------+-------------+
+     | Archive of objects |        a       |    Binary   |
+     +--------------------+----------------+-------------+
+     | Precompiled header |       gch      |    Binary   |
+     +--------------------+----------------+-------------+
+     | Clang AST file     |       ast      |    Binary   |
+     +--------------------+----------------+-------------+
+
+.. _clang-bundled-code-object-layout-text:
+
+Bundled Text File Layout
+========================
+
+The format of the bundled files is currently very simple: text formats are
+concatenated with comments that have a magic string and bundle entry ID in
+between.
+
+::
+
+  "Comment OFFLOAD_BUNDLER_MAGIC_STR__START__ 1st Bundle Entry ID"
+  Bundle 1
+  "Comment OFFLOAD_BUNDLER_MAGIC_STR__END__ 1st Bundle Entry ID"
+  ...
+  "Comment OFFLOAD_BUNDLER_MAGIC_STR__START__ Nth Bundle Entry ID"
+  Bundle N
+  "Comment OFFLOAD_BUNDLER_MAGIC_STR__END__ 1st Bundle Entry ID"
+
 .. _clang-bundled-code-object-layout:
 
-Bundled Code Object Layout
+Bundled Binary File Layout
 ==========================
 
 The layout of a bundled code object is defined by the following table:
@@ -121,15 +174,7 @@ Where:
       ============= ==============================================================
 
 **target-triple**
-    The target triple of the code object:
-
-.. code::
-
-  <Architecture>-<Vendor>-<OS>-<Environment>
-
-It is required to have all four components present, if target-id is present.
-Components are hyphen separated. If a component is not specified then the
-empty string must be used in its place.
+    The target triple of the code object.
 
 **target-id**
   The canonical target ID of the code object. Present only if the target
@@ -217,3 +262,37 @@ Target specific information is available for the following:
   supported.
 
 Most other targets do not support target IDs.
+
+Archive Unbundling
+==================
+
+Unbundling of heterogeneous device archive is done to create device specific
+archives. Heterogeneous Device Archive is in a format compatible with GNU ar
+utility and contains a collection of bundled device binaries where each bundle
+file will contain device binaries for a host and one or more targets. The
+output device specific archive is in a format compatible with GNU ar utility
+and contains a collection of device binaries for a specific target.
+
+.. code::
+
+  Heterogeneous Device Archive, HDA = {F1.X, F2.X, ..., FN.Y}
+  where, Fi = Bundle{Host-DeviceBinary, T1-DeviceBinary, T2-DeviceBinary, ...,
+                     Tm-DeviceBinary},
+         Ti = {Target i, qualified using Bundle Entry ID},
+         X/Y = \*.bc for AMDGPU and \*.cubin for NVPTX
+
+  Device Specific Archive, DSA(Tk) = {F1-Tk-DeviceBinary.X, F2-Tk-DeviceBinary.X, ...
+                                      FN-Tk-DeviceBinary.Y}
+  where, Fi-Tj-DeviceBinary.X represents device binary of i-th bundled device
+  binary file for target Tj.
+
+clang-offload-bundler extracts compatible device binaries for a given target
+from the bundled device binaries in a heterogeneous device archive and creates
+a target specific device archive without bundling.
+
+clang-offload-bundler determines whether a device binary is compatible with a
+target by comparing bundle ID's. Two bundle ID's are considered compatible if:
+
+  * Their offload kind are the same
+  * Their target triple are the same
+  * Their GPUArch are the same

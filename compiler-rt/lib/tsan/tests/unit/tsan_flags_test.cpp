@@ -42,7 +42,6 @@ static const char *options1 =
   " report_signal_unsafe=0"
   " report_atomic_races=0"
   " force_seq_cst_atomics=0"
-  " print_benign=0"
   " halt_on_error=0"
   " atexit_sleep_ms=222"
   " profile_memory=qqq"
@@ -67,7 +66,6 @@ static const char *options2 =
   " report_signal_unsafe=true"
   " report_atomic_races=true"
   " force_seq_cst_atomics=true"
-  " print_benign=true"
   " halt_on_error=true"
   " atexit_sleep_ms=123"
   " profile_memory=bbbbb"
@@ -92,7 +90,6 @@ void VerifyOptions1(Flags *f) {
   EXPECT_EQ(f->report_signal_unsafe, 0);
   EXPECT_EQ(f->report_atomic_races, 0);
   EXPECT_EQ(f->force_seq_cst_atomics, 0);
-  EXPECT_EQ(f->print_benign, 0);
   EXPECT_EQ(f->halt_on_error, 0);
   EXPECT_EQ(f->atexit_sleep_ms, 222);
   EXPECT_EQ(f->profile_memory, std::string("qqq"));
@@ -101,7 +98,7 @@ void VerifyOptions1(Flags *f) {
   EXPECT_EQ(f->memory_limit_mb, 666);
   EXPECT_EQ(f->stop_on_start, 0);
   EXPECT_EQ(f->running_on_valgrind, 0);
-  EXPECT_EQ(f->history_size, 5);
+  EXPECT_EQ(f->history_size, (uptr)5);
   EXPECT_EQ(f->io_sync, 1);
   EXPECT_EQ(f->die_after_fork, true);
 }
@@ -117,7 +114,6 @@ void VerifyOptions2(Flags *f) {
   EXPECT_EQ(f->report_signal_unsafe, true);
   EXPECT_EQ(f->report_atomic_races, true);
   EXPECT_EQ(f->force_seq_cst_atomics, true);
-  EXPECT_EQ(f->print_benign, true);
   EXPECT_EQ(f->halt_on_error, true);
   EXPECT_EQ(f->atexit_sleep_ms, 123);
   EXPECT_EQ(f->profile_memory, std::string("bbbbb"));
@@ -126,7 +122,7 @@ void VerifyOptions2(Flags *f) {
   EXPECT_EQ(f->memory_limit_mb, 456);
   EXPECT_EQ(f->stop_on_start, true);
   EXPECT_EQ(f->running_on_valgrind, true);
-  EXPECT_EQ(f->history_size, 6);
+  EXPECT_EQ(f->history_size, 6ul);
   EXPECT_EQ(f->io_sync, 2);
   EXPECT_EQ(f->die_after_fork, false);
 }

@@ -2,15 +2,21 @@
 
 # ORC runtime library implementation files.
 set(ORC_SOURCES
+  debug.cpp
   extensible_rtti.cpp
   log_error_to_stderr.cpp
+  macho_ehframe_registration.cpp
   macho_platform.cpp
+  elfnix_platform.cpp
   run_program_wrapper.cpp
+  dlfcn_wrapper.cpp
   )
 
 # Implementation files for all ORC architectures.
-set(x86_64_SOURCES
-# x86-64 specific assembly files will go here.
+set(ALL_ORC_ASM_SOURCES
+  macho_tlv.x86-64.S
+  macho_tlv.arm64.S
+  elfnix_tls.x86-64.S
 )
 
 set(ORC_IMPL_HEADERS
@@ -33,7 +39,7 @@ set(ORC_IMPL_HEADERS
 # consumption by tests.
 set(ORC_ALL_SOURCE_FILES
   ${ORC_SOURCES}
-  ${x86_64_SOURCES}
+  ${ALL_ORC_ASM_SOURCES}
   ${ORC_IMPL_HEADERS}
   )
 
@@ -58,15 +64,19 @@ if (TARGET cxx-headers OR HAVE_LIBCXX)
 endif()
 
 if (APPLE)
+  add_asm_sources(ORC_ASM_SOURCES
+    macho_tlv.x86-64.S
+    macho_tlv.arm64.S
+    )
+
   add_compiler_rt_object_libraries(RTOrc
     OS ${ORC_SUPPORTED_OS}
     ARCHS ${ORC_SUPPORTED_ARCH}
-    SOURCES ${ORC_SOURCES} ${x86_64_SOURCES}
+    SOURCES ${ORC_SOURCES} ${ORC_ASM_SOURCES}
     ADDITIONAL_HEADERS ${ORC_IMPL_HEADERS}
     CFLAGS ${ORC_CFLAGS}
     DEPS ${ORC_DEPS})
 
-  # We only support running on osx for now.
   add_compiler_rt_runtime(clang_rt.orc
     STATIC
     OS ${ORC_SUPPORTED_OS}
@@ -77,13 +87,16 @@ if (APPLE)
     LINK_LIBS ${ORC_LINK_LIBS}
     PARENT_TARGET orc)
 else() # not Apple
+  add_asm_sources(ORC_ASM_SOURCES elfnix_tls.x86-64.S)
+
   foreach(arch ${ORC_SUPPORTED_ARCH})
     if(NOT CAN_TARGET_${arch})
       continue()
     endif()
+
     add_compiler_rt_object_libraries(RTOrc
       ARCHS ${arch}
-      SOURCES ${ORC_SOURCES} ${${arch}_SOURCES}
+      SOURCES ${ORC_SOURCES} ${ORC_ASM_SOURCES}
       ADDITIONAL_HEADERS ${ORC_IMPL_HEADERS}
       CFLAGS ${ORC_CFLAGS}
       DEPS ${ORC_DEPS})

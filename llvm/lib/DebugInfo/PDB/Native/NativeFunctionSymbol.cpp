@@ -8,11 +8,15 @@
 
 #include "llvm/DebugInfo/PDB/Native/NativeFunctionSymbol.h"
 
+#include "llvm/DebugInfo/CodeView/CVRecord.h"
+#include "llvm/DebugInfo/CodeView/CodeView.h"
 #include "llvm/DebugInfo/CodeView/SymbolDeserializer.h"
 #include "llvm/DebugInfo/CodeView/SymbolRecord.h"
+#include "llvm/DebugInfo/PDB/Native/ModuleDebugStream.h"
 #include "llvm/DebugInfo/PDB/Native/NativeEnumSymbols.h"
-#include "llvm/DebugInfo/PDB/Native/NativeTypeBuiltin.h"
-#include "llvm/DebugInfo/PDB/Native/NativeTypeEnum.h"
+#include "llvm/DebugInfo/PDB/Native/NativeSession.h"
+#include "llvm/DebugInfo/PDB/Native/SymbolCache.h"
+#include "llvm/DebugInfo/PDB/PDBExtras.h"
 
 using namespace llvm;
 using namespace llvm::codeview;
@@ -25,7 +29,7 @@ NativeFunctionSymbol::NativeFunctionSymbol(NativeSession &Session,
     : NativeRawSymbol(Session, PDB_SymType::Function, Id), Sym(Sym),
       RecordOffset(Offset) {}
 
-NativeFunctionSymbol::~NativeFunctionSymbol() {}
+NativeFunctionSymbol::~NativeFunctionSymbol() = default;
 
 void NativeFunctionSymbol::dump(raw_ostream &OS, int Indent,
                                 PdbSymbolIdField ShowIdFields,

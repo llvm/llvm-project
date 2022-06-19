@@ -3,7 +3,7 @@
 // Test .ctors* and .dtors* are sorted by priority.
 
 // RUN: llvm-mc -filetype=obj -triple=x86_64-unknown-linux %s -o %t1
-// RUN: mkdir -p %t
+// RUN: rm -rf %t && mkdir -p %t
 // RUN: llvm-mc -filetype=obj -triple=x86_64-unknown-linux \
 // RUN:   %p/Inputs/ctors_dtors_priority1.s -o %t/crtbegin.o
 // RUN: llvm-mc -filetype=obj -triple=x86_64-unknown-linux \
@@ -23,6 +23,10 @@
 // RUN: ld.lld %t1 %t2 %t/clang_rt.crtend-x86_64.o %t/clang_rt.crtbegin-x86_64.o -o %t.clang_rt-arch.exe
 // RUN: llvm-objdump -s %t.clang_rt-arch.exe | FileCheck %s
 
+// RUN: cp %t/crtbegin.o %t/crtbeginS.o
+// RUN: cp %t/crtend.o %t/crtendT.o
+// RUN: ld.lld %t1 %t2 %t/crtendT.o %t/crtbeginS.o -o %t.ST.exe
+// RUN: cmp %t.exe %t.ST.exe
 	
 .globl _start
 _start:

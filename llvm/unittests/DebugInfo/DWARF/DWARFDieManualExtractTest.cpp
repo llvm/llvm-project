@@ -9,6 +9,7 @@
 #include "DwarfGenerator.h"
 #include "DwarfUtils.h"
 #include "llvm/BinaryFormat/Dwarf.h"
+#include "llvm/DebugInfo/DWARF/DWARFCompileUnit.h"
 #include "llvm/DebugInfo/DWARF/DWARFContext.h"
 #include "llvm/ObjectYAML/DWARFEmitter.h"
 #include "llvm/Testing/Support/Error.h"
@@ -24,8 +25,8 @@ TEST(DWARFDie, manualExtractDump) {
   typedef uint32_t AddrType;
   uint16_t Version = 4;
   Triple Triple = getDefaultTargetTripleForAddrSize(sizeof(AddrType));
-  if (!isObjectEmissionSupported(Triple))
-    return;
+  if (!isConfigurationSupported(Triple))
+    GTEST_SKIP();
 
   auto ExpectedDG = dwarfgen::Generator::create(Triple, Version);
   ASSERT_THAT_EXPECTED(ExpectedDG, Succeeded());
@@ -54,9 +55,8 @@ TEST(DWARFDie, manualExtractDump) {
   uint64_t NextCUOffset = CU->getNextUnitOffset();
   DWARFDebugInfoEntry DieInfo;
   DWARFDataExtractor DebugInfoData = CU->getDebugInfoExtractor();
-  uint32_t Depth = 0;
-  ASSERT_TRUE(
-      DieInfo.extractFast(*CU, &DIEOffset, DebugInfoData, NextCUOffset, Depth));
+  ASSERT_TRUE(DieInfo.extractFast(*CU, &DIEOffset, DebugInfoData, NextCUOffset,
+                                  UINT32_MAX));
   DWARFDie Die(CU, &DieInfo);
   ASSERT_TRUE(Die.isValid());
   ASSERT_TRUE(Die.hasChildren());

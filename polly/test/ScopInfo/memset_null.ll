@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -polly-allow-modref-calls -polly-scops -analyze < %s | FileCheck %s
+; RUN: opt %loadPolly -polly-allow-modref-calls -polly-print-scops -disable-output < %s | FileCheck %s
 ; RUN: opt %loadPolly -polly-allow-modref-calls -S -polly-codegen < %s
 ;
 ; Verify we can handle a memset to "null" and that we do not model it.

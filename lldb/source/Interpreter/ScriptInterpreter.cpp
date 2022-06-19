@@ -46,6 +46,10 @@ void ScriptInterpreter::CollectDataForWatchpointCommandCallback(
       "This script interpreter does not support watchpoint callbacks.");
 }
 
+StructuredData::DictionarySP ScriptInterpreter::GetInterpreterInfo() {
+  return nullptr;
+}
+
 bool ScriptInterpreter::LoadScriptingModule(const char *filename,
                                             const LoadScriptOptions &options,
                                             lldb_private::Status &error,
@@ -83,6 +87,14 @@ ScriptInterpreter::GetStatusFromSBError(const lldb::SBError &error) const {
   return Status();
 }
 
+llvm::Optional<MemoryRegionInfo>
+ScriptInterpreter::GetOpaqueTypeFromSBMemoryRegionInfo(
+    const lldb::SBMemoryRegionInfo &mem_region) const {
+  if (!mem_region.m_opaque_up)
+    return llvm::None;
+  return *mem_region.m_opaque_up.get();
+}
+
 lldb::ScriptLanguage
 ScriptInterpreter::StringToLanguage(const llvm::StringRef &language) {
   if (language.equals_insensitive(LanguageToString(eScriptLanguageNone)))
@@ -97,13 +109,13 @@ ScriptInterpreter::StringToLanguage(const llvm::StringRef &language) {
 Status ScriptInterpreter::SetBreakpointCommandCallback(
     std::vector<std::reference_wrapper<BreakpointOptions>> &bp_options_vec,
     const char *callback_text) {
-  Status return_error;
+  Status error;
   for (BreakpointOptions &bp_options : bp_options_vec) {
-    return_error = SetBreakpointCommandCallback(bp_options, callback_text);
-    if (return_error.Success())
+    error = SetBreakpointCommandCallback(bp_options, callback_text);
+    if (!error.Success())
       break;
   }
-  return return_error;
+  return error;
 }
 
 Status ScriptInterpreter::SetBreakpointCommandCallbackFunction(
@@ -141,12 +153,12 @@ ScriptInterpreterIORedirect::Create(bool enable_io, Debugger &debugger,
         new ScriptInterpreterIORedirect(debugger, result));
 
   auto nullin = FileSystem::Instance().Open(FileSpec(FileSystem::DEV_NULL),
-                                            File::eOpenOptionRead);
+                                            File::eOpenOptionReadOnly);
   if (!nullin)
     return nullin.takeError();
 
   auto nullout = FileSystem::Instance().Open(FileSpec(FileSystem::DEV_NULL),
-                                             File::eOpenOptionWrite);
+                                             File::eOpenOptionWriteOnly);
   if (!nullout)
     return nullin.takeError();
 

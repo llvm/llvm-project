@@ -22,6 +22,7 @@
 #include "lldb/Target/Process.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Utility/FileSpec.h"
+#include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/State.h"
 #include "lldb/Utility/Status.h"
@@ -45,7 +46,7 @@ static uint32_t g_initialize_count = 0;
 
 
 PlatformSP PlatformFreeBSD::CreateInstance(bool force, const ArchSpec *arch) {
-  Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_PLATFORM));
+  Log *log = GetLog(LLDBLog::Platform);
   LLDB_LOG(log, "force = {0}, arch=({1}, {2})", force,
            arch ? arch->GetArchitectureName() : "<null>",
            arch ? arch->GetTriple().getTriple() : "<null>");
@@ -76,25 +77,10 @@ PlatformSP PlatformFreeBSD::CreateInstance(bool force, const ArchSpec *arch) {
   return PlatformSP();
 }
 
-ConstString PlatformFreeBSD::GetPluginNameStatic(bool is_host) {
-  if (is_host) {
-    static ConstString g_host_name(Platform::GetHostPlatformName());
-    return g_host_name;
-  } else {
-    static ConstString g_remote_name("remote-freebsd");
-    return g_remote_name;
-  }
-}
-
-const char *PlatformFreeBSD::GetPluginDescriptionStatic(bool is_host) {
+llvm::StringRef PlatformFreeBSD::GetPluginDescriptionStatic(bool is_host) {
   if (is_host)
     return "Local FreeBSD user platform plug-in.";
-  else
-    return "Remote FreeBSD user platform plug-in.";
-}
-
-ConstString PlatformFreeBSD::GetPluginName() {
-  return GetPluginNameStatic(IsHost());
+  return "Remote FreeBSD user platform plug-in.";
 }
 
 void PlatformFreeBSD::Initialize() {
@@ -126,72 +112,28 @@ void PlatformFreeBSD::Terminate() {
 /// Default Constructor
 PlatformFreeBSD::PlatformFreeBSD(bool is_host)
     : PlatformPOSIX(is_host) // This is the local host platform
-{}
-
-bool PlatformFreeBSD::GetSupportedArchitectureAtIndex(uint32_t idx,
-                                                      ArchSpec &arch) {
-  if (IsHost()) {
+{
+  if (is_host) {
     ArchSpec hostArch = HostInfo::GetArchitecture(HostInfo::eArchKindDefault);
-    if (hostArch.GetTriple().isOSFreeBSD()) {
-      if (idx == 0) {
-        arch = hostArch;
-        return arch.IsValid();
-      } else if (idx == 1) {
-        // If the default host architecture is 64-bit, look for a 32-bit
-        // variant
-        if (hostArch.IsValid() && hostArch.GetTriple().isArch64Bit()) {
-          arch = HostInfo::GetArchitecture(HostInfo::eArchKind32);
-          return arch.IsValid();
-        }
-      }
+    m_supported_architectures.push_back(hostArch);
+    if (hostArch.GetTriple().isArch64Bit()) {
+      m_supported_architectures.push_back(
+          HostInfo::GetArchitecture(HostInfo::eArchKind32));
     }
   } else {
-    if (m_remote_platform_sp)
-      return m_remote_platform_sp->GetSupportedArchitectureAtIndex(idx, arch);
-
-    llvm::Triple triple;
-    // Set the OS to FreeBSD
-    triple.setOS(llvm::Triple::FreeBSD);
-    // Set the architecture
-    switch (idx) {
-    case 0:
-      triple.setArchName("x86_64");
-      break;
-    case 1:
-      triple.setArchName("i386");
-      break;
-    case 2:
-      triple.setArchName("aarch64");
-      break;
-    case 3:
-      triple.setArchName("arm");
-      break;
-    case 4:
-      triple.setArchName("mips64");
-      break;
-    case 5:
-      triple.setArchName("mips");
-      break;
-    case 6:
-      triple.setArchName("ppc64");
-      break;
-    case 7:
-      triple.setArchName("ppc");
-      break;
-    default:
-      return false;
-    }
-    // Leave the vendor as "llvm::Triple:UnknownVendor" and don't specify the
-    // vendor by calling triple.SetVendorName("unknown") so that it is a
-    // "unspecified unknown". This means when someone calls
-    // triple.GetVendorName() it will return an empty string which indicates
-    // that the vendor can be set when two architectures are merged
-
-    // Now set the triple into "arch" and return true
-    arch.SetTriple(triple);
-    return true;
+    m_supported_architectures = CreateArchList(
+        {llvm::Triple::x86_64, llvm::Triple::x86, llvm::Triple::aarch64,
+         llvm::Triple::arm, llvm::Triple::mips64, llvm::Triple::ppc64,
+         llvm::Triple::ppc},
+        llvm::Triple::FreeBSD);
   }
-  return false;
+}
+
+std::vector<ArchSpec>
+PlatformFreeBSD::GetSupportedArchitectures(const ArchSpec &process_host_arch) {
+  if (m_remote_platform_sp)
+    return m_remote_platform_sp->GetSupportedArchitectures(process_host_arch);
+  return m_supported_architectures;
 }
 
 void PlatformFreeBSD::GetStatus(Stream &strm) {
@@ -242,4 +184,98 @@ MmapArgList PlatformFreeBSD::GetMmapArgumentList(const ArchSpec &arch,
   if (arch.GetTriple().getArch() == llvm::Triple::x86)
     args.push_back(0);
   return args;
+}
+
+CompilerType PlatformFreeBSD::GetSiginfoType(const llvm::Triple &triple) {
+  if (!m_type_system_up)
+    m_type_system_up.reset(new TypeSystemClang("siginfo", triple));
+  TypeSystemClang *ast = m_type_system_up.get();
+
+  // generic types
+  CompilerType int_type = ast->GetBasicType(eBasicTypeInt);
+  CompilerType uint_type = ast->GetBasicType(eBasicTypeUnsignedInt);
+  CompilerType long_type = ast->GetBasicType(eBasicTypeLong);
+  CompilerType voidp_type = ast->GetBasicType(eBasicTypeVoid).GetPointerType();
+
+  // platform-specific types
+  CompilerType &pid_type = int_type;
+  CompilerType &uid_type = uint_type;
+
+  CompilerType sigval_type = ast->CreateRecordType(
+      nullptr, OptionalClangModuleID(), lldb::eAccessPublic, "__lldb_sigval_t",
+      clang::TTK_Union, lldb::eLanguageTypeC);
+  ast->StartTagDeclarationDefinition(sigval_type);
+  ast->AddFieldToRecordType(sigval_type, "sival_int", int_type,
+                            lldb::eAccessPublic, 0);
+  ast->AddFieldToRecordType(sigval_type, "sival_ptr", voidp_type,
+                            lldb::eAccessPublic, 0);
+  ast->CompleteTagDeclarationDefinition(sigval_type);
+
+  // siginfo_t
+  CompilerType siginfo_type = ast->CreateRecordType(
+      nullptr, OptionalClangModuleID(), lldb::eAccessPublic, "__lldb_siginfo_t",
+      clang::TTK_Struct, lldb::eLanguageTypeC);
+  ast->StartTagDeclarationDefinition(siginfo_type);
+  ast->AddFieldToRecordType(siginfo_type, "si_signo", int_type,
+                            lldb::eAccessPublic, 0);
+  ast->AddFieldToRecordType(siginfo_type, "si_errno", int_type,
+                            lldb::eAccessPublic, 0);
+  ast->AddFieldToRecordType(siginfo_type, "si_code", int_type,
+                            lldb::eAccessPublic, 0);
+  ast->AddFieldToRecordType(siginfo_type, "si_pid", pid_type,
+                            lldb::eAccessPublic, 0);
+  ast->AddFieldToRecordType(siginfo_type, "si_uid", uid_type,
+                            lldb::eAccessPublic, 0);
+  ast->AddFieldToRecordType(siginfo_type, "si_status", int_type,
+                            lldb::eAccessPublic, 0);
+  ast->AddFieldToRecordType(siginfo_type, "si_addr", voidp_type,
+                            lldb::eAccessPublic, 0);
+  ast->AddFieldToRecordType(siginfo_type, "si_value", sigval_type,
+                            lldb::eAccessPublic, 0);
+
+  // union used to hold the signal data
+  CompilerType union_type = ast->CreateRecordType(
+      nullptr, OptionalClangModuleID(), lldb::eAccessPublic, "",
+      clang::TTK_Union, lldb::eLanguageTypeC);
+  ast->StartTagDeclarationDefinition(union_type);
+
+  ast->AddFieldToRecordType(
+      union_type, "_fault",
+      ast->CreateStructForIdentifier(ConstString(),
+                                     {
+                                         {"_trapno", int_type},
+                                     }),
+      lldb::eAccessPublic, 0);
+
+  ast->AddFieldToRecordType(
+      union_type, "_timer",
+      ast->CreateStructForIdentifier(ConstString(),
+                                     {
+                                         {"_timerid", int_type},
+                                         {"_overrun", int_type},
+                                     }),
+      lldb::eAccessPublic, 0);
+
+  ast->AddFieldToRecordType(
+      union_type, "_mesgq",
+      ast->CreateStructForIdentifier(ConstString(),
+                                     {
+                                         {"_mqd", int_type},
+                                     }),
+      lldb::eAccessPublic, 0);
+
+  ast->AddFieldToRecordType(
+      union_type, "_poll",
+      ast->CreateStructForIdentifier(ConstString(),
+                                     {
+                                         {"_band", long_type},
+                                     }),
+      lldb::eAccessPublic, 0);
+
+  ast->CompleteTagDeclarationDefinition(union_type);
+  ast->AddFieldToRecordType(siginfo_type, "_reason", union_type,
+                            lldb::eAccessPublic, 0);
+
+  ast->CompleteTagDeclarationDefinition(siginfo_type);
+  return siginfo_type;
 }

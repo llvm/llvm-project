@@ -26,11 +26,7 @@ namespace {
 class SystemZShortenInst : public MachineFunctionPass {
 public:
   static char ID;
-  SystemZShortenInst(const SystemZTargetMachine &tm);
-
-  StringRef getPassName() const override {
-    return "SystemZ Instruction Shortening";
-  }
+  SystemZShortenInst();
 
   bool processBlock(MachineBasicBlock &MBB);
   bool runOnMachineFunction(MachineFunction &F) override;
@@ -56,12 +52,17 @@ private:
 char SystemZShortenInst::ID = 0;
 } // end anonymous namespace
 
+INITIALIZE_PASS(SystemZShortenInst, DEBUG_TYPE,
+                "SystemZ Instruction Shortening", false, false)
+
 FunctionPass *llvm::createSystemZShortenInstPass(SystemZTargetMachine &TM) {
-  return new SystemZShortenInst(TM);
+  return new SystemZShortenInst();
 }
 
-SystemZShortenInst::SystemZShortenInst(const SystemZTargetMachine &tm)
-  : MachineFunctionPass(ID), TII(nullptr) {}
+SystemZShortenInst::SystemZShortenInst()
+    : MachineFunctionPass(ID), TII(nullptr) {
+  initializeSystemZShortenInstPass(*PassRegistry::getPassRegistry());
+}
 
 // Tie operands if MI has become a two-address instruction.
 static void tieOpsIfNeeded(MachineInstr &MI) {
@@ -161,10 +162,10 @@ bool SystemZShortenInst::shortenFPConv(MachineInstr &MI, unsigned Opcode) {
     MachineOperand Src(MI.getOperand(1));
     MachineOperand Suppress(MI.getOperand(2));
     MachineOperand Mode(MI.getOperand(3));
-    MI.RemoveOperand(3);
-    MI.RemoveOperand(2);
-    MI.RemoveOperand(1);
-    MI.RemoveOperand(0);
+    MI.removeOperand(3);
+    MI.removeOperand(2);
+    MI.removeOperand(1);
+    MI.removeOperand(0);
     MI.setDesc(TII->get(Opcode));
     MachineInstrBuilder(*MI.getParent()->getParent(), &MI)
         .add(Dest)
@@ -189,9 +190,9 @@ bool SystemZShortenInst::shortenFusedFPOp(MachineInstr &MI, unsigned Opcode) {
     MachineOperand Lhs(LHSMO);
     MachineOperand Rhs(RHSMO);
     MachineOperand Src(AccMO);
-    MI.RemoveOperand(3);
-    MI.RemoveOperand(2);
-    MI.RemoveOperand(1);
+    MI.removeOperand(3);
+    MI.removeOperand(2);
+    MI.removeOperand(1);
     MI.setDesc(TII->get(Opcode));
     MachineInstrBuilder(*MI.getParent()->getParent(), &MI)
         .add(Src)
@@ -211,8 +212,7 @@ bool SystemZShortenInst::processBlock(MachineBasicBlock &MBB) {
   LiveRegs.addLiveOuts(MBB);
 
   // Iterate backwards through the block looking for instructions to change.
-  for (auto MBBI = MBB.rbegin(), MBBE = MBB.rend(); MBBI != MBBE; ++MBBI) {
-    MachineInstr &MI = *MBBI;
+  for (MachineInstr &MI : llvm::reverse(MBB)) {
     switch (MI.getOpcode()) {
     case SystemZ::IILF:
       Changed |= shortenIIF(MI, SystemZ::LLILL, SystemZ::LLILH);

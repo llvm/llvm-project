@@ -10,12 +10,16 @@
 #ifndef _LIBCPP___BIT_REFERENCE
 #define _LIBCPP___BIT_REFERENCE
 
-#include <__config>
+#include <__algorithm/min.h>
 #include <__bits>
-#include <algorithm>
+#include <__config>
+#include <__iterator/iterator_traits.h>
+#include <__memory/pointer_traits.h>
+#include <cstring>
+#include <type_traits>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
-#pragma GCC system_header
+#  pragma GCC system_header
 #endif
 
 _LIBCPP_PUSH_MACROS
@@ -65,6 +69,16 @@ public:
         return *this;
     }
 
+#if _LIBCPP_STD_VER > 20
+    _LIBCPP_HIDE_FROM_ABI const __bit_reference& operator=(bool __x) const noexcept {
+        if (__x)
+            *__seg_ |= __mask_;
+        else
+            *__seg_ &= ~__mask_;
+        return *this;
+    }
+#endif
+
     _LIBCPP_INLINE_VISIBILITY
     __bit_reference& operator=(const __bit_reference& __x) _NOEXCEPT
         {return operator=(static_cast<bool>(__x));}
@@ -74,7 +88,7 @@ public:
         {return __bit_iterator<_Cp, false>(__seg_, static_cast<unsigned>(__libcpp_ctz(__mask_)));}
 private:
     _LIBCPP_INLINE_VISIBILITY
-    __bit_reference(__storage_pointer __s, __storage_type __m) _NOEXCEPT
+    explicit __bit_reference(__storage_pointer __s, __storage_type __m) _NOEXCEPT
         : __seg_(__s), __mask_(__m) {}
 };
 
@@ -150,7 +164,7 @@ public:
 private:
     _LIBCPP_INLINE_VISIBILITY
     _LIBCPP_CONSTEXPR
-    __bit_const_reference(__storage_pointer __s, __storage_type __m) _NOEXCEPT
+    explicit __bit_const_reference(__storage_pointer __s, __storage_type __m) _NOEXCEPT
         : __seg_(__s), __mask_(__m) {}
 
     __bit_const_reference& operator=(const __bit_const_reference&) = delete;
@@ -1095,7 +1109,11 @@ public:
     typedef typename _Cp::difference_type                                                          difference_type;
     typedef bool                                                                                  value_type;
     typedef __bit_iterator                                                                        pointer;
+#ifndef _LIBCPP_ABI_BITSET_VECTOR_BOOL_CONST_SUBSCRIPT_RETURN_BOOL
     typedef typename conditional<_IsConst, __bit_const_reference<_Cp>, __bit_reference<_Cp> >::type reference;
+#else
+    using reference = typename conditional<_IsConst, bool, __bit_reference<_Cp> >::type;
+#endif
     typedef random_access_iterator_tag                                                            iterator_category;
 
 private:
@@ -1135,8 +1153,10 @@ public:
         return *this;
     }
 
-    _LIBCPP_INLINE_VISIBILITY reference operator*() const _NOEXCEPT
-        {return reference(__seg_, __storage_type(1) << __ctz_);}
+    _LIBCPP_INLINE_VISIBILITY reference operator*() const _NOEXCEPT {
+        return typename conditional<_IsConst, __bit_const_reference<_Cp>, __bit_reference<_Cp> >
+                ::type(__seg_, __storage_type(1) << __ctz_);
+    }
 
     _LIBCPP_INLINE_VISIBILITY __bit_iterator& operator++()
     {
@@ -1236,7 +1256,7 @@ public:
 
 private:
     _LIBCPP_INLINE_VISIBILITY
-    __bit_iterator(__storage_pointer __s, unsigned __ctz) _NOEXCEPT
+    explicit __bit_iterator(__storage_pointer __s, unsigned __ctz) _NOEXCEPT
         : __seg_(__s), __ctz_(__ctz) {}
 
     friend typename _Cp::__self;

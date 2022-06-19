@@ -156,6 +156,58 @@ define <2 x float> @f6(<2 x float> %a) {
   ret <2 x float> %3
 }
 
+; This @f7 IR test can be generated from flowing c test:
+;
+; typedef __float128 TYPE;
+; TYPE foo(TYPE *qr) {
+;   TYPE re =__arithmetic_fence(*qr);
+;   return re;
+;}
+;
+; with flowing build command:
+; clang -cc1  -triple i386-pc-linux-gnu -mreassociate  t.c -emit-llvm -O2
+
+define dso_local fp128 @foo(fp128* nocapture readonly %qr) local_unnamed_addr{
+; X86-LABEL: foo:
+; X86:       # %bb.0: # %entry
+; X86-NEXT:    pushl %edi
+; X86-NEXT:    .cfi_def_cfa_offset 8
+; X86-NEXT:    pushl %esi
+; X86-NEXT:    .cfi_def_cfa_offset 12
+; X86-NEXT:    .cfi_offset %esi, -12
+; X86-NEXT:    .cfi_offset %edi, -8
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    movl 12(%ecx), %edx
+; X86-NEXT:    movl 8(%ecx), %esi
+; X86-NEXT:    movl (%ecx), %edi
+; X86-NEXT:    movl 4(%ecx), %ecx
+; X86-NEXT:    #ARITH_FENCE
+; X86-NEXT:    #ARITH_FENCE
+; X86-NEXT:    #ARITH_FENCE
+; X86-NEXT:    #ARITH_FENCE
+; X86-NEXT:    movl %edx, 12(%eax)
+; X86-NEXT:    movl %esi, 8(%eax)
+; X86-NEXT:    movl %ecx, 4(%eax)
+; X86-NEXT:    movl %edi, (%eax)
+; X86-NEXT:    popl %esi
+; X86-NEXT:    .cfi_def_cfa_offset 8
+; X86-NEXT:    popl %edi
+; X86-NEXT:    .cfi_def_cfa_offset 4
+; X86-NEXT:    retl $4
+;
+; X64-LABEL: foo:
+; X64:       # %bb.0: # %entry
+; X64-NEXT:    vmovaps (%rdi), %xmm0
+; X64-NEXT:    #ARITH_FENCE
+; X64-NEXT:    retq
+entry:
+  %0 = load fp128, fp128* %qr, align 16
+  %1 = tail call reassoc fp128 @llvm.arithmetic.fence.f128(fp128 %0)
+  ret fp128 %1
+}
+
+declare fp128 @llvm.arithmetic.fence.f128(fp128)
 declare float @llvm.arithmetic.fence.f32(float)
 declare double @llvm.arithmetic.fence.f64(double)
 declare <2 x float> @llvm.arithmetic.fence.v2f32(<2 x float>)

@@ -1,9 +1,9 @@
 ; RUN: llc < %s -verify-machineinstrs -stack-symbol-ordering=0 -mtriple="x86_64-pc-linux-gnu" | FileCheck %s
 ; RUN: llc < %s -verify-machineinstrs -stack-symbol-ordering=0 -mtriple="x86_64-pc-unknown-elf" | FileCheck %s
 
-; This test is a sanity check to ensure statepoints are generating StackMap
-; sections correctly.  This is not intended to be a rigorous test of the 
-; StackMap format (see the stackmap tests for that).
+; This test is a basic correctness check to ensure statepoints are generating
+; StackMap sections correctly.  This is not intended to be a rigorous test of
+; the StackMap format (see the stackmap tests for that).
 
 target datalayout = "e-i64:64-f80:128-n8:16:32:64-S128"
 
@@ -25,7 +25,7 @@ entry:
   %metadata1 = alloca i32 addrspace(1)*, i32 2, align 8
   store i32 addrspace(1)* null, i32 addrspace(1)** %metadata1
   %ptr_derived = getelementptr i32, i32 addrspace(1)* %ptr_base, i32 %arg
-  %safepoint_token = tail call token (i64, i32, i1 ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_i1f(i64 0, i32 0, i1 ()* @return_i1, i32 0, i32 0, i32 0, i32 0) ["gc-live"(i32 addrspace(1)* %ptr_base, i32 addrspace(1)* %ptr_derived, i32 addrspace(1)* null), "deopt" (i32 addrspace(1)* %ptr_base, i32 addrspace(1)* null)]
+  %safepoint_token = tail call token (i64, i32, i1 ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_i1f(i64 0, i32 0, i1 ()* elementtype(i1 ()) @return_i1, i32 0, i32 0, i32 0, i32 0) ["gc-live"(i32 addrspace(1)* %ptr_base, i32 addrspace(1)* %ptr_derived, i32 addrspace(1)* null), "deopt" (i32 addrspace(1)* %ptr_base, i32 addrspace(1)* null)]
   %call1 = call zeroext i1 @llvm.experimental.gc.result.i1(token %safepoint_token)
   %a = call i32 addrspace(1)* @llvm.experimental.gc.relocate.p1i32(token %safepoint_token, i32 0, i32 0)
   %b = call i32 addrspace(1)* @llvm.experimental.gc.relocate.p1i32(token %safepoint_token, i32 0, i32 1)
@@ -53,7 +53,7 @@ define i1 @test_derived_arg(i32 addrspace(1)* %ptr_base,
 entry:
   %metadata1 = alloca i32 addrspace(1)*, i32 2, align 8
   store i32 addrspace(1)* null, i32 addrspace(1)** %metadata1
-  %safepoint_token = tail call token (i64, i32, i1 ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_i1f(i64 0, i32 0, i1 ()* @return_i1, i32 0, i32 0, i32 0, i32 0) ["gc-live"(i32 addrspace(1)* %ptr_base, i32 addrspace(1)* %ptr_derived, i32 addrspace(1)* null), "deopt" (i32 addrspace(1)* %ptr_base, i32 addrspace(1)* null)]
+  %safepoint_token = tail call token (i64, i32, i1 ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_i1f(i64 0, i32 0, i1 ()* elementtype(i1 ()) @return_i1, i32 0, i32 0, i32 0, i32 0) ["gc-live"(i32 addrspace(1)* %ptr_base, i32 addrspace(1)* %ptr_derived, i32 addrspace(1)* null), "deopt" (i32 addrspace(1)* %ptr_base, i32 addrspace(1)* null)]
   %call1 = call zeroext i1 @llvm.experimental.gc.result.i1(token %safepoint_token)
   %a = call i32 addrspace(1)* @llvm.experimental.gc.relocate.p1i32(token %safepoint_token, i32 0, i32 0)
   %b = call i32 addrspace(1)* @llvm.experimental.gc.relocate.p1i32(token %safepoint_token, i32 0, i32 1)
@@ -66,7 +66,7 @@ entry:
 define i1 @test_id() gc "statepoint-example" {
 ; CHECK-LABEL: test_id
 entry:
-  %safepoint_token = tail call token (i64, i32, i1 ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_i1f(i64 237, i32 0, i1 ()* @return_i1, i32 0, i32 0, i32 0, i32 0)
+  %safepoint_token = tail call token (i64, i32, i1 ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_i1f(i64 237, i32 0, i1 ()* elementtype(i1 ()) @return_i1, i32 0, i32 0, i32 0, i32 0)
   %call1 = call zeroext i1 @llvm.experimental.gc.result.i1(token %safepoint_token)
   ret i1 %call1
 }
@@ -90,7 +90,7 @@ define i32 @test_spadj(i32 addrspace(1)* %p) gc "statepoint-example" {
   ; CHECK: callq many_arg
   ; CHECK: addq $16, %rsp
   ; CHECK: movq (%rsp)
-  %statepoint_token = call token (i64, i32, void (i64, i64, i64, i64, i64, i64, i64, i64)*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidi64i64i64i64i64i64i64i64f(i64 0, i32 0, void (i64, i64, i64, i64, i64, i64, i64, i64)* @many_arg, i32 8, i32 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i32 0, i32 0) ["gc-live"(i32 addrspace(1)* %p)]
+  %statepoint_token = call token (i64, i32, void (i64, i64, i64, i64, i64, i64, i64, i64)*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidi64i64i64i64i64i64i64i64f(i64 0, i32 0, void (i64, i64, i64, i64, i64, i64, i64, i64)* elementtype(void (i64, i64, i64, i64, i64, i64, i64, i64)) @many_arg, i32 8, i32 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i32 0, i32 0) ["gc-live"(i32 addrspace(1)* %p)]
   %p.relocated = call i32 addrspace(1)* @llvm.experimental.gc.relocate.p1i32(token %statepoint_token, i32 0, i32 0) ; (%p, %p)
   %ld = load i32, i32 addrspace(1)* %p.relocated
   ret i32 %ld
@@ -116,7 +116,7 @@ entry:
   br label %bb
 
 bb:                                               ; preds = %entry
-  %statepoint_token = call token (i64, i32, void (%struct*)*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidp0s_structsf(i64 0, i32 0, void (%struct*)* @use, i32 1, i32 0, %struct* %x, i32 0, i32 0) ["deopt" (%struct* %x)]
+  %statepoint_token = call token (i64, i32, void (%struct*)*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidp0s_structsf(i64 0, i32 0, void (%struct*)* elementtype(void (%struct*)) @use, i32 1, i32 0, %struct* %x, i32 0, i32 0) ["deopt" (%struct* %x)]
   ret void
 }
 

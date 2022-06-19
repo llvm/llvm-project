@@ -37,6 +37,7 @@ int main(int, char**)
         static_assert((std::is_same<std::numpunct<char>::string_type, std::string>::value), "");
         static_assert((std::is_base_of<std::locale::facet, std::numpunct<char> >::value), "");
     }
+#ifndef TEST_HAS_NO_WIDE_CHARACTERS
     {
         assert(std::has_facet<std::numpunct<wchar_t> >(l));
         const std::numpunct<wchar_t>& f = std::use_facet<std::numpunct<wchar_t> >(l);
@@ -48,6 +49,7 @@ int main(int, char**)
         static_assert((std::is_same<std::numpunct<wchar_t>::string_type, std::wstring>::value), "");
         static_assert((std::is_base_of<std::locale::facet, std::numpunct<wchar_t> >::value), "");
     }
+#endif // TEST_HAS_NO_WIDE_CHARACTERS
 
   return 0;
 }

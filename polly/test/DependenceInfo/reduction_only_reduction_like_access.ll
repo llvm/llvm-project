@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -polly-dependences -analyze < %s | FileCheck %s
+; RUN: opt %loadPolly -polly-print-dependences -disable-output < %s | FileCheck %s
 ;
 ; FIXME: Change the comment once we allow different pointers
 ; The statement is "almost" reduction like but should not yield any reduction dependences

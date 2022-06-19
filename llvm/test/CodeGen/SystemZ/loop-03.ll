@@ -19,7 +19,7 @@ declare void @llvm.memcpy.p0i8.p0i8.i64(i8* nocapture writeonly, i8* nocapture r
 
 define void @fun0(%0*) {
 ; CHECK-LABEL: .LBB0_4
-; CHECK: =>  This Inner Loop Header: Depth=2
+; CHECK: =>  This Inner Loop Header
 ; CHECK-NOT: 16-byte Folded Spill
 ; CHECK-NOT: 16-byte Folded Reload
 

@@ -1,9 +1,7 @@
 from __future__ import absolute_import
 import os
-import tempfile
-import subprocess
-import sys
-import platform
+import re
+import operator
 
 import lit.Test
 import lit.TestRunner
@@ -50,19 +48,16 @@ class LLDBTest(TestFormat):
         # build with.
         executable = test.config.python_executable
 
+        isLuaTest = testFile == test.config.lua_test_entry
+
         # On Windows, the system does not always correctly interpret
         # shebang lines.  To make sure we can execute the tests, add
         # python exe as the first parameter of the command.
         cmd = [executable] + self.dotest_cmd + [testPath, '-p', testFile]
 
-        if 'lldb-repro-capture' in test.config.available_features or \
-           'lldb-repro-replay' in test.config.available_features:
-            reproducer_path = os.path.join(
-                test.config.lldb_reproducer_directory, testFile)
-            if 'lldb-repro-capture' in test.config.available_features:
-                cmd.extend(['--capture-path', reproducer_path])
-            else:
-                cmd.extend(['--replay-path', reproducer_path])
+        if isLuaTest:
+            luaExecutable = test.config.lua_executable
+            cmd.extend(['--env', 'LUA_EXECUTABLE=%s' % luaExecutable])
 
         timeoutInfo = None
         try:
@@ -76,16 +71,6 @@ class LLDBTest(TestFormat):
             exitCode = e.exitCode
             timeoutInfo = 'Reached timeout of {} seconds'.format(
                 litConfig.maxIndividualTestTime)
-
-        if sys.version_info.major == 2:
-            # In Python 2, string objects can contain Unicode characters. Use
-            # the non-strict 'replace' decoding mode. We cannot use the strict
-            # mode right now because lldb's StringPrinter facility and the
-            # Python utf8 decoder have different interpretations of which
-            # characters are "printable". This leads to Python utf8 decoding
-            # exceptions even though lldb is behaving as expected.
-            out = out.decode('utf-8', 'replace')
-            err = err.decode('utf-8', 'replace')
 
         output = """Script:\n--\n%s\n--\nExit Code: %d\n""" % (
             ' '.join(cmd), exitCode)
@@ -101,20 +86,36 @@ class LLDBTest(TestFormat):
         if timeoutInfo:
             return lit.Test.TIMEOUT, output
 
-        if exitCode:
-            if 'XPASS:' in out or 'XPASS:' in err:
-                return lit.Test.XPASS, output
+        # Parse the dotest output from stderr.
+        result_regex = r"\((\d+) passes, (\d+) failures, (\d+) errors, (\d+) skipped, (\d+) expected failures, (\d+) unexpected successes\)"
+        results = re.search(result_regex, err)
 
-            # Otherwise this is just a failure.
-            return lit.Test.FAIL, output
-
-        has_unsupported_tests = 'UNSUPPORTED:' in out or 'UNSUPPORTED:' in err
-        has_passing_tests = 'PASS:' in out or 'PASS:' in err
-        if has_unsupported_tests and not has_passing_tests:
-            return lit.Test.UNSUPPORTED, output
-
-        passing_test_line = 'RESULT: PASSED'
-        if passing_test_line not in out and passing_test_line not in err:
+        # If parsing fails mark this test as unresolved.
+        if not results:
             return lit.Test.UNRESOLVED, output
 
-        return lit.Test.PASS, output
+        passes = int(results.group(1))
+        failures = int(results.group(2))
+        errors = int(results.group(3))
+        skipped = int(results.group(4))
+        expected_failures = int(results.group(5))
+        unexpected_successes = int(results.group(6))
+
+        if exitCode:
+            # Mark this test as FAIL if at least one test failed.
+            if failures > 0:
+                return lit.Test.FAIL, output
+            lit_results = [(failures, lit.Test.FAIL),
+                           (errors, lit.Test.UNRESOLVED),
+                           (unexpected_successes, lit.Test.XPASS)]
+        else:
+            # Mark this test as PASS if at least one test passed.
+            if passes > 0:
+                return lit.Test.PASS, output
+            lit_results = [(passes, lit.Test.PASS),
+                           (skipped, lit.Test.UNSUPPORTED),
+                           (expected_failures, lit.Test.XFAIL)]
+
+        # Return the lit result code with the maximum occurrence. Only look at
+        # the first element and rely on the original order to break ties.
+        return max(lit_results, key=operator.itemgetter(0))[1], output

@@ -32,7 +32,7 @@ namespace build {
 /// Corresponding cpplint.py check name: 'build/namespaces'.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/google-build-namespaces.html
+/// http://clang.llvm.org/extra/clang-tidy/checks/google/build-namespaces.html
 class UnnamedNamespaceInHeaderCheck : public ClangTidyCheck {
 public:
   UnnamedNamespaceInHeaderCheck(StringRef Name, ClangTidyContext *Context);
@@ -44,7 +44,7 @@ public:
   void check(const ast_matchers::MatchFinder::MatchResult &Result) override;
 
 private:
-  const std::string RawStringHeaderFileExtensions;
+  const StringRef RawStringHeaderFileExtensions;
   utils::FileExtensionsSet HeaderFileExtensions;
 };
 

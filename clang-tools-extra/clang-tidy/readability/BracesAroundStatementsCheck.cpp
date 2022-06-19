@@ -81,7 +81,7 @@ static SourceLocation findEndLocation(const Stmt &S, const SourceManager &SM,
     SourceRange TokRange(Loc, TokEndLoc);
     StringRef Comment = Lexer::getSourceText(
         CharSourceRange::getTokenRange(TokRange), SM, Context->getLangOpts());
-    if (Comment.startswith("/*") && Comment.find('\n') != StringRef::npos) {
+    if (Comment.startswith("/*") && Comment.contains('\n')) {
       // Multi-line block comment, insert brace before.
       break;
     }
@@ -186,6 +186,10 @@ BracesAroundStatementsCheck::findRParenLoc(const IfOrWhileStmt *S,
 bool BracesAroundStatementsCheck::checkStmt(
     const MatchFinder::MatchResult &Result, const Stmt *S,
     SourceLocation InitialLoc, SourceLocation EndLocHint) {
+
+  while (const auto *AS = dyn_cast<AttributedStmt>(S))
+    S = AS->getSubStmt();
+
   // 1) If there's a corresponding "else" or "while", the check inserts "} "
   // right before that token.
   // 2) If there's a multi-line block comment starting on the same line after

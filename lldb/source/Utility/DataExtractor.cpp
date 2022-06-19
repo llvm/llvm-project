@@ -142,8 +142,7 @@ DataExtractor::DataExtractor(const void *data, offset_t length,
 DataExtractor::DataExtractor(const DataBufferSP &data_sp, ByteOrder endian,
                              uint32_t addr_size,
                              uint32_t target_byte_size /*=1*/)
-    : m_start(nullptr), m_end(nullptr), m_byte_order(endian),
-      m_addr_size(addr_size), m_data_sp(),
+    : m_byte_order(endian), m_addr_size(addr_size), m_data_sp(),
       m_target_byte_size(target_byte_size) {
   assert(addr_size >= 1 && addr_size <= 8);
   SetData(data_sp);
@@ -156,9 +155,8 @@ DataExtractor::DataExtractor(const DataBufferSP &data_sp, ByteOrder endian,
 // "data".
 DataExtractor::DataExtractor(const DataExtractor &data, offset_t offset,
                              offset_t length, uint32_t target_byte_size /*=1*/)
-    : m_start(nullptr), m_end(nullptr), m_byte_order(data.m_byte_order),
-      m_addr_size(data.m_addr_size), m_data_sp(),
-      m_target_byte_size(target_byte_size) {
+    : m_byte_order(data.m_byte_order), m_addr_size(data.m_addr_size),
+      m_data_sp(), m_target_byte_size(target_byte_size) {
   assert(m_addr_size >= 1 && m_addr_size <= 8);
   if (data.ValidOffset(offset)) {
     offset_t bytes_available = data.GetByteSize() - offset;
@@ -1044,5 +1042,5 @@ void DataExtractor::Checksum(llvm::SmallVectorImpl<uint8_t> &dest,
   md5.final(result);
 
   dest.clear();
-  dest.append(result.Bytes.begin(), result.Bytes.end());
+  dest.append(result.begin(), result.end());
 }

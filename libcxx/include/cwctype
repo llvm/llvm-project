@@ -1,5 +1,5 @@
 // -*- C++ -*-
-//===--------------------------- cwctype ----------------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -49,16 +49,18 @@ wctrans_t wctrans(const char* property);
 
 */
 
+#include <__assert> // all public C++ headers provide the assertion handler
 #include <__config>
 #include <cctype>
 #include <wctype.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
-#pragma GCC system_header
+#  pragma GCC system_header
 #endif
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
+#if defined(_LIBCPP_INCLUDED_C_LIBRARY_WCTYPE_H)
 using ::wint_t _LIBCPP_USING_IF_EXISTS;
 using ::wctrans_t _LIBCPP_USING_IF_EXISTS;
 using ::wctype_t _LIBCPP_USING_IF_EXISTS;
@@ -80,6 +82,7 @@ using ::towlower _LIBCPP_USING_IF_EXISTS;
 using ::towupper _LIBCPP_USING_IF_EXISTS;
 using ::towctrans _LIBCPP_USING_IF_EXISTS;
 using ::wctrans _LIBCPP_USING_IF_EXISTS;
+#endif // _LIBCPP_INCLUDED_C_LIBRARY_WCTYPE_H
 
 _LIBCPP_END_NAMESPACE_STD
 

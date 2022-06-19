@@ -25,6 +25,7 @@
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Module.h"
+
 using namespace clang;
 using namespace CodeGen;
 
@@ -97,10 +98,18 @@ llvm::Type *CodeGenTypes::ConvertTypeForMem(QualType T, bool ForBitField) {
 
   llvm::Type *R = ConvertType(T);
 
-  // If this is a bool type, or an ExtIntType in a bitfield representation,
-  // map this integer to the target-specified size.
-  if ((ForBitField && T->isExtIntType()) ||
-      (!T->isExtIntType() && R->isIntegerTy(1)))
+  // Check for the boolean vector case.
+  if (T->isExtVectorBoolType()) {
+    auto *FixedVT = cast<llvm::FixedVectorType>(R);
+    // Pad to at least one byte.
+    uint64_t BytePadded = std::max<uint64_t>(FixedVT->getNumElements(), 8);
+    return llvm::IntegerType::get(FixedVT->getContext(), BytePadded);
+  }
+
+  // If this is a bool type, or a bit-precise integer type in a bitfield
+  // representation, map this integer to the target-specified size.
+  if ((ForBitField && T->isBitIntType()) ||
+      (!T->isBitIntType() && R->isIntegerTy(1)))
     return llvm::IntegerType::get(getLLVMContext(),
                                   (unsigned)Context.getTypeSize(T));
 
@@ -382,9 +391,6 @@ llvm::Type *CodeGenTypes::ConvertFunctionTypeInternal(QualType QFT) {
 
   RecordsBeingLaidOut.erase(Ty);
 
-  if (SkippedLayout)
-    TypeCache.clear();
-
   if (RecordsBeingLaidOut.empty())
     while (!DeferredRecords.empty())
       ConvertRecordDeclType(DeferredRecords.pop_back_val());
@@ -415,11 +421,27 @@ llvm::Type *CodeGenTypes::ConvertType(QualType T) {
   if (const RecordType *RT = dyn_cast<RecordType>(Ty))
     return ConvertRecordDeclType(RT->getDecl());
 
-  // See if type is already cached.
-  llvm::DenseMap<const Type *, llvm::Type *>::iterator TCI = TypeCache.find(Ty);
-  // If type is found in map then use it. Otherwise, convert type T.
-  if (TCI != TypeCache.end())
-    return TCI->second;
+  // The LLVM type we return for a given Clang type may not always be the same,
+  // most notably when dealing with recursive structs. We mark these potential
+  // cases with ShouldUseCache below. Builtin types cannot be recursive.
+  // TODO: when clang uses LLVM opaque pointers we won't be able to represent
+  // recursive types with LLVM types, making this logic much simpler.
+  llvm::Type *CachedType = nullptr;
+  bool ShouldUseCache =
+      Ty->isBuiltinType() ||
+      (noRecordsBeingLaidOut() && FunctionsBeingProcessed.empty());
+  if (ShouldUseCache) {
+    llvm::DenseMap<const Type *, llvm::Type *>::iterator TCI =
+        TypeCache.find(Ty);
+    if (TCI != TypeCache.end())
+      CachedType = TCI->second;
+      // With expensive checks, check that the type we compute matches the
+      // cached type.
+#ifndef EXPENSIVE_CHECKS
+    if (CachedType)
+      return CachedType;
+#endif
+  }
 
   // If we don't have it in the cache, convert it now.
   llvm::Type *ResultType = nullptr;
@@ -512,6 +534,7 @@ llvm::Type *CodeGenTypes::ConvertType(QualType T) {
     case BuiltinType::Double:
     case BuiltinType::LongDouble:
     case BuiltinType::Float128:
+    case BuiltinType::Ibm128:
       ResultType = getTypeForFormat(getLLVMContext(),
                                     Context.getFloatTypeSemantics(T),
                                     /* UseNativeHalf = */ false);
@@ -642,11 +665,7 @@ llvm::Type *CodeGenTypes::ConvertType(QualType T) {
     llvm::Type *PointeeType = ConvertTypeForMem(ETy);
     if (PointeeType->isVoidTy())
       PointeeType = llvm::Type::getInt8Ty(getLLVMContext());
-
-    unsigned AS = PointeeType->isFunctionTy()
-                      ? getDataLayout().getProgramAddressSpace()
-                      : Context.getTargetAddressSpace(ETy);
-
+    unsigned AS = Context.getTargetAddressSpace(ETy);
     ResultType = llvm::PointerType::get(PointeeType, AS);
     break;
   }
@@ -690,9 +709,12 @@ llvm::Type *CodeGenTypes::ConvertType(QualType T) {
   }
   case Type::ExtVector:
   case Type::Vector: {
-    const VectorType *VT = cast<VectorType>(Ty);
-    ResultType = llvm::FixedVectorType::get(ConvertType(VT->getElementType()),
-                                            VT->getNumElements());
+    const auto *VT = cast<VectorType>(Ty);
+    // An ext_vector_type of Bool is really a vector of bits.
+    llvm::Type *IRElemTy = VT->isExtVectorBoolType()
+                               ? llvm::Type::getInt1Ty(getLLVMContext())
+                               : ConvertType(VT->getElementType());
+    ResultType = llvm::FixedVectorType::get(IRElemTy, VT->getNumElements());
     break;
   }
   case Type::ConstantMatrix: {
@@ -747,7 +769,13 @@ llvm::Type *CodeGenTypes::ConvertType(QualType T) {
     llvm::Type *PointeeType = CGM.getLangOpts().OpenCL
                                   ? CGM.getGenericBlockLiteralType()
                                   : ConvertTypeForMem(FTy);
-    unsigned AS = Context.getTargetAddressSpace(FTy);
+    // Block pointers lower to function type. For function type,
+    // getTargetAddressSpace() returns default address space for
+    // function pointer i.e. program address space. Therefore, for block
+    // pointers, it is important to pass qualifiers when calling
+    // getTargetAddressSpace(), to ensure that we get the address space
+    // for data pointers and not function pointers.
+    unsigned AS = Context.getTargetAddressSpace(FTy.getQualifiers());
     ResultType = llvm::PointerType::get(PointeeType, AS);
     break;
   }
@@ -755,8 +783,11 @@ llvm::Type *CodeGenTypes::ConvertType(QualType T) {
   case Type::MemberPointer: {
     auto *MPTy = cast<MemberPointerType>(Ty);
     if (!getCXXABI().isMemberPointerConvertible(MPTy)) {
-      RecordsWithOpaqueMemberPointers.insert(MPTy->getClass());
-      ResultType = llvm::StructType::create(getLLVMContext());
+      auto *C = MPTy->getClass();
+      auto Insertion = RecordsWithOpaqueMemberPointers.insert({C, nullptr});
+      if (Insertion.second)
+        Insertion.first->second = llvm::StructType::create(getLLVMContext());
+      ResultType = Insertion.first->second;
     } else {
       ResultType = getCXXABI().ConvertMemberPointerType(MPTy);
     }
@@ -785,16 +816,19 @@ llvm::Type *CodeGenTypes::ConvertType(QualType T) {
     ResultType = CGM.getOpenCLRuntime().getPipeType(cast<PipeType>(Ty));
     break;
   }
-  case Type::ExtInt: {
-    const auto &EIT = cast<ExtIntType>(Ty);
+  case Type::BitInt: {
+    const auto &EIT = cast<BitIntType>(Ty);
     ResultType = llvm::Type::getIntNTy(getLLVMContext(), EIT->getNumBits());
     break;
   }
   }
 
   assert(ResultType && "Didn't convert a type?");
+  assert((!CachedType || CachedType == ResultType) &&
+         "Cached type doesn't match computed type");
 
-  TypeCache[Ty] = ResultType;
+  if (ShouldUseCache)
+    TypeCache[Ty] = ResultType;
   return ResultType;
 }
 

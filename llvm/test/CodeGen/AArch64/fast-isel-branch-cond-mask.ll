@@ -3,7 +3,7 @@
 define void @test(i64 %a, i64 %b, i2* %c) {
 ; CHECK-LABEL: test
 ; CHECK:       and [[REG1:w[0-9]+]], {{w[0-9]+}}, #0x3
-; CHECK-NEXT:  strb [[REG1]], {{\[}}x2{{\]}}
+; CHECK-NEXT:  strb [[REG1]], [x2]
 ; CHECK-NEXT:  tbz {{w[0-9]+}}, #0,
  %1 = trunc i64 %a to i2
  %2 = trunc i64 %b to i1

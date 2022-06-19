@@ -1,4 +1,4 @@
-; RUN: opt -S -newgvn %s | FileCheck %s
+; RUN: opt -S -passes=newgvn %s | FileCheck %s
 
 ; CHECK: define void @tinkywinky() {
 ; CHECK-NEXT: entry:

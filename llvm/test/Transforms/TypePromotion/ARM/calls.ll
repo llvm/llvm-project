@@ -169,7 +169,7 @@ define hidden i32 @call_return_pointer(i8 zeroext %p_13) local_unnamed_addr #0 {
 ; CHECK-NEXT:    [[TMP1:%.*]] = trunc i32 [[TMP0]] to i8
 ; CHECK-NEXT:    [[CONV1:%.*]] = zext i8 [[TMP1]] to i16
 ; CHECK-NEXT:    [[CALL:%.*]] = tail call i16** @func_62(i8 zeroext undef, i32 undef, i16 signext [[CONV1]], i32* undef)
-; CHECK-NEXT:    [[TMP2:%.*]] = load i32, i32* getelementptr inbounds (%struct.anon, %struct.anon* @g_893, i32 0, i32 0), align 4
+; CHECK-NEXT:    [[TMP2:%.*]] = load i32, i32* getelementptr inbounds ([[STRUCT_ANON:%.*]], %struct.anon* @g_893, i32 0, i32 0), align 4
 ; CHECK-NEXT:    [[CONV2:%.*]] = trunc i32 [[TMP2]] to i16
 ; CHECK-NEXT:    br label [[FOR_COND:%.*]]
 ; CHECK:       for.cond:

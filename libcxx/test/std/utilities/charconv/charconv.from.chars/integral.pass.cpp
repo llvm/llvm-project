@@ -7,8 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 // UNSUPPORTED: c++03
-// UNSUPPORTED: !libc++ && c++11
-// UNSUPPORTED: !libc++ && c++14
+// UNSUPPORTED: !stdlib=libc++ && c++11
+// UNSUPPORTED: !stdlib=libc++ && c++14
 
 // <charconv>
 

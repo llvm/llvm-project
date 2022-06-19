@@ -460,7 +460,7 @@ namespace rdar23721638 {
 
   template <typename T> void foo() {
     struct Inner { // expected-note {{in instantiation}}
-      void operator()(T a = "") {} // expected-error {{conversion function from 'const char [1]' to 'rdar23721638::A' invokes a deleted function}}
+      void operator()(T a = "") {} // expected-error {{conversion function from 'const char[1]' to 'rdar23721638::A' invokes a deleted function}}
       // expected-note@-1 {{passing argument to parameter 'a' here}}
     };
     Inner()(); // expected-error {{type 'Inner' does not provide a call operator}}
@@ -468,7 +468,7 @@ namespace rdar23721638 {
   template void foo<A>(); // expected-note 2 {{in instantiation}}
 
   template <typename T> void bar() {
-    auto lambda = [](T a = "") {}; // expected-error {{conversion function from 'const char [1]' to 'rdar23721638::A' invokes a deleted function}}
+    auto lambda = [](T a = "") {}; // expected-error {{conversion function from 'const char[1]' to 'rdar23721638::A' invokes a deleted function}}
       // expected-note@-1 {{passing argument to parameter 'a' here}}
     lambda();
   }
@@ -489,7 +489,7 @@ namespace anon_union_default_member_init {
 namespace PR45000 {
   template <typename T>
   void f(int x = [](T x = nullptr) -> int { return x; }());
-  // expected-error@-1 {{cannot initialize a parameter of type 'int' with an rvalue of type 'nullptr_t'}}
+  // expected-error@-1 {{cannot initialize a parameter of type 'int' with an rvalue of type 'std::nullptr_t'}}
   // expected-note@-2 {{passing argument to parameter 'x' here}}
 
   void g() { f<int>(); }

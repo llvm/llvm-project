@@ -8,6 +8,7 @@
 # FULL-NEXT: explicitKernArgSize: 128
 # FULL-NEXT: maxKernArgAlign: 64
 # FULL-NEXT: ldsSize: 2048
+# FULL-NEXT: gdsSize: 256
 # FULL-NEXT: dynLDSAlign: 1
 # FULL-NEXT: isEntryFunction: true
 # FULL-NEXT: noSignedZerosFPMath: false
@@ -18,12 +19,22 @@
 # FULL-NEXT: scratchRSrcReg:  '$sgpr8_sgpr9_sgpr10_sgpr11'
 # FULL-NEXT: frameOffsetReg:  '$sgpr12'
 # FULL-NEXT: stackPtrOffsetReg:  '$sgpr13'
+# FULL-NEXT: bytesInStackArgArea: 0
+# FULL-NEXT: returnsVoid: true
 # FULL-NEXT: argumentInfo:
 # FULL-NEXT: privateSegmentBuffer: { reg: '$sgpr0_sgpr1_sgpr2_sgpr3' }
+# FULL-NEXT: dispatchPtr:     { reg: '$sgpr4_sgpr5' }
+# FULL-NEXT: queuePtr:        { reg: '$sgpr6_sgpr7' }
 # FULL-NEXT: kernargSegmentPtr: { reg: '$sgpr4_sgpr5' }
-# FULL-NEXT: workGroupIDX: { reg: '$sgpr6' }
+# FULL-NEXT: dispatchID:      { reg: '$sgpr10_sgpr11' }
+# FULL-NEXT: workGroupIDX:    { reg: '$sgpr6' }
+# FULL-NEXT: workGroupIDY:    { reg: '$sgpr13' }
+# FULL-NEXT: workGroupIDZ:    { reg: '$sgpr14' }
 # FULL-NEXT: privateSegmentWaveByteOffset: { reg: '$sgpr7' }
-# FULL-NEXT: workItemIDX: { reg: '$vgpr0' }
+# FULL-NEXT: implicitArgPtr:  { reg: '$sgpr8_sgpr9' }
+# FULL-NEXT: workItemIDX:     { reg: '$vgpr0' }
+# FULL-NEXT: workItemIDY:     { reg: '$vgpr31', mask: 1047552 }
+# FULL-NEXT: workItemIDZ:     { reg: '$vgpr31', mask: 1072693248 }
 # FULL-NEXT: mode:
 # FULL-NEXT: ieee: true
 # FULL-NEXT: dx10-clamp: true
@@ -33,12 +44,14 @@
 # FULL-NEXT: fp64-fp16-output-denormals: true
 # FULL-NEXT:  highBitsOf32BitAddress: 0
 # FULL-NEXT:  occupancy: 10
+# FULL-NEXT:  vgprForAGPRCopy: ''
 # FULL-NEXT: body:
 
 # SIMPLE: machineFunctionInfo:
 # SIMPLE-NEXT: explicitKernArgSize: 128
 # SIMPLE-NEXT: maxKernArgAlign: 64
 # SIMPLE-NEXT: ldsSize: 2048
+# SIMPLE-NEXT: gdsSize: 256
 # SIMPLE-NEXT: isEntryFunction: true
 # SIMPLE-NEXT: memoryBound: true
 # SIMPLE-NEXT: waveLimiter: true
@@ -47,10 +60,18 @@
 # SIMPLE-NEXT: stackPtrOffsetReg:  '$sgpr13'
 # SIMPLE-NEXT: argumentInfo:
 # SIMPLE-NEXT: privateSegmentBuffer: { reg: '$sgpr0_sgpr1_sgpr2_sgpr3' }
+# SIMPLE-NEXT: dispatchPtr:     { reg: '$sgpr4_sgpr5' }
+# SIMPLE-NEXT: queuePtr:        { reg: '$sgpr6_sgpr7' }
 # SIMPLE-NEXT: kernargSegmentPtr: { reg: '$sgpr4_sgpr5' }
-# SIMPLE-NEXT: workGroupIDX: { reg: '$sgpr6' }
+# SIMPLE-NEXT: dispatchID:      { reg: '$sgpr10_sgpr11' }
+# SIMPLE-NEXT: workGroupIDX:    { reg: '$sgpr6' }
+# SIMPLE-NEXT: workGroupIDY:    { reg: '$sgpr13' }
+# SIMPLE-NEXT: workGroupIDZ:    { reg: '$sgpr14' }
 # SIMPLE-NEXT: privateSegmentWaveByteOffset: { reg: '$sgpr7' }
+# SIMPLE-NEXT: implicitArgPtr:  { reg: '$sgpr8_sgpr9' }
 # SIMPLE-NEXT: workItemIDX: { reg: '$vgpr0' }
+# SIMPLE-NEXT: workItemIDY:     { reg: '$vgpr31', mask: 1047552 }
+# SIMPLE-NEXT: workItemIDZ:     { reg: '$vgpr31', mask: 1072693248 }
 # SIMPLE-NEXT: occupancy: 10
 # SIMPLE-NEXT: body:
 name: kernel0
@@ -58,6 +79,7 @@ machineFunctionInfo:
   explicitKernArgSize: 128
   maxKernArgAlign: 64
   ldsSize: 2048
+  gdsSize: 256
   isEntryFunction: true
   noSignedZerosFPMath: false
   memoryBound:     true
@@ -84,6 +106,7 @@ body:             |
 # FULL-NEXT: explicitKernArgSize: 0
 # FULL-NEXT: maxKernArgAlign: 1
 # FULL-NEXT: ldsSize: 0
+# FULL-NEXT: gdsSize: 0
 # FULL-NEXT: dynLDSAlign: 1
 # FULL-NEXT: isEntryFunction: false
 # FULL-NEXT: noSignedZerosFPMath: false
@@ -94,8 +117,20 @@ body:             |
 # FULL-NEXT: scratchRSrcReg:  '$private_rsrc_reg'
 # FULL-NEXT: frameOffsetReg:  '$fp_reg'
 # FULL-NEXT: stackPtrOffsetReg:  '$sp_reg'
+# FULL-NEXT: bytesInStackArgArea: 0
+# FULL-NEXT: returnsVoid: true
 # FULL-NEXT: argumentInfo:
 # FULL-NEXT: privateSegmentBuffer: { reg: '$sgpr0_sgpr1_sgpr2_sgpr3' }
+# FULL-NEXT: dispatchPtr:     { reg: '$sgpr4_sgpr5' }
+# FULL-NEXT: queuePtr:        { reg: '$sgpr6_sgpr7' }
+# FULL-NEXT: dispatchID:      { reg: '$sgpr10_sgpr11' }
+# FULL-NEXT: workGroupIDX:    { reg: '$sgpr12' }
+# FULL-NEXT: workGroupIDY:    { reg: '$sgpr13' }
+# FULL-NEXT: workGroupIDZ:    { reg: '$sgpr14' }
+# FULL-NEXT: implicitArgPtr:  { reg: '$sgpr8_sgpr9' }
+# FULL-NEXT: workItemIDX:     { reg: '$vgpr31', mask: 1023 }
+# FULL-NEXT: workItemIDY:     { reg: '$vgpr31', mask: 1047552 }
+# FULL-NEXT: workItemIDZ:     { reg: '$vgpr31', mask: 1072693248 }
 # FULL-NEXT: mode:
 # FULL-NEXT: ieee: true
 # FULL-NEXT: dx10-clamp: true
@@ -105,12 +140,23 @@ body:             |
 # FULL-NEXT: fp64-fp16-output-denormals: true
 # FULL-NEXT:  highBitsOf32BitAddress: 0
 # FULL-NEXT:  occupancy: 10
+# FULL-NEXT: vgprForAGPRCopy: ''
 # FULL-NEXT: body:
 
 # SIMPLE: machineFunctionInfo:
 # SIMPLE-NEXT: maxKernArgAlign: 1
 # SIMPLE-NEXT: argumentInfo:
 # SIMPLE-NEXT: privateSegmentBuffer: { reg: '$sgpr0_sgpr1_sgpr2_sgpr3' }
+# SIMPLE-NEXT: dispatchPtr:     { reg: '$sgpr4_sgpr5' }
+# SIMPLE-NEXT: queuePtr:        { reg: '$sgpr6_sgpr7' }
+# SIMPLE-NEXT: dispatchID:      { reg: '$sgpr10_sgpr11' }
+# SIMPLE-NEXT: workGroupIDX:    { reg: '$sgpr12' }
+# SIMPLE-NEXT: workGroupIDY:    { reg: '$sgpr13' }
+# SIMPLE-NEXT: workGroupIDZ:    { reg: '$sgpr14' }
+# SIMPLE-NEXT: implicitArgPtr:  { reg: '$sgpr8_sgpr9' }
+# SIMPLE-NEXT: workItemIDX:     { reg: '$vgpr31', mask: 1023 }
+# SIMPLE-NEXT: workItemIDY:     { reg: '$vgpr31', mask: 1047552 }
+# SIMPLE-NEXT: workItemIDZ:     { reg: '$vgpr31', mask: 1072693248 }
 # SIMPLE-NEXT:  occupancy: 10
 # SIMPLE-NEXT: body:
 
@@ -127,6 +173,7 @@ body:             |
 # FULL-NEXT: explicitKernArgSize: 0
 # FULL-NEXT: maxKernArgAlign: 1
 # FULL-NEXT: ldsSize: 0
+# FULL-NEXT: gdsSize: 0
 # FULL-NEXT: dynLDSAlign: 1
 # FULL-NEXT: isEntryFunction: false
 # FULL-NEXT: noSignedZerosFPMath: false
@@ -137,8 +184,20 @@ body:             |
 # FULL-NEXT: scratchRSrcReg:  '$private_rsrc_reg'
 # FULL-NEXT: frameOffsetReg:  '$fp_reg'
 # FULL-NEXT: stackPtrOffsetReg:  '$sp_reg'
+# FULL-NEXT: bytesInStackArgArea: 0
+# FULL-NEXT: returnsVoid: true
 # FULL-NEXT: argumentInfo:
 # FULL-NEXT: privateSegmentBuffer: { reg: '$sgpr0_sgpr1_sgpr2_sgpr3' }
+# FULL-NEXT: dispatchPtr:     { reg: '$sgpr4_sgpr5' }
+# FULL-NEXT: queuePtr:        { reg: '$sgpr6_sgpr7' }
+# FULL-NEXT: dispatchID:      { reg: '$sgpr10_sgpr11' }
+# FULL-NEXT: workGroupIDX:    { reg: '$sgpr12' }
+# FULL-NEXT: workGroupIDY:    { reg: '$sgpr13' }
+# FULL-NEXT: workGroupIDZ:    { reg: '$sgpr14' }
+# FULL-NEXT: implicitArgPtr:  { reg: '$sgpr8_sgpr9' }
+# FULL-NEXT: workItemIDX:     { reg: '$vgpr31', mask: 1023 }
+# FULL-NEXT: workItemIDY:     { reg: '$vgpr31', mask: 1047552 }
+# FULL-NEXT: workItemIDZ:     { reg: '$vgpr31', mask: 1072693248 }
 # FULL-NEXT: mode:
 # FULL-NEXT: ieee: true
 # FULL-NEXT: dx10-clamp: true
@@ -148,12 +207,23 @@ body:             |
 # FULL-NEXT: fp64-fp16-output-denormals: true
 # FULL-NEXT:  highBitsOf32BitAddress: 0
 # FULL-NEXT:  occupancy: 10
+# FULL-NEXT: vgprForAGPRCopy: ''
 # FULL-NEXT: body:
 
 # SIMPLE: machineFunctionInfo:
 # SIMPLE-NEXT: maxKernArgAlign: 1
 # SIMPLE-NEXT: argumentInfo:
 # SIMPLE-NEXT: privateSegmentBuffer: { reg: '$sgpr0_sgpr1_sgpr2_sgpr3' }
+# SIMPLE-NEXT: dispatchPtr:     { reg: '$sgpr4_sgpr5' }
+# SIMPLE-NEXT: queuePtr:        { reg: '$sgpr6_sgpr7' }
+# SIMPLE-NEXT: dispatchID:      { reg: '$sgpr10_sgpr11' }
+# SIMPLE-NEXT: workGroupIDX:    { reg: '$sgpr12' }
+# SIMPLE-NEXT: workGroupIDY:    { reg: '$sgpr13' }
+# SIMPLE-NEXT: workGroupIDZ:    { reg: '$sgpr14' }
+# SIMPLE-NEXT: implicitArgPtr:  { reg: '$sgpr8_sgpr9' }
+# SIMPLE-NEXT: workItemIDX:     { reg: '$vgpr31', mask: 1023 }
+# SIMPLE-NEXT: workItemIDY:     { reg: '$vgpr31', mask: 1047552 }
+# SIMPLE-NEXT: workItemIDZ:     { reg: '$vgpr31', mask: 1072693248 }
 # SIMPLE-NEXT:  occupancy: 10
 # SIMPLE-NEXT: body:
 
@@ -171,6 +241,7 @@ body:             |
 # FULL-NEXT: explicitKernArgSize: 0
 # FULL-NEXT: maxKernArgAlign: 1
 # FULL-NEXT: ldsSize: 0
+# FULL-NEXT: gdsSize: 0
 # FULL-NEXT: dynLDSAlign: 1
 # FULL-NEXT: isEntryFunction: true
 # FULL-NEXT: noSignedZerosFPMath: false
@@ -181,8 +252,20 @@ body:             |
 # FULL-NEXT: scratchRSrcReg:  '$private_rsrc_reg'
 # FULL-NEXT: frameOffsetReg:  '$fp_reg'
 # FULL-NEXT: stackPtrOffsetReg:  '$sp_reg'
+# FULL-NEXT: bytesInStackArgArea: 0
+# FULL-NEXT: returnsVoid: true
 # FULL-NEXT: argumentInfo:
 # FULL-NEXT: privateSegmentBuffer: { reg: '$sgpr0_sgpr1_sgpr2_sgpr3' }
+# FULL-NEXT: dispatchPtr:     { reg: '$sgpr4_sgpr5' }
+# FULL-NEXT: queuePtr:        { reg: '$sgpr6_sgpr7' }
+# FULL-NEXT: dispatchID:      { reg: '$sgpr10_sgpr11' }
+# FULL-NEXT: workGroupIDX:    { reg: '$sgpr12' }
+# FULL-NEXT: workGroupIDY:    { reg: '$sgpr13' }
+# FULL-NEXT: workGroupIDZ:    { reg: '$sgpr14' }
+# FULL-NEXT: implicitArgPtr:  { reg: '$sgpr8_sgpr9' }
+# FULL-NEXT: workItemIDX:     { reg: '$vgpr31', mask: 1023 }
+# FULL-NEXT: workItemIDY:     { reg: '$vgpr31', mask: 1047552 }
+# FULL-NEXT: workItemIDZ:     { reg: '$vgpr31', mask: 1072693248 }
 # FULL-NEXT: mode:
 # FULL-NEXT: ieee: true
 # FULL-NEXT: dx10-clamp: true
@@ -192,6 +275,7 @@ body:             |
 # FULL-NEXT: fp64-fp16-output-denormals: true
 # FULL-NEXT:  highBitsOf32BitAddress: 0
 # FULL-NEXT:  occupancy: 10
+# FULL-NEXT: vgprForAGPRCopy: ''
 # FULL-NEXT: body:
 
 # SIMPLE: machineFunctionInfo:
@@ -199,6 +283,16 @@ body:             |
 # SIMPLE-NEXT: isEntryFunction: true
 # SIMPLE-NEXT: argumentInfo:
 # SIMPLE-NEXT: privateSegmentBuffer: { reg: '$sgpr0_sgpr1_sgpr2_sgpr3' }
+# SIMPLE-NEXT: dispatchPtr:     { reg: '$sgpr4_sgpr5' }
+# SIMPLE-NEXT: queuePtr:        { reg: '$sgpr6_sgpr7' }
+# SIMPLE-NEXT: dispatchID:      { reg: '$sgpr10_sgpr11' }
+# SIMPLE-NEXT: workGroupIDX:    { reg: '$sgpr12' }
+# SIMPLE-NEXT: workGroupIDY:    { reg: '$sgpr13' }
+# SIMPLE-NEXT: workGroupIDZ:    { reg: '$sgpr14' }
+# SIMPLE-NEXT: implicitArgPtr:  { reg: '$sgpr8_sgpr9' }
+# SIMPLE-NEXT: workItemIDX:     { reg: '$vgpr31', mask: 1023 }
+# SIMPLE-NEXT: workItemIDY:     { reg: '$vgpr31', mask: 1047552 }
+# SIMPLE-NEXT: workItemIDZ:     { reg: '$vgpr31', mask: 1072693248 }
 # SIMPLE-NEXT: occupancy: 10
 # SIMPLE-NEXT: body:
 
@@ -234,14 +328,23 @@ body:             |
 # ALL-LABEL: name: fake_stack_arginfo
 
 # FULL: argumentInfo:
-# FULL-NEXT: privateSegmentBuffer: { reg: '$sgpr0_sgpr1_sgpr2_sgpr3' }
-# FULL-NEXT: flatScratchInit: { offset: 4 }
-# FULL-NEXT: workItemIDY: { reg: '$vgpr0', mask: 65280 }
+# FULL: privateSegmentBuffer: { reg: '$sgpr0_sgpr1_sgpr2_sgpr3' }
+# FULL: flatScratchInit: { offset: 4 }
+# FULL: workItemIDY: { reg: '$vgpr0', mask: 65280 }
 
 # SIMPLE: argumentInfo:
 # SIMPLE-NEXT: privateSegmentBuffer: { reg: '$sgpr0_sgpr1_sgpr2_sgpr3' }
+# SIMPLE-NEXT: dispatchPtr:     { reg: '$sgpr4_sgpr5' }
+# SIMPLE-NEXT: queuePtr:        { reg: '$sgpr6_sgpr7' }
+# SIMPLE-NEXT: dispatchID:      { reg: '$sgpr10_sgpr11' }
 # SIMPLE-NEXT: flatScratchInit: { offset: 4 }
-# SIMPLE-NEXT: workItemIDY: { reg: '$vgpr0', mask: 65280 }
+# SIMPLE-NEXT: workGroupIDX:    { reg: '$sgpr12' }
+# SIMPLE-NEXT: workGroupIDY:    { reg: '$sgpr13' }
+# SIMPLE-NEXT: workGroupIDZ:    { reg: '$sgpr14' }
+# SIMPLE-NEXT: implicitArgPtr:  { reg: '$sgpr8_sgpr9' }
+# SIMPLE-NEXT: workItemIDX:     { reg: '$vgpr31', mask: 1023 }
+# SIMPLE-NEXT: workItemIDY:     { reg: '$vgpr0', mask: 65280 }
+# SIMPLE-NEXT: workItemIDZ:     { reg: '$vgpr31', mask: 1072693248 }
 name: fake_stack_arginfo
 machineFunctionInfo:
   argumentInfo:
@@ -302,6 +405,7 @@ body:             |
 # ALL-LABEL: name: dyn_lds_with_alignment
 
 # FULL: ldsSize: 0
+# FULL-NEXT: gdsSize: 0
 # FULL-NEXT: dynLDSAlign: 8
 
 # SIMPLE: dynLDSAlign: 8
@@ -353,5 +457,66 @@ machineFunctionInfo:
 body:             |
   bb.0:
     S_ENDPGM 0
+
+...
+
+---
+# ALL-LABEL: name: bytes_in_stack_arg_area
+# ALL: bytesInStackArgArea: 444
+name: bytes_in_stack_arg_area
+machineFunctionInfo:
+  bytesInStackArgArea: 444
+body:             |
+  bb.0:
+    SI_RETURN
+
+...
+
+---
+# ALL-LABEL: name: returns_void_true
+# FULL: returnsVoid: true
+# SIMPLE-NOT: returnsVoid
+name: returns_void_true
+machineFunctionInfo:
+  returnsVoid: true
+body:             |
+  bb.0:
+    SI_RETURN
+
+...
+---
+# ALL-LABEL: name: returns_void_false
+# ALL: returnsVoid: false
+name: returns_void_false
+machineFunctionInfo:
+  returnsVoid: false
+body:             |
+  bb.0:
+    SI_RETURN
+
+...
+
+---
+# ALL-LABEL: name: vgpr_for_agpr_copy
+# ALL: vgprForAGPRCopy: '$vgpr2'
+name: vgpr_for_agpr_copy
+machineFunctionInfo:
+  vgprForAGPRCopy: '$vgpr2'
+body:             |
+  bb.0:
+    SI_RETURN
+
+...
+
+---
+# ALL-LABEL: name: vgpr_for_agpr_copy_noreg
+# FULL: vgprForAGPRCopy: ''
+# SIMPLE-NOT: vgprForAGPRCopy
+name: vgpr_for_agpr_copy_noreg
+machineFunctionInfo:
+  vgprForAGPRCopy: '$noreg'
+body:             |
+  bb.0:
+    SI_RETURN
 
 ...

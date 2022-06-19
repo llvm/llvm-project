@@ -23,6 +23,7 @@
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Module.h"
+#include "llvm/IR/ModuleSummaryIndex.h"
 #include "llvm/IR/Type.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Error.h"
@@ -37,7 +38,7 @@ using namespace llvm;
 
 static cl::OptionCategory DisCategory("Disassembler Options");
 
-static cl::list<std::string> InputFilenames(cl::Positional, cl::ZeroOrMore,
+static cl::list<std::string> InputFilenames(cl::Positional,
                                             cl::desc("[input bitcode]..."),
                                             cl::cat(DisCategory));
 
@@ -73,6 +74,11 @@ static cl::opt<bool>
                         cl::desc("Load module without materializing metadata, "
                                  "then materialize only the metadata"),
                         cl::cat(DisCategory));
+
+static cl::opt<bool> PrintThinLTOIndexOnly(
+    "print-thinlto-index-only",
+    cl::desc("Only read thinlto index and print the index as LLVM assembly."),
+    cl::init(false), cl::Hidden, cl::cat(DisCategory));
 
 namespace {
 
@@ -174,8 +180,13 @@ int main(int argc, char **argv) {
   }
 
   for (std::string InputFilename : InputFilenames) {
-    std::unique_ptr<MemoryBuffer> MB = ExitOnErr(
-        errorOrToExpected(MemoryBuffer::getFileOrSTDIN(InputFilename)));
+    ErrorOr<std::unique_ptr<MemoryBuffer>> BufferOrErr =
+        MemoryBuffer::getFileOrSTDIN(InputFilename);
+    if (std::error_code EC = BufferOrErr.getError()) {
+      WithColor::error() << InputFilename << ": " << EC.message() << '\n';
+      return 1;
+    }
+    std::unique_ptr<MemoryBuffer> MB = std::move(BufferOrErr.get());
 
     BitcodeFileContents IF = ExitOnErr(llvm::getBitcodeFileContents(*MB));
 
@@ -186,12 +197,17 @@ int main(int argc, char **argv) {
 
     for (size_t I = 0; I < N; ++I) {
       BitcodeModule MB = IF.Mods[I];
-      std::unique_ptr<Module> M = ExitOnErr(
-          MB.getLazyModule(Context, MaterializeMetadata, SetImporting));
-      if (MaterializeMetadata)
-        ExitOnErr(M->materializeMetadata());
-      else
-        ExitOnErr(M->materializeAll());
+
+      std::unique_ptr<Module> M;
+
+      if (!PrintThinLTOIndexOnly) {
+        M = ExitOnErr(
+            MB.getLazyModule(Context, MaterializeMetadata, SetImporting));
+        if (MaterializeMetadata)
+          ExitOnErr(M->materializeMetadata());
+        else
+          ExitOnErr(M->materializeAll());
+      }
 
       BitcodeLTOInfo LTOInfo = ExitOnErr(MB.getLTOInfo());
       std::unique_ptr<ModuleSummaryIndex> Index;
@@ -233,7 +249,8 @@ int main(int argc, char **argv) {
 
       // All that llvm-dis does is write the assembly to a file.
       if (!DontPrint) {
-        M->print(Out->os(), Annotator.get(), PreserveAssemblyUseListOrder);
+        if (M)
+          M->print(Out->os(), Annotator.get(), PreserveAssemblyUseListOrder);
         if (Index)
           Index->print(Out->os());
       }

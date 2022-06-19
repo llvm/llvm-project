@@ -40,3 +40,7 @@ AEABI_RTABI du_int __aeabi_d2ulz(fp_t a) { return __fixunsdfdi(a); }
 COMPILER_RT_ALIAS(__fixunsdfdi, __aeabi_d2ulz)
 #endif
 #endif
+
+#if defined(__MINGW32__) && defined(__arm__)
+COMPILER_RT_ALIAS(__fixunsdfdi, __dtou64)
+#endif

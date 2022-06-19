@@ -238,12 +238,12 @@ define <vscale x 4 x i32> @index_rr_i32_combine(i32 %a, i32 %b) {
 define <vscale x 4 x i32> @index_rr_i32_not_combine(i32 %a, i32 %b) {
 ; CHECK-LABEL: index_rr_i32_not_combine:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov z0.s, w0
-; CHECK-NEXT:    mov z1.s, w1
-; CHECK-NEXT:    index z2.s, #0, #1
+; CHECK-NEXT:    index z0.s, #0, #1
+; CHECK-NEXT:    mov z1.s, w0
+; CHECK-NEXT:    mov z2.s, w1
 ; CHECK-NEXT:    ptrue p0.s
-; CHECK-NEXT:    mla z0.s, p0/m, z2.s, z1.s
-; CHECK-NEXT:    add z0.s, z0.s, z2.s
+; CHECK-NEXT:    mla z1.s, p0/m, z0.s, z2.s
+; CHECK-NEXT:    add z0.s, z1.s, z0.s
 ; CHECK-NEXT:    ret
   %val = insertelement <vscale x 4 x i32> poison, i32 %a, i32 0
   %val1 = shufflevector <vscale x 4 x i32> %val, <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer

@@ -110,8 +110,8 @@ char const *__kmp_barrier_type_name[bs_last_barrier] = {"plain", "forkjoin"
                                                         "reduction"
 #endif // KMP_FAST_REDUCTION_BARRIER
 };
-char const *__kmp_barrier_pattern_name[bp_last_bar] = {"linear", "tree",
-                                                       "hyper", "hierarchical"};
+char const *__kmp_barrier_pattern_name[bp_last_bar] = {
+    "linear", "tree", "hyper", "hierarchical", "dist"};
 
 int __kmp_allThreadsSpecified = 0;
 size_t __kmp_align_alloc = CACHE_LINE;
@@ -154,6 +154,7 @@ int __kmp_hier_threads_per[kmp_hier_layer_e::LAYER_LAST + 1];
 kmp_hier_sched_env_t __kmp_hier_scheds = {0, 0, NULL, NULL, NULL};
 #endif
 int __kmp_dflt_blocktime = KMP_DEFAULT_BLOCKTIME;
+bool __kmp_wpolicy_passive = false;
 #if KMP_USE_MONITOR
 int __kmp_monitor_wakeups = KMP_MIN_MONITOR_WAKEUPS;
 int __kmp_bt_intervals = KMP_INTERVALS_FROM_BLOCKTIME(KMP_DEFAULT_BLOCKTIME,
@@ -219,6 +220,13 @@ int __kmp_mwait_enabled = FALSE;
 int __kmp_mwait_hints = 0;
 #endif
 
+#if KMP_HAVE_UMWAIT
+int __kmp_waitpkg_enabled = 0;
+int __kmp_tpause_state = 0;
+int __kmp_tpause_hint = 1;
+int __kmp_tpause_enabled = 0;
+#endif
+
 /* map OMP 3.0 schedule types with our internal schedule types */
 enum sched_type __kmp_sch_map[kmp_sched_upper - kmp_sched_lower_ext +
                               kmp_sched_upper_std - kmp_sched_lower - 2] = {
@@ -280,6 +288,7 @@ char *__kmp_cpuinfo_file = NULL;
 #endif /* KMP_AFFINITY_SUPPORTED */
 
 kmp_nested_proc_bind_t __kmp_nested_proc_bind = {NULL, 0, 0};
+kmp_proc_bind_t __kmp_teams_proc_bind = proc_bind_spread;
 int __kmp_affinity_num_places = 0;
 int __kmp_display_affinity = FALSE;
 char *__kmp_affinity_format = NULL;
@@ -308,7 +317,6 @@ omp_allocator_handle_t const omp_pteam_mem_alloc =
     (omp_allocator_handle_t const)7;
 omp_allocator_handle_t const omp_thread_mem_alloc =
     (omp_allocator_handle_t const)8;
-// Preview of target memory support
 omp_allocator_handle_t const llvm_omp_target_host_mem_alloc =
     (omp_allocator_handle_t const)100;
 omp_allocator_handle_t const llvm_omp_target_shared_mem_alloc =
@@ -329,7 +337,6 @@ omp_memspace_handle_t const omp_high_bw_mem_space =
     (omp_memspace_handle_t const)3;
 omp_memspace_handle_t const omp_low_lat_mem_space =
     (omp_memspace_handle_t const)4;
-// Preview of target memory support
 omp_memspace_handle_t const llvm_omp_target_host_mem_space =
     (omp_memspace_handle_t const)100;
 omp_memspace_handle_t const llvm_omp_target_shared_mem_space =
@@ -424,6 +431,7 @@ kmp_int32 __kmp_use_yield_exp_set = 0;
 
 kmp_uint32 __kmp_yield_init = KMP_INIT_WAIT;
 kmp_uint32 __kmp_yield_next = KMP_NEXT_WAIT;
+kmp_uint64 __kmp_pause_init = 1; // for tpause
 
 /* ------------------------------------------------------ */
 /* STATE mostly syncronized with global lock */

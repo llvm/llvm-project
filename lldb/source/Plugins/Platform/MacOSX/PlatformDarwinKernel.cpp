@@ -27,6 +27,7 @@
 #include "lldb/Target/Target.h"
 #include "lldb/Utility/ArchSpec.h"
 #include "lldb/Utility/FileSpec.h"
+#include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/Status.h"
 #include "lldb/Utility/StreamString.h"
@@ -69,7 +70,7 @@ void PlatformDarwinKernel::Terminate() {
 
 PlatformSP PlatformDarwinKernel::CreateInstance(bool force,
                                                 const ArchSpec *arch) {
-  Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_PLATFORM));
+  Log *log = GetLog(LLDBLog::Platform);
   if (log) {
     const char *arch_name;
     if (arch && arch->GetArchitectureName())
@@ -166,12 +167,7 @@ PlatformSP PlatformDarwinKernel::CreateInstance(bool force,
   return PlatformSP();
 }
 
-lldb_private::ConstString PlatformDarwinKernel::GetPluginNameStatic() {
-  static ConstString g_name("darwin-kernel");
-  return g_name;
-}
-
-const char *PlatformDarwinKernel::GetDescriptionStatic() {
+llvm::StringRef PlatformDarwinKernel::GetDescriptionStatic() {
   return "Darwin Kernel platform plug-in.";
 }
 
@@ -197,7 +193,7 @@ public:
     m_collection_sp->Initialize(g_platformdarwinkernel_properties);
   }
 
-  virtual ~PlatformDarwinKernelProperties() = default;
+  ~PlatformDarwinKernelProperties() override = default;
 
   FileSpecList GetKextDirectories() const {
     const uint32_t idx = ePropertyKextDirectories;
@@ -209,14 +205,9 @@ public:
   }
 };
 
-typedef std::shared_ptr<PlatformDarwinKernelProperties>
-    PlatformDarwinKernelPropertiesSP;
-
-static const PlatformDarwinKernelPropertiesSP &GetGlobalProperties() {
-  static PlatformDarwinKernelPropertiesSP g_settings_sp;
-  if (!g_settings_sp)
-    g_settings_sp = std::make_shared<PlatformDarwinKernelProperties>();
-  return g_settings_sp;
+static PlatformDarwinKernelProperties &GetGlobalProperties() {
+  static PlatformDarwinKernelProperties g_settings;
+  return g_settings;
 }
 
 void PlatformDarwinKernel::DebuggerInitialize(
@@ -225,7 +216,7 @@ void PlatformDarwinKernel::DebuggerInitialize(
           debugger, PlatformDarwinKernelProperties::GetSettingName())) {
     const bool is_global_setting = true;
     PluginManager::CreateSettingForPlatformPlugin(
-        debugger, GetGlobalProperties()->GetValueProperties(),
+        debugger, GetGlobalProperties().GetValueProperties(),
         ConstString("Properties for the PlatformDarwinKernel plug-in."),
         is_global_setting);
   }
@@ -289,7 +280,7 @@ void PlatformDarwinKernel::GetStatus(Stream &strm) {
   strm.Printf(" Number of Kernel dSYM.yaa's indexed: %d\n",
               (int)m_kernel_dsyms_yaas.size());
 
-  Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_PLATFORM));
+  Log *log = GetLog(LLDBLog::Platform);
   if (log) {
     LLDB_LOGF(log, "\nkexts with dSYMs");
     for (auto pos : m_name_to_kext_path_map_with_dsyms) {
@@ -377,7 +368,7 @@ void PlatformDarwinKernel::CollectKextAndKernelDirectories() {
 }
 
 void PlatformDarwinKernel::GetUserSpecifiedDirectoriesToSearch() {
-  FileSpecList user_dirs(GetGlobalProperties()->GetKextDirectories());
+  FileSpecList user_dirs(GetGlobalProperties().GetKextDirectories());
   std::vector<FileSpec> possible_sdk_dirs;
 
   const uint32_t user_dirs_count = user_dirs.GetSize();
@@ -493,11 +484,9 @@ PlatformDarwinKernel::GetKernelsAndKextsInDirectoryHelper(
   FileSpec file_spec(path);
   ConstString file_spec_extension = file_spec.GetFileNameExtension();
 
-  Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_PLATFORM));
-  Log *log_verbose(GetLogIfAllCategoriesSet(LIBLLDB_LOG_PLATFORM | LLDB_LOG_OPTION_VERBOSE));
+  Log *log = GetLog(LLDBLog::Platform);
 
-  LLDB_LOGF(log_verbose, "PlatformDarwinKernel examining '%s'",
-            file_spec.GetPath().c_str());
+  LLDB_LOGV(log, "PlatformDarwinKernel examining '{0}'", file_spec);
 
   PlatformDarwinKernel *thisp = (PlatformDarwinKernel *)baton;
 
@@ -577,9 +566,8 @@ PlatformDarwinKernel::GetKernelsAndKextsInDirectoryHelper(
   if (recurse && file_spec_extension != g_dsym_suffix &&
       file_spec_extension != g_kext_suffix &&
       file_spec_extension != g_bundle_suffix) {
-    LLDB_LOGF(log_verbose,
-              "PlatformDarwinKernel descending into directory '%s'",
-              file_spec.GetPath().c_str());
+    LLDB_LOGV(log, "PlatformDarwinKernel descending into directory '{0}'",
+              file_spec);
     return FileSystem::eEnumerateDirectoryResultEnter;
   } else {
     return FileSystem::eEnumerateDirectoryResultNext;
@@ -588,7 +576,7 @@ PlatformDarwinKernel::GetKernelsAndKextsInDirectoryHelper(
 
 void PlatformDarwinKernel::AddKextToMap(PlatformDarwinKernel *thisp,
                                         const FileSpec &file_spec) {
-  Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_PLATFORM));
+  Log *log = GetLog(LLDBLog::Platform);
   CFCBundle bundle(file_spec.GetPath().c_str());
   CFStringRef bundle_id(bundle.GetIdentifier());
   if (bundle_id && CFGetTypeID(bundle_id) == CFStringGetTypeID()) {
@@ -921,13 +909,15 @@ Status PlatformDarwinKernel::ExamineKextForMatchingUUID(
   return {};
 }
 
-bool PlatformDarwinKernel::GetSupportedArchitectureAtIndex(uint32_t idx,
-                                                           ArchSpec &arch) {
+std::vector<ArchSpec> PlatformDarwinKernel::GetSupportedArchitectures(
+    const ArchSpec &process_host_arch) {
+  std::vector<ArchSpec> result;
 #if defined(__arm__) || defined(__arm64__) || defined(__aarch64__)
-  return ARMGetSupportedArchitectureAtIndex(idx, arch);
+  ARMGetSupportedArchitectures(result);
 #else
-  return x86GetSupportedArchitectureAtIndex(idx, arch);
+  x86GetSupportedArchitectures(result);
 #endif
+  return result;
 }
 
 void PlatformDarwinKernel::CalculateTrapHandlerSymbolNames() {
@@ -946,21 +936,6 @@ void PlatformDarwinKernel::CalculateTrapHandlerSymbolNames() {
   m_trap_handlers.push_back(ConstString("fleh_decirq"));
   m_trap_handlers.push_back(ConstString("fleh_fiq_generic"));
   m_trap_handlers.push_back(ConstString("fleh_dec"));
-}
-
-#else // __APPLE__
-
-// Since DynamicLoaderDarwinKernel is compiled in for all systems, and relies
-// on PlatformDarwinKernel for the plug-in name, we compile just the plug-in
-// name in here to avoid issues. We are tracking an internal bug to resolve
-// this issue by either not compiling in DynamicLoaderDarwinKernel for non-
-// apple builds, or to make PlatformDarwinKernel build on all systems.
-// PlatformDarwinKernel is currently not compiled on other platforms due to the
-// use of the Mac-specific source/Host/macosx/cfcpp utilities.
-
-lldb_private::ConstString PlatformDarwinKernel::GetPluginNameStatic() {
-  static lldb_private::ConstString g_name("darwin-kernel");
-  return g_name;
 }
 
 #endif // __APPLE__

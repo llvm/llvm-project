@@ -9,153 +9,167 @@
 
 ; These first four functions (@fun_sspreq, @fun_sspstrong, @fun_ssp, @fun_nossp)
 ; are used by the remaining functions to ensure that the SSP attributes are
-; propagated correctly.  The caller should have its SSP attribute set as:
+; propagated correctly.  If the caller had an SSP attribute before inlining, it
+; should have its new SSP attribute set as:
 ; strictest(caller-ssp-attr, callee-ssp-attr), where strictness is ordered as:
-;  sspreq > sspstrong > ssp > [no ssp]
-define internal void @fun_sspreq() nounwind sspreq uwtable {
+;  sspreq > sspstrong > ssp
+
+define internal void @fun_sspreq() sspreq {
 entry:
   %call = call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([12 x i8], [12 x i8]* @.str3, i32 0, i32 0))
   ret void
 }
 
-define internal void @fun_sspstrong() nounwind sspstrong uwtable {
+define internal void @fun_sspreq_alwaysinline() sspreq alwaysinline {
+entry:
+  %call = call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([12 x i8], [12 x i8]* @.str3, i32 0, i32 0))
+  ret void
+}
+
+define internal void @fun_sspstrong() sspstrong {
 entry:
   %call = call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([15 x i8], [15 x i8]* @.str2, i32 0, i32 0))
   ret void
 }
 
-define internal void @fun_ssp() nounwind ssp uwtable {
+define internal void @fun_ssp() ssp {
 entry:
   %call = call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([9 x i8], [9 x i8]* @.str1, i32 0, i32 0))
   ret void
 }
 
-define internal void @fun_nossp() nounwind uwtable {
+define internal void @fun_nossp() {
 entry:
   %call = call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([11 x i8], [11 x i8]* @.str, i32 0, i32 0))
   ret void
 }
 
-; Tests start below 
+; Tests start below.
 
-define void @inline_req_req() nounwind sspreq uwtable {
+define void @inline_req_req() sspreq {
 entry:
-; CHECK: @inline_req_req() #0
+; CHECK: @inline_req_req() #[[SSPREQ:[0-9]]]
   call void @fun_sspreq()
   ret void
 }
 
-define void @inline_req_strong() nounwind sspstrong uwtable {
+define void @inline_req_strong() sspstrong {
 entry:
-; CHECK: @inline_req_strong() #0
+; CHECK: @inline_req_strong() #[[SSPREQ]]
   call void @fun_sspreq()
   ret void
 }
 
-define void @inline_req_ssp() nounwind ssp uwtable {
+define void @inline_req_ssp() ssp {
 entry:
-; CHECK: @inline_req_ssp() #0
+; CHECK: @inline_req_ssp() #[[SSPREQ]]
   call void @fun_sspreq()
   ret void
 }
 
-define void @inline_req_nossp() nounwind uwtable {
+define void @inline_req_nossp() {
 entry:
-; CHECK: @inline_req_nossp() #3
+; CHECK: @inline_req_nossp() {
   call void @fun_sspreq()
   ret void
 }
 
-define void @inline_strong_req() nounwind sspreq uwtable {
+define void @alwaysinline_req_nossp() {
 entry:
-; CHECK: @inline_strong_req() #0
+; CHECK: @alwaysinline_req_nossp() {
+  call void @fun_sspreq_alwaysinline()
+  ret void
+}
+
+define void @inline_strong_req() sspreq {
+entry:
+; CHECK: @inline_strong_req() #[[SSPREQ]]
   call void @fun_sspstrong()
   ret void
 }
 
 
-define void @inline_strong_strong() nounwind sspstrong uwtable {
+define void @inline_strong_strong() sspstrong {
 entry:
-; CHECK: @inline_strong_strong() #1
+; CHECK: @inline_strong_strong() #[[SSPSTRONG:[0-9]]]
   call void @fun_sspstrong()
   ret void
 }
 
-define void @inline_strong_ssp() nounwind ssp uwtable {
+define void @inline_strong_ssp() ssp {
 entry:
-; CHECK: @inline_strong_ssp() #1
+; CHECK: @inline_strong_ssp() #[[SSPSTRONG]]
   call void @fun_sspstrong()
   ret void
 }
 
-define void @inline_strong_nossp() nounwind uwtable {
+define void @inline_strong_nossp() {
 entry:
-; CHECK: @inline_strong_nossp() #3
+; CHECK: @inline_strong_nossp() {
   call void @fun_sspstrong()
   ret void
 }
 
-define void @inline_ssp_req() nounwind sspreq uwtable {
+define void @inline_ssp_req() sspreq {
 entry:
-; CHECK: @inline_ssp_req() #0
+; CHECK: @inline_ssp_req() #[[SSPREQ]]
   call void @fun_ssp()
   ret void
 }
 
 
-define void @inline_ssp_strong() nounwind sspstrong uwtable {
+define void @inline_ssp_strong() sspstrong {
 entry:
-; CHECK: @inline_ssp_strong() #1
+; CHECK: @inline_ssp_strong() #[[SSPSTRONG]]
   call void @fun_ssp()
   ret void
 }
 
-define void @inline_ssp_ssp() nounwind ssp uwtable {
+define void @inline_ssp_ssp() ssp {
 entry:
-; CHECK: @inline_ssp_ssp() #2
+; CHECK: @inline_ssp_ssp() #[[SSP:[0-9]]]
   call void @fun_ssp()
   ret void
 }
 
-define void @inline_ssp_nossp() nounwind uwtable {
+define void @inline_ssp_nossp() {
 entry:
-; CHECK: @inline_ssp_nossp() #3
+; CHECK: @inline_ssp_nossp() {
   call void @fun_ssp()
   ret void
 }
 
-define void @inline_nossp_req() nounwind uwtable sspreq {
+define void @inline_nossp_req() sspreq {
 entry:
-; CHECK: @inline_nossp_req() #0
+; CHECK: @inline_nossp_req() #[[SSPREQ]]
   call void @fun_nossp()
   ret void
 }
 
 
-define void @inline_nossp_strong() nounwind sspstrong uwtable {
+define void @inline_nossp_strong() sspstrong {
 entry:
-; CHECK: @inline_nossp_strong() #1
+; CHECK: @inline_nossp_strong() #[[SSPSTRONG]]
   call void @fun_nossp()
   ret void
 }
 
-define void @inline_nossp_ssp() nounwind ssp uwtable {
+define void @inline_nossp_ssp() ssp {
 entry:
-; CHECK: @inline_nossp_ssp() #2
+; CHECK: @inline_nossp_ssp() #[[SSP]]
   call void @fun_nossp()
   ret void
 }
 
-define void @inline_nossp_nossp() nounwind uwtable {
+define void @inline_nossp_nossp() {
 entry:
-; CHECK: @inline_nossp_nossp() #3
+; CHECK: @inline_nossp_nossp() {
   call void @fun_nossp()
   ret void
 }
 
 declare i32 @printf(i8*, ...)
 
-; CHECK: attributes #0 = { nounwind sspreq uwtable }
-; CHECK: attributes #1 = { nounwind sspstrong uwtable }
-; CHECK: attributes #2 = { nounwind ssp uwtable }
-; CHECK: attributes #3 = { nounwind uwtable }
+; CHECK: attributes #[[SSPREQ]] = { sspreq }
+; CHECK: attributes #[[SSPSTRONG]] = { sspstrong }
+; CHECK: attributes #[[SSP]] = { ssp }

@@ -23,7 +23,7 @@ int also_after(void) {
   return 2;
 }
 
-int test() {
+int test(void) {
   // Should return 0.
   return also_after() + also_before();
 }
@@ -62,7 +62,7 @@ int non_equivalent_isa_trait(void);
 // CHECK-NEXT: | `-OMPDeclareVariantAttr [[ADDR_21:0x[a-z0-9]*]] <<invalid sloc>> Inherited Implicit device={kind(any, cpu)}, implementation={dynamic_allocators, vendor(llvm, pgi), extension(match_any)}, user={condition(1)}
 // CHECK-NEXT: |   `-DeclRefExpr [[ADDR_9]] <line:12:1> 'int ({{.*}})' {{.*}}Function [[ADDR_10]] 'also_after[device={kind(any, cpu)}, implementation={dynamic_allocators, vendor(llvm, pgi), extension(match_any)}, user={condition(...)}]' 'int ({{.*}})'
 // CHECK-NEXT: |-FunctionDecl [[ADDR_22:0x[a-z0-9]*]] <line:26:1, line:29:1> line:26:5 referenced test 'int ({{.*}})'
-// CHECK-NEXT: | `-CompoundStmt [[ADDR_23:0x[a-z0-9]*]] <col:12, line:29:1>
+// CHECK-NEXT: | `-CompoundStmt [[ADDR_23:0x[a-z0-9]*]] <col:16, line:29:1>
 // CHECK-NEXT: |   `-ReturnStmt [[ADDR_24:0x[a-z0-9]*]] <line:28:3, col:37>
 // CHECK-NEXT: |     `-BinaryOperator [[ADDR_25:0x[a-z0-9]*]] <col:10, col:37> 'int' '+'
 // CHECK-NEXT: |       |-PseudoObjectExpr [[ADDR_26:0x[a-z0-9]*]] <col:10, col:21> 'int'

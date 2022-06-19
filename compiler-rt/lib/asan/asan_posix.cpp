@@ -14,22 +14,23 @@
 #include "sanitizer_common/sanitizer_platform.h"
 #if SANITIZER_POSIX
 
-#include "asan_internal.h"
-#include "asan_interceptors.h"
-#include "asan_mapping.h"
-#include "asan_poisoning.h"
-#include "asan_report.h"
-#include "asan_stack.h"
-#include "sanitizer_common/sanitizer_libc.h"
-#include "sanitizer_common/sanitizer_posix.h"
-#include "sanitizer_common/sanitizer_procmaps.h"
+#  include <pthread.h>
+#  include <signal.h>
+#  include <stdlib.h>
+#  include <sys/resource.h>
+#  include <sys/time.h>
+#  include <unistd.h>
 
-#include <pthread.h>
-#include <signal.h>
-#include <stdlib.h>
-#include <sys/time.h>
-#include <sys/resource.h>
-#include <unistd.h>
+#  include "asan_interceptors.h"
+#  include "asan_internal.h"
+#  include "asan_mapping.h"
+#  include "asan_poisoning.h"
+#  include "asan_report.h"
+#  include "asan_stack.h"
+#  include "lsan/lsan_common.h"
+#  include "sanitizer_common/sanitizer_libc.h"
+#  include "sanitizer_common/sanitizer_posix.h"
+#  include "sanitizer_common/sanitizer_procmaps.h"
 
 namespace __asan {
 
@@ -131,7 +132,7 @@ void AsanTSDSet(void *tsd) {
 }
 
 void PlatformTSDDtor(void *tsd) {
-  AsanThreadContext *context = (AsanThreadContext*)tsd;
+  AsanThreadContext *context = (AsanThreadContext *)tsd;
   if (context->destructor_iterations > 1) {
     context->destructor_iterations--;
     CHECK_EQ(0, pthread_setspecific(tsd_key, tsd));
@@ -140,6 +141,18 @@ void PlatformTSDDtor(void *tsd) {
   AsanThread::TSDDtor(tsd);
 }
 #endif
+
+void InstallAtExitCheckLeaks() {
+  if (CAN_SANITIZE_LEAKS) {
+    if (common_flags()->detect_leaks && common_flags()->leak_check_at_exit) {
+      if (flags()->halt_on_error)
+        Atexit(__lsan::DoLeakCheck);
+      else
+        Atexit(__lsan::DoRecoverableLeakCheckVoid);
+    }
+  }
+}
+
 }  // namespace __asan
 
 #endif  // SANITIZER_POSIX

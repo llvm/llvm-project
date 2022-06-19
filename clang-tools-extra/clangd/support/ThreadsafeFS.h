@@ -12,7 +12,6 @@
 #include "Path.h"
 #include "llvm/ADT/IntrusiveRefCntPtr.h"
 #include "llvm/ADT/None.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/Support/VirtualFileSystem.h"
 #include <memory>
 

@@ -1,17 +1,8 @@
 ; RUN: llc -verify-machineinstrs -O0 -mcpu=pwr7 -mattr=-altivec -mtriple powerpc-ibm-aix-xcoff < %s | FileCheck %s
+; RUN: llc -verify-machineinstrs -O0 -mcpu=pwr7 -mattr=-altivec -mtriple powerpc64-ibm-aix-xcoff < %s | FileCheck %s
 
-@a = common global double 0.000000e+00, align 8
+@vi = global <4 x i32> zeroinitializer, section "custom_section", align 16
+@f = global float 0x400921E480000000, section "custom_section", align 16
 
-; Get some constants into the constant pool that need spacing for alignment
-define void @e() {
-entry:
-  %0 = load double, double* @a, align 8
-  %mul = fmul double 1.500000e+00, %0
-  store double %mul, double* @a, align 8
-  %mul1 = fmul double 0x3F9C71C71C71C71C, %0
-  store double %mul1, double* @a, align 8
-  ret void
-}
-
-; CHECK:      .space 4
+; CHECK:      .space 16
 ; CHECK-NOT:  .zero

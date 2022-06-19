@@ -5,9 +5,9 @@
 ; but that assumption does not hold if both checks refer to the same vtable.
 ; This tests checks that this case is handled correctly.
 ;
-; RUN: opt -S -wholeprogramdevirt -wholeprogramdevirt-summary-action=import \
+; RUN: opt -S -passes='wholeprogramdevirt,default<O2>' -wholeprogramdevirt-summary-action=import \
 ; RUN:   -wholeprogramdevirt-read-summary=%p/Inputs/unique-retval-same-vtable.yaml \
-; RUN:   -O2 -o - %s | FileCheck %s
+; RUN:   -o - %s | FileCheck %s
 ;
 ; Check that C::f() contains both possible return values.
 ; CHECK-LABEL: define {{.*}} @_ZNK1C1fEv

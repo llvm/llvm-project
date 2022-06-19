@@ -1,8 +1,8 @@
 // Also check that -Wglobal-constructors does the right thing. Strictly
 // speaking, this is a Sema test, but this avoids test case duplication.
-// RUN: %clang_cc1 -Wglobal-constructors %s -verify -triple i686-windows-msvc -fms-extensions -std=c++11
+// RUN: %clang_cc1 -no-opaque-pointers -Wglobal-constructors %s -verify -triple i686-windows-msvc -fms-extensions -std=c++11
 //
-// RUN: %clang_cc1 %s -emit-llvm -o - -triple i686-windows-msvc -fms-extensions -std=c++11 | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers %s -emit-llvm -o - -triple i686-windows-msvc -fms-extensions -std=c++11 | FileCheck %s
 
 struct __declspec(dllimport) Single {
   void nonvirt();

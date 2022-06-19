@@ -112,7 +112,7 @@ endif:
 
 ; Short chain of cheap instructions to not convert
 ; GCN-LABEL: {{^}}test_vccnz_ifcvt_triangle_min_expensive:
-; GCN: s_cbranch_vccnz [[ENDIF:BB[0-9]+_[0-9]+]]
+; GCN: s_cbranch_vccnz [[ENDIF:.LBB[0-9]+_[0-9]+]]
 
 ; GCN: v_mul_f32
 ; GCN: v_mul_f32
@@ -155,7 +155,7 @@ endif:
 ; Should still branch over fdiv expansion
 ; GCN-LABEL: {{^}}test_vccnz_ifcvt_triangle_expensive:
 ; GCN: v_cmp_neq_f32_e32
-; GCN: s_cbranch_vccnz [[ENDIF:BB[0-9]+_[0-9]+]]
+; GCN: s_cbranch_vccnz [[ENDIF:.LBB[0-9]+_[0-9]+]]
 
 ; GCN: v_div_scale_f32
 
@@ -180,7 +180,7 @@ endif:
 ; vcc branch with SGPR inputs
 ; GCN-LABEL: {{^}}test_vccnz_sgpr_ifcvt_triangle:
 ; GCN: v_cmp_neq_f32_e64
-; GCN: s_cbranch_vccnz [[ENDIF:BB[0-9]+_[0-9]+]]
+; GCN: s_cbranch_vccnz [[ENDIF:.LBB[0-9]+_[0-9]+]]
 
 ; GCN: s_add_i32
 
@@ -267,7 +267,7 @@ endif:
 ; Scalar branch but VGPR select operands
 ; GCN-LABEL: {{^}}test_scc1_vgpr_ifcvt_triangle:
 ; GCN: s_cmp_lg_u32
-; GCN: s_cbranch_scc1 [[ENDIF:BB[0-9]+_[0-9]+]]
+; GCN: s_cbranch_scc1 [[ENDIF:.LBB[0-9]+_[0-9]+]]
 
 ; GCN: v_add_f32_e32
 
@@ -402,7 +402,7 @@ done:
 
 ; GCN-LABEL: {{^}}test_vccnz_ifcvt_triangle256:
 ; GCN: v_cmp_neq_f32
-; GCN: s_cbranch_vccnz [[ENDIF:BB[0-9]+_[0-9]+]]
+; GCN: s_cbranch_vccnz [[ENDIF:.LBB[0-9]+_[0-9]+]]
 
 ; GCN: v_add_i32
 ; GCN: v_add_i32
@@ -427,7 +427,7 @@ endif:
 
 ; GCN-LABEL: {{^}}test_vccnz_ifcvt_triangle512:
 ; GCN: v_cmp_neq_f32
-; GCN: s_cbranch_vccnz [[ENDIF:BB[0-9]+_[0-9]+]]
+; GCN: s_cbranch_vccnz [[ENDIF:.LBB[0-9]+_[0-9]+]]
 
 ; GCN: v_add_i32
 ; GCN: v_add_i32

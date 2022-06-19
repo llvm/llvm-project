@@ -31,7 +31,6 @@
 #define LLVM_CLANG_TOOLS_EXTRA_CLANGD_RIFF_H
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Error.h"
-#include "llvm/Support/ScopedPrinter.h"
 #include <array>
 
 namespace clang {

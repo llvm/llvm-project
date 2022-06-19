@@ -1,7 +1,6 @@
 ; This testcase ensures that CFL AA answers queries soundly when callee tries 
 ; to return the dereference of one of its parameters
 
-; RUN: opt < %s -disable-basic-aa -cfl-steens-aa -aa-eval -print-all-alias-modref-info -disable-output 2>&1 | FileCheck %s
 ; RUN: opt < %s -aa-pipeline=cfl-steens-aa -passes=aa-eval -print-all-alias-modref-info -disable-output 2>&1 | FileCheck %s
 
 define i32* @return_deref_arg_callee(i32** %arg1) {
@@ -21,10 +20,14 @@ define void @test_return_deref_arg() {
   %b = alloca i32, align 4
   %p = alloca i32*, align 8
 
+  load i32, i32* %a
+  load i32, i32* %b
   store i32* %a, i32** %p
   %c = call i32* @return_deref_arg_callee(i32** %p)
 
   %lp = load i32*, i32** %p
+  load i32, i32* %c
+  load i32, i32* %lp
 
   ret void
 }

@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple=x86_64-apple-darwin10 -emit-llvm -std=c++14 -fblocks -fobjc-arc -o - %s | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -triple=x86_64-apple-darwin10 -emit-llvm -std=c++14 -fblocks -fobjc-arc -o - %s | FileCheck %s
 
 // CHECK: %[[STRUCT_BLOCK_DESCRIPTOR:.*]] = type { i64, i64 }
 // CHECK: %[[S:.*]] = type { i32 }
@@ -70,7 +70,7 @@ struct S {
 
 S getS();
 
-// CHECK: define internal i32 @"_ZZN18CaptureByReference5test2EvENK3$_1clIiEEDaT_"(%[[CLASS_ANON_2]]* {{[^,]*}} %{{.*}}, i32 %{{.*}})
+// CHECK: define internal noundef i32 @"_ZZN18CaptureByReference5test2EvENK3$_1clIiEEDaT_"(%[[CLASS_ANON_2]]* {{[^,]*}} %{{.*}}, i32 noundef %{{.*}})
 // CHECK: %[[BLOCK:.*]] = alloca <{ i8*, i32, i32, i8*, %{{.*}}, %[[S]]* }>, align 8
 // CHECK: %[[BLOCK_CAPTURED:.*]] = getelementptr inbounds <{ i8*, i32, i32, i8*, %{{.*}}, %[[S]]* }>, <{ i8*, i32, i32, i8*, %{{.*}}, %[[S]]* }>* %[[BLOCK]], i32 0, i32 5
 // CHECK: %[[V0:.*]] = getelementptr inbounds %[[CLASS_ANON_2]], %[[CLASS_ANON_2]]* %{{.*}}, i32 0, i32 0
@@ -87,7 +87,7 @@ int test2() {
   return fn(123);
 }
 
-// CHECK: define internal i32 @"_ZZN18CaptureByReference5test3EvENK3$_2clIiEEDaT_"(%[[CLASS_ANON_3]]* {{[^,]*}} %{{.*}}, i32 %{{.*}})
+// CHECK: define internal noundef i32 @"_ZZN18CaptureByReference5test3EvENK3$_2clIiEEDaT_"(%[[CLASS_ANON_3]]* {{[^,]*}} %{{.*}}, i32 noundef %{{.*}})
 // CHECK: %[[BLOCK:.*]] = alloca <{ i8*, i32, i32, i8*, %{{.*}}*, %[[S]] }>, align 8
 // CHECK: %[[BLOCK_CAPTURED:.*]] = getelementptr inbounds <{ i8*, i32, i32, i8*, %{{.*}}*, %[[S]] }>, <{ i8*, i32, i32, i8*, %{{.*}}*, %[[S]] }>* %[[BLOCK]], i32 0, i32 5
 // CHECK: %[[V0:.*]] = getelementptr inbounds %[[CLASS_ANON_3]], %[[CLASS_ANON_3]]* %{{.*}}, i32 0, i32 0

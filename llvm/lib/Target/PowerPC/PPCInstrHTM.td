@@ -29,10 +29,10 @@ let Predicates = [HasHTM] in {
 
 let Defs = [CR0] in {
 def TBEGIN : XForm_htm0 <31, 654,
-                         (outs), (ins u1imm:$R), "tbegin. $R", IIC_SprMTSPR, []>;
+                         (outs), (ins u1imm:$R), "tbegin. $R", IIC_SprMTSPR>;
 
 def TEND : XForm_htm1 <31, 686,
-                       (outs), (ins u1imm:$A), "tend. $A", IIC_SprMTSPR, []>;
+                       (outs), (ins u1imm:$A), "tend. $A", IIC_SprMTSPR>;
 
 def TABORT : XForm_base_r3xo <31, 910,
                               (outs), (ins gprc:$A), "tabort. $A", IIC_SprMTSPR,
@@ -62,7 +62,7 @@ def TABORTDCI : XForm_base_r3xo <31, 878,
                                  isRecordForm;
 
 def TSR : XForm_htm2 <31, 750,
-                      (outs), (ins u1imm:$L), "tsr. $L", IIC_SprMTSPR, []>,
+                      (outs), (ins u1imm:$L), "tsr. $L", IIC_SprMTSPR>,
                       isRecordForm;
 
 def TRECLAIM : XForm_base_r3xo <31, 942,
@@ -84,7 +84,7 @@ def TRECHKPT : XForm_base_r3xo <31, 1006,
 }
 
 def TCHECK : XForm_htm3 <31, 718,
-                        (outs crrc:$BF), (ins), "tcheck $BF", IIC_SprMTSPR, []>;
+                        (outs crrc:$BF), (ins), "tcheck $BF", IIC_SprMTSPR>;
 // Builtins
 
 // All HTM instructions, with the exception of tcheck, set CR0 with the

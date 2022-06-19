@@ -52,3 +52,7 @@ RUN: llvm-profdata merge --sample %p/Inputs/sample-fs.proftext -profile-isfs -fs
 RUN: llvm-profdata show --sample %p/Inputs/sample-fs.proftext -profile-isfs -fs-discriminator-pass=Pass1 -o %t3-text
 RUN: diff %t3-binary %t3-text
 
+4- ProfileIsFS is set properly in extbinary format from the internal option
+RUN: llvm-profdata merge --sample %p/Inputs/sample-fs.proftext -profile-isfs --extbinary -o %t_extbin.afdo
+RUN: llvm-profdata show --sample --show-sec-info-only %t_extbin.afdo | FileCheck %s --check-prefix=ISFSSET
+ISFSSET: Flags: {fs-discriminator}

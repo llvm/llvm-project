@@ -22,5 +22,5 @@ body: |
     %1 = COPY %0 . 42
     %2 = AND8ri %1, 1, implicit-def $eflags
     $al = COPY %2
-    RETQ $al
+    RET64 $al
 ...

@@ -16,7 +16,7 @@ define void @lsr_order_mul24_0(i32 %arg, i32 %arg2, i32 %arg6, i32 %arg13, i32 %
 ; GFX9-NEXT:    s_mov_b64 s[4:5], 0
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    ds_write_b32 v0, v5
-; GFX9-NEXT:  BB0_1: ; %bb23
+; GFX9-NEXT:  .LBB0_1: ; %bb23
 ; GFX9-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX9-NEXT:    v_mul_u32_u24_e32 v5, v0, v2
 ; GFX9-NEXT:    v_add_u32_e32 v0, v0, v1
@@ -25,7 +25,7 @@ define void @lsr_order_mul24_0(i32 %arg, i32 %arg2, i32 %arg6, i32 %arg13, i32 %
 ; GFX9-NEXT:    v_cmp_ge_u32_e32 vcc, v5, v3
 ; GFX9-NEXT:    s_or_b64 s[4:5], vcc, s[4:5]
 ; GFX9-NEXT:    s_andn2_b64 exec, exec, s[4:5]
-; GFX9-NEXT:    s_cbranch_execnz BB0_1
+; GFX9-NEXT:    s_cbranch_execnz .LBB0_1
 ; GFX9-NEXT:  ; %bb.2: ; %.loopexit
 ; GFX9-NEXT:    s_or_b64 exec, exec, s[4:5]
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
@@ -58,49 +58,49 @@ define void @lsr_order_mul24_1(i32 %arg, i32 %arg1, i32 %arg2, float addrspace(3
 ; GFX9-NEXT:    v_cmp_eq_u32_e32 vcc, 1, v5
 ; GFX9-NEXT:    v_cmp_lt_u32_e64 s[4:5], v0, v1
 ; GFX9-NEXT:    s_and_saveexec_b64 s[8:9], s[4:5]
-; GFX9-NEXT:    s_cbranch_execz BB1_3
+; GFX9-NEXT:    s_cbranch_execz .LBB1_3
 ; GFX9-NEXT:  ; %bb.1: ; %bb19
 ; GFX9-NEXT:    v_cvt_f32_u32_e32 v7, v6
+; GFX9-NEXT:    v_add_u32_e32 v4, v4, v0
 ; GFX9-NEXT:    v_and_b32_e32 v5, 0xffffff, v6
-; GFX9-NEXT:    v_add_u32_e32 v6, v4, v0
-; GFX9-NEXT:    v_lshl_add_u32 v3, v6, 2, v3
-; GFX9-NEXT:    v_rcp_iflag_f32_e32 v4, v7
-; GFX9-NEXT:    v_lshlrev_b32_e32 v6, 2, v2
-; GFX9-NEXT:    v_add_u32_e32 v7, v17, v12
+; GFX9-NEXT:    v_lshl_add_u32 v6, v4, 2, v3
+; GFX9-NEXT:    v_rcp_iflag_f32_e32 v7, v7
+; GFX9-NEXT:    v_lshlrev_b32_e32 v8, 2, v2
+; GFX9-NEXT:    v_add_u32_e32 v9, v17, v12
 ; GFX9-NEXT:    s_mov_b64 s[10:11], 0
-; GFX9-NEXT:  BB1_2: ; %bb23
+; GFX9-NEXT:    v_mov_b32_e32 v4, 0
+; GFX9-NEXT:    ; implicit-def: $vgpr3
+; GFX9-NEXT:  .LBB1_2: ; %bb23
 ; GFX9-NEXT:    ; =>This Inner Loop Header: Depth=1
-; GFX9-NEXT:    v_cvt_f32_u32_e32 v8, v0
-; GFX9-NEXT:    v_add_u32_e32 v9, v17, v0
-; GFX9-NEXT:    v_add_u32_e32 v12, v7, v0
-; GFX9-NEXT:    v_add_u32_e32 v0, v0, v2
-; GFX9-NEXT:    v_madak_f32 v8, v8, v4, 0x3727c5ac
-; GFX9-NEXT:    v_cvt_u32_f32_e32 v8, v8
-; GFX9-NEXT:    v_mul_u32_u24_e32 v18, v8, v5
-; GFX9-NEXT:    v_add_u32_e32 v8, v8, v16
-; GFX9-NEXT:    v_cmp_lt_u32_e64 s[4:5], v8, v13
-; GFX9-NEXT:    v_mul_lo_u32 v8, v8, v15
-; GFX9-NEXT:    v_sub_u32_e32 v19, v9, v18
-; GFX9-NEXT:    v_cmp_lt_u32_e64 s[6:7], v19, v14
-; GFX9-NEXT:    s_and_b64 s[4:5], s[4:5], s[6:7]
+; GFX9-NEXT:    v_cvt_f32_u32_e32 v3, v0
+; GFX9-NEXT:    v_add_u32_e32 v12, v17, v0
+; GFX9-NEXT:    v_madak_f32 v3, v3, v7, 0x3727c5ac
+; GFX9-NEXT:    v_cvt_u32_f32_e32 v3, v3
+; GFX9-NEXT:    v_mul_u32_u24_e32 v18, v3, v5
+; GFX9-NEXT:    v_add_u32_e32 v19, v3, v16
+; GFX9-NEXT:    v_add_u32_e32 v3, v9, v0
+; GFX9-NEXT:    v_sub_u32_e32 v3, v3, v18
 ; GFX9-NEXT:    v_sub_u32_e32 v12, v12, v18
-; GFX9-NEXT:    v_add_u32_e32 v8, v12, v8
+; GFX9-NEXT:    v_cmp_lt_u32_e64 s[4:5], v19, v13
+; GFX9-NEXT:    v_mad_u64_u32 v[18:19], s[6:7], v19, v15, v[3:4]
+; GFX9-NEXT:    v_cmp_lt_u32_e64 s[6:7], v12, v14
+; GFX9-NEXT:    s_and_b64 s[4:5], s[4:5], s[6:7]
 ; GFX9-NEXT:    s_and_b64 s[4:5], s[4:5], vcc
-; GFX9-NEXT:    v_mov_b32_e32 v9, 0
-; GFX9-NEXT:    v_cndmask_b32_e64 v8, 0, v8, s[4:5]
-; GFX9-NEXT:    v_lshlrev_b64 v[8:9], 2, v[8:9]
-; GFX9-NEXT:    v_add_co_u32_e64 v8, s[6:7], v10, v8
-; GFX9-NEXT:    v_addc_co_u32_e64 v9, s[6:7], v11, v9, s[6:7]
-; GFX9-NEXT:    global_load_dword v8, v[8:9], off
+; GFX9-NEXT:    v_cndmask_b32_e64 v3, 0, v18, s[4:5]
+; GFX9-NEXT:    v_lshlrev_b64 v[18:19], 2, v[3:4]
+; GFX9-NEXT:    v_add_u32_e32 v0, v0, v2
+; GFX9-NEXT:    v_add_co_u32_e64 v18, s[6:7], v10, v18
+; GFX9-NEXT:    v_addc_co_u32_e64 v19, s[6:7], v11, v19, s[6:7]
+; GFX9-NEXT:    global_load_dword v3, v[18:19], off
 ; GFX9-NEXT:    v_cmp_ge_u32_e64 s[6:7], v0, v1
 ; GFX9-NEXT:    s_or_b64 s[10:11], s[6:7], s[10:11]
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
-; GFX9-NEXT:    v_cndmask_b32_e64 v8, 0, v8, s[4:5]
-; GFX9-NEXT:    ds_write_b32 v3, v8
-; GFX9-NEXT:    v_add_u32_e32 v3, v3, v6
+; GFX9-NEXT:    v_cndmask_b32_e64 v3, 0, v3, s[4:5]
+; GFX9-NEXT:    ds_write_b32 v6, v3
+; GFX9-NEXT:    v_add_u32_e32 v6, v6, v8
 ; GFX9-NEXT:    s_andn2_b64 exec, exec, s[10:11]
-; GFX9-NEXT:    s_cbranch_execnz BB1_2
-; GFX9-NEXT:  BB1_3: ; %Flow3
+; GFX9-NEXT:    s_cbranch_execnz .LBB1_2
+; GFX9-NEXT:  .LBB1_3: ; %Flow3
 ; GFX9-NEXT:    s_or_b64 exec, exec, s[8:9]
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
@@ -151,8 +151,8 @@ define void @slsr1_0(i32 %b.arg, i32 %s.arg) #0 {
 ; GFX9-LABEL: slsr1_0:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-NEXT:    v_mul_u32_u24_e32 v3, v0, v1
 ; GFX9-NEXT:    v_and_b32_e32 v2, 0xffffff, v1
+; GFX9-NEXT:    v_mul_u32_u24_e32 v3, v0, v1
 ; GFX9-NEXT:    global_store_dword v[0:1], v3, off
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    v_mad_u32_u24 v0, v0, v1, v2
@@ -192,22 +192,22 @@ define void @slsr1_1(i32 %b.arg, i32 %s.arg) #0 {
 ; GFX9-NEXT:    buffer_store_dword v40, off, s[0:3], s32 offset:12 ; 4-byte Folded Spill
 ; GFX9-NEXT:    s_mov_b64 exec, s[4:5]
 ; GFX9-NEXT:    v_writelane_b32 v40, s33, 4
+; GFX9-NEXT:    v_writelane_b32 v40, s30, 0
 ; GFX9-NEXT:    s_mov_b32 s33, s32
 ; GFX9-NEXT:    s_addk_i32 s32, 0x800
-; GFX9-NEXT:    v_writelane_b32 v40, s34, 0
+; GFX9-NEXT:    v_writelane_b32 v40, s31, 1
+; GFX9-NEXT:    v_writelane_b32 v40, s34, 2
 ; GFX9-NEXT:    s_getpc_b64 s[4:5]
 ; GFX9-NEXT:    s_add_u32 s4, s4, foo@gotpcrel32@lo+4
 ; GFX9-NEXT:    s_addc_u32 s5, s5, foo@gotpcrel32@hi+12
-; GFX9-NEXT:    v_writelane_b32 v40, s35, 1
+; GFX9-NEXT:    v_writelane_b32 v40, s35, 3
 ; GFX9-NEXT:    s_load_dwordx2 s[34:35], s[4:5], 0x0
 ; GFX9-NEXT:    buffer_store_dword v41, off, s[0:3], s33 offset:8 ; 4-byte Folded Spill
 ; GFX9-NEXT:    buffer_store_dword v42, off, s[0:3], s33 offset:4 ; 4-byte Folded Spill
 ; GFX9-NEXT:    buffer_store_dword v43, off, s[0:3], s33 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_mov_b32_e32 v41, v1
 ; GFX9-NEXT:    v_mov_b32_e32 v42, v0
-; GFX9-NEXT:    v_writelane_b32 v40, s30, 2
 ; GFX9-NEXT:    v_mul_u32_u24_e32 v0, v42, v41
-; GFX9-NEXT:    v_writelane_b32 v40, s31, 3
 ; GFX9-NEXT:    v_and_b32_e32 v43, 0xffffff, v41
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX9-NEXT:    s_swappc_b64 s[30:31], s[34:35]
@@ -219,17 +219,17 @@ define void @slsr1_1(i32 %b.arg, i32 %s.arg) #0 {
 ; GFX9-NEXT:    buffer_load_dword v43, off, s[0:3], s33 ; 4-byte Folded Reload
 ; GFX9-NEXT:    buffer_load_dword v42, off, s[0:3], s33 offset:4 ; 4-byte Folded Reload
 ; GFX9-NEXT:    buffer_load_dword v41, off, s[0:3], s33 offset:8 ; 4-byte Folded Reload
-; GFX9-NEXT:    v_readlane_b32 s4, v40, 2
-; GFX9-NEXT:    v_readlane_b32 s5, v40, 3
-; GFX9-NEXT:    v_readlane_b32 s35, v40, 1
-; GFX9-NEXT:    v_readlane_b32 s34, v40, 0
+; GFX9-NEXT:    v_readlane_b32 s35, v40, 3
+; GFX9-NEXT:    v_readlane_b32 s34, v40, 2
+; GFX9-NEXT:    v_readlane_b32 s31, v40, 1
+; GFX9-NEXT:    v_readlane_b32 s30, v40, 0
 ; GFX9-NEXT:    s_addk_i32 s32, 0xf800
 ; GFX9-NEXT:    v_readlane_b32 s33, v40, 4
-; GFX9-NEXT:    s_or_saveexec_b64 s[6:7], -1
+; GFX9-NEXT:    s_or_saveexec_b64 s[4:5], -1
 ; GFX9-NEXT:    buffer_load_dword v40, off, s[0:3], s32 offset:12 ; 4-byte Folded Reload
-; GFX9-NEXT:    s_mov_b64 exec, s[6:7]
+; GFX9-NEXT:    s_mov_b64 exec, s[4:5]
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
-; GFX9-NEXT:    s_setpc_b64 s[4:5]
+; GFX9-NEXT:    s_setpc_b64 s[30:31]
   %b = and i32 %b.arg, 16777215
   %s = and i32 %s.arg, 16777215
 
@@ -253,10 +253,11 @@ define void @slsr1_1(i32 %b.arg, i32 %s.arg) #0 {
   ret void
 }
 
-declare void @foo(i32) #0
+declare void @foo(i32) #2
 declare float @llvm.fmuladd.f32(float, float, float) #1
 
 attributes #0 = { nounwind willreturn "denormal-fp-math-f32"="preserve-sign,preserve-sign" }
 attributes #1 = { nounwind readnone speculatable }
+attributes #2 = { nounwind "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-queue-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z" "uniform-work-group-size"="false" "denormal-fp-math-f32"="preserve-sign,preserve-sign" }
 
 !0 = !{float 2.500000e+00}

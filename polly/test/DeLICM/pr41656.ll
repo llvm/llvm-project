@@ -1,7 +1,7 @@
-; RUN: opt %loadPolly -polly-scops -polly-delicm -analyze < %s | FileCheck %s
+; RUN: opt %loadPolly -polly-print-scops -polly-print-delicm -disable-output < %s | FileCheck %s
 ;
 ; llvm.org/PR41656
-; 
+;
 ; This test case has an InvalidContext such that part of the predecessors
 ; of for.body.us.i lie within the invalid context. This causes a
 ; consistency check withing the invalid context of PR41656 to fail.
@@ -82,7 +82,7 @@ attributes #2 = { nounwind }
 
 
 ; CHECK:      Invalid Context:
-; CHECK-NEXT: [call24] -> {  : call24 <= 2 }
+; CHECK-NEXT: [call24] -> {  : false }
 ; CHECK:      Defined Behavior Context:
 ; CHECK-NEXT: [call24] -> {  : 3 <= call24 <= 2147483647 }
 

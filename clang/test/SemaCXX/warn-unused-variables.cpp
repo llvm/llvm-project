@@ -154,12 +154,12 @@ namespace ctor_with_cleanups {
 
 #include "Inputs/warn-unused-variables.h"
 
-namespace arrayRecords {
-
 class NonTriviallyDestructible {
 public:
   ~NonTriviallyDestructible() {}
 };
+
+namespace arrayRecords {
 
 struct Foo {
   int x;
@@ -196,7 +196,7 @@ void test() {
   bar<2>();
 }
 
-}
+} // namespace arrayRecords
 
 #if __cplusplus >= 201103L
 namespace with_constexpr {
@@ -253,3 +253,44 @@ void foo(T &t) {
 }
 }
 #endif
+
+// Ensure we do not warn on lifetime extension
+namespace gh54489 {
+
+void f() {
+  const auto &a = NonTriviallyDestructible();
+  const auto &b = a; // expected-warning {{unused variable 'b'}}
+#if __cplusplus >= 201103L
+  const auto &&c = NonTriviallyDestructible();
+  auto &&d = c; // expected-warning {{unused variable 'd'}}
+#endif
+}
+
+struct S {
+  S() = default;
+  S(const S &) = default;
+  S(int);
+};
+
+template <typename T>
+void foo(T &t) {
+  const auto &extended = S{t};
+}
+
+void test_foo() {
+  int i;
+  foo(i);
+}
+
+struct RAIIWrapper {
+  RAIIWrapper();
+  ~RAIIWrapper();
+};
+
+void RAIIWrapperTest() {
+  auto const guard = RAIIWrapper();
+  auto const &guard2 = RAIIWrapper();
+  auto &&guard3 = RAIIWrapper();
+}
+
+} // namespace gh54489

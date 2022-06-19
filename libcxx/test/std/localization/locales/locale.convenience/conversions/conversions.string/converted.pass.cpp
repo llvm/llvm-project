@@ -12,6 +12,8 @@
 
 // size_t converted() const;
 
+// XFAIL: no-wide-characters
+
 #include <locale>
 #include <codecvt>
 #include <cassert>

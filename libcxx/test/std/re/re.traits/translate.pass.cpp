@@ -1,4 +1,3 @@
-// -*- C++ -*-
 //===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
@@ -25,12 +24,14 @@ int main(int, char**)
         assert(t.translate('B') == 'B');
         assert(t.translate('c') == 'c');
     }
+#ifndef TEST_HAS_NO_WIDE_CHARACTERS
     {
         std::regex_traits<wchar_t> t;
         assert(t.translate(L'a') == L'a');
         assert(t.translate(L'B') == L'B');
         assert(t.translate(L'c') == L'c');
     }
+#endif
 
   return 0;
 }

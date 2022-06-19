@@ -1,5 +1,4 @@
-! RUN: %S/test_errors.sh %s %t %flang_fc1
-! REQUIRES: shell
+! RUN: %python %S/test_errors.py %s %flang_fc1
 ! 9.4.5
 subroutine s1
   type :: t(k, l)
@@ -173,3 +172,54 @@ subroutine s12()
       local1 = local5 ! mismatched constant LEN type parameter
     end subroutine sub
 end subroutine s12
+
+subroutine s13()
+  interface assignment(=)
+    procedure :: cToR, cToRa, cToI
+  end interface
+  real :: x(1)
+  integer :: n(1)
+  x='0' ! fine
+  n='0' ! fine
+  !ERROR: Defined assignment in WHERE must be elemental, but 'ctora' is not
+  where ([1==1]) x='*'
+  where ([1==1]) n='*' ! fine
+  forall (j=1:1)
+    !ERROR: The mask or variable must not be scalar
+    where (j==1)
+      !ERROR: Defined assignment in WHERE must be elemental, but 'ctor' is not
+      !ERROR: The mask or variable must not be scalar
+      x(j)='?'
+      !ERROR: The mask or variable must not be scalar
+      n(j)='?' ! fine
+    !ERROR: The mask or variable must not be scalar
+    elsewhere (.false.)
+      !ERROR: Defined assignment in WHERE must be elemental, but 'ctor' is not
+      !ERROR: The mask or variable must not be scalar
+      x(j)='1'
+      !ERROR: The mask or variable must not be scalar
+      n(j)='1' ! fine
+    elsewhere
+      !ERROR: Defined assignment in WHERE must be elemental, but 'ctor' is not
+      !ERROR: The mask or variable must not be scalar
+      x(j)='9'
+      !ERROR: The mask or variable must not be scalar
+      n(j)='9' ! fine
+    end where
+  end forall
+  x='0' ! still fine
+  n='0' ! still fine
+ contains
+  subroutine cToR(x, c)
+    real, intent(out) :: x
+    character, intent(in) :: c
+  end subroutine
+  subroutine cToRa(x, c)
+    real, intent(out) :: x(:)
+    character, intent(in) :: c
+  end subroutine
+  elemental subroutine cToI(n, c)
+    integer, intent(out) :: n
+    character, intent(in) :: c
+  end subroutine
+end subroutine s13

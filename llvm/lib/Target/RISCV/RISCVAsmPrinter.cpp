@@ -27,7 +27,7 @@
 #include "llvm/MC/MCInst.h"
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCSymbol.h"
-#include "llvm/Support/TargetRegistry.h"
+#include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/raw_ostream.h"
 using namespace llvm;
 
@@ -38,12 +38,13 @@ STATISTIC(RISCVNumInstrsCompressed,
 
 namespace {
 class RISCVAsmPrinter : public AsmPrinter {
-  const MCSubtargetInfo *STI;
+  const MCSubtargetInfo *MCSTI;
+  const RISCVSubtarget *STI;
 
 public:
   explicit RISCVAsmPrinter(TargetMachine &TM,
                            std::unique_ptr<MCStreamer> Streamer)
-      : AsmPrinter(TM, std::move(Streamer)), STI(TM.getMCSubtargetInfo()) {}
+      : AsmPrinter(TM, std::move(Streamer)), MCSTI(TM.getMCSubtargetInfo()) {}
 
   StringRef getPassName() const override { return "RISCV Assembly Printer"; }
 
@@ -62,11 +63,13 @@ public:
 
   // Wrapper needed for tblgenned pseudo lowering.
   bool lowerOperand(const MachineOperand &MO, MCOperand &MCOp) const {
-    return LowerRISCVMachineOperandToMCOperand(MO, MCOp, *this);
+    return lowerRISCVMachineOperandToMCOperand(MO, MCOp, *this);
   }
 
   void emitStartOfAsmFile(Module &M) override;
   void emitEndOfAsmFile(Module &M) override;
+
+  void emitFunctionEntryLabel() override;
 
 private:
   void emitAttributes();
@@ -170,7 +173,8 @@ bool RISCVAsmPrinter::runOnMachineFunction(MachineFunction &MF) {
   MCSubtargetInfo &NewSTI =
     OutStreamer->getContext().getSubtargetCopy(*TM.getMCSubtargetInfo());
   NewSTI.setFeatureBits(MF.getSubtarget().getFeatureBits());
-  STI = &NewSTI;
+  MCSTI = &NewSTI;
+  STI = &MF.getSubtarget<RISCVSubtarget>();
 
   SetupMachineFunction(MF);
   emitFunctionBody();
@@ -193,7 +197,14 @@ void RISCVAsmPrinter::emitEndOfAsmFile(Module &M) {
 void RISCVAsmPrinter::emitAttributes() {
   RISCVTargetStreamer &RTS =
       static_cast<RISCVTargetStreamer &>(*OutStreamer->getTargetStreamer());
-  RTS.emitTargetAttributes(*STI);
+  RTS.emitTargetAttributes(*MCSTI);
+}
+
+void RISCVAsmPrinter::emitFunctionEntryLabel() {
+  AsmPrinter::emitFunctionEntryLabel();
+  RISCVTargetStreamer &RTS =
+      static_cast<RISCVTargetStreamer &>(*OutStreamer->getTargetStreamer());
+  RTS.setTargetABI(STI->getTargetABI());
 }
 
 // Force static initialization.

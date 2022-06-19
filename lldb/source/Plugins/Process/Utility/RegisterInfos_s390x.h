@@ -27,7 +27,7 @@
     #name, alt, size, offset, eEncodingUint, eFormatHex,                       \
         {dwarf_##name##_s390x, dwarf_##name##_s390x, generic,                  \
          LLDB_INVALID_REGNUM, lldb_##name##_s390x },                           \
-         NULL, NULL, NULL, 0                                                   \
+         NULL, NULL,                                                           \
   }
 
 #define DEFINE_GPR_NODWARF(name, size, offset, alt, generic)                   \
@@ -35,7 +35,7 @@
     #name, alt, size, offset, eEncodingUint, eFormatHex,                       \
         {LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM, generic,                    \
          LLDB_INVALID_REGNUM, lldb_##name##_s390x },                           \
-         NULL, NULL, NULL, 0                                                   \
+         NULL, NULL,                                                           \
   }
 
 #define DEFINE_FPR(name, size, offset)                                         \
@@ -43,7 +43,7 @@
     #name, NULL, size, offset, eEncodingUint, eFormatHex,                      \
         {dwarf_##name##_s390x, dwarf_##name##_s390x, LLDB_INVALID_REGNUM,      \
          LLDB_INVALID_REGNUM, lldb_##name##_s390x },                           \
-         NULL, NULL, NULL, 0                                                   \
+         NULL, NULL,                                                           \
   }
 
 #define DEFINE_FPR_NODWARF(name, size, offset)                                 \
@@ -51,27 +51,27 @@
     #name, NULL, size, offset, eEncodingUint, eFormatHex,                      \
         {LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM,        \
          LLDB_INVALID_REGNUM, lldb_##name##_s390x },                           \
-         NULL, NULL, NULL, 0                                                   \
+         NULL, NULL,                                                           \
   }
 
 static RegisterInfo g_register_infos_s390x[] = {
     // General purpose registers.
     DEFINE_GPR(r0, 8, GPR_OFFSET(0), nullptr, LLDB_INVALID_REGNUM),
     DEFINE_GPR(r1, 8, GPR_OFFSET(1), nullptr, LLDB_INVALID_REGNUM),
-    DEFINE_GPR(r2, 8, GPR_OFFSET(2), "arg1", LLDB_REGNUM_GENERIC_ARG1),
-    DEFINE_GPR(r3, 8, GPR_OFFSET(3), "arg2", LLDB_REGNUM_GENERIC_ARG2),
-    DEFINE_GPR(r4, 8, GPR_OFFSET(4), "arg3", LLDB_REGNUM_GENERIC_ARG3),
-    DEFINE_GPR(r5, 8, GPR_OFFSET(5), "arg4", LLDB_REGNUM_GENERIC_ARG4),
-    DEFINE_GPR(r6, 8, GPR_OFFSET(6), "arg5", LLDB_REGNUM_GENERIC_ARG5),
+    DEFINE_GPR(r2, 8, GPR_OFFSET(2), nullptr, LLDB_REGNUM_GENERIC_ARG1),
+    DEFINE_GPR(r3, 8, GPR_OFFSET(3), nullptr, LLDB_REGNUM_GENERIC_ARG2),
+    DEFINE_GPR(r4, 8, GPR_OFFSET(4), nullptr, LLDB_REGNUM_GENERIC_ARG3),
+    DEFINE_GPR(r5, 8, GPR_OFFSET(5), nullptr, LLDB_REGNUM_GENERIC_ARG4),
+    DEFINE_GPR(r6, 8, GPR_OFFSET(6), nullptr, LLDB_REGNUM_GENERIC_ARG5),
     DEFINE_GPR(r7, 8, GPR_OFFSET(7), nullptr, LLDB_INVALID_REGNUM),
     DEFINE_GPR(r8, 8, GPR_OFFSET(8), nullptr, LLDB_INVALID_REGNUM),
     DEFINE_GPR(r9, 8, GPR_OFFSET(9), nullptr, LLDB_INVALID_REGNUM),
     DEFINE_GPR(r10, 8, GPR_OFFSET(10), nullptr, LLDB_INVALID_REGNUM),
-    DEFINE_GPR(r11, 8, GPR_OFFSET(11), "fp", LLDB_REGNUM_GENERIC_FP),
+    DEFINE_GPR(r11, 8, GPR_OFFSET(11), nullptr, LLDB_REGNUM_GENERIC_FP),
     DEFINE_GPR(r12, 8, GPR_OFFSET(12), nullptr, LLDB_INVALID_REGNUM),
     DEFINE_GPR(r13, 8, GPR_OFFSET(13), nullptr, LLDB_INVALID_REGNUM),
     DEFINE_GPR(r14, 8, GPR_OFFSET(14), nullptr, LLDB_INVALID_REGNUM),
-    DEFINE_GPR(r15, 8, GPR_OFFSET(15), "sp", LLDB_REGNUM_GENERIC_SP),
+    DEFINE_GPR(r15, 8, GPR_OFFSET(15), nullptr, LLDB_REGNUM_GENERIC_SP),
     DEFINE_GPR(acr0, 4, ACR_OFFSET(0), nullptr, LLDB_INVALID_REGNUM),
     DEFINE_GPR(acr1, 4, ACR_OFFSET(1), nullptr, LLDB_INVALID_REGNUM),
     DEFINE_GPR(acr2, 4, ACR_OFFSET(2), nullptr, LLDB_INVALID_REGNUM),
@@ -88,8 +88,8 @@ static RegisterInfo g_register_infos_s390x[] = {
     DEFINE_GPR(acr13, 4, ACR_OFFSET(13), nullptr, LLDB_INVALID_REGNUM),
     DEFINE_GPR(acr14, 4, ACR_OFFSET(14), nullptr, LLDB_INVALID_REGNUM),
     DEFINE_GPR(acr15, 4, ACR_OFFSET(15), nullptr, LLDB_INVALID_REGNUM),
-    DEFINE_GPR(pswm, 8, 0, "flags", LLDB_REGNUM_GENERIC_FLAGS),
-    DEFINE_GPR(pswa, 8, 8, "pc", LLDB_REGNUM_GENERIC_PC),
+    DEFINE_GPR(pswm, 8, 0, nullptr, LLDB_REGNUM_GENERIC_FLAGS),
+    DEFINE_GPR(pswa, 8, 8, nullptr, LLDB_REGNUM_GENERIC_PC),
 
     // Floating point registers.
     DEFINE_FPR(f0, 8, FPR_OFFSET(0)), DEFINE_FPR(f1, 8, FPR_OFFSET(1)),

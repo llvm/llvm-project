@@ -15,7 +15,6 @@ define void @_Z4testv() {
 ; CHECK-NEXT:    [[I:%.*]] = load i8, i8* @var_7, align 1
 ; CHECK-NEXT:    [[I1:%.*]] = icmp eq i8 [[I]], -1
 ; CHECK-NEXT:    [[I4:%.*]] = load i16, i16* @var_0, align 2
-; CHECK-NEXT:    [[I8:%.*]] = sext i16 [[I4]] to i32
 ; CHECK-NEXT:    br i1 [[I1]], label [[BB10:%.*]], label [[BB9:%.*]]
 ; CHECK:       bb9:
 ; CHECK-NEXT:    br label [[BB12:%.*]]
@@ -31,6 +30,7 @@ define void @_Z4testv() {
 ; CHECK-NEXT:    [[STOREMERGE1:%.*]] = phi i32 [ [[I11]], [[BB10]] ], [ 1, [[BB9]] ]
 ; CHECK-NEXT:    store i32 [[STOREMERGE1]], i32* getelementptr inbounds ([0 x i32], [0 x i32]* @arr_2, i64 0, i64 0), align 4
 ; CHECK-NEXT:    store i16 [[I4]], i16* getelementptr inbounds ([0 x i16], [0 x i16]* @arr_4, i64 0, i64 0), align 2
+; CHECK-NEXT:    [[I8:%.*]] = sext i16 [[I4]] to i32
 ; CHECK-NEXT:    store i32 [[I8]], i32* getelementptr inbounds ([8 x i32], [8 x i32]* @arr_3, i64 0, i64 0), align 16
 ; CHECK-NEXT:    store i32 [[STOREMERGE1]], i32* getelementptr inbounds ([0 x i32], [0 x i32]* @arr_2, i64 0, i64 1), align 4
 ; CHECK-NEXT:    store i16 [[I4]], i16* getelementptr inbounds ([0 x i16], [0 x i16]* @arr_4, i64 0, i64 1), align 2

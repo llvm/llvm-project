@@ -113,8 +113,10 @@ def warn_four_char_character_literal : Warning<
 // Unicode and UCNs
 def err_invalid_utf8 : Error<
   "source file is not valid UTF-8">;
-def err_non_ascii : Error<
-  "non-ASCII characters are not allowed outside of literals and identifiers">;
+def err_character_not_allowed : Error<
+  "unexpected character <U+%0>">;
+def err_character_not_allowed_identifier : Error<
+  "character <U+%0> not allowed %select{in|at the start of}1 an identifier">;
 def ext_unicode_whitespace : ExtWarn<
   "treating Unicode character as whitespace">,
   InGroup<DiagGroup<"unicode-whitespace">>;
@@ -125,6 +127,15 @@ def warn_utf8_symbol_zero_width : Warning<
   "identifier contains Unicode character <U+%0> that is invisible in "
   "some environments">, InGroup<DiagGroup<"unicode-zero-width">>;
 
+def ext_delimited_escape_sequence : Extension<
+  "delimited escape sequences are a Clang extension">,
+  InGroup<DiagGroup<"delimited-escape-sequence-extension">>;
+def err_delimited_escape_empty : Error<
+  "delimited escape sequence cannot be empty">;
+def err_delimited_escape_missing_brace: Error<
+  "expected '{' after '\\%0' escape sequence">;
+def err_delimited_escape_invalid : Error<
+  "invalid digit '%0' in escape sequence">;
 def err_hex_escape_no_digits : Error<
   "\\%0 used with no following hex digits">;
 def warn_ucn_escape_no_digits : Warning<
@@ -132,6 +143,12 @@ def warn_ucn_escape_no_digits : Warning<
   "treating as '\\' followed by identifier">, InGroup<Unicode>;
 def err_ucn_escape_incomplete : Error<
   "incomplete universal character name">;
+def warn_delimited_ucn_incomplete : Warning<
+  "incomplete delimited universal character name; "
+  "treating as '\\' 'u' '{' identifier">, InGroup<Unicode>;
+def warn_delimited_ucn_empty : Warning<
+  "empty delimited universal character name; "
+  "treating as '\\' 'u' '{' '}'">, InGroup<Unicode>;
 def warn_ucn_escape_incomplete : Warning<
   "incomplete universal character name; "
   "treating as '\\' followed by identifier">, InGroup<Unicode>;
@@ -150,9 +167,6 @@ def warn_c99_compat_unicode_id : Warning<
   "%select{using this character in an identifier|starting an identifier with "
   "this character}0 is incompatible with C99">,
   InGroup<C99Compat>, DefaultIgnore;
-def warn_cxx98_compat_unicode_id : Warning<
-  "using this character in an identifier is incompatible with C++98">,
-  InGroup<CXX98Compat>, DefaultIgnore;
 
 def warn_cxx98_compat_literal_ucn_escape_basic_scs : Warning<
   "specifying character '%0' with a universal character name "
@@ -184,12 +198,10 @@ def warn_c2x_compat_digit_separator : Warning<
   InGroup<CPre2xCompat>, DefaultIgnore;
 def err_digit_separator_not_between_digits : Error<
   "digit separator cannot appear at %select{start|end}0 of digit sequence">;
-def warn_extraneous_char_constant : Warning<
-  "extraneous characters in character constant ignored">;
 def warn_char_constant_too_large : Warning<
   "character constant too long for its type">;
-def err_multichar_utf_character_literal : Error<
-  "Unicode character literals may not contain multiple characters">;
+def err_multichar_character_literal : Error<
+  "%select{wide|Unicode}0 character literals may not contain multiple characters">;
 def err_exponent_has_no_digits : Error<"exponent has no digits">;
 def err_hex_constant_requires : Error<
   "hexadecimal floating %select{constant|literal}0 requires "
@@ -257,7 +269,9 @@ def err_bad_character_encoding : Error<
 def warn_bad_character_encoding : ExtWarn<
   "illegal character encoding in character literal">,
   InGroup<InvalidSourceEncoding>;
-def err_lexing_string : Error<"failure when lexing a string">;
+def err_lexing_string : Error<"failure when lexing a string literal">;
+def err_lexing_char : Error<"failure when lexing a character literal">;
+def err_lexing_numeric : Error<"failure when lexing a numeric literal">;
 def err_placeholder_in_source : Error<"editor placeholder in source file">;
 
 //===----------------------------------------------------------------------===//
@@ -300,6 +314,11 @@ def pp_pragma_once_in_main_file : Warning<"#pragma once in main file">,
 def pp_pragma_sysheader_in_main_file : Warning<
   "#pragma system_header ignored in main file">,
   InGroup<DiagGroup<"pragma-system-header-outside-header">>;
+
+def err_illegal_use_of_flt_eval_macro : Error<
+  "'__FLT_EVAL_METHOD__' cannot be expanded inside a scope containing "
+  "'#pragma clang fp eval_method'">;
+
 def pp_poisoning_existing_macro : Warning<"poisoning existing macro">;
 def pp_out_of_date_dependency : Warning<
   "current file is older than dependency %0">;
@@ -393,6 +412,10 @@ def ext_embedded_directive : Extension<
 def ext_missing_varargs_arg : Extension<
   "must specify at least one argument for '...' parameter of variadic macro">,
   InGroup<GNUZeroVariadicMacroArguments>;
+def warn_cxx17_compat_missing_varargs_arg : Warning<
+  "passing no argument for the '...' parameter of a variadic macro is "
+  "incompatible with C++ standards before C++20">,
+  InGroup<CXXPre20Compat>, DefaultIgnore;
 def ext_empty_fnmacro_arg : Extension<
   "empty macro arguments are a C99 feature">, InGroup<C99>;
 def warn_cxx98_compat_empty_fnmacro_arg : Warning<
@@ -404,7 +427,13 @@ def note_macro_expansion_here : Note<"expansion of macro %0 requested here">;
 def ext_pp_opencl_variadic_macros : Extension<
   "variadic macros are a Clang extension in OpenCL">;
 
-def err_pp_invalid_directive : Error<"invalid preprocessing directive">;
+def ext_pp_gnu_line_directive : Extension<
+  "this style of line directive is a GNU extension">,
+  InGroup<GNULineMarker>;
+def err_pp_invalid_directive : Error<
+  "invalid preprocessing directive%select{|, did you mean '#%1'?}0">;
+def warn_pp_invalid_directive : Warning<
+  err_pp_invalid_directive.Text>, InGroup<DiagGroup<"unknown-directives">>;
 def err_pp_directive_required : Error<
   "%0 must be used within a preprocessing directive">;
 def err_pp_file_not_found : Error<"'%0' file not found">, DefaultFatal;
@@ -423,6 +452,9 @@ def warn_pp_hdrstop_filename_ignored : Warning<
   "#pragma hdrstop filename not supported, "
   "/Fp can be used to specify precompiled header filename">,
   InGroup<ClangClPch>;
+def remark_pp_search_path_usage : Remark<
+  "search path used: '%0'">,
+  InGroup<UsedSearchPath>;
 def err_pp_file_not_found_angled_include_not_fatal : Error<
   "'%0' file not found with <angled> %select{include|import}1; "
   "use \"quotes\" instead">;
@@ -518,6 +550,27 @@ def warn_pragma_warning_push_level :
 def warn_pragma_warning_expected_number :
   ExtWarn<"#pragma warning expected a warning number">,
   InGroup<UnknownPragmas>;
+
+// - #pragma deprecated(...)
+def warn_pragma_deprecated_macro_use :
+  ExtWarn<"macro %0 has been marked as deprecated%select{|: %2}1">,
+  InGroup<DeprecatedPragma>;
+
+// - #pragma clang restrict_expansion(...)
+def warn_pragma_restrict_expansion_macro_use :
+  ExtWarn<"macro %0 has been marked as unsafe for use in headers"
+          "%select{|: %2}1">,
+  InGroup<RestrictExpansionMacro>;
+
+// - Note for macro annotations.
+def note_pp_macro_annotation :
+  Note<"macro marked '%select{deprecated|restrict_expansion|final}0' here">;
+
+// - #pragma clang final(...)
+def warn_pragma_final_macro :
+  ExtWarn<"macro %0 has been marked as final and should not be "
+          "%select{undefined|redefined}1">,
+  InGroup<FinalMacro>,  ShowInSystemHeader;
 
 // - #pragma execution_character_set(...)
 def warn_pragma_exec_charset_expected :
@@ -646,6 +699,23 @@ def ext_pp_line_too_big : Extension<
 def warn_cxx98_compat_pp_line_too_big : Warning<
   "#line number greater than 32767 is incompatible with C++98">,
   InGroup<CXX98CompatPedantic>, DefaultIgnore;
+
+def warn_c2x_compat_pp_directive : Warning<
+  "use of a '#%select{<BUG IF SEEN>|elifdef|elifndef}0' directive "
+  "is incompatible with C standards before C2x">,
+  InGroup<CPre2xCompat>, DefaultIgnore;
+def ext_c2x_pp_directive : ExtWarn<
+  "use of a '#%select{<BUG IF SEEN>|elifdef|elifndef}0' directive "
+  "is a C2x extension">,
+  InGroup<C2x>;
+def warn_cxx2b_compat_pp_directive : Warning<
+  "use of a '#%select{<BUG IF SEEN>|elifdef|elifndef}0' directive "
+  "is incompatible with C++ standards before C++2b">,
+  InGroup<CXXPre2bCompat>, DefaultIgnore;
+def ext_cxx2b_pp_directive : ExtWarn<
+  "use of a '#%select{<BUG IF SEEN>|elifdef|elifndef}0' directive "
+  "is a C++2b extension">,
+  InGroup<CXX2b>;
 
 def err_pp_visibility_non_macro : Error<"no macro named %0">;
 
@@ -829,11 +899,11 @@ def err_pp_eof_in_assume_nonnull : Error<
 
 }
 
-let CategoryName = "Dependency Directive Source Minimization Issue" in {
+let CategoryName = "Dependency Directive Source Scanner Issue" in {
 
-def err_dep_source_minimizer_missing_sema_after_at_import : Error<
+def err_dep_source_scanner_missing_semi_after_at_import : Error<
   "could not find ';' after @import">;
-def err_dep_source_minimizer_unexpected_tokens_at_import : Error<
+def err_dep_source_scanner_unexpected_tokens_at_import : Error<
   "unexpected extra tokens at end of @import declaration">;
 
 }

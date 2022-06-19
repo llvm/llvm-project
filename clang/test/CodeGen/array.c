@@ -1,11 +1,11 @@
 // RUN: %clang_cc1 -emit-llvm %s -o %t
 
-void f() {
+void f(void) {
  int a[2];
  a[0] = 0;
 }
 
-void f2() {
+void f2(void) {
   int x = 0;
   int y = 1;
   int a[10] = { y, x, 2, 3};

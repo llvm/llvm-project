@@ -1,7 +1,5 @@
 ; RUN: %clang_cc1 -flto -triple x86_64-pc-linux-gnu -emit-llvm-bc -disable-llvm-passes -x ir < %s -o - | llvm-bcanalyzer -dump | FileCheck %s
 ; RUN: %clang_cc1 -flto=thin -triple x86_64-pc-linux-gnu -emit-llvm-bc -disable-llvm-passes -x ir < %s -o - | llvm-bcanalyzer -dump | FileCheck %s
-; RUN: %clang_cc1 -fexperimental-new-pass-manager -flto -triple x86_64-pc-linux-gnu -emit-llvm-bc -disable-llvm-passes -x ir < %s -o - | llvm-bcanalyzer -dump | FileCheck %s
-; RUN: %clang_cc1 -fexperimental-new-pass-manager -flto=thin -triple x86_64-pc-linux-gnu -emit-llvm-bc -disable-llvm-passes -x ir < %s -o - | llvm-bcanalyzer -dump | FileCheck %s
 ; REQUIRES: x86-registered-target
 
 ; CHECK-NOT:GLOBALVAL_SUMMARY_BLOCK

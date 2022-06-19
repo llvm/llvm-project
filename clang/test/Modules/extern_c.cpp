@@ -62,7 +62,7 @@ using namespace M;
 #ifdef __cplusplus
 namespace N {
 #endif
-  void g() {
+  void g(void) {
     int k = f();
   }
 

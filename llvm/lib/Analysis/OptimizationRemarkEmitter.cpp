@@ -47,7 +47,7 @@ OptimizationRemarkEmitter::OptimizationRemarkEmitter(const Function *F)
 bool OptimizationRemarkEmitter::invalidate(
     Function &F, const PreservedAnalyses &PA,
     FunctionAnalysisManager::Invalidator &Inv) {
-  if (OwnedBFI.get()) {
+  if (OwnedBFI) {
     OwnedBFI.reset();
     BFI = nullptr;
   }
@@ -80,7 +80,7 @@ void OptimizationRemarkEmitter::emit(
   computeHotness(OptDiag);
 
   // Only emit it if its hotness meets the threshold.
-  if (OptDiag.getHotness().getValueOr(0) <
+  if (OptDiag.getHotness().value_or(0) <
       F->getContext().getDiagnosticsHotnessThreshold()) {
     return;
   }

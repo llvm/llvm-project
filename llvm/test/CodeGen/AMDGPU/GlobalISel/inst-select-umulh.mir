@@ -3,6 +3,7 @@
 # RUN: FileCheck -check-prefix=ERR  %s < %t
 # RUN: llc -march=amdgcn -mcpu=gfx900 -run-pass=instruction-select -verify-machineinstrs %s -o - | FileCheck -check-prefix=GFX9 %s
 # RUN: llc -march=amdgcn -mcpu=gfx1010 -run-pass=instruction-select -verify-machineinstrs %s -o - | FileCheck -check-prefix=GFX9 %s
+# RUN: llc -march=amdgcn -mcpu=gfx1100 -run-pass=instruction-select -verify-machineinstrs %s -o - | FileCheck -check-prefix=GFX9 %s
 
 # ERR-NOT: remark:
 # ERR: remark: <unknown>:0:0: cannot select: %2:sgpr(s32) = G_UMULH %0:sgpr, %1:sgpr (in function: umulh_s32_ss)

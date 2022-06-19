@@ -31,6 +31,11 @@
 #define PPC64_DYNAMIC_TAG_DEFINED
 #endif
 
+#ifndef RISCV_DYNAMIC_TAG
+#define RISCV_DYNAMIC_TAG(name, value) DYNAMIC_TAG(name, value)
+#define RISCV_DYNAMIC_TAG_DEFINED
+#endif
+
 #ifndef DYNAMIC_TAG_MARKER
 #define DYNAMIC_TAG_MARKER(name, value) DYNAMIC_TAG(name, value)
 #define DYNAMIC_TAG_MARKER_DEFINED
@@ -204,6 +209,7 @@ MIPS_DYNAMIC_TAG(MIPS_RWPLT, 0x70000034)        // Points to the base
                                                 // of a writable PLT.
 MIPS_DYNAMIC_TAG(MIPS_RLD_MAP_REL, 0x70000035)  // Relative offset of run time loader
                                                 // map, used for debugging.
+MIPS_DYNAMIC_TAG(MIPS_XHASH, 0x70000036)        // GNU-style hash table with xlat.
 
 // PPC specific dynamic table entries.
 PPC_DYNAMIC_TAG(PPC_GOT, 0x70000000) // Uses Secure PLT ABI.
@@ -212,6 +218,9 @@ PPC_DYNAMIC_TAG(PPC_OPT, 0x70000001) // Has TLS optimization.
 // PPC64 specific dynamic table entries.
 PPC64_DYNAMIC_TAG(PPC64_GLINK, 0x70000000) // Address of 32 bytes before the
                                            // first glink lazy resolver stub.
+
+// RISC-V specific dynamic array tags.
+RISCV_DYNAMIC_TAG(RISCV_VARIANT_CC, 0x70000001)
 
 // Sun machine-independent extensions.
 DYNAMIC_TAG(AUXILIARY, 0x7FFFFFFD) // Shared object to load before self
@@ -242,4 +251,8 @@ DYNAMIC_TAG(FILTER, 0x7FFFFFFF)    // Shared object to get values from
 #ifdef PPC64_DYNAMIC_TAG_DEFINED
 #undef PPC64_DYNAMIC_TAG
 #undef PPC64_DYNAMIC_TAG_DEFINED
+#endif
+#ifdef RISCV_DYNAMIC_TAG_DEFINED
+#undef RISCV_DYNAMIC_TAG
+#undef RISCV_DYNAMIC_TAG_DEFINED
 #endif

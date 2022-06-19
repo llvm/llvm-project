@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -fobjc-arc -fobjc-runtime-has-weak -fblocks -triple x86_64-apple-darwin10.0.0 -emit-llvm -o - %s | FileCheck %s -check-prefix=CHECK -check-prefix=UNOPT
-// RUN: %clang_cc1 -fobjc-arc -fobjc-runtime-has-weak -fblocks -triple x86_64-apple-darwin10.0.0 -emit-llvm -o - %s -O -disable-llvm-passes | FileCheck %s -check-prefix=CHECK -check-prefix=OPT
+// RUN: %clang_cc1 -no-opaque-pointers -fobjc-arc -fobjc-runtime-has-weak -fblocks -triple x86_64-apple-darwin10.0.0 -emit-llvm -o - %s | FileCheck %s -check-prefix=CHECK -check-prefix=UNOPT
+// RUN: %clang_cc1 -no-opaque-pointers -fobjc-arc -fobjc-runtime-has-weak -fblocks -triple x86_64-apple-darwin10.0.0 -emit-llvm -o - %s -O -disable-llvm-passes | FileCheck %s -check-prefix=CHECK -check-prefix=OPT
 
 typedef __strong id strong_id;
 typedef __weak id weak_id;
@@ -12,32 +12,32 @@ void test_new(id invalue) {
   // OPT-NEXT: [[T0:%.*]] = call i8* @llvm.objc.retain(i8* [[INVALUE:%.*]])
   // OPT-NEXT: store i8* [[T0]], i8** [[INVALUEADDR]]
 
-  // CHECK: [[CALL:%.*]] = call noalias nonnull i8* @_Znwm
+  // CHECK: [[CALL:%.*]] = call noalias noundef nonnull i8* @_Znwm
   // CHECK-NEXT: {{bitcast i8\*.*to i8\*\*}}
   // CHECK-NEXT: store i8* null, i8**
   new strong_id;
-  // CHECK: [[CALL:%.*]] = call noalias nonnull i8* @_Znwm
+  // CHECK: [[CALL:%.*]] = call noalias noundef nonnull i8* @_Znwm
   // CHECK-NEXT: {{bitcast i8\*.*to i8\*\*}}
   // UNOPT-NEXT: store i8* null, i8**
   // OPT-NEXT: call i8* @llvm.objc.initWeak(i8** {{.*}}, i8* null)
   new weak_id;
 
-  // CHECK: [[CALL:%.*]] = call noalias nonnull i8* @_Znwm
+  // CHECK: [[CALL:%.*]] = call noalias noundef nonnull i8* @_Znwm
   // CHECK-NEXT: {{bitcast i8\*.*to i8\*\*}}
   // CHECK-NEXT: store i8* null, i8**
   new __strong id;
-  // CHECK: [[CALL:%.*]] = call noalias nonnull i8* @_Znwm
+  // CHECK: [[CALL:%.*]] = call noalias noundef nonnull i8* @_Znwm
   // CHECK-NEXT: {{bitcast i8\*.*to i8\*\*}}
   // UNOPT-NEXT: store i8* null, i8**
   // OPT-NEXT: call i8* @llvm.objc.initWeak(i8** {{.*}}, i8* null)
   new __weak id;
 
-  // CHECK: [[CALL:%.*]] = call noalias nonnull i8* @_Znwm
+  // CHECK: [[CALL:%.*]] = call noalias noundef nonnull i8* @_Znwm
   // CHECK: call i8* @llvm.objc.retain
   // CHECK: store i8*
   new __strong id(invalue);
 
-  // CHECK: [[CALL:%.*]] = call noalias nonnull i8* @_Znwm
+  // CHECK: [[CALL:%.*]] = call noalias noundef nonnull i8* @_Znwm
   // CHECK: call i8* @llvm.objc.initWeak
   new __weak id(invalue);
 
@@ -48,12 +48,12 @@ void test_new(id invalue) {
 
 // CHECK-LABEL: define{{.*}} void @_Z14test_array_new
 void test_array_new() {
-  // CHECK: call noalias nonnull i8* @_Znam
+  // CHECK: call noalias noundef nonnull i8* @_Znam
   // CHECK: store i64 17, i64*
   // CHECK: call void @llvm.memset.p0i8.i64
   new strong_id[17];
 
-  // CHECK: call noalias nonnull i8* @_Znam
+  // CHECK: call noalias noundef nonnull i8* @_Znam
   // CHECK: store i64 17, i64*
   // CHECK: call void @llvm.memset.p0i8.i64
   new weak_id[17];

@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -polly-stmt-granularity=scalar-indep -polly-print-instructions -polly-scops -analyze < %s | FileCheck %s -match-full-lines
+; RUN: opt %loadPolly -polly-stmt-granularity=scalar-indep -polly-print-instructions -polly-print-scops -disable-output < %s | FileCheck %s -match-full-lines
 ;
 ; Two PHIs, cross-referencing each other. The PHI READs must be carried-out
 ; before the PHI WRITEs to ensure that the value when entering the block is

@@ -9,28 +9,22 @@
 #include "llvm/DebugInfo/DWARF/DWARFDebugInfoEntry.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/DebugInfo/DWARF/DWARFContext.h"
+#include "llvm/DebugInfo/DWARF/DWARFDataExtractor.h"
 #include "llvm/DebugInfo/DWARF/DWARFDebugAbbrev.h"
 #include "llvm/DebugInfo/DWARF/DWARFFormValue.h"
 #include "llvm/DebugInfo/DWARF/DWARFUnit.h"
-#include "llvm/Support/DataExtractor.h"
+#include "llvm/Support/Errc.h"
 #include <cstddef>
 #include <cstdint>
 
 using namespace llvm;
 using namespace dwarf;
 
-bool DWARFDebugInfoEntry::extractFast(const DWARFUnit &U,
-                                             uint64_t *OffsetPtr) {
-  DWARFDataExtractor DebugInfoData = U.getDebugInfoExtractor();
-  const uint64_t UEndOffset = U.getNextUnitOffset();
-  return extractFast(U, OffsetPtr, DebugInfoData, UEndOffset, 0);
-}
-
 bool DWARFDebugInfoEntry::extractFast(const DWARFUnit &U, uint64_t *OffsetPtr,
                                       const DWARFDataExtractor &DebugInfoData,
-                                      uint64_t UEndOffset, uint32_t D) {
+                                      uint64_t UEndOffset, uint32_t ParentIdx) {
   Offset = *OffsetPtr;
-  Depth = D;
+  this->ParentIdx = ParentIdx;
   if (Offset >= UEndOffset) {
     U.getContext().getWarningHandler()(
         createStringError(errc::invalid_argument,

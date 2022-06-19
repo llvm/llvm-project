@@ -30,14 +30,12 @@
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/GlobalsModRef.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
-#include "llvm/IR/CFG.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/InstVisitor.h"
 #include "llvm/IR/Instructions.h"
-#include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/MDBuilder.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
@@ -304,7 +302,7 @@ void LibCallsShrinkWrap::checkCandidate(CallInst &CI) {
   if (!TLI.getLibFunc(*Callee, Func) || !TLI.has(Func))
     return;
 
-  if (CI.getNumArgOperands() == 0)
+  if (CI.arg_empty())
     return;
   // TODO: Handle long double in other formats.
   Type *ArgType = CI.getArgOperand(0)->getType();

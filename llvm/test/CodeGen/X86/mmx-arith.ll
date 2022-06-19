@@ -2,7 +2,7 @@
 ; RUN: llc < %s -mtriple=i686-unknown-unknown -mattr=+mmx,+sse2 | FileCheck -check-prefix=X32 %s
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+mmx,+sse2 | FileCheck -check-prefix=X64 %s
 
-;; A basic sanity check to make sure that MMX arithmetic actually compiles.
+;; A basic functional check to make sure that MMX arithmetic actually compiles.
 ;; First is a straight translation of the original with bitcasts as needed.
 
 define void @test0(x86_mmx* %A, x86_mmx* %B) {
@@ -142,12 +142,12 @@ entry:
 define void @test1(x86_mmx* %A, x86_mmx* %B) {
 ; X32-LABEL: test1:
 ; X32:       # %bb.0: # %entry
-; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    movq {{.*#+}} xmm0 = mem[0],zero
 ; X32-NEXT:    movq {{.*#+}} xmm1 = mem[0],zero
 ; X32-NEXT:    paddd %xmm0, %xmm1
-; X32-NEXT:    movq %xmm1, (%ecx)
+; X32-NEXT:    movq %xmm1, (%eax)
 ; X32-NEXT:    movq {{.*#+}} xmm0 = mem[0],zero
 ; X32-NEXT:    pshufd {{.*#+}} xmm2 = xmm1[1,1,3,3]
 ; X32-NEXT:    pmuludq %xmm0, %xmm1
@@ -156,16 +156,16 @@ define void @test1(x86_mmx* %A, x86_mmx* %B) {
 ; X32-NEXT:    pshufd {{.*#+}} xmm0 = xmm2[0,2,2,3]
 ; X32-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[0,2,2,3]
 ; X32-NEXT:    punpckldq {{.*#+}} xmm1 = xmm1[0],xmm0[0],xmm1[1],xmm0[1]
-; X32-NEXT:    movq %xmm1, (%ecx)
+; X32-NEXT:    movq %xmm1, (%eax)
 ; X32-NEXT:    movq {{.*#+}} xmm0 = mem[0],zero
 ; X32-NEXT:    pand %xmm1, %xmm0
-; X32-NEXT:    movq %xmm0, (%ecx)
+; X32-NEXT:    movq %xmm0, (%eax)
 ; X32-NEXT:    movq {{.*#+}} xmm1 = mem[0],zero
 ; X32-NEXT:    por %xmm0, %xmm1
-; X32-NEXT:    movq %xmm1, (%ecx)
+; X32-NEXT:    movq %xmm1, (%eax)
 ; X32-NEXT:    movq {{.*#+}} xmm0 = mem[0],zero
 ; X32-NEXT:    pxor %xmm1, %xmm0
-; X32-NEXT:    movq %xmm0, (%ecx)
+; X32-NEXT:    movq %xmm0, (%eax)
 ; X32-NEXT:    emms
 ; X32-NEXT:    retl
 ;

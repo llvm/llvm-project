@@ -133,8 +133,8 @@ define amdgpu_kernel void @extract_vector_elt_v64i8(i8 addrspace(1)* %out, <64 x
 ; isTypeDesirableForOp in SimplifyDemandedBits
 
 ; GCN-LABEL: {{^}}dynamic_extract_vector_elt_v2i8:
-; VI: s_load_dword [[LOAD:s[0-9]+]], s[4:5], 0x28
-; VI-NEXT: s_load_dword [[IDX:s[0-9]+]], s[4:5], 0x4c
+; VI: s_load_dword [[IDX:s[0-9]+]], s[4:5], 0x4c
+; VI-NEXT: s_load_dword [[LOAD:s[0-9]+]], s[4:5], 0x28
 ; VI-NOT: {{flat|buffer|global}}
 ; VI-DAG: v_mov_b32_e32 [[V_LOAD:v[0-9]+]], [[LOAD]]
 ; VI-DAG: s_lshl_b32 [[SCALED_IDX:s[0-9]+]], [[IDX]], 3
@@ -147,8 +147,8 @@ define amdgpu_kernel void @dynamic_extract_vector_elt_v2i8(i8 addrspace(1)* %out
 }
 
 ; GCN-LABEL: {{^}}dynamic_extract_vector_elt_v3i8:
-; VI: s_load_dword [[LOAD:s[0-9]+]], s[4:5], 0x28
-; VI-NEXT: s_load_dword [[IDX:s[0-9]+]], s[4:5], 0x4c
+; VI: s_load_dword [[IDX:s[0-9]+]], s[4:5], 0x4c
+; VI-NEXT: s_load_dword [[LOAD:s[0-9]+]], s[4:5], 0x28
 ; VI-NOT: {{flat|buffer|global}}
 ; VI: s_lshl_b32 [[SCALED_IDX:s[0-9]+]], [[IDX]], 3
 ; VI: s_lshr_b32 [[ELT:s[0-9]+]], [[LOAD]], [[SCALED_IDX]]
@@ -183,7 +183,7 @@ define amdgpu_kernel void @dynamic_extract_vector_elt_v4i8(i8 addrspace(1)* %out
 ; VI: s_load_dwordx2 [[VEC8:s\[[0-9]+:[0-9]+\]]], s{{\[[0-9]+:[0-9]+\]}}, 0x0
 
 ; VI: s_lshl_b32 [[SCALED_IDX:s[0-9]+]], [[IDX]], 3
-; VI: s_lshr_b64 s{{\[}}[[EXTRACT_LO:[0-9]+]]:{{[0-9]+\]}}, [[VEC8]], [[SCALED_IDX]]
+; VI: s_lshr_b64 s[[[EXTRACT_LO:[0-9]+]]:{{[0-9]+\]}}, [[VEC8]], [[SCALED_IDX]]
 ; VI: v_mov_b32_e32 [[V_EXTRACT:v[0-9]+]], s[[EXTRACT_LO]]
 ; VI: buffer_store_byte [[V_EXTRACT]]
 define amdgpu_kernel void @dynamic_extract_vector_elt_v8i8(i8 addrspace(1)* %out, <8 x i8> addrspace(4)* %vec.ptr, i32 %idx) #0 {

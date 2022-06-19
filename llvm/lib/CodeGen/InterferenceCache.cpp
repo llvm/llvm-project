@@ -56,8 +56,8 @@ void InterferenceCache::init(MachineFunction *mf,
   LIUArray = liuarray;
   TRI = tri;
   reinitPhysRegEntries();
-  for (unsigned i = 0; i != CacheEntries; ++i)
-    Entries[i].clear(mf, indexes, lis);
+  for (Entry &E : Entries)
+    E.clear(mf, indexes, lis);
 }
 
 InterferenceCache::Entry *InterferenceCache::get(MCRegister PhysReg) {

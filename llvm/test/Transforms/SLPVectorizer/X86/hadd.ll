@@ -140,6 +140,28 @@ define <8 x i16> @test_v8i16(<8 x i16> %a, <8 x i16> %b) {
   ret <8 x i16> %r07
 }
 
+; PR41892
+define void @test_v4f32_v2f32_store(<4 x float> %f, float* %p){
+; CHECK-LABEL: @test_v4f32_v2f32_store(
+; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <4 x float> [[F:%.*]], <4 x float> undef, <2 x i32> <i32 1, i32 2>
+; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <4 x float> [[F]], <4 x float> undef, <2 x i32> <i32 0, i32 3>
+; CHECK-NEXT:    [[TMP3:%.*]] = fadd <2 x float> [[TMP1]], [[TMP2]]
+; CHECK-NEXT:    [[TMP4:%.*]] = bitcast float* [[P:%.*]] to <2 x float>*
+; CHECK-NEXT:    store <2 x float> [[TMP3]], <2 x float>* [[TMP4]], align 4
+; CHECK-NEXT:    ret void
+;
+  %x0 = extractelement <4 x float> %f, i64 0
+  %x1 = extractelement <4 x float> %f, i64 1
+  %add01 = fadd float %x0, %x1
+  store float %add01, float* %p, align 4
+  %x2 = extractelement <4 x float> %f, i64 2
+  %x3 = extractelement <4 x float> %f, i64 3
+  %add23 = fadd float %x2, %x3
+  %p23 = getelementptr inbounds float, float* %p, i64 1
+  store float %add23, float * %p23, align 4
+  ret void
+}
+
 ;
 ; 256-bit vectors
 ;
@@ -152,8 +174,8 @@ define <4 x double> @test_v4f64(<4 x double> %a, <4 x double> %b) {
 ; SSE-NEXT:    [[TMP4:%.*]] = shufflevector <4 x double> [[A]], <4 x double> [[B]], <2 x i32> <i32 2, i32 6>
 ; SSE-NEXT:    [[TMP5:%.*]] = shufflevector <4 x double> [[A]], <4 x double> [[B]], <2 x i32> <i32 3, i32 7>
 ; SSE-NEXT:    [[TMP6:%.*]] = fadd <2 x double> [[TMP4]], [[TMP5]]
-; SSE-NEXT:    [[R032:%.*]] = shufflevector <2 x double> [[TMP3]], <2 x double> [[TMP6]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-; SSE-NEXT:    ret <4 x double> [[R032]]
+; SSE-NEXT:    [[R031:%.*]] = shufflevector <2 x double> [[TMP3]], <2 x double> [[TMP6]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+; SSE-NEXT:    ret <4 x double> [[R031]]
 ;
 ; SLM-LABEL: @test_v4f64(
 ; SLM-NEXT:    [[TMP1:%.*]] = shufflevector <4 x double> [[A:%.*]], <4 x double> [[B:%.*]], <2 x i32> <i32 0, i32 4>
@@ -162,8 +184,8 @@ define <4 x double> @test_v4f64(<4 x double> %a, <4 x double> %b) {
 ; SLM-NEXT:    [[TMP4:%.*]] = shufflevector <4 x double> [[A]], <4 x double> [[B]], <2 x i32> <i32 2, i32 6>
 ; SLM-NEXT:    [[TMP5:%.*]] = shufflevector <4 x double> [[A]], <4 x double> [[B]], <2 x i32> <i32 3, i32 7>
 ; SLM-NEXT:    [[TMP6:%.*]] = fadd <2 x double> [[TMP4]], [[TMP5]]
-; SLM-NEXT:    [[R032:%.*]] = shufflevector <2 x double> [[TMP3]], <2 x double> [[TMP6]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-; SLM-NEXT:    ret <4 x double> [[R032]]
+; SLM-NEXT:    [[R031:%.*]] = shufflevector <2 x double> [[TMP3]], <2 x double> [[TMP6]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+; SLM-NEXT:    ret <4 x double> [[R031]]
 ;
 ; AVX-LABEL: @test_v4f64(
 ; AVX-NEXT:    [[TMP1:%.*]] = shufflevector <4 x double> [[A:%.*]], <4 x double> [[B:%.*]], <4 x i32> <i32 0, i32 4, i32 2, i32 6>
@@ -190,6 +212,34 @@ define <4 x double> @test_v4f64(<4 x double> %a, <4 x double> %b) {
   ret <4 x double> %r03
 }
 
+; PR50392
+define <4 x double> @test_v4f64_partial_swizzle(<4 x double> %a, <4 x double> %b) {
+; CHECK-LABEL: @test_v4f64_partial_swizzle(
+; CHECK-NEXT:    [[B2:%.*]] = extractelement <4 x double> [[B:%.*]], i64 2
+; CHECK-NEXT:    [[B3:%.*]] = extractelement <4 x double> [[B]], i64 3
+; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <4 x double> [[A:%.*]], <4 x double> [[B]], <2 x i32> <i32 0, i32 4>
+; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <4 x double> [[A]], <4 x double> [[B]], <2 x i32> <i32 1, i32 5>
+; CHECK-NEXT:    [[TMP3:%.*]] = fadd <2 x double> [[TMP1]], [[TMP2]]
+; CHECK-NEXT:    [[R3:%.*]] = fadd double [[B2]], [[B3]]
+; CHECK-NEXT:    [[R021:%.*]] = shufflevector <2 x double> [[TMP3]], <2 x double> poison, <4 x i32> <i32 0, i32 undef, i32 1, i32 undef>
+; CHECK-NEXT:    [[R03:%.*]] = insertelement <4 x double> [[R021]], double [[R3]], i64 3
+; CHECK-NEXT:    ret <4 x double> [[R03]]
+;
+  %a0 = extractelement <4 x double> %a, i64 0
+  %a1 = extractelement <4 x double> %a, i64 1
+  %b0 = extractelement <4 x double> %b, i64 0
+  %b1 = extractelement <4 x double> %b, i64 1
+  %b2 = extractelement <4 x double> %b, i32 2
+  %b3 = extractelement <4 x double> %b, i32 3
+  %r0 = fadd double %a0, %a1
+  %r2 = fadd double %b0, %b1
+  %r3 = fadd double %b2, %b3
+  %r00 = insertelement <4 x double> undef, double %r0, i32 0
+  %r02 = insertelement <4 x double>  %r00, double %r2, i32 2
+  %r03 = insertelement <4 x double>  %r02, double %r3, i32 3
+  ret <4 x double> %r03
+}
+
 define <8 x float> @test_v8f32(<8 x float> %a, <8 x float> %b) {
 ; SSE-LABEL: @test_v8f32(
 ; SSE-NEXT:    [[TMP1:%.*]] = shufflevector <8 x float> [[A:%.*]], <8 x float> [[B:%.*]], <8 x i32> <i32 0, i32 2, i32 8, i32 10, i32 4, i32 6, i32 12, i32 14>
@@ -204,8 +254,8 @@ define <8 x float> @test_v8f32(<8 x float> %a, <8 x float> %b) {
 ; SLM-NEXT:    [[TMP4:%.*]] = shufflevector <8 x float> [[A]], <8 x float> [[B]], <4 x i32> <i32 4, i32 6, i32 12, i32 14>
 ; SLM-NEXT:    [[TMP5:%.*]] = shufflevector <8 x float> [[A]], <8 x float> [[B]], <4 x i32> <i32 5, i32 7, i32 13, i32 15>
 ; SLM-NEXT:    [[TMP6:%.*]] = fadd <4 x float> [[TMP4]], [[TMP5]]
-; SLM-NEXT:    [[R072:%.*]] = shufflevector <4 x float> [[TMP3]], <4 x float> [[TMP6]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
-; SLM-NEXT:    ret <8 x float> [[R072]]
+; SLM-NEXT:    [[R071:%.*]] = shufflevector <4 x float> [[TMP3]], <4 x float> [[TMP6]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+; SLM-NEXT:    ret <8 x float> [[R071]]
 ;
 ; AVX-LABEL: @test_v8f32(
 ; AVX-NEXT:    [[TMP1:%.*]] = shufflevector <8 x float> [[A:%.*]], <8 x float> [[B:%.*]], <8 x i32> <i32 0, i32 2, i32 8, i32 10, i32 4, i32 6, i32 12, i32 14>
@@ -324,8 +374,8 @@ define <16 x i16> @test_v16i16(<16 x i16> %a, <16 x i16> %b) {
 ; SSE-NEXT:    [[TMP4:%.*]] = shufflevector <16 x i16> [[A]], <16 x i16> [[B]], <8 x i32> <i32 8, i32 10, i32 12, i32 14, i32 24, i32 26, i32 28, i32 30>
 ; SSE-NEXT:    [[TMP5:%.*]] = shufflevector <16 x i16> [[A]], <16 x i16> [[B]], <8 x i32> <i32 9, i32 11, i32 13, i32 15, i32 25, i32 27, i32 29, i32 31>
 ; SSE-NEXT:    [[TMP6:%.*]] = add <8 x i16> [[TMP4]], [[TMP5]]
-; SSE-NEXT:    [[RV152:%.*]] = shufflevector <8 x i16> [[TMP3]], <8 x i16> [[TMP6]], <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
-; SSE-NEXT:    ret <16 x i16> [[RV152]]
+; SSE-NEXT:    [[RV151:%.*]] = shufflevector <8 x i16> [[TMP3]], <8 x i16> [[TMP6]], <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+; SSE-NEXT:    ret <16 x i16> [[RV151]]
 ;
 ; SLM-LABEL: @test_v16i16(
 ; SLM-NEXT:    [[TMP1:%.*]] = shufflevector <16 x i16> [[A:%.*]], <16 x i16> [[B:%.*]], <16 x i32> <i32 0, i32 2, i32 4, i32 6, i32 16, i32 18, i32 20, i32 22, i32 8, i32 10, i32 12, i32 14, i32 24, i32 26, i32 28, i32 30>

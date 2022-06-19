@@ -1,5 +1,4 @@
-! RUN: %S/test_errors.sh %s %t %flang_fc1
-! REQUIRES: shell
+! RUN: %python %S/test_errors.py %s %flang_fc1
 ! C718 Each named constant in a complex literal constant shall be of type 
 ! integer or real.
 subroutine s()

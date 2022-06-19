@@ -182,3 +182,35 @@ define void @f19(<16 x i8> %val, <16 x i8> *%ptr) {
   ret void
 }
 
+; Test that the alignment hint for VST is emitted also when CFG optimizer
+; replaces two VSTs with just one that then carries two memoperands.
+define void @f20() {
+; CHECK-LABEL: f20:
+; CHECK: vst %v0, 0(%r1), 3
+; CHECK-NOT: vst
+entry:
+  switch i32 undef, label %exit [
+    i32 1, label %bb1
+    i32 2, label %bb2
+  ]
+
+bb1:
+  %C1 = call i64* @foo()
+  %I1 = insertelement <2 x i64*> poison, i64* %C1, i64 0
+  %S1 = shufflevector <2 x i64*> %I1, <2 x i64*> poison, <2 x i32> zeroinitializer
+  store <2 x i64*> %S1, <2 x i64*>* undef, align 8
+  br label %exit
+
+bb2:
+  %C2 = call i64* @foo()
+  %I2 = insertelement <2 x i64*> poison, i64* %C2, i64 0
+  %S2 = shufflevector <2 x i64*> %I2, <2 x i64*> poison, <2 x i32> zeroinitializer
+  %U = bitcast i64** undef to <2 x i64*>*
+  store <2 x i64*> %S2, <2 x i64*>* %U, align 8
+  br label %exit
+
+exit:
+  ret void
+}
+
+declare i64* @foo()

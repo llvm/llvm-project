@@ -25,11 +25,13 @@ int main(int, char**)
         std::ostreambuf_iterator<char> i(outf);
         assert(!i.failed());
     }
+#ifndef TEST_HAS_NO_WIDE_CHARACTERS
     {
         std::wostringstream outf;
         std::ostreambuf_iterator<wchar_t> i(outf);
         assert(!i.failed());
     }
+#endif
 
   return 0;
 }

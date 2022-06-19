@@ -1,4 +1,3 @@
-; RUN: opt < %s -postdomtree -analyze -enable-new-pm=0 | FileCheck %s
 ; RUN: opt < %s -passes='print<postdomtree>' 2>&1 | FileCheck %s
 
 @a = external global i32, align 4

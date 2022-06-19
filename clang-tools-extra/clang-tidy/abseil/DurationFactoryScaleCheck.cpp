@@ -145,7 +145,7 @@ void DurationFactoryScaleCheck::check(const MatchFinder::MatchResult &Result) {
     return;
 
   // We first handle the cases of literal zero (both float and integer).
-  if (IsLiteralZero(Result, *Arg)) {
+  if (isLiteralZero(Result, *Arg)) {
     diag(Call->getBeginLoc(),
          "use ZeroDuration() for zero-length time intervals")
         << FixItHint::CreateReplacement(Call->getSourceRange(),
@@ -192,7 +192,7 @@ void DurationFactoryScaleCheck::check(const MatchFinder::MatchResult &Result) {
                  Result.Nodes.getNodeAs<BinaryOperator>("div_binop")) {
     // We next handle division.
     // For division, we only check the RHS.
-    const auto *FloatLit = llvm::dyn_cast<FloatingLiteral>(DivBinOp->getRHS());
+    const auto *FloatLit = llvm::cast<FloatingLiteral>(DivBinOp->getRHS());
 
     llvm::Optional<DurationScale> NewScale =
         getNewScale(Scale, 1.0 / FloatLit->getValueAsApproximateDouble());
@@ -221,7 +221,6 @@ void DurationFactoryScaleCheck::check(const MatchFinder::MatchResult &Result) {
                 tooling::fixit::getText(*Remainder, *Result.Context) + ")")
                    .str());
   }
-  return;
 }
 
 } // namespace abseil

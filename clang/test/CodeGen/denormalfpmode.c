@@ -9,6 +9,6 @@
 // CHECK-PS: attributes #0 = {{.*}}"denormal-fp-math"="preserve-sign,preserve-sign"{{.*}}
 // CHECK-PZ: attributes #0 = {{.*}}"denormal-fp-math"="positive-zero,positive-zero"{{.*}}
 
-int main() {
+int main(void) {
   return 0;
 }

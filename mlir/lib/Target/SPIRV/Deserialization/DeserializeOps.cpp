@@ -15,6 +15,7 @@
 #include "mlir/Dialect/SPIRV/IR/SPIRVOps.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/Location.h"
+#include "mlir/Target/SPIRV/SPIRVBinaryUtils.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/Debug.h"
@@ -44,20 +45,19 @@ Value spirv::Deserializer::getValue(uint32_t id) {
   }
   if (auto varOp = getGlobalVariable(id)) {
     auto addressOfOp = opBuilder.create<spirv::AddressOfOp>(
-        unknownLoc, varOp.type(),
-        opBuilder.getSymbolRefAttr(varOp.getOperation()));
+        unknownLoc, varOp.type(), SymbolRefAttr::get(varOp.getOperation()));
     return addressOfOp.pointer();
   }
   if (auto constOp = getSpecConstant(id)) {
     auto referenceOfOp = opBuilder.create<spirv::ReferenceOfOp>(
         unknownLoc, constOp.default_value().getType(),
-        opBuilder.getSymbolRefAttr(constOp.getOperation()));
+        SymbolRefAttr::get(constOp.getOperation()));
     return referenceOfOp.reference();
   }
   if (auto constCompositeOp = getSpecConstantComposite(id)) {
     auto referenceOfOp = opBuilder.create<spirv::ReferenceOfOp>(
         unknownLoc, constCompositeOp.type(),
-        opBuilder.getSymbolRefAttr(constCompositeOp.getOperation()));
+        SymbolRefAttr::get(constCompositeOp.getOperation()));
     return referenceOfOp.reference();
   }
   if (auto specConstOperationInfo = getSpecConstantOperation(id)) {
@@ -104,8 +104,8 @@ spirv::Deserializer::sliceInstruction(spirv::Opcode &opcode,
 
 LogicalResult spirv::Deserializer::processInstruction(
     spirv::Opcode opcode, ArrayRef<uint32_t> operands, bool deferInstructions) {
-  LLVM_DEBUG(llvm::dbgs() << "[inst] processing instruction "
-                          << spirv::stringifyOpcode(opcode) << "\n");
+  LLVM_DEBUG(logger.startLine() << "[inst] processing instruction "
+                                << spirv::stringifyOpcode(opcode) << "\n");
 
   // First dispatch all the instructions whose opcode does not correspond to
   // those that have a direct mirror in the SPIR-V dialect
@@ -137,7 +137,8 @@ LogicalResult spirv::Deserializer::processInstruction(
   case spirv::Opcode::OpLine:
     return processDebugLine(operands);
   case spirv::Opcode::OpNoLine:
-    return clearDebugLine();
+    clearDebugLine();
+    return success();
   case spirv::Opcode::OpName:
     return processName(operands);
   case spirv::Opcode::OpString:
@@ -282,12 +283,12 @@ LogicalResult spirv::Deserializer::processOpWithoutGrammarAttr(
   if (hasResult)
     opState.addTypes(resultTypes);
   opState.addAttributes(attributes);
-  Operation *op = opBuilder.createOperation(opState);
+  Operation *op = opBuilder.create(opState);
   if (hasResult)
     valueMap[valueID] = op->getResult(0);
 
   if (op->hasTrait<OpTrait::IsTerminator>())
-    (void)clearDebugLine();
+    clearDebugLine();
 
   return success();
 }
@@ -357,12 +358,12 @@ Deserializer::processOp<spirv::EntryPointOp>(ArrayRef<uint32_t> words) {
       return emitError(unknownLoc, "undefined result <id> ")
              << words[wordIndex] << " while decoding OpEntryPoint";
     }
-    interface.push_back(opBuilder.getSymbolRefAttr(arg.getOperation()));
+    interface.push_back(SymbolRefAttr::get(arg.getOperation()));
     wordIndex++;
   }
-  opBuilder.create<spirv::EntryPointOp>(unknownLoc, execModel,
-                                        opBuilder.getSymbolRefAttr(fnName),
-                                        opBuilder.getArrayAttr(interface));
+  opBuilder.create<spirv::EntryPointOp>(
+      unknownLoc, execModel, SymbolRefAttr::get(opBuilder.getContext(), fnName),
+      opBuilder.getArrayAttr(interface));
   return success();
 }
 
@@ -394,7 +395,8 @@ Deserializer::processOp<spirv::ExecutionModeOp>(ArrayRef<uint32_t> words) {
   }
   auto values = opBuilder.getArrayAttr(attrListElems);
   opBuilder.create<spirv::ExecutionModeOp>(
-      unknownLoc, opBuilder.getSymbolRefAttr(fn.getName()), execMode, values);
+      unknownLoc, SymbolRefAttr::get(opBuilder.getContext(), fn.getName()),
+      execMode, values);
   return success();
 }
 
@@ -461,8 +463,8 @@ Deserializer::processOp<spirv::FunctionCallOp>(ArrayRef<uint32_t> operands) {
   }
 
   auto opFunctionCall = opBuilder.create<spirv::FunctionCallOp>(
-      unknownLoc, resultType, opBuilder.getSymbolRefAttr(functionName),
-      arguments);
+      unknownLoc, resultType,
+      SymbolRefAttr::get(opBuilder.getContext(), functionName), arguments);
 
   if (resultType)
     valueMap[resultID] = opFunctionCall.getResult(0);

@@ -16,12 +16,14 @@
 
 #include <tuple>
 
+#include "TestTraits.h"
 #include "mlir/IR/Attributes.h"
 #include "mlir/IR/Diagnostics.h"
 #include "mlir/IR/Dialect.h"
 #include "mlir/IR/DialectImplementation.h"
 
 #include "TestAttrInterfaces.h.inc"
+#include "TestOpEnums.h.inc"
 
 #define GET_ATTRDEF_CLASSES
 #include "TestAttrDefs.h.inc"

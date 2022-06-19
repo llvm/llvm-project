@@ -26,27 +26,62 @@
 #include "clang/Basic/SourceManager.h"
 #include "clang/Format/Format.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/Debug.h"
+#include <type_traits>
 
 #define DEBUG_TYPE "format-formatter"
 
 namespace clang {
 namespace format {
 
+// FIXME: Instead of printing the diagnostic we should store it and have a
+// better way to return errors through the format APIs.
+class FatalDiagnosticConsumer : public DiagnosticConsumer {
+public:
+  void HandleDiagnostic(DiagnosticsEngine::Level DiagLevel,
+                        const Diagnostic &Info) override {
+    if (DiagLevel == DiagnosticsEngine::Fatal) {
+      Fatal = true;
+      llvm::SmallVector<char, 128> Message;
+      Info.FormatDiagnostic(Message);
+      llvm::errs() << Message << "\n";
+    }
+  }
+
+  bool fatalError() const { return Fatal; }
+
+private:
+  bool Fatal = false;
+};
+
+std::unique_ptr<Environment>
+Environment::make(StringRef Code, StringRef FileName,
+                  ArrayRef<tooling::Range> Ranges, unsigned FirstStartColumn,
+                  unsigned NextStartColumn, unsigned LastStartColumn) {
+  auto Env = std::make_unique<Environment>(Code, FileName, FirstStartColumn,
+                                           NextStartColumn, LastStartColumn);
+  FatalDiagnosticConsumer Diags;
+  Env->SM.getDiagnostics().setClient(&Diags, /*ShouldOwnClient=*/false);
+  SourceLocation StartOfFile = Env->SM.getLocForStartOfFile(Env->ID);
+  for (const tooling::Range &Range : Ranges) {
+    SourceLocation Start = StartOfFile.getLocWithOffset(Range.getOffset());
+    SourceLocation End = Start.getLocWithOffset(Range.getLength());
+    Env->CharRanges.push_back(CharSourceRange::getCharRange(Start, End));
+  }
+  // Validate that we can get the buffer data without a fatal error.
+  Env->SM.getBufferData(Env->ID);
+  if (Diags.fatalError())
+    return nullptr;
+  return Env;
+}
+
 Environment::Environment(StringRef Code, StringRef FileName,
-                         ArrayRef<tooling::Range> Ranges,
                          unsigned FirstStartColumn, unsigned NextStartColumn,
                          unsigned LastStartColumn)
     : VirtualSM(new SourceManagerForFile(FileName, Code)), SM(VirtualSM->get()),
       ID(VirtualSM->get().getMainFileID()), FirstStartColumn(FirstStartColumn),
-      NextStartColumn(NextStartColumn), LastStartColumn(LastStartColumn) {
-  SourceLocation StartOfFile = SM.getLocForStartOfFile(ID);
-  for (const tooling::Range &Range : Ranges) {
-    SourceLocation Start = StartOfFile.getLocWithOffset(Range.getOffset());
-    SourceLocation End = Start.getLocWithOffset(Range.getLength());
-    CharRanges.push_back(CharSourceRange::getCharRange(Start, End));
-  }
-}
+      NextStartColumn(NextStartColumn), LastStartColumn(LastStartColumn) {}
 
 TokenAnalyzer::TokenAnalyzer(const Environment &Env, const FormatStyle &Style)
     : Style(Style), Env(Env),
@@ -75,15 +110,17 @@ std::pair<tooling::Replacements, unsigned> TokenAnalyzer::process() {
   UnwrappedLineParser Parser(Style, Lex.getKeywords(),
                              Env.getFirstStartColumn(), Tokens, *this);
   Parser.parse();
-  assert(UnwrappedLines.rbegin()->empty());
+  assert(UnwrappedLines.back().empty());
   unsigned Penalty = 0;
   for (unsigned Run = 0, RunE = UnwrappedLines.size(); Run + 1 != RunE; ++Run) {
+    const auto &Lines = UnwrappedLines[Run];
     LLVM_DEBUG(llvm::dbgs() << "Run " << Run << "...\n");
     SmallVector<AnnotatedLine *, 16> AnnotatedLines;
+    AnnotatedLines.reserve(Lines.size());
 
     TokenAnnotator Annotator(Style, Lex.getKeywords());
-    for (unsigned i = 0, e = UnwrappedLines[Run].size(); i != e; ++i) {
-      AnnotatedLines.push_back(new AnnotatedLine(UnwrappedLines[Run][i]));
+    for (const UnwrappedLine &Line : Lines) {
+      AnnotatedLines.push_back(new AnnotatedLine(Line));
       Annotator.annotate(*AnnotatedLines.back());
     }
 
@@ -92,15 +129,11 @@ std::pair<tooling::Replacements, unsigned> TokenAnalyzer::process() {
 
     LLVM_DEBUG({
       llvm::dbgs() << "Replacements for run " << Run << ":\n";
-      for (tooling::Replacements::const_iterator I = RunResult.first.begin(),
-                                                 E = RunResult.first.end();
-           I != E; ++I) {
-        llvm::dbgs() << I->toString() << "\n";
-      }
+      for (const tooling::Replacement &Fix : RunResult.first)
+        llvm::dbgs() << Fix.toString() << "\n";
     });
-    for (unsigned i = 0, e = AnnotatedLines.size(); i != e; ++i) {
-      delete AnnotatedLines[i];
-    }
+    for (AnnotatedLine *Line : AnnotatedLines)
+      delete Line;
 
     Penalty += RunResult.second;
     for (const auto &R : RunResult.first) {

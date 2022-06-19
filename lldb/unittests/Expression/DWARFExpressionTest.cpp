@@ -22,6 +22,7 @@
 #include "gtest/gtest.h"
 
 using namespace lldb_private;
+using namespace lldb_private::dwarf;
 
 static llvm::Expected<Scalar> Evaluate(llvm::ArrayRef<uint8_t> expr,
                                        lldb::ModuleSP module_sp = {},
@@ -309,8 +310,7 @@ TEST_F(DWARFExpressionMockProcessTest, DW_OP_deref) {
 
   struct MockProcess : Process {
     using Process::Process;
-    ConstString GetPluginName() override { return ConstString("mock process"); }
-    uint32_t GetPluginVersion() override { return 0; }
+    llvm::StringRef GetPluginName() override { return "mock process"; }
     bool CanDebug(lldb::TargetSP target,
                   bool plugin_specified_by_name) override {
       return false;

@@ -9,11 +9,12 @@
 // CHECK:      Relocations [
 // CHECK-NEXT:   Section ({{.*}}) .rela.dyn {
 // CHECK-NEXT:     0x[[FOO_ADDR:.*]] R_X86_64_RELATIVE - 0x[[FOO_ADDR]]
-// CHECK-NEXT:     0x[[BAR_ADDR:.*]] R_X86_64_RELATIVE - 0x[[BAR_ADDR]]
-// CHECK-NEXT:     0x{{[0-9A-F]+}} R_X86_64_RELATIVE - 0x{{[0-9A-F]+}}
-// CHECK-NEXT:     0x{{.*}} R_X86_64_RELATIVE - 0x[[ZED_ADDR:.*]]
-// CHECK-NEXT:     0x{{.*}} R_X86_64_RELATIVE - 0x[[FOO_ADDR]]
-// CHECK-NEXT:     0x{{[0-9A-F]+}} R_X86_64_64 external 0x0
+// CHECK-NEXT:     0x[[#%X,BAR_ADDR:]] R_X86_64_RELATIVE
+// CHECK-SAME:       - 0x[[#BAR_ADDR]]
+// CHECK-NEXT:     0x[[#BAR_ADDR +  8]] R_X86_64_RELATIVE - 0x[[#BAR_ADDR + 1]]
+// CHECK-NEXT:     0x[[#BAR_ADDR + 16]] R_X86_64_RELATIVE - 0x[[ZED_ADDR:.*]]
+// CHECK-NEXT:     0x[[#BAR_ADDR + 24]] R_X86_64_RELATIVE - 0x[[FOO_ADDR]]
+// CHECK-NEXT:     0x[[#BAR_ADDR + 32]] R_X86_64_64 external 0x0
 // CHECK-NEXT:   }
 // CHECK-NEXT: ]
 
@@ -21,7 +22,7 @@
 // CHECK:        Name: foo
 // CHECK-NEXT:   Value: 0x[[FOO_ADDR]]
 // CHECK:        Name: bar
-// CHECK-NEXT:   Value: 0x[[BAR_ADDR]]
+// CHECK-NEXT:   Value: 0x[[#BAR_ADDR]]
 // CHECK:        Name: zed
 // CHECK-NEXT:   Value: 0x[[ZED_ADDR]]
 // CHECK:      ]

@@ -9,17 +9,18 @@
 #ifndef DIALECT_SPIRV_TRANSFORMS_PASSDETAIL_H_
 #define DIALECT_SPIRV_TRANSFORMS_PASSDETAIL_H_
 
+#include "mlir/IR/BuiltinOps.h"
 #include "mlir/Pass/Pass.h"
 
 namespace mlir {
 
 namespace spirv {
 class ModuleOp;
-} // end namespace spirv
+} // namespace spirv
 
 #define GEN_PASS_CLASSES
 #include "mlir/Dialect/SPIRV/Transforms/Passes.h.inc"
 
-} // end namespace mlir
+} // namespace mlir
 
 #endif // DIALECT_SPIRV_TRANSFORMS_PASSDETAIL_H_

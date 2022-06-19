@@ -5,7 +5,7 @@
 // Note: -fopemp and -fopenmp-simd behavior are expected to be the same.
 
 // This test checks the values of Narrowest Data Size (NDS), as defined in
-// https://github.com/ARM-software/abi-aa/tree/master/vfabia64
+// https://github.com/ARM-software/abi-aa/tree/main/vfabia64
 //
 // NDS is used to compute the <vlen> token in the name of AdvSIMD
 // vector functions when no `simdlen` is specified, with the rule:

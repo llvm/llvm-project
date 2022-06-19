@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -emit-llvm -triple thumbv7-windows-itanium -fexceptions -fcxx-exceptions %s -o - | FileCheck %s
-// RUN: %clang_cc1 -emit-llvm -triple i686-windows-itanium -fexceptions -fcxx-exceptions %s -o - | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -emit-llvm -triple thumbv7-windows-itanium -fexceptions -fcxx-exceptions %s -o - | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -emit-llvm -triple i686-windows-itanium -fexceptions -fcxx-exceptions %s -o - | FileCheck %s
 // REQUIRES: asserts
 
 void except() {

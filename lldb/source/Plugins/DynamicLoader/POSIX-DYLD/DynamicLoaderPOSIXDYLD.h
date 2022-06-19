@@ -30,9 +30,9 @@ public:
 
   static void Terminate();
 
-  static lldb_private::ConstString GetPluginNameStatic();
+  static llvm::StringRef GetPluginNameStatic() { return "posix-dyld"; }
 
-  static const char *GetPluginDescriptionStatic();
+  static llvm::StringRef GetPluginDescriptionStatic();
 
   static lldb_private::DynamicLoader *
   CreateInstance(lldb_private::Process *process, bool force);
@@ -53,9 +53,12 @@ public:
                                   lldb::addr_t tls_file_addr) override;
 
   // PluginInterface protocol
-  lldb_private::ConstString GetPluginName() override;
+  llvm::StringRef GetPluginName() override { return GetPluginNameStatic(); }
 
-  uint32_t GetPluginVersion() override;
+  lldb::ModuleSP LoadModuleAtAddress(const lldb_private::FileSpec &file,
+                                     lldb::addr_t link_map_addr,
+                                     lldb::addr_t base_addr,
+                                     bool base_addr_is_offset) override;
 
 protected:
   /// Runtime linker rendezvous structure.

@@ -1,5 +1,4 @@
-! RUN: %S/test_errors.sh %s %t %flang_fc1
-! REQUIRES: shell
+! RUN: %python %S/test_errors.py %s %flang_fc1
 ! Testing for pointer constant, along with :
 ! C751 A component shall not have both the ALLOCATABLE and POINTER attributes.
 ! C752 If the CONTIGUOUS attribute is specified, the component shall be an 

@@ -15,12 +15,14 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/Analysis/BlockFrequencyInfoImpl.h"
+#include "llvm/CodeGen/Passes.h"
+#include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/Function.h"
+#include "llvm/InitializePasses.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/Utils/SampleProfileLoaderBaseUtil.h"
-#include <unordered_map>
 
 using namespace llvm;
 using namespace sampleprof;
@@ -67,6 +69,8 @@ static uint64_t getCallStackHash(const MachineBasicBlock &BB,
 // b/w LowBit and HighBit.
 bool MIRAddFSDiscriminators::runOnMachineFunction(MachineFunction &MF) {
   if (!EnableFSDiscriminator)
+    return false;
+  if (!MF.getFunction().isDebugInfoForProfiling())
     return false;
 
   bool Changed = false;
@@ -131,6 +135,7 @@ bool MIRAddFSDiscriminators::runOnMachineFunction(MachineFunction &MF) {
   if (Changed) {
     createFSDiscriminatorVariable(MF.getFunction().getParent());
     LLVM_DEBUG(dbgs() << "Num of FS Discriminators: " << NumNewD << "\n");
+    (void) NumNewD;
   }
 
   return Changed;

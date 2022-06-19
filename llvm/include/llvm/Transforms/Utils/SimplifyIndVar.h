@@ -15,12 +15,11 @@
 #ifndef LLVM_TRANSFORMS_UTILS_SIMPLIFYINDVAR_H
 #define LLVM_TRANSFORMS_UTILS_SIMPLIFYINDVAR_H
 
-#include "llvm/Analysis/ScalarEvolutionExpressions.h"
-#include "llvm/IR/ConstantRange.h"
-#include "llvm/IR/ValueHandle.h"
-
 namespace llvm {
 
+class Type;
+class WeakTrackingVH;
+template <typename T> class SmallVectorImpl;
 class CastInst;
 class DominatorTree;
 class Loop;

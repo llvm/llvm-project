@@ -31,19 +31,15 @@ class Triple;
 // is found an MCExpr is created with that, else an MCExpr with Value is
 // created. This function returns true if it adds an operand to the MCInst and
 // false otherwise.
-bool MCExternalSymbolizer::tryAddingSymbolicOperand(MCInst &MI,
-                                                    raw_ostream &cStream,
-                                                    int64_t Value,
-                                                    uint64_t Address,
-                                                    bool IsBranch,
-                                                    uint64_t Offset,
-                                                    uint64_t InstSize) {
+bool MCExternalSymbolizer::tryAddingSymbolicOperand(
+    MCInst &MI, raw_ostream &cStream, int64_t Value, uint64_t Address,
+    bool IsBranch, uint64_t Offset, uint64_t OpSize, uint64_t InstSize) {
   struct LLVMOpInfo1 SymbolicOp;
   std::memset(&SymbolicOp, '\0', sizeof(struct LLVMOpInfo1));
   SymbolicOp.Value = Value;
 
   if (!GetOpInfo ||
-      !GetOpInfo(DisInfo, Address, Offset, InstSize, 1, &SymbolicOp)) {
+      !GetOpInfo(DisInfo, Address, Offset, OpSize, InstSize, 1, &SymbolicOp)) {
     // Clear SymbolicOp.Value from above and also all other fields.
     std::memset(&SymbolicOp, '\0', sizeof(struct LLVMOpInfo1));
 
@@ -53,10 +49,10 @@ bool MCExternalSymbolizer::tryAddingSymbolicOperand(MCInst &MI,
     // that always makes sense to guess.  But in the case of an immediate it is
     // a bit more questionable if it is an address of a symbol or some other
     // reference.  So if the immediate Value comes from a width of 1 byte,
-    // InstSize, we will not guess it is an address of a symbol.  Because in
+    // OpSize, we will not guess it is an address of a symbol.  Because in
     // object files assembled starting at address 0 this usually leads to
     // incorrect symbolication.
-    if (!SymbolLookUp || (InstSize == 1 && !IsBranch))
+    if (!SymbolLookUp || (OpSize == 1 && !IsBranch))
       return false;
 
     uint64_t ReferenceType;

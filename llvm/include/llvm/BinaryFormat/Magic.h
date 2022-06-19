@@ -51,6 +51,9 @@ struct file_magic {
     wasm_object,         ///< WebAssembly Object file
     pdb,                 ///< Windows PDB debug info file
     tapi_file,           ///< Text-based Dynamic Library Stub file
+    cuda_fatbinary,      ///< CUDA Fatbinary object file
+    offload_binary,      ///< LLVM offload object file
+    dxcontainer_object,  ///< DirectX container file
   };
 
   bool is_object() const { return V != unknown; }

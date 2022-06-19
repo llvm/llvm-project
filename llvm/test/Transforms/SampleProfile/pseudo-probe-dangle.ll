@@ -1,9 +1,9 @@
 ; REQUIRES: x86_64-linux
 ; RUN: opt < %s -passes='pseudo-probe,jump-threading' -S -o %t
 ; RUN: FileCheck %s < %t --check-prefix=JT
-; RUN: llc -pseudo-probe-for-profiling -function-sections <%t -filetype=asm | FileCheck %s --check-prefix=ASM
+; RUN: llc  -function-sections <%t -filetype=asm | FileCheck %s --check-prefix=ASM
 ; RUN: opt < %s -passes='pseudo-probe' -S -o %t1
-; RUN: llc -pseudo-probe-for-profiling -stop-after=tailduplication <%t1 | FileCheck %s --check-prefix=MIR-tail
+; RUN: llc  -stop-after=tailduplication <%t1 | FileCheck %s --check-prefix=MIR-tail
 ; RUN: opt < %s -passes='pseudo-probe,simplifycfg' -S | FileCheck %s --check-prefix=SC
 
 declare i32 @f1()

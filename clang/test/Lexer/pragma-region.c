@@ -17,7 +17,7 @@
 void foo(void){}
 #pragma endregion long comment
 
-void inner();
+void inner(void);
 
 __pragma(region) // no sense, but ignored
 _Pragma("region")// ditto

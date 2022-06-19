@@ -4,6 +4,54 @@
 // Unsupported instructions.
 //===----------------------------------------------------------------------===//
 
+image_sample_c_cd_cl_g16 v[5:6], v[1:5], s[8:15], s[12:15] dmask:0x3
+// CHECK: error: instruction not supported on this GPU
+
+image_sample_c_cd_cl_o_g16 v[5:6], v[1:6], s[8:15], s[12:15] dmask:0x3
+// CHECK: error: instruction not supported on this GPU
+
+image_sample_c_cd_g16 v[5:6], v[1:4], s[8:15], s[12:15] dmask:0x3
+// CHECK: error: instruction not supported on this GPU
+
+image_sample_c_cd_o_g16 v[5:6], v[1:5], s[8:15], s[12:15] dmask:0x3
+// CHECK: error: instruction not supported on this GPU
+
+image_sample_c_d_cl_g16 v[5:6], v[1:5], s[8:15], s[12:15] dmask:0x3
+// CHECK: error: instruction not supported on this GPU
+
+image_sample_c_d_cl_o_g16 v[5:6], v[1:6], s[8:15], s[12:15] dmask:0x3
+// CHECK: error: instruction not supported on this GPU
+
+image_sample_c_d_g16 v[5:6], v[1:4], s[8:15], s[12:15] dmask:0x3
+// CHECK: error: instruction not supported on this GPU
+
+image_sample_c_d_o_g16 v[5:6], v[1:5], s[8:15], s[12:15] dmask:0x3
+// CHECK: error: instruction not supported on this GPU
+
+image_sample_cd_cl_g16 v[5:6], v[1:4], s[8:15], s[12:15] dmask:0x3
+// CHECK: error: instruction not supported on this GPU
+
+image_sample_cd_cl_o_g16 v[5:6], v[1:5], s[8:15], s[12:15] dmask:0x3
+// CHECK: error: instruction not supported on this GPU
+
+image_sample_cd_g16 v[5:6], v[1:3], s[8:15], s[12:15] dmask:0x3
+// CHECK: error: instruction not supported on this GPU
+
+image_sample_cd_o_g16 v[5:6], v[1:4], s[8:15], s[12:15] dmask:0x3
+// CHECK: error: instruction not supported on this GPU
+
+image_sample_d_cl_g16 v[5:6], v[1:4], s[8:15], s[12:15] dmask:0x3
+// CHECK: error: instruction not supported on this GPU
+
+image_sample_d_cl_o_g16 v[5:6], v[1:5], s[8:15], s[12:15] dmask:0x3
+// CHECK: error: instruction not supported on this GPU
+
+image_sample_d_g16 v[5:6], v[1:3], s[8:15], s[12:15] dmask:0x3
+// CHECK: error: instruction not supported on this GPU
+
+image_sample_d_o_g16 v[5:6], v[1:4], s[8:15], s[12:15] dmask:0x3
+// CHECK: error: instruction not supported on this GPU
+
 buffer_atomic_add_f32 v255, off, s[8:11], s3 offset:4095
 // CHECK: error: instruction not supported on this GPU
 
@@ -1778,6 +1826,18 @@ v_xnor_b32_sdwa v255, v1, v2 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD 
 // CHECK: error: instruction not supported on this GPU
 
 v_xor3_b32 v255, v1, v2, v3
+// CHECK: error: instruction not supported on this GPU
+
+global_load_lds_dword v[2:3], off
+// CHECK: error: instruction not supported on this GPU
+
+global_load_dword v[2:3], off lds
+// CHECK: error: instruction not supported on this GPU
+
+scratch_load_dword v2, off lds
+// CHECK: error: instruction not supported on this GPU
+
+scratch_load_dword off, s2 lds
 // CHECK: error: instruction not supported on this GPU
 
 //===----------------------------------------------------------------------===//

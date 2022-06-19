@@ -1,52 +1,153 @@
-// RUN: %clang_cc1 -std=c++2b -fsyntax-only -fcxx-exceptions                    -verify=new %s
-// RUN: %clang_cc1 -std=c++2b -fsyntax-only -fcxx-exceptions -fms-compatibility -verify=old %s
-// RUN: %clang_cc1 -std=c++20 -fsyntax-only -fcxx-exceptions                    -verify=old %s
+// RUN: %clang_cc1 -std=c++2b -fsyntax-only                    -verify=cxx2b,new %s
+// RUN: %clang_cc1 -std=c++2b -fsyntax-only -fms-compatibility -verify=cxx2b,old %s
+// RUN: %clang_cc1 -std=c++20 -fsyntax-only                    -verify=cxx20,old %s
 
 // FIXME: This is a test for a temporary workaround where we disable simpler implicit moves
-//        when compiling with -fms-compatibility, because the MSVC STL does not compile.
-//        A better workaround is under discussion.
-//        The test cases here are just a copy from `CXX/class/class.init/class.copy.elision/p3.cpp`,
-//        so feel free to delete this file when the workaround is not needed anymore.
+//        in the STL when compiling with -fms-compatibility, because of issues with the
+//        implementation there.
+//        Feel free to delete this file when the workaround is not needed anymore.
 
-struct CopyOnly {
-  CopyOnly(); // new-note {{candidate constructor not viable: requires 0 arguments, but 1 was provided}}
-  // new-note@-1 {{candidate constructor not viable: requires 0 arguments, but 1 was provided}}
-  CopyOnly(CopyOnly &); // new-note {{candidate constructor not viable: expects an lvalue for 1st argument}}
-  // new-note@-1 {{candidate constructor not viable: expects an lvalue for 1st argument}}
+#if __INCLUDE_LEVEL__ == 0
+
+#if __cpluscplus > 202002L && __cpp_implicit_move < 202011L
+#error "__cpp_implicit_move not defined correctly"
+#endif
+
+struct nocopy {
+  nocopy(nocopy &&);
 };
-struct MoveOnly {
-  MoveOnly();
-  MoveOnly(MoveOnly &&);
-};
-MoveOnly &&rref();
 
-MoveOnly &&test1(MoveOnly &&w) {
-  return w; // old-error {{cannot bind to lvalue of type}}
-}
+int &&mt1(int &&x) { return x; } // cxx20-error {{cannot bind to lvalue}}
+int &mt2(int &&x) { return x; }  // cxx2b-error {{cannot bind to a temporary}}
+nocopy mt3(nocopy x) { return x; }
 
-CopyOnly test2(bool b) {
-  static CopyOnly w1;
-  CopyOnly w2;
-  if (b) {
-    return w1;
-  } else {
-    return w2; // new-error {{no matching constructor for initialization}}
-  }
-}
+namespace {
+int &&mt1(int &&x) { return x; } // cxx20-error {{cannot bind to lvalue}}
+int &mt2(int &&x) { return x; }  // cxx2b-error {{cannot bind to a temporary}}
+nocopy mt3(nocopy x) { return x; }
+} // namespace
 
-template <class T> T &&test3(T &&x) { return x; } // old-error {{cannot bind to lvalue of type}}
-template MoveOnly &test3<MoveOnly &>(MoveOnly &);
-template MoveOnly &&test3<MoveOnly>(MoveOnly &&); // old-note {{in instantiation of function template specialization}}
+namespace foo {
+int &&mt1(int &&x) { return x; } // cxx20-error {{cannot bind to lvalue}}
+int &mt2(int &&x) { return x; }  // cxx2b-error {{cannot bind to a temporary}}
+namespace std {
+int &&mt1(int &&x) { return x; } // cxx20-error {{cannot bind to lvalue}}
+int &mt2(int &&x) { return x; }  // cxx2b-error {{cannot bind to a temporary}}
+nocopy mt3(nocopy x) { return x; }
+} // namespace std
+} // namespace foo
 
-MoveOnly &&test4() {
-  MoveOnly &&x = rref();
-  return x; // old-error {{cannot bind to lvalue of type}}
-}
+namespace std {
 
-void test5() try {
-  CopyOnly x;
-  throw x; // new-error {{no matching constructor for initialization}}
-} catch (...) {
-}
+int &&mt1(int &&x) { return x; } // cxx20-error {{cannot bind to lvalue}}
+int &mt2(int &&x) { return x; }  // cxx2b-error {{cannot bind to a temporary}}
+nocopy mt3(nocopy x) { return x; }
 
-MoveOnly test6(MoveOnly x) { return x; }
+namespace {
+int &&mt1(int &&x) { return x; } // cxx20-error {{cannot bind to lvalue}}
+int &mt2(int &&x) { return x; }  // cxx2b-error {{cannot bind to a temporary}}
+nocopy mt3(nocopy x) { return x; }
+} // namespace
+
+namespace foo {
+int &&mt1(int &&x) { return x; } // cxx20-error {{cannot bind to lvalue}}
+int &mt2(int &&x) { return x; }  // cxx2b-error {{cannot bind to a temporary}}
+nocopy mt3(nocopy x) { return x; }
+} // namespace foo
+
+} // namespace std
+
+#include __FILE__
+
+#define SYSTEM
+#include __FILE__
+
+#elif !defined(SYSTEM)
+
+int &&ut1(int &&x) { return x; } // cxx20-error {{cannot bind to lvalue}}
+int &ut2(int &&x) { return x; }  // cxx2b-error {{cannot bind to a temporary}}
+nocopy ut3(nocopy x) { return x; }
+
+namespace {
+int &&ut1(int &&x) { return x; } // cxx20-error {{cannot bind to lvalue}}
+int &ut2(int &&x) { return x; }  // cxx2b-error {{cannot bind to a temporary}}
+nocopy ut3(nocopy x) { return x; }
+} // namespace
+
+namespace foo {
+int &&ut1(int &&x) { return x; } // cxx20-error {{cannot bind to lvalue}}
+int &ut2(int &&x) { return x; }  // cxx2b-error {{cannot bind to a temporary}}
+nocopy ut3(nocopy x) { return x; }
+namespace std {
+int &&ut1(int &&x) { return x; } // cxx20-error {{cannot bind to lvalue}}
+int &ut2(int &&x) { return x; }  // cxx2b-error {{cannot bind to a temporary}}
+nocopy ut3(nocopy x) { return x; }
+} // namespace std
+} // namespace foo
+
+namespace std {
+
+int &&ut1(int &&x) { return x; } // cxx20-error {{cannot bind to lvalue}}
+int &ut2(int &&x) { return x; }  // cxx2b-error {{cannot bind to a temporary}}
+nocopy ut3(nocopy x) { return x; }
+
+namespace {
+int &&ut1(int &&x) { return x; } // cxx20-error {{cannot bind to lvalue}}
+int &ut2(int &&x) { return x; }  // cxx2b-error {{cannot bind to a temporary}}
+nocopy ut3(nocopy x) { return x; }
+} // namespace
+
+namespace foo {
+int &&ut1(int &&x) { return x; } // cxx20-error {{cannot bind to lvalue}}
+int &ut2(int &&x) { return x; }  // cxx2b-error {{cannot bind to a temporary}}
+nocopy ut3(nocopy x) { return x; }
+} // namespace foo
+
+} // namespace std
+
+#else
+
+#pragma GCC system_header
+
+int &&st1(int &&x) { return x; } // cxx20-error {{cannot bind to lvalue}}
+int &st2(int &&x) { return x; }  // cxx2b-error {{cannot bind to a temporary}}
+nocopy st3(nocopy x) { return x; }
+
+namespace {
+int &&st1(int &&x) { return x; } // cxx20-error {{cannot bind to lvalue}}
+int &st2(int &&x) { return x; }  // cxx2b-error {{cannot bind to a temporary}}
+nocopy st3(nocopy x) { return x; }
+} // namespace
+
+namespace foo {
+int &&st1(int &&x) { return x; } // cxx20-error {{cannot bind to lvalue}}
+int &st2(int &&x) { return x; }  // cxx2b-error {{cannot bind to a temporary}}
+nocopy st3(nocopy x) { return x; }
+namespace std {
+int &&st1(int &&x) { return x; } // cxx20-error {{cannot bind to lvalue}}
+int &st2(int &&x) { return x; }  // cxx2b-error {{cannot bind to a temporary}}
+nocopy st3(nocopy x) { return x; }
+} // namespace std
+} // namespace foo
+
+namespace std {
+
+int &&st1(int &&x) { return x; } // old-error {{cannot bind to lvalue}}
+int &st2(int &&x) { return x; }  // new-error {{cannot bind to a temporary}}
+nocopy st3(nocopy x) { return x; }
+
+namespace {
+int &&st1(int &&x) { return x; } // old-error {{cannot bind to lvalue}}
+int &st2(int &&x) { return x; }  // new-error {{cannot bind to a temporary}}
+nocopy st3(nocopy x) { return x; }
+} // namespace
+
+namespace foo {
+int &&st1(int &&x) { return x; } // old-error {{cannot bind to lvalue}}
+int &st2(int &&x) { return x; }  // new-error {{cannot bind to a temporary}}
+nocopy st3(nocopy x) { return x; }
+} // namespace foo
+
+} // namespace std
+
+#endif

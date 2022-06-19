@@ -21,7 +21,6 @@
 namespace llvm {
 class Record;
 class RecordKeeper;
-class CodeGenTarget;
 
 struct CodeGenIntrinsic {
   Record *TheDef;             // The actual record defining this intrinsic.
@@ -125,6 +124,9 @@ struct CodeGenIntrinsic {
 
   /// True if the intrinsic is no-return.
   bool isNoReturn;
+
+  /// True if the intrinsic is no-callback.
+  bool isNoCallback;
 
   /// True if the intrinsic is no-sync.
   bool isNoSync;

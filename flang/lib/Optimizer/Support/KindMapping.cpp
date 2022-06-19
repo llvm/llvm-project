@@ -49,8 +49,8 @@ static constexpr const char *kwPPCFP128 = "PPC_FP128";
 /// Integral types default to the kind value being the size of the value in
 /// bytes. The default is to scale from bytes to bits.
 static Bitsize defaultScalingKind(KindTy kind) {
-  const unsigned BITS_IN_BYTE = 8;
-  return kind * BITS_IN_BYTE;
+  const unsigned bitsInByte = 8;
+  return kind * bitsInByte;
 }
 
 /// Floating-point types default to the kind value being the size of the value
@@ -87,7 +87,7 @@ static RT doLookup(std::function<RT(KindTy)> def,
   return def(kind);
 }
 
-// do a lookup for INTERGER, LOGICAL, or CHARACTER
+// do a lookup for INTEGER, LOGICAL, or CHARACTER
 template <char KEY, typename MAP>
 static Bitsize getIntegerLikeBitsize(KindTy kind, const MAP &map) {
   return doLookup<Bitsize, KEY>(defaultScalingKind, map, kind);

@@ -1,6 +1,6 @@
 // Multiple inheritance.
 
-// RUN: %clang_cc1 %s -triple=aarch64-unknown-fuchsia -O1 -S -o - -emit-llvm -fhalf-no-semantic-interposition | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers %s -triple=aarch64-unknown-fuchsia -O1 -S -o - -emit-llvm -fhalf-no-semantic-interposition | FileCheck %s
 
 // CHECK: %class.C = type { %class.A, %class.B }
 // CHECK: %class.A = type { i32 (...)** }
@@ -13,7 +13,7 @@
 
 // CHECK: @_ZTV1C ={{.*}} unnamed_addr alias { [4 x i32], [3 x i32] }, { [4 x i32], [3 x i32] }* @_ZTV1C.local
 
-// CHECK:      define{{.*}} void @_Z8C_foobarP1C(%class.C* %c) local_unnamed_addr
+// CHECK:      define{{.*}} void @_Z8C_foobarP1C(%class.C* noundef %c) local_unnamed_addr
 // CHECK-NEXT: entry:
 // CHECK-NEXT:   [[c:%[0-9]+]] = bitcast %class.C* %c to i8**
 // CHECK-NEXT:   [[vtable:%[a-z0-9]+]] = load i8*, i8** [[c]], align 8

@@ -169,7 +169,7 @@ body:             |
     $eax = XOR32rr undef $eax, undef $eax, implicit-def dead $eflags, debug-location !22
     $rcx = frame-destroy POP64r implicit-def $rsp, implicit $rsp, debug-location !22
     CFI_INSTRUCTION def_cfa_offset 8, debug-location !22
-    RETQ killed $eax, debug-location !22
+    RET64 killed $eax, debug-location !22
 
 ...
 ---
@@ -192,7 +192,7 @@ body:             |
     $eax = XOR32rr undef $eax, undef $eax, implicit-def dead $eflags, debug-location !22
     $rcx = frame-destroy POP64r implicit-def $rsp, implicit $rsp, debug-location !22
     CFI_INSTRUCTION def_cfa_offset 8, debug-location !22
-    RETQ killed $eax, debug-location !22
+    RET64 killed $eax, debug-location !22
 
 ...
 ---
@@ -214,7 +214,7 @@ body:             |
     DBG_VALUE $edi, $noreg, !13, !DIExpression(DW_OP_LLVM_fragment, 0, 32), debug-location !14
     $rcx = frame-destroy POP64r implicit-def $rsp, implicit $rsp, debug-location !22
     CFI_INSTRUCTION def_cfa_offset 8, debug-location !22
-    RETQ killed $eax, debug-location !22
+    RET64 killed $eax, debug-location !22
 
 ...
 ---
@@ -236,7 +236,7 @@ body:             |
     DBG_VALUE $edi, $noreg, !13, !DIExpression(DW_OP_LLVM_fragment, 0, 32), debug-location !14
     $rcx = frame-destroy POP64r implicit-def $rsp, implicit $rsp, debug-location !22
     CFI_INSTRUCTION def_cfa_offset 8, debug-location !22
-    RETQ killed $eax, debug-location !22
+    RET64 killed $eax, debug-location !22
 
 ...
 ---
@@ -258,7 +258,7 @@ body:             |
     DBG_VALUE $edi, $noreg, !13, !DIExpression(DW_OP_LLVM_fragment, 0, 32), debug-location !14
     $rcx = frame-destroy POP64r implicit-def $rsp, implicit $rsp, debug-location !22
     CFI_INSTRUCTION def_cfa_offset 8, debug-location !22
-    RETQ killed $eax, debug-location !22
+    RET64 killed $eax, debug-location !22
 
 ...
 ---
@@ -279,6 +279,6 @@ body:             |
     $eax = XOR32rr undef $eax, undef $eax, implicit-def dead $eflags, debug-location !22
     $rcx = frame-destroy POP64r implicit-def $rsp, implicit $rsp, debug-location !22
     CFI_INSTRUCTION def_cfa_offset 8, debug-location !22
-    RETQ killed $eax, debug-location !22
+    RET64 killed $eax, debug-location !22
 
 ...

@@ -76,6 +76,7 @@ TYPE_PARSER(recovery(
                 construct<ExecutionPartConstruct>(
                     statement(indirect(dataStmt))),
                 extension<LanguageFeature::ExecutionPartNamelist>(
+                    "nonstandard usage: NAMELIST in execution part"_port_en_US,
                     construct<ExecutionPartConstruct>(
                         statement(indirect(Parser<NamelistStmt>{})))),
                 obsoleteExecutionPartConstruct))),
@@ -310,7 +311,7 @@ TYPE_CONTEXT_PARSER("IF construct"_en_US,
         many(construct<IfConstruct::ElseIfBlock>(
             unambiguousStatement(construct<ElseIfStmt>(
                 "ELSE IF" >> parenthesized(scalarLogicalExpr),
-                "THEN" >> maybe(name))),
+                recovery("THEN"_tok, ok) >> maybe(name))),
             block)),
         maybe(construct<IfConstruct::ElseBlock>(
             statement(construct<ElseStmt>("ELSE" >> maybe(name))), block)),

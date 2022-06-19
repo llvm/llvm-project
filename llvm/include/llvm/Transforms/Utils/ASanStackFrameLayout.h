@@ -33,7 +33,7 @@ struct ASanStackVariableDescription {
   uint64_t Size;       // Size of the variable in bytes.
   size_t LifetimeSize; // Size in bytes to use for lifetime analysis check.
                        // Will be rounded up to Granularity.
-  size_t Alignment;    // Alignment of the variable (power of 2).
+  uint64_t Alignment;  // Alignment of the variable (power of 2).
   AllocaInst *AI;      // The actual AllocaInst.
   size_t Offset;       // Offset from the beginning of the frame;
                        // set by ComputeASanStackFrameLayout.
@@ -42,20 +42,20 @@ struct ASanStackVariableDescription {
 
 // Output data struct for ComputeASanStackFrameLayout.
 struct ASanStackFrameLayout {
-  size_t Granularity;     // Shadow granularity.
-  size_t FrameAlignment;  // Alignment for the entire frame.
-  size_t FrameSize;       // Size of the frame in bytes.
+  uint64_t Granularity;     // Shadow granularity.
+  uint64_t FrameAlignment;  // Alignment for the entire frame.
+  uint64_t FrameSize;       // Size of the frame in bytes.
 };
 
 ASanStackFrameLayout ComputeASanStackFrameLayout(
     // The array of stack variables. The elements may get reordered and changed.
     SmallVectorImpl<ASanStackVariableDescription> &Vars,
     // AddressSanitizer's shadow granularity. Usually 8, may also be 16, 32, 64.
-    size_t Granularity,
+    uint64_t Granularity,
     // The minimal size of the left-most redzone (header).
     // At least 4 pointer sizes, power of 2, and >= Granularity.
     // The resulting FrameSize should be multiple of MinHeaderSize.
-    size_t MinHeaderSize);
+    uint64_t MinHeaderSize);
 
 // Compute frame description, see DescribeAddressIfStack in ASan runtime.
 SmallString<64> ComputeASanStackFrameDescription(

@@ -7,8 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17
-// UNSUPPORTED: libcpp-no-concepts
-// UNSUPPORTED: gcc-10
+// UNSUPPORTED: libcpp-has-no-incomplete-ranges
 
 // constexpr V base() const& requires copy_constructible<V>
 // constexpr V base() &&
@@ -20,14 +19,14 @@
 
 constexpr bool test() {
   {
-    std::ranges::transform_view<ContiguousView, Increment> transformView;
-    ContiguousView base = std::move(transformView).base();
-    ASSERT_SAME_TYPE(ContiguousView, decltype(std::move(transformView).base()));
+    std::ranges::transform_view<MoveOnlyView, PlusOne> transformView;
+    MoveOnlyView base = std::move(transformView).base();
+    ASSERT_SAME_TYPE(MoveOnlyView, decltype(std::move(transformView).base()));
     assert(std::ranges::begin(base) == globalBuff);
   }
 
   {
-    std::ranges::transform_view<CopyableView, Increment> transformView;
+    std::ranges::transform_view<CopyableView, PlusOne> transformView;
     CopyableView base1 = transformView.base();
     ASSERT_SAME_TYPE(CopyableView, decltype(transformView.base()));
     assert(std::ranges::begin(base1) == globalBuff);
@@ -38,7 +37,7 @@ constexpr bool test() {
   }
 
   {
-    const std::ranges::transform_view<CopyableView, Increment> transformView;
+    const std::ranges::transform_view<CopyableView, PlusOne> transformView;
     const CopyableView base1 = transformView.base();
     ASSERT_SAME_TYPE(CopyableView, decltype(transformView.base()));
     assert(std::ranges::begin(base1) == globalBuff);

@@ -9,7 +9,7 @@
 // <string>
 
 // basic_string<charT,traits,Allocator>&
-//   insert(size_type pos, string_view sv);
+//   insert(size_type pos, string_view sv); // constexpr since C++20
 
 #include <string>
 #include <stdexcept>
@@ -19,7 +19,7 @@
 #include "min_allocator.h"
 
 template <class S, class SV>
-void
+TEST_CONSTEXPR_CXX20 void
 test(S s, typename S::size_type pos, SV sv, S expected)
 {
     const typename S::size_type old_size = s.size();
@@ -31,7 +31,7 @@ test(S s, typename S::size_type pos, SV sv, S expected)
         assert(s == expected);
     }
 #ifndef TEST_HAS_NO_EXCEPTIONS
-    else
+    else if (!TEST_IS_CONSTANT_EVALUATED)
     {
         try
         {
@@ -47,9 +47,8 @@ test(S s, typename S::size_type pos, SV sv, S expected)
 #endif
 }
 
-int main(int, char**)
-{
-    {
+TEST_CONSTEXPR_CXX20 bool test() {
+  {
     typedef std::string S;
     typedef std::string_view SV;
     test(S(""), 0, SV(""), S(""));
@@ -132,9 +131,9 @@ int main(int, char**)
     test(S("abcdefghijklmnopqrst"), 21, SV("12345"), S("can't happen"));
     test(S("abcdefghijklmnopqrst"), 21, SV("1234567890"), S("can't happen"));
     test(S("abcdefghijklmnopqrst"), 21, SV("12345678901234567890"), S("can't happen"));
-    }
+  }
 #if TEST_STD_VER >= 11
-    {
+  {
     typedef std::basic_string<char, std::char_traits<char>, min_allocator<char>> S;
     typedef std::string_view SV;
     test(S(""), 0, SV(""), S(""));
@@ -217,10 +216,10 @@ int main(int, char**)
     test(S("abcdefghijklmnopqrst"), 21, SV("12345"), S("can't happen"));
     test(S("abcdefghijklmnopqrst"), 21, SV("1234567890"), S("can't happen"));
     test(S("abcdefghijklmnopqrst"), 21, SV("12345678901234567890"), S("can't happen"));
-    }
+  }
 #endif
 
-    { // test inserting into self
+  { // test inserting into self
     typedef std::string S;
     S s_short = "123/";
     S s_long  = "Lorem ipsum dolor sit amet, consectetur/";
@@ -234,7 +233,17 @@ int main(int, char**)
 
     s_long.insert(0, s_long.c_str());
     assert(s_long == "Lorem ipsum dolor sit amet, consectetur/Lorem ipsum dolor sit amet, consectetur/");
-    }
+  }
+
+  return true;
+}
+
+int main(int, char**)
+{
+  test();
+#if TEST_STD_VER > 17
+  static_assert(test());
+#endif
 
   return 0;
 }

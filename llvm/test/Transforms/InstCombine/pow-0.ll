@@ -1,4 +1,4 @@
-; RUN: opt < %s -instcombine -S | FileCheck %s
+; RUN: opt < %s -passes=instcombine -S | FileCheck %s
 
 ; CHECK-LABEL: @zero(
 ; CHECK-NEXT:  ret double 1.000000e+00

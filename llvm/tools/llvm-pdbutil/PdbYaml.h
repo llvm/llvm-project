@@ -27,20 +27,16 @@
 #include <vector>
 
 namespace llvm {
-namespace codeview {
-class DebugStringTableSubsection;
-}
 namespace pdb {
 
 namespace yaml {
-struct SerializationContext;
 
 struct MSFHeaders {
   msf::SuperBlock SuperBlock;
   uint32_t NumDirectoryBlocks = 0;
   std::vector<uint32_t> DirectoryBlocks;
   uint32_t NumStreams = 0;
-  uint32_t FileSize = 0;
+  uint64_t FileSize = 0;
 };
 
 struct StreamBlockList {

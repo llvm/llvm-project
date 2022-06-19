@@ -25,50 +25,58 @@ libc++ :ref:`here <using-libcxx>`.
 The default build
 =================
 
-By default, libc++ and libc++abi are built as sub-projects of the LLVM project.
-This can be achieved with the usual CMake invocation:
+The default way of building libc++, libc++abi and libunwind is to root the CMake
+invocation at ``<monorepo>/runtimes``. While those projects are under the LLVM
+umbrella, they are different in nature from other build tools, so it makes sense
+to treat them as a separate set of entities. The default build can be achieved
+with the following CMake invocation:
 
 .. code-block:: bash
 
   $ git clone https://github.com/llvm/llvm-project.git
   $ cd llvm-project
   $ mkdir build
-  $ cmake -G Ninja -S llvm -B build -DLLVM_ENABLE_PROJECTS="libcxx;libcxxabi" # Configure
-  $ ninja -C build cxx cxxabi                                                 # Build
-  $ ninja -C build check-cxx check-cxxabi                                     # Test
-  $ ninja -C build install-cxx install-cxxabi                                 # Install
+  $ cmake -G Ninja -S runtimes -B build -DLLVM_ENABLE_RUNTIMES="libcxx;libcxxabi;libunwind" # Configure
+  $ ninja -C build cxx cxxabi unwind                                                        # Build
+  $ ninja -C build check-cxx check-cxxabi check-unwind                                      # Test
+  $ ninja -C build install-cxx install-cxxabi install-unwind                                # Install
 
 .. note::
   See :ref:`CMake Options` below for more configuration options.
 
-After building the ``install-cxx`` and ``install-cxxabi`` targets, shared libraries
-for libc++ and libc++abi should now be present in ``<CMAKE_INSTALL_PREFIX>/lib``, and
-headers in ``<CMAKE_INSTALL_PREFIX>/include/c++/v1``. See :ref:`using an alternate
-libc++ installation <alternate libcxx>` for information on how to use this libc++ over
-the default one.
+After building the various ``install-XXX`` targets, shared libraries for libc++, libc++abi and
+libunwind should now be present in ``<CMAKE_INSTALL_PREFIX>/lib``, and headers in
+``<CMAKE_INSTALL_PREFIX>/include/c++/v1``. See :ref:`using an alternate libc++ installation
+<alternate libcxx>` for information on how to use this libc++ over the default one.
 
-In the default configuration, libc++ and libc++abi will be built using the compiler available
-by default on your system. It is also possible to bootstrap Clang and build libc++ with it.
+In the default configuration, the runtimes will be built using the compiler available by default
+on your system. Of course, you can change what compiler is being used with the usual CMake
+variables. If you wish to build the runtimes from a just-built Clang, the bootstrapping build
+explained below makes this task easy.
 
 
 Bootstrapping build
 ===================
 
-It is also possible to build Clang and then build libc++ and libc++abi using that
-just-built compiler. This is the correct way to build libc++ when putting together
-a toolchain, or when the system compiler is not adequate to build libc++ (too old,
-unsupported, etc.). This type of build is also commonly called a "Runtimes build":
+It is possible to build Clang and then build the runtimes using that just-built compiler in a
+single CMake invocation. This is usually the correct way to build the runtimes when putting together
+a toolchain, or when the system compiler is not adequate to build them (too old, unsupported, etc.).
+To do this, use the following CMake invocation, and in particular notice how we're now rooting the
+CMake invocation at ``<monorepo>/llvm``:
 
 .. code-block:: bash
 
   $ mkdir build
-  $ cmake -G Ninja -S llvm -B build -DLLVM_ENABLE_PROJECTS="clang"            \  # Configure
-                                    -DLLVM_ENABLE_RUNTIMES="libcxx;libcxxabi" \
+  $ cmake -G Ninja -S llvm -B build -DLLVM_ENABLE_PROJECTS="clang"                      \  # Configure
+                                    -DLLVM_ENABLE_RUNTIMES="libcxx;libcxxabi;libunwind" \
                                     -DLLVM_RUNTIME_TARGETS="<target-triple>"
-  $ ninja -C build runtimes                                                      # Build
-  $ ninja -C build check-runtimes                                                # Test
-  $ ninja -C build install-runtimes                                              # Install
+  $ ninja -C build runtimes                                                                # Build
+  $ ninja -C build check-runtimes                                                          # Test
+  $ ninja -C build install-runtimes                                                        # Install
 
+.. note::
+  This type of build is also commonly called a "Runtimes build", but we would like to move
+  away from that terminology, which is too confusing.
 
 Support for Windows
 ===================
@@ -87,10 +95,11 @@ it is the simplest way to build.
 
 .. code-block:: batch
 
-  > cmake -G "Visual Studio 16 2019" -S libcxx -B build ^
-          -T "ClangCL"                                  ^
-          -DLIBCXX_ENABLE_SHARED=YES                    ^
-          -DLIBCXX_ENABLE_STATIC=NO                     ^
+  > cmake -G "Visual Studio 16 2019" -S runtimes -B build ^
+          -T "ClangCL"                                    ^
+          -DLLVM_ENABLE_RUNTIMES=libcxx                   ^
+          -DLIBCXX_ENABLE_SHARED=YES                      ^
+          -DLIBCXX_ENABLE_STATIC=NO                       ^
           -DLIBCXX_ENABLE_EXPERIMENTAL_LIBRARY=NO
   > cmake --build build
 
@@ -119,16 +128,17 @@ In either case, then run:
 
 .. code-block:: batch
 
-  > cmake -G Ninja -S libcxx -B build                                                 ^
+  > cmake -G Ninja -S runtimes -B build                                               ^
           -DCMAKE_C_COMPILER=clang-cl                                                 ^
           -DCMAKE_CXX_COMPILER=clang-cl                                               ^
+          -DLLVM_ENABLE_RUNTIMES=libcxx                                               ^
           -DLIBCXX_ENABLE_EXPERIMENTAL_LIBRARY=NO
   > ninja -C build cxx
   > ninja -C build check-cxx
 
 If you are running in an MSYS2 shell and you have installed the
 MSYS2-provided clang package (which defaults to a non-MSVC target), you
-should add e.g. ``-DLIBCXX_TARGET_TRIPLE=x86_64-windows-msvc`` (replacing
+should add e.g. ``-DCMAKE_CXX_COMPILER_TARGET=x86_64-windows-msvc`` (replacing
 ``x86_64`` with the architecture you're targeting) to the ``cmake`` command
 line above. This will instruct ``check-cxx`` to use the right target triple
 when invoking ``clang++``.
@@ -145,10 +155,10 @@ e.g. the ``mingw-w64-x86_64-clang`` package), together with CMake and ninja.
 
 .. code-block:: bash
 
-  > cmake -G Ninja -S libcxx -B build                                                 \
+  > cmake -G Ninja -S runtimes -B build                                               \
           -DCMAKE_C_COMPILER=clang                                                    \
           -DCMAKE_CXX_COMPILER=clang++                                                \
-          -DLIBCXX_HAS_WIN32_THREAD_API=ON                                            \
+          -DLLVM_ENABLE_RUNTIMES=libcxx                                               \
           -DLIBCXX_CXX_ABI=libstdc++                                                  \
           -DLIBCXX_TARGET_INFO="libcxx.test.target_info.MingwLocalTI"
   > ninja -C build cxx
@@ -208,13 +218,10 @@ libc++ specific options
 
   **Default**: ``OFF``
 
-  Build libc++ with assertions enabled.
-
-.. option:: LIBCXX_BUILD_32_BITS:BOOL
-
-  **Default**: ``OFF``
-
-  Build libc++ as a 32 bit library. Also see `LLVM_BUILD_32_BITS`.
+  Build libc++ with assertions enabled in the compiled library, and enable assertions
+  by default when building user code as well. Assertions can be turned off by users
+  by defining ``_LIBCPP_ENABLE_ASSERTIONS=0``. For details, see
+  :ref:`the documentation <assertions-mode>`.
 
 .. option:: LIBCXX_ENABLE_SHARED:BOOL
 
@@ -246,10 +253,28 @@ libc++ specific options
 
 .. option:: LIBCXX_ENABLE_FILESYSTEM:BOOL
 
-   **Default**: ``ON`` except on Windows.
+   **Default**: ``ON`` except on Windows when using MSVC.
 
    This option can be used to enable or disable the filesystem components on
-   platforms that may not support them. For example on Windows.
+   platforms that may not support them. For example on Windows when using MSVC.
+
+.. option:: LIBCXX_ENABLE_WIDE_CHARACTERS:BOOL
+
+   **Default**: ``ON``
+
+   This option can be used to disable support for ``wchar_t`` in the library. It also
+   allows the library to work on top of a C Standard Library that does not provide
+   support for ``wchar_t``. This is especially useful in embedded settings where
+   C Standard Libraries don't always provide all the usual bells and whistles.
+
+.. option:: LIBCXX_ENABLE_INCOMPLETE_FEATURES:BOOL
+
+  **Default**: ``ON``
+
+  Whether to enable support for incomplete library features. Incomplete features
+  are new library features under development. These features don't guarantee
+  ABI stability nor the quality of completed library features. Vendors
+  shipping the library may want to disable this option.
 
 .. option:: LIBCXX_INSTALL_LIBRARY_DIR:PATH
 
@@ -298,7 +323,7 @@ ABI Library Specific Options
 
 .. option:: LIBCXX_CXX_ABI:STRING
 
-  **Values**: ``none``, ``libcxxabi``, ``libcxxrt``, ``libstdc++``, ``libsupc++``.
+  **Values**: ``none``, ``libcxxabi``, ``system-libcxxabi``, ``libcxxrt``, ``libstdc++``, ``libsupc++``, ``vcruntime``.
 
   Select the ABI library to build libc++ against.
 
@@ -308,7 +333,8 @@ ABI Library Specific Options
 
 .. option:: LIBCXX_CXX_ABI_LIBRARY_PATH:PATH
 
-  Provide the path to the ABI library that libc++ should link against.
+  Provide the path to the ABI library that libc++ should link against. This is only
+  useful when linking against an out-of-tree ABI library.
 
 .. option:: LIBCXX_ENABLE_STATIC_ABI_LIBRARY:BOOL
 
@@ -423,10 +449,10 @@ The following options allow building libc++ for a different ABI version.
   with other libc++ versions.
 
   .. warning::
-    When providing a custom namespace, it's the users responsibility to ensure the name won't cause
+    When providing a custom namespace, it's the user's responsibility to ensure the name won't cause
     conflicts with other names defined by libc++, both now and in the future. In particular, inline
-    namespaces of the form ``__[0-9]+`` are strictly reserved by libc++ and may not be used by users.
-    Doing otherwise could cause conflicts and hinder libc++ ABI evolution.
+    namespaces of the form ``__[0-9]+`` could cause conflicts with future versions of the library,
+    and so should be avoided.
 
 .. option:: LIBCXX_ABI_DEFINES:STRING
 
@@ -503,8 +529,8 @@ We can now run CMake:
 
 .. code-block:: bash
 
-  $ cmake -G Ninja -S llvm -B build           \
-    -DLLVM_ENABLE_PROJECTS="libcxx"           \
+  $ cmake -G Ninja -S runtimes -B build       \
+    -DLLVM_ENABLE_RUNTIMES="libcxx"           \
     -DLIBCXX_CXX_ABI=libstdc++                \
     -DLIBCXX_CXX_ABI_INCLUDE_PATHS="/usr/include/c++/4.7/;/usr/include/c++/4.7/x86_64-linux-gnu/"
   $ ninja -C build install-cxx
@@ -529,8 +555,8 @@ We can now run CMake like:
 
 .. code-block:: bash
 
-  $ cmake -G Ninja -S llvm -B build                                   \
-          -DLLVM_ENABLE_PROJECTS="libcxx"                             \
+  $ cmake -G Ninja -S runtimes -B build                               \
+          -DLLVM_ENABLE_RUNTIMES="libcxx"                             \
           -DLIBCXX_CXX_ABI=libcxxrt                                   \
           -DLIBCXX_CXX_ABI_INCLUDE_PATHS=path/to/libcxxrt-sources/src
   $ ninja -C build install-cxx

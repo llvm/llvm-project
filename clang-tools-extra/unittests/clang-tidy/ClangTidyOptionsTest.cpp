@@ -86,6 +86,20 @@ TEST(ParseConfiguration, ValidConfiguration) {
   EXPECT_EQ("some.user", *Options->User);
 }
 
+TEST(ParseConfiguration, ChecksSeparatedByNewlines) {
+  auto MemoryBuffer = llvm::MemoryBufferRef("Checks: |\n"
+                                            "  -*,misc-*\n"
+                                            "  llvm-*\n"
+                                            "  -clang-*,\n"
+                                            "  google-*",
+                                            "Options");
+
+  auto Options = parseConfiguration(MemoryBuffer);
+
+  EXPECT_TRUE(!!Options);
+  EXPECT_EQ("-*,misc-*\nllvm-*\n-clang-*,\ngoogle-*\n", *Options->Checks);
+}
+
 TEST(ParseConfiguration, MergeConfigurations) {
   llvm::ErrorOr<ClangTidyOptions> Options1 =
       parseConfiguration(llvm::MemoryBufferRef(R"(

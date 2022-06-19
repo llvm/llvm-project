@@ -499,6 +499,67 @@ for.cond.cleanup:                                 ; preds = %vector.body
   ret void
 }
 
+define <2 x i64> @large_i128(<2 x double> %x) {
+; CHECK-LABEL: large_i128:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    .save {r4, r5, r6, r7, r8, r9, lr}
+; CHECK-NEXT:    push.w {r4, r5, r6, r7, r8, r9, lr}
+; CHECK-NEXT:    .pad #4
+; CHECK-NEXT:    sub sp, #4
+; CHECK-NEXT:    mov r8, r3
+; CHECK-NEXT:    mov r5, r2
+; CHECK-NEXT:    bl __fixdfti
+; CHECK-NEXT:    subs r7, r2, #1
+; CHECK-NEXT:    mov.w r9, #1
+; CHECK-NEXT:    sbcs r7, r3, #0
+; CHECK-NEXT:    mov.w r4, #0
+; CHECK-NEXT:    cset r7, lt
+; CHECK-NEXT:    cmp r7, #0
+; CHECK-NEXT:    csel r0, r0, r7, ne
+; CHECK-NEXT:    csel r3, r3, r7, ne
+; CHECK-NEXT:    csel r2, r2, r9, ne
+; CHECK-NEXT:    csel r1, r1, r7, ne
+; CHECK-NEXT:    rsbs r7, r0, #0
+; CHECK-NEXT:    sbcs.w r7, r4, r1
+; CHECK-NEXT:    sbcs.w r2, r4, r2
+; CHECK-NEXT:    sbcs.w r2, r4, r3
+; CHECK-NEXT:    cset r2, lt
+; CHECK-NEXT:    cmp r2, #0
+; CHECK-NEXT:    csel r6, r0, r2, ne
+; CHECK-NEXT:    csel r7, r1, r2, ne
+; CHECK-NEXT:    mov r0, r5
+; CHECK-NEXT:    mov r1, r8
+; CHECK-NEXT:    bl __fixdfti
+; CHECK-NEXT:    subs r5, r2, #1
+; CHECK-NEXT:    sbcs r5, r3, #0
+; CHECK-NEXT:    cset r5, lt
+; CHECK-NEXT:    cmp r5, #0
+; CHECK-NEXT:    csel r0, r0, r5, ne
+; CHECK-NEXT:    csel r3, r3, r5, ne
+; CHECK-NEXT:    csel r2, r2, r9, ne
+; CHECK-NEXT:    csel r1, r1, r5, ne
+; CHECK-NEXT:    rsbs r5, r0, #0
+; CHECK-NEXT:    sbcs.w r5, r4, r1
+; CHECK-NEXT:    sbcs.w r2, r4, r2
+; CHECK-NEXT:    sbcs.w r2, r4, r3
+; CHECK-NEXT:    cset r3, lt
+; CHECK-NEXT:    cmp r3, #0
+; CHECK-NEXT:    csel r2, r0, r3, ne
+; CHECK-NEXT:    csel r3, r1, r3, ne
+; CHECK-NEXT:    mov r0, r6
+; CHECK-NEXT:    mov r1, r7
+; CHECK-NEXT:    add sp, #4
+; CHECK-NEXT:    pop.w {r4, r5, r6, r7, r8, r9, pc}
+entry:
+  %conv = fptosi <2 x double> %x to <2 x i128>
+  %0 = icmp slt <2 x i128> %conv, <i128 18446744073709551616, i128 18446744073709551616>
+  %spec.store.select = select <2 x i1> %0, <2 x i128> %conv, <2 x i128> <i128 18446744073709551616, i128 18446744073709551616>
+  %1 = icmp sgt <2 x i128> %spec.store.select, zeroinitializer
+  %spec.store.select7 = select <2 x i1> %1, <2 x i128> %spec.store.select, <2 x i128> zeroinitializer
+  %conv6 = trunc <2 x i128> %spec.store.select7 to <2 x i64>
+  ret <2 x i64> %conv6
+}
+
 declare i64 @llvm.vector.reduce.add.v4i64(<4 x i64>)
 declare i32 @llvm.vector.reduce.add.v8i32(<8 x i32>)
 declare i32 @llvm.vector.reduce.add.v16i32(<16 x i32>)

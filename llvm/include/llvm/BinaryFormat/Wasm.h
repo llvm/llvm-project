@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 //
 // This file defines manifest constants for the wasm object file format.
-// See: https://github.com/WebAssembly/design/blob/master/BinaryEncoding.md
+// See: https://github.com/WebAssembly/design/blob/main/BinaryEncoding.md
 //
 //===----------------------------------------------------------------------===//
 
@@ -36,12 +36,25 @@ struct WasmObjectHeader {
   uint32_t Version;
 };
 
+struct WasmDylinkImportInfo {
+  StringRef Module;
+  StringRef Field;
+  uint32_t Flags;
+};
+
+struct WasmDylinkExportInfo {
+  StringRef Name;
+  uint32_t Flags;
+};
+
 struct WasmDylinkInfo {
   uint32_t MemorySize; // Memory size in bytes
   uint32_t MemoryAlignment;  // P2 alignment of memory
   uint32_t TableSize;  // Table size in elements
   uint32_t TableAlignment;  // P2 alignment of table
   std::vector<StringRef> Needed; // Shared library dependencies
+  std::vector<WasmDylinkImportInfo> ImportInfo;
+  std::vector<WasmDylinkExportInfo> ExportInfo;
 };
 
 struct WasmProducerInfo {
@@ -78,7 +91,7 @@ struct WasmTable {
   StringRef SymbolName; // from the "linking" section
 };
 
-struct WasmInitExpr {
+struct WasmInitExprMVP {
   uint8_t Opcode;
   union {
     int32_t Int32;
@@ -87,6 +100,13 @@ struct WasmInitExpr {
     uint64_t Float64;
     uint32_t Global;
   } Value;
+};
+
+struct WasmInitExpr {
+  uint8_t Extended; // Set to non-zero if extended const is used (i.e. more than
+                    // one instruction)
+  WasmInitExprMVP Inst;
+  ArrayRef<uint8_t> Body;
 };
 
 struct WasmGlobalType {
@@ -101,15 +121,9 @@ struct WasmGlobal {
   StringRef SymbolName; // from the "linking" section
 };
 
-struct WasmTagType {
-  // Kind of tag. Currently only WASM_TAG_ATTRIBUTE_EXCEPTION is possible.
-  uint8_t Attribute;
-  uint32_t SigIndex;
-};
-
 struct WasmTag {
   uint32_t Index;
-  WasmTagType Type;
+  uint32_t SigIndex;
   StringRef SymbolName; // from the "linking" section
 };
 
@@ -122,7 +136,6 @@ struct WasmImport {
     WasmGlobalType Global;
     WasmTableType Table;
     WasmLimits Memory;
-    WasmTagType Tag;
   };
 };
 
@@ -133,6 +146,7 @@ struct WasmLocalDecl {
 
 struct WasmFunction {
   uint32_t Index;
+  uint32_t SigIndex;
   std::vector<WasmLocalDecl> Locals;
   ArrayRef<uint8_t> Body;
   uint32_t CodeSectionOffset;
@@ -238,7 +252,8 @@ enum : unsigned {
   WASM_SEC_CODE = 10,      // Function bodies (code)
   WASM_SEC_DATA = 11,      // Data segments
   WASM_SEC_DATACOUNT = 12, // Data segment count
-  WASM_SEC_TAG = 13        // Tag declarations
+  WASM_SEC_TAG = 13,       // Tag declarations
+  WASM_SEC_LAST_KNOWN = WASM_SEC_TAG,
 };
 
 // Type immediate encodings used in various contexts.
@@ -269,6 +284,7 @@ enum : unsigned {
   WASM_OPCODE_CALL = 0x10,
   WASM_OPCODE_LOCAL_GET = 0x20,
   WASM_OPCODE_LOCAL_SET = 0x21,
+  WASM_OPCODE_LOCAL_TEE = 0x22,
   WASM_OPCODE_GLOBAL_GET = 0x23,
   WASM_OPCODE_GLOBAL_SET = 0x24,
   WASM_OPCODE_I32_STORE = 0x36,
@@ -278,17 +294,24 @@ enum : unsigned {
   WASM_OPCODE_F32_CONST = 0x43,
   WASM_OPCODE_F64_CONST = 0x44,
   WASM_OPCODE_I32_ADD = 0x6a,
+  WASM_OPCODE_I32_SUB = 0x6b,
+  WASM_OPCODE_I32_MUL = 0x6c,
   WASM_OPCODE_I64_ADD = 0x7c,
+  WASM_OPCODE_I64_SUB = 0x7d,
+  WASM_OPCODE_I64_MUL = 0x7e,
   WASM_OPCODE_REF_NULL = 0xd0,
 };
 
 // Opcodes used in synthetic functions.
 enum : unsigned {
-  WASM_OPCODE_IF = 0x04,
-  WASM_OPCODE_ELSE = 0x05,
+  WASM_OPCODE_BLOCK = 0x02,
+  WASM_OPCODE_BR = 0x0c,
+  WASM_OPCODE_BR_TABLE = 0x0e,
+  WASM_OPCODE_RETURN = 0x0f,
   WASM_OPCODE_DROP = 0x1a,
   WASM_OPCODE_MISC_PREFIX = 0xfc,
   WASM_OPCODE_MEMORY_INIT = 0x08,
+  WASM_OPCODE_MEMORY_FILL = 0x0b,
   WASM_OPCODE_DATA_DROP = 0x09,
   WASM_OPCODE_ATOMICS_PREFIX = 0xfe,
   WASM_OPCODE_ATOMIC_NOTIFY = 0x00,
@@ -339,6 +362,14 @@ enum : unsigned {
   WASM_SYMBOL_TABLE = 0x8,
 };
 
+// Kind codes used in the custom "dylink" section
+enum : unsigned {
+  WASM_DYLINK_MEM_INFO = 0x1,
+  WASM_DYLINK_NEEDED = 0x2,
+  WASM_DYLINK_EXPORT_INFO = 0x3,
+  WASM_DYLINK_IMPORT_INFO = 0x4,
+};
+
 // Kind codes used in the custom "linking" section in the WASM_COMDAT_INFO
 enum : unsigned {
   WASM_COMDAT_DATA = 0x0,
@@ -379,6 +410,7 @@ const unsigned WASM_SYMBOL_UNDEFINED = 0x10;
 const unsigned WASM_SYMBOL_EXPORTED = 0x20;
 const unsigned WASM_SYMBOL_EXPLICIT_NAME = 0x40;
 const unsigned WASM_SYMBOL_NO_STRIP = 0x80;
+const unsigned WASM_SYMBOL_TLS = 0x100;
 
 #define WASM_RELOC(name, value) name = value,
 
@@ -439,8 +471,9 @@ inline bool operator==(const WasmTableType &LHS, const WasmTableType &RHS) {
   return LHS.ElemType == RHS.ElemType && LHS.Limits == RHS.Limits;
 }
 
-std::string toString(WasmSymbolType type);
-std::string relocTypetoString(uint32_t type);
+llvm::StringRef toString(WasmSymbolType type);
+llvm::StringRef relocTypetoString(uint32_t type);
+llvm::StringRef sectionTypeToString(uint32_t type);
 bool relocTypeHasAddend(uint32_t type);
 
 } // end namespace wasm

@@ -125,8 +125,8 @@ namespace {
     };
 
     LatticeCell() : Kind(Top), Size(0), IsSpecial(false) {
-      for (unsigned i = 0; i < MaxCellSize; ++i)
-        Values[i] = nullptr;
+      for (const Constant *&Value : Values)
+        Value = nullptr;
     }
 
     bool meet(const LatticeCell &L);
@@ -863,14 +863,13 @@ void MachineConstPropagator::removeCFGEdge(MachineBasicBlock *From,
   // First, remove the CFG successor/predecessor information.
   From->removeSuccessor(To);
   // Remove all corresponding PHI operands in the To block.
-  for (auto I = To->begin(), E = To->getFirstNonPHI(); I != E; ++I) {
-    MachineInstr *PN = &*I;
+  for (MachineInstr &PN : To->phis()) {
     // reg0 = PHI reg1, bb2, reg3, bb4, ...
-    int N = PN->getNumOperands()-2;
+    int N = PN.getNumOperands() - 2;
     while (N > 0) {
-      if (PN->getOperand(N+1).getMBB() == From) {
-        PN->RemoveOperand(N+1);
-        PN->RemoveOperand(N);
+      if (PN.getOperand(N + 1).getMBB() == From) {
+        PN.removeOperand(N + 1);
+        PN.removeOperand(N);
       }
       N -= 2;
     }
@@ -996,8 +995,7 @@ bool MachineConstPropagator::rewrite(MachineFunction &MF) {
     bool HaveTargets = computeBlockSuccessors(B, Targets);
     // Rewrite the executable instructions. Skip branches if we don't
     // have block successor information.
-    for (auto I = B->rbegin(), E = B->rend(); I != E; ++I) {
-      MachineInstr &MI = *I;
+    for (MachineInstr &MI : llvm::reverse(*B)) {
       if (InstrExec.count(&MI)) {
         if (MI.isBranch() && !HaveTargets)
           continue;
@@ -1031,8 +1029,8 @@ bool MachineConstPropagator::rewrite(MachineFunction &MF) {
           ToRemove.push_back(const_cast<MachineBasicBlock*>(SB));
         Targets.remove(SB);
       }
-      for (unsigned i = 0, n = ToRemove.size(); i < n; ++i)
-        removeCFGEdge(B, ToRemove[i]);
+      for (MachineBasicBlock *MBB : ToRemove)
+        removeCFGEdge(B, MBB);
       // If there are any blocks left in the computed targets, it means that
       // we think that the block could go somewhere, but the CFG does not.
       // This could legitimately happen in blocks that have non-returning
@@ -1046,13 +1044,9 @@ bool MachineConstPropagator::rewrite(MachineFunction &MF) {
   // erase instructions during rewriting, so this needs to be delayed until
   // now.
   for (MachineBasicBlock &B : MF) {
-    MachineBasicBlock::iterator I = B.begin(), E = B.end();
-    while (I != E) {
-      auto Next = std::next(I);
-      if (I->isBranch() && !InstrExec.count(&*I))
-        B.erase(I);
-      I = Next;
-    }
+    for (MachineInstr &MI : llvm::make_early_inc_range(B))
+      if (MI.isBranch() && !InstrExec.count(&MI))
+        B.erase(&MI);
   }
   return Changed;
 }
@@ -1223,8 +1217,8 @@ bool MachineConstEvaluator::evaluateCMPii(uint32_t Cmp, const APInt &A1,
   unsigned W2 = A2.getBitWidth();
   unsigned MaxW = (W1 >= W2) ? W1 : W2;
   if (Cmp & Comparison::U) {
-    const APInt Zx1 = A1.zextOrSelf(MaxW);
-    const APInt Zx2 = A2.zextOrSelf(MaxW);
+    APInt Zx1 = A1.zext(MaxW);
+    APInt Zx2 = A2.zext(MaxW);
     if (Cmp & Comparison::L)
       Result = Zx1.ult(Zx2);
     else if (Cmp & Comparison::G)
@@ -1233,8 +1227,8 @@ bool MachineConstEvaluator::evaluateCMPii(uint32_t Cmp, const APInt &A1,
   }
 
   // Signed comparison.
-  const APInt Sx1 = A1.sextOrSelf(MaxW);
-  const APInt Sx2 = A2.sextOrSelf(MaxW);
+  APInt Sx1 = A1.sext(MaxW);
+  APInt Sx2 = A2.sext(MaxW);
   if (Cmp & Comparison::L)
     Result = Sx1.slt(Sx2);
   else if (Cmp & Comparison::G)
@@ -1819,7 +1813,7 @@ bool MachineConstEvaluator::evaluateSplati(const APInt &A1, unsigned Bits,
       unsigned Count, APInt &Result) {
   assert(Count > 0);
   unsigned BW = A1.getBitWidth(), SW = Count*Bits;
-  APInt LoBits = (Bits < BW) ? A1.trunc(Bits) : A1.zextOrSelf(Bits);
+  APInt LoBits = (Bits < BW) ? A1.trunc(Bits) : A1.zext(Bits);
   if (Count > 1)
     LoBits = LoBits.zext(SW);
 
@@ -2516,7 +2510,7 @@ APInt HexagonConstEvaluator::getCmpImm(unsigned Opc, unsigned OpX,
 void HexagonConstEvaluator::replaceWithNop(MachineInstr &MI) {
   MI.setDesc(HII.get(Hexagon::A2_nop));
   while (MI.getNumOperands() > 0)
-    MI.RemoveOperand(0);
+    MI.removeOperand(0);
 }
 
 bool HexagonConstEvaluator::evaluateHexRSEQ32(RegisterSubReg RL, RegisterSubReg RH,
@@ -2544,9 +2538,9 @@ bool HexagonConstEvaluator::evaluateHexRSEQ32(RegisterSubReg RL, RegisterSubReg 
   }
 
   for (unsigned i = 0; i < HiVs.size(); ++i) {
-    APInt HV = HiVs[i].zextOrSelf(64) << 32;
+    APInt HV = HiVs[i].zext(64) << 32;
     for (unsigned j = 0; j < LoVs.size(); ++j) {
-      APInt LV = LoVs[j].zextOrSelf(64);
+      APInt LV = LoVs[j].zext(64);
       const Constant *C = intToConst(HV | LV);
       Result.add(C);
       if (Result.isBottom())
@@ -3133,11 +3127,9 @@ void HexagonConstEvaluator::replaceAllRegUsesWith(Register FromReg,
                                                   Register ToReg) {
   assert(FromReg.isVirtual());
   assert(ToReg.isVirtual());
-  for (auto I = MRI->use_begin(FromReg), E = MRI->use_end(); I != E;) {
-    MachineOperand &O = *I;
-    ++I;
+  for (MachineOperand &O :
+       llvm::make_early_inc_range(MRI->use_operands(FromReg)))
     O.setReg(ToReg);
-  }
 }
 
 bool HexagonConstEvaluator::rewriteHexBranch(MachineInstr &BrI,
@@ -3173,7 +3165,7 @@ bool HexagonConstEvaluator::rewriteHexBranch(MachineInstr &BrI,
                   .addMBB(TargetB);
       BrI.setDesc(JD);
       while (BrI.getNumOperands() > 0)
-        BrI.RemoveOperand(0);
+        BrI.removeOperand(0);
       // This ensures that all implicit operands (e.g. implicit-def %r31, etc)
       // are present in the rewritten branch.
       for (auto &Op : NI->operands())

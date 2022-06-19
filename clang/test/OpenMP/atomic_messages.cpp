@@ -1,8 +1,10 @@
 // RUN: %clang_cc1 -verify=expected,omp45 -fopenmp -fopenmp-version=45 -ferror-limit 150 %s -Wuninitialized
 // RUN: %clang_cc1 -verify=expected,omp50 -fopenmp -ferror-limit 150 %s -Wuninitialized
+// RUN: %clang_cc1 -DOMP51 -verify=expected,omp50,omp51 -fopenmp -fopenmp-version=51 -ferror-limit 150 %s -Wuninitialized
 
 // RUN: %clang_cc1 -verify=expected,omp45 -fopenmp-simd -fopenmp-version=45 -ferror-limit 150 %s -Wuninitialized
 // RUN: %clang_cc1 -verify=expected,omp50 -fopenmp-simd -ferror-limit 150 %s -Wuninitialized
+// RUN: %clang_cc1 -DOMP51 -verify=expected,omp50,omp51 -fopenmp-simd -fopenmp-version=51 -ferror-limit 150 %s -Wuninitialized
 
 int foo() {
 L1:
@@ -896,44 +898,67 @@ int relaxed() {
 template <class T>
 T mixed() {
   T a, b = T();
-// expected-error@+2 2 {{directive '#pragma omp atomic' cannot contain more than one 'read', 'write', 'update' or 'capture' clause}}
+// expected-error@+2 2 {{directive '#pragma omp atomic' cannot contain more than one 'read', 'write', 'update', 'capture', or 'compare' clause}}
 // expected-note@+1 2 {{'read' clause used here}}
 #pragma omp atomic read write
   a = b;
-// expected-error@+2 2 {{directive '#pragma omp atomic' cannot contain more than one 'read', 'write', 'update' or 'capture' clause}}
+// expected-error@+2 2 {{directive '#pragma omp atomic' cannot contain more than one 'read', 'write', 'update', 'capture', or 'compare' clause}}
 // expected-note@+1 2 {{'write' clause used here}}
 #pragma omp atomic write read
   a = b;
-// expected-error@+2 2 {{directive '#pragma omp atomic' cannot contain more than one 'read', 'write', 'update' or 'capture' clause}}
+// expected-error@+2 2 {{directive '#pragma omp atomic' cannot contain more than one 'read', 'write', 'update', 'capture', or 'compare' clause}}
 // expected-note@+1 2 {{'update' clause used here}}
 #pragma omp atomic update read
   a += b;
-// expected-error@+2 2 {{directive '#pragma omp atomic' cannot contain more than one 'read', 'write', 'update' or 'capture' clause}}
+// expected-error@+2 2 {{directive '#pragma omp atomic' cannot contain more than one 'read', 'write', 'update', 'capture', or 'compare' clause}}
 // expected-note@+1 2 {{'capture' clause used here}}
 #pragma omp atomic capture read
   a = ++b;
+#ifdef OMP51
+// expected-error@+2 2 {{directive '#pragma omp atomic' cannot contain more than one 'read', 'write', 'update', 'capture', or 'compare' clause}}
+// expected-note@+1 2 {{'write' clause used here}}
+#pragma omp atomic write compare
+  a = b;
+// expected-error@+2 2 {{directive '#pragma omp atomic' cannot contain more than one 'read', 'write', 'update', 'capture', or 'compare' clause}}
+// expected-note@+1 2 {{'read' clause used here}}
+#pragma omp atomic read compare
+  a = b;
+#endif
   return T();
 }
 
 int mixed() {
-  int a, b = 0;
-// expected-error@+2 {{directive '#pragma omp atomic' cannot contain more than one 'read', 'write', 'update' or 'capture' clause}}
+  int a, v, b = 0;
+// expected-error@+2 {{directive '#pragma omp atomic' cannot contain more than one 'read', 'write', 'update', 'capture', or 'compare' clause}}
 // expected-note@+1 {{'read' clause used here}}
 #pragma omp atomic read write
   a = b;
-// expected-error@+2 {{directive '#pragma omp atomic' cannot contain more than one 'read', 'write', 'update' or 'capture' clause}}
+// expected-error@+2 {{directive '#pragma omp atomic' cannot contain more than one 'read', 'write', 'update', 'capture', or 'compare' clause}}
 // expected-note@+1 {{'write' clause used here}}
 #pragma omp atomic write read
   a = b;
-// expected-error@+2 {{directive '#pragma omp atomic' cannot contain more than one 'read', 'write', 'update' or 'capture' clause}}
+// expected-error@+2 {{directive '#pragma omp atomic' cannot contain more than one 'read', 'write', 'update', 'capture', or 'compare' clause}}
 // expected-note@+1 {{'write' clause used here}}
 #pragma omp atomic write update
   a = b;
-// expected-error@+2 {{directive '#pragma omp atomic' cannot contain more than one 'read', 'write', 'update' or 'capture' clause}}
+// expected-error@+2 {{directive '#pragma omp atomic' cannot contain more than one 'read', 'write', 'update', 'capture', or 'compare' clause}}
 // expected-note@+1 {{'write' clause used here}}
 #pragma omp atomic write capture
   a = b;
+#ifdef OMP51
+// expected-error@+2 {{directive '#pragma omp atomic' cannot contain more than one 'read', 'write', 'update', 'capture', or 'compare' clause}}
+// expected-note@+1 {{'write' clause used here}}
+#pragma omp atomic write compare
+  a = b;
+// expected-error@+2 {{directive '#pragma omp atomic' cannot contain more than one 'read', 'write', 'update', 'capture', or 'compare' clause}}
+// expected-note@+1 {{'read' clause used here}}
+#pragma omp atomic read compare
+  a = b;
+// expected-error@+2 {{directive '#pragma omp atomic' cannot contain more than one 'compare' clause}}
+// expected-error@+1 {{directive '#pragma omp atomic' cannot contain more than one 'capture' clause}}
+#pragma omp atomic compare compare capture capture
+  { v = a; if (a > b) a = b; }
+#endif
   // expected-note@+1 {{in instantiation of function template specialization 'mixed<int>' requested here}}
   return mixed<int>();
 }
-

@@ -6,10 +6,7 @@ import json
 import unittest2
 
 
-@skipIfReproducer
 class TestSimulatorPlatformLaunching(TestBase):
-
-    mydir = TestBase.compute_mydir(__file__)
     NO_DEBUG_INFO_TESTCASE = True
 
     def check_load_commands(self, expected_load_command):

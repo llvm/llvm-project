@@ -1,6 +1,6 @@
-// RUN: %clang_cc1 -fsyntax-only -verify -Wall -W -Wno-comment -triple arm64-linux-gnu -target-feature +sve -std=c90 %s
-// RUN: %clang_cc1 -fsyntax-only -verify -Wall -W -triple arm64-linux-gnu -target-feature +sve -std=c11 %s
-// RUN: %clang_cc1 -fsyntax-only -verify -Wall -W -triple arm64-linux-gnu -target-feature +sve -std=gnu11 %s
+// RUN: %clang_cc1 -fsyntax-only -verify -Wall -W -Wno-comment -Wno-strict-prototypes -triple arm64-linux-gnu -target-feature +sve -std=c90 %s
+// RUN: %clang_cc1 -fsyntax-only -verify -Wall -W -Wno-strict-prototypes -triple arm64-linux-gnu -target-feature +sve -std=c11 %s
+// RUN: %clang_cc1 -fsyntax-only -verify -Wall -W -Wno-strict-prototypes -triple arm64-linux-gnu -target-feature +sve -std=gnu11 %s
 
 typedef __SVInt8_t svint8_t;
 typedef __SVInt16_t svint16_t;
@@ -26,7 +26,7 @@ int alignof_int8_var_ptr = _Alignof(extern_int8_ptr); // expected-warning {{GNU 
 
 void pass_int8(svint8_t); // expected-note {{passing argument to parameter here}}
 
-svint8_t return_int8();
+svint8_t return_int8(void);
 
 typedef svint8_t vec_int8_a __attribute__((vector_size(64)));    // expected-error {{invalid vector element type}}
 typedef svint8_t vec_int8_b __attribute__((ext_vector_type(4))); // expected-error {{invalid vector element type}}
@@ -45,7 +45,7 @@ void __attribute__((overloadable)) overf16(int);       // expected-note + {{not 
 void noproto();
 void varargs(int, ...);
 
-void unused() {
+void unused(void) {
   svint8_t unused_int8; // expected-warning {{unused}}
 }
 
@@ -76,9 +76,9 @@ void func(int sel) {
 
   (void)local_int8;
 
-  local_int8, 0; // expected-warning + {{expression result unused}}
+  local_int8, 0; // expected-warning {{left operand of comma operator has no effect}}
 
-  0, local_int8; // expected-warning + {{expression result unused}}
+  0, local_int8; // expected-warning {{left operand of comma operator has no effect}} expected-warning {{expression result unused}}
 
   svint8_t init_int8 = local_int8;
   svint8_t bad_init_int8 = for; // expected-error {{expected expression}}
@@ -193,60 +193,13 @@ void func(int sel) {
   -init_int8;       // expected-error {{invalid argument type 'svint8_t'}}
   --init_int8;      // expected-error {{cannot decrement value of type 'svint8_t'}}
   init_int8--;      // expected-error {{cannot decrement value of type 'svint8_t'}}
-  ~init_int8;       // expected-error {{invalid argument type 'svint8_t'}}
   !init_int8;       // expected-error {{invalid argument type 'svint8_t'}}
   *init_int8;       // expected-error {{indirection requires pointer operand}}
   __real init_int8; // expected-error {{invalid type 'svint8_t'}}
   __imag init_int8; // expected-error {{invalid type 'svint8_t'}}
 
-  local_int8 + init_int8;  // expected-error {{invalid operands to binary expression}}
-  local_int8 - init_int8;  // expected-error {{invalid operands to binary expression}}
-  local_int8 *init_int8;   // expected-error {{invalid operands to binary expression}}
-  local_int8 / init_int8;  // expected-error {{invalid operands to binary expression}}
-  local_int8 % init_int8;  // expected-error {{invalid operands to binary expression}}
-  local_int8 &init_int8;   // expected-error {{invalid operands to binary expression}}
-  local_int8 | init_int8;  // expected-error {{invalid operands to binary expression}}
-  local_int8 ^ init_int8;  // expected-error {{invalid operands to binary expression}}
-  local_int8 << init_int8; // expected-error {{invalid operands to binary expression}}
-  local_int8 >> init_int8; // expected-error {{invalid operands to binary expression}}
-  local_int8 < init_int8;  // expected-error {{invalid operands to binary expression}}
-  local_int8 <= init_int8; // expected-error {{invalid operands to binary expression}}
-  local_int8 == init_int8; // expected-error {{invalid operands to binary expression}}
-  local_int8 != init_int8; // expected-error {{invalid operands to binary expression}}
-  local_int8 >= init_int8; // expected-error {{invalid operands to binary expression}}
-  local_int8 > init_int8;  // expected-error {{invalid operands to binary expression}}
   local_int8 &&init_int8;  // expected-error {{invalid operands to binary expression}}
   local_int8 || init_int8; // expected-error {{invalid operands to binary expression}}
-
-  local_int8 += init_int8;  // expected-error {{invalid operands to binary expression}}
-  local_int8 -= init_int8;  // expected-error {{invalid operands to binary expression}}
-  local_int8 *= init_int8;  // expected-error {{invalid operands to binary expression}}
-  local_int8 /= init_int8;  // expected-error {{invalid operands to binary expression}}
-  local_int8 %= init_int8;  // expected-error {{invalid operands to binary expression}}
-  local_int8 &= init_int8;  // expected-error {{invalid operands to binary expression}}
-  local_int8 |= init_int8;  // expected-error {{invalid operands to binary expression}}
-  local_int8 ^= init_int8;  // expected-error {{invalid operands to binary expression}}
-  local_int8 <<= init_int8; // expected-error {{invalid operands to binary expression}}
-  local_int8 >>= init_int8; // expected-error {{invalid operands to binary expression}}
-
-  local_int8 + 0;  // expected-error {{invalid operands to binary expression}}
-  local_int8 - 0;  // expected-error {{invalid operands to binary expression}}
-  local_int8 * 0;  // expected-error {{invalid operands to binary expression}}
-  local_int8 / 0;  // expected-error {{invalid operands to binary expression}}
-  local_int8 % 0;  // expected-error {{invalid operands to binary expression}}
-  local_int8 & 0;  // expected-error {{invalid operands to binary expression}}
-  local_int8 | 0;  // expected-error {{invalid operands to binary expression}}
-  local_int8 ^ 0;  // expected-error {{invalid operands to binary expression}}
-  local_int8 << 0; // expected-error {{invalid operands to binary expression}}
-  local_int8 >> 0; // expected-error {{invalid operands to binary expression}}
-  local_int8 < 0;  // expected-error {{invalid operands to binary expression}}
-  local_int8 <= 0; // expected-error {{invalid operands to binary expression}}
-  local_int8 == 0; // expected-error {{invalid operands to binary expression}}
-  local_int8 != 0; // expected-error {{invalid operands to binary expression}}
-  local_int8 >= 0; // expected-error {{invalid operands to binary expression}}
-  local_int8 > 0;  // expected-error {{invalid operands to binary expression}}
-  local_int8 && 0; // expected-error {{invalid operands to binary expression}}
-  local_int8 || 0; // expected-error {{invalid operands to binary expression}}
 
   if (local_int8) { // expected-error {{statement requires expression of scalar type}}
   }

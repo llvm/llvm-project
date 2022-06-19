@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple x86_64-apple-darwin10 -emit-llvm -o %t1 %s
+// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-apple-darwin10 -emit-llvm -o %t1 %s
 // RUN: FileCheck --check-prefix=LOCAL %s < %t1
 // RUN: FileCheck --check-prefix=UNDEF %s < %t1
 // RUN: FileCheck --check-prefix=PARAM %s < %t1

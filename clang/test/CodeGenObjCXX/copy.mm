@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple x86_64-apple-darwin10 -fobjc-runtime=macosx-fragile-10.5 -emit-llvm -o - %s | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-apple-darwin10 -fobjc-runtime=macosx-fragile-10.5 -emit-llvm -o - %s | FileCheck %s
 
 // rdar://problem/9158302
 // This should not use a memmove_collectable in non-GC mode.
@@ -11,7 +11,7 @@ namespace test0 {
   // CHECK:      alloca
   // CHECK-NEXT: getelementptr
   // CHECK-NEXT: store
-  // CHECK-NEXT: [[CALL:%.*]] = call noalias nonnull i8* @_Znwm(
+  // CHECK-NEXT: [[CALL:%.*]] = call noalias noundef nonnull i8* @_Znwm(
   // CHECK-NEXT: bitcast
   // CHECK-NEXT: bitcast
   // CHECK-NEXT: bitcast

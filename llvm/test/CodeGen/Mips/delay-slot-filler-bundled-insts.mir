@@ -95,15 +95,15 @@ body:             |
   ; CHECK:     $sp_64 = DADDiu $sp_64, 16
   ; CHECK:   }
   ; CHECK:   BEQ64 renamable $a0_64, $zero_64, %bb.2, implicit-def $at {
-  ; CHECK:     NOP
+  ; CHECK:     $zero = SLL $zero, 0
   ; CHECK:   }
   ; CHECK: bb.1.if.then:
   ; CHECK:   successors: %bb.3(0x80000000)
   ; CHECK:   JAL @func_a, csr_n64, implicit-def dead $ra, implicit $a0_64, implicit-def $sp, implicit-def $v0_64 {
-  ; CHECK:     NOP
+  ; CHECK:     $zero = SLL $zero, 0
   ; CHECK:   }
   ; CHECK:   J %bb.3, implicit-def dead $at {
-  ; CHECK:     NOP
+  ; CHECK:     $zero = SLL $zero, 0
   ; CHECK:   }
   ; CHECK: bb.2.if.else:
   ; CHECK:   successors: %bb.3(0x80000000)

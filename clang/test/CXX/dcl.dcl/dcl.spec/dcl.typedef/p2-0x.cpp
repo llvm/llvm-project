@@ -40,7 +40,7 @@ namespace VariableLengthArrays {
   const int m = 42;
   using U = int[m];
   using U = int[42]; // expected-note {{previous definition}}
-  using U = int; // expected-error {{type alias redefinition with different types ('int' vs 'int [42]')}}
+  using U = int; // expected-error {{type alias redefinition with different types ('int' vs 'int[42]')}}
 
   void f() {
     int n = 42;

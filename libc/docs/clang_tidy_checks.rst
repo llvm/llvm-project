@@ -67,6 +67,11 @@ a public header with non-namespaced functions like ``string.h`` is included.
 This check ensures any function call resolves to a function within the
 __llvm_libc namespace.
 
+There are exceptions for the following functions: 
+``__errno_location`` so that ``errno`` can be set;
+``malloc``, ``calloc``, ``realloc``, ``aligned_alloc``, and ``free`` since they
+are always external and can be intercepted.
+
 .. code-block:: c++
 
     namespace __llvm_libc {
@@ -82,5 +87,8 @@ __llvm_libc namespace.
 
     // Disallow calling into functions in the global namespace.
     ::strlen("!");
+
+    // Allow calling into specific global functions (explained above)
+    ::malloc(10);
 
     } // namespace __llvm_libc

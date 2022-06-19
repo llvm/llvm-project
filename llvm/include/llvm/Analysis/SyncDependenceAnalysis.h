@@ -16,18 +16,18 @@
 #ifndef LLVM_ANALYSIS_SYNCDEPENDENCEANALYSIS_H
 #define LLVM_ANALYSIS_SYNCDEPENDENCEANALYSIS_H
 
-#include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/ADT/SmallPtrSet.h"
-#include "llvm/Analysis/LoopInfo.h"
+#include <map>
 #include <memory>
 #include <unordered_map>
+#include <vector>
 
 namespace llvm {
 
 class BasicBlock;
 class DominatorTree;
-class Loop;
+class Instruction;
+class LoopInfo;
 class PostDominatorTree;
 
 using ConstBlockSet = SmallPtrSet<const BasicBlock *, 4>;

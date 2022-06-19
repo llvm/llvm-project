@@ -12,7 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "sanitizer_common/sanitizer_platform.h"
-#if SANITIZER_MAC
+#if SANITIZER_APPLE
 
 #include "interception/interception.h"
 #include "lsan.h"
@@ -68,7 +68,7 @@ typedef struct {
 ALWAYS_INLINE
 void lsan_register_worker_thread(int parent_tid) {
   if (GetCurrentThread() == kInvalidTid) {
-    u32 tid = ThreadCreate(parent_tid, 0, true);
+    u32 tid = ThreadCreate(parent_tid, true);
     ThreadStart(tid, GetTid());
     SetCurrentThread(tid);
   }
@@ -188,4 +188,4 @@ INTERCEPTOR(void, dispatch_source_set_event_handler, dispatch_source_t ds,
 }
 #endif
 
-#endif  // SANITIZER_MAC
+#endif  // SANITIZER_APPLE

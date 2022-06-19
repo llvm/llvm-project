@@ -1,6 +1,4 @@
-; RUN: opt -analyze -enable-new-pm=0 -scalar-evolution -scev-addops-inline-threshold=1 < %s | FileCheck --check-prefix=CHECK1 %s
 ; RUN: opt -disable-output "-passes=print<scalar-evolution>" -scev-addops-inline-threshold=1 < %s 2>&1 | FileCheck --check-prefix=CHECK1 %s
-; RUN: opt -analyze -enable-new-pm=0 -scalar-evolution -scev-addops-inline-threshold=10 < %s | FileCheck --check-prefix=CHECK10 %s
 ; RUN: opt -disable-output "-passes=print<scalar-evolution>" -scev-addops-inline-threshold=10 < %s 2>&1 | FileCheck --check-prefix=CHECK10 %s
 
 define i32 @foo(i64 %p0, i32 %p1) {

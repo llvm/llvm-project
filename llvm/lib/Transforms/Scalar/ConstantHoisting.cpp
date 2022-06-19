@@ -52,6 +52,7 @@
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
+#include "llvm/IR/Operator.h"
 #include "llvm/IR/Value.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
@@ -271,8 +272,7 @@ static void findBestInsertionSet(DominatorTree &DT, BlockFrequencyInfo &BFI,
   // subtree of BB (subtree not including the BB itself).
   DenseMap<BasicBlock *, InsertPtsCostPair> InsertPtsMap;
   InsertPtsMap.reserve(Orders.size() + 1);
-  for (auto RIt = Orders.rbegin(); RIt != Orders.rend(); RIt++) {
-    BasicBlock *Node = *RIt;
+  for (BasicBlock *Node : llvm::reverse(Orders)) {
     bool NodeInBBs = BBs.count(Node);
     auto &InsertPts = InsertPtsMap[Node].first;
     BlockFrequency &InsertPtsFreq = InsertPtsMap[Node].second;
@@ -415,6 +415,14 @@ void ConstantHoistingPass::collectConstantCandidates(
   IntegerType *PtrIntTy = DL->getIntPtrType(*Ctx, GVPtrTy->getAddressSpace());
   APInt Offset(DL->getTypeSizeInBits(PtrIntTy), /*val*/0, /*isSigned*/true);
   auto *GEPO = cast<GEPOperator>(ConstExpr);
+
+  // TODO: If we have a mix of inbounds and non-inbounds GEPs, then basing a
+  // non-inbounds GEP on an inbounds GEP is potentially incorrect. Restrict to
+  // inbounds GEP for now -- alternatively, we could drop inbounds from the
+  // constant expression,
+  if (!GEPO->isInBounds())
+    return;
+
   if (!GEPO->accumulateConstantOffset(*DL, Offset))
     return;
 
@@ -471,7 +479,7 @@ void ConstantHoistingPass::collectConstantCandidates(
   // Visit constant expressions that have constant integers.
   if (auto ConstExpr = dyn_cast<ConstantExpr>(Opnd)) {
     // Handle constant gep expressions.
-    if (ConstHoistGEP && ConstExpr->isGEPWithNoNotionalOverIndexing())
+    if (ConstHoistGEP && isa<GEPOperator>(ConstExpr))
       collectConstantCandidates(ConstCandMap, Inst, Idx, ConstExpr);
 
     // Only visit constant cast expressions.
@@ -762,7 +770,7 @@ void ConstantHoistingPass::emitBaseConstants(Instruction *Base,
       PointerType *Int8PtrTy = Type::getInt8PtrTy(*Ctx,
           cast<PointerType>(Ty)->getAddressSpace());
       Base = new BitCastInst(Base, Int8PtrTy, "base_bitcast", InsertionPt);
-      Mat = GetElementPtrInst::Create(Int8PtrTy->getElementType(), Base,
+      Mat = GetElementPtrInst::Create(Type::getInt8Ty(*Ctx), Base,
           Offset, "mat_gep", InsertionPt);
       Mat = new BitCastInst(Mat, Ty, "mat_bitcast", InsertionPt);
     } else
@@ -811,7 +819,7 @@ void ConstantHoistingPass::emitBaseConstants(Instruction *Base,
 
   // Visit constant expression.
   if (auto ConstExpr = dyn_cast<ConstantExpr>(Opnd)) {
-    if (ConstExpr->isGEPWithNoNotionalOverIndexing()) {
+    if (isa<GEPOperator>(ConstExpr)) {
       // Operand is a ConstantGEP, replace it.
       updateOperand(ConstUser.Inst, ConstUser.OpndIdx, Mat);
       return;
@@ -819,10 +827,9 @@ void ConstantHoistingPass::emitBaseConstants(Instruction *Base,
 
     // Aside from constant GEPs, only constant cast expressions are collected.
     assert(ConstExpr->isCast() && "ConstExpr should be a cast");
-    Instruction *ConstExprInst = ConstExpr->getAsInstruction();
+    Instruction *ConstExprInst = ConstExpr->getAsInstruction(
+        findMatInsertPt(ConstUser.Inst, ConstUser.OpndIdx));
     ConstExprInst->setOperand(0, Mat);
-    ConstExprInst->insertBefore(findMatInsertPt(ConstUser.Inst,
-                                                ConstUser.OpndIdx));
 
     // Use the same debug location as the instruction we are about to update.
     ConstExprInst->setDebugLoc(ConstUser.Inst->getDebugLoc());

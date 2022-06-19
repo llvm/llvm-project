@@ -2,7 +2,7 @@
 
 // return values
 void test_void_alloc_align(void) __attribute__((alloc_align(1))); // expected-warning {{'alloc_align' attribute only applies to return values that are pointers}}
-void *test_ptr_alloc_align(int a) __attribute__((alloc_align(1))); // no-warning
+void *test_ptr_alloc_align(unsigned long long a) __attribute__((alloc_align(1))); // no-warning
 
 int j __attribute__((alloc_align(1))); // expected-warning {{'alloc_align' attribute only applies to non-K&R-style functions}}
 void *test_no_params_zero(void) __attribute__((alloc_align(0))); // expected-error {{'alloc_align' attribute parameter 1 is out of bounds}}
@@ -20,12 +20,12 @@ void *test_no_fn_proto(int x, int y) __attribute__((alloc_align(32, 45, 37))); /
 void *passthrought(int a) {
   return test_ptr_alloc_align(a);
 }
-void *align16() {
+void *align16(void) {
   return test_ptr_alloc_align(16);
 }
-void *align15() {
+void *align15(void) {
   return test_ptr_alloc_align(15); // expected-warning {{requested alignment is not a power of 2}}
 }
-void *align536870912() {
-  return test_ptr_alloc_align(1073741824); // expected-warning {{requested alignment must be 536870912 bytes or smaller; maximum alignment assumed}}
+void *align1073741824(void) {
+  return test_ptr_alloc_align(8589934592); // expected-warning {{requested alignment must be 4294967296 bytes or smaller; maximum alignment assumed}}
 }

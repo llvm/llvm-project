@@ -52,7 +52,7 @@ E: neil@daikokuya.co.uk
 D: APFloat implementation.
 
 N: Alex Bradbury
-E: asb@lowrisc.org
+E: asb@igalia.com
 D: RISC-V backend
 
 N: Misha Brukman
@@ -324,6 +324,10 @@ D: Mips backend
 D: Random ARM integrated assembler and assembly parser improvements
 D: General X86 AVX1 support
 
+N: Weining Lu
+E: luweining@loongson.cn
+D: LoongArch backend
+
 N: Duraid Madina
 E: duraid@octopus.com.au
 W: http://kinoko.c.u-tokyo.ac.jp/~duraid/
@@ -459,6 +463,10 @@ D: Type legalizer rewrite
 N: Ruchira Sasanka
 E: sasanka@uiuc.edu
 D: Graph coloring register allocator for the Sparc64 backend
+
+N: Alina Sbirlea
+E: alina.sbirlea@gmail.com
+D: MemorySSA, BatchAA, misc loop and new pass manager work.
 
 N: Arnold Schwaighofer
 E: arnold.schwaighofer@gmail.com

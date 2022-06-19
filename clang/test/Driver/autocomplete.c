@@ -49,6 +49,10 @@
 // CLSTDALL-NEXT: CL3.0
 // CLSTDALL-NEXT: clc++
 // CLSTDALL-NEXT: CLC++
+// CLSTDALL-NEXT: clc++1.0
+// CLSTDALL-NEXT: CLC++1.0
+// CLSTDALL-NEXT: clc++2021
+// CLSTDALL-NEXT: CLC++2021
 // RUN: %clang --autocomplete=-fno-sanitize-coverage=,f | FileCheck %s -check-prefix=FNOSANICOVER
 // FNOSANICOVER: func
 // RUN: %clang --autocomplete=-fno-sanitize-coverage= | FileCheck %s -check-prefix=FNOSANICOVERALL

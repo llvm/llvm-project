@@ -1,5 +1,4 @@
 ; TEST that counter updates are promoted outside the whole loop nest
-; RUN: opt < %s -pgo-instr-gen -instrprof -do-counter-promotion=true -S | FileCheck --check-prefix=PROMO  %s
 ; RUN: opt < %s --passes=pgo-instr-gen,instrprof -do-counter-promotion=true -S | FileCheck --check-prefix=PROMO  %s 
 
 @g = common local_unnamed_addr global i32 0, align 4

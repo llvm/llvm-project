@@ -3,9 +3,11 @@ mlir_tablegen(EnumsGenTest.h.inc -gen-enum-decls)
 mlir_tablegen(EnumsGenTest.cpp.inc -gen-enum-defs)
 add_public_tablegen_target(MLIRTableGenEnumsIncGen)
 
+# FIXME: This test is for deprecated feature being remove so warnings are
+# disabled on it.
 set(LLVM_TARGET_DEFINITIONS structs.td)
-mlir_tablegen(StructAttrGenTest.h.inc -gen-struct-attr-decls)
-mlir_tablegen(StructAttrGenTest.cpp.inc -gen-struct-attr-defs)
+mlir_tablegen(StructAttrGenTest.h.inc -gen-struct-attr-decls --on-deprecated=none)
+mlir_tablegen(StructAttrGenTest.cpp.inc -gen-struct-attr-defs --on-deprecated=none)
 add_public_tablegen_target(MLIRTableGenStructAttrIncGen)
 
 set(LLVM_TARGET_DEFINITIONS passes.td)
@@ -25,8 +27,11 @@ add_dependencies(MLIRTableGenTests MLIRTableGenStructAttrIncGen)
 add_dependencies(MLIRTableGenTests MLIRTableGenTestPassIncGen)
 add_dependencies(MLIRTableGenTests MLIRTestDialect)
 
-include_directories(${CMAKE_CURRENT_SOURCE_DIR}/../../test/lib/Dialect/Test)
-include_directories(${CMAKE_CURRENT_BINARY_DIR}/../../test/lib/Dialect/Test)
+target_include_directories(MLIRTableGenTests
+  PRIVATE
+  ${CMAKE_CURRENT_SOURCE_DIR}/../../test/lib/Dialect/Test
+  ${CMAKE_CURRENT_BINARY_DIR}/../../test/lib/Dialect/Test
+)
 
 target_link_libraries(MLIRTableGenTests
   PRIVATE MLIRTableGen MLIRIR

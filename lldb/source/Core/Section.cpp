@@ -164,12 +164,6 @@ Section::Section(const ModuleSP &module_sp, ObjectFile *obj_file,
       m_log2align(log2align), m_children(), m_fake(false), m_encrypted(false),
       m_thread_specific(false), m_readable(false), m_writable(false),
       m_executable(false), m_relocated(false), m_target_byte_size(target_byte_size) {
-  //    printf ("Section::Section(%p): module=%p, sect_id = 0x%16.16" PRIx64 ",
-  //    addr=[0x%16.16" PRIx64 " - 0x%16.16" PRIx64 "), file [0x%16.16" PRIx64 "
-  //    - 0x%16.16" PRIx64 "), flags = 0x%8.8x, name = %s\n",
-  //            this, module_sp.get(), sect_id, file_addr, file_addr +
-  //            byte_size, file_offset, file_offset + file_size, flags,
-  //            name.GetCString());
 }
 
 Section::Section(const lldb::SectionSP &parent_section_sp,
@@ -186,19 +180,11 @@ Section::Section(const lldb::SectionSP &parent_section_sp,
       m_log2align(log2align), m_children(), m_fake(false), m_encrypted(false),
       m_thread_specific(false), m_readable(false), m_writable(false),
       m_executable(false), m_relocated(false), m_target_byte_size(target_byte_size) {
-  //    printf ("Section::Section(%p): module=%p, sect_id = 0x%16.16" PRIx64 ",
-  //    addr=[0x%16.16" PRIx64 " - 0x%16.16" PRIx64 "), file [0x%16.16" PRIx64 "
-  //    - 0x%16.16" PRIx64 "), flags = 0x%8.8x, name = %s.%s\n",
-  //            this, module_sp.get(), sect_id, file_addr, file_addr +
-  //            byte_size, file_offset, file_offset + file_size, flags,
-  //            parent_section_sp->GetName().GetCString(), name.GetCString());
   if (parent_section_sp)
     m_parent_wp = parent_section_sp;
 }
 
-Section::~Section() {
-  //    printf ("Section::~Section(%p)\n", this);
-}
+Section::~Section() = default;
 
 addr_t Section::GetFileAddress() const {
   SectionSP parent_sp(GetParent());
@@ -395,6 +381,82 @@ lldb::offset_t Section::GetSectionData(DataExtractor &section_data) {
     return m_obj_file->ReadSectionData(this, section_data);
   return 0;
 }
+
+bool Section::ContainsOnlyDebugInfo() const {
+  switch (m_type) {
+  case eSectionTypeInvalid:
+  case eSectionTypeCode:
+  case eSectionTypeContainer:
+  case eSectionTypeData:
+  case eSectionTypeDataCString:
+  case eSectionTypeDataCStringPointers:
+  case eSectionTypeDataSymbolAddress:
+  case eSectionTypeData4:
+  case eSectionTypeData8:
+  case eSectionTypeData16:
+  case eSectionTypeDataPointers:
+  case eSectionTypeZeroFill:
+  case eSectionTypeDataObjCMessageRefs:
+  case eSectionTypeDataObjCCFStrings:
+  case eSectionTypeELFSymbolTable:
+  case eSectionTypeELFDynamicSymbols:
+  case eSectionTypeELFRelocationEntries:
+  case eSectionTypeELFDynamicLinkInfo:
+  case eSectionTypeEHFrame:
+  case eSectionTypeARMexidx:
+  case eSectionTypeARMextab:
+  case eSectionTypeCompactUnwind:
+  case eSectionTypeGoSymtab:
+  case eSectionTypeAbsoluteAddress:
+  case eSectionTypeOther:
+  // Used for "__dof_cache" in mach-o or ".debug" for COFF which isn't debug
+  // information that we parse at all. This was causing system files with no
+  // debug info to show debug info byte sizes in the "statistics dump" output
+  // for each module. New "eSectionType" enums should be created for dedicated
+  // debug info that has a predefined format if we wish for these sections to
+  // show up as debug info.
+  case eSectionTypeDebug:
+    return false;
+
+  case eSectionTypeDWARFDebugAbbrev:
+  case eSectionTypeDWARFDebugAbbrevDwo:
+  case eSectionTypeDWARFDebugAddr:
+  case eSectionTypeDWARFDebugAranges:
+  case eSectionTypeDWARFDebugCuIndex:
+  case eSectionTypeDWARFDebugTuIndex:
+  case eSectionTypeDWARFDebugFrame:
+  case eSectionTypeDWARFDebugInfo:
+  case eSectionTypeDWARFDebugInfoDwo:
+  case eSectionTypeDWARFDebugLine:
+  case eSectionTypeDWARFDebugLineStr:
+  case eSectionTypeDWARFDebugLoc:
+  case eSectionTypeDWARFDebugLocDwo:
+  case eSectionTypeDWARFDebugLocLists:
+  case eSectionTypeDWARFDebugLocListsDwo:
+  case eSectionTypeDWARFDebugMacInfo:
+  case eSectionTypeDWARFDebugMacro:
+  case eSectionTypeDWARFDebugPubNames:
+  case eSectionTypeDWARFDebugPubTypes:
+  case eSectionTypeDWARFDebugRanges:
+  case eSectionTypeDWARFDebugRngLists:
+  case eSectionTypeDWARFDebugRngListsDwo:
+  case eSectionTypeDWARFDebugStr:
+  case eSectionTypeDWARFDebugStrDwo:
+  case eSectionTypeDWARFDebugStrOffsets:
+  case eSectionTypeDWARFDebugStrOffsetsDwo:
+  case eSectionTypeDWARFDebugTypes:
+  case eSectionTypeDWARFDebugTypesDwo:
+  case eSectionTypeDWARFDebugNames:
+  case eSectionTypeDWARFAppleNames:
+  case eSectionTypeDWARFAppleTypes:
+  case eSectionTypeDWARFAppleNamespaces:
+  case eSectionTypeDWARFAppleObjC:
+  case eSectionTypeDWARFGNUDebugAltLink:
+    return true;
+  }
+  return false;
+}
+
 
 #pragma mark SectionList
 
@@ -598,4 +660,16 @@ size_t SectionList::Slide(addr_t slide_amount, bool slide_children) {
       ++count;
   }
   return count;
+}
+
+uint64_t SectionList::GetDebugInfoSize() const {
+  uint64_t debug_info_size = 0;
+  for (const auto &section : m_sections) {
+    const SectionList &sub_sections = section->GetChildren();
+    if (sub_sections.GetSize() > 0)
+      debug_info_size += sub_sections.GetDebugInfoSize();
+    else if (section->ContainsOnlyDebugInfo())
+      debug_info_size += section->GetFileSize();
+  }
+  return debug_info_size;
 }

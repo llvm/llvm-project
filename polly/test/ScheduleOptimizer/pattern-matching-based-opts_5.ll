@@ -1,12 +1,12 @@
-; RUN: opt %loadPolly -polly-opt-isl -polly-pattern-matching-based-opts=true \
+; RUN: opt %loadPolly -polly-pattern-matching-based-opts=true \
 ; RUN: -polly-target-throughput-vector-fma=1 \
 ; RUN: -polly-target-latency-vector-fma=8 \
-; RUN: -analyze -polly-ast -polly-target-1st-cache-level-associativity=8 \
+; RUN: -polly-target-1st-cache-level-associativity=8 \
 ; RUN: -polly-target-2nd-cache-level-associativity=8 \
 ; RUN: -polly-target-1st-cache-level-size=32768 \
 ; RUN: -polly-target-vector-register-bitwidth=256 \
-; RUN: -polly-target-2nd-cache-level-size=262144 < %s \
-; RUN: | FileCheck %s
+; RUN: -polly-target-2nd-cache-level-size=262144 \
+; RUN: -polly-opt-isl -polly-print-ast -disable-output < %s | FileCheck %s
 ;
 ; opt %loadPolly -polly-opt-isl -polly-pattern-matching-based-opts=true \
 ; -polly-target-throughput-vector-fma=1 \
@@ -37,7 +37,6 @@
 ;	   C[i][j] += A[i][k] * B[k][j];
 ;
 ; CHECK:          if (ni >= 1) {
-; CHECK-NEXT:            // Inter iteration alias-free
 ; CHECK-NEXT:            // 1st level tiling - Tiles
 ; CHECK-NEXT:            for (int c0 = 0; c0 <= floord(nj - 1, 2048); c0 += 1)
 ; CHECK-NEXT:              for (int c1 = 0; c1 <= floord(nk - 1, 256); c1 += 1) {

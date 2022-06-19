@@ -10,9 +10,9 @@
 // CHECK-NOT: @dead
 // CHECK: ret void
 int i;
-void dead();
+void dead(void);
 
-void test1() {
+void test1(void) {
   switch (1)
     case 1:
       ++i;
@@ -30,7 +30,7 @@ void test1() {
 // CHECK-NOT: switch
 // CHECK-NOT: @dead
 // CHECK: ret void
-void test2() {
+void test2(void) {
   switch (4) {
   case 1:
     dead();
@@ -49,7 +49,7 @@ void test2() {
 // CHECK-NOT: switch
 // CHECK-NOT: @dead
 // CHECK: ret void
-void test3() {
+void test3(void) {
   switch (4) {
   case 1:
     dead();
@@ -68,7 +68,7 @@ void test3() {
 // CHECK-NOT: switch
 // CHECK-NOT: @dead
 // CHECK: ret void
-void test4() {
+void test4(void) {
   switch (4) {
     case 1:
       dead();
@@ -82,7 +82,7 @@ void test4() {
 
 // This shouldn't crash codegen, but we don't have to optimize out the switch
 // in this case.
-void test5() {
+void test5(void) {
   switch (1) {
     int x;  // eliding var decl?
     case 1:
@@ -96,7 +96,7 @@ void test5() {
 // CHECK-NOT: switch
 // CHECK-NOT: @dead
 // CHECK: ret void
-void test6() {
+void test6(void) {
   // Neither case is reachable.
   switch (40) {
   case 1:
@@ -116,7 +116,7 @@ void test6() {
 // CHECK-NOT: switch
 // CHECK-NOT: @dead
 // CHECK: ret void
-void test7() {
+void test7(void) {
   switch (4) {
   case 1:
       dead();
@@ -136,7 +136,7 @@ void test7() {
 // CHECK-NOT: switch
 // CHECK-NOT: @dead
 // CHECK: ret void
-void test8() {
+void test8(void) {
   switch (4) {
   case 1:
     dead();
@@ -187,7 +187,7 @@ int test10(void) {
 // CHECK: @test11
 // CHECK-NOT: switch
 // CHECK: ret void
-void test11() {
+void test11(void) {
   switch (1) {
     case 1:
       break;
@@ -201,7 +201,7 @@ void test11() {
 // CHECK: @test12
 // CHECK-NOT: switch
 // CHECK: ret void
-void test12() {
+void test12(void) {
   switch (1) {
   case 2: {
      int a;   // Ok to skip this vardecl.
@@ -218,11 +218,11 @@ void test12() {
 
 // Verify that case 42 only calls test14 once.
 // CHECK: @test13
-// CHECK: call void @test13(i32 97)
+// CHECK: call void @test13(i32 noundef 97)
 // CHECK-NEXT: br label %[[EPILOG2:[0-9.a-z]+]]
 // CHECK: [[EPILOG2]]
 // CHECK-NEXT: br label [[EPILOG:%[0-9.a-z]+]]
-// CHECK: call void @test13(i32 42)
+// CHECK: call void @test13(i32 noundef 42)
 // CHECK-NEXT: br label [[EPILOG]]
 void test13(int x) {
   switch (x) {

@@ -9,6 +9,7 @@
 #ifndef LLVM_DEBUGINFO_PDB_IPDBENUMCHILDREN_H
 #define LLVM_DEBUGINFO_PDB_IPDBENUMCHILDREN_H
 
+#include "llvm/DebugInfo/CodeView/LazyRandomTypeCollection.h"
 #include <cassert>
 #include <cstdint>
 #include <memory>

@@ -83,16 +83,20 @@ newDriver(DiagnosticsEngine *Diagnostics, const char *BinaryName,
   return CompilerDriver;
 }
 
-/// Retrieves the clang CC1 specific flags out of the compilation's jobs.
-///
-/// Returns nullptr on error.
-static const llvm::opt::ArgStringList *getCC1Arguments(
-    DiagnosticsEngine *Diagnostics, driver::Compilation *Compilation) {
-  // We expect to get back exactly one Command job, if we didn't something
-  // failed. Extract that job from the Compilation.
+/// Decide whether extra compiler frontend commands can be ignored.
+static bool ignoreExtraCC1Commands(const driver::Compilation *Compilation) {
   const driver::JobList &Jobs = Compilation->getJobs();
   const driver::ActionList &Actions = Compilation->getActions();
+
   bool OffloadCompilation = false;
+
+  // Jobs and Actions look very different depending on whether the Clang tool
+  // injected -fsyntax-only or not. Try to handle both cases here.
+
+  for (const auto &Job : Jobs)
+    if (StringRef(Job.getExecutable()) == "clang-offload-bundler")
+      OffloadCompilation = true;
+
   if (Jobs.size() > 1) {
     for (auto A : Actions){
       // On MacOSX real actions may end up being wrapped in BindArchAction
@@ -117,8 +121,33 @@ static const llvm::opt::ArgStringList *getCC1Arguments(
       }
     }
   }
-  if (Jobs.size() == 0 || !isa<driver::Command>(*Jobs.begin()) ||
-      (Jobs.size() > 1 && !OffloadCompilation)) {
+
+  return OffloadCompilation;
+}
+
+namespace clang {
+namespace tooling {
+
+const llvm::opt::ArgStringList *
+getCC1Arguments(DiagnosticsEngine *Diagnostics,
+                driver::Compilation *Compilation) {
+  const driver::JobList &Jobs = Compilation->getJobs();
+
+  auto IsCC1Command = [](const driver::Command &Cmd) {
+    return StringRef(Cmd.getCreator().getName()) == "clang";
+  };
+
+  auto IsSrcFile = [](const driver::InputInfo &II) {
+    return isSrcFile(II.getType());
+  };
+
+  llvm::SmallVector<const driver::Command *, 1> CC1Jobs;
+  for (const driver::Command &Job : Jobs)
+    if (IsCC1Command(Job) && llvm::all_of(Job.getInputInfos(), IsSrcFile))
+      CC1Jobs.push_back(&Job);
+
+  if (CC1Jobs.empty() ||
+      (CC1Jobs.size() > 1 && !ignoreExtraCC1Commands(Compilation))) {
     SmallString<256> error_msg;
     llvm::raw_svector_ostream error_stream(error_msg);
     Jobs.Print(error_stream, "; ", true);
@@ -127,18 +156,8 @@ static const llvm::opt::ArgStringList *getCC1Arguments(
     return nullptr;
   }
 
-  // The one job we find should be to invoke clang again.
-  const auto &Cmd = cast<driver::Command>(*Jobs.begin());
-  if (StringRef(Cmd.getCreator().getName()) != "clang") {
-    Diagnostics->Report(diag::err_fe_expected_clang_command);
-    return nullptr;
-  }
-
-  return &Cmd.getArguments();
+  return &CC1Jobs[0]->getArguments();
 }
-
-namespace clang {
-namespace tooling {
 
 /// Returns a clang build invocation initialized from the CC1 flags.
 CompilerInvocation *newInvocation(DiagnosticsEngine *Diagnostics,
@@ -324,23 +343,27 @@ bool ToolInvocation::run() {
   for (const std::string &Str : CommandLine)
     Argv.push_back(Str.c_str());
   const char *const BinaryName = Argv[0];
-  IntrusiveRefCntPtr<DiagnosticOptions> DiagOpts = new DiagnosticOptions();
-  unsigned MissingArgIndex, MissingArgCount;
-  llvm::opt::InputArgList ParsedArgs = driver::getDriverOptTable().ParseArgs(
-      ArrayRef<const char *>(Argv).slice(1), MissingArgIndex, MissingArgCount);
-  ParseDiagnosticArgs(*DiagOpts, ParsedArgs);
-  TextDiagnosticPrinter DiagnosticPrinter(
-      llvm::errs(), &*DiagOpts);
-  DiagnosticsEngine Diagnostics(
-      IntrusiveRefCntPtr<DiagnosticIDs>(new DiagnosticIDs()), &*DiagOpts,
-      DiagConsumer ? DiagConsumer : &DiagnosticPrinter, false);
+
+  // Parse diagnostic options from the driver command-line only if none were
+  // explicitly set.
+  IntrusiveRefCntPtr<DiagnosticOptions> ParsedDiagOpts;
+  DiagnosticOptions *DiagOpts = this->DiagOpts;
+  if (!DiagOpts) {
+    ParsedDiagOpts = CreateAndPopulateDiagOpts(Argv);
+    DiagOpts = &*ParsedDiagOpts;
+  }
+
+  TextDiagnosticPrinter DiagnosticPrinter(llvm::errs(), DiagOpts);
+  IntrusiveRefCntPtr<DiagnosticsEngine> Diagnostics =
+      CompilerInstance::createDiagnostics(
+          &*DiagOpts, DiagConsumer ? DiagConsumer : &DiagnosticPrinter, false);
   // Although `Diagnostics` are used only for command-line parsing, the custom
   // `DiagConsumer` might expect a `SourceManager` to be present.
-  SourceManager SrcMgr(Diagnostics, *Files);
-  Diagnostics.setSourceManager(&SrcMgr);
+  SourceManager SrcMgr(*Diagnostics, *Files);
+  Diagnostics->setSourceManager(&SrcMgr);
 
   const std::unique_ptr<driver::Driver> Driver(
-      newDriver(&Diagnostics, BinaryName, &Files->getVirtualFileSystem()));
+      newDriver(&*Diagnostics, BinaryName, &Files->getVirtualFileSystem()));
   // The "input file not found" diagnostics from the driver are useful.
   // The driver is only aware of the VFS working directory, but some clients
   // change this at the FileManager level instead.
@@ -352,11 +375,11 @@ bool ToolInvocation::run() {
   if (!Compilation)
     return false;
   const llvm::opt::ArgStringList *const CC1Args = getCC1Arguments(
-      &Diagnostics, Compilation.get());
+      &*Diagnostics, Compilation.get());
   if (!CC1Args)
     return false;
   std::unique_ptr<CompilerInvocation> Invocation(
-      newInvocation(&Diagnostics, *CC1Args, BinaryName));
+      newInvocation(&*Diagnostics, *CC1Args, BinaryName));
   return runInvocation(BinaryName, Compilation.get(), std::move(Invocation),
                        std::move(PCHContainerOps));
 }

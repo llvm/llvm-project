@@ -1,5 +1,5 @@
 // RUN: %clang_cc1 -fsanitize=memory -O0 -fsanitize-memory-use-after-dtor -std=c++11 -triple=x86_64-pc-linux -emit-llvm -o - %s | FileCheck %s
-// RUN: %clang_cc1 -fsanitize=memory -O1 -fno-experimental-new-pass-manager -fsanitize-memory-use-after-dtor -std=c++11 -triple=x86_64-pc-linux -emit-llvm -o - %s | FileCheck %s
+// RUN: %clang_cc1 -fsanitize=memory -O1 -disable-llvm-passes -fsanitize-memory-use-after-dtor -std=c++11 -triple=x86_64-pc-linux -emit-llvm -o - %s | FileCheck %s
 
 template <class T>
 class Vector {
@@ -70,8 +70,8 @@ Derived d;
 
 // poison int, ignore vector, poison int
 // CHECK-LABEL: define {{.*}}ZN7DerivedD2Ev
-// CHECK: call void {{.*}}ZN6VectorIiED1Ev
 // CHECK: call void {{.*}}sanitizer_dtor_callback({{.*}}, i64 4)
+// CHECK: call void {{.*}}ZN6VectorIiED1Ev
 // CHECK: call void {{.*}}sanitizer_dtor_callback({{.*}}, i64 4)
 // CHECK: call void {{.*}}ZN4BaseD2Ev
 // CHECK: ret void

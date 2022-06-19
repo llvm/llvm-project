@@ -15,7 +15,7 @@
 #endif
 
 int main(int argc, char **argv) {
-  int fd = socket(AF_INET, SOCK_DGRAM, 0);
+  int fd = socket(AF_UNIX, SOCK_DGRAM, 0);
 
   int nonblock;
   int res = ioctl(fd, FIONBIO, &nonblock + 1);

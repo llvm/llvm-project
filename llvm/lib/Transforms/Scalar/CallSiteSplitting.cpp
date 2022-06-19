@@ -57,6 +57,7 @@
 
 #include "llvm/Transforms/Scalar/CallSiteSplitting.h"
 #include "llvm/ADT/Statistic.h"
+#include "llvm/Analysis/DomTreeUpdater.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/IR/IntrinsicInst.h"
@@ -65,7 +66,6 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Transforms/Scalar.h"
-#include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Utils/Cloning.h"
 #include "llvm/Transforms/Utils/Local.h"
 
@@ -123,8 +123,8 @@ static bool isCondRelevantToAnyCallArgument(ICmpInst *Cmp, CallBase &CB) {
   return false;
 }
 
-typedef std::pair<ICmpInst *, unsigned> ConditionTy;
-typedef SmallVector<ConditionTy, 2> ConditionsTy;
+using ConditionTy = std::pair<ICmpInst *, unsigned>;
+using ConditionsTy = SmallVector<ConditionTy, 2>;
 
 /// If From has a conditional jump to To, add the condition to Conditions,
 /// if it is relevant to any argument at CB.
@@ -301,10 +301,9 @@ static void copyMustTailReturn(BasicBlock *SplitBB, Instruction *CI,
 /// Note that in case any arguments at the call-site are constrained by its
 /// predecessors, new call-sites with more constrained arguments will be
 /// created in createCallSitesOnPredicatedArgument().
-static void splitCallSite(
-    CallBase &CB,
-    const SmallVectorImpl<std::pair<BasicBlock *, ConditionsTy>> &Preds,
-    DomTreeUpdater &DTU) {
+static void splitCallSite(CallBase &CB,
+                          ArrayRef<std::pair<BasicBlock *, ConditionsTy>> Preds,
+                          DomTreeUpdater &DTU) {
   BasicBlock *TailBB = CB.getParent();
   bool IsMustTailCall = CB.isMustTailCall();
 
@@ -467,7 +466,7 @@ static PredsWithCondsTy shouldSplitOnPredicatedArgument(CallBase &CB,
   BasicBlock *StopAt = CSDTNode ? CSDTNode->getIDom()->getBlock() : nullptr;
 
   SmallVector<std::pair<BasicBlock *, ConditionsTy>, 2> PredsCS;
-  for (auto *Pred : make_range(Preds.rbegin(), Preds.rend())) {
+  for (auto *Pred : llvm::reverse(Preds)) {
     ConditionsTy Conditions;
     // Record condition on edge BB(CS) <- Pred
     recordCondition(CB, Pred, CB.getParent(), Conditions);
@@ -505,8 +504,7 @@ static bool doCallSiteSplitting(Function &F, TargetLibraryInfo &TLI,
 
   DomTreeUpdater DTU(&DT, DomTreeUpdater::UpdateStrategy::Lazy);
   bool Changed = false;
-  for (Function::iterator BI = F.begin(), BE = F.end(); BI != BE;) {
-    BasicBlock &BB = *BI++;
+  for (BasicBlock &BB : llvm::make_early_inc_range(F)) {
     auto II = BB.getFirstNonPHIOrDbg()->getIterator();
     auto IE = BB.getTerminator()->getIterator();
     // Iterate until we reach the terminator instruction. tryToSplitCallSite

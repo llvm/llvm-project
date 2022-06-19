@@ -714,14 +714,3 @@ void ABISysV_i386::Initialize() {
 void ABISysV_i386::Terminate() {
   PluginManager::UnregisterPlugin(CreateInstance);
 }
-
-// PluginInterface protocol
-
-lldb_private::ConstString ABISysV_i386::GetPluginNameStatic() {
-  static ConstString g_name("sysv-i386");
-  return g_name;
-}
-
-lldb_private::ConstString ABISysV_i386::GetPluginName() {
-  return GetPluginNameStatic();
-}

@@ -9,6 +9,7 @@
 #include "llvm/Analysis/CGSCCPassManager.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/Optional.h"
+#include "llvm/ADT/PriorityWorklist.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallPtrSet.h"
@@ -27,7 +28,6 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/TimeProfiler.h"
 #include "llvm/Support/raw_ostream.h"
-#include <algorithm>
 #include <cassert>
 #include <iterator>
 
@@ -38,11 +38,12 @@ using namespace llvm;
 // Explicit template instantiations and specialization definitions for core
 // template typedefs.
 namespace llvm {
-
 static cl::opt<bool> AbortOnMaxDevirtIterationsReached(
     "abort-on-max-devirt-iterations-reached",
     cl::desc("Abort when the max iterations for devirtualization CGSCC repeat "
              "pass is reached"));
+
+AnalysisKey ShouldNotRunFunctionPassesAnalysis::Key;
 
 // Explicit instantiations for the core proxy templates.
 template class AllAnalysesOn<LazyCallGraph::SCC>;
@@ -119,12 +120,6 @@ PassManager<LazyCallGraph::SCC, CGSCCAnalysisManager, LazyCallGraph &,
     // Finally, we intersect the final preserved analyses to compute the
     // aggregate preserved set for this pass manager.
     PA.intersect(std::move(PassPA));
-
-    // FIXME: Historically, the pass managers all called the LLVM context's
-    // yield function here. We don't have a generic way to acquire the
-    // context and it isn't yet clear what the right pattern is for yielding
-    // in the new pass manager so it is currently omitted.
-    // ...getContext().yield();
   }
 
   // Before we mark all of *this* SCC's analyses as preserved below, intersect
@@ -169,9 +164,9 @@ ModuleToPostOrderCGSCCPassAdaptor::run(Module &M, ModuleAnalysisManager &AM) {
       InlinedInternalEdges;
 
   CGSCCUpdateResult UR = {
-      RCWorklist, CWorklist, InvalidRefSCCSet,         InvalidSCCSet,
-      nullptr,    nullptr,   PreservedAnalyses::all(), InlinedInternalEdges,
-      {}};
+      RCWorklist,           CWorklist, InvalidRefSCCSet,
+      InvalidSCCSet,        nullptr,   PreservedAnalyses::all(),
+      InlinedInternalEdges, {}};
 
   // Request PassInstrumentation from analysis manager, will use it to run
   // instrumenting callbacks for the passes later.
@@ -179,9 +174,8 @@ ModuleToPostOrderCGSCCPassAdaptor::run(Module &M, ModuleAnalysisManager &AM) {
 
   PreservedAnalyses PA = PreservedAnalyses::all();
   CG.buildRefSCCs();
-  for (auto RCI = CG.postorder_ref_scc_begin(),
-            RCE = CG.postorder_ref_scc_end();
-       RCI != RCE;) {
+  for (LazyCallGraph::RefSCC &RC :
+       llvm::make_early_inc_range(CG.postorder_ref_sccs())) {
     assert(RCWorklist.empty() &&
            "Should always start with an empty RefSCC worklist");
     // The postorder_ref_sccs range we are walking is lazily constructed, so
@@ -195,7 +189,7 @@ ModuleToPostOrderCGSCCPassAdaptor::run(Module &M, ModuleAnalysisManager &AM) {
     //
     // We also eagerly increment the iterator to the next position because
     // the CGSCC passes below may delete the current RefSCC.
-    RCWorklist.insert(&*RCI++);
+    RCWorklist.insert(&RC);
 
     do {
       LazyCallGraph::RefSCC *RC = RCWorklist.pop_back_val();
@@ -235,11 +229,15 @@ ModuleToPostOrderCGSCCPassAdaptor::run(Module &M, ModuleAnalysisManager &AM) {
           LLVM_DEBUG(dbgs() << "Skipping redundant run on SCC: " << *C << "\n");
           continue;
         }
-        if (&C->getOuterRefSCC() != RC) {
-          LLVM_DEBUG(dbgs() << "Skipping an SCC that is now part of some other "
-                               "RefSCC...\n");
-          continue;
-        }
+        // We used to also check if the current SCC is part of the current
+        // RefSCC and bail if it wasn't, since it should be in RCWorklist.
+        // However, this can cause compile time explosions in some cases on
+        // modules with a huge RefSCC. If a non-trivial amount of SCCs in the
+        // huge RefSCC can become their own child RefSCC, we create one child
+        // RefSCC, bail on the current RefSCC, visit the child RefSCC, revisit
+        // the huge RefSCC, and repeat. By visiting all SCCs in the original
+        // RefSCC we create all the child RefSCCs in one pass of the RefSCC,
+        // rather one pass of the RefSCC creating one child RefSCC at a time.
 
         // Ensure we can proxy analysis updates from the CGSCC analysis manager
         // into the the Function analysis manager by getting a proxy here.
@@ -269,11 +267,8 @@ ModuleToPostOrderCGSCCPassAdaptor::run(Module &M, ModuleAnalysisManager &AM) {
           // Check that we didn't miss any update scenario.
           assert(!InvalidSCCSet.count(C) && "Processing an invalid SCC!");
           assert(C->begin() != C->end() && "Cannot have an empty SCC!");
-          assert(&C->getOuterRefSCC() == RC &&
-                 "Processing an SCC in a different RefSCC!");
 
           LastUpdatedC = UR.UpdatedC;
-          UR.UpdatedRC = nullptr;
           UR.UpdatedC = nullptr;
 
           // Check the PassInstrumentation's BeforePass callbacks before
@@ -295,7 +290,6 @@ ModuleToPostOrderCGSCCPassAdaptor::run(Module &M, ModuleAnalysisManager &AM) {
 
           // Update the SCC and RefSCC if necessary.
           C = UR.UpdatedC ? UR.UpdatedC : C;
-          RC = UR.UpdatedRC ? UR.UpdatedRC : RC;
 
           if (UR.UpdatedC) {
             // If we're updating the SCC, also update the FAM inside the proxy's
@@ -547,6 +541,9 @@ PreservedAnalyses CGSCCToFunctionPassAdaptor::run(LazyCallGraph::SCC &C,
 
     Function &F = N->getFunction();
 
+    if (NoRerun && FAM.getCachedResult<ShouldNotRunFunctionPassesAnalysis>(F))
+      continue;
+
     PassInstrumentation PI = FAM.getResult<PassInstrumentationAnalysis>(F);
     if (!PI.runBeforePass<Function>(*Pass, F))
       continue;
@@ -562,7 +559,9 @@ PreservedAnalyses CGSCCToFunctionPassAdaptor::run(LazyCallGraph::SCC &C,
     // We know that the function pass couldn't have invalidated any other
     // function's analyses (that's the contract of a function pass), so
     // directly handle the function analysis manager's invalidation here.
-    FAM.invalidate(F, PassPA);
+    FAM.invalidate(F, EagerlyInvalidate ? PreservedAnalyses::none() : PassPA);
+    if (NoRerun)
+      (void)FAM.getResult<ShouldNotRunFunctionPassesAnalysis>(F);
 
     // Then intersect the preserved set so that invalidation of module
     // analyses will eventually occur when the module pass completes.
@@ -863,7 +862,7 @@ incorporateNewSCCRange(const SCCRangeT &NewSCCRange, LazyCallGraph &G,
   // split-off SCCs.
   // We know however that this will preserve any FAM proxy so go ahead and mark
   // that.
-  PreservedAnalyses PA;
+  auto PA = PreservedAnalyses::allInSet<AllAnalysesOn<Function>>();
   PA.preserve<FunctionAnalysisManagerCGSCCProxy>();
   AM.invalidate(*OldC, PA);
 
@@ -1213,10 +1212,8 @@ static LazyCallGraph::SCC &updateCGAndAnalysisManagerForPass(
   assert(!UR.InvalidatedRefSCCs.count(RC) && "Invalidated the current RefSCC!");
   assert(&C->getOuterRefSCC() == RC && "Current SCC not in current RefSCC!");
 
-  // Record the current RefSCC and SCC for higher layers of the CGSCC pass
-  // manager now that all the updates have been applied.
-  if (RC != &InitialRC)
-    UR.UpdatedRC = RC;
+  // Record the current SCC for higher layers of the CGSCC pass manager now that
+  // all the updates have been applied.
   if (C != &InitialC)
     UR.UpdatedC = C;
 

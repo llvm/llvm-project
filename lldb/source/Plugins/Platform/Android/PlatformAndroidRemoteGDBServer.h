@@ -24,7 +24,7 @@ namespace platform_android {
 class PlatformAndroidRemoteGDBServer
     : public platform_gdb_server::PlatformRemoteGDBServer {
 public:
-  PlatformAndroidRemoteGDBServer();
+  PlatformAndroidRemoteGDBServer() = default;
 
   ~PlatformAndroidRemoteGDBServer() override;
 

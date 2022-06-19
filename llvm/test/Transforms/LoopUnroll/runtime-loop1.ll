@@ -15,9 +15,9 @@
 ; EPILOG: for.body.epil.preheader:
 ; EPILOG:   br label %for.body.epil, !dbg [[PH_LOC]]
 ; EPILOG: for.body.epil:
-; EPILOG:   br label %for.end.loopexit.epilog-lcssa, !dbg [[PH_LOC]]
+; EPILOG:   br label %for.end.loopexit, !dbg [[EXIT_LOC:![0-9]+]]
 ; EPILOG: for.end.loopexit:
-; EPILOG:   br label %for.end, !dbg [[EXIT_LOC:![0-9]+]]
+; EPILOG:   br label %for.end, !dbg [[EXIT_LOC]]
 
 ; EPILOG-DAG: [[PH_LOC]] = !DILocation(line: 102, column: 1, scope: !{{.*}})
 ; EPILOG-DAG: [[EXIT_LOC]] = !DILocation(line: 103, column: 1, scope: !{{.*}})

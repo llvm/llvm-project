@@ -265,11 +265,18 @@ OPTIONS
 
  Show code coverage only for functions with the given name.
 
+.. option:: -name-allowlist=<FILE>
+
+ Show code coverage only for functions listed in the given file. Each line in
+ the file should start with `allowlist_fun:`, immediately followed by the name
+ of the function to accept. This name can be a wildcard expression.
+
 .. option:: -name-whitelist=<FILE>
 
  Show code coverage only for functions listed in the given file. Each line in
  the file should start with `whitelist_fun:`, immediately followed by the name
- of the function to accept. This name can be a wildcard expression.
+ of the function to accept. This name can be a wildcard expression. This option
+ will be deprecated for `-name-allowlist=<FILE>` in future releases.
 
 .. option:: -name-regex=<PATTERN>
 
@@ -341,6 +348,13 @@ OPTIONS
  Map the paths in the coverage data to local source file paths. This allows you
  to generate the coverage data on one machine, and then use llvm-cov on a
  different machine where you have the same files on a different path.
+
+.. option:: -coverage-watermark=<high>,<low>
+
+ Set high and low watermarks for coverage in html format output. This allows you
+ to set the high and low watermark of coverage as desired, green when
+ coverage >= high, red when coverage < low, and yellow otherwise. Both high and
+ low should be between 0-100 and high > low.
 
 .. program:: llvm-cov report
 

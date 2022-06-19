@@ -25,6 +25,11 @@ public:
 
 private:
   MCSection *ProgmemDataSection;
+  MCSection *Progmem1DataSection;
+  MCSection *Progmem2DataSection;
+  MCSection *Progmem3DataSection;
+  MCSection *Progmem4DataSection;
+  MCSection *Progmem5DataSection;
 };
 
 } // end namespace llvm

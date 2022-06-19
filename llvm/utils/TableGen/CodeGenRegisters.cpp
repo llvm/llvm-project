@@ -12,21 +12,18 @@
 //===----------------------------------------------------------------------===//
 
 #include "CodeGenRegisters.h"
-#include "CodeGenTarget.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/IntEqClasses.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
-#include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Support/Debug.h"
-#include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/TableGen/Error.h"
 #include "llvm/TableGen/Record.h"
@@ -204,12 +201,16 @@ namespace {
 class RegUnitIterator {
   CodeGenRegister::Vec::const_iterator RegI, RegE;
   CodeGenRegister::RegUnitList::iterator UnitI, UnitE;
+  static CodeGenRegister::RegUnitList Sentinel;
 
 public:
   RegUnitIterator(const CodeGenRegister::Vec &Regs):
     RegI(Regs.begin()), RegE(Regs.end()) {
 
-    if (RegI != RegE) {
+    if (RegI == RegE) {
+      UnitI = Sentinel.end();
+      UnitE = Sentinel.end();
+    } else {
       UnitI = (*RegI)->getRegUnits().begin();
       UnitE = (*RegI)->getRegUnits().end();
       advance();
@@ -239,6 +240,8 @@ protected:
     }
   }
 };
+
+CodeGenRegister::RegUnitList RegUnitIterator::Sentinel;
 
 } // end anonymous namespace
 
@@ -635,6 +638,7 @@ struct TupleExpander : SetTheory::Expander {
       Def->getValueAsListOfStrings("RegAsmNames");
 
     // Zip them up.
+    RecordKeeper &RK = Def->getRecords();
     for (unsigned n = 0; n != Length; ++n) {
       std::string Name;
       Record *Proto = Lists[0][n];
@@ -651,13 +655,13 @@ struct TupleExpander : SetTheory::Expander {
       SmallVector<Init *, 2> CostPerUse;
       CostPerUse.insert(CostPerUse.end(), CostList->begin(), CostList->end());
 
-      StringInit *AsmName = StringInit::get("");
+      StringInit *AsmName = StringInit::get(RK, "");
       if (!RegNames.empty()) {
         if (RegNames.size() <= n)
           PrintFatalError(Def->getLoc(),
                           "Register tuple definition missing name for '" +
                             Name + "'.");
-        AsmName = StringInit::get(RegNames[n]);
+        AsmName = StringInit::get(RK, RegNames[n]);
       }
 
       // Create a new Record representing the synthesized register. This record
@@ -696,7 +700,7 @@ struct TupleExpander : SetTheory::Expander {
 
         // Composite registers are always covered by sub-registers.
         if (Field == "CoveredBySubRegs")
-          RV.setValue(BitInit::get(true));
+          RV.setValue(BitInit::get(RK, true));
 
         // Copy fields from the RegisterTuples def.
         if (Field == "SubRegIndices" ||
@@ -734,7 +738,7 @@ static void sortAndUniqueRegisters(CodeGenRegister::Vec &M) {
 
 CodeGenRegisterClass::CodeGenRegisterClass(CodeGenRegBank &RegBank, Record *R)
     : TheDef(R), Name(std::string(R->getName())),
-      TopoSigs(RegBank.getNumTopoSigs()), EnumValue(-1) {
+      TopoSigs(RegBank.getNumTopoSigs()), EnumValue(-1), TSFlags(0) {
   GeneratePressureSet = R->getValueAsBit("GeneratePressureSet");
   std::vector<Record*> TypeList = R->getValueAsListOfDefs("RegTypes");
   if (TypeList.empty())
@@ -802,6 +806,12 @@ CodeGenRegisterClass::CodeGenRegisterClass(CodeGenRegBank &RegBank, Record *R)
   if (AllocationPriority < 0 || AllocationPriority > 63)
     PrintFatalError(R->getLoc(), "AllocationPriority out of range [0,63]");
   this->AllocationPriority = AllocationPriority;
+
+  BitsInit *TSF = R->getValueAsBitsInit("TSFlags");
+  for (unsigned I = 0, E = TSF->getNumBits(); I != E; ++I) {
+    BitInit *Bit = cast<BitInit>(TSF->getBit(I));
+    TSFlags |= uint8_t(Bit->getValue()) << I;
+  }
 }
 
 // Create an inferred register class that was missing from the .td files.
@@ -811,7 +821,7 @@ CodeGenRegisterClass::CodeGenRegisterClass(CodeGenRegBank &RegBank,
                                            StringRef Name, Key Props)
     : Members(*Props.Members), TheDef(nullptr), Name(std::string(Name)),
       TopoSigs(RegBank.getNumTopoSigs()), EnumValue(-1), RSI(Props.RSI),
-      CopyCost(0), Allocatable(true), AllocationPriority(0) {
+      CopyCost(0), Allocatable(true), AllocationPriority(0), TSFlags(0) {
   Artificial = true;
   GeneratePressureSet = false;
   for (const auto R : Members) {
@@ -839,6 +849,7 @@ void CodeGenRegisterClass::inheritProperties(CodeGenRegBank &RegBank) {
   });
   AltOrderSelect = Super.AltOrderSelect;
   AllocationPriority = Super.AllocationPriority;
+  TSFlags = Super.TSFlags;
   GeneratePressureSet |= Super.GeneratePressureSet;
 
   // Copy all allocation orders, filter out foreign registers from the larger
@@ -1099,6 +1110,17 @@ void CodeGenRegisterClass::buildRegUnitSet(const CodeGenRegBank &RegBank,
 }
 
 //===----------------------------------------------------------------------===//
+//                           CodeGenRegisterCategory
+//===----------------------------------------------------------------------===//
+
+CodeGenRegisterCategory::CodeGenRegisterCategory(CodeGenRegBank &RegBank,
+                                                 Record *R)
+    : TheDef(R), Name(std::string(R->getName())) {
+  for (Record *RegClass : R->getValueAsListOfDefs("Classes"))
+    Classes.push_back(RegBank.getRegClass(RegClass));
+}
+
+//===----------------------------------------------------------------------===//
 //                               CodeGenRegBank
 //===----------------------------------------------------------------------===//
 
@@ -1215,6 +1237,12 @@ CodeGenRegBank::CodeGenRegBank(RecordKeeper &Records,
   for (auto &RC : RegClasses)
     RC.EnumValue = i++;
   CodeGenRegisterClass::computeSubClasses(*this);
+
+  // Read in the register category definitions.
+  std::vector<Record *> RCats =
+      Records.getAllDerivedDefinitions("RegisterCategory");
+  for (auto *R : RCats)
+    RegCategories.emplace_back(*this, R);
 }
 
 // Create a synthetic CodeGenSubRegIndex without a corresponding Record.
@@ -1617,9 +1645,9 @@ static void computeUberSets(std::vector<UberRegSet> &UberSets,
     assert(USetID && "register number 0 is invalid");
 
     AllocatableRegs.insert((*Regs.begin())->EnumValue);
-    for (auto I = std::next(Regs.begin()), E = Regs.end(); I != E; ++I) {
-      AllocatableRegs.insert((*I)->EnumValue);
-      UberSetIDs.join(USetID, (*I)->EnumValue);
+    for (const CodeGenRegister *CGR : llvm::drop_begin(Regs)) {
+      AllocatableRegs.insert(CGR->EnumValue);
+      UberSetIDs.join(USetID, CGR->EnumValue);
     }
   }
   // Combine non-allocatable regs.
@@ -1787,6 +1815,7 @@ void CodeGenRegBank::computeRegUnitWeights() {
   unsigned NumIters = 0;
   for (bool Changed = true; Changed; ++NumIters) {
     assert(NumIters <= NumNativeRegUnits && "Runaway register unit weights");
+    (void) NumIters;
     Changed = false;
     for (auto &Reg : Registers) {
       CodeGenRegister::RegUnitList NormalUnits;
@@ -1908,6 +1937,9 @@ void CodeGenRegBank::computeRegUnitSets() {
       RegUnitSets.pop_back();
   }
 
+  if (RegUnitSets.empty())
+    PrintFatalError("RegUnitSets cannot be empty!");
+
   LLVM_DEBUG(dbgs() << "\nBefore pruning:\n"; for (unsigned USIdx = 0,
                                                    USEnd = RegUnitSets.size();
                                                    USIdx < USEnd; ++USIdx) {
@@ -2018,7 +2050,8 @@ void CodeGenRegBank::computeRegUnitSets() {
       }
     }
     LLVM_DEBUG(dbgs() << "\n");
-    assert(!RegClassUnitSets[RCIdx].empty() && "missing unit set for regclass");
+    assert((!RegClassUnitSets[RCIdx].empty() || !RC.GeneratePressureSet) &&
+           "missing unit set for regclass");
   }
 
   // For each register unit, ensure that we have the list of UnitSets that

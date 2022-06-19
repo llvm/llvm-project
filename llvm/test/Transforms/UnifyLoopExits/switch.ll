@@ -23,8 +23,6 @@ define void @loop_1(i32 %Value, i1 %PredEntry, i1 %PredD) {
 ; CHECK-NEXT:    br label [[D]]
 ; CHECK:       D:
 ; CHECK-NEXT:    br i1 [[PREDD:%.*]], label [[A]], label [[LOOP_EXIT_GUARD]]
-; CHECK:       NewDefault:
-; CHECK-NEXT:    br label [[X:%.*]]
 ; CHECK:       X:
 ; CHECK-NEXT:    br label [[EXIT:%.*]]
 ; CHECK:       Y:
@@ -34,8 +32,8 @@ define void @loop_1(i32 %Value, i1 %PredEntry, i1 %PredD) {
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret void
 ; CHECK:       loop.exit.guard:
-; CHECK-NEXT:    [[GUARD_NEWDEFAULT:%.*]] = phi i1 [ true, [[LEAFBLOCK1]] ], [ true, [[LEAFBLOCK]] ], [ false, [[D]] ]
-; CHECK-NEXT:    br i1 [[GUARD_NEWDEFAULT]], label [[NEWDEFAULT:%.*]], label [[Y:%.*]]
+; CHECK-NEXT:    [[GUARD_X:%.*]] = phi i1 [ true, [[LEAFBLOCK1]] ], [ true, [[LEAFBLOCK]] ], [ false, [[D]] ]
+; CHECK-NEXT:    br i1 [[GUARD_X]], label [[X:%.*]], label [[Y:%.*]]
 ;
 entry:
   br i1 %PredEntry, label %A, label %G

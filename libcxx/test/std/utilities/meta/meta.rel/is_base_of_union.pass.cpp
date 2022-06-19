@@ -14,13 +14,6 @@
 
 #include "test_macros.h"
 
-//  Clang before v9 and apple-clang up to and including v11 do not
-//  report that unions are never base classes - nor can they have bases.
-//  See https://reviews.llvm.org/D61858
-// XFAIL: apple-clang-9.0, apple-clang-9.1, apple-clang-10.0, apple-clang-11.0.0
-// XFAIL: clang-4.0, clang-5.0, clang-6.0, clang-7.0, clang-8.0
-
-
 template <class T, class U>
 void test_is_base_of()
 {

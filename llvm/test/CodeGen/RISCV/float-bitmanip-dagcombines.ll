@@ -47,30 +47,26 @@ declare float @llvm.fabs.f32(float)
 define float @fabs(float %a) nounwind {
 ; RV32I-LABEL: fabs:
 ; RV32I:       # %bb.0:
-; RV32I-NEXT:    lui a1, 524288
-; RV32I-NEXT:    addi a1, a1, -1
-; RV32I-NEXT:    and a0, a0, a1
+; RV32I-NEXT:    slli a0, a0, 1
+; RV32I-NEXT:    srli a0, a0, 1
 ; RV32I-NEXT:    ret
 ;
 ; RV32IF-LABEL: fabs:
 ; RV32IF:       # %bb.0:
-; RV32IF-NEXT:    lui a1, 524288
-; RV32IF-NEXT:    addi a1, a1, -1
-; RV32IF-NEXT:    and a0, a0, a1
+; RV32IF-NEXT:    slli a0, a0, 1
+; RV32IF-NEXT:    srli a0, a0, 1
 ; RV32IF-NEXT:    ret
 ;
 ; RV64I-LABEL: fabs:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    lui a1, 524288
-; RV64I-NEXT:    addiw a1, a1, -1
-; RV64I-NEXT:    and a0, a0, a1
+; RV64I-NEXT:    slli a0, a0, 33
+; RV64I-NEXT:    srli a0, a0, 33
 ; RV64I-NEXT:    ret
 ;
 ; RV64IF-LABEL: fabs:
 ; RV64IF:       # %bb.0:
-; RV64IF-NEXT:    lui a1, 524288
-; RV64IF-NEXT:    addiw a1, a1, -1
-; RV64IF-NEXT:    and a0, a0, a1
+; RV64IF-NEXT:    slli a0, a0, 33
+; RV64IF-NEXT:    srli a0, a0, 33
 ; RV64IF-NEXT:    ret
   %1 = call float @llvm.fabs.f32(float %a)
   ret float %1
@@ -88,8 +84,8 @@ define float @fcopysign_fneg(float %a, float %b) nounwind {
 ; RV32I-NEXT:    not a1, a1
 ; RV32I-NEXT:    lui a2, 524288
 ; RV32I-NEXT:    and a1, a1, a2
-; RV32I-NEXT:    addi a2, a2, -1
-; RV32I-NEXT:    and a0, a0, a2
+; RV32I-NEXT:    slli a0, a0, 1
+; RV32I-NEXT:    srli a0, a0, 1
 ; RV32I-NEXT:    or a0, a0, a1
 ; RV32I-NEXT:    ret
 ;
@@ -108,8 +104,8 @@ define float @fcopysign_fneg(float %a, float %b) nounwind {
 ; RV64I-NEXT:    not a1, a1
 ; RV64I-NEXT:    lui a2, 524288
 ; RV64I-NEXT:    and a1, a1, a2
-; RV64I-NEXT:    addiw a2, a2, -1
-; RV64I-NEXT:    and a0, a0, a2
+; RV64I-NEXT:    slli a0, a0, 33
+; RV64I-NEXT:    srli a0, a0, 33
 ; RV64I-NEXT:    or a0, a0, a1
 ; RV64I-NEXT:    ret
 ;

@@ -19,25 +19,13 @@
 #include "clang/AST/DeclBase.h"
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/DeclTemplate.h"
-#include "clang/AST/Expr.h"
-#include "clang/AST/ExprCXX.h"
 #include "clang/AST/NestedNameSpecifier.h"
-#include "clang/AST/PrettyPrinter.h"
-#include "clang/AST/RecursiveASTVisitor.h"
 #include "clang/AST/Stmt.h"
-#include "clang/AST/TemplateBase.h"
-#include "clang/AST/Type.h"
-#include "clang/AST/TypeLoc.h"
 #include "clang/Basic/LangOptions.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Basic/TokenKinds.h"
-#include "clang/Driver/Types.h"
-#include "clang/Index/IndexDataConsumer.h"
-#include "clang/Index/IndexSymbol.h"
-#include "clang/Index/IndexingAction.h"
 #include "clang/Lex/Lexer.h"
-#include "clang/Lex/Preprocessor.h"
 #include "clang/Lex/Token.h"
 #include "clang/Sema/Lookup.h"
 #include "clang/Sema/Sema.h"
@@ -46,14 +34,10 @@
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/None.h"
 #include "llvm/ADT/Optional.h"
-#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/Error.h"
-#include "llvm/Support/FormatAdapters.h"
-#include "llvm/Support/FormatVariadic.h"
-#include "llvm/Support/Signals.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cstddef>
 #include <set>
@@ -342,13 +326,13 @@ renameParameters(const FunctionDecl *Dest, const FunctionDecl *Source,
 // Because canonical declaration points to template decl instead of
 // specialization.
 const FunctionDecl *findTarget(const FunctionDecl *FD) {
-  auto CanonDecl = FD->getCanonicalDecl();
+  auto *CanonDecl = FD->getCanonicalDecl();
   if (!FD->isFunctionTemplateSpecialization() || CanonDecl == FD)
     return CanonDecl;
   // For specializations CanonicalDecl is the TemplatedDecl, which is not the
   // target we want to inline into. Instead we traverse previous decls to find
   // the first forward decl for this specialization.
-  auto PrevDecl = FD;
+  auto *PrevDecl = FD;
   while (PrevDecl->getPreviousDecl() != CanonDecl) {
     PrevDecl = PrevDecl->getPreviousDecl();
     assert(PrevDecl && "Found specialization without template decl");

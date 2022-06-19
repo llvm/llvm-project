@@ -3,13 +3,15 @@ add_libc_unittest(
   SUITE
     libc_string_unittests
   SRCS
+    address_test.cpp
     elements_test.cpp
     memory_access_test.cpp
     utils_test.cpp
-  DEPENDS
-    libc.src.string.memory_utils.memory_utils
-    libc.utils.CPP.standalone_cpp
   COMPILE_OPTIONS
     ${LIBC_COMPILE_OPTIONS_NATIVE}
     -ffreestanding
+  DEPENDS
+    libc.src.string.memory_utils.memory_utils
+    libc.src.__support.CPP.array
+    libc.src.__support.CPP.array_ref
 )

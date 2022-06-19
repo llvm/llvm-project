@@ -13,6 +13,7 @@
 #include "lldb/Host/FileSystem.h"
 #include "lldb/Host/HostInfo.h"
 #include "lldb/Host/ProcessLaunchInfo.h"
+#include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/StreamString.h"
 
@@ -40,9 +41,7 @@ ProcessLaunchInfo::ProcessLaunchInfo(const FileSpec &stdin_file_spec,
                                      const FileSpec &working_directory,
                                      uint32_t launch_flags)
     : ProcessInfo(), m_working_dir(), m_plugin_name(), m_flags(launch_flags),
-      m_file_actions(), m_pty(new PseudoTerminal), m_resume_count(0),
-      m_monitor_callback(nullptr), m_monitor_callback_baton(nullptr),
-      m_monitor_signals(false), m_listener_sp(), m_hijack_listener_sp(),
+      m_file_actions(), m_pty(new PseudoTerminal),
       m_scripted_process_class_name(), m_scripted_process_dictionary_sp() {
   if (stdin_file_spec) {
     FileAction file_action;
@@ -176,27 +175,18 @@ void ProcessLaunchInfo::Clear() {
   m_scripted_process_dictionary_sp.reset();
 }
 
-void ProcessLaunchInfo::SetMonitorProcessCallback(
-    const Host::MonitorChildProcessCallback &callback, bool monitor_signals) {
-  m_monitor_callback = callback;
-  m_monitor_signals = monitor_signals;
-}
-
-bool ProcessLaunchInfo::NoOpMonitorCallback(lldb::pid_t pid, bool exited, int signal, int status) {
-  Log *log = lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_PROCESS);
-  LLDB_LOG(log, "pid = {0}, exited = {1}, signal = {2}, status = {3}", pid,
-           exited, signal, status);
-  return true;
+void ProcessLaunchInfo::NoOpMonitorCallback(lldb::pid_t pid, int signal,
+                                            int status) {
+  Log *log = GetLog(LLDBLog::Process);
+  LLDB_LOG(log, "pid = {0}, signal = {1}, status = {2}", pid, signal, status);
 }
 
 bool ProcessLaunchInfo::MonitorProcess() const {
   if (m_monitor_callback && ProcessIDIsValid()) {
     llvm::Expected<HostThread> maybe_thread =
-    Host::StartMonitoringChildProcess(m_monitor_callback, GetProcessID(),
-                                      m_monitor_signals);
+        Host::StartMonitoringChildProcess(m_monitor_callback, GetProcessID());
     if (!maybe_thread)
-      LLDB_LOG(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_HOST),
-               "failed to launch host thread: {}",
+      LLDB_LOG(GetLog(LLDBLog::Host), "failed to launch host thread: {}",
                llvm::toString(maybe_thread.takeError()));
     return true;
   }
@@ -211,7 +201,15 @@ void ProcessLaunchInfo::SetDetachOnError(bool enable) {
 }
 
 llvm::Error ProcessLaunchInfo::SetUpPtyRedirection() {
-  Log *log = GetLogIfAllCategoriesSet(LIBLLDB_LOG_PROCESS);
+  Log *log = GetLog(LLDBLog::Process);
+
+  bool stdin_free = GetFileActionForFD(STDIN_FILENO) == nullptr;
+  bool stdout_free = GetFileActionForFD(STDOUT_FILENO) == nullptr;
+  bool stderr_free = GetFileActionForFD(STDERR_FILENO) == nullptr;
+  bool any_free = stdin_free || stdout_free || stderr_free;
+  if (!any_free)
+    return llvm::Error::success();
+
   LLDB_LOG(log, "Generating a pty to use for stdin/out/err");
 
   int open_flags = O_RDWR | O_NOCTTY;
@@ -226,19 +224,13 @@ llvm::Error ProcessLaunchInfo::SetUpPtyRedirection() {
 
   const FileSpec secondary_file_spec(m_pty->GetSecondaryName());
 
-  // Only use the secondary tty if we don't have anything specified for
-  // input and don't have an action for stdin
-  if (GetFileActionForFD(STDIN_FILENO) == nullptr)
+  if (stdin_free)
     AppendOpenFileAction(STDIN_FILENO, secondary_file_spec, true, false);
 
-  // Only use the secondary tty if we don't have anything specified for
-  // output and don't have an action for stdout
-  if (GetFileActionForFD(STDOUT_FILENO) == nullptr)
+  if (stdout_free)
     AppendOpenFileAction(STDOUT_FILENO, secondary_file_spec, false, true);
 
-  // Only use the secondary tty if we don't have anything specified for
-  // error and don't have an action for stderr
-  if (GetFileActionForFD(STDERR_FILENO) == nullptr)
+  if (stderr_free)
     AppendOpenFileAction(STDERR_FILENO, secondary_file_spec, false, true);
   return llvm::Error::success();
 }

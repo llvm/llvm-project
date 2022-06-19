@@ -11,7 +11,7 @@
 
 void handler_bad(int) {
   printf("1234");
-  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: 'printf' may not be asynchronous-safe; calling it from a signal handler may be dangerous [bugprone-signal-handler]
+  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: standard function 'printf' may not be asynchronous-safe; calling it from a signal handler may be dangerous [bugprone-signal-handler]
 }
 
 void handler_good(int) {
@@ -23,7 +23,7 @@ void handler_good(int) {
   memcpy((void*)10, (const void*)20, 1);
 }
 
-void test() {
+void test(void) {
   signal(SIGINT, handler_good);
   signal(SIGINT, handler_bad);
 }

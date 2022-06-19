@@ -13,16 +13,19 @@
 ## 1 Ki times. The resulting folded program should retain one instance for each
 ## of the four unique functions.
 
+## The symtab does not have a particular order. And even though we can expect
+## some partial order, it is not possible to express that in FileCheck syntax.
+## So just use -DAG
 # CHECK-LABEL: SYMBOL TABLE:
-# CHECK: [[#%x,G0:]] g   F __TEXT,__text _g000000
-# CHECK: [[#%x,G1:]] g   F __TEXT,__text _g100000
-# CHECK: [[#%x,G2:]] g   F __TEXT,__text _g200000
-# CHECK: [[#%x,G3:]] g   F __TEXT,__text _g300000
+# CHECK-DAG: [[#%x,G0:]] g   F __TEXT,__text _g000000
+# CHECK-DAG: [[#%x,G0]]  g   F __TEXT,__text _g033333
+# CHECK-DAG: [[#%x,G1:]] g   F __TEXT,__text _g100000
+# CHECK-DAG: [[#%x,G1]]  g   F __TEXT,__text _g133333
+# CHECK-DAG: [[#%x,G2:]] g   F __TEXT,__text _g200000
+# CHECK-DAG: [[#%x,G2]]  g   F __TEXT,__text _g233333
+# CHECK-DAG: [[#%x,G3:]] g   F __TEXT,__text _g300000
+# CHECK-DAG: [[#%x,G3]]  g   F __TEXT,__text _g333333
 ## . . . many intervening _gXXXXXX symbols
-# CHECK: [[#%x,G0]]  g   F __TEXT,__text _g033333
-# CHECK: [[#%x,G1]]  g   F __TEXT,__text _g133333
-# CHECK: [[#%x,G2]]  g   F __TEXT,__text _g233333
-# CHECK: [[#%x,G3]]  g   F __TEXT,__text _g333333
 
 # CHECK-LABEL: Disassembly of section __TEXT,__text:
 # CHECK-DAG: [[#%x,G0]]  <_g033333>:

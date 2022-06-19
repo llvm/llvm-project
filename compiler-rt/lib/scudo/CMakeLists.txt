@@ -7,6 +7,9 @@ set(SCUDO_CFLAGS ${SANITIZER_COMMON_CFLAGS})
 list(APPEND SCUDO_CFLAGS -fbuiltin)
 append_rtti_flag(OFF SCUDO_CFLAGS)
 
+# Too many existing bugs, needs cleanup.
+append_list_if(COMPILER_RT_HAS_WNO_FORMAT -Wno-format SCUDO_CFLAGS)
+
 set(SCUDO_MINIMAL_DYNAMIC_LIBS ${SANITIZER_COMMON_LINK_LIBS})
 append_list_if(COMPILER_RT_HAS_LIBDL dl SCUDO_MINIMAL_DYNAMIC_LIBS)
 append_list_if(COMPILER_RT_HAS_LIBRT rt SCUDO_MINIMAL_DYNAMIC_LIBS)
@@ -27,7 +30,7 @@ if(ANDROID)
   endif()
 endif()
 
-# The minimal Scudo runtime does not inlude the UBSan runtime.
+# The minimal Scudo runtime does not include the UBSan runtime.
 set(SCUDO_MINIMAL_OBJECT_LIBS
   RTSanitizerCommonNoTermination
   RTSanitizerCommonLibc
@@ -83,8 +86,11 @@ set(SCUDO_HEADERS
   scudo_tsd_shared.inc
   scudo_utils.h)
 
-# Enable the SSE 4.2 instruction set for scudo_crc32.cpp, if available.
-if (COMPILER_RT_HAS_MSSE4_2_FLAG)
+# Enable the necessary instruction set for scudo_crc32.cpp, if available.
+# Newer compiler versions use -mcrc32 rather than -msse4.2.
+if (COMPILER_RT_HAS_MCRC32_FLAG)
+  set_source_files_properties(scudo_crc32.cpp PROPERTIES COMPILE_FLAGS -mcrc32)
+elseif (COMPILER_RT_HAS_MSSE4_2_FLAG)
   set_source_files_properties(scudo_crc32.cpp PROPERTIES COMPILE_FLAGS -msse4.2)
 endif()
 

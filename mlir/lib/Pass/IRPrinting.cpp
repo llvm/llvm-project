@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "PassDetail.h"
+#include "mlir/IR/SymbolTable.h"
 #include "mlir/Pass/PassManager.h"
 #include "llvm/Support/Format.h"
 #include "llvm/Support/FormatVariadic.h"
@@ -66,7 +67,7 @@ private:
         ArrayRef<uint8_t>(reinterpret_cast<const uint8_t *>(&data), sizeof(T)));
   }
 
-  SmallString<20> hash;
+  std::array<uint8_t, 20> hash;
 };
 
 //===----------------------------------------------------------------------===//
@@ -92,7 +93,7 @@ private:
   /// configuration asked for change detection.
   DenseMap<Pass *, OperationFingerPrint> beforePassFingerPrints;
 };
-} // end anonymous namespace
+} // namespace
 
 static void printIR(Operation *op, bool printModuleScope, raw_ostream &out,
                     OpPrintingFlags flags) {
@@ -169,8 +170,7 @@ void IRPrinterInstrumentation::runAfterPassFailed(Pass *pass, Operation *op) {
 
   config->printAfterIfEnabled(pass, op, [&](raw_ostream &out) {
     out << formatv("// -----// IR Dump After {0} Failed", pass->getName());
-    printIR(op, config->shouldPrintAtModuleScope(), out,
-            OpPrintingFlags().printGenericOpForm());
+    printIR(op, config->shouldPrintAtModuleScope(), out, OpPrintingFlags());
     out << "\n\n";
   });
 }
@@ -188,7 +188,7 @@ PassManager::IRPrinterConfig::IRPrinterConfig(bool printModuleScope,
       printAfterOnlyOnChange(printAfterOnlyOnChange),
       printAfterOnlyOnFailure(printAfterOnlyOnFailure),
       opPrintingFlags(opPrintingFlags) {}
-PassManager::IRPrinterConfig::~IRPrinterConfig() {}
+PassManager::IRPrinterConfig::~IRPrinterConfig() = default;
 
 /// A hook that may be overridden by a derived config that checks if the IR
 /// of 'operation' should be dumped *before* the pass 'pass' has been
@@ -223,9 +223,9 @@ struct BasicIRPrinterConfig : public PassManager::IRPrinterConfig {
       raw_ostream &out)
       : IRPrinterConfig(printModuleScope, printAfterOnlyOnChange,
                         printAfterOnlyOnFailure, opPrintingFlags),
-        shouldPrintBeforePass(shouldPrintBeforePass),
-        shouldPrintAfterPass(shouldPrintAfterPass), out(out) {
-    assert((shouldPrintBeforePass || shouldPrintAfterPass) &&
+        shouldPrintBeforePass(std::move(shouldPrintBeforePass)),
+        shouldPrintAfterPass(std::move(shouldPrintAfterPass)), out(out) {
+    assert((this->shouldPrintBeforePass || this->shouldPrintAfterPass) &&
            "expected at least one valid filter function");
   }
 
@@ -248,7 +248,7 @@ struct BasicIRPrinterConfig : public PassManager::IRPrinterConfig {
   /// The stream to output to.
   raw_ostream &out;
 };
-} // end anonymous namespace
+} // namespace
 
 /// Add an instrumentation to print the IR before and after pass execution,
 /// using the provided configuration.

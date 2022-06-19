@@ -13,7 +13,6 @@
 #include "llvm/Bitcode/BitcodeWriterPass.h"
 #include "llvm/Analysis/ModuleSummaryAnalysis.h"
 #include "llvm/Bitcode/BitcodeWriter.h"
-#include "llvm/IR/Module.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"

@@ -62,6 +62,23 @@ define void @memset(i8* %dest, i8 %val, i1 %is.volatile) {
   ret void
 }
 
+declare void @llvm.memset.inline.p0i8.i32(i8* nocapture, i8, i32, i1)
+define void @memset_inline_is_volatile(i8* %dest, i8 %value, i1 %is.volatile) {
+  ; CHECK: immarg operand has non-immediate parameter
+  ; CHECK-NEXT: i1 %is.volatile
+  ; CHECK-NEXT: call void @llvm.memset.inline.p0i8.i32(i8* %dest, i8 %value, i32 8, i1 %is.volatile)
+  call void @llvm.memset.inline.p0i8.i32(i8* %dest, i8 %value, i32 8, i1 %is.volatile)
+  ret void
+}
+
+define void @memset_inline_variable_size(i8* %dest, i8 %value, i32 %size) {
+  ; CHECK: immarg operand has non-immediate parameter
+  ; CHECK-NEXT: i32 %size
+  ; CHECK-NEXT: call void @llvm.memset.inline.p0i8.i32(i8* %dest, i8 %value, i32 %size, i1 true)
+  call void @llvm.memset.inline.p0i8.i32(i8* %dest, i8 %value, i32 %size, i1 true)
+  ret void
+}
+
 
 declare i64 @llvm.objectsize.i64.p0i8(i8*, i1, i1, i1)
 define void @objectsize(i8* %ptr, i1 %a, i1 %b, i1 %c) {
@@ -245,5 +262,15 @@ define void @hwasan_check_memaccess(i8* %arg0,i8* %arg1, i32 %arg2) {
   ; CHECK: i32 %arg2
   ; CHECK: call void @llvm.hwasan.check.memaccess(i8* %arg0, i8* %arg1, i32 %arg2)
   call void @llvm.hwasan.check.memaccess(i8* %arg0,i8* %arg1, i32 %arg2)
+  ret void
+}
+
+declare void @llvm.eh.sjlj.callsite(i32)
+
+define void @eh_sjlj_callsite(i32 %arg0) {
+  ; CHECK: immarg operand has non-immediate parameter
+  ; CHECK: i32 %arg0
+  ; CHECK: call void @llvm.eh.sjlj.callsite(i32 %arg0)
+  call void @llvm.eh.sjlj.callsite(i32 %arg0)
   ret void
 }

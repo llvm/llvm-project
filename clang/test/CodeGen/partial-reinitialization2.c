@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 %s -triple x86_64-unknown-unknown -emit-llvm -o - | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers %s -triple x86_64-unknown-unknown -emit-llvm -o - | FileCheck %s
 
 struct P1 { char x[6]; } g1 = { "foo" };
 struct LP1 { struct P1 p1; };
@@ -40,21 +40,21 @@ void test3(void)
 }
 
 // CHECK-LABEL: get235
-struct P2 get235()
+struct P2 get235(void)
 {
   struct P2 p = { 2, 3, 5 };
   return p;
 }
 
 // CHECK-LABEL: get456789
-struct LP2P2 get456789()
+struct LP2P2 get456789(void)
 {
   struct LP2P2 l = { { 4, 5, 6 }, { 7, 8, 9 } };
   return l;
 }
 
 // CHECK-LABEL: get123
-union UP2 get123()
+union UP2 get123(void)
 {
   union UP2 u = { { 1, 2, 3 } };
   return u;

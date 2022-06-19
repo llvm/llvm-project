@@ -40,8 +40,8 @@ entry:
 
 if.then:
 ; CHECK: mov     x8, #320
-; CHECK: st2g    x9, [x9], #32
 ; CHECK: sub     x8, x8, #32
+; CHECK: st2g    x9, [x9], #32
 ; CHECK: cbnz    x8,
   call void @llvm.aarch64.settag(i8* %a, i64 160)
   call void @llvm.aarch64.settag(i8* %a2, i64 160)
@@ -49,8 +49,8 @@ if.then:
 
 if.else:
 ; CHECK: mov     x8, #256
-; CHECK: st2g    x9, [x9], #32
 ; CHECK: sub     x8, x8, #32
+; CHECK: st2g    x9, [x9], #32
 ; CHECK: cbnz    x8,
   call void @llvm.aarch64.settag(i8* %c, i64 128)
   call void @llvm.aarch64.settag(i8* %c2, i64 128)

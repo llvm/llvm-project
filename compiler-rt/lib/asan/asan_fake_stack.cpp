@@ -28,8 +28,8 @@ static const u64 kAllocaRedzoneMask = 31UL;
 // For small size classes inline PoisonShadow for better performance.
 ALWAYS_INLINE void SetShadow(uptr ptr, uptr size, uptr class_id, u64 magic) {
   u64 *shadow = reinterpret_cast<u64*>(MemToShadow(ptr));
-  if (SHADOW_SCALE == 3 && class_id <= 6) {
-    // This code expects SHADOW_SCALE=3.
+  if (ASAN_SHADOW_SCALE == 3 && class_id <= 6) {
+    // This code expects ASAN_SHADOW_SCALE=3.
     for (uptr i = 0; i < (((uptr)1) << class_id); i++) {
       shadow[i] = magic;
       // Make sure this does not become memset.
@@ -54,10 +54,11 @@ FakeStack *FakeStack::Create(uptr stack_size_log) {
                              : MmapOrDie(size, "FakeStack"));
   res->stack_size_log_ = stack_size_log;
   u8 *p = reinterpret_cast<u8 *>(res);
-  VReport(1, "T%d: FakeStack created: %p -- %p stack_size_log: %zd; "
+  VReport(1,
+          "T%d: FakeStack created: %p -- %p stack_size_log: %zd; "
           "mmapped %zdK, noreserve=%d \n",
-          GetCurrentTidOrInvalid(), p,
-          p + FakeStack::RequiredSize(stack_size_log), stack_size_log,
+          GetCurrentTidOrInvalid(), (void *)p,
+          (void *)(p + FakeStack::RequiredSize(stack_size_log)), stack_size_log,
           size >> 10, flags()->uar_noreserve);
   return res;
 }
@@ -139,7 +140,6 @@ void FakeStack::HandleNoReturn() {
 // We do it based on their 'real_stack' values -- everything that is lower
 // than the current real_stack is garbage.
 NOINLINE void FakeStack::GC(uptr real_stack) {
-  uptr collected = 0;
   for (uptr class_id = 0; class_id < kNumberOfSizeClasses; class_id++) {
     u8 *flags = GetFlags(stack_size_log(), class_id);
     for (uptr i = 0, n = NumberOfFrames(stack_size_log(), class_id); i < n;
@@ -149,7 +149,6 @@ NOINLINE void FakeStack::GC(uptr real_stack) {
           GetFrame(stack_size_log(), class_id, i));
       if (ff->real_stack < real_stack) {
         flags[i] = 0;
-        collected++;
       }
     }
   }
@@ -293,10 +292,10 @@ void __asan_alloca_poison(uptr addr, uptr size) {
   uptr LeftRedzoneAddr = addr - kAllocaRedzoneSize;
   uptr PartialRzAddr = addr + size;
   uptr RightRzAddr = (PartialRzAddr + kAllocaRedzoneMask) & ~kAllocaRedzoneMask;
-  uptr PartialRzAligned = PartialRzAddr & ~(SHADOW_GRANULARITY - 1);
+  uptr PartialRzAligned = PartialRzAddr & ~(ASAN_SHADOW_GRANULARITY - 1);
   FastPoisonShadow(LeftRedzoneAddr, kAllocaRedzoneSize, kAsanAllocaLeftMagic);
   FastPoisonShadowPartialRightRedzone(
-      PartialRzAligned, PartialRzAddr % SHADOW_GRANULARITY,
+      PartialRzAligned, PartialRzAddr % ASAN_SHADOW_GRANULARITY,
       RightRzAddr - PartialRzAligned, kAsanAllocaRightMagic);
   FastPoisonShadow(RightRzAddr, kAllocaRedzoneSize, kAsanAllocaRightMagic);
 }
@@ -304,7 +303,8 @@ void __asan_alloca_poison(uptr addr, uptr size) {
 SANITIZER_INTERFACE_ATTRIBUTE
 void __asan_allocas_unpoison(uptr top, uptr bottom) {
   if ((!top) || (top > bottom)) return;
-  REAL(memset)(reinterpret_cast<void*>(MemToShadow(top)), 0,
-               (bottom - top) / SHADOW_GRANULARITY);
+  REAL(memset)
+  (reinterpret_cast<void *>(MemToShadow(top)), 0,
+   (bottom - top) / ASAN_SHADOW_GRANULARITY);
 }
 } // extern "C"

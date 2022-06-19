@@ -8,13 +8,13 @@ void f(int a[10], Arr arr) { // expected-note 4 {{declared here}}
 
   /* Should warn. */
   (void)sizeof(a);  // \
-      // expected-warning{{sizeof on array function parameter will return size of 'int *' instead of 'int [10]'}}
+      // expected-warning{{sizeof on array function parameter will return size of 'int *' instead of 'int[10]'}}
   (void)sizeof((((a))));  // \
-      // expected-warning{{sizeof on array function parameter will return size of 'int *' instead of 'int [10]'}}
+      // expected-warning{{sizeof on array function parameter will return size of 'int *' instead of 'int[10]'}}
   (void)sizeof a;  // \
-      // expected-warning{{sizeof on array function parameter will return size of 'int *' instead of 'int [10]'}}
+      // expected-warning{{sizeof on array function parameter will return size of 'int *' instead of 'int[10]'}}
   (void)sizeof arr;  // \
-      // expected-warning{{sizeof on array function parameter will return size of 'int *' instead of 'Arr' (aka 'int [10]')}}
+      // expected-warning{{sizeof on array function parameter will return size of 'int *' instead of 'Arr' (aka 'int[10]')}}
 
   /* Shouldn't warn. */
   int b[10];

@@ -5,7 +5,7 @@
 
 // CHECK-INTEL: -x86-asm-syntax=intel
 // CHECK-ATT: -x86-asm-syntax=att
-// CHECK-SOMEREQUIRED: error: unsupported argument 'somerequired' to option 'masm='
+// CHECK-SOMEREQUIRED: error: unsupported argument 'somerequired' to option '-masm='
 // CHECK-ARM: warning: argument unused during compilation: '-masm=intel'
 .text
 mov    al, 0

@@ -11,8 +11,6 @@ from lldbsuite.test import lldbutil
 
 
 class TestStructuredDataAPI(TestBase):
-
-    mydir = TestBase.compute_mydir(__file__)
     NO_DEBUG_INFO_TESTCASE = True
 
     def test(self):
@@ -37,7 +35,7 @@ class TestStructuredDataAPI(TestBase):
         # Test that GetDescription works:
         s.Clear()
         error = example.GetDescription(s)
-        self.assertTrue(error.Success(), "GetDescription works")
+        self.assertSuccess(error, "GetDescription works")
         if not "key_float" in s.GetData():
             self.fail("FAILED: could not find key_float in description output")
         

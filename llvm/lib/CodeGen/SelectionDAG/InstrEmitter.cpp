@@ -14,22 +14,18 @@
 
 #include "InstrEmitter.h"
 #include "SDNodeDbgValue.h"
-#include "llvm/ADT/Statistic.h"
+#include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/CodeGen/MachineConstantPool.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
-#include "llvm/CodeGen/SelectionDAG.h"
 #include "llvm/CodeGen/StackMaps.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/CodeGen/TargetLowering.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
-#include "llvm/IR/DataLayout.h"
-#include "llvm/IR/DebugInfo.h"
+#include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/PseudoProbe.h"
-#include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
-#include "llvm/Support/MathExtras.h"
 #include "llvm/Target/TargetMachine.h"
 using namespace llvm;
 
@@ -321,8 +317,15 @@ InstrEmitter::AddRegisterOperand(MachineInstrBuilder &MIB,
       OpRC = TII->getRegClass(*II, IIOpNum, TRI, *MF);
 
     if (OpRC) {
+      unsigned MinNumRegs = MinRCSize;
+      // Don't apply any RC size limit for IMPLICIT_DEF. Each use has a unique
+      // virtual register.
+      if (Op.isMachineOpcode() &&
+          Op.getMachineOpcode() == TargetOpcode::IMPLICIT_DEF)
+        MinNumRegs = 0;
+
       const TargetRegisterClass *ConstrainedRC
-        = MRI->constrainRegClass(VReg, OpRC, MinRCSize);
+        = MRI->constrainRegClass(VReg, OpRC, MinNumRegs);
       if (!ConstrainedRC) {
         OpRC = TRI->getAllocatableClass(OpRC);
         assert(OpRC && "Constraints cannot be fulfilled for allocation");
@@ -722,7 +725,7 @@ void InstrEmitter::AddDbgValueLocationOps(
       MIB.addFrameIndex(Op.getFrameIx());
       break;
     case SDDbgOperand::VREG:
-      MIB.addReg(Op.getVReg(), RegState::Debug);
+      MIB.addReg(Op.getVReg());
       break;
     case SDDbgOperand::SDNODE: {
       SDValue V = SDValue(Op.getSDNode(), Op.getResNo());
@@ -765,7 +768,7 @@ InstrEmitter::EmitDbgInstrRef(SDDbgValue *SD,
   assert(!SD->isVariadic());
   SDDbgOperand DbgOperand = SD->getLocationOps()[0];
   MDNode *Var = SD->getVariable();
-  MDNode *Expr = SD->getExpression();
+  DIExpression *Expr = (DIExpression*)SD->getExpression();
   DebugLoc DL = SD->getDebugLoc();
   const MCInstrDesc &RefII = TII->get(TargetOpcode::DBG_INSTR_REF);
 
@@ -774,6 +777,13 @@ InstrEmitter::EmitDbgInstrRef(SDDbgValue *SD,
   if (DbgOperand.getKind() == SDDbgOperand::FRAMEIX ||
       DbgOperand.getKind() == SDDbgOperand::CONST)
     return EmitDbgValueFromSingleOp(SD, VRBaseMap);
+
+  // Immediately fold any indirectness from the LLVM-IR intrinsic into the
+  // expression:
+  if (SD->isIndirect()) {
+    std::vector<uint64_t> Elts = {dwarf::DW_OP_deref};
+    Expr = DIExpression::append(Expr, Elts);
+  }
 
   // It may not be immediately possible to identify the MachineInstr that
   // defines a VReg, it can depend for example on the order blocks are
@@ -862,7 +872,7 @@ MachineInstr *InstrEmitter::EmitDbgNoLocation(SDDbgValue *SD) {
   DebugLoc DL = SD->getDebugLoc();
   auto MIB = BuildMI(*MF, DL, TII->get(TargetOpcode::DBG_VALUE));
   MIB.addReg(0U);
-  MIB.addReg(0U, RegState::Debug);
+  MIB.addReg(0U);
   MIB.addMetadata(Var);
   MIB.addMetadata(Expr);
   return &*MIB;
@@ -872,22 +882,33 @@ MachineInstr *
 InstrEmitter::EmitDbgValueFromSingleOp(SDDbgValue *SD,
                                        DenseMap<SDValue, Register> &VRBaseMap) {
   MDNode *Var = SD->getVariable();
-  MDNode *Expr = SD->getExpression();
+  DIExpression *Expr = SD->getExpression();
   DebugLoc DL = SD->getDebugLoc();
   const MCInstrDesc &II = TII->get(TargetOpcode::DBG_VALUE);
 
   assert(SD->getLocationOps().size() == 1 &&
          "Non variadic dbg_value should have only one location op");
 
+  // See about constant-folding the expression.
+  // Copy the location operand in case we replace it.
+  SmallVector<SDDbgOperand, 1> LocationOps(1, SD->getLocationOps()[0]);
+  if (Expr && LocationOps[0].getKind() == SDDbgOperand::CONST) {
+    const Value *V = LocationOps[0].getConst();
+    if (auto *C = dyn_cast<ConstantInt>(V)) {
+      std::tie(Expr, C) = Expr->constantFold(C);
+      LocationOps[0] = SDDbgOperand::fromConst(C);
+    }
+  }
+
   // Emit non-variadic dbg_value nodes as DBG_VALUE.
   // DBG_VALUE := "DBG_VALUE" loc, isIndirect, var, expr
   auto MIB = BuildMI(*MF, DL, II);
-  AddDbgValueLocationOps(MIB, II, SD->getLocationOps(), VRBaseMap);
+  AddDbgValueLocationOps(MIB, II, LocationOps, VRBaseMap);
 
   if (SD->isIndirect())
     MIB.addImm(0U);
   else
-    MIB.addReg(0U, RegState::Debug);
+    MIB.addReg(0U);
 
   return MIB.addMetadata(Var).addMetadata(Expr);
 }
@@ -1323,11 +1344,12 @@ EmitSpecialNode(SDNode *Node, bool IsClone, bool IsCloned,
 /// InstrEmitter - Construct an InstrEmitter and set it to start inserting
 /// at the given position in the given block.
 InstrEmitter::InstrEmitter(const TargetMachine &TM, MachineBasicBlock *mbb,
-                           MachineBasicBlock::iterator insertpos)
+                           MachineBasicBlock::iterator insertpos,
+                           bool UseInstrRefDebugInfo)
     : MF(mbb->getParent()), MRI(&MF->getRegInfo()),
       TII(MF->getSubtarget().getInstrInfo()),
       TRI(MF->getSubtarget().getRegisterInfo()),
       TLI(MF->getSubtarget().getTargetLowering()), MBB(mbb),
       InsertPos(insertpos) {
-  EmitDebugInstrRefs = TM.Options.ValueTrackingVariableLocations;
+  EmitDebugInstrRefs = UseInstrRefDebugInfo;
 }

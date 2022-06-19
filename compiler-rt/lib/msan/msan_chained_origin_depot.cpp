@@ -19,7 +19,7 @@ namespace __msan {
 
 static ChainedOriginDepot chainedOriginDepot;
 
-StackDepotStats *ChainedOriginDepotGetStats() {
+StackDepotStats ChainedOriginDepotGetStats() {
   return chainedOriginDepot.GetStats();
 }
 

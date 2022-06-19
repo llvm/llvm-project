@@ -22,13 +22,15 @@
 #include "lldb/Symbol/SymbolFile.h"
 #include "lldb/Symbol/TypeMap.h"
 #include "lldb/Symbol/TypeSystem.h"
-
+#include "lldb/Utility/LLDBLog.h"
+#include "llvm/DebugInfo/PDB/ConcreteSymbolEnumerator.h"
 #include "llvm/DebugInfo/PDB/IPDBLineNumber.h"
 #include "llvm/DebugInfo/PDB/IPDBSourceFile.h"
 #include "llvm/DebugInfo/PDB/PDBSymbol.h"
 #include "llvm/DebugInfo/PDB/PDBSymbolData.h"
 #include "llvm/DebugInfo/PDB/PDBSymbolFunc.h"
 #include "llvm/DebugInfo/PDB/PDBSymbolTypeArray.h"
+#include "llvm/DebugInfo/PDB/PDBSymbolTypeBaseClass.h"
 #include "llvm/DebugInfo/PDB/PDBSymbolTypeBuiltin.h"
 #include "llvm/DebugInfo/PDB/PDBSymbolTypeEnum.h"
 #include "llvm/DebugInfo/PDB/PDBSymbolTypeFunctionArg.h"
@@ -497,7 +499,7 @@ lldb::TypeSP PDBASTParser::CreateLLDBTypeFromPDBType(const PDBSymbol &type) {
       // Class). Set it false for now.
       bool isScoped = false;
 
-      ast_enum = m_ast.CreateEnumerationType(name.c_str(), decl_context,
+      ast_enum = m_ast.CreateEnumerationType(name, decl_context,
                                              OptionalClangModuleID(), decl,
                                              builtin_type, isScoped);
 
@@ -799,7 +801,8 @@ bool PDBASTParser::CompleteTypeFromPDB(
   if (uid_it == m_forward_decl_to_uid.end())
     return true;
 
-  auto symbol_file = static_cast<SymbolFilePDB *>(m_ast.GetSymbolFile());
+  auto symbol_file = static_cast<SymbolFilePDB *>(
+      m_ast.GetSymbolFile()->GetBackingSymbolFile());
   if (!symbol_file)
     return false;
 
@@ -833,7 +836,8 @@ PDBASTParser::GetDeclForSymbol(const llvm::pdb::PDBSymbol &symbol) {
   if (it != m_uid_to_decl.end())
     return it->second;
 
-  auto symbol_file = static_cast<SymbolFilePDB *>(m_ast.GetSymbolFile());
+  auto symbol_file = static_cast<SymbolFilePDB *>(
+      m_ast.GetSymbolFile()->GetBackingSymbolFile());
   if (!symbol_file)
     return nullptr;
 
@@ -999,7 +1003,8 @@ PDBASTParser::GetDeclContextForSymbol(const llvm::pdb::PDBSymbol &symbol) {
     return result;
   }
 
-  auto symbol_file = static_cast<SymbolFilePDB *>(m_ast.GetSymbolFile());
+  auto symbol_file = static_cast<SymbolFilePDB *>(
+      m_ast.GetSymbolFile()->GetBackingSymbolFile());
   if (!symbol_file)
     return nullptr;
 
@@ -1039,7 +1044,8 @@ clang::DeclContext *PDBASTParser::GetDeclContextContainingSymbol(
   if (specs.empty())
     return m_ast.GetTranslationUnitDecl();
 
-  auto symbol_file = static_cast<SymbolFilePDB *>(m_ast.GetSymbolFile());
+  auto symbol_file = static_cast<SymbolFilePDB *>(
+      m_ast.GetSymbolFile()->GetBackingSymbolFile());
   if (!symbol_file)
     return m_ast.GetTranslationUnitDecl();
 
@@ -1092,7 +1098,8 @@ clang::DeclContext *PDBASTParser::GetDeclContextContainingSymbol(
 
 void PDBASTParser::ParseDeclsForDeclContext(
     const clang::DeclContext *decl_context) {
-  auto symbol_file = static_cast<SymbolFilePDB *>(m_ast.GetSymbolFile());
+  auto symbol_file = static_cast<SymbolFilePDB *>(
+      m_ast.GetSymbolFile()->GetBackingSymbolFile());
   if (!symbol_file)
     return;
 
@@ -1298,7 +1305,7 @@ void PDBASTParser::AddRecordMembers(
             TypeSystemClang::SetIntegerInitializerForVariable(
                 decl, value.toAPSInt().extOrTrunc(type_width));
           } else {
-            LLDB_LOG(GetLogIfAllCategoriesSet(LIBLLDB_LOG_AST),
+            LLDB_LOG(GetLog(LLDBLog::AST),
                      "Class '{0}' has a member '{1}' of type '{2}' ({3} bits) "
                      "which resolves to a wider constant value ({4} bits). "
                      "Ignoring constant.",
@@ -1316,7 +1323,7 @@ void PDBASTParser::AddRecordMembers(
                   decl, value.toAPFloat());
               decl->setConstexpr(true);
             } else {
-              LLDB_LOG(GetLogIfAllCategoriesSet(LIBLLDB_LOG_AST),
+              LLDB_LOG(GetLog(LLDBLog::AST),
                        "Class '{0}' has a member '{1}' of type '{2}' ({3} "
                        "bits) which resolves to a constant value of mismatched "
                        "width ({4} bits). Ignoring constant.",

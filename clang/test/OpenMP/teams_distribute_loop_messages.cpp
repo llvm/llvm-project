@@ -721,4 +721,15 @@ void test_nowait() {
   for (int i = 0; i < 16; ++i)
     ;
 }
+//expected-note@+1 {{candidate function not viable: requires single argument 'device_Id', but no arguments were provided}}
+int foo(int device_Id) {
+  return 2;
+}
+
+int main() {
+// expected-error@+1 {{no matching function for call to 'foo'}}
+  const int globalWI{ foo() };
+#pragma omp target teams distribute
+  for (int i=0 ; i<globalWI; i++) {}
+}
 

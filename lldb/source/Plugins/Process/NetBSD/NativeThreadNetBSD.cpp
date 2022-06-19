@@ -75,7 +75,7 @@ Status NativeThreadNetBSD::Suspend() {
 
 void NativeThreadNetBSD::SetStoppedBySignal(uint32_t signo,
                                             const siginfo_t *info) {
-  Log *log(ProcessPOSIXLog::GetLogIfAllCategoriesSet(POSIX_LOG_THREAD));
+  Log *log = GetLog(POSIXLog::Thread);
   LLDB_LOG(log, "tid = {0} in called with signal {1}", GetID(), signo);
 
   SetStopped();
@@ -178,7 +178,7 @@ void NativeThreadNetBSD::SetStepping() {
 }
 
 std::string NativeThreadNetBSD::GetName() {
-  Log *log(ProcessPOSIXLog::GetLogIfAllCategoriesSet(POSIX_LOG_THREAD));
+  Log *log = GetLog(POSIXLog::Thread);
 
 #ifdef PT_LWPSTATUS
   struct ptrace_lwpstatus info = {};
@@ -225,7 +225,7 @@ lldb::StateType NativeThreadNetBSD::GetState() { return m_state; }
 
 bool NativeThreadNetBSD::GetStopReason(ThreadStopInfo &stop_info,
                                        std::string &description) {
-  Log *log(ProcessPOSIXLog::GetLogIfAllCategoriesSet(POSIX_LOG_THREAD));
+  Log *log = GetLog(POSIXLog::Thread);
   description.clear();
 
   switch (m_state) {

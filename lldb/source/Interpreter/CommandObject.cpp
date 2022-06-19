@@ -132,7 +132,7 @@ bool CommandObject::ParseOptions(Args &args, CommandReturnObject &result) {
       } else {
         // No error string, output the usage information into result
         options->GenerateOptionUsage(
-            result.GetErrorStream(), this,
+            result.GetErrorStream(), *this,
             GetCommandInterpreter().GetDebugger().GetTerminalWidth());
       }
     }
@@ -326,7 +326,7 @@ bool CommandObject::HelpTextContainsWord(llvm::StringRef search_word,
   if (!found_word && search_options && GetOptions() != nullptr) {
     StreamString usage_help;
     GetOptions()->GenerateOptionUsage(
-        usage_help, this,
+        usage_help, *this,
         GetCommandInterpreter().GetDebugger().GetTerminalWidth());
     if (!usage_help.Empty()) {
       llvm::StringRef usage_text = usage_help.GetString();
@@ -454,6 +454,9 @@ void CommandObject::GetFormattedCommandArguments(Stream &str,
         opt_set_mask == LLDB_OPT_SET_ALL
             ? m_arguments[i]
             : OptSetFiltered(opt_set_mask, m_arguments[i]);
+    // This argument is not associated with the current option set, so skip it.
+    if (arg_entry.empty())
+      continue;
     int num_alternatives = arg_entry.size();
 
     if ((num_alternatives == 2) && IsPairType(arg_entry[0].arg_repetition)) {
@@ -860,7 +863,7 @@ void CommandObject::GenerateHelpText(Stream &output_strm) {
   Options *options = GetOptions();
   if (options != nullptr) {
     options->GenerateOptionUsage(
-        output_strm, this,
+        output_strm, *this,
         GetCommandInterpreter().GetDebugger().GetTerminalWidth());
   }
   llvm::StringRef long_help = GetHelpLong();
@@ -1120,7 +1123,7 @@ CommandObject::ArgumentTableEntry CommandObject::g_arguments_data[] = {
     { eArgTypeWatchpointIDRange, "watchpt-id-list", CommandCompletions::eNoCompletion, { nullptr, false }, "For example, '1-3' or '1 to 3'." },
     { eArgTypeWatchType, "watch-type", CommandCompletions::eNoCompletion, { nullptr, false }, "Specify the type for a watchpoint." },
     { eArgRawInput, "raw-input", CommandCompletions::eNoCompletion, { nullptr, false }, "Free-form text passed to a command without prior interpretation, allowing spaces without requiring quotes.  To pass arguments and free form text put two dashes ' -- ' between the last argument and any raw input." },
-    { eArgTypeCommand, "command", CommandCompletions::eNoCompletion, { nullptr, false }, "An LLDB Command line command." },
+    { eArgTypeCommand, "command", CommandCompletions::eNoCompletion, { nullptr, false }, "An LLDB Command line command element." },
     { eArgTypeColumnNum, "column", CommandCompletions::eNoCompletion, { nullptr, false }, "Column number in a source file." },
     { eArgTypeModuleUUID, "module-uuid", CommandCompletions::eModuleUUIDCompletion, { nullptr, false }, "A module UUID value." },
     { eArgTypeSaveCoreStyle, "corefile-style", CommandCompletions::eNoCompletion, { nullptr, false }, "The type of corefile that lldb will try to create, dependant on this target's capabilities." }

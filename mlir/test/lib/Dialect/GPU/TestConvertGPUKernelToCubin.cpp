@@ -6,8 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir/Dialect/GPU/Passes.h"
-
+#include "mlir/Dialect/GPU/Transforms/Passes.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Target/LLVMIR/Dialect/NVVM/NVVMToLLVMIRTranslation.h"
 #include "mlir/Target/LLVMIR/Export.h"
@@ -20,6 +19,8 @@ namespace {
 class TestSerializeToCubinPass
     : public PassWrapper<TestSerializeToCubinPass, gpu::SerializeToBlobPass> {
 public:
+  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(TestSerializeToCubinPass)
+
   StringRef getArgument() const final { return "test-gpu-to-cubin"; }
   StringRef getDescription() const final {
     return "Lower GPU kernel function to CUBIN binary annotations";

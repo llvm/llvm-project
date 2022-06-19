@@ -1,30 +1,37 @@
 // REQUIRES: amdgpu-registered-target
-// RUN: %clang_cc1 -include __clang_hip_runtime_wrapper.h \
+// RUN: %clang_cc1 -no-opaque-pointers -include __clang_hip_runtime_wrapper.h \
 // RUN:   -internal-isystem %S/../../lib/Headers/cuda_wrappers \
 // RUN:   -internal-isystem %S/Inputs/include \
 // RUN:   -triple amdgcn-amd-amdhsa -aux-triple x86_64-unknown-unknown \
 // RUN:   -target-cpu gfx906 -emit-llvm %s -fcuda-is-device -o - \
-// RUN:   -D__HIPCC_RTC__ | FileCheck %s
-// RUN: %clang_cc1 -include __clang_hip_runtime_wrapper.h \
+// RUN:   -D__HIPCC_RTC__ | FileCheck -check-prefixes=CHECK,NOMALLOC %s
+// RUN: %clang_cc1 -no-opaque-pointers -include __clang_hip_runtime_wrapper.h \
 // RUN:   -internal-isystem %S/../../lib/Headers/cuda_wrappers \
 // RUN:   -internal-isystem %S/Inputs/include \
 // RUN:   -include cmath \
 // RUN:   -triple amdgcn-amd-amdhsa -aux-triple x86_64-unknown-unknown \
 // RUN:   -target-cpu gfx906 -emit-llvm %s -fcuda-is-device -o - \
 // RUN:   -D__HIPCC_RTC__ | FileCheck %s  -check-prefixes=AMD_BOOL_RETURN
-// RUN: %clang_cc1 -include __clang_hip_runtime_wrapper.h \
+// RUN: %clang_cc1 -no-opaque-pointers -include __clang_hip_runtime_wrapper.h \
 // RUN:   -internal-isystem %S/../../lib/Headers/cuda_wrappers \
 // RUN:   -internal-isystem %S/Inputs/include \
 // RUN:   -include cmath \
 // RUN:   -triple amdgcn-amd-amdhsa -aux-triple x86_64-unknown-unknown \
 // RUN:   -target-cpu gfx906 -emit-llvm %s -fcuda-is-device -o - \
 // RUN:   -D__HIPCC_RTC__ -DUSE_ISNAN_WITH_INT_RETURN | FileCheck %s -check-prefixes=AMD_INT_RETURN
-// RUN: %clang_cc1 -include __clang_hip_runtime_wrapper.h \
+// RUN: %clang_cc1 -no-opaque-pointers -include __clang_hip_runtime_wrapper.h \
 // RUN:   -internal-isystem %S/../../lib/Headers/cuda_wrappers \
 // RUN:   -internal-isystem %S/Inputs/include \
 // RUN:   -triple amdgcn-amd-amdhsa -aux-triple x86_64-unknown-unknown \
 // RUN:   -target-cpu gfx906 -emit-llvm %s -fcuda-is-device -o - \
 // RUN:   -D__HIPCC_RTC__ -std=c++14 | FileCheck -check-prefixes=CHECK,CXX14 %s
+// RUN: %clang_cc1 -no-opaque-pointers -include __clang_hip_runtime_wrapper.h \
+// RUN:   -internal-isystem %S/../../lib/Headers/cuda_wrappers \
+// RUN:   -internal-isystem %S/Inputs/include \
+// RUN:   -triple amdgcn-amd-amdhsa -aux-triple x86_64-unknown-unknown \
+// RUN:   -target-cpu gfx906 -emit-llvm %s -fcuda-is-device -o - \
+// RUN:   -DHIP_VERSION_MAJOR=4 -DHIP_VERSION_MINOR=5 \
+// RUN:   -D__HIPCC_RTC__ | FileCheck -check-prefixes=CHECK,MALLOC %s
 
 // expected-no-diagnostics
 
@@ -120,14 +127,18 @@ __device__ double test_isnan() {
 #include <cstdlib>
 // CHECK-LABEL: define{{.*}}@_Z11test_malloc
 // CHECK: call {{.*}}i8* @malloc(i64
-// CHECK: define weak {{.*}}i8* @malloc(i64
+// CHECK-LABEL: define weak {{.*}}i8* @malloc(i64
+// MALLOC:  call i64 @__ockl_dm_alloc
+// NOMALLOC:  call void @llvm.trap
 __device__ void test_malloc(void *a) {
   a = malloc(42);
 }
 
 // CHECK-LABEL: define{{.*}}@_Z9test_free
-// CHECK: call {{.*}}i8* @free(i8*
-// CHECK: define weak {{.*}}i8* @free(i8*
+// CHECK: call {{.*}}void @free(i8*
+// CHECK-LABEL: define weak {{.*}}void @free(i8*
+// MALLOC:  call void @__ockl_dm_dealloc
+// NOMALLOC: call void @llvm.trap
 __device__ void test_free(void *a) {
   free(a);
 }

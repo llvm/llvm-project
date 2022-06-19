@@ -13,16 +13,11 @@
 
 #cmakedefine01 LLDB_HAVE_EL_RFUNC_T
 
-
-#cmakedefine01 HAVE_SYS_TYPES_H
-
 #cmakedefine01 HAVE_SYS_EVENT_H
 
 #cmakedefine01 HAVE_PPOLL
 
 #cmakedefine01 HAVE_PTSNAME_R
-
-#cmakedefine01 HAVE_SIGACTION
 
 #cmakedefine01 HAVE_PROCESS_VM_READV
 
@@ -50,10 +45,14 @@
 
 #cmakedefine01 LLDB_ENABLE_PYTHON
 
+#cmakedefine01 LLDB_ENABLE_FBSDVMCORE
+
 #cmakedefine01 LLDB_EMBED_PYTHON_HOME
 
 #cmakedefine LLDB_PYTHON_HOME R"(${LLDB_PYTHON_HOME})"
 
 #define LLDB_LIBDIR_SUFFIX "${LLVM_LIBDIR_SUFFIX}"
+
+#cmakedefine LLDB_GLOBAL_INIT_DIRECTORY R"(${LLDB_GLOBAL_INIT_DIRECTORY})"
 
 #endif // #ifndef LLDB_HOST_CONFIG_H

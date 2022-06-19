@@ -998,13 +998,26 @@ struct ComponentDecl {
       t;
 };
 
+// A %FILL component for a DEC STRUCTURE.  The name will be replaced
+// with a distinct compiler-generated name.
+struct FillDecl {
+  TUPLE_CLASS_BOILERPLATE(FillDecl);
+  std::tuple<Name, std::optional<ComponentArraySpec>, std::optional<CharLength>>
+      t;
+};
+
+struct ComponentOrFill {
+  UNION_CLASS_BOILERPLATE(ComponentOrFill);
+  std::variant<ComponentDecl, FillDecl> u;
+};
+
 // R737 data-component-def-stmt ->
 //        declaration-type-spec [[, component-attr-spec-list] ::]
 //        component-decl-list
 struct DataComponentDefStmt {
   TUPLE_CLASS_BOILERPLATE(DataComponentDefStmt);
   std::tuple<DeclarationTypeSpec, std::list<ComponentAttrSpec>,
-      std::list<ComponentDecl>>
+      std::list<ComponentOrFill>>
       t;
 };
 
@@ -3258,7 +3271,7 @@ struct Union {
 
 struct StructureStmt {
   TUPLE_CLASS_BOILERPLATE(StructureStmt);
-  std::tuple<Name, bool /*slashes*/, std::list<EntityDecl>> t;
+  std::tuple<std::optional<Name>, std::list<EntityDecl>> t;
 };
 
 struct StructureDef {
@@ -3295,7 +3308,7 @@ WRAPPER_CLASS(PauseStmt, std::optional<StopCode>);
 
 // 2.5 proc-bind-clause -> PROC_BIND (MASTER | CLOSE | SPREAD)
 struct OmpProcBindClause {
-  ENUM_CLASS(Type, Close, Master, Spread)
+  ENUM_CLASS(Type, Close, Master, Spread, Primary)
   WRAPPER_CLASS_BOILERPLATE(OmpProcBindClause, Type);
 };
 
@@ -3333,8 +3346,9 @@ struct OmpMapClause {
 // 2.15.5.2 defaultmap -> DEFAULTMAP (implicit-behavior[:variable-category])
 struct OmpDefaultmapClause {
   TUPLE_CLASS_BOILERPLATE(OmpDefaultmapClause);
-  ENUM_CLASS(ImplicitBehavior, Tofrom)
-  ENUM_CLASS(VariableCategory, Scalar)
+  ENUM_CLASS(
+      ImplicitBehavior, Alloc, To, From, Tofrom, Firstprivate, None, Default)
+  ENUM_CLASS(VariableCategory, Scalar, Aggregate, Allocatable, Pointer)
   std::tuple<ImplicitBehavior, std::optional<VariableCategory>> t;
 };
 
@@ -3420,6 +3434,13 @@ struct OmpReductionClause {
   std::tuple<OmpReductionOperator, OmpObjectList> t;
 };
 
+// OMP 5.0 2.19.5.6 in_reduction-clause -> IN_REDUCTION (reduction-identifier:
+//                                         variable-name-list)
+struct OmpInReductionClause {
+  TUPLE_CLASS_BOILERPLATE(OmpInReductionClause);
+  std::tuple<OmpReductionOperator, OmpObjectList> t;
+};
+
 // OMP 5.0 2.11.4 allocate-clause -> ALLOCATE ([allocator:] variable-name-list)
 struct OmpAllocateClause {
   TUPLE_CLASS_BOILERPLATE(OmpAllocateClause);
@@ -3502,7 +3523,15 @@ struct OmpEndSectionsDirective {
 // [!$omp section
 //    structured-block]
 // ...
-WRAPPER_CLASS(OmpSectionBlocks, std::list<Block>);
+struct OpenMPSectionConstruct {
+  WRAPPER_CLASS_BOILERPLATE(OpenMPSectionConstruct, Block);
+  CharBlock source;
+};
+
+// `OmpSectionBlocks` is a list of section constructs. The parser guarentees
+// that the `OpenMPConstruct` here always encapsulates an
+// `OpenMPSectionConstruct` and not any other OpenMP construct.
+WRAPPER_CLASS(OmpSectionBlocks, std::list<OpenMPConstruct>);
 
 struct OpenMPSectionsConstruct {
   TUPLE_CLASS_BOILERPLATE(OpenMPSectionsConstruct);
@@ -3594,7 +3623,7 @@ struct OpenMPDeclarativeConstruct {
 struct OmpCriticalDirective {
   TUPLE_CLASS_BOILERPLATE(OmpCriticalDirective);
   CharBlock source;
-  std::tuple<Verbatim, std::optional<Name>, std::optional<OmpClause>> t;
+  std::tuple<Verbatim, std::optional<Name>, OmpClauseList> t;
 };
 struct OmpEndCriticalDirective {
   TUPLE_CLASS_BOILERPLATE(OmpEndCriticalDirective);
@@ -3733,7 +3762,6 @@ struct OpenMPCancelConstruct {
   std::tuple<Verbatim, OmpCancelType, std::optional<If>> t;
 };
 
-
 // 2.17.8 flush -> FLUSH [memory-order-clause] [(variable-name-list)]
 struct OpenMPFlushConstruct {
   TUPLE_CLASS_BOILERPLATE(OpenMPFlushConstruct);
@@ -3804,9 +3832,9 @@ struct OpenMPLoopConstruct {
 struct OpenMPConstruct {
   UNION_CLASS_BOILERPLATE(OpenMPConstruct);
   std::variant<OpenMPStandaloneConstruct, OpenMPSectionsConstruct,
-      OpenMPLoopConstruct, OpenMPBlockConstruct, OpenMPAtomicConstruct,
-      OpenMPDeclarativeAllocate, OpenMPExecutableAllocate,
-      OpenMPCriticalConstruct>
+      OpenMPSectionConstruct, OpenMPLoopConstruct, OpenMPBlockConstruct,
+      OpenMPAtomicConstruct, OpenMPDeclarativeAllocate,
+      OpenMPExecutableAllocate, OpenMPCriticalConstruct>
       u;
 };
 

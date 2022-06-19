@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -polly-optree -analyze %s | FileCheck %s
+; RUN: opt %loadPolly -polly-print-optree -disable-output %s | FileCheck %s
 
 ; This used to loop infinitely because of UINT_MAX returned by ISL on out-of-quota.
 

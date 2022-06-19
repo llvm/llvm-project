@@ -198,9 +198,7 @@ define i16 @uabd16b_rdx(<16 x i8>* %a, <16 x i8>* %b) {
 ; CHECK-NEXT:    ldr q0, [x0]
 ; CHECK-NEXT:    ldr q1, [x1]
 ; CHECK-NEXT:    uabd.16b v0, v0, v1
-; CHECK-NEXT:    ushll.8h v1, v0, #0
-; CHECK-NEXT:    uaddw2.8h v0, v1, v0
-; CHECK-NEXT:    addv.8h h0, v0
+; CHECK-NEXT:    uaddlv.16b h0, v0
 ; CHECK-NEXT:    fmov w0, s0
 ; CHECK-NEXT:    ret
   %aload = load <16 x i8>, <16 x i8>* %a, align 1
@@ -261,9 +259,7 @@ define i32 @uabd8h_rdx(<8 x i16>* %a, <8 x i16>* %b) {
 ; CHECK-NEXT:    ldr q0, [x0]
 ; CHECK-NEXT:    ldr q1, [x1]
 ; CHECK-NEXT:    uabd.8h v0, v0, v1
-; CHECK-NEXT:    ushll.4s v1, v0, #0
-; CHECK-NEXT:    uaddw2.4s v0, v1, v0
-; CHECK-NEXT:    addv.4s s0, v0
+; CHECK-NEXT:    uaddlv.8h s0, v0
 ; CHECK-NEXT:    fmov w0, s0
 ; CHECK-NEXT:    ret
   %aload = load <8 x i16>, <8 x i16>* %a, align 1
@@ -282,9 +278,7 @@ define i32 @sabd8h_rdx(<8 x i16> %a, <8 x i16> %b) {
 ; CHECK-LABEL: sabd8h_rdx:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    sabd.8h v0, v0, v1
-; CHECK-NEXT:    ushll.4s v1, v0, #0
-; CHECK-NEXT:    uaddw2.4s v0, v1, v0
-; CHECK-NEXT:    addv.4s s0, v0
+; CHECK-NEXT:    uaddlv.8h s0, v0
 ; CHECK-NEXT:    fmov w0, s0
 ; CHECK-NEXT:    ret
   %aext = sext <8 x i16> %a to <8 x i32>
@@ -310,8 +304,8 @@ define i32 @uabdl4s_rdx_i32(<4 x i16> %a, <4 x i16> %b) {
 ; GISEL-NEXT:    movi.2d v2, #0000000000000000
 ; GISEL-NEXT:    usubl.4s v0, v0, v1
 ; GISEL-NEXT:    cmgt.4s v1, v2, v0
-; GISEL-NEXT:    shl.4s v1, v1, #31
 ; GISEL-NEXT:    neg.4s v2, v0
+; GISEL-NEXT:    shl.4s v1, v1, #31
 ; GISEL-NEXT:    sshr.4s v1, v1, #31
 ; GISEL-NEXT:    bit.16b v0, v2, v1
 ; GISEL-NEXT:    addv.4s s0, v0
@@ -338,9 +332,7 @@ define i64 @uabd4s_rdx(<4 x i32>* %a, <4 x i32>* %b, i32 %h) {
 ; CHECK-NEXT:    ldr q0, [x0]
 ; CHECK-NEXT:    ldr q1, [x1]
 ; CHECK-NEXT:    uabd.4s v0, v0, v1
-; CHECK-NEXT:    ushll.2d v1, v0, #0
-; CHECK-NEXT:    uaddw2.2d v0, v1, v0
-; CHECK-NEXT:    addp.2d d0, v0
+; CHECK-NEXT:    uaddlv.4s d0, v0
 ; CHECK-NEXT:    fmov x0, d0
 ; CHECK-NEXT:    ret
   %aload = load <4 x i32>, <4 x i32>* %a, align 1
@@ -359,9 +351,7 @@ define i64 @sabd4s_rdx(<4 x i32> %a, <4 x i32> %b) {
 ; CHECK-LABEL: sabd4s_rdx:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    sabd.4s v0, v0, v1
-; CHECK-NEXT:    ushll.2d v1, v0, #0
-; CHECK-NEXT:    uaddw2.2d v0, v1, v0
-; CHECK-NEXT:    addp.2d d0, v0
+; CHECK-NEXT:    uaddlv.4s d0, v0
 ; CHECK-NEXT:    fmov x0, d0
 ; CHECK-NEXT:    ret
   %aext = sext <4 x i32> %a to <4 x i64>
@@ -387,8 +377,8 @@ define i64 @uabdl2d_rdx_i64(<2 x i32> %a, <2 x i32> %b) {
 ; GISEL-NEXT:    movi.2d v2, #0000000000000000
 ; GISEL-NEXT:    usubl.2d v0, v0, v1
 ; GISEL-NEXT:    cmgt.2d v1, v2, v0
-; GISEL-NEXT:    shl.2d v1, v1, #63
 ; GISEL-NEXT:    neg.2d v2, v0
+; GISEL-NEXT:    shl.2d v1, v1, #63
 ; GISEL-NEXT:    sshr.2d v1, v1, #63
 ; GISEL-NEXT:    bit.16b v0, v2, v1
 ; GISEL-NEXT:    addp.2d d0, v0
@@ -908,13 +898,21 @@ declare i64 @llvm.aarch64.neon.abs.i64(i64) nounwind readnone
 
 ; FALLBACK-NOT: remark:{{.*}} sabal8h
 define <8 x i16> @sabal8h(<8 x i8>* %A, <8 x i8>* %B,  <8 x i16>* %C) nounwind {
-; CHECK-LABEL: sabal8h:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldr d1, [x0]
-; CHECK-NEXT:    ldr d2, [x1]
-; CHECK-NEXT:    ldr q0, [x2]
-; CHECK-NEXT:    sabal.8h v0, v1, v2
-; CHECK-NEXT:    ret
+; DAG-LABEL: sabal8h:
+; DAG:       // %bb.0:
+; DAG-NEXT:    ldr d1, [x1]
+; DAG-NEXT:    ldr d2, [x0]
+; DAG-NEXT:    ldr q0, [x2]
+; DAG-NEXT:    sabal.8h v0, v2, v1
+; DAG-NEXT:    ret
+;
+; GISEL-LABEL: sabal8h:
+; GISEL:       // %bb.0:
+; GISEL-NEXT:    ldr d1, [x0]
+; GISEL-NEXT:    ldr d2, [x1]
+; GISEL-NEXT:    ldr q0, [x2]
+; GISEL-NEXT:    sabal.8h v0, v1, v2
+; GISEL-NEXT:    ret
   %tmp1 = load <8 x i8>, <8 x i8>* %A
   %tmp2 = load <8 x i8>, <8 x i8>* %B
   %tmp3 = load <8 x i16>, <8 x i16>* %C
@@ -926,13 +924,21 @@ define <8 x i16> @sabal8h(<8 x i8>* %A, <8 x i8>* %B,  <8 x i16>* %C) nounwind {
 
 ; FALLBACK-NOT: remark:{{.*}} sabal4s
 define <4 x i32> @sabal4s(<4 x i16>* %A, <4 x i16>* %B, <4 x i32>* %C) nounwind {
-; CHECK-LABEL: sabal4s:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldr d1, [x0]
-; CHECK-NEXT:    ldr d2, [x1]
-; CHECK-NEXT:    ldr q0, [x2]
-; CHECK-NEXT:    sabal.4s v0, v1, v2
-; CHECK-NEXT:    ret
+; DAG-LABEL: sabal4s:
+; DAG:       // %bb.0:
+; DAG-NEXT:    ldr d1, [x1]
+; DAG-NEXT:    ldr d2, [x0]
+; DAG-NEXT:    ldr q0, [x2]
+; DAG-NEXT:    sabal.4s v0, v2, v1
+; DAG-NEXT:    ret
+;
+; GISEL-LABEL: sabal4s:
+; GISEL:       // %bb.0:
+; GISEL-NEXT:    ldr d1, [x0]
+; GISEL-NEXT:    ldr d2, [x1]
+; GISEL-NEXT:    ldr q0, [x2]
+; GISEL-NEXT:    sabal.4s v0, v1, v2
+; GISEL-NEXT:    ret
   %tmp1 = load <4 x i16>, <4 x i16>* %A
   %tmp2 = load <4 x i16>, <4 x i16>* %B
   %tmp3 = load <4 x i32>, <4 x i32>* %C
@@ -944,13 +950,21 @@ define <4 x i32> @sabal4s(<4 x i16>* %A, <4 x i16>* %B, <4 x i32>* %C) nounwind 
 
 ; FALLBACK-NOT: remark:{{.*}} sabal2d
 define <2 x i64> @sabal2d(<2 x i32>* %A, <2 x i32>* %B, <2 x i64>* %C) nounwind {
-; CHECK-LABEL: sabal2d:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldr d1, [x0]
-; CHECK-NEXT:    ldr d2, [x1]
-; CHECK-NEXT:    ldr q0, [x2]
-; CHECK-NEXT:    sabal.2d v0, v1, v2
-; CHECK-NEXT:    ret
+; DAG-LABEL: sabal2d:
+; DAG:       // %bb.0:
+; DAG-NEXT:    ldr d1, [x1]
+; DAG-NEXT:    ldr d2, [x0]
+; DAG-NEXT:    ldr q0, [x2]
+; DAG-NEXT:    sabal.2d v0, v2, v1
+; DAG-NEXT:    ret
+;
+; GISEL-LABEL: sabal2d:
+; GISEL:       // %bb.0:
+; GISEL-NEXT:    ldr d1, [x0]
+; GISEL-NEXT:    ldr d2, [x1]
+; GISEL-NEXT:    ldr q0, [x2]
+; GISEL-NEXT:    sabal.2d v0, v1, v2
+; GISEL-NEXT:    ret
   %tmp1 = load <2 x i32>, <2 x i32>* %A
   %tmp2 = load <2 x i32>, <2 x i32>* %B
   %tmp3 = load <2 x i64>, <2 x i64>* %C
@@ -1020,13 +1034,21 @@ define <2 x i64> @sabal2_2d(<4 x i32>* %A, <4 x i32>* %B, <2 x i64>* %C) nounwin
 
 ; FALLBACK-NOT: remark:{{.*}} uabal8h
 define <8 x i16> @uabal8h(<8 x i8>* %A, <8 x i8>* %B,  <8 x i16>* %C) nounwind {
-; CHECK-LABEL: uabal8h:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldr d1, [x0]
-; CHECK-NEXT:    ldr d2, [x1]
-; CHECK-NEXT:    ldr q0, [x2]
-; CHECK-NEXT:    uabal.8h v0, v1, v2
-; CHECK-NEXT:    ret
+; DAG-LABEL: uabal8h:
+; DAG:       // %bb.0:
+; DAG-NEXT:    ldr d1, [x1]
+; DAG-NEXT:    ldr d2, [x0]
+; DAG-NEXT:    ldr q0, [x2]
+; DAG-NEXT:    uabal.8h v0, v2, v1
+; DAG-NEXT:    ret
+;
+; GISEL-LABEL: uabal8h:
+; GISEL:       // %bb.0:
+; GISEL-NEXT:    ldr d1, [x0]
+; GISEL-NEXT:    ldr d2, [x1]
+; GISEL-NEXT:    ldr q0, [x2]
+; GISEL-NEXT:    uabal.8h v0, v1, v2
+; GISEL-NEXT:    ret
   %tmp1 = load <8 x i8>, <8 x i8>* %A
   %tmp2 = load <8 x i8>, <8 x i8>* %B
   %tmp3 = load <8 x i16>, <8 x i16>* %C
@@ -1038,13 +1060,21 @@ define <8 x i16> @uabal8h(<8 x i8>* %A, <8 x i8>* %B,  <8 x i16>* %C) nounwind {
 
 ; FALLBACK-NOT: remark:{{.*}} uabal8s
 define <4 x i32> @uabal4s(<4 x i16>* %A, <4 x i16>* %B, <4 x i32>* %C) nounwind {
-; CHECK-LABEL: uabal4s:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldr d1, [x0]
-; CHECK-NEXT:    ldr d2, [x1]
-; CHECK-NEXT:    ldr q0, [x2]
-; CHECK-NEXT:    uabal.4s v0, v1, v2
-; CHECK-NEXT:    ret
+; DAG-LABEL: uabal4s:
+; DAG:       // %bb.0:
+; DAG-NEXT:    ldr d1, [x1]
+; DAG-NEXT:    ldr d2, [x0]
+; DAG-NEXT:    ldr q0, [x2]
+; DAG-NEXT:    uabal.4s v0, v2, v1
+; DAG-NEXT:    ret
+;
+; GISEL-LABEL: uabal4s:
+; GISEL:       // %bb.0:
+; GISEL-NEXT:    ldr d1, [x0]
+; GISEL-NEXT:    ldr d2, [x1]
+; GISEL-NEXT:    ldr q0, [x2]
+; GISEL-NEXT:    uabal.4s v0, v1, v2
+; GISEL-NEXT:    ret
   %tmp1 = load <4 x i16>, <4 x i16>* %A
   %tmp2 = load <4 x i16>, <4 x i16>* %B
   %tmp3 = load <4 x i32>, <4 x i32>* %C
@@ -1056,13 +1086,21 @@ define <4 x i32> @uabal4s(<4 x i16>* %A, <4 x i16>* %B, <4 x i32>* %C) nounwind 
 
 ; FALLBACK-NOT: remark:{{.*}} uabal2d
 define <2 x i64> @uabal2d(<2 x i32>* %A, <2 x i32>* %B, <2 x i64>* %C) nounwind {
-; CHECK-LABEL: uabal2d:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldr d1, [x0]
-; CHECK-NEXT:    ldr d2, [x1]
-; CHECK-NEXT:    ldr q0, [x2]
-; CHECK-NEXT:    uabal.2d v0, v1, v2
-; CHECK-NEXT:    ret
+; DAG-LABEL: uabal2d:
+; DAG:       // %bb.0:
+; DAG-NEXT:    ldr d1, [x1]
+; DAG-NEXT:    ldr d2, [x0]
+; DAG-NEXT:    ldr q0, [x2]
+; DAG-NEXT:    uabal.2d v0, v2, v1
+; DAG-NEXT:    ret
+;
+; GISEL-LABEL: uabal2d:
+; GISEL:       // %bb.0:
+; GISEL-NEXT:    ldr d1, [x0]
+; GISEL-NEXT:    ldr d2, [x1]
+; GISEL-NEXT:    ldr q0, [x2]
+; GISEL-NEXT:    uabal.2d v0, v1, v2
+; GISEL-NEXT:    ret
   %tmp1 = load <2 x i32>, <2 x i32>* %A
   %tmp2 = load <2 x i32>, <2 x i32>* %B
   %tmp3 = load <2 x i64>, <2 x i64>* %C
@@ -1130,13 +1168,21 @@ define <2 x i64> @uabal2_2d(<4 x i32>* %A, <4 x i32>* %B, <2 x i64>* %C) nounwin
 }
 
 define <8 x i8> @saba_8b(<8 x i8>* %A, <8 x i8>* %B, <8 x i8>* %C) nounwind {
-; CHECK-LABEL: saba_8b:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldr d1, [x0]
-; CHECK-NEXT:    ldr d2, [x1]
-; CHECK-NEXT:    ldr d0, [x2]
-; CHECK-NEXT:    saba.8b v0, v1, v2
-; CHECK-NEXT:    ret
+; DAG-LABEL: saba_8b:
+; DAG:       // %bb.0:
+; DAG-NEXT:    ldr d1, [x1]
+; DAG-NEXT:    ldr d2, [x0]
+; DAG-NEXT:    ldr d0, [x2]
+; DAG-NEXT:    saba.8b v0, v2, v1
+; DAG-NEXT:    ret
+;
+; GISEL-LABEL: saba_8b:
+; GISEL:       // %bb.0:
+; GISEL-NEXT:    ldr d1, [x0]
+; GISEL-NEXT:    ldr d2, [x1]
+; GISEL-NEXT:    ldr d0, [x2]
+; GISEL-NEXT:    saba.8b v0, v1, v2
+; GISEL-NEXT:    ret
   %tmp1 = load <8 x i8>, <8 x i8>* %A
   %tmp2 = load <8 x i8>, <8 x i8>* %B
   %tmp3 = call <8 x i8> @llvm.aarch64.neon.sabd.v8i8(<8 x i8> %tmp1, <8 x i8> %tmp2)
@@ -1146,13 +1192,21 @@ define <8 x i8> @saba_8b(<8 x i8>* %A, <8 x i8>* %B, <8 x i8>* %C) nounwind {
 }
 
 define <16 x i8> @saba_16b(<16 x i8>* %A, <16 x i8>* %B, <16 x i8>* %C) nounwind {
-; CHECK-LABEL: saba_16b:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldr q1, [x0]
-; CHECK-NEXT:    ldr q2, [x1]
-; CHECK-NEXT:    ldr q0, [x2]
-; CHECK-NEXT:    saba.16b v0, v1, v2
-; CHECK-NEXT:    ret
+; DAG-LABEL: saba_16b:
+; DAG:       // %bb.0:
+; DAG-NEXT:    ldr q1, [x1]
+; DAG-NEXT:    ldr q2, [x0]
+; DAG-NEXT:    ldr q0, [x2]
+; DAG-NEXT:    saba.16b v0, v2, v1
+; DAG-NEXT:    ret
+;
+; GISEL-LABEL: saba_16b:
+; GISEL:       // %bb.0:
+; GISEL-NEXT:    ldr q1, [x0]
+; GISEL-NEXT:    ldr q2, [x1]
+; GISEL-NEXT:    ldr q0, [x2]
+; GISEL-NEXT:    saba.16b v0, v1, v2
+; GISEL-NEXT:    ret
   %tmp1 = load <16 x i8>, <16 x i8>* %A
   %tmp2 = load <16 x i8>, <16 x i8>* %B
   %tmp3 = call <16 x i8> @llvm.aarch64.neon.sabd.v16i8(<16 x i8> %tmp1, <16 x i8> %tmp2)
@@ -1162,13 +1216,21 @@ define <16 x i8> @saba_16b(<16 x i8>* %A, <16 x i8>* %B, <16 x i8>* %C) nounwind
 }
 
 define <4 x i16> @saba_4h(<4 x i16>* %A, <4 x i16>* %B, <4 x i16>* %C) nounwind {
-; CHECK-LABEL: saba_4h:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldr d1, [x0]
-; CHECK-NEXT:    ldr d2, [x1]
-; CHECK-NEXT:    ldr d0, [x2]
-; CHECK-NEXT:    saba.4h v0, v1, v2
-; CHECK-NEXT:    ret
+; DAG-LABEL: saba_4h:
+; DAG:       // %bb.0:
+; DAG-NEXT:    ldr d1, [x1]
+; DAG-NEXT:    ldr d2, [x0]
+; DAG-NEXT:    ldr d0, [x2]
+; DAG-NEXT:    saba.4h v0, v2, v1
+; DAG-NEXT:    ret
+;
+; GISEL-LABEL: saba_4h:
+; GISEL:       // %bb.0:
+; GISEL-NEXT:    ldr d1, [x0]
+; GISEL-NEXT:    ldr d2, [x1]
+; GISEL-NEXT:    ldr d0, [x2]
+; GISEL-NEXT:    saba.4h v0, v1, v2
+; GISEL-NEXT:    ret
   %tmp1 = load <4 x i16>, <4 x i16>* %A
   %tmp2 = load <4 x i16>, <4 x i16>* %B
   %tmp3 = call <4 x i16> @llvm.aarch64.neon.sabd.v4i16(<4 x i16> %tmp1, <4 x i16> %tmp2)
@@ -1178,13 +1240,21 @@ define <4 x i16> @saba_4h(<4 x i16>* %A, <4 x i16>* %B, <4 x i16>* %C) nounwind 
 }
 
 define <8 x i16> @saba_8h(<8 x i16>* %A, <8 x i16>* %B, <8 x i16>* %C) nounwind {
-; CHECK-LABEL: saba_8h:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldr q1, [x0]
-; CHECK-NEXT:    ldr q2, [x1]
-; CHECK-NEXT:    ldr q0, [x2]
-; CHECK-NEXT:    saba.8h v0, v1, v2
-; CHECK-NEXT:    ret
+; DAG-LABEL: saba_8h:
+; DAG:       // %bb.0:
+; DAG-NEXT:    ldr q1, [x1]
+; DAG-NEXT:    ldr q2, [x0]
+; DAG-NEXT:    ldr q0, [x2]
+; DAG-NEXT:    saba.8h v0, v2, v1
+; DAG-NEXT:    ret
+;
+; GISEL-LABEL: saba_8h:
+; GISEL:       // %bb.0:
+; GISEL-NEXT:    ldr q1, [x0]
+; GISEL-NEXT:    ldr q2, [x1]
+; GISEL-NEXT:    ldr q0, [x2]
+; GISEL-NEXT:    saba.8h v0, v1, v2
+; GISEL-NEXT:    ret
   %tmp1 = load <8 x i16>, <8 x i16>* %A
   %tmp2 = load <8 x i16>, <8 x i16>* %B
   %tmp3 = call <8 x i16> @llvm.aarch64.neon.sabd.v8i16(<8 x i16> %tmp1, <8 x i16> %tmp2)
@@ -1194,13 +1264,21 @@ define <8 x i16> @saba_8h(<8 x i16>* %A, <8 x i16>* %B, <8 x i16>* %C) nounwind 
 }
 
 define <2 x i32> @saba_2s(<2 x i32>* %A, <2 x i32>* %B, <2 x i32>* %C) nounwind {
-; CHECK-LABEL: saba_2s:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldr d1, [x0]
-; CHECK-NEXT:    ldr d2, [x1]
-; CHECK-NEXT:    ldr d0, [x2]
-; CHECK-NEXT:    saba.2s v0, v1, v2
-; CHECK-NEXT:    ret
+; DAG-LABEL: saba_2s:
+; DAG:       // %bb.0:
+; DAG-NEXT:    ldr d1, [x1]
+; DAG-NEXT:    ldr d2, [x0]
+; DAG-NEXT:    ldr d0, [x2]
+; DAG-NEXT:    saba.2s v0, v2, v1
+; DAG-NEXT:    ret
+;
+; GISEL-LABEL: saba_2s:
+; GISEL:       // %bb.0:
+; GISEL-NEXT:    ldr d1, [x0]
+; GISEL-NEXT:    ldr d2, [x1]
+; GISEL-NEXT:    ldr d0, [x2]
+; GISEL-NEXT:    saba.2s v0, v1, v2
+; GISEL-NEXT:    ret
   %tmp1 = load <2 x i32>, <2 x i32>* %A
   %tmp2 = load <2 x i32>, <2 x i32>* %B
   %tmp3 = call <2 x i32> @llvm.aarch64.neon.sabd.v2i32(<2 x i32> %tmp1, <2 x i32> %tmp2)
@@ -1210,13 +1288,21 @@ define <2 x i32> @saba_2s(<2 x i32>* %A, <2 x i32>* %B, <2 x i32>* %C) nounwind 
 }
 
 define <4 x i32> @saba_4s(<4 x i32>* %A, <4 x i32>* %B, <4 x i32>* %C) nounwind {
-; CHECK-LABEL: saba_4s:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldr q1, [x0]
-; CHECK-NEXT:    ldr q2, [x1]
-; CHECK-NEXT:    ldr q0, [x2]
-; CHECK-NEXT:    saba.4s v0, v1, v2
-; CHECK-NEXT:    ret
+; DAG-LABEL: saba_4s:
+; DAG:       // %bb.0:
+; DAG-NEXT:    ldr q1, [x1]
+; DAG-NEXT:    ldr q2, [x0]
+; DAG-NEXT:    ldr q0, [x2]
+; DAG-NEXT:    saba.4s v0, v2, v1
+; DAG-NEXT:    ret
+;
+; GISEL-LABEL: saba_4s:
+; GISEL:       // %bb.0:
+; GISEL-NEXT:    ldr q1, [x0]
+; GISEL-NEXT:    ldr q2, [x1]
+; GISEL-NEXT:    ldr q0, [x2]
+; GISEL-NEXT:    saba.4s v0, v1, v2
+; GISEL-NEXT:    ret
   %tmp1 = load <4 x i32>, <4 x i32>* %A
   %tmp2 = load <4 x i32>, <4 x i32>* %B
   %tmp3 = call <4 x i32> @llvm.aarch64.neon.sabd.v4i32(<4 x i32> %tmp1, <4 x i32> %tmp2)
@@ -1226,13 +1312,21 @@ define <4 x i32> @saba_4s(<4 x i32>* %A, <4 x i32>* %B, <4 x i32>* %C) nounwind 
 }
 
 define <8 x i8> @uaba_8b(<8 x i8>* %A, <8 x i8>* %B, <8 x i8>* %C) nounwind {
-; CHECK-LABEL: uaba_8b:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldr d1, [x0]
-; CHECK-NEXT:    ldr d2, [x1]
-; CHECK-NEXT:    ldr d0, [x2]
-; CHECK-NEXT:    uaba.8b v0, v1, v2
-; CHECK-NEXT:    ret
+; DAG-LABEL: uaba_8b:
+; DAG:       // %bb.0:
+; DAG-NEXT:    ldr d1, [x1]
+; DAG-NEXT:    ldr d2, [x0]
+; DAG-NEXT:    ldr d0, [x2]
+; DAG-NEXT:    uaba.8b v0, v2, v1
+; DAG-NEXT:    ret
+;
+; GISEL-LABEL: uaba_8b:
+; GISEL:       // %bb.0:
+; GISEL-NEXT:    ldr d1, [x0]
+; GISEL-NEXT:    ldr d2, [x1]
+; GISEL-NEXT:    ldr d0, [x2]
+; GISEL-NEXT:    uaba.8b v0, v1, v2
+; GISEL-NEXT:    ret
   %tmp1 = load <8 x i8>, <8 x i8>* %A
   %tmp2 = load <8 x i8>, <8 x i8>* %B
   %tmp3 = call <8 x i8> @llvm.aarch64.neon.uabd.v8i8(<8 x i8> %tmp1, <8 x i8> %tmp2)
@@ -1242,13 +1336,21 @@ define <8 x i8> @uaba_8b(<8 x i8>* %A, <8 x i8>* %B, <8 x i8>* %C) nounwind {
 }
 
 define <16 x i8> @uaba_16b(<16 x i8>* %A, <16 x i8>* %B, <16 x i8>* %C) nounwind {
-; CHECK-LABEL: uaba_16b:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldr q1, [x0]
-; CHECK-NEXT:    ldr q2, [x1]
-; CHECK-NEXT:    ldr q0, [x2]
-; CHECK-NEXT:    uaba.16b v0, v1, v2
-; CHECK-NEXT:    ret
+; DAG-LABEL: uaba_16b:
+; DAG:       // %bb.0:
+; DAG-NEXT:    ldr q1, [x1]
+; DAG-NEXT:    ldr q2, [x0]
+; DAG-NEXT:    ldr q0, [x2]
+; DAG-NEXT:    uaba.16b v0, v2, v1
+; DAG-NEXT:    ret
+;
+; GISEL-LABEL: uaba_16b:
+; GISEL:       // %bb.0:
+; GISEL-NEXT:    ldr q1, [x0]
+; GISEL-NEXT:    ldr q2, [x1]
+; GISEL-NEXT:    ldr q0, [x2]
+; GISEL-NEXT:    uaba.16b v0, v1, v2
+; GISEL-NEXT:    ret
   %tmp1 = load <16 x i8>, <16 x i8>* %A
   %tmp2 = load <16 x i8>, <16 x i8>* %B
   %tmp3 = call <16 x i8> @llvm.aarch64.neon.uabd.v16i8(<16 x i8> %tmp1, <16 x i8> %tmp2)
@@ -1258,13 +1360,21 @@ define <16 x i8> @uaba_16b(<16 x i8>* %A, <16 x i8>* %B, <16 x i8>* %C) nounwind
 }
 
 define <4 x i16> @uaba_4h(<4 x i16>* %A, <4 x i16>* %B, <4 x i16>* %C) nounwind {
-; CHECK-LABEL: uaba_4h:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldr d1, [x0]
-; CHECK-NEXT:    ldr d2, [x1]
-; CHECK-NEXT:    ldr d0, [x2]
-; CHECK-NEXT:    uaba.4h v0, v1, v2
-; CHECK-NEXT:    ret
+; DAG-LABEL: uaba_4h:
+; DAG:       // %bb.0:
+; DAG-NEXT:    ldr d1, [x1]
+; DAG-NEXT:    ldr d2, [x0]
+; DAG-NEXT:    ldr d0, [x2]
+; DAG-NEXT:    uaba.4h v0, v2, v1
+; DAG-NEXT:    ret
+;
+; GISEL-LABEL: uaba_4h:
+; GISEL:       // %bb.0:
+; GISEL-NEXT:    ldr d1, [x0]
+; GISEL-NEXT:    ldr d2, [x1]
+; GISEL-NEXT:    ldr d0, [x2]
+; GISEL-NEXT:    uaba.4h v0, v1, v2
+; GISEL-NEXT:    ret
   %tmp1 = load <4 x i16>, <4 x i16>* %A
   %tmp2 = load <4 x i16>, <4 x i16>* %B
   %tmp3 = call <4 x i16> @llvm.aarch64.neon.uabd.v4i16(<4 x i16> %tmp1, <4 x i16> %tmp2)
@@ -1274,13 +1384,21 @@ define <4 x i16> @uaba_4h(<4 x i16>* %A, <4 x i16>* %B, <4 x i16>* %C) nounwind 
 }
 
 define <8 x i16> @uaba_8h(<8 x i16>* %A, <8 x i16>* %B, <8 x i16>* %C) nounwind {
-; CHECK-LABEL: uaba_8h:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldr q1, [x0]
-; CHECK-NEXT:    ldr q2, [x1]
-; CHECK-NEXT:    ldr q0, [x2]
-; CHECK-NEXT:    uaba.8h v0, v1, v2
-; CHECK-NEXT:    ret
+; DAG-LABEL: uaba_8h:
+; DAG:       // %bb.0:
+; DAG-NEXT:    ldr q1, [x1]
+; DAG-NEXT:    ldr q2, [x0]
+; DAG-NEXT:    ldr q0, [x2]
+; DAG-NEXT:    uaba.8h v0, v2, v1
+; DAG-NEXT:    ret
+;
+; GISEL-LABEL: uaba_8h:
+; GISEL:       // %bb.0:
+; GISEL-NEXT:    ldr q1, [x0]
+; GISEL-NEXT:    ldr q2, [x1]
+; GISEL-NEXT:    ldr q0, [x2]
+; GISEL-NEXT:    uaba.8h v0, v1, v2
+; GISEL-NEXT:    ret
   %tmp1 = load <8 x i16>, <8 x i16>* %A
   %tmp2 = load <8 x i16>, <8 x i16>* %B
   %tmp3 = call <8 x i16> @llvm.aarch64.neon.uabd.v8i16(<8 x i16> %tmp1, <8 x i16> %tmp2)
@@ -1290,13 +1408,21 @@ define <8 x i16> @uaba_8h(<8 x i16>* %A, <8 x i16>* %B, <8 x i16>* %C) nounwind 
 }
 
 define <2 x i32> @uaba_2s(<2 x i32>* %A, <2 x i32>* %B, <2 x i32>* %C) nounwind {
-; CHECK-LABEL: uaba_2s:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldr d1, [x0]
-; CHECK-NEXT:    ldr d2, [x1]
-; CHECK-NEXT:    ldr d0, [x2]
-; CHECK-NEXT:    uaba.2s v0, v1, v2
-; CHECK-NEXT:    ret
+; DAG-LABEL: uaba_2s:
+; DAG:       // %bb.0:
+; DAG-NEXT:    ldr d1, [x1]
+; DAG-NEXT:    ldr d2, [x0]
+; DAG-NEXT:    ldr d0, [x2]
+; DAG-NEXT:    uaba.2s v0, v2, v1
+; DAG-NEXT:    ret
+;
+; GISEL-LABEL: uaba_2s:
+; GISEL:       // %bb.0:
+; GISEL-NEXT:    ldr d1, [x0]
+; GISEL-NEXT:    ldr d2, [x1]
+; GISEL-NEXT:    ldr d0, [x2]
+; GISEL-NEXT:    uaba.2s v0, v1, v2
+; GISEL-NEXT:    ret
   %tmp1 = load <2 x i32>, <2 x i32>* %A
   %tmp2 = load <2 x i32>, <2 x i32>* %B
   %tmp3 = call <2 x i32> @llvm.aarch64.neon.uabd.v2i32(<2 x i32> %tmp1, <2 x i32> %tmp2)
@@ -1306,13 +1432,21 @@ define <2 x i32> @uaba_2s(<2 x i32>* %A, <2 x i32>* %B, <2 x i32>* %C) nounwind 
 }
 
 define <4 x i32> @uaba_4s(<4 x i32>* %A, <4 x i32>* %B, <4 x i32>* %C) nounwind {
-; CHECK-LABEL: uaba_4s:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldr q1, [x0]
-; CHECK-NEXT:    ldr q2, [x1]
-; CHECK-NEXT:    ldr q0, [x2]
-; CHECK-NEXT:    uaba.4s v0, v1, v2
-; CHECK-NEXT:    ret
+; DAG-LABEL: uaba_4s:
+; DAG:       // %bb.0:
+; DAG-NEXT:    ldr q1, [x1]
+; DAG-NEXT:    ldr q2, [x0]
+; DAG-NEXT:    ldr q0, [x2]
+; DAG-NEXT:    uaba.4s v0, v2, v1
+; DAG-NEXT:    ret
+;
+; GISEL-LABEL: uaba_4s:
+; GISEL:       // %bb.0:
+; GISEL-NEXT:    ldr q1, [x0]
+; GISEL-NEXT:    ldr q2, [x1]
+; GISEL-NEXT:    ldr q0, [x2]
+; GISEL-NEXT:    uaba.4s v0, v1, v2
+; GISEL-NEXT:    ret
   %tmp1 = load <4 x i32>, <4 x i32>* %A
   %tmp2 = load <4 x i32>, <4 x i32>* %B
   %tmp3 = call <4 x i32> @llvm.aarch64.neon.uabd.v4i32(<4 x i32> %tmp1, <4 x i32> %tmp2)
@@ -1439,9 +1573,9 @@ define <2 x i32> @abspattern1(<2 x i32> %a) nounwind {
 ; GISEL-LABEL: abspattern1:
 ; GISEL:       // %bb.0:
 ; GISEL-NEXT:    movi.2d v1, #0000000000000000
+; GISEL-NEXT:    neg.2s v2, v0
 ; GISEL-NEXT:    cmge.2s v1, v0, v1
 ; GISEL-NEXT:    shl.2s v1, v1, #31
-; GISEL-NEXT:    neg.2s v2, v0
 ; GISEL-NEXT:    sshr.2s v1, v1, #31
 ; GISEL-NEXT:    bif.8b v0, v2, v1
 ; GISEL-NEXT:    ret
@@ -1461,9 +1595,9 @@ define <4 x i16> @abspattern2(<4 x i16> %a) nounwind {
 ; GISEL-LABEL: abspattern2:
 ; GISEL:       // %bb.0:
 ; GISEL-NEXT:    movi.2d v1, #0000000000000000
+; GISEL-NEXT:    neg.4h v2, v0
 ; GISEL-NEXT:    cmgt.4h v1, v0, v1
 ; GISEL-NEXT:    shl.4h v1, v1, #15
-; GISEL-NEXT:    neg.4h v2, v0
 ; GISEL-NEXT:    sshr.4h v1, v1, #15
 ; GISEL-NEXT:    bif.8b v0, v2, v1
 ; GISEL-NEXT:    ret
@@ -1484,9 +1618,9 @@ define <8 x i8> @abspattern3(<8 x i8> %a) nounwind {
 ; GISEL-LABEL: abspattern3:
 ; GISEL:       // %bb.0:
 ; GISEL-NEXT:    movi.2d v1, #0000000000000000
+; GISEL-NEXT:    neg.8b v2, v0
 ; GISEL-NEXT:    cmgt.8b v1, v1, v0
 ; GISEL-NEXT:    shl.8b v1, v1, #7
-; GISEL-NEXT:    neg.8b v2, v0
 ; GISEL-NEXT:    sshr.8b v1, v1, #7
 ; GISEL-NEXT:    bit.8b v0, v2, v1
 ; GISEL-NEXT:    ret
@@ -1506,9 +1640,9 @@ define <4 x i32> @abspattern4(<4 x i32> %a) nounwind {
 ; GISEL-LABEL: abspattern4:
 ; GISEL:       // %bb.0:
 ; GISEL-NEXT:    movi.2d v1, #0000000000000000
+; GISEL-NEXT:    neg.4s v2, v0
 ; GISEL-NEXT:    cmge.4s v1, v0, v1
 ; GISEL-NEXT:    shl.4s v1, v1, #31
-; GISEL-NEXT:    neg.4s v2, v0
 ; GISEL-NEXT:    sshr.4s v1, v1, #31
 ; GISEL-NEXT:    bif.16b v0, v2, v1
 ; GISEL-NEXT:    ret
@@ -1528,9 +1662,9 @@ define <8 x i16> @abspattern5(<8 x i16> %a) nounwind {
 ; GISEL-LABEL: abspattern5:
 ; GISEL:       // %bb.0:
 ; GISEL-NEXT:    movi.2d v1, #0000000000000000
+; GISEL-NEXT:    neg.8h v2, v0
 ; GISEL-NEXT:    cmgt.8h v1, v0, v1
 ; GISEL-NEXT:    shl.8h v1, v1, #15
-; GISEL-NEXT:    neg.8h v2, v0
 ; GISEL-NEXT:    sshr.8h v1, v1, #15
 ; GISEL-NEXT:    bif.16b v0, v2, v1
 ; GISEL-NEXT:    ret
@@ -1550,9 +1684,9 @@ define <16 x i8> @abspattern6(<16 x i8> %a) nounwind {
 ; GISEL-LABEL: abspattern6:
 ; GISEL:       // %bb.0:
 ; GISEL-NEXT:    movi.2d v1, #0000000000000000
+; GISEL-NEXT:    neg.16b v2, v0
 ; GISEL-NEXT:    cmgt.16b v1, v1, v0
 ; GISEL-NEXT:    shl.16b v1, v1, #7
-; GISEL-NEXT:    neg.16b v2, v0
 ; GISEL-NEXT:    sshr.16b v1, v1, #7
 ; GISEL-NEXT:    bit.16b v0, v2, v1
 ; GISEL-NEXT:    ret
@@ -1572,9 +1706,9 @@ define <2 x i64> @abspattern7(<2 x i64> %a) nounwind {
 ; GISEL-LABEL: abspattern7:
 ; GISEL:       // %bb.0:
 ; GISEL-NEXT:    movi.2d v1, #0000000000000000
+; GISEL-NEXT:    neg.2d v2, v0
 ; GISEL-NEXT:    cmge.2d v1, v1, v0
 ; GISEL-NEXT:    shl.2d v1, v1, #63
-; GISEL-NEXT:    neg.2d v2, v0
 ; GISEL-NEXT:    sshr.2d v1, v1, #63
 ; GISEL-NEXT:    bit.16b v0, v2, v1
 ; GISEL-NEXT:    ret
@@ -1596,8 +1730,8 @@ define <2 x i64> @uabd_i32(<2 x i32> %a, <2 x i32> %b) {
 ; GISEL-NEXT:    movi.2d v2, #0000000000000000
 ; GISEL-NEXT:    ssubl.2d v0, v0, v1
 ; GISEL-NEXT:    cmgt.2d v1, v2, v0
-; GISEL-NEXT:    shl.2d v1, v1, #63
 ; GISEL-NEXT:    neg.2d v2, v0
+; GISEL-NEXT:    shl.2d v1, v1, #63
 ; GISEL-NEXT:    sshr.2d v1, v1, #63
 ; GISEL-NEXT:    bit.16b v0, v2, v1
 ; GISEL-NEXT:    ret
@@ -1614,28 +1748,28 @@ define <2 x i64> @uabd_i32(<2 x i32> %a, <2 x i32> %b) {
 define <2 x i128> @uabd_i64(<2 x i64> %a, <2 x i64> %b) {
 ; CHECK-LABEL: uabd_i64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    fmov x9, d0
-; CHECK-NEXT:    fmov x12, d1
-; CHECK-NEXT:    asr x10, x9, #63
-; CHECK-NEXT:    asr x13, x12, #63
-; CHECK-NEXT:    subs x9, x9, x12
 ; CHECK-NEXT:    mov.d x8, v0[1]
-; CHECK-NEXT:    mov.d x11, v1[1]
-; CHECK-NEXT:    sbcs x10, x10, x13
+; CHECK-NEXT:    fmov x9, d0
+; CHECK-NEXT:    mov.d x10, v1[1]
+; CHECK-NEXT:    fmov x11, d1
+; CHECK-NEXT:    asr x12, x9, #63
+; CHECK-NEXT:    asr x13, x11, #63
+; CHECK-NEXT:    subs x9, x9, x11
+; CHECK-NEXT:    sbc x11, x12, x13
 ; CHECK-NEXT:    asr x12, x8, #63
-; CHECK-NEXT:    asr x14, x11, #63
-; CHECK-NEXT:    subs x8, x8, x11
-; CHECK-NEXT:    sbcs x11, x12, x14
-; CHECK-NEXT:    negs x12, x8
-; CHECK-NEXT:    ngcs x13, x11
-; CHECK-NEXT:    cmp x11, #0 // =0
-; CHECK-NEXT:    csel x2, x12, x8, lt
-; CHECK-NEXT:    csel x3, x13, x11, lt
-; CHECK-NEXT:    negs x8, x9
-; CHECK-NEXT:    ngcs x11, x10
-; CHECK-NEXT:    cmp x10, #0 // =0
-; CHECK-NEXT:    csel x8, x8, x9, lt
-; CHECK-NEXT:    csel x1, x11, x10, lt
+; CHECK-NEXT:    asr x13, x10, #63
+; CHECK-NEXT:    subs x8, x8, x10
+; CHECK-NEXT:    sbc x10, x12, x13
+; CHECK-NEXT:    asr x12, x11, #63
+; CHECK-NEXT:    asr x13, x10, #63
+; CHECK-NEXT:    eor x9, x9, x12
+; CHECK-NEXT:    eor x8, x8, x13
+; CHECK-NEXT:    eor x10, x10, x13
+; CHECK-NEXT:    subs x2, x8, x13
+; CHECK-NEXT:    sbc x3, x10, x13
+; CHECK-NEXT:    subs x8, x9, x12
+; CHECK-NEXT:    eor x9, x11, x12
+; CHECK-NEXT:    sbc x1, x9, x12
 ; CHECK-NEXT:    fmov d0, x8
 ; CHECK-NEXT:    mov.d v0[1], x1
 ; CHECK-NEXT:    fmov x0, d0

@@ -7,9 +7,13 @@
 //===----------------------------------------------------------------------===//
 
 #include "IndexingContext.h"
+#include "clang/AST/ASTConcept.h"
 #include "clang/AST/Attr.h"
+#include "clang/AST/Decl.h"
+#include "clang/AST/DeclTemplate.h"
 #include "clang/AST/DeclVisitor.h"
 #include "clang/Index/IndexDataConsumer.h"
+#include "clang/Index/IndexSymbol.h"
 
 using namespace clang;
 using namespace index;
@@ -128,6 +132,8 @@ public:
         }
       }
     }
+    if (auto *C = D->getTrailingRequiresClause())
+      IndexCtx.indexBody(C, Parent);
   }
 
   bool handleObjCMethod(const ObjCMethodDecl *D,
@@ -372,6 +378,15 @@ public:
     return true;
   }
 
+  bool VisitEnumDecl(const EnumDecl *ED) {
+    TRY_TO(VisitTagDecl(ED));
+    // Indexing for enumdecl itself is handled inside TagDecl, we just want to
+    // visit integer-base here, which is different than other TagDecl bases.
+    if (auto *TSI = ED->getIntegerTypeSourceInfo())
+      IndexCtx.indexTypeSourceInfo(TSI, ED, ED, /*isBase=*/true);
+    return true;
+  }
+
   bool handleReferencedProtocols(const ObjCProtocolList &ProtList,
                                  const ObjCContainerDecl *ContD,
                                  SourceLocation SuperLoc) {
@@ -595,9 +610,16 @@ public:
     const NamedDecl *Parent = dyn_cast<NamedDecl>(DC);
     IndexCtx.indexNestedNameSpecifierLoc(D->getQualifierLoc(), Parent,
                                          D->getLexicalDeclContext());
-    for (const auto *I : D->shadows())
+    for (const auto *I : D->shadows()) {
+      // Skip unresolved using decls - we already have a decl for the using
+      // itself, so there's not much point adding another decl or reference to
+      // refer to the same location.
+      if (isa<UnresolvedUsingIfExistsDecl>(I->getUnderlyingDecl()))
+        continue;
+
       IndexCtx.handleReference(I->getUnderlyingDecl(), D->getLocation(), Parent,
                                D->getLexicalDeclContext(), SymbolRoleSet());
+    }
     return true;
   }
 
@@ -671,34 +693,50 @@ public:
     return true;
   }
 
-  bool VisitTemplateDecl(const TemplateDecl *D) {
+  void indexTemplateParameters(TemplateParameterList *Params,
+                               const NamedDecl *Parent) {
+    for (const NamedDecl *TP : *Params) {
+      if (IndexCtx.shouldIndexTemplateParameters())
+        IndexCtx.handleDecl(TP);
+      if (const auto *TTP = dyn_cast<TemplateTypeParmDecl>(TP)) {
+        if (TTP->hasDefaultArgument())
+          IndexCtx.indexTypeSourceInfo(TTP->getDefaultArgumentInfo(), Parent);
+        if (auto *C = TTP->getTypeConstraint())
+          IndexCtx.handleReference(C->getNamedConcept(), C->getConceptNameLoc(),
+                                   Parent, TTP->getLexicalDeclContext());
+      } else if (const auto *NTTP = dyn_cast<NonTypeTemplateParmDecl>(TP)) {
+        if (NTTP->hasDefaultArgument())
+          IndexCtx.indexBody(NTTP->getDefaultArgument(), Parent);
+      } else if (const auto *TTPD = dyn_cast<TemplateTemplateParmDecl>(TP)) {
+        if (TTPD->hasDefaultArgument())
+          handleTemplateArgumentLoc(TTPD->getDefaultArgument(), Parent,
+                                    TP->getLexicalDeclContext());
+      }
+    }
+    if (auto *R = Params->getRequiresClause())
+      IndexCtx.indexBody(R, Parent);
+  }
 
+  bool VisitTemplateDecl(const TemplateDecl *D) {
     const NamedDecl *Parent = D->getTemplatedDecl();
     if (!Parent)
       return true;
 
     // Index the default values for the template parameters.
-    if (D->getTemplateParameters() &&
-        shouldIndexTemplateParameterDefaultValue(Parent)) {
-      const TemplateParameterList *Params = D->getTemplateParameters();
-      for (const NamedDecl *TP : *Params) {
-        if (IndexCtx.shouldIndexTemplateParameters())
-          IndexCtx.handleDecl(TP);
-        if (const auto *TTP = dyn_cast<TemplateTypeParmDecl>(TP)) {
-          if (TTP->hasDefaultArgument())
-            IndexCtx.indexTypeSourceInfo(TTP->getDefaultArgumentInfo(), Parent);
-        } else if (const auto *NTTP = dyn_cast<NonTypeTemplateParmDecl>(TP)) {
-          if (NTTP->hasDefaultArgument())
-            IndexCtx.indexBody(NTTP->getDefaultArgument(), Parent);
-        } else if (const auto *TTPD = dyn_cast<TemplateTemplateParmDecl>(TP)) {
-          if (TTPD->hasDefaultArgument())
-            handleTemplateArgumentLoc(TTPD->getDefaultArgument(), Parent,
-                                      TP->getLexicalDeclContext());
-        }
-      }
+    auto *Params = D->getTemplateParameters();
+    if (Params && shouldIndexTemplateParameterDefaultValue(Parent)) {
+      indexTemplateParameters(Params, Parent);
     }
 
     return Visit(Parent);
+  }
+
+  bool VisitConceptDecl(const ConceptDecl *D) {
+    if (auto *Params = D->getTemplateParameters())
+      indexTemplateParameters(Params, D);
+    if (auto *E = D->getConstraintExpr())
+      IndexCtx.indexBody(E, D);
+    return IndexCtx.handleDecl(D);
   }
 
   bool VisitFriendDecl(const FriendDecl *D) {

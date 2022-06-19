@@ -13,6 +13,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/TableGen/Format.h"
+#include "llvm/ADT/StringSwitch.h"
+#include "llvm/ADT/Twine.h"
 #include <cctype>
 
 using namespace mlir;
@@ -21,7 +23,12 @@ using namespace mlir::tblgen;
 // Marker to indicate an error happened when replacing a placeholder.
 const char *const kMarkerForNoSubst = "<no-subst-found>";
 
-FmtContext &FmtContext::addSubst(StringRef placeholder, Twine subst) {
+FmtContext::FmtContext(ArrayRef<std::pair<StringRef, StringRef>> subs) {
+  for (auto &sub : subs)
+    addSubst(sub.first, sub.second);
+}
+
+FmtContext &FmtContext::addSubst(StringRef placeholder, const Twine &subst) {
   customSubstMap[placeholder] = subst.str();
   return *this;
 }

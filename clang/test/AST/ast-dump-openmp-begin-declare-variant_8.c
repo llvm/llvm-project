@@ -23,7 +23,7 @@ int also_after(void) {
   return 2;
 }
 
-int test() {
+int test(void) {
   // Should return 0.
   return also_after() + also_before();
 }
@@ -60,7 +60,7 @@ int test() {
 // CHECK-NEXT: | `-OMPDeclareVariantAttr [[ADDR_24:0x[a-z0-9]*]] <<invalid sloc>> Inherited Implicit implementation={vendor(score(0): llvm)}
 // CHECK-NEXT: |   `-DeclRefExpr [[ADDR_12]] <line:12:1> 'int ({{.*}})' Function [[ADDR_13]] 'also_after[implementation={vendor(llvm)}]' 'int ({{.*}})'
 // CHECK-NEXT: `-FunctionDecl [[ADDR_25:0x[a-z0-9]*]] <line:26:1, line:29:1> line:26:5 test 'int ({{.*}})'
-// CHECK-NEXT:   `-CompoundStmt [[ADDR_26:0x[a-z0-9]*]] <col:12, line:29:1>
+// CHECK-NEXT:   `-CompoundStmt [[ADDR_26:0x[a-z0-9]*]] <col:16, line:29:1>
 // CHECK-NEXT:     `-ReturnStmt [[ADDR_27:0x[a-z0-9]*]] <line:28:3, col:37>
 // CHECK-NEXT:       `-BinaryOperator [[ADDR_28:0x[a-z0-9]*]] <col:10, col:37> 'int' '+'
 // CHECK-NEXT:         |-PseudoObjectExpr [[ADDR_29:0x[a-z0-9]*]] <col:10, col:21> 'int'

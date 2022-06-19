@@ -4,7 +4,7 @@
 
 #include <x86intrin.h>
 
-void test_mm_pause() {
+void test_mm_pause(void) {
   // CHECK-LABEL: test_mm_pause
   // CHECK: call void @llvm.x86.sse2.pause()
   return _mm_pause();

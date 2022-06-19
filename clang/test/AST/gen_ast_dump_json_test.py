@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 from __future__ import print_function
 from collections import OrderedDict
@@ -6,7 +6,6 @@ from shutil import copyfile
 import argparse
 import json
 import os
-import pprint
 import re
 import subprocess
 import sys
@@ -21,20 +20,19 @@ def normalize(dict_var):
             for e in v:
                 if isinstance(e, OrderedDict):
                     normalize(e)
-        elif type(v) is unicode:
-            st = v.encode('utf-8')
+        elif type(v) is str:
             if v != "0x0" and re.match(r"0x[0-9A-Fa-f]+", v):
-                dict_var[k] = u'0x{{.*}}'
+                dict_var[k] = '0x{{.*}}'
             elif os.path.isfile(v):
-                dict_var[k] = u'{{.*}}'
+                dict_var[k] = '{{.*}}'
             else:
-                splits = (v.split(u' '))
+                splits = (v.split(' '))
                 out_splits = []
                 for split in splits:
-                    inner_splits = split.rsplit(u':',2)
+                    inner_splits = split.rsplit(':',2)
                     if os.path.isfile(inner_splits[0]):
                         out_splits.append(
-                            u'{{.*}}:%s:%s'
+                            '{{.*}}:%s:%s'
                             %(inner_splits[1],
                               inner_splits[2]))
                         continue
@@ -42,11 +40,11 @@ def normalize(dict_var):
 
                 dict_var[k] = ' '.join(out_splits)
 
+
 def filter_json(dict_var, filters, out):
     for k, v in dict_var.items():
-        if type(v) is unicode:
-            st = v.encode('utf-8')
-            if st in filters:
+        if type(v) is str:
+            if v in filters:
                 out.append(dict_var)
                 break
         elif isinstance(v, OrderedDict):
@@ -154,33 +152,39 @@ def process_file(source_file, clang_binary, cmdline_filters, cmdline_opts,
     print("Will use the following filters:", filters)
 
     try:
-        json_str = subprocess.check_output(cmd)
+        json_str = subprocess.check_output(cmd).decode()
     except Exception as ex:
         print("The clang command failed with %s" % ex)
         return -1
     
     out_asts = []
     if using_ast_dump_filter:
-        splits = re.split('Dumping .*:\n', json_str)
-        if len(splits) > 1:
-            for split in splits[1:]:
-                j = json.loads(split.decode('utf-8'), object_pairs_hook=OrderedDict)
+        # If we're using a filter, then we might have multiple JSON objects
+        # in the output. To parse each out, we use a manual JSONDecoder in
+        # "raw" mode and update our location in the string based on where the
+        # last document ended.
+        decoder = json.JSONDecoder(object_hook=OrderedDict)
+        doc_start = 0
+        prev_end = 0
+        while True:
+            try:
+                prev_end = doc_start
+                (j, doc_start) = decoder.raw_decode(json_str[doc_start:])
+                doc_start += prev_end + 1
                 normalize(j)
                 out_asts.append(j)
+            except:
+                break
     else:
-        j = json.loads(json_str.decode('utf-8'), object_pairs_hook=OrderedDict)
+        j = json.loads(json_str, object_pairs_hook=OrderedDict)
         normalize(j)
 
         if len(filters) == 0:
             out_asts.append(j)
         else:
-            #assert using_ast_dump_filter is False,\
-            #    "Does not support using compiler's ast-dump-filter "\
-            #    "and the tool's filter option at the same time yet."
-        
             filter_json(j, filters, out_asts)
         
-    with tempfile.NamedTemporaryFile("wb", delete=False) as f:
+    with tempfile.NamedTemporaryFile("w", delete=False) as f:
         with open(source_file, "r") as srcf:
             for line in srcf.readlines():
                 # copy up to the note:
@@ -191,6 +195,7 @@ def process_file(source_file, clang_binary, cmdline_filters, cmdline_opts,
         for out_ast in out_asts:
             append_str = json.dumps(out_ast, indent=1, ensure_ascii=False)
             out_str = '\n\n'
+            out_str += "// CHECK-NOT: {{^}}Dumping\n"
             index = 0
             for append_line in append_str.splitlines()[2:]:
                 if index == 0:

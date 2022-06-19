@@ -6,7 +6,7 @@ target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
 
 ; Function Attrs: noinline nounwind
-define i8* @f(i32 %x) #0 !dbg !6 {
+define i8* @f(i32 %x) #0 personality i32 0 !dbg !6 {
 entry:
   %x.addr = alloca i32, align 4
   %coro_hdl = alloca i8*, align 8
@@ -34,9 +34,13 @@ sw.bb:                                            ; preds = %entry
   call void @llvm.dbg.declare(metadata i32 %direct, metadata !25, metadata !13), !dbg !14
   call void @llvm.dbg.declare(metadata i32* %x.addr, metadata !12, metadata !13), !dbg !14
   call void @llvm.dbg.declare(metadata i8** %coro_hdl, metadata !15, metadata !13), !dbg !16
-  call void @llvm.dbg.declare(metadata i8* null, metadata !28, metadata !13), !dbg !16
   call void @llvm.dbg.declare(metadata i32* %late_local, metadata !29, metadata !13), !dbg !16
-  br label %next, !dbg !18
+  call void @llvm.dbg.value(metadata i32 %direct, metadata !30, metadata !13), !dbg !14
+  ; don't crash when encountering nonsensical debug info, verfifier doesn't yet reject these
+  call void @llvm.dbg.declare(metadata i8* null, metadata !28, metadata !13), !dbg !16
+  call void @llvm.dbg.declare(metadata !{}, metadata !28, metadata !13), !dbg !16
+  %new_storgae = invoke i8* @allocate()
+    to label %next unwind label %ehcleanup, !dbg !18
 
 next:
   br label %sw.epilog, !dbg !18
@@ -48,15 +52,22 @@ sw.default:                                       ; preds = %entry
   br label %coro_Suspend, !dbg !18
 
 sw.epilog:                                        ; preds = %sw.bb
+  call void @llvm.dbg.declare(metadata i8* %new_storgae, metadata !31, metadata !13), !dbg !16
   %4 = load i32, i32* %x.addr, align 4, !dbg !20
   %add = add nsw i32 %4, 1, !dbg !21
   store i32 %add, i32* %x.addr, align 4, !dbg !22
-  br label %coro_Cleanup, !dbg !23
+  %asm_res = callbr i32 asm "", "=r,r,i"(i32 %x, i8* blockaddress(@f, %indirect.dest))
+          to label %coro_Cleanup [label %indirect.dest]
+
+indirect.dest:
+  call void @log(), !dbg !18
+  br label %coro_Cleanup
 
 coro_Cleanup:                                     ; preds = %sw.epilog, %sw.bb1
   %5 = load i8*, i8** %coro_hdl, align 8, !dbg !24
   %6 = call i8* @llvm.coro.free(token %0, i8* %5), !dbg !24
   call void @free(i8* %6), !dbg !24
+  call void @llvm.dbg.declare(metadata i32 %asm_res, metadata !32, metadata !13), !dbg !16
   br label %coro_Suspend, !dbg !24
 
 coro_Suspend:                                     ; preds = %coro_Cleanup, %sw.default
@@ -64,7 +75,16 @@ coro_Suspend:                                     ; preds = %coro_Cleanup, %sw.d
   %8 = load i8*, i8** %coro_hdl, align 8, !dbg !24
   store i32 0, i32* %late_local, !dbg !24
   ret i8* %8, !dbg !24
+
+ehcleanup:
+  %ex = landingpad { i8*, i32 }
+          catch i8* null
+  call void @print({ i8*, i32 } %ex)
+  unreachable
 }
+
+; Function Attrs: nounwind readnone speculatable
+declare void @llvm.dbg.value(metadata, metadata, metadata) #1
 
 ; Function Attrs: nounwind readnone speculatable
 declare void @llvm.dbg.declare(metadata, metadata, metadata) #1
@@ -73,6 +93,9 @@ declare void @llvm.dbg.declare(metadata, metadata, metadata) #1
 declare token @llvm.coro.id(i32, i8* readnone, i8* nocapture readonly, i8*) #2
 
 declare i8* @malloc(i64) #3
+declare i8* @allocate() 
+declare void @print({ i8*, i32 })
+declare void @log()
 
 ; Function Attrs: nounwind readnone
 declare i64 @llvm.coro.size.i64() #4
@@ -100,7 +123,7 @@ entry:
 ; Function Attrs: argmemonly nounwind readonly
 declare i8* @llvm.coro.subfn.addr(i8* nocapture readonly, i8) #2
 
-attributes #0 = { noinline nounwind "coroutine.presplit"="1" "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "less-precise-fpmad"="false" "frame-pointer"="none" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "target-features"="+mmx,+sse,+sse2,+x87" "unsafe-fp-math"="false" "use-soft-float"="false" }
+attributes #0 = { noinline nounwind presplitcoroutine "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "less-precise-fpmad"="false" "frame-pointer"="none" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "target-features"="+mmx,+sse,+sse2,+x87" "unsafe-fp-math"="false" "use-soft-float"="false" }
 attributes #1 = { nounwind readnone speculatable }
 attributes #2 = { argmemonly nounwind readonly }
 attributes #3 = { "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "less-precise-fpmad"="false" "frame-pointer"="none" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "target-features"="+mmx,+sse,+sse2,+x87" "unsafe-fp-math"="false" "use-soft-float"="false" }
@@ -144,9 +167,12 @@ attributes #7 = { noduplicate }
 !27 = !DILocalVariable(name: "undefined", scope: !6, file: !7, line: 55, type: !11)
 !28 = !DILocalVariable(name: "null", scope: !6, file: !7, line: 55, type: !11)
 !29 = !DILocalVariable(name: "partial_dead", scope: !6, file: !7, line: 55, type: !11)
+!30 = !DILocalVariable(name: "direct_value", scope: !6, file: !7, line: 55, type: !11)
+!31 = !DILocalVariable(name: "allocated", scope: !6, file: !7, line: 55, type: !11)
+!32 = !DILocalVariable(name: "inline_asm", scope: !6, file: !7, line: 55, type: !11)
 
-; CHECK: define i8* @f(i32 %x) #0 !dbg ![[ORIG:[0-9]+]]
-; CHECK: define internal fastcc void @f.resume(%f.Frame* noalias nonnull align 8 dereferenceable(32) %FramePtr) #0 !dbg ![[RESUME:[0-9]+]]
+; CHECK: define i8* @f(i32 %x) #0 personality i32 0 !dbg ![[ORIG:[0-9]+]]
+; CHECK: define internal fastcc void @f.resume(%f.Frame* noalias nonnull align 8 dereferenceable(40) %FramePtr) #0 personality i32 0 !dbg ![[RESUME:[0-9]+]]
 ; CHECK: entry.resume:
 ; CHECK: %[[DBG_PTR:.*]] = alloca %f.Frame*
 ; CHECK: call void @llvm.dbg.declare(metadata %f.Frame** %[[DBG_PTR]], metadata ![[RESUME_COROHDL:[0-9]+]], metadata !DIExpression(DW_OP_deref, DW_OP_plus_uconst,
@@ -154,12 +180,22 @@ attributes #7 = { noduplicate }
 ; CHECK: call void @llvm.dbg.declare(metadata %f.Frame** %[[DBG_PTR]], metadata ![[RESUME_DIRECT:[0-9]+]], metadata !DIExpression(DW_OP_deref, DW_OP_plus_uconst, [[EXPR_TAIL]])
 ; CHECK: store %f.Frame* {{.*}}, %f.Frame** %[[DBG_PTR]]
 ; CHECK-NOT: alloca %struct.test*
-; CHECK: call void @llvm.dbg.declare(metadata i32 0, metadata ![[RESUME_CONST:[0-9]+]], metadata !DIExpression())
+; CHECK: call void @llvm.dbg.declare(metadata i8 0, metadata ![[RESUME_CONST:[0-9]+]], metadata !DIExpression(DW_OP_LLVM_convert, 8, DW_ATE_signed, DW_OP_LLVM_convert, 32, DW_ATE_signed))
 ; Note that keeping the undef value here could be acceptable, too.
 ; CHECK-NOT: call void @llvm.dbg.declare(metadata i32* undef, metadata !{{[0-9]+}}, metadata !DIExpression())
 ; CHECK: call void @coro.devirt.trigger(i8* null)
-; CHECK: define internal fastcc void @f.destroy(%f.Frame* noalias nonnull align 8 dereferenceable(32) %FramePtr) #0 !dbg ![[DESTROY:[0-9]+]]
-; CHECK: define internal fastcc void @f.cleanup(%f.Frame* noalias nonnull align 8 dereferenceable(32) %FramePtr) #0 !dbg ![[CLEANUP:[0-9]+]]
+; CHECK: call void @llvm.dbg.value(metadata %f.Frame** {{.*}}, metadata ![[RESUME_DIRECT_VALUE:[0-9]+]], metadata !DIExpression(DW_OP_deref, DW_OP_plus_uconst, {{[0-9]+}}, DW_OP_deref))
+; Check that the dbg.declare intrinsic of invoke instruction is hanled correctly.
+; CHECK: %[[ALLOCATED_STORAGE:.+]] = invoke i8* @allocate()
+; CHECK-NEXT: to label %[[NORMAL_DEST:.+]] unwind
+; CHECK: [[NORMAL_DEST]]
+; CHEKC-NEXT: call void @llvm.dbg.declare(metadata i8* %[[ALLOCATED_STORAGE]]
+; CHECK: %[[CALLBR_RES:.+]] = callbr i32 asm
+; CHECK-NEXT: to label %[[DEFAULT_DEST:.+]] [label
+; CHECK: [[DEFAULT_DEST]]:
+; CHECK-NEXT: call void @llvm.dbg.declare(metadata i32 %[[CALLBR_RES]]
+; CHECK: define internal fastcc void @f.destroy(%f.Frame* noalias nonnull align 8 dereferenceable(40) %FramePtr) #0 personality i32 0 !dbg ![[DESTROY:[0-9]+]]
+; CHECK: define internal fastcc void @f.cleanup(%f.Frame* noalias nonnull align 8 dereferenceable(40) %FramePtr) #0 personality i32 0 !dbg ![[CLEANUP:[0-9]+]]
 
 ; CHECK: ![[ORIG]] = distinct !DISubprogram(name: "f", linkageName: "flink"
 
@@ -168,6 +204,7 @@ attributes #7 = { noduplicate }
 ; CHECK: ![[RESUME_X]] = !DILocalVariable(name: "x", arg: 1, scope: ![[RESUME]]
 ; CHECK: ![[RESUME_DIRECT]] = !DILocalVariable(name: "direct_mem", scope: ![[RESUME]]
 ; CHECK: ![[RESUME_CONST]] = !DILocalVariable(name: "direct_const", scope: ![[RESUME]]
+; CHECK: ![[RESUME_DIRECT_VALUE]] = !DILocalVariable(name: "direct_value", scope: ![[RESUME]]
 
 ; CHECK: ![[DESTROY]] = distinct !DISubprogram(name: "f", linkageName: "flink"
 

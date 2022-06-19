@@ -1,6 +1,5 @@
 ; RUN: opt < %s -disable-output "-passes=print<da>" -aa-pipeline=basic-aa 2>&1 \
 ; RUN: | FileCheck %s
-; RUN: opt < %s -analyze -enable-new-pm=0 -basic-aa -da | FileCheck %s
 
 ; Test for a bug, which caused an assert when an invalid
 ; SCEVAddRecExpr is created in addToCoefficient.

@@ -11,12 +11,11 @@
 
 #include "llvm/ADT/StringRef.h"
 #include "llvm/DebugInfo/DWARF/DWARFUnit.h"
-#include "llvm/DebugInfo/DWARF/DWARFUnitIndex.h"
-#include "llvm/Support/DataExtractor.h"
 #include <cstdint>
 
 namespace llvm {
 
+struct DIDumpOptions;
 class DWARFContext;
 class DWARFDebugAbbrev;
 struct DWARFSection;

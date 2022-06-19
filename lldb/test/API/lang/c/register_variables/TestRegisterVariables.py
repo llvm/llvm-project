@@ -14,8 +14,6 @@ def re_expr_equals(val_type, val):
 
 class RegisterVariableTestCase(TestBase):
 
-    mydir = TestBase.compute_mydir(__file__)
-
     @expectedFailureAll(compiler="clang", compiler_version=['<', '3.5'])
     @expectedFailureAll(compiler="gcc", compiler_version=[
             '>=', '4.8.2'], archs=["i386"])
@@ -50,8 +48,7 @@ class RegisterVariableTestCase(TestBase):
                              'stop reason = breakpoint'])
 
         # The breakpoint should have a hit count of 1.
-        self.expect("breakpoint list -f", BREAKPOINT_HIT_ONCE,
-                    substrs=[' resolved, hit count = 1'])
+        lldbutil.check_breakpoint(self, bpno = 1, location_id = 1, expected_location_hit_count = 1)
 
         # Try some variables that should be visible
         frame = self.dbg.GetSelectedTarget().GetProcess(
@@ -77,8 +74,7 @@ class RegisterVariableTestCase(TestBase):
                              'stop reason = breakpoint'])
 
         # The breakpoint should have a hit count of 1.
-        self.expect("breakpoint list -f", BREAKPOINT_HIT_ONCE,
-                    substrs=[' resolved, hit count = 1'])
+        lldbutil.check_breakpoint(self, bpno = 1, location_id = 2, expected_location_hit_count = 1)
 
         # Try some variables that should be visible
         frame = self.dbg.GetSelectedTarget().GetProcess(
@@ -104,8 +100,7 @@ class RegisterVariableTestCase(TestBase):
                              'stop reason = breakpoint'])
 
         # The breakpoint should have a hit count of 1.
-        self.expect("breakpoint list -f", BREAKPOINT_HIT_ONCE,
-                    substrs=[' resolved, hit count = 1'])
+        lldbutil.check_breakpoint(self, bpno = 1, location_id = 3, expected_location_hit_count = 1)
 
         # Try some variables that should be visible
         frame = self.dbg.GetSelectedTarget().GetProcess(

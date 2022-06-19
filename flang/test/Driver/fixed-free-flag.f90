@@ -20,4 +20,4 @@
 !-------------------------------------
 ! EXPECTED OUTPUT FOR FIXED FORM MODE
 !-------------------------------------
-! FIXEDFORM:free-form-test.f90:1:1: Character in fixed-form label field must be a digit
+! FIXEDFORM:free-form-test.f90:1:1: warning: Character in fixed-form label field must be a digit

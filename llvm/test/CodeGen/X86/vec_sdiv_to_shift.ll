@@ -9,9 +9,8 @@ define <8 x i16> @sdiv_vec8x16(<8 x i16> %var) {
 ; SSE-NEXT:    movdqa %xmm0, %xmm1
 ; SSE-NEXT:    psraw $15, %xmm1
 ; SSE-NEXT:    psrlw $11, %xmm1
-; SSE-NEXT:    paddw %xmm0, %xmm1
-; SSE-NEXT:    psraw $5, %xmm1
-; SSE-NEXT:    movdqa %xmm1, %xmm0
+; SSE-NEXT:    paddw %xmm1, %xmm0
+; SSE-NEXT:    psraw $5, %xmm0
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: sdiv_vec8x16:
@@ -32,9 +31,8 @@ define <8 x i16> @sdiv_vec8x16_minsize(<8 x i16> %var) minsize {
 ; SSE-NEXT:    movdqa %xmm0, %xmm1
 ; SSE-NEXT:    psraw $15, %xmm1
 ; SSE-NEXT:    psrlw $11, %xmm1
-; SSE-NEXT:    paddw %xmm0, %xmm1
-; SSE-NEXT:    psraw $5, %xmm1
-; SSE-NEXT:    movdqa %xmm1, %xmm0
+; SSE-NEXT:    paddw %xmm1, %xmm0
+; SSE-NEXT:    psraw $5, %xmm0
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: sdiv_vec8x16_minsize:
@@ -55,9 +53,8 @@ define <4 x i32> @sdiv_vec4x32(<4 x i32> %var) {
 ; SSE-NEXT:    movdqa %xmm0, %xmm1
 ; SSE-NEXT:    psrad $31, %xmm1
 ; SSE-NEXT:    psrld $28, %xmm1
-; SSE-NEXT:    paddd %xmm0, %xmm1
-; SSE-NEXT:    psrad $4, %xmm1
-; SSE-NEXT:    movdqa %xmm1, %xmm0
+; SSE-NEXT:    paddd %xmm1, %xmm0
+; SSE-NEXT:    psrad $4, %xmm0
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: sdiv_vec4x32:
@@ -104,15 +101,13 @@ define <8 x i32> @sdiv8x32(<8 x i32> %var) {
 ; SSE-NEXT:    movdqa %xmm0, %xmm2
 ; SSE-NEXT:    psrad $31, %xmm2
 ; SSE-NEXT:    psrld $26, %xmm2
-; SSE-NEXT:    paddd %xmm0, %xmm2
-; SSE-NEXT:    psrad $6, %xmm2
-; SSE-NEXT:    movdqa %xmm1, %xmm3
-; SSE-NEXT:    psrad $31, %xmm3
-; SSE-NEXT:    psrld $26, %xmm3
-; SSE-NEXT:    paddd %xmm1, %xmm3
-; SSE-NEXT:    psrad $6, %xmm3
-; SSE-NEXT:    movdqa %xmm2, %xmm0
-; SSE-NEXT:    movdqa %xmm3, %xmm1
+; SSE-NEXT:    paddd %xmm2, %xmm0
+; SSE-NEXT:    psrad $6, %xmm0
+; SSE-NEXT:    movdqa %xmm1, %xmm2
+; SSE-NEXT:    psrad $31, %xmm2
+; SSE-NEXT:    psrld $26, %xmm2
+; SSE-NEXT:    paddd %xmm2, %xmm1
+; SSE-NEXT:    psrad $6, %xmm1
 ; SSE-NEXT:    retq
 ;
 ; AVX1-LABEL: sdiv8x32:
@@ -147,15 +142,13 @@ define <16 x i16> @sdiv16x16(<16 x i16> %var) {
 ; SSE-NEXT:    movdqa %xmm0, %xmm2
 ; SSE-NEXT:    psraw $15, %xmm2
 ; SSE-NEXT:    psrlw $14, %xmm2
-; SSE-NEXT:    paddw %xmm0, %xmm2
-; SSE-NEXT:    psraw $2, %xmm2
-; SSE-NEXT:    movdqa %xmm1, %xmm3
-; SSE-NEXT:    psraw $15, %xmm3
-; SSE-NEXT:    psrlw $14, %xmm3
-; SSE-NEXT:    paddw %xmm1, %xmm3
-; SSE-NEXT:    psraw $2, %xmm3
-; SSE-NEXT:    movdqa %xmm2, %xmm0
-; SSE-NEXT:    movdqa %xmm3, %xmm1
+; SSE-NEXT:    paddw %xmm2, %xmm0
+; SSE-NEXT:    psraw $2, %xmm0
+; SSE-NEXT:    movdqa %xmm1, %xmm2
+; SSE-NEXT:    psraw $15, %xmm2
+; SSE-NEXT:    psrlw $14, %xmm2
+; SSE-NEXT:    paddw %xmm2, %xmm1
+; SSE-NEXT:    psraw $2, %xmm1
 ; SSE-NEXT:    retq
 ;
 ; AVX1-LABEL: sdiv16x16:

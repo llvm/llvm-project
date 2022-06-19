@@ -9,12 +9,13 @@
 @my_emutls_v_xyz = external global i8*, align 4
 declare i8* @my_emutls_get_address(i8*)
 
-define i32 @my_get_xyz() {
+define i32 @my_get_xyz() uwtable {
 ; ARM64-LABEL: my_get_xyz:
 ; ARM64:        adrp x0, :got:my_emutls_v_xyz
 ; ARM64-NEXT:   ldr x0, [x0, :got_lo12:my_emutls_v_xyz]
 ; ARM64-NEXT:   bl my_emutls_get_address
 ; ARM64-NEXT:   ldr  w0, [x0]
+; ARM64-NEXT: 	.cfi_def_cfa wsp, 16
 ; ARM64-NEXT:   ldp x29, x30, [sp]
 
 entry:
@@ -32,12 +33,13 @@ entry:
 @s1 = thread_local global i16 15
 @b1 = thread_local global i8 0
 
-define i32 @f1() {
+define i32 @f1() uwtable {
 ; ARM64-LABEL: f1:
 ; ARM64:        adrp x0, :got:__emutls_v.i1
 ; ARM64-NEXT:   ldr x0, [x0, :got_lo12:__emutls_v.i1]
 ; ARM64-NEXT:   bl __emutls_get_address
 ; ARM64-NEXT:   ldr  w0, [x0]
+; ARM64-NEXT: 	.cfi_def_cfa wsp, 16
 ; ARM64-NEXT:   ldp x29, x30, [sp]
 
 entry:
@@ -45,11 +47,12 @@ entry:
   ret i32 %tmp1
 }
 
-define i32* @f2() {
+define i32* @f2() uwtable {
 ; ARM64-LABEL: f2:
 ; ARM64:        adrp x0, :got:__emutls_v.i1
 ; ARM64-NEXT:   ldr x0, [x0, :got_lo12:__emutls_v.i1]
 ; ARM64-NEXT:   bl __emutls_get_address
+; ARM64-NEXT: 	.cfi_def_cfa wsp, 16
 ; ARM64-NEXT:   ldp x29, x30, [sp]
 
 entry:
@@ -68,11 +71,12 @@ entry:
   ret i32 %tmp1
 }
 
-define i32* @f6() {
+define i32* @f6() uwtable {
 ; ARM64-LABEL: f6:
 ; ARM64:        adrp x0, __emutls_v.i3
 ; ARM64:        add x0, x0, :lo12:__emutls_v.i3
 ; ARM64-NEXT:   bl __emutls_get_address
+; ARM64-NEXT: 	.cfi_def_cfa wsp, 16
 ; ARM64-NEXT:   ldp x29, x30, [sp]
 
 entry:
@@ -95,9 +99,9 @@ define i32 @_Z7getIntXv() {
 ; ARM64:        adrp x0, :got:__emutls_v._ZN1AIiE1xE
 ; ARM64:        ldr x0, [x0, :got_lo12:__emutls_v._ZN1AIiE1xE]
 ; ARM64-NEXT:   bl __emutls_get_address
-; ARM64-NEXT:   ldr {{.*}}, [x0]
+; ARM64:        ldr {{.*}}, [x0]
 ; ARM64:        add
-; ARM64:        str {{.*}}, [x0]
+; ARM64:        str {{.*}}, [x8]
 
 entry:
   %0 = load i32, i32* @_ZN1AIiE1xE, align 4
@@ -111,7 +115,7 @@ define float @_Z9getFloatXv() {
 ; ARM64:        adrp x0, :got:__emutls_v._ZN1AIfE1xE
 ; ARM64:        ldr x0, [x0, :got_lo12:__emutls_v._ZN1AIfE1xE]
 ; ARM64-NEXT:   bl __emutls_get_address
-; ARM64-NEXT:   ldr {{.*}}, [x0]
+; ARM64:        ldr {{.*}}, [x0]
 ; ARM64:        fadd s{{.*}}, s
 ; ARM64:        str s{{.*}}, [x0]
 

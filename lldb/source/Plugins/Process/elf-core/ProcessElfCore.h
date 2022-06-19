@@ -40,9 +40,9 @@ public:
 
   static void Terminate();
 
-  static lldb_private::ConstString GetPluginNameStatic();
+  static llvm::StringRef GetPluginNameStatic() { return "elf-core"; }
 
-  static const char *GetPluginDescriptionStatic();
+  static llvm::StringRef GetPluginDescriptionStatic();
 
   // Constructors and Destructors
   ProcessElfCore(lldb::TargetSP target_sp, lldb::ListenerSP listener_sp,
@@ -60,9 +60,7 @@ public:
   lldb_private::DynamicLoader *GetDynamicLoader() override;
 
   // PluginInterface protocol
-  lldb_private::ConstString GetPluginName() override;
-
-  uint32_t GetPluginVersion() override;
+  llvm::StringRef GetPluginName() override { return GetPluginNameStatic(); }
 
   // Process Control
   lldb_private::Status DoDestroy() override;
@@ -71,9 +69,8 @@ public:
 
   lldb_private::Status WillResume() override {
     lldb_private::Status error;
-    error.SetErrorStringWithFormat(
-        "error: %s does not support resuming processes",
-        GetPluginName().GetCString());
+    error.SetErrorStringWithFormatv(
+        "error: {0} does not support resuming processes", GetPluginName());
     return error;
   }
 
@@ -89,10 +86,6 @@ public:
   size_t DoReadMemory(lldb::addr_t addr, void *buf, size_t size,
                       lldb_private::Status &error) override;
 
-  lldb_private::Status
-  GetMemoryRegionInfo(lldb::addr_t load_addr,
-                      lldb_private::MemoryRegionInfo &region_info) override;
-
   lldb::addr_t GetImageInfoAddress() override;
 
   lldb_private::ArchSpec GetArchitecture();
@@ -107,6 +100,10 @@ protected:
 
   bool DoUpdateThreadList(lldb_private::ThreadList &old_thread_list,
                           lldb_private::ThreadList &new_thread_list) override;
+
+  lldb_private::Status
+  DoGetMemoryRegionInfo(lldb::addr_t load_addr,
+                        lldb_private::MemoryRegionInfo &region_info) override;
 
 private:
   struct NT_FILE_Entry {
@@ -148,7 +145,7 @@ private:
   // Parse thread(s) data structures(prstatus, prpsinfo) from given NOTE segment
   llvm::Error ParseThreadContextsFromNoteSegment(
       const elf::ELFProgramHeader &segment_header,
-      lldb_private::DataExtractor segment_data);
+      const lldb_private::DataExtractor &segment_data);
 
   // Returns number of thread contexts stored in the core file
   uint32_t GetNumThreadContexts();

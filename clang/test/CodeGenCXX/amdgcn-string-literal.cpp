@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple amdgcn-amd-amdhsa -emit-llvm %s -o - | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -triple amdgcn-amd-amdhsa -emit-llvm %s -o - | FileCheck %s
 
 // CHECK: @.str = private unnamed_addr addrspace(4) constant [6 x i8] c"g_str\00", align 1
 // CHECK: @g_str ={{.*}} addrspace(1) global i8* addrspacecast (i8 addrspace(4)* getelementptr inbounds ([6 x i8], [6 x i8] addrspace(4)* @.str, i32 0, i32 0) to i8*), align 8

@@ -1,5 +1,4 @@
-! RUN: %S/test_errors.sh %s %t %flang_fc1
-! REQUIRES: shell
+! RUN: %python %S/test_errors.py %s %flang_fc1
 ! C729 A derived type type-name shall not be DOUBLEPRECISION or the same as 
 ! the name of any intrinsic type defined in this document.
 subroutine s()

@@ -32,7 +32,7 @@ struct ArrayIndexedAccessorRange
 template <typename T>
 static void compareData(ArrayIndexedAccessorRange<T> range,
                         ArrayRef<T> referenceData) {
-  ASSERT_TRUE(referenceData.size() == range.size());
+  ASSERT_EQ(referenceData.size(), range.size());
   ASSERT_TRUE(std::equal(range.begin(), range.end(), referenceData.begin()));
 }
 
@@ -45,5 +45,19 @@ TEST(AccessorRange, SliceTest) {
   compareData(range, data);
   compareData(range.slice(2, 3), data.slice(2, 3));
   compareData(range.slice(0, 5), data.slice(0, 5));
+}
+
+TEST(AccessorRange, EqualTest) {
+  int32_t rawData1[] = {0, 1, 2, 3, 4};
+  uint64_t rawData2[] = {0, 1, 2, 3, 4};
+
+  ArrayIndexedAccessorRange<int32_t> range1(rawData1, /*start=*/0,
+                                            /*numElements=*/5);
+  ArrayIndexedAccessorRange<uint64_t> range2(rawData2, /*start=*/0,
+                                             /*numElements=*/5);
+  EXPECT_TRUE(range1 == range2);
+  EXPECT_FALSE(range1 != range2);
+  EXPECT_TRUE(range2 == range1);
+  EXPECT_FALSE(range2 != range1);
 }
 } // end anonymous namespace

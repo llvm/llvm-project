@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -analyze -polly-scops < %s | FileCheck %s -check-prefix=SCOP
+; RUN: opt %loadPolly -polly-print-scops -disable-output < %s | FileCheck %s -check-prefix=SCOP
 ; RUN: opt %loadPolly -S -polly-codegen-ppcg < %s | FileCheck %s -check-prefix=HOST-IR
 
 ; REQUIRES: pollyacc
@@ -18,7 +18,7 @@
 ;         x = 0;
 ;         if(control) x = C[i];
 ;         B[i] = x * A[i];
-; 
+;
 ;     }
 ; #pragma endscop
 ; }

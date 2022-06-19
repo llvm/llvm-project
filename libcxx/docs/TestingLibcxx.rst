@@ -158,13 +158,6 @@ default.
   still be used to specify the path of the library to link to and run against,
   respectively.
 
-.. option:: debug_level=<level>
-
-  **Values**: 0, 1
-
-  Enable the use of debug mode. Level 0 enables assertions and level 1 enables
-  assertions and debugging of iterator misuse.
-
 .. option:: use_sanitizer=<sanitizer name>
 
   **Values**: Memory, MemoryWithOrigins, Address, Undefined
@@ -227,12 +220,11 @@ An example build would look like:
 .. code-block:: bash
 
   $ cd build
-  $ cmake [options] <path to libcxx sources>
-  $ make cxx-benchmarks
+  $ ninja cxx-benchmarks
 
 This will build all of the benchmarks under ``<libcxx-src>/benchmarks`` to be
 built against the just-built libc++. The compiled tests are output into
-``build/benchmarks``.
+``build/projects/libcxx/benchmarks``.
 
 The benchmarks can also be built against the platforms native standard library
 using the ``-DLIBCXX_BUILD_BENCHMARKS_NATIVE_STDLIB=ON`` CMake option. This
@@ -255,8 +247,7 @@ For example:
 
 .. code-block:: bash
 
-  $ cd build/benchmarks
-  $ make cxx-benchmarks
+  $ cd build/projects/libcxx/benchmarks
   $ ./algorithms.libcxx.out # Runs all the benchmarks
   $ ./algorithms.libcxx.out --benchmark_filter=BM_Sort.* # Only runs the sort benchmarks
 

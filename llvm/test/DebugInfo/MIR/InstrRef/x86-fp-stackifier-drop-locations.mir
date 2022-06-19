@@ -1,12 +1,11 @@
-# RUN: llc %s -run-pass=x86-codegen -o - -experimental-debug-variable-locations | FileCheck %s
+# RUN: llc %s -run-pass=x86-codegen -o - -experimental-debug-variable-locations | FileCheck %s --implicit-check-not=debug-instr-number
 #
 # The x87 FP instructions below have debug instr numbers attached -- but the
 # operands get rewritten when it's converted to stack-form. Rather than trying
 # to recover from this, drop any instruction numbers.
 #
-# CHECK-NOT: debug-instr-number
-# CHECK:     ADD_F64m
-# CHECK-NOT: debug-instr-number
+## We shouldn't drop numbers from _every_ call though:
+# CHECK:  CALLpcrel32 @ext, csr_32, implicit $esp, implicit $ssp, implicit-def $esp, implicit-def $ssp, debug-instr-number 101,
 #
 # Original program, command line 'clang ./test.c -O2 -g -m32 -o out.o -c'
 #
@@ -147,7 +146,16 @@ body:             |
     renamable $fp0 = nofpexcept ADD_Fp80 killed renamable $fp0, killed renamable $fp1, implicit-def dead $fpsw, implicit $fpcw, debug-instr-number 6, debug-location !21
     ST_FpP80m %stack.2, 1, $noreg, 0, $noreg, killed renamable $fp0, implicit-def $fpsw, implicit $fpcw, debug-instr-number 7 :: (store (s80) into %stack.2, align 4)
     ADJCALLSTACKDOWN32 0, 0, 0, implicit-def dead $esp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $esp, implicit $ssp, debug-location !22
+
+    ; This identical call (to the one below) does not touch the FP registers at
+    ; all. Therefore, it shouldn't have any debug instructions dropped.
+    CALLpcrel32 @ext, csr_32, implicit $esp, implicit $ssp, implicit-def $esp, implicit-def $ssp, debug-instr-number 101, debug-location !22
+
+    ; Original call: this should have it's location dropped, as it touches the
+    ; FP stack.
     CALLpcrel32 @ext, csr_32, implicit $esp, implicit $ssp, implicit-def $esp, implicit-def $ssp, implicit-def $fp0, debug-instr-number 100, debug-location !22
+
+
     ADJCALLSTACKUP32 0, 0, implicit-def dead $esp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $esp, implicit $ssp, debug-location !22
     renamable $fp1 = LD_Fp80m %stack.2, 1, $noreg, 0, $noreg, implicit-def $fpsw, implicit $fpcw :: (load (s80) from %stack.2, align 4)
     renamable $fp0 = nofpexcept MUL_Fp80 killed renamable $fp1, killed renamable $fp0, implicit-def dead $fpsw, implicit $fpcw, debug-instr-number 8, debug-location !23

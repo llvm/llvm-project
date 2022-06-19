@@ -44,7 +44,6 @@
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Constant.h"
 #include "llvm/IR/DataLayout.h"
-#include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/GlobalValue.h"
@@ -61,7 +60,6 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/DOTGraphTraits.h"
-#include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/GraphWriter.h"
 #include "llvm/Support/raw_ostream.h"
@@ -76,6 +74,8 @@
 #include <utility>
 #include <vector>
 
+#include "LiveDebugValues/LiveDebugValues.h"
+
 using namespace llvm;
 
 #define DEBUG_TYPE "codegen"
@@ -89,6 +89,7 @@ static cl::opt<unsigned> AlignAllFunctions(
 static const char *getPropertyName(MachineFunctionProperties::Property Prop) {
   using P = MachineFunctionProperties::Property;
 
+  // clang-format off
   switch(Prop) {
   case P::FailedISel: return "FailedISel";
   case P::IsSSA: return "IsSSA";
@@ -99,8 +100,32 @@ static const char *getPropertyName(MachineFunctionProperties::Property Prop) {
   case P::Selected: return "Selected";
   case P::TracksLiveness: return "TracksLiveness";
   case P::TiedOpsRewritten: return "TiedOpsRewritten";
+  case P::FailsVerification: return "FailsVerification";
+  case P::TracksDebugUserValues: return "TracksDebugUserValues";
   }
+  // clang-format on
   llvm_unreachable("Invalid machine function property");
+}
+
+void setUnsafeStackSize(const Function &F, MachineFrameInfo &FrameInfo) {
+  if (!F.hasFnAttribute(Attribute::SafeStack))
+    return;
+
+  auto *Existing =
+      dyn_cast_or_null<MDTuple>(F.getMetadata(LLVMContext::MD_annotation));
+
+  if (!Existing || Existing->getNumOperands() != 2)
+    return;
+
+  auto *MetadataName = "unsafe-stack-size";
+  if (auto &N = Existing->getOperand(0)) {
+    if (cast<MDString>(N.get())->getString() == MetadataName) {
+      if (auto &Op = Existing->getOperand(1)) {
+        auto Val = mdconst::extract<ConstantInt>(Op)->getZExtValue();
+        FrameInfo.setUnsafeStackSize(Val);
+      }
+    }
+  }
 }
 
 // Pin the vtable to this file.
@@ -124,14 +149,14 @@ void MachineFunctionProperties::print(raw_ostream &OS) const {
 MachineFunctionInfo::~MachineFunctionInfo() = default;
 
 void ilist_alloc_traits<MachineBasicBlock>::deleteNode(MachineBasicBlock *MBB) {
-  MBB->getParent()->DeleteMachineBasicBlock(MBB);
+  MBB->getParent()->deleteMachineBasicBlock(MBB);
 }
 
-static inline unsigned getFnStackAlignment(const TargetSubtargetInfo *STI,
+static inline Align getFnStackAlignment(const TargetSubtargetInfo *STI,
                                            const Function &F) {
-  if (F.hasFnAttribute(Attribute::StackAlignment))
-    return F.getFnStackAlignment();
-  return STI->getFrameLowering()->getStackAlign().value();
+  if (auto MA = F.getFnStackAlign())
+    return *MA;
+  return STI->getFrameLowering()->getStackAlign();
 }
 
 MachineFunction::MachineFunction(Function &F, const LLVMTargetMachine &Target,
@@ -171,6 +196,8 @@ void MachineFunction::init() {
       /*ForcedRealign=*/CanRealignSP &&
           F.hasFnAttribute(Attribute::StackAlignment));
 
+  setUnsafeStackSize(F, *FrameInfo);
+
   if (F.hasFnAttribute(Attribute::StackAlignment))
     FrameInfo->ensureMaxAlignment(*F.getFnStackAlign());
 
@@ -202,9 +229,7 @@ void MachineFunction::init() {
          "Can't create a MachineFunction using a Module with a "
          "Target-incompatible DataLayout attached\n");
 
-  PSVManager =
-    std::make_unique<PseudoSourceValueManager>(*(getSubtarget().
-                                                  getInstrInfo()));
+  PSVManager = std::make_unique<PseudoSourceValueManager>(getTarget());
 }
 
 MachineFunction::~MachineFunction() {
@@ -346,10 +371,10 @@ void MachineFunction::assignBeginEndSections() {
 
 /// Allocate a new MachineInstr. Use this instead of `new MachineInstr'.
 MachineInstr *MachineFunction::CreateMachineInstr(const MCInstrDesc &MCID,
-                                                  const DebugLoc &DL,
+                                                  DebugLoc DL,
                                                   bool NoImplicit) {
   return new (InstructionRecycler.Allocate<MachineInstr>(Allocator))
-      MachineInstr(*this, MCID, DL, NoImplicit);
+      MachineInstr(*this, MCID, std::move(DL), NoImplicit);
 }
 
 /// Create a new MachineInstr which is a copy of the 'Orig' instruction,
@@ -360,8 +385,9 @@ MachineFunction::CloneMachineInstr(const MachineInstr *Orig) {
              MachineInstr(*this, *Orig);
 }
 
-MachineInstr &MachineFunction::CloneMachineInstrBundle(MachineBasicBlock &MBB,
-    MachineBasicBlock::iterator InsertBefore, const MachineInstr &Orig) {
+MachineInstr &MachineFunction::cloneMachineInstrBundle(
+    MachineBasicBlock &MBB, MachineBasicBlock::iterator InsertBefore,
+    const MachineInstr &Orig) {
   MachineInstr *FirstClone = nullptr;
   MachineBasicBlock::const_instr_iterator I = Orig.getIterator();
   while (true) {
@@ -389,8 +415,7 @@ MachineInstr &MachineFunction::CloneMachineInstrBundle(MachineBasicBlock &MBB,
 ///
 /// This function also serves as the MachineInstr destructor - the real
 /// ~MachineInstr() destructor must be empty.
-void
-MachineFunction::DeleteMachineInstr(MachineInstr *MI) {
+void MachineFunction::deleteMachineInstr(MachineInstr *MI) {
   // Verify that a call site info is at valid state. This assertion should
   // be triggered during the implementation of support for the
   // call site info of a new architecture. If the assertion is triggered,
@@ -417,8 +442,7 @@ MachineFunction::CreateMachineBasicBlock(const BasicBlock *bb) {
 }
 
 /// Delete the given MachineBasicBlock.
-void
-MachineFunction::DeleteMachineBasicBlock(MachineBasicBlock *MBB) {
+void MachineFunction::deleteMachineBasicBlock(MachineBasicBlock *MBB) {
   assert(MBB->getParent() == this && "MBB parent mismatch!");
   // Clean up any references to MBB in jump tables before deleting it.
   if (JumpTableInfo)
@@ -745,9 +769,8 @@ MCSymbol *MachineFunction::addLandingPad(MachineBasicBlock *LandingPad) {
         // Add filters in a list.
         auto *CVal = cast<Constant>(Val);
         SmallVector<const GlobalValue *, 4> FilterList;
-        for (User::op_iterator II = CVal->op_begin(), IE = CVal->op_end();
-             II != IE; ++II)
-          FilterList.push_back(cast<GlobalValue>((*II)->stripPointerCasts()));
+        for (const Use &U : CVal->operands())
+          FilterList.push_back(cast<GlobalValue>(U->stripPointerCasts()));
 
         addFilterTypeInfo(LandingPad, FilterList);
       }
@@ -769,8 +792,8 @@ MCSymbol *MachineFunction::addLandingPad(MachineBasicBlock *LandingPad) {
 void MachineFunction::addCatchTypeInfo(MachineBasicBlock *LandingPad,
                                        ArrayRef<const GlobalValue *> TyInfo) {
   LandingPadInfo &LP = getOrCreateLandingPadInfo(LandingPad);
-  for (unsigned N = TyInfo.size(); N; --N)
-    LP.TypeIds.push_back(getTypeIDFor(TyInfo[N - 1]));
+  for (const GlobalValue *GV : llvm::reverse(TyInfo))
+    LP.TypeIds.push_back(getTypeIDFor(GV));
 }
 
 void MachineFunction::addFilterTypeInfo(MachineBasicBlock *LandingPad,
@@ -831,25 +854,6 @@ void MachineFunction::tidyLandingPads(DenseMap<MCSymbol *, uintptr_t> *LPMap,
 void MachineFunction::addCleanup(MachineBasicBlock *LandingPad) {
   LandingPadInfo &LP = getOrCreateLandingPadInfo(LandingPad);
   LP.TypeIds.push_back(0);
-}
-
-void MachineFunction::addSEHCatchHandler(MachineBasicBlock *LandingPad,
-                                         const Function *Filter,
-                                         const BlockAddress *RecoverBA) {
-  LandingPadInfo &LP = getOrCreateLandingPadInfo(LandingPad);
-  SEHHandler Handler;
-  Handler.FilterOrFinally = Filter;
-  Handler.RecoverBA = RecoverBA;
-  LP.SEHHandlers.push_back(Handler);
-}
-
-void MachineFunction::addSEHCleanupHandler(MachineBasicBlock *LandingPad,
-                                           const Function *Cleanup) {
-  LandingPadInfo &LP = getOrCreateLandingPadInfo(LandingPad);
-  SEHHandler Handler;
-  Handler.FilterOrFinally = Cleanup;
-  Handler.RecoverBA = nullptr;
-  LP.SEHHandlers.push_back(Handler);
 }
 
 void MachineFunction::setCallSiteLandingPad(MCSymbol *Sym,
@@ -973,6 +977,9 @@ void MachineFunction::makeDebugValueSubstitution(DebugInstrOperandPair A,
                                                  unsigned Subreg) {
   // Catch any accidental self-loops.
   assert(A.first != B.first);
+  // Don't allow any substitutions _from_ the memory operand number.
+  assert(A.second != DebugOperandMemNumber);
+
   DebugValueSubstitutions.push_back({A, B, Subreg});
 }
 
@@ -1005,7 +1012,32 @@ void MachineFunction::substituteDebugValuesForInst(const MachineInstr &Old,
   }
 }
 
-auto MachineFunction::salvageCopySSA(MachineInstr &MI)
+auto MachineFunction::salvageCopySSA(
+    MachineInstr &MI, DenseMap<Register, DebugInstrOperandPair> &DbgPHICache)
+    -> DebugInstrOperandPair {
+  const TargetInstrInfo &TII = *getSubtarget().getInstrInfo();
+
+  // Check whether this copy-like instruction has already been salvaged into
+  // an operand pair.
+  Register Dest;
+  if (auto CopyDstSrc = TII.isCopyInstr(MI)) {
+    Dest = CopyDstSrc->Destination->getReg();
+  } else {
+    assert(MI.isSubregToReg());
+    Dest = MI.getOperand(0).getReg();
+  }
+
+  auto CacheIt = DbgPHICache.find(Dest);
+  if (CacheIt != DbgPHICache.end())
+    return CacheIt->second;
+
+  // Calculate the instruction number to use, or install a DBG_PHI.
+  auto OperandPair = salvageCopySSAImpl(MI);
+  DbgPHICache.insert({Dest, OperandPair});
+  return OperandPair;
+}
+
+auto MachineFunction::salvageCopySSAImpl(MachineInstr &MI)
     -> DebugInstrOperandPair {
   MachineRegisterInfo &MRI = getRegInfo();
   const TargetRegisterInfo &TRI = *MRI.getTargetRegisterInfo();
@@ -1131,17 +1163,21 @@ auto MachineFunction::salvageCopySSA(MachineInstr &MI)
     }
   }
 
+  MachineBasicBlock &InsertBB = *CurInst->getParent();
+
   // We reached the start of the block before finding a defining instruction.
-  // It must be an argument: assert that this is the entry block, and produce
-  // a DBG_PHI.
-  assert(!State.first.isVirtual());
-  MachineBasicBlock &TargetBB = *CurInst->getParent();
-  assert(&*TargetBB.getParent()->begin() == &TargetBB);
+  // There are numerous scenarios where this can happen:
+  // * Constant physical registers,
+  // * Several intrinsics that allow LLVM-IR to read arbitary registers,
+  // * Arguments in the entry block,
+  // * Exception handling landing pads.
+  // Validating all of them is too difficult, so just insert a DBG_PHI reading
+  // the variable value at this position, rather than checking it makes sense.
 
   // Create DBG_PHI for specified physreg.
-  auto Builder = BuildMI(TargetBB, TargetBB.getFirstNonPHI(), DebugLoc(),
+  auto Builder = BuildMI(InsertBB, InsertBB.getFirstNonPHI(), DebugLoc(),
                          TII.get(TargetOpcode::DBG_PHI));
-  Builder.addReg(State.first, RegState::Debug);
+  Builder.addReg(State.first);
   unsigned NewNum = getNewDebugInstrNum();
   Builder.addImm(NewNum);
   return ApplySubregisters({NewNum, 0u});
@@ -1150,16 +1186,14 @@ auto MachineFunction::salvageCopySSA(MachineInstr &MI)
 void MachineFunction::finalizeDebugInstrRefs() {
   auto *TII = getSubtarget().getInstrInfo();
 
-  auto MakeDbgValue = [&](MachineInstr &MI) {
+  auto MakeUndefDbgValue = [&](MachineInstr &MI) {
     const MCInstrDesc &RefII = TII->get(TargetOpcode::DBG_VALUE);
     MI.setDesc(RefII);
+    MI.getOperand(0).setReg(0);
     MI.getOperand(1).ChangeToRegister(0, false);
-    MI.getOperand(0).setIsDebug();
   };
 
-  if (!getTarget().Options.ValueTrackingVariableLocations)
-    return;
-
+  DenseMap<Register, DebugInstrOperandPair> ArgDbgPHIs;
   for (auto &MBB : *this) {
     for (auto &MI : MBB) {
       if (!MI.isDebugRef() || !MI.getOperand(0).isReg())
@@ -1168,21 +1202,21 @@ void MachineFunction::finalizeDebugInstrRefs() {
       Register Reg = MI.getOperand(0).getReg();
 
       // Some vregs can be deleted as redundant in the meantime. Mark those
-      // as DBG_VALUE $noreg.
-      if (Reg == 0) {
-        MakeDbgValue(MI);
+      // as DBG_VALUE $noreg. Additionally, some normal instructions are
+      // quickly deleted, leaving dangling references to vregs with no def.
+      if (Reg == 0 || !RegInfo->hasOneDef(Reg)) {
+        MakeUndefDbgValue(MI);
         continue;
       }
 
       assert(Reg.isVirtual());
       MachineInstr &DefMI = *RegInfo->def_instr_begin(Reg);
-      assert(RegInfo->hasOneDef(Reg));
 
       // If we've found a copy-like instruction, follow it back to the
       // instruction that defines the source value, see salvageCopySSA docs
       // for why this is important.
       if (DefMI.isCopyLike() || TII->isCopyInstr(DefMI)) {
-        auto Result = salvageCopySSA(DefMI);
+        auto Result = salvageCopySSA(DefMI, ArgDbgPHIs);
         MI.getOperand(0).ChangeToImmediate(Result.first);
         MI.getOperand(1).setImm(Result.second);
       } else {
@@ -1203,6 +1237,27 @@ void MachineFunction::finalizeDebugInstrRefs() {
     }
   }
 }
+
+bool MachineFunction::useDebugInstrRef() const {
+  // Disable instr-ref at -O0: it's very slow (in compile time). We can still
+  // have optimized code inlined into this unoptimized code, however with
+  // fewer and less aggressive optimizations happening, coverage and accuracy
+  // should not suffer.
+  if (getTarget().getOptLevel() == CodeGenOpt::None)
+    return false;
+
+  // Don't use instr-ref if this function is marked optnone.
+  if (F.hasFnAttribute(Attribute::OptimizeNone))
+    return false;
+
+  if (llvm::debuginfoShouldUseDebugInstrRef(getTarget().getTargetTriple()))
+    return true;
+
+  return false;
+}
+
+// Use one million as a high / reserved number.
+const unsigned MachineFunction::DebugOperandMemNumber = 1000000;
 
 /// \}
 
@@ -1287,9 +1342,9 @@ bool MachineJumpTableInfo::ReplaceMBBInJumpTable(unsigned Idx,
   assert(Old != New && "Not making a change?");
   bool MadeChange = false;
   MachineJumpTableEntry &JTE = JumpTables[Idx];
-  for (size_t j = 0, e = JTE.MBBs.size(); j != e; ++j)
-    if (JTE.MBBs[j] == Old) {
-      JTE.MBBs[j] = New;
+  for (MachineBasicBlock *&MBB : JTE.MBBs)
+    if (MBB == Old) {
+      MBB = New;
       MadeChange = true;
     }
   return MadeChange;
@@ -1302,8 +1357,8 @@ void MachineJumpTableInfo::print(raw_ostream &OS) const {
 
   for (unsigned i = 0, e = JumpTables.size(); i != e; ++i) {
     OS << printJumpTableEntryReference(i) << ':';
-    for (unsigned j = 0, f = JumpTables[i].MBBs.size(); j != f; ++j)
-      OS << ' ' << printMBBReference(*JumpTables[i].MBBs[j]);
+    for (const MachineBasicBlock *MBB : JumpTables[i].MBBs)
+      OS << ' ' << printMBBReference(*MBB);
     if (i != e)
       OS << '\n';
   }
@@ -1363,10 +1418,10 @@ MachineConstantPool::~MachineConstantPool() {
   // A constant may be a member of both Constants and MachineCPVsSharingEntries,
   // so keep track of which we've deleted to avoid double deletions.
   DenseSet<MachineConstantPoolValue*> Deleted;
-  for (unsigned i = 0, e = Constants.size(); i != e; ++i)
-    if (Constants[i].isMachineConstantPoolEntry()) {
-      Deleted.insert(Constants[i].Val.MachineCPVal);
-      delete Constants[i].Val.MachineCPVal;
+  for (const MachineConstantPoolEntry &C : Constants)
+    if (C.isMachineConstantPoolEntry()) {
+      Deleted.insert(C.Val.MachineCPVal);
+      delete C.Val.MachineCPVal;
     }
   for (MachineConstantPoolValue *CPV : MachineCPVsSharingEntries) {
     if (Deleted.count(CPV) == 0)

@@ -24,12 +24,10 @@ def RewritePassUtils {
     // created.
     ListOption<"disabledPatterns", "disable-patterns", "std::string",
                "Labels of patterns that should be filtered out during"
-               " application",
-               "llvm::cl::MiscFlags::CommaSeparated">,
+               " application">,
     ListOption<"enabledPatterns", "enable-patterns", "std::string",
                "Labels of patterns that should be used during"
-               " application, all other patterns are filtered out",
-               "llvm::cl::MiscFlags::CommaSeparated">,
+               " application, all other patterns are filtered out">,
   ];
 }
 

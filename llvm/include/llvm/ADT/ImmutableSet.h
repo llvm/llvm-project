@@ -5,9 +5,10 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-//
-// This file defines the ImutAVLTree and ImmutableSet classes.
-//
+///
+/// \file
+/// This file defines the ImutAVLTree and ImmutableSet classes.
+///
 //===----------------------------------------------------------------------===//
 
 #ifndef LLVM_ADT_IMMUTABLESET_H
@@ -168,20 +169,6 @@ public:
   ///  has an data element that matches the specified key.  Complexity
   ///  is logarithmic in the size of the tree.
   bool contains(key_type_ref K) { return (bool) find(K); }
-
-  /// foreach - A member template the accepts invokes operator() on a functor
-  ///  object (specified by Callback) for every node/subtree in the tree.
-  ///  Nodes are visited using an inorder traversal.
-  template <typename Callback>
-  void foreach(Callback& C) {
-    if (ImutAVLTree* L = getLeft())
-      L->foreach(C);
-
-    C(value);
-
-    if (ImutAVLTree* R = getRight())
-      R->foreach(C);
-  }
 
   /// validateTree - A utility method that checks that the balancing and
   ///  ordering invariants of the tree are satisfied.  It is a recursive
@@ -1062,12 +1049,6 @@ public:
   /// isSingleton - Return true if the set contains exactly one element.
   ///   This method runs in constant time.
   bool isSingleton() const { return getHeight() == 1; }
-
-  template <typename Callback>
-  void foreach(Callback& C) { if (Root) Root->foreach(C); }
-
-  template <typename Callback>
-  void foreach() { if (Root) { Callback C; Root->foreach(C); } }
 
   //===--------------------------------------------------===//
   // Iterators.

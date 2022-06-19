@@ -1,8 +1,8 @@
-; RUN: opt < %s -instcombine -S -mtriple x86_64-unknown-linux-gnu | FileCheck %s --check-prefixes=CHECK,LINUX,ISC99
-; RUN: opt < %s -instcombine -S -mtriple x86_64-pc-win32          | FileCheck %s --check-prefixes=CHECK,ISC99
-; RUN: opt < %s -instcombine -S -mtriple x86_64-pc-windows-msvc16 | FileCheck %s --check-prefixes=CHECK,MS64,ISC89
-; RUN: opt < %s -instcombine -S -mtriple i386-pc-windows-msvc     | FileCheck %s --check-prefixes=CHECK,ISC99
-; RUN: opt < %s -instcombine -S -mtriple i686-pc-windows-msvc17   | FileCheck %s --check-prefixes=CHECK,MS32,ISC89
+; RUN: opt < %s -passes=instcombine -S -mtriple x86_64-unknown-linux-gnu | FileCheck %s --check-prefixes=CHECK,LINUX,ISC99
+; RUN: opt < %s -passes=instcombine -S -mtriple x86_64-pc-win32          | FileCheck %s --check-prefixes=CHECK,ISC99
+; RUN: opt < %s -passes=instcombine -S -mtriple x86_64-pc-windows-msvc16 | FileCheck %s --check-prefixes=CHECK,MS64,ISC89
+; RUN: opt < %s -passes=instcombine -S -mtriple i386-pc-windows-msvc     | FileCheck %s --check-prefixes=CHECK,ISC99
+; RUN: opt < %s -passes=instcombine -S -mtriple i686-pc-windows-msvc17   | FileCheck %s --check-prefixes=CHECK,MS32,ISC89
 
 ; Check for and against shrinkage when using the
 ; unsafe-fp-math function attribute on a math lib
@@ -346,7 +346,7 @@ define float @logb_test1(float %f)   {
 ; LINUX-NEXT:    [[LOGBF:%.*]] = call fast float @logbf(float [[F:%.*]])
 ; LINUX-NEXT:    ret float [[LOGBF]]
 ; MS32:          [[POWF:%.*]] = call fast double @logb(double [[F:%.*]])
-; MS64-NEXT:     [[LOGBF:%.*]] = call fast float @logbf(float [[F:%.*]])
+; MS64-NEXT:     [[LOGBF:%.*]] = call fast float @_logbf(float [[F:%.*]])
 ;
   %conv = fpext float %f to double
   %call = call fast double @logb(double %conv)

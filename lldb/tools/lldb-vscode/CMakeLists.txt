@@ -1,5 +1,4 @@
 if ( CMAKE_SYSTEM_NAME MATCHES "Windows" OR CMAKE_SYSTEM_NAME MATCHES "NetBSD" )
-  add_definitions( -DIMPORT_LIBLLDB )
   list(APPEND extra_libs lldbHost)
 endif ()
 
@@ -40,7 +39,6 @@ add_lldb_tool(lldb-vscode
 
   LINK_LIBS
     liblldb
-    ${host_lib}
     ${extra_libs}
 
   LINK_COMPONENTS

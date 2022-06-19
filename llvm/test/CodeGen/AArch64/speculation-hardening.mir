@@ -167,7 +167,7 @@ body:             |
   bb.0:
     ; CHECK-LABEL: indirect_call_lr
     ; CHECK:            mov x1, sp
-    ; CHECK-NEXT:       and x1, x1, x16
+    ; CHECK:            and x1, x1, x16
     ; CHECK-NEXT:       mov sp, x1
     ; CHECK-NEXT:       blr x30
     liveins: $x0, $lr

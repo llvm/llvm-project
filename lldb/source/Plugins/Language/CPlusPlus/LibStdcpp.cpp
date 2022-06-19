@@ -53,7 +53,7 @@ public:
 
 private:
   ExecutionContextRef m_exe_ctx_ref;
-  lldb::addr_t m_pair_address;
+  lldb::addr_t m_pair_address = 0;
   CompilerType m_pair_type;
   lldb::ValueObjectSP m_pair_sp;
 };
@@ -77,8 +77,8 @@ public:
 
 LibstdcppMapIteratorSyntheticFrontEnd::LibstdcppMapIteratorSyntheticFrontEnd(
     lldb::ValueObjectSP valobj_sp)
-    : SyntheticChildrenFrontEnd(*valobj_sp), m_exe_ctx_ref(), m_pair_address(0),
-      m_pair_type(), m_pair_sp() {
+    : SyntheticChildrenFrontEnd(*valobj_sp), m_exe_ctx_ref(), m_pair_type(),
+      m_pair_sp() {
   if (valobj_sp)
     Update();
 }
@@ -250,7 +250,7 @@ bool lldb_private::formatters::LibStdcppStringSummaryProvider(
           addr_of_data == LLDB_INVALID_ADDRESS)
         return false;
       options.SetLocation(addr_of_data);
-      options.SetProcessSP(process_sp);
+      options.SetTargetSP(valobj.GetTargetSP());
       options.SetStream(&stream);
       options.SetNeedsZeroTermination(false);
       options.SetBinaryZeroIsTerminator(true);
@@ -311,7 +311,7 @@ bool lldb_private::formatters::LibStdcppWStringSummaryProvider(
           addr_of_data == LLDB_INVALID_ADDRESS)
         return false;
       options.SetLocation(addr_of_data);
-      options.SetProcessSP(process_sp);
+      options.SetTargetSP(valobj.GetTargetSP());
       options.SetStream(&stream);
       options.SetNeedsZeroTermination(false);
       options.SetBinaryZeroIsTerminator(false);

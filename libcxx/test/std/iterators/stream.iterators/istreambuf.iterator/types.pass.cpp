@@ -58,6 +58,7 @@ int main(int, char**)
     static_assert((std::is_trivially_destructible<I1>::value), "" );
     }
 
+#ifndef TEST_HAS_NO_WIDE_CHARACTERS
     {
     typedef std::istreambuf_iterator<wchar_t> I2;
 #if TEST_STD_VER <= 14
@@ -78,6 +79,7 @@ int main(int, char**)
     static_assert((std::is_trivially_copy_constructible<I2>::value), "" );
     static_assert((std::is_trivially_destructible<I2>::value), "" );
     }
+#endif // TEST_HAS_NO_WIDE_CHARACTERS
 
   return 0;
 }

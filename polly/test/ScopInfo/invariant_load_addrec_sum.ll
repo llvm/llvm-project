@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -polly-scops -polly-invariant-load-hoisting=true -polly-ignore-aliasing -polly-process-unprofitable -analyze < %s | FileCheck %s
+; RUN: opt %loadPolly -polly-print-scops -polly-invariant-load-hoisting=true -polly-ignore-aliasing -polly-process-unprofitable -disable-output < %s | FileCheck %s
 ;
 ; CHECK: Region: %entry.split---%if.end
 ; CHECK:     Invariant Accesses: {

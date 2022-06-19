@@ -1,6 +1,6 @@
 // RUN: mlir-opt %s -convert-openacc-to-scf -split-input-file | FileCheck %s
 
-func @testenterdataop(%a: memref<10xf32>, %ifCond: i1) -> () {
+func.func @testenterdataop(%a: memref<10xf32>, %ifCond: i1) -> () {
   acc.enter_data if(%ifCond) create(%a: memref<10xf32>)
   return
 }
@@ -12,7 +12,7 @@ func @testenterdataop(%a: memref<10xf32>, %ifCond: i1) -> () {
 
 // -----
 
-func @testexitdataop(%a: memref<10xf32>, %ifCond: i1) -> () {
+func.func @testexitdataop(%a: memref<10xf32>, %ifCond: i1) -> () {
   acc.exit_data if(%ifCond) delete(%a: memref<10xf32>)
   return
 }
@@ -24,7 +24,7 @@ func @testexitdataop(%a: memref<10xf32>, %ifCond: i1) -> () {
 
 // -----
 
-func @testupdateop(%a: memref<10xf32>, %ifCond: i1) -> () {
+func.func @testupdateop(%a: memref<10xf32>, %ifCond: i1) -> () {
   acc.update if(%ifCond) host(%a: memref<10xf32>)
   return
 }

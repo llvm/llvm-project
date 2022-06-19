@@ -9,7 +9,7 @@
 // <string>
 
 // basic_string<charT,traits,Allocator>&
-//   replace(const_iterator i1, const_iterator i2, size_type n, charT c);
+//   replace(const_iterator i1, const_iterator i2, size_type n, charT c); // constexpr since C++20
 
 #include <string>
 #include <algorithm>
@@ -19,7 +19,7 @@
 #include "min_allocator.h"
 
 template <class S>
-void
+TEST_CONSTEXPR_CXX20 void
 test(S s, typename S::size_type pos1, typename S::size_type n1, typename S::size_type n2,
      typename S::value_type c, S expected)
 {
@@ -35,7 +35,7 @@ test(S s, typename S::size_type pos1, typename S::size_type n1, typename S::size
 }
 
 template <class S>
-void test0()
+TEST_CONSTEXPR_CXX20 void test0()
 {
     test(S(""), 0, 0, 0, '3', S(""));
     test(S(""), 0, 0, 5, '3', S("33333"));
@@ -140,7 +140,7 @@ void test0()
 }
 
 template <class S>
-void test1()
+TEST_CONSTEXPR_CXX20 void test1()
 {
     test(S("abcdefghij"), 1, 4, 0, '3', S("afghij"));
     test(S("abcdefghij"), 1, 4, 5, '3', S("a33333fghij"));
@@ -245,7 +245,7 @@ void test1()
 }
 
 template <class S>
-void test2()
+TEST_CONSTEXPR_CXX20 void test2()
 {
     test(S("abcdefghijklmnopqrst"), 10, 10, 0, '3', S("abcdefghij"));
     test(S("abcdefghijklmnopqrst"), 10, 10, 5, '3', S("abcdefghij33333"));
@@ -265,21 +265,30 @@ void test2()
     test(S("abcdefghijklmnopqrst"), 20, 0, 20, '3', S("abcdefghijklmnopqrst33333333333333333333"));
 }
 
-int main(int, char**)
-{
-    {
+TEST_CONSTEXPR_CXX20 bool test() {
+  {
     typedef std::string S;
     test0<S>();
     test1<S>();
     test2<S>();
-    }
+  }
 #if TEST_STD_VER >= 11
-    {
+  {
     typedef std::basic_string<char, std::char_traits<char>, min_allocator<char>> S;
     test0<S>();
     test1<S>();
     test2<S>();
-    }
+  }
+#endif
+
+  return true;
+}
+
+int main(int, char**)
+{
+  test();
+#if TEST_STD_VER > 17
+  static_assert(test());
 #endif
 
   return 0;

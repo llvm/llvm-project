@@ -73,6 +73,12 @@ void MultiplexASTDeserializationListener::ModuleRead(
     Listener->ModuleRead(ID, Mod);
 }
 
+void MultiplexASTDeserializationListener::ModuleImportRead(
+    serialization::SubmoduleID ID, SourceLocation ImportLoc) {
+  for (auto &Listener : Listeners)
+    Listener->ModuleImportRead(ID, ImportLoc);
+}
+
 // This ASTMutationListener forwards its notifications to a set of
 // child listeners.
 class MultiplexASTMutationListener : public ASTMutationListener {
@@ -236,10 +242,10 @@ void MultiplexASTMutationListener::AddedAttributeToRecord(
 
 MultiplexConsumer::MultiplexConsumer(
     std::vector<std::unique_ptr<ASTConsumer>> C)
-    : Consumers(std::move(C)), MutationListener(), DeserializationListener() {
+    : Consumers(std::move(C)) {
   // Collect the mutation listeners and deserialization listeners of all
   // children, and create a multiplex listener each if so.
-  std::vector<ASTMutationListener*> mutationListeners;
+  std::vector<ASTMutationListener *> mutationListeners;
   std::vector<ASTDeserializationListener*> serializationListeners;
   for (auto &Consumer : Consumers) {
     if (auto *mutationListener = Consumer->GetASTMutationListener())

@@ -19,7 +19,7 @@
 namespace __msan {
 
 // Gets the statistic of the origin chain storage.
-StackDepotStats *ChainedOriginDepotGetStats();
+StackDepotStats ChainedOriginDepotGetStats();
 
 // Stores a chain with StackDepot ID here_id and previous chain ID prev_id.
 // If successful, returns true and the new chain id new_id.

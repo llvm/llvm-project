@@ -37,8 +37,8 @@ define void @needs_align16_default_stack_align(i32 %idx) #0 {
 
 ; GCN: buffer_store_dword v{{[0-9]+}}, v{{[0-9]+}}, s[0:3], 0 offen
 ; GCN: v_or_b32_e32 v{{[0-9]+}}, 12
-; GCN: s_addk_i32 s32, 0x2800{{$}}
 ; GCN: buffer_store_dword v{{[0-9]+}}, v{{[0-9]+}}, s[0:3], 0 offen
+; GCN: s_addk_i32 s32, 0x2800{{$}}
 ; GCN: buffer_store_dword v{{[0-9]+}}, v{{[0-9]+}}, s[0:3], 0 offen
 ; GCN: buffer_store_dword v{{[0-9]+}}, v{{[0-9]+}}, s[0:3], 0 offen
 
@@ -58,8 +58,8 @@ define void @needs_align16_stack_align4(i32 %idx) #2 {
 
 ; GCN: buffer_store_dword v{{[0-9]+}}, v{{[0-9]+}}, s[0:3], 0 offen
 ; GCN: v_or_b32_e32 v{{[0-9]+}}, 12
-; GCN: s_addk_i32 s32, 0x3000{{$}}
 ; GCN: buffer_store_dword v{{[0-9]+}}, v{{[0-9]+}}, s[0:3], 0 offen
+; GCN: s_addk_i32 s32, 0x3000{{$}}
 ; GCN: buffer_store_dword v{{[0-9]+}}, v{{[0-9]+}}, s[0:3], 0 offen
 ; GCN: buffer_store_dword v{{[0-9]+}}, v{{[0-9]+}}, s[0:3], 0 offen
 
@@ -157,26 +157,29 @@ define void @func_call_align1024_bp_gets_vgpr_spill(<32 x i32> %a, i32 %b) #0 {
 
 ; GCN-LABEL: func_call_align1024_bp_gets_vgpr_spill:
 ; GCN: buffer_store_dword [[VGPR_REG:v[0-9]+]], off, s[0:3], s32 offset:1028 ; 4-byte Folded Spill
-; GCN-NEXT: s_mov_b64 exec, s[4:5]
+; GCN-NEXT: s_mov_b64 exec, s[16:17]
 ; GCN-NEXT: v_writelane_b32 [[VGPR_REG]], s33, 2
 ; GCN-DAG: s_add_i32 [[SCRATCH_REG:s[0-9]+]], s32, 0xffc0
-; GCN-DAG: v_writelane_b32 [[VGPR_REG]], s34, 3
 ; GCN: s_and_b32 s33, [[SCRATCH_REG]], 0xffff0000
-; GCN: s_mov_b32 s34, s32
 ; GCN: v_mov_b32_e32 v32, 0
+; GCN-DAG: v_writelane_b32 [[VGPR_REG]], s34, 3
+; GCN: s_mov_b32 s34, s32
 ; GCN: buffer_store_dword v32, off, s[0:3], s33 offset:1024
 ; GCN-NEXT: s_waitcnt vmcnt(0)
 ; GCN-NEXT: buffer_load_dword v{{[0-9]+}}, off, s[0:3], s34
 ; GCN-DAG: s_add_i32 s32, s32, 0x30000
 ; GCN: buffer_store_dword v{{[0-9]+}}, off, s[0:3], s32
-; GCN: s_swappc_b64 s[30:31], s[4:5]
+; GCN: s_swappc_b64 s[30:31],
 
+; GCN: v_readlane_b32 s31, [[VGPR_REG]], 1
+; GCN: v_readlane_b32 s30, [[VGPR_REG]], 0
 ; GCN: s_add_i32 s32, s32, 0xfffd0000
 ; GCN-NEXT: v_readlane_b32 s33, [[VGPR_REG]], 2
 ; GCN-NEXT: v_readlane_b32 s34, [[VGPR_REG]], 3
-; GCN-NEXT: s_or_saveexec_b64 s[6:7], -1
+; GCN-NEXT: s_or_saveexec_b64 s[4:5], -1
 ; GCN-NEXT: buffer_load_dword [[VGPR_REG]], off, s[0:3], s32 offset:1028 ; 4-byte Folded Reload
-; GCN-NEXT: s_mov_b64 exec, s[6:7]
+; GCN-NEXT: s_mov_b64 exec, s[4:5]
+; GCN: s_setpc_b64 s[30:31]
   %temp = alloca i32, align 1024, addrspace(5)
   store volatile i32 0, i32 addrspace(5)* %temp, align 1024
   call void @extern_func(<32 x i32> %a, i32 %b)
@@ -193,12 +196,12 @@ define i32 @needs_align1024_stack_args_used_inside_loop(%struct.Data addrspace(5
 
 ; GCN-LABEL: needs_align1024_stack_args_used_inside_loop:
 ; GCN: s_mov_b32 [[FP_COPY:s[0-9]+]], s33
-; GCN-NEXT: s_add_i32 s33, s32, 0xffc0
 ; GCN-NEXT: s_mov_b32 [[BP_COPY:s[0-9]+]], s34
+; GCN-NEXT: s_add_i32 s33, s32, 0xffc0
 ; GCN-NEXT: s_mov_b32 s34, s32
 ; GCN-NEXT: s_and_b32 s33, s33, 0xffff0000
-; GCN-NEXT: v_mov_b32_e32 v{{[0-9]+}}, 0
 ; GCN-NEXT: v_lshrrev_b32_e64 [[VGPR_REG:v[0-9]+]], 6, s34
+; GCN-NEXT: v_mov_b32_e32 v{{[0-9]+}}, 0
 ; GCN: s_add_i32 s32, s32, 0x30000
 ; GCN: buffer_store_dword v{{[0-9]+}}, off, s[0:3], s33 offset:1024
 ; GCN: buffer_load_dword v{{[0-9]+}}, [[VGPR_REG]], s[0:3], 0 offen

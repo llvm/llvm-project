@@ -11,6 +11,7 @@
 
 #include <atomic>
 #include <condition_variable>
+#include <fstream>
 #include <memory>
 #include <mutex>
 #include <thread>
@@ -130,11 +131,23 @@ TEST(ScudoWrappersCppTest, ThreadedNew) {
 }
 
 #if !SCUDO_FUCHSIA
-// TODO(kostyak): for me, this test fails in a specific configuration when ran
-//                by itself with some Scudo or GWP-ASan violation. Other people
-//                can't seem to reproduce the failure. Consider skipping this in
-//                the event it fails on the upstream bots.
 TEST(ScudoWrappersCppTest, AllocAfterFork) {
+  // This test can fail flakily when ran as a part of large number of
+  // other tests if the maxmimum number of mappings allowed is low.
+  // We tried to reduce the number of iterations of the loops with
+  // moderate success, so we will now skip this test under those
+  // circumstances.
+  if (SCUDO_LINUX) {
+    long MaxMapCount = 0;
+    // If the file can't be accessed, we proceed with the test.
+    std::ifstream Stream("/proc/sys/vm/max_map_count");
+    if (Stream.good()) {
+      Stream >> MaxMapCount;
+      if (MaxMapCount < 200000)
+        return;
+    }
+  }
+
   std::atomic_bool Stop;
 
   // Create threads that simply allocate and free different sizes.
@@ -142,7 +155,7 @@ TEST(ScudoWrappersCppTest, AllocAfterFork) {
   for (size_t N = 0; N < 5; N++) {
     std::thread *T = new std::thread([&Stop] {
       while (!Stop) {
-        for (size_t SizeLog = 3; SizeLog <= 21; SizeLog++) {
+        for (size_t SizeLog = 3; SizeLog <= 20; SizeLog++) {
           char *P = new char[1UL << SizeLog];
           EXPECT_NE(P, nullptr);
           // Make sure this value is not optimized away.
@@ -155,10 +168,10 @@ TEST(ScudoWrappersCppTest, AllocAfterFork) {
   }
 
   // Create a thread to fork and allocate.
-  for (size_t N = 0; N < 100; N++) {
+  for (size_t N = 0; N < 50; N++) {
     pid_t Pid;
     if ((Pid = fork()) == 0) {
-      for (size_t SizeLog = 3; SizeLog <= 21; SizeLog++) {
+      for (size_t SizeLog = 3; SizeLog <= 20; SizeLog++) {
         char *P = new char[1UL << SizeLog];
         EXPECT_NE(P, nullptr);
         // Make sure this value is not optimized away.

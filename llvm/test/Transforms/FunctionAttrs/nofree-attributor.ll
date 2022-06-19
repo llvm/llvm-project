@@ -1,4 +1,4 @@
-; RUN: opt -enable-new-pm=1 -function-attrs --disable-nofree-inference=false -S < %s | FileCheck %s --check-prefix=FNATTR
+; RUN: opt -passes=function-attrs --aa-pipeline=basic-aa --disable-nofree-inference=false -S < %s | FileCheck %s --check-prefix=FNATTR
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 
@@ -12,7 +12,7 @@ declare void @_ZdaPv(i8*) local_unnamed_addr #2
 
 
 ; TEST 1 (positive case)
-; FNATTR: Function Attrs: mustprogress nofree noinline norecurse nosync nounwind readnone uwtable
+; FNATTR: Function Attrs: mustprogress nofree noinline norecurse nosync nounwind readnone willreturn uwtable
 ; FNATTR-NEXT: define void @only_return()
 define void @only_return() #0 {
     ret void

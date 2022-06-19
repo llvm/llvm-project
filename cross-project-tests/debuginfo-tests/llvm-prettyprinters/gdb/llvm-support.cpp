@@ -24,7 +24,12 @@ llvm::Optional<int> OptionalNone(llvm::None);
 llvm::SmallVector<int, 5> SmallVector = {10, 11, 12};
 llvm::SmallString<5> SmallString("foo");
 llvm::StringRef StringRef = "bar";
-llvm::Twine Twine = llvm::Twine(SmallString) + StringRef;
+// Should test std::string in Twine too, but it's currently broken because I
+// don't know how to add 'str' and 'gdb.LazyString' (can't figure out any way to
+// string-ify LazyString).
+std::string String = "foo";
+llvm::Twine TempTwine = llvm::Twine(String) + StringRef;
+llvm::Twine Twine = TempTwine + "baz";
 llvm::PointerIntPair<int *, 1> PointerIntPair(IntPtr, 1);
 
 struct alignas(8) Z {};
@@ -56,12 +61,15 @@ auto SimpleIlist = []() {
 }();
 
 int main() {
-  // Reference symbols that might otherwise be stripped.
-  ArrayRef[0];
-  MutableArrayRef[0];
-  (void)!ExpectedValue;
-  (void)!ExpectedError;
-  *OptionalValue;
-  *OptionalNone;
-  return 0;
+  std::uintptr_t result = 0;
+  auto dont_strip = [&](const auto &val) {
+    result += reinterpret_cast<std::uintptr_t>(&val);
+  };
+  dont_strip(ArrayRef);
+  dont_strip(MutableArrayRef);
+  dont_strip(ExpectedValue);
+  dont_strip(ExpectedError);
+  dont_strip(OptionalValue);
+  dont_strip(OptionalNone);
+  return result; // Non-zero return value is OK.
 }

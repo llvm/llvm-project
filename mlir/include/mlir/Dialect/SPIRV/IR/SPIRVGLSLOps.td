@@ -21,12 +21,20 @@ include "mlir/Interfaces/SideEffectInterfaces.td"
 //===----------------------------------------------------------------------===//
 
 // Base class for all GLSL ops.
-class SPV_GLSLOp<string mnemonic, int opcode, list<OpTrait> traits = []> :
-  SPV_ExtInstOp<mnemonic, "GLSL", "GLSL.std.450", opcode, traits>;
+class SPV_GLSLOp<string mnemonic, int opcode, list<Trait> traits = []> :
+  SPV_ExtInstOp<mnemonic, "GLSL", "GLSL.std.450", opcode, traits> {
+
+  let availability = [
+    MinVersion<SPV_V_1_0>,
+    MaxVersion<SPV_V_1_5>,
+    Extension<[]>,
+    Capability<[SPV_C_Shader]>
+  ];
+}
 
 // Base class for GLSL unary ops.
 class SPV_GLSLUnaryOp<string mnemonic, int opcode, Type resultType,
-                      Type operandType, list<OpTrait> traits = []> :
+                      Type operandType, list<Trait> traits = []> :
   SPV_GLSLOp<mnemonic, opcode, !listconcat([NoSideEffect], traits)> {
 
   let arguments = (ins
@@ -37,22 +45,21 @@ class SPV_GLSLUnaryOp<string mnemonic, int opcode, Type resultType,
     SPV_ScalarOrVectorOf<resultType>:$result
   );
 
-  let parser = [{ return parseUnaryOp(parser, result); }];
-
-  let printer = [{ return printUnaryOp(getOperation(), p); }];
-
-  let verifier = [{ return success(); }];
+  let hasVerifier = 0;
 }
 
 // Base class for GLSL Unary arithmetic ops where return type matches
 // the operand type.
 class SPV_GLSLUnaryArithmeticOp<string mnemonic, int opcode, Type type,
-                                list<OpTrait> traits = []> :
-  SPV_GLSLUnaryOp<mnemonic, opcode, type, type, traits>;
+                                list<Trait> traits = []> :
+  SPV_GLSLUnaryOp<mnemonic, opcode, type, type,
+                  traits # [SameOperandsAndResultType]> {
+  let assemblyFormat = "$operand `:` type($operand) attr-dict";
+}
 
 // Base class for GLSL binary ops.
 class SPV_GLSLBinaryOp<string mnemonic, int opcode, Type resultType,
-                        Type operandType, list<OpTrait> traits = []> :
+                        Type operandType, list<Trait> traits = []> :
   SPV_GLSLOp<mnemonic, opcode, !listconcat([NoSideEffect], traits)> {
 
   let arguments = (ins
@@ -64,22 +71,21 @@ class SPV_GLSLBinaryOp<string mnemonic, int opcode, Type resultType,
     SPV_ScalarOrVectorOf<resultType>:$result
   );
 
-  let parser = [{ return impl::parseOneResultSameOperandTypeOp(parser, result); }];
-
-  let printer = [{ return impl::printOneResultOp(getOperation(), p); }];
-
-  let verifier = [{ return success(); }];
+  let hasVerifier = 0;
 }
 
 // Base class for GLSL Binary arithmetic ops where operand types and
 // return type matches.
 class SPV_GLSLBinaryArithmeticOp<string mnemonic, int opcode, Type type,
-                                 list<OpTrait> traits = []> :
-  SPV_GLSLBinaryOp<mnemonic, opcode, type, type, traits>;
+                                 list<Trait> traits = []> :
+  SPV_GLSLBinaryOp<mnemonic, opcode, type, type,
+                   traits # [SameOperandsAndResultType]> {
+  let assemblyFormat = "operands attr-dict `:` type($result)";
+}
 
 // Base class for GLSL ternary ops.
 class SPV_GLSLTernaryArithmeticOp<string mnemonic, int opcode, Type type,
-                        list<OpTrait> traits = []> :
+                        list<Trait> traits = []> :
   SPV_GLSLOp<mnemonic, opcode, !listconcat([NoSideEffect], traits)> {
 
   let arguments = (ins
@@ -92,11 +98,8 @@ class SPV_GLSLTernaryArithmeticOp<string mnemonic, int opcode, Type type,
     SPV_ScalarOrVectorOf<type>:$result
   );
 
-  let parser = [{ return impl::parseOneResultSameOperandTypeOp(parser, result); }];
-
-  let printer = [{ return impl::printOneResultOp(getOperation(), p); }];
-
-  let verifier = [{ return success(); }];
+  let hasCustomAssemblyFormat = 1;
+  let hasVerifier = 0;
 }
 
 // -----
@@ -261,10 +264,10 @@ def SPV_GLSLTanOp : SPV_GLSLUnaryArithmeticOp<"Tan", 15, SPV_Float16or32> {
   let description = [{
     The standard trigonometric tangent of x radians.
 
-    The operand x must be a scalar or vector whose component type is 16-bit or 
+    The operand x must be a scalar or vector whose component type is 16-bit or
     32-bit floating-point.
 
-    Result Type and the type of x must be the same type. Results are computed 
+    Result Type and the type of x must be the same type. Results are computed
     per component.
 
     <!-- End of AutoGen section -->
@@ -576,6 +579,36 @@ def SPV_GLSLFMaxOp : SPV_GLSLBinaryArithmeticOp<"FMax", 40, SPV_Float> {
 
 // -----
 
+def SPV_GLSLUMaxOp : SPV_GLSLBinaryArithmeticOp<"UMax", 41, SPV_Integer> {
+  let summary = "Return maximum of two unsigned integer operands";
+
+  let description = [{
+    Result is y if x < y; otherwise result is x, where x and y are interpreted
+    as unsigned integers.
+
+    Result Type and the type of x and y must both be integer scalar or integer
+    vector types. Result Type and operand types must have the same number of
+    components with the same component width. Results are computed per
+    component.
+
+    <!-- End of AutoGen section -->
+    ```
+    integer-scalar-vector-type ::= integer-type |
+                                   `vector<` integer-literal `x` integer-type `>`
+    smax-op ::= ssa-id `=` `spv.GLSL.UMax` ssa-use `:`
+                integer-scalar-vector-type
+    ```
+    #### Example:
+
+    ```mlir
+    %2 = spv.GLSL.UMax %0, %1 : i32
+    %3 = spv.GLSL.UMax %0, %1 : vector<3xi16>
+    ```
+  }];
+}
+
+// -----
+
 def SPV_GLSLSMaxOp : SPV_GLSLBinaryArithmeticOp<"SMax", 42, SPV_Integer> {
   let summary = "Return maximum of two signed integer operands";
 
@@ -631,6 +664,36 @@ def SPV_GLSLFMinOp : SPV_GLSLBinaryArithmeticOp<"FMin", 37, SPV_Float> {
     ```mlir
     %2 = spv.GLSL.FMin %0, %1 : f32
     %3 = spv.GLSL.FMin %0, %1 : vector<3xf16>
+    ```
+  }];
+}
+
+// -----
+
+def SPV_GLSLUMinOp : SPV_GLSLBinaryArithmeticOp<"UMin", 38, SPV_Integer> {
+  let summary = "Return minimum of two unsigned integer operands";
+
+  let description = [{
+    Result is y if y < x; otherwise result is x, where x and y are interpreted
+    as unsigned integers.
+
+    Result Type and the type of x and y must both be integer scalar or integer
+    vector types. Result Type and operand types must have the same number of
+    components with the same component width. Results are computed per
+    component.
+
+    <!-- End of AutoGen section -->
+    ```
+    integer-scalar-vector-type ::= integer-type |
+                                   `vector<` integer-literal `x` integer-type `>`
+    smin-op ::= ssa-id `=` `spv.GLSL.UMin` ssa-use `:`
+                integer-scalar-vector-type
+    ```
+    #### Example:
+
+    ```mlir
+    %2 = spv.GLSL.UMin %0, %1 : i32
+    %3 = spv.GLSL.UMin %0, %1 : vector<3xi16>
     ```
   }];
 }
@@ -916,7 +979,7 @@ def SPV_GLSLFClampOp : SPV_GLSLTernaryArithmeticOp<"FClamp", 43, SPV_Float> {
 
 // -----
 
-def SPV_GLSLUClampOp : SPV_GLSLTernaryArithmeticOp<"UClamp", 44, SPV_SignlessOrUnsignedInt> {
+def SPV_GLSLUClampOp : SPV_GLSLTernaryArithmeticOp<"UClamp", 44, SPV_Integer> {
   let summary = "Clamp x between min and max values.";
 
   let description = [{
@@ -945,7 +1008,7 @@ def SPV_GLSLUClampOp : SPV_GLSLTernaryArithmeticOp<"UClamp", 44, SPV_SignlessOrU
 
 // -----
 
-def SPV_GLSLSClampOp : SPV_GLSLTernaryArithmeticOp<"SClamp", 45, SPV_SignedInt> {
+def SPV_GLSLSClampOp : SPV_GLSLTernaryArithmeticOp<"SClamp", 45, SPV_Integer> {
   let summary = "Clamp x between min and max values.";
 
   let description = [{
@@ -1065,8 +1128,6 @@ def SPV_GLSLFrexpStructOp : SPV_GLSLOp<"FrexpStruct", 52, [NoSideEffect]> {
   let assemblyFormat = [{
     attr-dict $operand `:` type($operand) `->` type($result)
   }];
-
-  let verifier = [{ return ::verifyGLSLFrexpStructOp(*this); }];
 }
 
 def SPV_GLSLLdexpOp :
@@ -1119,8 +1180,6 @@ def SPV_GLSLLdexpOp :
   let assemblyFormat = [{
     attr-dict $x `:` type($x) `,` $exp `:` type($exp) `->` type($y)
   }];
-
-  let verifier = [{ return ::verify(*this); }];
 }
 
 def SPV_GLSLFMixOp :
@@ -1159,7 +1218,23 @@ def SPV_GLSLFMixOp :
     attr-dict $x `:` type($x) `,` $y `:` type($y) `,` $a `:` type($a) `->` type($result)
   }];
 
-  let verifier = [{ return success(); }];
+  let hasVerifier = 0;
+}
+
+def SPV_GLSLFindUMsbOp : SPV_GLSLUnaryArithmeticOp<"FindUMsb", 75, SPV_Int32> {
+  let summary = "Unsigned-integer most-significant bit";
+
+  let description = [{
+    Results in the bit number of the most-significant 1-bit in the binary
+    representation of Value. If Value is 0, the result is -1.
+
+    Result Type and the type of Value must both be integer scalar or
+    integer vector types. Result Type and operand types must have the
+    same number of components with the same component width. Results are
+    computed per component.
+
+    This instruction is currently limited to 32-bit width components.
+  }];
 }
 
 #endif // MLIR_DIALECT_SPIRV_IR_GLSL_OPS

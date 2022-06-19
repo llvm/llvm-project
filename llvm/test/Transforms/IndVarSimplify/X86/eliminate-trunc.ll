@@ -543,7 +543,7 @@ bb7:                                             ; preds = %bb6
 define void @test_12(i32* %p) {
 ; CHECK-LABEL: @test_12(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[N:%.*]] = load i32, i32* [[P:%.*]], align 4, [[RNG0:!range !.*]]
+; CHECK-NEXT:    [[N:%.*]] = load i32, i32* [[P:%.*]], align 4, !range [[RNG0:![0-9]+]]
 ; CHECK-NEXT:    [[SMAX:%.*]] = call i32 @llvm.smax.i32(i32 [[N]], i32 1)
 ; CHECK-NEXT:    [[WIDE_TRIP_COUNT:%.*]] = zext i32 [[SMAX]] to i64
 ; CHECK-NEXT:    br label [[LOOP:%.*]]

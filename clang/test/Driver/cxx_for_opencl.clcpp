@@ -13,6 +13,6 @@ kernel void k(){
   auto a = get_local_id(1);
 #ifndef __OPENCL_CPP_VERSION__
 //expected-error@-2{{OpenCL C version 2.0 does not support the 'auto' storage class specifier}}
-//expected-warning@-3{{type specifier missing, defaults to 'int'}}
+//expected-error@-3{{type specifier missing, defaults to 'int'}}
 #endif
 }

@@ -39,7 +39,7 @@ private:
 public:
   BaseIndexOffset() = default;
   BaseIndexOffset(SDValue Base, SDValue Index, bool IsIndexSignExt)
-      : Base(Base), Index(Index), Offset(), IsIndexSignExt(IsIndexSignExt) {}
+      : Base(Base), Index(Index), IsIndexSignExt(IsIndexSignExt) {}
   BaseIndexOffset(SDValue Base, SDValue Index, int64_t Offset,
                   bool IsIndexSignExt)
       : Base(Base), Index(Index), Offset(Offset),
@@ -50,6 +50,7 @@ public:
   SDValue getIndex() { return Index; }
   SDValue getIndex() const { return Index; }
   bool hasValidOffset() const { return Offset.hasValue(); }
+  int64_t getOffset() const { return *Offset; }
 
   // Returns true if `Other` and `*this` are both some offset from the same base
   // pointer. In that case, `Off` is set to the offset between `*this` and

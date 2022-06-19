@@ -1,5 +1,5 @@
-; RUN: opt -loop-vectorize -scalable-vectorization=on -force-vector-width=4 -force-vector-interleave=1 -mtriple aarch64-unknown-linux-gnu -mattr=+sve -S < %s | FileCheck %s --check-prefix=CHECK-VF4UF1
-; RUN: opt -loop-vectorize -scalable-vectorization=on -force-vector-width=4 -force-vector-interleave=2 -mtriple aarch64-unknown-linux-gnu -mattr=+sve -S < %s | FileCheck %s --check-prefix=CHECK-VF4UF2
+; RUN: opt -loop-vectorize -force-vector-width=4 -force-vector-interleave=1 -mtriple aarch64-unknown-linux-gnu -mattr=+sve -S < %s | FileCheck %s --check-prefix=CHECK-VF4UF1
+; RUN: opt -loop-vectorize -force-vector-width=4 -force-vector-interleave=2 -mtriple aarch64-unknown-linux-gnu -mattr=+sve -S < %s | FileCheck %s --check-prefix=CHECK-VF4UF2
 
 ; We vectorize this first order recurrence, with a set of insertelements for
 ; each unrolled part. Make sure these insertelements are generated in-order,
@@ -18,7 +18,7 @@
 ;   return a;
 ; }
 ;
-define i32 @PR33613(double* %b, double %j, i32 %d) {
+define i32 @PR33613(double* %b, double %j, i32 %d) #0 {
 ; CHECK-VF4UF2-LABEL: @PR33613
 ; CHECK-VF4UF2: vector.body
 ; CHECK-VF4UF2: %[[VEC_RECUR:.*]] = phi <vscale x 4 x double> [ {{.*}}, %vector.ph ], [ {{.*}}, %vector.body ]
@@ -66,11 +66,11 @@ for.body:
 ; }
 ;
 ; Check that the sext sank after the load in the vector loop.
-define void @PR34711([2 x i16]* %a, i32* %b, i32* %c, i64 %n) {
+define void @PR34711([2 x i16]* %a, i32* %b, i32* %c, i64 %n) #0 {
 ; CHECK-VF4UF1-LABEL: @PR34711
 ; CHECK-VF4UF1: vector.body
 ; CHECK-VF4UF1: %[[VEC_RECUR:.*]] = phi <vscale x 4 x i16> [ %vector.recur.init, %vector.ph ], [ %[[MGATHER:.*]], %vector.body ]
-; CHECK-VF4UF1: %[[MGATHER]] = call <vscale x 4 x i16> @llvm.masked.gather.nxv4i16.nxv4p0i16(<vscale x 4 x i16*> {{.*}}, i32 2, <vscale x 4 x i1> shufflevector (<vscale x 4 x i1> insertelement (<vscale x 4 x i1> undef, i1 true, i32 0), <vscale x 4 x i1> undef, <vscale x 4 x i32> zeroinitializer), <vscale x 4 x i16> undef)
+; CHECK-VF4UF1: %[[MGATHER]] = call <vscale x 4 x i16> @llvm.masked.gather.nxv4i16.nxv4p0i16(<vscale x 4 x i16*> {{.*}}, i32 2, <vscale x 4 x i1> shufflevector (<vscale x 4 x i1> insertelement (<vscale x 4 x i1> poison, i1 true, i32 0), <vscale x 4 x i1> poison, <vscale x 4 x i32> zeroinitializer), <vscale x 4 x i16> undef)
 ; CHECK-VF4UF1-NEXT: %[[SPLICE:.*]] = call <vscale x 4 x i16> @llvm.experimental.vector.splice.nxv4i16(<vscale x 4 x i16> %[[VEC_RECUR]], <vscale x 4 x i16> %[[MGATHER]], i32 -1)
 ; CHECK-VF4UF1-NEXT: %[[SXT1:.*]] = sext <vscale x 4 x i16> %[[SPLICE]] to <vscale x 4 x i32>
 ; CHECK-VF4UF1-NEXT: %[[SXT2:.*]] = sext <vscale x 4 x i16> %[[MGATHER]] to <vscale x 4 x i32>
@@ -100,5 +100,6 @@ for.end:
   ret void
 }
 
+attributes #0 = { vscale_range(1, 16) }
 !0 = distinct !{!0, !1}
 !1 = !{!"llvm.loop.vectorize.scalable.enable", i1 true}

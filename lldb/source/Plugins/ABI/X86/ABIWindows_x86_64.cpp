@@ -26,6 +26,7 @@
 #include "lldb/Target/Thread.h"
 #include "lldb/Utility/ConstString.h"
 #include "lldb/Utility/DataExtractor.h"
+#include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/RegisterValue.h"
 #include "lldb/Utility/Status.h"
@@ -123,7 +124,7 @@ ABIWindows_x86_64::CreateInstance(lldb::ProcessSP process_sp, const ArchSpec &ar
 bool ABIWindows_x86_64::PrepareTrivialCall(Thread &thread, addr_t sp,
                                            addr_t func_addr, addr_t return_addr,
                                            llvm::ArrayRef<addr_t> args) const {
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_EXPRESSIONS));
+  Log *log = GetLog(LLDBLog::Expressions);
 
   if (log) {
     StreamString s;
@@ -641,7 +642,7 @@ ValueObjectSP ABIWindows_x86_64::GetReturnValueObjectImpl(
                            0, aggregate_field_offsets,
                            aggregate_compiler_types)) {
     ByteOrder byte_order = target->GetArchitecture().GetByteOrder();
-    DataBufferSP data_sp(
+    WritableDataBufferSP data_sp(
         new DataBufferHeap(max_register_value_bit_width / 8, 0));
     DataExtractor return_ext(data_sp, byte_order,
         target->GetArchitecture().GetAddressByteSize());
@@ -806,6 +807,8 @@ uint32_t ABIWindows_x86_64::GetGenericNum(llvm::StringRef reg) {
       .Case("rsp", LLDB_REGNUM_GENERIC_SP)
       .Case("rbp", LLDB_REGNUM_GENERIC_FP)
       .Case("rflags", LLDB_REGNUM_GENERIC_FLAGS)
+      // gdbserver uses eflags
+      .Case("eflags", LLDB_REGNUM_GENERIC_FLAGS)
       .Case("rcx", LLDB_REGNUM_GENERIC_ARG1)
       .Case("rdx", LLDB_REGNUM_GENERIC_ARG2)
       .Case("r8", LLDB_REGNUM_GENERIC_ARG3)
@@ -821,18 +824,3 @@ void ABIWindows_x86_64::Initialize() {
 void ABIWindows_x86_64::Terminate() {
   PluginManager::UnregisterPlugin(CreateInstance);
 }
-
-lldb_private::ConstString ABIWindows_x86_64::GetPluginNameStatic() {
-  static ConstString g_name("windows-x86_64");
-  return g_name;
-}
-
-//------------------------------------------------------------------
-// PluginInterface protocol
-//------------------------------------------------------------------
-
-lldb_private::ConstString ABIWindows_x86_64::GetPluginName() {
-  return GetPluginNameStatic();
-}
-
-uint32_t ABIWindows_x86_64::GetPluginVersion() { return 1; }

@@ -14,18 +14,23 @@
 #define LLVM_IR_AUTOUPGRADE_H
 
 #include "llvm/ADT/StringRef.h"
+#include <vector>
 
 namespace llvm {
   class AttrBuilder;
-  class CallInst;
+  class CallBase;
   class Constant;
   class Function;
   class Instruction;
+  class GlobalVariable;
   class MDNode;
   class Module;
-  class GlobalVariable;
+  class StringRef;
   class Type;
   class Value;
+
+  template <typename T> class OperandBundleDefT;
+  using OperandBundleDef = OperandBundleDefT<Value *>;
 
   /// This is a more granular function that simply checks an intrinsic function
   /// for upgrading, and returns true if it requires upgrading. It may return
@@ -35,7 +40,7 @@ namespace llvm {
 
   /// This is the complement to the above, replacing a specific call to an
   /// intrinsic function with a call to the specified new function.
-  void UpgradeIntrinsicCall(CallInst *CI, Function *NewFn);
+  void UpgradeIntrinsicCall(CallBase *CB, Function *NewFn);
 
   // This upgrades the comment for objc retain release markers in inline asm
   // calls
@@ -97,6 +102,9 @@ namespace llvm {
 
   /// Upgrade attributes that changed format or kind.
   void UpgradeAttributes(AttrBuilder &B);
+
+  /// Upgrade operand bundles (without knowing about their user instruction).
+  void UpgradeOperandBundles(std::vector<OperandBundleDef> &OperandBundles);
 
 } // End llvm namespace
 

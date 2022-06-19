@@ -10,7 +10,7 @@ static const NSString * Identifier1 =   @"Identifier1";
 static NSString const * Identifier2 =   @"Identifier2";
 static NSString * const Identifier3 =   @"Identifier3";
 
-int main () {
+int main (void) {
         
     [@"Identifier1" isEqualToString:Identifier1]; // expected-warning {{sending 'const NSString *' to parameter of type 'NSString *' discards qualifiers}}
     [@"Identifier2" isEqualToString:Identifier2]; // expected-warning {{sending 'const NSString *' to parameter of type 'NSString *' discards qualifiers}}

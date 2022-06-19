@@ -16,6 +16,7 @@
 #include "CodeRegionGenerator.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/MC/MCParser/MCAsmLexer.h"
 #include "llvm/MC/MCParser/MCTargetAsmParser.h"
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCTargetOptions.h"
@@ -62,10 +63,10 @@ public:
                     uint64_t Size = 0, unsigned ByteAlignment = 0,
                     SMLoc Loc = SMLoc()) override {}
   void emitGPRel32Value(const MCExpr *Value) override {}
-  void BeginCOFFSymbolDef(const MCSymbol *Symbol) override {}
-  void EmitCOFFSymbolStorageClass(int StorageClass) override {}
-  void EmitCOFFSymbolType(int Type) override {}
-  void EndCOFFSymbolDef() override {}
+  void beginCOFFSymbolDef(const MCSymbol *Symbol) override {}
+  void emitCOFFSymbolStorageClass(int StorageClass) override {}
+  void emitCOFFSymbolType(int Type) override {}
+  void endCOFFSymbolDef() override {}
 
   ArrayRef<MCInst> GetInstructionSequence(unsigned Index) const {
     return Regions.getInstructionSequence(Index);
@@ -114,7 +115,7 @@ Expected<const CodeRegions &> AsmCodeRegionGenerator::parseCodeRegions(
 
   // Need to initialize an MCTargetStreamer otherwise
   // certain asm directives will cause a segfault.
-  // Using nulls() so that anything emitted by the MCTagetStreamer
+  // Using nulls() so that anything emitted by the MCTargetStreamer
   // doesn't show up in the llvm-mca output.
   raw_ostream &OSRef = nulls();
   formatted_raw_ostream FOSRef(OSRef);

@@ -103,6 +103,9 @@ function(add_ocaml_library name)
     list(APPEND ocaml_inputs "${bin}/${ocaml_file}.mli" "${bin}/${ocaml_file}.ml")
 
     list(APPEND ocaml_outputs "${bin}/${ocaml_file}.cmi" "${bin}/${ocaml_file}.cmo")
+
+        list(APPEND ocaml_outputs "${bin}/${ocaml_file}.cmti" "${bin}/${ocaml_file}.cmt")
+
     if( HAVE_OCAMLOPT )
       list(APPEND ocaml_outputs
            "${bin}/${ocaml_file}.cmx"
@@ -152,7 +155,8 @@ function(add_ocaml_library name)
 
   add_custom_command(
     OUTPUT ${ocaml_outputs}
-    COMMAND "${OCAMLFIND}" "ocamlmklib" "-o" "${name}" ${ocaml_flags} ${ocaml_params}
+    COMMAND "${OCAMLFIND}" "ocamlmklib" "-ocamlcflags" "-bin-annot"
+      "-o" "${name}" ${ocaml_flags} ${ocaml_params}
     DEPENDS ${ocaml_inputs} ${c_outputs}
     COMMENT "Building OCaml library ${name}"
     VERBATIM)

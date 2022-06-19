@@ -35,7 +35,7 @@ uintptr_t GetCurrentProcess(void);
 #include <machine/sysarch.h>
 #endif
 
-#if defined(__OpenBSD__) && (defined(__arm__) || defined(__mips__))
+#if defined(__OpenBSD__) && (defined(__arm__) || defined(__mips__) || defined(__riscv))
 // clang-format off
 #include <sys/types.h>
 #include <machine/sysarch.h>
@@ -130,7 +130,10 @@ void __clear_cache(void *start, void *end) {
     __asm __volatile("dsb ish");
   }
   __asm __volatile("isb sy");
-#elif defined(__powerpc64__)
+#elif defined(__powerpc__)
+  // Newer CPUs have a bigger line size made of multiple blocks, so the
+  // following value is a minimal common denominator for what used to be
+  // a single block cache line and is therefore inneficient.
   const size_t line_size = 32;
   const size_t len = (uintptr_t)end - (uintptr_t)start;
 
@@ -166,12 +169,19 @@ void __clear_cache(void *start, void *end) {
                    : "=r"(start_reg)
                    : "r"(start_reg), "r"(end_reg), "r"(flags), "r"(syscall_nr));
   assert(start_reg == 0 && "Cache flush syscall failed.");
+#elif defined(__riscv) && defined(__OpenBSD__)
+  struct riscv_sync_icache_args arg;
+
+  arg.addr = (uintptr_t)start;
+  arg.len = (uintptr_t)end - (uintptr_t)start;
+
+  sysarch(RISCV_SYNC_ICACHE, &arg);
+#elif defined(__ve__)
+  __asm__ volatile("fencec 2");
 #else
 #if __APPLE__
   // On Darwin, sys_icache_invalidate() provides this functionality
   sys_icache_invalidate(start, end - start);
-#elif defined(__ve__)
-  __asm__ volatile("fencec 2");
 #else
   compilerrt_abort();
 #endif

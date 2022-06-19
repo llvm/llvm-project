@@ -370,13 +370,10 @@ namespace dr128 { // dr128: yes
 // dr129: dup 616
 // dr130: na
 
-namespace dr131 { // dr131: yes
+namespace dr131 { // dr131: sup P1949
   const char *a_with_\u0e8c = "\u0e8c";
   const char *b_with_\u0e8d = "\u0e8d";
   const char *c_with_\u0e8e = "\u0e8e";
-#if __cplusplus < 201103L
-  // expected-error@-4 {{expected ';'}} expected-error@-2 {{expected ';'}}
-#endif
 }
 
 namespace dr132 { // dr132: no
@@ -480,7 +477,7 @@ namespace dr140 { // dr140: yes
 
 namespace dr141 { // dr141: yes
   template<typename T> void f();
-  template<typename T> struct S { int n; };
+  template<typename T> struct S { int n; }; // expected-note {{'::dr141::S<int>::n' declared here}}
   struct A : S<int> {
     template<typename T> void f();
     template<typename T> struct S {};
@@ -488,7 +485,7 @@ namespace dr141 { // dr141: yes
   struct B : S<int> {} b;
   void g() {
     a.f<int>();
-    (void)a.S<int>::n; // expected-error {{no member named 'n'}}
+    (void)a.S<int>::n; // expected-error {{no member named 'n' in 'dr141::A::S<int>'; did you mean '::dr141::S<int>::n'?}}
 #if __cplusplus < 201103L
     // expected-error@-2 {{ambiguous}}
     // expected-note@-11 {{lookup from the current scope}}
@@ -934,12 +931,12 @@ namespace dr182 { // dr182: yes
   template <class T> void C<T>::g() {}
 
   class A {
-    class B {}; // expected-note {{here}}
+    class B {};
     void f();
   };
 
   template void C<A::B>::f();
-  template <> void C<A::B>::g(); // expected-error {{private}}
+  template <> void C<A::B>::g();
 
   void A::f() {
     C<B> cb;

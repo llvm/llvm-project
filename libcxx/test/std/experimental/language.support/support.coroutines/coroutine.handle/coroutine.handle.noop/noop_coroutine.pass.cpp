@@ -1,4 +1,3 @@
-// -*- C++ -*-
 //===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
@@ -21,7 +20,7 @@
 
 #include "test_macros.h"
 
-#if __has_builtin(__builtin_coro_noop)
+#if TEST_HAS_BUILTIN(__builtin_coro_noop)
 
 namespace coro = std::experimental::coroutines_v1;
 
@@ -75,4 +74,4 @@ int main(int, char**)
 
 int main(int, char**) { return 0; }
 
-#endif //  __has_builtin(__builtin_coro_noop)
+#endif //  TEST_HAS_BUILTIN(__builtin_coro_noop)

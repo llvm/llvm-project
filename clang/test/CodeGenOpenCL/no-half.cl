@@ -1,10 +1,10 @@
-// RUN: %clang_cc1 %s -cl-std=cl2.0 -emit-llvm -o - -triple spir-unknown-unknown | FileCheck %s
-// RUN: %clang_cc1 %s -cl-std=cl1.2 -emit-llvm -o - -triple spir-unknown-unknown | FileCheck %s
-// RUN: %clang_cc1 %s -cl-std=cl1.1 -emit-llvm -o - -triple spir-unknown-unknown | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers %s -cl-std=cl2.0 -emit-llvm -o - -triple spir-unknown-unknown | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers %s -cl-std=cl1.2 -emit-llvm -o - -triple spir-unknown-unknown | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers %s -cl-std=cl1.1 -emit-llvm -o - -triple spir-unknown-unknown | FileCheck %s
 
 #pragma OPENCL EXTENSION cl_khr_fp64:enable
 
-// CHECK-LABEL: @test_store_float(float %foo, half addrspace({{.}}){{.*}} %bar)
+// CHECK-LABEL: @test_store_float(float noundef %foo, half addrspace({{.}}){{.*}} %bar)
 __kernel void test_store_float(float foo, __global half* bar)
 {
 	__builtin_store_halff(foo, bar);
@@ -12,7 +12,7 @@ __kernel void test_store_float(float foo, __global half* bar)
 // CHECK: store half [[HALF_VAL]], half addrspace({{.}})* %bar, align 2
 }
 
-// CHECK-LABEL: @test_store_double(double %foo, half addrspace({{.}}){{.*}} %bar)
+// CHECK-LABEL: @test_store_double(double noundef %foo, half addrspace({{.}}){{.*}} %bar)
 __kernel void test_store_double(double foo, __global half* bar)
 {
 	__builtin_store_half(foo, bar);

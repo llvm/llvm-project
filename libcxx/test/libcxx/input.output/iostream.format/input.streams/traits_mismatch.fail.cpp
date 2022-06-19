@@ -13,6 +13,8 @@
 
 // The char type of the stream and the char_type of the traits have to match
 
+// UNSUPPORTED: no-wide-characters
+
 #include <istream>
 #include <type_traits>
 #include <cassert>

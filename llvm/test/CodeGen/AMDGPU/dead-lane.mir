@@ -1,4 +1,5 @@
 # RUN: llc -march=amdgcn -mcpu=tonga %s -start-before detect-dead-lanes -stop-before machine-scheduler -verify-machineinstrs -o - | FileCheck -check-prefix=GCN %s
+# RUN: llc -march=amdgcn -mcpu=tonga %s -start-before detect-dead-lanes -stop-before machine-scheduler -verify-machineinstrs -early-live-intervals -o - | FileCheck -check-prefix=GCN %s
 
 # GCN-LABEL: name: dead_lane
 # GCN:      bb.0:

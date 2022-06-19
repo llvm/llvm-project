@@ -696,7 +696,7 @@ bool HexagonExpandCondsets::split(MachineInstr &MI,
       MI.setDesc(HII->get(TargetOpcode::COPY));
       unsigned S = getRegState(ST);
       while (MI.getNumOperands() > 1)
-        MI.RemoveOperand(MI.getNumOperands()-1);
+        MI.removeOperand(MI.getNumOperands()-1);
       MachineFunction &MF = *MI.getParent()->getParent();
       MachineInstrBuilder(MF, MI).addReg(RT.Reg, S, RT.Sub);
       return true;
@@ -1070,20 +1070,18 @@ bool HexagonExpandCondsets::predicate(MachineInstr &TfrI, bool Cond,
 bool HexagonExpandCondsets::predicateInBlock(MachineBasicBlock &B,
                                              std::set<Register> &UpdRegs) {
   bool Changed = false;
-  MachineBasicBlock::iterator I, E, NextI;
-  for (I = B.begin(), E = B.end(); I != E; I = NextI) {
-    NextI = std::next(I);
-    unsigned Opc = I->getOpcode();
+  for (MachineInstr &MI : llvm::make_early_inc_range(B)) {
+    unsigned Opc = MI.getOpcode();
     if (Opc == Hexagon::A2_tfrt || Opc == Hexagon::A2_tfrf) {
-      bool Done = predicate(*I, (Opc == Hexagon::A2_tfrt), UpdRegs);
+      bool Done = predicate(MI, (Opc == Hexagon::A2_tfrt), UpdRegs);
       if (!Done) {
         // If we didn't predicate I, we may need to remove it in case it is
         // an "identity" copy, e.g.  %1 = A2_tfrt %2, %1.
-        if (RegisterRef(I->getOperand(0)) == RegisterRef(I->getOperand(2))) {
-          for (auto &Op : I->operands())
+        if (RegisterRef(MI.getOperand(0)) == RegisterRef(MI.getOperand(2))) {
+          for (auto &Op : MI.operands())
             if (Op.isReg())
               UpdRegs.insert(Op.getReg());
-          removeInstr(*I);
+          removeInstr(MI);
         }
       }
       Changed |= Done;
@@ -1108,8 +1106,7 @@ bool HexagonExpandCondsets::isIntReg(RegisterRef RR, unsigned &BW) {
 }
 
 bool HexagonExpandCondsets::isIntraBlocks(LiveInterval &LI) {
-  for (LiveInterval::iterator I = LI.begin(), E = LI.end(); I != E; ++I) {
-    LiveRange::Segment &LR = *I;
+  for (LiveRange::Segment &LR : LI) {
     // Range must start at a register...
     if (!LR.start.isRegister())
       return false;
@@ -1162,16 +1159,16 @@ bool HexagonExpandCondsets::coalesceRegisters(RegisterRef R1, RegisterRef R2) {
   // Move all live segments from L2 to L1.
   using ValueInfoMap = DenseMap<VNInfo *, VNInfo *>;
   ValueInfoMap VM;
-  for (LiveInterval::iterator I = L2.begin(), E = L2.end(); I != E; ++I) {
-    VNInfo *NewVN, *OldVN = I->valno;
+  for (LiveRange::Segment &I : L2) {
+    VNInfo *NewVN, *OldVN = I.valno;
     ValueInfoMap::iterator F = VM.find(OldVN);
     if (F == VM.end()) {
-      NewVN = L1.getNextValue(I->valno->def, LIS->getVNInfoAllocator());
+      NewVN = L1.getNextValue(I.valno->def, LIS->getVNInfoAllocator());
       VM.insert(std::make_pair(OldVN, NewVN));
     } else {
       NewVN = F->second;
     }
-    L1.addSegment(LiveRange::Segment(I->start, I->end, NewVN));
+    L1.addSegment(LiveRange::Segment(I.start, I.end, NewVN));
   }
   while (!L2.empty())
     L2.removeSegment(*L2.begin());

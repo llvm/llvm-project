@@ -3,4 +3,4 @@
 // CHECK: define {{.*}}@foo
 // CHECK-NOT: load {{.*}}foo
 // CHECK: ret void
-void foo() {}
+void foo(void) {}

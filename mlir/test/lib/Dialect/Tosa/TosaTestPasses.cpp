@@ -10,7 +10,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir/Dialect/StandardOps/IR/Ops.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "mlir/Dialect/Tosa/IR/TosaOps.h"
 #include "mlir/Dialect/Tosa/Transforms/PassDetail.h"
@@ -71,7 +70,7 @@ ConvertTosaNegateOp::matchAndRewrite(Operation *op,
   double typeRangeMax = double(outputElementType.getStorageTypeMax() -
                                outputElementType.getZeroPoint()) *
                         outputElementType.getScale();
-  bool narrow_range = outputElementType.getStorageTypeMin() == 1 ? true : false;
+  bool narrowRange = outputElementType.getStorageTypeMin() == 1;
 
   auto dstQConstType = RankedTensorType::get(
       outputType.getShape(),
@@ -81,7 +80,7 @@ ConvertTosaNegateOp::matchAndRewrite(Operation *op,
                            rewriter.getI32IntegerAttr(
                                outputElementType.getStorageTypeIntegralWidth()),
                            0, true /* signed */,
-                           rewriter.getBoolAttr(narrow_range)));
+                           rewriter.getBoolAttr(narrowRange)));
 
   ElementsAttr inputElems;
   if (!matchPattern(tosaNegateOp.input1(), m_Constant(&inputElems)))
@@ -179,25 +178,27 @@ ConvertTosaConv2DOp::matchAndRewrite(Operation *op,
 namespace {
 
 struct TosaTestQuantUtilAPI
-    : public PassWrapper<TosaTestQuantUtilAPI, FunctionPass> {
+    : public PassWrapper<TosaTestQuantUtilAPI, OperationPass<func::FuncOp>> {
+  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(TosaTestQuantUtilAPI)
+
   StringRef getArgument() const final { return PASS_NAME; }
   StringRef getDescription() const final {
     return "TOSA Test: Exercise the APIs in QuantUtils.cpp.";
   }
-  void runOnFunction() override;
+  void runOnOperation() override;
 };
 
-void TosaTestQuantUtilAPI::runOnFunction() {
+void TosaTestQuantUtilAPI::runOnOperation() {
   auto *ctx = &getContext();
   RewritePatternSet patterns(ctx);
-  auto func = getFunction();
+  auto func = getOperation();
 
   patterns.add<ConvertTosaNegateOp>(ctx);
   patterns.add<ConvertTosaConv2DOp>(ctx);
   (void)applyPatternsAndFoldGreedily(func, std::move(patterns));
 }
 
-} // anonymous namespace
+} // namespace
 
 namespace mlir {
 void registerTosaTestQuantUtilAPIPass() {

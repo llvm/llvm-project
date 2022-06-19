@@ -44,7 +44,7 @@ public:
   // attributes of each function.
   const X86Subtarget *getSubtargetImpl() const = delete;
 
-  TargetTransformInfo getTargetTransformInfo(const Function &F) override;
+  TargetTransformInfo getTargetTransformInfo(const Function &F) const override;
 
   // Set up the pass pipeline.
   TargetPassConfig *createPassConfig(PassManagerBase &PM) override;

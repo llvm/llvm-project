@@ -21,7 +21,6 @@
 #include "X86TargetMachine.h"
 #include "llvm/CodeGen/GlobalISel/InstructionSelector.h"
 #include "llvm/CodeGen/GlobalISel/InstructionSelectorImpl.h"
-#include "llvm/CodeGen/GlobalISel/RegisterBank.h"
 #include "llvm/CodeGen/GlobalISel/Utils.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineConstantPool.h"
@@ -31,6 +30,7 @@
 #include "llvm/CodeGen/MachineMemOperand.h"
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
+#include "llvm/CodeGen/RegisterBank.h"
 #include "llvm/CodeGen/TargetOpcodes.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/IR/DataLayout.h"
@@ -153,8 +153,8 @@ private:
 X86InstructionSelector::X86InstructionSelector(const X86TargetMachine &TM,
                                                const X86Subtarget &STI,
                                                const X86RegisterBankInfo &RBI)
-    : InstructionSelector(), TM(TM), STI(STI), TII(*STI.getInstrInfo()),
-      TRI(*STI.getRegisterInfo()), RBI(RBI),
+    : TM(TM), STI(STI), TII(*STI.getInstrInfo()), TRI(*STI.getRegisterInfo()),
+      RBI(RBI),
 #define GET_GLOBALISEL_PREDICATES_INIT
 #include "X86GenGlobalISel.inc"
 #undef GET_GLOBALISEL_PREDICATES_INIT
@@ -179,6 +179,8 @@ X86InstructionSelector::getRegClass(LLT Ty, const RegisterBank &RB) const {
       return &X86::GR64RegClass;
   }
   if (RB.getID() == X86::VECRRegBankID) {
+    if (Ty.getSizeInBits() == 16)
+      return STI.hasAVX512() ? &X86::FR16XRegClass : &X86::FR16RegClass;
     if (Ty.getSizeInBits() == 32)
       return STI.hasAVX512() ? &X86::FR32XRegClass : &X86::FR32RegClass;
     if (Ty.getSizeInBits() == 64)
@@ -479,7 +481,7 @@ static void X86SelectAddress(const MachineInstr &I,
          "unsupported type.");
 
   if (I.getOpcode() == TargetOpcode::G_PTR_ADD) {
-    if (auto COff = getConstantVRegSExtVal(I.getOperand(2).getReg(), MRI)) {
+    if (auto COff = getIConstantVRegSExtVal(I.getOperand(2).getReg(), MRI)) {
       int64_t Imm = *COff;
       if (isInt<32>(Imm)) { // Check for displacement overflow.
         AM.Disp = static_cast<int32_t>(Imm);
@@ -516,7 +518,7 @@ bool X86InstructionSelector::selectLoadStoreOp(MachineInstr &I,
     // is already on the instruction we're mutating, and thus we don't need to
     // make any changes.  So long as we select an opcode which is capable of
     // loading or storing the appropriate size atomically, the rest of the
-    // backend is required to respect the MMO state. 
+    // backend is required to respect the MMO state.
     if (!MemOp.isUnordered()) {
       LLVM_DEBUG(dbgs() << "Atomic ordering not supported yet\n");
       return false;
@@ -537,12 +539,12 @@ bool X86InstructionSelector::selectLoadStoreOp(MachineInstr &I,
   I.setDesc(TII.get(NewOpc));
   MachineInstrBuilder MIB(MF, I);
   if (Opc == TargetOpcode::G_LOAD) {
-    I.RemoveOperand(1);
+    I.removeOperand(1);
     addFullAddress(MIB, AM);
   } else {
     // G_STORE (VAL, Addr), X86Store instruction (Addr, VAL)
-    I.RemoveOperand(1);
-    I.RemoveOperand(0);
+    I.removeOperand(1);
+    I.removeOperand(0);
     addFullAddress(MIB, AM).addUse(DefReg);
   }
   return constrainSelectedInstRegOperands(I, TII, TRI, RBI);
@@ -625,7 +627,7 @@ bool X86InstructionSelector::selectGlobalValue(MachineInstr &I,
   I.setDesc(TII.get(NewOpc));
   MachineInstrBuilder MIB(MF, I);
 
-  I.RemoveOperand(1);
+  I.removeOperand(1);
   addFullAddress(MIB, AM);
 
   return constrainSelectedInstRegOperands(I, TII, TRI, RBI);
@@ -1065,7 +1067,7 @@ bool X86InstructionSelector::selectUadde(MachineInstr &I,
       return false;
 
     Opcode = X86::ADC32rr;
-  } else if (auto val = getConstantVRegVal(CarryInReg, MRI)) {
+  } else if (auto val = getIConstantVRegVal(CarryInReg, MRI)) {
     // carry is constant, support only 0.
     if (*val != 0)
       return false;
@@ -1412,7 +1414,7 @@ bool X86InstructionSelector::materializeFP(MachineInstr &I,
 
     MachineMemOperand *MMO = MF.getMachineMemOperand(
         MachinePointerInfo::getConstantPool(MF), MachineMemOperand::MOLoad,
-        MF.getDataLayout().getPointerSize(), Alignment);
+        LLT::pointer(0, MF.getDataLayout().getPointerSizeInBits()), Alignment);
 
     LoadInst =
         addDirectMem(BuildMI(*I.getParent(), I, DbgLoc, TII.get(Opc), DstReg),

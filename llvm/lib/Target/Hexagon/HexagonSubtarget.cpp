@@ -39,41 +39,46 @@ using namespace llvm;
 #define GET_SUBTARGETINFO_TARGET_DESC
 #include "HexagonGenSubtargetInfo.inc"
 
-static cl::opt<bool> EnableBSBSched("enable-bsb-sched",
-  cl::Hidden, cl::ZeroOrMore, cl::init(true));
+static cl::opt<bool> EnableBSBSched("enable-bsb-sched", cl::Hidden,
+                                    cl::init(true));
 
-static cl::opt<bool> EnableTCLatencySched("enable-tc-latency-sched",
-  cl::Hidden, cl::ZeroOrMore, cl::init(false));
+static cl::opt<bool> EnableTCLatencySched("enable-tc-latency-sched", cl::Hidden,
+                                          cl::init(false));
 
-static cl::opt<bool> EnableDotCurSched("enable-cur-sched",
-  cl::Hidden, cl::ZeroOrMore, cl::init(true),
-  cl::desc("Enable the scheduler to generate .cur"));
+static cl::opt<bool>
+    EnableDotCurSched("enable-cur-sched", cl::Hidden, cl::init(true),
+                      cl::desc("Enable the scheduler to generate .cur"));
 
-static cl::opt<bool> DisableHexagonMISched("disable-hexagon-misched",
-  cl::Hidden, cl::ZeroOrMore, cl::init(false),
-  cl::desc("Disable Hexagon MI Scheduling"));
+static cl::opt<bool>
+    DisableHexagonMISched("disable-hexagon-misched", cl::Hidden,
+                          cl::desc("Disable Hexagon MI Scheduling"));
 
-static cl::opt<bool> EnableSubregLiveness("hexagon-subreg-liveness",
-  cl::Hidden, cl::ZeroOrMore, cl::init(true),
-  cl::desc("Enable subregister liveness tracking for Hexagon"));
+static cl::opt<bool> EnableSubregLiveness(
+    "hexagon-subreg-liveness", cl::Hidden, cl::init(true),
+    cl::desc("Enable subregister liveness tracking for Hexagon"));
 
-static cl::opt<bool> OverrideLongCalls("hexagon-long-calls",
-  cl::Hidden, cl::ZeroOrMore, cl::init(false),
-  cl::desc("If present, forces/disables the use of long calls"));
+static cl::opt<bool> OverrideLongCalls(
+    "hexagon-long-calls", cl::Hidden,
+    cl::desc("If present, forces/disables the use of long calls"));
 
-static cl::opt<bool> EnablePredicatedCalls("hexagon-pred-calls",
-  cl::Hidden, cl::ZeroOrMore, cl::init(false),
-  cl::desc("Consider calls to be predicable"));
+static cl::opt<bool>
+    EnablePredicatedCalls("hexagon-pred-calls", cl::Hidden,
+                          cl::desc("Consider calls to be predicable"));
 
-static cl::opt<bool> SchedPredsCloser("sched-preds-closer",
-  cl::Hidden, cl::ZeroOrMore, cl::init(true));
+static cl::opt<bool> SchedPredsCloser("sched-preds-closer", cl::Hidden,
+                                      cl::init(true));
 
 static cl::opt<bool> SchedRetvalOptimization("sched-retval-optimization",
-  cl::Hidden, cl::ZeroOrMore, cl::init(true));
+                                             cl::Hidden, cl::init(true));
 
-static cl::opt<bool> EnableCheckBankConflict("hexagon-check-bank-conflict",
-  cl::Hidden, cl::ZeroOrMore, cl::init(true),
-  cl::desc("Enable checking for cache bank conflicts"));
+static cl::opt<bool> EnableCheckBankConflict(
+    "hexagon-check-bank-conflict", cl::Hidden, cl::init(true),
+    cl::desc("Enable checking for cache bank conflicts"));
+
+static cl::opt<bool> EnableV68FloatCodeGen(
+    "force-hvx-float", cl::Hidden,
+    cl::desc(
+        "Enable the code-generation for vector float instructions on v68."));
 
 HexagonSubtarget::HexagonSubtarget(const Triple &TT, StringRef CPU,
                                    StringRef FS, const TargetMachine &TM)
@@ -91,8 +96,7 @@ HexagonSubtarget::HexagonSubtarget(const Triple &TT, StringRef CPU,
 
 HexagonSubtarget &
 HexagonSubtarget::initializeSubtargetDependencies(StringRef CPU, StringRef FS) {
-  Optional<Hexagon::ArchEnum> ArchVer =
-      Hexagon::GetCpu(Hexagon::CpuTable, CPUString);
+  Optional<Hexagon::ArchEnum> ArchVer = Hexagon::getCpu(CPUString);
   if (ArchVer)
     HexagonArchVersion = *ArchVer;
   else
@@ -103,12 +107,70 @@ HexagonSubtarget::initializeSubtargetDependencies(StringRef CPU, StringRef FS) {
   UseAudioOps = false;
   UseLongCalls = false;
 
-  UseBSBScheduling = hasV60Ops() && EnableBSBSched;
+  SubtargetFeatures Features(FS);
 
-  ParseSubtargetFeatures(CPUString, /*TuneCPU*/ CPUString, FS);
+  // Turn on QFloat if the HVX version is v68+.
+  // The function ParseSubtargetFeatures will set feature bits and initialize
+  // subtarget's variables all in one, so there isn't a good way to preprocess
+  // the feature string, other than by tinkering with it directly.
+  auto IsQFloatFS = [](StringRef F) {
+    return F == "+hvx-qfloat" || F == "-hvx-qfloat";
+  };
+  if (!llvm::count_if(Features.getFeatures(), IsQFloatFS)) {
+    auto getHvxVersion = [&Features](StringRef FS) -> StringRef {
+      for (StringRef F : llvm::reverse(Features.getFeatures())) {
+        if (F.startswith("+hvxv"))
+          return F;
+      }
+      for (StringRef F : llvm::reverse(Features.getFeatures())) {
+        if (F == "-hvx")
+          return StringRef();
+        if (F.startswith("+hvx") || F == "-hvx")
+          return F.take_front(4);  // Return "+hvx" or "-hvx".
+      }
+      return StringRef();
+    };
+
+    bool AddQFloat = false;
+    StringRef HvxVer = getHvxVersion(FS);
+    if (HvxVer.startswith("+hvxv")) {
+      int Ver = 0;
+      if (!HvxVer.drop_front(5).consumeInteger(10, Ver) && Ver >= 68)
+        AddQFloat = true;
+    } else if (HvxVer == "+hvx") {
+      if (hasV68Ops())
+        AddQFloat = true;
+    }
+
+    if (AddQFloat)
+      Features.AddFeature("+hvx-qfloat");
+  }
+
+  std::string FeatureString = Features.getString();
+  ParseSubtargetFeatures(CPUString, /*TuneCPU*/ CPUString, FeatureString);
+
+  // Enable float code generation only if the flag(s) are set and
+  // the feature is enabled. v68 is guarded by additional flags.
+  bool GreaterThanV68 = false;
+  if (useHVXV69Ops())
+    GreaterThanV68 = true;
+
+  // Support for deprecated qfloat/ieee codegen flags
+  if (!GreaterThanV68) {
+    if (EnableV68FloatCodeGen)
+      UseHVXFloatingPoint = true;
+  } else {
+    UseHVXFloatingPoint = true;
+  }
+
+  if (UseHVXQFloatOps && UseHVXIEEEFPOps && UseHVXFloatingPoint)
+    LLVM_DEBUG(
+        dbgs() << "Behavior is undefined for simultaneous qfloat and ieee hvx codegen...");
 
   if (OverrideLongCalls.getPosition())
     UseLongCalls = OverrideLongCalls;
+
+  UseBSBScheduling = hasV60Ops() && EnableBSBSched;
 
   if (isTinyCore()) {
     // Tiny core has a single thread, so back-to-back scheduling is enabled by
@@ -117,10 +179,10 @@ HexagonSubtarget::initializeSubtargetDependencies(StringRef CPU, StringRef FS) {
       UseBSBScheduling = false;
   }
 
-  FeatureBitset Features = getFeatureBits();
+  FeatureBitset FeatureBits = getFeatureBits();
   if (HexagonDisableDuplex)
-    setFeatureBits(Features.reset(Hexagon::FeatureDuplex));
-  setFeatureBits(Hexagon_MC::completeHVXFeatures(Features));
+    setFeatureBits(FeatureBits.reset(Hexagon::FeatureDuplex));
+  setFeatureBits(Hexagon_MC::completeHVXFeatures(FeatureBits));
 
   return *this;
 }
@@ -166,7 +228,9 @@ bool HexagonSubtarget::isTypeForHVX(Type *VecTy, bool IncludeBool) const {
   if (!VecTy->isVectorTy() || isa<ScalableVectorType>(VecTy))
     return false;
   // Avoid types like <2 x i32*>.
-  if (!cast<VectorType>(VecTy)->getElementType()->isIntegerTy())
+  Type *ScalTy = VecTy->getScalarType();
+  if (!ScalTy->isIntegerTy() &&
+      !(ScalTy->isFloatingPointTy() && useHVXFloatingPoint()))
     return false;
   // The given type may be something like <17 x i32>, which is not MVT,
   // but can be represented as (non-simple) EVT.
@@ -305,8 +369,7 @@ void HexagonSubtarget::CallMutation::apply(ScheduleDAGInstrs *DAGInstrs) {
         VRegHoldingReg[MI->getOperand(0).getReg()] = MI->getOperand(1).getReg();
         LastVRegUse.erase(MI->getOperand(1).getReg());
       } else {
-        for (unsigned i = 0, e = MI->getNumOperands(); i != e; ++i) {
-          const MachineOperand &MO = MI->getOperand(i);
+        for (const MachineOperand &MO : MI->operands()) {
           if (!MO.isReg())
             continue;
           if (MO.isUse() && !MI->isCopy() &&
@@ -405,28 +468,46 @@ void HexagonSubtarget::adjustSchedDependency(SUnit *Src, int SrcOpIdx,
     return;
   }
 
-  if (!hasV60Ops())
-    return;
-
-  // Set the latency for a copy to zero since we hope that is will get removed.
+  // Set the latency for a copy to zero since we hope that is will get
+  // removed.
   if (DstInst->isCopy())
     Dep.setLatency(0);
 
   // If it's a REG_SEQUENCE/COPY, use its destination instruction to determine
   // the correct latency.
-  if ((DstInst->isRegSequence() || DstInst->isCopy()) && Dst->NumSuccs == 1) {
+  // If there are multiple uses of the def of COPY/REG_SEQUENCE, set the latency
+  // only if the latencies on all the uses are equal, otherwise set it to
+  // default.
+  if ((DstInst->isRegSequence() || DstInst->isCopy())) {
     Register DReg = DstInst->getOperand(0).getReg();
-    MachineInstr *DDst = Dst->Succs[0].getSUnit()->getInstr();
-    unsigned UseIdx = -1;
-    for (unsigned OpNum = 0; OpNum < DDst->getNumOperands(); OpNum++) {
-      const MachineOperand &MO = DDst->getOperand(OpNum);
-      if (MO.isReg() && MO.getReg() && MO.isUse() && MO.getReg() == DReg) {
-        UseIdx = OpNum;
+    int DLatency = -1;
+    for (const auto &DDep : Dst->Succs) {
+      MachineInstr *DDst = DDep.getSUnit()->getInstr();
+      int UseIdx = -1;
+      for (unsigned OpNum = 0; OpNum < DDst->getNumOperands(); OpNum++) {
+        const MachineOperand &MO = DDst->getOperand(OpNum);
+        if (MO.isReg() && MO.getReg() && MO.isUse() && MO.getReg() == DReg) {
+          UseIdx = OpNum;
+          break;
+        }
+      }
+
+      if (UseIdx == -1)
+        continue;
+
+      int Latency = (InstrInfo.getOperandLatency(&InstrItins, *SrcInst, 0,
+                                                 *DDst, UseIdx));
+      // Set DLatency for the first time.
+      DLatency = (DLatency == -1) ? Latency : DLatency;
+
+      // For multiple uses, if the Latency is different across uses, reset
+      // DLatency.
+      if (DLatency != Latency) {
+        DLatency = -1;
         break;
       }
     }
-    int DLatency = (InstrInfo.getOperandLatency(&InstrItins, *SrcInst,
-                                                0, *DDst, UseIdx));
+
     DLatency = std::max(DLatency, 0);
     Dep.setLatency((unsigned)DLatency);
   }
@@ -439,8 +520,10 @@ void HexagonSubtarget::adjustSchedDependency(SUnit *Src, int SrcOpIdx,
     Dep.setLatency(0);
     return;
   }
-
-  updateLatency(*SrcInst, *DstInst, Dep);
+  int Latency = Dep.getLatency();
+  bool IsArtificial = Dep.isArtificial();
+  Latency = updateLatency(*SrcInst, *DstInst, IsArtificial, Latency);
+  Dep.setLatency(Latency);
 }
 
 void HexagonSubtarget::getPostRAMutations(
@@ -469,21 +552,19 @@ bool HexagonSubtarget::usePredicatedCalls() const {
   return EnablePredicatedCalls;
 }
 
-void HexagonSubtarget::updateLatency(MachineInstr &SrcInst,
-      MachineInstr &DstInst, SDep &Dep) const {
-  if (Dep.isArtificial()) {
-    Dep.setLatency(1);
-    return;
-  }
-
+int HexagonSubtarget::updateLatency(MachineInstr &SrcInst,
+                                    MachineInstr &DstInst, bool IsArtificial,
+                                    int Latency) const {
+  if (IsArtificial)
+    return 1;
   if (!hasV60Ops())
-    return;
+    return Latency;
 
-  auto &QII = static_cast<const HexagonInstrInfo&>(*getInstrInfo());
-
+  auto &QII = static_cast<const HexagonInstrInfo &>(*getInstrInfo());
   // BSB scheduling.
   if (QII.isHVXVec(SrcInst) || useBSBScheduling())
-    Dep.setLatency((Dep.getLatency() + 1) >> 1);
+    Latency = (Latency + 1) >> 1;
+  return Latency;
 }
 
 void HexagonSubtarget::restoreLatency(SUnit *Src, SUnit *Dst) const {
@@ -519,9 +600,9 @@ void HexagonSubtarget::restoreLatency(SUnit *Src, SUnit *Dst) const {
         // For some instructions (ex: COPY), we might end up with < 0 latency
         // as they don't have any Itinerary class associated with them.
         Latency = std::max(Latency, 0);
-
+        bool IsArtificial = I.isArtificial();
+        Latency = updateLatency(*SrcI, *DstI, IsArtificial, Latency);
         I.setLatency(Latency);
-        updateLatency(*SrcI, *DstI, I);
       }
     }
 

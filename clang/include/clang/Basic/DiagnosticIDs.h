@@ -25,14 +25,16 @@ namespace clang {
 
   // Import the diagnostic enums themselves.
   namespace diag {
+    enum class Group;
+
     // Size of each of the diagnostic categories.
     enum {
       DIAG_SIZE_COMMON        =  300,
-      DIAG_SIZE_DRIVER        =  250,
+      DIAG_SIZE_DRIVER        =  300,
       DIAG_SIZE_FRONTEND      =  150,
       DIAG_SIZE_SERIALIZATION =  120,
       DIAG_SIZE_LEX           =  400,
-      DIAG_SIZE_PARSE         =  600,
+      DIAG_SIZE_PARSE         =  700,
       DIAG_SIZE_AST           =  250,
       DIAG_SIZE_COMMENT       =  100,
       DIAG_SIZE_CROSSTU       =  100,
@@ -65,7 +67,7 @@ namespace clang {
     // Get typedefs for common diagnostics.
     enum {
 #define DIAG(ENUM, FLAGS, DEFAULT_MAPPING, DESC, GROUP, SFINAE, CATEGORY,      \
-             NOWERROR, SHOWINSYSHEADER, DEFFERABLE)                            \
+             NOWERROR, SHOWINSYSHEADER, SHOWINSYSMACRO, DEFFERABLE)            \
   ENUM,
 #define COMMONSTART
 #include "clang/Basic/DiagnosticCommonKinds.inc"
@@ -224,6 +226,21 @@ public:
   ///
   static bool isBuiltinExtensionDiag(unsigned DiagID, bool &EnabledByDefault);
 
+  /// Given a group ID, returns the flag that toggles the group.
+  /// For example, for Group::DeprecatedDeclarations, returns
+  /// "deprecated-declarations".
+  static StringRef getWarningOptionForGroup(diag::Group);
+
+  /// Given a diagnostic group ID, return its documentation.
+  static StringRef getWarningOptionDocumentation(diag::Group GroupID);
+
+  /// Given a group ID, returns the flag that toggles the group.
+  /// For example, for "deprecated-declarations", returns
+  /// Group::DeprecatedDeclarations.
+  static llvm::Optional<diag::Group> getGroupForWarningOption(StringRef);
+
+  /// Return the lowest-level group that contains the specified diagnostic.
+  static llvm::Optional<diag::Group> getGroupForDiag(unsigned DiagID);
 
   /// Return the lowest-level warning option that enables the specified
   /// diagnostic.

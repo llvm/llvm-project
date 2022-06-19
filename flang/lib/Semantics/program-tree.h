@@ -29,6 +29,10 @@ class Scope;
 
 class ProgramTree {
 public:
+  using EntryStmtList = std::list<common::Reference<const parser::EntryStmt>>;
+  using GenericSpecList =
+      std::list<common::Reference<const parser::GenericSpec>>;
+
   // Build the ProgramTree rooted at one of these program units.
   static ProgramTree Build(const parser::ProgramUnit &);
   static ProgramTree Build(const parser::MainProgram &);
@@ -69,12 +73,24 @@ public:
   const parser::ExecutionPart *exec() const { return exec_; }
   std::list<ProgramTree> &children() { return children_; }
   const std::list<ProgramTree> &children() const { return children_; }
+  const EntryStmtList &entryStmts() const { return entryStmts_; }
+  const GenericSpecList &genericSpecs() const { return genericSpecs_; }
+
   Symbol::Flag GetSubpFlag() const;
   bool IsModule() const; // Module or Submodule
   bool HasModulePrefix() const; // in function or subroutine stmt
   Scope *scope() const { return scope_; }
   void set_scope(Scope &);
+  const parser::LanguageBindingSpec *bindingSpec() const {
+    return bindingSpec_;
+  }
+  ProgramTree &set_bindingSpec(const parser::LanguageBindingSpec *spec) {
+    bindingSpec_ = spec;
+    return *this;
+  }
   void AddChild(ProgramTree &&);
+  void AddEntry(const parser::EntryStmt &);
+  void AddGeneric(const parser::GenericSpec &);
 
   template <typename T>
   ProgramTree &set_stmt(const parser::Statement<T> &stmt) {
@@ -94,9 +110,12 @@ private:
   const parser::SpecificationPart &spec_;
   const parser::ExecutionPart *exec_{nullptr};
   std::list<ProgramTree> children_;
+  EntryStmtList entryStmts_;
+  GenericSpecList genericSpecs_;
   Scope *scope_{nullptr};
   const parser::CharBlock *endStmt_{nullptr};
   bool isSpecificationPartResolved_{false};
+  const parser::LanguageBindingSpec *bindingSpec_{nullptr};
 };
 
 } // namespace Fortran::semantics

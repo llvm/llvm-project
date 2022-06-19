@@ -4,9 +4,54 @@ import("//llvm/utils/gn/build/buildflags.gni")
 declare_args() {
   # Skip the atomic builtin (should normally be provided by a shared library).
   compiler_rt_exclude_atomic_builtin = true
+}
 
-  # Compile builtins for baremetal.
-  compiler_rt_baremetal_build = false
+lse_targets = []
+
+if (current_cpu == "arm64") {
+  foreach(pat,
+          [
+            "cas",
+            "swp",
+            "ldadd",
+            "ldclr",
+            "ldeor",
+            "ldset",
+          ]) {
+    foreach(size,
+            [
+              "1",
+              "2",
+              "4",
+              "8",
+              "16",
+            ]) {
+      foreach(model,
+              [
+                "1",
+                "2",
+                "3",
+                "4",
+              ]) {
+        if (pat == "cas" || size != "16") {
+          source_set("lse_${pat}_${size}_${model}") {
+            # Assign to sources like this to hide from
+            # sync_source_lists_from_cmake.py which won't find the source file
+            # on the CMake side.
+            lse_file = "aarch64/lse.S"
+            sources = [ lse_file ]
+            include_dirs = [ "." ]
+            defines = [
+              "L_$pat",
+              "SIZE=$size",
+              "MODEL=$model",
+            ]
+          }
+          lse_targets += [ ":lse_${pat}_${size}_${model}" ]
+        }
+      }
+    }
+  }
 }
 
 static_library("builtins") {
@@ -148,8 +193,10 @@ static_library("builtins") {
     "subvsi3.c",
     "subvti3.c",
     "trampoline_setup.c",
+    "truncdfbf2.c",
     "truncdfhf2.c",
     "truncdfsf2.c",
+    "truncsfbf2.c",
     "truncsfhf2.c",
     "ucmpdi2.c",
     "ucmpti2.c",
@@ -170,15 +217,15 @@ static_library("builtins") {
   ]
 
   if (current_os != "fuchsia") {
+    sources += [ "clear_cache.c" ]
+  }
+
+  if (current_os != "fuchsia" && current_os != "baremetal") {
     sources += [
       "emutls.c",
       "enable_execute_stack.c",
       "eprintf.c",
     ]
-  }
-
-  if (current_os != "fuchsia" && !compiler_rt_baremetal_build) {
-    sources += [ "clear_cache.c" ]
   }
 
   if (current_os == "mac" || current_os == "ios") {
@@ -421,7 +468,6 @@ static_library("builtins") {
         "arm/aeabi_uidivmod.S",
         "arm/aeabi_uldivmod.S",
         "arm/chkstk.S",
-        "mingw_fixfloat.c",
       ]
     }
   }
@@ -435,6 +481,18 @@ static_library("builtins") {
     if (current_os == "mingw") {
       sources += [ "aarch64/chkstk.S" ]
     }
+  }
+
+  if (current_cpu == "avr") {
+    sources += [
+      "avr/divmodhi4.S",
+      "avr/divmodqi4.S",
+      "avr/exit.S",
+      "avr/mulhi3.S",
+      "avr/mulqi3.S",
+      "avr/udivmodhi4.S",
+      "avr/udivmodqi4.S",
+    ]
   }
 
   if (current_cpu == "hexagon") {
@@ -510,6 +568,8 @@ static_library("builtins") {
   if (!compiler_rt_exclude_atomic_builtin) {
     sources += [ "atomic.c" ]
   }
+
+  deps = lse_targets
 }
 
 # Currently unused but necessary to make sync_source_lists_from_cmake.py happy.

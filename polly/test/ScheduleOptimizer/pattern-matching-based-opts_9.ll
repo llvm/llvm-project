@@ -1,14 +1,14 @@
-; RUN: opt %loadPolly -polly-opt-isl -polly-pattern-matching-based-opts=true \
+; RUN: opt %loadPolly -polly-pattern-matching-based-opts=true \
 ; RUN: -polly-target-throughput-vector-fma=1 \
 ; RUN: -polly-target-latency-vector-fma=8 \
-; RUN: -analyze -polly-ast -polly-target-1st-cache-level-associativity=8 \
+; RUN: -polly-target-1st-cache-level-associativity=8 \
 ; RUN: -polly-target-2nd-cache-level-associativity=8 \
 ; RUN: -polly-target-1st-cache-level-size=32768 \
 ; RUN: -polly-target-vector-register-bitwidth=256 \
-; RUN: -polly-target-2nd-cache-level-size=262144 < %s
+; RUN: -polly-target-2nd-cache-level-size=262144 \
+; RUN: -polly-opt-isl -disable-output < %s
 ;
-; RUN: opt %loadPolly -analyze -polly-dependences < %s | FileCheck %s \
-; RUN: --check-prefix=DEPENDENCES
+; RUN: opt %loadPolly -polly-print-dependences -disable-output < %s | FileCheck %s --check-prefix=DEPENDENCES
 ;
 ;    /* C := A * B + C */
 ;    /* Elements of the matrices A, B, C have the char type. */

@@ -1,4 +1,4 @@
-; RUN: opt -instsimplify -S -o - < %s | FileCheck %s
+; RUN: opt -passes=instsimplify -S -o - < %s | FileCheck %s
 
 define <vscale x 2 x i1> @reinterpret_zero() {
 ; CHECK-LABEL:  @reinterpret_zero(

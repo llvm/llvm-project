@@ -18,9 +18,11 @@
 #include "llvm/IR/Module.h"
 #include "llvm/IR/NoFolder.h"
 #include "llvm/IR/Verifier.h"
+#include "gmock/gmock.h"
 #include "gtest/gtest.h"
 
 using namespace llvm;
+using ::testing::UnorderedElementsAre;
 
 namespace {
 
@@ -214,6 +216,25 @@ TEST_F(IRBuilderTest, CreateStepVector) {
   EXPECT_EQ(Call->getIntrinsicID(), Intrinsic::experimental_stepvector);
 }
 
+TEST_F(IRBuilderTest, CreateStepVectorI3) {
+  IRBuilder<> Builder(BB);
+
+  // Scalable vectors
+  Type *DstVecTy = VectorType::get(IntegerType::get(Ctx, 3), 2, true);
+  Type *VecI8Ty = VectorType::get(Builder.getInt8Ty(), 2, true);
+  Value *StepVec = Builder.CreateStepVector(DstVecTy);
+  EXPECT_TRUE(isa<TruncInst>(StepVec));
+  TruncInst *Trunc = cast<TruncInst>(StepVec);
+  EXPECT_EQ(Trunc->getDestTy(), DstVecTy);
+  EXPECT_EQ(Trunc->getSrcTy(), VecI8Ty);
+  EXPECT_TRUE(isa<CallInst>(Trunc->getOperand(0)));
+
+  CallInst *Call = cast<CallInst>(Trunc->getOperand(0));
+  FunctionType *FTy = Call->getFunctionType();
+  EXPECT_EQ(FTy->getReturnType(), VecI8Ty);
+  EXPECT_EQ(Call->getIntrinsicID(), Intrinsic::experimental_stepvector);
+}
+
 TEST_F(IRBuilderTest, ConstrainedFP) {
   IRBuilder<> Builder(BB);
   Value *V;
@@ -289,13 +310,13 @@ TEST_F(IRBuilderTest, ConstrainedFP) {
   EXPECT_EQ(II->getIntrinsicID(), Intrinsic::experimental_constrained_fpext);
 
   // Verify attributes on the call are created automatically.
-  AttributeSet CallAttrs = II->getAttributes().getFnAttributes();
+  AttributeSet CallAttrs = II->getAttributes().getFnAttrs();
   EXPECT_EQ(CallAttrs.hasAttribute(Attribute::StrictFP), true);
 
   // Verify attributes on the containing function are created when requested.
   Builder.setConstrainedFPFunctionAttr();
   AttributeList Attrs = BB->getParent()->getAttributes();
-  AttributeSet FnAttrs = Attrs.getFnAttributes();
+  AttributeSet FnAttrs = Attrs.getFnAttrs();
   EXPECT_EQ(FnAttrs.hasAttribute(Attribute::StrictFP), true);
 
   // Verify the codepaths for setting and overriding the default metadata.
@@ -392,8 +413,8 @@ TEST_F(IRBuilderTest, ConstrainedFPFunctionCall) {
   CallInst *FCall = Builder.CreateCall(Callee, None);
 
   // Check the attributes to verify the strictfp attribute is on the call.
-  EXPECT_TRUE(FCall->getAttributes().getFnAttributes().hasAttribute(
-      Attribute::StrictFP));
+  EXPECT_TRUE(
+      FCall->getAttributes().getFnAttrs().hasAttribute(Attribute::StrictFP));
 
   Builder.CreateRetVoid();
   EXPECT_FALSE(verifyModule(*M));
@@ -415,7 +436,7 @@ TEST_F(IRBuilderTest, Lifetime) {
   EXPECT_EQ(Start3->getArgOperand(0), Builder.getInt64(100));
 
   EXPECT_EQ(Start1->getArgOperand(1), Var1);
-  EXPECT_NE(Start2->getArgOperand(1), Var2);
+  EXPECT_EQ(Start2->getArgOperand(1)->stripPointerCasts(), Var2);
   EXPECT_EQ(Start3->getArgOperand(1), Var3);
 
   Value *End1 = Builder.CreateLifetimeEnd(Var1);
@@ -872,14 +893,78 @@ TEST_F(IRBuilderTest, createArtificialSubprogram) {
   EXPECT_TRUE(GSP->isArtificial());
 }
 
+// Check that we can add debug info to an existing DICompileUnit.
+TEST_F(IRBuilderTest, appendDebugInfo) {
+  IRBuilder<> Builder(BB);
+  Builder.CreateRetVoid();
+  EXPECT_FALSE(verifyModule(*M));
+
+  auto GetNames = [](DICompileUnit *CU) {
+    SmallVector<StringRef> Names;
+    for (auto *ET : CU->getEnumTypes())
+      Names.push_back(ET->getName());
+    for (auto *RT : CU->getRetainedTypes())
+      Names.push_back(RT->getName());
+    for (auto *GV : CU->getGlobalVariables())
+      Names.push_back(GV->getVariable()->getName());
+    for (auto *IE : CU->getImportedEntities())
+      Names.push_back(IE->getName());
+    for (auto *Node : CU->getMacros())
+      if (auto *MN = dyn_cast_or_null<DIMacro>(Node))
+        Names.push_back(MN->getName());
+    return Names;
+  };
+
+  DICompileUnit *CU;
+  {
+    DIBuilder DIB(*M);
+    auto *File = DIB.createFile("main.c", "/");
+    CU = DIB.createCompileUnit(dwarf::DW_LANG_C, File, "clang",
+                               /*isOptimized=*/true, /*Flags=*/"",
+                               /*Runtime Version=*/0);
+    auto *ByteTy = DIB.createBasicType("byte0", 8, dwarf::DW_ATE_signed);
+    DIB.createEnumerationType(CU, "ET0", File, /*LineNo=*/0, /*SizeInBits=*/8,
+                              /*AlignInBits=*/8, /*Elements=*/{}, ByteTy);
+    DIB.retainType(ByteTy);
+    DIB.createGlobalVariableExpression(CU, "GV0", /*LinkageName=*/"", File,
+                                       /*LineNo=*/1, ByteTy,
+                                       /*IsLocalToUnit=*/true);
+    DIB.createImportedDeclaration(CU, nullptr, File, /*LineNo=*/2, "IM0");
+    DIB.createMacro(nullptr, /*LineNo=*/0, dwarf::DW_MACINFO_define, "M0");
+    DIB.finalize();
+  }
+  EXPECT_FALSE(verifyModule(*M));
+  EXPECT_THAT(GetNames(CU),
+              UnorderedElementsAre("ET0", "byte0", "GV0", "IM0", "M0"));
+
+  {
+    DIBuilder DIB(*M, true, CU);
+    auto *File = CU->getFile();
+    auto *ByteTy = DIB.createBasicType("byte1", 8, dwarf::DW_ATE_signed);
+    DIB.createEnumerationType(CU, "ET1", File, /*LineNo=*/0,
+                              /*SizeInBits=*/8, /*AlignInBits=*/8,
+                              /*Elements=*/{}, ByteTy);
+    DIB.retainType(ByteTy);
+    DIB.createGlobalVariableExpression(CU, "GV1", /*LinkageName=*/"", File,
+                                       /*LineNo=*/1, ByteTy,
+                                       /*IsLocalToUnit=*/true);
+    DIB.createImportedDeclaration(CU, nullptr, File, /*LineNo=*/2, "IM1");
+    DIB.createMacro(nullptr, /*LineNo=*/0, dwarf::DW_MACINFO_define, "M1");
+    DIB.finalize();
+  }
+  EXPECT_FALSE(verifyModule(*M));
+  EXPECT_THAT(GetNames(CU),
+              UnorderedElementsAre("ET0", "byte0", "GV0", "IM0", "M0", "ET1",
+                                   "byte1", "GV1", "IM1", "M1"));
+}
+
 TEST_F(IRBuilderTest, InsertExtractElement) {
   IRBuilder<> Builder(BB);
 
   auto VecTy = FixedVectorType::get(Builder.getInt64Ty(), 4);
   auto Elt1 = Builder.getInt64(-1);
   auto Elt2 = Builder.getInt64(-2);
-  Value *Vec = UndefValue::get(VecTy);
-  Vec = Builder.CreateInsertElement(Vec, Elt1, Builder.getInt8(1));
+  Value *Vec = Builder.CreateInsertElement(VecTy, Elt1, Builder.getInt8(1));
   Vec = Builder.CreateInsertElement(Vec, Elt2, 2);
   auto X1 = Builder.CreateExtractElement(Vec, 1);
   auto X2 = Builder.CreateExtractElement(Vec, Builder.getInt32(2));
@@ -945,13 +1030,17 @@ TEST_F(IRBuilderTest, DIImportedEntity) {
   auto CU = DIB.createCompileUnit(dwarf::DW_LANG_Cobol74,
                                   F, "llvm-cobol74",
                                   true, "", 0);
+  MDTuple *Elements = MDTuple::getDistinct(Ctx, None);
+
   DIB.createImportedDeclaration(CU, nullptr, F, 1);
   DIB.createImportedDeclaration(CU, nullptr, F, 1);
   DIB.createImportedModule(CU, (DIImportedEntity *)nullptr, F, 2);
   DIB.createImportedModule(CU, (DIImportedEntity *)nullptr, F, 2);
+  DIB.createImportedModule(CU, (DIImportedEntity *)nullptr, F, 2, Elements);
+  DIB.createImportedModule(CU, (DIImportedEntity *)nullptr, F, 2, Elements);
   DIB.finalize();
   EXPECT_TRUE(verifyModule(*M));
-  EXPECT_TRUE(CU->getImportedEntities().size() == 2);
+  EXPECT_TRUE(CU->getImportedEntities().size() == 3);
 }
 
 //  0: #define M0 V0          <-- command line definition

@@ -83,3 +83,28 @@ define i32 @overshift(i32 %a) {
   ret i32 %xor
 }
 
+; Should be possible to adjust the pointer and narrow the load to 16 bits.
+define i16 @srl_load_narrowing1(i32* %arg) {
+; CHECK-LABEL: srl_load_narrowing1:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; CHECK-NEXT:    movzwl 1(%eax), %eax
+; CHECK-NEXT:    retl
+  %tmp1 = load i32, i32* %arg, align 1
+  %tmp2 = lshr i32 %tmp1, 8
+  %tmp3 = trunc i32 %tmp2 to i16
+  ret i16 %tmp3
+}
+
+define i16 @srl_load_narrowing2(i32* %arg) {
+; CHECK-LABEL: srl_load_narrowing2:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; CHECK-NEXT:    movzbl 3(%eax), %eax
+; CHECK-NEXT:    # kill: def $ax killed $ax killed $eax
+; CHECK-NEXT:    retl
+  %tmp1 = load i32, i32* %arg, align 1
+  %tmp2 = lshr i32 %tmp1, 24
+  %tmp3 = trunc i32 %tmp2 to i16
+  ret i16 %tmp3
+}

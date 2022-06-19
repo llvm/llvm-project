@@ -31,10 +31,10 @@
 #include "llvm/CodeGen/SlotIndexes.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/MC/MCAsmInfo.h"
+#include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
-#include "llvm/Support/TargetRegistry.h"
 #include "llvm/Support/raw_ostream.h"
 
 using namespace llvm;
@@ -297,18 +297,16 @@ protected:
         // fma result.
 
         LiveInterval &NewFMAInt = LIS->getInterval(KilledProdReg);
-        for (LiveInterval::iterator AI = FMAInt.begin(), AE = FMAInt.end();
-             AI != AE; ++AI) {
+        for (auto &AI : FMAInt) {
           // Don't add the segment that corresponds to the original copy.
-          if (AI->valno == AddendValNo)
+          if (AI.valno == AddendValNo)
             continue;
 
           VNInfo *NewFMAValNo =
-            NewFMAInt.getNextValue(AI->start,
-                                   LIS->getVNInfoAllocator());
+              NewFMAInt.getNextValue(AI.start, LIS->getVNInfoAllocator());
 
-          NewFMAInt.addSegment(LiveInterval::Segment(AI->start, AI->end,
-                                                     NewFMAValNo));
+          NewFMAInt.addSegment(
+              LiveInterval::Segment(AI.start, AI.end, NewFMAValNo));
         }
         LLVM_DEBUG(dbgs() << "  extended: " << NewFMAInt << '\n');
 
@@ -361,11 +359,9 @@ public:
       if (DisableVSXFMAMutate)
         return Changed;
 
-      for (MachineFunction::iterator I = MF.begin(); I != MF.end();) {
-        MachineBasicBlock &B = *I++;
+      for (MachineBasicBlock &B : llvm::make_early_inc_range(MF))
         if (processBlock(B))
           Changed = true;
-      }
 
       return Changed;
     }

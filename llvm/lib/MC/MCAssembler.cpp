@@ -27,7 +27,6 @@
 #include "llvm/MC/MCInst.h"
 #include "llvm/MC/MCObjectWriter.h"
 #include "llvm/MC/MCSection.h"
-#include "llvm/MC/MCSectionELF.h"
 #include "llvm/MC/MCSymbol.h"
 #include "llvm/MC/MCValue.h"
 #include "llvm/Support/Alignment.h"
@@ -36,15 +35,17 @@
 #include "llvm/Support/EndianStream.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/LEB128.h"
-#include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cassert>
 #include <cstdint>
-#include <cstring>
 #include <tuple>
 #include <utility>
 
 using namespace llvm;
+
+namespace llvm {
+class MCSubtargetInfo;
+}
 
 #define DEBUG_TYPE "assembler"
 
@@ -89,6 +90,7 @@ MCAssembler::MCAssembler(MCContext &Context,
       BundleAlignSize(0), RelaxAll(false), SubsectionsViaSymbols(false),
       IncrementalLinkerCompatible(false), ELFHeaderEFlags(0) {
   VersionInfo.Major = 0; // Major version == 0 for "none specified"
+  DarwinTargetVariantVersionInfo.Major = 0;
 }
 
 MCAssembler::~MCAssembler() = default;
@@ -109,6 +111,8 @@ void MCAssembler::reset() {
   LOHContainer.reset();
   VersionInfo.Major = 0;
   VersionInfo.SDKVersion = VersionTuple();
+  DarwinTargetVariantVersionInfo.Major = 0;
+  DarwinTargetVariantVersionInfo.SDKVersion = VersionTuple();
 
   // reset objects owned by us
   if (getBackendPtr())
@@ -327,11 +331,11 @@ uint64_t MCAssembler::computeFragmentSize(const MCAsmLayout &Layout,
   case MCFragment::FT_Align: {
     const MCAlignFragment &AF = cast<MCAlignFragment>(F);
     unsigned Offset = Layout.getFragmentOffset(&AF);
-    unsigned Size = offsetToAlignment(Offset, Align(AF.getAlignment()));
+    unsigned Size = offsetToAlignment(Offset, AF.getAlignment());
 
     // Insert extra Nops for code alignment if the target define
     // shouldInsertExtraNopBytesForCodeAlign target hook.
-    if (AF.getParent()->UseCodeAlign() && AF.hasEmitNops() &&
+    if (AF.getParent()->useCodeAlign() && AF.hasEmitNops() &&
         getBackend().shouldInsertExtraNopBytesForCodeAlign(AF, Size))
       return Size;
 
@@ -339,7 +343,7 @@ uint64_t MCAssembler::computeFragmentSize(const MCAsmLayout &Layout,
     // minimum nop size.
     if (Size > 0 && AF.hasEmitNops()) {
       while (Size % getBackend().getMinimumNopSize())
-        Size += AF.getAlignment();
+        Size += AF.getAlignment().value();
     }
     if (Size > AF.getMaxBytesToEmit())
       return 0;
@@ -483,6 +487,7 @@ void MCAssembler::writeFragmentPadding(raw_ostream &OS,
            "Writing bundle padding for a fragment without instructions");
 
     unsigned TotalLength = BundlePadding + static_cast<unsigned>(FSize);
+    const MCSubtargetInfo *STI = EF.getSubtargetInfo();
     if (EF.alignToBundleEnd() && TotalLength > getBundleAlignSize()) {
       // If the padding itself crosses a bundle boundary, it must be emitted
       // in 2 pieces, since even nop instructions must not cross boundaries.
@@ -493,12 +498,12 @@ void MCAssembler::writeFragmentPadding(raw_ostream &OS,
       // ----------------------------
       //        ^-------------------^   <- TotalLength
       unsigned DistanceToBoundary = TotalLength - getBundleAlignSize();
-      if (!getBackend().writeNopData(OS, DistanceToBoundary))
+      if (!getBackend().writeNopData(OS, DistanceToBoundary, STI))
         report_fatal_error("unable to write NOP sequence of " +
                            Twine(DistanceToBoundary) + " bytes");
       BundlePadding -= DistanceToBoundary;
     }
-    if (!getBackend().writeNopData(OS, BundlePadding))
+    if (!getBackend().writeNopData(OS, BundlePadding, STI))
       report_fatal_error("unable to write NOP sequence of " +
                          Twine(BundlePadding) + " bytes");
   }
@@ -544,7 +549,7 @@ static void writeFragment(raw_ostream &OS, const MCAssembler &Asm,
     // bytes left to fill use the Value and ValueSize to fill the rest.
     // If we are aligning with nops, ask that target to emit the right data.
     if (AF.hasEmitNops()) {
-      if (!Asm.getBackend().writeNopData(OS, Count))
+      if (!Asm.getBackend().writeNopData(OS, Count, AF.getSubtargetInfo()))
         report_fatal_error("unable to write nop sequence of " +
                           Twine(Count) + " bytes");
       break;
@@ -621,9 +626,11 @@ static void writeFragment(raw_ostream &OS, const MCAssembler &Asm,
   case MCFragment::FT_Nops: {
     ++stats::EmittedNopsFragments;
     const MCNopsFragment &NF = cast<MCNopsFragment>(F);
+
     int64_t NumBytes = NF.getNumBytes();
     int64_t ControlledNopLength = NF.getControlledNopLength();
-    int64_t MaximumNopLength = Asm.getBackend().getMaximumNopSize();
+    int64_t MaximumNopLength =
+        Asm.getBackend().getMaximumNopSize(*NF.getSubtargetInfo());
 
     assert(NumBytes > 0 && "Expected positive NOPs fragment size");
     assert(ControlledNopLength >= 0 && "Expected non-negative NOP size");
@@ -647,7 +654,8 @@ static void writeFragment(raw_ostream &OS, const MCAssembler &Asm,
       uint64_t NumBytesToEmit =
           (uint64_t)std::min(NumBytes, ControlledNopLength);
       assert(NumBytesToEmit && "try to emit empty NOP instruction");
-      if (!Asm.getBackend().writeNopData(OS, NumBytesToEmit)) {
+      if (!Asm.getBackend().writeNopData(OS, NumBytesToEmit,
+                                         NF.getSubtargetInfo())) {
         report_fatal_error("unable to write nop sequence of the remaining " +
                            Twine(NumBytesToEmit) + " bytes");
         break;
@@ -664,7 +672,8 @@ static void writeFragment(raw_ostream &OS, const MCAssembler &Asm,
   }
 
   case MCFragment::FT_BoundaryAlign: {
-    if (!Asm.getBackend().writeNopData(OS, FragmentSize))
+    const MCBoundaryAlignFragment &BF = cast<MCBoundaryAlignFragment>(F);
+    if (!Asm.getBackend().writeNopData(OS, FragmentSize, BF.getSubtargetInfo()))
       report_fatal_error("unable to write nop sequence of " +
                          Twine(FragmentSize) + " bytes");
     break;
@@ -865,7 +874,7 @@ void MCAssembler::layout(MCAsmLayout &Layout) {
         MCAlignFragment &AF = cast<MCAlignFragment>(Frag);
         // Insert fixup type for code alignment if the target define
         // shouldInsertFixupForCodeAlign target hook.
-        if (Sec.UseCodeAlign() && AF.hasEmitNops())
+        if (Sec.useCodeAlign() && AF.hasEmitNops())
           getBackend().shouldInsertFixupForCodeAlign(*this, Layout, AF);
         continue;
       }

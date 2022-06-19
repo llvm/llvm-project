@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple armv7-apple-ios -emit-llvm -o - %s | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -triple armv7-apple-ios -emit-llvm -o - %s | FileCheck %s
 struct Empty {};
 
 Empty emptyvar;

@@ -16,6 +16,7 @@
 #include "hwasan_checks.h"
 #include "hwasan_dynamic_shadow.h"
 #include "hwasan_globals.h"
+#include "hwasan_mapping.h"
 #include "hwasan_poisoning.h"
 #include "hwasan_report.h"
 #include "hwasan_thread.h"
@@ -24,6 +25,7 @@
 #include "sanitizer_common/sanitizer_common.h"
 #include "sanitizer_common/sanitizer_flag_parser.h"
 #include "sanitizer_common/sanitizer_flags.h"
+#include "sanitizer_common/sanitizer_interface_internal.h"
 #include "sanitizer_common/sanitizer_libc.h"
 #include "sanitizer_common/sanitizer_procmaps.h"
 #include "sanitizer_common/sanitizer_stackdepot.h"
@@ -141,7 +143,7 @@ static void CheckUnwind() {
 static void HwasanFormatMemoryUsage(InternalScopedString &s) {
   HwasanThreadList &thread_list = hwasanThreadList();
   auto thread_stats = thread_list.GetThreadStats();
-  auto *sds = StackDepotGetStats();
+  auto sds = StackDepotGetStats();
   AllocatorStatCounters asc;
   GetAllocatorStats(asc);
   s.append(
@@ -151,7 +153,7 @@ static void HwasanFormatMemoryUsage(InternalScopedString &s) {
       internal_getpid(), GetRSS(), thread_stats.n_live_threads,
       thread_stats.total_stack_size,
       thread_stats.n_live_threads * thread_list.MemoryUsedPerThread(),
-      sds->allocated, sds->n_uniq_ids, asc[AllocatorStatMapped]);
+      sds.allocated, sds.n_uniq_ids, asc[AllocatorStatMapped]);
 }
 
 #if SANITIZER_ANDROID
@@ -319,7 +321,7 @@ void __hwasan_init_static() {
     InitializeSingleGlobal(global);
 }
 
-void __hwasan_init() {
+__attribute__((constructor(0))) void __hwasan_init() {
   CHECK(!hwasan_init_is_running);
   if (hwasan_inited) return;
   hwasan_init_is_running = 1;
@@ -344,7 +346,7 @@ void __hwasan_init() {
 
   // Needs to be called here because flags()->random_tags might not have been
   // initialized when InitInstrumentation() was called.
-  GetCurrentThread()->InitRandomState();
+  GetCurrentThread()->EnsureRandomStateInited();
 
   SetPrintfAndReportCallback(AppendToErrorMessageBuffer);
   // This may call libc -> needs initialized shadow.
@@ -360,6 +362,7 @@ void __hwasan_init() {
   HwasanTSDThreadInit();
 
   HwasanAllocatorInit();
+  HwasanInstallAtForkHandler();
 
 #if HWASAN_CONTAINS_UBSAN
   __ubsan::InitAsPlugin();
@@ -390,8 +393,15 @@ void __hwasan_print_shadow(const void *p, uptr sz) {
   uptr shadow_last = MemToShadow(ptr_raw + sz - 1);
   Printf("HWASan shadow map for %zx .. %zx (pointer tag %x)\n", ptr_raw,
          ptr_raw + sz, GetTagFromPointer((uptr)p));
-  for (uptr s = shadow_first; s <= shadow_last; ++s)
-    Printf("  %zx: %x\n", ShadowToMem(s), *(tag_t *)s);
+  for (uptr s = shadow_first; s <= shadow_last; ++s) {
+    tag_t mem_tag = *reinterpret_cast<tag_t *>(s);
+    uptr granule_addr = ShadowToMem(s);
+    if (mem_tag && mem_tag < kShadowAlignment)
+      Printf("  %zx: %02x(%02x)\n", granule_addr, mem_tag,
+             *reinterpret_cast<tag_t *>(granule_addr + kShadowAlignment - 1));
+    else
+      Printf("  %zx: %02x\n", granule_addr, mem_tag);
+  }
 }
 
 sptr __hwasan_test_shadow(const void *p, uptr sz) {

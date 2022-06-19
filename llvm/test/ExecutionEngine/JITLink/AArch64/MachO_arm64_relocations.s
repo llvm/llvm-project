@@ -1,6 +1,6 @@
 # RUN: rm -rf %t && mkdir -p %t
 # RUN: llvm-mc -triple=arm64-apple-darwin19 -filetype=obj -o %t/macho_reloc.o %s
-# RUN: llvm-jitlink -noexec -define-abs external_data=0xdeadbeef -define-abs external_func=0xcafef00d -check=%s %t/macho_reloc.o
+# RUN: llvm-jitlink -noexec -abs external_data=0xdeadbeef -abs external_func=0xcafef00d -check=%s %t/macho_reloc.o
 
         .section        __TEXT,__text,regular,pure_instructions
 
@@ -78,7 +78,8 @@ test_gotpageoff12_defined:
 # For the GOTPAGEOFF12 relocation we test the ADD instruction, all LDR/GPR
 # variants and all LDR/Neon variants.
 #
-# jitlink-check: decode_operand(test_page21, 1) = ((named_data + 256) - test_page21)[32:12]
+# jitlink-check: decode_operand(test_page21, 1)[20:0] = \
+# jitlink-check:     ((named_data + 256) - test_page21)[32:12]
 # jitlink-check: decode_operand(test_pageoff12add, 2) = (named_data + 256)[11:0]
 # jitlink-check: decode_operand(test_pageoff12gpr8, 2) = (named_data + 256)[11:0]
 # jitlink-cherk: decode_operand(test_pageoff12gpr8s, 2) = (named_data + 256)[11:0]

@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -emit-llvm --std=c++17 -fcxx-exceptions -fexceptions -discard-value-names %s -o - | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-unknown-linux-gnu -emit-llvm --std=c++17 -fcxx-exceptions -fexceptions -discard-value-names %s -o - | FileCheck %s
 
 struct Q { Q(); };
 struct R { R(Q); ~R(); };

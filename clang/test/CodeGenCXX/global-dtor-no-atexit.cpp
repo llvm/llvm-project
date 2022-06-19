@@ -1,7 +1,7 @@
-// RUN: %clang_cc1 -triple x86_64 %s -fno-use-cxa-atexit -emit-llvm -o - | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64 %s -fno-use-cxa-atexit -emit-llvm -o - | FileCheck %s
 
 // PR7097
-// RUN: %clang_cc1 -triple x86_64 %s -fno-use-cxa-atexit -mconstructor-aliases -emit-llvm -o - | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64 %s -fno-use-cxa-atexit -mconstructor-aliases -emit-llvm -o - | FileCheck %s
 
 // CHECK:      call void @_ZN1AC1Ev([[A:%.*]]* {{[^,]*}} @a)
 // CHECK-NEXT: call i32 @atexit(void ()* @__dtor_a)

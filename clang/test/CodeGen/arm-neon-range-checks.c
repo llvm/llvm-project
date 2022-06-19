@@ -1,6 +1,8 @@
 // RUN: %clang_cc1 -triple arm64-none-eabi -target-feature +neon -target-feature +dotprod -target-feature +v8.1a -verify %s
 // RUN: %clang_cc1 -triple armv8.1a-none-eabi -target-feature +neon -target-feature +dotprod -target-feature +v8.1a -verify %s
 
+// REQUIRES: aarch64-registered-target || arm-registered-target
+
 #include <arm_neon.h>
 
 void test_vdot_lane(int32x2_t r, int8x8_t a, int8x8_t b) {

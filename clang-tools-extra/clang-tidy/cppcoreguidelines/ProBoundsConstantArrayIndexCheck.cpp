@@ -22,7 +22,8 @@ ProBoundsConstantArrayIndexCheck::ProBoundsConstantArrayIndexCheck(
     StringRef Name, ClangTidyContext *Context)
     : ClangTidyCheck(Name, Context), GslHeader(Options.get("GslHeader", "")),
       Inserter(Options.getLocalOrGlobal("IncludeStyle",
-                                        utils::IncludeSorter::IS_LLVM)) {}
+                                        utils::IncludeSorter::IS_LLVM),
+               areDiagsSelfContained()) {}
 
 void ProBoundsConstantArrayIndexCheck::storeOptions(
     ClangTidyOptions::OptionMap &Opts) {
@@ -38,12 +39,12 @@ void ProBoundsConstantArrayIndexCheck::registerPPCallbacks(
 void ProBoundsConstantArrayIndexCheck::registerMatchers(MatchFinder *Finder) {
   // Note: if a struct contains an array member, the compiler-generated
   // constructor has an arraySubscriptExpr.
-  Finder->addMatcher(
-      arraySubscriptExpr(
-          hasBase(ignoringImpCasts(hasType(constantArrayType().bind("type")))),
-          hasIndex(expr().bind("index")), unless(hasAncestor(isImplicit())))
-          .bind("expr"),
-      this);
+  Finder->addMatcher(arraySubscriptExpr(hasBase(ignoringImpCasts(hasType(
+                                            constantArrayType().bind("type")))),
+                                        hasIndex(expr().bind("index")),
+                                        unless(hasAncestor(decl(isImplicit()))))
+                         .bind("expr"),
+                     this);
 
   Finder->addMatcher(
       cxxOperatorCallExpr(
@@ -71,13 +72,12 @@ void ProBoundsConstantArrayIndexCheck::check(
       BaseRange = ArraySubscriptE->getBase()->getSourceRange();
     else
       BaseRange =
-          dyn_cast<CXXOperatorCallExpr>(Matched)->getArg(0)->getSourceRange();
+          cast<CXXOperatorCallExpr>(Matched)->getArg(0)->getSourceRange();
     SourceRange IndexRange = IndexExpr->getSourceRange();
 
     auto Diag = diag(Matched->getExprLoc(),
                      "do not use array subscript when the index is "
-                     "not an integer constant expression; use gsl::at() "
-                     "instead");
+                     "not an integer constant expression");
     if (!GslHeader.empty()) {
       Diag << FixItHint::CreateInsertion(BaseRange.getBegin(), "gsl::at(")
            << FixItHint::CreateReplacement(

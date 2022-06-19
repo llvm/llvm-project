@@ -127,15 +127,15 @@ define i64 @no_extract_mul(i64 %i) nounwind {
 define i32 @no_extract_udiv(i32 %i) nounwind {
 ; CHECK-LABEL: no_extract_udiv:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #43691
-; CHECK-NEXT:    mov w9, #33437
-; CHECK-NEXT:    movk w8, #43690, lsl #16
-; CHECK-NEXT:    movk w9, #21399, lsl #16
+; CHECK-NEXT:    mov w8, #33437
+; CHECK-NEXT:    mov w9, #43691
+; CHECK-NEXT:    movk w8, #21399, lsl #16
+; CHECK-NEXT:    movk w9, #43690, lsl #16
 ; CHECK-NEXT:    umull x8, w0, w8
 ; CHECK-NEXT:    umull x9, w0, w9
-; CHECK-NEXT:    lsr x8, x8, #33
-; CHECK-NEXT:    lsr x9, x9, #32
-; CHECK-NEXT:    extr w0, w8, w9, #4
+; CHECK-NEXT:    lsr x8, x8, #32
+; CHECK-NEXT:    lsr x9, x9, #33
+; CHECK-NEXT:    extr w0, w9, w8, #4
 ; CHECK-NEXT:    ret
   %lhs_div = udiv i32 %i, 3
   %rhs_div = udiv i32 %i, 49

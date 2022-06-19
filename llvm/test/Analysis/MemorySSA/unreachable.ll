@@ -1,4 +1,4 @@
-; RUN: opt -licm -enable-mssa-loop-dependency -verify-memoryssa %s -S | FileCheck %s
+; RUN: opt -licm -verify-memoryssa %s -S | FileCheck %s
 ; REQUIRES: asserts
 ; Ensure verification doesn't fail with unreachable blocks.
 

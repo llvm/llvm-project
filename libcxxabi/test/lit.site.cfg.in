@@ -7,6 +7,7 @@ import site
 
 config.cxx_under_test           = "@CMAKE_CXX_COMPILER@"
 config.project_obj_root         = "@CMAKE_BINARY_DIR@"
+config.install_root             = "@CMAKE_BINARY_DIR@"
 config.libcxxabi_hdr_root       = "@LIBCXXABI_HEADER_DIR@"
 config.libcxxabi_src_root       = "@LIBCXXABI_SOURCE_DIR@"
 config.libcxxabi_obj_root       = "@LIBCXXABI_BINARY_DIR@"
@@ -23,8 +24,8 @@ config.executor                 = "@LIBCXXABI_EXECUTOR@"
 config.libcxxabi_shared         = @LIBCXXABI_LINK_TESTS_WITH_SHARED_LIBCXXABI@
 config.enable_shared            = @LIBCXXABI_LINK_TESTS_WITH_SHARED_LIBCXX@
 config.host_triple              = "@LLVM_HOST_TRIPLE@"
-config.sysroot                  = "@LIBCXXABI_SYSROOT@"
-config.gcc_toolchain            = "@LIBCXXABI_GCC_TOOLCHAIN@"
+config.sysroot                  = "@CMAKE_SYSROOT@"
+config.gcc_toolchain            = "@CMAKE_CXX_COMPILER_EXTERNAL_TOOLCHAIN@"
 config.cxx_ext_threads          = @LIBCXXABI_BUILD_EXTERNAL_THREAD_LIBRARY@
 
 config.pstl_src_root            = "@ParallelSTL_SOURCE_DIR@" if @LIBCXX_ENABLE_PARALLEL_ALGORITHMS@ else None
@@ -59,3 +60,6 @@ import libcxxabi.test.config
 configuration = libcxxabi.test.config.Configuration(lit_config, config)
 configuration.configure()
 configuration.print_config_info()
+
+lit_config.warning("This is a legacy testing configuration which will be removed in LLVM 16. "
+                   "Please use one of the configurations in libcxxabi/test/configs or define your own.")

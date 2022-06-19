@@ -19,7 +19,7 @@ NSObject     // expected-error {{cannot find interface declaration for 'NSObject
 @interface INT1
 @end
 
-void test2() {
+void test2(void) {
     // rdar://6827200
     INT1 b[3];          // expected-error {{array of interface 'INT1' is invalid (probably should be an array of pointers)}}
     INT1 *c = &b[0];

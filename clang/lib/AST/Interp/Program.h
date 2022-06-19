@@ -29,20 +29,23 @@ namespace clang {
 class RecordDecl;
 class Expr;
 class FunctionDecl;
-class Stmt;
 class StringLiteral;
 class VarDecl;
 
 namespace interp {
 class Context;
-class State;
 class Record;
-class Scope;
 
 /// The program contains and links the bytecode for all functions.
 class Program {
 public:
   Program(Context &Ctx) : Ctx(Ctx) {}
+
+  /// Marshals a native pointer to an ID for embedding in bytecode.
+  unsigned getOrCreateNativePointer(const void *Ptr);
+
+  /// Returns the value of a marshalled native pointer.
+  const void *getNativePointer(unsigned Idx);
 
   /// Emits a string literal among global data.
   unsigned createGlobalString(const StringLiteral *S);
@@ -142,6 +145,11 @@ private:
 
   /// Function relocation locations.
   llvm::DenseMap<const FunctionDecl *, std::vector<unsigned>> Relocs;
+
+  /// Native pointers referenced by bytecode.
+  std::vector<const void *> NativePointers;
+  /// Cached native pointer indices.
+  llvm::DenseMap<const void *, unsigned> NativePointerIndices;
 
   /// Custom allocator for global storage.
   using PoolAllocTy = llvm::BumpPtrAllocatorImpl<llvm::MallocAllocator>;

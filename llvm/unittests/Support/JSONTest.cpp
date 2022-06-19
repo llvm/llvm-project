@@ -138,9 +138,9 @@ TEST(JSONTest, Object) {
   EXPECT_FALSE(O.try_emplace("a", 4).second);
 
   auto D = O.find("d");
-  EXPECT_FALSE(D == O.end());
+  EXPECT_NE(D, O.end());
   auto E = O.find("e");
-  EXPECT_TRUE(E == O.end());
+  EXPECT_EQ(E, O.end());
 
   O.erase("b");
   O.erase(D);
@@ -353,6 +353,88 @@ TEST(JSONTest, Integers) {
     EXPECT_EQ(Doc->getAsNumber(), T.AsNumber) << T.Desc;
     EXPECT_EQ(T.Val, *Doc) << T.Desc;
     EXPECT_EQ(T.Str, s(*Doc)) << T.Desc;
+  }
+}
+
+// Verify uint64_t type.
+TEST(JSONTest, U64Integers) {
+  Value Val = uint64_t{3100100100};
+  uint64_t Var = 3100100100;
+  EXPECT_EQ(Val, Var);
+
+  Val = uint64_t{std::numeric_limits<uint64_t>::max()};
+  Var = std::numeric_limits<uint64_t>::max();
+  EXPECT_EQ(Val, Var);
+
+  // Test the parse() part.
+  {
+    const char *Str = "4611686018427387905";
+    llvm::Expected<Value> Doc = parse(Str);
+
+    EXPECT_TRUE(!!Doc);
+    EXPECT_EQ(Doc->getAsInteger(), int64_t{4611686018427387905});
+    EXPECT_EQ(Doc->getAsUINT64(), uint64_t{4611686018427387905});
+  }
+
+  {
+    const char *Str = "-78278238238328222";
+    llvm::Expected<Value> Doc = parse(Str);
+
+    EXPECT_TRUE(!!Doc);
+    EXPECT_EQ(Doc->getAsInteger(), int64_t{-78278238238328222});
+    EXPECT_EQ(Doc->getAsUINT64(), llvm::None);
+  }
+
+  // Test with the largest 64 signed int.
+  {
+    const char *Str = "9223372036854775807";
+    llvm::Expected<Value> Doc = parse(Str);
+
+    EXPECT_TRUE(!!Doc);
+    EXPECT_EQ(Doc->getAsInteger(), int64_t{9223372036854775807});
+    EXPECT_EQ(Doc->getAsUINT64(), uint64_t{9223372036854775807});
+  }
+
+  // Test with the largest 64 unsigned int.
+  {
+    const char *Str = "18446744073709551615";
+    llvm::Expected<Value> Doc = parse(Str);
+
+    EXPECT_TRUE(!!Doc);
+    EXPECT_EQ(Doc->getAsInteger(), None);
+    EXPECT_EQ(Doc->getAsUINT64(), uint64_t{18446744073709551615u});
+  }
+
+  // Test with a number that is too big for 64 bits.
+  {
+    const char *Str = "184467440737095516150";
+    llvm::Expected<Value> Doc = parse(Str);
+
+    EXPECT_TRUE(!!Doc);
+    EXPECT_EQ(Doc->getAsInteger(), None);
+    EXPECT_EQ(Doc->getAsUINT64(), None);
+    // The number was parsed as a double.
+    EXPECT_TRUE(!!Doc->getAsNumber());
+  }
+
+  // Test with a negative number that is too small for 64 bits.
+  {
+    const char *Str = "-18446744073709551615";
+    llvm::Expected<Value> Doc = parse(Str);
+
+    EXPECT_TRUE(!!Doc);
+    EXPECT_EQ(Doc->getAsInteger(), None);
+    EXPECT_EQ(Doc->getAsUINT64(), None);
+    // The number was parsed as a double.
+    EXPECT_TRUE(!!Doc->getAsNumber());
+  }
+  // Test with a large number that is malformed.
+  {
+    const char *Str = "184467440737095516150.12.12";
+    llvm::Expected<Value> Doc = parse(Str);
+
+    EXPECT_EQ("[1:27, byte=27]: Invalid JSON value (number?)",
+              llvm::toString(Doc.takeError()));
   }
 }
 

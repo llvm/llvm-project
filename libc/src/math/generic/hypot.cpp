@@ -7,8 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/math/hypot.h"
+#include "src/__support/FPUtil/Hypot.h"
 #include "src/__support/common.h"
-#include "utils/FPUtil/Hypot.h"
 
 namespace __llvm_libc {
 

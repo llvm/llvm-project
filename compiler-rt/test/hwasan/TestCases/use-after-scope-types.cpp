@@ -1,4 +1,8 @@
-// RUN: %clangxx_asan %stdcxx11 -O0 -fsanitize-address-use-after-scope %s -o %t
+// This is the ASAN test of the same name ported to HWAsan.
+
+// RUN: %clangxx_hwasan -mllvm -hwasan-use-after-scope -std=c++11 -O0 %s -o %t
+// RUN: %clangxx_hwasan -fno-exceptions -mllvm -hwasan-use-after-scope -std=c++11 -O0 %s -o %t-noexcept
+
 // RUN: not %run %t 0 2>&1 | FileCheck %s
 // RUN: not %run %t 1 2>&1 | FileCheck %s
 // RUN: not %run %t 2 2>&1 | FileCheck %s
@@ -10,9 +14,21 @@
 // RUN: not %run %t 8 2>&1 | FileCheck %s
 // RUN: not %run %t 9 2>&1 | FileCheck %s
 // RUN: not %run %t 10 2>&1 | FileCheck %s
-//
-// Not expected to work yet with HWAsan.
-// XFAIL: *
+
+// RUN: not %run %t-noexcept 0 2>&1 | FileCheck %s
+// RUN: not %run %t-noexcept 1 2>&1 | FileCheck %s
+// RUN: not %run %t-noexcept 2 2>&1 | FileCheck %s
+// RUN: not %run %t-noexcept 3 2>&1 | FileCheck %s
+// RUN: not %run %t-noexcept 4 2>&1 | FileCheck %s
+// RUN: not %run %t-noexcept 5 2>&1 | FileCheck %s
+// RUN: not %run %t-noexcept 6 2>&1 | FileCheck %s
+// RUN: not %run %t-noexcept 7 2>&1 | FileCheck %s
+// RUN: not %run %t-noexcept 8 2>&1 | FileCheck %s
+// RUN: not %run %t-noexcept 9 2>&1 | FileCheck %s
+// RUN: not %run %t-noexcept 10 2>&1 | FileCheck %s
+
+// REQUIRES: aarch64-target-arch
+// REQUIRES: stable-runtime
 
 #include <stdlib.h>
 #include <string>
@@ -46,10 +62,9 @@ __attribute__((noinline)) void test() {
   }
 
   ptr.Access();
-  // CHECK: ERROR: AddressSanitizer: stack-use-after-scope
+  // CHECK: ERROR: HWAddressSanitizer: tag-mismatch
   // CHECK:  #{{[0-9]+}} 0x{{.*}} in {{(void )?test.*\((void)?\) .*}}use-after-scope-types.cpp
-  // CHECK: Address 0x{{.*}} is located in stack of thread T{{.*}} at offset [[OFFSET:[^ ]+]] in frame
-  // {{\[}}[[OFFSET]], {{[0-9]+}}) 'x'
+  // CHECK: Cause: stack tag-mismatch
 }
 
 int main(int argc, char **argv) {

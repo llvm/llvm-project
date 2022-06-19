@@ -7,6 +7,8 @@
 //===----------------------------------------------------------------------===//
 #include "Plugins/Language/CPlusPlus/CPlusPlusLanguage.h"
 #include "Plugins/Language/CPlusPlus/CPlusPlusNameParser.h"
+#include "TestingSupport/SubsystemRAII.h"
+#include "lldb/lldb-enumerations.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 
@@ -121,6 +123,37 @@ TEST(CPlusPlusLanguage, MethodNameParsing) {
   }
 }
 
+TEST(CPlusPlusLanguage, ContainsPath) {
+  CPlusPlusLanguage::MethodName 
+      reference_1(ConstString("int foo::bar::func01(int a, double b)"));
+  CPlusPlusLanguage::MethodName
+      reference_2(ConstString("int foofoo::bar::func01(std::string a, int b)"));
+  CPlusPlusLanguage::MethodName reference_3(ConstString("int func01()"));
+  CPlusPlusLanguage::MethodName 
+      reference_4(ConstString("bar::baz::operator bool()"));
+  
+  EXPECT_TRUE(reference_1.ContainsPath("func01"));
+  EXPECT_TRUE(reference_1.ContainsPath("bar::func01"));
+  EXPECT_TRUE(reference_1.ContainsPath("foo::bar::func01"));
+  EXPECT_FALSE(reference_1.ContainsPath("func"));
+  EXPECT_FALSE(reference_1.ContainsPath("baz::func01"));
+  EXPECT_FALSE(reference_1.ContainsPath("::bar::func01"));
+  EXPECT_FALSE(reference_1.ContainsPath("::foo::baz::func01"));
+  EXPECT_FALSE(reference_1.ContainsPath("foo::bar::baz::func01"));
+  
+  EXPECT_TRUE(reference_2.ContainsPath("foofoo::bar::func01"));
+  EXPECT_FALSE(reference_2.ContainsPath("foo::bar::func01"));
+  
+  EXPECT_TRUE(reference_3.ContainsPath("func01"));
+  EXPECT_FALSE(reference_3.ContainsPath("func"));
+  EXPECT_FALSE(reference_3.ContainsPath("bar::func01"));
+
+  EXPECT_TRUE(reference_4.ContainsPath("operator bool"));
+  EXPECT_TRUE(reference_4.ContainsPath("baz::operator bool"));
+  EXPECT_TRUE(reference_4.ContainsPath("bar::baz::operator bool"));
+  EXPECT_FALSE(reference_4.ContainsPath("az::operator bool"));
+}
+
 TEST(CPlusPlusLanguage, ExtractContextAndIdentifier) {
   struct TestCase {
     std::string input;
@@ -185,29 +218,32 @@ TEST(CPlusPlusLanguage, ExtractContextAndIdentifier) {
       "operator<=><A::B>", context, basename));
 }
 
-static std::set<std::string> FindAlternate(llvm::StringRef Name) {
-  std::set<ConstString> Results;
-  uint32_t Count = CPlusPlusLanguage::FindAlternateFunctionManglings(
-      ConstString(Name), Results);
-  EXPECT_EQ(Count, Results.size());
-  std::set<std::string> Strings;
-  for (ConstString Str : Results)
-    Strings.insert(std::string(Str.GetStringRef()));
+static std::vector<std::string> GenerateAlternate(llvm::StringRef Name) {
+  std::vector<std::string> Strings;
+  if (Language *CPlusPlusLang =
+          Language::FindPlugin(lldb::eLanguageTypeC_plus_plus)) {
+    std::vector<ConstString> Results =
+        CPlusPlusLang->GenerateAlternateFunctionManglings(ConstString(Name));
+    for (ConstString Str : Results)
+      Strings.push_back(std::string(Str.GetStringRef()));
+  }
   return Strings;
 }
 
-TEST(CPlusPlusLanguage, FindAlternateFunctionManglings) {
+TEST(CPlusPlusLanguage, GenerateAlternateFunctionManglings) {
   using namespace testing;
 
-  EXPECT_THAT(FindAlternate("_ZN1A1fEv"),
+  SubsystemRAII<CPlusPlusLanguage> lang;
+
+  EXPECT_THAT(GenerateAlternate("_ZN1A1fEv"),
               UnorderedElementsAre("_ZNK1A1fEv", "_ZLN1A1fEv"));
-  EXPECT_THAT(FindAlternate("_ZN1A1fEa"), Contains("_ZN1A1fEc"));
-  EXPECT_THAT(FindAlternate("_ZN1A1fEx"), Contains("_ZN1A1fEl"));
-  EXPECT_THAT(FindAlternate("_ZN1A1fEy"), Contains("_ZN1A1fEm"));
-  EXPECT_THAT(FindAlternate("_ZN1A1fEai"), Contains("_ZN1A1fEci"));
-  EXPECT_THAT(FindAlternate("_ZN1AC1Ev"), Contains("_ZN1AC2Ev"));
-  EXPECT_THAT(FindAlternate("_ZN1AD1Ev"), Contains("_ZN1AD2Ev"));
-  EXPECT_THAT(FindAlternate("_bogus"), IsEmpty());
+  EXPECT_THAT(GenerateAlternate("_ZN1A1fEa"), Contains("_ZN1A1fEc"));
+  EXPECT_THAT(GenerateAlternate("_ZN1A1fEx"), Contains("_ZN1A1fEl"));
+  EXPECT_THAT(GenerateAlternate("_ZN1A1fEy"), Contains("_ZN1A1fEm"));
+  EXPECT_THAT(GenerateAlternate("_ZN1A1fEai"), Contains("_ZN1A1fEci"));
+  EXPECT_THAT(GenerateAlternate("_ZN1AC1Ev"), Contains("_ZN1AC2Ev"));
+  EXPECT_THAT(GenerateAlternate("_ZN1AD1Ev"), Contains("_ZN1AD2Ev"));
+  EXPECT_THAT(GenerateAlternate("_bogus"), IsEmpty());
 }
 
 TEST(CPlusPlusLanguage, CPlusPlusNameParser) {

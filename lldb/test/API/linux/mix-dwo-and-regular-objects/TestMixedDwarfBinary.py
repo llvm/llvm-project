@@ -6,7 +6,6 @@ from lldbsuite.test import lldbutil
 
 
 class TestMixedDwarfBinary(TestBase):
-    mydir = TestBase.compute_mydir(__file__)
 
     @no_debug_info_test  # Prevent the genaration of the dwarf version of this test
     @add_test_categories(["dwo"])
@@ -30,8 +29,8 @@ class TestMixedDwarfBinary(TestBase):
         self.assertTrue(self.process, PROCESS_IS_VALID)
 
         # The stop reason of the thread should be breakpoint.
-        self.assertEquals(self.process.GetState(), lldb.eStateStopped,
-                        STOPPED_DUE_TO_BREAKPOINT)
+        self.assertState(self.process.GetState(), lldb.eStateStopped,
+                         STOPPED_DUE_TO_BREAKPOINT)
 
         frame = self.process.GetThreadAtIndex(0).GetFrameAtIndex(0)
         x = frame.FindVariable("x")

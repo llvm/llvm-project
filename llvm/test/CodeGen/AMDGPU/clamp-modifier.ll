@@ -139,7 +139,7 @@ define amdgpu_kernel void @v_clamp_add_src_f16_no_denormals(half addrspace(1)* %
 }
 
 ; GCN-LABEL: {{^}}v_clamp_add_src_v2f32:
-; GCN: {{buffer|flat|global}}_load_dwordx2 v{{\[}}[[A:[0-9]+]]:[[B:[0-9]+]]{{\]}}
+; GCN: {{buffer|flat|global}}_load_dwordx2 v[[[A:[0-9]+]]:[[B:[0-9]+]]]
 ; GCN-DAG: v_add_f32_e64 v{{[0-9]+}}, v[[A]], 1.0 clamp{{$}}
 ; GCN-DAG: v_add_f32_e64 v{{[0-9]+}}, v[[B]], 1.0 clamp{{$}}
 define amdgpu_kernel void @v_clamp_add_src_v2f32(<2 x float> addrspace(1)* %out, <2 x float> addrspace(1)* %aptr) #0 {

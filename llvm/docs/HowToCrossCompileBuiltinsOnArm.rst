@@ -137,8 +137,8 @@ The cmake try compile stage fails
 At an early stage cmake will attempt to compile and link a simple C program to
 test if the toolchain is working.
 
-This stage can often fail at link time if the ``--sysroot`` and
-``--gcc-toolchain`` options are not passed to the compiler. Check the
+This stage can often fail at link time if the ``--sysroot=`` and
+``--gcc-toolchain=`` options are not passed to the compiler. Check the
 ``CMAKE_C_FLAGS`` and ``CMAKE_C_COMPILER_TARGET`` flags.
 
 It can be useful to build a simple example outside of cmake with your toolchain
@@ -148,7 +148,7 @@ Clang uses the host header files
 --------------------------------
 On debian based systems it is possible to install multiarch support for
 arm-linux-gnueabi and arm-linux-gnueabihf. In many cases clang can successfully
-use this multiarch support when -gcc-toolchain and --sysroot are not supplied.
+use this multiarch support when ``--gcc-toolchain=`` and ``--sysroot=`` are not supplied.
 Unfortunately clang adds ``/usr/local/include`` before
 ``/usr/include/arm-linux-gnueabihf`` leading to errors when compiling the hosts
 header files.

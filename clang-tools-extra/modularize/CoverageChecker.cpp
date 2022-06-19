@@ -88,9 +88,9 @@ public:
   // Include directive callback.
   void InclusionDirective(SourceLocation HashLoc, const Token &IncludeTok,
                           StringRef FileName, bool IsAngled,
-                          CharSourceRange FilenameRange, const FileEntry *File,
-                          StringRef SearchPath, StringRef RelativePath,
-                          const Module *Imported,
+                          CharSourceRange FilenameRange,
+                          Optional<FileEntryRef> File, StringRef SearchPath,
+                          StringRef RelativePath, const Module *Imported,
                           SrcMgr::CharacteristicKind FileType) override {
     Checker.collectUmbrellaHeaderHeader(File->getName());
   }
@@ -381,8 +381,7 @@ bool CoverageChecker::collectFileSystemHeaders(StringRef IncludePath) {
       continue;
     // Assume directories or files starting with '.' are private and not to
     // be considered.
-    if ((file.find("\\.") != StringRef::npos) ||
-        (file.find("/.") != StringRef::npos))
+    if (file.contains("\\.") || file.contains("/."))
       continue;
     // If the file does not have a common header extension, ignore it.
     if (!ModularizeUtilities::isHeader(file))

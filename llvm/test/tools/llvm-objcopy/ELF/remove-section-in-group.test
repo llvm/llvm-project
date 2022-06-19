@@ -34,3 +34,4 @@ Sections:
 Symbols:
   - Name:     foo_bar_grp
     Section:  .group
+    Binding:  STB_GLOBAL

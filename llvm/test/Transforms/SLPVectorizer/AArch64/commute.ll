@@ -14,7 +14,6 @@ define void @test1(%structA* nocapture readonly %J, i32 %xmin, i32 %ymin) {
 ; CHECK:       for.body3.lr.ph:
 ; CHECK-NEXT:    [[TMP2:%.*]] = sitofp <2 x i32> [[TMP1]] to <2 x float>
 ; CHECK-NEXT:    [[ARRAYIDX4:%.*]] = getelementptr inbounds [[STRUCTA:%.*]], %structA* [[J:%.*]], i64 0, i32 0, i64 0
-; CHECK-NEXT:    [[ARRAYIDX9:%.*]] = getelementptr inbounds [[STRUCTA]], %structA* [[J]], i64 0, i32 0, i64 1
 ; CHECK-NEXT:    [[TMP3:%.*]] = bitcast float* [[ARRAYIDX4]] to <2 x float>*
 ; CHECK-NEXT:    [[TMP4:%.*]] = load <2 x float>, <2 x float>* [[TMP3]], align 4
 ; CHECK-NEXT:    [[TMP5:%.*]] = fsub fast <2 x float> [[TMP2]], [[TMP4]]
@@ -59,7 +58,6 @@ define void @test2(%structA* nocapture readonly %J, i32 %xmin, i32 %ymin) {
 ; CHECK:       for.body3.lr.ph:
 ; CHECK-NEXT:    [[TMP2:%.*]] = sitofp <2 x i32> [[TMP1]] to <2 x float>
 ; CHECK-NEXT:    [[ARRAYIDX4:%.*]] = getelementptr inbounds [[STRUCTA:%.*]], %structA* [[J:%.*]], i64 0, i32 0, i64 0
-; CHECK-NEXT:    [[ARRAYIDX9:%.*]] = getelementptr inbounds [[STRUCTA]], %structA* [[J]], i64 0, i32 0, i64 1
 ; CHECK-NEXT:    [[TMP3:%.*]] = bitcast float* [[ARRAYIDX4]] to <2 x float>*
 ; CHECK-NEXT:    [[TMP4:%.*]] = load <2 x float>, <2 x float>* [[TMP3]], align 4
 ; CHECK-NEXT:    [[TMP5:%.*]] = fsub fast <2 x float> [[TMP2]], [[TMP4]]

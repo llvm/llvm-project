@@ -1,7 +1,9 @@
 ; RUN: llc < %s | FileCheck %s --check-prefix=ASM
 ; RUN: llc < %s -filetype=obj | llvm-readobj - --codeview | FileCheck %s --check-prefix=OBJ
 ; RUN: llc < %s | llvm-mc -filetype=obj --triple=x86_64-windows | llvm-readobj - --codeview | FileCheck %s --check-prefix=OBJ
-; RUN: llc < %s -filetype=obj | obj2yaml | FileCheck %s --check-prefix=YAML
+; RUN: llc < %s -filetype=obj | obj2yaml | FileCheck %s --check-prefixes=YAML,YAML-STDOUT
+; RUN: llc < %s -filetype=obj -o %t
+; RUN: obj2yaml < %t | FileCheck %s --check-prefixes=YAML,YAML-FILE
 
 ; C++ source to regenerate:
 ; $ cat a.cpp
@@ -86,19 +88,19 @@
 
 ; ASM:        .short	4359                    # Record kind: S_CONSTANT
 ; ASM-NEXT:	  .long	4100                    # Type
-; ASM-NEXT:   .byte	0x00, 0x80, 0x08        # Value
+; ASM-NEXT:   .byte	0x08, 0x00              # Value
 ; ASM-NEXT:	  .asciz	"foo::constExpr"        # Name
 ; ASM-NEXT:   .p2align	2
 
 ; ASM:        .short	4359                    # Record kind: S_CONSTANT
 ; ASM-NEXT:   .long	4100                    # Type
-; ASM-NEXT:   .byte	0x00, 0x80, 0x09        # Value
+; ASM-NEXT:   .byte	0x09, 0x00              # Value
 ; ASM-NEXT:   .asciz	"foo::constVal"         # Name
 ; ASM-NEXT:   .p2align	2
 
 ; ASM:        .short	4359                    # Record kind: S_CONSTANT
 ; ASM-NEXT:   .long	4100                    # Type
-; ASM-NEXT:   .byte	0x00, 0x80, 0x0e        # Value
+; ASM-NEXT:   .byte	0x0e, 0x00              # Value
 ; ASM-NEXT:   .asciz	"foo::Data::DataConstExpr" # Name
 ; ASM-NEXT:   .p2align	2
 
@@ -246,6 +248,11 @@
 ; YAML:    Subsections:
 ; YAML:      - !Symbols
 ; YAML:        Records:
+; YAML:          - Kind:            S_OBJNAME
+; YAML:            ObjNameSym:
+; YAML:               Signature:       0
+; YAML-STDOUT:        ObjectName:      ''
+; YAML-FILE:          ObjectName:      '{{.*}}'
 ; YAML:          - Kind:            S_COMPILE3
 ; YAML:            Compile3Sym:
 

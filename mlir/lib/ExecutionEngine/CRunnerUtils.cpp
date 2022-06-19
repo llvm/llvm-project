@@ -13,9 +13,14 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/ExecutionEngine/CRunnerUtils.h"
+#include "mlir/ExecutionEngine/Msan.h"
 
 #ifndef _WIN32
+#if defined(__FreeBSD__) || defined(__NetBSD__) || defined(__OpenBSD__)
+#include <cstdlib>
+#else
 #include <alloca.h>
+#endif
 #include <sys/time.h>
 #else
 #include "malloc.h"
@@ -40,13 +45,19 @@ extern "C" void printClose() { fputs(" )", stdout); }
 extern "C" void printComma() { fputs(", ", stdout); }
 extern "C" void printNewline() { fputc('\n', stdout); }
 
-extern "C" MLIR_CRUNNERUTILS_EXPORT void
-memrefCopy(int64_t elemSize, UnrankedMemRefType<char> *srcArg,
-           UnrankedMemRefType<char> *dstArg) {
+extern "C" void memrefCopy(int64_t elemSize, UnrankedMemRefType<char> *srcArg,
+                           UnrankedMemRefType<char> *dstArg) {
   DynamicMemRefType<char> src(*srcArg);
   DynamicMemRefType<char> dst(*dstArg);
 
   int64_t rank = src.rank;
+  MLIR_MSAN_MEMORY_IS_INITIALIZED(src.sizes, rank * sizeof(int64_t));
+
+  // Handle empty shapes -> nothing to copy.
+  for (int rankp = 0; rankp < rank; ++rankp)
+    if (src.sizes[rankp] == 0)
+      return;
+
   char *srcPtr = src.data + src.offset * elemSize;
   char *dstPtr = dst.data + dst.offset * elemSize;
 
@@ -83,7 +94,7 @@ memrefCopy(int64_t elemSize, UnrankedMemRefType<char> *srcArg,
       if (axis == 0)
         return;
       // Else, reset to 0 and undo the advancement of the linear index that
-      // this axis had. The continue with the axis one outer.
+      // this axis had. Then continue with the axis one outer.
       indices[axis] = 0;
       readIndex -= src.sizes[axis] * srcStrides[axis];
       writeIndex -= dst.sizes[axis] * dstStrides[axis];
@@ -92,7 +103,7 @@ memrefCopy(int64_t elemSize, UnrankedMemRefType<char> *srcArg,
 }
 
 /// Prints GFLOPS rating.
-extern "C" void print_flops(double flops) {
+extern "C" void printFlops(double flops) {
   fprintf(stderr, "%lf GFLOPS\n", flops / 1.0E9);
 }
 
@@ -100,7 +111,7 @@ extern "C" void print_flops(double flops) {
 extern "C" double rtclock() {
 #ifndef _WIN32
   struct timeval tp;
-  int stat = gettimeofday(&tp, NULL);
+  int stat = gettimeofday(&tp, nullptr);
   if (stat != 0)
     fprintf(stderr, "Error returning time from gettimeofday: %d\n", stat);
   return (tp.tv_sec + tp.tv_usec * 1.0e-6);

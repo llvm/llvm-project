@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -emit-llvm %s -o - -triple=x86_64-apple-darwin10 | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -emit-llvm %s -o - -triple=x86_64-apple-darwin10 | FileCheck %s
 
 // PR5392
 namespace PR5392 {
@@ -29,7 +29,7 @@ A *g();
 void f(A *a) {
   A::E e1 = a->Foo;
   
-  // CHECK: call %struct.A* @_Z1gv()
+  // CHECK: call noundef %struct.A* @_Z1gv()
   A::E e2 = g()->Foo;
   // CHECK: call void @_ZN1AC1Ev(
   // CHECK: call void @_ZN1AD1Ev(

@@ -16,6 +16,7 @@
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/ManagedStatic.h"
 #include "llvm/Support/Path.h"
+#include "llvm/Support/SourceMgr.h"
 #include "llvm/Testing/Support/Error.h"
 #include "llvm/Transforms/Scalar/LoopPassManager.h"
 #include "gtest/gtest.h"

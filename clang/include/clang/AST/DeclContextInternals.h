@@ -78,8 +78,7 @@ class StoredDeclsList {
     }
     Data.setPointer(NewHead);
 
-    assert(llvm::find_if(getLookupResult(), ShouldErase) ==
-           getLookupResult().end() && "Still exists!");
+    assert(llvm::none_of(getLookupResult(), ShouldErase) && "Still exists!");
   }
 
   void erase(NamedDecl *ND) {
@@ -91,7 +90,7 @@ public:
 
   StoredDeclsList(StoredDeclsList &&RHS) : Data(RHS.Data) {
     RHS.Data.setPointer(nullptr);
-    RHS.Data.setInt(0);
+    RHS.Data.setInt(false);
   }
 
   void MaybeDeallocList() {
@@ -115,7 +114,7 @@ public:
 
     Data = RHS.Data;
     RHS.Data.setPointer(nullptr);
-    RHS.Data.setInt(0);
+    RHS.Data.setInt(false);
     return *this;
   }
 
@@ -143,7 +142,7 @@ public:
   }
 
   void setHasExternalDecls() {
-    Data.setInt(1);
+    Data.setInt(true);
   }
 
   void remove(NamedDecl *D) {
@@ -156,7 +155,7 @@ public:
     erase_if([](NamedDecl *ND) { return ND->isFromASTFile(); });
 
     // Don't have any pending external decls any more.
-    Data.setInt(0);
+    Data.setInt(false);
   }
 
   void replaceExternalDecls(ArrayRef<NamedDecl*> Decls) {
@@ -172,7 +171,7 @@ public:
     });
 
     // Don't have any pending external decls any more.
-    Data.setInt(0);
+    Data.setInt(false);
 
     if (Decls.empty())
       return;

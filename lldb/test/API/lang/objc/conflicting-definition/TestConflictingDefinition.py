@@ -10,8 +10,6 @@ from lldbsuite.test import lldbutil
 
 class TestRealDefinition(TestBase):
 
-    mydir = TestBase.compute_mydir(__file__)
-
     def test_frame_var_after_stop_at_implementation(self):
         """Test that we can find the implementation for an objective C type"""
         if self.getArchitecture() == 'i386':
@@ -31,8 +29,7 @@ class TestRealDefinition(TestBase):
                     substrs=['stopped',
                              'stop reason = breakpoint'])
 
-        self.expect("breakpoint list -f", BREAKPOINT_HIT_ONCE,
-                    substrs=[' resolved, hit count = 1'])
+        lldbutil.check_breakpoint(self, bpno = 1, expected_hit_count = 1)
 
         # This should display correctly.
         self.expect(

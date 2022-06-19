@@ -29,6 +29,7 @@ int main(int, char**)
         std::ostreambuf_iterator<char>& iref2 = i++;
         assert(&iref2 == &i);
     }
+#ifndef TEST_HAS_NO_WIDE_CHARACTERS
     {
         std::wostringstream outf;
         std::ostreambuf_iterator<wchar_t> i(outf);
@@ -37,6 +38,7 @@ int main(int, char**)
         std::ostreambuf_iterator<wchar_t>& iref2 = i++;
         assert(&iref2 == &i);
     }
+#endif
 
   return 0;
 }

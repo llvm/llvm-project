@@ -1,5 +1,4 @@
-! RUN: %S/test_errors.sh %s %t %flang_fc1
-! REQUIRES: shell
+! RUN: %python %S/test_errors.py %s %flang_fc1
 ! Testing 15.6.2.2 point 4 (What function-name refers to depending on the
 ! presence of RESULT).
 
@@ -11,7 +10,7 @@ contains
   ! testing with data object results
   function f1()
     real :: x, f1
-    !ERROR: 'f1' is not a function
+    !ERROR: Recursive call to 'f1' requires a distinct RESULT in its declaration
     x = acos(f1())
     f1 = x
     x = acos(f1) !OK
@@ -19,7 +18,7 @@ contains
   function f2(i)
     integer i
     real :: x, f2
-    !ERROR: 'f2' is not an array
+    !ERROR: Recursive call to 'f2' requires a distinct RESULT in its declaration
     x = acos(f2(i+1))
     f2 = x
     x = acos(f2) !OK
@@ -64,7 +63,7 @@ contains
   end function
   function f7() result(f7) !OKI (warning)
     real :: x, f7
-    !ERROR: 'f7' is not a function
+    !ERROR: Recursive call to 'f7' requires a distinct RESULT in its declaration
     x = acos(f7())
     f7 = x
     x = acos(f7) !OK
@@ -125,7 +124,7 @@ contains
   ! testing that calling the result is also caught
   function f6() result(r)
     real :: x, r
-    !ERROR: 'r' is not a function
+    !ERROR: 'r' is not a callable procedure
     x = r()
   end function
 end module

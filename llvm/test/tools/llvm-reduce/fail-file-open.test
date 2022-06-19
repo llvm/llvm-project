@@ -2,4 +2,4 @@
 
 This file will not be read. An invalid file path is fed to llvm-reduce.
 
-# CHECK: llvm-reduce: {{.*}}.NotAFileInTestingDir: error:
+# CHECK: llvm-reduce{{.*}}: {{.*}}.NotAFileInTestingDir: error:

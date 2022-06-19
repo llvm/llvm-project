@@ -25,8 +25,8 @@
 
 # CHECK:      <__start>:
 # CHECK-NEXT:    20110:  lapc   $2, -12
-# CHECK-NEXT:            beqzc  $3, -36
-# CHECK-NEXT:            balc   -24 <foo>
+# CHECK-NEXT:            beqzc  $3, 0x200f0
+# CHECK-NEXT:            balc   {{.*}} <foo>
 
   .text
   .set micromips

@@ -8,9 +8,9 @@
 
 #include "fp_test.h"
 
-COMPILER_RT_ABI long double __floatunsitf(unsigned int a);
+COMPILER_RT_ABI long double __floatunsitf(su_int a);
 
-int test__floatunsitf(unsigned int a, uint64_t expectedHi, uint64_t expectedLo)
+int test__floatunsitf(su_int a, uint64_t expectedHi, uint64_t expectedLo)
 {
     long double x = __floatunsitf(a);
     int ret = compareResultLD(x, expectedHi, expectedLo);

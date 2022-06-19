@@ -6,15 +6,15 @@
 // CHECK-DAG: [[$MAP_MINUS_1:#map[0-9]+]] = affine_map<(d0) -> (d0 - 1)>
 
 // CHECK-LABEL: func @loop_nest_dma() {
-func @loop_nest_dma() {
+func.func @loop_nest_dma() {
 
   %A = memref.alloc() : memref<256 x f32, affine_map<(d0) -> (d0)>, 0>
   %Ah = memref.alloc() : memref<32 x f32, affine_map<(d0) -> (d0)>, 1>
 
   %tag = memref.alloc() : memref<1 x f32>
 
-  %zero = constant 0 : index
-  %num_elts = constant 32 : index
+  %zero = arith.constant 0 : index
+  %num_elts = arith.constant 32 : index
 
   affine.for %i = 0 to 8 {
     affine.dma_start %A[%i], %Ah[%i], %tag[%zero], %num_elts : memref<256 x f32>, memref<32 x f32, 1>, memref<1 x f32>
@@ -68,10 +68,10 @@ func @loop_nest_dma() {
 // CHECK-DAG: [[$REMAP_SHIFT_MINUS_4:#map[0-9]+]] = affine_map<(d0) -> (d0 - 4)>
 
 // CHECK-LABEL: @loop_step
-func @loop_step(%arg0: memref<512xf32>,
+func.func @loop_step(%arg0: memref<512xf32>,
                   %arg1: memref<512xf32>) {
-  %c0 = constant 0 : index
-  %c4 = constant 4 : index
+  %c0 = arith.constant 0 : index
+  %c4 = arith.constant 4 : index
   affine.for %i0 = 0 to 512 step 4 {
     %1 = memref.alloc() : memref<4xf32, 1>
     %2 = memref.alloc() : memref<1xi32>
@@ -108,9 +108,9 @@ func @loop_step(%arg0: memref<512xf32>,
 #map1 = affine_map<(d0, d1) -> ((d0 * 2048 + d1 * 256) floordiv 32)>
 #map2 = affine_map<(d0) -> ((d0 * 2048) floordiv 32)>
 // CHECK-LABEL: func @loop_dma_nested(%{{.*}}: memref<512x32xvector<8xf32>
-func @loop_dma_nested(%arg0: memref<512x32xvector<8xf32>>, %arg1: memref<512x32xvector<8xf32>>, %arg2: memref<512x32xvector<8xf32>>) {
-  %num_elts = constant 256 : index
-  %c0 = constant 0 : index
+func.func @loop_dma_nested(%arg0: memref<512x32xvector<8xf32>>, %arg1: memref<512x32xvector<8xf32>>, %arg2: memref<512x32xvector<8xf32>>) {
+  %num_elts = arith.constant 256 : index
+  %c0 = arith.constant 0 : index
   %0 = memref.alloc() : memref<64x4xvector<8xf32>, 2>
   %1 = memref.alloc() : memref<64x4xvector<8xf32>, 2>
   %2 = memref.alloc() : memref<64x4xvector<8xf32>, 2>
@@ -202,9 +202,9 @@ func @loop_dma_nested(%arg0: memref<512x32xvector<8xf32>>, %arg1: memref<512x32x
 #map2 = affine_map<(d0) -> ((d0 * 2048) floordiv 32)>
 
 // CHECK: func @loop_dma_dependent
-func @loop_dma_dependent(%arg2: memref<512x32xvector<8xf32>>) {
-  %num_elts = constant 256 : index
-  %c0 = constant 0 : index
+func.func @loop_dma_dependent(%arg2: memref<512x32xvector<8xf32>>) {
+  %num_elts = arith.constant 256 : index
+  %c0 = arith.constant 0 : index
   %0 = memref.alloc() : memref<64x4xvector<8xf32>, 2>
   %1 = memref.alloc() : memref<64x4xvector<8xf32>, 2>
   %2 = memref.alloc() : memref<64x4xvector<8xf32>, 2>
@@ -236,10 +236,10 @@ func @loop_dma_dependent(%arg2: memref<512x32xvector<8xf32>>) {
 // -----
 
 // CHECK-LABEL: func @escaping_use
-func @escaping_use(%arg0: memref<512 x 32 x f32>) {
-  %c32 = constant 32 : index
-  %num_elt = constant 512 : index
-  %zero = constant 0 : index
+func.func @escaping_use(%arg0: memref<512 x 32 x f32>) {
+  %c32 = arith.constant 32 : index
+  %num_elt = arith.constant 512 : index
+  %zero = arith.constant 0 : index
   %Av = memref.alloc() : memref<32 x 32 x f32, 2>
   %tag = memref.alloc() : memref<1 x i32>
 
@@ -264,10 +264,10 @@ func @escaping_use(%arg0: memref<512 x 32 x f32>) {
 // -----
 
 // CHECK-LABEL: func @escaping_tag
-func @escaping_tag(%arg0: memref<512 x 32 x f32>) {
-  %c32 = constant 32 : index
-  %num_elt = constant 512 : index
-  %zero = constant 0 : index
+func.func @escaping_tag(%arg0: memref<512 x 32 x f32>) {
+  %c32 = arith.constant 32 : index
+  %num_elt = arith.constant 512 : index
+  %zero = arith.constant 0 : index
   %Av = memref.alloc() : memref<32 x 32 x f32, 2>
   %tag = memref.alloc() : memref<1 x i32>
 
@@ -293,10 +293,10 @@ func @escaping_tag(%arg0: memref<512 x 32 x f32>) {
 // -----
 
 // CHECK-LABEL: func @live_out_use
-func @live_out_use(%arg0: memref<512 x 32 x f32>) -> f32 {
-  %c32 = constant 32 : index
-  %num_elt = constant 512 : index
-  %zero = constant 0 : index
+func.func @live_out_use(%arg0: memref<512 x 32 x f32>) -> f32 {
+  %c32 = arith.constant 32 : index
+  %num_elt = arith.constant 512 : index
+  %zero = arith.constant 0 : index
   %Av = memref.alloc() : memref<32 x 32 x f32, 2>
   %tag = memref.alloc() : memref<1 x i32>
 
@@ -320,15 +320,15 @@ func @live_out_use(%arg0: memref<512 x 32 x f32>) -> f32 {
 // -----
 
 // CHECK-LABEL: func @dynamic_shape_dma_buffer
-func @dynamic_shape_dma_buffer(%arg0: memref<512 x 32 x f32>, %Av: memref<? x ? x f32, 2>) {
-  %num_elt = constant 512 : index
-  %zero = constant 0 : index
+func.func @dynamic_shape_dma_buffer(%arg0: memref<512 x 32 x f32>, %Av: memref<? x ? x f32, 2>) {
+  %num_elt = arith.constant 512 : index
+  %zero = arith.constant 0 : index
   %tag = memref.alloc() : memref<1 x i32>
 
 // Double buffering for dynamic shaped buffer.
 // Note: Cannot capture C0 because there are multiple C0 constants in the IR.
 // CHECK:       memref.dim %{{.*}}, %{{.*}} : memref<?x?xf32, 2>
-// CHECK-NEXT:  %[[C1:.*]] = constant 1 : index
+// CHECK-NEXT:  %[[C1:.*]] = arith.constant 1 : index
 // CHECK-NEXT:  memref.dim %{{.*}}, %[[C1]] : memref<?x?xf32, 2>
 // CHECK-NEXT:  memref.alloc(%{{.*}}, %{{.*}}) : memref<2x?x?xf32, 2>
 // CHECK:       affine.dma_start %{{.*}}[%{{.*}}, %{{.*}}], %{{.*}}[%{{.*}} mod 2, 0, 0], %{{.*}}[%{{.*}} mod 2, 0], %{{.*}}
@@ -352,12 +352,12 @@ func @dynamic_shape_dma_buffer(%arg0: memref<512 x 32 x f32>, %Av: memref<? x ? 
 // dereferencing one since replaceAllMemRefUsesWith checks for escaping uses
 // before performing any replacement.
 // CHECK-LABEL: func @escaping_and_indexed_use_mix
-func @escaping_and_indexed_use_mix() {
+func.func @escaping_and_indexed_use_mix() {
   %A = memref.alloc() : memref<256 x f32, affine_map<(d0) -> (d0)>, 0>
   %Ah = memref.alloc() : memref<32 x f32, affine_map<(d0) -> (d0)>, 1>
   %tag = memref.alloc() : memref<1 x f32>
-  %zero = constant 0 : index
-  %num_elts = constant 32 : index
+  %zero = arith.constant 0 : index
+  %num_elts = arith.constant 32 : index
 
   // alloc for the buffer is created but no replacement should happen.
   affine.for %i = 0 to 8 {

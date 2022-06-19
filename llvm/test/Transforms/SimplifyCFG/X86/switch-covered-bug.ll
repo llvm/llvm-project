@@ -11,8 +11,8 @@ define i64 @test(i3 %arg) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[SWITCH_TABLEIDX:%.*]] = sub i3 [[ARG:%.*]], -4
 ; CHECK-NEXT:    [[SWITCH_TABLEIDX_ZEXT:%.*]] = zext i3 [[SWITCH_TABLEIDX]] to i4
-; CHECK-NEXT:    [[SWITCH_GEP:%.*]] = getelementptr inbounds [8 x i64], [8 x i64]* @switch.table.test, i32 0, i4 [[SWITCH_TABLEIDX_ZEXT]]
-; CHECK-NEXT:    [[SWITCH_LOAD:%.*]] = load i64, i64* [[SWITCH_GEP]]
+; CHECK-NEXT:    [[SWITCH_GEP:%.*]] = getelementptr inbounds [8 x i64], ptr @switch.table.test, i32 0, i4 [[SWITCH_TABLEIDX_ZEXT]]
+; CHECK-NEXT:    [[SWITCH_LOAD:%.*]] = load i64, ptr [[SWITCH_GEP]], align 8
 ; CHECK-NEXT:    [[V3:%.*]] = add i64 [[SWITCH_LOAD]], 0
 ; CHECK-NEXT:    ret i64 [[V3]]
 ;

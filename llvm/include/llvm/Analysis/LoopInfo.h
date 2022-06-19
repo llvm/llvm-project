@@ -44,7 +44,6 @@
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/IR/CFG.h"
-#include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/Pass.h"
@@ -55,9 +54,10 @@
 namespace llvm {
 
 class DominatorTree;
+class InductionDescriptor;
+class Instruction;
 class LoopInfo;
 class Loop;
-class InductionDescriptor;
 class MDNode;
 class MemorySSAUpdater;
 class ScalarEvolution;
@@ -111,6 +111,22 @@ public:
   /// If a loop is top-level, it has no parent, otherwise its
   /// parent is the innermost loop in which it is enclosed.
   LoopT *getParentLoop() const { return ParentLoop; }
+
+  /// Get the outermost loop in which this loop is contained.
+  /// This may be the loop itself, if it already is the outermost loop.
+  const LoopT *getOutermostLoop() const {
+    const LoopT *L = static_cast<const LoopT *>(this);
+    while (L->ParentLoop)
+      L = L->ParentLoop;
+    return L;
+  }
+
+  LoopT *getOutermostLoop() {
+    LoopT *L = static_cast<LoopT *>(this);
+    while (L->ParentLoop)
+      L = L->ParentLoop;
+    return L;
+  }
 
   /// This is a raw interface for bypassing addChildLoop.
   void setParentLoop(LoopT *L) {
@@ -527,7 +543,7 @@ extern template class LoopBase<BasicBlock, Loop>;
 
 /// Represents a single loop in the control flow graph.  Note that not all SCCs
 /// in the CFG are necessarily loops.
-class Loop : public LoopBase<BasicBlock, Loop> {
+class LLVM_EXTERNAL_VISIBILITY Loop : public LoopBase<BasicBlock, Loop> {
 public:
   /// A range representing the start and end location of a loop.
   class LocRange {
@@ -535,7 +551,7 @@ public:
     DebugLoc End;
 
   public:
-    LocRange() {}
+    LocRange() = default;
     LocRange(DebugLoc Start) : Start(Start), End(Start) {}
     LocRange(DebugLoc Start, DebugLoc End)
         : Start(std::move(Start)), End(std::move(End)) {}
@@ -557,21 +573,24 @@ public:
 
   /// If the given value is an instruction inside of the loop and it can be
   /// hoisted, do so to make it trivially loop-invariant.
-  /// Return true if the value after any hoisting is loop invariant. This
-  /// function can be used as a slightly more aggressive replacement for
-  /// isLoopInvariant.
+  /// Return true if \c V is already loop-invariant, and false if \c V can't
+  /// be made loop-invariant. If \c V is made loop-invariant, \c Changed is
+  /// set to true. This function can be used as a slightly more aggressive
+  /// replacement for isLoopInvariant.
   ///
   /// If InsertPt is specified, it is the point to hoist instructions to.
   /// If null, the terminator of the loop preheader is used.
+  ///
   bool makeLoopInvariant(Value *V, bool &Changed,
                          Instruction *InsertPt = nullptr,
                          MemorySSAUpdater *MSSAU = nullptr) const;
 
   /// If the given instruction is inside of the loop and it can be hoisted, do
   /// so to make it trivially loop-invariant.
-  /// Return true if the instruction after any hoisting is loop invariant. This
-  /// function can be used as a slightly more aggressive replacement for
-  /// isLoopInvariant.
+  /// Return true if \c I is already loop-invariant, and false if \c I can't
+  /// be made loop-invariant. If \c I is made loop-invariant, \c Changed is
+  /// set to true. This function can be used as a slightly more aggressive
+  /// replacement for isLoopInvariant.
   ///
   /// If InsertPt is specified, it is the point to hoist instructions to.
   /// If null, the terminator of the loop preheader is used.
@@ -897,7 +916,7 @@ template <class BlockT, class LoopT> class LoopInfoBase {
   LoopInfoBase(const LoopInfoBase &) = delete;
 
 public:
-  LoopInfoBase() {}
+  LoopInfoBase() = default;
   ~LoopInfoBase() { releaseMemory(); }
 
   LoopInfoBase(LoopInfoBase &&Arg)
@@ -950,7 +969,7 @@ public:
   ///
   /// Note that because loops form a forest of trees, preorder is equivalent to
   /// reverse postorder.
-  SmallVector<LoopT *, 4> getLoopsInPreorder();
+  SmallVector<LoopT *, 4> getLoopsInPreorder() const;
 
   /// Return all of the loops in the function in preorder across the loop
   /// nests, with siblings in *reverse* program order.
@@ -960,7 +979,7 @@ public:
   ///
   /// Also note that this is *not* a reverse preorder. Only the siblings are in
   /// reverse program order.
-  SmallVector<LoopT *, 4> getLoopsInReverseSiblingPreorder();
+  SmallVector<LoopT *, 4> getLoopsInReverseSiblingPreorder() const;
 
   /// Return the inner most loop that BB lives in. If a basic block is in no
   /// loop (for example the entry node), null is returned.
@@ -1089,7 +1108,7 @@ class LoopInfo : public LoopInfoBase<BasicBlock, Loop> {
   LoopInfo(const LoopInfo &) = delete;
 
 public:
-  LoopInfo() {}
+  LoopInfo() = default;
   explicit LoopInfo(const DominatorTreeBase<BasicBlock, false> &DomTree);
 
   LoopInfo(LoopInfo &&Arg) : BaseT(std::move(static_cast<BaseT &>(Arg))) {}
@@ -1213,6 +1232,13 @@ public:
 
 };
 
+/// Enable verification of loop info.
+///
+/// The flag enables checks which are expensive and are disabled by default
+/// unless the `EXPENSIVE_CHECKS` macro is defined.  The `-verify-loop-info`
+/// flag allows the checks to be enabled selectively without re-compilation.
+extern bool VerifyLoopInfo;
+
 // Allow clients to walk the list of nested loops...
 template <> struct GraphTraits<const Loop *> {
   typedef const Loop *NodeRef;
@@ -1305,6 +1331,10 @@ bool getBooleanLoopAttribute(const Loop *TheLoop, StringRef Name);
 llvm::Optional<int>
 getOptionalIntLoopAttribute(const Loop *TheLoop, StringRef Name);
 
+/// Find named metadata for a loop with an integer value. Return \p Default if
+/// not set.
+int getIntLoopAttribute(const Loop *TheLoop, StringRef Name, int Default = 0);
+
 /// Find string metadata for loop
 ///
 /// If it has a value (e.g. {"llvm.distribute", 1} return the value as an
@@ -1321,6 +1351,10 @@ bool hasMustProgress(const Loop *L);
 /// Return true if this loop can be assumed to make progress.  (i.e. can't
 /// be infinite without side effects without also being undefined)
 bool isMustProgress(const Loop *L);
+
+/// Return true if this loop can be assumed to run for a finite number of
+/// iterations.
+bool isFinite(const Loop *L);
 
 /// Return whether an MDNode might represent an access group.
 ///

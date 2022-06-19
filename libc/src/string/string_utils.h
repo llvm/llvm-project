@@ -9,7 +9,10 @@
 #ifndef LIBC_SRC_STRING_STRING_UTILS_H
 #define LIBC_SRC_STRING_STRING_UTILS_H
 
-#include "utils/CPP/Bitset.h"
+#include "src/__support/CPP/Bitset.h"
+#include "src/__support/common.h"
+#include "src/string/memory_utils/memcpy_implementations.h"
+#include "src/string/memory_utils/memset_implementations.h"
 #include <stddef.h> // size_t
 
 namespace __llvm_libc {
@@ -58,26 +61,41 @@ static inline size_t complementary_span(const char *src, const char *segment) {
 static inline char *string_token(char *__restrict src,
                                  const char *__restrict delimiter_string,
                                  char **__restrict saveptr) {
+  // Return nullptr immediately if both src AND saveptr are nullptr
+  if (unlikely(src == nullptr && ((src = *saveptr) == nullptr)))
+    return nullptr;
+
   cpp::Bitset<256> delimiter_set;
-  for (; *delimiter_string; ++delimiter_string)
+  for (; *delimiter_string != '\0'; ++delimiter_string)
     delimiter_set.set(*delimiter_string);
 
-  src = src ? src : *saveptr;
-  for (; *src && delimiter_set.test(*src); ++src)
+  for (; *src != '\0' && delimiter_set.test(*src); ++src)
     ;
-  if (!*src) {
+  if (*src == '\0') {
     *saveptr = src;
     return nullptr;
   }
   char *token = src;
-  for (; *src && !delimiter_set.test(*src); ++src)
-    ;
-  if (*src) {
-    *src = '\0';
-    ++src;
+  for (; *src != '\0'; ++src) {
+    if (delimiter_set.test(*src)) {
+      *src = '\0';
+      ++src;
+      break;
+    }
   }
   *saveptr = src;
   return token;
+}
+
+static inline size_t strlcpy(char *__restrict dst, const char *__restrict src,
+                             size_t size) {
+  size_t len = internal::string_length(src);
+  if (!size)
+    return len;
+  size_t n = len < size - 1 ? len : size - 1;
+  inline_memcpy(dst, src, n);
+  inline_memset(dst + n, 0, size - n);
+  return len;
 }
 
 } // namespace internal

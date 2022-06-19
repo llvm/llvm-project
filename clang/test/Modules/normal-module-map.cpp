@@ -2,7 +2,7 @@
 // RUN: %clang_cc1 -x objective-c -fmodules-cache-path=%t -fmodules -fimplicit-module-maps -I %S/Inputs/normal-module-map %s -verify
 #include "Umbrella/umbrella_sub.h"
 
-int getUmbrella() { 
+int getUmbrella(void) { 
   return umbrella + umbrella_sub; 
 }
 
@@ -12,17 +12,17 @@ int getUmbrella() {
 #include "b1.h"
 #include "nested/nested2.h"
 
-int test() {
+int test(void) {
   return a1 + b1 + nested2;
 }
 
 @import nested_umbrella.a;
 
-int testNestedUmbrellaA() {
+int testNestedUmbrellaA(void) {
   return nested_umbrella_a;
 }
 
-int testNestedUmbrellaBFail() {
+int testNestedUmbrellaBFail(void) {
   return nested_umbrella_b;
   // expected-error@-1{{declaration of 'nested_umbrella_b' must be imported from module 'nested_umbrella.b' before it is required}}
   // expected-note@Inputs/normal-module-map/nested_umbrella/b.h:1{{here}}
@@ -30,7 +30,7 @@ int testNestedUmbrellaBFail() {
 
 @import nested_umbrella.b;
 
-int testNestedUmbrellaB() {
+int testNestedUmbrellaB(void) {
   return nested_umbrella_b;
 }
 
@@ -40,6 +40,6 @@ int testNestedUmbrellaB() {
 
 @import nested_umbrella.decltype_;
 
-int testSanitizedName() {
+int testSanitizedName(void) {
   return extra_a + one + decltype_val;
 }

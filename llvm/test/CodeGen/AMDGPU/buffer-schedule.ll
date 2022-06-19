@@ -44,11 +44,9 @@ define amdgpu_cs void @_amdgpu_cs_main(<3 x i32> inreg %arg3, <3 x i32> %arg5) {
   ret void
 }
 
-; FIXME: the first load and store should not be reordered because they might
-; alias depending on the value of %off
 ; GCN-LABEL: {{^}}test1:
-; GCN: buffer_load_dword
 ; GCN: buffer_store_dword
+; GCN: buffer_load_dword
 ; GCN: buffer_store_dword
 define amdgpu_cs void @test1(<4 x i32> inreg %buf, i32 %off) {
 .entry:

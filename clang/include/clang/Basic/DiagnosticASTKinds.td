@@ -65,6 +65,8 @@ def note_consteval_address_accessible : Note<
   "is not a constant expression">;
 def note_constexpr_uninitialized : Note<
   "%select{|sub}0object of type %1 is not initialized">;
+def note_constexpr_static_local : Note<
+  "control flows through the definition of a %select{static|thread_local}0 variable">;
 def note_constexpr_subobject_declared_here : Note<
   "subobject declared here">;
 def note_constexpr_array_index : Note<"cannot refer to element %0 of "
@@ -362,6 +364,8 @@ def note_constexpr_memory_leak : Note<
   "%plural{0:|: (along with %0 other memory leak%s0)}0">;
 def note_constexpr_unsupported_layout : Note<
   "type %0 has unexpected layout">;
+def note_constexpr_unsupported_flexible_array : Note<
+  "flexible array initialization is not yet supported">;
 def err_experimental_clang_interp_failed : Error<
   "the experimental clang interpreter failed to evaluate an expression">;
 
@@ -439,8 +443,6 @@ def note_odr_tag_kind_here: Note<
 def note_odr_field : Note<"field %0 has type %1 here">;
 def note_odr_field_name : Note<"field has name %0 here">;
 def note_odr_missing_field : Note<"no corresponding field here">;
-def note_odr_bit_field : Note<"bit-field %0 with type %1 and length %2 here">;
-def note_odr_not_bit_field : Note<"field %0 is not a bit-field">;
 def note_odr_base : Note<"class has base type %0">;
 def note_odr_virtual_base : Note<
   "%select{non-virtual|virtual}0 derivation here">;
@@ -567,8 +569,8 @@ def remark_sanitize_address_insert_extra_padding_accepted : Remark<
 def remark_sanitize_address_insert_extra_padding_rejected : Remark<
     "-fsanitize-address-field-padding ignored for %0 because it "
     "%select{is not C++|is packed|is a union|is trivially copyable|"
-    "has trivial destructor|is standard layout|is in a blacklisted file|"
-    "is blacklisted}1">, ShowInSystemHeader,
+    "has trivial destructor|is standard layout|is in a ignorelisted file|"
+    "is ignorelisted}1">, ShowInSystemHeader,
     InGroup<SanitizeAddressRemarks>;
 
 def warn_npot_ms_struct : Warning<
@@ -590,4 +592,9 @@ def warn_padded_struct_size : Warning<
   InGroup<Padded>, DefaultIgnore;
 def warn_unnecessary_packed : Warning<
   "packed attribute is unnecessary for %0">, InGroup<Packed>, DefaultIgnore;
+
+// -Wunaligned-access
+def warn_unaligned_access : Warning<
+  "field %1 within %0 is less aligned than %2 and is usually due to %0 being "
+  "packed, which can lead to unaligned accesses">, InGroup<UnalignedAccess>, DefaultIgnore;
 }

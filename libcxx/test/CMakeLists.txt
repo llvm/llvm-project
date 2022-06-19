@@ -17,7 +17,9 @@ set(LIBCXX_TEST_COMPILER_FLAGS "" CACHE STRING
 # The tests shouldn't link to any ABI library when it has been linked into
 # libc++ statically or via a linker script.
 if (LIBCXX_ENABLE_STATIC_ABI_LIBRARY OR LIBCXX_ENABLE_ABI_LINKER_SCRIPT)
-  set(LIBCXX_CXX_ABI_LIBNAME "none")
+  set(LIBCXX_CXXABI_FOR_TESTS "none")
+else()
+  set(LIBCXX_CXXABI_FOR_TESTS "${LIBCXX_CXX_ABI}")
 endif()
 
 # The tests shouldn't link to libunwind if we have a linker script which
@@ -59,7 +61,6 @@ pythonize_bool(LIBCXX_ENABLE_SHARED)
 pythonize_bool(LIBCXX_LINK_TESTS_WITH_SHARED_LIBCXX)
 pythonize_bool(LIBCXX_LINK_TESTS_WITH_SHARED_LIBCXXABI)
 pythonize_bool(LIBCXX_ENABLE_FILESYSTEM)
-pythonize_bool(LIBCXX_BUILD_32_BITS)
 pythonize_bool(LIBCXX_GENERATE_COVERAGE)
 pythonize_bool(LIBCXXABI_ENABLE_SHARED)
 pythonize_bool(LIBCXXABI_USE_LLVM_UNWINDER)
@@ -70,8 +71,7 @@ pythonize_bool(LIBCXX_BUILD_EXTERNAL_THREAD_LIBRARY)
 pythonize_bool(LIBCXX_DEBUG_BUILD)
 pythonize_bool(LIBCXX_ENABLE_PARALLEL_ALGORITHMS)
 
-# By default, for non-standalone builds, libcxx and libcxxabi share a library
-# directory.
+# By default, libcxx and libcxxabi share a library directory.
 if (NOT LIBCXX_CXX_ABI_LIBRARY_PATH)
   set(LIBCXX_CXX_ABI_LIBRARY_PATH "${LIBCXX_LIBRARY_DIR}" CACHE PATH
       "The path to libc++abi library.")
@@ -101,20 +101,18 @@ if (NOT LIBCXX_ENABLE_RTTI)
   serialize_lit_param(enable_rtti False)
 endif()
 
-if (NOT LIBCXX_ENABLE_DEBUG_MODE_SUPPORT)
-  serialize_lit_param(enable_debug_tests False)
+if (LIBCXX_ENABLE_ASSERTIONS)
+  serialize_lit_param(enable_assertions True)
 endif()
 
-if (LIBCXX_TARGET_TRIPLE)
-  serialize_lit_param(target_triple "\"${LIBCXX_TARGET_TRIPLE}\"")
+if (CMAKE_CXX_COMPILER_TARGET)
+  serialize_lit_param(target_triple "\"${CMAKE_CXX_COMPILER_TARGET}\"")
+else()
+  serialize_lit_param(target_triple "\"${LLVM_DEFAULT_TARGET_TRIPLE}\"")
 endif()
 
 if (LLVM_USE_SANITIZER)
   serialize_lit_param(use_sanitizer "\"${LLVM_USE_SANITIZER}\"")
-endif()
-
-if (LIBCXX_BUILD_32_BITS)
-  serialize_lit_param(enable_32bit True)
 endif()
 
 foreach(param IN LISTS LIBCXX_TEST_PARAMS)
@@ -129,6 +127,10 @@ endif()
 
 if (LIBCXX_INCLUDE_TESTS)
   include(AddLLVM) # for configure_lit_site_cfg and add_lit_testsuite
+
+  configure_file("${CMAKE_CURRENT_SOURCE_DIR}/configs/cmake-bridge.cfg.in"
+                 "${CMAKE_CURRENT_BINARY_DIR}/cmake-bridge.cfg"
+                 @ONLY)
 
   configure_lit_site_cfg(
     "${LIBCXX_TEST_CONFIG}"

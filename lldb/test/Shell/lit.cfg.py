@@ -12,7 +12,6 @@ import lit.formats
 from lit.llvm import llvm_config
 from lit.llvm.subst import FindTool
 from lit.llvm.subst import ToolSubst
-from distutils.spawn import find_executable
 
 site.addsitedir(os.path.dirname(__file__))
 from helper import toolchain
@@ -63,6 +62,12 @@ toolchain.use_support_substitutions(config)
 if re.match(r'^arm(hf.*-linux)|(.*-linux-gnuabihf)', config.target_triple):
     config.available_features.add("armhf-linux")
 
+if re.match(r'.*-(windows-msvc)$', config.target_triple):
+    config.available_features.add("windows-msvc")
+
+if re.match(r'.*-(windows-gnu|mingw32)$', config.target_triple):
+    config.available_features.add("windows-gnu")
+
 def calculate_arch_features(arch_string):
     # This will add a feature such as x86, arm, mips, etc for each built
     # target
@@ -85,7 +90,7 @@ llvm_config.feature_config(
 # lit.py invocation is close enough.
 for cachedir in [config.clang_module_cache, config.lldb_module_cache]:
   if os.path.isdir(cachedir):
-     print("Deleting module cache at %s."%cachedir)
+     lit_config.note("Deleting module cache at %s."%cachedir)
      shutil.rmtree(cachedir)
 
 # Set a default per-test timeout of 10 minutes. Setting a timeout per test
@@ -121,7 +126,7 @@ if config.lldb_enable_lua:
 if config.lldb_enable_lzma:
     config.available_features.add('lzma')
 
-if find_executable('xz') != None:
+if shutil.which('xz') != None:
     config.available_features.add('xz')
 
 if config.lldb_system_debugserver:
@@ -140,3 +145,6 @@ if platform.system() == 'NetBSD' and os.geteuid() != 0:
         can_set_dbregs = False
 if can_set_dbregs:
     config.available_features.add('dbregs-set')
+
+if 'LD_PRELOAD' in os.environ:
+    config.available_features.add('ld_preload-present')

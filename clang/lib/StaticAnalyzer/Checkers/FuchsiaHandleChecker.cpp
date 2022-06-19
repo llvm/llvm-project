@@ -254,9 +254,6 @@ static const ExplodedNode *getAcquireSite(const ExplodedNode *N, SymbolRef Sym,
 namespace {
 class FuchsiaHandleSymbolVisitor final : public SymbolVisitor {
 public:
-  FuchsiaHandleSymbolVisitor(ProgramStateRef State) : State(std::move(State)) {}
-  ProgramStateRef getState() const { return State; }
-
   bool VisitSymbol(SymbolRef S) override {
     if (const auto *HandleType = S->getType()->getAs<TypedefType>())
       if (HandleType->getDecl()->getName() == HandleTypeName)
@@ -268,7 +265,6 @@ public:
 
 private:
   SmallVector<SymbolRef, 1024> Symbols;
-  ProgramStateRef State;
 };
 } // end anonymous namespace
 
@@ -284,7 +280,7 @@ getFuchsiaHandleSymbols(QualType QT, SVal Arg, ProgramStateRef State) {
   if (QT->isStructureType()) {
     // If we see a structure, see if there is any handle referenced by the
     // structure.
-    FuchsiaHandleSymbolVisitor Visitor(State);
+    FuchsiaHandleSymbolVisitor Visitor;
     State->scanReachableSymbols(Arg, Visitor);
     return Visitor.GetSymbols();
   }
@@ -389,7 +385,7 @@ void FuchsiaHandleChecker::checkPostCall(const CallEvent &Call,
         llvm::raw_string_ostream OS(SBuf);
         OS << "Function '" << FuncDecl->getDeclName()
            << "' returns an open handle";
-        return OS.str();
+        return SBuf;
       } else
         return "";
     });
@@ -405,7 +401,7 @@ void FuchsiaHandleChecker::checkPostCall(const CallEvent &Call,
         llvm::raw_string_ostream OS(SBuf);
         OS << "Function '" << FuncDecl->getDeclName()
            << "' returns an unowned handle";
-        return OS.str();
+        return SBuf;
       } else
         return "";
     });
@@ -439,7 +435,7 @@ void FuchsiaHandleChecker::checkPostCall(const CallEvent &Call,
               llvm::raw_string_ostream OS(SBuf);
               OS << "Handle released through " << ParamDiagIdx
                  << llvm::getOrdinalSuffix(ParamDiagIdx) << " parameter";
-              return OS.str();
+              return SBuf;
             } else
               return "";
           });
@@ -453,7 +449,7 @@ void FuchsiaHandleChecker::checkPostCall(const CallEvent &Call,
             llvm::raw_string_ostream OS(SBuf);
             OS << "Handle allocated through " << ParamDiagIdx
                << llvm::getOrdinalSuffix(ParamDiagIdx) << " parameter";
-            return OS.str();
+            return SBuf;
           } else
             return "";
         });
@@ -467,7 +463,7 @@ void FuchsiaHandleChecker::checkPostCall(const CallEvent &Call,
             llvm::raw_string_ostream OS(SBuf);
             OS << "Unowned handle allocated through " << ParamDiagIdx
                << llvm::getOrdinalSuffix(ParamDiagIdx) << " parameter";
-            return OS.str();
+            return SBuf;
           } else
             return "";
         });

@@ -28,6 +28,25 @@
 
 using namespace clang;
 
+namespace {
+
+// MacroInfo is expected to take 40 bytes on platforms with an 8 byte pointer
+// and 4 byte SourceLocation.
+template <int> class MacroInfoSizeChecker {
+public:
+  constexpr static bool AsExpected = true;
+};
+template <> class MacroInfoSizeChecker<8> {
+public:
+  constexpr static bool AsExpected =
+      sizeof(MacroInfo) == (32 + sizeof(SourceLocation) * 2);
+};
+
+static_assert(MacroInfoSizeChecker<sizeof(void *)>::AsExpected,
+              "Unexpected size of MacroInfo");
+
+} // end namespace
+
 MacroInfo::MacroInfo(SourceLocation DefLoc)
     : Location(DefLoc), IsDefinitionLengthCached(false), IsFunctionLike(false),
       IsC99Varargs(false), IsGNUVarargs(false), IsBuiltinMacro(false),
@@ -39,6 +58,7 @@ unsigned MacroInfo::getDefinitionLengthSlow(const SourceManager &SM) const {
   assert(!IsDefinitionLengthCached);
   IsDefinitionLengthCached = true;
 
+  ArrayRef<Token> ReplacementTokens = tokens();
   if (ReplacementTokens.empty())
     return (DefinitionLength = 0);
 
@@ -76,7 +96,7 @@ bool MacroInfo::isIdenticalTo(const MacroInfo &Other, Preprocessor &PP,
   bool Lexically = !Syntactically;
 
   // Check # tokens in replacement, number of args, and various flags all match.
-  if (ReplacementTokens.size() != Other.ReplacementTokens.size() ||
+  if (getNumTokens() != Other.getNumTokens() ||
       getNumParams() != Other.getNumParams() ||
       isFunctionLike() != Other.isFunctionLike() ||
       isC99Varargs() != Other.isC99Varargs() ||
@@ -92,7 +112,7 @@ bool MacroInfo::isIdenticalTo(const MacroInfo &Other, Preprocessor &PP,
   }
 
   // Check all the tokens.
-  for (unsigned i = 0, e = ReplacementTokens.size(); i != e; ++i) {
+  for (unsigned i = 0; i != NumReplacementTokens; ++i) {
     const Token &A = ReplacementTokens[i];
     const Token &B = Other.ReplacementTokens[i];
     if (A.getKind() != B.getKind())
@@ -157,7 +177,7 @@ LLVM_DUMP_METHOD void MacroInfo::dump() const {
   }
 
   bool First = true;
-  for (const Token &Tok : ReplacementTokens) {
+  for (const Token &Tok : tokens()) {
     // Leading space is semantically meaningful in a macro definition,
     // so preserve it in the dump output.
     if (First || Tok.hasLeadingSpace())

@@ -1,8 +1,6 @@
 ; RUN: llvm-profdata merge %S/Inputs/irreducible.proftext -o %t.profdata
-; RUN: opt < %s -pgo-instr-use -pgo-instrument-entry=false -pgo-test-profile-file=%t.profdata -S | FileCheck %s --check-prefix=USE
 ; RUN: opt < %s -passes=pgo-instr-use -pgo-instrument-entry=false -pgo-test-profile-file=%t.profdata -S | FileCheck %s --check-prefix=USE
 ; RUN: llvm-profdata merge %S/Inputs/irreducible_entry.proftext -o %t2.profdata
-; RUN: opt < %s -pgo-instr-use -pgo-instrument-entry=true -pgo-test-profile-file=%t2.profdata -S | FileCheck %s --check-prefix=USE
 ; RUN: opt < %s -passes=pgo-instr-use -pgo-instrument-entry=true -pgo-test-profile-file=%t2.profdata -S | FileCheck %s --check-prefix=USE
 
 ; GEN: $__llvm_profile_raw_version = comdat any
@@ -139,4 +137,4 @@ indirectgoto:                                     ; preds = %if.then18, %if.then
 ; USE: ![[IF_END9_IRR_LOOP]] = !{!"loop_header_weight", i64 1000}
 ; USE: ![[SW_BB6_IRR_LOOP]] = !{!"loop_header_weight", i64 501}
 ; USE: ![[SW_BB15_IRR_LOOP]] = !{!"loop_header_weight", i64 100}
-; USE: ![[INDIRECTGOTO_IRR_LOOP]] = !{!"loop_header_weight", i64 400}
+; USE: ![[INDIRECTGOTO_IRR_LOOP]] = !{!"loop_header_weight", i64 399}

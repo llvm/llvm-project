@@ -15,7 +15,7 @@ class X {
 // Nullability applies to all pointer types.
 typedef int (X::* _Nonnull member_function_type_1)(int);
 typedef int X::* _Nonnull member_data_type_1;
-typedef nullptr_t _Nonnull nonnull_nullptr_t; // expected-error{{nullability specifier '_Nonnull' cannot be applied to non-pointer type 'nullptr_t'}}
+typedef nullptr_t _Nonnull nonnull_nullptr_t; // expected-error{{nullability specifier '_Nonnull' cannot be applied to non-pointer type 'nullptr_t' (aka 'std::nullptr_t')}}
 
 // Nullability can move into member pointers (this is suppressing a warning).
 typedef _Nonnull int (X::* member_function_type_2)(int);
@@ -26,7 +26,7 @@ typedef _Nonnull int X::* member_data_type_2;
 template<typename T>
 struct AddNonNull {
   typedef _Nonnull T type; // expected-error{{nullability specifier '_Nonnull' cannot be applied to non-pointer type 'int'}}
-  // expected-error@-1{{nullability specifier '_Nonnull' cannot be applied to non-pointer type 'nullptr_t'}}
+  // expected-error@-1{{nullability specifier '_Nonnull' cannot be applied to non-pointer type 'std::nullptr_t'}}
 };
 
 typedef AddNonNull<int *>::type nonnull_int_ptr_1;
@@ -126,11 +126,11 @@ void arraysInLambdas() {
   simple(nullptr); // expected-warning {{null passed to a callee that requires a non-null argument}}
   auto nested = [](void *_Nullable [_Nonnull 2]) {};
   nested(nullptr); // expected-warning {{null passed to a callee that requires a non-null argument}}
-  auto nestedBad = [](int [2][_Nonnull 2]) {}; // expected-error {{nullability specifier '_Nonnull' cannot be applied to non-pointer type 'int [2]'}}
+  auto nestedBad = [](int [2][_Nonnull 2]) {}; // expected-error {{nullability specifier '_Nonnull' cannot be applied to non-pointer type 'int[2]'}}
 
   auto withTypedef = [](INTS _Nonnull) {};
   withTypedef(nullptr); // expected-warning {{null passed to a callee that requires a non-null argument}}
-  auto withTypedefBad = [](INTS _Nonnull[2]) {}; // expected-error {{nullability specifier '_Nonnull' cannot be applied to non-pointer type 'INTS' (aka 'int [4]')}}
+  auto withTypedefBad = [](INTS _Nonnull[2]) {}; // expected-error {{nullability specifier '_Nonnull' cannot be applied to non-pointer type 'INTS' (aka 'int[4]')}}
 }
 
 void testNullabilityCompletenessWithTemplate() {

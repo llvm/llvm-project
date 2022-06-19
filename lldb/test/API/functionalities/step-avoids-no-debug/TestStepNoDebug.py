@@ -13,8 +13,6 @@ from lldbsuite.test import lldbutil
 
 class StepAvoidsNoDebugTestCase(TestBase):
 
-    mydir = TestBase.compute_mydir(__file__)
-
     @add_test_categories(['pyapi'])
     def test_step_out_with_python(self):
         """Test stepping out using avoid-no-debug with dsyms."""
@@ -50,9 +48,6 @@ class StepAvoidsNoDebugTestCase(TestBase):
         archs=["i386"],
         oslist=no_match(["freebsd"]),
         bugnumber="llvm.org/pr28549")
-    @expectedFailureAll(archs=["arm64"], bugnumber="<rdar://problem/34026777>")  # lldb doesn't step past last source line in function on arm64
-    @expectedFailureAll(archs=["aarch64"], oslist=["freebsd", "linux"],
-                        bugnumber="llvm.org/pr44057")
     def test_step_in_with_python(self):
         """Test stepping in using avoid-no-debug with dwarf."""
         self.build()

@@ -17,10 +17,13 @@
 #include "llvm/ADT/DenseMapInfo.h"
 #include "llvm/ADT/Hashing.h"
 #include "llvm/ADT/Optional.h"
+#include "llvm/Support/Endian.h"
 #include <string>
 #include <tuple>
 
 namespace llvm {
+template <typename HasherT, support::endianness Endianness>
+class HashBuilderImpl;
 class raw_ostream;
 class StringRef;
 
@@ -96,6 +99,12 @@ public:
     return *this;
   }
 
+  /// Return a version tuple that contains a different major version but
+  /// everything else is the same.
+  VersionTuple withMajorReplaced(unsigned NewMajor) const {
+    return VersionTuple(NewMajor, Minor, Subminor, Build);
+  }
+
   /// Return a version tuple that contains only components that are non-zero.
   VersionTuple normalize() const {
     VersionTuple Result = *this;
@@ -160,8 +169,14 @@ public:
     return !(X < Y);
   }
 
-  friend llvm::hash_code hash_value(const VersionTuple &VT) {
-    return llvm::hash_combine(VT.Major, VT.Minor, VT.Subminor, VT.Build);
+  friend hash_code hash_value(const VersionTuple &VT) {
+    return hash_combine(VT.Major, VT.Minor, VT.Subminor, VT.Build);
+  }
+
+  template <typename HasherT, llvm::support::endianness Endianness>
+  friend void addHash(HashBuilderImpl<HasherT, Endianness> &HBuilder,
+                      const VersionTuple &VT) {
+    HBuilder.add(VT.Major, VT.Minor, VT.Subminor, VT.Build);
   }
 
   /// Retrieve a string representation of the version number.

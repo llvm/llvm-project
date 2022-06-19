@@ -6,11 +6,14 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <condition_variable>
-#include <deque>
+#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANGD_UNITTESTS_LSPCLIENT_H
+#define LLVM_CLANG_TOOLS_EXTRA_CLANGD_UNITTESTS_LSPCLIENT_H
+
 #include <llvm/ADT/Optional.h>
 #include <llvm/Support/Error.h>
 #include <llvm/Support/JSON.h>
+#include <condition_variable>
+#include <deque>
 #include <mutex>
 
 namespace clang {
@@ -80,3 +83,5 @@ private:
 
 } // namespace clangd
 } // namespace clang
+
+#endif // LLVM_CLANG_TOOLS_EXTRA_CLANGD_UNITTESTS_LSPCLIENT_H

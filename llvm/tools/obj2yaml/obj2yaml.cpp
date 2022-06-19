@@ -1,4 +1,4 @@
-//===------ utils/obj2yaml.cpp - obj2yaml conversion tool -------*- C++ -*-===//
+//===------ utils/obj2yaml.cpp - obj2yaml conversion tool -----------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -18,12 +18,20 @@
 using namespace llvm;
 using namespace llvm::object;
 
+static cl::opt<std::string>
+    InputFilename(cl::Positional, cl::desc("<input file>"), cl::init("-"));
+static cl::bits<RawSegments> RawSegment(
+    "raw-segment",
+    cl::desc("Mach-O: dump the raw contents of the listed segments instead of "
+             "parsing them:"),
+    cl::values(clEnumVal(data, "__DATA"), clEnumVal(linkedit, "__LINKEDIT")));
+
 static Error dumpObject(const ObjectFile &Obj) {
   if (Obj.isCOFF())
     return errorCodeToError(coff2yaml(outs(), cast<COFFObjectFile>(Obj)));
 
   if (Obj.isXCOFF())
-    return errorCodeToError(xcoff2yaml(outs(), cast<XCOFFObjectFile>(Obj)));
+    return xcoff2yaml(outs(), cast<XCOFFObjectFile>(Obj));
 
   if (Obj.isELF())
     return elf2yaml(outs(), Obj);
@@ -42,8 +50,14 @@ static Error dumpInput(StringRef File) {
     return errorCodeToError(EC);
   std::unique_ptr<MemoryBuffer> &Buffer = FileOrErr.get();
   MemoryBufferRef MemBuf = Buffer->getMemBufferRef();
-  if (file_magic::archive == identify_magic(MemBuf.getBuffer()))
+  switch (identify_magic(MemBuf.getBuffer())) {
+  case file_magic::archive:
     return archive2yaml(outs(), MemBuf);
+  case file_magic::dxcontainer_object:
+    return dxcontainer2yaml(outs(), MemBuf);
+  default:
+    break;
+  }
 
   Expected<std::unique_ptr<Binary>> BinOrErr =
       createBinary(MemBuf, /*Context=*/nullptr);
@@ -54,7 +68,7 @@ static Error dumpInput(StringRef File) {
   // Universal MachO is not a subclass of ObjectFile, so it needs to be handled
   // here with the other binary types.
   if (Binary.isMachO() || Binary.isMachOUniversalBinary())
-    return macho2yaml(outs(), Binary);
+    return macho2yaml(outs(), Binary, RawSegment.getBits());
   if (ObjectFile *Obj = dyn_cast<ObjectFile>(&Binary))
     return dumpObject(*Obj);
   if (MinidumpFile *Minidump = dyn_cast<MinidumpFile>(&Binary))
@@ -73,9 +87,6 @@ static void reportError(StringRef Input, Error Err) {
   errs() << "Error reading file: " << Input << ": " << ErrMsg;
   errs().flush();
 }
-
-cl::opt<std::string> InputFilename(cl::Positional, cl::desc("<input file>"),
-                                   cl::init("-"));
 
 int main(int argc, char *argv[]) {
   InitLLVM X(argc, argv);

@@ -1,6 +1,6 @@
-// RUN: %clang_cc1 -triple=aarch64-unknown-linux-gnu -emit-llvm < %s | FileCheck %s -check-prefix CHECK -check-prefixes CHECK-IT,CHECK-IT-ARM
-// RUN: %clang_cc1 -triple=x86_64-unknown-linux-gnu -emit-llvm < %s | FileCheck %s -check-prefix CHECK -check-prefixes CHECK-IT,CHECK-IT-OTHER
-// RUN: %clang_cc1 -triple=%ms_abi_triple -emit-llvm < %s | FileCheck %s -check-prefix CHECK -check-prefix CHECK-MS
+// RUN: %clang_cc1 -no-opaque-pointers -triple=aarch64-unknown-linux-gnu -emit-llvm < %s | FileCheck %s -check-prefix CHECK -check-prefixes CHECK-IT,CHECK-IT-ARM
+// RUN: %clang_cc1 -no-opaque-pointers -triple=x86_64-unknown-linux-gnu -emit-llvm < %s | FileCheck %s -check-prefix CHECK -check-prefixes CHECK-IT,CHECK-IT-OTHER
+// RUN: %clang_cc1 -no-opaque-pointers -triple=%ms_abi_triple -emit-llvm < %s | FileCheck %s -check-prefix CHECK -check-prefix CHECK-MS
 
 int S;
 volatile int vS;
@@ -37,7 +37,7 @@ volatile struct {int x;} aggFct(void);
 typedef volatile int volatile_int;
 volatile_int vtS;
 
-int main() {
+int main(void) {
   int i;
 // CHECK: [[I:%[a-zA-Z0-9_.]+]] = alloca i32
   // load

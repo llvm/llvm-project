@@ -6,9 +6,9 @@
 define i8 @out8(i8 %x, i8 %y, i8 %mask) {
 ; CHECK-LABEL: out8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    and w8, w0, w2
-; CHECK-NEXT:    bic w9, w1, w2
-; CHECK-NEXT:    orr w0, w8, w9
+; CHECK-NEXT:    bic w8, w1, w2
+; CHECK-NEXT:    and w9, w0, w2
+; CHECK-NEXT:    orr w0, w9, w8
 ; CHECK-NEXT:    ret
   %mx = and i8 %x, %mask
   %notmask = xor i8 %mask, -1
@@ -20,9 +20,9 @@ define i8 @out8(i8 %x, i8 %y, i8 %mask) {
 define i16 @out16(i16 %x, i16 %y, i16 %mask) {
 ; CHECK-LABEL: out16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    and w8, w0, w2
-; CHECK-NEXT:    bic w9, w1, w2
-; CHECK-NEXT:    orr w0, w8, w9
+; CHECK-NEXT:    bic w8, w1, w2
+; CHECK-NEXT:    and w9, w0, w2
+; CHECK-NEXT:    orr w0, w9, w8
 ; CHECK-NEXT:    ret
   %mx = and i16 %x, %mask
   %notmask = xor i16 %mask, -1
@@ -34,9 +34,9 @@ define i16 @out16(i16 %x, i16 %y, i16 %mask) {
 define i32 @out32(i32 %x, i32 %y, i32 %mask) {
 ; CHECK-LABEL: out32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    and w8, w0, w2
-; CHECK-NEXT:    bic w9, w1, w2
-; CHECK-NEXT:    orr w0, w8, w9
+; CHECK-NEXT:    bic w8, w1, w2
+; CHECK-NEXT:    and w9, w0, w2
+; CHECK-NEXT:    orr w0, w9, w8
 ; CHECK-NEXT:    ret
   %mx = and i32 %x, %mask
   %notmask = xor i32 %mask, -1
@@ -48,9 +48,9 @@ define i32 @out32(i32 %x, i32 %y, i32 %mask) {
 define i64 @out64(i64 %x, i64 %y, i64 %mask) {
 ; CHECK-LABEL: out64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    and x8, x0, x2
-; CHECK-NEXT:    bic x9, x1, x2
-; CHECK-NEXT:    orr x0, x8, x9
+; CHECK-NEXT:    bic x8, x1, x2
+; CHECK-NEXT:    and x9, x0, x2
+; CHECK-NEXT:    orr x0, x9, x8
 ; CHECK-NEXT:    ret
   %mx = and i64 %x, %mask
   %notmask = xor i64 %mask, -1
@@ -155,9 +155,9 @@ define i32 @in_commutativity_0_1_1(i32 %x, i32 %y, i32 %mask) {
 define i32 @in_commutativity_1_0_0(i32 %x, i32 %y, i32 %mask) {
 ; CHECK-LABEL: in_commutativity_1_0_0:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    bic w8, w0, w2
-; CHECK-NEXT:    and w9, w1, w2
-; CHECK-NEXT:    orr w0, w9, w8
+; CHECK-NEXT:    and w8, w1, w2
+; CHECK-NEXT:    bic w9, w0, w2
+; CHECK-NEXT:    orr w0, w8, w9
 ; CHECK-NEXT:    ret
   %n0 = xor i32 %x, %y
   %n1 = and i32 %n0, %mask
@@ -167,9 +167,9 @@ define i32 @in_commutativity_1_0_0(i32 %x, i32 %y, i32 %mask) {
 define i32 @in_commutativity_1_0_1(i32 %x, i32 %y, i32 %mask) {
 ; CHECK-LABEL: in_commutativity_1_0_1:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    bic w8, w0, w2
-; CHECK-NEXT:    and w9, w1, w2
-; CHECK-NEXT:    orr w0, w9, w8
+; CHECK-NEXT:    and w8, w1, w2
+; CHECK-NEXT:    bic w9, w0, w2
+; CHECK-NEXT:    orr w0, w8, w9
 ; CHECK-NEXT:    ret
   %n0 = xor i32 %x, %y
   %n1 = and i32 %mask, %n0 ; swapped
@@ -179,9 +179,9 @@ define i32 @in_commutativity_1_0_1(i32 %x, i32 %y, i32 %mask) {
 define i32 @in_commutativity_1_1_0(i32 %x, i32 %y, i32 %mask) {
 ; CHECK-LABEL: in_commutativity_1_1_0:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    bic w8, w0, w2
-; CHECK-NEXT:    and w9, w1, w2
-; CHECK-NEXT:    orr w0, w9, w8
+; CHECK-NEXT:    and w8, w1, w2
+; CHECK-NEXT:    bic w9, w0, w2
+; CHECK-NEXT:    orr w0, w8, w9
 ; CHECK-NEXT:    ret
   %n0 = xor i32 %x, %y
   %n1 = and i32 %n0, %mask
@@ -191,9 +191,9 @@ define i32 @in_commutativity_1_1_0(i32 %x, i32 %y, i32 %mask) {
 define i32 @in_commutativity_1_1_1(i32 %x, i32 %y, i32 %mask) {
 ; CHECK-LABEL: in_commutativity_1_1_1:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    bic w8, w0, w2
-; CHECK-NEXT:    and w9, w1, w2
-; CHECK-NEXT:    orr w0, w9, w8
+; CHECK-NEXT:    and w8, w1, w2
+; CHECK-NEXT:    bic w9, w0, w2
+; CHECK-NEXT:    orr w0, w8, w9
 ; CHECK-NEXT:    ret
   %n0 = xor i32 %x, %y
   %n1 = and i32 %mask, %n0 ; swapped
@@ -384,10 +384,10 @@ define i32 @in_constant_varx_mone_invmask(i32 %x, i32 %y, i32 %mask) {
 define i32 @out_constant_varx_42(i32 %x, i32 %y, i32 %mask) {
 ; CHECK-LABEL: out_constant_varx_42:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w9, #42
-; CHECK-NEXT:    and w8, w2, w0
-; CHECK-NEXT:    bic w9, w9, w2
-; CHECK-NEXT:    orr w0, w8, w9
+; CHECK-NEXT:    mov w8, #42
+; CHECK-NEXT:    and w9, w2, w0
+; CHECK-NEXT:    bic w8, w8, w2
+; CHECK-NEXT:    orr w0, w9, w8
 ; CHECK-NEXT:    ret
   %notmask = xor i32 %mask, -1
   %mx = and i32 %mask, %x
@@ -399,8 +399,8 @@ define i32 @in_constant_varx_42(i32 %x, i32 %y, i32 %mask) {
 ; CHECK-LABEL: in_constant_varx_42:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov w8, #42
-; CHECK-NEXT:    bic w8, w8, w2
 ; CHECK-NEXT:    and w9, w0, w2
+; CHECK-NEXT:    bic w8, w8, w2
 ; CHECK-NEXT:    orr w0, w9, w8
 ; CHECK-NEXT:    ret
   %n0 = xor i32 %x, 42 ; %x
@@ -412,10 +412,10 @@ define i32 @in_constant_varx_42(i32 %x, i32 %y, i32 %mask) {
 define i32 @out_constant_varx_42_invmask(i32 %x, i32 %y, i32 %mask) {
 ; CHECK-LABEL: out_constant_varx_42_invmask:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w9, #42
-; CHECK-NEXT:    bic w8, w0, w2
-; CHECK-NEXT:    and w9, w2, w9
-; CHECK-NEXT:    orr w0, w8, w9
+; CHECK-NEXT:    mov w8, #42
+; CHECK-NEXT:    bic w9, w0, w2
+; CHECK-NEXT:    and w8, w2, w8
+; CHECK-NEXT:    orr w0, w9, w8
 ; CHECK-NEXT:    ret
   %notmask = xor i32 %mask, -1
   %mx = and i32 %notmask, %x
@@ -428,8 +428,8 @@ define i32 @in_constant_varx_42_invmask(i32 %x, i32 %y, i32 %mask) {
 ; CHECK-LABEL: in_constant_varx_42_invmask:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov w8, #42
-; CHECK-NEXT:    and w8, w2, w8
 ; CHECK-NEXT:    bic w9, w0, w2
+; CHECK-NEXT:    and w8, w2, w8
 ; CHECK-NEXT:    orr w0, w9, w8
 ; CHECK-NEXT:    ret
   %notmask = xor i32 %mask, -1
@@ -491,8 +491,8 @@ define i32 @out_constant_42_vary(i32 %x, i32 %y, i32 %mask) {
 ; CHECK-LABEL: out_constant_42_vary:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov w8, #42
-; CHECK-NEXT:    and w8, w2, w8
 ; CHECK-NEXT:    bic w9, w1, w2
+; CHECK-NEXT:    and w8, w2, w8
 ; CHECK-NEXT:    orr w0, w8, w9
 ; CHECK-NEXT:    ret
   %notmask = xor i32 %mask, -1
@@ -504,10 +504,10 @@ define i32 @out_constant_42_vary(i32 %x, i32 %y, i32 %mask) {
 define i32 @in_constant_42_vary(i32 %x, i32 %y, i32 %mask) {
 ; CHECK-LABEL: in_constant_42_vary:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w9, #42
-; CHECK-NEXT:    bic w8, w1, w2
-; CHECK-NEXT:    and w9, w2, w9
-; CHECK-NEXT:    orr w0, w9, w8
+; CHECK-NEXT:    mov w8, #42
+; CHECK-NEXT:    bic w9, w1, w2
+; CHECK-NEXT:    and w8, w2, w8
+; CHECK-NEXT:    orr w0, w8, w9
 ; CHECK-NEXT:    ret
   %n0 = xor i32 42, %y ; %x
   %n1 = and i32 %n0, %mask
@@ -519,8 +519,8 @@ define i32 @out_constant_42_vary_invmask(i32 %x, i32 %y, i32 %mask) {
 ; CHECK-LABEL: out_constant_42_vary_invmask:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov w8, #42
-; CHECK-NEXT:    bic w8, w8, w2
 ; CHECK-NEXT:    and w9, w2, w1
+; CHECK-NEXT:    bic w8, w8, w2
 ; CHECK-NEXT:    orr w0, w8, w9
 ; CHECK-NEXT:    ret
   %notmask = xor i32 %mask, -1
@@ -533,10 +533,10 @@ define i32 @out_constant_42_vary_invmask(i32 %x, i32 %y, i32 %mask) {
 define i32 @in_constant_42_vary_invmask(i32 %x, i32 %y, i32 %mask) {
 ; CHECK-LABEL: in_constant_42_vary_invmask:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w9, #42
-; CHECK-NEXT:    and w8, w1, w2
-; CHECK-NEXT:    bic w9, w9, w2
-; CHECK-NEXT:    orr w0, w9, w8
+; CHECK-NEXT:    mov w8, #42
+; CHECK-NEXT:    and w9, w1, w2
+; CHECK-NEXT:    bic w8, w8, w2
+; CHECK-NEXT:    orr w0, w8, w9
 ; CHECK-NEXT:    ret
   %notmask = xor i32 %mask, -1
   %n0 = xor i32 42, %y ; %x
@@ -556,8 +556,8 @@ define i32 @in_multiuse_A(i32 %x, i32 %y, i32 %z, i32 %mask) nounwind {
 ; CHECK-NEXT:    eor w8, w0, w1
 ; CHECK-NEXT:    stp x20, x19, [sp, #16] // 16-byte Folded Spill
 ; CHECK-NEXT:    and w20, w8, w3
-; CHECK-NEXT:    mov w0, w20
 ; CHECK-NEXT:    mov w19, w1
+; CHECK-NEXT:    mov w0, w20
 ; CHECK-NEXT:    bl use32
 ; CHECK-NEXT:    eor w0, w20, w19
 ; CHECK-NEXT:    ldp x20, x19, [sp, #16] // 16-byte Folded Reload
@@ -605,10 +605,10 @@ define i32 @n0_badmask(i32 %x, i32 %y, i32 %mask, i32 %mask2) {
 define i32 @n0_badxor(i32 %x, i32 %y, i32 %mask) {
 ; CHECK-LABEL: n0_badxor:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    eor w9, w2, #0x1
-; CHECK-NEXT:    and w8, w0, w2
-; CHECK-NEXT:    and w9, w1, w9
-; CHECK-NEXT:    orr w0, w8, w9
+; CHECK-NEXT:    eor w8, w2, #0x1
+; CHECK-NEXT:    and w9, w0, w2
+; CHECK-NEXT:    and w8, w1, w8
+; CHECK-NEXT:    orr w0, w9, w8
 ; CHECK-NEXT:    ret
   %mx = and i32 %x, %mask
   %notmask = xor i32 %mask, 1 ; instead of -1

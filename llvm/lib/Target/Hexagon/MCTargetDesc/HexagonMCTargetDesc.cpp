@@ -10,18 +10,19 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "HexagonArch.h"
+#include "MCTargetDesc/HexagonMCTargetDesc.h"
+#include "HexagonDepArch.h"
 #include "HexagonTargetStreamer.h"
 #include "MCTargetDesc/HexagonInstPrinter.h"
 #include "MCTargetDesc/HexagonMCAsmInfo.h"
 #include "MCTargetDesc/HexagonMCELFStreamer.h"
 #include "MCTargetDesc/HexagonMCInstrInfo.h"
-#include "MCTargetDesc/HexagonMCTargetDesc.h"
 #include "TargetInfo/HexagonTargetInfo.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/MC/MCAsmBackend.h"
+#include "llvm/MC/MCAssembler.h"
 #include "llvm/MC/MCCodeEmitter.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCDwarf.h"
@@ -32,8 +33,8 @@
 #include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCSubtargetInfo.h"
+#include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/ErrorHandling.h"
-#include "llvm/Support/TargetRegistry.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cassert>
 #include <cstdint>
@@ -80,6 +81,8 @@ cl::opt<bool> MV67T("mv67t", cl::Hidden, cl::desc("Build for Hexagon V67T"),
                     cl::init(false));
 cl::opt<bool> MV68("mv68", cl::Hidden, cl::desc("Build for Hexagon V68"),
                    cl::init(false));
+cl::opt<bool> MV69("mv69", cl::Hidden, cl::desc("Build for Hexagon V69"),
+                   cl::init(false));
 
 cl::opt<Hexagon::ArchEnum>
     EnableHVX("mhvx",
@@ -91,6 +94,7 @@ cl::opt<Hexagon::ArchEnum>
         clEnumValN(Hexagon::ArchEnum::V66, "v66", "Build for HVX v66"),
         clEnumValN(Hexagon::ArchEnum::V67, "v67", "Build for HVX v67"),
         clEnumValN(Hexagon::ArchEnum::V68, "v68", "Build for HVX v68"),
+        clEnumValN(Hexagon::ArchEnum::V69, "v69", "Build for HVX v69"),
         // Sentinel for no value specified.
         clEnumValN(Hexagon::ArchEnum::Generic, "", "")),
       // Sentinel for flag not present.
@@ -101,6 +105,11 @@ static cl::opt<bool>
   DisableHVX("mno-hvx", cl::Hidden,
              cl::desc("Disable Hexagon Vector eXtensions"));
 
+static cl::opt<bool>
+    EnableHvxIeeeFp("mhvx-ieee-fp", cl::Hidden,
+                    cl::desc("Enable HVX IEEE floating point extensions"));
+static cl::opt<bool> EnableHexagonCabac
+  ("mcabac", cl::desc("tbd"), cl::init(false));
 
 static StringRef DefaultArch = "hexagonv60";
 
@@ -123,6 +132,8 @@ static StringRef HexagonGetArchVariant() {
     return "hexagonv67t";
   if (MV68)
     return "hexagonv68";
+  if (MV69)
+    return "hexagonv69";
   return "";
 }
 
@@ -371,6 +382,9 @@ std::string selectHexagonFS(StringRef CPU, StringRef FS) {
   case Hexagon::ArchEnum::V68:
     Result.push_back("+hvxv68");
     break;
+  case Hexagon::ArchEnum::V69:
+    Result.push_back("+hvxv69");
+    break;
   case Hexagon::ArchEnum::Generic:{
     Result.push_back(StringSwitch<StringRef>(CPU)
              .Case("hexagonv60", "+hvxv60")
@@ -379,19 +393,25 @@ std::string selectHexagonFS(StringRef CPU, StringRef FS) {
              .Case("hexagonv66", "+hvxv66")
              .Case("hexagonv67", "+hvxv67")
              .Case("hexagonv67t", "+hvxv67")
-             .Case("hexagonv68", "+hvxv68"));
+             .Case("hexagonv68", "+hvxv68")
+             .Case("hexagonv69", "+hvxv69"));
     break;
   }
   case Hexagon::ArchEnum::NoArch:
     // Sentinel if -mhvx isn't specified
     break;
   }
+  if (EnableHvxIeeeFp)
+    Result.push_back("+hvx-ieee-fp");
+  if (EnableHexagonCabac)
+    Result.push_back("+cabac");
+
   return join(Result.begin(), Result.end(), ",");
 }
 }
 
-static bool isCPUValid(const std::string &CPU) {
-  return Hexagon::CpuTable.find(CPU) != Hexagon::CpuTable.cend();
+static bool isCPUValid(StringRef CPU) {
+  return Hexagon::getCpu(CPU).hasValue();
 }
 
 namespace {
@@ -422,8 +442,8 @@ FeatureBitset Hexagon_MC::completeHVXFeatures(const FeatureBitset &S) {
   // turns on hvxvNN, corresponding to the existing ArchVNN.
   FeatureBitset FB = S;
   unsigned CpuArch = ArchV5;
-  for (unsigned F : {ArchV68, ArchV67, ArchV66, ArchV65, ArchV62, ArchV60,
-                     ArchV55, ArchV5}) {
+  for (unsigned F : {ArchV69, ArchV68, ArchV67, ArchV66, ArchV65, ArchV62,
+                     ArchV60, ArchV55, ArchV5}) {
     if (!FB.test(F))
       continue;
     CpuArch = F;
@@ -438,7 +458,8 @@ FeatureBitset Hexagon_MC::completeHVXFeatures(const FeatureBitset &S) {
   }
   bool HasHvxVer = false;
   for (unsigned F : {ExtensionHVXV60, ExtensionHVXV62, ExtensionHVXV65,
-                     ExtensionHVXV66, ExtensionHVXV67, ExtensionHVXV68}) {
+                     ExtensionHVXV66, ExtensionHVXV67, ExtensionHVXV68,
+                     ExtensionHVXV69}) {
     if (!FB.test(F))
       continue;
     HasHvxVer = true;
@@ -451,6 +472,9 @@ FeatureBitset Hexagon_MC::completeHVXFeatures(const FeatureBitset &S) {
 
   // HasHvxVer is false, and UseHvx is true.
   switch (CpuArch) {
+  case ArchV69:
+    FB.set(ExtensionHVXV69);
+    LLVM_FALLTHROUGH;
     case ArchV68:
       FB.set(ExtensionHVXV68);
       LLVM_FALLTHROUGH;
@@ -494,6 +518,14 @@ MCSubtargetInfo *Hexagon_MC::createHexagonMCSubtargetInfo(const Triple &TT,
     return nullptr;
   }
 
+  // Add qfloat subtarget feature by default to v68 and above
+  // unless explicitely disabled
+  if (checkFeature(X, Hexagon::ExtensionHVXV68) &&
+      ArchFS.find("-hvx-qfloat", 0) == std::string::npos) {
+    llvm::FeatureBitset Features = X->getFeatureBits();
+    X->setFeatureBits(Features.set(Hexagon::ExtensionHVXQFloat));
+  }
+
   if (HexagonDisableDuplex) {
     llvm::FeatureBitset Features = X->getFeatureBits();
     X->setFeatureBits(Features.reset(Hexagon::FeatureDuplex));
@@ -528,21 +560,18 @@ void Hexagon_MC::addArchSubtarget(MCSubtargetInfo const *STI,
 }
 
 unsigned Hexagon_MC::GetELFFlags(const MCSubtargetInfo &STI) {
-  static std::map<StringRef,unsigned> ElfFlags = {
-    {"hexagonv5",  ELF::EF_HEXAGON_MACH_V5},
-    {"hexagonv55", ELF::EF_HEXAGON_MACH_V55},
-    {"hexagonv60", ELF::EF_HEXAGON_MACH_V60},
-    {"hexagonv62", ELF::EF_HEXAGON_MACH_V62},
-    {"hexagonv65", ELF::EF_HEXAGON_MACH_V65},
-    {"hexagonv66", ELF::EF_HEXAGON_MACH_V66},
-    {"hexagonv67", ELF::EF_HEXAGON_MACH_V67},
-    {"hexagonv67t", ELF::EF_HEXAGON_MACH_V67T},
-    {"hexagonv68", ELF::EF_HEXAGON_MACH_V68},
-  };
-
-  auto F = ElfFlags.find(STI.getCPU());
-  assert(F != ElfFlags.end() && "Unrecognized Architecture");
-  return F->second;
+  return StringSwitch<unsigned>(STI.getCPU())
+      .Case("generic", llvm::ELF::EF_HEXAGON_MACH_V5)
+      .Case("hexagonv5", llvm::ELF::EF_HEXAGON_MACH_V5)
+      .Case("hexagonv55", llvm::ELF::EF_HEXAGON_MACH_V55)
+      .Case("hexagonv60", llvm::ELF::EF_HEXAGON_MACH_V60)
+      .Case("hexagonv62", llvm::ELF::EF_HEXAGON_MACH_V62)
+      .Case("hexagonv65", llvm::ELF::EF_HEXAGON_MACH_V65)
+      .Case("hexagonv66", llvm::ELF::EF_HEXAGON_MACH_V66)
+      .Case("hexagonv67", llvm::ELF::EF_HEXAGON_MACH_V67)
+      .Case("hexagonv67t", llvm::ELF::EF_HEXAGON_MACH_V67T)
+      .Case("hexagonv68", llvm::ELF::EF_HEXAGON_MACH_V68)
+      .Case("hexagonv69", llvm::ELF::EF_HEXAGON_MACH_V69);
 }
 
 llvm::ArrayRef<MCPhysReg> Hexagon_MC::GetVectRegRev() {

@@ -231,6 +231,18 @@ define <vscale x 4 x half> @ld1_nxv4f16(half* %addr, i64 %off) {
   ret <vscale x 4 x half> %val
 }
 
+define <vscale x 4 x bfloat> @ld1_nxv4bf16(bfloat* %addr, i64 %off) {
+; CHECK-LABEL: ld1_nxv4bf16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.s
+; CHECK-NEXT:    ld1h { z0.s }, p0/z, [x0, x1, lsl #1]
+; CHECK-NEXT:    ret
+  %ptr = getelementptr inbounds bfloat, bfloat* %addr, i64 %off
+  %ptrcast = bitcast bfloat* %ptr to <vscale x 4 x bfloat>*
+  %val = load volatile <vscale x 4 x bfloat>, <vscale x 4 x bfloat>* %ptrcast
+  ret <vscale x 4 x bfloat> %val
+}
+
 define <vscale x 2 x half> @ld1_nxv2f16(half* %addr, i64 %off) {
 ; CHECK-LABEL: ld1_nxv2f16:
 ; CHECK:       // %bb.0:
@@ -241,6 +253,18 @@ define <vscale x 2 x half> @ld1_nxv2f16(half* %addr, i64 %off) {
   %ptrcast = bitcast half* %ptr to <vscale x 2 x half>*
   %val = load volatile <vscale x 2 x half>, <vscale x 2 x half>* %ptrcast
   ret <vscale x 2 x half> %val
+}
+
+define <vscale x 2 x bfloat> @ld1_nxv2bf16(bfloat* %addr, i64 %off) {
+; CHECK-LABEL: ld1_nxv2bf16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    ld1h { z0.d }, p0/z, [x0, x1, lsl #1]
+; CHECK-NEXT:    ret
+  %ptr = getelementptr inbounds bfloat, bfloat* %addr, i64 %off
+  %ptrcast = bitcast bfloat* %ptr to <vscale x 2 x bfloat>*
+  %val = load volatile <vscale x 2 x bfloat>, <vscale x 2 x bfloat>* %ptrcast
+  ret <vscale x 2 x bfloat> %val
 }
 
 ; LD1W

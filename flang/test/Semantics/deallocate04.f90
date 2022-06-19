@@ -1,5 +1,4 @@
-! RUN: %S/test_errors.sh %s %t %flang_fc1
-! REQUIRES: shell
+! RUN: %python %S/test_errors.py %s %flang_fc1
 ! Check for type errors in DEALLOCATE statements
 
 INTEGER, PARAMETER :: maxvalue=1024

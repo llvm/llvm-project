@@ -41,13 +41,13 @@ public:
     MachineWcemIpsv2 = 0x169
   };
 
-  ObjectFilePECOFF(const lldb::ModuleSP &module_sp, lldb::DataBufferSP &data_sp,
+  ObjectFilePECOFF(const lldb::ModuleSP &module_sp, lldb::DataBufferSP data_sp,
                    lldb::offset_t data_offset,
                    const lldb_private::FileSpec *file,
                    lldb::offset_t file_offset, lldb::offset_t length);
 
   ObjectFilePECOFF(const lldb::ModuleSP &module_sp,
-                   lldb::DataBufferSP &header_data_sp,
+                   lldb::WritableDataBufferSP header_data_sp,
                    const lldb::ProcessSP &process_sp, lldb::addr_t header_addr);
 
   ~ObjectFilePECOFF() override;
@@ -55,19 +55,21 @@ public:
   // Static Functions
   static void Initialize();
 
+  static void DebuggerInitialize(lldb_private::Debugger &debugger);
+
   static void Terminate();
 
-  static lldb_private::ConstString GetPluginNameStatic();
+  static llvm::StringRef GetPluginNameStatic() { return "pe-coff"; }
 
-  static const char *GetPluginDescriptionStatic();
+  static llvm::StringRef GetPluginDescriptionStatic();
 
   static ObjectFile *
-  CreateInstance(const lldb::ModuleSP &module_sp, lldb::DataBufferSP &data_sp,
+  CreateInstance(const lldb::ModuleSP &module_sp, lldb::DataBufferSP data_sp,
                  lldb::offset_t data_offset, const lldb_private::FileSpec *file,
                  lldb::offset_t offset, lldb::offset_t length);
 
   static lldb_private::ObjectFile *CreateMemoryInstance(
-      const lldb::ModuleSP &module_sp, lldb::DataBufferSP &data_sp,
+      const lldb::ModuleSP &module_sp, lldb::WritableDataBufferSP data_sp,
       const lldb::ProcessSP &process_sp, lldb::addr_t header_addr);
 
   static size_t GetModuleSpecifications(const lldb_private::FileSpec &file,
@@ -82,7 +84,7 @@ public:
                        lldb::SaveCoreStyle &core_style,
                        lldb_private::Status &error);
 
-  static bool MagicBytesMatch(lldb::DataBufferSP &data_sp);
+  static bool MagicBytesMatch(lldb::DataBufferSP data_sp);
 
   static lldb::SymbolType MapSymbolType(uint16_t coff_symbol_type);
 
@@ -107,7 +109,7 @@ public:
   //    virtual lldb_private::AddressClass
   //    GetAddressClass (lldb::addr_t file_addr);
 
-  lldb_private::Symtab *GetSymtab() override;
+  void ParseSymtab(lldb_private::Symtab &symtab) override;
 
   bool IsStripped() override;
 
@@ -118,6 +120,10 @@ public:
   lldb_private::ArchSpec GetArchitecture() override;
 
   lldb_private::UUID GetUUID() override;
+
+  /// Return the contents of the .gnu_debuglink section, if the object file
+  /// contains it.
+  llvm::Optional<lldb_private::FileSpec> GetDebugLink();
 
   uint32_t GetDependentModules(lldb_private::FileSpecList &files) override;
 
@@ -130,9 +136,7 @@ public:
   ObjectFile::Strata CalculateStrata() override;
 
   // PluginInterface protocol
-  lldb_private::ConstString GetPluginName() override;
-
-  uint32_t GetPluginVersion() override;
+  llvm::StringRef GetPluginName() override { return GetPluginNameStatic(); }
 
   bool IsWindowsSubsystem();
 

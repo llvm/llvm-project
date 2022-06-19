@@ -90,7 +90,7 @@ TEST(AddressSanitizerInterface, GetCurrentAllocatedBytesTest) {
 TEST(AddressSanitizerInterface, GetHeapSizeTest) {
   // ASan allocator does not keep huge chunks in free list, but unmaps them.
   // The chunk should be greater than the quarantine size,
-  // otherwise it will be stuck in quarantine instead of being unmaped.
+  // otherwise it will be stuck in quarantine instead of being unmapped.
   static const size_t kLargeMallocSize = (1 << 28) + 1;  // 256M
   free(Ident(malloc(kLargeMallocSize)));  // Drain quarantine.
   size_t old_heap_size = __sanitizer_get_heap_size();
@@ -160,7 +160,6 @@ TEST(AddressSanitizerInterface, DeathCallbackTest) {
 #define BAD_ACCESS(ptr, offset) \
     EXPECT_TRUE(__asan_address_is_poisoned(ptr + offset))
 
-#if !defined(ASAN_SHADOW_SCALE) || ASAN_SHADOW_SCALE == 3
 static const char* kUseAfterPoisonErrorMessage = "use-after-poison";
 
 TEST(AddressSanitizerInterface, SimplePoisonMemoryRegionTest) {
@@ -200,7 +199,6 @@ TEST(AddressSanitizerInterface, OverlappingPoisonMemoryRegionTest) {
   BAD_ACCESS(array, 96);
   free(array);
 }
-#endif  // !defined(ASAN_SHADOW_SCALE) || ASAN_SHADOW_SCALE == 3
 
 TEST(AddressSanitizerInterface, PushAndPopWithPoisoningTest) {
   // Vector of capacity 20
@@ -415,6 +413,9 @@ TEST(AddressSanitizerInterface, HandleNoReturnTest) {
   __asan_poison_memory_region(array, sizeof(array));
   BAD_ACCESS(array, 20);
   __asan_handle_no_return();
+  // Fake stack does not need to be unpoisoned.
+  if (__asan_get_current_fake_stack())
+    return;
   // It unpoisons the whole thread stack.
   GOOD_ACCESS(array, 20);
 }

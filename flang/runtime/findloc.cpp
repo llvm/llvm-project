@@ -9,10 +9,9 @@
 // Implements FINDLOC for all required operand types and shapes and result
 // integer kinds.
 
-#include "character.h"
 #include "reduction-templates.h"
-#include "reduction.h"
-#include "flang/Common/long-double.h"
+#include "flang/Runtime/character.h"
+#include "flang/Runtime/reduction.h"
 #include <cinttypes>
 #include <complex>
 
@@ -248,7 +247,7 @@ void RTNAME(Findloc)(Descriptor &result, const Descriptor &x,
     break;
   default:
     terminator.Crash(
-        "FINDLOC: Bad data type code (%d) for array", x.type().raw());
+        "FINDLOC: bad data type code (%d) for array", x.type().raw());
   }
 }
 } // extern "C"
@@ -335,7 +334,7 @@ void RTNAME(FindlocDim)(Descriptor &result, const Descriptor &x,
     break;
   default:
     terminator.Crash(
-        "FINDLOC: Bad data type code (%d) for array", x.type().raw());
+        "FINDLOC: bad data type code (%d) for array", x.type().raw());
   }
 }
 } // extern "C"

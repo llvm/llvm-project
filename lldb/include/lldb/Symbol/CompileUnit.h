@@ -208,9 +208,9 @@ public:
   ///     unit file.
   ///
   /// \param[in] exact
-  ///     If \btrue match only if there is a line table entry for this line
+  ///     If \b true match only if there is a line table entry for this line
   ///     number.
-  ///     If \bfalse, find the line table entry equal to or after this line
+  ///     If \b false, find the line table entry equal to or after this line
   ///     number.
   ///
   /// \param[out] line_entry
@@ -332,6 +332,7 @@ public:
   void SetLineTable(LineTable *line_table);
 
   void SetSupportFiles(const FileSpecList &support_files);
+  void SetSupportFiles(FileSpecList &&support_files);
 
   void SetDebugMacros(const DebugMacrosSP &debug_macros);
 
@@ -442,6 +443,7 @@ private:
 
   CompileUnit(const CompileUnit &) = delete;
   const CompileUnit &operator=(const CompileUnit &) = delete;
+  const char *GetCachedLanguage() const;
 };
 
 } // namespace lldb_private

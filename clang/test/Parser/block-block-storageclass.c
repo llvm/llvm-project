@@ -3,7 +3,7 @@
 int printf(const char *, ...);
 void _Block_byref_release(void*src){}
 
-int main() {
+int main(void) {
    __block  int X = 1234;
    __block  const char * message = "HELLO";
 

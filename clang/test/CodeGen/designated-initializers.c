@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple i386-unknown-unknown %s -emit-llvm -o - | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -triple i386-unknown-unknown %s -emit-llvm -o - | FileCheck %s
 
 struct foo {
     void *a;
@@ -181,7 +181,7 @@ struct S {
   };
 };
 
-void test2() {
+void test2(void) {
   struct S *btkr;
   
   *btkr = (struct S) {

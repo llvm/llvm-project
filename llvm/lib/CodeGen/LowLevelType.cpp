@@ -15,7 +15,6 @@
 #include "llvm/ADT/APFloat.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/DerivedTypes.h"
-#include "llvm/Support/raw_ostream.h"
 using namespace llvm;
 
 LLT llvm::getLLTForType(Type &Ty, const DataLayout &DL) {
@@ -50,6 +49,16 @@ MVT llvm::getMVTForLLT(LLT Ty) {
   return MVT::getVectorVT(
       MVT::getIntegerVT(Ty.getElementType().getSizeInBits()),
       Ty.getNumElements());
+}
+
+EVT llvm::getApproximateEVTForLLT(LLT Ty, const DataLayout &DL,
+                                  LLVMContext &Ctx) {
+  if (Ty.isVector()) {
+    EVT EltVT = getApproximateEVTForLLT(Ty.getElementType(), DL, Ctx);
+    return EVT::getVectorVT(Ctx, EltVT, Ty.getElementCount());
+  }
+
+  return EVT::getIntegerVT(Ctx, Ty.getSizeInBits());
 }
 
 LLT llvm::getLLTForMVT(MVT Ty) {

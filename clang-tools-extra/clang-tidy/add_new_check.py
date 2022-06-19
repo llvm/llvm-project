@@ -9,18 +9,24 @@
 #===-----------------------------------------------------------------------===#
 
 from __future__ import print_function
+from __future__ import unicode_literals
 
 import argparse
+import io
 import os
 import re
 import sys
-
 
 # Adapts the module's CMakelist file. Returns 'True' if it could add a new
 # entry and 'False' if the entry already existed.
 def adapt_cmake(module_path, check_name_camel):
   filename = os.path.join(module_path, 'CMakeLists.txt')
-  with open(filename, 'r') as f:
+
+  # The documentation files are encoded using UTF-8, however on Windows the
+  # default encoding might be different (e.g. CP-1252). To make sure UTF-8 is
+  # always used, use `io.open(filename, mode, encoding='utf8')` for reading and
+  # writing files here and elsewhere.
+  with io.open(filename, 'r', encoding='utf8') as f:
     lines = f.readlines()
 
   cpp_file = check_name_camel + '.cpp'
@@ -31,7 +37,7 @@ def adapt_cmake(module_path, check_name_camel):
       return False
 
   print('Updating %s...' % filename)
-  with open(filename, 'w') as f:
+  with io.open(filename, 'w', encoding='utf8', newline='\n') as f:
     cpp_found = False
     file_added = False
     for line in lines:
@@ -48,10 +54,9 @@ def adapt_cmake(module_path, check_name_camel):
 
 # Adds a header for the new check.
 def write_header(module_path, module, namespace, check_name, check_name_camel):
-  check_name_dashes = module + '-' + check_name
   filename = os.path.join(module_path, check_name_camel) + '.h'
   print('Creating %s...' % filename)
-  with open(filename, 'w') as f:
+  with io.open(filename, 'w', encoding='utf8', newline='\n') as f:
     header_guard = ('LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_' + module.upper() + '_'
                     + check_name_camel.upper() + '_H')
     f.write('//===--- ')
@@ -79,10 +84,10 @@ namespace %(namespace)s {
 /// FIXME: Write a short description.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/%(check_name_dashes)s.html
-class %(check_name)s : public ClangTidyCheck {
+/// http://clang.llvm.org/extra/clang-tidy/checks/%(module)s/%(check_name)s.html
+class %(check_name_camel)s : public ClangTidyCheck {
 public:
-  %(check_name)s(StringRef Name, ClangTidyContext *Context)
+  %(check_name_camel)s(StringRef Name, ClangTidyContext *Context)
       : ClangTidyCheck(Name, Context) {}
   void registerMatchers(ast_matchers::MatchFinder *Finder) override;
   void check(const ast_matchers::MatchFinder::MatchResult &Result) override;
@@ -94,8 +99,8 @@ public:
 
 #endif // %(header_guard)s
 """ % {'header_guard': header_guard,
-       'check_name': check_name_camel,
-       'check_name_dashes': check_name_dashes,
+       'check_name_camel': check_name_camel,
+       'check_name': check_name,
        'module': module,
        'namespace': namespace})
 
@@ -104,7 +109,7 @@ public:
 def write_implementation(module_path, module, namespace, check_name_camel):
   filename = os.path.join(module_path, check_name_camel) + '.cpp'
   print('Creating %s...' % filename)
-  with open(filename, 'w') as f:
+  with io.open(filename, 'w', encoding='utf8', newline='\n') as f:
     f.write('//===--- ')
     f.write(os.path.basename(filename))
     f.write(' - clang-tidy ')
@@ -152,17 +157,22 @@ void %(check_name)s::check(const MatchFinder::MatchResult &Result) {
        'namespace': namespace})
 
 
-# Modifies the module to include the new check.
-def adapt_module(module_path, module, check_name, check_name_camel):
+# Returns the source filename that implements the module.
+def get_module_filename(module_path, module):
   modulecpp = list(filter(
       lambda p: p.lower() == module.lower() + 'tidymodule.cpp',
       os.listdir(module_path)))[0]
-  filename = os.path.join(module_path, modulecpp)
-  with open(filename, 'r') as f:
+  return os.path.join(module_path, modulecpp)
+
+
+# Modifies the module to include the new check.
+def adapt_module(module_path, module, check_name, check_name_camel):
+  filename = get_module_filename(module_path, module)
+  with io.open(filename, 'r', encoding='utf8') as f:
     lines = f.readlines()
 
   print('Updating %s...' % filename)
-  with open(filename, 'w') as f:
+  with io.open(filename, 'w', encoding='utf8', newline='\n') as f:
     header_added = False
     header_found = False
     check_added = False
@@ -217,7 +227,7 @@ def add_release_notes(module_path, module, check_name):
   check_name_dashes = module + '-' + check_name
   filename = os.path.normpath(os.path.join(module_path,
                                            '../../docs/ReleaseNotes.rst'))
-  with open(filename, 'r') as f:
+  with io.open(filename, 'r', encoding='utf8') as f:
     lines = f.readlines()
 
   lineMatcher = re.compile('New checks')
@@ -225,7 +235,7 @@ def add_release_notes(module_path, module, check_name):
   checkMatcher = re.compile('- New :doc:`(.*)')
 
   print('Updating %s...' % filename)
-  with open(filename, 'w') as f:
+  with io.open(filename, 'w', encoding='utf8', newline='\n') as f:
     note_added = False
     header_found = False
     add_note_here = False
@@ -255,11 +265,11 @@ def add_release_notes(module_path, module, check_name):
         if header_found and add_note_here:
           if not line.startswith('^^^^'):
             f.write("""- New :doc:`%s
-  <clang-tidy/checks/%s>` check.
+  <clang-tidy/checks/%s/%s>` check.
 
   FIXME: add release notes.
 
-""" % (check_name_dashes, check_name_dashes))
+""" % (check_name_dashes, module, check_name))
             note_added = True
 
       f.write(line)
@@ -271,7 +281,7 @@ def write_test(module_path, module, check_name, test_extension):
   filename = os.path.normpath(os.path.join(module_path, '../../test/clang-tidy/checkers',
                                            check_name_dashes + '.' + test_extension))
   print('Creating %s...' % filename)
-  with open(filename, 'w') as f:
+  with io.open(filename, 'w', encoding='utf8', newline='\n') as f:
     f.write("""// RUN: %%check_clang_tidy %%s %(check_name_dashes)s %%t
 
 // FIXME: Add something that triggers the check here.
@@ -291,7 +301,7 @@ void awesome_f2();
 
 def get_actual_filename(dirname, filename):
   if not os.path.isdir(dirname): 
-    return ""
+    return ''
   name = os.path.join(dirname, filename)
   if (os.path.isfile(name)):
     return name
@@ -299,7 +309,7 @@ def get_actual_filename(dirname, filename):
   for file in os.listdir(dirname):
     if (file.lower() == caselessname):
       return os.path.join(dirname, file)
-  return ""
+  return ''
 
 
 # Recreates the list of checks in the docs/clang-tidy/checks directory.
@@ -307,33 +317,116 @@ def update_checks_list(clang_tidy_path):
   docs_dir = os.path.join(clang_tidy_path, '../docs/clang-tidy/checks')
   filename = os.path.normpath(os.path.join(docs_dir, 'list.rst'))
   # Read the content of the current list.rst file
-  with open(filename, 'r') as f:
+  with io.open(filename, 'r', encoding='utf8') as f:
     lines = f.readlines()
   # Get all existing docs
-  doc_files = list(filter(lambda s: s.endswith('.rst') and s != 'list.rst',
-                     os.listdir(docs_dir)))
+  doc_files = []
+  for subdir in list(filter(lambda s: not s.endswith('.rst') and not s.endswith('.py'),
+                     os.listdir(docs_dir))):
+    for file in filter(lambda s: s.endswith('.rst'), os.listdir(os.path.join(docs_dir, subdir))):
+      doc_files.append([subdir, file])
   doc_files.sort()
 
-  def has_auto_fix(check_name):
-    dirname, _, check_name = check_name.partition("-")
-
-    checkerCode = get_actual_filename(dirname,
-                                      get_camel_name(check_name) + '.cpp')
-
-    if not os.path.isfile(checkerCode):
-      return ""
-
-    with open(checkerCode) as f:
+  # We couldn't find the source file from the check name, so try to find the
+  # class name that corresponds to the check in the module file.
+  def filename_from_module(module_name, check_name):
+    module_path = os.path.join(clang_tidy_path, module_name)
+    if not os.path.isdir(module_path):
+      return ''
+    module_file = get_module_filename(module_path, module_name)
+    if not os.path.isfile(module_file):
+      return ''
+    with io.open(module_file, 'r') as f:
       code = f.read()
-      if 'FixItHint' in code or "ReplacementText" in code or "fixit" in code:
-        # Some simple heuristics to figure out if a checker has an autofix or not.
+      full_check_name = module_name + '-' + check_name
+      name_pos = code.find('"' + full_check_name + '"')
+      if name_pos == -1:
+        return ''
+      stmt_end_pos = code.find(';', name_pos)
+      if stmt_end_pos == -1:
+        return ''
+      stmt_start_pos = code.rfind(';', 0, name_pos)
+      if stmt_start_pos == -1:
+        stmt_start_pos = code.rfind('{', 0, name_pos)
+      if stmt_start_pos == -1:
+        return ''
+      stmt = code[stmt_start_pos+1:stmt_end_pos]
+      matches = re.search('registerCheck<([^>:]*)>\(\s*"([^"]*)"\s*\)', stmt)
+      if matches and matches[2] == full_check_name:
+        class_name = matches[1]
+        if '::' in class_name:
+          parts = class_name.split('::')
+          class_name = parts[-1]
+          class_path = os.path.join(clang_tidy_path, module_name, '..', *parts[0:-1])
+        else:
+          class_path = os.path.join(clang_tidy_path, module_name)
+        return get_actual_filename(class_path, class_name + '.cpp')
+
+    return ''
+
+  # Examine code looking for a c'tor definition to get the base class name.
+  def get_base_class(code, check_file):
+    check_class_name = os.path.splitext(os.path.basename(check_file))[0]
+    ctor_pattern = check_class_name + '\([^:]*\)\s*:\s*([A-Z][A-Za-z0-9]*Check)\('
+    matches = re.search('\s+' + check_class_name + '::' + ctor_pattern, code)
+
+    # The constructor might be inline in the header.
+    if not matches:
+      header_file = os.path.splitext(check_file)[0] + '.h'
+      if not os.path.isfile(header_file):
+        return ''
+      with io.open(header_file, encoding='utf8') as f:
+        code = f.read()
+      matches = re.search(' ' + ctor_pattern, code)
+
+    if matches and matches[1] != 'ClangTidyCheck':
+      return matches[1]
+    return ''
+
+  # Some simple heuristics to figure out if a check has an autofix or not.
+  def has_fixits(code):
+    for needle in ['FixItHint', 'ReplacementText', 'fixit',
+                   'TransformerClangTidyCheck']:
+      if needle in code:
+        return True
+    return False
+
+  # Try to figure out of the check supports fixits.
+  def has_auto_fix(check_name):
+    dirname, _, check_name = check_name.partition('-')
+
+    check_file = get_actual_filename(os.path.join(clang_tidy_path, dirname),
+                                       get_camel_check_name(check_name) + '.cpp')
+    if not os.path.isfile(check_file):
+      # Some older checks don't end with 'Check.cpp'
+      check_file = get_actual_filename(os.path.join(clang_tidy_path, dirname),
+                                         get_camel_name(check_name) + '.cpp')
+      if not os.path.isfile(check_file):
+        # Some checks aren't in a file based on the check name.
+        check_file = filename_from_module(dirname, check_name)
+        if not check_file or not os.path.isfile(check_file):
+          return ''
+
+    with io.open(check_file, encoding='utf8') as f:
+      code = f.read()
+      if has_fixits(code):
         return ' "Yes"'
-    return ""
+
+    base_class = get_base_class(code, check_file)
+    if base_class:
+      base_file = os.path.join(clang_tidy_path, dirname, base_class + '.cpp')
+      if os.path.isfile(base_file):
+        with io.open(base_file, encoding='utf8') as f:
+          code = f.read()
+          if has_fixits(code):
+            return ' "Yes"'
+
+    return ''
 
   def process_doc(doc_file):
-    check_name = doc_file.replace('.rst', '')
+    check_name = doc_file[0] + '-' + doc_file[1].replace('.rst', '')
 
-    with open(os.path.join(docs_dir, doc_file), 'r') as doc:
+    with io.open(os.path.join(docs_dir, *doc_file), 'r', encoding='utf8') as doc:
       content = doc.read()
       match = re.search('.*:orphan:.*', content)
 
@@ -341,7 +434,7 @@ def update_checks_list(clang_tidy_path):
         # Orphan page, don't list it.
         return '', ''
 
-      match = re.search('.*:http-equiv=refresh: \d+;URL=(.*).html.*',
+      match = re.search('.*:http-equiv=refresh: \d+;URL=(.*).html(.*)',
                         content)
       # Is it a redirect?
       return check_name, match
@@ -349,8 +442,10 @@ def update_checks_list(clang_tidy_path):
   def format_link(doc_file):
     check_name, match = process_doc(doc_file)
     if not match and check_name:
-      return '   `%(check)s <%(check)s.html>`_,%(autofix)s\n' % {
-        'check': check_name,
+      return '   `%(check_name)s <%(module)s/%(check)s.html>`_,%(autofix)s\n' % {
+        'check_name': check_name,
+        'module': doc_file[0],
+        'check': doc_file[1].replace('.rst', ''),
         'autofix': has_auto_fix(check_name)
       }
     else:
@@ -359,16 +454,27 @@ def update_checks_list(clang_tidy_path):
   def format_link_alias(doc_file):
     check_name, match = process_doc(doc_file)
     if match and check_name:
+      module = doc_file[0]
+      check_file = doc_file[1].replace('.rst', '')
       if match.group(1) == 'https://clang.llvm.org/docs/analyzer/checkers':
-        title_redirect = 'Clang Static Analyzer'
+        title = 'Clang Static Analyzer ' + check_file
+        # Preserve the anchor in checkers.html from group 2.
+        target = match.group(1) + '.html' + match.group(2)
+        autofix = ''
       else:
-        title_redirect = match.group(1)
+        redirect_parts = re.search('^\.\./([^/]*)/([^/]*)$', match.group(1))
+        title = redirect_parts[1] + '-' + redirect_parts[2]
+        target = redirect_parts[1] + '/' + redirect_parts[2] + '.html'
+        autofix = has_auto_fix(title)
+
       # The checker is just a redirect.
-      return '   `%(check)s <%(check)s.html>`_, `%(title)s <%(target)s.html>`_,%(autofix)s\n' % {
-        'check': check_name,
-        'target': match.group(1),
-        'title': title_redirect,
-        'autofix': has_auto_fix(match.group(1))
+      return '   `%(check_name)s <%(module)s/%(check_file)s.html>`_, `%(title)s <%(target)s>`_,%(autofix)s\n' % {
+        'check_name': check_name,
+        'module': module,
+        'check_file': check_file,
+        'target': target,
+        'title': title,
+        'autofix': autofix
       }
     return ''
 
@@ -376,10 +482,10 @@ def update_checks_list(clang_tidy_path):
   checks_alias = map(format_link_alias, doc_files)
 
   print('Updating %s...' % filename)
-  with open(filename, 'w') as f:
+  with io.open(filename, 'w', encoding='utf8', newline='\n') as f:
     for line in lines:
       f.write(line)
-      if line.strip() == ".. csv-table::":
+      if line.strip() == '.. csv-table::':
         # We dump the checkers
         f.write('   :header: "Name", "Offers fixes"\n\n')
         f.writelines(checks)
@@ -395,9 +501,9 @@ def update_checks_list(clang_tidy_path):
 def write_docs(module_path, module, check_name):
   check_name_dashes = module + '-' + check_name
   filename = os.path.normpath(os.path.join(
-      module_path, '../../docs/clang-tidy/checks/', check_name_dashes + '.rst'))
+      module_path, '../../docs/clang-tidy/checks/', module, check_name + '.rst'))
   print('Creating %s...' % filename)
-  with open(filename, 'w') as f:
+  with io.open(filename, 'w', encoding='utf8', newline='\n') as f:
     f.write(""".. title:: clang-tidy - %(check_name_dashes)s
 
 %(check_name_dashes)s
@@ -410,7 +516,11 @@ FIXME: Describe what patterns does the check detect and why. Give examples.
 
 def get_camel_name(check_name):
   return ''.join(map(lambda elem: elem.capitalize(),
-                     check_name.split('-'))) + 'Check'
+                     check_name.split('-')))
+
+
+def get_camel_check_name(check_name):
+  return get_camel_name(check_name) + 'Check'
 
 
 def main():
@@ -452,7 +562,7 @@ def main():
 
   module = args.module
   check_name = args.check
-  check_name_camel = get_camel_name(check_name)
+  check_name_camel = get_camel_check_name(check_name)
   if check_name.startswith(module):
     print('Check name "%s" must not start with the module "%s". Exiting.' % (
         check_name, module))

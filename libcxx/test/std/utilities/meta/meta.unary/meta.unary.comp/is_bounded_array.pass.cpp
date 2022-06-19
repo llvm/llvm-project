@@ -32,9 +32,6 @@ void test_array()
     test_array_imp<const volatile T, B>();
 }
 
-typedef char array[3];
-typedef char incomplete_array[];
-
 class incomplete_type;
 
 class Empty {};
@@ -65,8 +62,9 @@ int main(int, char**)
     test_array<FunctionPtr,    false>();
 
 //  Array types
-    test_array<array,             true>();
-    test_array<incomplete_array,  false>();
+    test_array<char[3],           true>();
+    test_array<int[0],            false>();
+    test_array<char[],            false>();
     test_array<incomplete_type[], false>();
 
   return 0;

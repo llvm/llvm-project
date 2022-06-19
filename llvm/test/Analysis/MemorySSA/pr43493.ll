@@ -1,4 +1,4 @@
-; RUN: opt -enable-mssa-loop-dependency=true -loop-rotate -verify-memoryssa -S %s | FileCheck %s
+; RUN: opt -loop-rotate -verify-memoryssa -S %s | FileCheck %s
 ; REQUIRES: asserts
 
 ; CHECK-LABEL: @func_35()

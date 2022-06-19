@@ -1,7 +1,7 @@
 // RUN: %clang_cc1 -triple=x86_64-apple-darwin -fsyntax-only -verify %s
 // PR6913
 
-int main()
+int main(void)
 {
    int x[10][10];
    int (*p)[] = x;
@@ -10,7 +10,7 @@ int main()
 
    for(i = 0; i < 10; ++i)
    {
-       p[i][i] = i; // expected-error {{subscript of pointer to incomplete type 'int []'}}
+       p[i][i] = i; // expected-error {{subscript of pointer to incomplete type 'int[]'}}
    }
 }
 

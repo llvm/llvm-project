@@ -1,6 +1,6 @@
 // Check typeid() + type_info
 
-// RUN: %clang_cc1 %s -triple=aarch64-unknown-fuchsia -O3 -S -o - -emit-llvm -fcxx-exceptions -fexceptions | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers %s -triple=aarch64-unknown-fuchsia -O3 -S -o - -emit-llvm -fcxx-exceptions -fexceptions | FileCheck %s
 
 // CHECK: %class.A = type { i32 (...)** }
 // CHECK: %class.B = type { %class.A }
@@ -28,7 +28,7 @@
 // CHECK-NEXT:   ret i8* getelementptr inbounds ([3 x i8], [3 x i8]* @_ZTS1A, i64 0, i64 0)
 // CHECK-NEXT: }
 
-// CHECK:      define{{.*}} i1 @_Z5equalP1A(%class.A* readonly %a) local_unnamed_addr
+// CHECK:      define{{.*}} i1 @_Z5equalP1A(%class.A* noundef readonly %a) local_unnamed_addr
 // CHECK-NEXT: entry:
 // CHECK-NEXT:   [[isnull:%[0-9]+]] = icmp eq %class.A* %a, null
 // CHECK-NEXT:   br i1 [[isnull]], label %[[bad_typeid:[a-z0-9._]+]], label %[[end:[a-z0-9.+]+]]

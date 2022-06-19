@@ -1,6 +1,6 @@
 ; RUN: lli -jit-kind=orc-lazy %s
 ;
-; Basic sanity check: We can make a call inside lazily JIT'd code.
+; Basic correctness check: We can make a call inside lazily JIT'd code.
 ; Compared to minimal.ll, this demonstrates that we can call through a stub.
 
 define i32 @foo() {

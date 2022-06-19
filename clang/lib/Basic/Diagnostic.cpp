@@ -374,6 +374,12 @@ void DiagnosticsEngine::setSeverity(diag::kind Diag, diag::Severity Map,
   DiagnosticMapping Mapping = makeUserMapping(Map, L);
   Mapping.setUpgradedFromWarning(WasUpgradedFromWarning);
 
+  // Make sure we propagate the NoWarningAsError flag from an existing
+  // mapping (which may be the default mapping).
+  DiagnosticMapping &Info = GetCurDiagState()->getOrAddMapping(Diag);
+  Mapping.setNoWarningAsError(Info.hasNoWarningAsError() ||
+                              Mapping.hasNoWarningAsError());
+
   // Common case; setting all the diagnostics of a group in one place.
   if ((L.isInvalid() || L == DiagStatesByLoc.getCurDiagStateLoc()) &&
       DiagStatesByLoc.getCurDiagState()) {
@@ -406,6 +412,14 @@ bool DiagnosticsEngine::setSeverityForGroup(diag::Flavor Flavor,
     setSeverity(Diag, Map, Loc);
 
   return false;
+}
+
+bool DiagnosticsEngine::setSeverityForGroup(diag::Flavor Flavor,
+                                            diag::Group Group,
+                                            diag::Severity Map,
+                                            SourceLocation Loc) {
+  return setSeverityForGroup(Flavor, Diags->getWarningOptionForGroup(Group),
+                             Map, Loc);
 }
 
 bool DiagnosticsEngine::setDiagnosticGroupWarningAsError(StringRef Group,
@@ -924,7 +938,7 @@ FormatDiagnostic(const char *DiagStr, const char *DiagEnd,
     }
     // ---- INTEGERS ----
     case DiagnosticsEngine::ak_sint: {
-      int Val = getArgSInt(ArgNo);
+      int64_t Val = getArgSInt(ArgNo);
 
       if (ModifierIs(Modifier, ModifierLen, "select")) {
         HandleSelectModifier(*this, (unsigned)Val, Argument, ArgumentLen,
@@ -943,7 +957,7 @@ FormatDiagnostic(const char *DiagStr, const char *DiagEnd,
       break;
     }
     case DiagnosticsEngine::ak_uint: {
-      unsigned Val = getArgUInt(ArgNo);
+      uint64_t Val = getArgUInt(ArgNo);
 
       if (ModifierIs(Modifier, ModifierLen, "select")) {
         HandleSelectModifier(*this, Val, Argument, ArgumentLen, OutStr);
@@ -969,13 +983,13 @@ FormatDiagnostic(const char *DiagStr, const char *DiagEnd,
       if (const char *S = tok::getPunctuatorSpelling(Kind))
         // Quoted token spelling for punctuators.
         Out << '\'' << S << '\'';
-      else if (const char *S = tok::getKeywordSpelling(Kind))
+      else if ((S = tok::getKeywordSpelling(Kind)))
         // Unquoted token spelling for keywords.
         Out << S;
-      else if (const char *S = getTokenDescForDiagnostic(Kind))
+      else if ((S = getTokenDescForDiagnostic(Kind)))
         // Unquoted translatable token name.
         Out << S;
-      else if (const char *S = tok::getTokenName(Kind))
+      else if ((S = tok::getTokenName(Kind)))
         // Debug name, shouldn't appear in user-facing diagnostics.
         Out << '<' << S << '>';
       else
@@ -1122,6 +1136,14 @@ StoredDiagnostic::StoredDiagnostic(DiagnosticsEngine::Level Level, unsigned ID,
     : ID(ID), Level(Level), Loc(Loc), Message(Message),
       Ranges(Ranges.begin(), Ranges.end()), FixIts(FixIts.begin(), FixIts.end())
 {
+}
+
+llvm::raw_ostream &clang::operator<<(llvm::raw_ostream &OS,
+                                     const StoredDiagnostic &SD) {
+  if (SD.getLocation().hasManager())
+    OS << SD.getLocation().printToString(SD.getLocation().getManager()) << ": ";
+  OS << SD.getMessage();
+  return OS;
 }
 
 /// IncludeInDiagnosticCounts - This method (whose default implementation

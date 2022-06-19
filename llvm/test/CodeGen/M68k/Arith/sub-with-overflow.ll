@@ -11,24 +11,24 @@ declare {i32, i1} @llvm.usub.with.overflow.i32(i32, i32)
 define i1 @func1(i32 %v1, i32 %v2) nounwind {
 ; CHECK-LABEL: func1:
 ; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    sub.l #12, %sp
+; CHECK-NEXT:    suba.l #12, %sp
 ; CHECK-NEXT:    move.l (16,%sp), %d0
 ; CHECK-NEXT:    sub.l (20,%sp), %d0
 ; CHECK-NEXT:    bvc .LBB0_1
 ; CHECK-NEXT:  ; %bb.2: ; %overflow
 ; CHECK-NEXT:    lea (no,%pc), %a0
 ; CHECK-NEXT:    move.l %a0, (%sp)
-; CHECK-NEXT:    jsr printf
+; CHECK-NEXT:    jsr printf@PLT
 ; CHECK-NEXT:    move.b #0, %d0
-; CHECK-NEXT:    add.l #12, %sp
+; CHECK-NEXT:    adda.l #12, %sp
 ; CHECK-NEXT:    rts
 ; CHECK-NEXT:  .LBB0_1: ; %normal
 ; CHECK-NEXT:    move.l %d0, (4,%sp)
 ; CHECK-NEXT:    lea (ok,%pc), %a0
 ; CHECK-NEXT:    move.l %a0, (%sp)
-; CHECK-NEXT:    jsr printf
+; CHECK-NEXT:    jsr printf@PLT
 ; CHECK-NEXT:    move.b #1, %d0
-; CHECK-NEXT:    add.l #12, %sp
+; CHECK-NEXT:    adda.l #12, %sp
 ; CHECK-NEXT:    rts
 entry:
   %t = call {i32, i1} @llvm.ssub.with.overflow.i32(i32 %v1, i32 %v2)
@@ -48,24 +48,24 @@ overflow:
 define i1 @func2(i32 %v1, i32 %v2) nounwind {
 ; CHECK-LABEL: func2:
 ; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    sub.l #12, %sp
+; CHECK-NEXT:    suba.l #12, %sp
 ; CHECK-NEXT:    move.l (16,%sp), %d0
 ; CHECK-NEXT:    sub.l (20,%sp), %d0
 ; CHECK-NEXT:    bcc .LBB1_1
 ; CHECK-NEXT:  ; %bb.2: ; %carry
 ; CHECK-NEXT:    lea (no,%pc), %a0
 ; CHECK-NEXT:    move.l %a0, (%sp)
-; CHECK-NEXT:    jsr printf
+; CHECK-NEXT:    jsr printf@PLT
 ; CHECK-NEXT:    move.b #0, %d0
-; CHECK-NEXT:    add.l #12, %sp
+; CHECK-NEXT:    adda.l #12, %sp
 ; CHECK-NEXT:    rts
 ; CHECK-NEXT:  .LBB1_1: ; %normal
 ; CHECK-NEXT:    move.l %d0, (4,%sp)
 ; CHECK-NEXT:    lea (ok,%pc), %a0
 ; CHECK-NEXT:    move.l %a0, (%sp)
-; CHECK-NEXT:    jsr printf
+; CHECK-NEXT:    jsr printf@PLT
 ; CHECK-NEXT:    move.b #1, %d0
-; CHECK-NEXT:    add.l #12, %sp
+; CHECK-NEXT:    adda.l #12, %sp
 ; CHECK-NEXT:    rts
 entry:
   %t = call {i32, i1} @llvm.usub.with.overflow.i32(i32 %v1, i32 %v2)

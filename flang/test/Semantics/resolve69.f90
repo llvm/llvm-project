@@ -1,5 +1,4 @@
-! RUN: %S/test_errors.sh %s %t %flang_fc1
-! REQUIRES: shell
+! RUN: %python %S/test_errors.py %s %flang_fc1
 subroutine s1()
   ! C701 (R701) The type-param-value for a kind type parameter shall be a
   ! constant expression.
@@ -65,3 +64,15 @@ Program d5
   line%value = 'ok'
   Print *,Trim(line%value)
 End Program
+
+!Not errors.
+subroutine outer
+  integer n
+ contains
+  character(n) function inner1()
+    inner1 = ''
+  end function inner1
+  function inner2()
+    real inner2(n)
+  end function inner2
+end subroutine outer

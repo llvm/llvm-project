@@ -15,14 +15,9 @@ clang_hwasan_common_cflags = clang_cflags + ["-fsanitize=hwaddress", "-fuse-ld=l
 
 if config.target_arch == 'x86_64' and config.enable_aliases == '1':
   clang_hwasan_common_cflags += ["-fsanitize-hwaddress-experimental-aliasing"]
-if config.enable_aliases != '1':
+else:
   config.available_features.add('pointer-tagging')
 if config.target_arch == 'x86_64':
-  # This does basically the same thing as tagged-globals on aarch64. Because
-  # the x86_64 implementation is for testing purposes only there is no
-  # equivalent target feature implemented on x86_64.
-  clang_hwasan_common_cflags += ["-mcmodel=large"]
-
   # The callback instrumentation used on x86_64 has a 1/64 chance of choosing a
   # stack tag of 0.  This causes stack tests to become flaky, so we force tags
   # to be generated via calls to __hwasan_generate_tag, which never returns 0.

@@ -44,10 +44,10 @@ TEST(CompilerInstance, SanityCheckForFileManager) {
 
   // 2. Set up CompilerInstance (i.e. specify the input file)
   std::string buf;
-  llvm::raw_string_ostream error_stream{buf};
+  llvm::raw_string_ostream errorStream{buf};
   CompilerInstance compInst;
   const Fortran::parser::SourceFile *sf =
-      compInst.allSources().Open(testFilePath, error_stream);
+      compInst.getAllSources().Open(testFilePath, errorStream);
 
   // 3. Verify the content of the input file
   // This is just a sanity check to make sure that CompilerInstance is capable
@@ -82,7 +82,7 @@ TEST(CompilerInstance, AllowDiagnosticLogWithUnownedDiagnosticConsumer) {
 
   // 4. Create a DiagnosticEngine with an unowned consumer
   IntrusiveRefCntPtr<clang::DiagnosticsEngine> diags =
-      compInst.CreateDiagnostics(diagOpts, diagPrinter.get(),
+      compInst.createDiagnostics(diagOpts, diagPrinter.get(),
           /*ShouldOwnClient=*/false);
 
   // 5. Report a diagnostic

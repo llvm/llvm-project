@@ -3,6 +3,7 @@ VERS1.0 {
     __tgt_register_requires;
     __tgt_register_lib;
     __tgt_unregister_lib;
+    __tgt_init_all_rtls;
     __tgt_target_data_begin;
     __tgt_target_data_end;
     __tgt_target_data_update;
@@ -39,7 +40,18 @@ VERS1.0 {
     llvm_omp_target_alloc_host;
     llvm_omp_target_alloc_shared;
     llvm_omp_target_alloc_device;
+    llvm_omp_target_dynamic_shared_alloc;
     __tgt_set_info_flag;
+    __tgt_print_device_info;
+    omp_get_interop_ptr;
+    omp_get_interop_str;
+    omp_get_interop_int;
+    omp_get_interop_name;
+    omp_get_interop_type_desc;
+    omp_get_interop_rc_desc;
+    __tgt_interop_init;
+    __tgt_interop_use;
+    __tgt_interop_destroy;
   local:
     *;
 };

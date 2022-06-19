@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -emit-llvm %s -verify -fno-rtti -triple %itanium_abi_triple -o - | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -emit-llvm %s -verify -fno-rtti -triple %itanium_abi_triple -o - | FileCheck %s
 // expected-no-diagnostics
 
 struct A {

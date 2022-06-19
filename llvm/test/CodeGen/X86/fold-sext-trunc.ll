@@ -35,7 +35,7 @@ declare void @llvm.dbg.value(metadata, metadata, metadata)
 !llvm.debugify = !{!3, !4}
 
 !0 = distinct !DICompileUnit(language: DW_LANG_C, file: !1, producer: "debugify", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, enums: !2)
-!1 = !DIFile(filename: "/Users/vsk/src/llvm.org-master/llvm/test/CodeGen/X86/fold-sext-trunc.ll", directory: "/")
+!1 = !DIFile(filename: "/Users/vsk/src/llvm.org-main/llvm/test/CodeGen/X86/fold-sext-trunc.ll", directory: "/")
 !2 = !{}
 !3 = !{i32 8}
 !4 = !{i32 6}

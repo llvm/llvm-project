@@ -26,25 +26,27 @@
 
 #include "ClangdLSPServer.h"
 #include "CodeComplete.h"
+#include "CompileCommands.h"
 #include "Config.h"
 #include "GlobalCompilationDatabase.h"
 #include "Hover.h"
+#include "InlayHints.h"
 #include "ParsedAST.h"
 #include "Preamble.h"
+#include "Protocol.h"
 #include "SourceCode.h"
 #include "XRefs.h"
 #include "index/CanonicalIncludes.h"
 #include "index/FileIndex.h"
 #include "refactor/Tweak.h"
 #include "support/ThreadsafeFS.h"
+#include "support/Trace.h"
 #include "clang/AST/ASTContext.h"
-#include "clang/Basic/DiagnosticIDs.h"
 #include "clang/Format/Format.h"
 #include "clang/Frontend/CompilerInvocation.h"
 #include "clang/Tooling/CompilationDatabase.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/Optional.h"
-#include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/Path.h"
 
 namespace clang {
@@ -126,6 +128,8 @@ public:
     Inputs.CompileCommand = Cmd;
     Inputs.TFS = &TFS;
     Inputs.ClangTidyProvider = Opts.ClangTidyProvider;
+    Inputs.Opts.PreambleParseForwardingFunctions =
+        Opts.PreambleParseForwardingFunctions;
     if (Contents.hasValue()) {
       Inputs.Contents = *Contents;
       log("Imaginary source file contents:\n{0}", Inputs.Contents);
@@ -158,16 +162,15 @@ public:
   // Build preamble and AST, and index them.
   bool buildAST() {
     log("Building preamble...");
-    Preamble =
-        buildPreamble(File, *Invocation, Inputs, /*StoreInMemory=*/true,
-                      [&](ASTContext &Ctx, std::shared_ptr<Preprocessor> PP,
-                          const CanonicalIncludes &Includes) {
-                        if (!Opts.BuildDynamicSymbolIndex)
-                          return;
-                        log("Indexing headers...");
-                        Index.updatePreamble(File, /*Version=*/"null", Ctx,
-                                             std::move(PP), Includes);
-                      });
+    Preamble = buildPreamble(File, *Invocation, Inputs, /*StoreInMemory=*/true,
+                             [&](ASTContext &Ctx, Preprocessor &PP,
+                                 const CanonicalIncludes &Includes) {
+                               if (!Opts.BuildDynamicSymbolIndex)
+                                 return;
+                               log("Indexing headers...");
+                               Index.updatePreamble(File, /*Version=*/"null",
+                                                    Ctx, PP, Includes);
+                             });
     if (!Preamble) {
       elog("Failed to build preamble");
       return false;
@@ -191,10 +194,20 @@ public:
     return true;
   }
 
+  // Build Inlay Hints for the entire AST or the specified range
+  void buildInlayHints(llvm::Optional<Range> LineRange) {
+    log("Building inlay hints");
+    auto Hints = inlayHints(*AST, LineRange);
+
+    for (const auto &Hint : Hints) {
+      vlog("  {0} {1} {2}", Hint.kind, Hint.position, Hint.label);
+    }
+  }
+
   // Run AST-based features at each token in the file.
-  void testLocationFeatures(
-      llvm::function_ref<bool(const Position &)> ShouldCheckLine,
-      const bool EnableCodeCompletion) {
+  void testLocationFeatures(llvm::Optional<Range> LineRange,
+                            const bool EnableCodeCompletion) {
+    trace::Span Trace("testLocationFeatures");
     log("Testing features at each token (may be slow in large files)");
     auto &SM = AST->getSourceManager();
     auto SpelledTokens = AST->getTokens().spelledTokens(SM.getMainFileID());
@@ -207,8 +220,12 @@ public:
       unsigned End = Start + Tok.length();
       Position Pos = offsetToPosition(Inputs.Contents, Start);
 
-      if (!ShouldCheckLine(Pos))
+      if (LineRange && !LineRange->contains(Pos))
         continue;
+
+      trace::Span Trace("Token");
+      SPAN_ATTACH(Trace, "pos", Pos);
+      SPAN_ATTACH(Trace, "text", Tok.text(AST->getSourceManager()));
 
       // FIXME: dumping the tokens may leak sensitive code into bug reports.
       // Add an option to turn this off, once we decide how options work.
@@ -238,6 +255,9 @@ public:
       auto Hover = getHover(*AST, Pos, Style, &Index);
       vlog("    hover: {0}", Hover.hasValue());
 
+      unsigned DocHighlights = findDocumentHighlights(*AST, Pos).size();
+      vlog("    documentHighlight: {0}", DocHighlights);
+
       if (EnableCodeCompletion) {
         Position EndPos = offsetToPosition(Inputs.Contents, End);
         auto CC = codeComplete(File, EndPos, Preamble.get(), Inputs, CCOpts);
@@ -250,8 +270,7 @@ public:
 
 } // namespace
 
-bool check(llvm::StringRef File,
-           llvm::function_ref<bool(const Position &)> ShouldCheckLine,
+bool check(llvm::StringRef File, llvm::Optional<Range> LineRange,
            const ThreadsafeFS &TFS, const ClangdLSPServer::Options &Opts,
            bool EnableCodeCompletion) {
   llvm::SmallString<0> FakeFile;
@@ -272,12 +291,16 @@ bool check(llvm::StringRef File,
 
   auto ContextProvider = ClangdServer::createConfiguredContextProvider(
       Opts.ConfigProvider, nullptr);
-  WithContext Ctx(ContextProvider(""));
+  WithContext Ctx(ContextProvider(
+      FakeFile.empty()
+          ? File
+          : /*Don't turn on local configs for an arbitrary temp path.*/ ""));
   Checker C(File, Opts);
   if (!C.buildCommand(TFS) || !C.buildInvocation(TFS, Contents) ||
       !C.buildAST())
     return false;
-  C.testLocationFeatures(ShouldCheckLine, EnableCodeCompletion);
+  C.buildInlayHints(LineRange);
+  C.testLocationFeatures(LineRange, EnableCodeCompletion);
 
   log("All checks completed, {0} errors", C.ErrCount);
   return C.ErrCount == 0;

@@ -42,23 +42,30 @@ void test_print_matches(const regex_t *preg, const char *string) {
 int main(void) {
   printf("regex\n");
 
-  regex_t regex;
-  int rv = regcomp(&regex, "[[:upper:]]\\([[:upper:]]\\)", 0);
-  assert(!rv);
+  {
+    regex_t regex;
+    int rv = regcomp(&regex, "[[:upper:]]\\([[:upper:]]\\)", 0);
+    assert(!rv);
 
-  test_matched(&regex, "abc");
-  test_matched(&regex, "ABC");
+    test_matched(&regex, "abc");
+    test_matched(&regex, "ABC");
 
-  test_print_matches(&regex, "ABC");
+    test_print_matches(&regex, "ABC");
 
-  regfree(&regex);
+    regfree(&regex);
+  }
 
-  rv = regcomp(&regex, "[[:upp:]]", 0);
-  assert(rv);
+  {
+    regex_t regex;
+    int rv = regcomp(&regex, "[[:upp:]]", 0);
+    assert(rv);
 
-  char errbuf[1024];
-  regerror(rv, &regex, errbuf, sizeof errbuf);
-  printf("error: %s\n", errbuf);
+    char errbuf[1024];
+    regerror(rv, &regex, errbuf, sizeof errbuf);
+    printf("error: %s\n", errbuf);
+
+    regfree(&regex);
+  }
 
   // CHECK: regex
   // CHECK: abc: not-matched

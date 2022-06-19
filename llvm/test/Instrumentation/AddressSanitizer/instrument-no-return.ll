@@ -1,5 +1,4 @@
-; RUN: opt < %s -asan -enable-new-pm=0 -S | FileCheck %s
-; RUN: opt < %s -passes='asan-function-pipeline' -S | FileCheck %s
+; RUN: opt < %s -passes='asan-pipeline' -S | FileCheck %s
 ; AddressSanitizer must insert __asan_handle_no_return
 ; before noreturn calls that aren't inserted by sanitizers.
 

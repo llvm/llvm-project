@@ -1,4 +1,4 @@
-; RUN: opt < %s -instcombine -disable-output
+; RUN: opt < %s -passes=instcombine -disable-output
 
 @X = global i32 5               ; <i32*> [#uses=1]
 

@@ -710,6 +710,36 @@ static bool hasReturnsTwiceAttr(SelectionDAG &DAG, SDValue Callee,
   return CalleeFn->hasFnAttribute(Attribute::ReturnsTwice);
 }
 
+/// IsEligibleForTailCallOptimization - Check whether the call is eligible
+/// for tail call optimization.
+bool SparcTargetLowering::IsEligibleForTailCallOptimization(
+    CCState &CCInfo, CallLoweringInfo &CLI, MachineFunction &MF) const {
+
+  auto &Outs = CLI.Outs;
+  auto &Caller = MF.getFunction();
+
+  // Do not tail call opt functions with "disable-tail-calls" attribute.
+  if (Caller.getFnAttribute("disable-tail-calls").getValueAsString() == "true")
+    return false;
+
+  // Do not tail call opt if the stack is used to pass parameters.
+  if (CCInfo.getNextStackOffset() != 0)
+    return false;
+
+  // Do not tail call opt if either the callee or caller returns
+  // a struct and the other does not.
+  if (!Outs.empty() && Caller.hasStructRetAttr() != Outs[0].Flags.isSRet())
+    return false;
+
+  // Byval parameters hand the function a pointer directly into the stack area
+  // we want to reuse during a tail call.
+  for (auto &Arg : Outs)
+    if (Arg.Flags.isByVal())
+      return false;
+
+  return true;
+}
+
 // Lower a call for the 32-bit ABI.
 SDValue
 SparcTargetLowering::LowerCall_32(TargetLowering::CallLoweringInfo &CLI,
@@ -725,14 +755,14 @@ SparcTargetLowering::LowerCall_32(TargetLowering::CallLoweringInfo &CLI,
   CallingConv::ID CallConv              = CLI.CallConv;
   bool isVarArg                         = CLI.IsVarArg;
 
-  // Sparc target does not yet support tail call optimization.
-  isTailCall = false;
-
   // Analyze operands of the call, assigning locations to each operand.
   SmallVector<CCValAssign, 16> ArgLocs;
   CCState CCInfo(CallConv, isVarArg, DAG.getMachineFunction(), ArgLocs,
                  *DAG.getContext());
   CCInfo.AnalyzeCallOperands(Outs, CC_Sparc32);
+
+  isTailCall = isTailCall && IsEligibleForTailCallOptimization(
+                                 CCInfo, CLI, DAG.getMachineFunction());
 
   // Get the size of the outgoing arguments stack space requirement.
   unsigned ArgsSize = CCInfo.getNextStackOffset();
@@ -771,7 +801,10 @@ SparcTargetLowering::LowerCall_32(TargetLowering::CallLoweringInfo &CLI,
     }
   }
 
-  Chain = DAG.getCALLSEQ_START(Chain, ArgsSize, 0, dl);
+  assert(!isTailCall || ArgsSize == 0);
+
+  if (!isTailCall)
+    Chain = DAG.getCALLSEQ_START(Chain, ArgsSize, 0, dl);
 
   SmallVector<std::pair<unsigned, SDValue>, 8> RegsToPass;
   SmallVector<SDValue, 8> MemOpChains;
@@ -816,6 +849,10 @@ SparcTargetLowering::LowerCall_32(TargetLowering::CallLoweringInfo &CLI,
 
     if (Flags.isSRet()) {
       assert(VA.needsCustom());
+
+      if (isTailCall)
+        continue;
+
       // store SRet argument in %sp+64
       SDValue StackPtr = DAG.getRegister(SP::O6, MVT::i32);
       SDValue PtrOff = DAG.getIntPtrConstant(64, dl);
@@ -825,9 +862,8 @@ SparcTargetLowering::LowerCall_32(TargetLowering::CallLoweringInfo &CLI,
       hasStructRetAttr = true;
       // sret only allowed on first argument
       assert(Outs[realArgIdx].OrigArgIndex == 0);
-      PointerType *Ty = cast<PointerType>(CLI.getArgs()[0].Ty);
-      Type *ElementTy = Ty->getElementType();
-      SRetArgSize = DAG.getDataLayout().getTypeAllocSize(ElementTy);
+      SRetArgSize =
+          DAG.getDataLayout().getTypeAllocSize(CLI.getArgs()[0].IndirectType);
       continue;
     }
 
@@ -929,7 +965,9 @@ SparcTargetLowering::LowerCall_32(TargetLowering::CallLoweringInfo &CLI,
   // stuck together.
   SDValue InFlag;
   for (unsigned i = 0, e = RegsToPass.size(); i != e; ++i) {
-    Register Reg = toCallerWindow(RegsToPass[i].first);
+    Register Reg = RegsToPass[i].first;
+    if (!isTailCall)
+      Reg = toCallerWindow(Reg);
     Chain = DAG.getCopyToReg(Chain, dl, Reg, RegsToPass[i].second, InFlag);
     InFlag = Chain.getValue(1);
   }
@@ -953,9 +991,12 @@ SparcTargetLowering::LowerCall_32(TargetLowering::CallLoweringInfo &CLI,
   Ops.push_back(Callee);
   if (hasStructRetAttr)
     Ops.push_back(DAG.getTargetConstant(SRetArgSize, dl, MVT::i32));
-  for (unsigned i = 0, e = RegsToPass.size(); i != e; ++i)
-    Ops.push_back(DAG.getRegister(toCallerWindow(RegsToPass[i].first),
-                                  RegsToPass[i].second.getValueType()));
+  for (unsigned i = 0, e = RegsToPass.size(); i != e; ++i) {
+    Register Reg = RegsToPass[i].first;
+    if (!isTailCall)
+      Reg = toCallerWindow(Reg);
+    Ops.push_back(DAG.getRegister(Reg, RegsToPass[i].second.getValueType()));
+  }
 
   // Add a register mask operand representing the call-preserved registers.
   const SparcRegisterInfo *TRI = Subtarget->getRegisterInfo();
@@ -968,6 +1009,11 @@ SparcTargetLowering::LowerCall_32(TargetLowering::CallLoweringInfo &CLI,
 
   if (InFlag.getNode())
     Ops.push_back(InFlag);
+
+  if (isTailCall) {
+    DAG.getMachineFunction().getFrameInfo().setHasTailCall();
+    return DAG.getNode(SPISD::TAIL_CALL, dl, MVT::Other, Ops);
+  }
 
   Chain = DAG.getNode(SPISD::CALL, dl, NodeTys, Ops);
   InFlag = Chain.getValue(1);
@@ -1408,7 +1454,7 @@ static SPCC::CondCodes FPCondCCodeToFCC(ISD::CondCode CC) {
 SparcTargetLowering::SparcTargetLowering(const TargetMachine &TM,
                                          const SparcSubtarget &STI)
     : TargetLowering(TM), Subtarget(&STI) {
-  MVT PtrVT = MVT::getIntegerVT(8 * TM.getPointerSize(0));
+  MVT PtrVT = MVT::getIntegerVT(TM.getPointerSizeInBits(0));
 
   // Instructions which use registers as conditionals examine all the
   // bits (as does the pseudo SELECT_CC expansion). I don't think it
@@ -1614,10 +1660,13 @@ SparcTargetLowering::SparcTargetLowering(const TargetMachine &TM,
 
   if (!Subtarget->is64Bit()) {
     // These libcalls are not available in 32-bit.
+    setLibcallName(RTLIB::MULO_I64, nullptr);
     setLibcallName(RTLIB::SHL_I128, nullptr);
     setLibcallName(RTLIB::SRL_I128, nullptr);
     setLibcallName(RTLIB::SRA_I128, nullptr);
   }
+
+  setLibcallName(RTLIB::MULO_I128, nullptr);
 
   if (!Subtarget->isV9()) {
     // SparcV8 does not have FNEGD and FABSD.
@@ -1850,6 +1899,8 @@ const char *SparcTargetLowering::getTargetNodeName(unsigned Opcode) const {
   case SPISD::TLS_ADD:         return "SPISD::TLS_ADD";
   case SPISD::TLS_LD:          return "SPISD::TLS_LD";
   case SPISD::TLS_CALL:        return "SPISD::TLS_CALL";
+  case SPISD::TAIL_CALL:       return "SPISD::TAIL_CALL";
+  case SPISD::LOAD_GDOP:       return "SPISD::LOAD_GDOP";
   }
   return nullptr;
 }
@@ -2175,8 +2226,10 @@ SparcTargetLowering::LowerF128Op(SDValue Op, SelectionDAG &DAG,
     RetPtr = DAG.getFrameIndex(RetFI, PtrVT);
     Entry.Node = RetPtr;
     Entry.Ty   = PointerType::getUnqual(RetTy);
-    if (!Subtarget->is64Bit())
+    if (!Subtarget->is64Bit()) {
       Entry.IsSRet = true;
+      Entry.IndirectType = RetTy;
+    }
     Entry.IsReturned = false;
     Args.push_back(Entry);
     RetTyABI = Type::getVoidTy(*DAG.getContext());
@@ -2681,7 +2734,7 @@ static SDValue LowerRETURNADDR(SDValue Op, SelectionDAG &DAG,
   SDValue RetAddr;
   if (depth == 0) {
     auto PtrVT = TLI.getPointerTy(DAG.getDataLayout());
-    unsigned RetReg = MF.addLiveIn(SP::I7, TLI.getRegClassFor(PtrVT));
+    Register RetReg = MF.addLiveIn(SP::I7, TLI.getRegClassFor(PtrVT));
     RetAddr = DAG.getCopyFromReg(DAG.getEntryNode(), dl, RetReg, VT);
     return RetAddr;
   }
@@ -2957,8 +3010,15 @@ static SDValue LowerUMULO_SMULO(SDValue Op, SelectionDAG &DAG,
   SDValue ShiftAmt = DAG.getConstant(63, dl, VT);
 
   SDValue RHS = Op.getOperand(1);
-  SDValue HiLHS = DAG.getNode(ISD::SRA, dl, VT, LHS, ShiftAmt);
-  SDValue HiRHS = DAG.getNode(ISD::SRA, dl, MVT::i64, RHS, ShiftAmt);
+  SDValue HiLHS, HiRHS;
+  if (isSigned) {
+    HiLHS = DAG.getNode(ISD::SRA, dl, VT, LHS, ShiftAmt);
+    HiRHS = DAG.getNode(ISD::SRA, dl, MVT::i64, RHS, ShiftAmt);
+  } else {
+    HiLHS = DAG.getConstant(0, dl, VT);
+    HiRHS = DAG.getConstant(0, dl, MVT::i64);
+  }
+
   SDValue Args[] = { HiLHS, LHS, HiRHS, RHS };
 
   TargetLowering::MakeLibCallOptions CallOptions;
@@ -3116,6 +3176,11 @@ SparcTargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
   case SP::SELECT_CC_DFP_ICC:
   case SP::SELECT_CC_QFP_ICC:
     return expandSelectCC(MI, BB, SP::BCOND);
+  case SP::SELECT_CC_Int_XCC:
+  case SP::SELECT_CC_FP_XCC:
+  case SP::SELECT_CC_DFP_XCC:
+  case SP::SELECT_CC_QFP_XCC:
+    return expandSelectCC(MI, BB, SP::BPXCC);
   case SP::SELECT_CC_Int_FCC:
   case SP::SELECT_CC_FP_FCC:
   case SP::SELECT_CC_DFP_FCC:
@@ -3235,7 +3300,7 @@ LowerAsmOperandForConstraint(SDValue Op,
                              std::string &Constraint,
                              std::vector<SDValue> &Ops,
                              SelectionDAG &DAG) const {
-  SDValue Result(nullptr, 0);
+  SDValue Result;
 
   // Only support length 1 constraints for now.
   if (Constraint.length() > 1)
@@ -3266,6 +3331,9 @@ std::pair<unsigned, const TargetRegisterClass *>
 SparcTargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
                                                   StringRef Constraint,
                                                   MVT VT) const {
+  if (Constraint.empty())
+    return std::make_pair(0U, nullptr);
+
   if (Constraint.size() == 1) {
     switch (Constraint[0]) {
     case 'r':
@@ -3294,46 +3362,60 @@ SparcTargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
       // This will generate an error message
       return std::make_pair(0U, nullptr);
     }
-  } else if (!Constraint.empty() && Constraint.size() <= 5
-              && Constraint[0] == '{' && *(Constraint.end()-1) == '}') {
-    // constraint = '{r<d>}'
-    // Remove the braces from around the name.
-    StringRef name(Constraint.data()+1, Constraint.size()-2);
-    // Handle register aliases:
-    //       r0-r7   -> g0-g7
-    //       r8-r15  -> o0-o7
-    //       r16-r23 -> l0-l7
-    //       r24-r31 -> i0-i7
-    uint64_t intVal = 0;
-    if (name.substr(0, 1).equals("r")
-        && !name.substr(1).getAsInteger(10, intVal) && intVal <= 31) {
-      const char regTypes[] = { 'g', 'o', 'l', 'i' };
-      char regType = regTypes[intVal/8];
-      char regIdx = '0' + (intVal % 8);
-      char tmp[] = { '{', regType, regIdx, '}', 0 };
-      std::string newConstraint = std::string(tmp);
-      return TargetLowering::getRegForInlineAsmConstraint(TRI, newConstraint,
-                                                          VT);
-    }
-    if (name.substr(0, 1).equals("f") &&
-        !name.substr(1).getAsInteger(10, intVal) && intVal <= 63) {
-      std::string newConstraint;
+  }
 
-      if (VT == MVT::f32 || VT == MVT::Other) {
-        newConstraint = "{f" + utostr(intVal) + "}";
-      } else if (VT == MVT::f64 && (intVal % 2 == 0)) {
-        newConstraint = "{d" + utostr(intVal / 2) + "}";
-      } else if (VT == MVT::f128 && (intVal % 4 == 0)) {
-        newConstraint = "{q" + utostr(intVal / 4) + "}";
-      } else {
-        return std::make_pair(0U, nullptr);
-      }
-      return TargetLowering::getRegForInlineAsmConstraint(TRI, newConstraint,
-                                                          VT);
+  if (Constraint.front() != '{')
+    return std::make_pair(0U, nullptr);
+
+  assert(Constraint.back() == '}' && "Not a brace enclosed constraint?");
+  StringRef RegName(Constraint.data() + 1, Constraint.size() - 2);
+  if (RegName.empty())
+    return std::make_pair(0U, nullptr);
+
+  unsigned long long RegNo;
+  // Handle numbered register aliases.
+  if (RegName[0] == 'r' &&
+      getAsUnsignedInteger(RegName.begin() + 1, 10, RegNo)) {
+    // r0-r7   -> g0-g7
+    // r8-r15  -> o0-o7
+    // r16-r23 -> l0-l7
+    // r24-r31 -> i0-i7
+    if (RegNo > 31)
+      return std::make_pair(0U, nullptr);
+    const char RegTypes[] = {'g', 'o', 'l', 'i'};
+    char RegType = RegTypes[RegNo / 8];
+    char RegIndex = '0' + (RegNo % 8);
+    char Tmp[] = {'{', RegType, RegIndex, '}', 0};
+    return getRegForInlineAsmConstraint(TRI, Tmp, VT);
+  }
+
+  // Rewrite the fN constraint according to the value type if needed.
+  if (VT != MVT::f32 && VT != MVT::Other && RegName[0] == 'f' &&
+      getAsUnsignedInteger(RegName.begin() + 1, 10, RegNo)) {
+    if (VT == MVT::f64 && (RegNo % 2 == 0)) {
+      return getRegForInlineAsmConstraint(
+          TRI, StringRef("{d" + utostr(RegNo / 2) + "}"), VT);
+    } else if (VT == MVT::f128 && (RegNo % 4 == 0)) {
+      return getRegForInlineAsmConstraint(
+          TRI, StringRef("{q" + utostr(RegNo / 4) + "}"), VT);
+    } else {
+      return std::make_pair(0U, nullptr);
     }
   }
 
-  return TargetLowering::getRegForInlineAsmConstraint(TRI, Constraint, VT);
+  auto ResultPair =
+      TargetLowering::getRegForInlineAsmConstraint(TRI, Constraint, VT);
+  if (!ResultPair.second)
+    return std::make_pair(0U, nullptr);
+
+  // Force the use of I64Regs over IntRegs for 64-bit values.
+  if (Subtarget->is64Bit() && VT == MVT::i64) {
+    assert(ResultPair.second == &SP::IntRegsRegClass &&
+           "Unexpected register class");
+    return std::make_pair(ResultPair.first, &SP::I64RegsRegClass);
+  }
+
+  return ResultPair;
 }
 
 bool

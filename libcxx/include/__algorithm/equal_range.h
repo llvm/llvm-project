@@ -9,20 +9,22 @@
 #ifndef _LIBCPP___ALGORITHM_EQUAL_RANGE_H
 #define _LIBCPP___ALGORITHM_EQUAL_RANGE_H
 
-#include <__config>
 #include <__algorithm/comp.h>
 #include <__algorithm/comp_ref_type.h>
 #include <__algorithm/half_positive.h>
+#include <__algorithm/iterator_operations.h>
 #include <__algorithm/lower_bound.h>
 #include <__algorithm/upper_bound.h>
-#include <iterator>
+#include <__config>
+#include <__functional/identity.h>
+#include <__iterator/advance.h>
+#include <__iterator/distance.h>
+#include <__iterator/iterator_traits.h>
+#include <__utility/pair.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
-#pragma GCC system_header
+#  pragma GCC system_header
 #endif
-
-_LIBCPP_PUSH_MACROS
-#include <__undef_macros>
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
@@ -49,10 +51,11 @@ __equal_range(_ForwardIterator __first, _ForwardIterator __last, const _Tp& __va
         }
         else
         {
+            auto __proj = std::__identity();
             _ForwardIterator __mp1 = __m;
             return pair<_ForwardIterator, _ForwardIterator>
                    (
-                      _VSTD::__lower_bound<_Compare>(__first, __m, __value_, __comp),
+                      _VSTD::__lower_bound_impl<_StdIterOps>(__first, __m, __value_, __comp, __proj),
                       _VSTD::__upper_bound<_Compare>(++__mp1, __last, __value_, __comp)
                    );
         }
@@ -81,7 +84,5 @@ equal_range(_ForwardIterator __first, _ForwardIterator __last, const _Tp& __valu
 }
 
 _LIBCPP_END_NAMESPACE_STD
-
-_LIBCPP_POP_MACROS
 
 #endif // _LIBCPP___ALGORITHM_EQUAL_RANGE_H

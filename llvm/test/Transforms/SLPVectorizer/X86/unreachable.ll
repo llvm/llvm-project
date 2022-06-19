@@ -12,22 +12,11 @@ define void @foo(i32* nocapture %x) #0 {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[BB2:%.*]]
 ; CHECK:       bb1:
-; CHECK-NEXT:    [[T3:%.*]] = getelementptr inbounds i32, i32* [[X:%.*]], i64 4
-; CHECK-NEXT:    [[T4:%.*]] = load i32, i32* [[T3]], align 4
-; CHECK-NEXT:    [[T5:%.*]] = getelementptr inbounds i32, i32* [[X]], i64 5
-; CHECK-NEXT:    [[T6:%.*]] = load i32, i32* [[T5]], align 4
 ; CHECK-NEXT:    [[BAD:%.*]] = fadd float [[BAD]], 0.000000e+00
-; CHECK-NEXT:    [[T7:%.*]] = getelementptr inbounds i32, i32* [[X]], i64 6
-; CHECK-NEXT:    [[T8:%.*]] = load i32, i32* [[T7]], align 4
-; CHECK-NEXT:    [[T9:%.*]] = getelementptr inbounds i32, i32* [[X]], i64 7
-; CHECK-NEXT:    [[T10:%.*]] = load i32, i32* [[T9]], align 4
 ; CHECK-NEXT:    br label [[BB2]]
 ; CHECK:       bb2:
 ; CHECK-NEXT:    [[TMP0:%.*]] = phi <4 x i32> [ poison, [[BB1:%.*]] ], [ <i32 2, i32 2, i32 2, i32 2>, [[ENTRY:%.*]] ]
-; CHECK-NEXT:    [[T12:%.*]] = getelementptr inbounds i32, i32* [[X]], i64 1
-; CHECK-NEXT:    [[T13:%.*]] = getelementptr inbounds i32, i32* [[X]], i64 2
-; CHECK-NEXT:    [[T14:%.*]] = getelementptr inbounds i32, i32* [[X]], i64 3
-; CHECK-NEXT:    [[TMP1:%.*]] = bitcast i32* [[X]] to <4 x i32>*
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast i32* [[X:%.*]] to <4 x i32>*
 ; CHECK-NEXT:    store <4 x i32> [[TMP0]], <4 x i32>* [[TMP1]], align 4
 ; CHECK-NEXT:    ret void
 ;

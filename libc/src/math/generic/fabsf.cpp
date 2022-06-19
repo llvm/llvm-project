@@ -7,8 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/math/fabsf.h"
+#include "src/__support/FPUtil/BasicOperations.h"
 #include "src/__support/common.h"
-#include "utils/FPUtil/BasicOperations.h"
 
 namespace __llvm_libc {
 

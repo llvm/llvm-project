@@ -70,10 +70,10 @@ void BufferViewFlowAnalysis::build(Operation *op) {
       // Query the branch op interface to get the successor operands.
       auto successorOperands =
           branchInterface.getSuccessorOperands(it.getIndex());
-      if (!successorOperands.hasValue())
-        continue;
       // Build the actual mapping of values to their immediate dependencies.
-      registerDependencies(successorOperands.getValue(), (*it)->getArguments());
+      registerDependencies(successorOperands.getForwardedOperands(),
+                           (*it)->getArguments().drop_front(
+                               successorOperands.getProducedOperandCount()));
     }
   });
 
@@ -101,12 +101,18 @@ void BufferViewFlowAnalysis::build(Operation *op) {
       regionInterface.getSuccessorRegions(region.getRegionNumber(),
                                           successorRegions);
       for (RegionSuccessor &successorRegion : successorRegions) {
+        // Determine the current region index (if any).
+        Optional<unsigned> regionIndex;
+        Region *regionSuccessor = successorRegion.getSuccessor();
+        if (regionSuccessor)
+          regionIndex = regionSuccessor->getRegionNumber();
         // Iterate over all immediate terminator operations and wire the
-        // successor inputs with the operands of each terminator.
+        // successor inputs with the successor operands of each terminator.
         for (Block &block : region) {
-          Operation &terminator = *block.getTerminator();
-          if (terminator.hasTrait<OpTrait::ReturnLike>()) {
-            registerDependencies(terminator.getOperands(),
+          auto successorOperands = getRegionBranchSuccessorOperands(
+              block.getTerminator(), regionIndex);
+          if (successorOperands) {
+            registerDependencies(*successorOperands,
                                  successorRegion.getSuccessorInputs());
           }
         }

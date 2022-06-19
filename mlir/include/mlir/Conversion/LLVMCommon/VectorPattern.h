@@ -70,14 +70,14 @@ public:
   using Super = VectorConvertToLLVMPattern<SourceOp, TargetOp>;
 
   LogicalResult
-  matchAndRewrite(SourceOp op, ArrayRef<Value> operands,
+  matchAndRewrite(SourceOp op, typename SourceOp::Adaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
     static_assert(
         std::is_base_of<OpTrait::OneResult<SourceOp>, SourceOp>::value,
         "expected single result op");
     return LLVM::detail::vectorOneToOneRewrite(
-        op, TargetOp::getOperationName(), operands, *this->getTypeConverter(),
-        rewriter);
+        op, TargetOp::getOperationName(), adaptor.getOperands(),
+        *this->getTypeConverter(), rewriter);
   }
 };
 } // namespace mlir

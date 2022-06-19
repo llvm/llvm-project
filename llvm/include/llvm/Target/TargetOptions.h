@@ -110,28 +110,41 @@ namespace llvm {
     DisableWithDiag // Disable the abort but emit a diagnostic on failure.
   };
 
+  /// Indicates when and how the Swift async frame pointer bit should be set.
+  enum class SwiftAsyncFramePointerMode {
+    /// Determine whether to set the bit statically or dynamically based
+    /// on the deployment target.
+    DeploymentBased,
+    /// Always set the bit.
+    Always,
+    /// Never set the bit.
+    Never,
+  };
+
   class TargetOptions {
   public:
     TargetOptions()
         : UnsafeFPMath(false), NoInfsFPMath(false), NoNaNsFPMath(false),
           NoTrappingFPMath(true), NoSignedZerosFPMath(false),
-          EnableAIXExtendedAltivecABI(false),
+          ApproxFuncFPMath(false), EnableAIXExtendedAltivecABI(false),
           HonorSignDependentRoundingFPMathOption(false), NoZerosInBSS(false),
           GuaranteedTailCallOpt(false), StackSymbolOrdering(true),
           EnableFastISel(false), EnableGlobalISel(false), UseInitArray(false),
-          DisableIntegratedAS(false), RelaxELFRelocations(false),
-          FunctionSections(false), DataSections(false),
-          IgnoreXCOFFVisibility(false), XCOFFTracebackTable(true),
-          UniqueSectionNames(true), UniqueBasicBlockSectionNames(false),
-          TrapUnreachable(false), NoTrapAfterNoreturn(false), TLSSize(0),
-          EmulatedTLS(false), ExplicitEmulatedTLS(false), EnableIPRA(false),
+          LowerGlobalDtorsViaCxaAtExit(false), DisableIntegratedAS(false),
+          RelaxELFRelocations(false), FunctionSections(false),
+          DataSections(false), IgnoreXCOFFVisibility(false),
+          XCOFFTracebackTable(true), UniqueSectionNames(true),
+          UniqueBasicBlockSectionNames(false), TrapUnreachable(false),
+          NoTrapAfterNoreturn(false), TLSSize(0), EmulatedTLS(false),
+          ExplicitEmulatedTLS(false), EnableIPRA(false),
           EmitStackSizeSection(false), EnableMachineOutliner(false),
           EnableMachineFunctionSplitter(false), SupportsDefaultOutlining(false),
           EmitAddrsig(false), EmitCallSiteInfo(false),
           SupportsDebugEntryValues(false), EnableDebugEntryValues(false),
-          PseudoProbeForProfiling(false), ValueTrackingVariableLocations(false),
-          ForceDwarfFrameSection(false), XRayOmitFunctionIndex(false),
-          DebugStrictDwarf(false),
+          ValueTrackingVariableLocations(false), ForceDwarfFrameSection(false),
+          XRayOmitFunctionIndex(false), DebugStrictDwarf(false),
+          Hotpatch(false), PPCGenScalarMASSEntries(false), JMCInstrument(false),
+          EnableCFIFixup(false), MisExpect(false),
           FPDenormalMode(DenormalMode::IEEE, DenormalMode::IEEE) {}
 
     /// DisableFramePointerElim - This returns true if frame pointer elimination
@@ -172,9 +185,15 @@ namespace llvm {
     /// argument or result as insignificant.
     unsigned NoSignedZerosFPMath : 1;
 
+    /// ApproxFuncFPMath - This flag is enabled when the
+    /// -enable-approx-func-fp-math is specified on the command line. This
+    /// specifies that optimizations are allowed to substitute math functions
+    /// with approximate calculations
+    unsigned ApproxFuncFPMath : 1;
+
     /// EnableAIXExtendedAltivecABI - This flag returns true when -vec-extabi is
     /// specified. The code generator is then able to use both volatile and
-    /// nonvolitle vector regisers. When false, the code generator only uses
+    /// nonvolitle vector registers. When false, the code generator only uses
     /// volatile vector registers which is the default setting on AIX.
     unsigned EnableAIXExtendedAltivecABI : 1;
 
@@ -219,9 +238,18 @@ namespace llvm {
     /// selection fails to lower/select an instruction.
     GlobalISelAbortMode GlobalISelAbort = GlobalISelAbortMode::Enable;
 
+    /// Control when and how the Swift async frame pointer bit should
+    /// be set.
+    SwiftAsyncFramePointerMode SwiftAsyncFramePointer =
+        SwiftAsyncFramePointerMode::Always;
+
     /// UseInitArray - Use .init_array instead of .ctors for static
     /// constructors.
     unsigned UseInitArray : 1;
+
+    /// Use __cxa_atexit to register global destructors; determines how
+    /// llvm.global_dtors is lowered.
+    unsigned LowerGlobalDtorsViaCxaAtExit : 1;
 
     /// Disable the integrated assembler.
     unsigned DisableIntegratedAS : 1;
@@ -305,9 +333,6 @@ namespace llvm {
     /// production.
     bool ShouldEmitDebugEntryValues() const;
 
-    /// Emit pseudo probes into the binary for sample profiling
-    unsigned PseudoProbeForProfiling : 1;
-
     // When set to true, use experimental new debug variable location tracking,
     // which seeks to follow the values of variables rather than their location,
     // post isel.
@@ -323,10 +348,29 @@ namespace llvm {
     /// By default, it is set to false.
     unsigned DebugStrictDwarf : 1;
 
+    /// Emit the hotpatch flag in CodeView debug.
+    unsigned Hotpatch : 1;
+
+    /// Enables scalar MASS conversions
+    unsigned PPCGenScalarMASSEntries : 1;
+
+    /// Enable JustMyCode instrumentation.
+    unsigned JMCInstrument : 1;
+
+    /// Enable the CFIFixup pass.
+    unsigned EnableCFIFixup : 1;
+
+    /// When set to true, enable MisExpect Diagnostics
+    /// By default, it is set to false
+    unsigned MisExpect : 1;
+
     /// Name of the stack usage file (i.e., .su file) if user passes
     /// -fstack-usage. If empty, it can be implied that -fstack-usage is not
     /// passed on the command line.
     std::string StackUsageOutput;
+
+    /// If greater than 0, override TargetLoweringBase::PrefLoopAlignment.
+    unsigned LoopAlignment = 0;
 
     /// FloatABIType - This setting is set by -float-abi=xxx option is specfied
     /// on the command line. This setting may either be Default, Soft, or Hard.
@@ -396,6 +440,11 @@ namespace llvm {
 
     /// Machine level options.
     MCTargetOptions MCOptions;
+
+    /// Stores the filename/path of the final .o/.obj file, to be written in the
+    /// debug information. This is used for emitting the CodeView S_OBJNAME
+    /// record.
+    std::string ObjectFilenameForDebug;
   };
 
 } // End llvm namespace

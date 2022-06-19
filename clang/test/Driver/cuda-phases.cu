@@ -4,7 +4,6 @@
 // - Host/device-only compilation;
 // - User-requested final phase - binary or assembly.
 
-// REQUIRES: clang-driver
 // REQUIRES: powerpc-registered-target
 // REQUIRES: nvptx-registered-target
 //
@@ -218,3 +217,35 @@
 // DASM2-DAG: [[P8:[0-9]+]]: backend, {[[P7]]}, assembler, (device-[[T]], [[ARCH2]])
 // DASM2-DAG: [[P9:[0-9]+]]: offload, "device-[[T]] ([[TRIPLE]]:[[ARCH2]])" {[[P8]]}, assembler
 // DASM2-NOT: host
+
+//
+// Test the phases generated when using the new offloading driver.
+//
+// RUN: %clang -### -target powerpc64le-ibm-linux-gnu -ccc-print-phases --offload-new-driver \
+// RUN: --offload-arch=sm_52 --offload-arch=sm_70 %s 2>&1 | FileCheck --check-prefix=NEW_DRIVER %s
+// NEW_DRIVER: 0: input, "[[INPUT:.+]]", cuda
+// NEW_DRIVER: 1: preprocessor, {0}, cuda-cpp-output
+// NEW_DRIVER: 2: compiler, {1}, ir
+// NEW_DRIVER: 3: input, "[[INPUT]]", cuda, (device-cuda, sm_52)
+// NEW_DRIVER: 4: preprocessor, {3}, cuda-cpp-output, (device-cuda, sm_52)
+// NEW_DRIVER: 5: compiler, {4}, ir, (device-cuda, sm_52)
+// NEW_DRIVER: 6: backend, {5}, assembler, (device-cuda, sm_52)
+// NEW_DRIVER: 7: assembler, {6}, object, (device-cuda, sm_52)
+// NEW_DRIVER: 8: offload, "device-cuda (nvptx64-nvidia-cuda:sm_52)" {7}, object
+// NEW_DRIVER: 9: offload, "device-cuda (nvptx64-nvidia-cuda:sm_52)" {6}, assembler
+// NEW_DRIVER: 10: linker, {8, 9}, cuda-fatbin, (device-cuda, sm_52)
+// NEW_DRIVER: 11: offload, "device-cuda (nvptx64-nvidia-cuda:sm_52)" {10}, cuda-fatbin
+// NEW_DRIVER: 12: input, "[[INPUT]]", cuda, (device-cuda, sm_70)
+// NEW_DRIVER: 13: preprocessor, {12}, cuda-cpp-output, (device-cuda, sm_70)
+// NEW_DRIVER: 14: compiler, {13}, ir, (device-cuda, sm_70)
+// NEW_DRIVER: 15: backend, {14}, assembler, (device-cuda, sm_70)
+// NEW_DRIVER: 16: assembler, {15}, object, (device-cuda, sm_70)
+// NEW_DRIVER: 17: offload, "device-cuda (nvptx64-nvidia-cuda:sm_70)" {16}, object
+// NEW_DRIVER: 18: offload, "device-cuda (nvptx64-nvidia-cuda:sm_70)" {15}, assembler
+// NEW_DRIVER: 19: linker, {17, 18}, cuda-fatbin, (device-cuda, sm_70)
+// NEW_DRIVER: 20: offload, "device-cuda (nvptx64-nvidia-cuda:sm_70)" {19}, cuda-fatbin
+// NEW_DRIVER: 21: clang-offload-packager, {11, 20}, image
+// NEW_DRIVER: 22: offload, " (powerpc64le-ibm-linux-gnu)" {2}, " (powerpc64le-ibm-linux-gnu)" {21}, ir
+// NEW_DRIVER: 23: backend, {22}, assembler, (host-cuda)
+// NEW_DRIVER: 24: assembler, {23}, object, (host-cuda)
+// NEW_DRIVER: 25: clang-linker-wrapper, {24}, image, (host-cuda)

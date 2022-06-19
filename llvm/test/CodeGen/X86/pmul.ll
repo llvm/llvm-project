@@ -1062,43 +1062,45 @@ entry:
 define <4 x i32> @mul_v4i64_zero_upper_left(<4 x i32> %val1, <4 x i64> %val2) {
 ; SSE2-LABEL: mul_v4i64_zero_upper_left:
 ; SSE2:       # %bb.0: # %entry
-; SSE2-NEXT:    pxor %xmm3, %xmm3
-; SSE2-NEXT:    movdqa %xmm0, %xmm4
-; SSE2-NEXT:    punpckldq {{.*#+}} xmm4 = xmm4[0],xmm3[0],xmm4[1],xmm3[1]
-; SSE2-NEXT:    punpckhdq {{.*#+}} xmm0 = xmm0[2],xmm3[2],xmm0[3],xmm3[3]
+; SSE2-NEXT:    pxor %xmm4, %xmm4
 ; SSE2-NEXT:    movdqa %xmm0, %xmm3
-; SSE2-NEXT:    pmuludq %xmm2, %xmm3
+; SSE2-NEXT:    punpckldq {{.*#+}} xmm3 = xmm3[0],xmm4[0],xmm3[1],xmm4[1]
+; SSE2-NEXT:    punpckhdq {{.*#+}} xmm0 = xmm0[2],xmm4[2],xmm0[3],xmm4[3]
+; SSE2-NEXT:    movdqa %xmm0, %xmm4
+; SSE2-NEXT:    pmuludq %xmm2, %xmm4
 ; SSE2-NEXT:    psrlq $32, %xmm2
 ; SSE2-NEXT:    pmuludq %xmm0, %xmm2
 ; SSE2-NEXT:    psllq $32, %xmm2
-; SSE2-NEXT:    paddq %xmm3, %xmm2
-; SSE2-NEXT:    movdqa %xmm4, %xmm0
+; SSE2-NEXT:    paddq %xmm4, %xmm2
+; SSE2-NEXT:    movdqa %xmm3, %xmm0
 ; SSE2-NEXT:    pmuludq %xmm1, %xmm0
 ; SSE2-NEXT:    psrlq $32, %xmm1
-; SSE2-NEXT:    pmuludq %xmm4, %xmm1
-; SSE2-NEXT:    psllq $32, %xmm1
-; SSE2-NEXT:    paddq %xmm1, %xmm0
-; SSE2-NEXT:    shufps {{.*#+}} xmm0 = xmm0[1,3],xmm2[1,3]
+; SSE2-NEXT:    pmuludq %xmm1, %xmm3
+; SSE2-NEXT:    psllq $32, %xmm3
+; SSE2-NEXT:    paddq %xmm0, %xmm3
+; SSE2-NEXT:    shufps {{.*#+}} xmm3 = xmm3[1,3],xmm2[1,3]
+; SSE2-NEXT:    movaps %xmm3, %xmm0
 ; SSE2-NEXT:    retq
 ;
 ; SSE41-LABEL: mul_v4i64_zero_upper_left:
 ; SSE41:       # %bb.0: # %entry
-; SSE41-NEXT:    pxor %xmm3, %xmm3
-; SSE41-NEXT:    pmovzxdq {{.*#+}} xmm4 = xmm0[0],zero,xmm0[1],zero
-; SSE41-NEXT:    punpckhdq {{.*#+}} xmm0 = xmm0[2],xmm3[2],xmm0[3],xmm3[3]
-; SSE41-NEXT:    movdqa %xmm0, %xmm3
-; SSE41-NEXT:    pmuludq %xmm2, %xmm3
+; SSE41-NEXT:    pxor %xmm4, %xmm4
+; SSE41-NEXT:    pmovzxdq {{.*#+}} xmm3 = xmm0[0],zero,xmm0[1],zero
+; SSE41-NEXT:    punpckhdq {{.*#+}} xmm0 = xmm0[2],xmm4[2],xmm0[3],xmm4[3]
+; SSE41-NEXT:    movdqa %xmm0, %xmm4
+; SSE41-NEXT:    pmuludq %xmm2, %xmm4
 ; SSE41-NEXT:    psrlq $32, %xmm2
 ; SSE41-NEXT:    pmuludq %xmm0, %xmm2
 ; SSE41-NEXT:    psllq $32, %xmm2
-; SSE41-NEXT:    paddq %xmm3, %xmm2
-; SSE41-NEXT:    movdqa %xmm4, %xmm0
+; SSE41-NEXT:    paddq %xmm4, %xmm2
+; SSE41-NEXT:    movdqa %xmm3, %xmm0
 ; SSE41-NEXT:    pmuludq %xmm1, %xmm0
 ; SSE41-NEXT:    psrlq $32, %xmm1
-; SSE41-NEXT:    pmuludq %xmm4, %xmm1
-; SSE41-NEXT:    psllq $32, %xmm1
-; SSE41-NEXT:    paddq %xmm1, %xmm0
-; SSE41-NEXT:    shufps {{.*#+}} xmm0 = xmm0[1,3],xmm2[1,3]
+; SSE41-NEXT:    pmuludq %xmm1, %xmm3
+; SSE41-NEXT:    psllq $32, %xmm3
+; SSE41-NEXT:    paddq %xmm0, %xmm3
+; SSE41-NEXT:    shufps {{.*#+}} xmm3 = xmm3[1,3],xmm2[1,3]
+; SSE41-NEXT:    movaps %xmm3, %xmm0
 ; SSE41-NEXT:    retq
 ;
 ; AVX-LABEL: mul_v4i64_zero_upper_left:

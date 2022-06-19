@@ -4,8 +4,8 @@
    uses of B & C that are not dominated by their definitions.  See:
    http://gcc.gnu.org/ml/gcc/2002-03/msg00697.html
  */
-int bar();
-int foo()
+int bar(void);
+int foo(void)
 {
   int a,b,c;
 

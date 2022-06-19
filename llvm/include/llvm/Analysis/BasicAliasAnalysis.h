@@ -13,22 +13,16 @@
 #ifndef LLVM_ANALYSIS_BASICALIASANALYSIS_H
 #define LLVM_ANALYSIS_BASICALIASANALYSIS_H
 
-#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/SmallPtrSet.h"
-#include "llvm/ADT/SmallVector.h"
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/Pass.h"
-#include <algorithm>
-#include <cstdint>
 #include <memory>
 #include <utility>
 
 namespace llvm {
 
-struct AAMDNodes;
-class APInt;
 class AssumptionCache;
 class BasicBlock;
 class DataLayout;
@@ -61,7 +55,7 @@ public:
   BasicAAResult(const DataLayout &DL, const Function &F,
                 const TargetLibraryInfo &TLI, AssumptionCache &AC,
                 DominatorTree *DT = nullptr, PhiValues *PV = nullptr)
-      : AAResultBase(), DL(DL), F(F), TLI(TLI), AC(AC), DT(DT), PV(PV) {}
+      : DL(DL), F(F), TLI(TLI), AC(AC), DT(DT), PV(PV) {}
 
   BasicAAResult(const BasicAAResult &Arg)
       : AAResultBase(Arg), DL(Arg.DL), F(Arg.F), TLI(Arg.TLI), AC(Arg.AC),
@@ -98,71 +92,7 @@ public:
   FunctionModRefBehavior getModRefBehavior(const Function *Fn);
 
 private:
-  // A linear transformation of a Value; this class represents ZExt(SExt(V,
-  // SExtBits), ZExtBits) * Scale + Offset.
-  struct VariableGEPIndex {
-    // An opaque Value - we can't decompose this further.
-    const Value *V;
-
-    // We need to track what extensions we've done as we consider the same Value
-    // with different extensions as different variables in a GEP's linear
-    // expression;
-    // e.g.: if V == -1, then sext(x) != zext(x).
-    unsigned ZExtBits;
-    unsigned SExtBits;
-
-    APInt Scale;
-
-    // Context instruction to use when querying information about this index.
-    const Instruction *CxtI;
-
-    /// True if all operations in this expression are NSW.
-    bool IsNSW;
-
-    void dump() const {
-      print(dbgs());
-      dbgs() << "\n";
-    }
-    void print(raw_ostream &OS) const {
-      OS << "(V=" << V->getName()
-	 << ", zextbits=" << ZExtBits
-	 << ", sextbits=" << SExtBits
-	 << ", scale=" << Scale << ")";
-    }
-  };
-
-  // Represents the internal structure of a GEP, decomposed into a base pointer,
-  // constant offsets, and variable scaled indices.
-  struct DecomposedGEP {
-    // Base pointer of the GEP
-    const Value *Base;
-    // Total constant offset from base.
-    APInt Offset;
-    // Scaled variable (non-constant) indices.
-    SmallVector<VariableGEPIndex, 4> VarIndices;
-    // Is GEP index scale compile-time constant.
-    bool HasCompileTimeConstantScale;
-    // Are all operations inbounds GEPs or non-indexing operations?
-    // (None iff expression doesn't involve any geps)
-    Optional<bool> InBounds;
-
-    void dump() const {
-      print(dbgs());
-      dbgs() << "\n";
-    }
-    void print(raw_ostream &OS) const {
-      OS << "(DecomposedGEP Base=" << Base->getName()
-         << ", Offset=" << Offset
-         << ", VarIndices=[";
-      for (size_t i = 0; i < VarIndices.size(); i++) {
-        if (i != 0)
-          OS << ", ";
-        VarIndices[i].print(OS);
-      }
-      OS << "], HasCompileTimeConstantScale=" << HasCompileTimeConstantScale
-         << ")";
-    }
-  };
+  struct DecomposedGEP;
 
   /// Tracks phi nodes we have visited.
   ///
@@ -187,10 +117,6 @@ private:
   DecomposeGEPExpression(const Value *V, const DataLayout &DL,
                          AssumptionCache *AC, DominatorTree *DT);
 
-  static bool isGEPBaseAtNegativeOffset(const GEPOperator *GEPOp,
-      const DecomposedGEP &DecompGEP, const DecomposedGEP &DecompObject,
-      LocationSize ObjectAccessSize);
-
   /// A Heuristic for aliasGEP that searches for a constant offset
   /// between the variables.
   ///
@@ -200,15 +126,14 @@ private:
   /// However, we know that, for all %x, zext(%x) != zext(%x + 1), even if
   /// the addition overflows.
   bool
-  constantOffsetHeuristic(const SmallVectorImpl<VariableGEPIndex> &VarIndices,
-                          LocationSize V1Size, LocationSize V2Size,
-                          const APInt &BaseOffset, AssumptionCache *AC,
+  constantOffsetHeuristic(const DecomposedGEP &GEP, LocationSize V1Size,
+                          LocationSize V2Size, AssumptionCache *AC,
                           DominatorTree *DT);
 
   bool isValueEqualInPotentialCycles(const Value *V1, const Value *V2);
 
-  void GetIndexDifference(SmallVectorImpl<VariableGEPIndex> &Dest,
-                          const SmallVectorImpl<VariableGEPIndex> &Src);
+  void subtractDecomposedGEPs(DecomposedGEP &DestGEP,
+                              const DecomposedGEP &SrcGEP);
 
   AliasResult aliasGEP(const GEPOperator *V1, LocationSize V1Size,
                        const Value *V2, LocationSize V2Size,

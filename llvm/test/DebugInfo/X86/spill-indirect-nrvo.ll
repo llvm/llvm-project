@@ -1,5 +1,7 @@
-; RUN: llc < %s | FileCheck -check-prefixes=CHECK,OPT %s
-; RUN: llc -O0 < %s | FileCheck -check-prefixes=CHECK,OPTNONE %s
+; RUN: llc < %s -experimental-debug-variable-locations=false | FileCheck -check-prefixes=CHECK,OPT %s
+; RUN: llc -O0 < %s -experimental-debug-variable-locations=false | FileCheck -check-prefixes=CHECK,OPTNONE %s
+; RUN: llc < %s -experimental-debug-variable-locations=true | FileCheck -check-prefixes=CHECK,OPT %s
+; RUN: llc -O0 < %s -experimental-debug-variable-locations=true | FileCheck -check-prefixes=CHECK,OPTNONE %s
 
 ; Make sure we insert DW_OP_deref when spilling indirect DBG_VALUE instructions.
 

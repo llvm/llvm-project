@@ -101,8 +101,7 @@ body:             |
     ; CHECK-NOT: {{%[0-9]+}}(s8) = G_PTRTOINT
     ; CHECK: [[X32:%[0-9]+]]:_(s32) = G_PTRTOINT {{%[0-9]+}}(p0)
     ; CHECK: [[BITS:%[0-9]+]]:_(s32) = G_CONSTANT i32 255
-    ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY [[X32]]
-    ; CHECK: {{%[0-9]+}}:_(s32) = G_AND [[COPY]], [[BITS]]
+    ; CHECK: {{%[0-9]+}}:_(s32) = G_AND [[X32]], [[BITS]]
     ; CHECK-NOT: {{%[0-9]+}}(s8) = G_PTRTOINT
     %2(s32) = G_ZEXT %1(s8)
     $r0 = COPY %2(s32)

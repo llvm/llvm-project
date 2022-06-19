@@ -52,7 +52,7 @@ struct B1 {
 // CHECK-NEXT:          4 |     struct A a
 // CHECK-NEXT:          4 |       double d
 // CHECK-NEXT:         12 |     char c
-// CHECK-NEXT:         13 |   char [7] ext
+// CHECK-NEXT:         13 |   char[7] ext
 // CHECK-NEXT:            | [sizeof=20, dsize=20, align=4, preferredalign=4,
 // CHECK-NEXT:            |  nvsize=20, nvalign=4, preferrednvalign=4]
 
@@ -85,7 +85,7 @@ struct C1 {
 // CHECK-NEXT:          0 |     struct A a
 // CHECK-NEXT:          0 |       double d
 // CHECK-NEXT:          8 |     char c
-// CHECK-NEXT:          9 |   char [7] ext
+// CHECK-NEXT:          9 |   char[7] ext
 // CHECK-NEXT:            | [sizeof=16, dsize=16, align=4, preferredalign=8,
 // CHECK-NEXT:            |  nvsize=16, nvalign=4, preferrednvalign=8]
 
@@ -118,7 +118,7 @@ struct D1 {
 // CHECK-NEXT:          4 |     struct A a
 // CHECK-NEXT:          4 |       double d
 // CHECK-NEXT:         12 |     char c
-// CHECK-NEXT:         13 |   char [7] ext
+// CHECK-NEXT:         13 |   char[7] ext
 // CHECK-NEXT:            | [sizeof=20, dsize=20, align=4, preferredalign=4,
 // CHECK-NEXT:            |  nvsize=20, nvalign=4, preferrednvalign=4]
 

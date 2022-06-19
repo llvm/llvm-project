@@ -1,5 +1,4 @@
-! RUN: %S/test_errors.sh %s %t %flang_fc1
-! REQUIRES: shell
+! RUN: %python %S/test_errors.py %s %flang_fc1
 ! Error tests for recursive use of derived types.
 ! C744 If neither the POINTER nor the ALLOCATABLE attribute is specified, the
 ! declaration-type-spec in the component-def-stmt shall specify an intrinsic

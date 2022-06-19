@@ -16,30 +16,30 @@
 #include "mlir/Dialect/LLVMIR/LLVMTypes.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/DialectImplementation.h"
+#include "mlir/IR/ExtensibleDialect.h"
 #include "mlir/IR/Types.h"
 #include "llvm/ADT/Hashing.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/TypeSwitch.h"
 
 using namespace mlir;
-using namespace mlir::test;
+using namespace test;
 
 // Custom parser for SignednessSemantics.
 static ParseResult
-parseSignedness(DialectAsmParser &parser,
+parseSignedness(AsmParser &parser,
                 TestIntegerType::SignednessSemantics &result) {
   StringRef signStr;
   auto loc = parser.getCurrentLocation();
   if (parser.parseKeyword(&signStr))
     return failure();
-  if (signStr.compare_insensitive("u") ||
-      signStr.compare_insensitive("unsigned"))
+  if (signStr.equals_insensitive("u") || signStr.equals_insensitive("unsigned"))
     result = TestIntegerType::SignednessSemantics::Unsigned;
-  else if (signStr.compare_insensitive("s") ||
-           signStr.compare_insensitive("signed"))
+  else if (signStr.equals_insensitive("s") ||
+           signStr.equals_insensitive("signed"))
     result = TestIntegerType::SignednessSemantics::Signed;
-  else if (signStr.compare_insensitive("n") ||
-           signStr.compare_insensitive("none"))
+  else if (signStr.equals_insensitive("n") ||
+           signStr.equals_insensitive("none"))
     result = TestIntegerType::SignednessSemantics::Signless;
   else
     return parser.emitError(loc, "expected signed, unsigned, or none");
@@ -47,7 +47,7 @@ parseSignedness(DialectAsmParser &parser,
 }
 
 // Custom printer for SignednessSemantics.
-static void printSignedness(DialectAsmPrinter &printer,
+static void printSignedness(AsmPrinter &printer,
                             const TestIntegerType::SignednessSemantics &ss) {
   switch (ss) {
   case TestIntegerType::SignednessSemantics::Unsigned:
@@ -65,7 +65,6 @@ static void printSignedness(DialectAsmPrinter &printer,
 // The functions don't need to be in the header file, but need to be in the mlir
 // namespace. Declare them here, then define them immediately below. Separating
 // the declaration and definition adheres to the LLVM coding standards.
-namespace mlir {
 namespace test {
 // FieldInfo is used as part of a parameter, so equality comparison is
 // compulsory.
@@ -73,24 +72,82 @@ static bool operator==(const FieldInfo &a, const FieldInfo &b);
 // FieldInfo is used as part of a parameter, so a hash will be computed.
 static llvm::hash_code hash_value(const FieldInfo &fi); // NOLINT
 } // namespace test
-} // namespace mlir
 
 // FieldInfo is used as part of a parameter, so equality comparison is
 // compulsory.
-static bool mlir::test::operator==(const FieldInfo &a, const FieldInfo &b) {
+static bool test::operator==(const FieldInfo &a, const FieldInfo &b) {
   return a.name == b.name && a.type == b.type;
 }
 
 // FieldInfo is used as part of a parameter, so a hash will be computed.
-static llvm::hash_code mlir::test::hash_value(const FieldInfo &fi) { // NOLINT
+static llvm::hash_code test::hash_value(const FieldInfo &fi) { // NOLINT
   return llvm::hash_combine(fi.name, fi.type);
 }
+
+//===----------------------------------------------------------------------===//
+// TestCustomType
+//===----------------------------------------------------------------------===//
+
+static LogicalResult parseCustomTypeA(AsmParser &parser,
+                                      FailureOr<int> &aResult) {
+  aResult.emplace();
+  return parser.parseInteger(*aResult);
+}
+
+static void printCustomTypeA(AsmPrinter &printer, int a) { printer << a; }
+
+static LogicalResult parseCustomTypeB(AsmParser &parser, int a,
+                                      FailureOr<Optional<int>> &bResult) {
+  if (a < 0)
+    return success();
+  for (int i : llvm::seq(0, a))
+    if (failed(parser.parseInteger(i)))
+      return failure();
+  bResult.emplace(0);
+  return parser.parseInteger(**bResult);
+}
+
+static void printCustomTypeB(AsmPrinter &printer, int a, Optional<int> b) {
+  if (a < 0)
+    return;
+  printer << ' ';
+  for (int i : llvm::seq(0, a))
+    printer << i << ' ';
+  printer << *b;
+}
+
+static LogicalResult parseFooString(AsmParser &parser,
+                                    FailureOr<std::string> &foo) {
+  std::string result;
+  if (parser.parseString(&result))
+    return failure();
+  foo = std::move(result);
+  return success();
+}
+
+static void printFooString(AsmPrinter &printer, StringRef foo) {
+  printer << '"' << foo << '"';
+}
+
+static LogicalResult parseBarString(AsmParser &parser, StringRef foo) {
+  return parser.parseKeyword(foo);
+}
+
+static void printBarString(AsmPrinter &printer, StringRef foo) {
+  printer << ' ' << foo;
+}
+//===----------------------------------------------------------------------===//
+// Tablegen Generated Definitions
+//===----------------------------------------------------------------------===//
+
+#define GET_TYPEDEF_CLASSES
+#include "TestTypeDefs.cpp.inc"
 
 //===----------------------------------------------------------------------===//
 // CompoundAType
 //===----------------------------------------------------------------------===//
 
-Type CompoundAType::parse(MLIRContext *ctxt, DialectAsmParser &parser) {
+Type CompoundAType::parse(AsmParser &parser) {
   int widthOfSomething;
   Type oneType;
   SmallVector<int, 4> arrayOfInts;
@@ -109,11 +166,10 @@ Type CompoundAType::parse(MLIRContext *ctxt, DialectAsmParser &parser) {
   if (parser.parseRSquare() || parser.parseGreater())
     return Type();
 
-  return get(ctxt, widthOfSomething, oneType, arrayOfInts);
+  return get(parser.getContext(), widthOfSomething, oneType, arrayOfInts);
 }
-void CompoundAType::print(DialectAsmPrinter &printer) const {
-  printer << "cmpnd_a<" << getWidthOfSomething() << ", " << getOneType()
-          << ", [";
+void CompoundAType::print(AsmPrinter &printer) const {
+  printer << "<" << getWidthOfSomething() << ", " << getOneType() << ", [";
   auto intArray = getArrayOfInts();
   llvm::interleaveComma(intArray, printer);
   printer << "]>";
@@ -133,6 +189,54 @@ TestIntegerType::verify(function_ref<InFlightDiagnostic()> emitError,
   return success();
 }
 
+Type TestIntegerType::parse(AsmParser &parser) {
+  SignednessSemantics signedness;
+  int width;
+  if (parser.parseLess() || parseSignedness(parser, signedness) ||
+      parser.parseComma() || parser.parseInteger(width) ||
+      parser.parseGreater())
+    return Type();
+  Location loc = parser.getEncodedSourceLoc(parser.getNameLoc());
+  return getChecked(loc, loc.getContext(), width, signedness);
+}
+
+void TestIntegerType::print(AsmPrinter &p) const {
+  p << "<";
+  printSignedness(p, getSignedness());
+  p << ", " << getWidth() << ">";
+}
+
+//===----------------------------------------------------------------------===//
+// TestStructType
+//===----------------------------------------------------------------------===//
+
+Type StructType::parse(AsmParser &p) {
+  SmallVector<FieldInfo, 4> parameters;
+  if (p.parseLess())
+    return Type();
+  while (succeeded(p.parseOptionalLBrace())) {
+    Type type;
+    StringRef name;
+    if (p.parseKeyword(&name) || p.parseComma() || p.parseType(type) ||
+        p.parseRBrace())
+      return Type();
+    parameters.push_back(FieldInfo{name, type});
+    if (p.parseOptionalComma())
+      break;
+  }
+  if (p.parseGreater())
+    return Type();
+  return get(p.getContext(), parameters);
+}
+
+void StructType::print(AsmPrinter &p) const {
+  p << "<";
+  llvm::interleaveComma(getFields(), p, [&](const FieldInfo &field) {
+    p << "{" << field.name << "," << field.type << "}";
+  });
+  p << ">";
+}
+
 //===----------------------------------------------------------------------===//
 // TestType
 //===----------------------------------------------------------------------===//
@@ -145,15 +249,15 @@ void TestType::printTypeC(Location loc) const {
 // TestTypeWithLayout
 //===----------------------------------------------------------------------===//
 
-Type TestTypeWithLayoutType::parse(MLIRContext *ctx, DialectAsmParser &parser) {
+Type TestTypeWithLayoutType::parse(AsmParser &parser) {
   unsigned val;
   if (parser.parseLess() || parser.parseInteger(val) || parser.parseGreater())
     return Type();
-  return TestTypeWithLayoutType::get(ctx, val);
+  return TestTypeWithLayoutType::get(parser.getContext(), val);
 }
 
-void TestTypeWithLayoutType::print(DialectAsmPrinter &printer) const {
-  printer << "test_type_with_layout<" << getKey() << ">";
+void TestTypeWithLayoutType::print(AsmPrinter &printer) const {
+  printer << "<" << getKey() << ">";
 }
 
 unsigned
@@ -213,11 +317,70 @@ unsigned TestTypeWithLayoutType::extractKind(DataLayoutEntryListRef params,
 }
 
 //===----------------------------------------------------------------------===//
-// Tablegen Generated Definitions
+// Dynamic Types
 //===----------------------------------------------------------------------===//
 
-#define GET_TYPEDEF_CLASSES
-#include "TestTypeDefs.cpp.inc"
+/// Define a singleton dynamic type.
+static std::unique_ptr<DynamicTypeDefinition>
+getSingletonDynamicType(TestDialect *testDialect) {
+  return DynamicTypeDefinition::get(
+      "dynamic_singleton", testDialect,
+      [](function_ref<InFlightDiagnostic()> emitError,
+         ArrayRef<Attribute> args) {
+        if (!args.empty()) {
+          emitError() << "expected 0 type arguments, but had " << args.size();
+          return failure();
+        }
+        return success();
+      });
+}
+
+/// Define a dynamic type representing a pair.
+static std::unique_ptr<DynamicTypeDefinition>
+getPairDynamicType(TestDialect *testDialect) {
+  return DynamicTypeDefinition::get(
+      "dynamic_pair", testDialect,
+      [](function_ref<InFlightDiagnostic()> emitError,
+         ArrayRef<Attribute> args) {
+        if (args.size() != 2) {
+          emitError() << "expected 2 type arguments, but had " << args.size();
+          return failure();
+        }
+        return success();
+      });
+}
+
+static std::unique_ptr<DynamicTypeDefinition>
+getCustomAssemblyFormatDynamicType(TestDialect *testDialect) {
+  auto verifier = [](function_ref<InFlightDiagnostic()> emitError,
+                     ArrayRef<Attribute> args) {
+    if (args.size() != 2) {
+      emitError() << "expected 2 type arguments, but had " << args.size();
+      return failure();
+    }
+    return success();
+  };
+
+  auto parser = [](AsmParser &parser,
+                   llvm::SmallVectorImpl<Attribute> &parsedParams) {
+    Attribute leftAttr, rightAttr;
+    if (parser.parseLess() || parser.parseAttribute(leftAttr) ||
+        parser.parseColon() || parser.parseAttribute(rightAttr) ||
+        parser.parseGreater())
+      return failure();
+    parsedParams.push_back(leftAttr);
+    parsedParams.push_back(rightAttr);
+    return success();
+  };
+
+  auto printer = [](AsmPrinter &printer, ArrayRef<Attribute> params) {
+    printer << "<" << params[0] << ":" << params[1] << ">";
+  };
+
+  return DynamicTypeDefinition::get("dynamic_custom_assembly_format",
+                                    testDialect, std::move(verifier),
+                                    std::move(parser), std::move(printer));
+}
 
 //===----------------------------------------------------------------------===//
 // TestDialect
@@ -236,19 +399,33 @@ void TestDialect::registerTypes() {
 #include "TestTypeDefs.cpp.inc"
            >();
   SimpleAType::attachInterface<PtrElementModel>(*getContext());
+
+  registerDynamicType(getSingletonDynamicType(this));
+  registerDynamicType(getPairDynamicType(this));
+  registerDynamicType(getCustomAssemblyFormatDynamicType(this));
 }
 
-static Type parseTestType(MLIRContext *ctxt, DialectAsmParser &parser,
-                          SetVector<Type> &stack) {
+Type TestDialect::parseTestType(AsmParser &parser,
+                                SetVector<Type> &stack) const {
   StringRef typeTag;
   if (failed(parser.parseKeyword(&typeTag)))
     return Type();
 
   {
     Type genType;
-    auto parseResult = generatedTypeParser(ctxt, parser, typeTag, genType);
+    auto parseResult = generatedTypeParser(parser, typeTag, genType);
     if (parseResult.hasValue())
       return genType;
+  }
+
+  {
+    Type dynType;
+    auto parseResult = parseOptionalDynamicType(typeTag, parser, dynType);
+    if (parseResult.hasValue()) {
+      if (succeeded(parseResult.getValue()))
+        return dynType;
+      return Type();
+    }
   }
 
   if (typeTag != "test_rec") {
@@ -259,7 +436,7 @@ static Type parseTestType(MLIRContext *ctxt, DialectAsmParser &parser,
   StringRef name;
   if (parser.parseLess() || parser.parseKeyword(&name))
     return Type();
-  auto rec = TestRecursiveType::get(parser.getBuilder().getContext(), name);
+  auto rec = TestRecursiveType::get(parser.getContext(), name);
 
   // If this type already has been parsed above in the stack, expect just the
   // name.
@@ -273,7 +450,7 @@ static Type parseTestType(MLIRContext *ctxt, DialectAsmParser &parser,
   if (failed(parser.parseComma()))
     return Type();
   stack.insert(rec);
-  Type subtype = parseTestType(ctxt, parser, stack);
+  Type subtype = parseTestType(parser, stack);
   stack.pop_back();
   if (!subtype || failed(parser.parseGreater()) || failed(rec.setBody(subtype)))
     return Type();
@@ -283,12 +460,15 @@ static Type parseTestType(MLIRContext *ctxt, DialectAsmParser &parser,
 
 Type TestDialect::parseType(DialectAsmParser &parser) const {
   SetVector<Type> stack;
-  return parseTestType(getContext(), parser, stack);
+  return parseTestType(parser, stack);
 }
 
-static void printTestType(Type type, DialectAsmPrinter &printer,
-                          SetVector<Type> &stack) {
+void TestDialect::printTestType(Type type, AsmPrinter &printer,
+                                SetVector<Type> &stack) const {
   if (succeeded(generatedTypePrinter(type, printer)))
+    return;
+
+  if (succeeded(printIfDynamicType(type, printer)))
     return;
 
   auto rec = type.cast<TestRecursiveType>();

@@ -24,6 +24,7 @@
 #include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/MC/MCTargetOptions.h"
+#include "llvm/MC/TargetRegistry.h"
 #include "llvm/Object/SymbolSize.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/DynamicLibrary.h"
@@ -33,7 +34,6 @@
 #include "llvm/Support/Memory.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
-#include "llvm/Support/TargetRegistry.h"
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/Support/Timer.h"
 #include "llvm/Support/raw_ostream.h"
@@ -46,7 +46,7 @@ using namespace llvm::object;
 
 static cl::OptionCategory RTDyldCategory("RTDyld Options");
 
-static cl::list<std::string> InputFileList(cl::Positional, cl::ZeroOrMore,
+static cl::list<std::string> InputFileList(cl::Positional,
                                            cl::desc("<input files>"),
                                            cl::cat(RTDyldCategory));
 
@@ -79,11 +79,11 @@ static cl::opt<std::string>
                cl::init("_main"), cl::cat(RTDyldCategory));
 
 static cl::list<std::string> Dylibs("dylib", cl::desc("Add library."),
-                                    cl::ZeroOrMore, cl::cat(RTDyldCategory));
+                                    cl::cat(RTDyldCategory));
 
 static cl::list<std::string> InputArgv("args", cl::Positional,
                                        cl::desc("<program arguments>..."),
-                                       cl::ZeroOrMore, cl::PositionalEatsArgs,
+                                       cl::PositionalEatsArgs,
                                        cl::cat(RTDyldCategory));
 
 static cl::opt<std::string>
@@ -98,7 +98,7 @@ static cl::opt<std::string>
 static cl::list<std::string>
     CheckFiles("check",
                cl::desc("File containing RuntimeDyld verifier checks."),
-               cl::ZeroOrMore, cl::cat(RTDyldCategory));
+               cl::cat(RTDyldCategory));
 
 static cl::opt<uint64_t>
     PreallocMemory("preallocate",
@@ -127,14 +127,13 @@ static cl::list<std::string>
     SpecificSectionMappings("map-section",
                             cl::desc("For -verify only: Map a section to a "
                                      "specific address."),
-                            cl::ZeroOrMore, cl::Hidden,
-                            cl::cat(RTDyldCategory));
+                            cl::Hidden, cl::cat(RTDyldCategory));
 
 static cl::list<std::string> DummySymbolMappings(
     "dummy-extern",
     cl::desc("For -verify only: Inject a symbol into the extern "
              "symbol table."),
-    cl::ZeroOrMore, cl::Hidden, cl::cat(RTDyldCategory));
+    cl::Hidden, cl::cat(RTDyldCategory));
 
 static cl::opt<bool> PrintAllocationRequests(
     "print-alloc-requests",
@@ -206,6 +205,9 @@ public:
   uint8_t *allocateDataSection(uintptr_t Size, unsigned Alignment,
                                unsigned SectionID, StringRef SectionName,
                                bool IsReadOnly) override;
+  TrivialMemoryManager::TLSSection
+  allocateTLSSection(uintptr_t Size, unsigned Alignment, unsigned SectionID,
+                     StringRef SectionName) override;
 
   /// If non null, records subsequent Name -> SectionID mappings.
   void setSectionIDsMap(SectionIDMap *SecIDMap) {
@@ -252,7 +254,8 @@ public:
                                         sys::Memory::MF_WRITE,
                                         EC);
     if (!MB.base())
-      report_fatal_error("Can't allocate enough memory: " + EC.message());
+      report_fatal_error(Twine("Can't allocate enough memory: ") +
+                         EC.message());
 
     PreallocSlab = MB;
     UsePreallocation = true;
@@ -282,6 +285,9 @@ private:
   uintptr_t SlabSize = 0;
   uintptr_t CurrentSlabOffset = 0;
   SectionIDMap *SecIDMap = nullptr;
+#if defined(__x86_64__) && defined(__ELF__) && defined(__linux__)
+  unsigned UsedTLSStorage = 0;
+#endif
 };
 
 uint8_t *TrivialMemoryManager::allocateCodeSection(uintptr_t Size,
@@ -306,7 +312,8 @@ uint8_t *TrivialMemoryManager::allocateCodeSection(uintptr_t Size,
                                       sys::Memory::MF_WRITE,
                                       EC);
   if (!MB.base())
-    report_fatal_error("MemoryManager allocation failed: " + EC.message());
+    report_fatal_error(Twine("MemoryManager allocation failed: ") +
+                       EC.message());
   FunctionMemory.push_back(SectionInfo(SectionName, MB, SectionID));
   return (uint8_t*)MB.base();
 }
@@ -334,9 +341,50 @@ uint8_t *TrivialMemoryManager::allocateDataSection(uintptr_t Size,
                                       sys::Memory::MF_WRITE,
                                       EC);
   if (!MB.base())
-    report_fatal_error("MemoryManager allocation failed: " + EC.message());
+    report_fatal_error(Twine("MemoryManager allocation failed: ") +
+                       EC.message());
   DataMemory.push_back(SectionInfo(SectionName, MB, SectionID));
   return (uint8_t*)MB.base();
+}
+
+// In case the execution needs TLS storage, we define a very small TLS memory
+// area here that will be used in allocateTLSSection().
+#if defined(__x86_64__) && defined(__ELF__) && defined(__linux__)
+extern "C" {
+alignas(16) __attribute__((visibility("hidden"), tls_model("initial-exec"),
+                           used)) thread_local char LLVMRTDyldTLSSpace[16];
+}
+#endif
+
+TrivialMemoryManager::TLSSection
+TrivialMemoryManager::allocateTLSSection(uintptr_t Size, unsigned Alignment,
+                                         unsigned SectionID,
+                                         StringRef SectionName) {
+#if defined(__x86_64__) && defined(__ELF__) && defined(__linux__)
+  if (Size + UsedTLSStorage > sizeof(LLVMRTDyldTLSSpace)) {
+    return {};
+  }
+
+  // Get the offset of the TLSSpace in the TLS block by using a tpoff
+  // relocation here.
+  int64_t TLSOffset;
+  asm("leaq LLVMRTDyldTLSSpace@tpoff, %0" : "=r"(TLSOffset));
+
+  TLSSection Section;
+  // We use the storage directly as the initialization image. This means that
+  // when a new thread is spawned after this allocation, it will not be
+  // initialized correctly. This means, llvm-rtdyld will only support TLS in a
+  // single thread.
+  Section.InitializationImage =
+      reinterpret_cast<uint8_t *>(LLVMRTDyldTLSSpace + UsedTLSStorage);
+  Section.Offset = TLSOffset + UsedTLSStorage;
+
+  UsedTLSStorage += Size;
+
+  return Section;
+#else
+  return {};
+#endif
 }
 
 static const char *ProgramName;
@@ -349,10 +397,10 @@ static void ErrorAndExit(const Twine &Msg) {
 static void loadDylibs() {
   for (const std::string &Dylib : Dylibs) {
     if (!sys::fs::is_regular_file(Dylib))
-      report_fatal_error("Dylib not found: '" + Dylib + "'.");
+      report_fatal_error(Twine("Dylib not found: '") + Dylib + "'.");
     std::string ErrMsg;
     if (sys::DynamicLibrary::LoadLibraryPermanently(Dylib.c_str(), &ErrMsg))
-      report_fatal_error("Error loading '" + Dylib + "': " + ErrMsg);
+      report_fatal_error(Twine("Error loading '") + Dylib + "': " + ErrMsg);
   }
 }
 
@@ -413,8 +461,9 @@ static int printLineInfoForInput(bool LoadObjects, bool UseDebugObj) {
       }
     }
 
-    std::unique_ptr<DIContext> Context =
-        DWARFContext::create(*SymbolObj, LoadedObjInfo.get());
+    std::unique_ptr<DIContext> Context = DWARFContext::create(
+        *SymbolObj, DWARFContext::ProcessDebugRelocations::Process,
+        LoadedObjInfo.get());
 
     std::vector<std::pair<SymbolRef, uint64_t>> SymAddr =
         object::computeSymbolSizes(*SymbolObj);
@@ -710,15 +759,15 @@ static void remapSectionsAndSymbols(const llvm::Triple &TargetTriple,
     size_t EqualsIdx = Mapping.find_first_of('=');
 
     if (EqualsIdx == StringRef::npos)
-      report_fatal_error("Invalid dummy symbol specification '" + Mapping +
-                         "'. Should be '<symbol name>=<addr>'");
+      report_fatal_error(Twine("Invalid dummy symbol specification '") +
+                         Mapping + "'. Should be '<symbol name>=<addr>'");
 
     std::string Symbol = Mapping.substr(0, EqualsIdx);
     std::string AddrStr = Mapping.substr(EqualsIdx + 1);
 
     uint64_t Addr;
     if (StringRef(AddrStr).getAsInteger(0, Addr))
-      report_fatal_error("Invalid symbol mapping '" + Mapping + "'.");
+      report_fatal_error(Twine("Invalid symbol mapping '") + Mapping + "'.");
 
     MemMgr.addDummySymbol(Symbol, Addr);
   }
@@ -974,7 +1023,7 @@ int main(int argc, char **argv) {
 
   Timers = ShowTimes ? std::make_unique<RTDyldTimers>() : nullptr;
 
-  int Result;
+  int Result = 0;
   switch (Action) {
   case AC_Execute:
     Result = executeInput();

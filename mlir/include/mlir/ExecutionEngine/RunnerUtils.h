@@ -13,8 +13,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef EXECUTIONENGINE_RUNNERUTILS_H_
-#define EXECUTIONENGINE_RUNNERUTILS_H_
+#ifndef MLIR_EXECUTIONENGINE_RUNNERUTILS_H
+#define MLIR_EXECUTIONENGINE_RUNNERUTILS_H
 
 #ifdef _WIN32
 #ifndef MLIR_RUNNERUTILS_EXPORT
@@ -27,7 +27,8 @@
 #endif // mlir_runner_utils_EXPORTS
 #endif // MLIR_RUNNERUTILS_EXPORT
 #else
-#define MLIR_RUNNERUTILS_EXPORT
+// Non-windows: use visibility attributes.
+#define MLIR_RUNNERUTILS_EXPORT __attribute__((visibility("default")))
 #endif // _WIN32
 
 #include <assert.h>
@@ -37,34 +38,34 @@
 #include "mlir/ExecutionEngine/CRunnerUtils.h"
 
 template <typename T, typename StreamType>
-void printMemRefMetaData(StreamType &os, const DynamicMemRefType<T> &V) {
-  os << "base@ = " << reinterpret_cast<void *>(V.data) << " rank = " << V.rank
-     << " offset = " << V.offset;
+void printMemRefMetaData(StreamType &os, const DynamicMemRefType<T> &v) {
+  os << "base@ = " << reinterpret_cast<void *>(v.data) << " rank = " << v.rank
+     << " offset = " << v.offset;
   auto print = [&](const int64_t *ptr) {
-    if (V.rank == 0)
+    if (v.rank == 0)
       return;
     os << ptr[0];
-    for (int64_t i = 1; i < V.rank; ++i)
+    for (int64_t i = 1; i < v.rank; ++i)
       os << ", " << ptr[i];
   };
   os << " sizes = [";
-  print(V.sizes);
+  print(v.sizes);
   os << "] strides = [";
-  print(V.strides);
+  print(v.strides);
   os << "]";
 }
 
 template <typename StreamType, typename T, int N>
-void printMemRefMetaData(StreamType &os, StridedMemRefType<T, N> &V) {
+void printMemRefMetaData(StreamType &os, StridedMemRefType<T, N> &v) {
   static_assert(N >= 0, "Expected N > 0");
   os << "MemRef ";
-  printMemRefMetaData(os, DynamicMemRefType<T>(V));
+  printMemRefMetaData(os, DynamicMemRefType<T>(v));
 }
 
 template <typename StreamType, typename T>
-void printUnrankedMemRefMetaData(StreamType &os, UnrankedMemRefType<T> &V) {
+void printUnrankedMemRefMetaData(StreamType &os, UnrankedMemRefType<T> &v) {
   os << "Unranked MemRef ";
-  printMemRefMetaData(os, DynamicMemRefType<T>(V));
+  printMemRefMetaData(os, DynamicMemRefType<T>(v));
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -191,39 +192,41 @@ void MemRefDataPrinter<T>::printLast(std::ostream &os, T *base, int64_t dim,
   os << "]";
 }
 
-template <typename T, int N> void printMemRefShape(StridedMemRefType<T, N> &M) {
+template <typename T, int N>
+void printMemRefShape(StridedMemRefType<T, N> &m) {
   std::cout << "Memref ";
-  printMemRefMetaData(std::cout, DynamicMemRefType<T>(M));
-}
-
-template <typename T> void printMemRefShape(UnrankedMemRefType<T> &M) {
-  std::cout << "Unranked Memref ";
-  printMemRefMetaData(std::cout, DynamicMemRefType<T>(M));
+  printMemRefMetaData(std::cout, DynamicMemRefType<T>(m));
 }
 
 template <typename T>
-void printMemRef(const DynamicMemRefType<T> &M) {
-  printMemRefMetaData(std::cout, M);
+void printMemRefShape(UnrankedMemRefType<T> &m) {
+  std::cout << "Unranked Memref ";
+  printMemRefMetaData(std::cout, DynamicMemRefType<T>(m));
+}
+
+template <typename T>
+void printMemRef(const DynamicMemRefType<T> &m) {
+  printMemRefMetaData(std::cout, m);
   std::cout << " data = " << std::endl;
-  if (M.rank == 0)
+  if (m.rank == 0)
     std::cout << "[";
-  MemRefDataPrinter<T>::print(std::cout, M.data, M.rank, M.rank, M.offset,
-                              M.sizes, M.strides);
-  if (M.rank == 0)
+  MemRefDataPrinter<T>::print(std::cout, m.data, m.rank, m.rank, m.offset,
+                              m.sizes, m.strides);
+  if (m.rank == 0)
     std::cout << "]";
   std::cout << std::endl;
 }
 
 template <typename T, int N>
-void printMemRef(StridedMemRefType<T, N> &M) {
+void printMemRef(StridedMemRefType<T, N> &m) {
   std::cout << "Memref ";
-  printMemRef(DynamicMemRefType<T>(M));
+  printMemRef(DynamicMemRefType<T>(m));
 }
 
 template <typename T>
-void printMemRef(UnrankedMemRefType<T> &M) {
+void printMemRef(UnrankedMemRefType<T> &m) {
   std::cout << "Unranked Memref ";
-  printMemRef(DynamicMemRefType<T>(M));
+  printMemRef(DynamicMemRefType<T>(m));
 }
 
 /// Verify the result of two computations are equivalent up to a small
@@ -338,48 +341,48 @@ int64_t verifyMemRef(UnrankedMemRefType<T> &actual,
 // Currently exposed C API.
 ////////////////////////////////////////////////////////////////////////////////
 extern "C" MLIR_RUNNERUTILS_EXPORT void
-_mlir_ciface_print_memref_shape_i8(UnrankedMemRefType<int8_t> *M);
+_mlir_ciface_printMemrefShapeI8(UnrankedMemRefType<int8_t> *m);
 extern "C" MLIR_RUNNERUTILS_EXPORT void
-_mlir_ciface_print_memref_shape_i32(UnrankedMemRefType<int32_t> *M);
+_mlir_ciface_printMemrefShapeI32(UnrankedMemRefType<int32_t> *m);
 extern "C" MLIR_RUNNERUTILS_EXPORT void
-_mlir_ciface_print_memref_shape_i64(UnrankedMemRefType<int64_t> *M);
+_mlir_ciface_printMemrefShapeI64(UnrankedMemRefType<int64_t> *m);
 extern "C" MLIR_RUNNERUTILS_EXPORT void
-_mlir_ciface_print_memref_shape_f32(UnrankedMemRefType<float> *M);
+_mlir_ciface_printMemrefShapeF32(UnrankedMemRefType<float> *m);
 extern "C" MLIR_RUNNERUTILS_EXPORT void
-_mlir_ciface_print_memref_shape_f64(UnrankedMemRefType<double> *M);
+_mlir_ciface_printMemrefShapeF64(UnrankedMemRefType<double> *m);
 
 extern "C" MLIR_RUNNERUTILS_EXPORT void
-_mlir_ciface_print_memref_i8(UnrankedMemRefType<int8_t> *M);
+_mlir_ciface_printMemrefI8(UnrankedMemRefType<int8_t> *m);
 extern "C" MLIR_RUNNERUTILS_EXPORT void
-_mlir_ciface_print_memref_i32(UnrankedMemRefType<int32_t> *M);
+_mlir_ciface_printMemrefI32(UnrankedMemRefType<int32_t> *m);
 extern "C" MLIR_RUNNERUTILS_EXPORT void
-_mlir_ciface_print_memref_f32(UnrankedMemRefType<float> *M);
+_mlir_ciface_printMemrefI64(UnrankedMemRefType<int64_t> *m);
 extern "C" MLIR_RUNNERUTILS_EXPORT void
-_mlir_ciface_print_memref_f64(UnrankedMemRefType<double> *M);
+_mlir_ciface_printMemrefF32(UnrankedMemRefType<float> *m);
+extern "C" MLIR_RUNNERUTILS_EXPORT void
+_mlir_ciface_printMemrefF64(UnrankedMemRefType<double> *m);
 
-extern "C" MLIR_RUNNERUTILS_EXPORT void print_memref_i32(int64_t rank,
-                                                         void *ptr);
-extern "C" MLIR_RUNNERUTILS_EXPORT void print_memref_i64(int64_t rank,
-                                                         void *ptr);
-extern "C" MLIR_RUNNERUTILS_EXPORT void print_memref_f32(int64_t rank,
-                                                         void *ptr);
-extern "C" MLIR_RUNNERUTILS_EXPORT void print_memref_f64(int64_t rank,
-                                                         void *ptr);
+extern "C" MLIR_RUNNERUTILS_EXPORT int64_t _mlir_ciface_nanoTime();
 
-extern "C" MLIR_RUNNERUTILS_EXPORT void
-_mlir_ciface_print_memref_0d_f32(StridedMemRefType<float, 0> *M);
-extern "C" MLIR_RUNNERUTILS_EXPORT void
-_mlir_ciface_print_memref_1d_f32(StridedMemRefType<float, 1> *M);
-extern "C" MLIR_RUNNERUTILS_EXPORT void
-_mlir_ciface_print_memref_2d_f32(StridedMemRefType<float, 2> *M);
-extern "C" MLIR_RUNNERUTILS_EXPORT void
-_mlir_ciface_print_memref_3d_f32(StridedMemRefType<float, 3> *M);
-extern "C" MLIR_RUNNERUTILS_EXPORT void
-_mlir_ciface_print_memref_4d_f32(StridedMemRefType<float, 4> *M);
+extern "C" MLIR_RUNNERUTILS_EXPORT void printMemrefI32(int64_t rank, void *ptr);
+extern "C" MLIR_RUNNERUTILS_EXPORT void printMemrefI64(int64_t rank, void *ptr);
+extern "C" MLIR_RUNNERUTILS_EXPORT void printMemrefF32(int64_t rank, void *ptr);
+extern "C" MLIR_RUNNERUTILS_EXPORT void printMemrefF64(int64_t rank, void *ptr);
+extern "C" MLIR_RUNNERUTILS_EXPORT void printCString(char *str);
 
 extern "C" MLIR_RUNNERUTILS_EXPORT void
-_mlir_ciface_print_memref_vector_4x4xf32(
-    StridedMemRefType<Vector2D<4, 4, float>, 2> *M);
+_mlir_ciface_printMemref0dF32(StridedMemRefType<float, 0> *m);
+extern "C" MLIR_RUNNERUTILS_EXPORT void
+_mlir_ciface_printMemref1dF32(StridedMemRefType<float, 1> *m);
+extern "C" MLIR_RUNNERUTILS_EXPORT void
+_mlir_ciface_printMemref2dF32(StridedMemRefType<float, 2> *m);
+extern "C" MLIR_RUNNERUTILS_EXPORT void
+_mlir_ciface_printMemref3dF32(StridedMemRefType<float, 3> *m);
+extern "C" MLIR_RUNNERUTILS_EXPORT void
+_mlir_ciface_printMemref4dF32(StridedMemRefType<float, 4> *m);
+
+extern "C" MLIR_RUNNERUTILS_EXPORT void _mlir_ciface_printMemrefVector4x4xf32(
+    StridedMemRefType<Vector2D<4, 4, float>, 2> *m);
 
 extern "C" MLIR_RUNNERUTILS_EXPORT int64_t _mlir_ciface_verifyMemRefI32(
     UnrankedMemRefType<int32_t> *actual, UnrankedMemRefType<int32_t> *expected);
@@ -398,4 +401,4 @@ extern "C" MLIR_RUNNERUTILS_EXPORT int64_t verifyMemRefF64(int64_t rank,
                                                            void *actualPtr,
                                                            void *expectedPtr);
 
-#endif // EXECUTIONENGINE_RUNNERUTILS_H_
+#endif // MLIR_EXECUTIONENGINE_RUNNERUTILS_H

@@ -23,6 +23,7 @@
 #include "lldb/Target/Target.h"
 #include "lldb/Target/Thread.h"
 #include "lldb/Utility/ConstString.h"
+#include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/RegisterValue.h"
 #include "lldb/Utility/Scalar.h"
@@ -65,7 +66,7 @@ bool ABISysV_arm64::PrepareTrivialCall(Thread &thread, addr_t sp,
   if (!reg_ctx)
     return false;
 
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_EXPRESSIONS));
+  Log *log = GetLog(LLDBLog::Expressions);
 
   if (log) {
     StreamString s;
@@ -560,9 +561,12 @@ static bool LoadValueFromConsecutiveGPRRegisters(
   } else {
     const RegisterInfo *reg_info = nullptr;
     if (is_return_value) {
-      // We are assuming we are decoding this immediately after returning from
-      // a function call and that the address of the structure is in x8
-      reg_info = reg_ctx->GetRegisterInfoByName("x8", 0);
+      // The SysV arm64 ABI doesn't require you to write the return location 
+      // back to x8 before returning from the function the way the x86_64 ABI 
+      // does.  It looks like all the users of this ABI currently choose not to
+      // do that, and so we can't reconstruct stack based returns on exit 
+      // from the function.
+      return false;
     } else {
       // We are assuming we are stopped at the first instruction in a function
       // and that the ABI is being respected so all parameters appear where
@@ -790,14 +794,20 @@ lldb::addr_t ABISysV_arm64::FixAddress(addr_t pc, addr_t mask) {
 // Reads code or data address mask for the current Linux process.
 static lldb::addr_t ReadLinuxProcessAddressMask(lldb::ProcessSP process_sp,
                                                 llvm::StringRef reg_name) {
-  // Linux configures user-space virtual addresses with top byte ignored.
-  // We set default value of mask such that top byte is masked out.
-  uint64_t address_mask = ~((1ULL << 56) - 1);
-  // If Pointer Authentication feature is enabled then Linux exposes
-  // PAC data and code mask register. Try reading relevant register
-  // below and merge it with default address mask calculated above.
+  // 0 means there isn't a mask or it has not been read yet.
+  // We do not return the top byte mask unless thread_sp is valid.
+  // This prevents calls to this function before the thread is setup locking
+  // in the value to just the top byte mask, in cases where pointer
+  // authentication might also be active.
+  uint64_t address_mask = 0;
   lldb::ThreadSP thread_sp = process_sp->GetThreadList().GetSelectedThread();
   if (thread_sp) {
+    // Linux configures user-space virtual addresses with top byte ignored.
+    // We set default value of mask such that top byte is masked out.
+    address_mask = ~((1ULL << 56) - 1);
+    // If Pointer Authentication feature is enabled then Linux exposes
+    // PAC data and code mask register. Try reading relevant register
+    // below and merge it with default address mask calculated above.
     lldb::RegisterContextSP reg_ctx_sp = thread_sp->GetRegisterContext();
     if (reg_ctx_sp) {
       const RegisterInfo *reg_info =
@@ -845,14 +855,3 @@ void ABISysV_arm64::Initialize() {
 void ABISysV_arm64::Terminate() {
   PluginManager::UnregisterPlugin(CreateInstance);
 }
-
-lldb_private::ConstString ABISysV_arm64::GetPluginNameStatic() {
-  static ConstString g_name("SysV-arm64");
-  return g_name;
-}
-
-// PluginInterface protocol
-
-ConstString ABISysV_arm64::GetPluginName() { return GetPluginNameStatic(); }
-
-uint32_t ABISysV_arm64::GetPluginVersion() { return 1; }

@@ -1,5 +1,4 @@
-! RUN: %S/test_errors.sh %s %t %flang_fc1
-! REQUIRES: shell
+! RUN: %python %S/test_errors.py %s %flang_fc1
 ! Test 15.5.2.9(2,3,5) dummy procedure requirements
 ! C843
 !   An entity with the INTENT attribute shall be a dummy data object or a 
@@ -58,9 +57,6 @@ module m
     procedure(realfunc), pointer :: p
     procedure(intfunc), pointer :: ip
     integer, pointer :: intPtr
-    external :: extfunc
-    external :: extfuncPtr
-    pointer :: extfuncPtr
     p => realfunc
     ip => intfunc
     call s01(realfunc) ! ok
@@ -79,8 +75,6 @@ module m
     call s01(null(intPtr))
     !ERROR: Actual argument associated with procedure dummy argument 'p=' is typeless
     call s01(B"0101")
-    !ERROR: Actual procedure argument has an implicit interface which is not known to be compatible with dummy argument 'p=' which has an explicit interface
-    call s01(extfunc)
     !ERROR: Actual argument associated with procedure pointer dummy argument 'p=' must be a POINTER unless INTENT(IN)
     call s02(realfunc)
     call s02(p) ! ok
@@ -94,10 +88,6 @@ module m
     call s02(null(p))
     !ERROR: Actual argument associated with procedure pointer dummy argument 'p=' must be a POINTER unless INTENT(IN)
     call s02(sin)
-    !ERROR: Actual procedure argument has an implicit interface which is not known to be compatible with dummy argument 'p=' which has an explicit interface
-    call s02(extfunc)
-    !ERROR: Actual procedure argument has an implicit interface which is not known to be compatible with dummy argument 'p=' which has an explicit interface
-    call s03(extfuncPtr)
   end subroutine
 
   subroutine callsub(s)

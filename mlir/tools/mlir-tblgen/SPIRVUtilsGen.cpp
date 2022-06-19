@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/TableGen/Attribute.h"
+#include "mlir/TableGen/CodeGenHelpers.h"
 #include "mlir/TableGen/Format.h"
 #include "mlir/TableGen/GenInfo.h"
 #include "mlir/TableGen/Operator.h"
@@ -39,12 +40,12 @@ using llvm::SmallVector;
 using llvm::SMLoc;
 using llvm::StringMap;
 using llvm::StringRef;
-using llvm::Twine;
 using mlir::tblgen::Attribute;
 using mlir::tblgen::EnumAttr;
 using mlir::tblgen::EnumAttrCase;
 using mlir::tblgen::NamedAttribute;
 using mlir::tblgen::NamedTypeConstraint;
+using mlir::tblgen::NamespaceEmitter;
 using mlir::tblgen::Operator;
 
 //===----------------------------------------------------------------------===//
@@ -61,6 +62,9 @@ public:
   // Returns the name of the direct TableGen class for this availability
   // instance.
   StringRef getClass() const;
+
+  // Returns the generated C++ interface's class namespace.
+  StringRef getInterfaceClassNamespace() const;
 
   // Returns the generated C++ interface's class name.
   StringRef getInterfaceClassName() const;
@@ -91,6 +95,9 @@ public:
   // Returns the concrete availability instance carried in this case.
   StringRef getMergeInstance() const;
 
+  // Returns the underlying LLVM TableGen Record.
+  const llvm::Record *getDef() const { return def; }
+
 private:
   // The TableGen definition of this availability.
   const llvm::Record *def;
@@ -110,6 +117,10 @@ StringRef Availability::getClass() const {
                     "expected to only have one direct superclass");
   }
   return parentClass.front()->getName();
+}
+
+StringRef Availability::getInterfaceClassNamespace() const {
+  return def->getValueAsString("cppNamespace");
 }
 
 StringRef Availability::getInterfaceClassName() const {
@@ -168,9 +179,16 @@ std::vector<Availability> getAvailabilities(const Record &def) {
 
 static void emitInterfaceDef(const Availability &availability,
                              raw_ostream &os) {
+
+  os << availability.getQueryFnRetType() << " ";
+
+  StringRef cppNamespace = availability.getInterfaceClassNamespace();
+  cppNamespace.consume_front("::");
+  if (!cppNamespace.empty())
+    os << cppNamespace << "::";
+
   StringRef methodName = availability.getQueryFnName();
-  os << availability.getQueryFnRetType() << " "
-     << availability.getInterfaceClassName() << "::" << methodName << "() {\n"
+  os << availability.getInterfaceClassName() << "::" << methodName << "() {\n"
      << "  return getImpl()->" << methodName << "(getImpl(), getOperation());\n"
      << "}\n";
 }
@@ -237,13 +255,16 @@ static void emitInterfaceDecl(const Availability &availability,
   std::string interfaceTraitsName =
       std::string(formatv("{0}Traits", interfaceName));
 
+  StringRef cppNamespace = availability.getInterfaceClassNamespace();
+  NamespaceEmitter nsEmitter(os, cppNamespace);
+
   // Emit the traits struct containing the concept and model declarations.
   os << "namespace detail {\n"
      << "struct " << interfaceTraitsName << " {\n";
   emitConceptDecl(availability, os);
   os << '\n';
   emitModelDecl(availability, os);
-  os << "};\n} // end namespace detail\n\n";
+  os << "};\n} // namespace detail\n\n";
 
   // Emit the main interface class declaration.
   os << "/*\n" << availability.getInterfaceDescription().trim() << "\n*/\n";
@@ -651,7 +672,8 @@ static void emitDecorationSerialization(const Operator &op, StringRef tabs,
     // All non-argument attributes translated into OpDecorate instruction
     os << tabs << formatv("for (auto attr : {0}->getAttrs()) {{\n", opVar);
     os << tabs
-       << formatv("  if (llvm::is_contained({0}, attr.first)) {{", elidedAttrs);
+       << formatv("  if (llvm::is_contained({0}, attr.getName())) {{",
+                  elidedAttrs);
     os << tabs << "    continue;\n";
     os << tabs << "  }\n";
     os << tabs
@@ -865,10 +887,9 @@ static void emitOperandDeserialization(const Operator &op, ArrayRef<SMLoc> loc,
                                        StringRef wordIndex, StringRef operands,
                                        StringRef attributes, raw_ostream &os) {
   // Process operands/attributes
-  unsigned operandNum = 0;
   for (unsigned i = 0, e = op.getNumArgs(); i < e; ++i) {
     auto argument = op.getArg(i);
-    if (auto valueArg = argument.dyn_cast<NamedTypeConstraint *>()) {
+    if (auto *valueArg = argument.dyn_cast<NamedTypeConstraint *>()) {
       if (valueArg->isVariableLength()) {
         if (i != e - 1) {
           PrintFatalError(loc, "SPIR-V ops can have Variadic<..> or "
@@ -894,11 +915,10 @@ static void emitOperandDeserialization(const Operator &op, ArrayRef<SMLoc> loc,
       if (!valueArg->isVariableLength()) {
         os << tabs << formatv("  {0}++;\n", wordIndex);
       }
-      operandNum++;
       os << tabs << "}\n";
     } else {
       os << tabs << formatv("if ({0} < {1}.size()) {{\n", wordIndex, words);
-      auto attr = argument.get<NamedAttribute *>();
+      auto *attr = argument.get<NamedAttribute *>();
       auto newtabs = tabs.str() + "  ";
       emitAttributeDeserialization(
           (attr->attr.isOptional() ? attr->attr.getBaseAttr() : attr->attr),
@@ -1080,7 +1100,7 @@ emitExtendedSetDeserializationDispatch(const RecordKeeper &recordKeeper,
     Operator op(def);
     auto setName = def->getValueAsString("extendedInstSetName");
     if (!extensionSets.count(setName)) {
-      extensionSetNames.push_back("");
+      extensionSetNames.emplace_back("");
       extensionSets.try_emplace(setName, extensionSetNames.back());
       auto &setos = extensionSets.find(setName)->second;
       setos << formatv("  if ({0} == \"{1}\") {{\n", extensionSetName, setName);

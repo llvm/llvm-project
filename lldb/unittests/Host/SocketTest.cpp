@@ -10,6 +10,7 @@
 #include "TestingSupport/SubsystemRAII.h"
 #include "lldb/Host/Config.h"
 #include "lldb/Utility/UriParser.h"
+#include "llvm/Testing/Support/Error.h"
 #include "gtest/gtest.h"
 
 using namespace lldb_private;
@@ -32,69 +33,40 @@ protected:
 };
 
 TEST_P(SocketTest, DecodeHostAndPort) {
-  std::string host_str;
-  std::string port_str;
-  int32_t port;
-  Status error;
-  EXPECT_TRUE(Socket::DecodeHostAndPort("localhost:1138", host_str, port_str,
-                                        port, &error));
-  EXPECT_STREQ("localhost", host_str.c_str());
-  EXPECT_STREQ("1138", port_str.c_str());
-  EXPECT_EQ(1138, port);
-  EXPECT_TRUE(error.Success());
+  EXPECT_THAT_EXPECTED(Socket::DecodeHostAndPort("localhost:1138"),
+                       llvm::HasValue(Socket::HostAndPort{"localhost", 1138}));
 
-  EXPECT_FALSE(Socket::DecodeHostAndPort("google.com:65536", host_str, port_str,
-                                         port, &error));
-  EXPECT_TRUE(error.Fail());
-  EXPECT_STREQ("invalid host:port specification: 'google.com:65536'",
-               error.AsCString());
+  EXPECT_THAT_EXPECTED(
+      Socket::DecodeHostAndPort("google.com:65536"),
+      llvm::FailedWithMessage(
+          "invalid host:port specification: 'google.com:65536'"));
 
-  EXPECT_FALSE(Socket::DecodeHostAndPort("google.com:-1138", host_str, port_str,
-                                         port, &error));
-  EXPECT_TRUE(error.Fail());
-  EXPECT_STREQ("invalid host:port specification: 'google.com:-1138'",
-               error.AsCString());
+  EXPECT_THAT_EXPECTED(
+      Socket::DecodeHostAndPort("google.com:-1138"),
+      llvm::FailedWithMessage(
+          "invalid host:port specification: 'google.com:-1138'"));
 
-  EXPECT_FALSE(Socket::DecodeHostAndPort("google.com:65536", host_str, port_str,
-                                         port, &error));
-  EXPECT_TRUE(error.Fail());
-  EXPECT_STREQ("invalid host:port specification: 'google.com:65536'",
-               error.AsCString());
+  EXPECT_THAT_EXPECTED(
+      Socket::DecodeHostAndPort("google.com:65536"),
+      llvm::FailedWithMessage(
+          "invalid host:port specification: 'google.com:65536'"));
 
-  EXPECT_TRUE(
-      Socket::DecodeHostAndPort("12345", host_str, port_str, port, &error));
-  EXPECT_STREQ("", host_str.c_str());
-  EXPECT_STREQ("12345", port_str.c_str());
-  EXPECT_EQ(12345, port);
-  EXPECT_TRUE(error.Success());
+  EXPECT_THAT_EXPECTED(Socket::DecodeHostAndPort("12345"),
+                       llvm::HasValue(Socket::HostAndPort{"", 12345}));
 
-  EXPECT_TRUE(
-      Socket::DecodeHostAndPort("*:0", host_str, port_str, port, &error));
-  EXPECT_STREQ("*", host_str.c_str());
-  EXPECT_STREQ("0", port_str.c_str());
-  EXPECT_EQ(0, port);
-  EXPECT_TRUE(error.Success());
+  EXPECT_THAT_EXPECTED(Socket::DecodeHostAndPort("*:0"),
+                       llvm::HasValue(Socket::HostAndPort{"*", 0}));
 
-  EXPECT_TRUE(
-      Socket::DecodeHostAndPort("*:65535", host_str, port_str, port, &error));
-  EXPECT_STREQ("*", host_str.c_str());
-  EXPECT_STREQ("65535", port_str.c_str());
-  EXPECT_EQ(65535, port);
-  EXPECT_TRUE(error.Success());
+  EXPECT_THAT_EXPECTED(Socket::DecodeHostAndPort("*:65535"),
+                       llvm::HasValue(Socket::HostAndPort{"*", 65535}));
 
-  EXPECT_TRUE(
-      Socket::DecodeHostAndPort("[::1]:12345", host_str, port_str, port, &error));
-  EXPECT_STREQ("::1", host_str.c_str());
-  EXPECT_STREQ("12345", port_str.c_str());
-  EXPECT_EQ(12345, port);
-  EXPECT_TRUE(error.Success());
+  EXPECT_THAT_EXPECTED(
+      Socket::DecodeHostAndPort("[::1]:12345"),
+      llvm::HasValue(Socket::HostAndPort{"::1", 12345}));
 
-  EXPECT_TRUE(
-      Socket::DecodeHostAndPort("[abcd:12fg:AF58::1]:12345", host_str, port_str, port, &error));
-  EXPECT_STREQ("abcd:12fg:AF58::1", host_str.c_str());
-  EXPECT_STREQ("12345", port_str.c_str());
-  EXPECT_EQ(12345, port);
-  EXPECT_TRUE(error.Success());
+  EXPECT_THAT_EXPECTED(
+      Socket::DecodeHostAndPort("[abcd:12fg:AF58::1]:12345"),
+      llvm::HasValue(Socket::HostAndPort{"abcd:12fg:AF58::1", 12345}));
 }
 
 #if LLDB_ENABLE_POSIX
@@ -157,10 +129,8 @@ TEST_P(SocketTest, UDPConnect) {
 TEST_P(SocketTest, TCPListen0GetPort) {
   if (!HostSupportsIPv4())
     return;
-  Predicate<uint16_t> port_predicate;
-  port_predicate.SetValue(0, eBroadcastNever);
   llvm::Expected<std::unique_ptr<TCPSocket>> sock =
-      Socket::TcpListen("10.10.12.3:0", false, &port_predicate);
+      Socket::TcpListen("10.10.12.3:0", false);
   ASSERT_THAT_EXPECTED(sock, llvm::Succeeded());
   ASSERT_TRUE(sock.get()->IsValid());
   EXPECT_NE(sock.get()->GetLocalPortNumber(), 0);
@@ -174,14 +144,10 @@ TEST_P(SocketTest, TCPGetConnectURI) {
   CreateTCPConnectedSockets(GetParam().localhost_ip, &socket_a_up,
                             &socket_b_up);
 
-  llvm::StringRef scheme;
-  llvm::StringRef hostname;
-  int port;
-  llvm::StringRef path;
   std::string uri(socket_a_up->GetRemoteConnectionURI());
-  EXPECT_TRUE(UriParser::Parse(uri, scheme, hostname, port, path));
-  EXPECT_EQ(scheme, "connect");
-  EXPECT_EQ(port, socket_a_up->GetRemotePortNumber());
+  EXPECT_EQ((URI{"connect", GetParam().localhost_ip,
+                 socket_a_up->GetRemotePortNumber(), "/"}),
+            URI::Parse(uri));
 }
 
 TEST_P(SocketTest, UDPGetConnectURI) {
@@ -192,13 +158,8 @@ TEST_P(SocketTest, UDPGetConnectURI) {
       UDPSocket::Connect("127.0.0.1:0", /*child_processes_inherit=*/false);
   ASSERT_THAT_EXPECTED(socket, llvm::Succeeded());
 
-  llvm::StringRef scheme;
-  llvm::StringRef hostname;
-  int port;
-  llvm::StringRef path;
   std::string uri = socket.get()->GetRemoteConnectionURI();
-  EXPECT_TRUE(UriParser::Parse(uri, scheme, hostname, port, path));
-  EXPECT_EQ(scheme, "udp");
+  EXPECT_EQ((URI{"udp", "127.0.0.1", 0, "/"}), URI::Parse(uri));
 }
 
 #if LLDB_ENABLE_POSIX
@@ -217,14 +178,11 @@ TEST_P(SocketTest, DomainGetConnectURI) {
   std::unique_ptr<DomainSocket> socket_b_up;
   CreateDomainConnectedSockets(domain_path, &socket_a_up, &socket_b_up);
 
-  llvm::StringRef scheme;
-  llvm::StringRef hostname;
-  int port;
-  llvm::StringRef path;
   std::string uri(socket_a_up->GetRemoteConnectionURI());
-  EXPECT_TRUE(UriParser::Parse(uri, scheme, hostname, port, path));
-  EXPECT_EQ(scheme, "unix-connect");
-  EXPECT_EQ(path, domain_path);
+  EXPECT_EQ((URI{"unix-connect", "", llvm::None, domain_path}),
+            URI::Parse(uri));
+
+  EXPECT_EQ(socket_b_up->GetRemoteConnectionURI(), "");
 }
 #endif
 

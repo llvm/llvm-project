@@ -112,15 +112,13 @@ class CombinedAllocator {
     return new_p;
   }
 
-  bool PointerIsMine(void *p) {
+  bool PointerIsMine(const void *p) const {
     if (primary_.PointerIsMine(p))
       return true;
     return secondary_.PointerIsMine(p);
   }
 
-  bool FromPrimary(void *p) {
-    return primary_.PointerIsMine(p);
-  }
+  bool FromPrimary(const void *p) const { return primary_.PointerIsMine(p); }
 
   void *GetMetaData(const void *p) {
     if (primary_.PointerIsMine(p))
@@ -177,12 +175,12 @@ class CombinedAllocator {
 
   // ForceLock() and ForceUnlock() are needed to implement Darwin malloc zone
   // introspection API.
-  void ForceLock() NO_THREAD_SAFETY_ANALYSIS {
+  void ForceLock() SANITIZER_NO_THREAD_SAFETY_ANALYSIS {
     primary_.ForceLock();
     secondary_.ForceLock();
   }
 
-  void ForceUnlock() NO_THREAD_SAFETY_ANALYSIS {
+  void ForceUnlock() SANITIZER_NO_THREAD_SAFETY_ANALYSIS {
     secondary_.ForceUnlock();
     primary_.ForceUnlock();
   }

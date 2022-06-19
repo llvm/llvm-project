@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/Driver/Tool.h"
-#include "InputInfo.h"
+#include "clang/Driver/InputInfo.h"
 
 using namespace clang::driver;
 

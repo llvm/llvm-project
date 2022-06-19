@@ -13,6 +13,7 @@
 #include "lldb/Target/PathMappingList.h"
 #include "lldb/Utility/ArchSpec.h"
 #include "lldb/Utility/FileSpec.h"
+#include "lldb/Utility/Iterable.h"
 #include "lldb/Utility/Stream.h"
 #include "lldb/Utility/UUID.h"
 
@@ -25,18 +26,14 @@ namespace lldb_private {
 
 class ModuleSpec {
 public:
-  ModuleSpec()
-      : m_file(), m_platform_file(), m_symbol_file(), m_arch(), m_uuid(),
-        m_object_name(), m_source_mappings() {}
+  ModuleSpec() = default;
 
   /// If the \c data argument is passed, its contents will be used
   /// as the module contents instead of trying to read them from
   /// \c file_spec .
   ModuleSpec(const FileSpec &file_spec, const UUID &uuid = UUID(),
              lldb::DataBufferSP data = lldb::DataBufferSP())
-      : m_file(file_spec), m_platform_file(), m_symbol_file(), m_arch(),
-        m_uuid(uuid), m_object_name(), m_object_offset(0), m_source_mappings(),
-        m_data(data) {
+      : m_file(file_spec), m_uuid(uuid), m_object_offset(0), m_data(data) {
     if (data)
       m_object_size = data->GetByteSize();
     else if (m_file)
@@ -44,10 +41,8 @@ public:
   }
 
   ModuleSpec(const FileSpec &file_spec, const ArchSpec &arch)
-      : m_file(file_spec), m_platform_file(), m_symbol_file(), m_arch(arch),
-        m_uuid(), m_object_name(), m_object_offset(0),
-        m_object_size(FileSystem::Instance().GetByteSize(file_spec)),
-        m_source_mappings() {}
+      : m_file(file_spec), m_arch(arch), m_object_offset(0),
+        m_object_size(FileSystem::Instance().GetByteSize(file_spec)) {}
 
   FileSpec *GetFileSpecPtr() { return (m_file ? &m_file : nullptr); }
 
@@ -279,9 +274,9 @@ protected:
 
 class ModuleSpecList {
 public:
-  ModuleSpecList() : m_specs(), m_mutex() {}
+  ModuleSpecList() = default;
 
-  ModuleSpecList(const ModuleSpecList &rhs) : m_specs(), m_mutex() {
+  ModuleSpecList(const ModuleSpecList &rhs) {
     std::lock_guard<std::recursive_mutex> lhs_guard(m_mutex);
     std::lock_guard<std::recursive_mutex> rhs_guard(rhs.m_mutex);
     m_specs = rhs.m_specs;
@@ -293,7 +288,7 @@ public:
     if (this != &rhs) {
       std::lock(m_mutex, rhs.m_mutex);
       std::lock_guard<std::recursive_mutex> lhs_guard(m_mutex, std::adopt_lock);
-      std::lock_guard<std::recursive_mutex> rhs_guard(rhs.m_mutex, 
+      std::lock_guard<std::recursive_mutex> rhs_guard(rhs.m_mutex,
                                                       std::adopt_lock);
       m_specs = rhs.m_specs;
     }
@@ -393,8 +388,16 @@ public:
     }
   }
 
+  typedef std::vector<ModuleSpec> collection;
+  typedef LockingAdaptedIterable<collection, ModuleSpec, vector_adapter,
+                                 std::recursive_mutex>
+      ModuleSpecIterable;
+
+  ModuleSpecIterable ModuleSpecs() {
+    return ModuleSpecIterable(m_specs, m_mutex);
+  }
+
 protected:
-  typedef std::vector<ModuleSpec> collection; ///< The module collection type.
   collection m_specs;                         ///< The collection of modules.
   mutable std::recursive_mutex m_mutex;
 };

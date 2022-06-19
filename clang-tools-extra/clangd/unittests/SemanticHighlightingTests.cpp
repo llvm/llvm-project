@@ -7,11 +7,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "Annotations.h"
-#include "ClangdServer.h"
 #include "Protocol.h"
 #include "SemanticHighlighting.h"
 #include "SourceCode.h"
-#include "TestFS.h"
 #include "TestTU.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/STLExtras.h"
@@ -617,7 +615,14 @@ sizeof...($TemplateParameter[[Elements]]);
         void $Method_decl[[bar1]]() {
           $Class[[Foo]]<$TemplateParameter[[U]]>().$Field_dependentName[[Waldo]];
         }
+
+        void $Method_decl[[Overload]]();
+        void $Method_decl_readonly[[Overload]]() const;
       };
+      template <typename $TemplateParameter_decl[[T]]>
+      void $Function_decl[[baz]]($Class[[Foo]]<$TemplateParameter[[T]]> $Parameter_decl[[o]]) {
+        $Parameter[[o]].$Method_readonly_dependentName[[Overload]]();
+      }
     )cpp",
       // Concepts
       R"cpp(
@@ -642,9 +647,14 @@ sizeof...($TemplateParameter[[Elements]]);
     )cpp",
       R"cpp(
       class $Class_decl_abstract[[Abstract]] {
-        virtual void $Method_decl_abstract[[pure]]() = 0;
-        virtual void $Method_decl[[impl]]();
+      public:
+        virtual void $Method_decl_abstract_virtual[[pure]]() = 0;
+        virtual void $Method_decl_virtual[[impl]]();
       };
+      void $Function_decl[[foo]]($Class_abstract[[Abstract]]* $Parameter_decl[[A]]) {
+          $Parameter[[A]]->$Method_abstract_virtual[[pure]]();
+          $Parameter[[A]]->$Method_virtual[[impl]]();
+      }
       )cpp",
       R"cpp(
       <:[deprecated]:> int $Variable_decl_deprecated[[x]];
@@ -656,13 +666,15 @@ sizeof...($TemplateParameter[[Elements]]);
         @interface $Class_decl[[Foo]]
         @end
         @interface $Class_decl[[Bar]] : $Class[[Foo]]
-        -($Class[[id]]) $Method_decl[[x]]:(int)$Parameter_decl[[a]] $Method_decl[[y]]:(int)$Parameter_decl[[b]];
+        -(id) $Method_decl[[x]]:(int)$Parameter_decl[[a]] $Method_decl[[y]]:(int)$Parameter_decl[[b]];
+        +(instancetype)$StaticMethod_decl_static[[sharedInstance]];
         +(void) $StaticMethod_decl_static[[explode]];
         @end
         @implementation $Class_decl[[Bar]]
-        -($Class[[id]]) $Method_decl[[x]]:(int)$Parameter_decl[[a]] $Method_decl[[y]]:(int)$Parameter_decl[[b]] {
+        -(id) $Method_decl[[x]]:(int)$Parameter_decl[[a]] $Method_decl[[y]]:(int)$Parameter_decl[[b]] {
           return self;
         }
+        +(instancetype)$StaticMethod_decl_static[[sharedInstance]] { return 0; }
         +(void) $StaticMethod_decl_static[[explode]] {}
         @end
 
@@ -724,7 +736,91 @@ sizeof...($TemplateParameter[[Elements]]);
           }
         };
       )cpp",
-  };
+      // Modifier for variables passed as non-const references
+      R"cpp(
+        void $Function_decl[[fun]](int, const int,
+                                   int*, const int*,
+                                   int&, const int&,
+                                   int*&, const int*&, const int* const &,
+                                   int**, int**&, int** const &,
+                                   int = 123) {
+          int $LocalVariable_decl[[val]];
+          int* $LocalVariable_decl[[ptr]];
+          const int* $LocalVariable_decl_readonly[[constPtr]];
+          int** $LocalVariable_decl[[array]];
+          $Function[[fun]]($LocalVariable[[val]], $LocalVariable[[val]], 
+                           $LocalVariable[[ptr]], $LocalVariable_readonly[[constPtr]], 
+                           $LocalVariable_usedAsMutableReference[[val]], $LocalVariable[[val]], 
+
+                           $LocalVariable_usedAsMutableReference[[ptr]],
+                           $LocalVariable_readonly_usedAsMutableReference[[constPtr]],
+                           $LocalVariable_readonly[[constPtr]],
+
+                           $LocalVariable[[array]], $LocalVariable_usedAsMutableReference[[array]], 
+                           $LocalVariable[[array]]
+                           );
+        }
+        struct $Class_decl[[S]] {
+          $Class_decl[[S]](int&) {
+            $Class[[S]] $LocalVariable_decl[[s1]]($Field_usedAsMutableReference[[field]]);
+            $Class[[S]] $LocalVariable_decl[[s2]]($LocalVariable[[s1]].$Field_usedAsMutableReference[[field]]);
+
+            $Class[[S]] $LocalVariable_decl[[s3]]($StaticField_static_usedAsMutableReference[[staticField]]);
+            $Class[[S]] $LocalVariable_decl[[s4]]($Class[[S]]::$StaticField_static_usedAsMutableReference[[staticField]]);
+          }
+          int $Field_decl[[field]];
+          static int $StaticField_decl_static[[staticField]];
+        };
+        template <typename $TemplateParameter_decl[[X]]>
+        void $Function_decl[[foo]]($TemplateParameter[[X]]& $Parameter_decl[[x]]) {
+          // We do not support dependent types, so this one should *not* get the modifier.
+          $Function[[foo]]($Parameter[[x]]); 
+        }
+      )cpp",
+      // init-captures
+      R"cpp(
+        void $Function_decl[[foo]]() {
+          int $LocalVariable_decl[[a]], $LocalVariable_decl[[b]];
+          [ $LocalVariable_decl[[c]] = $LocalVariable[[a]],
+            $LocalVariable_decl[[d]]($LocalVariable[[b]]) ]() {}();
+        }
+      )cpp",
+      // Enum base specifier
+      R"cpp(
+        using $Primitive_decl[[MyTypedef]] = int;
+        enum $Enum_decl[[MyEnum]] : $Primitive[[MyTypedef]] {};
+      )cpp",
+      // Enum base specifier
+      R"cpp(
+        typedef int $Primitive_decl[[MyTypedef]];
+        enum $Enum_decl[[MyEnum]] : $Primitive[[MyTypedef]] {};
+      )cpp",
+      // Issue 1096
+      R"cpp(
+        void $Function_decl[[Foo]]();
+        // Use <: :> digraphs for deprecated attribute to avoid conflict with annotation syntax
+        <:<:deprecated:>:> void $Function_decl_deprecated[[Foo]](int* $Parameter_decl[[x]]);
+        void $Function_decl[[Foo]](int $Parameter_decl[[x]]);
+        template <typename $TemplateParameter_decl[[T]]>
+        void $Function_decl[[Bar]]($TemplateParameter[[T]] $Parameter_decl[[x]]) {
+            $Function_deprecated[[Foo]]($Parameter[[x]]); 
+            $Function_deprecated[[Foo]]($Parameter[[x]]); 
+            $Function_deprecated[[Foo]]($Parameter[[x]]); 
+        }
+      )cpp",
+      // Explicit template specialization
+      R"cpp(
+        struct $Class_decl[[Base]]{};
+        template <typename $TemplateParameter_decl[[T]]>
+        struct $Class_decl[[S]] : public $Class[[Base]] {};
+        template <> 
+        struct $Class_decl[[S]]<void> : public $Class[[Base]] {};
+
+        template <typename $TemplateParameter_decl[[T]]>
+        $TemplateParameter[[T]] $Variable_decl[[x]] = {};
+        template <>
+        int $Variable_decl[[x]]<int> = (int)sizeof($Class[[Base]]);
+      )cpp"};
   for (const auto &TestCase : TestCases)
     // Mask off scope modifiers to keep the tests manageable.
     // They're tested separately.
@@ -792,7 +888,7 @@ TEST(SemanticHighlighting, ScopeModifiers) {
       )cpp",
       R"cpp(
         // Lambdas are considered functions, not classes.
-        auto $Variable_fileScope[[x]] = [m(42)] { // FIXME: annotate capture
+        auto $Variable_fileScope[[x]] = [$LocalVariable_functionScope[[m]](42)] {
           return $LocalVariable_functionScope[[m]];
         };
       )cpp",

@@ -31,12 +31,14 @@ int main(int, char**)
         os << std::setfill('*');
         assert(os.fill() == '*');
     }
+#ifndef TEST_HAS_NO_WIDE_CHARACTERS
     {
         testbuf<wchar_t> sb;
         std::wostream os(&sb);
         os << std::setfill(L'*');
         assert(os.fill() == L'*');
     }
+#endif
 
   return 0;
 }

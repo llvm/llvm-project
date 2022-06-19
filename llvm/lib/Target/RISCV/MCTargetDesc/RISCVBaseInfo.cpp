@@ -14,13 +14,24 @@
 #include "RISCVBaseInfo.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/Triple.h"
+#include "llvm/MC/MCSubtargetInfo.h"
+#include "llvm/Support/RISCVISAInfo.h"
+#include "llvm/Support/TargetParser.h"
 #include "llvm/Support/raw_ostream.h"
 
 namespace llvm {
+
+extern const SubtargetFeatureKV RISCVFeatureKV[RISCV::NumSubtargetFeatures];
+
 namespace RISCVSysReg {
 #define GET_SysRegsList_IMPL
 #include "RISCVGenSearchableTables.inc"
 } // namespace RISCVSysReg
+
+namespace RISCVInsnOpcode {
+#define GET_RISCVOpcodesList_IMPL
+#include "RISCVGenSearchableTables.inc"
+} // namespace RISCVInsnOpcode
 
 namespace RISCVABI {
 ABI computeTargetABI(const Triple &TT, FeatureBitset FeatureBits,
@@ -51,15 +62,11 @@ ABI computeTargetABI(const Triple &TT, FeatureBitset FeatureBits,
   if (TargetABI != ABI_Unknown)
     return TargetABI;
 
-  // For now, default to the ilp32/ilp32e/lp64 ABI if no explicit ABI is given
-  // or an invalid/unrecognised string is given. In the future, it might be
-  // worth changing this to default to ilp32f/lp64f and ilp32d/lp64d when
-  // hardware support for floating point is present.
-  if (IsRV32E)
-    return ABI_ILP32E;
-  if (IsRV64)
-    return ABI_LP64;
-  return ABI_ILP32;
+  // If no explicit ABI is given, try to compute the default ABI.
+  auto ISAInfo = RISCVFeatures::parseFeatureBits(IsRV64, FeatureBits);
+  if (!ISAInfo)
+    report_fatal_error(ISAInfo.takeError());
+  return getTargetABI((*ISAInfo)->computeDefaultABI());
 }
 
 ABI getTargetABI(StringRef ABIName) {
@@ -96,6 +103,19 @@ void validate(const Triple &TT, const FeatureBitset &FeatureBits) {
     report_fatal_error("RV32E can't be enabled for an RV64 target");
 }
 
+llvm::Expected<std::unique_ptr<RISCVISAInfo>>
+parseFeatureBits(bool IsRV64, const FeatureBitset &FeatureBits) {
+  unsigned XLen = IsRV64 ? 64 : 32;
+  std::vector<std::string> FeatureVector;
+  // Convert FeatureBitset to FeatureVector.
+  for (auto Feature : RISCVFeatureKV) {
+    if (FeatureBits[Feature.Value] &&
+        llvm::RISCVISAInfo::isSupportedExtensionFeature(Feature.Key))
+      FeatureVector.push_back(std::string("+") + Feature.Key);
+  }
+  return llvm::RISCVISAInfo::parseFeatures(XLen, FeatureVector);
+}
+
 } // namespace RISCVFeatures
 
 // Encode VTYPE into the binary format used by the the VSETVLI instruction which
@@ -111,7 +131,7 @@ unsigned RISCVVType::encodeVTYPE(RISCVII::VLMUL VLMUL, unsigned SEW,
                                  bool TailAgnostic, bool MaskAgnostic) {
   assert(isValidSEW(SEW) && "Invalid SEW");
   unsigned VLMULBits = static_cast<unsigned>(VLMUL);
-  unsigned VSEWBits = Log2_32(SEW) - 3;
+  unsigned VSEWBits = encodeSEW(SEW);
   unsigned VTypeI = (VSEWBits << 3) | (VLMULBits & 0x7);
   if (TailAgnostic)
     VTypeI |= 0x40;

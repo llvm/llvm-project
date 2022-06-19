@@ -9,6 +9,7 @@
 #ifndef SPARSETENSOR_ATTRDEFS
 #define SPARSETENSOR_ATTRDEFS
 
+include "mlir/IR/AttrTypeBase.td"
 include "mlir/Dialect/SparseTensor/IR/SparseTensorBase.td"
 include "mlir/IR/TensorEncoding.td"
 
@@ -23,12 +24,26 @@ def SparseTensorEncodingAttr : SparseTensor_Attr<"SparseTensorEncoding",
   let mnemonic = "encoding";
 
   let description = [{
-    An attribute to encode "TACO"-style information (see tensor-compiler.org)
-    on sparsity properties of tensors. The encoding is eventually used by a
-    `sparse compiler` pass to generate sparse code fully automatically
-    for all tensor expressions that involve tensors with a sparse encoding.
-    Compiler passes that run before this sparse compiler pass need to be
+    An attribute to encode TACO-style information on sparsity properties
+    of tensors. The encoding is eventually used by a **sparse compiler**
+    pass to generate sparse code fully automatically for all tensor
+    expressions that involve tensors with a sparse encoding. Compiler
+    passes that run before this sparse compiler pass need to be
     aware of the semantics of tensor types with such an encoding.
+
+    Example:
+
+    ```mlir
+    #DCSC = #sparse_tensor.encoding<{
+      dimLevelType = [ "compressed", "compressed" ],
+      dimOrdering = affine_map<(i,j) -> (j,i)>,
+      pointerBitWidth = 32,
+      indexBitWidth = 8
+    }>
+
+
+    ... tensor<8x8xf64, #DCSC> ...
+    ```
   }];
 
   // Data in sparse tensor encoding.
@@ -65,6 +80,7 @@ def SparseTensorEncodingAttr : SparseTensor_Attr<"SparseTensorEncoding",
   );
 
   let genVerifyDecl = 1;
+  let hasCustomAssemblyFormat = 1;
 
   let extraClassDeclaration = [{
     // Dimension level types that define sparse tensors:
@@ -76,5 +92,21 @@ def SparseTensorEncodingAttr : SparseTensor_Attr<"SparseTensorEncoding",
     };
   }];
 }
+
+def IsSparseTensorPred
+  : CPred<"!!::mlir::sparse_tensor::getSparseTensorEncoding($_self)">;
+
+// The following four follow the same idiom as `TensorOf`, `AnyTensor`,
+// `RankedTensorOf`, `AnyRankedTensor`.
+
+class SparseTensorOf<list<Type> allowedTypes>
+  : TensorOf<allowedTypes, [IsSparseTensorPred], "sparse tensor">;
+
+def AnySparseTensor : SparseTensorOf<[AnyType]>;
+
+class RankedSparseTensorOf<list<Type> allowedTypes>
+  : RankedTensorOf<allowedTypes, [IsSparseTensorPred], "ranked sparse tensor">;
+
+def AnyRankedSparseTensor : RankedSparseTensorOf<[AnyType]>;
 
 #endif // SPARSETENSOR_ATTRDEFS

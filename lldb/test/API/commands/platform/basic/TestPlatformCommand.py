@@ -11,8 +11,6 @@ from lldbsuite.test import lldbutil
 
 
 class PlatformCommandTestCase(TestBase):
-
-    mydir = TestBase.compute_mydir(__file__)
     NO_DEBUG_INFO_TESTCASE = True
 
     @no_debug_info_test
@@ -20,10 +18,12 @@ class PlatformCommandTestCase(TestBase):
         self.runCmd("help platform")
 
     @no_debug_info_test
-    def test_help_platform(self):
+    def test_help_shell_alias(self):
         self.expect("help shell", substrs=["Run a shell command on the host.",
-                                           "shell <shell-command>"])
-
+                                           "shell <shell-command>",
+                                           "'shell' is an abbreviation"])
+        # "platform shell" has options. The "shell" alias for it does not.
+        self.expect("help shell", substrs=["Command Options:"], matching=False)
 
     @no_debug_info_test
     def test_list(self):
@@ -95,6 +95,7 @@ class PlatformCommandTestCase(TestBase):
                     "error: timed out waiting for shell command to complete"])
 
     @no_debug_info_test
+    @skipIfRemote
     def test_host_shell_interpreter(self):
         """ Test the host platform shell with a different interpreter """
         self.build()

@@ -740,6 +740,7 @@ int main(int, char**)
         assert(m.str(0) == s);
     }
 
+#ifndef TEST_HAS_NO_WIDE_CHARACTERS
     {
         std::wcmatch m;
         assert(!std::regex_search(L"a", m, std::wregex()));
@@ -1456,6 +1457,8 @@ int main(int, char**)
         assert(m.position(0) == 0);
         assert(m.str(0) == s);
     }
+#endif // TEST_HAS_NO_WIDE_CHARACTERS
+
     { // LWG 2273
         std::regex re("Foo|FooBar");
         std::cmatch m;

@@ -37,7 +37,7 @@ class BreakpointRange:
     """
 
     def __init__(self, expression: str, path: str, range_from: int, range_to: int,
-                 values: list, hit_count: int):
+                 values: list, hit_count: int, finish_on_remove: bool):
         self.expression = expression
         self.path = path
         self.range_from = range_from
@@ -45,6 +45,7 @@ class BreakpointRange:
         self.conditional_values = values
         self.max_hit_count = hit_count
         self.current_hit_count = 0
+        self.finish_on_remove = finish_on_remove
 
     def has_conditions(self):
         return self.expression != None
@@ -68,16 +69,15 @@ class BreakpointRange:
 
 class ConditionalController(DebuggerControllerBase):
     def __init__(self, context, step_collection):
-      self.context = context
-      self.step_collection = step_collection
       self._bp_ranges = None
-      self._build_bp_ranges()
       self._watches = set()
       self._step_index = 0
       self._pause_between_steps = context.options.pause_between_steps
       self._max_steps = context.options.max_steps
       # Map {id: BreakpointRange}
       self._leading_bp_handles = {}
+      super(ConditionalController, self).__init__(context, step_collection)
+      self._build_bp_ranges()
 
     def _build_bp_ranges(self):
         commands = self.step_collection.commands
@@ -91,10 +91,23 @@ class ConditionalController(DebuggerControllerBase):
                   lc.from_line,
                   lc.to_line,
                   lc.values,
-                  lc.hit_count)
+                  lc.hit_count,
+                  False)
                 self._bp_ranges.append(bpr)
         except KeyError:
             raise DebuggerException('Missing DexLimitSteps commands, cannot conditionally step.')
+        if 'DexFinishTest' in commands:
+            finish_commands = commands['DexFinishTest']
+            for ic in finish_commands:
+                bpr = BreakpointRange(
+                  ic.expression,
+                  ic.path,
+                  ic.on_line,
+                  ic.on_line,
+                  ic.values,
+                  ic.hit_count + 1,
+                  True)
+                self._bp_ranges.append(bpr)
 
     def _set_leading_bps(self):
         # Set a leading breakpoint for each BreakpointRange, building a
@@ -112,7 +125,7 @@ class ConditionalController(DebuggerControllerBase):
                 id = self.debugger.add_breakpoint(bpr.path, bpr.range_from)
                 self._leading_bp_handles[id] = bpr
 
-    def _run_debugger_custom(self):
+    def _run_debugger_custom(self, cmdline):
         # TODO: Add conditional and unconditional breakpoint support to dbgeng.
         if self.debugger.get_name() == 'dbgeng':
             raise DebuggerException('DexLimitSteps commands are not supported by dbgeng')
@@ -123,8 +136,11 @@ class ConditionalController(DebuggerControllerBase):
         for command_obj in chain.from_iterable(self.step_collection.commands.values()):
             self._watches.update(command_obj.get_watches())
 
-        self.debugger.launch()
+        self.debugger.launch(cmdline)
         time.sleep(self._pause_between_steps)
+
+        exit_desired = False
+
         while not self.debugger.is_finished:
             while self.debugger.is_running:
                 pass
@@ -147,6 +163,8 @@ class ConditionalController(DebuggerControllerBase):
 
                 bpr.add_hit()
                 if bpr.should_be_removed():
+                    if bpr.finish_on_remove:
+                        exit_desired = True
                     bp_to_delete.append(bp_id)
                     del self._leading_bp_handles[bp_id]
                 # Add a range of trailing breakpoints covering the lines
@@ -157,8 +175,9 @@ class ConditionalController(DebuggerControllerBase):
                     self.debugger.add_breakpoint(bpr.path, line)
 
             # Remove any trailing or expired leading breakpoints we just hit.
-            for bp_id in bp_to_delete:
-                self.debugger.delete_breakpoint(bp_id)
+            self.debugger.delete_breakpoints(bp_to_delete)
 
+            if exit_desired:
+                break
             self.debugger.go()
             time.sleep(self._pause_between_steps)

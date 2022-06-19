@@ -25,7 +25,7 @@ body:             |
     ; LARGE: RET_ReallyLR implicit $x0
     ; SMALL-LABEL: name: select_gv_with_offset
     ; SMALL: liveins: $x0
-    ; SMALL: %g:gpr64 = MOVaddr target-flags(aarch64-page) @g + 1, target-flags(aarch64-pageoff, aarch64-nc) @g + 1
+    ; SMALL: %g:gpr64common = MOVaddr target-flags(aarch64-page) @g + 1, target-flags(aarch64-pageoff, aarch64-nc) @g + 1
     ; SMALL: $x0 = COPY %g
     ; SMALL: RET_ReallyLR implicit $x0
     ; TINY-LABEL: name: select_gv_with_offset

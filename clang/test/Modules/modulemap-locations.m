@@ -10,9 +10,11 @@
 @import Both_F;
 @import Inferred;
 
-void test() {
+void test(void) {
   will_be_found1();
-  wont_be_found1(); // expected-warning{{implicit declaration of function 'wont_be_found1' is invalid in C99}}
+  wont_be_found1(); // expected-error{{call to undeclared function 'wont_be_found1'; ISO C99 and later do not support implicit function declarations}} \
+                       expected-note {{did you mean 'will_be_found1'?}} \
+                       expected-note@Inputs/ModuleMapLocations/Module_ModuleMap/a.h:1 {{'will_be_found1' declared here}}
   will_be_found2();
-  wont_be_found2(); // expected-warning{{implicit declaration of function 'wont_be_found2' is invalid in C99}}
+  wont_be_found2(); // expected-error{{call to undeclared function 'wont_be_found2'; ISO C99 and later do not support implicit function declarations}}
 }

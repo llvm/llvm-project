@@ -20,95 +20,102 @@
 int main(int, char**)
 {
     assert(std::stoi("0") == 0);
-    assert(std::stoi(L"0") == 0);
     assert(std::stoi("-0") == 0);
-    assert(std::stoi(L"-0") == 0);
     assert(std::stoi("-10") == -10);
-    assert(std::stoi(L"-10") == -10);
     assert(std::stoi(" 10") == 10);
-    assert(std::stoi(L" 10") == 10);
-    size_t idx = 0;
-    assert(std::stoi("10g", &idx, 16) == 16);
-    assert(idx == 2);
-    idx = 0;
-    assert(std::stoi(L"10g", &idx, 16) == 16);
-    assert(idx == 2);
-#ifndef TEST_HAS_NO_EXCEPTIONS
-    if (std::numeric_limits<long>::max() > std::numeric_limits<int>::max())
     {
-        try
-        {
+        size_t idx = 0;
+        assert(std::stoi("10g", &idx, 16) == 16);
+        assert(idx == 2);
+    }
+#ifndef TEST_HAS_NO_EXCEPTIONS
+    if (std::numeric_limits<long>::max() > std::numeric_limits<int>::max()) {
+        size_t idx = 0;
+        try {
             std::stoi("0x100000000", &idx, 16);
             assert(false);
+        } catch (const std::out_of_range&) {
+
         }
-        catch (const std::out_of_range&)
-        {
+    }
+    {
+        size_t idx = 0;
+        try {
+            std::stoi("", &idx);
+            assert(false);
+        } catch (const std::invalid_argument&) {
+            assert(idx == 0);
         }
-        try
-        {
+    }
+    {
+        size_t idx = 0;
+        try {
+            std::stoi("  - 8", &idx);
+            assert(false);
+        } catch (const std::invalid_argument&) {
+            assert(idx == 0);
+        }
+    }
+    {
+        size_t idx = 0;
+        try {
+            std::stoi("a1", &idx);
+            assert(false);
+        } catch (const std::invalid_argument&) {
+            assert(idx == 0);
+        }
+    }
+#endif // TEST_HAS_NO_EXCEPTIONS
+
+#ifndef TEST_HAS_NO_WIDE_CHARACTERS
+    assert(std::stoi(L"0") == 0);
+    assert(std::stoi(L"-0") == 0);
+    assert(std::stoi(L"-10") == -10);
+    assert(std::stoi(L" 10") == 10);
+    {
+        size_t idx = 0;
+        assert(std::stoi(L"10g", &idx, 16) == 16);
+        assert(idx == 2);
+    }
+#ifndef TEST_HAS_NO_EXCEPTIONS
+    if (std::numeric_limits<long>::max() > std::numeric_limits<int>::max()) {
+        size_t idx = 0;
+        try {
             std::stoi(L"0x100000000", &idx, 16);
             assert(false);
+        } catch (const std::out_of_range&) {
+
         }
-        catch (const std::out_of_range&)
-        {
+    }
+    {
+        size_t idx = 0;
+        try {
+            std::stoi(L"", &idx);
+            assert(false);
+        } catch (const std::invalid_argument&) {
+            assert(idx == 0);
         }
     }
-    idx = 0;
-    try
     {
-        std::stoi("", &idx);
-        assert(false);
+        size_t idx = 0;
+        try {
+            std::stoi(L"  - 8", &idx);
+            assert(false);
+        } catch (const std::invalid_argument&) {
+            assert(idx == 0);
+        }
     }
-    catch (const std::invalid_argument&)
     {
-        assert(idx == 0);
+        size_t idx = 0;
+        try {
+            std::stoi(L"a1", &idx);
+            assert(false);
+        } catch (const std::invalid_argument&) {
+            assert(idx == 0);
+        }
     }
-    try
-    {
-        std::stoi(L"", &idx);
-        assert(false);
-    }
-    catch (const std::invalid_argument&)
-    {
-        assert(idx == 0);
-    }
-    try
-    {
-        std::stoi("  - 8", &idx);
-        assert(false);
-    }
-    catch (const std::invalid_argument&)
-    {
-        assert(idx == 0);
-    }
-    try
-    {
-        std::stoi(L"  - 8", &idx);
-        assert(false);
-    }
-    catch (const std::invalid_argument&)
-    {
-        assert(idx == 0);
-    }
-    try
-    {
-        std::stoi("a1", &idx);
-        assert(false);
-    }
-    catch (const std::invalid_argument&)
-    {
-        assert(idx == 0);
-    }
-    try
-    {
-        std::stoi(L"a1", &idx);
-        assert(false);
-    }
-    catch (const std::invalid_argument&)
-    {
-        assert(idx == 0);
-    }
-#endif
+#endif // TEST_HAS_NO_EXCEPTIONS
+#endif // TEST_HAS_NO_WIDE_CHARACTERS
 
   return 0;
 }

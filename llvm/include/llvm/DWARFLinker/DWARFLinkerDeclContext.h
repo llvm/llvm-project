@@ -14,7 +14,6 @@
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/CodeGen/NonRelocatableStringpool.h"
-#include "llvm/DWARFLinker/DWARFLinkerCompileUnit.h"
 #include "llvm/DebugInfo/DWARF/DWARFDebugLine.h"
 #include "llvm/DebugInfo/DWARF/DWARFDie.h"
 #include "llvm/Support/FileSystem.h"
@@ -22,6 +21,7 @@
 
 namespace llvm {
 
+class CompileUnit;
 struct DeclMapInfo;
 
 /// Small helper that resolves and caches file paths. This helps reduce the

@@ -12,6 +12,8 @@
 
 #ifdef CALLOC
 
+extern void exit(int) __attribute__((noreturn));
+
 // dfsan_init() installs interceptors via dlysm(), which calls calloc().
 // Calling mmap() from here should work even if interceptors haven't been fully
 // set up yet.

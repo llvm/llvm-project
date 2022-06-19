@@ -19,6 +19,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "LLDMapFile.h"
+#include "COFFLinkerContext.h"
 #include "SymbolTable.h"
 #include "Symbols.h"
 #include "Writer.h"
@@ -44,9 +45,9 @@ static void writeHeader(raw_ostream &os, uint64_t addr, uint64_t size,
 }
 
 // Returns a list of all symbols that we want to print out.
-static std::vector<DefinedRegular *> getSymbols() {
+static std::vector<DefinedRegular *> getSymbols(const COFFLinkerContext &ctx) {
   std::vector<DefinedRegular *> v;
-  for (ObjFile *file : ObjFile::instances)
+  for (ObjFile *file : ctx.objFileInstances)
     for (Symbol *b : file->getSymbols())
       if (auto *sym = dyn_cast_or_null<DefinedRegular>(b))
         if (sym && !sym->getCOFFSymbol().isSectionDefinition())
@@ -86,7 +87,7 @@ getSymbolStrings(ArrayRef<DefinedRegular *> syms) {
   return ret;
 }
 
-void lld::coff::writeLLDMapFile(ArrayRef<OutputSection *> outputSections) {
+void lld::coff::writeLLDMapFile(const COFFLinkerContext &ctx) {
   if (config->lldmapFile.empty())
     return;
 
@@ -96,7 +97,7 @@ void lld::coff::writeLLDMapFile(ArrayRef<OutputSection *> outputSections) {
     fatal("cannot open " + config->lldmapFile + ": " + ec.message());
 
   // Collect symbol info that we want to print out.
-  std::vector<DefinedRegular *> syms = getSymbols();
+  std::vector<DefinedRegular *> syms = getSymbols(ctx);
   SymbolMapTy sectionSyms = getSectionSyms(syms);
   DenseMap<DefinedRegular *, std::string> symStr = getSymbolStrings(syms);
 
@@ -104,7 +105,7 @@ void lld::coff::writeLLDMapFile(ArrayRef<OutputSection *> outputSections) {
   os << "Address  Size     Align Out     In      Symbol\n";
 
   // Print out file contents.
-  for (OutputSection *sec : outputSections) {
+  for (OutputSection *sec : ctx.outputSections) {
     writeHeader(os, sec->getRVA(), sec->getVirtualSize(), /*align=*/pageSize);
     os << sec->name << '\n';
 

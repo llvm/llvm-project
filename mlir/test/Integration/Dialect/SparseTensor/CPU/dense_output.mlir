@@ -1,17 +1,11 @@
-// RUN: mlir-opt %s \
-// RUN:   --sparsification --sparse-tensor-conversion \
-// RUN:   --convert-vector-to-scf --convert-scf-to-std \
-// RUN:   --func-bufferize --tensor-constant-bufferize --tensor-bufferize \
-// RUN:   --std-bufferize --finalizing-bufferize  \
-// RUN:   --convert-vector-to-llvm --convert-memref-to-llvm --convert-std-to-llvm | \
+// RUN: mlir-opt %s --sparse-compiler | \
 // RUN: TENSOR0="%mlir_integration_test_dir/data/test.mtx" \
-// RUN: TENSOR1="%mlir_integration_test_dir/data/zero.mtx" \
 // RUN: mlir-cpu-runner \
 // RUN:  -e entry -entry-point-result=void  \
 // RUN:  -shared-libs=%mlir_integration_test_dir/libmlir_c_runner_utils%shlibext | \
 // RUN: FileCheck %s
 
-!Filename = type !llvm.ptr<i8>
+!Filename = !llvm.ptr<i8>
 
 #DenseMatrix = #sparse_tensor.encoding<{
   dimLevelType = [ "dense", "dense" ],
@@ -29,7 +23,7 @@
     affine_map<(i,j) -> (i,j)>  // X (out)
   ],
   iterator_types = ["parallel", "parallel"],
-  doc = "X(i,j) = A(i,j)"
+  doc = "X(i,j) = A(i,j) * 2"
 }
 
 //
@@ -45,55 +39,57 @@
 // library.
 module {
   //
-  // A kernel that assigns elements from A to an initially zero X.
+  // A kernel that assigns multiplied elements from A to X.
   //
-  func @dense_output(%arga: tensor<?x?xf64, #SparseMatrix>,
-                     %argx: tensor<?x?xf64, #DenseMatrix>
-		     {linalg.inplaceable = true})
-       -> tensor<?x?xf64, #DenseMatrix> {
+  func.func @dense_output(%arga: tensor<?x?xf64, #SparseMatrix>) -> tensor<?x?xf64, #DenseMatrix> {
+    %c0 = arith.constant 0 : index
+    %c1 = arith.constant 1 : index
+    %c2 = arith.constant 2.0 : f64
+    %d0 = tensor.dim %arga, %c0 : tensor<?x?xf64, #SparseMatrix>
+    %d1 = tensor.dim %arga, %c1 : tensor<?x?xf64, #SparseMatrix>
+    %init = bufferization.alloc_tensor(%d0, %d1) : tensor<?x?xf64, #DenseMatrix>
     %0 = linalg.generic #trait_assign
        ins(%arga: tensor<?x?xf64, #SparseMatrix>)
-      outs(%argx: tensor<?x?xf64, #DenseMatrix>) {
+      outs(%init: tensor<?x?xf64, #DenseMatrix>) {
       ^bb(%a: f64, %x: f64):
-        linalg.yield %a : f64
+        %0 = arith.mulf %a, %c2 : f64
+        linalg.yield %0 : f64
     } -> tensor<?x?xf64, #DenseMatrix>
     return %0 : tensor<?x?xf64, #DenseMatrix>
   }
 
-  func private @getTensorFilename(index) -> (!Filename)
+  func.func private @getTensorFilename(index) -> (!Filename)
 
   //
   // Main driver that reads matrix from file and calls the kernel.
   //
-  func @entry() {
-    %d0 = constant 0.0 : f64
-    %c0 = constant 0 : index
-    %c1 = constant 1 : index
+  func.func @entry() {
+    %d0 = arith.constant 0.0 : f64
+    %c0 = arith.constant 0 : index
+    %c1 = arith.constant 1 : index
 
     // Read the sparse matrix from file, construct sparse storage.
     %fileName = call @getTensorFilename(%c0) : (index) -> (!Filename)
     %a = sparse_tensor.new %fileName
-      : !llvm.ptr<i8> to tensor<?x?xf64, #SparseMatrix>
-
-    // Initialize all-dense annotated "sparse" matrix to all zeros.
-    %fileZero = call @getTensorFilename(%c1) : (index) -> (!Filename)
-    %x = sparse_tensor.new %fileZero
-      : !llvm.ptr<i8> to tensor<?x?xf64, #DenseMatrix>
+      : !Filename to tensor<?x?xf64, #SparseMatrix>
 
     // Call the kernel.
-    %0 = call @dense_output(%a, %x)
-      : (tensor<?x?xf64, #SparseMatrix>,
-         tensor<?x?xf64, #DenseMatrix>) -> tensor<?x?xf64, #DenseMatrix>
+    %0 = call @dense_output(%a)
+      : (tensor<?x?xf64, #SparseMatrix>) -> tensor<?x?xf64, #DenseMatrix>
 
     //
     // Print the linearized 5x5 result for verification.
     //
-    // CHECK: ( 1, 0, 0, 1.4, 0, 0, 2, 0, 0, 2.5, 0, 0, 3, 0, 0, 4.1, 0, 0, 4, 0, 0, 5.2, 0, 0, 5 )
+    // CHECK: ( 2, 0, 0, 2.8, 0, 0, 4, 0, 0, 5, 0, 0, 6, 0, 0, 8.2, 0, 0, 8, 0, 0, 10.4, 0, 0, 10 )
     //
     %m = sparse_tensor.values %0
       : tensor<?x?xf64, #DenseMatrix> to memref<?xf64>
     %v = vector.load %m[%c0] : memref<?xf64>, vector<25xf64>
     vector.print %v : vector<25xf64>
+
+    // Release the resources.
+    sparse_tensor.release %a : tensor<?x?xf64, #SparseMatrix>
+    sparse_tensor.release %0 : tensor<?x?xf64, #DenseMatrix>
 
     return
   }

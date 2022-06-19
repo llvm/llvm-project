@@ -168,6 +168,7 @@ def thumb_cb_target : Operand<OtherVT> {
   let EncoderMethod = "getThumbCBTargetOpValue";
   let DecoderMethod = "DecodeThumbCmpBROperand";
 }
+} // OperandType = "OPERAND_PCREL"
 
 // t_addrmode_pc := <label> => pc + imm8 * 4
 //
@@ -176,7 +177,6 @@ def t_addrmode_pc : MemOperand {
   let DecoderMethod = "DecodeThumbAddrModePC";
   let PrintMethod = "printThumbLdrLabelOperand";
   let ParserMatchClass = ThumbMemPC;
-}
 }
 
 // t_addrmode_rr := reg + reg
@@ -1520,6 +1520,7 @@ def tTBH_JT : tPseudoInst<(outs),
 let isCall = 1, Defs = [R0, R12, LR, CPSR], Uses = [SP] in
 def tTPsoft : tPseudoInst<(outs), (ins), 4, IIC_Br,
                           [(set R0, ARMthread_pointer)]>,
+                          Requires<[IsThumb, IsReadTPSoft]>,
                           Sched<[WriteBr]>;
 
 //===----------------------------------------------------------------------===//
@@ -1536,25 +1537,28 @@ def tTPsoft : tPseudoInst<(outs), (ins), 4, IIC_Br,
 // Defs. By doing so, we also cause the prologue/epilogue code to actively
 // preserve all of the callee-saved registers, which is exactly what we want.
 // $val is a scratch register for our use.
+// This gets lowered to an instruction sequence of 12 bytes
 let Defs = [ R0,  R1,  R2,  R3,  R4,  R5,  R6,  R7, R12, CPSR ],
-    hasSideEffects = 1, isBarrier = 1, isCodeGenOnly = 1,
+    hasSideEffects = 1, isBarrier = 1, isCodeGenOnly = 1, Size = 12,
     usesCustomInserter = 1 in
 def tInt_eh_sjlj_setjmp : ThumbXI<(outs),(ins tGPR:$src, tGPR:$val),
                                   AddrModeNone, 0, NoItinerary, "","",
                           [(set R0, (ARMeh_sjlj_setjmp tGPR:$src, tGPR:$val))]>;
 
+// This gets lowered to an instruction sequence of 10 bytes
 // FIXME: Non-IOS version(s)
 let isBarrier = 1, hasSideEffects = 1, isTerminator = 1, isCodeGenOnly = 1,
-    Defs = [ R7, LR, SP ] in
+    Size = 10, Defs = [ R7, LR, SP ] in
 def tInt_eh_sjlj_longjmp : XI<(outs), (ins tGPR:$src, tGPR:$scratch),
                               AddrModeNone, 0, IndexModeNone,
                               Pseudo, NoItinerary, "", "",
                               [(ARMeh_sjlj_longjmp tGPR:$src, tGPR:$scratch)]>,
                              Requires<[IsThumb,IsNotWindows]>;
 
+// This gets lowered to an instruction sequence of 12 bytes
 // (Windows is Thumb2-only)
 let isBarrier = 1, hasSideEffects = 1, isTerminator = 1, isCodeGenOnly = 1,
-    Defs = [ R11, LR, SP ] in
+    Size = 12, Defs = [ R11, LR, SP ] in
 def tInt_WIN_eh_sjlj_longjmp
   : XI<(outs), (ins GPR:$src, GPR:$scratch), AddrModeNone, 0, IndexModeNone,
        Pseudo, NoItinerary, "", "", [(ARMeh_sjlj_longjmp GPR:$src, GPR:$scratch)]>,
@@ -1575,6 +1579,8 @@ def : T1Pat<(srl (bswap (extloadi16 t_addrmode_is2:$addr)), (i32 16)),
             (tREV16 (tLDRHi t_addrmode_is2:$addr))>;
 def : T1Pat<(srl (bswap (extloadi16 t_addrmode_rr:$addr)), (i32 16)),
             (tREV16 (tLDRHr t_addrmode_rr:$addr))>;
+def : T1Pat<(srl (bswap top16Zero:$Rn), (i32 16)),
+            (tREV16 tGPR:$Rn)>;
 def : T1Pat<(truncstorei16 (srl (bswap tGPR:$Rn), (i32 16)),
                            t_addrmode_is2:$addr),
             (tSTRHi(tREV16 tGPR:$Rn), t_addrmode_is2:$addr)>;

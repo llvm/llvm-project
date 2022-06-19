@@ -1,10 +1,10 @@
-; RUN: opt < %s -mtriple=aarch64--linux-gnu -cost-model -analyze | FileCheck %s --check-prefix=COST
+; RUN: opt < %s -mtriple=aarch64--linux-gnu -passes='print<cost-model>' 2>&1 -disable-output | FileCheck %s --check-prefix=COST
 ; RUN: llc < %s -mtriple=aarch64--linux-gnu | FileCheck %s --check-prefix=CODE
 
 ; COST-LABEL: sel.v8i8
 ; COST:       Found an estimated cost of 42 for instruction: %tmp0 = shufflevector <8 x i8> %v0, <8 x i8> %v1, <8 x i32> <i32 0, i32 9, i32 2, i32 11, i32 4, i32 13, i32 6, i32 15>
 ; CODE-LABEL: sel.v8i8
-; CODE:       tbl v0.8b, { v0.16b }, v2.8b
+; CODE:       tbl v0.8b, { v0.16b }, v1.8b
 define <8 x i8> @sel.v8i8(<8 x i8> %v0, <8 x i8> %v1) {
   %tmp0 = shufflevector <8 x i8> %v0, <8 x i8> %v1, <8 x i32> <i32 0, i32 9, i32 2, i32 11, i32 4, i32 13, i32 6, i32 15>
   ret <8 x i8> %tmp0
@@ -20,7 +20,7 @@ define <16 x i8> @sel.v16i8(<16 x i8> %v0, <16 x i8> %v1) {
 }
 
 ; COST-LABEL: sel.v4i16
-; COST:       Found an estimated cost of 18 for instruction: %tmp0 = shufflevector <4 x i16> %v0, <4 x i16> %v1, <4 x i32> <i32 0, i32 5, i32 2, i32 7>
+; COST:       Found an estimated cost of 2 for instruction: %tmp0 = shufflevector <4 x i16> %v0, <4 x i16> %v1, <4 x i32> <i32 0, i32 5, i32 2, i32 7>
 ; CODE-LABEL: sel.v4i16
 ; CODE:       rev32 v0.4h, v0.4h
 ; CODE:       trn2 v0.4h, v0.4h, v1.4h

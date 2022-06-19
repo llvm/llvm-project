@@ -43,8 +43,6 @@ class UnixAPIMisuseChecker : public Checker< check::PreStmt<CallExpr> > {
   mutable Optional<uint64_t> Val_O_CREAT;
 
 public:
-  DefaultBool CheckMisuse, CheckPortability;
-
   void checkPreStmt(const CallExpr *CE, CheckerContext &C) const;
 
   void CheckOpen(CheckerContext &C, const CallExpr *CE) const;
@@ -110,7 +108,7 @@ void UnixAPIMisuseChecker::checkPreStmt(const CallExpr *CE,
   // Don't treat functions in namespaces with the same name a Unix function
   // as a call to the Unix function.
   const DeclContext *NamespaceCtx = FD->getEnclosingNamespaceContext();
-  if (NamespaceCtx && isa<NamespaceDecl>(NamespaceCtx))
+  if (isa_and_nonnull<NamespaceDecl>(NamespaceCtx))
     return;
 
   StringRef FName = C.getCalleeName(FD);
@@ -182,8 +180,7 @@ void UnixAPIMisuseChecker::CheckOpenVariant(CheckerContext &C,
   ProgramStateRef state = C.getState();
 
   if (CE->getNumArgs() < MinArgCount) {
-    // The frontend should issue a warning for this case, so this is a sanity
-    // check.
+    // The frontend should issue a warning for this case. Just return.
     return;
   } else if (CE->getNumArgs() == MaxArgCount) {
     const Expr *Arg = CE->getArg(CreateModeArgIndex);
@@ -230,7 +227,7 @@ void UnixAPIMisuseChecker::CheckOpenVariant(CheckerContext &C,
   // Now check if oflags has O_CREAT set.
   const Expr *oflagsEx = CE->getArg(FlagsArgIndex);
   const SVal V = C.getSVal(oflagsEx);
-  if (!V.getAs<NonLoc>()) {
+  if (!isa<NonLoc>(V)) {
     // The case where 'V' can be a location can only be due to a bad header,
     // so in this case bail out.
     return;
@@ -366,7 +363,7 @@ void UnixAPIPortabilityChecker::BasicAllocationCheck(CheckerContext &C,
                                                      const unsigned numArgs,
                                                      const unsigned sizeArg,
                                                      const char *fn) const {
-  // Sanity check for the correct number of arguments
+  // Check for the correct number of arguments.
   if (CE->getNumArgs() != numArgs)
     return;
 
@@ -466,7 +463,7 @@ void UnixAPIPortabilityChecker::checkPreStmt(const CallExpr *CE,
   // Don't treat functions in namespaces with the same name a Unix function
   // as a call to the Unix function.
   const DeclContext *NamespaceCtx = FD->getEnclosingNamespaceContext();
-  if (NamespaceCtx && isa<NamespaceDecl>(NamespaceCtx))
+  if (isa_and_nonnull<NamespaceDecl>(NamespaceCtx))
     return;
 
   StringRef FName = C.getCalleeName(FD);
@@ -504,7 +501,7 @@ void UnixAPIPortabilityChecker::checkPreStmt(const CallExpr *CE,
     mgr.registerChecker<CHECKERNAME>();                                        \
   }                                                                            \
                                                                                \
-  bool ento::shouldRegister##CHECKERNAME(const CheckerManager &mgr) {              \
+  bool ento::shouldRegister##CHECKERNAME(const CheckerManager &mgr) {          \
     return true;                                                               \
   }
 

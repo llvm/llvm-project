@@ -18,19 +18,19 @@ body:             |
   ; CHECK-LABEL: name: outline_default_arm
   ; CHECK: bb.0:
   ; CHECK:   liveins: $lr
-  ; CHECK:   early-clobber $sp = STR_PRE_IMM killed $lr, $sp, -8, 14 /* CC::al */, $noreg
+  ; CHECK:   early-clobber $sp = frame-setup STR_PRE_IMM killed $lr, $sp, -8, 14 /* CC::al */, $noreg
   ; CHECK:   BL @OUTLINED_FUNCTION_0
-  ; CHECK:   $lr, $sp = LDR_POST_IMM $sp, $noreg, 8, 14 /* CC::al */, $noreg
+  ; CHECK:   $lr, $sp = frame-destroy LDR_POST_IMM $sp, $noreg, 8, 14 /* CC::al */, $noreg
   ; CHECK: bb.1:
   ; CHECK:   liveins: $lr, $r6, $r7, $r8, $r9, $r10, $r11
-  ; CHECK:   early-clobber $sp = STR_PRE_IMM killed $lr, $sp, -8, 14 /* CC::al */, $noreg
+  ; CHECK:   early-clobber $sp = frame-setup STR_PRE_IMM killed $lr, $sp, -8, 14 /* CC::al */, $noreg
   ; CHECK:   BL @OUTLINED_FUNCTION_0
-  ; CHECK:   $lr, $sp = LDR_POST_IMM $sp, $noreg, 8, 14 /* CC::al */, $noreg
+  ; CHECK:   $lr, $sp = frame-destroy LDR_POST_IMM $sp, $noreg, 8, 14 /* CC::al */, $noreg
   ; CHECK: bb.2:
   ; CHECK:   liveins: $lr, $r6, $r7, $r8, $r9, $r10, $r11
-  ; CHECK:   early-clobber $sp = STR_PRE_IMM killed $lr, $sp, -8, 14 /* CC::al */, $noreg
+  ; CHECK:   early-clobber $sp = frame-setup STR_PRE_IMM killed $lr, $sp, -8, 14 /* CC::al */, $noreg
   ; CHECK:   BL @OUTLINED_FUNCTION_0
-  ; CHECK:   $lr, $sp = LDR_POST_IMM $sp, $noreg, 8, 14 /* CC::al */, $noreg
+  ; CHECK:   $lr, $sp = frame-destroy LDR_POST_IMM $sp, $noreg, 8, 14 /* CC::al */, $noreg
   ; CHECK: bb.3:
   ; CHECK:   liveins: $lr, $r6, $r7, $r8, $r9, $r10, $r11
   ; CHECK:   $r2 = MOVr $lr, 14 /* CC::al */, $noreg, $noreg
@@ -72,19 +72,19 @@ body:             |
   ; CHECK-LABEL: name: outline_default_thumb
   ; CHECK: bb.0:
   ; CHECK:   liveins: $lr
-  ; CHECK:   early-clobber $sp = t2STR_PRE killed $lr, $sp, -8, 14 /* CC::al */, $noreg
+  ; CHECK:   early-clobber $sp = frame-setup t2STR_PRE killed $lr, $sp, -8, 14 /* CC::al */, $noreg
   ; CHECK:   tBL 14 /* CC::al */, $noreg, @OUTLINED_FUNCTION_1
-  ; CHECK:   $lr, $sp = t2LDR_POST $sp, 8, 14 /* CC::al */, $noreg
+  ; CHECK:   $lr, $sp = frame-destroy t2LDR_POST $sp, 8, 14 /* CC::al */, $noreg
   ; CHECK: bb.1:
   ; CHECK:   liveins: $lr, $r4, $r5, $r6, $r7, $r8, $r9, $r10, $r11
-  ; CHECK:   early-clobber $sp = t2STR_PRE killed $lr, $sp, -8, 14 /* CC::al */, $noreg
+  ; CHECK:   early-clobber $sp = frame-setup t2STR_PRE killed $lr, $sp, -8, 14 /* CC::al */, $noreg
   ; CHECK:   tBL 14 /* CC::al */, $noreg, @OUTLINED_FUNCTION_1
-  ; CHECK:   $lr, $sp = t2LDR_POST $sp, 8, 14 /* CC::al */, $noreg
+  ; CHECK:   $lr, $sp = frame-destroy t2LDR_POST $sp, 8, 14 /* CC::al */, $noreg
   ; CHECK: bb.2:
   ; CHECK:   liveins: $lr, $r4, $r5, $r6, $r7, $r8, $r9, $r10, $r11
-  ; CHECK:   early-clobber $sp = t2STR_PRE killed $lr, $sp, -8, 14 /* CC::al */, $noreg
+  ; CHECK:   early-clobber $sp = frame-setup t2STR_PRE killed $lr, $sp, -8, 14 /* CC::al */, $noreg
   ; CHECK:   tBL 14 /* CC::al */, $noreg, @OUTLINED_FUNCTION_1
-  ; CHECK:   $lr, $sp = t2LDR_POST $sp, 8, 14 /* CC::al */, $noreg
+  ; CHECK:   $lr, $sp = frame-destroy t2LDR_POST $sp, 8, 14 /* CC::al */, $noreg
   ; CHECK: bb.3:
   ; CHECK:   liveins: $lr, $r4, $r5, $r6, $r7, $r8, $r9, $r10, $r11
   ; CHECK:   $r2 = tMOVr $lr, 14 /* CC::al */, $noreg

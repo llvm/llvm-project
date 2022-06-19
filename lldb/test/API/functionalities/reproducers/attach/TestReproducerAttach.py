@@ -11,15 +11,12 @@ from lldbsuite.test import lldbutil
 
 
 class ReproducerAttachTestCase(TestBase):
-
-    mydir = TestBase.compute_mydir(__file__)
     NO_DEBUG_INFO_TESTCASE = True
 
     @skipIfNetBSD
     @skipIfWindows
     @skipIfRemote
     @skipIfiOSSimulator
-    @skipIfReproducer
     def test_reproducer_attach(self):
         """Test thread creation after process attach."""
         exe = '%s_%d' % (self.testMethodName, os.getpid())
@@ -57,16 +54,6 @@ class ReproducerAttachTestCase(TestBase):
         outs = outs.decode('utf-8')
         self.assertIn('Process {} stopped'.format(pid), outs)
         self.assertIn('Reproducer written', outs)
-
-        # Check that replay works.
-        replay = subprocess.Popen(
-            [lldbtest_config.lldbExec, '-replay', reproducer],
-            stdin=subprocess.PIPE,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE)
-        outs, _ = replay.communicate()
-        outs = outs.decode('utf-8')
-        self.assertIn('Process {} stopped'.format(pid), outs)
 
         # We can dump the reproducer in the current context.
         self.expect('reproducer dump -f {} -p process'.format(reproducer),

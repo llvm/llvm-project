@@ -8,10 +8,12 @@
 
 #include "llvm/MC/MCSectionXCOFF.h"
 #include "llvm/MC/MCAsmInfo.h"
-#include "llvm/MC/MCExpr.h"
-#include "llvm/Support/Debug.h"
 #include "llvm/Support/Format.h"
 #include "llvm/Support/raw_ostream.h"
+namespace llvm {
+class MCExpr;
+class Triple;
+} // namespace llvm
 
 using namespace llvm;
 
@@ -22,7 +24,7 @@ void MCSectionXCOFF::printCsectDirective(raw_ostream &OS) const {
      << '\n';
 }
 
-void MCSectionXCOFF::PrintSwitchToSection(const MCAsmInfo &MAI, const Triple &T,
+void MCSectionXCOFF::printSwitchToSection(const MCAsmInfo &MAI, const Triple &T,
                                           raw_ostream &OS,
                                           const MCExpr *Subsection) const {
   if (getKind().isText()) {
@@ -34,7 +36,8 @@ void MCSectionXCOFF::PrintSwitchToSection(const MCAsmInfo &MAI, const Triple &T,
   }
 
   if (getKind().isReadOnly()) {
-    if (getMappingClass() != XCOFF::XMC_RO)
+    if (getMappingClass() != XCOFF::XMC_RO &&
+        getMappingClass() != XCOFF::XMC_TD)
       report_fatal_error("Unhandled storage-mapping class for .rodata csect.");
     printCsectDirective(OS);
     return;
@@ -70,7 +73,8 @@ void MCSectionXCOFF::PrintSwitchToSection(const MCAsmInfo &MAI, const Triple &T,
   }
 
   if (isCsect() && getMappingClass() == XCOFF::XMC_TD) {
-    assert((getKind().isBSSExtern() || getKind().isBSSLocal()) &&
+    assert((getKind().isBSSExtern() || getKind().isBSSLocal() ||
+            getKind().isReadOnlyWithRel()) &&
            "Unexepected section kind for toc-data");
     printCsectDirective(OS);
     return;
@@ -115,9 +119,13 @@ void MCSectionXCOFF::PrintSwitchToSection(const MCAsmInfo &MAI, const Triple &T,
   report_fatal_error("Printing for this SectionKind is unimplemented.");
 }
 
-bool MCSectionXCOFF::UseCodeAlign() const { return getKind().isText(); }
+bool MCSectionXCOFF::useCodeAlign() const { return getKind().isText(); }
 
 bool MCSectionXCOFF::isVirtualSection() const {
-  assert(isCsect() && "Only csect section can be virtual!");
+  // DWARF sections are always not virtual.
+  if (isDwarfSect())
+    return false;
+  assert(isCsect() &&
+         "Handling for isVirtualSection not implemented for this section!");
   return XCOFF::XTY_CM == CsectProp->Type;
 }

@@ -1,0 +1,30 @@
+# Check that profile data for the fall-through jump is not ingored when there is
+# a conditional jump followed by a no-op.
+
+RUN: llvm-mc -filetype=obj -triple x86_64-unknown-unknown \
+RUN:   %S/Inputs/ft_to_noop.s -o %t.o
+RUN: link_fdata %S/Inputs/ft_to_noop.s %t.o %t.fdata --nmtool llvm-nm
+RUN: llvm-strip --strip-unneeded %t.o
+RUN: %clang %cflags %t.o -o %t.exe -Wl,-q
+RUN: llvm-bolt %t.exe -o %t --data %t.fdata \
+RUN:   --print-cfg --sequential-disassembly 2>&1 | FileCheck %s
+
+CHECK:      Binary Function "foo" after building cfg
+CHECK:        Exec Count  : 20
+CHECK:        Profile Acc : 100.0%
+
+# This block is terminated with a conditional jump to .Ltmp0 followed by a
+# no-op. The profile data contains a count for the fall-through (3) which
+# is different from what would be inferred (2). However the destination
+# offset of this fall-through jump in the profile data points to the no-op
+# following the jump and not the start of the fall-through block .LFT0.
+CHECK:      Entry Point
+CHECK-NEXT:   Exec Count : 20
+CHECK:        Successors: .Ltmp[[#BB1:]] (mispreds: 0, count: 18), .LFT[[#BB2:]] (mispreds: 0, count: 3)
+
+CHECK:      .LFT[[#BB2]]
+CHECK-NEXT:   Exec Count : 3
+CHECK:        Successors: .Ltmp[[#]] (mispreds: 0, count: 0)
+
+CHECK:      .Ltmp[[#BB1]]
+CHECK-NEXT:   Exec Count : 18

@@ -1,4 +1,4 @@
-; REQUIRES: default_triple, object-emission
+; REQUIRES: object-emission
 ;
 ; RUN: llvm-link %s %p/type-unique-type-array-b.ll -S -o - | %llc_dwarf -filetype=obj -O0 | llvm-dwarfdump -v -debug-info - | FileCheck %s
 ;
@@ -21,20 +21,20 @@
 ;
 ; CHECK: DW_TAG_compile_unit
 ; CHECK: DW_TAG_class_type
-; CHECK-NEXT:   DW_AT_name {{.*}} "A"
+; CHECK-NEXT:   DW_AT_name {{.*}}"A"
 ; CHECK: DW_TAG_subprogram
-; CHECK: DW_AT_name {{.*}} "testA"
+; CHECK: DW_AT_name {{.*}}"testA"
 ; CHECK: DW_TAG_formal_parameter
 ; CHECK: DW_TAG_formal_parameter
 ; CHECK-NEXT: DW_AT_type [DW_FORM_ref4] (cu + 0x{{.*}} => {0x[[STRUCT:.*]]}
 ; CHECK: 0x[[STRUCT]]: DW_TAG_structure_type
-; CHECK-NEXT:   DW_AT_name {{.*}} "SA"
+; CHECK-NEXT:   DW_AT_name {{.*}}"SA"
 
 ; CHECK: DW_TAG_compile_unit
 ; CHECK: DW_TAG_class_type
-; CHECK-NEXT:   DW_AT_name {{.*}} "B"
+; CHECK-NEXT:   DW_AT_name {{.*}}"B"
 ; CHECK: DW_TAG_subprogram
-; CHECK:   DW_AT_name {{.*}} "testB"
+; CHECK:   DW_AT_name {{.*}}"testB"
 ; CHECK: DW_TAG_formal_parameter
 ; CHECK: DW_TAG_formal_parameter
 ; CHECK-NEXT: DW_AT_type [DW_FORM_ref_addr] {{.*}}[[STRUCT]]
@@ -112,7 +112,7 @@ attributes #3 = { nounwind }
 !18 = !{null, !19, !10}
 !19 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !4)
 !20 = distinct !DISubprogram(name: "testA", linkageName: "_ZN1A5testAE2SA", line: 7, isLocal: false, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: false, unit: !0, scopeLine: 7, file: !1, scope: !4, type: !7, declaration: !6, retainedNodes: !2)
-!21 = !{i32 2, !"Dwarf Version", i32 2}
+!21 = !{i32 2, !"Dwarf Version", i32 3}
 !22 = !{i32 2, !"Debug Info Version", i32 3}
 !23 = !{!"clang version 3.5.0 (trunk 214102:214113M) (llvm/trunk 214102:214115M)"}
 !24 = !DILocalVariable(name: "a", line: 11, arg: 1, scope: !15, file: !16, type: !19)

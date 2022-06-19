@@ -66,8 +66,7 @@ body:             |
     ; MIPS32: liveins: $a0
     ; MIPS32: [[COPY:%[0-9]+]]:_(p0) = COPY $a0
     ; MIPS32: [[ZEXTLOAD:%[0-9]+]]:_(s32) = G_ZEXTLOAD [[COPY]](p0) :: (load (s8) from %ir.px)
-    ; MIPS32: [[COPY1:%[0-9]+]]:_(s32) = COPY [[ZEXTLOAD]](s32)
-    ; MIPS32: $v0 = COPY [[COPY1]](s32)
+    ; MIPS32: $v0 = COPY [[ZEXTLOAD]](s32)
     ; MIPS32: RetRA implicit $v0
     %0:_(p0) = COPY $a0
     %2:_(s16) = G_ZEXTLOAD %0(p0) :: (load (s8) from %ir.px)
@@ -172,8 +171,7 @@ body:             |
     ; MIPS32: liveins: $a0
     ; MIPS32: [[COPY:%[0-9]+]]:_(p0) = COPY $a0
     ; MIPS32: [[SEXTLOAD:%[0-9]+]]:_(s32) = G_SEXTLOAD [[COPY]](p0) :: (load (s8) from %ir.px)
-    ; MIPS32: [[COPY1:%[0-9]+]]:_(s32) = COPY [[SEXTLOAD]](s32)
-    ; MIPS32: $v0 = COPY [[COPY1]](s32)
+    ; MIPS32: $v0 = COPY [[SEXTLOAD]](s32)
     ; MIPS32: RetRA implicit $v0
     %0:_(p0) = COPY $a0
     %2:_(s16) = G_SEXTLOAD %0(p0) :: (load (s8) from %ir.px)
@@ -215,7 +213,6 @@ body:             |
     ; MIPS32: [[COPY:%[0-9]+]]:_(p0) = COPY $a0
     ; MIPS32: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[COPY]](p0) :: (load (s32) from %ir.px)
     ; MIPS32: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 31
-    ; MIPS32: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
     ; MIPS32: [[ASHR:%[0-9]+]]:_(s32) = G_ASHR [[LOAD]], [[C]](s32)
     ; MIPS32: $v0 = COPY [[LOAD]](s32)
     ; MIPS32: $v1 = COPY [[ASHR]](s32)

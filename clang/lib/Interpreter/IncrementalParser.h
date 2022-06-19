@@ -15,6 +15,8 @@
 
 #include "clang/Interpreter/PartialTranslationUnit.h"
 
+#include "clang/AST/GlobalDecl.h"
+
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Error.h"
@@ -28,9 +30,6 @@ class LLVMContext;
 namespace clang {
 class ASTConsumer;
 class CompilerInstance;
-class CodeGenerator;
-class DeclGroupRef;
-class FrontendAction;
 class IncrementalAction;
 class Parser;
 
@@ -68,6 +67,10 @@ public:
   ///\returns a \c PartialTranslationUnit which holds information about the
   /// \c TranslationUnitDecl and \c llvm::Module corresponding to the input.
   llvm::Expected<PartialTranslationUnit &> Parse(llvm::StringRef Input);
+
+  /// Uses the CodeGenModule mangled name cache and avoids recomputing.
+  ///\returns the mangled name of a \c GD.
+  llvm::StringRef GetMangledName(GlobalDecl GD) const;
 
 private:
   llvm::Expected<PartialTranslationUnit &> ParseOrWrapTopLevelDecl();

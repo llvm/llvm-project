@@ -288,6 +288,19 @@ void RegisterFile::addRegisterWrite(WriteRef Write,
   // If this move has been eliminated, then method tryEliminateMoveOrSwap should
   // have already updated all the register mappings.
   if (!IsEliminated) {
+    // Check if this is one of multiple writes performed by this
+    // instruction to register RegID.
+    const WriteRef &OtherWrite = RegisterMappings[RegID].first;
+    const WriteState *OtherWS = OtherWrite.getWriteState();
+    if (OtherWS && OtherWrite.getSourceIndex() == Write.getSourceIndex()) {
+      if (OtherWS->getLatency() > WS.getLatency()) {
+        // Conservatively keep the slowest write on RegID.
+        if (ShouldAllocatePhysRegs)
+          allocatePhysRegs(RegisterMappings[RegID].second, UsedPhysRegs);
+        return;
+      }
+    }
+
     // Update the mapping for register RegID including its sub-registers.
     RegisterMappings[RegID].first = Write;
     RegisterMappings[RegID].second.AliasRegID = 0U;

@@ -8,17 +8,14 @@ define void @fusion(i8* noalias nocapture align 256 dereferenceable(19267584) %a
 ; CHECK-NEXT:    [[TMP4:%.*]] = or i32 [[TMP]], [[ARG3:%.*]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = shl nuw nsw i32 [[TMP4]], 2
 ; CHECK-NEXT:    [[TMP6:%.*]] = zext i32 [[TMP5]] to i64
-; CHECK-NEXT:    [[TMP7:%.*]] = or i64 [[TMP6]], 1
 ; CHECK-NEXT:    [[TMP10:%.*]] = bitcast i8* [[ARG1:%.*]] to half*
 ; CHECK-NEXT:    [[TMP11:%.*]] = getelementptr inbounds half, half* [[TMP10]], i64 [[TMP6]]
 ; CHECK-NEXT:    [[TMP15:%.*]] = bitcast i8* [[ARG:%.*]] to half*
 ; CHECK-NEXT:    [[TMP16:%.*]] = getelementptr inbounds half, half* [[TMP15]], i64 [[TMP6]]
-; CHECK-NEXT:    [[TMP17:%.*]] = getelementptr inbounds half, half* [[TMP10]], i64 [[TMP7]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = bitcast half* [[TMP11]] to <2 x half>*
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x half>, <2 x half>* [[TMP1]], align 8
 ; CHECK-NEXT:    [[TMP3:%.*]] = fmul fast <2 x half> [[TMP2]], <half 0xH5380, half 0xH5380>
 ; CHECK-NEXT:    [[TMP4:%.*]] = fadd fast <2 x half> [[TMP3]], <half 0xH57F0, half 0xH57F0>
-; CHECK-NEXT:    [[TMP21:%.*]] = getelementptr inbounds half, half* [[TMP15]], i64 [[TMP7]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = bitcast half* [[TMP16]] to <2 x half>*
 ; CHECK-NEXT:    store <2 x half> [[TMP4]], <2 x half>* [[TMP5]], align 8
 ; CHECK-NEXT:    ret void

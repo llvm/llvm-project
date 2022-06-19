@@ -1,9 +1,6 @@
 #!/usr/bin/env python3
 
 # Converts clang-scan-deps output into response files.
-#   * For modules, arguments in the resulting response file are enough to build a PCM.
-#   * For translation units, the response file needs to be added to the original Clang invocation from compilation
-#     database.
 #
 # Usage:
 #
@@ -11,7 +8,7 @@
 #   module-deps-to-rsp.py deps.json --module-name=ModuleName > module_name.cc1.rsp
 #   module-deps-to-rsp.py deps.json --tu-index=0 > tu.rsp
 #   clang @module_name.cc1.rsp
-#   clang ... @tu.rsp
+#   clang @tu.rsp
 
 import argparse
 import json

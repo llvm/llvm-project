@@ -44,6 +44,11 @@ constexpr uint32_t VersionMajorV4 = 1;
 /// HSA metadata minor version for code object V4.
 constexpr uint32_t VersionMinorV4 = 1;
 
+/// HSA metadata major version for code object V5.
+constexpr uint32_t VersionMajorV5 = 1;
+/// HSA metadata minor version for code object V5.
+constexpr uint32_t VersionMinorV5 = 2;
+
 /// HSA metadata beginning assembler directive.
 constexpr char AssemblerDirectiveBegin[] = ".amd_amdgpu_hsa_metadata";
 /// HSA metadata ending assembler directive.

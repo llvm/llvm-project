@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple x86_64-apple-darwin10 -emit-llvm -fblocks -fobjc-weak -fobjc-runtime-has-weak -std=c++11 -o - %s | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-apple-darwin10 -emit-llvm -fblocks -fobjc-weak -fobjc-runtime-has-weak -std=c++11 -o - %s | FileCheck %s
 
 struct A { __weak id x; };
 
@@ -12,7 +12,7 @@ id test0() {
 }
 
 // Copy Assignment Operator
-// CHECK-LABEL: define linkonce_odr nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) %struct.A* @_ZN1AaSERKS_(
+// CHECK-LABEL: define linkonce_odr noundef nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) %struct.A* @_ZN1AaSERKS_(
 // CHECK:       [[THISADDR:%this.*]] = alloca [[A:.*]]*
 // CHECK:       [[OBJECTADDR:%.*]] = alloca [[A:.*]]*
 // CHECK:       [[THIS:%this.*]] = load [[A]]*, [[A]]** [[THISADDR]]
@@ -23,7 +23,7 @@ id test0() {
 // CHECK-NEXT:  [[T3:%.*]] = call i8* @llvm.objc.storeWeak(i8** [[T2]], i8* [[T1]])
 
 // Move Assignment Operator
-// CHECK-LABEL: define linkonce_odr nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) %struct.A* @_ZN1AaSEOS_(
+// CHECK-LABEL: define linkonce_odr noundef nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) %struct.A* @_ZN1AaSEOS_(
 // CHECK:       [[THISADDR:%this.*]] = alloca [[A:.*]]*
 // CHECK:       [[OBJECTADDR:%.*]] = alloca [[A:.*]]*
 // CHECK:       [[THIS:%this.*]] = load [[A]]*, [[A]]** [[THISADDR]]

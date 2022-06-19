@@ -12,8 +12,8 @@ namespace frameSizeThunkWarning {
     virtual void f();
   };
 
-  // CHECK: warning: stack frame size ([[#]]) exceeds limit ([[#]]) in function 'frameSizeThunkWarning::B::f'
-  // CHECK: warning: stack frame size ([[#]]) exceeds limit in function '_ZTv0_n12_N21frameSizeThunkWarning1B1fEv'
+  // CHECK: warning: stack frame size ([[#]]) exceeds limit ([[#]]) in 'frameSizeThunkWarning::B::f()'
+  // CHECK: warning: stack frame size ([[#]]) exceeds limit ([[#]]) in function '_ZTv0_n12_N21frameSizeThunkWarning1B1fEv'
   void B::f() {
     volatile int x = 0; // Ensure there is stack usage.
   }

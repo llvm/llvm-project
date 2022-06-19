@@ -165,3 +165,38 @@ without any syntax highlighting like this:
                           ...
 
 
+Generating the documentation
+============================
+
+You can generate the HTML documentation from the sources locally if you want to
+see what they would look like. In addition to the normal
+`build tools <docs/GettingStarted.html>`_
+you need to install `Sphinx`_ and the
+`recommonmark <https://recommonmark.readthedocs.io/en/latest/>`_ extension.
+
+On Debian you can install these with:
+
+.. code-block:: console
+
+   sudo apt install -y sphinx-doc python-recommonmark-doc
+
+On Ubuntu use pip to get an up-to-date version of recommonmark:
+
+.. code-block:: console
+
+   sudo pip install sphinx recommonmark
+
+Then run cmake to build the documentation inside the ``llvm-project`` checkout:
+
+.. code-block:: console
+
+   mkdir build
+   cd build
+   cmake -DLLVM_ENABLE_SPHINX=On ../llvm
+   cmake --build . --target docs-llvm-html
+
+In case you already have the Cmake build set up and want to reuse that,
+just set the CMake variable ``LLVM_ENABLE_SPHINX=On``.
+
+After that you find the generated documentation in ``build/docs/html``
+folder.

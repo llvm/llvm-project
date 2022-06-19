@@ -176,4 +176,4 @@ u u1 = { 1 };
 u u2 = u1; 
 u u3 = 1; // expected-error{{no viable conversion}}
 u u4 = { 0, "asdf" };  // expected-error{{excess elements in union initializer}}
-u u5 = { "asdf" }; // expected-error{{cannot initialize a member subobject of type 'int' with an lvalue of type 'const char [5]'}}
+u u5 = { "asdf" }; // expected-error{{cannot initialize a member subobject of type 'int' with an lvalue of type 'const char[5]'}}

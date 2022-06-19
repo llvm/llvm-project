@@ -5,19 +5,24 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-#ifndef MLIR_CONVERSION_OPENMPTOLLVM_OPENMPTOLLVM_H_
-#define MLIR_CONVERSION_OPENMPTOLLVM_OPENMPTOLLVM_H_
+#ifndef MLIR_CONVERSION_OPENMPTOLLVM_CONVERTOPENMPTOLLVM_H
+#define MLIR_CONVERSION_OPENMPTOLLVM_CONVERTOPENMPTOLLVM_H
 
 #include <memory>
 
 namespace mlir {
 class LLVMTypeConverter;
+class ConversionTarget;
 class MLIRContext;
 class ModuleOp;
 template <typename T>
 class OperationPass;
 class RewritePatternSet;
-using OwningRewritePatternList = RewritePatternSet;
+
+/// Configure dynamic conversion legality of regionless operations from OpenMP
+/// to LLVM.
+void configureOpenMPToLLVMConversionLegality(ConversionTarget &target,
+                                             LLVMTypeConverter &typeConverter);
 
 /// Populate the given list with patterns that convert from OpenMP to LLVM.
 void populateOpenMPToLLVMConversionPatterns(LLVMTypeConverter &converter,
@@ -28,4 +33,4 @@ std::unique_ptr<OperationPass<ModuleOp>> createConvertOpenMPToLLVMPass();
 
 } // namespace mlir
 
-#endif // MLIR_CONVERSION_OPENMPTOLLVM_OPENMPTOLLVM_H_
+#endif // MLIR_CONVERSION_OPENMPTOLLVM_CONVERTOPENMPTOLLVM_H

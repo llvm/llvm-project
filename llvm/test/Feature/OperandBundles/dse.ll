@@ -1,4 +1,4 @@
-; RUN: opt -S -dse < %s | FileCheck %s
+; RUN: opt -S -passes=dse < %s | FileCheck %s
 
 declare void @f()
 declare noalias i8* @malloc(i32) nounwind

@@ -62,10 +62,10 @@
 #ifndef LLVM_TRANSFORMS_SCALAR_SPECULATIVEEXECUTION_H
 #define LLVM_TRANSFORMS_SCALAR_SPECULATIVEEXECUTION_H
 
-#include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/IR/PassManager.h"
 
 namespace llvm {
+class TargetTransformInfo;
 class SpeculativeExecutionPass
     : public PassInfoMixin<SpeculativeExecutionPass> {
 public:

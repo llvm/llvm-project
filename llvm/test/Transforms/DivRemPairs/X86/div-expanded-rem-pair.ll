@@ -529,3 +529,35 @@ return:                                           ; preds = %if.then, %if.end3
   %retval.0 = phi i64 [ %div, %if.end3 ], [ 0, %if.then ]
   ret i64 %retval.0
 }
+
+; Negative test (this would create invalid IR and crash).
+; The div block can't have predecessors other than the rem block
+; and the common single pred block (it is reachable from entry here).
+
+define i32 @PR51241(i1 %b1, i1 %b2, i32 %t0) {
+; CHECK-LABEL: @PR51241(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br i1 [[B1:%.*]], label [[DIVBB:%.*]], label [[PREDBB:%.*]]
+; CHECK:       predbb:
+; CHECK-NEXT:    br i1 [[B2:%.*]], label [[DIVBB]], label [[REMBB:%.*]]
+; CHECK:       rembb:
+; CHECK-NEXT:    [[REM2:%.*]] = srem i32 7, [[T0:%.*]]
+; CHECK-NEXT:    br label [[DIVBB]]
+; CHECK:       divbb:
+; CHECK-NEXT:    [[DIV:%.*]] = sdiv i32 7, [[T0]]
+; CHECK-NEXT:    ret i32 [[DIV]]
+;
+entry:
+  br i1 %b1, label %divbb, label %predbb
+
+predbb:
+  br i1 %b2, label %divbb, label %rembb
+
+rembb:
+  %rem2 = srem i32 7, %t0
+  br label %divbb
+
+divbb:
+  %div = sdiv i32 7, %t0
+  ret i32 %div
+}

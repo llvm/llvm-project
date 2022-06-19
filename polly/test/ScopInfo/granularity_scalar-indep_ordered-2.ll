@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -polly-stmt-granularity=scalar-indep -polly-print-instructions -polly-scops -analyze < %s | FileCheck %s -match-full-lines
+; RUN: opt %loadPolly -polly-stmt-granularity=scalar-indep -polly-print-instructions -polly-print-scops -disable-output < %s | FileCheck %s -match-full-lines
 ;
 ; This case should be split into two statements because {X[0], Y[0]}
 ; and {A[0], B[0]} do not intersect.

@@ -60,7 +60,7 @@
                               {LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM,       \
                                LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM,       \
                                dbg_##reg##i },                                 \
-                               NULL, NULL, NULL, 0
+                               NULL, NULL,         
 #define REG_CONTEXT_SIZE                                                       \
   (sizeof(RegisterInfoPOSIX_arm64::GPR) +                                      \
    sizeof(RegisterInfoPOSIX_arm64::FPU) +                                      \
@@ -71,6 +71,12 @@
 #include "RegisterInfos_arm64.h"
 #include "RegisterInfos_arm64_sve.h"
 #undef DECLARE_REGISTER_INFOS_ARM64_STRUCT
+
+static lldb_private::RegisterInfo g_register_infos_pauth[] = {
+    DEFINE_EXTENSION_REG(data_mask), DEFINE_EXTENSION_REG(code_mask)};
+
+static lldb_private::RegisterInfo g_register_infos_mte[] = {
+    DEFINE_EXTENSION_REG(mte_ctrl)};
 
 // Number of register sets provided by this context.
 enum {
@@ -178,10 +184,10 @@ static const lldb_private::RegisterSet g_reg_sets_arm64[k_num_register_sets] = {
      g_sve_regnums_arm64}};
 
 static const lldb_private::RegisterSet g_reg_set_pauth_arm64 = {
-    "Pointer Authentication Registers", "pauth", k_num_pauth_register, NULL};
+    "Pointer Authentication Registers", "pauth", k_num_pauth_register, nullptr};
 
 static const lldb_private::RegisterSet g_reg_set_mte_arm64 = {
-    "MTE Control Register", "mte", k_num_mte_register, NULL};
+    "MTE Control Register", "mte", k_num_mte_register, nullptr};
 
 RegisterInfoPOSIX_arm64::RegisterInfoPOSIX_arm64(
     const lldb_private::ArchSpec &target_arch, lldb_private::Flags opt_regsets)

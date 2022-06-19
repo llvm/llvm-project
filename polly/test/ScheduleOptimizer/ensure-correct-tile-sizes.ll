@@ -1,9 +1,9 @@
-; RUN: opt %loadPolly -analyze -polly-process-unprofitable  -polly-remarks-minimal \
-; RUN:     -polly-opt-isl  -polly-pattern-matching-based-opts=true \
+; RUN: opt %loadPolly -polly-process-unprofitable -polly-remarks-minimal \
+; RUN:     -polly-opt-isl -polly-pattern-matching-based-opts=true \
 ; RUN:     -polly-target-throughput-vector-fma=1 \
 ; RUN:     -polly-target-latency-vector-fma=1 \
-; RUN:     -polly-ast -polly-target-vector-register-bitwidth=4096 \
-; RUN:     -polly-target-1st-cache-level-associativity=3 < %s | FileCheck %s
+; RUN:     -polly-target-vector-register-bitwidth=4096 \
+; RUN:     -polly-target-1st-cache-level-associativity=3 -polly-print-ast -disable-output < %s | FileCheck %s
 ;
 ;     /* Test that Polly does not crash due to configurations that can lead to
 ;    incorrect tile size computations.
@@ -31,7 +31,6 @@
 ; CHECK-NEXT:            for (int c3 = 0; c3 <= min(31, -32 * c1 + 2999); c3 += 1)
 ; CHECK-NEXT:              Stmt_for_body3(32 * c0 + c2, 32 * c1 + c3);
 ; CHECK-NEXT:        }
-; CHECK-NEXT:      // Inter iteration alias-free
 ; CHECK-NEXT:      // Register tiling - Tiles
 ; CHECK-NEXT:      for (int c0 = 0; c0 <= 23; c0 += 1)
 ; CHECK-NEXT:        for (int c1 = 0; c1 <= 2999; c1 += 1)

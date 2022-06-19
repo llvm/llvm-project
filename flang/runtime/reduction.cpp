@@ -12,11 +12,10 @@
 // DOT_PRODUCT, FINDLOC, MATMUL, SUM, and PRODUCT are in their own eponymous
 // source files.
 // NORM2, MAXLOC, MINLOC, MAXVAL, and MINVAL are in extrema.cpp.
-//
-// TODO: IALL, IANY
 
-#include "reduction.h"
+#include "flang/Runtime/reduction.h"
 #include "reduction-templates.h"
+#include "flang/Runtime/descriptor.h"
 #include <cinttypes>
 
 namespace Fortran::runtime {
@@ -229,7 +228,7 @@ inline auto GetTotalLogicalReduction(const Descriptor &x, const char *source,
     typename ACCUMULATOR::Type {
   Terminator terminator{source, line};
   if (dim < 0 || dim > 1) {
-    terminator.Crash("%s: bad DIM=%d", intrinsic, dim);
+    terminator.Crash("%s: bad DIM=%d for ARRAY with rank=1", intrinsic, dim);
   }
   SubscriptValue xAt[maxRank];
   x.GetLowerBounds(xAt);
@@ -267,7 +266,7 @@ template <LogicalReduction REDUCTION> struct LogicalReduceHelper {
           result, x, dim, terminator, intrinsic, x.type());
       SubscriptValue at[maxRank];
       result.GetLowerBounds(at);
-      INTERNAL_CHECK(at[0] == 1);
+      INTERNAL_CHECK(result.rank() == 0 || at[0] == 1);
       using CppType = CppTypeFor<TypeCategory::Logical, KIND>;
       for (auto n{result.Elements()}; n-- > 0; result.IncrementSubscripts(at)) {
         *result.Element<CppType>(at) =
@@ -315,7 +314,7 @@ template <int KIND> struct CountDimension {
         TypeCode{TypeCategory::Integer, KIND});
     SubscriptValue at[maxRank];
     result.GetLowerBounds(at);
-    INTERNAL_CHECK(at[0] == 1);
+    INTERNAL_CHECK(result.rank() == 0 || at[0] == 1);
     using CppType = CppTypeFor<TypeCategory::Integer, KIND>;
     for (auto n{result.Elements()}; n-- > 0; result.IncrementSubscripts(at)) {
       *result.Element<CppType>(at) =

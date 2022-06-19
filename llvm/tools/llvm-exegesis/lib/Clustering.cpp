@@ -8,13 +8,15 @@
 
 #include "Clustering.h"
 #include "Error.h"
+#include "SchedClassResolution.h"
+#include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include <algorithm>
+#include <deque>
 #include <string>
 #include <vector>
-#include <deque>
 
 namespace llvm {
 namespace exegesis {
@@ -183,46 +185,58 @@ void InstructionBenchmarkClustering::clusterizeDbScan(const size_t MinPts) {
   }
 }
 
-void InstructionBenchmarkClustering::clusterizeNaive(unsigned NumOpcodes) {
-  // Given an instruction Opcode, which are the benchmarks of this instruction?
-  std::vector<SmallVector<size_t, 1>> OpcodeToPoints;
-  OpcodeToPoints.resize(NumOpcodes);
-  size_t NumOpcodesSeen = 0;
+void InstructionBenchmarkClustering::clusterizeNaive(
+    const MCSubtargetInfo &SubtargetInfo, const MCInstrInfo &InstrInfo) {
+  // Given an instruction Opcode, which sched class id's are represented,
+  // and which are the benchmarks for each sched class?
+  std::vector<SmallMapVector<unsigned, SmallVector<size_t, 1>, 1>>
+      OpcodeToSchedClassesToPoints;
+  const unsigned NumOpcodes = InstrInfo.getNumOpcodes();
+  OpcodeToSchedClassesToPoints.resize(NumOpcodes);
+  size_t NumClusters = 0;
   for (size_t P = 0, NumPoints = Points_.size(); P < NumPoints; ++P) {
     const InstructionBenchmark &Point = Points_[P];
-    const unsigned Opcode = Point.keyInstruction().getOpcode();
+    const MCInst &MCI = Point.keyInstruction();
+    unsigned SchedClassId;
+    std::tie(SchedClassId, std::ignore) =
+        ResolvedSchedClass::resolveSchedClassId(SubtargetInfo, InstrInfo, MCI);
+    const unsigned Opcode = MCI.getOpcode();
     assert(Opcode < NumOpcodes && "NumOpcodes is incorrect (too small)");
-    SmallVectorImpl<size_t> &PointsOfOpcode = OpcodeToPoints[Opcode];
-    if (PointsOfOpcode.empty()) // If we previously have not seen any points of
-      ++NumOpcodesSeen; // this opcode, then naturally this is the new opcode.
-    PointsOfOpcode.emplace_back(P);
+    auto &Points = OpcodeToSchedClassesToPoints[Opcode][SchedClassId];
+    if (Points.empty()) // If we previously have not seen any points of
+      ++NumClusters;    // this opcode's sched class, then new cluster begins.
+    Points.emplace_back(P);
   }
-  assert(OpcodeToPoints.size() == NumOpcodes && "sanity check");
-  assert(NumOpcodesSeen <= NumOpcodes &&
+  assert(NumClusters <= NumOpcodes &&
          "can't see more opcodes than there are total opcodes");
-  assert(NumOpcodesSeen <= Points_.size() &&
+  assert(NumClusters <= Points_.size() &&
          "can't see more opcodes than there are total points");
 
-  Clusters_.reserve(NumOpcodesSeen); // One cluster per opcode.
-  for (ArrayRef<size_t> PointsOfOpcode :
-       make_filter_range(OpcodeToPoints, [](ArrayRef<size_t> PointsOfOpcode) {
-         return !PointsOfOpcode.empty(); // Ignore opcodes with no points.
-       })) {
-    // Create a new cluster.
-    Clusters_.emplace_back(ClusterId::makeValid(
-        Clusters_.size(), /*IsUnstable=*/!areAllNeighbours(PointsOfOpcode)));
-    Cluster &CurrentCluster = Clusters_.back();
-    // Mark points as belonging to the new cluster.
-    for_each(PointsOfOpcode, [this, &CurrentCluster](size_t P) {
-      ClusterIdForPoint_[P] = CurrentCluster.Id;
-    });
-    // And add all the points of this opcode to the new cluster.
-    CurrentCluster.PointIndices.reserve(PointsOfOpcode.size());
-    CurrentCluster.PointIndices.assign(PointsOfOpcode.begin(),
-                                       PointsOfOpcode.end());
-    assert(CurrentCluster.PointIndices.size() == PointsOfOpcode.size());
+  Clusters_.reserve(NumClusters); // We already know how many clusters there is.
+  for (const auto &SchedClassesOfOpcode : OpcodeToSchedClassesToPoints) {
+    if (SchedClassesOfOpcode.empty())
+      continue;
+    for (ArrayRef<size_t> PointsOfSchedClass :
+         make_second_range(SchedClassesOfOpcode)) {
+      if (PointsOfSchedClass.empty())
+        continue;
+      // Create a new cluster.
+      Clusters_.emplace_back(ClusterId::makeValid(
+          Clusters_.size(),
+          /*IsUnstable=*/!areAllNeighbours(PointsOfSchedClass)));
+      Cluster &CurrentCluster = Clusters_.back();
+      // Mark points as belonging to the new cluster.
+      for_each(PointsOfSchedClass, [this, &CurrentCluster](size_t P) {
+        ClusterIdForPoint_[P] = CurrentCluster.Id;
+      });
+      // And add all the points of this opcode's sched class to the new cluster.
+      CurrentCluster.PointIndices.reserve(PointsOfSchedClass.size());
+      CurrentCluster.PointIndices.assign(PointsOfSchedClass.begin(),
+                                         PointsOfSchedClass.end());
+      assert(CurrentCluster.PointIndices.size() == PointsOfSchedClass.size());
+    }
   }
-  assert(Clusters_.size() == NumOpcodesSeen);
+  assert(Clusters_.size() == NumClusters);
 }
 
 // Given an instruction Opcode, we can make benchmarks (measurements) of the
@@ -317,7 +331,7 @@ void InstructionBenchmarkClustering::stabilize(unsigned NumOpcodes) {
 Expected<InstructionBenchmarkClustering> InstructionBenchmarkClustering::create(
     const std::vector<InstructionBenchmark> &Points, const ModeE Mode,
     const size_t DbscanMinPts, const double AnalysisClusteringEpsilon,
-    Optional<unsigned> NumOpcodes) {
+    const MCSubtargetInfo *SubtargetInfo, const MCInstrInfo *InstrInfo) {
   InstructionBenchmarkClustering Clustering(
       Points, AnalysisClusteringEpsilon * AnalysisClusteringEpsilon);
   if (auto Error = Clustering.validateAndSetup()) {
@@ -330,13 +344,13 @@ Expected<InstructionBenchmarkClustering> InstructionBenchmarkClustering::create(
   if (Mode == ModeE::Dbscan) {
     Clustering.clusterizeDbScan(DbscanMinPts);
 
-    if (NumOpcodes.hasValue())
-      Clustering.stabilize(NumOpcodes.getValue());
+    if (InstrInfo)
+      Clustering.stabilize(InstrInfo->getNumOpcodes());
   } else /*if(Mode == ModeE::Naive)*/ {
-    if (!NumOpcodes.hasValue())
-      return make_error<Failure>(
-          "'naive' clustering mode requires opcode count to be specified");
-    Clustering.clusterizeNaive(NumOpcodes.getValue());
+    if (!SubtargetInfo || !InstrInfo)
+      return make_error<Failure>("'naive' clustering mode requires "
+                                 "SubtargetInfo and InstrInfo to be present");
+    Clustering.clusterizeNaive(*SubtargetInfo, *InstrInfo);
   }
 
   return Clustering;

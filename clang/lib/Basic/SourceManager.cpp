@@ -59,12 +59,10 @@ unsigned ContentCache::getSizeBytesMapped() const {
 /// Returns the kind of memory used to back the memory buffer for
 /// this content cache.  This is used for performance analysis.
 llvm::MemoryBuffer::BufferKind ContentCache::getMemoryBufferKind() const {
-  assert(Buffer);
-
-  // Should be unreachable, but keep for sanity.
-  if (!Buffer)
+  if (Buffer == nullptr) {
+    assert(0 && "Buffer should never be null");
     return llvm::MemoryBuffer::MemoryBuffer_Malloc;
-
+  }
   return Buffer->getBufferKind();
 }
 
@@ -207,28 +205,30 @@ void LineTableInfo::AddLineNote(FileID FID, unsigned Offset, unsigned LineNo,
                                 SrcMgr::CharacteristicKind FileKind) {
   std::vector<LineEntry> &Entries = LineEntries[FID];
 
-  // An unspecified FilenameID means use the last filename if available, or the
-  // main source file otherwise.
-  if (FilenameID == -1 && !Entries.empty())
-    FilenameID = Entries.back().FilenameID;
-
   assert((Entries.empty() || Entries.back().FileOffset < Offset) &&
          "Adding line entries out of order!");
 
   unsigned IncludeOffset = 0;
-  if (EntryExit == 0) {  // No #include stack change.
-    IncludeOffset = Entries.empty() ? 0 : Entries.back().IncludeOffset;
-  } else if (EntryExit == 1) {
+  if (EntryExit == 1) {
+    // Push #include
     IncludeOffset = Offset-1;
-  } else if (EntryExit == 2) {
-    assert(!Entries.empty() && Entries.back().IncludeOffset &&
-       "PPDirectives should have caught case when popping empty include stack");
-
-    // Get the include loc of the last entries' include loc as our include loc.
-    IncludeOffset = 0;
-    if (const LineEntry *PrevEntry =
-          FindNearestLineEntry(FID, Entries.back().IncludeOffset))
+  } else {
+    const auto *PrevEntry = Entries.empty() ? nullptr : &Entries.back();
+    if (EntryExit == 2) {
+      // Pop #include
+      assert(PrevEntry && PrevEntry->IncludeOffset &&
+             "PPDirectives should have caught case when popping empty include "
+             "stack");
+      PrevEntry = FindNearestLineEntry(FID, PrevEntry->IncludeOffset);
+    }
+    if (PrevEntry) {
       IncludeOffset = PrevEntry->IncludeOffset;
+      if (FilenameID == -1) {
+        // An unspecified FilenameID means use the previous (or containing)
+        // filename if available, or the main source file otherwise.
+        FilenameID = PrevEntry->FilenameID;
+      }
+    }
   }
 
   Entries.push_back(LineEntry::get(Offset, LineNo, FilenameID, FileKind,
@@ -629,23 +629,21 @@ FileID SourceManager::createFileIDImpl(ContentCache &File, StringRef Filename,
   return LastFileIDLookup = FID;
 }
 
-SourceLocation
-SourceManager::createMacroArgExpansionLoc(SourceLocation SpellingLoc,
-                                          SourceLocation ExpansionLoc,
-                                          unsigned TokLength) {
+SourceLocation SourceManager::createMacroArgExpansionLoc(
+    SourceLocation SpellingLoc, SourceLocation ExpansionLoc, unsigned Length) {
   ExpansionInfo Info = ExpansionInfo::createForMacroArg(SpellingLoc,
                                                         ExpansionLoc);
-  return createExpansionLocImpl(Info, TokLength);
+  return createExpansionLocImpl(Info, Length);
 }
 
 SourceLocation SourceManager::createExpansionLoc(
     SourceLocation SpellingLoc, SourceLocation ExpansionLocStart,
-    SourceLocation ExpansionLocEnd, unsigned TokLength,
+    SourceLocation ExpansionLocEnd, unsigned Length,
     bool ExpansionIsTokenRange, int LoadedID,
     SourceLocation::UIntTy LoadedOffset) {
   ExpansionInfo Info = ExpansionInfo::create(
       SpellingLoc, ExpansionLocStart, ExpansionLocEnd, ExpansionIsTokenRange);
-  return createExpansionLocImpl(Info, TokLength, LoadedID, LoadedOffset);
+  return createExpansionLocImpl(Info, Length, LoadedID, LoadedOffset);
 }
 
 SourceLocation SourceManager::createTokenSplitLoc(SourceLocation Spelling,
@@ -660,7 +658,7 @@ SourceLocation SourceManager::createTokenSplitLoc(SourceLocation Spelling,
 
 SourceLocation
 SourceManager::createExpansionLocImpl(const ExpansionInfo &Info,
-                                      unsigned TokLength, int LoadedID,
+                                      unsigned Length, int LoadedID,
                                       SourceLocation::UIntTy LoadedOffset) {
   if (LoadedID < 0) {
     assert(LoadedID != -1 && "Loading sentinel FileID");
@@ -672,12 +670,12 @@ SourceManager::createExpansionLocImpl(const ExpansionInfo &Info,
     return SourceLocation::getMacroLoc(LoadedOffset);
   }
   LocalSLocEntryTable.push_back(SLocEntry::get(NextLocalOffset, Info));
-  assert(NextLocalOffset + TokLength + 1 > NextLocalOffset &&
-         NextLocalOffset + TokLength + 1 <= CurrentLoadedOffset &&
+  assert(NextLocalOffset + Length + 1 > NextLocalOffset &&
+         NextLocalOffset + Length + 1 <= CurrentLoadedOffset &&
          "Ran out of source locations!");
   // See createFileID for that +1.
-  NextLocalOffset += TokLength + 1;
-  return SourceLocation::getMacroLoc(NextLocalOffset - (TokLength + 1));
+  NextLocalOffset += Length + 1;
+  return SourceLocation::getMacroLoc(NextLocalOffset - (Length + 1));
 }
 
 llvm::Optional<llvm::MemoryBufferRef>
@@ -862,7 +860,6 @@ FileID SourceManager::getFileIDLocal(SourceLocation::UIntTy SLocOffset) const {
 /// This function knows that the SourceLocation is in a loaded buffer, not a
 /// local one.
 FileID SourceManager::getFileIDLoaded(SourceLocation::UIntTy SLocOffset) const {
-  // Sanity checking, otherwise a bug may lead to hanging in release build.
   if (SLocOffset < CurrentLoadedOffset) {
     assert(0 && "Invalid SLocOffset or bad function choice");
     return FileID();
@@ -907,7 +904,6 @@ FileID SourceManager::getFileIDLoaded(SourceLocation::UIntTy SLocOffset) const {
     ++NumProbes;
 
     if (E.getOffset() > SLocOffset) {
-      // Sanity checking, otherwise a bug may lead to hanging in release build.
       if (GreaterIndex == MiddleIndex) {
         assert(0 && "binary search missed the entry");
         return FileID();
@@ -923,7 +919,6 @@ FileID SourceManager::getFileIDLoaded(SourceLocation::UIntTy SLocOffset) const {
       return Res;
     }
 
-    // Sanity checking, otherwise a bug may lead to hanging in release build.
     if (LessIndex == MiddleIndex) {
       assert(0 && "binary search missed the entry");
       return FileID();

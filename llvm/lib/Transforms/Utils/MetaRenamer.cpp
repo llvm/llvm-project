@@ -15,6 +15,7 @@
 #include "llvm/Transforms/Utils/MetaRenamer.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallString.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
@@ -31,9 +32,35 @@
 #include "llvm/IR/TypeFinder.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
+#include "llvm/Support/CommandLine.h"
 #include "llvm/Transforms/Utils.h"
 
 using namespace llvm;
+
+static cl::opt<std::string> RenameExcludeFunctionPrefixes(
+    "rename-exclude-function-prefixes",
+    cl::desc("Prefixes for functions that don't need to be renamed, separated "
+             "by a comma"),
+    cl::Hidden);
+
+static cl::opt<std::string> RenameExcludeAliasPrefixes(
+    "rename-exclude-alias-prefixes",
+    cl::desc("Prefixes for aliases that don't need to be renamed, separated "
+             "by a comma"),
+    cl::Hidden);
+
+static cl::opt<std::string> RenameExcludeGlobalPrefixes(
+    "rename-exclude-global-prefixes",
+    cl::desc(
+        "Prefixes for global values that don't need to be renamed, separated "
+        "by a comma"),
+    cl::Hidden);
+
+static cl::opt<std::string> RenameExcludeStructPrefixes(
+    "rename-exclude-struct-prefixes",
+    cl::desc("Prefixes for structs that don't need to be renamed, separated "
+             "by a comma"),
+    cl::Hidden);
 
 static const char *const metaNames[] = {
   // See http://en.wikipedia.org/wiki/Metasyntactic_variable
@@ -66,6 +93,18 @@ struct Renamer {
   PRNG prng;
 };
 
+static void
+parseExcludedPrefixes(StringRef PrefixesStr,
+                      SmallVectorImpl<StringRef> &ExcludedPrefixes) {
+  for (;;) {
+    auto PrefixesSplit = PrefixesStr.split(',');
+    if (PrefixesSplit.first.empty())
+      break;
+    ExcludedPrefixes.push_back(PrefixesSplit.first);
+    PrefixesStr = PrefixesSplit.second;
+  }
+}
+
 void MetaRename(Function &F) {
   for (Argument &Arg : F.args())
     if (!Arg.getType()->isVoidTy())
@@ -91,19 +130,36 @@ void MetaRename(Module &M,
 
   Renamer renamer(randSeed);
 
+  SmallVector<StringRef, 8> ExcludedAliasesPrefixes;
+  SmallVector<StringRef, 8> ExcludedGlobalsPrefixes;
+  SmallVector<StringRef, 8> ExcludedStructsPrefixes;
+  SmallVector<StringRef, 8> ExcludedFuncPrefixes;
+  parseExcludedPrefixes(RenameExcludeAliasPrefixes, ExcludedAliasesPrefixes);
+  parseExcludedPrefixes(RenameExcludeGlobalPrefixes, ExcludedGlobalsPrefixes);
+  parseExcludedPrefixes(RenameExcludeStructPrefixes, ExcludedStructsPrefixes);
+  parseExcludedPrefixes(RenameExcludeFunctionPrefixes, ExcludedFuncPrefixes);
+
+  auto IsNameExcluded = [](StringRef &Name,
+                           SmallVectorImpl<StringRef> &ExcludedPrefixes) {
+    return any_of(ExcludedPrefixes,
+                  [&Name](auto &Prefix) { return Name.startswith(Prefix); });
+  };
+
   // Rename all aliases
-  for (auto AI = M.alias_begin(), AE = M.alias_end(); AI != AE; ++AI) {
-    StringRef Name = AI->getName();
-    if (Name.startswith("llvm.") || (!Name.empty() && Name[0] == 1))
+  for (GlobalAlias &GA : M.aliases()) {
+    StringRef Name = GA.getName();
+    if (Name.startswith("llvm.") || (!Name.empty() && Name[0] == 1) ||
+        IsNameExcluded(Name, ExcludedAliasesPrefixes))
       continue;
 
-    AI->setName("alias");
+    GA.setName("alias");
   }
 
   // Rename all global variables
   for (GlobalVariable &GV : M.globals()) {
     StringRef Name = GV.getName();
-    if (Name.startswith("llvm.") || (!Name.empty() && Name[0] == 1))
+    if (Name.startswith("llvm.") || (!Name.empty() && Name[0] == 1) ||
+        IsNameExcluded(Name, ExcludedGlobalsPrefixes))
       continue;
 
     GV.setName("global");
@@ -113,7 +169,9 @@ void MetaRename(Module &M,
   TypeFinder StructTypes;
   StructTypes.run(M, true);
   for (StructType *STy : StructTypes) {
-    if (STy->isLiteral() || STy->getName().empty())
+    StringRef Name = STy->getName();
+    if (STy->isLiteral() || Name.empty() ||
+        IsNameExcluded(Name, ExcludedStructsPrefixes))
       continue;
 
     SmallString<128> NameStorage;
@@ -128,7 +186,8 @@ void MetaRename(Module &M,
     // Leave library functions alone because their presence or absence could
     // affect the behavior of other passes.
     if (Name.startswith("llvm.") || (!Name.empty() && Name[0] == 1) ||
-        GetTLI(F).getLibFunc(F, Tmp))
+        GetTLI(F).getLibFunc(F, Tmp) ||
+        IsNameExcluded(Name, ExcludedFuncPrefixes))
       continue;
 
     // Leave @main alone. The output of -metarenamer might be passed to

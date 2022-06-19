@@ -51,8 +51,7 @@ Status::Status(std::error_code EC)
                                                       : eErrorTypeGeneric),
       m_string(EC.message()) {}
 
-Status::Status(const char *format, ...)
-    : m_code(0), m_type(eErrorTypeInvalid), m_string() {
+Status::Status(const char *format, ...) : m_string() {
   va_list args;
   va_start(args, format);
   SetErrorToGenericError();
@@ -286,10 +285,6 @@ int Status::SetErrorStringWithVarArg(const char *format, va_list args) {
 // Returns true if the error code in this object is considered a successful
 // return value.
 bool Status::Success() const { return m_code == 0; }
-
-bool Status::WasInterrupted() const {
-  return (m_type == eErrorTypePOSIX && m_code == EINTR);
-}
 
 void llvm::format_provider<lldb_private::Status>::format(
     const lldb_private::Status &error, llvm::raw_ostream &OS,

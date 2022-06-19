@@ -102,17 +102,10 @@ def SDT_ZMemMemLengthCC     : SDTypeProfile<1, 3,
                                              SDTCisPtrTy<1>,
                                              SDTCisPtrTy<2>,
                                              SDTCisVT<3, i64>]>;
-def SDT_ZMemMemLoop         : SDTypeProfile<0, 4,
+def SDT_ZMemsetMVC          : SDTypeProfile<0, 3,
                                             [SDTCisPtrTy<0>,
-                                             SDTCisPtrTy<1>,
-                                             SDTCisVT<2, i64>,
-                                             SDTCisVT<3, i64>]>;
-def SDT_ZMemMemLoopCC       : SDTypeProfile<1, 4,
-                                            [SDTCisVT<0, i32>,
-                                             SDTCisPtrTy<1>,
-                                             SDTCisPtrTy<2>,
-                                             SDTCisVT<3, i64>,
-                                             SDTCisVT<4, i64>]>;
+                                             SDTCisVT<1, i64>,
+                                             SDTCisVT<2, i32>]>;
 def SDT_ZString             : SDTypeProfile<1, 3,
                                             [SDTCisPtrTy<0>,
                                              SDTCisPtrTy<1>,
@@ -416,24 +409,16 @@ def z_atomic_cmp_swap_128 : SDNode<"SystemZISD::ATOMIC_CMP_SWAP_128",
 
 def z_mvc               : SDNode<"SystemZISD::MVC", SDT_ZMemMemLength,
                                  [SDNPHasChain, SDNPMayStore, SDNPMayLoad]>;
-def z_mvc_loop          : SDNode<"SystemZISD::MVC_LOOP", SDT_ZMemMemLoop,
-                                 [SDNPHasChain, SDNPMayStore, SDNPMayLoad]>;
 def z_nc                : SDNode<"SystemZISD::NC", SDT_ZMemMemLength,
-                                  [SDNPHasChain, SDNPMayStore, SDNPMayLoad]>;
-def z_nc_loop           : SDNode<"SystemZISD::NC_LOOP", SDT_ZMemMemLoop,
                                   [SDNPHasChain, SDNPMayStore, SDNPMayLoad]>;
 def z_oc                : SDNode<"SystemZISD::OC", SDT_ZMemMemLength,
                                   [SDNPHasChain, SDNPMayStore, SDNPMayLoad]>;
-def z_oc_loop           : SDNode<"SystemZISD::OC_LOOP", SDT_ZMemMemLoop,
-                                  [SDNPHasChain, SDNPMayStore, SDNPMayLoad]>;
 def z_xc                : SDNode<"SystemZISD::XC", SDT_ZMemMemLength,
-                                  [SDNPHasChain, SDNPMayStore, SDNPMayLoad]>;
-def z_xc_loop           : SDNode<"SystemZISD::XC_LOOP", SDT_ZMemMemLoop,
                                   [SDNPHasChain, SDNPMayStore, SDNPMayLoad]>;
 def z_clc               : SDNode<"SystemZISD::CLC", SDT_ZMemMemLengthCC,
                                  [SDNPHasChain, SDNPMayLoad]>;
-def z_clc_loop          : SDNode<"SystemZISD::CLC_LOOP", SDT_ZMemMemLoopCC,
-                                 [SDNPHasChain, SDNPMayLoad]>;
+def z_memset_mvc        : SDNode<"SystemZISD::MEMSET_MVC", SDT_ZMemsetMVC,
+                                 [SDNPHasChain, SDNPMayStore, SDNPMayLoad]>;
 def z_strcmp            : SDNode<"SystemZISD::STRCMP", SDT_ZStringCC,
                                  [SDNPHasChain, SDNPMayLoad]>;
 def z_stpcpy            : SDNode<"SystemZISD::STPCPY", SDT_ZString,

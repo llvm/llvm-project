@@ -28,6 +28,7 @@
 #include "lldb/Core/StreamFile.h"
 #include "lldb/Core/ValueObjectUpdater.h"
 #include "lldb/Host/File.h"
+#include "lldb/Utility/AnsiTerminal.h"
 #include "lldb/Utility/Predicate.h"
 #include "lldb/Utility/Status.h"
 #include "lldb/Utility/StreamString.h"
@@ -36,6 +37,7 @@
 
 #include "lldb/Interpreter/CommandCompletions.h"
 #include "lldb/Interpreter/CommandInterpreter.h"
+#include "lldb/Interpreter/OptionGroupPlatform.h"
 
 #if LLDB_ENABLE_CURSES
 #include "lldb/Breakpoint/BreakpointLocation.h"
@@ -44,6 +46,7 @@
 #include "lldb/Core/ValueObject.h"
 #include "lldb/Core/ValueObjectRegister.h"
 #include "lldb/Symbol/Block.h"
+#include "lldb/Symbol/CompileUnit.h"
 #include "lldb/Symbol/Function.h"
 #include "lldb/Symbol/Symbol.h"
 #include "lldb/Symbol/VariableList.h"
@@ -76,17 +79,20 @@
 
 using namespace lldb;
 using namespace lldb_private;
-using llvm::None;
-using llvm::Optional;
 using llvm::StringRef;
 
 // we may want curses to be disabled for some builds for instance, windows
 #if LLDB_ENABLE_CURSES
 
+#define KEY_CTRL_A 1
+#define KEY_CTRL_E 5
+#define KEY_CTRL_K 11
 #define KEY_RETURN 10
 #define KEY_ESCAPE 27
+#define KEY_DELETE 127
 
 #define KEY_SHIFT_TAB (KEY_MAX + 1)
+#define KEY_ALT_ENTER (KEY_MAX + 2)
 
 namespace curses {
 class Menu;
@@ -336,20 +342,35 @@ public:
 
 protected:
   StringList m_text;
-  int m_first_visible_line;
+  int m_first_visible_line = 0;
 };
 
 // A surface is an abstraction for something than can be drawn on. The surface
 // have a width, a height, a cursor position, and a multitude of drawing
 // operations. This type should be sub-classed to get an actually useful ncurses
-// object, such as a Window, SubWindow, Pad, or a SubPad.
+// object, such as a Window or a Pad.
 class Surface {
 public:
-  Surface() : m_window(nullptr) {}
+  enum class Type { Window, Pad };
+
+  Surface(Surface::Type type) : m_type(type) {}
 
   WINDOW *get() { return m_window; }
 
   operator WINDOW *() { return m_window; }
+
+  Surface SubSurface(Rect bounds) {
+    Surface subSurface(m_type);
+    if (m_type == Type::Pad)
+      subSurface.m_window =
+          ::subpad(m_window, bounds.size.height, bounds.size.width,
+                   bounds.origin.y, bounds.origin.x);
+    else
+      subSurface.m_window =
+          ::derwin(m_window, bounds.size.height, bounds.size.width,
+                   bounds.origin.y, bounds.origin.x);
+    return subSurface;
+  }
 
   // Copy a region of the surface to another surface.
   void CopyToSurface(Surface &target, Point source_origin, Point target_origin,
@@ -475,7 +496,7 @@ public:
     if (use_blue_background)
       ::wattron(m_window, COLOR_PAIR(WhiteOnBlue));
     while (!string.empty()) {
-      size_t esc_pos = string.find('\x1b');
+      size_t esc_pos = string.find(ANSI_ESC_START);
       if (esc_pos == StringRef::npos) {
         string = string.substr(skip_first_count);
         if (!string.empty()) {
@@ -497,36 +518,36 @@ public:
           string = string.drop_front(esc_pos);
         }
       }
-      bool consumed = string.consume_front("\x1b");
+      bool consumed = string.consume_front(ANSI_ESC_START);
       assert(consumed);
       UNUSED_IF_ASSERT_DISABLED(consumed);
       // This is written to match our Highlighter classes, which seem to
       // generate only foreground color escape sequences. If necessary, this
       // will need to be extended.
-      if (!string.consume_front("[")) {
-        llvm::errs() << "Missing '[' in color escape sequence.\n";
-        continue;
-      }
-      // Only 8 basic foreground colors and reset, our Highlighter doesn't use
-      // anything else.
+      // Only 8 basic foreground colors, underline and reset, our Highlighter
+      // doesn't use anything else.
       int value;
       if (!!string.consumeInteger(10, value) || // Returns false on success.
-          !(value == 0 || (value >= 30 && value <= 37))) {
+          !(value == 0 || value == ANSI_CTRL_UNDERLINE ||
+            (value >= ANSI_FG_COLOR_BLACK && value <= ANSI_FG_COLOR_WHITE))) {
         llvm::errs() << "No valid color code in color escape sequence.\n";
         continue;
       }
-      if (!string.consume_front("m")) {
-        llvm::errs() << "Missing 'm' in color escape sequence.\n";
+      if (!string.consume_front(ANSI_ESC_END)) {
+        llvm::errs() << "Missing '" << ANSI_ESC_END
+                     << "' in color escape sequence.\n";
         continue;
       }
       if (value == 0) { // Reset.
         wattr_set(m_window, saved_attr, saved_pair, nullptr);
         if (use_blue_background)
           ::wattron(m_window, COLOR_PAIR(WhiteOnBlue));
+      } else if (value == ANSI_CTRL_UNDERLINE) {
+        ::wattron(m_window, A_UNDERLINE);
       } else {
         // Mapped directly to first 16 color pairs (black/blue background).
-        ::wattron(m_window,
-                  COLOR_PAIR(value - 30 + 1 + (use_blue_background ? 8 : 0)));
+        ::wattron(m_window, COLOR_PAIR(value - ANSI_FG_COLOR_BLACK + 1 +
+                                       (use_blue_background ? 8 : 0)));
       }
     }
     wattr_set(m_window, saved_attr, saved_pair, nullptr);
@@ -534,41 +555,32 @@ public:
   }
 
 protected:
-  WINDOW *m_window;
+  Type m_type;
+  WINDOW *m_window = nullptr;
 };
 
 class Pad : public Surface {
 public:
-  Pad(Size size) { m_window = ::newpad(size.height, size.width); }
+  Pad(Size size) : Surface(Surface::Type::Pad) {
+    m_window = ::newpad(size.height, size.width);
+  }
 
   ~Pad() { ::delwin(m_window); }
-};
-
-class SubPad : public Surface {
-public:
-  SubPad(Pad &pad, Rect bounds) {
-    m_window = ::subpad(pad.get(), bounds.size.height, bounds.size.width,
-                        bounds.origin.y, bounds.origin.x);
-  }
-  SubPad(SubPad &subpad, Rect bounds) {
-    m_window = ::subpad(subpad.get(), bounds.size.height, bounds.size.width,
-                        bounds.origin.y, bounds.origin.x);
-  }
-
-  ~SubPad() { ::delwin(m_window); }
 };
 
 class Window : public Surface {
 public:
   Window(const char *name)
-      : m_name(name), m_panel(nullptr), m_parent(nullptr), m_subwindows(),
-        m_delegate_sp(), m_curr_active_window_idx(UINT32_MAX),
+      : Surface(Surface::Type::Window), m_name(name), m_panel(nullptr),
+        m_parent(nullptr), m_subwindows(), m_delegate_sp(),
+        m_curr_active_window_idx(UINT32_MAX),
         m_prev_active_window_idx(UINT32_MAX), m_delete(false),
         m_needs_update(true), m_can_activate(true), m_is_subwin(false) {}
 
   Window(const char *name, WINDOW *w, bool del = true)
-      : m_name(name), m_panel(nullptr), m_parent(nullptr), m_subwindows(),
-        m_delegate_sp(), m_curr_active_window_idx(UINT32_MAX),
+      : Surface(Surface::Type::Window), m_name(name), m_panel(nullptr),
+        m_parent(nullptr), m_subwindows(), m_delegate_sp(),
+        m_curr_active_window_idx(UINT32_MAX),
         m_prev_active_window_idx(UINT32_MAX), m_delete(del),
         m_needs_update(true), m_can_activate(true), m_is_subwin(false) {
     if (w)
@@ -576,8 +588,8 @@ public:
   }
 
   Window(const char *name, const Rect &bounds)
-      : m_name(name), m_parent(nullptr), m_subwindows(), m_delegate_sp(),
-        m_curr_active_window_idx(UINT32_MAX),
+      : Surface(Surface::Type::Window), m_name(name), m_parent(nullptr),
+        m_subwindows(), m_delegate_sp(), m_curr_active_window_idx(UINT32_MAX),
         m_prev_active_window_idx(UINT32_MAX), m_delete(true),
         m_needs_update(true), m_can_activate(true), m_is_subwin(false) {
     Reset(::newwin(bounds.size.height, bounds.size.width, bounds.origin.y,
@@ -969,20 +981,6 @@ private:
   const Window &operator=(const Window &) = delete;
 };
 
-class DerivedWindow : public Surface {
-public:
-  DerivedWindow(Window &window, Rect bounds) {
-    m_window = ::derwin(window.get(), bounds.size.height, bounds.size.width,
-                        bounds.origin.y, bounds.origin.x);
-  }
-  DerivedWindow(DerivedWindow &derived_window, Rect bounds) {
-    m_window = ::derwin(derived_window.get(), bounds.size.height,
-                        bounds.size.width, bounds.origin.y, bounds.origin.x);
-  }
-
-  ~DerivedWindow() { ::delwin(m_window); }
-};
-
 /////////
 // Forms
 /////////
@@ -1024,7 +1022,7 @@ public:
   // Draw the field in the given subpad surface. The surface have a height that
   // is equal to the height returned by FieldDelegateGetHeight(). If the field
   // is selected in the form window, then is_selected will be true.
-  virtual void FieldDelegateDraw(SubPad &surface, bool is_selected) = 0;
+  virtual void FieldDelegateDraw(Surface &surface, bool is_selected) = 0;
 
   // Handle the key that wasn't handled by the form window or a container field.
   virtual HandleCharResult FieldDelegateHandleChar(int key) {
@@ -1035,7 +1033,7 @@ public:
   // navigates to the next or the previous field. This is particularly useful to
   // do in-field validation and error setting. Fields with internal navigation
   // should call this method on their fields.
-  virtual void FieldDelegateExitCallback() { return; }
+  virtual void FieldDelegateExitCallback() {}
 
   // Fields may have internal navigation, for instance, a List Field have
   // multiple internal elements, which needs to be navigated. To allow for this
@@ -1056,10 +1054,10 @@ public:
   virtual bool FieldDelegateOnLastOrOnlyElement() { return true; }
 
   // Select the first element in the field if multiple elements exists.
-  virtual void FieldDelegateSelectFirstElement() { return; }
+  virtual void FieldDelegateSelectFirstElement() {}
 
   // Select the last element in the field if multiple elements exists.
-  virtual void FieldDelegateSelectLastElement() { return; }
+  virtual void FieldDelegateSelectLastElement() {}
 
   // Returns true if the field has an error, false otherwise.
   virtual bool FieldDelegateHasError() { return false; }
@@ -1079,8 +1077,7 @@ typedef std::unique_ptr<FieldDelegate> FieldDelegateUP;
 class TextFieldDelegate : public FieldDelegate {
 public:
   TextFieldDelegate(const char *label, const char *content, bool required)
-      : m_label(label), m_required(required), m_cursor_position(0),
-        m_first_visibile_char(0) {
+      : m_label(label), m_required(required) {
     if (content)
       m_content = content;
   }
@@ -1111,11 +1108,12 @@ public:
 
   int GetContentLength() { return m_content.length(); }
 
-  void DrawContent(SubPad &surface, bool is_selected) {
+  void DrawContent(Surface &surface, bool is_selected) {
+    UpdateScrolling(surface.GetWidth());
+
     surface.MoveCursor(0, 0);
     const char *text = m_content.c_str() + m_first_visibile_char;
     surface.PutCString(text, surface.GetWidth());
-    m_last_drawn_content_width = surface.GetWidth();
 
     // Highlight the cursor.
     surface.MoveCursor(GetCursorXPosition(), 0);
@@ -1130,17 +1128,17 @@ public:
       surface.AttributeOff(A_REVERSE);
   }
 
-  void DrawField(SubPad &surface, bool is_selected) {
+  void DrawField(Surface &surface, bool is_selected) {
     surface.TitledBox(m_label.c_str());
 
     Rect content_bounds = surface.GetFrame();
     content_bounds.Inset(1, 1);
-    SubPad content_surface = SubPad(surface, content_bounds);
+    Surface content_surface = surface.SubSurface(content_bounds);
 
     DrawContent(content_surface, is_selected);
   }
 
-  void DrawError(SubPad &surface) {
+  void DrawError(Surface &surface) {
     if (!FieldDelegateHasError())
       return;
     surface.MoveCursor(0, 0);
@@ -1151,15 +1149,31 @@ public:
     surface.AttributeOff(COLOR_PAIR(RedOnBlack));
   }
 
-  void FieldDelegateDraw(SubPad &surface, bool is_selected) override {
+  void FieldDelegateDraw(Surface &surface, bool is_selected) override {
     Rect frame = surface.GetFrame();
     Rect field_bounds, error_bounds;
     frame.HorizontalSplit(GetFieldHeight(), field_bounds, error_bounds);
-    SubPad field_surface = SubPad(surface, field_bounds);
-    SubPad error_surface = SubPad(surface, error_bounds);
+    Surface field_surface = surface.SubSurface(field_bounds);
+    Surface error_surface = surface.SubSurface(error_bounds);
 
     DrawField(field_surface, is_selected);
     DrawError(error_surface);
+  }
+
+  // Get the position of the last visible character.
+  int GetLastVisibleCharPosition(int width) {
+    int position = m_first_visibile_char + width - 1;
+    return std::min(position, GetContentLength());
+  }
+
+  void UpdateScrolling(int width) {
+    if (m_cursor_position < m_first_visibile_char) {
+      m_first_visibile_char = m_cursor_position;
+      return;
+    }
+
+    if (m_cursor_position > GetLastVisibleCharPosition(width))
+      m_first_visibile_char = m_cursor_position - (width - 1);
   }
 
   // The cursor is allowed to move one character past the string.
@@ -1174,47 +1188,65 @@ public:
       m_cursor_position--;
   }
 
-  // If the cursor moved past the last visible character, scroll right by one
-  // character.
-  void ScrollRightIfNeeded() {
-    if (m_cursor_position - m_first_visibile_char == m_last_drawn_content_width)
-      m_first_visibile_char++;
-  }
+  void MoveCursorToStart() { m_cursor_position = 0; }
+
+  void MoveCursorToEnd() { m_cursor_position = GetContentLength(); }
 
   void ScrollLeft() {
     if (m_first_visibile_char > 0)
       m_first_visibile_char--;
   }
 
-  // If the cursor moved past the first visible character, scroll left by one
-  // character.
-  void ScrollLeftIfNeeded() {
-    if (m_cursor_position < m_first_visibile_char)
-      m_first_visibile_char--;
-  }
-
-  // Insert a character at the current cursor position, advance the cursor
-  // position, and make sure to scroll right if needed.
+  // Insert a character at the current cursor position and advance the cursor
+  // position.
   void InsertChar(char character) {
     m_content.insert(m_cursor_position, 1, character);
     m_cursor_position++;
-    ScrollRightIfNeeded();
+    ClearError();
   }
 
   // Remove the character before the cursor position, retreat the cursor
-  // position, and make sure to scroll left if needed.
-  void RemoveChar() {
+  // position, and scroll left.
+  void RemovePreviousChar() {
     if (m_cursor_position == 0)
       return;
 
     m_content.erase(m_cursor_position - 1, 1);
     m_cursor_position--;
     ScrollLeft();
+    ClearError();
+  }
+
+  // Remove the character after the cursor position.
+  void RemoveNextChar() {
+    if (m_cursor_position == GetContentLength())
+      return;
+
+    m_content.erase(m_cursor_position, 1);
+    ClearError();
+  }
+
+  // Clear characters from the current cursor position to the end.
+  void ClearToEnd() {
+    m_content.erase(m_cursor_position);
+    ClearError();
+  }
+
+  void Clear() {
+    m_content.clear();
+    m_cursor_position = 0;
+    ClearError();
   }
 
   // True if the key represents a char that can be inserted in the field
   // content, false otherwise.
-  virtual bool IsAcceptableChar(int key) { return isprint(key); }
+  virtual bool IsAcceptableChar(int key) {
+    // The behavior of isprint is undefined when the value is not representable
+    // as an unsigned char. So explicitly check for non-ascii key codes.
+    if (key > 127)
+      return false;
+    return isprint(key);
+  }
 
   HandleCharResult FieldDelegateHandleChar(int key) override {
     if (IsAcceptableChar(key)) {
@@ -1224,17 +1256,36 @@ public:
     }
 
     switch (key) {
+    case KEY_HOME:
+    case KEY_CTRL_A:
+      MoveCursorToStart();
+      return eKeyHandled;
+    case KEY_END:
+    case KEY_CTRL_E:
+      MoveCursorToEnd();
+      return eKeyHandled;
     case KEY_RIGHT:
+    case KEY_SF:
       MoveCursorRight();
-      ScrollRightIfNeeded();
       return eKeyHandled;
     case KEY_LEFT:
+    case KEY_SR:
       MoveCursorLeft();
-      ScrollLeftIfNeeded();
       return eKeyHandled;
     case KEY_BACKSPACE:
-      ClearError();
-      RemoveChar();
+    case KEY_DELETE:
+      RemovePreviousChar();
+      return eKeyHandled;
+    case KEY_DC:
+      RemoveNextChar();
+      return eKeyHandled;
+    case KEY_EOL:
+    case KEY_CTRL_K:
+      ClearToEnd();
+      return eKeyHandled;
+    case KEY_DL:
+    case KEY_CLEAR:
+      Clear();
       return eKeyHandled;
     default:
       break;
@@ -1259,6 +1310,14 @@ public:
 
   const std::string &GetText() { return m_content; }
 
+  void SetText(const char *text) {
+    if (text == nullptr) {
+      m_content.clear();
+      return;
+    }
+    m_content = text;
+  }
+
 protected:
   std::string m_label;
   bool m_required;
@@ -1266,12 +1325,9 @@ protected:
   std::string m_content;
   // The cursor position in the content string itself. Can be in the range
   // [0, GetContentLength()].
-  int m_cursor_position;
+  int m_cursor_position = 0;
   // The index of the first visible character in the content.
-  int m_first_visibile_char;
-  // The width of the fields content that was last drawn. Width can change, so
-  // this is used to determine if scrolling is needed dynamically.
-  int m_last_drawn_content_width;
+  int m_first_visibile_char = 0;
   // Optional error message. If empty, field is considered to have no error.
   std::string m_error;
 };
@@ -1300,8 +1356,11 @@ public:
     if (!IsSpecified())
       return;
 
-    FileSpec file(GetPath());
-    if (m_need_to_exist && !FileSystem::Instance().Exists(file)) {
+    if (!m_need_to_exist)
+      return;
+
+    FileSpec file = GetResolvedFileSpec();
+    if (!FileSystem::Instance().Exists(file)) {
       SetError("File doesn't exist!");
       return;
     }
@@ -1311,7 +1370,17 @@ public:
     }
   }
 
-  // Returns the path of the file.
+  FileSpec GetFileSpec() {
+    FileSpec file_spec(GetPath());
+    return file_spec;
+  }
+
+  FileSpec GetResolvedFileSpec() {
+    FileSpec file_spec(GetPath());
+    FileSystem::Instance().Resolve(file_spec);
+    return file_spec;
+  }
+
   const std::string &GetPath() { return m_content; }
 
 protected:
@@ -1330,8 +1399,11 @@ public:
     if (!IsSpecified())
       return;
 
-    FileSpec file(GetPath());
-    if (m_need_to_exist && !FileSystem::Instance().Exists(file)) {
+    if (!m_need_to_exist)
+      return;
+
+    FileSpec file = GetResolvedFileSpec();
+    if (!FileSystem::Instance().Exists(file)) {
       SetError("Directory doesn't exist!");
       return;
     }
@@ -1341,11 +1413,40 @@ public:
     }
   }
 
-  // Returns the path of the file.
+  FileSpec GetFileSpec() {
+    FileSpec file_spec(GetPath());
+    return file_spec;
+  }
+
+  FileSpec GetResolvedFileSpec() {
+    FileSpec file_spec(GetPath());
+    FileSystem::Instance().Resolve(file_spec);
+    return file_spec;
+  }
+
   const std::string &GetPath() { return m_content; }
 
 protected:
   bool m_need_to_exist;
+};
+
+class ArchFieldDelegate : public TextFieldDelegate {
+public:
+  ArchFieldDelegate(const char *label, const char *content, bool required)
+      : TextFieldDelegate(label, content, required) {}
+
+  void FieldDelegateExitCallback() override {
+    TextFieldDelegate::FieldDelegateExitCallback();
+    if (!IsSpecified())
+      return;
+
+    if (!GetArchSpec().IsValid())
+      SetError("Not a valid arch!");
+  }
+
+  const std::string &GetArchString() { return m_content; }
+
+  ArchSpec GetArchSpec() { return ArchSpec(GetArchString()); }
 };
 
 class BooleanFieldDelegate : public FieldDelegate {
@@ -1360,7 +1461,7 @@ public:
   // Boolean fields are have a single line.
   int FieldDelegateGetHeight() override { return 1; }
 
-  void FieldDelegateDraw(SubPad &surface, bool is_selected) override {
+  void FieldDelegateDraw(Surface &surface, bool is_selected) override {
     surface.MoveCursor(0, 0);
     surface.PutChar('[');
     if (is_selected)
@@ -1414,7 +1515,7 @@ public:
   ChoicesFieldDelegate(const char *label, int number_of_visible_choices,
                        std::vector<std::string> choices)
       : m_label(label), m_number_of_visible_choices(number_of_visible_choices),
-        m_choices(choices), m_choice(0), m_first_visibile_choice(0) {}
+        m_choices(choices) {}
 
   // Choices fields are drawn as titles boxses of a number of visible choices.
   // The rest of the choices become visible as the user scroll. The selected
@@ -1440,7 +1541,7 @@ public:
     return std::min(index, GetNumberOfChoices()) - 1;
   }
 
-  void DrawContent(SubPad &surface, bool is_selected) {
+  void DrawContent(Surface &surface, bool is_selected) {
     int choices_to_draw = GetLastVisibleChoice() - m_first_visibile_choice + 1;
     for (int i = 0; i < choices_to_draw; i++) {
       surface.MoveCursor(0, i);
@@ -1456,14 +1557,14 @@ public:
     }
   }
 
-  void FieldDelegateDraw(SubPad &surface, bool is_selected) override {
+  void FieldDelegateDraw(Surface &surface, bool is_selected) override {
     UpdateScrolling();
 
     surface.TitledBox(m_label.c_str());
 
     Rect content_bounds = surface.GetFrame();
     content_bounds.Inset(1, 1);
-    SubPad content_surface = SubPad(surface, content_bounds);
+    Surface content_surface = surface.SubSurface(content_bounds);
 
     DrawContent(content_surface, is_selected);
   }
@@ -1508,7 +1609,7 @@ public:
   // Returns the index of the choice.
   int GetChoice() { return m_choice; }
 
-  void SetChoice(const std::string &choice) {
+  void SetChoice(llvm::StringRef choice) {
     for (int i = 0; i < GetNumberOfChoices(); i++) {
       if (choice == m_choices[i]) {
         m_choice = i;
@@ -1522,9 +1623,9 @@ protected:
   int m_number_of_visible_choices;
   std::vector<std::string> m_choices;
   // The index of the selected choice.
-  int m_choice;
+  int m_choice = 0;
   // The index of the first visible choice in the field.
-  int m_first_visibile_choice;
+  int m_first_visibile_choice = 0;
 };
 
 class PlatformPluginFieldDelegate : public ChoicesFieldDelegate {
@@ -1533,14 +1634,16 @@ public:
       : ChoicesFieldDelegate("Platform Plugin", 3, GetPossiblePluginNames()) {
     PlatformSP platform_sp = debugger.GetPlatformList().GetSelectedPlatform();
     if (platform_sp)
-      SetChoice(platform_sp->GetName().AsCString());
+      SetChoice(platform_sp->GetPluginName());
   }
 
   std::vector<std::string> GetPossiblePluginNames() {
     std::vector<std::string> names;
     size_t i = 0;
-    while (auto name = PluginManager::GetPlatformPluginNameAtIndex(i++))
-      names.push_back(name);
+    for (llvm::StringRef name =
+             PluginManager::GetPlatformPluginNameAtIndex(i++);
+         !name.empty(); name = PluginManager::GetProcessPluginNameAtIndex(i++))
+      names.push_back(name.str());
     return names;
   }
 
@@ -1560,8 +1663,9 @@ public:
     names.push_back("<default>");
 
     size_t i = 0;
-    while (auto name = PluginManager::GetProcessPluginNameAtIndex(i++))
-      names.push_back(name);
+    for (llvm::StringRef name = PluginManager::GetProcessPluginNameAtIndex(i++);
+         !name.empty(); name = PluginManager::GetProcessPluginNameAtIndex(i++))
+      names.push_back(name.str());
     return names;
   }
 
@@ -1573,10 +1677,37 @@ public:
   }
 };
 
+class LazyBooleanFieldDelegate : public ChoicesFieldDelegate {
+public:
+  LazyBooleanFieldDelegate(const char *label, const char *calculate_label)
+      : ChoicesFieldDelegate(label, 3, GetPossibleOptions(calculate_label)) {}
+
+  static constexpr const char *kNo = "No";
+  static constexpr const char *kYes = "Yes";
+
+  std::vector<std::string> GetPossibleOptions(const char *calculate_label) {
+    std::vector<std::string> options;
+    options.push_back(calculate_label);
+    options.push_back(kYes);
+    options.push_back(kNo);
+    return options;
+  }
+
+  LazyBool GetLazyBoolean() {
+    std::string choice = GetChoiceContent();
+    if (choice == kNo)
+      return eLazyBoolNo;
+    else if (choice == kYes)
+      return eLazyBoolYes;
+    else
+      return eLazyBoolCalculate;
+  }
+};
+
 template <class T> class ListFieldDelegate : public FieldDelegate {
 public:
   ListFieldDelegate(const char *label, T default_field)
-      : m_label(label), m_default_field(default_field), m_selection_index(0),
+      : m_label(label), m_default_field(default_field),
         m_selection_type(SelectionType::NewButton) {}
 
   // Signify which element is selected. If a field or a remove button is
@@ -1638,7 +1769,7 @@ public:
     return context;
   }
 
-  void DrawRemoveButton(SubPad &surface, int highlight) {
+  void DrawRemoveButton(Surface &surface, int highlight) {
     surface.MoveCursor(1, surface.GetHeight() / 2);
     if (highlight)
       surface.AttributeOn(A_REVERSE);
@@ -1647,7 +1778,7 @@ public:
       surface.AttributeOff(A_REVERSE);
   }
 
-  void DrawFields(SubPad &surface, bool is_selected) {
+  void DrawFields(Surface &surface, bool is_selected) {
     int line = 0;
     int width = surface.GetWidth();
     for (int i = 0; i < GetNumberOfFields(); i++) {
@@ -1656,8 +1787,8 @@ public:
       Rect field_bounds, remove_button_bounds;
       bounds.VerticalSplit(bounds.size.width - sizeof(" [Remove]"),
                            field_bounds, remove_button_bounds);
-      SubPad field_surface = SubPad(surface, field_bounds);
-      SubPad remove_button_surface = SubPad(surface, remove_button_bounds);
+      Surface field_surface = surface.SubSurface(field_bounds);
+      Surface remove_button_surface = surface.SubSurface(remove_button_bounds);
 
       bool is_element_selected = m_selection_index == i && is_selected;
       bool is_field_selected =
@@ -1672,7 +1803,7 @@ public:
     }
   }
 
-  void DrawNewButton(SubPad &surface, bool is_selected) {
+  void DrawNewButton(Surface &surface, bool is_selected) {
     const char *button_text = "[New]";
     int x = (surface.GetWidth() - sizeof(button_text) - 1) / 2;
     surface.MoveCursor(x, 0);
@@ -1685,7 +1816,7 @@ public:
       surface.AttributeOff(A_REVERSE);
   }
 
-  void FieldDelegateDraw(SubPad &surface, bool is_selected) override {
+  void FieldDelegateDraw(Surface &surface, bool is_selected) override {
     surface.TitledBox(m_label.c_str());
 
     Rect content_bounds = surface.GetFrame();
@@ -1693,8 +1824,8 @@ public:
     Rect fields_bounds, new_button_bounds;
     content_bounds.HorizontalSplit(content_bounds.size.height - 1,
                                    fields_bounds, new_button_bounds);
-    SubPad fields_surface = SubPad(surface, fields_bounds);
-    SubPad new_button_surface = SubPad(surface, new_button_bounds);
+    Surface fields_surface = surface.SubSurface(fields_bounds);
+    Surface new_button_surface = surface.SubSurface(new_button_bounds);
 
     DrawFields(fields_surface, is_selected);
     DrawNewButton(new_button_surface, is_selected);
@@ -1777,6 +1908,31 @@ public:
     return eKeyHandled;
   }
 
+  // If the last element of the field is selected and it didn't handle the key.
+  // Select the next field or new button if the selected field is the last one.
+  HandleCharResult SelectNextInList(int key) {
+    assert(m_selection_type == SelectionType::Field);
+
+    FieldDelegate &field = m_fields[m_selection_index];
+    if (field.FieldDelegateHandleChar(key) == eKeyHandled)
+      return eKeyHandled;
+
+    if (!field.FieldDelegateOnLastOrOnlyElement())
+      return eKeyNotHandled;
+
+    field.FieldDelegateExitCallback();
+
+    if (m_selection_index == GetNumberOfFields() - 1) {
+      m_selection_type = SelectionType::NewButton;
+      return eKeyHandled;
+    }
+
+    m_selection_index++;
+    FieldDelegate &next_field = m_fields[m_selection_index];
+    next_field.FieldDelegateSelectFirstElement();
+    return eKeyHandled;
+  }
+
   HandleCharResult FieldDelegateHandleChar(int key) override {
     switch (key) {
     case '\r':
@@ -1789,16 +1945,14 @@ public:
       case SelectionType::RemoveButton:
         RemoveField();
         return eKeyHandled;
-      default:
-        break;
+      case SelectionType::Field:
+        return SelectNextInList(key);
       }
       break;
     case '\t':
-      SelectNext(key);
-      return eKeyHandled;
+      return SelectNext(key);
     case KEY_SHIFT_TAB:
-      SelectPrevious(key);
-      return eKeyHandled;
+      return SelectPrevious(key);
     default:
       break;
     }
@@ -1844,7 +1998,6 @@ public:
 
   void FieldDelegateSelectLastElement() override {
     m_selection_type = SelectionType::NewButton;
-    return;
   }
 
   int GetNumberOfFields() { return m_fields.size(); }
@@ -1858,9 +2011,244 @@ protected:
   // created though a copy.
   T m_default_field;
   std::vector<T> m_fields;
-  int m_selection_index;
+  int m_selection_index = 0;
   // See SelectionType class enum.
   SelectionType m_selection_type;
+};
+
+class ArgumentsFieldDelegate : public ListFieldDelegate<TextFieldDelegate> {
+public:
+  ArgumentsFieldDelegate()
+      : ListFieldDelegate("Arguments",
+                          TextFieldDelegate("Argument", "", false)) {}
+
+  Args GetArguments() {
+    Args arguments;
+    for (int i = 0; i < GetNumberOfFields(); i++) {
+      arguments.AppendArgument(GetField(i).GetText());
+    }
+    return arguments;
+  }
+
+  void AddArguments(const Args &arguments) {
+    for (size_t i = 0; i < arguments.GetArgumentCount(); i++) {
+      AddNewField();
+      TextFieldDelegate &field = GetField(GetNumberOfFields() - 1);
+      field.SetText(arguments.GetArgumentAtIndex(i));
+    }
+  }
+};
+
+template <class KeyFieldDelegateType, class ValueFieldDelegateType>
+class MappingFieldDelegate : public FieldDelegate {
+public:
+  MappingFieldDelegate(KeyFieldDelegateType key_field,
+                       ValueFieldDelegateType value_field)
+      : m_key_field(key_field), m_value_field(value_field),
+        m_selection_type(SelectionType::Key) {}
+
+  // Signify which element is selected. The key field or its value field.
+  enum class SelectionType { Key, Value };
+
+  // A mapping field is drawn as two text fields with a right arrow in between.
+  // The first field stores the key of the mapping and the second stores the
+  // value if the mapping.
+  //
+  // __[Key]_____________   __[Value]___________
+  // |                  | > |                  |
+  // |__________________|   |__________________|
+  // - Error message if it exists.
+
+  // The mapping field has a height that is equal to the maximum height between
+  // the key and value fields.
+  int FieldDelegateGetHeight() override {
+    return std::max(m_key_field.FieldDelegateGetHeight(),
+                    m_value_field.FieldDelegateGetHeight());
+  }
+
+  void DrawArrow(Surface &surface) {
+    surface.MoveCursor(0, 1);
+    surface.PutChar(ACS_RARROW);
+  }
+
+  void FieldDelegateDraw(Surface &surface, bool is_selected) override {
+    Rect bounds = surface.GetFrame();
+    Rect key_field_bounds, arrow_and_value_field_bounds;
+    bounds.VerticalSplit(bounds.size.width / 2, key_field_bounds,
+                         arrow_and_value_field_bounds);
+    Rect arrow_bounds, value_field_bounds;
+    arrow_and_value_field_bounds.VerticalSplit(1, arrow_bounds,
+                                               value_field_bounds);
+
+    Surface key_field_surface = surface.SubSurface(key_field_bounds);
+    Surface arrow_surface = surface.SubSurface(arrow_bounds);
+    Surface value_field_surface = surface.SubSurface(value_field_bounds);
+
+    bool key_is_selected =
+        m_selection_type == SelectionType::Key && is_selected;
+    m_key_field.FieldDelegateDraw(key_field_surface, key_is_selected);
+    DrawArrow(arrow_surface);
+    bool value_is_selected =
+        m_selection_type == SelectionType::Value && is_selected;
+    m_value_field.FieldDelegateDraw(value_field_surface, value_is_selected);
+  }
+
+  HandleCharResult SelectNext(int key) {
+    if (FieldDelegateOnLastOrOnlyElement())
+      return eKeyNotHandled;
+
+    if (!m_key_field.FieldDelegateOnLastOrOnlyElement()) {
+      return m_key_field.FieldDelegateHandleChar(key);
+    }
+
+    m_key_field.FieldDelegateExitCallback();
+    m_selection_type = SelectionType::Value;
+    m_value_field.FieldDelegateSelectFirstElement();
+    return eKeyHandled;
+  }
+
+  HandleCharResult SelectPrevious(int key) {
+    if (FieldDelegateOnFirstOrOnlyElement())
+      return eKeyNotHandled;
+
+    if (!m_value_field.FieldDelegateOnFirstOrOnlyElement()) {
+      return m_value_field.FieldDelegateHandleChar(key);
+    }
+
+    m_value_field.FieldDelegateExitCallback();
+    m_selection_type = SelectionType::Key;
+    m_key_field.FieldDelegateSelectLastElement();
+    return eKeyHandled;
+  }
+
+  // If the value field is selected, pass the key to it. If the key field is
+  // selected, its last element is selected, and it didn't handle the key, then
+  // select its corresponding value field.
+  HandleCharResult SelectNextField(int key) {
+    if (m_selection_type == SelectionType::Value) {
+      return m_value_field.FieldDelegateHandleChar(key);
+    }
+
+    if (m_key_field.FieldDelegateHandleChar(key) == eKeyHandled)
+      return eKeyHandled;
+
+    if (!m_key_field.FieldDelegateOnLastOrOnlyElement())
+      return eKeyNotHandled;
+
+    m_key_field.FieldDelegateExitCallback();
+    m_selection_type = SelectionType::Value;
+    m_value_field.FieldDelegateSelectFirstElement();
+    return eKeyHandled;
+  }
+
+  HandleCharResult FieldDelegateHandleChar(int key) override {
+    switch (key) {
+    case KEY_RETURN:
+      return SelectNextField(key);
+    case '\t':
+      return SelectNext(key);
+    case KEY_SHIFT_TAB:
+      return SelectPrevious(key);
+    default:
+      break;
+    }
+
+    // If the key wasn't handled, pass the key to the selected field.
+    if (m_selection_type == SelectionType::Key)
+      return m_key_field.FieldDelegateHandleChar(key);
+    else
+      return m_value_field.FieldDelegateHandleChar(key);
+
+    return eKeyNotHandled;
+  }
+
+  bool FieldDelegateOnFirstOrOnlyElement() override {
+    return m_selection_type == SelectionType::Key;
+  }
+
+  bool FieldDelegateOnLastOrOnlyElement() override {
+    return m_selection_type == SelectionType::Value;
+  }
+
+  void FieldDelegateSelectFirstElement() override {
+    m_selection_type = SelectionType::Key;
+  }
+
+  void FieldDelegateSelectLastElement() override {
+    m_selection_type = SelectionType::Value;
+  }
+
+  bool FieldDelegateHasError() override {
+    return m_key_field.FieldDelegateHasError() ||
+           m_value_field.FieldDelegateHasError();
+  }
+
+  KeyFieldDelegateType &GetKeyField() { return m_key_field; }
+
+  ValueFieldDelegateType &GetValueField() { return m_value_field; }
+
+protected:
+  KeyFieldDelegateType m_key_field;
+  ValueFieldDelegateType m_value_field;
+  // See SelectionType class enum.
+  SelectionType m_selection_type;
+};
+
+class EnvironmentVariableNameFieldDelegate : public TextFieldDelegate {
+public:
+  EnvironmentVariableNameFieldDelegate(const char *content)
+      : TextFieldDelegate("Name", content, true) {}
+
+  // Environment variable names can't contain an equal sign.
+  bool IsAcceptableChar(int key) override {
+    return TextFieldDelegate::IsAcceptableChar(key) && key != '=';
+  }
+
+  const std::string &GetName() { return m_content; }
+};
+
+class EnvironmentVariableFieldDelegate
+    : public MappingFieldDelegate<EnvironmentVariableNameFieldDelegate,
+                                  TextFieldDelegate> {
+public:
+  EnvironmentVariableFieldDelegate()
+      : MappingFieldDelegate(
+            EnvironmentVariableNameFieldDelegate(""),
+            TextFieldDelegate("Value", "", /*required=*/false)) {}
+
+  const std::string &GetName() { return GetKeyField().GetName(); }
+
+  const std::string &GetValue() { return GetValueField().GetText(); }
+
+  void SetName(const char *name) { return GetKeyField().SetText(name); }
+
+  void SetValue(const char *value) { return GetValueField().SetText(value); }
+};
+
+class EnvironmentVariableListFieldDelegate
+    : public ListFieldDelegate<EnvironmentVariableFieldDelegate> {
+public:
+  EnvironmentVariableListFieldDelegate(const char *label)
+      : ListFieldDelegate(label, EnvironmentVariableFieldDelegate()) {}
+
+  Environment GetEnvironment() {
+    Environment environment;
+    for (int i = 0; i < GetNumberOfFields(); i++) {
+      environment.insert(
+          std::make_pair(GetField(i).GetName(), GetField(i).GetValue()));
+    }
+    return environment;
+  }
+
+  void AddEnvironmentVariables(const Environment &environment) {
+    for (auto &variable : environment) {
+      AddNewField();
+      EnvironmentVariableFieldDelegate &field =
+          GetField(GetNumberOfFields() - 1);
+      field.SetName(variable.getKey().str().c_str());
+      field.SetValue(variable.getValue().c_str());
+    }
+  }
 };
 
 class FormAction {
@@ -1872,7 +2260,7 @@ public:
   }
 
   // Draw a centered [Label].
-  void Draw(SubPad &surface, bool is_selected) {
+  void Draw(Surface &surface, bool is_selected) {
     int x = (surface.GetWidth() - m_label.length()) / 2;
     surface.MoveCursor(x, 0);
     if (is_selected)
@@ -1895,13 +2283,13 @@ protected:
 
 class FormDelegate {
 public:
-  FormDelegate() {}
+  FormDelegate() = default;
 
   virtual ~FormDelegate() = default;
 
   virtual std::string GetName() = 0;
 
-  virtual void UpdateFieldsVisibility() { return; }
+  virtual void UpdateFieldsVisibility() {}
 
   FieldDelegate *GetField(uint32_t field_index) {
     if (field_index < m_fields.size())
@@ -1928,6 +2316,7 @@ public:
   // action that requires valid fields.
   bool CheckFieldsValidity() {
     for (int i = 0; i < GetNumberOfFields(); i++) {
+      GetField(i)->FieldDelegateExitCallback();
       if (GetField(i)->FieldDelegateHasError()) {
         SetError("Some fields are invalid!");
         return false;
@@ -1963,6 +2352,14 @@ public:
     return delegate;
   }
 
+  ArchFieldDelegate *AddArchField(const char *label, const char *content,
+                                  bool required) {
+    ArchFieldDelegate *delegate =
+        new ArchFieldDelegate(label, content, required);
+    m_fields.push_back(FieldDelegateUP(delegate));
+    return delegate;
+  }
+
   IntegerFieldDelegate *AddIntegerField(const char *label, int content,
                                         bool required) {
     IntegerFieldDelegate *delegate =
@@ -1973,6 +2370,14 @@ public:
 
   BooleanFieldDelegate *AddBooleanField(const char *label, bool content) {
     BooleanFieldDelegate *delegate = new BooleanFieldDelegate(label, content);
+    m_fields.push_back(FieldDelegateUP(delegate));
+    return delegate;
+  }
+
+  LazyBooleanFieldDelegate *AddLazyBooleanField(const char *label,
+                                                const char *calculate_label) {
+    LazyBooleanFieldDelegate *delegate =
+        new LazyBooleanFieldDelegate(label, calculate_label);
     m_fields.push_back(FieldDelegateUP(delegate));
     return delegate;
   }
@@ -2006,6 +2411,43 @@ public:
     return delegate;
   }
 
+  ArgumentsFieldDelegate *AddArgumentsField() {
+    ArgumentsFieldDelegate *delegate = new ArgumentsFieldDelegate();
+    m_fields.push_back(FieldDelegateUP(delegate));
+    return delegate;
+  }
+
+  template <class K, class V>
+  MappingFieldDelegate<K, V> *AddMappingField(K key_field, V value_field) {
+    MappingFieldDelegate<K, V> *delegate =
+        new MappingFieldDelegate<K, V>(key_field, value_field);
+    m_fields.push_back(FieldDelegateUP(delegate));
+    return delegate;
+  }
+
+  EnvironmentVariableNameFieldDelegate *
+  AddEnvironmentVariableNameField(const char *content) {
+    EnvironmentVariableNameFieldDelegate *delegate =
+        new EnvironmentVariableNameFieldDelegate(content);
+    m_fields.push_back(FieldDelegateUP(delegate));
+    return delegate;
+  }
+
+  EnvironmentVariableFieldDelegate *AddEnvironmentVariableField() {
+    EnvironmentVariableFieldDelegate *delegate =
+        new EnvironmentVariableFieldDelegate();
+    m_fields.push_back(FieldDelegateUP(delegate));
+    return delegate;
+  }
+
+  EnvironmentVariableListFieldDelegate *
+  AddEnvironmentVariableListField(const char *label) {
+    EnvironmentVariableListFieldDelegate *delegate =
+        new EnvironmentVariableListFieldDelegate(label);
+    m_fields.push_back(FieldDelegateUP(delegate));
+    return delegate;
+  }
+
   // Factory methods for adding actions.
 
   void AddAction(const char *label, std::function<void(Window &)> action) {
@@ -2023,9 +2465,7 @@ typedef std::shared_ptr<FormDelegate> FormDelegateSP;
 
 class FormWindowDelegate : public WindowDelegate {
 public:
-  FormWindowDelegate(FormDelegateSP &delegate_sp)
-      : m_delegate_sp(delegate_sp), m_selection_index(0),
-        m_first_visible_line(0) {
+  FormWindowDelegate(FormDelegateSP &delegate_sp) : m_delegate_sp(delegate_sp) {
     assert(m_delegate_sp->GetNumberOfActions() > 0);
     if (m_delegate_sp->GetNumberOfFields() > 0)
       m_selection_type = SelectionType::Field;
@@ -2103,7 +2543,7 @@ public:
     return context;
   }
 
-  void UpdateScrolling(DerivedWindow &surface) {
+  void UpdateScrolling(Surface &surface) {
     ScrollContext context = GetScrollContext();
     int content_height = GetContentHeight();
     int surface_height = surface.GetHeight();
@@ -2127,7 +2567,7 @@ public:
     }
   }
 
-  void DrawError(SubPad &surface) {
+  void DrawError(Surface &surface) {
     if (!m_delegate_sp->HasError())
       return;
     surface.MoveCursor(0, 0);
@@ -2141,7 +2581,7 @@ public:
     surface.HorizontalLine(surface.GetWidth());
   }
 
-  void DrawFields(SubPad &surface) {
+  void DrawFields(Surface &surface) {
     int line = 0;
     int width = surface.GetWidth();
     bool a_field_is_selected = m_selection_type == SelectionType::Field;
@@ -2152,13 +2592,13 @@ public:
       bool is_field_selected = a_field_is_selected && m_selection_index == i;
       int height = field->FieldDelegateGetHeight();
       Rect bounds = Rect(Point(0, line), Size(width, height));
-      SubPad field_surface = SubPad(surface, bounds);
+      Surface field_surface = surface.SubSurface(bounds);
       field->FieldDelegateDraw(field_surface, is_field_selected);
       line += height;
     }
   }
 
-  void DrawActions(SubPad &surface) {
+  void DrawActions(Surface &surface) {
     int number_of_actions = m_delegate_sp->GetNumberOfActions();
     int width = surface.GetWidth() / number_of_actions;
     bool an_action_is_selected = m_selection_type == SelectionType::Action;
@@ -2167,19 +2607,19 @@ public:
       bool is_action_selected = an_action_is_selected && m_selection_index == i;
       FormAction &action = m_delegate_sp->GetAction(i);
       Rect bounds = Rect(Point(x, 0), Size(width, 1));
-      SubPad action_surface = SubPad(surface, bounds);
+      Surface action_surface = surface.SubSurface(bounds);
       action.Draw(action_surface, is_action_selected);
       x += width;
     }
   }
 
-  void DrawElements(SubPad &surface) {
+  void DrawElements(Surface &surface) {
     Rect frame = surface.GetFrame();
     Rect fields_bounds, actions_bounds;
     frame.HorizontalSplit(surface.GetHeight() - GetActionsHeight(),
                           fields_bounds, actions_bounds);
-    SubPad fields_surface = SubPad(surface, fields_bounds);
-    SubPad actions_surface = SubPad(surface, actions_bounds);
+    Surface fields_surface = surface.SubSurface(fields_bounds);
+    Surface actions_surface = surface.SubSurface(actions_bounds);
 
     DrawFields(fields_surface);
     DrawActions(actions_surface);
@@ -2188,7 +2628,7 @@ public:
   // Contents are first drawn on a pad. Then a subset of that pad is copied to
   // the derived window starting at the first visible line. This essentially
   // provides scrolling functionality.
-  void DrawContent(DerivedWindow &surface) {
+  void DrawContent(Surface &surface) {
     UpdateScrolling(surface);
 
     int width = surface.GetWidth();
@@ -2198,8 +2638,8 @@ public:
     Rect frame = pad.GetFrame();
     Rect error_bounds, elements_bounds;
     frame.HorizontalSplit(GetErrorHeight(), error_bounds, elements_bounds);
-    SubPad error_surface = SubPad(pad, error_bounds);
-    SubPad elements_surface = SubPad(pad, elements_bounds);
+    Surface error_surface = pad.SubSurface(error_bounds);
+    Surface elements_surface = pad.SubSurface(elements_bounds);
 
     DrawError(error_surface);
     DrawElements(elements_surface);
@@ -2209,17 +2649,28 @@ public:
                       Size(width, copy_height));
   }
 
+  void DrawSubmitHint(Surface &surface, bool is_active) {
+    surface.MoveCursor(2, surface.GetHeight() - 1);
+    if (is_active)
+      surface.AttributeOn(A_BOLD | COLOR_PAIR(BlackOnWhite));
+    surface.Printf("[Press Alt+Enter to %s]",
+                   m_delegate_sp->GetAction(0).GetLabel().c_str());
+    if (is_active)
+      surface.AttributeOff(A_BOLD | COLOR_PAIR(BlackOnWhite));
+  }
+
   bool WindowDelegateDraw(Window &window, bool force) override {
     m_delegate_sp->UpdateFieldsVisibility();
 
     window.Erase();
 
     window.DrawTitleBox(m_delegate_sp->GetName().c_str(),
-                        "Press Esc to cancel");
+                        "Press Esc to Cancel");
+    DrawSubmitHint(window, window.IsActive());
 
     Rect content_bounds = window.GetFrame();
     content_bounds.Inset(2, 2);
-    DerivedWindow content_surface = DerivedWindow(window, content_bounds);
+    Surface content_surface = window.SubSurface(content_bounds);
 
     DrawContent(content_surface);
     return true;
@@ -2338,8 +2789,8 @@ public:
     return eKeyHandled;
   }
 
-  void ExecuteAction(Window &window) {
-    FormAction &action = m_delegate_sp->GetAction(m_selection_index);
+  void ExecuteAction(Window &window, int index) {
+    FormAction &action = m_delegate_sp->GetAction(index);
     action.Execute(window);
     if (m_delegate_sp->HasError()) {
       m_first_visible_line = 0;
@@ -2348,20 +2799,27 @@ public:
     }
   }
 
+  // Always return eKeyHandled to absorb all events since forms are always
+  // added as pop-ups that should take full control until canceled or submitted.
   HandleCharResult WindowDelegateHandleChar(Window &window, int key) override {
     switch (key) {
     case '\r':
     case '\n':
     case KEY_ENTER:
       if (m_selection_type == SelectionType::Action) {
-        ExecuteAction(window);
+        ExecuteAction(window, m_selection_index);
         return eKeyHandled;
       }
       break;
+    case KEY_ALT_ENTER:
+      ExecuteAction(window, 0);
+      return eKeyHandled;
     case '\t':
-      return SelectNext(key);
+      SelectNext(key);
+      return eKeyHandled;
     case KEY_SHIFT_TAB:
-      return SelectPrevious(key);
+      SelectPrevious(key);
+      return eKeyHandled;
     case KEY_ESCAPE:
       window.GetParent()->RemoveSubWindow(&window);
       return eKeyHandled;
@@ -2373,20 +2831,34 @@ public:
     // to that field.
     if (m_selection_type == SelectionType::Field) {
       FieldDelegate *field = m_delegate_sp->GetField(m_selection_index);
-      return field->FieldDelegateHandleChar(key);
+      if (field->FieldDelegateHandleChar(key) == eKeyHandled)
+        return eKeyHandled;
     }
 
-    return eKeyNotHandled;
+    // If the key wasn't handled by the possibly selected field, handle some
+    // extra keys for navigation.
+    switch (key) {
+    case KEY_DOWN:
+      SelectNext(key);
+      return eKeyHandled;
+    case KEY_UP:
+      SelectPrevious(key);
+      return eKeyHandled;
+    default:
+      break;
+    }
+
+    return eKeyHandled;
   }
 
 protected:
   FormDelegateSP m_delegate_sp;
   // The index of the currently selected SelectionType.
-  int m_selection_index;
+  int m_selection_index = 0;
   // See SelectionType class enum.
   SelectionType m_selection_type;
   // The first visible line from the pad.
-  int m_first_visible_line;
+  int m_first_visible_line = 0;
 };
 
 ///////////////////////////
@@ -2597,6 +3069,798 @@ protected:
   BooleanFieldDelegate *m_show_advanced_field;
   ProcessPluginFieldDelegate *m_plugin_field;
 };
+
+class TargetCreateFormDelegate : public FormDelegate {
+public:
+  TargetCreateFormDelegate(Debugger &debugger) : m_debugger(debugger) {
+    m_executable_field = AddFileField("Executable", "", /*need_to_exist=*/true,
+                                      /*required=*/true);
+    m_core_file_field = AddFileField("Core File", "", /*need_to_exist=*/true,
+                                     /*required=*/false);
+    m_symbol_file_field = AddFileField(
+        "Symbol File", "", /*need_to_exist=*/true, /*required=*/false);
+    m_show_advanced_field = AddBooleanField("Show advanced settings.", false);
+    m_remote_file_field = AddFileField(
+        "Remote File", "", /*need_to_exist=*/false, /*required=*/false);
+    m_arch_field = AddArchField("Architecture", "", /*required=*/false);
+    m_platform_field = AddPlatformPluginField(debugger);
+    m_load_dependent_files_field =
+        AddChoicesField("Load Dependents", 3, GetLoadDependentFilesChoices());
+
+    AddAction("Create", [this](Window &window) { CreateTarget(window); });
+  }
+
+  std::string GetName() override { return "Create Target"; }
+
+  void UpdateFieldsVisibility() override {
+    if (m_show_advanced_field->GetBoolean()) {
+      m_remote_file_field->FieldDelegateShow();
+      m_arch_field->FieldDelegateShow();
+      m_platform_field->FieldDelegateShow();
+      m_load_dependent_files_field->FieldDelegateShow();
+    } else {
+      m_remote_file_field->FieldDelegateHide();
+      m_arch_field->FieldDelegateHide();
+      m_platform_field->FieldDelegateHide();
+      m_load_dependent_files_field->FieldDelegateHide();
+    }
+  }
+
+  static constexpr const char *kLoadDependentFilesNo = "No";
+  static constexpr const char *kLoadDependentFilesYes = "Yes";
+  static constexpr const char *kLoadDependentFilesExecOnly = "Executable only";
+
+  std::vector<std::string> GetLoadDependentFilesChoices() {
+    std::vector<std::string> load_depentents_options;
+    load_depentents_options.push_back(kLoadDependentFilesExecOnly);
+    load_depentents_options.push_back(kLoadDependentFilesYes);
+    load_depentents_options.push_back(kLoadDependentFilesNo);
+    return load_depentents_options;
+  }
+
+  LoadDependentFiles GetLoadDependentFiles() {
+    std::string choice = m_load_dependent_files_field->GetChoiceContent();
+    if (choice == kLoadDependentFilesNo)
+      return eLoadDependentsNo;
+    if (choice == kLoadDependentFilesYes)
+      return eLoadDependentsYes;
+    return eLoadDependentsDefault;
+  }
+
+  OptionGroupPlatform GetPlatformOptions() {
+    OptionGroupPlatform platform_options(false);
+    platform_options.SetPlatformName(m_platform_field->GetPluginName().c_str());
+    return platform_options;
+  }
+
+  TargetSP GetTarget() {
+    OptionGroupPlatform platform_options = GetPlatformOptions();
+    TargetSP target_sp;
+    Status status = m_debugger.GetTargetList().CreateTarget(
+        m_debugger, m_executable_field->GetPath(),
+        m_arch_field->GetArchString(), GetLoadDependentFiles(),
+        &platform_options, target_sp);
+
+    if (status.Fail()) {
+      SetError(status.AsCString());
+      return nullptr;
+    }
+
+    m_debugger.GetTargetList().SetSelectedTarget(target_sp);
+
+    return target_sp;
+  }
+
+  void SetSymbolFile(TargetSP target_sp) {
+    if (!m_symbol_file_field->IsSpecified())
+      return;
+
+    ModuleSP module_sp(target_sp->GetExecutableModule());
+    if (!module_sp)
+      return;
+
+    module_sp->SetSymbolFileFileSpec(
+        m_symbol_file_field->GetResolvedFileSpec());
+  }
+
+  void SetCoreFile(TargetSP target_sp) {
+    if (!m_core_file_field->IsSpecified())
+      return;
+
+    FileSpec core_file_spec = m_core_file_field->GetResolvedFileSpec();
+
+    FileSpec core_file_directory_spec;
+    core_file_directory_spec.GetDirectory() = core_file_spec.GetDirectory();
+    target_sp->AppendExecutableSearchPaths(core_file_directory_spec);
+
+    ProcessSP process_sp(target_sp->CreateProcess(
+        m_debugger.GetListener(), llvm::StringRef(), &core_file_spec, false));
+
+    if (!process_sp) {
+      SetError("Unable to find process plug-in for core file!");
+      return;
+    }
+
+    Status status = process_sp->LoadCore();
+    if (status.Fail()) {
+      SetError("Can't find plug-in for core file!");
+      return;
+    }
+  }
+
+  void SetRemoteFile(TargetSP target_sp) {
+    if (!m_remote_file_field->IsSpecified())
+      return;
+
+    ModuleSP module_sp(target_sp->GetExecutableModule());
+    if (!module_sp)
+      return;
+
+    FileSpec remote_file_spec = m_remote_file_field->GetFileSpec();
+    module_sp->SetPlatformFileSpec(remote_file_spec);
+  }
+
+  void RemoveTarget(TargetSP target_sp) {
+    m_debugger.GetTargetList().DeleteTarget(target_sp);
+  }
+
+  void CreateTarget(Window &window) {
+    ClearError();
+
+    bool all_fields_are_valid = CheckFieldsValidity();
+    if (!all_fields_are_valid)
+      return;
+
+    TargetSP target_sp = GetTarget();
+    if (HasError())
+      return;
+
+    SetSymbolFile(target_sp);
+    if (HasError()) {
+      RemoveTarget(target_sp);
+      return;
+    }
+
+    SetCoreFile(target_sp);
+    if (HasError()) {
+      RemoveTarget(target_sp);
+      return;
+    }
+
+    SetRemoteFile(target_sp);
+    if (HasError()) {
+      RemoveTarget(target_sp);
+      return;
+    }
+
+    window.GetParent()->RemoveSubWindow(&window);
+  }
+
+protected:
+  Debugger &m_debugger;
+
+  FileFieldDelegate *m_executable_field;
+  FileFieldDelegate *m_core_file_field;
+  FileFieldDelegate *m_symbol_file_field;
+  BooleanFieldDelegate *m_show_advanced_field;
+  FileFieldDelegate *m_remote_file_field;
+  ArchFieldDelegate *m_arch_field;
+  PlatformPluginFieldDelegate *m_platform_field;
+  ChoicesFieldDelegate *m_load_dependent_files_field;
+};
+
+class ProcessLaunchFormDelegate : public FormDelegate {
+public:
+  ProcessLaunchFormDelegate(Debugger &debugger, WindowSP main_window_sp)
+      : m_debugger(debugger), m_main_window_sp(main_window_sp) {
+
+    m_arguments_field = AddArgumentsField();
+    SetArgumentsFieldDefaultValue();
+    m_target_environment_field =
+        AddEnvironmentVariableListField("Target Environment Variables");
+    SetTargetEnvironmentFieldDefaultValue();
+    m_working_directory_field = AddDirectoryField(
+        "Working Directory", GetDefaultWorkingDirectory().c_str(), true, false);
+
+    m_show_advanced_field = AddBooleanField("Show advanced settings.", false);
+
+    m_stop_at_entry_field = AddBooleanField("Stop at entry point.", false);
+    m_detach_on_error_field =
+        AddBooleanField("Detach on error.", GetDefaultDetachOnError());
+    m_disable_aslr_field =
+        AddBooleanField("Disable ASLR", GetDefaultDisableASLR());
+    m_plugin_field = AddProcessPluginField();
+    m_arch_field = AddArchField("Architecture", "", false);
+    m_shell_field = AddFileField("Shell", "", true, false);
+    m_expand_shell_arguments_field =
+        AddBooleanField("Expand shell arguments.", false);
+
+    m_disable_standard_io_field =
+        AddBooleanField("Disable Standard IO", GetDefaultDisableStandardIO());
+    m_standard_output_field =
+        AddFileField("Standard Output File", "", /*need_to_exist=*/false,
+                     /*required=*/false);
+    m_standard_error_field =
+        AddFileField("Standard Error File", "", /*need_to_exist=*/false,
+                     /*required=*/false);
+    m_standard_input_field =
+        AddFileField("Standard Input File", "", /*need_to_exist=*/false,
+                     /*required=*/false);
+
+    m_show_inherited_environment_field =
+        AddBooleanField("Show inherited environment variables.", false);
+    m_inherited_environment_field =
+        AddEnvironmentVariableListField("Inherited Environment Variables");
+    SetInheritedEnvironmentFieldDefaultValue();
+
+    AddAction("Launch", [this](Window &window) { Launch(window); });
+  }
+
+  std::string GetName() override { return "Launch Process"; }
+
+  void UpdateFieldsVisibility() override {
+    if (m_show_advanced_field->GetBoolean()) {
+      m_stop_at_entry_field->FieldDelegateShow();
+      m_detach_on_error_field->FieldDelegateShow();
+      m_disable_aslr_field->FieldDelegateShow();
+      m_plugin_field->FieldDelegateShow();
+      m_arch_field->FieldDelegateShow();
+      m_shell_field->FieldDelegateShow();
+      m_expand_shell_arguments_field->FieldDelegateShow();
+      m_disable_standard_io_field->FieldDelegateShow();
+      if (m_disable_standard_io_field->GetBoolean()) {
+        m_standard_input_field->FieldDelegateHide();
+        m_standard_output_field->FieldDelegateHide();
+        m_standard_error_field->FieldDelegateHide();
+      } else {
+        m_standard_input_field->FieldDelegateShow();
+        m_standard_output_field->FieldDelegateShow();
+        m_standard_error_field->FieldDelegateShow();
+      }
+      m_show_inherited_environment_field->FieldDelegateShow();
+      if (m_show_inherited_environment_field->GetBoolean())
+        m_inherited_environment_field->FieldDelegateShow();
+      else
+        m_inherited_environment_field->FieldDelegateHide();
+    } else {
+      m_stop_at_entry_field->FieldDelegateHide();
+      m_detach_on_error_field->FieldDelegateHide();
+      m_disable_aslr_field->FieldDelegateHide();
+      m_plugin_field->FieldDelegateHide();
+      m_arch_field->FieldDelegateHide();
+      m_shell_field->FieldDelegateHide();
+      m_expand_shell_arguments_field->FieldDelegateHide();
+      m_disable_standard_io_field->FieldDelegateHide();
+      m_standard_input_field->FieldDelegateHide();
+      m_standard_output_field->FieldDelegateHide();
+      m_standard_error_field->FieldDelegateHide();
+      m_show_inherited_environment_field->FieldDelegateHide();
+      m_inherited_environment_field->FieldDelegateHide();
+    }
+  }
+
+  // Methods for setting the default value of the fields.
+
+  void SetArgumentsFieldDefaultValue() {
+    TargetSP target = m_debugger.GetSelectedTarget();
+    if (target == nullptr)
+      return;
+
+    const Args &target_arguments =
+        target->GetProcessLaunchInfo().GetArguments();
+    m_arguments_field->AddArguments(target_arguments);
+  }
+
+  void SetTargetEnvironmentFieldDefaultValue() {
+    TargetSP target = m_debugger.GetSelectedTarget();
+    if (target == nullptr)
+      return;
+
+    const Environment &target_environment = target->GetTargetEnvironment();
+    m_target_environment_field->AddEnvironmentVariables(target_environment);
+  }
+
+  void SetInheritedEnvironmentFieldDefaultValue() {
+    TargetSP target = m_debugger.GetSelectedTarget();
+    if (target == nullptr)
+      return;
+
+    const Environment &inherited_environment =
+        target->GetInheritedEnvironment();
+    m_inherited_environment_field->AddEnvironmentVariables(
+        inherited_environment);
+  }
+
+  std::string GetDefaultWorkingDirectory() {
+    TargetSP target = m_debugger.GetSelectedTarget();
+    if (target == nullptr)
+      return "";
+
+    PlatformSP platform = target->GetPlatform();
+    return platform->GetWorkingDirectory().GetPath();
+  }
+
+  bool GetDefaultDisableASLR() {
+    TargetSP target = m_debugger.GetSelectedTarget();
+    if (target == nullptr)
+      return false;
+
+    return target->GetDisableASLR();
+  }
+
+  bool GetDefaultDisableStandardIO() {
+    TargetSP target = m_debugger.GetSelectedTarget();
+    if (target == nullptr)
+      return true;
+
+    return target->GetDisableSTDIO();
+  }
+
+  bool GetDefaultDetachOnError() {
+    TargetSP target = m_debugger.GetSelectedTarget();
+    if (target == nullptr)
+      return true;
+
+    return target->GetDetachOnError();
+  }
+
+  // Methods for getting the necessary information and setting them to the
+  // ProcessLaunchInfo.
+
+  void GetExecutableSettings(ProcessLaunchInfo &launch_info) {
+    TargetSP target = m_debugger.GetSelectedTarget();
+    ModuleSP executable_module = target->GetExecutableModule();
+    llvm::StringRef target_settings_argv0 = target->GetArg0();
+
+    if (!target_settings_argv0.empty()) {
+      launch_info.GetArguments().AppendArgument(target_settings_argv0);
+      launch_info.SetExecutableFile(executable_module->GetPlatformFileSpec(),
+                                    false);
+      return;
+    }
+
+    launch_info.SetExecutableFile(executable_module->GetPlatformFileSpec(),
+                                  true);
+  }
+
+  void GetArguments(ProcessLaunchInfo &launch_info) {
+    TargetSP target = m_debugger.GetSelectedTarget();
+    Args arguments = m_arguments_field->GetArguments();
+    launch_info.GetArguments().AppendArguments(arguments);
+  }
+
+  void GetEnvironment(ProcessLaunchInfo &launch_info) {
+    Environment target_environment =
+        m_target_environment_field->GetEnvironment();
+    Environment inherited_environment =
+        m_inherited_environment_field->GetEnvironment();
+    launch_info.GetEnvironment().insert(target_environment.begin(),
+                                        target_environment.end());
+    launch_info.GetEnvironment().insert(inherited_environment.begin(),
+                                        inherited_environment.end());
+  }
+
+  void GetWorkingDirectory(ProcessLaunchInfo &launch_info) {
+    if (m_working_directory_field->IsSpecified())
+      launch_info.SetWorkingDirectory(
+          m_working_directory_field->GetResolvedFileSpec());
+  }
+
+  void GetStopAtEntry(ProcessLaunchInfo &launch_info) {
+    if (m_stop_at_entry_field->GetBoolean())
+      launch_info.GetFlags().Set(eLaunchFlagStopAtEntry);
+    else
+      launch_info.GetFlags().Clear(eLaunchFlagStopAtEntry);
+  }
+
+  void GetDetachOnError(ProcessLaunchInfo &launch_info) {
+    if (m_detach_on_error_field->GetBoolean())
+      launch_info.GetFlags().Set(eLaunchFlagDetachOnError);
+    else
+      launch_info.GetFlags().Clear(eLaunchFlagDetachOnError);
+  }
+
+  void GetDisableASLR(ProcessLaunchInfo &launch_info) {
+    if (m_disable_aslr_field->GetBoolean())
+      launch_info.GetFlags().Set(eLaunchFlagDisableASLR);
+    else
+      launch_info.GetFlags().Clear(eLaunchFlagDisableASLR);
+  }
+
+  void GetPlugin(ProcessLaunchInfo &launch_info) {
+    launch_info.SetProcessPluginName(m_plugin_field->GetPluginName());
+  }
+
+  void GetArch(ProcessLaunchInfo &launch_info) {
+    if (!m_arch_field->IsSpecified())
+      return;
+
+    TargetSP target_sp = m_debugger.GetSelectedTarget();
+    PlatformSP platform_sp =
+        target_sp ? target_sp->GetPlatform() : PlatformSP();
+    launch_info.GetArchitecture() = Platform::GetAugmentedArchSpec(
+        platform_sp.get(), m_arch_field->GetArchString());
+  }
+
+  void GetShell(ProcessLaunchInfo &launch_info) {
+    if (!m_shell_field->IsSpecified())
+      return;
+
+    launch_info.SetShell(m_shell_field->GetResolvedFileSpec());
+    launch_info.SetShellExpandArguments(
+        m_expand_shell_arguments_field->GetBoolean());
+  }
+
+  void GetStandardIO(ProcessLaunchInfo &launch_info) {
+    if (m_disable_standard_io_field->GetBoolean()) {
+      launch_info.GetFlags().Set(eLaunchFlagDisableSTDIO);
+      return;
+    }
+
+    FileAction action;
+    if (m_standard_input_field->IsSpecified()) {
+      action.Open(STDIN_FILENO, m_standard_input_field->GetFileSpec(), true,
+                  false);
+      launch_info.AppendFileAction(action);
+    }
+    if (m_standard_output_field->IsSpecified()) {
+      action.Open(STDOUT_FILENO, m_standard_output_field->GetFileSpec(), false,
+                  true);
+      launch_info.AppendFileAction(action);
+    }
+    if (m_standard_error_field->IsSpecified()) {
+      action.Open(STDERR_FILENO, m_standard_error_field->GetFileSpec(), false,
+                  true);
+      launch_info.AppendFileAction(action);
+    }
+  }
+
+  void GetInheritTCC(ProcessLaunchInfo &launch_info) {
+    if (m_debugger.GetSelectedTarget()->GetInheritTCC())
+      launch_info.GetFlags().Set(eLaunchFlagInheritTCCFromParent);
+  }
+
+  ProcessLaunchInfo GetLaunchInfo() {
+    ProcessLaunchInfo launch_info;
+
+    GetExecutableSettings(launch_info);
+    GetArguments(launch_info);
+    GetEnvironment(launch_info);
+    GetWorkingDirectory(launch_info);
+    GetStopAtEntry(launch_info);
+    GetDetachOnError(launch_info);
+    GetDisableASLR(launch_info);
+    GetPlugin(launch_info);
+    GetArch(launch_info);
+    GetShell(launch_info);
+    GetStandardIO(launch_info);
+    GetInheritTCC(launch_info);
+
+    return launch_info;
+  }
+
+  bool StopRunningProcess() {
+    ExecutionContext exe_ctx =
+        m_debugger.GetCommandInterpreter().GetExecutionContext();
+
+    if (!exe_ctx.HasProcessScope())
+      return false;
+
+    Process *process = exe_ctx.GetProcessPtr();
+    if (!(process && process->IsAlive()))
+      return false;
+
+    FormDelegateSP form_delegate_sp =
+        FormDelegateSP(new DetachOrKillProcessFormDelegate(process));
+    Rect bounds = m_main_window_sp->GetCenteredRect(85, 8);
+    WindowSP form_window_sp = m_main_window_sp->CreateSubWindow(
+        form_delegate_sp->GetName().c_str(), bounds, true);
+    WindowDelegateSP window_delegate_sp =
+        WindowDelegateSP(new FormWindowDelegate(form_delegate_sp));
+    form_window_sp->SetDelegate(window_delegate_sp);
+
+    return true;
+  }
+
+  Target *GetTarget() {
+    Target *target = m_debugger.GetSelectedTarget().get();
+
+    if (target == nullptr) {
+      SetError("No target exists!");
+      return nullptr;
+    }
+
+    ModuleSP exe_module_sp = target->GetExecutableModule();
+
+    if (exe_module_sp == nullptr) {
+      SetError("No executable in target!");
+      return nullptr;
+    }
+
+    return target;
+  }
+
+  void Launch(Window &window) {
+    ClearError();
+
+    bool all_fields_are_valid = CheckFieldsValidity();
+    if (!all_fields_are_valid)
+      return;
+
+    bool process_is_running = StopRunningProcess();
+    if (process_is_running)
+      return;
+
+    Target *target = GetTarget();
+    if (HasError())
+      return;
+
+    StreamString stream;
+    ProcessLaunchInfo launch_info = GetLaunchInfo();
+    Status status = target->Launch(launch_info, &stream);
+
+    if (status.Fail()) {
+      SetError(status.AsCString());
+      return;
+    }
+
+    ProcessSP process_sp(target->GetProcessSP());
+    if (!process_sp) {
+      SetError("Launched successfully but target has no process!");
+      return;
+    }
+
+    window.GetParent()->RemoveSubWindow(&window);
+  }
+
+protected:
+  Debugger &m_debugger;
+  WindowSP m_main_window_sp;
+
+  ArgumentsFieldDelegate *m_arguments_field;
+  EnvironmentVariableListFieldDelegate *m_target_environment_field;
+  DirectoryFieldDelegate *m_working_directory_field;
+
+  BooleanFieldDelegate *m_show_advanced_field;
+
+  BooleanFieldDelegate *m_stop_at_entry_field;
+  BooleanFieldDelegate *m_detach_on_error_field;
+  BooleanFieldDelegate *m_disable_aslr_field;
+  ProcessPluginFieldDelegate *m_plugin_field;
+  ArchFieldDelegate *m_arch_field;
+  FileFieldDelegate *m_shell_field;
+  BooleanFieldDelegate *m_expand_shell_arguments_field;
+  BooleanFieldDelegate *m_disable_standard_io_field;
+  FileFieldDelegate *m_standard_input_field;
+  FileFieldDelegate *m_standard_output_field;
+  FileFieldDelegate *m_standard_error_field;
+
+  BooleanFieldDelegate *m_show_inherited_environment_field;
+  EnvironmentVariableListFieldDelegate *m_inherited_environment_field;
+};
+
+////////////
+// Searchers
+////////////
+
+class SearcherDelegate {
+public:
+  SearcherDelegate() = default;
+
+  virtual ~SearcherDelegate() = default;
+
+  virtual int GetNumberOfMatches() = 0;
+
+  // Get the string that will be displayed for the match at the input index.
+  virtual const std::string &GetMatchTextAtIndex(int index) = 0;
+
+  // Update the matches of the search. This is executed every time the text
+  // field handles an event.
+  virtual void UpdateMatches(const std::string &text) = 0;
+
+  // Execute the user callback given the index of some match. This is executed
+  // once the user selects a match.
+  virtual void ExecuteCallback(int match_index) = 0;
+};
+
+typedef std::shared_ptr<SearcherDelegate> SearcherDelegateSP;
+
+class SearcherWindowDelegate : public WindowDelegate {
+public:
+  SearcherWindowDelegate(SearcherDelegateSP &delegate_sp)
+      : m_delegate_sp(delegate_sp), m_text_field("Search", "", false) {
+    ;
+  }
+
+  // A completion window is padded by one character from all sides. A text field
+  // is first drawn for inputting the searcher request, then a list of matches
+  // are displayed in a scrollable list.
+  //
+  // ___<Searcher Window Name>____________________________
+  // |                                                   |
+  // | __[Search]_______________________________________ |
+  // | |                                               | |
+  // | |_______________________________________________| |
+  // | - Match 1.                                        |
+  // | - Match 2.                                        |
+  // | - ...                                             |
+  // |                                                   |
+  // |____________________________[Press Esc to Cancel]__|
+  //
+
+  // Get the index of the last visible match. Assuming at least one match
+  // exists.
+  int GetLastVisibleMatch(int height) {
+    int index = m_first_visible_match + height;
+    return std::min(index, m_delegate_sp->GetNumberOfMatches()) - 1;
+  }
+
+  int GetNumberOfVisibleMatches(int height) {
+    return GetLastVisibleMatch(height) - m_first_visible_match + 1;
+  }
+
+  void UpdateScrolling(Surface &surface) {
+    if (m_selected_match < m_first_visible_match) {
+      m_first_visible_match = m_selected_match;
+      return;
+    }
+
+    int height = surface.GetHeight();
+    int last_visible_match = GetLastVisibleMatch(height);
+    if (m_selected_match > last_visible_match) {
+      m_first_visible_match = m_selected_match - height + 1;
+    }
+  }
+
+  void DrawMatches(Surface &surface) {
+    if (m_delegate_sp->GetNumberOfMatches() == 0)
+      return;
+
+    UpdateScrolling(surface);
+
+    int count = GetNumberOfVisibleMatches(surface.GetHeight());
+    for (int i = 0; i < count; i++) {
+      surface.MoveCursor(1, i);
+      int current_match = m_first_visible_match + i;
+      if (current_match == m_selected_match)
+        surface.AttributeOn(A_REVERSE);
+      surface.PutCString(
+          m_delegate_sp->GetMatchTextAtIndex(current_match).c_str());
+      if (current_match == m_selected_match)
+        surface.AttributeOff(A_REVERSE);
+    }
+  }
+
+  void DrawContent(Surface &surface) {
+    Rect content_bounds = surface.GetFrame();
+    Rect text_field_bounds, matchs_bounds;
+    content_bounds.HorizontalSplit(m_text_field.FieldDelegateGetHeight(),
+                                   text_field_bounds, matchs_bounds);
+    Surface text_field_surface = surface.SubSurface(text_field_bounds);
+    Surface matches_surface = surface.SubSurface(matchs_bounds);
+
+    m_text_field.FieldDelegateDraw(text_field_surface, true);
+    DrawMatches(matches_surface);
+  }
+
+  bool WindowDelegateDraw(Window &window, bool force) override {
+    window.Erase();
+
+    window.DrawTitleBox(window.GetName(), "Press Esc to Cancel");
+
+    Rect content_bounds = window.GetFrame();
+    content_bounds.Inset(2, 2);
+    Surface content_surface = window.SubSurface(content_bounds);
+
+    DrawContent(content_surface);
+    return true;
+  }
+
+  void SelectNext() {
+    if (m_selected_match != m_delegate_sp->GetNumberOfMatches() - 1)
+      m_selected_match++;
+  }
+
+  void SelectPrevious() {
+    if (m_selected_match != 0)
+      m_selected_match--;
+  }
+
+  void ExecuteCallback(Window &window) {
+    m_delegate_sp->ExecuteCallback(m_selected_match);
+    window.GetParent()->RemoveSubWindow(&window);
+  }
+
+  void UpdateMatches() {
+    m_delegate_sp->UpdateMatches(m_text_field.GetText());
+    m_selected_match = 0;
+  }
+
+  HandleCharResult WindowDelegateHandleChar(Window &window, int key) override {
+    switch (key) {
+    case '\r':
+    case '\n':
+    case KEY_ENTER:
+      ExecuteCallback(window);
+      return eKeyHandled;
+    case '\t':
+    case KEY_DOWN:
+      SelectNext();
+      return eKeyHandled;
+    case KEY_SHIFT_TAB:
+    case KEY_UP:
+      SelectPrevious();
+      return eKeyHandled;
+    case KEY_ESCAPE:
+      window.GetParent()->RemoveSubWindow(&window);
+      return eKeyHandled;
+    default:
+      break;
+    }
+
+    if (m_text_field.FieldDelegateHandleChar(key) == eKeyHandled)
+      UpdateMatches();
+
+    return eKeyHandled;
+  }
+
+protected:
+  SearcherDelegateSP m_delegate_sp;
+  TextFieldDelegate m_text_field;
+  // The index of the currently selected match.
+  int m_selected_match = 0;
+  // The index of the first visible match.
+  int m_first_visible_match = 0;
+};
+
+//////////////////////////////
+// Searcher Delegate Instances
+//////////////////////////////
+
+// This is a searcher delegate wrapper around CommandCompletions common
+// callbacks. The callbacks are only given the match string. The completion_mask
+// can be a combination of CommonCompletionTypes.
+class CommonCompletionSearcherDelegate : public SearcherDelegate {
+public:
+  typedef std::function<void(const std::string &)> CallbackType;
+
+  CommonCompletionSearcherDelegate(Debugger &debugger, uint32_t completion_mask,
+                                   CallbackType callback)
+      : m_debugger(debugger), m_completion_mask(completion_mask),
+        m_callback(callback) {}
+
+  int GetNumberOfMatches() override { return m_matches.GetSize(); }
+
+  const std::string &GetMatchTextAtIndex(int index) override {
+    return m_matches[index];
+  }
+
+  void UpdateMatches(const std::string &text) override {
+    CompletionResult result;
+    CompletionRequest request(text.c_str(), text.size(), result);
+    CommandCompletions::InvokeCommonCompletionCallbacks(
+        m_debugger.GetCommandInterpreter(), m_completion_mask, request,
+        nullptr);
+    result.GetMatches(m_matches);
+  }
+
+  void ExecuteCallback(int match_index) override {
+    m_callback(m_matches[match_index]);
+  }
+
+protected:
+  Debugger &m_debugger;
+  // A compound mask from CommonCompletionTypes.
+  uint32_t m_completion_mask;
+  // A callback to execute once the user selects a match. The match is passed to
+  // the callback as a string.
+  CallbackType m_callback;
+  StringList m_matches;
+};
+
+////////
+// Menus
+////////
 
 class MenuDelegate {
 public:
@@ -2999,8 +4263,7 @@ HandleCharResult Menu::WindowDelegateHandleChar(Window &window, int key) {
 
 class Application {
 public:
-  Application(FILE *in, FILE *out)
-      : m_window_sp(), m_screen(nullptr), m_in(in), m_out(out) {}
+  Application(FILE *in, FILE *out) : m_window_sp(), m_in(in), m_out(out) {}
 
   ~Application() {
     m_window_delegates.clear();
@@ -3025,15 +4288,15 @@ public:
     bool done = false;
     int delay_in_tenths_of_a_second = 1;
 
-    // Alas the threading model in curses is a bit lame so we need to resort to
-    // polling every 0.5 seconds. We could poll for stdin ourselves and then
-    // pass the keys down but then we need to translate all of the escape
+    // Alas the threading model in curses is a bit lame so we need to resort
+    // to polling every 0.5 seconds. We could poll for stdin ourselves and
+    // then pass the keys down but then we need to translate all of the escape
     // sequences ourselves. So we resort to polling for input because we need
     // to receive async process events while in this loop.
 
-    halfdelay(delay_in_tenths_of_a_second); // Poll using some number of tenths
-                                            // of seconds seconds when calling
-                                            // Window::GetChar()
+    halfdelay(delay_in_tenths_of_a_second); // Poll using some number of
+                                            // tenths of seconds seconds when
+                                            // calling Window::GetChar()
 
     ListenerSP listener_sp(
         Listener::MakeListener("lldb.IOHandler.curses.Application"));
@@ -3208,7 +4471,7 @@ public:
 protected:
   WindowSP m_window_sp;
   WindowDelegates m_window_delegates;
-  SCREEN *m_screen;
+  SCREEN *m_screen = nullptr;
   FILE *m_in;
   FILE *m_out;
   bool m_update_screen = false;
@@ -3274,7 +4537,8 @@ struct Row {
     if (parent)
       parent->DrawTreeForChild(window, this, 0);
 
-    if (might_have_children) {
+    if (might_have_children &&
+        (!calculated_children || !GetChildren().empty())) {
       // It we can get UTF8 characters to work we should try to use the
       // "symbol" UTF8 string below
       //            const char *symbol = "";
@@ -3335,8 +4599,16 @@ public:
 
   virtual void TreeDelegateDrawTreeItem(TreeItem &item, Window &window) = 0;
   virtual void TreeDelegateGenerateChildren(TreeItem &item) = 0;
-  virtual bool TreeDelegateItemSelected(
-      TreeItem &item) = 0; // Return true if we need to update views
+  virtual void TreeDelegateUpdateSelection(TreeItem &root, int &selection_index,
+                                           TreeItem *&selected_item) {}
+  // This is invoked when a tree item is selected. If true is returned, the
+  // views are updated.
+  virtual bool TreeDelegateItemSelected(TreeItem &item) = 0;
+  virtual bool TreeDelegateExpandRootByDefault() { return false; }
+  // This is mostly useful for root tree delegates. If false is returned,
+  // drawing will be skipped completely. This is needed, for instance, in
+  // skipping drawing of the threads tree if there is no running process.
+  virtual bool TreeDelegateShouldDraw() { return true; }
 };
 
 typedef std::shared_ptr<TreeDelegate> TreeDelegateSP;
@@ -3344,9 +4616,11 @@ typedef std::shared_ptr<TreeDelegate> TreeDelegateSP;
 class TreeItem {
 public:
   TreeItem(TreeItem *parent, TreeDelegate &delegate, bool might_have_children)
-      : m_parent(parent), m_delegate(delegate), m_user_data(nullptr),
-        m_identifier(0), m_row_idx(-1), m_children(),
-        m_might_have_children(might_have_children), m_is_expanded(false) {}
+      : m_parent(parent), m_delegate(delegate), m_children(),
+        m_might_have_children(might_have_children) {
+    if (m_parent == nullptr)
+      m_is_expanded = m_delegate.TreeDelegateExpandRootByDefault();
+  }
 
   TreeItem &operator=(const TreeItem &rhs) {
     if (this != &rhs) {
@@ -3523,46 +4797,40 @@ public:
 
   void SetIdentifier(uint64_t identifier) { m_identifier = identifier; }
 
+  const std::string &GetText() const { return m_text; }
+
+  void SetText(const char *text) {
+    if (text == nullptr) {
+      m_text.clear();
+      return;
+    }
+    m_text = text;
+  }
+
   void SetMightHaveChildren(bool b) { m_might_have_children = b; }
 
 protected:
   TreeItem *m_parent;
   TreeDelegate &m_delegate;
-  void *m_user_data;
-  uint64_t m_identifier;
-  int m_row_idx; // Zero based visible row index, -1 if not visible or for the
-                 // root item
+  void *m_user_data = nullptr;
+  uint64_t m_identifier = 0;
+  std::string m_text;
+  int m_row_idx = -1; // Zero based visible row index, -1 if not visible or for
+                      // the root item
   std::vector<TreeItem> m_children;
   bool m_might_have_children;
-  bool m_is_expanded;
+  bool m_is_expanded = false;
 };
 
 class TreeWindowDelegate : public WindowDelegate {
 public:
   TreeWindowDelegate(Debugger &debugger, const TreeDelegateSP &delegate_sp)
       : m_debugger(debugger), m_delegate_sp(delegate_sp),
-        m_root(nullptr, *delegate_sp, true), m_selected_item(nullptr),
-        m_num_rows(0), m_selected_row_idx(0), m_first_visible_row(0),
-        m_min_x(0), m_min_y(0), m_max_x(0), m_max_y(0) {}
+        m_root(nullptr, *delegate_sp, true) {}
 
   int NumVisibleRows() const { return m_max_y - m_min_y; }
 
   bool WindowDelegateDraw(Window &window, bool force) override {
-    ExecutionContext exe_ctx(
-        m_debugger.GetCommandInterpreter().GetExecutionContext());
-    Process *process = exe_ctx.GetProcessPtr();
-
-    bool display_content = false;
-    if (process) {
-      StateType state = process->GetState();
-      if (StateIsStoppedState(state, true)) {
-        // We are stopped, so it is ok to
-        display_content = true;
-      } else if (StateIsRunningState(state)) {
-        return true; // Don't do any updating when we are running
-      }
-    }
-
     m_min_x = 2;
     m_min_y = 1;
     m_max_x = window.GetWidth() - 1;
@@ -3571,32 +4839,35 @@ public:
     window.Erase();
     window.DrawTitleBox(window.GetName());
 
-    if (display_content) {
-      const int num_visible_rows = NumVisibleRows();
-      m_num_rows = 0;
-      m_root.CalculateRowIndexes(m_num_rows);
-
-      // If we unexpanded while having something selected our total number of
-      // rows is less than the num visible rows, then make sure we show all the
-      // rows by setting the first visible row accordingly.
-      if (m_first_visible_row > 0 && m_num_rows < num_visible_rows)
-        m_first_visible_row = 0;
-
-      // Make sure the selected row is always visible
-      if (m_selected_row_idx < m_first_visible_row)
-        m_first_visible_row = m_selected_row_idx;
-      else if (m_first_visible_row + num_visible_rows <= m_selected_row_idx)
-        m_first_visible_row = m_selected_row_idx - num_visible_rows + 1;
-
-      int row_idx = 0;
-      int num_rows_left = num_visible_rows;
-      m_root.Draw(window, m_first_visible_row, m_selected_row_idx, row_idx,
-                  num_rows_left);
-      // Get the selected row
-      m_selected_item = m_root.GetItemForRowIndex(m_selected_row_idx);
-    } else {
+    if (!m_delegate_sp->TreeDelegateShouldDraw()) {
       m_selected_item = nullptr;
+      return true;
     }
+
+    const int num_visible_rows = NumVisibleRows();
+    m_num_rows = 0;
+    m_root.CalculateRowIndexes(m_num_rows);
+    m_delegate_sp->TreeDelegateUpdateSelection(m_root, m_selected_row_idx,
+                                               m_selected_item);
+
+    // If we unexpanded while having something selected our total number of
+    // rows is less than the num visible rows, then make sure we show all the
+    // rows by setting the first visible row accordingly.
+    if (m_first_visible_row > 0 && m_num_rows < num_visible_rows)
+      m_first_visible_row = 0;
+
+    // Make sure the selected row is always visible
+    if (m_selected_row_idx < m_first_visible_row)
+      m_first_visible_row = m_selected_row_idx;
+    else if (m_first_visible_row + num_visible_rows <= m_selected_row_idx)
+      m_first_visible_row = m_selected_row_idx - num_visible_rows + 1;
+
+    int row_idx = 0;
+    int num_rows_left = num_visible_rows;
+    m_root.Draw(window, m_first_visible_row, m_selected_row_idx, row_idx,
+                num_rows_left);
+    // Get the selected row
+    m_selected_item = m_root.GetItemForRowIndex(m_selected_row_idx);
 
     return true; // Drawing handled
   }
@@ -3715,22 +4986,38 @@ protected:
   Debugger &m_debugger;
   TreeDelegateSP m_delegate_sp;
   TreeItem m_root;
-  TreeItem *m_selected_item;
-  int m_num_rows;
-  int m_selected_row_idx;
-  int m_first_visible_row;
-  int m_min_x;
-  int m_min_y;
-  int m_max_x;
-  int m_max_y;
+  TreeItem *m_selected_item = nullptr;
+  int m_num_rows = 0;
+  int m_selected_row_idx = 0;
+  int m_first_visible_row = 0;
+  int m_min_x = 0;
+  int m_min_y = 0;
+  int m_max_x = 0;
+  int m_max_y = 0;
+};
+
+// A tree delegate that just draws the text member of the tree item, it doesn't
+// have any children or actions.
+class TextTreeDelegate : public TreeDelegate {
+public:
+  TextTreeDelegate() : TreeDelegate() {}
+
+  ~TextTreeDelegate() override = default;
+
+  void TreeDelegateDrawTreeItem(TreeItem &item, Window &window) override {
+    window.PutCStringTruncated(1, item.GetText().c_str());
+  }
+
+  void TreeDelegateGenerateChildren(TreeItem &item) override {}
+
+  bool TreeDelegateItemSelected(TreeItem &item) override { return false; }
 };
 
 class FrameTreeDelegate : public TreeDelegate {
 public:
   FrameTreeDelegate() : TreeDelegate() {
     FormatEntity::Parse(
-        "frame #${frame.index}: {${function.name}${function.pc-offset}}}",
-        m_format);
+        "#${frame.index}: {${function.name}${function.pc-offset}}}", m_format);
   }
 
   ~FrameTreeDelegate() override = default;
@@ -3777,8 +5064,7 @@ protected:
 class ThreadTreeDelegate : public TreeDelegate {
 public:
   ThreadTreeDelegate(Debugger &debugger)
-      : TreeDelegate(), m_debugger(debugger), m_tid(LLDB_INVALID_THREAD_ID),
-        m_stop_id(UINT32_MAX) {
+      : TreeDelegate(), m_debugger(debugger) {
     FormatEntity::Parse("thread #${thread.index}: tid = ${thread.id}{, stop "
                         "reason = ${thread.stop-reason}}",
                         m_format);
@@ -3867,16 +5153,15 @@ public:
 protected:
   Debugger &m_debugger;
   std::shared_ptr<FrameTreeDelegate> m_frame_delegate_sp;
-  lldb::user_id_t m_tid;
-  uint32_t m_stop_id;
+  lldb::user_id_t m_tid = LLDB_INVALID_THREAD_ID;
+  uint32_t m_stop_id = UINT32_MAX;
   FormatEntity::Entry m_format;
 };
 
 class ThreadsTreeDelegate : public TreeDelegate {
 public:
   ThreadsTreeDelegate(Debugger &debugger)
-      : TreeDelegate(), m_thread_delegate_sp(), m_debugger(debugger),
-        m_stop_id(UINT32_MAX) {
+      : TreeDelegate(), m_thread_delegate_sp(), m_debugger(debugger) {
     FormatEntity::Parse("process ${process.id}{, name = ${process.name}}",
                         m_format);
   }
@@ -3887,6 +5172,17 @@ public:
     return m_debugger.GetCommandInterpreter()
         .GetExecutionContext()
         .GetProcessSP();
+  }
+
+  bool TreeDelegateShouldDraw() override {
+    ProcessSP process = GetProcess();
+    if (!process)
+      return false;
+
+    if (StateIsRunningState(process->GetState()))
+      return false;
+
+    return true;
   }
 
   void TreeDelegateDrawTreeItem(TreeItem &item, Window &window) override {
@@ -3904,6 +5200,7 @@ public:
 
   void TreeDelegateGenerateChildren(TreeItem &item) override {
     ProcessSP process_sp = GetProcess();
+    m_update_selection = false;
     if (process_sp && process_sp->IsAlive()) {
       StateType state = process_sp->GetState();
       if (StateIsStoppedState(state, true)) {
@@ -3912,6 +5209,7 @@ public:
           return; // Children are already up to date
 
         m_stop_id = stop_id;
+        m_update_selection = true;
 
         if (!m_thread_delegate_sp) {
           // Always expand the thread item the first time we show it
@@ -3923,11 +5221,15 @@ public:
         TreeItem t(&item, *m_thread_delegate_sp, false);
         ThreadList &threads = process_sp->GetThreadList();
         std::lock_guard<std::recursive_mutex> guard(threads.GetMutex());
+        ThreadSP selected_thread = threads.GetSelectedThread();
         size_t num_threads = threads.GetSize();
         item.Resize(num_threads, t);
         for (size_t i = 0; i < num_threads; ++i) {
-          item[i].SetIdentifier(threads.GetThreadAtIndex(i)->GetID());
+          ThreadSP thread = threads.GetThreadAtIndex(i);
+          item[i].SetIdentifier(thread->GetID());
           item[i].SetMightHaveChildren(true);
+          if (selected_thread->GetID() == thread->GetID())
+            item[i].Expand();
         }
         return;
       }
@@ -3935,22 +5237,284 @@ public:
     item.ClearChildren();
   }
 
+  void TreeDelegateUpdateSelection(TreeItem &root, int &selection_index,
+                                   TreeItem *&selected_item) override {
+    if (!m_update_selection)
+      return;
+
+    ProcessSP process_sp = GetProcess();
+    if (!(process_sp && process_sp->IsAlive()))
+      return;
+
+    StateType state = process_sp->GetState();
+    if (!StateIsStoppedState(state, true))
+      return;
+
+    ThreadList &threads = process_sp->GetThreadList();
+    std::lock_guard<std::recursive_mutex> guard(threads.GetMutex());
+    ThreadSP selected_thread = threads.GetSelectedThread();
+    size_t num_threads = threads.GetSize();
+    for (size_t i = 0; i < num_threads; ++i) {
+      ThreadSP thread = threads.GetThreadAtIndex(i);
+      if (selected_thread->GetID() == thread->GetID()) {
+        selected_item = &root[i][thread->GetSelectedFrameIndex()];
+        selection_index = selected_item->GetRowIndex();
+        return;
+      }
+    }
+  }
+
   bool TreeDelegateItemSelected(TreeItem &item) override { return false; }
+
+  bool TreeDelegateExpandRootByDefault() override { return true; }
 
 protected:
   std::shared_ptr<ThreadTreeDelegate> m_thread_delegate_sp;
   Debugger &m_debugger;
-  uint32_t m_stop_id;
+  uint32_t m_stop_id = UINT32_MAX;
+  bool m_update_selection = false;
   FormatEntity::Entry m_format;
+};
+
+class BreakpointLocationTreeDelegate : public TreeDelegate {
+public:
+  BreakpointLocationTreeDelegate(Debugger &debugger)
+      : TreeDelegate(), m_debugger(debugger) {}
+
+  ~BreakpointLocationTreeDelegate() override = default;
+
+  Process *GetProcess() {
+    ExecutionContext exe_ctx(
+        m_debugger.GetCommandInterpreter().GetExecutionContext());
+    return exe_ctx.GetProcessPtr();
+  }
+
+  BreakpointLocationSP GetBreakpointLocation(const TreeItem &item) {
+    Breakpoint *breakpoint = (Breakpoint *)item.GetUserData();
+    return breakpoint->GetLocationAtIndex(item.GetIdentifier());
+  }
+
+  void TreeDelegateDrawTreeItem(TreeItem &item, Window &window) override {
+    BreakpointLocationSP breakpoint_location = GetBreakpointLocation(item);
+    Process *process = GetProcess();
+    StreamString stream;
+    stream.Printf("%i.%i: ", breakpoint_location->GetBreakpoint().GetID(),
+                  breakpoint_location->GetID());
+    Address address = breakpoint_location->GetAddress();
+    address.Dump(&stream, process, Address::DumpStyleResolvedDescription,
+                 Address::DumpStyleInvalid);
+    window.PutCStringTruncated(1, stream.GetString().str().c_str());
+  }
+
+  StringList ComputeDetailsList(BreakpointLocationSP breakpoint_location) {
+    StringList details;
+
+    Address address = breakpoint_location->GetAddress();
+    SymbolContext symbol_context;
+    address.CalculateSymbolContext(&symbol_context);
+
+    if (symbol_context.module_sp) {
+      StreamString module_stream;
+      module_stream.PutCString("module = ");
+      symbol_context.module_sp->GetFileSpec().Dump(
+          module_stream.AsRawOstream());
+      details.AppendString(module_stream.GetString());
+    }
+
+    if (symbol_context.comp_unit != nullptr) {
+      StreamString compile_unit_stream;
+      compile_unit_stream.PutCString("compile unit = ");
+      symbol_context.comp_unit->GetPrimaryFile().GetFilename().Dump(
+          &compile_unit_stream);
+      details.AppendString(compile_unit_stream.GetString());
+
+      if (symbol_context.function != nullptr) {
+        StreamString function_stream;
+        function_stream.PutCString("function = ");
+        function_stream.PutCString(
+            symbol_context.function->GetName().AsCString("<unknown>"));
+        details.AppendString(function_stream.GetString());
+      }
+
+      if (symbol_context.line_entry.line > 0) {
+        StreamString location_stream;
+        location_stream.PutCString("location = ");
+        symbol_context.line_entry.DumpStopContext(&location_stream, true);
+        details.AppendString(location_stream.GetString());
+      }
+
+    } else {
+      if (symbol_context.symbol) {
+        StreamString symbol_stream;
+        if (breakpoint_location->IsReExported())
+          symbol_stream.PutCString("re-exported target = ");
+        else
+          symbol_stream.PutCString("symbol = ");
+        symbol_stream.PutCString(
+            symbol_context.symbol->GetName().AsCString("<unknown>"));
+        details.AppendString(symbol_stream.GetString());
+      }
+    }
+
+    Process *process = GetProcess();
+
+    StreamString address_stream;
+    address.Dump(&address_stream, process, Address::DumpStyleLoadAddress,
+                 Address::DumpStyleModuleWithFileAddress);
+    details.AppendString(address_stream.GetString());
+
+    BreakpointSiteSP breakpoint_site = breakpoint_location->GetBreakpointSite();
+    if (breakpoint_location->IsIndirect() && breakpoint_site) {
+      Address resolved_address;
+      resolved_address.SetLoadAddress(breakpoint_site->GetLoadAddress(),
+                                      &breakpoint_location->GetTarget());
+      Symbol *resolved_symbol = resolved_address.CalculateSymbolContextSymbol();
+      if (resolved_symbol) {
+        StreamString indirect_target_stream;
+        indirect_target_stream.PutCString("indirect target = ");
+        indirect_target_stream.PutCString(
+            resolved_symbol->GetName().GetCString());
+        details.AppendString(indirect_target_stream.GetString());
+      }
+    }
+
+    bool is_resolved = breakpoint_location->IsResolved();
+    StreamString resolved_stream;
+    resolved_stream.Printf("resolved = %s", is_resolved ? "true" : "false");
+    details.AppendString(resolved_stream.GetString());
+
+    bool is_hardware = is_resolved && breakpoint_site->IsHardware();
+    StreamString hardware_stream;
+    hardware_stream.Printf("hardware = %s", is_hardware ? "true" : "false");
+    details.AppendString(hardware_stream.GetString());
+
+    StreamString hit_count_stream;
+    hit_count_stream.Printf("hit count = %-4u",
+                            breakpoint_location->GetHitCount());
+    details.AppendString(hit_count_stream.GetString());
+
+    return details;
+  }
+
+  void TreeDelegateGenerateChildren(TreeItem &item) override {
+    BreakpointLocationSP breakpoint_location = GetBreakpointLocation(item);
+    StringList details = ComputeDetailsList(breakpoint_location);
+
+    if (!m_string_delegate_sp)
+      m_string_delegate_sp = std::make_shared<TextTreeDelegate>();
+    TreeItem details_tree_item(&item, *m_string_delegate_sp, false);
+
+    item.Resize(details.GetSize(), details_tree_item);
+    for (size_t i = 0; i < details.GetSize(); i++) {
+      item[i].SetText(details.GetStringAtIndex(i));
+    }
+  }
+
+  bool TreeDelegateItemSelected(TreeItem &item) override { return false; }
+
+protected:
+  Debugger &m_debugger;
+  std::shared_ptr<TextTreeDelegate> m_string_delegate_sp;
+};
+
+class BreakpointTreeDelegate : public TreeDelegate {
+public:
+  BreakpointTreeDelegate(Debugger &debugger)
+      : TreeDelegate(), m_debugger(debugger),
+        m_breakpoint_location_delegate_sp() {}
+
+  ~BreakpointTreeDelegate() override = default;
+
+  BreakpointSP GetBreakpoint(const TreeItem &item) {
+    TargetSP target = m_debugger.GetSelectedTarget();
+    BreakpointList &breakpoints = target->GetBreakpointList(false);
+    return breakpoints.GetBreakpointAtIndex(item.GetIdentifier());
+  }
+
+  void TreeDelegateDrawTreeItem(TreeItem &item, Window &window) override {
+    BreakpointSP breakpoint = GetBreakpoint(item);
+    StreamString stream;
+    stream.Format("{0}: ", breakpoint->GetID());
+    breakpoint->GetResolverDescription(&stream);
+    breakpoint->GetFilterDescription(&stream);
+    window.PutCStringTruncated(1, stream.GetString().str().c_str());
+  }
+
+  void TreeDelegateGenerateChildren(TreeItem &item) override {
+    BreakpointSP breakpoint = GetBreakpoint(item);
+
+    if (!m_breakpoint_location_delegate_sp)
+      m_breakpoint_location_delegate_sp =
+          std::make_shared<BreakpointLocationTreeDelegate>(m_debugger);
+    TreeItem breakpoint_location_tree_item(
+        &item, *m_breakpoint_location_delegate_sp, true);
+
+    item.Resize(breakpoint->GetNumLocations(), breakpoint_location_tree_item);
+    for (size_t i = 0; i < breakpoint->GetNumLocations(); i++) {
+      item[i].SetIdentifier(i);
+      item[i].SetUserData(breakpoint.get());
+    }
+  }
+
+  bool TreeDelegateItemSelected(TreeItem &item) override { return false; }
+
+protected:
+  Debugger &m_debugger;
+  std::shared_ptr<BreakpointLocationTreeDelegate>
+      m_breakpoint_location_delegate_sp;
+};
+
+class BreakpointsTreeDelegate : public TreeDelegate {
+public:
+  BreakpointsTreeDelegate(Debugger &debugger)
+      : TreeDelegate(), m_debugger(debugger), m_breakpoint_delegate_sp() {}
+
+  ~BreakpointsTreeDelegate() override = default;
+
+  bool TreeDelegateShouldDraw() override {
+    TargetSP target = m_debugger.GetSelectedTarget();
+    if (!target)
+      return false;
+
+    return true;
+  }
+
+  void TreeDelegateDrawTreeItem(TreeItem &item, Window &window) override {
+    window.PutCString("Breakpoints");
+  }
+
+  void TreeDelegateGenerateChildren(TreeItem &item) override {
+    TargetSP target = m_debugger.GetSelectedTarget();
+
+    BreakpointList &breakpoints = target->GetBreakpointList(false);
+    std::unique_lock<std::recursive_mutex> lock;
+    breakpoints.GetListMutex(lock);
+
+    if (!m_breakpoint_delegate_sp)
+      m_breakpoint_delegate_sp =
+          std::make_shared<BreakpointTreeDelegate>(m_debugger);
+    TreeItem breakpoint_tree_item(&item, *m_breakpoint_delegate_sp, true);
+
+    item.Resize(breakpoints.GetSize(), breakpoint_tree_item);
+    for (size_t i = 0; i < breakpoints.GetSize(); i++) {
+      item[i].SetIdentifier(i);
+    }
+  }
+
+  bool TreeDelegateItemSelected(TreeItem &item) override { return false; }
+
+  bool TreeDelegateExpandRootByDefault() override { return true; }
+
+protected:
+  Debugger &m_debugger;
+  std::shared_ptr<BreakpointTreeDelegate> m_breakpoint_delegate_sp;
 };
 
 class ValueObjectListDelegate : public WindowDelegate {
 public:
   ValueObjectListDelegate() : m_rows() {}
 
-  ValueObjectListDelegate(ValueObjectList &valobj_list)
-      : m_rows(), m_selected_row(nullptr), m_selected_row_idx(0),
-        m_first_visible_row(0), m_num_rows(0), m_max_x(0), m_max_y(0) {
+  ValueObjectListDelegate(ValueObjectList &valobj_list) : m_rows() {
     SetValues(valobj_list);
   }
 
@@ -4261,9 +5825,11 @@ protected:
         ++m_num_rows;
       }
 
-      auto &children = row.GetChildren();
-      if (row.expanded && !children.empty()) {
-        DisplayRows(window, children, options);
+      if (row.expanded) {
+        auto &children = row.GetChildren();
+        if (!children.empty()) {
+          DisplayRows(window, children, options);
+        }
       }
     }
   }
@@ -4284,11 +5850,13 @@ protected:
         return &row;
       else {
         --row_index;
-        auto &children = row.GetChildren();
-        if (row.expanded && !children.empty()) {
-          Row *result = GetRowForRowIndexImpl(children, row_index);
-          if (result)
-            return result;
+        if (row.expanded) {
+          auto &children = row.GetChildren();
+          if (!children.empty()) {
+            Row *result = GetRowForRowIndexImpl(children, row_index);
+            if (result)
+              return result;
+          }
         }
       }
     }
@@ -4307,8 +5875,7 @@ protected:
 class FrameVariablesWindowDelegate : public ValueObjectListDelegate {
 public:
   FrameVariablesWindowDelegate(Debugger &debugger)
-      : ValueObjectListDelegate(), m_debugger(debugger),
-        m_frame_block(nullptr) {}
+      : ValueObjectListDelegate(), m_debugger(debugger) {}
 
   ~FrameVariablesWindowDelegate() override = default;
 
@@ -4369,7 +5936,7 @@ public:
 
 protected:
   Debugger &m_debugger;
-  Block *m_frame_block;
+  Block *m_frame_block = nullptr;
 };
 
 class RegistersWindowDelegate : public ValueObjectListDelegate {
@@ -4623,7 +6190,7 @@ static const char *CursesKeyToCString(int ch) {
 
 HelpDialogDelegate::HelpDialogDelegate(const char *text,
                                        KeyHelp *key_help_array)
-    : m_text(), m_first_visible_line(0) {
+    : m_text() {
   if (text && text[0]) {
     m_text.SplitIntoLines(text);
     m_text.AppendString("");
@@ -4745,6 +6312,7 @@ public:
     eMenuID_ViewRegisters,
     eMenuID_ViewSource,
     eMenuID_ViewVariables,
+    eMenuID_ViewBreakpoints,
 
     eMenuID_Help,
     eMenuID_HelpGUIHelp
@@ -4809,6 +6377,18 @@ public:
 
   MenuActionResult MenuDelegateAction(Menu &menu) override {
     switch (menu.GetIdentifier()) {
+    case eMenuID_TargetCreate: {
+      WindowSP main_window_sp = m_app.GetMainWindow();
+      FormDelegateSP form_delegate_sp =
+          FormDelegateSP(new TargetCreateFormDelegate(m_debugger));
+      Rect bounds = main_window_sp->GetCenteredRect(80, 19);
+      WindowSP form_window_sp = main_window_sp->CreateSubWindow(
+          form_delegate_sp->GetName().c_str(), bounds, true);
+      WindowDelegateSP window_delegate_sp =
+          WindowDelegateSP(new FormWindowDelegate(form_delegate_sp));
+      form_window_sp->SetDelegate(window_delegate_sp);
+      return MenuActionResult::Handled;
+    }
     case eMenuID_ThreadStepIn: {
       ExecutionContext exe_ctx =
           m_debugger.GetCommandInterpreter().GetExecutionContext();
@@ -4827,8 +6407,11 @@ public:
       if (exe_ctx.HasThreadScope()) {
         Process *process = exe_ctx.GetProcessPtr();
         if (process && process->IsAlive() &&
-            StateIsStoppedState(process->GetState(), true))
-          exe_ctx.GetThreadRef().StepOut();
+            StateIsStoppedState(process->GetState(), true)) {
+          Thread *thread = exe_ctx.GetThreadPtr();
+          uint32_t frame_idx = thread->GetSelectedFrameIndex();
+          exe_ctx.GetThreadRef().StepOut(frame_idx);
+        }
       }
     }
       return MenuActionResult::Handled;
@@ -4849,6 +6432,18 @@ public:
       WindowSP main_window_sp = m_app.GetMainWindow();
       FormDelegateSP form_delegate_sp = FormDelegateSP(
           new ProcessAttachFormDelegate(m_debugger, main_window_sp));
+      Rect bounds = main_window_sp->GetCenteredRect(80, 22);
+      WindowSP form_window_sp = main_window_sp->CreateSubWindow(
+          form_delegate_sp->GetName().c_str(), bounds, true);
+      WindowDelegateSP window_delegate_sp =
+          WindowDelegateSP(new FormWindowDelegate(form_delegate_sp));
+      form_window_sp->SetDelegate(window_delegate_sp);
+      return MenuActionResult::Handled;
+    }
+    case eMenuID_ProcessLaunch: {
+      WindowSP main_window_sp = m_app.GetMainWindow();
+      FormDelegateSP form_delegate_sp = FormDelegateSP(
+          new ProcessLaunchFormDelegate(m_debugger, main_window_sp));
       Rect bounds = main_window_sp->GetCenteredRect(80, 22);
       WindowSP form_window_sp = main_window_sp->CreateSubWindow(
           form_delegate_sp->GetName().c_str(), bounds, true);
@@ -4947,8 +6542,8 @@ public:
         // previously added
         submenus.erase(submenus.begin() + 7, submenus.end());
       }
-      // Since we are adding and removing items we need to recalculate the name
-      // lengths
+      // Since we are adding and removing items we need to recalculate the
+      // name lengths
       menu.RecalculateNameLengths();
     }
       return MenuActionResult::Handled;
@@ -5056,6 +6651,39 @@ public:
     }
       return MenuActionResult::Handled;
 
+    case eMenuID_ViewBreakpoints: {
+      WindowSP main_window_sp = m_app.GetMainWindow();
+      WindowSP threads_window_sp = main_window_sp->FindSubWindow("Threads");
+      WindowSP breakpoints_window_sp =
+          main_window_sp->FindSubWindow("Breakpoints");
+      const Rect threads_bounds = threads_window_sp->GetBounds();
+
+      // If a breakpoints window already exists, remove it and give the area
+      // it used to occupy to the threads window. If it doesn't exist, split
+      // the threads window horizontally into two windows where the top window
+      // is the threads window and the bottom window is a newly added
+      // breakpoints window.
+      if (breakpoints_window_sp) {
+        threads_window_sp->Resize(threads_bounds.size.width,
+                                  threads_bounds.size.height +
+                                      breakpoints_window_sp->GetHeight());
+        main_window_sp->RemoveSubWindow(breakpoints_window_sp.get());
+      } else {
+        Rect new_threads_bounds, breakpoints_bounds;
+        threads_bounds.HorizontalSplitPercentage(0.70, new_threads_bounds,
+                                                 breakpoints_bounds);
+        threads_window_sp->SetBounds(new_threads_bounds);
+        breakpoints_window_sp = main_window_sp->CreateSubWindow(
+            "Breakpoints", breakpoints_bounds, false);
+        TreeDelegateSP breakpoints_delegate_sp(
+            new BreakpointsTreeDelegate(m_debugger));
+        breakpoints_window_sp->SetDelegate(WindowDelegateSP(
+            new TreeWindowDelegate(m_debugger, breakpoints_delegate_sp)));
+      }
+      touchwin(stdscr);
+      return MenuActionResult::Handled;
+    }
+
     case eMenuID_HelpGUIHelp:
       m_app.GetMainWindow()->CreateHelpSubwindow();
       return MenuActionResult::Handled;
@@ -5129,11 +6757,7 @@ class SourceFileWindowDelegate : public WindowDelegate {
 public:
   SourceFileWindowDelegate(Debugger &debugger)
       : WindowDelegate(), m_debugger(debugger), m_sc(), m_file_sp(),
-        m_disassembly_scope(nullptr), m_disassembly_sp(), m_disassembly_range(),
-        m_title(), m_tid(LLDB_INVALID_THREAD_ID), m_line_width(4),
-        m_selected_line(0), m_pc_line(0), m_stop_id(0), m_frame_idx(UINT32_MAX),
-        m_first_visible_line(0), m_first_visible_column(0), m_min_x(0),
-        m_min_y(0), m_max_x(0), m_max_y(0) {}
+        m_disassembly_sp(), m_disassembly_range(), m_title() {}
 
   ~SourceFileWindowDelegate() override = default;
 
@@ -5248,8 +6872,8 @@ public:
             m_selected_line = m_pc_line;
 
           if (m_file_sp && m_file_sp->GetFileSpec() == m_sc.line_entry.file) {
-            // Same file, nothing to do, we should either have the lines or not
-            // (source file missing)
+            // Same file, nothing to do, we should either have the lines or
+            // not (source file missing)
             if (m_selected_line >= static_cast<size_t>(m_first_visible_line)) {
               if (m_selected_line >= m_first_visible_line + num_visible_lines)
                 m_first_visible_line = m_selected_line - 10;
@@ -5361,9 +6985,6 @@ public:
         }
       }
 
-      const attr_t selected_highlight_attr = A_REVERSE;
-      const attr_t pc_highlight_attr = COLOR_PAIR(BlackOnBlue);
-
       for (size_t i = 0; i < num_visible_lines; ++i) {
         const uint32_t curr_line = m_first_visible_line + i;
         if (curr_line < num_source_lines) {
@@ -5371,14 +6992,13 @@ public:
           window.MoveCursor(1, line_y);
           const bool is_pc_line = curr_line == m_pc_line;
           const bool line_is_selected = m_selected_line == curr_line;
-          // Highlight the line as the PC line first, then if the selected line
-          // isn't the same as the PC line, highlight it differently
+          // Highlight the line as the PC line first (done by passing
+          // argument to OutputColoredStringTruncated()), then if the selected
+          // line isn't the same as the PC line, highlight it differently.
           attr_t highlight_attr = 0;
           attr_t bp_attr = 0;
-          if (is_pc_line)
-            highlight_attr = pc_highlight_attr;
-          else if (line_is_selected)
-            highlight_attr = selected_highlight_attr;
+          if (line_is_selected && !is_pc_line)
+            highlight_attr = A_REVERSE;
 
           if (bp_lines.find(curr_line + 1) != bp_lines.end())
             bp_attr = COLOR_PAIR(BlackOnWhite);
@@ -5402,14 +7022,19 @@ public:
             window.AttributeOn(highlight_attr);
 
           StreamString lineStream;
-          m_file_sp->DisplaySourceLines(curr_line + 1, {}, 0, 0, &lineStream);
+
+          llvm::Optional<size_t> column;
+          if (is_pc_line && m_sc.line_entry.IsValid() && m_sc.line_entry.column)
+            column = m_sc.line_entry.column - 1;
+          m_file_sp->DisplaySourceLines(curr_line + 1, column, 0, 0,
+                                        &lineStream);
           StringRef line = lineStream.GetString();
           if (line.endswith("\n"))
             line = line.drop_back();
           bool wasWritten = window.OutputColoredStringTruncated(
-              1, line, m_first_visible_column, line_is_selected);
-          if (line_is_selected && !wasWritten) {
-            // Draw an empty space to show the selected line if empty,
+              1, line, m_first_visible_column, is_pc_line);
+          if (!wasWritten && (line_is_selected || is_pc_line)) {
+            // Draw an empty space to show the selected/PC line if empty,
             // or draw '<' if nothing is visible because of scrolling too much
             // to the right.
             window.PutCStringTruncated(
@@ -5511,8 +7136,8 @@ public:
           window.MoveCursor(1, line_y);
           const bool is_pc_line = frame_sp && inst_idx == pc_idx;
           const bool line_is_selected = m_selected_line == inst_idx;
-          // Highlight the line as the PC line first, then if the selected line
-          // isn't the same as the PC line, highlight it differently
+          // Highlight the line as the PC line first, then if the selected
+          // line isn't the same as the PC line, highlight it differently
           attr_t highlight_attr = 0;
           attr_t bp_attr = 0;
           if (is_pc_line)
@@ -5744,7 +7369,9 @@ public:
             m_debugger.GetCommandInterpreter().GetExecutionContext();
         if (exe_ctx.HasThreadScope() &&
             StateIsStoppedState(exe_ctx.GetProcessRef().GetState(), true)) {
-          exe_ctx.GetThreadRef().StepOut();
+          Thread *thread = exe_ctx.GetThreadPtr();
+          uint32_t frame_idx = thread->GetSelectedFrameIndex();
+          exe_ctx.GetThreadRef().StepOut(frame_idx);
         }
       }
       return eKeyHandled;
@@ -5891,22 +7518,22 @@ protected:
   Debugger &m_debugger;
   SymbolContext m_sc;
   SourceManager::FileSP m_file_sp;
-  SymbolContextScope *m_disassembly_scope;
+  SymbolContextScope *m_disassembly_scope = nullptr;
   lldb::DisassemblerSP m_disassembly_sp;
   AddressRange m_disassembly_range;
   StreamString m_title;
-  lldb::user_id_t m_tid;
-  int m_line_width;
-  uint32_t m_selected_line; // The selected line
-  uint32_t m_pc_line;       // The line with the PC
-  uint32_t m_stop_id;
-  uint32_t m_frame_idx;
-  int m_first_visible_line;
-  int m_first_visible_column;
-  int m_min_x;
-  int m_min_y;
-  int m_max_x;
-  int m_max_y;
+  lldb::user_id_t m_tid = LLDB_INVALID_THREAD_ID;
+  int m_line_width = 4;
+  uint32_t m_selected_line = 0; // The selected line
+  uint32_t m_pc_line = 0;       // The line with the PC
+  uint32_t m_stop_id = 0;
+  uint32_t m_frame_idx = UINT32_MAX;
+  int m_first_visible_line = 0;
+  int m_first_visible_column = 0;
+  int m_min_x = 0;
+  int m_min_y = 0;
+  int m_max_x = 0;
+  int m_max_y = 0;
 };
 
 DisplayOptions ValueObjectListDelegate::g_options = {true};
@@ -5976,7 +7603,7 @@ void IOHandlerCursesGUI::Activate() {
     MenuSP view_menu_sp(
         new Menu("View", "F5", KEY_F(5), ApplicationDelegate::eMenuID_View));
     view_menu_sp->AddSubmenu(
-        MenuSP(new Menu("Backtrace", nullptr, 'b',
+        MenuSP(new Menu("Backtrace", nullptr, 't',
                         ApplicationDelegate::eMenuID_ViewBacktrace)));
     view_menu_sp->AddSubmenu(
         MenuSP(new Menu("Registers", nullptr, 'r',
@@ -5986,6 +7613,9 @@ void IOHandlerCursesGUI::Activate() {
     view_menu_sp->AddSubmenu(
         MenuSP(new Menu("Variables", nullptr, 'v',
                         ApplicationDelegate::eMenuID_ViewVariables)));
+    view_menu_sp->AddSubmenu(
+        MenuSP(new Menu("Breakpoints", nullptr, 'b',
+                        ApplicationDelegate::eMenuID_ViewBreakpoints)));
 
     MenuSP help_menu_sp(
         new Menu("Help", "F6", KEY_F(6), ApplicationDelegate::eMenuID_Help));
@@ -6046,13 +7676,6 @@ void IOHandlerCursesGUI::Activate() {
     status_window_sp->SetDelegate(
         WindowDelegateSP(new StatusBarWindowDelegate(m_debugger)));
 
-    // Show the main help window once the first time the curses GUI is launched
-    static bool g_showed_help = false;
-    if (!g_showed_help) {
-      g_showed_help = true;
-      main_window_sp->CreateHelpSubwindow();
-    }
-
     // All colors with black background.
     init_pair(1, COLOR_BLACK, COLOR_BLACK);
     init_pair(2, COLOR_RED, COLOR_BLACK);
@@ -6077,6 +7700,7 @@ void IOHandlerCursesGUI::Activate() {
     static_assert(LastColorPairIndex == 18, "Color indexes do not match.");
 
     define_key("\033[Z", KEY_SHIFT_TAB);
+    define_key("\033\015", KEY_ALT_ENTER);
   }
 }
 
@@ -6091,7 +7715,9 @@ IOHandlerCursesGUI::~IOHandlerCursesGUI() = default;
 
 void IOHandlerCursesGUI::Cancel() {}
 
-bool IOHandlerCursesGUI::Interrupt() { return false; }
+bool IOHandlerCursesGUI::Interrupt() {
+  return m_debugger.GetCommandInterpreter().IOHandlerInterrupt(*this);
+}
 
 void IOHandlerCursesGUI::GotEOF() {}
 

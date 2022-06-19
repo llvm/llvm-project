@@ -11,8 +11,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_TOOLING_REFACTOR_ATOMICCHANGE_H
-#define LLVM_CLANG_TOOLING_REFACTOR_ATOMICCHANGE_H
+#ifndef LLVM_CLANG_TOOLING_REFACTORING_ATOMICCHANGE_H
+#define LLVM_CLANG_TOOLING_REFACTORING_ATOMICCHANGE_H
 
 #include "clang/Basic/SourceManager.h"
 #include "clang/Format/Format.h"
@@ -116,6 +116,8 @@ public:
   /// Returns a const reference to existing replacements.
   const Replacements &getReplacements() const { return Replaces; }
 
+  Replacements &getReplacements() { return Replaces; }
+
   llvm::ArrayRef<std::string> getInsertedHeaders() const {
     return InsertedHeaders;
   }
@@ -187,4 +189,4 @@ applyAtomicChanges(llvm::StringRef FilePath, llvm::StringRef Code,
 } // end namespace tooling
 } // end namespace clang
 
-#endif // LLVM_CLANG_TOOLING_REFACTOR_ATOMICCHANGE_H
+#endif // LLVM_CLANG_TOOLING_REFACTORING_ATOMICCHANGE_H

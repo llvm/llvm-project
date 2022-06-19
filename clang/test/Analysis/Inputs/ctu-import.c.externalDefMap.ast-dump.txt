@@ -1,1 +1,1 @@
-c:@F@testStaticImplicit ctu-import.c.ast
+23:c:@F@testStaticImplicit ctu-import.c.ast

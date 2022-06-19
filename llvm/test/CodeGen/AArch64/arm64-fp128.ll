@@ -74,9 +74,9 @@ define fp128 @test_div() {
 define dso_local void @test_fptosi() {
 ; CHECK-LABEL: test_fptosi:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    sub sp, sp, #32 // =32
-; CHECK-NEXT:    str x30, [sp, #16] // 8-byte Folded Spill
+; CHECK-NEXT:    sub sp, sp, #32
 ; CHECK-NEXT:    .cfi_def_cfa_offset 32
+; CHECK-NEXT:    str x30, [sp, #16] // 8-byte Folded Spill
 ; CHECK-NEXT:    .cfi_offset w30, -16
 ; CHECK-NEXT:    adrp x8, lhs
 ; CHECK-NEXT:    ldr q0, [x8, :lo12:lhs]
@@ -89,7 +89,7 @@ define dso_local void @test_fptosi() {
 ; CHECK-NEXT:    adrp x8, var64
 ; CHECK-NEXT:    str x0, [x8, :lo12:var64]
 ; CHECK-NEXT:    ldr x30, [sp, #16] // 8-byte Folded Reload
-; CHECK-NEXT:    add sp, sp, #32 // =32
+; CHECK-NEXT:    add sp, sp, #32
 ; CHECK-NEXT:    ret
   %val = load fp128, fp128* @lhs, align 16
 
@@ -105,9 +105,9 @@ define dso_local void @test_fptosi() {
 define dso_local void @test_fptoui() {
 ; CHECK-LABEL: test_fptoui:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    sub sp, sp, #32 // =32
-; CHECK-NEXT:    str x30, [sp, #16] // 8-byte Folded Spill
+; CHECK-NEXT:    sub sp, sp, #32
 ; CHECK-NEXT:    .cfi_def_cfa_offset 32
+; CHECK-NEXT:    str x30, [sp, #16] // 8-byte Folded Spill
 ; CHECK-NEXT:    .cfi_offset w30, -16
 ; CHECK-NEXT:    adrp x8, lhs
 ; CHECK-NEXT:    ldr q0, [x8, :lo12:lhs]
@@ -120,7 +120,7 @@ define dso_local void @test_fptoui() {
 ; CHECK-NEXT:    adrp x8, var64
 ; CHECK-NEXT:    str x0, [x8, :lo12:var64]
 ; CHECK-NEXT:    ldr x30, [sp, #16] // 8-byte Folded Reload
-; CHECK-NEXT:    add sp, sp, #32 // =32
+; CHECK-NEXT:    add sp, sp, #32
 ; CHECK-NEXT:    ret
   %val = load fp128, fp128* @lhs, align 16
 
@@ -204,7 +204,7 @@ define dso_local i1 @test_setcc1() {
 ; CHECK-NEXT:    adrp x8, rhs
 ; CHECK-NEXT:    ldr q1, [x8, :lo12:rhs]
 ; CHECK-NEXT:    bl __letf2
-; CHECK-NEXT:    cmp w0, #0 // =0
+; CHECK-NEXT:    cmp w0, #0
 ; CHECK-NEXT:    cset w0, le
 ; CHECK-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
 ; CHECK-NEXT:    ret
@@ -230,7 +230,7 @@ define dso_local i1 @test_setcc2() {
 ; CHECK-NEXT:    adrp x8, rhs
 ; CHECK-NEXT:    ldr q1, [x8, :lo12:rhs]
 ; CHECK-NEXT:    bl __letf2
-; CHECK-NEXT:    cmp w0, #0 // =0
+; CHECK-NEXT:    cmp w0, #0
 ; CHECK-NEXT:    cset w0, gt
 ; CHECK-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
 ; CHECK-NEXT:    ret
@@ -246,9 +246,9 @@ define dso_local i1 @test_setcc2() {
 define dso_local i1 @test_setcc3() {
 ; CHECK-LABEL: test_setcc3:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    sub sp, sp, #48 // =48
-; CHECK-NEXT:    stp x30, x19, [sp, #32] // 16-byte Folded Spill
+; CHECK-NEXT:    sub sp, sp, #48
 ; CHECK-NEXT:    .cfi_def_cfa_offset 48
+; CHECK-NEXT:    stp x30, x19, [sp, #32] // 16-byte Folded Spill
 ; CHECK-NEXT:    .cfi_offset w19, -8
 ; CHECK-NEXT:    .cfi_offset w30, -16
 ; CHECK-NEXT:    adrp x8, lhs
@@ -257,15 +257,14 @@ define dso_local i1 @test_setcc3() {
 ; CHECK-NEXT:    ldr q1, [x8, :lo12:rhs]
 ; CHECK-NEXT:    stp q1, q0, [sp] // 32-byte Folded Spill
 ; CHECK-NEXT:    bl __eqtf2
-; CHECK-NEXT:    cmp w0, #0 // =0
-; CHECK-NEXT:    cset w19, eq
+; CHECK-NEXT:    mov x19, x0
 ; CHECK-NEXT:    ldp q1, q0, [sp] // 32-byte Folded Reload
 ; CHECK-NEXT:    bl __unordtf2
-; CHECK-NEXT:    cmp w0, #0 // =0
-; CHECK-NEXT:    cset w8, ne
-; CHECK-NEXT:    orr w0, w8, w19
+; CHECK-NEXT:    cmp w0, #0
+; CHECK-NEXT:    ccmp w19, #0, #4, eq
+; CHECK-NEXT:    cset w0, eq
 ; CHECK-NEXT:    ldp x30, x19, [sp, #32] // 16-byte Folded Reload
-; CHECK-NEXT:    add sp, sp, #48 // =48
+; CHECK-NEXT:    add sp, sp, #48
 ; CHECK-NEXT:    ret
 
   %lhs = load fp128, fp128* @lhs, align 16
@@ -277,26 +276,32 @@ define dso_local i1 @test_setcc3() {
 }
 
 
-define dso_local i32 @test_br_cc() {
+define dso_local i32 @test_br_cc() uwtable {
 ; CHECK-LABEL: test_br_cc:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    .cfi_offset w30, -16
+; CHECK-NEXT:    .cfi_remember_state
 ; CHECK-NEXT:    adrp x8, lhs
 ; CHECK-NEXT:    ldr q0, [x8, :lo12:lhs]
 ; CHECK-NEXT:    adrp x8, rhs
 ; CHECK-NEXT:    ldr q1, [x8, :lo12:rhs]
 ; CHECK-NEXT:    bl __lttf2
-; CHECK-NEXT:    cmp w0, #0 // =0
+; CHECK-NEXT:    cmp w0, #0
 ; CHECK-NEXT:    b.ge .LBB11_2
 ; CHECK-NEXT:  // %bb.1: // %iftrue
 ; CHECK-NEXT:    mov w0, #42
 ; CHECK-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
+; CHECK-NEXT:    .cfi_def_cfa_offset 0
+; CHECK-NEXT:    .cfi_restore w30
 ; CHECK-NEXT:    ret
 ; CHECK-NEXT:  .LBB11_2: // %iffalse
+; CHECK-NEXT:    .cfi_restore_state
 ; CHECK-NEXT:    mov w0, #29
 ; CHECK-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
+; CHECK-NEXT:    .cfi_def_cfa_offset 0
+; CHECK-NEXT:    .cfi_restore w30
 ; CHECK-NEXT:    ret
 
   %lhs = load fp128, fp128* @lhs, align 16
@@ -336,9 +341,9 @@ define dso_local void @test_select(i1 %cond, fp128 %lhs, fp128 %rhs) {
 define dso_local void @test_round() {
 ; CHECK-LABEL: test_round:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    sub sp, sp, #32 // =32
-; CHECK-NEXT:    str x30, [sp, #16] // 8-byte Folded Spill
+; CHECK-NEXT:    sub sp, sp, #32
 ; CHECK-NEXT:    .cfi_def_cfa_offset 32
+; CHECK-NEXT:    str x30, [sp, #16] // 8-byte Folded Spill
 ; CHECK-NEXT:    .cfi_offset w30, -16
 ; CHECK-NEXT:    adrp x8, lhs
 ; CHECK-NEXT:    ldr q0, [x8, :lo12:lhs]
@@ -355,7 +360,7 @@ define dso_local void @test_round() {
 ; CHECK-NEXT:    adrp x8, vardouble
 ; CHECK-NEXT:    str d0, [x8, :lo12:vardouble]
 ; CHECK-NEXT:    ldr x30, [sp, #16] // 8-byte Folded Reload
-; CHECK-NEXT:    add sp, sp, #32 // =32
+; CHECK-NEXT:    add sp, sp, #32
 ; CHECK-NEXT:    ret
 
   %val = load fp128, fp128* @lhs, align 16
@@ -415,8 +420,8 @@ define dso_local void @test_extend() {
 define fp128 @test_neg(fp128 %in) {
 ; CHECK-LABEL: test_neg:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    str q0, [sp, #-16]!
+; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    ldrb w8, [sp, #15]
 ; CHECK-NEXT:    eor w8, w8, #0x80
 ; CHECK-NEXT:    strb w8, [sp, #15]

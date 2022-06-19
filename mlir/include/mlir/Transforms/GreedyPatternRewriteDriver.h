@@ -33,8 +33,11 @@ public:
   bool enableRegionSimplification = true;
 
   /// This specifies the maximum number of times the rewriter will iterate
-  /// between applying patterns and simplifying regions.
-  unsigned maxIterations = 10;
+  /// between applying patterns and simplifying regions. Use `kNoIterationLimit`
+  /// to disable this iteration limit.
+  int64_t maxIterations = 10;
+
+  static constexpr int64_t kNoIterationLimit = -1;
 };
 
 //===----------------------------------------------------------------------===//
@@ -91,6 +94,6 @@ bool applyOpPatternsAndFold(ArrayRef<Operation *> ops,
                             const FrozenRewritePatternSet &patterns,
                             bool strict);
 
-} // end namespace mlir
+} // namespace mlir
 
 #endif // MLIR_TRANSFORMS_GREEDYPATTERNREWRITEDRIVER_H_

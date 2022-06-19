@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple x86_64-apple-darwin10 -emit-llvm -fobjc-arc -fobjc-runtime-has-weak -o - -std=c++11 %s | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-apple-darwin10 -emit-llvm -fobjc-arc -fobjc-runtime-has-weak -o - -std=c++11 %s | FileCheck %s
 
 // CHECK: %[[TYPE:[a-z0-9]+]] = type opaque
 // CHECK: @[[CFSTRING:[a-z0-9_]+]] = private global %struct.__NSConstantString_tag

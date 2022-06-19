@@ -11,15 +11,12 @@ from lldbsuite.test import lldbutil
 
 
 class ReproducerFileSystemSensitivityTestCase(TestBase):
-
-    mydir = TestBase.compute_mydir(__file__)
     NO_DEBUG_INFO_TESTCASE = True
 
     @skipIfNetBSD
     @skipIfWindows
     @skipIfRemote
     @skipIfiOSSimulator
-    @skipIfReproducer
     def test_reproducer_attach(self):
         # The reproducer output path. Note that this is on purpose a lower-case
         # file name. See the case-sensitivity check below.

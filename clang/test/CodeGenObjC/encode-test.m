@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple i686-apple-darwin9 -fobjc-runtime=macosx-fragile-10.5 -emit-llvm -o %t %s
+// RUN: %clang_cc1 -no-opaque-pointers -triple i686-apple-darwin9 -fobjc-runtime=macosx-fragile-10.5 -emit-llvm -o %t %s
 // RUN: FileCheck < %t %s
 //
 // CHECK: @OBJC_METH_VAR_TYPE_{{.*}} = private unnamed_addr constant [16 x i8] c"v12@0:4[3[4@]]8\00"
@@ -83,7 +83,7 @@ struct S { int iS; };
 @end
 typedef Object MyObj;
 
-int main()
+int main(void)
 {
 	const char *en = @encode(Derived);
 	const char *eb = @encode(B1);
@@ -188,7 +188,7 @@ size_t strlen(const char *s);
 // CHECK: %[[i:.*]] = alloca i32
 // CHECK: %[[call:.*]] = call i32 @strlen
 // CHECK: store i32 %[[call]], i32* %[[i]]
-void test_strlen() {
+void test_strlen(void) {
   const char array[] = @encode(int);
   int i = strlen(array);
 }

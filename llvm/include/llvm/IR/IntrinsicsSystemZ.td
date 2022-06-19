@@ -144,7 +144,7 @@ multiclass SystemZBinaryCCBHF {
   def fs : SystemZBinaryCC<llvm_v4i32_ty>;
 }
 
-multiclass SystemZCompareBHFG<string name> {
+multiclass SystemZCompareBHFG {
   def bs : SystemZBinaryCC<llvm_v16i8_ty>;
   def hs : SystemZBinaryCC<llvm_v8i16_ty>;
   def fs : SystemZBinaryCC<llvm_v4i32_ty>;
@@ -341,9 +341,9 @@ let TargetPrefix = "s390" in {
 
   def int_s390_vtm : SystemZBinaryConv<"vtm", llvm_i32_ty, llvm_v16i8_ty>;
 
-  defm int_s390_vceq : SystemZCompareBHFG<"vceq">;
-  defm int_s390_vch  : SystemZCompareBHFG<"vch">;
-  defm int_s390_vchl : SystemZCompareBHFG<"vchl">;
+  defm int_s390_vceq : SystemZCompareBHFG;
+  defm int_s390_vch  : SystemZCompareBHFG;
+  defm int_s390_vchl : SystemZCompareBHFG;
 
   defm int_s390_vfae  : SystemZTernaryIntBHF<"vfae">;
   defm int_s390_vfae  : SystemZTernaryIntCCBHF;
@@ -436,6 +436,28 @@ let TargetPrefix = "s390" in {
   def int_s390_vstrszb : SystemZTernaryConvCC<llvm_v16i8_ty, llvm_v16i8_ty>;
   def int_s390_vstrszh : SystemZTernaryConvCC<llvm_v16i8_ty, llvm_v8i16_ty>;
   def int_s390_vstrszf : SystemZTernaryConvCC<llvm_v16i8_ty, llvm_v4i32_ty>;
+
+  // Instructions from the NNP-assist Facility
+  def int_s390_vclfnhs : GCCBuiltin<"__builtin_s390_vclfnhs">,
+                         Intrinsic<[llvm_v4f32_ty],
+                                   [llvm_v8i16_ty, llvm_i32_ty],
+                                   [IntrNoMem, ImmArg<ArgIndex<1>>]>;
+  def int_s390_vclfnls : GCCBuiltin<"__builtin_s390_vclfnls">,
+                         Intrinsic<[llvm_v4f32_ty],
+                                   [llvm_v8i16_ty, llvm_i32_ty],
+                                   [IntrNoMem, ImmArg<ArgIndex<1>>]>;
+  def int_s390_vcrnfs : GCCBuiltin<"__builtin_s390_vcrnfs">,
+                        Intrinsic<[llvm_v8i16_ty],
+                                  [llvm_v4f32_ty, llvm_v4f32_ty, llvm_i32_ty],
+                                  [IntrNoMem, ImmArg<ArgIndex<2>>]>;
+  def int_s390_vcfn : GCCBuiltin<"__builtin_s390_vcfn">,
+                      Intrinsic<[llvm_v8i16_ty],
+                                [llvm_v8i16_ty, llvm_i32_ty],
+                                [IntrNoMem, ImmArg<ArgIndex<1>>]>;
+  def int_s390_vcnf : GCCBuiltin<"__builtin_s390_vcnf">,
+                      Intrinsic<[llvm_v8i16_ty],
+                                [llvm_v8i16_ty, llvm_i32_ty],
+                                [IntrNoMem, ImmArg<ArgIndex<1>>]>;
 }
 
 //===----------------------------------------------------------------------===//

@@ -14,28 +14,10 @@
 #include "llvm-c/Core.h"
 #include "llvm/IR/LegacyPassManager.h"
 #include "llvm/IR/Module.h"
+#include "llvm/Pass.h"
 #include "llvm/Transforms/Instrumentation.h"
-#include "llvm/Transforms/Instrumentation/AddressSanitizer.h"
-#include "llvm/Transforms/Instrumentation/MemorySanitizer.h"
-#include "llvm/Transforms/Instrumentation/ThreadSanitizer.h"
 
 using namespace llvm;
-
-void LLVMAddAddressSanitizerFunctionPass(LLVMPassManagerRef PM) {
-  unwrap(PM)->add(createAddressSanitizerFunctionPass());
-}
-
-void LLVMAddAddressSanitizerModulePass(LLVMPassManagerRef PM) {
-  unwrap(PM)->add(createModuleAddressSanitizerLegacyPassPass());
-}
-
-void LLVMAddThreadSanitizerPass(LLVMPassManagerRef PM) {
-  unwrap(PM)->add(createThreadSanitizerLegacyPassPass());
-}
-
-void LLVMAddMemorySanitizerLegacyPassPass(LLVMPassManagerRef PM) {
-  unwrap(PM)->add(createMemorySanitizerLegacyPassPass());
-}
 
 void LLVMAddDataFlowSanitizerPass(LLVMPassManagerRef PM,
                                   int ABIListFilesNum,

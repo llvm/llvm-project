@@ -4,15 +4,6 @@
 ; RUN: cat %s %t/1 > %t/2
 
 ; By default, the exit block is the second.
-; RUN: opt -insert-gcov-profiling -disable-output %t/2
-; RUN: llvm-cov gcov -n -dump %t/exit-block.gcno 2>&1 | FileCheck --check-prefixes=CHECK,EXIT-SECOND %s
-
-; But we can optionally emit it last, to match GCC<4.8 (r189778).
-; RUN: opt -insert-gcov-profiling -default-gcov-version='407*' -disable-output %t/2
-; RUN: llvm-cov gcov -n -dump %t/exit-block.gcno 2>&1 | FileCheck --check-prefixes=CHECK,EXIT-LAST %s
-; RUN: rm  %t/exit-block.gcno
-
-; By default, the exit block is the second.
 ; RUN: opt -passes=insert-gcov-profiling -disable-output %t/2
 ; RUN: llvm-cov gcov -n -dump %t/exit-block.gcno 2>&1 | FileCheck --check-prefixes=CHECK,EXIT-SECOND %s
 

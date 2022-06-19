@@ -41,7 +41,7 @@ public:
 
   void addFile(InputFile *file);
 
-  void addCombinedLTOObject();
+  void compileBitcodeFiles();
 
   ArrayRef<Symbol *> getSymbols() const { return symVector; }
 
@@ -79,6 +79,10 @@ public:
                             llvm::Optional<StringRef> importModule,
                             uint32_t flags, InputFile *file,
                             const WasmTableType *type);
+  Symbol *addUndefinedTag(StringRef name, llvm::Optional<StringRef> importName,
+                          llvm::Optional<StringRef> importModule,
+                          uint32_t flags, InputFile *file,
+                          const WasmSignature *sig);
 
   TableSymbol *resolveIndirectFunctionTable(bool required);
 

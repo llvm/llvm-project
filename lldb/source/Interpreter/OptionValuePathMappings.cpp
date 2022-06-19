@@ -9,20 +9,18 @@
 #include "lldb/Interpreter/OptionValuePathMappings.h"
 
 #include "lldb/Host/FileSystem.h"
-#include "lldb/Host/StringConvert.h"
 #include "lldb/Utility/Args.h"
 #include "lldb/Utility/FileSpec.h"
 #include "lldb/Utility/Stream.h"
 
 using namespace lldb;
 using namespace lldb_private;
-namespace {
+
 static bool VerifyPathExists(const char *path) {
   if (path && path[0])
     return FileSystem::Instance().Exists(path);
   else
     return false;
-}
 }
 
 void OptionValuePathMappings::DumpValue(const ExecutionContext *exe_ctx,
@@ -52,23 +50,22 @@ Status OptionValuePathMappings::SetValueFromString(llvm::StringRef value,
     // Must be at least one index + 1 pair of paths, and the pair count must be
     // even
     if (argc >= 3 && (((argc - 1) & 1) == 0)) {
-      uint32_t idx =
-          StringConvert::ToUInt32(args.GetArgumentAtIndex(0), UINT32_MAX);
+      uint32_t idx;
       const uint32_t count = m_path_mappings.GetSize();
-      if (idx > count) {
+      if (!llvm::to_integer(args.GetArgumentAtIndex(0), idx) || idx > count) {
         error.SetErrorStringWithFormat(
-            "invalid file list index %u, index must be 0 through %u", idx,
-            count);
+            "invalid file list index %s, index must be 0 through %u",
+            args.GetArgumentAtIndex(0), count);
       } else {
         bool changed = false;
         for (size_t i = 1; i < argc; idx++, i += 2) {
           const char *orginal_path = args.GetArgumentAtIndex(i);
           const char *replace_path = args.GetArgumentAtIndex(i + 1);
           if (VerifyPathExists(replace_path)) {
-            ConstString a(orginal_path);
-            ConstString b(replace_path);
-            if (!m_path_mappings.Replace(a, b, idx, m_notify_changes))
-              m_path_mappings.Append(a, b, m_notify_changes);
+            if (!m_path_mappings.Replace(orginal_path, replace_path, idx,
+                                         m_notify_changes))
+              m_path_mappings.Append(orginal_path, replace_path,
+                                     m_notify_changes);
             changed = true;
           } else {
             std::string previousError =
@@ -105,9 +102,7 @@ Status OptionValuePathMappings::SetValueFromString(llvm::StringRef value,
         const char *orginal_path = args.GetArgumentAtIndex(i);
         const char *replace_path = args.GetArgumentAtIndex(i + 1);
         if (VerifyPathExists(replace_path)) {
-          ConstString a(orginal_path);
-          ConstString b(replace_path);
-          m_path_mappings.Append(a, b, m_notify_changes);
+          m_path_mappings.Append(orginal_path, replace_path, m_notify_changes);
           m_value_was_set = true;
           changed = true;
         } else {
@@ -128,13 +123,12 @@ Status OptionValuePathMappings::SetValueFromString(llvm::StringRef value,
     // Must be at least one index + 1 pair of paths, and the pair count must be
     // even
     if (argc >= 3 && (((argc - 1) & 1) == 0)) {
-      uint32_t idx =
-          StringConvert::ToUInt32(args.GetArgumentAtIndex(0), UINT32_MAX);
+      uint32_t idx;
       const uint32_t count = m_path_mappings.GetSize();
-      if (idx > count) {
+      if (!llvm::to_integer(args.GetArgumentAtIndex(0), idx) || idx > count) {
         error.SetErrorStringWithFormat(
-            "invalid file list index %u, index must be 0 through %u", idx,
-            count);
+            "invalid file list index %s, index must be 0 through %u",
+            args.GetArgumentAtIndex(0), count);
       } else {
         bool changed = false;
         if (op == eVarSetOperationInsertAfter)
@@ -143,9 +137,8 @@ Status OptionValuePathMappings::SetValueFromString(llvm::StringRef value,
           const char *orginal_path = args.GetArgumentAtIndex(i);
           const char *replace_path = args.GetArgumentAtIndex(i + 1);
           if (VerifyPathExists(replace_path)) {
-            ConstString a(orginal_path);
-            ConstString b(replace_path);
-            m_path_mappings.Insert(a, b, idx, m_notify_changes);
+            m_path_mappings.Insert(orginal_path, replace_path, idx,
+                                   m_notify_changes);
             changed = true;
             idx++;
           } else {
@@ -169,9 +162,9 @@ Status OptionValuePathMappings::SetValueFromString(llvm::StringRef value,
     if (argc > 0) {
       std::vector<int> remove_indexes;
       for (size_t i = 0; i < argc; ++i) {
-        int idx =
-            StringConvert::ToSInt32(args.GetArgumentAtIndex(i), INT32_MAX);
-        if (idx < 0 || idx >= (int)m_path_mappings.GetSize()) {
+        int idx;
+        if (!llvm::to_integer(args.GetArgumentAtIndex(i), idx) || idx < 0 ||
+            idx >= (int)m_path_mappings.GetSize()) {
           error.SetErrorStringWithFormat(
               "invalid array index '%s', aborting remove operation",
               args.GetArgumentAtIndex(i));

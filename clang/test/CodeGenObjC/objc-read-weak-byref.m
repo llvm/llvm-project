@@ -1,13 +1,13 @@
-// RUN: %clang_cc1 -fblocks -fobjc-gc -triple x86_64-apple-darwin -fobjc-runtime=macosx-fragile-10.5 -emit-llvm %s -o - | \
+// RUN: %clang_cc1 -no-opaque-pointers -fblocks -fobjc-gc -triple x86_64-apple-darwin -fobjc-runtime=macosx-fragile-10.5 -emit-llvm %s -o - | \
 // RUN: FileCheck %s
-// RUN: %clang_cc1 -fblocks -fobjc-gc -triple i386-apple-darwin -fobjc-runtime=macosx-fragile-10.5 -emit-llvm %s -o - | \
+// RUN: %clang_cc1 -no-opaque-pointers -fblocks -fobjc-gc -triple i386-apple-darwin -fobjc-runtime=macosx-fragile-10.5 -emit-llvm %s -o - | \
 // RUN: FileCheck %s
 
 @interface NSObject 
 - copy;
 @end
 
-int main() {
+int main(void) {
     NSObject *object = 0;
     __weak __block NSObject* weak_object = object;
     void (^callback) (void) = [^{

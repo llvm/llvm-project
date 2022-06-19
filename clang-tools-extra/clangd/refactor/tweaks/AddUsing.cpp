@@ -8,7 +8,6 @@
 
 #include "AST.h"
 #include "Config.h"
-#include "FindTarget.h"
 #include "refactor/Tweak.h"
 #include "support/Logger.h"
 #include "clang/AST/Decl.h"
@@ -79,6 +78,8 @@ public:
   }
 
   bool TraverseDecl(Decl *Node) {
+    if (!Node)
+      return true;
     // There is no need to go deeper into nodes that do not enclose selection,
     // since "using" there will not affect selection, nor would it make a good
     // insertion point.
@@ -187,7 +188,7 @@ findInsertionPoint(const Tweak::Selection &Inputs,
       return Tok.kind() == tok::l_brace;
     });
     if (Tok == Toks.end() || Tok->endLocation().isInvalid()) {
-      return error("Namespace with no {");
+      return error("Namespace with no {{");
     }
     if (!Tok->endLocation().isMacroID() && IsValidPoint(Tok->endLocation())) {
       InsertionPointData Out;
@@ -236,7 +237,7 @@ bool AddUsing::prepare(const Selection &Inputs) {
   const auto &TB = Inputs.AST->getTokens();
 
   // Do not suggest "using" in header files. That way madness lies.
-  if (isHeaderFile(SM.getFileEntryForID(SM.getMainFileID())->getName(),
+  if (isHeaderFile(SM.getFileEntryRefForID(SM.getMainFileID())->getName(),
                    Inputs.AST->getLangOpts()))
     return false;
 
@@ -250,11 +251,13 @@ bool AddUsing::prepare(const Selection &Inputs) {
   for (; Node->Parent; Node = Node->Parent) {
     if (Node->ASTNode.get<NestedNameSpecifierLoc>()) {
       continue;
-    } else if (auto *T = Node->ASTNode.get<TypeLoc>()) {
+    }
+    if (auto *T = Node->ASTNode.get<TypeLoc>()) {
       if (T->getAs<ElaboratedTypeLoc>()) {
         break;
-      } else if (Node->Parent->ASTNode.get<TypeLoc>() ||
-                 Node->Parent->ASTNode.get<NestedNameSpecifierLoc>()) {
+      }
+      if (Node->Parent->ASTNode.get<TypeLoc>() ||
+          Node->Parent->ASTNode.get<NestedNameSpecifierLoc>()) {
         // Node is TypeLoc, but it's parent is either TypeLoc or
         // NestedNameSpecifier. In both cases, we want to go up, to find
         // the outermost TypeLoc.
@@ -278,8 +281,13 @@ bool AddUsing::prepare(const Selection &Inputs) {
       if (!QualifierToRemove)
         return false;
 
-      auto SpelledTokens =
-          TB.spelledForExpanded(TB.expandedTokens(E.getSourceRange()));
+      auto NameRange = E.getSourceRange();
+      if (auto T = E.getNamedTypeLoc().getAs<TemplateSpecializationTypeLoc>()) {
+        // Remove the template arguments from the name.
+        NameRange.setEnd(T.getLAngleLoc().getLocWithOffset(-1));
+      }
+
+      auto SpelledTokens = TB.spelledForExpanded(TB.expandedTokens(NameRange));
       if (!SpelledTokens)
         return false;
       auto SpelledRange = syntax::Token::range(SM, SpelledTokens->front(),

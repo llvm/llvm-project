@@ -26,6 +26,7 @@
 //  i -> int
 //  h -> half (__fp16, OpenCL)
 //  x -> half (_Float16)
+//  y -> half (__bf16)
 //  f -> float
 //  d -> double
 //  z -> size_t
@@ -80,9 +81,9 @@
 //       builtin even if type doesn't match signature, and don't warn if we
 //       can't be sure the type is right
 //  F -> this is a libc/libm function with a '__builtin_' prefix added.
-//  f -> this is a libc/libm function without the '__builtin_' prefix. It can
-//       be followed by ':headername:' to state which header this function
-//       comes from.
+//  f -> this is a libc/libm function without a '__builtin_' prefix, or with
+//       'z', a C++ standard library function in namespace std::. This builtin
+//       is disableable by '-fno-builtin-foo' / '-fno-builtin-std-foo'.
 //  h -> this function requires a specific header or an explicit declaration.
 //  i -> this is a runtime library implemented function without the
 //       '__builtin_' prefix. It will be implemented in compiler-rt or libgcc.
@@ -102,6 +103,7 @@
 //  V:N: -> requires vectors of at least N bits to be legal
 //  C<N,M_0,...,M_k> -> callback behavior: argument N is called with argument
 //                      M_0, ..., M_k as payload
+//  z -> this is a function in (possibly-versioned) namespace std
 //  FIXME: gcc has nonnull
 
 #if defined(BUILTIN) && !defined(LIBBUILTIN)
@@ -140,10 +142,12 @@ BUILTIN(__builtin_frexpf128, "LLdLLdi*", "Fn")
 BUILTIN(__builtin_huge_val, "d", "nc")
 BUILTIN(__builtin_huge_valf, "f", "nc")
 BUILTIN(__builtin_huge_vall, "Ld", "nc")
+BUILTIN(__builtin_huge_valf16, "x", "nc")
 BUILTIN(__builtin_huge_valf128, "LLd", "nc")
 BUILTIN(__builtin_inf  , "d"   , "nc")
 BUILTIN(__builtin_inff , "f"   , "nc")
 BUILTIN(__builtin_infl , "Ld"  , "nc")
+BUILTIN(__builtin_inff16 , "x"  , "nc")
 BUILTIN(__builtin_inff128 , "LLd"  , "nc")
 BUILTIN(__builtin_labs , "LiLi"  , "Fnc")
 BUILTIN(__builtin_llabs, "LLiLLi", "Fnc")
@@ -158,10 +162,12 @@ BUILTIN(__builtin_modff128, "LLdLLdLLd*", "Fn")
 BUILTIN(__builtin_nan,  "dcC*" , "FnU")
 BUILTIN(__builtin_nanf, "fcC*" , "FnU")
 BUILTIN(__builtin_nanl, "LdcC*", "FnU")
+BUILTIN(__builtin_nanf16, "xcC*", "FnU")
 BUILTIN(__builtin_nanf128, "LLdcC*", "FnU")
 BUILTIN(__builtin_nans,  "dcC*" , "FnU")
 BUILTIN(__builtin_nansf, "fcC*" , "FnU")
 BUILTIN(__builtin_nansl, "LdcC*", "FnU")
+BUILTIN(__builtin_nansf16, "xcC*", "FnU")
 BUILTIN(__builtin_nansf128, "LLdcC*", "FnU")
 BUILTIN(__builtin_powi , "ddi"  , "Fnc")
 BUILTIN(__builtin_powif, "ffi"  , "Fnc")
@@ -549,10 +555,11 @@ BUILTIN(__builtin_malloc, "v*z", "nF")
 BUILTIN(__builtin_memchr, "v*vC*iz", "nF")
 BUILTIN(__builtin_memcmp, "ivC*vC*z", "nF")
 BUILTIN(__builtin_memcpy, "v*v*vC*z", "nF")
-BUILTIN(__builtin_memcpy_inline, "vv*vC*Iz", "nt")
+BUILTIN(__builtin_memcpy_inline, "vv*vC*Iz", "n")
 BUILTIN(__builtin_memmove, "v*v*vC*z", "nF")
 BUILTIN(__builtin_mempcpy, "v*v*vC*z", "nF")
 BUILTIN(__builtin_memset, "v*v*iz", "nF")
+BUILTIN(__builtin_memset_inline, "vv*iIz", "n")
 BUILTIN(__builtin_printf, "icC*.", "Fp:0:")
 BUILTIN(__builtin_stpcpy, "c*c*cC*", "nF")
 BUILTIN(__builtin_stpncpy, "c*c*cC*z", "nF")
@@ -642,8 +649,27 @@ BUILTIN(__builtin_unreachable, "v", "nr")
 BUILTIN(__builtin_shufflevector, "v."   , "nct")
 BUILTIN(__builtin_convertvector, "v."   , "nct")
 BUILTIN(__builtin_alloca, "v*z"   , "Fn")
+BUILTIN(__builtin_alloca_uninitialized, "v*z", "Fn")
 BUILTIN(__builtin_alloca_with_align, "v*zIz", "Fn")
+BUILTIN(__builtin_alloca_with_align_uninitialized, "v*zIz", "Fn")
 BUILTIN(__builtin_call_with_static_chain, "v.", "nt")
+
+BUILTIN(__builtin_elementwise_abs, "v.", "nct")
+BUILTIN(__builtin_elementwise_max, "v.", "nct")
+BUILTIN(__builtin_elementwise_min, "v.", "nct")
+BUILTIN(__builtin_elementwise_ceil, "v.", "nct")
+BUILTIN(__builtin_elementwise_floor, "v.", "nct")
+BUILTIN(__builtin_elementwise_roundeven, "v.", "nct")
+BUILTIN(__builtin_elementwise_trunc, "v.", "nct")
+BUILTIN(__builtin_elementwise_add_sat, "v.", "nct")
+BUILTIN(__builtin_elementwise_sub_sat, "v.", "nct")
+BUILTIN(__builtin_reduce_max, "v.", "nct")
+BUILTIN(__builtin_reduce_min, "v.", "nct")
+BUILTIN(__builtin_reduce_xor, "v.", "nct")
+BUILTIN(__builtin_reduce_or, "v.", "nct")
+BUILTIN(__builtin_reduce_and, "v.", "nct")
+BUILTIN(__builtin_reduce_add, "v.", "nct")
+BUILTIN(__builtin_reduce_mul, "v.", "nct")
 
 BUILTIN(__builtin_matrix_transpose, "v.", "nFt")
 BUILTIN(__builtin_matrix_column_major_load, "v.", "nFt")
@@ -794,6 +820,7 @@ ATOMIC_BUILTIN(__c11_atomic_fetch_sub, "v.", "t")
 ATOMIC_BUILTIN(__c11_atomic_fetch_and, "v.", "t")
 ATOMIC_BUILTIN(__c11_atomic_fetch_or, "v.", "t")
 ATOMIC_BUILTIN(__c11_atomic_fetch_xor, "v.", "t")
+ATOMIC_BUILTIN(__c11_atomic_fetch_nand, "v.", "t")
 ATOMIC_BUILTIN(__c11_atomic_fetch_max, "v.", "t")
 ATOMIC_BUILTIN(__c11_atomic_fetch_min, "v.", "t")
 BUILTIN(__c11_atomic_thread_fence, "vi", "n")
@@ -849,6 +876,19 @@ ATOMIC_BUILTIN(__opencl_atomic_fetch_max, "v.", "t")
 ATOMIC_BUILTIN(__atomic_fetch_min, "v.", "t")
 ATOMIC_BUILTIN(__atomic_fetch_max, "v.", "t")
 
+// HIP atomic builtins.
+ATOMIC_BUILTIN(__hip_atomic_load, "v.", "t")
+ATOMIC_BUILTIN(__hip_atomic_store, "v.", "t")
+ATOMIC_BUILTIN(__hip_atomic_compare_exchange_weak, "v.", "t")
+ATOMIC_BUILTIN(__hip_atomic_compare_exchange_strong, "v.", "t")
+ATOMIC_BUILTIN(__hip_atomic_exchange, "v.", "t")
+ATOMIC_BUILTIN(__hip_atomic_fetch_add, "v.", "t")
+ATOMIC_BUILTIN(__hip_atomic_fetch_and, "v.", "t")
+ATOMIC_BUILTIN(__hip_atomic_fetch_or, "v.", "t")
+ATOMIC_BUILTIN(__hip_atomic_fetch_xor, "v.", "t")
+ATOMIC_BUILTIN(__hip_atomic_fetch_min, "v.", "t")
+ATOMIC_BUILTIN(__hip_atomic_fetch_max, "v.", "t")
+
 #undef ATOMIC_BUILTIN
 
 // Non-overloaded atomic builtins.
@@ -889,7 +929,7 @@ LANGBUILTIN(__exception_info, "v*",  "n", ALL_MS_LANGUAGES)
 LANGBUILTIN(_exception_info,  "v*",  "n", ALL_MS_LANGUAGES)
 LANGBUILTIN(__abnormal_termination, "i", "n", ALL_MS_LANGUAGES)
 LANGBUILTIN(_abnormal_termination,  "i", "n", ALL_MS_LANGUAGES)
-LANGBUILTIN(__GetExceptionInfo, "v*.", "ntu", ALL_MS_LANGUAGES)
+LANGBUILTIN(__GetExceptionInfo, "v*.", "zntu", ALL_MS_LANGUAGES)
 LANGBUILTIN(_InterlockedAnd8,   "ccD*c",        "n", ALL_MS_LANGUAGES)
 LANGBUILTIN(_InterlockedAnd16,  "ssD*s",        "n", ALL_MS_LANGUAGES)
 LANGBUILTIN(_InterlockedAnd,    "NiNiD*Ni",     "n", ALL_MS_LANGUAGES)
@@ -1513,6 +1553,15 @@ LIBBUILTIN(_Block_object_assign, "vv*vC*iC", "f", "Blocks.h", ALL_LANGUAGES)
 LIBBUILTIN(_Block_object_dispose, "vvC*iC", "f", "Blocks.h", ALL_LANGUAGES)
 // FIXME: Also declare NSConcreteGlobalBlock and NSConcreteStackBlock.
 
+// C++ standard library builtins in namespace 'std'.
+LIBBUILTIN(addressof, "v*v&", "zfncTh", "memory", CXX_LANG)
+// Synonym for addressof used internally by libstdc++.
+LANGBUILTIN(__addressof, "v*v&", "zfncT", CXX_LANG)
+LIBBUILTIN(as_const, "v&v&", "zfncTh", "utility", CXX_LANG)
+LIBBUILTIN(forward, "v&v&", "zfncTh", "utility", CXX_LANG)
+LIBBUILTIN(move, "v&v&", "zfncTh", "utility", CXX_LANG)
+LIBBUILTIN(move_if_noexcept, "v&v&", "zfncTh", "utility", CXX_LANG)
+
 // Annotation function
 BUILTIN(__builtin_annotation, "v.", "tn")
 
@@ -1556,10 +1605,11 @@ BUILTIN(__builtin_smulll_overflow, "bSLLiCSLLiCSLLi*", "n")
 
 // Clang builtins (not available in GCC).
 BUILTIN(__builtin_addressof, "v*v&", "nct")
+BUILTIN(__builtin_function_start, "v*v&", "nct")
 BUILTIN(__builtin_operator_new, "v*z", "tc")
 BUILTIN(__builtin_operator_delete, "vv*", "tn")
 BUILTIN(__builtin_char_memchr, "c*cC*iz", "n")
-BUILTIN(__builtin_dump_struct, "ivC*v*", "tn")
+BUILTIN(__builtin_dump_struct, "v.", "t")
 BUILTIN(__builtin_preserve_access_index, "v.", "t")
 
 // Alignment builtins (uses custom parsing to support pointers and integers)
@@ -1593,54 +1643,53 @@ LANGBUILTIN(__builtin_coro_alloc, "b", "n", COR_LANG)
 LANGBUILTIN(__builtin_coro_begin, "v*v*", "n", COR_LANG)
 LANGBUILTIN(__builtin_coro_end, "bv*Ib", "n", COR_LANG)
 LANGBUILTIN(__builtin_coro_suspend, "cIb", "n", COR_LANG)
-LANGBUILTIN(__builtin_coro_param, "bv*v*", "n", COR_LANG)
 
 // OpenCL v2.0 s6.13.16, s9.17.3.5 - Pipe functions.
 // We need the generic prototype, since the packet type could be anything.
-LANGBUILTIN(read_pipe, "i.", "tn", OCLC20_LANG)
-LANGBUILTIN(write_pipe, "i.", "tn", OCLC20_LANG)
+LANGBUILTIN(read_pipe, "i.", "tn", OCL_PIPE)
+LANGBUILTIN(write_pipe, "i.", "tn", OCL_PIPE)
 
-LANGBUILTIN(reserve_read_pipe, "i.", "tn", OCLC20_LANG)
-LANGBUILTIN(reserve_write_pipe, "i.", "tn", OCLC20_LANG)
+LANGBUILTIN(reserve_read_pipe, "i.", "tn", OCL_PIPE)
+LANGBUILTIN(reserve_write_pipe, "i.", "tn", OCL_PIPE)
 
-LANGBUILTIN(commit_write_pipe, "v.", "tn", OCLC20_LANG)
-LANGBUILTIN(commit_read_pipe, "v.", "tn", OCLC20_LANG)
+LANGBUILTIN(commit_write_pipe, "v.", "tn", OCL_PIPE)
+LANGBUILTIN(commit_read_pipe, "v.", "tn", OCL_PIPE)
 
-LANGBUILTIN(sub_group_reserve_read_pipe, "i.", "tn", OCLC20_LANG)
-LANGBUILTIN(sub_group_reserve_write_pipe, "i.", "tn", OCLC20_LANG)
+LANGBUILTIN(sub_group_reserve_read_pipe, "i.", "tn", OCL_PIPE)
+LANGBUILTIN(sub_group_reserve_write_pipe, "i.", "tn", OCL_PIPE)
 
-LANGBUILTIN(sub_group_commit_read_pipe, "v.", "tn", OCLC20_LANG)
-LANGBUILTIN(sub_group_commit_write_pipe, "v.", "tn", OCLC20_LANG)
+LANGBUILTIN(sub_group_commit_read_pipe, "v.", "tn", OCL_PIPE)
+LANGBUILTIN(sub_group_commit_write_pipe, "v.", "tn", OCL_PIPE)
 
-LANGBUILTIN(work_group_reserve_read_pipe, "i.", "tn", OCLC20_LANG)
-LANGBUILTIN(work_group_reserve_write_pipe, "i.", "tn", OCLC20_LANG)
+LANGBUILTIN(work_group_reserve_read_pipe, "i.", "tn", OCL_PIPE)
+LANGBUILTIN(work_group_reserve_write_pipe, "i.", "tn", OCL_PIPE)
 
-LANGBUILTIN(work_group_commit_read_pipe, "v.", "tn", OCLC20_LANG)
-LANGBUILTIN(work_group_commit_write_pipe, "v.", "tn", OCLC20_LANG)
+LANGBUILTIN(work_group_commit_read_pipe, "v.", "tn", OCL_PIPE)
+LANGBUILTIN(work_group_commit_write_pipe, "v.", "tn", OCL_PIPE)
 
-LANGBUILTIN(get_pipe_num_packets, "Ui.", "tn", OCLC20_LANG)
-LANGBUILTIN(get_pipe_max_packets, "Ui.", "tn", OCLC20_LANG)
+LANGBUILTIN(get_pipe_num_packets, "Ui.", "tn", OCL_PIPE)
+LANGBUILTIN(get_pipe_max_packets, "Ui.", "tn", OCL_PIPE)
 
 // OpenCL v2.0 s6.13.17 - Enqueue kernel functions.
 // Custom builtin check allows to perform special check of passed block arguments.
-LANGBUILTIN(enqueue_kernel, "i.", "tn", OCLC20_LANG)
-LANGBUILTIN(get_kernel_work_group_size, "Ui.", "tn", OCLC20_LANG)
-LANGBUILTIN(get_kernel_preferred_work_group_size_multiple, "Ui.", "tn", OCLC20_LANG)
-LANGBUILTIN(get_kernel_max_sub_group_size_for_ndrange, "Ui.", "tn", OCLC20_LANG)
-LANGBUILTIN(get_kernel_sub_group_count_for_ndrange, "Ui.", "tn", OCLC20_LANG)
+LANGBUILTIN(enqueue_kernel, "i.", "tn", OCL_DSE)
+LANGBUILTIN(get_kernel_work_group_size, "Ui.", "tn", OCL_DSE)
+LANGBUILTIN(get_kernel_preferred_work_group_size_multiple, "Ui.", "tn", OCL_DSE)
+LANGBUILTIN(get_kernel_max_sub_group_size_for_ndrange, "Ui.", "tn", OCL_DSE)
+LANGBUILTIN(get_kernel_sub_group_count_for_ndrange, "Ui.", "tn", OCL_DSE)
 
 // OpenCL v2.0 s6.13.9 - Address space qualifier functions.
 // FIXME: Pointer parameters of OpenCL builtins should have their address space
 // requirement defined.
-LANGBUILTIN(to_global, "v*v*", "tn", OCLC20_LANG)
-LANGBUILTIN(to_local, "v*v*", "tn", OCLC20_LANG)
-LANGBUILTIN(to_private, "v*v*", "tn", OCLC20_LANG)
+LANGBUILTIN(to_global, "v*v*", "tn", OCL_GAS)
+LANGBUILTIN(to_local, "v*v*", "tn", OCL_GAS)
+LANGBUILTIN(to_private, "v*v*", "tn", OCL_GAS)
 
 // OpenCL half load/store builtin
-LANGBUILTIN(__builtin_store_half, "vdh*", "n", ALL_OCLC_LANGUAGES)
-LANGBUILTIN(__builtin_store_halff, "vfh*", "n", ALL_OCLC_LANGUAGES)
-LANGBUILTIN(__builtin_load_half, "dhC*", "nc", ALL_OCLC_LANGUAGES)
-LANGBUILTIN(__builtin_load_halff, "fhC*", "nc", ALL_OCLC_LANGUAGES)
+LANGBUILTIN(__builtin_store_half, "vdh*", "n", ALL_OCL_LANGUAGES)
+LANGBUILTIN(__builtin_store_halff, "vfh*", "n", ALL_OCL_LANGUAGES)
+LANGBUILTIN(__builtin_load_half, "dhC*", "nc", ALL_OCL_LANGUAGES)
+LANGBUILTIN(__builtin_load_halff, "fhC*", "nc", ALL_OCL_LANGUAGES)
 
 // Builtins for os_log/os_trace
 BUILTIN(__builtin_os_log_format_buffer_size, "zcC*.", "p:0:nut")
@@ -1648,6 +1697,9 @@ BUILTIN(__builtin_os_log_format, "v*v*cC*.", "p:0:nt")
 
 // CUDA/HIP
 LANGBUILTIN(__builtin_get_device_side_mangled_name, "cC*.", "ncT", CUDA_LANG)
+
+// HLSL
+LANGBUILTIN(WaveActiveCountBits, "Uib", "nc", HLSL_LANG)
 
 // Builtins for XRay
 BUILTIN(__xray_customevent, "vcC*z", "")

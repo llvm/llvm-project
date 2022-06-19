@@ -29,10 +29,3 @@
 
 	.type string_type, "function"
 // CHECK: .type string_type,@function
-
-	.type special gnu_unique_object
-// CHECK: .type special,@gnu_unique_object
-
-	.type comma_special, gnu_unique_object
-// CHECK: .type comma_special,@gnu_unique_object
-

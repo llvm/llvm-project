@@ -63,6 +63,20 @@ struct stat_and_more {
   unsigned char z;
 };
 
+static void get_temp_dir(char *buf, size_t bufsize) {
+#if SANITIZER_WINDOWS
+  buf[0] = '\0';
+  if (!::GetTempPathA(bufsize, buf))
+    return;
+#else
+  const char *tmpdir = "/tmp";
+#  if SANITIZER_ANDROID
+  tmpdir = GetEnv("TMPDIR");
+#  endif
+  internal_snprintf(buf, bufsize, "%s", tmpdir);
+#endif
+}
+
 static void temp_file_name(char *buf, size_t bufsize, const char *prefix) {
 #if SANITIZER_WINDOWS
   buf[0] = '\0';
@@ -77,11 +91,7 @@ static void temp_file_name(char *buf, size_t bufsize, const char *prefix) {
 #else
   const char *tmpdir = "/tmp";
 #if SANITIZER_ANDROID
-  // I don't know a way to query temp directory location on Android without
-  // going through Java interfaces. The code below is not ideal, but should
-  // work. May require "adb root", but it is needed for almost any use of ASan
-  // on Android already.
-  tmpdir = GetEnv("EXTERNAL_STORAGE");
+  tmpdir = GetEnv("TMPDIR");
 #endif
   internal_snprintf(buf, bufsize, "%s/%sXXXXXX", tmpdir, prefix);
   ASSERT_TRUE(mkstemp(buf));
@@ -113,7 +123,7 @@ TEST(SanitizerCommon, FileOps) {
 
   fd = OpenFile(tmpfile, WrOnly);
   ASSERT_NE(fd, kInvalidFd);
-#if SANITIZER_POSIX && !SANITIZER_MAC
+#if SANITIZER_POSIX && !SANITIZER_APPLE
   EXPECT_EQ(internal_lseek(fd, 0, SEEK_END), 0u);
 #endif
   uptr bytes_written = 0;
@@ -283,8 +293,25 @@ TEST(SanitizerCommon, InternalStrFunctions) {
   EXPECT_EQ(retval, (uptr)9);
 }
 
+TEST(SanitizerCommon, InternalWideStringFunctions) {
+  const wchar_t *emptystr = L"";
+  const wchar_t *samesizestr = L"1234567";
+  const wchar_t *shortstr = L"123";
+  const wchar_t *longerstr = L"123456789";
+
+  ASSERT_EQ(internal_wcslen(emptystr), 0ul);
+  ASSERT_EQ(internal_wcslen(samesizestr), 7ul);
+  ASSERT_EQ(internal_wcslen(shortstr), 3ul);
+  ASSERT_EQ(internal_wcslen(longerstr), 9ul);
+
+  ASSERT_EQ(internal_wcsnlen(emptystr, 7), 0ul);
+  ASSERT_EQ(internal_wcsnlen(samesizestr, 7), 7ul);
+  ASSERT_EQ(internal_wcsnlen(shortstr, 7), 3ul);
+  ASSERT_EQ(internal_wcsnlen(longerstr, 7), 7ul);
+}
+
 // FIXME: File manipulations are not yet supported on Windows
-#if SANITIZER_POSIX && !SANITIZER_MAC
+#if SANITIZER_POSIX && !SANITIZER_APPLE
 TEST(SanitizerCommon, InternalMmapWithOffset) {
   char tmpfile[128];
   temp_file_name(tmpfile, sizeof(tmpfile),
@@ -313,3 +340,33 @@ TEST(SanitizerCommon, InternalMmapWithOffset) {
   internal_unlink(tmpfile);
 }
 #endif
+
+TEST(SanitizerCommon, ReportFile) {
+  SpinMutex report_file_mu;
+  ReportFile report_file = {&report_file_mu, kStderrFd, "", "", 0};
+  char tmpfile[128];
+  temp_file_name(tmpfile, sizeof(tmpfile),
+                 "dir/sanitizer_common.reportfile.tmp.");
+  report_file.SetReportPath(tmpfile);
+  const char *path = report_file.GetReportPath();
+  EXPECT_EQ(internal_strncmp(tmpfile, path, strlen(tmpfile)), 0);
+  // This will close tmpfile.
+  report_file.SetReportPath("stderr");
+  Unlink(tmpfile);
+}
+
+TEST(SanitizerCommon, FileExists) {
+  char tmpfile[128];
+  temp_file_name(tmpfile, sizeof(tmpfile), "sanitizer_common.fileexists.tmp.");
+  fd_t fd = OpenFile(tmpfile, WrOnly);
+  ASSERT_NE(fd, kInvalidFd);
+  EXPECT_TRUE(FileExists(tmpfile));
+  CloseFile(fd);
+  Unlink(tmpfile);
+}
+
+TEST(SanitizerCommon, DirExists) {
+  char tmpdir[128];
+  get_temp_dir(tmpdir, sizeof(tmpdir));
+  EXPECT_TRUE(DirExists(tmpdir));
+}

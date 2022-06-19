@@ -60,14 +60,12 @@ body: |
     ; CHECK-LABEL: name: cttz_zero_undef_s64_v
     ; CHECK: [[COPY:%[0-9]+]]:vgpr(s64) = COPY $vgpr0_vgpr1
     ; CHECK: [[UV:%[0-9]+]]:vgpr(s32), [[UV1:%[0-9]+]]:vgpr(s32) = G_UNMERGE_VALUES [[COPY]](s64)
-    ; CHECK: [[C:%[0-9]+]]:vgpr(s32) = G_CONSTANT i32 0
-    ; CHECK: [[ICMP:%[0-9]+]]:vcc(s1) = G_ICMP intpred(eq), [[UV]](s32), [[C]]
-    ; CHECK: [[CTTZ_ZERO_UNDEF:%[0-9]+]]:vgpr(s32) = G_CTTZ_ZERO_UNDEF [[UV1]](s32)
-    ; CHECK: [[C1:%[0-9]+]]:vgpr(s32) = G_CONSTANT i32 32
-    ; CHECK: [[ADD:%[0-9]+]]:vgpr(s32) = G_ADD [[CTTZ_ZERO_UNDEF]], [[C1]]
-    ; CHECK: [[CTTZ_ZERO_UNDEF1:%[0-9]+]]:vgpr(s32) = G_CTTZ_ZERO_UNDEF [[UV]](s32)
-    ; CHECK: [[SELECT:%[0-9]+]]:vgpr(s32) = G_SELECT [[ICMP]](s1), [[ADD]], [[CTTZ_ZERO_UNDEF1]]
-    ; CHECK: S_ENDPGM 0, implicit [[SELECT]](s32)
+    ; CHECK: [[AMDGPU_FFBL_B32_:%[0-9]+]]:vgpr(s32) = G_AMDGPU_FFBL_B32 [[UV]](s32)
+    ; CHECK: [[AMDGPU_FFBL_B32_1:%[0-9]+]]:vgpr(s32) = G_AMDGPU_FFBL_B32 [[UV1]](s32)
+    ; CHECK: [[C:%[0-9]+]]:vgpr(s32) = G_CONSTANT i32 32
+    ; CHECK: [[ADD:%[0-9]+]]:vgpr(s32) = G_ADD [[AMDGPU_FFBL_B32_1]], [[C]]
+    ; CHECK: [[UMIN:%[0-9]+]]:vgpr(s32) = G_UMIN [[AMDGPU_FFBL_B32_]], [[ADD]]
+    ; CHECK: S_ENDPGM 0, implicit [[UMIN]](s32)
     %0:_(s64) = COPY $vgpr0_vgpr1
     %1:_(s32) = G_CTTZ_ZERO_UNDEF %0
     S_ENDPGM 0, implicit %1

@@ -21,7 +21,6 @@
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Module.h"
-#include "llvm/IR/Operator.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/CommandLine.h"
@@ -34,7 +33,7 @@ using namespace llvm;
 #define DEBUG_TYPE "globaldce"
 
 static cl::opt<bool>
-    ClEnableVFE("enable-vfe", cl::Hidden, cl::init(true), cl::ZeroOrMore,
+    ClEnableVFE("enable-vfe", cl::Hidden, cl::init(true),
                 cl::desc("Enable virtual function elimination"));
 
 STATISTIC(NumAliases  , "Number of global aliases removed");
@@ -86,9 +85,12 @@ ModulePass *llvm::createGlobalDCEPass() {
 
 /// Returns true if F is effectively empty.
 static bool isEmptyFunction(Function *F) {
+  // Skip external functions.
+  if (F->isDeclaration())
+    return false;
   BasicBlock &Entry = F->getEntryBlock();
   for (auto &I : Entry) {
-    if (isa<DbgInfoIntrinsic>(I))
+    if (I.isDebugOrPseudoInst())
       continue;
     if (auto *RI = dyn_cast<ReturnInst>(&I))
       return !RI->getReturnValue();
@@ -210,18 +212,18 @@ void GlobalDCEPass::ScanVTableLoad(Function *Caller, Metadata *TypeId,
 
     Constant *Ptr =
         getPointerAtOffset(VTable->getInitializer(), VTableOffset + CallOffset,
-                           *Caller->getParent());
+                           *Caller->getParent(), VTable);
     if (!Ptr) {
       LLVM_DEBUG(dbgs() << "can't find pointer in vtable!\n");
       VFESafeVTables.erase(VTable);
-      return;
+      continue;
     }
 
     auto Callee = dyn_cast<Function>(Ptr->stripPointerCasts());
     if (!Callee) {
       LLVM_DEBUG(dbgs() << "vtable entry is not function pointer!\n");
       VFESafeVTables.erase(VTable);
-      return;
+      continue;
     }
 
     LLVM_DEBUG(dbgs() << "vfunc dep " << Caller->getName() << " -> "
@@ -298,7 +300,8 @@ PreservedAnalyses GlobalDCEPass::run(Module &M, ModuleAnalysisManager &MAM) {
   // marked as alive are discarded.
 
   // Remove empty functions from the global ctors list.
-  Changed |= optimizeGlobalCtorsList(M, isEmptyFunction);
+  Changed |= optimizeGlobalCtorsList(
+      M, [](uint32_t, Function *F) { return isEmptyFunction(F); });
 
   // Collect the set of members for each comdat.
   for (Function &F : M)
@@ -317,7 +320,7 @@ PreservedAnalyses GlobalDCEPass::run(Module &M, ModuleAnalysisManager &MAM) {
 
   // Loop over the module, adding globals which are obviously necessary.
   for (GlobalObject &GO : M.global_objects()) {
-    Changed |= RemoveUnusedGlobalValue(GO);
+    GO.removeDeadConstantUsers();
     // Functions with external linkage are needed if they have a body.
     // Externally visible & appending globals are needed, if they have an
     // initializer.
@@ -330,7 +333,7 @@ PreservedAnalyses GlobalDCEPass::run(Module &M, ModuleAnalysisManager &MAM) {
 
   // Compute direct dependencies of aliases.
   for (GlobalAlias &GA : M.aliases()) {
-    Changed |= RemoveUnusedGlobalValue(GA);
+    GA.removeDeadConstantUsers();
     // Externally visible aliases are needed.
     if (!GA.isDiscardableIfUnused())
       MarkLive(GA);
@@ -340,7 +343,7 @@ PreservedAnalyses GlobalDCEPass::run(Module &M, ModuleAnalysisManager &MAM) {
 
   // Compute direct dependencies of ifuncs.
   for (GlobalIFunc &GIF : M.ifuncs()) {
-    Changed |= RemoveUnusedGlobalValue(GIF);
+    GIF.removeDeadConstantUsers();
     // Externally visible ifuncs are needed.
     if (!GIF.isDiscardableIfUnused())
       MarkLive(GIF);
@@ -403,7 +406,7 @@ PreservedAnalyses GlobalDCEPass::run(Module &M, ModuleAnalysisManager &MAM) {
   // Now that all interferences have been dropped, delete the actual objects
   // themselves.
   auto EraseUnusedGlobalValue = [&](GlobalValue *GV) {
-    RemoveUnusedGlobalValue(*GV);
+    GV->removeDeadConstantUsers();
     GV->eraseFromParent();
     Changed = true;
   };
@@ -416,6 +419,16 @@ PreservedAnalyses GlobalDCEPass::run(Module &M, ModuleAnalysisManager &MAM) {
       // virtual function pointers with null, allowing us to remove the
       // function itself.
       ++NumVFuncs;
+
+      // Detect vfuncs that are referenced as "relative pointers" which are used
+      // in Swift vtables, i.e. entries in the form of:
+      //
+      //   i32 trunc (i64 sub (i64 ptrtoint @f, i64 ptrtoint ...)) to i32)
+      //
+      // In this case, replace the whole "sub" expression with constant 0 to
+      // avoid leaving a weird sub(0, symbol) expression behind.
+      replaceRelativePointerUsersWithZero(F);
+
       F->replaceNonMetadataUsesWith(ConstantPointerNull::get(F->getType()));
     }
     EraseUnusedGlobalValue(F);
@@ -444,17 +457,4 @@ PreservedAnalyses GlobalDCEPass::run(Module &M, ModuleAnalysisManager &MAM) {
   if (Changed)
     return PreservedAnalyses::none();
   return PreservedAnalyses::all();
-}
-
-// RemoveUnusedGlobalValue - Loop over all of the uses of the specified
-// GlobalValue, looking for the constant pointer ref that may be pointing to it.
-// If found, check to see if the constant pointer ref is safe to destroy, and if
-// so, nuke it.  This will reduce the reference count on the global value, which
-// might make it deader.
-//
-bool GlobalDCEPass::RemoveUnusedGlobalValue(GlobalValue &GV) {
-  if (GV.use_empty())
-    return false;
-  GV.removeDeadConstantUsers();
-  return GV.use_empty();
 }

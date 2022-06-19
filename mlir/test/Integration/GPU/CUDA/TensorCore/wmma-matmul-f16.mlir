@@ -1,7 +1,7 @@
 // RUN: mlir-opt %s \
 // RUN: -gpu-kernel-outlining \
-// RUN: -pass-pipeline='gpu.module(strip-debuginfo,convert-gpu-to-nvvm{index-bitwidth=32},gpu-to-cubin{chip=sm_70})' \
-// RUN: --convert-scf-to-std -gpu-to-llvm \
+// RUN: -pass-pipeline='gpu.module(strip-debuginfo,convert-gpu-to-nvvm,gpu-to-cubin{chip=sm_70})' \
+// RUN: --convert-scf-to-cf -gpu-to-llvm \
 // RUN: | mlir-cpu-runner \
 // RUN:   --shared-libs=%linalg_test_lib_dir/libmlir_cuda_runtime%shlibext \
 // RUN:   --shared-libs=%linalg_test_lib_dir/libmlir_runner_utils%shlibext \
@@ -10,17 +10,17 @@
 // Test case to check the working of Tensor cores on Nvidia GPUs. The kernel has already
 // been outlined to prevent crashing due to introduction of an empty basic block by --gpu-
 // kernel-outling.
-func @main() {
+func.func @main() {
   %0 = memref.alloc() : memref<16x16xf16>
   %22 = memref.alloc() : memref<16x16xf16>
   %1 = memref.alloc() : memref<16x16xf32>
 
-  %f1 = constant 1.0e+00 : f16
-  %f0 = constant 0.0e+00 : f16
-  %c0 = constant 0 : index
-  %c16 = constant 16 : index
-  %c32 = constant 32 : index
-  %c1 = constant 1 : index
+  %f1 = arith.constant 1.0e+00 : f16
+  %f0 = arith.constant 0.0e+00 : f16
+  %c0 = arith.constant 0 : index
+  %c16 = arith.constant 16 : index
+  %c32 = arith.constant 32 : index
+  %c1 = arith.constant 1 : index
 
   // Intialize the Input matrix with ones.
   scf.for %arg0 = %c0 to %c16 step %c1 {
@@ -57,13 +57,13 @@ func @main() {
   scf.for %arg0 = %c0 to %c16 step %c1 {
     scf.for %arg1 = %c0 to %c16 step %c1 {
       %6 = memref.load %0[%arg0, %arg1] : memref<16x16xf16>
-      %7 = fpext %6 : f16 to f32
+      %7 = arith.extf %6 : f16 to f32
       memref.store %7, %1[%arg0, %arg1] : memref<16x16xf32>
     }
   }
 
   // Print the memref after computation.
-  call @print_memref_f32(%3) : (memref<*xf32>) -> ()
+  call @printMemrefF32(%3) : (memref<*xf32>) -> ()
   // CHECK: [16,   16,   16,   16,   16,   16,   16,   16,   16,   16,   16,   16,   16,   16,   16,   16],
   // CHECK-NEXT: [16,   16,   16,   16,   16,   16,   16,   16,   16,   16,   16,   16,   16,   16,   16,   16],
   // CHECK-NEXT: [16,   16,   16,   16,   16,   16,   16,   16,   16,   16,   16,   16,   16,   16,   16,   16],
@@ -83,4 +83,4 @@ func @main() {
   return
 }
 
-func private @print_memref_f32(memref<*xf32>)
+func.func private @printMemrefF32(memref<*xf32>)

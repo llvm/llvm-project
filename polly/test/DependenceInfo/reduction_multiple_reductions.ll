@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -basic-aa -polly-dependences -analyze < %s | FileCheck %s
+; RUN: opt %loadPolly -basic-aa -polly-print-dependences -disable-output < %s | FileCheck %s
 ;
 ; Verify we do not have dependences between the if and the else clause
 ;

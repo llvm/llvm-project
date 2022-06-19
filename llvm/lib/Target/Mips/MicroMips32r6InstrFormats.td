@@ -958,7 +958,7 @@ class POOL32A_DVPEVP_FM_MMR6<string instr_asm, bits<10> funct>
   let Inst{5-0}   = 0b111100;
 }
 
-class CMP_BRANCH_OFF21_FM_MMR6<string opstr, bits<6> funct> : MipsR6Inst {
+class CMP_BRANCH_OFF21_FM_MMR6<bits<6> funct> : MipsR6Inst {
   bits<5> rs;
   bits<21> offset;
 

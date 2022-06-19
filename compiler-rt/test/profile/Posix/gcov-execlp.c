@@ -1,3 +1,4 @@
+// XFAIL: aix
 /// A basic block with fork/exec* is split. .gcda is flushed immediately before
 /// fork/exec* so the lines before exec* are counted once while succeeding
 /// lines are not counted.
@@ -18,10 +19,10 @@ void func2(void) {}                // CHECK-NEXT: #####: [[#@LINE]]:
 int main(void) {                   // CHECK-NEXT:     1: [[#@LINE]]:
   func1();                         // CHECK-NEXT:     1: [[#@LINE]]:
 #ifdef EXECVP
-  char *argv[] = {"ls", "-l", "-h", (char *)0};
+  char *argv[] = {"ls", "-l", (char *)0};
   execvp("ls", argv);              // EXECVP:         1: [[#@LINE]]:  execvp
 #else
-  execlp("ls", "-l", "-h", (char *)0); // EXECLP:     1: [[#@LINE]]:  execlp
+  execlp("ls", "-l", (char *)0); // EXECLP:     1: [[#@LINE]]:  execlp
 #endif
   func2();                         // CHECK:      #####: [[#@LINE]]:  func2
   return 0;                        // CHECK-NEXT: #####: [[#@LINE]]:

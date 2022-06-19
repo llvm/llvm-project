@@ -8,7 +8,6 @@
 
 #include "PrettyTypeDumper.h"
 
-#include "LinePrinter.h"
 #include "PrettyBuiltinDumper.h"
 #include "PrettyClassDefinitionDumper.h"
 #include "PrettyEnumDumper.h"
@@ -16,6 +15,8 @@
 #include "PrettyTypedefDumper.h"
 #include "llvm-pdbutil.h"
 
+#include "llvm/DebugInfo/PDB/ConcreteSymbolEnumerator.h"
+#include "llvm/DebugInfo/PDB/IPDBLineNumber.h"
 #include "llvm/DebugInfo/PDB/IPDBSession.h"
 #include "llvm/DebugInfo/PDB/PDBSymbolExe.h"
 #include "llvm/DebugInfo/PDB/PDBSymbolTypeArray.h"
@@ -25,6 +26,7 @@
 #include "llvm/DebugInfo/PDB/PDBSymbolTypePointer.h"
 #include "llvm/DebugInfo/PDB/PDBSymbolTypeTypedef.h"
 #include "llvm/DebugInfo/PDB/PDBSymbolTypeUDT.h"
+#include "llvm/DebugInfo/PDB/PDBSymbolTypeVTableShape.h"
 #include "llvm/DebugInfo/PDB/UDTLayout.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/FormatVariadic.h"

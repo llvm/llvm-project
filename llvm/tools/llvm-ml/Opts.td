@@ -7,6 +7,7 @@ class LLVMFlag<string name> : Flag<["--", "-"], name>;
 class LLVMJoined<string name> : Joined<["--", "-"], name>;
 class LLVMJoinedOrSeparate<string name> : JoinedOrSeparate<["--", "-"], name>;
 class LLVMSeparate<string name> : Separate<["--", "-"], name>;
+class LLVMCommaJoined<string name> : CommaJoined<["--", "-"], name>;
 
 def ml_Group : OptionGroup<"<ml options>">,
                HelpText<"ML.EXE COMPATIBILITY OPTIONS">;
@@ -30,7 +31,12 @@ class UnsupportedSeparate<string name> : Separate<["/", "-"], name>,
 def bitness : LLVMJoined<"m">, Values<"32,64">,
               HelpText<"Target platform (x86 or x86-64)">;
 def as_lex : LLVMFlag<"as-lex">,
-             HelpText<"Lex tokens from a .asm file without assembling">;
+             HelpText<"Lex tokens from a file without assembling">;
+def debug : LLVMFlag<"debug">, Flags<[HelpHidden]>,
+            HelpText<"Enable debug output">;
+def debug_only : LLVMCommaJoined<"debug-only=">, Flags<[HelpHidden]>,
+                 HelpText<"Enable a specific type of debug output (comma "
+                          "separated list of types)">;
 def fatal_warnings : LLVMFlag<"fatal-warnings">,
                      HelpText<"Treat warnings as errors">;
 def filetype : LLVMJoined<"filetype=">, Values<"obj,s,null">,
@@ -65,6 +71,7 @@ def assemble_only : MLFlag<"c">, HelpText<"Assemble only; do not link">;
 def define : MLJoinedOrSeparate<"D">, MetaVarName<"<macro>=<value>">,
              HelpText<"Define <macro> to <value> (or blank if <value> "
                       "omitted)">;
+def no_logo : MLFlag<"nologo">, HelpText<"">;
 def output_file : MLJoinedOrSeparate<"Fo">, HelpText<"Names the output file">;
 def include_path : MLJoinedOrSeparate<"I">,
                    HelpText<"Sets path for include files">;
@@ -74,8 +81,8 @@ def safeseh : MLFlag<"safeseh">,
                        "that are all declared with .SAFESEH. Only available in "
                        "32-bit.">;
 def assembly_file : MLJoinedOrSeparate<"Ta">,
-                    HelpText<"Assemble source file with name not ending with "
-                             "the .asm extension">;
+                    HelpText<"Assemble source file with the given name. Used "
+                             "if the filename begins with a forward slash.">;
 def error_on_warning : MLFlag<"WX">, Alias<fatal_warnings>;
 def parse_only : MLFlag<"Zs">, HelpText<"Run a syntax-check only">,
                  Alias<filetype>, AliasArgs<["null"]>;
@@ -101,7 +108,6 @@ def pascal_conventions : UnsupportedFlag<"Gc">, HelpText<"">;
 def c_conventions : UnsupportedFlag<"Gd">, HelpText<"">;
 def stdcall_conventions : UnsupportedFlag<"GZ">, HelpText<"">;
 def extern_name_limit : UnsupportedSeparate<"H">, HelpText<"">;
-def nologo : UnsupportedFlag<"nologo">, HelpText<"">;
 def omf_object_file : UnsupportedFlag<"omf">, HelpText<"">;
 def full_listing : UnsupportedFlag<"Sa">, HelpText<"">;
 def first_pass_listing : UnsupportedFlag<"Sf">, HelpText<"">;

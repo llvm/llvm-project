@@ -15,8 +15,6 @@ from lldbsuite.test import lldbutil
 
 class LoadUnloadTestCase(TestBase):
 
-    mydir = TestBase.compute_mydir(__file__)
-
     NO_DEBUG_INFO_TESTCASE = True
 
     def setUp(self):
@@ -93,7 +91,6 @@ class LoadUnloadTestCase(TestBase):
     @expectedFailureAll(oslist=["freebsd", "linux", "netbsd"])
     @skipIfRemote
     @skipIfWindows  # Windows doesn't have dlopen and friends, dynamic libraries work differently
-    @skipIfReproducer # VFS is a snapshot.
     def test_modules_search_paths(self):
         """Test target modules list after loading a different copy of the library libd.dylib, and verifies that it works with 'target modules search-paths add'."""
         if self.platformIsDarwin():
@@ -204,6 +201,7 @@ class LoadUnloadTestCase(TestBase):
         hostoslist=["windows"],
         triple='.*-android')
     @expectedFailureAll(oslist=["windows"]) # process load not implemented
+    @expectedFailureAll(oslist=["linux"], archs=["arm"]) # Fails on ubuntu jammy
     def test_lldb_process_load_and_unload_commands(self):
         self.setSvr4Support(False)
         self.run_lldb_process_load_and_unload_commands()
@@ -217,7 +215,6 @@ class LoadUnloadTestCase(TestBase):
         self.setSvr4Support(True)
         self.run_lldb_process_load_and_unload_commands()
 
-    @skipIfReproducer # FIXME: Unexpected packet during (passive) replay
     def run_lldb_process_load_and_unload_commands(self):
         """Test that lldb process load/unload command work correctly."""
         self.copy_shlibs_to_remote()
@@ -241,6 +238,15 @@ class LoadUnloadTestCase(TestBase):
             remoteDylibPath = lldbutil.join_remote_paths(wd, dylibName)
         else:
             remoteDylibPath = localDylibPath
+
+        # First make sure that we get some kind of error if process load fails.
+        # We print some error even if the load fails, which isn't formalized.
+        # The only plugin at present (Posix) that supports this says "unknown reasons".
+        # If another plugin shows up, let's require it uses "unknown error" as well.
+        non_existant_shlib = "/NoSuchDir/NoSuchSubdir/ReallyNo/NotAFile"
+        self.expect("process load %s"%(non_existant_shlib), error=True, matching=False,
+                    patterns=["unknown reasons"])
+        
 
         # Make sure that a_function does not exist at this point.
         self.expect(
@@ -289,6 +295,7 @@ class LoadUnloadTestCase(TestBase):
         self.runCmd("process continue")
 
     @expectedFailureAll(oslist=["windows"]) # breakpoint not hit
+    @expectedFailureAll(oslist=["linux"], archs=["arm"]) # Fails on ubuntu jammy
     def test_load_unload(self):
         self.setSvr4Support(False)
         self.run_load_unload()
@@ -318,8 +325,7 @@ class LoadUnloadTestCase(TestBase):
                              'stop reason = breakpoint'])
 
         # The breakpoint should have a hit count of 1.
-        self.expect("breakpoint list -f", BREAKPOINT_HIT_ONCE,
-                    substrs=[' resolved, hit count = 1'])
+        lldbutil.check_breakpoint(self, bpno = 1, expected_hit_count = 1)
 
         # Issue the 'continue' command.  We should stop agaian at a_function.
         # The stop reason of the thread should be breakpoint and at a_function.
@@ -333,8 +339,7 @@ class LoadUnloadTestCase(TestBase):
                              'stop reason = breakpoint'])
 
         # The breakpoint should have a hit count of 2.
-        self.expect("breakpoint list -f", BREAKPOINT_HIT_ONCE,
-                    substrs=[' resolved, hit count = 2'])
+        lldbutil.check_breakpoint(self, bpno = 1, expected_hit_count = 2)
 
     def test_step_over_load(self):
         self.setSvr4Support(False)

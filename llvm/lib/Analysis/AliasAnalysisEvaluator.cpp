@@ -9,9 +9,7 @@
 #include "llvm/Analysis/AliasAnalysisEvaluator.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/Analysis/AliasAnalysis.h"
-#include "llvm/IR/Constants.h"
 #include "llvm/IR/DataLayout.h"
-#include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/InstIterator.h"
 #include "llvm/IR/Instructions.h"
@@ -19,7 +17,6 @@
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/CommandLine.h"
-#include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 using namespace llvm;
 
@@ -41,30 +38,48 @@ static cl::opt<bool> PrintMustModRef("print-mustmodref", cl::ReallyHidden);
 
 static cl::opt<bool> EvalAAMD("evaluate-aa-metadata", cl::ReallyHidden);
 
-static void PrintResults(AliasResult AR, bool P, const Value *V1,
-                         const Value *V2, const Module *M) {
+static void PrintResults(AliasResult AR, bool P,
+                         std::pair<const Value *, Type *> Loc1,
+                         std::pair<const Value *, Type *> Loc2,
+                         const Module *M) {
   if (PrintAll || P) {
+    Type *Ty1 = Loc1.second, *Ty2 = Loc2.second;
+    unsigned AS1 = Loc1.first->getType()->getPointerAddressSpace();
+    unsigned AS2 = Loc2.first->getType()->getPointerAddressSpace();
     std::string o1, o2;
     {
       raw_string_ostream os1(o1), os2(o2);
-      V1->printAsOperand(os1, true, M);
-      V2->printAsOperand(os2, true, M);
+      Loc1.first->printAsOperand(os1, false, M);
+      Loc2.first->printAsOperand(os2, false, M);
     }
 
     if (o2 < o1) {
       std::swap(o1, o2);
+      std::swap(Ty1, Ty2);
+      std::swap(AS1, AS2);
       // Change offset sign for the local AR, for printing only.
       AR.swap();
     }
-    errs() << "  " << AR << ":\t" << o1 << ", " << o2 << "\n";
+    errs() << "  " << AR << ":\t";
+    Ty1->print(errs(), false, /* NoDetails */ true);
+    if (AS1 != 0)
+      errs() << " addrspace(" << AS1 << ")";
+    errs() << "* " << o1 << ", ";
+    Ty2->print(errs(), false, /* NoDetails */ true);
+    if (AS2 != 0)
+      errs() << " addrspace(" << AS2 << ")";
+    errs() << "* " << o2 << "\n";
   }
 }
 
-static inline void PrintModRefResults(const char *Msg, bool P, Instruction *I,
-                                      Value *Ptr, Module *M) {
+static inline void PrintModRefResults(
+    const char *Msg, bool P, Instruction *I,
+    std::pair<const Value *, Type *> Loc, Module *M) {
   if (PrintAll || P) {
     errs() << "  " << Msg << ":  Ptr: ";
-    Ptr->printAsOperand(errs(), true, M);
+    Loc.second->print(errs(), false, /* NoDetails */ true);
+    errs() << "* ";
+    Loc.first->printAsOperand(errs(), false, M);
     errs() << "\t<->" << *I << '\n';
   }
 }
@@ -84,11 +99,6 @@ static inline void PrintLoadStoreResults(AliasResult AR, bool P,
   }
 }
 
-static inline bool isInterestingPointer(Value *V) {
-  return V->getType()->isPointerTy()
-      && !isa<ConstantPointerNull>(V);
-}
-
 PreservedAnalyses AAEvaluator::run(Function &F, FunctionAnalysisManager &AM) {
   runInternal(F, AM.getResult<AAManager>(F));
   return PreservedAnalyses::all();
@@ -99,38 +109,21 @@ void AAEvaluator::runInternal(Function &F, AAResults &AA) {
 
   ++FunctionCount;
 
-  SetVector<Value *> Pointers;
+  SetVector<std::pair<const Value *, Type *>> Pointers;
   SmallSetVector<CallBase *, 16> Calls;
   SetVector<Value *> Loads;
   SetVector<Value *> Stores;
 
-  for (auto &I : F.args())
-    if (I.getType()->isPointerTy())    // Add all pointer arguments.
-      Pointers.insert(&I);
-
   for (Instruction &Inst : instructions(F)) {
-    if (Inst.getType()->isPointerTy()) // Add all pointer instructions.
-      Pointers.insert(&Inst);
-    if (EvalAAMD && isa<LoadInst>(&Inst))
-      Loads.insert(&Inst);
-    if (EvalAAMD && isa<StoreInst>(&Inst))
-      Stores.insert(&Inst);
-    if (auto *Call = dyn_cast<CallBase>(&Inst)) {
-      Value *Callee = Call->getCalledOperand();
-      // Skip actual functions for direct function calls.
-      if (!isa<Function>(Callee) && isInterestingPointer(Callee))
-        Pointers.insert(Callee);
-      // Consider formals.
-      for (Use &DataOp : Call->data_ops())
-        if (isInterestingPointer(DataOp))
-          Pointers.insert(DataOp);
-      Calls.insert(Call);
-    } else {
-      // Consider all operands.
-      for (Use &Op : Inst.operands())
-        if (isInterestingPointer(Op))
-          Pointers.insert(Op);
-    }
+    if (auto *LI = dyn_cast<LoadInst>(&Inst)) {
+      Pointers.insert({LI->getPointerOperand(), LI->getType()});
+      Loads.insert(LI);
+    } else if (auto *SI = dyn_cast<StoreInst>(&Inst)) {
+      Pointers.insert({SI->getPointerOperand(),
+                       SI->getValueOperand()->getType()});
+      Stores.insert(SI);
+    } else if (auto *CB = dyn_cast<CallBase>(&Inst))
+      Calls.insert(CB);
   }
 
   if (PrintAll || PrintNoAlias || PrintMayAlias || PrintPartialAlias ||
@@ -139,20 +132,12 @@ void AAEvaluator::runInternal(Function &F, AAResults &AA) {
            << " pointers, " << Calls.size() << " call sites\n";
 
   // iterate over the worklist, and run the full (n^2)/2 disambiguations
-  for (SetVector<Value *>::iterator I1 = Pointers.begin(), E = Pointers.end();
-       I1 != E; ++I1) {
-    auto I1Size = LocationSize::afterPointer();
-    Type *I1ElTy = cast<PointerType>((*I1)->getType())->getElementType();
-    if (I1ElTy->isSized())
-      I1Size = LocationSize::precise(DL.getTypeStoreSize(I1ElTy));
-
-    for (SetVector<Value *>::iterator I2 = Pointers.begin(); I2 != I1; ++I2) {
-      auto I2Size = LocationSize::afterPointer();
-      Type *I2ElTy = cast<PointerType>((*I2)->getType())->getElementType();
-      if (I2ElTy->isSized())
-        I2Size = LocationSize::precise(DL.getTypeStoreSize(I2ElTy));
-
-      AliasResult AR = AA.alias(*I1, I1Size, *I2, I2Size);
+  for (auto I1 = Pointers.begin(), E = Pointers.end(); I1 != E; ++I1) {
+    LocationSize Size1 = LocationSize::precise(DL.getTypeStoreSize(I1->second));
+    for (auto I2 = Pointers.begin(); I2 != I1; ++I2) {
+      LocationSize Size2 =
+          LocationSize::precise(DL.getTypeStoreSize(I2->second));
+      AliasResult AR = AA.alias(I1->first, Size1, I2->first, Size2);
       switch (AR) {
       case AliasResult::NoAlias:
         PrintResults(AR, PrintNoAlias, *I1, *I2, F.getParent());
@@ -231,13 +216,10 @@ void AAEvaluator::runInternal(Function &F, AAResults &AA) {
 
   // Mod/ref alias analysis: compare all pairs of calls and values
   for (CallBase *Call : Calls) {
-    for (auto Pointer : Pointers) {
-      auto Size = LocationSize::afterPointer();
-      Type *ElTy = cast<PointerType>(Pointer->getType())->getElementType();
-      if (ElTy->isSized())
-        Size = LocationSize::precise(DL.getTypeStoreSize(ElTy));
-
-      switch (AA.getModRefInfo(Call, Pointer, Size)) {
+    for (const auto &Pointer : Pointers) {
+      LocationSize Size =
+          LocationSize::precise(DL.getTypeStoreSize(Pointer.second));
+      switch (AA.getModRefInfo(Call, Pointer.first, Size)) {
       case ModRefInfo::NoModRef:
         PrintModRefResults("NoModRef", PrintNoModRef, Call, Pointer,
                            F.getParent());

@@ -13,15 +13,16 @@
 #ifndef LLVM_UTILS_TABLEGEN_CODEGENINSTRUCTION_H
 #define LLVM_UTILS_TABLEGEN_CODEGENINSTRUCTION_H
 
+#include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/MachineValueType.h"
-#include "llvm/Support/SMLoc.h"
 #include <cassert>
 #include <string>
 #include <utility>
 #include <vector>
 
 namespace llvm {
+class SMLoc;
 template <typename T> class ArrayRef;
   class Record;
   class DagInit;
@@ -106,7 +107,7 @@ template <typename T> class ArrayRef;
       /// DoNotEncode - Bools are set to true in this vector for each operand in
       /// the DisableEncoding list.  These should not be emitted by the code
       /// emitter.
-      std::vector<bool> DoNotEncode;
+      BitVector DoNotEncode;
 
       /// MIOperandInfo - Default MI operand type. Note an operand may be made
       /// up of multiple MI operands.
@@ -270,6 +271,7 @@ template <typename T> class ArrayRef;
     bool hasExtraDefRegAllocReq : 1;
     bool isCodeGenOnly : 1;
     bool isPseudo : 1;
+    bool isMeta : 1;
     bool isRegSequence : 1;
     bool isExtractSubreg : 1;
     bool isInsertSubreg : 1;

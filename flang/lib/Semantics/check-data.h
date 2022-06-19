@@ -37,6 +37,9 @@ public:
   void Enter(const parser::DataImpliedDo &);
   void Leave(const parser::DataImpliedDo &);
   void Leave(const parser::DataStmtSet &);
+  // These cases are for legacy DATA-like /initializations/
+  void Leave(const parser::ComponentDecl &);
+  void Leave(const parser::EntityDecl &);
 
   // After all DATA statements have been processed, converts their
   // initializations into per-symbol static initializers.
@@ -47,6 +50,7 @@ private:
   template <typename T> void CheckIfConstantSubscript(const T &);
   void CheckSubscript(const parser::SectionSubscript &);
   bool CheckAllSubscriptsInDataRef(const parser::DataRef &, parser::CharBlock);
+  template <typename A> void LegacyDataInit(const A &);
 
   DataInitializations inits_;
   evaluate::ExpressionAnalyzer exprAnalyzer_;

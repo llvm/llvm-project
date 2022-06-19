@@ -3,7 +3,7 @@
 // Checks that clang with "-gline-tables-only" or "-gline-directives-only" emits metadata for
 // compile unit, subprogram and file.
 
-int main() {
+int main(void) {
   // CHECK: ret i32 0, !dbg
   return 0;
 }

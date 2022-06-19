@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 %s -triple=armv7-apple-darwin10 -emit-llvm -o - -fexceptions -fcxx-exceptions | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers %s -triple=armv7-apple-darwin10 -emit-llvm -o - -fexceptions -fcxx-exceptions | FileCheck %s
 
 // Check that we annotate all compiler-synthesized runtime calls and
 // functions with the actual ABI-determined CC.  This usually doesn't
@@ -21,7 +21,7 @@ namespace test0 {
 
   A global;
 // CHECK-LABEL:    define internal void @__cxx_global_var_init()
-// CHECK:      call [[A]]* @_ZN5test01AC1Ev([[A]]* {{[^,]*}} @_ZN5test06globalE)
+// CHECK:      call noundef [[A]]* @_ZN5test01AC1Ev([[A]]* {{[^,]*}} @_ZN5test06globalE)
 // CHECK-NEXT: call i32 @__cxa_atexit(void (i8*)* bitcast ([[A]]* ([[A]]*)* @_ZN5test01AD1Ev to void (i8*)*), i8* bitcast ([[A]]* @_ZN5test06globalE to i8*), i8* @__dso_handle) [[NOUNWIND:#[0-9]+]]
 // CHECK-NEXT: ret void
 }

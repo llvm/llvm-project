@@ -1,4 +1,3 @@
-; RUN: opt < %s -basic-aa -gvn -asan -asan-module -enable-new-pm=0 -S | FileCheck %s
 ; RUN: opt < %s "-passes=function(require<basic-aa>,gvn),asan-pipeline" -S | FileCheck %s
 ; ASAN conflicts with load widening iff the widened load accesses data out of bounds
 ; (while the original unwidened loads do not).

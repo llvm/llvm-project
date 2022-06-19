@@ -1,4 +1,4 @@
-# RUN: not %{lit} -j 1 -vv %{inputs}/shtest-keyword-parse-errors > %t.out
+# RUN: not %{lit} -vv %{inputs}/shtest-keyword-parse-errors > %t.out
 # RUN: FileCheck -input-file %t.out %s
 #
 # END.

@@ -8,10 +8,6 @@ define arm_aapcscc i32 @test_call_to_varargs_with_ints(i32 *%a, i32 %b) {
 ; CHECK-DAG: [[AVREG:%[0-9]+]]:_(p0) = COPY $r0
 ; CHECK-DAG: [[BVREG:%[0-9]+]]:_(s32) = COPY $r1
 ; CHECK: ADJCALLSTACKDOWN 8, 0, 14 /* CC::al */, $noreg, implicit-def $sp, implicit $sp
-; CHECK-DAG: $r0 = COPY [[BVREG]]
-; CHECK-DAG: $r1 = COPY [[AVREG]]
-; CHECK-DAG: $r2 = COPY [[BVREG]]
-; CHECK-DAG: $r3 = COPY [[AVREG]]
 ; CHECK: [[SP1:%[0-9]+]]:_(p0) = COPY $sp
 ; CHECK: [[OFF1:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
 ; CHECK: [[FI1:%[0-9]+]]:_(p0) = G_PTR_ADD [[SP1]], [[OFF1]](s32)
@@ -20,10 +16,14 @@ define arm_aapcscc i32 @test_call_to_varargs_with_ints(i32 *%a, i32 %b) {
 ; CHECK: [[OFF2:%[0-9]+]]:_(s32) = G_CONSTANT i32 4
 ; CHECK: [[FI2:%[0-9]+]]:_(p0) = G_PTR_ADD [[SP2]], [[OFF2]](s32)
 ; CHECK: G_STORE [[AVREG]](p0), [[FI2]](p0){{.*}}store (p0)
+; CHECK-DAG: $r0 = COPY [[BVREG]]
+; CHECK-DAG: $r1 = COPY [[AVREG]]
+; CHECK-DAG: $r2 = COPY [[BVREG]]
+; CHECK-DAG: $r3 = COPY [[AVREG]]
 ; ARM: BL @int_varargs_target, csr_aapcs, implicit-def $lr, implicit $sp, implicit $r0, implicit $r1, implicit $r2, implicit $r3, implicit-def $r0
 ; THUMB: tBL 14 /* CC::al */, $noreg, @int_varargs_target, csr_aapcs, implicit-def $lr, implicit $sp, implicit $r0, implicit $r1, implicit $r2, implicit $r3, implicit-def $r0
 ; CHECK: [[RVREG:%[0-9]+]]:_(s32) = COPY $r0
-; CHECK: ADJCALLSTACKUP 8, 0, 14 /* CC::al */, $noreg, implicit-def $sp, implicit $sp
+; CHECK: ADJCALLSTACKUP 8, -1, 14 /* CC::al */, $noreg, implicit-def $sp, implicit $sp
 ; CHECK: $r0 = COPY [[RVREG]]
 ; ARM: BX_RET 14 /* CC::al */, $noreg, implicit $r0
 ; THUMB: tBX_RET 14 /* CC::al */, $noreg, implicit $r0
@@ -39,18 +39,18 @@ define arm_aapcs_vfpcc float @test_call_to_varargs_with_floats(float %a, double 
 ; CHECK-DAG: [[AVREG:%[0-9]+]]:_(s32) = COPY $s0
 ; CHECK-DAG: [[BVREG:%[0-9]+]]:_(s64) = COPY $d1
 ; CHECK: ADJCALLSTACKDOWN 8, 0, 14 /* CC::al */, $noreg, implicit-def $sp, implicit $sp
-; CHECK-DAG: $r0 = COPY [[AVREG]]
 ; CHECK-DAG: [[B1:%[0-9]+]]:_(s32), [[B2:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[BVREG]](s64)
-; CHECK-DAG: $r2 = COPY [[B1]]
-; CHECK-DAG: $r3 = COPY [[B2]]
 ; CHECK: [[SP1:%[0-9]+]]:_(p0) = COPY $sp
 ; CHECK: [[OFF1:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
 ; CHECK: [[FI1:%[0-9]+]]:_(p0) = G_PTR_ADD [[SP1]], [[OFF1]](s32)
 ; CHECK: G_STORE [[BVREG]](s64), [[FI1]](p0){{.*}}store (s64)
+; CHECK-DAG: $r0 = COPY [[AVREG]]
+; CHECK-DAG: $r2 = COPY [[B1]]
+; CHECK-DAG: $r3 = COPY [[B2]]
 ; ARM: BL @float_varargs_target, csr_aapcs, implicit-def $lr, implicit $sp, implicit $r0, implicit $r2, implicit $r3, implicit-def $r0
 ; THUMB: tBL 14 /* CC::al */, $noreg, @float_varargs_target, csr_aapcs, implicit-def $lr, implicit $sp, implicit $r0, implicit $r2, implicit $r3, implicit-def $r0
 ; CHECK: [[RVREG:%[0-9]+]]:_(s32) = COPY $r0
-; CHECK: ADJCALLSTACKUP 8, 0, 14 /* CC::al */, $noreg, implicit-def $sp, implicit $sp
+; CHECK: ADJCALLSTACKUP 8, -1, 14 /* CC::al */, $noreg, implicit-def $sp, implicit $sp
 ; CHECK: $s0 = COPY [[RVREG]]
 ; ARM: BX_RET 14 /* CC::al */, $noreg, implicit $s0
 ; THUMB: tBX_RET 14 /* CC::al */, $noreg, implicit $s0
@@ -71,7 +71,7 @@ define arm_aapcs_vfpcc float @test_call_to_varargs_with_floats_fixed_args_only(f
 ; ARM: BL @float_varargs_target, csr_aapcs, implicit-def $lr, implicit $sp, implicit $r0, implicit $r2, implicit $r3, implicit-def $r0
 ; THUMB: tBL 14 /* CC::al */, $noreg, @float_varargs_target, csr_aapcs, implicit-def $lr, implicit $sp, implicit $r0, implicit $r2, implicit $r3, implicit-def $r0
 ; CHECK: [[RVREG:%[0-9]+]]:_(s32) = COPY $r0
-; CHECK: ADJCALLSTACKUP 0, 0, 14 /* CC::al */, $noreg, implicit-def $sp, implicit $sp
+; CHECK: ADJCALLSTACKUP 0, -1, 14 /* CC::al */, $noreg, implicit-def $sp, implicit $sp
 ; CHECK: $s0 = COPY [[RVREG]]
 ; ARM: BX_RET 14 /* CC::al */, $noreg, implicit $s0
 ; THUMB: tBX_RET 14 /* CC::al */, $noreg, implicit $s0
@@ -86,18 +86,18 @@ define arm_aapcs_vfpcc float @test_indirect_call_to_varargs(float (float, double
 ; CHECK-DAG: [[AVREG:%[0-9]+]]:_(s32) = COPY $s0
 ; CHECK-DAG: [[BVREG:%[0-9]+]]:_(s64) = COPY $d1
 ; CHECK: ADJCALLSTACKDOWN 8, 0, 14 /* CC::al */, $noreg, implicit-def $sp, implicit $sp
-; CHECK-DAG: $r0 = COPY [[AVREG]]
 ; CHECK-DAG: [[B1:%[0-9]+]]:_(s32), [[B2:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[BVREG]](s64)
-; CHECK-DAG: $r2 = COPY [[B1]]
-; CHECK-DAG: $r3 = COPY [[B2]]
 ; CHECK: [[SP1:%[0-9]+]]:_(p0) = COPY $sp
 ; CHECK: [[OFF1:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
 ; CHECK: [[FI1:%[0-9]+]]:_(p0) = G_PTR_ADD [[SP1]], [[OFF1]](s32)
 ; CHECK: G_STORE [[BVREG]](s64), [[FI1]](p0){{.*}}store (s64)
+; CHECK-DAG: $r0 = COPY [[AVREG]]
+; CHECK-DAG: $r2 = COPY [[B1]]
+; CHECK-DAG: $r3 = COPY [[B2]]
 ; ARM: BLX [[FPTRVREG]](p0), csr_aapcs, implicit-def $lr, implicit $sp, implicit $r0, implicit $r2, implicit $r3, implicit-def $r0
 ; THUMB: tBLXr 14 /* CC::al */, $noreg, [[FPTRVREG]](p0), csr_aapcs, implicit-def $lr, implicit $sp, implicit $r0, implicit $r2, implicit $r3, implicit-def $r0
 ; CHECK: [[RVREG:%[0-9]+]]:_(s32) = COPY $r0
-; CHECK: ADJCALLSTACKUP 8, 0, 14 /* CC::al */, $noreg, implicit-def $sp, implicit $sp
+; CHECK: ADJCALLSTACKUP 8, -1, 14 /* CC::al */, $noreg, implicit-def $sp, implicit $sp
 ; CHECK: $s0 = COPY [[RVREG]]
 ; ARM: BX_RET 14 /* CC::al */, $noreg, implicit $s0
 ; THUMB: tBX_RET 14 /* CC::al */, $noreg, implicit $s0

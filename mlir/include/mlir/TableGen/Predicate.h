@@ -24,7 +24,7 @@ class Init;
 class ListInit;
 class Record;
 class SMLoc;
-} // end namespace llvm
+} // namespace llvm
 
 namespace mlir {
 namespace tblgen {
@@ -34,7 +34,7 @@ namespace tblgen {
 class Pred {
 public:
   // Constructs the null Predicate (e.g., always true).
-  explicit Pred() : def(nullptr) {}
+  explicit Pred() {}
   // Construct a Predicate from a record.
   explicit Pred(const llvm::Record *record);
   // Construct a Predicate from an initializer.
@@ -53,17 +53,23 @@ public:
   // record of type CombinedPred.
   bool isCombined() const;
 
+  // Get the location of the predicate.
+  ArrayRef<SMLoc> getLoc() const;
+
   // Records are pointer-comparable.
   bool operator==(const Pred &other) const { return def == other.def; }
 
-  // Get the location of the predicate.
-  ArrayRef<llvm::SMLoc> getLoc() const;
+  // Return true if the predicate is not null.
+  operator bool() const { return def; }
+
+  // Hash a predicate by its pointer value.
+  friend llvm::hash_code hash_value(Pred pred) {
+    return llvm::hash_value(pred.def);
+  }
 
 protected:
-  friend llvm::DenseMapInfo<Pred>;
-
   // The TableGen definition of this predicate.
-  const llvm::Record *def;
+  const llvm::Record *def{nullptr};
 };
 
 // A logical predicate wrapping a C expression.  This class must closely follow
@@ -95,7 +101,7 @@ public:
   const llvm::Record *getCombinerDef() const;
 
   // Get the predicates that are combined by this predicate.
-  const std::vector<llvm::Record *> getChildren() const;
+  std::vector<llvm::Record *> getChildren() const;
 };
 
 // A combined predicate that requires all child predicates of 'CPred' type to
@@ -116,21 +122,7 @@ public:
   StringRef getSuffix() const;
 };
 
-} // end namespace tblgen
-} // end namespace mlir
-
-namespace llvm {
-template <>
-struct DenseMapInfo<mlir::tblgen::Pred> {
-  static mlir::tblgen::Pred getEmptyKey() { return mlir::tblgen::Pred(); }
-  static mlir::tblgen::Pred getTombstoneKey() { return mlir::tblgen::Pred(); }
-  static unsigned getHashValue(mlir::tblgen::Pred pred) {
-    return llvm::hash_value(pred.def);
-  }
-  static bool isEqual(mlir::tblgen::Pred lhs, mlir::tblgen::Pred rhs) {
-    return lhs == rhs;
-  }
-};
-} // end namespace llvm
+} // namespace tblgen
+} // namespace mlir
 
 #endif // MLIR_TABLEGEN_PREDICATE_H_

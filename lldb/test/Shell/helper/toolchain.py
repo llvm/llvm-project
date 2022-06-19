@@ -71,7 +71,6 @@ def use_lldb_substitutions(config):
                   extra_args=['platform'],
                   unresolved='ignore'),
         'lldb-test',
-        'lldb-instr',
         'lldb-vscode',
         ToolSubst('%build',
                   command="'" + sys.executable + "'",
@@ -90,10 +89,13 @@ def _use_msvc_substitutions(config):
     # detect the include and lib paths, and find cl.exe and link.exe and create
     # substitutions for each of them that explicitly specify /I and /L paths
     cl = lit.util.which('cl')
-    link = lit.util.which('link')
 
-    if not cl or not link:
+    if not cl:
         return
+
+    # Don't use lit.util.which() for link.exe: In `git bash`, it will pick
+    # up /usr/bin/link (another name for ln).
+    link = os.path.join(os.path.dirname(cl), 'link.exe')
 
     cl = '"' + cl + '"'
     link = '"' + link + '"'

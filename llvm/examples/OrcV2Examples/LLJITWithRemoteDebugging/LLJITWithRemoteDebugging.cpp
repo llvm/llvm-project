@@ -79,6 +79,8 @@
 
 #include "llvm/ExecutionEngine/Orc/JITTargetMachineBuilder.h"
 #include "llvm/ExecutionEngine/Orc/LLJIT.h"
+#include "llvm/ExecutionEngine/Orc/ObjectLinkingLayer.h"
+#include "llvm/ExecutionEngine/Orc/SimpleRemoteEPC.h"
 #include "llvm/ExecutionEngine/Orc/ThreadSafeModule.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Error.h"
@@ -103,12 +105,12 @@ static cl::list<std::string> InputFiles(cl::Positional, cl::OneOrMore,
 // Command line arguments to pass to the JITed main function.
 static cl::list<std::string> InputArgv("args", cl::Positional,
                                        cl::desc("<program arguments>..."),
-                                       cl::ZeroOrMore, cl::PositionalEatsArgs);
+                                       cl::PositionalEatsArgs);
 
 // Given paths must exist on the remote target.
 static cl::list<std::string>
     Dylibs("dlopen", cl::desc("Dynamic libraries to load before linking"),
-           cl::value_desc("filename"), cl::ZeroOrMore);
+           cl::value_desc("filename"));
 
 // File path of the executable to launch for execution in a child process.
 // Inter-process communication will go through stdin/stdout pipes.
@@ -116,9 +118,9 @@ static cl::opt<std::string>
     OOPExecutor("executor", cl::desc("Set the out-of-process executor"),
                 cl::value_desc("filename"));
 
-// Network address of a running executor process that we can connected through a
-// TCP socket. It may run locally or on a remote machine.
-static cl::opt<std::string> OOPExecutorConnect(
+// Network address of a running executor process that we can connect via TCP. It
+// may run locally or on a remote machine.
+static cl::opt<std::string> OOPExecutorConnectTCP(
     "connect",
     cl::desc("Connect to an out-of-process executor through a TCP socket"),
     cl::value_desc("<hostname>:<port>"));
@@ -133,41 +135,6 @@ static cl::opt<bool>
 
 ExitOnError ExitOnErr;
 
-static std::unique_ptr<JITLinkExecutor> connectExecutor(const char *Argv0,
-                                                        ExecutionSession &ES) {
-  // Connect to a running out-of-process executor through a TCP socket.
-  if (!OOPExecutorConnect.empty()) {
-    std::unique_ptr<TCPSocketJITLinkExecutor> Exec =
-        ExitOnErr(JITLinkExecutor::ConnectTCPSocket(OOPExecutorConnect, ES));
-
-    outs() << "Connected to executor at " << OOPExecutorConnect << "\n";
-    if (WaitForDebugger) {
-      outs() << "Attach a debugger and press any key to continue.\n";
-      fflush(stdin);
-      getchar();
-    }
-
-    return std::move(Exec);
-  }
-
-  // Launch a out-of-process executor locally in a child process.
-  std::unique_ptr<ChildProcessJITLinkExecutor> Exec = ExitOnErr(
-      OOPExecutor.empty() ? JITLinkExecutor::FindLocal(Argv0)
-                          : JITLinkExecutor::CreateLocal(OOPExecutor));
-
-  outs() << "Found out-of-process executor: " << Exec->getPath() << "\n";
-
-  ExitOnErr(Exec->launch(ES));
-  if (WaitForDebugger) {
-    outs() << "Launched executor in subprocess: " << Exec->getPID() << "\n"
-           << "Attach a debugger and press any key to continue.\n";
-    fflush(stdin);
-    getchar();
-  }
-
-  return std::move(Exec);
-}
-
 int main(int argc, char *argv[]) {
   InitLLVM X(argc, argv);
 
@@ -177,11 +144,27 @@ int main(int argc, char *argv[]) {
   ExitOnErr.setBanner(std::string(argv[0]) + ": ");
   cl::ParseCommandLineOptions(argc, argv, "LLJITWithRemoteDebugging");
 
-  auto ES = std::make_unique<ExecutionSession>();
-  ES->setErrorReporter([&](Error Err) { ExitOnErr(std::move(Err)); });
+  std::unique_ptr<SimpleRemoteEPC> EPC;
+  if (OOPExecutorConnectTCP.getNumOccurrences() > 0) {
+    // Connect to a running out-of-process executor through a TCP socket.
+    EPC = ExitOnErr(connectTCPSocket(OOPExecutorConnectTCP));
+    outs() << "Connected to executor at " << OOPExecutorConnectTCP << "\n";
+  } else {
+    // Launch an out-of-process executor locally in a child process.
+    std::string Path =
+        OOPExecutor.empty() ? findLocalExecutor(argv[0]) : OOPExecutor;
+    outs() << "Found out-of-process executor: " << Path << "\n";
 
-  // Launch/connect the out-of-process executor.
-  std::unique_ptr<JITLinkExecutor> Executor = connectExecutor(argv[0], *ES);
+    uint64_t PID;
+    std::tie(EPC, PID) = ExitOnErr(launchLocalExecutor(Path));
+    outs() << "Launched executor in subprocess: " << PID << "\n";
+  }
+
+  if (WaitForDebugger) {
+    outs() << "Attach a debugger and press any key to continue.\n";
+    fflush(stdin);
+    getchar();
+  }
 
   // Load the given IR files.
   std::vector<ThreadSafeModule> TSMs;
@@ -214,45 +197,52 @@ int main(int argc, char *argv[]) {
   JTMB.setRelocationModel(Reloc::PIC_);
 
   // Create LLJIT and destroy it before disconnecting the target process.
+  outs() << "Initializing LLJIT for remote executor\n";
+  auto J = ExitOnErr(LLJITBuilder()
+                          .setExecutorProcessControl(std::move(EPC))
+                          .setJITTargetMachineBuilder(std::move(JTMB))
+                          .setObjectLinkingLayerCreator([&](auto &ES, const auto &TT) {
+                            return std::make_unique<ObjectLinkingLayer>(ES);
+                          })
+                          .create());
+
+  // Add plugin for debug support.
+  ExitOnErr(addDebugSupport(J->getObjLinkingLayer()));
+
+  // Load required shared libraries on the remote target and add a generator
+  // for each of it, so the compiler can lookup their symbols.
+  for (const std::string &Path : Dylibs)
+    J->getMainJITDylib().addGenerator(
+        ExitOnErr(loadDylib(J->getExecutionSession(), Path)));
+
+  // Add the loaded IR module to the JIT. This will set up symbol tables and
+  // prepare for materialization.
+  for (ThreadSafeModule &TSM : TSMs)
+    ExitOnErr(J->addIRModule(std::move(TSM)));
+
+  // The example uses a non-lazy JIT for simplicity. Thus, looking up the main
+  // function will materialize all reachable code. It also triggers debug
+  // registration in the remote target process.
+  auto MainAddr = ExitOnErr(J->lookup("main"));
+
+  outs() << "Running: main(";
+  int Pos = 0;
+  std::vector<std::string> ActualArgv{"LLJITWithRemoteDebugging"};
+  for (const std::string &Arg : InputArgv) {
+    outs() << (Pos++ == 0 ? "" : ", ") << "\"" << Arg << "\"";
+    ActualArgv.push_back(Arg);
+  }
+  outs() << ")\n";
+
+  // Execute the code in the remote target process and dump the result. With
+  // the debugger attached to the target, it should be possible to inspect the
+  // JITed code as if it was compiled statically.
   {
-    outs() << "Initializing LLJIT for remote executor\n";
-    auto J = ExitOnErr(LLJITBuilder()
-                           .setExecutionSession(std::move(ES))
-                           .setJITTargetMachineBuilder(std::move(JTMB))
-                           .setObjectLinkingLayerCreator(std::ref(*Executor))
-                           .create());
-
-    // Add plugin for debug support.
-    ExitOnErr(Executor->addDebugSupport(J->getObjLinkingLayer()));
-
-    // Load required shared libraries on the remote target and add a generator
-    // for each of it, so the compiler can lookup their symbols.
-    for (const std::string &Path : Dylibs)
-      J->getMainJITDylib().addGenerator(ExitOnErr(Executor->loadDylib(Path)));
-
-    // Add the loaded IR module to the JIT. This will set up symbol tables and
-    // prepare for materialization.
-    for (ThreadSafeModule &TSM : TSMs)
-      ExitOnErr(J->addIRModule(std::move(TSM)));
-
-    // The example uses a non-lazy JIT for simplicity. Thus, looking up the main
-    // function will materialize all reachable code. It also triggers debug
-    // registration in the remote target process.
-    JITEvaluatedSymbol MainFn = ExitOnErr(J->lookup("main"));
-
-    outs() << "Running: main(";
-    int Pos = 0;
-    for (const std::string &Arg : InputArgv)
-      outs() << (Pos++ == 0 ? "" : ", ") << "\"" << Arg << "\"";
-    outs() << ")\n";
-
-    // Execute the code in the remote target process and dump the result. With
-    // the debugger attached to the target, it should be possible to inspect the
-    // JITed code as if it was compiled statically.
-    int Result = ExitOnErr(Executor->runAsMain(MainFn, InputArgv));
+    ExecutorProcessControl &EPC =
+        J->getExecutionSession().getExecutorProcessControl();
+    int Result = ExitOnErr(EPC.runAsMain(MainAddr, ActualArgv));
     outs() << "Exit code: " << Result << "\n";
   }
 
-  ExitOnErr(Executor->disconnect());
   return 0;
 }

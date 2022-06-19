@@ -6,6 +6,12 @@
 ; RUN: llc -verify-machineinstrs -mcpu=pwr9 -ppc-vsr-nums-as-vr \
 ; RUN: -ppc-asm-full-reg-names -mtriple=powerpc64-unknown-linux-gnu < %s \
 ; RUN: | FileCheck %s -check-prefix=CHECK-BE
+; RUN: llc -verify-machineinstrs -mcpu=pwr9 -ppc-vsr-nums-as-vr \
+; RUN: -ppc-asm-full-reg-names -mtriple=powerpc64-ibm-aix-xcoff < %s \
+; RUN: | FileCheck %s -check-prefix=CHECK-BE
+; RUN: llc -verify-machineinstrs -mcpu=pwr9 -ppc-vsr-nums-as-vr \
+; RUN: -ppc-asm-full-reg-names -mtriple=powerpc-ibm-aix-xcoff < %s \
+; RUN: | FileCheck %s -check-prefix=CHECK-BE-AIX-32
 define dso_local <4 x float> @vector_gatherf(float* nocapture readonly %a,
 float* nocapture readonly %b, float* nocapture readonly %c,
 float* nocapture readonly %d) {
@@ -34,6 +40,17 @@ float* nocapture readonly %d) {
 ; CHECK-BE-DAG:    xxmrghw vs[[REG4:[0-9]+]], vs[[REG2]], vs[[REG3]]
 ; CHECK-BE-NEXT:   xxmrgld v[[REG:[0-9]+]], vs[[REG0]], vs[[REG4]]
 ; CHECK-BE-NEXT:   blr
+
+; CHECK-BE-AIX-32-LABEL: vector_gatherf:
+; CHECK-BE-AIX-32-LABEL: # %bb.0: # %entry
+; CHECK-BE-AIX-32-DAG: lxsiwzx v[[REG0:[0-9]+]]
+; CHECK-BE-AIX-32-DAG: lxsiwzx v[[REG1:[0-9]+]]
+; CHECK-BE-AIX-32-DAG: lxsiwzx v[[REG2:[0-9]+]]
+; CHECK-BE-AIX-32-DAG: lxsiwzx v[[REG3:[0-9]+]]
+; CHECK-BE-AIX-32-DAG: vmrgow v[[REG0]], v[[REG1]], v[[REG0]]
+; CHECK-BE-AIX-32-DAG: vmrgow v[[REG3]], v[[REG2]], v[[REG3]]
+; CHECK-BE-AIX-32-NEXT: xxmrghd v[[REG0]], v[[REG3]], v[[REG0]]
+; CHECK-BE-AIX-32-NEXT: blr
 entry:
   %0 = load float, float* %a, align 4
   %vecinit = insertelement <4 x float> undef, float %0, i32 0

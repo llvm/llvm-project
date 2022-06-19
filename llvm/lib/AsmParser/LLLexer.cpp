@@ -567,7 +567,6 @@ lltok::Kind LLLexer::LexIdentifier() {
   KEYWORD(exact);
   KEYWORD(inbounds);
   KEYWORD(inrange);
-  KEYWORD(align);
   KEYWORD(addrspace);
   KEYWORD(section);
   KEYWORD(partition);
@@ -576,11 +575,15 @@ lltok::Kind LLLexer::LexIdentifier() {
   KEYWORD(module);
   KEYWORD(asm);
   KEYWORD(sideeffect);
-  KEYWORD(alignstack);
   KEYWORD(inteldialect);
   KEYWORD(gc);
   KEYWORD(prefix);
   KEYWORD(prologue);
+
+  KEYWORD(no_sanitize_address);
+  KEYWORD(no_sanitize_hwaddress);
+  KEYWORD(no_sanitize_memtag);
+  KEYWORD(sanitize_address_dyninit);
 
   KEYWORD(ccc);
   KEYWORD(fastcc);
@@ -632,81 +635,13 @@ lltok::Kind LLLexer::LexIdentifier() {
   KEYWORD(c);
 
   KEYWORD(attributes);
+  KEYWORD(sync);
+  KEYWORD(async);
 
-  KEYWORD(alwaysinline);
-  KEYWORD(allocsize);
-  KEYWORD(argmemonly);
-  KEYWORD(builtin);
-  KEYWORD(byval);
-  KEYWORD(inalloca);
-  KEYWORD(cold);
-  KEYWORD(convergent);
-  KEYWORD(dereferenceable);
-  KEYWORD(dereferenceable_or_null);
-  KEYWORD(elementtype);
-  KEYWORD(inaccessiblememonly);
-  KEYWORD(inaccessiblemem_or_argmemonly);
-  KEYWORD(inlinehint);
-  KEYWORD(inreg);
-  KEYWORD(jumptable);
-  KEYWORD(minsize);
-  KEYWORD(naked);
-  KEYWORD(nest);
-  KEYWORD(noalias);
-  KEYWORD(nobuiltin);
-  KEYWORD(nocallback);
-  KEYWORD(nocapture);
-  KEYWORD(noduplicate);
-  KEYWORD(nofree);
-  KEYWORD(noimplicitfloat);
-  KEYWORD(noinline);
-  KEYWORD(norecurse);
-  KEYWORD(nonlazybind);
-  KEYWORD(nomerge);
-  KEYWORD(nonnull);
-  KEYWORD(noprofile);
-  KEYWORD(noredzone);
-  KEYWORD(noreturn);
-  KEYWORD(nosync);
-  KEYWORD(nocf_check);
-  KEYWORD(noundef);
-  KEYWORD(nounwind);
-  KEYWORD(nosanitize_coverage);
-  KEYWORD(null_pointer_is_valid);
-  KEYWORD(optforfuzzing);
-  KEYWORD(optnone);
-  KEYWORD(optsize);
-  KEYWORD(preallocated);
-  KEYWORD(readnone);
-  KEYWORD(readonly);
-  KEYWORD(returned);
-  KEYWORD(returns_twice);
-  KEYWORD(signext);
-  KEYWORD(speculatable);
-  KEYWORD(sret);
-  KEYWORD(ssp);
-  KEYWORD(sspreq);
-  KEYWORD(sspstrong);
-  KEYWORD(strictfp);
-  KEYWORD(safestack);
-  KEYWORD(shadowcallstack);
-  KEYWORD(sanitize_address);
-  KEYWORD(sanitize_hwaddress);
-  KEYWORD(sanitize_memtag);
-  KEYWORD(sanitize_thread);
-  KEYWORD(sanitize_memory);
-  KEYWORD(speculative_load_hardening);
-  KEYWORD(swifterror);
-  KEYWORD(swiftself);
-  KEYWORD(swiftasync);
-  KEYWORD(uwtable);
-  KEYWORD(vscale_range);
-  KEYWORD(willreturn);
-  KEYWORD(writeonly);
-  KEYWORD(zeroext);
-  KEYWORD(immarg);
-  KEYWORD(byref);
-  KEYWORD(mustprogress);
+#define GET_ATTR_NAMES
+#define ATTRIBUTE_ENUM(ENUM_NAME, DISPLAY_NAME) \
+  KEYWORD(DISPLAY_NAME);
+#include "llvm/IR/Attributes.inc"
 
   KEYWORD(type);
   KEYWORD(opaque);
@@ -732,6 +667,7 @@ lltok::Kind LLLexer::LexIdentifier() {
   KEYWORD(x);
   KEYWORD(blockaddress);
   KEYWORD(dso_local_equivalent);
+  KEYWORD(no_cfi);
 
   // Metadata types.
   KEYWORD(distinct);
@@ -769,13 +705,16 @@ lltok::Kind LLLexer::LexIdentifier() {
   KEYWORD(returnDoesNotAlias);
   KEYWORD(noInline);
   KEYWORD(alwaysInline);
+  KEYWORD(noUnwind);
+  KEYWORD(mayThrow);
+  KEYWORD(hasUnknownCall);
+  KEYWORD(mustBeUnreachable);
   KEYWORD(calls);
   KEYWORD(callee);
   KEYWORD(params);
   KEYWORD(param);
   KEYWORD(hotness);
   KEYWORD(unknown);
-  KEYWORD(hot);
   KEYWORD(critical);
   KEYWORD(relbf);
   KEYWORD(variable);
@@ -848,7 +787,18 @@ lltok::Kind LLLexer::LexIdentifier() {
   TYPEKEYWORD("x86_mmx",   Type::getX86_MMXTy(Context));
   TYPEKEYWORD("x86_amx",   Type::getX86_AMXTy(Context));
   TYPEKEYWORD("token",     Type::getTokenTy(Context));
-  TYPEKEYWORD("ptr", PointerType::getUnqual(Context));
+
+  if (Keyword == "ptr") {
+    // setOpaquePointers() must be called before creating any pointer types.
+    if (!Context.hasSetOpaquePointersValue()) {
+      Context.setOpaquePointers(true);
+    } else if (Context.supportsTypedPointers()) {
+      Warning("ptr type is only supported in -opaque-pointers mode");
+      return lltok::Error;
+    }
+    TyVal = PointerType::getUnqual(Context);
+    return lltok::Type;
+  }
 
 #undef TYPEKEYWORD
 

@@ -69,6 +69,10 @@ module m3
       class(t), intent(out) :: x
       integer, intent(in) :: y
     end
+    subroutine s2(x, y)
+      real, intent(out) :: x
+      class(*), intent(in) :: y
+    end
   end interface
   interface operator(+)
     integer function f(x, y)
@@ -77,12 +81,15 @@ module m3
     end
   end interface
 contains
-  subroutine test(x, y)
+  subroutine test(x, y, z)
     class(t) :: x, y
+    class(*), intent(in) :: z
+    real :: a
     !CHECK: CALL s1(x,2_4)
     x = 2
     !CHECK: i=f(x,y)
     i = x + y
+    !CHECK: CALL s2(a,z)
+    a = z
   end
 end
-

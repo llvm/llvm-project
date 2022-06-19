@@ -7,6 +7,7 @@ set(LLVM_LINK_COMPONENTS
   Analysis
   AsmParser
   BitWriter
+  CFGuard
   CodeGen
   Core
   Coroutines
@@ -31,7 +32,6 @@ add_llvm_tool(opt
   BreakpointPrinter.cpp
   GraphPrinters.cpp
   NewPMDriver.cpp
-  PassPrinters.cpp
   PrintSCC.cpp
   opt.cpp
 

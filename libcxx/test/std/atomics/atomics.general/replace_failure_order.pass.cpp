@@ -6,8 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-// UNSUPPORTED: libcpp-has-no-threads
-
 // This test verifies behavior specified by [atomics.types.operations.req]/21:
 //
 //     When only one memory_order argument is supplied, the value of success is

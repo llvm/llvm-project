@@ -19,39 +19,18 @@ using namespace llvm;
 
 /// Removes all the bodies of defined functions that aren't inside any of the
 /// desired Chunks.
-static void
-extractFunctionBodiesFromModule(const std::vector<Chunk> &ChunksToKeep,
-                                Module *Program) {
-  Oracle O(ChunksToKeep);
-
+static void extractFunctionBodiesFromModule(Oracle &O, Module &Program) {
   // Delete out-of-chunk function bodies
   std::vector<Function *> FuncDefsToReduce;
-  for (auto &F : *Program)
+  for (auto &F : Program)
     if (!F.isDeclaration() && !O.shouldKeep()) {
       F.deleteBody();
       F.setComdat(nullptr);
     }
 }
 
-/// Counts the amount of non-declaration functions and prints their
-/// respective name & index
-static int countFunctionDefinitions(Module *Program) {
-  // TODO: Silence index with --quiet flag
-  errs() << "----------------------------\n";
-  errs() << "Function Definition Index Reference:\n";
-  int FunctionDefinitionCount = 0;
-  for (auto &F : *Program)
-    if (!F.isDeclaration())
-      errs() << "\t" << ++FunctionDefinitionCount << ": " << F.getName()
-             << "\n";
-
-  errs() << "----------------------------\n";
-  return FunctionDefinitionCount;
-}
-
 void llvm::reduceFunctionBodiesDeltaPass(TestRunner &Test) {
   errs() << "*** Reducing Function Bodies...\n";
-  int Functions = countFunctionDefinitions(Test.getProgram());
-  runDeltaPass(Test, Functions, extractFunctionBodiesFromModule);
+  runDeltaPass(Test, extractFunctionBodiesFromModule);
   errs() << "----------------------------\n";
 }

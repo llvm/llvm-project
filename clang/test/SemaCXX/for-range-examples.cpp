@@ -196,7 +196,7 @@ namespace test5 {
 namespace test6 {
   void foo(int arr[]) {  // expected-note {{declared here}}
     for (auto i : arr) { }
-      // expected-error@-1 {{cannot build range expression with array function parameter 'arr' since parameter with array type 'int []' is treated as pointer type 'int *'}}
+      // expected-error@-1 {{cannot build range expression with array function parameter 'arr' since parameter with array type 'int[]' is treated as pointer type 'int *'}}
   }
 
   struct vector {
@@ -207,7 +207,7 @@ namespace test6 {
   void foo(vector arr[]) {  // expected-note {{declared here}}
     // Don't suggest to dereference arr.
     for (auto i : arr) { }
-      // expected-error@-1 {{cannot build range expression with array function parameter 'arr' since parameter with array type 'test6::vector []' is treated as pointer type 'test6::vector *'}}
+      // expected-error@-1 {{cannot build range expression with array function parameter 'arr' since parameter with array type 'test6::vector[]' is treated as pointer type 'test6::vector *'}}
   }
 }
 

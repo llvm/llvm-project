@@ -5,28 +5,30 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-//
-// This file builds on the ADT/GraphTraits.h file to build generic depth
-// first graph iterator.  This file exposes the following functions/types:
-//
-// df_begin/df_end/df_iterator
-//   * Normal depth-first iteration - visit a node and then all of its children.
-//
-// idf_begin/idf_end/idf_iterator
-//   * Depth-first iteration on the 'inverse' graph.
-//
-// df_ext_begin/df_ext_end/df_ext_iterator
-//   * Normal depth-first iteration - visit a node and then all of its children.
-//     This iterator stores the 'visited' set in an external set, which allows
-//     it to be more efficient, and allows external clients to use the set for
-//     other purposes.
-//
-// idf_ext_begin/idf_ext_end/idf_ext_iterator
-//   * Depth-first iteration on the 'inverse' graph.
-//     This iterator stores the 'visited' set in an external set, which allows
-//     it to be more efficient, and allows external clients to use the set for
-//     other purposes.
-//
+///
+/// \file
+/// This file builds on the ADT/GraphTraits.h file to build generic depth
+/// first graph iterator.  This file exposes the following functions/types:
+///
+/// df_begin/df_end/df_iterator
+///   * Normal depth-first iteration - visit a node and then all of its
+///     children.
+///
+/// idf_begin/idf_end/idf_iterator
+///   * Depth-first iteration on the 'inverse' graph.
+///
+/// df_ext_begin/df_ext_end/df_ext_iterator
+///   * Normal depth-first iteration - visit a node and then all of its
+///     children. This iterator stores the 'visited' set in an external set,
+///     which allows it to be more efficient, and allows external clients to
+///     use the set for other purposes.
+///
+/// idf_ext_begin/idf_ext_end/idf_ext_iterator
+///   * Depth-first iteration on the 'inverse' graph.
+///     This iterator stores the 'visited' set in an external set, which
+///     allows it to be more efficient, and allows external clients to use
+///     the set for other purposes.
+///
 //===----------------------------------------------------------------------===//
 
 #ifndef LLVM_ADT_DEPTHFIRSTITERATOR_H
@@ -38,7 +40,6 @@
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/iterator_range.h"
 #include <iterator>
-#include <set>
 #include <utility>
 #include <vector>
 
@@ -231,7 +232,7 @@ iterator_range<df_iterator<T>> depth_first(const T& G) {
 }
 
 // Provide global definitions of external depth first iterators...
-template <class T, class SetTy = std::set<typename GraphTraits<T>::NodeRef>>
+template <class T, class SetTy = df_iterator_default_set<typename GraphTraits<T>::NodeRef>>
 struct df_ext_iterator : public df_iterator<T, SetTy, true> {
   df_ext_iterator(const df_iterator<T, SetTy, true> &V)
     : df_iterator<T, SetTy, true>(V) {}
@@ -280,7 +281,7 @@ iterator_range<idf_iterator<T>> inverse_depth_first(const T& G) {
 }
 
 // Provide global definitions of external inverse depth first iterators...
-template <class T, class SetTy = std::set<typename GraphTraits<T>::NodeRef>>
+template <class T, class SetTy = df_iterator_default_set<typename GraphTraits<T>::NodeRef>>
 struct idf_ext_iterator : public idf_iterator<T, SetTy, true> {
   idf_ext_iterator(const idf_iterator<T, SetTy, true> &V)
     : idf_iterator<T, SetTy, true>(V) {}

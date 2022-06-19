@@ -10,13 +10,13 @@ For later versions of Visual Studio, no setup is required.
 <AutoVisualizer xmlns="http://schemas.microsoft.com/vstudio/debugger/natvis/2010">
   <Type Name="llvm::SmallVectorImpl&lt;*&gt;">
     <DisplayString IncludeView ="elt0" Condition="Size == 0"></DisplayString>
-    <DisplayString IncludeView ="elt0">{(($T1*)BeginX)[0]}{*this,view(elt1)}</DisplayString>
+    <DisplayString IncludeView ="elt0">{((value_type*)BeginX)[0]}{*this,view(elt1)}</DisplayString>
     <DisplayString IncludeView ="elt1" Condition="Size == 1"></DisplayString>
-    <DisplayString IncludeView ="elt1">, {(($T1*)BeginX)[1]}{*this,view(elt2)}</DisplayString>
+    <DisplayString IncludeView ="elt1">, {((value_type*)BeginX)[1]}{*this,view(elt2)}</DisplayString>
     <DisplayString IncludeView ="elt2" Condition="Size == 2"></DisplayString>
-    <DisplayString IncludeView ="elt2">, {(($T1*)BeginX)[2]}{*this,view(elt3)}</DisplayString>
+    <DisplayString IncludeView ="elt2">, {((value_type*)BeginX)[2]}{*this,view(elt3)}</DisplayString>
     <DisplayString IncludeView ="elt3" Condition="Size == 3"></DisplayString>
-    <DisplayString IncludeView ="elt3">, {(($T1*)BeginX)[3]}{*this,view(elt4)}</DisplayString>
+    <DisplayString IncludeView ="elt3">, {((value_type*)BeginX)[3]}{*this,view(elt4)}</DisplayString>
     <DisplayString IncludeView ="elt4" Condition="Size == 4"></DisplayString>
     <DisplayString IncludeView ="elt4">, /* {Size - 4} more*/ </DisplayString>
     <DisplayString Condition="Size == 0">empty</DisplayString>
@@ -27,7 +27,7 @@ For later versions of Visual Studio, no setup is required.
       <Item Name="[capacity]">Capacity</Item>
       <ArrayItems>
         <Size>Size</Size>
-        <ValuePointer>($T1*)BeginX</ValuePointer>
+        <ValuePointer>(value_type*)BeginX</ValuePointer>
       </ArrayItems>
     </Expand>
   </Type>
@@ -197,9 +197,9 @@ For later versions of Visual Studio, no setup is required.
   
   <Type Name="llvm::Optional&lt;*&gt;">
     <DisplayString Condition="!Storage.hasVal">None</DisplayString>
-    <DisplayString Condition="Storage.hasVal">{*(($T1 *)(unsigned char *)Storage.storage.buffer)}</DisplayString>
+    <DisplayString Condition="Storage.hasVal">{Storage.value}</DisplayString>
     <Expand>
-      <Item Name="[underlying]" Condition="Storage.hasVal">*(($T1 *)(unsigned char *)Storage.storage.buffer)</Item>
+      <Item Name="[underlying]" Condition="Storage.hasVal">Storage.value</Item>
     </Expand>
   </Type>
 

@@ -2,8 +2,8 @@
 ; RUN:  opt < %s -slp-vectorizer -instcombine -S -mtriple=x86_64-unknown-linux -mattr=+sse2     | FileCheck %s --check-prefixes=SSE
 ; RUN:  opt < %s -slp-vectorizer -instcombine -S -mtriple=x86_64-unknown-linux -mattr=+avx      | FileCheck %s --check-prefixes=AVX
 ; RUN:  opt < %s -slp-vectorizer -instcombine -S -mtriple=x86_64-unknown-linux -mattr=+avx2     | FileCheck %s --check-prefixes=AVX
-; RUN:  opt < %s -slp-vectorizer -instcombine -S -mtriple=x86_64-unknown-linux -mattr=+avx512f  | FileCheck %s --check-prefixes=AVX
-; RUN:  opt < %s -slp-vectorizer -instcombine -S -mtriple=x86_64-unknown-linux -mattr=+avx512vl | FileCheck %s --check-prefixes=AVX
+; RUN:  opt < %s -slp-vectorizer -instcombine -S -mtriple=x86_64-unknown-linux -mattr=+avx512f  | FileCheck %s --check-prefixes=AVX512
+; RUN:  opt < %s -slp-vectorizer -instcombine -S -mtriple=x86_64-unknown-linux -mattr=+avx512vl | FileCheck %s --check-prefixes=AVX512
 
 
 @b = global [8 x i32] zeroinitializer, align 16
@@ -26,11 +26,20 @@ define void @foo() {
 ; AVX-LABEL: @foo(
 ; AVX-NEXT:    [[TMP1:%.*]] = load i32, i32* getelementptr inbounds ([8 x i32], [8 x i32]* @b, i64 0, i64 0), align 16
 ; AVX-NEXT:    [[TMP2:%.*]] = load i32, i32* getelementptr inbounds ([8 x i32], [8 x i32]* @b, i64 0, i64 2), align 8
-; AVX-NEXT:    [[TMP3:%.*]] = insertelement <8 x i32> poison, i32 [[TMP1]], i32 0
-; AVX-NEXT:    [[TMP4:%.*]] = insertelement <8 x i32> [[TMP3]], i32 [[TMP2]], i32 1
+; AVX-NEXT:    [[TMP3:%.*]] = insertelement <8 x i32> poison, i32 [[TMP1]], i64 0
+; AVX-NEXT:    [[TMP4:%.*]] = insertelement <8 x i32> [[TMP3]], i32 [[TMP2]], i64 1
 ; AVX-NEXT:    [[SHUFFLE:%.*]] = shufflevector <8 x i32> [[TMP4]], <8 x i32> poison, <8 x i32> <i32 0, i32 1, i32 0, i32 1, i32 0, i32 1, i32 0, i32 1>
 ; AVX-NEXT:    store <8 x i32> [[SHUFFLE]], <8 x i32>* bitcast ([8 x i32]* @a to <8 x i32>*), align 16
 ; AVX-NEXT:    ret void
+;
+; AVX512-LABEL: @foo(
+; AVX512-NEXT:    [[TMP1:%.*]] = load i32, i32* getelementptr inbounds ([8 x i32], [8 x i32]* @b, i64 0, i64 0), align 16
+; AVX512-NEXT:    [[TMP2:%.*]] = load i32, i32* getelementptr inbounds ([8 x i32], [8 x i32]* @b, i64 0, i64 2), align 8
+; AVX512-NEXT:    [[TMP3:%.*]] = insertelement <8 x i32> poison, i32 [[TMP1]], i64 0
+; AVX512-NEXT:    [[TMP4:%.*]] = insertelement <8 x i32> [[TMP3]], i32 [[TMP2]], i64 1
+; AVX512-NEXT:    [[SHUFFLE:%.*]] = shufflevector <8 x i32> [[TMP4]], <8 x i32> poison, <8 x i32> <i32 0, i32 1, i32 0, i32 1, i32 0, i32 1, i32 0, i32 1>
+; AVX512-NEXT:    store <8 x i32> [[SHUFFLE]], <8 x i32>* bitcast ([8 x i32]* @a to <8 x i32>*), align 16
+; AVX512-NEXT:    ret void
 ;
   %1 = load i32, i32* getelementptr inbounds ([8 x i32], [8 x i32]* @b, i64 0, i64 0), align 16
   store i32 %1, i32* getelementptr inbounds ([8 x i32], [8 x i32]* @a, i64 0, i64 0), align 16

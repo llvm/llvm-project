@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -ffreestanding %s -triple=x86_64-apple-darwin -target-feature +lwp -emit-llvm -o - -Wall -Werror | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -ffreestanding %s -triple=x86_64-apple-darwin -target-feature +lwp -emit-llvm -o - -Wall -Werror | FileCheck %s
 
 #include <x86intrin.h>
 
@@ -8,7 +8,7 @@ void test_llwpcb(void *ptr) {
   __llwpcb(ptr);
 }
 
-void* test_slwpcb() {
+void* test_slwpcb(void) {
   // CHECK-LABEL: @test_slwpcb
   // CHECK: call i8* @llvm.x86.slwpcb()
   return __slwpcb();

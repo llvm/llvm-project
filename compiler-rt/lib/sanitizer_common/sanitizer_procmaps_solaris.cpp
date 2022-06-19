@@ -55,7 +55,15 @@ bool MemoryMappingLayout::Next(MemoryMappedSegment *segment) {
 
     internal_snprintf(proc_path, sizeof(proc_path), "/proc/self/path/%s",
                       xmapentry->pr_mapname);
-    internal_readlink(proc_path, segment->filename, segment->filename_size);
+    ssize_t sz = internal_readlink(proc_path, segment->filename,
+                                   segment->filename_size - 1);
+
+    // If readlink failed, the map is anonymous.
+    if (sz == -1) {
+      segment->filename[0] = '\0';
+    } else if ((size_t)sz < segment->filename_size)
+      // readlink doesn't NUL-terminate.
+      segment->filename[sz] = '\0';
   }
 
   data_.current += sizeof(prxmap_t);

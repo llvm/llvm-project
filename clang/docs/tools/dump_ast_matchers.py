@@ -10,6 +10,12 @@ try:
 except ImportError:
     from urllib2 import urlopen
 
+CLASS_INDEX_PAGE_URL = 'https://clang.llvm.org/doxygen/classes.html'
+try:
+  CLASS_INDEX_PAGE = urlopen(CLASS_INDEX_PAGE_URL).read()
+except Exception as e:
+  raise Exception('Unable to get %s: %s' % (CLASS_INDEX_PAGE_URL, e))
+
 MATCHERS_FILE = '../../include/clang/ASTMatchers/ASTMatchers.h'
 
 # Each matcher is documented in one row of the form:
@@ -40,15 +46,18 @@ def esc(text):
   text = re.sub(r'<', '&lt;', text)
   text = re.sub(r'>', '&gt;', text)
   def link_if_exists(m):
+    """Wrap a likely AST node name in a link to its clang docs.
+
+       We want to do this only if the page exists, in which case it will be
+       referenced from the class index page.
+    """
     name = m.group(1)
     url = 'https://clang.llvm.org/doxygen/classclang_1_1%s.html' % name
     if url not in doxygen_probes:
-      try:
-        print('Probing %s...' % url)
-        urlopen(url)
-        doxygen_probes[url] = True
-      except:
-        doxygen_probes[url] = False
+      search_str = 'href="classclang_1_1%s.html"' % name
+      doxygen_probes[url] = search_str in CLASS_INDEX_PAGE
+      if not doxygen_probes[url]:
+        print('Did not find %s in class index page' % name)
     if doxygen_probes[url]:
       return r'Matcher&lt;<a href="%s">%s</a>&gt;' % (url, name)
     else:

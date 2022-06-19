@@ -19,12 +19,12 @@
 
 namespace __sanitizer {
 
-static BlockingMutex tctx_allocator_lock(LINKER_INITIALIZED);
+static Mutex tctx_allocator_lock;
 static LowLevelAllocator tctx_allocator;
 
 template<typename TCTX>
 static ThreadContextBase *GetThreadContext(u32 tid) {
-  BlockingMutexLock l(&tctx_allocator_lock);
+  Lock l(&tctx_allocator_lock);
   return new(tctx_allocator) TCTX(tid);
 }
 

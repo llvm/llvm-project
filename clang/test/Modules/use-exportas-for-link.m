@@ -1,3 +1,4 @@
+// UNSUPPORTED: -zos, -aix
 // RUN: rm -rf %t
 // RUN: %clang_cc1 -emit-llvm -o - -fmodules-cache-path=%t -DA -fmodules -fimplicit-module-maps -F %S/Inputs/exportas-link %s | FileCheck --check-prefix=CHECK_A %s
 // CHECK_A: !llvm.linker.options = !{![[MODULE:[0-9]+]]}

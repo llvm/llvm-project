@@ -25,15 +25,14 @@
 namespace clang {
 
 class ASTContext;
+class Decl;
 class DependentTemplateName;
-class DiagnosticBuilder;
 class IdentifierInfo;
 class NamedDecl;
 class NestedNameSpecifier;
 enum OverloadedOperatorKind : int;
 class OverloadedTemplateStorage;
 class AssumedTemplateStorage;
-class PartialDiagnostic;
 struct PrintingPolicy;
 class QualifiedTemplateName;
 class SubstTemplateTemplateParmPackStorage;
@@ -41,6 +40,7 @@ class SubstTemplateTemplateParmStorage;
 class TemplateArgument;
 class TemplateDecl;
 class TemplateTemplateParmDecl;
+class UsingShadowDecl;
 
 /// Implementation class used to describe either a set of overloaded
 /// template names or an already-substituted template template parameter pack.
@@ -190,8 +190,12 @@ public:
 /// specifier in the typedef. "apply" is a nested template, and can
 /// only be understood in the context of
 class TemplateName {
+  // NameDecl is either a TemplateDecl or a UsingShadowDecl depending on the
+  // NameKind.
+  // !! There is no free low bits in 32-bit builds to discriminate more than 4
+  // pointer types in PointerUnion.
   using StorageType =
-      llvm::PointerUnion<TemplateDecl *, UncommonTemplateNameStorage *,
+      llvm::PointerUnion<Decl *, UncommonTemplateNameStorage *,
                          QualifiedTemplateName *, DependentTemplateName *>;
 
   StorageType Storage;
@@ -226,7 +230,11 @@ public:
     /// A template template parameter pack that has been substituted for
     /// a template template argument pack, but has not yet been expanded into
     /// individual arguments.
-    SubstTemplateTemplateParmPack
+    SubstTemplateTemplateParmPack,
+
+    /// A template name that refers to a template declaration found through a
+    /// specific using shadow declaration.
+    UsingTemplate,
   };
 
   TemplateName() = default;
@@ -237,6 +245,7 @@ public:
   explicit TemplateName(SubstTemplateTemplateParmPackStorage *Storage);
   explicit TemplateName(QualifiedTemplateName *Qual);
   explicit TemplateName(DependentTemplateName *Dep);
+  explicit TemplateName(UsingShadowDecl *Using);
 
   /// Determine whether this template name is NULL.
   bool isNull() const;
@@ -289,6 +298,10 @@ public:
   /// structure, if any.
   DependentTemplateName *getAsDependentTemplateName() const;
 
+  /// Retrieve the using shadow declaration through which the underlying
+  /// template declaration is introduced, if any.
+  UsingShadowDecl *getAsUsingShadowDecl() const;
+
   TemplateName getUnderlying() const;
 
   /// Get the template name to substitute when this template name is used as a
@@ -309,16 +322,17 @@ public:
   /// unexpanded parameter pack (for C++0x variadic templates).
   bool containsUnexpandedParameterPack() const;
 
+  enum class Qualified { None, AsWritten, Fully };
   /// Print the template name.
   ///
   /// \param OS the output stream to which the template name will be
   /// printed.
   ///
-  /// \param SuppressNNS if true, don't print the
-  /// nested-name-specifier that precedes the template name (if it has
-  /// one).
+  /// \param Qual print the (Qualified::None) simple name,
+  /// (Qualified::AsWritten) any written (possibly partial) qualifier, or
+  /// (Qualified::Fully) the fully qualified name.
   void print(raw_ostream &OS, const PrintingPolicy &Policy,
-             bool SuppressNNS = false) const;
+             Qualified Qual = Qualified::AsWritten) const;
 
   /// Debugging aid that dumps the template name.
   void dump(raw_ostream &OS) const;
@@ -400,13 +414,19 @@ class QualifiedTemplateName : public llvm::FoldingSetNode {
   /// this name with DependentTemplateName).
   llvm::PointerIntPair<NestedNameSpecifier *, 1> Qualifier;
 
-  /// The template declaration or set of overloaded function templates
-  /// that this qualified name refers to.
-  TemplateDecl *Template;
+  /// The underlying template name, it is either
+  ///  1) a Template -- a template declaration that this qualified name refers
+  ///     to.
+  ///  2) or a UsingTemplate -- a template declaration introduced by a
+  ///     using-shadow declaration.
+  TemplateName UnderlyingTemplate;
 
   QualifiedTemplateName(NestedNameSpecifier *NNS, bool TemplateKeyword,
-                        TemplateDecl *Template)
-      : Qualifier(NNS, TemplateKeyword? 1 : 0), Template(Template) {}
+                        TemplateName Template)
+      : Qualifier(NNS, TemplateKeyword ? 1 : 0), UnderlyingTemplate(Template) {
+    assert(UnderlyingTemplate.getKind() == TemplateName::Template ||
+           UnderlyingTemplate.getKind() == TemplateName::UsingTemplate);
+  }
 
 public:
   /// Return the nested name specifier that qualifies this name.
@@ -416,23 +436,18 @@ public:
   /// keyword.
   bool hasTemplateKeyword() const { return Qualifier.getInt(); }
 
-  /// The template declaration that this qualified name refers
-  /// to.
-  TemplateDecl *getDecl() const { return Template; }
-
-  /// The template declaration to which this qualified name
-  /// refers.
-  TemplateDecl *getTemplateDecl() const { return Template; }
+  /// Return the underlying template name.
+  TemplateName getUnderlyingTemplate() const { return UnderlyingTemplate; }
 
   void Profile(llvm::FoldingSetNodeID &ID) {
-    Profile(ID, getQualifier(), hasTemplateKeyword(), getTemplateDecl());
+    Profile(ID, getQualifier(), hasTemplateKeyword(), UnderlyingTemplate);
   }
 
   static void Profile(llvm::FoldingSetNodeID &ID, NestedNameSpecifier *NNS,
-                      bool TemplateKeyword, TemplateDecl *Template) {
+                      bool TemplateKeyword, TemplateName TN) {
     ID.AddPointer(NNS);
     ID.AddBoolean(TemplateKeyword);
-    ID.AddPointer(Template);
+    ID.AddPointer(TN.getAsVoidPointer());
   }
 };
 

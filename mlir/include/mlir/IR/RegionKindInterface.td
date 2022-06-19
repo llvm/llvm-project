@@ -33,7 +33,7 @@ def RegionKindInterface : OpInterface<"RegionKindInterface"> {
       /*desc=*/[{
         Return the kind of the region with the given index inside this operation.
       }],
-      /*retTy=*/"RegionKind",
+      /*retTy=*/"::mlir::RegionKind",
       /*methodName=*/"getRegionKind",
       /*args=*/(ins "unsigned":$index)
     >,
@@ -44,7 +44,7 @@ def RegionKindInterface : OpInterface<"RegionKindInterface"> {
       /*methodName=*/"hasSSADominance",
       /*args=*/(ins "unsigned":$index),
       /*methodBody=*/[{
-        return getRegionKind(index) == RegionKind::SSACFG;
+        return getRegionKind(index) == ::mlir::RegionKind::SSACFG;
       }]
     >,
   ];
@@ -54,13 +54,11 @@ def HasOnlyGraphRegion : NativeOpTrait<"HasOnlyGraphRegion">;
 
 // Op's regions that don't need a terminator: requires some other traits
 // so it defines a list that must be concatenated.
-def GraphRegionNoTerminator {
-  list<OpTrait> traits = [
+def GraphRegionNoTerminator : TraitList<[
     NoTerminator,
     SingleBlock,
     RegionKindInterface,
     HasOnlyGraphRegion
-  ];
-}
+  ]>;
 
 #endif // MLIR_IR_REGIONKINDINTERFACE

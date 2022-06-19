@@ -1,6 +1,6 @@
-// RUN: %clang_cc1 -std=c++14 -triple amdgcn-amd-amdhsa \
+// RUN: %clang_cc1 -no-opaque-pointers -std=c++14 -triple amdgcn-amd-amdhsa \
 // RUN:   -fcuda-is-device -emit-llvm -o - -x hip %s | FileCheck %s
-// RUN: %clang_cc1 -std=c++14 -triple amdgcn-amd-amdhsa \
+// RUN: %clang_cc1 -no-opaque-pointers -std=c++14 -triple amdgcn-amd-amdhsa \
 // RUN:   -fcuda-is-device -emit-llvm -o - -x hip %s | FileCheck -check-prefix=NEG %s
 
 #include "Inputs/cuda.h"

@@ -15,10 +15,10 @@ define arm_aapcs_vfpcc void @arm_var_f32_mve(float* %pSrc, i32 %blockSize, float
 ; CHECK-NEXT:    vadd.f32 q0, q0, q1
 ; CHECK-NEXT:    letp lr, .LBB0_1
 ; CHECK-NEXT:  @ %bb.2: @ %arm_mean_f32_mve.exit
-; CHECK-NEXT:    vmov s4, r1
-; CHECK-NEXT:    vadd.f32 s0, s3, s3
-; CHECK-NEXT:    vcvt.f32.u32 s4, s4
-; CHECK-NEXT:    vdiv.f32 s0, s0, s4
+; CHECK-NEXT:    vmov s0, r1
+; CHECK-NEXT:    vadd.f32 s2, s3, s3
+; CHECK-NEXT:    vcvt.f32.u32 s0, s0
+; CHECK-NEXT:    vdiv.f32 s0, s2, s0
 ; CHECK-NEXT:    vmov r12, s0
 ; CHECK-NEXT:    vmov.i32 q0, #0x0
 ; CHECK-NEXT:    dlstp.32 lr, r1

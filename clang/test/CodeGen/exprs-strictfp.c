@@ -8,7 +8,7 @@
 
 #pragma float_control(except, on)
 
-void eMaisUma() {
+void eMaisUma(void) {
   double t[1];
   if (*t)
     return;

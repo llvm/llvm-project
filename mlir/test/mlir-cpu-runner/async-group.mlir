@@ -1,8 +1,4 @@
-// RUN:   mlir-opt %s -async-to-async-runtime                                  \
-// RUN:               -async-runtime-ref-counting                              \
-// RUN:               -async-runtime-ref-counting-opt                          \
-// RUN:               -convert-async-to-llvm                                   \
-// RUN:               -convert-std-to-llvm                                     \
+// RUN:   mlir-opt %s -pass-pipeline="async-to-async-runtime,func.func(async-runtime-ref-counting,async-runtime-ref-counting-opt),convert-async-to-llvm,func.func(convert-arith-to-llvm),convert-func-to-llvm,reconcile-unrealized-casts" \
 // RUN: | mlir-cpu-runner                                                      \
 // RUN:     -e main -entry-point-result=void -O0                               \
 // RUN:     -shared-libs=%linalg_test_lib_dir/libmlir_c_runner_utils%shlibext  \
@@ -10,9 +6,16 @@
 // RUN:     -shared-libs=%linalg_test_lib_dir/libmlir_async_runtime%shlibext   \
 // RUN: | FileCheck %s
 
-func @main() {
-  %c1 = constant 1 : index
-  %c5 = constant 5 : index
+// This is crashing in CI "most of the time" on a AMD Rome CPU VM on GCP with:
+//    Tracer caught signal 11: addr=0x7a800028 pc=0x2e81ba sp=0x7efd2a7ffd50
+//    LeakSanitizer has encountered a fatal error.
+// This is hard to reproduce locally unfortunately. Disable it with ASAN/LSAN
+// to keep the bot green for now.
+// UNSUPPORTED: asan
+
+func.func @main() {
+  %c1 = arith.constant 1 : index
+  %c5 = arith.constant 5 : index
 
   %group = async.create_group %c5 : !async.group
 
@@ -43,4 +46,4 @@ func @main() {
   return
 }
 
-func private @mlirAsyncRuntimePrintCurrentThreadId() -> ()
+func.func private @mlirAsyncRuntimePrintCurrentThreadId() -> ()

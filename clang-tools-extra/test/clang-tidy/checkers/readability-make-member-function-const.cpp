@@ -40,6 +40,12 @@ struct A {
     return ConstM;
   }
 
+  int read_fields_in_parentheses() {
+    // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: method 'read_fields_in_parentheses' can be made const
+    // CHECK-FIXES: {{^}}  int read_fields_in_parentheses() const {
+    return (this)->M + (((((Struct.M))))) + ((this->ConstM));
+  }
+
   void call_const_member() {
     // CHECK-MESSAGES: :[[@LINE-1]]:8: warning: method 'call_const_member' can be made const
     // CHECK-FIXES: {{^}}  void call_const_member() const {

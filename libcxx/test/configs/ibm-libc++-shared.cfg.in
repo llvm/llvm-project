@@ -1,0 +1,33 @@
+# This testing configuration handles running the test suite against libc++ on
+# AIX using a shared library.
+#
+
+lit_config.load_config(config, '@CMAKE_CURRENT_BINARY_DIR@/cmake-bridge.cfg')
+
+config.substitutions.append(('%{flags}', ''))
+config.substitutions.append(('%{compile_flags}',
+    '-nostdinc++ -D__LIBC_NO_CPP_MATH_OVERLOADS__ -I %{include} -I %{libcxx}/test/support -pthread'
+))
+config.substitutions.append(('%{link_flags}',
+    '-nostdlib++ -L %{lib} -lc++ -lc++abi -latomic -Wl,-bbigtoc'
+))
+config.substitutions.append(('%{exec}',
+    '%{executor} --execdir %T --env LIBPATH=%{lib} -- '
+))
+
+# LIBCXX-AIX-FIXME is the feature name used to XFAIL the
+# initial AIX failures until they can be properly diagnosed
+# and fixed. This allows easier detection of new test failures
+# and regressions. Note: New failures should not be suppressed
+# using this feature. (Also see llvm.org/PR52188)
+config.available_features.add('LIBCXX-AIX-FIXME')
+
+import os, site
+site.addsitedir(os.path.join('@LIBCXX_SOURCE_DIR@', 'utils'))
+import libcxx.test.params, libcxx.test.newconfig
+libcxx.test.newconfig.configure(
+    libcxx.test.params.DEFAULT_PARAMETERS,
+    libcxx.test.features.DEFAULT_FEATURES,
+    config,
+    lit_config
+)

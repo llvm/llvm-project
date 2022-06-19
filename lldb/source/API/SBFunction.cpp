@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "lldb/API/SBFunction.h"
-#include "SBReproducerPrivate.h"
 #include "lldb/API/SBProcess.h"
 #include "lldb/API/SBStream.h"
 #include "lldb/Core/Disassembler.h"
@@ -18,42 +17,42 @@
 #include "lldb/Symbol/VariableList.h"
 #include "lldb/Target/ExecutionContext.h"
 #include "lldb/Target/Target.h"
+#include "lldb/Utility/Instrumentation.h"
 
 using namespace lldb;
 using namespace lldb_private;
 
-SBFunction::SBFunction() { LLDB_RECORD_CONSTRUCTOR_NO_ARGS(SBFunction); }
+SBFunction::SBFunction() { LLDB_INSTRUMENT_VA(this); }
 
 SBFunction::SBFunction(lldb_private::Function *lldb_object_ptr)
     : m_opaque_ptr(lldb_object_ptr) {}
 
 SBFunction::SBFunction(const lldb::SBFunction &rhs)
     : m_opaque_ptr(rhs.m_opaque_ptr) {
-  LLDB_RECORD_CONSTRUCTOR(SBFunction, (const lldb::SBFunction &), rhs);
+  LLDB_INSTRUMENT_VA(this, rhs);
 }
 
 const SBFunction &SBFunction::operator=(const SBFunction &rhs) {
-  LLDB_RECORD_METHOD(const lldb::SBFunction &,
-                     SBFunction, operator=,(const lldb::SBFunction &), rhs);
+  LLDB_INSTRUMENT_VA(this, rhs);
 
   m_opaque_ptr = rhs.m_opaque_ptr;
-  return LLDB_RECORD_RESULT(*this);
+  return *this;
 }
 
 SBFunction::~SBFunction() { m_opaque_ptr = nullptr; }
 
 bool SBFunction::IsValid() const {
-  LLDB_RECORD_METHOD_CONST_NO_ARGS(bool, SBFunction, IsValid);
+  LLDB_INSTRUMENT_VA(this);
   return this->operator bool();
 }
 SBFunction::operator bool() const {
-  LLDB_RECORD_METHOD_CONST_NO_ARGS(bool, SBFunction, operator bool);
+  LLDB_INSTRUMENT_VA(this);
 
   return m_opaque_ptr != nullptr;
 }
 
 const char *SBFunction::GetName() const {
-  LLDB_RECORD_METHOD_CONST_NO_ARGS(const char *, SBFunction, GetName);
+  LLDB_INSTRUMENT_VA(this);
 
   const char *cstr = nullptr;
   if (m_opaque_ptr)
@@ -63,7 +62,7 @@ const char *SBFunction::GetName() const {
 }
 
 const char *SBFunction::GetDisplayName() const {
-  LLDB_RECORD_METHOD_CONST_NO_ARGS(const char *, SBFunction, GetDisplayName);
+  LLDB_INSTRUMENT_VA(this);
 
   const char *cstr = nullptr;
   if (m_opaque_ptr)
@@ -73,7 +72,7 @@ const char *SBFunction::GetDisplayName() const {
 }
 
 const char *SBFunction::GetMangledName() const {
-  LLDB_RECORD_METHOD_CONST_NO_ARGS(const char *, SBFunction, GetMangledName);
+  LLDB_INSTRUMENT_VA(this);
 
   const char *cstr = nullptr;
   if (m_opaque_ptr)
@@ -82,21 +81,19 @@ const char *SBFunction::GetMangledName() const {
 }
 
 bool SBFunction::operator==(const SBFunction &rhs) const {
-  LLDB_RECORD_METHOD_CONST(
-      bool, SBFunction, operator==,(const lldb::SBFunction &), rhs);
+  LLDB_INSTRUMENT_VA(this, rhs);
 
   return m_opaque_ptr == rhs.m_opaque_ptr;
 }
 
 bool SBFunction::operator!=(const SBFunction &rhs) const {
-  LLDB_RECORD_METHOD_CONST(
-      bool, SBFunction, operator!=,(const lldb::SBFunction &), rhs);
+  LLDB_INSTRUMENT_VA(this, rhs);
 
   return m_opaque_ptr != rhs.m_opaque_ptr;
 }
 
 bool SBFunction::GetDescription(SBStream &s) {
-  LLDB_RECORD_METHOD(bool, SBFunction, GetDescription, (lldb::SBStream &), s);
+  LLDB_INSTRUMENT_VA(this, s);
 
   if (m_opaque_ptr) {
     s.Printf("SBFunction: id = 0x%8.8" PRIx64 ", name = %s",
@@ -111,16 +108,14 @@ bool SBFunction::GetDescription(SBStream &s) {
 }
 
 SBInstructionList SBFunction::GetInstructions(SBTarget target) {
-  LLDB_RECORD_METHOD(lldb::SBInstructionList, SBFunction, GetInstructions,
-                     (lldb::SBTarget), target);
+  LLDB_INSTRUMENT_VA(this, target);
 
-  return LLDB_RECORD_RESULT(GetInstructions(target, nullptr));
+  return GetInstructions(target, nullptr);
 }
 
 SBInstructionList SBFunction::GetInstructions(SBTarget target,
                                               const char *flavor) {
-  LLDB_RECORD_METHOD(lldb::SBInstructionList, SBFunction, GetInstructions,
-                     (lldb::SBTarget, const char *), target, flavor);
+  LLDB_INSTRUMENT_VA(this, target, flavor);
 
   SBInstructionList sb_instructions;
   if (m_opaque_ptr) {
@@ -136,7 +131,7 @@ SBInstructionList SBFunction::GetInstructions(SBTarget target,
           m_opaque_ptr->GetAddressRange(), force_live_memory));
     }
   }
-  return LLDB_RECORD_RESULT(sb_instructions);
+  return sb_instructions;
 }
 
 lldb_private::Function *SBFunction::get() { return m_opaque_ptr; }
@@ -146,16 +141,16 @@ void SBFunction::reset(lldb_private::Function *lldb_object_ptr) {
 }
 
 SBAddress SBFunction::GetStartAddress() {
-  LLDB_RECORD_METHOD_NO_ARGS(lldb::SBAddress, SBFunction, GetStartAddress);
+  LLDB_INSTRUMENT_VA(this);
 
   SBAddress addr;
   if (m_opaque_ptr)
     addr.SetAddress(m_opaque_ptr->GetAddressRange().GetBaseAddress());
-  return LLDB_RECORD_RESULT(addr);
+  return addr;
 }
 
 SBAddress SBFunction::GetEndAddress() {
-  LLDB_RECORD_METHOD_NO_ARGS(lldb::SBAddress, SBFunction, GetEndAddress);
+  LLDB_INSTRUMENT_VA(this);
 
   SBAddress addr;
   if (m_opaque_ptr) {
@@ -165,12 +160,11 @@ SBAddress SBFunction::GetEndAddress() {
       addr->Slide(byte_size);
     }
   }
-  return LLDB_RECORD_RESULT(addr);
+  return addr;
 }
 
 const char *SBFunction::GetArgumentName(uint32_t arg_idx) {
-  LLDB_RECORD_METHOD(const char *, SBFunction, GetArgumentName, (uint32_t),
-                     arg_idx);
+  LLDB_INSTRUMENT_VA(this, arg_idx);
 
   if (m_opaque_ptr) {
     Block &block = m_opaque_ptr->GetBlock(true);
@@ -188,7 +182,7 @@ const char *SBFunction::GetArgumentName(uint32_t arg_idx) {
 }
 
 uint32_t SBFunction::GetPrologueByteSize() {
-  LLDB_RECORD_METHOD_NO_ARGS(uint32_t, SBFunction, GetPrologueByteSize);
+  LLDB_INSTRUMENT_VA(this);
 
   if (m_opaque_ptr)
     return m_opaque_ptr->GetPrologueByteSize();
@@ -196,7 +190,7 @@ uint32_t SBFunction::GetPrologueByteSize() {
 }
 
 SBType SBFunction::GetType() {
-  LLDB_RECORD_METHOD_NO_ARGS(lldb::SBType, SBFunction, GetType);
+  LLDB_INSTRUMENT_VA(this);
 
   SBType sb_type;
   if (m_opaque_ptr) {
@@ -204,20 +198,20 @@ SBType SBFunction::GetType() {
     if (function_type)
       sb_type.ref().SetType(function_type->shared_from_this());
   }
-  return LLDB_RECORD_RESULT(sb_type);
+  return sb_type;
 }
 
 SBBlock SBFunction::GetBlock() {
-  LLDB_RECORD_METHOD_NO_ARGS(lldb::SBBlock, SBFunction, GetBlock);
+  LLDB_INSTRUMENT_VA(this);
 
   SBBlock sb_block;
   if (m_opaque_ptr)
     sb_block.SetPtr(&m_opaque_ptr->GetBlock(true));
-  return LLDB_RECORD_RESULT(sb_block);
+  return sb_block;
 }
 
 lldb::LanguageType SBFunction::GetLanguage() {
-  LLDB_RECORD_METHOD_NO_ARGS(lldb::LanguageType, SBFunction, GetLanguage);
+  LLDB_INSTRUMENT_VA(this);
 
   if (m_opaque_ptr) {
     if (m_opaque_ptr->GetCompileUnit())
@@ -227,47 +221,11 @@ lldb::LanguageType SBFunction::GetLanguage() {
 }
 
 bool SBFunction::GetIsOptimized() {
-  LLDB_RECORD_METHOD_NO_ARGS(bool, SBFunction, GetIsOptimized);
+  LLDB_INSTRUMENT_VA(this);
 
   if (m_opaque_ptr) {
     if (m_opaque_ptr->GetCompileUnit())
       return m_opaque_ptr->GetCompileUnit()->GetIsOptimized();
   }
   return false;
-}
-
-namespace lldb_private {
-namespace repro {
-
-template <>
-void RegisterMethods<SBFunction>(Registry &R) {
-  LLDB_REGISTER_CONSTRUCTOR(SBFunction, ());
-  LLDB_REGISTER_CONSTRUCTOR(SBFunction, (const lldb::SBFunction &));
-  LLDB_REGISTER_METHOD(const lldb::SBFunction &,
-                       SBFunction, operator=,(const lldb::SBFunction &));
-  LLDB_REGISTER_METHOD_CONST(bool, SBFunction, IsValid, ());
-  LLDB_REGISTER_METHOD_CONST(bool, SBFunction, operator bool, ());
-  LLDB_REGISTER_METHOD_CONST(const char *, SBFunction, GetName, ());
-  LLDB_REGISTER_METHOD_CONST(const char *, SBFunction, GetDisplayName, ());
-  LLDB_REGISTER_METHOD_CONST(const char *, SBFunction, GetMangledName, ());
-  LLDB_REGISTER_METHOD_CONST(
-      bool, SBFunction, operator==,(const lldb::SBFunction &));
-  LLDB_REGISTER_METHOD_CONST(
-      bool, SBFunction, operator!=,(const lldb::SBFunction &));
-  LLDB_REGISTER_METHOD(bool, SBFunction, GetDescription, (lldb::SBStream &));
-  LLDB_REGISTER_METHOD(lldb::SBInstructionList, SBFunction, GetInstructions,
-                       (lldb::SBTarget));
-  LLDB_REGISTER_METHOD(lldb::SBInstructionList, SBFunction, GetInstructions,
-                       (lldb::SBTarget, const char *));
-  LLDB_REGISTER_METHOD(lldb::SBAddress, SBFunction, GetStartAddress, ());
-  LLDB_REGISTER_METHOD(lldb::SBAddress, SBFunction, GetEndAddress, ());
-  LLDB_REGISTER_METHOD(const char *, SBFunction, GetArgumentName, (uint32_t));
-  LLDB_REGISTER_METHOD(uint32_t, SBFunction, GetPrologueByteSize, ());
-  LLDB_REGISTER_METHOD(lldb::SBType, SBFunction, GetType, ());
-  LLDB_REGISTER_METHOD(lldb::SBBlock, SBFunction, GetBlock, ());
-  LLDB_REGISTER_METHOD(lldb::LanguageType, SBFunction, GetLanguage, ());
-  LLDB_REGISTER_METHOD(bool, SBFunction, GetIsOptimized, ());
-}
-
-}
 }

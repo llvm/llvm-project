@@ -5,6 +5,8 @@
 ; RUN: opt -S -lowertypetests -mtriple=arm-unknown-linux-gnu < %s | FileCheck --check-prefixes=ARM,NATIVE %s
 ; RUN: opt -S -lowertypetests -mtriple=thumb-unknown-linux-gnu < %s | FileCheck --check-prefixes=THUMB,NATIVE %s
 ; RUN: opt -S -lowertypetests -mtriple=aarch64-unknown-linux-gnu < %s | FileCheck --check-prefixes=ARM,NATIVE %s
+; RUN: opt -S -lowertypetests -mtriple=riscv32-unknown-linux-gnu < %s | FileCheck --check-prefixes=RISCV,NATIVE %s
+; RUN: opt -S -lowertypetests -mtriple=riscv64-unknown-linux-gnu < %s | FileCheck --check-prefixes=RISCV,NATIVE %s
 ; RUN: opt -S -lowertypetests -mtriple=wasm32-unknown-unknown < %s | FileCheck --check-prefix=WASM32 %s
 
 ; Tests that we correctly handle bitsets containing 2 or more functions.
@@ -23,6 +25,7 @@ target datalayout = "e-p:64:64"
 ; X86: @g = internal alias void (), bitcast ([8 x i8]* getelementptr inbounds ([2 x [8 x i8]], [2 x [8 x i8]]* bitcast (void ()* @[[JT]] to [2 x [8 x i8]]*), i64 0, i64 1) to void ()*)
 ; ARM: @g = internal alias void (), bitcast ([4 x i8]* getelementptr inbounds ([2 x [4 x i8]], [2 x [4 x i8]]* bitcast (void ()* @[[JT]] to [2 x [4 x i8]]*), i64 0, i64 1) to void ()*)
 ; THUMB: @g = internal alias void (), bitcast ([4 x i8]* getelementptr inbounds ([2 x [4 x i8]], [2 x [4 x i8]]* bitcast (void ()* @[[JT]] to [2 x [4 x i8]]*), i64 0, i64 1) to void ()*)
+; RISCV: @g = internal alias void (), bitcast ([8 x i8]* getelementptr inbounds ([2 x [8 x i8]], [2 x [8 x i8]]* bitcast (void ()* @[[JT]] to [2 x [8 x i8]]*), i64 0, i64 1) to void ()*)
 
 ; NATIVE: define hidden void @f.cfi()
 ; WASM32: define void @f() !type !{{[0-9]+}} !wasm.index ![[I0:[0-9]+]]
@@ -52,6 +55,7 @@ define i1 @foo(i8* %p) {
 ; X86-WIN32:   define private void @[[JT]]() #[[ATTR:.*]] align 8 {
 ; ARM:   define private void @[[JT]]() #[[ATTR:.*]] align 4 {
 ; THUMB: define private void @[[JT]]() #[[ATTR:.*]] align 4 {
+; RISCV: define private void @[[JT]]() #[[ATTR:.*]] align 8 {
 
 ; X86:      jmp ${0:c}@plt
 ; X86-SAME: int3
@@ -68,12 +72,16 @@ define i1 @foo(i8* %p) {
 ; THUMB:      b.w $0
 ; THUMB-SAME: b.w $1
 
+; RISCV:      tail $0@plt
+; RISCV-SAME: tail $1@plt
+
 ; NATIVE-SAME: "s,s"(void ()* @f.cfi, void ()* @g.cfi)
 
 ; X86-LINUX: attributes #[[ATTR]] = { naked nounwind }
 ; X86-WIN32: attributes #[[ATTR]] = { nounwind }
 ; ARM: attributes #[[ATTR]] = { naked nounwind
 ; THUMB: attributes #[[ATTR]] = { naked nounwind "target-cpu"="cortex-a8" "target-features"="+thumb-mode" }
+; RISCV: attributes #[[ATTR]] = { naked nounwind "target-features"="-c,-relax" }
 
 ; WASM32: ![[I0]] = !{i64 1}
 ; WASM32: ![[I1]] = !{i64 2}

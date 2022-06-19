@@ -38,7 +38,7 @@ bool Sema::checkSYCLDeviceFunction(SourceLocation Loc, FunctionDecl *Callee) {
          "Should only be called during SYCL compilation");
   assert(Callee && "Callee may not be null.");
 
-  // Errors in unevaluated context don't need to be generated,
+  // Errors in an unevaluated context don't need to be generated,
   // so we can safely skip them.
   if (isUnevaluatedContext() || isConstantEvaluated())
     return true;
@@ -49,34 +49,100 @@ bool Sema::checkSYCLDeviceFunction(SourceLocation Loc, FunctionDecl *Callee) {
          DiagKind != SemaDiagnosticBuilder::K_ImmediateWithCallStack;
 }
 
-// The SYCL kernel's 'object type' used for diagnostics and naming/mangling is
-// the first parameter to a sycl_kernel labeled function template. In SYCL1.2.1,
-// this was passed by value, and in SYCL2020, it is passed by reference.
-static QualType GetSYCLKernelObjectType(const FunctionDecl *KernelCaller) {
-  assert(KernelCaller->getNumParams() > 0 && "Insufficient kernel parameters");
-  QualType KernelParamTy = KernelCaller->getParamDecl(0)->getType();
-
-  // SYCL 2020 kernels are passed by reference.
-  if (KernelParamTy->isReferenceType())
-    return KernelParamTy->getPointeeType();
-
-  // SYCL 1.2.1
-  return KernelParamTy;
+static bool isZeroSizedArray(Sema &SemaRef, QualType Ty) {
+  if (const auto *CAT = SemaRef.getASTContext().getAsConstantArrayType(Ty))
+    return CAT->getSize() == 0;
+  return false;
 }
 
-void Sema::AddSYCLKernelLambda(const FunctionDecl *FD) {
-  auto MangleCallback = [](ASTContext &Ctx,
-                           const NamedDecl *ND) -> llvm::Optional<unsigned> {
-    if (const auto *RD = dyn_cast<CXXRecordDecl>(ND))
-      Ctx.AddSYCLKernelNamingDecl(RD);
-    // We always want to go into the lambda mangling (skipping the unnamed
-    // struct version), so make sure we return a value here.
-    return 1;
+void Sema::deepTypeCheckForSYCLDevice(SourceLocation UsedAt,
+                                      llvm::DenseSet<QualType> Visited,
+                                      ValueDecl *DeclToCheck) {
+  assert(getLangOpts().SYCLIsDevice &&
+         "Should only be called during SYCL compilation");
+  // Emit notes only for the first discovered declaration of unsupported type
+  // to avoid mess of notes. This flag is to track that error already happened.
+  bool NeedToEmitNotes = true;
+
+  auto Check = [&](QualType TypeToCheck, const ValueDecl *D) {
+    bool ErrorFound = false;
+    if (isZeroSizedArray(*this, TypeToCheck)) {
+      SYCLDiagIfDeviceCode(UsedAt, diag::err_typecheck_zero_array_size) << 1;
+      ErrorFound = true;
+    }
+    // Checks for other types can also be done here.
+    if (ErrorFound) {
+      if (NeedToEmitNotes) {
+        if (auto *FD = dyn_cast<FieldDecl>(D))
+          SYCLDiagIfDeviceCode(FD->getLocation(),
+                               diag::note_illegal_field_declared_here)
+              << FD->getType()->isPointerType() << FD->getType();
+        else
+          SYCLDiagIfDeviceCode(D->getLocation(), diag::note_declared_at);
+      }
+    }
+
+    return ErrorFound;
   };
 
-  QualType Ty = GetSYCLKernelObjectType(FD);
-  std::unique_ptr<MangleContext> Ctx{ItaniumMangleContext::create(
-      Context, Context.getDiagnostics(), MangleCallback)};
-  llvm::raw_null_ostream Out;
-  Ctx->mangleTypeName(Ty, Out);
+  // In case we have a Record used do the DFS for a bad field.
+  SmallVector<const ValueDecl *, 4> StackForRecursion;
+  StackForRecursion.push_back(DeclToCheck);
+
+  // While doing DFS save how we get there to emit a nice set of notes.
+  SmallVector<const FieldDecl *, 4> History;
+  History.push_back(nullptr);
+
+  do {
+    const ValueDecl *Next = StackForRecursion.pop_back_val();
+    if (!Next) {
+      assert(!History.empty());
+      // Found a marker, we have gone up a level.
+      History.pop_back();
+      continue;
+    }
+    QualType NextTy = Next->getType();
+
+    if (!Visited.insert(NextTy).second)
+      continue;
+
+    auto EmitHistory = [&]() {
+      // The first element is always nullptr.
+      for (uint64_t Index = 1; Index < History.size(); ++Index) {
+        SYCLDiagIfDeviceCode(History[Index]->getLocation(),
+                             diag::note_within_field_of_type)
+            << History[Index]->getType();
+      }
+    };
+
+    if (Check(NextTy, Next)) {
+      if (NeedToEmitNotes)
+        EmitHistory();
+      NeedToEmitNotes = false;
+    }
+
+    // In case pointer/array/reference type is met get pointee type, then
+    // proceed with that type.
+    while (NextTy->isAnyPointerType() || NextTy->isArrayType() ||
+           NextTy->isReferenceType()) {
+      if (NextTy->isArrayType())
+        NextTy = QualType{NextTy->getArrayElementTypeNoTypeQual(), 0};
+      else
+        NextTy = NextTy->getPointeeType();
+      if (Check(NextTy, Next)) {
+        if (NeedToEmitNotes)
+          EmitHistory();
+        NeedToEmitNotes = false;
+      }
+    }
+
+    if (const auto *RecDecl = NextTy->getAsRecordDecl()) {
+      if (auto *NextFD = dyn_cast<FieldDecl>(Next))
+        History.push_back(NextFD);
+      // When nullptr is discovered, this means we've gone back up a level, so
+      // the history should be cleaned.
+      StackForRecursion.push_back(nullptr);
+      llvm::copy(RecDecl->fields(), std::back_inserter(StackForRecursion));
+    }
+  } while (!StackForRecursion.empty());
 }

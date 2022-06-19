@@ -7,8 +7,7 @@
 #===----------------------------------------------------------------------===##
 """GDB pretty-printers for libc++.
 
-These should work for objects compiled when _LIBCPP_ABI_UNSTABLE is defined
-and when it is undefined.
+These should work for objects compiled with either the stable ABI or the unstable ABI.
 """
 
 from __future__ import print_function
@@ -147,9 +146,7 @@ class StdTuplePrinter(object):
             self.count += 1
             return ("[%d]" % self.count, child)
 
-        # TODO Delete when we drop Python 2.
-        def next(self):
-            return self.__next__()
+        next = __next__  # Needed for GDB built against Python 2.7.
 
     def __init__(self, val):
         self.val = val
@@ -195,26 +192,6 @@ def _value_of_pair_first(value):
 class StdStringPrinter(object):
     """Print a std::string."""
 
-    def _get_short_size(self, short_field, short_size):
-        """Short size depends on both endianness and a compile-time define."""
-
-        # If the padding field is present after all this indirection, then string
-        # was compiled with _LIBCPP_ABI_ALTERNATE_STRING_LAYOUT defined.
-        field = short_field.type.fields()[1].type.fields()[0]
-        libcpp_abi_alternate_string_layout = field.name and "__padding" in field.name
-
-        # This logical structure closely follows the original code (which is clearer
-        # in C++).  Keep them parallel to make them easier to compare.
-        if libcpp_abi_alternate_string_layout:
-            if _libcpp_big_endian:
-                return short_size >> 1
-            else:
-                return short_size
-        elif _libcpp_big_endian:
-            return short_size
-        else:
-            return short_size >> 1
-
     def __init__(self, val):
         self.val = val
 
@@ -226,21 +203,14 @@ class StdStringPrinter(object):
         short_size = short_field["__size_"]
         if short_size == 0:
             return ""
-        short_mask = self.val["__short_mask"]
-        # Counter intuitive to compare the size and short_mask to see if the string
-        # is long, but that's the way the implementation does it. Note that
-        # __is_long() doesn't use get_short_size in C++.
-        is_long = short_size & short_mask
-        if is_long:
+        if short_field["__is_long_"]:
             long_field = value_field["__l"]
             data = long_field["__data_"]
             size = long_field["__size_"]
         else:
             data = short_field["__data_"]
-            size = self._get_short_size(short_field, short_size)
-        if hasattr(data, "lazy_string"):
-            return data.lazy_string(length=size)
-        return data.string(length=size)
+            size = short_field["__size_"]
+        return data.lazy_string(length=size)
 
     def display_hint(self):
         return "string"
@@ -252,24 +222,16 @@ class StdStringViewPrinter(object):
     def __init__(self, val):
       self.val = val
 
+    def display_hint(self):
+      return "string"
+
     def to_string(self):  # pylint: disable=g-bad-name
       """GDB calls this to compute the pretty-printed form."""
 
       ptr = self.val["__data"]
-      length = self.val["__size"]
-      print_length = length
-      # We print more than just a simple string (i.e. we also print
-      # "of length %d").  Thus we can't use the "string" display_hint,
-      # and thus we have to handle "print elements" ourselves.
-      # For reference sake, gdb ensures limit == None or limit > 0.
-      limit = gdb.parameter("print elements")
-      if limit is not None:
-        print_length = min(print_length, limit)
-      # FIXME: Passing ISO-8859-1 here isn't always correct.
-      string = ptr.string("ISO-8859-1", "ignore", print_length)
-      if length > print_length:
-        string += "..."
-      return "std::string_view of length %d: \"%s\"" % (length, string)
+      ptr = ptr.cast(ptr.type.target().strip_typedefs().pointer())
+      size = self.val["__size"]
+      return ptr.lazy_string(length=size)
 
 
 class StdUniquePtrPrinter(object):
@@ -370,9 +332,7 @@ class StdVectorPrinter(object):
                 self.offset = 0
             return ("[%d]" % self.count, outbit)
 
-        # TODO Delete when we drop Python 2.
-        def next(self):
-            return self.__next__()
+        next = __next__  # Needed for GDB built against Python 2.7.
 
     class _VectorIterator(object):
         """Class to iterate over the non-bool vector's children."""
@@ -393,9 +353,7 @@ class StdVectorPrinter(object):
             self.item += 1
             return ("[%d]" % self.count, entry)
 
-        # TODO Delete when we drop Python 2.
-        def next(self):
-            return self.__next__()
+        next = __next__  # Needed for GDB built against Python 2.7.
 
     def __init__(self, val):
         """Set val, length, capacity, and iterator for bool and normal vectors."""

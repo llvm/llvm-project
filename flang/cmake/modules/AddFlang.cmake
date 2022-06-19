@@ -1,3 +1,4 @@
+include(GNUInstallDirs)
 include(LLVMDistributionSupport)
 
 macro(set_flang_windows_version_resource_properties name)
@@ -17,7 +18,7 @@ endmacro()
 
 macro(add_flang_library name)
   cmake_parse_arguments(ARG
-    "SHARED"
+    "SHARED;STATIC"
     ""
     "ADDITIONAL_HEADERS"
     ${ARGN})
@@ -52,7 +53,7 @@ macro(add_flang_library name)
   else()
     # llvm_add_library ignores BUILD_SHARED_LIBS if STATIC is explicitly set,
     # so we need to handle it here.
-    if (BUILD_SHARED_LIBS)
+    if (BUILD_SHARED_LIBS AND NOT ARG_STATIC)
       set(LIBTYPE SHARED OBJECT)
     else()
       set(LIBTYPE STATIC OBJECT)
@@ -71,7 +72,7 @@ macro(add_flang_library name)
         ${export_to_flangtargets}
         LIBRARY DESTINATION lib${LLVM_LIBDIR_SUFFIX}
         ARCHIVE DESTINATION lib${LLVM_LIBDIR_SUFFIX}
-        RUNTIME DESTINATION bin)
+        RUNTIME DESTINATION "${CMAKE_INSTALL_BINDIR}")
 
       if (NOT LLVM_ENABLE_IDE)
         add_llvm_install_targets(install-${name}
@@ -108,7 +109,7 @@ macro(add_flang_tool name)
     get_target_export_arg(${name} Flang export_to_flangtargets)
     install(TARGETS ${name}
       ${export_to_flangtargets}
-      RUNTIME DESTINATION bin
+      RUNTIME DESTINATION "${CMAKE_INSTALL_BINDIR}"
       COMPONENT ${name})
 
     if(NOT LLVM_ENABLE_IDE)

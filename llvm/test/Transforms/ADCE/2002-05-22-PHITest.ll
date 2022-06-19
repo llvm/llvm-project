@@ -1,6 +1,6 @@
 ; It is illegal to remove BB1 because it will mess up the PHI node!
 ;
-; RUN: opt < %s -adce -S | grep BB1
+; RUN: opt < %s -passes=adce -S | grep BB1
 
 define i32 @test(i1 %C, i32 %A, i32 %B) {
 ; <label>:0

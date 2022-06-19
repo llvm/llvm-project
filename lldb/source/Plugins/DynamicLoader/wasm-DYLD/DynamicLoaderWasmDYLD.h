@@ -21,8 +21,8 @@ public:
   static void Initialize();
   static void Terminate() {}
 
-  static ConstString GetPluginNameStatic();
-  static const char *GetPluginDescriptionStatic();
+  static llvm::StringRef GetPluginNameStatic() { return "wasm-dyld"; }
+  static llvm::StringRef GetPluginDescriptionStatic();
 
   static DynamicLoader *CreateInstance(Process *process, bool force);
 
@@ -33,12 +33,16 @@ public:
   Status CanLoadImage() override { return Status(); }
   lldb::ThreadPlanSP GetStepThroughTrampolinePlan(Thread &thread,
                                                   bool stop) override;
+  lldb::ModuleSP LoadModuleAtAddress(const lldb_private::FileSpec &file,
+                                     lldb::addr_t link_map_addr,
+                                     lldb::addr_t base_addr,
+                                     bool base_addr_is_offset) override;
+
   /// \}
 
   /// PluginInterface protocol.
   /// \{
-  ConstString GetPluginName() override { return GetPluginNameStatic(); }
-  uint32_t GetPluginVersion() override { return 1; }
+  llvm::StringRef GetPluginName() override { return GetPluginNameStatic(); }
   /// \}
 };
 

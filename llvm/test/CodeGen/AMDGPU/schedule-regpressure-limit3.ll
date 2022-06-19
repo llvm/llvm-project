@@ -1,8 +1,17 @@
-; RUN: llc -march=amdgcn -mcpu=tonga -enable-amdgpu-aa=0 -verify-machineinstrs < %s | FileCheck %s
-; RUN: llc -march=amdgcn -mcpu=tonga -enable-amdgpu-aa=0 -misched=gcn-ilp -verify-machineinstrs < %s | FileCheck %s
+; RUN: llc -march=amdgcn -mcpu=tonga -verify-machineinstrs < %s | FileCheck --check-prefix=MISCHED %s
+; RUN: llc -march=amdgcn -mcpu=tonga -misched=gcn-ilp -verify-machineinstrs < %s | FileCheck --check-prefix=GCN-ILP %s
+
+; Test the scheduler when only one wave is requested. The result should be high register usage and max ILP.
 
 ; We expect a three digit VGPR usage here since only one wave requested.
-; CHECK: NumVgprs: {{[0-9][0-9][0-9]$}}
+;
+; GCN-ILP: NumVgprs: {{[0-9][0-9][0-9]$}}
+
+; FIXME: The machine scheduler is doing a poor job at maximizing ILP here.
+; However, if we had not requested only one wave register usage would indeed be
+; much lower, demonstrating that is the purpose of this test.
+;
+; MISCHED: NumVgprs: {{[7-9][0-9]$}}
 
 define amdgpu_kernel void @load_fma_store(float addrspace(3)* nocapture readonly %arg, float addrspace(1)* nocapture %arg1) #1 {
 bb:
@@ -588,4 +597,4 @@ bb:
 declare float @llvm.fmuladd.f32(float, float, float) #0
 
 attributes #0 = { nounwind readnone }
-attributes #1 = { "amdgpu-waves-per-eu"="1,1" }
+attributes #1 = { "amdgpu-waves-per-eu"="1,1" "amdgpu-flat-work-group-size"="1,256" }

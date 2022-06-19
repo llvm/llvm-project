@@ -14,7 +14,6 @@
 #include "llvm/CodeGen/ScheduleDAGInstrs.h"
 #include "llvm/ADT/IntEqClasses.h"
 #include "llvm/ADT/MapVector.h"
-#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/SparseSet.h"
 #include "llvm/ADT/iterator_range.h"
@@ -40,9 +39,6 @@
 #include "llvm/Config/llvm-config.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/Function.h"
-#include "llvm/IR/Instruction.h"
-#include "llvm/IR/Instructions.h"
-#include "llvm/IR/Operator.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/Value.h"
 #include "llvm/MC/LaneBitmask.h"
@@ -65,9 +61,9 @@ using namespace llvm;
 
 #define DEBUG_TYPE "machine-scheduler"
 
-static cl::opt<bool> EnableAASchedMI("enable-aa-sched-mi", cl::Hidden,
-    cl::ZeroOrMore, cl::init(false),
-    cl::desc("Enable use of AA during MI DAG construction"));
+static cl::opt<bool>
+    EnableAASchedMI("enable-aa-sched-mi", cl::Hidden,
+                    cl::desc("Enable use of AA during MI DAG construction"));
 
 static cl::opt<bool> UseTBAA("use-tbaa-in-sched-mi", cl::Hidden,
     cl::init(true), cl::desc("Enable use of TBAA during MI DAG construction"));
@@ -271,15 +267,10 @@ void ScheduleDAGInstrs::addPhysRegDataDeps(SUnit *SU, unsigned OperIdx) {
       if (!ImplicitPseudoDef && !ImplicitPseudoUse) {
         Dep.setLatency(SchedModel.computeOperandLatency(SU->getInstr(), OperIdx,
                                                         RegUse, UseOp));
-        ST.adjustSchedDependency(SU, OperIdx, UseSU, UseOp, Dep);
       } else {
         Dep.setLatency(0);
-        // FIXME: We could always let target to adjustSchedDependency(), and
-        // remove this condition, but that currently asserts in Hexagon BE.
-        if (SU->getInstr()->isBundle() || (RegUse && RegUse->isBundle()))
-          ST.adjustSchedDependency(SU, OperIdx, UseSU, UseOp, Dep);
       }
-
+      ST.adjustSchedDependency(SU, OperIdx, UseSU, UseOp, Dep);
       UseSU->addPred(Dep);
     }
   }
@@ -411,11 +402,10 @@ void ScheduleDAGInstrs::addVRegDefDeps(SUnit *SU, unsigned OperIdx) {
       // register in later operands. The lanes of other defs will now be live
       // after this instruction, so these should not be treated as killed by the
       // instruction even though they appear to be killed in this one operand.
-      for (int I = OperIdx + 1, E = MI->getNumOperands(); I != E; ++I) {
-        const MachineOperand &OtherMO = MI->getOperand(I);
+      for (const MachineOperand &OtherMO :
+           llvm::drop_begin(MI->operands(), OperIdx + 1))
         if (OtherMO.isReg() && OtherMO.isDef() && OtherMO.getReg() == Reg)
           KillLaneMask &= ~getLaneMaskForMO(OtherMO);
-      }
     }
 
     // Clear undef flag, we'll re-add it later once we know which subregister
@@ -807,14 +797,12 @@ void ScheduleDAGInstrs::buildSchedGraph(AAResults *AA,
       DbgMI = nullptr;
     }
 
-    if (MI.isDebugValue() || MI.isDebugRef() || MI.isDebugPHI()) {
+    if (MI.isDebugValue() || MI.isDebugPHI()) {
       DbgMI = &MI;
       continue;
     }
-    if (MI.isDebugLabel())
-      continue;
 
-    if (MI.isPseudoProbe())
+    if (MI.isDebugLabel() || MI.isDebugRef() || MI.isPseudoProbe())
       continue;
 
     SUnit *SU = MISUnitMap[&MI];
@@ -1119,7 +1107,7 @@ void ScheduleDAGInstrs::fixupKills(MachineBasicBlock &MBB) {
   LiveRegs.addLiveOuts(MBB);
 
   // Examine block from end to start...
-  for (MachineInstr &MI : make_range(MBB.rbegin(), MBB.rend())) {
+  for (MachineInstr &MI : llvm::reverse(MBB)) {
     if (MI.isDebugOrPseudoInstr())
       continue;
 

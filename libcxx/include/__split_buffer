@@ -1,14 +1,30 @@
 // -*- C++ -*-
-#ifndef _LIBCPP_SPLIT_BUFFER
-#define _LIBCPP_SPLIT_BUFFER
+//===----------------------------------------------------------------------===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
 
+#ifndef _LIBCPP___SPLIT_BUFFER
+#define _LIBCPP___SPLIT_BUFFER
+
+#include <__algorithm/max.h>
+#include <__algorithm/move.h>
+#include <__algorithm/move_backward.h>
 #include <__config>
+#include <__iterator/distance.h>
+#include <__iterator/iterator_traits.h>
+#include <__iterator/move_iterator.h>
+#include <__memory/allocator.h>
+#include <__memory/compressed_pair.h>
 #include <__utility/forward.h>
-#include <algorithm>
+#include <memory>
 #include <type_traits>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
-#pragma GCC system_header
+#  pragma GCC system_header
 #endif
 
 _LIBCPP_PUSH_MACROS
@@ -17,17 +33,8 @@ _LIBCPP_PUSH_MACROS
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-template <bool>
-class __split_buffer_common
-{
-protected:
-    _LIBCPP_NORETURN void __throw_length_error() const;
-    _LIBCPP_NORETURN void __throw_out_of_range() const;
-};
-
 template <class _Tp, class _Allocator = allocator<_Tp> >
 struct __split_buffer
-    : private __split_buffer_common<true>
 {
 private:
     __split_buffer(const __split_buffer&);
@@ -248,7 +255,7 @@ __split_buffer<_Tp, _Allocator>::__construct_at_end(_InputIter __first, _InputIt
             size_type __old_cap = __end_cap() - __first_;
             size_type __new_cap = _VSTD::max<size_type>(2 * __old_cap, 8);
             __split_buffer __buf(__new_cap, 0, __a);
-            for (pointer __p = __begin_; __p != __end_; ++__p, ++__buf.__end_)
+            for (pointer __p = __begin_; __p != __end_; ++__p, (void) ++__buf.__end_)
                 __alloc_traits::construct(__buf.__alloc(),
                         _VSTD::__to_address(__buf.__end_), _VSTD::move(*__p));
             swap(__buf);
@@ -268,7 +275,7 @@ typename enable_if
 __split_buffer<_Tp, _Allocator>::__construct_at_end(_ForwardIterator __first, _ForwardIterator __last)
 {
     _ConstructTransaction __tx(&this->__end_, _VSTD::distance(__first, __last));
-    for (; __tx.__pos_ != __tx.__end_; ++__tx.__pos_, ++__first) {
+    for (; __tx.__pos_ != __tx.__end_; ++__tx.__pos_, (void) ++__first) {
         __alloc_traits::construct(this->__alloc(),
             _VSTD::__to_address(__tx.__pos_), *__first);
     }
@@ -312,7 +319,13 @@ template <class _Tp, class _Allocator>
 __split_buffer<_Tp, _Allocator>::__split_buffer(size_type __cap, size_type __start, __alloc_rr& __a)
     : __end_cap_(nullptr, __a)
 {
-    __first_ = __cap != 0 ? __alloc_traits::allocate(__alloc(), __cap) : nullptr;
+    if (__cap == 0) {
+        __first_ = nullptr;
+    } else {
+        auto __allocation = std::__allocate_at_least(__alloc(), __cap);
+        __first_ = __allocation.ptr;
+        __cap = __allocation.count;
+    }
     __begin_ = __end_ = __first_ + __start;
     __end_cap() = __first_ + __cap;
 }
@@ -378,10 +391,10 @@ __split_buffer<_Tp, _Allocator>::__split_buffer(__split_buffer&& __c, const __al
     }
     else
     {
-        size_type __cap = __c.size();
-        __first_ = __alloc_traits::allocate(__alloc(), __cap);
+        auto __allocation = std::__allocate_at_least(__alloc(), __c.size());
+        __first_ = __allocation.ptr;
         __begin_ = __end_ = __first_;
-        __end_cap() = __first_ + __cap;
+        __end_cap() = __first_ + __allocation.count;
         typedef move_iterator<iterator> _Ip;
         __construct_at_end(_Ip(__c.begin()), _Ip(__c.end()));
     }
@@ -626,4 +639,4 @@ _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS
 
-#endif // _LIBCPP_SPLIT_BUFFER
+#endif // _LIBCPP___SPLIT_BUFFER

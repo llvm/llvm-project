@@ -298,3 +298,13 @@ class A {
 
 } // namespace PR32831
 
+namespace PR45881 {
+struct A {
+    void f();
+};
+int id(A*);
+void A::f() {
+    auto z = [*this](auto z2, decltype(z2(this)) z3){};
+    z(id,3);
+}
+} // namespace PR45881

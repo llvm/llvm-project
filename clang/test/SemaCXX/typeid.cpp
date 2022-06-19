@@ -24,8 +24,8 @@ void g1(X &x) {
 
 void h(int i) {
   char V[i];
-  typeid(V);        // expected-error{{'typeid' of variably modified type 'char [i]'}}
-  typeid(char [i]); // expected-error{{'typeid' of variably modified type 'char [i]'}}
+  typeid(V);        // expected-error{{'typeid' of variably modified type 'char[i]'}}
+  typeid(char [i]); // expected-error{{'typeid' of variably modified type 'char[i]'}}
 }
 
 // expected-note@+1 {{read of object 'typeid(int).name' whose value is not known}}

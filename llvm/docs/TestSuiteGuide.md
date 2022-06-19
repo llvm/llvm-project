@@ -386,6 +386,7 @@ There are two ways to run the tests in a cross compilation setting:
   ```bash
   % cmake -G Ninja -D CMAKE_C_COMPILER=path/to/clang \
           -C ../test-suite/cmake/caches/target-arm64-iphoneos-internal.cmake \
+          -D CMAKE_BUILD_TYPE=Release \
           -D TEST_SUITE_REMOTE_HOST=mydevice \
           ../test-suite
   % ninja

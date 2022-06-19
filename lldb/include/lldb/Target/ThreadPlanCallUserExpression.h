@@ -32,7 +32,7 @@ public:
 
   void DidPush() override;
 
-  void WillPop() override;
+  void DidPop() override;
 
   lldb::StopInfoSP GetRealStopInfo() override;
 

@@ -12,7 +12,7 @@ bool foobool(int argc) {
   return argc;
 }
 
-struct S1; // expected-note 2 {{declared here}}
+struct S1; // expected-note 2 {{declared here}}  // expected-note 2 {{forward declaration of 'S1'}}
 extern S1 a;
 class S2 {
   mutable int a;

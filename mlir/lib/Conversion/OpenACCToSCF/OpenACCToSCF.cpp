@@ -8,9 +8,9 @@
 
 #include "../PassDetail.h"
 #include "mlir/Conversion/OpenACCToSCF/ConvertOpenACCToSCF.h"
+#include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
 #include "mlir/Dialect/OpenACC/OpenACC.h"
 #include "mlir/Dialect/SCF/SCF.h"
-#include "mlir/Dialect/StandardOps/IR/Ops.h"
 #include "mlir/Transforms/DialectConversion.h"
 
 using namespace mlir;
@@ -33,7 +33,7 @@ class ExpandIfCondition : public OpRewritePattern<OpTy> {
       return success();
 
     // Condition is not a constant.
-    if (!op.ifCond().template getDefiningOp<ConstantOp>()) {
+    if (!op.ifCond().template getDefiningOp<arith::ConstantOp>()) {
       auto ifOp = rewriter.create<scf::IfOp>(op.getLoc(), TypeRange(),
                                              op.ifCond(), false);
       rewriter.updateRootInPlace(op, [&]() { op.ifCondMutable().erase(0); });

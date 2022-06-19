@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -polly-scops -analyze < %s | FileCheck %s
+; RUN: opt %loadPolly -polly-print-scops -disable-output < %s | FileCheck %s
 ;
 ; CHECK: [M, N] -> { Stmt_while_body[i0] : i0 > 0 and 4i0 <= -M + N; Stmt_while_body[0] };
 ;

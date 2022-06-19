@@ -32,11 +32,13 @@ struct Options {
   int fixedFormColumns{72};
   common::LanguageFeatureControl features;
   std::vector<std::string> searchDirectories;
+  std::vector<std::string> intrinsicModuleDirectories;
   std::vector<Predefinition> predefinitions;
   bool instrumentedParse{false};
   bool isModuleFile{false};
   bool needProvenanceRangeToCharBlockMappings{false};
   Fortran::parser::Encoding encoding{Fortran::parser::Encoding::UTF_8};
+  bool prescanAndReformat{false}; // -E
 };
 
 class Parsing {
@@ -47,12 +49,15 @@ public:
   bool consumedWholeFile() const { return consumedWholeFile_; }
   const char *finalRestingPlace() const { return finalRestingPlace_; }
   AllCookedSources &allCooked() { return allCooked_; }
+  const AllCookedSources &allCooked() const { return allCooked_; }
   Messages &messages() { return messages_; }
   std::optional<Program> &parseTree() { return parseTree_; }
 
   const CookedSource &cooked() const { return DEREF(currentCooked_); }
 
   const SourceFile *Prescan(const std::string &path, Options);
+  void EmitPreprocessedSource(
+      llvm::raw_ostream &, bool lineDirectives = true) const;
   void DumpCookedChars(llvm::raw_ostream &) const;
   void DumpProvenance(llvm::raw_ostream &) const;
   void DumpParsingLog(llvm::raw_ostream &) const;

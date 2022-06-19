@@ -16,14 +16,14 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/ADT/STLExtras.h"
+#include "llvm/Analysis/CostModel.h"
 #include "llvm/Analysis/Passes.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/IR/Function.h"
+#include "llvm/IR/PassManager.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/CommandLine.h"
-#include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 using namespace llvm;
 
@@ -48,7 +48,7 @@ namespace {
 
   public:
     static char ID; // Class identification, replacement for typeinfo
-    CostModelAnalysis() : FunctionPass(ID), F(nullptr), TTI(nullptr) {
+    CostModelAnalysis() : FunctionPass(ID) {
       initializeCostModelAnalysisPass(
         *PassRegistry::getPassRegistry());
     }
@@ -67,9 +67,9 @@ namespace {
     void print(raw_ostream &OS, const Module*) const override;
 
     /// The function that we analyze.
-    Function *F;
+    Function *F = nullptr;
     /// Target information.
-    const TargetTransformInfo *TTI;
+    const TargetTransformInfo *TTI = nullptr;
   };
 }  // End of anonymous namespace
 
@@ -112,4 +112,24 @@ void CostModelAnalysis::print(raw_ostream &OS, const Module*) const {
       OS << " for instruction: " << Inst << "\n";
     }
   }
+}
+
+PreservedAnalyses CostModelPrinterPass::run(Function &F,
+                                            FunctionAnalysisManager &AM) {
+  auto &TTI = AM.getResult<TargetIRAnalysis>(F);
+  OS << "Printing analysis 'Cost Model Analysis' for function '" << F.getName() << "':\n";
+  for (BasicBlock &B : F) {
+    for (Instruction &Inst : B) {
+      // TODO: Use a pass parameter instead of cl::opt CostKind to determine
+      // which cost kind to print.
+      InstructionCost Cost = TTI.getInstructionCost(&Inst, CostKind);
+      if (auto CostVal = Cost.getValue())
+        OS << "Cost Model: Found an estimated cost of " << *CostVal;
+      else
+        OS << "Cost Model: Invalid cost";
+
+      OS << " for instruction: " << Inst << "\n";
+    }
+  }
+  return PreservedAnalyses::all();
 }

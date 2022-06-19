@@ -1,10 +1,11 @@
-! RUN: %S/test_symbols.sh %s %t %flang_fc1
-! REQUIRES: shell
+! RUN: %python %S/test_symbols.py %s %flang_fc1
 ! Tests for "proc-interface" semantics.
 ! These cases are all valid.
 
 !DEF: /module1 Module
 module module1
+ !DEF:/module1/abstract2 ABSTRACT, POINTER, PUBLIC (Subroutine) Subprogram
+ pointer :: abstract2
  abstract interface
   !DEF: /module1/abstract1 ABSTRACT, PUBLIC (Function) Subprogram REAL(4)
   !DEF: /module1/abstract1/x INTENT(IN) ObjectEntity REAL(4)
@@ -12,7 +13,15 @@ module module1
    !REF: /module1/abstract1/x
    real, intent(in) :: x
   end function abstract1
+  !REF:/module1/abstract2
+  subroutine abstract2
+  end subroutine
+  !DEF:/module1/abstract3 ABSTRACT, POINTER, PUBLIC (Subroutine) Subprogram
+  subroutine abstract3
+  end subroutine
  end interface
+ !REF:/module1/abstract3
+ pointer :: abstract3
 
  interface
   !DEF: /module1/explicit1 EXTERNAL, PUBLIC (Function) Subprogram REAL(4)
@@ -54,13 +63,13 @@ module module1
   !DEF: /module1/derived1/p5 NOPASS, POINTER (Function) ProcEntity COMPLEX(4)
   !DEF: /module1/nested4 PUBLIC (Function) Subprogram COMPLEX(4)
   procedure(complex), pointer, nopass :: p5 => nested4
-  !DEF: /module1/sin ELEMENTAL, INTRINSIC, PUBLIC, PURE (Function) ProcEntity
-  !DEF: /module1/derived1/p6 NOPASS, POINTER (Function) ProcEntity
+  !DEF: /module1/sin ELEMENTAL, INTRINSIC, PUBLIC, PURE (Function) ProcEntity REAL(4)
+  !DEF: /module1/derived1/p6 NOPASS, POINTER (Function) ProcEntity REAL(4)
   !REF: /module1/nested1
   procedure(sin), pointer, nopass :: p6 => nested1
   !REF: /module1/sin
-  !DEF: /module1/derived1/p7 NOPASS, POINTER (Function) ProcEntity
-  !DEF: /module1/cos ELEMENTAL, INTRINSIC, PUBLIC, PURE (Function) ProcEntity
+  !DEF: /module1/derived1/p7 NOPASS, POINTER (Function) ProcEntity REAL(4)
+  !DEF: /module1/cos ELEMENTAL, INTRINSIC, PUBLIC, PURE (Function) ProcEntity REAL(4)
   procedure(sin), pointer, nopass :: p7 => cos
   !REF: /module1/tan
   !DEF: /module1/derived1/p8 NOPASS, POINTER (Function) ProcEntity CHARACTER(1_4,1)

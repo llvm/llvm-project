@@ -478,19 +478,13 @@ define i16 @bitcast_v32i16_to_v2i16(<32 x i16> %a0) nounwind {
 ;
 ; AVX512-LABEL: bitcast_v32i16_to_v2i16:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    pushq %rbp
-; AVX512-NEXT:    movq %rsp, %rbp
-; AVX512-NEXT:    andq $-32, %rsp
-; AVX512-NEXT:    subq $32, %rsp
 ; AVX512-NEXT:    vpmovw2m %zmm0, %k0
-; AVX512-NEXT:    kmovd %k0, (%rsp)
-; AVX512-NEXT:    vmovdqa (%rsp), %xmm0
+; AVX512-NEXT:    kmovd %k0, -{{[0-9]+}}(%rsp)
+; AVX512-NEXT:    vmovdqa -{{[0-9]+}}(%rsp), %xmm0
 ; AVX512-NEXT:    vmovd %xmm0, %ecx
 ; AVX512-NEXT:    vpextrw $1, %xmm0, %eax
 ; AVX512-NEXT:    addl %ecx, %eax
 ; AVX512-NEXT:    # kill: def $ax killed $ax killed $eax
-; AVX512-NEXT:    movq %rbp, %rsp
-; AVX512-NEXT:    popq %rbp
 ; AVX512-NEXT:    vzeroupper
 ; AVX512-NEXT:    retq
   %1 = icmp slt <32 x i16> %a0, zeroinitializer
@@ -548,10 +542,8 @@ define i32 @bitcast_v64i8_to_v2i32(<64 x i8> %a0) nounwind {
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    vpmovb2m %zmm0, %k0
 ; AVX512-NEXT:    kmovq %k0, -{{[0-9]+}}(%rsp)
-; AVX512-NEXT:    vmovdqa -{{[0-9]+}}(%rsp), %xmm0
-; AVX512-NEXT:    vmovd %xmm0, %ecx
-; AVX512-NEXT:    vpextrd $1, %xmm0, %eax
-; AVX512-NEXT:    addl %ecx, %eax
+; AVX512-NEXT:    movl -{{[0-9]+}}(%rsp), %eax
+; AVX512-NEXT:    addl -{{[0-9]+}}(%rsp), %eax
 ; AVX512-NEXT:    vzeroupper
 ; AVX512-NEXT:    retq
   %1 = icmp slt <64 x i8> %a0, zeroinitializer

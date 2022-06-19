@@ -11,6 +11,7 @@
 #include "../PassDetail.h"
 #include "mlir/Conversion/LLVMCommon/ConversionTarget.h"
 #include "mlir/Conversion/LLVMCommon/Pattern.h"
+#include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
 #include "mlir/Dialect/Complex/IR/Complex.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 
@@ -58,12 +59,11 @@ struct AbsOpConversion : public ConvertOpToLLVMPattern<complex::AbsOp> {
   using ConvertOpToLLVMPattern<complex::AbsOp>::ConvertOpToLLVMPattern;
 
   LogicalResult
-  matchAndRewrite(complex::AbsOp op, ArrayRef<Value> operands,
+  matchAndRewrite(complex::AbsOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
-    complex::AbsOp::Adaptor transformed(operands);
     auto loc = op.getLoc();
 
-    ComplexStructBuilder complexStruct(transformed.complex());
+    ComplexStructBuilder complexStruct(adaptor.getComplex());
     Value real = complexStruct.real(rewriter, op.getLoc());
     Value imag = complexStruct.imaginary(rewriter, op.getLoc());
 
@@ -77,20 +77,30 @@ struct AbsOpConversion : public ConvertOpToLLVMPattern<complex::AbsOp> {
   }
 };
 
+struct ConstantOpLowering : public ConvertOpToLLVMPattern<complex::ConstantOp> {
+  using ConvertOpToLLVMPattern::ConvertOpToLLVMPattern;
+
+  LogicalResult
+  matchAndRewrite(complex::ConstantOp op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    return LLVM::detail::oneToOneRewrite(
+        op, LLVM::ConstantOp::getOperationName(), adaptor.getOperands(),
+        *getTypeConverter(), rewriter);
+  }
+};
+
 struct CreateOpConversion : public ConvertOpToLLVMPattern<complex::CreateOp> {
   using ConvertOpToLLVMPattern<complex::CreateOp>::ConvertOpToLLVMPattern;
 
   LogicalResult
-  matchAndRewrite(complex::CreateOp complexOp, ArrayRef<Value> operands,
+  matchAndRewrite(complex::CreateOp complexOp, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
-    complex::CreateOp::Adaptor transformed(operands);
-
     // Pack real and imaginary part in a complex number struct.
     auto loc = complexOp.getLoc();
     auto structType = typeConverter->convertType(complexOp.getType());
     auto complexStruct = ComplexStructBuilder::undef(rewriter, loc, structType);
-    complexStruct.setReal(rewriter, loc, transformed.real());
-    complexStruct.setImaginary(rewriter, loc, transformed.imaginary());
+    complexStruct.setReal(rewriter, loc, adaptor.getReal());
+    complexStruct.setImaginary(rewriter, loc, adaptor.getImaginary());
 
     rewriter.replaceOp(complexOp, {complexStruct});
     return success();
@@ -101,12 +111,10 @@ struct ReOpConversion : public ConvertOpToLLVMPattern<complex::ReOp> {
   using ConvertOpToLLVMPattern<complex::ReOp>::ConvertOpToLLVMPattern;
 
   LogicalResult
-  matchAndRewrite(complex::ReOp op, ArrayRef<Value> operands,
+  matchAndRewrite(complex::ReOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
-    complex::ReOp::Adaptor transformed(operands);
-
     // Extract real part from the complex number struct.
-    ComplexStructBuilder complexStruct(transformed.complex());
+    ComplexStructBuilder complexStruct(adaptor.getComplex());
     Value real = complexStruct.real(rewriter, op.getLoc());
     rewriter.replaceOp(op, real);
 
@@ -118,12 +126,10 @@ struct ImOpConversion : public ConvertOpToLLVMPattern<complex::ImOp> {
   using ConvertOpToLLVMPattern<complex::ImOp>::ConvertOpToLLVMPattern;
 
   LogicalResult
-  matchAndRewrite(complex::ImOp op, ArrayRef<Value> operands,
+  matchAndRewrite(complex::ImOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
-    complex::ImOp::Adaptor transformed(operands);
-
     // Extract imaginary part from the complex number struct.
-    ComplexStructBuilder complexStruct(transformed.complex());
+    ComplexStructBuilder complexStruct(adaptor.getComplex());
     Value imaginary = complexStruct.imaginary(rewriter, op.getLoc());
     rewriter.replaceOp(op, imaginary);
 
@@ -138,17 +144,16 @@ struct BinaryComplexOperands {
 
 template <typename OpTy>
 BinaryComplexOperands
-unpackBinaryComplexOperands(OpTy op, ArrayRef<Value> operands,
+unpackBinaryComplexOperands(OpTy op, typename OpTy::Adaptor adaptor,
                             ConversionPatternRewriter &rewriter) {
   auto loc = op.getLoc();
-  typename OpTy::Adaptor transformed(operands);
 
   // Extract real and imaginary values from operands.
   BinaryComplexOperands unpacked;
-  ComplexStructBuilder lhs(transformed.lhs());
+  ComplexStructBuilder lhs(adaptor.getLhs());
   unpacked.lhs.real(lhs.real(rewriter, loc));
   unpacked.lhs.imag(lhs.imaginary(rewriter, loc));
-  ComplexStructBuilder rhs(transformed.rhs());
+  ComplexStructBuilder rhs(adaptor.getRhs());
   unpacked.rhs.real(rhs.real(rewriter, loc));
   unpacked.rhs.imag(rhs.imaginary(rewriter, loc));
 
@@ -159,11 +164,11 @@ struct AddOpConversion : public ConvertOpToLLVMPattern<complex::AddOp> {
   using ConvertOpToLLVMPattern<complex::AddOp>::ConvertOpToLLVMPattern;
 
   LogicalResult
-  matchAndRewrite(complex::AddOp op, ArrayRef<Value> operands,
+  matchAndRewrite(complex::AddOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
     auto loc = op.getLoc();
     BinaryComplexOperands arg =
-        unpackBinaryComplexOperands<complex::AddOp>(op, operands, rewriter);
+        unpackBinaryComplexOperands<complex::AddOp>(op, adaptor, rewriter);
 
     // Initialize complex number struct for result.
     auto structType = typeConverter->convertType(op.getType());
@@ -187,11 +192,11 @@ struct DivOpConversion : public ConvertOpToLLVMPattern<complex::DivOp> {
   using ConvertOpToLLVMPattern<complex::DivOp>::ConvertOpToLLVMPattern;
 
   LogicalResult
-  matchAndRewrite(complex::DivOp op, ArrayRef<Value> operands,
+  matchAndRewrite(complex::DivOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
     auto loc = op.getLoc();
     BinaryComplexOperands arg =
-        unpackBinaryComplexOperands<complex::DivOp>(op, operands, rewriter);
+        unpackBinaryComplexOperands<complex::DivOp>(op, adaptor, rewriter);
 
     // Initialize complex number struct for result.
     auto structType = typeConverter->convertType(op.getType());
@@ -232,11 +237,11 @@ struct MulOpConversion : public ConvertOpToLLVMPattern<complex::MulOp> {
   using ConvertOpToLLVMPattern<complex::MulOp>::ConvertOpToLLVMPattern;
 
   LogicalResult
-  matchAndRewrite(complex::MulOp op, ArrayRef<Value> operands,
+  matchAndRewrite(complex::MulOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
     auto loc = op.getLoc();
     BinaryComplexOperands arg =
-        unpackBinaryComplexOperands<complex::MulOp>(op, operands, rewriter);
+        unpackBinaryComplexOperands<complex::MulOp>(op, adaptor, rewriter);
 
     // Initialize complex number struct for result.
     auto structType = typeConverter->convertType(op.getType());
@@ -269,11 +274,11 @@ struct SubOpConversion : public ConvertOpToLLVMPattern<complex::SubOp> {
   using ConvertOpToLLVMPattern<complex::SubOp>::ConvertOpToLLVMPattern;
 
   LogicalResult
-  matchAndRewrite(complex::SubOp op, ArrayRef<Value> operands,
+  matchAndRewrite(complex::SubOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
     auto loc = op.getLoc();
     BinaryComplexOperands arg =
-        unpackBinaryComplexOperands<complex::SubOp>(op, operands, rewriter);
+        unpackBinaryComplexOperands<complex::SubOp>(op, adaptor, rewriter);
 
     // Initialize complex number struct for result.
     auto structType = typeConverter->convertType(op.getType());
@@ -300,6 +305,7 @@ void mlir::populateComplexToLLVMConversionPatterns(
   patterns.add<
       AbsOpConversion,
       AddOpConversion,
+      ConstantOpLowering,
       CreateOpConversion,
       DivOpConversion,
       ImOpConversion,
@@ -318,21 +324,18 @@ struct ConvertComplexToLLVMPass
 } // namespace
 
 void ConvertComplexToLLVMPass::runOnOperation() {
-  auto module = getOperation();
-
   // Convert to the LLVM IR dialect using the converter defined above.
   RewritePatternSet patterns(&getContext());
   LLVMTypeConverter converter(&getContext());
   populateComplexToLLVMConversionPatterns(converter, patterns);
 
   LLVMConversionTarget target(getContext());
-  target.addLegalOp<ModuleOp, FuncOp>();
   target.addIllegalDialect<complex::ComplexDialect>();
-  if (failed(applyPartialConversion(module, target, std::move(patterns))))
+  if (failed(
+          applyPartialConversion(getOperation(), target, std::move(patterns))))
     signalPassFailure();
 }
 
-std::unique_ptr<OperationPass<ModuleOp>>
-mlir::createConvertComplexToLLVMPass() {
+std::unique_ptr<Pass> mlir::createConvertComplexToLLVMPass() {
   return std::make_unique<ConvertComplexToLLVMPass>();
 }

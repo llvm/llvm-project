@@ -6,7 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSwitch.h"
@@ -15,7 +14,6 @@
 #include "llvm/BinaryFormat/MachO.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCDirectives.h"
-#include "llvm/MC/MCObjectFileInfo.h"
 #include "llvm/MC/MCParser/MCAsmLexer.h"
 #include "llvm/MC/MCParser/MCAsmParser.h"
 #include "llvm/MC/MCParser/MCAsmParserExtension.h"
@@ -29,7 +27,6 @@
 #include "llvm/Support/SMLoc.h"
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/raw_ostream.h"
-#include <algorithm>
 #include <cstddef>
 #include <cstdint>
 #include <string>
@@ -195,6 +192,8 @@ public:
     addDirectiveHandler<&DarwinAsmParser::parseMacOSXVersionMin>(
       ".macosx_version_min");
     addDirectiveHandler<&DarwinAsmParser::parseBuildVersion>(".build_version");
+    addDirectiveHandler<&DarwinAsmParser::parseDirectiveCGProfile>(
+        ".cg_profile");
 
     LastVersionDirective = SMLoc();
   }
@@ -467,6 +466,7 @@ public:
   bool parseSDKVersion(VersionTuple &SDKVersion);
   void checkVersion(StringRef Directive, StringRef Arg, SMLoc Loc,
                     Triple::OSType ExpectedOS);
+  bool parseDirectiveCGProfile(StringRef Directive, SMLoc Loc);
 };
 
 } // end anonymous namespace
@@ -480,7 +480,7 @@ bool DarwinAsmParser::parseSectionSwitch(StringRef Segment, StringRef Section,
 
   // FIXME: Arch specific.
   bool isText = TAA & MachO::S_ATTR_PURE_INSTRUCTIONS;
-  getStreamer().SwitchSection(getContext().getMachOSection(
+  getStreamer().switchSection(getContext().getMachOSection(
       Segment, Section, TAA, StubSize,
       isText ? SectionKind::getText() : SectionKind::getData()));
 
@@ -719,7 +719,7 @@ bool DarwinAsmParser::parseDirectiveSection(StringRef, SMLoc) {
 
   // FIXME: Arch specific.
   bool isText = Segment == "__TEXT";  // FIXME: Hack.
-  getStreamer().SwitchSection(getContext().getMachOSection(
+  getStreamer().switchSection(getContext().getMachOSection(
       Segment, Section, TAA, StubSize,
       isText ? SectionKind::getText() : SectionKind::getData()));
   return false;
@@ -728,10 +728,10 @@ bool DarwinAsmParser::parseDirectiveSection(StringRef, SMLoc) {
 /// ParseDirectivePushSection:
 ///   ::= .pushsection identifier (',' identifier)*
 bool DarwinAsmParser::parseDirectivePushSection(StringRef S, SMLoc Loc) {
-  getStreamer().PushSection();
+  getStreamer().pushSection();
 
   if (parseDirectiveSection(S, Loc)) {
-    getStreamer().PopSection();
+    getStreamer().popSection();
     return true;
   }
 
@@ -741,7 +741,7 @@ bool DarwinAsmParser::parseDirectivePushSection(StringRef S, SMLoc Loc) {
 /// ParseDirectivePopSection:
 ///   ::= .popsection
 bool DarwinAsmParser::parseDirectivePopSection(StringRef, SMLoc) {
-  if (!getStreamer().PopSection())
+  if (!getStreamer().popSection())
     return TokError(".popsection without corresponding .pushsection");
   return false;
 }
@@ -752,7 +752,7 @@ bool DarwinAsmParser::parseDirectivePrevious(StringRef DirName, SMLoc) {
   MCSectionSubPair PreviousSection = getStreamer().getPreviousSection();
   if (!PreviousSection.first)
     return TokError(".previous without corresponding .section");
-  getStreamer().SwitchSection(PreviousSection.first, PreviousSection.second);
+  getStreamer().switchSection(PreviousSection.first, PreviousSection.second);
   return false;
 }
 
@@ -1142,16 +1142,19 @@ bool DarwinAsmParser::parseVersionMin(StringRef Directive, SMLoc Loc,
 
 static Triple::OSType getOSTypeFromPlatform(MachO::PlatformType Type) {
   switch (Type) {
+  case MachO::PLATFORM_UNKNOWN: /* silence warning */
+    break;
   case MachO::PLATFORM_MACOS:   return Triple::MacOSX;
   case MachO::PLATFORM_IOS:     return Triple::IOS;
   case MachO::PLATFORM_TVOS:    return Triple::TvOS;
   case MachO::PLATFORM_WATCHOS: return Triple::WatchOS;
   case MachO::PLATFORM_BRIDGEOS:         /* silence warning */ break;
+  case MachO::PLATFORM_DRIVERKIT:
+    return Triple::DriverKit;
   case MachO::PLATFORM_MACCATALYST: return Triple::IOS;
   case MachO::PLATFORM_IOSSIMULATOR:     /* silence warning */ break;
   case MachO::PLATFORM_TVOSSIMULATOR:    /* silence warning */ break;
   case MachO::PLATFORM_WATCHOSSIMULATOR: /* silence warning */ break;
-  case MachO::PLATFORM_DRIVERKIT:        /* silence warning */ break;
   }
   llvm_unreachable("Invalid mach-o platform type");
 }
@@ -1170,6 +1173,7 @@ bool DarwinAsmParser::parseBuildVersion(StringRef Directive, SMLoc Loc) {
     .Case("tvos", MachO::PLATFORM_TVOS)
     .Case("watchos", MachO::PLATFORM_WATCHOS)
     .Case("macCatalyst", MachO::PLATFORM_MACCATALYST)
+    .Case("driverkit", MachO::PLATFORM_DRIVERKIT)
     .Default(0);
   if (Platform == 0)
     return Error(PlatformLoc, "unknown platform name");
@@ -1198,6 +1202,11 @@ bool DarwinAsmParser::parseBuildVersion(StringRef Directive, SMLoc Loc) {
   return false;
 }
 
+/// parseDirectiveCGProfile
+///   ::= .cg_profile from, to, count
+bool DarwinAsmParser::parseDirectiveCGProfile(StringRef S, SMLoc Loc) {
+  return MCAsmParserExtension::ParseDirectiveCGProfile(S, Loc);
+}
 
 namespace llvm {
 

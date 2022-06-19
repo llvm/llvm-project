@@ -21,10 +21,6 @@
 // CHECK-NEXT: error:
 // CHECK-NEXT: Error while scanning dependencies
 // CHECK-NEXT: fatal error: 'missing.h' file not found
-// CHECK-NEXT: "missing.h"
-// CHECK-NEXT: ^
 // CHECK-NEXT: Error while scanning dependencies
 // CHECK-NEXT: fatal error: 'missing.h' file not found
-// CHECK-NEXT: "missing.h"
-// CHECK-NEXT: ^
 // CHECK-NEXT: EOF

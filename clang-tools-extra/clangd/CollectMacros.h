@@ -6,14 +6,12 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANGD_COLLECTEDMACROS_H
-#define LLVM_CLANG_TOOLS_EXTRA_CLANGD_COLLECTEDMACROS_H
+#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANGD_COLLECTMACROS_H
+#define LLVM_CLANG_TOOLS_EXTRA_CLANGD_COLLECTMACROS_H
 
-#include "AST.h"
 #include "Protocol.h"
 #include "SourceCode.h"
 #include "index/SymbolID.h"
-#include "clang/Basic/IdentifierTable.h"
 #include "clang/Lex/PPCallbacks.h"
 #include "llvm/ADT/DenseMap.h"
 #include <string>
@@ -99,7 +97,19 @@ private:
   MainFileMacros &Out;
 };
 
+/// Represents a `#pragma mark` in the main file.
+///
+/// There can be at most one pragma mark per line.
+struct PragmaMark {
+  Range Rng;
+  std::string Trivia;
+};
+
+/// Collect all pragma marks from the main file.
+std::unique_ptr<PPCallbacks>
+collectPragmaMarksCallback(const SourceManager &, std::vector<PragmaMark> &Out);
+
 } // namespace clangd
 } // namespace clang
 
-#endif // LLVM_CLANG_TOOLS_EXTRA_CLANGD_COLLECTEDMACROS_H
+#endif // LLVM_CLANG_TOOLS_EXTRA_CLANGD_COLLECTMACROS_H

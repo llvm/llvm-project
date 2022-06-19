@@ -7,13 +7,13 @@
 //===----------------------------------------------------------------------===//
 
 #include "RIFF.h"
+#include "llvm/Support/ScopedPrinter.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 
 namespace clang {
 namespace clangd {
 namespace {
-using ::testing::ElementsAre;
 
 TEST(RIFFTest, File) {
   riff::File File{riff::fourCC("test"),

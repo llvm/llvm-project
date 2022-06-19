@@ -27,6 +27,7 @@
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/MC/MCSymbol.h"
 #include "llvm/MC/SubtargetFeature.h"
+#include "llvm/MC/TargetRegistry.h"
 #include "llvm/Object/IRObjectFile.h"
 #include "llvm/Object/MachO.h"
 #include "llvm/Object/ObjectFile.h"
@@ -35,7 +36,6 @@
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/SourceMgr.h"
-#include "llvm/Support/TargetRegistry.h"
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/Target/TargetLoweringObjectFile.h"
 #include "llvm/Transforms/Utils/GlobalStatus.h"
@@ -50,7 +50,7 @@ LTOModule::LTOModule(std::unique_ptr<Module> M, MemoryBufferRef MBRef,
   SymTab.addModule(Mod.get());
 }
 
-LTOModule::~LTOModule() {}
+LTOModule::~LTOModule() = default;
 
 /// isBitcodeFile - Returns 'true' if the file (or memory contents) is LLVM
 /// bitcode.
@@ -687,4 +687,17 @@ Expected<uint32_t> LTOModule::getMachOCPUType() const {
 
 Expected<uint32_t> LTOModule::getMachOCPUSubType() const {
   return MachO::getCPUSubType(Triple(Mod->getTargetTriple()));
+}
+
+bool LTOModule::hasCtorDtor() const {
+  for (auto Sym : SymTab.symbols()) {
+    if (auto *GV = Sym.dyn_cast<GlobalValue *>()) {
+      StringRef Name = GV->getName();
+      if (Name.consume_front("llvm.global_")) {
+        if (Name.equals("ctors") || Name.equals("dtors"))
+          return true;
+      }
+    }
+  }
+  return false;
 }

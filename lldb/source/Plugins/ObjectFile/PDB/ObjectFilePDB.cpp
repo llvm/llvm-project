@@ -46,11 +46,6 @@ void ObjectFilePDB::Terminate() {
   PluginManager::UnregisterPlugin(CreateInstance);
 }
 
-ConstString ObjectFilePDB::GetPluginNameStatic() {
-  static ConstString g_name("pdb");
-  return g_name;
-}
-
 ArchSpec ObjectFilePDB::GetArchitecture() {
   auto dbi_stream = m_file_up->getPDBDbiStream();
   if (!dbi_stream) {
@@ -92,7 +87,7 @@ bool ObjectFilePDB::initPDBFile() {
 }
 
 ObjectFile *
-ObjectFilePDB::CreateInstance(const ModuleSP &module_sp, DataBufferSP &data_sp,
+ObjectFilePDB::CreateInstance(const ModuleSP &module_sp, DataBufferSP data_sp,
                               offset_t data_offset, const FileSpec *file,
                               offset_t file_offset, offset_t length) {
   auto objfile_up = std::make_unique<ObjectFilePDB>(
@@ -103,7 +98,7 @@ ObjectFilePDB::CreateInstance(const ModuleSP &module_sp, DataBufferSP &data_sp,
 }
 
 ObjectFile *ObjectFilePDB::CreateMemoryInstance(const ModuleSP &module_sp,
-                                                DataBufferSP &data_sp,
+                                                WritableDataBufferSP data_sp,
                                                 const ProcessSP &process_sp,
                                                 addr_t header_addr) {
   return nullptr;

@@ -1,6 +1,10 @@
 ; RUN: llvm-as < %s | llvm-dis > %t.orig
-; RUN: llvm-as < %s | llvm-c-test --echo > %t.echo
+; RUN: llvm-as < %s | llvm-c-test --echo --no-opaque-pointers > %t.echo
 ; RUN: diff -w %t.orig %t.echo
+;
+; RUN: llvm-as -opaque-pointers < %s | llvm-dis > %t.orig_opaque
+; RUN: llvm-as -opaque-pointers < %s | llvm-c-test --echo > %t.echo_opaque
+; RUN: diff -w %t.orig_opaque %t.echo_opaque
 
 source_filename = "/test/Bindings/echo.ll"
 target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"
@@ -23,17 +27,20 @@ module asm "classical GAS"
 @align = global i32 31, align 4
 @nullptr = global i32* null
 
+@const_gep = global i32* getelementptr (i32, i32* @var, i64 2)
+@const_inbounds_gep = global i32* getelementptr inbounds (i32, i32* @var, i64 1)
+
 @aliased1 = alias i32, i32* @var
 @aliased2 = internal alias i32, i32* @var
 @aliased3 = external alias i32, i32* @var
 @aliased4 = weak alias i32, i32* @var
 @aliased5 = weak_odr alias i32, i32* @var
 
-@ifunc = ifunc i32 (i32), i64 ()* @ifunc_resolver
+@ifunc = ifunc i32 (i32), i32 (i32)* ()* @ifunc_resolver
 
-define i64 @ifunc_resolver() {
+define i32 (i32)* @ifunc_resolver() {
 entry:
-  ret i64 0
+  ret i32 (i32)* null
 }
 
 define { i64, %S* } @unpackrepack(%S %s) {
@@ -234,10 +241,9 @@ declare void @llvm.lifetime.end.p0i8(i64, i8*)
 define void @test_intrinsics() {
 entry:
   %sp = call i8* @llvm.stacksave()
-  %x = alloca i32, align 4
-  %0 = bitcast i32* %x to i8*
-  call void @llvm.lifetime.start.p0i8(i64 4, i8* %0)
-  call void @llvm.lifetime.end.p0i8(i64 4, i8* %0)
+  %0 = alloca i8, align 1
+  call void @llvm.lifetime.start.p0i8(i64 1, i8* %0)
+  call void @llvm.lifetime.end.p0i8(i64 1, i8* %0)
   call void @llvm.stackrestore(i8* %sp)
   ret void
 }

@@ -13,7 +13,7 @@
 #ifndef LLVM_ANALYSIS_SYNTHETICCOUNTSUTILS_H
 #define LLVM_ANALYSIS_SYNTHETICCOUNTSUTILS_H
 
-#include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/Analysis/CallGraph.h"
 #include "llvm/Support/ScaledNumber.h"
 

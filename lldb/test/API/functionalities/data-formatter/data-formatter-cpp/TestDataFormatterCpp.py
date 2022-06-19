@@ -12,16 +12,12 @@ from lldbsuite.test import lldbutil
 
 class CppDataFormatterTestCase(TestBase):
 
-    mydir = TestBase.compute_mydir(__file__)
-
     def setUp(self):
         # Call super's setUp().
         TestBase.setUp(self)
         # Find the line number to break at.
         self.line = line_number('main.cpp', '// Set break point at this line.')
 
-    @skipIf(debug_info="gmodules",
-            bugnumber="https://bugs.llvm.org/show_bug.cgi?id=36048")
     def test_with_run_command(self):
         """Test that that file and class static variables display correctly."""
         self.build()
@@ -85,7 +81,7 @@ class CppDataFormatterTestCase(TestBase):
                     substrs=['no custom formatter for Speed'])
 
         self.runCmd(
-            "type summary add --summary-string \"arr = ${var%s}\" -x \"char \\[[0-9]+\\]\" -v")
+            "type summary add --summary-string \"arr = ${var%s}\" -x \"char\\[[0-9]+\\]\" -v")
 
         self.expect("frame variable strarr",
                     substrs=['arr = "Hello world!"'])
@@ -99,7 +95,7 @@ class CppDataFormatterTestCase(TestBase):
                     substrs=['ptr = "Hello world!"'])
 
         self.runCmd(
-            "type summary add --summary-string \"arr = ${var%s}\" -x \"char \\[[0-9]+\\]\" -v")
+            "type summary add --summary-string \"arr = ${var%s}\" -x \"char\\[[0-9]+\\]\" -v")
 
         self.expect("frame variable strarr",
                     substrs=['arr = "Hello world!'])
@@ -122,32 +118,32 @@ class CppDataFormatterTestCase(TestBase):
                 ' = ptr = ',
                 ' "1234567890123456789012345678901234567890123456789012345678901234ABC"'])
 
-        self.runCmd("type summary add -c Point")
+        self.runCmd("type summary add -c TestPoint")
 
         self.expect("frame variable iAmSomewhere",
                     substrs=['x = 4',
                              'y = 6'])
 
         self.expect("type summary list",
-                    substrs=['Point',
+                    substrs=['TestPoint',
                              'one-line'])
 
-        self.runCmd("type summary add --summary-string \"y=${var.y%x}\" Point")
+        self.runCmd("type summary add --summary-string \"y=${var.y%x}\" TestPoint")
 
         self.expect("frame variable iAmSomewhere",
                     substrs=['y=0x'])
 
         self.runCmd(
-            "type summary add --summary-string \"y=${var.y},x=${var.x}\" Point")
+            "type summary add --summary-string \"y=${var.y},x=${var.x}\" TestPoint")
 
         self.expect("frame variable iAmSomewhere",
                     substrs=['y=6',
                              'x=4'])
 
-        self.runCmd("type summary add --summary-string \"hello\" Point -e")
+        self.runCmd("type summary add --summary-string \"hello\" TestPoint -e")
 
         self.expect("type summary list",
-                    substrs=['Point',
+                    substrs=['TestPoint',
                              'show children'])
 
         self.expect("frame variable iAmSomewhere",
@@ -176,7 +172,7 @@ class CppDataFormatterTestCase(TestBase):
                     matching=False)
 
         self.runCmd(
-            "type summary add --summary-string \"${var[1-3]}\" \"int [5]\"")
+            "type summary add --summary-string \"${var[1-3]}\" \"int[5]\"")
 
         self.expect("frame variable int_array",
                     substrs=['2',
@@ -188,7 +184,7 @@ class CppDataFormatterTestCase(TestBase):
         self.runCmd(
             "type summary add --summary-string \"${var[0-2].integer}\" \"i_am_cool *\"")
         self.runCmd(
-            "type summary add --summary-string \"${var[2-4].integer}\" \"i_am_cool [5]\"")
+            "type summary add --summary-string \"${var[2-4].integer}\" \"i_am_cool[5]\"")
 
         self.expect("frame variable cool_array",
                     substrs=['1,1,6'])
@@ -199,7 +195,7 @@ class CppDataFormatterTestCase(TestBase):
         # test special symbols for formatting variables into summaries
         self.runCmd(
             "type summary add --summary-string \"cool object @ ${var%L}\" i_am_cool")
-        self.runCmd("type summary delete \"i_am_cool [5]\"")
+        self.runCmd("type summary delete \"i_am_cool[5]\"")
 
         # this test might fail if the compiler tries to store
         # these values into registers.. hopefully this is not

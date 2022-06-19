@@ -1,5 +1,4 @@
-! RUN: %S/test_errors.sh %s %t %flang_fc1
-! REQUIRES: shell
+! RUN: %python %S/test_errors.py %s %flang_fc1
 ! C735 If EXTENDS appears, SEQUENCE shall not appear.
 ! C738 The same private-or-sequence shall not appear more than once in a
 ! given derived-type-def .
@@ -84,6 +83,8 @@ module m4
     class(*), allocatable :: typeStarField
     !ERROR: A sequence type data component must either be of an intrinsic type or a derived sequence type
     type(plainType) :: testField1
+    !Pointers are ok as an extension
+    type(plainType), pointer :: testField1p
     type(sequenceType) :: testField2
     procedure(real), pointer, nopass :: procField
   end type testType

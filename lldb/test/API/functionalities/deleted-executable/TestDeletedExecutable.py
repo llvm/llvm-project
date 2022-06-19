@@ -11,15 +11,12 @@ from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 
 class TestDeletedExecutable(TestBase):
-
-    mydir = TestBase.compute_mydir(__file__)
     NO_DEBUG_INFO_TESTCASE = True
 
     @skipIfWindows # cannot delete a running executable
     @expectedFailureAll(oslist=["linux"],
         triple=no_match('aarch64-.*-android'))
         # determining the architecture of the process fails
-    @skipIfReproducer # File synchronization is not supported during replay.
     def test(self):
         self.build()
         exe = self.getBuildArtifact("a.out")

@@ -1,20 +1,146 @@
 from __future__ import division
-import re
 import lldb.formatters.Logger
 
 # C++ STL formatters for LLDB
-# These formatters are based upon the version of the GNU libstdc++
-# as it ships with Mac OS X 10.6.8 thru 10.8.0
-# You are encouraged to look at the STL implementation for your platform
-# before relying on these formatters to do the right thing for your setup
+# As there are many versions of the libstdc++, you are encouraged to look at the STL
+# implementation for your platform before relying on these formatters to do the right
+# thing for your setup
+
+def ForwardListSummaryProvider(valobj, dict):
+    list_capping_size = valobj.GetTarget().GetMaximumNumberOfChildrenToDisplay()
+    text = "size=" + str(valobj.GetNumChildren())
+    if valobj.GetNumChildren() > list_capping_size:
+        return "(capped) " + text
+    else:
+        return text
+
+def StdOptionalSummaryProvider(valobj, dict):
+    has_value = valobj.GetNumChildren() > 0
+    # We add wrapping spaces for consistency with the libcxx formatter
+    return " Has Value=" + ("true" if has_value else "false") + " "
 
 
-class StdListSynthProvider:
-
+class StdOptionalSynthProvider:
     def __init__(self, valobj, dict):
+        self.valobj = valobj
+
+    def update(self):
+        try:
+            self.payload = self.valobj.GetChildMemberWithName('_M_payload')
+            self.value = self.payload.GetChildMemberWithName('_M_payload')
+            self.has_value = self.payload.GetChildMemberWithName('_M_engaged').GetValueAsUnsigned(0) != 0
+        except:
+            self.has_value = False
+        return False
+
+
+    def num_children(self):
+        return 1 if self.has_value else 0
+
+    def get_child_index(self, name):
+        return 0
+
+    def get_child_at_index(self, index):
+        # some versions of libstdcpp have an additional _M_value child with the actual value
+        possible_value = self.value.GetChildMemberWithName('_M_value')
+        if possible_value.IsValid():
+            return possible_value.Clone('Value')
+        return self.value.Clone('Value')
+
+"""
+ This formatter can be applied to all
+ unordered map-like structures (unordered_map, unordered_multimap, unordered_set, unordered_multiset)
+"""
+class StdUnorderedMapSynthProvider:
+    def __init__(self, valobj, dict):
+        self.valobj = valobj
+        self.count = None
+        self.kind = self.get_object_kind(valobj)
+
+    def get_object_kind(self, valobj):
+        type_name = valobj.GetTypeName()
+        return "set" if "set" in type_name else "map"
+
+    def extract_type(self):
+        type = self.valobj.GetType()
+        # type of std::pair<key, value> is the first template
+        # argument type of the 4th template argument to std::map and
+        # 3rd template argument for std::set. That's why
+        # we need to know kind of the object
+        template_arg_num = 4 if self.kind == "map" else 3
+        allocator_type = type.GetTemplateArgumentType(template_arg_num)
+        data_type = allocator_type.GetTemplateArgumentType(0)
+        return data_type
+
+    def update(self):
+        # preemptively setting this to None - we might end up changing our mind
+        # later
+        self.count = None
+        try:
+            self.head = self.valobj.GetChildMemberWithName('_M_h')
+            self.before_begin = self.head.GetChildMemberWithName('_M_before_begin')
+            self.next = self.before_begin.GetChildMemberWithName('_M_nxt')
+            self.data_type = self.extract_type()
+            self.skip_size = self.next.GetType().GetByteSize()
+            self.data_size = self.data_type.GetByteSize()
+            if (not self.data_type.IsValid()) or (not self.next.IsValid()):
+                self.count = 0
+        except:
+            self.count = 0
+        return False
+
+    def get_child_index(self, name):
+        try:
+            return int(name.lstrip('[').rstrip(']'))
+        except:
+            return -1
+
+    def get_child_at_index(self, index):
+        logger = lldb.formatters.Logger.Logger()
+        logger >> "Being asked to fetch child[" + str(index) + "]"
+        if index < 0:
+            return None
+        if index >= self.num_children():
+            return None
+        try:
+            offset = index
+            current = self.next
+            while offset > 0:
+                current = current.GetChildMemberWithName('_M_nxt')
+                offset = offset - 1
+            return current.CreateChildAtOffset( '[' + str(index) + ']', self.skip_size, self.data_type)
+
+        except:
+            logger >> "Cannot get child"
+            return None
+
+    def num_children(self):
+        if self.count is None:
+            self.count = self.num_children_impl()
+        return self.count
+
+    def num_children_impl(self):
+        logger = lldb.formatters.Logger.Logger()
+        try:
+            count = self.head.GetChildMemberWithName('_M_element_count').GetValueAsUnsigned(0)
+            return count
+        except:
+            logger >> "Could not determine the size"
+            return 0
+
+
+class AbstractListSynthProvider:
+    def __init__(self, valobj, dict, has_prev):
+        '''
+        :param valobj: The value object of the list
+        :param dict: A dict with metadata provided by LLDB
+        :param has_prev: Whether the list supports a 'prev' pointer besides a 'next' one
+        '''
         logger = lldb.formatters.Logger.Logger()
         self.valobj = valobj
         self.count = None
+        self.has_prev = has_prev
+        self.list_capping_size = self.valobj.GetTarget().GetMaximumNumberOfChildrenToDisplay()
         logger >> "Providing synthetic children for a list named " + \
             str(valobj.GetName())
 
@@ -24,7 +150,7 @@ class StdListSynthProvider:
 
     def is_valid(self, node):
         logger = lldb.formatters.Logger.Logger()
-        valid = self.value(self.next_node(node)) != self.node_address
+        valid = self.value(self.next_node(node)) != self.get_end_of_list_address()
         if valid:
             logger >> "%s is valid" % str(self.valobj.GetName())
         else:
@@ -73,26 +199,35 @@ class StdListSynthProvider:
     def num_children_impl(self):
         logger = lldb.formatters.Logger.Logger()
         try:
-            next_val = self.next.GetValueAsUnsigned(0)
-            prev_val = self.prev.GetValueAsUnsigned(0)
             # After a std::list has been initialized, both next and prev will
             # be non-NULL
-            if next_val == 0 or prev_val == 0:
+            next_val = self.next.GetValueAsUnsigned(0)
+            if next_val == 0:
                 return 0
-            if next_val == self.node_address:
-                return 0
-            if next_val == prev_val:
-                return 1
             if self.has_loop():
                 return 0
-            size = 2
+            if self.has_prev:
+                prev_val = self.prev.GetValueAsUnsigned(0)
+                if prev_val == 0:
+                    return 0
+                if next_val == self.node_address:
+                    return 0
+                if next_val == prev_val:
+                    return 1
+            size = 1
             current = self.next
             while current.GetChildMemberWithName(
-                    '_M_next').GetValueAsUnsigned(0) != self.node_address:
-                size = size + 1
+                    '_M_next').GetValueAsUnsigned(0) != self.get_end_of_list_address():
                 current = current.GetChildMemberWithName('_M_next')
-            return (size - 1)
+                if not current.IsValid():
+                    break
+                size = size + 1
+                if size >= self.list_capping_size:
+                    break
+
+            return size
         except:
+            logger >> "Error determining the size"
             return 0
 
     def get_child_index(self, name):
@@ -115,9 +250,11 @@ class StdListSynthProvider:
             while offset > 0:
                 current = current.GetChildMemberWithName('_M_next')
                 offset = offset - 1
+            # C++ lists store the data of a node after its pointers. In the case of a forward list, there's just one pointer (next), and
+            # in the case of a double-linked list, there's an additional pointer (prev).
             return current.CreateChildAtOffset(
                 '[' + str(index) + ']',
-                2 * current.GetType().GetByteSize(),
+               (2 if self.has_prev else 1) * current.GetType().GetByteSize(),
                 self.data_type)
         except:
             return None
@@ -128,10 +265,8 @@ class StdListSynthProvider:
         if list_type.IsReferenceType():
             list_type = list_type.GetDereferencedType()
         if list_type.GetNumberOfTemplateArguments() > 0:
-            data_type = list_type.GetTemplateArgumentType(0)
-        else:
-            data_type = None
-        return data_type
+            return list_type.GetTemplateArgumentType(0)
+        return lldb.SBType()
 
     def update(self):
         logger = lldb.formatters.Logger.Logger()
@@ -139,19 +274,71 @@ class StdListSynthProvider:
         # later
         self.count = None
         try:
-            impl = self.valobj.GetChildMemberWithName('_M_impl')
-            self.node = impl.GetChildMemberWithName('_M_node')
-            self.node_address = self.valobj.AddressOf().GetValueAsUnsigned(0)
-            self.next = self.node.GetChildMemberWithName('_M_next')
-            self.prev = self.node.GetChildMemberWithName('_M_prev')
+            self.impl = self.valobj.GetChildMemberWithName('_M_impl')
             self.data_type = self.extract_type()
-            self.data_size = self.data_type.GetByteSize()
+            if (not self.data_type.IsValid()) or (not self.impl.IsValid()):
+                self.count = 0
+            elif not self.updateNodes():
+                self.count = 0
+            else:
+                self.data_size = self.data_type.GetByteSize()
         except:
-            pass
+            self.count = 0
         return False
+
+    '''
+    Method is used to extract the list pointers into the variables (e.g self.node, self.next, and optionally to self.prev)
+    and is mandatory to be overriden in each AbstractListSynthProvider subclass.
+    This should return True or False depending on wheter it found valid data.
+    '''
+    def updateNodes(self):
+        raise NotImplementedError
 
     def has_children(self):
         return True
+
+    '''
+     Method is used to identify if a node traversal has reached its end
+     and is mandatory to be overriden in each AbstractListSynthProvider subclass
+    '''
+    def get_end_of_list_address(self):
+        raise NotImplementedError
+
+
+class StdForwardListSynthProvider(AbstractListSynthProvider):
+
+    def __init__(self, valobj, dict):
+        has_prev = False
+        super().__init__(valobj, dict, has_prev)
+
+    def updateNodes(self):
+        self.node = self.impl.GetChildMemberWithName('_M_head')
+        self.next = self.node.GetChildMemberWithName('_M_next')
+        if (not self.node.IsValid()) or (not self.next.IsValid()):
+            return False
+        return True
+
+    def get_end_of_list_address(self):
+        return 0
+
+
+class StdListSynthProvider(AbstractListSynthProvider):
+
+    def __init__(self, valobj, dict):
+        has_prev = True
+        super().__init__(valobj, dict, has_prev)
+
+    def updateNodes(self):
+        self.node_address = self.valobj.AddressOf().GetValueAsUnsigned(0)
+        self.node = self.impl.GetChildMemberWithName('_M_node')
+        self.prev = self.node.GetChildMemberWithName('_M_prev')
+        self.next = self.node.GetChildMemberWithName('_M_next')
+        if self.node_address == 0 or (not self.node.IsValid()) or (not self.next.IsValid()) or (not self.prev.IsValid()):
+            return False
+        return True
+
+    def get_end_of_list_address(self):
+        return self.node_address
 
 
 class StdVectorSynthProvider:
@@ -235,8 +422,8 @@ class StdVectorSynthProvider:
                 else:
                     self.count = 0
             except:
-                pass
-            return False 
+                self.count = 0
+            return False
 
     class StdVBoolImplementation(object):
 
@@ -280,7 +467,10 @@ class StdVectorSynthProvider:
                 self.start_p = self.m_start.GetChildMemberWithName('_M_p')
                 self.finish_p = self.m_finish.GetChildMemberWithName('_M_p')
                 self.offset = self.m_finish.GetChildMemberWithName('_M_offset')
-                self.valid = True
+                if self.offset.IsValid() and self.start_p.IsValid() and self.finish_p.IsValid():
+                    self.valid = True
+                else:
+                    self.valid = False
             except:
                 self.valid = False
             return False
@@ -314,19 +504,30 @@ class StdVectorSynthProvider:
     def has_children(self):
         return True
 
-
-class StdMapSynthProvider:
+    """
+     This formatter can be applied to all
+     map-like structures (map, multimap, set, multiset)
+    """
+class StdMapLikeSynthProvider:
 
     def __init__(self, valobj, dict):
         logger = lldb.formatters.Logger.Logger()
         self.valobj = valobj
         self.count = None
-        logger >> "Providing synthetic children for a map named " + \
+        self.kind = self.get_object_kind(valobj)
+        logger >> "Providing synthetic children for a " + self.kind + " named " + \
             str(valobj.GetName())
+
+    def get_object_kind(self, valobj):
+        type_name = valobj.GetTypeName()
+        for kind in ["multiset", "multimap", "set", "map"]:
+           if kind in type_name:
+              return kind
+        return type_name
 
     # we need this function as a temporary workaround for rdar://problem/10801549
     # which prevents us from extracting the std::pair<K,V> SBType out of the template
-    # arguments for _Rep_Type _M_t in the map itself - because we have to make up the
+    # arguments for _Rep_Type _M_t in the object itself - because we have to make up the
     # typename and then find it, we may hit the situation were std::string has multiple
     # names but only one is actually referenced in the debug information. hence, we need
     # to replace the longer versions of std::string with the shorter one in order to be able
@@ -349,36 +550,38 @@ class StdMapSynthProvider:
         # later
         self.count = None
         try:
-            # we will set this to True if we find out that discovering a node in the map takes more steps than the overall size of the RB tree
+            # we will set this to True if we find out that discovering a node in the object takes more steps than the overall size of the RB tree
             # if this gets set to True, then we will merrily return None for
             # any child from that moment on
             self.garbage = False
             self.Mt = self.valobj.GetChildMemberWithName('_M_t')
             self.Mimpl = self.Mt.GetChildMemberWithName('_M_impl')
             self.Mheader = self.Mimpl.GetChildMemberWithName('_M_header')
+            if not self.Mheader.IsValid():
+                self.count = 0
+            else:
+                map_type = self.valobj.GetType()
+                if map_type.IsReferenceType():
+                    logger >> "Dereferencing type"
+                    map_type = map_type.GetDereferencedType()
 
-            map_type = self.valobj.GetType()
-            if map_type.IsReferenceType():
-                logger >> "Dereferencing type"
-                map_type = map_type.GetDereferencedType()
+                # Get the type of std::pair<key, value>. It is the first template
+                # argument type of the 4th template argument to std::map.
+                allocator_type = map_type.GetTemplateArgumentType(3)
+                self.data_type = allocator_type.GetTemplateArgumentType(0)
+                if not self.data_type:
+                    # GCC does not emit DW_TAG_template_type_parameter for
+                    # std::allocator<...>. For such a case, get the type of
+                    # std::pair from a member of std::map.
+                    rep_type = self.valobj.GetChildMemberWithName('_M_t').GetType()
+                    self.data_type = rep_type.GetTypedefedType().GetTemplateArgumentType(1)
 
-            # Get the type of std::pair<key, value>. It is the first template
-            # argument type of the 4th template argument to std::map.
-            allocator_type = map_type.GetTemplateArgumentType(3)
-            self.data_type = allocator_type.GetTemplateArgumentType(0)
-            if not self.data_type:
-                # GCC does not emit DW_TAG_template_type_parameter for
-                # std::allocator<...>. For such a case, get the type of
-                # std::pair from a member of std::map.
-                rep_type = self.valobj.GetChildMemberWithName('_M_t').GetType()
-                self.data_type = rep_type.GetTypedefedType().GetTemplateArgumentType(1)
-
-            # from libstdc++ implementation of _M_root for rbtree
-            self.Mroot = self.Mheader.GetChildMemberWithName('_M_parent')
-            self.data_size = self.data_type.GetByteSize()
-            self.skip_size = self.Mheader.GetType().GetByteSize()
+                # from libstdc++ implementation of _M_root for rbtree
+                self.Mroot = self.Mheader.GetChildMemberWithName('_M_parent')
+                self.data_size = self.data_type.GetByteSize()
+                self.skip_size = self.Mheader.GetType().GetByteSize()
         except:
-            pass
+            self.count = 0
         return False
 
     def num_children(self):
@@ -481,3 +684,135 @@ class StdMapSynthProvider:
         return True
 
 _list_uses_loop_detector = True
+
+class StdDequeSynthProvider:
+    def __init__(self, valobj, d):
+        self.valobj = valobj
+        self.pointer_size = self.valobj.GetProcess().GetAddressByteSize()
+        self.count = None
+        self.block_size = -1
+        self.element_size = -1
+        self.find_block_size()
+
+
+    def find_block_size(self):
+        # in order to use the deque we must have the block size, or else
+        # it's impossible to know what memory addresses are valid
+        self.element_type = self.valobj.GetType().GetTemplateArgumentType(0)
+        if not self.element_type.IsValid():
+            return
+        self.element_size = self.element_type.GetByteSize()
+        # The block size (i.e. number of elements per subarray) is defined in
+        # this piece of code, so we need to replicate it.
+        #
+        # #define _GLIBCXX_DEQUE_BUF_SIZE 512
+        #
+        # return (__size < _GLIBCXX_DEQUE_BUF_SIZE
+	    #   ? size_t(_GLIBCXX_DEQUE_BUF_SIZE / __size) : size_t(1));
+        if self.element_size < 512:
+            self.block_size = 512 // self.element_size
+        else:
+            self.block_size = 1
+
+    def num_children(self):
+        if self.count is None:
+            return 0
+        return self.count
+
+    def has_children(self):
+        return True
+
+    def get_child_index(self, name):
+        try:
+            return int(name.lstrip('[').rstrip(']'))
+        except:
+            return -1
+
+    def get_child_at_index(self, index):
+        if index < 0 or self.count is None:
+            return None
+        if index >= self.num_children():
+            return None
+        try:
+            name = '[' + str(index) + ']'
+            # We first look for the element in the first subarray,
+            # which might be incomplete.
+            if index < self.first_node_size:
+                # The following statement is valid because self.first_elem is the pointer
+                # to the first element
+                return self.first_elem.CreateChildAtOffset(name, index * self.element_size, self.element_type)
+
+            # Now the rest of the subarrays except for maybe the last one
+            # are going to be complete, so the final expression is simpler
+            i, j = divmod(index - self.first_node_size, self.block_size)
+
+            # We first move to the beginning of the node/subarray were our element is
+            node = self.start_node.CreateChildAtOffset(
+                '',
+                (1 + i) * self.valobj.GetProcess().GetAddressByteSize(),
+                self.element_type.GetPointerType())
+            return node.CreateChildAtOffset(name, j * self.element_size, self.element_type)
+
+        except:
+            return None
+
+    def update(self):
+        logger = lldb.formatters.Logger.Logger()
+        self.count = 0
+        try:
+            # A deque is effectively a two-dim array, with fixed width.
+            # However, only a subset of this memory contains valid data
+            # since a deque may have some slack at the front and back in
+            # order to have O(1) insertion at both ends.
+            # The rows in active use are delimited by '_M_start' and
+            # '_M_finish'.
+            #
+            # To find the elements that are actually constructed, the 'start'
+            # variable tells which element in this NxM array is the 0th
+            # one.
+            if self.block_size < 0 or self.element_size < 0:
+                return False
+
+            count = 0
+
+            impl = self.valobj.GetChildMemberWithName('_M_impl')
+
+            # we calculate the size of the first node (i.e. first internal array)
+            self.start = impl.GetChildMemberWithName('_M_start')
+            self.start_node = self.start.GetChildMemberWithName('_M_node')
+            first_node_address = self.start_node.GetValueAsUnsigned(0)
+            first_node_last_elem = self.start.GetChildMemberWithName('_M_last').GetValueAsUnsigned(0)
+            self.first_elem = self.start.GetChildMemberWithName('_M_cur')
+            first_node_first_elem = self.first_elem.GetValueAsUnsigned(0)
+
+
+            finish = impl.GetChildMemberWithName('_M_finish')
+            last_node_address = finish.GetChildMemberWithName('_M_node').GetValueAsUnsigned(0)
+            last_node_first_elem = finish.GetChildMemberWithName('_M_first').GetValueAsUnsigned(0)
+            last_node_last_elem = finish.GetChildMemberWithName('_M_cur').GetValueAsUnsigned(0)
+
+            if first_node_first_elem == 0 or first_node_last_elem == 0 or first_node_first_elem > first_node_last_elem:
+                return False
+            if last_node_first_elem == 0 or last_node_last_elem == 0 or last_node_first_elem > last_node_last_elem:
+                return False
+
+
+            if last_node_address == first_node_address:
+                self.first_node_size = (last_node_last_elem - first_node_first_elem) // self.element_size
+                count += self.first_node_size
+            else:
+                self.first_node_size = (first_node_last_elem - first_node_first_elem) // self.element_size
+                count += self.first_node_size
+
+                # we calculate the size of the last node
+                finish = impl.GetChildMemberWithName('_M_finish')
+                last_node_address = finish.GetChildMemberWithName('_M_node').GetValueAsUnsigned(0)
+                count += (last_node_last_elem - last_node_first_elem) // self.element_size
+
+                # we calculate the size of the intermediate nodes
+                num_intermediate_nodes = (last_node_address - first_node_address - 1) // self.valobj.GetProcess().GetAddressByteSize()
+                count += self.block_size * num_intermediate_nodes
+            self.count = count
+        except:
+            pass
+        return False

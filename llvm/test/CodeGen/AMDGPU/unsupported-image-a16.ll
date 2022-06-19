@@ -1,8 +1,8 @@
 ; RUN: not --crash llc -global-isel=0 -march=amdgcn -mcpu=fiji -verify-machineinstrs -o /dev/null %s 2>&1 | FileCheck -check-prefix=SDAG-ERR %s
-; RUN: not --crash llc -global-isel=1 -march=amdgcn -mcpu=fiji -verify-machineinstrs -o /dev/null %s 2>&1 | FileCheck -check-prefix=GISEL-ERR %s
+; RUN: not --crash llc -global-isel=1 -global-isel-abort=1 -march=amdgcn -mcpu=fiji -verify-machineinstrs -o /dev/null %s 2>&1 | FileCheck -check-prefix=GISEL-ERR %s
 
 ; Make sure this doesn't assert on targets without the r128-16
-; feature, and instead generates a slection error.
+; feature, and instead generates a selection error.
 
 ; SDAG-ERR: LLVM ERROR: Cannot select: intrinsic %llvm.amdgcn.image.load.1d
 ; GISEL-ERR: LLVM ERROR: unable to legalize instruction: %{{[0-9]+}}:_(<4 x s32>) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.load.1d), 15, %{{[0-9]+}}:_(s16), %{{[0-9]+}}:_(<8 x s32>), 0, 0 :: (dereferenceable load (<4 x s32>) from custom "ImageResource") (in function: load_1d)

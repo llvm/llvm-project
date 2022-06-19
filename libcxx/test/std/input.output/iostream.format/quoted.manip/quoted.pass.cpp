@@ -132,10 +132,12 @@ int main(int, char**)
     round_trip_d  (  "", 'q' );
     round_trip_e  (  "", 'q' );
 
+#ifndef TEST_HAS_NO_WIDE_CHARACTERS
     round_trip    ( L"" );
     round_trip_ws ( L"" );
     round_trip_d  ( L"", 'q' );
     round_trip_e  ( L"", 'q' );
+#endif
 
     round_trip    (  "Hi" );
     round_trip_ws (  "Hi" );
@@ -144,34 +146,47 @@ int main(int, char**)
     assert ( quote ( "Hi", '!' ) == "!Hi!" );
     assert ( quote ( "Hi!", '!' ) == R"(!Hi\!!)" );
 
+#ifndef TEST_HAS_NO_WIDE_CHARACTERS
     round_trip    ( L"Hi" );
     round_trip_ws ( L"Hi" );
     round_trip_d  ( L"Hi", '!' );
     round_trip_e  ( L"Hi", '!' );
     assert ( quote ( L"Hi", '!' )  == L"!Hi!" );
     assert ( quote ( L"Hi!", '!' ) == LR"(!Hi\!!)" );
+#endif
 
     round_trip    (  "Hi Mom" );
     round_trip_ws (  "Hi Mom" );
+#ifndef TEST_HAS_NO_WIDE_CHARACTERS
     round_trip    ( L"Hi Mom" );
     round_trip_ws ( L"Hi Mom" );
+#endif
 
     assert ( quote (  "" )  ==  "\"\"" );
-    assert ( quote ( L"" )  == L"\"\"" );
     assert ( quote (  "a" ) ==  "\"a\"" );
+#ifndef TEST_HAS_NO_WIDE_CHARACTERS
+    assert ( quote ( L"" )  == L"\"\"" );
     assert ( quote ( L"a" ) == L"\"a\"" );
+#endif
 
-//  missing end quote - must not hang
+    // missing end quote - must not hang
     assert ( unquote (  "\"abc" ) ==  "abc" );
+#ifndef TEST_HAS_NO_WIDE_CHARACTERS
     assert ( unquote ( L"\"abc" ) == L"abc" );
+#endif
 
     assert ( unquote (  "abc" ) == "abc" ); // no delimiter
-    assert ( unquote ( L"abc" ) == L"abc" ); // no delimiter
     assert ( unquote (  "abc def" ) ==  "abc" ); // no delimiter
+#ifndef TEST_HAS_NO_WIDE_CHARACTERS
+    assert ( unquote ( L"abc" ) == L"abc" ); // no delimiter
     assert ( unquote ( L"abc def" ) == L"abc" ); // no delimiter
+#endif
 
     assert ( unquote (  "" ) ==  "" ); // nothing there
+#ifndef TEST_HAS_NO_WIDE_CHARACTERS
     assert ( unquote ( L"" ) == L"" ); // nothing there
+#endif
+
     test_padding ();
 
     return 0;

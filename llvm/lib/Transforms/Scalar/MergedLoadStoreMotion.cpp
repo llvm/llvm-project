@@ -76,13 +76,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Transforms/Scalar/MergedLoadStoreMotion.h"
-#include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/AliasAnalysis.h"
-#include "llvm/Analysis/CFG.h"
 #include "llvm/Analysis/GlobalsModRef.h"
-#include "llvm/Analysis/Loads.h"
-#include "llvm/Analysis/ValueTracking.h"
-#include "llvm/IR/Metadata.h"
+#include "llvm/IR/Instructions.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
@@ -419,4 +415,13 @@ MergedLoadStoreMotionPass::run(Function &F, FunctionAnalysisManager &AM) {
   if (!Options.SplitFooterBB)
     PA.preserveSet<CFGAnalyses>();
   return PA;
+}
+
+void MergedLoadStoreMotionPass::printPipeline(
+    raw_ostream &OS, function_ref<StringRef(StringRef)> MapClassName2PassName) {
+  static_cast<PassInfoMixin<MergedLoadStoreMotionPass> *>(this)->printPipeline(
+      OS, MapClassName2PassName);
+  OS << "<";
+  OS << (Options.SplitFooterBB ? "" : "no-") << "split-footer-bb";
+  OS << ">";
 }

@@ -12,8 +12,6 @@ from lldbsuite.test.decorators import *
 
 class MemoryFindTestCase(TestBase):
 
-    mydir = TestBase.compute_mydir(__file__)
-
     def setUp(self):
         # Call super's setUp().
         TestBase.setUp(self)
@@ -37,10 +35,14 @@ class MemoryFindTestCase(TestBase):
                     substrs=['stopped', 'stop reason = breakpoint'])
 
         # The breakpoint should have a hit count of 1.
-        self.expect("breakpoint list -f", BREAKPOINT_HIT_ONCE,
-                    substrs=[' resolved, hit count = 1'])
+        lldbutil.check_breakpoint(self, bpno = 1, expected_hit_count = 1)
 
         # Test the memory find commands.
+
+        # Empty search string should be handled.
+        self.expect('memory find -s "" `stringdata` `stringdata+16`',
+                error=True,
+                substrs=["error: search string must have non-zero length."])
 
         self.expect(
             'memory find -s "in const" `stringdata` `stringdata+(int)strlen(stringdata)`',
@@ -48,6 +50,12 @@ class MemoryFindTestCase(TestBase):
                 'data found at location: 0x',
                 '69 6e 20 63',
                 'in const'])
+
+        # Invalid expr is an error.
+        self.expect(
+            'memory find -e "not_a_symbol" `&bytedata[0]` `&bytedata[15]`',
+            error=True,
+            substrs=["error: expression evaluation failed. pass a string instead"])
 
         self.expect(
             'memory find -e "(uint8_t)0x22" `&bytedata[0]` `&bytedata[15]`',

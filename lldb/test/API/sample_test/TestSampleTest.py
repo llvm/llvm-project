@@ -11,9 +11,7 @@ from lldbsuite.test.lldbtest import *
 
 class RenameThisSampleTestTestCase(TestBase):
 
-    mydir = TestBase.compute_mydir(__file__)
-
-    # If your test case doesn't stress debug info, the
+    # If your test case doesn't stress debug info, then
     # set this to true.  That way it won't be run once for
     # each debug info format.
     NO_DEBUG_INFO_TESTCASE = True
@@ -42,7 +40,7 @@ class RenameThisSampleTestTestCase(TestBase):
 
         frame = thread.GetFrameAtIndex(0)
         test_var = frame.FindVariable("test_var")
-        self.assertTrue(test_var.GetError().Success(), "Failed to fetch test_var")
+        self.assertSuccess(test_var.GetError(), "Failed to fetch test_var")
         test_value = test_var.GetValueAsUnsigned()
         self.assertEqual(test_value, 10, "Got the right value for test_var")
 

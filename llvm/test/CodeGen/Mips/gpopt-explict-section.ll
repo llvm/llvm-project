@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=mips -mcpu=mips32 -mips-ssection-threshold=8 \
+; RUN: llc < %s -mtriple=mips -mcpu=mips32 -mips-ssection-threshold=8 \
 ; RUN:     -relocation-model=static -mattr=+noabicalls -mgpopt \
 ; RUN:   | FileCheck %s
 

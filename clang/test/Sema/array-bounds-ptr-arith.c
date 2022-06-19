@@ -33,7 +33,19 @@ typedef TPtr *TabHandle;
 struct RDar11387038_B { TabHandle x; };
 typedef struct RDar11387038_B RDar11387038_B;
 
-void radar11387038() {
+void radar11387038(void) {
   RDar11387038_B *pRDar11387038_B;
   struct RDar11387038* y = &(*pRDar11387038_B->x)->z[4];
+}
+
+void pr51682 (void) {
+  int arr [1];
+  switch (0) {
+    case 0:
+      break;
+    case 1:
+      asm goto (""::"r"(arr[42] >> 1)::failed); // no-warning
+      break;
+  }
+failed:;
 }

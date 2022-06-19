@@ -25,18 +25,13 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Transforms/IPO/SyntheticCountsPropagation.h"
-#include "llvm/ADT/DenseSet.h"
-#include "llvm/ADT/STLExtras.h"
 #include "llvm/Analysis/BlockFrequencyInfo.h"
 #include "llvm/Analysis/CallGraph.h"
-#include "llvm/Analysis/ProfileSummaryInfo.h"
 #include "llvm/Analysis/SyntheticCountsUtils.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/Module.h"
 #include "llvm/Support/CommandLine.h"
-#include "llvm/Support/Debug.h"
-#include "llvm/Support/raw_ostream.h"
 
 using namespace llvm;
 using Scaled64 = ScaledNumber<uint64_t>;
@@ -47,18 +42,17 @@ using ProfileCount = Function::ProfileCount;
 namespace llvm {
 cl::opt<int>
     InitialSyntheticCount("initial-synthetic-count", cl::Hidden, cl::init(10),
-                          cl::ZeroOrMore,
                           cl::desc("Initial value of synthetic entry count"));
 } // namespace llvm
 
 /// Initial synthetic count assigned to inline functions.
 static cl::opt<int> InlineSyntheticCount(
-    "inline-synthetic-count", cl::Hidden, cl::init(15), cl::ZeroOrMore,
+    "inline-synthetic-count", cl::Hidden, cl::init(15),
     cl::desc("Initial synthetic entry count for inline functions."));
 
 /// Initial synthetic count assigned to cold functions.
 static cl::opt<int> ColdSyntheticCount(
-    "cold-synthetic-count", cl::Hidden, cl::init(5), cl::ZeroOrMore,
+    "cold-synthetic-count", cl::Hidden, cl::init(5),
     cl::desc("Initial synthetic entry count for cold functions."));
 
 // Assign initial synthetic entry counts to functions.

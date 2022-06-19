@@ -11,7 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "sanitizer_platform.h"
-#if SANITIZER_MAC
+#if SANITIZER_APPLE
 #include "sanitizer_mac.h"
 #include "interception/interception.h"
 
@@ -25,6 +25,7 @@
 #include "sanitizer_common.h"
 #include "sanitizer_file.h"
 #include "sanitizer_flags.h"
+#include "sanitizer_interface_internal.h"
 #include "sanitizer_internal_defs.h"
 #include "sanitizer_libc.h"
 #include "sanitizer_platform_limits_posix.h"
@@ -265,30 +266,32 @@ int internal_sysctlbyname(const char *sname, void *oldp, uptr *oldlenp,
 
 static fd_t internal_spawn_impl(const char *argv[], const char *envp[],
                                 pid_t *pid) {
-  fd_t master_fd = kInvalidFd;
-  fd_t slave_fd = kInvalidFd;
+  fd_t primary_fd = kInvalidFd;
+  fd_t secondary_fd = kInvalidFd;
 
   auto fd_closer = at_scope_exit([&] {
-    internal_close(master_fd);
-    internal_close(slave_fd);
+    internal_close(primary_fd);
+    internal_close(secondary_fd);
   });
 
   // We need a new pseudoterminal to avoid buffering problems. The 'atos' tool
   // in particular detects when it's talking to a pipe and forgets to flush the
   // output stream after sending a response.
-  master_fd = posix_openpt(O_RDWR);
-  if (master_fd == kInvalidFd) return kInvalidFd;
+  primary_fd = posix_openpt(O_RDWR);
+  if (primary_fd == kInvalidFd)
+    return kInvalidFd;
 
-  int res = grantpt(master_fd) || unlockpt(master_fd);
+  int res = grantpt(primary_fd) || unlockpt(primary_fd);
   if (res != 0) return kInvalidFd;
 
   // Use TIOCPTYGNAME instead of ptsname() to avoid threading problems.
-  char slave_pty_name[128];
-  res = ioctl(master_fd, TIOCPTYGNAME, slave_pty_name);
+  char secondary_pty_name[128];
+  res = ioctl(primary_fd, TIOCPTYGNAME, secondary_pty_name);
   if (res == -1) return kInvalidFd;
 
-  slave_fd = internal_open(slave_pty_name, O_RDWR);
-  if (slave_fd == kInvalidFd) return kInvalidFd;
+  secondary_fd = internal_open(secondary_pty_name, O_RDWR);
+  if (secondary_fd == kInvalidFd)
+    return kInvalidFd;
 
   // File descriptor actions
   posix_spawn_file_actions_t acts;
@@ -299,9 +302,9 @@ static fd_t internal_spawn_impl(const char *argv[], const char *envp[],
     posix_spawn_file_actions_destroy(&acts);
   });
 
-  res = posix_spawn_file_actions_adddup2(&acts, slave_fd, STDIN_FILENO) ||
-        posix_spawn_file_actions_adddup2(&acts, slave_fd, STDOUT_FILENO) ||
-        posix_spawn_file_actions_addclose(&acts, slave_fd);
+  res = posix_spawn_file_actions_adddup2(&acts, secondary_fd, STDIN_FILENO) ||
+        posix_spawn_file_actions_adddup2(&acts, secondary_fd, STDOUT_FILENO) ||
+        posix_spawn_file_actions_addclose(&acts, secondary_fd);
   if (res != 0) return kInvalidFd;
 
   // Spawn attributes
@@ -326,14 +329,14 @@ static fd_t internal_spawn_impl(const char *argv[], const char *envp[],
 
   // Disable echo in the new terminal, disable CR.
   struct termios termflags;
-  tcgetattr(master_fd, &termflags);
+  tcgetattr(primary_fd, &termflags);
   termflags.c_oflag &= ~ONLCR;
   termflags.c_lflag &= ~ECHO;
-  tcsetattr(master_fd, TCSANOW, &termflags);
+  tcsetattr(primary_fd, TCSANOW, &termflags);
 
-  // On success, do not close master_fd on scope exit.
-  fd_t fd = master_fd;
-  master_fd = kInvalidFd;
+  // On success, do not close primary_fd on scope exit.
+  fd_t fd = primary_fd;
+  primary_fd = kInvalidFd;
 
   return fd;
 }
@@ -388,6 +391,13 @@ bool FileExists(const char *filename) {
     return false;
   // Sanity check: filename is a regular file.
   return S_ISREG(st.st_mode);
+}
+
+bool DirExists(const char *path) {
+  struct stat st;
+  if (stat(path, &st))
+    return false;
+  return S_ISDIR(st.st_mode);
 }
 
 tid_t GetTid() {
@@ -516,25 +526,6 @@ void FutexWait(atomic_uint32_t *p, u32 cmp) {
 
 void FutexWake(atomic_uint32_t *p, u32 count) {}
 
-BlockingMutex::BlockingMutex() {
-  internal_memset(this, 0, sizeof(*this));
-}
-
-void BlockingMutex::Lock() {
-  CHECK(sizeof(OSSpinLock) <= sizeof(opaque_storage_));
-  CHECK_EQ(OS_SPINLOCK_INIT, 0);
-  CHECK_EQ(owner_, 0);
-  OSSpinLockLock((OSSpinLock*)&opaque_storage_);
-}
-
-void BlockingMutex::Unlock() {
-  OSSpinLockUnlock((OSSpinLock*)&opaque_storage_);
-}
-
-void BlockingMutex::CheckLocked() const {
-  CHECK_NE(*(const OSSpinLock*)&opaque_storage_, 0);
-}
-
 u64 NanoTime() {
   timeval tv;
   internal_memset(&tv, 0, sizeof(tv));
@@ -562,6 +553,9 @@ uptr TlsBaseAddr() {
   asm("movq %%gs:0,%0" : "=r"(segbase));
 #elif defined(__i386__)
   asm("movl %%gs:0,%0" : "=r"(segbase));
+#elif defined(__aarch64__)
+  asm("mrs %x0, tpidrro_el0" : "=r"(segbase));
+  segbase &= 0x07ul;  // clearing lower bits, cpu id stored there
 #endif
   return segbase;
 }
@@ -784,8 +778,8 @@ void *internal_start_thread(void *(*func)(void *arg), void *arg) {
 void internal_join_thread(void *th) { pthread_join((pthread_t)th, 0); }
 
 #if !SANITIZER_GO
-static BlockingMutex syslog_lock(LINKER_INITIALIZED);
-#endif
+static Mutex syslog_lock;
+#  endif
 
 void WriteOneLineToSyslog(const char *s) {
 #if !SANITIZER_GO
@@ -800,7 +794,7 @@ void WriteOneLineToSyslog(const char *s) {
 
 // buffer to store crash report application information
 static char crashreporter_info_buff[__sanitizer::kErrorMessageBufferSize] = {};
-static BlockingMutex crashreporter_info_mutex(LINKER_INITIALIZED);
+static Mutex crashreporter_info_mutex;
 
 extern "C" {
 // Integrate with crash reporter libraries.
@@ -830,7 +824,7 @@ asm(".desc ___crashreporter_info__, 0x10");
 }  // extern "C"
 
 static void CRAppendCrashLogMessage(const char *msg) {
-  BlockingMutexLock l(&crashreporter_info_mutex);
+  Lock l(&crashreporter_info_mutex);
   internal_strlcat(crashreporter_info_buff, msg,
                    sizeof(crashreporter_info_buff));
 #if HAVE_CRASHREPORTERCLIENT_H
@@ -874,7 +868,7 @@ void LogFullErrorReport(const char *buffer) {
   // the reporting thread holds the thread registry mutex, and asl_log waits
   // for GCD to dispatch a new thread, the process will deadlock, because the
   // pthread_create wrapper needs to acquire the lock as well.
-  BlockingMutexLock l(&syslog_lock);
+  Lock l(&syslog_lock);
   if (common_flags()->log_to_syslog)
     WriteToSyslog(buffer);
 
@@ -885,9 +879,12 @@ void LogFullErrorReport(const char *buffer) {
 SignalContext::WriteFlag SignalContext::GetWriteFlag() const {
 #if defined(__x86_64__) || defined(__i386__)
   ucontext_t *ucontext = static_cast<ucontext_t*>(context);
-  return ucontext->uc_mcontext->__es.__err & 2 /*T_PF_WRITE*/ ? WRITE : READ;
+  return ucontext->uc_mcontext->__es.__err & 2 /*T_PF_WRITE*/ ? Write : Read;
+#elif defined(__arm64__)
+  ucontext_t *ucontext = static_cast<ucontext_t*>(context);
+  return ucontext->uc_mcontext->__es.__esr & 0x40 /*ISS_DA_WNR*/ ? Write : Read;
 #else
-  return UNKNOWN;
+  return Unknown;
 #endif
 }
 
@@ -902,18 +899,14 @@ bool SignalContext::IsTrueFaultingAddress() const {
     (uptr)ptrauth_strip(     \
         (void *)arm_thread_state64_get_##r(ucontext->uc_mcontext->__ss), 0)
 #else
-  #define AARCH64_GET_REG(r) ucontext->uc_mcontext->__ss.__##r
+  #define AARCH64_GET_REG(r) (uptr)ucontext->uc_mcontext->__ss.__##r
 #endif
 
 static void GetPcSpBp(void *context, uptr *pc, uptr *sp, uptr *bp) {
   ucontext_t *ucontext = (ucontext_t*)context;
 # if defined(__aarch64__)
   *pc = AARCH64_GET_REG(pc);
-#   if defined(__IPHONE_8_0) && __IPHONE_OS_VERSION_MAX_ALLOWED >= __IPHONE_8_0
   *bp = AARCH64_GET_REG(fp);
-#   else
-  *bp = AARCH64_GET_REG(lr);
-#   endif
   *sp = AARCH64_GET_REG(sp);
 # elif defined(__x86_64__)
   *pc = ucontext->uc_mcontext->__ss.__rip;
@@ -1065,12 +1058,12 @@ void MaybeReexec() {
   }
 
   // Verify that interceptors really work.  We'll use dlsym to locate
-  // "pthread_create", if interceptors are working, it should really point to
-  // "wrap_pthread_create" within our own dylib.
-  Dl_info info_pthread_create;
-  void *dlopen_addr = dlsym(RTLD_DEFAULT, "pthread_create");
-  RAW_CHECK(dladdr(dlopen_addr, &info_pthread_create));
-  if (internal_strcmp(info.dli_fname, info_pthread_create.dli_fname) != 0) {
+  // "puts", if interceptors are working, it should really point to
+  // "wrap_puts" within our own dylib.
+  Dl_info info_puts;
+  void *dlopen_addr = dlsym(RTLD_DEFAULT, "puts");
+  RAW_CHECK(dladdr(dlopen_addr, &info_puts));
+  if (internal_strcmp(info.dli_fname, info_puts.dli_fname) != 0) {
     Report(
         "ERROR: Interceptors are not working. This may be because %s is "
         "loaded too late (e.g. via dlopen). Please launch the executable "
@@ -1237,7 +1230,7 @@ uptr MapDynamicShadow(uptr shadow_size_bytes, uptr shadow_scale,
 
   uptr largest_gap_found = 0;
   uptr max_occupied_addr = 0;
-  VReport(2, "FindDynamicShadowStart, space_size = %p\n", space_size);
+  VReport(2, "FindDynamicShadowStart, space_size = %p\n", (void *)space_size);
   uptr shadow_start =
       FindAvailableMemoryRange(space_size, alignment, granularity,
                                &largest_gap_found, &max_occupied_addr);
@@ -1246,20 +1239,21 @@ uptr MapDynamicShadow(uptr shadow_size_bytes, uptr shadow_scale,
     VReport(
         2,
         "Shadow doesn't fit, largest_gap_found = %p, max_occupied_addr = %p\n",
-        largest_gap_found, max_occupied_addr);
+        (void *)largest_gap_found, (void *)max_occupied_addr);
     uptr new_max_vm = RoundDownTo(largest_gap_found << shadow_scale, alignment);
     if (new_max_vm < max_occupied_addr) {
       Report("Unable to find a memory range for dynamic shadow.\n");
       Report(
           "space_size = %p, largest_gap_found = %p, max_occupied_addr = %p, "
           "new_max_vm = %p\n",
-          space_size, largest_gap_found, max_occupied_addr, new_max_vm);
+          (void *)space_size, (void *)largest_gap_found,
+          (void *)max_occupied_addr, (void *)new_max_vm);
       CHECK(0 && "cannot place shadow");
     }
     RestrictMemoryToMaxAddress(new_max_vm);
     high_mem_end = new_max_vm - 1;
     space_size = (high_mem_end >> shadow_scale) + left_padding;
-    VReport(2, "FindDynamicShadowStart, space_size = %p\n", space_size);
+    VReport(2, "FindDynamicShadowStart, space_size = %p\n", (void *)space_size);
     shadow_start = FindAvailableMemoryRange(space_size, alignment, granularity,
                                             nullptr, nullptr);
     if (shadow_start == 0) {
@@ -1330,7 +1324,7 @@ uptr FindAvailableMemoryRange(uptr size, uptr alignment, uptr left_padding,
 }
 
 // FIXME implement on this platform.
-void GetMemoryProfile(fill_profile_f cb, uptr *stats, uptr stats_size) { }
+void GetMemoryProfile(fill_profile_f cb, uptr *stats) {}
 
 void SignalContext::DumpAllRegisters(void *context) {
   Report("Register values:\n");
@@ -1339,7 +1333,7 @@ void SignalContext::DumpAllRegisters(void *context) {
 # define DUMPREG64(r) \
     Printf("%s = 0x%016llx  ", #r, ucontext->uc_mcontext->__ss.__ ## r);
 # define DUMPREGA64(r) \
-    Printf("   %s = 0x%016llx  ", #r, AARCH64_GET_REG(r));
+    Printf("   %s = 0x%016lx  ", #r, AARCH64_GET_REG(r));
 # define DUMPREG32(r) \
     Printf("%s = 0x%08x  ", #r, ucontext->uc_mcontext->__ss.__ ## r);
 # define DUMPREG_(r)   Printf(" "); DUMPREG(r);
@@ -1409,7 +1403,7 @@ void DumpProcessMap() {
     char uuid_str[128];
     FormatUUID(uuid_str, sizeof(uuid_str), modules[i].uuid());
     Printf("0x%zx-0x%zx %s (%s) %s\n", modules[i].base_address(),
-           modules[i].max_executable_address(), modules[i].full_name(),
+           modules[i].max_address(), modules[i].full_name(),
            ModuleArchToString(modules[i].arch()), uuid_str);
   }
   Printf("End of module map.\n");
@@ -1435,4 +1429,4 @@ void InitializePlatformCommonFlags(CommonFlags *cf) {}
 
 }  // namespace __sanitizer
 
-#endif  // SANITIZER_MAC
+#endif  // SANITIZER_APPLE

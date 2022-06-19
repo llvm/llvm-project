@@ -13,13 +13,18 @@
 
 #include "mlir/Conversion/GPUToNVVM/GPUToNVVMPass.h"
 
+#include "mlir/Conversion/ArithmeticToLLVM/ArithmeticToLLVM.h"
+#include "mlir/Conversion/ControlFlowToLLVM/ControlFlowToLLVM.h"
+#include "mlir/Conversion/FuncToLLVM/ConvertFuncToLLVM.h"
 #include "mlir/Conversion/LLVMCommon/ConversionTarget.h"
 #include "mlir/Conversion/LLVMCommon/LoweringOptions.h"
 #include "mlir/Conversion/LLVMCommon/TypeConverter.h"
 #include "mlir/Conversion/MemRefToLLVM/MemRefToLLVM.h"
-#include "mlir/Conversion/StandardToLLVM/ConvertStandardToLLVM.h"
-#include "mlir/Dialect/GPU/GPUDialect.h"
-#include "mlir/Dialect/GPU/Passes.h"
+#include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
+#include "mlir/Dialect/ControlFlow/IR/ControlFlow.h"
+#include "mlir/Dialect/Func/IR/FuncOps.h"
+#include "mlir/Dialect/GPU/IR/GPUDialect.h"
+#include "mlir/Dialect/GPU/Transforms/Passes.h"
 #include "mlir/Dialect/LLVMIR/NVVMDialect.h"
 #include "mlir/Dialect/Math/IR/Math.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
@@ -37,6 +42,21 @@ using namespace mlir;
 
 namespace {
 
+/// Convert gpu dialect shfl mode enum to the equivalent nvvm one.
+static NVVM::ShflKind convertShflKind(gpu::ShuffleMode mode) {
+  switch (mode) {
+  case gpu::ShuffleMode::XOR:
+    return NVVM::ShflKind::bfly;
+  case gpu::ShuffleMode::UP:
+    return NVVM::ShflKind::up;
+  case gpu::ShuffleMode::DOWN:
+    return NVVM::ShflKind::down;
+  case gpu::ShuffleMode::IDX:
+    return NVVM::ShflKind::idx;
+  }
+  llvm_unreachable("unknown shuffle mode");
+}
+
 struct GPUShuffleOpLowering : public ConvertOpToLLVMPattern<gpu::ShuffleOp> {
   using ConvertOpToLLVMPattern<gpu::ShuffleOp>::ConvertOpToLLVMPattern;
 
@@ -47,8 +67,10 @@ struct GPUShuffleOpLowering : public ConvertOpToLLVMPattern<gpu::ShuffleOp> {
   /// the highest lane which participates in the shuffle).
   ///
   ///     %one = llvm.constant(1 : i32) : i32
-  ///     %shl = llvm.shl %one, %width : i32
-  ///     %active_mask = llvm.sub %shl, %one : i32
+  ///     %minus_one = llvm.constant(-1 : i32) : i32
+  ///     %thirty_two = llvm.constant(32 : i32) : i32
+  ///     %num_lanes = llvm.sub %thirty_two, %width : i32
+  ///     %active_mask = llvm.lshr %minus_one, %num_lanes : i32
   ///     %mask_and_clamp = llvm.sub %width, %one : i32
   ///     %shfl = nvvm.shfl.sync.bfly %active_mask, %value, %offset,
   ///         %mask_and_clamp : !llvm<"{ float, i1 }">
@@ -57,10 +79,9 @@ struct GPUShuffleOpLowering : public ConvertOpToLLVMPattern<gpu::ShuffleOp> {
   ///     %shfl_pred = llvm.extractvalue %shfl[1 : index] :
   ///         !llvm<"{ float, i1 }">
   LogicalResult
-  matchAndRewrite(gpu::ShuffleOp op, ArrayRef<Value> operands,
+  matchAndRewrite(gpu::ShuffleOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
     Location loc = op->getLoc();
-    gpu::ShuffleOpAdaptor adaptor(operands);
 
     auto valueTy = adaptor.value().getType();
     auto int32Type = IntegerType::get(rewriter.getContext(), 32);
@@ -70,25 +91,59 @@ struct GPUShuffleOpLowering : public ConvertOpToLLVMPattern<gpu::ShuffleOp> {
 
     Value one = rewriter.create<LLVM::ConstantOp>(
         loc, int32Type, rewriter.getI32IntegerAttr(1));
-    // Bit mask of active lanes: `(1 << activeWidth) - 1`.
-    Value activeMask = rewriter.create<LLVM::SubOp>(
-        loc, int32Type,
-        rewriter.create<LLVM::ShlOp>(loc, int32Type, one, adaptor.width()),
-        one);
-    // Clamp lane: `activeWidth - 1`
-    Value maskAndClamp =
-        rewriter.create<LLVM::SubOp>(loc, int32Type, adaptor.width(), one);
+    Value minusOne = rewriter.create<LLVM::ConstantOp>(
+        loc, int32Type, rewriter.getI32IntegerAttr(-1));
+    Value thirtyTwo = rewriter.create<LLVM::ConstantOp>(
+        loc, int32Type, rewriter.getI32IntegerAttr(32));
+    Value numLeadInactiveLane = rewriter.create<LLVM::SubOp>(
+        loc, int32Type, thirtyTwo, adaptor.width());
+    // Bit mask of active lanes: `(-1) >> (32 - activeWidth)`.
+    Value activeMask = rewriter.create<LLVM::LShrOp>(loc, int32Type, minusOne,
+                                                     numLeadInactiveLane);
+    Value maskAndClamp;
+    if (op.mode() == gpu::ShuffleMode::UP) {
+      // Clamp lane: `32 - activeWidth`
+      maskAndClamp = numLeadInactiveLane;
+    } else {
+      // Clamp lane: `activeWidth - 1`
+      maskAndClamp =
+          rewriter.create<LLVM::SubOp>(loc, int32Type, adaptor.width(), one);
+    }
 
     auto returnValueAndIsValidAttr = rewriter.getUnitAttr();
-    Value shfl = rewriter.create<NVVM::ShflBflyOp>(
+    Value shfl = rewriter.create<NVVM::ShflOp>(
         loc, resultTy, activeMask, adaptor.value(), adaptor.offset(),
-        maskAndClamp, returnValueAndIsValidAttr);
+        maskAndClamp, convertShflKind(op.mode()), returnValueAndIsValidAttr);
     Value shflValue = rewriter.create<LLVM::ExtractValueOp>(
         loc, valueTy, shfl, rewriter.getIndexArrayAttr(0));
     Value isActiveSrcLane = rewriter.create<LLVM::ExtractValueOp>(
         loc, predTy, shfl, rewriter.getIndexArrayAttr(1));
 
     rewriter.replaceOp(op, {shflValue, isActiveSrcLane});
+    return success();
+  }
+};
+
+struct GPULaneIdOpToNVVM : ConvertOpToLLVMPattern<gpu::LaneIdOp> {
+  using ConvertOpToLLVMPattern<gpu::LaneIdOp>::ConvertOpToLLVMPattern;
+
+  LogicalResult
+  matchAndRewrite(gpu::LaneIdOp op, gpu::LaneIdOp::Adaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    auto loc = op->getLoc();
+    MLIRContext *context = rewriter.getContext();
+    Value newOp = rewriter.create<NVVM::LaneIdOp>(loc, rewriter.getI32Type());
+    // Truncate or extend the result depending on the index bitwidth specified
+    // by the LLVMTypeConverter options.
+    const unsigned indexBitwidth = getTypeConverter()->getIndexTypeBitwidth();
+    if (indexBitwidth > 32) {
+      newOp = rewriter.create<LLVM::SExtOp>(
+          loc, IntegerType::get(context, indexBitwidth), newOp);
+    } else if (indexBitwidth < 32) {
+      newOp = rewriter.create<LLVM::TruncOp>(
+          loc, IntegerType::get(context, indexBitwidth), newOp);
+    }
+    rewriter.replaceOp(op, {newOp});
     return success();
   }
 };
@@ -111,18 +166,23 @@ struct LowerGpuOpsToNVVMOpsPass
   void runOnOperation() override {
     gpu::GPUModuleOp m = getOperation();
 
-    /// Customize the bitwidth used for the device side index computations.
+    // Request C wrapper emission.
+    for (auto func : m.getOps<func::FuncOp>()) {
+      func->setAttr(LLVM::LLVMDialect::getEmitCWrapperAttrName(),
+                    UnitAttr::get(&getContext()));
+    }
+
+    // Customize the bitwidth used for the device side index computations.
     LowerToLLVMOptions options(
         m.getContext(),
         DataLayout(cast<DataLayoutOpInterface>(m.getOperation())));
-    options.emitCWrappers = true;
     if (indexBitwidth != kDeriveIndexBitwidthFromDataLayout)
       options.overrideIndexBitwidth(indexBitwidth);
 
-    /// MemRef conversion for GPU to NVVM lowering. The GPU dialect uses memory
-    /// space 5 for private memory attributions, but NVVM represents private
-    /// memory allocations as local `alloca`s in the default address space. This
-    /// converter drops the private memory space to support the use case above.
+    // MemRef conversion for GPU to NVVM lowering. The GPU dialect uses memory
+    // space 5 for private memory attributions, but NVVM represents private
+    // memory allocations as local `alloca`s in the default address space. This
+    // converter drops the private memory space to support the use case above.
     LLVMTypeConverter converter(m.getContext(), options);
     converter.addConversion([&](MemRefType type) -> Optional<Type> {
       if (type.getMemorySpaceAsInt() !=
@@ -130,37 +190,10 @@ struct LowerGpuOpsToNVVMOpsPass
         return llvm::None;
       return converter.convertType(MemRefType::Builder(type).setMemorySpace(0));
     });
-
     // Lowering for MMAMatrixType.
     converter.addConversion([&](gpu::MMAMatrixType type) -> Type {
-      // The number of items in structToReturn are dependent on the the dataType
-      // and the MMA operand that this operation is associated with.
-      llvm::DenseMap<StringRef, int64_t> numElemsPerThreadF16,
-          numElemsPerThreadF32;
-      numElemsPerThreadF16["AOp"] = 8;
-      numElemsPerThreadF16["BOp"] = 8;
-      numElemsPerThreadF16["COp"] = 4;
-      numElemsPerThreadF32["AOp"] = 8;
-      numElemsPerThreadF32["BOp"] = 8;
-      numElemsPerThreadF32["COp"] = 8;
-      Type structToReturn;
-      if (type.getElementType().isF16()) {
-        // Number of f16's in 32-bit.
-        unsigned vecSize = 2;
-        Type vec = VectorType::get(vecSize, FloatType::getF16(&getContext()));
-        unsigned size = numElemsPerThreadF16[type.getOperand()];
-        SmallVector<Type> elements(size, vec);
-        structToReturn =
-            LLVM::LLVMStructType::getLiteral(&getContext(), elements);
-      } else if (type.getElementType().isF32()) {
-        unsigned size = numElemsPerThreadF32[type.getOperand()];
-        SmallVector<Type> elements(size, FloatType::getF32(&getContext()));
-        structToReturn =
-            LLVM::LLVMStructType::getLiteral(&getContext(), elements);
-      }
-      return structToReturn;
+      return convertMMAToLLVMType(type);
     });
-
     RewritePatternSet patterns(m.getContext());
     RewritePatternSet llvmPatterns(m.getContext());
 
@@ -170,7 +203,9 @@ struct LowerGpuOpsToNVVMOpsPass
     populateGpuRewritePatterns(patterns);
     (void)applyPatternsAndFoldGreedily(m, std::move(patterns));
 
-    populateStdToLLVMConversionPatterns(converter, llvmPatterns);
+    arith::populateArithmeticToLLVMConversionPatterns(converter, llvmPatterns);
+    cf::populateControlFlowToLLVMConversionPatterns(converter, llvmPatterns);
+    populateFuncToLLVMConversionPatterns(converter, llvmPatterns);
     populateMemRefToLLVMConversionPatterns(converter, llvmPatterns);
     populateGpuToNVVMConversionPatterns(converter, llvmPatterns);
     populateGpuWMMAToNVVMConversionPatterns(converter, llvmPatterns);
@@ -181,10 +216,10 @@ struct LowerGpuOpsToNVVMOpsPass
   }
 };
 
-} // anonymous namespace
+} // namespace
 
 void mlir::configureGpuToNVVMConversionLegality(ConversionTarget &target) {
-  target.addIllegalOp<FuncOp>();
+  target.addIllegalOp<func::FuncOp>();
   target.addLegalDialect<::mlir::LLVM::LLVMDialect>();
   target.addLegalDialect<::mlir::NVVM::NVVMDialect>();
   target.addIllegalDialect<gpu::GPUDialect>();
@@ -208,24 +243,25 @@ void mlir::populateGpuToNVVMConversionPatterns(LLVMTypeConverter &converter,
                                        NVVM::BlockIdYOp, NVVM::BlockIdZOp>,
            GPUIndexIntrinsicOpLowering<gpu::GridDimOp, NVVM::GridDimXOp,
                                        NVVM::GridDimYOp, NVVM::GridDimZOp>,
-           GPUShuffleOpLowering, GPUReturnOpLowering>(converter);
+           GPULaneIdOpToNVVM, GPUShuffleOpLowering, GPUReturnOpLowering>(
+          converter);
 
   // Explicitly drop memory space when lowering private memory
   // attributions since NVVM models it as `alloca`s in the default
   // memory space and does not support `alloca`s with addrspace(5).
   patterns.add<GPUFuncOpLowering>(
       converter, /*allocaAddrSpace=*/0,
-      Identifier::get(NVVM::NVVMDialect::getKernelFuncAttrName(),
-                      &converter.getContext()));
+      StringAttr::get(&converter.getContext(),
+                      NVVM::NVVMDialect::getKernelFuncAttrName()));
 
-  patterns.add<OpToFuncCallLowering<AbsFOp>>(converter, "__nv_fabsf",
-                                             "__nv_fabs");
+  patterns.add<OpToFuncCallLowering<math::AbsOp>>(converter, "__nv_fabsf",
+                                                  "__nv_fabs");
   patterns.add<OpToFuncCallLowering<math::AtanOp>>(converter, "__nv_atanf",
                                                    "__nv_atan");
   patterns.add<OpToFuncCallLowering<math::Atan2Op>>(converter, "__nv_atan2f",
                                                     "__nv_atan2");
-  patterns.add<OpToFuncCallLowering<CeilFOp>>(converter, "__nv_ceilf",
-                                              "__nv_ceil");
+  patterns.add<OpToFuncCallLowering<math::CeilOp>>(converter, "__nv_ceilf",
+                                                   "__nv_ceil");
   patterns.add<OpToFuncCallLowering<math::CosOp>>(converter, "__nv_cosf",
                                                   "__nv_cos");
   patterns.add<OpToFuncCallLowering<math::ExpOp>>(converter, "__nv_expf",
@@ -234,8 +270,8 @@ void mlir::populateGpuToNVVMConversionPatterns(LLVMTypeConverter &converter,
                                                    "__nv_exp2");
   patterns.add<OpToFuncCallLowering<math::ExpM1Op>>(converter, "__nv_expm1f",
                                                     "__nv_expm1");
-  patterns.add<OpToFuncCallLowering<FloorFOp>>(converter, "__nv_floorf",
-                                               "__nv_floor");
+  patterns.add<OpToFuncCallLowering<math::FloorOp>>(converter, "__nv_floorf",
+                                                    "__nv_floor");
   patterns.add<OpToFuncCallLowering<math::LogOp>>(converter, "__nv_logf",
                                                   "__nv_log");
   patterns.add<OpToFuncCallLowering<math::Log1pOp>>(converter, "__nv_log1pf",

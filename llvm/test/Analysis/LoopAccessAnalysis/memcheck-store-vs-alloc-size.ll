@@ -1,4 +1,3 @@
-; RUN: opt -analyze --loop-accesses %s -enable-new-pm=0 | FileCheck %s
 ; RUN: opt -passes=print-access-info %s -disable-output 2>&1 | FileCheck %s
 
 ; This test defends against accidentally using alloc size instead of store size when performing run-time

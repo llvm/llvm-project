@@ -205,7 +205,7 @@ private:
   // Use static GetHistory() function to get a EditlineHistorySP to one of
   // these objects
   EditlineHistory(const std::string &prefix, uint32_t size, bool unique_entries)
-      : m_history(nullptr), m_event(), m_prefix(prefix), m_path() {
+      : m_prefix(prefix) {
     m_history = history_winit();
     history_w(m_history, &m_event, H_SETSIZE, size);
     if (unique_entries)
@@ -298,11 +298,15 @@ public:
   }
 
 protected:
-  HistoryW *m_history; // The history object
-  HistEventW m_event;  // The history event needed to contain all history events
-  std::string m_prefix; // The prefix name (usually the editline program name)
-                        // to use when loading/saving history
-  std::string m_path;   // Path to the history file
+  /// The history object.
+  HistoryW *m_history = nullptr;
+  /// The history event needed to contain all history events.
+  HistEventW m_event;
+  /// The prefix name (usually the editline program name) to use when
+  /// loading/saving history.
+  std::string m_prefix;
+  /// Path to the history file.
+  std::string m_path;
 };
 }
 }
@@ -1006,11 +1010,11 @@ unsigned char Editline::TabCommand(int ch) {
     switch (completion.GetMode()) {
     case CompletionMode::Normal: {
       std::string to_add = completion.GetCompletion();
-      to_add = to_add.substr(request.GetCursorArgumentPrefix().size());
       // Terminate the current argument with a quote if it started with a quote.
       if (!request.GetParsedLine().empty() && request.GetParsedArg().IsQuoted())
         to_add.push_back(request.GetParsedArg().GetQuoteChar());
       to_add.push_back(' ');
+      el_deletestr(m_editline, request.GetCursorArgumentPrefix().size());
       el_insertstr(m_editline, to_add.c_str());
       // Clear all the autosuggestion parts if the only single space can be completed.
       if (to_add == " ")
@@ -1076,8 +1080,13 @@ unsigned char Editline::TypedCharacter(int ch) {
   llvm::StringRef line(line_info->buffer,
                        line_info->lastchar - line_info->buffer);
 
+  const char *ansi_prefix =
+      m_color_prompts ? m_suggestion_ansi_prefix.c_str() : "";
+  const char *ansi_suffix =
+      m_color_prompts ? m_suggestion_ansi_suffix.c_str() : "";
+
   if (llvm::Optional<std::string> to_add = m_suggestion_callback(line)) {
-    std::string to_add_color = ANSI_FAINT + to_add.getValue() + ANSI_UNFAINT;
+    std::string to_add_color = ansi_prefix + to_add.getValue() + ansi_suffix;
     fputs(typed.c_str(), m_output_file);
     fputs(to_add_color.c_str(), m_output_file);
     size_t new_autosuggestion_size = line.size() + to_add->length();
@@ -1367,10 +1376,12 @@ Editline *Editline::InstanceFor(EditLine *editline) {
 }
 
 Editline::Editline(const char *editline_name, FILE *input_file,
-                   FILE *output_file, FILE *error_file, bool color_prompts)
+                   FILE *output_file, FILE *error_file,
+                   std::recursive_mutex &output_mutex, bool color_prompts)
     : m_editor_status(EditorStatus::Complete), m_color_prompts(color_prompts),
       m_input_file(input_file), m_output_file(output_file),
-      m_error_file(error_file), m_input_connection(fileno(input_file), false) {
+      m_error_file(error_file), m_input_connection(fileno(input_file), false),
+      m_output_mutex(output_mutex) {
   // Get a shared history instance
   m_editor_name = (editline_name == nullptr) ? "lldb-tmp" : editline_name;
   m_history_sp = EditlineHistory::GetHistory(m_editor_name);
@@ -1379,12 +1390,13 @@ Editline::Editline(const char *editline_name, FILE *input_file,
   if (m_output_file) {
     const int term_fd = fileno(m_output_file);
     if (term_fd != -1) {
-      static std::mutex *g_init_terminal_fds_mutex_ptr = nullptr;
+      static std::recursive_mutex *g_init_terminal_fds_mutex_ptr = nullptr;
       static std::set<int> *g_init_terminal_fds_ptr = nullptr;
       static llvm::once_flag g_once_flag;
       llvm::call_once(g_once_flag, [&]() {
         g_init_terminal_fds_mutex_ptr =
-            new std::mutex(); // NOTE: Leak to avoid C++ destructor chain issues
+            new std::recursive_mutex(); // NOTE: Leak to avoid C++ destructor
+                                        // chain issues
         g_init_terminal_fds_ptr = new std::set<int>(); // NOTE: Leak to avoid
                                                        // C++ destructor chain
                                                        // issues
@@ -1392,7 +1404,8 @@ Editline::Editline(const char *editline_name, FILE *input_file,
 
       // We must make sure to initialize the terminal a given file descriptor
       // only once. If we do this multiple times, we start leaking memory.
-      std::lock_guard<std::mutex> guard(*g_init_terminal_fds_mutex_ptr);
+      std::lock_guard<std::recursive_mutex> guard(
+          *g_init_terminal_fds_mutex_ptr);
       if (g_init_terminal_fds_ptr->find(term_fd) ==
           g_init_terminal_fds_ptr->end()) {
         g_init_terminal_fds_ptr->insert(term_fd);
@@ -1464,7 +1477,7 @@ uint32_t Editline::GetCurrentLine() { return m_current_line_index; }
 
 bool Editline::Interrupt() {
   bool result = true;
-  std::lock_guard<std::mutex> guard(m_output_mutex);
+  std::lock_guard<std::recursive_mutex> guard(m_output_mutex);
   if (m_editor_status == EditorStatus::Editing) {
     fprintf(m_output_file, "^C\n");
     result = m_input_connection.InterruptRead();
@@ -1475,7 +1488,7 @@ bool Editline::Interrupt() {
 
 bool Editline::Cancel() {
   bool result = true;
-  std::lock_guard<std::mutex> guard(m_output_mutex);
+  std::lock_guard<std::recursive_mutex> guard(m_output_mutex);
   if (m_editor_status == EditorStatus::Editing) {
     MoveCursor(CursorLocation::EditingCursor, CursorLocation::BlockStart);
     fprintf(m_output_file, ANSI_CLEAR_BELOW);
@@ -1490,7 +1503,7 @@ bool Editline::GetLine(std::string &line, bool &interrupted) {
   m_input_lines = std::vector<EditLineStringType>();
   m_input_lines.insert(m_input_lines.begin(), EditLineConstString(""));
 
-  std::lock_guard<std::mutex> guard(m_output_mutex);
+  std::lock_guard<std::recursive_mutex> guard(m_output_mutex);
 
   lldbassert(m_editor_status != EditorStatus::Editing);
   if (m_editor_status == EditorStatus::Interrupted) {
@@ -1535,7 +1548,7 @@ bool Editline::GetLines(int first_line_number, StringList &lines,
   m_input_lines = std::vector<EditLineStringType>();
   m_input_lines.insert(m_input_lines.begin(), EditLineConstString(""));
 
-  std::lock_guard<std::mutex> guard(m_output_mutex);
+  std::lock_guard<std::recursive_mutex> guard(m_output_mutex);
   // Begin the line editing loop
   DisplayInput();
   SetCurrentLine(0);
@@ -1554,8 +1567,10 @@ bool Editline::GetLines(int first_line_number, StringList &lines,
 
   interrupted = m_editor_status == EditorStatus::Interrupted;
   if (!interrupted) {
-    // Save the completed entry in history before returning
-    m_history_sp->Enter(CombineLines(m_input_lines).c_str());
+    // Save the completed entry in history before returning. Don't save empty
+    // input as that just clutters the command history.
+    if (!m_input_lines.empty())
+      m_history_sp->Enter(CombineLines(m_input_lines).c_str());
 
     lines = GetInputAsStringList();
   }
@@ -1563,7 +1578,7 @@ bool Editline::GetLines(int first_line_number, StringList &lines,
 }
 
 void Editline::PrintAsync(Stream *stream, const char *s, size_t len) {
-  std::lock_guard<std::mutex> guard(m_output_mutex);
+  std::lock_guard<std::recursive_mutex> guard(m_output_mutex);
   if (m_editor_status == EditorStatus::Editing) {
     MoveCursor(CursorLocation::EditingCursor, CursorLocation::BlockStart);
     fprintf(m_output_file, ANSI_CLEAR_BELOW);

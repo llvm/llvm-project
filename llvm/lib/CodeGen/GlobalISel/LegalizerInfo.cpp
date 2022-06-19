@@ -13,7 +13,6 @@
 
 #include "llvm/CodeGen/GlobalISel/LegalizerInfo.h"
 #include "llvm/ADT/SmallBitVector.h"
-#include "llvm/CodeGen/GlobalISel/GISelChangeObserver.h"
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
@@ -23,9 +22,7 @@
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/LowLevelTypeImpl.h"
-#include "llvm/Support/MathExtras.h"
 #include <algorithm>
-#include <map>
 
 using namespace llvm;
 using namespace LegalizeActions;
@@ -132,15 +129,16 @@ static bool mutationIsSane(const LegalizeRule &Rule,
     LLVM_FALLTHROUGH;
   case MoreElements: {
     // MoreElements can go from scalar to vector.
-    const unsigned OldElts = OldTy.isVector() ? OldTy.getNumElements() : 1;
+    const ElementCount OldElts = OldTy.isVector() ?
+      OldTy.getElementCount() : ElementCount::getFixed(1);
     if (NewTy.isVector()) {
       if (Rule.getAction() == FewerElements) {
         // Make sure the element count really decreased.
-        if (NewTy.getNumElements() >= OldElts)
+        if (ElementCount::isKnownGE(NewTy.getElementCount(), OldElts))
           return false;
       } else {
         // Make sure the element count really increased.
-        if (NewTy.getNumElements() <= OldElts)
+        if (ElementCount::isKnownLE(NewTy.getElementCount(), OldElts))
           return false;
       }
     } else if (Rule.getAction() == MoreElements)
@@ -352,8 +350,7 @@ LegalizerInfo::getAction(const MachineInstr &MI,
 
   SmallVector<LegalityQuery::MemDesc, 2> MemDescrs;
   for (const auto &MMO : MI.memoperands())
-    MemDescrs.push_back({MMO->getMemoryType(), 8 * MMO->getAlign().value(),
-                         MMO->getSuccessOrdering()});
+    MemDescrs.push_back({*MMO});
 
   return getAction({MI.getOpcode(), Types, MemDescrs});
 }

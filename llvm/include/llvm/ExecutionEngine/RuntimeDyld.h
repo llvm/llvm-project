@@ -112,6 +112,20 @@ public:
                                          StringRef SectionName,
                                          bool IsReadOnly) = 0;
 
+    /// An allocated TLS section
+    struct TLSSection {
+      /// The pointer to the initialization image
+      uint8_t *InitializationImage;
+      /// The TLS offset
+      intptr_t Offset;
+    };
+
+    /// Allocate a memory block of (at least) the given size to be used for
+    /// thread-local storage (TLS).
+    virtual TLSSection allocateTLSSection(uintptr_t Size, unsigned Alignment,
+                                          unsigned SectionID,
+                                          StringRef SectionName);
+
     /// Inform the memory manager about the total amount of memory required to
     /// allocate all sections to be loaded:
     /// \p CodeSize - the total size of all code sections

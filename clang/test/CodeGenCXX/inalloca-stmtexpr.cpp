@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 %s -emit-llvm -triple i686-windows-msvc -o - | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers %s -emit-llvm -triple i686-windows-msvc -o - | FileCheck %s
 
 // Statement allow the user to exit the evaluation scope of a CallExpr without
 // executing the call. Check that clang generates reasonable IR for that case.
@@ -43,7 +43,7 @@ out:;
 // that goto branches through.
 // CHECK-LABEL: define dso_local void @seqAbort()
 // CHECK: alloca inalloca <{ %struct.Foo, %struct.Foo }>
-// CHECK: call zeroext i1 @"?cond@@YA_NXZ"()
+// CHECK: call noundef zeroext i1 @"?cond@@YA_NXZ"()
 // CHECK: br i1
 // CHECK: br label %out
 // CHECK: call void @"?inalloca@@YAXUFoo@@0@Z"(<{ %struct.Foo, %struct.Foo }>* inalloca(<{ %struct.Foo, %struct.Foo }>) %{{.*}})

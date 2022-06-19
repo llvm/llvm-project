@@ -25,9 +25,7 @@
 
 // The filesystem specification explicitly allows for self-move on
 // the directory iterators. Turn off this warning so we can test it.
-#if defined(__clang__)
-#pragma clang diagnostic ignored "-Wself-move"
-#endif
+TEST_CLANG_DIAGNOSTIC_IGNORED("-Wself-move")
 
 using namespace fs;
 

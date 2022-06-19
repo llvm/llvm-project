@@ -24,7 +24,6 @@ class APInt;
 template <typename T> class ArrayRef;
 class CallBase;
 class Constant;
-class ConstantExpr;
 class DSOLocalEquivalent;
 class DataLayout;
 class Function;
@@ -128,24 +127,31 @@ Constant *ConstantFoldExtractElementInstruction(Constant *Val, Constant *Idx);
 Constant *ConstantFoldShuffleVectorInstruction(Constant *V1, Constant *V2,
                                                ArrayRef<int> Mask);
 
-/// ConstantFoldLoadFromConstPtr - Return the value that a load from C would
-/// produce if it is constant and determinable.  If this is not determinable,
-/// return null.
-Constant *ConstantFoldLoadFromConstPtr(Constant *C, Type *Ty, const DataLayout &DL);
+/// Extract value of C at the given Offset reinterpreted as Ty. If bits past
+/// the end of C are accessed, they are assumed to be poison.
+Constant *ConstantFoldLoadFromConst(Constant *C, Type *Ty, const APInt &Offset,
+                                    const DataLayout &DL);
 
-/// ConstantFoldLoadThroughGEPConstantExpr - Given a constant and a
-/// getelementptr constantexpr, return the constant value being addressed by the
-/// constant expression, or null if something is funny and we can't decide.
-Constant *ConstantFoldLoadThroughGEPConstantExpr(Constant *C, ConstantExpr *CE,
-                                                 Type *Ty,
-                                                 const DataLayout &DL);
+/// Extract value of C reinterpreted as Ty. Same as previous API with zero
+/// offset.
+Constant *ConstantFoldLoadFromConst(Constant *C, Type *Ty,
+                                    const DataLayout &DL);
 
-/// ConstantFoldLoadThroughGEPIndices - Given a constant and getelementptr
-/// indices (with an *implied* zero pointer index that is not in the list),
-/// return the constant value being addressed by a virtual load, or null if
-/// something is funny and we can't decide.
-Constant *ConstantFoldLoadThroughGEPIndices(Constant *C,
-                                            ArrayRef<Constant *> Indices);
+/// Return the value that a load from C with offset Offset would produce if it
+/// is constant and determinable. If this is not determinable, return null.
+Constant *ConstantFoldLoadFromConstPtr(Constant *C, Type *Ty, APInt Offset,
+                                       const DataLayout &DL);
+
+/// Return the value that a load from C would produce if it is constant and
+/// determinable. If this is not determinable, return null.
+Constant *ConstantFoldLoadFromConstPtr(Constant *C, Type *Ty,
+                                       const DataLayout &DL);
+
+/// If C is a uniform value where all bits are the same (either all zero, all
+/// ones, all undef or all poison), return the corresponding uniform value in
+/// the new type. If the value is not uniform or the result cannot be
+/// represented, return null.
+Constant *ConstantFoldLoadFromUniformValue(Constant *C, Type *Ty);
 
 /// canConstantFoldCallTo - Return true if its even possible to fold a call to
 /// the specified function.

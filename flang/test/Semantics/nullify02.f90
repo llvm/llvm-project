@@ -1,5 +1,4 @@
-! RUN: %S/test_errors.sh %s %t %flang_fc1
-! REQUIRES: shell
+! RUN: %python %S/test_errors.py %s %flang_fc1
 ! Check for semantic errors in NULLIFY statements
 
 INTEGER, PARAMETER :: maxvalue=1024
@@ -23,10 +22,10 @@ Nullify(x(2)%p)
 !ERROR: name in NULLIFY statement must have the POINTER attribute
 Nullify(pi)
 
-!ERROR: name in NULLIFY statement must have the POINTER attribute
+!ERROR: name in NULLIFY statement must be a variable or procedure pointer
 Nullify(prp)
 
-!ERROR: name in NULLIFY statement must be a variable or procedure pointer name
+!ERROR: name in NULLIFY statement must be a variable or procedure pointer
 Nullify(maxvalue)
 
 End Program
@@ -35,7 +34,7 @@ End Program
 ! that has reported errors
 module badNullify
   interface
-    module function ptrFun()
+    function ptrFun()
       integer, pointer :: ptrFun
     end function
   end interface

@@ -1,9 +1,9 @@
 // Test target codegen - host bc file has to be created first.
-// RUN: %clang_cc1 -verify -fopenmp -fopenmp-cuda-mode -x c++ -triple powerpc64le-unknown-unknown -fopenmp-targets=nvptx64-nvidia-cuda -emit-llvm-bc %s -o %t-ppc-host.bc
-// RUN: %clang_cc1 -verify -fopenmp -fopenmp-cuda-mode -x c++ -triple nvptx64-unknown-unknown -fopenmp-targets=nvptx64-nvidia-cuda -emit-llvm %s -fopenmp-is-device -fopenmp-host-ir-file-path %t-ppc-host.bc -o - | FileCheck %s --check-prefix CHECK --check-prefix CHECK-64
-// RUN: %clang_cc1 -verify -fopenmp -fopenmp-cuda-mode -x c++ -triple i386-unknown-unknown -fopenmp-targets=nvptx-nvidia-cuda -emit-llvm-bc %s -o %t-x86-host.bc
-// RUN: %clang_cc1 -verify -fopenmp -fopenmp-cuda-mode -x c++ -triple nvptx-unknown-unknown -fopenmp-targets=nvptx-nvidia-cuda -emit-llvm %s -fopenmp-is-device -fopenmp-host-ir-file-path %t-x86-host.bc -o - | FileCheck %s --check-prefix CHECK --check-prefix CHECK-32
-// RUN: %clang_cc1 -verify -fopenmp -fopenmp-cuda-mode -fexceptions -fcxx-exceptions -x c++ -triple nvptx-unknown-unknown -fopenmp-targets=nvptx-nvidia-cuda -emit-llvm %s -fopenmp-is-device -fopenmp-host-ir-file-path %t-x86-host.bc -o - | FileCheck %s --check-prefix CHECK --check-prefix CHECK-32
+// RUN: %clang_cc1 -no-opaque-pointers -verify -fopenmp -fopenmp-cuda-mode -x c++ -triple powerpc64le-unknown-unknown -fopenmp-targets=nvptx64-nvidia-cuda -emit-llvm-bc %s -o %t-ppc-host.bc
+// RUN: %clang_cc1 -no-opaque-pointers -verify -fopenmp -fopenmp-cuda-mode -x c++ -triple nvptx64-unknown-unknown -fopenmp-targets=nvptx64-nvidia-cuda -emit-llvm %s -fopenmp-is-device -fopenmp-host-ir-file-path %t-ppc-host.bc -o - | FileCheck %s --check-prefix CHECK --check-prefix CHECK-64
+// RUN: %clang_cc1 -no-opaque-pointers -verify -fopenmp -fopenmp-cuda-mode -x c++ -triple i386-unknown-unknown -fopenmp-targets=nvptx-nvidia-cuda -emit-llvm-bc %s -o %t-x86-host.bc
+// RUN: %clang_cc1 -no-opaque-pointers -verify -fopenmp -fopenmp-cuda-mode -x c++ -triple nvptx-unknown-unknown -fopenmp-targets=nvptx-nvidia-cuda -emit-llvm %s -fopenmp-is-device -fopenmp-host-ir-file-path %t-x86-host.bc -o - | FileCheck %s --check-prefix CHECK --check-prefix CHECK-32
+// RUN: %clang_cc1 -no-opaque-pointers -verify -fopenmp -fopenmp-cuda-mode -fexceptions -fcxx-exceptions -x c++ -triple nvptx-unknown-unknown -fopenmp-targets=nvptx-nvidia-cuda -emit-llvm %s -fopenmp-is-device -fopenmp-host-ir-file-path %t-x86-host.bc -o - | FileCheck %s --check-prefix CHECK --check-prefix CHECK-32
 // expected-no-diagnostics
 #ifndef HEADER
 #define HEADER
@@ -12,9 +12,9 @@
 // CHECK-DAG: [[TRANSFER_STORAGE:@.+]] = weak addrspace([[SHARED_ADDRSPACE:[0-9]+]]) global [32 x i32]
 
 // Check that the execution mode of all 3 target regions is set to Spmd Mode.
-// CHECK-DAG: {{@__omp_offloading_.+l27}}_exec_mode = weak constant i8 0
-// CHECK-DAG: {{@__omp_offloading_.+l32}}_exec_mode = weak constant i8 0
-// CHECK-DAG: {{@__omp_offloading_.+l38}}_exec_mode = weak constant i8 0
+// CHECK-DAG: {{@__omp_offloading_.+l27}}_exec_mode = weak constant i8 2
+// CHECK-DAG: {{@__omp_offloading_.+l32}}_exec_mode = weak constant i8 2
+// CHECK-DAG: {{@__omp_offloading_.+l38}}_exec_mode = weak constant i8 2
 
 template<typename tx>
 tx ftemplate(int n) {
@@ -54,8 +54,8 @@ int bar(int n){
 
 // CHECK: define {{.*}}void {{@__omp_offloading_.+template.+l27}}(
 //
-// CHECK: call i32 @__kmpc_target_init({{.*}}, i1 true, i1 false, i1 true)
-// CHECK: call void @__kmpc_target_deinit({{.*}}, i1 true, i1 true)
+// CHECK: call i32 @__kmpc_target_init({{.*}}, i8 2, i1 false, i1 true)
+// CHECK: call void @__kmpc_target_deinit({{.*}}, i8 2, i1 true)
 //
 //
 // define internal void [[PFN]](
@@ -82,7 +82,7 @@ int bar(int n){
 
 //
 // Reduction function
-// CHECK: define internal void [[REDUCTION_FUNC:@.+]](i8* %0, i8* %1)
+// CHECK: define internal void [[REDUCTION_FUNC:@.+]](i8* noundef %0, i8* noundef %1)
 // CHECK: [[VAR_RHS_REF:%.+]] = getelementptr inbounds [[RLT]], [[RLT]]* [[RED_LIST_RHS:%.+]], i{{32|64}} 0, i{{32|64}} 0
 // CHECK: [[VAR_RHS_VOID:%.+]] = load i8*, i8** [[VAR_RHS_REF]],
 // CHECK: [[VAR_RHS:%.+]] = bitcast i8* [[VAR_RHS_VOID]] to double*
@@ -99,7 +99,7 @@ int bar(int n){
 
 //
 // Shuffle and reduce function
-// CHECK: define internal void [[SHUFFLE_REDUCE_FN]](i8* %0, i16 {{.*}}, i16 {{.*}}, i16 {{.*}})
+// CHECK: define internal void [[SHUFFLE_REDUCE_FN]](i8* noundef %0, i16 noundef {{.*}}, i16 noundef {{.*}}, i16 noundef {{.*}})
 // CHECK: [[REMOTE_RED_LIST:%.+]] = alloca [[RLT]], align
 // CHECK: [[REMOTE_ELT:%.+]] = alloca double
 //
@@ -108,14 +108,14 @@ int bar(int n){
 // CHECK: [[ALGVER:%.+]] = load i16, i16* {{.+}}, align
 //
 // CHECK: [[ELT_REF:%.+]] = getelementptr inbounds [[RLT]], [[RLT]]* [[RED_LIST:%.+]], i{{32|64}} 0, i{{32|64}} 0
-// CHECK: [[ELT_VOID:%.+]] = load i8*, i8** [[ELT_REF]],
+// CHECK: [[ELT_REF_CAST:%.+]] = bitcast i8** [[ELT_REF]] to double**
+// CHECK: [[ELT:%.+]] = load double*, double** [[ELT_REF_CAST]],
 // CHECK: [[REMOTE_ELT_REF:%.+]] = getelementptr inbounds [[RLT]], [[RLT]]* [[REMOTE_RED_LIST:%.+]], i{{32|64}} 0, i{{32|64}} 0
-// CHECK: [[ELT:%.+]] = bitcast i8* [[ELT_VOID]] to double*
 //
 // CHECK: [[ELT_CAST:%.+]] = bitcast double* [[ELT]] to i64*
 // CHECK: [[REMOTE_ELT_CAST:%.+]] = bitcast double* [[REMOTE_ELT]] to i64*
 // CHECK: [[ELT_VAL:%.+]] = load i64, i64* [[ELT_CAST]], align
-// CHECK: [[WS32:%.+]] = call i32 @llvm.nvvm.read.ptx.sreg.warpsize()
+// CHECK: [[WS32:%.+]] = call i32 @__kmpc_get_warp_size()
 // CHECK: [[WS:%.+]] = trunc i32 [[WS32]] to i16
 // CHECK: [[REMOTE_ELT_VAL64:%.+]] = call i64 @__kmpc_shuffle_int64(i64 [[ELT_VAL]], i16 [[LANEOFFSET]], i16 [[WS]])
 //
@@ -159,11 +159,11 @@ int bar(int n){
 //
 // CHECK: [[DO_COPY]]
 // CHECK: [[REMOTE_ELT_REF:%.+]] = getelementptr inbounds [[RLT]], [[RLT]]* [[REMOTE_RED_LIST]], i{{32|64}} 0, i{{32|64}} 0
-// CHECK: [[REMOTE_ELT_VOID:%.+]] = load i8*, i8** [[REMOTE_ELT_REF]],
+// CHECK: [[REMOTE_ELT_REF_CAST:%.+]] = bitcast i8** [[REMOTE_ELT_REF]] to double**
+// CHECK: [[REMOTE_ELT:%.+]] = load double*, double** [[REMOTE_ELT_REF_CAST]],
 // CHECK: [[ELT_REF:%.+]] = getelementptr inbounds [[RLT]], [[RLT]]* [[RED_LIST]], i{{32|64}} 0, i{{32|64}} 0
-// CHECK: [[ELT_VOID:%.+]] = load i8*, i8** [[ELT_REF]],
-// CHECK: [[REMOTE_ELT:%.+]] = bitcast i8* [[REMOTE_ELT_VOID]] to double*
-// CHECK: [[ELT:%.+]] = bitcast i8* [[ELT_VOID]] to double*
+// CHECK: [[ELT_REF_CAST:%.+]] = bitcast i8** [[ELT_REF]] to double**
+// CHECK: [[ELT:%.+]] = load double*, double** [[ELT_REF_CAST]],
 // CHECK: [[REMOTE_ELT_VAL:%.+]] = load double, double* [[REMOTE_ELT]], align
 // CHECK: store double [[REMOTE_ELT_VAL]], double* [[ELT]], align
 // CHECK: br label {{%?}}[[COPY_CONT:.+]]
@@ -176,7 +176,7 @@ int bar(int n){
 
 //
 // Inter warp copy function
-// CHECK: define internal void [[WARP_COPY_FN]](i8* %0, i32 %1)
+// CHECK: define internal void [[WARP_COPY_FN]](i8* noundef %0, i32 noundef %1)
 // CHECK-DAG: [[LANEID:%.+]] = and i32 {{.+}}, 31
 // CHECK-DAG: [[WARPID:%.+]] = ashr i32 {{.+}}, 5
 // CHECK-DAG: [[RED_LIST:%.+]] = bitcast i8* {{.+}} to [[RLT]]*
@@ -233,8 +233,8 @@ int bar(int n){
 
 // CHECK: define {{.*}}void {{@__omp_offloading_.+template.+l32}}(
 //
-// CHECK: call i32 @__kmpc_target_init({{.*}}, i1 true, i1 false, i1 true)
-// CHECK: call void @__kmpc_target_deinit({{.*}}, i1 true, i1 true)
+// CHECK: call i32 @__kmpc_target_init({{.*}}, i8 2, i1 false, i1 true)
+// CHECK: call void @__kmpc_target_deinit({{.*}}, i8 2, i1 true)
 //
 //
 // define internal void [[PFN1]](
@@ -274,7 +274,7 @@ int bar(int n){
 
 //
 // Reduction function
-// CHECK: define internal void [[REDUCTION_FUNC:@.+]](i8* %0, i8* %1)
+// CHECK: define internal void [[REDUCTION_FUNC:@.+]](i8* noundef %0, i8* noundef %1)
 // CHECK: [[VAR1_RHS_REF:%.+]] = getelementptr inbounds [[RLT]], [[RLT]]* [[RED_LIST_RHS:%.+]], i{{32|64}} 0, i{{32|64}} 0
 // CHECK: [[VAR1_RHS:%.+]] = load i8*, i8** [[VAR1_RHS_REF]],
 //
@@ -305,7 +305,7 @@ int bar(int n){
 
 //
 // Shuffle and reduce function
-// CHECK: define internal void [[SHUFFLE_REDUCE_FN]](i8* %0, i16 {{.*}}, i16 {{.*}}, i16 {{.*}})
+// CHECK: define internal void [[SHUFFLE_REDUCE_FN]](i8* noundef %0, i16 noundef {{.*}}, i16 noundef {{.*}}, i16 noundef {{.*}})
 // CHECK: [[REMOTE_RED_LIST:%.+]] = alloca [[RLT]], align
 // CHECK: [[REMOTE_ELT1:%.+]] = alloca i8
 // CHECK: [[REMOTE_ELT2:%.+]] = alloca float
@@ -320,7 +320,7 @@ int bar(int n){
 // CHECK: [[ELT_VAL:%.+]] = load i8, i8* [[ELT_VOID]], align
 //
 // CHECK: [[ELT_CAST:%.+]] = sext i8 [[ELT_VAL]] to i32
-// CHECK: [[WS32:%.+]] = call i32 @llvm.nvvm.read.ptx.sreg.warpsize()
+// CHECK: [[WS32:%.+]] = call i32 @__kmpc_get_warp_size()
 // CHECK: [[WS:%.+]] = trunc i32 [[WS32]] to i16
 // CHECK: [[REMOTE_ELT1_VAL32:%.+]] = call i32 @__kmpc_shuffle_int32(i32 [[ELT_CAST]], i16 [[LANEOFFSET]], i16 [[WS]])
 // CHECK: [[REMOTE_ELT1_VAL:%.+]] = trunc i32 [[REMOTE_ELT1_VAL32]] to i8
@@ -329,14 +329,14 @@ int bar(int n){
 // CHECK: store i8* [[REMOTE_ELT1]], i8** [[REMOTE_ELT_REF]], align
 //
 // CHECK: [[ELT_REF:%.+]] = getelementptr inbounds [[RLT]], [[RLT]]* [[RED_LIST]], i{{32|64}} 0, i{{32|64}} 1
-// CHECK: [[ELT_VOID:%.+]] = load i8*, i8** [[ELT_REF]],
+// CHECK: [[ELT_REF_CAST:%.+]] = bitcast i8** [[ELT_REF]] to float**
+// CHECK: [[ELT:%.+]] = load float*, float** [[ELT_REF_CAST]],
 // CHECK: [[REMOTE_ELT_REF:%.+]] = getelementptr inbounds [[RLT]], [[RLT]]* [[REMOTE_RED_LIST]], i{{32|64}} 0, i{{32|64}} 1
-// CHECK: [[ELT:%.+]] = bitcast i8* [[ELT_VOID]] to float*
 //
 // CHECK: [[ELT_CAST:%.+]] = bitcast float* [[ELT]] to i32*
 // CHECK: [[REMOTE_ELT2_CAST:%.+]] = bitcast float* [[REMOTE_ELT2]] to i32*
 // CHECK: [[ELT_VAL:%.+]] = load i32, i32* [[ELT_CAST]], align
-// CHECK: [[WS32:%.+]] = call i32 @llvm.nvvm.read.ptx.sreg.warpsize()
+// CHECK: [[WS32:%.+]] = call i32 @__kmpc_get_warp_size()
 // CHECK: [[WS:%.+]] = trunc i32 [[WS32]] to i16
 // CHECK: [[REMOTE_ELT2_VAL32:%.+]] = call i32 @__kmpc_shuffle_int32(i32 [[ELT_VAL]], i16 [[LANEOFFSET]], i16 [[WS]])
 //
@@ -387,11 +387,11 @@ int bar(int n){
 // CHECK: store i8 [[REMOTE_ELT_VAL]], i8* [[ELT_VOID]], align
 //
 // CHECK: [[REMOTE_ELT_REF:%.+]] = getelementptr inbounds [[RLT]], [[RLT]]* [[REMOTE_RED_LIST]], i{{32|64}} 0, i{{32|64}} 1
-// CHECK: [[REMOTE_ELT_VOID:%.+]] = load i8*, i8** [[REMOTE_ELT_REF]],
+// CHECK: [[REMOTE_ELT_REF_CAST:%.+]] = bitcast i8** [[REMOTE_ELT_REF]] to float**
+// CHECK: [[REMOTE_ELT:%.+]] = load float*, float** [[REMOTE_ELT_REF_CAST]],
 // CHECK: [[ELT_REF:%.+]] = getelementptr inbounds [[RLT]], [[RLT]]* [[RED_LIST]], i{{32|64}} 0, i{{32|64}} 1
-// CHECK: [[ELT_VOID:%.+]] = load i8*, i8** [[ELT_REF]],
-// CHECK: [[REMOTE_ELT:%.+]] = bitcast i8* [[REMOTE_ELT_VOID]] to float*
-// CHECK: [[ELT:%.+]] = bitcast i8* [[ELT_VOID]] to float*
+// CHECK: [[ELT_REF_CAST:%.+]] = bitcast i8** [[ELT_REF]] to float**
+// CHECK: [[ELT:%.+]] = load float*, float** [[ELT_REF_CAST]],
 // CHECK: [[REMOTE_ELT_VAL:%.+]] = load float, float* [[REMOTE_ELT]], align
 // CHECK: store float [[REMOTE_ELT_VAL]], float* [[ELT]], align
 // CHECK: br label {{%?}}[[COPY_CONT:.+]]
@@ -404,7 +404,7 @@ int bar(int n){
 
 //
 // Inter warp copy function
-// CHECK: define internal void [[WARP_COPY_FN]](i8* %0, i32 %1)
+// CHECK: define internal void [[WARP_COPY_FN]](i8* noundef %0, i32 noundef %1)
 // CHECK-DAG: [[LANEID:%.+]] = and i32 {{.+}}, 31
 // CHECK-DAG: [[WARPID:%.+]] = ashr i32 {{.+}}, 5
 // CHECK-DAG: [[RED_LIST:%.+]] = bitcast i8* {{.+}} to [[RLT]]*
@@ -490,8 +490,8 @@ int bar(int n){
 
 // CHECK: define {{.*}}void {{@__omp_offloading_.+template.+l38}}(
 //
-// CHECK: call i32 @__kmpc_target_init({{.*}}, i1 true, i1 false, i1 true)
-// CHECK: call void @__kmpc_target_deinit({{.*}}, i1 true, i1 true)
+// CHECK: call i32 @__kmpc_target_init({{.*}}, i8 2, i1 false, i1 true)
+// CHECK: call void @__kmpc_target_deinit({{.*}}, i8 2, i1 true)
 //
 //
 // define internal void [[PFN2]](
@@ -557,7 +557,7 @@ int bar(int n){
 
 //
 // Reduction function
-// CHECK: define internal void [[REDUCTION_FUNC:@.+]](i8* %0, i8* %1)
+// CHECK: define internal void [[REDUCTION_FUNC:@.+]](i8* noundef %0, i8* noundef %1)
 // CHECK: [[VAR1_RHS_REF:%.+]] = getelementptr inbounds [[RLT]], [[RLT]]* [[RED_LIST_RHS:%.+]], i{{32|64}} 0, i{{32|64}} 0
 // CHECK: [[VAR1_RHS_VOID:%.+]] = load i8*, i8** [[VAR1_RHS_REF]],
 // CHECK: [[VAR1_RHS:%.+]] = bitcast i8* [[VAR1_RHS_VOID]] to i32*
@@ -602,7 +602,7 @@ int bar(int n){
 
 //
 // Shuffle and reduce function
-// CHECK: define internal void [[SHUFFLE_REDUCE_FN]](i8* %0, i16 {{.*}}, i16 {{.*}}, i16 {{.*}})
+// CHECK: define internal void [[SHUFFLE_REDUCE_FN]](i8* noundef %0, i16 noundef {{.*}}, i16 noundef {{.*}}, i16 noundef {{.*}})
 // CHECK: [[REMOTE_RED_LIST:%.+]] = alloca [[RLT]], align
 // CHECK: [[REMOTE_ELT1:%.+]] = alloca i32
 // CHECK: [[REMOTE_ELT2:%.+]] = alloca i16
@@ -612,12 +612,12 @@ int bar(int n){
 // CHECK: [[ALGVER:%.+]] = load i16, i16* {{.+}}, align
 //
 // CHECK: [[ELT_REF:%.+]] = getelementptr inbounds [[RLT]], [[RLT]]* [[RED_LIST:%.+]], i{{32|64}} 0, i{{32|64}} 0
-// CHECK: [[ELT_VOID:%.+]] = load i8*, i8** [[ELT_REF]],
+// CHECK: [[ELT_REF_CAST:%.+]] = bitcast i8** [[ELT_REF]] to i32**
+// CHECK: [[ELT:%.+]] = load i32*, i32** [[ELT_REF_CAST]],
 // CHECK: [[REMOTE_ELT_REF:%.+]] = getelementptr inbounds [[RLT]], [[RLT]]* [[REMOTE_RED_LIST:%.+]], i{{32|64}} 0, i{{32|64}} 0
-// CHECK: [[ELT:%.+]] = bitcast i8* [[ELT_VOID]] to i32*
 // CHECK: [[ELT_VAL:%.+]] = load i32, i32* [[ELT]], align
 //
-// CHECK: [[WS32:%.+]] = call i32 @llvm.nvvm.read.ptx.sreg.warpsize()
+// CHECK: [[WS32:%.+]] = call i32 @__kmpc_get_warp_size()
 // CHECK: [[WS:%.+]] = trunc i32 [[WS32]] to i16
 // CHECK: [[REMOTE_ELT1_VAL:%.+]] = call i32 @__kmpc_shuffle_int32(i32 [[ELT_VAL]], i16 [[LANEOFFSET]], i16 [[WS]])
 //
@@ -626,13 +626,13 @@ int bar(int n){
 // CHECK: store i8* [[REMOTE_ELT1C]], i8** [[REMOTE_ELT_REF]], align
 //
 // CHECK: [[ELT_REF:%.+]] = getelementptr inbounds [[RLT]], [[RLT]]* [[RED_LIST]], i{{32|64}} 0, i{{32|64}} 1
-// CHECK: [[ELT_VOID:%.+]] = load i8*, i8** [[ELT_REF]],
+// CHECK: [[ELT_REF_CAST:%.+]] = bitcast i8** [[ELT_REF]] to i16**
+// CHECK: [[ELT:%.+]] = load i16*, i16** [[ELT_REF_CAST]],
 // CHECK: [[REMOTE_ELT_REF:%.+]] = getelementptr inbounds [[RLT]], [[RLT]]* [[REMOTE_RED_LIST]], i{{32|64}} 0, i{{32|64}} 1
-// CHECK: [[ELT:%.+]] = bitcast i8* [[ELT_VOID]] to i16*
 // CHECK: [[ELT_VAL:%.+]] = load i16, i16* [[ELT]], align
 //
 // CHECK: [[ELT_CAST:%.+]] = sext i16 [[ELT_VAL]] to i32
-// CHECK: [[WS32:%.+]] = call i32 @llvm.nvvm.read.ptx.sreg.warpsize()
+// CHECK: [[WS32:%.+]] = call i32 @__kmpc_get_warp_size()
 // CHECK: [[WS:%.+]] = trunc i32 [[WS32]] to i16
 // CHECK: [[REMOTE_ELT2_VAL32:%.+]] = call i32 @__kmpc_shuffle_int32(i32 [[ELT_CAST]], i16 [[LANEOFFSET]], i16 [[WS]])
 // CHECK: [[REMOTE_ELT2_VAL:%.+]] = trunc i32 [[REMOTE_ELT2_VAL32]] to i16
@@ -677,20 +677,20 @@ int bar(int n){
 //
 // CHECK: [[DO_COPY]]
 // CHECK: [[REMOTE_ELT_REF:%.+]] = getelementptr inbounds [[RLT]], [[RLT]]* [[REMOTE_RED_LIST]], i{{32|64}} 0, i{{32|64}} 0
-// CHECK: [[REMOTE_ELT_VOID:%.+]] = load i8*, i8** [[REMOTE_ELT_REF]],
+// CHECK: [[REMOTE_ELT_REF_CAST:%.+]] = bitcast i8** [[REMOTE_ELT_REF]] to i32**
+// CHECK: [[REMOTE_ELT:%.+]] = load i32*, i32** [[REMOTE_ELT_REF_CAST]],
 // CHECK: [[ELT_REF:%.+]] = getelementptr inbounds [[RLT]], [[RLT]]* [[RED_LIST]], i{{32|64}} 0, i{{32|64}} 0
-// CHECK: [[ELT_VOID:%.+]] = load i8*, i8** [[ELT_REF]],
-// CHECK: [[REMOTE_ELT:%.+]] = bitcast i8* [[REMOTE_ELT_VOID]] to i32*
-// CHECK: [[ELT:%.+]] = bitcast i8* [[ELT_VOID]] to i32*
+// CHECK: [[ELT_REF_CAST:%.+]] = bitcast i8** [[ELT_REF]] to i32**
+// CHECK: [[ELT:%.+]] = load i32*, i32** [[ELT_REF_CAST]],
 // CHECK: [[REMOTE_ELT_VAL:%.+]] = load i32, i32* [[REMOTE_ELT]], align
 // CHECK: store i32 [[REMOTE_ELT_VAL]], i32* [[ELT]], align
 //
 // CHECK: [[REMOTE_ELT_REF:%.+]] = getelementptr inbounds [[RLT]], [[RLT]]* [[REMOTE_RED_LIST]], i{{32|64}} 0, i{{32|64}} 1
-// CHECK: [[REMOTE_ELT_VOID:%.+]] = load i8*, i8** [[REMOTE_ELT_REF]],
+// CHECK: [[REMOTE_ELT_REF_CAST:%.+]] = bitcast i8** [[REMOTE_ELT_REF]] to i16**
+// CHECK: [[REMOTE_ELT:%.+]] = load i16*, i16** [[REMOTE_ELT_REF_CAST]],
 // CHECK: [[ELT_REF:%.+]] = getelementptr inbounds [[RLT]], [[RLT]]* [[RED_LIST]], i{{32|64}} 0, i{{32|64}} 1
-// CHECK: [[ELT_VOID:%.+]] = load i8*, i8** [[ELT_REF]],
-// CHECK: [[REMOTE_ELT:%.+]] = bitcast i8* [[REMOTE_ELT_VOID]] to i16*
-// CHECK: [[ELT:%.+]] = bitcast i8* [[ELT_VOID]] to i16*
+// CHECK: [[ELT_REF_CAST:%.+]] = bitcast i8** [[ELT_REF]] to i16**
+// CHECK: [[ELT:%.+]] = load i16*, i16** [[ELT_REF_CAST]],
 // CHECK: [[REMOTE_ELT_VAL:%.+]] = load i16, i16* [[REMOTE_ELT]], align
 // CHECK: store i16 [[REMOTE_ELT_VAL]], i16* [[ELT]], align
 // CHECK: br label {{%?}}[[COPY_CONT:.+]]
@@ -703,7 +703,7 @@ int bar(int n){
 
 //
 // Inter warp copy function
-// CHECK: define internal void [[WARP_COPY_FN]](i8* %0, i32 %1)
+// CHECK: define internal void [[WARP_COPY_FN]](i8* noundef %0, i32 noundef %1)
 // CHECK-DAG: [[LANEID:%.+]] = and i32 {{.+}}, 31
 // CHECK-DAG: [[WARPID:%.+]] = ashr i32 {{.+}}, 5
 // CHECK-DAG: [[RED_LIST:%.+]] = bitcast i8* {{.+}} to [[RLT]]*

@@ -44,12 +44,14 @@ constexpr int g(int k) {
   return 3 * k3 + 5 * k2 + n * k - 20;
 }
 static_assert(g(2) == 42, "");
-constexpr int h(int n) {
-  static const int m = n; // expected-error {{static variable not permitted in a constexpr function}}
+constexpr int h(int n) {  // expected-error {{constexpr function never produces a constant expression}}
+  static const int m = n; // expected-note {{control flows through the definition of a static variable}} \
+                          // cxx14_20-warning {{definition of a static variable in a constexpr function is a C++2b extension}}
   return m;
 }
-constexpr int i(int n) {
-  thread_local const int m = n; // expected-error {{thread_local variable not permitted in a constexpr function}}
+constexpr int i(int n) {        // expected-error {{constexpr function never produces a constant expression}}
+  thread_local const int m = n; // expected-note {{control flows through the definition of a thread_local variable}} \
+                                // cxx14_20-warning {{definition of a thread_local variable in a constexpr function is a C++2b extension}}
   return m;
 }
 
@@ -876,14 +878,12 @@ namespace VirtualFromBase {
 namespace Lifetime {
   constexpr int &get(int &&r) { return r; }
   // cxx2b-error@-1 {{non-const lvalue reference to type 'int' cannot bind to a temporary of type 'int'}}
-  // cxx2b-error@-2 {{no return statement in constexpr function}} See PR40598
   constexpr int f() {
     int &r = get(123);
     return r;
-    // cxx2b-note@-1 {{use of reference outside its lifetime is not allowed in a constant expression}}
-    // cxx14_20-note@-2 {{read of object outside its lifetime}}
+    // cxx14_20-note@-1 {{read of object outside its lifetime}}
   }
-  static_assert(f() == 123, ""); // expected-error {{constant expression}} expected-note {{in call}}
+  static_assert(f() == 123, ""); // expected-error {{constant expression}} cxx14_20-note {{in call}}
 
   constexpr int g() {
     int *p = 0;

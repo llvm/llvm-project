@@ -12,7 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "sanitizer_common/sanitizer_platform.h"
-#if SANITIZER_MAC
+#if SANITIZER_APPLE
 
 #include "asan_interceptors.h"
 #include "asan_internal.h"
@@ -55,7 +55,7 @@ void *AsanDoesNotSupportStaticLinkage() {
 }
 
 uptr FindDynamicShadowStart() {
-  return MapDynamicShadow(MemToShadowSize(kHighMemEnd), SHADOW_SCALE,
+  return MapDynamicShadow(MemToShadowSize(kHighMemEnd), ASAN_SHADOW_SCALE,
                           /*min_shadow_base_alignment*/ 0, kHighMemEnd);
 }
 
@@ -296,4 +296,4 @@ INTERCEPTOR(void, dispatch_source_set_event_handler,
 }
 #endif
 
-#endif  // SANITIZER_MAC
+#endif  // SANITIZER_APPLE

@@ -43,7 +43,8 @@ typedef unsigned char CFI_attribute_t;
 typedef signed char CFI_type_t;
 /* These codes are required to be macros (i.e., #ifdef will work).
  * They are not required to be distinct, but neither are they required
- * to have had their synonyms combined.
+ * to have had their synonyms combined.  Codes marked as extensions may be
+ * place holders for as yet unimplemented types.
  */
 #define CFI_type_signed_char 1
 #define CFI_type_short 2
@@ -60,42 +61,52 @@ typedef signed char CFI_type_t;
 #define CFI_type_int_least16_t 13
 #define CFI_type_int_least32_t 14
 #define CFI_type_int_least64_t 15
-#define CFI_type_int_least128_t 16
+#define CFI_type_int_least128_t 16 /* extension */
 #define CFI_type_int_fast8_t 17
 #define CFI_type_int_fast16_t 18
 #define CFI_type_int_fast32_t 19
 #define CFI_type_int_fast64_t 20
-#define CFI_type_int_fast128_t 21
+#define CFI_type_int_fast128_t 21 /* extension */
 #define CFI_type_intmax_t 22
 #define CFI_type_intptr_t 23
 #define CFI_type_ptrdiff_t 24
-#define CFI_type_float 25
-#define CFI_type_double 26
-#define CFI_type_long_double 27
-#define CFI_type_float_Complex 28
-#define CFI_type_double_Complex 29
-#define CFI_type_long_double_Complex 30
-#define CFI_type_Bool 31
-#define CFI_type_char 32
-#define CFI_type_cptr 33
-#define CFI_type_struct 34
-#define CFI_type_char16_t 35 /* extension: char16_t */
-#define CFI_type_char32_t 36 /* extension: char32_t */
+#define CFI_type_half_float 25 /* extension: kind=2 */
+#define CFI_type_bfloat 26 /* extension: kind=3 */
+#define CFI_type_float 27
+#define CFI_type_double 28
+#define CFI_type_extended_double 29 /* extension: kind=10 */
+#define CFI_type_long_double 30
+#define CFI_type_float128 31 /* extension: kind=16 */
+#define CFI_type_half_float_Complex 32 /* extension: kind=2 */
+#define CFI_type_bfloat_Complex 33 /* extension: kind=3 */
+#define CFI_type_float_Complex 34
+#define CFI_type_double_Complex 35
+#define CFI_type_extended_double_Complex 36 /* extension: kind=10 */
+#define CFI_type_long_double_Complex 37
+#define CFI_type_float128_Complex 38 /* extension: kind=16 */
+#define CFI_type_Bool 39
+#define CFI_type_char 40
+#define CFI_type_cptr 41
+#define CFI_type_struct 42
+#define CFI_type_char16_t 43 /* extension */
+#define CFI_type_char32_t 44 /* extension */
 #define CFI_TYPE_LAST CFI_type_char32_t
 #define CFI_type_other (-1) // must be negative
 
-/* Error code macros */
+/* Error code macros - skip some of the small values to avoid conflicts with
+ * other status codes mandated by the standard, e.g. those returned by
+ * GET_ENVIRONMENT_VARIABLE (16.9.84) */
 #define CFI_SUCCESS 0 /* must be zero */
-#define CFI_ERROR_BASE_ADDR_NULL 1
-#define CFI_ERROR_BASE_ADDR_NOT_NULL 2
-#define CFI_INVALID_ELEM_LEN 3
-#define CFI_INVALID_RANK 4
-#define CFI_INVALID_TYPE 5
-#define CFI_INVALID_ATTRIBUTE 6
-#define CFI_INVALID_EXTENT 7
-#define CFI_INVALID_DESCRIPTOR 8
-#define CFI_ERROR_MEM_ALLOCATION 9
-#define CFI_ERROR_OUT_OF_BOUNDS 10
+#define CFI_ERROR_BASE_ADDR_NULL 11
+#define CFI_ERROR_BASE_ADDR_NOT_NULL 12
+#define CFI_INVALID_ELEM_LEN 13
+#define CFI_INVALID_RANK 14
+#define CFI_INVALID_TYPE 15
+#define CFI_INVALID_ATTRIBUTE 16
+#define CFI_INVALID_EXTENT 17
+#define CFI_INVALID_DESCRIPTOR 18
+#define CFI_ERROR_MEM_ALLOCATION 19
+#define CFI_ERROR_OUT_OF_BOUNDS 20
 
 /* 18.5.2 per-dimension information */
 typedef struct CFI_dim_t {

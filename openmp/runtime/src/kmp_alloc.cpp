@@ -883,7 +883,7 @@ static void bpool(kmp_info_t *th, void *buf, bufsize len) {
   __kmp_bget_dequeue(th); /* Release any queued buffers */
 
 #ifdef SizeQuant
-  len &= ~(SizeQuant - 1);
+  len &= ~((bufsize)(SizeQuant - 1));
 #endif
   if (thr->pool_len == 0) {
     thr->pool_len = len;
@@ -1242,7 +1242,6 @@ static void **mk_hbw_preferred_hugetlb;
 static void **mk_dax_kmem;
 static void **mk_dax_kmem_all;
 static void **mk_dax_kmem_preferred;
-// Preview of target memory support
 static void *(*kmp_target_alloc_host)(size_t size, int device);
 static void *(*kmp_target_alloc_shared)(size_t size, int device);
 static void *(*kmp_target_alloc_device)(size_t size, int device);
@@ -1257,7 +1256,7 @@ static bool __kmp_target_mem_available;
    MA == llvm_omp_target_shared_mem_alloc ||                                   \
    MA == llvm_omp_target_device_mem_alloc)
 
-#if KMP_OS_UNIX && KMP_DYNAMIC_LIB
+#if KMP_OS_UNIX && KMP_DYNAMIC_LIB && !KMP_OS_DARWIN
 static inline void chk_kind(void ***pkind) {
   KMP_DEBUG_ASSERT(pkind);
   if (*pkind) // symbol found
@@ -1268,7 +1267,7 @@ static inline void chk_kind(void ***pkind) {
 
 void __kmp_init_memkind() {
 // as of 2018-07-31 memkind does not support Windows*, exclude it for now
-#if KMP_OS_UNIX && KMP_DYNAMIC_LIB
+#if KMP_OS_UNIX && KMP_DYNAMIC_LIB && !KMP_OS_DARWIN
   // use of statically linked memkind is problematic, as it depends on libnuma
   kmp_mk_lib_name = "libmemkind.so";
   h_memkind = dlopen(kmp_mk_lib_name, RTLD_LAZY);
@@ -1352,7 +1351,7 @@ void __kmp_fini_memkind() {
   mk_dax_kmem_preferred = NULL;
 #endif
 }
-// Preview of target memory support
+
 void __kmp_init_target_mem() {
   *(void **)(&kmp_target_alloc_host) = KMP_DLSYM("llvm_omp_target_alloc_host");
   *(void **)(&kmp_target_alloc_shared) =
@@ -1484,31 +1483,74 @@ typedef struct kmp_mem_desc { // Memory block descriptor
   void *ptr_align; // Pointer to aligned memory, returned
   kmp_allocator_t *allocator; // allocator
 } kmp_mem_desc_t;
-static int alignment = sizeof(void *); // let's align to pointer size
+static int alignment = sizeof(void *); // align to pointer size by default
 
+// external interfaces are wrappers over internal implementation
 void *__kmpc_alloc(int gtid, size_t size, omp_allocator_handle_t allocator) {
+  KE_TRACE(25, ("__kmpc_alloc: T#%d (%d, %p)\n", gtid, (int)size, allocator));
+  void *ptr = __kmp_alloc(gtid, 0, size, allocator);
+  KE_TRACE(25, ("__kmpc_alloc returns %p, T#%d\n", ptr, gtid));
+  return ptr;
+}
+
+void *__kmpc_aligned_alloc(int gtid, size_t algn, size_t size,
+                           omp_allocator_handle_t allocator) {
+  KE_TRACE(25, ("__kmpc_aligned_alloc: T#%d (%d, %d, %p)\n", gtid, (int)algn,
+                (int)size, allocator));
+  void *ptr = __kmp_alloc(gtid, algn, size, allocator);
+  KE_TRACE(25, ("__kmpc_aligned_alloc returns %p, T#%d\n", ptr, gtid));
+  return ptr;
+}
+
+void *__kmpc_calloc(int gtid, size_t nmemb, size_t size,
+                    omp_allocator_handle_t allocator) {
+  KE_TRACE(25, ("__kmpc_calloc: T#%d (%d, %d, %p)\n", gtid, (int)nmemb,
+                (int)size, allocator));
+  void *ptr = __kmp_calloc(gtid, 0, nmemb, size, allocator);
+  KE_TRACE(25, ("__kmpc_calloc returns %p, T#%d\n", ptr, gtid));
+  return ptr;
+}
+
+void *__kmpc_realloc(int gtid, void *ptr, size_t size,
+                     omp_allocator_handle_t allocator,
+                     omp_allocator_handle_t free_allocator) {
+  KE_TRACE(25, ("__kmpc_realloc: T#%d (%p, %d, %p, %p)\n", gtid, ptr, (int)size,
+                allocator, free_allocator));
+  void *nptr = __kmp_realloc(gtid, ptr, size, allocator, free_allocator);
+  KE_TRACE(25, ("__kmpc_realloc returns %p, T#%d\n", nptr, gtid));
+  return nptr;
+}
+
+void __kmpc_free(int gtid, void *ptr, omp_allocator_handle_t allocator) {
+  KE_TRACE(25, ("__kmpc_free: T#%d free(%p,%p)\n", gtid, ptr, allocator));
+  ___kmpc_free(gtid, ptr, allocator);
+  KE_TRACE(10, ("__kmpc_free: T#%d freed %p (%p)\n", gtid, ptr, allocator));
+  return;
+}
+
+// internal implementation, called from inside the library
+void *__kmp_alloc(int gtid, size_t algn, size_t size,
+                  omp_allocator_handle_t allocator) {
   void *ptr = NULL;
   kmp_allocator_t *al;
   KMP_DEBUG_ASSERT(__kmp_init_serial);
-
   if (size == 0)
     return NULL;
-
   if (allocator == omp_null_allocator)
     allocator = __kmp_threads[gtid]->th.th_def_allocator;
 
-  KE_TRACE(25, ("__kmpc_alloc: T#%d (%d, %p)\n", gtid, (int)size, allocator));
-  al = RCAST(kmp_allocator_t *, CCAST(omp_allocator_handle_t, allocator));
+  al = RCAST(kmp_allocator_t *, allocator);
 
   int sz_desc = sizeof(kmp_mem_desc_t);
   kmp_mem_desc_t desc;
   kmp_uintptr_t addr; // address returned by allocator
   kmp_uintptr_t addr_align; // address to return to caller
   kmp_uintptr_t addr_descr; // address of memory block descriptor
-  int align = alignment; // default alignment
-  if (allocator > kmp_max_mem_alloc && al->alignment > 0) {
-    align = al->alignment; // alignment requested by user
-  }
+  size_t align = alignment; // default alignment
+  if (allocator > kmp_max_mem_alloc && al->alignment > align)
+    align = al->alignment; // alignment required by allocator trait
+  if (align < algn)
+    align = algn; // max of allocator trait, parameter and sizeof(void*)
   desc.size_orig = size;
   desc.size_a = size + sz_desc + align;
 
@@ -1537,7 +1579,7 @@ void *__kmpc_alloc(int gtid, size_t size, omp_allocator_handle_t allocator) {
         } else if (al->fb == omp_atv_allocator_fb) {
           KMP_ASSERT(al != al->fb_data);
           al = al->fb_data;
-          return __kmpc_alloc(gtid, size, (omp_allocator_handle_t)al);
+          return __kmp_alloc(gtid, algn, size, (omp_allocator_handle_t)al);
         } // else ptr == NULL;
       } else {
         // pool has enough space
@@ -1551,7 +1593,7 @@ void *__kmpc_alloc(int gtid, size_t size, omp_allocator_handle_t allocator) {
           } else if (al->fb == omp_atv_allocator_fb) {
             KMP_ASSERT(al != al->fb_data);
             al = al->fb_data;
-            return __kmpc_alloc(gtid, size, (omp_allocator_handle_t)al);
+            return __kmp_alloc(gtid, algn, size, (omp_allocator_handle_t)al);
           }
         }
       }
@@ -1567,7 +1609,7 @@ void *__kmpc_alloc(int gtid, size_t size, omp_allocator_handle_t allocator) {
         } else if (al->fb == omp_atv_allocator_fb) {
           KMP_ASSERT(al != al->fb_data);
           al = al->fb_data;
-          return __kmpc_alloc(gtid, size, (omp_allocator_handle_t)al);
+          return __kmp_alloc(gtid, algn, size, (omp_allocator_handle_t)al);
         }
       }
     }
@@ -1623,7 +1665,7 @@ void *__kmpc_alloc(int gtid, size_t size, omp_allocator_handle_t allocator) {
       } else if (al->fb == omp_atv_allocator_fb) {
         KMP_ASSERT(al != al->fb_data);
         al = al->fb_data;
-        return __kmpc_alloc(gtid, size, (omp_allocator_handle_t)al);
+        return __kmp_alloc(gtid, algn, size, (omp_allocator_handle_t)al);
       } // else ptr == NULL;
     } else {
       // pool has enough space
@@ -1639,7 +1681,7 @@ void *__kmpc_alloc(int gtid, size_t size, omp_allocator_handle_t allocator) {
       KMP_ASSERT(0); // abort fallback requested
     } // no sense to look for another fallback because of same internal alloc
   }
-  KE_TRACE(10, ("__kmpc_alloc: T#%d %p=alloc(%d)\n", gtid, ptr, desc.size_a));
+  KE_TRACE(10, ("__kmp_alloc: T#%d %p=alloc(%d)\n", gtid, ptr, desc.size_a));
   if (ptr == NULL)
     return NULL;
 
@@ -1653,12 +1695,11 @@ void *__kmpc_alloc(int gtid, size_t size, omp_allocator_handle_t allocator) {
   *((kmp_mem_desc_t *)addr_descr) = desc; // save descriptor contents
   KMP_MB();
 
-  KE_TRACE(25, ("__kmpc_alloc returns %p, T#%d\n", desc.ptr_align, gtid));
   return desc.ptr_align;
 }
 
-void *__kmpc_calloc(int gtid, size_t nmemb, size_t size,
-                    omp_allocator_handle_t allocator) {
+void *__kmp_calloc(int gtid, size_t algn, size_t nmemb, size_t size,
+                   omp_allocator_handle_t allocator) {
   void *ptr = NULL;
   kmp_allocator_t *al;
   KMP_DEBUG_ASSERT(__kmp_init_serial);
@@ -1666,10 +1707,7 @@ void *__kmpc_calloc(int gtid, size_t nmemb, size_t size,
   if (allocator == omp_null_allocator)
     allocator = __kmp_threads[gtid]->th.th_def_allocator;
 
-  KE_TRACE(25, ("__kmpc_calloc: T#%d (%d, %d, %p)\n", gtid, (int)nmemb,
-                (int)size, allocator));
-
-  al = RCAST(kmp_allocator_t *, CCAST(omp_allocator_handle_t, allocator));
+  al = RCAST(kmp_allocator_t *, allocator);
 
   if (nmemb == 0 || size == 0)
     return ptr;
@@ -1681,31 +1719,27 @@ void *__kmpc_calloc(int gtid, size_t nmemb, size_t size,
     return ptr;
   }
 
-  ptr = __kmpc_alloc(gtid, nmemb * size, allocator);
+  ptr = __kmp_alloc(gtid, algn, nmemb * size, allocator);
 
   if (ptr) {
     memset(ptr, 0x00, nmemb * size);
   }
-  KE_TRACE(25, ("__kmpc_calloc returns %p, T#%d\n", ptr, gtid));
   return ptr;
 }
 
-void *__kmpc_realloc(int gtid, void *ptr, size_t size,
-                     omp_allocator_handle_t allocator,
-                     omp_allocator_handle_t free_allocator) {
+void *__kmp_realloc(int gtid, void *ptr, size_t size,
+                    omp_allocator_handle_t allocator,
+                    omp_allocator_handle_t free_allocator) {
   void *nptr = NULL;
   KMP_DEBUG_ASSERT(__kmp_init_serial);
 
   if (size == 0) {
     if (ptr != NULL)
-      __kmpc_free(gtid, ptr, free_allocator);
+      ___kmpc_free(gtid, ptr, free_allocator);
     return nptr;
   }
 
-  KE_TRACE(25, ("__kmpc_realloc: T#%d (%p, %d, %p, %p)\n", gtid, ptr, (int)size,
-                allocator, free_allocator));
-
-  nptr = __kmpc_alloc(gtid, size, allocator);
+  nptr = __kmp_alloc(gtid, 0, size, allocator);
 
   if (nptr != NULL && ptr != NULL) {
     kmp_mem_desc_t desc;
@@ -1724,15 +1758,13 @@ void *__kmpc_realloc(int gtid, void *ptr, size_t size,
   }
 
   if (nptr != NULL) {
-    __kmpc_free(gtid, ptr, free_allocator);
+    ___kmpc_free(gtid, ptr, free_allocator);
   }
 
-  KE_TRACE(25, ("__kmpc_realloc returns %p, T#%d\n", nptr, gtid));
   return nptr;
 }
 
-void __kmpc_free(int gtid, void *ptr, const omp_allocator_handle_t allocator) {
-  KE_TRACE(25, ("__kmpc_free: T#%d free(%p,%p)\n", gtid, ptr, allocator));
+void ___kmpc_free(int gtid, void *ptr, omp_allocator_handle_t allocator) {
   if (ptr == NULL)
     return;
 
@@ -1792,8 +1824,6 @@ void __kmpc_free(int gtid, void *ptr, const omp_allocator_handle_t allocator) {
     }
     __kmp_thread_free(__kmp_thread_from_gtid(gtid), desc.ptr_alloc);
   }
-  KE_TRACE(10, ("__kmpc_free: T#%d freed %p (%p)\n", gtid, desc.ptr_alloc,
-                allocator));
 }
 
 /* If LEAK_MEMORY is defined, __kmp_free() will *not* free memory. It causes
@@ -1924,9 +1954,10 @@ void *___kmp_page_allocate(size_t size KMP_SRC_LOC_DECL) {
    In debug mode, fill the memory block with 0xEF before call to free(). */
 void ___kmp_free(void *ptr KMP_SRC_LOC_DECL) {
   kmp_mem_descr_t descr;
+#if KMP_DEBUG
   kmp_uintptr_t addr_allocated; // Address returned by malloc().
   kmp_uintptr_t addr_aligned; // Aligned address passed by caller.
-
+#endif
   KE_TRACE(25,
            ("-> __kmp_free( %p ) called from %s:%d\n", ptr KMP_SRC_LOC_PARM));
   KMP_ASSERT(ptr != NULL);
@@ -1938,18 +1969,15 @@ void ___kmp_free(void *ptr KMP_SRC_LOC_DECL) {
                 "ptr_aligned=%p, size_aligned=%d\n",
                 descr.ptr_allocated, (int)descr.size_allocated,
                 descr.ptr_aligned, (int)descr.size_aligned));
-
+#if KMP_DEBUG
   addr_allocated = (kmp_uintptr_t)descr.ptr_allocated;
   addr_aligned = (kmp_uintptr_t)descr.ptr_aligned;
-
   KMP_DEBUG_ASSERT(addr_aligned % CACHE_LINE == 0);
   KMP_DEBUG_ASSERT(descr.ptr_aligned == ptr);
   KMP_DEBUG_ASSERT(addr_allocated + sizeof(kmp_mem_descr_t) <= addr_aligned);
   KMP_DEBUG_ASSERT(descr.size_aligned < descr.size_allocated);
   KMP_DEBUG_ASSERT(addr_aligned + descr.size_aligned <=
                    addr_allocated + descr.size_allocated);
-
-#ifdef KMP_DEBUG
   memset(descr.ptr_allocated, 0xEF, descr.size_allocated);
 // Fill memory block with 0xEF, it helps catch using freed memory.
 #endif

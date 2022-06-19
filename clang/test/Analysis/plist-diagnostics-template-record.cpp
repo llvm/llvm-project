@@ -38,5 +38,5 @@ int main() {
 
 // CHECK:      <string>Calling constructor for &apos;DivByZero&lt;int, float, double, 0&gt;&apos;</string>
 // CHECK:      <string>Calling constructor for &apos;DivByZero&lt;char, float, double, 0&gt;&apos;</string>
-// CHECK:      <string>Calling constructor for &apos;DivByZeroVariadic&lt;char, float, double, nullptr_t&gt;&apos;</string>
+// CHECK:      <string>Calling constructor for &apos;DivByZeroVariadic&lt;char, float, double, std::nullptr_t&gt;&apos;</string>
 

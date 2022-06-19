@@ -3,7 +3,7 @@
 // expected-no-diagnostics
 
 // rdar://8366474
-int main() {
+int main(void) {
   SEL s = @selector(retain);
   SEL s1 = @selector(meth1:);
   SEL s2 = @selector(retainArgument::);

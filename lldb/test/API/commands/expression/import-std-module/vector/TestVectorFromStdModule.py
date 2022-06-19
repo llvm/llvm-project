@@ -9,8 +9,6 @@ from lldbsuite.test import lldbutil
 
 class TestBasicVector(TestBase):
 
-    mydir = TestBase.compute_mydir(__file__)
-
     @add_test_categories(["libc++"])
     @skipIf(compiler=no_match("clang"))
     def test(self):
@@ -24,7 +22,6 @@ class TestBasicVector(TestBase):
 
         vector_type = "std::vector<int>"
         size_type = vector_type + "::size_type"
-        value_type = "std::__vector_base<int, std::allocator<int> >::value_type"
         iterator = vector_type + "::iterator"
         # LLDB's formatter provides us with a artificial 'item' member.
         iterator_children = [ValueCheck(name="item")]
@@ -42,7 +39,12 @@ class TestBasicVector(TestBase):
                              ValueCheck(value="2")
                          ])
         self.expect_expr("a.size()", result_type=size_type, result_value="3")
-        self.expect_expr("a.front()", result_type=value_type, result_value="3")
+        front = self.expect_expr("a.front()", result_value="3")
+        value_type = front.GetDisplayTypeName()
+        self.assertIn(value_type, [
+            "std::vector<int>::value_type", # Pre-D112976
+            "std::__vector_base<int, std::allocator<int> >::value_type", # Post-D112976
+            ])
         self.expect_expr("a[1]", result_type=value_type, result_value="1")
         self.expect_expr("a.back()", result_type=value_type, result_value="2")
 

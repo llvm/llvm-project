@@ -423,5 +423,11 @@ void PerInstructionStats::push(const BenchmarkMeasure &BM) {
   MinValue = std::min(MinValue, BM.PerInstructionValue);
 }
 
+bool operator==(const BenchmarkMeasure &A, const BenchmarkMeasure &B) {
+  return std::tie(A.Key, A.PerInstructionValue, A.PerSnippetValue) ==
+         std::tie(B.Key, B.PerInstructionValue, B.PerSnippetValue);
+}
+
+
 } // namespace exegesis
 } // namespace llvm

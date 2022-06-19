@@ -1,4 +1,4 @@
-//===----- M68kCollapseMOVEMPass.cpp - Expand MOVEM pass --------*- C++ -*-===//
+//===-- M68kCollapseMOVEMPass.cpp - Expand MOVEM pass -----------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -231,7 +231,7 @@ public:
   }
 
   bool runOnMachineFunction(MachineFunction &MF) override {
-    STI = &static_cast<const M68kSubtarget &>(MF.getSubtarget());
+    STI = &MF.getSubtarget<M68kSubtarget>();
     TII = STI->getInstrInfo();
     TRI = STI->getRegisterInfo();
     MFI = MF.getInfo<M68kMachineFunctionInfo>();

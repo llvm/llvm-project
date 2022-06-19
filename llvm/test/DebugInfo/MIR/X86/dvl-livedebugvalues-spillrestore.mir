@@ -1,4 +1,4 @@
-# RUN: llc -mtriple=x86_64-- -run-pass livedebugvalues -o - %s | FileCheck %s --implicit-check-not=DBG_VALUE_LIST
+# RUN: llc -mtriple=x86_64-- -run-pass livedebugvalues -o - %s -experimental-debug-variable-locations=false | FileCheck %s --implicit-check-not=DBG_VALUE_LIST
 #
 # A DBG_VALUE_LIST that has a component spilt and restored should had its
 # expression and operands updated to refer to the stack for that period, and
@@ -72,6 +72,6 @@ body:             |
     $rax = COPY killed $rdi
     $rdi = MOV64ri 0
     $rdi = MOV64rm $rsp, 1, $noreg, -16, $noreg, debug-location !15 :: (load (s64) from %stack.0)
-    RETQ
+    RET64
 ...
 

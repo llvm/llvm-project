@@ -1,11 +1,11 @@
-// RUN: %clang_cc1 -triple x86_64-linux-android -emit-llvm -O -o - %s \
+// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-linux-android -emit-llvm -O -o - %s \
 // RUN:    | FileCheck %s --check-prefix=ANDROID --check-prefix=CHECK
-// RUN: %clang_cc1 -triple x86_64-linux-gnu -emit-llvm -O -o - %s \
+// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-linux-gnu -emit-llvm -O -o - %s \
 // RUN:    | FileCheck %s --check-prefix=GNU --check-prefix=CHECK
-// RUN: %clang_cc1 -triple x86_64 -emit-llvm -O -o - %s \
+// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64 -emit-llvm -O -o - %s \
 // RUN:    | FileCheck %s --check-prefix=GNU --check-prefix=CHECK
 // NaCl is an example of a target for which long double is the same as double.
-// RUN: %clang_cc1 -triple x86_64-nacl -emit-llvm -O -o - %s \
+// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-nacl -emit-llvm -O -o - %s \
 // RUN:    | FileCheck %s --check-prefix=NACL --check-prefix=CHECK
 
 // Android uses fp128 for long double but other x86_64 targets use x86_fp80.
@@ -20,16 +20,16 @@ long double _Complex dataLDC = {1.0L, 1.0L};
 
 long double TestLD(long double x) {
   return x * x;
-// ANDROID: define{{.*}} fp128 @TestLD(fp128 %x)
-// GNU: define{{.*}} x86_fp80 @TestLD(x86_fp80 %x)
-// NACL: define{{.*}} double @TestLD(double %x)
+// ANDROID: define{{.*}} fp128 @TestLD(fp128 noundef %x)
+// GNU: define{{.*}} x86_fp80 @TestLD(x86_fp80 noundef %x)
+// NACL: define{{.*}} double @TestLD(double noundef %x)
 }
 
 long double _Complex TestLDC(long double _Complex x) {
   return x * x;
 // ANDROID: define{{.*}} void @TestLDC({ fp128, fp128 }* {{.*}}, { fp128, fp128 }* {{.*}} %x)
 // GNU: define{{.*}} { x86_fp80, x86_fp80 } @TestLDC({ x86_fp80, x86_fp80 }* {{.*}} %x)
-// NACL: define{{.*}} { double, double } @TestLDC(double %x{{.*}}, double %x{{.*}})
+// NACL: define{{.*}} { double, double } @TestLDC(double noundef %x{{.*}}, double noundef %x{{.*}})
 }
 
 typedef __builtin_va_list va_list;
@@ -94,30 +94,30 @@ void TestVarArg(const char *s, ...);
 
 void TestPassVarInt(int x) {
   TestVarArg("A", x);
-// CHECK: define{{.*}} void @TestPassVarInt(i32 %x)
-// CHECK: call {{.*}} @TestVarArg(i8* {{.*}}, i32 %x)
+// CHECK: define{{.*}} void @TestPassVarInt(i32 noundef %x)
+// CHECK: call {{.*}} @TestVarArg(i8* {{.*}}, i32 noundef %x)
 }
 
 void TestPassVarFloat(float x) {
   TestVarArg("A", x);
-// CHECK: define{{.*}} void @TestPassVarFloat(float %x)
-// CHECK: call {{.*}} @TestVarArg(i8* {{.*}}, double %
+// CHECK: define{{.*}} void @TestPassVarFloat(float noundef %x)
+// CHECK: call {{.*}} @TestVarArg(i8* {{.*}}, double noundef %
 }
 
 void TestPassVarDouble(double x) {
   TestVarArg("A", x);
-// CHECK: define{{.*}} void @TestPassVarDouble(double %x)
-// CHECK: call {{.*}} @TestVarArg(i8* {{.*}}, double %x
+// CHECK: define{{.*}} void @TestPassVarDouble(double noundef %x)
+// CHECK: call {{.*}} @TestVarArg(i8* {{.*}}, double noundef %x
 }
 
 void TestPassVarLD(long double x) {
   TestVarArg("A", x);
-// ANDROID: define{{.*}} void @TestPassVarLD(fp128 %x)
-// ANDROID: call {{.*}} @TestVarArg(i8* {{.*}}, fp128 %x
-// GNU: define{{.*}} void @TestPassVarLD(x86_fp80 %x)
-// GNU: call {{.*}} @TestVarArg(i8* {{.*}}, x86_fp80 %x
-// NACL: define{{.*}} void @TestPassVarLD(double %x)
-// NACL: call {{.*}} @TestVarArg(i8* {{.*}}, double %x
+// ANDROID: define{{.*}} void @TestPassVarLD(fp128 noundef %x)
+// ANDROID: call {{.*}} @TestVarArg(i8* {{.*}}, fp128 noundef %x
+// GNU: define{{.*}} void @TestPassVarLD(x86_fp80 noundef %x)
+// GNU: call {{.*}} @TestVarArg(i8* {{.*}}, x86_fp80 noundef %x
+// NACL: define{{.*}} void @TestPassVarLD(double noundef %x)
+// NACL: call {{.*}} @TestVarArg(i8* {{.*}}, double noundef %x
 }
 
 void TestPassVarLDC(long double _Complex x) {
@@ -130,6 +130,6 @@ void TestPassVarLDC(long double _Complex x) {
 // GNU:          store x86_fp80 %{{.*}}, x86_fp80* %
 // GNU-NEXT:     store x86_fp80 %{{.*}}, x86_fp80* %
 // GNU-NEXT:   call {{.*}} @TestVarArg(i8* {{.*}}, { x86_fp80, x86_fp80 }* {{.*}} %
-// NACL:      define{{.*}} void @TestPassVarLDC(double %x{{.*}}, double %x{{.*}})
-// NACL: call {{.*}} @TestVarArg(i8* {{.*}}, double %x{{.*}}, double %x{{.*}})
+// NACL:      define{{.*}} void @TestPassVarLDC(double noundef %x{{.*}}, double noundef %x{{.*}})
+// NACL: call {{.*}} @TestVarArg(i8* {{.*}}, double noundef %x{{.*}}, double noundef %x{{.*}})
 }

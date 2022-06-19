@@ -30,6 +30,42 @@ using namespace llvm;
 //
 //===----------------------------------------------------------------------===//
 
+static bool isUsedAsMemCpySource(const Value *V, bool &OtherUse) {
+  bool UsedAsMemCpySource = false;
+  for (const User *U : V->users())
+    if (const Instruction *User = dyn_cast<Instruction>(U)) {
+      if (isa<BitCastInst>(User) || isa<GetElementPtrInst>(User)) {
+        UsedAsMemCpySource |= isUsedAsMemCpySource(User, OtherUse);
+        continue;
+      }
+      if (const MemCpyInst *Memcpy = dyn_cast<MemCpyInst>(User)) {
+        if (Memcpy->getOperand(1) == V && !Memcpy->isVolatile()) {
+          UsedAsMemCpySource = true;
+          continue;
+        }
+      }
+      OtherUse = true;
+    }
+  return UsedAsMemCpySource;
+}
+
+unsigned SystemZTTIImpl::adjustInliningThreshold(const CallBase *CB) const {
+  unsigned Bonus = 0;
+
+  // Increase the threshold if an incoming argument is used only as a memcpy
+  // source.
+  if (Function *Callee = CB->getCalledFunction())
+    for (Argument &Arg : Callee->args()) {
+      bool OtherUse = false;
+      if (isUsedAsMemCpySource(&Arg, OtherUse) && !OtherUse)
+        Bonus += 150;
+    }
+
+  LLVM_DEBUG(if (Bonus)
+               dbgs() << "++ SZTTI Adding inlining bonus: " << Bonus << "\n";);
+  return Bonus;
+}
+
 InstructionCost SystemZTTIImpl::getIntImmCost(const APInt &Imm, Type *Ty,
                                               TTI::TargetCostKind CostKind) {
   assert(Ty->isIntegerTy());
@@ -243,7 +279,8 @@ SystemZTTIImpl::getPopcntSupport(unsigned TyWidth) {
 }
 
 void SystemZTTIImpl::getUnrollingPreferences(Loop *L, ScalarEvolution &SE,
-                                             TTI::UnrollingPreferences &UP) {
+                                             TTI::UnrollingPreferences &UP,
+                                             OptimizationRemarkEmitter *ORE) {
   // Find out if L contains a call, what the machine instruction count
   // estimate is, and how many stores there are.
   bool HasCall = false;
@@ -302,8 +339,8 @@ void SystemZTTIImpl::getPeelingPreferences(Loop *L, ScalarEvolution &SE,
   BaseT::getPeelingPreferences(L, SE, PP);
 }
 
-bool SystemZTTIImpl::isLSRCostLess(TargetTransformInfo::LSRCost &C1,
-                                   TargetTransformInfo::LSRCost &C2) {
+bool SystemZTTIImpl::isLSRCostLess(const TargetTransformInfo::LSRCost &C1,
+                                   const TargetTransformInfo::LSRCost &C2) {
   // SystemZ specific: check instruction count (first), and don't care about
   // ImmCost, since offsets are checked explicitly.
   return std::tie(C1.Insns, C1.NumRegs, C1.AddRecCost,
@@ -423,8 +460,8 @@ InstructionCost SystemZTTIImpl::getArithmeticInstrCost(
           (C->getType()->isVectorTy()
                ? dyn_cast_or_null<const ConstantInt>(C->getSplatValue())
                : dyn_cast<const ConstantInt>(C));
-      if (CVal != nullptr &&
-          (CVal->getValue().isPowerOf2() || (-CVal->getValue()).isPowerOf2()))
+      if (CVal && (CVal->getValue().isPowerOf2() ||
+                   CVal->getValue().isNegatedPowerOf2()))
         DivRemConstPow2 = true;
       else
         DivRemConst = true;
@@ -558,7 +595,8 @@ InstructionCost SystemZTTIImpl::getArithmeticInstrCost(
 InstructionCost SystemZTTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
                                                VectorType *Tp,
                                                ArrayRef<int> Mask, int Index,
-                                               VectorType *SubTp) {
+                                               VectorType *SubTp,
+                                               ArrayRef<const Value *> Args) {
   Kind = improveShuffleKindFromMask(Kind, Mask);
   if (ST->hasVector()) {
     unsigned NumVectors = getNumVectorRegs(Tp);

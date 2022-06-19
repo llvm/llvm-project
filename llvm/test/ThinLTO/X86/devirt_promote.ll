@@ -9,7 +9,7 @@
 ; RUN: opt -thinlto-bc -o %t3.o %s
 ; RUN: opt -thinlto-bc -o %t4.o %p/Inputs/devirt_promote.ll
 
-; RUN: llvm-lto2 run %t3.o %t4.o -save-temps -use-new-pm -pass-remarks=. \
+; RUN: llvm-lto2 run %t3.o %t4.o -save-temps -pass-remarks=. \
 ; RUN:   -whole-program-visibility \
 ; RUN:   -wholeprogramdevirt-print-index-based \
 ; RUN:   -o %t5 \
@@ -58,7 +58,7 @@ entry:
   %fptr1 = load i32 (%struct.A*, i32)*, i32 (%struct.A*, i32)** %2, align 8
 
   ; Check that the call was devirtualized.
-  ; CHECK-IR1: %call = tail call i32 bitcast (void ()* @_ZN1A1nEi
+  ; CHECK-IR1: %call = tail call i32 @_ZN1A1nEi
   %call = tail call i32 %fptr1(%struct.A* nonnull %obj, i32 %a)
 
   ret i32 %call

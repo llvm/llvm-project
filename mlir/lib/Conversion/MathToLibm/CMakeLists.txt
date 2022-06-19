@@ -11,6 +11,11 @@ add_mlir_conversion_library(MLIRMathToLibm
   Core
 
   LINK_LIBS PUBLIC
-  MLIRMath
-  MLIRStandardOpsTransforms
+  MLIRArithmeticDialect
+  MLIRDialectUtils
+  MLIRFuncDialect
+  MLIRMathDialect
+  MLIRTransformUtils
+  MLIRVectorDialect
+  MLIRVectorUtils
   )

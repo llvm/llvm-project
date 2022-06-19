@@ -1,4 +1,5 @@
 RUN: dsymutil -oso-prepend-path %p/.. %p/../Inputs/swift-ast.macho.x86_64 -o %T/swift-ast.dSYM -verbose -no-swiftmodule-timestamp | FileCheck %s --check-prefix=DSYMUTIL
+RUN: dsymutil -oso-prepend-path %p/.. %p/../Inputs/swift-ast.macho.x86_64 -o %T/swift-ast.dSYM -verbose | FileCheck %s --check-prefix=DSYMUTIL
 RUN: llvm-readobj --sections --section-data %T/swift-ast.dSYM/Contents/Resources/DWARF/swift-ast.macho.x86_64 | FileCheck %s --check-prefix=READOBJ
 RUN: llvm-dwarfdump --show-section-sizes %T/swift-ast.dSYM/Contents/Resources/DWARF/swift-ast.macho.x86_64 | FileCheck %s --check-prefix=DWARFDUMP
 
@@ -11,6 +12,7 @@ Compiled with:
 
 DSYMUTIL: filename:{{.*}}swift-ast.swiftmodule
 DSYMUTIL-NOT: The file was not recognized as a valid object file
+DSYMUTIL-NOT: timestamp mismatch
 DSYMUTIL: DEBUG MAP OBJECT:{{.*}}swift-ast.swiftmodule
 
 READOBJ: Name:{{.*}}__swift_ast
@@ -18,9 +20,6 @@ READOBJ: |SWIFTMODULE DATA|
 READOBJ-NEXT: |.|
 
 DWARFDUMP: __swift_ast
-
-RUN: dsymutil -oso-prepend-path %p/.. %p/../Inputs/swift-ast.macho.x86_64 -no-output -verbose 2>&1 | FileCheck %s --check-prefix=TIMESTAMP
-TIMESTAMP: warning: {{.*}}/swift-ast.swiftmodule: timestamp mismatch between swift interface file ({{.*}}) and debug map ({{.*}})
 
 RUN: dsymutil -s %T/swift-ast.dSYM/Contents/Resources/DWARF/swift-ast.macho.x86_64 | FileCheck %s --check-prefix=NAST
 NAST-NOT: N_AST

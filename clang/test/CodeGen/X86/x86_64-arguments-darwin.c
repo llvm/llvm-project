@@ -11,7 +11,7 @@ typedef struct _str {
 
 void func(str s);
 str ss;
-void f9122143()
+void f9122143(void)
 {
   func(ss);
 }

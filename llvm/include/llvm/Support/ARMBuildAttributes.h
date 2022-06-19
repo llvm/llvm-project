@@ -70,9 +70,13 @@ enum AttrType : unsigned {
   DIV_use = 44,
   DSP_extension = 46,
   MVE_arch = 48,
+  PAC_extension = 50,
+  BTI_extension = 52,
   also_compatible_with = 65,
   conformance = 67,
   Virtualization_use = 68,
+  BTI_use = 74,
+  PACRET_use = 76,
 
   /// Legacy Tags
   Section = 2,               // deprecated (ABI r2.09)
@@ -86,25 +90,26 @@ enum AttrType : unsigned {
 
 // Legal Values for CPU_arch, (=6), uleb128
 enum CPUArch {
-  Pre_v4   = 0,
-  v4       = 1,   // e.g. SA110
-  v4T      = 2,   // e.g. ARM7TDMI
-  v5T      = 3,   // e.g. ARM9TDMI
-  v5TE     = 4,   // e.g. ARM946E_S
-  v5TEJ    = 5,   // e.g. ARM926EJ_S
-  v6       = 6,   // e.g. ARM1136J_S
-  v6KZ     = 7,   // e.g. ARM1176JZ_S
-  v6T2     = 8,   // e.g. ARM1156T2_S
-  v6K      = 9,   // e.g. ARM1176JZ_S
-  v7       = 10,  // e.g. Cortex A8, Cortex M3
-  v6_M     = 11,  // e.g. Cortex M1
-  v6S_M    = 12,  // v6_M with the System extensions
-  v7E_M    = 13,  // v7_M with DSP extensions
-  v8_A     = 14,  // v8_A AArch32
-  v8_R     = 15,  // e.g. Cortex R52
-  v8_M_Base= 16,  // v8_M_Base AArch32
-  v8_M_Main= 17,  // v8_M_Main AArch32
-  v8_1_M_Main=21, // v8_1_M_Main AArch32
+  Pre_v4 = 0,
+  v4 = 1,           // e.g. SA110
+  v4T = 2,          // e.g. ARM7TDMI
+  v5T = 3,          // e.g. ARM9TDMI
+  v5TE = 4,         // e.g. ARM946E_S
+  v5TEJ = 5,        // e.g. ARM926EJ_S
+  v6 = 6,           // e.g. ARM1136J_S
+  v6KZ = 7,         // e.g. ARM1176JZ_S
+  v6T2 = 8,         // e.g. ARM1156T2_S
+  v6K = 9,          // e.g. ARM1176JZ_S
+  v7 = 10,          // e.g. Cortex A8, Cortex M3
+  v6_M = 11,        // e.g. Cortex M1
+  v6S_M = 12,       // v6_M with the System extensions
+  v7E_M = 13,       // v7_M with DSP extensions
+  v8_A = 14,        // v8_A AArch32
+  v8_R = 15,        // e.g. Cortex R52
+  v8_M_Base = 16,   // v8_M_Base AArch32
+  v8_M_Main = 17,   // v8_M_Main AArch32
+  v8_1_M_Main = 21, // v8_1_M_Main AArch32
+  v9_A = 22,        // v9_A AArch32
 };
 
 enum CPUArchProfile {               // (=7), uleb128
@@ -237,7 +242,25 @@ enum {
   // Tag_Virtualization_use, (=68), uleb128
   AllowTZ = 1,
   AllowVirtualization = 2,
-  AllowTZVirtualization = 3
+  AllowTZVirtualization = 3,
+
+  // Tag_PAC_extension, (=50), uleb128
+  DisallowPAC = 0,
+  AllowPACInNOPSpace = 1,
+  AllowPAC = 2,
+
+  // Tag_BTI_extension, (=52), uleb128
+  DisallowBTI = 0,
+  AllowBTIInNOPSpace = 1,
+  AllowBTI = 2,
+
+  // Tag_BTI_use, (=74), uleb128
+  BTINotUsed = 0,
+  BTIUsed = 1,
+
+  // Tag_PACRET_use, (=76), uleb128
+  PACRETNotUsed = 0,
+  PACRETUsed = 1
 };
 
 } // namespace ARMBuildAttrs

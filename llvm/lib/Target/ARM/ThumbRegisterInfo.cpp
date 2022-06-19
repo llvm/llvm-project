@@ -37,7 +37,7 @@ extern cl::opt<bool> ReuseFrameIndexVals;
 
 using namespace llvm;
 
-ThumbRegisterInfo::ThumbRegisterInfo() : ARMBaseRegisterInfo() {}
+ThumbRegisterInfo::ThumbRegisterInfo() = default;
 
 const TargetRegisterClass *
 ThumbRegisterInfo::getLargestLegalSuperClass(const TargetRegisterClass *RC,
@@ -338,7 +338,7 @@ void llvm::emitThumbRegPlusImmediate(MachineBasicBlock &MBB,
 static void removeOperands(MachineInstr &MI, unsigned i) {
   unsigned Op = i;
   for (unsigned e = MI.getNumOperands(); i != e; ++i)
-    MI.RemoveOperand(Op);
+    MI.removeOperand(Op);
 }
 
 /// convertToNonSPOpcode - Change the opcode to the non-SP version, because

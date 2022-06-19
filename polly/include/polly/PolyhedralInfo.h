@@ -31,7 +31,7 @@ class Scop;
 class ScopInfo;
 class DependenceInfoWrapperPass;
 
-class PolyhedralInfo : public llvm::FunctionPass {
+class PolyhedralInfo final : public llvm::FunctionPass {
 public:
   static char ID; // Pass identification, replacement for typeid
 
@@ -91,11 +91,14 @@ private:
   ScopInfo *SI;
   DependenceInfoWrapperPass *DI;
 };
+
+llvm::Pass *createPolyhedralInfoPrinterLegacyPass(llvm::raw_ostream &OS);
 } // end namespace polly
 
 namespace llvm {
 class PassRegistry;
 void initializePolyhedralInfoPass(llvm::PassRegistry &);
+void initializePolyhedralInfoPrinterLegacyPassPass(llvm::PassRegistry &);
 } // namespace llvm
 
 #endif

@@ -1,8 +1,8 @@
 // Cross comdat example
 // Both the parent and child VTablea are in their own comdat sections.
 
-// RUN: %clang_cc1 %s -triple=aarch64 -S -o - -emit-llvm -fexperimental-relative-c++-abi-vtables | FileCheck %s
-// RUN: %clang_cc1 %s -triple=x86_64 -S -o - -emit-llvm -fexperimental-relative-c++-abi-vtables | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers %s -triple=aarch64 -S -o - -emit-llvm -fexperimental-relative-c++-abi-vtables | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers %s -triple=x86_64 -S -o - -emit-llvm -fexperimental-relative-c++-abi-vtables | FileCheck %s
 
 // Comdats are emitted for both A and B in this module and for their respective implementations of foo().
 // CHECK: $_ZN1A3fooEv = comdat any
@@ -23,7 +23,7 @@
 // CHECK: @_ZTV1A = linkonce_odr unnamed_addr alias { [3 x i32] }, { [3 x i32] }* @_ZTV1A.local
 // CHECK: @_ZTV1B = linkonce_odr unnamed_addr alias { [3 x i32] }, { [3 x i32] }* @_ZTV1B.local
 
-// CHECK: declare void @_Z5A_fooP1A(%class.A*)
+// CHECK: declare void @_Z5A_fooP1A(%class.A* noundef)
 
 // The stubs and implementations for foo() are in their own comdat sections.
 // CHECK:      define linkonce_odr void @_ZN1A3fooEv(%class.A* {{.*}}%this) unnamed_addr #{{[0-9]+}} comdat

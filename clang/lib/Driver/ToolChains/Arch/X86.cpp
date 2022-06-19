@@ -11,6 +11,8 @@
 #include "clang/Driver/Driver.h"
 #include "clang/Driver/DriverDiagnostic.h"
 #include "clang/Driver/Options.h"
+#include "llvm/ADT/StringExtras.h"
+#include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/Option/ArgList.h"
 #include "llvm/Support/Host.h"
@@ -20,7 +22,7 @@ using namespace clang::driver::tools;
 using namespace clang;
 using namespace llvm::opt;
 
-std::string x86::getX86TargetCPU(const ArgList &Args,
+std::string x86::getX86TargetCPU(const Driver &D, const ArgList &Args,
                                  const llvm::Triple &Triple) {
   if (const Arg *A = Args.getLastArg(clang::driver::options::OPT_march_EQ)) {
     StringRef CPU = A->getValue();
@@ -37,29 +39,34 @@ std::string x86::getX86TargetCPU(const ArgList &Args,
       return std::string(CPU);
   }
 
-  if (const Arg *A = Args.getLastArgNoClaim(options::OPT__SLASH_arch)) {
+  if (const Arg *A = Args.getLastArg(options::OPT__SLASH_arch)) {
     // Mapping built by looking at lib/Basic's X86TargetInfo::initFeatureMap().
-    StringRef Arch = A->getValue();
-    StringRef CPU;
-    if (Triple.getArch() == llvm::Triple::x86) {  // 32-bit-only /arch: flags.
-      CPU = llvm::StringSwitch<StringRef>(Arch)
-                .Case("IA32", "i386")
-                .Case("SSE", "pentium3")
-                .Case("SSE2", "pentium4")
-                .Default("");
+    // The keys are case-sensitive; this matches link.exe.
+    // 32-bit and 64-bit /arch: flags.
+    llvm::StringMap<StringRef> ArchMap({
+        {"AVX", "sandybridge"},
+        {"AVX2", "haswell"},
+        {"AVX512F", "knl"},
+        {"AVX512", "skylake-avx512"},
+    });
+    if (Triple.getArch() == llvm::Triple::x86) {
+      // 32-bit-only /arch: flags.
+      ArchMap.insert({
+          {"IA32", "i386"},
+          {"SSE", "pentium3"},
+          {"SSE2", "pentium4"},
+      });
     }
-    if (CPU.empty()) {  // 32-bit and 64-bit /arch: flags.
-      CPU = llvm::StringSwitch<StringRef>(Arch)
-                .Case("AVX", "sandybridge")
-                .Case("AVX2", "haswell")
-                .Case("AVX512F", "knl")
-                .Case("AVX512", "skylake-avx512")
-                .Default("");
+    StringRef CPU = ArchMap.lookup(A->getValue());
+    if (CPU.empty()) {
+      std::vector<StringRef> ValidArchs{ArchMap.keys().begin(),
+                                        ArchMap.keys().end()};
+      sort(ValidArchs);
+      D.Diag(diag::warn_drv_invalid_arch_name_with_suggestion)
+          << A->getValue() << (Triple.getArch() == llvm::Triple::x86)
+          << join(ValidArchs, ", ");
     }
-    if (!CPU.empty()) {
-      A->claim();
-      return std::string(CPU);
-    }
+    return std::string(CPU);
   }
 
   // Select the default CPU if none was given (or detection failed).
@@ -77,13 +84,19 @@ std::string x86::getX86TargetCPU(const ArgList &Args,
     // Simulators can still run on 10.11 though, like Xcode.
     if (Triple.isMacOSX() && !Triple.isOSVersionLT(10, 12))
       return "penryn";
+
+    if (Triple.isDriverKit())
+      return "nehalem";
+
     // The oldest x86_64 Macs have core2/Merom; the oldest x86 Macs have Yonah.
     return Is64Bit ? "core2" : "yonah";
   }
 
-  // Set up default CPU name for PS4 compilers.
-  if (Triple.isPS4CPU())
+  // Set up default CPU name for PS4/PS5 compilers.
+  if (Triple.isPS4())
     return "btver2";
+  if (Triple.isPS5())
+    return "znver2";
 
   // On Android use targets compatible with gcc
   if (Triple.isAndroid())
@@ -232,5 +245,21 @@ void x86::getX86TargetFeatures(const Driver &D, const llvm::Triple &Triple,
     if (IsNegative)
       Name = Name.substr(3);
     Features.push_back(Args.MakeArgString((IsNegative ? "-" : "+") + Name));
+  }
+
+  // Enable/disable straight line speculation hardening.
+  if (Arg *A = Args.getLastArg(options::OPT_mharden_sls_EQ)) {
+    StringRef Scope = A->getValue();
+    if (Scope == "all") {
+      Features.push_back("+harden-sls-ijmp");
+      Features.push_back("+harden-sls-ret");
+    } else if (Scope == "return") {
+      Features.push_back("+harden-sls-ret");
+    } else if (Scope == "indirect-jmp") {
+      Features.push_back("+harden-sls-ijmp");
+    } else if (Scope != "none") {
+      D.Diag(diag::err_drv_unsupported_option_argument)
+          << A->getOption().getName() << Scope;
+    }
   }
 }

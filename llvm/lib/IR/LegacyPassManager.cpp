@@ -12,28 +12,23 @@
 
 #include "llvm/IR/LegacyPassManager.h"
 #include "llvm/ADT/MapVector.h"
-#include "llvm/ADT/Statistic.h"
 #include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/IRPrintingPasses.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/LegacyPassManagers.h"
-#include "llvm/IR/LegacyPassNameParser.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/PassTimingInfo.h"
 #include "llvm/IR/PrintPasses.h"
-#include "llvm/IR/StructuralHash.h"
 #include "llvm/Support/Chrono.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/ErrorHandling.h"
-#include "llvm/Support/ManagedStatic.h"
-#include "llvm/Support/Mutex.h"
 #include "llvm/Support/TimeProfiler.h"
 #include "llvm/Support/Timer.h"
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
-#include <unordered_set>
+
 using namespace llvm;
 
 // See PassManagers.h for Pass Manager infrastructure overview.
@@ -256,9 +251,9 @@ private:
   bool wasRun;
 public:
   static char ID;
-  explicit FunctionPassManagerImpl() :
-    Pass(PT_PassManager, ID), PMDataManager(),
-    PMTopLevelManager(new FPPassManager()), wasRun(false) {}
+  explicit FunctionPassManagerImpl()
+      : Pass(PT_PassManager, ID), PMTopLevelManager(new FPPassManager()),
+        wasRun(false) {}
 
   /// \copydoc FunctionPassManager::add()
   void add(Pass *P) {
@@ -387,8 +382,7 @@ namespace {
 class MPPassManager : public Pass, public PMDataManager {
 public:
   static char ID;
-  explicit MPPassManager() :
-    Pass(PT_PassManager, ID), PMDataManager() { }
+  explicit MPPassManager() : Pass(PT_PassManager, ID) {}
 
   // Delete on the fly managers.
   ~MPPassManager() override {
@@ -478,9 +472,8 @@ class PassManagerImpl : public Pass,
 
 public:
   static char ID;
-  explicit PassManagerImpl() :
-    Pass(PT_PassManager, ID), PMDataManager(),
-                              PMTopLevelManager(new MPPassManager()) {}
+  explicit PassManagerImpl()
+      : Pass(PT_PassManager, ID), PMTopLevelManager(new MPPassManager()) {}
 
   /// \copydoc PassManager::add()
   void add(Pass *P) {
@@ -886,9 +879,8 @@ void PMDataManager::recordAvailableAnalysis(Pass *P) {
   // implements as well.
   const PassInfo *PInf = TPM->findAnalysisPassInfo(PI);
   if (!PInf) return;
-  const std::vector<const PassInfo*> &II = PInf->getInterfacesImplemented();
-  for (unsigned i = 0, e = II.size(); i != e; ++i)
-    AvailableAnalysis[II[i]->getTypeInfo()] = P;
+  for (const PassInfo *PI : PInf->getInterfacesImplemented())
+    AvailableAnalysis[PI->getTypeInfo()] = P;
 }
 
 // Return true if P preserves high level analysis used by other
@@ -1013,10 +1005,9 @@ void PMDataManager::freePass(Pass *P, StringRef Msg,
 
     // Remove all interfaces this pass implements, for which it is also
     // listed as the available implementation.
-    const std::vector<const PassInfo*> &II = PInf->getInterfacesImplemented();
-    for (unsigned i = 0, e = II.size(); i != e; ++i) {
-      DenseMap<AnalysisID, Pass*>::iterator Pos =
-        AvailableAnalysis.find(II[i]->getTypeInfo());
+    for (const PassInfo *PI : PInf->getInterfacesImplemented()) {
+      DenseMap<AnalysisID, Pass *>::iterator Pos =
+          AvailableAnalysis.find(PI->getTypeInfo());
       if (Pos != AvailableAnalysis.end() && Pos->second == P)
         AvailableAnalysis.erase(Pos);
     }
@@ -1351,7 +1342,7 @@ void FunctionPassManager::add(Pass *P) {
 ///
 bool FunctionPassManager::run(Function &F) {
   handleAllErrors(F.materialize(), [&](ErrorInfoBase &EIB) {
-    report_fatal_error("Error reading bitcode file: " + EIB.message());
+    report_fatal_error(Twine("Error reading bitcode file: ") + EIB.message());
   });
   return FPM->run(F);
 }
@@ -1434,12 +1425,12 @@ bool FPPassManager::runOnFunction(Function &F) {
       PassManagerPrettyStackEntry X(FP, F);
       TimeRegion PassTimer(getPassTimer(FP));
 #ifdef EXPENSIVE_CHECKS
-      uint64_t RefHash = StructuralHash(F);
+      uint64_t RefHash = FP->structuralHash(F);
 #endif
       LocalChanged |= FP->runOnFunction(F);
 
 #if defined(EXPENSIVE_CHECKS) && !defined(NDEBUG)
-      if (!LocalChanged && (RefHash != StructuralHash(F))) {
+      if (!LocalChanged && (RefHash != FP->structuralHash(F))) {
         llvm::errs() << "Pass modifies its input and doesn't report it: "
                      << FP->getPassName() << "\n";
         llvm_unreachable("Pass modifies its input and doesn't report it");
@@ -1548,13 +1539,13 @@ MPPassManager::runOnModule(Module &M) {
       TimeRegion PassTimer(getPassTimer(MP));
 
 #ifdef EXPENSIVE_CHECKS
-      uint64_t RefHash = StructuralHash(M);
+      uint64_t RefHash = MP->structuralHash(M);
 #endif
 
       LocalChanged |= MP->runOnModule(M);
 
 #ifdef EXPENSIVE_CHECKS
-      assert((LocalChanged || (RefHash == StructuralHash(M))) &&
+      assert((LocalChanged || (RefHash == MP->structuralHash(M))) &&
              "Pass modifies its input and doesn't report it.");
 #endif
 
@@ -1772,4 +1763,4 @@ void FunctionPass::assignPassManager(PMStack &PMS,
   PM->add(this);
 }
 
-legacy::PassManagerBase::~PassManagerBase() {}
+legacy::PassManagerBase::~PassManagerBase() = default;

@@ -1,11 +1,11 @@
-; RUN: llc -asm-show-inst -march=mipsel -relocation-model=pic < %s | FileCheck %s -check-prefix=PIC
-; RUN: llc -asm-show-inst -march=mipsel -relocation-model=static < %s | FileCheck %s -check-prefix=STATIC
-; RUN: llc -asm-show-inst -march=mipsel -mattr=mips16 -relocation-model=pic < %s | FileCheck %s -check-prefix=PIC16
-; RUN: llc -asm-show-inst -march=mipsel -mattr=mips16 -relocation-model=static < %s | FileCheck %s -check-prefix=STATIC16
-; RUN: llc -asm-show-inst -march=mips -mattr=+micromips -relocation-model=static < %s | FileCheck %s -check-prefix=STATICMM
-; RUN: llc -asm-show-inst -march=mips -mattr=+micromips -relocation-model=pic < %s | FileCheck %s -check-prefix=PICMM
-; RUN: llc -asm-show-inst -march=mips -mcpu=mips32r6 -mattr=+micromips -relocation-model=static < %s | FileCheck %s -check-prefix=STATICMMR6
-; RUN: llc -asm-show-inst -march=mips -mcpu=mips32r6 -mattr=+micromips -relocation-model=pic < %s | FileCheck %s -check-prefix=PICMMR6
+; RUN: llc -asm-show-inst -mtriple=mipsel -relocation-model=pic < %s | FileCheck %s -check-prefix=PIC
+; RUN: llc -asm-show-inst -mtriple=mipsel -relocation-model=static < %s | FileCheck %s -check-prefix=STATIC
+; RUN: llc -asm-show-inst -mtriple=mipsel -mattr=mips16 -relocation-model=pic < %s | FileCheck %s -check-prefix=PIC16
+; RUN: llc -asm-show-inst -mtriple=mipsel -mattr=mips16 -relocation-model=static < %s | FileCheck %s -check-prefix=STATIC16
+; RUN: llc -asm-show-inst -mtriple=mips -mattr=+micromips -relocation-model=static < %s | FileCheck %s -check-prefix=STATICMM
+; RUN: llc -asm-show-inst -mtriple=mips -mattr=+micromips -relocation-model=pic < %s | FileCheck %s -check-prefix=PICMM
+; RUN: llc -asm-show-inst -mtriple=mips -mcpu=mips32r6 -mattr=+micromips -relocation-model=static < %s | FileCheck %s -check-prefix=STATICMMR6
+; RUN: llc -asm-show-inst -mtriple=mips -mcpu=mips32r6 -mattr=+micromips -relocation-model=pic < %s | FileCheck %s -check-prefix=PICMMR6
 
 
 

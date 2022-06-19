@@ -1,7 +1,7 @@
 ; RUN: opt %loadPolly -polly-stmt-granularity=bb -polly-flatten-schedule \
 ; RUN: -polly-delicm-overapproximate-writes=true \
-; RUN: -polly-delicm-compute-known=true -polly-delicm \
-; RUN: -analyze < %s | FileCheck %s
+; RUN: -polly-delicm-compute-known=true -polly-print-delicm \
+; RUN: -disable-output < %s | FileCheck %s
 ;
 ; Make sure delicm works even in case two stores that store the same value.
 ;

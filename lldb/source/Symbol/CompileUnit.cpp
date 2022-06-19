@@ -52,7 +52,7 @@ void CompileUnit::DumpSymbolContext(Stream *s) {
 
 void CompileUnit::GetDescription(Stream *s,
                                  lldb::DescriptionLevel level) const {
-  const char *language = Language::GetNameForLanguageType(m_language);
+  const char *language = GetCachedLanguage();
   *s << "id = " << (const UserID &)*this << ", file = \""
      << this->GetPrimaryFile() << "\", language = \"" << language << '"';
 }
@@ -97,12 +97,18 @@ lldb::FunctionSP CompileUnit::FindFunction(
   return {};
 }
 
+const char *CompileUnit::GetCachedLanguage() const {
+  if (m_flags.IsClear(flagsParsedLanguage))
+    return "<not loaded>";
+  return Language::GetNameForLanguageType(m_language);
+}
+
 // Dump the current contents of this object. No functions that cause on demand
 // parsing of functions, globals, statics are called, so this is a good
 // function to call to get an idea of the current contents of the CompileUnit
 // object.
 void CompileUnit::Dump(Stream *s, bool show_context) const {
-  const char *language = Language::GetNameForLanguageType(m_language);
+  const char *language = GetCachedLanguage();
 
   s->Printf("%p: ", static_cast<const void *>(this));
   s->Indent();
@@ -173,6 +179,10 @@ void CompileUnit::SetLineTable(LineTable *line_table) {
 
 void CompileUnit::SetSupportFiles(const FileSpecList &support_files) {
   m_support_files = support_files;
+}
+
+void CompileUnit::SetSupportFiles(FileSpecList &&support_files) {
+  m_support_files = std::move(support_files);
 }
 
 DebugMacros *CompileUnit::GetDebugMacros() {
@@ -277,6 +287,9 @@ void CompileUnit::ResolveSymbolContext(
   if (num_file_indexes == 0)
     return;
 
+  // Found a matching source file in this compile unit load its debug info.
+  GetModule()->GetSymbolFile()->SetLoadDebugInfoEnabled();
+
   LineTable *line_table = sc.comp_unit->GetLineTable();
 
   if (line_table == nullptr) {
@@ -302,15 +315,20 @@ void CompileUnit::ResolveSymbolContext(
     line_idx = line_table->FindLineEntryIndexByFileIndex(
         0, file_indexes, src_location_spec, &line_entry);
   }
-  
+
   // If "exact == true", then "found_line" will be the same as "line". If
   // "exact == false", the "found_line" will be the closest line entry
   // with a line number greater than "line" and we will use this for our
   // subsequent line exact matches below.
   const bool inlines = false;
   const bool exact = true;
-  SourceLocationSpec found_entry(line_entry.file, line_entry.line,
-                                 line_entry.column, inlines, exact);
+  const llvm::Optional<uint16_t> column =
+      src_location_spec.GetColumn().hasValue()
+          ? llvm::Optional<uint16_t>(line_entry.column)
+          : llvm::None;
+
+  SourceLocationSpec found_entry(line_entry.file, line_entry.line, column,
+                                 inlines, exact);
 
   while (line_idx != UINT32_MAX) {
     // If they only asked for the line entry, then we're done, we can

@@ -1,9 +1,8 @@
 //===--- ASTConcept.h - Concepts Related AST Data Structures ----*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 ///
@@ -23,7 +22,6 @@
 
 namespace clang {
 class ConceptDecl;
-class ConceptSpecializationExpr;
 
 /// The result of a constraint satisfaction check, containing the necessary
 /// information to diagnose an unsatisfied constraint.
@@ -124,17 +122,16 @@ protected:
   const ASTTemplateArgumentListInfo *ArgsAsWritten;
 
 public:
-
   ConceptReference(NestedNameSpecifierLoc NNS, SourceLocation TemplateKWLoc,
                    DeclarationNameInfo ConceptNameInfo, NamedDecl *FoundDecl,
                    ConceptDecl *NamedConcept,
-                   const ASTTemplateArgumentListInfo *ArgsAsWritten) :
-      NestedNameSpec(NNS), TemplateKWLoc(TemplateKWLoc),
-      ConceptName(ConceptNameInfo), FoundDecl(FoundDecl),
-      NamedConcept(NamedConcept), ArgsAsWritten(ArgsAsWritten) {}
+                   const ASTTemplateArgumentListInfo *ArgsAsWritten)
+      : NestedNameSpec(NNS), TemplateKWLoc(TemplateKWLoc),
+        ConceptName(ConceptNameInfo), FoundDecl(FoundDecl),
+        NamedConcept(NamedConcept), ArgsAsWritten(ArgsAsWritten) {}
 
-  ConceptReference() : NestedNameSpec(), TemplateKWLoc(), ConceptName(),
-      FoundDecl(nullptr), NamedConcept(nullptr), ArgsAsWritten(nullptr) {}
+  ConceptReference()
+      : FoundDecl(nullptr), NamedConcept(nullptr), ArgsAsWritten(nullptr) {}
 
   const NestedNameSpecifierLoc &getNestedNameSpecifierLoc() const {
     return NestedNameSpec;

@@ -51,23 +51,23 @@ body:             |
     ;CHECK-LABEL: name:           CheckAddrModeT2_i8
     ;CHECK: $r0 = tMOVr $r1, 14 /* CC::al */, $noreg
     ;CHECK-NEXT: tBL 14 /* CC::al */, $noreg, @OUTLINED_FUNCTION_[[I8:[0-9]+]]
-    ;CHECK-NEXT: t2STRHi8 $r0, $sp, 248, 14 /* CC::al */, $noreg
+    ;CHECK-NEXT: t2STRHT $r0, $sp, 248, 14 /* CC::al */, $noreg
     $r0 = tMOVr $r1, 14, $noreg
     tBL 14, $noreg, @foo, implicit-def dead $lr, implicit $sp
-    t2STRHi8 $r0, $sp, 0, 14, $noreg
-    t2STRHi8 $r0, $sp, 4, 14, $noreg
-    t2STRHi8 $r0, $sp, 247, 14, $noreg
-    t2STRHi8 $r0, $sp, 248, 14, $noreg
+    t2STRHT $r0, $sp, 0, 14, $noreg
+    t2STRHT $r0, $sp, 4, 14, $noreg
+    t2STRHT $r0, $sp, 247, 14, $noreg
+    t2STRHT $r0, $sp, 248, 14, $noreg
     tBL 14, $noreg, @foo, implicit-def dead $lr, implicit $sp
-    t2STRHi8 $r0, $sp, 0, 14, $noreg
-    t2STRHi8 $r0, $sp, 4, 14, $noreg
-    t2STRHi8 $r0, $sp, 247, 14, $noreg
-    t2STRHi8 $r0, $sp, 248, 14, $noreg
+    t2STRHT $r0, $sp, 0, 14, $noreg
+    t2STRHT $r0, $sp, 4, 14, $noreg
+    t2STRHT $r0, $sp, 247, 14, $noreg
+    t2STRHT $r0, $sp, 248, 14, $noreg
     tBL 14, $noreg, @foo, implicit-def dead $lr, implicit $sp
-    t2STRHi8 $r0, $sp, 0, 14, $noreg
-    t2STRHi8 $r0, $sp, 4, 14, $noreg
-    t2STRHi8 $r0, $sp, 247, 14, $noreg
-    t2STRHi8 $r0, $sp, 248, 14, $noreg
+    t2STRHT $r0, $sp, 0, 14, $noreg
+    t2STRHT $r0, $sp, 4, 14, $noreg
+    t2STRHT $r0, $sp, 247, 14, $noreg
+    t2STRHT $r0, $sp, 248, 14, $noreg
     BX_RET 14, $noreg
 ...
 ---
@@ -181,51 +181,51 @@ body:             |
     BX_RET 14, $noreg
 
     ;CHECK: name:           OUTLINED_FUNCTION_[[LDREX]]
-    ;CHECK: early-clobber $sp = t2STR_PRE killed $lr, $sp, -8, 14 /* CC::al */, $noreg
+    ;CHECK: early-clobber $sp = frame-setup t2STR_PRE killed $lr, $sp, -8, 14 /* CC::al */, $noreg
     ;CHECK-NEXT: frame-setup CFI_INSTRUCTION def_cfa_offset 8
     ;CHECK-NEXT: frame-setup CFI_INSTRUCTION offset $lr, -8
     ;CHECK-NEXT: tBL 14 /* CC::al */, $noreg, @foo, implicit-def dead $lr, implicit $sp
     ;CHECK-NEXT: $r1 = t2LDREX $sp, 2, 14 /* CC::al */, $noreg
     ;CHECK-NEXT: $r1 = t2LDREX $sp, 10, 14 /* CC::al */, $noreg
     ;CHECK-NEXT: $r1 = t2LDREX $sp, 255, 14 /* CC::al */, $noreg
-    ;CHECK-NEXT: $lr, $sp = t2LDR_POST $sp, 8, 14 /* CC::al */, $noreg
+    ;CHECK-NEXT: $lr, $sp = frame-destroy t2LDR_POST $sp, 8, 14 /* CC::al */, $noreg
 
     ;CHECK: name:           OUTLINED_FUNCTION_[[I8]]
-    ;CHECK: early-clobber $sp = t2STR_PRE killed $lr, $sp, -8, 14 /* CC::al */, $noreg
+    ;CHECK: early-clobber $sp = frame-setup t2STR_PRE killed $lr, $sp, -8, 14 /* CC::al */, $noreg
     ;CHECK-NEXT: frame-setup CFI_INSTRUCTION def_cfa_offset 8
     ;CHECK-NEXT: frame-setup CFI_INSTRUCTION offset $lr, -8
     ;CHECK-NEXT: tBL 14 /* CC::al */, $noreg, @foo, implicit-def dead $lr, implicit $sp
-    ;CHECK-NEXT: t2STRHi8 $r0, $sp, 8, 14 /* CC::al */, $noreg
-    ;CHECK-NEXT: t2STRHi8 $r0, $sp, 12, 14 /* CC::al */, $noreg
-    ;CHECK-NEXT: t2STRHi8 $r0, $sp, 255, 14 /* CC::al */, $noreg
-    ;CHECK-NEXT: $lr, $sp = t2LDR_POST $sp, 8, 14 /* CC::al */, $noreg
+    ;CHECK-NEXT: t2STRHT $r0, $sp, 8, 14 /* CC::al */, $noreg
+    ;CHECK-NEXT: t2STRHT $r0, $sp, 12, 14 /* CC::al */, $noreg
+    ;CHECK-NEXT: t2STRHT $r0, $sp, 255, 14 /* CC::al */, $noreg
+    ;CHECK-NEXT: $lr, $sp = frame-destroy t2LDR_POST $sp, 8, 14 /* CC::al */, $noreg
 
     ;CHECK: name:           OUTLINED_FUNCTION_[[I8S4]]
-    ;CHECK: early-clobber $sp = t2STR_PRE killed $lr, $sp, -8, 14 /* CC::al */, $noreg
+    ;CHECK: early-clobber $sp = frame-setup t2STR_PRE killed $lr, $sp, -8, 14 /* CC::al */, $noreg
     ;CHECK-NEXT: frame-setup CFI_INSTRUCTION def_cfa_offset 8
     ;CHECK-NEXT: frame-setup CFI_INSTRUCTION offset $lr, -8
     ;CHECK-NEXT: tBL 14 /* CC::al */, $noreg, @foo, implicit-def dead $lr, implicit $sp
     ;CHECK-NEXT: t2STRDi8 $r0, $r1, $sp, 8, 14 /* CC::al */, $noreg
     ;CHECK-NEXT: t2STRDi8 $r0, $r1, $sp, 16, 14 /* CC::al */, $noreg
     ;CHECK-NEXT: t2STRDi8 $r0, $r1, $sp, 1020, 14 /* CC::al */, $noreg
-    ;CHECK-NEXT: $lr, $sp = t2LDR_POST $sp, 8, 14 /* CC::al */, $noreg
+    ;CHECK-NEXT: $lr, $sp = frame-destroy t2LDR_POST $sp, 8, 14 /* CC::al */, $noreg
 
     ;CHECK: name:           OUTLINED_FUNCTION_[[I12]]
-    ;CHECK: early-clobber $sp = t2STR_PRE killed $lr, $sp, -8, 14 /* CC::al */, $noreg
+    ;CHECK: early-clobber $sp = frame-setup t2STR_PRE killed $lr, $sp, -8, 14 /* CC::al */, $noreg
     ;CHECK-NEXT: frame-setup CFI_INSTRUCTION def_cfa_offset 8
     ;CHECK-NEXT: frame-setup CFI_INSTRUCTION offset $lr, -8
     ;CHECK-NEXT: tBL 14 /* CC::al */, $noreg, @foo, implicit-def dead $lr, implicit $sp
     ;CHECK-NEXT: $r0 = t2LDRi12 $sp, 8, 14 /* CC::al */, $noreg
     ;CHECK-NEXT: $r0 = t2LDRi12 $sp, 12, 14 /* CC::al */, $noreg
     ;CHECK-NEXT: $r0 = t2LDRi12 $sp, 4094, 14 /* CC::al */, $noreg
-    ;CHECK-NEXT: $lr, $sp = t2LDR_POST $sp, 8, 14 /* CC::al */, $noreg
+    ;CHECK-NEXT: $lr, $sp = frame-destroy t2LDR_POST $sp, 8, 14 /* CC::al */, $noreg
 
     ;CHECK: name:           OUTLINED_FUNCTION_[[T1_S]]
-    ;CHECK: early-clobber $sp = t2STR_PRE killed $lr, $sp, -8, 14 /* CC::al */, $noreg
+    ;CHECK: early-clobber $sp = frame-setup t2STR_PRE killed $lr, $sp, -8, 14 /* CC::al */, $noreg
     ;CHECK-NEXT: frame-setup CFI_INSTRUCTION def_cfa_offset 8
     ;CHECK-NEXT: frame-setup CFI_INSTRUCTION offset $lr, -8
     ;CHECK-NEXT: tBL 14 /* CC::al */, $noreg, @foo, implicit-def dead $lr, implicit $sp
     ;CHECK-NEXT: tSTRspi $r0, $sp, 2, 14 /* CC::al */, $noreg
     ;CHECK-NEXT: tSTRspi $r0, $sp, 6, 14 /* CC::al */, $noreg
     ;CHECK-NEXT: tSTRspi $r0, $sp, 255, 14 /* CC::al */, $noreg
-    ;CHECK-NEXT: $lr, $sp = t2LDR_POST $sp, 8, 14 /* CC::al */, $noreg
+    ;CHECK-NEXT: $lr, $sp = frame-destroy t2LDR_POST $sp, 8, 14 /* CC::al */, $noreg

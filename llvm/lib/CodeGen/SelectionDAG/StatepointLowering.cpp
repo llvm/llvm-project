@@ -17,7 +17,10 @@
 #include "llvm/ADT/None.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SetVector.h"
+#include "llvm/ADT/SmallBitVector.h"
 #include "llvm/ADT/SmallSet.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/CodeGen/FunctionLoweringInfo.h"
 #include "llvm/CodeGen/GCMetadata.h"
@@ -27,6 +30,7 @@
 #include "llvm/CodeGen/MachineMemOperand.h"
 #include "llvm/CodeGen/RuntimeLibcalls.h"
 #include "llvm/CodeGen/SelectionDAG.h"
+#include "llvm/CodeGen/SelectionDAGNodes.h"
 #include "llvm/CodeGen/StackMaps.h"
 #include "llvm/CodeGen/TargetLowering.h"
 #include "llvm/CodeGen/TargetOpcodes.h"
@@ -168,7 +172,7 @@ static Optional<int> findPreviousSpillSlot(const Value *Val,
     const auto &RelocationMap =
         Builder.FuncInfo.StatepointRelocationMaps[Relocate->getStatepoint()];
 
-    auto It = RelocationMap.find(Relocate->getDerivedPtr());
+    auto It = RelocationMap.find(Relocate);
     if (It == RelocationMap.end())
       return None;
 
@@ -880,8 +884,9 @@ SDValue SelectionDAGBuilder::LowerAsSTATEPOINT(
     DAG.getMachineNode(TargetOpcode::STATEPOINT, getCurSDLoc(), NodeTys, Ops);
   DAG.setNodeMemRefs(StatepointMCNode, MemRefs);
 
-  // For values lowered to tied-defs, create the virtual registers.  Note that
-  // for simplicity, we *always* create a vreg even within a single block.
+  // For values lowered to tied-defs, create the virtual registers if used
+  // in other blocks. For local gc.relocate record appropriate statepoint
+  // result in StatepointLoweringState.
   DenseMap<SDValue, Register> VirtRegs;
   for (const auto *Relocate : SI.GCRelocates) {
     Value *Derived = Relocate->getDerivedPtr();
@@ -889,11 +894,22 @@ SDValue SelectionDAGBuilder::LowerAsSTATEPOINT(
     if (!LowerAsVReg.count(SD))
       continue;
 
+    SDValue Relocated = SDValue(StatepointMCNode, LowerAsVReg[SD]);
+
+    // Handle local relocate. Note that different relocates might
+    // map to the same SDValue.
+    if (SI.StatepointInstr->getParent() == Relocate->getParent()) {
+      SDValue Res = StatepointLowering.getLocation(SD);
+      if (Res)
+        assert(Res == Relocated);
+      else
+        StatepointLowering.setLocation(SD, Relocated);
+      continue;
+    }
+
     // Handle multiple gc.relocates of the same input efficiently.
     if (VirtRegs.count(SD))
       continue;
-
-    SDValue Relocated = SDValue(StatepointMCNode, LowerAsVReg[SD]);
 
     auto *RetTy = Relocate->getType();
     Register Reg = FuncInfo.CreateRegs(RetTy);
@@ -915,8 +931,13 @@ SDValue SelectionDAGBuilder::LowerAsSTATEPOINT(
     SDValue SDV = getValue(V);
     SDValue Loc = StatepointLowering.getLocation(SDV);
 
+    bool IsLocal = (Relocate->getParent() == StatepointInstr->getParent());
+
     RecordType Record;
-    if (LowerAsVReg.count(SDV)) {
+    if (IsLocal && LowerAsVReg.count(SDV)) {
+      // Result is already stored in StatepointLowering
+      Record.type = RecordType::SDValueNode;
+    } else if (LowerAsVReg.count(SDV)) {
       Record.type = RecordType::VReg;
       assert(VirtRegs.count(SDV));
       Record.payload.Reg = VirtRegs[SDV];
@@ -932,7 +953,7 @@ SDValue SelectionDAGBuilder::LowerAsSTATEPOINT(
       if (Relocate->getParent() != StatepointInstr->getParent())
         ExportFromCurrentBlock(V);
     }
-    RelocationMap[V] = Record;
+    RelocationMap[Relocate] = Record;
   }
 
   
@@ -988,6 +1009,24 @@ SDValue SelectionDAGBuilder::LowerAsSTATEPOINT(
   // to actually be possible today.
 
   return ReturnVal;
+}
+
+/// Return two gc.results if present.  First result is a block local
+/// gc.result, second result is a non-block local gc.result.  Corresponding
+/// entry will be nullptr if not present.
+static std::pair<const GCResultInst*, const GCResultInst*>
+getGCResultLocality(const GCStatepointInst &S) {
+  std::pair<const GCResultInst *, const GCResultInst*> Res(nullptr, nullptr);
+  for (auto *U : S.users()) {
+    auto *GRI = dyn_cast<GCResultInst>(U);
+    if (!GRI)
+      continue;
+    if (GRI->getParent() == S.getParent())
+      Res.first = GRI;
+    else
+      Res.second = GRI;
+  }
+  return Res;
 }
 
 void
@@ -1075,12 +1114,11 @@ SelectionDAGBuilder::LowerStatepoint(const GCStatepointInst &I,
   SDValue ReturnValue = LowerAsSTATEPOINT(SI);
 
   // Export the result value if needed
-  const std::pair<bool, bool> GCResultLocality = I.getGCResultLocality();
-  Type *RetTy = I.getActualReturnType();
+  const auto GCResultLocality = getGCResultLocality(I);
 
-  if (RetTy->isVoidTy() ||
-      (!GCResultLocality.first && !GCResultLocality.second)) {
-    // The return value is not needed, just generate a poison value. 
+  if (!GCResultLocality.first && !GCResultLocality.second) {
+    // The return value is not needed, just generate a poison value.
+    // Note: This covers the void return case.
     setValue(&I, DAG.getIntPtrConstant(-1, getCurSDLoc()));
     return;
   }
@@ -1102,6 +1140,7 @@ SelectionDAGBuilder::LowerStatepoint(const GCStatepointInst &I,
   // manually.
   // TODO: To eliminate this problem we can remove gc.result intrinsics
   //       completely and make statepoint call to return a tuple.
+  Type *RetTy = GCResultLocality.second->getType();
   unsigned Reg = FuncInfo.CreateRegs(RetTy);
   RegsForValue RFV(*DAG.getContext(), DAG.getTargetLoweringInfo(),
                    DAG.getDataLayout(), Reg, RetTy,
@@ -1119,7 +1158,7 @@ void SelectionDAGBuilder::LowerCallSiteWithDeoptBundleImpl(
   StatepointLoweringInfo SI(DAG);
   unsigned ArgBeginIndex = Call->arg_begin() - Call->op_begin();
   populateCallLoweringInfo(
-      SI.CLI, Call, ArgBeginIndex, Call->getNumArgOperands(), Callee,
+      SI.CLI, Call, ArgBeginIndex, Call->arg_size(), Callee,
       ForceVoidReturnTy ? Type::getVoidTy(*DAG.getContext()) : Call->getType(),
       false);
   if (!VarArgDisallowed)
@@ -1130,8 +1169,8 @@ void SelectionDAGBuilder::LowerCallSiteWithDeoptBundleImpl(
   unsigned DefaultID = StatepointDirectives::DeoptBundleStatepointID;
 
   auto SD = parseStatepointDirectivesFromAttrs(Call->getAttributes());
-  SI.ID = SD.StatepointID.getValueOr(DefaultID);
-  SI.NumPatchBytes = SD.NumPatchBytes.getValueOr(0);
+  SI.ID = SD.StatepointID.value_or(DefaultID);
+  SI.NumPatchBytes = SD.NumPatchBytes.value_or(0);
 
   SI.DeoptState =
       ArrayRef<const Use>(DeoptBundle.Inputs.begin(), DeoptBundle.Inputs.end());
@@ -1168,7 +1207,7 @@ void SelectionDAGBuilder::visitGCResult(const GCResultInst &CI) {
   // register because statepoint and actual call return types can be
   // different, and getValue() will use CopyFromReg of the wrong type,
   // which is always i32 in our case.
-  Type *RetTy = SI->getActualReturnType();
+  Type *RetTy = CI.getType();
   SDValue CopyFromReg = getCopyFromRegs(SI, RetTy);
   
   assert(CopyFromReg.getNode());
@@ -1192,11 +1231,19 @@ void SelectionDAGBuilder::visitGCRelocate(const GCRelocateInst &Relocate) {
   const Value *DerivedPtr = Relocate.getDerivedPtr();
   auto &RelocationMap =
     FuncInfo.StatepointRelocationMaps[Relocate.getStatepoint()];
-  auto SlotIt = RelocationMap.find(DerivedPtr);
+  auto SlotIt = RelocationMap.find(&Relocate);
   assert(SlotIt != RelocationMap.end() && "Relocating not lowered gc value");
   const RecordType &Record = SlotIt->second;
 
   // If relocation was done via virtual register..
+  if (Record.type == RecordType::SDValueNode) {
+    assert(Relocate.getStatepoint()->getParent() == Relocate.getParent() &&
+           "Nonlocal gc.relocate mapped via SDValue");
+    SDValue SDV = StatepointLowering.getLocation(getValue(DerivedPtr));
+    assert(SDV.getNode() && "empty SDValue");
+    setValue(&Relocate, SDV);
+    return;
+  }
   if (Record.type == RecordType::VReg) {
     Register InReg = Record.payload.Reg;
     RegsForValue RFV(*DAG.getContext(), DAG.getTargetLoweringInfo(),

@@ -24,16 +24,12 @@
 # CHECK-NONDETERMINISTIC:  {{[[:space:]]1995[[:space:]]}}
 
 ## D Flag specified more than once:
-# RUN: not llvm-libtool-darwin -static -o %t.lib %t-input1.o -D -D 2>&1 | \
-# RUN:   FileCheck %s --check-prefix=CHECK-ERROR-D
-
-# CHECK-ERROR-D: for the -D option: may only occur zero or one times!
+# RUN: llvm-libtool-darwin -static -o %t.lib %t-input1.o -D -D 2>&1 | count 0
+# RUN: env TZ=GMT llvm-ar tv %t.lib | FileCheck %s --check-prefix=CHECK-DETERMINISTIC
 
 ## U Flag specified more than once:
-# RUN: not llvm-libtool-darwin -static -o %t.lib %t-input1.o -U -U 2>&1 | \
-# RUN:   FileCheck %s --check-prefix=CHECK-ERROR-U
-
-# CHECK-ERROR-U: for the -U option: may only occur zero or one times!
+# RUN: llvm-libtool-darwin -static -o %t.lib %t-input1.o -U -U 2>&1 | count 0
+# RUN: env TZ=GMT llvm-ar tv %t.lib | FileCheck %s --check-prefix=CHECK-NONDETERMINISTIC
 
 ## Both D and U flags specified:
 # RUN: not llvm-libtool-darwin -static -o %t.lib %t-input1.o -D -U 2>&1 | \

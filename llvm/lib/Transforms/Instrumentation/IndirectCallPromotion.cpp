@@ -13,30 +13,20 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Analysis/IndirectCallPromotionAnalysis.h"
 #include "llvm/Analysis/IndirectCallVisitor.h"
 #include "llvm/Analysis/OptimizationRemarkEmitter.h"
 #include "llvm/Analysis/ProfileSummaryInfo.h"
-#include "llvm/IR/Attributes.h"
-#include "llvm/IR/BasicBlock.h"
-#include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/Function.h"
-#include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/InstrTypes.h"
-#include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/MDBuilder.h"
 #include "llvm/IR/PassManager.h"
-#include "llvm/IR/Type.h"
 #include "llvm/IR/Value.h"
-#include "llvm/InitializePasses.h"
-#include "llvm/Pass.h"
 #include "llvm/ProfileData/InstrProf.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
@@ -45,7 +35,6 @@
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/Instrumentation.h"
 #include "llvm/Transforms/Instrumentation/PGOInstrumentation.h"
-#include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Utils/CallPromotionUtils.h"
 #include <cassert>
 #include <cstdint>
@@ -71,13 +60,13 @@ static cl::opt<bool> DisableICP("disable-icp", cl::init(false), cl::Hidden,
 // value.
 // For debug use only.
 static cl::opt<unsigned>
-    ICPCutOff("icp-cutoff", cl::init(0), cl::Hidden, cl::ZeroOrMore,
+    ICPCutOff("icp-cutoff", cl::init(0), cl::Hidden,
               cl::desc("Max number of promotions for this compilation"));
 
 // If ICPCSSkip is non zero, the first ICPCSSkip callsites will be skipped.
 // For debug use only.
 static cl::opt<unsigned>
-    ICPCSSkip("icp-csskip", cl::init(0), cl::Hidden, cl::ZeroOrMore,
+    ICPCSSkip("icp-csskip", cl::init(0), cl::Hidden,
               cl::desc("Skip Callsite up to this number for this compilation"));
 
 // Set if the pass is called in LTO optimization. The difference for LTO mode
@@ -112,55 +101,6 @@ static cl::opt<bool> ICPInvokeOnly("icp-invoke-only", cl::init(false),
 static cl::opt<bool>
     ICPDUMPAFTER("icp-dumpafter", cl::init(false), cl::Hidden,
                  cl::desc("Dump IR after transformation happens"));
-
-namespace {
-
-class PGOIndirectCallPromotionLegacyPass : public ModulePass {
-public:
-  static char ID;
-
-  PGOIndirectCallPromotionLegacyPass(bool InLTO = false, bool SamplePGO = false)
-      : ModulePass(ID), InLTO(InLTO), SamplePGO(SamplePGO) {
-    initializePGOIndirectCallPromotionLegacyPassPass(
-        *PassRegistry::getPassRegistry());
-  }
-
-  void getAnalysisUsage(AnalysisUsage &AU) const override {
-    AU.addRequired<ProfileSummaryInfoWrapperPass>();
-  }
-
-  StringRef getPassName() const override { return "PGOIndirectCallPromotion"; }
-
-private:
-  bool runOnModule(Module &M) override;
-
-  // If this pass is called in LTO. We need to special handling the PGOFuncName
-  // for the static variables due to LTO's internalization.
-  bool InLTO;
-
-  // If this pass is called in SamplePGO. We need to add the prof metadata to
-  // the promoted direct call.
-  bool SamplePGO;
-};
-
-} // end anonymous namespace
-
-char PGOIndirectCallPromotionLegacyPass::ID = 0;
-
-INITIALIZE_PASS_BEGIN(PGOIndirectCallPromotionLegacyPass, "pgo-icall-prom",
-                      "Use PGO instrumentation profile to promote indirect "
-                      "calls to direct calls.",
-                      false, false)
-INITIALIZE_PASS_DEPENDENCY(ProfileSummaryInfoWrapperPass)
-INITIALIZE_PASS_END(PGOIndirectCallPromotionLegacyPass, "pgo-icall-prom",
-                    "Use PGO instrumentation profile to promote indirect "
-                    "calls to direct calls.",
-                    false, false)
-
-ModulePass *llvm::createPGOIndirectCallPromotionLegacyPass(bool InLTO,
-                                                           bool SamplePGO) {
-  return new PGOIndirectCallPromotionLegacyPass(InLTO, SamplePGO);
-}
 
 namespace {
 
@@ -426,15 +366,6 @@ static bool promoteIndirectCalls(Module &M, ProfileSummaryInfo *PSI,
     }
   }
   return Changed;
-}
-
-bool PGOIndirectCallPromotionLegacyPass::runOnModule(Module &M) {
-  ProfileSummaryInfo *PSI =
-      &getAnalysis<ProfileSummaryInfoWrapperPass>().getPSI();
-
-  // Command-line option has the priority for InLTO.
-  return promoteIndirectCalls(M, PSI, InLTO | ICPLTOMode,
-                              SamplePGO | ICPSamplePGOMode);
 }
 
 PreservedAnalyses PGOIndirectCallPromotion::run(Module &M,

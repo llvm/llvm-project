@@ -24,7 +24,7 @@ public:
     std::vector<LabelInfo> stack;
     for (auto i{block.begin()}, end{block.end()}; i != end; ++i) {
       if (auto *executableConstruct{std::get_if<ExecutableConstruct>(&i->u)}) {
-        std::visit(
+        common::visit(
             common::visitors{
                 [](auto &) {},
                 // Labels on end-stmt of constructs are accepted by f18 as an

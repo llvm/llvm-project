@@ -12,6 +12,7 @@
 #include "Target.h"
 
 #include "lld/Common/ErrorHandler.h"
+#include "mach-o/compact_unwind_encoding.h"
 #include "llvm/BinaryFormat/MachO.h"
 #include "llvm/Support/Endian.h"
 
@@ -32,7 +33,7 @@ struct X86_64 : TargetInfo {
 
   void writeStub(uint8_t *buf, const Symbol &) const override;
   void writeStubHelperHeader(uint8_t *buf) const override;
-  void writeStubHelperEntry(uint8_t *buf, const DylibSymbol &,
+  void writeStubHelperEntry(uint8_t *buf, const Symbol &,
                             uint64_t entryAddr) const override;
 
   void relaxGotLoad(uint8_t *loc, uint8_t type) const override;
@@ -102,9 +103,9 @@ void X86_64::relocateOne(uint8_t *loc, const Reloc &r, uint64_t value,
   switch (r.length) {
   case 2:
     if (r.type == X86_64_RELOC_UNSIGNED)
-      checkUInt(r, value, 32);
+      checkUInt(loc, r, value, 32);
     else
-      checkInt(r, value, 32);
+      checkInt(loc, r, value, 32);
     write32le(loc, value);
     break;
   case 3:
@@ -127,7 +128,7 @@ void X86_64::relocateOne(uint8_t *loc, const Reloc &r, uint64_t value,
 static void writeRipRelative(SymbolDiagnostic d, uint8_t *buf, uint64_t bufAddr,
                              uint64_t bufOff, uint64_t destAddr) {
   uint64_t rip = bufAddr + bufOff;
-  checkInt(d, destAddr - rip, 32);
+  checkInt(buf, d, destAddr - rip, 32);
   // For the instructions we care about, the RIP-relative address is always
   // stored in the last 4 bytes of the instruction.
   write32le(buf + bufOff - 4, destAddr - rip);
@@ -166,7 +167,7 @@ static constexpr uint8_t stubHelperEntry[] = {
     0xe9, 0, 0, 0, 0, // 0x5: jmp <__stub_helper>
 };
 
-void X86_64::writeStubHelperEntry(uint8_t *buf, const DylibSymbol &sym,
+void X86_64::writeStubHelperEntry(uint8_t *buf, const Symbol &sym,
                                   uint64_t entryAddr) const {
   memcpy(buf, stubHelperEntry, sizeof(stubHelperEntry));
   write32le(buf + 1, sym.lazyBindOffset);
@@ -184,6 +185,10 @@ void X86_64::relaxGotLoad(uint8_t *loc, uint8_t type) const {
 X86_64::X86_64() : TargetInfo(LP64()) {
   cpuType = CPU_TYPE_X86_64;
   cpuSubtype = CPU_SUBTYPE_X86_64_ALL;
+
+  modeDwarfEncoding = UNWIND_X86_MODE_DWARF;
+  subtractorRelocType = X86_64_RELOC_SUBTRACTOR;
+  unsignedRelocType = X86_64_RELOC_UNSIGNED;
 
   stubSize = sizeof(stub);
   stubHelperHeaderSize = sizeof(stubHelperHeader);

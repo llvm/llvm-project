@@ -10,7 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir/Analysis/Utils.h"
+#include "mlir/Dialect/Affine/Analysis/Utils.h"
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/Affine/Utils.h"
 #include "mlir/Pass/Pass.h"
@@ -24,34 +24,36 @@ namespace {
 
 /// This pass applies the permutation on the first maximal perfect nest.
 struct TestAffineLoopUnswitching
-    : public PassWrapper<TestAffineLoopUnswitching, FunctionPass> {
+    : public PassWrapper<TestAffineLoopUnswitching, OperationPass<>> {
+  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(TestAffineLoopUnswitching)
+
   StringRef getArgument() const final { return PASS_NAME; }
   StringRef getDescription() const final {
     return "Tests affine loop unswitching / if/else hoisting";
   }
   TestAffineLoopUnswitching() = default;
-  TestAffineLoopUnswitching(const TestAffineLoopUnswitching &pass) {}
+  TestAffineLoopUnswitching(const TestAffineLoopUnswitching &pass) = default;
 
-  void runOnFunction() override;
+  void runOnOperation() override;
 
   /// The maximum number of iterations to run this for.
   constexpr static unsigned kMaxIterations = 5;
 };
 
-} // end anonymous namespace
+} // namespace
 
-void TestAffineLoopUnswitching::runOnFunction() {
+void TestAffineLoopUnswitching::runOnOperation() {
   // Each hoisting invalidates a lot of IR around. Just stop the walk after the
   // first if/else hoisting, and repeat until no more hoisting can be done, or
   // the maximum number of iterations have been run.
-  auto func = getFunction();
+  Operation *op = getOperation();
   unsigned i = 0;
   do {
     auto walkFn = [](AffineIfOp op) {
       return succeeded(hoistAffineIfOp(op)) ? WalkResult::interrupt()
                                             : WalkResult::advance();
     };
-    if (func.walk(walkFn).wasInterrupted())
+    if (op->walk(walkFn).wasInterrupted())
       break;
   } while (++i < kMaxIterations);
 }

@@ -31,7 +31,7 @@ def read_raw_stdin():
 
 def get_raw_section_dump(readobj_path, section_name, input_file):
     import subprocess
-    cmd = [readobj_path, '-elf-output-style=GNU', '--hex-dump={}'.format(section_name),
+    cmd = [readobj_path, '--elf-output-style=GNU', '--hex-dump={}'.format(section_name),
             input_file]
     proc = subprocess.Popen(cmd, stdin=subprocess.PIPE, stdout=subprocess.PIPE)
 
@@ -59,6 +59,9 @@ if __name__ == '__main__':
             help='Print out in bits')
     arg_parser.add_argument('--byte-indicator', action='store_true',
             help='Whether to print a \'.\' every 8 bits in bits printing mode')
+    arg_parser.add_argument('--bits-endian', metavar='<little/big>', type=str,
+            choices=['little', 'big'],
+            help='Print out bits in specified endianness (little or big); defaults to big')
     format_group.add_argument('-h', dest='format', action='store_const', const='hex',
             help='Print out in hexadecimal')
     arg_parser.add_argument('--hex-width', metavar='<# of bytes>', type=int,
@@ -66,7 +69,7 @@ if __name__ == '__main__':
 
     arg_parser.add_argument('--help', action='help')
     arg_parser.set_defaults(format='bits', tool_path='llvm-readobj', input_file='-',
-            byte_indicator=False, hex_width=4)
+            byte_indicator=False, hex_width=4, bits_endian='big')
     args = arg_parser.parse_args()
 
     raw_section = get_raw_section_dump(args.tool_path, args.section, args.input_file)
@@ -82,7 +85,10 @@ if __name__ == '__main__':
                 val = int(part, 16)
                 if args.format == 'bits':
                     # divided into bytes first
-                    for byte in [(val >> off) & 0xFF for off in (24,16,8,0)]:
+                    offsets = (24, 16, 8, 0)
+                    if args.bits_endian == 'little':
+                        offsets = (0, 8, 16, 24)
+                    for byte in [(val >> off) & 0xFF for off in offsets]:
                         for bit in [(byte >> off) & 1 for off in range(7, -1, -1)]:
                             results.append(str(bit))
                         if args.byte_indicator:

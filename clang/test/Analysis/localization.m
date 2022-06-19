@@ -1,4 +1,4 @@
-// RUN: %clang_analyze_cc1 -fblocks -analyzer-store=region -analyzer-output=text -analyzer-checker=optin.osx.cocoa.localizability.NonLocalizedStringChecker -analyzer-checker=alpha.osx.cocoa.localizability.PluralMisuseChecker -verify  %s
+// RUN: %clang_analyze_cc1 -fblocks -analyzer-output=text -analyzer-checker=optin.osx.cocoa.localizability.NonLocalizedStringChecker -analyzer-checker=alpha.osx.cocoa.localizability.PluralMisuseChecker -verify  %s
 
 // The larger set of tests in located in localization.m. These are tests
 // specific for non-aggressive reporting.
@@ -37,7 +37,7 @@
 @end
 
 @interface LocalizationTestSuite : NSObject
-int random();
+int random(void);
 @property (assign) int unreadArticlesCount;
 @end
 #define MCLocalizedString(s) NSLocalizedString(s,nil);

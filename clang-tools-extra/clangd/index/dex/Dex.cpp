@@ -10,14 +10,22 @@
 #include "FileDistance.h"
 #include "FuzzyMatch.h"
 #include "Quality.h"
+#include "URI.h"
 #include "index/Index.h"
 #include "index/dex/Iterator.h"
+#include "index/dex/Token.h"
+#include "index/dex/Trigram.h"
 #include "support/Logger.h"
 #include "support/Trace.h"
+#include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringSet.h"
+#include "llvm/Support/Path.h"
 #include "llvm/Support/ScopedPrinter.h"
 #include <algorithm>
 #include <queue>
+#include <utility>
+#include <vector>
 
 namespace clang {
 namespace clangd {
@@ -73,23 +81,38 @@ public:
   }
 
   // Assemble the final compressed posting lists for the added symbols.
-  llvm::DenseMap<Token, PostingList> build() {
+  llvm::DenseMap<Token, PostingList> build() && {
     llvm::DenseMap<Token, PostingList> Result(/*InitialReserve=*/
                                               TrigramDocs.size() +
                                               RestrictedCCDocs.size() +
                                               TypeDocs.size() +
                                               ScopeDocs.size() +
                                               ProximityDocs.size());
-    for (const auto &E : TrigramDocs)
+    // Tear down intermediate structs as we go to reduce memory usage.
+    // Since we're trying to get rid of underlying allocations, clearing the
+    // containers is not enough.
+    auto CreatePostingList =
+        [&Result](Token::Kind TK, llvm::StringMap<std::vector<DocID>> &Docs) {
+          for (auto &E : Docs) {
+            Result.try_emplace(Token(TK, E.first()), E.second);
+            E.second = {};
+          }
+          Docs = {};
+        };
+    CreatePostingList(Token::Kind::Type, TypeDocs);
+    CreatePostingList(Token::Kind::Scope, ScopeDocs);
+    CreatePostingList(Token::Kind::ProximityURI, ProximityDocs);
+
+    // TrigramDocs are stored in a DenseMap and RestrictedCCDocs is not even a
+    // map, treat them specially.
+    for (auto &E : TrigramDocs) {
       Result.try_emplace(Token(Token::Kind::Trigram, E.first.str()), E.second);
-    for (const auto &E : TypeDocs)
-      Result.try_emplace(Token(Token::Kind::Type, E.first()), E.second);
-    for (const auto &E : ScopeDocs)
-      Result.try_emplace(Token(Token::Kind::Scope, E.first()), E.second);
-    for (const auto &E : ProximityDocs)
-      Result.try_emplace(Token(Token::Kind::ProximityURI, E.first()), E.second);
+      E.second = {};
+    }
+    TrigramDocs = llvm::DenseMap<Trigram, std::vector<DocID>>{};
     if (!RestrictedCCDocs.empty())
-      Result.try_emplace(RestrictedForCodeCompletion, RestrictedCCDocs);
+      Result.try_emplace(RestrictedForCodeCompletion,
+                         std::move(RestrictedCCDocs));
     return Result;
   }
 };
@@ -122,7 +145,7 @@ void Dex::buildIndex() {
   IndexBuilder Builder;
   for (DocID SymbolRank = 0; SymbolRank < Symbols.size(); ++SymbolRank)
     Builder.add(*Symbols[SymbolRank], SymbolRank);
-  InvertedIndex = Builder.build();
+  InvertedIndex = std::move(Builder).build();
 }
 
 std::unique_ptr<Iterator> Dex::iterator(const Token &Tok) const {
@@ -203,7 +226,7 @@ bool Dex::fuzzyFind(const FuzzyFindRequest &Req,
   std::vector<std::unique_ptr<Iterator>> TrigramIterators;
   for (const auto &Trigram : TrigramTokens)
     TrigramIterators.push_back(iterator(Trigram));
-  Criteria.push_back(Corpus.intersect(move(TrigramIterators)));
+  Criteria.push_back(Corpus.intersect(std::move(TrigramIterators)));
 
   // Generate scope tokens for search query.
   std::vector<std::unique_ptr<Iterator>> ScopeIterators;
@@ -212,7 +235,7 @@ bool Dex::fuzzyFind(const FuzzyFindRequest &Req,
   if (Req.AnyScope)
     ScopeIterators.push_back(
         Corpus.boost(Corpus.all(), ScopeIterators.empty() ? 1.0 : 0.2));
-  Criteria.push_back(Corpus.unionOf(move(ScopeIterators)));
+  Criteria.push_back(Corpus.unionOf(std::move(ScopeIterators)));
 
   // Add proximity paths boosting (all symbols, some boosted).
   Criteria.push_back(createFileProximityIterator(Req.ProximityPaths));
@@ -224,12 +247,12 @@ bool Dex::fuzzyFind(const FuzzyFindRequest &Req,
 
   // Use TRUE iterator if both trigrams and scopes from the query are not
   // present in the symbol index.
-  auto Root = Corpus.intersect(move(Criteria));
+  auto Root = Corpus.intersect(std::move(Criteria));
   // Retrieve more items than it was requested: some of  the items with high
   // final score might not be retrieved otherwise.
   // FIXME(kbobyrev): Tune this ratio.
   if (Req.Limit)
-    Root = Corpus.limit(move(Root), *Req.Limit * 100);
+    Root = Corpus.limit(std::move(Root), *Req.Limit * 100);
   SPAN_ATTACH(Tracer, "query", llvm::to_string(*Root));
   vlog("Dex query tree: {0}", *Root);
 

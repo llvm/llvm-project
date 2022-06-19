@@ -1,5 +1,4 @@
-; RUN: opt %loadPolly -polly-scops \
-; RUN: -analyze < %s | FileCheck %s --check-prefix=SCOP
+; RUN: opt %loadPolly -polly-print-scops -disable-output < %s | FileCheck %s --check-prefix=SCOP
 
 ; RUN: opt %loadPolly -polly-codegen-ppcg \
 ; RUN: -S -polly-acc-codegen-managed-memory \

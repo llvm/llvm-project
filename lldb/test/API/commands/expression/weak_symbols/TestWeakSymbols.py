@@ -7,18 +7,17 @@ absent weak symbols from a dylib.
 
 import os
 import lldb
-from lldbsuite.test import decorators
+from lldbsuite.test.decorators import *
 import lldbsuite.test.lldbutil as lldbutil
 from lldbsuite.test.lldbtest import *
 
 
 class TestWeakSymbolsInExpressions(TestBase):
 
-    mydir = TestBase.compute_mydir(__file__)
-
     NO_DEBUG_INFO_TESTCASE = True
 
-    @decorators.skipUnlessDarwin
+    @skipUnlessDarwin
+    @skipIf(compiler="clang", compiler_version=['<', '7.0'])
     def test_weak_symbol_in_expr(self):
         """Tests that we can refer to weak symbols in expressions."""
         self.build()

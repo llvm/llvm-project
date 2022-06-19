@@ -10,8 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef MLIR_DIALECT_SPIRV_SPIRVCONVERSION_H
-#define MLIR_DIALECT_SPIRV_SPIRVCONVERSION_H
+#ifndef MLIR_DIALECT_SPIRV_TRANSFORMS_SPIRVCONVERSION_H
+#define MLIR_DIALECT_SPIRV_TRANSFORMS_SPIRVCONVERSION_H
 
 #include "mlir/Dialect/SPIRV/IR/SPIRVAttributes.h"
 #include "mlir/Dialect/SPIRV/IR/SPIRVTypes.h"
@@ -47,22 +47,27 @@ public:
     ///
     /// If the original scalar type has less than 32-bit, a multiple of its
     /// values will be packed into one 32-bit value to be memory efficient.
-    bool emulateNon32BitScalarTypes;
+    bool emulateNon32BitScalarTypes{true};
+
+    /// Use 64-bit integers to convert index types.
+    bool use64bitIndex{false};
 
     /// The number of bits to store a boolean value. It is eight bits by
     /// default.
-    unsigned boolNumBits;
+    unsigned boolNumBits{8};
 
-    // Note: we need this instead of inline initializers becuase of
+    // Note: we need this instead of inline initializers because of
     // https://bugs.llvm.org/show_bug.cgi?id=36684
-    Options() : emulateNon32BitScalarTypes(true), boolNumBits(8) {}
+    Options()
+
+    {}
   };
 
   explicit SPIRVTypeConverter(spirv::TargetEnvAttr targetAttr,
                               Options options = {});
 
   /// Gets the SPIR-V correspondence for the standard index type.
-  static Type getIndexType(MLIRContext *context);
+  Type getIndexType() const;
 
   /// Returns the corresponding memory space for memref given a SPIR-V storage
   /// class.
@@ -79,6 +84,8 @@ public:
 private:
   spirv::TargetEnv targetEnv;
   Options options;
+
+  MLIRContext *getContext() const;
 };
 
 //===----------------------------------------------------------------------===//
@@ -129,24 +136,27 @@ class AccessChainOp;
 /// Returns the value for the given `builtin` variable. This function gets or
 /// inserts the global variable associated for the builtin within the nearest
 /// symbol table enclosing `op`. Returns null Value on error.
-Value getBuiltinVariableValue(Operation *op, BuiltIn builtin,
+Value getBuiltinVariableValue(Operation *op, BuiltIn builtin, Type integerType,
                               OpBuilder &builder);
 
 /// Gets the value at the given `offset` of the push constant storage with a
-/// total of `elementCount` 32-bit integers. A global variable will be created
-/// in the nearest symbol table enclosing `op` for the push constant storage if
-/// not existing. Load ops will be created via the given `builder` to load
-/// values from the push constant. Returns null Value on error.
+/// total of `elementCount` `integerType` integers. A global variable will be
+/// created in the nearest symbol table enclosing `op` for the push constant
+/// storage if not existing. Load ops will be created via the given `builder` to
+/// load values from the push constant. Returns null Value on error.
 Value getPushConstantValue(Operation *op, unsigned elementCount,
-                           unsigned offset, OpBuilder &builder);
+                           unsigned offset, Type integerType,
+                           OpBuilder &builder);
 
 /// Generates IR to perform index linearization with the given `indices` and
 /// their corresponding `strides`, adding an initial `offset`.
 Value linearizeIndex(ValueRange indices, ArrayRef<int64_t> strides,
-                     int64_t offset, Location loc, OpBuilder &builder);
+                     int64_t offset, Type integerType, Location loc,
+                     OpBuilder &builder);
 
 /// Performs the index computation to get to the element at `indices` of the
 /// memory pointed to by `basePtr`, using the layout map of `baseType`.
+/// Returns null if index computation cannot be performed.
 
 // TODO: This method assumes that the `baseType` is a MemRefType with AffineMap
 // that has static strides. Extend to handle dynamic strides.
@@ -158,4 +168,4 @@ spirv::AccessChainOp getElementPtr(SPIRVTypeConverter &typeConverter,
 } // namespace spirv
 } // namespace mlir
 
-#endif // MLIR_DIALECT_SPIRV_SPIRVCONVERSION_H
+#endif // MLIR_DIALECT_SPIRV_TRANSFORMS_SPIRVCONVERSION_H

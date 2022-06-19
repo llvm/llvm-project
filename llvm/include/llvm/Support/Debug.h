@@ -67,8 +67,8 @@ void setCurrentDebugTypes(const char **Types, unsigned Count);
 
 #else
 #define isCurrentDebugType(X) (false)
-#define setCurrentDebugType(X)
-#define setCurrentDebugTypes(X, N)
+#define setCurrentDebugType(X) do { (void)(X); } while (false)
+#define setCurrentDebugTypes(X, N) do { (void)(X); (void)(N); } while (false)
 #define DEBUG_WITH_TYPE(TYPE, X) do { } while (false)
 #endif
 
@@ -77,27 +77,6 @@ void setCurrentDebugTypes(const char **Types, unsigned Count);
 /// the DEBUG macro below.
 ///
 extern bool DebugFlag;
-
-/// \name Verification flags.
-///
-/// These flags turns on/off that are expensive and are turned off by default,
-/// unless macro EXPENSIVE_CHECKS is defined. The flags allow selectively
-/// turning the checks on without need to recompile.
-/// \{
-
-/// Enables verification of dominator trees.
-///
-extern bool VerifyDomInfo;
-
-/// Enables verification of loop info.
-///
-extern bool VerifyLoopInfo;
-
-/// Enables verification of MemorySSA.
-///
-extern bool VerifyMemorySSA;
-
-///\}
 
 /// EnableDebugBuffering - This defaults to false.  If true, the debug
 /// stream will install signal handlers to dump any buffered debug

@@ -94,7 +94,7 @@ incompatible with the flags that gdb specifies.
 //     2. file path in ascii-hex encoding
 //
 //  response is F followed by the return value of the mkdir() call,
-//  base 10 encoded.
+//  base 16 encoded.
 
 //----------------------------------------------------------------------
 // qPlatform_shell:
@@ -270,7 +270,7 @@ incompatible with the flags that gdb specifies.
 //  send:    Fc008
 //
 //  response is "F" followed by the file size in base 16.
-//  "F-1,errno" with the errno if an error occurs.
+//  "F-1,errno" with the errno if an error occurs, base 16.
 
 
 //----------------------------------------------------------------------
@@ -286,7 +286,7 @@ incompatible with the flags that gdb specifies.
 //
 //  response is "F" followed by the mode bits in base 16, this 0x1ed would 
 //  correspond to 0755 in octal.  
-//  "F-1,errno" with the errno if an error occurs.
+//  "F-1,errno" with the errno if an error occurs, base 16.
 
 //----------------------------------------------------------------------
 // vFile:unlink:
@@ -300,7 +300,9 @@ incompatible with the flags that gdb specifies.
 //  send:    F0
 //
 //  Argument is a file path in ascii-hex encoding.
-//  Response is "F" plus the return value of unlink(), base 10 encoding.
+//  Response is "F" plus the return value of unlink(), base 16 encoding.
+//  Return value may optionally be followed by a comma and the base16
+//  value of errno if unlink failed.
 
 //----------------------------------------------------------------------
 // vFile:symlink:
@@ -314,7 +316,8 @@ incompatible with the flags that gdb specifies.
 //  send:    F0,0
 //
 //  Argument file paths are in ascii-hex encoding.
-//  Response is "F" plus the return value of symlink(), base 10 encoding, twice.
+//  Response is "F" plus the return value of symlink(), base 16 encoding, 
+//  optionally followed by the value of errno if it failed, also base 16.
 
 //----------------------------------------------------------------------
 // vFile:chmod:
@@ -330,7 +333,7 @@ incompatible with the flags that gdb specifies.
 //
 //  Arguments are the mode bits to set, base 16, and a file path in 
 //  ascii-hex encoding.
-//  Response is "F" plus the return value of chmod(), base 10 encoding.
+//  Response is "F" plus the return value of chmod(), base 16 encoding.
 //
 //  I don't know why there are two packets for the same thing, v.
 //  vFile:chmod:.
@@ -369,15 +372,9 @@ incompatible with the flags that gdb specifies.
 //        are the constant values in enum OpenOptions from lldb's File.h
 //     3. mode bits, base 16
 //  
-//  response is F followed by the opened file descriptor in base 10.
-//  "F-1,errno" with the errno if an error occurs.
+//  response is F followed by the opened file descriptor in base 16.
+//  "F-1,errno" with the errno if an error occurs, base 16.
 //
-//  COMPATIBILITY
-//    The gdb-remote serial protocol documentatio defines a vFile:open:
-//    packet which uses incompatible flag values, e.g. 1 means O_WRONLY
-//    in gdb's vFile:open:, but it means eOpenOptionRead to lldb's
-//    implementation.
-
 //----------------------------------------------------------------------
 // vFile:close:
 //
@@ -389,8 +386,9 @@ incompatible with the flags that gdb specifies.
 //  receive: vFile:close:7
 //  send:    F0
 //
-//  File descriptor is in base 10.
-//  "F-1,errno" with the errno if an error occurs.
+//  File descriptor is in base 16.
+//  "F-1,errno" with the errno if an error occurs,
+//  errno is base 16.
 
 
 //----------------------------------------------------------------------
@@ -405,17 +403,12 @@ incompatible with the flags that gdb specifies.
 //  send:    F4;a'b\00
 //
 //  request packet has the fields:
-//     1. file descriptor, base 10
-//     2. number of bytes to be read, base 10
-//     3. offset into file to start from, base 10
+//     1. file descriptor, base 16
+//     2. number of bytes to be read, base 16
+//     3. offset into file to start from, base 16
 //
-//  Response is F, followed by the number of bytes read (base 10), a
+//  Response is F, followed by the number of bytes read (base 16), a
 //  semicolon, followed by the data in the binary-escaped-data encoding.
-//
-//  COMPATIBILITY
-//    The gdb-remote serial protocol documentation says that numbers
-//    in "vFile:" packets should be hexadecimal. Instead lldb uses
-//    decimal.
 
 
 //----------------------------------------------------------------------
@@ -430,16 +423,11 @@ incompatible with the flags that gdb specifies.
 //  send:    F1024
 //
 //  request packet has the fields:
-//     1. file descriptor, base 10
-//     2. offset into file to start from, base 10
+//     1. file descriptor, base 16
+//     2. offset into file to start from, base 16
 //     3. binary-escaped-data to be written
 //
-//  Response is F, followed by the number of bytes written (base 10)
-//
-//  COMPATIBILITY
-//    The gdb-remote serial protocol documentation says that numbers
-//    in "vFile:" packets should be hexadecimal. Instead lldb uses
-//    decimal.
+//  Response is F, followed by the number of bytes written (base 16)
 
 
 

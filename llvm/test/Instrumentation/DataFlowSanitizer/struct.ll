@@ -1,5 +1,4 @@
 ; RUN: opt < %s -dfsan -dfsan-event-callbacks=true -S | FileCheck %s --check-prefixes=CHECK,EVENT_CALLBACKS
-; RUN: opt < %s -dfsan -dfsan-args-abi -S | FileCheck %s --check-prefixes=CHECK,ARGS_ABI
 ; RUN: opt < %s -dfsan -S | FileCheck %s --check-prefixes=CHECK,FAST
 ; RUN: opt < %s -dfsan -dfsan-combine-pointer-labels-on-load=false -S | FileCheck %s --check-prefixes=CHECK,NO_COMBINE_LOAD_PTR
 ; RUN: opt < %s -dfsan -dfsan-combine-pointer-labels-on-store=true -S | FileCheck %s --check-prefixes=CHECK,COMBINE_STORE_PTR
@@ -17,10 +16,6 @@ define {i8*, i32} @pass_struct({i8*, i32} %s) {
   ; NO_COMBINE_LOAD_PTR: @pass_struct.dfsan
   ; NO_COMBINE_LOAD_PTR: [[L:%.*]] = load { i[[#SBITS]], i[[#SBITS]] }, { i[[#SBITS]], i[[#SBITS]] }* bitcast ([[TLS_ARR]]* @__dfsan_arg_tls to { i[[#SBITS]], i[[#SBITS]] }*), align [[ALIGN:2]]
   ; NO_COMBINE_LOAD_PTR: store { i[[#SBITS]], i[[#SBITS]] } [[L]], { i[[#SBITS]], i[[#SBITS]] }* bitcast ([[TLS_ARR]]* @__dfsan_retval_tls to { i[[#SBITS]], i[[#SBITS]] }*), align [[ALIGN]]
-
-  ; ARGS_ABI: @pass_struct.dfsan
-  ; ARGS_ABI-SAME: ({ i8*, i32 } {{%.*}}, i[[#SBITS]] {{%.*}})
-  ; ARGS_ABI: ret { { i8*, i32 }, i[[#SBITS]] }
 
   ; DEBUG_NONZERO_LABELS: @pass_struct.dfsan
   ; DEBUG_NONZERO_LABELS: [[L:%.*]] = load { i[[#SBITS]], i[[#SBITS]] }, { i[[#SBITS]], i[[#SBITS]] }* bitcast ([[TLS_ARR]]* @__dfsan_arg_tls to { i[[#SBITS]], i[[#SBITS]] }*), align [[ALIGN:2]]
@@ -41,8 +36,6 @@ define %StructOfAggr @pass_struct_of_aggregate(%StructOfAggr %s) {
   ; NO_COMBINE_LOAD_PTR: %1 = load { i[[#SBITS]], [4 x i[[#SBITS]]], i[[#SBITS]], { i[[#SBITS]], i[[#SBITS]] } }, { i[[#SBITS]], [4 x i[[#SBITS]]], i[[#SBITS]], { i[[#SBITS]], i[[#SBITS]] } }* bitcast ([[TLS_ARR]]* @__dfsan_arg_tls to { i[[#SBITS]], [4 x i[[#SBITS]]], i[[#SBITS]], { i[[#SBITS]], i[[#SBITS]] } }*), align [[ALIGN:2]]
   ; NO_COMBINE_LOAD_PTR: store { i[[#SBITS]], [4 x i[[#SBITS]]], i[[#SBITS]], { i[[#SBITS]], i[[#SBITS]] } } %1, { i[[#SBITS]], [4 x i[[#SBITS]]], i[[#SBITS]], { i[[#SBITS]], i[[#SBITS]] } }* bitcast ([[TLS_ARR]]* @__dfsan_retval_tls to { i[[#SBITS]], [4 x i[[#SBITS]]], i[[#SBITS]], { i[[#SBITS]], i[[#SBITS]] } }*), align [[ALIGN]]
 
-  ; ARGS_ABI: @pass_struct_of_aggregate.dfsan
-  ; ARGS_ABI: ret { %StructOfAggr, i[[#SBITS]] }
   ret %StructOfAggr %s
 }
 

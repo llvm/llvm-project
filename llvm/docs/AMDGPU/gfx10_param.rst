@@ -5,10 +5,10 @@
     *                                                *
     **************************************************
 
-.. _amdgpu_synid10_param:
+.. _amdgpu_synid_gfx10_param:
 
 param
-===========================
+=====
 
 Interpolation parameter to read:
 

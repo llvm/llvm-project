@@ -36,7 +36,7 @@ void foobar(int &ref) {
     foo();
 }
 
-struct S1; // expected-note {{declared here}} expected-note 4 {{forward declaration of 'S1'}}
+struct S1; // expected-note {{declared here}} expected-note 6 {{forward declaration of 'S1'}}
 extern S1 a;
 class S2 {
   mutable int a;
@@ -374,12 +374,12 @@ int main(int argc, char **argv) {
     foo();
 #pragma omp target
 #pragma omp teams
-#pragma omp distribute parallel for reduction(+ : ba) // expected-error {{const-qualified variable cannot be reduction}} expected-warning {{Type 'const S2 [5]' is not trivially copyable and not guaranteed to be mapped correctly}}
+#pragma omp distribute parallel for reduction(+ : ba) // expected-error {{const-qualified variable cannot be reduction}} expected-warning {{Type 'const S2[5]' is not trivially copyable and not guaranteed to be mapped correctly}}
   for (int i = 0; i < 10; ++i)
     foo();
 #pragma omp target
 #pragma omp teams
-#pragma omp distribute parallel for reduction(* : ca) // expected-error {{const-qualified variable cannot be reduction}} expected-warning {{Type 'const S3 [5]' is not trivially copyable and not guaranteed to be mapped correctly}}
+#pragma omp distribute parallel for reduction(* : ca) // expected-error {{const-qualified variable cannot be reduction}} expected-warning {{Type 'const S3[5]' is not trivially copyable and not guaranteed to be mapped correctly}}
   for (int i = 0; i < 10; ++i)
     foo();
 #pragma omp target

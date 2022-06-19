@@ -12,8 +12,6 @@ from lldbsuite.test import lldbutil
 
 class BreakpointIgnoreCountTestCase(TestBase):
 
-    mydir = TestBase.compute_mydir(__file__)
-
     @skipIfWindows # This test will hang on windows llvm.org/pr21753
     def test_with_run_command(self):
         """Exercise breakpoint ignore count with 'breakpoint set -i <count>'."""
@@ -76,9 +74,7 @@ class BreakpointIgnoreCountTestCase(TestBase):
 
         # Also check the hit count, which should be 2, due to ignore count of
         # 1.
-        self.expect("breakpoint list -f", BREAKPOINT_HIT_THRICE,
-                    substrs=["resolved = 1",
-                             "hit count = 2"])
+        lldbutil.check_breakpoint(self, bpno = 1, expected_hit_count = 2)
 
         # The frame #0 should correspond to main.c:37, the executable statement
         # in function name 'c'.  And frame #2 should point to main.c:45.
@@ -97,9 +93,7 @@ class BreakpointIgnoreCountTestCase(TestBase):
 
         # Also check the hit count, which should be 2, due to ignore count of
         # 1.
-        self.expect("breakpoint list -f", BREAKPOINT_HIT_THRICE,
-                    substrs=["resolved = 1",
-                             "hit count = 4"])
+        lldbutil.check_breakpoint(self, bpno = 1, expected_hit_count = 4)
 
         # The frame #0 should correspond to main.c:37, the executable statement
         # in function name 'c'.  And frame #2 should point to main.c:45.

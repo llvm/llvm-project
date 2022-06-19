@@ -7,99 +7,81 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/Tooling/DependencyScanning/DependencyScanningFilesystem.h"
-#include "clang/Lex/DependencyDirectivesSourceMinimizer.h"
 #include "llvm/Support/MemoryBuffer.h"
+#include "llvm/Support/SmallVectorMemoryBuffer.h"
 #include "llvm/Support/Threading.h"
 
 using namespace clang;
 using namespace tooling;
 using namespace dependencies;
 
-CachedFileSystemEntry CachedFileSystemEntry::createFileEntry(
-    StringRef Filename, llvm::vfs::FileSystem &FS, bool Minimize) {
+llvm::ErrorOr<DependencyScanningWorkerFilesystem::TentativeEntry>
+DependencyScanningWorkerFilesystem::readFile(StringRef Filename) {
   // Load the file and its content from the file system.
-  llvm::ErrorOr<std::unique_ptr<llvm::vfs::File>> MaybeFile =
-      FS.openFileForRead(Filename);
+  auto MaybeFile = getUnderlyingFS().openFileForRead(Filename);
   if (!MaybeFile)
     return MaybeFile.getError();
-  llvm::ErrorOr<llvm::vfs::Status> Stat = (*MaybeFile)->status();
-  if (!Stat)
-    return Stat.getError();
+  auto File = std::move(*MaybeFile);
 
-  llvm::vfs::File &F = **MaybeFile;
-  llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>> MaybeBuffer =
-      F.getBuffer(Stat->getName());
+  auto MaybeStat = File->status();
+  if (!MaybeStat)
+    return MaybeStat.getError();
+  auto Stat = std::move(*MaybeStat);
+
+  auto MaybeBuffer = File->getBuffer(Stat.getName());
   if (!MaybeBuffer)
     return MaybeBuffer.getError();
+  auto Buffer = std::move(*MaybeBuffer);
 
-  llvm::SmallString<1024> MinimizedFileContents;
-  // Minimize the file down to directives that might affect the dependencies.
-  const auto &Buffer = *MaybeBuffer;
-  SmallVector<minimize_source_to_dependency_directives::Token, 64> Tokens;
-  if (!Minimize || minimizeSourceToDependencyDirectives(
-                       Buffer->getBuffer(), MinimizedFileContents, Tokens)) {
-    // Use the original file unless requested otherwise, or
-    // if the minimization failed.
-    // FIXME: Propage the diagnostic if desired by the client.
-    CachedFileSystemEntry Result;
-    Result.MaybeStat = std::move(*Stat);
-    Result.Contents.reserve(Buffer->getBufferSize() + 1);
-    Result.Contents.append(Buffer->getBufferStart(), Buffer->getBufferEnd());
-    // Implicitly null terminate the contents for Clang's lexer.
-    Result.Contents.push_back('\0');
-    Result.Contents.pop_back();
-    return Result;
-  }
+  // If the file size changed between read and stat, pretend it didn't.
+  if (Stat.getSize() != Buffer->getBufferSize())
+    Stat = llvm::vfs::Status::copyWithNewSize(Stat, Buffer->getBufferSize());
 
-  CachedFileSystemEntry Result;
-  size_t Size = MinimizedFileContents.size();
-  Result.MaybeStat = llvm::vfs::Status(Stat->getName(), Stat->getUniqueID(),
-                                       Stat->getLastModificationTime(),
-                                       Stat->getUser(), Stat->getGroup(), Size,
-                                       Stat->getType(), Stat->getPermissions());
-  // The contents produced by the minimizer must be null terminated.
-  assert(MinimizedFileContents.data()[MinimizedFileContents.size()] == '\0' &&
-         "not null terminated contents");
-  // Even though there's an implicit null terminator in the minimized contents,
-  // we want to temporarily make it explicit. This will ensure that the
-  // std::move will preserve it even if it needs to do a copy if the
-  // SmallString still has the small capacity.
-  MinimizedFileContents.push_back('\0');
-  Result.Contents = std::move(MinimizedFileContents);
-  // Now make the null terminator implicit again, so that Clang's lexer can find
-  // it right where the buffer ends.
-  Result.Contents.pop_back();
-
-  // Compute the skipped PP ranges that speedup skipping over inactive
-  // preprocessor blocks.
-  llvm::SmallVector<minimize_source_to_dependency_directives::SkippedRange, 32>
-      SkippedRanges;
-  minimize_source_to_dependency_directives::computeSkippedRanges(Tokens,
-                                                                 SkippedRanges);
-  PreprocessorSkippedRangeMapping Mapping;
-  for (const auto &Range : SkippedRanges) {
-    if (Range.Length < 16) {
-      // Ignore small ranges as non-profitable.
-      // FIXME: This is a heuristic, its worth investigating the tradeoffs
-      // when it should be applied.
-      continue;
-    }
-    Mapping[Range.Offset] = Range.Length;
-  }
-  Result.PPSkippedRangeMapping = std::move(Mapping);
-
-  return Result;
+  return TentativeEntry(Stat, std::move(Buffer));
 }
 
-CachedFileSystemEntry
-CachedFileSystemEntry::createDirectoryEntry(llvm::vfs::Status &&Stat) {
-  assert(Stat.isDirectory() && "not a directory!");
-  auto Result = CachedFileSystemEntry();
-  Result.MaybeStat = std::move(Stat);
-  return Result;
+EntryRef DependencyScanningWorkerFilesystem::scanForDirectivesIfNecessary(
+    const CachedFileSystemEntry &Entry, StringRef Filename, bool Disable) {
+  if (Entry.isError() || Entry.isDirectory() || Disable ||
+      !shouldScanForDirectives(Filename))
+    return EntryRef(Filename, Entry);
+
+  CachedFileContents *Contents = Entry.getCachedContents();
+  assert(Contents && "contents not initialized");
+
+  // Double-checked locking.
+  if (Contents->DepDirectives.load())
+    return EntryRef(Filename, Entry);
+
+  std::lock_guard<std::mutex> GuardLock(Contents->ValueLock);
+
+  // Double-checked locking.
+  if (Contents->DepDirectives.load())
+    return EntryRef(Filename, Entry);
+
+  SmallVector<dependency_directives_scan::Directive, 64> Directives;
+  // Scan the file for preprocessor directives that might affect the
+  // dependencies.
+  if (scanSourceForDependencyDirectives(Contents->Original->getBuffer(),
+                                        Contents->DepDirectiveTokens,
+                                        Directives)) {
+    Contents->DepDirectiveTokens.clear();
+    // FIXME: Propagate the diagnostic if desired by the client.
+    Contents->DepDirectives.store(new Optional<DependencyDirectivesTy>());
+    return EntryRef(Filename, Entry);
+  }
+
+  // This function performed double-checked locking using `DepDirectives`.
+  // Assigning it must be the last thing this function does, otherwise other
+  // threads may skip the
+  // critical section (`DepDirectives != nullptr`), leading to a data race.
+  Contents->DepDirectives.store(
+      new Optional<DependencyDirectivesTy>(std::move(Directives)));
+  return EntryRef(Filename, Entry);
 }
 
-DependencyScanningFilesystemSharedCache::SingleCache::SingleCache() {
+DependencyScanningFilesystemSharedCache::
+    DependencyScanningFilesystemSharedCache() {
   // This heuristic was chosen using a empirical testing on a
   // reasonably high core machine (iMacPro 18 cores / 36 threads). The cache
   // sharding gives a performance edge by reducing the lock contention.
@@ -110,18 +92,70 @@ DependencyScanningFilesystemSharedCache::SingleCache::SingleCache() {
   CacheShards = std::make_unique<CacheShard[]>(NumShards);
 }
 
-DependencyScanningFilesystemSharedCache::SharedFileSystemEntry &
-DependencyScanningFilesystemSharedCache::SingleCache::get(StringRef Key) {
-  CacheShard &Shard = CacheShards[llvm::hash_value(Key) % NumShards];
-  std::unique_lock<std::mutex> LockGuard(Shard.CacheLock);
-  auto It = Shard.Cache.try_emplace(Key);
-  return It.first->getValue();
+DependencyScanningFilesystemSharedCache::CacheShard &
+DependencyScanningFilesystemSharedCache::getShardForFilename(
+    StringRef Filename) const {
+  return CacheShards[llvm::hash_value(Filename) % NumShards];
 }
 
-DependencyScanningFilesystemSharedCache::SharedFileSystemEntry &
-DependencyScanningFilesystemSharedCache::get(StringRef Key, bool Minimized) {
-  SingleCache &Cache = Minimized ? CacheMinimized : CacheOriginal;
-  return Cache.get(Key);
+DependencyScanningFilesystemSharedCache::CacheShard &
+DependencyScanningFilesystemSharedCache::getShardForUID(
+    llvm::sys::fs::UniqueID UID) const {
+  auto Hash = llvm::hash_combine(UID.getDevice(), UID.getFile());
+  return CacheShards[Hash % NumShards];
+}
+
+const CachedFileSystemEntry *
+DependencyScanningFilesystemSharedCache::CacheShard::findEntryByFilename(
+    StringRef Filename) const {
+  std::lock_guard<std::mutex> LockGuard(CacheLock);
+  auto It = EntriesByFilename.find(Filename);
+  return It == EntriesByFilename.end() ? nullptr : It->getValue();
+}
+
+const CachedFileSystemEntry *
+DependencyScanningFilesystemSharedCache::CacheShard::findEntryByUID(
+    llvm::sys::fs::UniqueID UID) const {
+  std::lock_guard<std::mutex> LockGuard(CacheLock);
+  auto It = EntriesByUID.find(UID);
+  return It == EntriesByUID.end() ? nullptr : It->getSecond();
+}
+
+const CachedFileSystemEntry &
+DependencyScanningFilesystemSharedCache::CacheShard::
+    getOrEmplaceEntryForFilename(StringRef Filename,
+                                 llvm::ErrorOr<llvm::vfs::Status> Stat) {
+  std::lock_guard<std::mutex> LockGuard(CacheLock);
+  auto Insertion = EntriesByFilename.insert({Filename, nullptr});
+  if (Insertion.second)
+    Insertion.first->second =
+        new (EntryStorage.Allocate()) CachedFileSystemEntry(std::move(Stat));
+  return *Insertion.first->second;
+}
+
+const CachedFileSystemEntry &
+DependencyScanningFilesystemSharedCache::CacheShard::getOrEmplaceEntryForUID(
+    llvm::sys::fs::UniqueID UID, llvm::vfs::Status Stat,
+    std::unique_ptr<llvm::MemoryBuffer> Contents) {
+  std::lock_guard<std::mutex> LockGuard(CacheLock);
+  auto Insertion = EntriesByUID.insert({UID, nullptr});
+  if (Insertion.second) {
+    CachedFileContents *StoredContents = nullptr;
+    if (Contents)
+      StoredContents = new (ContentsStorage.Allocate())
+          CachedFileContents(std::move(Contents));
+    Insertion.first->second = new (EntryStorage.Allocate())
+        CachedFileSystemEntry(std::move(Stat), StoredContents);
+  }
+  return *Insertion.first->second;
+}
+
+const CachedFileSystemEntry &
+DependencyScanningFilesystemSharedCache::CacheShard::
+    getOrInsertEntryForFilename(StringRef Filename,
+                                const CachedFileSystemEntry &Entry) {
+  std::lock_guard<std::mutex> LockGuard(CacheLock);
+  return *EntriesByFilename.insert({Filename, &Entry}).first->getValue();
 }
 
 /// Whitelist file extensions that should be minimized, treating no extension as
@@ -129,110 +163,117 @@ DependencyScanningFilesystemSharedCache::get(StringRef Key, bool Minimized) {
 ///
 /// This is kinda hacky, it would be better if we knew what kind of file Clang
 /// was expecting instead.
-static bool shouldMinimize(StringRef Filename) {
+static bool shouldScanForDirectivesBasedOnExtension(StringRef Filename) {
   StringRef Ext = llvm::sys::path::extension(Filename);
   if (Ext.empty())
     return true; // C++ standard library
   return llvm::StringSwitch<bool>(Ext)
-    .CasesLower(".c", ".cc", ".cpp", ".c++", ".cxx", true)
-    .CasesLower(".h", ".hh", ".hpp", ".h++", ".hxx", true)
-    .CasesLower(".m", ".mm", true)
-    .CasesLower(".i", ".ii", ".mi", ".mmi", true)
-    .CasesLower(".def", ".inc", true)
-    .Default(false);
+      .CasesLower(".c", ".cc", ".cpp", ".c++", ".cxx", true)
+      .CasesLower(".h", ".hh", ".hpp", ".h++", ".hxx", true)
+      .CasesLower(".m", ".mm", true)
+      .CasesLower(".i", ".ii", ".mi", ".mmi", true)
+      .CasesLower(".def", ".inc", true)
+      .Default(false);
 }
-
 
 static bool shouldCacheStatFailures(StringRef Filename) {
   StringRef Ext = llvm::sys::path::extension(Filename);
   if (Ext.empty())
     return false; // This may be the module cache directory.
-  return shouldMinimize(Filename); // Only cache stat failures on source files.
+  // Only cache stat failures on source files.
+  return shouldScanForDirectivesBasedOnExtension(Filename);
 }
 
-void DependencyScanningWorkerFilesystem::ignoreFile(StringRef RawFilename) {
-  llvm::SmallString<256> Filename;
-  llvm::sys::path::native(RawFilename, Filename);
-  IgnoredFiles.insert(Filename);
+bool DependencyScanningWorkerFilesystem::shouldScanForDirectives(
+    StringRef Filename) {
+  return shouldScanForDirectivesBasedOnExtension(Filename);
 }
 
-bool DependencyScanningWorkerFilesystem::shouldIgnoreFile(
-    StringRef RawFilename) {
-  llvm::SmallString<256> Filename;
-  llvm::sys::path::native(RawFilename, Filename);
-  return IgnoredFiles.contains(Filename);
+const CachedFileSystemEntry &
+DependencyScanningWorkerFilesystem::getOrEmplaceSharedEntryForUID(
+    TentativeEntry TEntry) {
+  auto &Shard = SharedCache.getShardForUID(TEntry.Status.getUniqueID());
+  return Shard.getOrEmplaceEntryForUID(TEntry.Status.getUniqueID(),
+                                       std::move(TEntry.Status),
+                                       std::move(TEntry.Contents));
 }
 
-llvm::ErrorOr<const CachedFileSystemEntry *>
-DependencyScanningWorkerFilesystem::getOrCreateFileSystemEntry(
-    const StringRef Filename) {
-  bool ShouldMinimize = !shouldIgnoreFile(Filename) && shouldMinimize(Filename);
-
-  if (const auto *Entry = Cache.getCachedEntry(Filename, ShouldMinimize))
+const CachedFileSystemEntry *
+DependencyScanningWorkerFilesystem::findEntryByFilenameWithWriteThrough(
+    StringRef Filename) {
+  if (const auto *Entry = LocalCache.findEntryByFilename(Filename))
     return Entry;
+  auto &Shard = SharedCache.getShardForFilename(Filename);
+  if (const auto *Entry = Shard.findEntryByFilename(Filename))
+    return &LocalCache.insertEntryForFilename(Filename, *Entry);
+  return nullptr;
+}
 
-  // FIXME: Handle PCM/PCH files.
-  // FIXME: Handle module map files.
-
-  DependencyScanningFilesystemSharedCache::SharedFileSystemEntry
-      &SharedCacheEntry = SharedCache.get(Filename, ShouldMinimize);
-  const CachedFileSystemEntry *Result;
-  {
-    std::unique_lock<std::mutex> LockGuard(SharedCacheEntry.ValueLock);
-    CachedFileSystemEntry &CacheEntry = SharedCacheEntry.Value;
-
-    if (!CacheEntry.isValid()) {
-      llvm::vfs::FileSystem &FS = getUnderlyingFS();
-      auto MaybeStatus = FS.status(Filename);
-      if (!MaybeStatus) {
-        if (!shouldCacheStatFailures(Filename))
-          // HACK: We need to always restat non source files if the stat fails.
-          //   This is because Clang first looks up the module cache and module
-          //   files before building them, and then looks for them again. If we
-          //   cache the stat failure, it won't see them the second time.
-          return MaybeStatus.getError();
-        else
-          CacheEntry = CachedFileSystemEntry(MaybeStatus.getError());
-      } else if (MaybeStatus->isDirectory())
-        CacheEntry = CachedFileSystemEntry::createDirectoryEntry(
-            std::move(*MaybeStatus));
-      else
-        CacheEntry = CachedFileSystemEntry::createFileEntry(Filename, FS,
-                                                            ShouldMinimize);
-    }
-
-    Result = &CacheEntry;
+llvm::ErrorOr<const CachedFileSystemEntry &>
+DependencyScanningWorkerFilesystem::computeAndStoreResult(StringRef Filename) {
+  llvm::ErrorOr<llvm::vfs::Status> Stat = getUnderlyingFS().status(Filename);
+  if (!Stat) {
+    if (!shouldCacheStatFailures(Filename))
+      return Stat.getError();
+    const auto &Entry =
+        getOrEmplaceSharedEntryForFilename(Filename, Stat.getError());
+    return insertLocalEntryForFilename(Filename, Entry);
   }
 
-  // Store the result in the local cache.
-  Cache.setCachedEntry(Filename, ShouldMinimize, Result);
-  return Result;
+  if (const auto *Entry = findSharedEntryByUID(*Stat))
+    return insertLocalEntryForFilename(Filename, *Entry);
+
+  auto TEntry =
+      Stat->isDirectory() ? TentativeEntry(*Stat) : readFile(Filename);
+
+  const CachedFileSystemEntry *SharedEntry = [&]() {
+    if (TEntry) {
+      const auto &UIDEntry = getOrEmplaceSharedEntryForUID(std::move(*TEntry));
+      return &getOrInsertSharedEntryForFilename(Filename, UIDEntry);
+    }
+    return &getOrEmplaceSharedEntryForFilename(Filename, TEntry.getError());
+  }();
+
+  return insertLocalEntryForFilename(Filename, *SharedEntry);
+}
+
+llvm::ErrorOr<EntryRef>
+DependencyScanningWorkerFilesystem::getOrCreateFileSystemEntry(
+    StringRef Filename, bool DisableDirectivesScanning) {
+  if (const auto *Entry = findEntryByFilenameWithWriteThrough(Filename))
+    return scanForDirectivesIfNecessary(*Entry, Filename,
+                                        DisableDirectivesScanning)
+        .unwrapError();
+  auto MaybeEntry = computeAndStoreResult(Filename);
+  if (!MaybeEntry)
+    return MaybeEntry.getError();
+  return scanForDirectivesIfNecessary(*MaybeEntry, Filename,
+                                      DisableDirectivesScanning)
+      .unwrapError();
 }
 
 llvm::ErrorOr<llvm::vfs::Status>
 DependencyScanningWorkerFilesystem::status(const Twine &Path) {
   SmallString<256> OwnedFilename;
   StringRef Filename = Path.toStringRef(OwnedFilename);
-  const llvm::ErrorOr<const CachedFileSystemEntry *> Result =
-      getOrCreateFileSystemEntry(Filename);
+
+  llvm::ErrorOr<EntryRef> Result = getOrCreateFileSystemEntry(Filename);
   if (!Result)
     return Result.getError();
-  return (*Result)->getStatus();
+  return Result->getStatus();
 }
 
 namespace {
 
 /// The VFS that is used by clang consumes the \c CachedFileSystemEntry using
 /// this subclass.
-class MinimizedVFSFile final : public llvm::vfs::File {
+class DepScanFile final : public llvm::vfs::File {
 public:
-  MinimizedVFSFile(std::unique_ptr<llvm::MemoryBuffer> Buffer,
-                   llvm::vfs::Status Stat)
+  DepScanFile(std::unique_ptr<llvm::MemoryBuffer> Buffer,
+              llvm::vfs::Status Stat)
       : Buffer(std::move(Buffer)), Stat(std::move(Stat)) {}
 
-  static llvm::ErrorOr<std::unique_ptr<llvm::vfs::File>>
-  create(const CachedFileSystemEntry *Entry,
-         ExcludedPreprocessorDirectiveSkipMapping *PPSkipMappings);
+  static llvm::ErrorOr<std::unique_ptr<llvm::vfs::File>> create(EntryRef Entry);
 
   llvm::ErrorOr<llvm::vfs::Status> status() override { return Stat; }
 
@@ -251,22 +292,19 @@ private:
 
 } // end anonymous namespace
 
-llvm::ErrorOr<std::unique_ptr<llvm::vfs::File>> MinimizedVFSFile::create(
-    const CachedFileSystemEntry *Entry,
-    ExcludedPreprocessorDirectiveSkipMapping *PPSkipMappings) {
-  if (Entry->isDirectory())
-    return llvm::ErrorOr<std::unique_ptr<llvm::vfs::File>>(
-        std::make_error_code(std::errc::is_a_directory));
-  llvm::ErrorOr<StringRef> Contents = Entry->getContents();
-  if (!Contents)
-    return Contents.getError();
-  auto Result = std::make_unique<MinimizedVFSFile>(
-      llvm::MemoryBuffer::getMemBuffer(*Contents, Entry->getName(),
+llvm::ErrorOr<std::unique_ptr<llvm::vfs::File>>
+DepScanFile::create(EntryRef Entry) {
+  assert(!Entry.isError() && "error");
+
+  if (Entry.isDirectory())
+    return std::make_error_code(std::errc::is_a_directory);
+
+  auto Result = std::make_unique<DepScanFile>(
+      llvm::MemoryBuffer::getMemBuffer(Entry.getContents(),
+                                       Entry.getStatus().getName(),
                                        /*RequiresNullTerminator=*/false),
-      *Entry->getStatus());
-  if (!Entry->getPPSkippedRangeMapping().empty() && PPSkipMappings)
-    (*PPSkipMappings)[Result->Buffer->getBufferStart()] =
-        &Entry->getPPSkippedRangeMapping();
+      Entry.getStatus());
+
   return llvm::ErrorOr<std::unique_ptr<llvm::vfs::File>>(
       std::unique_ptr<llvm::vfs::File>(std::move(Result)));
 }
@@ -276,9 +314,8 @@ DependencyScanningWorkerFilesystem::openFileForRead(const Twine &Path) {
   SmallString<256> OwnedFilename;
   StringRef Filename = Path.toStringRef(OwnedFilename);
 
-  const llvm::ErrorOr<const CachedFileSystemEntry *> Result =
-      getOrCreateFileSystemEntry(Filename);
+  llvm::ErrorOr<EntryRef> Result = getOrCreateFileSystemEntry(Filename);
   if (!Result)
     return Result.getError();
-  return MinimizedVFSFile::create(Result.get(), PPSkipMappings);
+  return DepScanFile::create(Result.get());
 }

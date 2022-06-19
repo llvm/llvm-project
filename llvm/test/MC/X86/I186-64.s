@@ -33,7 +33,7 @@ outsb %gs:(%rsi), %dx
 outsl %gs:(%rsi), %dx 
 
 // CHECK: outsw %gs:(%rsi), %dx 
-// CHECK: encoding: [0x66,0x65,0x6f]        
+// CHECK: encoding: [0x65,0x66,0x6f]        
 outsw %gs:(%rsi), %dx 
 
 // CHECK: pushq $0 
@@ -289,7 +289,7 @@ repne outsb %gs:(%rsi), %dx
 repne outsl %gs:(%rsi), %dx 
 
 // CHECK: repne outsw %gs:(%rsi), %dx 
-// CHECK: encoding: [0xf2,0x66,0x65,0x6f]       
+// CHECK: encoding: [0xf2,0x65,0x66,0x6f]       
 repne outsw %gs:(%rsi), %dx 
 
 // CHECK: rep outsb %gs:(%rsi), %dx 
@@ -301,7 +301,7 @@ rep outsb %gs:(%rsi), %dx
 rep outsl %gs:(%rsi), %dx 
 
 // CHECK: rep outsw %gs:(%rsi), %dx 
-// CHECK: encoding: [0xf3,0x66,0x65,0x6f]       
+// CHECK: encoding: [0xf3,0x65,0x66,0x6f]       
 rep outsw %gs:(%rsi), %dx 
 
 // CHECK: rolb $0, 485498096 

@@ -18,7 +18,7 @@
 static_assert(1, ""); // c2x-error {{expected parameter declarator}} \
                       // c2x-error {{expected ')'}} \
                       // c2x-note {{to match this '('}} \
-                      // c2x-warning {{type specifier missing, defaults to 'int'}} \
+                      // c2x-error {{a type specifier is required for all declarations}} \
                       // c2x-ms-warning {{use of 'static_assert' without inclusion of <assert.h> is a Microsoft extension}}
 #endif
 

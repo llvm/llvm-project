@@ -134,9 +134,13 @@ public:
   bool isColdCount(uint64_t C) const;
   /// Returns true if count \p C is considered hot with regard to a given
   /// hot percentile cutoff value.
+  /// PercentileCutoff is encoded as a 6 digit decimal fixed point number, where
+  /// the first two digits are the whole part. E.g. 995000 for 99.5 percentile.
   bool isHotCountNthPercentile(int PercentileCutoff, uint64_t C) const;
   /// Returns true if count \p C is considered cold with regard to a given
   /// cold percentile cutoff value.
+  /// PercentileCutoff is encoded as a 6 digit decimal fixed point number, where
+  /// the first two digits are the whole part. E.g. 995000 for 99.5 percentile.
   bool isColdCountNthPercentile(int PercentileCutoff, uint64_t C) const;
   /// Returns true if BasicBlock \p BB is considered hot.
   bool isHotBlock(const BasicBlock *BB, BlockFrequencyInfo *BFI) const;
@@ -144,10 +148,14 @@ public:
   bool isColdBlock(const BasicBlock *BB, BlockFrequencyInfo *BFI) const;
   /// Returns true if BasicBlock \p BB is considered hot with regard to a given
   /// hot percentile cutoff value.
+  /// PercentileCutoff is encoded as a 6 digit decimal fixed point number, where
+  /// the first two digits are the whole part. E.g. 995000 for 99.5 percentile.
   bool isHotBlockNthPercentile(int PercentileCutoff, const BasicBlock *BB,
                                BlockFrequencyInfo *BFI) const;
   /// Returns true if BasicBlock \p BB is considered cold with regard to a given
   /// cold percentile cutoff value.
+  /// PercentileCutoff is encoded as a 6 digit decimal fixed point number, where
+  /// the first two digits are the whole part. E.g. 995000 for 99.5 percentile.
   bool isColdBlockNthPercentile(int PercentileCutoff, const BasicBlock *BB,
                                 BlockFrequencyInfo *BFI) const;
   /// Returns true if the call site \p CB is considered hot.
@@ -162,11 +170,11 @@ public:
   uint64_t getOrCompColdCountThreshold() const;
   /// Returns HotCountThreshold if set.
   uint64_t getHotCountThreshold() const {
-    return HotCountThreshold ? HotCountThreshold.getValue() : 0;
+    return HotCountThreshold.value_or(0);
   }
   /// Returns ColdCountThreshold if set.
   uint64_t getColdCountThreshold() const {
-    return ColdCountThreshold ? ColdCountThreshold.getValue() : 0;
+    return ColdCountThreshold.value_or(0);
   }
 
  private:

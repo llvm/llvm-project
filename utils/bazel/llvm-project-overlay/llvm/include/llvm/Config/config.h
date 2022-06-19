@@ -24,7 +24,7 @@
 #include "llvm/Config/llvm-config.h"
 
 /* Bug report URL. */
-#define BUG_REPORT_URL "https://bugs.llvm.org/"
+#define BUG_REPORT_URL "https://github.com/llvm/llvm-project/issues/"
 
 /* Define to 1 to enable backtraces, and to 0 otherwise. */
 #define ENABLE_BACKTRACES 1
@@ -34,6 +34,10 @@
 
 /* Define to 1 to enable crash memory dumps, and to 0 otherwise. */
 #define LLVM_ENABLE_CRASH_DUMPS 0
+
+/* Define to 1 to prefer forward slashes on Windows, and to 0 prefer
+   backslashes. */
+#define LLVM_WINDOWS_PREFER_FORWARD_SLASH 0
 
 /* Define to 1 if you have the `backtrace' function. */
 /* HAVE_BACKTRACE defined in Bazel */
@@ -62,9 +66,6 @@
    don't. */
 #define HAVE_DECL_STRERROR_S 0
 
-/* Define to 1 if you have the DIA SDK installed, and to 0 if you don't. */
-#define LLVM_ENABLE_DIA_SDK 0
-
 /* Define to 1 if you have the <dlfcn.h> header file. */
 #define HAVE_DLFCN_H 1
 
@@ -75,10 +76,13 @@
 /* #undef HAVE_DLADDR */
 
 /* Define to 1 if we can register EH frames on this platform. */
-#define HAVE_REGISTER_FRAME 1
+/* HAVE_REGISTER_FRAME defined in Bazel*/
 
 /* Define to 1 if we can deregister EH frames on this platform. */
-#define HAVE_DEREGISTER_FRAME 1
+/* HAVE_DEREGISTER_FRAME defined in Bazel*/
+
+/* Define if __unw_add_dynamic_fde() is available on this platform. */
+/* HAVE_UNW_ADD_DYNAMIC_FDE defined in Bazel */
 
 /* Define to 1 if you have the <errno.h> header file. */
 #define HAVE_ERRNO_H 1
@@ -158,20 +162,14 @@
 /* Define to 1 if you have the `malloc_zone_statistics' function. */
 /* HAVE_MALLOC_ZONE_STATISTICS defined in Bazel */
 
-/* Define to 1 if you have the `posix_fallocate' function. */
-/* HAVE_POSIX_FALLOCATE defined in Bazel */
-
 /* Define to 1 if you have the `posix_spawn' function. */
 #define HAVE_POSIX_SPAWN 1
 
 /* Define to 1 if you have the `pread' function. */
 #define HAVE_PREAD 1
 
-/* Have pthread_getspecific */
-#define HAVE_PTHREAD_GETSPECIFIC 1
-
 /* Define to 1 if you have the <pthread.h> header file. */
-#define HAVE_PTHREAD_H 1
+/* HAVE_PTHREAD_H defined in Bazel */
 
 /* Have pthread_mutex_lock */
 #define HAVE_PTHREAD_MUTEX_LOCK 1
@@ -183,7 +181,7 @@
 /* HAVE_SBRK defined in Bazel */
 
 /* Define to 1 if you have the `setenv' function. */
-#define HAVE_SETENV 1
+/* HAVE_SETENV defined in Bazel */
 
 /* Define to 1 if you have the `setrlimit' function. */
 #define HAVE_SETRLIMIT 1
@@ -305,18 +303,11 @@
 /* Linker version detected at compile time. */
 /* #undef HOST_LINK_VERSION */
 
-/* Target triple LLVM will generate code for by default */
-/* Doesn't use `cmakedefine` because it is allowed to be empty. */
-/* LLVM_DEFAULT_TARGET_TRIPLE defined in Bazel */
-
 /* Define if zlib compression is available */
 /* LLVM_ENABLE_ZLIB defined in Bazel */
 
 /* Define if overriding target triple is enabled */
 /* #undef LLVM_TARGET_TRIPLE_ENV */
-
-/* LLVM version information */
-/* #undef LLVM_VERSION_INFO */
 
 /* Whether tools show host and target info when invoked with --version */
 #define LLVM_VERSION_PRINTER_SHOW_HOST_TARGET_INFO 1
@@ -328,7 +319,7 @@
 /* LTDL_SHLIB_EXT defined in Bazel */
 
 /* Define to the address where bug reports for this package should be sent. */
-#define PACKAGE_BUGREPORT "https://bugs.llvm.org/"
+#define PACKAGE_BUGREPORT "https://github.com/llvm/llvm-project/issues/"
 
 /* Define to the full name of this package. */
 #define PACKAGE_NAME "LLVM"
@@ -342,22 +333,37 @@
 /* Define to the vendor of this package. */
 /* #undef PACKAGE_VENDOR */
 
-/* Define as the return type of signal handlers (`int' or `void'). */
-#define RETSIGTYPE void
-
 /* Define if std::is_trivially_copyable is supported */
 #define HAVE_STD_IS_TRIVIALLY_COPYABLE 1
 
 /* Define to a function implementing stricmp */
-/* stricmp defined in Bazel */
+/* stricmp defined conditionally below. */
 
 /* Define to a function implementing strdup */
-/* strdup defined in Bazel */
+/* strdup defined conditionally below. */
 
 /* Whether GlobalISel rule coverage is being collected */
 #define LLVM_GISEL_COV_ENABLED 0
 
 /* Define to the default GlobalISel coverage file prefix */
 /* #undef LLVM_GISEL_COV_PREFIX */
+
+/* Whether Timers signpost passes in Xcode Instruments */
+#define LLVM_SUPPORT_XCODE_SIGNPOSTS 0
+
+/* HAVE_PROC_PID_RUSAGE defined in Bazel */
+
+/* Directly provide definitions here behind platform preprocessor definitions.
+ * The preprocessor conditions are sufficient to handle all of the configuration
+ * on platforms targeted by Bazel, and defining these here more faithfully
+ * matches how the users of this header expect things to work with CMake.
+ * FIXME: We should consider moving other platform defines to use this technique
+ * as well.
+ */
+
+#ifdef _WIN32
+#define stricmp _stricmp
+#define strdup _strdup
+#endif
 
 #endif

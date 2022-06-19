@@ -885,9 +885,9 @@ define void @test_pr30292(i1 %cond, i1 %cond2, i32 %a, i32 %b) {
 ; CHECK:       two:
 ; CHECK-NEXT:    call void @g()
 ; CHECK-NEXT:    [[ADD2:%.*]] = add i32 [[A]], 1
-; CHECK-NEXT:    br label [[SUCC]]
+; CHECK-NEXT:    br label [[TWO:%.*]]
 ; CHECK:       succ:
-; CHECK-NEXT:    [[P:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[ADD1]], [[SUCC]] ], [ [[ADD2]], [[TWO:%.*]] ]
+; CHECK-NEXT:    [[P:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[ADD1]], [[SUCC]] ]
 ; CHECK-NEXT:    br i1 [[COND:%.*]], label [[TWO]], label [[SUCC]]
 ;
 entry:
@@ -1256,28 +1256,28 @@ merge:
 }
 
 
-%T = type {i32, i32}
+%TP = type {i32, i32}
 
-define i32 @test_insertvalue(i1 zeroext %flag, %T %P) {
+define i32 @test_insertvalue(i1 zeroext %flag, %TP %P) {
 ; CHECK-LABEL: @test_insertvalue(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[DOT:%.*]] = select i1 [[FLAG:%.*]], i32 0, i32 1
-; CHECK-NEXT:    [[T2:%.*]] = insertvalue [[T:%.*]] [[P:%.*]], i32 [[DOT]], 0
+; CHECK-NEXT:    [[I2:%.*]] = insertvalue [[TP:%.*]] [[P:%.*]], i32 [[DOT]], 0
 ; CHECK-NEXT:    ret i32 1
 ;
 entry:
   br i1 %flag, label %if.then, label %if.else
 
 if.then:
-  %t1 = insertvalue %T %P, i32 0, 0
+  %i1 = insertvalue %TP %P, i32 0, 0
   br label %if.end
 
 if.else:
-  %t2 = insertvalue %T %P, i32 1, 0
+  %i2 = insertvalue %TP %P, i32 1, 0
   br label %if.end
 
 if.end:
-  %t = phi %T [%t1, %if.then], [%t2, %if.else]
+  %i = phi %TP [%i1, %if.then], [%i2, %if.else]
   ret i32 1
 }
 

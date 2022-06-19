@@ -51,6 +51,7 @@ int main(int, char**)
         s1 >> s;
         assert(s == "Dddddddddddddddddd");
     }
+#ifndef TEST_HAS_NO_WIDE_CHARACTERS
     {
         std::wistringstream ss0(L" 123 456");
         std::wistringstream ss;
@@ -82,6 +83,7 @@ int main(int, char**)
         s1 >> s;
         assert(s == L"Dddddddddddddddddd");
     }
+#endif // TEST_HAS_NO_WIDE_CHARACTERS
 
   return 0;
 }

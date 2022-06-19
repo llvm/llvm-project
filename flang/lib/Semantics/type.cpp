@@ -12,6 +12,7 @@
 #include "flang/Evaluate/fold.h"
 #include "flang/Evaluate/tools.h"
 #include "flang/Parser/characters.h"
+#include "flang/Parser/parse-tree-visitor.h"
 #include "flang/Semantics/scope.h"
 #include "flang/Semantics/symbol.h"
 #include "flang/Semantics/tools.h"
@@ -177,11 +178,11 @@ bool DerivedTypeSpec::IsForwardReferenced() const {
   return typeSymbol_.get<DerivedTypeDetails>().isForwardReferenced();
 }
 
-bool DerivedTypeSpec::HasDefaultInitialization() const {
+bool DerivedTypeSpec::HasDefaultInitialization(bool ignoreAllocatable) const {
   DirectComponentIterator components{*this};
   return bool{std::find_if(
       components.begin(), components.end(), [&](const Symbol &component) {
-        return IsInitialized(component, false, &typeSymbol());
+        return IsInitialized(component, true, ignoreAllocatable);
       })};
 }
 
@@ -201,15 +202,27 @@ ParamValue *DerivedTypeSpec::FindParameter(SourceName target) {
       const_cast<const DerivedTypeSpec *>(this)->FindParameter(target));
 }
 
-// Objects of derived types might be assignment compatible if they are equal
-// with respect to everything other than their instantiated type parameters
-// and their constant instantiated type parameters have the same values.
-bool DerivedTypeSpec::MightBeAssignmentCompatibleWith(
-    const DerivedTypeSpec &that) const {
-  if (!RawEquals(that)) {
+bool DerivedTypeSpec::Match(const DerivedTypeSpec &that) const {
+  if (&typeSymbol_ != &that.typeSymbol_) {
     return false;
   }
-  return AreTypeParamCompatible(*this, that);
+  for (const auto &pair : parameters_) {
+    const Symbol *tpSym{scope_ ? scope_->FindSymbol(pair.first) : nullptr};
+    const auto *tpDetails{
+        tpSym ? tpSym->detailsIf<TypeParamDetails>() : nullptr};
+    if (!tpDetails) {
+      return false;
+    }
+    if (tpDetails->attr() != common::TypeParamAttr::Kind) {
+      continue;
+    }
+    const ParamValue &value{pair.second};
+    auto iter{that.parameters_.find(pair.first)};
+    if (iter == that.parameters_.end() || iter->second != value) {
+      return false;
+    }
+  }
+  return true;
 }
 
 class InstantiateHelper {
@@ -360,11 +373,39 @@ void DerivedTypeSpec::Instantiate(Scope &containingScope) {
 }
 
 void InstantiateHelper::InstantiateComponents(const Scope &fromScope) {
-  for (const auto &pair : fromScope) {
-    InstantiateComponent(*pair.second);
+  // Instantiate symbols in declaration order; this ensures that
+  // parent components and type parameters of ancestor types exist
+  // by the time that they're needed.
+  for (SymbolRef ref : fromScope.GetSymbols()) {
+    InstantiateComponent(*ref);
   }
   ComputeOffsets(context(), scope_);
 }
+
+// Walks a parsed expression to prepare it for (re)analysis;
+// clears out the typedExpr analysis results and re-resolves
+// symbol table pointers of type parameters.
+class ComponentInitResetHelper {
+public:
+  explicit ComponentInitResetHelper(Scope &scope) : scope_{scope} {}
+
+  template <typename A> bool Pre(const A &) { return true; }
+
+  template <typename A> void Post(const A &x) {
+    if constexpr (parser::HasTypedExpr<A>()) {
+      x.typedExpr.Reset();
+    }
+  }
+
+  void Post(const parser::Name &name) {
+    if (name.symbol && name.symbol->has<TypeParamDetails>()) {
+      name.symbol = scope_.FindComponent(name.source);
+    }
+  }
+
+private:
+  Scope &scope_;
+};
 
 void InstantiateHelper::InstantiateComponent(const Symbol &oldSymbol) {
   auto pair{scope_.try_emplace(
@@ -396,6 +437,18 @@ void InstantiateHelper::InstantiateComponent(const Symbol &oldSymbol) {
       if (dim.ubound().isExplicit()) {
         dim.ubound().SetExplicit(Fold(std::move(dim.ubound().GetExplicit())));
       }
+    }
+    if (const auto *parsedExpr{details->unanalyzedPDTComponentInit()}) {
+      // Analyze the parsed expression in this PDT instantiation context.
+      ComponentInitResetHelper resetter{scope_};
+      parser::Walk(*parsedExpr, resetter);
+      auto restorer{foldingContext().messages().SetLocation(newSymbol.name())};
+      details->set_init(evaluate::Fold(
+          foldingContext(), AnalyzeExpr(context(), *parsedExpr)));
+      details->set_unanalyzedPDTComponentInit(nullptr);
+      // Remove analysis results to prevent unparsing or other use of
+      // instantiation-specific expressions.
+      parser::Walk(*parsedExpr, resetter);
     }
     if (MaybeExpr & init{details->init()}) {
       // Non-pointer components with default initializers are
@@ -436,11 +489,28 @@ const DeclTypeSpec *InstantiateHelper::InstantiateType(const Symbol &symbol) {
   }
 }
 
+/// Fold explicit length parameters of character components when the explicit
+/// expression is a constant expression (if it only depends on KIND parameters).
+/// Do not fold `character(len=pdt_length)`, even if the length parameter is
+/// constant in the pdt instantiation, in order to avoid losing the information
+/// that the character component is automatic (and must be a descriptor).
+static ParamValue FoldCharacterLength(evaluate::FoldingContext &foldingContext,
+    const CharacterTypeSpec &characterSpec) {
+  if (const auto &len{characterSpec.length().GetExplicit()}) {
+    if (evaluate::IsConstantExpr(*len)) {
+      return ParamValue{evaluate::Fold(foldingContext, common::Clone(*len)),
+          common::TypeParamAttr::Len};
+    }
+  }
+  return characterSpec.length();
+}
+
 // Apply type parameter values to an intrinsic type spec.
 const DeclTypeSpec &InstantiateHelper::InstantiateIntrinsicType(
     SourceName symbolName, const DeclTypeSpec &spec) {
   const IntrinsicTypeSpec &intrinsic{DEREF(spec.AsIntrinsic())};
-  if (evaluate::ToInt64(intrinsic.kind())) {
+  if (spec.category() != DeclTypeSpec::Character &&
+      evaluate::IsActuallyConstant(intrinsic.kind())) {
     return spec; // KIND is already a known constant
   }
   // The expression was not originally constant, but now it must be so
@@ -465,7 +535,8 @@ const DeclTypeSpec &InstantiateHelper::InstantiateIntrinsicType(
     return scope_.MakeLogicalType(KindExpr{kind});
   case DeclTypeSpec::Character:
     return scope_.MakeCharacterType(
-        ParamValue{spec.characterTypeSpec().length()}, KindExpr{kind});
+        FoldCharacterLength(foldingContext(), spec.characterTypeSpec()),
+        KindExpr{kind});
   default:
     CRASH_NO_CASE;
   }
@@ -533,9 +604,9 @@ llvm::raw_ostream &operator<<(llvm::raw_ostream &o, const DerivedTypeSpec &x) {
 Bound::Bound(common::ConstantSubscript bound) : expr_{bound} {}
 
 llvm::raw_ostream &operator<<(llvm::raw_ostream &o, const Bound &x) {
-  if (x.isAssumed()) {
+  if (x.isStar()) {
     o << '*';
-  } else if (x.isDeferred()) {
+  } else if (x.isColon()) {
     o << ':';
   } else if (x.expr_) {
     x.expr_->AsFortran(o);
@@ -546,15 +617,15 @@ llvm::raw_ostream &operator<<(llvm::raw_ostream &o, const Bound &x) {
 }
 
 llvm::raw_ostream &operator<<(llvm::raw_ostream &o, const ShapeSpec &x) {
-  if (x.lb_.isAssumed()) {
-    CHECK(x.ub_.isAssumed());
+  if (x.lb_.isStar()) {
+    CHECK(x.ub_.isStar());
     o << "..";
   } else {
-    if (!x.lb_.isDeferred()) {
+    if (!x.lb_.isColon()) {
       o << x.lb_;
     }
     o << ':';
-    if (!x.ub_.isDeferred()) {
+    if (!x.ub_.isColon()) {
       o << x.ub_;
     }
   }
@@ -699,7 +770,14 @@ std::string DeclTypeSpec::AsFortran() const {
   case Character:
     return characterTypeSpec().AsFortran();
   case TypeDerived:
-    return "TYPE(" + derivedTypeSpec().AsFortran() + ')';
+    if (derivedTypeSpec()
+            .typeSymbol()
+            .get<DerivedTypeDetails>()
+            .isDECStructure()) {
+      return "RECORD" + derivedTypeSpec().typeSymbol().name().ToString();
+    } else {
+      return "TYPE(" + derivedTypeSpec().AsFortran() + ')';
+    }
   case ClassDerived:
     return "CLASS(" + derivedTypeSpec().AsFortran() + ')';
   case TypeStar:

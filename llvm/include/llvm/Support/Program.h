@@ -14,7 +14,6 @@
 #define LLVM_SUPPORT_PROGRAM_H
 
 #include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Config/llvm-config.h"
@@ -24,6 +23,7 @@
 #include <system_error>
 
 namespace llvm {
+class BitVector;
 namespace sys {
 
   /// This is the OS-specific separator for PATH like environment variables:

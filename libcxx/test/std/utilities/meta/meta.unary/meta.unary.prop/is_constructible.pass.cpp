@@ -11,16 +11,8 @@
 // template <class T, class... Args>
 //   struct is_constructible;
 
-// UNSUPPORTED: gcc-5, gcc-6, gcc-7, gcc-8, gcc-9
-
 #include <type_traits>
 #include "test_macros.h"
-
-#if TEST_STD_VER >= 11 && defined(_LIBCPP_VERSION)
-#define LIBCPP11_STATIC_ASSERT(...) static_assert(__VA_ARGS__)
-#else
-#define LIBCPP11_STATIC_ASSERT(...) ((void)0)
-#endif
 
 struct A
 {

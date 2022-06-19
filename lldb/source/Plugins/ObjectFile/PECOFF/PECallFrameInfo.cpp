@@ -46,25 +46,23 @@ public:
 private:
   ObjectFilePECOFF &m_object_file;
 
-  bool m_error;
+  bool m_error = false;
 
   uint32_t m_unwind_info_rva;
   DataExtractor m_unwind_info_data;
-  const UnwindInfo *m_unwind_info;
+  const UnwindInfo *m_unwind_info = nullptr;
 
   DataExtractor m_unwind_code_data;
   offset_t m_unwind_code_offset;
-  const UnwindCode *m_unwind_code;
+  const UnwindCode *m_unwind_code = nullptr;
 
-  bool m_chained;
+  bool m_chained = false;
 };
 
 UnwindCodesIterator::UnwindCodesIterator(ObjectFilePECOFF &object_file,
                                          uint32_t unwind_info_rva)
-    : m_object_file(object_file), m_error(false),
-      m_unwind_info_rva(unwind_info_rva),
-      m_unwind_info(nullptr), m_unwind_code_offset{}, m_unwind_code(nullptr),
-      m_chained(false) {}
+    : m_object_file(object_file),
+      m_unwind_info_rva(unwind_info_rva), m_unwind_code_offset{} {}
 
 bool UnwindCodesIterator::GetNext() {
   static constexpr int UNWIND_INFO_SIZE = 4;

@@ -12,6 +12,7 @@
 #include "llvm/Support/Error.h"
 #include "llvm/Support/Format.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/Support/NativeFormatting.h"
 #include <cctype>
 
 namespace llvm {
@@ -109,6 +110,7 @@ void Value::copyFrom(const Value &M) {
   case T_Boolean:
   case T_Double:
   case T_Integer:
+  case T_UINT64:
     memcpy(&Union, &M.Union, sizeof(Union));
     break;
   case T_StringRef:
@@ -133,6 +135,7 @@ void Value::moveFrom(const Value &&M) {
   case T_Boolean:
   case T_Double:
   case T_Integer:
+  case T_UINT64:
     memcpy(&Union, &M.Union, sizeof(Union));
     break;
   case T_StringRef:
@@ -159,6 +162,7 @@ void Value::destroy() {
   case T_Boolean:
   case T_Double:
   case T_Integer:
+  case T_UINT64:
     break;
   case T_StringRef:
     as<StringRef>().~StringRef();
@@ -505,12 +509,24 @@ bool Parser::parseNumber(char First, Value &Out) {
     S.push_back(next());
   char *End;
   // Try first to parse as integer, and if so preserve full 64 bits.
-  // strtoll returns long long >= 64 bits, so check it's in range too.
-  auto I = std::strtoll(S.c_str(), &End, 10);
-  if (End == S.end() && I >= std::numeric_limits<int64_t>::min() &&
-      I <= std::numeric_limits<int64_t>::max()) {
+  // We check for errno for out of bounds errors and for End == S.end()
+  // to make sure that the numeric string is not malformed.
+  errno = 0;
+  int64_t I = std::strtoll(S.c_str(), &End, 10);
+  if (End == S.end() && errno != ERANGE) {
     Out = int64_t(I);
     return true;
+  }
+  // strtroull has a special handling for negative numbers, but in this
+  // case we don't want to do that because negative numbers were already
+  // handled in the previous block.
+  if (First != '-') {
+    errno = 0;
+    uint64_t UI = std::strtoull(S.c_str(), &End, 10);
+    if (End == S.end() && errno != ERANGE) {
+      Out = UI;
+      return true;
+    }
   }
   // If it's not an integer
   Out = std::strtod(S.c_str(), &End);
@@ -750,6 +766,8 @@ void llvm::json::OStream::value(const Value &V) {
     valueBegin();
     if (V.Type == Value::T_Integer)
       OS << *V.getAsInteger();
+    else if (V.Type == Value::T_UINT64)
+      OS << *V.getAsUINT64();
     else
       OS << format("%.*g", std::numeric_limits<double>::max_digits10,
                    *V.getAsNumber());

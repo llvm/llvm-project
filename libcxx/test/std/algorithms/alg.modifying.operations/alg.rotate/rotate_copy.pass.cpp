@@ -12,10 +12,6 @@
 //   constexpr OutIter          // constexpr after C++17
 //   rotate_copy(InIter first, InIter middle, InIter last, OutIter result);
 
-// Older compilers don't support std::is_constant_evaluated
-// UNSUPPORTED: clang-4, clang-5, clang-6, clang-7, clang-8
-// UNSUPPORTED: apple-clang-9, apple-clang-10
-
 #include <algorithm>
 #include <cassert>
 
@@ -129,19 +125,19 @@ TEST_CONSTEXPR_CXX20 void test() {
 }
 
 TEST_CONSTEXPR_CXX20 bool all_tests() {
-  test<bidirectional_iterator<const int*>, output_iterator<int*> >();
+  test<bidirectional_iterator<const int*>, cpp17_output_iterator<int*> >();
   test<bidirectional_iterator<const int*>, forward_iterator<int*> >();
   test<bidirectional_iterator<const int*>, bidirectional_iterator<int*> >();
   test<bidirectional_iterator<const int*>, random_access_iterator<int*> >();
   test<bidirectional_iterator<const int*>, int*>();
 
-  test<random_access_iterator<const int*>, output_iterator<int*> >();
+  test<random_access_iterator<const int*>, cpp17_output_iterator<int*> >();
   test<random_access_iterator<const int*>, forward_iterator<int*> >();
   test<random_access_iterator<const int*>, bidirectional_iterator<int*> >();
   test<random_access_iterator<const int*>, random_access_iterator<int*> >();
   test<random_access_iterator<const int*>, int*>();
 
-  test<const int*, output_iterator<int*> >();
+  test<const int*, cpp17_output_iterator<int*> >();
   test<const int*, forward_iterator<int*> >();
   test<const int*, bidirectional_iterator<int*> >();
   test<const int*, random_access_iterator<int*> >();

@@ -1294,7 +1294,7 @@ define i32 @tlsCall(i1 %bool1, i32 %arg, i32* readonly dereferenceable(4) %sum1)
 ; ENABLE-NEXT:    pushq %rax
 ; ENABLE-NEXT:    testb $1, %dil
 ; ENABLE-NEXT:    je LBB15_2
-; ENABLE-NEXT:  ## %bb.1: ## %master
+; ENABLE-NEXT:  ## %bb.1: ## %main
 ; ENABLE-NEXT:    movl (%rdx), %ecx
 ; ENABLE-NEXT:    movq _sum1@TLVP(%rip), %rdi
 ; ENABLE-NEXT:    callq *(%rdi)
@@ -1315,7 +1315,7 @@ define i32 @tlsCall(i1 %bool1, i32 %arg, i32* readonly dereferenceable(4) %sum1)
 ; DISABLE-NEXT:    pushq %rax
 ; DISABLE-NEXT:    testb $1, %dil
 ; DISABLE-NEXT:    je LBB15_2
-; DISABLE-NEXT:  ## %bb.1: ## %master
+; DISABLE-NEXT:  ## %bb.1: ## %main
 ; DISABLE-NEXT:    movl (%rdx), %ecx
 ; DISABLE-NEXT:    movq _sum1@TLVP(%rip), %rdi
 ; DISABLE-NEXT:    callq *(%rdi)
@@ -1331,9 +1331,9 @@ define i32 @tlsCall(i1 %bool1, i32 %arg, i32* readonly dereferenceable(4) %sum1)
 ; DISABLE-NEXT:    popq %rcx
 ; DISABLE-NEXT:    retq
 entry:
-  br i1 %bool1, label %master, label %else
+  br i1 %bool1, label %main, label %else
 
-master:
+main:
   %tmp1 = load i32, i32* %sum1, align 4
   store i32 %tmp1, i32* @sum1, align 4
   br label %exit
@@ -1343,7 +1343,7 @@ else:
   br label %exit
 
 exit:
-  %res = phi i32 [ %arg, %master], [ %call, %else ]
+  %res = phi i32 [ %arg, %main], [ %call, %else ]
   ret i32 %res
 }
 

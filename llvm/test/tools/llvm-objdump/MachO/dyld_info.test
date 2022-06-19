@@ -1,0 +1,6 @@
+RUN: llvm-objdump --macho --dyld_info %p/Inputs/bind.macho-x86_64 \
+RUN:   | FileCheck %s --match-full-lines --strict-whitespace \
+RUN:     --implicit-check-not={{.}}
+
+CHECK:{{.*}}bind.macho-x86_64:
+CHECK:dyld information:

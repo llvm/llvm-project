@@ -1,6 +1,6 @@
 // We run this twice, once as Objective-C and once as Objective-C++.
-// RUN: %clang_cc1 %s -emit-llvm -o - -fobjc-gc -fblocks -fexceptions -triple i386-apple-darwin10 -fobjc-runtime=macosx-fragile-10.5 | FileCheck %s
-// RUN: %clang_cc1 %s -emit-llvm -o - -fobjc-gc -fblocks -fexceptions -triple i386-apple-darwin10 -fobjc-runtime=macosx-fragile-10.5 -x objective-c++ | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers %s -emit-llvm -o - -fobjc-gc -fblocks -fexceptions -triple i386-apple-darwin10 -fobjc-runtime=macosx-fragile-10.5 | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers %s -emit-llvm -o - -fobjc-gc -fblocks -fexceptions -triple i386-apple-darwin10 -fobjc-runtime=macosx-fragile-10.5 -x objective-c++ | FileCheck %s
 
 
 // CHECK: define{{.*}} i8* @{{.*}}test0
@@ -15,7 +15,7 @@ id test0(id x) {
 
 // <rdar://problem/8224178>: cleanup __block variables on EH path
 // CHECK: define{{.*}} void @{{.*}}test1
-void test1() {
+void test1(void) {
   extern void test1_help(void (^x)(void));
 
   // CHECK:      [[N:%.*]] = alloca [[N_T:%.*]], align 8

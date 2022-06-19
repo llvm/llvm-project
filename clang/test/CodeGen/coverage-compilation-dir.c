@@ -4,4 +4,4 @@
 
 // CHECK-NONSENSE: nonsense
 
-void f() {}
+void f(void) {}

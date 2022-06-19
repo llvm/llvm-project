@@ -16,6 +16,9 @@
 #include "mlir/Pass/Pass.h"
 
 namespace mlir {
+
+class ModuleOp;
+
 namespace spirv {
 
 class ModuleOp;
@@ -23,6 +26,11 @@ class ModuleOp;
 //===----------------------------------------------------------------------===//
 // Passes
 //===----------------------------------------------------------------------===//
+
+/// Creates a pass to run canoncalization patterns that involve GLSL ops.
+/// These patterns cannot be run in default canonicalization because GLSL ops
+/// aren't always available. So they should be involed specifically when needed.
+std::unique_ptr<OperationPass<>> createCanonicalizeGLSLPass();
 
 /// Creates a module pass that converts composite types used by objects in the
 /// StorageBuffer, PhysicalStorageBuffer, Uniform, and PushConstant storage
@@ -54,6 +62,11 @@ std::unique_ptr<OperationPass<spirv::ModuleOp>> createLowerABIAttributesPass();
 /// Creates an operation pass that rewrites sequential chains of
 /// spv.CompositeInsert into spv.CompositeConstruct.
 std::unique_ptr<OperationPass<spirv::ModuleOp>> createRewriteInsertsPass();
+
+/// Creates an operation pass that unifies access of multiple aliased resources
+/// into access of one single resource.
+std::unique_ptr<OperationPass<spirv::ModuleOp>>
+createUnifyAliasedResourcePass();
 
 //===----------------------------------------------------------------------===//
 // Registration

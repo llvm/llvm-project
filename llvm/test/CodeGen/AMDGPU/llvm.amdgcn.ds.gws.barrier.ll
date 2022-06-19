@@ -17,7 +17,7 @@
 ; NOLOOP: ds_gws_barrier v0 gds{{$}}
 
 ; LOOP: s_mov_b32 m0, 0{{$}}
-; LOOP: [[LOOP:BB[0-9]+_[0-9]+]]:
+; LOOP: [[LOOP:.LBB[0-9]+_[0-9]+]]:
 ; LOOP-NEXT: s_setreg_imm32_b32 hwreg(HW_REG_TRAPSTS, 8, 1), 0
 ; LOOP-NEXT: ds_gws_barrier v0 gds
 ; LOOP-NEXT: s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -50,7 +50,7 @@ define amdgpu_kernel void @gws_barrier_offset63(i32 %val) #0 {
 
 ; FIXME: Should be able to shift directly into m0
 ; GCN-LABEL: {{^}}gws_barrier_sgpr_offset:
-; NOLOOP-DAG: s_load_dwordx2 s{{\[}}[[BAR_NUM:[0-9]+]]:[[OFFSET:[0-9]+]]{{\]}}
+; NOLOOP-DAG: s_load_dwordx2 s[[[BAR_NUM:[0-9]+]]:[[OFFSET:[0-9]+]]]
 
 ; NOLOOP-SDAG-DAG: s_lshl_b32 [[SHL:s[0-9]+]], s[[OFFSET]], 16
 ; NOLOOP-SDAG-DAG: s_mov_b32 m0, [[SHL]]{{$}}
@@ -67,7 +67,7 @@ define amdgpu_kernel void @gws_barrier_sgpr_offset(i32 %val, i32 %offset) #0 {
 
 ; Variable offset in SGPR with constant add
 ; GCN-LABEL: {{^}}gws_barrier_sgpr_offset_add1:
-; NOLOOP-DAG: s_load_dwordx2 s{{\[}}[[BAR_NUM:[0-9]+]]:[[OFFSET:[0-9]+]]{{\]}}
+; NOLOOP-DAG: s_load_dwordx2 s[[[BAR_NUM:[0-9]+]]:[[OFFSET:[0-9]+]]]
 
 ; NOLOOP-SDAG-DAG: s_lshl_b32 [[SHL:s[0-9]+]], s[[OFFSET]], 16
 ; NOLOOP-SDAG-DAG: s_mov_b32 m0, [[SHL]]{{$}}

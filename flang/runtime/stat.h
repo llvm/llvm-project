@@ -11,8 +11,8 @@
 
 #ifndef FORTRAN_RUNTIME_STAT_H_
 #define FORTRAN_RUNTIME_STAT_H_
-#include "magic-numbers.h"
 #include "flang/ISO_Fortran_binding.h"
+#include "flang/Runtime/magic-numbers.h"
 namespace Fortran::runtime {
 
 class Descriptor;
@@ -39,11 +39,15 @@ enum Stat {
   StatFailedImage = FORTRAN_RUNTIME_STAT_FAILED_IMAGE,
   StatLocked = FORTRAN_RUNTIME_STAT_LOCKED,
   StatLockedOtherImage = FORTRAN_RUNTIME_STAT_LOCKED_OTHER_IMAGE,
+  StatMissingEnvVariable = FORTRAN_RUNTIME_STAT_MISSING_ENV_VAR,
   StatStoppedImage = FORTRAN_RUNTIME_STAT_STOPPED_IMAGE,
   StatUnlocked = FORTRAN_RUNTIME_STAT_UNLOCKED,
   StatUnlockedFailedImage = FORTRAN_RUNTIME_STAT_UNLOCKED_FAILED_IMAGE,
 
   // Additional "processor-defined" STAT= values
+  StatInvalidArgumentNumber = FORTRAN_RUNTIME_STAT_INVALID_ARG_NUMBER,
+  StatMissingArgument = FORTRAN_RUNTIME_STAT_MISSING_ARG,
+  StatValueTooShort = FORTRAN_RUNTIME_STAT_VALUE_TOO_SHORT,
 };
 
 const char *StatErrorString(int);

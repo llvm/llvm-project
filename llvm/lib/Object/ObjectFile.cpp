@@ -21,10 +21,9 @@
 #include "llvm/Support/Error.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/ErrorOr.h"
-#include "llvm/Support/FileSystem.h"
+#include "llvm/Support/Format.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/raw_ostream.h"
-#include <algorithm>
 #include <cstdint>
 #include <memory>
 #include <system_error>
@@ -55,14 +54,15 @@ bool SectionRef::containsSymbol(SymbolRef S) const {
 }
 
 Expected<uint64_t> ObjectFile::getSymbolValue(DataRefImpl Ref) const {
-  if (Expected<uint32_t> FlagsOrErr = getSymbolFlags(Ref)) {
-    if (*FlagsOrErr & SymbolRef::SF_Undefined)
-      return 0;
-    if (*FlagsOrErr & SymbolRef::SF_Common)
-      return getCommonSymbolSize(Ref);
-  } else
+  uint32_t Flags;
+  if (Error E = getSymbolFlags(Ref).moveInto(Flags))
     // TODO: Test this error.
-    return FlagsOrErr.takeError();
+    return std::move(E);
+
+  if (Flags & SymbolRef::SF_Undefined)
+    return 0;
+  if (Flags & SymbolRef::SF_Common)
+    return getCommonSymbolSize(Ref);
   return getSymbolValueImpl(Ref);
 }
 
@@ -146,6 +146,9 @@ ObjectFile::createObjectFile(MemoryBufferRef Object, file_magic Type,
   case file_magic::pdb:
   case file_magic::minidump:
   case file_magic::goff_object:
+  case file_magic::cuda_fatbinary:
+  case file_magic::offload_binary:
+  case file_magic::dxcontainer_object:
     return errorCodeToError(object_error::invalid_file_type);
   case file_magic::tapi_file:
     return errorCodeToError(object_error::invalid_file_type);
@@ -196,4 +199,13 @@ ObjectFile::createObjectFile(StringRef ObjectPath) {
   std::unique_ptr<ObjectFile> Obj = std::move(ObjOrErr.get());
 
   return OwningBinary<ObjectFile>(std::move(Obj), std::move(Buffer));
+}
+
+bool ObjectFile::isReflectionSectionStrippable(
+    llvm::binaryformat::Swift5ReflectionSectionKind ReflectionSectionKind)
+    const {
+  using llvm::binaryformat::Swift5ReflectionSectionKind;
+  return ReflectionSectionKind == Swift5ReflectionSectionKind::fieldmd ||
+         ReflectionSectionKind == Swift5ReflectionSectionKind::reflstr ||
+         ReflectionSectionKind == Swift5ReflectionSectionKind::assocty;
 }

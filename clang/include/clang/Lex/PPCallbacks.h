@@ -61,23 +61,6 @@ public:
                            const Token &FilenameTok,
                            SrcMgr::CharacteristicKind FileType) {}
 
-  /// Callback invoked whenever an inclusion directive results in a
-  /// file-not-found error.
-  ///
-  /// \param FileName The name of the file being included, as written in the
-  /// source code.
-  ///
-  /// \param RecoveryPath If this client indicates that it can recover from
-  /// this missing file, the client should set this as an additional header
-  /// search patch.
-  ///
-  /// \returns true to indicate that the preprocessor should attempt to recover
-  /// by adding \p RecoveryPath as a header search path.
-  virtual bool FileNotFound(StringRef FileName,
-                            SmallVectorImpl<char> &RecoveryPath) {
-    return false;
-  }
-
   /// Callback invoked whenever an inclusion directive of
   /// any kind (\c \#include, \c \#import, etc.) has been processed, regardless
   /// of whether the inclusion will actually result in an inclusion.
@@ -124,7 +107,7 @@ public:
                                   StringRef FileName,
                                   bool IsAngled,
                                   CharSourceRange FilenameRange,
-                                  const FileEntry *File,
+                                  Optional<FileEntryRef> File,
                                   StringRef SearchPath,
                                   StringRef RelativePath,
                                   const Module *Imported,
@@ -252,9 +235,20 @@ public:
   }
 
   /// Callback invoked when a \#pragma warning directive is read.
-  virtual void PragmaWarning(SourceLocation Loc, StringRef WarningSpec,
-                             ArrayRef<int> Ids) {
-  }
+  enum PragmaWarningSpecifier {
+    PWS_Default,
+    PWS_Disable,
+    PWS_Error,
+    PWS_Once,
+    PWS_Suppress,
+    PWS_Level1,
+    PWS_Level2,
+    PWS_Level3,
+    PWS_Level4,
+  };
+  virtual void PragmaWarning(SourceLocation Loc,
+                             PragmaWarningSpecifier WarningSpec,
+                             ArrayRef<int> Ids) {}
 
   /// Callback invoked when a \#pragma warning(push) directive is read.
   virtual void PragmaWarningPush(SourceLocation Loc, int Level) {
@@ -432,17 +426,11 @@ public:
     Second->FileSkipped(SkippedFile, FilenameTok, FileType);
   }
 
-  bool FileNotFound(StringRef FileName,
-                    SmallVectorImpl<char> &RecoveryPath) override {
-    return First->FileNotFound(FileName, RecoveryPath) ||
-           Second->FileNotFound(FileName, RecoveryPath);
-  }
-
   void InclusionDirective(SourceLocation HashLoc, const Token &IncludeTok,
                           StringRef FileName, bool IsAngled,
-                          CharSourceRange FilenameRange, const FileEntry *File,
-                          StringRef SearchPath, StringRef RelativePath,
-                          const Module *Imported,
+                          CharSourceRange FilenameRange,
+                          Optional<FileEntryRef> File, StringRef SearchPath,
+                          StringRef RelativePath, const Module *Imported,
                           SrcMgr::CharacteristicKind FileType) override {
     First->InclusionDirective(HashLoc, IncludeTok, FileName, IsAngled,
                               FilenameRange, File, SearchPath, RelativePath,
@@ -492,6 +480,11 @@ public:
     Second->PragmaComment(Loc, Kind, Str);
   }
 
+  void PragmaMark(SourceLocation Loc, StringRef Trivia) override {
+    First->PragmaMark(Loc, Trivia);
+    Second->PragmaMark(Loc, Trivia);
+  }
+
   void PragmaDetectMismatch(SourceLocation Loc, StringRef Name,
                             StringRef Value) override {
     First->PragmaDetectMismatch(Loc, Name, Value);
@@ -535,7 +528,7 @@ public:
     Second->PragmaOpenCLExtension(NameLoc, Name, StateLoc, State);
   }
 
-  void PragmaWarning(SourceLocation Loc, StringRef WarningSpec,
+  void PragmaWarning(SourceLocation Loc, PragmaWarningSpecifier WarningSpec,
                      ArrayRef<int> Ids) override {
     First->PragmaWarning(Loc, WarningSpec, Ids);
     Second->PragmaWarning(Loc, WarningSpec, Ids);

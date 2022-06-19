@@ -10,9 +10,5 @@
 
 using namespace mlir;
 
-//===----------------------------------------------------------------------===//
-// LoopLike Interfaces
-//===----------------------------------------------------------------------===//
-
 /// Include the definitions of the loop-like interfaces.
 #include "mlir/Interfaces/LoopLikeInterface.cpp.inc"

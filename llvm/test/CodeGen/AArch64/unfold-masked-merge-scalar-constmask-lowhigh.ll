@@ -201,8 +201,8 @@ define i32 @in_multiuse_A_constmask(i32 %x, i32 %y, i32 %z) nounwind {
 ; CHECK-NEXT:    eor w8, w0, w1
 ; CHECK-NEXT:    stp x20, x19, [sp, #16] // 16-byte Folded Spill
 ; CHECK-NEXT:    and w20, w8, #0xffff
-; CHECK-NEXT:    mov w0, w20
 ; CHECK-NEXT:    mov w19, w1
+; CHECK-NEXT:    mov w0, w20
 ; CHECK-NEXT:    bl use32
 ; CHECK-NEXT:    eor w0, w20, w19
 ; CHECK-NEXT:    ldp x20, x19, [sp, #16] // 16-byte Folded Reload

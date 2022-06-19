@@ -8,8 +8,8 @@
 
 #include "llvm/ExecutionEngine/Orc/JITTargetMachineBuilder.h"
 
+#include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/Host.h"
-#include "llvm/Support/TargetRegistry.h"
 #include "llvm/Support/raw_ostream.h"
 
 namespace llvm {
@@ -19,6 +19,7 @@ JITTargetMachineBuilder::JITTargetMachineBuilder(Triple TT)
     : TT(std::move(TT)) {
   Options.EmulatedTLS = true;
   Options.ExplicitEmulatedTLS = true;
+  Options.UseInitArray = true;
 }
 
 Expected<JITTargetMachineBuilder> JITTargetMachineBuilder::detectHost() {

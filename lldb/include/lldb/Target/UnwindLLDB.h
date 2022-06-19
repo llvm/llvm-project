@@ -119,7 +119,7 @@ private:
     RegisterContextLLDBSP
         reg_ctx_lldb_sp; // These are all RegisterContextUnwind's
 
-    Cursor() : sctx(), reg_ctx_lldb_sp() {}
+    Cursor() = default;
 
   private:
     Cursor(const Cursor &) = delete;

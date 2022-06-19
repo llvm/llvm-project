@@ -1,4 +1,4 @@
-; RUN: opt < %s -ipsccp -S | FileCheck %s
+; RUN: opt < %s -passes=ipsccp -S | FileCheck %s
 
 define internal i32 @f1(i32 %x) {
 ; CHECK-LABEL: define internal i32 @f1(

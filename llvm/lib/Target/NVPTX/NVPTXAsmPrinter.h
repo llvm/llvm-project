@@ -106,6 +106,8 @@ class LLVM_LIBRARY_VISIBILITY NVPTXAsmPrinter : public AsmPrinter {
       EmitGeneric = AP.EmitGeneric;
     }
 
+    // Copy Num bytes from Ptr.
+    // if Bytes > Num, zero fill up to Bytes.
     unsigned addBytes(unsigned char *Ptr, int Num, int Bytes) {
       assert((curpos + Num) <= size);
       assert((curpos + Bytes) <= size);
@@ -216,7 +218,7 @@ private:
   void printMemOperand(const MachineInstr *MI, int opNum, raw_ostream &O,
                        const char *Modifier = nullptr);
   void printModuleLevelGV(const GlobalVariable *GVar, raw_ostream &O,
-                          bool = false);
+                          bool processDemoted, const NVPTXSubtarget &STI);
   void printParamName(Function::const_arg_iterator I, int paramIndex,
                       raw_ostream &O);
   void emitGlobals(const Module &M);
@@ -256,7 +258,8 @@ private:
   // List of variables demoted to a function scope.
   std::map<const Function *, std::vector<const GlobalVariable *>> localDecls;
 
-  void emitPTXGlobalVariable(const GlobalVariable *GVar, raw_ostream &O);
+  void emitPTXGlobalVariable(const GlobalVariable *GVar, raw_ostream &O,
+                             const NVPTXSubtarget &STI);
   void emitPTXAddressSpace(unsigned int AddressSpace, raw_ostream &O) const;
   std::string getPTXFundamentalTypeStr(Type *Ty, bool = true) const;
   void printScalarConstant(const Constant *CPV, raw_ostream &O);
@@ -304,6 +307,11 @@ public:
   std::string getVirtualRegisterName(unsigned) const;
 
   const MCSymbol *getFunctionFrameSymbol() const override;
+
+  // Make emitGlobalVariable() no-op for NVPTX.
+  // Global variables have been already emitted by the time the base AsmPrinter
+  // attempts to do so in doFinalization() (see NVPTXAsmPrinter::emitGlobals()).
+  void emitGlobalVariable(const GlobalVariable *GV) override {}
 };
 
 } // end namespace llvm

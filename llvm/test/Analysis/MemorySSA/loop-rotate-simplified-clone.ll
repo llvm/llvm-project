@@ -1,4 +1,4 @@
-; RUN: opt -verify-memoryssa -enable-mssa-loop-dependency -loop-rotate %s -S | FileCheck %s 
+; RUN: opt -verify-memoryssa -loop-rotate %s -S | FileCheck %s
 ; REQUIRES: asserts
 
 ; CHECK-LABEL: @test()

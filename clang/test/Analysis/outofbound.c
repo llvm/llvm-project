@@ -1,4 +1,4 @@
-// RUN: %clang_analyze_cc1 -Wno-array-bounds -analyzer-store=region -verify %s \
+// RUN: %clang_analyze_cc1 -Wno-array-bounds -verify %s \
 // RUN:   -analyzer-checker=core \
 // RUN:   -analyzer-checker=unix \
 // RUN:   -analyzer-checker=alpha.security.ArrayBound \
@@ -8,13 +8,13 @@ typedef __typeof(sizeof(int)) size_t;
 void *malloc(size_t);
 void *calloc(size_t, size_t);
 
-char f1() {
+char f1(void) {
   char* s = "abcd";
   char c = s[4]; // no-warning
   return s[5] + c; // expected-warning{{Access out-of-bound array element (buffer overflow)}}
 }
 
-void f2() {
+void f2(void) {
   int *p = malloc(12);
   p[3] = 4; // expected-warning{{Access out-of-bound array element (buffer overflow)}}
 }
@@ -27,14 +27,14 @@ struct seven_words {
   int c[7];
 };
 
-void f3() {
+void f3(void) {
   struct three_words a, *p;
   p = &a;
   p[0] = a; // no-warning
   p[1] = a; // expected-warning{{Access out-of-bound array element (buffer overflow)}}
 }
 
-void f4() {
+void f4(void) {
   struct seven_words c;
   struct three_words a, *p = (struct three_words *)&c;
   p[0] = a; // no-warning
@@ -42,19 +42,19 @@ void f4() {
   p[2] = a; // expected-warning{{Access out-of-bound array element (buffer overflow)}}
 }
 
-void f5() {
+void f5(void) {
   char *p = calloc(2,2);
   p[3] = '.'; // no-warning
   p[4] = '!'; // expected-warning{{out-of-bound}}
 }
 
-void f6() {
+void f6(void) {
   char a[2];
   int *b = (int*)a;
   b[1] = 3; // expected-warning{{out-of-bound}}
 }
 
-void f7() {
+void f7(void) {
   struct three_words a;
   a.c[3] = 1; // expected-warning{{out-of-bound}}
 }

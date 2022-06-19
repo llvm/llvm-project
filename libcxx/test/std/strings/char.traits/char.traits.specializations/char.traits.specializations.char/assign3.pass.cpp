@@ -6,8 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-// UNSUPPORTED: clang-8
-
 // <string>
 
 // template<> struct char_traits<char>

@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -fopenmp -fopenmp-version=51 -triple powerpc64le-unknown-unknown -fopenmp-targets=powerpc64le-ibm-linux-gnu -debug-info-kind=limited -emit-llvm %s -o - | FileCheck %s --check-prefix DEBUG
-// RUN: %clang_cc1 -fopenmp -fopenmp-version=51 -triple powerpc64le-unknown-unknown -fopenmp-targets=powerpc64le-ibm-linux-gnu -emit-llvm %s -o - | FileCheck %s --check-prefix CHECK
+// RUN: %clang_cc1 -no-opaque-pointers -fopenmp -fopenmp-version=51 -triple powerpc64le-unknown-unknown -fopenmp-targets=powerpc64le-ibm-linux-gnu -debug-info-kind=limited -emit-llvm %s -o - | FileCheck %s --check-prefix DEBUG
+// RUN: %clang_cc1 -no-opaque-pointers -fopenmp -fopenmp-version=51 -triple powerpc64le-unknown-unknown -fopenmp-targets=powerpc64le-ibm-linux-gnu -emit-llvm %s -o - | FileCheck %s --check-prefix CHECK
 #ifndef HEADER
 #define HEADER
 
@@ -206,7 +206,7 @@ void secondMapNameInClause() {
 // CHECK: call void @__tgt_target_data_update_nowait_mapper(%struct.ident_t* @{{.+}}, i64 -1, i32 1, i8** %{{.+}}, i8** %{{.+}}, i64* {{.+}}, i64* {{.+}}, i8** null, i8** {{.+}})
 
 
-// DEBUG: void @.omp_mapper._ZTS2S3.id(i8* {{.*}}, i8* {{.*}}, i8* {{.*}}, i64 {{.*}}, i64 {{.*}}, i8* [[NAME_ARG:%.+]])
+// DEBUG: void @.omp_mapper._ZTS2S3.id(i8* {{.*}}, i8* {{.*}}, i8* {{.*}}, i64 {{.*}}, i64 {{.*}}, i8* noundef [[NAME_ARG:%.+]])
 // DEBUG: store i8* [[NAME_ARG]], i8** [[NAME_STACK:%.+]]
 // DEBUG: [[MAPPER_NAME:%.+]] = load i8*, i8** [[NAME_STACK]]
 // DEBUG: call void @__tgt_push_mapper_component(i8* %{{.*}}, i8* %{{.*}}, i8* %{{.*}}, i64 %{{.*}}, i64 %{{.*}}, i8* [[MAPPER_NAME]])

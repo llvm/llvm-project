@@ -1,4 +1,4 @@
-; RUN: opt < %s -add-discriminators -S | FileCheck %s
+; RUN: opt < %s -passes=add-discriminators -S | FileCheck %s
 ; ModuleID = 'invoke.bc'
 source_filename = "invoke.cpp"
 target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"

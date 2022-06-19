@@ -1700,6 +1700,12 @@ class Enc_7b7ba8 : OpcodeHexagon {
   bits <5> Vd32;
   let Inst{4-0} = Vd32{4-0};
 }
+class Enc_7d1542 : OpcodeHexagon {
+  bits <7> Ss128;
+  let Inst{22-16} = Ss128{6-0};
+  bits <5> Rd32;
+  let Inst{4-0} = Rd32{4-0};
+}
 class Enc_7e5a82 : OpcodeHexagon {
   bits <5> Ii;
   let Inst{12-8} = Ii{4-0};
@@ -2011,6 +2017,12 @@ class Enc_8e583a : OpcodeHexagon {
   let Inst{25-23} = n1{3-1};
   let Inst{13-13} = n1{0-0};
 }
+class Enc_8f7633 : OpcodeHexagon {
+  bits <5> Rs32;
+  let Inst{20-16} = Rs32{4-0};
+  bits <7> Sd128;
+  let Inst{6-0} = Sd128{6-0};
+}
 class Enc_90cd8b : OpcodeHexagon {
   bits <5> Rss32;
   let Inst{20-16} = Rss32{4-0};
@@ -2276,6 +2288,12 @@ class Enc_a30110 : OpcodeHexagon {
   bits <5> Vd32;
   let Inst{4-0} = Vd32{4-0};
 }
+class Enc_a33d04 : OpcodeHexagon {
+  bits <5> Vuu32;
+  let Inst{12-8} = Vuu32{4-0};
+  bits <5> Vd32;
+  let Inst{4-0} = Vd32{4-0};
+}
 class Enc_a42857 : OpcodeHexagon {
   bits <11> Ii;
   let Inst{21-20} = Ii{10-9};
@@ -2345,6 +2363,12 @@ class Enc_a6ce9c : OpcodeHexagon {
   let Inst{3-0} = Ii{5-2};
   bits <4> Rs16;
   let Inst{7-4} = Rs16{3-0};
+}
+class Enc_a705fc : OpcodeHexagon {
+  bits <5> Rss32;
+  let Inst{20-16} = Rss32{4-0};
+  bits <7> Sdd128;
+  let Inst{6-0} = Sdd128{6-0};
 }
 class Enc_a7341a : OpcodeHexagon {
   bits <5> Vu32;
@@ -3091,6 +3115,14 @@ class Enc_de0214 : OpcodeHexagon {
   bits <5> Rd32;
   let Inst{4-0} = Rd32{4-0};
 }
+class Enc_de5ea0 : OpcodeHexagon {
+  bits <5> Vuu32;
+  let Inst{12-8} = Vuu32{4-0};
+  bits <5> Vv32;
+  let Inst{20-16} = Vv32{4-0};
+  bits <5> Vd32;
+  let Inst{4-0} = Vd32{4-0};
+}
 class Enc_e07374 : OpcodeHexagon {
   bits <5> Rs32;
   let Inst{20-16} = Rs32{4-0};
@@ -3126,6 +3158,12 @@ class Enc_e26546 : OpcodeHexagon {
   let Inst{10-8} = Nt8{2-0};
   bits <5> Rx32;
   let Inst{20-16} = Rx32{4-0};
+}
+class Enc_e32517 : OpcodeHexagon {
+  bits <7> Sss128;
+  let Inst{22-16} = Sss128{6-0};
+  bits <5> Rdd32;
+  let Inst{4-0} = Rdd32{4-0};
 }
 class Enc_e38e1f : OpcodeHexagon {
   bits <8> Ii;

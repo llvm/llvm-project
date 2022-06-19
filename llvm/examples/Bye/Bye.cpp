@@ -50,13 +50,17 @@ static llvm::RegisterStandardPasses RegisterBye(
     [](const llvm::PassManagerBuilder &Builder,
        llvm::legacy::PassManagerBase &PM) { PM.add(new LegacyBye()); });
 
+static llvm::RegisterStandardPasses RegisterByeLTO(
+    llvm::PassManagerBuilder::EP_ModuleOptimizerEarly,
+    [](const llvm::PassManagerBuilder &Builder,
+       llvm::legacy::PassManagerBase &PM) { PM.add(new LegacyBye()); });
+
 /* New PM Registration */
 llvm::PassPluginLibraryInfo getByePluginInfo() {
   return {LLVM_PLUGIN_API_VERSION, "Bye", LLVM_VERSION_STRING,
           [](PassBuilder &PB) {
             PB.registerVectorizerStartEPCallback(
-                [](llvm::FunctionPassManager &PM,
-                   llvm::PassBuilder::OptimizationLevel Level) {
+                [](llvm::FunctionPassManager &PM, OptimizationLevel Level) {
                   PM.addPass(Bye());
                 });
             PB.registerPipelineParsingCallback(

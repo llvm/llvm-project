@@ -3,7 +3,7 @@
 target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-apple-macosx10.12.0"
 
-define {i8*, i32*} @f(i8* %buffer, i32* %ptr) "coroutine.presplit"="1" {
+define {i8*, i32*} @f(i8* %buffer, i32* %ptr) presplitcoroutine {
 entry:
   %temp = alloca i32, align 4
   %id = call token @llvm.coro.id.retcon.once(i32 8, i32 8, i8* %buffer, i8* bitcast (void (i8*, i1)* @prototype to i8*), i8* bitcast (i8* (i32)* @allocate to i8*), i8* bitcast (void (i8*)* @deallocate to i8*))

@@ -20,7 +20,7 @@ spv.module Logical GLSL450 {
 
 // Allow taking address of global variables in other module-like ops
 spv.GlobalVariable @var : !spv.ptr<!spv.struct<(f32, !spv.array<4xf32>)>, Input>
-func @addressof() -> () {
+func.func @addressof() -> () {
   // CHECK: spv.mlir.addressof @var
   %1 = spv.mlir.addressof @var : !spv.ptr<!spv.struct<(f32, !spv.array<4xf32>)>, Input>
   return
@@ -52,7 +52,7 @@ spv.module Logical GLSL450 {
 // spv.Constant
 //===----------------------------------------------------------------------===//
 
-func @const() -> () {
+func.func @const() -> () {
   // CHECK: spv.Constant true
   // CHECK: spv.Constant 42 : i32
   // CHECK: spv.Constant 5.000000e-01 : f32
@@ -72,12 +72,13 @@ func @const() -> () {
   %6 = spv.Constant dense<1.0> : tensor<2x3xf32> : !spv.array<2 x !spv.array<3 x f32>>
   %7 = spv.Constant dense<[[1, 2, 3], [4, 5, 6]]> : tensor<2x3xi32> : !spv.array<2 x !spv.array<3 x i32>>
   %8 = spv.Constant dense<[[1.0, 2.0, 3.0], [4.0, 5.0, 6.0]]> : tensor<2x3xf32> : !spv.array<2 x !spv.array<3 x f32>>
+  %9 = spv.Constant [[dense<3.0> : vector<2xf32>]] : !spv.array<1 x !spv.array<1xvector<2xf32>>>
   return
 }
 
 // -----
 
-func @unaccepted_std_attr() -> () {
+func.func @unaccepted_std_attr() -> () {
   // expected-error @+1 {{cannot have value of type 'none'}}
   %0 = spv.Constant unit : none
   return
@@ -85,15 +86,15 @@ func @unaccepted_std_attr() -> () {
 
 // -----
 
-func @array_constant() -> () {
-  // expected-error @+1 {{has array element whose type ('vector<2xi32>') does not match the result element type ('vector<2xf32>')}}
+func.func @array_constant() -> () {
+  // expected-error @+1 {{result or element type ('vector<2xf32>') does not match value type ('vector<2xi32>')}}
   %0 = spv.Constant [dense<3.0> : vector<2xf32>, dense<4> : vector<2xi32>] : !spv.array<2xvector<2xf32>>
   return
 }
 
 // -----
 
-func @array_constant() -> () {
+func.func @array_constant() -> () {
   // expected-error @+1 {{must have spv.array result type for array value}}
   %0 = spv.Constant [dense<3.0> : vector<2xf32>] : !spv.rtarray<vector<2xf32>>
   return
@@ -101,7 +102,7 @@ func @array_constant() -> () {
 
 // -----
 
-func @non_nested_array_constant() -> () {
+func.func @non_nested_array_constant() -> () {
   // expected-error @+1 {{only support nested array result type}}
   %0 = spv.Constant dense<3.0> : tensor<2x2xf32> : !spv.array<2xvector<2xf32>>
   return
@@ -109,21 +110,21 @@ func @non_nested_array_constant() -> () {
 
 // -----
 
-func @value_result_type_mismatch() -> () {
-  // expected-error @+1 {{must have spv.array result type for array value}}
+func.func @value_result_type_mismatch() -> () {
+  // expected-error @+1 {{result or element type ('vector<4xi32>') does not match value type ('tensor<4xi32>')}}
   %0 = "spv.Constant"() {value = dense<0> : tensor<4xi32>} : () -> (vector<4xi32>)
 }
 
 // -----
 
-func @value_result_type_mismatch() -> () {
+func.func @value_result_type_mismatch() -> () {
   // expected-error @+1 {{result element type ('i32') does not match value element type ('f32')}}
   %0 = spv.Constant dense<1.0> : tensor<2x3xf32> : !spv.array<2 x !spv.array<3 x i32>>
 }
 
 // -----
 
-func @value_result_num_elements_mismatch() -> () {
+func.func @value_result_num_elements_mismatch() -> () {
   // expected-error @+1 {{result number of elements (6) does not match value number of elements (4)}}
   %0 = spv.Constant dense<1.0> : tensor<2x2xf32> : !spv.array<2 x !spv.array<3 x f32>>
   return
@@ -545,7 +546,7 @@ spv.module Logical GLSL450 {
 
 // Allow taking reference of spec constant in other module-like ops
 spv.SpecConstant @sc = 5 : i32
-func @reference_of() {
+func.func @reference_of() {
   // CHECK: spv.mlir.referenceof @sc
   %0 = spv.mlir.referenceof @sc : i32
   return
@@ -556,7 +557,7 @@ func @reference_of() {
 spv.SpecConstant @sc = 5 : i32
 spv.SpecConstantComposite @scc (@sc) : !spv.array<1 x i32>
 
-func @reference_of_composite() {
+func.func @reference_of_composite() {
   // CHECK: spv.mlir.referenceof @scc : !spv.array<1 x i32>
   %0 = spv.mlir.referenceof @scc : !spv.array<1 x i32>
   %1 = spv.CompositeExtract %0[0 : i32] : !spv.array<1 x i32>
@@ -634,7 +635,7 @@ spv.module Logical GLSL450 {
 
 // -----
 
-func @use_in_function() -> () {
+func.func @use_in_function() -> () {
   // expected-error @+1 {{op must appear in a module-like op's block}}
   spv.SpecConstant @sc = false
   return

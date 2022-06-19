@@ -12,9 +12,13 @@
 #include "Plugins/SymbolFile/DWARF/DWARFDeclContext.h"
 #include "Plugins/SymbolFile/DWARF/LogChannelDWARF.h"
 #include "Plugins/SymbolFile/DWARF/SymbolFileDWARFDwo.h"
+#include "lldb/Core/DataFileCache.h"
+#include "lldb/Core/Debugger.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/Progress.h"
 #include "lldb/Symbol/ObjectFile.h"
+#include "lldb/Utility/DataEncoder.h"
+#include "lldb/Utility/DataExtractor.h"
 #include "lldb/Utility/Stream.h"
 #include "lldb/Utility/Timer.h"
 #include "llvm/Support/FormatVariadic.h"
@@ -22,18 +26,22 @@
 
 using namespace lldb_private;
 using namespace lldb;
+using namespace lldb_private::dwarf;
 
 void ManualDWARFIndex::Index() {
-  if (!m_dwarf)
+  if (m_indexed)
     return;
+  m_indexed = true;
 
-  SymbolFileDWARF &main_dwarf = *m_dwarf;
-  m_dwarf = nullptr;
+  ElapsedTime elapsed(m_index_time);
+  LLDB_SCOPED_TIMERF("%p", static_cast<void *>(m_dwarf));
+  if (LoadFromCache()) {
+    m_dwarf->SetDebugInfoIndexWasLoadedFromCache();
+    return;
+  }
 
-  LLDB_SCOPED_TIMERF("%p", static_cast<void *>(&main_dwarf));
-
-  DWARFDebugInfo &main_info = main_dwarf.DebugInfo();
-  SymbolFileDWARFDwo *dwp_dwarf = main_dwarf.GetDwpSymbolFile().get();
+  DWARFDebugInfo &main_info = m_dwarf->DebugInfo();
+  SymbolFileDWARFDwo *dwp_dwarf = m_dwarf->GetDwpSymbolFile().get();
   DWARFDebugInfo *dwp_info = dwp_dwarf ? &dwp_dwarf->DebugInfo() : nullptr;
 
   std::vector<DWARFUnit *> units_to_index;
@@ -87,7 +95,7 @@ void ManualDWARFIndex::Index() {
 
   // Share one thread pool across operations to avoid the overhead of
   // recreating the threads.
-  llvm::ThreadPool pool(llvm::optimal_concurrency(units_to_index.size()));
+  llvm::ThreadPoolTaskGroup task_group(Debugger::GetThreadPool());
 
   // Create a task runner that extracts dies for each DWARF unit in a
   // separate thread.
@@ -98,14 +106,14 @@ void ManualDWARFIndex::Index() {
   // to wait until all units have been indexed in case a DIE in one
   // unit refers to another and the indexes accesses those DIEs.
   for (size_t i = 0; i < units_to_index.size(); ++i)
-    pool.async(extract_fn, i);
-  pool.wait();
+    task_group.async(extract_fn, i);
+  task_group.wait();
 
   // Now create a task runner that can index each DWARF unit in a
   // separate thread so we can index quickly.
   for (size_t i = 0; i < units_to_index.size(); ++i)
-    pool.async(parser_fn, i);
-  pool.wait();
+    task_group.async(parser_fn, i);
+  task_group.wait();
 
   auto finalize_fn = [this, &sets, &progress](NameToDIE(IndexSet::*index)) {
     NameToDIE &result = m_set.*index;
@@ -115,20 +123,22 @@ void ManualDWARFIndex::Index() {
     progress.Increment();
   };
 
-  pool.async(finalize_fn, &IndexSet::function_basenames);
-  pool.async(finalize_fn, &IndexSet::function_fullnames);
-  pool.async(finalize_fn, &IndexSet::function_methods);
-  pool.async(finalize_fn, &IndexSet::function_selectors);
-  pool.async(finalize_fn, &IndexSet::objc_class_selectors);
-  pool.async(finalize_fn, &IndexSet::globals);
-  pool.async(finalize_fn, &IndexSet::types);
-  pool.async(finalize_fn, &IndexSet::namespaces);
-  pool.wait();
+  task_group.async(finalize_fn, &IndexSet::function_basenames);
+  task_group.async(finalize_fn, &IndexSet::function_fullnames);
+  task_group.async(finalize_fn, &IndexSet::function_methods);
+  task_group.async(finalize_fn, &IndexSet::function_selectors);
+  task_group.async(finalize_fn, &IndexSet::objc_class_selectors);
+  task_group.async(finalize_fn, &IndexSet::globals);
+  task_group.async(finalize_fn, &IndexSet::types);
+  task_group.async(finalize_fn, &IndexSet::namespaces);
+  task_group.wait();
+
+  SaveToCache();
 }
 
 void ManualDWARFIndex::IndexUnit(DWARFUnit &unit, SymbolFileDWARFDwo *dwp,
                                  IndexSet &set) {
-  Log *log = LogChannelDWARF::GetLogIfAll(DWARF_LOG_LOOKUPS);
+  Log *log = GetLog(DWARFLog::Lookups);
 
   if (log) {
     m_module.LogMessage(
@@ -358,7 +368,8 @@ void ManualDWARFIndex::GetGlobalVariables(
 }
 
 void ManualDWARFIndex::GetGlobalVariables(
-    const DWARFUnit &unit, llvm::function_ref<bool(DWARFDIE die)> callback) {
+    DWARFUnit &unit, llvm::function_ref<bool(DWARFDIE die)> callback) {
+  lldbassert(!unit.GetSymbolFileDWARF().GetDwoNum());
   Index();
   m_set.globals.FindAllEntriesForUnit(unit, DIERefCallback(callback));
 }
@@ -477,4 +488,215 @@ void ManualDWARFIndex::Dump(Stream &s) {
   m_set.types.Dump(&s);
   s.Printf("\nNamespaces:\n");
   m_set.namespaces.Dump(&s);
+}
+
+constexpr llvm::StringLiteral kIdentifierManualDWARFIndex("DIDX");
+// Define IDs for the different tables when encoding and decoding the
+// ManualDWARFIndex NameToDIE objects so we can avoid saving any empty maps.
+enum DataID {
+  kDataIDFunctionBasenames = 1u,
+  kDataIDFunctionFullnames,
+  kDataIDFunctionMethods,
+  kDataIDFunctionSelectors,
+  kDataIDFunctionObjcClassSelectors,
+  kDataIDGlobals,
+  kDataIDTypes,
+  kDataIDNamespaces,
+  kDataIDEnd = 255u,
+
+};
+constexpr uint32_t CURRENT_CACHE_VERSION = 1;
+
+bool ManualDWARFIndex::IndexSet::Decode(const DataExtractor &data,
+                                        lldb::offset_t *offset_ptr) {
+  StringTableReader strtab;
+  // We now decode the string table for all strings in the data cache file.
+  if (!strtab.Decode(data, offset_ptr))
+    return false;
+
+  llvm::StringRef identifier((const char *)data.GetData(offset_ptr, 4), 4);
+  if (identifier != kIdentifierManualDWARFIndex)
+    return false;
+  const uint32_t version = data.GetU32(offset_ptr);
+  if (version != CURRENT_CACHE_VERSION)
+    return false;
+
+  bool done = false;
+  while (!done) {
+    switch (data.GetU8(offset_ptr)) {
+    default:
+      // If we got here, this is not expected, we expect the data IDs to match
+      // one of the values from the DataID enumeration.
+      return false;
+    case kDataIDFunctionBasenames:
+      if (!function_basenames.Decode(data, offset_ptr, strtab))
+        return false;
+      break;
+    case kDataIDFunctionFullnames:
+      if (!function_fullnames.Decode(data, offset_ptr, strtab))
+        return false;
+      break;
+    case kDataIDFunctionMethods:
+      if (!function_methods.Decode(data, offset_ptr, strtab))
+        return false;
+      break;
+    case kDataIDFunctionSelectors:
+      if (!function_selectors.Decode(data, offset_ptr, strtab))
+        return false;
+      break;
+    case kDataIDFunctionObjcClassSelectors:
+      if (!objc_class_selectors.Decode(data, offset_ptr, strtab))
+        return false;
+      break;
+    case kDataIDGlobals:
+      if (!globals.Decode(data, offset_ptr, strtab))
+        return false;
+      break;
+    case kDataIDTypes:
+      if (!types.Decode(data, offset_ptr, strtab))
+        return false;
+      break;
+    case kDataIDNamespaces:
+      if (!namespaces.Decode(data, offset_ptr, strtab))
+        return false;
+      break;
+    case kDataIDEnd:
+      // We got to the end of our NameToDIE encodings.
+      done = true;
+      break;
+    }
+  }
+  // Success!
+  return true;
+}
+
+void ManualDWARFIndex::IndexSet::Encode(DataEncoder &encoder) const {
+  ConstStringTable strtab;
+
+  // Encoder the DWARF index into a separate encoder first. This allows us
+  // gather all of the strings we willl need in "strtab" as we will need to
+  // write the string table out before the symbol table.
+  DataEncoder index_encoder(encoder.GetByteOrder(),
+                            encoder.GetAddressByteSize());
+
+  index_encoder.AppendData(kIdentifierManualDWARFIndex);
+  // Encode the data version.
+  index_encoder.AppendU32(CURRENT_CACHE_VERSION);
+
+  if (!function_basenames.IsEmpty()) {
+    index_encoder.AppendU8(kDataIDFunctionBasenames);
+    function_basenames.Encode(index_encoder, strtab);
+  }
+  if (!function_fullnames.IsEmpty()) {
+    index_encoder.AppendU8(kDataIDFunctionFullnames);
+    function_fullnames.Encode(index_encoder, strtab);
+  }
+  if (!function_methods.IsEmpty()) {
+    index_encoder.AppendU8(kDataIDFunctionMethods);
+    function_methods.Encode(index_encoder, strtab);
+  }
+  if (!function_selectors.IsEmpty()) {
+    index_encoder.AppendU8(kDataIDFunctionSelectors);
+    function_selectors.Encode(index_encoder, strtab);
+  }
+  if (!objc_class_selectors.IsEmpty()) {
+    index_encoder.AppendU8(kDataIDFunctionObjcClassSelectors);
+    objc_class_selectors.Encode(index_encoder, strtab);
+  }
+  if (!globals.IsEmpty()) {
+    index_encoder.AppendU8(kDataIDGlobals);
+    globals.Encode(index_encoder, strtab);
+  }
+  if (!types.IsEmpty()) {
+    index_encoder.AppendU8(kDataIDTypes);
+    types.Encode(index_encoder, strtab);
+  }
+  if (!namespaces.IsEmpty()) {
+    index_encoder.AppendU8(kDataIDNamespaces);
+    namespaces.Encode(index_encoder, strtab);
+  }
+  index_encoder.AppendU8(kDataIDEnd);
+
+  // Now that all strings have been gathered, we will emit the string table.
+  strtab.Encode(encoder);
+  // Followed the the symbol table data.
+  encoder.AppendData(index_encoder.GetData());
+}
+
+bool ManualDWARFIndex::Decode(const DataExtractor &data,
+                              lldb::offset_t *offset_ptr,
+                              bool &signature_mismatch) {
+  signature_mismatch = false;
+  CacheSignature signature;
+  if (!signature.Decode(data, offset_ptr))
+    return false;
+  if (CacheSignature(m_dwarf->GetObjectFile()) != signature) {
+    signature_mismatch = true;
+    return false;
+  }
+  IndexSet set;
+  if (!set.Decode(data, offset_ptr))
+    return false;
+  m_set = std::move(set);
+  return true;
+}
+
+bool ManualDWARFIndex::Encode(DataEncoder &encoder) const {
+  CacheSignature signature(m_dwarf->GetObjectFile());
+  if (!signature.Encode(encoder))
+    return false;
+  m_set.Encode(encoder);
+  return true;
+}
+
+std::string ManualDWARFIndex::GetCacheKey() {
+  std::string key;
+  llvm::raw_string_ostream strm(key);
+  // DWARF Index can come from different object files for the same module. A
+  // module can have one object file as the main executable and might have
+  // another object file in a separate symbol file, or we might have a .dwo file
+  // that claims its module is the main executable.
+  ObjectFile *objfile = m_dwarf->GetObjectFile();
+  strm << objfile->GetModule()->GetCacheKey() << "-dwarf-index-"
+      << llvm::format_hex(objfile->GetCacheHash(), 10);
+  return strm.str();
+}
+
+bool ManualDWARFIndex::LoadFromCache() {
+  DataFileCache *cache = Module::GetIndexCache();
+  if (!cache)
+    return false;
+  ObjectFile *objfile = m_dwarf->GetObjectFile();
+  if (!objfile)
+    return false;
+  std::unique_ptr<llvm::MemoryBuffer> mem_buffer_up =
+      cache->GetCachedData(GetCacheKey());
+  if (!mem_buffer_up)
+    return false;
+  DataExtractor data(mem_buffer_up->getBufferStart(),
+                     mem_buffer_up->getBufferSize(),
+                     endian::InlHostByteOrder(),
+                     objfile->GetAddressByteSize());
+  bool signature_mismatch = false;
+  lldb::offset_t offset = 0;
+  const bool result = Decode(data, &offset, signature_mismatch);
+  if (signature_mismatch)
+    cache->RemoveCacheFile(GetCacheKey());
+  return result;
+}
+
+void ManualDWARFIndex::SaveToCache() {
+  DataFileCache *cache = Module::GetIndexCache();
+  if (!cache)
+    return; // Caching is not enabled.
+  ObjectFile *objfile = m_dwarf->GetObjectFile();
+  if (!objfile)
+    return;
+  DataEncoder file(endian::InlHostByteOrder(), objfile->GetAddressByteSize());
+  // Encode will return false if the object file doesn't have anything to make
+  // a signature from.
+  if (Encode(file)) {
+    if (cache->SetCachedData(GetCacheKey(), file.GetData()))
+      m_dwarf->SetDebugInfoIndexWasSavedToCache();
+  }
 }

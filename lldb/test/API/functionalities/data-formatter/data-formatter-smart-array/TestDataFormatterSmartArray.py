@@ -12,8 +12,6 @@ from lldbsuite.test import lldbutil
 
 class SmartArrayDataFormatterTestCase(TestBase):
 
-    mydir = TestBase.compute_mydir(__file__)
-
     def test_with_run_command(self):
         """Test data formatter commands."""
         self.build()
@@ -68,7 +66,7 @@ class SmartArrayDataFormatterTestCase(TestBase):
                              'Nested Hello world!'])
 
         self.runCmd(
-            "type summary add --summary-string \"arr = ${var%s}\" -x \"char \\[[0-9]+\\]\"")
+            "type summary add --summary-string \"arr = ${var%s}\" -x \"char\\[[0-9]+\\]\"")
 
         self.expect("frame variable strarr",
                     substrs=['arr = \"',
@@ -107,7 +105,7 @@ class SmartArrayDataFormatterTestCase(TestBase):
                              'Nested Hello world!'])
 
         self.runCmd(
-            "type summary add --summary-string \"arr = ${var%c}\" -x \"char \\[[0-9]+\\]\"")
+            "type summary add --summary-string \"arr = ${var%c}\" -x \"char\\[[0-9]+\\]\"")
 
         self.expect("frame variable strarr",
                     substrs=['arr = \"',
@@ -127,7 +125,7 @@ class SmartArrayDataFormatterTestCase(TestBase):
 
 # ${var%char[]}
         self.runCmd(
-            "type summary add --summary-string \"arr = ${var%char[]}\" -x \"char \\[[0-9]+\\]\"")
+            "type summary add --summary-string \"arr = ${var%char[]}\" -x \"char\\[[0-9]+\\]\"")
 
         self.expect("frame variable strarr",
                     substrs=['arr = \"',
@@ -166,7 +164,7 @@ class SmartArrayDataFormatterTestCase(TestBase):
 
 # ${var%a}
         self.runCmd(
-            "type summary add --summary-string \"arr = ${var%a}\" -x \"char \\[[0-9]+\\]\"")
+            "type summary add --summary-string \"arr = ${var%a}\" -x \"char\\[[0-9]+\\]\"")
 
         self.expect("frame variable strarr",
                     substrs=['arr = \"',
@@ -255,7 +253,7 @@ class SmartArrayDataFormatterTestCase(TestBase):
                     '0x00000009,0x00000008,0x00000007,0x00000006,0x00000005'])
 
         self.runCmd(
-            "type summary add --summary-string \"arr = ${var[]%x}\" \"int [5]\"")
+            "type summary add --summary-string \"arr = ${var[]%x}\" \"int[5]\"")
 
         self.expect(
             "frame variable intarr",
@@ -271,7 +269,7 @@ class SmartArrayDataFormatterTestCase(TestBase):
 
 # printing each array item as an array
         self.runCmd(
-            "type summary add --summary-string \"arr = ${var[]%uint32_t[]}\" \"int [5]\"")
+            "type summary add --summary-string \"arr = ${var[]%uint32_t[]}\" \"int[5]\"")
 
         self.expect(
             "frame variable intarr",
@@ -287,7 +285,7 @@ class SmartArrayDataFormatterTestCase(TestBase):
 
 # printing full array as an array
         self.runCmd(
-            "type summary add --summary-string \"arr = ${var%uint32_t[]}\" \"int [5]\"")
+            "type summary add --summary-string \"arr = ${var%uint32_t[]}\" \"int[5]\"")
 
         self.expect(
             "frame variable intarr",
@@ -303,7 +301,7 @@ class SmartArrayDataFormatterTestCase(TestBase):
 
 # printing each array item as an array
         self.runCmd(
-            "type summary add --summary-string \"arr = ${var[]%float32[]}\" \"float [7]\"")
+            "type summary add --summary-string \"arr = ${var[]%float32[]}\" \"float[7]\"")
 
         self.expect(
             "frame variable flarr",
@@ -319,7 +317,7 @@ class SmartArrayDataFormatterTestCase(TestBase):
 
 # printing full array as an array
         self.runCmd(
-            "type summary add --summary-string \"arr = ${var%float32[]}\" \"float [7]\"")
+            "type summary add --summary-string \"arr = ${var%float32[]}\" \"float[7]\"")
 
         self.expect("frame variable flarr",
                     substrs=['flarr = arr =',
@@ -343,9 +341,9 @@ class SmartArrayDataFormatterTestCase(TestBase):
 
 # use y and Y
         self.runCmd(
-            "type summary add --summary-string \"arr = ${var%y}\" \"float [7]\"")
+            "type summary add --summary-string \"arr = ${var%y}\" \"float[7]\"")
         self.runCmd(
-            "type summary add --summary-string \"arr = ${var%y}\" \"int [5]\"")
+            "type summary add --summary-string \"arr = ${var%y}\" \"int[5]\"")
 
         if process.GetByteOrder() == lldb.eByteOrderLittle:
             self.expect(
@@ -400,9 +398,9 @@ class SmartArrayDataFormatterTestCase(TestBase):
                     '00 00 00 09,00 00 00 08,00 00 00 07,00 00 00 06,00 00 00 05'])
 
         self.runCmd(
-            "type summary add --summary-string \"arr = ${var%Y}\" \"float [7]\"")
+            "type summary add --summary-string \"arr = ${var%Y}\" \"float[7]\"")
         self.runCmd(
-            "type summary add --summary-string \"arr = ${var%Y}\" \"int [5]\"")
+            "type summary add --summary-string \"arr = ${var%Y}\" \"int[5]\"")
 
         if process.GetByteOrder() == lldb.eByteOrderLittle:
             self.expect(

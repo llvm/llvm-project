@@ -23,7 +23,6 @@ define void @foo(%struct.X* nocapture %x, %struct.Y* nocapture %y) nounwind opts
 ; OPT-NEXT:    [[FROMBOOL:%.*]] = trunc i32 [[BF_CLEAR_LOBIT]] to i8
 ; OPT-NEXT:    store i8 [[FROMBOOL]], i8* [[B]], align 1
 ; OPT-NEXT:    ret void
-;
   %tmp = bitcast %struct.X* %x to i32*
   %tmp1 = load i32, i32* %tmp, align 4
   %b = getelementptr inbounds %struct.Y, %struct.Y* %y, i64 0, i32 1
@@ -44,7 +43,6 @@ define i32 @baz(i64 %cav1.coerce) nounwind {
 ; OPT-NEXT:    [[TMP1:%.*]] = shl i32 [[TMP]], 28
 ; OPT-NEXT:    [[BF_VAL_SEXT:%.*]] = ashr exact i32 [[TMP1]], 28
 ; OPT-NEXT:    ret i32 [[BF_VAL_SEXT]]
-;
   %tmp = trunc i64 %cav1.coerce to i32
   %tmp1 = shl i32 %tmp, 28
   %bf.val.sext = ashr exact i32 %tmp1, 28
@@ -61,7 +59,6 @@ define i32 @bar(i64 %cav1.coerce) nounwind {
 ; OPT-NEXT:    [[CAV1_SROA_0_1_INSERT:%.*]] = shl i32 [[TMP]], 22
 ; OPT-NEXT:    [[TMP1:%.*]] = ashr i32 [[CAV1_SROA_0_1_INSERT]], 26
 ; OPT-NEXT:    ret i32 [[TMP1]]
-;
   %tmp = trunc i64 %cav1.coerce to i32
   %cav1.sroa.0.1.insert = shl i32 %tmp, 22
   %tmp1 = ashr i32 %cav1.sroa.0.1.insert, 26
@@ -83,7 +80,6 @@ define void @fct1(%struct.Z* nocapture %x, %struct.A* nocapture %y) nounwind opt
 ; OPT-NEXT:    [[BF_CLEAR_LOBIT:%.*]] = and i64 [[BF_CLEAR]], 1
 ; OPT-NEXT:    store i64 [[BF_CLEAR_LOBIT]], i64* [[B1]], align 8
 ; OPT-NEXT:    ret void
-;
   %tmp = bitcast %struct.Z* %x to i64*
   %tmp1 = load i64, i64* %tmp, align 4
   %b = getelementptr inbounds %struct.A, %struct.A* %y, i64 0, i32 0
@@ -102,7 +98,6 @@ define i64 @fct2(i64 %cav1.coerce) nounwind {
 ; OPT-NEXT:    [[TMP:%.*]] = shl i64 [[CAV1_COERCE:%.*]], 28
 ; OPT-NEXT:    [[BF_VAL_SEXT:%.*]] = ashr exact i64 [[TMP]], 28
 ; OPT-NEXT:    ret i64 [[BF_VAL_SEXT]]
-;
   %tmp = shl i64 %cav1.coerce, 28
   %bf.val.sext = ashr exact i64 %tmp, 28
   ret i64 %bf.val.sext
@@ -117,7 +112,6 @@ define i64 @fct3(i64 %cav1.coerce) nounwind {
 ; OPT-NEXT:    [[CAV1_SROA_0_1_INSERT:%.*]] = shl i64 [[CAV1_COERCE:%.*]], 22
 ; OPT-NEXT:    [[TMP1:%.*]] = ashr i64 [[CAV1_SROA_0_1_INSERT]], 26
 ; OPT-NEXT:    ret i64 [[TMP1]]
-;
   %cav1.sroa.0.1.insert = shl i64 %cav1.coerce, 22
   %tmp1 = ashr i64 %cav1.sroa.0.1.insert, 26
   ret i64 %tmp1
@@ -139,7 +133,6 @@ define void @fct4(i64* nocapture %y, i64 %x) nounwind optsize inlinehint ssp {
 ; OPT-NEXT:    [[OR:%.*]] = or i64 [[AND]], [[AND1]]
 ; OPT-NEXT:    store i64 [[OR]], i64* [[Y]], align 8
 ; OPT-NEXT:    ret void
-;
 entry:
   %0 = load i64, i64* %y, align 8
   %and = and i64 %0, -16777216
@@ -166,7 +159,6 @@ define void @fct5(i32* nocapture %y, i32 %x) nounwind optsize inlinehint ssp {
 ; OPT-NEXT:    [[OR:%.*]] = or i32 [[AND]], [[AND1]]
 ; OPT-NEXT:    store i32 [[OR]], i32* [[Y]], align 8
 ; OPT-NEXT:    ret void
-;
 entry:
   %0 = load i32, i32* %y, align 8
   %and = and i32 %0, -8
@@ -196,7 +188,6 @@ define void @fct6(i32* nocapture %y, i32 %x) nounwind optsize inlinehint ssp {
 ; OPT-NEXT:    [[SHR1:%.*]] = lshr i32 [[OR]], 2
 ; OPT-NEXT:    store i32 [[SHR1]], i32* [[Y]], align 8
 ; OPT-NEXT:    ret void
-;
 entry:
 ; lsr is an alias of ubfm
   %0 = load i32, i32* %y, align 8
@@ -229,7 +220,6 @@ define void @fct7(i32* nocapture %y, i32 %x) nounwind optsize inlinehint ssp {
 ; OPT-NEXT:    [[SHL:%.*]] = shl i32 [[OR]], 2
 ; OPT-NEXT:    store i32 [[SHL]], i32* [[Y]], align 8
 ; OPT-NEXT:    ret void
-;
 entry:
 ; lsl is an alias of ubfm
   %0 = load i32, i32* %y, align 8
@@ -263,7 +253,6 @@ define void @fct8(i64* nocapture %y, i64 %x) nounwind optsize inlinehint ssp {
 ; OPT-NEXT:    [[SHR1:%.*]] = lshr i64 [[OR]], 2
 ; OPT-NEXT:    store i64 [[SHR1]], i64* [[Y]], align 8
 ; OPT-NEXT:    ret void
-;
 entry:
 ; lsr is an alias of ubfm
   %0 = load i64, i64* %y, align 8
@@ -297,7 +286,6 @@ define void @fct9(i64* nocapture %y, i64 %x) nounwind optsize inlinehint ssp {
 ; OPT-NEXT:    [[SHL:%.*]] = shl i64 [[OR]], 2
 ; OPT-NEXT:    store i64 [[SHL]], i64* [[Y]], align 8
 ; OPT-NEXT:    ret void
-;
 entry:
 ; lsr is an alias of ubfm
   %0 = load i64, i64* %y, align 8
@@ -329,7 +317,6 @@ define void @fct10(i32* nocapture %y, i32 %x) nounwind optsize inlinehint ssp {
 ; OPT-NEXT:    [[SHL:%.*]] = shl i32 [[OR]], 2
 ; OPT-NEXT:    store i32 [[SHL]], i32* [[Y]], align 8
 ; OPT-NEXT:    ret void
-;
 entry:
 ; lsl is an alias of ubfm
   %0 = load i32, i32* %y, align 8
@@ -360,7 +347,6 @@ define void @fct11(i64* nocapture %y, i64 %x) nounwind optsize inlinehint ssp {
 ; OPT-NEXT:    [[SHL:%.*]] = shl i64 [[OR]], 2
 ; OPT-NEXT:    store i64 [[SHL]], i64* [[Y]], align 8
 ; OPT-NEXT:    ret void
-;
 entry:
 ; lsl is an alias of ubfm
   %0 = load i64, i64* %y, align 8
@@ -381,7 +367,6 @@ define zeroext i1 @fct12bis(i32 %tmp2) unnamed_addr nounwind ssp align 2 {
 ; OPT-NEXT:    [[AND_I_I:%.*]] = and i32 [[TMP2:%.*]], 2048
 ; OPT-NEXT:    [[TOBOOL_I_I:%.*]] = icmp ne i32 [[AND_I_I]], 0
 ; OPT-NEXT:    ret i1 [[TOBOOL_I_I]]
-;
   %and.i.i = and i32 %tmp2, 2048
   %tobool.i.i = icmp ne i32 %and.i.i, 0
   ret i1 %tobool.i.i
@@ -408,7 +393,6 @@ define void @fct12(i32* nocapture %y, i32 %x) nounwind optsize inlinehint ssp {
 ; OPT-NEXT:    [[SHR2:%.*]] = lshr i32 [[SHL]], 4
 ; OPT-NEXT:    store i32 [[SHR2]], i32* [[Y]], align 8
 ; OPT-NEXT:    ret void
-;
 entry:
 ; lsr is an alias of ubfm
   %0 = load i32, i32* %y, align 8
@@ -441,7 +425,6 @@ define void @fct12_mask(i32* nocapture %y, i32 %x) nounwind optsize inlinehint s
 ; OPT-NEXT:    [[MASK:%.*]] = and i32 [[LSHR]], 268435455
 ; OPT-NEXT:    store i32 [[MASK]], i32* [[Y]], align 8
 ; OPT-NEXT:    ret void
-;
 entry:
 ; lsr is an alias of ubfm
   %0 = load i32, i32* %y, align 8
@@ -477,7 +460,6 @@ define void @fct13(i64* nocapture %y, i64 %x) nounwind optsize inlinehint ssp {
 ; OPT-NEXT:    [[SHR2:%.*]] = lshr i64 [[SHL]], 4
 ; OPT-NEXT:    store i64 [[SHR2]], i64* [[Y]], align 8
 ; OPT-NEXT:    ret void
-;
 entry:
 ; lsr is an alias of ubfm
   %0 = load i64, i64* %y, align 8
@@ -510,7 +492,6 @@ define void @fct13_mask(i64* nocapture %y, i64 %x) nounwind optsize inlinehint s
 ; OPT-NEXT:    [[MASK:%.*]] = and i64 [[LSHR]], 1152921504606846975
 ; OPT-NEXT:    store i64 [[MASK]], i64* [[Y]], align 8
 ; OPT-NEXT:    ret void
-;
 entry:
 ; lsr is an alias of ubfm
   %0 = load i64, i64* %y, align 8
@@ -552,7 +533,6 @@ define void @fct14(i32* nocapture %y, i32 %x, i32 %x1) nounwind optsize inlinehi
 ; OPT-NEXT:    [[SHL1:%.*]] = shl i32 [[OR1]], 2
 ; OPT-NEXT:    store i32 [[SHL1]], i32* [[Y]], align 8
 ; OPT-NEXT:    ret void
-;
 entry:
 ; lsr is an alias of ubfm
 ; lsl is an alias of ubfm
@@ -599,7 +579,6 @@ define void @fct15(i64* nocapture %y, i64 %x, i64 %x1) nounwind optsize inlinehi
 ; OPT-NEXT:    [[SHL1:%.*]] = shl i64 [[OR1]], 2
 ; OPT-NEXT:    store i64 [[SHL1]], i64* [[Y]], align 8
 ; OPT-NEXT:    ret void
-;
 entry:
 ; lsr is an alias of ubfm
 ; lsl is an alias of ubfm
@@ -642,7 +621,6 @@ define void @fct16(i32* nocapture %y, i32 %x) nounwind optsize inlinehint ssp {
 ; OPT-NEXT:    [[SHR2:%.*]] = lshr i32 [[SHL]], 4
 ; OPT-NEXT:    store i32 [[SHR2]], i32* [[Y]], align 8
 ; OPT-NEXT:    ret void
-;
 entry:
 ; Create the constant
 ; Do the masking
@@ -679,7 +657,6 @@ define void @fct16_mask(i32* nocapture %y, i32 %x) nounwind optsize inlinehint s
 ; OPT-NEXT:    [[MASK:%.*]] = and i32 [[LSHR]], 268435455
 ; OPT-NEXT:    store i32 [[MASK]], i32* [[Y]], align 8
 ; OPT-NEXT:    ret void
-;
 entry:
 ; Create the constant
 ; Do the masking
@@ -721,7 +698,6 @@ define void @fct17(i64* nocapture %y, i64 %x) nounwind optsize inlinehint ssp {
 ; OPT-NEXT:    [[SHR2:%.*]] = lshr i64 [[SHL]], 4
 ; OPT-NEXT:    store i64 [[SHR2]], i64* [[Y]], align 8
 ; OPT-NEXT:    ret void
-;
 entry:
 ; Create the constant
 ; Do the masking
@@ -758,7 +734,6 @@ define void @fct17_mask(i64* nocapture %y, i64 %x) nounwind optsize inlinehint s
 ; OPT-NEXT:    [[MASK:%.*]] = and i64 [[LSHR]], 1152921504606846975
 ; OPT-NEXT:    store i64 [[MASK]], i64* [[Y]], align 8
 ; OPT-NEXT:    ret void
-;
 entry:
 ; Create the constant
 ; Do the masking
@@ -785,7 +760,6 @@ define i64 @fct18(i32 %xor72) nounwind ssp {
 ; OPT-NEXT:    [[CONV82:%.*]] = zext i32 [[SHR81]] to i64
 ; OPT-NEXT:    [[RESULT:%.*]] = and i64 [[CONV82]], 255
 ; OPT-NEXT:    ret i64 [[RESULT]]
-;
   %shr81 = lshr i32 %xor72, 9
   %conv82 = zext i32 %shr81 to i64
   %result = and i64 %conv82, 255
@@ -813,7 +787,7 @@ define i32 @fct19(i64 %arg1) nounwind readonly ssp  {
 ; LLC-NEXT:    adrp x9, first_ones
 ; LLC-NEXT:    add x9, x9, :lo12:first_ones
 ; LLC-NEXT:    ldrb w8, [x9, x8]
-; LLC-NEXT:    add w0, w8, #16 // =16
+; LLC-NEXT:    add w0, w8, #16
 ; LLC-NEXT:    ret
 ; LLC-NEXT:  .LBB26_4: // %if.end13
 ; LLC-NEXT:    ubfx x8, x0, #16, #16
@@ -822,7 +796,7 @@ define i32 @fct19(i64 %arg1) nounwind readonly ssp  {
 ; LLC-NEXT:    adrp x9, first_ones
 ; LLC-NEXT:    add x9, x9, :lo12:first_ones
 ; LLC-NEXT:    ldrb w8, [x9, x8]
-; LLC-NEXT:    add w0, w8, #32 // =32
+; LLC-NEXT:    add w0, w8, #32
 ; LLC-NEXT:    ret
 ; LLC-NEXT:  .LBB26_6:
 ; LLC-NEXT:    mov w0, #64
@@ -868,7 +842,6 @@ define i32 @fct19(i64 %arg1) nounwind readonly ssp  {
 ; OPT:       return:
 ; OPT-NEXT:    [[RETVAL_0:%.*]] = phi i32 [ [[CONV]], [[IF_THEN]] ], [ [[ADD]], [[IF_THEN7]] ], [ [[ADD23]], [[IF_THEN17]] ], [ 64, [[IF_END13]] ]
 ; OPT-NEXT:    ret i32 [[RETVAL_0]]
-;
 entry:
   %x.sroa.1.0.extract.shift = lshr i64 %arg1, 16
   %x.sroa.1.0.extract.trunc = trunc i64 %x.sroa.1.0.extract.shift to i16
@@ -923,18 +896,18 @@ define i80 @fct20(i128 %a, i128 %b) {
 ; LLC-LABEL: fct20:
 ; LLC:       // %bb.0: // %entry
 ; LLC-NEXT:    mov x12, #11776
+; LLC-NEXT:    extr x9, x1, x0, #18
 ; LLC-NEXT:    movk x12, #25856, lsl #16
+; LLC-NEXT:    lsr x8, x1, #18
 ; LLC-NEXT:    movk x12, #11077, lsl #32
-; LLC-NEXT:    extr x8, x1, x0, #18
-; LLC-NEXT:    lsr x9, x1, #18
 ; LLC-NEXT:    orr x10, x2, x3
 ; LLC-NEXT:    mov w11, #26220
 ; LLC-NEXT:    movk x12, #45, lsl #48
-; LLC-NEXT:    and x11, x9, x11
-; LLC-NEXT:    and x12, x8, x12
-; LLC-NEXT:    cmp x10, #0 // =0
-; LLC-NEXT:    csel x0, x12, x8, eq
-; LLC-NEXT:    csel x1, x11, x9, eq
+; LLC-NEXT:    and x11, x8, x11
+; LLC-NEXT:    and x12, x9, x12
+; LLC-NEXT:    cmp x10, #0
+; LLC-NEXT:    csel x0, x12, x9, eq
+; LLC-NEXT:    csel x1, x11, x8, eq
 ; LLC-NEXT:    ret
 ; OPT-LABEL: @fct20(
 ; OPT-NEXT:  entry:
@@ -949,7 +922,6 @@ define i80 @fct20(i128 %a, i128 %b) {
 ; OPT:       end:
 ; OPT-NEXT:    [[CONV3:%.*]] = phi i80 [ [[CONV]], [[ENTRY:%.*]] ], [ [[CONV2]], [[THEN]] ]
 ; OPT-NEXT:    ret i80 [[CONV3]]
-;
 entry:
   %shr = lshr i128 %a, 18
   %conv = trunc i128 %shr to i80
@@ -969,8 +941,8 @@ end:
 define i64 @fct21(i64 %x) {
 ; LLC-LABEL: fct21:
 ; LLC:       // %bb.0: // %entry
-; LLC-NEXT:    adrp x9, arr
 ; LLC-NEXT:    ubfx x8, x0, #4, #4
+; LLC-NEXT:    adrp x9, arr
 ; LLC-NEXT:    add x9, x9, :lo12:arr
 ; LLC-NEXT:    ldr x0, [x9, x8, lsl #3]
 ; LLC-NEXT:    ret
@@ -981,7 +953,6 @@ define i64 @fct21(i64 %x) {
 ; OPT-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [8 x [64 x i64]], [8 x [64 x i64]]* @arr, i64 0, i64 0, i64 [[AND]]
 ; OPT-NEXT:    [[TMP0:%.*]] = load i64, i64* [[ARRAYIDX]], align 8
 ; OPT-NEXT:    ret i64 [[TMP0]]
-;
 entry:
   %shr = lshr i64 %x, 4
   %and = and i64 %shr, 15
@@ -1006,7 +977,6 @@ define i16 @test_ignored_rightbits(i32 %dst, i32 %in) {
 ; OPT-NEXT:    [[OR18:%.*]] = or i32 [[SHL16]], [[INSERTION]]
 ; OPT-NEXT:    [[CONV19:%.*]] = trunc i32 [[OR18]] to i16
 ; OPT-NEXT:    ret i16 [[CONV19]]
-;
   %positioned_field = shl i32 %in, 3
   %positioned_masked_field = and i32 %positioned_field, 120
   %masked_dst = and i32 %dst, 7
@@ -1052,7 +1022,6 @@ define void @sameOperandBFI(i64 %src, i64 %src2, i16 *%ptr) {
 ; OPT-NEXT:    br label [[END]]
 ; OPT:       end:
 ; OPT-NEXT:    ret void
-;
 entry:
   %shr47 = lshr i64 %src, 47
   %src2.trunc = trunc i64 %src2 to i32

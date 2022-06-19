@@ -69,8 +69,9 @@ private:
   void InclusionDirective(SourceLocation DirectiveLoc,
                           const Token &IncludeToken, StringRef IncludedFilename,
                           bool IsAngled, CharSourceRange FilenameRange,
-                          const FileEntry *IncludedFile, StringRef SearchPath,
-                          StringRef RelativePath, const Module *Imported,
+                          Optional<FileEntryRef> IncludedFile,
+                          StringRef SearchPath, StringRef RelativePath,
+                          const Module *Imported,
                           SrcMgr::CharacteristicKind FileType) override;
 
   void EndOfMainFile() override;
@@ -94,7 +95,8 @@ private:
                   SrcMgr::CharacteristicKind) override;
   void PragmaOpenCLExtension(SourceLocation NameLoc, const IdentifierInfo *,
                              SourceLocation StateLoc, unsigned) override;
-  void PragmaWarning(SourceLocation Loc, StringRef, ArrayRef<int>) override;
+  void PragmaWarning(SourceLocation Loc, PragmaWarningSpecifier,
+                     ArrayRef<int>) override;
   void PragmaWarningPush(SourceLocation Loc, int) override;
   void PragmaWarningPop(SourceLocation Loc) override;
   void PragmaAssumeNonNullBegin(SourceLocation Loc) override;

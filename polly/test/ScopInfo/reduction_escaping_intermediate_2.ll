@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -basic-aa -polly-stmt-granularity=bb -polly-scops -analyze < %s | FileCheck %s
+; RUN: opt %loadPolly -basic-aa -polly-stmt-granularity=bb -polly-print-scops -disable-output < %s | FileCheck %s
 ;
 ; void f(int N, int * restrict sums, int * restrict escape) {
 ;   int i, j;

@@ -24,19 +24,14 @@ using namespace clang::ast_matchers;
 namespace clang {
 namespace tidy {
 namespace cppcoreguidelines {
-namespace {
-auto hasAnyListedName(const std::string &Names) {
-  const std::vector<std::string> NameList =
-      utils::options::parseStringList(Names);
-  return hasAnyName(std::vector<StringRef>(NameList.begin(), NameList.end()));
-}
-} // namespace
 
 NarrowingConversionsCheck::NarrowingConversionsCheck(StringRef Name,
                                                      ClangTidyContext *Context)
     : ClangTidyCheck(Name, Context),
       WarnOnIntegerNarrowingConversion(
           Options.get("WarnOnIntegerNarrowingConversion", true)),
+      WarnOnIntegerToFloatingPointNarrowingConversion(
+          Options.get("WarnOnIntegerToFloatingPointNarrowingConversion", true)),
       WarnOnFloatingPointNarrowingConversion(
           Options.get("WarnOnFloatingPointNarrowingConversion", true)),
       WarnWithinTemplateInstantiation(
@@ -49,6 +44,8 @@ void NarrowingConversionsCheck::storeOptions(
     ClangTidyOptions::OptionMap &Opts) {
   Options.store(Opts, "WarnOnIntegerNarrowingConversion",
                 WarnOnIntegerNarrowingConversion);
+  Options.store(Opts, "WarnOnIntegerToFloatingPointNarrowingConversion",
+                WarnOnIntegerToFloatingPointNarrowingConversion);
   Options.store(Opts, "WarnOnFloatingPointNarrowingConversion",
                 WarnOnFloatingPointNarrowingConversion);
   Options.store(Opts, "WarnWithinTemplateInstantiation",
@@ -56,6 +53,14 @@ void NarrowingConversionsCheck::storeOptions(
   Options.store(Opts, "WarnOnEquivalentBitWidth", WarnOnEquivalentBitWidth);
   Options.store(Opts, "IgnoreConversionFromTypes", IgnoreConversionFromTypes);
   Options.store(Opts, "PedanticMode", PedanticMode);
+}
+
+AST_MATCHER(FieldDecl, hasIntBitwidth) {
+  assert(Node.isBitField());
+  const ASTContext &Ctx = Node.getASTContext();
+  unsigned IntBitWidth = Ctx.getIntWidth(Ctx.IntTy);
+  unsigned CurrentBitWidth = Node.getBitWidthValue(Ctx);
+  return IntBitWidth == CurrentBitWidth;
 }
 
 void NarrowingConversionsCheck::registerMatchers(MatchFinder *Finder) {
@@ -67,8 +72,8 @@ void NarrowingConversionsCheck::registerMatchers(MatchFinder *Finder) {
   // We may want to exclude other types from the checks, such as `size_type`
   // and `difference_type`. These are often used to count elements, represented
   // in 64 bits and assigned to `int`. Rarely are people counting >2B elements.
-  const auto IsConversionFromIgnoredType =
-      hasType(namedDecl(hasAnyListedName(IgnoreConversionFromTypes)));
+  const auto IsConversionFromIgnoredType = hasType(namedDecl(
+      hasAnyName(utils::options::parseStringList(IgnoreConversionFromTypes))));
 
   // `IsConversionFromIgnoredType` will ignore narrowing calls from those types,
   // but not expressions that are promoted to an ignored type as a result of a
@@ -82,6 +87,46 @@ void NarrowingConversionsCheck::registerMatchers(MatchFinder *Finder) {
       anyOf(IsConversionFromIgnoredType,
             binaryOperator(hasOperands(IsConversionFromIgnoredType,
                                        hasType(isInteger()))));
+
+  // Bitfields are special. Due to integral promotion [conv.prom/5] bitfield
+  // member access expressions are frequently wrapped by an implicit cast to
+  // `int` if that type can represent all the values of the bitfield.
+  //
+  // Consider these examples:
+  //   struct SmallBitfield { unsigned int id : 4; };
+  //   x.id & 1;             (case-1)
+  //   x.id & 1u;            (case-2)
+  //   x.id << 1u;           (case-3)
+  //   (unsigned)x.id << 1;  (case-4)
+  //
+  // Due to the promotion rules, we would get a warning for case-1. It's
+  // debatable how useful this is, but the user at least has a convenient way of
+  // //fixing// it by adding the `u` unsigned-suffix to the literal as
+  // demonstrated by case-2. However, this won't work for shift operators like
+  // the one in case-3. In case of a normal binary operator, both operands
+  // contribute to the result type. However, the type of the shift expression is
+  // the promoted type of the left operand. One could still suppress this
+  // superfluous warning by explicitly casting the bitfield member access as
+  // case-4 demonstrates, but why? The compiler already knew that the value from
+  // the member access should safely fit into an `int`, why do we have this
+  // warning in the first place? So, hereby we suppress this specific scenario.
+  //
+  // Note that the bitshift operation might invoke unspecified/undefined
+  // behavior, but that's another topic, this checker is about detecting
+  // conversion-related defects.
+  //
+  // Example AST for `x.id << 1`:
+  //   BinaryOperator 'int' '<<'
+  //   |-ImplicitCastExpr 'int' <IntegralCast>
+  //   | `-ImplicitCastExpr 'unsigned int' <LValueToRValue>
+  //   |   `-MemberExpr 'unsigned int' lvalue bitfield .id
+  //   |     `-DeclRefExpr 'SmallBitfield' lvalue ParmVar 'x' 'SmallBitfield'
+  //   `-IntegerLiteral 'int' 1
+  const auto ImplicitIntWidenedBitfieldValue = implicitCastExpr(
+      hasCastKind(CK_IntegralCast), hasType(asString("int")),
+      has(castExpr(hasCastKind(CK_LValueToRValue),
+                   has(ignoringParens(memberExpr(hasDeclaration(
+                       fieldDecl(isBitField(), unless(hasIntBitwidth())))))))));
 
   // Casts:
   //   i = 0.5;
@@ -100,7 +145,8 @@ void NarrowingConversionsCheck::registerMatchers(MatchFinder *Finder) {
                             IgnoreConversionFromTypes.empty()
                                 ? castExpr()
                                 : castExpr(unless(hasSourceExpression(
-                                      IsIgnoredTypeTwoLevelsDeep))))
+                                      IsIgnoredTypeTwoLevelsDeep))),
+                            unless(ImplicitIntWidenedBitfieldValue))
                             .bind("cast")),
       this);
 
@@ -376,19 +422,21 @@ void NarrowingConversionsCheck::handleIntegralToBoolean(
 void NarrowingConversionsCheck::handleIntegralToFloating(
     const ASTContext &Context, SourceLocation SourceLoc, const Expr &Lhs,
     const Expr &Rhs) {
-  const BuiltinType *ToType = getBuiltinType(Lhs);
-  llvm::APSInt IntegerConstant;
-  if (getIntegerConstantExprValue(Context, Rhs, IntegerConstant)) {
-    if (!isWideEnoughToHold(Context, IntegerConstant, *ToType))
-      diagNarrowIntegerConstant(SourceLoc, Lhs, Rhs, IntegerConstant);
-    return;
-  }
+  if (WarnOnIntegerToFloatingPointNarrowingConversion) {
+    const BuiltinType *ToType = getBuiltinType(Lhs);
+    llvm::APSInt IntegerConstant;
+    if (getIntegerConstantExprValue(Context, Rhs, IntegerConstant)) {
+      if (!isWideEnoughToHold(Context, IntegerConstant, *ToType))
+        diagNarrowIntegerConstant(SourceLoc, Lhs, Rhs, IntegerConstant);
+      return;
+    }
 
-  const BuiltinType *FromType = getBuiltinType(Rhs);
-  if (isWarningInhibitedByEquivalentSize(Context, *FromType, *ToType))
-    return;
-  if (!isWideEnoughToHold(Context, *FromType, *ToType))
-    diagNarrowType(SourceLoc, Lhs, Rhs);
+    const BuiltinType *FromType = getBuiltinType(Rhs);
+    if (isWarningInhibitedByEquivalentSize(Context, *FromType, *ToType))
+      return;
+    if (!isWideEnoughToHold(Context, *FromType, *ToType))
+      diagNarrowType(SourceLoc, Lhs, Rhs);
+  }
 }
 
 void NarrowingConversionsCheck::handleFloatingToIntegral(

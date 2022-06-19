@@ -41,12 +41,7 @@ void SymbolVendorWasm::Terminate() {
   PluginManager::UnregisterPlugin(CreateInstance);
 }
 
-lldb_private::ConstString SymbolVendorWasm::GetPluginNameStatic() {
-  static ConstString g_name("WASM");
-  return g_name;
-}
-
-const char *SymbolVendorWasm::GetPluginDescriptionStatic() {
+llvm::StringRef SymbolVendorWasm::GetPluginDescriptionStatic() {
   return "Symbol vendor for WASM that looks for dwo files that match "
          "executables.";
 }
@@ -139,8 +134,3 @@ SymbolVendorWasm::CreateInstance(const lldb::ModuleSP &module_sp,
   symbol_vendor->AddSymbolFileRepresentation(sym_objfile_sp);
   return symbol_vendor;
 }
-
-// PluginInterface protocol
-ConstString SymbolVendorWasm::GetPluginName() { return GetPluginNameStatic(); }
-
-uint32_t SymbolVendorWasm::GetPluginVersion() { return 1; }

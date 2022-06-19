@@ -98,8 +98,19 @@ class ARMTargetAsmStreamer : public ARMTargetStreamer {
   void emitInst(uint32_t Inst, char Suffix = '\0') override;
   void finishAttributeSection() override;
 
-  void AnnotateTLSDescriptorSequence(const MCSymbolRefExpr *SRE) override;
+  void annotateTLSDescriptorSequence(const MCSymbolRefExpr *SRE) override;
   void emitThumbSet(MCSymbol *Symbol, const MCExpr *Value) override;
+
+  void emitARMWinCFIAllocStack(unsigned Size, bool Wide) override;
+  void emitARMWinCFISaveRegMask(unsigned Mask, bool Wide) override;
+  void emitARMWinCFISaveSP(unsigned Reg) override;
+  void emitARMWinCFISaveFRegs(unsigned First, unsigned Last) override;
+  void emitARMWinCFISaveLR(unsigned Offset) override;
+  void emitARMWinCFIPrologEnd(bool Fragment) override;
+  void emitARMWinCFINop(bool Wide) override;
+  void emitARMWinCFIEpilogStart(unsigned Condition) override;
+  void emitARMWinCFIEpilogEnd() override;
+  void emitARMWinCFICustom(unsigned Opcode) override;
 
 public:
   ARMTargetAsmStreamer(MCStreamer &S, formatted_raw_ostream &OS,
@@ -239,8 +250,8 @@ void ARMTargetAsmStreamer::emitFPU(unsigned FPU) {
 
 void ARMTargetAsmStreamer::finishAttributeSection() {}
 
-void
-ARMTargetAsmStreamer::AnnotateTLSDescriptorSequence(const MCSymbolRefExpr *S) {
+void ARMTargetAsmStreamer::annotateTLSDescriptorSequence(
+    const MCSymbolRefExpr *S) {
   OS << "\t.tlsdescseq\t" << S->getSymbol().getName() << "\n";
 }
 
@@ -264,11 +275,104 @@ void ARMTargetAsmStreamer::emitInst(uint32_t Inst, char Suffix) {
 void ARMTargetAsmStreamer::emitUnwindRaw(int64_t Offset,
                                       const SmallVectorImpl<uint8_t> &Opcodes) {
   OS << "\t.unwind_raw " << Offset;
-  for (SmallVectorImpl<uint8_t>::const_iterator OCI = Opcodes.begin(),
-                                                OCE = Opcodes.end();
-       OCI != OCE; ++OCI)
-    OS << ", 0x" << Twine::utohexstr(*OCI);
+  for (uint8_t Opcode : Opcodes)
+    OS << ", 0x" << Twine::utohexstr(Opcode);
   OS << '\n';
+}
+
+void ARMTargetAsmStreamer::emitARMWinCFIAllocStack(unsigned Size, bool Wide) {
+  if (Wide)
+    OS << "\t.seh_stackalloc_w\t" << Size << "\n";
+  else
+    OS << "\t.seh_stackalloc\t" << Size << "\n";
+}
+
+static void printRegs(formatted_raw_ostream &OS, ListSeparator &LS, int First,
+                      int Last) {
+  if (First != Last)
+    OS << LS << "r" << First << "-r" << Last;
+  else
+    OS << LS << "r" << First;
+}
+
+void ARMTargetAsmStreamer::emitARMWinCFISaveRegMask(unsigned Mask, bool Wide) {
+  if (Wide)
+    OS << "\t.seh_save_regs_w\t";
+  else
+    OS << "\t.seh_save_regs\t";
+  ListSeparator LS;
+  int First = -1;
+  OS << "{";
+  for (int I = 0; I <= 12; I++) {
+    if (Mask & (1 << I)) {
+      if (First < 0)
+        First = I;
+    } else {
+      if (First >= 0) {
+        printRegs(OS, LS, First, I - 1);
+        First = -1;
+      }
+    }
+  }
+  if (First >= 0)
+    printRegs(OS, LS, First, 12);
+  if (Mask & (1 << 14))
+    OS << LS << "lr";
+  OS << "}\n";
+}
+
+void ARMTargetAsmStreamer::emitARMWinCFISaveSP(unsigned Reg) {
+  OS << "\t.seh_save_sp\tr" << Reg << "\n";
+}
+
+void ARMTargetAsmStreamer::emitARMWinCFISaveFRegs(unsigned First,
+                                                  unsigned Last) {
+  if (First != Last)
+    OS << "\t.seh_save_fregs\t{d" << First << "-d" << Last << "}\n";
+  else
+    OS << "\t.seh_save_fregs\t{d" << First << "}\n";
+}
+
+void ARMTargetAsmStreamer::emitARMWinCFISaveLR(unsigned Offset) {
+  OS << "\t.seh_save_lr\t" << Offset << "\n";
+}
+
+void ARMTargetAsmStreamer::emitARMWinCFIPrologEnd(bool Fragment) {
+  if (Fragment)
+    OS << "\t.seh_endprologue_fragment\n";
+  else
+    OS << "\t.seh_endprologue\n";
+}
+
+void ARMTargetAsmStreamer::emitARMWinCFINop(bool Wide) {
+  if (Wide)
+    OS << "\t.seh_nop_w\n";
+  else
+    OS << "\t.seh_nop\n";
+}
+
+void ARMTargetAsmStreamer::emitARMWinCFIEpilogStart(unsigned Condition) {
+  if (Condition == ARMCC::AL)
+    OS << "\t.seh_startepilogue\n";
+  else
+    OS << "\t.seh_startepilogue_cond\t"
+       << ARMCondCodeToString(static_cast<ARMCC::CondCodes>(Condition)) << "\n";
+}
+
+void ARMTargetAsmStreamer::emitARMWinCFIEpilogEnd() {
+  OS << "\t.seh_endepilogue\n";
+}
+
+void ARMTargetAsmStreamer::emitARMWinCFICustom(unsigned Opcode) {
+  int I;
+  for (I = 3; I > 0; I--)
+    if (Opcode & (0xffu << (8 * I)))
+      break;
+  ListSeparator LS;
+  OS << "\t.seh_custom\t";
+  for (; I >= 0; I--)
+    OS << LS << ((Opcode >> (8 * I)) & 0xff);
+  OS << "\n";
 }
 
 class ARMTargetELFStreamer : public ARMTargetStreamer {
@@ -311,7 +415,7 @@ private:
   void finishAttributeSection() override;
   void emitLabel(MCSymbol *Symbol) override;
 
-  void AnnotateTLSDescriptorSequence(const MCSymbolRefExpr *SRE) override;
+  void annotateTLSDescriptorSequence(const MCSymbolRefExpr *SRE) override;
   void emitThumbSet(MCSymbol *Symbol, const MCExpr *Value) override;
 
   // Reset state between object emissions
@@ -785,6 +889,10 @@ void ARMTargetELFStreamer::emitArchDefaultAttributes() {
   case ARM::ArchKind::ARMV8_4A:
   case ARM::ArchKind::ARMV8_5A:
   case ARM::ArchKind::ARMV8_6A:
+  case ARM::ArchKind::ARMV9A:
+  case ARM::ArchKind::ARMV9_1A:
+  case ARM::ArchKind::ARMV9_2A:
+  case ARM::ArchKind::ARMV9_3A:
     S.setAttributeItem(CPU_arch_profile, ApplicationProfile, false);
     S.setAttributeItem(ARM_ISA_use, Allowed, false);
     S.setAttributeItem(THUMB_ISA_use, AllowThumb32, false);
@@ -982,8 +1090,8 @@ void ARMTargetELFStreamer::emitLabel(MCSymbol *Symbol) {
     Streamer.emitThumbFunc(Symbol);
 }
 
-void
-ARMTargetELFStreamer::AnnotateTLSDescriptorSequence(const MCSymbolRefExpr *S) {
+void ARMTargetELFStreamer::annotateTLSDescriptorSequence(
+    const MCSymbolRefExpr *S) {
   getStreamer().EmitFixup(S, FK_Data_4);
 }
 
@@ -1055,8 +1163,8 @@ inline void ARMELFStreamer::SwitchToEHSection(StringRef Prefix,
   assert(EHSection && "Failed to get the required EH section");
 
   // Switch to .ARM.extab or .ARM.exidx section
-  SwitchSection(EHSection);
-  emitCodeAlignment(4);
+  switchSection(EHSection);
+  emitValueToAlignment(4, 0, 1, 0);
 }
 
 inline void ARMELFStreamer::SwitchToExTabSection(const MCSymbol &FnStart) {
@@ -1148,7 +1256,7 @@ void ARMELFStreamer::emitFnEnd() {
   }
 
   // Switch to the section containing FnStart
-  SwitchSection(&FnStart->getSection());
+  switchSection(&FnStart->getSection());
 
   // Clean exception handling frame information
   EHReset();
@@ -1286,34 +1394,65 @@ void ARMELFStreamer::emitPad(int64_t Offset) {
   PendingOffset -= Offset;
 }
 
-void ARMELFStreamer::emitRegSave(const SmallVectorImpl<unsigned> &RegList,
-                                 bool IsVector) {
-  // Collect the registers in the register list
-  unsigned Count = 0;
+static std::pair<unsigned, unsigned>
+collectHWRegs(const MCRegisterInfo &MRI, unsigned Idx,
+              const SmallVectorImpl<unsigned> &RegList, bool IsVector,
+              uint32_t &Mask_) {
   uint32_t Mask = 0;
-  const MCRegisterInfo *MRI = getContext().getRegisterInfo();
-  for (size_t i = 0; i < RegList.size(); ++i) {
-    unsigned Reg = MRI->getEncodingValue(RegList[i]);
+  unsigned Count = 0;
+  while (Idx > 0) {
+    unsigned Reg = RegList[Idx - 1];
+    if (Reg == ARM::RA_AUTH_CODE)
+      break;
+    Reg = MRI.getEncodingValue(Reg);
     assert(Reg < (IsVector ? 32U : 16U) && "Register out of range");
     unsigned Bit = (1u << Reg);
     if ((Mask & Bit) == 0) {
       Mask |= Bit;
       ++Count;
     }
+    --Idx;
   }
 
-  // Track the change the $sp offset: For the .save directive, the
-  // corresponding push instruction will decrease the $sp by (4 * Count).
-  // For the .vsave directive, the corresponding vpush instruction will
-  // decrease $sp by (8 * Count).
-  SPOffset -= Count * (IsVector ? 8 : 4);
+  Mask_ = Mask;
+  return {Idx, Count};
+}
 
-  // Emit the opcode
-  FlushPendingOffset();
-  if (IsVector)
-    UnwindOpAsm.EmitVFPRegSave(Mask);
-  else
-    UnwindOpAsm.EmitRegSave(Mask);
+void ARMELFStreamer::emitRegSave(const SmallVectorImpl<unsigned> &RegList,
+                                 bool IsVector) {
+  uint32_t Mask;
+  unsigned Idx, Count;
+  const MCRegisterInfo &MRI = *getContext().getRegisterInfo();
+
+  // Collect the registers in the register list. Issue unwinding instructions in
+  // three parts: ordinary hardware registers, return address authentication
+  // code pseudo register, the rest of the registers. The RA PAC is kept in an
+  // architectural register (usually r12), but we treat it as a special case in
+  // order to distinguish between that register containing RA PAC or a general
+  // value.
+  Idx = RegList.size();
+  while (Idx > 0) {
+    std::tie(Idx, Count) = collectHWRegs(MRI, Idx, RegList, IsVector, Mask);
+    if (Count) {
+      // Track the change the $sp offset: For the .save directive, the
+      // corresponding push instruction will decrease the $sp by (4 * Count).
+      // For the .vsave directive, the corresponding vpush instruction will
+      // decrease $sp by (8 * Count).
+      SPOffset -= Count * (IsVector ? 8 : 4);
+
+      // Emit the opcode
+      FlushPendingOffset();
+      if (IsVector)
+        UnwindOpAsm.EmitVFPRegSave(Mask);
+      else
+        UnwindOpAsm.EmitRegSave(Mask);
+    } else if (Idx > 0 && RegList[Idx - 1] == ARM::RA_AUTH_CODE) {
+      --Idx;
+      SPOffset -= 4;
+      FlushPendingOffset();
+      UnwindOpAsm.EmitRegSave(0);
+    }
+  }
 }
 
 void ARMELFStreamer::emitUnwindRaw(int64_t Offset,
@@ -1336,12 +1475,8 @@ MCTargetStreamer *createARMNullTargetStreamer(MCStreamer &S) {
   return new ARMTargetStreamer(S);
 }
 
-MCTargetStreamer *createARMObjectTargetStreamer(MCStreamer &S,
-                                                const MCSubtargetInfo &STI) {
-  const Triple &TT = STI.getTargetTriple();
-  if (TT.isOSBinFormatELF())
-    return new ARMTargetELFStreamer(S);
-  return new ARMTargetStreamer(S);
+MCTargetStreamer *createARMObjectTargetELFStreamer(MCStreamer &S) {
+  return new ARMTargetELFStreamer(S);
 }
 
 MCELFStreamer *createARMELFStreamer(MCContext &Context,

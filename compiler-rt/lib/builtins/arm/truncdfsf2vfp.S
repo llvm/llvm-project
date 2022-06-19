@@ -11,9 +11,9 @@
 //
 // extern float __truncdfsf2vfp(double a);
 //
-// Converts double precision float to signle precision result.
+// Converts double precision float to single precision result.
 // Uses Darwin calling convention where a double precision parameter is
-// passed in a R0/R1 pair and a signle precision result is returned in R0.
+// passed in a R0/R1 pair and a single precision result is returned in R0.
 //
 	.syntax unified
 	.p2align 2

@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 %s -fsyntax-only -triple i686-intel-elfiamcu -verify
+// RUN: %clang_cc1 %s -fsyntax-only -Wno-strict-prototypes -triple i686-intel-elfiamcu -verify
 
 void __attribute__((fastcall)) foo(float *a) { // expected-warning {{'fastcall' calling convention is not supported for this target}}
 }

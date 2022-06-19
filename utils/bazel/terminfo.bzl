@@ -27,7 +27,7 @@ def _llvm_terminfo_disable_impl(repository_ctx):
 
 _terminfo_disable_attrs = {
     "_disable_build_template": attr.label(
-        default = Label("//deps_impl:terminfo_disable.BUILD"),
+        default = Label("//utils/bazel/deps_impl:terminfo_disable.BUILD"),
         allow_single_file = True,
     ),
 }
@@ -113,6 +113,7 @@ def _llvm_terminfo_system_impl(repository_ctx):
         # these would be provided as lists, but Bazel doesn't currently
         # support that. See: https://github.com/bazelbuild/bazel/issues/12178
         linkopts_candidates = [[x] for x in repository_ctx.attr.candidate_system_linkopts]
+        linkopts = None
 
         # For each candidate, try to use it to link our test source file.
         for linkopts_candidate in linkopts_candidates:
@@ -147,11 +148,11 @@ def _merge_attrs(attrs_list):
 
 _terminfo_system_attrs = _merge_attrs([_terminfo_disable_attrs, {
     "_system_build_template": attr.label(
-        default = Label("//deps_impl:terminfo_system.BUILD"),
+        default = Label("//utils/bazel/deps_impl:terminfo_system.BUILD"),
         allow_single_file = True,
     ),
     "_terminfo_test_source": attr.label(
-        default = Label("//deps_impl:terminfo_test.c"),
+        default = Label("//utils/bazel/deps_impl:terminfo_test.c"),
         allow_single_file = True,
     ),
     "candidate_system_linkopts": attr.string_list(

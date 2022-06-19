@@ -7,8 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17
-// UNSUPPORTED: libcpp-no-concepts
-// UNSUPPORTED: gcc-10
 
 // template<class I2, class S2>
 //   requires convertible_to<const I2&, I> && convertible_to<const S2&, S> &&
@@ -73,13 +71,13 @@ void test() {
     assert(*commonIter2 == 2);
     assert(commonIter1 == commonIter2);
 
-    assert(std::ranges::next(commonIter1, 6) != commonSent1);
-    assert(std::ranges::next(commonIter1, 6) == commonSent2);
+    assert(std::next(commonIter1, 6) != commonSent1);
+    assert(std::next(commonIter1, 6) == commonSent2);
 
     commonSent1 = commonSent2;
 
-    assert(std::ranges::next(commonIter1, 6) == commonSent1);
-    assert(std::ranges::next(commonIter1, 6) == commonSent2);
+    assert(std::next(commonIter1, 6) == commonSent1);
+    assert(std::next(commonIter1, 6) == commonSent2);
   }
   {
     auto iter1 = assignable_iterator<int*>(buffer);
@@ -99,13 +97,13 @@ void test() {
     assert(*commonIter2 == 2);
     assert(commonIter1 == commonIter2);
 
-    assert(std::ranges::next(commonIter1, 6) != commonSent1);
-    assert(std::ranges::next(commonIter1, 6) == commonSent2);
+    assert(std::next(commonIter1, 6) != commonSent1);
+    assert(std::next(commonIter1, 6) == commonSent2);
 
     commonSent1 = commonSent2;
 
-    assert(std::ranges::next(commonIter1, 6) == commonSent1);
-    assert(std::ranges::next(commonIter1, 6) == commonSent2);
+    assert(std::next(commonIter1, 6) == commonSent1);
+    assert(std::next(commonIter1, 6) == commonSent2);
 
     commonIter1 = commonSent1;
 

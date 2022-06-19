@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple arm64-apple-ios -target-abi darwinpcs -emit-llvm -o - %s | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -triple arm64-apple-ios -target-abi darwinpcs -emit-llvm -o - %s | FileCheck %s
 struct Empty {};
 
 Empty emptyvar;

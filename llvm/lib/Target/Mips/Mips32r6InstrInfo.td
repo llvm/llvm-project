@@ -39,6 +39,7 @@ def brtarget21 : Operand<OtherVT> {
   let OperandType = "OPERAND_PCREL";
   let DecoderMethod = "DecodeBranchTarget21";
   let ParserMatchClass = MipsJumpTargetAsmOperand;
+  let PrintMethod = "printBranchOperand";
 }
 
 def brtarget26 : Operand<OtherVT> {
@@ -46,6 +47,7 @@ def brtarget26 : Operand<OtherVT> {
   let OperandType = "OPERAND_PCREL";
   let DecoderMethod = "DecodeBranchTarget26";
   let ParserMatchClass = MipsJumpTargetAsmOperand;
+  let PrintMethod = "printBranchOperand";
 }
 
 def jmpoffset16 : Operand<OtherVT> {
@@ -700,8 +702,7 @@ class RINT_D_DESC : CLASS_RINT_DESC_BASE<"rint.d", FGR64Opnd, II_RINT_D>;
 class CLASS_S_DESC : CLASS_RINT_DESC_BASE<"class.s", FGR32Opnd, II_CLASS_S>;
 class CLASS_D_DESC : CLASS_RINT_DESC_BASE<"class.d", FGR64Opnd, II_CLASS_D>;
 
-class CACHE_HINT_DESC<string instr_asm, Operand MemOpnd,
-                      RegisterOperand GPROpnd, InstrItinClass itin>
+class CACHE_HINT_DESC<string instr_asm, Operand MemOpnd, InstrItinClass itin>
                      : MipsR6Arch<instr_asm> {
   dag OutOperandList = (outs);
   dag InOperandList = (ins MemOpnd:$addr, uimm5:$hint);
@@ -711,8 +712,8 @@ class CACHE_HINT_DESC<string instr_asm, Operand MemOpnd,
   InstrItinClass Itinerary = itin;
 }
 
-class CACHE_DESC : CACHE_HINT_DESC<"cache", mem_simm9, GPR32Opnd, II_CACHE>;
-class PREF_DESC : CACHE_HINT_DESC<"pref", mem_simm9, GPR32Opnd, II_PREF>;
+class CACHE_DESC : CACHE_HINT_DESC<"cache", mem_simm9, II_CACHE>;
+class PREF_DESC : CACHE_HINT_DESC<"pref", mem_simm9, II_PREF>;
 
 class COP2LD_DESC_BASE<string instr_asm, RegisterOperand COPOpnd,
                        InstrItinClass itin> {

@@ -38,7 +38,7 @@ llvm_config.use_default_substitutions()
 llvm_config.use_lld()
 
 tool_patterns = [
-    'llc', 'llvm-as', 'llvm-mc', 'llvm-nm', 'llvm-objdump', 'llvm-pdbutil',
+    'llc', 'llvm-as', 'llvm-mc', 'llvm-nm', 'llvm-objdump', 'llvm-otool', 'llvm-pdbutil',
     'llvm-dwarfdump', 'llvm-readelf', 'llvm-readobj', 'obj2yaml', 'yaml2obj',
     'opt', 'llvm-dis']
 
@@ -63,9 +63,7 @@ if platform.system() not in ['Windows']:
     config.available_features.add('demangler')
 
 llvm_config.feature_config(
-    [('--build-mode', {'DEBUG': 'debug'}),
-     ('--assertion-mode', {'ON': 'asserts'}),
-     ('--targets-built', {'AArch64': 'aarch64',
+    [('--targets-built', {'AArch64': 'aarch64',
                           'AMDGPU': 'amdgpu',
                           'ARM': 'arm',
                           'AVR': 'avr',
@@ -76,12 +74,28 @@ llvm_config.feature_config(
                           'RISCV': 'riscv',
                           'Sparc': 'sparc',
                           'WebAssembly': 'wasm',
-                          'X86': 'x86'})
+                          'X86': 'x86'}),
+     ('--assertion-mode', {'ON': 'asserts'}),
      ])
 
 # Set a fake constant version so that we get consistent output.
 config.environment['LLD_VERSION'] = 'LLD 1.0'
-config.environment['LLD_IN_TEST'] = '1'
+
+# LLD_IN_TEST determines how many times `main` is run inside each process, which
+# lets us test that it's cleaning up after itself and resetting global state
+# correctly (which is important for usage as a library).
+run_lld_main_twice = lit_config.params.get('RUN_LLD_MAIN_TWICE', False)
+if not run_lld_main_twice:
+    config.environment['LLD_IN_TEST'] = '1'
+else:
+    config.environment['LLD_IN_TEST'] = '2'
+    # Many ELF tests fail in this mode.
+    config.excludes.append('ELF')
+    # Some old Mach-O backend tests fail, and it's due for removal anyway.
+    config.excludes.append('mach-o')
+    # Some new Mach-O backend tests fail; give them a way to mark themselves
+    # unsupported in this mode.
+    config.available_features.add('main-run-twice')
 
 # Indirectly check if the mt.exe Microsoft utility exists by searching for
 # cvtres, which always accompanies it.  Alternatively, check if we can use
@@ -101,6 +115,24 @@ if config.have_dia_sdk:
 
 if config.sizeof_void_p == 8:
     config.available_features.add("llvm-64-bits")
+
+if config.has_plugins:
+    config.available_features.add('plugins')
+
+if config.build_examples:
+    config.available_features.add('examples')
+
+if config.linked_bye_extension:
+    config.substitutions.append(('%loadbye', ''))
+    config.substitutions.append(('%loadnewpmbye', ''))
+else:
+    config.substitutions.append(('%loadbye',
+                                 '-load={}/Bye{}'.format(config.llvm_shlib_dir,
+                                                         config.llvm_shlib_ext)))
+    config.substitutions.append(('%loadnewpmbye',
+                                 '-load-pass-plugin={}/Bye{}'
+                                 .format(config.llvm_shlib_dir,
+                                         config.llvm_shlib_ext)))
 
 tar_executable = lit.util.which('tar', config.environment['PATH'])
 if tar_executable:

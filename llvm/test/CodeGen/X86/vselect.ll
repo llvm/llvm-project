@@ -535,8 +535,8 @@ define <2 x i64> @shrunkblend_nonvselectuse(<2 x i1> %cond, <2 x i64> %a, <2 x i
 ; SSE41-LABEL: shrunkblend_nonvselectuse:
 ; SSE41:       # %bb.0:
 ; SSE41-NEXT:    psllq $63, %xmm0
-; SSE41-NEXT:    psrad $31, %xmm0
 ; SSE41-NEXT:    blendvpd %xmm0, %xmm1, %xmm2
+; SSE41-NEXT:    psrad $31, %xmm0
 ; SSE41-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[1,1,3,3]
 ; SSE41-NEXT:    paddq %xmm2, %xmm0
 ; SSE41-NEXT:    retq
@@ -569,7 +569,7 @@ define <2 x i32> @simplify_select(i32 %x, <2 x i1> %z) {
 ; SSE2-NEXT:    movd %edi, %xmm1
 ; SSE2-NEXT:    pshufd {{.*#+}} xmm2 = xmm1[1,0,1,1]
 ; SSE2-NEXT:    por %xmm1, %xmm2
-; SSE2-NEXT:    shufps {{.*#+}} xmm1 = xmm1[0,1],xmm2[1,3]
+; SSE2-NEXT:    punpcklqdq {{.*#+}} xmm1 = xmm1[0,0]
 ; SSE2-NEXT:    shufps {{.*#+}} xmm1 = xmm1[2,0],xmm2[1,1]
 ; SSE2-NEXT:    pand %xmm0, %xmm2
 ; SSE2-NEXT:    pandn %xmm1, %xmm0

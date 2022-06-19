@@ -19,3 +19,5 @@ target_link_libraries(ScalarTests PRIVATE LLVMTestingSupport)
 if (CMAKE_COMPILER_IS_GNUCXX AND CMAKE_CXX_COMPILER_VERSION VERSION_GREATER 6.0 AND CMAKE_CXX_COMPILER_VERSION VERSION_LESS 9.0)
   set_source_files_properties(LoopPassManagerTest.cpp PROPERTIES COMPILE_FLAGS -Wno-unused-function)
 endif()
+
+set_property(TARGET ScalarTests PROPERTY FOLDER "Tests/UnitTests/TransformsTests")

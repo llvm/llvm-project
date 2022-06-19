@@ -109,8 +109,10 @@ llvm::Expected<InvocationListTy> parseInvocationList(
     StringRef FileContent,
     llvm::sys::path::Style PathStyle = llvm::sys::path::Style::posix);
 
-// Returns true if the variable or any field of a record variable is const.
-bool containsConst(const VarDecl *VD, const ASTContext &ACtx);
+/// Returns true if it makes sense to import a foreign variable definition.
+/// For instance, we don't want to import variables that have non-trivial types
+/// because the constructor might have side-effects.
+bool shouldImport(const VarDecl *VD, const ASTContext &ACtx);
 
 /// This class is used for tools that requires cross translation
 ///        unit capability.
@@ -195,6 +197,14 @@ public:
   getMacroExpansionContextForSourceLocation(
       const clang::SourceLocation &ToLoc) const;
 
+  /// Returns true if the given Decl is newly created during the import.
+  bool isImportedAsNew(const Decl *ToDecl) const;
+
+  /// Returns true if the given Decl is mapped (or created) during an import
+  /// but there was an unrecoverable error (the AST node cannot be erased, it
+  /// is marked with an Error object in this case).
+  bool hasError(const Decl *ToDecl) const;
+
 private:
   void lazyInitImporterSharedSt(TranslationUnitDecl *ToTU);
   ASTImporter &getOrCreateASTImporter(ASTUnit *Unit);
@@ -226,7 +236,7 @@ private:
               StringRef InvocationListFilePath);
 
     /// Load the ASTUnit by its identifier found in the index file. If the
-    /// indentifier is suffixed with '.ast' it is considered a dump. Otherwise
+    /// identifier is suffixed with '.ast' it is considered a dump. Otherwise
     /// it is treated as source-file, and on-demand parsed. Relative paths are
     /// prefixed with CTUDir.
     LoadResultTy load(StringRef Identifier);
@@ -291,7 +301,7 @@ private:
     /// \param DisplayCTUProgress Display a message about loading new ASTs.
     ///
     /// \return An Expected instance which contains the ASTUnit pointer or the
-    /// error occured during the load.
+    /// error occurred during the load.
     llvm::Expected<ASTUnit *> getASTUnitForFunction(StringRef FunctionName,
                                                     StringRef CrossTUDir,
                                                     StringRef IndexName,

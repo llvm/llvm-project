@@ -8,7 +8,7 @@ optimize C/C++ code during compilation.
 
 .. warning::
 
-  Warning: clang/LLVM/Polly need to be in sync (compiled from the same SVN
+  Warning: clang/LLVM/Polly need to be in sync (compiled from the same
   revision).
 
 Make Polly available from Clang

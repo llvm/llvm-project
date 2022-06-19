@@ -5,9 +5,6 @@ define void @f1(<2 x i16> %x, i16* %a) {
 ; CHECK-LABEL: @f1(
 ; CHECK-NEXT:    [[SHUFFLE:%.*]] = shufflevector <2 x i16> [[X:%.*]], <2 x i16> poison, <4 x i32> <i32 0, i32 1, i32 1, i32 0>
 ; CHECK-NEXT:    [[PTR0:%.*]] = getelementptr inbounds [4 x i16], [4 x i16]* undef, i16 0, i16 0
-; CHECK-NEXT:    [[PTR1:%.*]] = getelementptr inbounds [4 x i16], [4 x i16]* undef, i16 0, i16 1
-; CHECK-NEXT:    [[PTR2:%.*]] = getelementptr inbounds [4 x i16], [4 x i16]* undef, i16 0, i16 2
-; CHECK-NEXT:    [[PTR3:%.*]] = getelementptr inbounds [4 x i16], [4 x i16]* undef, i16 0, i16 3
 ; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <2 x i16> [[X]], i32 0
 ; CHECK-NEXT:    store i16 [[TMP1]], i16* [[A:%.*]], align 2
 ; CHECK-NEXT:    [[TMP2:%.*]] = bitcast i16* [[PTR0]] to <4 x i16>*
@@ -37,9 +34,6 @@ define void @f2(<2 x i16> %x, i16* %a) {
 ; CHECK-NEXT:    [[AA:%.*]] = phi i16* [ [[A:%.*]], [[ENTRY]] ], [ undef, [[CONT]] ]
 ; CHECK-NEXT:    [[SHUFFLE:%.*]] = shufflevector <2 x i16> [[XX]], <2 x i16> poison, <4 x i32> <i32 0, i32 1, i32 1, i32 0>
 ; CHECK-NEXT:    [[PTR0:%.*]] = getelementptr inbounds [4 x i16], [4 x i16]* undef, i16 0, i16 0
-; CHECK-NEXT:    [[PTR1:%.*]] = getelementptr inbounds [4 x i16], [4 x i16]* undef, i16 0, i16 1
-; CHECK-NEXT:    [[PTR2:%.*]] = getelementptr inbounds [4 x i16], [4 x i16]* undef, i16 0, i16 2
-; CHECK-NEXT:    [[PTR3:%.*]] = getelementptr inbounds [4 x i16], [4 x i16]* undef, i16 0, i16 3
 ; CHECK-NEXT:    [[TMP0:%.*]] = extractelement <2 x i16> [[XX]], i32 0
 ; CHECK-NEXT:    store i16 [[TMP0]], i16* [[A]], align 2
 ; CHECK-NEXT:    [[TMP1:%.*]] = bitcast i16* [[PTR0]] to <4 x i16>*
@@ -84,9 +78,6 @@ define void @f3(<2 x i16> %x, i16* %a) {
 ; CHECK-NEXT:    [[AA:%.*]] = phi i16* [ [[A:%.*]], [[ENTRY]] ], [ undef, [[CONT]] ]
 ; CHECK-NEXT:    [[SHUFFLE:%.*]] = shufflevector <2 x i16> [[XX]], <2 x i16> poison, <4 x i32> <i32 1, i32 0, i32 0, i32 1>
 ; CHECK-NEXT:    [[PTR0:%.*]] = getelementptr inbounds [4 x i16], [4 x i16]* undef, i16 0, i16 0
-; CHECK-NEXT:    [[PTR1:%.*]] = getelementptr inbounds [4 x i16], [4 x i16]* undef, i16 0, i16 1
-; CHECK-NEXT:    [[PTR2:%.*]] = getelementptr inbounds [4 x i16], [4 x i16]* undef, i16 0, i16 2
-; CHECK-NEXT:    [[PTR3:%.*]] = getelementptr inbounds [4 x i16], [4 x i16]* undef, i16 0, i16 3
 ; CHECK-NEXT:    [[TMP0:%.*]] = extractelement <2 x i16> [[XX]], i32 1
 ; CHECK-NEXT:    store i16 [[TMP0]], i16* [[A]], align 2
 ; CHECK-NEXT:    [[TMP1:%.*]] = bitcast i16* [[PTR0]] to <4 x i16>*

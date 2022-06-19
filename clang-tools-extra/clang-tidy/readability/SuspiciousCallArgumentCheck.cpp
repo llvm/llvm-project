@@ -93,38 +93,37 @@ struct AllHeuristicsBoundsWellConfigured {
 static_assert(AllHeuristicsBoundsWellConfigured::Value, "");
 } // namespace
 
-static const std::string DefaultAbbreviations =
-    optutils::serializeStringList({"addr=address",
-                                   "arr=array",
-                                   "attr=attribute",
-                                   "buf=buffer",
-                                   "cl=client",
-                                   "cnt=count",
-                                   "col=column",
-                                   "cpy=copy",
-                                   "dest=destination",
-                                   "dist=distance"
-                                   "dst=distance",
-                                   "elem=element",
-                                   "hght=height",
-                                   "i=index",
-                                   "idx=index",
-                                   "len=length",
-                                   "ln=line",
-                                   "lst=list",
-                                   "nr=number",
-                                   "num=number",
-                                   "pos=position",
-                                   "ptr=pointer",
-                                   "ref=reference",
-                                   "src=source",
-                                   "srv=server",
-                                   "stmt=statement",
-                                   "str=string",
-                                   "val=value",
-                                   "var=variable",
-                                   "vec=vector",
-                                   "wdth=width"});
+static constexpr llvm::StringLiteral DefaultAbbreviations = "addr=address;"
+                                                            "arr=array;"
+                                                            "attr=attribute;"
+                                                            "buf=buffer;"
+                                                            "cl=client;"
+                                                            "cnt=count;"
+                                                            "col=column;"
+                                                            "cpy=copy;"
+                                                            "dest=destination;"
+                                                            "dist=distance"
+                                                            "dst=distance;"
+                                                            "elem=element;"
+                                                            "hght=height;"
+                                                            "i=index;"
+                                                            "idx=index;"
+                                                            "len=length;"
+                                                            "ln=line;"
+                                                            "lst=list;"
+                                                            "nr=number;"
+                                                            "num=number;"
+                                                            "pos=position;"
+                                                            "ptr=pointer;"
+                                                            "ref=reference;"
+                                                            "src=source;"
+                                                            "srv=server;"
+                                                            "stmt=statement;"
+                                                            "str=string;"
+                                                            "val=value;"
+                                                            "var=variable;"
+                                                            "vec=vector;"
+                                                            "wdth=width";
 
 static constexpr std::size_t SmallVectorSize =
     SuspiciousCallArgumentCheck::SmallVectorSize;
@@ -414,9 +413,9 @@ static bool areTypesCompatible(QualType ArgType, QualType ParamType,
   // Arithmetic types are interconvertible, except scoped enums.
   if (ParamType->isArithmeticType() && ArgType->isArithmeticType()) {
     if ((ParamType->isEnumeralType() &&
-         ParamType->getAs<EnumType>()->getDecl()->isScoped()) ||
+         ParamType->castAs<EnumType>()->getDecl()->isScoped()) ||
         (ArgType->isEnumeralType() &&
-         ArgType->getAs<EnumType>()->getDecl()->isScoped()))
+         ArgType->castAs<EnumType>()->getDecl()->isScoped()))
       return false;
 
     return true;
@@ -527,12 +526,12 @@ SuspiciousCallArgumentCheck::SuspiciousCallArgumentCheck(
                        GetBoundOpt(H, BoundKind::SimilarAbove)));
   }
 
-  for (const std::string &Abbreviation : optutils::parseStringList(
+  for (StringRef Abbreviation : optutils::parseStringList(
            Options.get("Abbreviations", DefaultAbbreviations))) {
-    auto KeyAndValue = StringRef{Abbreviation}.split("=");
+    auto KeyAndValue = Abbreviation.split("=");
     assert(!KeyAndValue.first.empty() && !KeyAndValue.second.empty());
     AbbreviationDictionary.insert(
-        std::make_pair(KeyAndValue.first.str(), KeyAndValue.second.str()));
+        std::make_pair(KeyAndValue.first, KeyAndValue.second.str()));
   }
 }
 
@@ -574,7 +573,8 @@ void SuspiciousCallArgumentCheck::storeOptions(
       Abbreviations.emplace_back(EqualSignJoined.str());
   }
   Options.store(Opts, "Abbreviations",
-                optutils::serializeStringList(Abbreviations));
+                optutils::serializeStringList(std::vector<StringRef>(
+                    Abbreviations.begin(), Abbreviations.end())));
 }
 
 bool SuspiciousCallArgumentCheck::isHeuristicEnabled(Heuristic H) const {
@@ -712,23 +712,28 @@ void SuspiciousCallArgumentCheck::setArgNamesAndTypes(
 
   for (std::size_t I = InitialArgIndex, J = MatchedCallExpr->getNumArgs();
        I < J; ++I) {
+    assert(ArgTypes.size() == I - InitialArgIndex &&
+           ArgNames.size() == ArgTypes.size() &&
+           "Every iteration must put an element into the vectors!");
+
     if (const auto *ArgExpr = dyn_cast<DeclRefExpr>(
             MatchedCallExpr->getArg(I)->IgnoreUnlessSpelledInSource())) {
       if (const auto *Var = dyn_cast<VarDecl>(ArgExpr->getDecl())) {
         ArgTypes.push_back(Var->getType());
         ArgNames.push_back(Var->getName());
-      } else if (const auto *FCall =
-                     dyn_cast<FunctionDecl>(ArgExpr->getDecl())) {
-        ArgTypes.push_back(FCall->getType());
-        ArgNames.push_back(FCall->getName());
-      } else {
-        ArgTypes.push_back(QualType());
-        ArgNames.push_back(StringRef());
+        continue;
       }
-    } else {
-      ArgTypes.push_back(QualType());
-      ArgNames.push_back(StringRef());
+      if (const auto *FCall = dyn_cast<FunctionDecl>(ArgExpr->getDecl())) {
+        if (FCall->getNameInfo().getName().isIdentifier()) {
+          ArgTypes.push_back(FCall->getType());
+          ArgNames.push_back(FCall->getName());
+          continue;
+        }
+      }
     }
+
+    ArgTypes.push_back(QualType());
+    ArgNames.push_back(StringRef());
   }
 }
 

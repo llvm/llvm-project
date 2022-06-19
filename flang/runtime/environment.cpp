@@ -1,4 +1,4 @@
-//===-- runtime/environment.cpp ---------------------------------*- C++ -*-===//
+//===-- runtime/environment.cpp -------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "environment.h"
+#include "memory.h"
 #include "tools.h"
 #include <cstdio>
 #include <cstdlib>
@@ -66,6 +67,39 @@ void ExecutionEnvironment::Configure(
     }
   }
 
+  if (auto *x{std::getenv("NO_STOP_MESSAGE")}) {
+    char *end;
+    auto n{std::strtol(x, &end, 10)};
+    if (n >= 0 && n <= 1 && *end == '\0') {
+      noStopMessage = n != 0;
+    } else {
+      std::fprintf(stderr,
+          "Fortran runtime: NO_STOP_MESSAGE=%s is invalid; ignored\n", x);
+    }
+  }
+
+  if (auto *x{std::getenv("DEFAULT_UTF8")}) {
+    char *end;
+    auto n{std::strtol(x, &end, 10)};
+    if (n >= 0 && n <= 1 && *end == '\0') {
+      defaultUTF8 = n != 0;
+    } else {
+      std::fprintf(
+          stderr, "Fortran runtime: DEFAULT_UTF8=%s is invalid; ignored\n", x);
+    }
+  }
+
   // TODO: Set RP/ROUND='PROCESSOR_DEFINED' from environment
+}
+
+const char *ExecutionEnvironment::GetEnv(
+    const char *name, std::size_t name_length, const Terminator &terminator) {
+  RUNTIME_CHECK(terminator, name && name_length);
+
+  OwningPtr<char> cStyleName{
+      SaveDefaultCharacter(name, name_length, terminator)};
+  RUNTIME_CHECK(terminator, cStyleName);
+
+  return std::getenv(cStyleName.get());
 }
 } // namespace Fortran::runtime

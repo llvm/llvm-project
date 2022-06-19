@@ -9,7 +9,7 @@
 #include "src/math/fma.h"
 #include "src/__support/common.h"
 
-#include "utils/FPUtil/FMA.h"
+#include "src/__support/FPUtil/FMA.h"
 
 namespace __llvm_libc {
 

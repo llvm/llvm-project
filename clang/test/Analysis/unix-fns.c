@@ -1,4 +1,4 @@
-// RUN: %clang_analyze_cc1 -triple x86_64-apple-darwin10 -analyzer-checker=core,unix.API,osx.API,optin.portability %s -analyzer-store=region -analyzer-output=plist -analyzer-config faux-bodies=true  -fblocks -verify -o %t.plist
+// RUN: %clang_analyze_cc1 -triple x86_64-apple-darwin10 -analyzer-checker=core,unix.API,osx.API,optin.portability %s -analyzer-output=plist -analyzer-config faux-bodies=true  -fblocks -verify -o %t.plist
 // RUN: %normalize_plist <%t.plist | diff -ub %S/Inputs/expected-plists/unix-fns.c.plist -
 // RUN: mkdir -p %t.dir
 // RUN: %clang_analyze_cc1 -analyzer-checker=core,unix.API,osx.API,optin.portability -analyzer-output=html -analyzer-config faux-bodies=true -fblocks -o %t.dir %s
@@ -100,28 +100,28 @@ void test_open_at(int directory_fd, const char *relative_path) {
     close(fd);
 }
 
-void test_dispatch_once() {
+void test_dispatch_once(void) {
   dispatch_once_t pred = 0;
-  do { if (__builtin_expect(*(&pred), ~0l) != ~0l) dispatch_once((&pred), (^() {})); } while (0); // expected-warning{{Call to 'dispatch_once' uses the local variable 'pred' for the predicate value}}
+  do { if (__builtin_expect(*(&pred), ~0l) != ~0l) dispatch_once((&pred), (^(void) {})); } while (0); // expected-warning{{Call to 'dispatch_once' uses the local variable 'pred' for the predicate value}}
 }
-void test_dispatch_once_neg() {
+void test_dispatch_once_neg(void) {
   static dispatch_once_t pred = 0;
-  do { if (__builtin_expect(*(&pred), ~0l) != ~0l) dispatch_once((&pred), (^() {})); } while (0); // no-warning
+  do { if (__builtin_expect(*(&pred), ~0l) != ~0l) dispatch_once((&pred), (^(void) {})); } while (0); // no-warning
 }
 
-void test_pthread_once_aux();
+void test_pthread_once_aux(void);
 
-void test_pthread_once() {
+void test_pthread_once(void) {
   pthread_once_t pred = {0x30B1BCBA, {0}};
   pthread_once(&pred, test_pthread_once_aux); // expected-warning{{Call to 'pthread_once' uses the local variable 'pred' for the "control" value}}
 }
-void test_pthread_once_neg() {
+void test_pthread_once_neg(void) {
   static pthread_once_t pred = {0x30B1BCBA, {0}};
   pthread_once(&pred, test_pthread_once_aux); // no-warning
 }
 
 // PR 2899 - warn of zero-sized allocations to malloc().
-void pr2899() {
+void pr2899(void) {
   char* foo = malloc(0); // expected-warning{{Call to 'malloc' has an allocation size of 0 bytes}}
   for (unsigned i = 0; i < 100; i++) {
     foo[i] = 0;
@@ -175,7 +175,7 @@ void test_reallocf_nowarn(char *ptr, size_t size) {
     foo[i] = 0;
   }
 }
-void test_alloca() {
+void test_alloca(void) {
   char *foo = alloca(0); // expected-warning{{Call to 'alloca' has an allocation size of 0 bytes}}
   for(unsigned i = 0; i < 100; i++) {
     foo[i] = 0; 
@@ -187,7 +187,7 @@ void test_alloca_nowarn(size_t sz) {
     foo[i] = 0;
   }
 }
-void test_builtin_alloca() {
+void test_builtin_alloca(void) {
   char *foo2 = __builtin_alloca(0); // expected-warning{{Call to 'alloca' has an allocation size of 0 bytes}}
   for(unsigned i = 0; i < 100; i++) {
     foo2[i] = 0; 
@@ -199,7 +199,7 @@ void test_builtin_alloca_nowarn(size_t sz) {
     foo2[i] = 0;
   }
 }
-void test_valloc() {
+void test_valloc(void) {
   char *foo = valloc(0); // expected-warning{{Call to 'valloc' has an allocation size of 0 bytes}}
   for(unsigned i = 0; i < 100; i++) {
     foo[i] = 0; 
@@ -212,9 +212,9 @@ void test_valloc_nowarn(size_t sz) {
   }
 }
 
-void test_dispatch_once_in_macro() {
+void test_dispatch_once_in_macro(void) {
   dispatch_once_t pred = 0;
-  dispatch_once(&pred, ^(){});  // expected-warning {{Call to 'dispatch_once' uses the local variable 'pred' for the predicate value}}
+  dispatch_once(&pred, ^(void){});  // expected-warning {{Call to 'dispatch_once' uses the local variable 'pred' for the predicate value}}
 }
 
 // Test inlining of dispatch_sync.
@@ -228,7 +228,7 @@ void test_dispatch_sync(dispatch_queue_t queue, int *q) {
 }
 
 // Test inlining of dispatch_once.
-void test_inline_dispatch_once() {
+void test_inline_dispatch_once(void) {
   static dispatch_once_t pred;
   int *p = 0;
   dispatch_once(&pred, ^(void) {
@@ -237,7 +237,7 @@ void test_inline_dispatch_once() {
 }
 
 // Make sure code after call to dispatch once is reached.
-void test_inline_dispatch_once_reachable() {
+void test_inline_dispatch_once_reachable(void) {
   static dispatch_once_t pred;
   __block int *p;
   dispatch_once(&pred, ^(void) {

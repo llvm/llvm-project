@@ -20,8 +20,18 @@
 
 #include "llvm/Analysis/ScalarEvolutionAliasAnalysis.h"
 #include "llvm/Analysis/ScalarEvolution.h"
+#include "llvm/Analysis/ScalarEvolutionExpressions.h"
 #include "llvm/InitializePasses.h"
 using namespace llvm;
+
+static bool canComputePointerDiff(ScalarEvolution &SE,
+                                  const SCEV *A, const SCEV *B) {
+  if (SE.getEffectiveSCEVType(A->getType()) !=
+      SE.getEffectiveSCEVType(B->getType()))
+    return false;
+
+  return SE.instructionCouldExistWitthOperands(A, B);
+}
 
 AliasResult SCEVAAResult::alias(const MemoryLocation &LocA,
                                 const MemoryLocation &LocB, AAQueryInfo &AAQI) {
@@ -41,8 +51,7 @@ AliasResult SCEVAAResult::alias(const MemoryLocation &LocA,
 
   // If something is known about the difference between the two addresses,
   // see if it's enough to prove a NoAlias.
-  if (SE.getEffectiveSCEVType(AS->getType()) ==
-      SE.getEffectiveSCEVType(BS->getType())) {
+  if (canComputePointerDiff(SE, AS, BS)) {
     unsigned BitWidth = SE.getTypeSizeInBits(AS->getType());
     APInt ASizeInt(BitWidth, LocA.Size.hasValue()
                                  ? LocA.Size.getValue()

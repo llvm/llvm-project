@@ -10,8 +10,7 @@ target triple = "x86_64-unknown-linux-gnu"
 define void @_Z3fooPml(i64* nocapture %a, i64 %i) {
 ; CHECK-LABEL: @_Z3fooPml(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[ARRAYIDX1:%.*]] = getelementptr inbounds i64, i64* [[A:%.*]], i64 1
-; CHECK-NEXT:    [[TMP0:%.*]] = bitcast i64* [[A]] to <2 x i64>*
+; CHECK-NEXT:    [[TMP0:%.*]] = bitcast i64* [[A:%.*]] to <2 x i64>*
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i64>, <2 x i64>* [[TMP0]], align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = lshr <2 x i64> [[TMP1]], <i64 4, i64 4>
 ; CHECK-NEXT:    [[TMP3:%.*]] = bitcast i64* [[A]] to <2 x i64>*

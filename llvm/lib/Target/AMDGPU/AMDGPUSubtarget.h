@@ -38,30 +38,32 @@ public:
     SEA_ISLANDS = 6,
     VOLCANIC_ISLANDS = 7,
     GFX9 = 8,
-    GFX10 = 9
+    GFX10 = 9,
+    GFX11 = 10
   };
 
 private:
   Triple TargetTriple;
 
 protected:
-  bool GCN3Encoding;
-  bool Has16BitInsts;
-  bool HasMadMixInsts;
-  bool HasMadMacF32Insts;
-  bool HasDsSrc2Insts;
-  bool HasSDWA;
-  bool HasVOP3PInsts;
-  bool HasMulI24;
-  bool HasMulU24;
-  bool HasSMulHi;
-  bool HasInv2PiInlineImm;
-  bool HasFminFmaxLegacy;
-  bool EnablePromoteAlloca;
-  bool HasTrigReducedRange;
-  unsigned MaxWavesPerEU;
-  unsigned LocalMemorySize;
-  char WavefrontSizeLog2;
+  bool GCN3Encoding = false;
+  bool Has16BitInsts = false;
+  bool HasTrue16BitInsts = false;
+  bool HasMadMixInsts = false;
+  bool HasMadMacF32Insts = false;
+  bool HasDsSrc2Insts = false;
+  bool HasSDWA = false;
+  bool HasVOP3PInsts = false;
+  bool HasMulI24 = true;
+  bool HasMulU24 = true;
+  bool HasSMulHi = false;
+  bool HasInv2PiInlineImm = false;
+  bool HasFminFmaxLegacy = true;
+  bool EnablePromoteAlloca = false;
+  bool HasTrigReducedRange = false;
+  unsigned MaxWavesPerEU = 10;
+  unsigned LocalMemorySize = 0;
+  char WavefrontSizeLog2 = 0;
 
 public:
   AMDGPUSubtarget(const Triple &TT);
@@ -91,7 +93,18 @@ public:
   /// be converted to integer, violate subtarget's specifications, or are not
   /// compatible with minimum/maximum number of waves limited by flat work group
   /// size, register usage, and/or lds usage.
-  std::pair<unsigned, unsigned> getWavesPerEU(const Function &F) const;
+  std::pair<unsigned, unsigned> getWavesPerEU(const Function &F) const {
+    // Default/requested minimum/maximum flat work group sizes.
+    std::pair<unsigned, unsigned> FlatWorkGroupSizes = getFlatWorkGroupSizes(F);
+    return getWavesPerEU(F, FlatWorkGroupSizes);
+  }
+
+  /// Overload which uses the specified values for the flat work group sizes,
+  /// rather than querying the function itself. \p FlatWorkGroupSizes Should
+  /// correspond to the function's value for getFlatWorkGroupSizes.
+  std::pair<unsigned, unsigned>
+  getWavesPerEU(const Function &F,
+                std::pair<unsigned, unsigned> FlatWorkGroupSizes) const;
 
   /// Return the amount of LDS that can be used that will not restrict the
   /// occupancy lower than WaveCount.
@@ -133,6 +146,8 @@ public:
   bool has16BitInsts() const {
     return Has16BitInsts;
   }
+
+  bool hasTrue16BitInsts() const { return HasTrue16BitInsts; }
 
   bool hasMadMixInsts() const {
     return HasMadMixInsts;
@@ -201,7 +216,19 @@ public:
   /// Returns the offset in bytes from the start of the input buffer
   ///        of the first explicit kernel argument.
   unsigned getExplicitKernelArgOffset(const Function &F) const {
-    return isAmdHsaOrMesa(F) ? 0 : 36;
+    switch (TargetTriple.getOS()) {
+    case Triple::AMDHSA:
+    case Triple::AMDPAL:
+    case Triple::Mesa3D:
+      return 0;
+    case Triple::UnknownOS:
+    default:
+      // For legacy reasons unknown/other is treated as a different version of
+      // mesa.
+      return 36;
+    }
+
+    llvm_unreachable("invalid triple OS");
   }
 
   /// \returns Maximum number of work groups per compute unit supported by the
@@ -240,11 +267,11 @@ public:
   uint64_t getExplicitKernArgSize(const Function &F, Align &MaxAlign) const;
   unsigned getKernArgSegmentSize(const Function &F, Align &MaxAlign) const;
 
-  /// \returns Corresponsing DWARF register number mapping flavour for the
+  /// \returns Corresponding DWARF register number mapping flavour for the
   /// \p WavefrontSize.
   AMDGPUDwarfFlavour getAMDGPUDwarfFlavour() const;
 
-  virtual ~AMDGPUSubtarget() {}
+  virtual ~AMDGPUSubtarget() = default;
 };
 
 } // end namespace llvm

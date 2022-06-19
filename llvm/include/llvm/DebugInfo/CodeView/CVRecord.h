@@ -10,7 +10,6 @@
 #define LLVM_DEBUGINFO_CODEVIEW_CVRECORD_H
 
 #include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/DebugInfo/CodeView/CodeView.h"
 #include "llvm/DebugInfo/CodeView/CodeViewError.h"
 #include "llvm/DebugInfo/CodeView/RecordSerialization.h"

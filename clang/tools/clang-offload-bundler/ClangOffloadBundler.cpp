@@ -14,6 +14,7 @@
 ///
 //===----------------------------------------------------------------------===//
 
+#include "clang/Basic/Cuda.h"
 #include "clang/Basic/Version.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallString.h"
@@ -61,15 +62,26 @@ static cl::opt<bool> Help("h", cl::desc("Alias for -help"), cl::Hidden);
 // and -help) will be hidden.
 static cl::OptionCategory
     ClangOffloadBundlerCategory("clang-offload-bundler options");
-
 static cl::list<std::string>
-    InputFileNames("inputs", cl::CommaSeparated, cl::OneOrMore,
-                   cl::desc("[<input file>,...]"),
+    InputFileNames("input",
+                   cl::desc("Input file."
+                            " Can be specified multiple times "
+                            "for multiple input files."),
                    cl::cat(ClangOffloadBundlerCategory));
 static cl::list<std::string>
-    OutputFileNames("outputs", cl::CommaSeparated,
-                    cl::desc("[<output file>,...]"),
+    InputFileNamesDeprecatedOpt("inputs", cl::CommaSeparated,
+                                cl::desc("[<input file>,...] (deprecated)"),
+                                cl::cat(ClangOffloadBundlerCategory));
+static cl::list<std::string>
+    OutputFileNames("output",
+                    cl::desc("Output file."
+                             " Can be specified multiple times "
+                             "for multiple output files."),
                     cl::cat(ClangOffloadBundlerCategory));
+static cl::list<std::string>
+    OutputFileNamesDeprecatedOpt("outputs", cl::CommaSeparated,
+                                 cl::desc("[<output file>,...] (deprecated)"),
+                                 cl::cat(ClangOffloadBundlerCategory));
 static cl::list<std::string>
     TargetNames("targets", cl::CommaSeparated,
                 cl::desc("[<offload kind>-<target triple>,...]"),
@@ -116,6 +128,12 @@ static cl::opt<unsigned>
                     cl::desc("Alignment of bundle for binary files"),
                     cl::init(1), cl::cat(ClangOffloadBundlerCategory));
 
+static cl::opt<bool> HipOpenmpCompatible(
+    "hip-openmp-compatible",
+    cl::desc("Treat hip and hipv4 offload kinds as "
+             "compatible with openmp kind, and vice versa.\n"),
+    cl::init(false), cl::cat(ClangOffloadBundlerCategory));
+
 /// Magic string that marks the existence of offloading data.
 #define OFFLOAD_BUNDLER_MAGIC_STR "__CLANG_OFFLOAD_BUNDLE__"
 
@@ -134,21 +152,28 @@ static std::string BundlerExecutable;
 ///  * Offload Kind - Host, OpenMP, or HIP
 ///  * Triple - Standard LLVM Triple
 ///  * GPUArch (Optional) - Processor name, like gfx906 or sm_30
-/// In presence of Proc, the Triple should contain separator "-" for all
-/// standard four components, even if they are empty.
+
 struct OffloadTargetInfo {
   StringRef OffloadKind;
   llvm::Triple Triple;
   StringRef GPUArch;
 
   OffloadTargetInfo(const StringRef Target) {
-    SmallVector<StringRef, 6> Components;
-    Target.split(Components, '-', 5);
-    Components.resize(6);
-    this->OffloadKind = Components[0];
-    this->Triple = llvm::Triple(Components[1], Components[2], Components[3],
-                                Components[4]);
-    this->GPUArch = Components[5];
+    auto TargetFeatures = Target.split(':');
+    auto TripleOrGPU = TargetFeatures.first.rsplit('-');
+
+    if (clang::StringToCudaArch(TripleOrGPU.second) !=
+        clang::CudaArch::UNKNOWN) {
+      auto KindTriple = TripleOrGPU.first.split('-');
+      this->OffloadKind = KindTriple.first;
+      this->Triple = llvm::Triple(KindTriple.second);
+      this->GPUArch = Target.substr(Target.find(TripleOrGPU.second));
+    } else {
+      auto KindTriple = TargetFeatures.first.split('-');
+      this->OffloadKind = KindTriple.first;
+      this->Triple = llvm::Triple(KindTriple.second);
+      this->GPUArch = "";
+    }
   }
 
   bool hasHostKind() const { return this->OffloadKind == "host"; }
@@ -156,6 +181,21 @@ struct OffloadTargetInfo {
   bool isOffloadKindValid() const {
     return OffloadKind == "host" || OffloadKind == "openmp" ||
            OffloadKind == "hip" || OffloadKind == "hipv4";
+  }
+
+  bool isOffloadKindCompatible(const StringRef TargetOffloadKind) const {
+    if (OffloadKind == TargetOffloadKind)
+      return true;
+    if (HipOpenmpCompatible) {
+      bool HIPCompatibleWithOpenMP =
+          OffloadKind.startswith_insensitive("hip") &&
+          TargetOffloadKind == "openmp";
+      bool OpenMPCompatibleWithHIP =
+          OffloadKind == "openmp" &&
+          TargetOffloadKind.startswith_insensitive("hip");
+      return HIPCompatibleWithOpenMP || OpenMPCompatibleWithHIP;
+    }
+    return false;
   }
 
   bool isTripleValid() const {
@@ -171,6 +211,26 @@ struct OffloadTargetInfo {
     return Twine(OffloadKind + "-" + Triple.str() + "-" + GPUArch).str();
   }
 };
+
+static StringRef getDeviceFileExtension(StringRef Device,
+                                        StringRef BundleFileName) {
+  if (Device.contains("gfx"))
+    return ".bc";
+  if (Device.contains("sm_"))
+    return ".cubin";
+  return sys::path::extension(BundleFileName);
+}
+
+static std::string getDeviceLibraryFileName(StringRef BundleFileName,
+                                            StringRef Device) {
+  StringRef LibName = sys::path::stem(BundleFileName);
+  StringRef Extension = getDeviceFileExtension(Device, BundleFileName);
+
+  std::string Result;
+  Result += LibName;
+  Result += Extension;
+  return Result;
+}
 
 /// Generic file handler interface.
 class FileHandler {
@@ -328,7 +388,7 @@ class BinaryFileHandler final : public FileHandler {
   std::string CurWriteBundleTarget;
 
 public:
-  BinaryFileHandler() : FileHandler() {}
+  BinaryFileHandler() {}
 
   ~BinaryFileHandler() final {}
 
@@ -548,8 +608,7 @@ class ObjectFileHandler final : public FileHandler {
 
 public:
   ObjectFileHandler(std::unique_ptr<ObjectFile> ObjIn)
-      : FileHandler(), Obj(std::move(ObjIn)),
-        CurrentSection(Obj->section_begin()),
+      : Obj(std::move(ObjIn)), CurrentSection(Obj->section_begin()),
         NextSection(Obj->section_begin()) {}
 
   ~ObjectFileHandler() final {}
@@ -785,8 +844,7 @@ protected:
   }
 
 public:
-  TextFileHandler(StringRef Comment)
-      : FileHandler(), Comment(Comment), ReadChars(0) {
+  TextFileHandler(StringRef Comment) : Comment(Comment), ReadChars(0) {
     BundleStartString =
         "\n" + Comment.str() + " " OFFLOAD_BUNDLER_MAGIC_STR "__START__ ";
     BundleEndString =
@@ -1063,14 +1121,15 @@ bool isCodeObjectCompatible(OffloadTargetInfo &CodeObjectInfo,
 
   // Compatible in case of exact match.
   if (CodeObjectInfo == TargetInfo) {
-    DEBUG_WITH_TYPE(
-        "CodeObjectCompatibility",
-        dbgs() << "Compatible: Exact match: " << CodeObjectInfo.str() << "\n");
+    DEBUG_WITH_TYPE("CodeObjectCompatibility",
+                    dbgs() << "Compatible: Exact match: \t[CodeObject: "
+                           << CodeObjectInfo.str()
+                           << "]\t:\t[Target: " << TargetInfo.str() << "]\n");
     return true;
   }
 
   // Incompatible if Kinds or Triples mismatch.
-  if (CodeObjectInfo.OffloadKind != TargetInfo.OffloadKind ||
+  if (!CodeObjectInfo.isOffloadKindCompatible(TargetInfo.OffloadKind) ||
       !CodeObjectInfo.Triple.isCompatibleWith(TargetInfo.Triple)) {
     DEBUG_WITH_TYPE(
         "CodeObjectCompatibility",
@@ -1099,8 +1158,8 @@ bool isCodeObjectCompatible(OffloadTargetInfo &CodeObjectInfo,
 
 /// @brief Computes a list of targets among all given targets which are
 /// compatible with this code object
-/// @param [in] Code Object \p CodeObject
-/// @param [out] List of all compatible targets \p CompatibleTargets among all
+/// @param [in] CodeObjectInfo Code Object
+/// @param [out] CompatibleTargets List of all compatible targets among all
 /// given targets
 /// @return false, if no compatible target is found.
 static bool
@@ -1220,7 +1279,9 @@ static Error UnbundleArchive() {
           BundledObjectFileName.assign(BundledObjectFile);
           auto OutputBundleName =
               Twine(llvm::sys::path::stem(BundledObjectFileName) + "-" +
-                    CodeObject)
+                    CodeObject +
+                    getDeviceLibraryFileName(BundledObjectFileName,
+                                             CodeObjectInfo.GPUArch))
                   .str();
           // Replace ':' in optional target feature list with '_' to ensure
           // cross-platform validity.
@@ -1261,7 +1322,7 @@ static Error UnbundleArchive() {
     } // End of processing of all bundle entries of this child of input archive.
   }   // End of while over children of input archive.
 
-  assert(!ArchiveErr && "Error occured while reading archive!");
+  assert(!ArchiveErr && "Error occurred while reading archive!");
 
   /// Write out an archive for each target
   for (auto &Target : TargetNames) {
@@ -1276,9 +1337,19 @@ static Error UnbundleArchive() {
     } else if (!AllowMissingBundles) {
       std::string ErrMsg =
           Twine("no compatible code object found for the target '" + Target +
-                "' in heterogenous archive library: " + IFName)
+                "' in heterogeneous archive library: " + IFName)
               .str();
       return createStringError(inconvertibleErrorCode(), ErrMsg);
+    } else { // Create an empty archive file if no compatible code object is
+             // found and "allow-missing-bundles" is enabled. It ensures that
+             // the linker using output of this step doesn't complain about
+             // the missing input file.
+      std::vector<llvm::NewArchiveMember> EmptyArchive;
+      EmptyArchive.clear();
+      if (Error WriteErr = writeArchive(FileName, EmptyArchive, true,
+                                        getDefaultArchiveKindForHost(), true,
+                                        false, nullptr))
+        return WriteErr;
     }
   }
 
@@ -1324,6 +1395,38 @@ int main(int argc, const char **argv) {
     }
   };
 
+  auto warningOS = [argv]() -> raw_ostream & {
+    return WithColor::warning(errs(), StringRef(argv[0]));
+  };
+
+  if (InputFileNames.getNumOccurrences() != 0 &&
+      InputFileNamesDeprecatedOpt.getNumOccurrences() != 0) {
+    reportError(createStringError(
+        errc::invalid_argument,
+        "-inputs and -input cannot be used together, use only -input instead"));
+  }
+  if (InputFileNamesDeprecatedOpt.size()) {
+    warningOS() << "-inputs is deprecated, use -input instead\n";
+    // temporary hack to support -inputs
+    std::vector<std::string> &s = InputFileNames;
+    s.insert(s.end(), InputFileNamesDeprecatedOpt.begin(),
+             InputFileNamesDeprecatedOpt.end());
+  }
+
+  if (OutputFileNames.getNumOccurrences() != 0 &&
+      OutputFileNamesDeprecatedOpt.getNumOccurrences() != 0) {
+    reportError(createStringError(errc::invalid_argument,
+                                  "-outputs and -output cannot be used "
+                                  "together, use only -output instead"));
+  }
+  if (OutputFileNamesDeprecatedOpt.size()) {
+    warningOS() << "-outputs is deprecated, use -output instead\n";
+    // temporary hack to support -outputs
+    std::vector<std::string> &s = OutputFileNames;
+    s.insert(s.end(), OutputFileNamesDeprecatedOpt.begin(),
+             OutputFileNamesDeprecatedOpt.end());
+  }
+
   if (ListBundleIDs) {
     if (Unbundle) {
       reportError(
@@ -1347,10 +1450,9 @@ int main(int argc, const char **argv) {
     return 0;
   }
 
-  if (OutputFileNames.getNumOccurrences() == 0) {
-    reportError(createStringError(
-        errc::invalid_argument,
-        "for the --outputs option: must be specified at least once!"));
+  if (OutputFileNames.size() == 0) {
+    reportError(
+        createStringError(errc::invalid_argument, "no output file specified!"));
   }
   if (TargetNames.getNumOccurrences() == 0) {
     reportError(createStringError(

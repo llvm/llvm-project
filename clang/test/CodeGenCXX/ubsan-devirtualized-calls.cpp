@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -std=c++11 -triple %itanium_abi_triple -emit-llvm -fsanitize=null,vptr %s -o - | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -std=c++11 -triple %itanium_abi_triple -emit-llvm -fsanitize=null,vptr %s -o - | FileCheck %s
 
 struct Base1 {
   virtual void f1() {}

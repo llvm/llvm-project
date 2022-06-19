@@ -5,9 +5,10 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-//
-// This file defines the SmallString class.
-//
+///
+/// \file
+/// This file defines the SmallString class.
+///
 //===----------------------------------------------------------------------===//
 
 #ifndef LLVM_ADT_SMALLSTRING_H
@@ -70,16 +71,16 @@ public:
 
   /// Append from a list of StringRefs.
   void append(std::initializer_list<StringRef> Refs) {
-    size_t SizeNeeded = this->size();
+    size_t CurrentSize = this->size();
+    size_t SizeNeeded = CurrentSize;
     for (const StringRef &Ref : Refs)
       SizeNeeded += Ref.size();
-    this->reserve(SizeNeeded);
-    auto CurEnd = this->end();
+    this->resize_for_overwrite(SizeNeeded);
     for (const StringRef &Ref : Refs) {
-      this->uninitialized_copy(Ref.begin(), Ref.end(), CurEnd);
-      CurEnd += Ref.size();
+      std::copy(Ref.begin(), Ref.end(), this->begin() + CurrentSize);
+      CurrentSize += Ref.size();
     }
-    this->set_size(SizeNeeded);
+    assert(CurrentSize == this->size());
   }
 
   /// @}

@@ -16,16 +16,16 @@ set(LIBOMPTARGET_SRC_FILES
   ${CMAKE_CURRENT_SOURCE_DIR}/api.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/device.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/interface.cpp
-  ${CMAKE_CURRENT_SOURCE_DIR}/rtl.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/interop.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/omptarget.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/rtl.cpp
 )
 
 set(LIBOMPTARGET_SRC_FILES ${LIBOMPTARGET_SRC_FILES} PARENT_SCOPE)
 
-include_directories(${LIBOMPTARGET_LLVM_INCLUDE_DIRS})
-
 # Build libomptarget library with libdl dependency.
 add_library(omptarget SHARED ${LIBOMPTARGET_SRC_FILES})
+set_target_properties(omptarget PROPERTIES INSTALL_RPATH "$ORIGIN" BUILD_RPATH "$ORIGIN")
 if (OPENMP_ENABLE_LIBOMPTARGET_PROFILING)
   # Add LLVMSupport dependency if profiling is enabled.
   # Linking with LLVM component libraries also requires
@@ -34,6 +34,8 @@ if (OPENMP_ENABLE_LIBOMPTARGET_PROFILING)
   target_compile_definitions(omptarget PUBLIC OMPTARGET_PROFILE_ENABLED)
   target_link_libraries(omptarget PRIVATE LLVMSupport)
 endif()
+target_include_directories(omptarget PRIVATE
+  ${LIBOMPTARGET_INCLUDE_DIR})
 target_link_libraries(omptarget PRIVATE
   ${CMAKE_DL_LIBS}
   "-Wl,--version-script=${CMAKE_CURRENT_SOURCE_DIR}/exports")

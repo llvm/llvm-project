@@ -10,8 +10,6 @@ from lldbsuite.test.lldbtest import *
 
 class TestSuspendedThreadHandling(TestBase):
 
-    mydir = TestBase.compute_mydir(__file__)
-
     NO_DEBUG_INFO_TESTCASE = True
 
     @skipUnlessDarwin
@@ -34,7 +32,7 @@ class TestSuspendedThreadHandling(TestBase):
         frame = thread.frames[0]
 
         value = frame.EvaluateExpression('function_to_call()')
-        self.assertTrue(value.GetError().Success(), "Successfully called the function")
+        self.assertSuccess(value.GetError(), "Successfully called the function")
         self.assertEqual(value.GetValueAsSigned(), correct_value, "Got expected value for expression")
 
         # Again, make sure we didn't let the suspend thread breakpoint run:

@@ -13,14 +13,11 @@ exe_name = "AttachResume"  # Must match Makefile
 
 
 class AttachResumeTestCase(TestBase):
-
-    mydir = TestBase.compute_mydir(__file__)
     NO_DEBUG_INFO_TESTCASE = True
 
     @skipIfRemote
     @expectedFailureNetBSD
     @skipIfWindows # llvm.org/pr24778, llvm.org/pr21753
-    @skipIfReproducer # FIXME: Unexpected packet during (active) replay
     def test_attach_continue_interrupt_detach(self):
         """Test attach/continue/interrupt/detach"""
         self.build()

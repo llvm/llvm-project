@@ -3,19 +3,15 @@ import("//llvm/utils/gn/build/toolchain/compiler.gni")
 declare_args() {
   # If is_goma is true, the location of the goma client install.
   # Set this to the output of `goma_ctl goma_dir`.
-  if (host_os == "win") {
-    goma_dir = "C:/src/goma/goma-win64"
-  } else {
-    goma_dir = getenv("HOME") + "/goma"
-  }
+  goma_dir = ""
 }
 
 assert(!use_goma || goma_dir != "",
-       "set goma_dir to the output of `goma_ctl goma_dir` in your args.gn")
+       "set `goma_dir` to the output of `goma_ctl goma_dir` in your args.gn")
 
 template("unix_toolchain") {
   toolchain(target_name) {
-    # https://groups.google.com/a/chromium.org/d/msg/gn-dev/F_lv5T-tNDM
+    # https://groups.google.com/a/chromium.org/g/gn-dev/c/F_lv5T-tNDM
     forward_variables_from(invoker.toolchain_args, "*")
     not_needed("*")
 
@@ -48,6 +44,14 @@ template("unix_toolchain") {
       command = "$cxx -MMD -MF $depfile -o {{output}} -c {{source}} {{defines}} {{include_dirs}} {{cflags}} {{cflags_cc}}"
       depsformat = "gcc"
       description = "CXX {{output}}"
+      outputs = [ "{{source_out_dir}}/{{label_name}}.{{source_name_part}}.o" ]
+    }
+
+    tool("objcxx") {
+      depfile = "{{output}}.d"
+      command = "$cxx -MMD -MF $depfile -o {{output}} -c {{source}} {{defines}} {{include_dirs}} {{cflags}} {{cflags_objcc}}"
+      depsformat = "gcc"
+      description = "OBJCXX {{output}}"
       outputs = [ "{{source_out_dir}}/{{label_name}}.{{source_name_part}}.o" ]
     }
 
@@ -91,18 +95,21 @@ template("unix_toolchain") {
                  "Update it, perhaps by running llvm/utils/gn/get.py")
     }
 
+    # Make these apply to all tools below.
+    lib_switch = "-l"
+    lib_dir_switch = "-L"
+
     tool("solink") {
       outfile = "{{output_dir}}/{{target_output_name}}{{output_extension}}"
       if (current_os == "ios" || current_os == "mac") {
         command = "$ld -shared {{ldflags}} -o $outfile {{inputs}} {{libs}} {{frameworks}}"
         default_output_extension = ".dylib"
       } else {
-        command = "$ld -shared {{ldflags}} -Wl,-z,defs -Wl,-soname,{{target_output_name}}{{output_extension}} -o $outfile {{inputs}} {{libs}}"
+        command = "$ld -shared {{ldflags}} -Wl,-soname,{{target_output_name}}{{output_extension}} -o $outfile {{inputs}} {{libs}}"
         default_output_extension = ".so"
       }
       description = "SOLINK $outfile"
       outputs = [ outfile ]
-      lib_switch = "-l"
       output_prefix = "lib"
       default_output_dir = "{{root_out_dir}}/lib"
     }
@@ -118,7 +125,6 @@ template("unix_toolchain") {
       }
       description = "SOLINK $outfile"
       outputs = [ outfile ]
-      lib_switch = "-l"
       default_output_dir = "{{root_out_dir}}/lib"
     }
 
@@ -132,7 +138,6 @@ template("unix_toolchain") {
       }
       description = "LINK $outfile"
       outputs = [ outfile ]
-      lib_switch = "-l"
 
       # Setting this allows targets to override the default executable output by
       # setting output_dir.
@@ -169,7 +174,11 @@ template("unix_toolchain") {
 
 unix_toolchain("unix") {
   if (current_os != "ios" && current_os != "mac") {
-    ar = "ar"
+    if (clang_base_path != "") {
+      ar = rebase_path(clang_base_path, root_build_dir) + "/bin/llvm-ar"
+    } else {
+      ar = "ar"
+    }
   }
 
   toolchain_args = {
@@ -193,7 +202,8 @@ template("stage2_unix_toolchain") {
       "//:clang($host_toolchain)",
       "//:lld($host_toolchain)",
     ]
-    if (current_os != "ios" && current_os != "mac") {
+    if (toolchain_args.current_os != "ios" &&
+        toolchain_args.current_os != "mac") {
       ar = "bin/llvm-ar"
       deps += [ "//:llvm-ar($host_toolchain)" ]
     }
@@ -236,6 +246,19 @@ if (host_os == "mac") {
       current_os = "ios"
       current_cpu = "x64"
     }
+  }
+}
+
+stage2_unix_toolchain("stage2_baremetal_aarch64") {
+  toolchain_args = {
+    current_os = "baremetal"
+    current_cpu = "arm64"
+
+    # FIXME: These should be set in all toolchains building sanitizers,
+    # see discussion at https://reviews.llvm.org/D127906#3587329
+    use_asan = false
+    use_tsan = false
+    use_ubsan = false
   }
 }
 
@@ -282,6 +305,10 @@ template("win_toolchain") {
       default_output_dir = "{{root_out_dir}}/lib"
     }
 
+    # Make these apply to all tools below.
+    lib_switch = ""
+    lib_dir_switch = "/LIBPATH:"
+
     tool("solink") {
       outprefix = "{{output_dir}}/{{target_output_name}}"
       dllfile = "$outprefix{{output_extension}}"
@@ -296,7 +323,6 @@ template("win_toolchain") {
         dllfile,
         libfile,
       ]
-      lib_switch = ""
       default_output_extension = ".dll"
       restat = true
 
@@ -317,7 +343,6 @@ template("win_toolchain") {
       command = "$link /nologo /dll {{ldflags}} /out:$dllfile /pdb:$pdbfile {{inputs}} {{libs}} "
       description = "LINK_MODULE $dllfile"
       outputs = [ dllfile ]
-      lib_switch = ""
       runtime_outputs = outputs
       default_output_extension = ".dll"
 
@@ -331,7 +356,6 @@ template("win_toolchain") {
       command = "$link /nologo {{ldflags}} /out:$outfile /pdb:$pdbfile {{inputs}} {{libs}}"
       description = "LINK $outfile"
       outputs = [ outfile ]
-      lib_switch = ""
       default_output_extension = ".exe"
 
       # Setting this allows targets to override the default executable output by
@@ -364,6 +388,20 @@ win_toolchain("stage2_win") {
   toolchain_args = {
     current_os = host_os
     current_cpu = host_cpu
+
+    clang_base_path = root_build_dir
+    use_goma = false
+  }
+  deps = [
+    "//:clang($host_toolchain)",
+    "//:lld($host_toolchain)",
+  ]
+}
+
+win_toolchain("stage2_win_x86") {
+  toolchain_args = {
+    current_os = host_os
+    current_cpu = "x86"
 
     clang_base_path = root_build_dir
     use_goma = false

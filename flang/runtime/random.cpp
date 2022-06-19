@@ -9,12 +9,13 @@
 // Implements the intrinsic subroutines RANDOM_INIT, RANDOM_NUMBER, and
 // RANDOM_SEED.
 
-#include "random.h"
-#include "cpp-type.h"
-#include "descriptor.h"
+#include "flang/Runtime/random.h"
 #include "lock.h"
 #include "flang/Common/leading-zero-bit-count.h"
 #include "flang/Common/uint128.h"
+#include "flang/Runtime/cpp-type.h"
+#include "flang/Runtime/descriptor.h"
+#include "flang/Runtime/float128.h"
 #include <algorithm>
 #include <cmath>
 #include <cstdint>
@@ -40,6 +41,19 @@ static constexpr int rangeBits{
 
 static Lock lock;
 static Generator generator;
+static std::optional<GeneratedWord> nextValue;
+
+// Call only with lock held
+static GeneratedWord GetNextValue() {
+  GeneratedWord result;
+  if (nextValue.has_value()) {
+    result = *nextValue;
+    nextValue.reset();
+  } else {
+    result = generator();
+  }
+  return result;
+}
 
 template <typename REAL, int PREC>
 inline void Generate(const Descriptor &harvest) {
@@ -54,17 +68,23 @@ inline void Generate(const Descriptor &harvest) {
   {
     CriticalSection critical{lock};
     for (std::size_t j{0}; j < elements; ++j) {
-      Int fraction{generator()};
-      if constexpr (words > 1) {
-        for (std::size_t k{1}; k < words; ++k) {
-          static constexpr auto rangeMask{(GeneratedWord{1} << rangeBits) - 1};
-          GeneratedWord word{(generator() - generator.min()) & rangeMask};
-          fraction = (fraction << rangeBits) | word;
+      while (true) {
+        Int fraction{GetNextValue()};
+        if constexpr (words > 1) {
+          for (std::size_t k{1}; k < words; ++k) {
+            static constexpr auto rangeMask{
+                (GeneratedWord{1} << rangeBits) - 1};
+            GeneratedWord word{(GetNextValue() - generator.min()) & rangeMask};
+            fraction = (fraction << rangeBits) | word;
+          }
+        }
+        fraction >>= words * rangeBits - PREC;
+        REAL next{std::ldexp(static_cast<REAL>(fraction), -(PREC + 1))};
+        if (next >= 0.0 && next < 1.0) {
+          *harvest.Element<REAL>(at) = next;
+          break;
         }
       }
-      fraction >>= words * rangeBits - PREC;
-      *harvest.Element<REAL>(at) =
-          std::ldexp(static_cast<REAL>(fraction), -(PREC + 1));
       harvest.IncrementSubscripts(at);
     }
   }
@@ -94,22 +114,28 @@ void RTNAME(RandomNumber)(
   // TODO: REAL (2 & 3)
   case 4:
     Generate<CppTypeFor<TypeCategory::Real, 4>, 24>(harvest);
-    break;
+    return;
   case 8:
     Generate<CppTypeFor<TypeCategory::Real, 8>, 53>(harvest);
-    break;
-#if LONG_DOUBLE == 80
+    return;
   case 10:
-    Generate<CppTypeFor<TypeCategory::Real, 10>, 64>(harvest);
-    break;
-#elif LONG_DOUBLE == 128
-  case 16:
-    Generate<CppTypeFor<TypeCategory::Real, 16>, 113>(harvest);
-    break;
+    if constexpr (HasCppTypeFor<TypeCategory::Real, 10>) {
+#if LDBL_MANT_DIG == 64
+      Generate<CppTypeFor<TypeCategory::Real, 10>, 64>(harvest);
+      return;
 #endif
-  default:
-    terminator.Crash("RANDOM_NUMBER(): unsupported REAL kind %d", kind);
+    }
+    break;
+  case 16:
+    if constexpr (HasCppTypeFor<TypeCategory::Real, 16>) {
+#if LDBL_MANT_DIG == 113
+      Generate<CppTypeFor<TypeCategory::Real, 16>, 113>(harvest);
+      return;
+#endif
+    }
+    break;
   }
+  terminator.Crash("not yet implemented: RANDOM_NUMBER(): REAL kind %d", kind);
 }
 
 void RTNAME(RandomSeedSize)(
@@ -127,7 +153,8 @@ void RTNAME(RandomSeedSize)(
     *size.OffsetElement<CppTypeFor<TypeCategory::Integer, 8>>() = 1;
     break;
   default:
-    terminator.Crash("RANDOM_SEED(SIZE=): bad kind %d\n", kind);
+    terminator.Crash(
+        "not yet implemented: RANDOM_SEED(SIZE=): kind %d\n", kind);
   }
 }
 
@@ -148,11 +175,12 @@ void RTNAME(RandomSeedPut)(
     seed = *put.OffsetElement<CppTypeFor<TypeCategory::Integer, 8>>();
     break;
   default:
-    terminator.Crash("RANDOM_SEED(PUT=): bad kind %d\n", kind);
+    terminator.Crash("not yet implemented: RANDOM_SEED(PUT=): kind %d\n", kind);
   }
   {
     CriticalSection critical{lock};
     generator.seed(seed);
+    nextValue = seed;
   }
 }
 
@@ -175,8 +203,8 @@ void RTNAME(RandomSeedGet)(
   GeneratedWord seed;
   {
     CriticalSection critical{lock};
-    seed = generator();
-    generator.seed(seed);
+    seed = GetNextValue();
+    nextValue = seed;
   }
   switch (kind) {
   case 4:
@@ -186,7 +214,7 @@ void RTNAME(RandomSeedGet)(
     *got.OffsetElement<CppTypeFor<TypeCategory::Integer, 8>>() = seed;
     break;
   default:
-    terminator.Crash("RANDOM_SEED(GET=): bad kind %d\n", kind);
+    terminator.Crash("not yet implemented: RANDOM_SEED(GET=): kind %d\n", kind);
   }
 }
 } // extern "C"

@@ -1,4 +1,4 @@
-//===- LinalgTransforms.cpp - Linalg transformations as patterns ----------===//
+//===- Transforms.cpp - Linalg transformations as patterns ----------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -12,23 +12,30 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Dialect/Linalg/Transforms/Transforms.h"
-#include "mlir/Dialect/Affine/Utils.h"
+#include "mlir/Dialect/Affine/IR/AffineOps.h"
+#include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
+#include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/Linalg/Analysis/DependenceAnalysis.h"
-#include "mlir/Dialect/Linalg/IR/LinalgOps.h"
+#include "mlir/Dialect/Linalg/IR/Linalg.h"
+#include "mlir/Dialect/Linalg/Transforms/HoistPadding.h"
 #include "mlir/Dialect/Linalg/Utils/Utils.h"
+#include "mlir/Dialect/SCF/Transforms.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
+#include "mlir/Dialect/Tensor/IR/TensorTilingInterfaceImpl.h"
 #include "mlir/Dialect/Utils/StaticValueUtils.h"
 #include "mlir/Dialect/Utils/StructuredOpsUtils.h"
-#include "mlir/Dialect/Vector/VectorOps.h"
+#include "mlir/Dialect/Vector/IR/VectorOps.h"
 #include "mlir/IR/AffineExpr.h"
 #include "mlir/IR/Matchers.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Support/LLVM.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 #include "llvm/ADT/ScopeExit.h"
+#include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 #include <type_traits>
+#include <utility>
 
 #define DEBUG_TYPE "linalg-transforms"
 
@@ -45,16 +52,16 @@ const StringLiteral mlir::linalg::LinalgTransforms::kLinalgTransformMarker =
     "__internal_linalg_transform__";
 
 mlir::linalg::LinalgTransformationFilter::LinalgTransformationFilter(
-    ArrayRef<Identifier> matchDisjunction, Optional<Identifier> replacement)
+    ArrayRef<StringAttr> matchDisjunction, Optional<StringAttr> replacement)
     : matchDisjunction(matchDisjunction.begin(), matchDisjunction.end()),
-      replacement(replacement) {}
+      replacement(replacement), matchByDefault(false) {}
 
 mlir::linalg::LinalgTransformationFilter::LinalgTransformationFilter(
-    FilterFunction f, ArrayRef<Identifier> matchDisjunction,
-    Optional<Identifier> replacement)
+    const FilterFunction &f, ArrayRef<StringAttr> matchDisjunction,
+    Optional<StringAttr> replacement)
     : filters(),
       matchDisjunction(matchDisjunction.begin(), matchDisjunction.end()),
-      replacement(replacement) {
+      replacement(replacement), matchByDefault(false) {
   if (f)
     filters.push_back(f);
 }
@@ -70,7 +77,7 @@ LogicalResult mlir::linalg::LinalgTransformationFilter::checkAndNotify(
 
   if (!attr) {
     // 1. Has no filter case and matchDisjunction is empty.
-    if (matchDisjunction.empty())
+    if (matchDisjunction.empty() || matchByDefault)
       return success();
 
     // 2. Has no filter but was expecting a filter.
@@ -97,183 +104,251 @@ void mlir::linalg::LinalgTransformationFilter::
                                       Operation *op) const {
   if (replacement.hasValue())
     op->setAttr(LinalgTransforms::kLinalgTransformMarker,
-                rewriter.getStringAttr(replacement.getValue().strref()));
+                replacement.getValue());
   else
-    op->removeAttr(Identifier::get(LinalgTransforms::kLinalgTransformMarker,
-                                   rewriter.getContext()));
+    op->removeAttr(
+        rewriter.getStringAttr(LinalgTransforms::kLinalgTransformMarker));
+}
+
+bool mlir::linalg::LinalgTransformationFilter::hasReplacementFilter(
+    Operation *op) const {
+  if (!replacement)
+    return false;
+  auto attr = op->getAttr(LinalgTransforms::kLinalgTransformMarker)
+                  .dyn_cast<StringAttr>();
+  return attr && attr == replacement.getValue();
 }
 
 LinalgTilingOptions &
 mlir::linalg::LinalgTilingOptions::setTileSizes(ArrayRef<int64_t> ts) {
+  assert(!tileSizeComputationFunction && "tile sizes already set");
   SmallVector<int64_t, 4> tileSizes(ts.begin(), ts.end());
   tileSizeComputationFunction = [tileSizes](OpBuilder &b, Operation *op) {
     OpBuilder::InsertionGuard guard(b);
     b.setInsertionPointToStart(
-        &op->getParentOfType<FuncOp>().getBody().front());
+        &op->getParentOfType<func::FuncOp>().getBody().front());
     return llvm::to_vector<4>(map_range(tileSizes, [&](int64_t s) {
-      Value v = b.create<ConstantIndexOp>(op->getLoc(), s);
+      Value v = b.create<arith::ConstantIndexOp>(op->getLoc(), s);
       return v;
     }));
   };
   return *this;
 }
 
-/// Try to compute a static bounding box for `operand`
-/// Return success if either:
-///   1. The operand is already statically shaped, `result` is left unchanged.
-///   2. The operand is (partially) dynamic, `result` is the result of a freshly
-///      created PadTensorOp.
-/// Return failure if the operand cannot be padded to a static shape.
-static LogicalResult padOperandToSmallestStaticBoundingBox(
-    PatternRewriter &rewriter, linalg::LinalgOp opToPad, OpOperand *opOperand,
-    const LinalgTilingOptions &options, Value &result) {
-  // Already static shape, no need to pad.
-  if (llvm::none_of(opToPad.getShape(opOperand), ShapedType::isDynamic))
-    return success();
-  auto sliceOp = opOperand->get().getDefiningOp<tensor::ExtractSliceOp>();
-  // Not a slice op, cannot construct a static bounding box.
-  if (!sliceOp)
-    return failure();
-  SmallVector<int64_t> staticSizes;
-  staticSizes.reserve(opToPad.getRank(opOperand));
-  auto shapedOp = cast<OffsetSizeAndStrideOpInterface>(sliceOp.getOperation());
-  for (auto size : shapedOp.getMixedSizes()) {
-    auto indexAttr = size.is<Attribute>()
-                         ? size.get<Attribute>().dyn_cast<IntegerAttr>()
-                         : linalg::getSmallestBoundingIndex(size.get<Value>());
-    // SmallestBoundingIndex must exist for all sizes.
-    // For now return an error if we can't find it.
-    if (!indexAttr)
-      return rewriter.notifyMatchFailure(
-          opToPad, "No constant bounding box can be found for padding");
-    staticSizes.push_back(indexAttr.getInt());
-  }
-  Value pad = options.paddingValueComputationFunction(rewriter, *opOperand);
-  auto staticTensorType = RankedTensorType::get(
-      staticSizes, getElementTypeOrSelf(opOperand->get()));
-  result = linalg::PadTensorOp::createPadHighOp(
-      staticTensorType, opOperand->get(), pad, opToPad->getLoc(), rewriter);
-  return success();
+LinalgTilingOptions &mlir::linalg::LinalgTilingOptions::scalarizeDynamicDims() {
+  assert(!tileSizeComputationFunction && "tile sizes already set");
+  tileSizeComputationFunction = [](OpBuilder &b, Operation *op) {
+    SmallVector<Value, 4> tileSizes;
+    auto linalgOp = dyn_cast<LinalgOp>(op);
+    if (!linalgOp)
+      return tileSizes;
+    Location loc = linalgOp.getLoc();
+    auto allShapeSizes = linalgOp.createFlatListOfOperandDims(b, loc);
+    AffineMap map = linalgOp.getShapesToLoopsMap();
+    if (!map)
+      return tileSizes;
+    auto shapeSizes = applyMapToValues(b, loc, map, allShapeSizes);
+    // If the shape size is dynamic, tile by 1. Otherwise, do not tile (tile
+    // size 0).
+    for (Value shapeSize : shapeSizes)
+      tileSizes.push_back(getConstantIntValue(shapeSize).hasValue()
+                              ? b.create<arith::ConstantIndexOp>(loc, 0)
+                              : b.create<arith::ConstantIndexOp>(loc, 1));
+    return tileSizes;
+  };
+  return *this;
 }
 
-// Try to create a static bounding box around each operand of `res.op`.
-// If successful, `res.op` is rewritten in static form with padded operands.
-// `res.op` is updated to the cloned static form of the op on success.
-static LogicalResult rewriteAsPaddedOp(PatternRewriter &rewriter,
-                                       TiledLinalgOp &res,
-                                       const LinalgTilingOptions &options) {
-  LinalgOp opToPad = res.op;
+/// Pad the `opOperand` in the `paddingDimensions` using the padding value and
+/// the nofold flag found in `paddingValues` and `packPaddings`, respectively.
+/// Exit early and return the `opOperand` value if the shape dimensions that
+/// match `paddingDimensions` have a static size and the nofold flag is not set.
+/// Otherwise, try to pad the shape dimensions that match the iterator
+/// dimensions `paddingDimensions` and return the tensor::PadOp result if
+/// padding succeeds or failure otherwise.
+static FailureOr<Value> padOperandToSmallestStaticBoundingBox(
+    OpBuilder &b, linalg::LinalgOp opToPad, OpOperand *opOperand,
+    ArrayRef<int64_t> paddingDimensions, ArrayRef<Attribute> paddingValues,
+    ArrayRef<bool> packPaddings) {
+  AffineMap indexingMap = opToPad.getTiedIndexingMap(opOperand);
+  ArrayRef<int64_t> shape = opToPad.getShape(opOperand);
+
+  // Collect the shape dimension that are a function of the `paddingDimensions`.
+  llvm::SmallDenseSet<int64_t> shapeDimsToPad;
+  for (int64_t dim : paddingDimensions)
+    for (const auto &en : enumerate(indexingMap.getResults()))
+      if (en.value().isFunctionOfDim(dim))
+        shapeDimsToPad.insert(en.index());
+
+  // Return the unpadded operand if padding to a static shape is not needed and
+  // if the nofold flag is not set.
+  bool nofold = opOperand->getOperandNumber() < packPaddings.size()
+                    ? packPaddings[opOperand->getOperandNumber()]
+                    : false;
+  bool hasStaticShape = llvm::none_of(shapeDimsToPad, [&](int64_t dim) {
+    return ShapedType::isDynamic(shape[dim]);
+  });
+  if (!nofold && hasStaticShape)
+    return opOperand->get();
+
+  // Fail if `paddingValues` specifies no padding value.
+  if (opOperand->getOperandNumber() >= paddingValues.size())
+    return failure();
+  Attribute paddingAttr = paddingValues[opOperand->getOperandNumber()];
+  Value paddingValue = b.create<arith::ConstantOp>(
+      opToPad.getLoc(), paddingAttr.getType(), paddingAttr);
+
+  // Follow the use-def chain if `currOpOperand` is defined by a LinalgOp.
+  OpOperand *currOpOperand = opOperand;
+  while (auto linalgOp = currOpOperand->get().getDefiningOp<LinalgOp>()) {
+    OpResult result = currOpOperand->get().cast<OpResult>();
+    currOpOperand = linalgOp.getOutputOperand(result.getResultNumber());
+  }
+
+  // Fail if `currOpOperand` is not defined by an ExtractSliceOp.
+  auto sliceOp = currOpOperand->get().getDefiningOp<tensor::ExtractSliceOp>();
+  if (!sliceOp)
+    return failure();
+
+  // Compute the dropped dimensions if `sliceOp` is ranke-reducing.
+  llvm::SmallBitVector droppedDims = sliceOp.getDroppedDims();
+  OffsetSizeAndStrideOpInterface shapedOp = sliceOp;
+
+  // Upper bound the `sliceOp` sizes to obtain a static bounding box.
+  SmallVector<int64_t> paddedShape(shape.begin(), shape.end());
+  int64_t shapeIdx = 0;
+  for (const auto &en : enumerate(shapedOp.getMixedSizes())) {
+    // Skip dropped dimensions.
+    if (droppedDims.test(en.index()))
+      continue;
+    // Skip dimensions that do not require padding.
+    if (!shapeDimsToPad.contains(shapeIdx)) {
+      shapeIdx++;
+      continue;
+    }
+    // If the size is an attribute add it directly to `paddedShape`.
+    if (en.value().is<Attribute>()) {
+      paddedShape[shapeIdx++] =
+          en.value().get<Attribute>().dyn_cast<IntegerAttr>().getInt();
+      continue;
+    }
+    // Otherwise, try to compute a constant upper bound for the size value.
+    FailureOr<int64_t> upperBound =
+        getConstantUpperBoundForIndex(en.value().get<Value>());
+    if (failed(upperBound)) {
+      LLVM_DEBUG(DBGS() << "No constant bounding box can be found for padding");
+      return failure();
+    }
+    paddedShape[shapeIdx++] = upperBound.getValue();
+  }
+  assert(shapeIdx == static_cast<int64_t>(shape.size()) &&
+         "expect the dynamic and static ranks to match");
+
+  // Pad the operand to the bounding box defined by `paddedShape`.
+  auto paddedTensorType = RankedTensorType::get(
+      paddedShape, getElementTypeOrSelf(opOperand->get()));
+  return makeComposedPadHighOp(b, opToPad->getLoc(), paddedTensorType,
+                               opOperand->get(), paddingValue, nofold);
+}
+
+FailureOr<SmallVector<Value>>
+linalg::rewriteAsPaddedOp(OpBuilder &b, LinalgOp opToPad,
+                          ArrayRef<int64_t> paddingDimensions,
+                          ArrayRef<Attribute> paddingValues,
+                          ArrayRef<bool> packPaddings, LinalgOp &paddedOp) {
   Location loc = opToPad->getLoc();
 
-  // If the op is fully static, it does not need padding.
   // TODO: there are cases where we may still want to pad to larger sizes.
   assert(opToPad.hasTensorSemantics() &&
          "expected operation to have tensor semantics");
-  if (!opToPad.hasDynamicShape())
-    return success();
 
-  OpBuilder::InsertionGuard g(rewriter);
+  OpBuilder::InsertionGuard g(b);
   // Set IP after op because we also take the dims of the original output.
-  rewriter.setInsertionPointAfter(opToPad);
+  b.setInsertionPointAfter(opToPad);
   // Make a copy of the shaped operands and update it.
   SmallVector<Value> newOperands;
   newOperands.reserve(opToPad.getNumInputsAndOutputs());
   for (OpOperand *opOperand : opToPad.getInputAndOutputOperands()) {
-    Value paddedOperand;
-    // If padding was requested but the shape cannot be bounded statically then
-    // the pattern fails to apply.
-    if (failed(padOperandToSmallestStaticBoundingBox(
-            rewriter, opToPad, opOperand, options, paddedOperand)))
+    FailureOr<Value> paddedOperand = padOperandToSmallestStaticBoundingBox(
+        b, opToPad, opOperand, paddingDimensions, paddingValues, packPaddings);
+    // Exit if `paddingDimensions` cannot be bounded statically.
+    if (failed(paddedOperand))
       return failure();
-    newOperands.push_back(paddedOperand ? paddedOperand : opOperand->get());
+    newOperands.push_back(*paddedOperand);
   }
+
+  SmallVector<SmallVector<Value>> reifiedResultShapes;
+  if (failed(cast<ReifyRankedShapedTypeOpInterface>(opToPad.getOperation())
+                 .reifyResultShapes(b, reifiedResultShapes)))
+    return failure();
+  assert(reifiedResultShapes.size() == opToPad->getNumResults() &&
+         "expected same number of results");
 
   // Clone `opToPad` to operate on the statically padded shapes.
   auto resultTensorTypes =
       ValueRange(newOperands).take_back(opToPad.getNumOutputs()).getTypes();
-  linalg::LinalgOp paddedOp =
-      opToPad.clone(rewriter, loc, resultTensorTypes, newOperands);
+  paddedOp = opToPad.clone(b, loc, resultTensorTypes, newOperands);
 
   // Recover the slice out of the new static results. This keeps the original
   // linalg op around because it uses the dims of the original results.
-  // This later folds away.
   SmallVector<Value> paddedSubviewResults;
   paddedSubviewResults.reserve(opToPad->getNumResults());
-  SetVector<Operation *> newUsersOfOpToPad;
-  for (auto it : llvm::zip(opToPad->getResults(), paddedOp->getResults())) {
-    auto rank = std::get<0>(it).getType().cast<RankedTensorType>().getRank();
-    SmallVector<OpFoldResult> offsets(rank, rewriter.getIndexAttr(0));
-    auto sizes = llvm::to_vector<4>(llvm::map_range(
-        llvm::seq<unsigned>(0, rank), [&](unsigned d) -> OpFoldResult {
-          auto dimOp = rewriter.create<tensor::DimOp>(loc, std::get<0>(it), d);
-          newUsersOfOpToPad.insert(dimOp);
-          return dimOp.getResult();
-        }));
-    SmallVector<OpFoldResult> strides(rank, rewriter.getIndexAttr(1));
-    paddedSubviewResults.push_back(rewriter.create<tensor::ExtractSliceOp>(
-        loc, std::get<1>(it), offsets, sizes, strides));
+  for (const auto &en : llvm::enumerate(paddedOp->getResults())) {
+    Value paddedResult = en.value();
+    int64_t resultNumber = en.index();
+    int64_t rank = paddedResult.getType().cast<RankedTensorType>().getRank();
+    SmallVector<OpFoldResult> offsets(rank, b.getIndexAttr(0));
+    SmallVector<OpFoldResult> sizes;
+    for (Value v : reifiedResultShapes[resultNumber])
+      sizes.push_back(getAsOpFoldResult(v));
+    SmallVector<OpFoldResult> strides(rank, b.getIndexAttr(1));
+    paddedSubviewResults.push_back(b.create<tensor::ExtractSliceOp>(
+        loc, paddedResult, offsets, sizes, strides));
   }
-  // Replace the transient `opToPad` locally, except for uses that we just
-  // created for the purpose of extracting the dims.
-  rewriter.replaceOpWithIf(opToPad, paddedSubviewResults, [&](OpOperand &opOp) {
-    return !newUsersOfOpToPad.contains(opOp.getOwner());
-  });
-
-  res = TiledLinalgOp{paddedOp, res.loops, res.tensorResults};
-  return success();
+  return paddedSubviewResults;
 }
 
-/// Linalg base tiling pattern.
-mlir::linalg::LinalgBaseTilingPattern::LinalgBaseTilingPattern(
-    StringRef opName, MLIRContext *context, LinalgTilingOptions options,
-    LinalgTransformationFilter filter, PatternBenefit benefit)
-    : RewritePattern(opName, benefit, context), filter(filter),
-      options(options) {}
+/// Try to peel a loop `op` and return the new result.
+// TODO: Add support for scf.parallel and affine.for loops.
+static SmallVector<Value, 4> peelLoop(RewriterBase &rewriter, Operation *op) {
+  return llvm::TypeSwitch<Operation *, SmallVector<Value, 4>>(op)
+      .Case<scf::ForOp>([&](scf::ForOp forOp) {
+        scf::ForOp partialIteration;
+        if (succeeded(scf::peelAndCanonicalizeForLoop(rewriter, forOp,
+                                                      partialIteration)))
+          return partialIteration->getResults();
+        assert(!partialIteration && "expected that loop was not peeled");
+        return forOp->getResults();
+      })
+      .Default([&](Operation *op) { return op->getResults(); });
+}
 
-mlir::linalg::LinalgBaseTilingPattern::LinalgBaseTilingPattern(
-    MLIRContext *context, LinalgTilingOptions options,
-    LinalgTransformationFilter filter, PatternBenefit benefit)
-    : RewritePattern(MatchAnyOpTypeTag(), benefit, context), filter(filter),
-      options(options) {}
-
-LogicalResult mlir::linalg::LinalgBaseTilingPattern::matchAndRewriteBase(
-    Operation *op, PatternRewriter &rewriter, TiledLinalgOp &result) const {
-  LinalgOp linalgOp = dyn_cast<LinalgOp>(op);
-  if (!linalgOp)
-    return failure();
-  if (failed(filter.checkAndNotify(rewriter, linalgOp)))
-    return failure();
-
-  Optional<TiledLinalgOp> res = tileLinalgOp(rewriter, linalgOp, options);
-
-  if (!res)
-    return failure();
-
-  // Setup RAII guard to return properly.
-  LinalgOp tiledOp = res->op;
-  auto guard = llvm::make_scope_exit([&]() {
-    // Return relevant information to derived pattern.
-    result = *res;
-    // Replace filter on both tiledOp and tiledAndPaddedOp, if necessary.
-    filter.replaceLinalgTransformationFilter(rewriter, tiledOp);
-    if (tiledOp != res->op)
-      filter.replaceLinalgTransformationFilter(rewriter, res->op);
-  });
-
-  // Consider padding on the fly only if the op has tensor semantics.
-  if (!options.paddingValueComputationFunction ||
-      !linalgOp.hasTensorSemantics())
-    return success();
-
-  // Try to pad on the fly by rewriting res->op as a padded op.
-  if (failed(rewriteAsPaddedOp(rewriter, *res, options))) {
-    // Set so RAII guard does not propagate TiledLinalgOp to `result`.
-    return failure();
+/// Peel and canonicalize 'loops'.
+void mlir::linalg::peelLoops(RewriterBase &rewriter,
+                             ArrayRef<scf::ForOp> loops) {
+  for (auto loopOp : loops) {
+    SmallVector<Value, 4> loopResults;
+    loopResults = peelLoop(rewriter, loopOp);
   }
+}
 
-  // Do not perform replacement of `linalgOp`, let the derived patterns
-  // do this as they see fit, from the resulting TiledLinalgOp.
-  return success();
+/// Peel loops after tiling.
+void mlir::linalg::peelTiledLinalgOp(RewriterBase &rewriter, TiledLinalgOp &res,
+                                     ArrayRef<int64_t> peeledLoops,
+                                     LinalgTilingLoopType loopType) {
+  for (int64_t loop : peeledLoops) {
+    assert(loop < static_cast<int64_t>(res.loops.size()) &&
+           "requested peeling of non-existing loop");
+    SmallVector<Value, 4> loopResults;
+    Operation *loopOp = res.loops[loop];
+    loopResults = peelLoop(rewriter, loopOp);
+
+    // The result of the loop nest may change with peeling.
+    if (res.tensorResults.size() == loopOp->getNumResults() &&
+        std::equal(res.tensorResults.begin(), res.tensorResults.end(),
+                   loopOp->getResults().begin()))
+      res.tensorResults = loopResults;
+  }
 }
 
 static ValueRange getTiledOpResult(TiledLinalgOp tiledOp) {
@@ -293,12 +368,13 @@ mlir::linalg::LinalgBaseTileAndFusePattern::LinalgBaseTileAndFusePattern(
     StringRef opName, MLIRContext *context,
     const LinalgDependenceGraph &dependenceGraph,
     LinalgTilingOptions tilingOptions, LinalgFusionOptions fusionOptions,
-    LinalgTransformationFilter filter, LinalgTransformationFilter fusedOpMarker,
+    LinalgTransformationFilter f, LinalgTransformationFilter fusedOpMarker,
     LinalgTransformationFilter originalOpMarker, PatternBenefit benefit)
     : RewritePattern(opName, benefit, context, {}),
-      dependenceGraph(dependenceGraph), tilingOptions(tilingOptions),
-      fusionOptions(fusionOptions), filter(filter),
-      fusedOpMarker(fusedOpMarker), originalOpMarker(originalOpMarker) {}
+      dependenceGraph(dependenceGraph), tilingOptions(std::move(tilingOptions)),
+      fusionOptions(std::move(fusionOptions)), filter(std::move(f)),
+      fusedOpMarker(std::move(fusedOpMarker)),
+      originalOpMarker(std::move(originalOpMarker)) {}
 
 LogicalResult mlir::linalg::LinalgBaseTileAndFusePattern::matchAndRewrite(
     Operation *op, PatternRewriter &rewriter) const {
@@ -343,8 +419,8 @@ LogicalResult mlir::linalg::LinalgBaseTileAndFusePattern::matchAndRewrite(
 
   // Tile the unfused loops;
   SmallVector<Value, 4> unfusedLoopTileSizes;
-  Value zero = rewriter.create<ConstantIndexOp>(op->getLoc(), 0);
-  for (auto tileSize : enumerate(tileSizes)) {
+  Value zero = rewriter.create<arith::ConstantIndexOp>(op->getLoc(), 0);
+  for (const auto &tileSize : enumerate(tileSizes)) {
     if (tiledAndFusedOps->fusedLoopDims.count(tileSize.index()))
       unfusedLoopTileSizes.push_back(zero);
     else
@@ -354,15 +430,15 @@ LogicalResult mlir::linalg::LinalgBaseTileAndFusePattern::matchAndRewrite(
   if (unfusedLoopTileSizes.size() > linalgOp.getNumLoops())
     unfusedLoopTileSizes.resize(linalgOp.getNumLoops());
   if (llvm::any_of(unfusedLoopTileSizes, [](Value val) {
-        if (auto cst = val.getDefiningOp<ConstantIndexOp>())
-          return cst.getValue() != 0;
+        if (auto cst = val.getDefiningOp<arith::ConstantIndexOp>())
+          return cst.value() != 0;
         return true;
       })) {
     LinalgTilingOptions unfusedTilingOptions = tilingOptions;
     unfusedTilingOptions.setTileSizes(unfusedLoopTileSizes);
-    Optional<TiledLinalgOp> unfusedTiledOp =
+    FailureOr<TiledLinalgOp> unfusedTiledOp =
         tileLinalgOp(rewriter, tiledAndFusedOps->op, unfusedTilingOptions);
-    if (!unfusedTiledOp)
+    if (failed(unfusedTiledOp))
       return failure();
     rewriter.replaceOp(tiledAndFusedOps->op,
                        getTiledOpResult(unfusedTiledOp.getValue()));
@@ -386,35 +462,246 @@ LogicalResult mlir::linalg::LinalgBaseTileAndFusePattern::matchAndRewrite(
   return success();
 }
 
+/// Linalg tiling pattern.
+mlir::linalg::LinalgTilingPattern::LinalgTilingPattern(
+    MLIRContext *context, LinalgTilingOptions options,
+    LinalgTransformationFilter f, PatternBenefit benefit)
+    : OpInterfaceRewritePattern<LinalgOp>(context, benefit),
+      filter(std::move(f)), options(std::move(options)) {}
+
+mlir::linalg::LinalgTilingPattern::LinalgTilingPattern(
+    StringRef opName, MLIRContext *context, LinalgTilingOptions options,
+    LinalgTransformationFilter f, PatternBenefit benefit)
+    : OpInterfaceRewritePattern<LinalgOp>(context, benefit),
+      filter(f.addOpNameFilter(opName)), options(std::move(options)) {}
+
+FailureOr<TiledLinalgOp>
+mlir::linalg::LinalgTilingPattern::returningMatchAndRewrite(
+    LinalgOp op, PatternRewriter &rewriter) const {
+  if (failed(filter.checkAndNotify(rewriter, op)))
+    return failure();
+
+  FailureOr<TiledLinalgOp> res = tileLinalgOp(rewriter, op, options);
+  if (failed(res))
+    return failure();
+
+  // Clear filter to stop recursive pattern application.
+  // This must be done here to properly propagate to peeling branches.
+  filter.replaceLinalgTransformationFilter(rewriter, res->op);
+
+  // Peel the loops of the TiledLinalgOp.
+  peelTiledLinalgOp(rewriter, *res, options.peeledLoops, options.loopType);
+
+  if (res->tensorResults.empty())
+    rewriter.eraseOp(op);
+  else
+    rewriter.replaceOp(op, res->tensorResults);
+
+  return res;
+}
+
+/// Linalg padding pattern.
+mlir::linalg::LinalgPaddingPattern::LinalgPaddingPattern(
+    MLIRContext *context, LinalgPaddingOptions options,
+    LinalgTransformationFilter f, PatternBenefit benefit)
+    : OpInterfaceRewritePattern<LinalgOp>(context, benefit),
+      filter(std::move(f)), options(std::move(options)) {}
+
+mlir::linalg::LinalgPaddingPattern::LinalgPaddingPattern(
+    StringRef opName, MLIRContext *context, LinalgPaddingOptions options,
+    LinalgTransformationFilter f, PatternBenefit benefit)
+    : OpInterfaceRewritePattern<LinalgOp>(context, benefit),
+      filter(f.addOpNameFilter(opName)), options(std::move(options)) {}
+
+FailureOr<LinalgOp>
+mlir::linalg::LinalgPaddingPattern::returningMatchAndRewrite(
+    LinalgOp linalgOp, PatternRewriter &rewriter) const {
+  if (!linalgOp.hasTensorSemantics())
+    return failure();
+  if (failed(filter.checkAndNotify(rewriter, linalgOp)))
+    return failure();
+
+  // Pad the operation.
+  LinalgOp paddedOp;
+  FailureOr<SmallVector<Value>> newResults =
+      rewriteAsPaddedOp(rewriter, linalgOp, options.paddingDimensions,
+                        options.paddingValues, options.packPaddings, paddedOp);
+  if (failed(newResults))
+    return failure();
+
+  // Hoist the padding.
+  for (const auto &en : enumerate(options.hoistPaddings)) {
+    if (static_cast<int64_t>(en.index()) >= paddedOp.getNumInputsAndOutputs())
+      break;
+    OpOperand *opOperand = &paddedOp->getOpOperand(en.index());
+    auto padOp = opOperand->get().getDefiningOp<tensor::PadOp>();
+    if (!padOp || en.value() == 0)
+      continue;
+
+    // Fail hoisting if the operand shape is not fully static.
+    if (llvm::any_of(paddedOp.getShape(opOperand),
+                     [](int64_t size) { return ShapedType::isDynamic(size); }))
+      return failure();
+
+    tensor::PadOp hoistedOp;
+    SmallVector<GenericOp> transposeOps;
+    SmallVector<int64_t> transposeVector =
+        en.index() < options.transposePaddings.size()
+            ? options.transposePaddings[en.index()]
+            : SmallVector<int64_t>{};
+
+    FailureOr<Value> newResult = hoistPaddingOnTensors(
+        padOp, en.value(), transposeVector, hoistedOp, transposeOps);
+    if (failed(newResult))
+      continue;
+    rewriter.replaceOp(padOp, newResult.getValue());
+
+    // Do not apply hoist padding to the newly introduced transpose operations.
+    for (GenericOp transposeOp : transposeOps)
+      filter.replaceLinalgTransformationFilter(rewriter, transposeOp);
+  }
+
+  // Replace the original operation to pad.
+  rewriter.replaceOp(linalgOp, newResults.getValue());
+  filter.replaceLinalgTransformationFilter(rewriter, paddedOp);
+
+  return paddedOp;
+}
+
+/// Linalg tile and fuse tensor ops pattern.
+mlir::linalg::LinalgTileAndFuseTensorOpsPattern::
+    LinalgTileAndFuseTensorOpsPattern(MLIRContext *context,
+                                      LinalgTilingAndFusionOptions options,
+                                      LinalgTransformationFilter f,
+                                      PatternBenefit benefit)
+    : RewritePattern(MatchAnyOpTypeTag(), benefit, context),
+      filter(std::move(f)), options(std::move(options)) {}
+
+mlir::linalg::LinalgTileAndFuseTensorOpsPattern::
+    LinalgTileAndFuseTensorOpsPattern(StringRef opName, MLIRContext *context,
+                                      LinalgTilingAndFusionOptions options,
+                                      LinalgTransformationFilter f,
+                                      PatternBenefit benefit)
+    : RewritePattern(opName, benefit, context), filter(std::move(f)),
+      options(std::move(options)) {}
+
+FailureOr<mlir::linalg::TileLoopNest>
+mlir::linalg::LinalgTileAndFuseTensorOpsPattern::returningMatchAndRewrite(
+    Operation *op, PatternRewriter &rewriter) const {
+  LinalgOp rootOp = dyn_cast<LinalgOp>(op);
+  if (!rootOp)
+    return failure();
+  if (failed(filter.checkAndNotify(rewriter, op)))
+    return failure();
+
+  // Check `tileSizes` contains a tile size for every `rootOp` loop dimension.
+  if (options.tileSizes.size() < rootOp.getNumLoops())
+    return rewriter.notifyMatchFailure(op, "expect #tile sizes >= #loops");
+
+  // Check `tileInterchange` contains no entries or as many as `tileSizes`.
+  if (!options.tileInterchange.empty() &&
+      options.tileInterchange.size() != options.tileSizes.size())
+    return rewriter.notifyMatchFailure(
+        op, "expect the number of tile sizes and interchange dims to match");
+
+  // Copy the `tileSizes` and `tileInterchange` prefixes needed for `rootOp`.
+  SmallVector<int64_t> rootTileSizes(options.tileSizes.begin(),
+                                     options.tileSizes.begin() +
+                                         rootOp.getNumLoops());
+  SmallVector<int64_t> rootInterchange =
+      options.tileInterchange.empty()
+          ? llvm::to_vector<6>(llvm::seq<int64_t>(0, rootOp.getNumLoops()))
+          : SmallVector<int64_t>(options.tileInterchange.begin(),
+                                 options.tileInterchange.begin() +
+                                     rootOp.getNumLoops());
+
+  // Check `rootTileSizes` contains non-zero tile sizes.
+  if (llvm::count(rootTileSizes, 0) == static_cast<long>(rootTileSizes.size()))
+    return rewriter.notifyMatchFailure(
+        op, "expect at least one non-zero tile size");
+
+  // Check `rootInterchange` is a permutation of the `rootOp` loop dimensions.
+  // It has to be a permutation since the tiling cannot tile the same loop
+  // dimension multiple times.
+  if (!isPermutation(rootInterchange))
+    return rewriter.notifyMatchFailure(
+        op, "expect the tile interchange permutes the root loops");
+
+  // Tile `rootOp` and fuse its producers.
+  FailureOr<TileLoopNest> tileLoopNest =
+      tileConsumerAndFuseProducers(rewriter, rootOp, rootTileSizes,
+                                   rootInterchange, options.tileDistribution);
+  if (failed(tileLoopNest))
+    return rewriter.notifyMatchFailure(
+        op, "tileConsumerAndFuseProducers failed unexpectedly");
+
+  // Replace all uses of the tiled loop operation.
+  rootOp->replaceAllUsesWith(tileLoopNest->getRootOpReplacementResults());
+
+  // Apply the filter if specified.
+  for (LinalgOp linalgOp : tileLoopNest->getAllTiledAndFusedOps())
+    filter.replaceLinalgTransformationFilter(rewriter, linalgOp);
+  return tileLoopNest;
+}
+
 /// Linalg generic interchange pattern.
 mlir::linalg::GenericOpInterchangePattern::GenericOpInterchangePattern(
     MLIRContext *context, ArrayRef<unsigned> interchangeVector,
-    LinalgTransformationFilter filter, PatternBenefit benefit)
-    : OpRewritePattern(context, benefit), filter(filter),
+    LinalgTransformationFilter f, PatternBenefit benefit)
+    : OpRewritePattern(context, benefit), filter(std::move(f)),
       interchangeVector(interchangeVector.begin(), interchangeVector.end()) {}
 
-LogicalResult mlir::linalg::GenericOpInterchangePattern::matchAndRewrite(
+FailureOr<GenericOp>
+mlir::linalg::GenericOpInterchangePattern::returningMatchAndRewrite(
     GenericOp genericOp, PatternRewriter &rewriter) const {
   if (failed(filter.checkAndNotify(rewriter, genericOp)))
     return failure();
-  if (failed(interchangeGenericOpPrecondition(genericOp, interchangeVector)))
+
+  FailureOr<GenericOp> transformedOp =
+      interchangeGenericOp(rewriter, genericOp, interchangeVector);
+  if (failed(transformedOp))
     return failure();
 
-  // TODO: figure out how this interplays with named ops. In particular this
-  // should break the named op property.
-  rewriter.updateRootInPlace(genericOp, [&]() {
-    interchangeGenericOp(rewriter, genericOp, interchangeVector);
-    // New filter if specified.
-    filter.replaceLinalgTransformationFilter(rewriter, genericOp);
-  });
-  return success();
+  // New filter if specified.
+  filter.replaceLinalgTransformationFilter(rewriter, genericOp);
+  return transformedOp;
+}
+
+/// Linalg generalization pattern.
+mlir::linalg::LinalgGeneralizationPattern::LinalgGeneralizationPattern(
+    MLIRContext *context, LinalgTransformationFilter f, PatternBenefit benefit)
+    : OpInterfaceRewritePattern<LinalgOp>(context, benefit),
+      filter(std::move(f)) {}
+
+mlir::linalg::LinalgGeneralizationPattern::LinalgGeneralizationPattern(
+    StringRef opName, MLIRContext *context, LinalgTransformationFilter f,
+    PatternBenefit benefit)
+    : OpInterfaceRewritePattern<LinalgOp>(context, benefit),
+      filter(f.addOpNameFilter(opName)) {}
+
+FailureOr<GenericOp>
+mlir::linalg::LinalgGeneralizationPattern::returningMatchAndRewrite(
+    LinalgOp linalgOp, PatternRewriter &rewriter) const {
+  if (failed(filter.checkAndNotify(rewriter, linalgOp)))
+    return failure();
+  FailureOr<GenericOp> genericOp = generalizeNamedOp(rewriter, linalgOp);
+  if (failed(genericOp))
+    return failure();
+  filter.replaceLinalgTransformationFilter(rewriter, *genericOp);
+  return genericOp;
 }
 
 mlir::linalg::LinalgBasePromotionPattern::LinalgBasePromotionPattern(
+    MLIRContext *context, LinalgTransformationFilter f,
+    LinalgPromotionOptions options, PatternBenefit benefit)
+    : RewritePattern(MatchAnyOpTypeTag(), benefit, context),
+      filter(std::move(f)), options(std::move(options)) {}
+
+mlir::linalg::LinalgBasePromotionPattern::LinalgBasePromotionPattern(
     StringRef opName, MLIRContext *context, LinalgPromotionOptions options,
-    LinalgTransformationFilter filter, PatternBenefit benefit)
-    : RewritePattern(opName, benefit, context, {}), filter(filter),
-      options(options) {}
+    LinalgTransformationFilter f, PatternBenefit benefit)
+    : RewritePattern(opName, benefit, context, {}), filter(std::move(f)),
+      options(std::move(options)) {}
 
 LogicalResult mlir::linalg::LinalgBasePromotionPattern::matchAndRewrite(
     Operation *op, PatternRewriter &rewriter) const {
@@ -438,31 +725,57 @@ LogicalResult mlir::linalg::LinalgBasePromotionPattern::matchAndRewrite(
   return success();
 }
 
-mlir::linalg::LinalgBaseVectorizationPattern::LinalgBaseVectorizationPattern(
-    MLIRContext *context, LinalgTransformationFilter filter,
-    PatternBenefit benefit)
-    : RewritePattern(MatchAnyOpTypeTag(), benefit, context), filter(filter) {}
+mlir::linalg::LinalgPeelingPattern::LinalgPeelingPattern(
+    MLIRContext *context, LinalgTransformationFilter f,
+    LinalgPeelOptions options, PatternBenefit benefit)
+    : OpInterfaceRewritePattern<LinalgOp>(context, benefit),
+      filter(std::move(f)), options(std::move(options)) {}
 
-mlir::linalg::LinalgBaseVectorizationPattern::LinalgBaseVectorizationPattern(
-    StringRef opName, MLIRContext *context, LinalgTransformationFilter filter,
-    PatternBenefit benefit)
-    : RewritePattern(opName, benefit, context, {}), filter(filter) {}
+mlir::linalg::LinalgPeelingPattern::LinalgPeelingPattern(
+    StringRef opName, MLIRContext *context, LinalgPeelOptions options,
+    LinalgTransformationFilter f, PatternBenefit benefit)
+    : OpInterfaceRewritePattern<LinalgOp>(context, benefit),
+      filter(f.addOpNameFilter(opName)), options(std::move(options)) {}
 
-LogicalResult mlir::linalg::LinalgBaseVectorizationPattern::matchAndRewrite(
-    Operation *op, PatternRewriter &rewriter) const {
-  LinalgOp linalgOp = dyn_cast<LinalgOp>(op);
-  if (!linalgOp)
-    return failure();
+LogicalResult mlir::linalg::LinalgPeelingPattern::matchAndRewrite(
+    LinalgOp linalgOp, PatternRewriter &rewriter) const {
   if (failed(filter.checkAndNotify(rewriter, linalgOp)))
     return failure();
-  SmallVector<Value> newResults;
-  if (failed(vectorizeLinalgOp(rewriter, op, newResults)))
+
+  // Increase marker counter even if peeling doesn't happen for this op.
+  filter.replaceLinalgTransformationFilter(rewriter, linalgOp);
+
+  if (!options.loopsToPeelComputationFunction)
     return failure();
-  if (!newResults.empty())
-    rewriter.replaceOp(op, newResults);
-  else
-    rewriter.eraseOp(op);
+
+  SmallVector<scf::ForOp, 4> loopsToPeel;
+  options.loopsToPeelComputationFunction(rewriter, linalgOp, loopsToPeel);
+  peelLoops(rewriter, loopsToPeel);
   return success();
+}
+
+mlir::linalg::LinalgVectorizationPattern::LinalgVectorizationPattern(
+    MLIRContext *context, LinalgTransformationFilter f,
+    LinalgVectorizationOptions options, PatternBenefit benefit)
+    : OpInterfaceRewritePattern<LinalgOp>(context, benefit),
+      filter(std::move(f)) {}
+
+mlir::linalg::LinalgVectorizationPattern::LinalgVectorizationPattern(
+    StringRef opName, MLIRContext *context, LinalgVectorizationOptions options,
+    LinalgTransformationFilter f, PatternBenefit benefit)
+    : OpInterfaceRewritePattern<LinalgOp>(context, benefit),
+      filter(f.addOpNameFilter(opName)) {}
+
+LogicalResult mlir::linalg::LinalgVectorizationPattern::matchAndRewrite(
+    LinalgOp linalgOp, PatternRewriter &rewriter) const {
+  if (failed(filter.checkAndNotify(rewriter, linalgOp)))
+    return failure();
+  return vectorize(rewriter, linalgOp);
+}
+
+LogicalResult mlir::linalg::CopyVectorizationPattern::matchAndRewrite(
+    memref::CopyOp copyOp, PatternRewriter &rewriter) const {
+  return vectorizeCopy(rewriter, copyOp);
 }
 
 LogicalResult mlir::linalg::applyStagedPatterns(
@@ -496,153 +809,15 @@ LogicalResult mlir::linalg::applyStagedPatterns(
   return success();
 }
 
-/// Traverse the `dims` and substitute known min or max expressions returned by
-/// the lambda |getMinMaxExpr|.
-static AffineMap substitute(AffineMap map, SmallVectorImpl<Value> &dims,
-                            SmallVectorImpl<Value> &symbols,
-                            GetMinMaxExprFn getMinMaxExpr) {
-  auto exprs = llvm::to_vector<4>(map.getResults());
-  for (AffineExpr &expr : exprs) {
-    bool substituted = true;
-    while (substituted) {
-      substituted = false;
-      for (unsigned dimIdx = 0; dimIdx < dims.size(); ++dimIdx) {
-        Value dim = dims[dimIdx];
-        auto minMax = getMinMaxExpr(dim, dims, symbols);
-        if (!minMax)
-          continue;
-        AffineExpr dimExpr = getAffineDimExpr(dimIdx, expr.getContext());
-        LLVM_DEBUG(DBGS() << "Subst: " << dim << " @ " << dimExpr << "\n");
-        LLVM_DEBUG(DBGS() << "Before: " << expr << "\n");
-        // Substitute occurrences of `dimExpr` by either the min expression or
-        // the max expression depending on whether the value is used with a
-        // positive or negative  coefficient.
-        AffineExpr substitutedExpr =
-            substWithMin(expr, dimExpr, minMax->first, minMax->second);
-        LLVM_DEBUG(DBGS() << "After: " << substitutedExpr << "\n");
-        substituted = (substitutedExpr != expr);
-        expr = substitutedExpr;
-      }
-    }
-
-    // Cleanup and simplify the results.
-    // This needs to happen outside of the loop iterating on dims.size() since
-    // it modifies dims.
-    SmallVector<Value, 4> operands(dims.begin(), dims.end());
-    operands.append(symbols.begin(), symbols.end());
-    auto map = AffineMap::get(dims.size(), symbols.size(), exprs,
-                              exprs.front().getContext());
-
-    LLVM_DEBUG({
-      DBGS() << "Map to simplify: " << map << "\n";
-      DBGS() << "Operands:\n";
-      for (Value v : operands)
-        DBGS() << v << "\n";
-    });
-
-    // Pull in affine.apply operations and compose them fully into the
-    // result.
-    fullyComposeAffineMapAndOperands(&map, &operands);
-    canonicalizeMapAndOperands(&map, &operands);
-    map = simplifyAffineMap(map);
-    // Assign the results.
-    exprs.assign(map.getResults().begin(), map.getResults().end());
-    dims.assign(operands.begin(), operands.begin() + map.getNumDims());
-    symbols.assign(operands.begin() + map.getNumDims(), operands.end());
-
-    LLVM_DEBUG(DBGS() << "Map simplified: " << map << "\n");
-  }
-
-  assert(!exprs.empty() && "Unexpected empty exprs");
-  return AffineMap::get(dims.size(), symbols.size(), exprs, map.getContext());
-}
-
-/// Traverse the dims of the AffineMap of `affineMinOp` and substitute
-/// dimensions with known range by new expressions involving the min or max
-/// expression:
-///   - If the AffineDimExpr mapped to a known value has a positive sign, it
-///     is replaced by the min expression.
-///   - If the AffineDimExpr mapped to a known value has a negative sign, it is
-///     replaced by the max expression.
-/// All known values are iteratively replaced.
-/// This is used as an intermediate step in computing bounding boxes and
-/// canonicalize AffineMinOps. All dim and symbol operands are assumed to have
-/// positive values (positive orthant assumptions).
-/// Return a new AffineMap, dims and symbols that have been canonicalized and
-/// simplified.
-AffineMapAndOperands
-mlir::linalg::substituteMin(AffineMinOp affineMinOp,
-                            GetMinMaxExprFn getMinMaxExpr) {
-  AffineMapAndOperands res{affineMinOp.getAffineMap(),
-                           SmallVector<Value>(affineMinOp.getDimOperands()),
-                           SmallVector<Value>(affineMinOp.getSymbolOperands())};
-  res.map = substitute(affineMinOp.getAffineMap(), res.dims, res.symbols,
-                       getMinMaxExpr);
-  return res;
-}
-
-LogicalResult AffineMinRangeCanonicalizationPattern::matchAndRewrite(
-    AffineMinOp minOp, PatternRewriter &rewriter) const {
-  LLVM_DEBUG(DBGS() << "Canonicalize AffineMinSCF: " << *minOp.getOperation()
-                    << "\n");
-
-  auto affineMapAndOperands = substituteMin(minOp, getMinMaxFn);
-  AffineMap map = affineMapAndOperands.map;
-
-  LLVM_DEBUG(DBGS() << "Resulting map: " << map << "\n");
-
-  // Check whether any of the expressions, when subtracted from all other
-  // expressions, produces only >= 0 constants. If so, it is the min.
-  for (auto e : minOp.getAffineMap().getResults()) {
-    LLVM_DEBUG(DBGS() << "Candidate min: " << e << "\n");
-    if (!e.isSymbolicOrConstant())
-      continue;
-
-    auto isNonPositive = [](AffineExpr e) {
-      if (auto cst = e.dyn_cast<AffineConstantExpr>())
-        return cst.getValue() < 0;
-      return true;
-    };
-
-    // Build the subMap and check everything is statically known to be
-    // positive.
-    SmallVector<AffineExpr, 4> subExprs;
-    subExprs.reserve(map.getNumResults());
-    for (auto ee : map.getResults())
-      subExprs.push_back(ee - e);
-    MLIRContext *ctx = minOp.getContext();
-    AffineMap subMap = simplifyAffineMap(
-        AffineMap::get(map.getNumDims(), map.getNumSymbols(), subExprs, ctx));
-    LLVM_DEBUG(DBGS() << "simplified subMap: " << subMap << "\n");
-    if (llvm::any_of(subMap.getResults(), isNonPositive))
-      continue;
-
-    // Static min found.
-    if (auto cst = e.dyn_cast<AffineConstantExpr>()) {
-      rewriter.replaceOpWithNewOp<ConstantIndexOp>(minOp, cst.getValue());
-    } else {
-      auto resultMap = AffineMap::get(0, map.getNumSymbols(), {e}, ctx);
-      SmallVector<Value> resultOperands = affineMapAndOperands.dims;
-      llvm::append_range(resultOperands, affineMapAndOperands.symbols);
-      canonicalizeMapAndOperands(&resultMap, &resultOperands);
-      resultMap = simplifyAffineMap(resultMap);
-      rewriter.replaceOpWithNewOp<AffineApplyOp>(minOp, resultMap,
-                                                 resultOperands);
-    }
-    return success();
-  }
-
-  return failure();
-}
-
 static SmallVector<StringRef> getNParallelLoopsAttrs(unsigned nParallelLoops) {
   return SmallVector<StringRef>(nParallelLoops, getParallelIteratorTypeName());
 }
 
-/// Rewrite a PadTensorOp into a sequence of InitTensorOp, FillOp (to initialize
-/// with pad_val) and GenericOp (to copy contents).
-LogicalResult PadTensorOpTransformationPattern::matchAndRewrite(
-    linalg::PadTensorOp padOp, PatternRewriter &rewriter) const {
+/// Rewrite a tensor::PadOp into a sequence of InitTensorOp, FillOp (to
+/// initialize with pad_val) and GenericOp (to copy contents).
+LogicalResult
+PadOpTransformationPattern::matchAndRewrite(tensor::PadOp padOp,
+                                            PatternRewriter &rewriter) const {
 
   auto inputShapedType = padOp.source().getType().cast<ShapedType>();
   auto resultShapedType = padOp.result().getType().cast<ShapedType>();
@@ -657,9 +832,8 @@ LogicalResult PadTensorOpTransformationPattern::matchAndRewrite(
   //   1. A BBarg from a different block.
   //   2. A value defined outside of the current block.
   Block &block = padOp.region().front();
-  auto yieldOp = cast<YieldOp>(block.getTerminator());
-  assert(yieldOp.getNumOperands() == 1 && "expected single operand yield");
-  Value padValue = yieldOp.values().front();
+  auto yieldOp = cast<tensor::YieldOp>(block.getTerminator());
+  Value padValue = yieldOp.value();
   Operation *definingOp = padValue.getDefiningOp();
   if (definingOp && definingOp->getBlock() == &block)
     return failure();
@@ -669,13 +843,15 @@ LogicalResult PadTensorOpTransformationPattern::matchAndRewrite(
   // Create tensor with the padded shape
   Location loc = padOp.getLoc();
   SmallVector<Value> indices(resultShapedType.getRank(),
-                             rewriter.create<ConstantIndexOp>(loc, 0));
+                             rewriter.create<arith::ConstantIndexOp>(loc, 0));
   Value initTensor = rewriter.create<InitTensorOp>(
       loc, resultShapedType.getShape(), resultShapedType.getElementType());
 
   // Initialize tensor with the pad value
-  Value tmpTensor =
-      rewriter.create<linalg::FillOp>(loc, padValue, initTensor).result();
+  Value tmpTensor = rewriter
+                        .create<linalg::FillOp>(loc, ValueRange{padValue},
+                                                ValueRange{initTensor})
+                        .result();
 
   // Copy original contents into new tensor
   // Uses linalg.generic, but could be done with tensor.insert_slice
@@ -702,8 +878,8 @@ LogicalResult PadTensorOpTransformationPattern::matchAndRewrite(
 
 /// Filling `dest` using FillOp constant padding value if possible.
 /// Otherwise, generate a tensor::GenerateOp.
-Value GeneralizePadTensorOpPattern::createFillOrGenerateOp(
-    PatternRewriter &rewriter, PadTensorOp padOp, Value dest,
+Value GeneralizePadOpPattern::createFillOrGenerateOp(
+    PatternRewriter &rewriter, tensor::PadOp padOp, Value dest,
     const SmallVector<Value> &dynSizes) const {
   auto padValue = padOp.getConstantPaddingValue();
   if (padValue)
@@ -715,26 +891,18 @@ Value GeneralizePadTensorOpPattern::createFillOrGenerateOp(
   // Copy region to new op.
   BlockAndValueMapping bvm;
   padOp.region().cloneInto(&generateOp.getRegion(), bvm);
-  // Rewrite linalg::YieldOp to tensor::YieldOp.
-  OpBuilder::InsertionGuard guard(rewriter);
-  auto yieldOp =
-      dyn_cast<linalg::YieldOp>(generateOp.getRegion().front().getTerminator());
-  assert(yieldOp && "malformed PadTensorOp: expected YieldOp terminator");
-  assert(yieldOp.values().size() == 1);
-  rewriter.setInsertionPoint(yieldOp);
-  rewriter.replaceOpWithNewOp<tensor::YieldOp>(yieldOp, yieldOp.values()[0]);
   return generateOp;
 }
 
 LogicalResult
-GeneralizePadTensorOpPattern::matchAndRewrite(PadTensorOp padOp,
-                                              PatternRewriter &rewriter) const {
+GeneralizePadOpPattern::matchAndRewrite(tensor::PadOp padOp,
+                                        PatternRewriter &rewriter) const {
   // Given an OpFoldResult, return an index-typed value.
   auto getIdxValue = [&](OpFoldResult ofr) {
     if (auto val = ofr.dyn_cast<Value>())
       return val;
     return rewriter
-        .create<ConstantIndexOp>(
+        .create<arith::ConstantIndexOp>(
             padOp.getLoc(), ofr.get<Attribute>().cast<IntegerAttr>().getInt())
         .getResult();
   };
@@ -749,9 +917,9 @@ GeneralizePadTensorOpPattern::matchAndRewrite(PadTensorOp padOp,
       auto srcSize = rewriter.createOrFold<tensor::DimOp>(padOp.getLoc(),
                                                           padOp.source(), dim);
       // Add low and high padding value.
-      auto plusLow = rewriter.createOrFold<AddIOp>(
+      auto plusLow = rewriter.createOrFold<arith::AddIOp>(
           padOp.getLoc(), srcSize, getIdxValue(padOp.getMixedLowPad()[dim]));
-      auto plusHigh = rewriter.createOrFold<AddIOp>(
+      auto plusHigh = rewriter.createOrFold<arith::AddIOp>(
           padOp.getLoc(), plusLow, getIdxValue(padOp.getMixedHighPad()[dim]));
       dynSizes.push_back(plusHigh);
     }
@@ -767,10 +935,10 @@ GeneralizePadTensorOpPattern::matchAndRewrite(PadTensorOp padOp,
   if (optimizeCopyFn && optimizeCopyFn(rewriter, padOp, fill).succeeded())
     return success();
 
-  // PadTensorOps cannot be optimized. Generate a InsertSliceOp instead
+  // tensor::PadOps cannot be optimized. Generate a InsertSliceOp instead
   // for copying the PadOp source.
   auto sourceType = padOp.getSourceType();
-  // Compute size of source of PadTensorOp.
+  // Compute size of source of tensor::PadOp.
   SmallVector<OpFoldResult> srcSizes;
   for (unsigned dim = 0; dim < sourceType.getRank(); ++dim) {
     if (sourceType.isDynamicDim(dim)) {
@@ -789,245 +957,184 @@ GeneralizePadTensorOpPattern::matchAndRewrite(PadTensorOp padOp,
   return success();
 }
 
-/// Given an OpFoldResult, return a Value. If the OpFoldResult is an Attribute,
-/// it must be of type Integer.
-static Value asValue(OpBuilder &builder, Location loc, OpFoldResult ofr) {
-  if (auto val = ofr.dyn_cast<Value>())
-    return val;
-  auto intVal = getConstantIntValue(ofr);
-  assert(intVal && "expected Value or IntegerAttr");
-  return builder.create<ConstantIndexOp>(loc, *intVal);
-}
-
 LogicalResult ExtractSliceOfPadTensorSwapPattern::matchAndRewrite(
     tensor::ExtractSliceOp sliceOp, PatternRewriter &rewriter) const {
-  auto padOp = sliceOp.source().getDefiningOp<PadTensorOp>();
-  if (!padOp)
-    return failure();
-  // Only unit stride supported.
   if (!sliceOp.hasUnitStride())
     return failure();
-  // Only constant padding value supported.
-  Value padValue = padOp.getConstantPaddingValue();
-  if (!padValue)
+
+  auto padOp = sliceOp.source().getDefiningOp<tensor::PadOp>();
+  if (!padOp)
     return failure();
 
-  // Helper variables and functions for various arithmetic operations. These are
-  // used extensively for computing new offset/length and padding values.
-  Location loc = sliceOp.getLoc();
-  AffineExpr dim0, dim1;
-  bindDims(rewriter.getContext(), dim0, dim1);
-  // Add two integers.
-  auto addMap = AffineMap::get(2, 0, {dim0 + dim1});
-  auto add = [&](Value v1, Value v2) {
-    return rewriter.createOrFold<AffineApplyOp>(loc, addMap,
-                                                ValueRange{v1, v2});
-  };
-  // Subtract two integers.
-  auto subMap = AffineMap::get(2, 0, {dim0 - dim1});
-  auto sub = [&](Value v1, Value v2) {
-    return rewriter.createOrFold<AffineApplyOp>(loc, subMap,
-                                                ValueRange{v1, v2});
-  };
-  // Take the minimum of two integers.
-  auto idMap = AffineMap::getMultiDimIdentityMap(2, rewriter.getContext());
-  auto min = [&](Value v1, Value v2) {
-    return rewriter.createOrFold<AffineMinOp>(loc, idMap, ValueRange{v1, v2});
-  };
-  // Take the maximum of two integers.
-  auto max = [&](Value v1, Value v2) {
-    return rewriter.createOrFold<AffineMaxOp>(loc, idMap, ValueRange{v1, v2});
-  };
-  // Zero index-typed integer.
-  auto zero = rewriter.create<ConstantIndexOp>(loc, 0);
-
-  // Helper function for filling static/dynamic low/high padding indices vectors
-  // of PadTensorOp.
-  auto appendIndex = [&](Value val, SmallVector<Value> &dynIndices,
-                         SmallVector<int64_t> &staticIndices) {
-    if (auto constInt = getConstantIntValue(val)) {
-      staticIndices.push_back(*constInt);
-    } else {
-      staticIndices.push_back(ShapedType::kDynamicSize);
-      dynIndices.push_back(val);
-    }
-  };
-
-  // Compute new offsets, lengths, low padding, high padding.
-  SmallVector<OpFoldResult> newOffsets, newLengths, newStrides;
-  SmallVector<Value> newLows, newHighs;
-  SmallVector<int64_t> staticNewLows, staticNewHighs;
-  // Set to true if the original data source is not read at all.
-  bool hasZeroLen = false;
-  // Same as hasZeroLen, but for dynamic dimension sizes. This condition
-  // is true if the original data source turns out to be unused at runtime.
-  Value dynHasZeroLenCond;
-
-  int64_t rank = padOp.getSourceType().getRank();
-  for (unsigned dim = 0; dim < rank; ++dim) {
-    auto low = asValue(rewriter, loc, padOp.getMixedLowPad()[dim]);
-    bool hasLowPad = getConstantIntValue(low) != static_cast<int64_t>(0);
-    auto high = asValue(rewriter, loc, padOp.getMixedHighPad()[dim]);
-    bool hasHighPad = getConstantIntValue(high) != static_cast<int64_t>(0);
-    auto offset = asValue(rewriter, loc, sliceOp.getMixedOffsets()[dim]);
-    auto length = asValue(rewriter, loc, sliceOp.getMixedSizes()[dim]);
-    auto srcSize =
-        rewriter.createOrFold<tensor::DimOp>(loc, padOp.source(), dim);
-
-    // The new amount of low padding is `low - offset`. Except for the case
-    // where none of the low padding is read. In that case, the new amount of
-    // low padding is zero.
-    //
-    // Optimization: If low = 0, then newLow = 0.
-    Value newLow = hasLowPad ? max(zero, sub(low, offset)) : zero;
-    appendIndex(newLow, newLows, staticNewLows);
-
-    // Start reading the data from position `offset - low`. Since the original
-    // read may have started in the low padding zone, this value could be
-    // negative. Therefore, start reading from:
-    //
-    // max(offset - low, 0)
-    //
-    // The original read could also have started in the high padding zone.
-    // In that case, set the offset to the end of source tensor. The new
-    // ExtractSliceOp length will be zero in that case. (Effectively reading no
-    // data from the source.)
-    //
-    // Optimization: If low = 0, then the formula can be simplified.
-    Value newOffset = hasLowPad ? min(max(sub(offset, low), zero), srcSize)
-                                : min(offset, srcSize);
-    newOffsets.push_back(getAsOpFoldResult(newOffset));
-
-    // The original ExtractSliceOp was reading until position `offset + length`.
-    // Therefore, the corresponding position within the source tensor is:
-    //
-    // offset + length - low
-    //
-    // In case the original ExtractSliceOp stopped reading within the low
-    // padding zone, this value can be negative. In that case, the end position
-    // of the read should be zero. (Similar to newOffset.)
-    //
-    // The original read could also have stopped in the high padding zone.
-    // In that case, set the end positition of the read should be the end of the
-    // source tensor. (Similar to newOffset.)
-    //
-    // endLoc = min(max(offset - low + length, 0), srcSize)
-    //
-    // The new ExtractSliceOp length is `endLoc - newOffset`.
-    //
-    // Optimization: If low = 0, then the formula can be simplified.
-    Value endLoc = hasLowPad
-                       ? min(max(add(sub(offset, low), length), zero), srcSize)
-                       : min(add(offset, length), srcSize);
-    Value newLength = sub(endLoc, newOffset);
-    newLengths.push_back(getAsOpFoldResult(newLength));
-
-    // Check if newLength is zero. In that case, no SubTensorOp should be
-    // executed.
-    if (auto newLengthInt = getConstantIntValue(newLength)) {
-      hasZeroLen |= *newLengthInt == 0;
-    } else {
-      Value check = rewriter.create<CmpIOp>(
-          loc, CmpIPredicate::eq, newLength, zero);
-      dynHasZeroLenCond =
-          dynHasZeroLenCond
-              ? rewriter.create<OrOp>(loc, check, dynHasZeroLenCond)
-              : check;
-    }
-
-    // The amount of high padding is simply the number of elements remaining,
-    // so that the result has the same length as the original ExtractSliceOp.
-    // As an optimization, if the original high padding is zero, then the new
-    // high padding must also be zero.
-    Value newHigh = hasHighPad ? sub(sub(length, newLength), newLow) : zero;
-    appendIndex(newHigh, newHighs, staticNewHighs);
-
-    // Only unit stride supported.
-    newStrides.push_back(rewriter.getIndexAttr(1));
+  bool zeroSliceGuard = true;
+  if (controlFn) {
+    if (Optional<bool> control = controlFn(sliceOp))
+      zeroSliceGuard = control.getValue();
+    else
+      return failure();
   }
 
-  // Insert cast to ensure that types match. (May be folded away.)
-  auto castResult = [&](Value val) -> Value {
-    auto castOp = rewriter.create<tensor::CastOp>(loc, sliceOp.getType(), val);
-    return castOp;
-  };
-
-  // In cases where the original data source is unused: Emit a GenerateOp and
-  // do not generate a SliceOp. (The result shape of the SliceOp would
-  // have a dimension of size 0, the semantics of which is unclear.)
-  auto createGenerateOp = [&]() {
-    // The shape of the GenerateOp is the same as the existing SliceOp.
-    RankedTensorType type = sliceOp.getType();
-    SmallVector<Value> dynDims;
-    for (unsigned i = 0; i < type.getRank(); ++i) {
-      if (type.isDynamicDim(i))
-        dynDims.push_back(asValue(rewriter, loc, sliceOp.getMixedSizes()[i]));
-    }
-
-    // Create GenerateOp.
-    auto generateOp  = rewriter.create<tensor::GenerateOp>(loc, type, dynDims);
-
-    // Copy region to new op.
-    BlockAndValueMapping bvm;
-    padOp.region().cloneInto(&generateOp.getRegion(), bvm);
-    // Rewrite linalg::YieldOp to tensor::YieldOp.
-    {
-      OpBuilder::InsertionGuard guard(rewriter);
-      auto yieldOp = dyn_cast<linalg::YieldOp>(
-          generateOp.getRegion().front().getTerminator());
-      assert(yieldOp && "malformed PadTensorOp: expected YieldOp terminator");
-      assert(yieldOp.values().size() == 1);
-      rewriter.setInsertionPoint(yieldOp);
-      rewriter.replaceOpWithNewOp<tensor::YieldOp>(
-          yieldOp, yieldOp.values()[0]);
-    }
-
-    return castResult(generateOp);
-  };
-
-  // Emit a SliceOp and a PadTensorOp. Should not be used in cases where
-  // the result shape of the new SliceOp has a zero dimension.
-  auto createPadTensorOfSubTensor = [&]() {
-    // Create pad_tensor(subtensor(x)).
-    auto newSliceOp = rewriter.create<tensor::ExtractSliceOp>(
-        loc, padOp.source(), newOffsets, newLengths, newStrides);
-    auto newPadTensorOp = rewriter.create<PadTensorOp>(
-        loc, newSliceOp, staticNewLows, staticNewHighs, newLows, newHighs);
-
-    // Copy region to new PadTensorOp.
-    BlockAndValueMapping bvm;
-    padOp.region().cloneInto(&newPadTensorOp.getRegion(), bvm);
-
-    // Cast result and return.
-    return castResult(newPadTensorOp);
-  };
-
-  // Rewrite subtensor(pad_tensor(x)) into a GenerateOp it is statically known
-  // that the original data source x is not used.
-  if (hasZeroLen) {
-    rewriter.replaceOp(sliceOp, createGenerateOp());
-    return success();
-  }
-
-  // If there are dynamic dimensions: Generate an scf.if check to avoid creating
-  // SliceOps with result dimensions of size 0 at runtime.
-  if (dynHasZeroLenCond) {
-    auto result = rewriter.create<scf::IfOp>(
-        loc, sliceOp.getType(), dynHasZeroLenCond,
-        /*thenBuilder=*/
-        [&](OpBuilder &b, Location loc) {
-          b.create<scf::YieldOp>(loc, createGenerateOp());
-        },
-        /*elseBuilder=*/
-        [&](OpBuilder &b, Location loc) {
-          b.create<scf::YieldOp>(loc, createPadTensorOfSubTensor());
-        });
-    rewriter.replaceOp(sliceOp, result.getResult(0));
-    return success();
-  }
-
+  Operation *tiledPadOp =
+      tensor::bubbleUpPadSlice(rewriter, padOp, sliceOp.getMixedOffsets(),
+                               sliceOp.getMixedSizes(), zeroSliceGuard);
   // All shapes are static and the data source is actually used. Rewrite into
-  // pad_tensor(subtensor(x)).
-  rewriter.replaceOp(sliceOp, createPadTensorOfSubTensor());
+  // pad(extract_slice(x)).
+  rewriter.replaceOp(sliceOp, tiledPadOp->getResults());
   return success();
+}
+
+// The following are patterns for downscaling convolution ops with size-1
+// window dimensions.
+//
+// Note that we'd eventually want to write such transformations in a generic
+// way, e.g., converting to linalg.generic, removing the size-1 dimensions,
+// and then turning back to named ops. But for now it's fine to have a few
+// patterns matching special ops to get started.
+
+FailureOr<Conv1DNwcWcfOp>
+DownscaleSizeOneWindowed2DConvolution::returningMatchAndRewrite(
+    linalg::Conv2DNhwcHwcfOp convOp, PatternRewriter &rewriter) const {
+  if (failed(filter.checkAndNotify(rewriter, convOp)))
+    return failure();
+  if (convOp.hasBufferSemantics())
+    return failure(); // To be implemented.
+
+  Value input = convOp.inputs().front();
+  Value kernel = convOp.inputs().back();
+  Value output = convOp.outputs().front();
+
+  auto inputType = input.getType().dyn_cast<RankedTensorType>();
+  auto kernelType = kernel.getType().dyn_cast<RankedTensorType>();
+  auto outputType = output.getType().dyn_cast<RankedTensorType>();
+
+  auto kernelShape = kernelType.getShape();
+  auto outputShape = outputType.getShape();
+
+  // Only handle the case where at least one of the window dimensions is
+  // of size 1. Other cases can rely on tiling to reduce to such cases.
+  int64_t khSize = kernelShape[0], kwSize = kernelShape[1];
+  int64_t ohSize = outputShape[1], owSize = outputShape[2];
+  bool removeH = (khSize == 1 && ohSize == 1);
+  bool removeW = (kwSize == 1 && owSize == 1);
+  if (!removeH && !removeW)
+    return failure();
+
+  // Get new shapes and types for all operands by removing the size-1
+  // dimension.
+  using RTTBuilder = RankedTensorType::Builder;
+  RankedTensorType newInputType =
+      RTTBuilder(inputType).dropDim((removeH ? 1 : 2));
+  RankedTensorType newKernelType =
+      RTTBuilder(kernelType).dropDim((removeH ? 0 : 1));
+  RankedTensorType newOutputType =
+      RTTBuilder(outputType).dropDim(removeH ? 1 : 2);
+
+  // Rank-reduce operands.
+  Location loc = convOp.getLoc();
+  Value newInput = tensor::createCanonicalRankReducingExtractSliceOp(
+      rewriter, loc, input, newInputType);
+  Value newKernel = tensor::createCanonicalRankReducingExtractSliceOp(
+      rewriter, loc, kernel, newKernelType);
+  Value newOutput = tensor::createCanonicalRankReducingExtractSliceOp(
+      rewriter, loc, output, newOutputType);
+
+  // Rank-reduce strides and dilations too.
+  // TODO: dropDim 1-liner helper.
+  auto strides = llvm::to_vector<4>(convOp.strides().getValues<int64_t>());
+  strides.erase(strides.begin() + (removeH ? 0 : 1));
+  auto stridesAttr = rewriter.getI64VectorAttr(strides);
+
+  auto dilations = llvm::to_vector<4>(convOp.dilations().getValues<int64_t>());
+  dilations.erase(dilations.begin() + (removeH ? 0 : 1));
+  auto dilationsAttr = rewriter.getI64VectorAttr(dilations);
+
+  auto conv1DOp = rewriter.create<linalg::Conv1DNwcWcfOp>(
+      loc, newOutputType, ValueRange{newInput, newKernel},
+      ValueRange{newOutput}, stridesAttr, dilationsAttr);
+
+  // Insert back.
+  Value inserted = tensor::createCanonicalRankReducingInsertSliceOp(
+      rewriter, loc, conv1DOp.getResult(0), output);
+  rewriter.replaceOp(convOp, inserted);
+
+  filter.replaceLinalgTransformationFilter(rewriter, conv1DOp);
+  return conv1DOp;
+}
+
+FailureOr<DepthwiseConv1DNwcWcOp>
+DownscaleDepthwiseConv2DNhwcHwcOp::returningMatchAndRewrite(
+    DepthwiseConv2DNhwcHwcOp convOp, PatternRewriter &rewriter) const {
+  if (failed(filter.checkAndNotify(rewriter, convOp)))
+    return failure();
+  if (convOp.hasBufferSemantics())
+    return failure(); // To be implemented.
+
+  Value input = convOp.inputs().front();
+  Value kernel = convOp.inputs().back();
+  Value output = convOp.outputs().front();
+
+  auto inputType = input.getType().dyn_cast<RankedTensorType>();
+  auto kernelType = kernel.getType().dyn_cast<RankedTensorType>();
+  auto outputType = output.getType().dyn_cast<RankedTensorType>();
+
+  auto kernelShape = kernelType.getShape();
+  auto outputShape = outputType.getShape();
+
+  // Only handle the case where at least one of the window dimensions is
+  // of size 1. Other cases can rely on tiling to reduce to such cases.
+  int64_t khSize = kernelShape[0], kwSize = kernelShape[1];
+  int64_t ohSize = outputShape[1], owSize = outputShape[2];
+  bool removeH = (khSize == 1 && ohSize == 1);
+  bool removeW = (kwSize == 1 && owSize == 1);
+  if (!removeH && !removeW)
+    return failure();
+
+  // Get new shapes and types for all operands by removing the size-1
+  // dimension.
+  using RTTBuilder = RankedTensorType::Builder;
+  RankedTensorType newInputType =
+      RTTBuilder(inputType).dropDim((removeH ? 1 : 2));
+  RankedTensorType newKernelType =
+      RTTBuilder(kernelType).dropDim((removeH ? 0 : 1));
+  RankedTensorType newOutputType =
+      RTTBuilder(outputType).dropDim(removeH ? 1 : 2);
+
+  // Rank-reduce operands.
+  Location loc = convOp.getLoc();
+  Value newInput = tensor::createCanonicalRankReducingExtractSliceOp(
+      rewriter, loc, input, newInputType);
+  Value newKernel = tensor::createCanonicalRankReducingExtractSliceOp(
+      rewriter, loc, kernel, newKernelType);
+  Value newOutput = tensor::createCanonicalRankReducingExtractSliceOp(
+      rewriter, loc, output, newOutputType);
+
+  // Rank-reduce strides and dilations too.
+  // TODO: dropDim 1-liner helper.
+  auto strides = llvm::to_vector<4>(convOp.strides().getValues<int64_t>());
+  strides.erase(strides.begin() + (removeH ? 0 : 1));
+  auto stridesAttr = rewriter.getI64VectorAttr(strides);
+
+  auto dilations = llvm::to_vector<4>(convOp.dilations().getValues<int64_t>());
+  dilations.erase(dilations.begin() + (removeH ? 0 : 1));
+  auto dilationsAttr = rewriter.getI64VectorAttr(dilations);
+
+  auto conv1DOp = rewriter.create<DepthwiseConv1DNwcWcOp>(
+      loc, newOutputType, ValueRange{newInput, newKernel},
+      ValueRange{newOutput}, stridesAttr, dilationsAttr);
+
+  // Insert back.
+  Value inserted = tensor::createCanonicalRankReducingInsertSliceOp(
+      rewriter, loc, conv1DOp.getResult(0), output);
+  rewriter.replaceOp(convOp, inserted);
+
+  filter.replaceLinalgTransformationFilter(rewriter, conv1DOp);
+  return conv1DOp;
+}
+
+void linalg::populateDecomposeConvolutionPatterns(
+    RewritePatternSet &patterns, const LinalgTransformationFilter &filter,
+    PatternBenefit benefit) {
+  patterns.add<DownscaleSizeOneWindowed2DConvolution,
+               DownscaleDepthwiseConv2DNhwcHwcOp>(patterns.getContext(), filter,
+                                                  benefit);
 }

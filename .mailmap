@@ -16,7 +16,7 @@
 # Combinations of both are possible too, see
 # https://git-scm.com/docs/gitmailmap for format details.
 #
-# You can commit changes for your own names and  email addresses without review.
+# You can commit changes for your own names and email addresses without review.
 # If you want to add entries for other people, please have them review the
 # addition.
 #
@@ -24,12 +24,14 @@
 
 <compnerd@compnerd.org> <abdulras@fb.com>
 <compnerd@compnerd.org> <abdulras@google.com>
+<hans@hanshq.net> <hans@chromium.org>
 <i@maskray.me> <maskray@google.com>
+<JCTremoulet@gmail.com> <jotrem@microsoft.com>
 <qiucofan@cn.ibm.com> <qiucf@cn.ibm.com>
 <rnk@google.com> <reid@kleckner.net>
 <thakis@chromium.org> <nicolasweber@gmx.de>
-Jon Roelofs <jonathan_roelofs@apple.com> Jon Roelofs <jroelofs@jroelofs.com>
-Jon Roelofs <jonathan_roelofs@apple.com> Jonathan Roelofs <jonathan@codesourcery.com>
-Jon Roelofs <jonathan_roelofs@apple.com> Jonathan Roelofs <jroelofs@jroelofs.com>
+Jon Roelofs <jonathan_roelofs@apple.com> <jonathan@codesourcery.com>
+Jon Roelofs <jonathan_roelofs@apple.com> <jroelofs@jroelofs.com>
+LLVM GN Syncbot <llvmgnsyncbot@gmail.com>
 Martin Storsjö <martin@martin.st>
-Saleem Abdulrasool <compnerd@compnerd.org> <compnerd@compnerd.org>
+Saleem Abdulrasool <compnerd@compnerd.org>

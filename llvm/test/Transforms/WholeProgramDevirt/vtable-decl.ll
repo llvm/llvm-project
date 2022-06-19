@@ -1,5 +1,5 @@
 ; Check that we don't crash when processing declaration with type metadata
-; RUN: opt -S -wholeprogramdevirt -whole-program-visibility %s
+; RUN: opt -S -passes=wholeprogramdevirt -whole-program-visibility %s
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-none-linux-gnu"

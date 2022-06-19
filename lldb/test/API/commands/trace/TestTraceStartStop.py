@@ -6,8 +6,6 @@ from lldbsuite.test.decorators import *
 
 class TestTraceStartStop(TraceIntelPTTestCaseBase):
 
-    mydir = TestBase.compute_mydir(__file__)
-
     def expectGenericHelpMessageForStartCommand(self):
         self.expect("help thread trace start",
             substrs=["Syntax: thread trace start [<trace-options>]"])
@@ -35,18 +33,18 @@ class TestTraceStartStop(TraceIntelPTTestCaseBase):
         self.expect("r")
 
         self.traceStartThread(
-            error=True, threadBufferSize=2000,
-            substrs=["The trace buffer size must be a power of 2", "It was 2000"])
+            error=True, iptTraceSize=2000,
+            substrs=["The intel pt trace size must be a power of 2", "It was 2000"])
 
         self.traceStartThread(
-            error=True, threadBufferSize=5000,
-            substrs=["The trace buffer size must be a power of 2", "It was 5000"])
+            error=True, iptTraceSize=5000,
+            substrs=["The intel pt trace size must be a power of 2", "It was 5000"])
 
         self.traceStartThread(
-            error=True, threadBufferSize=0,
-            substrs=["The trace buffer size must be a power of 2", "It was 0"])
+            error=True, iptTraceSize=0,
+            substrs=["The intel pt trace size must be a power of 2", "It was 0"])
 
-        self.traceStartThread(threadBufferSize=1048576)
+        self.traceStartThread(iptTraceSize=1048576)
 
     @skipIf(oslist=no_match(['linux']), archs=no_match(['i386', 'x86_64']))
     def testSBAPIHelp(self):
@@ -55,7 +53,7 @@ class TestTraceStartStop(TraceIntelPTTestCaseBase):
         self.expect("r")
 
         help = self.getTraceOrCreate().GetStartConfigurationHelp()
-        self.assertIn("threadBufferSize", help)
+        self.assertIn("iptTraceSize", help)
         self.assertIn("processBufferSizeLimit", help)
 
     @skipIf(oslist=no_match(['linux']), archs=no_match(['i386', 'x86_64']))
@@ -114,29 +112,29 @@ class TestTraceStartStop(TraceIntelPTTestCaseBase):
         self.expect("thread trace dump instructions -f",
             patterns=[f'''thread #1: tid = .*
   a.out`main \+ 4 at main.cpp:2
-    \[ 0\] {ADDRESS_REGEX}    movl'''])
+    0: {ADDRESS_REGEX}    movl'''])
 
         # We can reconstruct the instructions up to the second line
         self.expect("n")
         self.expect("thread trace dump instructions -f",
             patterns=[f'''thread #1: tid = .*
   a.out`main \+ 4 at main.cpp:2
-    \[ 0\] {ADDRESS_REGEX}    movl .*
+    0: {ADDRESS_REGEX}    movl .*
   a.out`main \+ 11 at main.cpp:4
-    \[ 1\] {ADDRESS_REGEX}    movl .*
-    \[ 2\] {ADDRESS_REGEX}    jmp  .* ; <\+28> at main.cpp:4
-    \[ 3\] {ADDRESS_REGEX}    cmpl .*
-    \[ 4\] {ADDRESS_REGEX}    jle  .* ; <\+20> at main.cpp:5'''])
+    1: {ADDRESS_REGEX}    movl .*
+    2: {ADDRESS_REGEX}    jmp  .* ; <\+28> at main.cpp:4
+    3: {ADDRESS_REGEX}    cmpl .*
+    4: {ADDRESS_REGEX}    jle  .* ; <\+20> at main.cpp:5'''])
 
         self.expect("thread trace dump instructions",
             patterns=[f'''thread #1: tid = .*
   a.out`main \+ 32 at main.cpp:4
-    \[  0\] {ADDRESS_REGEX}    jle  .* ; <\+20> at main.cpp:5
-    \[ -1\] {ADDRESS_REGEX}    cmpl .*
-    \[ -2\] {ADDRESS_REGEX}    jmp  .* ; <\+28> at main.cpp:4
-    \[ -3\] {ADDRESS_REGEX}    movl .*
+    4: {ADDRESS_REGEX}    jle  .* ; <\+20> at main.cpp:5
+    3: {ADDRESS_REGEX}    cmpl .*
+    2: {ADDRESS_REGEX}    jmp  .* ; <\+28> at main.cpp:4
+    1: {ADDRESS_REGEX}    movl .*
   a.out`main \+ 4 at main.cpp:2
-    \[ -4\] {ADDRESS_REGEX}    movl .* '''])
+    0: {ADDRESS_REGEX}    movl .* '''])
 
         # We stop tracing
         self.expect("thread trace stop")
@@ -152,12 +150,12 @@ class TestTraceStartStop(TraceIntelPTTestCaseBase):
         self.expect("thread trace dump instructions -f",
             patterns=[f'''thread #1: tid = .*
   a.out`main \+ 20 at main.cpp:5
-    \[ 0\] {ADDRESS_REGEX}    xorl'''])
+    0: {ADDRESS_REGEX}    xorl'''])
 
         self.expect("thread trace dump instructions",
             patterns=[f'''thread #1: tid = .*
   a.out`main \+ 20 at main.cpp:5
-    \[  0\] {ADDRESS_REGEX}    xorl'''])
+    0: {ADDRESS_REGEX}    xorl'''])
 
         self.expect("c")
         # Now the process has finished, so the commands should fail
@@ -166,3 +164,16 @@ class TestTraceStartStop(TraceIntelPTTestCaseBase):
 
         self.expect("thread trace stop", error=True,
             substrs=["error: Process must be launched"])
+
+        # We should be able to trace the program if we relaunch it
+        # For this, we'll trace starting at a different point in the new
+        # process.
+        self.expect("breakpoint disable")
+        self.expect("b main.cpp:4")
+        self.expect("r")
+        self.expect("thread trace start")
+        # We can reconstruct the single instruction executed in the first line
+        self.expect("si")
+        self.expect("thread trace dump instructions -c 1",
+            patterns=[f'''thread #1: tid = .*
+  a.out`main \+ 11 at main.cpp:4'''])

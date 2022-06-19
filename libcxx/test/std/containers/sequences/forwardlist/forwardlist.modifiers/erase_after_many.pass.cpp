@@ -12,6 +12,7 @@
 
 #include <forward_list>
 #include <cassert>
+#include <iterator>
 
 #include "test_macros.h"
 #include "min_allocator.h"
@@ -24,65 +25,65 @@ int main(int, char**)
         const T t[] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9};
         C c(std::begin(t), std::end(t));
 
-        C::iterator i = c.erase_after(next(c.cbefore_begin(), 4), next(c.cbefore_begin(), 4));
-        assert(i == next(c.cbefore_begin(), 4));
-        assert(distance(c.begin(), c.end()) == 10);
-        assert(*next(c.begin(), 0) == 0);
-        assert(*next(c.begin(), 1) == 1);
-        assert(*next(c.begin(), 2) == 2);
-        assert(*next(c.begin(), 3) == 3);
-        assert(*next(c.begin(), 4) == 4);
-        assert(*next(c.begin(), 5) == 5);
-        assert(*next(c.begin(), 6) == 6);
-        assert(*next(c.begin(), 7) == 7);
-        assert(*next(c.begin(), 8) == 8);
-        assert(*next(c.begin(), 9) == 9);
+        C::iterator i = c.erase_after(std::next(c.cbefore_begin(), 4), std::next(c.cbefore_begin(), 4));
+        assert(i == std::next(c.cbefore_begin(), 4));
+        assert(std::distance(c.begin(), c.end()) == 10);
+        assert(*std::next(c.begin(), 0) == 0);
+        assert(*std::next(c.begin(), 1) == 1);
+        assert(*std::next(c.begin(), 2) == 2);
+        assert(*std::next(c.begin(), 3) == 3);
+        assert(*std::next(c.begin(), 4) == 4);
+        assert(*std::next(c.begin(), 5) == 5);
+        assert(*std::next(c.begin(), 6) == 6);
+        assert(*std::next(c.begin(), 7) == 7);
+        assert(*std::next(c.begin(), 8) == 8);
+        assert(*std::next(c.begin(), 9) == 9);
 
-        i = c.erase_after(next(c.cbefore_begin(), 2), next(c.cbefore_begin(), 5));
-        assert(i == next(c.begin(), 2));
-        assert(distance(c.begin(), c.end()) == 8);
-        assert(*next(c.begin(), 0) == 0);
-        assert(*next(c.begin(), 1) == 1);
-        assert(*next(c.begin(), 2) == 4);
-        assert(*next(c.begin(), 3) == 5);
-        assert(*next(c.begin(), 4) == 6);
-        assert(*next(c.begin(), 5) == 7);
-        assert(*next(c.begin(), 6) == 8);
-        assert(*next(c.begin(), 7) == 9);
+        i = c.erase_after(std::next(c.cbefore_begin(), 2), std::next(c.cbefore_begin(), 5));
+        assert(i == std::next(c.begin(), 2));
+        assert(std::distance(c.begin(), c.end()) == 8);
+        assert(*std::next(c.begin(), 0) == 0);
+        assert(*std::next(c.begin(), 1) == 1);
+        assert(*std::next(c.begin(), 2) == 4);
+        assert(*std::next(c.begin(), 3) == 5);
+        assert(*std::next(c.begin(), 4) == 6);
+        assert(*std::next(c.begin(), 5) == 7);
+        assert(*std::next(c.begin(), 6) == 8);
+        assert(*std::next(c.begin(), 7) == 9);
 
-        i = c.erase_after(next(c.cbefore_begin(), 2), next(c.cbefore_begin(), 3));
-        assert(i == next(c.begin(), 2));
-        assert(distance(c.begin(), c.end()) == 8);
-        assert(*next(c.begin(), 0) == 0);
-        assert(*next(c.begin(), 1) == 1);
-        assert(*next(c.begin(), 2) == 4);
-        assert(*next(c.begin(), 3) == 5);
-        assert(*next(c.begin(), 4) == 6);
-        assert(*next(c.begin(), 5) == 7);
-        assert(*next(c.begin(), 6) == 8);
-        assert(*next(c.begin(), 7) == 9);
+        i = c.erase_after(std::next(c.cbefore_begin(), 2), std::next(c.cbefore_begin(), 3));
+        assert(i == std::next(c.begin(), 2));
+        assert(std::distance(c.begin(), c.end()) == 8);
+        assert(*std::next(c.begin(), 0) == 0);
+        assert(*std::next(c.begin(), 1) == 1);
+        assert(*std::next(c.begin(), 2) == 4);
+        assert(*std::next(c.begin(), 3) == 5);
+        assert(*std::next(c.begin(), 4) == 6);
+        assert(*std::next(c.begin(), 5) == 7);
+        assert(*std::next(c.begin(), 6) == 8);
+        assert(*std::next(c.begin(), 7) == 9);
 
-        i = c.erase_after(next(c.cbefore_begin(), 5), next(c.cbefore_begin(), 9));
+        i = c.erase_after(std::next(c.cbefore_begin(), 5), std::next(c.cbefore_begin(), 9));
         assert(i == c.end());
-        assert(distance(c.begin(), c.end()) == 5);
-        assert(*next(c.begin(), 0) == 0);
-        assert(*next(c.begin(), 1) == 1);
-        assert(*next(c.begin(), 2) == 4);
-        assert(*next(c.begin(), 3) == 5);
-        assert(*next(c.begin(), 4) == 6);
+        assert(std::distance(c.begin(), c.end()) == 5);
+        assert(*std::next(c.begin(), 0) == 0);
+        assert(*std::next(c.begin(), 1) == 1);
+        assert(*std::next(c.begin(), 2) == 4);
+        assert(*std::next(c.begin(), 3) == 5);
+        assert(*std::next(c.begin(), 4) == 6);
 
-        i = c.erase_after(next(c.cbefore_begin(), 0), next(c.cbefore_begin(), 2));
+        i = c.erase_after(std::next(c.cbefore_begin(), 0), std::next(c.cbefore_begin(), 2));
         assert(i == c.begin());
-        assert(distance(c.begin(), c.end()) == 4);
-        assert(*next(c.begin(), 0) == 1);
-        assert(*next(c.begin(), 1) == 4);
-        assert(*next(c.begin(), 2) == 5);
-        assert(*next(c.begin(), 3) == 6);
+        assert(std::distance(c.begin(), c.end()) == 4);
+        assert(*std::next(c.begin(), 0) == 1);
+        assert(*std::next(c.begin(), 1) == 4);
+        assert(*std::next(c.begin(), 2) == 5);
+        assert(*std::next(c.begin(), 3) == 6);
 
-        i = c.erase_after(next(c.cbefore_begin(), 0), next(c.cbefore_begin(), 5));
+        i = c.erase_after(std::next(c.cbefore_begin(), 0), std::next(c.cbefore_begin(), 5));
         assert(i == c.begin());
         assert(i == c.end());
-        assert(distance(c.begin(), c.end()) == 0);
+        assert(std::distance(c.begin(), c.end()) == 0);
     }
 #if TEST_STD_VER >= 11
     {
@@ -91,65 +92,65 @@ int main(int, char**)
         const T t[] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9};
         C c(std::begin(t), std::end(t));
 
-        C::iterator i = c.erase_after(next(c.cbefore_begin(), 4), next(c.cbefore_begin(), 4));
-        assert(i == next(c.cbefore_begin(), 4));
-        assert(distance(c.begin(), c.end()) == 10);
-        assert(*next(c.begin(), 0) == 0);
-        assert(*next(c.begin(), 1) == 1);
-        assert(*next(c.begin(), 2) == 2);
-        assert(*next(c.begin(), 3) == 3);
-        assert(*next(c.begin(), 4) == 4);
-        assert(*next(c.begin(), 5) == 5);
-        assert(*next(c.begin(), 6) == 6);
-        assert(*next(c.begin(), 7) == 7);
-        assert(*next(c.begin(), 8) == 8);
-        assert(*next(c.begin(), 9) == 9);
+        C::iterator i = c.erase_after(std::next(c.cbefore_begin(), 4), std::next(c.cbefore_begin(), 4));
+        assert(i == std::next(c.cbefore_begin(), 4));
+        assert(std::distance(c.begin(), c.end()) == 10);
+        assert(*std::next(c.begin(), 0) == 0);
+        assert(*std::next(c.begin(), 1) == 1);
+        assert(*std::next(c.begin(), 2) == 2);
+        assert(*std::next(c.begin(), 3) == 3);
+        assert(*std::next(c.begin(), 4) == 4);
+        assert(*std::next(c.begin(), 5) == 5);
+        assert(*std::next(c.begin(), 6) == 6);
+        assert(*std::next(c.begin(), 7) == 7);
+        assert(*std::next(c.begin(), 8) == 8);
+        assert(*std::next(c.begin(), 9) == 9);
 
-        i = c.erase_after(next(c.cbefore_begin(), 2), next(c.cbefore_begin(), 5));
-        assert(i == next(c.begin(), 2));
-        assert(distance(c.begin(), c.end()) == 8);
-        assert(*next(c.begin(), 0) == 0);
-        assert(*next(c.begin(), 1) == 1);
-        assert(*next(c.begin(), 2) == 4);
-        assert(*next(c.begin(), 3) == 5);
-        assert(*next(c.begin(), 4) == 6);
-        assert(*next(c.begin(), 5) == 7);
-        assert(*next(c.begin(), 6) == 8);
-        assert(*next(c.begin(), 7) == 9);
+        i = c.erase_after(std::next(c.cbefore_begin(), 2), std::next(c.cbefore_begin(), 5));
+        assert(i == std::next(c.begin(), 2));
+        assert(std::distance(c.begin(), c.end()) == 8);
+        assert(*std::next(c.begin(), 0) == 0);
+        assert(*std::next(c.begin(), 1) == 1);
+        assert(*std::next(c.begin(), 2) == 4);
+        assert(*std::next(c.begin(), 3) == 5);
+        assert(*std::next(c.begin(), 4) == 6);
+        assert(*std::next(c.begin(), 5) == 7);
+        assert(*std::next(c.begin(), 6) == 8);
+        assert(*std::next(c.begin(), 7) == 9);
 
-        i = c.erase_after(next(c.cbefore_begin(), 2), next(c.cbefore_begin(), 3));
-        assert(i == next(c.begin(), 2));
-        assert(distance(c.begin(), c.end()) == 8);
-        assert(*next(c.begin(), 0) == 0);
-        assert(*next(c.begin(), 1) == 1);
-        assert(*next(c.begin(), 2) == 4);
-        assert(*next(c.begin(), 3) == 5);
-        assert(*next(c.begin(), 4) == 6);
-        assert(*next(c.begin(), 5) == 7);
-        assert(*next(c.begin(), 6) == 8);
-        assert(*next(c.begin(), 7) == 9);
+        i = c.erase_after(std::next(c.cbefore_begin(), 2), std::next(c.cbefore_begin(), 3));
+        assert(i == std::next(c.begin(), 2));
+        assert(std::distance(c.begin(), c.end()) == 8);
+        assert(*std::next(c.begin(), 0) == 0);
+        assert(*std::next(c.begin(), 1) == 1);
+        assert(*std::next(c.begin(), 2) == 4);
+        assert(*std::next(c.begin(), 3) == 5);
+        assert(*std::next(c.begin(), 4) == 6);
+        assert(*std::next(c.begin(), 5) == 7);
+        assert(*std::next(c.begin(), 6) == 8);
+        assert(*std::next(c.begin(), 7) == 9);
 
-        i = c.erase_after(next(c.cbefore_begin(), 5), next(c.cbefore_begin(), 9));
+        i = c.erase_after(std::next(c.cbefore_begin(), 5), std::next(c.cbefore_begin(), 9));
         assert(i == c.end());
-        assert(distance(c.begin(), c.end()) == 5);
-        assert(*next(c.begin(), 0) == 0);
-        assert(*next(c.begin(), 1) == 1);
-        assert(*next(c.begin(), 2) == 4);
-        assert(*next(c.begin(), 3) == 5);
-        assert(*next(c.begin(), 4) == 6);
+        assert(std::distance(c.begin(), c.end()) == 5);
+        assert(*std::next(c.begin(), 0) == 0);
+        assert(*std::next(c.begin(), 1) == 1);
+        assert(*std::next(c.begin(), 2) == 4);
+        assert(*std::next(c.begin(), 3) == 5);
+        assert(*std::next(c.begin(), 4) == 6);
 
-        i = c.erase_after(next(c.cbefore_begin(), 0), next(c.cbefore_begin(), 2));
+        i = c.erase_after(std::next(c.cbefore_begin(), 0), std::next(c.cbefore_begin(), 2));
         assert(i == c.begin());
-        assert(distance(c.begin(), c.end()) == 4);
-        assert(*next(c.begin(), 0) == 1);
-        assert(*next(c.begin(), 1) == 4);
-        assert(*next(c.begin(), 2) == 5);
-        assert(*next(c.begin(), 3) == 6);
+        assert(std::distance(c.begin(), c.end()) == 4);
+        assert(*std::next(c.begin(), 0) == 1);
+        assert(*std::next(c.begin(), 1) == 4);
+        assert(*std::next(c.begin(), 2) == 5);
+        assert(*std::next(c.begin(), 3) == 6);
 
-        i = c.erase_after(next(c.cbefore_begin(), 0), next(c.cbefore_begin(), 5));
+        i = c.erase_after(std::next(c.cbefore_begin(), 0), std::next(c.cbefore_begin(), 5));
         assert(i == c.begin());
         assert(i == c.end());
-        assert(distance(c.begin(), c.end()) == 0);
+        assert(std::distance(c.begin(), c.end()) == 0);
     }
 #endif
 

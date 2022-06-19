@@ -124,7 +124,7 @@ void ClangOpcodesEmitter::EmitInterp(raw_ostream &OS, StringRef N, Record *R) {
     for (size_t I = 0, N = Args.size(); I < N; ++I) {
       OS << "  auto V" << I;
       OS << " = ";
-      OS << "PC.read<" << Args[I]->getValueAsString("Name") << ">();\n";
+      OS << "ReadArg<" << Args[I]->getValueAsString("Name") << ">(S, PC);\n";
     }
 
     // Emit a call to the template method and pass arguments.
@@ -161,8 +161,10 @@ void ClangOpcodesEmitter::EmitDisasm(raw_ostream &OS, StringRef N, Record *R) {
     OS << "  PrintName(\"" << ID << "\");\n";
     OS << "  OS << \"\\t\"";
 
-    for (auto *Arg : R->getValueAsListOfDefs("Args"))
-      OS << " << PC.read<" << Arg->getValueAsString("Name") << ">() << \" \"";
+    for (auto *Arg : R->getValueAsListOfDefs("Args")) {
+      OS << " << ReadArg<" << Arg->getValueAsString("Name") << ">(P, PC)";
+      OS << " << \" \"";
+    }
 
     OS << " << \"\\n\";\n";
     OS << "  continue;\n";

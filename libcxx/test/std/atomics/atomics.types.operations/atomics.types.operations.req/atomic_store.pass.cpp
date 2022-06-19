@@ -5,19 +5,18 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-//
-// UNSUPPORTED: libcpp-has-no-threads
+
 // XFAIL: !non-lockfree-atomics
 
 // <atomic>
 
 // template <class T>
 //     void
-//     atomic_store(volatile atomic<T>* obj, T desr);
+//     atomic_store(volatile atomic<T>*, atomic<T>::value_type) noexcept;
 //
 // template <class T>
 //     void
-//     atomic_store(atomic<T>* obj, T desr);
+//     atomic_store(atomic<T>*, atomic<T>::value_type) noexcept;
 
 #include <atomic>
 #include <type_traits>
@@ -36,6 +35,9 @@ struct TestFn {
     volatile A vt;
     std::atomic_store(&vt, T(2));
     assert(vt == T(2));
+
+    ASSERT_NOEXCEPT(std::atomic_store(&t, T(1)));
+    ASSERT_NOEXCEPT(std::atomic_store(&vt, T(2)));
   }
 };
 

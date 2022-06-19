@@ -49,7 +49,7 @@ v_ffbh_i32_e32 v1, v2
 v_frexp_exp_i32_f64 v1, v[2:3]
 
 // SICI: v_frexp_mant_f64_e32 v[1:2], v[2:3] ; encoding: [0x02,0x7b,0x02,0x7e]
-// VI;   v_frexp_mant_f64_e32 v[1:2], v[2:3] ; encoding: [0x02,0x63,0x02,0x7e]
+// VI:   v_frexp_mant_f64_e32 v[1:2], v[2:3] ; encoding: [0x02,0x63,0x02,0x7e]
 v_frexp_mant_f64 v[1:2], v[2:3]
 
 // SICI: v_fract_f64_e32 v[1:2], v[2:3] ; encoding: [0x02,0x7d,0x02,0x7e]

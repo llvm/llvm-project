@@ -18,11 +18,17 @@
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/IR/ConstantRange.h"
-#include "llvm/IR/Dominators.h"
-#include "llvm/IR/Function.h"
 #include "llvm/IR/PassManager.h"
 
 namespace llvm {
+class DominatorTree;
+class Function;
+class Instruction;
+class LLVMContext;
+template <typename T> class Optional;
+class Type;
+class Value;
+
 class Float2IntPass : public PassInfoMixin<Float2IntPass> {
 public:
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
@@ -36,6 +42,7 @@ private:
   ConstantRange badRange();
   ConstantRange unknownRange();
   ConstantRange validateRange(ConstantRange R);
+  Optional<ConstantRange> calcRange(Instruction *I);
   void walkBackwards();
   void walkForwards();
   bool validateAndTransform();

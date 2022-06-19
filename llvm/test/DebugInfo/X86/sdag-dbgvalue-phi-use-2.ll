@@ -1,4 +1,9 @@
-; RUN: llc -start-after=codegenprepare -stop-before finalize-isel -o - %s | FileCheck %s
+; RUN: llc -start-after=codegenprepare -stop-before finalize-isel -o - %s \
+; RUN:     -experimental-debug-variable-locations=false \
+; RUN: | FileCheck %s --check-prefixes=CHECK,DBGVALUE
+; RUN: llc -start-after=codegenprepare -stop-before finalize-isel -o - %s \
+; RUN:     -experimental-debug-variable-locations=true \
+; RUN: | FileCheck %s --check-prefixes=CHECK,INSTRREF
 
 ; This test case is a modified version of dbg_value_phi_isel1.ll
 ; where the llvm.dbg.value nodes in for.body has been moved.
@@ -27,8 +32,10 @@ for.body.lr.ph:                                   ; preds = %entry
 
 for.cond.cleanup:                                 ; preds = %for.body, %entry
 ; CHECK-LABEL: bb.{{.*}}.for.cond.cleanup:
-; CHECK:      [[REG1:%[0-9]+]]:gr32 = PHI
-; CHECK-NEXT: DBG_VALUE [[REG1]]
+; CHECK:         [[REG1:%[0-9]+]]:gr32 = PHI
+; INSTRREF-SAME:      debug-instr-number 7
+; INSTRREF-NEXT: DBG_INSTR_REF 7, 0
+; DBGVALUE-NEXT: DBG_VALUE [[REG1]]
   %x.0.lcssa = phi i32 [ 9, %entry ], [ %add, %for.body ]
   call void @llvm.dbg.value(metadata i32 %x.0.lcssa, metadata !15, metadata !DIExpression()), !dbg !26
   %2 = bitcast [80 x i32]* %arr to i8*, !dbg !37
@@ -39,22 +46,34 @@ for.cond.cleanup:                                 ; preds = %for.body, %entry
 
 for.body:                                         ; preds = %for.body.lr.ph, %for.body
 ; CHECK-LABEL: bb.{{.*}}.for.body:
-; CHECK:      [[REG2:%[0-9]+]]:gr32 = PHI
-; CHECK-NEXT: [[REG3:%[0-9]+]]:gr32 = PHI
-; CHECK-NEXT: [[REG4:%[0-9]+]]:gr32 = PHI
-; CHECK-NEXT: DBG_VALUE [[REG3]], $noreg, !16
-; CHECK-NEXT: DBG_VALUE 555, $noreg, !17
-; CHECK-NEXT: [[ADDREG:%[0-9]+]]:gr32 = nuw nsw ADD32rr
-; CHECK-NEXT: DBG_VALUE [[REG2]], $noreg, !17
-; CHECK:      [[MULREG:%[0-9]+]]:gr32 = LEA64_32r
-; CHECK-NEXT: DBG_VALUE 777, $noreg, !17
-; XXX: The following DBG_VALUE should have stayed below the INC32r
-; CHECK-NEXT: DBG_VALUE [[MULREG]], $noreg, !16
-; CHECK-NEXT: [[INCREG:%[0-9]+]]:gr32 = nuw nsw INC32r
-; CHECK-NEXT: DBG_VALUE [[INCREG]], $noreg, !17
-; CHECK-NEXT: DBG_VALUE [[ADDREG]], $noreg, !15
-; CHECK-NEXT: implicit-def $eflags,
-; CHECK-NEXT: DBG_VALUE [[REG4]]
+; CHECK:         [[REG2:%[0-9]+]]:gr32 = PHI
+; INSTRREF-SAME:    debug-instr-number 4
+; CHECK-NEXT:    [[REG3:%[0-9]+]]:gr32 = PHI
+; INSTRREF-SAME:    debug-instr-number 3
+; CHECK-NEXT:    [[REG4:%[0-9]+]]:gr32 = PHI
+; INSTRREF-SAME:    debug-instr-number 6
+; INSTRREF-NEXT: DBG_INSTR_REF 3, 0, !16
+; DBGVALUE-NEXT: DBG_VALUE [[REG3]], $noreg, !16
+; CHECK-NEXT:    DBG_VALUE 555, $noreg, !17
+; CHECK-NEXT:    [[ADDREG:%[0-9]+]]:gr32 = nuw nsw ADD32rr
+; INSTRREF-SAME:    debug-instr-number 5
+; INSTRREF-NEXT: DBG_INSTR_REF 4, 0, !17
+; DBGVALUE-NEXT: DBG_VALUE [[REG2]], $noreg, !17
+; CHECK:         [[MULREG:%[0-9]+]]:gr32 = LEA64_32r
+; INSTRREF-SAME:    debug-instr-number 1
+; CHECK-NEXT:    DBG_VALUE 777, $noreg, !17
+;;; XXX: The following DBG_INSTR_REF should have stayed below the INC32r
+; INSTRREF-NEXT: DBG_INSTR_REF 1, 0, !16
+; DBGVALUE-NEXT: DBG_VALUE [[MULREG]], $noreg, !16
+; CHECK-NEXT:    [[INCREG:%[0-9]+]]:gr32 = nuw nsw INC32r
+; INSTRREF-SAME:    debug-instr-number 2
+; INSTRREF-NEXT: DBG_INSTR_REF 2, 0, !17
+; INSTRREF-NEXT: DBG_INSTR_REF 5, 0, !15
+; DBGVALUE-NEXT: DBG_VALUE [[INCREG]], $noreg, !17
+; DBGVALUE-NEXT: DBG_VALUE [[ADDREG]], $noreg, !15
+; CHECK-NEXT:    implicit-def $eflags,
+; INSTRREF-NEXT: DBG_INSTR_REF 6, 0
+; DBGVALUE-NEXT: DBG_VALUE [[REG4]]
   %u.023 = phi i32 [ 0, %for.body.lr.ph ], [ %inc, %for.body ]
   %y.022 = phi i32 [ 13, %for.body.lr.ph ], [ %mul, %for.body ]
   %x.021 = phi i32 [ 9, %for.body.lr.ph ], [ %add, %for.body ]

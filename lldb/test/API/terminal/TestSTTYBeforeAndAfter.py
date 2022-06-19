@@ -7,14 +7,13 @@ from __future__ import print_function
 
 import lldb
 import six
+import sys
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 
 
 class TestSTTYBeforeAndAfter(TestBase):
-
-    mydir = TestBase.compute_mydir(__file__)
 
     @classmethod
     def classCleanup(cls):
@@ -41,11 +40,7 @@ class TestSTTYBeforeAndAfter(TestBase):
         lldb_prompt = "(lldb) "
 
         # So that the child gets torn down after the test.
-        import sys
-        if sys.version_info.major == 3:
-          self.child = pexpect.spawnu('expect')
-        else:
-          self.child = pexpect.spawn('expect')
+        self.child = pexpect.spawnu('expect')
         child = self.child
 
         child.expect(expect_prompt)

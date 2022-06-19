@@ -4,26 +4,7 @@
 
 ; RUN: opt -thinlto-bc -thinlto-split-lto-unit -o %t.o %s
 
-; Legacy PM
 ; RUN: llvm-lto2 run %t.o -save-temps -pass-remarks=. \
-; RUN:   -whole-program-visibility \
-; RUN:   -o %t3 \
-; RUN:   -r=%t.o,test,px \
-; RUN:   -r=%t.o,_ZN1A1nEi,p \
-; RUN:   -r=%t.o,_ZN1B1fEi,p \
-; RUN:   -r=%t.o,_ZN1C1fEi,p \
-; RUN:   -r=%t.o,empty,p \
-; RUN:   -r=%t.o,_ZTV1B, \
-; RUN:   -r=%t.o,_ZTV1C, \
-; RUN:   -r=%t.o,_ZN1A1nEi, \
-; RUN:   -r=%t.o,_ZN1B1fEi, \
-; RUN:   -r=%t.o,_ZN1C1fEi, \
-; RUN:   -r=%t.o,_ZTV1B,px \
-; RUN:   -r=%t.o,_ZTV1C,px 2>&1 | FileCheck %s --check-prefix=REMARK
-; RUN: llvm-dis %t3.1.4.opt.bc -o - | FileCheck %s --check-prefix=CHECK-IR
-
-; New PM
-; RUN: llvm-lto2 run %t.o -save-temps -use-new-pm -pass-remarks=. \
 ; RUN:   -whole-program-visibility \
 ; RUN:   -o %t3 \
 ; RUN:   -r=%t.o,test,px \
@@ -113,7 +94,7 @@ cont2:
   ; CHECK-IR: br i1 {{.*}}, label %trap, label %cont2
 
   ; We still have to call it as virtual.
-  ; CHECK-IR: %call3 = tail call i32 %7
+  ; CHECK-IR: %call3 = tail call i32 %5
   %call3 = tail call i32 %8(%struct.A* nonnull %obj, i32 %call)
   ret i32 %call3
 }

@@ -21,10 +21,6 @@ define i32 @tripcount_11() {
 ; CHECK-NEXT:    br label [[DO_BODY6:%.*]]
 ; CHECK:       for.cond:
 ; CHECK-NEXT:    br i1 true, label [[FOR_COND_1:%.*]], label [[IF_THEN11:%.*]]
-; CHECK:       do.body6:
-; CHECK-NEXT:    br i1 true, label [[FOR_COND:%.*]], label [[IF_THEN11]]
-; CHECK:       if.then11:
-; CHECK-NEXT:    unreachable
 ; CHECK:       for.cond.1:
 ; CHECK-NEXT:    br i1 true, label [[FOR_COND_2:%.*]], label [[IF_THEN11]]
 ; CHECK:       for.cond.2:
@@ -45,6 +41,10 @@ define i32 @tripcount_11() {
 ; CHECK-NEXT:    br i1 true, label [[FOR_COND_10:%.*]], label [[IF_THEN11]]
 ; CHECK:       for.cond.10:
 ; CHECK-NEXT:    ret i32 0
+; CHECK:       do.body6:
+; CHECK-NEXT:    br i1 true, label [[FOR_COND:%.*]], label [[IF_THEN11]]
+; CHECK:       if.then11:
+; CHECK-NEXT:    unreachable
 ;
 do.body6.preheader:
   br label %do.body6

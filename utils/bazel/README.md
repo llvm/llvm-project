@@ -26,9 +26,9 @@ for adding this configuration.
 
 1. `git clone https://github.com/llvm/llvm-project.git; cd llvm-project` if
    you don't have a checkout yet.
-2. Install Bazel at the version indicated by [.bazelversion](./bazelversion),
+2. Install Bazel at the version indicated by [.bazelversion](./.bazelversion),
    following the official instructions, if you don't have it installed yet:
-   https://docs.bazel.build/versions/master/install.html.
+   https://docs.bazel.build/versions/main/install.html.
 3. `cd utils/bazel`
 4. `bazel build --config=generic_clang @llvm-project//...` (if building on Unix
    with Clang). `--config=generic_gcc` and `--config=msvc` are also available.
@@ -45,7 +45,7 @@ build --config=generic_clang
 ```
 
 You can enable
-[disk caching](https://docs.bazel.build/versions/master/remote-caching.html#disk-cache),
+[disk caching](https://docs.bazel.build/versions/main/remote-caching.html#disk-cache),
 which will cache build results
 
 ```.bazelrc
@@ -53,7 +53,7 @@ build --disk_cache=~/.cache/bazel-disk-cache
 ```
 
 You can instruct Bazel to use a ramdisk for its sandboxing operations via
-[--sandbox_base](https://docs.bazel.build/versions/master/command-line-reference.html#flag--sandbox_base),
+[--sandbox_base](https://docs.bazel.build/versions/main/command-line-reference.html#flag--sandbox_base),
 which can help avoid IO bottlenecks for the symlink stragegy used for
 sandboxing. This is especially important with many inputs and many cores (see
 https://github.com/bazelbuild/bazel/issues/11868):
@@ -73,7 +73,30 @@ platform-specific are selected for in defines. Many are also hardcoded to the
 values currently used by all supported configurations. If there is a
 configuration you'd like to use that isn't supported, please send a patch.
 
-# Usage
+# Continuous Testing
+
+A [Buildkite pipeline](https://buildkite.com/llvm-project/upstream-bazel-rbe)
+runs the full Bazel build on every commit to the main branch. Notifications of
+failures are sent to the
+[llvm-bazel-alerts google group](https://groups.google.com/g/llvm-bazel-alerts),
+which anyone is free to join. Currently, the behavior is just to send an email
+on each failure using Buildkite's built-in notification system, so if you
+subscribe, it is highly recommended that you set up email filters or some other
+mechanism to not flood your inbox. More sophisticated notifications, e.g. only
+on status change or routed based on blamelist are TODO (contributions welcome).
+
+# Pre-merge Testing
+
+A Buildkite pipeline runs the full Bazel build as a pre-merge test using the 
+[LLVM pre-merge testing](https://github.com/google/llvm-premerge-checks/). It
+is triggered on all changes to the utils/bazel directory and when the patch
+author is a member of the
+[Bazel Phabricator project](https://reviews.llvm.org/project/members/107/). If
+you use or benefit from the Bazel build, please join the project so that you
+can help keep it green. As a bonus, it runs in under 5 minutes, much faster
+than any of the other pre-merge builds.
+
+# Usage in Downstream Projects
 
 To use in dependent projects using Bazel, you can import LLVM and then use the
 provided configuration rule. See example usage in the `examples/` directory.

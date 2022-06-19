@@ -16,12 +16,13 @@
 #include "mlir/Pass/Pass.h"
 
 namespace mlir {
+class ModuleOp;
 
 std::unique_ptr<Pass> createAsyncParallelForPass();
 
 std::unique_ptr<Pass> createAsyncParallelForPass(bool asyncDispatch,
                                                  int32_t numWorkerThreads,
-                                                 int32_t targetBlockSize);
+                                                 int32_t minTaskSize);
 
 std::unique_ptr<OperationPass<ModuleOp>> createAsyncToAsyncRuntimePass();
 

@@ -17,10 +17,9 @@
 
 namespace llvm {
 class ThreadPool;
-} // end namespace llvm
+} // namespace llvm
 
 namespace mlir {
-class AbstractOperation;
 class DebugActionManager;
 class DiagnosticEngine;
 class Dialect;
@@ -28,6 +27,7 @@ class DialectRegistry;
 class InFlightDiagnostic;
 class Location;
 class MLIRContextImpl;
+class RegisteredOperationName;
 class StorageUniquer;
 
 /// MLIRContext is the top-level object for a collection of MLIR operations. It
@@ -129,6 +129,8 @@ public:
   bool isMultithreadingEnabled();
 
   /// Set the flag specifying if multi-threading is disabled by the context.
+  /// The command line debugging flag `--mlir-disable-threading` is overriding
+  /// this call and making it a no-op!
   void disableMultithreading(bool disable = true);
   void enableMultithreading(bool enable = true) {
     disableMultithreading(!enable);
@@ -140,7 +142,17 @@ public:
   /// decoupling the lifetime of the threads from the contexts. The thread pool
   /// must outlive the context. Multi-threading will be enabled as part of this
   /// method.
+  /// The command line debugging flag `--mlir-disable-threading` will still
+  /// prevent threading from being enabled and threading won't be enabled after
+  /// this call in this case.
   void setThreadPool(llvm::ThreadPool &pool);
+
+  /// Return the number of threads used by the thread pool in this context. The
+  /// number of computed hardware threads can change over the lifetime of a
+  /// process based on affinity changes, so users should use the number of
+  /// threads actually in the thread pool for dispatching work. Returns 1 if
+  /// multithreading is disabled.
+  unsigned getNumThreads();
 
   /// Return the thread pool used by this context. This method requires that
   /// multithreading be enabled within the context, and should generally not be
@@ -164,10 +176,9 @@ public:
   /// emitting diagnostics.
   void printStackTraceOnDiagnostic(bool enable);
 
-  /// Return information about all registered operations.  This isn't very
-  /// efficient: typically you should ask the operations about their properties
-  /// directly.
-  std::vector<AbstractOperation *> getRegisteredOperations();
+  /// Return a sorted array containing the information about all registered
+  /// operations.
+  ArrayRef<RegisteredOperationName> getRegisteredOperations();
 
   /// Return true if this operation name is registered in this context.
   bool isOperationRegistered(StringRef name);
@@ -231,6 +242,6 @@ private:
 /// an MLIR context for initialization.
 void registerMLIRContextCLOptions();
 
-} // end namespace mlir
+} // namespace mlir
 
 #endif // MLIR_IR_MLIRCONTEXT_H

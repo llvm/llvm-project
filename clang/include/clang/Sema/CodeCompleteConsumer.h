@@ -329,6 +329,9 @@ public:
     /// Code completion inside the filename part of a #include directive.
     CCC_IncludedFile,
 
+    /// Code completion of an attribute name.
+    CCC_Attribute,
+
     /// An unknown context, in which we are recovering from a parsing
     /// error and don't know which completions we should give.
     CCC_Recovery
@@ -603,8 +606,11 @@ public:
     return begin()[I];
   }
 
-  /// Returns the text in the TypedText chunk.
+  /// Returns the text in the first TypedText chunk.
   const char *getTypedText() const;
+
+  /// Returns the combined text from all TypedText chunks.
+  std::string getAllTypedText() const;
 
   /// Retrieve the priority of this code completion result.
   unsigned getPriority() const { return Priority; }
@@ -1006,12 +1012,18 @@ public:
       /// The candidate is a function declaration.
       CK_Function,
 
-      /// The candidate is a function template.
+      /// The candidate is a function template, arguments are being completed.
       CK_FunctionTemplate,
 
       /// The "candidate" is actually a variable, expression, or block
       /// for which we only have a function prototype.
-      CK_FunctionType
+      CK_FunctionType,
+
+      /// The candidate is a template, template arguments are being completed.
+      CK_Template,
+
+      /// The candidate is aggregate initialization of a record type.
+      CK_Aggregate,
     };
 
   private:
@@ -1030,17 +1042,39 @@ public:
       /// The function type that describes the entity being called,
       /// when Kind == CK_FunctionType.
       const FunctionType *Type;
+
+      /// The template overload candidate, available when
+      /// Kind == CK_Template.
+      const TemplateDecl *Template;
+
+      /// The class being aggregate-initialized,
+      /// when Kind == CK_Aggregate
+      const RecordDecl *AggregateType;
     };
 
   public:
     OverloadCandidate(FunctionDecl *Function)
-        : Kind(CK_Function), Function(Function) {}
+        : Kind(CK_Function), Function(Function) {
+      assert(Function != nullptr);
+    }
 
     OverloadCandidate(FunctionTemplateDecl *FunctionTemplateDecl)
-        : Kind(CK_FunctionTemplate), FunctionTemplate(FunctionTemplateDecl) {}
+        : Kind(CK_FunctionTemplate), FunctionTemplate(FunctionTemplateDecl) {
+      assert(FunctionTemplateDecl != nullptr);
+    }
 
     OverloadCandidate(const FunctionType *Type)
-        : Kind(CK_FunctionType), Type(Type) {}
+        : Kind(CK_FunctionType), Type(Type) {
+      assert(Type != nullptr);
+    }
+
+    OverloadCandidate(const RecordDecl *Aggregate)
+        : Kind(CK_Aggregate), AggregateType(Aggregate) {
+      assert(Aggregate != nullptr);
+    }
+
+    OverloadCandidate(const TemplateDecl *Template)
+        : Kind(CK_Template), Template(Template) {}
 
     /// Determine the kind of overload candidate.
     CandidateKind getKind() const { return Kind; }
@@ -1059,13 +1093,35 @@ public:
     /// function is stored.
     const FunctionType *getFunctionType() const;
 
+    const TemplateDecl *getTemplate() const {
+      assert(getKind() == CK_Template && "Not a template");
+      return Template;
+    }
+
+    /// Retrieve the aggregate type being initialized.
+    const RecordDecl *getAggregate() const {
+      assert(getKind() == CK_Aggregate);
+      return AggregateType;
+    }
+
+    /// Get the number of parameters in this signature.
+    unsigned getNumParams() const;
+
+    /// Get the type of the Nth parameter.
+    /// Returns null if the type is unknown or N is out of range.
+    QualType getParamType(unsigned N) const;
+
+    /// Get the declaration of the Nth parameter.
+    /// Returns null if the decl is unknown or N is out of range.
+    const NamedDecl *getParamDecl(unsigned N) const;
+
     /// Create a new code-completion string that describes the function
     /// signature of this overload candidate.
-    CodeCompletionString *CreateSignatureString(unsigned CurrentArg,
-                                                Sema &S,
-                                      CodeCompletionAllocator &Allocator,
-                                      CodeCompletionTUInfo &CCTUInfo,
-                                      bool IncludeBriefComments) const;
+    CodeCompletionString *
+    CreateSignatureString(unsigned CurrentArg, Sema &S,
+                          CodeCompletionAllocator &Allocator,
+                          CodeCompletionTUInfo &CCTUInfo,
+                          bool IncludeBriefComments, bool Braced) const;
   };
 
   CodeCompleteConsumer(const CodeCompleteOptions &CodeCompleteOpts)
@@ -1139,7 +1195,8 @@ public:
   virtual void ProcessOverloadCandidates(Sema &S, unsigned CurrentArg,
                                          OverloadCandidate *Candidates,
                                          unsigned NumCandidates,
-                                         SourceLocation OpenParLoc) {}
+                                         SourceLocation OpenParLoc,
+                                         bool Braced) {}
   //@}
 
   /// Retrieve the allocator that will be used to allocate
@@ -1190,7 +1247,8 @@ public:
   void ProcessOverloadCandidates(Sema &S, unsigned CurrentArg,
                                  OverloadCandidate *Candidates,
                                  unsigned NumCandidates,
-                                 SourceLocation OpenParLoc) override;
+                                 SourceLocation OpenParLoc,
+                                 bool Braced) override;
 
   bool isResultFilteredOut(StringRef Filter, CodeCompletionResult Results) override;
 

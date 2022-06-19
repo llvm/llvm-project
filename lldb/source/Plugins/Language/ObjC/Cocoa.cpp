@@ -7,7 +7,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "Cocoa.h"
+#include "NSString.h"
+#include "ObjCConstants.h"
 
+#include "Plugins/LanguageRuntime/ObjC/AppleObjCRuntime/AppleObjCRuntime.h"
 #include "Plugins/TypeSystem/Clang/TypeSystemClang.h"
 #include "lldb/Core/Mangled.h"
 #include "lldb/Core/ValueObject.h"
@@ -22,15 +25,13 @@
 #include "lldb/Target/Target.h"
 #include "lldb/Utility/DataBufferHeap.h"
 #include "lldb/Utility/Endian.h"
+#include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Status.h"
 #include "lldb/Utility/Stream.h"
 
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/bit.h"
 
-#include "Plugins/LanguageRuntime/ObjC/AppleObjCRuntime/AppleObjCRuntime.h"
-
-#include "NSString.h"
 
 using namespace lldb;
 using namespace lldb_private;
@@ -426,7 +427,7 @@ bool lldb_private::formatters::NSNumberSummaryProvider(
   if (!process_sp)
     return false;
 
-  Log *log = lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_DATAFORMATTERS);
+  Log *log = GetLog(LLDBLog::DataFormatters);
   ObjCLanguageRuntime *runtime = ObjCLanguageRuntime::Get(*process_sp);
 
   if (!runtime)
@@ -455,6 +456,72 @@ bool lldb_private::formatters::NSNumberSummaryProvider(
 
   if (class_name == "NSDecimalNumber")
     return NSDecimalNumberSummaryProvider(valobj, stream, options);
+
+  if (class_name == "NSConstantIntegerNumber") {
+    Status error;
+    int64_t value = process_sp->ReadSignedIntegerFromMemory(
+        valobj_addr + 2 * ptr_size, 8, 0, error);
+    if (error.Fail())
+      return false;
+    uint64_t encoding_addr = process_sp->ReadUnsignedIntegerFromMemory(
+        valobj_addr + ptr_size, ptr_size, 0, error);
+    if (error.Fail())
+      return false;
+    char encoding =
+        process_sp->ReadUnsignedIntegerFromMemory(encoding_addr, 1, 0, error);
+    if (error.Fail())
+      return false;
+
+    switch (encoding) {
+    case _C_CHR:
+      NSNumber_FormatChar(valobj, stream, (char)value, options.GetLanguage());
+      return true;
+    case _C_SHT:
+      NSNumber_FormatShort(valobj, stream, (short)value, options.GetLanguage());
+      return true;
+    case _C_INT:
+      NSNumber_FormatInt(valobj, stream, (int)value, options.GetLanguage());
+      return true;
+    case _C_LNG:
+    case _C_LNG_LNG:
+      NSNumber_FormatLong(valobj, stream, value, options.GetLanguage());
+      return true;
+
+    case _C_UCHR:
+    case _C_USHT:
+    case _C_UINT:
+    case _C_ULNG:
+    case _C_ULNG_LNG:
+      stream.Printf("%" PRIu64, value);
+      return true;
+    }
+
+    return false;
+  }
+
+  if (class_name == "NSConstantFloatNumber") {
+    Status error;
+    uint32_t flt_as_int = process_sp->ReadUnsignedIntegerFromMemory(
+        valobj_addr + ptr_size, 4, 0, error);
+    if (error.Fail())
+      return false;
+    float flt_value = 0.0f;
+    memcpy(&flt_value, &flt_as_int, sizeof(flt_as_int));
+    NSNumber_FormatFloat(valobj, stream, flt_value, options.GetLanguage());
+    return true;
+  }
+
+  if (class_name == "NSConstantDoubleNumber") {
+    Status error;
+    uint64_t dbl_as_lng = process_sp->ReadUnsignedIntegerFromMemory(
+        valobj_addr + ptr_size, 8, 0, error);
+    if (error.Fail())
+      return false;
+    double dbl_value = 0.0;
+    memcpy(&dbl_value, &dbl_as_lng, sizeof(dbl_as_lng));
+    NSNumber_FormatDouble(valobj, stream, dbl_value, options.GetLanguage());
+    return true;
+  }
 
   if (class_name == "NSNumber" || class_name == "__NSCFNumber") {
     int64_t value = 0;
@@ -852,8 +919,8 @@ bool lldb_private::formatters::NSDateSummaryProvider(
   ConstString class_name = descriptor->GetClassName();
 
   static const ConstString g_NSDate("NSDate");
-  static const ConstString g___NSDate("__NSDate");
-  static const ConstString g___NSTaggedDate("__NSTaggedDate");
+  static const ConstString g_dunder_NSDate("__NSDate");
+  static const ConstString g_NSTaggedDate("__NSTaggedDate");
   static const ConstString g_NSCalendarDate("NSCalendarDate");
   static const ConstString g_NSConstantDate("NSConstantDate");
 
@@ -861,8 +928,8 @@ bool lldb_private::formatters::NSDateSummaryProvider(
     return false;
 
   uint64_t info_bits = 0, value_bits = 0;
-  if ((class_name == g_NSDate) || (class_name == g___NSDate) ||
-      (class_name == g___NSTaggedDate) || (class_name == g_NSConstantDate)) {
+  if ((class_name == g_NSDate) || (class_name == g_dunder_NSDate) ||
+      (class_name == g_NSTaggedDate) || (class_name == g_NSConstantDate)) {
     if (descriptor->GetTaggedPointerInfo(&info_bits, &value_bits)) {
       date_value_bits = ((value_bits << 8) | (info_bits << 4));
       memcpy(&date_value, &date_value_bits, sizeof(date_value_bits));
@@ -900,7 +967,7 @@ bool lldb_private::formatters::NSDateSummaryProvider(
   }
 
   // Accomodate for the __NSTaggedDate format introduced in Foundation 1600.
-  if (class_name == g___NSTaggedDate) {
+  if (class_name == g_NSTaggedDate) {
     auto *runtime = llvm::dyn_cast_or_null<AppleObjCRuntime>(
         ObjCLanguageRuntime::Get(*process_sp));
     if (runtime && runtime->GetFoundationVersion() >= 1600)

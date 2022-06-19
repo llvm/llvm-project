@@ -16,10 +16,10 @@ def run(f):
 @run
 def testDialectDescriptor():
   ctx = Context()
-  d = ctx.get_dialect_descriptor("std")
-  # CHECK: <DialectDescriptor std>
+  d = ctx.get_dialect_descriptor("func")
+  # CHECK: <DialectDescriptor func>
   print(d)
-  # CHECK: std
+  # CHECK: func
   print(d.namespace)
   try:
     _ = ctx.get_dialect_descriptor("not_existing")
@@ -34,10 +34,8 @@ def testDialectDescriptor():
 def testUserDialectClass():
   ctx = Context()
   # Access using attribute.
-  d = ctx.dialects.std
-  # Note that the standard dialect namespace prints as ''. Others will print
-  # as "<Dialect %namespace (..."
-  # CHECK: <Dialect (class mlir.dialects._std_ops_gen._Dialect)>
+  d = ctx.dialects.func
+  # CHECK: <Dialect func (class mlir.dialects._func_ops_gen._Dialect)>
   print(d)
   try:
     _ = ctx.dialects.not_existing
@@ -47,8 +45,8 @@ def testUserDialectClass():
     assert False, "Expected exception"
 
   # Access using index.
-  d = ctx.dialects["std"]
-  # CHECK: <Dialect (class mlir.dialects._std_ops_gen._Dialect)>
+  d = ctx.dialects["func"]
+  # CHECK: <Dialect func (class mlir.dialects._func_ops_gen._Dialect)>
   print(d)
   try:
     _ = ctx.dialects["not_existing"]
@@ -58,8 +56,8 @@ def testUserDialectClass():
     assert False, "Expected exception"
 
   # Using the 'd' alias.
-  d = ctx.d["std"]
-  # CHECK: <Dialect (class mlir.dialects._std_ops_gen._Dialect)>
+  d = ctx.d["func"]
+  # CHECK: <Dialect func (class mlir.dialects._func_ops_gen._Dialect)>
   print(d)
 
 
@@ -84,16 +82,16 @@ def testCustomOpView():
       # Create via dialects context collection.
       input1 = createInput()
       input2 = createInput()
-      op1 = ctx.dialects.std.AddFOp(input1.type, input1, input2)
+      op1 = ctx.dialects.arith.AddFOp(input1, input2)
 
       # Create via an import
-      from mlir.dialects.std import AddFOp
-      AddFOp(input1.type, input1, op1.result)
+      from mlir.dialects.arith import AddFOp
+      AddFOp(input1, op1.result)
 
   # CHECK: %[[INPUT0:.*]] = "pytest_dummy.intinput"
   # CHECK: %[[INPUT1:.*]] = "pytest_dummy.intinput"
-  # CHECK: %[[R0:.*]] = addf %[[INPUT0]], %[[INPUT1]] : f32
-  # CHECK: %[[R1:.*]] = addf %[[INPUT0]], %[[R0]] : f32
+  # CHECK: %[[R0:.*]] = arith.addf %[[INPUT0]], %[[INPUT1]] : f32
+  # CHECK: %[[R1:.*]] = arith.addf %[[INPUT0]], %[[R0]] : f32
   m.operation.print()
 
 
@@ -102,7 +100,7 @@ def testCustomOpView():
 def testIsRegisteredOperation():
   ctx = Context()
 
-  # CHECK: std.cond_br: True
-  print(f"std.cond_br: {ctx.is_registered_operation('std.cond_br')}")
-  # CHECK: std.not_existing: False
-  print(f"std.not_existing: {ctx.is_registered_operation('std.not_existing')}")
+  # CHECK: cf.cond_br: True
+  print(f"cf.cond_br: {ctx.is_registered_operation('cf.cond_br')}")
+  # CHECK: func.not_existing: False
+  print(f"func.not_existing: {ctx.is_registered_operation('func.not_existing')}")

@@ -1,6 +1,6 @@
 # Check that we can inject commands at the beginning of a ShTest.
 
-# RUN: %{lit} -j 1 %{inputs}/shtest-inject/test-empty.txt --show-all | FileCheck --check-prefix=CHECK-TEST1 %s
+# RUN: %{lit} %{inputs}/shtest-inject/test-empty.txt --show-all | FileCheck --check-prefix=CHECK-TEST1 %s
 #
 # CHECK-TEST1: Script:
 # CHECK-TEST1: --
@@ -13,7 +13,7 @@
 #
 # CHECK-TEST1: Passed: 1
 
-# RUN: %{lit} -j 1 %{inputs}/shtest-inject/test-one.txt --show-all | FileCheck --check-prefix=CHECK-TEST2 %s
+# RUN: %{lit} %{inputs}/shtest-inject/test-one.txt --show-all | FileCheck --check-prefix=CHECK-TEST2 %s
 #
 # CHECK-TEST2: Script:
 # CHECK-TEST2: --
@@ -28,7 +28,7 @@
 #
 # CHECK-TEST2: Passed: 1
 
-# RUN: %{lit} -j 1 %{inputs}/shtest-inject/test-many.txt --show-all | FileCheck --check-prefix=CHECK-TEST3 %s
+# RUN: %{lit} %{inputs}/shtest-inject/test-many.txt --show-all | FileCheck --check-prefix=CHECK-TEST3 %s
 #
 # CHECK-TEST3: Script:
 # CHECK-TEST3: --

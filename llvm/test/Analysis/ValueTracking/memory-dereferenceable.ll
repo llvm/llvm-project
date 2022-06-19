@@ -1,6 +1,4 @@
-; RUN: opt -print-memderefs -analyze -S < %s -enable-new-pm=0 -use-dereferenceable-at-point-semantics=0 | FileCheck %s --check-prefixes=CHECK,GLOBAL
 ; RUN: opt -passes=print-memderefs -S < %s -disable-output  -use-dereferenceable-at-point-semantics=0 2>&1 | FileCheck %s --check-prefixes=CHECK,GLOBAL
-; RUN: opt -print-memderefs -analyze -S < %s -enable-new-pm=0 -use-dereferenceable-at-point-semantics=1 | FileCheck %s --check-prefixes=CHECK,POINT
 ; RUN: opt -passes=print-memderefs -S < %s -disable-output  -use-dereferenceable-at-point-semantics=1 2>&1 | FileCheck %s --check-prefixes=CHECK,POINT
 
 
@@ -51,7 +49,7 @@ entry:
 
 ; GLOBAL: %relocate{{.*}}(unaligned)
 ; POINT-NOT: %relocate{{.*}}(unaligned)
-    %tok = tail call token (i64, i32, i1 ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_i1f(i64 0, i32 0, i1 ()* @return_i1, i32 0, i32 0, i32 0, i32 0) ["gc-live" (i32 addrspace(1)* %dparam)]
+    %tok = tail call token (i64, i32, i1 ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_i1f(i64 0, i32 0, i1 ()* elementtype(i1 ()) @return_i1, i32 0, i32 0, i32 0, i32 0) ["gc-live" (i32 addrspace(1)* %dparam)]
     %relocate = call i32 addrspace(1)* @llvm.experimental.gc.relocate.p1i32(token %tok, i32 0, i32 0)
     %load4 = load i32, i32 addrspace(1)* %relocate
 

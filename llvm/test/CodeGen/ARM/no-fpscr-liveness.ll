@@ -14,7 +14,7 @@ target triple = "thumbv7s-apple-ios"
 ; VMRS instruction comes before any other instruction writing FPSCR:
 ; CHECK-NOT: vcmp
 ; CHECK: vmrs {{r[0-9]}}, fpscr
-; CHECK; vcmp
+; CHECK: vcmp
 ; ...
 ; CHECK: add sp, #8
 ; CHECK: bx lr

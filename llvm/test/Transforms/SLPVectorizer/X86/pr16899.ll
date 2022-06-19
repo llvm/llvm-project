@@ -9,10 +9,10 @@ target triple = "i386--netbsd"
 define i32 @fn1() #0 {
 ; CHECK-LABEL: @fn1(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = load i32*, i32** @a, align 4, !tbaa !0
-; CHECK-NEXT:    [[TMP1:%.*]] = load i32, i32* [[TMP0]], align 4, !tbaa !4
+; CHECK-NEXT:    [[TMP0:%.*]] = load i32*, i32** @a, align 4, !tbaa [[TBAA0:![0-9]+]]
+; CHECK-NEXT:    [[TMP1:%.*]] = load i32, i32* [[TMP0]], align 4, !tbaa [[TBAA4:![0-9]+]]
 ; CHECK-NEXT:    [[ARRAYIDX1:%.*]] = getelementptr inbounds i32, i32* [[TMP0]], i32 1
-; CHECK-NEXT:    [[TMP2:%.*]] = load i32, i32* [[ARRAYIDX1]], align 4, !tbaa !4
+; CHECK-NEXT:    [[TMP2:%.*]] = load i32, i32* [[ARRAYIDX1]], align 4, !tbaa [[TBAA4]]
 ; CHECK-NEXT:    br label [[DO_BODY:%.*]]
 ; CHECK:       do.body:
 ; CHECK-NEXT:    [[C_0:%.*]] = phi i32 [ [[TMP2]], [[ENTRY:%.*]] ], [ [[ADD2:%.*]], [[DO_BODY]] ]

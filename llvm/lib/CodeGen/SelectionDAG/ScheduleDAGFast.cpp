@@ -11,16 +11,14 @@
 //===----------------------------------------------------------------------===//
 
 #include "InstrEmitter.h"
-#include "ScheduleDAGSDNodes.h"
 #include "SDNodeDbgValue.h"
-#include "llvm/ADT/STLExtras.h"
+#include "ScheduleDAGSDNodes.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/CodeGen/SchedulerRegistry.h"
 #include "llvm/CodeGen/SelectionDAGISel.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
-#include "llvm/IR/DataLayout.h"
 #include "llvm/IR/InlineAsm.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -56,9 +54,7 @@ namespace {
 
     SUnit *pop() {
       if (empty()) return nullptr;
-      SUnit *V = Queue.back();
-      Queue.pop_back();
-      return V;
+      return Queue.pop_back_val();
     }
   };
 
@@ -760,7 +756,8 @@ void ScheduleDAGLinearize::Schedule() {
 
 MachineBasicBlock*
 ScheduleDAGLinearize::EmitSchedule(MachineBasicBlock::iterator &InsertPos) {
-  InstrEmitter Emitter(DAG->getTarget(), BB, InsertPos);
+  InstrEmitter Emitter(DAG->getTarget(), BB, InsertPos,
+                       DAG->getUseInstrRefDebugInfo());
   DenseMap<SDValue, Register> VRBaseMap;
 
   LLVM_DEBUG({ dbgs() << "\n*** Final schedule ***\n"; });

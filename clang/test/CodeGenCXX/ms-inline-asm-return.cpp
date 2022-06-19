@@ -1,5 +1,5 @@
 // REQUIRES: x86-registered-target
-// RUN: %clang_cc1 %s -triple i686-pc-windows-msvc -emit-llvm -o - -fasm-blocks | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers %s -triple i686-pc-windows-msvc -emit-llvm -o - -fasm-blocks | FileCheck %s
 
 // Check that we take EAX or EAX:EDX and return it from these functions for MSVC
 // compatibility.
@@ -124,6 +124,6 @@ EightChars f_s8() {
 int main() {
   __asm xor eax, eax
 }
-// CHECK-LABEL: define dso_local i32 @main()
+// CHECK-LABEL: define dso_local noundef i32 @main()
 // CHECK: %[[r:[^ ]*]] = call i32 asm sideeffect inteldialect "xor eax, eax", "=&{eax},{{.*}}"
 // CHECK: ret i32 %[[r]]

@@ -208,7 +208,7 @@ void compound_literal() {
 // CHECK: void compound_literal()
 // CHECK: (CXXConstructExpr, struct Bar)
 // CHECK: (CXXConstructExpr, struct Bar)
-// CHECK: ~Bar [2]() (Temporary object destructor)
+// CHECK: ~Bar[2]() (Temporary object destructor)
 
 Foo elided_return() {
   return get_foo();
@@ -258,49 +258,49 @@ void default_ctor_with_default_arg() {
   DefaultArgInCtor qux[3];
 }
 // CHECK: void default_ctor_with_default_arg()
-// CHECK: CXXConstructExpr, {{.*}}, struct DefaultArgInCtor [3]
+// CHECK: CXXConstructExpr, {{.*}}, struct DefaultArgInCtor[3]
 // CXX14: ~Foo() (Temporary object destructor)
 // CHECK: ~Foo() (Temporary object destructor)
-// CHECK: .~DefaultArgInCtor [3]() (Implicit destructor)
+// CHECK: .~DefaultArgInCtor[3]() (Implicit destructor)
 
 void new_default_ctor_with_default_arg(long count) {
   // Same problems as above.
   new DefaultArgInCtor[count];
 }
 // CHECK: void new_default_ctor_with_default_arg(long count)
-// CHECK: CXXConstructExpr, {{.*}}, struct DefaultArgInCtor []
+// CHECK: CXXConstructExpr, {{.*}}, struct DefaultArgInCtor[]
 // CXX14: ~Foo() (Temporary object destructor)
 // CHECK: ~Foo() (Temporary object destructor)
 
 #if CXX2A
 // Boilerplate needed to test co_return:
 
-namespace std::experimental {
-  template <typename Promise>
-  struct coroutine_handle {
-    static coroutine_handle from_address(void *) noexcept;
-  };
-}
+namespace std {
+template <typename Promise>
+struct coroutine_handle {
+  static coroutine_handle from_address(void *) noexcept;
+};
+} // namespace std
 
 struct TestPromise {
   TestPromise initial_suspend();
   TestPromise final_suspend() noexcept;
   bool await_ready() noexcept;
-  void await_suspend(const std::experimental::coroutine_handle<TestPromise> &) noexcept;
+  void await_suspend(const std::coroutine_handle<TestPromise> &) noexcept;
   void await_resume() noexcept;
   Foo return_value(const Bar &);
   Bar get_return_object();
   void unhandled_exception();
 };
 
-namespace std::experimental {
-  template <typename Ret, typename... Args>
-  struct coroutine_traits;
-  template <>
-  struct coroutine_traits<Bar> {
-      using promise_type = TestPromise;
-  };
-}
+namespace std {
+template <typename Ret, typename... Args>
+struct coroutine_traits;
+template <>
+struct coroutine_traits<Bar> {
+  using promise_type = TestPromise;
+};
+} // namespace std
 
 Bar coreturn() {
   co_return get_bar();

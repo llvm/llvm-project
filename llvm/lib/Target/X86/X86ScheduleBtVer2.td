@@ -209,7 +209,10 @@ defm : JWriteResIntPair<WriteIMul32Reg, [JALU1, JMul], 3, [1, 1], 1>;
 defm : JWriteResIntPair<WriteIMul64,    [JALU1, JMul], 6, [1, 4], 2>;  
 defm : JWriteResIntPair<WriteIMul64Imm, [JALU1, JMul], 6, [1, 4], 1>;
 defm : JWriteResIntPair<WriteIMul64Reg, [JALU1, JMul], 6, [1, 4], 1>;
-defm : X86WriteRes<WriteIMulH,          [JALU1], 6, [4], 1>;
+defm : X86WriteResUnsupported<WriteIMulH>;
+defm : X86WriteResUnsupported<WriteIMulHLd>;
+defm : X86WriteResPairUnsupported<WriteMULX32>;
+defm : X86WriteResPairUnsupported<WriteMULX64>;
 
 defm : JWriteResIntPair<WriteDiv8,   [JALU1, JDiv], 12, [1, 12], 1>;
 defm : JWriteResIntPair<WriteDiv16,  [JALU1, JDiv], 17, [1, 17], 2>;
@@ -522,6 +525,7 @@ defm : X86WriteRes<WriteFMaskedStore64Y, [JFPU0, JFPA, JFPU1, JSTC, JLAGU, JSAGU
 defm : X86WriteRes<WriteFMove,         [JFPU01, JFPX], 1, [1, 1], 1>;
 defm : X86WriteRes<WriteFMoveX,        [JFPU01, JFPX], 1, [1, 1], 1>;
 defm : X86WriteRes<WriteFMoveY,        [JFPU01, JFPX], 1, [2, 2], 2>;
+defm : X86WriteResUnsupported<WriteFMoveZ>;
 
 defm : X86WriteRes<WriteEMMS,          [JFPU01, JFPX], 2, [1, 1], 1>;
 
@@ -679,6 +683,7 @@ defm : X86WriteResUnsupported<WriteVecMaskedStore64Y>;
 defm : X86WriteRes<WriteVecMove,          [JFPU01, JVALU], 1, [1, 1], 1>;
 defm : X86WriteRes<WriteVecMoveX,         [JFPU01, JVALU], 1, [1, 1], 1>;
 defm : X86WriteRes<WriteVecMoveY,         [JFPU01, JVALU], 1, [2, 2], 2>;
+defm : X86WriteResUnsupported<WriteVecMoveZ>;
 defm : X86WriteRes<WriteVecMoveToGpr,     [JFPU0, JFPA, JALU0], 4, [1, 1, 1], 1>;
 defm : X86WriteRes<WriteVecMoveFromGpr,   [JFPU01, JFPX], 8, [1, 1], 2>;
 
@@ -835,8 +840,8 @@ def JWriteMASKMOVDQU: SchedWriteRes<[JFPU0, JFPA, JFPU1, JSTC, JLAGU, JSAGU, JAL
   let ResourceCycles = [1, 1, 2, 2, 2, 16, 42];
   let NumMicroOps = 63;
 }
-def : InstRW<[JWriteMASKMOVDQU], (instrs MASKMOVDQU, MASKMOVDQU64, MASKMOVDQUX32,
-                                         VMASKMOVDQU, VMASKMOVDQU64, VMASKMOVDQUX32)>;
+def : InstRW<[JWriteMASKMOVDQU], (instrs MASKMOVDQU, MASKMOVDQU64,
+                                         VMASKMOVDQU, VMASKMOVDQU64)>;
 
 ///////////////////////////////////////////////////////////////////////////////
 //  SchedWriteVariant definitions.
@@ -885,7 +890,7 @@ def JWriteVZeroIdiomLogic : SchedWriteVariant<[
     SchedVar<MCSchedPredicate<ZeroIdiomPredicate>, [JWriteZeroLatency]>,
     SchedVar<NoSchedPred,                          [WriteVecLogic]>
 ]>;
-def : InstRW<[JWriteVZeroIdiomLogic], (instrs MMX_PXORirr, MMX_PANDNirr)>;
+def : InstRW<[JWriteVZeroIdiomLogic], (instrs MMX_PXORrr, MMX_PANDNrr)>;
 
 def JWriteVZeroIdiomLogicX : SchedWriteVariant<[
     SchedVar<MCSchedPredicate<ZeroIdiomPredicate>, [JWriteZeroLatency]>,
@@ -898,12 +903,12 @@ def JWriteVZeroIdiomALU : SchedWriteVariant<[
     SchedVar<MCSchedPredicate<ZeroIdiomPredicate>, [JWriteZeroLatency]>,
     SchedVar<NoSchedPred,                          [WriteVecALU]>
 ]>;
-def : InstRW<[JWriteVZeroIdiomALU], (instrs MMX_PSUBBirr, MMX_PSUBDirr,
-                                            MMX_PSUBQirr, MMX_PSUBWirr,
-                                            MMX_PSUBSBirr, MMX_PSUBSWirr,
-                                            MMX_PSUBUSBirr, MMX_PSUBUSWirr,
-                                            MMX_PCMPGTBirr, MMX_PCMPGTDirr,
-                                            MMX_PCMPGTWirr)>;
+def : InstRW<[JWriteVZeroIdiomALU], (instrs MMX_PSUBBrr, MMX_PSUBDrr,
+                                            MMX_PSUBQrr, MMX_PSUBWrr,
+                                            MMX_PSUBSBrr, MMX_PSUBSWrr,
+                                            MMX_PSUBUSBrr, MMX_PSUBUSWrr,
+                                            MMX_PCMPGTBrr, MMX_PCMPGTDrr,
+                                            MMX_PCMPGTWrr)>;
 
 def JWriteVZeroIdiomALUX : SchedWriteVariant<[
     SchedVar<MCSchedPredicate<ZeroIdiomPredicate>, [JWriteZeroLatency]>,
@@ -971,10 +976,10 @@ def : IsZeroIdiomFunction<[
 
   // MMX Zero-idioms.
   DepBreakingClass<[
-    MMX_PXORirr, MMX_PANDNirr, MMX_PSUBBirr,
-    MMX_PSUBDirr, MMX_PSUBQirr, MMX_PSUBWirr,
-    MMX_PSUBSBirr, MMX_PSUBSWirr, MMX_PSUBUSBirr, MMX_PSUBUSWirr,
-    MMX_PCMPGTBirr, MMX_PCMPGTDirr, MMX_PCMPGTWirr
+    MMX_PXORrr, MMX_PANDNrr, MMX_PSUBBrr,
+    MMX_PSUBDrr, MMX_PSUBQrr, MMX_PSUBWrr,
+    MMX_PSUBSBrr, MMX_PSUBSWrr, MMX_PSUBUSBrr, MMX_PSUBUSWrr,
+    MMX_PCMPGTBrr, MMX_PCMPGTDrr, MMX_PCMPGTWrr
   ], ZeroIdiomPredicate>,
 
   // SSE Zero-idioms.
@@ -1014,7 +1019,7 @@ def : IsDepBreakingFunction<[
 
   // MMX
   DepBreakingClass<[
-    MMX_PCMPEQBirr, MMX_PCMPEQDirr, MMX_PCMPEQWirr
+    MMX_PCMPEQBrr, MMX_PCMPEQDrr, MMX_PCMPEQWrr
   ], ZeroIdiomPredicate>,
 
   // SSE

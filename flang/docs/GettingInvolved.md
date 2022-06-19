@@ -16,12 +16,11 @@ The Flang Project welcomes contributions of all kinds.
 Please feel free to join the mailing list or the slack channel for discussions related to development of Flang.
 To understand the status of various developments in Flang please join the respective call.
 
-## Mailing Lists
+## Forum and Mailing Lists
 
-[Developer's List (flang-dev)](http://lists.llvm.org/mailman/listinfo/flang-dev)
+[Forum](https://discourse.llvm.org/c/subprojects/flang)
 
-  This list is for people who want to be included in technical discussions related to Flang. People post to this list when they have questions about writing code
-  for or using the Flang tools. It is relatively low volume.
+  Flang forums are for technical discussions, questions about writing code for, or using Flang tools.
 
 
 [Commits Archive (flang-commits)](http://lists.llvm.org/pipermail/flang-commits)
@@ -47,9 +46,8 @@ To understand the status of various developments in Flang please join the respec
 -   General updates on the Flang Project, both LLVM Flang and current Flang.
 -   Join [Flang Community Biweekly Call](https://lanl-us.webex.com/lanl-us/j.php?MTID=mdce13c9bd55202e8071d8128fb953614)
 -   Time: On Wednesdays 8:30 Pacific Time, on the weeks alternating with regular Flang Community Technical Biweekly Call.
--   Meeting minutes are available in this [Google Doc](https://docs.google.com/document/d/10T-S2J3GrahpG4Ooif93NSTz2zBW0MQc_RlwHi0-afY/edit?usp=sharing).
-    If you can not access the Google Doc, please send an email to Alexis Perry-Holby at aperry@lanl.gov requesting to be added to the access list.
--   Minutes from older meetings were sent to [flang-dev](http://lists.llvm.org/mailman/listinfo/flang-dev). Search for `Flang Biweekly Sync - Notes`.
+-   Meeting minutes are available in this [Google Doc](https://docs.google.com/document/d/1Z2U5UAtJ-Dag5wlMaLaW1KRmNgENNAYynJqLW2j2AZQ/edit).
+-   Minutes from older meetings were posted on the [Flang forum](https://discourse.llvm.org/c/subprojects/flang). Search for `Flang Biweekly Sync - Notes`.
 
 ### Flang Community Technical Biweekly Call
 
@@ -61,9 +59,9 @@ To understand the status of various developments in Flang please join the respec
 ### LLVM Alias Analysis Technical Call
 
 -   For people working on improvements to LLVM alias analysis.
--   Join [LLVM Alias Analysis Technical Call](https://bluejeans.com/316886064)
+-   Join [LLVM Alias Analysis Technical Call](https://teams.microsoft.com/l/meetup-join/19%3ameeting_MGI1Zjc1MGItZjJjZS00ZmE5LTg0OGYtMmQzNDU5YjQwODA2%40thread.v2/0?context=%7b%22Tid%22%3a%220cfca185-25f7-49e3-8ae7-704d5326e285%22%2c%22Oid%22%3a%220cacfb51-1523-4455-a443-adca936d1af0%22%7d)
 -   Time: Tuesdays 10:00 AM Pacific Time, every 4 weeks.
--   The agenda is in this [Google Doc](https://docs.google.com/document/d/1ybwEKDVtIbhIhK50qYtwKsL50K-NvB6LfuBsfepBZ9Y/).
+-   The agenda is in this [Google Doc](https://docs.google.com/document/d/17U-WvX8qyKc3S36YUKr3xfF-GHunWyYowXbxEdpHscw).
 
 ### OpenMP in Flang Technical Call
 
@@ -87,11 +85,3 @@ To understand the status of various developments in Flang please join the respec
 -   Join [Classic Flang Biweekly Technical Call](https://teams.microsoft.com/l/meetup-join/19%3ameeting_YjM5YjlmNGEtMjA0MS00MTRlLTg5ZjUtOTM1ZGIxOTU2NWQy%40thread.v2)
 -   The call is held every other Wednesday in the same week as the LLVM Flang Technical call (alternate week with the Flang Community Biweekly call).
 -   The agenda is available [here](https://docs.google.com/document/d/1-OuiKx4d7O6eLEJDBDKSRnSiUO2rgRR-c2Ga4AkrzOI)
-
-### New Flang Driver Technical Biweekly Call
-
--   Development updates on the new Flang driver.
--   Join [New Flang Driver Technical Call](https://bit.ly/3v5T4EZ)
--   Time: On Mondays 4:30 PM UK Time, on the weeks alternating with Flang Community Technical Biweekly Call
--   Meeting minutes are [here](https://docs.google.com/document/d/1G042fAWgVN-QW9fi8JGy4lyTLC1IMQ_tfWDZin3RHW4).
--   Status tracking [page](https://docs.google.com/spreadsheets/d/1JRe39lP_KhtkYxFEIvwrCFlE5v1Ofa_krOHI-XXXWPY)

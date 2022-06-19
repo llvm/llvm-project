@@ -19,7 +19,6 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
-#include "llvm/CodeGen/TargetFrameLowering.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/MC/MCRegisterInfo.h"
@@ -44,9 +43,11 @@ void RegisterClassInfo::runOnMachineFunction(const MachineFunction &mf) {
   bool Update = false;
   MF = &mf;
 
+  auto &STI = MF->getSubtarget();
+
   // Allocate new array the first time we see a new target.
-  if (MF->getSubtarget().getRegisterInfo() != TRI) {
-    TRI = MF->getSubtarget().getRegisterInfo();
+  if (STI.getRegisterInfo() != TRI) {
+    TRI = STI.getRegisterInfo();
     RegClass.reset(new RCInfo[TRI->getNumRegClasses()]);
     Update = true;
   }
@@ -67,6 +68,18 @@ void RegisterClassInfo::runOnMachineFunction(const MachineFunction &mf) {
     Update = true;
   }
   CalleeSavedRegs = CSR;
+
+  // Even if CSR list is same, we could have had a different allocation order
+  // if ignoreCSRForAllocationOrder is evaluated differently.
+  BitVector CSRHintsForAllocOrder(TRI->getNumRegs());
+  for (const MCPhysReg *I = CSR; *I; ++I)
+    for (MCRegAliasIterator AI(*I, TRI, true); AI.isValid(); ++AI)
+      CSRHintsForAllocOrder[*AI] = STI.ignoreCSRForAllocationOrder(mf, *AI);
+  if (IgnoreCSRForAllocOrder.size() != CSRHintsForAllocOrder.size() ||
+      IgnoreCSRForAllocOrder != CSRHintsForAllocOrder) {
+    Update = true;
+    IgnoreCSRForAllocOrder = CSRHintsForAllocOrder;
+  }
 
   RegCosts = TRI->getRegisterCosts(*MF);
 
@@ -109,8 +122,7 @@ void RegisterClassInfo::compute(const TargetRegisterClass *RC) const {
   // FIXME: Once targets reserve registers instead of removing them from the
   // allocation order, we can simply use begin/end here.
   ArrayRef<MCPhysReg> RawOrder = RC->getRawAllocationOrder(*MF);
-  for (unsigned i = 0; i != RawOrder.size(); ++i) {
-    unsigned PhysReg = RawOrder[i];
+  for (unsigned PhysReg : RawOrder) {
     // Remove reserved registers from the allocation order.
     if (Reserved.test(PhysReg))
       continue;

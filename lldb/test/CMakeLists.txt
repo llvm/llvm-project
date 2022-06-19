@@ -12,6 +12,11 @@ if(LLDB_BUILT_STANDALONE)
 endif()
 
 # Configure the build directory.
+# The .noindex suffix is a marker for Spotlight to never index the
+# build directory.  LLDB queries Spotlight to locate .dSYM bundles
+# based on the UUID embedded in a binary, and because the UUID is a
+# hash of filename and .text section, there *will* be conflicts inside
+# the build directory.
 set(LLDB_TEST_BUILD_DIRECTORY "${PROJECT_BINARY_DIR}/lldb-test-build.noindex" CACHE PATH "The build root for building tests.")
 
 # Configure and create module cache directories.
@@ -64,10 +69,6 @@ if(TARGET lldb-vscode)
   add_lldb_test_dependency(lldb-vscode)
 endif()
 
-if(TARGET lldb-instr)
-  add_lldb_test_dependency(lldb-instr)
-endif()
-
 if(TARGET liblldb)
   add_lldb_test_dependency(liblldb)
 endif()
@@ -102,7 +103,7 @@ if(TARGET clang)
     add_lldb_test_dependency(tsan)
   endif()
 
-  if(APPLE)
+  if(APPLE AND NOT LLVM_TARGET_IS_CROSSCOMPILE_HOST)
     # FIXME: Standalone builds should import the cxx target as well.
     if(LLDB_BUILT_STANDALONE)
       # For now check that the include directory exists.
@@ -112,31 +113,27 @@ if(TARGET clang)
       endif()
     else()
       # We require libcxx for the test suite, so if we aren't building it,
-      # try to provide a helpful error about how to resolve the situation.
+      # provide a helpful error about how to resolve the situation.
       if(NOT TARGET cxx AND NOT libcxx IN_LIST LLVM_ENABLE_RUNTIMES)
-        if(LLVM_ENABLE_PROJECTS STREQUAL "")
-          # If `LLVM_ENABLE_PROJECTS` is not being used (implying that we are
-          # using the old layout), suggest checking it out.
-          message(FATAL_ERROR
-            "LLDB test suite requires libc++, but it is currently disabled. "
-            "Please checkout `libcxx` in `llvm/projects` or disable tests "
-            "via `LLDB_INCLUDE_TESTS=OFF`.")
-        else()
-          # If `LLVM_ENABLE_PROJECTS` is being used, suggest adding it.
-          message(FATAL_ERROR
-            "LLDB test suite requires libc++, but it is currently disabled. "
-            "Please add `libcxx` to `LLVM_ENABLE_PROJECTS` or "
-            "`LLVM_ENABLE_RUNTIMES`, or disable tests via "
-            "`LLDB_INCLUDE_TESTS=OFF`.")
-        endif()
+        message(FATAL_ERROR
+          "LLDB test suite requires libc++, but it is currently disabled. "
+          "Please add `libcxx` to `LLVM_ENABLE_RUNTIMES` or disable tests via "
+          "`LLDB_INCLUDE_TESTS=OFF`.")
       endif()
-      add_lldb_test_dependency(cxx)
     endif()
   endif()
+
+  # Add libc++ dependency for libc++-specific tests. This is an optional
+  # dependency as it's also possible to run the libc++ tests against the libc++
+  # installed on the system.
+  if (TARGET cxx)
+    add_lldb_test_dependency(cxx)
+  endif()
+
 endif()
 
 if (LLDB_BUILT_STANDALONE)
-  set(LLVM_HOST_TRIPLE ${TARGET_TRIPLE})
+  set(LLVM_HOST_TRIPLE ${LLVM_TARGET_TRIPLE})
 endif()
 
 add_lldb_test_dependency(

@@ -97,7 +97,7 @@ uuids:
 install-name:     '/usr/lib/libbaz.dylib'
 reexported-libraries:
   - targets:      [ arm64-macos ]
-    libraries:    [ '/usr/lib/libbaz-noappext-reexport.dylib']
+    libraries:    [ '/usr/lib/libbaz-noappext-reexported.dylib']
 --- !tapi-tbd
 tbd-version:      4
 targets:          [ arm64-macos ]
@@ -105,7 +105,7 @@ flags: [ not_app_extension_safe ]
 uuids:
   - target:       arm64-macos
     value:        00000000-0000-0000-0000-000000000003
-install-name:     '/usr/lib/libbaz-noappext-reexport.dylib'
+install-name:     '/usr/lib/libbaz-noappext-reexported.dylib'
 parent-umbrella:
   - targets:      [ arm64-macos ]
     umbrella:     baz

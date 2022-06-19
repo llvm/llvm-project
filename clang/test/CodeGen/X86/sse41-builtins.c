@@ -1,5 +1,7 @@
-// RUN: %clang_cc1 -flax-vector-conversions=none -ffreestanding %s -triple=x86_64-apple-darwin -target-feature +sse4.1 -emit-llvm -o - -Wall -Werror | FileCheck %s
-// RUN: %clang_cc1 -flax-vector-conversions=none -ffreestanding %s -triple=x86_64-apple-darwin -target-feature +sse4.1 -fno-signed-char -emit-llvm -o - -Wall -Werror | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -flax-vector-conversions=none -ffreestanding %s -triple=x86_64-apple-darwin -target-feature +sse4.1 -emit-llvm -o - -Wall -Werror | FileCheck %s --check-prefixes=CHECK,X64
+// RUN: %clang_cc1 -no-opaque-pointers -flax-vector-conversions=none -ffreestanding %s -triple=x86_64-apple-darwin -target-feature +sse4.1 -fno-signed-char -emit-llvm -o - -Wall -Werror | FileCheck %s --check-prefixes=CHECK,X64
+// RUN: %clang_cc1 -no-opaque-pointers -flax-vector-conversions=none -ffreestanding %s -triple=i386-apple-darwin -target-feature +sse4.1 -emit-llvm -o - -Wall -Werror | FileCheck %s --check-prefixes=CHECK
+// RUN: %clang_cc1 -no-opaque-pointers -flax-vector-conversions=none -ffreestanding %s -triple=i386-apple-darwin -target-feature +sse4.1 -fno-signed-char -emit-llvm -o - -Wall -Werror | FileCheck %s --check-prefixes=CHECK
 
 
 #include <immintrin.h>
@@ -182,13 +184,11 @@ int test_mm_extract_epi32(__m128i x) {
   return _mm_extract_epi32(x, 1);
 }
 
-#ifdef __x86_64__
 long long test_mm_extract_epi64(__m128i x) {
   // CHECK-LABEL: test_mm_extract_epi64
   // CHECK: extractelement <2 x i64> %{{.*}}, {{i32|i64}} 1
   return _mm_extract_epi64(x, 1);
 }
-#endif
 
 int test_mm_extract_ps(__m128 x) {
   // CHECK-LABEL: test_mm_extract_ps
@@ -234,8 +234,8 @@ __m128i test_mm_insert_epi32(__m128i x, int b) {
 
 #ifdef __x86_64__
 __m128i test_mm_insert_epi64(__m128i x, long long b) {
-  // CHECK-LABEL: test_mm_insert_epi64
-  // CHECK: insertelement <2 x i64> %{{.*}}, i64 %{{.*}}, {{i32|i64}} 1
+  // X64-LABEL: test_mm_insert_epi64
+  // X64: insertelement <2 x i64> %{{.*}}, i64 %{{.*}}, {{i32|i64}} 1
   return _mm_insert_epi64(x, b, 1);
 }
 #endif
@@ -392,4 +392,12 @@ int test_mm_testz_si128(__m128i x, __m128i y) {
   // CHECK-LABEL: test_mm_testz_si128
   // CHECK: call i32 @llvm.x86.sse41.ptestz(<2 x i64> %{{.*}}, <2 x i64> %{{.*}})
   return _mm_testz_si128(x, y);
+}
+
+// Make sure brackets work after macro intrinsics.
+float pr51324(__m128 a) {
+  // CHECK-LABEL: pr51324
+  // CHECK: call <4 x float> @llvm.x86.sse41.round.ps(<4 x float> %{{.*}}, i32 0)
+  // CHECK: extractelement <4 x float> %{{.*}}, i32 0
+  return _mm_round_ps(a, 0)[0];
 }

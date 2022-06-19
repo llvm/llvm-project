@@ -12,8 +12,6 @@ from lldbsuite.test.lldbtest import *
 
 class AssertingInferiorTestCase(TestBase):
 
-    mydir = TestBase.compute_mydir(__file__)
-
     @expectedFailureAll(
         oslist=["windows"],
         bugnumber="llvm.org/pr21793: need to implement support for detecting assertion / abort on Windows")
@@ -45,9 +43,7 @@ class AssertingInferiorTestCase(TestBase):
         bugnumber="llvm.org/pr21793: need to implement support for detecting assertion / abort on Windows")
     @expectedFailureAll(
         oslist=["linux"],
-        archs=[
-            "aarch64",
-            "arm"],
+        archs=["arm"],
         triple=no_match(".*-android"),
         bugnumber="llvm.org/pr25338")
     @expectedFailureAll(bugnumber="llvm.org/pr26592", triple='^mips')

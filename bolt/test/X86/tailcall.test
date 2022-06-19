@@ -1,0 +1,13 @@
+# Verifies that llvm-bolt recognizes tailcalls and mark them
+# in control flow graph.
+
+RUN: %clang %cflags %S/Inputs/tailcall.s -o %t.exe
+RUN: llvm-bolt %t.exe -o /dev/null --print-cfg 2>&1 | FileCheck %s
+
+CHECK:  Binary Function "foo"
+CHECK:    jmp     bar # TAILCALL
+CHECK:  End of Function "foo"
+
+CHECK:  Binary Function "bar"
+CHECK:    jmp     baz # TAILCALL
+CHECK:  End of Function "bar"

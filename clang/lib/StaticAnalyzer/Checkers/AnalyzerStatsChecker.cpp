@@ -93,11 +93,10 @@ void AnalyzerStatsChecker::checkEndAnalysis(ExplodedGraph &G,
   if (!Loc.isValid())
     return;
 
-  if (isa<FunctionDecl>(D) || isa<ObjCMethodDecl>(D)) {
+  if (isa<FunctionDecl, ObjCMethodDecl>(D)) {
     const NamedDecl *ND = cast<NamedDecl>(D);
     output << *ND;
-  }
-  else if (isa<BlockDecl>(D)) {
+  } else if (isa<BlockDecl>(D)) {
     output << "block(line:" << Loc.getLine() << ":col:" << Loc.getColumn();
   }
 

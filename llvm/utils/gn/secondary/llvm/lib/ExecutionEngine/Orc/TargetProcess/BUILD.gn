@@ -6,7 +6,11 @@ static_library("TargetProcess") {
   ]
   sources = [
     "JITLoaderGDB.cpp",
+    "OrcRTBootstrap.cpp",
     "RegisterEHFrames.cpp",
+    "SimpleExecutorDylibManager.cpp",
+    "SimpleExecutorMemoryManager.cpp",
+    "SimpleRemoteEPCServer.cpp",
     "TargetExecutionUtils.cpp",
   ]
 }

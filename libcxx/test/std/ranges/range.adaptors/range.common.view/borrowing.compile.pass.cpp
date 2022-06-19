@@ -7,33 +7,19 @@
 //===----------------------------------------------------------------------===//
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17
-// UNSUPPORTED: libcpp-no-concepts
-// UNSUPPORTED: gcc-10
+// UNSUPPORTED: libcpp-has-no-incomplete-ranges
 
 // template<class T>
 //   inline constexpr bool enable_borrowed_range<common_view<T>> = enable_borrowed_range<T>;
 
 #include <ranges>
-#include <cassert>
 
-#include "test_iterators.h"
-
-struct View : std::ranges::view_base {
-  friend int* begin(View&);
-  friend int* begin(View const&);
-  friend sentinel_wrapper<int*> end(View&);
-  friend sentinel_wrapper<int*> end(View const&);
+// common_view can only wrap Ts that are `view<T> && !common_range<T>`, so we need to invent one.
+struct Uncommon : std::ranges::view_base {
+    int *begin() const;
+    std::unreachable_sentinel_t end() const;
 };
 
-struct BorrowableView : std::ranges::view_base {
-  friend int* begin(BorrowableView&);
-  friend int* begin(BorrowableView const&);
-  friend sentinel_wrapper<int*> end(BorrowableView&);
-  friend sentinel_wrapper<int*> end(BorrowableView const&);
-};
-
-template<>
-inline constexpr bool std::ranges::enable_borrowed_range<BorrowableView> = true;
-
-static_assert(!std::ranges::enable_borrowed_range<std::ranges::common_view<View>>);
-static_assert( std::ranges::enable_borrowed_range<std::ranges::common_view<BorrowableView>>);
+static_assert(!std::ranges::borrowed_range<std::ranges::common_view<Uncommon>>);
+static_assert(!std::ranges::borrowed_range<std::ranges::common_view<std::ranges::owning_view<Uncommon>>>);
+static_assert( std::ranges::borrowed_range<std::ranges::common_view<std::ranges::ref_view<Uncommon>>>);

@@ -1,4 +1,5 @@
-; RUN: llvm-xray convert -m %S/Inputs/elf64-sample-o2.bin -y %S/Inputs/naive-log-simple.xray -f=yaml -o - 2>&1 | FileCheck %s
+; RUN: llvm-xray convert -m %S/Inputs/elf64-sample-o2.bin -y %S/Inputs/naive-log-simple.xray -f yaml 2>&1 | FileCheck %s
+; RUN: llvm-xray convert -m %S/Inputs/elf64-sample-o2.bin -y %S/Inputs/naive-log-simple.xray -f yaml --demangle 2>&1 | FileCheck %s
 
 ; CHECK:      ---
 ; CHECK-NEXT: header:
@@ -15,3 +16,21 @@
 ; CHECK-NEXT:   - { type: 0, func-id: 1, function: {{.*bar.*}}, cpu: 37, thread: 84697, kind: function-exit, tsc: 3315356841454802, data: '' }
 ; CHECK-NEXT:   - { type: 0, func-id: 3, function: main, cpu: 37, thread: 84697, kind: function-exit, tsc: 3315356841494828, data: '' }
 ; CHECK-NEXT: ...
+
+; RUN: llvm-xray convert -m %S/Inputs/elf64-sample-o2.bin --symbolize --no-demangle %S/Inputs/naive-log-simple.xray -f=yaml -o - 2>&1 | FileCheck --check-prefix=MANGLED %s
+
+; MANGLED:      ---
+; MANGLED-NEXT: header:
+; MANGLED-NEXT:   version:         1
+; MANGLED-NEXT:   type:            0
+; MANGLED-NEXT:   constant-tsc:    true
+; MANGLED-NEXT:   nonstop-tsc:     true
+; MANGLED-NEXT:   cycle-frequency: 2601000000
+; MANGLED-NEXT: records:
+; MANGLED-NEXT:   - { type: 0, func-id: 3, function: main, cpu: 37, thread: 84697, kind: function-enter, tsc: 3315356841453914, data: '' }
+; MANGLED-NEXT:   - { type: 0, func-id: 2, function: _Z3foov, cpu: 37, thread: 84697, kind: function-enter, tsc: 3315356841454542, data: '' }
+; MANGLED-NEXT:   - { type: 0, func-id: 2, function: _Z3foov, cpu: 37, thread: 84697, kind: function-exit, tsc: 3315356841454670, data: '' }
+; MANGLED-NEXT:   - { type: 0, func-id: 1, function: _Z3barv, cpu: 37, thread: 84697, kind: function-enter, tsc: 3315356841454762, data: '' }
+; MANGLED-NEXT:   - { type: 0, func-id: 1, function: _Z3barv, cpu: 37, thread: 84697, kind: function-exit, tsc: 3315356841454802, data: '' }
+; MANGLED-NEXT:   - { type: 0, func-id: 3, function: main, cpu: 37, thread: 84697, kind: function-exit, tsc: 3315356841494828, data: '' }
+; MANGLED-NEXT: ...

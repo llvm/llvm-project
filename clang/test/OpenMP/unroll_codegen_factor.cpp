@@ -1,9 +1,9 @@
 // Check code generation
-// RUN: %clang_cc1 -verify -triple x86_64-pc-linux-gnu -fopenmp -fopenmp-version=51 -emit-llvm %s -o - | FileCheck %s --check-prefix=IR
+// RUN: %clang_cc1 -no-opaque-pointers -verify -triple x86_64-pc-linux-gnu -fopenmp -fopenmp-version=51 -emit-llvm %s -o - | FileCheck %s --check-prefix=IR
 
 // Check same results after serialization round-trip
-// RUN: %clang_cc1 -verify -triple x86_64-pc-linux-gnu -fopenmp -fopenmp-version=51 -emit-pch -o %t %s
-// RUN: %clang_cc1 -verify -triple x86_64-pc-linux-gnu -fopenmp -fopenmp-version=51 -include-pch %t -emit-llvm %s -o - | FileCheck %s --check-prefix=IR
+// RUN: %clang_cc1 -no-opaque-pointers -verify -triple x86_64-pc-linux-gnu -fopenmp -fopenmp-version=51 -emit-pch -o %t %s
+// RUN: %clang_cc1 -no-opaque-pointers -verify -triple x86_64-pc-linux-gnu -fopenmp -fopenmp-version=51 -include-pch %t -emit-llvm %s -o - | FileCheck %s --check-prefix=IR
 // expected-no-diagnostics
 
 #ifndef HEADER
@@ -37,7 +37,7 @@ extern "C" void body(...) {}
 // IR-NEXT:    %[[TMP4:.+]] = load i32, i32* %[[END_ADDR]], align 4
 // IR-NEXT:    %[[TMP5:.+]] = load i32, i32* %[[STEP_ADDR]], align 4
 // IR-NEXT:    %[[TMP6:.+]] = load i32, i32* %[[I]], align 4
-// IR-NEXT:    call void (...) @body(i32 %[[TMP3]], i32 %[[TMP4]], i32 %[[TMP5]], i32 %[[TMP6]])
+// IR-NEXT:    call void (...) @body(i32 noundef %[[TMP3]], i32 noundef %[[TMP4]], i32 noundef %[[TMP5]], i32 noundef %[[TMP6]])
 // IR-NEXT:    br label %[[FOR_INC:.+]]
 // IR-EMPTY:
 // IR-NEXT:  [[FOR_INC]]:

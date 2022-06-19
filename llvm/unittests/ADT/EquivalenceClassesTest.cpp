@@ -66,8 +66,14 @@ TEST(EquivalenceClassesTest, TwoSets) {
         EXPECT_FALSE(EqClasses.isEquivalent(i, j));
 }
 
-TEST(EquivalenceClassesTest, MultipleSets) {
-  EquivalenceClasses<int> EqClasses;
+// Type-parameterized tests: Run the same test cases with different element
+// types.
+template <typename T> class ParameterizedTest : public testing::Test {};
+
+TYPED_TEST_SUITE_P(ParameterizedTest);
+
+TYPED_TEST_P(ParameterizedTest, MultipleSets) {
+  TypeParam EqClasses;
   // Split numbers from [0, 100) into sets so that values in the same set have
   // equal remainders (mod 17).
   for (int i = 0; i < 100; i++)
@@ -80,5 +86,31 @@ TEST(EquivalenceClassesTest, MultipleSets) {
       else
         EXPECT_FALSE(EqClasses.isEquivalent(i, j));
 }
+
+namespace {
+// A dummy struct for testing EquivalenceClasses with a comparator.
+struct TestStruct {
+  TestStruct(int value) : value(value) {}
+
+  bool operator==(const TestStruct &other) const {
+    return value == other.value;
+  }
+
+  int value;
+};
+// Comparator to be used in test case.
+struct TestStructComparator {
+  bool operator()(const TestStruct &lhs, const TestStruct &rhs) const {
+    return lhs.value < rhs.value;
+  }
+};
+} // namespace
+
+REGISTER_TYPED_TEST_SUITE_P(ParameterizedTest, MultipleSets);
+using ParamTypes =
+    testing::Types<EquivalenceClasses<int>,
+                   EquivalenceClasses<TestStruct, TestStructComparator>>;
+INSTANTIATE_TYPED_TEST_SUITE_P(EquivalenceClassesTest, ParameterizedTest,
+                               ParamTypes, );
 
 } // llvm

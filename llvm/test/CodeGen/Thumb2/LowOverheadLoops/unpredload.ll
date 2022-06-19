@@ -11,9 +11,9 @@ define void @arm_cmplx_mag_squared_q15_mve(i16* %pSrc, i16* %pDst, i32 %blockSiz
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    vld20.16 {q0, q1}, [r0]
 ; CHECK-NEXT:    vld21.16 {q0, q1}, [r0]!
-; CHECK-NEXT:    vmulh.s16 q2, q1, q1
+; CHECK-NEXT:    vmulh.s16 q1, q1, q1
 ; CHECK-NEXT:    vmulh.s16 q0, q0, q0
-; CHECK-NEXT:    vqadd.s16 q0, q0, q2
+; CHECK-NEXT:    vqadd.s16 q0, q0, q1
 ; CHECK-NEXT:    vshr.s16 q0, q0, #1
 ; CHECK-NEXT:    vstrh.16 q0, [r1], #16
 ; CHECK-NEXT:    letp lr, .LBB0_1
@@ -63,9 +63,9 @@ define i32 @bad(i32* readonly %x, i32* nocapture readonly %y, i32 %n) {
 ; CHECK-NEXT:  .LBB1_1: @ %do.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    vctp.32 r2
+; CHECK-NEXT:    vldrw.u32 q1, [r1], #16
 ; CHECK-NEXT:    vpst
 ; CHECK-NEXT:    vldrwt.u32 q0, [r0], #16
-; CHECK-NEXT:    vldrw.u32 q1, [r1], #16
 ; CHECK-NEXT:    subs r2, #4
 ; CHECK-NEXT:    vmlava.s32 r12, q0, q1
 ; CHECK-NEXT:    le lr, .LBB1_1

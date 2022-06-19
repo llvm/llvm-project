@@ -12,6 +12,8 @@
 
 // char narrow(charT c, char dfault) const;
 
+// XFAIL: no-wide-characters
+
 #include <locale>
 #include <cassert>
 

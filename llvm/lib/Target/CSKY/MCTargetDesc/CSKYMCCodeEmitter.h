@@ -13,12 +13,14 @@
 #ifndef LLVM_LIB_TARGET_CSKY_MCTARGETDESC_CSKYMCCODEEMITTER_H
 #define LLVM_LIB_TARGET_CSKY_MCTARGETDESC_CSKYMCCODEEMITTER_H
 
-#include "CSKYMCExpr.h"
 #include "MCTargetDesc/CSKYFixupKinds.h"
+#include "MCTargetDesc/CSKYMCExpr.h"
 #include "llvm/MC/MCCodeEmitter.h"
 #include "llvm/MC/MCContext.h"
 
 namespace llvm {
+
+class MCInstrInfo;
 
 class CSKYMCCodeEmitter : public MCCodeEmitter {
   MCContext &Ctx;
@@ -49,13 +51,39 @@ public:
                          SmallVectorImpl<MCFixup> &Fixups,
                          const MCSubtargetInfo &STI) const {
     const MCOperand &MO = MI.getOperand(Idx);
-    assert(MO.isImm() && "Unexpected MO type.");
-    return (MO.getImm() >> shift);
+    if (MO.isImm())
+      return (MO.getImm() >> shift);
+
+    assert(MO.isExpr() && "Unexpected MO type.");
+
+    MCFixupKind Kind = getTargetFixup(MO.getExpr());
+    Fixups.push_back(MCFixup::create(0, MO.getExpr(), Kind, MI.getLoc()));
+    return 0;
   }
+
+  unsigned getRegSeqImmOpValue(const MCInst &MI, unsigned Idx,
+                               SmallVectorImpl<MCFixup> &Fixups,
+                               const MCSubtargetInfo &STI) const;
+
+  unsigned getRegisterSeqOpValue(const MCInst &MI, unsigned Op,
+                                 SmallVectorImpl<MCFixup> &Fixups,
+                                 const MCSubtargetInfo &STI) const;
 
   unsigned getOImmOpValue(const MCInst &MI, unsigned Idx,
                           SmallVectorImpl<MCFixup> &Fixups,
                           const MCSubtargetInfo &STI) const;
+
+  unsigned getImmOpValueIDLY(const MCInst &MI, unsigned Idx,
+                             SmallVectorImpl<MCFixup> &Fixups,
+                             const MCSubtargetInfo &STI) const;
+
+  unsigned getImmJMPIX(const MCInst &MI, unsigned Idx,
+                       SmallVectorImpl<MCFixup> &Fixups,
+                       const MCSubtargetInfo &STI) const;
+
+  unsigned getImmOpValueMSBSize(const MCInst &MI, unsigned Idx,
+                                SmallVectorImpl<MCFixup> &Fixups,
+                                const MCSubtargetInfo &STI) const;
 
   unsigned getImmShiftOpValue(const MCInst &MI, unsigned Idx,
                               SmallVectorImpl<MCFixup> &Fixups,
@@ -101,6 +129,21 @@ public:
     return 0;
   }
 
+  template <llvm::CSKY::Fixups FIXUP>
+  unsigned getDataSymbolOpValue(const MCInst &MI, unsigned Idx,
+                                SmallVectorImpl<MCFixup> &Fixups,
+                                const MCSubtargetInfo &STI) const {
+    const MCOperand &MO = MI.getOperand(Idx);
+    assert(MO.isExpr() && "Unexpected MO type.");
+
+    MCFixupKind Kind = MCFixupKind(FIXUP);
+    if (MO.getExpr()->getKind() == MCExpr::Target)
+      Kind = getTargetFixup(MO.getExpr());
+
+    Fixups.push_back(MCFixup::create(0, MO.getExpr(), Kind, MI.getLoc()));
+    return 0;
+  }
+
   unsigned getCallSymbolOpValue(const MCInst &MI, unsigned Idx,
                                 SmallVectorImpl<MCFixup> &Fixups,
                                 const MCSubtargetInfo &STI) const {
@@ -128,6 +171,16 @@ public:
     Fixups.push_back(MCFixup::create(0, MO.getExpr(), Kind, MI.getLoc()));
     return 0;
   }
+
+  void expandJBTF(const MCInst &MI, raw_ostream &OS,
+                  SmallVectorImpl<MCFixup> &Fixups,
+                  const MCSubtargetInfo &STI) const;
+  void expandNEG(const MCInst &MI, raw_ostream &OS,
+                 SmallVectorImpl<MCFixup> &Fixups,
+                 const MCSubtargetInfo &STI) const;
+  void expandRSUBI(const MCInst &MI, raw_ostream &OS,
+                   SmallVectorImpl<MCFixup> &Fixups,
+                   const MCSubtargetInfo &STI) const;
 };
 
 } // namespace llvm

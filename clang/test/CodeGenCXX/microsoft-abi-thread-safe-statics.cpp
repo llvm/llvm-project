@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -fexceptions -fcxx-exceptions -fms-extensions -fms-compatibility -fms-compatibility-version=19 -std=c++11 -emit-llvm %s -o - -triple=i386-pc-win32 | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -fexceptions -fcxx-exceptions -fms-extensions -fms-compatibility -fms-compatibility-version=19 -std=c++11 -emit-llvm %s -o - -triple=i386-pc-win32 | FileCheck %s
 // REQUIRES: asserts
 
 struct S {
@@ -89,7 +89,7 @@ extern inline S&h(bool b) {
   return b ? j : i;
 }
 
-// CHECK-LABEL: define dso_local i32 @"?g1@@YAHXZ"()
+// CHECK-LABEL: define dso_local noundef i32 @"?g1@@YAHXZ"()
 int f1();
 int g1() {
   static int i = f1();

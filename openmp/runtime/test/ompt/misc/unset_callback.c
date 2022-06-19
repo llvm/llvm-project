@@ -1,19 +1,14 @@
 // RUN: %libomp-compile-and-run | FileCheck %s
 // REQUIRES: ompt
 #include "callback.h"
+#include "omp_testsuite.h"
 #include <omp.h>
 
 int main()
 {
-  #pragma omp parallel num_threads(1)
-  {
-
-  }
+  go_parallel_nthreads(1);
   ompt_set_callback(ompt_callback_parallel_begin, NULL);
-  #pragma omp parallel num_threads(1)
-  {
-
-  }
+  go_parallel_nthreads(1);
 
   // Check if libomp supports the callbacks for this test.
   // CHECK-NOT: {{^}}0: Could not register callback 'ompt_callback_idle'
@@ -25,5 +20,5 @@ int main()
   // CHECK-NOT: {{^}}[[THREAD_ID]]: ompt_event_parallel_begin:
   // CHECK: {{^}}[[THREAD_ID]]: ompt_event_parallel_end:
 
-  return 0;
+  return get_exit_value();
 }

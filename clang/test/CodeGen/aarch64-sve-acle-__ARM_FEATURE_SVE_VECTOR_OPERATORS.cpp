@@ -1,8 +1,9 @@
-// RUN: %clang_cc1 -x c++ -triple aarch64-none-linux-gnu -target-feature +sve -fallow-half-arguments-and-returns -S -O1 -Werror -Wall -emit-llvm -o - %s -msve-vector-bits=128  | FileCheck %s -D#VBITS=128  --check-prefixes=CHECK,CHECK128
-// RUN: %clang_cc1 -x c++ -triple aarch64-none-linux-gnu -target-feature +sve -fallow-half-arguments-and-returns -S -O1 -Werror -Wall -emit-llvm -o - %s -msve-vector-bits=256  | FileCheck %s -D#VBITS=256  --check-prefixes=CHECK,CHECKWIDE
-// RUN: %clang_cc1 -x c++ -triple aarch64-none-linux-gnu -target-feature +sve -fallow-half-arguments-and-returns -S -O1 -Werror -Wall -emit-llvm -o - %s -msve-vector-bits=512  | FileCheck %s -D#VBITS=512  --check-prefixes=CHECK,CHECKWIDE
-// RUN: %clang_cc1 -x c++ -triple aarch64-none-linux-gnu -target-feature +sve -fallow-half-arguments-and-returns -S -O1 -Werror -Wall -emit-llvm -o - %s -msve-vector-bits=1024 | FileCheck %s -D#VBITS=1024 --check-prefixes=CHECK,CHECKWIDE
-// RUN: %clang_cc1 -x c++ -triple aarch64-none-linux-gnu -target-feature +sve -fallow-half-arguments-and-returns -S -O1 -Werror -Wall -emit-llvm -o - %s -msve-vector-bits=2048 | FileCheck %s -D#VBITS=2048 --check-prefixes=CHECK,CHECKWIDE
+// RUN: %clang_cc1 -no-opaque-pointers -x c++ -triple aarch64-none-linux-gnu -target-feature +sve -fallow-half-arguments-and-returns -S -O1 -Werror -Wall -emit-llvm -o - %s -mvscale-min=1 -mvscale-max=1  | FileCheck %s -D#VBITS=128  --check-prefixes=CHECK,CHECK128
+// RUN: %clang_cc1 -no-opaque-pointers -x c++ -triple aarch64-none-linux-gnu -target-feature +sve -fallow-half-arguments-and-returns -S -O1 -Werror -Wall -emit-llvm -o - %s -mvscale-min=2 -mvscale-max=2  | FileCheck %s -D#VBITS=256  --check-prefixes=CHECK,CHECKWIDE
+// RUN: %clang_cc1 -no-opaque-pointers -x c++ -triple aarch64-none-linux-gnu -target-feature +sve -fallow-half-arguments-and-returns -S -O1 -Werror -Wall -emit-llvm -o - %s -mvscale-min=4 -mvscale-max=4  | FileCheck %s -D#VBITS=512  --check-prefixes=CHECK,CHECKWIDE
+// RUN: %clang_cc1 -no-opaque-pointers -x c++ -triple aarch64-none-linux-gnu -target-feature +sve -fallow-half-arguments-and-returns -S -O1 -Werror -Wall -emit-llvm -o - %s -mvscale-min=8 -mvscale-max=8 | FileCheck %s -D#VBITS=1024 --check-prefixes=CHECK,CHECKWIDE
+// RUN: %clang_cc1 -no-opaque-pointers -x c++ -triple aarch64-none-linux-gnu -target-feature +sve -fallow-half-arguments-and-returns -S -O1 -Werror -Wall -emit-llvm -o - %s -mvscale-min=16 -mvscale-max=16 | FileCheck %s -D#VBITS=2048 --check-prefixes=CHECK,CHECKWIDE
+
 // REQUIRES: aarch64-registered-target
 
 // Examples taken from section "3.7.3.3 Behavior specific to SVE
@@ -10,7 +11,7 @@
 // https://developer.arm.com/documentation/100987/latest
 //
 // Example has been expanded to work with mutiple values of
-// -msve-vector-bits.
+// -mvscale-{min,max}.
 
 #include <arm_sve.h>
 
@@ -46,7 +47,7 @@ void test02() {
 #define N __ARM_FEATURE_SVE_BITS
 // CHECK-LABEL: define{{.*}} <vscale x 4 x i32> @_Z1f9__SVE_VLSIu11__SVInt32_tLj
 // CHECK-SAME:    [[#VBITS]]
-// CHECK-SAME:    EES_(<vscale x 4 x i32> %x.coerce, <vscale x 4 x i32> %y.coerce)
+// CHECK-SAME:    EES_(<vscale x 4 x i32> noundef %x.coerce, <vscale x 4 x i32> noundef %y.coerce)
 // CHECK-NEXT: entry:
 // CHECK-NEXT:   [[X:%.*]] = call <[[#div(VBITS, 32)]] x i32> @llvm.experimental.vector.extract.v[[#div(VBITS, 32)]]i32.nxv4i32(<vscale x 4 x i32> [[X_COERCE:%.*]], i64 0)
 // CHECK-NEXT:   [[Y:%.*]] = call <[[#div(VBITS, 32)]] x i32> @llvm.experimental.vector.extract.v[[#div(VBITS, 32)]]i32.nxv4i32(<vscale x 4 x i32> [[X_COERCE1:%.*]], i64 0)
@@ -65,15 +66,15 @@ void f(vec1);
 typedef svint16_t vec2 __attribute__((arm_sve_vector_bits(N)));
 // CHECK-LABEL: define{{.*}} void @_Z1g9__SVE_VLSIu11__SVInt16_tLj
 // CHECK-SAME:    [[#VBITS]]
-// CHECK-SAME:    EE(<vscale x 8 x i16> %x.coerce)
+// CHECK-SAME:    EE(<vscale x 8 x i16> noundef %x.coerce)
 // CHECK-NEXT: entry:
 // CHECK128-NEXT:   [[X:%.*]] = call <8 x i16> @llvm.experimental.vector.extract.v8i16.nxv8i16(<vscale x 8 x i16> [[X_COERCE:%.*]], i64 0)
-// CHECK128-NEXT:   call void @_Z1fDv8_s(<8 x i16> [[X]]) [[ATTR5:#.*]]
+// CHECK128-NEXT:   call void @_Z1fDv8_s(<8 x i16> noundef [[X]]) [[ATTR5:#.*]]
 // CHECK128-NEXT:   ret void
 // CHECKWIDE-NEXT:   [[INDIRECT_ARG_TEMP:%.*]] = alloca <[[#div(VBITS, 16)]] x i16>, align 16
 // CHECKWIDE-NEXT:   [[X:%.*]] = call <[[#div(VBITS, 16)]] x i16> @llvm.experimental.vector.extract.v[[#div(VBITS, 16)]]i16.nxv8i16(<vscale x 8 x i16> [[X_COERCE:%.*]], i64 0)
 // CHECKWIDE-NEXT:   store <[[#div(VBITS, 16)]] x i16> [[X]], <[[#div(VBITS, 16)]] x i16>* [[INDIRECT_ARG_TEMP]], align 16, [[TBAA6:!tbaa !.*]]
-// CHECKWIDE-NEXT:   call void @_Z1fDv[[#div(VBITS, 16)]]_s(<[[#div(VBITS, 16)]] x i16>* nonnull [[INDIRECT_ARG_TEMP]]) [[ATTR5:#.*]]
+// CHECKWIDE-NEXT:   call void @_Z1fDv[[#div(VBITS, 16)]]_s(<[[#div(VBITS, 16)]] x i16>* noundef nonnull [[INDIRECT_ARG_TEMP]]) [[ATTR5:#.*]]
 // CHECKWIDE-NEXT:   ret void
 void g(vec2 x) { f(x); } // OK
 #endif

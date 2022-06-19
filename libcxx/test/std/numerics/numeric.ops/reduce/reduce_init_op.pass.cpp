@@ -6,10 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-// <numeric>
 // UNSUPPORTED: c++03, c++11, c++14
-// UNSUPPORTED: clang-8
-// UNSUPPORTED: gcc-9
+
+// <numeric>
 
 // Became constexpr in C++20
 // template<class InputIterator, class T, class BinaryOperation>
@@ -17,6 +16,7 @@
 
 #include <numeric>
 #include <cassert>
+#include <functional>
 
 #include "test_macros.h"
 #include "test_iterators.h"

@@ -335,8 +335,8 @@ template <typename SCMap> inline void printMap() {
     const uptr L = S ? getMostSignificantSetBitIndex(S) : 0;
     const uptr Cached = SCMap::getMaxCachedHint(S) * S;
     Buffer.append(
-        "C%02zu => S: %zu diff: +%zu %02zu%% L %zu Cached: %zu %zu; id %zu\n",
-        I, S, D, P, L, SCMap::getMaxCachedHint(S), Cached,
+        "C%02zu => S: %zu diff: +%zu %02zu%% L %zu Cached: %u %zu; id %zu\n", I,
+        S, D, P, L, SCMap::getMaxCachedHint(S), Cached,
         SCMap::getClassIdBySize(S));
     TotalCached += Cached;
     PrevS = S;
@@ -345,7 +345,7 @@ template <typename SCMap> inline void printMap() {
   Buffer.output();
 }
 
-template <typename SCMap> static void validateMap() {
+template <typename SCMap> static UNUSED void validateMap() {
   for (uptr C = 0; C < SCMap::NumClasses; C++) {
     if (C == SCMap::BatchClassId)
       continue;

@@ -8,9 +8,11 @@
 
 // UNSUPPORTED: c++03
 
+// XFAIL: LIBCXX-AIX-FIXME
+
 // The string reported on errors changed, which makes those tests fail when run
 // against already-released libc++'s.
-// XFAIL: use_system_cxx_lib && target={{.+}}-apple-macosx10.15
+// XFAIL: use_system_cxx_lib && target={{.+}}-apple-macosx{{10.15|11.0}}
 
 // <filesystem>
 
@@ -25,6 +27,7 @@
 #include <cstdio>
 #include <cstdlib>
 #include <ctime>
+#include <ratio>
 #include <type_traits>
 
 #include "test_macros.h"
@@ -193,14 +196,9 @@ Times GetSymlinkTimes(path const& p) {
 namespace {
 
 // In some configurations, the comparison is tautological and the test is valid.
-// We disable the warning so that we can actually test it regardless. Also, that
-// diagnostic is pretty new, so also don't fail if old clang does not support it
-#if defined(__clang__)
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wunknown-warning-option"
-#pragma clang diagnostic ignored "-Wunknown-pragmas"
-#pragma clang diagnostic ignored "-Wtautological-constant-compare"
-#endif
+// We disable the warning so that we can actually test it regardless.
+TEST_DIAGNOSTIC_PUSH
+TEST_CLANG_DIAGNOSTIC_IGNORED("-Wtautological-constant-compare")
 
 static const bool SupportsNegativeTimes = [] {
   using namespace std::chrono;
@@ -365,9 +363,7 @@ inline bool TimeIsRepresentableByFilesystem(file_time_type tp) {
   return true;
 }
 
-#if defined(__clang__)
-#pragma clang diagnostic pop
-#endif
+TEST_DIAGNOSTIC_POP
 
 // Create a sub-second duration using the smallest period the filesystem supports.
 file_time_type::duration SubSec(long long val) {
@@ -430,7 +426,6 @@ TEST_CASE(read_last_write_time_static_env_test)
 
 TEST_CASE(get_last_write_time_dynamic_env_test)
 {
-    using Clock = file_time_type::clock;
     using Sec = std::chrono::seconds;
     scoped_test_env env;
 
@@ -443,11 +438,9 @@ TEST_CASE(get_last_write_time_dynamic_env_test)
     const TimeSpec dir_write_time = dir_times.write;
 
     file_time_type ftime = last_write_time(file);
-    TEST_CHECK(Clock::to_time_t(ftime) == file_write_time.tv_sec);
     TEST_CHECK(CompareTime(ftime, file_write_time));
 
     file_time_type dtime = last_write_time(dir);
-    TEST_CHECK(Clock::to_time_t(dtime) == dir_write_time.tv_sec);
     TEST_CHECK(CompareTime(dtime, dir_write_time));
 
     SleepFor(Sec(2));

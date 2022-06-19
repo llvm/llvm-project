@@ -12,11 +12,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/CodeGen/MacroFusion.h"
-#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/CodeGen/MachineInstr.h"
-#include "llvm/CodeGen/MachineScheduler.h"
 #include "llvm/CodeGen/ScheduleDAG.h"
+#include "llvm/CodeGen/ScheduleDAGInstrs.h"
 #include "llvm/CodeGen/ScheduleDAGMutation.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/Support/CommandLine.h"
@@ -44,15 +43,15 @@ static SUnit *getPredClusterSU(const SUnit &SU) {
   return nullptr;
 }
 
-static bool hasLessThanNumFused(const SUnit &SU, unsigned FuseLimit) {
+bool llvm::hasLessThanNumFused(const SUnit &SU, unsigned FuseLimit) {
   unsigned Num = 1;
   const SUnit *CurrentSU = &SU;
   while ((CurrentSU = getPredClusterSU(*CurrentSU)) && Num < FuseLimit) Num ++;
   return Num < FuseLimit;
 }
 
-static bool fuseInstructionPair(ScheduleDAGInstrs &DAG, SUnit &FirstSU,
-                                SUnit &SecondSU) {
+bool llvm::fuseInstructionPair(ScheduleDAGInstrs &DAG, SUnit &FirstSU,
+                               SUnit &SecondSU) {
   // Check that neither instr is already paired with another along the edge
   // between them.
   for (SDep &SI : FirstSU.Succs)

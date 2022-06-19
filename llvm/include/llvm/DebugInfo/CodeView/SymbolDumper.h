@@ -9,11 +9,13 @@
 #ifndef LLVM_DEBUGINFO_CODEVIEW_SYMBOLDUMPER_H
 #define LLVM_DEBUGINFO_CODEVIEW_SYMBOLDUMPER_H
 
-#include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/StringSet.h"
 #include "llvm/DebugInfo/CodeView/CVRecord.h"
+#include "llvm/DebugInfo/CodeView/CodeView.h"
 #include "llvm/DebugInfo/CodeView/SymbolDumpDelegate.h"
-#include "llvm/DebugInfo/CodeView/TypeIndex.h"
+#include "llvm/Support/Error.h"
+
+#include <memory>
+#include <utility>
 
 namespace llvm {
 class ScopedPrinter;

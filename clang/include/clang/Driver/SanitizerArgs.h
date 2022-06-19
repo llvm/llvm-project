@@ -33,6 +33,7 @@ class SanitizerArgs {
   int CoverageFeatures = 0;
   int MsanTrackOrigins = 0;
   bool MsanUseAfterDtor = true;
+  bool MsanParamRetval = false;
   bool CfiCrossDso = false;
   bool CfiICallGeneralizePointers = false;
   bool CfiCanonicalJumpTables = false;
@@ -63,9 +64,12 @@ class SanitizerArgs {
   llvm::AsanDetectStackUseAfterReturnMode AsanUseAfterReturn =
       llvm::AsanDetectStackUseAfterReturnMode::Invalid;
 
+  std::string MemtagMode;
+
 public:
   /// Parses the sanitizer arguments from an argument list.
-  SanitizerArgs(const ToolChain &TC, const llvm::opt::ArgList &Args);
+  SanitizerArgs(const ToolChain &TC, const llvm::opt::ArgList &Args,
+                bool DiagnoseErrors = true);
 
   bool needsSharedRt() const { return SharedRuntime; }
 
@@ -94,6 +98,23 @@ public:
   bool needsCfiDiagRt() const;
   bool needsStatsRt() const { return Stats; }
   bool needsScudoRt() const { return Sanitizers.has(SanitizerKind::Scudo); }
+
+  bool hasMemTag() const {
+    return hasMemtagHeap() || hasMemtagStack() || hasMemtagGlobals();
+  }
+  bool hasMemtagHeap() const {
+    return Sanitizers.has(SanitizerKind::MemtagHeap);
+  }
+  bool hasMemtagStack() const {
+    return Sanitizers.has(SanitizerKind::MemtagStack);
+  }
+  bool hasMemtagGlobals() const {
+    return Sanitizers.has(SanitizerKind::MemtagGlobals);
+  }
+  const std::string &getMemtagMode() const {
+    assert(!MemtagMode.empty());
+    return MemtagMode;
+  }
 
   bool requiresPIE() const;
   bool needsUnwindTables() const;

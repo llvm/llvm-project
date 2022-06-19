@@ -1,18 +1,18 @@
-// RUN: mlir-opt %s -convert-scf-to-std -convert-vector-to-llvm -convert-std-to-llvm | \
+// RUN: mlir-opt %s -convert-scf-to-cf -convert-vector-to-llvm -convert-func-to-llvm -reconcile-unrealized-casts | \
 // RUN: mlir-cpu-runner -e entry -entry-point-result=void  \
 // RUN:   -shared-libs=%mlir_integration_test_dir/libmlir_c_runner_utils%shlibext | \
 // RUN: FileCheck %s
 
-func @entry() {
-  %i = constant 2147483647: i32
-  %l = constant 9223372036854775807 : i64
+func.func @entry() {
+  %i = arith.constant 2147483647: i32
+  %l = arith.constant 9223372036854775807 : i64
 
-  %f0 = constant 0.0: f32
-  %f1 = constant 1.0: f32
-  %f2 = constant 2.0: f32
-  %f3 = constant 3.0: f32
-  %f4 = constant 4.0: f32
-  %f5 = constant 5.0: f32
+  %f0 = arith.constant 0.0: f32
+  %f1 = arith.constant 1.0: f32
+  %f2 = arith.constant 2.0: f32
+  %f3 = arith.constant 3.0: f32
+  %f4 = arith.constant 4.0: f32
+  %f5 = arith.constant 5.0: f32
 
   // Test simple broadcasts.
   %vi = vector.broadcast %i : i32 to vector<2xi32>

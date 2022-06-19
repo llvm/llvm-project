@@ -65,7 +65,7 @@ bool CapturedDiagList::hasDiagnostic(ArrayRef<unsigned> IDs,
   while (I != List.end()) {
     FullSourceLoc diagLoc = I->getLocation();
     if ((IDs.empty() || // empty means any diagnostic in the range.
-         llvm::find(IDs, I->getID()) != IDs.end()) &&
+         llvm::is_contained(IDs, I->getID())) &&
         !diagLoc.isBeforeInTranslationUnitThan(range.getBegin()) &&
         (diagLoc == range.getEnd() ||
          diagLoc.isBeforeInTranslationUnitThan(range.getEnd()))) {
@@ -162,9 +162,7 @@ static bool HasARCRuntime(CompilerInvocation &origCI) {
     return triple.getOSMajorVersion() >= 11;
 
   if (triple.getOS() == llvm::Triple::MacOSX) {
-    unsigned Major, Minor, Micro;
-    triple.getOSVersion(Major, Minor, Micro);
-    return Major > 10 || (Major == 10 && Minor >= 7);
+    return triple.getOSVersion() >= VersionTuple(10, 7);
   }
 
   return false;

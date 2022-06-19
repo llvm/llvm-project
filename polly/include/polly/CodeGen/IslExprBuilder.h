@@ -78,7 +78,7 @@ class ScopArrayInfo;
 ///   to use this information in our IslAstGenerator. Preliminary patches are
 ///   available, but have not been committed yet.
 ///
-class IslExprBuilder {
+class IslExprBuilder final {
 public:
   /// A map from isl_ids to llvm::Values.
   typedef llvm::MapVector<isl_id *, llvm::AssertingVH<llvm::Value>> IDToValueTy;

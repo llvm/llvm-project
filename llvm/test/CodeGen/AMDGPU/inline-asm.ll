@@ -1,5 +1,5 @@
-; RUN: llc -march=amdgcn -verify-machineinstrs < %s | FileCheck --check-prefix=CHECK --check-prefix=PRE-GFX8 %s
-; RUN: llc -march=amdgcn -mcpu=tonga -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck  --check-prefix=CHECK --check-prefix=GFX8 %s
+; RUN: llc -march=amdgcn -verify-machineinstrs < %s | FileCheck --check-prefix=CHECK %s
+; RUN: llc -march=amdgcn -mcpu=tonga -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck  --check-prefix=CHECK %s
 
 ; CHECK-LABEL: {{^}}inline_asm:
 ; CHECK: s_endpgm
@@ -59,10 +59,10 @@ endif:
 
 ; CHECK-LABEL: {{^}}v_cmp_asm:
 ; CHECK: v_mov_b32_e32 [[SRC:v[0-9]+]], s{{[0-9]+}}
-; CHECK: v_cmp_ne_u32_e64 s{{\[}}[[MASK_LO:[0-9]+]]:[[MASK_HI:[0-9]+]]{{\]}}, 0, [[SRC]]
+; CHECK: v_cmp_ne_u32_e64 s[[[MASK_LO:[0-9]+]]:[[MASK_HI:[0-9]+]]], 0, [[SRC]]
 ; CHECK-DAG: v_mov_b32_e32 v[[V_LO:[0-9]+]], s[[MASK_LO]]
 ; CHECK-DAG: v_mov_b32_e32 v[[V_HI:[0-9]+]], s[[MASK_HI]]
-; CHECK: buffer_store_dwordx2 v{{\[}}[[V_LO]]:[[V_HI]]{{\]}}
+; CHECK: buffer_store_dwordx2 v[[[V_LO]]:[[V_HI]]]
 define amdgpu_kernel void @v_cmp_asm(i64 addrspace(1)* %out, i32 %in) {
   %sgpr = tail call i64 asm "v_cmp_ne_u32_e64 $0, 0, $1", "=s,v"(i32 %in)
   store i64 %sgpr, i64 addrspace(1)* %out
@@ -260,8 +260,7 @@ entry:
 ; CHECK: ; def v0
 ; CHECK: v_mov_b32_e32 v1, v0
 ; CHECK: ; def v0
-; PRE-GFX8: v_lshl_b32_e32 v{{[0-9]+}}, v1, v0
-; GFX8: v_lshlrev_b32_e32 v{{[0-9]+}}, v0, v1
+; CHECK: v_lshlrev_b32_e32 v{{[0-9]+}}, v0, v1
 define amdgpu_kernel void @muliple_def_phys_vgpr() {
 entry:
   %def0 = call i32 asm sideeffect "; def $0 ", "={v0}"()

@@ -1,9 +1,9 @@
-; RUN: opt %loadPolly -polly-stmt-granularity=bb -polly-scops -analyze -polly-allow-modref-calls \
-; RUN: -polly-invariant-load-hoisting=true \
-; RUN:  < %s | FileCheck %s
-; RUN: opt %loadPolly -polly-stmt-granularity=bb -polly-scops -polly-allow-nonaffine -analyze \
-; RUN: -polly-invariant-load-hoisting=true \
-; RUN: -polly-allow-modref-calls < %s | FileCheck %s --check-prefix=NONAFFINE
+; RUN: opt %loadPolly -polly-stmt-granularity=bb -polly-print-scops -polly-allow-modref-calls \
+; RUN:     -polly-invariant-load-hoisting=true \
+; RUN:     -disable-output < %s | FileCheck %s
+; RUN: opt %loadPolly -polly-stmt-granularity=bb -polly-print-scops -polly-allow-nonaffine \
+; RUN:     -polly-invariant-load-hoisting=true \
+; RUN:     -polly-allow-modref-calls -disable-output < %s | FileCheck %s --check-prefix=NONAFFINE
 
 ;  TODO: We should delinearize the accesses despite the use in a call to a
 ;        readonly function. For now we verify we do not delinearize them though.

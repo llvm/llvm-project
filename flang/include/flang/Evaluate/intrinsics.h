@@ -23,6 +23,10 @@ namespace llvm {
 class raw_ostream;
 }
 
+namespace Fortran::semantics {
+class Scope;
+}
+
 namespace Fortran::evaluate {
 
 class FoldingContext;
@@ -73,6 +77,9 @@ public:
 
   static IntrinsicProcTable Configure(
       const common::IntrinsicTypeDefaultKinds &);
+
+  // Make *this aware of the __Fortran_builtins module to expose TEAM_TYPE &c.
+  void SupplyBuiltins(const semantics::Scope &) const;
 
   // Check whether a name should be allowed to appear on an INTRINSIC
   // statement.

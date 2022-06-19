@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/Basic/Builtins.h"
+#include "BuiltinTargetFeatures.h"
 #include "clang/Basic/IdentifierTable.h"
 #include "clang/Basic/LangOptions.h"
 #include "clang/Basic/TargetInfo.h"
@@ -48,18 +49,22 @@ void Builtin::Context::InitializeTarget(const TargetInfo &Target,
 }
 
 bool Builtin::Context::isBuiltinFunc(llvm::StringRef FuncName) {
-  for (unsigned i = Builtin::NotBuiltin + 1; i != Builtin::FirstTSBuiltin; ++i)
-    if (FuncName.equals(BuiltinInfo[i].Name))
+  bool InStdNamespace = FuncName.consume_front("std-");
+  for (unsigned i = Builtin::NotBuiltin + 1; i != Builtin::FirstTSBuiltin;
+       ++i) {
+    if (FuncName.equals(BuiltinInfo[i].Name) &&
+        (bool)strchr(BuiltinInfo[i].Attributes, 'z') == InStdNamespace)
       return strchr(BuiltinInfo[i].Attributes, 'f') != nullptr;
+  }
 
   return false;
 }
 
-bool Builtin::Context::builtinIsSupported(const Builtin::Info &BuiltinInfo,
-                                          const LangOptions &LangOpts) {
+/// Is this builtin supported according to the given language options?
+static bool builtinIsSupported(const Builtin::Info &BuiltinInfo,
+                               const LangOptions &LangOpts) {
   bool BuiltinsUnsupported =
-      (LangOpts.NoBuiltin || LangOpts.isNoBuiltinFunc(BuiltinInfo.Name)) &&
-      strchr(BuiltinInfo.Attributes, 'f');
+      LangOpts.NoBuiltin && strchr(BuiltinInfo.Attributes, 'f') != nullptr;
   bool CorBuiltinsUnsupported =
       !LangOpts.Coroutines && (BuiltinInfo.Langs & COR_LANG);
   bool MathBuiltinsUnsupported =
@@ -69,22 +74,26 @@ bool Builtin::Context::builtinIsSupported(const Builtin::Info &BuiltinInfo,
   bool MSModeUnsupported =
       !LangOpts.MicrosoftExt && (BuiltinInfo.Langs & MS_LANG);
   bool ObjCUnsupported = !LangOpts.ObjC && BuiltinInfo.Langs == OBJC_LANG;
-  bool OclC1Unsupported = (LangOpts.OpenCLVersion / 100) != 1 &&
-                          (BuiltinInfo.Langs & ALL_OCLC_LANGUAGES ) ==  OCLC1X_LANG;
-  bool OclC2Unsupported =
-      (LangOpts.OpenCLVersion != 200 && !LangOpts.OpenCLCPlusPlus) &&
-      (BuiltinInfo.Langs & ALL_OCLC_LANGUAGES) == OCLC20_LANG;
-  bool OclCUnsupported = !LangOpts.OpenCL &&
-                         (BuiltinInfo.Langs & ALL_OCLC_LANGUAGES);
+  bool OclCUnsupported =
+      !LangOpts.OpenCL && (BuiltinInfo.Langs & ALL_OCL_LANGUAGES);
+  bool OclGASUnsupported =
+      !LangOpts.OpenCLGenericAddressSpace && (BuiltinInfo.Langs & OCL_GAS);
+  bool OclPipeUnsupported =
+      !LangOpts.OpenCLPipes && (BuiltinInfo.Langs & OCL_PIPE);
+  // Device side enqueue is not supported until OpenCL 2.0. In 2.0 and higher
+  // support is indicated with language option for blocks.
+  bool OclDSEUnsupported =
+      (LangOpts.getOpenCLCompatibleVersion() < 200 || !LangOpts.Blocks) &&
+      (BuiltinInfo.Langs & OCL_DSE);
   bool OpenMPUnsupported = !LangOpts.OpenMP && BuiltinInfo.Langs == OMP_LANG;
   bool CUDAUnsupported = !LangOpts.CUDA && BuiltinInfo.Langs == CUDA_LANG;
   bool CPlusPlusUnsupported =
       !LangOpts.CPlusPlus && BuiltinInfo.Langs == CXX_LANG;
   return !BuiltinsUnsupported && !CorBuiltinsUnsupported &&
-         !MathBuiltinsUnsupported && !OclCUnsupported && !OclC1Unsupported &&
-         !OclC2Unsupported && !OpenMPUnsupported && !GnuModeUnsupported &&
-         !MSModeUnsupported && !ObjCUnsupported && !CPlusPlusUnsupported &&
-         !CUDAUnsupported;
+         !MathBuiltinsUnsupported && !OclCUnsupported && !OclGASUnsupported &&
+         !OclPipeUnsupported && !OclDSEUnsupported && !OpenMPUnsupported &&
+         !GnuModeUnsupported && !MSModeUnsupported && !ObjCUnsupported &&
+         !CPlusPlusUnsupported && !CUDAUnsupported;
 }
 
 /// initializeBuiltins - Mark the identifiers for all the builtins with their
@@ -107,6 +116,19 @@ void Builtin::Context::initializeBuiltins(IdentifierTable &Table,
   for (unsigned i = 0, e = AuxTSRecords.size(); i != e; ++i)
     Table.get(AuxTSRecords[i].Name)
         .setBuiltinID(i + Builtin::FirstTSBuiltin + TSRecords.size());
+
+  // Step #4: Unregister any builtins specified by -fno-builtin-foo.
+  for (llvm::StringRef Name : LangOpts.NoBuiltinFuncs) {
+    bool InStdNamespace = Name.consume_front("std-");
+    auto NameIt = Table.find(Name);
+    if (NameIt != Table.end()) {
+      unsigned ID = NameIt->second->getBuiltinID();
+      if (ID != Builtin::NotBuiltin && isPredefinedLibFunction(ID) &&
+          isInStdNamespace(ID) == InStdNamespace) {
+        Table.get(Name).setBuiltinID(Builtin::NotBuiltin);
+      }
+    }
+  }
 }
 
 unsigned Builtin::Context::getRequiredVectorWidth(unsigned ID) const {
@@ -186,8 +208,18 @@ bool Builtin::Context::performsCallback(unsigned ID,
 }
 
 bool Builtin::Context::canBeRedeclared(unsigned ID) const {
-  return ID == Builtin::NotBuiltin ||
-         ID == Builtin::BI__va_start ||
-         (!hasReferenceArgsOrResult(ID) &&
-          !hasCustomTypechecking(ID));
+  return ID == Builtin::NotBuiltin || ID == Builtin::BI__va_start ||
+         (!hasReferenceArgsOrResult(ID) && !hasCustomTypechecking(ID)) ||
+         isInStdNamespace(ID);
+}
+
+bool Builtin::evaluateRequiredTargetFeatures(
+    StringRef RequiredFeatures, const llvm::StringMap<bool> &TargetFetureMap) {
+  // Return true if the builtin doesn't have any required features.
+  if (RequiredFeatures.empty())
+    return true;
+  assert(!RequiredFeatures.contains(' ') && "Space in feature list");
+
+  TargetFeatures TF(TargetFetureMap);
+  return TF.hasRequiredFeatures(RequiredFeatures);
 }

@@ -52,7 +52,7 @@ LoadCommands:
       timestamp:       1
       current_version: 65536
       compatibility_version: 65536
-    PayloadString:   macho-no-exports.dylib
+    Content:         macho-no-exports.dylib
     ZeroPadBytes:    2
   - cmd:             LC_DYLD_INFO_ONLY
     cmdsize:         48
@@ -109,7 +109,7 @@ LoadCommands:
       timestamp:       2
       current_version: 79495168
       compatibility_version: 65536
-    PayloadString:   '/usr/lib/libSystem.B.dylib'
+    Content:         '/usr/lib/libSystem.B.dylib'
     ZeroPadBytes:    6
   - cmd:             LC_FUNCTION_STARTS
     cmdsize:         16

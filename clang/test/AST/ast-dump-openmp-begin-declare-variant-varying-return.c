@@ -62,7 +62,7 @@ RETURN_TY also_after(long l) {
   return AFTER__BASE_RETURN_VALUE;
 }
 
-int main() {
+int main(void) {
   // Should return 0.
   return also_before() + also_before(1) + also_before(2.0f) + also_after(3.0) + also_after(4L);
 }
@@ -123,7 +123,7 @@ int main() {
 // C_FLOAT-NEXT: | |     `-IntegerLiteral [[ADDR_48:0x[a-z0-9]*]] <col:34> 'int' 1
 // C_FLOAT-NEXT: | `-OverloadableAttr [[ADDR_49:0x[a-z0-9]*]] <line:10:37>
 // C_FLOAT-NEXT: `-FunctionDecl [[ADDR_50:0x[a-z0-9]*]] <line:65:1, line:68:1> line:65:5 main 'int ({{.*}})'
-// C_FLOAT-NEXT:   `-CompoundStmt [[ADDR_51:0x[a-z0-9]*]] <col:12, line:68:1>
+// C_FLOAT-NEXT:   `-CompoundStmt [[ADDR_51:0x[a-z0-9]*]] <col:16, line:68:1>
 // C_FLOAT-NEXT:     `-ReturnStmt [[ADDR_52:0x[a-z0-9]*]] <line:67:3, col:94>
 // C_FLOAT-NEXT:       `-ImplicitCastExpr [[ADDR_53:0x[a-z0-9]*]] <col:10, col:94> 'int' <FloatingToIntegral>
 // C_FLOAT-NEXT:         `-BinaryOperator [[ADDR_54:0x[a-z0-9]*]] <col:10, col:94> 'float' '+'
@@ -194,7 +194,7 @@ int main() {
 // CXX_FLOAT-NEXT: |     `-ImplicitCastExpr [[ADDR_40:0x[a-z0-9]*]] <col:34> 'float' <IntegralToFloating>
 // CXX_FLOAT-NEXT: |       `-IntegerLiteral [[ADDR_41:0x[a-z0-9]*]] <col:34> 'int' 1
 // CXX_FLOAT-NEXT: `-FunctionDecl [[ADDR_42:0x[a-z0-9]*]] <line:65:1, line:68:1> line:65:5 main 'int ({{.*}})'
-// CXX_FLOAT-NEXT:   `-CompoundStmt [[ADDR_43:0x[a-z0-9]*]] <col:12, line:68:1>
+// CXX_FLOAT-NEXT:   `-CompoundStmt [[ADDR_43:0x[a-z0-9]*]] <col:16, line:68:1>
 // CXX_FLOAT-NEXT:     `-ReturnStmt [[ADDR_44:0x[a-z0-9]*]] <line:67:3, col:94>
 // CXX_FLOAT-NEXT:       `-ImplicitCastExpr [[ADDR_45:0x[a-z0-9]*]] <col:10, col:94> 'int' <FloatingToIntegral>
 // CXX_FLOAT-NEXT:         `-BinaryOperator [[ADDR_46:0x[a-z0-9]*]] <col:10, col:94> 'float' '+'
@@ -273,7 +273,7 @@ int main() {
 // C_INT-NEXT: | |   `-IntegerLiteral [[ADDR_48:0x[a-z0-9]*]] <col:34> 'int' 0
 // C_INT-NEXT: | `-OverloadableAttr [[ADDR_49:0x[a-z0-9]*]] <line:10:37>
 // C_INT-NEXT: `-FunctionDecl [[ADDR_50:0x[a-z0-9]*]] <line:65:1, line:68:1> line:65:5 main 'int ({{.*}})'
-// C_INT-NEXT:   `-CompoundStmt [[ADDR_51:0x[a-z0-9]*]] <col:12, line:68:1>
+// C_INT-NEXT:   `-CompoundStmt [[ADDR_51:0x[a-z0-9]*]] <col:16, line:68:1>
 // C_INT-NEXT:     `-ReturnStmt [[ADDR_52:0x[a-z0-9]*]] <line:67:3, col:94>
 // C_INT-NEXT:       `-BinaryOperator [[ADDR_53:0x[a-z0-9]*]] <col:10, col:94> 'int' '+'
 // C_INT-NEXT:         |-BinaryOperator [[ADDR_54:0x[a-z0-9]*]] <col:10, col:77> 'int' '+'
@@ -358,7 +358,7 @@ int main() {
 // CXX_INT-NEXT: |   `-ReturnStmt [[ADDR_40:0x[a-z0-9]*]] <line:62:3, line:23:34>
 // CXX_INT-NEXT: |     `-IntegerLiteral [[ADDR_41:0x[a-z0-9]*]] <col:34> 'int' 0
 // CXX_INT-NEXT: `-FunctionDecl [[ADDR_42:0x[a-z0-9]*]] <line:65:1, line:68:1> line:65:5 main 'int ({{.*}})'
-// CXX_INT-NEXT:   `-CompoundStmt [[ADDR_43:0x[a-z0-9]*]] <col:12, line:68:1>
+// CXX_INT-NEXT:   `-CompoundStmt [[ADDR_43:0x[a-z0-9]*]] <col:16, line:68:1>
 // CXX_INT-NEXT:     `-ReturnStmt [[ADDR_44:0x[a-z0-9]*]] <line:67:3, col:94>
 // CXX_INT-NEXT:       `-BinaryOperator [[ADDR_45:0x[a-z0-9]*]] <col:10, col:94> 'int' '+'
 // CXX_INT-NEXT:         |-BinaryOperator [[ADDR_46:0x[a-z0-9]*]] <col:10, col:77> 'int' '+'

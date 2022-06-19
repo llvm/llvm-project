@@ -50,9 +50,9 @@ define amdgpu_kernel void @fadd_v32_vs(<32 x float> addrspace(1)* %a, <32 x floa
 }
 
 ; GCN-LABEL: {{^}}fadd_v2_v_imm:
-; GCN:            s_mov_b32 s[[K:[0-9]+]], 0x42c80000
-; GFX900-COUNT-2: v_add_f32_e32 v{{[0-9]+}}, s[[K]], v{{[0-9]+}}
-; GFX90A:         v_pk_add_f32 v[{{[0-9:]+}}], v[{{[0-9:]+}}], s{{\[}}[[K]]:{{[0-9:]+}}] op_sel_hi:[1,0]{{$}}
+; GFX90A:         s_mov_b32 s[[K:[0-9]+]], 0x42c80000
+; GFX900-COUNT-2: v_add_f32_e32 v{{[0-9]+}}, 0x42c80000, v{{[0-9]+}}
+; GFX90A:         v_pk_add_f32 v[{{[0-9:]+}}], v[{{[0-9:]+}}], s[[[K]]:{{[0-9:]+}}] op_sel_hi:[1,0]{{$}}
 define amdgpu_kernel void @fadd_v2_v_imm(<2 x float> addrspace(1)* %a) {
   %id = tail call i32 @llvm.amdgcn.workitem.id.x()
   %gep = getelementptr inbounds <2 x float>, <2 x float> addrspace(1)* %a, i32 %id
@@ -108,7 +108,7 @@ define amdgpu_kernel void @fadd_v2_v_lit_hi0(<2 x float> addrspace(1)* %a) {
 ; GFX900-DAG: v_add_f32_e32 v{{[0-9]+}}, 1.0, v{{[0-9]+}}
 ; GFX90A-DAG: s_mov_b32 s[[LO:[0-9]+]], 0
 ; GFX90A-DAG: s_mov_b32 s[[HI:[0-9]+]], 1.0
-; GFX90A:     v_pk_add_f32 v[{{[0-9:]+}}], v[{{[0-9:]+}}], s{{\[}}[[LO]]:[[HI]]]{{$}}
+; GFX90A:     v_pk_add_f32 v[{{[0-9:]+}}], v[{{[0-9:]+}}], s[[[LO]]:[[HI]]]{{$}}
 define amdgpu_kernel void @fadd_v2_v_lit_lo0(<2 x float> addrspace(1)* %a) {
   %id = tail call i32 @llvm.amdgcn.workitem.id.x()
   %gep = getelementptr inbounds <2 x float>, <2 x float> addrspace(1)* %a, i32 %id
@@ -261,9 +261,9 @@ define amdgpu_kernel void @fmul_v32_vs(<32 x float> addrspace(1)* %a, <32 x floa
 }
 
 ; GCN-LABEL: {{^}}fmul_v2_v_imm:
-; GCN:            s_mov_b32 s[[K:[0-9]+]], 0x42c80000
-; GFX900-COUNT-2: v_mul_f32_e32 v{{[0-9]+}}, s[[K]], v{{[0-9]+}}
-; GFX90A:         v_pk_mul_f32 v[{{[0-9:]+}}], v[{{[0-9:]+}}], s{{\[}}[[K]]:{{[0-9:]+}}] op_sel_hi:[1,0]{{$}}
+; GFX90A:         s_mov_b32 s[[K:[0-9]+]], 0x42c80000
+; GFX900-COUNT-2: v_mul_f32_e32 v{{[0-9]+}}, 0x42c80000, v{{[0-9]+}}
+; GFX90A:         v_pk_mul_f32 v[{{[0-9:]+}}], v[{{[0-9:]+}}], s[[[K]]:{{[0-9:]+}}] op_sel_hi:[1,0]{{$}}
 define amdgpu_kernel void @fmul_v2_v_imm(<2 x float> addrspace(1)* %a) {
   %id = tail call i32 @llvm.amdgcn.workitem.id.x()
   %gep = getelementptr inbounds <2 x float>, <2 x float> addrspace(1)* %a, i32 %id
@@ -382,7 +382,7 @@ define amdgpu_kernel void @fma_v32_vs(<32 x float> addrspace(1)* %a, <32 x float
 ; GCN-DAG:        s_mov_b32 s[[K1:[0-9]+]], 0x42c80000
 ; GCN-DAG:        v_mov_b32_e32 v[[K2:[0-9]+]], 0x43480000
 ; GFX900-COUNT-2: v_fma_f32 v{{[0-9]+}}, v{{[0-9]+}}, s[[K1]], v[[K2]]
-; GFX90A:         v_pk_fma_f32 v[{{[0-9:]+}}], v[{{[0-9:]+}}], s{{\[}}[[K1]]:{{[0-9:]+}}], v{{\[}}[[K2]]:{{[0-9:]+}}] op_sel_hi:[1,0,0]{{$}}
+; GFX90A:         v_pk_fma_f32 v[{{[0-9:]+}}], v[{{[0-9:]+}}], s[[[K1]]:{{[0-9:]+}}], v[[[K2]]:{{[0-9:]+}}] op_sel_hi:[1,0,0]{{$}}
 define amdgpu_kernel void @fma_v2_v_imm(<2 x float> addrspace(1)* %a) {
   %id = tail call i32 @llvm.amdgcn.workitem.id.x()
   %gep = getelementptr inbounds <2 x float>, <2 x float> addrspace(1)* %a, i32 %id
@@ -552,8 +552,7 @@ bb:
 }
 
 ; GCN-LABEL: {{^}}fneg_v2f32_vec:
-; GFX900:         s_brev_b32 [[SIGN:s[0-9]+]], 1
-; GFX900-COUNT-2: v_xor_b32_e32 v{{[0-9]+}}, [[SIGN]], v{{[0-9]+}}
+; GFX900-COUNT-2: v_xor_b32_e32 v{{[0-9]+}}, 0x80000000, v{{[0-9]+}}
 ; GFX90A:         v_pk_add_f32 v[{{[0-9:]+}}], v[{{[0-9:]+}}], 0 neg_lo:[1,1] neg_hi:[1,1]{{$}}
 define amdgpu_kernel void @fneg_v2f32_vec(<2 x float> addrspace(1)* %a) {
   %id = tail call i32 @llvm.amdgcn.workitem.id.x()
@@ -565,8 +564,7 @@ define amdgpu_kernel void @fneg_v2f32_vec(<2 x float> addrspace(1)* %a) {
 }
 
 ; GCN-LABEL: {{^}}fneg_v2f32_scalar:
-; GCN:         s_brev_b32 [[SIGN:s[0-9]+]], 1
-; GCN-COUNT-2: s_xor_b32 s{{[0-9]+}}, s{{[0-9]+}}, [[SIGN]]
+; GCN-COUNT-2: s_xor_b32 s{{[0-9]+}}, s{{[0-9]+}}, 0x80000000
 define amdgpu_kernel void @fneg_v2f32_scalar(<2 x float> addrspace(1)* %a, <2 x float> %x) {
   %fneg = fsub <2 x float> <float -0.0, float -0.0>, %x
   store <2 x float> %fneg, <2 x float> addrspace(1)* %a, align 8

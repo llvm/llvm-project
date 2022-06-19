@@ -10,7 +10,6 @@
 #define LLVM_SUPPORT_BINARYSTREAMWRITER_H
 
 #include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/BinaryStreamArray.h"
 #include "llvm/Support/BinaryStreamError.h"
@@ -36,16 +35,11 @@ public:
   explicit BinaryStreamWriter(MutableArrayRef<uint8_t> Data,
                               llvm::support::endianness Endian);
 
-  BinaryStreamWriter(const BinaryStreamWriter &Other)
-      : Stream(Other.Stream), Offset(Other.Offset) {}
+  BinaryStreamWriter(const BinaryStreamWriter &Other) = default;
 
-  BinaryStreamWriter &operator=(const BinaryStreamWriter &Other) {
-    Stream = Other.Stream;
-    Offset = Other.Offset;
-    return *this;
-  }
+  BinaryStreamWriter &operator=(const BinaryStreamWriter &Other) = default;
 
-  virtual ~BinaryStreamWriter() {}
+  virtual ~BinaryStreamWriter() = default;
 
   /// Write the bytes specified in \p Buffer to the underlying stream.
   /// On success, updates the offset so that subsequent writes will occur
@@ -124,7 +118,7 @@ public:
   ///
   /// \returns a success error code if the data was successfully written,
   /// otherwise returns an appropriate error code.
-  Error writeStreamRef(BinaryStreamRef Ref, uint32_t Size);
+  Error writeStreamRef(BinaryStreamRef Ref, uint64_t Size);
 
   /// Writes the object \p Obj to the underlying stream, as if by using memcpy.
   /// It is up to the caller to ensure that type of \p Obj can be safely copied
@@ -178,17 +172,17 @@ public:
   }
 
   /// Splits the Writer into two Writers at a given offset.
-  std::pair<BinaryStreamWriter, BinaryStreamWriter> split(uint32_t Off) const;
+  std::pair<BinaryStreamWriter, BinaryStreamWriter> split(uint64_t Off) const;
 
-  void setOffset(uint32_t Off) { Offset = Off; }
-  uint32_t getOffset() const { return Offset; }
-  uint32_t getLength() const { return Stream.getLength(); }
-  uint32_t bytesRemaining() const { return getLength() - getOffset(); }
+  void setOffset(uint64_t Off) { Offset = Off; }
+  uint64_t getOffset() const { return Offset; }
+  uint64_t getLength() const { return Stream.getLength(); }
+  uint64_t bytesRemaining() const { return getLength() - getOffset(); }
   Error padToAlignment(uint32_t Align);
 
 protected:
   WritableBinaryStreamRef Stream;
-  uint32_t Offset = 0;
+  uint64_t Offset = 0;
 };
 
 } // end namespace llvm

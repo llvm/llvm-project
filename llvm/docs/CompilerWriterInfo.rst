@@ -107,6 +107,11 @@ C-SKY
 * `C-SKY Architecture User Guide <https://github.com/c-sky/csky-doc/blob/master/CSKY%20Architecture%20user_guide.pdf>`_
 * `C-SKY V2 ABI <https://github.com/c-sky/csky-doc/blob/master/C-SKY_V2_CPU_Applications_Binary_Interface_Standards_Manual.pdf>`_
 
+LoongArch
+---------
+* `LoongArch Reference Manual - Volume 1: Basic Architecture <https://loongson.github.io/LoongArch-Documentation/LoongArch-Vol1-EN.html>`_
+* `LoongArch ELF ABI specification <https://loongson.github.io/LoongArch-Documentation/LoongArch-ELF-ABI-EN.html>`_
+
 SPARC
 -----
 
@@ -118,6 +123,12 @@ SystemZ
 -------
 
 * `z/Architecture Principles of Operation (registration required, free sign-up) <http://www-01.ibm.com/support/docview.wss?uid=isg2b9de5f05a9d57819852571c500428f9a>`_
+
+VE
+--
+
+* `NEC SX-Aurora TSUBASA ISA Guide <https://www.hpc.nec/documents/guide/pdfs/Aurora_ISA_guide.pdf>`_
+* `NEC SX-Aurora TSUBASA manuals and documentation <https://www.hpc.nec/documentation>`_
 
 X86
 ---
@@ -186,6 +197,11 @@ NVPTX
 
 * `CUDA Documentation <http://docs.nvidia.com/cuda/index.html>`_ includes the PTX
   ISA and Driver API documentation
+
+SPIR-V
+======
+
+* `SPIR-V documentation <https://www.khronos.org/registry/SPIR-V/>`_
 
 Miscellaneous Resources
 =======================

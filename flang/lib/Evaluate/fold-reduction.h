@@ -6,8 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-// TODO: ALL, ANY, COUNT, DOT_PRODUCT, FINDLOC, IALL, IANY, IPARITY,
-// NORM2, MAXLOC, MINLOC, PARITY, PRODUCT, SUM
+// TODO: DOT_PRODUCT, NORM2, PARITY
 
 #ifndef FORTRAN_EVALUATE_FOLD_REDUCTION_H_
 #define FORTRAN_EVALUATE_FOLD_REDUCTION_H_
@@ -16,6 +15,16 @@
 
 namespace Fortran::evaluate {
 
+// Fold and validate a DIM= argument.  Returns false on error.
+bool CheckReductionDIM(std::optional<int> &dim, FoldingContext &,
+    ActualArguments &, std::optional<int> dimIndex, int rank);
+
+// Fold and validate a MASK= argument.  Return null on error, absent MASK=, or
+// non-constant MASK=.
+Constant<LogicalResult> *GetReductionMASK(
+    std::optional<ActualArgument> &maskArg, const ConstantSubscripts &shape,
+    FoldingContext &);
+
 // Common preprocessing for reduction transformational intrinsic function
 // folding.  If the intrinsic can have DIM= &/or MASK= arguments, extract
 // and check them.  If a MASK= is present, apply it to the array data and
@@ -23,10 +32,9 @@ namespace Fortran::evaluate {
 // the mask.  If the result is present, the intrinsic call can be folded.
 template <typename T>
 static std::optional<Constant<T>> ProcessReductionArgs(FoldingContext &context,
-    ActualArguments &arg, std::optional<ConstantSubscript> &dim,
-    const Scalar<T> &identity, int arrayIndex,
-    std::optional<std::size_t> dimIndex = std::nullopt,
-    std::optional<std::size_t> maskIndex = std::nullopt) {
+    ActualArguments &arg, std::optional<int> &dim, const Scalar<T> &identity,
+    int arrayIndex, std::optional<int> dimIndex = std::nullopt,
+    std::optional<int> maskIndex = std::nullopt) {
   if (arg.empty()) {
     return std::nullopt;
   }
@@ -34,57 +42,37 @@ static std::optional<Constant<T>> ProcessReductionArgs(FoldingContext &context,
   if (!folded || folded->Rank() < 1) {
     return std::nullopt;
   }
-  if (dimIndex && arg.size() >= *dimIndex + 1 && arg[*dimIndex]) {
-    if (auto *dimConst{
-            Folder<SubscriptInteger>{context}.Folding(arg[*dimIndex])}) {
-      if (auto dimScalar{dimConst->GetScalarValue()}) {
-        dim.emplace(dimScalar->ToInt64());
-        if (*dim < 1 || *dim > folded->Rank()) {
-          context.messages().Say(
-              "DIM=%jd is not valid for an array of rank %d"_err_en_US,
-              static_cast<std::intmax_t>(*dim), folded->Rank());
-          dim.reset();
+  if (!CheckReductionDIM(dim, context, arg, dimIndex, folded->Rank())) {
+    return std::nullopt;
+  }
+  if (maskIndex && static_cast<std::size_t>(*maskIndex) < arg.size() &&
+      arg[*maskIndex]) {
+    if (const Constant<LogicalResult> *mask{
+            GetReductionMASK(arg[*maskIndex], folded->shape(), context)}) {
+      // Apply the mask in place to the array
+      std::size_t n{folded->size()};
+      std::vector<typename Constant<T>::Element> elements;
+      if (auto scalarMask{mask->GetScalarValue()}) {
+        if (scalarMask->IsTrue()) {
+          return Constant<T>{*folded};
+        } else { // MASK=.FALSE.
+          elements = std::vector<typename Constant<T>::Element>(n, identity);
+        }
+      } else { // mask is an array; test its elements
+        elements = std::vector<typename Constant<T>::Element>(n, identity);
+        ConstantSubscripts at{folded->lbounds()};
+        for (std::size_t j{0}; j < n; ++j, folded->IncrementSubscripts(at)) {
+          if (mask->values()[j].IsTrue()) {
+            elements[j] = folded->At(at);
+          }
         }
       }
-    }
-    if (!dim) {
-      return std::nullopt;
-    }
-  }
-  if (maskIndex && arg.size() >= *maskIndex + 1 && arg[*maskIndex]) {
-    if (Constant<LogicalResult> *
-        mask{Folder<LogicalResult>{context}.Folding(arg[*maskIndex])}) {
-      if (CheckConformance(context.messages(), AsShape(folded->shape()),
-              AsShape(mask->shape()),
-              CheckConformanceFlags::RightScalarExpandable, "ARRAY=", "MASK=")
-              .value_or(false)) {
-        // Apply the mask in place to the array
-        std::size_t n{folded->size()};
-        std::vector<typename Constant<T>::Element> elements;
-        if (auto scalarMask{mask->GetScalarValue()}) {
-          if (scalarMask->IsTrue()) {
-            return Constant<T>{*folded};
-          } else { // MASK=.FALSE.
-            elements = std::vector<typename Constant<T>::Element>(n, identity);
-          }
-        } else { // mask is an array; test its elements
-          elements = std::vector<typename Constant<T>::Element>(n, identity);
-          ConstantSubscripts at{folded->lbounds()};
-          for (std::size_t j{0}; j < n; ++j, folded->IncrementSubscripts(at)) {
-            if (mask->values()[j].IsTrue()) {
-              elements[j] = folded->At(at);
-            }
-          }
-        }
-        if constexpr (T::category == TypeCategory::Character) {
-          return Constant<T>{static_cast<ConstantSubscript>(identity.size()),
-              std::move(elements), ConstantSubscripts{folded->shape()}};
-        } else {
-          return Constant<T>{
-              std::move(elements), ConstantSubscripts{folded->shape()}};
-        }
+      if constexpr (T::category == TypeCategory::Character) {
+        return Constant<T>{static_cast<ConstantSubscript>(identity.size()),
+            std::move(elements), ConstantSubscripts{folded->shape()}};
       } else {
-        return std::nullopt;
+        return Constant<T>{
+            std::move(elements), ConstantSubscripts{folded->shape()}};
       }
     } else {
       return std::nullopt;
@@ -96,9 +84,9 @@ static std::optional<Constant<T>> ProcessReductionArgs(FoldingContext &context,
 
 // Generalized reduction to an array of one dimension fewer (w/ DIM=)
 // or to a scalar (w/o DIM=).
-template <typename T, typename ACCUMULATOR>
-static Constant<T> DoReduction(const Constant<T> &array,
-    std::optional<ConstantSubscript> &dim, const Scalar<T> &identity,
+template <typename T, typename ACCUMULATOR, typename ARRAY>
+static Constant<T> DoReduction(const Constant<ARRAY> &array,
+    std::optional<int> &dim, const Scalar<T> &identity,
     ACCUMULATOR &accumulator) {
   ConstantSubscripts at{array.lbounds()};
   std::vector<typename Constant<T>::Element> elements;
@@ -140,7 +128,7 @@ static Expr<T> FoldMaxvalMinval(FoldingContext &context, FunctionRef<T> &&ref,
       T::category == TypeCategory::Real ||
       T::category == TypeCategory::Character);
   using Element = Scalar<T>;
-  std::optional<ConstantSubscript> dim;
+  std::optional<int> dim;
   if (std::optional<Constant<T>> array{
           ProcessReductionArgs<T>(context, ref.arguments(), dim, identity,
               /*ARRAY=*/0, /*DIM=*/1, /*MASK=*/2)}) {
@@ -154,7 +142,7 @@ static Expr<T> FoldMaxvalMinval(FoldingContext &context, FunctionRef<T> &&ref,
         element = array->At(at);
       }
     }};
-    return Expr<T>{DoReduction(*array, dim, identity, accumulator)};
+    return Expr<T>{DoReduction<T>(*array, dim, identity, accumulator)};
   }
   return Expr<T>{std::move(ref)};
 }
@@ -167,7 +155,7 @@ static Expr<T> FoldProduct(
       T::category == TypeCategory::Real ||
       T::category == TypeCategory::Complex);
   using Element = typename Constant<T>::Element;
-  std::optional<ConstantSubscript> dim;
+  std::optional<int> dim;
   if (std::optional<Constant<T>> array{
           ProcessReductionArgs<T>(context, ref.arguments(), dim, identity,
               /*ARRAY=*/0, /*DIM=*/1, /*MASK=*/2)}) {
@@ -185,9 +173,9 @@ static Expr<T> FoldProduct(
     }};
     if (overflow) {
       context.messages().Say(
-          "PRODUCT() of %s data overflowed"_en_US, T::AsFortran());
+          "PRODUCT() of %s data overflowed"_warn_en_US, T::AsFortran());
     } else {
-      return Expr<T>{DoReduction(*array, dim, identity, accumulator)};
+      return Expr<T>{DoReduction<T>(*array, dim, identity, accumulator)};
     }
   }
   return Expr<T>{std::move(ref)};
@@ -200,7 +188,7 @@ static Expr<T> FoldSum(FoldingContext &context, FunctionRef<T> &&ref) {
       T::category == TypeCategory::Real ||
       T::category == TypeCategory::Complex);
   using Element = typename Constant<T>::Element;
-  std::optional<ConstantSubscript> dim;
+  std::optional<int> dim;
   Element identity{}, correction{};
   if (std::optional<Constant<T>> array{
           ProcessReductionArgs<T>(context, ref.arguments(), dim, identity,
@@ -224,9 +212,9 @@ static Expr<T> FoldSum(FoldingContext &context, FunctionRef<T> &&ref) {
     }};
     if (overflow) {
       context.messages().Say(
-          "SUM() of %s data overflowed"_en_US, T::AsFortran());
+          "SUM() of %s data overflowed"_warn_en_US, T::AsFortran());
     } else {
-      return Expr<T>{DoReduction(*array, dim, identity, accumulator)};
+      return Expr<T>{DoReduction<T>(*array, dim, identity, accumulator)};
     }
   }
   return Expr<T>{std::move(ref)};

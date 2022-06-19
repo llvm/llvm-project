@@ -14,8 +14,6 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/CodeGen/GlobalISel/LegalizerInfo.h"
-#include "llvm/CodeGen/GlobalISel/RegisterBank.h"
-#include "llvm/CodeGen/GlobalISel/RegisterBankInfo.h"
 #include "llvm/CodeGen/GlobalISel/Utils.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineBlockFrequencyInfo.h"
@@ -25,12 +23,13 @@
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/MachineOptimizationRemarkEmitter.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
+#include "llvm/CodeGen/RegisterBank.h"
+#include "llvm/CodeGen/RegisterBankInfo.h"
 #include "llvm/CodeGen/TargetOpcodes.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/Config/llvm-config.h"
-#include "llvm/IR/Attributes.h"
 #include "llvm/IR/Function.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
@@ -626,11 +625,13 @@ bool RegBankSelect::assignInstr(MachineInstr &MI) {
   unsigned Opc = MI.getOpcode();
   if (isPreISelGenericOptimizationHint(Opc)) {
     assert((Opc == TargetOpcode::G_ASSERT_ZEXT ||
-            Opc == TargetOpcode::G_ASSERT_SEXT) &&
+            Opc == TargetOpcode::G_ASSERT_SEXT ||
+            Opc == TargetOpcode::G_ASSERT_ALIGN) &&
            "Unexpected hint opcode!");
     // The only correct mapping for these is to always use the source register
     // bank.
-    const RegisterBank *RB = MRI->getRegBankOrNull(MI.getOperand(1).getReg());
+    const RegisterBank *RB =
+        RBI->getRegBank(MI.getOperand(1).getReg(), *MRI, *TRI);
     // We can assume every instruction above this one has a selected register
     // bank.
     assert(RB && "Expected source register to have a register bank?");
@@ -699,11 +700,11 @@ bool RegBankSelect::runOnMachineFunction(MachineFunction &MF) {
     // Set a sensible insertion point so that subsequent calls to
     // MIRBuilder.
     MIRBuilder.setMBB(*MBB);
-    for (MachineBasicBlock::iterator MII = MBB->begin(), End = MBB->end();
-         MII != End;) {
-      // MI might be invalidated by the assignment, so move the
-      // iterator before hand.
-      MachineInstr &MI = *MII++;
+    SmallVector<MachineInstr *> WorkList(
+        make_pointer_range(reverse(MBB->instrs())));
+
+    while (!WorkList.empty()) {
+      MachineInstr &MI = *WorkList.pop_back_val();
 
       // Ignore target-specific post-isel instructions: they should use proper
       // regclasses.
@@ -727,18 +728,6 @@ bool RegBankSelect::runOnMachineFunction(MachineFunction &MF) {
         reportGISelFailure(MF, *TPC, *MORE, "gisel-regbankselect",
                            "unable to map instruction", MI);
         return false;
-      }
-
-      // It's possible the mapping changed control flow, and moved the following
-      // instruction to a new block, so figure out the new parent.
-      if (MII != End) {
-        MachineBasicBlock *NextInstBB = MII->getParent();
-        if (NextInstBB != MBB) {
-          LLVM_DEBUG(dbgs() << "Instruction mapping changed control flow\n");
-          MBB = NextInstBB;
-          MIRBuilder.setMBB(*MBB);
-          End = MBB->end();
-        }
       }
     }
   }
@@ -868,7 +857,7 @@ void RegBankSelect::RepairingPlacement::addInsertPoint(
 
 RegBankSelect::InstrInsertPoint::InstrInsertPoint(MachineInstr &Instr,
                                                   bool Before)
-    : InsertPoint(), Instr(Instr), Before(Before) {
+    : Instr(Instr), Before(Before) {
   // Since we do not support splitting, we do not need to update
   // liveness and such, so do not do anything with P.
   assert((!Before || !Instr.isPHI()) &&

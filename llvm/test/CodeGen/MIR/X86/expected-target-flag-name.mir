@@ -20,5 +20,5 @@ body: |
     $rax = MOV64rm $rip, 1, _, target-flags( ) @G, _
     $eax = MOV32rm killed $rax, 1, _, 0, _
     $eax = INC32r killed $eax, implicit-def dead $eflags
-    RETQ $eax
+    RET64 $eax
 ...

@@ -22,9 +22,7 @@
 #include "llvm/CodeGen/LiveStacks.h"
 #include "llvm/CodeGen/MachineBlockFrequencyInfo.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
-#include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineLoopInfo.h"
-#include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/Passes.h"
 #include "llvm/CodeGen/RegAllocRegistry.h"
 #include "llvm/CodeGen/Spiller.h"
@@ -33,7 +31,6 @@
 #include "llvm/Pass.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
-#include <cstdlib>
 #include <queue>
 
 using namespace llvm;
@@ -45,7 +42,7 @@ static RegisterRegAlloc basicRegAlloc("basic", "basic register allocator",
 
 namespace {
   struct CompSpillWeight {
-    bool operator()(LiveInterval *A, LiveInterval *B) const {
+    bool operator()(const LiveInterval *A, const LiveInterval *B) const {
       return A->weight() < B->weight();
     }
   };
@@ -65,8 +62,9 @@ class RABasic : public MachineFunctionPass,
 
   // state
   std::unique_ptr<Spiller> SpillerInstance;
-  std::priority_queue<LiveInterval*, std::vector<LiveInterval*>,
-                      CompSpillWeight> Queue;
+  std::priority_queue<const LiveInterval *, std::vector<const LiveInterval *>,
+                      CompSpillWeight>
+      Queue;
 
   // Scratch space.  Allocated here to avoid repeated malloc calls in
   // selectOrSplit().
@@ -88,19 +86,17 @@ public:
 
   Spiller &spiller() override { return *SpillerInstance; }
 
-  void enqueueImpl(LiveInterval *LI) override {
-    Queue.push(LI);
-  }
+  void enqueueImpl(const LiveInterval *LI) override { Queue.push(LI); }
 
-  LiveInterval *dequeue() override {
+  const LiveInterval *dequeue() override {
     if (Queue.empty())
       return nullptr;
-    LiveInterval *LI = Queue.top();
+    const LiveInterval *LI = Queue.top();
     Queue.pop();
     return LI;
   }
 
-  MCRegister selectOrSplit(LiveInterval &VirtReg,
+  MCRegister selectOrSplit(const LiveInterval &VirtReg,
                            SmallVectorImpl<Register> &SplitVRegs) override;
 
   /// Perform register allocation.
@@ -119,7 +115,7 @@ public:
   // Helper for spilling all live virtual registers currently unified under preg
   // that interfere with the most recently queried lvr.  Return true if spilling
   // was successful, and append any new spilled/split intervals to splitLVRs.
-  bool spillInterferences(LiveInterval &VirtReg, MCRegister PhysReg,
+  bool spillInterferences(const LiveInterval &VirtReg, MCRegister PhysReg,
                           SmallVectorImpl<Register> &SplitVRegs);
 
   static char ID;
@@ -208,18 +204,17 @@ void RABasic::releaseMemory() {
 // Spill or split all live virtual registers currently unified under PhysReg
 // that interfere with VirtReg. The newly spilled or split live intervals are
 // returned by appending them to SplitVRegs.
-bool RABasic::spillInterferences(LiveInterval &VirtReg, MCRegister PhysReg,
+bool RABasic::spillInterferences(const LiveInterval &VirtReg,
+                                 MCRegister PhysReg,
                                  SmallVectorImpl<Register> &SplitVRegs) {
   // Record each interference and determine if all are spillable before mutating
   // either the union or live intervals.
-  SmallVector<LiveInterval*, 8> Intfs;
+  SmallVector<const LiveInterval *, 8> Intfs;
 
   // Collect interferences assigned to any alias of the physical register.
   for (MCRegUnitIterator Units(PhysReg, TRI); Units.isValid(); ++Units) {
     LiveIntervalUnion::Query &Q = Matrix->query(VirtReg, *Units);
-    Q.collectInterferingVRegs();
-    for (unsigned i = Q.interferingVRegs().size(); i; --i) {
-      LiveInterval *Intf = Q.interferingVRegs()[i - 1];
+    for (const auto *Intf : reverse(Q.interferingVRegs())) {
       if (!Intf->isSpillable() || Intf->weight() > VirtReg.weight())
         return false;
       Intfs.push_back(Intf);
@@ -231,7 +226,7 @@ bool RABasic::spillInterferences(LiveInterval &VirtReg, MCRegister PhysReg,
 
   // Spill each interfering vreg allocated to PhysReg or an alias.
   for (unsigned i = 0, e = Intfs.size(); i != e; ++i) {
-    LiveInterval &Spill = *Intfs[i];
+    const LiveInterval &Spill = *Intfs[i];
 
     // Skip duplicates.
     if (!VRM->hasPhys(Spill.reg()))
@@ -260,7 +255,7 @@ bool RABasic::spillInterferences(LiveInterval &VirtReg, MCRegister PhysReg,
 // |vregs| * |machineregs|. And since the number of interference tests is
 // minimal, there is no value in caching them outside the scope of
 // selectOrSplit().
-MCRegister RABasic::selectOrSplit(LiveInterval &VirtReg,
+MCRegister RABasic::selectOrSplit(const LiveInterval &VirtReg,
                                   SmallVectorImpl<Register> &SplitVRegs) {
   // Populate a list of physical register spill candidates.
   SmallVector<MCRegister, 8> PhysRegSpillCands;

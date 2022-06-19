@@ -16,6 +16,8 @@
 //     // unspecified
 // };
 
+// XFAIL: no-wide-characters
+
 // Not a portable test
 
 #include <codecvt>

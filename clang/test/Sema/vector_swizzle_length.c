@@ -3,7 +3,7 @@
 
 typedef float float8 __attribute__((ext_vector_type(8)));
 
-void foo() {
+void foo(void) {
     float8 f2 = (float8){0, 0, 0, 0, 0, 0, 0, 0};
     (void)f2.s01234;
     (void)f2.xyzxy;

@@ -18,7 +18,7 @@ enum x                      // expected-warning {{enumeration values exceed rang
 { y = -9223372036854775807LL-1,  // expected-warning {{ISO C restricts enumerator values to range of 'int'}}
 z = 9223372036854775808ULL };    // expected-warning {{ISO C restricts enumerator values to range of 'int'}}
 
-int test() {
+int test(void) {
   return sizeof(enum e) ;
 }
 
@@ -39,7 +39,7 @@ enum u0 { U0A }; // expected-error {{use of 'u0' with tag type that does not mat
 // rdar://6095136
 extern enum some_undefined_enum ve2; // expected-warning {{ISO C forbids forward references to 'enum' types}}
 
-void test4() {
+void test4(void) {
   for (; ve2;) // expected-error {{statement requires expression of scalar type}}
     ;
   (_Bool)ve2;  // expected-error {{arithmetic or pointer type is required}}
@@ -62,7 +62,7 @@ enum e0 { // expected-note {{previous definition is here}}
 enum { PR3173A, PR3173B = PR3173A+50 };
 
 // PR2753
-void foo() {
+void foo(void) {
   enum xpto; // expected-warning{{ISO C forbids forward references to 'enum' types}}
   enum xpto; // expected-warning{{ISO C forbids forward references to 'enum' types}}
 }
@@ -99,7 +99,7 @@ int CheckPR4515[PR4515b==0?1:-1];
 
 // PR7911
 extern enum PR7911T PR7911V; // expected-warning{{ISO C forbids forward references to 'enum' types}}
-void PR7911F() {
+void PR7911F(void) {
   switch (PR7911V) // expected-error {{statement requires expression of integer type}}
     ;
 }
@@ -158,4 +158,17 @@ struct EnumRedeclStruct {
   enum {
     PR15071_One // expected-error {{redefinition of enumerator 'PR15071_One'}}
   } e;
+};
+
+enum struct GH42372_1 { // expected-error {{expected identifier or '{'}} expected-warning {{declaration does not declare anything}}
+  One
+};
+
+// Because class is not a keyword in C, this looks like a forward declaration.
+// expected-error@+4 {{expected ';' after top level declarator}}
+// expected-error@+3 {{tentative definition has type 'enum class' that is never completed}}
+// expected-warning@+2 {{ISO C forbids forward references to 'enum' types}}
+// expected-note@+1 {{forward declaration of 'enum class'}}
+enum class GH42372_2 {
+  One
 };

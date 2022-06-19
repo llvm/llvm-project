@@ -3,7 +3,7 @@
 ; On powerpc llvm-nm describes win_func as a global variable, not a function. It breaks the test.
 ; It is not essential to DWARF path handling code we're testing here.
 ; UNSUPPORTED: powerpc
-; REQUIRES: default_triple, object-emission
+; REQUIRES: object-emission
 ; RUN: %llc_dwarf -O0 -filetype=obj -o %t < %s
 ; RUN: llvm-nm --radix=o %t | grep posix_absolute_func > %t.posix_absolute_func
 ; RUN: llvm-nm --radix=o %t | grep posix_relative_func > %t.posix_relative_func
@@ -72,4 +72,3 @@ define i32 @posix_relative_func() #0 !dbg !44 {
 !47 = !DIBasicType(name: "int", size: 32, align: 32, encoding: DW_ATE_signed)
 !411 = !DILocation(line: 44, column: 2, scope: !44)
 !412 = !DIFile(filename: "c.c", directory: "/ABSOLUTE/CU/PATH")
-

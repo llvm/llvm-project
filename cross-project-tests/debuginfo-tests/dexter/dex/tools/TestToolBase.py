@@ -46,23 +46,22 @@ class TestToolBase(ToolBase):
             '--results-directory',
             type=str,
             metavar='<directory>',
-            default=os.path.abspath(
-                os.path.join(get_root_directory(), '..', 'results',
-                             datetime.now().strftime('%Y-%m-%d-%H%M-%S'))),
-            help='directory to save results')
+            default=None,
+            help='directory to save results (default: none)')
 
     def handle_options(self, defaults):
         options = self.context.options
 
-        # We accept either or both of --binary and --builder.
-        if not options.binary and not options.builder:
-            raise Error('expected --builder or --binary')
+        if not options.builder and (options.cflags or options.ldflags):
+            warn(self.context, '--cflags and --ldflags will be ignored when not'
+                               ' using --builder')
 
-        # --binary overrides --builder
-        if options.binary:
-            if options.builder:
-                warn(self.context, "overriding --builder with --binary\n")
-
+        if options.vs_solution:
+            options.vs_solution = os.path.abspath(options.vs_solution)
+            if not os.path.isfile(options.vs_solution):
+                raise Error('<d>could not find VS solution file</> <r>"{}"</>'
+                            .format(options.vs_solution))
+        elif options.binary:
             options.binary = os.path.abspath(options.binary)
             if not os.path.isfile(options.binary):
                 raise Error('<d>could not find binary file</> <r>"{}"</>'
@@ -85,14 +84,15 @@ class TestToolBase(ToolBase):
                 '<d>could not find test path</> <r>"{}"</>'.format(
                     options.test_path))
 
-        options.results_directory = os.path.abspath(options.results_directory)
-        if not os.path.isdir(options.results_directory):
-            try:
-                os.makedirs(options.results_directory, exist_ok=True)
-            except OSError as e:
-                raise Error(
-                    '<d>could not create directory</> <r>"{}"</> <y>({})</>'.
-                    format(options.results_directory, e.strerror))
+        if options.results_directory:
+            options.results_directory = os.path.abspath(options.results_directory)
+            if not os.path.isdir(options.results_directory):
+                try:
+                    os.makedirs(options.results_directory, exist_ok=True)
+                except OSError as e:
+                    raise Error(
+                        '<d>could not create directory</> <r>"{}"</> <y>({})</>'.
+                        format(options.results_directory, e.strerror))
 
     def go(self) -> ReturnCode:  # noqa
         options = self.context.options

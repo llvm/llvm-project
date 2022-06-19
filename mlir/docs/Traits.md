@@ -36,9 +36,12 @@ class MyTrait : public TraitBase<ConcreteType, MyTrait> {
 };
 ```
 
-Operation traits may also provide a `verifyTrait` hook, that is called when
-verifying the concrete operation. The trait verifiers will currently always be
-invoked before the main `Op::verify`.
+Operation traits may also provide a `verifyTrait` or `verifyRegionTrait` hook
+that is called when verifying the concrete operation. The difference between
+these two is that whether the verifier needs to access the regions, if so, the
+operations in the regions will be verified before the verification of this
+trait. The [verification order](OpDefinitions.md/#verification-ordering)
+determines when a verifier will be invoked.
 
 ```c++
 template <typename ConcreteType>
@@ -53,16 +56,16 @@ public:
 ```
 
 Note: It is generally good practice to define the implementation of the
-`verifyTrait` hook out-of-line as a free function when possible to avoid
-instantiating the implementation for every concrete operation type.
+`verifyTrait` or `verifyRegionTrait` hook out-of-line as a free function when
+possible to avoid instantiating the implementation for every concrete operation
+type.
 
-Operation traits may also provide a `foldTrait` hook that is called when
-folding the concrete operation. The trait folders will only be invoked if
-the concrete operation fold is either not implemented, fails, or performs
-an in-place fold.
+Operation traits may also provide a `foldTrait` hook that is called when folding
+the concrete operation. The trait folders will only be invoked if the concrete
+operation fold is either not implemented, fails, or performs an in-place fold.
 
-The following signature of fold will be called if it is implemented
-and the op has a single result.
+The following signature of fold will be called if it is implemented and the op
+has a single result.
 
 ```c++
 template <typename ConcreteType>
@@ -76,8 +79,8 @@ public:
 };
 ```
 
-Otherwise, if the operation has a single result and the above signature is
-not implemented, or the operation has multiple results, then the following signature
+Otherwise, if the operation has a single result and the above signature is not
+implemented, or the operation has multiple results, then the following signature
 will be used (if implemented):
 
 ```c++
@@ -200,9 +203,9 @@ defined at the top-level of such operations, or appear as region arguments for
 such operations automatically become valid symbols for the polyhedral scope
 defined by that operation. As a result, such SSA values could be used as the
 operands or index operands of various affine dialect operations like affine.for,
-affine.load, and affine.store.  The polyhedral scope defined by an operation
-with this trait includes all operations in its region excluding operations that
-are nested inside of other operations that themselves have this trait.
+affine.load, and affine.store. The polyhedral scope defined by an operation with
+this trait includes all operations in its region excluding operations that are
+nested inside of other operations that themselves have this trait.
 
 ### AutomaticAllocationScope
 
@@ -211,7 +214,8 @@ are nested inside of other operations that themselves have this trait.
 This trait is carried by region holding operations that define a new scope for
 automatic allocation. Such allocations are automatically freed when control is
 transferred back from the regions of such operations. As an example, allocations
-performed by [`memref.alloca`](Dialects/MemRef.md/#memrefalloca-mlirmemrefallocaop) are
+performed by
+[`memref.alloca`](Dialects/MemRef.md/#memrefalloca-mlirmemrefallocaop) are
 automatically freed when control leaves the region of its closest surrounding op
 that has the trait AutomaticAllocationScope.
 
@@ -241,7 +245,7 @@ Y op X`
 
 ### ElementwiseMappable
 
-* `OpTrait::ElementwiseMappable` -- `ElementwiseMappable`
+*   `OpTrait::ElementwiseMappable` -- `ElementwiseMappable`
 
 This trait tags scalar ops that also can be applied to vectors/tensors, with
 their semantics on vectors/tensors being elementwise application. This trait
@@ -252,34 +256,6 @@ of various analyses/transformations for all `ElementwiseMappable` ops.
 Note: Not all ops that are "elementwise" in some abstract sense satisfy this
 trait. In particular, broadcasting behavior is not allowed. See the comments on
 `OpTrait::ElementwiseMappable` for the precise requirements.
-
-### Function-Like
-
-*   `OpTrait::FunctionLike`
-
-This trait provides APIs for operations that behave like functions. In
-particular:
-
--   Ops must be symbols, i.e. also have the `Symbol` trait;
--   Ops have a single region with multiple blocks that corresponds to the body
-    of the function;
--   An op with a single empty region corresponds to an external function;
--   arguments of the first block of the region are treated as function
-    arguments;
--   they can have argument and result attributes that are stored in dictionary
-    attributes on the operation itself.
-
-This trait provides limited type support for the declared or defined functions.
-The convenience function `getTypeAttrName()` returns the name of an attribute
-that can be used to store the function type. In addition, this trait provides
-`getType` and `setType` helpers to store a `FunctionType` in the attribute named
-by `getTypeAttrName()`.
-
-In general, this trait assumes concrete ops use `FunctionType` under the hood.
-If this is not the case, in order to use the function type support, concrete ops
-must define the following methods, using the same name, to hide the ones defined
-for `FunctionType`: `addBodyBlock`, `getType`, `getTypeWithoutArgsAndResults`
-and `setType`.
 
 ### HasParent
 
@@ -300,7 +276,7 @@ that the following is invalid if `foo.region_op` is defined as
 `IsolatedFromAbove`:
 
 ```mlir
-%result = constant 10 : i32
+%result = arith.constant 10 : i32
 foo.region_op {
   foo.yield %result : i32
 }
@@ -311,14 +287,13 @@ to have [passes](PassManagement.md) scheduled under them.
 
 ### MemRefsNormalizable
 
-* `OpTrait::MemRefsNormalizable` -- `MemRefsNormalizable`
+*   `OpTrait::MemRefsNormalizable` -- `MemRefsNormalizable`
 
-This trait is used to flag operations that consume or produce
-values of `MemRef` type where those references can be 'normalized'.
-In cases where an associated `MemRef` has a
-non-identity memory-layout specification, such normalizable operations can be
-modified so that the `MemRef` has an identity layout specification.
-This can be implemented by associating the operation with its own
+This trait is used to flag operations that consume or produce values of `MemRef`
+type where those references can be 'normalized'. In cases where an associated
+`MemRef` has a non-identity memory-layout specification, such normalizable
+operations can be modified so that the `MemRef` has an identity layout
+specification. This can be implemented by associating the operation with its own
 index expression that can express the equivalent of the memory-layout
 specification of the MemRef type. See [the -normalize-memrefs pass].
 (https://mlir.llvm.org/docs/Passes/#-normalize-memrefs-normalize-memrefs)

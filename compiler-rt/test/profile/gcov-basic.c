@@ -1,3 +1,4 @@
+// XFAIL: aix
 // RUN: mkdir -p %t.dir && cd %t.dir
 
 /// gcov 3.4 redesigned the format and changed the extension from .da to .gcda

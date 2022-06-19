@@ -12,24 +12,24 @@ define <16 x i8> @test_v16i8_nosignbit(<16 x i8> %a, <16 x i8> %b) {
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movdqa {{.*#+}} xmm2 = [15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15]
 ; SSE2-NEXT:    pand %xmm2, %xmm0
-; SSE2-NEXT:    pand %xmm2, %xmm1
-; SSE2-NEXT:    pminub %xmm1, %xmm0
+; SSE2-NEXT:    pand %xmm1, %xmm2
+; SSE2-NEXT:    pminub %xmm2, %xmm0
 ; SSE2-NEXT:    retq
 ;
 ; SSE41-LABEL: test_v16i8_nosignbit:
 ; SSE41:       # %bb.0:
 ; SSE41-NEXT:    movdqa {{.*#+}} xmm2 = [15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15]
 ; SSE41-NEXT:    pand %xmm2, %xmm0
-; SSE41-NEXT:    pand %xmm2, %xmm1
-; SSE41-NEXT:    pminsb %xmm1, %xmm0
+; SSE41-NEXT:    pand %xmm1, %xmm2
+; SSE41-NEXT:    pminsb %xmm2, %xmm0
 ; SSE41-NEXT:    retq
 ;
 ; SSE42-LABEL: test_v16i8_nosignbit:
 ; SSE42:       # %bb.0:
 ; SSE42-NEXT:    movdqa {{.*#+}} xmm2 = [15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15]
 ; SSE42-NEXT:    pand %xmm2, %xmm0
-; SSE42-NEXT:    pand %xmm2, %xmm1
-; SSE42-NEXT:    pminsb %xmm1, %xmm0
+; SSE42-NEXT:    pand %xmm1, %xmm2
+; SSE42-NEXT:    pminsb %xmm2, %xmm0
 ; SSE42-NEXT:    retq
 ;
 ; AVX-LABEL: test_v16i8_nosignbit:

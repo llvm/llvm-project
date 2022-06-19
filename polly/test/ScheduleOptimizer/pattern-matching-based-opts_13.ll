@@ -1,17 +1,16 @@
-; RUN: opt %loadPolly -polly-opt-isl -polly-pattern-matching-based-opts=true \
+; RUN: opt %loadPolly -polly-pattern-matching-based-opts=true \
 ; RUN: -polly-target-throughput-vector-fma=2 \
 ; RUN: -polly-target-latency-vector-fma=8 \
-; RUN: -analyze -polly-ast -polly-target-1st-cache-level-associativity=8 \
+; RUN: -polly-target-1st-cache-level-associativity=8 \
 ; RUN: -polly-target-2nd-cache-level-associativity=8 \
 ; RUN: -polly-target-1st-cache-level-size=32768 \
 ; RUN: -polly-target-vector-register-bitwidth=128 \
-; RUN: -polly-target-2nd-cache-level-size=262144 < %s \
-; RUN: | FileCheck %s
+; RUN: -polly-target-2nd-cache-level-size=262144 \
+; RUN: -polly-opt-isl -polly-print-ast -disable-output < %s | FileCheck %s
 ;
 ; Test whether isolation works as expected.
 ;
-; CHECK:   // Inter iteration alias-free
-; CHECK-NEXT:          // 1st level tiling - Tiles
+; CHECK:               // 1st level tiling - Tiles
 ; CHECK-NEXT:          for (int c0 = 0; c0 <= 1; c0 += 1)
 ; CHECK-NEXT:            for (int c1 = 0; c1 <= 6; c1 += 1) {
 ; CHECK-NEXT:              for (int c3 = 1536 * c0; c3 <= min(1999, 1536 * c0 + 1535); c3 += 1)

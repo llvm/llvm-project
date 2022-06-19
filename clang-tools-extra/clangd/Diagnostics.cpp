@@ -12,10 +12,9 @@
 #include "Protocol.h"
 #include "SourceCode.h"
 #include "support/Logger.h"
-#include "clang/Basic/AllDiagnostics.h"
+#include "clang/Basic/AllDiagnostics.h" // IWYU pragma: keep
 #include "clang/Basic/Diagnostic.h"
 #include "clang/Basic/DiagnosticIDs.h"
-#include "clang/Basic/FileManager.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Lex/Lexer.h"
@@ -26,15 +25,15 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/SmallString.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
-#include "llvm/Support/Capacity.h"
 #include "llvm/Support/Path.h"
-#include "llvm/Support/ScopedPrinter.h"
-#include "llvm/Support/Signals.h"
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
+#include <cassert>
 #include <cstddef>
+#include <vector>
 
 namespace clang {
 namespace clangd {
@@ -43,7 +42,7 @@ namespace {
 const char *getDiagnosticCode(unsigned ID) {
   switch (ID) {
 #define DIAG(ENUM, CLASS, DEFAULT_MAPPING, DESC, GROPU, SFINAE, NOWERROR,      \
-             SHOWINSYSHEADER, DEFERRABLE, CATEGORY)                            \
+             SHOWINSYSHEADER, SHOWINSYSMACRO, DEFERRABLE, CATEGORY)            \
   case clang::diag::ENUM:                                                      \
     return #ENUM;
 #include "clang/Basic/DiagnosticASTKinds.inc"
@@ -197,16 +196,16 @@ bool tryMoveToMainFile(Diag &D, FullSourceLoc DiagLoc) {
     return false;
 
   // Add a note that will point to real diagnostic.
-  const auto *FE = SM.getFileEntryForID(SM.getFileID(DiagLoc));
+  auto FE = SM.getFileEntryRefForID(SM.getFileID(DiagLoc)).getValue();
   D.Notes.emplace(D.Notes.begin());
   Note &N = D.Notes.front();
-  N.AbsFile = std::string(FE->tryGetRealPathName());
-  N.File = std::string(FE->getName());
+  N.AbsFile = std::string(FE.getFileEntry().tryGetRealPathName());
+  N.File = std::string(FE.getName());
   N.Message = "error occurred here";
   N.Range = D.Range;
 
   // Update diag to point at include inside main file.
-  D.File = SM.getFileEntryForID(SM.getMainFileID())->getName().str();
+  D.File = SM.getFileEntryRefForID(SM.getMainFileID())->getName().str();
   D.Range = std::move(R);
   D.InsideMainFile = true;
   // Update message to mention original file.
@@ -324,6 +323,60 @@ std::string noteMessage(const Diag &Main, const DiagBase &Note,
   OS.flush();
   return capitalize(std::move(Result));
 }
+
+void setTags(clangd::Diag &D) {
+  static const auto *DeprecatedDiags = new llvm::DenseSet<unsigned>{
+      diag::warn_access_decl_deprecated,
+      diag::warn_atl_uuid_deprecated,
+      diag::warn_deprecated,
+      diag::warn_deprecated_altivec_src_compat,
+      diag::warn_deprecated_comma_subscript,
+      diag::warn_deprecated_compound_assign_volatile,
+      diag::warn_deprecated_copy,
+      diag::warn_deprecated_copy_with_dtor,
+      diag::warn_deprecated_copy_with_user_provided_copy,
+      diag::warn_deprecated_copy_with_user_provided_dtor,
+      diag::warn_deprecated_def,
+      diag::warn_deprecated_increment_decrement_volatile,
+      diag::warn_deprecated_message,
+      diag::warn_deprecated_redundant_constexpr_static_def,
+      diag::warn_deprecated_register,
+      diag::warn_deprecated_simple_assign_volatile,
+      diag::warn_deprecated_string_literal_conversion,
+      diag::warn_deprecated_this_capture,
+      diag::warn_deprecated_volatile_param,
+      diag::warn_deprecated_volatile_return,
+      diag::warn_deprecated_volatile_structured_binding,
+      diag::warn_opencl_attr_deprecated_ignored,
+      diag::warn_property_method_deprecated,
+      diag::warn_vector_mode_deprecated,
+  };
+  static const auto *UnusedDiags = new llvm::DenseSet<unsigned>{
+      diag::warn_opencl_attr_deprecated_ignored,
+      diag::warn_pragma_attribute_unused,
+      diag::warn_unused_but_set_parameter,
+      diag::warn_unused_but_set_variable,
+      diag::warn_unused_comparison,
+      diag::warn_unused_const_variable,
+      diag::warn_unused_exception_param,
+      diag::warn_unused_function,
+      diag::warn_unused_label,
+      diag::warn_unused_lambda_capture,
+      diag::warn_unused_local_typedef,
+      diag::warn_unused_member_function,
+      diag::warn_unused_parameter,
+      diag::warn_unused_private_field,
+      diag::warn_unused_property_backing_ivar,
+      diag::warn_unused_template,
+      diag::warn_unused_variable,
+  };
+  if (DeprecatedDiags->contains(D.ID)) {
+    D.Tags.push_back(DiagnosticTag::Deprecated);
+  } else if (UnusedDiags->contains(D.ID)) {
+    D.Tags.push_back(DiagnosticTag::Unnecessary);
+  }
+  // FIXME: Set tags for tidy-based diagnostics too.
+}
 } // namespace
 
 llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, const DiagBase &D) {
@@ -363,6 +416,7 @@ llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, const Diag &D) {
       OS << Sep << Fix;
       Sep = ", ";
     }
+    OS << "}";
   }
   return OS;
 }
@@ -410,7 +464,8 @@ void toLSPDiags(
 
   // Main diagnostic should always refer to a range inside main file. If a
   // diagnostic made it so for, it means either itself or one of its notes is
-  // inside main file.
+  // inside main file. It's also possible that there's a fix in the main file,
+  // but we preserve fixes iff primary diagnostic is in the main file.
   if (D.InsideMainFile) {
     Main.range = D.Range;
   } else {
@@ -422,12 +477,19 @@ void toLSPDiags(
   }
 
   Main.code = D.Name;
+  if (auto URI = getDiagnosticDocURI(D.Source, D.ID, D.Name)) {
+    Main.codeDescription.emplace();
+    Main.codeDescription->href = std::move(*URI);
+  }
   switch (D.Source) {
   case Diag::Clang:
     Main.source = "clang";
     break;
   case Diag::ClangTidy:
     Main.source = "clang-tidy";
+    break;
+  case Diag::Clangd:
+    Main.source = "clangd";
     break;
   case Diag::ClangdConfig:
     Main.source = "clangd-config";
@@ -461,6 +523,7 @@ void toLSPDiags(
       Main.relatedInformation->push_back(std::move(RelInfo));
     }
   }
+  Main.tags = D.Tags;
   OutFn(std::move(Main), D.Fixes);
 
   // If we didn't emit the notes as relatedLocations, emit separate diagnostics
@@ -504,6 +567,7 @@ std::vector<Diag> StoreDiags::take(const clang::tidy::ClangTidyContext *Tidy) {
 
   // Fill in name/source now that we have all the context needed to map them.
   for (auto &Diag : Output) {
+    setTags(Diag);
     if (const char *ClangDiag = getDiagnosticCode(Diag.ID)) {
       // Warnings controlled by -Wfoo are better recognized by that name.
       StringRef Warning = DiagnosticIDs::getWarningOptionForDiag(Diag.ID);
@@ -545,7 +609,7 @@ std::vector<Diag> StoreDiags::take(const clang::tidy::ClangTidyContext *Tidy) {
   // duplicated messages due to various reasons (e.g. the check doesn't handle
   // template instantiations well; clang-tidy alias checks).
   std::set<std::pair<Range, std::string>> SeenDiags;
-  llvm::erase_if(Output, [&](const Diag& D) {
+  llvm::erase_if(Output, [&](const Diag &D) {
     return !SeenDiags.emplace(D.Range, D.Message).second;
   });
   return std::move(Output);
@@ -569,7 +633,10 @@ void StoreDiags::EndSourceFile() {
 /// the result is not too large and does not contain newlines.
 static void writeCodeToFixMessage(llvm::raw_ostream &OS, llvm::StringRef Code) {
   constexpr unsigned MaxLen = 50;
-
+  if (Code == "\n") {
+    OS << "\\n";
+    return;
+  }
   // Only show the first line if there are many.
   llvm::StringRef R = Code.split('\n').first;
   // Shorten the message if it's too long.
@@ -640,13 +707,12 @@ void StoreDiags::HandleDiagnostic(DiagnosticsEngine::Level DiagLevel,
     return;
   }
 
-  bool InsideMainFile = isInsideMainFile(Info);
   SourceManager &SM = Info.getSourceManager();
 
   auto FillDiagBase = [&](DiagBase &D) {
     fillNonLocationData(DiagLevel, Info, D);
 
-    D.InsideMainFile = InsideMainFile;
+    D.InsideMainFile = isInsideMainFile(Info);
     D.Range = diagnosticRange(Info, *LangOpts);
     D.File = std::string(SM.getFilename(Info.getLocation()));
     D.AbsFile = getCanonicalPath(
@@ -658,9 +724,9 @@ void StoreDiags::HandleDiagnostic(DiagnosticsEngine::Level DiagLevel,
   auto AddFix = [&](bool SyntheticMessage) -> bool {
     assert(!Info.getFixItHints().empty() &&
            "diagnostic does not have attached fix-its");
-    if (!InsideMainFile)
+    // No point in generating fixes, if the diagnostic is for a different file.
+    if (!LastDiag->InsideMainFile)
       return false;
-
     // Copy as we may modify the ranges.
     auto FixIts = Info.getFixItHints().vec();
     llvm::SmallVector<TextEdit, 1> Edits;
@@ -762,6 +828,18 @@ void StoreDiags::HandleDiagnostic(DiagnosticsEngine::Level DiagLevel,
     if (LastDiag->Severity == DiagnosticsEngine::Ignored)
       return;
 
+    // Give include-fixer a chance to replace a note with a fix.
+    if (Fixer) {
+      auto ReplacementFixes = Fixer(LastDiag->Severity, Info);
+      if (!ReplacementFixes.empty()) {
+        assert(Info.getNumFixItHints() == 0 &&
+               "Include-fixer replaced a note with clang fix-its attached!");
+        LastDiag->Fixes.insert(LastDiag->Fixes.end(), ReplacementFixes.begin(),
+                               ReplacementFixes.end());
+        return;
+      }
+    }
+
     if (!Info.getFixItHints().empty()) {
       // A clang note with fix-it is not a separate diagnostic in clangd. We
       // attach it as a Fix to the main diagnostic instead.
@@ -805,7 +883,14 @@ void StoreDiags::flushLastDiag() {
 }
 
 bool isBuiltinDiagnosticSuppressed(unsigned ID,
-                                   const llvm::StringSet<> &Suppress) {
+                                   const llvm::StringSet<> &Suppress,
+                                   const LangOptions &LangOpts) {
+  // Don't complain about header-only stuff in mainfiles if it's a header.
+  // FIXME: would be cleaner to suppress in clang, once we decide whether the
+  //        behavior should be to silently-ignore or respect the pragma.
+  if (ID == diag::pp_pragma_sysheader_in_main_file && LangOpts.IsHeaderFile)
+    return true;
+
   if (const char *CodePtr = getDiagnosticCode(ID)) {
     if (Suppress.contains(normalizeSuppressedCode(CodePtr)))
       return true;
@@ -820,6 +905,32 @@ llvm::StringRef normalizeSuppressedCode(llvm::StringRef Code) {
   Code.consume_front("err_");
   Code.consume_front("-W");
   return Code;
+}
+
+llvm::Optional<std::string> getDiagnosticDocURI(Diag::DiagSource Source,
+                                                unsigned ID,
+                                                llvm::StringRef Name) {
+  switch (Source) {
+  case Diag::Unknown:
+    break;
+  case Diag::Clang:
+    // There is a page listing many warning flags, but it provides too little
+    // information to be worth linking.
+    // https://clang.llvm.org/docs/DiagnosticsReference.html
+    break;
+  case Diag::ClangTidy:
+    return {("https://clang.llvm.org/extra/clang-tidy/checks/" + Name + ".html")
+                .str()};
+  case Diag::Clangd:
+    if (Name == "unused-includes")
+      return {"https://clangd.llvm.org/guides/include-cleaner"};
+    break;
+  case Diag::ClangdConfig:
+    // FIXME: we should link to https://clangd.llvm.org/config
+    // However we have no diagnostic codes, which the link should describe!
+    break;
+  }
+  return llvm::None;
 }
 
 } // namespace clangd

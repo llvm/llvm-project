@@ -108,8 +108,12 @@ class Tool(TestToolBase):
         """Build an executable from the test source with the given --builder
         script and flags (--cflags, --ldflags) in the working directory.
         Or, if the --binary option has been given, copy the executable provided
-        into the working directory and rename it to match the --builder output.
+        into the working directory and rename it to match the --builder output
+        or skip if --vs-solution was passed on the command line.
         """
+
+        if self.context.options.vs_solution:
+            return
 
         options = self.context.options
         if options.binary:
@@ -172,6 +176,7 @@ class Tool(TestToolBase):
         """Returns the path to the test results directory for the test denoted
         by test_name.
         """
+        assert self.context.options.results_directory != None
         return os.path.join(self.context.options.results_directory,
                             self._get_results_basename(test_name))
 
@@ -189,22 +194,25 @@ class Tool(TestToolBase):
 
     def _record_steps(self, test_name, steps):
         """Write out the set of steps out to the test's .txt and .json
-        results file.
+        results file if a results directory has been specified.
         """
-        output_text_path = self._get_results_text_path(test_name)
-        with open(output_text_path, 'w') as fp:
-            self.context.o.auto(str(steps), stream=Stream(fp))
+        if self.context.options.results_directory:
+            output_text_path = self._get_results_text_path(test_name)
+            with open(output_text_path, 'w') as fp:
+                self.context.o.auto(str(steps), stream=Stream(fp))
 
-        output_dextIR_path = self._get_results_pickle_path(test_name)
-        with open(output_dextIR_path, 'wb') as fp:
-            pickle.dump(steps, fp, protocol=pickle.HIGHEST_PROTOCOL)
+            output_dextIR_path = self._get_results_pickle_path(test_name)
+            with open(output_dextIR_path, 'wb') as fp:
+                pickle.dump(steps, fp, protocol=pickle.HIGHEST_PROTOCOL)
 
     def _record_score(self, test_name, heuristic):
-        """Write out the test's heuristic score to the results .txt file.
+        """Write out the test's heuristic score to the results .txt file
+        if a results directory has been specified.
         """
-        output_text_path = self._get_results_text_path(test_name)
-        with open(output_text_path, 'a') as fp:
-            self.context.o.auto(heuristic.verbose_output, stream=Stream(fp))
+        if self.context.options.results_directory:
+            output_text_path = self._get_results_text_path(test_name)
+            with open(output_text_path, 'a') as fp:
+                self.context.o.auto(heuristic.verbose_output, stream=Stream(fp))
 
     def _record_test_and_display(self, test_case):
         """Output test case to o stream and record test case internally for
@@ -268,19 +276,20 @@ class Tool(TestToolBase):
             if num_tests != 0:
                 print("@avg: ({:.4f})".format(score_sum/num_tests))
 
-        summary_path = os.path.join(options.results_directory, 'summary.csv')
-        with open(summary_path, mode='w', newline='') as fp:
-            writer = csv.writer(fp, delimiter=',')
-            writer.writerow(['Test Case', 'Score', 'Error'])
+        has_failed = lambda test: test.score < options.fail_lt or test.error
+        if any(map(has_failed, self._test_cases)):
+            return_code = ReturnCode.FAIL
 
-            for test_case in self._test_cases:
-                if (test_case.score < options.fail_lt or
-                        test_case.error is not None):
-                    return_code = ReturnCode.FAIL
+        if options.results_directory:
+            summary_path = os.path.join(options.results_directory, 'summary.csv')
+            with open(summary_path, mode='w', newline='') as fp:
+                writer = csv.writer(fp, delimiter=',')
+                writer.writerow(['Test Case', 'Score', 'Error'])
 
-                writer.writerow([
-                    test_case.name, '{:.4f}'.format(test_case.score),
-                    test_case.error
-                ])
+                for test_case in self._test_cases:
+                    writer.writerow([
+                        test_case.name, '{:.4f}'.format(test_case.score),
+                        test_case.error
+                    ])
 
         return return_code

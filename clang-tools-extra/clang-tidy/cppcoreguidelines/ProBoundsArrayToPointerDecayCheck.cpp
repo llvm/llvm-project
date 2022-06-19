@@ -54,13 +54,17 @@ void ProBoundsArrayToPointerDecayCheck::registerMatchers(MatchFinder *Finder) {
   // 2) inside a range-for over an array
   // 3) if it converts a string literal to a pointer
   Finder->addMatcher(
-      traverse(TK_AsIs,
-               implicitCastExpr(
-                   unless(hasParent(arraySubscriptExpr())),
-                   unless(hasParentIgnoringImpCasts(explicitCastExpr())),
-                   unless(isInsideOfRangeBeginEndStmt()),
-                   unless(hasSourceExpression(ignoringParens(stringLiteral()))))
-                   .bind("cast")),
+      traverse(
+          TK_AsIs,
+          implicitCastExpr(
+              unless(hasParent(arraySubscriptExpr())),
+              unless(hasParentIgnoringImpCasts(explicitCastExpr())),
+              unless(isInsideOfRangeBeginEndStmt()),
+              unless(hasSourceExpression(ignoringParens(stringLiteral()))),
+              unless(hasSourceExpression(ignoringParens(conditionalOperator(
+                  allOf(hasTrueExpression(stringLiteral()),
+                        hasFalseExpression(stringLiteral())))))))
+              .bind("cast")),
       this);
 }
 

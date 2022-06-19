@@ -51,12 +51,14 @@ int main(int, char**)
         t.setg(in, in+1, in+sizeof(in)/sizeof(in[0]));
         t.gbump(2);
     }
+#ifndef TEST_HAS_NO_WIDE_CHARACTERS
     {
         test<wchar_t> t;
         wchar_t in[] = L"ABCDE";
         t.setg(in, in+1, in+sizeof(in)/sizeof(in[0]));
         t.gbump(3);
     }
+#endif
 
   return 0;
 }

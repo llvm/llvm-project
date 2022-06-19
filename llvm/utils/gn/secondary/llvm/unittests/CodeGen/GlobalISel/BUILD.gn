@@ -15,6 +15,7 @@ unittest("GlobalISelTests") {
   sources = [
     "CSETest.cpp",
     "ConstantFoldingTest.cpp",
+    "GISelAliasTest.cpp",
     "GISelMITest.cpp",
     "GISelUtilsTest.cpp",
     "KnownBitsTest.cpp",

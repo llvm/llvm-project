@@ -1,4 +1,4 @@
-; RUN: opt -loop-vectorize -force-vector-width=4 %s | FileCheck %s
+; RUN: opt -passes=loop-vectorize -force-vector-width=4 %s | FileCheck %s
 
 %struct.foo = type { [400 x double] }
 

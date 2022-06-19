@@ -10,8 +10,6 @@ from lldbsuite.test.lldbtest import *
 
 class TestStepVrsInterruptTimeout(TestBase):
 
-    mydir = TestBase.compute_mydir(__file__)
-
     NO_DEBUG_INFO_TESTCASE = True
 
     def test_step_vrs_interrupt(self):
@@ -33,4 +31,4 @@ class TestStepVrsInterruptTimeout(TestBase):
         self.dbg.SetAsync(False)
         self.runCmd("settings set target.process.interrupt-timeout 1")
         thread.StepOver()
-        self.assertEqual(process.GetState(), lldb.eStateStopped, "Stopped like we should")
+        self.assertState(process.GetState(), lldb.eStateStopped, "Stopped like we should")

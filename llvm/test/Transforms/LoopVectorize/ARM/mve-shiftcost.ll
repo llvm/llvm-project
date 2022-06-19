@@ -15,7 +15,7 @@ target triple = "thumbv8.1m.main-none-none-eabi"
 define void @test([101 x i32] *%src, i32 %N) #0 {
 entry:
   br label %for.body386
-  
+
 for.body386:                                      ; preds = %entry, %l77
   %add387 = phi i32 [ %inc532, %l77 ], [ 0, %entry ]
   %arrayidx388 = getelementptr inbounds [101 x i32], [101 x i32]* %src, i32 0, i32 %add387

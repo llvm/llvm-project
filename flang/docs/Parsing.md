@@ -133,10 +133,20 @@ indicators within the parser and in the parse tree.
 
 Message texts, and snprintf-like formatting strings for constructing
 messages, are instantiated in the various components of the parser with
-C++ user defined character literals tagged with `_err_en_US` and `_en_US`
-(signifying fatality and language, with the default being the dialect of
-English used in the United States) so that they may be easily identified
-for localization.  As described above, messages are associated with
+C++ user defined character literals tagged with `_err_en_US`, `_warn_en_US`,
+`port_en_US`, and `_en_US` to signify severity and language; the default
+language is the dialect of English used in the United States.
+
+All "fatal" errors that do not immediately abort compilation but do
+prevent the generation of binary and module files are `_err_en_US`.
+Warnings about detected flaws in the program that probably indicate
+problems worth attention are `_warn_en_US`.
+Non-conforming extensions, legacy features, and obsolescent or deleted
+features will raise `_port_en_US` messages when those are enabled.
+Other messages have a simple `_en_US` suffix, including all messages
+that are explanatory attachments.
+
+As described above, messages are associated with
 source code positions by means of provenance values.
 
 ## The Parse Tree

@@ -107,6 +107,8 @@ void InitThreads();
 void InitializeInterceptors();
 
 void HwasanAllocatorInit();
+void HwasanAllocatorLock();
+void HwasanAllocatorUnlock();
 
 void *hwasan_malloc(uptr size, StackTrace *stack);
 void *hwasan_calloc(uptr nmemb, uptr size, StackTrace *stack);
@@ -140,6 +142,8 @@ void HwasanAtExit();
 
 void HwasanOnDeadlySignal(int signo, void *info, void *context);
 
+void HwasanInstallAtForkHandler();
+
 void UpdateMemoryUsage();
 
 void AppendToErrorMessageBuffer(const char *buffer);
@@ -168,40 +172,34 @@ void HwasanTagMismatch(uptr addr, uptr access_info, uptr *registers_frame,
 
 }  // namespace __hwasan
 
-#define HWASAN_MALLOC_HOOK(ptr, size)       \
-  do {                                    \
-    if (&__sanitizer_malloc_hook) {       \
-      __sanitizer_malloc_hook(ptr, size); \
-    }                                     \
-    RunMallocHooks(ptr, size);            \
-  } while (false)
-#define HWASAN_FREE_HOOK(ptr)       \
-  do {                            \
-    if (&__sanitizer_free_hook) { \
-      __sanitizer_free_hook(ptr); \
-    }                             \
-    RunFreeHooks(ptr);            \
-  } while (false)
-
-#if HWASAN_WITH_INTERCEPTORS && defined(__aarch64__)
+#if HWASAN_WITH_INTERCEPTORS
 // For both bionic and glibc __sigset_t is an unsigned long.
 typedef unsigned long __hw_sigset_t;
 // Setjmp and longjmp implementations are platform specific, and hence the
-// interception code is platform specific too.  As yet we've only implemented
-// the interception for AArch64.
-typedef unsigned long long __hw_register_buf[22];
+// interception code is platform specific too.
+#  if defined(__aarch64__)
+constexpr size_t kHwRegisterBufSize = 22;
+#  elif defined(__x86_64__)
+constexpr size_t kHwRegisterBufSize = 8;
+#  endif
+typedef unsigned long long __hw_register_buf[kHwRegisterBufSize];
 struct __hw_jmp_buf_struct {
   // NOTE: The machine-dependent definition of `__sigsetjmp'
   // assume that a `__hw_jmp_buf' begins with a `__hw_register_buf' and that
   // `__mask_was_saved' follows it.  Do not move these members or add others
   // before it.
+  //
+  // We add a __magic field to our struct to catch cases where libc's setjmp
+  // populated the jmp_buf instead of our interceptor.
   __hw_register_buf __jmpbuf; // Calling environment.
-  int __mask_was_saved;       // Saved the signal mask?
+  unsigned __mask_was_saved : 1;  // Saved the signal mask?
+  unsigned __magic : 31;      // Used to distinguish __hw_jmp_buf from jmp_buf.
   __hw_sigset_t __saved_mask; // Saved signal mask.
 };
 typedef struct __hw_jmp_buf_struct __hw_jmp_buf[1];
 typedef struct __hw_jmp_buf_struct __hw_sigjmp_buf[1];
-#endif // HWASAN_WITH_INTERCEPTORS && __aarch64__
+constexpr unsigned kHwJmpBufMagic = 0x248ACE77;
+#endif  // HWASAN_WITH_INTERCEPTORS
 
 #define ENSURE_HWASAN_INITED()      \
   do {                              \

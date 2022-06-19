@@ -2,6 +2,8 @@
 // RUN: -triple aarch64-arm-none-eabi -target-feature +neon \
 // RUN: -target-feature +bf16 %s
 
+// REQUIRES: aarch64-registered-target || arm-registered-target
+
 #include <arm_neon.h>
 
 int x;

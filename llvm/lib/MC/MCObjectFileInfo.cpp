@@ -16,10 +16,14 @@
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCSection.h"
 #include "llvm/MC/MCSectionCOFF.h"
+#include "llvm/MC/MCSectionDXContainer.h"
 #include "llvm/MC/MCSectionELF.h"
+#include "llvm/MC/MCSectionGOFF.h"
 #include "llvm/MC/MCSectionMachO.h"
+#include "llvm/MC/MCSectionSPIRV.h"
 #include "llvm/MC/MCSectionWasm.h"
 #include "llvm/MC/MCSectionXCOFF.h"
+#include "llvm/Support/Casting.h"
 
 using namespace llvm;
 
@@ -61,8 +65,18 @@ void MCObjectFileInfo::initMachOMCObjectFileInfo(const Triple &T) {
       (T.getArch() == Triple::aarch64 || T.getArch() == Triple::aarch64_32))
     SupportsCompactUnwindWithoutEHFrame = true;
 
-  if (T.isWatchABI())
+  switch (Ctx->emitDwarfUnwindInfo()) {
+  case EmitDwarfUnwindType::Always:
+    OmitDwarfIfHaveCompactUnwind = false;
+    break;
+  case EmitDwarfUnwindType::NoCompactUnwind:
     OmitDwarfIfHaveCompactUnwind = true;
+    break;
+  case EmitDwarfUnwindType::Default:
+    OmitDwarfIfHaveCompactUnwind =
+        T.isWatchABI() || SupportsCompactUnwindWithoutEHFrame;
+    break;
+  }
 
   FDECFIEncoding = dwarf::DW_EH_PE_pcrel;
 
@@ -178,6 +192,9 @@ void MCObjectFileInfo::initMachOMCObjectFileInfo(const Triple &T) {
     = Ctx->getMachOSection("__DATA", "__thread_ptr",
                            MachO::S_THREAD_LOCAL_VARIABLE_POINTERS,
                            SectionKind::getMetadata());
+
+  AddrSigSection = Ctx->getMachOSection("__DATA", "__llvm_addrsig", 0,
+                                        SectionKind::getData());
 
   // Exception Handling.
   LSDASection = Ctx->getMachOSection("__TEXT", "__gcc_except_tab", 0,
@@ -297,6 +314,18 @@ void MCObjectFileInfo::initMachOMCObjectFileInfo(const Triple &T) {
 
   RemarksSection = Ctx->getMachOSection(
       "__LLVM", "__remarks", MachO::S_ATTR_DEBUG, SectionKind::getMetadata());
+
+  // The architecture of dsymutil makes it very difficult to copy the Swift
+  // reflection metadata sections into the __TEXT segment, so dsymutil creates
+  // these sections in the __DWARF segment instead.
+  if (!Ctx->getSwift5ReflectionSegmentName().empty()) {
+#define HANDLE_SWIFT_SECTION(KIND, MACHO, ELF, COFF)                           \
+  Swift5ReflectionSections                                                     \
+      [llvm::binaryformat::Swift5ReflectionSectionKind::KIND] =                \
+          Ctx->getMachOSection(Ctx->getSwift5ReflectionSegmentName().data(),   \
+                               MACHO, 0, SectionKind::getMetadata());
+#include "llvm/BinaryFormat/Swift.def"
+  }
 
   TLSExtraDataSection = TLSTLVSection;
 }
@@ -504,6 +533,16 @@ void MCObjectFileInfo::initELFMCObjectFileInfo(const Triple &T, bool Large) {
       Ctx->getELFSection(".pseudo_probe_desc", DebugSecType, 0);
 }
 
+void MCObjectFileInfo::initGOFFMCObjectFileInfo(const Triple &T) {
+  TextSection =
+      Ctx->getGOFFSection(".text", SectionKind::getText(), nullptr, nullptr);
+  BSSSection =
+      Ctx->getGOFFSection(".bss", SectionKind::getBSS(), nullptr, nullptr);
+  PPA1Section =
+      Ctx->getGOFFSection(".ppa1", SectionKind::getMetadata(), TextSection,
+                          MCConstantExpr::create(GOFF::SK_PPA1, *Ctx));
+}
+
 void MCObjectFileInfo::initCOFFMCObjectFileInfo(const Triple &T) {
   EHFrameSection =
       Ctx->getCOFFSection(".eh_frame", COFF::IMAGE_SCN_CNT_INITIALIZED_DATA |
@@ -536,8 +575,9 @@ void MCObjectFileInfo::initCOFFMCObjectFileInfo(const Triple &T) {
       ".rdata", COFF::IMAGE_SCN_CNT_INITIALIZED_DATA | COFF::IMAGE_SCN_MEM_READ,
       SectionKind::getReadOnly());
 
-  if (T.getArch() == Triple::x86_64 || T.getArch() == Triple::aarch64) {
-    // On Windows 64 with SEH, the LSDA is emitted into the .xdata section
+  if (T.getArch() == Triple::x86_64 || T.getArch() == Triple::aarch64 ||
+      T.getArch() == Triple::arm || T.getArch() == Triple::thumb) {
+    // On Windows with SEH, the LSDA is emitted into the .xdata section
     LSDASection = nullptr;
   } else {
     LSDASection = Ctx->getCOFFSection(".gcc_except_table",
@@ -785,6 +825,11 @@ void MCObjectFileInfo::initCOFFMCObjectFileInfo(const Triple &T) {
                                         SectionKind::getReadOnly());
 }
 
+void MCObjectFileInfo::initSPIRVMCObjectFileInfo(const Triple &T) {
+  // Put everything in a single binary section.
+  TextSection = Ctx->getSPIRVSection();
+}
+
 void MCObjectFileInfo::initWasmMCObjectFileInfo(const Triple &T) {
   TextSection = Ctx->getWasmSection(".text", SectionKind::getText());
   DataSection = Ctx->getWasmSection(".data", SectionKind::getData());
@@ -890,6 +935,19 @@ void MCObjectFileInfo::initXCOFFMCObjectFileInfo(const Triple &T) {
       ".rodata", SectionKind::getReadOnly(),
       XCOFF::CsectProperties(XCOFF::StorageMappingClass::XMC_RO, XCOFF::XTY_SD),
       /* MultiSymbolsAllowed*/ true);
+  ReadOnlySection->setAlignment(Align(4));
+
+  ReadOnly8Section = Ctx->getXCOFFSection(
+      ".rodata.8", SectionKind::getReadOnly(),
+      XCOFF::CsectProperties(XCOFF::StorageMappingClass::XMC_RO, XCOFF::XTY_SD),
+      /* MultiSymbolsAllowed*/ true);
+  ReadOnly8Section->setAlignment(Align(8));
+
+  ReadOnly16Section = Ctx->getXCOFFSection(
+      ".rodata.16", SectionKind::getReadOnly(),
+      XCOFF::CsectProperties(XCOFF::StorageMappingClass::XMC_RO, XCOFF::XTY_SD),
+      /* MultiSymbolsAllowed*/ true);
+  ReadOnly16Section->setAlignment(Align(16));
 
   TLSDataSection = Ctx->getXCOFFSection(
       ".tdata", SectionKind::getThreadData(),
@@ -962,6 +1020,13 @@ void MCObjectFileInfo::initXCOFFMCObjectFileInfo(const Triple &T) {
       /* MultiSymbolsAllowed */ true, ".dwmac", XCOFF::SSUBTYP_DWMAC);
 }
 
+void MCObjectFileInfo::initDXContainerObjectFileInfo(const Triple &T) {
+  // At the moment the DXBC section should end up empty.
+  TextSection = Ctx->getDXContainerSection("DXBC", SectionKind::getText());
+}
+
+MCObjectFileInfo::~MCObjectFileInfo() = default;
+
 void MCObjectFileInfo::initMCObjectFileInfo(MCContext &MCCtx, bool PIC,
                                             bool LargeCodeModel) {
   PositionIndependent = PIC;
@@ -995,11 +1060,20 @@ void MCObjectFileInfo::initMCObjectFileInfo(MCContext &MCCtx, bool PIC,
   case MCContext::IsELF:
     initELFMCObjectFileInfo(TheTriple, LargeCodeModel);
     break;
+  case MCContext::IsGOFF:
+    initGOFFMCObjectFileInfo(TheTriple);
+    break;
+  case MCContext::IsSPIRV:
+    initSPIRVMCObjectFileInfo(TheTriple);
+    break;
   case MCContext::IsWasm:
     initWasmMCObjectFileInfo(TheTriple);
     break;
   case MCContext::IsXCOFF:
     initXCOFFMCObjectFileInfo(TheTriple);
+    break;
+  case MCContext::IsDXContainer:
+    initDXContainerObjectFileInfo(TheTriple);
     break;
   }
 }
@@ -1016,7 +1090,9 @@ MCSection *MCObjectFileInfo::getDwarfComdatSection(const char *Name,
   case Triple::MachO:
   case Triple::COFF:
   case Triple::GOFF:
+  case Triple::SPIRV:
   case Triple::XCOFF:
+  case Triple::DXContainer:
   case Triple::UnknownObjectFormat:
     report_fatal_error("Cannot get DWARF comdat section for this object file "
                        "format: not implemented.");

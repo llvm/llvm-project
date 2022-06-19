@@ -26,8 +26,6 @@
 #include "llvm/Analysis/MemoryLocation.h"
 #include "llvm/AsmParser/Parser.h"
 #include "llvm/AsmParser/SlotMapping.h"
-#include "llvm/CodeGen/GlobalISel/RegisterBank.h"
-#include "llvm/CodeGen/GlobalISel/RegisterBankInfo.h"
 #include "llvm/CodeGen/MIRFormatter.h"
 #include "llvm/CodeGen/MIRPrinter.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
@@ -38,6 +36,8 @@
 #include "llvm/CodeGen/MachineMemOperand.h"
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
+#include "llvm/CodeGen/RegisterBank.h"
+#include "llvm/CodeGen/RegisterBankInfo.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
@@ -60,7 +60,6 @@
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCDwarf.h"
 #include "llvm/MC/MCInstrDesc.h"
-#include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/Support/AtomicOrdering.h"
 #include "llvm/Support/BranchProbability.h"
 #include "llvm/Support/Casting.h"
@@ -69,10 +68,8 @@
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/SMLoc.h"
 #include "llvm/Support/SourceMgr.h"
-#include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetIntrinsicInfo.h"
 #include "llvm/Target/TargetMachine.h"
-#include <algorithm>
 #include <cassert>
 #include <cctype>
 #include <cstddef>
@@ -498,7 +495,7 @@ public:
                                          MachineOperand &Dest,
                                          Optional<unsigned> &TiedDefIdx);
   bool parseOffset(int64_t &Offset);
-  bool parseAlignment(unsigned &Alignment);
+  bool parseAlignment(uint64_t &Alignment);
   bool parseAddrspace(unsigned &Addrspace);
   bool parseSectionID(Optional<MBBSectionID> &SID);
   bool parseOperandsOffset(MachineOperand &Op);
@@ -674,9 +671,10 @@ bool MIParser::parseBasicBlockDefinition(
   lex();
   bool HasAddressTaken = false;
   bool IsLandingPad = false;
+  bool IsInlineAsmBrIndirectTarget = false;
   bool IsEHFuncletEntry = false;
   Optional<MBBSectionID> SectionID;
-  unsigned Alignment = 0;
+  uint64_t Alignment = 0;
   BasicBlock *BB = nullptr;
   if (consumeIfPresent(MIToken::lparen)) {
     do {
@@ -688,6 +686,10 @@ bool MIParser::parseBasicBlockDefinition(
         break;
       case MIToken::kw_landing_pad:
         IsLandingPad = true;
+        lex();
+        break;
+      case MIToken::kw_inlineasm_br_indirect_target:
+        IsInlineAsmBrIndirectTarget = true;
         lex();
         break;
       case MIToken::kw_ehfunclet_entry:
@@ -737,6 +739,7 @@ bool MIParser::parseBasicBlockDefinition(
   if (HasAddressTaken)
     MBB->setHasAddressTaken();
   MBB->setIsEHPad(IsLandingPad);
+  MBB->setIsInlineAsmBrIndirectTarget(IsInlineAsmBrIndirectTarget);
   MBB->setIsEHFuncletEntry(IsEHFuncletEntry);
   if (SectionID.hasValue()) {
     MBB->setSectionID(SectionID.getValue());
@@ -869,11 +872,11 @@ bool MIParser::parseBasicBlock(MachineBasicBlock &MBB,
   // N.B: Multiple lists of successors and liveins are allowed and they're
   // merged into one.
   // Example:
-  //   liveins: %edi
-  //   liveins: %esi
+  //   liveins: $edi
+  //   liveins: $esi
   //
   // is equivalent to
-  //   liveins: %edi, %esi
+  //   liveins: $edi, $esi
   bool ExplicitSuccessors = false;
   while (true) {
     if (Token.is(MIToken::kw_successors)) {
@@ -1011,10 +1014,6 @@ bool MIParser::parse(MachineInstr *&MI) {
     Optional<unsigned> TiedDefIdx;
     if (parseMachineOperandAndTargetFlags(OpCode, Operands.size(), MO, TiedDefIdx))
       return true;
-    if ((OpCode == TargetOpcode::DBG_VALUE ||
-         OpCode == TargetOpcode::DBG_VALUE_LIST) &&
-        MO.isReg())
-      MO.setIsDebug();
     Operands.push_back(
         ParsedMachineOperand(MO, Loc, Token.location(), TiedDefIdx));
     if (Token.isNewlineOrEOF() || Token.is(MIToken::coloncolon) ||
@@ -1092,11 +1091,23 @@ bool MIParser::parse(MachineInstr *&MI) {
       return true;
   }
 
-  // TODO: Check for extraneous machine operands.
   MI = MF.CreateMachineInstr(MCID, DebugLocation, /*NoImplicit=*/true);
   MI->setFlags(Flags);
-  for (const auto &Operand : Operands)
+
+  unsigned NumExplicitOps = 0;
+  for (const auto &Operand : Operands) {
+    bool IsImplicitOp = Operand.Operand.isReg() && Operand.Operand.isImplicit();
+    if (!IsImplicitOp) {
+      if (!MCID.isVariadic() && NumExplicitOps >= MCID.getNumOperands() &&
+          !Operand.Operand.isValidExcessOperand())
+        return error(Operand.Begin, "too many operands for instruction");
+
+      ++NumExplicitOps;
+    }
+
     MI->addOperand(MF, Operand.Operand);
+  }
+
   if (assignRegisterTies(*MI, Operands))
     return true;
   if (PreInstrSymbol)
@@ -1712,6 +1723,15 @@ bool MIParser::parseRegisterOperand(MachineOperand &Dest,
         RegInfo->Kind == VRegInfo::REGBANK)
       return error("generic virtual registers must have a type");
   }
+
+  if (Flags & RegState::Define) {
+    if (Flags & RegState::Kill)
+      return error("cannot have a killed def operand");
+  } else {
+    if (Flags & RegState::Dead)
+      return error("cannot have a dead use operand");
+  }
+
   Dest = MachineOperand::CreateReg(
       Reg, Flags & RegState::Define, Flags & RegState::Implicit,
       Flags & RegState::Kill, Flags & RegState::Dead, Flags & RegState::Undef,
@@ -2898,16 +2918,16 @@ bool MIParser::parseOffset(int64_t &Offset) {
   return false;
 }
 
-bool MIParser::parseAlignment(unsigned &Alignment) {
+bool MIParser::parseAlignment(uint64_t &Alignment) {
   assert(Token.is(MIToken::kw_align) || Token.is(MIToken::kw_basealign));
   lex();
   if (Token.isNot(MIToken::IntegerLiteral) || Token.integerValue().isSigned())
     return error("expected an integer literal after 'align'");
-  if (getUnsigned(Alignment))
+  if (getUint64(Alignment))
     return true;
   lex();
 
-  if (!isPowerOf2_32(Alignment))
+  if (!isPowerOf2_64(Alignment))
     return error("expected a power-of-2 literal after 'align'");
 
   return false;
@@ -3261,17 +3281,27 @@ bool MIParser::parseMachineMemoryOperand(MachineMemOperand *&Dest) {
     if (parseMachinePointerInfo(Ptr))
       return true;
   }
-  unsigned BaseAlignment =
+  uint64_t BaseAlignment =
       (Size != MemoryLocation::UnknownSize ? PowerOf2Ceil(Size) : 1);
   AAMDNodes AAInfo;
   MDNode *Range = nullptr;
   while (consumeIfPresent(MIToken::comma)) {
     switch (Token.kind()) {
-    case MIToken::kw_align:
+    case MIToken::kw_align: {
       // align is printed if it is different than size.
-      if (parseAlignment(BaseAlignment))
+      uint64_t Alignment;
+      if (parseAlignment(Alignment))
         return true;
+      if (Ptr.Offset & (Alignment - 1)) {
+        // MachineMemOperand::getAlign never returns a value greater than the
+        // alignment of offset, so this just guards against hand-written MIR
+        // that specifies a large "align" value when it should probably use
+        // "basealign" instead.
+        return error("specified alignment is more aligned than offset");
+      }
+      BaseAlignment = Alignment;
       break;
+    }
     case MIToken::kw_basealign:
       // basealign is printed if it is different than align.
       if (parseAlignment(BaseAlignment))

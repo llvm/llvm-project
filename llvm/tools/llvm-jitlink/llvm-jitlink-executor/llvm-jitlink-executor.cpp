@@ -11,10 +11,11 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ADT/StringRef.h"
-#include "llvm/ExecutionEngine/Orc/Shared/FDRawByteChannel.h"
 #include "llvm/ExecutionEngine/Orc/TargetProcess/JITLoaderGDB.h"
-#include "llvm/ExecutionEngine/Orc/TargetProcess/OrcRPCTPCServer.h"
 #include "llvm/ExecutionEngine/Orc/TargetProcess/RegisterEHFrames.h"
+#include "llvm/ExecutionEngine/Orc/TargetProcess/SimpleExecutorMemoryManager.h"
+#include "llvm/ExecutionEngine/Orc/TargetProcess/SimpleRemoteEPCServer.h"
+#include "llvm/Support/Debug.h"
 #include "llvm/Support/DynamicLibrary.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/MathExtras.h"
@@ -42,10 +43,18 @@ LLVM_ATTRIBUTE_USED void linkComponents() {
 }
 
 void printErrorAndExit(Twine ErrMsg) {
+#ifndef NDEBUG
+  const char *DebugOption = "[debug] ";
+#else
+  const char *DebugOption = "";
+#endif
+
   errs() << "error: " << ErrMsg.str() << "\n\n"
          << "Usage:\n"
-         << "  llvm-jitlink-executor filedescs=<infd>,<outfd> [args...]\n"
-         << "  llvm-jitlink-executor listen=<host>:<port> [args...]\n";
+         << "  llvm-jitlink-executor " << DebugOption
+         << "filedescs=<infd>,<outfd> [args...]\n"
+         << "  llvm-jitlink-executor " << DebugOption
+         << "listen=<host>:<port> [args...]\n";
   exit(1);
 }
 
@@ -90,8 +99,6 @@ int openListener(std::string Host, std::string PortStr) {
   static constexpr int ConnectionQueueLen = 1;
   listen(SockFD, ConnectionQueueLen);
 
-  outs() << "Listening at " << Host << ":" << PortStr << "\n";
-
 #if defined(_AIX)
   assert(Hi_32(AI->ai_addrlen) == 0 && "Field is a size_t on 64-bit AIX");
   socklen_t AddrLen = Lo_32(AI->ai_addrlen);
@@ -104,18 +111,28 @@ int openListener(std::string Host, std::string PortStr) {
 }
 
 int main(int argc, char *argv[]) {
+#if LLVM_ENABLE_THREADS
 
   ExitOnErr.setBanner(std::string(argv[0]) + ": ");
 
+  unsigned FirstProgramArg = 1;
   int InFD = 0;
   int OutFD = 0;
 
   if (argc < 2)
     printErrorAndExit("insufficient arguments");
   else {
-    StringRef Arg1 = argv[1];
+
+    StringRef ConnectArg = argv[FirstProgramArg++];
+#ifndef NDEBUG
+    if (ConnectArg == "debug") {
+      DebugFlag = true;
+      ConnectArg = argv[FirstProgramArg++];
+    }
+#endif
+
     StringRef SpecifierType, Specifier;
-    std::tie(SpecifierType, Specifier) = Arg1.split('=');
+    std::tie(SpecifierType, Specifier) = ConnectArg.split('=');
     if (SpecifierType == "filedescs") {
       StringRef FD1Str, FD2Str;
       std::tie(FD1Str, FD2Str) = Specifier.split(',');
@@ -133,24 +150,30 @@ int main(int argc, char *argv[]) {
                           "' is not a valid integer");
 
       InFD = OutFD = openListener(Host.str(), PortStr.str());
-      outs() << "Connection established. Running OrcRPCTPCServer...\n";
     } else
       printErrorAndExit("invalid specifier type \"" + SpecifierType + "\"");
   }
 
-  ExitOnErr.setBanner(std::string(argv[0]) + ":");
+  auto Server =
+      ExitOnErr(SimpleRemoteEPCServer::Create<FDSimpleRemoteEPCTransport>(
+          [](SimpleRemoteEPCServer::Setup &S) -> Error {
+            S.setDispatcher(
+                std::make_unique<SimpleRemoteEPCServer::ThreadDispatcher>());
+            S.bootstrapSymbols() =
+                SimpleRemoteEPCServer::defaultBootstrapSymbols();
+            S.services().push_back(
+                std::make_unique<rt_bootstrap::SimpleExecutorMemoryManager>());
+            return Error::success();
+          },
+          InFD, OutFD));
 
-  using JITLinkExecutorEndpoint =
-      shared::SingleThreadedRPCEndpoint<shared::FDRawByteChannel>;
-
-  shared::registerStringError<shared::FDRawByteChannel>();
-
-  shared::FDRawByteChannel C(InFD, OutFD);
-  JITLinkExecutorEndpoint EP(C, true);
-  OrcRPCTPCServer<JITLinkExecutorEndpoint> Server(EP);
-  Server.setProgramName(std::string("llvm-jitlink-executor"));
-
-  ExitOnErr(Server.run());
-
+  ExitOnErr(Server->waitForDisconnect());
   return 0;
+
+#else
+  errs() << argv[0]
+         << " error: this tool requires threads, but LLVM was "
+            "built with LLVM_ENABLE_THREADS=Off\n";
+  return 1;
+#endif
 }

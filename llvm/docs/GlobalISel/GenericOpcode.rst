@@ -290,7 +290,9 @@ These each perform their respective integer arithmetic on a scalar.
 
 .. code-block:: none
 
-  %2:_(s32) = G_ADD %0:_(s32), %1:_(s32)
+  %dst:_(s32) = G_ADD %src0:_(s32), %src1:_(s32)
+
+The above example adds %src1 to %src0 and stores the result in %dst.
 
 G_SDIVREM, G_UDIVREM
 ^^^^^^^^^^^^^^^^^^^^
@@ -403,8 +405,8 @@ normal input. Also produce a carry output in addition to the normal result.
 G_UMULH, G_SMULH
 ^^^^^^^^^^^^^^^^
 
-Multiply two numbers at twice the incoming bit width (signed) and return
-the high half of the result.
+Multiply two numbers at twice the incoming bit width (unsigned or signed) and
+return the high half of the result.
 
 .. code-block:: none
 
@@ -477,6 +479,16 @@ G_FCANONICALIZE
 ^^^^^^^^^^^^^^^
 
 See :ref:`i_intr_llvm_canonicalize`.
+
+G_IS_FPCLASS
+^^^^^^^^^^^^
+
+Tests if the first operand, which must be floating-point scalar or vector, has
+floating-point class specified by the second operand. The third operand
+specifies floating-point semantics of the tested value. Returns non-zero (true)
+or zero (false). It's target specific whether a true value is 1, ~0U, or some
+other non-zero value. If the first operand is a vector, the returned value is a
+vector of the same length.
 
 G_FMINNUM
 ^^^^^^^^^
@@ -570,6 +582,19 @@ G_INTRINSIC_ROUND
 ^^^^^^^^^^^^^^^^^
 
 Returns the operand rounded to the nearest integer.
+
+G_LROUND, G_LLROUND
+^^^^^^^^^^^^^^^^^^^
+
+Returns the source operand rounded to the nearest integer with ties away from
+zero.
+
+See the LLVM LangRef entry on '``llvm.lround.*'`` for details on behaviour.
+
+.. code-block:: none
+
+  %rounded_32:_(s32) = G_LROUND %round_me:_(s64)
+  %rounded_64:_(s64) = G_LLROUND %round_me:_(s64)
 
 Vector Specific Operations
 --------------------------
@@ -755,34 +780,58 @@ Implement the φ node in the SSA graph representing the function.
 
 .. code-block:: none
 
-  %1(s8) = G_PHI %7(s8), %bb.0, %3(s8), %bb.1
+  %dst(s8) = G_PHI %src1(s8), %bb.<id1>, %src2(s8), %bb.<id2>
 
 G_BR
 ^^^^
 
 Unconditional branch
 
+.. code-block:: none
+
+  G_BR %bb.<id>
+
 G_BRCOND
 ^^^^^^^^
 
 Conditional branch
+
+.. code-block:: none
+
+  G_BRCOND %condition, %basicblock.<id>
 
 G_BRINDIRECT
 ^^^^^^^^^^^^
 
 Indirect branch
 
+.. code-block:: none
+
+  G_BRINDIRECT %src(p0)
+
 G_BRJT
 ^^^^^^
 
 Indirect branch to jump table entry
 
+.. code-block:: none
+
+  G_BRJT %ptr(p0), %jti, %idx(s64)
+
 G_JUMP_TABLE
 ^^^^^^^^^^^^
 
-.. caution::
+Generates a pointer to the address of the jump table specified by the source
+operand. The source operand is a jump table index.
+G_JUMP_TABLE can be used in conjunction with G_BRJT to support jump table
+codegen with GlobalISel.
 
-  I found no documentation for this instruction at the time of writing.
+.. code-block:: none
+
+  %dst:_(p0) = G_JUMP_TABLE %jump-table.0
+
+The above example generates a pointer to the source jump table index.
+
 
 G_INTRINSIC, G_INTRINSIC_W_SIDE_EFFECTS
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

@@ -1,3 +1,5 @@
+// UNSUPPORTED: system-windows
+
 // -----------------------------------------------------------------------------
 // Passing --musl
 // -----------------------------------------------------------------------------
@@ -37,8 +39,8 @@
 // CHECK002:       "-dynamic-linker={{/|\\\\}}lib{{/|\\\\}}ld-musl-hexagon.so.1"
 // CHECK002-NOT:   {{.*}}basic_linux_libcxx_tree{{/|\\\\}}usr{{/|\\\\}}lib{{/|\\\\}}crti.o
 // CHECK002-NOT:   {{.*}}basic_linux_libcxx_tree{{/|\\\\}}usr{{/|\\\\}}lib{{/|\\\\}}crt1.o
-// CHECK002-NOT:   -lclang_rt.builtins-hexagon
-// CHECK002-NOT:   -lc
+// CHECK002-NOT:   "-lclang_rt.builtins-hexagon"
+// CHECK002-NOT:   "-lc"
 // -----------------------------------------------------------------------------
 // Passing --musl -nostartfiles
 // -----------------------------------------------------------------------------
@@ -63,8 +65,8 @@
 // RUN:   | FileCheck -check-prefix=CHECK004 %s
 // CHECK004:       "-dynamic-linker={{/|\\\\}}lib{{/|\\\\}}ld-musl-hexagon.so.1"
 // CHECK004:       "{{.*}}basic_linux_libcxx_tree{{/|\\\\}}usr{{/|\\\\}}lib{{/|\\\\}}crt1.o"
-// CHECK004-NOT:   -lclang_rt.builtins-hexagon
-// CHECK004-NOT:   -lc
+// CHECK004-NOT:   "-lclang_rt.builtins-hexagon"
+// CHECK004-NOT:   "-lc"
 // -----------------------------------------------------------------------------
 // Not Passing -fno-use-init-array when musl is selected
 // -----------------------------------------------------------------------------
@@ -94,4 +96,26 @@
 // RUN:   -mcpu=hexagonv60 \
 // RUN:   %s 2>&1 \
 // RUN:   | FileCheck -check-prefix=CHECK007 %s
-// CHECK007:          "-internal-isystem" "{{.*}}hexagon{{/|\\\\}}include{{/|\\\\}}c++{{/|\\\\}}v1"
+// CHECK007:   "-internal-isystem" "{{.*}}hexagon{{/|\\\\}}include{{/|\\\\}}c++{{/|\\\\}}v1"
+// -----------------------------------------------------------------------------
+// internal-isystem for linux with and without musl
+// -----------------------------------------------------------------------------
+// RUN: %clang -### -target hexagon-unknown-linux-musl \
+// RUN:   -ccc-install-dir %S/Inputs/hexagon_tree/Tools/bin \
+// RUN:   -resource-dir=%S/Inputs/resource_dir \
+// RUN:   %s 2>&1 \
+// RUN:   | FileCheck -check-prefix=CHECK008 %s
+// CHECK008:   InstalledDir: [[INSTALLED_DIR:.+]]
+// CHECK008:   "-resource-dir" "[[RESOURCE:[^"]+]]"
+// CHECK008-SAME: {{^}} "-internal-isystem" "[[RESOURCE]]/include"
+// CHECK008-SAME: {{^}} "-internal-externc-isystem" "[[INSTALLED_DIR]]/../target/hexagon/include"
+
+// RUN: %clang -### -target hexagon-unknown-linux \
+// RUN:   -ccc-install-dir %S/Inputs/hexagon_tree/Tools/bin \
+// RUN:   -resource-dir=%S/Inputs/resource_dir \
+// RUN:   %s 2>&1 \
+// RUN:   | FileCheck -check-prefix=CHECK009 %s
+// CHECK009:   InstalledDir: [[INSTALLED_DIR:.+]]
+// CHECK009:   "-resource-dir" "[[RESOURCE:[^"]+]]"
+// CHECK009-SAME: {{^}} "-internal-isystem" "[[RESOURCE]]/include"
+// CHECK009-SAME: {{^}} "-internal-externc-isystem" "[[INSTALLED_DIR]]/../target/hexagon/include"

@@ -1,7 +1,4 @@
 ; Test -sanitizer-coverage-experimental-tracing
-; RUN: opt < %s -sancov -sanitizer-coverage-level=3 -sanitizer-coverage-trace-pc  -S -enable-new-pm=0 | FileCheck %s --check-prefix=CHECK_PC
-; RUN: opt < %s -sancov -sanitizer-coverage-level=3 -sanitizer-coverage-trace-pc-guard  -S -enable-new-pm=0 | FileCheck %s --check-prefix=CHECK_PC_GUARD
-; RUN: opt < %s -sancov -sanitizer-coverage-level=3 -sanitizer-coverage-trace-pc-guard  -S -mtriple=x86_64-apple-macosx -enable-new-pm=0 | FileCheck %s --check-prefix=CHECK_PC_GUARD_DARWIN
 
 ; RUN: opt < %s -passes='module(sancov-module)' -sanitizer-coverage-level=3 -sanitizer-coverage-trace-pc  -S | FileCheck %s --check-prefix=CHECK_PC
 ; RUN: opt < %s -passes='module(sancov-module)' -sanitizer-coverage-level=3 -sanitizer-coverage-trace-pc-guard  -S | FileCheck %s --check-prefix=CHECK_PC_GUARD

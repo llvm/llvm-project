@@ -12,6 +12,8 @@
 
 // static constexpr int_type eof();
 
+// UNSUPPORTED: no-wide-characters
+
 #include <string>
 #include <cassert>
 

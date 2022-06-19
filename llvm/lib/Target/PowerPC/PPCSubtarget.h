@@ -19,7 +19,7 @@
 #include "llvm/ADT/Triple.h"
 #include "llvm/CodeGen/GlobalISel/CallLowering.h"
 #include "llvm/CodeGen/GlobalISel/LegalizerInfo.h"
-#include "llvm/CodeGen/GlobalISel/RegisterBankInfo.h"
+#include "llvm/CodeGen/RegisterBankInfo.h"
 #include "llvm/CodeGen/SelectionDAGTargetInfo.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/IR/DataLayout.h"
@@ -147,9 +147,20 @@ protected:
   bool HasStoreFusion;
   bool HasAddiLoadFusion;
   bool HasAddisLoadFusion;
+  bool HasArithAddFusion;
+  bool HasAddLogicalFusion;
+  bool HasLogicalAddFusion;
+  bool HasLogicalFusion;
+  bool HasSha3Fusion;
+  bool HasCompareFusion;
+  bool HasWideImmFusion;
+  bool HasZeroMoveFusion;
+  bool HasBack2BackFusion;
+  bool IsISA2_06;
   bool IsISA2_07;
   bool IsISA3_0;
   bool IsISA3_1;
+  bool IsISAFuture;
   bool UseLongCalls;
   bool SecurePlt;
   bool VectorsUseTwoUnits;
@@ -322,14 +333,25 @@ public:
 
   bool hasHTM() const { return HasHTM; }
   bool hasFloat128() const { return HasFloat128; }
+  bool isISA2_06() const { return IsISA2_06; }
   bool isISA2_07() const { return IsISA2_07; }
   bool isISA3_0() const { return IsISA3_0; }
   bool isISA3_1() const { return IsISA3_1; }
+  bool isISAFuture() const { return IsISAFuture; }
   bool useLongCalls() const { return UseLongCalls; }
   bool hasFusion() const { return HasFusion; }
   bool hasStoreFusion() const { return HasStoreFusion; }
   bool hasAddiLoadFusion() const { return HasAddiLoadFusion; }
   bool hasAddisLoadFusion() const { return HasAddisLoadFusion; }
+  bool hasArithAddFusion() const { return HasArithAddFusion; }
+  bool hasAddLogicalFusion() const { return HasAddLogicalFusion; }
+  bool hasLogicalAddFusion() const { return HasLogicalAddFusion; }
+  bool hasLogicalFusion() const { return HasLogicalFusion; }
+  bool hasCompareFusion() const { return HasCompareFusion; }
+  bool hasWideImmFusion() const { return HasWideImmFusion; }
+  bool hasSha3Fusion() const { return HasSha3Fusion; }
+  bool hasZeroMoveFusion() const { return HasZeroMoveFusion; }
+  bool hasBack2BackFusion() const { return HasBack2BackFusion; }
   bool needsSwapsForVSXMemOps() const {
     return hasVSX() && isLittleEndian() && !hasP9Vector();
   }

@@ -1,7 +1,7 @@
 ; This testcase causes an infinite loop in the instruction combiner,
 ; because it changes a pattern and the original pattern is almost
 ; identical to the newly-generated pattern.
-; RUN: opt < %s -instcombine -disable-output
+; RUN: opt < %s -passes=instcombine -disable-output
 
 ;PR PR9216
 

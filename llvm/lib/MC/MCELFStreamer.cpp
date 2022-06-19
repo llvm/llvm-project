@@ -29,10 +29,10 @@
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCSymbol.h"
 #include "llvm/MC/MCSymbolELF.h"
+#include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/LEB128.h"
-#include "llvm/Support/TargetRegistry.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cassert>
 #include <cstdint>
@@ -88,13 +88,13 @@ void MCELFStreamer::mergeFragment(MCDataFragment *DF,
   DF->getContents().append(EF->getContents().begin(), EF->getContents().end());
 }
 
-void MCELFStreamer::InitSections(bool NoExecStack) {
+void MCELFStreamer::initSections(bool NoExecStack, const MCSubtargetInfo &STI) {
   MCContext &Ctx = getContext();
-  SwitchSection(Ctx.getObjectFileInfo()->getTextSection());
-  emitCodeAlignment(4);
+  switchSection(Ctx.getObjectFileInfo()->getTextSection());
+  emitCodeAlignment(Ctx.getObjectFileInfo()->getTextSectionAlignment(), &STI);
 
   if (NoExecStack)
-    SwitchSection(Ctx.getAsmInfo()->getNonexecutableStackSection(Ctx));
+    switchSection(Ctx.getAsmInfo()->getNonexecutableStackSection(Ctx));
 }
 
 void MCELFStreamer::emitLabel(MCSymbol *S, SMLoc Loc) {
@@ -215,6 +215,7 @@ bool MCELFStreamer::emitSymbolAttribute(MCSymbol *S, MCSymbolAttr Attribute) {
   case MCSA_WeakDefAutoPrivate:
   case MCSA_Invalid:
   case MCSA_IndirectSymbol:
+  case MCSA_Exported:
     return false;
 
   case MCSA_NoDeadStrip:
@@ -224,6 +225,7 @@ bool MCELFStreamer::emitSymbolAttribute(MCSymbol *S, MCSymbolAttr Attribute) {
   case MCSA_ELF_TypeGnuUniqueObject:
     Symbol->setType(CombineSymbolTypes(Symbol->getType(), ELF::STT_OBJECT));
     Symbol->setBinding(ELF::STB_GNU_UNIQUE);
+    getAssembler().getWriter().markGnuAbi();
     break;
 
   case MCSA_Global:
@@ -316,16 +318,16 @@ void MCELFStreamer::emitCommonSymbol(MCSymbol *S, uint64_t Size,
     MCSection &Section = *getAssembler().getContext().getELFSection(
         ".bss", ELF::SHT_NOBITS, ELF::SHF_WRITE | ELF::SHF_ALLOC);
     MCSectionSubPair P = getCurrentSection();
-    SwitchSection(&Section);
+    switchSection(&Section);
 
     emitValueToAlignment(ByteAlignment, 0, 1, 0);
     emitLabel(Symbol);
     emitZeros(Size);
 
-    SwitchSection(P.first, P.second);
+    switchSection(P.first, P.second);
   } else {
     if(Symbol->declareCommon(Size, ByteAlignment))
-      report_fatal_error("Symbol: " + Symbol->getName() +
+      report_fatal_error(Twine("Symbol: ") + Symbol->getName() +
                          " redeclared as different type");
   }
 
@@ -380,15 +382,15 @@ void MCELFStreamer::emitCGProfileEntry(const MCSymbolRefExpr *From,
 void MCELFStreamer::emitIdent(StringRef IdentString) {
   MCSection *Comment = getAssembler().getContext().getELFSection(
       ".comment", ELF::SHT_PROGBITS, ELF::SHF_MERGE | ELF::SHF_STRINGS, 1);
-  PushSection();
-  SwitchSection(Comment);
+  pushSection();
+  switchSection(Comment);
   if (!SeenIdent) {
     emitInt8(0);
     SeenIdent = true;
   }
   emitBytes(IdentString);
   emitInt8(0);
-  PopSection();
+  popSection();
 }
 
 void MCELFStreamer::fixSymbolsInTLSFixups(const MCExpr *expr) {
@@ -500,7 +502,7 @@ void MCELFStreamer::finalizeCGProfileEntry(const MCSymbolRefExpr *&SRE,
               *MCOffset, "BFD_RELOC_NONE", SRE, SRE->getLoc(),
               *getContext().getSubtargetInfo()))
     report_fatal_error("Relocation for CG Profile could not be created: " +
-                       Err->second);
+                       Twine(Err->second));
 }
 
 void MCELFStreamer::finalizeCGProfile() {
@@ -510,8 +512,8 @@ void MCELFStreamer::finalizeCGProfile() {
   MCSection *CGProfile = getAssembler().getContext().getELFSection(
       ".llvm.call-graph-profile", ELF::SHT_LLVM_CALL_GRAPH_PROFILE,
       ELF::SHF_EXCLUDE, /*sizeof(Elf_CGProfile_Impl<>)=*/8);
-  PushSection();
-  SwitchSection(CGProfile);
+  pushSection();
+  switchSection(CGProfile);
   uint64_t Offset = 0;
   for (MCAssembler::CGProfileEntry &E : Asm.CGProfile) {
     finalizeCGProfileEntry(E.From, Offset);
@@ -519,7 +521,7 @@ void MCELFStreamer::finalizeCGProfile() {
     emitIntValue(E.Count, sizeof(uint64_t));
     Offset += sizeof(uint64_t);
   }
-  PopSection();
+  popSection();
 }
 
 void MCELFStreamer::emitInstToFragment(const MCInst &Inst,
@@ -645,8 +647,6 @@ void MCELFStreamer::emitBundleAlignMode(unsigned AlignPow2) {
 void MCELFStreamer::emitBundleLock(bool AlignToEnd) {
   MCSection &Sec = *getCurrentSectionOnly();
 
-  // Sanity checks
-  //
   if (!getAssembler().isBundlingEnabled())
     report_fatal_error(".bundle_lock forbidden when bundling is disabled");
 
@@ -666,7 +666,6 @@ void MCELFStreamer::emitBundleLock(bool AlignToEnd) {
 void MCELFStreamer::emitBundleUnlock() {
   MCSection &Sec = *getCurrentSectionOnly();
 
-  // Sanity checks
   if (!getAssembler().isBundlingEnabled())
     report_fatal_error(".bundle_unlock forbidden when bundling is disabled");
   else if (!isBundleLocked())
@@ -834,10 +833,10 @@ void MCELFStreamer::createAttributesSection(
 
   // Switch section to AttributeSection or get/create the section.
   if (AttributeSection) {
-    SwitchSection(AttributeSection);
+    switchSection(AttributeSection);
   } else {
     AttributeSection = getContext().getELFSection(Section, Type, 0);
-    SwitchSection(AttributeSection);
+    switchSection(AttributeSection);
 
     // Format version
     emitInt8(0x41);

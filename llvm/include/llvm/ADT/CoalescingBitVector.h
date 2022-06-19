@@ -6,7 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 ///
-/// \file A bitvector that uses an IntervalMap to coalesce adjacent elements
+/// \file
+/// A bitvector that uses an IntervalMap to coalesce adjacent elements
 /// into intervals.
 ///
 //===----------------------------------------------------------------------===//
@@ -15,12 +16,12 @@
 #define LLVM_ADT_COALESCINGBITVECTOR_H
 
 #include "llvm/ADT/IntervalMap.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 
-#include <algorithm>
 #include <initializer_list>
 
 namespace llvm {

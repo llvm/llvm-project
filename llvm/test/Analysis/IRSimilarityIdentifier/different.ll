@@ -7,11 +7,11 @@
 
 ; CHECK: 2 candidates of length 3.  Found in:
 ; CHECK-NEXT:   Function: turtle, Basic Block: (unnamed)
-; CHECK-NEXT:     Start Instruction:   %a = load i32, i32* %0, align 4
-; CHECK-NEXT:       End Instruction:   %c = load i32, i32* %2, align 4
-; CHECK-NEXT:   Function: turtle, Basic Block: (unnamed)
 ; CHECK-NEXT:     Start Instruction:   %b = load i32, i32* %1, align 4
 ; CHECK-NEXT:       End Instruction:   %d = load i32, i32* %3, align 4
+; CHECK-NEXT:   Function: turtle, Basic Block: (unnamed)
+; CHECK-NEXT:     Start Instruction:   %a = load i32, i32* %0, align 4
+; CHECK-NEXT:       End Instruction:   %c = load i32, i32* %2, align 4
 ; CHECK-NEXT: 2 candidates of length 5.  Found in:
 ; CHECK-NEXT:   Function: fish, Basic Block: entry
 ; CHECK-NEXT:     Start Instruction:   store i32 6, i32* %0, align 4

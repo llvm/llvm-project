@@ -7,6 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ExecutionEngine/Orc/EPCEHFrameRegistrar.h"
+
+#include "llvm/ExecutionEngine/Orc/Core.h"
 #include "llvm/Support/BinaryStreamWriter.h"
 
 using namespace llvm::orc::shared;
@@ -15,12 +17,13 @@ namespace llvm {
 namespace orc {
 
 Expected<std::unique_ptr<EPCEHFrameRegistrar>>
-EPCEHFrameRegistrar::Create(ExecutorProcessControl &EPC) {
+EPCEHFrameRegistrar::Create(ExecutionSession &ES) {
   // FIXME: Proper mangling here -- we really need to decouple linker mangling
   // from DataLayout.
 
   // Find the addresses of the registration/deregistration functions in the
   // executor process.
+  auto &EPC = ES.getExecutorProcessControl();
   auto ProcessHandle = EPC.loadDylib(nullptr);
   if (!ProcessHandle)
     return ProcessHandle.takeError();
@@ -49,22 +52,19 @@ EPCEHFrameRegistrar::Create(ExecutorProcessControl &EPC) {
   auto DeregisterEHFrameWrapperFnAddr = (*Result)[0][1];
 
   return std::make_unique<EPCEHFrameRegistrar>(
-      EPC, RegisterEHFrameWrapperFnAddr, DeregisterEHFrameWrapperFnAddr);
+      ES, ExecutorAddr(RegisterEHFrameWrapperFnAddr),
+      ExecutorAddr(DeregisterEHFrameWrapperFnAddr));
 }
 
-Error EPCEHFrameRegistrar::registerEHFrames(JITTargetAddress EHFrameSectionAddr,
-                                            size_t EHFrameSectionSize) {
-
-  return WrapperFunction<void(SPSExecutorAddress, uint64_t)>::call(
-      EPCCaller(EPC, RegisterEHFrameWrapperFnAddr), EHFrameSectionAddr,
-      static_cast<uint64_t>(EHFrameSectionSize));
+Error EPCEHFrameRegistrar::registerEHFrames(ExecutorAddrRange EHFrameSection) {
+  return ES.callSPSWrapper<void(SPSExecutorAddrRange)>(
+      RegisterEHFrameWrapperFnAddr, EHFrameSection);
 }
 
 Error EPCEHFrameRegistrar::deregisterEHFrames(
-    JITTargetAddress EHFrameSectionAddr, size_t EHFrameSectionSize) {
-  return WrapperFunction<void(SPSExecutorAddress, uint64_t)>::call(
-      EPCCaller(EPC, DeregisterEHFrameWrapperFnAddr), EHFrameSectionAddr,
-      static_cast<uint64_t>(EHFrameSectionSize));
+    ExecutorAddrRange EHFrameSection) {
+  return ES.callSPSWrapper<void(SPSExecutorAddrRange)>(
+      DeregisterEHFrameWrapperFnAddr, EHFrameSection);
 }
 
 } // end namespace orc

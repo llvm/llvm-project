@@ -1,6 +1,6 @@
-; RUN: opt < %s -mtriple aarch64-linux-android29 -hwasan -S | FileCheck %s --check-prefixes=COMMON,LP,ARM
-; RUN: opt < %s -mtriple x86_64-linux -hwasan-instrument-landing-pads -hwasan -S | FileCheck %s --check-prefixes=COMMON,LP,X86
-; RUN: opt < %s -mtriple aarch64-linux-android30 -hwasan -S | FileCheck %s --check-prefixes=COMMON,NOLP
+; RUN: opt < %s -mtriple aarch64-linux-android29 -passes=hwasan -S | FileCheck %s --check-prefixes=COMMON,LP,ARM
+; RUN: opt < %s -mtriple x86_64-linux -hwasan-instrument-landing-pads -passes=hwasan -S | FileCheck %s --check-prefixes=COMMON,LP,X86
+; RUN: opt < %s -mtriple aarch64-linux-android30 -passes=hwasan -S | FileCheck %s --check-prefixes=COMMON,NOLP
 
 target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
 target triple = "aarch64-unknown-linux-android"

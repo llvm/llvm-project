@@ -3,7 +3,7 @@
 
 ; GCN-LABEL: {{^}}icmp_2_users:
 ; GCN: s_cmp_lt_i32 s{{[0-9]+}}, 1
-; GCN: s_cbranch_scc1 [[LABEL:BB[0-9_A-Z]+]]
+; GCN: s_cbranch_scc1 [[LABEL:.LBB[0-9_A-Z]+]]
 ; GCN: [[LABEL]]:
 ; GCN-NEXT: s_endpgm
 define amdgpu_kernel void @icmp_2_users(i32 addrspace(1)* %out, i32 %cond) {
@@ -21,8 +21,8 @@ ENDIF:                                            ; preds = %IF, %main_body
 }
 
 ; GCN-LABEL: {{^}}fix_sgpr_live_ranges_crash:
-; GCN: s_cbranch_scc1 [[BB0:[A-Z0-9_]+]]
-; GCN: {{^}}[[LOOP:[A-Z0-9_]+]]:
+; GCN: s_cbranch_scc1 [[BB0:.L[A-Z0-9_]+]]
+; GCN: {{^}}[[LOOP:.L[A-Z0-9_]+]]:
 ; GCN: s_cbranch_scc1 [[LOOP]]
 ; GCN: {{^}}[[BB0]]:
 define amdgpu_kernel void @fix_sgpr_live_ranges_crash(i32 %arg, i32 %arg1)  {

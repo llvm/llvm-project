@@ -4,6 +4,7 @@ set(LIBCXX_LIB_CMAKEFILES_DIR "${CMAKE_CURRENT_BINARY_DIR}${CMAKE_FILES_DIRECTOR
 set(LIBCXX_SOURCES
   algorithm.cpp
   any.cpp
+  assert.cpp
   atomic.cpp
   barrier.cpp
   bind.cpp
@@ -12,7 +13,6 @@ set(LIBCXX_SOURCES
   condition_variable.cpp
   condition_variable_destructor.cpp
   exception.cpp
-  format.cpp
   functional.cpp
   future.cpp
   hash.cpp
@@ -20,12 +20,26 @@ set(LIBCXX_SOURCES
   include/atomic_support.h
   include/config_elast.h
   include/refstring.h
+  include/ryu/common.h
+  include/ryu/d2fixed.h
+  include/ryu/d2fixed_full_table.h
+  include/ryu/d2s.h
+  include/ryu/d2s_full_table.h
+  include/ryu/d2s_intrinsics.h
+  include/ryu/digit_table.h
+  include/ryu/f2s.h
+  include/ryu/ryu.h
+  include/to_chars_floating_point.h
+  legacy_pointer_safety.cpp
   memory.cpp
   mutex.cpp
   mutex_destructor.cpp
   new.cpp
   optional.cpp
   random_shuffle.cpp
+  ryu/d2fixed.cpp
+  ryu/d2s.cpp
+  ryu/f2s.cpp
   shared_mutex.cpp
   stdexcept.cpp
   string.cpp
@@ -50,9 +64,10 @@ set(LIBCXX_SOURCES
   vector.cpp
   )
 
-if (LIBCXX_ENABLE_DEBUG_MODE_SUPPORT)
+if (LIBCXX_ENABLE_DEBUG_MODE OR LIBCXX_ENABLE_BACKWARDS_COMPATIBILITY_DEBUG_MODE_SYMBOLS)
   list(APPEND LIBCXX_SOURCES
     debug.cpp
+    legacy_debug_handler.cpp
     )
 endif()
 
@@ -74,6 +89,12 @@ if (LIBCXX_ENABLE_LOCALIZATION)
     )
 endif()
 
+if(LIBCXX_ENABLE_INCOMPLETE_FEATURES)
+  list(APPEND LIBCXX_SOURCES
+    format.cpp
+  )
+endif()
+
 if(WIN32)
   list(APPEND LIBCXX_SOURCES
     support/win32/locale_win32.cpp
@@ -93,6 +114,8 @@ elseif("${CMAKE_SYSTEM_NAME}" STREQUAL "SunOS")
     )
 elseif(ZOS)
   list(APPEND LIBCXX_SOURCES
+    support/ibm/mbsnrtowcs.cpp
+    support/ibm/wcsnrtombs.cpp
     support/ibm/xlocale_zos.cpp
     )
 endif()
@@ -133,11 +156,6 @@ if(NOT LIBCXX_INSTALL_LIBRARY)
   set(exclude_from_all EXCLUDE_FROM_ALL)
 endif()
 
-# If LIBCXX_CXX_ABI_LIBRARY_PATH is defined we want to add it to the search path.
-add_link_flags_if(LIBCXX_CXX_ABI_LIBRARY_PATH
-                  "${CMAKE_LIBRARY_PATH_FLAG}${LIBCXX_CXX_ABI_LIBRARY_PATH}")
-
-
 if (LIBCXX_GENERATE_COVERAGE AND NOT LIBCXX_COVERAGE_LIBRARY)
   find_compiler_rt_library(profile LIBCXX_COVERAGE_LIBRARY)
 endif()
@@ -156,7 +174,8 @@ if (APPLE AND LLVM_USE_SANITIZER)
     message(WARNING "LLVM_USE_SANITIZER=${LLVM_USE_SANITIZER} is not supported on OS X")
   endif()
   if (LIBFILE)
-    find_compiler_rt_dir(LIBDIR)
+    find_compiler_rt_library(builtins LIBCXX_BUILTINS_LIBRARY)
+    get_filename_component(LIBDIR "${LIBCXX_BUILTINS_LIBRARY}" DIRECTORY)
     if (NOT IS_DIRECTORY "${LIBDIR}")
       message(FATAL_ERROR "Cannot find compiler-rt directory on OS X required for LLVM_USE_SANITIZER")
     endif()
@@ -173,10 +192,6 @@ if (LIBCXX_ENABLE_PARALLEL_ALGORITHMS AND NOT TARGET pstl::ParallelSTL)
 endif()
 
 function(cxx_set_common_defines name)
-  if(LIBCXX_CXX_ABI_HEADER_TARGET)
-    add_dependencies(${name} ${LIBCXX_CXX_ABI_HEADER_TARGET})
-  endif()
-
   if (LIBCXX_ENABLE_PARALLEL_ALGORITHMS)
     target_link_libraries(${name} PUBLIC pstl::ParallelSTL)
   endif()
@@ -188,6 +203,7 @@ split_list(LIBCXX_LINK_FLAGS)
 # Build the shared library.
 if (LIBCXX_ENABLE_SHARED)
   add_library(cxx_shared SHARED ${exclude_from_all} ${LIBCXX_SOURCES} ${LIBCXX_HEADERS})
+  target_include_directories(cxx_shared PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
   target_link_libraries(cxx_shared PUBLIC cxx-headers
                                    PRIVATE ${LIBCXX_LIBRARIES})
   set_target_properties(cxx_shared
@@ -195,7 +211,7 @@ if (LIBCXX_ENABLE_SHARED)
       COMPILE_FLAGS "${LIBCXX_COMPILE_FLAGS}"
       LINK_FLAGS    "${LIBCXX_LINK_FLAGS}"
       OUTPUT_NAME   "c++"
-      VERSION       "${LIBCXX_ABI_VERSION}.0"
+      VERSION       "${LIBCXX_LIBRARY_VERSION}"
       SOVERSION     "${LIBCXX_ABI_VERSION}"
       DEFINE_SYMBOL ""
   )
@@ -203,11 +219,14 @@ if (LIBCXX_ENABLE_SHARED)
   cxx_set_common_defines(cxx_shared)
 
   # Link against LLVM libunwind
+  # Note that we do need to link against libunwind directly to ensure that the correct
+  # dependencies are recorded when creating a linker script.
+  # TODO: Look into modifying the linker script creation to recursively consider interface libraries
   if (LIBCXXABI_USE_LLVM_UNWINDER)
-    if (NOT LIBCXXABI_STATICALLY_LINK_UNWINDER_IN_SHARED_LIBRARY AND (TARGET unwind_shared OR HAVE_LIBUNWIND))
-      target_link_libraries(cxx_shared PUBLIC unwind_shared)
-    elseif (LIBCXXABI_STATICALLY_LINK_UNWINDER_IN_SHARED_LIBRARY AND (TARGET unwind_static OR HAVE_LIBUNWIND))
+    if (LIBCXXABI_STATICALLY_LINK_UNWINDER_IN_SHARED_LIBRARY)
       # libunwind is already included in libc++abi
+    elseif (TARGET unwind_shared OR HAVE_LIBUNWIND)
+      target_link_libraries(cxx_shared PUBLIC unwind_shared)
     else()
       target_link_libraries(cxx_shared PUBLIC unwind)
     endif()
@@ -215,20 +234,15 @@ if (LIBCXX_ENABLE_SHARED)
 
   # Link against libc++abi
   if (LIBCXX_STATICALLY_LINK_ABI_IN_SHARED_LIBRARY)
-    if (APPLE)
-      target_link_libraries(cxx_shared PRIVATE "-Wl,-force_load" "${LIBCXX_CXX_STATIC_ABI_LIBRARY}")
-    else()
-      target_link_libraries(cxx_shared PRIVATE "-Wl,--whole-archive,-Bstatic" "${LIBCXX_CXX_STATIC_ABI_LIBRARY}" "-Wl,-Bdynamic,--no-whole-archive")
-    endif()
+    target_link_libraries(cxx_shared PRIVATE libcxx-abi-shared-objects)
   else()
-    target_link_libraries(cxx_shared PUBLIC "${LIBCXX_CXX_SHARED_ABI_LIBRARY}")
+    target_link_libraries(cxx_shared PUBLIC libcxx-abi-shared)
   endif()
 
   # Maybe re-export symbols from libc++abi
   # In particular, we don't re-export the symbols if libc++abi is merged statically
   # into libc++ because in that case there's no dylib to re-export from.
-  if (APPLE AND (LIBCXX_CXX_ABI_LIBNAME STREQUAL "libcxxabi" OR
-                 LIBCXX_CXX_ABI_LIBNAME STREQUAL "default")
+  if (APPLE AND LIBCXX_CXX_ABI STREQUAL "libcxxabi"
             AND NOT DEFINED LIBCXX_OSX_REEXPORT_LIBCXXABI_SYMBOLS
             AND NOT LIBCXX_STATICALLY_LINK_ABI_IN_SHARED_LIBRARY)
     set(LIBCXX_OSX_REEXPORT_LIBCXXABI_SYMBOLS ON)
@@ -237,7 +251,7 @@ if (LIBCXX_ENABLE_SHARED)
   if (LIBCXX_OSX_REEXPORT_LIBCXXABI_SYMBOLS)
     target_link_libraries(cxx_shared PRIVATE
       "-Wl,-unexported_symbols_list,${CMAKE_CURRENT_SOURCE_DIR}/../lib/libc++unexp.exp"
-      "-Wl,-reexported_symbols_list,${CMAKE_CURRENT_SOURCE_DIR}/../lib/libc++abi.v${LIBCXX_LIBCPPABI_VERSION}.exp"
+      "-Wl,-reexported_symbols_list,${CMAKE_CURRENT_SOURCE_DIR}/../lib/libc++abi.exp"
       "-Wl,-force_symbols_not_weak_list,${CMAKE_CURRENT_SOURCE_DIR}/../lib/notweak.exp"
       "-Wl,-force_symbols_weak_list,${CMAKE_CURRENT_SOURCE_DIR}/../lib/weak.exp")
 
@@ -265,8 +279,10 @@ set(CMAKE_STATIC_LIBRARY_PREFIX "lib")
 # Build the static library.
 if (LIBCXX_ENABLE_STATIC)
   add_library(cxx_static STATIC ${exclude_from_all} ${LIBCXX_SOURCES} ${LIBCXX_HEADERS})
+  target_include_directories(cxx_static PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
   target_link_libraries(cxx_static PUBLIC cxx-headers
-                                   PRIVATE ${LIBCXX_LIBRARIES})
+                                   PRIVATE ${LIBCXX_LIBRARIES}
+                                   PRIVATE libcxx-abi-static)
   set_target_properties(cxx_static
     PROPERTIES
       COMPILE_FLAGS "${LIBCXX_COMPILE_FLAGS}"
@@ -284,41 +300,15 @@ if (LIBCXX_ENABLE_STATIC)
       append_flags_if_supported(CXX_STATIC_LIBRARY_FLAGS -fvisibility-global-new-delete-hidden)
     endif()
     target_compile_options(cxx_static PRIVATE ${CXX_STATIC_LIBRARY_FLAGS})
-    target_compile_definitions(cxx_static PRIVATE _LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS)
+    # _LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS can be defined in __config_site
+    # too. Define it in the same way here, to avoid redefinition conflicts.
+    target_compile_definitions(cxx_static PRIVATE _LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS=)
   endif()
 
   list(APPEND LIBCXX_BUILD_TARGETS "cxx_static")
   # Attempt to merge the libc++.a archive and the ABI library archive into one.
   if (LIBCXX_STATICALLY_LINK_ABI_IN_STATIC_LIBRARY)
-    set(MERGE_ARCHIVES_SEARCH_PATHS "")
-    if (LIBCXX_CXX_ABI_LIBRARY_PATH)
-      set(MERGE_ARCHIVES_SEARCH_PATHS "-L${LIBCXX_CXX_ABI_LIBRARY_PATH}")
-    endif()
-    if (TARGET "${LIBCXX_CXX_STATIC_ABI_LIBRARY}" OR HAVE_LIBCXXABI)
-      set(MERGE_ARCHIVES_ABI_TARGET "$<TARGET_LINKER_FILE:${LIBCXX_CXX_STATIC_ABI_LIBRARY}>")
-    else()
-      set(MERGE_ARCHIVES_ABI_TARGET
-        "${CMAKE_STATIC_LIBRARY_PREFIX}${LIBCXX_CXX_STATIC_ABI_LIBRARY}${CMAKE_STATIC_LIBRARY_SUFFIX}")
-      if (LIBCXX_CXX_ABI_LIBRARY_PATH)
-        set(MERGE_ARCHIVES_ABI_TARGET "${LIBCXX_CXX_ABI_LIBRARY_PATH}/${MERGE_ARCHIVES_ABI_TARGET}")
-      endif ()
-    endif()
-    if (APPLE)
-      set(MERGE_ARCHIVES_LIBTOOL "--use-libtool" "--libtool" "${CMAKE_LIBTOOL}")
-    endif()
-    add_custom_command(TARGET cxx_static POST_BUILD
-    COMMAND
-      ${Python3_EXECUTABLE} ${LIBCXX_SOURCE_DIR}/utils/merge_archives.py
-    ARGS
-      -o $<TARGET_LINKER_FILE:cxx_static>
-      --ar "${CMAKE_AR}"
-      ${MERGE_ARCHIVES_LIBTOOL}
-      "$<TARGET_LINKER_FILE:cxx_static>"
-      "${MERGE_ARCHIVES_ABI_TARGET}"
-      "${MERGE_ARCHIVES_SEARCH_PATHS}"
-    WORKING_DIRECTORY ${LIBCXX_BUILD_DIR}
-    DEPENDS ${MERGE_ARCHIVES_ABI_TARGET}
-    )
+    target_link_libraries(cxx_static PRIVATE libcxx-abi-static-objects)
   endif()
 endif()
 
@@ -369,21 +359,21 @@ if (LIBCXX_INSTALL_SHARED_LIBRARY)
   install(TARGETS cxx_shared
     ARCHIVE DESTINATION ${LIBCXX_INSTALL_LIBRARY_DIR} COMPONENT cxx
     LIBRARY DESTINATION ${LIBCXX_INSTALL_LIBRARY_DIR} COMPONENT cxx
-    RUNTIME DESTINATION bin COMPONENT cxx)
+    RUNTIME DESTINATION ${LIBCXX_INSTALL_RUNTIME_DIR} COMPONENT cxx)
 endif()
 
 if (LIBCXX_INSTALL_STATIC_LIBRARY)
   install(TARGETS cxx_static
     ARCHIVE DESTINATION ${LIBCXX_INSTALL_LIBRARY_DIR} COMPONENT cxx
     LIBRARY DESTINATION ${LIBCXX_INSTALL_LIBRARY_DIR} COMPONENT cxx
-    RUNTIME DESTINATION bin COMPONENT cxx)
+    RUNTIME DESTINATION ${LIBCXX_INSTALL_RUNTIME_DIR} COMPONENT cxx)
 endif()
 
 if(LIBCXX_INSTALL_EXPERIMENTAL_LIBRARY)
   install(TARGETS cxx_experimental
     LIBRARY DESTINATION ${LIBCXX_INSTALL_LIBRARY_DIR} COMPONENT cxx
     ARCHIVE DESTINATION ${LIBCXX_INSTALL_LIBRARY_DIR} COMPONENT cxx
-    RUNTIME DESTINATION bin COMPONENT cxx)
+    RUNTIME DESTINATION ${LIBCXX_INSTALL_RUNTIME_DIR} COMPONENT cxx)
 endif()
 
 # NOTE: This install command must go after the cxx install command otherwise

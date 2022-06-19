@@ -1,4 +1,4 @@
-; RUN: opt < %s -instcombine -S | not grep "sub i32 0"
+; RUN: opt < %s -passes=instcombine -S | not grep "sub i32 0"
 ; PR2330
 
 define i32 @foo(i32 %a) nounwind {

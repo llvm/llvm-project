@@ -10,6 +10,11 @@
 // for functionality in the Driver flang library.
 //
 //===----------------------------------------------------------------------===//
+//
+// Coding style: https://mlir.llvm.org/getting_started/DeveloperGuide/
+//
+//===----------------------------------------------------------------------===//
+
 #include "clang/Driver/Driver.h"
 #include "flang/Frontend/CompilerInvocation.h"
 #include "flang/Frontend/TextDiagnosticPrinter.h"
@@ -20,6 +25,7 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/IntrusiveRefCntPtr.h"
 #include "llvm/Option/ArgList.h"
+#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Host.h"
 #include "llvm/Support/InitLLVM.h"
 #include "llvm/Support/VirtualFileSystem.h"
@@ -29,16 +35,16 @@ using llvm::StringRef;
 // main frontend method. Lives inside fc1_main.cpp
 extern int fc1_main(llvm::ArrayRef<const char *> argv, const char *argv0);
 
-std::string GetExecutablePath(const char *argv0) {
+std::string getExecutablePath(const char *argv0) {
   // This just needs to be some symbol in the binary
-  void *p = (void *)(intptr_t)GetExecutablePath;
+  void *p = (void *)(intptr_t)getExecutablePath;
   return llvm::sys::fs::getMainExecutable(argv0, p);
 }
 
 // This lets us create the DiagnosticsEngine with a properly-filled-out
 // DiagnosticOptions instance
-static clang::DiagnosticOptions *CreateAndPopulateDiagOpts(
-    llvm::ArrayRef<const char *> argv) {
+static clang::DiagnosticOptions *
+createAndPopulateDiagOpts(llvm::ArrayRef<const char *> argv) {
   auto *diagOpts = new clang::DiagnosticOptions;
 
   // Ignore missingArgCount and the return value of ParseDiagnosticArgs.
@@ -49,12 +55,12 @@ static clang::DiagnosticOptions *CreateAndPopulateDiagOpts(
       argv.slice(1), missingArgIndex, missingArgCount,
       /*FlagsToInclude=*/clang::driver::options::FlangOption);
 
-  (void)Fortran::frontend::ParseDiagnosticArgs(*diagOpts, args);
+  (void)Fortran::frontend::parseDiagnosticArgs(*diagOpts, args);
 
   return diagOpts;
 }
 
-static int ExecuteFC1Tool(llvm::SmallVectorImpl<const char *> &argV) {
+static int executeFC1Tool(llvm::SmallVectorImpl<const char *> &argV) {
   llvm::StringRef tool = argV[1];
   if (tool == "-fc1")
     return fc1_main(makeArrayRef(argV).slice(2), argV[0]);
@@ -66,6 +72,13 @@ static int ExecuteFC1Tool(llvm::SmallVectorImpl<const char *> &argV) {
   return 1;
 }
 
+static void ExpandResponseFiles(
+    llvm::StringSaver &saver, llvm::SmallVectorImpl<const char *> &args) {
+  // We're defaulting to the GNU syntax, since we don't have a CL mode.
+  llvm::cl::TokenizerCallback tokenizer = &llvm::cl::TokenizeGNUCommandLine;
+  llvm::cl::ExpandResponseFiles(saver, tokenizer, args, /* MarkEOLs=*/false);
+}
+
 int main(int argc, const char **argv) {
 
   // Initialize variables to call the driver
@@ -73,7 +86,11 @@ int main(int argc, const char **argv) {
   llvm::SmallVector<const char *, 256> args(argv, argv + argc);
 
   clang::driver::ParsedClangName targetandMode("flang", "--driver-mode=flang");
-  std::string driverPath = GetExecutablePath(args[0]);
+  std::string driverPath = getExecutablePath(args[0]);
+
+  llvm::BumpPtrAllocator a;
+  llvm::StringSaver saver(a);
+  ExpandResponseFiles(saver, args);
 
   // Check if flang-new is in the frontend mode
   auto firstArg = std::find_if(
@@ -86,7 +103,7 @@ int main(int argc, const char **argv) {
     }
     // Call flang-new frontend
     if (llvm::StringRef(args[1]).startswith("-fc1")) {
-      return ExecuteFC1Tool(args);
+      return executeFC1Tool(args);
     }
   }
 
@@ -94,14 +111,14 @@ int main(int argc, const char **argv) {
 
   // Create DiagnosticsEngine for the compiler driver
   llvm::IntrusiveRefCntPtr<clang::DiagnosticOptions> diagOpts =
-      CreateAndPopulateDiagOpts(args);
+      createAndPopulateDiagOpts(args);
   llvm::IntrusiveRefCntPtr<clang::DiagnosticIDs> diagID(
       new clang::DiagnosticIDs());
   Fortran::frontend::TextDiagnosticPrinter *diagClient =
       new Fortran::frontend::TextDiagnosticPrinter(llvm::errs(), &*diagOpts);
 
-  diagClient->set_prefix(
-      std::string(llvm::sys::path::stem(GetExecutablePath(args[0]))));
+  diagClient->setPrefix(
+      std::string(llvm::sys::path::stem(getExecutablePath(args[0]))));
 
   clang::DiagnosticsEngine diags(diagID, &*diagOpts, diagClient);
 
@@ -120,18 +137,18 @@ int main(int argc, const char **argv) {
   res = theDriver.ExecuteCompilation(*c, failingCommands);
 
   for (const auto &p : failingCommands) {
-    int CommandRes = p.first;
+    int commandRes = p.first;
     const clang::driver::Command *failingCommand = p.second;
     if (!res)
-      res = CommandRes;
+      res = commandRes;
 
     // If result status is < 0 (e.g. when sys::ExecuteAndWait returns -1),
     // then the driver command signalled an error. On Windows, abort will
     // return an exit code of 3. In these cases, generate additional diagnostic
     // information if possible.
-    isCrash = CommandRes < 0;
+    isCrash = commandRes < 0;
 #ifdef _WIN32
-    isCrash |= CommandRes == 3;
+    isCrash |= commandRes == 3;
 #endif
     if (isCrash) {
       theDriver.generateCompilationDiagnostics(*c, *failingCommand);

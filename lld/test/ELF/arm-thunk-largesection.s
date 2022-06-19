@@ -1,11 +1,11 @@
 // REQUIRES: arm
 // RUN: llvm-mc -arm-add-build-attributes -filetype=obj -triple=thumbv7a-none-linux-gnueabi %s -o %t
 // RUN: ld.lld %t -o %t2
-// RUN: llvm-objdump -d --no-show-raw-insn --triple=thumbv7a-none-linux-gnueabi --start-address=0x21000 --stop-address=0x21006 %t2 | FileCheck --check-prefix=CHECK1 %s
-// RUN: llvm-objdump -d --no-show-raw-insn --triple=thumbv7a-none-linux-gnueabi --start-address=0x22004 --stop-address=0x22008 %t2 | FileCheck --check-prefix=CHECK2 %s
-// RUN: llvm-objdump -d --no-show-raw-insn --triple=thumbv7a-none-linux-gnueabi --start-address=0x1021ff8 --stop-address=0x1021ffc %t2 | FileCheck --check-prefix=CHECK3 %s
-// RUN: llvm-objdump -d --no-show-raw-insn --triple=thumbv7a-none-linux-gnueabi --start-address=0x2012ff8 --stop-address=0x2021ffc %t2 | FileCheck --check-prefix=CHECK4 %s
-// RUN: llvm-objdump -d --no-show-raw-insn --triple=thumbv7a-none-linux-gnueabi --start-address=0x3021fec --stop-address=0x3021ff6 %t2 | FileCheck --check-prefix=CHECK5 %s
+// RUN: llvm-objdump -d --no-show-raw-insn --start-address=0x21000 --stop-address=0x21006 %t2 | FileCheck --check-prefix=CHECK1 %s
+// RUN: llvm-objdump -d --no-show-raw-insn --start-address=0x22004 --stop-address=0x22008 %t2 | FileCheck --check-prefix=CHECK2 %s
+// RUN: llvm-objdump -d --no-show-raw-insn --start-address=0x1021ff8 --stop-address=0x1021ffc %t2 | FileCheck --check-prefix=CHECK3 %s
+// RUN: llvm-objdump -d --no-show-raw-insn --start-address=0x2012ff8 --stop-address=0x2021ffc %t2 | FileCheck --check-prefix=CHECK4 %s
+// RUN: llvm-objdump -d --no-show-raw-insn --start-address=0x3021fec --stop-address=0x3021ff6 %t2 | FileCheck --check-prefix=CHECK5 %s
  .syntax unified
  .balign 0x1000
  .thumb

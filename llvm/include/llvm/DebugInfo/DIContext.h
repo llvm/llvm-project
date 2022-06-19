@@ -90,6 +90,8 @@ class DIInliningInfo {
 public:
   DIInliningInfo() = default;
 
+  /// Returns the frame at `Index`. Frames are stored in bottom-up
+  /// (leaf-to-root) order with increasing index.
   const DILineInfo &getFrame(unsigned Index) const {
     assert(Index < Frames.size());
     return Frames[Index];
@@ -112,6 +114,8 @@ struct DIGlobal {
   std::string Name;
   uint64_t Start = 0;
   uint64_t Size = 0;
+  std::string DeclFile;
+  uint64_t DeclLine = 0;
 
   DIGlobal() : Name(DILineInfo::BadString) {}
 };
@@ -151,6 +155,10 @@ struct DILineInfoSpecifier {
   DILineInfoSpecifier(FileLineInfoKind FLIKind = FileLineInfoKind::RawValue,
                       FunctionNameKind FNKind = FunctionNameKind::None)
       : FLIKind(FLIKind), FNKind(FNKind) {}
+
+  inline bool operator==(const DILineInfoSpecifier &RHS) const {
+    return FLIKind == RHS.FLIKind && FNKind == RHS.FNKind;
+  }
 };
 
 /// This is just a helper to programmatically construct DIDumpType.
@@ -233,6 +241,8 @@ public:
   virtual DILineInfo getLineInfoForAddress(
       object::SectionedAddress Address,
       DILineInfoSpecifier Specifier = DILineInfoSpecifier()) = 0;
+  virtual DILineInfo
+  getLineInfoForDataAddress(object::SectionedAddress Address) = 0;
   virtual DILineInfoTable getLineInfoForAddressRange(
       object::SectionedAddress Address, uint64_t Size,
       DILineInfoSpecifier Specifier = DILineInfoSpecifier()) = 0;

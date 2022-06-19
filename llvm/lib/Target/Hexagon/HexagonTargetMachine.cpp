@@ -21,51 +21,55 @@
 #include "TargetInfo/HexagonTargetInfo.h"
 #include "llvm/CodeGen/Passes.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
+#include "llvm/CodeGen/VLIWMachineScheduler.h"
 #include "llvm/IR/LegacyPassManager.h"
 #include "llvm/IR/Module.h"
+#include "llvm/MC/TargetRegistry.h"
 #include "llvm/Passes/PassBuilder.h"
 #include "llvm/Support/CommandLine.h"
-#include "llvm/Support/TargetRegistry.h"
 #include "llvm/Transforms/IPO/PassManagerBuilder.h"
 #include "llvm/Transforms/Scalar.h"
 
 using namespace llvm;
 
-static cl::opt<bool> EnableCExtOpt("hexagon-cext", cl::Hidden, cl::ZeroOrMore,
-  cl::init(true), cl::desc("Enable Hexagon constant-extender optimization"));
+static cl::opt<bool>
+    EnableCExtOpt("hexagon-cext", cl::Hidden, cl::init(true),
+                  cl::desc("Enable Hexagon constant-extender optimization"));
 
-static cl::opt<bool> EnableRDFOpt("rdf-opt", cl::Hidden, cl::ZeroOrMore,
-  cl::init(true), cl::desc("Enable RDF-based optimizations"));
+static cl::opt<bool> EnableRDFOpt("rdf-opt", cl::Hidden, cl::init(true),
+                                  cl::desc("Enable RDF-based optimizations"));
 
 static cl::opt<bool> DisableHardwareLoops("disable-hexagon-hwloops",
   cl::Hidden, cl::desc("Disable Hardware Loops for Hexagon target"));
 
-static cl::opt<bool> DisableAModeOpt("disable-hexagon-amodeopt",
-  cl::Hidden, cl::ZeroOrMore, cl::init(false),
-  cl::desc("Disable Hexagon Addressing Mode Optimization"));
+static cl::opt<bool>
+    DisableAModeOpt("disable-hexagon-amodeopt", cl::Hidden,
+                    cl::desc("Disable Hexagon Addressing Mode Optimization"));
 
-static cl::opt<bool> DisableHexagonCFGOpt("disable-hexagon-cfgopt",
-  cl::Hidden, cl::ZeroOrMore, cl::init(false),
-  cl::desc("Disable Hexagon CFG Optimization"));
+static cl::opt<bool>
+    DisableHexagonCFGOpt("disable-hexagon-cfgopt", cl::Hidden,
+                         cl::desc("Disable Hexagon CFG Optimization"));
 
-static cl::opt<bool> DisableHCP("disable-hcp", cl::init(false), cl::Hidden,
-  cl::ZeroOrMore, cl::desc("Disable Hexagon constant propagation"));
+static cl::opt<bool>
+    DisableHCP("disable-hcp", cl::Hidden,
+               cl::desc("Disable Hexagon constant propagation"));
 
 static cl::opt<bool> DisableStoreWidening("disable-store-widen",
   cl::Hidden, cl::init(false), cl::desc("Disable store widening"));
 
 static cl::opt<bool> EnableExpandCondsets("hexagon-expand-condsets",
-  cl::init(true), cl::Hidden, cl::ZeroOrMore,
-  cl::desc("Early expansion of MUX"));
+                                          cl::init(true), cl::Hidden,
+                                          cl::desc("Early expansion of MUX"));
 
 static cl::opt<bool> EnableEarlyIf("hexagon-eif", cl::init(true), cl::Hidden,
-  cl::ZeroOrMore, cl::desc("Enable early if-conversion"));
+                                   cl::desc("Enable early if-conversion"));
 
 static cl::opt<bool> EnableGenInsert("hexagon-insert", cl::init(true),
   cl::Hidden, cl::desc("Generate \"insert\" instructions"));
 
-static cl::opt<bool> EnableCommGEP("hexagon-commgep", cl::init(true),
-  cl::Hidden, cl::ZeroOrMore, cl::desc("Enable commoning of GEP instructions"));
+static cl::opt<bool>
+    EnableCommGEP("hexagon-commgep", cl::init(true), cl::Hidden,
+                  cl::desc("Enable commoning of GEP instructions"));
 
 static cl::opt<bool> EnableGenExtract("hexagon-extract", cl::init(true),
   cl::Hidden, cl::desc("Generate \"extract\" instructions"));
@@ -77,9 +81,9 @@ static cl::opt<bool> EnableGenPred("hexagon-gen-pred", cl::init(true),
   cl::Hidden, cl::desc("Enable conversion of arithmetic operations to "
   "predicate instructions"));
 
-static cl::opt<bool> EnableLoopPrefetch("hexagon-loop-prefetch",
-  cl::init(false), cl::Hidden, cl::ZeroOrMore,
-  cl::desc("Enable loop data prefetch on Hexagon"));
+static cl::opt<bool>
+    EnableLoopPrefetch("hexagon-loop-prefetch", cl::Hidden,
+                       cl::desc("Enable loop data prefetch on Hexagon"));
 
 static cl::opt<bool> DisableHSDR("disable-hsdr", cl::init(false), cl::Hidden,
   cl::desc("Disable splitting double registers"));
@@ -93,22 +97,24 @@ static cl::opt<bool> EnableLoopResched("hexagon-loop-resched", cl::init(true),
 static cl::opt<bool> HexagonNoOpt("hexagon-noopt", cl::init(false),
   cl::Hidden, cl::desc("Disable backend optimizations"));
 
-static cl::opt<bool> EnableVectorPrint("enable-hexagon-vector-print",
-  cl::Hidden, cl::ZeroOrMore, cl::init(false),
-  cl::desc("Enable Hexagon Vector print instr pass"));
+static cl::opt<bool>
+    EnableVectorPrint("enable-hexagon-vector-print", cl::Hidden,
+                      cl::desc("Enable Hexagon Vector print instr pass"));
 
-static cl::opt<bool> EnableVExtractOpt("hexagon-opt-vextract", cl::Hidden,
-  cl::ZeroOrMore, cl::init(true), cl::desc("Enable vextract optimization"));
+static cl::opt<bool>
+    EnableVExtractOpt("hexagon-opt-vextract", cl::Hidden, cl::init(true),
+                      cl::desc("Enable vextract optimization"));
 
-static cl::opt<bool> EnableVectorCombine("hexagon-vector-combine", cl::Hidden,
-  cl::ZeroOrMore, cl::init(true), cl::desc("Enable HVX vector combining"));
+static cl::opt<bool>
+    EnableVectorCombine("hexagon-vector-combine", cl::Hidden, cl::init(true),
+                        cl::desc("Enable HVX vector combining"));
 
-static cl::opt<bool> EnableInitialCFGCleanup("hexagon-initial-cfg-cleanup",
-  cl::Hidden, cl::ZeroOrMore, cl::init(true),
-  cl::desc("Simplify the CFG after atomic expansion pass"));
+static cl::opt<bool> EnableInitialCFGCleanup(
+    "hexagon-initial-cfg-cleanup", cl::Hidden, cl::init(true),
+    cl::desc("Simplify the CFG after atomic expansion pass"));
 
 static cl::opt<bool> EnableInstSimplify("hexagon-instsimplify", cl::Hidden,
-                                        cl::ZeroOrMore, cl::init(true),
+                                        cl::init(true),
                                         cl::desc("Enable instsimplify"));
 
 /// HexagonTargetMachineModule - Note that this is used on hosts that
@@ -120,8 +126,8 @@ extern "C" int HexagonTargetMachineModule;
 int HexagonTargetMachineModule = 0;
 
 static ScheduleDAGInstrs *createVLIWMachineSched(MachineSchedContext *C) {
-  ScheduleDAGMILive *DAG =
-    new VLIWMachineScheduler(C, std::make_unique<ConvergingVLIWScheduler>());
+  ScheduleDAGMILive *DAG = new VLIWMachineScheduler(
+      C, std::make_unique<HexagonConvergingVLIWScheduler>());
   DAG->addMutation(std::make_unique<HexagonSubtarget::UsrOverflowMutation>());
   DAG->addMutation(std::make_unique<HexagonSubtarget::HVXMemLatencyMutation>());
   DAG->addMutation(std::make_unique<HexagonSubtarget::CallMutation>());
@@ -138,6 +144,7 @@ namespace llvm {
   void initializeHexagonBitSimplifyPass(PassRegistry&);
   void initializeHexagonConstExtendersPass(PassRegistry&);
   void initializeHexagonConstPropagationPass(PassRegistry&);
+  void initializeHexagonCopyToCombinePass(PassRegistry&);
   void initializeHexagonEarlyIfConversionPass(PassRegistry&);
   void initializeHexagonExpandCondsetsPass(PassRegistry&);
   void initializeHexagonGenMuxPass(PassRegistry&);
@@ -187,7 +194,7 @@ namespace llvm {
 } // end namespace llvm;
 
 static Reloc::Model getEffectiveRelocModel(Optional<Reloc::Model> RM) {
-  return RM.getValueOr(Reloc::Static);
+  return RM.value_or(Reloc::Static);
 }
 
 extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeHexagonTarget() {
@@ -198,6 +205,7 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeHexagonTarget() {
   initializeHexagonBitSimplifyPass(PR);
   initializeHexagonConstExtendersPass(PR);
   initializeHexagonConstPropagationPass(PR);
+  initializeHexagonCopyToCombinePass(PR);
   initializeHexagonEarlyIfConversionPass(PR);
   initializeHexagonGenMuxPass(PR);
   initializeHexagonHardwareLoopsPass(PR);
@@ -238,9 +246,9 @@ const HexagonSubtarget *
 HexagonTargetMachine::getSubtargetImpl(const Function &F) const {
   AttributeList FnAttrs = F.getAttributes();
   Attribute CPUAttr =
-      FnAttrs.getAttribute(AttributeList::FunctionIndex, "target-cpu");
+      FnAttrs.getFnAttr("target-cpu");
   Attribute FSAttr =
-      FnAttrs.getAttribute(AttributeList::FunctionIndex, "target-features");
+      FnAttrs.getFnAttr("target-features");
 
   std::string CPU =
       CPUAttr.isValid() ? CPUAttr.getValueAsString().str() : TargetCPU;
@@ -280,22 +288,21 @@ void HexagonTargetMachine::adjustPassManager(PassManagerBuilder &PMB) {
 
 void HexagonTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB) {
   PB.registerLateLoopOptimizationsEPCallback(
-      [=](LoopPassManager &LPM, PassBuilder::OptimizationLevel Level) {
+      [=](LoopPassManager &LPM, OptimizationLevel Level) {
         LPM.addPass(HexagonLoopIdiomRecognitionPass());
       });
   PB.registerLoopOptimizerEndEPCallback(
-      [=](LoopPassManager &LPM, PassBuilder::OptimizationLevel Level) {
+      [=](LoopPassManager &LPM, OptimizationLevel Level) {
         LPM.addPass(HexagonVectorLoopCarriedReusePass());
       });
 }
 
 TargetTransformInfo
-HexagonTargetMachine::getTargetTransformInfo(const Function &F) {
+HexagonTargetMachine::getTargetTransformInfo(const Function &F) const {
   return TargetTransformInfo(HexagonTTIImpl(this, F));
 }
 
-
-HexagonTargetMachine::~HexagonTargetMachine() {}
+HexagonTargetMachine::~HexagonTargetMachine() = default;
 
 namespace {
 /// Hexagon Code Generator Pass Configuration Options.
@@ -342,6 +349,7 @@ void HexagonPassConfig::addIRPasses() {
     if (EnableInitialCFGCleanup)
       addPass(createCFGSimplificationPass(SimplifyCFGOptions()
                                               .forwardSwitchCondToPhi(true)
+                                              .convertSwitchRangeToICmp(true)
                                               .convertSwitchToLookupTable(true)
                                               .needCanonicalLoops(false)
                                               .hoistCommonInsts(true)
@@ -447,11 +455,11 @@ void HexagonPassConfig::addPreEmitPass() {
   }
 
   // Packetization is mandatory: it handles gather/scatter at all opt levels.
-  addPass(createHexagonPacketizer(NoOpt), false);
+  addPass(createHexagonPacketizer(NoOpt));
 
   if (EnableVectorPrint)
-    addPass(createHexagonVectorPrint(), false);
+    addPass(createHexagonVectorPrint());
 
   // Add CFI instructions if necessary.
-  addPass(createHexagonCallFrameInformation(), false);
+  addPass(createHexagonCallFrameInformation());
 }

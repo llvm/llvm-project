@@ -167,7 +167,7 @@ void renderLineSummary(raw_ostream &OS, const FileCoverageSummary &Summary) {
 
 void renderBranchSummary(raw_ostream &OS, const FileCoverageSummary &Summary) {
   OS << "BRF:" << Summary.BranchCoverage.getNumBranches() << '\n'
-     << "BFH:" << Summary.BranchCoverage.getCovered() << '\n';
+     << "BRH:" << Summary.BranchCoverage.getCovered() << '\n';
 }
 
 void renderFile(raw_ostream &OS, const coverage::CoverageMapping &Coverage,

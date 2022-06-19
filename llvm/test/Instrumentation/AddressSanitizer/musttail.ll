@@ -1,6 +1,5 @@
 ; To test that asan does not break the musttail call contract.
 ;
-; RUN: opt < %s -asan -asan-module -S -enable-new-pm=0 | FileCheck %s
 ; RUN: opt < %s -passes='asan-pipeline' -S | FileCheck %s
 
 define internal i32 @foo(i32* %p) sanitize_address {

@@ -1,4 +1,4 @@
-// RUN: %clang_analyze_cc1 -Wno-objc-literal-conversion -analyzer-checker=core,unix.Malloc,osx.cocoa.NonNilReturnValue,debug.ExprInspection -analyzer-store=region -verify %s
+// RUN: %clang_analyze_cc1 -Wno-objc-literal-conversion -analyzer-checker=core,unix.Malloc,osx.cocoa.NonNilReturnValue,debug.ExprInspection -verify %s
 
 void clang_analyzer_eval(int);
 
@@ -49,11 +49,11 @@ extern void *malloc(size_t);
 extern void free(void *);
 extern char *strdup(const char *str);
 
-id constant_string() {
+id constant_string(void) {
     return @("boxed constant string.");
 }
 
-id dynamic_string() {
+id dynamic_string(void) {
     return @(strdup("boxed dynamic string")); // expected-warning{{Potential memory leak}}
 }
 
@@ -61,14 +61,14 @@ typedef struct __attribute__((objc_boxable)) {
   const char *str;
 } BoxableStruct;
 
-id leak_within_boxed_struct() {
+id leak_within_boxed_struct(void) {
   BoxableStruct bs;
   bs.str = strdup("dynamic string"); // The duped string shall be owned by val.
   NSValue *val = @(bs); // no-warning
   return val;
 }
 
-id leak_of_boxed_struct() {
+id leak_of_boxed_struct(void) {
   BoxableStruct *bs = malloc(sizeof(BoxableStruct)); // The pointer stored in bs isn't owned by val.
   NSValue *val = @(*bs); // expected-warning{{Potential leak of memory pointed to by 'bs'}}
   return val;
@@ -80,7 +80,7 @@ id const_char_pointer(int *x) {
   return @(*x); // expected-warning {{Dereference of null pointer (loaded from variable 'x')}}
 }
 
-void checkNonNil() {
+void checkNonNil(void) {
   clang_analyzer_eval(!!@3); // expected-warning{{TRUE}}
   clang_analyzer_eval(!!@(3+4)); // expected-warning{{TRUE}}
   clang_analyzer_eval(!!@(57.0)); // expected-warning{{TRUE}}

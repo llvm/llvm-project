@@ -3,7 +3,7 @@
 // RUN: echo '.cfi_startproc; .cfi_endproc' | llvm-mc -filetype=obj -triple=x86_64 - -o %t2.o
 // RUN: ld.lld %t.o %t2.o -o %t
 // RUN: llvm-readobj -S %t | FileCheck %s
-// RUN: llvm-objdump -d %t | FileCheck --check-prefix=DISASM %s
+// RUN: llvm-objdump -d --print-imm-hex %t | FileCheck --check-prefix=DISASM %s
 
 // CHECK:      Name: .eh_frame
 // CHECK-NEXT: Type: SHT_PROGBITS
@@ -15,18 +15,17 @@
 // CHECK-NEXT: Size: 52
 // CHECK-NOT: .eh_frame
 
-// 0x200120 = 2097440
-// 0x200120 + 5 = 2097445
 // DISASM:      Disassembly of section .text:
 // DISASM-EMPTY:
 // DISASM-NEXT: <_start>:
-// DISASM-NEXT:   201154: {{.*}} movq 2097440, %rax
-// DISASM-NEXT:   20115c: {{.*}} movq 2097445, %rax
+// DISASM-NEXT:   movq 0x200120, %rax
+// DISASM-NEXT:   leaq {{.*}}(%rip), %rax  # {{.*}} <__EH_FRAME_LIST__>
 
 .section .eh_frame,"a",@unwind
+__EH_FRAME_LIST__:
 
 .section .text
 .globl _start
 _start:
- movq .eh_frame, %rax
- movq .eh_frame + 5, %rax
+ movq .eh_frame, %rax  # addend=0
+ leaq __EH_FRAME_LIST__(%rip), %rax  # addend=-4, used by libclang_rt.crtbegin.o

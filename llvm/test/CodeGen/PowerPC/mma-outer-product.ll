@@ -13,9 +13,9 @@ define void @intrinsics1(<16 x i8> %vc1, <16 x i8> %vc2, <16 x i8> %vc3, <16 x i
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vmr v1, v4
 ; CHECK-NEXT:    vmr v4, v3
-; CHECK-NEXT:    ld r3, 96(r1)
 ; CHECK-NEXT:    vmr v0, v2
 ; CHECK-NEXT:    xxlor vs3, v5, v5
+; CHECK-NEXT:    ld r3, 96(r1)
 ; CHECK-NEXT:    xxlor vs0, v0, v0
 ; CHECK-NEXT:    xxlor vs1, v1, v1
 ; CHECK-NEXT:    xxlor vs2, v4, v4
@@ -37,9 +37,9 @@ define void @intrinsics1(<16 x i8> %vc1, <16 x i8> %vc2, <16 x i8> %vc3, <16 x i
 ; CHECK-BE:       # %bb.0:
 ; CHECK-BE-NEXT:    vmr v1, v4
 ; CHECK-BE-NEXT:    vmr v4, v3
-; CHECK-BE-NEXT:    ld r3, 112(r1)
 ; CHECK-BE-NEXT:    vmr v0, v2
 ; CHECK-BE-NEXT:    xxlor vs3, v5, v5
+; CHECK-BE-NEXT:    ld r3, 112(r1)
 ; CHECK-BE-NEXT:    xxlor vs0, v0, v0
 ; CHECK-BE-NEXT:    xxlor vs1, v1, v1
 ; CHECK-BE-NEXT:    xxlor vs2, v4, v4
@@ -73,9 +73,9 @@ define void @intrinsics2(<16 x i8>* %ptr1, <16 x i8>* %ptr2, <16 x i8>* %ptr3, <
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    lxv v2, 0(r3)
 ; CHECK-NEXT:    lxv v3, 0(r4)
+; CHECK-NEXT:    xxlor vs0, v2, v2
 ; CHECK-NEXT:    lxv v4, 0(r5)
 ; CHECK-NEXT:    lxv v5, 0(r6)
-; CHECK-NEXT:    xxlor vs0, v2, v2
 ; CHECK-NEXT:    xxlor vs1, v3, v3
 ; CHECK-NEXT:    xxlor vs2, v4, v4
 ; CHECK-NEXT:    xxlor vs3, v5, v5
@@ -97,9 +97,9 @@ define void @intrinsics2(<16 x i8>* %ptr1, <16 x i8>* %ptr2, <16 x i8>* %ptr3, <
 ; CHECK-BE:       # %bb.0:
 ; CHECK-BE-NEXT:    lxv v2, 0(r3)
 ; CHECK-BE-NEXT:    lxv v3, 0(r4)
+; CHECK-BE-NEXT:    xxlor vs0, v2, v2
 ; CHECK-BE-NEXT:    lxv v4, 0(r5)
 ; CHECK-BE-NEXT:    lxv v5, 0(r6)
-; CHECK-BE-NEXT:    xxlor vs0, v2, v2
 ; CHECK-BE-NEXT:    xxlor vs1, v3, v3
 ; CHECK-BE-NEXT:    xxlor vs2, v4, v4
 ; CHECK-BE-NEXT:    xxlor vs3, v5, v5
@@ -1406,8 +1406,8 @@ define void @test34(i8* %vqp, i8* %vpp, <16 x i8> %vc, i8* %resp) {
 ; CHECK-NEXT:    lxv vs0, 48(r3)
 ; CHECK-NEXT:    lxv vs3, 0(r3)
 ; CHECK-NEXT:    lxv vs2, 16(r3)
-; CHECK-NEXT:    xxmtacc acc0
 ; CHECK-NEXT:    lxv v5, 0(r4)
+; CHECK-NEXT:    xxmtacc acc0
 ; CHECK-NEXT:    lxv v4, 16(r4)
 ; CHECK-NEXT:    xvf64gerpp acc0, vsp36, v2
 ; CHECK-NEXT:    xxmfacc acc0
@@ -1423,8 +1423,8 @@ define void @test34(i8* %vqp, i8* %vpp, <16 x i8> %vc, i8* %resp) {
 ; CHECK-BE-NEXT:    lxv vs0, 0(r3)
 ; CHECK-BE-NEXT:    lxv vs3, 48(r3)
 ; CHECK-BE-NEXT:    lxv vs2, 32(r3)
-; CHECK-BE-NEXT:    xxmtacc acc0
 ; CHECK-BE-NEXT:    lxv v5, 16(r4)
+; CHECK-BE-NEXT:    xxmtacc acc0
 ; CHECK-BE-NEXT:    lxv v4, 0(r4)
 ; CHECK-BE-NEXT:    xvf64gerpp acc0, vsp36, v2
 ; CHECK-BE-NEXT:    xxmfacc acc0
@@ -1454,8 +1454,8 @@ define void @test35(i8* %vqp, i8* %vpp, <16 x i8> %vc, i8* %resp) {
 ; CHECK-NEXT:    lxv vs0, 48(r3)
 ; CHECK-NEXT:    lxv vs3, 0(r3)
 ; CHECK-NEXT:    lxv vs2, 16(r3)
-; CHECK-NEXT:    xxmtacc acc0
 ; CHECK-NEXT:    lxv v5, 0(r4)
+; CHECK-NEXT:    xxmtacc acc0
 ; CHECK-NEXT:    lxv v4, 16(r4)
 ; CHECK-NEXT:    xvf64gerpn acc0, vsp36, v2
 ; CHECK-NEXT:    xxmfacc acc0
@@ -1471,8 +1471,8 @@ define void @test35(i8* %vqp, i8* %vpp, <16 x i8> %vc, i8* %resp) {
 ; CHECK-BE-NEXT:    lxv vs0, 0(r3)
 ; CHECK-BE-NEXT:    lxv vs3, 48(r3)
 ; CHECK-BE-NEXT:    lxv vs2, 32(r3)
-; CHECK-BE-NEXT:    xxmtacc acc0
 ; CHECK-BE-NEXT:    lxv v5, 16(r4)
+; CHECK-BE-NEXT:    xxmtacc acc0
 ; CHECK-BE-NEXT:    lxv v4, 0(r4)
 ; CHECK-BE-NEXT:    xvf64gerpn acc0, vsp36, v2
 ; CHECK-BE-NEXT:    xxmfacc acc0
@@ -1502,8 +1502,8 @@ define void @test36(i8* %vqp, i8* %vpp, <16 x i8> %vc, i8* %resp) {
 ; CHECK-NEXT:    lxv vs0, 48(r3)
 ; CHECK-NEXT:    lxv vs3, 0(r3)
 ; CHECK-NEXT:    lxv vs2, 16(r3)
-; CHECK-NEXT:    xxmtacc acc0
 ; CHECK-NEXT:    lxv v5, 0(r4)
+; CHECK-NEXT:    xxmtacc acc0
 ; CHECK-NEXT:    lxv v4, 16(r4)
 ; CHECK-NEXT:    xvf64gernp acc0, vsp36, v2
 ; CHECK-NEXT:    xxmfacc acc0
@@ -1519,8 +1519,8 @@ define void @test36(i8* %vqp, i8* %vpp, <16 x i8> %vc, i8* %resp) {
 ; CHECK-BE-NEXT:    lxv vs0, 0(r3)
 ; CHECK-BE-NEXT:    lxv vs3, 48(r3)
 ; CHECK-BE-NEXT:    lxv vs2, 32(r3)
-; CHECK-BE-NEXT:    xxmtacc acc0
 ; CHECK-BE-NEXT:    lxv v5, 16(r4)
+; CHECK-BE-NEXT:    xxmtacc acc0
 ; CHECK-BE-NEXT:    lxv v4, 0(r4)
 ; CHECK-BE-NEXT:    xvf64gernp acc0, vsp36, v2
 ; CHECK-BE-NEXT:    xxmfacc acc0
@@ -1550,8 +1550,8 @@ define void @test37(i8* %vqp, i8* %vpp, <16 x i8> %vc, i8* %resp) {
 ; CHECK-NEXT:    lxv vs0, 48(r3)
 ; CHECK-NEXT:    lxv vs3, 0(r3)
 ; CHECK-NEXT:    lxv vs2, 16(r3)
-; CHECK-NEXT:    xxmtacc acc0
 ; CHECK-NEXT:    lxv v5, 0(r4)
+; CHECK-NEXT:    xxmtacc acc0
 ; CHECK-NEXT:    lxv v4, 16(r4)
 ; CHECK-NEXT:    xvf64gernn acc0, vsp36, v2
 ; CHECK-NEXT:    xxmfacc acc0
@@ -1567,8 +1567,8 @@ define void @test37(i8* %vqp, i8* %vpp, <16 x i8> %vc, i8* %resp) {
 ; CHECK-BE-NEXT:    lxv vs0, 0(r3)
 ; CHECK-BE-NEXT:    lxv vs3, 48(r3)
 ; CHECK-BE-NEXT:    lxv vs2, 32(r3)
-; CHECK-BE-NEXT:    xxmtacc acc0
 ; CHECK-BE-NEXT:    lxv v5, 16(r4)
+; CHECK-BE-NEXT:    xxmtacc acc0
 ; CHECK-BE-NEXT:    lxv v4, 0(r4)
 ; CHECK-BE-NEXT:    xvf64gernn acc0, vsp36, v2
 ; CHECK-BE-NEXT:    xxmfacc acc0
@@ -1634,8 +1634,8 @@ define void @test39(i8* %vqp, i8* %vpp, <16 x i8> %vc, i8* %resp) {
 ; CHECK-NEXT:    lxv vs0, 48(r3)
 ; CHECK-NEXT:    lxv vs3, 0(r3)
 ; CHECK-NEXT:    lxv vs2, 16(r3)
-; CHECK-NEXT:    xxmtacc acc0
 ; CHECK-NEXT:    lxv v5, 0(r4)
+; CHECK-NEXT:    xxmtacc acc0
 ; CHECK-NEXT:    lxv v4, 16(r4)
 ; CHECK-NEXT:    pmxvf64gerpp acc0, vsp36, v2, 0, 0
 ; CHECK-NEXT:    xxmfacc acc0
@@ -1651,8 +1651,8 @@ define void @test39(i8* %vqp, i8* %vpp, <16 x i8> %vc, i8* %resp) {
 ; CHECK-BE-NEXT:    lxv vs0, 0(r3)
 ; CHECK-BE-NEXT:    lxv vs3, 48(r3)
 ; CHECK-BE-NEXT:    lxv vs2, 32(r3)
-; CHECK-BE-NEXT:    xxmtacc acc0
 ; CHECK-BE-NEXT:    lxv v5, 16(r4)
+; CHECK-BE-NEXT:    xxmtacc acc0
 ; CHECK-BE-NEXT:    lxv v4, 0(r4)
 ; CHECK-BE-NEXT:    pmxvf64gerpp acc0, vsp36, v2, 0, 0
 ; CHECK-BE-NEXT:    xxmfacc acc0
@@ -1682,8 +1682,8 @@ define void @test40(i8* %vqp, i8* %vpp, <16 x i8> %vc, i8* %resp) {
 ; CHECK-NEXT:    lxv vs0, 48(r3)
 ; CHECK-NEXT:    lxv vs3, 0(r3)
 ; CHECK-NEXT:    lxv vs2, 16(r3)
-; CHECK-NEXT:    xxmtacc acc0
 ; CHECK-NEXT:    lxv v5, 0(r4)
+; CHECK-NEXT:    xxmtacc acc0
 ; CHECK-NEXT:    lxv v4, 16(r4)
 ; CHECK-NEXT:    pmxvf64gerpn acc0, vsp36, v2, 0, 0
 ; CHECK-NEXT:    xxmfacc acc0
@@ -1699,8 +1699,8 @@ define void @test40(i8* %vqp, i8* %vpp, <16 x i8> %vc, i8* %resp) {
 ; CHECK-BE-NEXT:    lxv vs0, 0(r3)
 ; CHECK-BE-NEXT:    lxv vs3, 48(r3)
 ; CHECK-BE-NEXT:    lxv vs2, 32(r3)
-; CHECK-BE-NEXT:    xxmtacc acc0
 ; CHECK-BE-NEXT:    lxv v5, 16(r4)
+; CHECK-BE-NEXT:    xxmtacc acc0
 ; CHECK-BE-NEXT:    lxv v4, 0(r4)
 ; CHECK-BE-NEXT:    pmxvf64gerpn acc0, vsp36, v2, 0, 0
 ; CHECK-BE-NEXT:    xxmfacc acc0
@@ -1730,8 +1730,8 @@ define void @test41(i8* %vqp, i8* %vpp, <16 x i8> %vc, i8* %resp) {
 ; CHECK-NEXT:    lxv vs0, 48(r3)
 ; CHECK-NEXT:    lxv vs3, 0(r3)
 ; CHECK-NEXT:    lxv vs2, 16(r3)
-; CHECK-NEXT:    xxmtacc acc0
 ; CHECK-NEXT:    lxv v5, 0(r4)
+; CHECK-NEXT:    xxmtacc acc0
 ; CHECK-NEXT:    lxv v4, 16(r4)
 ; CHECK-NEXT:    pmxvf64gernp acc0, vsp36, v2, 0, 0
 ; CHECK-NEXT:    xxmfacc acc0
@@ -1747,8 +1747,8 @@ define void @test41(i8* %vqp, i8* %vpp, <16 x i8> %vc, i8* %resp) {
 ; CHECK-BE-NEXT:    lxv vs0, 0(r3)
 ; CHECK-BE-NEXT:    lxv vs3, 48(r3)
 ; CHECK-BE-NEXT:    lxv vs2, 32(r3)
-; CHECK-BE-NEXT:    xxmtacc acc0
 ; CHECK-BE-NEXT:    lxv v5, 16(r4)
+; CHECK-BE-NEXT:    xxmtacc acc0
 ; CHECK-BE-NEXT:    lxv v4, 0(r4)
 ; CHECK-BE-NEXT:    pmxvf64gernp acc0, vsp36, v2, 0, 0
 ; CHECK-BE-NEXT:    xxmfacc acc0
@@ -1778,8 +1778,8 @@ define void @test42(i8* %vqp, i8* %vpp, <16 x i8> %vc, i8* %resp) {
 ; CHECK-NEXT:    lxv vs0, 48(r3)
 ; CHECK-NEXT:    lxv vs3, 0(r3)
 ; CHECK-NEXT:    lxv vs2, 16(r3)
-; CHECK-NEXT:    xxmtacc acc0
 ; CHECK-NEXT:    lxv v5, 0(r4)
+; CHECK-NEXT:    xxmtacc acc0
 ; CHECK-NEXT:    lxv v4, 16(r4)
 ; CHECK-NEXT:    pmxvf64gernn acc0, vsp36, v2, 0, 0
 ; CHECK-NEXT:    xxmfacc acc0
@@ -1795,8 +1795,8 @@ define void @test42(i8* %vqp, i8* %vpp, <16 x i8> %vc, i8* %resp) {
 ; CHECK-BE-NEXT:    lxv vs0, 0(r3)
 ; CHECK-BE-NEXT:    lxv vs3, 48(r3)
 ; CHECK-BE-NEXT:    lxv vs2, 32(r3)
-; CHECK-BE-NEXT:    xxmtacc acc0
 ; CHECK-BE-NEXT:    lxv v5, 16(r4)
+; CHECK-BE-NEXT:    xxmtacc acc0
 ; CHECK-BE-NEXT:    lxv v4, 0(r4)
 ; CHECK-BE-NEXT:    pmxvf64gernn acc0, vsp36, v2, 0, 0
 ; CHECK-BE-NEXT:    xxmfacc acc0

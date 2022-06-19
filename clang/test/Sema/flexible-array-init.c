@@ -6,7 +6,7 @@ struct one {
 
 struct one x2 = { 5, 1, 2, 3 }; // expected-warning{{flexible array initialization is a GNU extension}}
 
-void test() {
+void test(void) {
   struct one x3 = {5, {1, 2, 3}}; // expected-error{{initialization of flexible array member is not allowed}}
   struct one x3a = { 5 };
   struct one x3b = { .a = 5 };
@@ -70,7 +70,7 @@ struct PR8217a {
   char v[]; // expected-note 2 {{initialized flexible array member 'v' is here}}
 };
 
-void PR8217() {
+void PR8217(void) {
   struct PR8217a foo1 = { .i = 0, .v = "foo" }; // expected-error {{initialization of flexible array member is not allowed}}
   struct PR8217a foo2 = { .i = 0 };
   struct PR8217a foo3 = { .i = 0, .v = { 'b', 'a', 'r', '\0' } }; // expected-error {{initialization of flexible array member is not allowed}}
@@ -81,11 +81,11 @@ typedef struct PR10648 {
  unsigned long n;
  int v[]; // expected-note {{initialized flexible array member 'v' is here}}
 } PR10648;
-int f10648() { 
+int f10648(void) { 
   return (PR10648){2, {3, 4}}.v[1]; // expected-error {{initialization of flexible array member is not allowed}}
 }
 
 struct FlexWithUnnamedBitfield { int : 10; int x; int y[]; }; // expected-note {{initialized flexible array member 'y' is here}}
-void TestFlexWithUnnamedBitfield() {
+void TestFlexWithUnnamedBitfield(void) {
   struct FlexWithUnnamedBitfield x = {10, {3}}; // expected-error {{initialization of flexible array member is not allowed}}
 }

@@ -1,7 +1,7 @@
-; This is a basic sanity check for constant propagation. The fneg instruction
-; should be eliminated.
+; This is a basic correctness check for constant propagation. The fneg
+; instruction should be eliminated.
 
-; RUN: opt < %s -sccp -S | FileCheck %s
+; RUN: opt < %s -passes=sccp -S | FileCheck %s
 
 define double @test(i1 %B) {
 	br i1 %B, label %BB1, label %BB2

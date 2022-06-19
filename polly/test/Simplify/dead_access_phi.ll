@@ -1,5 +1,5 @@
-; RUN: opt %loadPolly -polly-stmt-granularity=bb -polly-simplify -analyze < %s | FileCheck %s -match-full-lines
-; RUN: opt %loadPolly -polly-stmt-granularity=bb "-passes=scop(print<polly-simplify>)" -disable-output -aa-pipeline=basic-aa < %s | FileCheck %s -match-full-lines
+; RUN: opt %loadPolly -polly-stmt-granularity=bb -polly-print-simplify -disable-output < %s | FileCheck %s -match-full-lines
+; RUN: opt %loadNPMPolly -polly-stmt-granularity=bb "-passes=scop(print<polly-simplify>)" -disable-output -aa-pipeline=basic-aa < %s | FileCheck %s -match-full-lines
 ;
 ; Remove a dead PHI write/read pair
 ; (accesses that are effectively not used)
@@ -7,7 +7,7 @@
 ; for (int j = 0; j < n; j += 1) {
 ; body:
 ;   double phi = 42;
-; 
+;
 ; body_succ:
 ;   A[0] = 42.0;
 ; }
@@ -23,7 +23,7 @@ for:
 
     body:
       br label %body_succ
-      
+
     body_succ:
       %phi = phi double [42.0, %body]
       store double 42.0, double* %A

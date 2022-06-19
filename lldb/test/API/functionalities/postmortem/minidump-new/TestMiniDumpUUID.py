@@ -12,10 +12,7 @@ from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 
 
-@skipIfReproducer # Modules are not orphaned and it finds the module with the same UUID from test_partial_uuid_match.
 class MiniDumpUUIDTestCase(TestBase):
-
-    mydir = TestBase.compute_mydir(__file__)
 
     NO_DEBUG_INFO_TESTCASE = True
 

@@ -9,7 +9,7 @@ import sys
 import os
 import platform
 
-from dex.debugger.DebuggerBase import DebuggerBase
+from dex.debugger.DebuggerBase import DebuggerBase, watch_is_active
 from dex.dextIR import FrameIR, LocIR, StepIR, StopReason, ValueIR
 from dex.dextIR import ProgramState, StackFrame, SourceLocation
 from dex.utils.Exceptions import DebuggerException, LoadDebuggerException
@@ -90,12 +90,13 @@ class DbgEng(DebuggerBase):
     def get_triggered_breakpoint_ids(self):
       raise NotImplementedError('get_triggered_breakpoint_ids is not yet implemented by dbgeng')
 
-    def delete_breakpoint(self, id):
+    def delete_breakpoints(self, ids):
         # breakpoint setting/deleting is not supported by dbgeng at this moment
         # but is something that should be considered in the future.
         raise NotImplementedError('delete_conditional_breakpoint is not yet implemented by dbgeng')
 
-    def launch(self):
+    def launch(self, cmdline):
+        assert len(cmdline) == 0, "Command lines unimplemented for dbgeng right now"
         # We are, by this point, already launched.
         self.step_info = probe_process.probe_state(self.client)
 
@@ -133,8 +134,14 @@ class DbgEng(DebuggerBase):
                                                            column=0),
                                    watches={})
           for expr in map(
-              lambda watch, idx=i: self.evaluate_expression(watch, idx),
-              watches):
+              # Filter out watches that are not active in the current frame,
+              # and then evaluate all the active watches.
+              lambda watch_info, idx=i:
+                self.evaluate_expression(watch_info.expression, idx),
+              filter(
+                  lambda watch_info, idx=i, line_no=loc.lineno, path=loc.path:
+                    watch_is_active(watch_info, path, idx, line_no),
+                  watches)):
               state_frame.watches[expr.expression] = expr
           state_frames.append(state_frame)
 

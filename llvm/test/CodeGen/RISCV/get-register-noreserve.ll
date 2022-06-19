@@ -31,8 +31,20 @@ entry:
   ret i32 %sp
 }
 
+define i32 @get_csr_vlenb() nounwind {
+; CHECK-LABEL: get_csr_vlenb:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    csrr a0, vlenb
+; CHECK-NEXT:    ret
+entry:
+  %sp = call i32 @llvm.read_register.i32(metadata !2)
+  ret i32 %sp
+}
+
+
 declare i32 @llvm.read_register.i32(metadata) nounwind
 declare void @llvm.write_register.i32(metadata, i32) nounwind
 
 !0 = !{!"sp\00"}
 !1 = !{!"x4\00"}
+!2 = !{!"vlenb"}

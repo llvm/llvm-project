@@ -11,10 +11,8 @@
 
 #include "Trace.h"
 #include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Allocator.h"
-#include "llvm/Support/StringSaver.h"
 #include <cstddef>
 #include <string>
 #include <vector>

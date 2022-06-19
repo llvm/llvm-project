@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/MCA/Stages/InOrderIssueStage.h"
+#include "llvm/MCA/HardwareUnits/LSUnit.h"
 #include "llvm/MCA/HardwareUnits/RegisterFile.h"
 #include "llvm/MCA/HardwareUnits/RetireControlUnit.h"
 #include "llvm/MCA/Instruction.h"
@@ -43,9 +44,10 @@ void StallInfo::cycleEnd() {
 }
 
 InOrderIssueStage::InOrderIssueStage(const MCSubtargetInfo &STI,
-                                     RegisterFile &PRF, CustomBehaviour &CB)
-    : STI(STI), PRF(PRF), RM(STI.getSchedModel()), CB(CB), NumIssued(), SI(),
-      CarryOver(), Bandwidth(), LastWriteBackCycle() {}
+                                     RegisterFile &PRF, CustomBehaviour &CB,
+                                     LSUnit &LSU)
+    : STI(STI), PRF(PRF), RM(STI.getSchedModel()), CB(CB), LSU(LSU),
+      NumIssued(), CarryOver(), Bandwidth(), LastWriteBackCycle() {}
 
 unsigned InOrderIssueStage::getIssueWidth() const {
   return STI.getSchedModel().IssueWidth;
@@ -61,7 +63,6 @@ bool InOrderIssueStage::isAvailable(const InstRef &IR) const {
 
   const Instruction &Inst = *IR.getInstruction();
   unsigned NumMicroOps = Inst.getNumMicroOps();
-  const InstrDesc &Desc = Inst.getDesc();
 
   bool ShouldCarryOver = NumMicroOps > getIssueWidth();
   if (Bandwidth < NumMicroOps && !ShouldCarryOver)
@@ -69,7 +70,7 @@ bool InOrderIssueStage::isAvailable(const InstRef &IR) const {
 
   // Instruction with BeginGroup must be the first instruction to be issued in a
   // cycle.
-  if (Desc.BeginGroup && NumIssued != 0)
+  if (Inst.getBeginGroup() && NumIssued != 0)
     return false;
 
   return true;
@@ -125,13 +126,20 @@ bool InOrderIssueStage::canExecute(const InstRef &IR) {
     return false;
   }
 
+  if (IR.getInstruction()->isMemOp() && !LSU.isReady(IR)) {
+    // This load (store) aliases with a preceding store (load). Delay
+    // it until the depenency is cleared.
+    SI.update(IR, /* delay */ 1, StallInfo::StallKind::LOAD_STORE);
+    return false;
+  }
+
   if (unsigned CustomStallCycles = CB.checkCustomHazard(IssuedInst, IR)) {
     SI.update(IR, CustomStallCycles, StallInfo::StallKind::CUSTOM_STALL);
     return false;
   }
 
   if (LastWriteBackCycle) {
-    if (!IR.getInstruction()->getDesc().RetireOOO) {
+    if (!IR.getInstruction()->getRetireOOO()) {
       unsigned NextWriteBackCycle = findFirstWriteBackCycle(IR);
       // Delay the instruction to ensure that writes happen in program order.
       if (NextWriteBackCycle < LastWriteBackCycle) {
@@ -188,6 +196,10 @@ void InOrderIssueStage::notifyInstructionRetired(const InstRef &IR,
 }
 
 llvm::Error InOrderIssueStage::execute(InstRef &IR) {
+  Instruction &IS = *IR.getInstruction();
+  if (IS.isMemOp())
+    IS.setLSUTokenID(LSU.dispatch(IR));
+
   if (llvm::Error E = tryIssue(IR))
     return E;
 
@@ -222,6 +234,9 @@ llvm::Error InOrderIssueStage::tryIssue(InstRef &IR) {
   RM.issueInstruction(Desc, UsedResources);
   IS.execute(SourceIndex);
 
+  if (IS.isMemOp())
+    LSU.onInstructionIssued(IR);
+
   // Replace resource masks with valid resource processor IDs.
   for (ResourceUse &Use : UsedResources) {
     uint64_t Mask = Use.first.first;
@@ -238,13 +253,14 @@ llvm::Error InOrderIssueStage::tryIssue(InstRef &IR) {
     LLVM_DEBUG(dbgs() << "[N] Carry over #" << IR << " \n");
   } else {
     NumIssued += NumMicroOps;
-    Bandwidth = Desc.EndGroup ? 0 : Bandwidth - NumMicroOps;
+    Bandwidth = IS.getEndGroup() ? 0 : Bandwidth - NumMicroOps;
   }
 
   // If the instruction has a latency of 0, we need to handle
   // the execution and retirement now.
   if (IS.isExecuted()) {
     PRF.onInstructionExecuted(&IS);
+    LSU.onInstructionExecuted(IR);
     notifyEvent<HWInstructionEvent>(
         HWInstructionEvent(HWInstructionEvent::Executed, IR));
     LLVM_DEBUG(dbgs() << "[E] Instruction #" << IR << " is executed\n");
@@ -255,7 +271,7 @@ llvm::Error InOrderIssueStage::tryIssue(InstRef &IR) {
 
   IssuedInst.push_back(IR);
 
-  if (!IR.getInstruction()->getDesc().RetireOOO)
+  if (!IR.getInstruction()->getRetireOOO())
     LastWriteBackCycle = IS.getCyclesLeft();
 
   return llvm::ErrorSuccess();
@@ -279,6 +295,7 @@ void InOrderIssueStage::updateIssuedInst() {
     }
 
     PRF.onInstructionExecuted(&IS);
+    LSU.onInstructionExecuted(IR);
     notifyInstructionExecuted(IR);
     ++NumExecuted;
 
@@ -307,7 +324,7 @@ void InOrderIssueStage::updateCarriedOver() {
 
   LLVM_DEBUG(dbgs() << "[N] Carry over (complete) #" << CarriedOver << " \n");
 
-  if (CarriedOver.getInstruction()->getDesc().EndGroup)
+  if (CarriedOver.getInstruction()->getEndGroup())
     Bandwidth = 0;
   else
     Bandwidth -= CarryOver;
@@ -323,6 +340,9 @@ void InOrderIssueStage::retireInstruction(InstRef &IR) {
   llvm::SmallVector<unsigned, 4> FreedRegs(PRF.getNumRegisterFiles());
   for (const WriteState &WS : IS.getDefs())
     PRF.removeRegisterWrite(WS, FreedRegs);
+
+  if (IS.isMemOp())
+    LSU.onInstructionRetired(IR);
 
   notifyInstructionRetired(IR, FreedRegs);
 }
@@ -363,6 +383,7 @@ llvm::Error InOrderIssueStage::cycleStart() {
   Bandwidth = getIssueWidth();
 
   PRF.cycleStart();
+  LSU.cycleEvent();
 
   // Release consumed resources.
   SmallVector<ResourceRef, 4> Freed;

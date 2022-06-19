@@ -116,7 +116,7 @@ public:
   ///
   /// Initialize with a invalid section (NULL) and an invalid offset
   /// (LLDB_INVALID_ADDRESS).
-  Address() : m_section_wp() {}
+  Address() = default;
 
   /// Copy constructor
   ///
@@ -210,6 +210,10 @@ public:
     }
   };
 
+  /// Write a description of this object to a Stream.
+  bool GetDescription(Stream &s, Target &target,
+                      lldb::DescriptionLevel level) const;
+
   /// Dump a description of this object to a Stream.
   ///
   /// Dump a description of the contents of this object to the supplied stream
@@ -225,6 +229,14 @@ public:
   /// \param[in] fallback_style
   ///     The display style for the address.
   ///
+  /// \param[in] addr_byte_size
+  ///     The address byte size for the address.
+  ///
+  /// \param[in] all_ranges
+  ///     If true, dump all valid ranges and value ranges for the variable that
+  ///     contains the address, otherwise dumping the range that contains the
+  ///     address.
+  ///
   /// \return
   ///     Returns \b true if the address was able to be displayed.
   ///     File and load addresses may be unresolved and it may not be
@@ -234,7 +246,8 @@ public:
   /// \see Address::DumpStyle
   bool Dump(Stream *s, ExecutionContextScope *exe_scope, DumpStyle style,
             DumpStyle fallback_style = DumpStyleInvalid,
-            uint32_t addr_byte_size = UINT32_MAX) const;
+            uint32_t addr_byte_size = UINT32_MAX,
+            bool all_ranges = false) const;
 
   AddressClass GetAddressClass() const;
 

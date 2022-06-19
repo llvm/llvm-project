@@ -10,11 +10,8 @@ from lldbsuite.test.lldbtest import *
 
 
 class CmdPythonTestCase(TestBase):
-
-    mydir = TestBase.compute_mydir(__file__)
     NO_DEBUG_INFO_TESTCASE = True
 
-    @skipIfReproducer # FIXME: Unexpected packet during (active) replay
     def test(self):
         self.build()
         self.pycmd_tests()
@@ -148,7 +145,7 @@ class CmdPythonTestCase(TestBase):
         self.expect('my_command Blah', substrs=['Hello Blah, welcome to LLDB'])
 
         self.runCmd(
-            'command script add my_command --class welcome.TargetnameCommand')
+            'command script add my_command -o --class welcome.TargetnameCommand')
         self.expect('my_command', substrs=['a.out'])
 
         self.runCmd("command script clear")
@@ -166,3 +163,19 @@ class CmdPythonTestCase(TestBase):
         self.runCmd('command script add -f bug11569 bug11569')
         # This should not crash.
         self.runCmd('bug11569', check=False)
+
+    def test_persistence(self):
+        """
+        Ensure that function arguments meaningfully persist (and do not crash!)
+        even after the function terminates.
+        """
+        self.runCmd("command script import persistence.py")
+        self.runCmd("command script add -f persistence.save_debugger save_debugger")
+        self.expect("save_debugger", substrs=[str(self.dbg)])
+
+        # After the command completes, the debugger object should still be
+        # valid.
+        self.expect("script str(persistence.debugger_copy)", substrs=[str(self.dbg)])
+        # The result object will be replaced by an empty result object (in the
+        # "Started" state).
+        self.expect("script str(persistence.result_copy)", substrs=["Started"])

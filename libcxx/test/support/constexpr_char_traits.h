@@ -1,5 +1,5 @@
 // -*- C++ -*-
-//===-------------------- constexpr_char_traits ---------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -118,7 +118,8 @@ template <class _CharT>
 TEST_CONSTEXPR_CXX14 _CharT*
 constexpr_char_traits<_CharT>::copy(char_type* __s1, const char_type* __s2, size_t __n)
 {
-    assert(__s2 < __s1 || __s2 >= __s1+__n);
+    if (!TEST_IS_CONSTANT_EVALUATED) // fails in constexpr because we might be comparing unrelated pointers
+        assert(__s2 < __s1 || __s2 >= __s1+__n);
     char_type* __r = __s1;
     for (; __n; --__n, ++__s1, ++__s2)
         assign(*__s1, *__s2);

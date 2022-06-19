@@ -26,6 +26,7 @@
 #include "lldb/Target/Thread.h"
 #include "lldb/Utility/ConstString.h"
 #include "lldb/Utility/DataExtractor.h"
+#include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/RegisterValue.h"
 #include "lldb/Utility/Status.h"
@@ -107,7 +108,7 @@ ABISysV_x86_64::CreateInstance(lldb::ProcessSP process_sp, const ArchSpec &arch)
 bool ABISysV_x86_64::PrepareTrivialCall(Thread &thread, addr_t sp,
                                         addr_t func_addr, addr_t return_addr,
                                         llvm::ArrayRef<addr_t> args) const {
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_EXPRESSIONS));
+  Log *log = GetLog(LLDBLog::Expressions);
 
   if (log) {
     StreamString s;
@@ -644,7 +645,7 @@ ValueObjectSP ABISysV_x86_64::GetReturnValueObjectImpl(
                           0, aggregate_field_offsets,
                           aggregate_compiler_types)) {
       ByteOrder byte_order = target->GetArchitecture().GetByteOrder();
-      DataBufferSP data_sp(new DataBufferHeap(16, 0));
+      WritableDataBufferSP data_sp(new DataBufferHeap(16, 0));
       DataExtractor return_ext(data_sp, byte_order,
                                target->GetArchitecture().GetAddressByteSize());
 
@@ -933,6 +934,8 @@ uint32_t ABISysV_x86_64::GetGenericNum(llvm::StringRef name) {
       .Case("rsp", LLDB_REGNUM_GENERIC_SP)
       .Case("rbp", LLDB_REGNUM_GENERIC_FP)
       .Case("rflags", LLDB_REGNUM_GENERIC_FLAGS)
+      // gdbserver uses eflags
+      .Case("eflags", LLDB_REGNUM_GENERIC_FLAGS)
       .Case("rdi", LLDB_REGNUM_GENERIC_ARG1)
       .Case("rsi", LLDB_REGNUM_GENERIC_ARG2)
       .Case("rdx", LLDB_REGNUM_GENERIC_ARG3)
@@ -950,16 +953,3 @@ void ABISysV_x86_64::Initialize() {
 void ABISysV_x86_64::Terminate() {
   PluginManager::UnregisterPlugin(CreateInstance);
 }
-
-lldb_private::ConstString ABISysV_x86_64::GetPluginNameStatic() {
-  static ConstString g_name("sysv-x86_64");
-  return g_name;
-}
-
-// PluginInterface protocol
-
-lldb_private::ConstString ABISysV_x86_64::GetPluginName() {
-  return GetPluginNameStatic();
-}
-
-uint32_t ABISysV_x86_64::GetPluginVersion() { return 1; }

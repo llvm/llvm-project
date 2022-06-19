@@ -138,5 +138,62 @@ define <vscale x 4 x i8> @shuffle(<4 x i8> %x, <4 x i8> %y) {
   ret  <vscale x 4 x i8> %ins4
 }
 
+define void @sext_scalable_extractelement() {
+; CHECK-LABEL: @sext_scalable_extractelement(
+; CHECK-NEXT:    [[X0:%.*]] = extractelement <vscale x 2 x i32> undef, i32 undef
+; CHECK-NEXT:    [[TMP1:%.*]] = sext i32 [[X0]] to i64
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i64, i64* undef, i64 [[TMP1]]
+; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <vscale x 2 x i32> undef, i32 undef
+; CHECK-NEXT:    [[TMP4:%.*]] = sext i32 [[TMP3]] to i64
+; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i64, i64* undef, i64 [[TMP4]]
+; CHECK-NEXT:    ret void
+;
+  %x0 = extractelement <vscale x 2 x i32> undef, i32 undef
+  %1 = sext i32 %x0 to i64
+  %2 = getelementptr inbounds i64, i64* undef, i64 %1
+  %3 = extractelement <vscale x 2 x i32> undef, i32 undef
+  %4 = sext i32 %3 to i64
+  %5 = getelementptr inbounds i64, i64* undef, i64 %4
+  ret void
+}
+
+define void @zext_scalable_extractelement() {
+; CHECK-LABEL: @zext_scalable_extractelement(
+; CHECK-NEXT:    [[X0:%.*]] = extractelement <vscale x 2 x i32> undef, i32 undef
+; CHECK-NEXT:    [[TMP1:%.*]] = zext i32 [[X0]] to i64
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i64, i64* undef, i64 [[TMP1]]
+; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <vscale x 2 x i32> undef, i32 undef
+; CHECK-NEXT:    [[TMP4:%.*]] = zext i32 [[TMP3]] to i64
+; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i64, i64* undef, i64 [[TMP4]]
+; CHECK-NEXT:    ret void
+;
+  %x0 = extractelement <vscale x 2 x i32> undef, i32 undef
+  %1 = zext i32 %x0 to i64
+  %2 = getelementptr inbounds i64, i64* undef, i64 %1
+  %3 = extractelement <vscale x 2 x i32> undef, i32 undef
+  %4 = zext i32 %3 to i64
+  %5 = getelementptr inbounds i64, i64* undef, i64 %4
+  ret void
+}
+
+define void @trunc_scalable_extractelement() {
+; CHECK-LABEL: @trunc_scalable_extractelement(
+; CHECK-NEXT:    [[X0:%.*]] = extractelement <vscale x 2 x i64> undef, i32 undef
+; CHECK-NEXT:    [[TMP1:%.*]] = trunc i64 [[X0]] to i32
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i32, i32* undef, i32 [[TMP1]]
+; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <vscale x 2 x i64> undef, i32 undef
+; CHECK-NEXT:    [[TMP4:%.*]] = trunc i64 [[TMP3]] to i32
+; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i32, i32* undef, i32 [[TMP4]]
+; CHECK-NEXT:    ret void
+;
+  %x0 = extractelement <vscale x 2 x i64> undef, i32 undef
+  %1 = trunc i64 %x0 to i32
+  %2 = getelementptr inbounds i32, i32* undef, i32 %1
+  %3 = extractelement <vscale x 2 x i64> undef, i32 undef
+  %4 = trunc i64 %3 to i32
+  %5 = getelementptr inbounds i32, i32* undef, i32 %4
+  ret void
+}
+
 declare <vscale x 16 x i8> @llvm.masked.load.nxv16i8.p0nxv16i8(<vscale x 16 x i8>*, i32 immarg, <vscale x 16 x i1>, <vscale x 16 x i8>)
 declare void @llvm.masked.store.nxv16i8.p0nxv16i8(<vscale x 16 x i8>, <vscale x 16 x i8>*, i32 immarg, <vscale x 16 x i1>)

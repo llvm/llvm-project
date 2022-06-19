@@ -1,5 +1,5 @@
-// RUN: %clang_cc1  -Wno-error=vec-elem-size -emit-llvm %s -o - | FileCheck %s
-// RUN: %clang_cc1  -Wno-error=vec-elem-size -DEXT -emit-llvm %s -o - | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers  -Wno-error=vec-elem-size -emit-llvm %s -o - | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers  -Wno-error=vec-elem-size -DEXT -emit-llvm %s -o - | FileCheck %s
 
 #ifdef EXT
 typedef __attribute__((__ext_vector_type__(8))) char vector_char8;
@@ -48,7 +48,7 @@ vector_uchar4 vuc4;
 vector_ushort4 vus4;
 vector_uint4 vui4;
 
-void foo() {
+void foo(void) {
   vc8 = 1 << vc8;
 // CHECK: [[t0:%.+]] = load <8 x i8>, <8 x i8>* {{@.+}},
 // CHECK: shl <8 x i8> <i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1>, [[t0]]

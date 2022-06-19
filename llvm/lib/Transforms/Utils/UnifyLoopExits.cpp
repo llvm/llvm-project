@@ -18,7 +18,9 @@
 
 #include "llvm/Transforms/Utils/UnifyLoopExits.h"
 #include "llvm/ADT/MapVector.h"
+#include "llvm/Analysis/DomTreeUpdater.h"
 #include "llvm/Analysis/LoopInfo.h"
+#include "llvm/IR/Constants.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Transforms/Utils.h"

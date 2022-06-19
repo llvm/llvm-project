@@ -266,7 +266,7 @@ public:
   static const TST TST_char32 = clang::TST_char32;
   static const TST TST_int = clang::TST_int;
   static const TST TST_int128 = clang::TST_int128;
-  static const TST TST_extint = clang::TST_extint;
+  static const TST TST_bitint = clang::TST_bitint;
   static const TST TST_half = clang::TST_half;
   static const TST TST_BFloat16 = clang::TST_BFloat16;
   static const TST TST_float = clang::TST_float;
@@ -275,6 +275,7 @@ public:
   static const TST TST_accum = clang::TST_Accum;
   static const TST TST_fract = clang::TST_Fract;
   static const TST TST_float128 = clang::TST_float128;
+  static const TST TST_ibm128 = clang::TST_ibm128;
   static const TST TST_bool = clang::TST_bool;
   static const TST TST_decimal32 = clang::TST_decimal32;
   static const TST TST_decimal64 = clang::TST_decimal64;
@@ -403,7 +404,7 @@ private:
             T == TST_underlyingType || T == TST_atomic);
   }
   static bool isExprRep(TST T) {
-    return (T == TST_typeofExpr || T == TST_decltype || T == TST_extint);
+    return (T == TST_typeofExpr || T == TST_decltype || T == TST_bitint);
   }
   static bool isTemplateIdRep(TST T) {
     return (T == TST_auto || T == TST_decltype_auto);
@@ -433,8 +434,7 @@ public:
         FS_noreturn_specified(false), Friend_specified(false),
         ConstexprSpecifier(
             static_cast<unsigned>(ConstexprSpecKind::Unspecified)),
-        FS_explicit_specifier(), Attrs(attrFactory), writtenBS(),
-        ObjCQualifiers(nullptr) {}
+        Attrs(attrFactory), writtenBS(), ObjCQualifiers(nullptr) {}
 
   // storage-class-specifier
   SCS getStorageClassSpec() const { return (SCS)StorageClassSpec; }
@@ -516,7 +516,8 @@ public:
   SourceLocation getTypeSpecSatLoc() const { return TSSatLoc; }
 
   SourceLocation getTypeSpecTypeNameLoc() const {
-    assert(isDeclRep((TST) TypeSpecType) || TypeSpecType == TST_typename);
+    assert(isDeclRep((TST)TypeSpecType) || isTypeRep((TST)TypeSpecType) ||
+           isExprRep((TST)TypeSpecType));
     return TSTNameLoc;
   }
 
@@ -702,7 +703,7 @@ public:
   bool SetTypePipe(bool isPipe, SourceLocation Loc,
                        const char *&PrevSpec, unsigned &DiagID,
                        const PrintingPolicy &Policy);
-  bool SetExtIntType(SourceLocation KWLoc, Expr *BitWidth,
+  bool SetBitIntType(SourceLocation KWLoc, Expr *BitWidth,
                      const char *&PrevSpec, unsigned &DiagID,
                      const PrintingPolicy &Policy);
   bool SetTypeSpecSat(SourceLocation Loc, const char *&PrevSpec,
@@ -786,7 +787,7 @@ public:
   /// int __attribute__((may_alias)) __attribute__((aligned(16))) var;
   /// \endcode
   ///
-  void addAttributes(ParsedAttributesView &AL) {
+  void addAttributes(const ParsedAttributesView &AL) {
     Attrs.addAll(AL.begin(), AL.end());
   }
 
@@ -1785,7 +1786,8 @@ enum class DeclaratorContext {
   TemplateTypeArg,     // Template type argument (in default argument).
   AliasDecl,           // C++11 alias-declaration.
   AliasTemplate,       // C++11 alias-declaration template.
-  RequiresExpr         // C++2a requires-expression.
+  RequiresExpr,        // C++2a requires-expression.
+  Association          // C11 _Generic selection expression association.
 };
 
 /// Information about one declarator, including the parsed type
@@ -1850,8 +1852,12 @@ private:
   /// Indicates whether this declarator has an initializer.
   unsigned HasInitializer : 1;
 
-  /// Attrs - Attributes.
+  /// Attributes attached to the declarator.
   ParsedAttributes Attrs;
+
+  /// Attributes attached to the declaration. See also documentation for the
+  /// corresponding constructor parameter.
+  const ParsedAttributesView &DeclarationAttrs;
 
   /// The asm label, if specified.
   Expr *AsmLabel;
@@ -1891,16 +1897,40 @@ private:
   friend struct DeclaratorChunk;
 
 public:
-  Declarator(const DeclSpec &ds, DeclaratorContext C)
-      : DS(ds), Range(ds.getSourceRange()), Context(C),
+  /// `DS` and `DeclarationAttrs` must outlive the `Declarator`. In particular,
+  /// take care not to pass temporary objects for these parameters.
+  ///
+  /// `DeclarationAttrs` contains [[]] attributes from the
+  /// attribute-specifier-seq at the beginning of a declaration, which appertain
+  /// to the declared entity itself. Attributes with other syntax (e.g. GNU)
+  /// should not be placed in this attribute list; if they occur at the
+  /// beginning of a declaration, they apply to the `DeclSpec` and should be
+  /// attached to that instead.
+  ///
+  /// Here is an example of an attribute associated with a declaration:
+  ///
+  ///  [[deprecated]] int x, y;
+  ///
+  /// This attribute appertains to all of the entities declared in the
+  /// declaration, i.e. `x` and `y` in this case.
+  Declarator(const DeclSpec &DS, const ParsedAttributesView &DeclarationAttrs,
+             DeclaratorContext C)
+      : DS(DS), Range(DS.getSourceRange()), Context(C),
         InvalidType(DS.getTypeSpecType() == DeclSpec::TST_error),
         GroupingParens(false), FunctionDefinition(static_cast<unsigned>(
                                    FunctionDefinitionKind::Declaration)),
         Redeclaration(false), Extension(false), ObjCIvar(false),
         ObjCWeakProperty(false), InlineStorageUsed(false),
-        HasInitializer(false), Attrs(ds.getAttributePool().getFactory()),
-        AsmLabel(nullptr), TrailingRequiresClause(nullptr),
-        InventedTemplateParameterList(nullptr) {}
+        HasInitializer(false), Attrs(DS.getAttributePool().getFactory()),
+        DeclarationAttrs(DeclarationAttrs), AsmLabel(nullptr),
+        TrailingRequiresClause(nullptr),
+        InventedTemplateParameterList(nullptr) {
+    assert(llvm::all_of(DeclarationAttrs,
+                        [](const ParsedAttr &AL) {
+                          return AL.isStandardAttributeSyntax();
+                        }) &&
+           "DeclarationAttrs may only contain [[]] attributes");
+  }
 
   ~Declarator() {
     clear();
@@ -2023,6 +2053,7 @@ public:
     case DeclaratorContext::TrailingReturn:
     case DeclaratorContext::TrailingReturnVar:
     case DeclaratorContext::RequiresExpr:
+    case DeclaratorContext::Association:
       return true;
     }
     llvm_unreachable("unknown context kind!");
@@ -2062,6 +2093,7 @@ public:
     case DeclaratorContext::TemplateTypeArg:
     case DeclaratorContext::TrailingReturn:
     case DeclaratorContext::TrailingReturnVar:
+    case DeclaratorContext::Association:
       return false;
     }
     llvm_unreachable("unknown context kind!");
@@ -2105,6 +2137,7 @@ public:
     case DeclaratorContext::TemplateTypeArg:
     case DeclaratorContext::TrailingReturn:
     case DeclaratorContext::TrailingReturnVar:
+    case DeclaratorContext::Association:
       return false;
     }
     llvm_unreachable("unknown context kind!");
@@ -2161,6 +2194,7 @@ public:
     case DeclaratorContext::TemplateTypeArg:
     case DeclaratorContext::TrailingReturn:
     case DeclaratorContext::RequiresExpr:
+    case DeclaratorContext::Association:
       return false;
     }
     llvm_unreachable("unknown context kind!");
@@ -2383,6 +2417,7 @@ public:
     case DeclaratorContext::TrailingReturn:
     case DeclaratorContext::TrailingReturnVar:
     case DeclaratorContext::RequiresExpr:
+    case DeclaratorContext::Association:
       return false;
     }
     llvm_unreachable("unknown context kind!");
@@ -2417,6 +2452,7 @@ public:
     case DeclaratorContext::TrailingReturnVar:
     case DeclaratorContext::TemplateTypeArg:
     case DeclaratorContext::RequiresExpr:
+    case DeclaratorContext::Association:
       return false;
 
     case DeclaratorContext::Block:
@@ -2513,19 +2549,24 @@ public:
   ///                                 __attribute__((common,deprecated));
   ///
   /// Also extends the range of the declarator.
-  void takeAttributes(ParsedAttributes &attrs, SourceLocation lastLoc) {
+  void takeAttributes(ParsedAttributes &attrs) {
     Attrs.takeAllFrom(attrs);
 
-    if (!lastLoc.isInvalid())
-      SetRangeEnd(lastLoc);
+    if (attrs.Range.getEnd().isValid())
+      SetRangeEnd(attrs.Range.getEnd());
   }
 
   const ParsedAttributes &getAttributes() const { return Attrs; }
   ParsedAttributes &getAttributes() { return Attrs; }
 
+  const ParsedAttributesView &getDeclarationAttributes() const {
+    return DeclarationAttrs;
+  }
+
   /// hasAttributes - do we contain any attributes?
   bool hasAttributes() const {
-    if (!getAttributes().empty() || getDeclSpec().hasAttributes())
+    if (!getAttributes().empty() || !getDeclarationAttributes().empty() ||
+        getDeclSpec().hasAttributes())
       return true;
     for (unsigned i = 0, e = getNumTypeObjects(); i != e; ++i)
       if (!getTypeObject(i).getAttrs().empty())
@@ -2607,8 +2648,10 @@ public:
 struct FieldDeclarator {
   Declarator D;
   Expr *BitfieldSize;
-  explicit FieldDeclarator(const DeclSpec &DS)
-      : D(DS, DeclaratorContext::Member), BitfieldSize(nullptr) {}
+  explicit FieldDeclarator(const DeclSpec &DS,
+                           const ParsedAttributes &DeclarationAttrs)
+      : D(DS, DeclarationAttrs, DeclaratorContext::Member),
+        BitfieldSize(nullptr) {}
 };
 
 /// Represents a C++11 virt-specifier-seq.

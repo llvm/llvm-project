@@ -97,6 +97,11 @@ static cl::opt<bool> ForceMemOperand(
     cl::desc("Convert cmovs to branches whenever they have memory operands."),
     cl::init(true), cl::Hidden);
 
+static cl::opt<bool> ForceAll(
+    "x86-cmov-converter-force-all",
+    cl::desc("Convert all cmovs to branches."),
+    cl::init(false), cl::Hidden);
+
 namespace {
 
 /// Converts X86 cmov instructions into branches when profitable.
@@ -174,11 +179,11 @@ bool X86CmovConverterPass::runOnMachineFunction(MachineFunction &MF) {
   TSchedModel.init(&STI);
 
   // Before we handle the more subtle cases of register-register CMOVs inside
-  // of potentially hot loops, we want to quickly remove all CMOVs with
-  // a memory operand. The CMOV will risk a stall waiting for the load to
-  // complete that speculative execution behind a branch is better suited to
-  // handle on modern x86 chips.
-  if (ForceMemOperand) {
+  // of potentially hot loops, we want to quickly remove all CMOVs (ForceAll) or
+  // the ones with a memory operand (ForceMemOperand option). The latter CMOV
+  // will risk a stall waiting for the load to complete that speculative
+  // execution behind a branch is better suited to handle on modern x86 chips.
+  if (ForceMemOperand || ForceAll) {
     CmovGroups AllCmovGroups;
     SmallVector<MachineBasicBlock *, 4> Blocks;
     for (auto &MBB : MF)
@@ -186,7 +191,8 @@ bool X86CmovConverterPass::runOnMachineFunction(MachineFunction &MF) {
     if (collectCmovCandidates(Blocks, AllCmovGroups, /*IncludeLoads*/ true)) {
       for (auto &Group : AllCmovGroups) {
         // Skip any group that doesn't do at least one memory operand cmov.
-        if (!llvm::any_of(Group, [&](MachineInstr *I) { return I->mayLoad(); }))
+        if (ForceMemOperand && !ForceAll &&
+            llvm::none_of(Group, [&](MachineInstr *I) { return I->mayLoad(); }))
           continue;
 
         // For CMOV groups which we can rewrite and which contain a memory load,
@@ -196,12 +202,15 @@ bool X86CmovConverterPass::runOnMachineFunction(MachineFunction &MF) {
         convertCmovInstsToBranches(Group);
       }
     }
+    // Early return as ForceAll converts all CmovGroups.
+    if (ForceAll)
+      return Changed;
   }
 
   //===--------------------------------------------------------------------===//
   // Register-operand Conversion Algorithm
   // ---------
-  //   For each inner most loop
+  //   For each innermost loop
   //     collectCmovCandidates() {
   //       Find all CMOV-group-candidates.
   //     }
@@ -230,7 +239,7 @@ bool X86CmovConverterPass::runOnMachineFunction(MachineFunction &MF) {
       Loops.push_back(Child);
 
   for (MachineLoop *CurrLoop : Loops) {
-    // Optimize only inner most loops.
+    // Optimize only innermost loops.
     if (!CurrLoop->getSubLoops().empty())
       continue;
 
@@ -520,7 +529,7 @@ bool X86CmovConverterPass::checkForProfitableCmovCandidates(
   //===--------------------------------------------------------------------===//
   // Step 3: Check for each CMOV-group-candidate if it worth to be optimized.
   // Worth-Optimize-Group:
-  //   Iff it worths to optimize all CMOV instructions in the group.
+  //   Iff it is worth to optimize all CMOV instructions in the group.
   //
   // Worth-Optimize-CMOV:
   //   Predicted branch is faster than CMOV by the difference between depth of
@@ -582,10 +591,9 @@ static bool checkEFLAGSLive(MachineInstr *MI) {
   }
 
   // We hit the end of the block, check whether EFLAGS is live into a successor.
-  for (auto I = BB->succ_begin(), E = BB->succ_end(); I != E; ++I) {
-    if ((*I)->isLiveIn(X86::EFLAGS))
+  for (MachineBasicBlock *Succ : BB->successors())
+    if (Succ->isLiveIn(X86::EFLAGS))
       return true;
-  }
 
   return false;
 }
@@ -797,8 +805,7 @@ void X86CmovConverterPass::convertCmovInstsToBranches(
         MOp.setIsKill(false);
       }
     }
-    MBB->erase(MachineBasicBlock::iterator(MI),
-               std::next(MachineBasicBlock::iterator(MI)));
+    MBB->erase(&MI);
 
     // Add this PHI to the rewrite table.
     FalseBBRegRewriteTable[NewCMOV->getOperand(0).getReg()] = TmpReg;

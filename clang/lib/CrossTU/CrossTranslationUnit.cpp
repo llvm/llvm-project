@@ -149,6 +149,35 @@ std::error_code IndexError::convertToErrorCode() const {
   return std::error_code(static_cast<int>(Code), *Category);
 }
 
+/// Parse one line of the input CTU index file.
+///
+/// @param[in]  LineRef     The input CTU index item in format
+///                         "<USR-Length>:<USR> <File-Path>".
+/// @param[out] LookupName  The lookup name in format "<USR-Length>:<USR>".
+/// @param[out] FilePath    The file path "<File-Path>".
+static bool parseCrossTUIndexItem(StringRef LineRef, StringRef &LookupName,
+                                  StringRef &FilePath) {
+  // `LineRef` is "<USR-Length>:<USR> <File-Path>" now.
+
+  size_t USRLength = 0;
+  if (LineRef.consumeInteger(10, USRLength))
+    return false;
+  assert(USRLength && "USRLength should be greater than zero.");
+
+  if (!LineRef.consume_front(":"))
+    return false;
+
+  // `LineRef` is now just "<USR> <File-Path>".
+
+  // Check LookupName length out of bound and incorrect delimiter.
+  if (USRLength >= LineRef.size() || ' ' != LineRef[USRLength])
+    return false;
+
+  LookupName = LineRef.substr(0, USRLength);
+  FilePath = LineRef.substr(USRLength + 1);
+  return true;
+}
+
 llvm::Expected<llvm::StringMap<std::string>>
 parseCrossTUIndex(StringRef IndexPath) {
   std::ifstream ExternalMapFile{std::string(IndexPath)};
@@ -160,24 +189,23 @@ parseCrossTUIndex(StringRef IndexPath) {
   std::string Line;
   unsigned LineNo = 1;
   while (std::getline(ExternalMapFile, Line)) {
-    StringRef LineRef{Line};
-    const size_t Delimiter = LineRef.find(' ');
-    if (Delimiter > 0 && Delimiter != std::string::npos) {
-      StringRef LookupName = LineRef.substr(0, Delimiter);
-
-      // Store paths with posix-style directory separator.
-      SmallString<32> FilePath(LineRef.substr(Delimiter + 1));
-      llvm::sys::path::native(FilePath, llvm::sys::path::Style::posix);
-
-      bool InsertionOccured;
-      std::tie(std::ignore, InsertionOccured) =
-          Result.try_emplace(LookupName, FilePath.begin(), FilePath.end());
-      if (!InsertionOccured)
-        return llvm::make_error<IndexError>(
-            index_error_code::multiple_definitions, IndexPath.str(), LineNo);
-    } else
+    // Split lookup name and file path
+    StringRef LookupName, FilePathInIndex;
+    if (!parseCrossTUIndexItem(Line, LookupName, FilePathInIndex))
       return llvm::make_error<IndexError>(
           index_error_code::invalid_index_format, IndexPath.str(), LineNo);
+
+    // Store paths with posix-style directory separator.
+    SmallString<32> FilePath(FilePathInIndex);
+    llvm::sys::path::native(FilePath, llvm::sys::path::Style::posix);
+
+    bool InsertionOccured;
+    std::tie(std::ignore, InsertionOccured) =
+        Result.try_emplace(LookupName, FilePath.begin(), FilePath.end());
+    if (!InsertionOccured)
+      return llvm::make_error<IndexError>(
+          index_error_code::multiple_definitions, IndexPath.str(), LineNo);
+
     ++LineNo;
   }
   return Result;
@@ -187,18 +215,14 @@ std::string
 createCrossTUIndexString(const llvm::StringMap<std::string> &Index) {
   std::ostringstream Result;
   for (const auto &E : Index)
-    Result << E.getKey().str() << " " << E.getValue() << '\n';
+    Result << E.getKey().size() << ':' << E.getKey().str() << ' '
+           << E.getValue() << '\n';
   return Result.str();
 }
 
-bool containsConst(const VarDecl *VD, const ASTContext &ACtx) {
+bool shouldImport(const VarDecl *VD, const ASTContext &ACtx) {
   CanQualType CT = ACtx.getCanonicalType(VD->getType());
-  if (!CT.isConstQualified()) {
-    const RecordType *RTy = CT->getAs<RecordType>();
-    if (!RTy || !RTy->hasConstFields())
-      return false;
-  }
-  return true;
+  return CT.isConstQualified() && VD->getType().isTrivialType(ACtx);
 }
 
 static bool hasBodyOrInit(const FunctionDecl *D, const FunctionDecl *&DefD) {
@@ -428,7 +452,7 @@ CrossTranslationUnitContext::ASTUnitStorage::getASTUnitForFunction(
             ensureCTUIndexLoaded(CrossTUDir, IndexName))
       return std::move(IndexLoadError);
 
-    // Check if there is and entry in the index for the function.
+    // Check if there is an entry in the index for the function.
     if (!NameFileMap.count(FunctionName)) {
       ++NumNotInOtherTU;
       return llvm::make_error<IndexError>(index_error_code::missing_definition);
@@ -711,20 +735,19 @@ CrossTranslationUnitContext::importDefinitionImpl(const T *D, ASTUnit *Unit) {
 
   auto ToDeclOrError = Importer.Import(D);
   if (!ToDeclOrError) {
-    handleAllErrors(ToDeclOrError.takeError(),
-                    [&](const ImportError &IE) {
-                      switch (IE.Error) {
-                      case ImportError::NameConflict:
-                        ++NumNameConflicts;
-                         break;
-                      case ImportError::UnsupportedConstruct:
-                        ++NumUnsupportedNodeFound;
-                        break;
-                      case ImportError::Unknown:
-                        llvm_unreachable("Unknown import error happened.");
-                        break;
-                      }
-                    });
+    handleAllErrors(ToDeclOrError.takeError(), [&](const ASTImportError &IE) {
+      switch (IE.Error) {
+      case ASTImportError::NameConflict:
+        ++NumNameConflicts;
+        break;
+      case ASTImportError::UnsupportedConstruct:
+        ++NumUnsupportedNodeFound;
+        break;
+      case ASTImportError::Unknown:
+        llvm_unreachable("Unknown import error happened.");
+        break;
+      }
+    });
     return llvm::make_error<IndexError>(index_error_code::failed_import);
   }
   auto *ToDecl = cast<T>(*ToDeclOrError);
@@ -775,6 +798,19 @@ CrossTranslationUnitContext::getMacroExpansionContextForSourceLocation(
     const clang::SourceLocation &ToLoc) const {
   // FIXME: Implement: Record such a context for every imported ASTUnit; lookup.
   return llvm::None;
+}
+
+bool CrossTranslationUnitContext::isImportedAsNew(const Decl *ToDecl) const {
+  if (!ImporterSharedSt)
+    return false;
+  return ImporterSharedSt->isNewDecl(const_cast<Decl *>(ToDecl));
+}
+
+bool CrossTranslationUnitContext::hasError(const Decl *ToDecl) const {
+  if (!ImporterSharedSt)
+    return false;
+  return static_cast<bool>(
+      ImporterSharedSt->getImportDeclErrorIfAny(const_cast<Decl *>(ToDecl)));
 }
 
 } // namespace cross_tu

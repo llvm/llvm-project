@@ -9,7 +9,7 @@
 // UNSUPPORTED: c++03
 
 // This test makes sure that the control block implementation used for non-array
-// types in std::make_shared and std::allocate_shared is ABI compatbile with the
+// types in std::make_shared and std::allocate_shared is ABI compatible with the
 // original implementation.
 //
 // This test is relevant because the implementation of that control block is

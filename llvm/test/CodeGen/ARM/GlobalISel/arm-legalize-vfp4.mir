@@ -88,21 +88,21 @@ body:             |
     ; HARD: [[R:%[0-9]+]]:_(s64) = G_FMA [[X]], [[X]], [[Y]]
     ; SOFT-NOT: G_FMA
     ; SOFT: ADJCALLSTACKDOWN
+    ; SOFT-ABI: [[SP1:%[0-9]+]]:_(p0) = COPY $sp
+    ; SOFT-ABI: [[OFF1:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
+    ; SOFT-ABI: [[FI1:%[0-9]+]]:_(p0) = G_PTR_ADD [[SP1]], [[OFF1]](s32)
+    ; SOFT-ABI: G_STORE [[Y0]](s32), [[FI1]](p0){{.*}}store (s32) into stack, align 1)
+    ; SOFT-ABI: [[SP2:%[0-9]+]]:_(p0) = COPY $sp
+    ; FIXME: Should avoid multiple copies from $sp
+    ; FIXME: This ought to be align 8 but ARM's call lowering hardcodes it to 1
+    ; SOFT-ABI: [[OFF2:%[0-9]+]]:_(s32) = G_CONSTANT i32 4
+    ; SOFT-ABI: [[FI2:%[0-9]+]]:_(p0) = G_PTR_ADD [[SP2]], [[OFF2]](s32)
+    ; SOFT-ABI: G_STORE [[Y1]](s32), [[FI2]](p0){{.*}}store (s32) into stack + 4, align 1)
     ; SOFT-ABI-DAG: $r{{[0-1]}} = COPY [[X0]]
     ; SOFT-ABI-DAG: $r{{[0-1]}} = COPY [[X1]]
     ; SOFT-ABI-DAG: $r{{[2-3]}} = COPY [[X0]]
     ; SOFT-ABI-DAG: $r{{[2-3]}} = COPY [[X1]]
-    ; SOFT-ABI: [[SP1:%[0-9]+]]:_(p0) = COPY $sp
-    ; SOFT-ABI: [[OFF1:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
-    ; SOFT-ABI: [[FI1:%[0-9]+]]:_(p0) = G_PTR_ADD [[SP1]], [[OFF1]](s32)
 
-    ; FIXME: Should avoid multiple copies from $sp
-    ; FIXME: This ought to be align 8 but ARM's call lowering hardcodes it to 1
-    ; SOFT-ABI: G_STORE [[Y0]](s32), [[FI1]](p0){{.*}}store (s32) into stack, align 1)
-    ; SOFT-ABI: [[SP2:%[0-9]+]]:_(p0) = COPY $sp
-    ; SOFT-ABI: [[OFF2:%[0-9]+]]:_(s32) = G_CONSTANT i32 4
-    ; SOFT-ABI: [[FI2:%[0-9]+]]:_(p0) = G_PTR_ADD [[SP2]], [[OFF2]](s32)
-    ; SOFT-ABI: G_STORE [[Y1]](s32), [[FI2]](p0){{.*}}store (s32) into stack + 4, align 1)
     ; SOFT-ABI: BL &fma, {{.*}}, implicit $r0, implicit $r1, implicit $r2, implicit $r3, implicit-def $r0, implicit-def $r1
     ; SOFT-ABI-DAG: [[R0:%[0-9]+]]:_(s32) = COPY $r0
     ; SOFT-ABI-DAG: [[R1:%[0-9]+]]:_(s32) = COPY $r1

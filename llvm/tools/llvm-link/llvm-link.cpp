@@ -48,7 +48,7 @@ static cl::list<std::string> InputFilenames(cl::Positional, cl::OneOrMore,
                                             cl::cat(LinkCategory));
 
 static cl::list<std::string> OverridingInputs(
-    "override", cl::ZeroOrMore, cl::value_desc("filename"),
+    "override", cl::value_desc("filename"),
     cl::desc(
         "input bitcode file which can override previously defined symbol(s)"),
     cl::cat(LinkCategory));
@@ -56,7 +56,7 @@ static cl::list<std::string> OverridingInputs(
 // Option to simulate function importing for testing. This enables using
 // llvm-link to simulate ThinLTO backend processes.
 static cl::list<std::string> Imports(
-    "import", cl::ZeroOrMore, cl::value_desc("function:filename"),
+    "import", cl::value_desc("function:filename"),
     cl::desc("Pair of function name and filename, where function should be "
              "imported from bitcode in filename"),
     cl::cat(LinkCategory));
@@ -164,11 +164,16 @@ static std::unique_ptr<Module> loadArFile(const char *Argv0,
   if (Verbose)
     errs() << "Reading library archive file '" << ArchiveName
            << "' to memory\n";
-  Error Err = Error::success();
-  object::Archive Archive(*Buffer, Err);
-  ExitOnErr(std::move(Err));
+  Expected<std::unique_ptr<object::Archive>> ArchiveOrError =
+      object::Archive::create(Buffer->getMemBufferRef());
+  if (!ArchiveOrError)
+    ExitOnErr(ArchiveOrError.takeError());
+
+  std::unique_ptr<object::Archive> Archive = std::move(ArchiveOrError.get());
+
   Linker L(*Result);
-  for (const object::Archive::Child &C : Archive.children(Err)) {
+  Error Err = Error::success();
+  for (const object::Archive::Child &C : Archive->children(Err)) {
     Expected<StringRef> Ename = C.getName();
     if (Error E = Ename.takeError()) {
       errs() << Argv0 << ": ";

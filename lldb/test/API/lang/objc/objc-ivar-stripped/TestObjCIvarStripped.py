@@ -10,8 +10,6 @@ from lldbsuite.test import lldbutil
 
 class TestObjCIvarStripped(TestBase):
 
-    mydir = TestBase.compute_mydir(__file__)
-
     def setUp(self):
         # Call super's setUp().
         TestBase.setUp(self)
@@ -62,5 +60,5 @@ class TestObjCIvarStripped(TestBase):
         ivar = frame.EvaluateExpression("(mc->_foo)")
         self.assertTrue(ivar, "Got result for mc->_foo")
         ivar_value = ivar.GetValueAsSigned(error)
-        self.assertTrue(error.Success())
+        self.assertSuccess(error)
         self.assertEquals(ivar_value, 3)

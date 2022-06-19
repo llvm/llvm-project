@@ -16,9 +16,9 @@
 #include "llvm-c/Types.h"
 #include "llvm/ADT/Triple.h"
 #include "llvm/Object/Error.h"
+#include "llvm/Support/CBindingWrapping.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/MemoryBuffer.h"
-#include <algorithm>
 #include <memory>
 #include <utility>
 
@@ -49,6 +49,8 @@ protected:
     ID_Minidump,
 
     ID_WinRes, // Windows resource (.res) file.
+
+    ID_Offload, // Offloading binary file.
 
     // Object and children.
     ID_StartObjects,
@@ -132,6 +134,8 @@ public:
   bool isXCOFF() const { return TypeID == ID_XCOFF32 || TypeID == ID_XCOFF64; }
 
   bool isWasm() const { return TypeID == ID_Wasm; }
+
+  bool isOffloadFile() const { return TypeID == ID_Offload; }
 
   bool isCOFFImportFile() const {
     return TypeID == ID_COFFImportFile;

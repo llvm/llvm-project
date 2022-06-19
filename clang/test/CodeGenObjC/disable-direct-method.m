@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -emit-llvm -triple x86_64-apple-darwin10 -fobjc-disable-direct-methods-for-testing %s -o - | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -emit-llvm -triple x86_64-apple-darwin10 -fobjc-disable-direct-methods-for-testing %s -o - | FileCheck %s
 
 @interface Y
 @property (direct) int direct_property;

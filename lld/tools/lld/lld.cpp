@@ -39,6 +39,7 @@
 #include "llvm/Support/InitLLVM.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/PluginLoader.h"
+#include "llvm/Support/Process.h"
 #include <cstdlib>
 
 using namespace lld;
@@ -47,14 +48,13 @@ using namespace llvm::sys;
 
 enum Flavor {
   Invalid,
-  Gnu,       // -flavor gnu
-  WinLink,   // -flavor link
-  Darwin,    // -flavor darwin
-  DarwinOld, // -flavor darwinold
-  Wasm,      // -flavor wasm
+  Gnu,     // -flavor gnu
+  WinLink, // -flavor link
+  Darwin,  // -flavor darwin
+  Wasm,    // -flavor wasm
 };
 
-LLVM_ATTRIBUTE_NORETURN static void die(const Twine &s) {
+[[noreturn]] static void die(const Twine &s) {
   llvm::errs() << s << "\n";
   exit(1);
 }
@@ -64,9 +64,7 @@ static Flavor getFlavor(StringRef s) {
       .CasesLower("ld", "ld.lld", "gnu", Gnu)
       .CasesLower("wasm", "ld-wasm", Wasm)
       .CaseLower("link", WinLink)
-      .CasesLower("ld64", "ld64.lld", "darwin", "darwinnew",
-                  "ld64.lld.darwinnew", Darwin)
-      .CasesLower("darwinold", "ld64.lld.darwinold", DarwinOld)
+      .CasesLower("ld64", "ld64.lld", "darwin", Darwin)
       .Default(Invalid);
 }
 
@@ -89,6 +87,8 @@ static bool isPETarget(std::vector<const char *> &v) {
   // Expand response files (arguments in the form of @<filename>)
   // to allow detecting the -m argument from arguments in them.
   SmallVector<const char *, 256> expandedArgs(v.data(), v.data() + v.size());
+  BumpPtrAllocator a;
+  StringSaver saver(a);
   cl::ExpandResponseFiles(saver, getDefaultQuotingStyle(), expandedArgs);
   for (auto it = expandedArgs.begin(); it + 1 != expandedArgs.end(); ++it) {
     if (StringRef(*it) != "-m")
@@ -136,29 +136,42 @@ static Flavor parseFlavor(std::vector<const char *> &v) {
   return parseProgname(arg0);
 }
 
+bool inTestOutputDisabled = false;
+
 /// Universal linker main(). This linker emulates the gnu, darwin, or
 /// windows linker based on the argv[0] or -flavor option.
 static int lldMain(int argc, const char **argv, llvm::raw_ostream &stdoutOS,
                    llvm::raw_ostream &stderrOS, bool exitEarly = true) {
   std::vector<const char *> args(argv, argv + argc);
-  switch (parseFlavor(args)) {
-  case Gnu:
-    if (isPETarget(args))
-      return !mingw::link(args, exitEarly, stdoutOS, stderrOS);
-    return !elf::link(args, exitEarly, stdoutOS, stderrOS);
-  case WinLink:
-    return !coff::link(args, exitEarly, stdoutOS, stderrOS);
-  case Darwin:
-    return !macho::link(args, exitEarly, stdoutOS, stderrOS);
-  case DarwinOld:
-    return !mach_o::link(args, exitEarly, stdoutOS, stderrOS);
-  case Wasm:
-    return !lld::wasm::link(args, exitEarly, stdoutOS, stderrOS);
-  default:
-    die("lld is a generic driver.\n"
-        "Invoke ld.lld (Unix), ld64.lld (macOS), lld-link (Windows), wasm-ld"
-        " (WebAssembly) instead");
-  }
+  auto link = [&args]() {
+    Flavor f = parseFlavor(args);
+    if (f == Gnu && isPETarget(args))
+      return mingw::link;
+    else if (f == Gnu)
+      return elf::link;
+    else if (f == WinLink)
+      return coff::link;
+    else if (f == Darwin)
+      return macho::link;
+    else if (f == Wasm)
+      return lld::wasm::link;
+    else
+      die("lld is a generic driver.\n"
+          "Invoke ld.lld (Unix), ld64.lld (macOS), lld-link (Windows), wasm-ld"
+          " (WebAssembly) instead");
+  }();
+  // Run the driver. If an error occurs, false will be returned.
+  bool r = link(args, stdoutOS, stderrOS, exitEarly, inTestOutputDisabled);
+
+  // Call exit() if we can to avoid calling destructors.
+  if (exitEarly)
+    exitLld(!r ? 1 : 0);
+
+  // Delete the global context and clear the global context pointer, so that it
+  // cannot be accessed anymore.
+  CommonLinkerContext::destroy();
+
+  return !r ? 1 : 0;
 }
 
 // Similar to lldMain except that exceptions are caught.
@@ -180,7 +193,7 @@ SafeReturn lld::safeLldMain(int argc, const char **argv,
   // Cleanup memory and reset everything back in pristine condition. This path
   // is only taken when LLD is in test, or when it is used as a library.
   llvm::CrashRecoveryContext crc;
-  if (!crc.RunSafely([&]() { errorHandler().reset(); })) {
+  if (!crc.RunSafely([&]() { CommonLinkerContext::destroy(); })) {
     // The memory is corrupted beyond any possible recovery.
     return {r, /*canRunAgain=*/false};
   }
@@ -199,6 +212,7 @@ static unsigned inTestVerbosity() {
 
 int main(int argc, const char **argv) {
   InitLLVM x(argc, argv);
+  sys::Process::UseANSIEscapeCodes(true);
 
   // Not running in lit tests, just take the shortest codepath with global
   // exception handling and no memory cleanup on exit.
@@ -210,8 +224,7 @@ int main(int argc, const char **argv) {
 
   for (unsigned i = inTestVerbosity(); i > 0; --i) {
     // Disable stdout/stderr for all iterations but the last one.
-    if (i != 1)
-      errorHandler().disableOutput = true;
+    inTestOutputDisabled = (i != 1);
 
     // Execute one iteration.
     auto r = safeLldMain(argc, argv, llvm::outs(), llvm::errs());

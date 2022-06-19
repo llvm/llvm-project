@@ -97,9 +97,8 @@ define amdgpu_kernel void @s_fneg_fabs_v2f16_bc_src(<2 x half> addrspace(1)* %ou
 }
 
 ; GCN-LABEL: {{^}}fneg_fabs_v4f16:
-; GCN: s_mov_b32 [[MASK:s[0-9]+]], 0x80008000
-; GCN: s_or_b32 s{{[0-9]+}}, s{{[0-9]+}}, [[MASK]]
-; GCN: s_or_b32 s{{[0-9]+}}, s{{[0-9]+}}, [[MASK]]
+; GCN: s_or_b32 s{{[0-9]+}}, s{{[0-9]+}}, 0x80008000
+; GCN: s_or_b32 s{{[0-9]+}}, s{{[0-9]+}}, 0x80008000
 ; GCN: {{flat|global}}_store_dwordx2
 define amdgpu_kernel void @fneg_fabs_v4f16(<4 x half> addrspace(1)* %out, <4 x half> %in) {
   %fabs = call <4 x half> @llvm.fabs.v4f16(<4 x half> %in)
@@ -131,8 +130,8 @@ define amdgpu_kernel void @fold_user_fneg_fabs_v2f16(<2 x half> addrspace(1)* %o
 
 ; GCN-LABEL: {{^}}s_fneg_multi_use_fabs_v2f16:
 ; GFX9: s_and_b32 [[ABS:s[0-9]+]], s{{[0-9]+}}, 0x7fff7fff
-; GFX9: v_mov_b32_e32 [[V_ABS:v[0-9]+]], [[ABS]]
 ; GFX9: s_xor_b32 [[NEG:s[0-9]+]], [[ABS]], 0x80008000
+; GFX9: v_mov_b32_e32 [[V_ABS:v[0-9]+]], [[ABS]]
 ; GFX9-DAG: v_mov_b32_e32 [[V_NEG:v[0-9]+]], [[NEG]]
 ; GFX9-DAG: global_store_dword v{{[0-9]+}}, [[V_ABS]], s{{\[[0-9]+:[0-9]+\]}}
 ; GFX9: global_store_dword v{{[0-9]+}}, [[V_NEG]], s{{\[[0-9]+:[0-9]+\]}}

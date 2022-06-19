@@ -20,8 +20,8 @@
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/MC/MCSymbolELF.h"
 #include "llvm/MC/MCValue.h"
+#include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/ErrorHandling.h"
-#include "llvm/Support/TargetRegistry.h"
 using namespace llvm;
 
 static uint64_t adjustFixupValue(unsigned Kind, uint64_t Value) {
@@ -44,6 +44,7 @@ static uint64_t adjustFixupValue(unsigned Kind, uint64_t Value) {
   case PPC::fixup_ppc_half16:
     return Value & 0xffff;
   case PPC::fixup_ppc_half16ds:
+  case PPC::fixup_ppc_half16dq:
     return Value & 0xfffc;
   case PPC::fixup_ppc_pcrel34:
   case PPC::fixup_ppc_imm34:
@@ -60,6 +61,7 @@ static unsigned getFixupKindNumBytes(unsigned Kind) {
   case FK_Data_2:
   case PPC::fixup_ppc_half16:
   case PPC::fixup_ppc_half16ds:
+  case PPC::fixup_ppc_half16dq:
     return 2;
   case FK_Data_4:
   case PPC::fixup_ppc_brcond14:
@@ -196,7 +198,8 @@ public:
     llvm_unreachable("relaxInstruction() unimplemented");
   }
 
-  bool writeNopData(raw_ostream &OS, uint64_t Count) const override {
+  bool writeNopData(raw_ostream &OS, uint64_t Count,
+                    const MCSubtargetInfo *STI) const override {
     uint64_t NumNops = Count / 4;
     for (uint64_t i = 0; i != NumNops; ++i)
       support::endian::write<uint32_t>(OS, 0x60000000, Endian);

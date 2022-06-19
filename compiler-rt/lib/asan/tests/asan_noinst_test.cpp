@@ -11,19 +11,20 @@
 // This test file should be compiled w/o asan instrumentation.
 //===----------------------------------------------------------------------===//
 
+#include <assert.h>
+#include <sanitizer/allocator_interface.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>  // for memset()
+
+#include <algorithm>
+#include <limits>
+#include <vector>
+
 #include "asan_allocator.h"
 #include "asan_internal.h"
 #include "asan_mapping.h"
 #include "asan_test_utils.h"
-#include <sanitizer/allocator_interface.h>
-
-#include <assert.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>  // for memset()
-#include <algorithm>
-#include <vector>
-#include <limits>
 
 using namespace __sanitizer;
 
@@ -230,17 +231,8 @@ TEST(AddressSanitizer, ShadowRegionIsPoisonedTest) {
 }
 
 // Test __asan_load1 & friends.
-TEST(AddressSanitizer, LoadStoreCallbacks) {
-  typedef void (*CB)(uptr p);
-  CB cb[2][5] = {
-      {
-        __asan_load1, __asan_load2, __asan_load4, __asan_load8, __asan_load16,
-      }, {
-        __asan_store1, __asan_store2, __asan_store4, __asan_store8,
-        __asan_store16,
-      }
-  };
-
+typedef void (*CB)(uptr p);
+static void TestLoadStoreCallbacks(CB cb[2][5]) {
   uptr buggy_ptr;
 
   __asan_test_only_reported_buggy_pointer = &buggy_ptr;
@@ -270,3 +262,86 @@ TEST(AddressSanitizer, LoadStoreCallbacks) {
   }
   __asan_test_only_reported_buggy_pointer = 0;
 }
+
+TEST(AddressSanitizer, LoadStoreCallbacks) {
+  CB cb[2][5] = {{
+                     __asan_load1,
+                     __asan_load2,
+                     __asan_load4,
+                     __asan_load8,
+                     __asan_load16,
+                 },
+                 {
+                     __asan_store1,
+                     __asan_store2,
+                     __asan_store4,
+                     __asan_store8,
+                     __asan_store16,
+                 }};
+  TestLoadStoreCallbacks(cb);
+}
+
+#if defined(__x86_64__) && \
+    !(defined(SANITIZER_APPLE) || defined(SANITIZER_WINDOWS))
+// clang-format off
+
+#define CALL_ASAN_MEMORY_ACCESS_CALLBACK_ADD(s, reg, op)        \
+  void CallAsanMemoryAccessAdd##reg##op##s(uptr address) {      \
+  asm("push  %%" #reg " \n"                                     \
+  "mov   %[x], %%" #reg " \n"                                   \
+  "call  __asan_check_" #op "_add_" #s "_" #reg "\n"            \
+  "pop   %%" #reg " \n"                                         \
+  :                                                             \
+  : [x] "r"(address)                                            \
+      : "r8", "rdi");                                           \
+  }
+
+#define TEST_ASAN_MEMORY_ACCESS_CALLBACKS_ADD(reg)            \
+  CALL_ASAN_MEMORY_ACCESS_CALLBACK_ADD(1, reg, load)          \
+  CALL_ASAN_MEMORY_ACCESS_CALLBACK_ADD(1, reg, store)         \
+  CALL_ASAN_MEMORY_ACCESS_CALLBACK_ADD(2, reg, load)          \
+  CALL_ASAN_MEMORY_ACCESS_CALLBACK_ADD(2, reg, store)         \
+  CALL_ASAN_MEMORY_ACCESS_CALLBACK_ADD(4, reg, load)          \
+  CALL_ASAN_MEMORY_ACCESS_CALLBACK_ADD(4, reg, store)         \
+  CALL_ASAN_MEMORY_ACCESS_CALLBACK_ADD(8, reg, load)          \
+  CALL_ASAN_MEMORY_ACCESS_CALLBACK_ADD(8, reg, store)         \
+  CALL_ASAN_MEMORY_ACCESS_CALLBACK_ADD(16, reg, load)         \
+  CALL_ASAN_MEMORY_ACCESS_CALLBACK_ADD(16, reg, store)        \
+                                                              \
+  TEST(AddressSanitizer, LoadStoreCallbacksAddX86##reg) {     \
+    CB cb[2][5] = {{                                          \
+                       CallAsanMemoryAccessAdd##reg##load1,   \
+                       CallAsanMemoryAccessAdd##reg##load2,   \
+                       CallAsanMemoryAccessAdd##reg##load4,   \
+                       CallAsanMemoryAccessAdd##reg##load8,   \
+                       CallAsanMemoryAccessAdd##reg##load16,  \
+                   },                                         \
+                   {                                          \
+                       CallAsanMemoryAccessAdd##reg##store1,  \
+                       CallAsanMemoryAccessAdd##reg##store2,  \
+                       CallAsanMemoryAccessAdd##reg##store4,  \
+                       CallAsanMemoryAccessAdd##reg##store8,  \
+                       CallAsanMemoryAccessAdd##reg##store16, \
+                   }};                                        \
+    TestLoadStoreCallbacks(cb);                               \
+  }
+
+// Instantiate all but R10 and R11 callbacks. We are using PLTSafe class with
+// the intrinsic, which guarantees that the code generation will never emit
+// R10 or R11 callbacks.
+TEST_ASAN_MEMORY_ACCESS_CALLBACKS_ADD(RAX)
+TEST_ASAN_MEMORY_ACCESS_CALLBACKS_ADD(RBX)
+TEST_ASAN_MEMORY_ACCESS_CALLBACKS_ADD(RCX)
+TEST_ASAN_MEMORY_ACCESS_CALLBACKS_ADD(RDX)
+TEST_ASAN_MEMORY_ACCESS_CALLBACKS_ADD(RSI)
+TEST_ASAN_MEMORY_ACCESS_CALLBACKS_ADD(RDI)
+TEST_ASAN_MEMORY_ACCESS_CALLBACKS_ADD(RBP)
+TEST_ASAN_MEMORY_ACCESS_CALLBACKS_ADD(R8)
+TEST_ASAN_MEMORY_ACCESS_CALLBACKS_ADD(R9)
+TEST_ASAN_MEMORY_ACCESS_CALLBACKS_ADD(R12)
+TEST_ASAN_MEMORY_ACCESS_CALLBACKS_ADD(R13)
+TEST_ASAN_MEMORY_ACCESS_CALLBACKS_ADD(R14)
+TEST_ASAN_MEMORY_ACCESS_CALLBACKS_ADD(R15)
+
+// clang-format on
+#endif

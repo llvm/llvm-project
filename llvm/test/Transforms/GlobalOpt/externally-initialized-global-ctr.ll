@@ -1,4 +1,4 @@
-; RUN: opt < %s -globalopt -S | FileCheck %s
+; RUN: opt < %s -passes=globalopt -S | FileCheck %s
 ; rdar://12580965.
 ; ObjC++ test case.
 
@@ -38,7 +38,7 @@ declare void @test(i8*)
 
 define void @print() {
 ; CHECK-LABEL: @print(
-; CHECK-NEXT:    [[TMP1:%.*]] = load i8*, i8** @_ZL14buttonInitData.0.0, align 16
+; CHECK-NEXT:    [[TMP1:%.*]] = load i8*, i8** @_ZL14buttonInitData.0, align 16
 ; CHECK-NEXT:    call void @test(i8* [[TMP1]])
 ; CHECK-NEXT:    ret void
 ;

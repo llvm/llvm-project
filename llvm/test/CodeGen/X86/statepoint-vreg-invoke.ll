@@ -23,7 +23,7 @@ define i64 addrspace(1)* @test_basic_invoke(i64 addrspace(1)* %obj, i64 addrspac
 ; CHECK:          RET 0, $rax
   gc "statepoint-example" personality i32* ()* @"personality_function" {
 entry:
-  %0 = invoke token (i64, i32, void (i64 addrspace(1)*)*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidp1i64f(i64 0, i32 0, void (i64 addrspace(1)*)* @some_call, i32 1, i32 0, i64 addrspace(1)* %obj, i32 0, i32 0) ["gc-live" (i64 addrspace(1)* %obj, i64 addrspace(1)* %obj1), "deopt" (i32 0, i32 -1, i32 0, i32 0, i32 0)]
+  %0 = invoke token (i64, i32, void (i64 addrspace(1)*)*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidp1i64f(i64 0, i32 0, void (i64 addrspace(1)*)* elementtype(void (i64 addrspace(1)*)) @some_call, i32 1, i32 0, i64 addrspace(1)* %obj, i32 0, i32 0) ["gc-live" (i64 addrspace(1)* %obj, i64 addrspace(1)* %obj1), "deopt" (i32 0, i32 -1, i32 0, i32 0, i32 0)]
           to label %safepoint_normal_dest unwind label %exceptional_return
 
 safepoint_normal_dest:
@@ -82,7 +82,7 @@ entry:
   br i1 %cond, label %left, label %right
 
 left:
-  %sp1 = invoke token (i64, i32, void (i64 addrspace(1)*)*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidp1i64f(i64 0, i32 0, void (i64 addrspace(1)*)* @some_call, i32 1, i32 0, i64 addrspace(1)* %val1, i32 0, i32 0) ["gc-live"(i64 addrspace(1)* %val1, i64 addrspace(1)* %val2)]
+  %sp1 = invoke token (i64, i32, void (i64 addrspace(1)*)*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidp1i64f(i64 0, i32 0, void (i64 addrspace(1)*)* elementtype(void (i64 addrspace(1)*)) @some_call, i32 1, i32 0, i64 addrspace(1)* %val1, i32 0, i32 0) ["gc-live"(i64 addrspace(1)* %val1, i64 addrspace(1)* %val2)]
            to label %left.relocs unwind label %exceptional_return.left
 
 left.relocs:
@@ -91,7 +91,7 @@ left.relocs:
   br label %normal_return
 
 right:
-  %sp2 = invoke token (i64, i32, void (i64 addrspace(1)*)*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidp1i64f(i64 0, i32 0, void (i64 addrspace(1)*)* @some_call, i32 1, i32 0, i64 addrspace(1)* %val1, i32 0, i32 0) ["gc-live"(i64 addrspace(1)* %val2, i64 addrspace(1)* %val3)]
+  %sp2 = invoke token (i64, i32, void (i64 addrspace(1)*)*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidp1i64f(i64 0, i32 0, void (i64 addrspace(1)*)* elementtype(void (i64 addrspace(1)*)) @some_call, i32 1, i32 0, i64 addrspace(1)* %val1, i32 0, i32 0) ["gc-live"(i64 addrspace(1)* %val2, i64 addrspace(1)* %val3)]
            to label %right.relocs unwind label %exceptional_return.right
 
 right.relocs:
@@ -136,20 +136,20 @@ define void @test_duplicate_ir_values() gc "statepoint-example" personality i32*
 entry:
   %val1 = load i8 addrspace(1)*, i8 addrspace(1)* addrspace(1)* undef, align 8
   %val2 = load i8 addrspace(1)*, i8 addrspace(1)* addrspace(1)* undef, align 8
-  %statepoint_token1 = invoke token (i64, i32, i32 (i32, i8 addrspace(1)*, i32, i32, i32)*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_i32i32p1i8i32i32i32f(i64 1, i32 16, i32 (i32, i8 addrspace(1)*, i32, i32, i32)* nonnull @foo, i32 5, i32 0, i32 undef, i8 addrspace(1)* undef, i32 undef, i32 undef, i32 undef, i32 0, i32 0) [ "deopt"(), "gc-live"(i8 addrspace(1)* %val1, i8 addrspace(1)* %val2) ]
+  %statepoint_token1 = invoke token (i64, i32, i32 (i32, i8 addrspace(1)*, i32, i32, i32)*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_i32i32p1i8i32i32i32f(i64 1, i32 16, i32 (i32, i8 addrspace(1)*, i32, i32, i32)* nonnull elementtype(i32 (i32, i8 addrspace(1)*, i32, i32, i32)) @foo, i32 5, i32 0, i32 undef, i8 addrspace(1)* undef, i32 undef, i32 undef, i32 undef, i32 0, i32 0) [ "deopt"(), "gc-live"(i8 addrspace(1)* %val1, i8 addrspace(1)* %val2) ]
           to label %normal_continue unwind label %exceptional_return
 
 normal_continue: ; preds = %entry
   %val1.relocated1 = call coldcc i8 addrspace(1)* @llvm.experimental.gc.relocate.p1i8(token %statepoint_token1, i32 0, i32 0) ; (%val1, %val1)
   %val2.relocated1 = call coldcc i8 addrspace(1)* @llvm.experimental.gc.relocate.p1i8(token %statepoint_token1, i32 1, i32 1) ; (%val2, %val2)
-  %safepoint_token2 = call token (i64, i32, void (i32)*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidi32f(i64 2882400000, i32 0, void (i32)* nonnull @__llvm_deoptimize, i32 1, i32 2, i32 10, i32 0, i32 0) [ "deopt"(i8 addrspace(1)* %val1.relocated1, i8 addrspace(1)* %val2.relocated1), "gc-live"() ]
+  %safepoint_token2 = call token (i64, i32, void (i32)*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidi32f(i64 2882400000, i32 0, void (i32)* nonnull elementtype(void (i32)) @__llvm_deoptimize, i32 1, i32 2, i32 10, i32 0, i32 0) [ "deopt"(i8 addrspace(1)* %val1.relocated1, i8 addrspace(1)* %val2.relocated1), "gc-live"() ]
   unreachable
 
 exceptional_return:                         ; preds = %entry
   %lpad_token11090 = landingpad token
           cleanup
   %val2.relocated2 = call coldcc i8 addrspace(1)* @llvm.experimental.gc.relocate.p1i8(token %lpad_token11090, i32 1, i32 1) ; (%val2, %val2)
-  %safepoint_token3 = call token (i64, i32, void (i32)*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidi32f(i64 2882400000, i32 0, void (i32)* nonnull @__llvm_deoptimize, i32 1, i32 0, i32 -271, i32 0, i32 0) [ "deopt"(i8 addrspace(1)* %val2.relocated2), "gc-live"() ]
+  %safepoint_token3 = call token (i64, i32, void (i32)*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidi32f(i64 2882400000, i32 0, void (i32)* nonnull elementtype(void (i32)) @__llvm_deoptimize, i32 1, i32 0, i32 -271, i32 0, i32 0) [ "deopt"(i8 addrspace(1)* %val2.relocated2), "gc-live"() ]
   unreachable
 }
 

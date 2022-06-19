@@ -10,6 +10,9 @@
 // RUN: %clang -target x86_64-netbsd -fopenmp=libomp -c %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-CC1-OPENMP
 // RUN: %clang -target x86_64-netbsd -fopenmp=libgomp -c %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-CC1-NO-OPENMP
 // RUN: %clang -target x86_64-netbsd -fopenmp=libiomp5 -c %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-CC1-OPENMP
+// RUN: %clang -target x86_64-openbsd -fopenmp=libomp -c %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-CC1-OPENMP
+// RUN: %clang -target x86_64-openbsd -fopenmp=libgomp -c %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-CC1-NO-OPENMP
+// RUN: %clang -target x86_64-openbsd -fopenmp=libiomp5 -c %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-CC1-OPENMP
 // RUN: %clang -target x86_64-windows-gnu -fopenmp=libomp -c %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-CC1-OPENMP
 // RUN: %clang -target x86_64-windows-gnu -fopenmp=libgomp -c %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-CC1-NO-OPENMP
 // RUN: %clang -target x86_64-windows-gnu -fopenmp=libiomp5 -c %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-CC1-OPENMP
@@ -74,6 +77,19 @@
 // RUN: %clang -nostdlib -target x86_64-netbsd -fopenmp=libgomp %s -o %t -### 2>&1 | FileCheck %s --check-prefix=CHECK-NO-GOMP
 // RUN: %clang -nostdlib -target x86_64-netbsd -fopenmp=libiomp5 %s -o %t -### 2>&1 | FileCheck %s --check-prefix=CHECK-NO-IOMP5
 //
+// RUN: %clang -target x86_64-openbsd -fopenmp=libomp %s -o %t -### 2>&1 | FileCheck %s --check-prefix=CHECK-LD-OMP
+// RUN: %clang -target x86_64-openbsd -fopenmp=libgomp %s -o %t -### 2>&1 | FileCheck %s --check-prefix=CHECK-LD-GOMP --check-prefix=CHECK-LD-GOMP-NO-RT
+// RUN: %clang -target x86_64-openbsd -fopenmp=libiomp5 %s -o %t -### 2>&1 | FileCheck %s --check-prefix=CHECK-LD-IOMP5
+//
+// RUN: %clang -target x86_64-openbsd -fopenmp=libomp -static-openmp %s -o %t -### 2>&1 | FileCheck %s --check-prefix=CHECK-LD-STATIC-OMP
+// RUN: %clang -target x86_64-openbsd -fopenmp=libgomp -static-openmp %s -o %t -### 2>&1 | FileCheck %s --check-prefix=CHECK-LD-STATIC-GOMP --check-prefix=CHECK-LD-STATIC-GOMP-NO-RT
+// RUN: %clang -target x86_64-openbsd -fopenmp=libiomp5 -static-openmp %s -o %t -### 2>&1 | FileCheck %s --check-prefix=CHECK-LD-STATIC-IOMP5
+// RUN: %clang -target x86_64-openbsd -fopenmp=libiomp5 -static -static-openmp %s -o %t -### 2>&1 | FileCheck %s --check-prefix=CHECK-LD-STATIC-IOMP5-NO-BDYNAMIC
+//
+// RUN: %clang -nostdlib -target x86_64-openbsd -fopenmp=libomp %s -o %t -### 2>&1 | FileCheck %s --check-prefix=CHECK-NO-OMP
+// RUN: %clang -nostdlib -target x86_64-openbsd -fopenmp=libgomp %s -o %t -### 2>&1 | FileCheck %s --check-prefix=CHECK-NO-GOMP
+// RUN: %clang -nostdlib -target x86_64-openbsd -fopenmp=libiomp5 %s -o %t -### 2>&1 | FileCheck %s --check-prefix=CHECK-NO-IOMP5
+//
 // RUN: %clang -target x86_64-windows-gnu -fopenmp=libomp %s -o %t -### 2>&1 | FileCheck %s --check-prefix=CHECK-LD-OMP
 // RUN: %clang -target x86_64-windows-gnu -fopenmp=libgomp %s -o %t -### 2>&1 | FileCheck %s --check-prefix=CHECK-LD-GOMP --check-prefix=CHECK-LD-GOMP-NO-RT
 // RUN: %clang -target x86_64-windows-gnu -fopenmp=libiomp5 %s -o %t -### 2>&1 | FileCheck %s --check-prefix=CHECK-LD-IOMP5MD
@@ -120,7 +136,7 @@
 // CHECK-LD-STATIC-IOMP5: "-Bstatic" "-liomp5" "-Bdynamic"
 //
 // CHECK-LD-STATIC-IOMP5-NO-BDYNAMIC: "{{.*}}ld{{(.exe)?}}"
-// For x86 Gnu, the driver passes -static, while NetBSD and FreeBSD pass -Bstatic
+// For x86 Gnu, the driver passes -static, while FreeBSD, NetBSD and OpenBSD pass -Bstatic
 // CHECK-LD-STATIC-IOMP5-NO-BDYNAMIC: "-{{B?}}static" {{.*}} "-liomp5"
 // CHECK-LD-STATIC-IOMP5-NO-BDYNAMIC-NOT: "-Bdynamic"
 //
@@ -140,6 +156,7 @@
 // RUN: %clang -target x86_64-darwin -fopenmp %s -o %t -### 2>&1 | FileCheck %s --check-prefix=CHECK-LD-ANY
 // RUN: %clang -target x86_64-freebsd -fopenmp %s -o %t -### 2>&1 | FileCheck %s --check-prefix=CHECK-LD-ANY
 // RUN: %clang -target x86_64-netbsd -fopenmp %s -o %t -### 2>&1 | FileCheck %s --check-prefix=CHECK-LD-ANY
+// RUN: %clang -target x86_64-openbsd -fopenmp %s -o %t -### 2>&1 | FileCheck %s --check-prefix=CHECK-LD-ANY
 // RUN: %clang -target x86_64-windows-gnu -fopenmp %s -o %t -### 2>&1 | FileCheck %s --check-prefix=CHECK-LD-ANYMD
 //
 // CHECK-LD-ANY: "{{.*}}ld{{(.exe)?}}"

@@ -186,40 +186,6 @@ static llvm::Value *getMemAccInstPointerOperand(Instruction *Inst) {
   return MemInst.getPointerOperand();
 }
 
-void ScopAnnotator::annotateSecondLevel(llvm::Instruction *Inst,
-                                        llvm::Value *BasePtr) {
-  Value *Ptr = getMemAccInstPointerOperand(Inst);
-  if (!Ptr)
-    return;
-
-  auto *PtrSCEV = SE->getSCEV(Ptr);
-  auto *BasePtrSCEV = SE->getPointerBase(PtrSCEV);
-
-  auto SecondLevelAliasScope = SecondLevelAliasScopeMap.lookup(PtrSCEV);
-  auto SecondLevelOtherAliasScopeList =
-      SecondLevelOtherAliasScopeListMap.lookup(PtrSCEV);
-  if (!SecondLevelAliasScope) {
-    auto AliasScope = AliasScopeMap.lookup(BasePtr);
-    if (!AliasScope)
-      return;
-    LLVMContext &Ctx = SE->getContext();
-    SecondLevelAliasScope = getID(
-        Ctx, AliasScope, MDString::get(Ctx, "second level alias metadata"));
-    SecondLevelAliasScopeMap[PtrSCEV] = SecondLevelAliasScope;
-    Metadata *Args = {SecondLevelAliasScope};
-    auto SecondLevelBasePtrAliasScopeList =
-        SecondLevelAliasScopeMap.lookup(BasePtrSCEV);
-    SecondLevelAliasScopeMap[BasePtrSCEV] = MDNode::concatenate(
-        SecondLevelBasePtrAliasScopeList, MDNode::get(Ctx, Args));
-    auto OtherAliasScopeList = OtherAliasScopeListMap.lookup(BasePtr);
-    SecondLevelOtherAliasScopeList = MDNode::concatenate(
-        OtherAliasScopeList, SecondLevelBasePtrAliasScopeList);
-    SecondLevelOtherAliasScopeListMap[PtrSCEV] = SecondLevelOtherAliasScopeList;
-  }
-  Inst->setMetadata("alias.scope", SecondLevelAliasScope);
-  Inst->setMetadata("noalias", SecondLevelOtherAliasScopeList);
-}
-
 /// Find the base pointer of an array access.
 ///
 /// This should be equivalent to ScalarEvolution::getPointerBase, which we
@@ -299,18 +265,6 @@ void ScopAnnotator::annotate(Instruction *Inst) {
          "BasePtr either expected in AliasScopeMap and OtherAlias...Map");
   auto *OtherAliasScopeList = OtherAliasScopeListMap[BasePtr];
 
-  if (InterIterationAliasFreeBasePtrs.count(BasePtr)) {
-    annotateSecondLevel(Inst, BasePtr);
-    return;
-  }
-
-  Inst->setMetadata("alias.scope", AliasScope);
+  Inst->setMetadata("alias.scope", MDNode::get(SE->getContext(), AliasScope));
   Inst->setMetadata("noalias", OtherAliasScopeList);
-}
-
-void ScopAnnotator::addInterIterationAliasFreeBasePtr(llvm::Value *BasePtr) {
-  if (!BasePtr)
-    return;
-
-  InterIterationAliasFreeBasePtrs.insert(BasePtr);
 }

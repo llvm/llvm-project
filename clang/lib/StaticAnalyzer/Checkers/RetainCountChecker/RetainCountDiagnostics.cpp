@@ -73,11 +73,8 @@ RefCountBug::RefCountBug(CheckerNameRef Checker, RefCountBugKind BT)
 
 static bool isNumericLiteralExpression(const Expr *E) {
   // FIXME: This set of cases was copied from SemaExprObjC.
-  return isa<IntegerLiteral>(E) ||
-         isa<CharacterLiteral>(E) ||
-         isa<FloatingLiteral>(E) ||
-         isa<ObjCBoolLiteralExpr>(E) ||
-         isa<CXXBoolLiteralExpr>(E);
+  return isa<IntegerLiteral, CharacterLiteral, FloatingLiteral,
+             ObjCBoolLiteralExpr, CXXBoolLiteralExpr>(E);
 }
 
 /// If type represents a pointer to CXXRecordDecl,
@@ -264,14 +261,12 @@ static void generateDiagnosticsForCallLike(ProgramStateRef CurrSt,
   }
 
   if (CurrV.getObjKind() == ObjKind::CF) {
-    os << "a Core Foundation object of type '"
-       << Sym->getType().getAsString() << "' with a ";
+    os << "a Core Foundation object of type '" << Sym->getType() << "' with a ";
   } else if (CurrV.getObjKind() == ObjKind::OS) {
     os << "an OSObject of type '" << findAllocatedObjectName(S, Sym->getType())
        << "' with a ";
   } else if (CurrV.getObjKind() == ObjKind::Generalized) {
-    os << "an object of type '" << Sym->getType().getAsString()
-       << "' with a ";
+    os << "an object of type '" << Sym->getType() << "' with a ";
   } else {
     assert(CurrV.getObjKind() == ObjKind::ObjC);
     QualType T = Sym->getType();
@@ -279,8 +274,7 @@ static void generateDiagnosticsForCallLike(ProgramStateRef CurrSt,
       os << "an Objective-C object with a ";
     } else {
       const ObjCObjectPointerType *PT = cast<ObjCObjectPointerType>(T);
-      os << "an instance of " << PT->getPointeeType().getAsString()
-         << " with a ";
+      os << "an instance of " << PT->getPointeeType() << " with a ";
     }
   }
 

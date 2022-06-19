@@ -65,6 +65,8 @@ public:
           case frontend::ParseSyntaxOnly:
             Act = CreateFrontendAction(CI);
             break;
+          case frontend::PluginAction:
+            LLVM_FALLTHROUGH;
           case frontend::EmitAssembly:
             LLVM_FALLTHROUGH;
           case frontend::EmitObj:
@@ -132,7 +134,10 @@ IncrementalParser::IncrementalParser(std::unique_ptr<CompilerInstance> Instance,
   P->Initialize();
 }
 
-IncrementalParser::~IncrementalParser() { Act->FinalizeAction(); }
+IncrementalParser::~IncrementalParser() {
+  P.reset();
+  Act->FinalizeAction();
+}
 
 llvm::Expected<PartialTranslationUnit &>
 IncrementalParser::ParseOrWrapTopLevelDecl() {
@@ -162,8 +167,9 @@ IncrementalParser::ParseOrWrapTopLevelDecl() {
   }
 
   Parser::DeclGroupPtrTy ADecl;
-  for (bool AtEOF = P->ParseFirstTopLevelDecl(ADecl); !AtEOF;
-       AtEOF = P->ParseTopLevelDecl(ADecl)) {
+  Sema::ModuleImportState ImportState;
+  for (bool AtEOF = P->ParseFirstTopLevelDecl(ADecl, ImportState); !AtEOF;
+       AtEOF = P->ParseTopLevelDecl(ADecl, ImportState)) {
     // If we got a null return and something *was* parsed, ignore it.  This
     // is due to a top-level semicolon, an action override, or a parse error
     // skipping something.
@@ -254,7 +260,7 @@ IncrementalParser::Parse(llvm::StringRef input) {
                                /*LoadedOffset=*/0, NewLoc);
 
   // NewLoc only used for diags.
-  if (PP.EnterSourceFile(FID, /*DirLookup=*/0, NewLoc))
+  if (PP.EnterSourceFile(FID, /*DirLookup=*/nullptr, NewLoc))
     return llvm::make_error<llvm::StringError>("Parsing failed. "
                                                "Cannot enter source file.",
                                                std::error_code());
@@ -289,4 +295,11 @@ IncrementalParser::Parse(llvm::StringRef input) {
 
   return PTU;
 }
+
+llvm::StringRef IncrementalParser::GetMangledName(GlobalDecl GD) const {
+  CodeGenerator *CG = getCodeGen(Act.get());
+  assert(CG);
+  return CG->GetMangledName(GD);
+}
+
 } // end namespace clang

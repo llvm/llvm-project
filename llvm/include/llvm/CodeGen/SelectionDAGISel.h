@@ -16,12 +16,13 @@
 
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/SelectionDAG.h"
-#include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/IR/BasicBlock.h"
 #include <memory>
 
 namespace llvm {
 class AAResults;
+class TargetInstrInfo;
+class TargetMachine;
 class SelectionDAGBuilder;
 class SDValue;
 class MachineRegisterInfo;
@@ -46,13 +47,14 @@ public:
   MachineRegisterInfo *RegInfo;
   SelectionDAG *CurDAG;
   std::unique_ptr<SelectionDAGBuilder> SDB;
-  AAResults *AA;
-  GCFunctionInfo *GFI;
+  AAResults *AA = nullptr;
+  GCFunctionInfo *GFI = nullptr;
   CodeGenOpt::Level OptLevel;
   const TargetInstrInfo *TII;
   const TargetLowering *TLI;
   bool FastISelFailed;
   SmallPtrSet<const Instruction *, 4> ElidedArgCopyInstrs;
+  bool UseInstrRefDebugInfo = false;
 
   /// Current optimization remark emitter.
   /// Used to report things like combines and FastISel failures.
@@ -199,7 +201,7 @@ public:
 protected:
   /// DAGSize - Size of DAG being instruction selected.
   ///
-  unsigned DAGSize;
+  unsigned DAGSize = 0;
 
   /// ReplaceUses - replace all uses of the old node F with the use
   /// of the new node T.

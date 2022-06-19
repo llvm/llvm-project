@@ -264,6 +264,8 @@ public:
                                               bool IsPCRel) const override;
 
   uint64_t writeObject(MCAssembler &Asm, const MCAsmLayout &Layout) override;
+
+  void writeAddrsigSection(MCAssembler &Asm);
 };
 
 /// Construct a new Mach-O writer instance.

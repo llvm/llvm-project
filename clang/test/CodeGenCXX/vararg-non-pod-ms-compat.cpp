@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -Wno-error=non-pod-varargs -triple i686-pc-win32 -fms-compatibility -emit-llvm -o - %s | FileCheck %s -check-prefix=X86 -check-prefix=CHECK
-// RUN: %clang_cc1 -Wno-error=non-pod-varargs -triple x86_64-pc-win32 -fms-compatibility -emit-llvm -o - %s | FileCheck %s -check-prefix=X64 -check-prefix=CHECK
+// RUN: %clang_cc1 -no-opaque-pointers -Wno-error=non-pod-varargs -triple i686-pc-win32 -fms-compatibility -emit-llvm -o - %s | FileCheck %s -check-prefix=X86 -check-prefix=CHECK
+// RUN: %clang_cc1 -no-opaque-pointers -Wno-error=non-pod-varargs -triple x86_64-pc-win32 -fms-compatibility -emit-llvm -o - %s | FileCheck %s -check-prefix=X64 -check-prefix=CHECK
 
 struct X {
   X();

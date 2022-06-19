@@ -24,13 +24,15 @@
 #ifndef LLVM_TRANSFORMS_VECTORIZE_VPLAN_VPLANHCFGBUILDER_H
 #define LLVM_TRANSFORMS_VECTORIZE_VPLAN_VPLANHCFGBUILDER_H
 
-#include "VPlan.h"
 #include "VPlanDominatorTree.h"
 #include "VPlanVerifier.h"
 
 namespace llvm {
 
 class Loop;
+class LoopInfo;
+class VPRegionBlock;
+class VPlan;
 class VPlanTestBase;
 
 /// Main class to build the VPlan H-CFG for an incoming IR.
@@ -55,9 +57,9 @@ private:
   // are introduced.
   VPDominatorTree VPDomTree;
 
-  /// Build plain CFG for TheLoop. Return a new VPRegionBlock (TopRegion)
-  /// enclosing the plain CFG.
-  VPRegionBlock *buildPlainCFG();
+  /// Build plain CFG for TheLoop. Return the pre-header VPBasicBlock connected
+  /// to a new VPRegionBlock (TopRegion) enclosing the plain CFG.
+  VPBasicBlock *buildPlainCFG();
 
 public:
   VPlanHCFGBuilder(Loop *Lp, LoopInfo *LI, VPlan &P)

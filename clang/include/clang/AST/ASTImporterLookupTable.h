@@ -21,7 +21,6 @@
 
 namespace clang {
 
-class ASTContext;
 class NamedDecl;
 class DeclContext;
 
@@ -75,6 +74,10 @@ public:
   // The function should be called when the old context is definitely different
   // from the new.
   void update(NamedDecl *ND, DeclContext *OldDC);
+  // Same as 'update' but allow if 'ND' is not in the table or the old context
+  // is the same as the new.
+  // FIXME: The old redeclaration context is not handled.
+  void updateForced(NamedDecl *ND, DeclContext *OldDC);
   using LookupResult = DeclList;
   LookupResult lookup(DeclContext *DC, DeclarationName Name) const;
   // Check if the `ND` is within the lookup table (with its current name) in

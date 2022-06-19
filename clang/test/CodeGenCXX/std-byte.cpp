@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -std=c++1z -Werror -triple i386-unknown-unknown -emit-llvm -O1 -disable-llvm-passes -o - %s | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -std=c++1z -Werror -triple i386-unknown-unknown -emit-llvm -O1 -disable-llvm-passes -o - %s | FileCheck %s
 
 // std::byte should be considered equivalent to char for aliasing.
 

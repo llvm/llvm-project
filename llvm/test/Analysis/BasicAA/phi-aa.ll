@@ -1,4 +1,3 @@
-; RUN: opt < %s -phi-values -basic-aa -aa-eval -print-all-alias-modref-info -disable-output 2>&1 | FileCheck %s
 ; RUN: opt < %s -aa-pipeline=basic-aa -passes='require<phi-values>,aa-eval' -print-all-alias-modref-info -disable-output 2>&1 | FileCheck %s
 target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f32:32:32-f64:64:64-v64:64:64-v128:128:128-a0:0:64-s0:64:64-f80:128:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
@@ -65,6 +64,7 @@ for.body:
   %sub11 = add i32 %1, -1
   %idxprom12 = zext i32 %sub11 to i64
   %arrayidx13 = getelementptr inbounds [100 x i32], [100 x i32]* %oa5, i64 0, i64 %idxprom12
+  load i32, i32* %arrayidx13
   call void @inc(i32* %jj7)
   br label %codeRepl
 
@@ -91,6 +91,7 @@ entry:
 loop1:
   %n1 = phi i32 [ 0, %entry ], [ %add1, %loop2 ]
   %val1 = phi i32* [ @X, %entry ], [ %val2, %loop2 ]
+  load i32, i32* %val1
   %add1 = add i32 %n1, 1
   %cmp1 = icmp ne i32 %n1, 32
   br i1 %cmp1, label %loop2, label %end
@@ -98,6 +99,7 @@ loop1:
 loop2:
   %n2 = phi i32 [ 0, %loop1 ], [ %add2, %loop3 ]
   %val2 = phi i32* [ %val1, %loop1 ], [ %val3, %loop3 ]
+  load i32, i32* %val2
   %add2 = add i32 %n2, 1
   %cmp2 = icmp ne i32 %n2, 32
   br i1 %cmp2, label %loop3, label %loop1
@@ -175,8 +177,8 @@ exit:
 declare void @llvm.memset.p0i8.i32(i8*, i8, i32, i1)
 
 ; CHECK-LABEL: unsound_inequality
-; CHECK: MayAlias:  i32* %arrayidx13, i32* %phi
 ; CHECK: MayAlias:  i32* %arrayidx5, i32* %phi
+; CHECK: MayAlias:  i32* %arrayidx13, i32* %phi
 ; CHECK: NoAlias:   i32* %arrayidx13, i32* %arrayidx5
 
 ; When recursively reasoning about phis, we can't use predicates between
@@ -188,6 +190,7 @@ entry:
 
 for.body:                                         ; preds = %for.body, %entry
   %phi = phi i32* [ %arrayidx13, %for.body ], [ %j, %entry ]
+  load i32, i32* %phi
   %idx = load i32, i32* %jj7, align 4
   %arrayidx5 = getelementptr inbounds [100 x i32], [100 x i32]* %oa5, i64 0, i32 %idx
   store i32 0, i32* %arrayidx5, align 4
@@ -209,10 +212,14 @@ entry:
 loop:
   %ptr = phi i32* [ %ptr.base, %entry ], [ %ptr.next, %split ]
   %ptr.next = getelementptr inbounds i32, i32* %ptr, i64 1
+  load i32, i32* %ptr
+  load i32, i32* %ptr.next
   br label %split
 
 split:
   %ptr.phi = phi i32* [ %ptr, %loop ]
   %ptr.next.phi = phi i32* [ %ptr.next, %loop ]
+  load i32, i32* %ptr.phi
+  load i32, i32* %ptr.next.phi
   br label %loop
 }

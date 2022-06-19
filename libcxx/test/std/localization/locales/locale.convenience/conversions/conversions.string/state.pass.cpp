@@ -12,6 +12,8 @@
 
 // state_type state() const;
 
+// XFAIL: no-wide-characters
+
 #include <locale>
 #include <codecvt>
 

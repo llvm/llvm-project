@@ -46,7 +46,17 @@ public:
     LongDoubleFormat = &llvm::APFloat::IEEEquad();
     DefaultAlignForAttributeAligned = 64;
     MinGlobalAlign = 16;
-    resetDataLayout("E-m:e-i1:8:16-i8:8:16-i64:64-f128:64-a:8:16-n32:64");
+    if (Triple.isOSzOS()) {
+      // All vector types are default aligned on an 8-byte boundary, even if the
+      // vector facility is not available. That is different from Linux.
+      MaxVectorAlign = 64;
+      // Compared to Linux/ELF, the data layout differs only in some details:
+      // - name mangling is GOFF
+      // - 128 bit vector types are 64 bit aligned
+      resetDataLayout(
+          "E-m:l-i1:8:16-i8:8:16-i64:64-f128:64-v128:64-a:8:16-n32:64");
+    } else
+      resetDataLayout("E-m:e-i1:8:16-i8:8:16-i64:64-f128:64-a:8:16-n32:64");
     MaxAtomicPromoteWidth = MaxAtomicInlineWidth = 64;
     HasStrictFP = true;
   }
@@ -71,6 +81,30 @@ public:
 
   bool validateAsmConstraint(const char *&Name,
                              TargetInfo::ConstraintInfo &info) const override;
+
+  std::string convertConstraint(const char *&Constraint) const override {
+    switch (Constraint[0]) {
+    case 'p': // Keep 'p' constraint.
+      return std::string("p");
+    case 'Z':
+      switch (Constraint[1]) {
+      case 'Q': // Address with base and unsigned 12-bit displacement
+      case 'R': // Likewise, plus an index
+      case 'S': // Address with base and signed 20-bit displacement
+      case 'T': // Likewise, plus an index
+        // "^" hints llvm that this is a 2 letter constraint.
+        // "Constraint++" is used to promote the string iterator
+        // to the next constraint.
+        return std::string("^") + std::string(Constraint++, 2);
+      default:
+        break;
+      }
+      break;
+    default:
+      break;
+    }
+    return TargetInfo::convertConstraint(Constraint);
+  }
 
   const char *getClobbers() const override {
     // FIXME: Is this really right?
@@ -108,6 +142,8 @@ public:
       Features["vector-enhancements-1"] = true;
     if (ISARevision >= 13)
       Features["vector-enhancements-2"] = true;
+    if (ISARevision >= 14)
+      Features["nnp-assist"] = true;
     return TargetInfo::initFeatureMap(Features, Diags, CPU, FeaturesVec);
   }
 
@@ -127,7 +163,7 @@ public:
     HasVector &= !SoftFloat;
 
     // If we use the vector ABI, vector types are 64-bit aligned.
-    if (HasVector) {
+    if (HasVector && !getTriple().isOSzOS()) {
       MaxVectorAlign = 64;
       resetDataLayout("E-m:e-i1:8:16-i8:8:16-i64:64-f128:64"
                       "-v128:64-a:8:16-n32:64");
@@ -158,7 +194,7 @@ public:
 
   const char *getLongDoubleMangling() const override { return "g"; }
 
-  bool hasExtIntType() const override { return true; }
+  bool hasBitIntType() const override { return true; }
 
   int getEHDataRegisterNumber(unsigned RegNo) const override {
     return RegNo < 4 ? 6 + RegNo : -1;

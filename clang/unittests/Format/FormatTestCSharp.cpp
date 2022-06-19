@@ -402,6 +402,7 @@ TEST_F(FormatTestCSharp, CSharpRegions) {
 }
 
 TEST_F(FormatTestCSharp, CSharpKeyWordEscaping) {
+  // AfterEnum is true by default.
   verifyFormat("public enum var\n"
                "{\n"
                "    none,\n"
@@ -758,6 +759,128 @@ class MyClass
                GoogleStyle);
 }
 
+TEST_F(FormatTestCSharp, CSharpLambdasDontBreakFollowingCodeAlignment) {
+  FormatStyle GoogleStyle = getGoogleStyle(FormatStyle::LK_CSharp);
+  FormatStyle MicrosoftStyle = getMicrosoftStyle(FormatStyle::LK_CSharp);
+
+  verifyFormat(R"(//
+public class Sample
+{
+    public void Test()
+    {
+        while (true)
+        {
+            preBindEnumerators.RemoveAll(enumerator => !enumerator.MoveNext());
+            CodeThatFollowsLambda();
+            IsWellAligned();
+        }
+    }
+})",
+               MicrosoftStyle);
+
+  verifyFormat(R"(//
+public class Sample {
+  public void Test() {
+    while (true) {
+      preBindEnumerators.RemoveAll(enumerator => !enumerator.MoveNext());
+      CodeThatFollowsLambda();
+      IsWellAligned();
+    }
+  }
+})",
+               GoogleStyle);
+}
+
+TEST_F(FormatTestCSharp, CSharpLambdasComplexLambdasDontBreakAlignment) {
+  FormatStyle GoogleStyle = getGoogleStyle(FormatStyle::LK_CSharp);
+  FormatStyle MicrosoftStyle = getMicrosoftStyle(FormatStyle::LK_CSharp);
+
+  verifyFormat(R"(//
+public class Test
+{
+    private static void ComplexLambda(BuildReport protoReport)
+    {
+        allSelectedScenes =
+            veryVeryLongCollectionNameThatPutsTheLineLenghtAboveTheThresholds.Where(scene => scene.enabled)
+                .Select(scene => scene.path)
+                .ToArray();
+        if (allSelectedScenes.Count == 0)
+        {
+            return;
+        }
+        Functions();
+        AreWell();
+        Aligned();
+        AfterLambdaBlock();
+    }
+})",
+               MicrosoftStyle);
+
+  verifyFormat(R"(//
+public class Test {
+  private static void ComplexLambda(BuildReport protoReport) {
+    allSelectedScenes = veryVeryLongCollectionNameThatPutsTheLineLenghtAboveTheThresholds
+                            .Where(scene => scene.enabled)
+                            .Select(scene => scene.path)
+                            .ToArray();
+    if (allSelectedScenes.Count == 0) {
+      return;
+    }
+    Functions();
+    AreWell();
+    Aligned();
+    AfterLambdaBlock();
+  }
+})",
+               GoogleStyle);
+}
+
+TEST_F(FormatTestCSharp, CSharpLambdasMulipleLambdasDontBreakAlignment) {
+  FormatStyle GoogleStyle = getGoogleStyle(FormatStyle::LK_CSharp);
+  FormatStyle MicrosoftStyle = getMicrosoftStyle(FormatStyle::LK_CSharp);
+
+  verifyFormat(R"(//
+public class Test
+{
+    private static void MultipleLambdas(BuildReport protoReport)
+    {
+        allSelectedScenes =
+            veryVeryLongCollectionNameThatPutsTheLineLenghtAboveTheThresholds.Where(scene => scene.enabled)
+                .Select(scene => scene.path)
+                .ToArray();
+        preBindEnumerators.RemoveAll(enumerator => !enumerator.MoveNext());
+        if (allSelectedScenes.Count == 0)
+        {
+            return;
+        }
+        Functions();
+        AreWell();
+        Aligned();
+        AfterLambdaBlock();
+    }
+})",
+               MicrosoftStyle);
+
+  verifyFormat(R"(//
+public class Test {
+  private static void MultipleLambdas(BuildReport protoReport) {
+    allSelectedScenes = veryVeryLongCollectionNameThatPutsTheLineLenghtAboveTheThresholds
+                            .Where(scene => scene.enabled)
+                            .Select(scene => scene.path)
+                            .ToArray();
+    preBindEnumerators.RemoveAll(enumerator => !enumerator.MoveNext());
+    if (allSelectedScenes.Count == 0) {
+      return;
+    }
+    Functions();
+    AreWell();
+    Aligned();
+    AfterLambdaBlock();
+  }
+})",
+               GoogleStyle);
+}
+
 TEST_F(FormatTestCSharp, CSharpObjectInitializers) {
   FormatStyle Style = getGoogleStyle(FormatStyle::LK_CSharp);
 
@@ -837,9 +960,11 @@ TEST_F(FormatTestCSharp, CSharpPropertyAccessors) {
   verifyFormat("int Value { get; } = 0", Style);
   verifyFormat("int Value { set }", Style);
   verifyFormat("int Value { set; }", Style);
+  verifyFormat("int Value { init; }", Style);
   verifyFormat("int Value { internal set; }", Style);
   verifyFormat("int Value { set; } = 0", Style);
   verifyFormat("int Value { get; set }", Style);
+  verifyFormat("int Value { get; init; }", Style);
   verifyFormat("int Value { set; get }", Style);
   verifyFormat("int Value { get; private set; }", Style);
   verifyFormat("int Value { get; set; }", Style);
@@ -851,6 +976,18 @@ TEST_F(FormatTestCSharp, CSharpPropertyAccessors) {
 public string Name {
   get => _name;
   set => _name = value;
+})",
+               Style);
+  verifyFormat(R"(//
+public string Name {
+  init => _name = value;
+  get => _name;
+})",
+               Style);
+  verifyFormat(R"(//
+public string Name {
+  set => _name = value;
+  get => _name;
 })",
                Style);
 
@@ -939,6 +1076,26 @@ public class SaleItem
     public decimal Price { get; set; }
 })",
                MicrosoftStyle);
+}
+
+TEST_F(FormatTestCSharp, DefaultLiteral) {
+  FormatStyle Style = getGoogleStyle(FormatStyle::LK_CSharp);
+
+  verifyFormat(
+      "T[] InitializeArray<T>(int length, T initialValue = default) {}", Style);
+  verifyFormat("System.Numerics.Complex fillValue = default;", Style);
+  verifyFormat("int Value { get } = default;", Style);
+  verifyFormat("int Value { get } = default!;", Style);
+  verifyFormat(R"(//
+public record Person {
+  public string GetInit { get; init; } = default!;
+};)",
+               Style);
+  verifyFormat(R"(//
+public record Person {
+  public string GetSet { get; set; } = default!;
+};)",
+               Style);
 }
 
 TEST_F(FormatTestCSharp, CSharpSpaces) {
@@ -1098,6 +1255,328 @@ class A {
   int f(int where) {}
 };)",
                getGoogleStyle(FormatStyle::LK_Cpp));
+}
+
+TEST_F(FormatTestCSharp, CSharpAfterEnum) {
+  FormatStyle Style = getGoogleStyle(FormatStyle::LK_CSharp);
+  Style.BreakBeforeBraces = FormatStyle::BS_Custom;
+  Style.BraceWrapping.AfterEnum = false;
+  Style.AllowShortEnumsOnASingleLine = false;
+
+  verifyFormat("enum MyEnum {\n"
+               "  Foo,\n"
+               "  Bar,\n"
+               "}",
+               Style);
+  verifyFormat("internal enum MyEnum {\n"
+               "  Foo,\n"
+               "  Bar,\n"
+               "}",
+               Style);
+  verifyFormat("public enum MyEnum {\n"
+               "  Foo,\n"
+               "  Bar,\n"
+               "}",
+               Style);
+  verifyFormat("protected enum MyEnum {\n"
+               "  Foo,\n"
+               "  Bar,\n"
+               "}",
+               Style);
+  verifyFormat("private enum MyEnum {\n"
+               "  Foo,\n"
+               "  Bar,\n"
+               "}",
+               Style);
+
+  Style.BraceWrapping.AfterEnum = true;
+  Style.AllowShortEnumsOnASingleLine = false;
+
+  verifyFormat("enum MyEnum\n"
+               "{\n"
+               "  Foo,\n"
+               "  Bar,\n"
+               "}",
+               Style);
+  verifyFormat("internal enum MyEnum\n"
+               "{\n"
+               "  Foo,\n"
+               "  Bar,\n"
+               "}",
+               Style);
+  verifyFormat("public enum MyEnum\n"
+               "{\n"
+               "  Foo,\n"
+               "  Bar,\n"
+               "}",
+               Style);
+  verifyFormat("protected enum MyEnum\n"
+               "{\n"
+               "  Foo,\n"
+               "  Bar,\n"
+               "}",
+               Style);
+  verifyFormat("private enum MyEnum\n"
+               "{\n"
+               "  Foo,\n"
+               "  Bar,\n"
+               "}",
+               Style);
+  verifyFormat("/* Foo */ private enum MyEnum\n"
+               "{\n"
+               "  Foo,\n"
+               "  Bar,\n"
+               "}",
+               Style);
+  verifyFormat("/* Foo */ /* Bar */ private enum MyEnum\n"
+               "{\n"
+               "  Foo,\n"
+               "  Bar,\n"
+               "}",
+               Style);
+}
+
+TEST_F(FormatTestCSharp, CSharpAfterClass) {
+  FormatStyle Style = getGoogleStyle(FormatStyle::LK_CSharp);
+  Style.BreakBeforeBraces = FormatStyle::BS_Custom;
+  Style.BraceWrapping.AfterClass = false;
+
+  verifyFormat("class MyClass {\n"
+               "  int a;\n"
+               "  int b;\n"
+               "}",
+               Style);
+  verifyFormat("internal class MyClass {\n"
+               "  int a;\n"
+               "  int b;\n"
+               "}",
+               Style);
+  verifyFormat("public class MyClass {\n"
+               "  int a;\n"
+               "  int b;\n"
+               "}",
+               Style);
+  verifyFormat("protected class MyClass {\n"
+               "  int a;\n"
+               "  int b;\n"
+               "}",
+               Style);
+  verifyFormat("private class MyClass {\n"
+               "  int a;\n"
+               "  int b;\n"
+               "}",
+               Style);
+
+  verifyFormat("interface Interface {\n"
+               "  int a;\n"
+               "  int b;\n"
+               "}",
+               Style);
+  verifyFormat("internal interface Interface {\n"
+               "  int a;\n"
+               "  int b;\n"
+               "}",
+               Style);
+  verifyFormat("public interface Interface {\n"
+               "  int a;\n"
+               "  int b;\n"
+               "}",
+               Style);
+  verifyFormat("protected interface Interface {\n"
+               "  int a;\n"
+               "  int b;\n"
+               "}",
+               Style);
+  verifyFormat("private interface Interface {\n"
+               "  int a;\n"
+               "  int b;\n"
+               "}",
+               Style);
+
+  Style.BraceWrapping.AfterClass = true;
+
+  verifyFormat("class MyClass\n"
+               "{\n"
+               "  int a;\n"
+               "  int b;\n"
+               "}",
+               Style);
+  verifyFormat("internal class MyClass\n"
+               "{\n"
+               "  int a;\n"
+               "  int b;\n"
+               "}",
+               Style);
+  verifyFormat("public class MyClass\n"
+               "{\n"
+               "  int a;\n"
+               "  int b;\n"
+               "}",
+               Style);
+  verifyFormat("protected class MyClass\n"
+               "{\n"
+               "  int a;\n"
+               "  int b;\n"
+               "}",
+               Style);
+  verifyFormat("private class MyClass\n"
+               "{\n"
+               "  int a;\n"
+               "  int b;\n"
+               "}",
+               Style);
+
+  verifyFormat("interface MyInterface\n"
+               "{\n"
+               "  int a;\n"
+               "  int b;\n"
+               "}",
+               Style);
+  verifyFormat("internal interface MyInterface\n"
+               "{\n"
+               "  int a;\n"
+               "  int b;\n"
+               "}",
+               Style);
+  verifyFormat("public interface MyInterface\n"
+               "{\n"
+               "  int a;\n"
+               "  int b;\n"
+               "}",
+               Style);
+  verifyFormat("protected interface MyInterface\n"
+               "{\n"
+               "  int a;\n"
+               "  int b;\n"
+               "}",
+               Style);
+  verifyFormat("private interface MyInterface\n"
+               "{\n"
+               "  int a;\n"
+               "  int b;\n"
+               "}",
+               Style);
+  verifyFormat("/* Foo */ private interface MyInterface\n"
+               "{\n"
+               "  int a;\n"
+               "  int b;\n"
+               "}",
+               Style);
+  verifyFormat("/* Foo */ /* Bar */ private interface MyInterface\n"
+               "{\n"
+               "  int a;\n"
+               "  int b;\n"
+               "}",
+               Style);
+}
+
+TEST_F(FormatTestCSharp, NamespaceIndentation) {
+  FormatStyle Style = getMicrosoftStyle(FormatStyle::LK_CSharp);
+  Style.NamespaceIndentation = FormatStyle::NI_None;
+
+  verifyFormat("namespace A\n"
+               "{\n"
+               "public interface Name1\n"
+               "{\n"
+               "}\n"
+               "}\n",
+               Style);
+
+  verifyFormat("namespace A.B\n"
+               "{\n"
+               "public interface Name1\n"
+               "{\n"
+               "}\n"
+               "}\n",
+               Style);
+
+  Style.NamespaceIndentation = FormatStyle::NI_Inner;
+
+  verifyFormat("namespace A\n"
+               "{\n"
+               "namespace B\n"
+               "{\n"
+               "    public interface Name1\n"
+               "    {\n"
+               "    }\n"
+               "}\n"
+               "}\n",
+               Style);
+
+  Style.NamespaceIndentation = FormatStyle::NI_All;
+
+  verifyFormat("namespace A.B\n"
+               "{\n"
+               "    public interface Name1\n"
+               "    {\n"
+               "    }\n"
+               "}\n",
+               Style);
+
+  verifyFormat("namespace A\n"
+               "{\n"
+               "    namespace B\n"
+               "    {\n"
+               "        public interface Name1\n"
+               "        {\n"
+               "        }\n"
+               "    }\n"
+               "}\n",
+               Style);
+}
+
+TEST_F(FormatTestCSharp, SwitchExpression) {
+  FormatStyle Style = getMicrosoftStyle(FormatStyle::LK_CSharp);
+  verifyFormat("int x = a switch {\n"
+               "    1 => (0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0),\n"
+               "    2 => 1,\n"
+               "    _ => 2\n"
+               "};\n",
+               Style);
+}
+
+TEST_F(FormatTestCSharp, EmptyShortBlock) {
+  auto Style = getLLVMStyle();
+  Style.AllowShortBlocksOnASingleLine = FormatStyle::SBS_Empty;
+
+  verifyFormat("try {\n"
+               "  doA();\n"
+               "} catch (Exception e) {\n"
+               "  e.printStackTrace();\n"
+               "}\n",
+               Style);
+
+  verifyFormat("try {\n"
+               "  doA();\n"
+               "} catch (Exception e) {}\n",
+               Style);
+}
+
+TEST_F(FormatTestCSharp, ShortFunctions) {
+  FormatStyle Style = getLLVMStyle(FormatStyle::LK_CSharp);
+  Style.NamespaceIndentation = FormatStyle::NI_All;
+  Style.AllowShortFunctionsOnASingleLine = FormatStyle::SFS_Inline;
+  verifyFormat("interface Interface {\n"
+               "  void f() { return; }\n"
+               "};",
+               Style);
+  verifyFormat("public interface Interface {\n"
+               "  void f() { return; }\n"
+               "};",
+               Style);
+  verifyFormat("namespace {\n"
+               "  void f() {\n"
+               "    return;\n"
+               "  }\n"
+               "};",
+               Style);
+  // "union" is not a keyword in C#.
+  verifyFormat("namespace union {\n"
+               "  void f() {\n"
+               "    return;\n"
+               "  }\n"
+               "};",
+               Style);
 }
 
 } // namespace format

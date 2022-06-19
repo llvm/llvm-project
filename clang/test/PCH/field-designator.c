@@ -27,7 +27,7 @@ struct U {
 #endif
 //===----------------------------------------------------------------------===//
 
-void bar() {
+void bar(void) {
   static const struct U plan = { .e = 1 };
 }
 

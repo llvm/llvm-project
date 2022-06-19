@@ -291,5 +291,12 @@ TARGET_BUILTIN(__builtin_s390_vlbrh, "V8UsV8Us", "nc", "vector")
 TARGET_BUILTIN(__builtin_s390_vlbrf, "V4UiV4Ui", "nc", "vector")
 TARGET_BUILTIN(__builtin_s390_vlbrg, "V2ULLiV2ULLi", "nc", "vector")
 
+// NNP-assist facility intrinsics.
+TARGET_BUILTIN(__builtin_s390_vclfnhs, "V4fV8UsIi", "nc", "nnp-assist")
+TARGET_BUILTIN(__builtin_s390_vclfnls, "V4fV8UsIi", "nc", "nnp-assist")
+TARGET_BUILTIN(__builtin_s390_vcrnfs, "V8UsV4fV4fIi", "nc", "nnp-assist")
+TARGET_BUILTIN(__builtin_s390_vcfn, "V8UsV8UsIi", "nc", "nnp-assist")
+TARGET_BUILTIN(__builtin_s390_vcnf, "V8UsV8UsIi", "nc", "nnp-assist")
+
 #undef BUILTIN
 #undef TARGET_BUILTIN

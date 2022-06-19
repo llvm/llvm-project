@@ -1,4 +1,4 @@
-; RUN: opt < %s -disable-basic-aa -cfl-steens-aa -aa-eval -print-all-alias-modref-info 2>&1 | FileCheck %s
+; RUN: opt < %s -aa-pipeline=cfl-steens-aa -passes=aa-eval -print-all-alias-modref-info 2>&1 | FileCheck %s
 ; When merging MustAlias and PartialAlias, merge to PartialAlias
 ; instead of MayAlias.
 
@@ -41,7 +41,7 @@ entry:
   ret i8 %loaded
 }
 
-; Incoming pointer arguments should not be PartialAlias because we do not know their initial state
+; Incoming pointer arguments should not be MayAlias because we do not know their initial state
 ; even if they are nocapture
 ; CHECK: MayAlias:  double* %A, double* %Index
 define void @testr2(double* nocapture readonly %A, double* nocapture readonly %Index) {
@@ -51,5 +51,7 @@ define void @testr2(double* nocapture readonly %A, double* nocapture readonly %I
   %2 = load double, double* %arrayidx25
   %3 = fneg double %1
   %mul26 = fmul double %3, %2
+  load double, double* %A
+  load double, double* %Index
   ret void
 }

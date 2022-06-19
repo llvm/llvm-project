@@ -24,7 +24,7 @@ namespace modernize {
 /// operations do not 'copy' the resource but they 'steal' it.
 /// `std::unique_ptr` uses move semantics instead, which makes the intent of
 /// transferring the resource explicit. This difference between the two smart
-/// pointers requeres to wrap the copy-ctor and assign-operator with
+/// pointers requires wrapping the copy-ctor and assign-operator with
 /// `std::move()`.
 ///
 /// For example, given:

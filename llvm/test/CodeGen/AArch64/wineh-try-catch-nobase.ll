@@ -9,7 +9,7 @@
 ; CHECK:             stp     x29, x30, [sp, #-16]!   // 16-byte Folded Spill
 ; CHECK-NEXT:        .seh_save_fplr_x 16
 ; CHECK-NEXT:        .seh_endprologue
-; CHECK-NEXT:        sub     x0, x29, #16            // =16
+; CHECK-NEXT:        sub     x0, x29, #16
 ; CHECK-NEXT:        mov     x1, xzr
 ; CHECK-NEXT:        bl      "?bb@@YAXPEAHH@Z"
 ; CHECK-NEXT:        adrp    x0, .LBB0_1

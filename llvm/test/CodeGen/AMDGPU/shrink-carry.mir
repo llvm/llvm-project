@@ -1,7 +1,7 @@
 # RUN: llc -march=amdgcn -mcpu=gfx900 -verify-machineinstrs -start-before si-shrink-instructions -stop-before si-late-branch-lowering -o - %s | FileCheck -check-prefix=GCN %s
 
 # GCN-LABEL: name: subbrev{{$}}
-# GCN:       V_SUBBREV_U32_e32 0, undef $vgpr0, implicit-def $vcc, implicit killed $vcc, implicit $exec
+# GCN:       V_SUBBREV_U32_e32 0, undef $vgpr0, implicit-def dead $vcc, implicit killed $vcc, implicit $exec
 
 ---
 name:            subbrev
@@ -26,7 +26,7 @@ body:             |
 ...
 
 # GCN-LABEL: name: subb{{$}}
-# GCN:       V_SUBBREV_U32_e32 0, undef $vgpr0, implicit-def $vcc, implicit killed $vcc, implicit $exec
+# GCN:       V_SUBBREV_U32_e32 0, undef $vgpr0, implicit-def dead $vcc, implicit killed $vcc, implicit $exec
 
 ---
 name:            subb
@@ -51,7 +51,7 @@ body:             |
 ...
 
 # GCN-LABEL: name: addc{{$}}
-# GCN:       V_ADDC_U32_e32 0, undef $vgpr0, implicit-def $vcc, implicit killed $vcc, implicit $exec
+# GCN:       V_ADDC_U32_e32 0, undef $vgpr0, implicit-def dead $vcc, implicit killed $vcc, implicit $exec
 
 ---
 name:            addc
@@ -76,7 +76,7 @@ body:             |
 ...
 
 # GCN-LABEL: name: addc2{{$}}
-# GCN:       V_ADDC_U32_e32 0, undef $vgpr0, implicit-def $vcc, implicit killed $vcc, implicit $exec
+# GCN:       V_ADDC_U32_e32 0, undef $vgpr0, implicit-def dead $vcc, implicit killed $vcc, implicit $exec
 
 ---
 name:            addc2

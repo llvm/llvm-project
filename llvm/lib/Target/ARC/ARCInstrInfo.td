@@ -45,7 +45,6 @@ def SDT_ARCCallSeqStart : SDCallSeqStart<[ SDTCisVT<0, i32>,
 def SDT_ARCCallSeqEnd   : SDCallSeqEnd<[ SDTCisVT<0, i32>,
                                          SDTCisVT<1, i32> ]>;
 
-
 // Global Address.
 def ARCGAWrapper : SDNode<"ARCISD::GAWRAPPER", SDT_ARCmov, []>;
 
@@ -78,6 +77,12 @@ def callseq_start : SDNode<"ISD::CALLSEQ_START", SDT_ARCCallSeqStart,
                            [SDNPHasChain, SDNPOutGlue]>;
 def callseq_end   : SDNode<"ISD::CALLSEQ_END",   SDT_ARCCallSeqEnd,
                            [SDNPHasChain, SDNPOptInGlue, SDNPOutGlue]>;
+
+//===----------------------------------------------------------------------===//
+// Instruction predicates
+//===----------------------------------------------------------------------===//
+
+def HasNorm  :       Predicate<"Subtarget->hasNorm()">;
 
 //===----------------------------------------------------------------------===//
 // Instruction Pattern Stuff
@@ -127,6 +132,19 @@ def STH_FAR : PseudoInstARC<(outs), (ins GPR32:$dst, MEMrlimm:$addr),
 def STB_FAR : PseudoInstARC<(outs), (ins GPR32:$dst, MEMrlimm:$addr),
                              "STB_FAR $dst, $addr",
                              [(truncstorei8 GPR32:$dst, AddrModeFar:$addr)]>;
+
+// TODO: Add `Requires<[HasBitScan]>` predicate to these when available.
+let Defs = [STATUS32] in {
+  def CTLZ : PseudoInstARC<(outs GPR32:$A),
+                           (ins GPR32:$B),
+                           "error.fls $A, $B",
+                           [(set GPR32:$A, (ctlz i32:$B))]>;
+
+  def CTTZ : PseudoInstARC<(outs GPR32:$A),
+                           (ins GPR32:$B),
+                           "error.ffs $A, $B",
+                           [(set GPR32:$A, (cttz i32:$B))]>;
+}
 
 //===----------------------------------------------------------------------===//
 // Instruction Generation multiclasses.
@@ -252,6 +270,19 @@ multiclass MultiPat<SDPatternOperator InFrag,
   def _rrlimm : Pat<(InFrag i32:$B, imm32:$LImm), (RRLImm i32:$B, imm32:$LImm)>;
 }
 
+// NOTE: This could be specialized later with a custom `PrintMethod` for
+//       displaying the aux register name. E.g. `[%count0]` instead of [33].
+def AuxReg : Operand<i32>;
+
+def LR_rs12 : F32_SOP_RS12<0b00100, 0b101010, 0,
+                           (outs GPR32:$B), (ins AuxReg:$C),
+                           "lr\t$B, [$C]", []>;
+def LR_ru6 : F32_SOP_RU6<0b00100, 0b101010, 0,
+                         (outs GPR32:$B), (ins AuxReg:$C),
+                         "lr\t$B, [$C]", []>;
+
+def: Pat<(i32 readcyclecounter), (LR_rs12 0x21) >;  // read timer
+
 // ---------------------------------------------------------------------------
 // Instruction definitions and patterns for 3 operand binary instructions.
 // ---------------------------------------------------------------------------
@@ -276,6 +307,10 @@ defm MPY  : ArcBinaryGEN4Inst<0b011010, "mpy",1>;
 defm MPYM : ArcBinaryGEN4Inst<0b011011, "mpym",1>;
 defm MPYMU : ArcBinaryGEN4Inst<0b011100, "mpymu",1>;
 defm SETEQ : ArcBinaryGEN4Inst<0b111000, "seteq",1>;
+let Uses=[STATUS32], isAsCheapAsAMove=0, isReMaterializable=0 in {
+  defm ADC : ArcBinaryGEN4Inst<0b000001, "adc",1>;
+  defm SBC : ArcBinaryGEN4Inst<0b000011, "sbc">;
+}
 
 // Patterns for 3 operand binary instructions.
 defm : MultiPat<add, ADD_rrr, ADD_rru6, ADD_rrlimm>;
@@ -293,6 +328,11 @@ defm : MultiPat<mul, MPY_rrr, MPY_rru6, MPY_rrlimm>;
 defm : MultiPat<mulhs, MPYM_rrr, MPYM_rru6, MPYM_rrlimm>;
 defm : MultiPat<mulhu, MPYMU_rrr, MPYMU_rru6, MPYMU_rrlimm>;
 
+defm : MultiPat<addc, ADD_f_rrr, ADD_f_rru6, ADD_f_rrlimm>;
+defm : MultiPat<adde, ADC_f_rrr, ADC_f_rru6, ADC_f_rrlimm>;
+defm : MultiPat<subc, SUB_f_rrr, SUB_f_rru6, SUB_f_rrlimm>;
+defm : MultiPat<sube, SBC_f_rrr, SBC_f_rru6, SBC_f_rrlimm>;
+
 // ---------------------------------------------------------------------------
 // Unary Instruction definitions.
 // ---------------------------------------------------------------------------
@@ -301,7 +341,13 @@ defm SEXB : ArcUnaryGEN4Inst<0b000101, "sexb">;
 defm SEXH : ArcUnaryGEN4Inst<0b000110, "sexh">;
 
 // Extension unary instruction definitions.
+defm FFS : ArcUnaryEXT5Inst<0b010010, "ffs">;
 defm FLS : ArcUnaryEXT5Inst<0b010011, "fls">;
+
+let Predicates=[HasNorm] in {
+  defm NORM  : ArcUnaryEXT5Inst<0b000001,"norm">;
+  defm NORMH : ArcUnaryEXT5Inst<0b001000,"normh">;
+}
 
 // General Unary Instruction fragments.
 def : Pat<(sext_inreg i32:$a, i8), (SEXB_rr i32:$a)>;
@@ -337,24 +383,30 @@ def MOV_ru6 : F32_DOP_RU6<0b00100, 0b001010, 0,
                           (outs GPR32:$B), (ins immU6:$U6),
                           "mov\t$B, $U6", []>;
 
+def MOV_f_ru6 : F32_DOP_RU6<0b00100, 0b001010, 1,
+                          (outs GPR32:$B), (ins u6:$U6),
+                          "mov.f\t$B, $U6", []> {
+  let isAsCheapAsAMove=1;
+  let Defs = [STATUS32];
+}
+
 def cmov : PatFrag<(ops node:$op1, node:$op2, node:$cc),
                    (ARCcmov $op1, $op2, $cc)>;
-let Uses = [STATUS32] in {
-  def MOVcc : F32_DOP_CC_RR<0b00100, 0b001010, 0,
-                 (outs GPR32:$B),
-                 (ins GPR32:$C, GPR32:$fval, cmovpred:$cc),
-                 !strconcat("mov.", "$cc\t$B, $C"),
-                 [(set GPR32:$B, (cmov i32:$C, i32:$fval, cmovpred:$cc))]> {
-    let Constraints = "$B = $fval";
-  }
+let Uses = [STATUS32], isAsCheapAsAMove = 1, isPredicable=1,
+	  isReMaterializable = 0, Constraints = "$B = $B2" in {
+  def MOV_cc : F32_DOP_CC_RR<0b00100, 0b001010, 0,
+                 (outs GPR32:$B), (ins GPR32:$C, GPR32:$B2, cmovpred:$cc),
+                 "mov.$cc\t$B, $C",
+                 [(set GPR32:$B, (cmov i32:$C, i32:$B2, cmovpred:$cc))]>;
 
-  def MOVcc_ru6 : F32_SOP_CC_RU6<0b00100, 0b001010, 0,
-                 (outs GPR32:$b), (ins u6:$c, CCOp:$cc, GPR32:$b2),
-                 "mov.$cc\t$b, $c", []> {
-    let isAsCheapAsAMove=0;
-    let isPredicable=1;
-    let isReMaterializable=0;
-    let Constraints="$b2 = $b";
+  def MOV_cc_ru6 : F32_DOP_CC_RU6<0b00100, 0b001010, 0,
+                 (outs GPR32:$B), (ins u6:$C, CCOp:$cc, GPR32:$B2),
+                 "mov.$cc\t$B, $C", []>;
+
+  def MOV_cc_f_ru6 : F32_DOP_CC_RU6<0b00100, 0b001010, 1,
+                    (outs GPR32:$B), (ins u6:$C, CCOp:$cc, GPR32:$B2),
+                    "mov.$cc.f\t$B, $C", []> {
+    let Defs = [STATUS32];
   }
 }
 

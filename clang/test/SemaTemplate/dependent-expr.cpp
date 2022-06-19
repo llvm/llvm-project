@@ -141,15 +141,7 @@ namespace PR45083 {
   using U = float; // expected-error {{different types ('float' vs 'decltype(g<int>())' (aka 'void'))}}
 
   void h(auto a, decltype(g<char>())*) {} // expected-note {{previous}}
-  void h(auto a, void*) {} // expected-error {{redefinition}}
-
-  void i(auto a) {
-    [](auto a, int = ({decltype(a) i; i * 2;})){}(a); // expected-error {{invalid operands to binary expression ('decltype(a)' (aka 'void *') and 'int')}} expected-note {{in instantiation of}}
-  }
-  void use_i() {
-    i(0);
-    i((void*)0); // expected-note {{instantiation of}}
-  }
+  void h(auto a, void *) {}               // expected-error {{redefinition}}
 }
 
 namespace BindingInStmtExpr {

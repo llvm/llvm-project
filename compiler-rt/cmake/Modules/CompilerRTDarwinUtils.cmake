@@ -189,6 +189,8 @@ function(darwin_filter_host_archs input output)
 
   if(ARM_HOST)
     list(REMOVE_ITEM tmp_var i386)
+    list(REMOVE_ITEM tmp_var x86_64)
+    list(REMOVE_ITEM tmp_var x86_64h)
   else()
     list(REMOVE_ITEM tmp_var arm64)
     list(REMOVE_ITEM tmp_var arm64e)
@@ -298,6 +300,14 @@ macro(darwin_add_builtin_library name suffix)
          -target "${LIB_ARCH}-apple-${base_os}${DARWIN_${LIBOS}_BUILTIN_MIN_VER}-simulator")
   endif()
 
+  if ("${COMPILER_RT_ENABLE_MACCATALYST}" AND
+      "${LIB_OS}" MATCHES "^osx$")
+    # Build the macOS builtins with Mac Catalyst support.
+    list(APPEND builtin_cflags
+      -target ${LIB_ARCH}-apple-macos${DARWIN_osx_BUILTIN_MIN_VER}
+      -darwin-target-variant ${LIB_ARCH}-apple-ios13.1-macabi)
+  endif()
+
   set_target_compile_flags(${libname}
     ${sysroot_flag}
     ${DARWIN_${LIB_OS}_BUILTIN_MIN_VER_FLAG}
@@ -405,6 +415,18 @@ macro(darwin_add_builtin_libraries)
                       ../profile/InstrProfilingVersionVar.c)
   foreach (os ${ARGN})
     list_intersect(DARWIN_BUILTIN_ARCHS DARWIN_${os}_BUILTIN_ARCHS BUILTIN_SUPPORTED_ARCH)
+
+    if((arm64 IN_LIST DARWIN_BUILTIN_ARCHS OR arm64e IN_LIST DARWIN_BUILTIN_ARCHS) AND NOT TARGET lse_builtin_symlinks)
+      add_custom_target(
+        lse_builtin_symlinks
+        BYPRODUCTS ${lse_builtins}
+        ${arm64_lse_commands}
+      )
+
+      set(deps_arm64 lse_builtin_symlinks)
+      set(deps_arm64e lse_builtin_symlinks)
+    endif()
+
     foreach (arch ${DARWIN_BUILTIN_ARCHS})
       darwin_find_excluded_builtins_list(${arch}_${os}_EXCLUDED_BUILTINS
                               OS ${os}
@@ -419,6 +441,7 @@ macro(darwin_add_builtin_libraries)
       darwin_add_builtin_library(clang_rt builtins
                               OS ${os}
                               ARCH ${arch}
+                              DEPS ${deps_${arch}}
                               SOURCES ${filtered_sources}
                               CFLAGS ${CFLAGS} -arch ${arch}
                               PARENT_TARGET builtins)
@@ -443,6 +466,7 @@ macro(darwin_add_builtin_libraries)
         darwin_add_builtin_library(clang_rt cc_kext
                                 OS ${os}
                                 ARCH ${arch}
+                                DEPS ${deps_${arch}}
                                 SOURCES ${filtered_sources} ${PROFILE_SOURCES}
                                 CFLAGS ${CFLAGS} -arch ${arch} -mkernel
                                 DEFS KERNEL_USE

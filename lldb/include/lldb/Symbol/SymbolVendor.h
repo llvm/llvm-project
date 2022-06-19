@@ -41,9 +41,7 @@ public:
   SymbolFile *GetSymbolFile() { return m_sym_file_up.get(); }
 
   // PluginInterface protocol
-  ConstString GetPluginName() override;
-
-  uint32_t GetPluginVersion() override;
+  llvm::StringRef GetPluginName() override { return "vendor-default"; }
 
 protected:
   std::unique_ptr<SymbolFile> m_sym_file_up; // A single symbol file. Subclasses

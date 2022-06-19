@@ -3,6 +3,7 @@
 #include "gtest/gtest.h"
 #include <memory>
 
+using namespace mlir;
 using namespace mlir::sparse_tensor;
 
 namespace {
@@ -22,7 +23,8 @@ struct Pattern {
   /// Rather than using these, please use the readable helper constructor
   /// functions below to make tests more readable.
   Pattern(unsigned tensorNum) : kind(Kind::kTensor), tensorNum(tensorNum) {}
-  Pattern(Kind kind, std::shared_ptr<Pattern> e0, std::shared_ptr<Pattern> e1)
+  Pattern(Kind kind, const std::shared_ptr<Pattern> &e0,
+          const std::shared_ptr<Pattern> &e1)
       : kind(kind), e0(e0), e1(e1) {
     assert(kind >= Kind::kMulF);
     assert(e0 && e1);
@@ -38,13 +40,15 @@ static std::shared_ptr<Pattern> tensorPattern(unsigned tensorNum) {
   return std::make_shared<Pattern>(tensorNum);
 }
 
-static std::shared_ptr<Pattern> addfPattern(std::shared_ptr<Pattern> e0,
-                                            std::shared_ptr<Pattern> e1) {
+static std::shared_ptr<Pattern>
+addfPattern(const std::shared_ptr<Pattern> &e0,
+            const std::shared_ptr<Pattern> &e1) {
   return std::make_shared<Pattern>(Kind::kAddF, e0, e1);
 }
 
-static std::shared_ptr<Pattern> mulfPattern(std::shared_ptr<Pattern> e0,
-                                            std::shared_ptr<Pattern> e1) {
+static std::shared_ptr<Pattern>
+mulfPattern(const std::shared_ptr<Pattern> &e0,
+            const std::shared_ptr<Pattern> &e1) {
   return std::make_shared<Pattern>(Kind::kMulF, e0, e1);
 }
 
@@ -84,8 +88,8 @@ protected:
   /// groups of lattice points should be ordered with respect to other groups,
   /// but there is no required ordering within groups.
   bool latPointWithinRange(unsigned s, unsigned p, unsigned n,
-                           std::shared_ptr<Pattern> pattern,
-                           llvm::BitVector bits) {
+                           const std::shared_ptr<Pattern> &pattern,
+                           const BitVector &bits) {
     for (unsigned i = p; i < p + n; ++i) {
       if (compareExpression(merger.lat(merger.set(s)[i]).exp, pattern) &&
           compareBits(s, i, bits))
@@ -96,22 +100,23 @@ protected:
 
   /// Wrapper over latPointWithinRange for readability of tests.
   void expectLatPointWithinRange(unsigned s, unsigned p, unsigned n,
-                                 std::shared_ptr<Pattern> pattern,
-                                 llvm::BitVector bits) {
+                                 const std::shared_ptr<Pattern> &pattern,
+                                 const BitVector &bits) {
     EXPECT_TRUE(latPointWithinRange(s, p, n, pattern, bits));
   }
 
   /// Wrapper over expectLatPointWithinRange for a single lat point.
-  void expectLatPoint(unsigned s, unsigned p, std::shared_ptr<Pattern> pattern,
-                      llvm::BitVector bits) {
+  void expectLatPoint(unsigned s, unsigned p,
+                      const std::shared_ptr<Pattern> &pattern,
+                      const BitVector &bits) {
     EXPECT_TRUE(latPointWithinRange(s, p, 1, pattern, bits));
   }
 
   /// Converts a vector of (loop, tensor) pairs to a bitvector with the
   /// corresponding bits set.
-  llvm::BitVector
-  loopsToBits(std::vector<std::pair<unsigned, unsigned>> loops) {
-    llvm::BitVector testBits = llvm::BitVector(numTensors + 1, false);
+  BitVector
+  loopsToBits(const std::vector<std::pair<unsigned, unsigned>> &loops) {
+    BitVector testBits = BitVector(numTensors + 1, false);
     for (auto l : loops) {
       auto loop = std::get<0>(l);
       auto tensor = std::get<1>(l);
@@ -121,7 +126,7 @@ protected:
   }
 
   /// Returns true if the bits of lattice point p in set s match the given bits.
-  bool compareBits(unsigned s, unsigned p, llvm::BitVector bits) {
+  bool compareBits(unsigned s, unsigned p, const BitVector &bits) {
     return merger.lat(merger.set(s)[p]).bits == bits;
   }
 
@@ -131,43 +136,78 @@ protected:
   }
 
   /// Compares expressions for equality. Equality is defined recursively as:
-  /// - Two expressions can only be equal if they have the same Kind.
-  /// - Two binary expressions are equal if they have the same Kind and their
-  ///     children are equal.
-  /// - Expressions with Kind invariant or tensor are equal if they have the
-  ///     same expression id.
-  bool compareExpression(unsigned e, std::shared_ptr<Pattern> pattern) {
+  /// - Operations are equal if they have the same kind and children.
+  /// - Leaf tensors are equal if they refer to the same tensor.
+  bool compareExpression(unsigned e, const std::shared_ptr<Pattern> &pattern) {
     auto tensorExp = merger.exp(e);
     if (tensorExp.kind != pattern->kind)
       return false;
-    assert(tensorExp.kind != Kind::kInvariant &&
-           "Invariant comparison not yet supported");
     switch (tensorExp.kind) {
-    case Kind::kTensor:
+    // Leaf.
+    case kTensor:
       return tensorExp.tensor == pattern->tensorNum;
-    case Kind::kAbsF:
-    case Kind::kCeilF:
-    case Kind::kFloorF:
-    case Kind::kNegF:
-    case Kind::kNegI:
+    case kInvariant:
+    case kIndex:
+      llvm_unreachable("invariant not handled yet");
+    // Unary operations.
+    case kAbsF:
+    case kAbsC:
+    case kCeilF:
+    case kFloorF:
+    case kSqrtF:
+    case kSqrtC:
+    case kExpm1F:
+    case kExpm1C:
+    case kLog1pF:
+    case kLog1pC:
+    case kSinF:
+    case kSinC:
+    case kTanhF:
+    case kTanhC:
+    case kNegF:
+    case kNegC:
+    case kNegI:
+    case kTruncF:
+    case kExtF:
+    case kCastFS:
+    case kCastFU:
+    case kCastSF:
+    case kCastUF:
+    case kCastS:
+    case kCastU:
+    case kCastIdx:
+    case kTruncI:
+    case kCIm:
+    case kCRe:
+    case kBitCast:
+    case kBinaryBranch:
+    case kUnary:
+    case kShlI:
+    case kBinary:
       return compareExpression(tensorExp.children.e0, pattern->e0);
-    case Kind::kMulF:
-    case Kind::kMulI:
-    case Kind::kDivF:
-    case Kind::kDivS:
-    case Kind::kDivU:
-    case Kind::kAddF:
-    case Kind::kAddI:
-    case Kind::kSubF:
-    case Kind::kSubI:
-    case Kind::kAndI:
-    case Kind::kOrI:
-    case Kind::kXorI:
+    // Binary operations.
+    case kMulF:
+    case kMulC:
+    case kMulI:
+    case kDivF:
+    case kDivC:
+    case kDivS:
+    case kDivU:
+    case kAddF:
+    case kAddC:
+    case kAddI:
+    case kSubF:
+    case kSubC:
+    case kSubI:
+    case kAndI:
+    case kOrI:
+    case kXorI:
+    case kShrS:
+    case kShrU:
       return compareExpression(tensorExp.children.e0, pattern->e0) &&
              compareExpression(tensorExp.children.e1, pattern->e1);
-    default:
-      llvm_unreachable("Unhandled Kind");
     }
+    llvm_unreachable("unexpected kind");
   }
 
   unsigned numTensors;
@@ -198,7 +238,7 @@ protected:
   }
 };
 
-} // anonymous namespace
+} // namespace
 
 /// Vector addition of 2 vectors, i.e.:
 ///   a(i) = b(i) + c(i)

@@ -35,7 +35,7 @@ class MSP430AsmBackend : public MCAsmBackend {
 public:
   MSP430AsmBackend(const MCSubtargetInfo &STI, uint8_t OSABI)
       : MCAsmBackend(support::little), OSABI(OSABI) {}
-  ~MSP430AsmBackend() override {}
+  ~MSP430AsmBackend() override = default;
 
   void applyFixup(const MCAssembler &Asm, const MCFixup &Fixup,
                   const MCValue &Target, MutableArrayRef<char> Data,
@@ -90,7 +90,8 @@ public:
     return Infos[Kind - FirstTargetFixupKind];
   }
 
-  bool writeNopData(raw_ostream &OS, uint64_t Count) const override;
+  bool writeNopData(raw_ostream &OS, uint64_t Count,
+                    const MCSubtargetInfo *STI) const override;
 };
 
 uint64_t MSP430AsmBackend::adjustFixupValue(const MCFixup &Fixup,
@@ -147,7 +148,8 @@ void MSP430AsmBackend::applyFixup(const MCAssembler &Asm, const MCFixup &Fixup,
   }
 }
 
-bool MSP430AsmBackend::writeNopData(raw_ostream &OS, uint64_t Count) const {
+bool MSP430AsmBackend::writeNopData(raw_ostream &OS, uint64_t Count,
+                                    const MCSubtargetInfo *STI) const {
   if ((Count % 2) != 0)
     return false;
 

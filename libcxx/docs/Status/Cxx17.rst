@@ -40,7 +40,7 @@ Paper Status
 
 .. note::
 
-   .. [#note-P0433] P0433: So far, only the ``<string>``, sequence containers, container adaptors and ``<regex>`` portions of P0433 have been implemented.
+   .. [#note-P0067] P0067: ``std::(to|from)_chars`` for integrals has been available since version 7.0. ``std::to_chars`` for ``float`` and ``double`` since version 14.0 ``std::to_chars`` for ``long double`` uses the implementation for ``double``.
    .. [#note-P0607] P0607: The parts of P0607 that are not done are the ``<regex>`` bits.
 
 
@@ -53,5 +53,3 @@ Library Working Group Issues Status
    :file: Cxx17Issues.csv
    :header-rows: 1
    :widths: auto
-
-Last Updated: 17-Nov-2020

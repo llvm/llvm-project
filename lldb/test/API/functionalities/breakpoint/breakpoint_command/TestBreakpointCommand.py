@@ -14,17 +14,14 @@ import side_effect
 class BreakpointCommandTestCase(TestBase):
 
     NO_DEBUG_INFO_TESTCASE = True
-    mydir = TestBase.compute_mydir(__file__)
 
     @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr24528")
-    @skipIfReproducer # side_effect bypasses reproducer
-    def not_test_breakpoint_command_sequence(self):
+    def test_breakpoint_command_sequence(self):
         """Test a sequence of breakpoint command add, list, and delete."""
         self.build()
         self.breakpoint_command_sequence()
 
     @skipIf(oslist=["windows"], bugnumber="llvm.org/pr44431")
-    @skipIfReproducer # side_effect bypasses reproducer
     def test_script_parameters(self):
         """Test a sequence of breakpoint command add, list, and delete."""
         self.build()
@@ -244,8 +241,7 @@ class BreakpointCommandTestCase(TestBase):
                              'stop reason = breakpoint'])
 
         # The breakpoint should have a hit count of 2.
-        self.expect("breakpoint list -f", BREAKPOINT_HIT_TWICE,
-                    substrs=['resolved, hit count = 2'])
+        lldbutil.check_breakpoint(self, bpno = 1, expected_hit_count = 2)
 
     def breakpoint_command_script_parameters(self):
         """Test that the frame and breakpoint location are being properly passed to the script breakpoint command function."""
@@ -266,7 +262,7 @@ class BreakpointCommandTestCase(TestBase):
 
         self.expect(side_effect.frame, exe=False, startstr="frame #0:")
         self.expect(side_effect.bp_loc, exe=False,
-                patterns=["1.* where = .*main .* resolved, hit count = 1"])
+                patterns=["1.* where = .*main .* resolved,( hardware,)? hit count = 1"])
 
     def breakpoint_commands_on_creation(self):
         """Test that setting breakpoint commands when creating the breakpoint works"""
@@ -286,6 +282,34 @@ class BreakpointCommandTestCase(TestBase):
         self.assertEqual(com_list.GetStringAtIndex(1), "thread list", "Next thread list")
         self.assertEqual(com_list.GetStringAtIndex(2), "continue", "Last continue")
 
+    def test_add_commands_by_breakpoint_name(self):
+        """Make sure that when you specify a breakpoint name to "break command add"
+           it gets added to all the breakpoints marked with that name."""
+        self.build()
+        target = self.createTestTarget()
+
+        bp_ids = []
+        bp_names = ["main", "not_here", "main"]
+        for bp_name in bp_names:
+            bp = target.BreakpointCreateByName(bp_name)
+            bp.AddName("MyBKPTS")
+            bp_ids.append(bp.GetID())
+        # First do it with a script one-liner:
+        self.runCmd("breakpoint command add -s py -o 'print(\"some command\")' MyBKPTS")
+        for id in bp_ids:
+            self.expect("breakpoint command list {0}".format(id),
+                        patterns=["some command"])
+        # Now do the same thing with a python function:
+        import side_effect
+        self.runCmd("command script import --allow-reload ./bktptcmd.py")
+
+        self.runCmd("breakpoint command add --python-function bktptcmd.function MyBKPTS")
+        for id in bp_ids:
+            self.expect("breakpoint command list {0}".format(id),
+                        patterns=["bktptcmd.function"])
+        
+        
+
     def test_breakpoint_delete_disabled(self):
         """Test 'break delete --disabled' works"""
         self.build()
@@ -302,7 +326,7 @@ class BreakpointCommandTestCase(TestBase):
         bp_id_1 = bp_1.GetID()
         bp_id_2 = bp_2.GetID()
         bp_id_3 = bp_3.GetID()
-        
+
         self.runCmd("breakpoint delete --disabled DeleteMeNot")
 
         bp_1 = target.FindBreakpointByID(bp_id_1)
@@ -313,3 +337,21 @@ class BreakpointCommandTestCase(TestBase):
 
         bp_3 = target.FindBreakpointByID(bp_id_3)
         self.assertTrue(bp_3.IsValid(), "DeleteMeNot didn't protect disabled breakpoint 3")
+
+        # Reset the first breakpoint, disable it, and do this again with no protected name:
+        bp_1 = target.BreakpointCreateByName("main")
+
+        bp_1.SetEnabled(False)
+
+        bp_id_1 = bp_1.GetID()
+
+        self.runCmd("breakpoint delete --disabled")
+
+        bp_1 = target.FindBreakpointByID(bp_id_1)
+        self.assertFalse(bp_1.IsValid(), "Didn't delete disabled breakpoint 1")
+
+        bp_2 = target.FindBreakpointByID(bp_id_2)
+        self.assertTrue(bp_2.IsValid(), "Deleted enabled breakpoint 2")
+
+        bp_3 = target.FindBreakpointByID(bp_id_3)
+        self.assertFalse(bp_3.IsValid(), "Didn't delete disabled breakpoint 3")

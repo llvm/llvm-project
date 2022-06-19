@@ -20,5 +20,5 @@ body: |
   ; CHECK: [[@LINE+1]]:58: use of invalid tied-def operand index '300'; instruction has only 6 operands
     INLINEASM &"$foo", 1, 2818058, def $rdi, 2147483657, killed $rdi(tied-def 300)
     $rax = COPY killed $rdi
-    RETQ killed $rax
+    RET64 killed $rax
 ...

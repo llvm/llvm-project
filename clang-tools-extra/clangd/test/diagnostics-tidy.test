@@ -8,6 +8,9 @@
 # CHECK-NEXT:    "diagnostics": [
 # CHECK-NEXT:      {
 # CHECK-NEXT:        "code": "bugprone-sizeof-expression",
+# CHECK-NEXT:        "codeDescription": {
+# CHECK-NEXT:          "href": "https://clang.llvm.org/extra/clang-tidy/checks/bugprone-sizeof-expression.html"
+# CHECK-NEXT:        },
 # CHECK-NEXT:        "message": "Suspicious usage of 'sizeof(K)'; did you mean 'K'?",
 # CHECK-NEXT:        "range": {
 # CHECK-NEXT:          "end": {

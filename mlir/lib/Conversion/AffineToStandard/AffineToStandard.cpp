@@ -15,13 +15,11 @@
 
 #include "../PassDetail.h"
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
+#include "mlir/Dialect/Affine/Utils.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/SCF/SCF.h"
-#include "mlir/Dialect/StandardOps/IR/Ops.h"
-#include "mlir/Dialect/Vector/VectorOps.h"
-#include "mlir/IR/AffineExprVisitor.h"
+#include "mlir/Dialect/Vector/IR/VectorOps.h"
 #include "mlir/IR/BlockAndValueMapping.h"
-#include "mlir/IR/Builders.h"
 #include "mlir/IR/IntegerSet.h"
 #include "mlir/IR/MLIRContext.h"
 #include "mlir/Pass/Pass.h"
@@ -31,232 +29,28 @@
 using namespace mlir;
 using namespace mlir::vector;
 
-namespace {
-/// Visit affine expressions recursively and build the sequence of operations
-/// that correspond to it.  Visitation functions return an Value of the
-/// expression subtree they visited or `nullptr` on error.
-class AffineApplyExpander
-    : public AffineExprVisitor<AffineApplyExpander, Value> {
-public:
-  /// This internal class expects arguments to be non-null, checks must be
-  /// performed at the call site.
-  AffineApplyExpander(OpBuilder &builder, ValueRange dimValues,
-                      ValueRange symbolValues, Location loc)
-      : builder(builder), dimValues(dimValues), symbolValues(symbolValues),
-        loc(loc) {}
-
-  template <typename OpTy>
-  Value buildBinaryExpr(AffineBinaryOpExpr expr) {
-    auto lhs = visit(expr.getLHS());
-    auto rhs = visit(expr.getRHS());
-    if (!lhs || !rhs)
-      return nullptr;
-    auto op = builder.create<OpTy>(loc, lhs, rhs);
-    return op.getResult();
-  }
-
-  Value visitAddExpr(AffineBinaryOpExpr expr) {
-    return buildBinaryExpr<AddIOp>(expr);
-  }
-
-  Value visitMulExpr(AffineBinaryOpExpr expr) {
-    return buildBinaryExpr<MulIOp>(expr);
-  }
-
-  /// Euclidean modulo operation: negative RHS is not allowed.
-  /// Remainder of the euclidean integer division is always non-negative.
-  ///
-  /// Implemented as
-  ///
-  ///     a mod b =
-  ///         let remainder = srem a, b;
-  ///             negative = a < 0 in
-  ///         select negative, remainder + b, remainder.
-  Value visitModExpr(AffineBinaryOpExpr expr) {
-    auto rhsConst = expr.getRHS().dyn_cast<AffineConstantExpr>();
-    if (!rhsConst) {
-      emitError(
-          loc,
-          "semi-affine expressions (modulo by non-const) are not supported");
-      return nullptr;
-    }
-    if (rhsConst.getValue() <= 0) {
-      emitError(loc, "modulo by non-positive value is not supported");
-      return nullptr;
-    }
-
-    auto lhs = visit(expr.getLHS());
-    auto rhs = visit(expr.getRHS());
-    assert(lhs && rhs && "unexpected affine expr lowering failure");
-
-    Value remainder = builder.create<SignedRemIOp>(loc, lhs, rhs);
-    Value zeroCst = builder.create<ConstantIndexOp>(loc, 0);
-    Value isRemainderNegative =
-        builder.create<CmpIOp>(loc, CmpIPredicate::slt, remainder, zeroCst);
-    Value correctedRemainder = builder.create<AddIOp>(loc, remainder, rhs);
-    Value result = builder.create<SelectOp>(loc, isRemainderNegative,
-                                            correctedRemainder, remainder);
-    return result;
-  }
-
-  /// Floor division operation (rounds towards negative infinity).
-  ///
-  /// For positive divisors, it can be implemented without branching and with a
-  /// single division operation as
-  ///
-  ///        a floordiv b =
-  ///            let negative = a < 0 in
-  ///            let absolute = negative ? -a - 1 : a in
-  ///            let quotient = absolute / b in
-  ///                negative ? -quotient - 1 : quotient
-  Value visitFloorDivExpr(AffineBinaryOpExpr expr) {
-    auto rhsConst = expr.getRHS().dyn_cast<AffineConstantExpr>();
-    if (!rhsConst) {
-      emitError(
-          loc,
-          "semi-affine expressions (division by non-const) are not supported");
-      return nullptr;
-    }
-    if (rhsConst.getValue() <= 0) {
-      emitError(loc, "division by non-positive value is not supported");
-      return nullptr;
-    }
-
-    auto lhs = visit(expr.getLHS());
-    auto rhs = visit(expr.getRHS());
-    assert(lhs && rhs && "unexpected affine expr lowering failure");
-
-    Value zeroCst = builder.create<ConstantIndexOp>(loc, 0);
-    Value noneCst = builder.create<ConstantIndexOp>(loc, -1);
-    Value negative =
-        builder.create<CmpIOp>(loc, CmpIPredicate::slt, lhs, zeroCst);
-    Value negatedDecremented = builder.create<SubIOp>(loc, noneCst, lhs);
-    Value dividend =
-        builder.create<SelectOp>(loc, negative, negatedDecremented, lhs);
-    Value quotient = builder.create<SignedDivIOp>(loc, dividend, rhs);
-    Value correctedQuotient = builder.create<SubIOp>(loc, noneCst, quotient);
-    Value result =
-        builder.create<SelectOp>(loc, negative, correctedQuotient, quotient);
-    return result;
-  }
-
-  /// Ceiling division operation (rounds towards positive infinity).
-  ///
-  /// For positive divisors, it can be implemented without branching and with a
-  /// single division operation as
-  ///
-  ///     a ceildiv b =
-  ///         let negative = a <= 0 in
-  ///         let absolute = negative ? -a : a - 1 in
-  ///         let quotient = absolute / b in
-  ///             negative ? -quotient : quotient + 1
-  Value visitCeilDivExpr(AffineBinaryOpExpr expr) {
-    auto rhsConst = expr.getRHS().dyn_cast<AffineConstantExpr>();
-    if (!rhsConst) {
-      emitError(loc) << "semi-affine expressions (division by non-const) are "
-                        "not supported";
-      return nullptr;
-    }
-    if (rhsConst.getValue() <= 0) {
-      emitError(loc, "division by non-positive value is not supported");
-      return nullptr;
-    }
-    auto lhs = visit(expr.getLHS());
-    auto rhs = visit(expr.getRHS());
-    assert(lhs && rhs && "unexpected affine expr lowering failure");
-
-    Value zeroCst = builder.create<ConstantIndexOp>(loc, 0);
-    Value oneCst = builder.create<ConstantIndexOp>(loc, 1);
-    Value nonPositive =
-        builder.create<CmpIOp>(loc, CmpIPredicate::sle, lhs, zeroCst);
-    Value negated = builder.create<SubIOp>(loc, zeroCst, lhs);
-    Value decremented = builder.create<SubIOp>(loc, lhs, oneCst);
-    Value dividend =
-        builder.create<SelectOp>(loc, nonPositive, negated, decremented);
-    Value quotient = builder.create<SignedDivIOp>(loc, dividend, rhs);
-    Value negatedQuotient = builder.create<SubIOp>(loc, zeroCst, quotient);
-    Value incrementedQuotient = builder.create<AddIOp>(loc, quotient, oneCst);
-    Value result = builder.create<SelectOp>(loc, nonPositive, negatedQuotient,
-                                            incrementedQuotient);
-    return result;
-  }
-
-  Value visitConstantExpr(AffineConstantExpr expr) {
-    auto valueAttr =
-        builder.getIntegerAttr(builder.getIndexType(), expr.getValue());
-    auto op =
-        builder.create<ConstantOp>(loc, builder.getIndexType(), valueAttr);
-    return op.getResult();
-  }
-
-  Value visitDimExpr(AffineDimExpr expr) {
-    assert(expr.getPosition() < dimValues.size() &&
-           "affine dim position out of range");
-    return dimValues[expr.getPosition()];
-  }
-
-  Value visitSymbolExpr(AffineSymbolExpr expr) {
-    assert(expr.getPosition() < symbolValues.size() &&
-           "symbol dim position out of range");
-    return symbolValues[expr.getPosition()];
-  }
-
-private:
-  OpBuilder &builder;
-  ValueRange dimValues;
-  ValueRange symbolValues;
-
-  Location loc;
-};
-} // namespace
-
-/// Create a sequence of operations that implement the `expr` applied to the
-/// given dimension and symbol values.
-mlir::Value mlir::expandAffineExpr(OpBuilder &builder, Location loc,
-                                   AffineExpr expr, ValueRange dimValues,
-                                   ValueRange symbolValues) {
-  return AffineApplyExpander(builder, dimValues, symbolValues, loc).visit(expr);
-}
-
-/// Create a sequence of operations that implement the `affineMap` applied to
-/// the given `operands` (as it it were an AffineApplyOp).
-Optional<SmallVector<Value, 8>> mlir::expandAffineMap(OpBuilder &builder,
-                                                      Location loc,
-                                                      AffineMap affineMap,
-                                                      ValueRange operands) {
-  auto numDims = affineMap.getNumDims();
-  auto expanded = llvm::to_vector<8>(
-      llvm::map_range(affineMap.getResults(),
-                      [numDims, &builder, loc, operands](AffineExpr expr) {
-                        return expandAffineExpr(builder, loc, expr,
-                                                operands.take_front(numDims),
-                                                operands.drop_front(numDims));
-                      }));
-  if (llvm::all_of(expanded, [](Value v) { return v; }))
-    return expanded;
-  return None;
-}
-
 /// Given a range of values, emit the code that reduces them with "min" or "max"
 /// depending on the provided comparison predicate.  The predicate defines which
 /// comparison to perform, "lt" for "min", "gt" for "max" and is used for the
 /// `cmpi` operation followed by the `select` operation:
 ///
-///   %cond   = cmpi "predicate" %v0, %v1
+///   %cond   = arith.cmpi "predicate" %v0, %v1
 ///   %result = select %cond, %v0, %v1
 ///
 /// Multiple values are scanned in a linear sequence.  This creates a data
 /// dependences that wouldn't exist in a tree reduction, but is easier to
 /// recognize as a reduction by the subsequent passes.
-static Value buildMinMaxReductionSeq(Location loc, CmpIPredicate predicate,
+static Value buildMinMaxReductionSeq(Location loc,
+                                     arith::CmpIPredicate predicate,
                                      ValueRange values, OpBuilder &builder) {
   assert(!llvm::empty(values) && "empty min/max chain");
 
   auto valueIt = values.begin();
   Value value = *valueIt++;
   for (; valueIt != values.end(); ++valueIt) {
-    auto cmpOp = builder.create<CmpIOp>(loc, predicate, value, *valueIt);
-    value = builder.create<SelectOp>(loc, cmpOp.getResult(), value, *valueIt);
+    auto cmpOp = builder.create<arith::CmpIOp>(loc, predicate, value, *valueIt);
+    value = builder.create<arith::SelectOp>(loc, cmpOp.getResult(), value,
+                                            *valueIt);
   }
 
   return value;
@@ -267,7 +61,8 @@ static Value buildMinMaxReductionSeq(Location loc, CmpIPredicate predicate,
 static Value lowerAffineMapMax(OpBuilder &builder, Location loc, AffineMap map,
                                ValueRange operands) {
   if (auto values = expandAffineMap(builder, loc, map, operands))
-    return buildMinMaxReductionSeq(loc, CmpIPredicate::sgt, *values, builder);
+    return buildMinMaxReductionSeq(loc, arith::CmpIPredicate::sgt, *values,
+                                   builder);
   return nullptr;
 }
 
@@ -276,7 +71,8 @@ static Value lowerAffineMapMax(OpBuilder &builder, Location loc, AffineMap map,
 static Value lowerAffineMapMin(OpBuilder &builder, Location loc, AffineMap map,
                                ValueRange operands) {
   if (auto values = expandAffineMap(builder, loc, map, operands))
-    return buildMinMaxReductionSeq(loc, CmpIPredicate::slt, *values, builder);
+    return buildMinMaxReductionSeq(loc, arith::CmpIPredicate::slt, *values,
+                                   builder);
   return nullptr;
 }
 
@@ -356,13 +152,13 @@ public:
     Location loc = op.getLoc();
     Value lowerBound = lowerAffineLowerBound(op, rewriter);
     Value upperBound = lowerAffineUpperBound(op, rewriter);
-    Value step = rewriter.create<ConstantIndexOp>(loc, op.getStep());
+    Value step = rewriter.create<arith::ConstantIndexOp>(loc, op.getStep());
     auto scfForOp = rewriter.create<scf::ForOp>(loc, lowerBound, upperBound,
                                                 step, op.getIterOperands());
     rewriter.eraseBlock(scfForOp.getBody());
-    rewriter.inlineRegionBefore(op.region(), scfForOp.region(),
-                                scfForOp.region().end());
-    rewriter.replaceOp(op, scfForOp.results());
+    rewriter.inlineRegionBefore(op.region(), scfForOp.getRegion(),
+                                scfForOp.getRegion().end());
+    rewriter.replaceOp(op, scfForOp.getResults());
     return success();
   }
 };
@@ -398,9 +194,8 @@ public:
       upperBoundTuple.push_back(upper);
     }
     steps.reserve(op.steps().size());
-    for (Attribute step : op.steps())
-      steps.push_back(rewriter.create<ConstantIndexOp>(
-          loc, step.cast<IntegerAttr>().getInt()));
+    for (int64_t step : op.steps())
+      steps.push_back(rewriter.create<arith::ConstantIndexOp>(loc, step));
 
     // Get the terminator op.
     Operation *affineParOpTerminator = op.getBody()->getTerminator();
@@ -411,9 +206,9 @@ public:
                                                upperBoundTuple, steps,
                                                /*bodyBuilderFn=*/nullptr);
       rewriter.eraseBlock(parOp.getBody());
-      rewriter.inlineRegionBefore(op.region(), parOp.region(),
-                                  parOp.region().end());
-      rewriter.replaceOp(op, parOp.results());
+      rewriter.inlineRegionBefore(op.region(), parOp.getRegion(),
+                                  parOp.getRegion().end());
+      rewriter.replaceOp(op, parOp.getResults());
       return success();
     }
     // Case with affine.parallel with reduction operations/return values.
@@ -425,13 +220,14 @@ public:
       // initialization of the result values.
       Attribute reduction = std::get<0>(pair);
       Type resultType = std::get<1>(pair);
-      Optional<AtomicRMWKind> reductionOp = symbolizeAtomicRMWKind(
-          static_cast<uint64_t>(reduction.cast<IntegerAttr>().getInt()));
+      Optional<arith::AtomicRMWKind> reductionOp =
+          arith::symbolizeAtomicRMWKind(
+              static_cast<uint64_t>(reduction.cast<IntegerAttr>().getInt()));
       assert(reductionOp.hasValue() &&
              "Reduction operation cannot be of None Type");
-      AtomicRMWKind reductionOpValue = reductionOp.getValue();
+      arith::AtomicRMWKind reductionOpValue = reductionOp.getValue();
       identityVals.push_back(
-          getIdentityValue(reductionOpValue, resultType, rewriter, loc));
+          arith::getIdentityValue(reductionOpValue, resultType, rewriter, loc));
     }
     parOp = rewriter.create<scf::ParallelOp>(
         loc, lowerBoundTuple, upperBoundTuple, steps, identityVals,
@@ -439,28 +235,29 @@ public:
 
     //  Copy the body of the affine.parallel op.
     rewriter.eraseBlock(parOp.getBody());
-    rewriter.inlineRegionBefore(op.region(), parOp.region(),
-                                parOp.region().end());
+    rewriter.inlineRegionBefore(op.region(), parOp.getRegion(),
+                                parOp.getRegion().end());
     assert(reductions.size() == affineParOpTerminator->getNumOperands() &&
            "Unequal number of reductions and operands.");
     for (unsigned i = 0, end = reductions.size(); i < end; i++) {
       // For each of the reduction operations get the respective mlir::Value.
-      Optional<AtomicRMWKind> reductionOp =
-          symbolizeAtomicRMWKind(reductions[i].cast<IntegerAttr>().getInt());
+      Optional<arith::AtomicRMWKind> reductionOp =
+          arith::symbolizeAtomicRMWKind(
+              reductions[i].cast<IntegerAttr>().getInt());
       assert(reductionOp.hasValue() &&
              "Reduction Operation cannot be of None Type");
-      AtomicRMWKind reductionOpValue = reductionOp.getValue();
+      arith::AtomicRMWKind reductionOpValue = reductionOp.getValue();
       rewriter.setInsertionPoint(&parOp.getBody()->back());
       auto reduceOp = rewriter.create<scf::ReduceOp>(
           loc, affineParOpTerminator->getOperand(i));
-      rewriter.setInsertionPointToEnd(&reduceOp.reductionOperator().front());
-      Value reductionResult =
-          getReductionOp(reductionOpValue, rewriter, loc,
-                         reduceOp.reductionOperator().front().getArgument(0),
-                         reduceOp.reductionOperator().front().getArgument(1));
+      rewriter.setInsertionPointToEnd(&reduceOp.getReductionOperator().front());
+      Value reductionResult = arith::getReductionOp(
+          reductionOpValue, rewriter, loc,
+          reduceOp.getReductionOperator().front().getArgument(0),
+          reduceOp.getReductionOperator().front().getArgument(1));
       rewriter.create<scf::ReduceReturnOp>(loc, reductionResult);
     }
-    rewriter.replaceOp(op, parOp.results());
+    rewriter.replaceOp(op, parOp.getResults());
     return success();
   }
 };
@@ -475,7 +272,7 @@ public:
 
     // Now we just have to handle the condition logic.
     auto integerSet = op.getIntegerSet();
-    Value zeroConstant = rewriter.create<ConstantIndexOp>(loc, 0);
+    Value zeroConstant = rewriter.create<arith::ConstantIndexOp>(loc, 0);
     SmallVector<Value, 8> operands(op.getOperands());
     auto operandsRef = llvm::makeArrayRef(operands);
 
@@ -492,27 +289,31 @@ public:
                                          operandsRef.drop_front(numDims));
       if (!affResult)
         return failure();
-      auto pred = isEquality ? CmpIPredicate::eq : CmpIPredicate::sge;
+      auto pred =
+          isEquality ? arith::CmpIPredicate::eq : arith::CmpIPredicate::sge;
       Value cmpVal =
-          rewriter.create<CmpIOp>(loc, pred, affResult, zeroConstant);
-      cond =
-          cond ? rewriter.create<AndOp>(loc, cond, cmpVal).getResult() : cmpVal;
+          rewriter.create<arith::CmpIOp>(loc, pred, affResult, zeroConstant);
+      cond = cond
+                 ? rewriter.create<arith::AndIOp>(loc, cond, cmpVal).getResult()
+                 : cmpVal;
     }
     cond = cond ? cond
-                : rewriter.create<ConstantIntOp>(loc, /*value=*/1, /*width=*/1);
+                : rewriter.create<arith::ConstantIntOp>(loc, /*value=*/1,
+                                                        /*width=*/1);
 
     bool hasElseRegion = !op.elseRegion().empty();
     auto ifOp = rewriter.create<scf::IfOp>(loc, op.getResultTypes(), cond,
                                            hasElseRegion);
-    rewriter.inlineRegionBefore(op.thenRegion(), &ifOp.thenRegion().back());
-    rewriter.eraseBlock(&ifOp.thenRegion().back());
+    rewriter.inlineRegionBefore(op.thenRegion(), &ifOp.getThenRegion().back());
+    rewriter.eraseBlock(&ifOp.getThenRegion().back());
     if (hasElseRegion) {
-      rewriter.inlineRegionBefore(op.elseRegion(), &ifOp.elseRegion().back());
-      rewriter.eraseBlock(&ifOp.elseRegion().back());
+      rewriter.inlineRegionBefore(op.elseRegion(),
+                                  &ifOp.getElseRegion().back());
+      rewriter.eraseBlock(&ifOp.getElseRegion().back());
     }
 
     // Replace the Affine IfOp finally.
-    rewriter.replaceOp(op, ifOp.results());
+    rewriter.replaceOp(op, ifOp.getResults());
     return success();
   }
 };
@@ -714,7 +515,7 @@ public:
   }
 };
 
-} // end namespace
+} // namespace
 
 void mlir::populateAffineToStdConversionPatterns(RewritePatternSet &patterns) {
   // clang-format off
@@ -750,8 +551,8 @@ class LowerAffinePass : public ConvertAffineToStandardBase<LowerAffinePass> {
     populateAffineToStdConversionPatterns(patterns);
     populateAffineToVectorConversionPatterns(patterns);
     ConversionTarget target(getContext());
-    target.addLegalDialect<memref::MemRefDialect, scf::SCFDialect,
-                           StandardOpsDialect, VectorDialect>();
+    target.addLegalDialect<arith::ArithmeticDialect, memref::MemRefDialect,
+                           scf::SCFDialect, VectorDialect>();
     if (failed(applyPartialConversion(getOperation(), target,
                                       std::move(patterns))))
       signalPassFailure();

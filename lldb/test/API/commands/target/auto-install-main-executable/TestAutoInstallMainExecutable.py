@@ -12,10 +12,10 @@ from lldbsuite.test import lldbutil
 
 
 class TestAutoInstallMainExecutable(TestBase):
-    mydir = TestBase.compute_mydir(__file__)
     NO_DEBUG_INFO_TESTCASE = True
 
     @skipIfRemote
+    @skipIfWindows # This test is flaky on Windows
     def test_target_auto_install_main_executable(self):
         if lldbgdbserverutils.get_lldb_server_exe() is None:
           self.skipTest("lldb-server not found")

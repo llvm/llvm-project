@@ -154,11 +154,14 @@ public:
     return result;
   }
 
-  void Reset(A *p, void (*del)(A *)) {
+  void Reset(A *p = nullptr) {
     if (p_) {
       deleter_(p_);
     }
     p_ = p;
+  }
+  void Reset(A *p, void (*del)(A *)) {
+    Reset(p);
     deleter_ = del;
   }
 

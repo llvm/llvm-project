@@ -13,8 +13,6 @@ from lldbsuite.test import lldbutil
 
 class ProcessListTestCase(TestBase):
 
-    mydir = TestBase.compute_mydir(__file__)
-
     NO_DEBUG_INFO_TESTCASE = True
 
     @skipIfWindows  # https://bugs.llvm.org/show_bug.cgi?id=43702
@@ -28,10 +26,5 @@ class ProcessListTestCase(TestBase):
         popen = self.spawnSubprocess(exe, args=["arg1", "--arg2", "arg3"])
 
         substrs = [str(popen.pid), "TestProcess arg1 --arg2 arg3"]
-
-        # Because LLDB isn't the one spawning the subprocess, the PID will be
-        # different during replay.
-        if configuration.is_reproducer_replay():
-            substrs.pop(0)
 
         self.expect("platform process list -v", substrs=substrs)

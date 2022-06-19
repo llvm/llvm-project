@@ -20,8 +20,6 @@
 namespace llvm {
 
 template <typename T> class ArrayRef;
-class DataLayout;
-class MachineRegisterInfo;
 class X86TargetLowering;
 
 class X86CallLowering : public CallLowering {

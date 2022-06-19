@@ -14,8 +14,6 @@ from lldbsuite.test import lldbutil
 
 class CppValueCastTestCase(TestBase):
 
-    mydir = TestBase.compute_mydir(__file__)
-
     @skipIf(bugnumber="llvm.org/PR36714")
     @add_test_categories(['pyapi'])
     def test_value_cast_with_virtual_inheritance(self):
@@ -63,8 +61,8 @@ class CppValueCastTestCase(TestBase):
         process = target.LaunchSimple(
             None, None, self.get_process_working_directory())
 
-        self.assertEqual(process.GetState(), lldb.eStateStopped,
-                        PROCESS_STOPPED)
+        self.assertState(process.GetState(), lldb.eStateStopped,
+                         PROCESS_STOPPED)
 
         # Find DerivedA and DerivedB types.
         typeA = target.FindFirstType('DerivedA')

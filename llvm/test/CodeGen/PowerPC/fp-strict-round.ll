@@ -487,12 +487,12 @@ define <2 x float> @fptrunc_v2f32_v2f64(<2 x double> %vf1) {
 ;
 ; P9-LABEL: fptrunc_v2f32_v2f64:
 ; P9:       # %bb.0:
+; P9-NEXT:    xxswapd vs1, v2
 ; P9-NEXT:    xsrsp f0, v2
-; P9-NEXT:    xscvdpspn v3, f0
-; P9-NEXT:    xxswapd vs0, v2
-; P9-NEXT:    xsrsp f0, f0
-; P9-NEXT:    xscvdpspn v2, f0
-; P9-NEXT:    vmrghw v2, v3, v2
+; P9-NEXT:    xsrsp f1, f1
+; P9-NEXT:    xscvdpspn vs0, f0
+; P9-NEXT:    xscvdpspn vs1, f1
+; P9-NEXT:    xxmrghw v2, vs0, vs1
 ; P9-NEXT:    blr
   %res = call <2 x float> @llvm.experimental.constrained.fptrunc.v2f32.v2f64(
                         <2 x double> %vf1,

@@ -11,8 +11,14 @@ function(llvm_ExternalProject_BuildCmd out_var target bin_dir)
     # Use special command for Makefiles to support parallelism.
     set(${out_var} "$(MAKE)" "-C" "${bin_dir}" "${target}" PARENT_SCOPE)
   else()
+    set(tool_args "${LLVM_EXTERNAL_PROJECT_BUILD_TOOL_ARGS}")
+    if(NOT tool_args STREQUAL "")
+      string(CONFIGURE "${tool_args}" tool_args @ONLY)
+      string(PREPEND tool_args "-- ")
+      separate_arguments(tool_args UNIX_COMMAND "${tool_args}")
+    endif()
     set(${out_var} ${CMAKE_COMMAND} --build ${bin_dir} --target ${target}
-                                    --config ${ARG_CONFIGURATION} PARENT_SCOPE)
+                                    --config ${ARG_CONFIGURATION} ${tool_args} PARENT_SCOPE)
   endif()
 endfunction()
 
@@ -90,7 +96,7 @@ function(llvm_ExternalProject_Add name source_dir)
         list(APPEND ARG_TOOLCHAIN_TOOLS llvm-lib)
       else()
         # TODO: These tools don't fully support Mach-O format yet.
-        list(APPEND ARG_TOOLCHAIN_TOOLS llvm-objcopy llvm-strip)
+        list(APPEND ARG_TOOLCHAIN_TOOLS llvm-objcopy llvm-strip llvm-readelf)
       endif()
     endif()
   endif()
@@ -204,6 +210,9 @@ function(llvm_ExternalProject_Add name source_dir)
     if(llvm-strip IN_LIST TOOLCHAIN_TOOLS AND NOT ARG_STRIP_TOOL)
       list(APPEND compiler_args -DCMAKE_STRIP=${LLVM_RUNTIME_OUTPUT_INTDIR}/llvm-strip${CMAKE_EXECUTABLE_SUFFIX})
     endif()
+    if(llvm-readelf IN_LIST TOOLCHAIN_TOOLS)
+      list(APPEND compiler_args -DCMAKE_READELF=${LLVM_RUNTIME_OUTPUT_INTDIR}/llvm-readelf${CMAKE_EXECUTABLE_SUFFIX})
+    endif()
     list(APPEND ARG_DEPENDS ${TOOLCHAIN_TOOLS})
   endif()
 
@@ -241,7 +250,8 @@ function(llvm_ExternalProject_Add name source_dir)
                       -DCMAKE_NM=${CMAKE_NM}
                       -DCMAKE_OBJCOPY=${CMAKE_OBJCOPY}
                       -DCMAKE_OBJDUMP=${CMAKE_OBJDUMP}
-                      -DCMAKE_STRIP=${CMAKE_STRIP})
+                      -DCMAKE_STRIP=${CMAKE_STRIP}
+                      -DCMAKE_READELF=${CMAKE_READELF})
     set(llvm_config_path ${LLVM_CONFIG_PATH})
 
     if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
@@ -268,6 +278,8 @@ function(llvm_ExternalProject_Add name source_dir)
       foreach(type ${flag_types})
         list(APPEND cmake_args ${${type}_flag})
       endforeach()
+    else()
+      set(cmake_args ${ARG_CMAKE_ARGS})
     endif()
   else()
     set(llvm_config_path "$<TARGET_FILE:llvm-config>")
@@ -304,6 +316,8 @@ function(llvm_ExternalProject_Add name source_dir)
                -DPACKAGE_VERSION=${PACKAGE_VERSION}
                -DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}
                -DCMAKE_MAKE_PROGRAM=${CMAKE_MAKE_PROGRAM}
+               -DCMAKE_C_COMPILER_LAUNCHER=${CMAKE_C_COMPILER_LAUNCHER}
+               -DCMAKE_CXX_COMPILER_LAUNCHER=${CMAKE_CXX_COMPILER_LAUNCHER}
                -DCMAKE_EXPORT_COMPILE_COMMANDS=1
                ${cmake_args}
                ${PASSTHROUGH_VARIABLES}

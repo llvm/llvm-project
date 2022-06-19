@@ -13,10 +13,12 @@ multiclass Eq<string name, string help> {
   def : Separate<["--"], name>, Alias<!cast<Joined>(NAME #_EQ)>;
 }
 
+def X : JoinedOrSeparate<["-"], "X">, HelpText<"Specifies the type of ELF, XCOFF, or IR object file to examine. The value must be one of: 32, 64, 32_64, any (default)">;
 def debug_syms : FF<"debug-syms", "Show all symbols, even debugger only">;
 def defined_only : FF<"defined-only", "Show only defined symbols">;
 defm demangle : BB<"demangle", "Demangle C++ symbol names", "Don't demangle symbol names">;
 def dynamic : FF<"dynamic", "Display dynamic symbols instead of normal symbols">;
+def export_symbols : FF<"export-symbols", "Export symbol list for all inputs">;
 def extern_only : FF<"extern-only", "Show only external symbols">;
 defm format : Eq<"format", "Specify output format: bsd (default), posix, sysv, darwin, just-symbols">, MetaVarName<"<format>">;
 def help : FF<"help", "Display this help">;
@@ -48,6 +50,11 @@ def no_dyldinfo : FF<"no-dyldinfo", "Don't add any symbols from the dyldinfo">, 
 def s : F<"s", "Dump only symbols from this segment and section name">, Group<grp_mach_o>;
 def x : F<"x", "Print symbol entry in hex">, Group<grp_mach_o>;
 
+// XCOFF specific options.
+def grp_xcoff_o : OptionGroup<"kind">, HelpText<"llvm-nm XCOFF Specific Options">;
+
+def no_rsrc : FF<"no-rsrc", "Exclude resource file symbols (__rsrc) from the export symbol list.">, Group<grp_xcoff_o>;
+
 def : FF<"just-symbol-name", "Alias for --format=just-symbols">, Alias<format_EQ>, AliasArgs<["just-symbols"]>, Flags<[HelpHidden]>;
 def : FF<"portability", "Alias for --format=posix">, Alias<format_EQ>, AliasArgs<["posix"]>;
 
@@ -70,7 +77,7 @@ def : F<"r", "Alias for --reverse-sort">, Alias<reverse_sort>;
 def : F<"S", "Alias for --print-size">, Alias<print_size>;
 def : JoinedOrSeparate<["-"], "t">, HelpText<"Alias for --radix">, Alias<radix_EQ>, MetaVarName<"<radix>">;
 def : F<"u", "Alias for --undefined-only">, Alias<undefined_only>;
-def : F<"U", "Deprecated alias for --defined-only">, Alias<defined_only>, Flags<[HelpHidden]>;
+def : F<"U", "Alias for --defined-only">, Alias<defined_only>;
 def : F<"v", "Alias for --numeric-sort">, Alias<numeric_sort>;
 def : F<"V", "Alias for --version">, Alias<version>;
-def : F<"W", "Deprecated alias for --no-weak">, Alias<no_weak>, Flags<[HelpHidden]>;
+def : F<"W", "Alias for --no-weak">, Alias<no_weak>;

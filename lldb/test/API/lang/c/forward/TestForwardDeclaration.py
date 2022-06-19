@@ -10,8 +10,6 @@ import lldbsuite.test.lldbutil as lldbutil
 
 class ForwardDeclarationTestCase(TestBase):
 
-    mydir = TestBase.compute_mydir(__file__)
-
     def do_test(self, dictionary=None):
         """Display *bar_ptr when stopped on a function with forward declaration of struct bar."""
         self.build(dictionary=dictionary)
@@ -30,8 +28,7 @@ class ForwardDeclarationTestCase(TestBase):
                              'stop reason = breakpoint'])
 
         # The breakpoint should have a hit count of 1.
-        self.expect("breakpoint list -f", BREAKPOINT_HIT_ONCE,
-                    substrs=[' resolved, hit count = 1'])
+        lldbutil.check_breakpoint(self, bpno = 1, expected_hit_count = 1)
 
         # This should display correctly.
         # Note that the member fields of a = 1 and b = 2 is by design.

@@ -11,7 +11,6 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Debug.h"
-#include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
 #include <cassert>
@@ -37,7 +36,7 @@ LLVM_DUMP_METHOD void StackLayout::print(raw_ostream &OS) {
   }
 }
 
-void StackLayout::addObject(const Value *V, unsigned Size, unsigned Alignment,
+void StackLayout::addObject(const Value *V, unsigned Size, Align Alignment,
                             const StackLifetime::LiveRange &Range) {
   StackObjects.push_back({V, Size, Alignment, Range});
   ObjectAlignments[V] = Alignment;
@@ -45,7 +44,7 @@ void StackLayout::addObject(const Value *V, unsigned Size, unsigned Alignment,
 }
 
 static unsigned AdjustStackOffset(unsigned Offset, unsigned Size,
-                                  unsigned Alignment) {
+                                  Align Alignment) {
   return alignTo(Offset + Size, Alignment) - Size;
 }
 
@@ -62,7 +61,8 @@ void StackLayout::layoutObject(StackObject &Obj) {
   }
 
   LLVM_DEBUG(dbgs() << "Layout: size " << Obj.Size << ", align "
-                    << Obj.Alignment << ", range " << Obj.Range << "\n");
+                    << Obj.Alignment.value() << ", range " << Obj.Range
+                    << "\n");
   assert(Obj.Alignment <= MaxAlignment);
   unsigned Start = AdjustStackOffset(0, Obj.Size, Obj.Alignment);
   unsigned End = Start + Obj.Size;

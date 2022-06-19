@@ -9,7 +9,7 @@
 // This file is shared between AddressSanitizer and ThreadSanitizer
 // run-time libraries.
 //
-// Implemention of fast stack unwinding for Sparc.
+// Implementation of fast stack unwinding for Sparc.
 //===----------------------------------------------------------------------===//
 
 #if defined(__sparc__)

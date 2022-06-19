@@ -1,7 +1,8 @@
 import lldb
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test.decorators import *
-from gdbclientutils import *
+from lldbsuite.test.gdbclientutils import *
+from lldbsuite.test.lldbgdbclient import GDBRemoteTestBase
 
 
 class TestGDBRemoteLoad(GDBRemoteTestBase):
@@ -19,7 +20,6 @@ class TestGDBRemoteLoad(GDBRemoteTestBase):
         self.assertTrue(address.IsValid())
         self.assertEqual(".data", address.GetSection().GetName())
 
-    @skipIfReproducer # Packet log is not populated during replay.
     @expectedFailureAll(archs=["aarch64"], oslist=["freebsd"],
                         bugnumber="llvm.org/pr49414")
     def test_ram_load(self):
@@ -33,7 +33,6 @@ class TestGDBRemoteLoad(GDBRemoteTestBase):
                 ])
 
     @skipIfXmlSupportMissing
-    @skipIfReproducer # Packet log is not populated during replay.
     @expectedFailureAll(archs=["aarch64"], oslist=["freebsd"],
                         bugnumber="llvm.org/pr49414")
     def test_flash_load(self):

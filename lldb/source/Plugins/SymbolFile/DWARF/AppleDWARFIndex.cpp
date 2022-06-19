@@ -16,6 +16,7 @@
 
 using namespace lldb_private;
 using namespace lldb;
+using namespace lldb_private::dwarf;
 
 std::unique_ptr<AppleDWARFIndex> AppleDWARFIndex::Create(
     Module &module, DWARFDataExtractor apple_names,
@@ -75,12 +76,15 @@ void AppleDWARFIndex::GetGlobalVariables(
 }
 
 void AppleDWARFIndex::GetGlobalVariables(
-    const DWARFUnit &cu, llvm::function_ref<bool(DWARFDIE die)> callback) {
+    DWARFUnit &cu, llvm::function_ref<bool(DWARFDIE die)> callback) {
   if (!m_apple_names_up)
     return;
 
+  lldbassert(!cu.GetSymbolFileDWARF().GetDwoNum());
+  const DWARFUnit &non_skeleton_cu = cu.GetNonSkeletonUnit();
   DWARFMappedHash::DIEInfoArray hash_data;
-  m_apple_names_up->AppendAllDIEsInRange(cu.GetOffset(), cu.GetNextUnitOffset(),
+  m_apple_names_up->AppendAllDIEsInRange(non_skeleton_cu.GetOffset(),
+                                         non_skeleton_cu.GetNextUnitOffset(),
                                          hash_data);
   DWARFMappedHash::ExtractDIEArray(hash_data, DIERefCallback(callback));
 }
@@ -119,8 +123,7 @@ void AppleDWARFIndex::GetTypes(
   if (!m_apple_types_up)
     return;
 
-  Log *log = LogChannelDWARF::GetLogIfAny(DWARF_LOG_TYPE_COMPLETION |
-                                          DWARF_LOG_LOOKUPS);
+  Log *log = GetLog(DWARFLog::TypeCompletion | DWARFLog::Lookups);
   const bool has_tag = m_apple_types_up->GetHeader().header_data.ContainsAtom(
       DWARFMappedHash::eAtomTypeTag);
   const bool has_qualified_name_hash =

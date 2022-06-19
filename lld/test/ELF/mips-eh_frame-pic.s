@@ -10,7 +10,7 @@
 # RUN: not ld.lld -shared %t-nopic.o -o /dev/null 2>&1 | FileCheck %s --check-prefix=NOPIC-ERR
 ## Note: ld.bfd can link this file because it rewrites the .eh_frame section to use
 ## relative addressing.
-# NOPIC-ERR: ld.lld: error: can't create dynamic relocation R_MIPS_64 against local symbol in readonly segment
+# NOPIC-ERR: ld.lld: error: relocation R_MIPS_64 cannot be used against local symbol
 
 ## For -fPIC, .eh_frame should contain DW_EH_PE_pcrel | DW_EH_PE_sdata4 values:
 # RUN: llvm-mc -filetype=obj -triple=mips64-unknown-linux --position-independent %s -o %t-pic.o
@@ -25,7 +25,7 @@
 # RUN: not ld.lld -shared %t-nopic32.o -o /dev/null 2>&1 | FileCheck %s --check-prefix=NOPIC32-ERR
 ## Note: ld.bfd can link this file because it rewrites the .eh_frame section to use
 ## relative addressing.
-# NOPIC32-ERR: ld.lld: error: can't create dynamic relocation R_MIPS_32 against local symbol in readonly segment
+# NOPIC32-ERR: ld.lld: error: relocation R_MIPS_32 cannot be used against local symbol
 
 ## For -fPIC, .eh_frame should contain DW_EH_PE_pcrel | DW_EH_PE_sdata4 values:
 # RUN: llvm-mc -filetype=obj -triple=mips-unknown-linux --position-independent %s -o %t-pic32.o

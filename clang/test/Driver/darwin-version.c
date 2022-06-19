@@ -98,6 +98,10 @@
 // RUN:   FileCheck --check-prefix=CHECK-VERSION-WATCHSIM20 %s
 // CHECK-VERSION-WATCHSIM20: "i386-apple-watchos2.0.0-simulator"
 
+// RUN: %clang -target x86_64-apple-driverkit19.0 -c %s -### 2>&1 | \
+// RUN:   FileCheck --check-prefix=CHECK-VERSION-DRIVERKIT190 %s
+// CHECK-VERSION-DRIVERKIT190: "x86_64-apple-driverkit19.0.0"
+
 // Check environment variable gets interpreted correctly
 // RUN: env MACOSX_DEPLOYMENT_TARGET=10.5 IPHONEOS_DEPLOYMENT_TARGET=2.0 \
 // RUN:   %clang -target i686-apple-darwin9 -c %s -### 2>&1 | \
@@ -144,6 +148,15 @@
 // RUN: %clang -target x86_64-apple-watchos4.0 -c %s -### 2>&1 | \
 // RUN: FileCheck --check-prefix=CHECK-VERSION-WATCHOS-TARGET %s
 // CHECK-VERSION-WATCHOS-TARGET: "x86_64-apple-watchos4.0.0-simulator"
+
+// RUN: env DRIVERKIT_DEPLOYMENT_TARGET=19.0 \
+// RUN:   %clang -target x86_64-apple-darwin -c %s -### 2>&1 | \
+// RUN:   FileCheck --check-prefix=CHECK-VERSION-DRIVERKIT %s
+// CHECK-VERSION-DRIVERKIT: "x86_64-apple-driverkit19.0.0"
+//
+// Make sure stdlib is not mistaken
+// RUN: env DRIVERKIT_DEPLOYMENT_TARGET=2.0 \
+// RUN:   %clang -target arm64-apple-darwin -c -x c++ %s -stdlib=libc++ -### 2>&1
 
 // RUN: env MACOSX_DEPLOYMENT_TARGET=1000.1000 \
 // RUN:   %clang -target x86_64-apple-darwin -c %s -### 2>&1 | \

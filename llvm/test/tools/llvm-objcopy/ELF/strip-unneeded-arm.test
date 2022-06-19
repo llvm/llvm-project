@@ -1,0 +1,60 @@
+## Check that llvm-objcopy preserves ARM mapping symbols for relocatable files.
+# RUN: yaml2obj %s -o %t.o -DTYPE=REL
+# RUN: llvm-objcopy --strip-unneeded %t.o %t1.o
+# RUN: llvm-nm -j --special-syms %t1.o | FileCheck %s --match-full-lines
+# RUN: llvm-objcopy --discard-all %t.o %t2.o
+# RUN: llvm-nm -j --special-syms %t2.o | FileCheck %s --match-full-lines
+
+# CHECK:      $a
+# CHECK-NEXT: $a.a
+# CHECK-NEXT: $d
+# CHECK-NEXT: $d.d
+# CHECK-NEXT: $t
+# CHECK-NEXT: $t.t
+# CHECK-NOT:  $x
+
+## A mapping symbol can be deleted if specified explicitly.
+# RUN: llvm-objcopy -w -N '$d*' %t.o %t3.o
+# RUN: llvm-nm --special-syms %t3.o | FileCheck /dev/null --implicit-check-not='$d'
+
+## Mapping symbols are not preserved for executable files
+# RUN: yaml2obj %s -o %t.exec -DTYPE=EXEC
+# RUN: llvm-objcopy --strip-unneeded %t.exec %t1.exec
+# RUN: llvm-nm --special-syms %t1.exec | count 0
+
+# RUN: yaml2obj %s -o %t.so -DTYPE=DYN
+# RUN: llvm-objcopy --strip-unneeded %t.so %t1.so
+# RUN: llvm-nm --special-syms %t1.so | count 0
+
+!ELF
+FileHeader:
+  Class:    ELFCLASS32
+  Data:     ELFDATA2LSB
+  Type:     ET_[[TYPE]]
+  Machine:  EM_ARM
+Sections:
+  - Name: .text
+    Type: SHT_PROGBITS
+Symbols:
+  - Name:     $a
+    Section:  .text
+  - Name:     $aa
+    Section:  .text
+  - Name:     $a.a
+    Section:  .text
+  - Name:     $d
+    Section:  .text
+  - Name:     $dd
+    Section:  .text
+  - Name:     $d.d
+    Section:  .text
+  - Name:     $m
+    Section:  .text
+  - Name:     $t
+    Section:  .text
+  - Name:     $tt
+    Section:  .text
+  - Name:     $t.t
+    Section:  .text
+  - Name:     $x
+    Section:  .text

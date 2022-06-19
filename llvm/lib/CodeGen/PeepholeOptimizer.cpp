@@ -90,7 +90,6 @@
 #include "llvm/Pass.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
-#include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cassert>
 #include <cstdint>
@@ -214,8 +213,9 @@ namespace {
                               const SmallSet<Register, 2> &TargetReg,
                               RecurrenceCycle &RC);
 
-    /// If copy instruction \p MI is a virtual register copy, track it in
-    /// the set \p CopyMIs. If this virtual register was previously seen as a
+    /// If copy instruction \p MI is a virtual register copy or a copy of a
+    /// constant physical register to a virtual register, track it in the
+    /// set \p CopyMIs. If this virtual register was previously seen as a
     /// copy, replace the uses of this copy with the previously seen copy's
     /// destination register.
     bool foldRedundantCopy(MachineInstr &MI,
@@ -626,7 +626,7 @@ bool PeepholeOptimizer::optimizeCmpInstr(MachineInstr &MI) {
   // If this instruction is a comparison against zero and isn't comparing a
   // physical register, we can try to optimize it.
   Register SrcReg, SrcReg2;
-  int CmpMask, CmpValue;
+  int64_t CmpMask, CmpValue;
   if (!TII->analyzeCompare(MI, SrcReg, SrcReg2, CmpMask, CmpValue) ||
       SrcReg.isPhysical() || SrcReg2.isPhysical())
     return false;
@@ -810,7 +810,7 @@ protected:
   unsigned CurrentSrcIdx = 0;   ///< The index of the source being rewritten.
 public:
   Rewriter(MachineInstr &CopyLike) : CopyLike(CopyLike) {}
-  virtual ~Rewriter() {}
+  virtual ~Rewriter() = default;
 
   /// Get the next rewritable source (SrcReg, SrcSubReg) and
   /// the related value that it affects (DstReg, DstSubReg).
@@ -1022,7 +1022,7 @@ public:
       CurrentSrcIdx = -1;
       // Rewrite the operation as a COPY.
       // Get rid of the sub-register index.
-      CopyLike.RemoveOperand(2);
+      CopyLike.removeOperand(2);
       // Morph the operation into a COPY.
       CopyLike.setDesc(TII.get(TargetOpcode::COPY));
       return true;
@@ -1412,7 +1412,7 @@ bool PeepholeOptimizer::foldRedundantCopy(
 
   Register SrcReg = MI.getOperand(1).getReg();
   unsigned SrcSubReg = MI.getOperand(1).getSubReg();
-  if (!SrcReg.isVirtual())
+  if (!SrcReg.isVirtual() && !MRI->isConstantPhysReg(SrcReg))
     return false;
 
   Register DstReg = MI.getOperand(0).getReg();
@@ -1643,8 +1643,8 @@ bool PeepholeOptimizer::runOnMachineFunction(MachineFunction &MF) {
     // without any intervening re-definition of $physreg.
     DenseMap<Register, MachineInstr *> NAPhysToVirtMIs;
 
-    // Set of pairs of virtual registers and their subregs that are copied
-    // from.
+    // Set of copies to virtual registers keyed by source register.  Never
+    // holds any physreg which requires def tracking.
     DenseMap<RegSubRegPair, MachineInstr *> CopySrcMIs;
 
     bool IsLoopHeader = MLI->isLoopHeader(&MBB);

@@ -4,10 +4,11 @@
 define i32 @test(i32 %a, i32 %b) {
 ; CHECK-LABEL: test:
 ; CHECK:       ## %bb.0:
+; CHECK-NEXT:    ## kill: def $esi killed $esi def $rsi
 ; CHECK-NEXT:    ## kill: def $edi killed $edi def $rdi
-; CHECK-NEXT:    leal -1(%rdi), %eax
-; CHECK-NEXT:    addl $1, %esi
-; CHECK-NEXT:    imull %esi, %eax
+; CHECK-NEXT:    leal -1(%rdi), %ecx
+; CHECK-NEXT:    leal 1(%rsi), %eax
+; CHECK-NEXT:    imull %ecx, %eax
 ; CHECK-NEXT:    retq
  %a1 = add i32 %a, -1
  %b1 = add i32 %b, 1

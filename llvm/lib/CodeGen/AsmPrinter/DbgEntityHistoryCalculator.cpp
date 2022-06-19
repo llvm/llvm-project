@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/CodeGen/DbgEntityHistoryCalculator.h"
-#include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallSet.h"
@@ -252,8 +251,8 @@ void DbgValueHistoryMap::trimLocationRanges(
 
     // Now actually remove the entries. Iterate backwards so that our remaining
     // ToRemove indices are valid after each erase.
-    for (auto Itr = ToRemove.rbegin(), End = ToRemove.rend(); Itr != End; ++Itr)
-      HistoryMapEntries.erase(HistoryMapEntries.begin() + *Itr);
+    for (EntryIndex Idx : llvm::reverse(ToRemove))
+      HistoryMapEntries.erase(HistoryMapEntries.begin() + Idx);
   }
 }
 

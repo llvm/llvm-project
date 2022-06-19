@@ -95,16 +95,19 @@ public:
   XCOFF::StorageClass getStorageClass() const {
     return QualName->getStorageClass();
   }
+  XCOFF::VisibilityType getVisibilityType() const {
+    return QualName->getVisibilityType();
+  }
   XCOFF::SymbolType getCSectType() const {
     assert(isCsect() && "Only csect section has symbol type property!");
     return CsectProp->Type;
   }
   MCSymbolXCOFF *getQualNameSymbol() const { return QualName; }
 
-  void PrintSwitchToSection(const MCAsmInfo &MAI, const Triple &T,
+  void printSwitchToSection(const MCAsmInfo &MAI, const Triple &T,
                             raw_ostream &OS,
                             const MCExpr *Subsection) const override;
-  bool UseCodeAlign() const override;
+  bool useCodeAlign() const override;
   bool isVirtualSection() const override;
   StringRef getSymbolTableName() const { return SymbolTableName; }
   bool isMultiSymbolsAllowed() const { return MultiSymbolsAllowed; }
@@ -113,6 +116,7 @@ public:
   Optional<XCOFF::DwarfSectionSubtypeFlags> getDwarfSubtypeFlags() const {
     return DwarfSubtypeFlags;
   }
+  Optional<XCOFF::CsectProperties> getCsectProp() const { return CsectProp; }
 };
 
 } // end namespace llvm

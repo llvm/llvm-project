@@ -309,7 +309,6 @@ static uint32_t g_contained_z31[] = {sve_z31, LLDB_INVALID_REGNUM};
   {                                                                            \
     #vreg, nullptr, 16, 0, lldb::eEncodingVector, lldb::eFormatVectorOfUInt8,  \
         VREG_KIND(vreg), g_contained_##zreg, g_sve_##vreg##_invalidates,       \
-        nullptr, 0                                                             \
   }
 
 // Defines S and D pseudo registers mapping over corresponding vector register
@@ -317,21 +316,20 @@ static uint32_t g_contained_z31[] = {sve_z31, LLDB_INVALID_REGNUM};
   {                                                                            \
     #reg, nullptr, size, 0, lldb::eEncodingIEEE754, lldb::eFormatFloat,        \
         LLDB_KIND(fpu_##reg), g_contained_##zreg, g_sve_##reg##_invalidates,   \
-        nullptr, 0                                                             \
   }
 
 // Defines a Z vector register with 16-byte default size
 #define DEFINE_ZREG(reg)                                                       \
   {                                                                            \
     #reg, nullptr, 16, 0, lldb::eEncodingVector, lldb::eFormatVectorOfUInt8,   \
-        SVE_REG_KIND(reg), nullptr, nullptr, nullptr, 0                        \
+        SVE_REG_KIND(reg), nullptr, nullptr,                                   \
   }
 
 // Defines a P vector register with 2-byte default size
 #define DEFINE_PREG(reg)                                                       \
   {                                                                            \
     #reg, nullptr, 2, 0, lldb::eEncodingVector, lldb::eFormatVectorOfUInt8,    \
-        SVE_REG_KIND(reg), nullptr, nullptr, nullptr, 0                        \
+        SVE_REG_KIND(reg), nullptr, nullptr,                                   \
   }
 
 static lldb_private::RegisterInfo g_register_infos_arm64_sve_le[] = {

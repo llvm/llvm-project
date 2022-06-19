@@ -4,7 +4,8 @@
 // RUN: %clang_cc1 -triple x86_64-mingw32         -fsyntax-only -fms-extensions -verify -std=c++11 -Wunsupported-dll-base-class-template %s
 // RUN: %clang_cc1 -triple i686-windows-itanium   -fsyntax-only -fms-extensions -verify -std=c++11 -Wunsupported-dll-base-class-template -DWI %s
 // RUN: %clang_cc1 -triple x86_64-windows-itanium -fsyntax-only -fms-extensions -verify -std=c++1y -Wunsupported-dll-base-class-template -DWI %s
-// RUN: %clang_cc1 -triple x86_64-scei-ps4        -fsyntax-only -fdeclspec      -verify -std=c++1y -Wunsupported-dll-base-class-template -DWI %s
+// RUN: %clang_cc1 -triple x86_64-scei-ps4        -fsyntax-only -fdeclspec      -verify -std=c++11 -Wunsupported-dll-base-class-template -DWI %s
+// RUN: %clang_cc1 -triple x86_64-sie-ps5         -fsyntax-only -fdeclspec      -verify -std=c++1y -Wunsupported-dll-base-class-template -DWI %s
 
 // Helper structs to make templates more expressive.
 struct ImplicitInst_Exported {};
@@ -181,7 +182,7 @@ template<> __declspec(dllexport) int VarTmpl<ExplicitSpec_Def_Exported> = 1;
 //===----------------------------------------------------------------------===//
 
 // Export function declaration. Check different placements.
-__attribute__((dllexport)) void decl1A(); // Sanity check with __attribute__
+__attribute__((dllexport)) void decl1A(); // Correctness check with __attribute__
 __declspec(dllexport)      void decl1B();
 
 void __attribute__((dllexport)) decl2A();

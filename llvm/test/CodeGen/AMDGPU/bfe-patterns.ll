@@ -1,5 +1,5 @@
-; RUN: llc -march=amdgcn -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefix=GCN -check-prefix=SI %s
-; RUN: llc -march=amdgcn -mcpu=tonga -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefix=GCN -check-prefix=VI %s
+; RUN: llc -march=amdgcn -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefix=GCN %s
+; RUN: llc -march=amdgcn -mcpu=tonga -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefix=GCN %s
 
 ; GCN-LABEL: {{^}}v_ubfe_sub_i32:
 ; GCN: {{buffer|flat}}_load_dword [[SRC:v[0-9]+]]
@@ -24,11 +24,8 @@ define amdgpu_kernel void @v_ubfe_sub_i32(i32 addrspace(1)* %out, i32 addrspace(
 ; GCN: {{buffer|flat}}_load_dword [[WIDTH:v[0-9]+]]
 ; GCN: v_sub_{{[iu]}}32_e32 [[SUB:v[0-9]+]], vcc, 32, [[WIDTH]]
 
-; SI-NEXT: v_lshl_b32_e32 [[SHL:v[0-9]+]], [[SRC]], [[SUB]]
-; SI-NEXT: v_lshr_b32_e32 [[BFE:v[0-9]+]], [[SHL]], [[SUB]]
-
-; VI-NEXT: v_lshlrev_b32_e32 [[SHL:v[0-9]+]], [[SUB]], [[SRC]]
-; VI-NEXT: v_lshrrev_b32_e32 [[BFE:v[0-9]+]], [[SUB]], [[SHL]]
+; GCN-NEXT: v_lshlrev_b32_e32 [[SHL:v[0-9]+]], [[SUB]], [[SRC]]
+; GCN-NEXT: v_lshrrev_b32_e32 [[BFE:v[0-9]+]], [[SUB]], [[SHL]]
 
 ; GCN: [[BFE]]
 ; GCN: [[SHL]]
@@ -48,7 +45,7 @@ define amdgpu_kernel void @v_ubfe_sub_multi_use_shl_i32(i32 addrspace(1)* %out, 
 }
 
 ; GCN-LABEL: {{^}}s_ubfe_sub_i32:
-; GCN: s_load_dwordx2 s{{\[}}[[SRC:[0-9]+]]:[[WIDTH:[0-9]+]]{{\]}}, s[0:1], {{0xb|0x2c}}
+; GCN: s_load_dwordx2 s[[[SRC:[0-9]+]]:[[WIDTH:[0-9]+]]], s[0:1], {{0xb|0x2c}}
 ; GCN: s_sub_i32 [[SUB:s[0-9]+]], 32, s[[WIDTH]]
 ; GCN: s_lshl_b32 [[TMP:s[0-9]+]], s[[SRC]], [[SUB]]
 ; GCN: s_lshr_b32 s{{[0-9]+}}, [[TMP]], [[SUB]]
@@ -63,7 +60,7 @@ define amdgpu_kernel void @s_ubfe_sub_i32(i32 addrspace(1)* %out, i32 %src, i32 
 }
 
 ; GCN-LABEL: {{^}}s_ubfe_sub_multi_use_shl_i32:
-; GCN: s_load_dwordx2 s{{\[}}[[SRC:[0-9]+]]:[[WIDTH:[0-9]+]]{{\]}}, s[0:1], {{0xb|0x2c}}
+; GCN: s_load_dwordx2 s[[[SRC:[0-9]+]]:[[WIDTH:[0-9]+]]], s[0:1], {{0xb|0x2c}}
 ; GCN: s_sub_i32 [[SUB:s[0-9]+]], 32, s[[WIDTH]]
 ; GCN: s_lshl_b32 [[SHL:s[0-9]+]], s[[SRC]], [[SUB]]
 ; GCN: s_lshr_b32 s{{[0-9]+}}, [[SHL]], [[SUB]]
@@ -101,11 +98,8 @@ define amdgpu_kernel void @v_sbfe_sub_i32(i32 addrspace(1)* %out, i32 addrspace(
 ; GCN: {{buffer|flat}}_load_dword [[WIDTH:v[0-9]+]]
 ; GCN: v_sub_{{[iu]}}32_e32 [[SUB:v[0-9]+]], vcc, 32, [[WIDTH]]
 
-; SI-NEXT: v_lshl_b32_e32 [[SHL:v[0-9]+]], [[SRC]], [[SUB]]
-; SI-NEXT: v_ashr_i32_e32 [[BFE:v[0-9]+]], [[SHL]], [[SUB]]
-
-; VI-NEXT: v_lshlrev_b32_e32 [[SHL:v[0-9]+]], [[SUB]], [[SRC]]
-; VI-NEXT: v_ashrrev_i32_e32 [[BFE:v[0-9]+]], [[SUB]], [[SHL]]
+; GCN-NEXT: v_lshlrev_b32_e32 [[SHL:v[0-9]+]], [[SUB]], [[SRC]]
+; GCN-NEXT: v_ashrrev_i32_e32 [[BFE:v[0-9]+]], [[SUB]], [[SHL]]
 
 ; GCN: [[BFE]]
 ; GCN: [[SHL]]
@@ -125,7 +119,7 @@ define amdgpu_kernel void @v_sbfe_sub_multi_use_shl_i32(i32 addrspace(1)* %out, 
 }
 
 ; GCN-LABEL: {{^}}s_sbfe_sub_i32:
-; GCN: s_load_dwordx2 s{{\[}}[[SRC:[0-9]+]]:[[WIDTH:[0-9]+]]{{\]}}, s[0:1], {{0xb|0x2c}}
+; GCN: s_load_dwordx2 s[[[SRC:[0-9]+]]:[[WIDTH:[0-9]+]]], s[0:1], {{0xb|0x2c}}
 ; GCN: s_sub_i32 [[SUB:s[0-9]+]], 32, s[[WIDTH]]
 ; GCN: s_lshl_b32 [[TMP:s[0-9]+]], s[[SRC]], [[SUB]]
 ; GCN: s_ashr_i32 s{{[0-9]+}}, [[TMP]], [[SUB]]
@@ -140,7 +134,7 @@ define amdgpu_kernel void @s_sbfe_sub_i32(i32 addrspace(1)* %out, i32 %src, i32 
 }
 
 ; GCN-LABEL: {{^}}s_sbfe_sub_multi_use_shl_i32:
-; GCN: s_load_dwordx2 s{{\[}}[[SRC:[0-9]+]]:[[WIDTH:[0-9]+]]{{\]}}, s[0:1], {{0xb|0x2c}}
+; GCN: s_load_dwordx2 s[[[SRC:[0-9]+]]:[[WIDTH:[0-9]+]]], s[0:1], {{0xb|0x2c}}
 ; GCN: s_sub_i32 [[SUB:s[0-9]+]], 32, s[[WIDTH]]
 ; GCN: s_lshl_b32 [[SHL:s[0-9]+]], s[[SRC]], [[SUB]]
 ; GCN: s_ashr_i32 s{{[0-9]+}}, [[SHL]], [[SUB]]

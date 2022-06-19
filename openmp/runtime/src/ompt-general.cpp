@@ -295,15 +295,23 @@ ompt_try_start_tool(unsigned int omp_version, const char *runtime_version) {
         OMPT_VERBOSE_INIT_CONTINUED_PRINT("Success. \n");
         OMPT_VERBOSE_INIT_PRINT("Searching for ompt_start_tool in %s... ",
                                 fname);
+        dlerror(); // Clear any existing error
         start_tool = (ompt_start_tool_t)dlsym(h, "ompt_start_tool");
         if (!start_tool) {
-          OMPT_VERBOSE_INIT_CONTINUED_PRINT("Failed: %s\n", dlerror());
+          char *error = dlerror();
+          if (error != NULL) {
+            OMPT_VERBOSE_INIT_CONTINUED_PRINT("Failed: %s\n", error);
+          } else {
+            OMPT_VERBOSE_INIT_CONTINUED_PRINT("Failed: %s\n",
+                                              "ompt_start_tool = NULL");
+          }
         } else
 #elif KMP_OS_WINDOWS
       OMPT_VERBOSE_INIT_PRINT("Opening %s... ", fname);
       HMODULE h = LoadLibrary(fname);
       if (!h) {
-        OMPT_VERBOSE_INIT_CONTINUED_PRINT("Failed: Error %u\n", GetLastError());
+        OMPT_VERBOSE_INIT_CONTINUED_PRINT("Failed: Error %u\n",
+                                          (unsigned)GetLastError());
       } else {
         OMPT_VERBOSE_INIT_CONTINUED_PRINT("Success. \n");
         OMPT_VERBOSE_INIT_PRINT("Searching for ompt_start_tool in %s... ",
@@ -311,7 +319,7 @@ ompt_try_start_tool(unsigned int omp_version, const char *runtime_version) {
         start_tool = (ompt_start_tool_t)GetProcAddress(h, "ompt_start_tool");
         if (!start_tool) {
           OMPT_VERBOSE_INIT_CONTINUED_PRINT("Failed: Error %u\n",
-                                            GetLastError());
+                                            (unsigned)GetLastError());
         } else
 #else
 #error Activation of OMPT is not supported on this platform.
@@ -782,7 +790,7 @@ OMPT_API_ROUTINE int ompt_get_partition_place_nums(int place_nums_size,
 OMPT_API_ROUTINE int ompt_get_proc_id(void) {
   if (!ompt_enabled.enabled || __kmp_get_gtid() < 0)
     return -1;
-#if KMP_OS_LINUX
+#if KMP_HAVE_SCHED_GETCPU
   return sched_getcpu();
 #elif KMP_OS_WINDOWS
   PROCESSOR_NUMBER pn;

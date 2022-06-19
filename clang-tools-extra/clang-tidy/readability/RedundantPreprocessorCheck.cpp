@@ -24,16 +24,17 @@ struct PreprocessorEntry {
   std::string Condition;
 };
 
+const char WarningDescription[] =
+    "nested redundant %select{#if|#ifdef|#ifndef}0; consider removing it";
+const char NoteDescription[] = "previous %select{#if|#ifdef|#ifndef}0 was here";
+
 class RedundantPreprocessorCallbacks : public PPCallbacks {
   enum DirectiveKind { DK_If = 0, DK_Ifdef = 1, DK_Ifndef = 2 };
 
 public:
   explicit RedundantPreprocessorCallbacks(ClangTidyCheck &Check,
                                           Preprocessor &PP)
-      : Check(Check), PP(PP),
-        WarningDescription("nested redundant %select{#if|#ifdef|#ifndef}0; "
-                           "consider removing it"),
-        NoteDescription("previous %select{#if|#ifdef|#ifndef}0 was here") {}
+      : Check(Check), PP(PP) {}
 
   void If(SourceLocation Loc, SourceRange ConditionRange,
           ConditionValueKind ConditionValue) override {
@@ -94,8 +95,6 @@ private:
   SmallVector<PreprocessorEntry, 4> IfStack;
   SmallVector<PreprocessorEntry, 4> IfdefStack;
   SmallVector<PreprocessorEntry, 4> IfndefStack;
-  const std::string WarningDescription;
-  const std::string NoteDescription;
 };
 } // namespace
 

@@ -1,4 +1,4 @@
-//===-- M68k.td - Motorola 680x0 target definitions ------*- tablegen -*-===//
+//===-- M68k.td - Motorola 680x0 target definitions --------*- tablegen -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -78,7 +78,7 @@ def : Proc<"M68060",  [ FeatureISA60 ]>;
 //===----------------------------------------------------------------------===//
 
 include "M68kRegisterInfo.td"
-include "GlSel/M68kRegisterBanks.td"
+include "GISel/M68kRegisterBanks.td"
 
 //===----------------------------------------------------------------------===//
 // Instruction Descriptions

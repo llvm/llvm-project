@@ -7,10 +7,9 @@ define void @f() nounwind  {
 ; CHECK-NEXT:    calll L0$pb
 ; CHECK-NEXT:  L0$pb:
 ; CHECK-NEXT:    popl %eax
-; CHECK-NEXT:    pxor %xmm0, %xmm0
 ; CHECK-NEXT:    movdqa {{.*#+}} xmm1 = [1,1,1,1,1,1,1,1]
 ; CHECK-NEXT:    psllw {{\.?LCPI[0-9]+_[0-9]+}}-L0$pb(%eax), %xmm1
-; CHECK-NEXT:    pavgw {{\.?LCPI[0-9]+_[0-9]+}}-L0$pb(%eax), %xmm0
+; CHECK-NEXT:    movdqa {{.*#+}} xmm0 = [21183,21183,21183,21183,21183,21183,21183,21183]
 ; CHECK-NEXT:    paddsw %xmm0, %xmm0
 ; CHECK-NEXT:    paddw %xmm1, %xmm0
 ; CHECK-NEXT:    .p2align 4, 0x90

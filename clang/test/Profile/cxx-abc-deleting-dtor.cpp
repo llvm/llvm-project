@@ -1,7 +1,7 @@
-// RUN: %clang_cc1 -emit-llvm %s -std=c++11 -o - -fno-rtti \
+// RUN: %clang_cc1 -no-opaque-pointers -emit-llvm %s -std=c++11 -o - -fno-rtti \
 // RUN:     -fprofile-instrument=clang -fcoverage-mapping -disable-llvm-passes \
 // RUN:     -triple=x86_64-windows-msvc | FileCheck %s --check-prefix=MSVC
-// RUN: %clang_cc1 -emit-llvm %s -std=c++11 -o - -fno-rtti \
+// RUN: %clang_cc1 -no-opaque-pointers -emit-llvm %s -std=c++11 -o - -fno-rtti \
 // RUN:     -fprofile-instrument=clang -fcoverage-mapping -disable-llvm-passes \
 // RUN:     -triple=x86_64-linux-gnu | FileCheck %s --check-prefix=LINUX
 
@@ -24,12 +24,12 @@ DerivedABC *useABCVTable() { return new DerivedABC(); }
 // MSVC: @"__profn_??1ABC@@{{.*}}" =
 // MSVC-NOT: @"__profn_??_G{{.*}}" =
 
-// MSVC-LABEL: define linkonce_odr dso_local i8* @"??_GDerivedABC@@UEAAPEAXI@Z"(%struct.DerivedABC* {{[^,]*}} %this, {{.*}})
+// MSVC-LABEL: define linkonce_odr dso_local noundef i8* @"??_GDerivedABC@@UEAAPEAXI@Z"(%struct.DerivedABC* {{[^,]*}} %this, {{.*}})
 // MSVC-NOT:   call void @llvm.instrprof.increment({{.*}})
 // MSVC:   call void @"??1DerivedABC@@UEAA@XZ"({{.*}})
 // MSVC:   ret void
 
-// MSVC-LABEL: define linkonce_odr dso_local i8* @"??_GABC@@UEAAPEAXI@Z"(%struct.ABC* {{[^,]*}} %this, {{.*}})
+// MSVC-LABEL: define linkonce_odr dso_local noundef i8* @"??_GABC@@UEAAPEAXI@Z"(%struct.ABC* {{[^,]*}} %this, {{.*}})
 // MSVC-NOT:   call void @llvm.instrprof.increment({{.*}})
 // MSVC:   call void @llvm.trap()
 // MSVC-NEXT:   unreachable

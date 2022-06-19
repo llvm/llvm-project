@@ -62,6 +62,24 @@ libc, and finally, build and test the libc.
     cmake -G Ninja ../llvm-project/llvm -DCMAKE_C_COMPILER=C:/src/clang-build/bin/clang-cl.exe -DCMAKE_CXX_COMPILER=C:/src/clang-build/bin/clang-cl.exe  -DLLVM_TARGETS_TO_BUILD=X86 -DLLVM_FORCE_BUILD_RUNTIME=libc -DLLVM_ENABLE_PROJECTS=libc -DLLVM_NATIVE_ARCH=x86_64 -DLLVM_HOST_TRIPLE=x86_64-window-x86-gnu
     ```
 
+    Some LLVM libc math unittests test correctness/accuracy against results from
+    the [GNU MPFR library](https://www.mpfr.org/). If you want to run math tests
+    which use MPFR, and if MPFR on your machine is not installed in the default
+    include and linker lookup directories, then you can specify the MPFR install
+    directory by passing an additional CMake option as follows:
+
+    -DLLVM_LIBC_MPFR_INSTALL_PATH=<path/mpfr/install/dir>
+
+    If the above option is specified, then `${LLVM_LIBC_MPFR_INSTALL_PATH}/include`
+    will be added to the include directories, and
+    `${LLVM_LIBC_MPFR_INSTALL_PATH}/lib` will be added to the linker lookup
+    directories.
+
+    NOTE: The GNU MPFR library depends on the
+    [GNU GMP library](https://gmplib.org/). If you specify the above option, then it
+    will be assumed that GMP is also installed in the same directory or availabe in
+    the default paths.
+
 10. Build LLVM libc using:
 
     ```

@@ -1,48 +1,49 @@
 /// Check the behavior of toolchain for NEC Aurora VE
 /// REQUIRES: ve-registered-target
+/// UNSUPPORTED: system-windows
 
 ///-----------------------------------------------------------------------------
 /// Checking dwarf-version
 
-// RUN: %clang -### -g -target ve %s 2>&1 | FileCheck -check-prefix=DWARF_VER %s
-// DWARF_VER: "-dwarf-version=4"
+// RUN: %clang -### -g --target=ve %s 2>&1 | FileCheck -check-prefix=DWARF_VER %s
+// DWARF_VER: "-dwarf-version=5"
 
 ///-----------------------------------------------------------------------------
 /// Checking include-path
 
-// RUN: %clang -### -target ve --sysroot %S/Inputs/basic_ve_tree %s \
-// RUN:     -resource-dir=%S/Input/basic_ve_tree/resource_dir \
+// RUN: %clang -### --target=ve --sysroot %S/Inputs/basic_ve_tree %s \
+// RUN:     -resource-dir=%S/Inputs/basic_ve_tree/resource_dir \
 // RUN:     2>&1 | FileCheck -check-prefix=DEFINC %s
-// DEFINC: clang{{.*}} "-cc1"
+// DEFINC: "-cc1"
 // DEFINC-SAME: "-nostdsysteminc"
 // DEFINC-SAME: "-resource-dir" "[[RESOURCE_DIR:[^"]+]]"
 // DEFINC-SAME: "-isysroot" "[[SYSROOT:[^"]+]]"
 // DEFINC-SAME: "-internal-isystem" "[[RESOURCE_DIR]]/include"
 // DEFINC-SAME: "-internal-isystem" "[[SYSROOT]]/opt/nec/ve/include"
 
-// RUN: %clang -### -target ve --sysroot %S/Inputs/basic_ve_tree %s \
-// RUN:     -resource-dir=%S/Input/basic_ve_tree/resource_dir \
+// RUN: %clang -### --target=ve --sysroot %S/Inputs/basic_ve_tree %s \
+// RUN:     -resource-dir=%S/Inputs/basic_ve_tree/resource_dir \
 // RUN:     -nostdlibinc 2>&1 | FileCheck -check-prefix=NOSTDLIBINC %s
-// NOSTDLIBINC: clang{{.*}} "-cc1"
+// NOSTDLIBINC: "-cc1"
 // NOSTDLIBINC-SAME: "-resource-dir" "[[RESOURCE_DIR:[^"]+]]"
 // NOSTDLIBINC-SAME: "-isysroot" "[[SYSROOT:[^"]+]]"
 // NOSTDLIBINC-SAME: "-internal-isystem" "[[RESOURCE_DIR]]/include"
 // NOSTDLIBINC-NOT: "-internal-isystem" "[[SYSROOT]]/opt/nec/ve/include"
 
-// RUN: %clang -### -target ve --sysroot %S/Inputs/basic_ve_tree %s \
-// RUN:     -resource-dir=%S/Input/basic_ve_tree/resource_dir \
+// RUN: %clang -### --target=ve --sysroot %S/Inputs/basic_ve_tree %s \
+// RUN:     -resource-dir=%S/Inputs/basic_ve_tree/resource_dir \
 // RUN:     -nobuiltininc 2>&1 | FileCheck -check-prefix=NOBUILTININC %s
-// NOBUILTININC: clang{{.*}} "-cc1"
+// NOBUILTININC: "-cc1"
 // NOBUILTININC-SAME: "-nobuiltininc"
 // NOBUILTININC-SAME: "-resource-dir" "[[RESOURCE_DIR:[^"]+]]"
 // NOBUILTININC-SAME: "-isysroot" "[[SYSROOT:[^"]+]]"
 // NOBUILTININC-NOT: "-internal-isystem" "[[RESOURCE_DIR]]/include"
 // NOBUILTININC-SAME: "-internal-isystem" "[[SYSROOT]]/opt/nec/ve/include"
 
-// RUN: %clang -### -target ve --sysroot %S/Inputs/basic_ve_tree %s \
-// RUN:     -resource-dir=%S/Input/basic_ve_tree/resource_dir \
+// RUN: %clang -### --target=ve --sysroot %S/Inputs/basic_ve_tree %s \
+// RUN:     -resource-dir=%S/Inputs/basic_ve_tree/resource_dir \
 // RUN:     -nostdinc 2>&1 | FileCheck -check-prefix=NOSTDINC %s
-// NOSTDINC: clang{{.*}} "-cc1"
+// NOSTDINC: "-cc1"
 // NOSTDINC-SAME: "-nobuiltininc"
 // NOSTDINC-SAME: "-resource-dir" "[[RESOURCE_DIR:[^"]+]]"
 // NOSTDINC-SAME: "-isysroot" "[[SYSROOT:[^"]+]]"
@@ -52,19 +53,21 @@
 ///-----------------------------------------------------------------------------
 /// Checking -faddrsig
 
-// RUN: %clang -### -target ve %s 2>&1 | FileCheck -check-prefix=DEFADDRSIG %s
-// DEFADDRSIG: clang{{.*}} "-cc1"
+// RUN: %clang -### --target=ve %s 2>&1 | FileCheck -check-prefix=DEFADDRSIG %s
+// DEFADDRSIG: "-cc1"
 // DEFADDRSIG-NOT: "-faddrsig"
 
 ///-----------------------------------------------------------------------------
 /// Checking -fintegrated-as
 
-// RUN: %clang -### -target ve -x assembler %s 2>&1 | \
+// RUN: %clang -### --target=ve \
+// RUN:    -x assembler -fuse-ld=ld %s 2>&1 | \
 // RUN:    FileCheck -check-prefix=AS %s
-// RUN: %clang -### -target ve -fno-integrated-as -x assembler %s 2>&1 | \
+// RUN: %clang -### --target=ve \
+// RUN:    -fno-integrated-as -fuse-ld=ld -x assembler %s 2>&1 | \
 // RUN:    FileCheck -check-prefix=NAS %s
 
-// AS: clang{{.*}} "-cc1as"
+// AS: "-cc1as"
 // AS: nld{{.*}}
 
 // NAS: nas{{.*}}
@@ -77,9 +80,11 @@
 ///  - nld VE specific options
 ///  - sjlj exception
 
-// RUN: %clang -### -target ve-unknown-linux-gnu \
+// RUN: %clang -### --target=ve-unknown-linux-gnu \
 // RUN:     --sysroot %S/Inputs/basic_ve_tree \
 // RUN:     -resource-dir=%S/Inputs/basic_ve_tree/resource_dir \
+// RUN:     --unwindlib=none \
+// RUN:     -fuse-ld=ld \
 // RUN:     %s 2>&1 | FileCheck -check-prefix=DEF %s
 
 // DEF:      clang{{.*}}" "-cc1"

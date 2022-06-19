@@ -1,4 +1,3 @@
-; RUN: opt %s -mtriple amdgcn-- -enable-new-pm=0 -analyze -divergence -use-gpu-divergence-analysis | FileCheck %s
 ; RUN: opt %s -mtriple amdgcn-- -passes='print<divergence>' -disable-output 2>&1 | FileCheck %s
 
 ; NOTE: The new pass manager does not fall back on legacy divergence

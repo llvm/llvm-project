@@ -93,9 +93,32 @@ inline bool isValidBlockSize(uint32_t Size) {
   case 1024:
   case 2048:
   case 4096:
+  case 8192:
+  case 16384:
+  case 32768:
     return true;
   }
   return false;
+}
+
+/// Given the specified block size, returns the maximum possible file size.
+/// Block Size  |  Max File Size
+/// <= 4096     |      4GB
+///    8192     |      8GB
+///   16384     |      16GB
+///   32768     |      32GB
+/// \p Size - the block size of the MSF
+inline uint64_t getMaxFileSizeFromBlockSize(uint32_t Size) {
+  switch (Size) {
+  case 8192:
+    return (uint64_t)UINT32_MAX * 2ULL;
+  case 16384:
+    return (uint64_t)UINT32_MAX * 3ULL;
+  case 32768:
+    return (uint64_t)UINT32_MAX * 4ULL;
+  default:
+    return (uint64_t)UINT32_MAX;
+  }
 }
 
 // Super Block, Fpm0, Fpm1, and Block Map

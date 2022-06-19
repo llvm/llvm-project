@@ -37,7 +37,7 @@ def transpose_transpose(x) {
 Which corresponds to the following IR:
 
 ```mlir
-func @transpose_transpose(%arg0: tensor<*xf64>) -> tensor<*xf64> {
+toy.func @transpose_transpose(%arg0: tensor<*xf64>) -> tensor<*xf64> {
   %0 = toy.transpose(%arg0 : tensor<*xf64>) to tensor<*xf64>
   %1 = toy.transpose(%0 : tensor<*xf64>) to tensor<*xf64>
   toy.return %1 : tensor<*xf64>
@@ -125,14 +125,14 @@ similar way to LLVM:
 
 ```c++
   mlir::PassManager pm(module.getContext());
-  pm.addNestedPass<mlir::FuncOp>(mlir::createCanonicalizerPass());
+  pm.addNestedPass<mlir::toy::FuncOp>(mlir::createCanonicalizerPass());
 ```
 
 Finally, we can run `toyc-ch3 test/Examples/Toy/Ch3/transpose_transpose.toy 
 -emit=mlir -opt` and observe our pattern in action:
 
 ```mlir
-func @transpose_transpose(%arg0: tensor<*xf64>) -> tensor<*xf64> {
+toy.func @transpose_transpose(%arg0: tensor<*xf64>) -> tensor<*xf64> {
   %0 = toy.transpose(%arg0 : tensor<*xf64>) to tensor<*xf64>
   toy.return %arg0 : tensor<*xf64>
 }
@@ -153,7 +153,7 @@ def TransposeOp : Toy_Op<"transpose", [NoSideEffect]> {...}
 Let's retry now `toyc-ch3 test/transpose_transpose.toy -emit=mlir -opt`:
 
 ```mlir
-func @transpose_transpose(%arg0: tensor<*xf64>) -> tensor<*xf64> {
+toy.func @transpose_transpose(%arg0: tensor<*xf64>) -> tensor<*xf64> {
   toy.return %arg0 : tensor<*xf64>
 }
 ```
@@ -228,7 +228,7 @@ def main() {
 
 ```mlir
 module {
-  func @main() {
+  toy.func @main() {
     %0 = toy.constant dense<[1.000000e+00, 2.000000e+00]> : tensor<2xf64>
     %1 = toy.reshape(%0 : tensor<2xf64>) to tensor<2x1xf64>
     %2 = toy.reshape(%1 : tensor<2x1xf64>) to tensor<2x1xf64>
@@ -244,7 +244,7 @@ We can try to run `toyc-ch3 test/Examples/Toy/Ch3/trivial_reshape.toy -emit=mlir
 
 ```mlir
 module {
-  func @main() {
+  toy.func @main() {
     %0 = toy.constant dense<[[1.000000e+00], [2.000000e+00]]> : tensor<2x1xf64>
     toy.print %0 : tensor<2x1xf64>
     toy.return

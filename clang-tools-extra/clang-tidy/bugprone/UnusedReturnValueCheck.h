@@ -19,7 +19,7 @@ namespace bugprone {
 /// Detects function calls where the return value is unused.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/bugprone-unused-return-value.html
+/// http://clang.llvm.org/extra/clang-tidy/checks/bugprone/unused-return-value.html
 class UnusedReturnValueCheck : public ClangTidyCheck {
 public:
   UnusedReturnValueCheck(StringRef Name, ClangTidyContext *Context);

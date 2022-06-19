@@ -21,7 +21,8 @@ def A64FXModel : SchedMachineModel {
   let CompleteModel         =   1;
 
   list<Predicate> UnsupportedFeatures =
-    [HasSVE2, HasSVE2AES, HasSVE2SM4, HasSVE2SHA3, HasSVE2BitPerm, HasPAuth];
+    [HasSVE2, HasSVE2AES, HasSVE2SM4, HasSVE2SHA3, HasSVE2BitPerm, HasPAuth,
+     HasSVE2orSME];
 
   let FullInstRWOverlapCheck = 0;
 }
@@ -760,6 +761,7 @@ def : ReadAdvance<ReadIMA,     0>;
 def : ReadAdvance<ReadID,      0>;
 def : ReadAdvance<ReadExtrHi,  0>;
 def : ReadAdvance<ReadAdrBase, 0>;
+def : ReadAdvance<ReadST,      0>;
 def : ReadAdvance<ReadVLD,     0>;
 
 //===----------------------------------------------------------------------===//
@@ -1625,7 +1627,11 @@ def : InstRW<[A64FXWrite_FMOV_VG14], (instrs FMOVDXHighr)>;
 // ASIMD shift by register, basic, Q-form
 // ASIMD shift by register, complex, D-form
 // ASIMD shift by register, complex, Q-form
-def : WriteRes<WriteV, [A64FXGI03]> {
+def : WriteRes<WriteVd, [A64FXGI03]> {
+  let Latency = 4;
+  let ResourceCycles = [1];
+}
+def : WriteRes<WriteVq, [A64FXGI03]> {
   let Latency = 4;
   let ResourceCycles = [1];
 }
@@ -1885,7 +1891,7 @@ def : InstRW<[A64FXWrite_4Cyc_GI0],
 // ASIMD duplicate, gen reg
 // ASIMD duplicate, element
 def : InstRW<[A64FXWrite_DUPGENERAL], (instregex "^DUPv")>;
-def : InstRW<[A64FXWrite_6Cyc_GI0], (instregex "^CPY")>;
+def : InstRW<[A64FXWrite_6Cyc_GI0], (instregex "^DUP(i8|i16|i32|i64)$")>;
 def : InstRW<[A64FXWrite_6Cyc_GI0], (instregex "^DUPv.+gpr")>;
 
 // ASIMD extract
@@ -2506,16 +2512,16 @@ def : InstRW<[A64FXWrite_1Cyc_GI24], (instrs CNTW_XPiI)>;
 def : InstRW<[A64FXWrite_6Cyc_GI0], (instrs COMPACT_ZPZ_D, COMPACT_ZPZ_S)>;
 
 // [72]   "cpy  $Zd, $Pg/m, $Rn";
-//@@@ def : InstRW<[XXXXXX], (instrs CPY_ZPmR_B, CPY_ZPmR_D, CPY_ZPmR_H, CPY_ZPmR_S)>;
+def : InstRW<[A64FXWrite_6Cyc_GI0], (instrs CPY_ZPmR_B, CPY_ZPmR_D, CPY_ZPmR_H, CPY_ZPmR_S)>;
 
 // [73]   "cpy  $Zd, $Pg/m, $Vn";
-//@@@ def : InstRW<[XXXXXX], (instrs CPY_ZPmV_B, CPY_ZPmV_D, CPY_ZPmV_H, CPY_ZPmV_S)>;
+def : InstRW<[A64FXWrite_6Cyc_GI0], (instrs CPY_ZPmV_B, CPY_ZPmV_D, CPY_ZPmV_H, CPY_ZPmV_S)>;
 
 // [74]   "cpy  $Zd, $Pg/m, $imm";
-//@@@ def : InstRW<[XXXXXX], (instrs CPY_ZPmI_B, CPY_ZPmI_D, CPY_ZPmI_H, CPY_ZPmI_S)>;
+def : InstRW<[A64FXWrite_6Cyc_GI0], (instrs CPY_ZPmI_B, CPY_ZPmI_D, CPY_ZPmI_H, CPY_ZPmI_S)>;
 
 // [75]   "cpy  $Zd, $Pg/z, $imm";
-//@@@ def : InstRW<[XXXXXX], (instrs CPY_ZPzI_B, CPY_ZPzI_D, CPY_ZPzI_H, CPY_ZPzI_S)>;
+def : InstRW<[A64FXWrite_6Cyc_GI0], (instrs CPY_ZPzI_B, CPY_ZPzI_D, CPY_ZPzI_H, CPY_ZPzI_S)>;
 
 // [76]   "ctermeq      $Rn, $Rm";
 def : InstRW<[A64FXWrite_2Cyc_GI24], (instrs CTERMEQ_WW, CTERMEQ_XX)>;
@@ -3548,7 +3554,7 @@ def : InstRW<[A64FXWrite_4Cyc_GI03], (instrs SQINCW_ZPiI)>;
 def : InstRW<[A64FXWrite_ST1W_6], (instrs ST1B, ST1B_D, ST1B_H, ST1B_S)>;
 
 // [421]   "st1b        $Zt, $Pg, [$Rn, $Zm]";
-def : InstRW<[A64FXWrite_ST1W_19], (instrs SST1B_D_REAL, SST1B_D_SXTW, SST1B_D_UXTW, SST1B_S_SXTW, SST1B_S_UXTW)>;
+def : InstRW<[A64FXWrite_ST1W_19], (instrs SST1B_D, SST1B_D_SXTW, SST1B_D_UXTW, SST1B_S_SXTW, SST1B_S_UXTW)>;
 
 // [422]   "st1b        $Zt, $Pg, [$Rn, $imm4, mul vl]";
 def : InstRW<[A64FXWrite_ST1W_6], (instrs ST1B_D_IMM, ST1B_H_IMM, ST1B_IMM, ST1B_S_IMM)>;
@@ -3560,7 +3566,7 @@ def : InstRW<[A64FXWrite_ST1W_15], (instrs SST1B_D_IMM, SST1B_S_IMM)>;
 def : InstRW<[A64FXWrite_ST1W_6], (instrs ST1D)>;
 
 // [425]   "st1d        $Zt, $Pg, [$Rn, $Zm]";
-def : InstRW<[A64FXWrite_ST1W_19], (instrs SST1D_REAL, SST1D_SCALED_SCALED_REAL, SST1D_SXTW, SST1D_SXTW_SCALED, SST1D_UXTW, SST1D_UXTW_SCALED)>;
+def : InstRW<[A64FXWrite_ST1W_19], (instrs SST1D, SST1D_SCALED, SST1D_SXTW, SST1D_SXTW_SCALED, SST1D_UXTW, SST1D_UXTW_SCALED)>;
 
 // [426]   "st1d        $Zt, $Pg, [$Rn, $imm4, mul vl]";
 def : InstRW<[A64FXWrite_ST1W_6], (instrs ST1D_IMM)>;
@@ -3572,7 +3578,7 @@ def : InstRW<[A64FXWrite_ST1W_15], (instrs SST1D_IMM)>;
 def : InstRW<[A64FXWrite_ST1W_6], (instrs ST1H, ST1H_D, ST1H_S)>;
 
 // [429]   "st1h        $Zt, $Pg, [$Rn, $Zm]";
-def : InstRW<[A64FXWrite_ST1W_19], (instrs SST1H_D_REAL, SST1H_D_SCALED_SCALED_REAL, SST1H_D_SXTW, SST1H_D_SXTW_SCALED, SST1H_D_UXTW, SST1H_D_UXTW_SCALED, SST1H_S_SXTW, SST1H_S_SXTW_SCALED, SST1H_S_UXTW, SST1H_S_UXTW_SCALED)>;
+def : InstRW<[A64FXWrite_ST1W_19], (instrs SST1H_D, SST1H_D_SCALED, SST1H_D_SXTW, SST1H_D_SXTW_SCALED, SST1H_D_UXTW, SST1H_D_UXTW_SCALED, SST1H_S_SXTW, SST1H_S_SXTW_SCALED, SST1H_S_UXTW, SST1H_S_UXTW_SCALED)>;
 
 // [430]   "st1h        $Zt, $Pg, [$Rn, $imm4, mul vl]";
 def : InstRW<[A64FXWrite_ST1W_6], (instrs ST1H_D_IMM, ST1H_IMM, ST1H_S_IMM)>;
@@ -3584,7 +3590,7 @@ def : InstRW<[A64FXWrite_ST1W_15], (instrs SST1H_D_IMM, SST1H_S_IMM)>;
 def : InstRW<[A64FXWrite_ST1W_6], (instrs ST1W, ST1W_D)>;
 
 // [433]   "st1w        $Zt, $Pg, [$Rn, $Zm]";
-def : InstRW<[A64FXWrite_ST1W_19], (instrs SST1W_D_REAL, SST1W_D_SCALED_SCALED_REAL, SST1W_D_SXTW, SST1W_D_SXTW_SCALED, SST1W_D_UXTW, SST1W_D_UXTW_SCALED, SST1W_SXTW, SST1W_SXTW_SCALED, SST1W_UXTW, SST1W_UXTW_SCALED)>;
+def : InstRW<[A64FXWrite_ST1W_19], (instrs SST1W_D, SST1W_D_SCALED, SST1W_D_SXTW, SST1W_D_SXTW_SCALED, SST1W_D_UXTW, SST1W_D_UXTW_SCALED, SST1W_SXTW, SST1W_SXTW_SCALED, SST1W_UXTW, SST1W_UXTW_SCALED)>;
 
 // [434]   "st1w        $Zt, $Pg, [$Rn, $imm4, mul vl]";
 def : InstRW<[A64FXWrite_ST1W_6], (instrs ST1W_D_IMM, ST1W_IMM)>;

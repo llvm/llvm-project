@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 %s -O1 -disable-llvm-passes -triple=x86_64-apple-darwin10 -std=c++11 -emit-llvm -o - | FileCheck %s
-// RUN: %clang_cc1 %s -O1 -disable-llvm-passes -triple=x86_64-apple-darwin10 -std=c++11 -emit-llvm -o - | FileCheck %s --check-prefix=CHECK2
+// RUN: %clang_cc1 -no-opaque-pointers %s -O1 -disable-llvm-passes -triple=x86_64-apple-darwin10 -std=c++11 -emit-llvm -o - | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers %s -O1 -disable-llvm-passes -triple=x86_64-apple-darwin10 -std=c++11 -emit-llvm -o - | FileCheck %s --check-prefix=CHECK2
 
 // Instantiation order varies on different C++ dialects (IE, between C++98 and C++11).
 // CHECK-DAG: @_ZN7PR100011xE ={{.*}} global

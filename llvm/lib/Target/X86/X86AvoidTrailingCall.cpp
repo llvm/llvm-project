@@ -35,6 +35,7 @@
 #include "X86.h"
 #include "X86InstrInfo.h"
 #include "X86Subtarget.h"
+#include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 
 #define AVOIDCALL_DESC "X86 avoid trailing call pass"
@@ -69,8 +70,8 @@ INITIALIZE_PASS(X86AvoidTrailingCallPass, AVOIDCALL_NAME, AVOIDCALL_DESC, false,
 // A real instruction is a non-meta, non-pseudo instruction.  Some pseudos
 // expand to nothing, and some expand to code. This logic conservatively assumes
 // they might expand to nothing.
-static bool isRealInstruction(MachineInstr &MI) {
-  return !MI.isPseudo() && !MI.isMetaInstruction();
+static bool isCallOrRealInstruction(MachineInstr &MI) {
+  return MI.isCall() || (!MI.isPseudo() && !MI.isMetaInstruction());
 }
 
 // Return true if this is a call instruction, but not a tail call.
@@ -100,7 +101,7 @@ bool X86AvoidTrailingCallPass::runOnMachineFunction(MachineFunction &MF) {
       continue;
 
     // Find the last real instruction in this block.
-    auto LastRealInstr = llvm::find_if(reverse(MBB), isRealInstruction);
+    auto LastRealInstr = llvm::find_if(reverse(MBB), isCallOrRealInstruction);
 
     // If the block is empty or the last real instruction is a call instruction,
     // insert an int3. If there is a call instruction, insert the int3 between

@@ -123,6 +123,7 @@ static void initialize(TargetLibraryInfoImpl &TLI, const Triple &T,
 
   // Set IO unlocked variants as unavailable
   // Set them as available per system below
+  TLI.setUnavailable(LibFunc_getc_unlocked);
   TLI.setUnavailable(LibFunc_getchar_unlocked);
   TLI.setUnavailable(LibFunc_putc_unlocked);
   TLI.setUnavailable(LibFunc_putchar_unlocked);
@@ -156,22 +157,17 @@ static void initialize(TargetLibraryInfoImpl &TLI, const Triple &T,
   // isn't true for a target those defaults should be overridden below.
   TLI.setIntSize(T.isArch16Bit() ? 16 : 32);
 
-  if (T.isAMDGPU())
-    TLI.disableAllFunctions();
-
-  // There are no library implementations of memcpy and memset for AMD gpus and
-  // these can be difficult to lower in the backend.
+  // There is really no runtime library on AMDGPU, apart from
+  // __kmpc_alloc/free_shared.
   if (T.isAMDGPU()) {
-    TLI.setUnavailable(LibFunc_memcpy);
-    TLI.setUnavailable(LibFunc_memset);
-    TLI.setUnavailable(LibFunc_memset_pattern16);
+    TLI.disableAllFunctions();
     TLI.setAvailable(llvm::LibFunc___kmpc_alloc_shared);
     TLI.setAvailable(llvm::LibFunc___kmpc_free_shared);
     return;
   }
 
-  // memset_pattern16 is only available on iOS 3.0 and Mac OS X 10.5 and later.
-  // All versions of watchOS support it.
+  // memset_pattern{4,8,16} is only available on iOS 3.0 and Mac OS X 10.5 and
+  // later. All versions of watchOS support it.
   if (T.isMacOSX()) {
     // available IO unlocked variants on Mac OS X
     TLI.setAvailable(LibFunc_getc_unlocked);
@@ -179,12 +175,20 @@ static void initialize(TargetLibraryInfoImpl &TLI, const Triple &T,
     TLI.setAvailable(LibFunc_putc_unlocked);
     TLI.setAvailable(LibFunc_putchar_unlocked);
 
-    if (T.isMacOSXVersionLT(10, 5))
+    if (T.isMacOSXVersionLT(10, 5)) {
+      TLI.setUnavailable(LibFunc_memset_pattern4);
+      TLI.setUnavailable(LibFunc_memset_pattern8);
       TLI.setUnavailable(LibFunc_memset_pattern16);
+    }
   } else if (T.isiOS()) {
-    if (T.isOSVersionLT(3, 0))
+    if (T.isOSVersionLT(3, 0)) {
+      TLI.setUnavailable(LibFunc_memset_pattern4);
+      TLI.setUnavailable(LibFunc_memset_pattern8);
       TLI.setUnavailable(LibFunc_memset_pattern16);
+    }
   } else if (!T.isWatchOS()) {
+    TLI.setUnavailable(LibFunc_memset_pattern4);
+    TLI.setUnavailable(LibFunc_memset_pattern8);
     TLI.setUnavailable(LibFunc_memset_pattern16);
   }
 
@@ -234,9 +238,8 @@ static void initialize(TargetLibraryInfoImpl &TLI, const Triple &T,
     // e.g., x86_64-pc-windows-msvc18.
     bool hasPartialC99 = true;
     if (T.isKnownWindowsMSVCEnvironment()) {
-      unsigned Major, Minor, Micro;
-      T.getEnvironmentVersion(Major, Minor, Micro);
-      hasPartialC99 = (Major == 0 || Major >= 19);
+      VersionTuple Version = T.getEnvironmentVersion();
+      hasPartialC99 = (Version.getMajor() == 0 || Version.getMajor() >= 19);
     }
 
     // Latest targets support C89 math functions, in part.
@@ -418,6 +421,65 @@ static void initialize(TargetLibraryInfoImpl &TLI, const Triple &T,
     TLI.setUnavailable(LibFunc_utimes);
   }
 
+  // Pick just one set of new/delete variants.
+  if (T.isOSMSVCRT()) {
+    // MSVC, doesn't have the Itanium new/delete.
+    TLI.setUnavailable(LibFunc_ZdaPv);
+    TLI.setUnavailable(LibFunc_ZdaPvRKSt9nothrow_t);
+    TLI.setUnavailable(LibFunc_ZdaPvSt11align_val_t);
+    TLI.setUnavailable(LibFunc_ZdaPvSt11align_val_tRKSt9nothrow_t);
+    TLI.setUnavailable(LibFunc_ZdaPvj);
+    TLI.setUnavailable(LibFunc_ZdaPvjSt11align_val_t);
+    TLI.setUnavailable(LibFunc_ZdaPvm);
+    TLI.setUnavailable(LibFunc_ZdaPvmSt11align_val_t);
+    TLI.setUnavailable(LibFunc_ZdlPv);
+    TLI.setUnavailable(LibFunc_ZdlPvRKSt9nothrow_t);
+    TLI.setUnavailable(LibFunc_ZdlPvSt11align_val_t);
+    TLI.setUnavailable(LibFunc_ZdlPvSt11align_val_tRKSt9nothrow_t);
+    TLI.setUnavailable(LibFunc_ZdlPvj);
+    TLI.setUnavailable(LibFunc_ZdlPvjSt11align_val_t);
+    TLI.setUnavailable(LibFunc_ZdlPvm);
+    TLI.setUnavailable(LibFunc_ZdlPvmSt11align_val_t);
+    TLI.setUnavailable(LibFunc_Znaj);
+    TLI.setUnavailable(LibFunc_ZnajRKSt9nothrow_t);
+    TLI.setUnavailable(LibFunc_ZnajSt11align_val_t);
+    TLI.setUnavailable(LibFunc_ZnajSt11align_val_tRKSt9nothrow_t);
+    TLI.setUnavailable(LibFunc_Znam);
+    TLI.setUnavailable(LibFunc_ZnamRKSt9nothrow_t);
+    TLI.setUnavailable(LibFunc_ZnamSt11align_val_t);
+    TLI.setUnavailable(LibFunc_ZnamSt11align_val_tRKSt9nothrow_t);
+    TLI.setUnavailable(LibFunc_Znwj);
+    TLI.setUnavailable(LibFunc_ZnwjRKSt9nothrow_t);
+    TLI.setUnavailable(LibFunc_ZnwjSt11align_val_t);
+    TLI.setUnavailable(LibFunc_ZnwjSt11align_val_tRKSt9nothrow_t);
+    TLI.setUnavailable(LibFunc_Znwm);
+    TLI.setUnavailable(LibFunc_ZnwmRKSt9nothrow_t);
+    TLI.setUnavailable(LibFunc_ZnwmSt11align_val_t);
+    TLI.setUnavailable(LibFunc_ZnwmSt11align_val_tRKSt9nothrow_t);
+  } else {
+    // Not MSVC, assume it's Itanium.
+    TLI.setUnavailable(LibFunc_msvc_new_int);
+    TLI.setUnavailable(LibFunc_msvc_new_int_nothrow);
+    TLI.setUnavailable(LibFunc_msvc_new_longlong);
+    TLI.setUnavailable(LibFunc_msvc_new_longlong_nothrow);
+    TLI.setUnavailable(LibFunc_msvc_delete_ptr32);
+    TLI.setUnavailable(LibFunc_msvc_delete_ptr32_nothrow);
+    TLI.setUnavailable(LibFunc_msvc_delete_ptr32_int);
+    TLI.setUnavailable(LibFunc_msvc_delete_ptr64);
+    TLI.setUnavailable(LibFunc_msvc_delete_ptr64_nothrow);
+    TLI.setUnavailable(LibFunc_msvc_delete_ptr64_longlong);
+    TLI.setUnavailable(LibFunc_msvc_new_array_int);
+    TLI.setUnavailable(LibFunc_msvc_new_array_int_nothrow);
+    TLI.setUnavailable(LibFunc_msvc_new_array_longlong);
+    TLI.setUnavailable(LibFunc_msvc_new_array_longlong_nothrow);
+    TLI.setUnavailable(LibFunc_msvc_delete_array_ptr32);
+    TLI.setUnavailable(LibFunc_msvc_delete_array_ptr32_nothrow);
+    TLI.setUnavailable(LibFunc_msvc_delete_array_ptr32_int);
+    TLI.setUnavailable(LibFunc_msvc_delete_array_ptr64);
+    TLI.setUnavailable(LibFunc_msvc_delete_array_ptr64_nothrow);
+    TLI.setUnavailable(LibFunc_msvc_delete_array_ptr64_longlong);
+  }
+
   switch (T.getOS()) {
   case Triple::MacOSX:
     // exp10 and exp10f are not available on OS X until 10.9 and iOS until 7.0
@@ -572,6 +634,9 @@ static void initialize(TargetLibraryInfoImpl &TLI, const Triple &T,
     TLI.setUnavailable(LibFunc_sinh_finite);
     TLI.setUnavailable(LibFunc_sinhf_finite);
     TLI.setUnavailable(LibFunc_sinhl_finite);
+    TLI.setUnavailable(LibFunc_sqrt_finite);
+    TLI.setUnavailable(LibFunc_sqrtf_finite);
+    TLI.setUnavailable(LibFunc_sqrtl_finite);
   }
 
   if ((T.isOSLinux() && T.isGNUEnvironment()) ||
@@ -587,6 +652,139 @@ static void initialize(TargetLibraryInfoImpl &TLI, const Triple &T,
     TLI.setAvailable(LibFunc_fwrite_unlocked);
     TLI.setAvailable(LibFunc_fputs_unlocked);
     TLI.setAvailable(LibFunc_fgets_unlocked);
+  }
+
+  if (T.isAndroid() && T.isAndroidVersionLT(21)) {
+    TLI.setUnavailable(LibFunc_stpcpy);
+    TLI.setUnavailable(LibFunc_stpncpy);
+  }
+
+  if (T.isPS()) {
+    // PS4/PS5 do have memalign.
+    TLI.setAvailable(LibFunc_memalign);
+
+    // PS4/PS5 do not have new/delete with "unsigned int" size parameter;
+    // they only have the "unsigned long" versions.
+    TLI.setUnavailable(LibFunc_ZdaPvj);
+    TLI.setUnavailable(LibFunc_ZdaPvjSt11align_val_t);
+    TLI.setUnavailable(LibFunc_ZdlPvj);
+    TLI.setUnavailable(LibFunc_ZdlPvjSt11align_val_t);
+    TLI.setUnavailable(LibFunc_Znaj);
+    TLI.setUnavailable(LibFunc_ZnajRKSt9nothrow_t);
+    TLI.setUnavailable(LibFunc_ZnajSt11align_val_t);
+    TLI.setUnavailable(LibFunc_ZnajSt11align_val_tRKSt9nothrow_t);
+    TLI.setUnavailable(LibFunc_Znwj);
+    TLI.setUnavailable(LibFunc_ZnwjRKSt9nothrow_t);
+    TLI.setUnavailable(LibFunc_ZnwjSt11align_val_t);
+    TLI.setUnavailable(LibFunc_ZnwjSt11align_val_tRKSt9nothrow_t);
+
+    // None of the *_chk functions.
+    TLI.setUnavailable(LibFunc_memccpy_chk);
+    TLI.setUnavailable(LibFunc_memcpy_chk);
+    TLI.setUnavailable(LibFunc_memmove_chk);
+    TLI.setUnavailable(LibFunc_mempcpy_chk);
+    TLI.setUnavailable(LibFunc_memset_chk);
+    TLI.setUnavailable(LibFunc_snprintf_chk);
+    TLI.setUnavailable(LibFunc_sprintf_chk);
+    TLI.setUnavailable(LibFunc_stpcpy_chk);
+    TLI.setUnavailable(LibFunc_stpncpy_chk);
+    TLI.setUnavailable(LibFunc_strcat_chk);
+    TLI.setUnavailable(LibFunc_strcpy_chk);
+    TLI.setUnavailable(LibFunc_strlcat_chk);
+    TLI.setUnavailable(LibFunc_strlcpy_chk);
+    TLI.setUnavailable(LibFunc_strlen_chk);
+    TLI.setUnavailable(LibFunc_strncat_chk);
+    TLI.setUnavailable(LibFunc_strncpy_chk);
+    TLI.setUnavailable(LibFunc_vsnprintf_chk);
+    TLI.setUnavailable(LibFunc_vsprintf_chk);
+
+    // Various Posix system functions.
+    TLI.setUnavailable(LibFunc_access);
+    TLI.setUnavailable(LibFunc_chmod);
+    TLI.setUnavailable(LibFunc_chown);
+    TLI.setUnavailable(LibFunc_closedir);
+    TLI.setUnavailable(LibFunc_ctermid);
+    TLI.setUnavailable(LibFunc_execl);
+    TLI.setUnavailable(LibFunc_execle);
+    TLI.setUnavailable(LibFunc_execlp);
+    TLI.setUnavailable(LibFunc_execv);
+    TLI.setUnavailable(LibFunc_execvP);
+    TLI.setUnavailable(LibFunc_execve);
+    TLI.setUnavailable(LibFunc_execvp);
+    TLI.setUnavailable(LibFunc_execvpe);
+    TLI.setUnavailable(LibFunc_fork);
+    TLI.setUnavailable(LibFunc_fstat);
+    TLI.setUnavailable(LibFunc_fstatvfs);
+    TLI.setUnavailable(LibFunc_getenv);
+    TLI.setUnavailable(LibFunc_getitimer);
+    TLI.setUnavailable(LibFunc_getlogin_r);
+    TLI.setUnavailable(LibFunc_getpwnam);
+    TLI.setUnavailable(LibFunc_gettimeofday);
+    TLI.setUnavailable(LibFunc_lchown);
+    TLI.setUnavailable(LibFunc_lstat);
+    TLI.setUnavailable(LibFunc_mkdir);
+    TLI.setUnavailable(LibFunc_open);
+    TLI.setUnavailable(LibFunc_opendir);
+    TLI.setUnavailable(LibFunc_pclose);
+    TLI.setUnavailable(LibFunc_popen);
+    TLI.setUnavailable(LibFunc_pread);
+    TLI.setUnavailable(LibFunc_pwrite);
+    TLI.setUnavailable(LibFunc_read);
+    TLI.setUnavailable(LibFunc_readlink);
+    TLI.setUnavailable(LibFunc_realpath);
+    TLI.setUnavailable(LibFunc_rename);
+    TLI.setUnavailable(LibFunc_rmdir);
+    TLI.setUnavailable(LibFunc_setitimer);
+    TLI.setUnavailable(LibFunc_stat);
+    TLI.setUnavailable(LibFunc_statvfs);
+    TLI.setUnavailable(LibFunc_system);
+    TLI.setUnavailable(LibFunc_times);
+    TLI.setUnavailable(LibFunc_tmpfile);
+    TLI.setUnavailable(LibFunc_unlink);
+    TLI.setUnavailable(LibFunc_uname);
+    TLI.setUnavailable(LibFunc_unsetenv);
+    TLI.setUnavailable(LibFunc_utime);
+    TLI.setUnavailable(LibFunc_utimes);
+    TLI.setUnavailable(LibFunc_valloc);
+    TLI.setUnavailable(LibFunc_write);
+
+    // Miscellaneous other functions not provided.
+    TLI.setUnavailable(LibFunc_atomic_load);
+    TLI.setUnavailable(LibFunc_atomic_store);
+    TLI.setUnavailable(LibFunc___kmpc_alloc_shared);
+    TLI.setUnavailable(LibFunc___kmpc_free_shared);
+    TLI.setUnavailable(LibFunc_dunder_strndup);
+    TLI.setUnavailable(LibFunc_bcmp);
+    TLI.setUnavailable(LibFunc_bcopy);
+    TLI.setUnavailable(LibFunc_bzero);
+    TLI.setUnavailable(LibFunc_cabs);
+    TLI.setUnavailable(LibFunc_cabsf);
+    TLI.setUnavailable(LibFunc_cabsl);
+    TLI.setUnavailable(LibFunc_ffs);
+    TLI.setUnavailable(LibFunc_flockfile);
+    TLI.setUnavailable(LibFunc_fseeko);
+    TLI.setUnavailable(LibFunc_ftello);
+    TLI.setUnavailable(LibFunc_ftrylockfile);
+    TLI.setUnavailable(LibFunc_funlockfile);
+    TLI.setUnavailable(LibFunc_htonl);
+    TLI.setUnavailable(LibFunc_htons);
+    TLI.setUnavailable(LibFunc_isascii);
+    TLI.setUnavailable(LibFunc_memccpy);
+    TLI.setUnavailable(LibFunc_mempcpy);
+    TLI.setUnavailable(LibFunc_memrchr);
+    TLI.setUnavailable(LibFunc_ntohl);
+    TLI.setUnavailable(LibFunc_ntohs);
+    TLI.setUnavailable(LibFunc_reallocf);
+    TLI.setUnavailable(LibFunc_roundeven);
+    TLI.setUnavailable(LibFunc_roundevenf);
+    TLI.setUnavailable(LibFunc_roundevenl);
+    TLI.setUnavailable(LibFunc_stpcpy);
+    TLI.setUnavailable(LibFunc_stpncpy);
+    TLI.setUnavailable(LibFunc_strlcat);
+    TLI.setUnavailable(LibFunc_strlcpy);
+    TLI.setUnavailable(LibFunc_strndup);
+    TLI.setUnavailable(LibFunc_strnlen);
+    TLI.setUnavailable(LibFunc_toascii);
   }
 
   // As currently implemented in clang, NVPTX code has no standard library to
@@ -691,7 +889,7 @@ TargetLibraryInfoImpl &TargetLibraryInfoImpl::operator=(TargetLibraryInfoImpl &&
 static StringRef sanitizeFunctionName(StringRef funcName) {
   // Filter out empty names and names containing null bytes, those can't be in
   // our table.
-  if (funcName.empty() || funcName.find('\0') != StringRef::npos)
+  if (funcName.empty() || funcName.contains('\0'))
     return StringRef();
 
   // Check for \01 prefix that is used to mangle __asm declarations and
@@ -716,12 +914,12 @@ bool TargetLibraryInfoImpl::getLibFunc(StringRef funcName, LibFunc &F) const {
 
 bool TargetLibraryInfoImpl::isValidProtoForLibFunc(const FunctionType &FTy,
                                                    LibFunc F,
-                                                   const DataLayout *DL) const {
-  LLVMContext &Ctx = FTy.getContext();
-  Type *SizeTTy = DL ? DL->getIntPtrType(Ctx, /*AddressSpace=*/0) : nullptr;
-  auto IsSizeTTy = [SizeTTy](Type *Ty) {
-    return SizeTTy ? Ty == SizeTTy : Ty->isIntegerTy();
-  };
+                                                   const Module &M) const {
+  // FIXME: There is really no guarantee that sizeof(size_t) is equal to
+  // sizeof(int*) for every target. So the assumption used here to derive the
+  // SizeTBits based on the size of an integer pointer in address space zero
+  // isn't always valid.
+  unsigned SizeTBits = M.getDataLayout().getPointerSizeInBits(/*AddrSpace=*/0);
   unsigned NumParams = FTy.getNumParams();
 
   switch (F) {
@@ -745,12 +943,12 @@ bool TargetLibraryInfoImpl::isValidProtoForLibFunc(const FunctionType &FTy,
             FTy.getReturnType()->isIntegerTy(32));
   case LibFunc_strlen_chk:
     --NumParams;
-    if (!IsSizeTTy(FTy.getParamType(NumParams)))
+    if (!FTy.getParamType(NumParams)->isIntegerTy(SizeTBits))
       return false;
     LLVM_FALLTHROUGH;
   case LibFunc_strlen:
-    return (NumParams == 1 && FTy.getParamType(0)->isPointerTy() &&
-            FTy.getReturnType()->isIntegerTy());
+    return NumParams == 1 && FTy.getParamType(0)->isPointerTy() &&
+           FTy.getReturnType()->isIntegerTy(SizeTBits);
 
   case LibFunc_strchr:
   case LibFunc_strrchr:
@@ -770,7 +968,7 @@ bool TargetLibraryInfoImpl::isValidProtoForLibFunc(const FunctionType &FTy,
             FTy.getParamType(1)->isPointerTy());
   case LibFunc_strcat_chk:
     --NumParams;
-    if (!IsSizeTTy(FTy.getParamType(NumParams)))
+    if (!FTy.getParamType(NumParams)->isIntegerTy(SizeTBits))
       return false;
     LLVM_FALLTHROUGH;
   case LibFunc_strcat:
@@ -780,19 +978,19 @@ bool TargetLibraryInfoImpl::isValidProtoForLibFunc(const FunctionType &FTy,
 
   case LibFunc_strncat_chk:
     --NumParams;
-    if (!IsSizeTTy(FTy.getParamType(NumParams)))
+    if (!FTy.getParamType(NumParams)->isIntegerTy(SizeTBits))
       return false;
     LLVM_FALLTHROUGH;
   case LibFunc_strncat:
     return (NumParams == 3 && FTy.getReturnType()->isPointerTy() &&
             FTy.getParamType(0) == FTy.getReturnType() &&
             FTy.getParamType(1) == FTy.getReturnType() &&
-            IsSizeTTy(FTy.getParamType(2)));
+            FTy.getParamType(2)->isIntegerTy(SizeTBits));
 
   case LibFunc_strcpy_chk:
   case LibFunc_stpcpy_chk:
     --NumParams;
-    if (!IsSizeTTy(FTy.getParamType(NumParams)))
+    if (!FTy.getParamType(NumParams)->isIntegerTy(SizeTBits))
       return false;
     LLVM_FALLTHROUGH;
   case LibFunc_strcpy:
@@ -804,20 +1002,20 @@ bool TargetLibraryInfoImpl::isValidProtoForLibFunc(const FunctionType &FTy,
   case LibFunc_strlcat_chk:
   case LibFunc_strlcpy_chk:
     --NumParams;
-    if (!IsSizeTTy(FTy.getParamType(NumParams)))
+    if (!FTy.getParamType(NumParams)->isIntegerTy(SizeTBits))
       return false;
     LLVM_FALLTHROUGH;
   case LibFunc_strlcat:
   case LibFunc_strlcpy:
-    return NumParams == 3 && IsSizeTTy(FTy.getReturnType()) &&
+    return NumParams == 3 && FTy.getReturnType()->isIntegerTy(SizeTBits) &&
            FTy.getParamType(0)->isPointerTy() &&
            FTy.getParamType(1)->isPointerTy() &&
-           IsSizeTTy(FTy.getParamType(2));
+           FTy.getParamType(2)->isIntegerTy(SizeTBits);
 
   case LibFunc_strncpy_chk:
   case LibFunc_stpncpy_chk:
     --NumParams;
-    if (!IsSizeTTy(FTy.getParamType(NumParams)))
+    if (!FTy.getParamType(NumParams)->isIntegerTy(SizeTBits))
       return false;
     LLVM_FALLTHROUGH;
   case LibFunc_strncpy:
@@ -825,7 +1023,7 @@ bool TargetLibraryInfoImpl::isValidProtoForLibFunc(const FunctionType &FTy,
     return (NumParams == 3 && FTy.getReturnType() == FTy.getParamType(0) &&
             FTy.getParamType(0) == FTy.getParamType(1) &&
             FTy.getParamType(0)->isPointerTy() &&
-            IsSizeTTy(FTy.getParamType(2)));
+            FTy.getParamType(2)->isIntegerTy(SizeTBits));
 
   case LibFunc_strxfrm:
     return (NumParams == 3 && FTy.getParamType(0)->isPointerTy() &&
@@ -840,7 +1038,7 @@ bool TargetLibraryInfoImpl::isValidProtoForLibFunc(const FunctionType &FTy,
     return (NumParams == 3 && FTy.getReturnType()->isIntegerTy(32) &&
             FTy.getParamType(0)->isPointerTy() &&
             FTy.getParamType(0) == FTy.getParamType(1) &&
-            IsSizeTTy(FTy.getParamType(2)));
+            FTy.getParamType(2)->isIntegerTy(SizeTBits));
 
   case LibFunc_strspn:
   case LibFunc_strcspn:
@@ -888,20 +1086,21 @@ bool TargetLibraryInfoImpl::isValidProtoForLibFunc(const FunctionType &FTy,
   case LibFunc_sprintf_chk:
     return NumParams == 4 && FTy.getParamType(0)->isPointerTy() &&
            FTy.getParamType(1)->isIntegerTy(32) &&
-           IsSizeTTy(FTy.getParamType(2)) &&
+           FTy.getParamType(2)->isIntegerTy(SizeTBits) &&
            FTy.getParamType(3)->isPointerTy() &&
            FTy.getReturnType()->isIntegerTy(32);
 
   case LibFunc_snprintf:
-    return (NumParams == 3 && FTy.getParamType(0)->isPointerTy() &&
-            FTy.getParamType(2)->isPointerTy() &&
-            FTy.getReturnType()->isIntegerTy(32));
+    return NumParams == 3 && FTy.getParamType(0)->isPointerTy() &&
+           FTy.getParamType(1)->isIntegerTy(SizeTBits) &&
+           FTy.getParamType(2)->isPointerTy() &&
+           FTy.getReturnType()->isIntegerTy(32);
 
   case LibFunc_snprintf_chk:
     return NumParams == 5 && FTy.getParamType(0)->isPointerTy() &&
-           IsSizeTTy(FTy.getParamType(1)) &&
+           FTy.getParamType(1)->isIntegerTy(SizeTBits) &&
            FTy.getParamType(2)->isIntegerTy(32) &&
-           IsSizeTTy(FTy.getParamType(3)) &&
+           FTy.getParamType(3)->isIntegerTy(SizeTBits) &&
            FTy.getParamType(4)->isPointerTy() &&
            FTy.getReturnType()->isIntegerTy(32);
 
@@ -911,20 +1110,23 @@ bool TargetLibraryInfoImpl::isValidProtoForLibFunc(const FunctionType &FTy,
   case LibFunc_system:
     return (NumParams == 1 && FTy.getParamType(0)->isPointerTy());
   case LibFunc___kmpc_alloc_shared:
+    return NumParams == 1 && FTy.getReturnType()->isPointerTy();
   case LibFunc_malloc:
   case LibFunc_vec_malloc:
-    return (NumParams == 1 && FTy.getReturnType()->isPointerTy());
+    return NumParams == 1 && FTy.getParamType(0)->isIntegerTy(SizeTBits) &&
+           FTy.getReturnType()->isPointerTy();
   case LibFunc_memcmp:
-    return (NumParams == 3 && FTy.getReturnType()->isIntegerTy(32) &&
-            FTy.getParamType(0)->isPointerTy() &&
-            FTy.getParamType(1)->isPointerTy());
+    return NumParams == 3 && FTy.getReturnType()->isIntegerTy(32) &&
+           FTy.getParamType(0)->isPointerTy() &&
+           FTy.getParamType(1)->isPointerTy() &&
+           FTy.getParamType(2)->isIntegerTy(SizeTBits);
 
   case LibFunc_memchr:
   case LibFunc_memrchr:
     return (NumParams == 3 && FTy.getReturnType()->isPointerTy() &&
             FTy.getReturnType() == FTy.getParamType(0) &&
             FTy.getParamType(1)->isIntegerTy(32) &&
-            IsSizeTTy(FTy.getParamType(2)));
+            FTy.getParamType(2)->isIntegerTy(SizeTBits));
   case LibFunc_modf:
   case LibFunc_modff:
   case LibFunc_modfl:
@@ -934,7 +1136,7 @@ bool TargetLibraryInfoImpl::isValidProtoForLibFunc(const FunctionType &FTy,
   case LibFunc_mempcpy_chk:
   case LibFunc_memmove_chk:
     --NumParams;
-    if (!IsSizeTTy(FTy.getParamType(NumParams)))
+    if (!FTy.getParamType(NumParams)->isIntegerTy(SizeTBits))
       return false;
     LLVM_FALLTHROUGH;
   case LibFunc_memcpy:
@@ -943,22 +1145,22 @@ bool TargetLibraryInfoImpl::isValidProtoForLibFunc(const FunctionType &FTy,
     return (NumParams == 3 && FTy.getReturnType() == FTy.getParamType(0) &&
             FTy.getParamType(0)->isPointerTy() &&
             FTy.getParamType(1)->isPointerTy() &&
-            IsSizeTTy(FTy.getParamType(2)));
+            FTy.getParamType(2)->isIntegerTy(SizeTBits));
 
   case LibFunc_memset_chk:
     --NumParams;
-    if (!IsSizeTTy(FTy.getParamType(NumParams)))
+    if (!FTy.getParamType(NumParams)->isIntegerTy(SizeTBits))
       return false;
     LLVM_FALLTHROUGH;
   case LibFunc_memset:
     return (NumParams == 3 && FTy.getReturnType() == FTy.getParamType(0) &&
             FTy.getParamType(0)->isPointerTy() &&
             FTy.getParamType(1)->isIntegerTy() &&
-            IsSizeTTy(FTy.getParamType(2)));
+            FTy.getParamType(2)->isIntegerTy(SizeTBits));
 
   case LibFunc_memccpy_chk:
       --NumParams;
-    if (!IsSizeTTy(FTy.getParamType(NumParams)))
+    if (!FTy.getParamType(NumParams)->isIntegerTy(SizeTBits))
       return false;
     LLVM_FALLTHROUGH;
   case LibFunc_memccpy:
@@ -970,7 +1172,7 @@ bool TargetLibraryInfoImpl::isValidProtoForLibFunc(const FunctionType &FTy,
   case LibFunc_vec_realloc:
     return (NumParams == 2 && FTy.getReturnType()->isPointerTy() &&
             FTy.getParamType(0) == FTy.getReturnType() &&
-            IsSizeTTy(FTy.getParamType(1)));
+            FTy.getParamType(1)->isIntegerTy(SizeTBits));
   case LibFunc_read:
     return (NumParams == 3 && FTy.getParamType(1)->isPointerTy());
   case LibFunc_rewind:
@@ -1051,7 +1253,7 @@ bool TargetLibraryInfoImpl::isValidProtoForLibFunc(const FunctionType &FTy,
     return (NumParams != 0 && FTy.getParamType(0)->isPointerTy());
   case LibFunc___kmpc_free_shared:
     return (NumParams == 2 && FTy.getParamType(0)->isPointerTy() &&
-            IsSizeTTy(FTy.getParamType(1)));
+            FTy.getParamType(1)->isIntegerTy(SizeTBits));
 
   case LibFunc_fopen:
     return (NumParams == 2 && FTy.getReturnType()->isPointerTy() &&
@@ -1141,14 +1343,14 @@ bool TargetLibraryInfoImpl::isValidProtoForLibFunc(const FunctionType &FTy,
   case LibFunc_vsprintf_chk:
     return NumParams == 5 && FTy.getParamType(0)->isPointerTy() &&
            FTy.getParamType(1)->isIntegerTy(32) &&
-           IsSizeTTy(FTy.getParamType(2)) && FTy.getParamType(3)->isPointerTy();
+           FTy.getParamType(2)->isIntegerTy(SizeTBits) && FTy.getParamType(3)->isPointerTy();
   case LibFunc_vsnprintf:
     return (NumParams == 4 && FTy.getParamType(0)->isPointerTy() &&
             FTy.getParamType(2)->isPointerTy());
   case LibFunc_vsnprintf_chk:
     return NumParams == 6 && FTy.getParamType(0)->isPointerTy() &&
            FTy.getParamType(2)->isIntegerTy(32) &&
-           IsSizeTTy(FTy.getParamType(3)) && FTy.getParamType(4)->isPointerTy();
+           FTy.getParamType(3)->isIntegerTy(SizeTBits) && FTy.getParamType(4)->isPointerTy();
   case LibFunc_open:
     return (NumParams >= 2 && FTy.getParamType(0)->isPointerTy());
   case LibFunc_opendir:
@@ -1329,6 +1531,8 @@ bool TargetLibraryInfoImpl::isValidProtoForLibFunc(const FunctionType &FTy,
             FTy.getParamType(2)->isPointerTy() &&
             FTy.getParamType(3)->isIntegerTy());
 
+  case LibFunc_memset_pattern4:
+  case LibFunc_memset_pattern8:
   case LibFunc_memset_pattern16:
     return (!FTy.isVarArg() && NumParams == 3 &&
             FTy.getParamType(0)->isPointerTy() &&
@@ -1560,12 +1764,13 @@ bool TargetLibraryInfoImpl::isValidProtoForLibFunc(const FunctionType &FTy,
   case LibFunc_strnlen:
     return (NumParams == 2 && FTy.getReturnType() == FTy.getParamType(1) &&
             FTy.getParamType(0)->isPointerTy() &&
-            IsSizeTTy(FTy.getParamType(1)));
+            FTy.getParamType(1)->isIntegerTy(SizeTBits));
 
   case LibFunc_posix_memalign:
     return (NumParams == 3 && FTy.getReturnType()->isIntegerTy(32) &&
             FTy.getParamType(0)->isPointerTy() &&
-            IsSizeTTy(FTy.getParamType(1)) && IsSizeTTy(FTy.getParamType(2)));
+            FTy.getParamType(1)->isIntegerTy(SizeTBits) &&
+            FTy.getParamType(2)->isIntegerTy(SizeTBits));
 
   case LibFunc_wcslen:
     return (NumParams == 1 && FTy.getParamType(0)->isPointerTy() &&
@@ -1605,10 +1810,11 @@ bool TargetLibraryInfoImpl::getLibFunc(const Function &FDecl,
   // avoid string normalization and comparison.
   if (FDecl.isIntrinsic()) return false;
 
-  const DataLayout *DL =
-      FDecl.getParent() ? &FDecl.getParent()->getDataLayout() : nullptr;
+  const Module *M = FDecl.getParent();
+  assert(M && "Expecting FDecl to be connected to a Module.");
+
   return getLibFunc(FDecl.getName(), F) &&
-         isValidProtoForLibFunc(*FDecl.getFunctionType(), F, DL);
+         isValidProtoForLibFunc(*FDecl.getFunctionType(), F, *M);
 }
 
 void TargetLibraryInfoImpl::disableAllFunctions() {

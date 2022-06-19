@@ -85,6 +85,7 @@ TYPE_PARSER(first(construct<ConnectSpec>(maybe("UNIT ="_tok) >> fileUnitNumber),
     construct<ConnectSpec>("ERR =" >> errLabel),
     construct<ConnectSpec>("FILE =" >> fileNameExpr),
     extension<LanguageFeature::FileName>(
+        "nonstandard usage: NAME= in place of FILE="_port_en_US,
         construct<ConnectSpec>("NAME =" >> fileNameExpr)),
     construct<ConnectSpec>(construct<ConnectSpec::CharExpr>(
         "FORM =" >> pure(ConnectSpec::CharExpr::Kind::Form),
@@ -108,15 +109,19 @@ TYPE_PARSER(first(construct<ConnectSpec>(maybe("UNIT ="_tok) >> fileUnitNumber),
         "SIGN =" >> pure(ConnectSpec::CharExpr::Kind::Sign),
         scalarDefaultCharExpr)),
     construct<ConnectSpec>("STATUS =" >> statusExpr),
-    extension<LanguageFeature::Carriagecontrol>(construct<ConnectSpec>(
-        construct<ConnectSpec::CharExpr>("CARRIAGECONTROL =" >>
-                pure(ConnectSpec::CharExpr::Kind::Carriagecontrol),
-            scalarDefaultCharExpr))),
+    extension<LanguageFeature::Carriagecontrol>(
+        "nonstandard usage: CARRIAGECONTROL="_port_en_US,
+        construct<ConnectSpec>(
+            construct<ConnectSpec::CharExpr>("CARRIAGECONTROL =" >>
+                    pure(ConnectSpec::CharExpr::Kind::Carriagecontrol),
+                scalarDefaultCharExpr))),
     extension<LanguageFeature::Convert>(
+        "nonstandard usage: CONVERT="_port_en_US,
         construct<ConnectSpec>(construct<ConnectSpec::CharExpr>(
             "CONVERT =" >> pure(ConnectSpec::CharExpr::Kind::Convert),
             scalarDefaultCharExpr))),
     extension<LanguageFeature::Dispose>(
+        "nonstandard usage: DISPOSE="_port_en_US,
         construct<ConnectSpec>(construct<ConnectSpec::CharExpr>(
             "DISPOSE =" >> pure(ConnectSpec::CharExpr::Kind::Dispose),
             scalarDefaultCharExpr)))))
@@ -145,6 +150,7 @@ TYPE_CONTEXT_PARSER("CLOSE statement"_en_US,
 // rewriting in semantics when we know that CVAR is character.
 constexpr auto inputItemList{
     extension<LanguageFeature::IOListLeadingComma>(
+        "nonstandard usage: leading comma in input item list"_port_en_US,
         some("," >> inputItem)) || // legacy extension: leading comma
     optionalList(inputItem)};
 
@@ -226,6 +232,7 @@ TYPE_PARSER(first(construct<IoControlSpec>("UNIT =" >> ioUnit),
 // R1211 write-stmt -> WRITE ( io-control-spec-list ) [output-item-list]
 constexpr auto outputItemList{
     extension<LanguageFeature::IOListLeadingComma>(
+        "nonstandard usage: leading comma in output item list"_port_en_US,
         some("," >> outputItem)) || // legacy: allow leading comma
     optionalList(outputItem)};
 
@@ -486,18 +493,23 @@ TYPE_PARSER(first(construct<InquireSpec>(maybe("UNIT ="_tok) >> fileUnitNumber),
         construct<InquireSpec::CharVar>(pure(InquireSpec::CharVar::Kind::Write),
             scalarDefaultCharVariable)),
     extension<LanguageFeature::Carriagecontrol>(
+        "nonstandard usage: CARRIAGECONTROL="_port_en_US,
         construct<InquireSpec>("CARRIAGECONTROL =" >>
             construct<InquireSpec::CharVar>(
                 pure(InquireSpec::CharVar::Kind::Carriagecontrol),
                 scalarDefaultCharVariable))),
-    extension<LanguageFeature::Convert>(construct<InquireSpec>(
-        "CONVERT =" >> construct<InquireSpec::CharVar>(
-                           pure(InquireSpec::CharVar::Kind::Convert),
-                           scalarDefaultCharVariable))),
-    extension<LanguageFeature::Dispose>(construct<InquireSpec>(
-        "DISPOSE =" >> construct<InquireSpec::CharVar>(
-                           pure(InquireSpec::CharVar::Kind::Dispose),
-                           scalarDefaultCharVariable)))))
+    extension<LanguageFeature::Convert>(
+        "nonstandard usage: CONVERT="_port_en_US,
+        construct<InquireSpec>(
+            "CONVERT =" >> construct<InquireSpec::CharVar>(
+                               pure(InquireSpec::CharVar::Kind::Convert),
+                               scalarDefaultCharVariable))),
+    extension<LanguageFeature::Dispose>(
+        "nonstandard usage: DISPOSE="_port_en_US,
+        construct<InquireSpec>(
+            "DISPOSE =" >> construct<InquireSpec::CharVar>(
+                               pure(InquireSpec::CharVar::Kind::Dispose),
+                               scalarDefaultCharVariable)))))
 
 // R1230 inquire-stmt ->
 //         INQUIRE ( inquire-spec-list ) |
@@ -591,6 +603,7 @@ TYPE_PARSER(construct<format::IntrinsicTypeDataEditDesc>(
         noInt, noInt) ||
     // PGI/Intel extension: omitting width (and all else that follows)
     extension<LanguageFeature::AbbreviatedEditDescriptor>(
+        "nonstandard usage: abbreviated edit descriptor"_port_en_US,
         construct<format::IntrinsicTypeDataEditDesc>(
             "I" >> pure(format::IntrinsicTypeDataEditDesc::Kind::I) ||
                 ("B"_tok / !letter /* don't occlude BN & BZ */) >>
@@ -673,8 +686,9 @@ TYPE_PARSER(construct<format::ControlEditDesc>(
                "P" >> construct<format::ControlEditDesc>(
                           pure(format::ControlEditDesc::Kind::DP))) ||
     extension<LanguageFeature::AdditionalFormats>(
+        "nonstandard usage: $ and \\ control edit descriptors"_port_en_US,
         "$" >> construct<format::ControlEditDesc>(
                    pure(format::ControlEditDesc::Kind::Dollar)) ||
-        "\\" >> construct<format::ControlEditDesc>(
-                    pure(format::ControlEditDesc::Kind::Backslash))))
+            "\\" >> construct<format::ControlEditDesc>(
+                        pure(format::ControlEditDesc::Kind::Backslash))))
 } // namespace Fortran::parser

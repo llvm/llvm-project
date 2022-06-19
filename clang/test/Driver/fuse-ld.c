@@ -2,7 +2,7 @@
 // RUN: %clang %s -### -target x86_64-unknown-linux -Wfuse-ld-path \
 // RUN:   -fuse-ld=/usr/local/bin/or1k-linux-ld 2>&1 | \
 // RUN:   FileCheck %s --check-prefix=CHECK-ABSOLUTE-LD
-// CHECK-ABSOLUTE-LD: warning: '-fuse-ld=' taking a path is deprecated. Use '--ld-path=' instead
+// CHECK-ABSOLUTE-LD: warning: '-fuse-ld=' taking a path is deprecated; use '--ld-path=' instead
 // CHECK-ABSOLUTE-LD: /usr/local/bin/or1k-linux-ld
 
 // RUN: %clang %s -### -target x86_64-unknown-linux -Wextra \
@@ -60,19 +60,19 @@
 
 // RUN: %clang %s -### -fuse-ld=ld \
 // RUN:     -target arm-linux-androideabi \
-// RUN:     -gcc-toolchain %S/Inputs/basic_android_tree 2>&1 \
+// RUN:     --gcc-toolchain=%S/Inputs/basic_android_tree 2>&1 \
 // RUN:   | FileCheck %s --check-prefix=CHECK-ANDROID-ARM-LD-TC
 // CHECK-ANDROID-ARM-LD-TC: Inputs/basic_android_tree/lib/gcc/arm-linux-androideabi/4.4.3/../../../../arm-linux-androideabi/bin{{/|\\+}}ld
 
 // RUN: %clang %s -### -fuse-ld=bfd \
 // RUN:     -target arm-linux-androideabi \
-// RUN:     -gcc-toolchain %S/Inputs/basic_android_tree 2>&1 \
+// RUN:     --gcc-toolchain=%S/Inputs/basic_android_tree 2>&1 \
 // RUN:   | FileCheck %s -check-prefix=CHECK-ANDROID-ARM-BFD-TC
 // CHECK-ANDROID-ARM-BFD-TC: Inputs/basic_android_tree/lib/gcc/arm-linux-androideabi/4.4.3/../../../../arm-linux-androideabi/bin{{/|\\+}}ld.bfd
 
 // RUN: %clang %s -### -fuse-ld=gold \
 // RUN:     -target arm-linux-androideabi \
-// RUN:     -gcc-toolchain %S/Inputs/basic_android_tree 2>&1 \
+// RUN:     --gcc-toolchain=%S/Inputs/basic_android_tree 2>&1 \
 // RUN:   | FileCheck %s -check-prefix=CHECK-ANDROID-ARM-GOLD-TC
 // CHECK-ANDROID-ARM-GOLD-TC: Inputs/basic_android_tree/lib/gcc/arm-linux-androideabi/4.4.3/../../../../arm-linux-androideabi/bin{{/|\\+}}ld.gold
 

@@ -11,15 +11,18 @@
 //===----------------------------------------------------------------------===//
 
 #include "RISCVTargetStreamer.h"
+#include "RISCVBaseInfo.h"
 #include "RISCVMCTargetDesc.h"
 #include "llvm/Support/FormattedStream.h"
 #include "llvm/Support/RISCVAttributes.h"
+#include "llvm/Support/RISCVISAInfo.h"
 
 using namespace llvm;
 
 RISCVTargetStreamer::RISCVTargetStreamer(MCStreamer &S) : MCTargetStreamer(S) {}
 
 void RISCVTargetStreamer::finish() { finishAttributeSection(); }
+void RISCVTargetStreamer::reset() {}
 
 void RISCVTargetStreamer::emitDirectiveOptionPush() {}
 void RISCVTargetStreamer::emitDirectiveOptionPop() {}
@@ -36,6 +39,10 @@ void RISCVTargetStreamer::emitTextAttribute(unsigned Attribute,
 void RISCVTargetStreamer::emitIntTextAttribute(unsigned Attribute,
                                                unsigned IntValue,
                                                StringRef StringValue) {}
+void RISCVTargetStreamer::setTargetABI(RISCVABI::ABI ABI) {
+  assert(ABI != RISCVABI::ABI_Unknown && "Improperly initialized target ABI");
+  TargetABI = ABI;
+}
 
 void RISCVTargetStreamer::emitTargetAttributes(const MCSubtargetInfo &STI) {
   if (STI.hasFeature(RISCV::FeatureRV32E))
@@ -43,57 +50,14 @@ void RISCVTargetStreamer::emitTargetAttributes(const MCSubtargetInfo &STI) {
   else
     emitAttribute(RISCVAttrs::STACK_ALIGN, RISCVAttrs::ALIGN_16);
 
-  std::string Arch = "rv32";
-  if (STI.hasFeature(RISCV::Feature64Bit))
-    Arch = "rv64";
-  if (STI.hasFeature(RISCV::FeatureRV32E))
-    Arch += "e1p9";
-  else
-    Arch += "i2p0";
-  if (STI.hasFeature(RISCV::FeatureStdExtM))
-    Arch += "_m2p0";
-  if (STI.hasFeature(RISCV::FeatureStdExtA))
-    Arch += "_a2p0";
-  if (STI.hasFeature(RISCV::FeatureStdExtF))
-    Arch += "_f2p0";
-  if (STI.hasFeature(RISCV::FeatureStdExtD))
-    Arch += "_d2p0";
-  if (STI.hasFeature(RISCV::FeatureStdExtC))
-    Arch += "_c2p0";
-  if (STI.hasFeature(RISCV::FeatureStdExtB))
-    Arch += "_b0p93";
-  if (STI.hasFeature(RISCV::FeatureStdExtV))
-    Arch += "_v0p10";
-  if (STI.hasFeature(RISCV::FeatureExtZfh))
-    Arch += "_zfh0p1";
-  if (STI.hasFeature(RISCV::FeatureExtZba))
-    Arch += "_zba0p93";
-  if (STI.hasFeature(RISCV::FeatureExtZbb))
-    Arch += "_zbb0p93";
-  if (STI.hasFeature(RISCV::FeatureExtZbc))
-    Arch += "_zbc0p93";
-  if (STI.hasFeature(RISCV::FeatureExtZbe))
-    Arch += "_zbe0p93";
-  if (STI.hasFeature(RISCV::FeatureExtZbf))
-    Arch += "_zbf0p93";
-  if (STI.hasFeature(RISCV::FeatureExtZbm))
-    Arch += "_zbm0p93";
-  if (STI.hasFeature(RISCV::FeatureExtZbp))
-    Arch += "_zbp0p93";
-  if (STI.hasFeature(RISCV::FeatureExtZbproposedc))
-    Arch += "_zbproposedc0p93";
-  if (STI.hasFeature(RISCV::FeatureExtZbr))
-    Arch += "_zbr0p93";
-  if (STI.hasFeature(RISCV::FeatureExtZbs))
-    Arch += "_zbs0p93";
-  if (STI.hasFeature(RISCV::FeatureExtZbt))
-    Arch += "_zbt0p93";
-  if (STI.hasFeature(RISCV::FeatureExtZvamo))
-    Arch += "_zvamo0p10";
-  if (STI.hasFeature(RISCV::FeatureStdExtZvlsseg))
-    Arch += "_zvlsseg0p10";
-
-  emitTextAttribute(RISCVAttrs::ARCH, Arch);
+  auto ParseResult = RISCVFeatures::parseFeatureBits(
+      STI.hasFeature(RISCV::Feature64Bit), STI.getFeatureBits());
+  if (!ParseResult) {
+    report_fatal_error(ParseResult.takeError());
+  } else {
+    auto &ISAInfo = *ParseResult;
+    emitTextAttribute(RISCVAttrs::ARCH, ISAInfo->toString());
+  }
 }
 
 // This part is for ascii assembly output

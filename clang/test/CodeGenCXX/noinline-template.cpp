@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 %s -emit-llvm -triple %itanium_abi_triple -o - | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers %s -emit-llvm -triple %itanium_abi_triple -o - | FileCheck %s
 
 // This was a problem in Sema, but only shows up as noinline missing
 // in CodeGen.

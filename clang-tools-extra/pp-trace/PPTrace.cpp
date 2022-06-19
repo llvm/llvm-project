@@ -69,7 +69,7 @@ static cl::opt<std::string> OutputFileName(
     cl::desc("Output trace to the given file name or '-' for stdout."),
     cl::cat(Cat));
 
-LLVM_ATTRIBUTE_NORETURN static void error(Twine Message) {
+[[noreturn]] static void error(Twine Message) {
   WithColor::error() << Message << '\n';
   exit(1);
 }

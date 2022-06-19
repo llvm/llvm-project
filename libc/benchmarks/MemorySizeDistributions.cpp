@@ -1,8 +1,38 @@
 #include "MemorySizeDistributions.h"
 
+#include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/raw_ostream.h"
+
 namespace llvm {
 namespace libc_benchmarks {
 
+static constexpr double MemmoveGoogleA[] = {
+#include "distributions/MemmoveGoogleA.csv"
+};
+static constexpr double MemmoveGoogleB[] = {
+#include "distributions/MemmoveGoogleB.csv"
+};
+static constexpr double MemmoveGoogleD[] = {
+#include "distributions/MemmoveGoogleD.csv"
+};
+static constexpr double MemmoveGoogleQ[] = {
+#include "distributions/MemmoveGoogleQ.csv"
+};
+static constexpr double MemmoveGoogleL[] = {
+#include "distributions/MemmoveGoogleL.csv"
+};
+static constexpr double MemmoveGoogleM[] = {
+#include "distributions/MemmoveGoogleM.csv"
+};
+static constexpr double MemmoveGoogleS[] = {
+#include "distributions/MemmoveGoogleS.csv"
+};
+static constexpr double MemmoveGoogleW[] = {
+#include "distributions/MemmoveGoogleW.csv"
+};
+static constexpr double MemmoveGoogleU[] = {
+#include "distributions/MemmoveGoogleU.csv"
+};
 static constexpr double MemcmpGoogleA[] = {
 #include "distributions/MemcmpGoogleA.csv"
 };
@@ -33,11 +63,11 @@ static constexpr double MemcmpGoogleU[] = {
 static constexpr double MemcpyGoogleA[] = {
 #include "distributions/MemcpyGoogleA.csv"
 };
-static constexpr double MemcpyGoogleD[] = {
-#include "distributions/MemcpyGoogleD.csv"
-};
 static constexpr double MemcpyGoogleB[] = {
 #include "distributions/MemcpyGoogleB.csv"
+};
+static constexpr double MemcpyGoogleD[] = {
+#include "distributions/MemcpyGoogleD.csv"
 };
 static constexpr double MemcpyGoogleQ[] = {
 #include "distributions/MemcpyGoogleQ.csv"
@@ -88,6 +118,22 @@ static constexpr double Uniform384To4096[] = {
 #include "distributions/Uniform384To4096.csv"
 };
 
+ArrayRef<MemorySizeDistribution> getMemmoveSizeDistributions() {
+  static constexpr MemorySizeDistribution kDistributions[] = {
+      {"memmove Google A", MemmoveGoogleA},
+      {"memmove Google B", MemmoveGoogleB},
+      {"memmove Google D", MemmoveGoogleD},
+      {"memmove Google L", MemmoveGoogleL},
+      {"memmove Google M", MemmoveGoogleM},
+      {"memmove Google Q", MemmoveGoogleQ},
+      {"memmove Google S", MemmoveGoogleS},
+      {"memmove Google U", MemmoveGoogleU},
+      {"memmove Google W", MemmoveGoogleW},
+      {"uniform 384 to 4096", Uniform384To4096},
+  };
+  return kDistributions;
+}
+
 ArrayRef<MemorySizeDistribution> getMemcpySizeDistributions() {
   static constexpr MemorySizeDistribution kDistributions[] = {
       {"memcpy Google A", MemcpyGoogleA},
@@ -135,5 +181,24 @@ ArrayRef<MemorySizeDistribution> getMemcmpSizeDistributions() {
   };
   return kDistributions;
 }
+
+MemorySizeDistribution
+getDistributionOrDie(ArrayRef<MemorySizeDistribution> Distributions,
+                     StringRef Name) {
+  size_t Index = 0;
+  for (const auto &MSD : Distributions) {
+    if (MSD.Name == Name)
+      return MSD;
+    ++Index;
+  }
+  std::string Message;
+  raw_string_ostream Stream(Message);
+  Stream << "Unknown MemorySizeDistribution '" << Name
+         << "', available distributions:\n";
+  for (const auto &MSD : Distributions)
+    Stream << "'" << MSD.Name << "'\n";
+  report_fatal_error(Stream.str());
+}
+
 } // namespace libc_benchmarks
 } // namespace llvm

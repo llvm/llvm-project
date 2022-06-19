@@ -19,7 +19,7 @@ namespace cppcoreguidelines {
 /// of va_arg.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/cppcoreguidelines-pro-type-vararg.html
+/// http://clang.llvm.org/extra/clang-tidy/checks/cppcoreguidelines/pro-type-vararg.html
 class ProTypeVarargCheck : public ClangTidyCheck {
 public:
   ProTypeVarargCheck(StringRef Name, ClangTidyContext *Context)
@@ -28,6 +28,8 @@ public:
     return LangOpts.CPlusPlus;
   }
   void registerMatchers(ast_matchers::MatchFinder *Finder) override;
+  void registerPPCallbacks(const SourceManager &SM, Preprocessor *PP,
+                           Preprocessor *ModuleExpanderPP) override;
   void check(const ast_matchers::MatchFinder::MatchResult &Result) override;
 };
 

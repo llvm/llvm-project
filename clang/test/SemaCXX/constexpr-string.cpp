@@ -7,7 +7,7 @@
 // RUN: %clang_cc1 %s -triple armebv7-unknown-linux -std=c++2a -fsyntax-only -verify -pedantic -Wno-vla-extension -fno-signed-char
 // RUN: %clang_cc1 %s -triple armebv7-unknown-linux -std=c++2a -fsyntax-only -verify -pedantic -Wno-vla-extension -fno-wchar -DNO_PREDEFINED_WCHAR_T
 
-# 9 "/usr/include/string.h" 1 3 4
+# 9 "/usr/include/string.h" 1 3 4  // expected-warning {{this style of line directive is a GNU extension}}
 extern "C" {
   typedef decltype(sizeof(int)) size_t;
 
@@ -29,7 +29,7 @@ extern "C" {
 }
 # 25 "SemaCXX/constexpr-string.cpp" 2
 
-# 27 "/usr/include/wchar.h" 1 3 4
+# 27 "/usr/include/wchar.h" 1 3 4  // expected-warning {{this style of line directive is a GNU extension}}
 extern "C" {
 #if NO_PREDEFINED_WCHAR_T
   typedef decltype(L'0') wchar_t;
@@ -661,7 +661,7 @@ namespace MemcpyEtc {
   constexpr int test_address_of_incomplete_array_type() { // expected-error {{never produces a constant}}
     extern int arr[];
     __builtin_memmove(&arr, &arr, 4 * sizeof(arr[0]));
-    // expected-note@-1 2{{cannot constant evaluate 'memmove' between objects of incomplete type 'int []'}}
+    // expected-note@-1 2{{cannot constant evaluate 'memmove' between objects of incomplete type 'int[]'}}
     return arr[0] * 1000 + arr[1] * 100 + arr[2] * 10 + arr[3];
   }
   static_assert(test_address_of_incomplete_array_type() == 1234); // expected-error {{constant}} expected-note {{in call}}

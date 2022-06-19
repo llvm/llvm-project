@@ -20,6 +20,8 @@
 //     ...
 // };
 
+// XFAIL: no-wide-characters
+
 #include <locale>
 #include <type_traits>
 #include <cassert>

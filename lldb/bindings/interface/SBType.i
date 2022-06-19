@@ -355,6 +355,18 @@ public:
     IsScopedEnumerationType ();
 
     %feature("docstring",
+    "Returns true if this type is an aggregate type.
+
+    Language-specific behaviour:
+
+    * C: Returns true for struct values, arrays, and vectors.
+    * C++: Same a C. Also includes class instances.
+    * Objective-C: Same as C. Also includes class instances.
+    ") IsAggregateType;
+    bool
+    IsAggregateType ();
+
+    %feature("docstring",
     "Returns a type that represents a pointer to this type.
 
     If the type system of the current language can't represent a pointer to this
@@ -837,6 +849,21 @@ public:
     lldb::SBTypeMemberFunction
     GetMemberFunctionAtIndex (uint32_t idx);
 
+    %feature("docstring",
+    "Returns true if the type is completely defined.
+
+    Language-specific behaviour:
+
+    * C: Returns false for struct types that were only forward declared in the
+      type's `SBTarget`/`SBModule`. Otherwise returns true.
+    * C++: Returns false for template/non-template struct/class types and
+      scoped enums that were only forward declared inside the type's
+      `SBTarget`/`SBModule`. Otherwise returns true.
+    * Objective-C: Follows the same behavior as C for struct types. Objective-C
+      classes are considered complete unless they were only forward declared via
+      ``@class ClassName`` in the type's `SBTarget`/`SBModule`. Otherwise
+      returns true.
+    ") IsTypeComplete;
     bool
     IsTypeComplete ();
 

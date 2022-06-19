@@ -1,5 +1,4 @@
-; RUN: opt %loadPolly -polly-opt-isl -analyze \
-; RUN:                -polly-ast -polly-tile-sizes=1,64 < %s | FileCheck %s
+; RUN: opt %loadPolly -polly-tile-sizes=1,64 -polly-opt-isl -polly-print-ast -disable-output < %s | FileCheck %s
 
 ; CHECK: for (int c0 = 0; c0 <= 1023; c0 += 1)
 ; CHECK:   for (int c1 = 0; c1 <= 7; c1 += 1)

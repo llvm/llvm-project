@@ -89,6 +89,7 @@ class GenericLLVMIRPlatform : public Platform {
 public:
   GenericLLVMIRPlatform(GenericLLVMIRPlatformSupport &S) : S(S) {}
   Error setupJITDylib(JITDylib &JD) override;
+  Error teardownJITDylib(JITDylib &JD) override;
   Error notifyAdding(ResourceTracker &RT,
                      const MaterializationUnit &MU) override;
   Error notifyRemoving(ResourceTracker &RT) override {
@@ -105,16 +106,18 @@ private:
 /// llvm.global_ctors.
 class GlobalCtorDtorScraper {
 public:
-
   GlobalCtorDtorScraper(GenericLLVMIRPlatformSupport &PS,
-                        StringRef InitFunctionPrefix)
-    : PS(PS), InitFunctionPrefix(InitFunctionPrefix) {}
+                        StringRef InitFunctionPrefix,
+                        StringRef DeInitFunctionPrefix)
+      : PS(PS), InitFunctionPrefix(InitFunctionPrefix),
+        DeInitFunctionPrefix(DeInitFunctionPrefix) {}
   Expected<ThreadSafeModule> operator()(ThreadSafeModule TSM,
                                         MaterializationResponsibility &R);
 
 private:
   GenericLLVMIRPlatformSupport &PS;
   StringRef InitFunctionPrefix;
+  StringRef DeInitFunctionPrefix;
 };
 
 /// Generic IR Platform Support
@@ -125,12 +128,14 @@ private:
 class GenericLLVMIRPlatformSupport : public LLJIT::PlatformSupport {
 public:
   GenericLLVMIRPlatformSupport(LLJIT &J)
-      : J(J), InitFunctionPrefix(J.mangle("__orc_init_func.")) {
+      : J(J), InitFunctionPrefix(J.mangle("__orc_init_func.")),
+        DeInitFunctionPrefix(J.mangle("__orc_deinit_func.")) {
 
     getExecutionSession().setPlatform(
         std::make_unique<GenericLLVMIRPlatform>(*this));
 
-    setInitTransform(J, GlobalCtorDtorScraper(*this, InitFunctionPrefix));
+    setInitTransform(J, GlobalCtorDtorScraper(*this, InitFunctionPrefix,
+                                              DeInitFunctionPrefix));
 
     SymbolMap StdInterposes;
 
@@ -203,6 +208,8 @@ public:
           InitSymbols[&JD].add(KV.first,
                                SymbolLookupFlags::WeaklyReferencedSymbol);
           InitFunctions[&JD].add(KV.first);
+        } else if ((*KV.first).startswith(DeInitFunctionPrefix)) {
+          DeInitFunctions[&JD].add(KV.first);
         }
     }
     return Error::success();
@@ -256,6 +263,11 @@ public:
       });
   }
 
+  void registerDeInitFunc(JITDylib &JD, SymbolStringPtr DeInitName) {
+    getExecutionSession().runSessionLocked(
+        [&]() { DeInitFunctions[&JD].add(DeInitName); });
+  }
+
 private:
 
   Expected<std::vector<JITTargetAddress>> getInitializers(JITDylib &JD) {
@@ -265,17 +277,22 @@ private:
     DenseMap<JITDylib *, SymbolLookupSet> LookupSymbols;
     std::vector<JITDylibSP> DFSLinkOrder;
 
-    getExecutionSession().runSessionLocked([&]() {
-      DFSLinkOrder = JD.getDFSLinkOrder();
+    if (auto Err = getExecutionSession().runSessionLocked([&]() -> Error {
+          if (auto DFSLinkOrderOrErr = JD.getDFSLinkOrder())
+            DFSLinkOrder = std::move(*DFSLinkOrderOrErr);
+          else
+            return DFSLinkOrderOrErr.takeError();
 
-      for (auto &NextJD : DFSLinkOrder) {
-        auto IFItr = InitFunctions.find(NextJD.get());
-        if (IFItr != InitFunctions.end()) {
-          LookupSymbols[NextJD.get()] = std::move(IFItr->second);
-          InitFunctions.erase(IFItr);
-        }
-      }
-    });
+          for (auto &NextJD : DFSLinkOrder) {
+            auto IFItr = InitFunctions.find(NextJD.get());
+            if (IFItr != InitFunctions.end()) {
+              LookupSymbols[NextJD.get()] = std::move(IFItr->second);
+              InitFunctions.erase(IFItr);
+            }
+          }
+          return Error::success();
+        }))
+      return std::move(Err);
 
     LLVM_DEBUG({
       dbgs() << "JITDylib init order is [ ";
@@ -315,20 +332,25 @@ private:
     DenseMap<JITDylib *, SymbolLookupSet> LookupSymbols;
     std::vector<JITDylibSP> DFSLinkOrder;
 
-    ES.runSessionLocked([&]() {
-      DFSLinkOrder = JD.getDFSLinkOrder();
+    if (auto Err = ES.runSessionLocked([&]() -> Error {
+          if (auto DFSLinkOrderOrErr = JD.getDFSLinkOrder())
+            DFSLinkOrder = std::move(*DFSLinkOrderOrErr);
+          else
+            return DFSLinkOrderOrErr.takeError();
 
-      for (auto &NextJD : DFSLinkOrder) {
-        auto &JDLookupSymbols = LookupSymbols[NextJD.get()];
-        auto DIFItr = DeInitFunctions.find(NextJD.get());
-        if (DIFItr != DeInitFunctions.end()) {
-          LookupSymbols[NextJD.get()] = std::move(DIFItr->second);
-          DeInitFunctions.erase(DIFItr);
-        }
-        JDLookupSymbols.add(LLJITRunAtExits,
-                            SymbolLookupFlags::WeaklyReferencedSymbol);
-      }
-    });
+          for (auto &NextJD : DFSLinkOrder) {
+            auto &JDLookupSymbols = LookupSymbols[NextJD.get()];
+            auto DIFItr = DeInitFunctions.find(NextJD.get());
+            if (DIFItr != DeInitFunctions.end()) {
+              LookupSymbols[NextJD.get()] = std::move(DIFItr->second);
+              DeInitFunctions.erase(DIFItr);
+            }
+            JDLookupSymbols.add(LLJITRunAtExits,
+                                SymbolLookupFlags::WeaklyReferencedSymbol);
+          }
+          return Error::success();
+        }))
+      return std::move(Err);
 
     LLVM_DEBUG({
       dbgs() << "JITDylib deinit order is [ ";
@@ -369,17 +391,22 @@ private:
     DenseMap<JITDylib *, SymbolLookupSet> RequiredInitSymbols;
     std::vector<JITDylibSP> DFSLinkOrder;
 
-    getExecutionSession().runSessionLocked([&]() {
-      DFSLinkOrder = JD.getDFSLinkOrder();
+    if (auto Err = getExecutionSession().runSessionLocked([&]() -> Error {
+          if (auto DFSLinkOrderOrErr = JD.getDFSLinkOrder())
+            DFSLinkOrder = std::move(*DFSLinkOrderOrErr);
+          else
+            return DFSLinkOrderOrErr.takeError();
 
-      for (auto &NextJD : DFSLinkOrder) {
-        auto ISItr = InitSymbols.find(NextJD.get());
-        if (ISItr != InitSymbols.end()) {
-          RequiredInitSymbols[NextJD.get()] = std::move(ISItr->second);
-          InitSymbols.erase(ISItr);
-        }
-      }
-    });
+          for (auto &NextJD : DFSLinkOrder) {
+            auto ISItr = InitSymbols.find(NextJD.get());
+            if (ISItr != InitSymbols.end()) {
+              RequiredInitSymbols[NextJD.get()] = std::move(ISItr->second);
+              InitSymbols.erase(ISItr);
+            }
+          }
+          return Error::success();
+        }))
+      return Err;
 
     return Platform::lookupInitSymbols(getExecutionSession(),
                                        RequiredInitSymbols)
@@ -438,6 +465,7 @@ private:
 
   LLJIT &J;
   std::string InitFunctionPrefix;
+  std::string DeInitFunctionPrefix;
   DenseMap<JITDylib *, SymbolLookupSet> InitSymbols;
   DenseMap<JITDylib *, SymbolLookupSet> InitFunctions;
   DenseMap<JITDylib *, SymbolLookupSet> DeInitFunctions;
@@ -446,6 +474,10 @@ private:
 
 Error GenericLLVMIRPlatform::setupJITDylib(JITDylib &JD) {
   return S.setupJITDylib(JD);
+}
+
+Error GenericLLVMIRPlatform::teardownJITDylib(JITDylib &JD) {
+  return Error::success();
 }
 
 Error GenericLLVMIRPlatform::notifyAdding(ResourceTracker &RT,
@@ -459,40 +491,59 @@ GlobalCtorDtorScraper::operator()(ThreadSafeModule TSM,
   auto Err = TSM.withModuleDo([&](Module &M) -> Error {
     auto &Ctx = M.getContext();
     auto *GlobalCtors = M.getNamedGlobal("llvm.global_ctors");
+    auto *GlobalDtors = M.getNamedGlobal("llvm.global_dtors");
 
-    // If there's no llvm.global_ctors or it's just a decl then skip.
-    if (!GlobalCtors || GlobalCtors->isDeclaration())
+    auto RegisterCOrDtors = [&](GlobalVariable *GlobalCOrDtors,
+                                bool isCtor) -> Error {
+      // If there's no llvm.global_c/dtor or it's just a decl then skip.
+      if (!GlobalCOrDtors || GlobalCOrDtors->isDeclaration())
+        return Error::success();
+      std::string InitOrDeInitFunctionName;
+      if (isCtor)
+        raw_string_ostream(InitOrDeInitFunctionName)
+            << InitFunctionPrefix << M.getModuleIdentifier();
+      else
+        raw_string_ostream(InitOrDeInitFunctionName)
+            << DeInitFunctionPrefix << M.getModuleIdentifier();
+
+      MangleAndInterner Mangle(PS.getExecutionSession(), M.getDataLayout());
+      auto InternedInitOrDeInitName = Mangle(InitOrDeInitFunctionName);
+      if (auto Err = R.defineMaterializing(
+              {{InternedInitOrDeInitName, JITSymbolFlags::Callable}}))
+        return Err;
+
+      auto *InitOrDeInitFunc = Function::Create(
+          FunctionType::get(Type::getVoidTy(Ctx), {}, false),
+          GlobalValue::ExternalLinkage, InitOrDeInitFunctionName, &M);
+      InitOrDeInitFunc->setVisibility(GlobalValue::HiddenVisibility);
+      std::vector<std::pair<Function *, unsigned>> InitsOrDeInits;
+      auto COrDtors = isCtor ? getConstructors(M) : getDestructors(M);
+
+      for (auto E : COrDtors)
+        InitsOrDeInits.push_back(std::make_pair(E.Func, E.Priority));
+      llvm::sort(InitsOrDeInits, llvm::less_second());
+
+      auto *InitOrDeInitFuncEntryBlock =
+          BasicBlock::Create(Ctx, "entry", InitOrDeInitFunc);
+      IRBuilder<> IB(InitOrDeInitFuncEntryBlock);
+      for (auto &KV : InitsOrDeInits)
+        IB.CreateCall(KV.first);
+      IB.CreateRetVoid();
+
+      if (isCtor)
+        PS.registerInitFunc(R.getTargetJITDylib(), InternedInitOrDeInitName);
+      else
+        PS.registerDeInitFunc(R.getTargetJITDylib(), InternedInitOrDeInitName);
+
+      GlobalCOrDtors->eraseFromParent();
       return Error::success();
+    };
 
-    std::string InitFunctionName;
-    raw_string_ostream(InitFunctionName)
-        << InitFunctionPrefix << M.getModuleIdentifier();
-
-    MangleAndInterner Mangle(PS.getExecutionSession(), M.getDataLayout());
-    auto InternedName = Mangle(InitFunctionName);
-    if (auto Err =
-            R.defineMaterializing({{InternedName, JITSymbolFlags::Callable}}))
+    if (auto Err = RegisterCOrDtors(GlobalCtors, true))
+      return Err;
+    if (auto Err = RegisterCOrDtors(GlobalDtors, false))
       return Err;
 
-    auto *InitFunc =
-        Function::Create(FunctionType::get(Type::getVoidTy(Ctx), {}, false),
-                         GlobalValue::ExternalLinkage, InitFunctionName, &M);
-    InitFunc->setVisibility(GlobalValue::HiddenVisibility);
-    std::vector<std::pair<Function *, unsigned>> Inits;
-    for (auto E : getConstructors(M))
-      Inits.push_back(std::make_pair(E.Func, E.Priority));
-    llvm::sort(Inits, [](const std::pair<Function *, unsigned> &LHS,
-                         const std::pair<Function *, unsigned> &RHS) {
-      return LHS.first < RHS.first;
-    });
-    auto *EntryBlock = BasicBlock::Create(Ctx, "entry", InitFunc);
-    IRBuilder<> IB(EntryBlock);
-    for (auto &KV : Inits)
-      IB.CreateCall(KV.first);
-    IB.CreateRetVoid();
-
-    PS.registerInitFunc(R.getTargetJITDylib(), InternedName);
-    GlobalCtors->eraseFromParent();
     return Error::success();
   });
 
@@ -534,7 +585,7 @@ void LLJIT::PlatformSupport::setInitTransform(
   J.InitHelperTransformLayer->setTransform(std::move(T));
 }
 
-LLJIT::PlatformSupport::~PlatformSupport() {}
+LLJIT::PlatformSupport::~PlatformSupport() = default;
 
 Error LLJITBuilderState::prepareForConstruction() {
 
@@ -575,6 +626,22 @@ Error LLJITBuilderState::prepareForConstruction() {
       dbgs() << "\n";
   });
 
+  // If neither ES nor EPC has been set then create an EPC instance.
+  if (!ES && !EPC) {
+    LLVM_DEBUG({
+      dbgs() << "ExecutorProcessControl not specified, "
+                "Creating SelfExecutorProcessControl instance\n";
+    });
+    if (auto EPCOrErr = SelfExecutorProcessControl::Create())
+      EPC = std::move(*EPCOrErr);
+    else
+      return EPCOrErr.takeError();
+  } else
+    LLVM_DEBUG({
+      dbgs() << "Using explicitly specified ExecutorProcessControl instance "
+             << EPC.get() << "\n";
+    });
+
   // If the client didn't configure any linker options then auto-configure the
   // JIT linker.
   if (!CreateObjectLinkingLayer) {
@@ -585,16 +652,9 @@ Error LLJITBuilderState::prepareForConstruction() {
       JTMB->setRelocationModel(Reloc::PIC_);
       JTMB->setCodeModel(CodeModel::Small);
       CreateObjectLinkingLayer =
-          [EPC = this->EPC](
-              ExecutionSession &ES,
-              const Triple &) -> Expected<std::unique_ptr<ObjectLayer>> {
-        std::unique_ptr<ObjectLinkingLayer> ObjLinkingLayer;
-        if (EPC)
-          ObjLinkingLayer =
-              std::make_unique<ObjectLinkingLayer>(ES, EPC->getMemMgr());
-        else
-          ObjLinkingLayer = std::make_unique<ObjectLinkingLayer>(
-              ES, std::make_unique<jitlink::InProcessMemoryManager>());
+          [](ExecutionSession &ES,
+             const Triple &) -> Expected<std::unique_ptr<ObjectLayer>> {
+        auto ObjLinkingLayer = std::make_unique<ObjectLinkingLayer>(ES);
         ObjLinkingLayer->addPlugin(std::make_unique<EHFrameRegistrationPlugin>(
             ES, std::make_unique<jitlink::InProcessEHFrameRegistrar>()));
         return std::move(ObjLinkingLayer);
@@ -637,10 +697,14 @@ Error LLJIT::addObjectFile(JITDylib &JD, std::unique_ptr<MemoryBuffer> Obj) {
   return addObjectFile(JD.getDefaultResourceTracker(), std::move(Obj));
 }
 
-Expected<JITEvaluatedSymbol> LLJIT::lookupLinkerMangled(JITDylib &JD,
-                                                        SymbolStringPtr Name) {
-  return ES->lookup(
-      makeJITDylibSearchOrder(&JD, JITDylibLookupFlags::MatchAllSymbols), Name);
+Expected<ExecutorAddr> LLJIT::lookupLinkerMangled(JITDylib &JD,
+                                                  SymbolStringPtr Name) {
+  if (auto Sym = ES->lookup(
+        makeJITDylibSearchOrder(&JD, JITDylibLookupFlags::MatchAllSymbols),
+        Name))
+    return ExecutorAddr(Sym->getAddress());
+  else
+    return Sym.takeError();
 }
 
 Expected<std::unique_ptr<ObjectLayer>>
@@ -688,10 +752,24 @@ LLJIT::createCompileFunction(LLJITBuilderState &S,
 }
 
 LLJIT::LLJIT(LLJITBuilderState &S, Error &Err)
-    : ES(S.ES ? std::move(S.ES) : std::make_unique<ExecutionSession>()), Main(),
-      DL(""), TT(S.JTMB->getTargetTriple()) {
+    : DL(""), TT(S.JTMB->getTargetTriple()) {
 
   ErrorAsOutParameter _(&Err);
+
+  assert(!(S.EPC && S.ES) && "EPC and ES should not both be set");
+
+  if (S.EPC) {
+    ES = std::make_unique<ExecutionSession>(std::move(S.EPC));
+  } else if (S.ES)
+    ES = std::move(S.ES);
+  else {
+    if (auto EPC = SelfExecutorProcessControl::Create()) {
+      ES = std::make_unique<ExecutionSession>(std::move(*EPC));
+    } else {
+      Err = EPC.takeError();
+      return;
+    }
+  }
 
   if (auto MainOrErr = this->ES->createJITDylib("main"))
     Main = &*MainOrErr;
@@ -819,7 +897,7 @@ LLLazyJIT::LLLazyJIT(LLLazyJITBuilderState &S, Error &Err) : LLJIT(S, Err) {
     LCTMgr = std::move(S.LCTMgr);
   else {
     if (auto LCTMgrOrErr = createLocalLazyCallThroughManager(
-            S.TT, *ES, S.LazyCompileFailureAddr))
+        S.TT, *ES, S.LazyCompileFailureAddr.getValue()))
       LCTMgr = std::move(*LCTMgrOrErr);
     else {
       Err = LCTMgrOrErr.takeError();

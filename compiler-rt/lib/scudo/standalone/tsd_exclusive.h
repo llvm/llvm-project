@@ -15,7 +15,7 @@ namespace scudo {
 
 struct ThreadState {
   bool DisableMemInit : 1;
-  enum {
+  enum : unsigned {
     NotInitialized = 0,
     Initialized,
     TornDown,
@@ -87,7 +87,7 @@ template <class Allocator> struct TSDRegistryExT {
     Mutex.unlock();
   }
 
-  bool setOption(Option O, UNUSED sptr Value) {
+  bool setOption(Option O, sptr Value) {
     if (O == Option::ThreadDisableMemInit)
       State.DisableMemInit = Value;
     if (O == Option::MaxTSDsCount)

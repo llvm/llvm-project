@@ -1,4 +1,4 @@
-; RUN: opt -instcombine -S < %s | FileCheck %s
+; RUN: opt -passes=instcombine -S < %s | FileCheck %s
 
 target datalayout = "e-m:e-p:64:64:64-i64:64-f80:128-n8:16:32:64-S128"
 
@@ -25,10 +25,10 @@ declare i32 @use(i32*, i32) readonly
 ; There are some cases where it would be safe to keep it.
 ; CHECK-LABEL: @combine_metadata_dominance2(
 ; CHECK-NOT: nonnull
-define void @combine_metadata_dominance2(i32** %p) {
+define void @combine_metadata_dominance2(i32** %p, i1 %c1) {
 entry:
   %a = load i32*, i32** %p
-  br i1 undef, label %bb1, label %bb2
+  br i1 %c1, label %bb1, label %bb2
 
 bb1:
   %b = load i32*, i32** %p, !nonnull !0

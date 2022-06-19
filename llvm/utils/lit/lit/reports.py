@@ -1,3 +1,5 @@
+import base64
+import datetime
 import itertools
 import json
 
@@ -151,6 +153,90 @@ class XunitReport(object):
         if features:
             return 'Missing required feature(s): ' + ', '.join(features)
         return 'Unsupported configuration'
+
+
+def gen_resultdb_test_entry(
+    test_name, start_time, elapsed_time, test_output, result_code, is_expected
+):
+    test_data = {
+        'testId': test_name,
+        'start_time': datetime.datetime.fromtimestamp(start_time).isoformat() + 'Z',
+        'duration': '%.9fs' % elapsed_time,
+        'summary_html': '<p><text-artifact artifact-id="artifact-content-in-request"></p>',
+        'artifacts': {
+            'artifact-content-in-request': {
+                'contents': base64.b64encode(test_output.encode('utf-8')).decode(
+                    'utf-8'
+                ),
+            },
+        },
+        'expected': is_expected,
+    }
+    if (
+        result_code == lit.Test.PASS
+        or result_code == lit.Test.XPASS
+        or result_code == lit.Test.FLAKYPASS
+    ):
+        test_data['status'] = 'PASS'
+    elif result_code == lit.Test.FAIL or result_code == lit.Test.XFAIL:
+        test_data['status'] = 'FAIL'
+    elif (
+        result_code == lit.Test.UNSUPPORTED
+        or result_code == lit.Test.SKIPPED
+        or result_code == lit.Test.EXCLUDED
+    ):
+        test_data['status'] = 'SKIP'
+    elif result_code == lit.Test.UNRESOLVED or result_code == lit.Test.TIMEOUT:
+        test_data['status'] = 'ABORT'
+    return test_data
+
+
+class ResultDBReport(object):
+    def __init__(self, output_file):
+        self.output_file = output_file
+
+    def write_results(self, tests, elapsed):
+        unexecuted_codes = {lit.Test.EXCLUDED, lit.Test.SKIPPED}
+        tests = [t for t in tests if t.result.code not in unexecuted_codes]
+        data = {}
+        data['__version__'] = lit.__versioninfo__
+        data['elapsed'] = elapsed
+        # Encode the tests.
+        data['tests'] = tests_data = []
+        for test in tests:
+            tests_data.append(
+                gen_resultdb_test_entry(
+                    test_name=test.getFullName(),
+                    start_time=test.result.start,
+                    elapsed_time=test.result.elapsed,
+                    test_output=test.result.output,
+                    result_code=test.result.code,
+                    is_expected=not test.result.code.isFailure,
+                )
+            )
+            if test.result.microResults:
+                for key, micro_test in test.result.microResults.items():
+                    # Expand parent test name with micro test name
+                    parent_name = test.getFullName()
+                    micro_full_name = parent_name + ':' + key + 'microres'
+                    tests_data.append(
+                        gen_resultdb_test_entry(
+                            test_name=micro_full_name,
+                            start_time=micro_test.start
+                            if micro_test.start
+                            else test.result.start,
+                            elapsed_time=micro_test.elapsed
+                            if micro_test.elapsed
+                            else test.result.elapsed,
+                            test_output=micro_test.output,
+                            result_code=micro_test.code,
+                            is_expected=not micro_test.code.isFailure,
+                        )
+                    )
+
+        with open(self.output_file, 'w') as file:
+            json.dump(data, file, indent=2, sort_keys=True)
+            file.write('\n')
 
 
 class TimeTraceReport(object):

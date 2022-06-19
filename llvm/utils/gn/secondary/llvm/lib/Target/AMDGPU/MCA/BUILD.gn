@@ -1,0 +1,9 @@
+static_library("MCA") {
+  output_name = "LLVMAMDGPUTargetMCA"
+  deps = [
+    "//llvm/lib/Target/AMDGPU/MCTargetDesc",
+    "//llvm/lib/Target/AMDGPU/Utils",
+  ]
+  include_dirs = [ ".." ]
+  sources = [ "AMDGPUCustomBehaviour.cpp" ]
+}

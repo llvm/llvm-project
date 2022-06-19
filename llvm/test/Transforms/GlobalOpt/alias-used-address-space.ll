@@ -1,8 +1,8 @@
-; RUN: opt -S -globalopt < %s | FileCheck %s
+; RUN: opt -S -passes=globalopt < %s | FileCheck %s
 
 target datalayout = "p:32:32:32-p1:16:16:16"
 
-@c = addrspace(1) global i8 42
+@c = hidden addrspace(1) global i8 42
 
 @i = internal addrspace(1) global i8 42
 

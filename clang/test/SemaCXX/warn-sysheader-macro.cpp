@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -verify -fsyntax-only -Wshadow -Wold-style-cast %s
+// RUN: %clang_cc1 -verify -fsyntax-only -Wshadow -Wold-style-cast -Wc++20-designator %s
 
 // Test that macro expansions from system headers don't trigger 'syntactic'
 // warnings that are not actionable.
@@ -11,6 +11,11 @@
 #define SHADOW(a) __extension__({ int v = a; v; })
 
 #define OLD_STYLE_CAST(a) ((int) (a))
+
+struct Foo {
+  int x;
+};
+#define DESIGNATED_INITIALIZERS (Foo{.x = 123})
 
 #else
 
@@ -28,8 +33,13 @@ void PR16093() {
 }
 
 void PR18147() {
-  // no -Wold_style_cast in system macro expansion
+  // no -Wold-style-cast in system macro expansion
   int i = OLD_STYLE_CAST(0);
+}
+
+void PR52944() {
+  // no -Wc++20-designator in system macro expansion
+  auto i = DESIGNATED_INITIALIZERS;
 }
 
 #endif

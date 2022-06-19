@@ -54,7 +54,6 @@ class CompilerInstance;
 class CompilerInvocation;
 class DiagnosticConsumer;
 class DiagnosticsEngine;
-class SourceManager;
 
 namespace driver {
 
@@ -65,6 +64,14 @@ class Compilation;
 namespace tooling {
 
 class CompilationDatabase;
+
+/// Retrieves the flags of the `-cc1` job in `Compilation` that has only source
+/// files as its inputs.
+/// Returns nullptr if there are no such jobs or multiple of them. Note that
+/// offloading jobs are ignored.
+const llvm::opt::ArgStringList *
+getCC1Arguments(DiagnosticsEngine *Diagnostics,
+                driver::Compilation *Compilation);
 
 /// Interface to process a clang::CompilerInvocation.
 ///
@@ -107,7 +114,7 @@ public:
 /// T must derive from clang::FrontendAction.
 ///
 /// Example:
-/// FrontendActionFactory *Factory =
+/// std::unique_ptr<FrontendActionFactory> Factory =
 ///   newFrontendActionFactory<clang::SyntaxOnlyAction>();
 template <typename T>
 std::unique_ptr<FrontendActionFactory> newFrontendActionFactory();
@@ -137,7 +144,7 @@ public:
 ///
 /// Example:
 /// struct ProvidesASTConsumers {
-///   clang::ASTConsumer *newASTConsumer();
+///   std::unique_ptr<clang::ASTConsumer> newASTConsumer();
 /// } Factory;
 /// std::unique_ptr<FrontendActionFactory> FactoryAdapter(
 ///   newFrontendActionFactory(&Factory));
@@ -260,9 +267,15 @@ public:
 
   ~ToolInvocation();
 
-  /// Set a \c DiagnosticConsumer to use during parsing.
+  /// Set a \c DiagnosticConsumer to use during driver command-line parsing and
+  /// the action invocation itself.
   void setDiagnosticConsumer(DiagnosticConsumer *DiagConsumer) {
     this->DiagConsumer = DiagConsumer;
+  }
+
+  /// Set a \c DiagnosticOptions to use during driver command-line parsing.
+  void setDiagnosticOptions(DiagnosticOptions *DiagOpts) {
+    this->DiagOpts = DiagOpts;
   }
 
   /// Run the clang invocation.
@@ -282,6 +295,7 @@ public:
   FileManager *Files;
   std::shared_ptr<PCHContainerOperations> PCHContainerOps;
   DiagnosticConsumer *DiagConsumer = nullptr;
+  DiagnosticOptions *DiagOpts = nullptr;
 };
 
 /// Utility to run a FrontendAction over a set of files.

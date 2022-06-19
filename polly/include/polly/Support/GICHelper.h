@@ -186,6 +186,61 @@ ISL_OBJECT_TO_STRING(union_pw_aff)
 ISL_OBJECT_TO_STRING(union_pw_multi_aff)
 //@}
 
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+/// C++ wrapper for isl_*_dump() functions.
+//@{
+
+#define ISL_DUMP_OBJECT(name)                                                  \
+  void dumpIslObj(const isl::name &Obj);                                       \
+  void dumpIslObj(isl_##name *Obj);
+
+ISL_DUMP_OBJECT(aff)
+ISL_DUMP_OBJECT(aff_list)
+ISL_DUMP_OBJECT(ast_expr)
+ISL_DUMP_OBJECT(ast_node)
+ISL_DUMP_OBJECT(ast_node_list)
+ISL_DUMP_OBJECT(basic_map)
+ISL_DUMP_OBJECT(basic_map_list)
+ISL_DUMP_OBJECT(basic_set)
+ISL_DUMP_OBJECT(basic_set_list)
+ISL_DUMP_OBJECT(constraint)
+ISL_DUMP_OBJECT(id)
+ISL_DUMP_OBJECT(id_list)
+ISL_DUMP_OBJECT(id_to_ast_expr)
+ISL_DUMP_OBJECT(local_space)
+ISL_DUMP_OBJECT(map)
+ISL_DUMP_OBJECT(map_list)
+ISL_DUMP_OBJECT(multi_aff)
+ISL_DUMP_OBJECT(multi_pw_aff)
+ISL_DUMP_OBJECT(multi_union_pw_aff)
+ISL_DUMP_OBJECT(multi_val)
+ISL_DUMP_OBJECT(point)
+ISL_DUMP_OBJECT(pw_aff)
+ISL_DUMP_OBJECT(pw_aff_list)
+ISL_DUMP_OBJECT(pw_multi_aff)
+ISL_DUMP_OBJECT(schedule)
+ISL_DUMP_OBJECT(schedule_constraints)
+ISL_DUMP_OBJECT(schedule_node)
+ISL_DUMP_OBJECT(set)
+ISL_DUMP_OBJECT(set_list)
+ISL_DUMP_OBJECT(space)
+ISL_DUMP_OBJECT(union_map)
+ISL_DUMP_OBJECT(union_pw_aff)
+ISL_DUMP_OBJECT(union_pw_aff_list)
+ISL_DUMP_OBJECT(union_pw_multi_aff)
+ISL_DUMP_OBJECT(union_set)
+ISL_DUMP_OBJECT(union_set_list)
+ISL_DUMP_OBJECT(val)
+ISL_DUMP_OBJECT(val_list)
+//@}
+
+/// Emit the equivaltent of the isl_*_dump output into a raw_ostream.
+/// @{
+void dumpIslObj(const isl::schedule_node &Node, llvm::raw_ostream &OS);
+void dumpIslObj(__isl_keep isl_schedule_node *node, llvm::raw_ostream &OS);
+/// @}
+#endif
+
 inline llvm::raw_ostream &operator<<(llvm::raw_ostream &OS,
                                      __isl_keep isl_union_map *Map) {
   OS << polly::stringFromIslObj(Map, "null");
@@ -299,7 +354,7 @@ operator<<(llvm::DiagnosticInfoOptimizationBase &OS,
 /// This is typically used inside a nested IslMaxOperationsGuard scope. The
 /// IslMaxOperationsGuard defines the number of allowed base operations for some
 /// code, IslQuotaScope defines where it is allowed to return an error result.
-class IslQuotaScope {
+class IslQuotaScope final {
   isl_ctx *IslCtx;
   int OldOnError;
 
@@ -366,7 +421,7 @@ public:
 /// counter cannot be reset to the previous state, or one that adds the
 /// operations while being in the nested scope. Use therefore is only allowed
 /// while currently a no operations-limit is active.
-class IslMaxOperationsGuard {
+class IslMaxOperationsGuard final {
 private:
   /// The ISL context to set the operations limit.
   ///

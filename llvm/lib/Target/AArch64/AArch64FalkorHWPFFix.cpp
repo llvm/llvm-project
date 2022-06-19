@@ -138,8 +138,8 @@ bool FalkorMarkStridedAccesses::run() {
   bool MadeChange = false;
 
   for (Loop *L : LI)
-    for (auto LIt = df_begin(L), LE = df_end(L); LIt != LE; ++LIt)
-      MadeChange |= runOnLoop(**LIt);
+    for (Loop *LIt : depth_first(L))
+      MadeChange |= runOnLoop(*LIt);
 
   return MadeChange;
 }
@@ -813,7 +813,7 @@ void FalkorHWPFFix::runOnLoop(MachineLoop &L, MachineFunction &Fn) {
 }
 
 bool FalkorHWPFFix::runOnMachineFunction(MachineFunction &Fn) {
-  auto &ST = static_cast<const AArch64Subtarget &>(Fn.getSubtarget());
+  auto &ST = Fn.getSubtarget<AArch64Subtarget>();
   if (ST.getProcFamily() != AArch64Subtarget::Falkor)
     return false;
 
@@ -828,10 +828,10 @@ bool FalkorHWPFFix::runOnMachineFunction(MachineFunction &Fn) {
   Modified = false;
 
   for (MachineLoop *I : LI)
-    for (auto L = df_begin(I), LE = df_end(I); L != LE; ++L)
+    for (MachineLoop *L : depth_first(I))
       // Only process inner-loops
       if (L->isInnermost())
-        runOnLoop(**L, Fn);
+        runOnLoop(*L, Fn);
 
   return Modified;
 }

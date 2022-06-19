@@ -9,10 +9,10 @@
 #ifndef LLVM_TOOLS_LLVMPDBDUMP_BYTESOUTPUTSTYLE_H
 #define LLVM_TOOLS_LLVMPDBDUMP_BYTESOUTPUTSTYLE_H
 
-#include "LinePrinter.h"
 #include "OutputStyle.h"
 #include "StreamUtil.h"
 
+#include "llvm/DebugInfo/PDB/Native/LinePrinter.h"
 #include "llvm/Support/Error.h"
 
 namespace llvm {

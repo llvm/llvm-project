@@ -13,8 +13,6 @@ from lldbsuite.test import lldbutil
 
 class AsanTestCase(TestBase):
 
-    mydir = TestBase.compute_mydir(__file__)
-
     @skipIfFreeBSD  # llvm.org/pr21136 runtimes not yet available by default
     @expectedFailureNetBSD
     @skipUnlessAddressSanitizer
@@ -40,7 +38,7 @@ class AsanTestCase(TestBase):
         # "memory history" command should not work without a process
         self.expect("memory history 0",
                     error=True,
-                    substrs=["invalid process"])
+                    substrs=["Command requires a current process"])
 
         self.runCmd("run")
 

@@ -1,19 +1,19 @@
 // __cfi_check_fail codegen when not all CFI checkers are enabled.
-// RUN: %clang_cc1 -triple x86_64-unknown-linux -O0 -fsanitize-cfi-cross-dso \
+// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-unknown-linux -O0 -fsanitize-cfi-cross-dso \
 // RUN:     -fsanitize=cfi-vcall \
 // RUN:     -emit-llvm -o - %s | FileCheck %s
 
-// Check that blacklist does not affect generated code.
-// RUN: echo "src:*" > %t-all.blacklist
-// RUN: %clang_cc1 -triple x86_64-unknown-linux -O0 -fsanitize-cfi-cross-dso \
-// RUN:     -fsanitize=cfi-vcall -fsanitize-blacklist=%t-all.blacklist \
+// Check that ignorelist does not affect generated code.
+// RUN: echo "src:*" > %t-all.ignorelist
+// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-unknown-linux -O0 -fsanitize-cfi-cross-dso \
+// RUN:     -fsanitize=cfi-vcall -fsanitize-ignorelist=%t-all.ignorelist \
 // RUN:     -emit-llvm -o - %s | FileCheck %s
 
-void caller(void (*f)()) {
+void caller(void (*f)(void)) {
   f();
 }
 
-// CHECK: define weak_odr hidden void @__cfi_check_fail(i8* %0, i8* %1)
+// CHECK: define weak_odr hidden void @__cfi_check_fail(i8* noundef %0, i8* noundef %1)
 // CHECK: store i8* %0, i8** %[[ALLOCA0:.*]], align 8
 // CHECK: store i8* %1, i8** %[[ALLOCA1:.*]], align 8
 // CHECK: %[[DATA:.*]] = load i8*, i8** %[[ALLOCA0]], align 8

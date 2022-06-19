@@ -152,6 +152,16 @@ namespace test3 {
   };
 }
 
+namespace test4 {
+
+template <class> struct a { using b = const float; };
+template <class c> using d = typename a<c>::b;
+
+template <class c> void e(d<c> *, c) {}
+template void e(const float *, int);
+
+} // namespace test4
+
 // Verify that we can deduce enum-typed arguments correctly.
 namespace test14 {
   enum E { E0, E1 };
@@ -313,7 +323,7 @@ namespace nullptr_deduction {
   }
 
   template<template<typename T, T> class X, typename T, int *P>
-    void f0(X<T, P>) {} // expected-note {{deduced non-type template argument does not have the same type as the corresponding template parameter ('nullptr_t' vs 'int *')}}
+    void f0(X<T, P>) {} // expected-note {{deduced non-type template argument does not have the same type as the corresponding template parameter ('std::nullptr_t' vs 'int *')}}
   void h0() {
     f0(X<int*, nullptr>());
     f0(X<nullptr_t, nullptr>()); // expected-error {{no matching function}}

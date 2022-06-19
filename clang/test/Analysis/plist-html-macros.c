@@ -1,5 +1,5 @@
 // RUN: %clang_analyze_cc1 -analyzer-checker=core -verify %s
-// (sanity check)
+// (basic correctness check)
 
 // RUN: rm -rf %t.dir
 // RUN: mkdir -p %t.dir
@@ -24,7 +24,7 @@ void null_deref(int *a) {
   *a = 1; // expected-warning{{null}}
 }
 
-void test1() {
+void test1(void) {
   CALL_FN(0);
 }
 

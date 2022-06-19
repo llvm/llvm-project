@@ -29,9 +29,9 @@ void foo(NSInvocation *Invocation) {
   // CHECK-FIXES: __unsafe_unretained id Arg5;
   id ReturnValue;
   // CHECK-FIXES: __unsafe_unretained id ReturnValue;
-  void (^BlockArg1)();
-  // CHECK-FIXES: __unsafe_unretained void (^BlockArg1)();
-  __unsafe_unretained void (^BlockArg2)();
+  void (^BlockArg1)(void);
+  // CHECK-FIXES: __unsafe_unretained void (^BlockArg1)(void);
+  __unsafe_unretained void (^BlockArg2)(void);
   int IntVar;
   struct Foo Bar;
 

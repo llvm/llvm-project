@@ -12,22 +12,22 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Dialect/Linalg/Transforms/Hoisting.h"
-#include "mlir/Analysis/AffineStructures.h"
 #include "mlir/Analysis/SliceAnalysis.h"
-#include "mlir/Dialect/Affine/Utils.h"
-#include "mlir/Dialect/Linalg/Analysis/ConstraintsSet.h"
-#include "mlir/Dialect/Linalg/IR/LinalgOps.h"
+#include "mlir/Dialect/Affine/Analysis/AffineStructures.h"
+#include "mlir/Dialect/Affine/IR/AffineValueMap.h"
+#include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
+#include "mlir/Dialect/Func/IR/FuncOps.h"
+#include "mlir/Dialect/Linalg/IR/Linalg.h"
 #include "mlir/Dialect/Linalg/Transforms/Transforms.h"
 #include "mlir/Dialect/SCF/SCF.h"
-#include "mlir/Dialect/SCF/Utils.h"
-#include "mlir/Dialect/StandardOps/IR/Ops.h"
+#include "mlir/Dialect/SCF/Utils/Utils.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
-#include "mlir/Dialect/Vector/VectorOps.h"
-#include "mlir/Dialect/Vector/VectorUtils.h"
+#include "mlir/Dialect/Vector/IR/VectorOps.h"
+#include "mlir/Dialect/Vector/Utils/VectorUtils.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/Dominance.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
-#include "mlir/Transforms/LoopUtils.h"
+#include "mlir/Transforms/LoopInvariantCodeMotionUtils.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Debug.h"
 
@@ -60,8 +60,8 @@ static bool isEqualOffsetSizeOrStride(OpFoldResult op1, OpFoldResult op2) {
   auto getConstantIntValue = [](OpFoldResult ofr) -> llvm::Optional<int64_t> {
     Attribute attr = ofr.dyn_cast<Attribute>();
     // Note: isa+cast-like pattern allows writing the condition below as 1 line.
-    if (!attr && ofr.get<Value>().getDefiningOp<ConstantOp>())
-      attr = ofr.get<Value>().getDefiningOp<ConstantOp>().getValue();
+    if (!attr && ofr.get<Value>().getDefiningOp<arith::ConstantOp>())
+      attr = ofr.get<Value>().getDefiningOp<arith::ConstantOp>().getValue();
     if (auto intAttr = attr.dyn_cast_or_null<IntegerAttr>())
       return intAttr.getValue().getSExtValue();
     return llvm::None;
@@ -150,7 +150,7 @@ static HoistableRead findMatchingTransferRead(HoistableWrite write,
     LLVM_DEBUG(DBGS() << "maybeTransferReadUser: " << *maybeTransferReadUser
                       << "\n");
     auto read = dyn_cast<vector::TransferReadOp>(maybeTransferReadUser);
-    if (read && read.indices() == write.transferWriteOp.indices() &&
+    if (read && read.getIndices() == write.transferWriteOp.getIndices() &&
         read.getVectorType() == write.transferWriteOp.getVectorType())
       return HoistableRead{read, sliceOp};
   }
@@ -204,7 +204,7 @@ static bool tensorChunkAccessedByUnknownOp(HoistableWrite write,
         continue;
       }
       auto read = dyn_cast<vector::TransferReadOp>(user);
-      if (!read || !isDisjointTransferIndices(
+      if (!read || !vector::isDisjointTransferIndices(
                        cast<VectorTransferOpInterface>(read.getOperation()),
                        cast<VectorTransferOpInterface>(
                            write.transferWriteOp.getOperation()))) {
@@ -225,7 +225,7 @@ getLoopInvariantTransferWriteOpDefining(scf::ForOp forOp,
   Value v = yieldOperand.get();
   if (auto write = v.getDefiningOp<vector::TransferWriteOp>()) {
     // Indexing must not depend on `forOp`.
-    for (Value operand : write.indices())
+    for (Value operand : write.getIndices())
       if (!forOp.isDefinedOutsideOfLoop(operand))
         return HoistableWrite();
 
@@ -273,12 +273,11 @@ static void hoistReadWrite(HoistableRead read, HoistableWrite write,
                     << "\nInvolving: " << tensorBBArg << "\n");
 
   // If a read slice is present, hoist it.
-  if (read.extractSliceOp && failed(forOp.moveOutOfLoop({read.extractSliceOp})))
-    llvm_unreachable("Unexpected failure moving extract_slice out of loop");
+  if (read.extractSliceOp)
+    forOp.moveOutOfLoop(read.extractSliceOp);
 
   // Hoist the transfer_read op.
-  if (failed(forOp.moveOutOfLoop({read.transferReadOp})))
-    llvm_unreachable("Unexpected failure moving transfer read out of loop");
+  forOp.moveOutOfLoop(read.transferReadOp);
 
   // TODO: don't hardcode /*numIvs=*/1.
   assert(tensorBBArg.getArgNumber() >= /*numIvs=*/1);
@@ -286,9 +285,11 @@ static void hoistReadWrite(HoistableRead read, HoistableWrite write,
 
   // Update the source tensor.
   if (read.extractSliceOp)
-    read.extractSliceOp.sourceMutable().assign(forOp.initArgs()[initArgNumber]);
+    read.extractSliceOp.sourceMutable().assign(
+        forOp.getInitArgs()[initArgNumber]);
   else
-    read.transferReadOp.sourceMutable().assign(forOp.initArgs()[initArgNumber]);
+    read.transferReadOp.getSourceMutable().assign(
+        forOp.getInitArgs()[initArgNumber]);
 
   // Hoist write after.
   if (write.insertSliceOp)
@@ -296,16 +297,21 @@ static void hoistReadWrite(HoistableRead read, HoistableWrite write,
   write.transferWriteOp->moveAfter(forOp);
 
   // Update the yield.
-  auto yieldOp = cast<scf::YieldOp>(forOp.region().front().getTerminator());
+  auto yieldOp = cast<scf::YieldOp>(forOp.getRegion().front().getTerminator());
   if (write.insertSliceOp)
     yieldOp->setOperand(initArgNumber, write.insertSliceOp.dest());
   else
-    yieldOp->setOperand(initArgNumber, write.transferWriteOp.source());
+    yieldOp->setOperand(initArgNumber, write.transferWriteOp.getSource());
 
   // Rewrite `loop` with additional new yields.
   OpBuilder b(read.transferReadOp);
-  auto newForOp = cloneWithNewYields(b, forOp, read.transferReadOp.vector(),
-                                     write.transferWriteOp.vector());
+  NewYieldValueFn yieldFn = [&](OpBuilder &b, Location loc,
+                                ArrayRef<BlockArgument> newBBArgs) {
+    return SmallVector<Value>{write.transferWriteOp.getVector()};
+  };
+  auto newForOp = replaceLoopWithNewYields(
+      b, forOp, read.transferReadOp.getVector(), yieldFn);
+
   // Transfer write has been hoisted, need to update the vector and tensor
   // source. Replace the result of the loop to use the new tensor created
   // outside the loop.
@@ -314,17 +320,18 @@ static void hoistReadWrite(HoistableRead read, HoistableWrite write,
   if (write.insertSliceOp) {
     newForOp.getResult(initArgNumber)
         .replaceAllUsesWith(write.insertSliceOp.getResult());
-    write.transferWriteOp.sourceMutable().assign(read.extractSliceOp.result());
+    write.transferWriteOp.getSourceMutable().assign(
+        read.extractSliceOp.result());
     write.insertSliceOp.destMutable().assign(read.extractSliceOp.source());
   } else {
     newForOp.getResult(initArgNumber)
-        .replaceAllUsesWith(write.transferWriteOp.getResult(0));
-    write.transferWriteOp.sourceMutable().assign(
+        .replaceAllUsesWith(write.transferWriteOp.getResult());
+    write.transferWriteOp.getSourceMutable().assign(
         newForOp.getResult(initArgNumber));
   }
 
   // Always update with the newly yield tensor and vector.
-  write.transferWriteOp.vectorMutable().assign(newForOp.getResults().back());
+  write.transferWriteOp.getVectorMutable().assign(newForOp.getResults().back());
 }
 
 // To hoist transfer op on tensor the logic can be significantly simplified
@@ -338,13 +345,13 @@ static void hoistReadWrite(HoistableRead read, HoistableWrite write,
 // 4. Hoist the tensor_read/tensor_write and update the tensor SSA links.
 // After this transformation the scf.forOp may have unused arguments that can be
 // remove by the canonicalization pass.
-void mlir::linalg::hoistRedundantVectorTransfersOnTensor(FuncOp func) {
+void mlir::linalg::hoistRedundantVectorTransfersOnTensor(func::FuncOp func) {
   bool changed = true;
   while (changed) {
     changed = false;
     func.walk([&](scf::ForOp forOp) {
       Operation *yield = forOp.getBody()->getTerminator();
-      for (auto it : llvm::enumerate(forOp.getRegionIterArgs())) {
+      for (const auto &it : llvm::enumerate(forOp.getRegionIterArgs())) {
         OpOperand &ret = yield->getOpOperand(it.index());
         HoistableWrite write =
             getLoopInvariantTransferWriteOpDefining(forOp, ret);
@@ -356,7 +363,7 @@ void mlir::linalg::hoistRedundantVectorTransfersOnTensor(FuncOp func) {
         if (write.insertSliceOp)
           LLVM_DEBUG(DBGS() << "Candidate insert_slice for hoisting: "
                             << *write.insertSliceOp.getOperation() << "\n");
-        if (llvm::any_of(write.transferWriteOp.indices(),
+        if (llvm::any_of(write.transferWriteOp.getIndices(),
                          [&forOp](Value index) {
                            return !forOp.isDefinedOutsideOfLoop(index);
                          }))
@@ -390,10 +397,14 @@ void mlir::linalg::hoistRedundantVectorTransfersOnTensor(FuncOp func) {
   }
 }
 
-void mlir::linalg::hoistRedundantVectorTransfers(FuncOp func) {
+void mlir::linalg::hoistRedundantVectorTransfers(func::FuncOp func) {
   bool changed = true;
   while (changed) {
     changed = false;
+    // First move loop invariant ops outside of their loop. This needs to be
+    // done before as we cannot move ops without interrupting the function walk.
+    func.walk(
+        [&](LoopLikeOpInterface loopLike) { moveLoopInvariantCode(loopLike); });
 
     func.walk([&](vector::TransferReadOp transferRead) {
       if (!transferRead.getShapedType().isa<MemRefType>())
@@ -407,11 +418,6 @@ void mlir::linalg::hoistRedundantVectorTransfers(FuncOp func) {
       if (!loop)
         return WalkResult::advance();
 
-      if (failed(moveLoopInvariantCode(
-              cast<LoopLikeOpInterface>(loop.getOperation()))))
-        llvm_unreachable(
-            "Unexpected failure to move invariant code out of loop");
-
       LLVM_DEBUG(DBGS() << "Candidate read: " << *transferRead.getOperation()
                         << "\n");
 
@@ -423,7 +429,8 @@ void mlir::linalg::hoistRedundantVectorTransfers(FuncOp func) {
       vector::TransferWriteOp transferWrite;
       for (auto *sliceOp : llvm::reverse(forwardSlice)) {
         auto candidateWrite = dyn_cast<vector::TransferWriteOp>(sliceOp);
-        if (!candidateWrite || candidateWrite.source() != transferRead.source())
+        if (!candidateWrite ||
+            candidateWrite.getSource() != transferRead.getSource())
           continue;
         transferWrite = candidateWrite;
       }
@@ -445,7 +452,7 @@ void mlir::linalg::hoistRedundantVectorTransfers(FuncOp func) {
       //   2. no other operations in the loop access the same memref except
       //      for transfer_read/transfer_write accessing statically disjoint
       //      slices.
-      if (transferRead.indices() != transferWrite.indices() &&
+      if (transferRead.getIndices() != transferWrite.getIndices() &&
           transferRead.getVectorType() == transferWrite.getVectorType())
         return WalkResult::advance();
 
@@ -454,22 +461,22 @@ void mlir::linalg::hoistRedundantVectorTransfers(FuncOp func) {
       DominanceInfo dom(loop);
       if (!dom.properlyDominates(transferRead.getOperation(), transferWrite))
         return WalkResult::advance();
-      for (auto &use : transferRead.source().getUses()) {
-        if (!dom.properlyDominates(loop, use.getOwner()))
+      for (auto &use : transferRead.getSource().getUses()) {
+        if (!loop->isAncestor(use.getOwner()))
           continue;
         if (use.getOwner() == transferRead.getOperation() ||
             use.getOwner() == transferWrite.getOperation())
           continue;
         if (auto transferWriteUse =
                 dyn_cast<vector::TransferWriteOp>(use.getOwner())) {
-          if (!isDisjointTransferSet(
+          if (!vector::isDisjointTransferSet(
                   cast<VectorTransferOpInterface>(transferWrite.getOperation()),
                   cast<VectorTransferOpInterface>(
                       transferWriteUse.getOperation())))
             return WalkResult::advance();
         } else if (auto transferReadUse =
                        dyn_cast<vector::TransferReadOp>(use.getOwner())) {
-          if (!isDisjointTransferSet(
+          if (!vector::isDisjointTransferSet(
                   cast<VectorTransferOpInterface>(transferWrite.getOperation()),
                   cast<VectorTransferOpInterface>(
                       transferReadUse.getOperation())))
@@ -482,22 +489,23 @@ void mlir::linalg::hoistRedundantVectorTransfers(FuncOp func) {
       }
 
       // Hoist read before.
-      if (failed(loop.moveOutOfLoop({transferRead})))
-        llvm_unreachable(
-            "Unexpected failure to move transfer read out of loop");
+      loop.moveOutOfLoop(transferRead);
 
       // Hoist write after.
       transferWrite->moveAfter(loop);
 
       // Rewrite `loop` with new yields by cloning and erase the original loop.
       OpBuilder b(transferRead);
-      auto newForOp = cloneWithNewYields(b, loop, transferRead.vector(),
-                                         transferWrite.vector());
+      NewYieldValueFn yieldFn = [&](OpBuilder &b, Location loc,
+                                    ArrayRef<BlockArgument> newBBArgs) {
+        return SmallVector<Value>{transferWrite.getVector()};
+      };
+      auto newForOp =
+          replaceLoopWithNewYields(b, loop, transferRead.getVector(), yieldFn);
 
-      // Transfer write has been hoisted, need to update the written value to
+      // Transfer write has been hoisted, need to update the written vector by
       // the value yielded by the newForOp.
-      transferWrite.vector().replaceAllUsesWith(
-          newForOp.getResults().take_back()[0]);
+      transferWrite.getVectorMutable().assign(newForOp.getResults().back());
 
       changed = true;
       loop.erase();
@@ -506,453 +514,4 @@ void mlir::linalg::hoistRedundantVectorTransfers(FuncOp func) {
       return WalkResult::interrupt();
     });
   }
-}
-
-/// Return success if `v` is a value that is only transitively defined by ops of
-/// type in `OpTypeList`.
-template <typename... OpTypeList>
-static bool backwardsSliceOnlyHasOpsOfType(scf::ForOp outerLimit, Value v) {
-  // Compute a backward slice up to, but not including, `outerLimit`.
-  SetVector<Operation *> backwardSlice;
-  getBackwardSlice(v, &backwardSlice, [&](Operation *op) {
-    return outerLimit->isProperAncestor(op);
-  });
-  // Traverse the backward slice and ensure we can perform the computation to
-  // hoist.
-  for (Operation *op : backwardSlice) {
-    if (isa<OpTypeList...>(op))
-      continue;
-    LLVM_DEBUG(DBGS() << "Abort: unadmissible op in slice " << *op << "\n");
-    return false;
-  }
-  return true;
-}
-
-bool isDefinedOutsideOrConstant(scf::ForOp outer, Value v) {
-  return outer.isDefinedOutsideOfLoop(v) || v.getDefiningOp<ConstantOp>();
-}
-
-/// Return the current iteration number in the loop (iv - lb).ceilDiv(step).
-/// The returned Value is guaranteed not to depend on any loop comprised in
-/// [`outer`, `forOp`].
-/// Return null if such a loop-independent quantity cannot be computed.
-static Value buildLoopIterationCount(OpBuilder &b, scf::ForOp outer,
-                                     scf::ForOp forOp) {
-  MLIRContext *ctx = forOp->getContext();
-  AffineExpr iv, lb, step;
-  bindDims(ctx, iv, lb);
-  bindSymbols(ctx, step);
-  if (!isDefinedOutsideOrConstant(outer, forOp.lowerBound()) ||
-      !isDefinedOutsideOrConstant(outer, forOp.step()))
-    return Value();
-  Value ivVal = forOp.getInductionVar(), lbVal = forOp.lowerBound(),
-        stepVal = forOp.step();
-  auto loc = forOp->getLoc();
-  return b.createOrFold<AffineApplyOp>(loc, (iv - lb).ceilDiv(step),
-                                       ValueRange{ivVal, lbVal, stepVal});
-}
-
-/// Given a set of loops, assumed to be scf::ForOp, create a constraint set
-/// containing the inequalities `iv - lb >= 0` and `-iv + ub >= 0` for each
-/// loop.
-static ConstraintsSet initLoopIvsAndBounds(ArrayRef<Operation *> loops) {
-  ConstraintsSet constraints;
-  for (Operation *op : loops)
-    constraints.addDimId(constraints.getNumDimIds(),
-                         cast<scf::ForOp>(op).getInductionVar());
-  for (Operation *op : loops)
-    constraints.addDimId(constraints.getNumDimIds(),
-                         cast<scf::ForOp>(op).lowerBound());
-  for (Operation *op : loops)
-    constraints.addDimId(constraints.getNumDimIds(),
-                         cast<scf::ForOp>(op).upperBound());
-  unsigned numLoops = loops.size();
-  for (unsigned ivIdx = 0, e = numLoops; ivIdx < e; ++ivIdx) {
-    // iv - lb >= 0
-    SmallVector<int64_t, 8> ineqLb(constraints.getNumCols(), 0);
-    ineqLb[ivIdx] = 1;
-    ineqLb[ivIdx + numLoops] = -1;
-    // -iv + ub >= 0
-    SmallVector<int64_t, 8> ineqUb(constraints.getNumCols(), 0);
-    ineqUb[ivIdx] = -1;
-    ineqUb[ivIdx + 2 * numLoops] = 1;
-    ineqUb[constraints.getNumCols() - 1] = -1;
-    constraints.addInequality(ineqLb);
-    constraints.addInequality(ineqUb);
-  }
-  return constraints;
-}
-
-/// For each loop in `loops`, determine the ops involved in the construction of
-/// its upper bound---up to the outerLimit loop--- and fold them as new
-/// inequalities in the constraint set.
-/// This is achieved by computing the backwardSlice of the loop's upper bound
-/// and iteratively folding each op in reverse topological order to guarantee
-/// use-def ordering.
-/// As operations are folded in, their result is projected out of the
-/// constraints set.
-/// The following operations are supported:
-///   - scf::ForOp are simply skipped.
-///   - AffineApplyOp are composed to replace the result by an equality.
-///   - AffineMinOp are composed by adding each entry as an upper bound.
-/// If any other operation is met, return failure.
-// TODO: extend on a per-need basis.
-static LogicalResult
-foldUpperBoundsIntoConstraintsSet(ConstraintsSet &constraints,
-                                  scf::ForOp outerLimit,
-                                  ArrayRef<Operation *> loops) {
-  SetVector<Value> toProjectOut;
-  for (Operation *loop : loops) {
-    auto ub = cast<scf::ForOp>(loop).upperBound();
-    if (isDefinedOutsideOrConstant(outerLimit, ub))
-      continue;
-
-    // Compute a backward slice up to, but not including, `outerLimit`.
-    SetVector<Operation *> backwardSlice;
-    getBackwardSlice(ub, &backwardSlice, [&](Operation *op) {
-      return outerLimit->isProperAncestor(op);
-    });
-    backwardSlice.insert(ub.getDefiningOp());
-
-    // Iterate over all ops in the slice and compose them in the constraints.
-    for (Operation *op : llvm::reverse(backwardSlice)) {
-      if (!isa<scf::ForOp, AffineApplyOp, AffineMinOp>(op))
-        return failure();
-      if (isa<scf::ForOp>(op))
-        continue;
-      // Ensure there is a
-      auto ensureIdFailed = [&](Value v) {
-        return failed(constraints.ensureIdOfType(v, /*asDim=*/true));
-      };
-
-      // Ensure all ids exist and add results for later projection.
-      if (llvm::any_of(op->getResults(), ensureIdFailed) ||
-          llvm::any_of(op->getOperands(), ensureIdFailed))
-        return failure();
-
-      // All supported ops have 1 result.
-      // TODO: extend when needed.
-      toProjectOut.insert(op->getResult(0));
-
-      // Compose supported ops.
-      if (auto affineApplyOp = dyn_cast<AffineApplyOp>(op)) {
-        if (failed(constraints.composeAffineApply(affineApplyOp.getResult(),
-                                                  affineApplyOp.getAffineMap(),
-                                                  affineApplyOp.getOperands())))
-          return failure();
-        continue;
-      }
-      auto affineMinOp = cast<AffineMinOp>(op);
-      if (failed(constraints.composeMin(affineMinOp.getResult(),
-                                        affineMinOp.getAffineMap(),
-                                        affineMinOp.operands())))
-        return failure();
-    }
-  }
-  for (Value v : toProjectOut)
-    constraints.projectOut(v);
-  return success();
-}
-
-/// Compute dynamic tensor sizes, independent of any value defined inside
-/// `outer` and such that every n-D iteration of the packingLoops has its own
-/// space (so that each packed buffer has a storage location). This is achieved
-/// by computing the extent for each of the packing loops.
-static LogicalResult computeBounds(scf::ForOp outer,
-                                   ArrayRef<Operation *> packingLoops,
-                                   SmallVector<AffineMap> &lbs,
-                                   SmallVector<AffineMap> &ubs) {
-  // Packing loop IVs are introduced as the first positions.
-  ConstraintsSet constraints = initLoopIvsAndBounds(packingLoops);
-  if (failed(
-          foldUpperBoundsIntoConstraintsSet(constraints, outer, packingLoops)))
-    return failure();
-  // Compute the bounds of the first positions, assuming the others are fixed.
-  constraints.getSliceBounds(/*pos=*/0, /*num=*/packingLoops.size(),
-                             outer->getContext(), &lbs, &ubs);
-  return success();
-}
-
-/// Ensure prerequisites that guarantee pad op hoisting can occur.
-/// Return failure in the cases when we cannot perform hoisting; i.e. if either:
-///   1. There exists a use of `padTensorOp` that is not a linalg input operand.
-///   2. There isn't an enclosing `outermostEnclosingForOp` loop.
-///   3. There exists an op with a region that is dominated by
-///   `outermostEnclosingForOp` and that isn't a LoopLikeInterface or a
-///    LinalgOp.
-///   4. There exists an op with side effects that is dominated by
-///   `outermostEnclosingForOp` and that isn't a LoopLikeInterface.
-///   5. The lower bound, upper bound and step of all the loops involved in the
-///   hoisting can be
-///
-/// While ensuring prerequisites:
-///   1. Fill the `backwardSlice` to contain the topologically sorted ops
-///   dominated by `outermostEnclosingForOp`.
-///   2. Fill the `packingLoops` to contain only the enclosing loops of
-///   `backwardSlice` whose IV is actually used in computing padding. Loops that
-///   remain in `backwardSlice` but that are not in `packingLoops` are
-///   dimensions of reuse.
-static LogicalResult
-hoistPaddingOnTensorsPrerequisites(linalg::PadTensorOp padTensorOp, int nLevels,
-                                   SetVector<Operation *> &backwardSlice,
-                                   SetVector<Operation *> &packingLoops,
-                                   SmallVector<Value> &dynamicTensorSizes) {
-  // Bail on any use that isn't an input of a Linalg op.
-  // Hoisting of inplace updates happens after vectorization.
-  for (OpOperand &use : padTensorOp.result().getUses()) {
-    auto linalgUser = dyn_cast<linalg::LinalgOp>(use.getOwner());
-    if (!linalgUser || !linalgUser.isInputTensor(&use))
-      return failure();
-  }
-
-  // Get at most nLevels of enclosing loops.
-  SmallVector<LoopLikeOpInterface> reverseEnclosingLoops;
-  Operation *outermostEnclosingForOp = nullptr,
-            *nextEnclosingForOp =
-                padTensorOp->getParentOfType<LoopLikeOpInterface>();
-  while (nLevels-- > 0 && nextEnclosingForOp) {
-    outermostEnclosingForOp = nextEnclosingForOp;
-    reverseEnclosingLoops.push_back(outermostEnclosingForOp);
-    nextEnclosingForOp =
-        nextEnclosingForOp->getParentOfType<LoopLikeOpInterface>();
-  }
-  if (!outermostEnclosingForOp)
-    return failure();
-
-  // Get the backwards slice from `padTensorOp` that is dominated by the
-  // outermost enclosing loop.
-  DominanceInfo domInfo(outermostEnclosingForOp);
-  getBackwardSlice(padTensorOp.getOperation(), &backwardSlice,
-                   [&](Operation *op) {
-                     return domInfo.dominates(outermostEnclosingForOp, op);
-                   });
-
-  // Bail on any op with a region that is not a LoopLikeInterface or a LinalgOp.
-  if (llvm::any_of(backwardSlice, [](Operation *op) {
-        return op->getNumRegions() > 0 && !isa<LoopLikeOpInterface>(op) &&
-               !isa<LinalgOp>(op);
-      }))
-    return failure();
-
-  // Filter out the loops whose induction variable is not used to compute the
-  // padded result. As a first approximation, just look for IVs that have no use
-  // in the backwardSlice.
-  // These are the dimensions of reuse that we can exploit to reduce the amount
-  // of work / memory.
-  // TODO: would this optimization compose better as a canonicalization?
-  for (LoopLikeOpInterface loop : llvm::reverse(reverseEnclosingLoops)) {
-    auto forOp = dyn_cast<scf::ForOp>(loop.getOperation());
-    if (!forOp)
-      continue;
-    for (Operation *user : forOp.getInductionVar().getUsers()) {
-      if (backwardSlice.contains(user)) {
-        packingLoops.insert(forOp);
-        break;
-      }
-    }
-  }
-
-  // Backward slice is a topologically sorted list of ops starting at
-  // `outermostEnclosingForOp`.
-  assert(outermostEnclosingForOp == backwardSlice.front());
-
-  scf::ForOp outer = cast<scf::ForOp>(outermostEnclosingForOp);
-
-  ConstraintsSet constraints = initLoopIvsAndBounds(packingLoops.getArrayRef());
-  if (failed(foldUpperBoundsIntoConstraintsSet(constraints, outer,
-                                               packingLoops.getArrayRef())))
-    return failure();
-
-  unsigned numLoops = packingLoops.size();
-  SmallVector<AffineMap> lbs(numLoops), ubs(numLoops);
-  if (failed(computeBounds(outer, packingLoops.getArrayRef(), lbs, ubs)))
-    return failure();
-
-  SmallVector<Value> allValues;
-  constraints.getAllIdValues(&allValues);
-  SmallVector<Value> allNonLoopValues(allValues.begin() + numLoops,
-                                      allValues.end());
-
-  // For each packingLoop, create the extent by (ub - lb).ceilDiv(step).
-  // IP just before the outermost loop considered that we hoist above.
-  ImplicitLocOpBuilder b(outer->getLoc(), outer);
-  assert(packingLoops.size() == lbs.size() && "expected matching lb sizes");
-  assert(packingLoops.size() == ubs.size() && "expected matching ub sizes");
-  for (auto it : llvm::zip(packingLoops, lbs, ubs)) {
-    scf::ForOp loop = cast<scf::ForOp>(std::get<0>(it));
-    AffineMap lbMap = std::get<1>(it);
-    AffineMap ubMap = std::get<2>(it);
-    SmallVector<Value> lbOperands(allNonLoopValues);
-    canonicalizeMapAndOperands(&lbMap, &lbOperands);
-    Value lbVal = b.createOrFold<AffineMaxOp>(lbMap, lbOperands);
-
-    SmallVector<Value> ubOperands(allNonLoopValues);
-    canonicalizeMapAndOperands(&ubMap, &ubOperands);
-    Value ubVal = b.createOrFold<AffineMinOp>(ubMap, ubOperands);
-
-    AffineExpr lb, ub, step;
-    bindDims(b.getContext(), lb, ub);
-    bindSymbols(b.getContext(), step);
-    Value res = b.createOrFold<AffineApplyOp>(
-        (ub - lb).ceilDiv(step),
-        ValueRange{lbVal, ubVal, cast<scf::ForOp>(loop).step()});
-
-    dynamicTensorSizes.push_back(res);
-  }
-
-  return success();
-}
-
-LogicalResult mlir::linalg::hoistPaddingOnTensors(PadTensorOp &padTensorOp,
-                                                  unsigned nLoops) {
-  SmallVector<Value> dynamicTensorSizes;
-  SetVector<Operation *> backwardSlice, packingLoops;
-  if (failed(hoistPaddingOnTensorsPrerequisites(padTensorOp, nLoops,
-                                                backwardSlice, packingLoops,
-                                                dynamicTensorSizes)))
-    return failure();
-
-  // Update actual number of loops, which may be smaller.
-  nLoops = packingLoops.size();
-
-  Location loc = padTensorOp->getLoc();
-  RankedTensorType paddedTensorType = padTensorOp.getResultType();
-  unsigned paddedRank = paddedTensorType.getRank();
-
-  // Backward slice is a topologically sorted list of ops starting at
-  // `outermostEnclosingForOp`.
-  Operation *outermostEnclosingForOp = backwardSlice.front();
-  // IP just before the outermost loop considered that we hoist above.
-  OpBuilder b(outermostEnclosingForOp);
-
-  // Create the packed tensor<?x?x..?xpadded_shape> into which we amortize
-  // padding.
-  SmallVector<int64_t> packedShape(nLoops, ShapedType::kDynamicSize);
-  // TODO: go grab dims when necessary, for now PadTensorOp returns a static
-  // tensor.
-  llvm::append_range(packedShape, paddedTensorType.getShape());
-  auto packedTensorType =
-      RankedTensorType::get(packedShape, paddedTensorType.getElementType());
-  Value packedTensor = b.create<linalg::InitTensorOp>(
-      loc, dynamicTensorSizes, packedTensorType.getShape(),
-      packedTensorType.getElementType());
-
-  // Clone the operations involved in the backward slice, iteratively stepping
-  // into the loops that we encounter.
-  // The implementation proceeds in a stack-like fashion:
-  //   1. Iteratively clone and step into the loops, pushing the `packedTensor`
-  //      deeper in the stack.
-  //   2. Create a InsertSliceOp at the top of the stack.
-  //   3. Iteratively pop and yield the result of the InsertSliceOp across
-  //     the cloned loops.
-  SmallVector<Value> clonedLoopIvs, leadingPackedTensorIndexings;
-  clonedLoopIvs.reserve(nLoops);
-  leadingPackedTensorIndexings.reserve(nLoops);
-  BlockAndValueMapping bvm;
-  // Insert `padTensorOp` into the backwardSlice so we clone it too.
-  backwardSlice.insert(padTensorOp);
-  // Stack step 1. iteratively clone loops and push `packedTensor`.
-  for (Operation *op : backwardSlice) {
-    // Specifically sit out in the extract_slice(packedTensor) case: this is the
-    // piece we seek to replace.
-    if (auto sliceOp = dyn_cast<tensor::ExtractSliceOp>(op))
-      if (bvm.lookupOrDefault(sliceOp.source()) == packedTensor)
-        continue;
-    auto effects = dyn_cast<MemoryEffectOpInterface>(op);
-    bool hasNoEffects = !effects || effects.hasNoEffect();
-    if (hasNoEffects &&
-        (op->getNumRegions() == 0 || isa<linalg::PadTensorOp>(op))) {
-      b.clone(*op, bvm);
-      continue;
-    }
-    // TODO: support more cases as they appear.
-    auto forOp = dyn_cast<scf::ForOp>(op);
-    assert(forOp && "Expected scf::ForOp when hoisting pad ops");
-    // Unused loop, just skip it.
-    if (!packingLoops.contains(forOp))
-      continue;
-
-    auto clonedForOp =
-        b.create<scf::ForOp>(loc, bvm.lookupOrDefault(forOp.lowerBound()),
-                             bvm.lookupOrDefault(forOp.upperBound()),
-                             bvm.lookupOrDefault(forOp.step()), packedTensor);
-    // Map the induction var, region args and results to the `clonedForOp`.
-    bvm.map(forOp.getInductionVar(), clonedForOp.getInductionVar());
-    bvm.map(forOp.getRegionIterArgs(), clonedForOp.getRegionIterArgs());
-    bvm.map(forOp.getResults(), clonedForOp.getResults());
-    assert(clonedForOp->getNumRegions() == 1);
-    clonedLoopIvs.push_back(clonedForOp.getInductionVar());
-
-    b.setInsertionPointToStart(&clonedForOp->getRegion(0).front());
-    Value loopIndependentIterationCount = buildLoopIterationCount(
-        b, cast<scf::ForOp>(outermostEnclosingForOp), clonedForOp);
-    // Assert the loop-independent iteration count can be computed.
-    if (!loopIndependentIterationCount)
-      llvm_unreachable("loop independence prerequisite not met");
-    leadingPackedTensorIndexings.push_back(loopIndependentIterationCount);
-    packedTensor = clonedForOp.getRegionIterArgs().front();
-  }
-
-  // Stack step 2. create InsertSliceOp at the top of the stack.
-  // offsets = [clonedLoopIvs, 0 .. 0].
-  SmallVector<OpFoldResult> offsets(leadingPackedTensorIndexings.begin(),
-                                    leadingPackedTensorIndexings.end());
-  offsets.append(paddedRank, b.getIndexAttr(0));
-  // sizes = [1 .. 1, paddedShape].
-  SmallVector<OpFoldResult> sizes(nLoops, b.getIndexAttr(1));
-  for (int64_t sz : paddedTensorType.getShape()) {
-    // TODO: go grab dims when necessary, for now PadTensorOp returns a static
-    // tensor.
-    assert(!ShapedType::isDynamic(sz) && "padded tensor needs static sizes");
-    sizes.push_back(b.getIndexAttr(sz));
-  }
-  // strides = [1 .. 1].
-  SmallVector<OpFoldResult> strides(nLoops + paddedRank, b.getIndexAttr(1));
-
-  Value inserted =
-      b.create<tensor::InsertSliceOp>(loc, bvm.lookup(padTensorOp.result()),
-                                      packedTensor, offsets, sizes, strides);
-
-  // Stack step 3. iteratively pop the stack and propagate the yield.
-  Value valueToYield = inserted;
-  for (Value iv : llvm::reverse(clonedLoopIvs)) {
-    auto forOp = scf::getForInductionVarOwner(iv);
-    b.setInsertionPointToEnd(&forOp.getRegion().front());
-    b.create<scf::YieldOp>(loc, valueToYield);
-    valueToYield = forOp.getResult(0);
-  }
-
-  // Now the packed tensor is ready, replace the original padding op by a
-  // 1x..x1 slice [originalLoopIvs, 0 .. 0][1 .. 1, paddedShape][1 .. 1].
-  b.setInsertionPoint(padTensorOp);
-  SmallVector<Value> loopIterationCounts =
-      llvm::to_vector<4>(llvm::map_range(packingLoops, [&](Operation *loop) {
-        return buildLoopIterationCount(
-            b, cast<scf::ForOp>(outermostEnclosingForOp),
-            cast<scf::ForOp>(loop));
-      }));
-  // Assert all loop iteration counts can be computed.
-  if (llvm::any_of(loopIterationCounts, [](Value v) { return !v; }))
-    llvm_unreachable("loop independence prerequisite not met");
-  // offsets = [originalLoopIvs, 0 .. 0].
-  offsets.assign(loopIterationCounts.begin(), loopIterationCounts.end());
-  offsets.append(paddedRank, b.getIndexAttr(0));
-  // sizes = [1 .. 1, paddedShape] (definedabove).
-  // strides = [1 .. 1] (defined above)
-  packedTensor =
-      scf::getForInductionVarOwner(clonedLoopIvs.front())->getResult(0);
-  padTensorOp.replaceAllUsesWith(
-      b.create<tensor::ExtractSliceOp>(loc, padTensorOp.getResultType(),
-                                       packedTensor, offsets, sizes, strides)
-          ->getResult(0));
-
-  Operation *toErase = padTensorOp;
-
-  // Make the newly cloned `padTensorOp` available to the caller.
-  padTensorOp =
-      cast<PadTensorOp>(bvm.lookup(padTensorOp.result()).getDefiningOp());
-
-  toErase->erase();
-
-  return success();
 }

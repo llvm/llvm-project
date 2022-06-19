@@ -11,7 +11,7 @@
 # CHECK-NEXT: 0x401030
 # CHECK-NEXT: ]
 
-# The input was loosly based on studying this program:
+# The input was loosely based on studying this program:
 #
 #  void foo() { return; }
 #  void bar() { return; }

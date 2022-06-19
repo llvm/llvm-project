@@ -8,12 +8,11 @@ from lldbsuite.test.lldbtest import *
 
 
 class BreakpointSetRestart(TestBase):
-
-    mydir = TestBase.compute_mydir(__file__)
     BREAKPOINT_TEXT = 'Set a breakpoint here'
 
     @skipIfNetBSD
-    @skipIfReproducer
+    @skipIf(oslist=["freebsd"],
+            bugnumber="github.com/llvm/llvm-project/issues/56082")
     def test_breakpoint_set_restart(self):
         self.build()
 

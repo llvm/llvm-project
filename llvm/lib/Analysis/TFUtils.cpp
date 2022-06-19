@@ -1,9 +1,8 @@
 //===- TFUtils.cpp - tensorflow evaluation utilities ----------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -15,6 +14,7 @@
 
 #include "llvm/ADT/Twine.h"
 #include "llvm/Analysis/Utils/TFUtils.h"
+#include "llvm/Support/Base64.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/JSON.h"
@@ -23,6 +23,7 @@
 #include "llvm/Support/Path.h"
 #include "llvm/Support/raw_ostream.h"
 
+#include "google/protobuf/struct.pb.h"
 #include "google/protobuf/text_format.h"
 #include "tensorflow/c/c_api.h"
 #include "tensorflow/c/c_api_experimental.h"
@@ -73,6 +74,41 @@ TFStatusPtr createTFStatus() {
 TFSessionOptionsPtr createTFSessionOptions() {
   return TFSessionOptionsPtr(TF_NewSessionOptions(), &TF_DeleteSessionOptions);
 }
+
+void serialize(const Message &SE, std::string *OutStr) {
+  if (ProtobufTextMode) {
+    TextFormat::PrintToString(SE, OutStr);
+  } else {
+    *OutStr = SE.SerializeAsString();
+  }
+}
+
+int getTFTypeIndex(TensorType TType) {
+  switch (TType) {
+  case TensorType::Double:
+    return TF_DOUBLE;
+  case TensorType::Float:
+    return TF_FLOAT;
+  case TensorType::Int8:
+    return TF_INT8;
+  case TensorType::UInt8:
+    return TF_UINT8;
+  case TensorType::Int16:
+    return TF_INT16;
+  case TensorType::UInt16:
+    return TF_UINT16;
+  case TensorType::Int32:
+    return TF_INT32;
+  case TensorType::UInt32:
+    return TF_UINT32;
+  case TensorType::Int64:
+    return TF_INT64;
+  case TensorType::UInt64:
+    return TF_UINT64;
+  case TensorType::Invalid:
+    llvm_unreachable("Unknown tensor type");
+  }
+}
 } // namespace
 
 namespace llvm {
@@ -95,116 +131,6 @@ private:
   const size_t OutputSize;
   std::vector<TF_Tensor *> Output;
 };
-
-size_t TensorSpec::getElementByteSize() const {
-  return TF_DataTypeSize(static_cast<TF_DataType>(TypeIndex));
-}
-
-TensorSpec::TensorSpec(const std::string &Name, int Port, int TypeIndex,
-                       const std::vector<int64_t> &Shape)
-    : Name(Name), Port(Port), TypeIndex(TypeIndex), Shape(Shape),
-      ElementCount(std::accumulate(Shape.begin(), Shape.end(), 1,
-                                   std::multiplies<int64_t>())) {}
-
-Optional<TensorSpec> getTensorSpecFromJSON(LLVMContext &Ctx,
-                                           const json::Value &Value) {
-  auto EmitError = [&](const llvm::Twine &Message) -> Optional<TensorSpec> {
-    std::string S;
-    llvm::raw_string_ostream OS(S);
-    OS << Value;
-    Ctx.emitError("Unable to parse JSON Value as spec (" + Message + "): " + S);
-    return None;
-  };
-  // FIXME: accept a Path as a parameter, and use it for error reporting.
-  json::Path::Root Root("tensor_spec");
-  json::ObjectMapper Mapper(Value, Root);
-  if (!Mapper)
-    return EmitError("Value is not a dict");
-
-  std::string TensorName;
-  int TensorPort = -1;
-  std::string TensorType;
-  std::vector<int64_t> TensorShape;
-
-  if (!Mapper.map<std::string>("name", TensorName))
-    return EmitError("'name' property not present or not a string");
-  if (!Mapper.map<std::string>("type", TensorType))
-    return EmitError("'type' property not present or not a string");
-  if (!Mapper.map<int>("port", TensorPort))
-    return EmitError("'port' property not present or not an int");
-  if (!Mapper.map<std::vector<int64_t>>("shape", TensorShape))
-    return EmitError("'shape' property not present or not an int array");
-
-#define PARSE_TYPE(T, E)                                                       \
-  if (TensorType == #T)                                                        \
-    return TensorSpec::createSpec<T>(TensorName, TensorShape, TensorPort);
-  TFUTILS_SUPPORTED_TYPES(PARSE_TYPE)
-#undef PARSE_TYPE
-  return None;
-}
-
-Optional<std::vector<LoggedFeatureSpec>>
-loadOutputSpecs(LLVMContext &Ctx, StringRef ExpectedDecisionName,
-                StringRef ModelPath, StringRef SpecFileOverride) {
-  SmallVector<char, 128> OutputSpecsPath;
-  StringRef FileName = SpecFileOverride;
-  if (FileName.empty()) {
-    llvm::sys::path::append(OutputSpecsPath, ModelPath, "output_spec.json");
-    FileName = {OutputSpecsPath.data(), OutputSpecsPath.size()};
-  }
-
-  auto BufferOrError = MemoryBuffer::getFileOrSTDIN(FileName);
-  if (!BufferOrError) {
-    Ctx.emitError("Error opening output specs file: " + FileName + " : " +
-                  BufferOrError.getError().message());
-    return None;
-  }
-  auto ParsedJSONValues = json::parse(BufferOrError.get()->getBuffer());
-  if (!ParsedJSONValues) {
-    Ctx.emitError("Could not parse specs file: " + FileName);
-    return None;
-  }
-  auto ValuesArray = ParsedJSONValues->getAsArray();
-  if (!ValuesArray) {
-    Ctx.emitError("Expected an array of {tensor_spec:<TensorSpec>, "
-                  "logging_name:<name>} dictionaries");
-    return None;
-  }
-  std::vector<LoggedFeatureSpec> Ret;
-  for (const auto &Value : *ValuesArray)
-    if (const auto *Obj = Value.getAsObject())
-      if (const auto *SpecPart = Obj->get("tensor_spec"))
-        if (auto TensorSpec = getTensorSpecFromJSON(Ctx, *SpecPart))
-          if (auto LoggingName = Obj->getString("logging_name")) {
-            if (!TensorSpec->isElementType<int64_t>() &&
-                !TensorSpec->isElementType<int32_t>() &&
-                !TensorSpec->isElementType<float>()) {
-              Ctx.emitError(
-                  "Only int64, int32, and float tensors are supported. "
-                  "Found unsupported type for tensor named " +
-                  TensorSpec->name());
-              return None;
-            }
-            Ret.push_back({*TensorSpec, LoggingName->str()});
-          }
-
-  if (ValuesArray->size() != Ret.size()) {
-    Ctx.emitError(
-        "Unable to parse output spec. It should be a json file containing an "
-        "array of dictionaries. Each dictionary must have a 'tensor_spec' key, "
-        "with a json object describing a TensorSpec; and a 'logging_name' key, "
-        "which is a string to use as name when logging this tensor in the "
-        "training log.");
-    return None;
-  }
-  if (Ret.empty() || *Ret[0].LoggingName != ExpectedDecisionName) {
-    Ctx.emitError("The first output spec must describe the decision tensor, "
-                  "and must have the logging_name " +
-                  StringRef(ExpectedDecisionName));
-    return None;
-  }
-  return Ret;
-}
 
 class TFModelEvaluatorImpl {
 public:
@@ -262,50 +188,73 @@ private:
 class LoggerDataImpl {
   const std::vector<LoggedFeatureSpec> LoggedFeatureSpecs;
   const TensorSpec RewardSpec;
+  const bool IncludeReward;
 
-  tensorflow::SequenceExample SE;
-  std::vector<tensorflow::FeatureList *> FeatureLists;
-  tensorflow::FeatureList *Reward = nullptr;
+  std::vector<tensorflow::FeatureList> FeatureLists;
+  tensorflow::FeatureList Reward;
+
+  bool isSelfConsistent(const tensorflow::SequenceExample &SE,
+                        size_t NrRecords) const {
+    bool Ret = true;
+    for (const auto &TSpecs : LoggedFeatureSpecs) {
+      const auto &Name = TSpecs.getLoggingName();
+      const auto &FL = SE.feature_lists().feature_list().at(Name).feature();
+      if (NrRecords != static_cast<size_t>(FL.size())) {
+        dbgs() << "[TF-UTILS]: " << Name << " has missing records. Expected "
+               << NrRecords << " got " << FL.size() << "\n";
+        Ret = false;
+      }
+    }
+    if (IncludeReward && static_cast<size_t>(SE.feature_lists()
+                                                 .feature_list()
+                                                 .at(RewardSpec.name())
+                                                 .feature()
+                                                 .size()) != NrRecords) {
+      dbgs() << "[TF-UTILS]: reward is missing records.\n";
+      Ret = false;
+    }
+    return Ret;
+  }
+
+  void transferLog(tensorflow::SequenceExample &SE) {
+    auto *FL = SE.mutable_feature_lists()->mutable_feature_list();
+    if (IncludeReward)
+      (*FL)[RewardSpec.name()] = std::move(Reward);
+    assert(FeatureLists.size() == LoggedFeatureSpecs.size());
+    for (size_t I = 0; I < FeatureLists.size(); ++I) {
+      const auto &LFS = LoggedFeatureSpecs[I];
+      (*FL)[LFS.getLoggingName()] = std::move(FeatureLists[I]);
+    }
+  }
 
 public:
   LoggerDataImpl(const std::vector<LoggedFeatureSpec> &LoggedSpecs,
                  const TensorSpec &RewardSpec, bool IncludeReward)
-      : LoggedFeatureSpecs(LoggedSpecs), RewardSpec(RewardSpec) {
-    auto *FL = SE.mutable_feature_lists()->mutable_feature_list();
-    if (IncludeReward)
-      Reward = &(*FL)[RewardSpec.name()];
-    // Allocate first the map entries, then capture their address. We will not
-    // mutate the set of features after this (i.e. the pointers won't dangle).
-    for (const auto &LFS : LoggedSpecs) {
-      (*FL)[LFS.LoggingName ? *LFS.LoggingName : LFS.Spec.name()] = {};
-    }
-    for (const auto &LFS : LoggedSpecs)
-      FeatureLists.push_back(
-          &(*FL)[LFS.LoggingName ? *LFS.LoggingName : LFS.Spec.name()]);
-  }
+      : LoggedFeatureSpecs(LoggedSpecs), RewardSpec(RewardSpec),
+        IncludeReward(IncludeReward), FeatureLists(LoggedFeatureSpecs.size()) {}
 
-  void print(raw_ostream &OS) {
-    std::string OutStr;
-    if (ProtobufTextMode)
-      google::protobuf::TextFormat::PrintToString(SE, &OutStr);
-    else
-      OutStr = SE.SerializeAsString();
-
-    OS << OutStr;
+  // flush the logged info to a stream and clear the log contents.
+  void flush(std::string *Str) {
+    size_t NrRecords = getNrRecords();
+    (void)NrRecords;
+    tensorflow::SequenceExample SE;
+    transferLog(SE);
+    assert(isSelfConsistent(SE, NrRecords));
+    serialize(SE, Str);
   }
 
   char *addNewTensor(size_t FeatureID) {
     const auto &Spec = LoggedFeatureSpecs[FeatureID].Spec;
     if (Spec.isElementType<float>()) {
       auto *RF = FeatureLists[FeatureID]
-                     ->add_feature()
+                     .add_feature()
                      ->mutable_float_list()
                      ->mutable_value();
       RF->Resize(Spec.getElementCount(), 0.0);
       return reinterpret_cast<char *>(RF->mutable_data());
     } else if (Spec.isElementType<int32_t>() || Spec.isElementType<int64_t>()) {
       auto *RF = FeatureLists[FeatureID]
-                     ->add_feature()
+                     .add_feature()
                      ->mutable_int64_list()
                      ->mutable_value();
       RF->Resize(Spec.getElementCount(), 0);
@@ -315,17 +264,18 @@ public:
   }
 
   template <typename T> void logReward(T Value) {
+    assert(IncludeReward);
     if (RewardSpec.isElementType<float>())
-      Reward->add_feature()->mutable_float_list()->add_value(Value);
+      Reward.add_feature()->mutable_float_list()->add_value(Value);
     else if (RewardSpec.isElementType<int32_t>() ||
              RewardSpec.isElementType<int64_t>())
-      Reward->add_feature()->mutable_int64_list()->add_value(Value);
+      Reward.add_feature()->mutable_int64_list()->add_value(Value);
     else
       llvm_unreachable("Unsupported tensor type.");
   }
 
   size_t getNrRecords() const {
-    return FeatureLists.empty() ? 0 : FeatureLists[0]->feature().size();
+    return FeatureLists.empty() ? 0 : FeatureLists[0].feature().size();
   }
 };
 } // namespace llvm
@@ -350,16 +300,29 @@ TFModelEvaluatorImpl::TFModelEvaluatorImpl(
     errs() << TF_Message(Status.get());
     invalidate();
   }
+  size_t NrSupported = 0;
   for (size_t I = 0; I < InputSpecs.size(); ++I) {
     auto &InputSpec = InputSpecs[I];
     InputFeed[I] = {
         TF_GraphOperationByName(Graph.get(), (InputSpec.name()).c_str()),
         InputSpec.port()};
+    if (!InputFeed[I].oper) {
+      continue;
+    }
+    if (NrSupported++ != I) {
+      errs()
+          << "Unsupported features must be placed at the end of the InputSpecs";
+      invalidate();
+      return;
+    }
     if (!checkReportAndInvalidate(InputFeed[I], InputSpec))
       return;
-    initInput(I, static_cast<TF_DataType>(InputSpec.typeIndex()),
+    initInput(I, static_cast<TF_DataType>(getTFTypeIndex(InputSpec.type())),
               InputSpec.shape());
   }
+  InputFeed.resize(NrSupported);
+  Input.resize(NrSupported);
+
   for (size_t I = 0; I < OutputSpecsSize; ++I) {
     auto OutputSpec = GetOutputSpecs(I);
     OutputFeed[I] = {
@@ -437,7 +400,9 @@ void TFModelEvaluatorImpl::initInput(size_t Index, TF_DataType Type,
 }
 
 void *TFModelEvaluator::getUntypedInput(size_t Index) {
-  return TF_TensorData(Impl->getInput()[Index]);
+  if (Index < Impl->getInput().size())
+    return TF_TensorData(Impl->getInput()[Index]);
+  return nullptr;
 }
 
 TFModelEvaluator::EvaluationResult::EvaluationResult(
@@ -461,13 +426,6 @@ const void *
 TFModelEvaluator::EvaluationResult::getUntypedTensorValue(size_t Index) const {
   return TF_TensorData(Impl->getOutput()[Index]);
 }
-
-#define TFUTILS_GETDATATYPE_IMPL(T, E)                                         \
-  template <> int TensorSpec::getDataType<T>() { return E; }
-
-TFUTILS_SUPPORTED_TYPES(TFUTILS_GETDATATYPE_IMPL)
-
-#undef TFUTILS_GETDATATYPE_IMPL
 
 TFModelEvaluator::EvaluationResult::~EvaluationResult() {}
 TFModelEvaluator::~TFModelEvaluator() {}
@@ -538,5 +496,31 @@ char *Logger::addEntryAndGetFloatOrInt64Buffer(size_t FeatureID) {
   return reinterpret_cast<char *>(LoggerData->addNewTensor(FeatureID));
 }
 
-void Logger::print(raw_ostream &OS) { LoggerData->print(OS); }
+void Logger::flush(std::string *Str) { LoggerData->flush(Str); }
+
+void Logger::flush(raw_ostream &OS) {
+  std::string Buff;
+  LoggerData->flush(&Buff);
+  OS << Buff;
+}
+
+void Logger::flushLogs(raw_ostream &OS,
+                       const StringMap<std::unique_ptr<Logger>> &Loggers) {
+  google::protobuf::Struct Msg;
+  for (const auto &NamedLogger : Loggers) {
+    tensorflow::SequenceExample SE;
+    const auto &Logger = NamedLogger.second;
+    std::string Unencoded;
+    if (Logger->LoggerData->getNrRecords() > 0)
+      Logger->flush(&Unencoded);
+
+    (*Msg.mutable_fields())[NamedLogger.first().str()]
+        .mutable_string_value()
+        ->append(ProtobufTextMode ? Unencoded : encodeBase64(Unencoded));
+  }
+
+  std::string OutStr;
+  serialize(Msg, &OutStr);
+  OS << OutStr;
+}
 #endif // defined(LLVM_HAVE_TF_API)

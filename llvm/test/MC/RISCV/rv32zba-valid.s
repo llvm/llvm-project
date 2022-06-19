@@ -1,25 +1,13 @@
-# With B extension:
-# RUN: llvm-mc %s -triple=riscv32 -mattr=+experimental-b -show-encoding \
-# RUN:     | FileCheck -check-prefixes=CHECK-ASM,CHECK-ASM-AND-OBJ %s
-# RUN: llvm-mc %s -triple=riscv64 -mattr=+experimental-b -show-encoding \
-# RUN:     | FileCheck -check-prefixes=CHECK-ASM,CHECK-ASM-AND-OBJ %s
-# RUN: llvm-mc -filetype=obj -triple=riscv32 -mattr=+experimental-b < %s \
-# RUN:     | llvm-objdump --mattr=+experimental-b -d -r - \
-# RUN:     | FileCheck --check-prefix=CHECK-ASM-AND-OBJ %s
-# RUN: llvm-mc -filetype=obj -triple=riscv64 -mattr=+experimental-b < %s \
-# RUN:     | llvm-objdump --mattr=+experimental-b -d -r - \
-# RUN:     | FileCheck --check-prefix=CHECK-ASM-AND-OBJ %s
-
 # With Bitmanip base extension:
-# RUN: llvm-mc %s -triple=riscv32 -mattr=+experimental-zba -show-encoding \
+# RUN: llvm-mc %s -triple=riscv32 -mattr=+zba -show-encoding \
 # RUN:     | FileCheck -check-prefixes=CHECK-ASM,CHECK-ASM-AND-OBJ %s
-# RUN: llvm-mc %s -triple=riscv64 -mattr=+experimental-zba -show-encoding \
+# RUN: llvm-mc %s -triple=riscv64 -mattr=+zba -show-encoding \
 # RUN:     | FileCheck -check-prefixes=CHECK-ASM,CHECK-ASM-AND-OBJ %s
-# RUN: llvm-mc -filetype=obj -triple=riscv32 -mattr=+experimental-zba < %s \
-# RUN:     | llvm-objdump --mattr=+experimental-zba -d -r - \
+# RUN: llvm-mc -filetype=obj -triple=riscv32 -mattr=+zba < %s \
+# RUN:     | llvm-objdump --mattr=+zba -d -r - \
 # RUN:     | FileCheck --check-prefix=CHECK-ASM-AND-OBJ %s
-# RUN: llvm-mc -filetype=obj -triple=riscv64 -mattr=+experimental-zba < %s \
-# RUN:     | llvm-objdump --mattr=+experimental-zba -d -r - \
+# RUN: llvm-mc -filetype=obj -triple=riscv64 -mattr=+zba < %s \
+# RUN:     | llvm-objdump --mattr=+zba -d -r - \
 # RUN:     | FileCheck --check-prefix=CHECK-ASM-AND-OBJ %s
 
 # CHECK-ASM-AND-OBJ: sh1add t0, t1, t2

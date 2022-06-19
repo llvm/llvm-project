@@ -96,7 +96,7 @@ bool NVPTXTTIImpl::isSourceOfDivergence(const Value *V) {
       // Instructions that read threadIdx are obviously divergent.
       if (readsThreadIndex(II) || readsLaneId(II))
         return true;
-      // Handle the NVPTX atomic instrinsics that cannot be represented as an
+      // Handle the NVPTX atomic intrinsics that cannot be represented as an
       // atomic IR instruction.
       if (isNVVMAtomic(II))
         return true;
@@ -145,11 +145,15 @@ static Instruction *simplifyNvvmIntrinsic(IntrinsicInst *II, InstCombiner &IC) {
     Optional<SpecialCase> Special;
 
     FtzRequirementTy FtzRequirement = FTZ_Any;
+    // Denormal handling is guarded by different attributes depending on the
+    // type (denormal-fp-math vs denormal-fp-math-f32), take note of halfs.
+    bool IsHalfTy = false;
 
     SimplifyAction() = default;
 
-    SimplifyAction(Intrinsic::ID IID, FtzRequirementTy FtzReq)
-        : IID(IID), FtzRequirement(FtzReq) {}
+    SimplifyAction(Intrinsic::ID IID, FtzRequirementTy FtzReq,
+                   bool IsHalfTy = false)
+        : IID(IID), FtzRequirement(FtzReq), IsHalfTy(IsHalfTy) {}
 
     // Cast operations don't have anything to do with FTZ, so we skip that
     // argument.
@@ -191,18 +195,66 @@ static Instruction *simplifyNvvmIntrinsic(IntrinsicInst *II, InstCombiner &IC) {
       return {Intrinsic::fma, FTZ_MustBeOff};
     case Intrinsic::nvvm_fma_rn_ftz_f:
       return {Intrinsic::fma, FTZ_MustBeOn};
+    case Intrinsic::nvvm_fma_rn_f16:
+      return {Intrinsic::fma, FTZ_MustBeOff, true};
+    case Intrinsic::nvvm_fma_rn_ftz_f16:
+      return {Intrinsic::fma, FTZ_MustBeOn, true};
+    case Intrinsic::nvvm_fma_rn_f16x2:
+      return {Intrinsic::fma, FTZ_MustBeOff, true};
+    case Intrinsic::nvvm_fma_rn_ftz_f16x2:
+      return {Intrinsic::fma, FTZ_MustBeOn, true};
     case Intrinsic::nvvm_fmax_d:
       return {Intrinsic::maxnum, FTZ_Any};
     case Intrinsic::nvvm_fmax_f:
       return {Intrinsic::maxnum, FTZ_MustBeOff};
     case Intrinsic::nvvm_fmax_ftz_f:
       return {Intrinsic::maxnum, FTZ_MustBeOn};
+    case Intrinsic::nvvm_fmax_nan_f:
+      return {Intrinsic::maximum, FTZ_MustBeOff};
+    case Intrinsic::nvvm_fmax_ftz_nan_f:
+      return {Intrinsic::maximum, FTZ_MustBeOn};
+    case Intrinsic::nvvm_fmax_f16:
+      return {Intrinsic::maxnum, FTZ_MustBeOff, true};
+    case Intrinsic::nvvm_fmax_ftz_f16:
+      return {Intrinsic::maxnum, FTZ_MustBeOn, true};
+    case Intrinsic::nvvm_fmax_f16x2:
+      return {Intrinsic::maxnum, FTZ_MustBeOff, true};
+    case Intrinsic::nvvm_fmax_ftz_f16x2:
+      return {Intrinsic::maxnum, FTZ_MustBeOn, true};
+    case Intrinsic::nvvm_fmax_nan_f16:
+      return {Intrinsic::maximum, FTZ_MustBeOff, true};
+    case Intrinsic::nvvm_fmax_ftz_nan_f16:
+      return {Intrinsic::maximum, FTZ_MustBeOn, true};
+    case Intrinsic::nvvm_fmax_nan_f16x2:
+      return {Intrinsic::maximum, FTZ_MustBeOff, true};
+    case Intrinsic::nvvm_fmax_ftz_nan_f16x2:
+      return {Intrinsic::maximum, FTZ_MustBeOn, true};
     case Intrinsic::nvvm_fmin_d:
       return {Intrinsic::minnum, FTZ_Any};
     case Intrinsic::nvvm_fmin_f:
       return {Intrinsic::minnum, FTZ_MustBeOff};
     case Intrinsic::nvvm_fmin_ftz_f:
       return {Intrinsic::minnum, FTZ_MustBeOn};
+    case Intrinsic::nvvm_fmin_nan_f:
+      return {Intrinsic::minimum, FTZ_MustBeOff};
+    case Intrinsic::nvvm_fmin_ftz_nan_f:
+      return {Intrinsic::minimum, FTZ_MustBeOn};
+    case Intrinsic::nvvm_fmin_f16:
+      return {Intrinsic::minnum, FTZ_MustBeOff, true};
+    case Intrinsic::nvvm_fmin_ftz_f16:
+      return {Intrinsic::minnum, FTZ_MustBeOn, true};
+    case Intrinsic::nvvm_fmin_f16x2:
+      return {Intrinsic::minnum, FTZ_MustBeOff, true};
+    case Intrinsic::nvvm_fmin_ftz_f16x2:
+      return {Intrinsic::minnum, FTZ_MustBeOn, true};
+    case Intrinsic::nvvm_fmin_nan_f16:
+      return {Intrinsic::minimum, FTZ_MustBeOff, true};
+    case Intrinsic::nvvm_fmin_ftz_nan_f16:
+      return {Intrinsic::minimum, FTZ_MustBeOn, true};
+    case Intrinsic::nvvm_fmin_nan_f16x2:
+      return {Intrinsic::minimum, FTZ_MustBeOff, true};
+    case Intrinsic::nvvm_fmin_ftz_nan_f16x2:
+      return {Intrinsic::minimum, FTZ_MustBeOn, true};
     case Intrinsic::nvvm_round_d:
       return {Intrinsic::round, FTZ_Any};
     case Intrinsic::nvvm_round_f:
@@ -316,9 +368,10 @@ static Instruction *simplifyNvvmIntrinsic(IntrinsicInst *II, InstCombiner &IC) {
   // intrinsic, we don't have to look up any module metadata, as
   // FtzRequirementTy will be FTZ_Any.)
   if (Action.FtzRequirement != FTZ_Any) {
-    StringRef Attr = II->getFunction()
-                         ->getFnAttribute("denormal-fp-math-f32")
-                         .getValueAsString();
+    const char *AttrName =
+        Action.IsHalfTy ? "denormal-fp-math" : "denormal-fp-math-f32";
+    StringRef Attr =
+        II->getFunction()->getFnAttribute(AttrName).getValueAsString();
     DenormalMode Mode = parseDenormalFPAttribute(Attr);
     bool FtzEnabled = Mode.Output != DenormalMode::IEEE;
 
@@ -328,7 +381,7 @@ static Instruction *simplifyNvvmIntrinsic(IntrinsicInst *II, InstCombiner &IC) {
 
   // Simplify to target-generic intrinsic.
   if (Action.IID) {
-    SmallVector<Value *, 4> Args(II->arg_operands());
+    SmallVector<Value *, 4> Args(II->args());
     // All the target-generic intrinsics currently of interest to us have one
     // type argument, equal to that of the nvvm intrinsic's argument.
     Type *Tys[] = {II->getArgOperand(0)->getType()};
@@ -402,8 +455,9 @@ InstructionCost NVPTXTTIImpl::getArithmeticInstrCost(
 }
 
 void NVPTXTTIImpl::getUnrollingPreferences(Loop *L, ScalarEvolution &SE,
-                                           TTI::UnrollingPreferences &UP) {
-  BaseT::getUnrollingPreferences(L, SE, UP);
+                                           TTI::UnrollingPreferences &UP,
+                                           OptimizationRemarkEmitter *ORE) {
+  BaseT::getUnrollingPreferences(L, SE, UP, ORE);
 
   // Enable partial unrolling and runtime unrolling, but reduce the
   // threshold.  This partially unrolls small loops which are often

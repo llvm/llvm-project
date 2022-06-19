@@ -46,11 +46,8 @@
 #include "llvm/IR/Module.h"
 #include "llvm/IR/PassInstrumentation.h"
 #include "llvm/IR/PassManagerInternal.h"
-#include "llvm/Pass.h"
-#include "llvm/Support/Debug.h"
 #include "llvm/Support/TimeProfiler.h"
 #include "llvm/Support/TypeName.h"
-#include <algorithm>
 #include <cassert>
 #include <cstring>
 #include <iterator>
@@ -377,9 +374,15 @@ template <typename DerivedT> struct PassInfoMixin {
     static_assert(std::is_base_of<PassInfoMixin, DerivedT>::value,
                   "Must pass the derived type as the template argument!");
     StringRef Name = getTypeName<DerivedT>();
-    if (Name.startswith("llvm::"))
-      Name = Name.drop_front(strlen("llvm::"));
+    Name.consume_front("llvm::");
     return Name;
+  }
+
+  void printPipeline(raw_ostream &OS,
+                     function_ref<StringRef(StringRef)> MapClassName2PassName) {
+    StringRef ClassName = DerivedT::name();
+    auto PassName = MapClassName2PassName(ClassName);
+    OS << PassName;
   }
 };
 
@@ -467,7 +470,7 @@ class PassManager : public PassInfoMixin<
                         PassManager<IRUnitT, AnalysisManagerT, ExtraArgTs...>> {
 public:
   /// Construct a pass manager.
-  explicit PassManager() {}
+  explicit PassManager() = default;
 
   // FIXME: These are equivalent to the default move constructor/move
   // assignment. However, using = default triggers linker errors due to the
@@ -478,6 +481,16 @@ public:
   PassManager &operator=(PassManager &&RHS) {
     Passes = std::move(RHS.Passes);
     return *this;
+  }
+
+  void printPipeline(raw_ostream &OS,
+                     function_ref<StringRef(StringRef)> MapClassName2PassName) {
+    for (unsigned Idx = 0, Size = Passes.size(); Idx != Size; ++Idx) {
+      auto *P = Passes[Idx].get();
+      P->printPipeline(OS, MapClassName2PassName);
+      if (Idx + 1 < Size)
+        OS << ",";
+    }
   }
 
   /// Run all of the passes in this manager over the given unit of IR.
@@ -520,12 +533,6 @@ public:
       // Finally, intersect the preserved analyses to compute the aggregate
       // preserved set for this pass manager.
       PA.intersect(std::move(PassPA));
-
-      // FIXME: Historically, the pass managers all called the LLVM context's
-      // yield function here. We don't have a generic way to acquire the
-      // context and it isn't yet clear what the right pattern is for yielding
-      // in the new pass manager so it is currently omitted.
-      //IR.getContext().yield();
     }
 
     // Invalidation was handled after each pass in the above loop for the
@@ -538,13 +545,16 @@ public:
   }
 
   template <typename PassT>
-  std::enable_if_t<!std::is_same<PassT, PassManager>::value>
-  addPass(PassT &&Pass) {
+  LLVM_ATTRIBUTE_MINSIZE
+      std::enable_if_t<!std::is_same<PassT, PassManager>::value>
+      addPass(PassT &&Pass) {
     using PassModelT =
         detail::PassModel<IRUnitT, PassT, PreservedAnalyses, AnalysisManagerT,
                           ExtraArgTs...>;
-
-    Passes.emplace_back(new PassModelT(std::forward<PassT>(Pass)));
+    // Do not use make_unique or emplace_back, they cause too many template
+    // instantiations, causing terrible compile times.
+    Passes.push_back(std::unique_ptr<PassConceptT>(
+        new PassModelT(std::forward<PassT>(Pass))));
   }
 
   /// When adding a pass manager pass that has the same type as this pass
@@ -553,10 +563,11 @@ public:
   /// implementation complexity and avoid potential invalidation issues that may
   /// happen with nested pass managers of the same type.
   template <typename PassT>
-  std::enable_if_t<std::is_same<PassT, PassManager>::value>
-  addPass(PassT &&Pass) {
+  LLVM_ATTRIBUTE_MINSIZE
+      std::enable_if_t<std::is_same<PassT, PassManager>::value>
+      addPass(PassT &&Pass) {
     for (auto &P : Pass.Passes)
-      Passes.emplace_back(std::move(P));
+      Passes.push_back(std::move(P));
   }
 
   /// Returns if the pass manager contains any passes.
@@ -1190,29 +1201,37 @@ class ModuleToFunctionPassAdaptor
 public:
   using PassConceptT = detail::PassConcept<Function, FunctionAnalysisManager>;
 
-  explicit ModuleToFunctionPassAdaptor(std::unique_ptr<PassConceptT> Pass)
-      : Pass(std::move(Pass)) {}
+  explicit ModuleToFunctionPassAdaptor(std::unique_ptr<PassConceptT> Pass,
+                                       bool EagerlyInvalidate)
+      : Pass(std::move(Pass)), EagerlyInvalidate(EagerlyInvalidate) {}
 
   /// Runs the function pass across every function in the module.
   PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
+  void printPipeline(raw_ostream &OS,
+                     function_ref<StringRef(StringRef)> MapClassName2PassName);
 
   static bool isRequired() { return true; }
 
 private:
   std::unique_ptr<PassConceptT> Pass;
+  bool EagerlyInvalidate;
 };
 
 /// A function to deduce a function pass type and wrap it in the
 /// templated adaptor.
 template <typename FunctionPassT>
 ModuleToFunctionPassAdaptor
-createModuleToFunctionPassAdaptor(FunctionPassT &&Pass) {
+createModuleToFunctionPassAdaptor(FunctionPassT &&Pass,
+                                  bool EagerlyInvalidate = false) {
   using PassModelT =
       detail::PassModel<Function, FunctionPassT, PreservedAnalyses,
                         FunctionAnalysisManager>;
-
+  // Do not use make_unique, it causes too many template instantiations,
+  // causing terrible compile times.
   return ModuleToFunctionPassAdaptor(
-      std::make_unique<PassModelT>(std::forward<FunctionPassT>(Pass)));
+      std::unique_ptr<ModuleToFunctionPassAdaptor::PassConceptT>(
+          new PassModelT(std::forward<FunctionPassT>(Pass))),
+      EagerlyInvalidate);
 }
 
 /// A utility pass template to force an analysis result to be available.
@@ -1243,6 +1262,12 @@ struct RequireAnalysisPass
 
     return PreservedAnalyses::all();
   }
+  void printPipeline(raw_ostream &OS,
+                     function_ref<StringRef(StringRef)> MapClassName2PassName) {
+    auto ClassName = AnalysisT::name();
+    auto PassName = MapClassName2PassName(ClassName);
+    OS << "require<" << PassName << ">";
+  }
   static bool isRequired() { return true; }
 };
 
@@ -1262,6 +1287,12 @@ struct InvalidateAnalysisPass
     auto PA = PreservedAnalyses::all();
     PA.abandon<AnalysisT>();
     return PA;
+  }
+  void printPipeline(raw_ostream &OS,
+                     function_ref<StringRef(StringRef)> MapClassName2PassName) {
+    auto ClassName = AnalysisT::name();
+    auto PassName = MapClassName2PassName(ClassName);
+    OS << "invalidate<" << PassName << ">";
   }
 };
 
@@ -1310,6 +1341,13 @@ public:
       PI.runAfterPass(P, IR, IterPA);
     }
     return PA;
+  }
+
+  void printPipeline(raw_ostream &OS,
+                     function_ref<StringRef(StringRef)> MapClassName2PassName) {
+    OS << "repeat<" << Count << ">(";
+    P.printPipeline(OS, MapClassName2PassName);
+    OS << ")";
   }
 
 private:

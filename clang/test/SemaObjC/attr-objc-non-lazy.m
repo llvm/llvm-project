@@ -25,7 +25,7 @@ __attribute__((objc_nonlazy_class)) // expected-error {{'objc_nonlazy_class' att
 @end
 
 __attribute__((objc_nonlazy_class)) // expected-error {{'objc_nonlazy_class' attribute only applies to Objective-C interfaces}}
-void foo();
+void foo(void);
 
 @interface E
 @end

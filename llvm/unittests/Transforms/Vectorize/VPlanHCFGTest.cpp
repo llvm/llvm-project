@@ -45,12 +45,15 @@ TEST_F(VPlanHCFGTest, testBuildHCFGInnerLoop) {
   EXPECT_NE(nullptr, Entry->getSingleSuccessor());
   EXPECT_EQ(0u, Entry->getNumPredecessors());
   EXPECT_EQ(1u, Entry->getNumSuccessors());
-  EXPECT_EQ(nullptr, Entry->getCondBit());
 
+  // Check that the region following the preheader is a single basic-block
+  // region (loop).
   VPBasicBlock *VecBB = Entry->getSingleSuccessor()->getEntryBasicBlock();
-  EXPECT_EQ(7u, VecBB->size());
-  EXPECT_EQ(2u, VecBB->getNumPredecessors());
-  EXPECT_EQ(2u, VecBB->getNumSuccessors());
+  EXPECT_EQ(8u, VecBB->size());
+  EXPECT_EQ(0u, VecBB->getNumPredecessors());
+  EXPECT_EQ(0u, VecBB->getNumSuccessors());
+  EXPECT_EQ(VecBB->getParent()->getEntryBasicBlock(), VecBB);
+  EXPECT_EQ(VecBB->getParent()->getExitingBasicBlock(), VecBB);
   EXPECT_EQ(&*Plan, VecBB->getPlan());
 
   auto Iter = VecBB->begin();
@@ -87,7 +90,6 @@ TEST_F(VPlanHCFGTest, testBuildHCFGInnerLoop) {
   EXPECT_EQ(Instruction::ICmp, ICmp->getOpcode());
   EXPECT_EQ(2u, ICmp->getNumOperands());
   EXPECT_EQ(IndvarAdd, ICmp->getOperand(0));
-  EXPECT_EQ(VecBB->getCondBit(), ICmp);
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   // Add an external value to check we do not print the list of external values,
@@ -101,16 +103,16 @@ graph [labelloc=t, fontsize=30; label="Vectorization Plan"]
 node [shape=rect, fontname=Courier, fontsize=30]
 edge [fontname=Courier, fontsize=30]
 compound=true
-  subgraph cluster_N0 {
+  N0 [label =
+    "vector.ph:\l" +
+    "Successor(s): for.body\l"
+  ]
+  N0 -> N1 [ label="" lhead=cluster_N2]
+  subgraph cluster_N2 {
     fontname=Courier
-    label="\<x1\> TopRegion"
+    label="\<x1\> for.body"
     N1 [label =
-      "entry:\l" +
-      "Successor(s): for.body\l"
-    ]
-    N1 -> N2 [ label=""]
-    N2 [label =
-      "for.body:\l" +
+      "vector.body:\l" +
       "  WIDEN-PHI ir\<%indvars.iv\> = phi ir\<0\>, ir\<%indvars.iv.next\>\l" +
       "  EMIT ir\<%arr.idx\> = getelementptr ir\<%A\> ir\<%indvars.iv\>\l" +
       "  EMIT ir\<%l1\> = load ir\<%arr.idx\>\l" +
@@ -118,26 +120,24 @@ compound=true
       "  EMIT store ir\<%res\> ir\<%arr.idx\>\l" +
       "  EMIT ir\<%indvars.iv.next\> = add ir\<%indvars.iv\> ir\<1\>\l" +
       "  EMIT ir\<%exitcond\> = icmp ir\<%indvars.iv.next\> ir\<%N\>\l" +
-      "Successor(s): for.body, for.end\l" +
-      "CondBit: ir\<%exitcond\> (for.body)\l"
-    ]
-    N2 -> N2 [ label="T"]
-    N2 -> N3 [ label="F"]
-    N3 [label =
-      "for.end:\l" +
-      "  EMIT ret\l" +
+      "  EMIT branch-on-cond ir\<%exitcond\>\l" +
       "No successors\l"
     ]
   }
+  N1 -> N3 [ label="" ltail=cluster_N2]
+  N3 [label =
+    "for.end:\l" +
+    "No successors\l"
+  ]
 }
 )";
   EXPECT_EQ(ExpectedStr, FullDump);
 #endif
 
-  LoopVectorizationLegality::InductionList Inductions;
   SmallPtrSet<Instruction *, 1> DeadInstructions;
-  VPlanTransforms::VPInstructionsToVPRecipes(LI->getLoopFor(LoopHeader), Plan,
-                                             Inductions, DeadInstructions, *SE);
+  VPlanTransforms::VPInstructionsToVPRecipes(
+      LI->getLoopFor(LoopHeader), Plan, [](PHINode *P) { return nullptr; },
+      DeadInstructions, *SE);
 }
 
 TEST_F(VPlanHCFGTest, testVPInstructionToVPRecipesInner) {
@@ -164,20 +164,24 @@ TEST_F(VPlanHCFGTest, testVPInstructionToVPRecipesInner) {
   BasicBlock *LoopHeader = F->getEntryBlock().getSingleSuccessor();
   auto Plan = buildHCFG(LoopHeader);
 
-  LoopVectorizationLegality::InductionList Inductions;
   SmallPtrSet<Instruction *, 1> DeadInstructions;
-  VPlanTransforms::VPInstructionsToVPRecipes(LI->getLoopFor(LoopHeader), Plan,
-                                             Inductions, DeadInstructions, *SE);
+  VPlanTransforms::VPInstructionsToVPRecipes(
+      LI->getLoopFor(LoopHeader), Plan, [](PHINode *P) { return nullptr; },
+      DeadInstructions, *SE);
 
   VPBlockBase *Entry = Plan->getEntry()->getEntryBasicBlock();
   EXPECT_NE(nullptr, Entry->getSingleSuccessor());
   EXPECT_EQ(0u, Entry->getNumPredecessors());
   EXPECT_EQ(1u, Entry->getNumSuccessors());
 
+  // Check that the region following the preheader is a single basic-block
+  // region (loop).
   VPBasicBlock *VecBB = Entry->getSingleSuccessor()->getEntryBasicBlock();
-  EXPECT_EQ(7u, VecBB->size());
-  EXPECT_EQ(2u, VecBB->getNumPredecessors());
-  EXPECT_EQ(2u, VecBB->getNumSuccessors());
+  EXPECT_EQ(8u, VecBB->size());
+  EXPECT_EQ(0u, VecBB->getNumPredecessors());
+  EXPECT_EQ(0u, VecBB->getNumSuccessors());
+  EXPECT_EQ(VecBB->getParent()->getEntryBasicBlock(), VecBB);
+  EXPECT_EQ(VecBB->getParent()->getExitingBasicBlock(), VecBB);
 
   auto Iter = VecBB->begin();
   EXPECT_NE(nullptr, dyn_cast<VPWidenPHIRecipe>(&*Iter++));
@@ -187,6 +191,7 @@ TEST_F(VPlanHCFGTest, testVPInstructionToVPRecipesInner) {
   EXPECT_NE(nullptr, dyn_cast<VPWidenMemoryInstructionRecipe>(&*Iter++));
   EXPECT_NE(nullptr, dyn_cast<VPWidenRecipe>(&*Iter++));
   EXPECT_NE(nullptr, dyn_cast<VPWidenRecipe>(&*Iter++));
+  EXPECT_NE(nullptr, dyn_cast<VPInstruction>(&*Iter++));
   EXPECT_EQ(VecBB->end(), Iter);
 }
 

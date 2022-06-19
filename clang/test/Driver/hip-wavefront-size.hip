@@ -1,4 +1,4 @@
-// REQUIRES: clang-driver,amdgpu-registered-target
+// REQUIRES: amdgpu-registered-target
 
 // RUN: %clang -### -target x86_64-linux-gnu \
 // RUN:   --cuda-gpu-arch=gfx900 \

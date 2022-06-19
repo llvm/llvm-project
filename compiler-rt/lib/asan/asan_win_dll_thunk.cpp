@@ -56,6 +56,13 @@ INTERCEPT_WRAP_W_W(_expand_dbg)
 
 // TODO(timurrrr): Do we need to add _Crt* stuff here? (see asan_malloc_win.cpp)
 
+#  if defined(_MSC_VER) && !defined(__clang__)
+// Disable warnings such as: 'void memchr(void)': incorrect number of arguments
+// for intrinsic function, expected '3' arguments.
+#    pragma warning(push)
+#    pragma warning(disable : 4392)
+#  endif
+
 INTERCEPT_LIBRARY_FUNCTION(atoi);
 INTERCEPT_LIBRARY_FUNCTION(atol);
 INTERCEPT_LIBRARY_FUNCTION(frexp);
@@ -86,6 +93,10 @@ INTERCEPT_LIBRARY_FUNCTION(strtok);
 INTERCEPT_LIBRARY_FUNCTION(strtol);
 INTERCEPT_LIBRARY_FUNCTION(wcslen);
 INTERCEPT_LIBRARY_FUNCTION(wcsnlen);
+
+#  if defined(_MSC_VER) && !defined(__clang__)
+#    pragma warning(pop)
+#  endif
 
 #ifdef _WIN64
 INTERCEPT_LIBRARY_FUNCTION(__C_specific_handler);

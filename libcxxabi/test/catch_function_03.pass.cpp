@@ -1,4 +1,4 @@
-//===---------------------- catch_function_03.cpp -------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -7,7 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 // Can a noexcept function pointer be caught by a non-noexcept catch clause?
-// UNSUPPORTED: no-exceptions, no-noexcept-function-type
+// UNSUPPORTED: c++03, c++11, c++14
+// UNSUPPORTED: no-exceptions
 
 // Support for catching a function pointer including noexcept was shipped in macOS 10.13
 // XFAIL: use_system_cxx_lib && {{.+}}-apple-macosx10.{{9|10|11|12}}

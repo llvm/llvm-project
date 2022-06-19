@@ -15,8 +15,6 @@ import os
 
 class TestVSCode_launch(lldbvscode_testcase.VSCodeTestCaseBase):
 
-    mydir = TestBase.compute_mydir(__file__)
-
     @skipIfWindows
     @skipIfDarwin # Flaky
     @skipIfRemote
@@ -374,7 +372,7 @@ class TestVSCode_launch(lldbvscode_testcase.VSCodeTestCaseBase):
     @skipIfRemote
     def test_extra_launch_commands(self):
         '''
-            Tests the "luanchCommands" with extra launching settings
+            Tests the "launchCommands" with extra launching settings
         '''
         self.build_and_create_debug_adaptor()
         program = self.getBuildArtifact("a.out")

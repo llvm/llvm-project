@@ -2,7 +2,7 @@
 
 %Ty = type { i32, i32 }
 
-; sanity check that the argument and return value are both dead
+; Validate that the argument and return value are both dead
 ; CHECK-LABEL: define internal void @test1()
 
 define internal %Ty* @test1(%Ty* %this) {
@@ -19,7 +19,7 @@ define internal %Ty* @test2(%Ty* returned %this) {
 ; dummy to keep 'this' alive
 @dummy = global %Ty* null 
 
-; sanity check that return value is dead
+; Validate that return value is dead
 ; CHECK-LABEL: define internal void @test3(%Ty* %this)
 
 define internal %Ty* @test3(%Ty* %this) {

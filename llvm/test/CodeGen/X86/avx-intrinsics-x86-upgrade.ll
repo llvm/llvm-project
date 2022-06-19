@@ -87,7 +87,7 @@ define <8 x i32> @test_x86_avx_vinsertf128_si_256_2(<8 x i32> %a0, <4 x i32> %a1
 ; CHECK-LABEL: test_x86_avx_vinsertf128_si_256_2:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    # kill: def $xmm1 killed $xmm1 def $ymm1
-; CHECK-NEXT:    vblendps $240, %ymm0, %ymm1, %ymm0 # encoding: [0xc4,0xe3,0x75,0x0c,0xc0,0xf0]
+; CHECK-NEXT:    vblendps $15, %ymm1, %ymm0, %ymm0 # encoding: [0xc4,0xe3,0x7d,0x0c,0xc1,0x0f]
 ; CHECK-NEXT:    # ymm0 = ymm1[0,1,2,3],ymm0[4,5,6,7]
 ; CHECK-NEXT:    ret{{[l|q]}} # encoding: [0xc3]
   %res = call <8 x i32> @llvm.x86.avx.vinsertf128.si.256(<8 x i32> %a0, <4 x i32> %a1, i8 2)

@@ -39,10 +39,6 @@ Misc. Items and TODOs
 (Please mark all Format-related TODO comments with the string ``TODO FMT``, so we
 can find them easily.)
 
-    * C++23 may break the ABI with `P2216 <https://wg21.link/P2216>`_.
-      This ABI break may be backported to C++20. Therefore the library will not
-      be available on platforms where the ABI break is an issue.
-
 
 Paper and Issue Status
 ======================

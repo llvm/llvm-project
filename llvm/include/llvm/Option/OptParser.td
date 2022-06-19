@@ -214,7 +214,7 @@ class MarshallingInfoBitfieldFlag<KeyPathAndMacro kpm, code value>
 }
 
 // Implementation detail of BoolOption.
-class MarshallingInfoBooleanFlag<KeyPathAndMacro kpm, code defaultvalue, code value, code name,
+class MarshallingInfoBooleanFlag<KeyPathAndMacro kpm, code defaultvalue, code value,
                                  code other_value, code other_name>
   : MarshallingInfoFlag<kpm, defaultvalue> {
   code Normalizer = "makeBooleanOptionNormalizer("#value#", "#other_value#", OPT_"#other_name#")";

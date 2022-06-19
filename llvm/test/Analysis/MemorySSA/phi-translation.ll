@@ -1,5 +1,3 @@
-; RUN: opt -basic-aa -print-memoryssa -verify-memoryssa -enable-new-pm=0 -analyze < %s 2>&1 | FileCheck %s --check-prefixes=CHECK,NOLIMIT
-; RUN: opt -memssa-check-limit=0 -basic-aa -print-memoryssa -verify-memoryssa -enable-new-pm=0 -analyze < %s 2>&1 | FileCheck %s --check-prefixes=CHECK,LIMIT
 ; RUN: opt -aa-pipeline=basic-aa -passes='print<memoryssa>,verify<memoryssa>' -disable-output < %s 2>&1 | FileCheck %s --check-prefixes=CHECK,NOLIMIT
 ; RUN: opt -memssa-check-limit=0 -aa-pipeline=basic-aa -passes='print<memoryssa>,verify<memoryssa>' -disable-output < %s 2>&1 | FileCheck %s --check-prefixes=CHECK,LIMIT
 
@@ -197,7 +195,7 @@ if.end:
 define i32 @use_not_optimized_due_to_backedge(i32* nocapture %m_i_strides, i32* nocapture readonly %eval_left_dims) {
 entry:
 ; CHECK: 1 = MemoryDef(liveOnEntry)
-; CHECK_NEXT: store i32 1, i32* %m_i_strides, align 4
+; CHECK-NEXT: store i32 1, i32* %m_i_strides, align 4
   store i32 1, i32* %m_i_strides, align 4
   br label %for.body
 

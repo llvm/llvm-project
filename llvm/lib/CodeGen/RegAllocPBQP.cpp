@@ -623,8 +623,8 @@ void RegAllocPBQP::initializeGraph(PBQPRAGraph &G, VirtRegMap &VRM,
     // Compute an initial allowed set for the current vreg.
     std::vector<MCRegister> VRegAllowed;
     ArrayRef<MCPhysReg> RawPRegOrder = TRC->getRawAllocationOrder(MF);
-    for (unsigned I = 0; I != RawPRegOrder.size(); ++I) {
-      MCRegister PReg(RawPRegOrder[I]);
+    for (MCPhysReg R : RawPRegOrder) {
+      MCRegister PReg(R);
       if (MRI.isReserved(PReg))
         continue;
 
@@ -847,6 +847,7 @@ bool RegAllocPBQP::runOnMachineFunction(MachineFunction &MF) {
 
     while (!PBQPAllocComplete) {
       LLVM_DEBUG(dbgs() << "  PBQP Regalloc round " << Round << ":\n");
+      (void) Round;
 
       PBQPRAGraph G(PBQPRAGraph::GraphMetadata(MF, LIS, MBFI));
       initializeGraph(G, VRM, *VRegSpiller);

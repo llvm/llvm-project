@@ -13,7 +13,10 @@
 #include "ObjDumper.h"
 #include "llvm-readobj.h"
 #include "llvm/Object/XCOFFObjectFile.h"
+#include "llvm/Support/FormattedStream.h"
 #include "llvm/Support/ScopedPrinter.h"
+
+#include <ctime>
 
 using namespace llvm;
 using namespace object;
@@ -27,6 +30,7 @@ public:
       : ObjDumper(Writer, Obj.getFileName()), Obj(Obj) {}
 
   void printFileHeaders() override;
+  void printAuxiliaryHeader() override;
   void printSectionHeaders() override;
   void printRelocations() override;
   void printSymbols() override;
@@ -36,15 +40,28 @@ public:
   void printNeededLibraries() override;
   void printStringTable() override;
 
+  ScopedPrinter &getScopedPrinter() const { return W; }
+
 private:
   template <typename T> void printSectionHeaders(ArrayRef<T> Sections);
   template <typename T> void printGenericSectionHeader(T &Sec) const;
   template <typename T> void printOverflowSectionHeader(T &Sec) const;
+  template <typename T> const T *getAuxEntPtr(uintptr_t AuxAddress);
   void printFileAuxEnt(const XCOFFFileAuxEnt *AuxEntPtr);
   void printCsectAuxEnt(XCOFFCsectAuxRef AuxEntRef);
   void printSectAuxEntForStat(const XCOFFSectAuxEntForStat *AuxEntPtr);
+  void printExceptionAuxEnt(const XCOFFExceptionAuxEnt *AuxEntPtr);
+  void printFunctionAuxEnt(const XCOFFFunctionAuxEnt32 *AuxEntPtr);
+  void printFunctionAuxEnt(const XCOFFFunctionAuxEnt64 *AuxEntPtr);
+  void printBlockAuxEnt(const XCOFFBlockAuxEnt32 *AuxEntPtr);
+  void printBlockAuxEnt(const XCOFFBlockAuxEnt64 *AuxEntPtr);
+  template <typename T> void printSectAuxEntForDWARF(const T *AuxEntPtr);
   void printSymbol(const SymbolRef &);
-  void printRelocations(ArrayRef<XCOFFSectionHeader32> Sections);
+  template <typename RelTy> void printRelocation(RelTy Reloc);
+  template <typename Shdr, typename RelTy>
+  void printRelocations(ArrayRef<Shdr> Sections);
+  void printAuxiliaryHeader(const XCOFFAuxiliaryHeader32 *AuxHeader);
+  void printAuxiliaryHeader(const XCOFFAuxiliaryHeader64 *AuxHeader);
   const XCOFFObjectFile &Obj;
 };
 } // anonymous namespace
@@ -96,6 +113,15 @@ void XCOFFDumper::printFileHeaders() {
   // XCOFFObjectFile has the necessary support.
 }
 
+void XCOFFDumper::printAuxiliaryHeader() {
+  DictScope DS(W, "AuxiliaryHeader");
+
+  if (Obj.is64Bit())
+    printAuxiliaryHeader(Obj.auxiliaryHeader64());
+  else
+    printAuxiliaryHeader(Obj.auxiliaryHeader32());
+}
+
 void XCOFFDumper::printSectionHeaders() {
   if (Obj.is64Bit())
     printSectionHeaders(Obj.sections64());
@@ -105,12 +131,12 @@ void XCOFFDumper::printSectionHeaders() {
 
 void XCOFFDumper::printRelocations() {
   if (Obj.is64Bit())
-    llvm_unreachable("64-bit relocation output not implemented!");
+    printRelocations<XCOFFSectionHeader64, XCOFFRelocation64>(Obj.sections64());
   else
-    printRelocations(Obj.sections32());
+    printRelocations<XCOFFSectionHeader32, XCOFFRelocation32>(Obj.sections32());
 }
 
-static const EnumEntry<XCOFF::RelocationType> RelocationTypeNameclass[] = {
+const EnumEntry<XCOFF::RelocationType> RelocationTypeNameclass[] = {
 #define ECase(X)                                                               \
   { #X, XCOFF::X }
     ECase(R_POS),    ECase(R_RL),     ECase(R_RLA),    ECase(R_NEG),
@@ -122,50 +148,71 @@ static const EnumEntry<XCOFF::RelocationType> RelocationTypeNameclass[] = {
 #undef ECase
 };
 
-void XCOFFDumper::printRelocations(ArrayRef<XCOFFSectionHeader32> Sections) {
-  if (!opts::ExpandRelocs)
-    report_fatal_error("Unexpanded relocation output not implemented.");
+template <typename RelTy> void XCOFFDumper::printRelocation(RelTy Reloc) {
+  Expected<StringRef> ErrOrSymbolName =
+      Obj.getSymbolNameByIndex(Reloc.SymbolIndex);
+  if (Error E = ErrOrSymbolName.takeError()) {
+    reportUniqueWarning(std::move(E));
+    return;
+  }
+  StringRef SymbolName = *ErrOrSymbolName;
+  StringRef RelocName = XCOFF::getRelocationTypeString(Reloc.Type);
+  if (opts::ExpandRelocs) {
+    DictScope Group(W, "Relocation");
+    W.printHex("Virtual Address", Reloc.VirtualAddress);
+    W.printNumber("Symbol", SymbolName, Reloc.SymbolIndex);
+    W.printString("IsSigned", Reloc.isRelocationSigned() ? "Yes" : "No");
+    W.printNumber("FixupBitValue", Reloc.isFixupIndicated() ? 1 : 0);
+    W.printNumber("Length", Reloc.getRelocatedLength());
+    W.printEnum("Type", (uint8_t)Reloc.Type,
+                makeArrayRef(RelocationTypeNameclass));
+  } else {
+    raw_ostream &OS = W.startLine();
+    OS << W.hex(Reloc.VirtualAddress) << " " << RelocName << " " << SymbolName
+       << "(" << Reloc.SymbolIndex << ") " << W.hex(Reloc.Info) << "\n";
+  }
+}
 
+template <typename Shdr, typename RelTy>
+void XCOFFDumper::printRelocations(ArrayRef<Shdr> Sections) {
   ListScope LS(W, "Relocations");
   uint16_t Index = 0;
-  for (const auto &Sec : Sections) {
+  for (const Shdr &Sec : Sections) {
     ++Index;
     // Only the .text, .data, .tdata, and STYP_DWARF sections have relocation.
     if (Sec.Flags != XCOFF::STYP_TEXT && Sec.Flags != XCOFF::STYP_DATA &&
         Sec.Flags != XCOFF::STYP_TDATA && Sec.Flags != XCOFF::STYP_DWARF)
       continue;
-    auto Relocations = unwrapOrError(Obj.getFileName(), Obj.relocations(Sec));
+    Expected<ArrayRef<RelTy>> ErrOrRelocations = Obj.relocations<Shdr, RelTy>(Sec);
+    if (Error E = ErrOrRelocations.takeError()) {
+      reportUniqueWarning(std::move(E));
+      continue;
+    }
+
+    const ArrayRef<RelTy> Relocations = *ErrOrRelocations;
     if (Relocations.empty())
       continue;
 
     W.startLine() << "Section (index: " << Index << ") " << Sec.getName()
                   << " {\n";
-    for (auto Reloc : Relocations) {
-      StringRef SymbolName = unwrapOrError(
-          Obj.getFileName(), Obj.getSymbolNameByIndex(Reloc.SymbolIndex));
+    W.indent();
 
-      DictScope RelocScope(W, "Relocation");
-      W.printHex("Virtual Address", Reloc.VirtualAddress);
-      W.printNumber("Symbol", SymbolName, Reloc.SymbolIndex);
-      W.printString("IsSigned", Reloc.isRelocationSigned() ? "Yes" : "No");
-      W.printNumber("FixupBitValue", Reloc.isFixupIndicated() ? 1 : 0);
-      W.printNumber("Length", Reloc.getRelocatedLength());
-      W.printEnum("Type", (uint8_t)Reloc.Type,
-                  makeArrayRef(RelocationTypeNameclass));
-    }
+    for (const RelTy Reloc : Relocations)
+      printRelocation(Reloc);
+
     W.unindent();
     W.startLine() << "}\n";
   }
 }
 
-static const EnumEntry<XCOFF::CFileStringType> FileStringType[] = {
+const EnumEntry<XCOFF::CFileStringType> FileStringType[] = {
 #define ECase(X)                                                               \
   { #X, XCOFF::X }
     ECase(XFT_FN), ECase(XFT_CT), ECase(XFT_CV), ECase(XFT_CD)
 #undef ECase
 };
 
-static const EnumEntry<XCOFF::SymbolAuxType> SymAuxType[] = {
+const EnumEntry<XCOFF::SymbolAuxType> SymAuxType[] = {
 #define ECase(X)                                                               \
   { #X, XCOFF::X }
     ECase(AUX_EXCEPT), ECase(AUX_FCN), ECase(AUX_SYM), ECase(AUX_FILE),
@@ -203,7 +250,7 @@ static const EnumEntry<XCOFF::StorageMappingClass> CsectStorageMappingClass[] =
 #undef ECase
 };
 
-static const EnumEntry<XCOFF::SymbolType> CsectSymbolTypeClass[] = {
+const EnumEntry<XCOFF::SymbolType> CsectSymbolTypeClass[] = {
 #define ECase(X)                                                               \
   { #X, XCOFF::X }
     ECase(XTY_ER), ECase(XTY_SD), ECase(XTY_LD), ECase(XTY_CM)
@@ -253,7 +300,78 @@ void XCOFFDumper::printSectAuxEntForStat(
   W.printNumber("NumberOfLineNum", AuxEntPtr->NumberOfLineNum);
 }
 
-static const EnumEntry<XCOFF::StorageClass> SymStorageClass[] = {
+void XCOFFDumper::printExceptionAuxEnt(const XCOFFExceptionAuxEnt *AuxEntPtr) {
+  assert(Obj.is64Bit() && "64-bit interface called on 32-bit object file.");
+
+  DictScope SymDs(W, "Exception Auxiliary Entry");
+  W.printNumber("Index",
+                Obj.getSymbolIndex(reinterpret_cast<uintptr_t>(AuxEntPtr)));
+  W.printHex("OffsetToExceptionTable", AuxEntPtr->OffsetToExceptionTbl);
+  W.printHex("SizeOfFunction", AuxEntPtr->SizeOfFunction);
+  W.printNumber("SymbolIndexOfNextBeyond", AuxEntPtr->SymIdxOfNextBeyond);
+  W.printEnum("Auxiliary Type", static_cast<uint8_t>(AuxEntPtr->AuxType),
+              makeArrayRef(SymAuxType));
+}
+
+void XCOFFDumper::printFunctionAuxEnt(const XCOFFFunctionAuxEnt32 *AuxEntPtr) {
+  assert(!Obj.is64Bit() && "32-bit interface called on 64-bit object file.");
+
+  DictScope SymDs(W, "Function Auxiliary Entry");
+  W.printNumber("Index",
+                Obj.getSymbolIndex(reinterpret_cast<uintptr_t>(AuxEntPtr)));
+  W.printHex("OffsetToExceptionTable", AuxEntPtr->OffsetToExceptionTbl);
+  W.printHex("SizeOfFunction", AuxEntPtr->SizeOfFunction);
+  W.printHex("PointerToLineNum", AuxEntPtr->PtrToLineNum);
+  W.printNumber("SymbolIndexOfNextBeyond", AuxEntPtr->SymIdxOfNextBeyond);
+}
+
+void XCOFFDumper::printFunctionAuxEnt(const XCOFFFunctionAuxEnt64 *AuxEntPtr) {
+  assert(Obj.is64Bit() && "64-bit interface called on 32-bit object file.");
+
+  DictScope SymDs(W, "Function Auxiliary Entry");
+  W.printNumber("Index",
+                Obj.getSymbolIndex(reinterpret_cast<uintptr_t>(AuxEntPtr)));
+  W.printHex("SizeOfFunction", AuxEntPtr->SizeOfFunction);
+  W.printHex("PointerToLineNum", AuxEntPtr->PtrToLineNum);
+  W.printNumber("SymbolIndexOfNextBeyond", AuxEntPtr->SymIdxOfNextBeyond);
+  W.printEnum("Auxiliary Type", static_cast<uint8_t>(AuxEntPtr->AuxType),
+              makeArrayRef(SymAuxType));
+}
+
+void XCOFFDumper::printBlockAuxEnt(const XCOFFBlockAuxEnt32 *AuxEntPtr) {
+  assert(!Obj.is64Bit() && "32-bit interface called on 64-bit object file.");
+
+  DictScope SymDs(W, "Block Auxiliary Entry");
+  W.printNumber("Index",
+                Obj.getSymbolIndex(reinterpret_cast<uintptr_t>(AuxEntPtr)));
+  W.printHex("LineNumber (High 2 Bytes)", AuxEntPtr->LineNumHi);
+  W.printHex("LineNumber (Low 2 Bytes)", AuxEntPtr->LineNumLo);
+}
+
+void XCOFFDumper::printBlockAuxEnt(const XCOFFBlockAuxEnt64 *AuxEntPtr) {
+  assert(Obj.is64Bit() && "64-bit interface called on 32-bit object file.");
+
+  DictScope SymDs(W, "Block Auxiliary Entry");
+  W.printNumber("Index",
+                Obj.getSymbolIndex(reinterpret_cast<uintptr_t>(AuxEntPtr)));
+  W.printHex("LineNumber", AuxEntPtr->LineNum);
+  W.printEnum("Auxiliary Type", static_cast<uint8_t>(AuxEntPtr->AuxType),
+              makeArrayRef(SymAuxType));
+}
+
+template <typename T>
+void XCOFFDumper::printSectAuxEntForDWARF(const T *AuxEntPtr) {
+  DictScope SymDs(W, "Sect Auxiliary Entry For DWARF");
+  W.printNumber("Index",
+                Obj.getSymbolIndex(reinterpret_cast<uintptr_t>(AuxEntPtr)));
+  W.printHex("LengthOfSectionPortion", AuxEntPtr->LengthOfSectionPortion);
+  W.printNumber("NumberOfRelocEntries", AuxEntPtr->NumberOfRelocEnt);
+  if (Obj.is64Bit())
+    W.printEnum("Auxiliary Type", static_cast<uint8_t>(XCOFF::AUX_SECT),
+                makeArrayRef(SymAuxType));
+}
+
+const EnumEntry<XCOFF::StorageClass> SymStorageClass[] = {
 #define ECase(X)                                                               \
   { #X, XCOFF::X }
     ECase(C_NULL),  ECase(C_AUTO),    ECase(C_EXT),     ECase(C_STAT),
@@ -278,11 +396,13 @@ static StringRef GetSymbolValueName(XCOFF::StorageClass SC) {
   case XCOFF::C_WEAKEXT:
   case XCOFF::C_HIDEXT:
   case XCOFF::C_STAT:
+  case XCOFF::C_FCN:
+  case XCOFF::C_BLOCK:
     return "Value (RelocatableAddress)";
   case XCOFF::C_FILE:
     return "Value (SymbolTableIndex)";
-  case XCOFF::C_FCN:
-  case XCOFF::C_BLOCK:
+  case XCOFF::C_DWARF:
+    return "Value (OffsetInDWARF)";
   case XCOFF::C_FUN:
   case XCOFF::C_STSYM:
   case XCOFF::C_BINCL:
@@ -294,7 +414,6 @@ static StringRef GetSymbolValueName(XCOFF::StorageClass SC) {
   case XCOFF::C_RPSYM:
   case XCOFF::C_RSYM:
   case XCOFF::C_ECOML:
-  case XCOFF::C_DWARF:
     assert(false && "This StorageClass for the symbol is not yet implemented.");
     return "";
   default:
@@ -302,19 +421,35 @@ static StringRef GetSymbolValueName(XCOFF::StorageClass SC) {
   }
 }
 
-static const EnumEntry<XCOFF::CFileLangId> CFileLangIdClass[] = {
+const EnumEntry<XCOFF::CFileLangId> CFileLangIdClass[] = {
 #define ECase(X)                                                               \
   { #X, XCOFF::X }
     ECase(TB_C), ECase(TB_CPLUSPLUS)
 #undef ECase
 };
 
-static const EnumEntry<XCOFF::CFileCpuId> CFileCpuIdClass[] = {
+const EnumEntry<XCOFF::CFileCpuId> CFileCpuIdClass[] = {
 #define ECase(X)                                                               \
   { #X, XCOFF::X }
     ECase(TCPU_PPC64), ECase(TCPU_COM), ECase(TCPU_970)
 #undef ECase
 };
+
+template <typename T> const T *XCOFFDumper::getAuxEntPtr(uintptr_t AuxAddress) {
+  const T *AuxEntPtr = reinterpret_cast<const T *>(AuxAddress);
+  Obj.checkSymbolEntryPointer(reinterpret_cast<uintptr_t>(AuxEntPtr));
+  return AuxEntPtr;
+}
+
+static void printUnexpectedRawAuxEnt(ScopedPrinter &W, uintptr_t AuxAddress) {
+  W.startLine() << "!Unexpected raw auxiliary entry data:\n";
+  W.startLine() << format_bytes(
+                       ArrayRef<uint8_t>(
+                           reinterpret_cast<const uint8_t *>(AuxAddress),
+                           XCOFF::SymbolTableEntrySize),
+                       None, XCOFF::SymbolTableEntrySize)
+                << "\n";
+}
 
 void XCOFFDumper::printSymbol(const SymbolRef &S) {
   DataRefImpl SymbolDRI = S.getRawDataRefImpl();
@@ -327,16 +462,18 @@ void XCOFFDumper::printSymbol(const SymbolRef &S) {
   StringRef SymbolName =
       unwrapOrError(Obj.getFileName(), SymbolEntRef.getName());
 
-  W.printNumber("Index", Obj.getSymbolIndex(SymbolEntRef.getEntryAddress()));
+  uint32_t SymbolIdx = Obj.getSymbolIndex(SymbolEntRef.getEntryAddress());
+  XCOFF::StorageClass SymbolClass = SymbolEntRef.getStorageClass();
+
+  W.printNumber("Index", SymbolIdx);
   W.printString("Name", SymbolName);
-  W.printHex(GetSymbolValueName(SymbolEntRef.getStorageClass()),
-             SymbolEntRef.getValue());
+  W.printHex(GetSymbolValueName(SymbolClass), SymbolEntRef.getValue());
 
   StringRef SectionName =
       unwrapOrError(Obj.getFileName(), Obj.getSymbolSectionName(SymbolEntRef));
 
   W.printString("Section", SectionName);
-  if (SymbolEntRef.getStorageClass() == XCOFF::C_FILE) {
+  if (SymbolClass == XCOFF::C_FILE) {
     W.printEnum("Source Language ID", SymbolEntRef.getLanguageIdForCFile(),
                 makeArrayRef(CFileLangIdClass));
     W.printEnum("CPU Version ID", SymbolEntRef.getCPUTypeIddForCFile(),
@@ -344,15 +481,24 @@ void XCOFFDumper::printSymbol(const SymbolRef &S) {
   } else
     W.printHex("Type", SymbolEntRef.getSymbolType());
 
-  W.printEnum("StorageClass",
-              static_cast<uint8_t>(SymbolEntRef.getStorageClass()),
+  W.printEnum("StorageClass", static_cast<uint8_t>(SymbolClass),
               makeArrayRef(SymStorageClass));
   W.printNumber("NumberOfAuxEntries", NumberOfAuxEntries);
 
   if (NumberOfAuxEntries == 0)
     return;
 
-  switch (SymbolEntRef.getStorageClass()) {
+  auto checkNumOfAux = [=] {
+    if (NumberOfAuxEntries > 1)
+      reportUniqueWarning("the " +
+                          enumToString(static_cast<uint8_t>(SymbolClass),
+                                       makeArrayRef(SymStorageClass)) +
+                          " symbol at index " + Twine(SymbolIdx) +
+                          " should not have more than 1 "
+                          "auxiliary entry");
+  };
+
+  switch (SymbolClass) {
   case XCOFF::C_FILE:
     // If the symbol is C_FILE and has auxiliary entries...
     for (int I = 1; I <= NumberOfAuxEntries; I++) {
@@ -361,55 +507,62 @@ void XCOFFDumper::printSymbol(const SymbolRef &S) {
 
       if (Obj.is64Bit() &&
           *Obj.getSymbolAuxType(AuxAddress) != XCOFF::SymbolAuxType::AUX_FILE) {
-        W.startLine() << "!Unexpected raw auxiliary entry data:\n";
-        W.startLine() << format_bytes(
-                             ArrayRef<uint8_t>(
-                                 reinterpret_cast<const uint8_t *>(AuxAddress),
-                                 XCOFF::SymbolTableEntrySize),
-                             0, XCOFF::SymbolTableEntrySize)
-                      << "\n";
+        printUnexpectedRawAuxEnt(W, AuxAddress);
         continue;
       }
 
       const XCOFFFileAuxEnt *FileAuxEntPtr =
-          reinterpret_cast<const XCOFFFileAuxEnt *>(AuxAddress);
-#ifndef NDEBUG
-      Obj.checkSymbolEntryPointer(reinterpret_cast<uintptr_t>(FileAuxEntPtr));
-#endif
+          getAuxEntPtr<XCOFFFileAuxEnt>(AuxAddress);
       printFileAuxEnt(FileAuxEntPtr);
     }
     break;
   case XCOFF::C_EXT:
   case XCOFF::C_WEAKEXT:
   case XCOFF::C_HIDEXT: {
-    // If the symbol is for a function, and it has more than 1 auxiliary entry,
-    // then one of them must be function auxiliary entry which we do not
-    // support yet.
-    if (SymbolEntRef.isFunction() && NumberOfAuxEntries >= 2)
-      report_fatal_error("Function auxiliary entry printing is unimplemented.");
+    if (!SymbolEntRef.isFunction() && NumberOfAuxEntries > 1)
+      reportUniqueWarning("the non-function " +
+                          enumToString(static_cast<uint8_t>(SymbolClass),
+                                       makeArrayRef(SymStorageClass)) +
+                          " symbol at index " + Twine(SymbolIdx) +
+                          " should have only 1 auxiliary entry, i.e. the CSECT "
+                          "auxiliary entry");
 
-    // If there is more than 1 auxiliary entry, instead of printing out
-    // error information, print out the raw Auxiliary entry.
-    // For 32-bit object, print from first to the last - 1. The last one must be
-    // a CSECT Auxiliary Entry.
-    // For 64-bit object, print from first to last and skips if SymbolAuxType is
-    // AUX_CSECT.
+    // For 32-bit objects, print the function auxiliary symbol table entry. The
+    // last one must be a CSECT auxiliary entry.
+    // For 64-bit objects, both a function auxiliary entry and an exception
+    // auxiliary entry may appear, print them in the loop and skip printing the
+    // CSECT auxiliary entry, which will be printed outside the loop.
     for (int I = 1; I <= NumberOfAuxEntries; I++) {
-      if (I == NumberOfAuxEntries && !Obj.is64Bit())
+      if ((I == NumberOfAuxEntries && !Obj.is64Bit()) ||
+          !SymbolEntRef.isFunction())
         break;
 
       uintptr_t AuxAddress = XCOFFObjectFile::getAdvancedSymbolEntryAddress(
           SymbolEntRef.getEntryAddress(), I);
-      if (Obj.is64Bit() &&
-          *Obj.getSymbolAuxType(AuxAddress) == XCOFF::SymbolAuxType::AUX_CSECT)
-        continue;
 
-      W.startLine() << "!Unexpected raw auxiliary entry data:\n";
-      W.startLine() << format_bytes(
-          ArrayRef<uint8_t>(reinterpret_cast<const uint8_t *>(AuxAddress),
-                            XCOFF::SymbolTableEntrySize));
+      if (Obj.is64Bit()) {
+        XCOFF::SymbolAuxType Type = *Obj.getSymbolAuxType(AuxAddress);
+        if (Type == XCOFF::SymbolAuxType::AUX_CSECT)
+          continue;
+        if (Type == XCOFF::SymbolAuxType::AUX_FCN) {
+          const XCOFFFunctionAuxEnt64 *AuxEntPtr =
+              getAuxEntPtr<XCOFFFunctionAuxEnt64>(AuxAddress);
+          printFunctionAuxEnt(AuxEntPtr);
+        } else if (Type == XCOFF::SymbolAuxType::AUX_EXCEPT) {
+          const XCOFFExceptionAuxEnt *AuxEntPtr =
+              getAuxEntPtr<XCOFFExceptionAuxEnt>(AuxAddress);
+          printExceptionAuxEnt(AuxEntPtr);
+        } else {
+          printUnexpectedRawAuxEnt(W, AuxAddress);
+        }
+      } else {
+        const XCOFFFunctionAuxEnt32 *AuxEntPtr =
+            getAuxEntPtr<XCOFFFunctionAuxEnt32>(AuxAddress);
+        printFunctionAuxEnt(AuxEntPtr);
+      }
     }
 
+    // Print the CSECT auxiliary entry.
     auto ErrOrCsectAuxRef = SymbolEntRef.getXCOFFCsectAuxRef();
     if (!ErrOrCsectAuxRef)
       reportUniqueWarning(ErrOrCsectAuxRef.takeError());
@@ -418,34 +571,56 @@ void XCOFFDumper::printSymbol(const SymbolRef &S) {
 
     break;
   }
-  case XCOFF::C_STAT:
-    if (NumberOfAuxEntries > 1)
-      report_fatal_error(
-          "C_STAT symbol should not have more than 1 auxiliary entry.");
+  case XCOFF::C_STAT: {
+    checkNumOfAux();
 
-    const XCOFFSectAuxEntForStat *StatAuxEntPtr;
-    StatAuxEntPtr = reinterpret_cast<const XCOFFSectAuxEntForStat *>(
-        XCOFFObjectFile::getAdvancedSymbolEntryAddress(
-            SymbolEntRef.getEntryAddress(), 1));
-#ifndef NDEBUG
-    Obj.checkSymbolEntryPointer(reinterpret_cast<uintptr_t>(StatAuxEntPtr));
-#endif
+    const XCOFFSectAuxEntForStat *StatAuxEntPtr =
+        getAuxEntPtr<XCOFFSectAuxEntForStat>(
+            XCOFFObjectFile::getAdvancedSymbolEntryAddress(
+                SymbolEntRef.getEntryAddress(), 1));
     printSectAuxEntForStat(StatAuxEntPtr);
     break;
-  case XCOFF::C_DWARF:
-  case XCOFF::C_BLOCK:
-  case XCOFF::C_FCN:
-    report_fatal_error("Symbol table entry printing for this storage class "
-                       "type is unimplemented.");
+  }
+  case XCOFF::C_DWARF: {
+    checkNumOfAux();
+
+    uintptr_t AuxAddress = XCOFFObjectFile::getAdvancedSymbolEntryAddress(
+        SymbolEntRef.getEntryAddress(), 1);
+
+    if (Obj.is64Bit()) {
+      const XCOFFSectAuxEntForDWARF64 *AuxEntPtr =
+          getAuxEntPtr<XCOFFSectAuxEntForDWARF64>(AuxAddress);
+      printSectAuxEntForDWARF<XCOFFSectAuxEntForDWARF64>(AuxEntPtr);
+    } else {
+      const XCOFFSectAuxEntForDWARF32 *AuxEntPtr =
+          getAuxEntPtr<XCOFFSectAuxEntForDWARF32>(AuxAddress);
+      printSectAuxEntForDWARF<XCOFFSectAuxEntForDWARF32>(AuxEntPtr);
+    }
     break;
+  }
+  case XCOFF::C_BLOCK:
+  case XCOFF::C_FCN: {
+    checkNumOfAux();
+
+    uintptr_t AuxAddress = XCOFFObjectFile::getAdvancedSymbolEntryAddress(
+        SymbolEntRef.getEntryAddress(), 1);
+
+    if (Obj.is64Bit()) {
+      const XCOFFBlockAuxEnt64 *AuxEntPtr =
+          getAuxEntPtr<XCOFFBlockAuxEnt64>(AuxAddress);
+      printBlockAuxEnt(AuxEntPtr);
+    } else {
+      const XCOFFBlockAuxEnt32 *AuxEntPtr =
+          getAuxEntPtr<XCOFFBlockAuxEnt32>(AuxAddress);
+      printBlockAuxEnt(AuxEntPtr);
+    }
+    break;
+  }
   default:
     for (int i = 1; i <= NumberOfAuxEntries; i++) {
-      W.startLine() << "!Unexpected raw auxiliary entry data:\n";
-      W.startLine() << format_bytes(
-          ArrayRef<uint8_t>(reinterpret_cast<const uint8_t *>(
-                                XCOFFObjectFile::getAdvancedSymbolEntryAddress(
-                                    SymbolEntRef.getEntryAddress(), i)),
-                            XCOFF::SymbolTableEntrySize));
+      printUnexpectedRawAuxEnt(W,
+                               XCOFFObjectFile::getAdvancedSymbolEntryAddress(
+                                   SymbolEntRef.getEntryAddress(), i));
     }
     break;
   }
@@ -460,7 +635,12 @@ void XCOFFDumper::printSymbols() {
 void XCOFFDumper::printStringTable() {
   DictScope DS(W, "StringTable");
   StringRef StrTable = Obj.getStringTable();
-  printAsStringList(StrTable);
+  uint32_t StrTabSize = StrTable.size();
+  W.printNumber("Length", StrTabSize);
+  // Print strings from the fifth byte, since the first four bytes contain the
+  // length (in bytes) of the string table (including the length field).
+  if (StrTabSize > 4)
+    printAsStringList(StrTable, 4);
 }
 
 void XCOFFDumper::printDynamicSymbols() {
@@ -476,10 +656,46 @@ void XCOFFDumper::printStackMap() const {
 }
 
 void XCOFFDumper::printNeededLibraries() {
-  llvm_unreachable("Unimplemented functionality for XCOFFDumper");
+  ListScope D(W, "NeededLibraries");
+  auto ImportFilesOrError = Obj.getImportFileTable();
+  if (!ImportFilesOrError) {
+    reportUniqueWarning(ImportFilesOrError.takeError());
+    return;
+  }
+
+  StringRef ImportFileTable = ImportFilesOrError.get();
+  const char *CurrentStr = ImportFileTable.data();
+  const char *TableEnd = ImportFileTable.end();
+  // Default column width for names is 13 even if no names are that long.
+  size_t BaseWidth = 13;
+
+  // Get the max width of BASE columns.
+  for (size_t StrIndex = 0; CurrentStr < TableEnd; ++StrIndex) {
+    size_t CurrentLen = strlen(CurrentStr);
+    CurrentStr += strlen(CurrentStr) + 1;
+    if (StrIndex % 3 == 1)
+      BaseWidth = std::max(BaseWidth, CurrentLen);
+  }
+
+  auto &OS = static_cast<formatted_raw_ostream &>(W.startLine());
+  // Each entry consists of 3 strings: the path_name, base_name and
+  // archive_member_name. The first entry is a default LIBPATH value and other
+  // entries have no path_name. We just dump the base_name and
+  // archive_member_name here.
+  OS << left_justify("BASE", BaseWidth)  << " MEMBER\n";
+  CurrentStr = ImportFileTable.data();
+  for (size_t StrIndex = 0; CurrentStr < TableEnd;
+       ++StrIndex, CurrentStr += strlen(CurrentStr) + 1) {
+    if (StrIndex >= 3 && StrIndex % 3 != 0) {
+      if (StrIndex % 3 == 1)
+        OS << "  " << left_justify(CurrentStr, BaseWidth) << " ";
+      else
+        OS << CurrentStr << "\n";
+    }
+  }
 }
 
-static const EnumEntry<XCOFF::SectionTypeFlags> SectionTypeFlagsNames[] = {
+const EnumEntry<XCOFF::SectionTypeFlags> SectionTypeFlagsNames[] = {
 #define ECase(X)                                                               \
   { #X, XCOFF::X }
     ECase(STYP_PAD),    ECase(STYP_DWARF), ECase(STYP_TEXT),
@@ -521,6 +737,160 @@ void XCOFFDumper::printGenericSectionHeader(T &Sec) const {
   W.printHex("LineNumberPointer", Sec.FileOffsetToLineNumberInfo);
   W.printNumber("NumberOfRelocations", Sec.NumberOfRelocations);
   W.printNumber("NumberOfLineNumbers", Sec.NumberOfLineNumbers);
+}
+
+enum PrintStyle { Hex, Number };
+template <typename T, typename V>
+static void printAuxMemberHelper(PrintStyle Style, const char *MemberName,
+                                 const T &Member, const V *AuxHeader,
+                                 uint16_t AuxSize, uint16_t &PartialFieldOffset,
+                                 const char *&PartialFieldName,
+                                 ScopedPrinter &W) {
+  ptrdiff_t Offset = reinterpret_cast<const char *>(&Member) -
+                     reinterpret_cast<const char *>(AuxHeader);
+  if (Offset + sizeof(Member) <= AuxSize)
+    Style == Hex ? W.printHex(MemberName, Member)
+                 : W.printNumber(MemberName, Member);
+  else if (Offset < AuxSize) {
+    PartialFieldOffset = Offset;
+    PartialFieldName = MemberName;
+  }
+}
+
+template <class T>
+void checkAndPrintAuxHeaderParseError(const char *PartialFieldName,
+                                      uint16_t PartialFieldOffset,
+                                      uint16_t AuxSize, T &AuxHeader,
+                                      XCOFFDumper *Dumper) {
+  if (PartialFieldOffset < AuxSize) {
+    Dumper->reportUniqueWarning(Twine("only partial field for ") +
+                                PartialFieldName + " at offset (" +
+                                Twine(PartialFieldOffset) + ")");
+    Dumper->getScopedPrinter().printBinary(
+        "Raw data", "",
+        ArrayRef<uint8_t>(reinterpret_cast<const uint8_t *>(&AuxHeader) +
+                              PartialFieldOffset,
+                          AuxSize - PartialFieldOffset));
+  } else if (sizeof(AuxHeader) < AuxSize)
+    Dumper->getScopedPrinter().printBinary(
+        "Extra raw data", "",
+        ArrayRef<uint8_t>(reinterpret_cast<const uint8_t *>(&AuxHeader) +
+                              sizeof(AuxHeader),
+                          AuxSize - sizeof(AuxHeader)));
+}
+
+void XCOFFDumper::printAuxiliaryHeader(
+    const XCOFFAuxiliaryHeader32 *AuxHeader) {
+  if (AuxHeader == nullptr)
+    return;
+  uint16_t AuxSize = Obj.getOptionalHeaderSize();
+  uint16_t PartialFieldOffset = AuxSize;
+  const char *PartialFieldName = nullptr;
+
+  auto PrintAuxMember = [&](PrintStyle Style, const char *MemberName,
+                            auto &Member) {
+    printAuxMemberHelper(Style, MemberName, Member, AuxHeader, AuxSize,
+                         PartialFieldOffset, PartialFieldName, W);
+  };
+
+  PrintAuxMember(Hex, "Magic", AuxHeader->AuxMagic);
+  PrintAuxMember(Hex, "Version", AuxHeader->Version);
+  PrintAuxMember(Hex, "Size of .text section", AuxHeader->TextSize);
+  PrintAuxMember(Hex, "Size of .data section", AuxHeader->InitDataSize);
+  PrintAuxMember(Hex, "Size of .bss section", AuxHeader->BssDataSize);
+  PrintAuxMember(Hex, "Entry point address", AuxHeader->EntryPointAddr);
+  PrintAuxMember(Hex, ".text section start address", AuxHeader->TextStartAddr);
+  PrintAuxMember(Hex, ".data section start address", AuxHeader->DataStartAddr);
+  PrintAuxMember(Hex, "TOC anchor address", AuxHeader->TOCAnchorAddr);
+  PrintAuxMember(Number, "Section number of entryPoint",
+                 AuxHeader->SecNumOfEntryPoint);
+  PrintAuxMember(Number, "Section number of .text", AuxHeader->SecNumOfText);
+  PrintAuxMember(Number, "Section number of .data", AuxHeader->SecNumOfData);
+  PrintAuxMember(Number, "Section number of TOC", AuxHeader->SecNumOfTOC);
+  PrintAuxMember(Number, "Section number of loader data",
+                 AuxHeader->SecNumOfLoader);
+  PrintAuxMember(Number, "Section number of .bss", AuxHeader->SecNumOfBSS);
+  PrintAuxMember(Hex, "Maxium alignment of .text", AuxHeader->MaxAlignOfText);
+  PrintAuxMember(Hex, "Maxium alignment of .data", AuxHeader->MaxAlignOfData);
+  PrintAuxMember(Hex, "Module type", AuxHeader->ModuleType);
+  PrintAuxMember(Hex, "CPU type of objects", AuxHeader->CpuFlag);
+  PrintAuxMember(Hex, "(Reserved)", AuxHeader->CpuType);
+  PrintAuxMember(Hex, "Maximum stack size", AuxHeader->MaxStackSize);
+  PrintAuxMember(Hex, "Maximum data size", AuxHeader->MaxDataSize);
+  PrintAuxMember(Hex, "Reserved for debugger", AuxHeader->ReservedForDebugger);
+  PrintAuxMember(Hex, "Text page size", AuxHeader->TextPageSize);
+  PrintAuxMember(Hex, "Data page size", AuxHeader->DataPageSize);
+  PrintAuxMember(Hex, "Stack page size", AuxHeader->StackPageSize);
+  if (offsetof(XCOFFAuxiliaryHeader32, FlagAndTDataAlignment) +
+          sizeof(XCOFFAuxiliaryHeader32::FlagAndTDataAlignment) <=
+      AuxSize) {
+    W.printHex("Flag", AuxHeader->getFlag());
+    W.printHex("Alignment of thread-local storage",
+               AuxHeader->getTDataAlignment());
+  }
+
+  PrintAuxMember(Number, "Section number for .tdata", AuxHeader->SecNumOfTData);
+  PrintAuxMember(Number, "Section number for .tbss", AuxHeader->SecNumOfTBSS);
+
+  checkAndPrintAuxHeaderParseError(PartialFieldName, PartialFieldOffset,
+                                   AuxSize, *AuxHeader, this);
+}
+
+void XCOFFDumper::printAuxiliaryHeader(
+    const XCOFFAuxiliaryHeader64 *AuxHeader) {
+  if (AuxHeader == nullptr)
+    return;
+  uint16_t AuxSize = Obj.getOptionalHeaderSize();
+  uint16_t PartialFieldOffset = AuxSize;
+  const char *PartialFieldName = nullptr;
+
+  auto PrintAuxMember = [&](PrintStyle Style, const char *MemberName,
+                            auto &Member) {
+    printAuxMemberHelper(Style, MemberName, Member, AuxHeader, AuxSize,
+                         PartialFieldOffset, PartialFieldName, W);
+  };
+
+  PrintAuxMember(Hex, "Magic", AuxHeader->AuxMagic);
+  PrintAuxMember(Hex, "Version", AuxHeader->Version);
+  PrintAuxMember(Hex, "Reserved for debugger", AuxHeader->ReservedForDebugger);
+  PrintAuxMember(Hex, ".text section start address", AuxHeader->TextStartAddr);
+  PrintAuxMember(Hex, ".data section start address", AuxHeader->DataStartAddr);
+  PrintAuxMember(Hex, "TOC anchor address", AuxHeader->TOCAnchorAddr);
+  PrintAuxMember(Number, "Section number of entryPoint",
+                 AuxHeader->SecNumOfEntryPoint);
+  PrintAuxMember(Number, "Section number of .text", AuxHeader->SecNumOfText);
+  PrintAuxMember(Number, "Section number of .data", AuxHeader->SecNumOfData);
+  PrintAuxMember(Number, "Section number of TOC", AuxHeader->SecNumOfTOC);
+  PrintAuxMember(Number, "Section number of loader data",
+                 AuxHeader->SecNumOfLoader);
+  PrintAuxMember(Number, "Section number of .bss", AuxHeader->SecNumOfBSS);
+  PrintAuxMember(Hex, "Maxium alignment of .text", AuxHeader->MaxAlignOfText);
+  PrintAuxMember(Hex, "Maxium alignment of .data", AuxHeader->MaxAlignOfData);
+  PrintAuxMember(Hex, "Module type", AuxHeader->ModuleType);
+  PrintAuxMember(Hex, "CPU type of objects", AuxHeader->CpuFlag);
+  PrintAuxMember(Hex, "(Reserved)", AuxHeader->CpuType);
+  PrintAuxMember(Hex, "Text page size", AuxHeader->TextPageSize);
+  PrintAuxMember(Hex, "Data page size", AuxHeader->DataPageSize);
+  PrintAuxMember(Hex, "Stack page size", AuxHeader->StackPageSize);
+  if (offsetof(XCOFFAuxiliaryHeader64, FlagAndTDataAlignment) +
+          sizeof(XCOFFAuxiliaryHeader64::FlagAndTDataAlignment) <=
+      AuxSize) {
+    W.printHex("Flag", AuxHeader->getFlag());
+    W.printHex("Alignment of thread-local storage",
+               AuxHeader->getTDataAlignment());
+  }
+  PrintAuxMember(Hex, "Size of .text section", AuxHeader->TextSize);
+  PrintAuxMember(Hex, "Size of .data section", AuxHeader->InitDataSize);
+  PrintAuxMember(Hex, "Size of .bss section", AuxHeader->BssDataSize);
+  PrintAuxMember(Hex, "Entry point address", AuxHeader->EntryPointAddr);
+  PrintAuxMember(Hex, "Maximum stack size", AuxHeader->MaxStackSize);
+  PrintAuxMember(Hex, "Maximum data size", AuxHeader->MaxDataSize);
+  PrintAuxMember(Number, "Section number for .tdata", AuxHeader->SecNumOfTData);
+  PrintAuxMember(Number, "Section number for .tbss", AuxHeader->SecNumOfTBSS);
+  PrintAuxMember(Hex, "Additional flags 64-bit XCOFF", AuxHeader->XCOFF64Flag);
+
+  checkAndPrintAuxHeaderParseError(PartialFieldName, PartialFieldOffset,
+                                   AuxSize, *AuxHeader, this);
 }
 
 template <typename T>

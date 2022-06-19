@@ -5,10 +5,10 @@
     *                                                *
     **************************************************
 
-.. _amdgpu_synid10_waitcnt:
+.. _amdgpu_synid_gfx10_waitcnt:
 
 waitcnt
-===========================
+=======
 
 Counts of outstanding instructions to wait for.
 
@@ -19,7 +19,7 @@ The bits of this operand have the following meaning:
     ========== ========= ================================================ ============
     15:14      3:0       VM_CNT: vector memory operations count.          0..63
     \-         6:4       EXP_CNT: export count.                           0..7
-    \-         11:8      LGKM_CNT: LDS, GDS, Constant and Message count.  0..15
+    \-         13:8      LGKM_CNT: LDS, GDS, Constant and Message count.  0..63
     ========== ========= ================================================ ============
 
 This operand may be specified as one of the following:

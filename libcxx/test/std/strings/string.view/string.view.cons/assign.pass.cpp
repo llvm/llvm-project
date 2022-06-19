@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+// UNSUPPORTED: !stdlib=libc++ && (c++03 || c++11 || c++14)
 
 // <string_view>
 
@@ -36,23 +37,23 @@ int main(int, char**) {
     assert( test<std::u8string_view>  (u8"1234"));
 #endif
 #if TEST_STD_VER >= 11
-#ifndef _LIBCPP_HAS_NO_UNICODE_CHARS
     assert( test<std::u16string_view> ( u"1234"));
     assert( test<std::u32string_view> ( U"1234"));
 #endif
-#endif
+#ifndef TEST_HAS_NO_WIDE_CHARACTERS
     assert( test<std::wstring_view>   ( L"1234"));
+#endif
 
 #if TEST_STD_VER > 11
     static_assert( test<std::string_view>    ({  "abc", 3}), "");
-#if defined(__cpp_lib_char8_t) && __cpp_lib_char8_t >= 201811L
+#   if defined(__cpp_lib_char8_t) && __cpp_lib_char8_t >= 201811L
     static_assert( test<std::u8string_view>  ({u8"abc", 3}), "");
-#endif
-#ifndef _LIBCPP_HAS_NO_UNICODE_CHARS
+#   endif
     static_assert( test<std::u16string_view> ({ u"abc", 3}), "");
     static_assert( test<std::u32string_view> ({ U"abc", 3}), "");
-#endif
+#   ifndef TEST_HAS_NO_WIDE_CHARACTERS
     static_assert( test<std::wstring_view>   ({ L"abc", 3}), "");
+#   endif
 #endif
 
   return 0;

@@ -59,7 +59,7 @@ body:             |
   ; CHECK: bb.1.prehead:
   ; CHECK:   successors: %bb.3(0x40000000), %bb.2(0x40000000)
   ; CHECK:   [[DEF:%[0-9]+]]:mqpr = IMPLICIT_DEF
-  ; CHECK:   [[MVE_VMOVimmi32_:%[0-9]+]]:mqpr = MVE_VMOVimmi32 0, 0, $noreg, [[DEF]]
+  ; CHECK:   [[MVE_VMOVimmi32_:%[0-9]+]]:mqpr = MVE_VMOVimmi32 0, 0, $noreg, $noreg, [[DEF]]
   ; CHECK:   [[t2ADDri:%[0-9]+]]:rgpr = t2ADDri [[COPY]], 15, 14 /* CC::al */, $noreg, $noreg
   ; CHECK:   [[t2BICri:%[0-9]+]]:rgpr = t2BICri killed [[t2ADDri]], 16, 14 /* CC::al */, $noreg, $noreg
   ; CHECK:   [[t2LSRri:%[0-9]+]]:gprlr = t2LSRri killed [[t2BICri]], 4, 14 /* CC::al */, $noreg, $noreg
@@ -69,9 +69,9 @@ body:             |
   ; CHECK:   [[PHI:%[0-9]+]]:rgpr = PHI [[COPY2]], %bb.1, %11, %bb.2
   ; CHECK:   [[PHI1:%[0-9]+]]:gprlr = PHI [[t2WhileLoopStartTP]], %bb.1, %13, %bb.2
   ; CHECK:   [[PHI2:%[0-9]+]]:rgpr = PHI [[COPY]], %bb.1, %15, %bb.2
-  ; CHECK:   [[MVE_VCTP8_:%[0-9]+]]:vccr = MVE_VCTP8 [[PHI2]], 0, $noreg
+  ; CHECK:   [[MVE_VCTP8_:%[0-9]+]]:vccr = MVE_VCTP8 [[PHI2]], 0, $noreg, $noreg
   ; CHECK:   [[t2SUBri:%[0-9]+]]:rgpr = t2SUBri [[PHI2]], 16, 14 /* CC::al */, $noreg, $noreg
-  ; CHECK:   [[MVE_VSTRBU8_post:%[0-9]+]]:rgpr = MVE_VSTRBU8_post [[MVE_VMOVimmi32_]], [[PHI]], 16, 1, [[MVE_VCTP8_]]
+  ; CHECK:   [[MVE_VSTRBU8_post:%[0-9]+]]:rgpr = MVE_VSTRBU8_post [[MVE_VMOVimmi32_]], [[PHI]], 16, 1, [[MVE_VCTP8_]], [[PHI1]]
   ; CHECK:   [[t2LoopEndDec:%[0-9]+]]:gprlr = t2LoopEndDec [[PHI1]], %bb.2, implicit-def $cpsr
   ; CHECK:   t2B %bb.3, 14 /* CC::al */, $noreg
   ; CHECK: bb.3.prehead:
@@ -105,7 +105,7 @@ body:             |
     successors: %bb.5(0x40000000), %bb.4(0x40000000)
 
     %12:mqpr = IMPLICIT_DEF
-    %11:mqpr = MVE_VMOVimmi32 0, 0, $noreg, %12
+    %11:mqpr = MVE_VMOVimmi32 0, 0, $noreg, $noreg, %12
     %17:rgpr = t2ADDri %9, 15, 14 /* CC::al */, $noreg, $noreg
     %18:rgpr = t2BICri killed %17, 16, 14 /* CC::al */, $noreg, $noreg
     %19:gprlr = t2LSRri killed %18, 4, 14 /* CC::al */, $noreg, $noreg
@@ -118,9 +118,9 @@ body:             |
     %21:rgpr = PHI %7, %bb.1, %22, %bb.4
     %23:gprlr = PHI %20, %bb.1, %24, %bb.4
     %25:rgpr = PHI %9, %bb.1, %26, %bb.4
-    %27:vccr = MVE_VCTP8 %25, 0, $noreg
+    %27:vccr = MVE_VCTP8 %25, 0, $noreg, $noreg
     %26:rgpr = t2SUBri %25, 16, 14 /* CC::al */, $noreg, $noreg
-    %22:rgpr = MVE_VSTRBU8_post %11, %21, 16, 1, %27
+    %22:rgpr = MVE_VSTRBU8_post %11, %21, 16, 1, %27, $noreg
     %24:gprlr = t2LoopDec %23, 1
     t2LoopEnd %24, %bb.4, implicit-def $cpsr
     t2B %bb.5, 14 /* CC::al */, $noreg

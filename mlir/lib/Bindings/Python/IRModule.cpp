@@ -12,6 +12,8 @@
 
 #include <vector>
 
+#include "mlir-c/Bindings/Python/Interop.h"
+
 namespace py = pybind11;
 using namespace mlir;
 using namespace mlir::python;
@@ -25,12 +27,14 @@ PyGlobals *PyGlobals::instance = nullptr;
 PyGlobals::PyGlobals() {
   assert(!instance && "PyGlobals already constructed");
   instance = this;
+  // The default search path include {mlir.}dialects, where {mlir.} is the
+  // package prefix configured at compile time.
+  dialectSearchPrefixes.emplace_back(MAKE_MLIR_PYTHON_QUALNAME("dialects"));
 }
 
 PyGlobals::~PyGlobals() { instance = nullptr; }
 
 void PyGlobals::loadDialectModule(llvm::StringRef dialectNamespace) {
-  py::gil_scoped_acquire();
   if (loadedDialectModulesCache.contains(dialectNamespace))
     return;
   // Since re-entrancy is possible, make a copy of the search prefixes.
@@ -41,14 +45,12 @@ void PyGlobals::loadDialectModule(llvm::StringRef dialectNamespace) {
     moduleName.append(dialectNamespace.data(), dialectNamespace.size());
 
     try {
-      py::gil_scoped_release();
       loaded = py::module::import(moduleName.c_str());
     } catch (py::error_already_set &e) {
       if (e.matches(PyExc_ModuleNotFoundError)) {
         continue;
-      } else {
-        throw;
       }
+      throw;
     }
     break;
   }
@@ -60,7 +62,6 @@ void PyGlobals::loadDialectModule(llvm::StringRef dialectNamespace) {
 
 void PyGlobals::registerDialectImpl(const std::string &dialectNamespace,
                                     py::object pyClass) {
-  py::gil_scoped_acquire();
   py::object &found = dialectClassMap[dialectNamespace];
   if (found) {
     throw SetPyError(PyExc_RuntimeError, llvm::Twine("Dialect namespace '") +
@@ -73,7 +74,6 @@ void PyGlobals::registerDialectImpl(const std::string &dialectNamespace,
 void PyGlobals::registerOperationImpl(const std::string &operationName,
                                       py::object pyClass,
                                       py::object rawOpViewClass) {
-  py::gil_scoped_acquire();
   py::object &found = operationClassMap[operationName];
   if (found) {
     throw SetPyError(PyExc_RuntimeError, llvm::Twine("Operation '") +
@@ -86,7 +86,6 @@ void PyGlobals::registerOperationImpl(const std::string &operationName,
 
 llvm::Optional<py::object>
 PyGlobals::lookupDialectClass(const std::string &dialectNamespace) {
-  py::gil_scoped_acquire();
   loadDialectModule(dialectNamespace);
   // Fast match against the class map first (common case).
   const auto foundIt = dialectClassMap.find(dialectNamespace);
@@ -105,7 +104,6 @@ PyGlobals::lookupDialectClass(const std::string &dialectNamespace) {
 llvm::Optional<pybind11::object>
 PyGlobals::lookupRawOpViewClass(llvm::StringRef operationName) {
   {
-    py::gil_scoped_acquire();
     auto foundIt = rawOpViewClassMapCache.find(operationName);
     if (foundIt != rawOpViewClassMapCache.end()) {
       if (foundIt->second.is_none())
@@ -122,7 +120,6 @@ PyGlobals::lookupRawOpViewClass(llvm::StringRef operationName) {
 
   // Attempt to find from the canonical map and cache.
   {
-    py::gil_scoped_acquire();
     auto foundIt = rawOpViewClassMap.find(operationName);
     if (foundIt != rawOpViewClassMap.end()) {
       if (foundIt->second.is_none())
@@ -131,16 +128,14 @@ PyGlobals::lookupRawOpViewClass(llvm::StringRef operationName) {
       // Positive cache.
       rawOpViewClassMapCache[operationName] = foundIt->second;
       return foundIt->second;
-    } else {
-      // Negative cache.
-      rawOpViewClassMap[operationName] = py::none();
-      return llvm::None;
     }
+    // Negative cache.
+    rawOpViewClassMap[operationName] = py::none();
+    return llvm::None;
   }
 }
 
 void PyGlobals::clearImportCache() {
-  py::gil_scoped_acquire();
   loadedDialectModulesCache.clear();
   rawOpViewClassMapCache.clear();
 }

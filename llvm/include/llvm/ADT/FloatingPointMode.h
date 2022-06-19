@@ -5,9 +5,11 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-//
-// Utilities for dealing with flags related to floating point mode controls.
-//
+///
+/// \file
+/// Utilities for dealing with flags related to floating point properties and
+/// mode controls.
+///
 //===----------------------------------------------------------------------===/
 
 #ifndef LLVM_ADT_FLOATINGPOINTMODE_H
@@ -191,5 +193,30 @@ void DenormalMode::print(raw_ostream &OS) const {
 }
 
 }
+
+/// Floating-point class tests, supported by 'is_fpclass' intrinsic. Actual
+/// test may be an OR combination of basic tests.
+enum FPClassTest {
+  fcSNan = 0x0001,
+  fcQNan = 0x0002,
+  fcNegInf = 0x0004,
+  fcNegNormal = 0x0008,
+  fcNegSubnormal = 0x0010,
+  fcNegZero = 0x0020,
+  fcPosZero = 0x0040,
+  fcPosSubnormal = 0x0080,
+  fcPosNormal = 0x0100,
+  fcPosInf = 0x0200,
+
+  fcNan = fcSNan | fcQNan,
+  fcInf = fcPosInf | fcNegInf,
+  fcNormal = fcPosNormal | fcNegNormal,
+  fcSubnormal = fcPosSubnormal | fcNegSubnormal,
+  fcZero = fcPosZero | fcNegZero,
+  fcPosFinite = fcPosNormal | fcPosSubnormal | fcPosZero,
+  fcNegFinite = fcNegNormal | fcNegSubnormal | fcNegZero,
+  fcFinite = fcPosFinite | fcNegFinite,
+  fcAllFlags = fcNan | fcInf | fcFinite
+};
 
 #endif // LLVM_ADT_FLOATINGPOINTMODE_H

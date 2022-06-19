@@ -23,6 +23,7 @@ test()
     static_assert((std::is_error_condition_enum<T>::value == Expected), "");
 #if TEST_STD_VER > 14
     static_assert((std::is_error_condition_enum_v<T>        == Expected), "");
+    ASSERT_SAME_TYPE(decltype(std::is_error_condition_enum_v<T>), const bool);
 #endif
 }
 

@@ -38,7 +38,9 @@ test(const std::basic_string<CharT>& s)
 int main(int, char**)
 {
     test(std::string("123"));
+#ifndef TEST_HAS_NO_WIDE_CHARACTERS
     test(std::wstring(L"123"));
+#endif
 
   return 0;
 }

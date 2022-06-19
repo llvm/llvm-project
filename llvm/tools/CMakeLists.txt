@@ -39,6 +39,7 @@ add_llvm_external_project(lldb)
 add_llvm_external_project(mlir)
 # Flang depends on mlir, so place it afterward
 add_llvm_external_project(flang)
+add_llvm_external_project(bolt)
 
 # Automatically add remaining sub-directories containing a 'CMakeLists.txt'
 # file as external projects.
@@ -52,3 +53,9 @@ foreach(p ${LLVM_EXTERNAL_PROJECTS})
 endforeach(p)
 
 set(LLVM_COMMON_DEPENDS ${LLVM_COMMON_DEPENDS} PARENT_SCOPE)
+
+if (LLVM_TOOL_LLVM_DRIVER_BUILD)
+  # This is explicitly added at the end _after_ all tool projects so that it can
+  # scrape up tools from other projects into itself.
+  add_subdirectory(llvm-driver)
+endif()

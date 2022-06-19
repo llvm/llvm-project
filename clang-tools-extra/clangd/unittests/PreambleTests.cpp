@@ -16,17 +16,14 @@
 #include "TestTU.h"
 #include "XRefs.h"
 #include "clang/Format/Format.h"
+#include "clang/Frontend/FrontendActions.h"
 #include "clang/Frontend/PrecompiledPreamble.h"
-#include "clang/Lex/PreprocessorOptions.h"
-#include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/VirtualFileSystem.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
-#include <clang/Frontend/FrontendActions.h>
 #include <memory>
 #include <string>
 #include <vector>
@@ -59,7 +56,8 @@ collectPatchedIncludes(llvm::StringRef ModifiedContents,
   // Create the patch.
   TU.Code = ModifiedContents.str();
   auto PI = TU.inputs(FS);
-  auto PP = PreamblePatch::create(testPath(TU.Filename), PI, *BaselinePreamble);
+  auto PP = PreamblePatch::createFullPatch(testPath(TU.Filename), PI,
+                                           *BaselinePreamble);
   // Collect patch contents.
   IgnoreDiagnostics Diags;
   auto CI = buildCompilerInvocation(PI, Diags);
@@ -81,8 +79,7 @@ collectPatchedIncludes(llvm::StringRef ModifiedContents,
     return {};
   }
   IncludeStructure Includes;
-  Clang->getPreprocessor().addPPCallbacks(
-      collectIncludeStructureCallback(Clang->getSourceManager(), &Includes));
+  Includes.collect(*Clang);
   if (llvm::Error Err = Action.Execute()) {
     ADD_FAILURE() << "failed to execute action: " << std::move(Err);
     return {};
@@ -183,8 +180,8 @@ TEST(PreamblePatchTest, PatchesPreambleIncludes) {
     #include "a.h"
     #include "b.h"
   )cpp";
-  auto PP = PreamblePatch::create(testPath(TU.Filename), TU.inputs(FS),
-                                  *BaselinePreamble);
+  auto PP = PreamblePatch::createFullPatch(testPath(TU.Filename), TU.inputs(FS),
+                                           *BaselinePreamble);
   // Only a.h should exists in the preamble, as c.h has been dropped and b.h was
   // newly introduced.
   EXPECT_THAT(PP.preambleIncludes(),
@@ -221,8 +218,8 @@ std::string getPreamblePatch(llvm::StringRef Baseline,
   }
   MockFS FS;
   auto TU = TestTU::withCode(Modified);
-  return PreamblePatch::create(testPath("main.cpp"), TU.inputs(FS),
-                               *BaselinePreamble)
+  return PreamblePatch::createFullPatch(testPath("main.cpp"), TU.inputs(FS),
+                                        *BaselinePreamble)
       .text()
       .str();
 }
@@ -523,8 +520,8 @@ TEST(PreamblePatch, ModifiedBounds) {
     Annotations Modified(Case.Modified);
     TU.Code = Modified.code().str();
     MockFS FS;
-    auto PP = PreamblePatch::create(testPath(TU.Filename), TU.inputs(FS),
-                                    *BaselinePreamble);
+    auto PP = PreamblePatch::createFullPatch(testPath(TU.Filename),
+                                             TU.inputs(FS), *BaselinePreamble);
 
     IgnoreDiagnostics Diags;
     auto CI = buildCompilerInvocation(TU.inputs(FS), Diags);
@@ -545,6 +542,27 @@ TEST(PreamblePatch, DropsDiagnostics) {
               testing::Not(testing::IsEmpty()));
   // Ensure they are dropeed when a patched preamble is used.
   EXPECT_FALSE(createPatchedAST("", Code)->getDiagnostics());
+}
+
+TEST(PreamblePatch, MacroLoc) {
+  llvm::StringLiteral Baseline = "\n#define MACRO 12\nint num = MACRO;";
+  llvm::StringLiteral Modified = " \n#define MACRO 12\nint num = MACRO;";
+  auto AST = createPatchedAST(Baseline, Modified);
+  ASSERT_TRUE(AST);
+}
+
+TEST(PreamblePatch, NoopWhenNotRequested) {
+  llvm::StringLiteral Baseline = "#define M\nint num = M;";
+  llvm::StringLiteral Modified = "#define M\n#include <foo.h>\nint num = M;";
+  auto TU = TestTU::withCode(Baseline);
+  auto BaselinePreamble = TU.preamble();
+  ASSERT_TRUE(BaselinePreamble);
+
+  TU.Code = Modified.str();
+  MockFS FS;
+  auto PP = PreamblePatch::createMacroPatch(testPath(TU.Filename),
+                                            TU.inputs(FS), *BaselinePreamble);
+  EXPECT_TRUE(PP.text().empty());
 }
 } // namespace
 } // namespace clangd

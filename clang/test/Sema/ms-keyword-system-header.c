@@ -6,7 +6,7 @@
 // PR17824: GNU libc uses MS keyword __uptr as an identifier in C mode
 #include <ms-keyword-system-header.h>
 
-void fn() {
+void fn(void) {
   WS ws;
   ws.__uptr = 0;
 #ifdef MS

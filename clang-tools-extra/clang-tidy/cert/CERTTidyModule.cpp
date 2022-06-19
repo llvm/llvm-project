@@ -14,7 +14,9 @@
 #include "../bugprone/SignalHandlerCheck.h"
 #include "../bugprone/SignedCharMisuseCheck.h"
 #include "../bugprone/SpuriouslyWakeUpFunctionsCheck.h"
+#include "../bugprone/SuspiciousMemoryComparisonCheck.h"
 #include "../bugprone/UnhandledSelfAssignmentCheck.h"
+#include "../bugprone/UnusedReturnValueCheck.h"
 #include "../concurrency/ThreadCanceltypeAsynchronousCheck.h"
 #include "../google/UnnamedNamespaceInHeaderCheck.h"
 #include "../misc/NewDeleteOverloadsCheck.h"
@@ -37,6 +39,193 @@
 #include "StrToNumCheck.h"
 #include "ThrownExceptionTypeCheck.h"
 #include "VariadicFunctionDefCheck.h"
+
+namespace {
+
+// Checked functions for cert-err33-c.
+// The following functions are deliberately excluded because they can be called
+// with NULL argument and in this case the check is not applicable:
+// `mblen, mbrlen, mbrtowc, mbtowc, wctomb, wctomb_s`.
+// FIXME: The check can be improved to handle such cases.
+const llvm::StringRef CertErr33CCheckedFunctions = "::aligned_alloc;"
+                                                   "::asctime_s;"
+                                                   "::at_quick_exit;"
+                                                   "::atexit;"
+                                                   "::bsearch;"
+                                                   "::bsearch_s;"
+                                                   "::btowc;"
+                                                   "::c16rtomb;"
+                                                   "::c32rtomb;"
+                                                   "::calloc;"
+                                                   "::clock;"
+                                                   "::cnd_broadcast;"
+                                                   "::cnd_init;"
+                                                   "::cnd_signal;"
+                                                   "::cnd_timedwait;"
+                                                   "::cnd_wait;"
+                                                   "::ctime_s;"
+                                                   "::fclose;"
+                                                   "::fflush;"
+                                                   "::fgetc;"
+                                                   "::fgetpos;"
+                                                   "::fgets;"
+                                                   "::fgetwc;"
+                                                   "::fopen;"
+                                                   "::fopen_s;"
+                                                   "::fprintf;"
+                                                   "::fprintf_s;"
+                                                   "::fputc;"
+                                                   "::fputs;"
+                                                   "::fputwc;"
+                                                   "::fputws;"
+                                                   "::fread;"
+                                                   "::freopen;"
+                                                   "::freopen_s;"
+                                                   "::fscanf;"
+                                                   "::fscanf_s;"
+                                                   "::fseek;"
+                                                   "::fsetpos;"
+                                                   "::ftell;"
+                                                   "::fwprintf;"
+                                                   "::fwprintf_s;"
+                                                   "::fwrite;"
+                                                   "::fwscanf;"
+                                                   "::fwscanf_s;"
+                                                   "::getc;"
+                                                   "::getchar;"
+                                                   "::getenv;"
+                                                   "::getenv_s;"
+                                                   "::gets_s;"
+                                                   "::getwc;"
+                                                   "::getwchar;"
+                                                   "::gmtime;"
+                                                   "::gmtime_s;"
+                                                   "::localtime;"
+                                                   "::localtime_s;"
+                                                   "::malloc;"
+                                                   "::mbrtoc16;"
+                                                   "::mbrtoc32;"
+                                                   "::mbsrtowcs;"
+                                                   "::mbsrtowcs_s;"
+                                                   "::mbstowcs;"
+                                                   "::mbstowcs_s;"
+                                                   "::memchr;"
+                                                   "::mktime;"
+                                                   "::mtx_init;"
+                                                   "::mtx_lock;"
+                                                   "::mtx_timedlock;"
+                                                   "::mtx_trylock;"
+                                                   "::mtx_unlock;"
+                                                   "::printf_s;"
+                                                   "::putc;"
+                                                   "::putwc;"
+                                                   "::raise;"
+                                                   "::realloc;"
+                                                   "::remove;"
+                                                   "::rename;"
+                                                   "::scanf;"
+                                                   "::scanf_s;"
+                                                   "::setlocale;"
+                                                   "::setvbuf;"
+                                                   "::signal;"
+                                                   "::snprintf;"
+                                                   "::snprintf_s;"
+                                                   "::sprintf;"
+                                                   "::sprintf_s;"
+                                                   "::sscanf;"
+                                                   "::sscanf_s;"
+                                                   "::strchr;"
+                                                   "::strerror_s;"
+                                                   "::strftime;"
+                                                   "::strpbrk;"
+                                                   "::strrchr;"
+                                                   "::strstr;"
+                                                   "::strtod;"
+                                                   "::strtof;"
+                                                   "::strtoimax;"
+                                                   "::strtok;"
+                                                   "::strtok_s;"
+                                                   "::strtol;"
+                                                   "::strtold;"
+                                                   "::strtoll;"
+                                                   "::strtoul;"
+                                                   "::strtoull;"
+                                                   "::strtoumax;"
+                                                   "::strxfrm;"
+                                                   "::swprintf;"
+                                                   "::swprintf_s;"
+                                                   "::swscanf;"
+                                                   "::swscanf_s;"
+                                                   "::thrd_create;"
+                                                   "::thrd_detach;"
+                                                   "::thrd_join;"
+                                                   "::thrd_sleep;"
+                                                   "::time;"
+                                                   "::timespec_get;"
+                                                   "::tmpfile;"
+                                                   "::tmpfile_s;"
+                                                   "::tmpnam;"
+                                                   "::tmpnam_s;"
+                                                   "::tss_create;"
+                                                   "::tss_get;"
+                                                   "::tss_set;"
+                                                   "::ungetc;"
+                                                   "::ungetwc;"
+                                                   "::vfprintf;"
+                                                   "::vfprintf_s;"
+                                                   "::vfscanf;"
+                                                   "::vfscanf_s;"
+                                                   "::vfwprintf;"
+                                                   "::vfwprintf_s;"
+                                                   "::vfwscanf;"
+                                                   "::vfwscanf_s;"
+                                                   "::vprintf_s;"
+                                                   "::vscanf;"
+                                                   "::vscanf_s;"
+                                                   "::vsnprintf;"
+                                                   "::vsnprintf_s;"
+                                                   "::vsprintf;"
+                                                   "::vsprintf_s;"
+                                                   "::vsscanf;"
+                                                   "::vsscanf_s;"
+                                                   "::vswprintf;"
+                                                   "::vswprintf_s;"
+                                                   "::vswscanf;"
+                                                   "::vswscanf_s;"
+                                                   "::vwprintf_s;"
+                                                   "::vwscanf;"
+                                                   "::vwscanf_s;"
+                                                   "::wcrtomb;"
+                                                   "::wcschr;"
+                                                   "::wcsftime;"
+                                                   "::wcspbrk;"
+                                                   "::wcsrchr;"
+                                                   "::wcsrtombs;"
+                                                   "::wcsrtombs_s;"
+                                                   "::wcsstr;"
+                                                   "::wcstod;"
+                                                   "::wcstof;"
+                                                   "::wcstoimax;"
+                                                   "::wcstok;"
+                                                   "::wcstok_s;"
+                                                   "::wcstol;"
+                                                   "::wcstold;"
+                                                   "::wcstoll;"
+                                                   "::wcstombs;"
+                                                   "::wcstombs_s;"
+                                                   "::wcstoul;"
+                                                   "::wcstoull;"
+                                                   "::wcstoumax;"
+                                                   "::wcsxfrm;"
+                                                   "::wctob;"
+                                                   "::wctrans;"
+                                                   "::wctype;"
+                                                   "::wmemchr;"
+                                                   "::wprintf_s;"
+                                                   "::wscanf;"
+                                                   "::wscanf_s;";
+
+} // namespace
 
 namespace clang {
 namespace tidy {
@@ -98,12 +287,19 @@ public:
         "cert-dcl37-c");
     // ENV
     CheckFactories.registerCheck<CommandProcessorCheck>("cert-env33-c");
+    // ERR
+    CheckFactories.registerCheck<bugprone::UnusedReturnValueCheck>(
+        "cert-err33-c");
+    CheckFactories.registerCheck<StrToNumCheck>("cert-err34-c");
+    // EXP
+    CheckFactories.registerCheck<bugprone::SuspiciousMemoryComparisonCheck>(
+        "cert-exp42-c");
     // FLP
     CheckFactories.registerCheck<FloatLoopCounter>("cert-flp30-c");
+    CheckFactories.registerCheck<bugprone::SuspiciousMemoryComparisonCheck>(
+        "cert-flp37-c");
     // FIO
     CheckFactories.registerCheck<misc::NonCopyableObjectsCheck>("cert-fio38-c");
-    // ERR
-    CheckFactories.registerCheck<StrToNumCheck>("cert-err34-c");
     // MSC
     CheckFactories.registerCheck<LimitedRandomnessCheck>("cert-msc30-c");
     CheckFactories.registerCheck<ProperlySeededRandomGeneratorCheck>(
@@ -125,6 +321,7 @@ public:
     ClangTidyOptions Options;
     ClangTidyOptions::OptionMap &Opts = Options.CheckOptions;
     Opts["cert-dcl16-c.NewSuffixes"] = "L;LL;LU;LLU";
+    Opts["cert-err33-c.CheckedFunctions"] = CertErr33CCheckedFunctions;
     Opts["cert-oop54-cpp.WarnOnlyIfThisHasSuspiciousField"] = "false";
     Opts["cert-str34-c.DiagnoseSignedUnsignedCharComparisons"] = "false";
     return Options;

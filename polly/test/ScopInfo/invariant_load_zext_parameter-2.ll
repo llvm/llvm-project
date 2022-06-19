@@ -1,5 +1,5 @@
-; RUN: opt %loadPolly -scalar-evolution-max-value-compare-depth=3 -polly-scops -polly-invariant-load-hoisting=true -analyze < %s | FileCheck %s
-; RUN: opt %loadPolly -scalar-evolution-max-value-compare-depth=3 -polly-codegen -polly-invariant-load-hoisting=true -analyze < %s
+; RUN: opt %loadPolly -scalar-evolution-max-value-compare-depth=3 -polly-print-scops -polly-invariant-load-hoisting=true -disable-output < %s | FileCheck %s
+; RUN: opt %loadPolly -scalar-evolution-max-value-compare-depth=3 -polly-codegen -polly-invariant-load-hoisting=true -disable-output < %s
 ;
 ; Stress test for the code generation of invariant accesses.
 ;

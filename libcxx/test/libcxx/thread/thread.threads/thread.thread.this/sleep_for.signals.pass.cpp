@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-// UNSUPPORTED: libcpp-has-no-threads
+// UNSUPPORTED: no-threads
 
 // This test uses the POSIX header <sys/time.h> which Windows doesn't provide
 // UNSUPPORTED: windows
@@ -15,6 +15,8 @@
 // a signal, as tested here. Disable the test on the corresponding system
 // libraries.
 // XFAIL: use_system_cxx_lib && target={{.+}}-apple-macosx10.{{9|10|11}}
+
+// ALLOW_RETRIES: 3
 
 // <thread>
 

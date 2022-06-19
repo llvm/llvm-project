@@ -61,7 +61,7 @@ typedef void (* function_pointer_type_5)(int_ptr _Nonnull);
 void acceptFunctionPtr(_Nonnull int *(*)(void));
 void acceptBlockPtr(_Nonnull int *(^)(void));
 
-void testBlockFunctionPtrNullability() {
+void testBlockFunctionPtrNullability(void) {
   float *fp;
   fp = (function_pointer_type_3)0; // expected-warning{{from 'function_pointer_type_3' (aka 'int * _Nonnull (*)(int, int)')}}
   fp = (block_type_3)0; // expected-error{{from incompatible type 'block_type_3' (aka 'int * _Nonnull (^)(int, int)')}}
@@ -105,7 +105,7 @@ void accepts_nonnull_1(_Nonnull int *ptr);
 void (*accepts_nonnull_2)(_Nonnull int *ptr);
 void (^accepts_nonnull_3)(_Nonnull int *ptr);
 
-void test_accepts_nonnull_null_pointer_literal() {
+void test_accepts_nonnull_null_pointer_literal(void) {
   accepts_nonnull_1(0); // expected-warning{{null passed to a callee that requires a non-null argument}}
   accepts_nonnull_2(0); // expected-warning{{null passed to a callee that requires a non-null argument}}
   accepts_nonnull_3(0); // expected-warning{{null passed to a callee that requires a non-null argument}}
@@ -125,6 +125,7 @@ void nullable_to_nonnull(_Nullable int *ptr) {
   int *a = ptr; // okay
   _Nonnull int *b = ptr; // expected-warning{{implicit conversion from nullable pointer 'int * _Nullable' to non-nullable pointer type 'int * _Nonnull'}}
   b = ptr; // expected-warning{{implicit conversion from nullable pointer 'int * _Nullable' to non-nullable pointer type 'int * _Nonnull'}}
+  __auto_type _Nonnull c = ptr; // expected-warning{{implicit conversion from nullable pointer 'int * _Nullable' to non-nullable pointer type 'int * _Nullable _Nonnull'}}
 
   accepts_nonnull_1(ptr); // expected-warning{{implicit conversion from nullable pointer 'int * _Nullable' to non-nullable pointer type 'int * _Nonnull'}}
 }
@@ -171,7 +172,7 @@ void conditional_expr(int c) {
 }
 
 // Check nullability of binary conditional expressions.
-void binary_conditional_expr() {
+void binary_conditional_expr(void) {
   int * _Nonnull p;
   int * _Nonnull nonnullP;
   int * _Nullable nullableP;
@@ -209,41 +210,41 @@ void arrays(int ints[_Nonnull],
             int starSize[_Nonnull *],
             int vla[_Nonnull GLOBAL_LENGTH],
             void ** _Nullable reference);
-void testDecayedType() {
+void testDecayedType(void) {
   int produceAnErrorMessage = arrays; // expected-warning {{incompatible pointer to integer conversion initializing 'int' with an expression of type 'void (int * _Nonnull, void ** _Nullable, void *** _Nullable, void * _Null_unspecified * _Nonnull * _Nullable, int * _Nonnull, int * _Nonnull, int * _Nonnull, int * _Nonnull, int * _Nonnull, void ** _Nullable)'}}
 }
 
-int notInFunction[_Nullable 3]; // expected-error {{nullability specifier '_Nullable' cannot be applied to non-pointer type 'int [3]'}}
+int notInFunction[_Nullable 3]; // expected-error {{nullability specifier '_Nullable' cannot be applied to non-pointer type 'int[3]'}}
 
-void nestedArrays(int x[5][_Nonnull 1]) {} // expected-error {{nullability specifier '_Nonnull' cannot be applied to non-pointer type 'int [1]'}}
-void nestedArrays2(int x[5][_Nonnull 1][2]) {} // expected-error {{nullability specifier '_Nonnull' cannot be applied to non-pointer type 'int [1][2]'}}
+void nestedArrays(int x[5][_Nonnull 1]) {} // expected-error {{nullability specifier '_Nonnull' cannot be applied to non-pointer type 'int[1]'}}
+void nestedArrays2(int x[5][_Nonnull 1][2]) {} // expected-error {{nullability specifier '_Nonnull' cannot be applied to non-pointer type 'int[1][2]'}}
 void nestedArraysOK(int x[_Nonnull 5][1]) {} // ok
 
 void nullabilityOnBase(_Nonnull int x[1], // expected-error {{nullability specifier '_Nonnull' cannot be applied to non-pointer type 'int'}}
                        int _Nonnull y[1]); // expected-error {{nullability specifier '_Nonnull' cannot be applied to non-pointer type 'int'}}
 
 typedef int INTS[4];
-typedef int BAD_INTS[_Nonnull 4]; // expected-error {{nullability specifier '_Nonnull' cannot be applied to non-pointer type 'int [4]'}}
+typedef int BAD_INTS[_Nonnull 4]; // expected-error {{nullability specifier '_Nonnull' cannot be applied to non-pointer type 'int[4]'}}
 
 void typedefTest(INTS _Nonnull x,
                  _Nonnull INTS xx,
-                 INTS _Nonnull y[2], // expected-error {{nullability specifier '_Nonnull' cannot be applied to non-pointer type 'INTS' (aka 'int [4]')}}
+                 INTS _Nonnull y[2], // expected-error {{nullability specifier '_Nonnull' cannot be applied to non-pointer type 'INTS' (aka 'int[4]')}}
                  INTS z[_Nonnull 2]);
 
-INTS _Nonnull x; // expected-error {{nullability specifier '_Nonnull' cannot be applied to non-pointer type 'INTS' (aka 'int [4]')}}
-_Nonnull INTS x; // expected-error {{nullability specifier '_Nonnull' cannot be applied to non-pointer type 'INTS' (aka 'int [4]')}}
+INTS _Nonnull x; // expected-error {{nullability specifier '_Nonnull' cannot be applied to non-pointer type 'INTS' (aka 'int[4]')}}
+_Nonnull INTS x; // expected-error {{nullability specifier '_Nonnull' cannot be applied to non-pointer type 'INTS' (aka 'int[4]')}}
 
-void arraysInBlocks() {
+void arraysInBlocks(void) {
   typedef int INTS[4];
   void (^simple)(int [_Nonnull 2]) = ^(int x[_Nonnull 2]) {};
   simple(0); // expected-warning {{null passed to a callee that requires a non-null argument}}
   void (^nested)(void *_Nullable x[_Nonnull 2]) = ^(void *_Nullable x[_Nonnull 2]) {};
   nested(0); // expected-warning {{null passed to a callee that requires a non-null argument}}
-  void (^nestedBad)(int x[2][_Nonnull 2]) = // expected-error {{nullability specifier '_Nonnull' cannot be applied to non-pointer type 'int [2]'}}
-    ^(int x[2][_Nonnull 2]) {}; // expected-error {{nullability specifier '_Nonnull' cannot be applied to non-pointer type 'int [2]'}}
+  void (^nestedBad)(int x[2][_Nonnull 2]) = // expected-error {{nullability specifier '_Nonnull' cannot be applied to non-pointer type 'int[2]'}}
+    ^(int x[2][_Nonnull 2]) {}; // expected-error {{nullability specifier '_Nonnull' cannot be applied to non-pointer type 'int[2]'}}
 
   void (^withTypedef)(INTS _Nonnull) = ^(INTS _Nonnull x) {};
   withTypedef(0); // expected-warning {{null passed to a callee that requires a non-null argument}}
-  void (^withTypedefBad)(INTS _Nonnull [2]) = // expected-error {{nullability specifier '_Nonnull' cannot be applied to non-pointer type 'INTS' (aka 'int [4]')}}
-      ^(INTS _Nonnull x[2]) {}; // expected-error {{nullability specifier '_Nonnull' cannot be applied to non-pointer type 'INTS' (aka 'int [4]')}}
+  void (^withTypedefBad)(INTS _Nonnull [2]) = // expected-error {{nullability specifier '_Nonnull' cannot be applied to non-pointer type 'INTS' (aka 'int[4]')}}
+      ^(INTS _Nonnull x[2]) {}; // expected-error {{nullability specifier '_Nonnull' cannot be applied to non-pointer type 'INTS' (aka 'int[4]')}}
 }

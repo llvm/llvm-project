@@ -11,9 +11,11 @@
 ///
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_IR_OBJCARCUTIL_H
-#define LLVM_IR_OBJCARCUTIL_H
+#ifndef LLVM_ANALYSIS_OBJCARCUTIL_H
+#define LLVM_ANALYSIS_OBJCARCUTIL_H
 
+#include "llvm/Analysis/ObjCARCInstKind.h"
+#include "llvm/IR/Function.h"
 #include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/LLVMContext.h"
 
@@ -22,13 +24,6 @@ namespace objcarc {
 
 inline const char *getRVMarkerModuleFlagStr() {
   return "clang.arc.retainAutoreleasedReturnValueMarker";
-}
-
-enum AttachedCallOperandBundle : unsigned { RVOB_Retain, RVOB_Claim };
-
-inline AttachedCallOperandBundle
-getAttachedCallOperandBundleEnum(bool IsRetain) {
-  return IsRetain ? RVOB_Retain : RVOB_Claim;
 }
 
 inline bool hasAttachedCallOpBundle(const CallBase *CB) {
@@ -43,14 +38,32 @@ inline bool hasAttachedCallOpBundle(const CallBase *CB) {
              .hasValue();
 }
 
-inline bool hasAttachedCallOpBundle(const CallBase *CB, bool IsRetain) {
-  assert(hasAttachedCallOpBundle(CB) &&
-         "call doesn't have operand bundle clang_arc_attachedcall");
+/// This function returns operand bundle clang_arc_attachedcall's argument,
+/// which is the address of the ARC runtime function.
+inline Optional<Function *> getAttachedARCFunction(const CallBase *CB) {
   auto B = CB->getOperandBundle(LLVMContext::OB_clang_arc_attachedcall);
-  if (!B.hasValue())
-    return false;
-  return cast<ConstantInt>(B->Inputs[0])->getZExtValue() ==
-         getAttachedCallOperandBundleEnum(IsRetain);
+  if (!B)
+    return None;
+
+  return cast<Function>(B->Inputs[0]);
+}
+
+/// Check whether the function is retainRV/unsafeClaimRV.
+inline bool isRetainOrClaimRV(ARCInstKind Kind) {
+  return Kind == ARCInstKind::RetainRV || Kind == ARCInstKind::UnsafeClaimRV;
+}
+
+/// This function returns the ARCInstKind of the function attached to operand
+/// bundle clang_arc_attachedcall. It returns None if the call doesn't have the
+/// operand bundle or the operand is null. Otherwise it returns either RetainRV
+/// or UnsafeClaimRV.
+inline ARCInstKind getAttachedARCFunctionKind(const CallBase *CB) {
+  Optional<Function *> Fn = getAttachedARCFunction(CB);
+  if (!Fn.hasValue())
+    return ARCInstKind::None;
+  auto FnClass = GetFunctionClass(*Fn);
+  assert(isRetainOrClaimRV(FnClass) && "unexpected ARC runtime function");
+  return FnClass;
 }
 
 } // end namespace objcarc

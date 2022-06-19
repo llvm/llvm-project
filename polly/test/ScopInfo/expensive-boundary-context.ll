@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -polly-scops -analyze \
+; RUN: opt %loadPolly -polly-print-scops -disable-output \
 ; RUN:                < %s | FileCheck %s
 
 ; CHECK-NOT:   Assumed Context:

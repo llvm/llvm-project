@@ -19,7 +19,7 @@ extern id get();
 extern bool condition();
 #define nil ((id)0)
 
-void sanity(Test *a) {
+void basicCorrectnessTest(Test *a) {
   use(a.weakProp); // expected-warning{{weak property 'weakProp' is accessed multiple times in this function but may be unpredictably set to nil; assign to a strong variable to keep the object alive}}
   use(a.weakProp); // expected-note{{also accessed here}}
 
@@ -295,7 +295,7 @@ void doWhileLoop(Test *a) {
 @end
 
 @implementation Test (Methods)
-- (void)sanity {
+- (void)basicCorrectnessTest {
   use(self.weakProp); // expected-warning{{weak property 'weakProp' is accessed multiple times in this method but may be unpredictably set to nil; assign to a strong variable to keep the object alive}}
   use(self.weakProp); // expected-note{{also accessed here}}
 }

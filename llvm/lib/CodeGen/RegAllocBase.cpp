@@ -85,7 +85,7 @@ void RegAllocBase::allocatePhysRegs() {
   seedLiveRegs();
 
   // Continue assigning vregs one at a time to available physical registers.
-  while (LiveInterval *VirtReg = dequeue()) {
+  while (const LiveInterval *VirtReg = dequeue()) {
     assert(!VRM->hasPhys(VirtReg->reg()) && "Register already assigned");
 
     // Unused registers can appear when the spiller coalesces snippets.
@@ -140,10 +140,7 @@ void RegAllocBase::allocatePhysRegs() {
 
       // Keep going after reporting the error.
       VRM->assignVirt2Phys(VirtReg->reg(), AllocOrder.front());
-      continue;
-    }
-
-    if (AvailablePhysReg)
+    } else if (AvailablePhysReg)
       Matrix->assign(*VirtReg, AvailablePhysReg);
 
     for (Register Reg : SplitVRegs) {
@@ -176,7 +173,7 @@ void RegAllocBase::postOptimization() {
   DeadRemats.clear();
 }
 
-void RegAllocBase::enqueue(LiveInterval *LI) {
+void RegAllocBase::enqueue(const LiveInterval *LI) {
   const Register Reg = LI->reg();
 
   assert(Reg.isVirtual() && "Can only enqueue virtual registers");

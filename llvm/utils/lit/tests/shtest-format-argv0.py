@@ -7,7 +7,7 @@
 # and is not installed under PATH by default.
 # UNSUPPORTED: system-aix
 #
-# RUN: %{lit} -j 1 -v %{inputs}/shtest-format-argv0 | FileCheck %s
+# RUN: %{lit} -v %{inputs}/shtest-format-argv0 | FileCheck %s
 
 # CHECK: -- Testing:
 # CHECK: PASS: shtest-format-argv0 :: argv0.txt

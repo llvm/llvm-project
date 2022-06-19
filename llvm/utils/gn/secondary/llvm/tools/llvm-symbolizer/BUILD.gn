@@ -21,7 +21,7 @@ foreach(target, symlinks) {
 
 # //:llvm-symbolizer depends on this symlink target, see comment in //BUILD.gn.
 group("symlinks") {
-  deps = []
+  deps = [ ":llvm-symbolizer" ]
   foreach(target, symlinks) {
     deps += [ ":$target" ]
   }
@@ -33,6 +33,7 @@ executable("llvm-symbolizer") {
     "//llvm/lib/DebugInfo/DWARF",
     "//llvm/lib/DebugInfo/PDB",
     "//llvm/lib/DebugInfo/Symbolize",
+    "//llvm/lib/Debuginfod",
     "//llvm/lib/Demangle",
     "//llvm/lib/Object",
     "//llvm/lib/Option",

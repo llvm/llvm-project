@@ -13,11 +13,6 @@
 //   OutIter
 //   move(InIter first, InIter last, OutIter result);
 
-// Older compilers don't support std::is_constant_evaluated
-// UNSUPPORTED: clang-4, clang-5, clang-6, clang-7, clang-8
-// UNSUPPORTED: apple-clang-9, apple-clang-10, apple-clang-11
-// UNSUPPORTED: gcc-5, gcc-6, gcc-7, gcc-8
-
 #include <algorithm>
 #include <cassert>
 #include <memory>
@@ -63,62 +58,62 @@ test1()
 
 int main(int, char**)
 {
-    test<cpp17_input_iterator<const int*>, output_iterator<int*> >();
+    test<cpp17_input_iterator<const int*>, cpp17_output_iterator<int*> >();
     test<cpp17_input_iterator<const int*>, forward_iterator<int*> >();
     test<cpp17_input_iterator<const int*>, bidirectional_iterator<int*> >();
     test<cpp17_input_iterator<const int*>, random_access_iterator<int*> >();
     test<cpp17_input_iterator<const int*>, int*>();
 
-    test<forward_iterator<const int*>, output_iterator<int*> >();
+    test<forward_iterator<const int*>, cpp17_output_iterator<int*> >();
     test<forward_iterator<const int*>, forward_iterator<int*> >();
     test<forward_iterator<const int*>, bidirectional_iterator<int*> >();
     test<forward_iterator<const int*>, random_access_iterator<int*> >();
     test<forward_iterator<const int*>, int*>();
 
-    test<bidirectional_iterator<const int*>, output_iterator<int*> >();
+    test<bidirectional_iterator<const int*>, cpp17_output_iterator<int*> >();
     test<bidirectional_iterator<const int*>, forward_iterator<int*> >();
     test<bidirectional_iterator<const int*>, bidirectional_iterator<int*> >();
     test<bidirectional_iterator<const int*>, random_access_iterator<int*> >();
     test<bidirectional_iterator<const int*>, int*>();
 
-    test<random_access_iterator<const int*>, output_iterator<int*> >();
+    test<random_access_iterator<const int*>, cpp17_output_iterator<int*> >();
     test<random_access_iterator<const int*>, forward_iterator<int*> >();
     test<random_access_iterator<const int*>, bidirectional_iterator<int*> >();
     test<random_access_iterator<const int*>, random_access_iterator<int*> >();
     test<random_access_iterator<const int*>, int*>();
 
-    test<const int*, output_iterator<int*> >();
+    test<const int*, cpp17_output_iterator<int*> >();
     test<const int*, forward_iterator<int*> >();
     test<const int*, bidirectional_iterator<int*> >();
     test<const int*, random_access_iterator<int*> >();
     test<const int*, int*>();
 
 #if TEST_STD_VER >= 11
-    test1<cpp17_input_iterator<std::unique_ptr<int>*>, output_iterator<std::unique_ptr<int>*> >();
+    test1<cpp17_input_iterator<std::unique_ptr<int>*>, cpp17_output_iterator<std::unique_ptr<int>*> >();
     test1<cpp17_input_iterator<std::unique_ptr<int>*>, forward_iterator<std::unique_ptr<int>*> >();
     test1<cpp17_input_iterator<std::unique_ptr<int>*>, bidirectional_iterator<std::unique_ptr<int>*> >();
     test1<cpp17_input_iterator<std::unique_ptr<int>*>, random_access_iterator<std::unique_ptr<int>*> >();
     test1<cpp17_input_iterator<std::unique_ptr<int>*>, std::unique_ptr<int>*>();
 
-    test1<forward_iterator<std::unique_ptr<int>*>, output_iterator<std::unique_ptr<int>*> >();
+    test1<forward_iterator<std::unique_ptr<int>*>, cpp17_output_iterator<std::unique_ptr<int>*> >();
     test1<forward_iterator<std::unique_ptr<int>*>, forward_iterator<std::unique_ptr<int>*> >();
     test1<forward_iterator<std::unique_ptr<int>*>, bidirectional_iterator<std::unique_ptr<int>*> >();
     test1<forward_iterator<std::unique_ptr<int>*>, random_access_iterator<std::unique_ptr<int>*> >();
     test1<forward_iterator<std::unique_ptr<int>*>, std::unique_ptr<int>*>();
 
-    test1<bidirectional_iterator<std::unique_ptr<int>*>, output_iterator<std::unique_ptr<int>*> >();
+    test1<bidirectional_iterator<std::unique_ptr<int>*>, cpp17_output_iterator<std::unique_ptr<int>*> >();
     test1<bidirectional_iterator<std::unique_ptr<int>*>, forward_iterator<std::unique_ptr<int>*> >();
     test1<bidirectional_iterator<std::unique_ptr<int>*>, bidirectional_iterator<std::unique_ptr<int>*> >();
     test1<bidirectional_iterator<std::unique_ptr<int>*>, random_access_iterator<std::unique_ptr<int>*> >();
     test1<bidirectional_iterator<std::unique_ptr<int>*>, std::unique_ptr<int>*>();
 
-    test1<random_access_iterator<std::unique_ptr<int>*>, output_iterator<std::unique_ptr<int>*> >();
+    test1<random_access_iterator<std::unique_ptr<int>*>, cpp17_output_iterator<std::unique_ptr<int>*> >();
     test1<random_access_iterator<std::unique_ptr<int>*>, forward_iterator<std::unique_ptr<int>*> >();
     test1<random_access_iterator<std::unique_ptr<int>*>, bidirectional_iterator<std::unique_ptr<int>*> >();
     test1<random_access_iterator<std::unique_ptr<int>*>, random_access_iterator<std::unique_ptr<int>*> >();
     test1<random_access_iterator<std::unique_ptr<int>*>, std::unique_ptr<int>*>();
 
-    test1<std::unique_ptr<int>*, output_iterator<std::unique_ptr<int>*> >();
+    test1<std::unique_ptr<int>*, cpp17_output_iterator<std::unique_ptr<int>*> >();
     test1<std::unique_ptr<int>*, forward_iterator<std::unique_ptr<int>*> >();
     test1<std::unique_ptr<int>*, bidirectional_iterator<std::unique_ptr<int>*> >();
     test1<std::unique_ptr<int>*, random_access_iterator<std::unique_ptr<int>*> >();
@@ -131,7 +126,7 @@ int main(int, char**)
     test<bidirectional_iterator<const int*>, contiguous_iterator<int*>>();
     test<random_access_iterator<const int*>, contiguous_iterator<int*>>();
     test<const int*, contiguous_iterator<int*>>();
-    test<contiguous_iterator<const int*>, output_iterator<int*>>();
+    test<contiguous_iterator<const int*>, cpp17_output_iterator<int*>>();
     test<contiguous_iterator<const int*>, forward_iterator<int*>>();
     test<contiguous_iterator<const int*>, bidirectional_iterator<int*>>();
     test<contiguous_iterator<const int*>, random_access_iterator<int*>>();
@@ -143,7 +138,7 @@ int main(int, char**)
     test1<bidirectional_iterator<std::unique_ptr<int>*>, contiguous_iterator<std::unique_ptr<int>*>>();
     test1<random_access_iterator<std::unique_ptr<int>*>, contiguous_iterator<std::unique_ptr<int>*>>();
     test1<std::unique_ptr<int>*, contiguous_iterator<std::unique_ptr<int>*>>();
-    test1<contiguous_iterator<std::unique_ptr<int>*>, output_iterator<std::unique_ptr<int>*>>();
+    test1<contiguous_iterator<std::unique_ptr<int>*>, cpp17_output_iterator<std::unique_ptr<int>*>>();
     test1<contiguous_iterator<std::unique_ptr<int>*>, forward_iterator<std::unique_ptr<int>*>>();
     test1<contiguous_iterator<std::unique_ptr<int>*>, bidirectional_iterator<std::unique_ptr<int>*>>();
     test1<contiguous_iterator<std::unique_ptr<int>*>, random_access_iterator<std::unique_ptr<int>*>>();

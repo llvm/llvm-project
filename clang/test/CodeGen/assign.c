@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple x86_64 -emit-llvm -o - %s | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64 -emit-llvm -o - %s | FileCheck %s
 
 // Check that we don't generate unnecessary reloads.
 //
@@ -9,7 +9,7 @@
 // CHECK-NEXT: store i32 1, i32* [[x_0]]
 // CHECK-NEXT: store i32 1, i32* [[y_0]]
 // CHECK: }
-void f0() {
+void f0(void) {
   int x, y;
   x = 1;
   y = (x = 1);
@@ -25,7 +25,7 @@ void f0() {
 // CHECK-NEXT: store volatile i32 1, i32* [[x_1]]
 // CHECK-NEXT: store volatile i32 1, i32* [[y_1]]
 // CHECK: }
-void f1() {
+void f1(void) {
   volatile int x, y;
   x = 1;
   y = (x = 1);

@@ -54,4 +54,4 @@ def i8 : ValueType<8, 3>;
 def llvm_i8_ty : LLVMType<i8>;
 
 def int_has_ptr_to_any : Intrinsic<[LLVMPointerType<llvm_any_ty>, llvm_i8_ty]>;
-// CHECK: /* 0 */ 21, 14, 15, 0, 2, 0
+// CHECK: /* 0 */ 21, 14, 15, 0, 57, 0

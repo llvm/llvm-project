@@ -17,21 +17,16 @@ http_archive(
     ],
 )
 
-# Or wherever your submodule is located.
-SUBMODULE_PATH = "third_party/llvm-project"
-
-local_repository(
-    name = "llvm-bazel",
-    path = SUBMODULE_PATH + "/utils/bazel",
+new_local_repository(
+    name = "llvm-raw",
+    build_file_content = "# empty",
+    # Or wherever your submodule is located.
+    path = "third_party/llvm-project",
 )
 
-load("@llvm-bazel//:configure.bzl", "llvm_configure", "llvm_disable_optional_support_deps")
+load("@llvm-raw//utils/bazel:configure.bzl", "llvm_configure", "llvm_disable_optional_support_deps")
 
-llvm_configure(
-    name = "llvm-project",
-    src_path = SUBMODULE_PATH,
-    src_workspace = "@submodule_example//:WORKSPACE",
-)
+llvm_configure(name = "llvm-project")
 
 # Disables optional dependencies for Support like zlib and terminfo. You may
 # instead want to configure them using the macros in the corresponding bzl

@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 %s -triple=x86_64-apple-darwin10 -emit-llvm -std=c++98 -o - | FileCheck -check-prefix=CHECK -check-prefix=CHECK98 %s
-// RUN: %clang_cc1 %s -triple=x86_64-apple-darwin10 -emit-llvm -std=c++11 -o - | FileCheck -check-prefix=CHECK -check-prefix=CHECK11 %s
+// RUN: %clang_cc1 -no-opaque-pointers %s -triple=x86_64-apple-darwin10 -emit-llvm -std=c++98 -o - | FileCheck -check-prefix=CHECK -check-prefix=CHECK98 %s
+// RUN: %clang_cc1 -no-opaque-pointers %s -triple=x86_64-apple-darwin10 -emit-llvm -std=c++11 -o - | FileCheck -check-prefix=CHECK -check-prefix=CHECK11 %s
 
 // Check that IR gen doesn't try to do an lvalue-to-rvalue conversion
 // on a volatile reference result.  rdar://problem/8338198
@@ -16,7 +16,7 @@ namespace test0 {
   void test(A t) {
     // CHECK:      [[ARR:%.*]] = load [[A:%.*]]*, [[A:%.*]]** @_ZN5test05arrayE, align 8
     // CHECK-NEXT: [[IDX:%.*]] = getelementptr inbounds [[A]], [[A]]* [[ARR]], i64 0
-    // CHECK-NEXT: [[TMP:%.*]] = call nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) [[A]]* @_ZNV5test01AaSERVKS0_([[A]]* {{[^,]*}} [[IDX]], [[A]]* nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) [[T:%.*]])
+    // CHECK-NEXT: [[TMP:%.*]] = call noundef nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) [[A]]* @_ZNV5test01AaSERVKS0_([[A]]* {{[^,]*}} [[IDX]], [[A]]* noundef nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) [[T:%.*]])
     // CHECK-NEXT: ret void
     array[0] = t;
   }

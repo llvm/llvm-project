@@ -10,8 +10,6 @@ from lldbsuite.test.lldbtest import *
 
 class TestExitDuringExpression(TestBase):
 
-    mydir = TestBase.compute_mydir(__file__)
-
     NO_DEBUG_INFO_TESTCASE = True
 
     @skipIfWindows
@@ -45,7 +43,6 @@ class TestExitDuringExpression(TestBase):
         self.main_source_file = lldb.SBFileSpec("main.c")
         self.build()
 
-    @skipIfReproducer # Timeouts are not currently modeled.
     def exiting_expression_test(self, before_one_thread_timeout , unwind):
         """function_to_call sleeps for g_timeout microseconds, then calls pthread_exit.
            This test calls function_to_call with an overall timeout of 500
@@ -73,7 +70,7 @@ class TestExitDuringExpression(TestBase):
 
         error = lldb.SBError()
         timeout_value = g_timeout.GetValueAsUnsigned(error)
-        self.assertTrue(error.Success(), "Couldn't get timeout value: %s"%(error.GetCString()))
+        self.assertSuccess(error, "Couldn't get timeout value")
 
         one_thread_timeout = 0
         if (before_one_thread_timeout):
@@ -106,7 +103,7 @@ class TestExitDuringExpression(TestBase):
         # Now get the return value, if we successfully caused the thread to exit
         # it should be 10, not 20.
         ret_val = frame.FindVariable("ret_val")
-        self.assertTrue(ret_val.GetError().Success(), "Found ret_val")
+        self.assertSuccess(ret_val.GetError(), "Found ret_val")
         ret_val_value = ret_val.GetValueAsSigned(error)
-        self.assertTrue(error.Success(), "Got ret_val's value")
+        self.assertSuccess(error, "Got ret_val's value")
         self.assertEqual(ret_val_value, 10, "We put the right value in ret_val")

@@ -4,7 +4,7 @@
 ; CHECK: DW_TAG_variable
 ; CHECK-FAST: DW_TAG_variable
 
-; Test that llvm.dbg.declare() instrinsics do not crash the backend
+; Test that llvm.dbg.declare() intrinsics do not crash the backend
 
 source_filename = "test/DebugInfo/WebAssembly/dbg-declare.ll"
 target datalayout = "e-m:e-p:32:32-i64:64-n32:64-S128"

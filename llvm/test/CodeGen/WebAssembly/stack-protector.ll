@@ -2,7 +2,7 @@
 
 @"\01LC" = internal constant [11 x i8] c"buf == %s\0A\00"		; <[11 x i8]*> [#uses=1]
 
-; WASM32-LABEL: test
+; WASM32-LABEL: test:
 ; WASM32:      i32.load        28
 ; WASM32:      br_if           0
 ; WASM32:      call __stack_chk_fail
@@ -25,7 +25,7 @@ return:		; preds = %entry
 	ret void
 }
 
-; WASM32-LABEL: test_return_i32
+; WASM32-LABEL: test_return_i32:
 ; WASM32:      call __stack_chk_fail
 ; WASM32-NEXT: unreachable
 

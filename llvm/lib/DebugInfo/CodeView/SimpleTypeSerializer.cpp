@@ -7,7 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/DebugInfo/CodeView/SimpleTypeSerializer.h"
-#include "llvm/DebugInfo/CodeView/TypeRecord.h"
+#include "llvm/DebugInfo/CodeView/CVRecord.h"
+#include "llvm/DebugInfo/CodeView/RecordSerialization.h"
 #include "llvm/DebugInfo/CodeView/TypeRecordMapping.h"
 #include "llvm/Support/BinaryStreamWriter.h"
 
@@ -29,7 +30,7 @@ static void addPadding(BinaryStreamWriter &Writer) {
 
 SimpleTypeSerializer::SimpleTypeSerializer() : ScratchBuffer(MaxRecordLength) {}
 
-SimpleTypeSerializer::~SimpleTypeSerializer() {}
+SimpleTypeSerializer::~SimpleTypeSerializer() = default;
 
 template <typename T>
 ArrayRef<uint8_t> SimpleTypeSerializer::serialize(T &Record) {
@@ -53,7 +54,7 @@ ArrayRef<uint8_t> SimpleTypeSerializer::serialize(T &Record) {
   Prefix->RecordKind = CVT.kind();
   Prefix->RecordLen = Writer.getOffset() - sizeof(uint16_t);
 
-  return {ScratchBuffer.data(), Writer.getOffset()};
+  return {ScratchBuffer.data(), static_cast<size_t>(Writer.getOffset())};
 }
 
 // Explicitly instantiate the member function for each known type so that we can

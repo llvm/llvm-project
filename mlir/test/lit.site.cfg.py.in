@@ -3,12 +3,12 @@
 import sys
 
 config.host_triple = "@LLVM_HOST_TRIPLE@"
-config.target_triple = "@TARGET_TRIPLE@"
+config.target_triple = "@LLVM_TARGET_TRIPLE@"
 config.llvm_src_root = "@LLVM_SOURCE_DIR@"
 config.llvm_obj_root = "@LLVM_BINARY_DIR@"
-config.llvm_tools_dir = "@LLVM_TOOLS_DIR@"
-config.llvm_lib_dir = "@LLVM_LIBS_DIR@"
-config.llvm_shlib_dir = "@SHLIBDIR@"
+config.llvm_tools_dir = lit_config.substitute("@LLVM_TOOLS_DIR@")
+config.llvm_lib_dir = lit_config.substitute("@LLVM_LIBS_DIR@")
+config.llvm_shlib_dir = lit_config.substitute("@SHLIBDIR@")
 config.llvm_shlib_ext = "@SHLIBEXT@"
 config.llvm_exe_ext = "@EXEEXT@"
 config.lit_tools_dir = "@LLVM_LIT_TOOLS_DIR@"
@@ -25,8 +25,10 @@ config.host_cc = "@HOST_CC@"
 config.host_cxx = "@HOST_CXX@"
 config.enable_libcxx = "@LLVM_ENABLE_LIBCXX@"
 config.host_cmake = "@CMAKE_COMMAND@"
+config.host_cmake_generator = "@CMAKE_GENERATOR@"
 # Note: ldflags can contain double-quoted paths, so must use single quotes here.
 config.host_ldflags = '@HOST_LDFLAGS@'
+config.llvm_use_linker = "@LLVM_USE_LINKER@"
 config.llvm_use_sanitizer = "@LLVM_USE_SANITIZER@"
 config.llvm_host_triple = '@LLVM_HOST_TRIPLE@'
 config.host_arch = "@HOST_ARCH@"
@@ -41,6 +43,7 @@ config.run_cuda_tests = @MLIR_ENABLE_CUDA_CONVERSIONS@
 config.enable_cuda_runner = @MLIR_ENABLE_CUDA_RUNNER@
 config.run_rocm_tests = @MLIR_ENABLE_ROCM_CONVERSIONS@
 config.enable_rocm_runner = @MLIR_ENABLE_ROCM_RUNNER@
+config.rocm_test_chipset = "@ROCM_TEST_CHIPSET@"
 config.spirv_wrapper_library_dir = "@MLIR_SPIRV_WRAPPER_LIBRARY_DIR@"
 config.enable_spirv_cpu_runner = @MLIR_ENABLE_SPIRV_CPU_RUNNER@
 config.vulkan_wrapper_library_dir = "@MLIR_VULKAN_WRAPPER_LIBRARY_DIR@"
@@ -48,21 +51,15 @@ config.enable_vulkan_runner = @MLIR_ENABLE_VULKAN_RUNNER@
 config.enable_bindings_python = @MLIR_ENABLE_BINDINGS_PYTHON@
 config.mlir_integration_test_dir = "@MLIR_INTEGRATION_TEST_DIR@"
 config.intel_sde_executable = "@INTEL_SDE_EXECUTABLE@"
-config.mlir_run_amx_tests = "@MLIR_RUN_AMX_TESTS@"
-config.mlir_run_x86vector_tests = "@MLIR_RUN_X86VECTOR_TESTS@"
-config.mlir_run_cuda_tensor_core_tests = "@MLIR_RUN_CUDA_TENSOR_CORE_TESTS@"
-config.mlir_include_integration_tests = "@MLIR_INCLUDE_INTEGRATION_TESTS@"
-
-# Support substitution of the tools_dir with user parameters. This is
-# used when we can't determine the tool dir at configuration time.
-try:
-    config.llvm_tools_dir = config.llvm_tools_dir % lit_config.params
-    config.llvm_lib_dir = config.llvm_lib_dir % lit_config.params
-    config.llvm_shlib_dir = config.llvm_shlib_dir % lit_config.params
-except KeyError:
-    e = sys.exc_info()[1]
-    key, = e.args
-    lit_config.fatal("unable to find %r parameter, use '--param=%s=VALUE'" % (key,key))
+config.mlir_run_amx_tests = @MLIR_RUN_AMX_TESTS@
+config.mlir_run_x86vector_tests = @MLIR_RUN_X86VECTOR_TESTS@
+config.mlir_run_cuda_tensor_core_tests = @MLIR_RUN_CUDA_TENSOR_CORE_TESTS@
+config.mlir_include_integration_tests = @MLIR_INCLUDE_INTEGRATION_TESTS@
+config.arm_emulator_executable = "@ARM_EMULATOR_EXECUTABLE@"
+config.arm_emulator_options = "@ARM_EMULATOR_OPTIONS@"
+config.arm_emulator_lli_executable = "@ARM_EMULATOR_LLI_EXECUTABLE@"
+config.arm_emulator_utils_lib_dir = "@ARM_EMULATOR_UTILS_LIB_DIR@"
+config.mlir_run_arm_sve_tests = "@MLIR_RUN_ARM_SVE_TESTS@"
 
 import lit.llvm
 lit.llvm.initialize(lit_config, config)

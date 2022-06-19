@@ -129,7 +129,7 @@ Operation::result_range mlir::LLVM::createLLVMCall(OpBuilder &b, Location loc,
                                                    ValueRange paramTypes,
                                                    ArrayRef<Type> resultTypes) {
   return b
-      .create<LLVM::CallOp>(loc, resultTypes, b.getSymbolRefAttr(fn),
+      .create<LLVM::CallOp>(loc, resultTypes, SymbolRefAttr::get(fn),
                             paramTypes)
       ->getResults();
 }

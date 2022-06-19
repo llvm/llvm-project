@@ -9,7 +9,7 @@
 // <string>
 
 // basic_string<charT,traits,Allocator>&
-//   replace(const_iterator i1, const_iterator i2, const charT* s);
+//   replace(const_iterator i1, const_iterator i2, const charT* s); // constexpr since C++20
 
 #include <stdio.h>
 
@@ -21,7 +21,7 @@
 #include "min_allocator.h"
 
 template <class S>
-void
+TEST_CONSTEXPR_CXX20 void
 test(S s, typename S::size_type pos1, typename S::size_type n1, const typename S::value_type* str, S expected)
 {
     typename S::size_type old_size = s.size();
@@ -36,7 +36,7 @@ test(S s, typename S::size_type pos1, typename S::size_type n1, const typename S
 }
 
 template <class S>
-void test0()
+TEST_CONSTEXPR_CXX20 bool test0()
 {
     test(S(""), 0, 0, "", S(""));
     test(S(""), 0, 0, "12345", S("12345"));
@@ -138,10 +138,12 @@ void test0()
     test(S("abcdefghij"), 1, 1, "12345", S("a12345cdefghij"));
     test(S("abcdefghij"), 1, 1, "1234567890", S("a1234567890cdefghij"));
     test(S("abcdefghij"), 1, 1, "12345678901234567890", S("a12345678901234567890cdefghij"));
+
+    return true;
 }
 
 template <class S>
-void test1()
+TEST_CONSTEXPR_CXX20 bool test1()
 {
     test(S("abcdefghij"), 1, 4, "", S("afghij"));
     test(S("abcdefghij"), 1, 4, "12345", S("a12345fghij"));
@@ -243,10 +245,12 @@ void test1()
     test(S("abcdefghijklmnopqrst"), 10, 9, "12345", S("abcdefghij12345t"));
     test(S("abcdefghijklmnopqrst"), 10, 9, "1234567890", S("abcdefghij1234567890t"));
     test(S("abcdefghijklmnopqrst"), 10, 9, "12345678901234567890", S("abcdefghij12345678901234567890t"));
+
+    return true;
 }
 
 template <class S>
-void test2()
+TEST_CONSTEXPR_CXX20 bool test2()
 {
     test(S("abcdefghijklmnopqrst"), 10, 10, "", S("abcdefghij"));
     test(S("abcdefghijklmnopqrst"), 10, 10, "12345", S("abcdefghij12345"));
@@ -264,40 +268,55 @@ void test2()
     test(S("abcdefghijklmnopqrst"), 20, 0, "12345", S("abcdefghijklmnopqrst12345"));
     test(S("abcdefghijklmnopqrst"), 20, 0, "1234567890", S("abcdefghijklmnopqrst1234567890"));
     test(S("abcdefghijklmnopqrst"), 20, 0, "12345678901234567890", S("abcdefghijklmnopqrst12345678901234567890"));
+
+    { // test replacing into self
+      S s_short = "123/";
+      S s_long  = "Lorem ipsum dolor sit amet, consectetur/";
+
+      s_short.replace(s_short.begin(), s_short.begin(), s_short.c_str());
+      assert(s_short == "123/123/");
+      s_short.replace(s_short.begin(), s_short.begin(), s_short.c_str());
+      assert(s_short == "123/123/123/123/");
+      s_short.replace(s_short.begin(), s_short.begin(), s_short.c_str());
+      assert(s_short == "123/123/123/123/123/123/123/123/");
+
+      s_long.replace(s_long.begin(), s_long.begin(), s_long.c_str());
+      assert(s_long == "Lorem ipsum dolor sit amet, consectetur/Lorem ipsum dolor sit amet, consectetur/");
+    }
+
+    return true;
 }
 
-int main(int, char**)
-{
-    {
+TEST_CONSTEXPR_CXX20 void test() {
+  {
     typedef std::string S;
     test0<S>();
     test1<S>();
     test2<S>();
-    }
+#if TEST_STD_VER > 17
+    static_assert(test0<S>());
+    static_assert(test1<S>());
+    static_assert(test2<S>());
+#endif
+  }
 #if TEST_STD_VER >= 11
-    {
+  {
     typedef std::basic_string<char, std::char_traits<char>, min_allocator<char>> S;
     test0<S>();
     test1<S>();
     test2<S>();
-    }
+#if TEST_STD_VER > 17
+    static_assert(test0<S>());
+    static_assert(test1<S>());
+    static_assert(test2<S>());
 #endif
+  }
+#endif
+}
 
-    { // test replacing into self
-    typedef std::string S;
-    S s_short = "123/";
-    S s_long  = "Lorem ipsum dolor sit amet, consectetur/";
-
-    s_short.replace(s_short.begin(), s_short.begin(), s_short.c_str());
-    assert(s_short == "123/123/");
-    s_short.replace(s_short.begin(), s_short.begin(), s_short.c_str());
-    assert(s_short == "123/123/123/123/");
-    s_short.replace(s_short.begin(), s_short.begin(), s_short.c_str());
-    assert(s_short == "123/123/123/123/123/123/123/123/");
-
-    s_long.replace(s_long.begin(), s_long.begin(), s_long.c_str());
-    assert(s_long == "Lorem ipsum dolor sit amet, consectetur/Lorem ipsum dolor sit amet, consectetur/");
-    }
+int main(int, char**)
+{
+  test();
 
   return 0;
 }

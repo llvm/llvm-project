@@ -26,14 +26,14 @@ define dso_local void @test_dcbtstt() {
 ; CHECK-AIX:       # %bb.0: # %entry
 ; CHECK-AIX-NEXT:    lwz 3, L..C0(2) # @vpa
 ; CHECK-AIX-NEXT:    lwz 3, 0(3)
-; CHECK-AIX-NEXT:    dcbtstt 0, 3
+; CHECK-AIX-NEXT:    dcbtst 0, 3, 16
 ; CHECK-AIX-NEXT:    blr
 ;
 ; CHECK-AIX64-LABEL: test_dcbtstt:
 ; CHECK-AIX64:       # %bb.0: # %entry
 ; CHECK-AIX64-NEXT:    ld 3, L..C0(2) # @vpa
 ; CHECK-AIX64-NEXT:    ld 3, 0(3)
-; CHECK-AIX64-NEXT:    dcbtstt 0, 3
+; CHECK-AIX64-NEXT:    dcbtst 0, 3, 16
 ; CHECK-AIX64-NEXT:    blr
 entry:
   %0 = load i8*, i8** @vpa, align 8
@@ -55,14 +55,14 @@ define dso_local void @test_dcbtt() {
 ; CHECK-AIX:       # %bb.0: # %entry
 ; CHECK-AIX-NEXT:    lwz 3, L..C0(2) # @vpa
 ; CHECK-AIX-NEXT:    lwz 3, 0(3)
-; CHECK-AIX-NEXT:    dcbtt 0, 3
+; CHECK-AIX-NEXT:    dcbt 0, 3, 16
 ; CHECK-AIX-NEXT:    blr
 ;
 ; CHECK-AIX64-LABEL: test_dcbtt:
 ; CHECK-AIX64:       # %bb.0: # %entry
 ; CHECK-AIX64-NEXT:    ld 3, L..C0(2) # @vpa
 ; CHECK-AIX64-NEXT:    ld 3, 0(3)
-; CHECK-AIX64-NEXT:    dcbtt 0, 3
+; CHECK-AIX64-NEXT:    dcbt 0, 3, 16
 ; CHECK-AIX64-NEXT:    blr
 entry:
   %0 = load i8*, i8** @vpa, align 8

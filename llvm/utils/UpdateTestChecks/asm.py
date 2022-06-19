@@ -23,11 +23,11 @@ ASM_FUNCTION_X86_RE = re.compile(
     flags=(re.M | re.S))
 
 ASM_FUNCTION_ARM_RE = re.compile(
-        r'^(?P<func>[0-9a-zA-Z_]+):\n' # f: (name of function)
-        r'\s+\.fnstart\n' # .fnstart
-        r'(?P<body>.*?)\n' # (body of the function)
-        r'.Lfunc_end[0-9]+:', # .Lfunc_end0: or # -- End function
-        flags=(re.M | re.S))
+    r'^(?P<func>[0-9a-zA-Z_]+):\n' # f: (name of function)
+    r'\s+\.fnstart\n' # .fnstart
+    r'(?P<body>.*?)\n' # (body of the function)
+    r'.Lfunc_end[0-9]+:', # .Lfunc_end0: or # -- End function
+    flags=(re.M | re.S))
 
 ASM_FUNCTION_AARCH64_RE = re.compile(
      r'^_?(?P<func>[^:]+):[ \t]*\/\/[ \t]*@"?(?P=func)"?( (Function|Tail Call))?\n'
@@ -59,6 +59,7 @@ ASM_FUNCTION_M68K_RE = re.compile(
 
 ASM_FUNCTION_MIPS_RE = re.compile(
     r'^_?(?P<func>[^:]+):[ \t]*#+[ \t]*@"?(?P=func)"?\n[^:]*?' # f: (name of func)
+    r'(?:\s*\.?Ltmp[^:\n]*:\n)?[^:]*?'        # optional .Ltmp<N> for EH
     r'(?:^[ \t]+\.(frame|f?mask|set).*?\n)+'  # Mips+LLVM standard asm prologue
     r'(?P<body>.*?)\n'                        # (body of the function)
     # Mips+LLVM standard asm epilogue
@@ -119,50 +120,87 @@ ASM_FUNCTION_SYSTEMZ_RE = re.compile(
     flags=(re.M | re.S))
 
 ASM_FUNCTION_AARCH64_DARWIN_RE = re.compile(
-     r'^_(?P<func>[^:]+):[ \t]*;[ \t]@"?(?P=func)"?\n'
-     r'([ \t]*.cfi_startproc\n[\s]*)?'
-     r'(?P<body>.*?)'
-     r'([ \t]*.cfi_endproc\n[\s]*)?'
-     r'^[ \t]*;[ \t]--[ \t]End[ \t]function',
-     flags=(re.M | re.S))
+    r'^_(?P<func>[^:]+):[ \t]*;[ \t]@"?(?P=func)"?\n'
+    r'([ \t]*.cfi_startproc\n[\s]*)?'
+    r'(?P<body>.*?)'
+    r'([ \t]*.cfi_endproc\n[\s]*)?'
+    r'^[ \t]*;[ \t]--[ \t]End[ \t]function',
+    flags=(re.M | re.S))
 
 ASM_FUNCTION_ARM_DARWIN_RE = re.compile(
-     r'^[ \t]*\.globl[ \t]*_(?P<func>[^ \t])[ \t]*@[ \t]--[ \t]Begin[ \t]function[ \t]"?(?P=func)"?'
-     r'(?P<directives>.*?)'
-     r'^_(?P=func):\n[ \t]*'
-     r'(?P<body>.*?)'
-     r'^[ \t]*@[ \t]--[ \t]End[ \t]function',
-     flags=(re.M | re.S ))
+    r'^[ \t]*\.globl[ \t]*_(?P<func>[^ \t])[ \t]*@[ \t]--[ \t]Begin[ \t]function[ \t]"?(?P=func)"?'
+    r'(?P<directives>.*?)'
+    r'^_(?P=func):\n[ \t]*'
+    r'(?P<body>.*?)'
+    r'^[ \t]*@[ \t]--[ \t]End[ \t]function',
+    flags=(re.M | re.S ))
 
 ASM_FUNCTION_ARM_MACHO_RE = re.compile(
-     r'^_(?P<func>[^:]+):[ \t]*\n'
-     r'([ \t]*.cfi_startproc\n[ \t]*)?'
-     r'(?P<body>.*?)\n'
-     r'[ \t]*\.cfi_endproc\n',
-     flags=(re.M | re.S))
+    r'^_(?P<func>[^:]+):[ \t]*\n'
+    r'([ \t]*.cfi_startproc\n[ \t]*)?'
+    r'(?P<body>.*?)\n'
+    r'[ \t]*\.cfi_endproc\n',
+    flags=(re.M | re.S))
 
 ASM_FUNCTION_THUMBS_DARWIN_RE = re.compile(
-     r'^_(?P<func>[^:]+):\n'
-     r'(?P<body>.*?)\n'
-     r'[ \t]*\.data_region\n',
-     flags=(re.M | re.S))
+    r'^_(?P<func>[^:]+):\n'
+    r'(?P<body>.*?)\n'
+    r'[ \t]*\.data_region\n',
+    flags=(re.M | re.S))
 
 ASM_FUNCTION_THUMB_DARWIN_RE = re.compile(
-     r'^_(?P<func>[^:]+):\n'
-     r'(?P<body>.*?)\n'
-     r'^[ \t]*@[ \t]--[ \t]End[ \t]function',
-     flags=(re.M | re.S))
+    r'^_(?P<func>[^:]+):\n'
+    r'(?P<body>.*?)\n'
+    r'^[ \t]*@[ \t]--[ \t]End[ \t]function',
+    flags=(re.M | re.S))
 
 ASM_FUNCTION_ARM_IOS_RE = re.compile(
-     r'^_(?P<func>[^:]+):\n'
-     r'(?P<body>.*?)'
-     r'^[ \t]*@[ \t]--[ \t]End[ \t]function',
-     flags=(re.M | re.S))
+    r'^_(?P<func>[^:]+):\n'
+    r'(?P<body>.*?)'
+    r'^[ \t]*@[ \t]--[ \t]End[ \t]function',
+    flags=(re.M | re.S))
 
 ASM_FUNCTION_WASM32_RE = re.compile(
     r'^_?(?P<func>[^:]+):[ \t]*#+[ \t]*@"?(?P=func)"?\n'
     r'(?P<body>.*?)\n'
     r'^\s*(\.Lfunc_end[0-9]+:\n|end_function)',
+    flags=(re.M | re.S))
+
+ASM_FUNCTION_VE_RE = re.compile(
+    r'^_?(?P<func>[^:]+):[ \t]*#+[ \t]*@(?P=func)\n'
+    r'(?P<body>^##?[ \t]+[^:]+:.*?)\s*'
+    r'.Lfunc_end[0-9]+:\n',
+    flags=(re.M | re.S))
+
+ASM_FUNCTION_CSKY_RE = re.compile(
+    r'^_?(?P<func>[^:]+):[ \t]*#+[ \t]*@(?P=func)\n(?:\s*\.?Lfunc_begin[^:\n]*:\n)?[^:]*?'
+    r'(?P<body>^##?[ \t]+[^:]+:.*?)\s*'
+    r'.Lfunc_end[0-9]+:\n',
+    flags=(re.M | re.S))
+
+ASM_FUNCTION_NVPTX_RE = re.compile(
+    # function attributes and retval
+    # .visible .func (.param .align 16 .b8 func_retval0[32])
+    #r'^(\.visible\s+)?\.func\s+(\([^\)]*\)\s*)?'
+    r'^(\.(func|visible|weak|entry|noreturn|extern)\s+)+(\([^\)]*\)\s*)?'
+
+    # function name
+    r'(?P<func>[^\(\n]+)'
+
+    # function name separator (opening brace)
+    r'(?P<func_name_separator>\()'
+
+    # function parameters
+    # (
+    #   .param .align 16 .b8 callee_St8x4_param_0[32]
+    # ) // -- Begin function callee_St8x4
+    r'[^\)]*\)(\s*//[^\n]*)?\n'
+
+    # function body
+    r'(?P<body>.*?)\n'
+
+    # function body end marker
+    r'\s*// -- End function',
     flags=(re.M | re.S))
 
 SCRUB_X86_SHUFFLES_RE = (
@@ -353,20 +391,41 @@ def scrub_asm_wasm32(asm, args):
   asm = common.SCRUB_TRAILING_WHITESPACE_RE.sub(r'', asm)
   return asm
 
-def get_triple_from_march(march):
-  triples = {
-      'amdgcn': 'amdgcn',
-      'r600': 'r600',
-      'mips': 'mips',
-      'sparc': 'sparc',
-      'hexagon': 'hexagon',
-  }
-  for prefix, triple in triples.items():
-    if march.startswith(prefix):
-      return triple
-  print("Cannot find a triple. Assume 'x86'", file=sys.stderr)
-  return 'x86'
+def scrub_asm_ve(asm, args):
+  # Scrub runs of whitespace out of the assembly, but leave the leading
+  # whitespace in place.
+  asm = common.SCRUB_WHITESPACE_RE.sub(r' ', asm)
+  # Expand the tabs used for indentation.
+  asm = string.expandtabs(asm, 2)
+  # Strip trailing whitespace.
+  asm = common.SCRUB_TRAILING_WHITESPACE_RE.sub(r'', asm)
+  return asm
 
+def scrub_asm_csky(asm, args):
+  # Scrub runs of whitespace out of the assembly, but leave the leading
+  # whitespace in place.
+  asm = common.SCRUB_WHITESPACE_RE.sub(r' ', asm)
+  # Expand the tabs used for indentation.
+  asm = string.expandtabs(asm, 2)
+  # Strip kill operands inserted into the asm.
+  asm = common.SCRUB_KILL_COMMENT_RE.sub('', asm)
+  # Strip trailing whitespace.
+  asm = common.SCRUB_TRAILING_WHITESPACE_RE.sub(r'', asm)
+  return asm
+
+def scrub_asm_nvptx(asm, args):
+  # Scrub runs of whitespace out of the assembly, but leave the leading
+  # whitespace in place.
+  asm = common.SCRUB_WHITESPACE_RE.sub(r' ', asm)
+  # Expand the tabs used for indentation.
+  asm = string.expandtabs(asm, 2)
+  # Strip trailing whitespace.
+  asm = common.SCRUB_TRAILING_WHITESPACE_RE.sub(r'', asm)
+  return asm
+
+# Returns a tuple of a scrub function and a function regex. Scrub function is
+# used to alter function body in some way, for example, remove trailing spaces.
+# Function regex is used to match function name, body, etc. in raw llc output.
 def get_run_handler(triple):
   target_handlers = {
       'i686': (scrub_asm_x86, ASM_FUNCTION_X86_RE),
@@ -403,6 +462,9 @@ def get_run_handler(triple):
       'sparc': (scrub_asm_sparc, ASM_FUNCTION_SPARC_RE),
       's390x': (scrub_asm_systemz, ASM_FUNCTION_SYSTEMZ_RE),
       'wasm32': (scrub_asm_wasm32, ASM_FUNCTION_WASM32_RE),
+      've': (scrub_asm_ve, ASM_FUNCTION_VE_RE),
+      'csky': (scrub_asm_csky, ASM_FUNCTION_CSKY_RE),
+      'nvptx': (scrub_asm_nvptx, ASM_FUNCTION_NVPTX_RE)
   }
   handler = None
   best_prefix = ''
@@ -418,8 +480,10 @@ def get_run_handler(triple):
 
 ##### Generator of assembly CHECK lines
 
-def add_asm_checks(output_lines, comment_marker, prefix_list, func_dict, func_name):
+def add_checks(output_lines, comment_marker, prefix_list, func_dict,
+               func_name, global_vars_seen_dict, is_filtered):
   # Label format is based on ASM string.
-  check_label_format = '{} %s-LABEL: %s%s:'.format(comment_marker)
-  global_vars_seen_dict = {}
-  common.add_checks(output_lines, comment_marker, prefix_list, func_dict, func_name, check_label_format, True, False, global_vars_seen_dict)
+  check_label_format = '{} %s-LABEL: %s%s%s'.format(comment_marker)
+  return common.add_checks(output_lines, comment_marker, prefix_list, func_dict,
+                           func_name, check_label_format, True, False,
+                           global_vars_seen_dict, is_filtered=is_filtered)

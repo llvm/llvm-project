@@ -1,4 +1,3 @@
-// -*- C++ -*-
 //===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
@@ -24,6 +23,7 @@
 #include <utility>
 #include <cstdint>
 #include <cassert>
+#include <functional>
 
 #include "test_macros.h"
 

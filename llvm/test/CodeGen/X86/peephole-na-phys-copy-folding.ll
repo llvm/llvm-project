@@ -276,8 +276,8 @@ define i64 @test_two_live_flags(i64* %foo0, i64 %bar0, i64 %baz0, i64* %foo1, i6
 ; CHECK32-NEXT:    pushl %edi
 ; CHECK32-NEXT:    pushl %esi
 ; CHECK32-NEXT:    pushl %eax
-; CHECK32-NEXT:    movl {{[0-9]+}}(%esp), %edi
 ; CHECK32-NEXT:    movl {{[0-9]+}}(%esp), %ebp
+; CHECK32-NEXT:    movl {{[0-9]+}}(%esp), %edi
 ; CHECK32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; CHECK32-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; CHECK32-NEXT:    movl {{[0-9]+}}(%esp), %ebx
@@ -286,8 +286,8 @@ define i64 @test_two_live_flags(i64* %foo0, i64 %bar0, i64 %baz0, i64* %foo1, i6
 ; CHECK32-NEXT:    lock cmpxchg8b (%esi)
 ; CHECK32-NEXT:    setne {{[-0-9]+}}(%e{{[sb]}}p) # 1-byte Folded Spill
 ; CHECK32-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; CHECK32-NEXT:    movl %edi, %edx
-; CHECK32-NEXT:    movl %ebp, %ecx
+; CHECK32-NEXT:    movl %ebp, %edx
+; CHECK32-NEXT:    movl %edi, %ecx
 ; CHECK32-NEXT:    movl {{[0-9]+}}(%esp), %ebx
 ; CHECK32-NEXT:    movl {{[0-9]+}}(%esp), %esi
 ; CHECK32-NEXT:    lock cmpxchg8b (%esi)

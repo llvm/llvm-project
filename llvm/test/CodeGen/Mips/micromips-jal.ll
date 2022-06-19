@@ -1,4 +1,4 @@
-; RUN: llc %s -march=mipsel -mcpu=mips32r2 -mattr=micromips -filetype=asm \
+; RUN: llc %s -mtriple=mipsel -mcpu=mips32r2 -mattr=micromips -filetype=asm \
 ; RUN:   -relocation-model=static -o - | FileCheck %s
 
 define i32 @sum(i32 %a, i32 %b) nounwind uwtable {

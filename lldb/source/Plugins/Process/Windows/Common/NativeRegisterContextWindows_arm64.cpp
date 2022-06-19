@@ -105,7 +105,7 @@ CreateRegisterInfoInterface(const ArchSpec &target_arch) {
 static Status GetThreadContextHelper(lldb::thread_t thread_handle,
                                      PCONTEXT context_ptr,
                                      const DWORD control_flag) {
-  Log *log = ProcessWindowsLog::GetLogIfAny(WINDOWS_LOG_REGISTERS);
+  Log *log = GetLog(WindowsLog::Registers);
   Status error;
 
   memset(context_ptr, 0, sizeof(::CONTEXT));
@@ -121,7 +121,7 @@ static Status GetThreadContextHelper(lldb::thread_t thread_handle,
 
 static Status SetThreadContextHelper(lldb::thread_t thread_handle,
                                      PCONTEXT context_ptr) {
-  Log *log = ProcessWindowsLog::GetLogIfAny(WINDOWS_LOG_REGISTERS);
+  Log *log = GetLog(WindowsLog::Registers);
   Status error;
   // It's assumed that the thread has stopped.
   if (!::SetThreadContext(thread_handle, context_ptr)) {
@@ -220,7 +220,7 @@ Status NativeRegisterContextWindows_arm64::GPRRead(const uint32_t reg,
     reg_value.SetUInt64(tls_context.Pc);
     break;
   case gpr_cpsr_arm64:
-    reg_value.SetUInt64(tls_context.Cpsr);
+    reg_value.SetUInt32(tls_context.Cpsr);
     break;
 
   case gpr_w0_arm64:
@@ -317,7 +317,7 @@ NativeRegisterContextWindows_arm64::GPRWrite(const uint32_t reg,
     tls_context.Pc = reg_value.GetAsUInt64();
     break;
   case gpr_cpsr_arm64:
-    tls_context.Cpsr = reg_value.GetAsUInt64();
+    tls_context.Cpsr = reg_value.GetAsUInt32();
     break;
 
   case gpr_w0_arm64:
@@ -670,7 +670,7 @@ Status NativeRegisterContextWindows_arm64::WriteRegister(
 }
 
 Status NativeRegisterContextWindows_arm64::ReadAllRegisterValues(
-    lldb::DataBufferSP &data_sp) {
+    lldb::WritableDataBufferSP &data_sp) {
   const size_t data_size = REG_CONTEXT_SIZE;
   data_sp = std::make_shared<DataBufferHeap>(data_size, 0);
   ::CONTEXT tls_context;

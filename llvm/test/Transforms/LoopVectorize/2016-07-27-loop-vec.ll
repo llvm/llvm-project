@@ -1,4 +1,4 @@
-; RUN: opt < %s -loop-vectorize -S
+; RUN: opt < %s -passes=loop-vectorize -S
 
 define void @foo() local_unnamed_addr {
 entry:

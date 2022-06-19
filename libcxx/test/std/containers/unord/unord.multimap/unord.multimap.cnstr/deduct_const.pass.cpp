@@ -8,7 +8,6 @@
 
 // <unordered_map>
 // UNSUPPORTED: c++03, c++11, c++14
-// UNSUPPORTED: libcpp-no-deduction-guides
 
 // template<class InputIterator,
 //          class Hash = hash<iter-key-type<InputIterator>>,
@@ -60,6 +59,7 @@
 #include <cassert>
 #include <climits> // INT_MAX
 #include <functional>
+#include <iterator>
 #include <type_traits>
 #include <unordered_map>
 

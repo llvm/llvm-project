@@ -14,7 +14,7 @@ define amdgpu_kernel void @test_s_dcache_wb() #0 {
 
 ; VI-LABEL: {{^}}test_s_dcache_wb_insert_wait:
 ; VI-NEXT: ; %bb.0:
-; VI-NEXT: s_dcache_wb
+; VI: s_dcache_wb
 ; VI: s_waitcnt lgkmcnt(0) ; encoding
 define amdgpu_kernel void @test_s_dcache_wb_insert_wait() #0 {
   call void @llvm.amdgcn.s.dcache.wb()

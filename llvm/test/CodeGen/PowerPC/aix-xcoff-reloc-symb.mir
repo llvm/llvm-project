@@ -75,7 +75,7 @@ body:             |
 
 # DIS:      Disassembly of section .text:
 # DIS-EMPTY:
-# DIS-NEXT: 00000000 <.text>:
+# DIS-NEXT: 00000000 <.foo>:
 # DIS-NEXT:        0: 80 62 00 00                   lwz 3, 0(2)
 # DIS-NEXT:        4: 4e 80 00 20                   blr
 # DIS-EMPTY:

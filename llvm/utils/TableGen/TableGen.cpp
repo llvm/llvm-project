@@ -25,7 +25,6 @@ enum ActionType {
   NullBackend,
   DumpJSON,
   GenEmitter,
-  GenCodeBeads,
   GenRegisterInfo,
   GenInstrInfo,
   GenInstrDocs,
@@ -52,11 +51,13 @@ enum ActionType {
   GenGICombiner,
   GenX86EVEX2VEXTables,
   GenX86FoldTables,
+  GenX86MnemonicTables,
   GenRegisterBank,
   GenExegesis,
   GenAutomata,
   GenDirectivesEnumDecl,
   GenDirectivesEnumImpl,
+  GenDXILOperation,
 };
 
 namespace llvm {
@@ -81,8 +82,6 @@ cl::opt<ActionType> Action(
         clEnumValN(DumpJSON, "dump-json",
                    "Dump all records as machine-readable JSON"),
         clEnumValN(GenEmitter, "gen-emitter", "Generate machine code emitter"),
-        clEnumValN(GenCodeBeads, "gen-code-beads",
-                   "Generate machine code beads"),
         clEnumValN(GenRegisterInfo, "gen-register-info",
                    "Generate registers and register classes info"),
         clEnumValN(GenInstrInfo, "gen-instr-info",
@@ -130,6 +129,8 @@ cl::opt<ActionType> Action(
                    "Generate X86 EVEX to VEX compress tables"),
         clEnumValN(GenX86FoldTables, "gen-x86-fold-tables",
                    "Generate X86 fold tables"),
+        clEnumValN(GenX86MnemonicTables, "gen-x86-mnemonic-tables",
+                   "Generate X86 mnemonic tables"),
         clEnumValN(GenRegisterBank, "gen-register-bank",
                    "Generate registers bank descriptions"),
         clEnumValN(GenExegesis, "gen-exegesis",
@@ -138,7 +139,9 @@ cl::opt<ActionType> Action(
         clEnumValN(GenDirectivesEnumDecl, "gen-directive-decl",
                    "Generate directive related declaration code (header file)"),
         clEnumValN(GenDirectivesEnumImpl, "gen-directive-impl",
-                   "Generate directive related implementation code")));
+                   "Generate directive related implementation code"),
+        clEnumValN(GenDXILOperation, "gen-dxil-operation",
+                   "Generate DXIL operation information")));
 
 cl::OptionCategory PrintEnumsCat("Options for -print-enums");
 cl::opt<std::string> Class("class", cl::desc("Print Enum list for this class"),
@@ -160,9 +163,6 @@ bool LLVMTableGenMain(raw_ostream &OS, RecordKeeper &Records) {
     break;
   case GenEmitter:
     EmitCodeEmitter(Records, OS);
-    break;
-  case GenCodeBeads:
-    EmitCodeBeads(Records, OS);
     break;
   case GenRegisterInfo:
     EmitRegisterInfo(Records, OS);
@@ -257,6 +257,9 @@ bool LLVMTableGenMain(raw_ostream &OS, RecordKeeper &Records) {
   case GenX86EVEX2VEXTables:
     EmitX86EVEX2VEXTables(Records, OS);
     break;
+  case GenX86MnemonicTables:
+    EmitX86MnemonicTables(Records, OS);
+    break;
   case GenX86FoldTables:
     EmitX86FoldTables(Records, OS);
     break;
@@ -271,6 +274,9 @@ bool LLVMTableGenMain(raw_ostream &OS, RecordKeeper &Records) {
     break;
   case GenDirectivesEnumImpl:
     EmitDirectivesImpl(Records, OS);
+    break;
+  case GenDXILOperation:
+    EmitDXILOperation(Records, OS);
     break;
   }
 
@@ -289,7 +295,8 @@ int main(int argc, char **argv) {
 #define __has_feature(x) 0
 #endif
 
-#if __has_feature(address_sanitizer) || defined(__SANITIZE_ADDRESS__) ||       \
+#if __has_feature(address_sanitizer) ||                                        \
+    (defined(__SANITIZE_ADDRESS__) && defined(__GNUC__)) ||                    \
     __has_feature(leak_sanitizer)
 
 #include <sanitizer/lsan_interface.h>

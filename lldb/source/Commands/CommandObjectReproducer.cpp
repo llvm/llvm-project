@@ -191,14 +191,6 @@ protected:
     auto &r = Reproducer::Instance();
     if (auto generator = r.GetGenerator()) {
       generator->Keep();
-      if (llvm::Error e = repro::Finalize(r.GetReproducerPath())) {
-        SetError(result, std::move(e));
-        return result.Succeeded();
-      }
-    } else if (r.IsReplaying()) {
-      // Make this operation a NO-OP in replay mode.
-      result.SetStatus(eReturnStatusSuccessFinishNoResult);
-      return result.Succeeded();
     } else {
       result.AppendErrorWithFormat("Unable to get the reproducer generator");
       return false;
@@ -231,7 +223,7 @@ public:
 
   class CommandOptions : public Options {
   public:
-    CommandOptions() : Options() {}
+    CommandOptions() = default;
 
     ~CommandOptions() override = default;
 
@@ -276,7 +268,7 @@ protected:
 
     auto &r = Reproducer::Instance();
 
-    if (!r.IsCapturing() && !r.IsReplaying()) {
+    if (!r.IsCapturing()) {
       result.AppendError(
           "forcing a crash is only supported when capturing a reproducer.");
       result.SetStatus(eReturnStatusSuccessFinishNoResult);
@@ -326,15 +318,10 @@ protected:
     auto &r = Reproducer::Instance();
     if (r.IsCapturing()) {
       result.GetOutputStream() << "Reproducer is in capture mode.\n";
-    } else if (r.IsReplaying()) {
-      result.GetOutputStream() << "Reproducer is in replay mode.\n";
-    } else {
-      result.GetOutputStream() << "Reproducer is off.\n";
-    }
-
-    if (r.IsCapturing() || r.IsReplaying()) {
       result.GetOutputStream()
           << "Path: " << r.GetReproducerPath().GetPath() << '\n';
+    } else {
+      result.GetOutputStream() << "Reproducer is off.\n";
     }
 
     // Auto generate is hidden unless enabled because this is mostly for
@@ -364,7 +351,7 @@ public:
 
   class CommandOptions : public Options {
   public:
-    CommandOptions() : Options(), file() {}
+    CommandOptions() = default;
 
     ~CommandOptions() override = default;
 
@@ -438,7 +425,7 @@ protected:
       // Dump the VFS to a buffer.
       std::string str;
       raw_string_ostream os(str);
-      static_cast<vfs::RedirectingFileSystem &>(*vfs).dump(os);
+      static_cast<vfs::RedirectingFileSystem &>(*vfs).print(os);
       os.flush();
 
       // Return the string.
@@ -596,101 +583,6 @@ private:
   CommandOptions m_options;
 };
 
-class CommandObjectReproducerVerify : public CommandObjectParsed {
-public:
-  CommandObjectReproducerVerify(CommandInterpreter &interpreter)
-      : CommandObjectParsed(interpreter, "reproducer verify",
-                            "Verify the contents of a reproducer. "
-                            "If no reproducer is specified during replay, it "
-                            "verifies the content of the current reproducer.",
-                            nullptr) {}
-
-  ~CommandObjectReproducerVerify() override = default;
-
-  Options *GetOptions() override { return &m_options; }
-
-  class CommandOptions : public Options {
-  public:
-    CommandOptions() : Options(), file() {}
-
-    ~CommandOptions() override = default;
-
-    Status SetOptionValue(uint32_t option_idx, StringRef option_arg,
-                          ExecutionContext *execution_context) override {
-      Status error;
-      const int short_option = m_getopt_table[option_idx].val;
-
-      switch (short_option) {
-      case 'f':
-        file.SetFile(option_arg, FileSpec::Style::native);
-        FileSystem::Instance().Resolve(file);
-        break;
-      default:
-        llvm_unreachable("Unimplemented option");
-      }
-
-      return error;
-    }
-
-    void OptionParsingStarting(ExecutionContext *execution_context) override {
-      file.Clear();
-    }
-
-    ArrayRef<OptionDefinition> GetDefinitions() override {
-      return makeArrayRef(g_reproducer_verify_options);
-    }
-
-    FileSpec file;
-  };
-
-protected:
-  bool DoExecute(Args &command, CommandReturnObject &result) override {
-    if (!command.empty()) {
-      result.AppendErrorWithFormat("'%s' takes no arguments",
-                                   m_cmd_name.c_str());
-      return false;
-    }
-
-    llvm::Optional<Loader> loader_storage;
-    Loader *loader =
-        GetLoaderFromPathOrCurrent(loader_storage, result, m_options.file);
-    if (!loader)
-      return false;
-
-    bool errors = false;
-    auto error_callback = [&](llvm::StringRef error) {
-      errors = true;
-      result.AppendError(error);
-    };
-
-    bool warnings = false;
-    auto warning_callback = [&](llvm::StringRef warning) {
-      warnings = true;
-      result.AppendWarning(warning);
-    };
-
-    auto note_callback = [&](llvm::StringRef warning) {
-      result.AppendMessage(warning);
-    };
-
-    Verifier verifier(loader);
-    verifier.Verify(error_callback, warning_callback, note_callback);
-
-    if (warnings || errors) {
-      result.AppendMessage("reproducer verification failed");
-      result.SetStatus(eReturnStatusFailed);
-    } else {
-      result.AppendMessage("reproducer verification succeeded");
-      result.SetStatus(eReturnStatusSuccessFinishResult);
-    }
-
-    return result.Succeeded();
-  }
-
-private:
-  CommandOptions m_options;
-};
-
 CommandObjectReproducer::CommandObjectReproducer(
     CommandInterpreter &interpreter)
     : CommandObjectMultiword(
@@ -713,8 +605,6 @@ CommandObjectReproducer::CommandObjectReproducer(
                                new CommandObjectReproducerStatus(interpreter)));
   LoadSubCommand("dump",
                  CommandObjectSP(new CommandObjectReproducerDump(interpreter)));
-  LoadSubCommand("verify", CommandObjectSP(
-                               new CommandObjectReproducerVerify(interpreter)));
   LoadSubCommand("xcrash", CommandObjectSP(
                                new CommandObjectReproducerXCrash(interpreter)));
 }

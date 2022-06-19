@@ -43,3 +43,6 @@ d8f0e6caa91e230a486c948ab643174e40bdf215
 
 # Use C++11 default member initializers in LLDB. NFC.
 9494c510af56d9c8593ab69017dcaa232210b235
+
+# [libc++][NFC] clang-format <__config>
+ac251726f84d5b7e6533a2e3712920184435b61b

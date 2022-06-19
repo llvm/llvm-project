@@ -155,7 +155,7 @@ have an optional _linkage_ attribute derived from LLVM IR
 [linkage types](https://llvm.org/docs/LangRef.html#linkage-types). Linkage is
 specified by the same keyword as in LLVM IR and is located between the operation
 name (`llvm.func` or `llvm.global`) and the symbol name. If no linkage keyword
-is present, `external` linkage is assumed by default. Linakge is _distinct_ from
+is present, `external` linkage is assumed by default. Linkage is _distinct_ from
 MLIR symbol visibility.
 
 ### Attribute Pass-Through
@@ -194,8 +194,8 @@ objects, the creation and manipulation of LLVM dialect types is thread-safe.
 MLIR does not support module-scoped named type declarations, e.g. `%s = type
 {i32, i32}` in LLVM IR. Instead, types must be fully specified at each use,
 except for recursive types where only the first reference to a named type needs
-to be fully specified. MLIR [type aliases](../LangRef.md/#type-aliases) can be used
-to achieve more compact syntax.
+to be fully specified. MLIR [type aliases](../LangRef.md/#type-aliases) can be
+used to achieve more compact syntax.
 
 The general syntax of LLVM dialect types is `!llvm.`, followed by a type kind
 identifier (e.g., `ptr` for pointer or `struct` for structure) and by an
@@ -257,17 +257,24 @@ the element type, which can be either compatible built-in or LLVM dialect types.
 
 Pointer types specify an address in memory.
 
-Pointer types are parametric types parameterized by the element type and the
-address space. The address space is an integer, but this choice may be
-reconsidered if MLIR implements named address spaces. Their syntax is as
-follows:
+Both opaque and type-parameterized pointer types are supported.
+[Opaque pointers](https://llvm.org/docs/OpaquePointers.html) do not indicate the
+type of the data pointed to, and are intended to simplify LLVM IR by encoding
+behavior relevant to the pointee type into operations rather than into types.
+Non-opaque pointer types carry the pointee type as a type parameter. Both kinds
+of pointers may be additionally parameterized by an address space. The address
+space is an integer, but this choice may be reconsidered if MLIR implements
+named address spaces. The syntax of pointer types is as follows:
 
 ```
-  llvm-ptr-type ::= `!llvm.ptr<` type (`,` integer-literal)? `>`
+  llvm-ptr-type ::= `!llvm.ptr` (`<` integer-literal `>`)?
+                  | `!llvm.ptr<` type (`,` integer-literal)? `>`
 ```
 
-where the optional integer literal corresponds to the memory space. Both cases
-are represented by `LLVMPointerType` internally.
+where the former case is the opaque pointer type and the latter case is the
+non-opaque pointer type; the optional group containing the integer literal
+corresponds to the memory space. All cases are represented by `LLVMPointerType`
+internally.
 
 #### Array Types
 
@@ -466,3 +473,12 @@ All operations in the LLVM IR dialect have a custom form in MLIR. The mnemonic
 of an operation is that used in LLVM IR prefixed with "`llvm.`".
 
 [include "Dialects/LLVMOps.md"]
+
+## Operations for LLVM IR Intrinsics
+
+MLIR operation system is open making it unnecessary to introduce a hard bound
+between "core" operations and "intrinsics". General LLVM IR intrinsics are
+modeled as first-class operations in the LLVM dialect. Target-specific LLVM IR
+intrinsics, e.g., NVVM or ROCDL, are modeled as separate dialects.
+
+[include "Dialects/LLVMIntrinsicOps.md"]

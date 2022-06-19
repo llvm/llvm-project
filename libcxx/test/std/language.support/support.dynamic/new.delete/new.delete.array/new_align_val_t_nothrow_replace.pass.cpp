@@ -9,11 +9,10 @@
 // UNSUPPORTED: c++03, c++11, c++14
 // UNSUPPORTED: sanitizer-new-delete
 
+// XFAIL: LIBCXX-AIX-FIXME
+
 // Aligned allocation was not provided before macosx10.14 and as a result we
 // get availability errors when the deployment target is older than macosx10.14.
-// However, support for that was broken prior to Clang 8 and AppleClang 11.
-// UNSUPPORTED: apple-clang-9, apple-clang-10
-// UNSUPPORTED: clang-5, clang-6, clang-7
 // XFAIL: use_system_cxx_lib && target={{.+}}-apple-macosx10.{{9|10|11|12|13}}
 
 // Libcxx when built for z/OS doesn't contain the aligned allocation functions,
@@ -62,9 +61,9 @@ void* operator new[](std::size_t s, std::align_val_t a) TEST_THROW_SPEC(std::bad
 
 void  operator delete[](void* p, std::align_val_t a) TEST_NOEXCEPT
 {
-    assert(p == Buff);
+    ASSERT_WITH_OPERATOR_NEW_FALLBACKS(p == Buff);
     assert(static_cast<std::size_t>(a) == OverAligned);
-    assert(new_called);
+    ASSERT_WITH_OPERATOR_NEW_FALLBACKS(new_called);
     --new_called;
 }
 
@@ -74,18 +73,18 @@ int main(int, char**)
         A* ap = new (std::nothrow) A[2];
         assert(ap);
         assert(A_constructed == 2);
-        assert(new_called);
+        ASSERT_WITH_OPERATOR_NEW_FALLBACKS(new_called);
         delete [] ap;
         assert(A_constructed == 0);
-        assert(!new_called);
+        ASSERT_WITH_OPERATOR_NEW_FALLBACKS(!new_called);
     }
     {
         B* bp = new (std::nothrow) B[2];
         assert(bp);
         assert(B_constructed == 2);
-        assert(!new_called);
+        ASSERT_WITH_OPERATOR_NEW_FALLBACKS(!new_called);
         delete [] bp;
-        assert(!new_called);
+        ASSERT_WITH_OPERATOR_NEW_FALLBACKS(!new_called);
         assert(!B_constructed);
     }
 

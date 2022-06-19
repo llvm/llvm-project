@@ -13,11 +13,13 @@
 #ifndef LLVM_TRANSFORMS_UTILS_MODULEUTILS_H
 #define LLVM_TRANSFORMS_UTILS_MODULEUTILS_H
 
-#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/Alignment.h"
+#include "llvm/Support/MemoryBufferRef.h"
 #include <utility> // for std::pair
 
 namespace llvm {
+template <typename T> class SmallVectorImpl;
 
 template <typename T> class ArrayRef;
 class Module;
@@ -92,7 +94,7 @@ void appendToCompilerUsed(Module &M, ArrayRef<GlobalValue *> Values);
 /// DeadComdatFunctions are those where every member of the comdat is listed
 /// and thus removing them is safe (provided *all* are removed).
 void filterDeadComdatFunctions(
-    Module &M, SmallVectorImpl<Function *> &DeadComdatFunctions);
+    SmallVectorImpl<Function *> &DeadComdatFunctions);
 
 /// Produce a unique identifier for this module by taking the MD5 sum of
 /// the names of the module's strong external symbols that are not comdat
@@ -106,12 +108,16 @@ void filterDeadComdatFunctions(
 /// unique identifier for this module, so we return the empty string.
 std::string getUniqueModuleId(Module *M);
 
+/// Embed the memory buffer \p Buf into the module \p M as a global using the
+/// specified section name.
+void embedBufferInModule(Module &M, MemoryBufferRef Buf, StringRef SectionName,
+                         Align Alignment = Align(1));
+
 class CallInst;
 namespace VFABI {
 /// Overwrite the Vector Function ABI variants attribute with the names provide
 /// in \p VariantMappings.
-void setVectorVariantNames(CallInst *CI,
-                           const SmallVector<std::string, 8> &VariantMappings);
+void setVectorVariantNames(CallInst *CI, ArrayRef<std::string> VariantMappings);
 } // End VFABI namespace
 } // End llvm namespace
 

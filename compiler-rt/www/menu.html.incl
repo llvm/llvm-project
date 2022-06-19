@@ -10,7 +10,7 @@
 
   <div class="submenu">
     <label>Quick Links</label>
-    <a href="http://lists.llvm.org/mailman/listinfo/llvm-dev">llvm-dev</a>
+    <a href="https://discourse.llvm.org">LLVM Forum</a>
     <a href="http://lists.llvm.org/mailman/listinfo/llvm-commits">llvm-commits</a>
     <a href="http://llvm.org/bugs/">Bug Reports</a>
     <a href="https://github.com/llvm/llvm-project/tree/main/compiler-rt/">Browse Sources</a>

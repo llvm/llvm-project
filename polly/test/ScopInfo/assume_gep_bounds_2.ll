@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -basic-aa -polly-scops -analyze < %s \
+; RUN: opt %loadPolly -basic-aa -polly-print-scops -disable-output < %s \
 ; RUN:  -polly-precise-inbounds | FileCheck %s
 ;
 ;    void foo(float A[restrict][20], float B[restrict][20], long n, long m,

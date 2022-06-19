@@ -35,6 +35,7 @@ int main(int, char**)
         ss << "abc";
         assert(ss.str() == "abc9");
     }
+#ifndef TEST_HAS_NO_WIDE_CHARACTERS
     {
         std::wostringstream ss(L" 123 456");
         assert(ss.rdbuf() != 0);
@@ -50,6 +51,7 @@ int main(int, char**)
         ss << L"abc";
         assert(ss.str() == L"abc9");
     }
+#endif
 
   return 0;
 }

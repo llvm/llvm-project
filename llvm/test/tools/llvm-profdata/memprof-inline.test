@@ -1,0 +1,227 @@
+REQUIRES: x86_64-linux
+
+The input raw profile test has been generated from the following source code:
+
+```
+#include <stdlib.h>
+#include <string.h>
+
+__attribute__((always_inline))
+void qux(int x) {
+  char *ptr = malloc(x);
+  memset(ptr, 0, x);
+  free(ptr);
+}
+
+__attribute__((noinline))
+void foo(int x){ qux(x); }
+
+__attribute__((noinline))
+void bar(int x) { foo(x); }
+
+int main(int argc, char **argv) {
+  bar(argc);
+  return 0;
+}
+```
+
+Compile and run with the following commands:
+
+```
+bin/clang -fuse-ld=lld -Wl,--no-rosegment -gmlt -fdebug-info-for-profiling \
+          -fmemory-profile -mno-omit-leaf-frame-pointer -fno-omit-frame-pointer \
+          -fno-optimize-sibling-calls -m64 -Wl,-build-id -no-pie \
+          inline.c -o inline.memprofexe
+
+env MEMPROF_OPTIONS=log_path=stdout ./inline.memprofexe > inline.memprofraw
+```
+
+RUN: llvm-profdata show --memory %p/Inputs/inline.memprofraw --profiled-binary %p/Inputs/inline.memprofexe | FileCheck %s
+
+CHECK:  MemprofProfile:
+CHECK-NEXT:  Summary:
+CHECK-NEXT:    Version: 1
+CHECK-NEXT:    NumSegments: 9
+CHECK-NEXT:    NumMibInfo: 2
+CHECK-NEXT:    NumAllocFunctions: 2
+CHECK-NEXT:    NumStackOffsets: 1
+CHECK-NEXT:  Segments:
+CHECK-NEXT:  -
+CHECK-NEXT:    BuildId: <None>
+CHECK-NEXT:    Start: 0x200000
+CHECK-NEXT:    End: 0x29B000
+CHECK-NEXT:    Offset: 0x0
+CHECK-NEXT:  -
+CHECK-NEXT:    BuildId: <None>
+CHECK-NEXT:    Start: 0x7F5871485000
+CHECK-NEXT:    End: 0x7F58715CD000
+CHECK-NEXT:    Offset: 0x26000
+CHECK-NEXT:  -
+CHECK-NEXT:    BuildId: <None>
+CHECK-NEXT:    Start: 0x7F587162D000
+CHECK-NEXT:    End: 0x7F587163F000
+CHECK-NEXT:    Offset: 0x3000
+CHECK-NEXT:  -
+CHECK-NEXT:    BuildId: <None>
+CHECK-NEXT:    Start: 0x7F5871646000
+CHECK-NEXT:    End: 0x7F5871648000
+CHECK-NEXT:    Offset: 0x2000
+CHECK-NEXT:  -
+CHECK-NEXT:    BuildId: <None>
+CHECK-NEXT:    Start: 0x7F587165A000
+CHECK-NEXT:    End: 0x7F58716F4000
+CHECK-NEXT:    Offset: 0xF000
+CHECK-NEXT:  -
+CHECK-NEXT:    BuildId: <None>
+CHECK-NEXT:    Start: 0x7F5871791000
+CHECK-NEXT:    End: 0x7F5871795000
+CHECK-NEXT:    Offset: 0x3000
+CHECK-NEXT:  -
+CHECK-NEXT:    BuildId: <None>
+CHECK-NEXT:    Start: 0x7F58717A0000
+CHECK-NEXT:    End: 0x7F58717AF000
+CHECK-NEXT:    Offset: 0x7000
+CHECK-NEXT:  -
+CHECK-NEXT:    BuildId: <None>
+CHECK-NEXT:    Start: 0x7F58717D6000
+CHECK-NEXT:    End: 0x7F58717FA000
+CHECK-NEXT:    Offset: 0x1000
+CHECK-NEXT:  -
+CHECK-NEXT:    BuildId: <None>
+CHECK-NEXT:    Start: 0x7FFFC77BD000
+CHECK-NEXT:    End: 0x7FFFC77BF000
+CHECK-NEXT:    Offset: 0x0
+CHECK-NEXT:  Records:
+CHECK-NEXT:  -
+CHECK-NEXT:    FunctionGUID: 15505678318020221912
+CHECK-NEXT:    AllocSites:
+CHECK-NEXT:    -
+CHECK-NEXT:      Callstack:
+CHECK-NEXT:      -
+CHECK-NEXT:        Function: 15505678318020221912
+CHECK-NEXT:        SymbolName: qux
+CHECK-NEXT:        LineOffset: 1
+CHECK-NEXT:        Column: 15
+CHECK-NEXT:        Inline: 1
+CHECK-NEXT:      -
+CHECK-NEXT:        Function: 6699318081062747564
+CHECK-NEXT:        SymbolName: foo
+CHECK-NEXT:        LineOffset: 0
+CHECK-NEXT:        Column: 18
+CHECK-NEXT:        Inline: 0
+CHECK-NEXT:      -
+CHECK-NEXT:        Function: 16434608426314478903
+CHECK-NEXT:        SymbolName: bar
+CHECK-NEXT:        LineOffset: 0
+CHECK-NEXT:        Column: 19
+CHECK-NEXT:        Inline: 0
+CHECK-NEXT:      -
+CHECK-NEXT:        Function: 15822663052811949562
+CHECK-NEXT:        SymbolName: main
+CHECK-NEXT:        LineOffset: 1
+CHECK-NEXT:        Column: 3
+CHECK-NEXT:        Inline: 0
+CHECK-NEXT:      MemInfoBlock:
+CHECK-NEXT:        AllocCount: 1
+CHECK-NEXT:        TotalAccessCount: 1
+CHECK-NEXT:        MinAccessCount: 1
+CHECK-NEXT:        MaxAccessCount: 1
+CHECK-NEXT:        TotalSize: 1
+CHECK-NEXT:        MinSize: 1
+CHECK-NEXT:        MaxSize: 1
+CHECK-NEXT:        AllocTimestamp: 894
+CHECK-NEXT:        DeallocTimestamp: 894
+CHECK-NEXT:        TotalLifetime: 0
+CHECK-NEXT:        MinLifetime: 0
+CHECK-NEXT:        MaxLifetime: 0
+CHECK-NEXT:        AllocCpuId: 23
+CHECK-NEXT:        DeallocCpuId: 23
+CHECK-NEXT:        NumMigratedCpu: 0
+CHECK-NEXT:        NumLifetimeOverlaps: 0
+CHECK-NEXT:        NumSameAllocCpu: 0
+CHECK-NEXT:        NumSameDeallocCpu: 0
+CHECK-NEXT:        DataTypeId: {{[0-9]+}}
+CHECK-NEXT:  -
+CHECK-NEXT:    FunctionGUID: 6699318081062747564
+CHECK-NEXT:    AllocSites:
+CHECK-NEXT:    -
+CHECK-NEXT:      Callstack:
+CHECK-NEXT:      -
+CHECK-NEXT:        Function: 15505678318020221912
+CHECK-NEXT:        SymbolName: qux
+CHECK-NEXT:        LineOffset: 1
+CHECK-NEXT:        Column: 15
+CHECK-NEXT:        Inline: 1
+CHECK-NEXT:      -
+CHECK-NEXT:        Function: 6699318081062747564
+CHECK-NEXT:        SymbolName: foo
+CHECK-NEXT:        LineOffset: 0
+CHECK-NEXT:        Column: 18
+CHECK-NEXT:        Inline: 0
+CHECK-NEXT:      -
+CHECK-NEXT:        Function: 16434608426314478903
+CHECK-NEXT:        SymbolName: bar
+CHECK-NEXT:        LineOffset: 0
+CHECK-NEXT:        Column: 19
+CHECK-NEXT:        Inline: 0
+CHECK-NEXT:      -
+CHECK-NEXT:        Function: 15822663052811949562
+CHECK-NEXT:        SymbolName: main
+CHECK-NEXT:        LineOffset: 1
+CHECK-NEXT:        Column: 3
+CHECK-NEXT:        Inline: 0
+CHECK-NEXT:      MemInfoBlock:
+CHECK-NEXT:        AllocCount: 1
+CHECK-NEXT:        TotalAccessCount: 1
+CHECK-NEXT:        MinAccessCount: 1
+CHECK-NEXT:        MaxAccessCount: 1
+CHECK-NEXT:        TotalSize: 1
+CHECK-NEXT:        MinSize: 1
+CHECK-NEXT:        MaxSize: 1
+CHECK-NEXT:        AllocTimestamp: 894
+CHECK-NEXT:        DeallocTimestamp: 894
+CHECK-NEXT:        TotalLifetime: 0
+CHECK-NEXT:        MinLifetime: 0
+CHECK-NEXT:        MaxLifetime: 0
+CHECK-NEXT:        AllocCpuId: 23
+CHECK-NEXT:        DeallocCpuId: 23
+CHECK-NEXT:        NumMigratedCpu: 0
+CHECK-NEXT:        NumLifetimeOverlaps: 0
+CHECK-NEXT:        NumSameAllocCpu: 0
+CHECK-NEXT:        NumSameDeallocCpu: 0
+CHECK-NEXT:        DataTypeId: {{[0-9]+}}
+CHECK-NEXT:    CallSites:
+CHECK-NEXT:    -
+CHECK-NEXT:      -
+CHECK-NEXT:        Function: 15505678318020221912
+CHECK-NEXT:        SymbolName: qux
+CHECK-NEXT:        LineOffset: 1
+CHECK-NEXT:        Column: 15
+CHECK-NEXT:        Inline: 1
+CHECK-NEXT:    -
+CHECK-NEXT:      -
+CHECK-NEXT:        Function: 6699318081062747564
+CHECK-NEXT:        SymbolName: foo
+CHECK-NEXT:        LineOffset: 0
+CHECK-NEXT:        Column: 18
+CHECK-NEXT:        Inline: 0
+CHECK-NEXT:  -
+CHECK-NEXT:    FunctionGUID: 15822663052811949562
+CHECK-NEXT:    CallSites:
+CHECK-NEXT:    -
+CHECK-NEXT:      -
+CHECK-NEXT:        Function: 15822663052811949562
+CHECK-NEXT:        SymbolName: main
+CHECK-NEXT:        LineOffset: 1
+CHECK-NEXT:        Column: 3
+CHECK-NEXT:        Inline: 0
+CHECK-NEXT:  -
+CHECK-NEXT:    FunctionGUID: 16434608426314478903
+CHECK-NEXT:    CallSites:
+CHECK-NEXT:    -
+CHECK-NEXT:      -
+CHECK-NEXT:        Function: 16434608426314478903
+CHECK-NEXT:        SymbolName: bar
+CHECK-NEXT:        LineOffset: 0
+CHECK-NEXT:        Column: 19
+CHECK-NEXT:        Inline: 0

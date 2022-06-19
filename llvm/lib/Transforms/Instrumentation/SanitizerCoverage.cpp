@@ -13,30 +13,24 @@
 #include "llvm/Transforms/Instrumentation/SanitizerCoverage.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/Triple.h"
 #include "llvm/Analysis/EHPersonalities.h"
 #include "llvm/Analysis/PostDominators.h"
-#include "llvm/IR/CFG.h"
 #include "llvm/IR/Constant.h"
 #include "llvm/IR/DataLayout.h"
-#include "llvm/IR/DebugInfo.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/GlobalVariable.h"
 #include "llvm/IR/IRBuilder.h"
-#include "llvm/IR/InlineAsm.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/LLVMContext.h"
-#include "llvm/IR/MDBuilder.h"
-#include "llvm/IR/Mangler.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/Type.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Support/CommandLine.h"
-#include "llvm/Support/Debug.h"
 #include "llvm/Support/SpecialCaseList.h"
 #include "llvm/Support/VirtualFileSystem.h"
-#include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/Instrumentation.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Utils/ModuleUtils.h"
@@ -55,6 +49,16 @@ const char SanCovTraceConstCmp1[] = "__sanitizer_cov_trace_const_cmp1";
 const char SanCovTraceConstCmp2[] = "__sanitizer_cov_trace_const_cmp2";
 const char SanCovTraceConstCmp4[] = "__sanitizer_cov_trace_const_cmp4";
 const char SanCovTraceConstCmp8[] = "__sanitizer_cov_trace_const_cmp8";
+const char SanCovLoad1[] = "__sanitizer_cov_load1";
+const char SanCovLoad2[] = "__sanitizer_cov_load2";
+const char SanCovLoad4[] = "__sanitizer_cov_load4";
+const char SanCovLoad8[] = "__sanitizer_cov_load8";
+const char SanCovLoad16[] = "__sanitizer_cov_load16";
+const char SanCovStore1[] = "__sanitizer_cov_store1";
+const char SanCovStore2[] = "__sanitizer_cov_store2";
+const char SanCovStore4[] = "__sanitizer_cov_store4";
+const char SanCovStore8[] = "__sanitizer_cov_store8";
+const char SanCovStore16[] = "__sanitizer_cov_store16";
 const char SanCovTraceDiv4[] = "__sanitizer_cov_trace_div4";
 const char SanCovTraceDiv8[] = "__sanitizer_cov_trace_div8";
 const char SanCovTraceGep[] = "__sanitizer_cov_trace_gep";
@@ -122,6 +126,14 @@ static cl::opt<bool> ClDIVTracing("sanitizer-coverage-trace-divs",
                                   cl::desc("Tracing of DIV instructions"),
                                   cl::Hidden, cl::init(false));
 
+static cl::opt<bool> ClLoadTracing("sanitizer-coverage-trace-loads",
+                                   cl::desc("Tracing of load instructions"),
+                                   cl::Hidden, cl::init(false));
+
+static cl::opt<bool> ClStoreTracing("sanitizer-coverage-trace-stores",
+                                    cl::desc("Tracing of store instructions"),
+                                    cl::Hidden, cl::init(false));
+
 static cl::opt<bool> ClGEPTracing("sanitizer-coverage-trace-geps",
                                   cl::desc("Tracing of GEP instructions"),
                                   cl::Hidden, cl::init(false));
@@ -175,9 +187,11 @@ SanitizerCoverageOptions OverrideFromCL(SanitizerCoverageOptions Options) {
   Options.PCTable |= ClCreatePCTable;
   Options.NoPrune |= !ClPruneBlocks;
   Options.StackDepth |= ClStackDepth;
+  Options.TraceLoads |= ClLoadTracing;
+  Options.TraceStores |= ClStoreTracing;
   if (!Options.TracePCGuard && !Options.TracePC &&
       !Options.Inline8bitCounters && !Options.StackDepth &&
-      !Options.InlineBoolFlag)
+      !Options.InlineBoolFlag && !Options.TraceLoads && !Options.TraceStores)
     Options.TracePCGuard = true; // TracePCGuard is default.
   return Options;
 }
@@ -207,6 +221,8 @@ private:
                          ArrayRef<BinaryOperator *> DivTraceTargets);
   void InjectTraceForGep(Function &F,
                          ArrayRef<GetElementPtrInst *> GepTraceTargets);
+  void InjectTraceForLoadsAndStores(Function &F, ArrayRef<LoadInst *> Loads,
+                                    ArrayRef<StoreInst *> Stores);
   void InjectTraceForSwitch(Function &F,
                             ArrayRef<Instruction *> SwitchTraceTargets);
   bool InjectCoverage(Function &F, ArrayRef<BasicBlock *> AllBlocks,
@@ -225,8 +241,7 @@ private:
                                                 Type *Ty);
 
   void SetNoSanitizeMetadata(Instruction *I) {
-    I->setMetadata(I->getModule()->getMDKindID("nosanitize"),
-                   MDNode::get(*C, None));
+    I->setMetadata(LLVMContext::MD_nosanitize, MDNode::get(*C, None));
   }
 
   std::string getSectionName(const std::string &Section) const;
@@ -234,14 +249,17 @@ private:
   std::string getSectionEnd(const std::string &Section) const;
   FunctionCallee SanCovTracePCIndir;
   FunctionCallee SanCovTracePC, SanCovTracePCGuard;
-  FunctionCallee SanCovTraceCmpFunction[4];
-  FunctionCallee SanCovTraceConstCmpFunction[4];
-  FunctionCallee SanCovTraceDivFunction[2];
+  std::array<FunctionCallee, 4> SanCovTraceCmpFunction;
+  std::array<FunctionCallee, 4> SanCovTraceConstCmpFunction;
+  std::array<FunctionCallee, 5> SanCovLoadFunction;
+  std::array<FunctionCallee, 5> SanCovStoreFunction;
+  std::array<FunctionCallee, 2> SanCovTraceDivFunction;
   FunctionCallee SanCovTraceGepFunction;
   FunctionCallee SanCovTraceSwitchFunction;
   GlobalVariable *SanCovLowestStack;
-  Type *IntptrTy, *IntptrPtrTy, *Int64Ty, *Int64PtrTy, *Int32Ty, *Int32PtrTy,
-      *Int16Ty, *Int8Ty, *Int8PtrTy, *Int1Ty, *Int1PtrTy;
+  Type *Int128PtrTy, *IntptrTy, *IntptrPtrTy, *Int64Ty, *Int64PtrTy, *Int32Ty,
+      *Int32PtrTy, *Int16PtrTy, *Int16Ty, *Int8Ty, *Int8PtrTy, *Int1Ty,
+      *Int1PtrTy;
   Module *CurModule;
   std::string CurModuleUniqueId;
   Triple TargetTriple;
@@ -411,7 +429,9 @@ bool ModuleSanitizerCoverage::instrumentModule(
   IntptrPtrTy = PointerType::getUnqual(IntptrTy);
   Type *VoidTy = Type::getVoidTy(*C);
   IRBuilder<> IRB(*C);
+  Int128PtrTy = PointerType::getUnqual(IRB.getInt128Ty());
   Int64PtrTy = PointerType::getUnqual(IRB.getInt64Ty());
+  Int16PtrTy = PointerType::getUnqual(IRB.getInt16Ty());
   Int32PtrTy = PointerType::getUnqual(IRB.getInt32Ty());
   Int8PtrTy = PointerType::getUnqual(IRB.getInt8Ty());
   Int1PtrTy = PointerType::getUnqual(IRB.getInt1Ty());
@@ -451,6 +471,28 @@ bool ModuleSanitizerCoverage::instrumentModule(
       SanCovTraceConstCmp4, SanCovTraceCmpZeroExtAL, VoidTy, Int32Ty, Int32Ty);
   SanCovTraceConstCmpFunction[3] =
       M.getOrInsertFunction(SanCovTraceConstCmp8, VoidTy, Int64Ty, Int64Ty);
+
+  // Loads.
+  SanCovLoadFunction[0] = M.getOrInsertFunction(SanCovLoad1, VoidTy, Int8PtrTy);
+  SanCovLoadFunction[1] =
+      M.getOrInsertFunction(SanCovLoad2, VoidTy, Int16PtrTy);
+  SanCovLoadFunction[2] =
+      M.getOrInsertFunction(SanCovLoad4, VoidTy, Int32PtrTy);
+  SanCovLoadFunction[3] =
+      M.getOrInsertFunction(SanCovLoad8, VoidTy, Int64PtrTy);
+  SanCovLoadFunction[4] =
+      M.getOrInsertFunction(SanCovLoad16, VoidTy, Int128PtrTy);
+  // Stores.
+  SanCovStoreFunction[0] =
+      M.getOrInsertFunction(SanCovStore1, VoidTy, Int8PtrTy);
+  SanCovStoreFunction[1] =
+      M.getOrInsertFunction(SanCovStore2, VoidTy, Int16PtrTy);
+  SanCovStoreFunction[2] =
+      M.getOrInsertFunction(SanCovStore4, VoidTy, Int32PtrTy);
+  SanCovStoreFunction[3] =
+      M.getOrInsertFunction(SanCovStore8, VoidTy, Int64PtrTy);
+  SanCovStoreFunction[4] =
+      M.getOrInsertFunction(SanCovStore16, VoidTy, Int128PtrTy);
 
   {
     AttributeList AL;
@@ -632,6 +674,8 @@ void ModuleSanitizerCoverage::instrumentFunction(
   SmallVector<Instruction *, 8> SwitchTraceTargets;
   SmallVector<BinaryOperator *, 8> DivTraceTargets;
   SmallVector<GetElementPtrInst *, 8> GepTraceTargets;
+  SmallVector<LoadInst *, 8> Loads;
+  SmallVector<StoreInst *, 8> Stores;
 
   const DominatorTree *DT = DTCallback(F);
   const PostDominatorTree *PDT = PDTCallback(F);
@@ -643,7 +687,7 @@ void ModuleSanitizerCoverage::instrumentFunction(
     for (auto &Inst : BB) {
       if (Options.IndirectCalls) {
         CallBase *CB = dyn_cast<CallBase>(&Inst);
-        if (CB && !CB->getCalledFunction())
+        if (CB && CB->isIndirectCall())
           IndirCalls.push_back(&Inst);
       }
       if (Options.TraceCmp) {
@@ -661,6 +705,12 @@ void ModuleSanitizerCoverage::instrumentFunction(
       if (Options.TraceGep)
         if (GetElementPtrInst *GEP = dyn_cast<GetElementPtrInst>(&Inst))
           GepTraceTargets.push_back(GEP);
+      if (Options.TraceLoads)
+        if (LoadInst *LI = dyn_cast<LoadInst>(&Inst))
+          Loads.push_back(LI);
+      if (Options.TraceStores)
+        if (StoreInst *SI = dyn_cast<StoreInst>(&Inst))
+          Stores.push_back(SI);
       if (Options.StackDepth)
         if (isa<InvokeInst>(Inst) ||
             (isa<CallInst>(Inst) && !isa<IntrinsicInst>(Inst)))
@@ -674,6 +724,7 @@ void ModuleSanitizerCoverage::instrumentFunction(
   InjectTraceForSwitch(F, SwitchTraceTargets);
   InjectTraceForDiv(F, DivTraceTargets);
   InjectTraceForGep(F, GepTraceTargets);
+  InjectTraceForLoadsAndStores(F, Loads, Stores);
 }
 
 GlobalVariable *ModuleSanitizerCoverage::CreateFunctionLocalArrayInSection(
@@ -857,6 +908,39 @@ void ModuleSanitizerCoverage::InjectTraceForGep(
   }
 }
 
+void ModuleSanitizerCoverage::InjectTraceForLoadsAndStores(
+    Function &, ArrayRef<LoadInst *> Loads, ArrayRef<StoreInst *> Stores) {
+  auto CallbackIdx = [&](Type *ElementTy) -> int {
+    uint64_t TypeSize = DL->getTypeStoreSizeInBits(ElementTy);
+    return TypeSize == 8     ? 0
+           : TypeSize == 16  ? 1
+           : TypeSize == 32  ? 2
+           : TypeSize == 64  ? 3
+           : TypeSize == 128 ? 4
+                             : -1;
+  };
+  Type *PointerType[5] = {Int8PtrTy, Int16PtrTy, Int32PtrTy, Int64PtrTy,
+                          Int128PtrTy};
+  for (auto LI : Loads) {
+    IRBuilder<> IRB(LI);
+    auto Ptr = LI->getPointerOperand();
+    int Idx = CallbackIdx(LI->getType());
+    if (Idx < 0)
+      continue;
+    IRB.CreateCall(SanCovLoadFunction[Idx],
+                   IRB.CreatePointerCast(Ptr, PointerType[Idx]));
+  }
+  for (auto SI : Stores) {
+    IRBuilder<> IRB(SI);
+    auto Ptr = SI->getPointerOperand();
+    int Idx = CallbackIdx(SI->getValueOperand()->getType());
+    if (Idx < 0)
+      continue;
+    IRB.CreateCall(SanCovStoreFunction[Idx],
+                   IRB.CreatePointerCast(Ptr, PointerType[Idx]));
+  }
+}
+
 void ModuleSanitizerCoverage::InjectTraceForCmp(
     Function &, ArrayRef<Instruction *> CmpTraceTargets) {
   for (auto I : CmpTraceTargets) {
@@ -905,15 +989,11 @@ void ModuleSanitizerCoverage::InjectCoverageAtBlock(Function &F, BasicBlock &BB,
     // if we aren't splitting the block, it's nice for allocas to be before
     // calls.
     IP = PrepareToSplitEntryBlock(BB, IP);
-  } else {
-    EntryLoc = IP->getDebugLoc();
-    if (!EntryLoc)
-      if (auto *SP = F.getSubprogram())
-        EntryLoc = DILocation::get(SP->getContext(), 0, 0, SP);
   }
 
-  IRBuilder<> IRB(&*IP);
-  IRB.SetCurrentDebugLocation(EntryLoc);
+  InstrumentationIRBuilder IRB(&*IP);
+  if (EntryLoc)
+    IRB.SetCurrentDebugLocation(EntryLoc);
   if (Options.TracePC) {
     IRB.CreateCall(SanCovTracePC)
         ->setCannotMerge(); // gets the PC using GET_CALLER_PC.

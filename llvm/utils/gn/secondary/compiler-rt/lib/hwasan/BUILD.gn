@@ -67,7 +67,8 @@ source_set("sources") {
     "hwasan_poisoning.h",
     "hwasan_report.cpp",
     "hwasan_report.h",
-    "hwasan_setjmp.S",
+    "hwasan_setjmp_aarch64.S",
+    "hwasan_setjmp_x86_64.S",
     "hwasan_tag_mismatch_aarch64.S",
     "hwasan_thread.cpp",
     "hwasan_thread.h",
@@ -124,4 +125,16 @@ shared_library("hwasan_shared") {
     "-Wl,--version-script," + rebase_path(inputs[0], root_build_dir),
     "-Wl,-z,global",
   ]
+}
+
+static_library("hwasan_preinit") {
+  output_dir = crt_current_out_dir
+  output_name = "clang_rt.${hwasan_name}_preinit$crt_current_target_suffix"
+  complete_static_lib = true
+  configs -= [
+    "//llvm/utils/gn/build:llvm_code",
+    "//llvm/utils/gn/build:thin_archive",
+  ]
+  configs += [ "//llvm/utils/gn/build:crt_code" ]
+  sources = [ "hwasan_preinit.cpp" ]
 }

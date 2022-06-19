@@ -24,7 +24,7 @@ namespace lldb_private {
 class Declaration {
 public:
   /// Default constructor.
-  Declaration() : m_file() {}
+  Declaration() = default;
 
   /// Construct with file specification, and optional line and column.
   ///
@@ -45,7 +45,7 @@ public:
 
   /// Construct with a pointer to another Declaration object.
   Declaration(const Declaration *decl_ptr)
-      : m_file(), m_line(0), m_column(LLDB_INVALID_COLUMN_NUMBER) {
+      : m_line(0), m_column(LLDB_INVALID_COLUMN_NUMBER) {
     if (decl_ptr)
       *this = *decl_ptr;
   }
@@ -152,8 +152,6 @@ public:
   ///     The number of bytes that this object occupies in memory.
   ///     The returned value does not include the bytes for any
   ///     shared string values.
-  ///
-  /// \see ConstString::StaticMemorySize ()
   size_t MemorySize() const;
 
   /// Set accessor for the declaration file specification.

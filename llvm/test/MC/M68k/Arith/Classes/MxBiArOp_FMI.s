@@ -6,6 +6,9 @@ add.b	#-1, (0,%a0,%d0)
 ; CHECK:      add.b  #0, (-1,%a3,%a1)
 ; CHECK-SAME: encoding: [0x06,0x33,0x00,0x00,0x98,0xff]
 add.b	#0, (-1,%a3,%a1)
+; CHECK:      add.w  #-1, (7,%a2,%d0)
+; CHECK-SAME: encoding: [0x06,0x72,0xff,0xff,0x08,0x07]
+add.w	#-1, (7,%a2,%d0)
 ; CHECK:      add.l  #-1, (13,%a2,%d1)
 ; CHECK-SAME: encoding: [0x06,0xb2,0xff,0xff,0xff,0xff,0x18,0x0d]
 add.l	#-1, (13,%a2,%d1)
@@ -16,6 +19,9 @@ add.b	#-1, (0,%a0)
 ; CHECK:      add.b  #0, (-1,%a3)
 ; CHECK-SAME: encoding: [0x06,0x2b,0x00,0x00,0xff,0xff]
 add.b	#0, (-1,%a3)
+; CHECK:      add.w  #-1, (7,%a1)
+; CHECK-SAME: encoding: [0x06,0x69,0xff,0xff,0x00,0x07]
+add.w	#-1, (7,%a1)
 ; CHECK:      add.l  #-1, (13,%a2)
 ; CHECK-SAME: encoding: [0x06,0xaa,0xff,0xff,0xff,0xff,0x00,0x0d]
 add.l	#-1, (13,%a2)
@@ -26,7 +32,9 @@ add.b	#-1, (%a0)
 ; CHECK:      add.b  #0, (%a3)
 ; CHECK-SAME: encoding: [0x06,0x13,0x00,0x00]
 add.b	#0, (%a3)
+; CHECK:      add.w  #-1, (%a1)
+; CHECK-SAME: encoding: [0x06,0x51,0xff,0xff]
+add.w	#-1, (%a1)
 ; CHECK:      add.l  #-1, (%a2)
 ; CHECK-SAME: encoding: [0x06,0x92,0xff,0xff,0xff,0xff]
 add.l	#-1, (%a2)
-

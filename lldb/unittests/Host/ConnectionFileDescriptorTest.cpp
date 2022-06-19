@@ -23,17 +23,12 @@ public:
     std::unique_ptr<TCPSocket> socket_a_up;
     std::unique_ptr<TCPSocket> socket_b_up;
     CreateTCPConnectedSockets(ip, &socket_a_up, &socket_b_up);
-    auto socket = socket_a_up.release();
+    auto *socket = socket_a_up.release();
     ConnectionFileDescriptor connection_file_descriptor(socket);
 
-    llvm::StringRef scheme;
-    llvm::StringRef hostname;
-    int port;
-    llvm::StringRef path;
     std::string uri(connection_file_descriptor.GetURI());
-    EXPECT_TRUE(UriParser::Parse(uri, scheme, hostname, port, path));
-    EXPECT_EQ(ip, hostname);
-    EXPECT_EQ(socket->GetRemotePortNumber(), port);
+    EXPECT_EQ((URI{"connect", ip, socket->GetRemotePortNumber(), "/"}),
+              URI::Parse(uri).getValue());
   }
 };
 

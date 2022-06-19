@@ -37,10 +37,9 @@ define i8 @ror8(i8 %val, i8 %amt) {
   ; CHECK-NEXT: brmi .LBB1_2
 
 ; CHECK-NEXT: .LBB1_1:
-  ; CHECK-NEXT: lsr r24
-  ; CHECK-NEXT: ldi r0, 0
-  ; CHECK-NEXT: ror r0
-  ; CHECK-NEXT: or r24, r0
+  ; CHECK-NEXT: bst r24, 0
+  ; CHECK-NEXT: ror r24
+  ; CHECK-NEXT: bld r24, 7
   ; CHECK-NEXT: dec r22
   ; CHECK-NEXT: brpl .LBB1_1
 

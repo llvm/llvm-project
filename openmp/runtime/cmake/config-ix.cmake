@@ -109,6 +109,23 @@ if (NOT LIBOMP_HAVE_SHM_OPEN_NO_LRT)
   set(CMAKE_REQUIRED_LIBRARIES)
 endif()
 
+# Check for aligned memory allocator function
+check_include_file(xmmintrin.h LIBOMP_HAVE_XMMINTRIN_H)
+set(OLD_CMAKE_REQUIRED_FLAGS ${CMAKE_REQUIRED_FLAGS})
+if (LIBOMP_HAVE_XMMINTRIN_H)
+  set(CMAKE_REQUIRED_FLAGS "${CMAKE_REQUIRED_FLAGS} -DLIBOMP_HAVE_XMMINTRIN_H")
+endif()
+set(source_code "// check for _mm_malloc
+    #ifdef LIBOMP_HAVE_XMMINTRIN_H
+    #include <xmmintrin.h>
+    #endif
+    int main() { void *ptr = _mm_malloc(sizeof(int) * 1000, 64); _mm_free(ptr); return 0; }")
+check_cxx_source_compiles("${source_code}" LIBOMP_HAVE__MM_MALLOC)
+set(CMAKE_REQUIRED_FLAGS ${OLD_CMAKE_REQUIRED_FLAGS})
+check_symbol_exists(aligned_alloc "stdlib.h" LIBOMP_HAVE_ALIGNED_ALLOC)
+check_symbol_exists(posix_memalign "stdlib.h" LIBOMP_HAVE_POSIX_MEMALIGN)
+check_symbol_exists(_aligned_malloc "malloc.h" LIBOMP_HAVE__ALIGNED_MALLOC)
+
 # Check linker flags
 if(WIN32)
   libomp_check_linker_flag(/SAFESEH LIBOMP_HAVE_SAFESEH_FLAG)
@@ -122,7 +139,7 @@ elseif(NOT APPLE)
 endif()
 
 # Check Intel(R) C Compiler specific flags
-if(CMAKE_C_COMPILER_ID STREQUAL "Intel")
+if(CMAKE_C_COMPILER_ID STREQUAL "Intel" OR CMAKE_C_COMPILER_ID STREQUAL "IntelLLVM")
   check_cxx_compiler_flag(/Qlong_double LIBOMP_HAVE_LONG_DOUBLE_FLAG)
   check_cxx_compiler_flag(/Qdiag-disable:177 LIBOMP_HAVE_DIAG_DISABLE_177_FLAG)
   check_cxx_compiler_flag(/Qinline-min-size=1 LIBOMP_HAVE_INLINE_MIN_SIZE_FLAG)
@@ -230,7 +247,7 @@ libomp_check_version_symbols(LIBOMP_HAVE_VERSION_SYMBOLS)
 # Check if quad precision types are available
 if(CMAKE_C_COMPILER_ID STREQUAL "GNU")
   set(LIBOMP_HAVE_QUAD_PRECISION TRUE)
-elseif(CMAKE_C_COMPILER_ID STREQUAL "Intel")
+elseif(CMAKE_C_COMPILER_ID STREQUAL "Intel" OR CMAKE_C_COMPILER_ID STREQUAL "IntelLLVM")
   if(LIBOMP_HAVE_EXTENDED_FLOAT_TYPES_FLAG)
     set(LIBOMP_HAVE_QUAD_PRECISION TRUE)
   else()
@@ -315,7 +332,8 @@ endif()
 
 # Check if HWLOC support is available
 if(${LIBOMP_USE_HWLOC})
-  set(CMAKE_REQUIRED_INCLUDES ${LIBOMP_HWLOC_INSTALL_DIR}/include)
+  find_path(LIBOMP_HWLOC_INCLUDE_DIR NAMES hwloc.h HINTS ${LIBOMP_HWLOC_INSTALL_DIR} PATH_SUFFIXES include)
+  set(CMAKE_REQUIRED_INCLUDES ${LIBOMP_HWLOC_INCLUDE_DIR})
   check_include_file(hwloc.h LIBOMP_HAVE_HWLOC_H)
   set(CMAKE_REQUIRED_INCLUDES)
   find_library(LIBOMP_HWLOC_LIBRARY

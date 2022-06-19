@@ -69,6 +69,10 @@ public:
   // the shader stage to determine the number of vgprs to allocate.
   void setNumUsedVgprs(unsigned CC, unsigned Val);
 
+  // Set the number of used agprs in the metadata. This is an optional advisory
+  // record for logging etc;
+  void setNumUsedAgprs(unsigned CC, unsigned Val);
+
   // Set the number of used sgprs in the metadata. This is an optional advisory
   // record for logging etc; wave dispatch actually uses the rsrc1 register for
   // the shader stage to determine the number of sgprs to allocate.

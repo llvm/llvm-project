@@ -21,7 +21,6 @@
 
 namespace llvm {
 
-class LLVMContext;
 class AArch64Subtarget;
 
 /// This class provides the information for the target register banks.
@@ -35,8 +34,6 @@ public:
                          MachineInstr &MI) const override;
 
 private:
-  bool legalizeBSwap(MachineInstr &MI, MachineRegisterInfo &MRI,
-                     MachineIRBuilder &MIRBuilder) const;
   bool legalizeVaArg(MachineInstr &MI, MachineRegisterInfo &MRI,
                      MachineIRBuilder &MIRBuilder) const;
   bool legalizeLoadStore(MachineInstr &MI, MachineRegisterInfo &MRI,
@@ -59,6 +56,7 @@ private:
   bool legalizeAtomicCmpxchg128(MachineInstr &MI, MachineRegisterInfo &MRI,
                                 LegalizerHelper &Helper) const;
   bool legalizeCTTZ(MachineInstr &MI, LegalizerHelper &Helper) const;
+  bool legalizeMemOps(MachineInstr &MI, LegalizerHelper &Helper) const;
   const AArch64Subtarget *ST;
 };
 } // End llvm namespace.

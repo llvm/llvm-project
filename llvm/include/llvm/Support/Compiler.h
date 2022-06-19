@@ -17,9 +17,6 @@
 
 #include "llvm/Config/llvm-config.h"
 
-#ifdef __cplusplus
-#include <new>
-#endif
 #include <stddef.h>
 
 #if defined(_MSC_VER)
@@ -40,6 +37,10 @@
 
 #ifndef __has_builtin
 # define __has_builtin(x) 0
+#endif
+
+#ifndef __has_include
+# define __has_include(x) 0
 #endif
 
 // Only use __has_cpp_attribute in C++ mode. GCC defines __has_cpp_attribute in
@@ -80,38 +81,27 @@
 /// * 1916: VS2017, version 15.9
 /// * 1920: VS2019, version 16.0
 /// * 1921: VS2019, version 16.1
+/// * 1922: VS2019, version 16.2
+/// * 1923: VS2019, version 16.3
+/// * 1924: VS2019, version 16.4
+/// * 1925: VS2019, version 16.5
+/// * 1926: VS2019, version 16.6
+/// * 1927: VS2019, version 16.7
+/// * 1928: VS2019, version 16.8 + 16.9
+/// * 1929: VS2019, version 16.10 + 16.11
+/// * 1930: VS2022, version 17.0
 #ifdef _MSC_VER
 #define LLVM_MSC_PREREQ(version) (_MSC_VER >= (version))
 
-// We require at least MSVC 2017.
-#if !LLVM_MSC_PREREQ(1910)
-#error LLVM requires at least MSVC 2017.
+// We require at least VS 2019.
+#if !defined(LLVM_FORCE_USE_OLD_TOOLCHAIN)
+#if !LLVM_MSC_PREREQ(1920)
+#error LLVM requires at least VS 2019.
+#endif
 #endif
 
 #else
 #define LLVM_MSC_PREREQ(version) 0
-#endif
-
-/// Does the compiler support ref-qualifiers for *this?
-///
-/// Sadly, this is separate from just rvalue reference support because GCC
-/// and MSVC implemented this later than everything else. This appears to be
-/// corrected in MSVC 2019 but not MSVC 2017.
-#if __has_feature(cxx_rvalue_references) || LLVM_GNUC_PREREQ(4, 8, 1) ||       \
-    LLVM_MSC_PREREQ(1920)
-#define LLVM_HAS_RVALUE_REFERENCE_THIS 1
-#else
-#define LLVM_HAS_RVALUE_REFERENCE_THIS 0
-#endif
-
-/// Expands to '&' if ref-qualifiers for *this are supported.
-///
-/// This can be used to provide lvalue/rvalue overrides of member functions.
-/// The rvalue override should be guarded by LLVM_HAS_RVALUE_REFERENCE_THIS
-#if LLVM_HAS_RVALUE_REFERENCE_THIS
-#define LLVM_LVALUE_FUNCTION &
-#else
-#define LLVM_LVALUE_FUNCTION
 #endif
 
 /// LLVM_LIBRARY_VISIBILITY - If a class marked with this attribute is linked
@@ -123,10 +113,14 @@
 /// LLVM_EXTERNAL_VISIBILITY - classes, functions, and variables marked with
 /// this attribute will be made public and visible outside of any shared library
 /// they are linked in to.
-#if (__has_attribute(visibility) || LLVM_GNUC_PREREQ(4, 0, 0)) &&              \
-    !defined(__MINGW32__) && !defined(__CYGWIN__) && !defined(_WIN32)
+#if __has_attribute(visibility) && !defined(__MINGW32__) &&                    \
+    !defined(__CYGWIN__) && !defined(_WIN32)
 #define LLVM_LIBRARY_VISIBILITY __attribute__ ((visibility("hidden")))
-#define LLVM_EXTERNAL_VISIBILITY __attribute__ ((visibility("default")))
+#if defined(LLVM_BUILD_LLVM_DYLIB) || defined(LLVM_BUILD_SHARED_LIBS)
+#define LLVM_EXTERNAL_VISIBILITY __attribute__((visibility("default")))
+#else
+#define LLVM_EXTERNAL_VISIBILITY
+#endif
 #else
 #define LLVM_LIBRARY_VISIBILITY
 #define LLVM_EXTERNAL_VISIBILITY
@@ -138,7 +132,7 @@
 #define LLVM_PREFETCH(addr, rw, locality)
 #endif
 
-#if __has_attribute(used) || LLVM_GNUC_PREREQ(3, 1, 0)
+#if __has_attribute(used)
 #define LLVM_ATTRIBUTE_USED __attribute__((__used__))
 #else
 #define LLVM_ATTRIBUTE_USED
@@ -182,15 +176,15 @@
 // more portable solution:
 //   (void)unused_var_name;
 // Prefer cast-to-void wherever it is sufficient.
-#if __has_attribute(unused) || LLVM_GNUC_PREREQ(3, 1, 0)
+#if __has_attribute(unused)
 #define LLVM_ATTRIBUTE_UNUSED __attribute__((__unused__))
 #else
 #define LLVM_ATTRIBUTE_UNUSED
 #endif
 
 // FIXME: Provide this for PE/COFF targets.
-#if (__has_attribute(weak) || LLVM_GNUC_PREREQ(4, 0, 0)) &&                    \
-    (!defined(__MINGW32__) && !defined(__CYGWIN__) && !defined(_WIN32))
+#if __has_attribute(weak) && !defined(__MINGW32__) && !defined(__CYGWIN__) &&  \
+    !defined(_WIN32)
 #define LLVM_ATTRIBUTE_WEAK __attribute__((__weak__))
 #else
 #define LLVM_ATTRIBUTE_WEAK
@@ -212,7 +206,13 @@
 #define LLVM_READONLY
 #endif
 
-#if __has_builtin(__builtin_expect) || LLVM_GNUC_PREREQ(4, 0, 0)
+#if __has_attribute(minsize)
+#define LLVM_ATTRIBUTE_MINSIZE __attribute__((minsize))
+#else
+#define LLVM_ATTRIBUTE_MINSIZE
+#endif
+
+#if __has_builtin(__builtin_expect) || defined(__GNUC__)
 #define LLVM_LIKELY(EXPR) __builtin_expect((bool)(EXPR), true)
 #define LLVM_UNLIKELY(EXPR) __builtin_expect((bool)(EXPR), false)
 #else
@@ -222,7 +222,7 @@
 
 /// LLVM_ATTRIBUTE_NOINLINE - On compilers where we have a directive to do so,
 /// mark a method "not for inlining".
-#if __has_attribute(noinline) || LLVM_GNUC_PREREQ(3, 4, 0)
+#if __has_attribute(noinline)
 #define LLVM_ATTRIBUTE_NOINLINE __attribute__((noinline))
 #elif defined(_MSC_VER)
 #define LLVM_ATTRIBUTE_NOINLINE __declspec(noinline)
@@ -231,10 +231,8 @@
 #endif
 
 /// LLVM_ATTRIBUTE_ALWAYS_INLINE - On compilers where we have a directive to do
-/// so, mark a method "always inline" because it is performance sensitive. GCC
-/// 3.4 supported this but is buggy in various cases and produces unimplemented
-/// errors, just use it in GCC 4.0 and later.
-#if __has_attribute(always_inline) || LLVM_GNUC_PREREQ(4, 0, 0)
+/// so, mark a method "always inline" because it is performance sensitive.
+#if __has_attribute(always_inline)
 #define LLVM_ATTRIBUTE_ALWAYS_INLINE inline __attribute__((always_inline))
 #elif defined(_MSC_VER)
 #define LLVM_ATTRIBUTE_ALWAYS_INLINE __forceinline
@@ -242,15 +240,16 @@
 #define LLVM_ATTRIBUTE_ALWAYS_INLINE inline
 #endif
 
-#ifdef __GNUC__
-#define LLVM_ATTRIBUTE_NORETURN __attribute__((noreturn))
-#elif defined(_MSC_VER)
-#define LLVM_ATTRIBUTE_NORETURN __declspec(noreturn)
+/// LLVM_ATTRIBUTE_NO_DEBUG - On compilers where we have a directive to do
+/// so, mark a method "no debug" because debug info makes the debugger
+/// experience worse.
+#if __has_attribute(nodebug)
+#define LLVM_ATTRIBUTE_NODEBUG __attribute__((nodebug))
 #else
-#define LLVM_ATTRIBUTE_NORETURN
+#define LLVM_ATTRIBUTE_NODEBUG
 #endif
 
-#if __has_attribute(returns_nonnull) || LLVM_GNUC_PREREQ(4, 9, 0)
+#if __has_attribute(returns_nonnull)
 #define LLVM_ATTRIBUTE_RETURNS_NONNULL __attribute__((returns_nonnull))
 #elif defined(_MSC_VER)
 #define LLVM_ATTRIBUTE_RETURNS_NONNULL _Ret_notnull_
@@ -314,15 +313,14 @@
 #define LLVM_EXTENSION
 #endif
 
-// LLVM_ATTRIBUTE_DEPRECATED(decl, "message")
-// This macro will be removed.
-// Use C++14's attribute instead: [[deprecated("message")]]
-#define LLVM_ATTRIBUTE_DEPRECATED(decl, message) [[deprecated(message)]] decl
-
 /// LLVM_BUILTIN_UNREACHABLE - On compilers which support it, expands
 /// to an expression which states that it is undefined behavior for the
 /// compiler to reach this point.  Otherwise is not defined.
-#if __has_builtin(__builtin_unreachable) || LLVM_GNUC_PREREQ(4, 5, 0)
+///
+/// '#else' is intentionally left out so that other macro logic (e.g.,
+/// LLVM_ASSUME_ALIGNED and llvm_unreachable()) can detect whether
+/// LLVM_BUILTIN_UNREACHABLE has a definition.
+#if __has_builtin(__builtin_unreachable) || defined(__GNUC__)
 # define LLVM_BUILTIN_UNREACHABLE __builtin_unreachable()
 #elif defined(_MSC_VER)
 # define LLVM_BUILTIN_UNREACHABLE __assume(false)
@@ -330,7 +328,7 @@
 
 /// LLVM_BUILTIN_TRAP - On compilers which support it, expands to an expression
 /// which causes the program to exit abnormally.
-#if __has_builtin(__builtin_trap) || LLVM_GNUC_PREREQ(4, 3, 0)
+#if __has_builtin(__builtin_trap) || defined(__GNUC__)
 # define LLVM_BUILTIN_TRAP __builtin_trap()
 #elif defined(_MSC_VER)
 // The __debugbreak intrinsic is supported by MSVC, does not require forward
@@ -361,7 +359,7 @@
 
 /// \macro LLVM_ASSUME_ALIGNED
 /// Returns a pointer with an assumed alignment.
-#if __has_builtin(__builtin_assume_aligned) || LLVM_GNUC_PREREQ(4, 7, 0)
+#if __has_builtin(__builtin_assume_aligned) || defined(__GNUC__)
 # define LLVM_ASSUME_ALIGNED(p, a) __builtin_assume_aligned(p, a)
 #elif defined(LLVM_BUILTIN_UNREACHABLE)
 # define LLVM_ASSUME_ALIGNED(p, a) \
@@ -398,22 +396,6 @@
 # define LLVM_PACKED_END   _Pragma("pack(pop)")
 #endif
 
-/// \macro LLVM_PTR_SIZE
-/// A constant integer equivalent to the value of sizeof(void*).
-/// Generally used in combination with alignas or when doing computation in the
-/// preprocessor.
-#ifdef __SIZEOF_POINTER__
-# define LLVM_PTR_SIZE __SIZEOF_POINTER__
-#elif defined(_WIN64)
-# define LLVM_PTR_SIZE 8
-#elif defined(_WIN32)
-# define LLVM_PTR_SIZE 4
-#elif defined(_MSC_VER)
-# error "could not determine LLVM_PTR_SIZE as a constant int for MSVC"
-#else
-# define LLVM_PTR_SIZE sizeof(void *)
-#endif
-
 /// \macro LLVM_MEMORY_SANITIZER_BUILD
 /// Whether LLVM itself is built with MemorySanitizer instrumentation.
 #if __has_feature(memory_sanitizer)
@@ -431,7 +413,20 @@
 /// Whether LLVM itself is built with AddressSanitizer instrumentation.
 #if __has_feature(address_sanitizer) || defined(__SANITIZE_ADDRESS__)
 # define LLVM_ADDRESS_SANITIZER_BUILD 1
+#if __has_include(<sanitizer/asan_interface.h>)
 # include <sanitizer/asan_interface.h>
+#else
+// These declarations exist to support ASan with MSVC. If MSVC eventually ships
+// asan_interface.h in their headers, then we can remove this.
+#ifdef __cplusplus
+extern "C" {
+#endif
+void __asan_poison_memory_region(void const volatile *addr, size_t size);
+void __asan_unpoison_memory_region(void const volatile *addr, size_t size);
+#ifdef __cplusplus
+} // extern "C"
+#endif
+#endif
 #else
 # define LLVM_ADDRESS_SANITIZER_BUILD 0
 # define __asan_poison_memory_region(p, size)
@@ -547,6 +542,15 @@ void AnnotateIgnoreWritesEnd(const char *file, int line);
 #define LLVM_ENABLE_EXCEPTIONS 1
 #elif defined(_MSC_VER) && defined(_CPPUNWIND)
 #define LLVM_ENABLE_EXCEPTIONS 1
+#endif
+
+/// \macro LLVM_NO_PROFILE_INSTRUMENT_FUNCTION
+/// Disable the profile instrument for a function.
+#if __has_attribute(no_profile_instrument_function)
+#define LLVM_NO_PROFILE_INSTRUMENT_FUNCTION                                    \
+  __attribute__((no_profile_instrument_function))
+#else
+#define LLVM_NO_PROFILE_INSTRUMENT_FUNCTION
 #endif
 
 #endif

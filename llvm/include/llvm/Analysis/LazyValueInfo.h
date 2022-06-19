@@ -38,7 +38,7 @@ class LazyValueInfo {
   void operator=(const LazyValueInfo&) = delete;
 public:
   ~LazyValueInfo();
-  LazyValueInfo() {}
+  LazyValueInfo() = default;
   LazyValueInfo(AssumptionCache *AC_, const DataLayout *DL_,
                 TargetLibraryInfo *TLI_)
       : AC(AC_), DL(DL_), TLI(TLI_) {}
@@ -113,6 +113,9 @@ public:
 
   /// Inform the analysis cache that we have erased a block.
   void eraseBlock(BasicBlock *BB);
+
+  /// Complete flush all previously computed values
+  void clear(const Module *M);
 
   /// Print the \LazyValueInfo Analysis.
   /// We pass in the DTree that is required for identifying which basic blocks

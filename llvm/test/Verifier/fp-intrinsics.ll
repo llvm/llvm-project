@@ -12,7 +12,7 @@ declare double @llvm.experimental.constrained.sqrt.f64(double, metadata, metadat
 ; attached to the FP intrinsic.
 ; CHECK1: declare double @llvm.experimental.constrained.fadd.f64(double, double, metadata, metadata) #[[ATTR:[0-9]+]]
 ; CHECK1: declare double @llvm.experimental.constrained.sqrt.f64(double, metadata, metadata) #[[ATTR]]
-; CHECK1: attributes #[[ATTR]] = { inaccessiblememonly nofree nosync nounwind willreturn }
+; CHECK1: attributes #[[ATTR]] = { inaccessiblememonly nocallback nofree nosync nounwind willreturn }
 ; Note: FP exceptions aren't usually caught through normal unwind mechanisms,
 ;       but we may want to revisit this for asynchronous exception handling.
 define double @f1(double %a, double %b) #0 {

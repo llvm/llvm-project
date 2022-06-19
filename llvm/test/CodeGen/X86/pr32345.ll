@@ -43,27 +43,11 @@ define void @foo() {
 ; 6860-NEXT:    .cfi_def_cfa_register %ebp
 ; 6860-NEXT:    andl $-8, %esp
 ; 6860-NEXT:    subl $24, %esp
-; 6860-NEXT:    movw var_22, %dx
-; 6860-NEXT:    movzwl var_27, %ecx
-; 6860-NEXT:    movw %cx, %ax
-; 6860-NEXT:    xorw %ax, %dx
-; 6860-NEXT:    # implicit-def: $eax
-; 6860-NEXT:    movw %dx, %ax
-; 6860-NEXT:    xorl %ecx, %eax
-; 6860-NEXT:    # kill: def $ax killed $ax killed $eax
-; 6860-NEXT:    movzwl %ax, %eax
+; 6860-NEXT:    movzwl var_22, %eax
 ; 6860-NEXT:    movl %eax, {{[0-9]+}}(%esp)
 ; 6860-NEXT:    movl $0, {{[0-9]+}}(%esp)
-; 6860-NEXT:    movw var_22, %dx
-; 6860-NEXT:    movzwl var_27, %eax
-; 6860-NEXT:    movw %ax, %cx
-; 6860-NEXT:    xorw %cx, %dx
-; 6860-NEXT:    # implicit-def: $ecx
-; 6860-NEXT:    movw %dx, %cx
-; 6860-NEXT:    xorl %eax, %ecx
-; 6860-NEXT:    # kill: def $cx killed $cx killed $ecx
-; 6860-NEXT:    movzwl %cx, %edx
-; 6860-NEXT:    movb %al, %cl
+; 6860-NEXT:    movzwl var_22, %edx
+; 6860-NEXT:    movb var_27, %cl
 ; 6860-NEXT:    addb $30, %cl
 ; 6860-NEXT:    movb %cl, {{[-0-9]+}}(%e{{[sb]}}p) # 1-byte Spill
 ; 6860-NEXT:    xorl %eax, %eax
@@ -88,14 +72,10 @@ define void @foo() {
 ;
 ; X64-LABEL: foo:
 ; X64:       # %bb.0: # %bb
-; X64-NEXT:    movzwl var_27(%rip), %ecx
+; X64-NEXT:    movb var_27(%rip), %cl
 ; X64-NEXT:    movzwl var_22(%rip), %eax
-; X64-NEXT:    xorw %cx, %ax
-; X64-NEXT:    xorl %ecx, %eax
-; X64-NEXT:    movzwl %ax, %eax
 ; X64-NEXT:    movq %rax, -{{[0-9]+}}(%rsp)
 ; X64-NEXT:    addb $30, %cl
-; X64-NEXT:    # kill: def $cl killed $cl killed $ecx
 ; X64-NEXT:    shrq %cl, %rax
 ; X64-NEXT:    movb %al, (%rax)
 ; X64-NEXT:    retq
@@ -109,11 +89,8 @@ define void @foo() {
 ; 686-NEXT:    .cfi_def_cfa_register %ebp
 ; 686-NEXT:    andl $-8, %esp
 ; 686-NEXT:    subl $8, %esp
-; 686-NEXT:    movzwl var_27, %ecx
+; 686-NEXT:    movb var_27, %cl
 ; 686-NEXT:    movzwl var_22, %eax
-; 686-NEXT:    xorw %cx, %ax
-; 686-NEXT:    xorl %ecx, %eax
-; 686-NEXT:    movzwl %ax, %eax
 ; 686-NEXT:    movl %eax, (%esp)
 ; 686-NEXT:    movl $0, {{[0-9]+}}(%esp)
 ; 686-NEXT:    addb $30, %cl

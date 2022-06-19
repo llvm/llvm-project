@@ -142,7 +142,7 @@ enum amd_code_property_mask_t {
   /// is provided to the finalizer when it is invoked and is recorded
   /// here. The hardware will interleave the memory requests of each
   /// lane of a wavefront by this element size to ensure each
-  /// work-item gets a distinct memory memory location. Therefore, the
+  /// work-item gets a distinct memory location. Therefore, the
   /// finalizer ensures that all load and store operations done to
   /// private memory do not exceed this size. For example, if the
   /// element size is 4 (32-bits or dword) and a 64-bit value must be

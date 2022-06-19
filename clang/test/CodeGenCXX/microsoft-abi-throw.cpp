@@ -1,5 +1,4 @@
-// RUN: %clang_cc1 -emit-llvm -o - -triple=i386-pc-win32 -std=c++11 %s -fcxx-exceptions -fms-extensions | FileCheck %s
-// RUN: %clang_cc1 -emit-llvm -o - -triple=i386-pc-win32 -std=c++11 %s -fcxx-exceptions -fms-extensions -DSTD | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -emit-llvm -o - -triple=i386-pc-win32 -std=c++11 %s -fcxx-exceptions -fms-extensions | FileCheck %s
 
 // CHECK-DAG: @"??_R0?AUY@@@8" = linkonce_odr global %rtti.TypeDescriptor7 { i8** @"??_7type_info@@6B@", i8* null, [8 x i8] c".?AUY@@\00" }, comdat
 // CHECK-DAG: @"_CT??_R0?AUY@@@8??0Y@@QAE@ABU0@@Z8" = linkonce_odr unnamed_addr constant %eh.CatchableType { i32 4, i8* bitcast (%rtti.TypeDescriptor7* @"??_R0?AUY@@@8" to i8*), i32 0, i32 -1, i32 0, i32 8, i8* bitcast (%struct.Y* (%struct.Y*, %struct.Y*, i32)* @"??0Y@@QAE@ABU0@@Z" to i8*) }, section ".xdata", comdat
@@ -37,7 +36,7 @@ struct Y : Z, W, virtual V {};
 
 void f(const Y &y) {
   // CHECK-LABEL: @"?f@@YAXABUY@@@Z"
-  // CHECK: call x86_thiscallcc %struct.Y* @"??0Y@@QAE@ABU0@@Z"(%struct.Y* {{[^,]*}} %[[mem:.*]], %struct.Y*
+  // CHECK: call x86_thiscallcc noundef %struct.Y* @"??0Y@@QAE@ABU0@@Z"(%struct.Y* {{[^,]*}} %[[mem:.*]], %struct.Y*
   // CHECK: %[[cast:.*]] = bitcast %struct.Y* %[[mem]] to i8*
   // CHECK: call void @_CxxThrowException(i8* %[[cast]], %eh.ThrowInfo* @"_TI5?AUY@@")
   throw y;
@@ -66,7 +65,7 @@ struct Default {
 // CHECK: store {{.*}} %this, {{.*}} %[[this_addr]], align 4
 // CHECK: %[[this:.*]] = load {{.*}} %[[this_addr]]
 // CHECK: %[[src:.*]] = load {{.*}} %[[src_addr]]
-// CHECK: call x86_thiscallcc {{.*}} @"??0Default@@QAE@AAU0@H@Z"({{.*}} %[[this]], {{.*}} %[[src]], i32 42)
+// CHECK: call x86_thiscallcc {{.*}} @"??0Default@@QAE@AAU0@H@Z"({{.*}} %[[this]], {{.*}} %[[src]], i32 noundef 42)
 // CHECK: ret void
 
 void h(Default &d) {
@@ -134,15 +133,10 @@ void h() {
   throw nullptr;
 }
 
-#ifdef STD
 namespace std {
 template <typename T>
 void *__GetExceptionInfo(T);
 }
-#else
-template <typename T>
-void *__GetExceptionInfo(T);
-#endif
 using namespace std;
 
 void *GetExceptionInfo_test0() {

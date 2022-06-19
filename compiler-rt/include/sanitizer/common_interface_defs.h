@@ -28,7 +28,7 @@ typedef struct {
   // Enable sandbox support in sanitizer coverage.
   int coverage_sandboxed;
   // File descriptor to write coverage data to. If -1 is passed, a file will
-  // be pre-opened by __sanitizer_sandobx_on_notify(). This field has no
+  // be pre-opened by __sanitizer_sandbox_on_notify(). This field has no
   // effect if coverage_sandboxed == 0.
   intptr_t coverage_fd;
   // If non-zero, split the coverage data into well-formed blocks. This is
@@ -211,6 +211,15 @@ void __sanitizer_symbolize_pc(void *pc, const char *fmt, char *out_buf,
 // Same as __sanitizer_symbolize_pc, but for data section (i.e. globals).
 void __sanitizer_symbolize_global(void *data_ptr, const char *fmt,
                                   char *out_buf, size_t out_buf_size);
+// Determine the return address.
+#if !defined(_MSC_VER) || defined(__clang__)
+#define __sanitizer_return_address()                                           \
+  __builtin_extract_return_addr(__builtin_return_address(0))
+#else
+extern "C" void *_ReturnAddress(void);
+#pragma intrinsic(_ReturnAddress)
+#define __sanitizer_return_address() _ReturnAddress()
+#endif
 
 /// Sets the callback to be called immediately before death on error.
 ///

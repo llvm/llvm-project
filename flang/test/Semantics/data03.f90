@@ -1,5 +1,4 @@
-! RUN: %S/test_errors.sh %s %t %flang_fc1
-! REQUIRES: shell
+! RUN: %python %S/test_errors.py %s %flang_fc1
 !Testing data constraints : C874 - C875, C878 - C881 
 module m
     integer, target :: modarray(1)

@@ -15,6 +15,7 @@
 #include "lldb/Target/SectionLoadList.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Utility/DataBufferHeap.h"
+#include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallVector.h"
@@ -42,7 +43,7 @@ static bool ValidateModuleHeader(const DataBufferSP &data_sp) {
       llvm::file_magic::wasm_object)
     return false;
 
-  uint8_t *Ptr = data_sp->GetBytes() + sizeof(llvm::wasm::WasmMagic);
+  const uint8_t *Ptr = data_sp->GetBytes() + sizeof(llvm::wasm::WasmMagic);
 
   uint32_t version = llvm::support::endian::read32le(Ptr);
   return version == llvm::wasm::WasmVersion;
@@ -86,16 +87,11 @@ void ObjectFileWasm::Terminate() {
   PluginManager::UnregisterPlugin(CreateInstance);
 }
 
-ConstString ObjectFileWasm::GetPluginNameStatic() {
-  static ConstString g_name("wasm");
-  return g_name;
-}
-
 ObjectFile *
-ObjectFileWasm::CreateInstance(const ModuleSP &module_sp, DataBufferSP &data_sp,
+ObjectFileWasm::CreateInstance(const ModuleSP &module_sp, DataBufferSP data_sp,
                                offset_t data_offset, const FileSpec *file,
                                offset_t file_offset, offset_t length) {
-  Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_OBJECT));
+  Log *log = GetLog(LLDBLog::Object);
 
   if (!data_sp) {
     data_sp = MapFileData(*file, length, file_offset);
@@ -145,7 +141,7 @@ ObjectFileWasm::CreateInstance(const ModuleSP &module_sp, DataBufferSP &data_sp,
 }
 
 ObjectFile *ObjectFileWasm::CreateMemoryInstance(const ModuleSP &module_sp,
-                                                 DataBufferSP &data_sp,
+                                                 WritableDataBufferSP data_sp,
                                                  const ProcessSP &process_sp,
                                                  addr_t header_addr) {
   if (!ValidateModuleHeader(data_sp))
@@ -196,7 +192,7 @@ bool ObjectFileWasm::DecodeNextSection(lldb::offset_t *offset_ptr) {
     m_sect_infos.push_back(section_info{*offset_ptr + c.tell(), section_length,
                                         section_id, *sect_name});
     *offset_ptr += (c.tell() + section_length);
-  } else if (section_id <= llvm::wasm::WASM_SEC_TAG) {
+  } else if (section_id <= llvm::wasm::WASM_SEC_LAST_KNOWN) {
     m_sect_infos.push_back(section_info{*offset_ptr + c.tell(),
                                         static_cast<uint32_t>(payload_len),
                                         section_id, ConstString()});
@@ -231,7 +227,7 @@ size_t ObjectFileWasm::GetModuleSpecifications(
   return 1;
 }
 
-ObjectFileWasm::ObjectFileWasm(const ModuleSP &module_sp, DataBufferSP &data_sp,
+ObjectFileWasm::ObjectFileWasm(const ModuleSP &module_sp, DataBufferSP data_sp,
                                offset_t data_offset, const FileSpec *file,
                                offset_t offset, offset_t length)
     : ObjectFile(module_sp, file, offset, length, data_sp, data_offset),
@@ -240,7 +236,7 @@ ObjectFileWasm::ObjectFileWasm(const ModuleSP &module_sp, DataBufferSP &data_sp,
 }
 
 ObjectFileWasm::ObjectFileWasm(const lldb::ModuleSP &module_sp,
-                               lldb::DataBufferSP &header_data_sp,
+                               lldb::WritableDataBufferSP header_data_sp,
                                const lldb::ProcessSP &process_sp,
                                lldb::addr_t header_addr)
     : ObjectFile(module_sp, process_sp, header_addr, header_data_sp),
@@ -251,7 +247,7 @@ bool ObjectFileWasm::ParseHeader() {
   return true;
 }
 
-Symtab *ObjectFileWasm::GetSymtab() { return nullptr; }
+void ObjectFileWasm::ParseSymtab(Symtab &symtab) {}
 
 static SectionType GetSectionTypeFromName(llvm::StringRef Name) {
   if (Name.consume_front(".debug_") || Name.consume_front(".zdebug_")) {

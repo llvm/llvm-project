@@ -2,12 +2,27 @@
 cmake_minimum_required(VERSION 3.13.4)
 project(Runtimes C CXX ASM)
 
-set(LLVM_ALL_RUNTIMES "compiler-rt;libc;libcxx;libcxxabi;libunwind;openmp")
+# Add path for custom and the LLVM build's modules to the CMake module path.
+set(LLVM_COMMON_CMAKE_UTILS "${CMAKE_CURRENT_SOURCE_DIR}/../cmake")
+list(INSERT CMAKE_MODULE_PATH 0
+  "${CMAKE_CURRENT_SOURCE_DIR}/cmake"
+  "${CMAKE_CURRENT_SOURCE_DIR}/cmake/modules"
+  "${LLVM_COMMON_CMAKE_UTILS}"
+  "${LLVM_COMMON_CMAKE_UTILS}/Modules"
+  "${CMAKE_CURRENT_SOURCE_DIR}/../llvm/cmake"
+  "${CMAKE_CURRENT_SOURCE_DIR}/../llvm/cmake/modules"
+)
+
+# We order libraries to mirror roughly how they are layered, except that compiler-rt can depend
+# on libc++, so we put it after.
+set(LLVM_ALL_RUNTIMES "libc;libunwind;libcxxabi;libcxx;compiler-rt;openmp")
 set(LLVM_ENABLE_RUNTIMES "" CACHE STRING
   "Semicolon-separated list of runtimes to build (${LLVM_ALL_RUNTIMES}), or \"all\".")
 if(LLVM_ENABLE_RUNTIMES STREQUAL "all" )
   set(LLVM_ENABLE_RUNTIMES ${LLVM_ALL_RUNTIMES})
 endif()
+include(SortSubset)
+sort_subset("${LLVM_ALL_RUNTIMES}" "${LLVM_ENABLE_RUNTIMES}" LLVM_ENABLE_RUNTIMES)
 
 foreach(proj ${LLVM_ENABLE_RUNTIMES})
   set(proj_dir "${CMAKE_CURRENT_SOURCE_DIR}/../${proj}")
@@ -28,34 +43,17 @@ endfunction()
 find_package(LLVM PATHS "${LLVM_BINARY_DIR}" NO_DEFAULT_PATH NO_CMAKE_FIND_ROOT_PATH)
 find_package(Clang PATHS "${LLVM_BINARY_DIR}" NO_DEFAULT_PATH NO_CMAKE_FIND_ROOT_PATH)
 
-# Add path for custom and the LLVM build's modules to the CMake module path.
-list(INSERT CMAKE_MODULE_PATH 0
-  "${CMAKE_CURRENT_SOURCE_DIR}/cmake"
-  "${CMAKE_CURRENT_SOURCE_DIR}/cmake/modules"
-  "${CMAKE_CURRENT_SOURCE_DIR}/../llvm/cmake"
-  "${CMAKE_CURRENT_SOURCE_DIR}/../llvm/cmake/modules"
-)
+set(LLVM_THIRD_PARTY_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../third-party")
 
-function(get_compiler_rt_path path)
-  foreach(entry ${runtimes})
-    get_filename_component(projName ${entry} NAME)
-    if("${projName}" MATCHES "compiler-rt")
-      set(${path} ${entry} PARENT_SCOPE)
-      return()
-    endif()
-  endforeach()
-endfunction()
-
-# Some of the runtimes will conditionally use the compiler-rt sanitizers
-# to make this work smoothly we ensure that compiler-rt is added first in
-# the list of sub-projects. This allows other sub-projects to have checks
-# like `if(TARGET asan)` to enable building with asan.
-get_compiler_rt_path(compiler_rt_path)
-if(compiler_rt_path)
-  list(REMOVE_ITEM runtimes ${compiler_rt_path})
-  if(NOT DEFINED LLVM_BUILD_COMPILER_RT OR LLVM_BUILD_COMPILER_RT)
-    list(INSERT runtimes 0 ${compiler_rt_path})
-  endif()
+# If building standalone by pointing CMake at this runtimes directory,
+# LLVM_BINARY_DIR isn't set, find_package(LLVM) will fail and these
+# intermediate paths are unset.
+if (NOT LLVM_BINARY_DIR)
+  set(LLVM_BINARY_DIR ${CMAKE_CURRENT_BINARY_DIR})
+endif()
+if (NOT LLVM_FOUND)
+  set(LLVM_TOOLS_BINARY_DIR ${LLVM_BINARY_DIR}/bin)
+  set(LLVM_LIBRARY_DIR ${CMAKE_CURRENT_BINARY_DIR}/lib)
 endif()
 
 # Setting these variables will allow the sub-build to put their outputs into
@@ -64,24 +62,82 @@ set(LLVM_LIBRARY_OUTPUT_INTDIR ${LLVM_LIBRARY_DIR})
 set(LLVM_RUNTIME_OUTPUT_INTDIR ${LLVM_TOOLS_BINARY_DIR})
 
 # This variable makes sure that e.g. llvm-lit is found.
-set(LLVM_MAIN_SRC_DIR ${LLVM_BUILD_MAIN_SRC_DIR})
-set(LLVM_CMAKE_PATH ${LLVM_MAIN_SRC_DIR}/cmake/modules)
+set(LLVM_MAIN_SRC_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../llvm)
+set(LLVM_CMAKE_DIR ${LLVM_MAIN_SRC_DIR}/cmake/modules)
 
 # This variable is used by individual runtimes to locate LLVM files.
-set(LLVM_PATH ${LLVM_BUILD_MAIN_SRC_DIR})
-
-if(APPLE)
-  set(LLVM_ENABLE_LIBCXX ON CACHE BOOL "")
-endif()
+set(LLVM_PATH ${CMAKE_CURRENT_SOURCE_DIR}/../llvm)
 
 include(CheckLibraryExists)
+include(LLVMCheckCompilerLinkerFlag)
 include(CheckCCompilerFlag)
+include(CheckCXXCompilerFlag)
 
-# Disable use of the installed C++ standard library when building runtimes. If
-# MSVC is true, we must be using the clang-cl driver, which doesn't understand
-# these flags.
-if (NOT MSVC)
-  set(CMAKE_REQUIRED_FLAGS "${CMAKE_REQUIRED_FLAGS} -nostdinc++ -nostdlib++")
+# CMake omits default compiler include paths, but in runtimes build, we use
+# -nostdinc and -nostdinc++ and control include paths manually so this behavior
+# is undesirable. Filtering CMAKE_{LANG}_IMPLICIT_INCLUDE_DIRECTORIES to remove
+# paths that are inside the build directory disables this behavior.
+#
+# See https://gitlab.kitware.com/cmake/cmake/-/issues/19227 for further details.
+
+function(filter_prefixed list prefix outvar)
+  foreach(str ${list})
+    string(FIND "${str}" "${prefix}" out)
+    if(NOT "${out}" EQUAL 0)
+      list(APPEND result ${str})
+    endif()
+  endforeach()
+  set(${outvar} ${result} PARENT_SCOPE)
+endfunction()
+
+filter_prefixed("${CMAKE_C_IMPLICIT_INCLUDE_DIRECTORIES}" ${LLVM_BINARY_DIR} CMAKE_C_IMPLICIT_INCLUDE_DIRECTORIES)
+filter_prefixed("${CMAKE_CXX_IMPLICIT_INCLUDE_DIRECTORIES}" ${LLVM_BINARY_DIR} CMAKE_CXX_IMPLICIT_INCLUDE_DIRECTORIES)
+filter_prefixed("${CMAKE_ASM_IMPLICIT_INCLUDE_DIRECTORIES}" ${LLVM_BINARY_DIR} CMAKE_ASM_IMPLICIT_INCLUDE_DIRECTORIES)
+
+check_c_compiler_flag("" LLVM_RUNTIMES_LINKING_WORKS)
+if (NOT LLVM_RUNTIMES_LINKING_WORKS)
+  # The compiler driver may be implicitly trying to link against libunwind,
+  # which might not work if libunwind doesn't exist yet. Try to check if
+  # --unwindlib=none is supported, and use that if possible.
+  # Don't add this if not necessary to fix linking, as it can break using
+  # e.g. ASAN/TSAN.
+  llvm_check_compiler_linker_flag(C "--unwindlib=none" CXX_SUPPORTS_UNWINDLIB_EQ_NONE_FLAG)
+  if (CXX_SUPPORTS_UNWINDLIB_EQ_NONE_FLAG)
+    set(ORIG_CMAKE_REQUIRED_FLAGS "${CMAKE_REQUIRED_FLAGS}")
+    set(CMAKE_REQUIRED_FLAGS "${CMAKE_REQUIRED_FLAGS} --unwindlib=none")
+    # TODO: When we can require CMake 3.14, we should use
+    # CMAKE_REQUIRED_LINK_OPTIONS here. Until then, we need a workaround:
+    # When using CMAKE_REQUIRED_FLAGS, this option gets added both to
+    # compilation and linking commands. That causes warnings in the
+    # compilation commands during cmake tests. This is normally benign, but
+    # when testing whether -Werror works, that test fails (due to the
+    # preexisting warning).
+    #
+    # Therefore, before we can use CMAKE_REQUIRED_LINK_OPTIONS, check if we
+    # can use --start-no-unused-arguments to silence the warnings about
+    # --unwindlib=none during compilation.
+    #
+    # We must first add --unwindlib=none to CMAKE_REQUIRED_FLAGS above, to
+    # allow this subsequent test to succeed, then rewrite CMAKE_REQUIRED_FLAGS
+    # below.
+    check_c_compiler_flag("--start-no-unused-arguments" C_SUPPORTS_START_NO_UNUSED_ARGUMENTS)
+    if (C_SUPPORTS_START_NO_UNUSED_ARGUMENTS)
+      set(CMAKE_REQUIRED_FLAGS "${ORIG_CMAKE_REQUIRED_FLAGS} --start-no-unused-arguments --unwindlib=none --end-no-unused-arguments")
+    endif()
+  endif()
+endif()
+
+# Disable use of the installed C++ standard library when building runtimes.
+# Check for -nostdlib++ first; if there's no C++ standard library yet,
+# all check_cxx_compiler_flag commands will fail until we add -nostdlib++
+# (or -nodefaultlibs).
+llvm_check_compiler_linker_flag(C "-nostdlib++" CXX_SUPPORTS_NOSTDLIBXX_FLAG)
+if (CXX_SUPPORTS_NOSTDLIBXX_FLAG)
+  set(CMAKE_REQUIRED_FLAGS "${CMAKE_REQUIRED_FLAGS} -nostdlib++")
+endif()
+check_cxx_compiler_flag(-nostdinc++ CXX_SUPPORTS_NOSTDINCXX_FLAG)
+if (CXX_SUPPORTS_NOSTDINCXX_FLAG)
+  set(CMAKE_REQUIRED_FLAGS "${CMAKE_REQUIRED_FLAGS} -nostdinc++")
 endif()
 
 # Avoid checking whether the compiler is working.
@@ -92,6 +148,16 @@ include(AddLLVM)
 include(HandleLLVMOptions)
 
 find_package(Python3 REQUIRED COMPONENTS Interpreter)
+
+# Host triple is used by tests to check if they are running natively.
+include(GetHostTriple)
+get_host_triple(LLVM_HOST_TRIPLE)
+set(LLVM_DEFAULT_TARGET_TRIPLE "${LLVM_HOST_TRIPLE}" CACHE STRING
+  "Default target for which the runtimes will be built.")
+
+option(LLVM_INCLUDE_TESTS "Generate build targets for the runtimes unit tests." ON)
+option(LLVM_INCLUDE_DOCS "Generate build targets for the runtimes documentation." ON)
+option(LLVM_ENABLE_SPHINX "Use Sphinx to generate the runtimes documentation." OFF)
 
 # Use libtool instead of ar if you are both on an Apple host, and targeting Apple.
 if(CMAKE_HOST_APPLE AND APPLE)
@@ -125,42 +191,67 @@ foreach(entry ${runtimes})
   set(HAVE_${canon_name} ON)
 endforeach()
 
+if(LLVM_INCLUDE_TESTS)
+  set(LIT_ARGS_DEFAULT "-sv --show-xfail --show-unsupported")
+  if (MSVC OR XCODE)
+    set(LIT_ARGS_DEFAULT "${LIT_ARGS_DEFAULT} --no-progress-bar")
+  endif()
+  set(LLVM_LIT_ARGS "${LIT_ARGS_DEFAULT}" CACHE STRING "Default options for lit")
+
+  umbrella_lit_testsuite_begin(check-runtimes)
+endif()
+
+# llvm-libgcc incorporates both compiler-rt and libunwind as subprojects with very
+# specific flags, which causes clashes when they're independently built too.
+if("llvm-libgcc" IN_LIST runtimes)
+  if("compiler-rt" IN_LIST runtimes OR "compiler-rt" IN_LIST LLVM_ENABLE_PROJECTS)
+    message(FATAL_ERROR
+      "Attempting to build both compiler-rt and llvm-libgcc will cause irreconcilable "
+      "target clashes. Please choose one or the other, but not both.")
+  endif()
+
+  if("libunwind" IN_LIST runtimes)
+    message(
+      FATAL_ERROR
+      "Attempting to build both libunwind and llvm-libgcc will cause irreconcilable "
+      "target clashes. Please choose one or the other, but not both.")
+  endif()
+endif()
+
 # We do this in two loops so that HAVE_* is set for each runtime before the
 # other runtimes are added.
 foreach(entry ${runtimes})
   get_filename_component(projName ${entry} NAME)
 
-  # Between each sub-project we want to cache and clear the LIT properties
-  set_property(GLOBAL PROPERTY LLVM_LIT_TESTSUITES)
-  set_property(GLOBAL PROPERTY LLVM_LIT_PARAMS)
-  set_property(GLOBAL PROPERTY LLVM_LIT_DEPENDS)
-  set_property(GLOBAL PROPERTY LLVM_LIT_EXTRA_ARGS)
-
   add_subdirectory(${entry} ${projName})
-
-  get_property(LLVM_LIT_TESTSUITES GLOBAL PROPERTY LLVM_LIT_TESTSUITES)
-  get_property(LLVM_LIT_PARAMS GLOBAL PROPERTY LLVM_LIT_PARAMS)
-  get_property(LLVM_LIT_DEPENDS GLOBAL PROPERTY LLVM_LIT_DEPENDS)
-  get_property(LLVM_LIT_EXTRA_ARGS GLOBAL PROPERTY LLVM_LIT_EXTRA_ARGS)
-
-  list(APPEND RUNTIMES_LIT_TESTSUITES ${LLVM_LIT_TESTSUITES})
-  list(APPEND RUNTIMES_LIT_PARAMS ${LLVM_LIT_PARAMS})
-  list(APPEND RUNTIMES_LIT_DEPENDS ${LLVM_LIT_DEPENDS})
-  list(APPEND RUNTIMES_LIT_EXTRA_ARGS ${LLVM_LIT_EXTRA_ARGS})
 endforeach()
 
 if(LLVM_INCLUDE_TESTS)
+  # LLVM_RUNTIMES_LIT_DEPENDS is populated when lit tests are added between
+  # umbrella_list_testsuite begin and end. The bootstrap runtimes builds
+  # currently assumes this target exists.
+  add_custom_target(runtimes-test-depends ${LLVM_RUNTIMES_LIT_DEPENDS})
   # Add a global check rule now that all subdirectories have been traversed
   # and we know the total set of lit testsuites.
+  umbrella_lit_testsuite_end(check-runtimes)
 
-  add_lit_target(check-runtimes
-    "Running all regression tests"
-    ${RUNTIMES_LIT_TESTSUITES}
-    PARAMS ${RUNTIMES_LIT_PARAMS}
-    DEPENDS ${RUNTIMES_LIT_DEPENDS}
-    ARGS ${RUNTIMES_LIT_EXTRA_ARGS}
-    )
-  add_custom_target(runtimes-test-depends DEPENDS ${RUNTIMES_LIT_DEPENDS})
+  if (NOT HAVE_LLVM_LIT)
+    # If built by manually invoking cmake on this directory, we don't have
+    # llvm-lit. If invoked via llvm/runtimes, the toplevel llvm cmake
+    # invocation already generated the llvm-lit script.
+    add_subdirectory(${LLVM_MAIN_SRC_DIR}/utils/llvm-lit
+                     ${CMAKE_CURRENT_BINARY_DIR}/llvm-lit)
+  endif()
+
+  if(LLVM_RUNTIMES_TARGET)
+    configure_file(
+      ${CMAKE_CURRENT_SOURCE_DIR}/Tests.cmake.in
+      ${LLVM_BINARY_DIR}/runtimes/${LLVM_RUNTIMES_TARGET}/Tests.cmake)
+  else()
+    configure_file(
+      ${CMAKE_CURRENT_SOURCE_DIR}/Tests.cmake.in
+      ${LLVM_BINARY_DIR}/runtimes/Tests.cmake)
+  endif()
 endif()
 
 get_property(SUB_COMPONENTS GLOBAL PROPERTY SUB_COMPONENTS)

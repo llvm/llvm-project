@@ -13,8 +13,6 @@ from lldbsuite.test import lldbutil
 
 class LLDBIteratorTestCase(TestBase):
 
-    mydir = TestBase.compute_mydir(__file__)
-
     def setUp(self):
         # Call super's setUp().
         TestBase.setUp(self)
@@ -89,6 +87,7 @@ class LLDBIteratorTestCase(TestBase):
             self.assertEqual(yours[i], mine[i],
                             "ID of yours[{0}] and mine[{0}] matches".format(i))
 
+    @skipIfWindows # This test is flaky on Windows
     def test_lldb_iter_frame(self):
         """Test iterator works correctly for SBProcess->SBThread->SBFrame."""
         self.build()

@@ -7,11 +7,11 @@
 //===----------------------------------------------------------------------===//
 
 #include "PassDetail.h"
+#include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
 #include "mlir/Dialect/Quant/Passes.h"
 #include "mlir/Dialect/Quant/QuantOps.h"
 #include "mlir/Dialect/Quant/QuantizeUtils.h"
 #include "mlir/Dialect/Quant/UniformSupport.h"
-#include "mlir/Dialect/StandardOps/IR/Ops.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/Matchers.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
@@ -21,7 +21,7 @@ using namespace mlir::quant;
 
 namespace {
 struct ConvertConstPass : public QuantConvertConstBase<ConvertConstPass> {
-  void runOnFunction() override;
+  void runOnOperation() override;
 };
 
 struct QuantizedConstRewrite : public OpRewritePattern<QuantizeCastOp> {
@@ -31,7 +31,7 @@ struct QuantizedConstRewrite : public OpRewritePattern<QuantizeCastOp> {
                                 PatternRewriter &rewriter) const override;
 };
 
-} // end anonymous namespace
+} // namespace
 
 /// Matches a [constant] -> [qbarrier] where the qbarrier results type is
 /// quantized and the operand type is quantizable.
@@ -83,21 +83,22 @@ QuantizedConstRewrite::matchAndRewrite(QuantizeCastOp qbarrier,
   // original const and the qbarrier that led to the quantization.
   auto fusedLoc = rewriter.getFusedLoc(
       {qbarrier.arg().getDefiningOp()->getLoc(), qbarrier.getLoc()});
-  auto newConstOp =
-      rewriter.create<ConstantOp>(fusedLoc, newConstValueType, newConstValue);
+  auto newConstOp = rewriter.create<arith::ConstantOp>(
+      fusedLoc, newConstValueType, newConstValue);
   rewriter.replaceOpWithNewOp<StorageCastOp>(qbarrier, qbarrier.getType(),
                                              newConstOp);
   return success();
 }
 
-void ConvertConstPass::runOnFunction() {
+void ConvertConstPass::runOnOperation() {
   RewritePatternSet patterns(&getContext());
-  auto func = getFunction();
+  auto func = getOperation();
   auto *context = &getContext();
   patterns.add<QuantizedConstRewrite>(context);
   (void)applyPatternsAndFoldGreedily(func, std::move(patterns));
 }
 
-std::unique_ptr<OperationPass<FuncOp>> mlir::quant::createConvertConstPass() {
+std::unique_ptr<OperationPass<func::FuncOp>>
+mlir::quant::createConvertConstPass() {
   return std::make_unique<ConvertConstPass>();
 }

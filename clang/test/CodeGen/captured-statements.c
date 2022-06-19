@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple %itanium_abi_triple -emit-llvm %s -o %t -debug-info-kind=limited
+// RUN: %clang_cc1 -no-opaque-pointers -triple %itanium_abi_triple -emit-llvm %s -o %t -debug-info-kind=limited
 // RUN: FileCheck %s -input-file=%t -check-prefix=CHECK-GLOBALS
 // RUN: FileCheck %s -input-file=%t -check-prefix=CHECK-1
 // RUN: FileCheck %s -input-file=%t -check-prefix=CHECK-2
@@ -6,11 +6,11 @@
 
 typedef __INTPTR_TYPE__ intptr_t;
 
-int foo();
+int foo(void);
 int global;
 
 // Single statement
-void test1() {
+void test1(void) {
   int i = 0;
   #pragma clang __debug captured
   {
@@ -79,7 +79,7 @@ void test4(intptr_t size, intptr_t vla_arr[size]) {
   // CHECK-3: call void @__captured_stmt
 }
 
-void dont_capture_global() {
+void dont_capture_global(void) {
   static int s;
   extern int e;
   #pragma clang __debug captured

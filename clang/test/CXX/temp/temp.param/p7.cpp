@@ -30,7 +30,7 @@ template<int &&R> struct rval_ref; // expected-warning 0-1{{extension}} expected
 // arbitrary scalar types; we generally include complex types in that list
 template<_Complex float ci> struct ComplexFloat; // cxx17-error {{cannot have type '_Complex float' before C++20}}
 template<_Complex int ci> struct ComplexInt; // cxx17-error {{cannot have type '_Complex int' before C++20}}
-template<_ExtInt(42) ei> struct ExtInt;
+template<_BitInt(42) ei> struct ExtInt;
 
 // atomic types aren't scalar types
 template<_Atomic float ci> struct AtomicFloat; // expected-error {{cannot have type '_Atomic(float)'}}
@@ -63,7 +63,7 @@ public:
   RRef &ref_to_bad = *ptr_to_bad;
   _Complex int ci;
   _Complex float cf;
-  _ExtInt(42) ei;
+  _BitInt(42) ei;
   VI4 vi4;
   VF4 vf4;
 };

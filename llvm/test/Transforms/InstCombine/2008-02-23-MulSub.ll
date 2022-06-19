@@ -1,4 +1,4 @@
-; RUN: opt < %s -instcombine -S | not grep mul
+; RUN: opt < %s -passes=instcombine -S | not grep mul
 
 define i26 @test(i26 %a) nounwind  {
 entry:

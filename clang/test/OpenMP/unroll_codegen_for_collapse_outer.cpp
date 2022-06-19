@@ -1,9 +1,9 @@
 // Check code generation
-// RUN: %clang_cc1 -verify -triple x86_64-pc-linux-gnu -fopenmp -fopenmp-version=51 -emit-llvm %s -o - | FileCheck %s --check-prefix=IR
+// RUN: %clang_cc1 -no-opaque-pointers -verify -triple x86_64-pc-linux-gnu -fopenmp -fopenmp-version=51 -emit-llvm %s -o - | FileCheck %s --check-prefix=IR
 
 // Check same results after serialization round-trip
-// RUN: %clang_cc1 -verify -triple x86_64-pc-linux-gnu -fopenmp -fopenmp-version=51 -emit-pch -o %t %s
-// RUN: %clang_cc1 -verify -triple x86_64-pc-linux-gnu -fopenmp -fopenmp-version=51 -include-pch %t -emit-llvm %s -o - | FileCheck %s --check-prefix=IR
+// RUN: %clang_cc1 -no-opaque-pointers -verify -triple x86_64-pc-linux-gnu -fopenmp -fopenmp-version=51 -emit-pch -o %t %s
+// RUN: %clang_cc1 -no-opaque-pointers -verify -triple x86_64-pc-linux-gnu -fopenmp -fopenmp-version=51 -include-pch %t -emit-llvm %s -o - | FileCheck %s --check-prefix=IR
 // expected-no-diagnostics
 
 #ifndef HEADER
@@ -176,14 +176,14 @@ extern "C" void body(...) {}
 // IR-NEXT:    %[[TMP39:.+]] = load i32, i32* %[[DOTUNROLL_INNER_IV_J]], align 4
 // IR-NEXT:    %[[TMP40:.+]] = load i32, i32* %[[DOTUNROLLED_IV_J23]], align 4
 // IR-NEXT:    %[[ADD50:.+]] = add i32 %[[TMP40]], 2
-// IR-NEXT:    %[[CMP51:.+]] = icmp ule i32 %[[TMP39]], %[[ADD50]]
+// IR-NEXT:    %[[CMP51:.+]] = icmp ult i32 %[[TMP39]], %[[ADD50]]
 // IR-NEXT:    br i1 %[[CMP51]], label %[[LAND_RHS:.+]], label %[[LAND_END:.+]]
 // IR-EMPTY:
 // IR-NEXT:  [[LAND_RHS]]:
 // IR-NEXT:    %[[TMP41:.+]] = load i32, i32* %[[DOTUNROLL_INNER_IV_J]], align 4
 // IR-NEXT:    %[[TMP42:.+]] = load i32, i32* %[[DOTCAPTURE_EXPR_7]], align 4
 // IR-NEXT:    %[[ADD52:.+]] = add i32 %[[TMP42]], 1
-// IR-NEXT:    %[[CMP53:.+]] = icmp ule i32 %[[TMP41]], %[[ADD52]]
+// IR-NEXT:    %[[CMP53:.+]] = icmp ult i32 %[[TMP41]], %[[ADD52]]
 // IR-NEXT:    br label %[[LAND_END]]
 // IR-EMPTY:
 // IR-NEXT:  [[LAND_END]]:
@@ -202,7 +202,7 @@ extern "C" void body(...) {}
 // IR-NEXT:    %[[TMP49:.+]] = load i32, i32* %[[STEP_ADDR]], align 4
 // IR-NEXT:    %[[TMP50:.+]] = load i32, i32* %[[I22]], align 4
 // IR-NEXT:    %[[TMP51:.+]] = load i32, i32* %[[J]], align 4
-// IR-NEXT:    call void (...) @body(i32 %[[TMP47]], i32 %[[TMP48]], i32 %[[TMP49]], i32 %[[TMP50]], i32 %[[TMP51]])
+// IR-NEXT:    call void (...) @body(i32 noundef %[[TMP47]], i32 noundef %[[TMP48]], i32 noundef %[[TMP49]], i32 noundef %[[TMP50]], i32 noundef %[[TMP51]])
 // IR-NEXT:    br label %[[FOR_INC:.+]]
 // IR-EMPTY:
 // IR-NEXT:  [[FOR_INC]]:

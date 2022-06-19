@@ -1,4 +1,3 @@
-; RUN: opt -S -demanded-bits -analyze -enable-new-pm=0 < %s | FileCheck %s
 ; RUN: opt -S -disable-output -passes="print<demanded-bits>" < %s 2>&1 | FileCheck %s
 
 ; CHECK-DAG: DemandedBits: 0xff00 for   %x = or <2 x i32> %a, zeroinitializer

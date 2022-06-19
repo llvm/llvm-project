@@ -15,3 +15,13 @@ namespace PR11320 {
   }
   void h() { g<int>(0); }
 }
+
+// Can pass value dependent integer to atomic builtin
+template <int Order>
+void fetchAdd(int *A, int V) {
+  __atomic_fetch_add(A, V, Order);
+}
+
+void fetchAddUse(int *A, int V) {
+  fetchAdd<__ATOMIC_ACQ_REL>(A, V);
+}

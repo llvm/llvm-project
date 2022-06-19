@@ -1,6 +1,6 @@
-// RUN: %clang_cc1 %s -triple=x86_64-pc-linux -emit-llvm -o - | FileCheck --check-prefix=X86 %s
-// RUN: %clang_cc1 %s -triple=wasm32 -emit-llvm -o - | FileCheck --check-prefix=WASM %s
-// RUN: %clang_cc1 %s -triple=armv7-apple-darwin9 -emit-llvm -o - | FileCheck --check-prefix=ARM %s
+// RUN: %clang_cc1 -no-opaque-pointers %s -triple=x86_64-pc-linux -emit-llvm -o - | FileCheck --check-prefix=X86 %s
+// RUN: %clang_cc1 -no-opaque-pointers %s -triple=wasm32 -emit-llvm -o - | FileCheck --check-prefix=WASM %s
+// RUN: %clang_cc1 -no-opaque-pointers %s -triple=armv7-apple-darwin9 -emit-llvm -o - | FileCheck --check-prefix=ARM %s
 
 // Test that destructors are not passed directly to __cxa_atexit when their
 // signatures do not match the type of its first argument.
@@ -29,5 +29,5 @@ Foo global;
 // WASM: define internal void @__cxx_global_var_init()
 // WASM: call i32 @__cxa_atexit(void (i8*)* @__cxx_global_array_dtor, i8* null, i8* @__dso_handle)
 
-// WASM: define internal void @__cxx_global_array_dtor(i8* %0)
-// WASM: %call = call %class.Foo* @_ZN3FooD1Ev(%class.Foo* {{[^,]*}} @global)
+// WASM: define internal void @__cxx_global_array_dtor(i8* noundef %0)
+// WASM: %call = call noundef %class.Foo* @_ZN3FooD1Ev(%class.Foo* {{[^,]*}} @global)

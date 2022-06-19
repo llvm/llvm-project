@@ -17,6 +17,7 @@
 #include "clang/StaticAnalyzer/Checkers/BuiltinCheckerRegistration.h"
 #include "clang/StaticAnalyzer/Core/BugReporter/BugType.h"
 #include "clang/StaticAnalyzer/Core/Checker.h"
+#include "clang/StaticAnalyzer/Core/PathSensitive/CallDescription.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/CallEvent.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/CheckerContext.h"
 #include <utility>
@@ -88,20 +89,6 @@ public:
 /// state. Let's store it in the ProgramState.
 REGISTER_MAP_WITH_PROGRAMSTATE(StreamMap, SymbolRef, StreamState)
 
-namespace {
-class StopTrackingCallback final : public SymbolVisitor {
-  ProgramStateRef state;
-public:
-  StopTrackingCallback(ProgramStateRef st) : state(std::move(st)) {}
-  ProgramStateRef getState() const { return state; }
-
-  bool VisitSymbol(SymbolRef sym) override {
-    state = state->remove<StreamMap>(sym);
-    return true;
-  }
-};
-} // end anonymous namespace
-
 SimpleStreamChecker::SimpleStreamChecker()
     : OpenFn("fopen"), CloseFn("fclose", 1) {
   // Initialize the bug types.
@@ -119,7 +106,7 @@ void SimpleStreamChecker::checkPostCall(const CallEvent &Call,
   if (!Call.isGlobalCFunction())
     return;
 
-  if (!Call.isCalled(OpenFn))
+  if (!OpenFn.matches(Call))
     return;
 
   // Get the symbolic value corresponding to the file handle.
@@ -138,7 +125,7 @@ void SimpleStreamChecker::checkPreCall(const CallEvent &Call,
   if (!Call.isGlobalCFunction())
     return;
 
-  if (!Call.isCalled(CloseFn))
+  if (!CloseFn.matches(Call))
     return;
 
   // Get the symbolic value corresponding to the file handle.

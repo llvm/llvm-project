@@ -13,8 +13,6 @@ import socket
 
 
 class PlatformSDKTestCase(TestBase):
-
-    mydir = TestBase.compute_mydir(__file__)
     NO_DEBUG_INFO_TESTCASE = True
 
     # The port used by debugserver.
@@ -43,6 +41,7 @@ class PlatformSDKTestCase(TestBase):
     @skipUnlessDarwin
     @expectedFailureIfFn(no_debugserver)
     @expectedFailureIfFn(port_not_available)
+    @skipIfRemote
     def test_macos_sdk(self):
         self.build()
 
@@ -57,6 +56,7 @@ class PlatformSDKTestCase(TestBase):
 
         # Create a fake 'SDK' directory.
         test_home = os.path.join(self.getBuildDir(), 'fake_home.noindex')
+        test_home = os.path.realpath(test_home)
         macos_version = platform.mac_ver()[0]
         sdk_dir = os.path.join(test_home, 'Library', 'Developer', 'Xcode',
                                'macOS DeviceSupport', macos_version)
@@ -83,7 +83,7 @@ class PlatformSDKTestCase(TestBase):
         lldbutil.wait_for_file_on_target(self, token)
 
         # Move the binary into the 'SDK'.
-        rel_exe_path = os.path.relpath(exe, '/')
+        rel_exe_path = os.path.relpath(os.path.realpath(exe), '/')
         exe_sdk_path = os.path.join(symbols_dir, rel_exe_path)
         lldbutil.mkdir_p(os.path.dirname(exe_sdk_path))
         shutil.move(exe, exe_sdk_path)

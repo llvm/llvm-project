@@ -40,11 +40,11 @@ void MemprofThreadContext::OnFinished() {
 static ALIGNED(16) char thread_registry_placeholder[sizeof(ThreadRegistry)];
 static ThreadRegistry *memprof_thread_registry;
 
-static BlockingMutex mu_for_thread_context(LINKER_INITIALIZED);
+static Mutex mu_for_thread_context;
 static LowLevelAllocator allocator_for_thread_context;
 
 static ThreadContextBase *GetMemprofThreadContext(u32 tid) {
-  BlockingMutexLock lock(&mu_for_thread_context);
+  Lock lock(&mu_for_thread_context);
   return new (allocator_for_thread_context) MemprofThreadContext(tid);
 }
 
@@ -80,8 +80,7 @@ MemprofThread *MemprofThread::Create(thread_callback_t start_routine, void *arg,
   thread->start_routine_ = start_routine;
   thread->arg_ = arg;
   MemprofThreadContext::CreateThreadContextArgs args = {thread, stack};
-  memprofThreadRegistry().CreateThread(*reinterpret_cast<uptr *>(thread),
-                                       detached, parent_tid, &args);
+  memprofThreadRegistry().CreateThread(0, detached, parent_tid, &args);
 
   return thread;
 }
@@ -131,7 +130,7 @@ void MemprofThread::Init(const InitOptions *options) {
   int local = 0;
   VReport(1, "T%d: stack [%p,%p) size 0x%zx; local=%p\n", tid(),
           (void *)stack_bottom_, (void *)stack_top_, stack_top_ - stack_bottom_,
-          &local);
+          (void *)&local);
 }
 
 thread_return_t
@@ -198,7 +197,7 @@ MemprofThread *GetCurrentThread() {
 
 void SetCurrentThread(MemprofThread *t) {
   CHECK(t->context());
-  VReport(2, "SetCurrentThread: %p for thread %p\n", t->context(),
+  VReport(2, "SetCurrentThread: %p for thread %p\n", (void *)t->context(),
           (void *)GetThreadSelf());
   // Make sure we do not reset the current MemprofThread.
   CHECK_EQ(0, TSDGet());

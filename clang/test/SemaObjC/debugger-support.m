@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple x86_64-apple-darwin10 -fdebugger-support %s -emit-llvm -o - | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-apple-darwin10 -fdebugger-support %s -emit-llvm -o - | FileCheck %s
 
 // rdar://problem/9416370
 void test0(id x) {
@@ -10,5 +10,5 @@ void test0(id x) {
   // CHECK-NEXT: store i8* {{%.*}}, i8** [[X]],
   // CHECK-NEXT: [[T0:%.*]] = load i8*, i8** [[X]],
   // CHECK-NEXT: [[T1:%.*]] = load i8*, i8** @OBJC_SELECTOR_REFERENCES_
-  // CHECK-NEXT: [[T2:%.*]] = call { i64, i64 } bitcast (i8* (i8*, i8*, ...)* @objc_msgSend to { i64, i64 } (i8*, i8*)*)(i8* [[T0]], i8* [[T1]])
+  // CHECK-NEXT: [[T2:%.*]] = call { i64, i64 } bitcast (i8* (i8*, i8*, ...)* @objc_msgSend to { i64, i64 } (i8*, i8*)*)(i8* noundef [[T0]], i8* noundef [[T1]])
 }

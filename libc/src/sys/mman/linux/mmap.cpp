@@ -8,12 +8,12 @@
 
 #include "src/sys/mman/mmap.h"
 
-#include "config/linux/syscall.h" // For internal syscall function.
-#include "include/sys/syscall.h"  // For syscall numbers.
+#include "src/__support/OSUtil/syscall.h" // For internal syscall function.
 #include "src/__support/common.h"
-#include "src/errno/llvmlibc_errno.h"
 
+#include <errno.h>
 #include <linux/param.h> // For EXEC_PAGESIZE.
+#include <sys/syscall.h> // For syscall numbers.
 
 namespace __llvm_libc {
 
@@ -53,7 +53,7 @@ LLVM_LIBC_FUNCTION(void *, mmap,
   // return value corresponding to a location in the last page is an error
   // value.
   if (ret_val < 0 && ret_val > -EXEC_PAGESIZE) {
-    llvmlibc_errno = -ret_val;
+    errno = -ret_val;
     return MAP_FAILED;
   }
 

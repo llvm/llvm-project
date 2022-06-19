@@ -33,7 +33,7 @@ public:
 
   Command() : CombinedOutAndErr(false) {}
 
-  explicit Command(const Vector<std::string> &ArgsToAdd)
+  explicit Command(const std::vector<std::string> &ArgsToAdd)
       : Args(ArgsToAdd), CombinedOutAndErr(false) {}
 
   explicit Command(const Command &Other)
@@ -58,7 +58,7 @@ public:
 
   // Gets all of the current command line arguments, **including** those after
   // "-ignore-remaining-args=1".
-  const Vector<std::string> &getArguments() const { return Args; }
+  const std::vector<std::string> &getArguments() const { return Args; }
 
   // Adds the given argument before "-ignore_remaining_args=1", or at the end
   // if that flag isn't present.
@@ -68,7 +68,7 @@ public:
 
   // Adds all given arguments before "-ignore_remaining_args=1", or at the end
   // if that flag isn't present.
-  void addArguments(const Vector<std::string> &ArgsToAdd) {
+  void addArguments(const std::vector<std::string> &ArgsToAdd) {
     Args.insert(endMutableArgs(), ArgsToAdd.begin(), ArgsToAdd.end());
   }
 
@@ -155,16 +155,16 @@ private:
   Command(Command &&Other) = delete;
   Command &operator=(Command &&Other) = delete;
 
-  Vector<std::string>::iterator endMutableArgs() {
+  std::vector<std::string>::iterator endMutableArgs() {
     return std::find(Args.begin(), Args.end(), ignoreRemainingArgs());
   }
 
-  Vector<std::string>::const_iterator endMutableArgs() const {
+  std::vector<std::string>::const_iterator endMutableArgs() const {
     return std::find(Args.begin(), Args.end(), ignoreRemainingArgs());
   }
 
   // The command arguments.  Args[0] is the command name.
-  Vector<std::string> Args;
+  std::vector<std::string> Args;
 
   // True indicates stderr is redirected to stdout.
   bool CombinedOutAndErr;

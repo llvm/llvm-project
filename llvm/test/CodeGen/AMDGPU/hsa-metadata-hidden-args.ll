@@ -177,7 +177,7 @@ entry:
 ; CHECK-NEXT:       ValueKind:       HiddenGlobalOffsetZ
 ; CHECK-NEXT:     - Size:            8
 ; CHECK-NEXT:       Align:           8
-; CHECK-NEXT:       ValueKind:       HiddenNone
+; CHECK-NEXT:       ValueKind:       HiddenHostcallBuffer
 ; CHECK-NEXT:       AddrSpaceQual:   Global
 ; CHECK-NEXT:   CodeProps:
 define amdgpu_kernel void @test32(
@@ -221,7 +221,7 @@ entry:
 ; CHECK-NEXT:       ValueKind:       HiddenGlobalOffsetZ
 ; CHECK-NEXT:     - Size:            8
 ; CHECK-NEXT:       Align:           8
-; CHECK-NEXT:       ValueKind:       HiddenNone
+; CHECK-NEXT:       ValueKind:       HiddenHostcallBuffer
 ; CHECK-NEXT:       AddrSpaceQual:   Global
 ; CHECK-NEXT:     - Size:            8
 ; CHECK-NEXT:       Align:           8
@@ -273,7 +273,7 @@ entry:
 ; CHECK-NEXT:       ValueKind:       HiddenGlobalOffsetZ
 ; CHECK-NEXT:     - Size:            8
 ; CHECK-NEXT:       Align:           8
-; CHECK-NEXT:       ValueKind:       HiddenNone
+; CHECK-NEXT:       ValueKind:       HiddenHostcallBuffer
 ; CHECK-NEXT:       AddrSpaceQual:   Global
 ; CHECK-NEXT:     - Size:            8
 ; CHECK-NEXT:       Align:           8
@@ -300,9 +300,11 @@ entry:
   ret void
 }
 
-attributes #0 = { "amdgpu-implicitarg-num-bytes"="8" }
-attributes #1 = { "amdgpu-implicitarg-num-bytes"="16" }
-attributes #2 = { "amdgpu-implicitarg-num-bytes"="24" }
-attributes #3 = { "amdgpu-implicitarg-num-bytes"="32" }
-attributes #4 = { "amdgpu-implicitarg-num-bytes"="48" }
-attributes #5 = { "amdgpu-implicitarg-num-bytes"="56" }
+; We don't have a use of llvm.amdgcn.implicitarg.ptr, so optnone to
+; avoid optimizing out the implicit argument allocation.
+attributes #0 = { optnone noinline "amdgpu-implicitarg-num-bytes"="8" }
+attributes #1 = { optnone noinline "amdgpu-implicitarg-num-bytes"="16" }
+attributes #2 = { optnone noinline "amdgpu-implicitarg-num-bytes"="24" }
+attributes #3 = { optnone noinline "amdgpu-implicitarg-num-bytes"="32" }
+attributes #4 = { optnone noinline "amdgpu-implicitarg-num-bytes"="48" }
+attributes #5 = { optnone noinline "amdgpu-implicitarg-num-bytes"="56" }

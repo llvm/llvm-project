@@ -31,7 +31,7 @@ define amdgpu_kernel void @s_test_fmin_legacy_subreg_inputs_f32(float addrspace(
 }
 
 ; FUNC-LABEL: {{^}}s_test_fmin_legacy_ule_f32:
-; GCN-DAG: s_load_dwordx2 s{{\[}}[[A:[0-9]+]]:[[B:[0-9]+]]{{\]}}, s{{\[[0-9]+:[0-9]+\]}}, {{0xb|0x2c}}
+; GCN-DAG: s_load_dwordx2 s[[[A:[0-9]+]]:[[B:[0-9]+]]], s{{\[[0-9]+:[0-9]+\]}}, {{0xb|0x2c}}
 
 ; SI-SAFE: v_mov_b32_e32 [[VA:v[0-9]+]], s[[A]]
 
@@ -56,7 +56,7 @@ define amdgpu_kernel void @s_test_fmin_legacy_ule_f32(float addrspace(1)* %out, 
 ; Nsz also needed
 ; FIXME: Should separate tests
 ; GCN-LABEL: {{^}}s_test_fmin_legacy_ule_f32_nnan_src:
-; GCN: s_load_dwordx2 s{{\[}}[[A:[0-9]+]]:[[B:[0-9]+]]{{\]}}, s{{\[[0-9]+:[0-9]+\]}}, {{0xb|0x2c}}
+; GCN: s_load_dwordx2 s[[[A:[0-9]+]]:[[B:[0-9]+]]], s{{\[[0-9]+:[0-9]+\]}}, {{0xb|0x2c}}
 
 ; GCN-DAG: v_add_f32_e64 [[ADD_A:v[0-9]+]], s[[A]], 1.0
 ; GCN-DAG: v_add_f32_e64 [[ADD_B:v[0-9]+]], s[[B]], 2.0
@@ -187,8 +187,8 @@ define amdgpu_kernel void @test_fmin_legacy_ult_v1f32(<1 x float> addrspace(1)* 
   %gep.0 = getelementptr <1 x float>, <1 x float> addrspace(1)* %in, i32 %tid
   %gep.1 = getelementptr <1 x float>, <1 x float> addrspace(1)* %gep.0, i32 1
 
-  %a = load <1 x float>, <1 x float> addrspace(1)* %gep.0
-  %b = load <1 x float>, <1 x float> addrspace(1)* %gep.1
+  %a = load volatile <1 x float>, <1 x float> addrspace(1)* %gep.0
+  %b = load volatile <1 x float>, <1 x float> addrspace(1)* %gep.1
 
   %cmp = fcmp ult <1 x float> %a, %b
   %val = select <1 x i1> %cmp, <1 x float> %a, <1 x float> %b
@@ -214,8 +214,8 @@ define amdgpu_kernel void @test_fmin_legacy_ult_v2f32(<2 x float> addrspace(1)* 
   %gep.0 = getelementptr <2 x float>, <2 x float> addrspace(1)* %in, i32 %tid
   %gep.1 = getelementptr <2 x float>, <2 x float> addrspace(1)* %gep.0, i32 1
 
-  %a = load <2 x float>, <2 x float> addrspace(1)* %gep.0
-  %b = load <2 x float>, <2 x float> addrspace(1)* %gep.1
+  %a = load volatile <2 x float>, <2 x float> addrspace(1)* %gep.0
+  %b = load volatile <2 x float>, <2 x float> addrspace(1)* %gep.1
 
   %cmp = fcmp ult <2 x float> %a, %b
   %val = select <2 x i1> %cmp, <2 x float> %a, <2 x float> %b

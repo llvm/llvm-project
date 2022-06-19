@@ -1,4 +1,4 @@
-; RUN: opt < %s -float2int -float2int-max-integer-bw=256 -S | FileCheck %s
+; RUN: opt < %s -passes=float2int -float2int-max-integer-bw=256 -S | FileCheck %s
 
 ; CHECK-LABEL: @neg_toolarge
 ; CHECK:  %1 = uitofp i80 %a to fp128

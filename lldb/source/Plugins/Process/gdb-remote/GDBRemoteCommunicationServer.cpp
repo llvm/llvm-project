@@ -46,7 +46,7 @@ GDBRemoteCommunicationServer::GetPacketAndSendResponse(
     Timeout<std::micro> timeout, Status &error, bool &interrupt, bool &quit) {
   StringExtractorGDBRemote packet;
 
-  PacketResult packet_result = WaitForPacketNoLock(packet, timeout, false);
+  PacketResult packet_result = ReadPacket(packet, timeout, false);
   if (packet_result == PacketResult::Success) {
     const StringExtractorGDBRemote::ServerPacketType packet_type =
         packet.GetServerPacketType();
@@ -138,7 +138,7 @@ GDBRemoteCommunicationServer::Handle_QErrorStringEnable(
 GDBRemoteCommunication::PacketResult
 GDBRemoteCommunicationServer::SendIllFormedResponse(
     const StringExtractorGDBRemote &failed_packet, const char *message) {
-  Log *log(ProcessGDBRemoteLog::GetLogIfAllCategoriesSet(GDBR_LOG_PACKETS));
+  Log *log = GetLog(GDBRLog::Packets);
   LLDB_LOGF(log, "GDBRemoteCommunicationServer::%s: ILLFORMED: '%s' (%s)",
             __FUNCTION__, failed_packet.GetStringRef().data(),
             message ? message : "");
@@ -148,10 +148,6 @@ GDBRemoteCommunicationServer::SendIllFormedResponse(
 GDBRemoteCommunication::PacketResult
 GDBRemoteCommunicationServer::SendOKResponse() {
   return SendPacketNoLock("OK");
-}
-
-bool GDBRemoteCommunicationServer::HandshakeWithClient() {
-  return GetAck() == PacketResult::Success;
 }
 
 GDBRemoteCommunication::PacketResult

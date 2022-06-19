@@ -163,7 +163,7 @@ namespace ellipsis {
     (void)p1;
 
     UnsignedTmplArgSink<T(CtorSink(t ...)) ...> *t0; // ok
-    UnsignedTmplArgSink<((T *)0, 42u) ...> **t0p = &t0;
+    UnsignedTmplArgSink<((T *)0, 42u) ...> **t0p = &t0; // expected-warning 2{{left operand of comma operator has no effect}}
   }
 
   template void foo(int, int, int); // expected-note {{in instantiation of function template specialization 'ellipsis::foo<int, int>' requested here}}

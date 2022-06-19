@@ -1,13 +1,6 @@
-; RUN: opt %loadPolly -basic-aa -polly-scops -polly-allow-nonaffine-branches \
-; RUN:     -polly-allow-nonaffine-loops=false \
-; RUN:     -analyze < %s | FileCheck %s --check-prefix=INNERMOST
-; RUN: opt %loadPolly -basic-aa -polly-scops -polly-allow-nonaffine-branches \
-; RUN:     -polly-allow-nonaffine-loops=true \
-; RUN:     -analyze < %s | FileCheck %s --check-prefix=INNERMOST
-; RUN: opt %loadPolly -basic-aa -polly-scops -polly-allow-nonaffine \
-; RUN:     -polly-allow-nonaffine-branches -polly-allow-nonaffine-loops=true \
-; RUN:     -analyze < %s | FileCheck %s \
-; RUN:     --check-prefix=ALL
+; RUN: opt %loadPolly -basic-aa -polly-allow-nonaffine-branches -polly-allow-nonaffine-loops=false                       -polly-print-scops -disable-output < %s | FileCheck %s --check-prefix=INNERMOST
+; RUN: opt %loadPolly -basic-aa -polly-allow-nonaffine-branches -polly-allow-nonaffine-loops=true                        -polly-print-scops -disable-output < %s | FileCheck %s --check-prefix=INNERMOST
+; RUN: opt %loadPolly -basic-aa -polly-allow-nonaffine-branches -polly-allow-nonaffine-loops=true -polly-allow-nonaffine -polly-print-scops -disable-output < %s | FileCheck %s --check-prefix=ALL
 ;
 ; Here we have a non-affine loop (in the context of the loop nest)
 ; and also a non-affine access (A[k]). While we can always model the
@@ -96,9 +89,9 @@
 ; ALL-NEXT:         ReadAccess :=    [Reduction Type: NONE] [Scalar: 0]
 ; ALL-NEXT:             { Stmt_bb15__TO__bb25[i0, i1] -> MemRef_A[i1] };
 ; ALL-NEXT:         ReadAccess :=    [Reduction Type: NONE] [Scalar: 0]
-; ALL-NEXT:             { Stmt_bb15__TO__bb25[i0, i1] -> MemRef_A[o0] : 0 <= o0 <= 2305843009213693951 };
+; ALL-NEXT:             { Stmt_bb15__TO__bb25[i0, i1] -> MemRef_A[o0] };
 ; ALL-NEXT:         MayWriteAccess :=    [Reduction Type: NONE] [Scalar: 0]
-; ALL-NEXT:             { Stmt_bb15__TO__bb25[i0, i1] -> MemRef_A[o0] : 0 <= o0 <= 2305843009213693951 };
+; ALL-NEXT:             { Stmt_bb15__TO__bb25[i0, i1] -> MemRef_A[o0] };
 ; ALL-NEXT: }
 ;
 ;    void f(int *A) {

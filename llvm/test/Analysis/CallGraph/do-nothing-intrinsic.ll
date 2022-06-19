@@ -1,4 +1,4 @@
-; RUN: opt < %s -basiccg -enable-new-pm=0
+; RUN: opt < %s -passes='require<callgraph>'
 ; PR13903
 
 define void @main() personality i8 0 {

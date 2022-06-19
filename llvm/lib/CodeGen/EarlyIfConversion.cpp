@@ -17,10 +17,10 @@
 
 #include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/PostOrderIterator.h"
-#include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SparseSet.h"
 #include "llvm/ADT/Statistic.h"
+#include "llvm/Analysis/OptimizationRemarkEmitter.h"
 #include "llvm/CodeGen/MachineBranchProbabilityInfo.h"
 #include "llvm/CodeGen/MachineDominators.h"
 #include "llvm/CodeGen/MachineFunction.h"
@@ -30,7 +30,6 @@
 #include "llvm/CodeGen/MachineOptimizationRemarkEmitter.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/MachineTraceMetrics.h"
-#include "llvm/CodeGen/Passes.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
@@ -111,12 +110,11 @@ public:
   /// Information about each phi in the Tail block.
   struct PHIInfo {
     MachineInstr *PHI;
-    unsigned TReg, FReg;
+    unsigned TReg = 0, FReg = 0;
     // Latencies from Cond+Branch, TReg, and FReg to DstReg.
-    int CondCycles, TCycles, FCycles;
+    int CondCycles = 0, TCycles = 0, FCycles = 0;
 
-    PHIInfo(MachineInstr *phi)
-      : PHI(phi), TReg(0), FReg(0), CondCycles(0), TCycles(0), FCycles(0) {}
+    PHIInfo(MachineInstr *phi) : PHI(phi) {}
   };
 
   SmallVector<PHIInfo, 8> PHIs;
@@ -210,9 +208,9 @@ bool SSAIfConv::canSpeculateInstrs(MachineBasicBlock *MBB) {
 
   // Check all instructions, except the terminators. It is assumed that
   // terminators never have side effects or define any used register values.
-  for (MachineBasicBlock::iterator I = MBB->begin(),
-       E = MBB->getFirstTerminator(); I != E; ++I) {
-    if (I->isDebugInstr())
+  for (MachineInstr &MI :
+       llvm::make_range(MBB->begin(), MBB->getFirstTerminator())) {
+    if (MI.isDebugInstr())
       continue;
 
     if (++InstrCount > BlockInstrLimit && !Stress) {
@@ -222,28 +220,28 @@ bool SSAIfConv::canSpeculateInstrs(MachineBasicBlock *MBB) {
     }
 
     // There shouldn't normally be any phis in a single-predecessor block.
-    if (I->isPHI()) {
-      LLVM_DEBUG(dbgs() << "Can't hoist: " << *I);
+    if (MI.isPHI()) {
+      LLVM_DEBUG(dbgs() << "Can't hoist: " << MI);
       return false;
     }
 
     // Don't speculate loads. Note that it may be possible and desirable to
     // speculate GOT or constant pool loads that are guaranteed not to trap,
     // but we don't support that for now.
-    if (I->mayLoad()) {
-      LLVM_DEBUG(dbgs() << "Won't speculate load: " << *I);
+    if (MI.mayLoad()) {
+      LLVM_DEBUG(dbgs() << "Won't speculate load: " << MI);
       return false;
     }
 
     // We never speculate stores, so an AA pointer isn't necessary.
     bool DontMoveAcrossStore = true;
-    if (!I->isSafeToMove(nullptr, DontMoveAcrossStore)) {
-      LLVM_DEBUG(dbgs() << "Can't speculate: " << *I);
+    if (!MI.isSafeToMove(nullptr, DontMoveAcrossStore)) {
+      LLVM_DEBUG(dbgs() << "Can't speculate: " << MI);
       return false;
     }
 
     // Check for any dependencies on Head instructions.
-    if (!InstrDependenciesAllowIfConv(&(*I)))
+    if (!InstrDependenciesAllowIfConv(&MI))
       return false;
   }
   return true;
@@ -665,8 +663,8 @@ void SSAIfConv::rewritePHIOperands() {
         PI.PHI->getOperand(i-1).setMBB(Head);
         PI.PHI->getOperand(i-2).setReg(DstReg);
       } else if (MBB == getFPred()) {
-        PI.PHI->RemoveOperand(i-1);
-        PI.PHI->RemoveOperand(i-2);
+        PI.PHI->removeOperand(i-1);
+        PI.PHI->removeOperand(i-2);
       }
     }
     LLVM_DEBUG(dbgs() << "          --> " << *PI.PHI);

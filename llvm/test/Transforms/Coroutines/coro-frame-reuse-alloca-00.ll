@@ -1,11 +1,11 @@
 ; Check that we can handle spills of array allocas
-; RUN: opt < %s -passes='cgscc(coro-split),simplifycfg,early-cse' -reuse-storage-in-coroutine-frame -S | FileCheck %s
+; RUN: opt < %s -passes='cgscc(coro-split<reuse-storage>),simplifycfg,early-cse' -S | FileCheck %s
 
 %struct.big_structure = type { [500 x i8] }
 declare void @consume(%struct.big_structure*)
 
 ; Function Attrs: noinline optnone uwtable
-define i8* @f(i1 %cond) "coroutine.presplit"="1" {
+define i8* @f(i1 %cond) presplitcoroutine {
 entry:
   %data = alloca %struct.big_structure, align 1
   %data2 = alloca %struct.big_structure, align 1

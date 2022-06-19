@@ -1764,10 +1764,10 @@ define <16 x i32> @test_masked_v16i32(i8 * %addr, <16 x i32> %old, <16 x i32> %m
 ; SSE2-NEXT:    pcmpeqd %xmm8, %xmm7
 ; SSE2-NEXT:    pcmpeqd %xmm8, %xmm6
 ; SSE2-NEXT:    pcmpeqd %xmm8, %xmm5
-; SSE2-NEXT:    pcmpeqd %xmm8, %xmm4
-; SSE2-NEXT:    pand %xmm4, %xmm0
-; SSE2-NEXT:    pandn (%rdi), %xmm4
-; SSE2-NEXT:    por %xmm4, %xmm0
+; SSE2-NEXT:    pcmpeqd %xmm4, %xmm8
+; SSE2-NEXT:    pand %xmm8, %xmm0
+; SSE2-NEXT:    pandn (%rdi), %xmm8
+; SSE2-NEXT:    por %xmm8, %xmm0
 ; SSE2-NEXT:    pand %xmm5, %xmm1
 ; SSE2-NEXT:    pandn 16(%rdi), %xmm5
 ; SSE2-NEXT:    por %xmm5, %xmm1

@@ -7,13 +7,10 @@ define void @hoge(i64 %idx, <4 x i32>* %sink) {
 ; CHECK-LABEL: @hoge(
 ; CHECK-NEXT:  bb:
 ; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds [20 x [13 x i32]], [20 x [13 x i32]]* @array, i64 0, i64 [[IDX:%.*]], i64 5
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds [20 x [13 x i32]], [20 x [13 x i32]]* @array, i64 0, i64 [[IDX]], i64 6
-; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds [20 x [13 x i32]], [20 x [13 x i32]]* @array, i64 0, i64 [[IDX]], i64 7
-; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds [20 x [13 x i32]], [20 x [13 x i32]]* @array, i64 0, i64 [[IDX]], i64 8
-; CHECK-NEXT:    [[TMP4:%.*]] = bitcast i32* [[TMP0]] to <4 x i32>*
-; CHECK-NEXT:    [[TMP5:%.*]] = load <4 x i32>, <4 x i32>* [[TMP4]], align 4
-; CHECK-NEXT:    [[TMP6:%.*]] = shufflevector <4 x i32> [[TMP5]], <4 x i32> poison, <4 x i32> <i32 1, i32 2, i32 3, i32 0>
-; CHECK-NEXT:    store <4 x i32> [[TMP6]], <4 x i32>* [[SINK:%.*]], align 16
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast i32* [[TMP0]] to <4 x i32>*
+; CHECK-NEXT:    [[TMP2:%.*]] = load <4 x i32>, <4 x i32>* [[TMP1]], align 4
+; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <4 x i32> [[TMP2]], <4 x i32> poison, <4 x i32> <i32 1, i32 2, i32 3, i32 0>
+; CHECK-NEXT:    store <4 x i32> [[TMP3]], <4 x i32>* [[SINK:%.*]], align 16
 ; CHECK-NEXT:    ret void
 ;
 bb:

@@ -14,19 +14,15 @@
 #define LLVM_CODEGEN_ACCELTABLE_H
 
 #include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/CodeGen/DIE.h"
 #include "llvm/CodeGen/DwarfStringPoolEntry.h"
-#include "llvm/MC/MCSymbol.h"
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/DJB.h"
 #include "llvm/Support/Debug.h"
-#include "llvm/Support/Format.h"
-#include "llvm/Support/raw_ostream.h"
-#include <cstddef>
 #include <cstdint>
 #include <vector>
 
@@ -108,6 +104,8 @@ namespace llvm {
 class AsmPrinter;
 class DwarfCompileUnit;
 class DwarfDebug;
+class MCSymbol;
+class raw_ostream;
 
 /// Interface which the different types of accelerator table data have to
 /// conform. It serves as a base class for different values of the template

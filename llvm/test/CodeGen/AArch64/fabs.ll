@@ -22,11 +22,10 @@ define double @not_fabs(double %x) #0 {
 define float @still_not_fabs(float %x) #0 {
 ; CHECK-LABEL: still_not_fabs:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #-2147483648
-; CHECK-NEXT:    fmov s2, w8
-; CHECK-NEXT:    fneg s1, s0
-; CHECK-NEXT:    fcmp s0, s2
-; CHECK-NEXT:    fcsel s0, s0, s1, ge
+; CHECK-NEXT:    movi v1.2s, #128, lsl #24
+; CHECK-NEXT:    fneg s2, s0
+; CHECK-NEXT:    fcmp s0, s1
+; CHECK-NEXT:    fcsel s0, s0, s2, ge
 ; CHECK-NEXT:    ret
   %cmp = fcmp nnan oge float %x, -0.0
   %sub = fsub nnan float -0.0, %x

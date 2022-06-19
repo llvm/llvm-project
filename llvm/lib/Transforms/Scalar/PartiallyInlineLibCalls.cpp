@@ -82,7 +82,8 @@ static bool optimizeSQRT(CallInst *Call, Function *CalledFunc,
 
   // Add attribute "readnone" so that backend can use a native sqrt instruction
   // for this call.
-  Call->addAttribute(AttributeList::FunctionIndex, Attribute::ReadNone);
+  Call->removeFnAttr(Attribute::WriteOnly);
+  Call->addFnAttr(Attribute::ReadNone);
 
   // Insert a FP compare instruction and use it as the CurrBB branch condition.
   Builder.SetInsertPoint(CurrBBTerm);
@@ -122,6 +123,9 @@ static bool runPartiallyInlineLibCalls(Function &F, TargetLibraryInfo *TLI,
         continue;
 
       if (Call->isNoBuiltin() || Call->isStrictFP())
+        continue;
+
+      if (Call->isMustTailCall())
         continue;
 
       // Skip if function either has local linkage or is not a known library

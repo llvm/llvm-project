@@ -35,9 +35,15 @@ private:
   SDValue getFFBX_U32(SelectionDAG &DAG, SDValue Op, const SDLoc &DL, unsigned Opc) const;
 
 public:
+  /// \returns The minimum number of bits needed to store the value of \Op as an
+  /// unsigned integer. Truncating to this size and then zero-extending to the
+  /// original size will not change the value.
   static unsigned numBitsUnsigned(SDValue Op, SelectionDAG &DAG);
+
+  /// \returns The minimum number of bits needed to store the value of \Op as a
+  /// signed integer. Truncating to this size and then sign-extending to the
+  /// original size will not change the value.
   static unsigned numBitsSigned(SDValue Op, SelectionDAG &DAG);
-  static bool hasDefinedInitializer(const GlobalValue *GV);
 
 protected:
   SDValue LowerEXTRACT_SUBVECTOR(SDValue Op, SelectionDAG &DAG) const;
@@ -85,6 +91,7 @@ protected:
   SDValue performSrlCombine(SDNode *N, DAGCombinerInfo &DCI) const;
   SDValue performTruncateCombine(SDNode *N, DAGCombinerInfo &DCI) const;
   SDValue performMulCombine(SDNode *N, DAGCombinerInfo &DCI) const;
+  SDValue performMulLoHiCombine(SDNode *N, DAGCombinerInfo &DCI) const;
   SDValue performMulhsCombine(SDNode *N, DAGCombinerInfo &DCI) const;
   SDValue performMulhuCombine(SDNode *N, DAGCombinerInfo &DCI) const;
   SDValue performCtlz_CttzCombine(const SDLoc &SL, SDValue Cond, SDValue LHS,
@@ -313,8 +320,9 @@ public:
 
   enum ImplicitParameter {
     FIRST_IMPLICIT,
-    GRID_DIM = FIRST_IMPLICIT,
-    GRID_OFFSET,
+    PRIVATE_BASE,
+    SHARED_BASE,
+    QUEUE_PTR,
   };
 
   /// Helper function that returns the byte offset of the given
@@ -328,8 +336,8 @@ public:
 
   AtomicExpansionKind shouldExpandAtomicRMWInIR(AtomicRMWInst *) const override;
 
-  bool isConstantUnsignedBitfieldExtactLegal(unsigned Opc, LLT Ty1,
-                                             LLT Ty2) const override;
+  bool isConstantUnsignedBitfieldExtractLegal(unsigned Opc, LLT Ty1,
+                                              LLT Ty2) const override;
 };
 
 namespace AMDGPUISD {
@@ -337,7 +345,7 @@ namespace AMDGPUISD {
 enum NodeType : unsigned {
   // AMDIL ISD Opcodes
   FIRST_NUMBER = ISD::BUILTIN_OP_END,
-  UMUL,        // 32bit unsigned multiplication
+  UMUL, // 32bit unsigned multiplication
   BRANCH_COND,
   // End AMDIL ISD Opcodes
 
@@ -416,10 +424,10 @@ enum NodeType : unsigned {
   DOT4,
   CARRY,
   BORROW,
-  BFE_U32, // Extract range of bits with zero extension to 32-bits.
-  BFE_I32, // Extract range of bits with sign extension to 32-bits.
-  BFI, // (src0 & src1) | (~src0 & src2)
-  BFM, // Insert a range of bits into a 32-bit word.
+  BFE_U32,  // Extract range of bits with zero extension to 32-bits.
+  BFE_I32,  // Extract range of bits with sign extension to 32-bits.
+  BFI,      // (src0 & src1) | (~src0 & src2)
+  BFM,      // Insert a range of bits into a 32-bit word.
   FFBH_U32, // ctlz with -1 if input is zero.
   FFBH_I32,
   FFBL_B32, // cttz with -1 if input is zero.
@@ -473,6 +481,9 @@ enum NodeType : unsigned {
   CONST_DATA_PTR,
   PC_ADD_REL_OFFSET,
   LDS,
+  FPTRUNC_ROUND_UPWARD,
+  FPTRUNC_ROUND_DOWNWARD,
+
   DUMMY_CHAIN,
   FIRST_MEM_OPCODE_NUMBER = ISD::FIRST_TARGET_MEMORY_OPCODE,
   LOAD_D16_HI,
@@ -527,7 +538,6 @@ enum NodeType : unsigned {
 
   LAST_AMDGPU_ISD_NUMBER
 };
-
 
 } // End namespace AMDGPUISD
 

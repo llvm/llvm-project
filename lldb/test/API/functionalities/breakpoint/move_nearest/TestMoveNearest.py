@@ -8,8 +8,6 @@ import lldbsuite.test.lldbutil as lldbutil
 
 
 class TestMoveNearest(TestBase):
-
-    mydir = TestBase.compute_mydir(__file__)
     NO_DEBUG_INFO_TESTCASE = True
 
     def setUp(self):
@@ -32,7 +30,7 @@ class TestMoveNearest(TestBase):
         lldbutil.run_break_set_by_symbol(self, 'main', sym_exact=True)
         environment = self.registerSharedLibrariesWithTarget(target, ["foo"])
         process = target.LaunchSimple(None, environment, self.get_process_working_directory())
-        self.assertEquals(process.GetState(), lldb.eStateStopped)
+        self.assertState(process.GetState(), lldb.eStateStopped)
 
         # Regardless of the -m value the breakpoint should have exactly one
         # location on the foo functions

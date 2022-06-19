@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -E -C %s | FileCheck -strict-whitespace %s
+// RUN: %clang_cc1 -E -C -fminimize-whitespace %s | FileCheck -strict-whitespace %s
 
 // foo
 // CHECK: // foo

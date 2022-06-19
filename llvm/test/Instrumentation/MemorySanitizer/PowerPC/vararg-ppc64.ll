@@ -1,5 +1,4 @@
 ; RUN: opt < %s -S -passes=msan 2>&1 | FileCheck %s
-; RUN: opt < %s -msan -S | FileCheck %s
 
 target datalayout = "E-m:e-i64:64-n32:64"
 target triple = "powerpc64--linux"
@@ -92,7 +91,7 @@ define i32 @bar7([4 x i64]* %arg) {
 }
 
 ; CHECK-LABEL: @bar7
-; CHECK: call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 8 inttoptr (i64 add (i64 ptrtoint ([100 x i64]* @__msan_param_tls to i64), i64 8) to i8*), i8* align 8 {{.*}}, i64 32, i1 false)
+; CHECK: call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 8 inttoptr (i64 add (i64 ptrtoint ([100 x i64]* @__msan_va_arg_tls to i64), i64 8) to i8*), i8* align 8 {{.*}}, i64 32, i1 false)
 ; CHECK: store {{.*}} 40, {{.*}} @__msan_va_arg_overflow_size_tls
 
 

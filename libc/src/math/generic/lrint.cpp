@@ -7,13 +7,14 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/math/lrint.h"
+#include "src/__support/FPUtil/NearestIntegerOperations.h"
 #include "src/__support/common.h"
-#include "utils/FPUtil/NearestIntegerOperations.h"
 
 namespace __llvm_libc {
 
 LLVM_LIBC_FUNCTION(long, lrint, (double x)) {
-  return fputil::roundToSignedIntegerUsingCurrentRoundingMode<double, long>(x);
+  return fputil::round_to_signed_integer_using_current_rounding_mode<double,
+                                                                     long>(x);
 }
 
 } // namespace __llvm_libc

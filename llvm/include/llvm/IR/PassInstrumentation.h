@@ -86,7 +86,7 @@ public:
   using AnalysesClearedFunc = void(StringRef);
 
 public:
-  PassInstrumentationCallbacks() {}
+  PassInstrumentationCallbacks() = default;
 
   /// Copying PassInstrumentationCallbacks is not intended.
   PassInstrumentationCallbacks(const PassInstrumentationCallbacks &) = delete;

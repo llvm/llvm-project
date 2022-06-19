@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple x86_64-apple-darwin -emit-llvm -o %t %s
+// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-apple-darwin -emit-llvm -o %t %s
 // RUN: FileCheck < %t %s
 // rdar://11777609
 
@@ -57,7 +57,7 @@ typedef struct
 // rdar://16655340
 int i;
 typeof(@encode(typeof(i))) e = @encode(typeof(i));
-const char * Test()
+const char * Test(void)
 {
     return e;
 }

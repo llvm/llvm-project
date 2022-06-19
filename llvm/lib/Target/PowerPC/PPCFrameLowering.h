@@ -21,12 +21,12 @@ class PPCSubtarget;
 
 class PPCFrameLowering: public TargetFrameLowering {
   const PPCSubtarget &Subtarget;
-  const unsigned ReturnSaveOffset;
-  const unsigned TOCSaveOffset;
-  const unsigned FramePointerSaveOffset;
+  const uint64_t ReturnSaveOffset;
+  const uint64_t TOCSaveOffset;
+  const uint64_t FramePointerSaveOffset;
   const unsigned LinkageSize;
-  const unsigned BasePointerSaveOffset;
-  const unsigned CRSaveOffset;
+  const uint64_t BasePointerSaveOffset;
+  const uint64_t CRSaveOffset;
 
   // Map each group of one or two GPRs to corresponding VSR for spilling.
   // TODO: Use local table in methods to avoid this mutable member.
@@ -88,7 +88,7 @@ public:
   /**
    * Determine the frame layout and update the machine function.
    */
-  unsigned determineFrameLayoutAndUpdate(MachineFunction &MF,
+  uint64_t determineFrameLayoutAndUpdate(MachineFunction &MF,
                                          bool UseEstimate = false) const;
 
   /**
@@ -96,7 +96,7 @@ public:
    * The MachineFunction object can be const in this case as it is not
    * modified.
    */
-  unsigned determineFrameLayout(const MachineFunction &MF,
+  uint64_t determineFrameLayout(const MachineFunction &MF,
                                 bool UseEstimate = false,
                                 unsigned *NewMaxCallFrameSize = nullptr) const;
 
@@ -146,19 +146,19 @@ public:
 
   /// getReturnSaveOffset - Return the previous frame offset to save the
   /// return address.
-  unsigned getReturnSaveOffset() const { return ReturnSaveOffset; }
+  uint64_t getReturnSaveOffset() const { return ReturnSaveOffset; }
 
   /// getTOCSaveOffset - Return the previous frame offset to save the
   /// TOC register -- 64-bit SVR4 ABI only.
-  unsigned getTOCSaveOffset() const;
+  uint64_t getTOCSaveOffset() const;
 
   /// getFramePointerSaveOffset - Return the previous frame offset to save the
   /// frame pointer.
-  unsigned getFramePointerSaveOffset() const;
+  uint64_t getFramePointerSaveOffset() const;
 
   /// getBasePointerSaveOffset - Return the previous frame offset to save the
   /// base pointer.
-  unsigned getBasePointerSaveOffset() const;
+  uint64_t getBasePointerSaveOffset() const;
 
   /// getLinkageSize - Return the size of the PowerPC ABI linkage area.
   ///

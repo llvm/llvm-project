@@ -18,6 +18,12 @@
 using namespace clang;
 using namespace clang::targets;
 
+const Builtin::Info VETargetInfo::BuiltinInfo[] = {
+#define BUILTIN(ID, TYPE, ATTRS)                                               \
+  {#ID, TYPE, ATTRS, nullptr, ALL_LANGUAGES, nullptr},
+#include "clang/Basic/BuiltinsVE.def"
+};
+
 void VETargetInfo::getTargetDefines(const LangOptions &Opts,
                                     MacroBuilder &Builder) const {
   Builder.defineMacro("_LP64", "1");
@@ -35,5 +41,6 @@ void VETargetInfo::getTargetDefines(const LangOptions &Opts,
 }
 
 ArrayRef<Builtin::Info> VETargetInfo::getTargetBuiltins() const {
-  return ArrayRef<Builtin::Info>();
+  return llvm::makeArrayRef(BuiltinInfo,
+                            clang::VE::LastTSBuiltin - Builtin::FirstTSBuiltin);
 }

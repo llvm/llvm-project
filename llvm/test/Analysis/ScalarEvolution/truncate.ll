@@ -1,4 +1,3 @@
-; RUN: opt < %s -analyze -enable-new-pm=0 -scalar-evolution 2>&1 | FileCheck %s
 ; RUN: opt < %s -disable-output "-passes=print<scalar-evolution>" 2>&1 2>&1 | FileCheck %s
 ; RUN: opt < %s -passes='print<scalar-evolution>' -S 2>&1 | FileCheck %s
 ; Regression test for assert ScalarEvolution::getTruncateExpr.

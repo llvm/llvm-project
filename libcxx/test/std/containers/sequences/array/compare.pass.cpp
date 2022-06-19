@@ -22,26 +22,38 @@
 #include "test_macros.h"
 #include "test_comparisons.h"
 
-// std::array is explicitly allowed to be initialized with A a = { init-list };.
-// Disable the missing braces warning for this reason.
-#include "disable_missing_braces_warning.h"
-
 TEST_CONSTEXPR_CXX20 bool tests()
 {
     {
         typedef std::array<int, 3> C;
-        C c1 = {1, 2, 3};
-        C c2 = {1, 2, 3};
-        C c3 = {3, 2, 1};
-        C c4 = {1, 2, 1};
+        const C c1 = {1, 2, 3};
+        const C c2 = {1, 2, 3};
+        const C c3 = {3, 2, 1};
+        const C c4 = {1, 2, 1};
         assert(testComparisons6(c1, c2, true, false));
         assert(testComparisons6(c1, c3, false, true));
         assert(testComparisons6(c1, c4, false, false));
     }
     {
         typedef std::array<int, 0> C;
-        C c1 = {};
-        C c2 = {};
+        const C c1 = {};
+        const C c2 = {};
+        assert(testComparisons6(c1, c2, true, false));
+    }
+    {
+        typedef std::array<LessAndEqComp, 3> C;
+        const C c1 = {LessAndEqComp(1), LessAndEqComp(2), LessAndEqComp(3)};
+        const C c2 = {LessAndEqComp(1), LessAndEqComp(2), LessAndEqComp(3)};
+        const C c3 = {LessAndEqComp(3), LessAndEqComp(2), LessAndEqComp(1)};
+        const C c4 = {LessAndEqComp(1), LessAndEqComp(2), LessAndEqComp(1)};
+        assert(testComparisons6(c1, c2, true, false));
+        assert(testComparisons6(c1, c3, false, true));
+        assert(testComparisons6(c1, c4, false, false));
+    }
+    {
+        typedef std::array<LessAndEqComp, 0> C;
+        const C c1 = {};
+        const C c2 = {};
         assert(testComparisons6(c1, c2, true, false));
     }
 

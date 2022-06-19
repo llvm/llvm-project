@@ -6,7 +6,7 @@
 #include "xray_defs.h"
 #include "xray_interface_internal.h"
 
-#if SANITIZER_FREEBSD || SANITIZER_NETBSD || SANITIZER_MAC
+#if SANITIZER_FREEBSD || SANITIZER_NETBSD || SANITIZER_APPLE
 #include <sys/types.h>
 #include <sys/sysctl.h>
 #elif SANITIZER_FUCHSIA
@@ -82,11 +82,11 @@ uint64_t getTSCFrequency() XRAY_NEVER_INSTRUMENT {
   }
   return TSCFrequency == -1 ? 0 : static_cast<uint64_t>(TSCFrequency);
 }
-#elif SANITIZER_FREEBSD || SANITIZER_NETBSD || SANITIZER_MAC
+#elif SANITIZER_FREEBSD || SANITIZER_NETBSD || SANITIZER_APPLE
 uint64_t getTSCFrequency() XRAY_NEVER_INSTRUMENT {
     long long TSCFrequency = -1;
     size_t tscfreqsz = sizeof(TSCFrequency);
-#if SANITIZER_MAC
+#if SANITIZER_APPLE
     if (internal_sysctlbyname("machdep.tsc.frequency", &TSCFrequency,
                               &tscfreqsz, NULL, 0) != -1) {
 
@@ -148,7 +148,8 @@ bool patchFunctionEntry(const bool Enable, const uint32_t FuncId,
   int64_t TrampolineOffset = reinterpret_cast<int64_t>(Trampoline) -
                              (static_cast<int64_t>(Address) + 11);
   if (TrampolineOffset < MinOffset || TrampolineOffset > MaxOffset) {
-    Report("XRay Entry trampoline (%p) too far from sled (%p)\n", Trampoline,
+    Report("XRay Entry trampoline (%p) too far from sled (%p)\n",
+           reinterpret_cast<void *>(Trampoline),
            reinterpret_cast<void *>(Address));
     return false;
   }
@@ -195,7 +196,8 @@ bool patchFunctionExit(const bool Enable, const uint32_t FuncId,
                              (static_cast<int64_t>(Address) + 11);
   if (TrampolineOffset < MinOffset || TrampolineOffset > MaxOffset) {
     Report("XRay Exit trampoline (%p) too far from sled (%p)\n",
-           __xray_FunctionExit, reinterpret_cast<void *>(Address));
+           reinterpret_cast<void *>(__xray_FunctionExit),
+           reinterpret_cast<void *>(Address));
     return false;
   }
   if (Enable) {
@@ -224,7 +226,8 @@ bool patchFunctionTailExit(const bool Enable, const uint32_t FuncId,
       (static_cast<int64_t>(Address) + 11);
   if (TrampolineOffset < MinOffset || TrampolineOffset > MaxOffset) {
     Report("XRay Tail Exit trampoline (%p) too far from sled (%p)\n",
-           __xray_FunctionTailExit, reinterpret_cast<void *>(Address));
+           reinterpret_cast<void *>(__xray_FunctionTailExit),
+           reinterpret_cast<void *>(Address));
     return false;
   }
   if (Enable) {

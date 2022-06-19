@@ -11,8 +11,6 @@ from lldbsuite.test import lldbutil
 
 class SharedLibStrippedTestCase(TestBase):
 
-    mydir = TestBase.compute_mydir(__file__)
-
     @expectedFailureAll(oslist=["windows"])
     def test_expr(self):
         """Test that types work when defined in a shared library and forwa/d-declared in the main executable"""
@@ -84,5 +82,4 @@ class SharedLibStrippedTestCase(TestBase):
                              'stop reason = breakpoint'])
 
         # The breakpoint should have a hit count of 1.
-        self.expect("breakpoint list -f", BREAKPOINT_HIT_ONCE,
-                    substrs=[' resolved, hit count = 1'])
+        lldbutil.check_breakpoint(self, bpno = 1, expected_hit_count = 1)

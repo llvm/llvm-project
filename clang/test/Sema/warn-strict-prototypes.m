@@ -2,25 +2,25 @@
 
 @interface Foo
 
-@property (nonatomic, copy) void (^noProtoBlock)(); // expected-warning {{this block declaration is not a prototype}}
+@property (nonatomic, copy) void (^noProtoBlock)(); // expected-warning {{a block declaration without a prototype is deprecated}}
 @property (nonatomic, copy) void (^block)(void); // no warning
 
-- doStuff:(void (^)()) completionHandler; // expected-warning {{this block declaration is not a prototype}}
+- doStuff:(void (^)()) completionHandler; // expected-warning {{a block declaration without a prototype is deprecated}}
 - doOtherStuff:(void (^)(void)) completionHandler; // no warning
 
 @end
 
-void foo() { // expected-warning {{this old-style function definition is not preceded by a prototype}}
-  void (^block)() = // expected-warning {{this block declaration is not a prototype}}
+void foo() { // expected-warning {{a function declaration without a prototype is deprecated in all versions of C}}
+  void (^block)() = // expected-warning {{a block declaration without a prototype is deprecated}}
                     ^void(int arg) { // no warning
   };
-  void (^block2)(void) = ^void() { // no warning
+  void (^block2)(void) = ^void() {
   };
   void (^block3)(void) = ^ { // no warning
   };
 }
 
-void (*(^(*(^block4)()) // expected-warning {{this block declaration is not a prototype}}
-     ()) // expected-warning {{this function declaration is not a prototype}}
-     ()) // expected-warning {{this block declaration is not a prototype}}
-     (); // expected-warning {{this function declaration is not a prototype}}
+void (*(^(*(^block4)()) // expected-warning {{a block declaration without a prototype is deprecated}}
+     ()) // expected-warning {{a function declaration without a prototype is deprecated in all versions of C}}
+     ()) // expected-warning {{a block declaration without a prototype is deprecated}}
+     (); // expected-warning {{a function declaration without a prototype is deprecated in all versions of C}}

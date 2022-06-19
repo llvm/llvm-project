@@ -43,7 +43,7 @@ namespace ARMRI {
 
 /// isARMArea1Register - Returns true if the register is a low register (r0-r7)
 /// or a stack/pc register that we should push/pop.
-static inline bool isARMArea1Register(unsigned Reg, bool isIOS) {
+static inline bool isARMArea1Register(unsigned Reg, bool SplitFramePushPop) {
   using namespace ARM;
 
   switch (Reg) {
@@ -53,25 +53,52 @@ static inline bool isARMArea1Register(unsigned Reg, bool isIOS) {
       return true;
     case R8:  case R9:  case R10: case R11: case R12:
       // For iOS we want r7 and lr to be next to each other.
-      return !isIOS;
+      return !SplitFramePushPop;
     default:
       return false;
   }
 }
 
-static inline bool isARMArea2Register(unsigned Reg, bool isIOS) {
+static inline bool isARMArea2Register(unsigned Reg, bool SplitFramePushPop) {
   using namespace ARM;
 
   switch (Reg) {
     case R8: case R9: case R10: case R11: case R12:
       // iOS has this second area.
-      return isIOS;
+      return SplitFramePushPop;
     default:
       return false;
   }
 }
 
-static inline bool isARMArea3Register(unsigned Reg, bool isIOS) {
+static inline bool isSplitFPArea1Register(unsigned Reg,
+                                          bool SplitFramePushPop) {
+  using namespace ARM;
+
+  switch (Reg) {
+    case R0:  case R1:  case R2:  case R3:
+    case R4:  case R5:  case R6:  case R7:
+    case R8:  case R9:  case R10: case R12:
+    case SP:  case PC:
+      return true;
+    default:
+      return false;
+  }
+}
+
+static inline bool isSplitFPArea2Register(unsigned Reg,
+                                          bool SplitFramePushPop) {
+  using namespace ARM;
+
+  switch (Reg) {
+    case R11: case LR:
+      return true;
+    default:
+      return false;
+  }
+}
+
+static inline bool isARMArea3Register(unsigned Reg, bool SplitFramePushPop) {
   using namespace ARM;
 
   switch (Reg) {
@@ -214,6 +241,8 @@ public:
                             unsigned DefSubReg,
                             const TargetRegisterClass *SrcRC,
                             unsigned SrcSubReg) const override;
+
+  int getSEHRegNum(unsigned i) const { return getEncodingValue(i); }
 };
 
 } // end namespace llvm

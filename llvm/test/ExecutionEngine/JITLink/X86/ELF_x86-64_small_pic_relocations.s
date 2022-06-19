@@ -1,11 +1,11 @@
 # RUN: rm -rf %t && mkdir -p %t
-# RUN: llvm-mc -triple=x86_64-unknown-linux -position-independent -filetype=obj \
-# RUN:         -o %t/elf_sm_pic_reloc.o %s
-# RUN: llvm-jitlink -noexec -slab-allocate 100Kb -slab-address 0xfff00000 \
-# RUN:              -define-abs external_data=0x1 \
-# RUN:              -define-abs extern_in_range32=0xffe00000 \
-# RUN:              -define-abs extern_out_of_range32=0x7fff00000000 \
-# RUN:              -check %s %t/elf_sm_pic_reloc.o
+# RUN: llvm-mc -triple=x86_64-unknown-linux -position-independent \
+# RUN:     -filetype=obj -o %t/elf_sm_pic_reloc.o %s
+# RUN: llvm-jitlink -noexec \
+# RUN:     -slab-allocate 100Kb -slab-address 0xfff00000 -slab-page-size 4096 \
+# RUN:     -abs external_data=0x1 \
+# RUN:     -abs extern_out_of_range32=0x7fff00000000 \
+# RUN:     -check %s %t/elf_sm_pic_reloc.o
 #
 # Test ELF small/PIC relocations.
 
@@ -39,10 +39,12 @@ named_func:
 
         .size   named_func, .-named_func
 
-# Check R_X86_64_PLT32 handling with a call to a local function. This produces a
-# Branch32 edge that is resolved like a regular PCRel32 (no PLT entry created).
+# Check R_X86_64_PLT32 handling with a call to a local function in the text
+# section. This produces a Branch32 edge that is resolved like a regular
+# PCRel32 (no PLT entry created).
 #
-# jitlink-check: decode_operand(test_call_local, 0) = named_func - next_pc(test_call_local)
+# jitlink-check: decode_operand(test_call_local, 0) = \
+# jitlink-check:   named_func - next_pc(test_call_local)
         .globl  test_call_local
         .p2align       4, 0x90
         .type   test_call_local,@function
@@ -51,20 +53,21 @@ test_call_local:
 
         .size   test_call_local, .-test_call_local
 
-# Check R_X86_64_PLT32 handling with a call to an external. This produces a
-# Branch32ToStub edge, because externals are not defined locally. During
-# resolution, the target turns out to be in-range from the callsite and so the
-# edge is relaxed in post-allocation optimization.
+# Check R_X86_64_PLT32 handling with a call to a local linkage function in a
+# different text section and at a non-zero offset. This produces a Branch32 edge
+# that is resolved like a regular PCRel32 (no PLT entry created). The non-zero
+# offset requires us to handle addends for branch relocations correctly.
 #
-# jitlink-check: decode_operand(test_call_extern, 0) = \
-# jitlink-check:     extern_in_range32 - next_pc(test_call_extern)
-        .globl  test_call_extern
+# jitlink-check: decode_operand(test_call_alt_sec_at_offset, 0) = \
+# jitlink-check:   (section_addr(elf_sm_pic_reloc.o, .text.alt) + 16) - \
+# jitlink-check:   next_pc(test_call_alt_sec_at_offset)
+        .globl  test_call_alt_sec_at_offset
         .p2align       4, 0x90
-        .type   test_call_extern,@function
-test_call_extern:
-        callq   extern_in_range32@plt
+        .type   test_call_alt_sec_at_offset,@function
+test_call_alt_sec_at_offset:
+        callq   named_func_alt_sec_at_offset
 
-        .size   test_call_extern, .-test_call_extern
+        .size   test_call_alt_sec_at_offset, .-test_call_alt_sec_at_offset
 
 # Check R_X86_64_PLT32 handling with a call to an external via PLT. This
 # produces a Branch32ToStub edge, because externals are not defined locally.
@@ -85,7 +88,9 @@ test_call_extern_plt:
         .size   test_call_extern_plt, .-test_call_extern_plt
 
 # Test GOTPCREL handling. We want to check both the offset to the GOT entry and its
-# contents.
+# contents. "movl" will be optimized to "leal" and a non-got access if the pc relative
+# offset to named_data is in range of 32 bits signed immediate. So use "leal" here to
+# suppress optimization
 # jitlink-check: decode_operand(test_gotpcrel, 4) = \
 # jitlink-check:     got_addr(elf_sm_pic_reloc.o, named_data) - next_pc(test_gotpcrel)
 # jitlink-check: *{8}(got_addr(elf_sm_pic_reloc.o, named_data)) = named_data
@@ -94,7 +99,7 @@ test_call_extern_plt:
         .p2align      4, 0x90
         .type   test_gotpcrel,@function
 test_gotpcrel:
-	movl    named_data@GOTPCREL(%rip), %eax
+	leal    named_data@GOTPCREL(%rip), %eax
 
         .size   test_gotpcrel, .-test_gotpcrel
 
@@ -148,6 +153,17 @@ named_data:
 bss_variable:
 	.long	0
 	.size	bss_variable, 4
+
+# Named functions in a separate section.
+	.section	.text.alt,"ax",@progbits
+# .byte plus alignment of 16 should put named_func_alt_sec_at_offset at offset
+# 16 within .text.alt.
+	.byte   7
+	.p2align	4, 0x90
+	.type	named_func_alt_sec_at_offset,@function
+named_func_alt_sec_at_offset:
+	retq
+	.size	named_func_alt_sec_at_offset, .-named_func_alt_sec_at_offset
 
 # Constant pool entry with type STT_NOTYPE.
         .section        .rodata.cst8,"aM",@progbits,8

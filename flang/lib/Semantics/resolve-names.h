@@ -23,10 +23,11 @@ struct Program;
 
 namespace Fortran::semantics {
 
+class Scope;
 class SemanticsContext;
 class Symbol;
 
-bool ResolveNames(SemanticsContext &, const parser::Program &);
+bool ResolveNames(SemanticsContext &, const parser::Program &, Scope &top);
 void ResolveSpecificationParts(SemanticsContext &, const Symbol &);
 void DumpSymbols(llvm::raw_ostream &);
 

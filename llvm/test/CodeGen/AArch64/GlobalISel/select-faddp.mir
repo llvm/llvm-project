@@ -17,7 +17,7 @@ body:             |
     ; CHECK-LABEL: name: f64_faddp
     ; CHECK: liveins: $q0
     ; CHECK: [[COPY:%[0-9]+]]:fpr128 = COPY $q0
-    ; CHECK: [[FADDPv2i64p:%[0-9]+]]:fpr64 = FADDPv2i64p [[COPY]]
+    ; CHECK: [[FADDPv2i64p:%[0-9]+]]:fpr64 = nofpexcept FADDPv2i64p [[COPY]]
     ; CHECK: $d0 = COPY [[FADDPv2i64p]]
     ; CHECK: RET_ReallyLR implicit $d0
     %0:fpr(<2 x s64>) = COPY $q0
@@ -47,7 +47,7 @@ body:             |
     ; CHECK-LABEL: name: f32_faddp
     ; CHECK: liveins: $d0
     ; CHECK: [[COPY:%[0-9]+]]:fpr64 = COPY $d0
-    ; CHECK: [[FADDPv2i32p:%[0-9]+]]:fpr32 = FADDPv2i32p [[COPY]]
+    ; CHECK: [[FADDPv2i32p:%[0-9]+]]:fpr32 = nofpexcept FADDPv2i32p [[COPY]]
     ; CHECK: $s0 = COPY [[FADDPv2i32p]]
     ; CHECK: RET_ReallyLR implicit $s0
     %0:fpr(<2 x s32>) = COPY $d0

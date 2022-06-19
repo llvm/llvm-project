@@ -14,8 +14,8 @@ define void @func(<4 x float> %a, <16 x i8> %b, <16 x i8> %c, <8 x float> %d, <8
 ; CHECK-NEXT:    vaddps %xmm1, %xmm0, %xmm0
 ; CHECK-NEXT:    vaddps %xmm0, %xmm0, %xmm0
 ; CHECK-NEXT:    vmulps %xmm0, %xmm0, %xmm0
-; CHECK-NEXT:    vperm2f128 {{.*#+}} ymm0 = zero,zero,ymm0[0,1]
 ; CHECK-NEXT:    vxorps %xmm1, %xmm1, %xmm1
+; CHECK-NEXT:    vinsertf128 $1, %xmm0, %ymm1, %ymm0
 ; CHECK-NEXT:    vaddps %ymm0, %ymm0, %ymm0
 ; CHECK-NEXT:    vhaddps %ymm4, %ymm0, %ymm0
 ; CHECK-NEXT:    vsubps %ymm0, %ymm0, %ymm0

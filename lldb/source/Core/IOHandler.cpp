@@ -17,6 +17,7 @@
 #include "lldb/Core/StreamFile.h"
 #include "lldb/Host/Config.h"
 #include "lldb/Host/File.h"
+#include "lldb/Utility/AnsiTerminal.h"
 #include "lldb/Utility/Predicate.h"
 #include "lldb/Utility/ReproducerProvider.h"
 #include "lldb/Utility/Status.h"
@@ -121,14 +122,19 @@ void IOHandler::SetPopped(bool b) { m_popped.SetValue(b, eBroadcastOnChange); }
 
 void IOHandler::WaitForPop() { m_popped.WaitForValueEqualTo(true); }
 
-void IOHandlerStack::PrintAsync(Stream *stream, const char *s, size_t len) {
-  if (stream) {
-    std::lock_guard<std::recursive_mutex> guard(m_mutex);
-    if (m_top)
-      m_top->PrintAsync(stream, s, len);
-    else
-      stream->Write(s, len);
-  }
+void IOHandler::PrintAsync(const char *s, size_t len, bool is_stdout) {
+  std::lock_guard<std::recursive_mutex> guard(m_output_mutex);
+  lldb::StreamFileSP stream = is_stdout ? m_output_sp : m_error_sp;
+  stream->Write(s, len);
+  stream->Flush();
+}
+
+bool IOHandlerStack::PrintAsync(const char *s, size_t len, bool is_stdout) {
+  std::lock_guard<std::recursive_mutex> guard(m_mutex);
+  if (!m_top)
+    return false;
+  m_top->PrintAsync(s, len, is_stdout);
+  return true;
 }
 
 IOHandlerConfirm::IOHandlerConfirm(Debugger &debugger, llvm::StringRef prompt,
@@ -251,8 +257,7 @@ IOHandlerEditline::IOHandlerEditline(
       m_delegate(delegate), m_prompt(), m_continuation_prompt(),
       m_current_lines_ptr(nullptr), m_base_line_number(line_number_start),
       m_curr_line_idx(UINT32_MAX), m_multi_line(multi_line),
-      m_color_prompts(color_prompts), m_interrupt_exits(true),
-      m_editing(false) {
+      m_color_prompts(color_prompts), m_interrupt_exits(true) {
   SetPrompt(prompt);
 
 #if LLDB_ENABLE_LIBEDIT
@@ -262,9 +267,9 @@ IOHandlerEditline::IOHandlerEditline(
                  m_input_sp && m_input_sp->GetIsRealTerminal();
 
   if (use_editline) {
-    m_editline_up = std::make_unique<Editline>(editline_name, GetInputFILE(),
-                                               GetOutputFILE(), GetErrorFILE(),
-                                               m_color_prompts);
+    m_editline_up = std::make_unique<Editline>(
+        editline_name, GetInputFILE(), GetOutputFILE(), GetErrorFILE(),
+        GetOutputMutex(), m_color_prompts);
     m_editline_up->SetIsInputCompleteCallback(
         [this](Editline *editline, StringList &lines) {
           return this->IsInputCompleteCallback(editline, lines);
@@ -274,10 +279,14 @@ IOHandlerEditline::IOHandlerEditline(
       this->AutoCompleteCallback(request);
     });
 
-    if (debugger.GetUseAutosuggestion() && debugger.GetUseColor()) {
+    if (debugger.GetUseAutosuggestion()) {
       m_editline_up->SetSuggestionCallback([this](llvm::StringRef line) {
         return this->SuggestionCallback(line);
       });
+      m_editline_up->SetSuggestionAnsiPrefix(ansi::FormatAnsiTerminalCodes(
+          debugger.GetAutosuggestionAnsiPrefix()));
+      m_editline_up->SetSuggestionAnsiSuffix(ansi::FormatAnsiTerminalCodes(
+          debugger.GetAutosuggestionAnsiSuffix()));
     }
     // See if the delegate supports fixing indentation
     const char *indent_chars = delegate.IOHandlerGetFixIndentationCharacters();
@@ -399,7 +408,6 @@ bool IOHandlerEditline::GetLine(std::string &line, bool &interrupted) {
   }
 
   if (!got_line && in) {
-    m_editing = true;
     while (!got_line) {
       char *r = fgets(buffer, sizeof(buffer), in);
 #ifdef _WIN32
@@ -425,7 +433,6 @@ bool IOHandlerEditline::GetLine(std::string &line, bool &interrupted) {
       m_line_buffer += buffer;
       got_line = SplitLine(m_line_buffer);
     }
-    m_editing = false;
   }
 
   if (got_line) {
@@ -610,11 +617,13 @@ void IOHandlerEditline::GotEOF() {
 #endif
 }
 
-void IOHandlerEditline::PrintAsync(Stream *stream, const char *s, size_t len) {
+void IOHandlerEditline::PrintAsync(const char *s, size_t len, bool is_stdout) {
 #if LLDB_ENABLE_LIBEDIT
-  if (m_editline_up)
-    m_editline_up->PrintAsync(stream, s, len);
-  else
+  if (m_editline_up) {
+    std::lock_guard<std::recursive_mutex> guard(m_output_mutex);
+    lldb::StreamFileSP stream = is_stdout ? m_output_sp : m_error_sp;
+    m_editline_up->PrintAsync(stream.get(), s, len);
+  } else
 #endif
   {
 #ifdef _WIN32
@@ -631,11 +640,10 @@ void IOHandlerEditline::PrintAsync(Stream *stream, const char *s, size_t len) {
       SetConsoleCursorPosition(console_handle, coord);
     }
 #endif
-    IOHandler::PrintAsync(stream, s, len);
+    IOHandler::PrintAsync(s, len, is_stdout);
 #ifdef _WIN32
     if (prompt)
-      IOHandler::PrintAsync(GetOutputStreamFileSP().get(), prompt,
-                            strlen(prompt));
+      IOHandler::PrintAsync(prompt, strlen(prompt), is_stdout);
 #endif
   }
 }

@@ -21,6 +21,7 @@ if(MLIR_INCLUDE_TESTS)
     MLIRTestPass
     MLIRTestReducer
     MLIRTestRewrite
+    MLIRTestTransformDialect
     MLIRTestTransforms
     )
 endif()
@@ -29,7 +30,7 @@ set(LIBS
   ${dialect_libs}
   ${conversion_libs}
   ${test_libs}
-  MLIRLoopAnalysis
+  MLIRAffineAnalysis
   MLIRAnalysis
   MLIRDialect
   MLIRLspServerLib

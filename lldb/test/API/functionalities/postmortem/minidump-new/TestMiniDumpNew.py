@@ -14,8 +14,6 @@ from lldbsuite.test import lldbutil
 
 class MiniDumpNewTestCase(TestBase):
 
-    mydir = TestBase.compute_mydir(__file__)
-
     NO_DEBUG_INFO_TESTCASE = True
 
     _linux_x86_64_pid = 29917
@@ -29,7 +27,6 @@ class MiniDumpNewTestCase(TestBase):
         self.process = self.target.LoadCore(minidump_path)
         return self.process
 
-    @skipIfReproducer # lldb::FileSP used in typemap cannot be instrumented.
     def check_state(self):
         with open(os.devnull) as devnul:
             # sanitize test output
@@ -66,7 +63,7 @@ class MiniDumpNewTestCase(TestBase):
         error = lldb.SBError()
         self.process = self.target.LoadCore(minidump_path, error)
         self.assertTrue(self.process, PROCESS_IS_VALID)
-        self.assertTrue(error.Success())
+        self.assertSuccess(error)
 
     def test_loadcore_error_status_failure(self):
         """Test the SBTarget.LoadCore(core, error) overload."""
@@ -345,7 +342,6 @@ class MiniDumpNewTestCase(TestBase):
                                   "linux-x86_64_not_crashed.dmp",
                                   self._linux_x86_64_not_crashed_pid)
 
-    @skipIfReproducer # VFS is a snapshot.
     def do_change_pid_in_minidump(self, core, newcore, offset, oldpid, newpid):
         """ This assumes that the minidump is breakpad generated on Linux -
         meaning that the PID in the file will be an ascii string part of

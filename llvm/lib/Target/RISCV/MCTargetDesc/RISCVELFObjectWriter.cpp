@@ -43,7 +43,7 @@ RISCVELFObjectWriter::RISCVELFObjectWriter(uint8_t OSABI, bool Is64Bit)
     : MCELFObjectTargetWriter(Is64Bit, OSABI, ELF::EM_RISCV,
                               /*HasRelocationAddend*/ true) {}
 
-RISCVELFObjectWriter::~RISCVELFObjectWriter() {}
+RISCVELFObjectWriter::~RISCVELFObjectWriter() = default;
 
 unsigned RISCVELFObjectWriter::getRelocType(MCContext &Ctx,
                                             const MCValue &Target,

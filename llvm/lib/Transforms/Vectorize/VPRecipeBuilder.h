@@ -59,7 +59,7 @@ class VPRecipeBuilder {
   /// Cross-iteration reduction & first-order recurrence phis for which we need
   /// to add the incoming value from the backedge after all recipes have been
   /// created.
-  SmallVector<VPWidenPHIRecipe *, 4> PhisToFix;
+  SmallVector<VPHeaderPHIRecipe *, 4> PhisToFix;
 
   /// Check if \p I can be widened at the start of \p Range and possibly
   /// decrease the range such that the returned value holds for the entire \p
@@ -72,16 +72,17 @@ class VPRecipeBuilder {
   VPRecipeBase *tryToWidenMemory(Instruction *I, ArrayRef<VPValue *> Operands,
                                  VFRange &Range, VPlanPtr &Plan);
 
-  /// Check if an induction recipe should be constructed for \I. If so build and
-  /// return it. If not, return null.
-  VPWidenIntOrFpInductionRecipe *
-  tryToOptimizeInductionPHI(PHINode *Phi, ArrayRef<VPValue *> Operands) const;
+  /// Check if an induction recipe should be constructed for \p Phi. If so build
+  /// and return it. If not, return null.
+  VPRecipeBase *tryToOptimizeInductionPHI(PHINode *Phi,
+                                          ArrayRef<VPValue *> Operands,
+                                          VPlan &Plan, VFRange &Range);
 
   /// Optimize the special case where the operand of \p I is a constant integer
   /// induction variable.
   VPWidenIntOrFpInductionRecipe *
   tryToOptimizeInductionTruncate(TruncInst *I, ArrayRef<VPValue *> Operands,
-                                 VFRange &Range, VPlan &Plan) const;
+                                 VFRange &Range, VPlan &Plan);
 
   /// Handle non-loop phi nodes. Return a VPValue, if all incoming values match
   /// or a new VPBlendRecipe otherwise. Currently all such phi nodes are turned

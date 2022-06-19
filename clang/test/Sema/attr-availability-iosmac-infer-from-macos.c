@@ -13,20 +13,20 @@ void f3(void)
 void f4(void)
 __attribute__((availability(macOS, introduced = 10, deprecated = 100000)));
 
-void fAvail() __attribute__((availability(macOS, unavailable)));
+void fAvail(void) __attribute__((availability(macOS, unavailable)));
 
-void f16() __attribute__((availability(macOS, introduced = 11.0)));
+void f16(void) __attribute__((availability(macOS, introduced = 11.0)));
 #ifndef IOS14
 // expected-note@-2 {{here}}
 #endif
 
-void fObs() __attribute__((availability(macOS, introduced = 10.11, obsoleted = 10.15))); // expected-note {{'fObs' has been explicitly marked unavailable here}}
+void fObs(void) __attribute__((availability(macOS, introduced = 10.11, obsoleted = 10.15))); // expected-note {{'fObs' has been explicitly marked unavailable here}}
 
-void fAPItoDepr() __attribute__((availability(macOS, introduced = 10.11, deprecated = 100000)));
+void fAPItoDepr(void) __attribute__((availability(macOS, introduced = 10.11, deprecated = 100000)));
 
-void dontRemapFutureVers() __attribute__((availability(macOS, introduced = 20)));
+void dontRemapFutureVers(void) __attribute__((availability(macOS, introduced = 20)));
 
-void usage() {
+void usage(void) {
   f0();
   f1();
   f2(); // expected-warning {{'f2' is deprecated: first deprecated in macCatalyst 13.1}}
@@ -48,7 +48,7 @@ void f15_4(void) __attribute__((availability(macOS, introduced = 10.15, deprecat
 void f15_3(void) __attribute__((availability(macOS, introduced = 10.15, deprecated = 10.15.3))); // expected-note {{here}}
 void f15_2(void) __attribute__((availability(macOS, introduced = 10.15, deprecated = 10.15.2))); // expected-note {{here}}
 
-void usage16() {
+void usage16(void) {
   f15_2(); // expected-warning {{'f15_2' is deprecated: first deprecated in macCatalyst 13.3}}
   f15_3(); // expected-warning {{'f15_3' is deprecated: first deprecated in macCatalyst 13.3.1}}
   f15_4(); // expected-warning {{'f15_4' is deprecated: first deprecated in macCatalyst 13.4}}

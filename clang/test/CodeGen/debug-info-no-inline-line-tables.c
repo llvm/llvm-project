@@ -1,14 +1,14 @@
-// RUN: %clang_cc1 -triple x86_64-windows-msvc -debug-info-kind=limited \
+// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-windows-msvc -debug-info-kind=limited \
 // RUN:   -gno-inline-line-tables -emit-llvm -o - %s | FileCheck %s
 // RUN: %clang -gno-inline-line-tables -S -emit-llvm -o - %s | FileCheck %s \
 // RUN:   -check-prefix=INLINE-FLAG
 // RUN: %clang -S -emit-llvm -o - %s | FileCheck %s -check-prefix=NO-FLAG
 
 int x;
-__attribute((always_inline)) void f() {
+__attribute((always_inline)) void f(void) {
   x += 1;
 }
-int main() {
+int main(void) {
   f();
   x += 2;
   return x;

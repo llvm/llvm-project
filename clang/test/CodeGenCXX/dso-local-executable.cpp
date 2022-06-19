@@ -1,6 +1,6 @@
-// RUN: %clang_cc1 -triple x86_64-pc-linux -mrelocation-model static -O1 -fno-experimental-new-pass-manager -emit-llvm %s -o - | FileCheck --check-prefix=STATIC %s
-// RUN: %clang_cc1 -triple x86_64-pc-linux -mrelocation-model static -fno-plt -O1 -fno-experimental-new-pass-manager -emit-llvm %s -o - | FileCheck --check-prefix=NOPLT %s
-// RUN: %clang_cc1 -triple x86_64-w64-mingw32 -O1 -fno-experimental-new-pass-manager -emit-llvm %s -o - | FileCheck --check-prefix=MINGW %s
+// RUN: %clang_cc1 -triple x86_64-pc-linux -mrelocation-model static -O1 -disable-llvm-passes -emit-llvm %s -o - | FileCheck --check-prefix=STATIC %s
+// RUN: %clang_cc1 -triple x86_64-pc-linux -mrelocation-model static -fno-plt -O1 -disable-llvm-passes -emit-llvm %s -o - | FileCheck --check-prefix=NOPLT %s
+// RUN: %clang_cc1 -triple x86_64-w64-mingw32 -O1 -disable-llvm-passes -emit-llvm %s -o - | FileCheck --check-prefix=MINGW %s
 
 // STATIC-DAG: @_ZTV1C = linkonce_odr dso_local unnamed_addr constant
 // STATIC-DAG: @_ZTS1C = linkonce_odr dso_local constant

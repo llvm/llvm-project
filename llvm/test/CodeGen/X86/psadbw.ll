@@ -17,19 +17,15 @@ define <2 x i64> @combine_psadbw_shift(<16 x i8> %0, <16 x i8> %1) {
 define i64 @combine_psadbw_demandedelt(<16 x i8> %0, <16 x i8> %1) {
 ; X86-LABEL: combine_psadbw_demandedelt:
 ; X86:       # %bb.0:
-; X86-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,1,3,2]
-; X86-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[0,1,3,2]
-; X86-NEXT:    psadbw %xmm0, %xmm1
-; X86-NEXT:    movd %xmm1, %eax
+; X86-NEXT:    psadbw %xmm1, %xmm0
+; X86-NEXT:    movd %xmm0, %eax
 ; X86-NEXT:    xorl %edx, %edx
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: combine_psadbw_demandedelt:
 ; X64:       # %bb.0:
-; X64-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,1,3,2]
-; X64-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[0,1,3,2]
-; X64-NEXT:    psadbw %xmm0, %xmm1
-; X64-NEXT:    movq %xmm1, %rax
+; X64-NEXT:    psadbw %xmm1, %xmm0
+; X64-NEXT:    movq %xmm0, %rax
 ; X64-NEXT:    retq
   %3 = shufflevector <16 x i8> %0, <16 x i8> %0, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 12, i32 13, i32 14, i32 15, i32 8, i32 9, i32 10, i32 11>
   %4 = shufflevector <16 x i8> %1, <16 x i8> %1, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 12, i32 13, i32 14, i32 15, i32 8, i32 9, i32 10, i32 11>

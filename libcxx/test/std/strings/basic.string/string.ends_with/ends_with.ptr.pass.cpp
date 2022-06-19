@@ -9,16 +9,15 @@
 
 // <string>
 
-//   bool ends_with(const CharT *x) const;
+// constexpr bool ends_with(const CharT *x) const;
 
 #include <string>
 #include <cassert>
 
 #include "test_macros.h"
 
-int main(int, char**)
-{
-    {
+constexpr bool test() {
+  {
     typedef std::string S;
     const char *s = "abcde";
 
@@ -58,7 +57,14 @@ int main(int, char**)
     assert (!sNot.ends_with("bcde"));
     assert (!sNot.ends_with("abcde"));
     assert ( sNot.ends_with("def"));
-    }
+  }
+
+  return true;
+}
+
+int main(int, char**) {
+  test();
+  static_assert(test());
 
   return 0;
 }

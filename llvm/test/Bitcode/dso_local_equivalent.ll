@@ -65,12 +65,12 @@ define void @call_dso_local_alias_func() {
   ret void
 }
 
-@ifunc_func = ifunc void (), i64 ()* @resolver
-@dso_local_ifunc_func = dso_local ifunc void (), i64 ()* @resolver
+@ifunc_func = ifunc void (), void ()* ()* @resolver
+@dso_local_ifunc_func = dso_local ifunc void (), void ()* ()* @resolver
 
-define internal i64 @resolver() {
+define internal void ()* @resolver() {
 entry:
-  ret i64 0
+  ret void ()* null
 }
 
 define void @call_ifunc_func() {

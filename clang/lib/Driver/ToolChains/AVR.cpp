@@ -8,9 +8,9 @@
 
 #include "AVR.h"
 #include "CommonArgs.h"
-#include "InputInfo.h"
 #include "clang/Driver/Compilation.h"
 #include "clang/Driver/DriverDiagnostic.h"
+#include "clang/Driver/InputInfo.h"
 #include "clang/Driver/Options.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/StringExtras.h"
@@ -28,9 +28,10 @@ using namespace llvm::opt;
 
 namespace {
 
-const struct {
+// NOTE: This list has been synchronized with gcc-avr 7.3.0 and avr-libc 2.0.0.
+constexpr struct {
   StringRef Name;
-  std::string SubPath;
+  StringRef SubPath;
   StringRef Family;
   unsigned DataAddr;
 } MCUInfo[] = {
@@ -62,6 +63,7 @@ const struct {
     {"attiny261a", "avr25/tiny-stack", "avr25", 0x800060},
     {"at86rf401", "avr25", "avr25", 0x800060},
     {"ata5272", "avr25", "avr25", 0x800100},
+    {"ata6616c", "avr25", "avr25", 0x800100},
     {"attiny4313", "avr25", "avr25", 0x800060},
     {"attiny44", "avr25", "avr25", 0x800060},
     {"attiny44a", "avr25", "avr25", 0x800060},
@@ -88,6 +90,8 @@ const struct {
     {"at90usb82", "avr35", "avr35", 0x800100},
     {"at90usb162", "avr35", "avr35", 0x800100},
     {"ata5505", "avr35", "avr35", 0x800100},
+    {"ata6617c", "avr35", "avr35", 0x800100},
+    {"ata664251", "avr35", "avr35", 0x800100},
     {"atmega8u2", "avr35", "avr35", 0x800100},
     {"atmega16u2", "avr35", "avr35", 0x800100},
     {"atmega32u2", "avr35", "avr35", 0x800100},
@@ -97,6 +101,7 @@ const struct {
     {"atmega8a", "avr4", "avr4", 0x800060},
     {"ata6285", "avr4", "avr4", 0x800100},
     {"ata6286", "avr4", "avr4", 0x800100},
+    {"ata6612c", "avr4", "avr4", 0x800100},
     {"atmega48", "avr4", "avr4", 0x800100},
     {"atmega48a", "avr4", "avr4", 0x800100},
     {"atmega48pa", "avr4", "avr4", 0x800100},
@@ -116,8 +121,17 @@ const struct {
     {"at90pwm3", "avr4", "avr4", 0x800100},
     {"at90pwm3b", "avr4", "avr4", 0x800100},
     {"at90pwm81", "avr4", "avr4", 0x800100},
+    {"ata5702m322", "avr5", "avr5", 0x800200},
+    {"ata5782", "avr5", "avr5", 0x800200},
     {"ata5790", "avr5", "avr5", 0x800100},
+    {"ata5790n", "avr5", "avr5", 0x800100},
+    {"ata5791", "avr5", "avr5", 0x800100},
     {"ata5795", "avr5", "avr5", 0x800100},
+    {"ata5831", "avr5", "avr5", 0x800200},
+    {"ata6613c", "avr5", "avr5", 0x800100},
+    {"ata6614q", "avr5", "avr5", 0x800100},
+    {"ata8210", "avr5", "avr5", 0x800200},
+    {"ata8510", "avr5", "avr5", 0x800200},
     {"atmega16", "avr5", "avr5", 0x800060},
     {"atmega16a", "avr5", "avr5", 0x800060},
     {"atmega161", "avr5", "avr5", 0x800060},
@@ -145,6 +159,7 @@ const struct {
     {"atmega324a", "avr5", "avr5", 0x800100},
     {"atmega324p", "avr5", "avr5", 0x800100},
     {"atmega324pa", "avr5", "avr5", 0x800100},
+    {"atmega324pb", "avr5", "avr5", 0x800100},
     {"atmega325", "avr5", "avr5", 0x800100},
     {"atmega325a", "avr5", "avr5", 0x800100},
     {"atmega325p", "avr5", "avr5", 0x800100},
@@ -155,6 +170,7 @@ const struct {
     {"atmega3250pa", "avr5", "avr5", 0x800100},
     {"atmega328", "avr5", "avr5", 0x800100},
     {"atmega328p", "avr5", "avr5", 0x800100},
+    {"atmega328pb", "avr5", "avr5", 0x800100},
     {"atmega329", "avr5", "avr5", 0x800100},
     {"atmega329a", "avr5", "avr5", 0x800100},
     {"atmega329p", "avr5", "avr5", 0x800100},
@@ -192,6 +208,7 @@ const struct {
     {"atmega32hvb", "avr5", "avr5", 0x800100},
     {"atmega32hvbrevb", "avr5", "avr5", 0x800100},
     {"atmega64hve", "avr5", "avr5", 0x800100},
+    {"atmega64hve2", "avr5", "avr5", 0x800100},
     {"at90can32", "avr5", "avr5", 0x800100},
     {"at90can64", "avr5", "avr5", 0x800100},
     {"at90pwm161", "avr5", "avr5", 0x800100},
@@ -232,17 +249,22 @@ const struct {
     {"attiny10", "avrtiny", "avrtiny", 0x800040},
     {"attiny20", "avrtiny", "avrtiny", 0x800040},
     {"attiny40", "avrtiny", "avrtiny", 0x800040},
+    {"attiny102", "avrtiny", "avrtiny", 0x800040},
+    {"attiny104", "avrtiny", "avrtiny", 0x800040},
     {"atxmega16a4", "avrxmega2", "avrxmega2", 0x802000},
     {"atxmega16a4u", "avrxmega2", "avrxmega2", 0x802000},
     {"atxmega16c4", "avrxmega2", "avrxmega2", 0x802000},
     {"atxmega16d4", "avrxmega2", "avrxmega2", 0x802000},
     {"atxmega32a4", "avrxmega2", "avrxmega2", 0x802000},
     {"atxmega32a4u", "avrxmega2", "avrxmega2", 0x802000},
+    {"atxmega32c3", "avrxmega2", "avrxmega2", 0x802000},
     {"atxmega32c4", "avrxmega2", "avrxmega2", 0x802000},
+    {"atxmega32d3", "avrxmega2", "avrxmega2", 0x802000},
     {"atxmega32d4", "avrxmega2", "avrxmega2", 0x802000},
     {"atxmega32e5", "avrxmega2", "avrxmega2", 0x802000},
     {"atxmega16e5", "avrxmega2", "avrxmega2", 0x802000},
     {"atxmega8e5", "avrxmega2", "avrxmega2", 0x802000},
+    {"atxmega64a3", "avrxmega4", "avrxmega4", 0x802000},
     {"atxmega64a3u", "avrxmega4", "avrxmega4", 0x802000},
     {"atxmega64a4u", "avrxmega4", "avrxmega4", 0x802000},
     {"atxmega64b1", "avrxmega4", "avrxmega4", 0x802000},
@@ -274,6 +296,42 @@ const struct {
     {"atxmega128a1", "avrxmega7", "avrxmega7", 0x802000},
     {"atxmega128a1u", "avrxmega7", "avrxmega7", 0x802000},
     {"atxmega128a4u", "avrxmega7", "avrxmega7", 0x802000},
+    {"attiny202", "avrxmega3/short-calls", "avrxmega3", 0x803F80},
+    {"attiny204", "avrxmega3/short-calls", "avrxmega3", 0x803F80},
+    {"attiny212", "avrxmega3/short-calls", "avrxmega3", 0x803F80},
+    {"attiny214", "avrxmega3/short-calls", "avrxmega3", 0x803F80},
+    {"attiny402", "avrxmega3/short-calls", "avrxmega3", 0x803F00},
+    {"attiny404", "avrxmega3/short-calls", "avrxmega3", 0x803F00},
+    {"attiny406", "avrxmega3/short-calls", "avrxmega3", 0x803F00},
+    {"attiny412", "avrxmega3/short-calls", "avrxmega3", 0x803F00},
+    {"attiny414", "avrxmega3/short-calls", "avrxmega3", 0x803F00},
+    {"attiny416", "avrxmega3/short-calls", "avrxmega3", 0x803F00},
+    {"attiny417", "avrxmega3/short-calls", "avrxmega3", 0x803F00},
+    {"attiny804", "avrxmega3/short-calls", "avrxmega3", 0x803E00},
+    {"attiny806", "avrxmega3/short-calls", "avrxmega3", 0x803E00},
+    {"attiny807", "avrxmega3/short-calls", "avrxmega3", 0x803E00},
+    {"attiny814", "avrxmega3/short-calls", "avrxmega3", 0x803E00},
+    {"attiny816", "avrxmega3/short-calls", "avrxmega3", 0x803E00},
+    {"attiny817", "avrxmega3/short-calls", "avrxmega3", 0x803E00},
+    {"atmega808", "avrxmega3/short-calls", "avrxmega3", 0x803C00},
+    {"atmega809", "avrxmega3/short-calls", "avrxmega3", 0x803C00},
+    {"atmega1608", "avrxmega3", "avrxmega3", 0x803800},
+    {"atmega1609", "avrxmega3", "avrxmega3", 0x803800},
+    {"atmega3208", "avrxmega3", "avrxmega3", 0x803000},
+    {"atmega3209", "avrxmega3", "avrxmega3", 0x803000},
+    {"atmega4808", "avrxmega3", "avrxmega3", 0x802800},
+    {"atmega4809", "avrxmega3", "avrxmega3", 0x802800},
+    {"attiny1604", "avrxmega3", "avrxmega3", 0x803C00},
+    {"attiny1606", "avrxmega3", "avrxmega3", 0x803C00},
+    {"attiny1607", "avrxmega3", "avrxmega3", 0x803C00},
+    {"attiny1614", "avrxmega3", "avrxmega3", 0x803800},
+    {"attiny1616", "avrxmega3", "avrxmega3", 0x803800},
+    {"attiny1617", "avrxmega3", "avrxmega3", 0x803800},
+    {"attiny1624", "avrxmega3", "avrxmega3", 0x803800},
+    {"attiny1626", "avrxmega3", "avrxmega3", 0x803800},
+    {"attiny1627", "avrxmega3", "avrxmega3", 0x803800},
+    {"attiny3216", "avrxmega3", "avrxmega3", 0x803800},
+    {"attiny3217", "avrxmega3", "avrxmega3", 0x803800},
 };
 
 std::string GetMCUSubPath(StringRef MCUName) {
@@ -298,6 +356,7 @@ llvm::Optional<unsigned> GetMCUSectionAddressData(StringRef MCUName) {
 }
 
 const StringRef PossibleAVRLibcLocations[] = {
+    "/avr",
     "/usr/avr",
     "/usr/lib/avr",
 };
@@ -307,49 +366,19 @@ const StringRef PossibleAVRLibcLocations[] = {
 /// AVR Toolchain
 AVRToolChain::AVRToolChain(const Driver &D, const llvm::Triple &Triple,
                            const ArgList &Args)
-    : Generic_ELF(D, Triple, Args), LinkStdlib(false) {
+    : Generic_ELF(D, Triple, Args) {
   GCCInstallation.init(Triple, Args);
+
+  std::string CPU = getCPUName(D, Args, Triple);
+  if (CPU.empty())
+    D.Diag(diag::warn_drv_avr_mcu_not_specified);
 
   // Only add default libraries if the user hasn't explicitly opted out.
   if (!Args.hasArg(options::OPT_nostdlib) &&
-      !Args.hasArg(options::OPT_nodefaultlibs) &&
-      !Args.hasArg(options::OPT_c /* does not apply when not linking */)) {
-    std::string CPU = getCPUName(Args, Triple);
-
-    if (CPU.empty()) {
-      // We cannot link any standard libraries without an MCU specified.
-      D.Diag(diag::warn_drv_avr_mcu_not_specified);
-    } else {
-      Optional<StringRef> FamilyName = GetMCUFamilyName(CPU);
-      Optional<std::string> AVRLibcRoot = findAVRLibcInstallation();
-
-      if (!FamilyName.hasValue()) {
-        // We do not have an entry for this CPU in the family
-        // mapping table yet.
-        D.Diag(diag::warn_drv_avr_family_linking_stdlibs_not_implemented)
-            << CPU;
-      } else if (!GCCInstallation.isValid()) {
-        // No avr-gcc found and so no runtime linked.
-        D.Diag(diag::warn_drv_avr_gcc_not_found);
-      } else if (!AVRLibcRoot.hasValue()) {
-        // No avr-libc found and so no runtime linked.
-        D.Diag(diag::warn_drv_avr_libc_not_found);
-      } else { // We have enough information to link stdlibs
-        std::string GCCRoot(GCCInstallation.getInstallPath());
-        std::string GCCParentPath(GCCInstallation.getParentLibPath());
-        std::string LibcRoot = AVRLibcRoot.getValue();
-        std::string SubPath = GetMCUSubPath(CPU);
-
-        getProgramPaths().push_back(GCCParentPath + "/../bin");
-        getFilePaths().push_back(LibcRoot + std::string("/lib/") + SubPath);
-        getFilePaths().push_back(GCCRoot + std::string("/") + SubPath);
-
-        LinkStdlib = true;
-      }
-    }
-
-    if (!LinkStdlib)
-      D.Diag(diag::warn_drv_avr_stdlib_not_linked);
+      !Args.hasArg(options::OPT_nodefaultlibs) && GCCInstallation.isValid()) {
+    GCCInstallPath = GCCInstallation.getInstallPath();
+    std::string GCCParentPath(GCCInstallation.getParentLibPath());
+    getProgramPaths().push_back(GCCParentPath + "/../bin");
   }
 }
 
@@ -370,20 +399,43 @@ void AVRToolChain::AddClangSystemIncludeArgs(const ArgList &DriverArgs,
     addSystemInclude(DriverArgs, CC1Args, AVRInc);
 }
 
+void AVRToolChain::addClangTargetOptions(
+    const llvm::opt::ArgList &DriverArgs, llvm::opt::ArgStringList &CC1Args,
+    Action::OffloadKind DeviceOffloadKind) const {
+  // By default, use `.ctors` (not `.init_array`), as required by libgcc, which
+  // runs constructors/destructors on AVR.
+  if (!DriverArgs.hasFlag(options::OPT_fuse_init_array,
+                          options::OPT_fno_use_init_array, false))
+    CC1Args.push_back("-fno-use-init-array");
+  // Use `-fno-use-cxa-atexit` as default, since avr-libc does not support
+  // `__cxa_atexit()`.
+  if (!DriverArgs.hasFlag(options::OPT_fuse_cxa_atexit,
+                          options::OPT_fno_use_cxa_atexit, false))
+    CC1Args.push_back("-fno-use-cxa-atexit");
+}
+
 Tool *AVRToolChain::buildLinker() const {
-  return new tools::AVR::Linker(getTriple(), *this, LinkStdlib);
+  return new tools::AVR::Linker(getTriple(), *this);
 }
 
 void AVR::Linker::ConstructJob(Compilation &C, const JobAction &JA,
                                const InputInfo &Output,
                                const InputInfoList &Inputs, const ArgList &Args,
                                const char *LinkingOutput) const {
+  const auto &TC = static_cast<const AVRToolChain &>(getToolChain());
+  const Driver &D = getToolChain().getDriver();
+
   // Compute information about the target AVR.
-  std::string CPU = getCPUName(Args, getToolChain().getTriple());
+  std::string CPU = getCPUName(D, Args, getToolChain().getTriple());
   llvm::Optional<StringRef> FamilyName = GetMCUFamilyName(CPU);
+  llvm::Optional<std::string> AVRLibcRoot = TC.findAVRLibcInstallation();
   llvm::Optional<unsigned> SectionAddressData = GetMCUSectionAddressData(CPU);
 
-  std::string Linker = getToolChain().GetProgramPath(getShortName());
+  // Compute the linker program path, and use GNU "avr-ld" as default.
+  const Arg *A = Args.getLastArg(options::OPT_fuse_ld_EQ);
+  std::string Linker = A ? getToolChain().GetLinkerPath(nullptr)
+                         : getToolChain().GetProgramPath(getShortName());
+
   ArgStringList CmdArgs;
   AddLinkerInputs(getToolChain(), Inputs, Args, CmdArgs, JA);
 
@@ -397,15 +449,39 @@ void AVR::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   Args.AddAllArgs(CmdArgs, options::OPT_L);
   getToolChain().AddFilePathLibArgs(Args, CmdArgs);
 
+  // Only add default libraries if the user hasn't explicitly opted out.
+  bool LinkStdlib = false;
+  if (!Args.hasArg(options::OPT_nostdlib) &&
+      !Args.hasArg(options::OPT_nodefaultlibs)) {
+    if (!CPU.empty()) {
+      if (!FamilyName) {
+        // We do not have an entry for this CPU in the family
+        // mapping table yet.
+        D.Diag(diag::warn_drv_avr_family_linking_stdlibs_not_implemented)
+            << CPU;
+      } else if (!AVRLibcRoot) {
+        // No avr-libc found and so no runtime linked.
+        D.Diag(diag::warn_drv_avr_libc_not_found);
+      } else {
+        std::string SubPath = GetMCUSubPath(CPU);
+        CmdArgs.push_back(
+            Args.MakeArgString(Twine("-L") + *AVRLibcRoot + "/lib/" + SubPath));
+        CmdArgs.push_back(
+            Args.MakeArgString("-L" + TC.getGCCInstallPath() + "/" + SubPath));
+        LinkStdlib = true;
+      }
+    }
+    if (!LinkStdlib)
+      D.Diag(diag::warn_drv_avr_stdlib_not_linked);
+  }
+
   if (SectionAddressData.hasValue()) {
     std::string DataSectionArg = std::string("-Tdata=0x") +
                                  llvm::utohexstr(SectionAddressData.getValue());
     CmdArgs.push_back(Args.MakeArgString(DataSectionArg));
   } else {
     // We do not have an entry for this CPU in the address mapping table yet.
-    getToolChain().getDriver().Diag(
-        diag::warn_drv_avr_linker_section_addresses_not_implemented)
-        << CPU;
+    D.Diag(diag::warn_drv_avr_linker_section_addresses_not_implemented) << CPU;
   }
 
   // If the family name is known, we can link with the device-specific libgcc.
@@ -413,6 +489,8 @@ void AVR::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   // behavior.
   if (LinkStdlib) {
     assert(!CPU.empty() && "CPU name must be known in order to link stdlibs");
+
+    CmdArgs.push_back("--start-group");
 
     // Add the object file for the CRT.
     std::string CrtFileName = std::string("-l:crt") + CPU + std::string(".o");
@@ -425,11 +503,17 @@ void AVR::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     // Add the link library specific to the MCU.
     CmdArgs.push_back(Args.MakeArgString(std::string("-l") + CPU));
 
+    CmdArgs.push_back("--end-group");
+
+    // Add user specified linker script.
+    Args.AddAllArgs(CmdArgs, options::OPT_T);
+
     // Specify the family name as the emulation mode to use.
     // This is almost always required because otherwise avr-ld
     // will assume 'avr2' and warn about the program being larger
     // than the bare minimum supports.
-    CmdArgs.push_back(Args.MakeArgString(std::string("-m") + *FamilyName));
+    if (Linker.find("avr-ld") != std::string::npos)
+      CmdArgs.push_back(Args.MakeArgString(std::string("-m") + *FamilyName));
   }
 
   C.addCommand(std::make_unique<Command>(
@@ -438,11 +522,21 @@ void AVR::Linker::ConstructJob(Compilation &C, const JobAction &JA,
 }
 
 llvm::Optional<std::string> AVRToolChain::findAVRLibcInstallation() const {
+  // Search avr-libc installation according to avr-gcc installation.
+  std::string GCCParent(GCCInstallation.getParentLibPath());
+  std::string Path(GCCParent + "/avr");
+  if (llvm::sys::fs::is_directory(Path))
+    return Path;
+  Path = GCCParent + "/../avr";
+  if (llvm::sys::fs::is_directory(Path))
+    return Path;
+
+  // Search avr-libc installation from possible locations, and return the first
+  // one that exists, if there is no avr-gcc installed.
   for (StringRef PossiblePath : PossibleAVRLibcLocations) {
     std::string Path = getDriver().SysRoot + PossiblePath.str();
-    // Return the first avr-libc installation that exists.
     if (llvm::sys::fs::is_directory(Path))
-      return Optional<std::string>(Path);
+      return Path;
   }
 
   return llvm::None;

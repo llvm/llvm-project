@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon -enable-save-restore-long -hexagon-initial-cfg-cleanup=0 < %s | FileCheck %s
+; RUN: llc -mtriple=hexagon -enable-save-restore-long -hexagon-initial-cfg-cleanup=0 < %s | FileCheck %s
 
 ; Check that the -long-calls feature is supported by the backend.
 

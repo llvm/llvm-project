@@ -1,6 +1,6 @@
-// RUN: %clang_cc1 -Wno-objc-root-class -std=gnu++98 %s -triple=x86_64-apple-darwin10 -emit-llvm -o - | FileCheck --check-prefixes CHECK,CHECKCXX98,CHECK-NO-TEMP-SPEC %s
-// RUN: %clang_cc1 -Wno-objc-root-class -std=gnu++20 %s -triple=x86_64-apple-darwin10 -emit-llvm -o - | FileCheck --check-prefixes CHECK,CHECKCXX20,CHECK-NO-TEMP-SPEC %s
-// RUN: %clang_cc1 -Wno-objc-root-class -std=gnu++20 %s -triple=x86_64-apple-darwin10 -fobjc-encode-cxx-class-template-spec -emit-llvm -o - | FileCheck --check-prefixes CHECK,CHECKCXX20,CHECK-TEMP-SPEC %s
+// RUN: %clang_cc1 -no-opaque-pointers -Wno-objc-root-class -std=gnu++98 %s -triple=x86_64-apple-darwin10 -emit-llvm -o - | FileCheck --check-prefixes CHECK,CHECKCXX98,CHECK-NO-TEMP-SPEC %s
+// RUN: %clang_cc1 -no-opaque-pointers -Wno-objc-root-class -std=gnu++20 %s -triple=x86_64-apple-darwin10 -emit-llvm -o - | FileCheck --check-prefixes CHECK,CHECKCXX20,CHECK-NO-TEMP-SPEC %s
+// RUN: %clang_cc1 -no-opaque-pointers -Wno-objc-root-class -std=gnu++20 %s -triple=x86_64-apple-darwin10 -fobjc-encode-cxx-class-template-spec -emit-llvm -o - | FileCheck --check-prefixes CHECK,CHECKCXX20,CHECK-TEMP-SPEC %s
 
 // CHECK: v17@0:8{vector<float, float, float>=}16
 // CHECK: {vector<float, float, float>=}

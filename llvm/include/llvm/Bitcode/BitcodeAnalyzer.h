@@ -18,11 +18,12 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Bitstream/BitstreamReader.h"
 #include "llvm/Support/Error.h"
-#include "llvm/Support/raw_ostream.h"
 #include <map>
 #include <vector>
 
 namespace llvm {
+
+class raw_ostream;
 
 /// CurStreamTypeType - A type for CurStreamType
 enum CurStreamTypeType {
@@ -42,6 +43,8 @@ struct BCDumpOptions {
   bool Symbolic = false;
   /// Print binary blobs using hex escapes.
   bool ShowBinaryBlobs = false;
+  /// Print BLOCKINFO block details.
+  bool DumpBlockinfo = false;
 
   BCDumpOptions(raw_ostream &OS) : OS(OS) {}
 };

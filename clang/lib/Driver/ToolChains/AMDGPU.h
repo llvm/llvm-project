@@ -51,7 +51,7 @@ protected:
   const std::map<options::ID, const StringRef> OptionsDefault;
 
   Tool *buildLinker() const override;
-  const StringRef getOptionDefault(options::ID OptID) const {
+  StringRef getOptionDefault(options::ID OptID) const {
     auto opt = OptionsDefault.find(OptID);
     assert(opt != OptionsDefault.end() && "No Default for Option");
     return opt->second;
@@ -60,14 +60,16 @@ protected:
 public:
   AMDGPUToolChain(const Driver &D, const llvm::Triple &Triple,
                   const llvm::opt::ArgList &Args);
-  unsigned GetDefaultDwarfVersion() const override { return 4; }
+  unsigned GetDefaultDwarfVersion() const override { return 5; }
   bool IsIntegratedAssemblerDefault() const override { return true; }
   bool IsMathErrnoDefault() const override { return false; }
 
   bool useIntegratedAs() const override { return true; }
   bool isCrossCompiling() const override { return true; }
   bool isPICDefault() const override { return false; }
-  bool isPIEDefault() const override { return false; }
+  bool isPIEDefault(const llvm::opt::ArgList &Args) const override {
+    return false;
+  }
   bool isPICDefaultForced() const override { return false; }
   bool SupportsProfiling() const override { return false; }
 
@@ -136,6 +138,12 @@ public:
   addClangTargetOptions(const llvm::opt::ArgList &DriverArgs,
                         llvm::opt::ArgStringList &CC1Args,
                         Action::OffloadKind DeviceOffloadKind) const override;
+
+  // Returns a list of device library names shared by different languages
+  llvm::SmallVector<std::string, 12>
+  getCommonDeviceLibNames(const llvm::opt::ArgList &DriverArgs,
+                          const std::string &GPUArch,
+                          bool isOpenMP = false) const;
 };
 
 } // end namespace toolchains

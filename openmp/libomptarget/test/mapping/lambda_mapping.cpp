@@ -1,5 +1,10 @@
 // RUN: %libomptarget-compilexx-run-and-check-generic
 
+// Error on the gpu that crashes the host
+// UNSUPPORTED: amdgcn-amd-amdhsa
+// UNSUPPORTED: amdgcn-amd-amdhsa-oldDriver
+// UNSUPPORTED: amdgcn-amd-amdhsa-LTO
+
 #include <iostream>
 
 template <typename LOOP_BODY>

@@ -7,11 +7,11 @@
 //===----------------------------------------------------------------------===//
 
 #include "Chunks.h"
+#include "COFFLinkerContext.h"
 #include "InputFiles.h"
+#include "SymbolTable.h"
 #include "Symbols.h"
 #include "Writer.h"
-#include "SymbolTable.h"
-#include "lld/Common/ErrorHandler.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/BinaryFormat/COFF.h"
 #include "llvm/Object/COFF.h"
@@ -213,7 +213,8 @@ void SectionChunk::applyRelARM(uint8_t *off, uint16_t type, OutputSection *os,
 // the page offset from the current instruction to the target.
 void applyArm64Addr(uint8_t *off, uint64_t s, uint64_t p, int shift) {
   uint32_t orig = read32le(off);
-  uint64_t imm = ((orig >> 29) & 0x3) | ((orig >> 3) & 0x1FFFFC);
+  int64_t imm =
+      SignExtend64<21>(((orig >> 29) & 0x3) | ((orig >> 3) & 0x1FFFFC));
   s += imm;
   imm = (s >> shift) - (p >> shift);
   uint32_t immLo = (imm & 0x3) << 29;
@@ -385,7 +386,7 @@ void SectionChunk::applyRelocation(uint8_t *off,
   // section is needed to compute SECREL and SECTION relocations used in debug
   // info.
   Chunk *c = sym ? sym->getChunk() : nullptr;
-  OutputSection *os = c ? c->getOutputSection() : nullptr;
+  OutputSection *os = c ? file->ctx.getOutputSection(c) : nullptr;
 
   // Skip the relocation if it refers to a discarded section, and diagnose it
   // as an error if appropriate. If a symbol was discarded early, it may be
@@ -428,7 +429,7 @@ void SectionChunk::sortRelocations() {
     return;
   warn("some relocations in " + file->getName() + " are not sorted");
   MutableArrayRef<coff_relocation> newRelocs(
-      bAlloc.Allocate<coff_relocation>(relocsSize), relocsSize);
+      bAlloc().Allocate<coff_relocation>(relocsSize), relocsSize);
   memcpy(newRelocs.data(), relocsData, relocsSize * sizeof(coff_relocation));
   llvm::sort(newRelocs, cmpByVa);
   setRelocs(newRelocs);
@@ -633,7 +634,7 @@ void SectionChunk::printDiscardedMessage() const {
   // Removed by dead-stripping. If it's removed by ICF, ICF already
   // printed out the name, so don't repeat that here.
   if (sym && this == repl)
-    message("Discarded " + sym->getName());
+    log("Discarded " + sym->getName());
 }
 
 StringRef SectionChunk::getDebugName() const {
@@ -938,18 +939,16 @@ uint8_t Baserel::getDefaultType() {
   }
 }
 
-MergeChunk *MergeChunk::instances[Log2MaxSectionAlignment + 1] = {};
-
 MergeChunk::MergeChunk(uint32_t alignment)
     : builder(StringTableBuilder::RAW, alignment) {
   setAlignment(alignment);
 }
 
-void MergeChunk::addSection(SectionChunk *c) {
+void MergeChunk::addSection(COFFLinkerContext &ctx, SectionChunk *c) {
   assert(isPowerOf2_32(c->getAlignment()));
   uint8_t p2Align = llvm::Log2_32(c->getAlignment());
-  assert(p2Align < array_lengthof(instances));
-  auto *&mc = instances[p2Align];
+  assert(p2Align < array_lengthof(ctx.mergeChunkInstances));
+  auto *&mc = ctx.mergeChunkInstances[p2Align];
   if (!mc)
     mc = make<MergeChunk>(c->getAlignment());
   mc->sections.push_back(c);

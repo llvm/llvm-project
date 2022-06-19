@@ -14,8 +14,6 @@
 // some scalar I/O data transfer APIs could be changed to bypass their use
 // of descriptors in the future for better efficiency.)
 
-#include "cpp-type.h"
-#include "descriptor.h"
 #include "edit-input.h"
 #include "edit-output.h"
 #include "io-stmt.h"
@@ -23,6 +21,8 @@
 #include "type-info.h"
 #include "unit.h"
 #include "flang/Common/uint128.h"
+#include "flang/Runtime/cpp-type.h"
+#include "flang/Runtime/descriptor.h"
 
 namespace Fortran::runtime::io::descr {
 template <typename A>
@@ -42,23 +42,26 @@ inline A &ExtractElement(IoStatementState &io, const Descriptor &descriptor,
 // automatic repetition counts, like "10*3.14159", for list-directed and
 // NAMELIST array output.
 
-template <typename A, Direction DIR>
+template <int KIND, Direction DIR>
 inline bool FormattedIntegerIO(
     IoStatementState &io, const Descriptor &descriptor) {
   std::size_t numElements{descriptor.Elements()};
   SubscriptValue subscripts[maxRank];
   descriptor.GetLowerBounds(subscripts);
+  using IntType = CppTypeFor<TypeCategory::Integer, KIND>;
+  bool anyInput{false};
   for (std::size_t j{0}; j < numElements; ++j) {
     if (auto edit{io.GetNextDataEdit()}) {
-      A &x{ExtractElement<A>(io, descriptor, subscripts)};
+      IntType &x{ExtractElement<IntType>(io, descriptor, subscripts)};
       if constexpr (DIR == Direction::Output) {
-        if (!EditIntegerOutput(io, *edit, static_cast<std::int64_t>(x))) {
+        if (!EditIntegerOutput<KIND>(io, *edit, x)) {
           return false;
         }
       } else if (edit->descriptor != DataEdit::ListDirectedNullValue) {
-        if (!EditIntegerInput(io, *edit, reinterpret_cast<void *>(&x),
-                static_cast<int>(sizeof(A)))) {
-          return false;
+        if (EditIntegerInput(io, *edit, reinterpret_cast<void *>(&x), KIND)) {
+          anyInput = true;
+        } else {
+          return anyInput && edit->IsNamelist();
         }
       }
       if (!descriptor.IncrementSubscripts(subscripts) && j + 1 < numElements) {
@@ -79,6 +82,7 @@ inline bool FormattedRealIO(
   SubscriptValue subscripts[maxRank];
   descriptor.GetLowerBounds(subscripts);
   using RawType = typename RealOutputEditing<KIND>::BinaryFloatingPoint;
+  bool anyInput{false};
   for (std::size_t j{0}; j < numElements; ++j) {
     if (auto edit{io.GetNextDataEdit()}) {
       RawType &x{ExtractElement<RawType>(io, descriptor, subscripts)};
@@ -87,8 +91,10 @@ inline bool FormattedRealIO(
           return false;
         }
       } else if (edit->descriptor != DataEdit::ListDirectedNullValue) {
-        if (!EditRealInput<KIND>(io, *edit, reinterpret_cast<void *>(&x))) {
-          return false;
+        if (EditRealInput<KIND>(io, *edit, reinterpret_cast<void *>(&x))) {
+          anyInput = true;
+        } else {
+          return anyInput && edit->IsNamelist();
         }
       }
       if (!descriptor.IncrementSubscripts(subscripts) && j + 1 < numElements) {
@@ -111,12 +117,14 @@ inline bool FormattedComplexIO(
   bool isListOutput{
       io.get_if<ListDirectedStatementState<Direction::Output>>() != nullptr};
   using RawType = typename RealOutputEditing<KIND>::BinaryFloatingPoint;
+  bool anyInput{false};
   for (std::size_t j{0}; j < numElements; ++j) {
     RawType *x{&ExtractElement<RawType>(io, descriptor, subscripts)};
     if (isListOutput) {
       DataEdit rEdit, iEdit;
       rEdit.descriptor = DataEdit::ListDirectedRealPart;
       iEdit.descriptor = DataEdit::ListDirectedImaginaryPart;
+      rEdit.modes = iEdit.modes = io.mutableModes();
       if (!RealOutputEditing<KIND>{io, x[0]}.Edit(rEdit) ||
           !RealOutputEditing<KIND>{io, x[1]}.Edit(iEdit)) {
         return false;
@@ -132,9 +140,11 @@ inline bool FormattedComplexIO(
           }
         } else if (edit->descriptor == DataEdit::ListDirectedNullValue) {
           break;
-        } else if (!EditRealInput<KIND>(
+        } else if (EditRealInput<KIND>(
                        io, *edit, reinterpret_cast<void *>(x))) {
-          return false;
+          anyInput = true;
+        } else {
+          return anyInput && edit->IsNamelist();
         }
       }
     }
@@ -154,21 +164,24 @@ inline bool FormattedCharacterIO(
   descriptor.GetLowerBounds(subscripts);
   std::size_t length{descriptor.ElementBytes() / sizeof(A)};
   auto *listOutput{io.get_if<ListDirectedStatementState<Direction::Output>>()};
+  bool anyInput{false};
   for (std::size_t j{0}; j < numElements; ++j) {
     A *x{&ExtractElement<A>(io, descriptor, subscripts)};
     if (listOutput) {
-      if (!ListDirectedDefaultCharacterOutput(io, *listOutput, x, length)) {
+      if (!ListDirectedCharacterOutput(io, *listOutput, x, length)) {
         return false;
       }
     } else if (auto edit{io.GetNextDataEdit()}) {
       if constexpr (DIR == Direction::Output) {
-        if (!EditDefaultCharacterOutput(io, *edit, x, length)) {
+        if (!EditCharacterOutput(io, *edit, x, length)) {
           return false;
         }
-      } else {
+      } else { // input
         if (edit->descriptor != DataEdit::ListDirectedNullValue) {
-          if (!EditDefaultCharacterInput(io, *edit, x, length)) {
-            return false;
+          if (EditCharacterInput(io, *edit, x, length)) {
+            anyInput = true;
+          } else {
+            return anyInput && edit->IsNamelist();
           }
         }
       }
@@ -183,15 +196,17 @@ inline bool FormattedCharacterIO(
   return true;
 }
 
-template <typename A, Direction DIR>
+template <int KIND, Direction DIR>
 inline bool FormattedLogicalIO(
     IoStatementState &io, const Descriptor &descriptor) {
   std::size_t numElements{descriptor.Elements()};
   SubscriptValue subscripts[maxRank];
   descriptor.GetLowerBounds(subscripts);
   auto *listOutput{io.get_if<ListDirectedStatementState<Direction::Output>>()};
+  using IntType = CppTypeFor<TypeCategory::Integer, KIND>;
+  bool anyInput{false};
   for (std::size_t j{0}; j < numElements; ++j) {
-    A &x{ExtractElement<A>(io, descriptor, subscripts)};
+    IntType &x{ExtractElement<IntType>(io, descriptor, subscripts)};
     if (listOutput) {
       if (!ListDirectedLogicalOutput(io, *listOutput, x != 0)) {
         return false;
@@ -206,8 +221,9 @@ inline bool FormattedLogicalIO(
           bool truth{};
           if (EditLogicalInput(io, *edit, truth)) {
             x = truth;
+            anyInput = true;
           } else {
-            return false;
+            return anyInput && edit->IsNamelist();
           }
         }
       }
@@ -234,7 +250,7 @@ static bool DefaultFormattedComponentIO(IoStatementState &io,
     StaticDescriptor<maxRank, true, 16 /*?*/> statDesc;
     Descriptor &desc{statDesc.descriptor()};
     component.CreatePointerDescriptor(
-        desc, origDescriptor, origSubscripts, terminator);
+        desc, origDescriptor, terminator, origSubscripts);
     return DescriptorIO<DIR>(io, desc);
   } else {
     // Component is itself a descriptor
@@ -315,7 +331,9 @@ static bool UnformattedDescriptorIO(
     // Regular derived type unformatted I/O, not user-defined
     auto *externalUnf{io.get_if<ExternalUnformattedIoStatementState<DIR>>()};
     auto *childUnf{io.get_if<ChildUnformattedIoStatementState<DIR>>()};
-    RUNTIME_CHECK(handler, externalUnf != nullptr || childUnf != nullptr);
+    auto *inq{
+        DIR == Direction::Output ? io.get_if<InquireIOLengthState>() : nullptr};
+    RUNTIME_CHECK(handler, externalUnf || childUnf || inq);
     std::size_t elementBytes{descriptor.ElementBytes()};
     std::size_t numElements{descriptor.Elements()};
     SubscriptValue subscripts[maxRank];
@@ -326,7 +344,8 @@ static bool UnformattedDescriptorIO(
                       std::size_t elementBytes) -> bool {
       if constexpr (DIR == Direction::Output) {
         return externalUnf ? externalUnf->Emit(&x, totalBytes, elementBytes)
-                           : childUnf->Emit(&x, totalBytes, elementBytes);
+            : childUnf     ? childUnf->Emit(&x, totalBytes, elementBytes)
+                           : inq->Emit(&x, totalBytes, elementBytes);
       } else {
         return externalUnf ? externalUnf->Receive(&x, totalBytes, elementBytes)
                            : childUnf->Receive(&x, totalBytes, elementBytes);
@@ -353,6 +372,10 @@ static bool UnformattedDescriptorIO(
 
 template <Direction DIR>
 static bool DescriptorIO(IoStatementState &io, const Descriptor &descriptor) {
+  IoErrorHandler &handler{io.GetIoErrorHandler()};
+  if (handler.InError()) {
+    return false;
+  }
   if (!io.get_if<IoDirectionState<DIR>>()) {
     io.GetIoErrorHandler().Crash(
         "DescriptorIO() called for wrong I/O direction");
@@ -363,10 +386,9 @@ static bool DescriptorIO(IoStatementState &io, const Descriptor &descriptor) {
       return false;
     }
   }
-  if (!io.get_if<FormattedIoStatementState>()) {
+  if (!io.get_if<FormattedIoStatementState<DIR>>()) {
     return UnformattedDescriptorIO<DIR>(io, descriptor);
   }
-  IoErrorHandler &handler{io.GetIoErrorHandler()};
   if (auto catAndKind{descriptor.type().GetCategoryAndKind()}) {
     TypeCategory cat{catAndKind->first};
     int kind{catAndKind->second};
@@ -374,20 +396,15 @@ static bool DescriptorIO(IoStatementState &io, const Descriptor &descriptor) {
     case TypeCategory::Integer:
       switch (kind) {
       case 1:
-        return FormattedIntegerIO<CppTypeFor<TypeCategory::Integer, 1>, DIR>(
-            io, descriptor);
+        return FormattedIntegerIO<1, DIR>(io, descriptor);
       case 2:
-        return FormattedIntegerIO<CppTypeFor<TypeCategory::Integer, 2>, DIR>(
-            io, descriptor);
+        return FormattedIntegerIO<2, DIR>(io, descriptor);
       case 4:
-        return FormattedIntegerIO<CppTypeFor<TypeCategory::Integer, 4>, DIR>(
-            io, descriptor);
+        return FormattedIntegerIO<4, DIR>(io, descriptor);
       case 8:
-        return FormattedIntegerIO<CppTypeFor<TypeCategory::Integer, 8>, DIR>(
-            io, descriptor);
+        return FormattedIntegerIO<8, DIR>(io, descriptor);
       case 16:
-        return FormattedIntegerIO<CppTypeFor<TypeCategory::Integer, 16>, DIR>(
-            io, descriptor);
+        return FormattedIntegerIO<16, DIR>(io, descriptor);
       default:
         handler.Crash(
             "DescriptorIO: Unimplemented INTEGER kind (%d) in descriptor",
@@ -439,7 +456,10 @@ static bool DescriptorIO(IoStatementState &io, const Descriptor &descriptor) {
       switch (kind) {
       case 1:
         return FormattedCharacterIO<char, DIR>(io, descriptor);
-      // TODO cases 2, 4
+      case 2:
+        return FormattedCharacterIO<char16_t, DIR>(io, descriptor);
+      case 4:
+        return FormattedCharacterIO<char32_t, DIR>(io, descriptor);
       default:
         handler.Crash(
             "DescriptorIO: Unimplemented CHARACTER kind (%d) in descriptor",
@@ -449,17 +469,13 @@ static bool DescriptorIO(IoStatementState &io, const Descriptor &descriptor) {
     case TypeCategory::Logical:
       switch (kind) {
       case 1:
-        return FormattedLogicalIO<CppTypeFor<TypeCategory::Integer, 1>, DIR>(
-            io, descriptor);
+        return FormattedLogicalIO<1, DIR>(io, descriptor);
       case 2:
-        return FormattedLogicalIO<CppTypeFor<TypeCategory::Integer, 2>, DIR>(
-            io, descriptor);
+        return FormattedLogicalIO<2, DIR>(io, descriptor);
       case 4:
-        return FormattedLogicalIO<CppTypeFor<TypeCategory::Integer, 4>, DIR>(
-            io, descriptor);
+        return FormattedLogicalIO<4, DIR>(io, descriptor);
       case 8:
-        return FormattedLogicalIO<CppTypeFor<TypeCategory::Integer, 8>, DIR>(
-            io, descriptor);
+        return FormattedLogicalIO<8, DIR>(io, descriptor);
       default:
         handler.Crash(
             "DescriptorIO: Unimplemented LOGICAL kind (%d) in descriptor",
@@ -470,7 +486,7 @@ static bool DescriptorIO(IoStatementState &io, const Descriptor &descriptor) {
       return FormattedDerivedTypeIO<DIR>(io, descriptor);
     }
   }
-  handler.Crash("DescriptorIO: Bad type code (%d) in descriptor",
+  handler.Crash("DescriptorIO: bad type code (%d) in descriptor",
       static_cast<int>(descriptor.type().raw()));
   return false;
 }

@@ -3,9 +3,9 @@
 // RUN: ld.lld %t --shared --icf=all -o %t.so
 // The output file is large, most of it zeroes. We dissassemble only the
 // parts we need to speed up the test and avoid a large output file
-// RUN: llvm-objdump -d %t.so --start-address=0x2000000 --stop-address=0x2000018 --triple=thumbv7a-linux-gnueabihf | FileCheck --check-prefix=CHECK1 %s
-// RUN: llvm-objdump -d %t.so --start-address=0x2800004 --stop-address=0x2800034 --triple=thumbv7a-linux-gnueabihf | FileCheck --check-prefix=CHECK2 %s
-// RUN: llvm-objdump -d %t.so --start-address=0x4000000 --stop-address=0x4000010 --triple=thumbv7a-linux-gnueabihf | FileCheck --check-prefix=CHECK3 %s
+// RUN: llvm-objdump -d %t.so --start-address=0x2000000 --stop-address=0x2000018 | FileCheck --check-prefix=CHECK1 %s
+// RUN: llvm-objdump -d %t.so --start-address=0x2800004 --stop-address=0x2800034 | FileCheck --check-prefix=CHECK2 %s
+// RUN: llvm-objdump -d %t.so --start-address=0x4000000 --stop-address=0x4000010 | FileCheck --check-prefix=CHECK3 %s
 // RUN: llvm-objdump -d %t.so --start-address=0x4000010 --stop-address=0x4000100 --triple=armv7a-linux-gnueabihf | FileCheck --check-prefix=CHECK4 %s
 // RUN: rm %t.so
  .syntax unified

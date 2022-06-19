@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -std=c++1y -triple x86_64-linux-gnu -emit-llvm -o - %s | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -std=c++1y -triple x86_64-linux-gnu -emit-llvm -o - %s | FileCheck %s
 
 // Check that we keep the 'extern' when we instantiate the definition of this
 // variable template specialization.
@@ -40,7 +40,7 @@ namespace PR42111 {
   // CHECK: load {{.*}} @_ZGVN7PR4211112_GLOBAL__N_11nILi0EEE
   // CHECK: icmp eq i8 {{.*}}, 0
   // CHECK: br i1
-  // CHECK: call i32 @_ZN7PR421111fEv(
+  // CHECK: call noundef i32 @_ZN7PR421111fEv(
   // CHECK: store i32 {{.*}}, i32* @_ZN7PR4211112_GLOBAL__N_11nILi0EEE
   // CHECK: store i8 1, i8* @_ZGVN7PR4211112_GLOBAL__N_11nILi0EEE
   int g() { return n<> + n<>; }

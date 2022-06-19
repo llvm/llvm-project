@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "support/FileCache.h"
+#include "llvm/ADT/ScopeExit.h"
 
 namespace clang {
 namespace clangd {

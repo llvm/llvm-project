@@ -1,4 +1,4 @@
-; RUN: opt < %s -instcombine -S | grep "phi i32" | count 2
+; RUN: opt < %s -passes=instcombine -S | grep "phi i32" | count 2
 
 define void @test() nounwind  {
 entry:

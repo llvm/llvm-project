@@ -735,6 +735,17 @@ TEST_P(ASTMatchersTest, ParmVarDecl) {
   EXPECT_TRUE(notMatches("void f();", parmVarDecl()));
 }
 
+TEST_P(ASTMatchersTest, StaticAssertDecl) {
+  if (!GetParam().isCXX11OrLater())
+    return;
+
+  EXPECT_TRUE(matches("static_assert(true, \"\");", staticAssertDecl()));
+  EXPECT_TRUE(
+      notMatches("constexpr bool staticassert(bool B, const char *M) "
+                 "{ return true; };\n void f() { staticassert(true, \"\"); }",
+                 staticAssertDecl()));
+}
+
 TEST_P(ASTMatchersTest, Matcher_ConstructorCall) {
   if (!GetParam().isCXX()) {
     return;
@@ -876,7 +887,7 @@ TEST_P(ASTMatchersTest, Matcher_NoexceptExpression) {
   EXPECT_TRUE(
       matches("void foo() noexcept; bool bar = noexcept(foo());", NoExcept));
   EXPECT_TRUE(notMatches("void foo() noexcept;", NoExcept));
-  EXPECT_TRUE(notMatches("void foo() noexcept(1+1);", NoExcept));
+  EXPECT_TRUE(notMatches("void foo() noexcept(0+1);", NoExcept));
   EXPECT_TRUE(matches("void foo() noexcept(noexcept(1+1));", NoExcept));
 }
 
@@ -1049,7 +1060,7 @@ TEST_P(ASTMatchersTest, StmtExpr) {
 TEST_P(ASTMatchersTest, PredefinedExpr) {
   // __func__ expands as StringLiteral("foo")
   EXPECT_TRUE(matches("void foo() { __func__; }",
-                      predefinedExpr(hasType(asString("const char [4]")),
+                      predefinedExpr(hasType(asString("const char[4]")),
                                      has(stringLiteral()))));
 }
 
@@ -1367,7 +1378,7 @@ TEST_P(ASTMatchersTest, ExprWithCleanups_MatchesExprWithCleanups) {
 
 TEST_P(ASTMatchersTest, InitListExpr) {
   EXPECT_TRUE(matches("int a[] = { 1, 2 };",
-                      initListExpr(hasType(asString("int [2]")))));
+                      initListExpr(hasType(asString("int[2]")))));
   EXPECT_TRUE(matches("struct B { int x, y; }; struct B b = { 5, 6 };",
                       initListExpr(hasType(recordDecl(hasName("B"))))));
   EXPECT_TRUE(
@@ -1885,6 +1896,29 @@ TEST_P(ASTMatchersTest, NestedNameSpecifier) {
                  nestedNameSpecifier()));
 }
 
+TEST_P(ASTMatchersTest, Attr) {
+  // Windows adds some implicit attributes.
+  bool AutomaticAttributes = StringRef(GetParam().Target).contains("win32");
+  if (GetParam().isCXX11OrLater()) {
+    EXPECT_TRUE(matches("struct [[clang::warn_unused_result]] F{};", attr()));
+
+    // Unknown attributes are not parsed into an AST node.
+    if (!AutomaticAttributes) {
+      EXPECT_TRUE(notMatches("int x [[unknownattr]];", attr()));
+    }
+  }
+  if (GetParam().isCXX17OrLater()) {
+    EXPECT_TRUE(matches("struct [[nodiscard]] F{};", attr()));
+  }
+  EXPECT_TRUE(matches("int x(int * __attribute__((nonnull)) );", attr()));
+  if (!AutomaticAttributes) {
+    EXPECT_TRUE(notMatches("struct F{}; int x(int *);", attr()));
+    // Some known attributes are not parsed into an AST node.
+    EXPECT_TRUE(notMatches("typedef int x __attribute__((ext_vector_type(1)));",
+                           attr()));
+  }
+}
+
 TEST_P(ASTMatchersTest, NullStmt) {
   EXPECT_TRUE(matches("void f() {int i;;}", nullStmt()));
   EXPECT_TRUE(notMatches("void f() {int i;}", nullStmt()));
@@ -2053,6 +2087,224 @@ TEST_P(ASTMatchersTest, TypeAliasTemplateDecl) {
       matches(Code, typeAliasTemplateDecl(hasName("typeAliasTemplateDecl"))));
   EXPECT_TRUE(
       notMatches(Code, typeAliasTemplateDecl(hasName("typeAliasDecl"))));
+}
+
+TEST_P(ASTMatchersTest, QualifiedTypeLocTest_BindsToConstIntVarDecl) {
+  EXPECT_TRUE(matches("const int x = 0;",
+                      qualifiedTypeLoc(loc(asString("const int")))));
+}
+
+TEST_P(ASTMatchersTest, QualifiedTypeLocTest_BindsToConstIntFunctionDecl) {
+  EXPECT_TRUE(matches("const int f() { return 5; }",
+                      qualifiedTypeLoc(loc(asString("const int")))));
+}
+
+TEST_P(ASTMatchersTest, QualifiedTypeLocTest_DoesNotBindToUnqualifiedVarDecl) {
+  EXPECT_TRUE(notMatches("int x = 0;", qualifiedTypeLoc(loc(asString("int")))));
+}
+
+TEST_P(ASTMatchersTest, QualifiedTypeLocTest_IntDoesNotBindToConstIntDecl) {
+  EXPECT_TRUE(
+      notMatches("const int x = 0;", qualifiedTypeLoc(loc(asString("int")))));
+}
+
+TEST_P(ASTMatchersTest, QualifiedTypeLocTest_IntDoesNotBindToConstFloatDecl) {
+  EXPECT_TRUE(
+      notMatches("const float x = 0;", qualifiedTypeLoc(loc(asString("int")))));
+}
+
+TEST_P(ASTMatchersTest, PointerTypeLocTest_BindsToAnyPointerTypeLoc) {
+  auto matcher = varDecl(hasName("x"), hasTypeLoc(pointerTypeLoc()));
+  EXPECT_TRUE(matches("int* x;", matcher));
+  EXPECT_TRUE(matches("float* x;", matcher));
+  EXPECT_TRUE(matches("char* x;", matcher));
+  EXPECT_TRUE(matches("void* x;", matcher));
+}
+
+TEST_P(ASTMatchersTest, PointerTypeLocTest_DoesNotBindToNonPointerTypeLoc) {
+  auto matcher = varDecl(hasName("x"), hasTypeLoc(pointerTypeLoc()));
+  EXPECT_TRUE(notMatches("int x;", matcher));
+  EXPECT_TRUE(notMatches("float x;", matcher));
+  EXPECT_TRUE(notMatches("char x;", matcher));
+}
+
+TEST_P(ASTMatchersTest, ReferenceTypeLocTest_BindsToAnyReferenceTypeLoc) {
+  if (!GetParam().isCXX()) {
+    return;
+  }
+  auto matcher = varDecl(hasName("r"), hasTypeLoc(referenceTypeLoc()));
+  EXPECT_TRUE(matches("int rr = 3; int& r = rr;", matcher));
+  EXPECT_TRUE(matches("int rr = 3; auto& r = rr;", matcher));
+  EXPECT_TRUE(matches("int rr = 3; const int& r = rr;", matcher));
+  EXPECT_TRUE(matches("float rr = 3.0; float& r = rr;", matcher));
+  EXPECT_TRUE(matches("char rr = 'a'; char& r = rr;", matcher));
+}
+
+TEST_P(ASTMatchersTest, ReferenceTypeLocTest_DoesNotBindToNonReferenceTypeLoc) {
+  auto matcher = varDecl(hasName("r"), hasTypeLoc(referenceTypeLoc()));
+  EXPECT_TRUE(notMatches("int r;", matcher));
+  EXPECT_TRUE(notMatches("int r = 3;", matcher));
+  EXPECT_TRUE(notMatches("const int r = 3;", matcher));
+  EXPECT_TRUE(notMatches("int* r;", matcher));
+  EXPECT_TRUE(notMatches("float r;", matcher));
+  EXPECT_TRUE(notMatches("char r;", matcher));
+}
+
+TEST_P(ASTMatchersTest, ReferenceTypeLocTest_BindsToAnyRvalueReferenceTypeLoc) {
+  if (!GetParam().isCXX()) {
+    return;
+  }
+  auto matcher = varDecl(hasName("r"), hasTypeLoc(referenceTypeLoc()));
+  EXPECT_TRUE(matches("int&& r = 3;", matcher));
+  EXPECT_TRUE(matches("auto&& r = 3;", matcher));
+  EXPECT_TRUE(matches("float&& r = 3.0;", matcher));
+}
+
+TEST_P(
+    ASTMatchersTest,
+    TemplateSpecializationTypeLocTest_BindsToTemplateSpecializationExplicitInstantiation) {
+  if (!GetParam().isCXX()) {
+    return;
+  }
+  EXPECT_TRUE(
+      matches("template <typename T> class C {}; template class C<int>;",
+              classTemplateSpecializationDecl(
+                  hasName("C"), hasTypeLoc(templateSpecializationTypeLoc()))));
+}
+
+TEST_P(ASTMatchersTest,
+       TemplateSpecializationTypeLocTest_BindsToVarDeclTemplateSpecialization) {
+  if (!GetParam().isCXX()) {
+    return;
+  }
+  EXPECT_TRUE(matches(
+      "template <typename T> class C {}; C<char> var;",
+      varDecl(hasName("var"), hasTypeLoc(templateSpecializationTypeLoc()))));
+}
+
+TEST_P(
+    ASTMatchersTest,
+    TemplateSpecializationTypeLocTest_DoesNotBindToNonTemplateSpecialization) {
+  if (!GetParam().isCXX()) {
+    return;
+  }
+  EXPECT_TRUE(notMatches(
+      "class C {}; C var;",
+      varDecl(hasName("var"), hasTypeLoc(templateSpecializationTypeLoc()))));
+}
+
+TEST_P(ASTMatchersTest,
+       ElaboratedTypeLocTest_BindsToElaboratedObjectDeclaration) {
+  if (!GetParam().isCXX()) {
+    return;
+  }
+  EXPECT_TRUE(matches("class C {}; class C c;",
+                      varDecl(hasName("c"), hasTypeLoc(elaboratedTypeLoc()))));
+}
+
+TEST_P(ASTMatchersTest,
+       ElaboratedTypeLocTest_BindsToNamespaceElaboratedObjectDeclaration) {
+  if (!GetParam().isCXX()) {
+    return;
+  }
+  EXPECT_TRUE(matches("namespace N { class D {}; } N::D d;",
+                      varDecl(hasName("d"), hasTypeLoc(elaboratedTypeLoc()))));
+}
+
+TEST_P(ASTMatchersTest,
+       ElaboratedTypeLocTest_BindsToElaboratedStructDeclaration) {
+  EXPECT_TRUE(matches("struct s {}; struct s ss;",
+                      varDecl(hasName("ss"), hasTypeLoc(elaboratedTypeLoc()))));
+}
+
+TEST_P(ASTMatchersTest,
+       ElaboratedTypeLocTest_DoesNotBindToNonElaboratedObjectDeclaration) {
+  if (!GetParam().isCXX()) {
+    return;
+  }
+  EXPECT_TRUE(
+      notMatches("class C {}; C c;",
+                 varDecl(hasName("c"), hasTypeLoc(elaboratedTypeLoc()))));
+}
+
+TEST_P(
+    ASTMatchersTest,
+    ElaboratedTypeLocTest_DoesNotBindToNamespaceNonElaboratedObjectDeclaration) {
+  if (!GetParam().isCXX()) {
+    return;
+  }
+  EXPECT_TRUE(
+      notMatches("namespace N { class D {}; } using N::D; D d;",
+                 varDecl(hasName("d"), hasTypeLoc(elaboratedTypeLoc()))));
+}
+
+TEST_P(ASTMatchersTest,
+       ElaboratedTypeLocTest_DoesNotBindToNonElaboratedStructDeclaration) {
+  if (!GetParam().isCXX()) {
+    return;
+  }
+  EXPECT_TRUE(
+      notMatches("struct s {}; s ss;",
+                 varDecl(hasName("ss"), hasTypeLoc(elaboratedTypeLoc()))));
+}
+
+TEST_P(ASTMatchersTest, LambdaCaptureTest) {
+  if (!GetParam().isCXX11OrLater()) {
+    return;
+  }
+  EXPECT_TRUE(matches("int main() { int cc; auto f = [cc](){ return cc; }; }",
+                      lambdaExpr(hasAnyCapture(lambdaCapture()))));
+}
+
+TEST_P(ASTMatchersTest, LambdaCaptureTest_BindsToCaptureOfVarDecl) {
+  if (!GetParam().isCXX11OrLater()) {
+    return;
+  }
+  auto matcher = lambdaExpr(
+      hasAnyCapture(lambdaCapture(capturesVar(varDecl(hasName("cc"))))));
+  EXPECT_TRUE(matches("int main() { int cc; auto f = [cc](){ return cc; }; }",
+                      matcher));
+  EXPECT_TRUE(matches("int main() { int cc; auto f = [&cc](){ return cc; }; }",
+                      matcher));
+  EXPECT_TRUE(
+      matches("int main() { int cc; auto f = [=](){ return cc; }; }", matcher));
+  EXPECT_TRUE(
+      matches("int main() { int cc; auto f = [&](){ return cc; }; }", matcher));
+}
+
+TEST_P(ASTMatchersTest, LambdaCaptureTest_BindsToCaptureWithInitializer) {
+  if (!GetParam().isCXX14OrLater()) {
+    return;
+  }
+  auto matcher = lambdaExpr(hasAnyCapture(lambdaCapture(capturesVar(
+      varDecl(hasName("cc"), hasInitializer(integerLiteral(equals(1))))))));
+  EXPECT_TRUE(
+      matches("int main() { auto lambda = [cc = 1] {return cc;}; }", matcher));
+  EXPECT_TRUE(
+      matches("int main() { int cc = 2; auto lambda = [cc = 1] {return cc;}; }",
+              matcher));
+}
+
+TEST_P(ASTMatchersTest, LambdaCaptureTest_DoesNotBindToCaptureOfVarDecl) {
+  if (!GetParam().isCXX11OrLater()) {
+    return;
+  }
+  auto matcher = lambdaExpr(
+      hasAnyCapture(lambdaCapture(capturesVar(varDecl(hasName("cc"))))));
+  EXPECT_FALSE(matches("int main() { auto f = [](){ return 5; }; }", matcher));
+  EXPECT_FALSE(matches("int main() { int xx; auto f = [xx](){ return xx; }; }",
+                       matcher));
+}
+
+TEST_P(ASTMatchersTest,
+       LambdaCaptureTest_DoesNotBindToCaptureWithInitializerAndDifferentName) {
+  if (!GetParam().isCXX14OrLater()) {
+    return;
+  }
+  EXPECT_FALSE(matches(
+      "int main() { auto lambda = [xx = 1] {return xx;}; }",
+      lambdaExpr(hasAnyCapture(lambdaCapture(capturesVar(varDecl(
+          hasName("cc"), hasInitializer(integerLiteral(equals(1))))))))));
 }
 
 TEST(ASTMatchersTestObjC, ObjCMessageExpr) {

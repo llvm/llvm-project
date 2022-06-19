@@ -1,5 +1,4 @@
-! RUN: %S/test_symbols.sh %s %t %flang_fc1
-! REQUIRES: shell
+! RUN: %python %S/test_symbols.py %s %flang_fc1
  !DEF: /MainProgram1/ipdt DerivedType
  !DEF: /MainProgram1/ipdt/k TypeParam INTEGER(4)
  type :: ipdt(k)

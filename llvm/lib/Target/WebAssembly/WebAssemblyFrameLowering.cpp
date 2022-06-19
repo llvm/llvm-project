@@ -19,7 +19,7 @@
 
 #include "WebAssemblyFrameLowering.h"
 #include "MCTargetDesc/WebAssemblyMCTargetDesc.h"
-#include "Utils/WebAssemblyUtilities.h"
+#include "Utils/WebAssemblyTypeUtilities.h"
 #include "WebAssembly.h"
 #include "WebAssemblyInstrInfo.h"
 #include "WebAssemblyMachineFunctionInfo.h"

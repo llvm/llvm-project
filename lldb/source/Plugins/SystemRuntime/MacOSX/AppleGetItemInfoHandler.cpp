@@ -20,6 +20,7 @@
 #include "lldb/Target/Target.h"
 #include "lldb/Target/Thread.h"
 #include "lldb/Utility/ConstString.h"
+#include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/StreamString.h"
 
@@ -129,7 +130,7 @@ lldb::addr_t AppleGetItemInfoHandler::SetupGetItemInfoFunction(
     Thread &thread, ValueList &get_item_info_arglist) {
   ExecutionContext exe_ctx(thread.shared_from_this());
   DiagnosticManager diagnostics;
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_SYSTEM_RUNTIME));
+  Log *log = GetLog(LLDBLog::SystemRuntime);
   lldb::addr_t args_addr = LLDB_INVALID_ADDRESS;
   FunctionCaller *get_item_info_caller = nullptr;
 
@@ -218,7 +219,7 @@ AppleGetItemInfoHandler::GetItemInfo(Thread &thread, uint64_t item,
   TargetSP target_sp(thread.CalculateTarget());
   TypeSystemClang *clang_ast_context =
       ScratchTypeSystemClang::GetForTarget(*target_sp);
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_SYSTEM_RUNTIME));
+  Log *log = GetLog(LLDBLog::SystemRuntime);
 
   GetItemInfoReturnInfo return_value;
   return_value.item_buffer_ptr = LLDB_INVALID_ADDRESS;

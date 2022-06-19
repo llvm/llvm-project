@@ -2,10 +2,10 @@
 
 # Check the behavior of --max-failures option.
 #
-# RUN: not %{lit}                  -j 1 %{inputs}/max-failures >  %t.out 2>&1
-# RUN: not %{lit} --max-failures=1 -j 1 %{inputs}/max-failures >> %t.out 2>&1
-# RUN: not %{lit} --max-failures=2 -j 1 %{inputs}/max-failures >> %t.out 2>&1
-# RUN: not %{lit} --max-failures=0 -j 1 %{inputs}/max-failures 2>> %t.out
+# RUN: not %{lit}                  %{inputs}/max-failures >  %t.out 2>&1
+# RUN: not %{lit} --max-failures=1 %{inputs}/max-failures >> %t.out 2>&1
+# RUN: not %{lit} --max-failures=2 %{inputs}/max-failures >> %t.out 2>&1
+# RUN: not %{lit} --max-failures=0 %{inputs}/max-failures 2>> %t.out
 # RUN: FileCheck < %t.out %s
 #
 

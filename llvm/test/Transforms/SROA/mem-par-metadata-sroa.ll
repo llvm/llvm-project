@@ -1,4 +1,4 @@
-; RUN: opt < %s -sroa -S | FileCheck %s
+; RUN: opt < %s -passes=sroa -S | FileCheck %s
 ;
 ; Make sure the llvm.access.group meta-data is preserved
 ; when a load/store is replaced with another load/store by sroa

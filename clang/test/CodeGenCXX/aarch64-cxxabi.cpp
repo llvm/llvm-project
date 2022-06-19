@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple arm64-none-linux-gnu -emit-llvm -w -o - %s | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -triple arm64-none-linux-gnu -emit-llvm -w -o - %s | FileCheck %s
 
 // Check differences between the generic Itanium ABI, the AArch32 version and
 // the AArch64 version.

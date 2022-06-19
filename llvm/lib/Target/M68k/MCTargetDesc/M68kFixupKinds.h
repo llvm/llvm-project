@@ -1,4 +1,4 @@
-//===-- M68kFixupKinds.h - M68k Specific Fixup Entries ------*- C++ -*-===//
+//===-- M68kFixupKinds.h - M68k Specific Fixup Entries ----------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -51,4 +51,4 @@ static inline MCFixupKind getFixupForSize(unsigned Size, bool isPCRel) {
 
 } // namespace llvm
 
-#endif
+#endif // LLVM_LIB_TARGET_M68k_MCTARGETDESC_M68kFIXUPKINDS_H

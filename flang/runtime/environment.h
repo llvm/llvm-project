@@ -14,9 +14,11 @@
 
 namespace Fortran::runtime {
 
-#if __BYTE_ORDER__ == __ORDER_BIG_ENDIAN__
+class Terminator;
+
+#if FLANG_BIG_ENDIAN
 constexpr bool isHostLittleEndian{false};
-#elif __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__
+#elif FLANG_LITTLE_ENDIAN
 constexpr bool isHostLittleEndian{true};
 #else
 #error host endianness is not known
@@ -28,15 +30,23 @@ enum class Convert { Unknown, Native, LittleEndian, BigEndian, Swap };
 std::optional<Convert> GetConvertFromString(const char *, std::size_t);
 
 struct ExecutionEnvironment {
+  constexpr ExecutionEnvironment(){};
   void Configure(int argc, const char *argv[], const char *envp[]);
+  const char *GetEnv(
+      const char *name, std::size_t name_length, const Terminator &terminator);
 
-  int argc;
-  const char **argv;
-  const char **envp;
-  int listDirectedOutputLineLengthLimit;
-  enum decimal::FortranRounding defaultOutputRoundingMode;
-  Convert conversion;
+  int argc{0};
+  const char **argv{nullptr};
+  const char **envp{nullptr};
+
+  int listDirectedOutputLineLengthLimit{79}; // FORT_FMT_RECL
+  enum decimal::FortranRounding defaultOutputRoundingMode{
+      decimal::FortranRounding::RoundNearest}; // RP(==PN)
+  Convert conversion{Convert::Unknown}; // FORT_CONVERT
+  bool noStopMessage{false}; // NO_STOP_MESSAGE=1 inhibits "Fortran STOP"
+  bool defaultUTF8{false}; // DEFAULT_UTF8
 };
+
 extern ExecutionEnvironment executionEnvironment;
 } // namespace Fortran::runtime
 

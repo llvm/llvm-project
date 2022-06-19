@@ -11,8 +11,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef MLIR_INTERFACES_SUBELEMENTINTERFACES_H
-#define MLIR_INTERFACES_SUBELEMENTINTERFACES_H
+#ifndef MLIR_IR_SUBELEMENTINTERFACES_H
+#define MLIR_IR_SUBELEMENTINTERFACES_H
 
 #include "mlir/IR/Attributes.h"
 #include "mlir/IR/Types.h"
@@ -21,4 +21,4 @@
 #include "mlir/IR/SubElementAttrInterfaces.h.inc"
 #include "mlir/IR/SubElementTypeInterfaces.h.inc"
 
-#endif // MLIR_INTERFACES_SUBELEMENTINTERFACES_H
+#endif // MLIR_IR_SUBELEMENTINTERFACES_H

@@ -1,4 +1,5 @@
-; RUN: llc -mtriple=nvptx64-nvidia-cuda -dwarf-directory=0 < %s | FileCheck %s
+; RUN: llc -mtriple=nvptx64-nvidia-cuda < %s | FileCheck %s
+; RUN: %if ptxas %{ llc -mtriple=nvptx64-nvidia-cuda < %s | %ptxas-verify %}
 
 ; CHECK: .target sm_{{[0-9]+}}, debug
 
@@ -12,7 +13,7 @@
 ; CHECK: .visible .func  (.param .b32 func_retval0) _Z3bari(
 ; CHECK: {
 ; CHECK: .loc [[CU1:[0-9]+]] 1 0
-; CHECK: Lfunc_begin0:
+; CHECK: $L__func_begin0:
 ; CHECK: .loc [[CU1]] 1 0
 
 ; CHECK: //DEBUG_VALUE: bar:b <- {{[0-9]+}}
@@ -41,7 +42,7 @@ declare void @llvm.dbg.value(metadata, metadata, metadata) #1
 ; CHECK: .visible .func _Z3baz1A(
 ; CHECK: {
 ; CHECK: .loc [[CU2:[0-9]+]] 6 0
-; CHECK: Lfunc_begin1:
+; CHECK: $L__func_begin1:
 ; CHECK: .loc [[CU2]] 6 0
 ; CHECK-NOT: //DEBUG_VALUE: baz:z
 ; CHECK: //DEBUG_VALUE: baz:z <- undef
@@ -323,15 +324,15 @@ attributes #2 = { "less-precise-fpmad"="false" "frame-pointer"="all" "no-infs-fp
 ; CHECK-NEXT: .b8 99
 ; CHECK-NEXT: .b8 99
 ; CHECK-NEXT: .b8 0
-; CHECK-NEXT: .b64 Lfunc_begin1                    // DW_AT_low_pc
-; CHECK-NEXT: .b64 Lfunc_end1                      // DW_AT_high_pc
+; CHECK-NEXT: .b64 $L__func_begin1                 // DW_AT_low_pc
+; CHECK-NEXT: .b64 $L__func_end1                   // DW_AT_high_pc
 ; CHECK-NEXT: .b8 2                                // Abbrev [2] 0x64:0x4 DW_TAG_structure_type
 ; CHECK-NEXT: .b8 65                               // DW_AT_name
 ; CHECK-NEXT: .b8 0
 ; CHECK-NEXT: .b8 1                                // DW_AT_declaration
 ; CHECK-NEXT: .b8 3                                // Abbrev [3] 0x68:0x3a DW_TAG_subprogram
-; CHECK-NEXT: .b64 Lfunc_begin1                    // DW_AT_low_pc
-; CHECK-NEXT: .b64 Lfunc_end1                      // DW_AT_high_pc
+; CHECK-NEXT: .b64 $L__func_begin1                 // DW_AT_low_pc
+; CHECK-NEXT: .b64 $L__func_end1                   // DW_AT_high_pc
 ; CHECK-NEXT: .b8 1                                // DW_AT_frame_base
 ; CHECK-NEXT: .b8 156
 ; CHECK-NEXT: .b8 95                               // DW_AT_MIPS_linkage_name
@@ -439,11 +440,11 @@ attributes #2 = { "less-precise-fpmad"="false" "frame-pointer"="all" "no-infs-fp
 ; CHECK-NEXT: .b8 99
 ; CHECK-NEXT: .b8 99
 ; CHECK-NEXT: .b8 0
-; CHECK-NEXT: .b64 Lfunc_begin0                    // DW_AT_low_pc
-; CHECK-NEXT: .b64 Lfunc_end0                      // DW_AT_high_pc
+; CHECK-NEXT: .b64 $L__func_begin0                 // DW_AT_low_pc
+; CHECK-NEXT: .b64 $L__func_end0                   // DW_AT_high_pc
 ; CHECK-NEXT: .b8 6                                // Abbrev [6] 0x64:0x30 DW_TAG_subprogram
-; CHECK-NEXT: .b64 Lfunc_begin0                    // DW_AT_low_pc
-; CHECK-NEXT: .b64 Lfunc_end0                      // DW_AT_high_pc
+; CHECK-NEXT: .b64 $L__func_begin0                 // DW_AT_low_pc
+; CHECK-NEXT: .b64 $L__func_end0                   // DW_AT_high_pc
 ; CHECK-NEXT: .b8 1                                // DW_AT_frame_base
 ; CHECK-NEXT: .b8 156
 ; CHECK-NEXT: .b8 95                               // DW_AT_MIPS_linkage_name

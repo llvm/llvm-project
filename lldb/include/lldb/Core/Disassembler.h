@@ -150,6 +150,10 @@ public:
 
   virtual bool HasDelaySlot();
 
+  virtual bool IsLoad() = 0;
+
+  virtual bool IsAuthenticated() = 0;
+
   bool CanSetBreakpoint ();
 
   virtual size_t Decode(const Disassembler &disassembler,
@@ -336,6 +340,10 @@ public:
 
   bool HasDelaySlot() override;
 
+  bool IsLoad() override;
+
+  bool IsAuthenticated() override;
+
   void CalculateMnemonicOperandsAndComment(
       const ExecutionContext *exe_ctx) override {
     // TODO: fill this in and put opcode name into Instruction::m_opcode_name,
@@ -457,7 +465,7 @@ protected:
     uint32_t line = LLDB_INVALID_LINE_NUMBER;
     uint32_t column = 0;
 
-    SourceLine() : file() {}
+    SourceLine() = default;
 
     bool operator==(const SourceLine &rhs) const {
       return file == rhs.file && line == rhs.line && rhs.column == column;
@@ -481,7 +489,7 @@ protected:
     // Whether to print a blank line at the end of the source lines.
     bool print_source_context_end_eol = true;
 
-    SourceLinesToDisplay() : lines() {}
+    SourceLinesToDisplay() = default;
   };
 
   // Get the function's declaration line number, hopefully a line number

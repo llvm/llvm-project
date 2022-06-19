@@ -1,5 +1,4 @@
-; RUN: opt -loop-accesses -analyze -enable-new-pm=0 < %s | FileCheck %s
-; RUN: opt -passes='require<scalar-evolution>,require<aa>,loop(print-access-info)' -disable-output  < %s 2>&1 | FileCheck %s
+; RUN: opt -passes='print-access-info' -disable-output  < %s 2>&1 | FileCheck %s
 
 target datalayout = "e-m:e-i64:64-i128:128-n32:64-S128"
 
@@ -119,6 +118,7 @@ for.body:                                         ; preds = %entry, %for.body
 ; CHECK: function 'unsafe_Read_Write':
 ; CHECK-NEXT:   for.body:
 ; CHECK-NEXT:     Report: unsafe dependent memory operations in loop
+; CHECK-NEXT:     Backward loop carried data dependence.
 ; CHECK-NEXT:     Dependences:
 ; CHECK-NEXT:      Backward:
 ; CHECK-NEXT:           %0 = load i32, i32* %arrayidx, align 4 -> 
@@ -158,6 +158,7 @@ for.body:                                         ; preds = %entry, %for.body
 ; CHECK: function 'unsafe_Write_Read':
 ; CHECK-NEXT:   for.body:
 ; CHECK-NEXT:     Report: unsafe dependent memory operations in loop
+; CHECK-NEXT:     Backward loop carried data dependence.
 ; CHECK-NEXT:     Dependences:
 ; CHECK-NEXT:      Backward:
 ; CHECK-NEXT:           store i32 %0, i32* %arrayidx, align 4 ->
@@ -194,6 +195,7 @@ for.body:                                         ; preds = %entry, %for.body
 ; CHECK: function 'unsafe_Write_Write':
 ; CHECK-NEXT:   for.body:
 ; CHECK-NEXT:     Report: unsafe dependent memory operations in loop
+; CHECK-NEXT:     Backward loop carried data dependence.
 ; CHECK-NEXT:     Dependences:
 ; CHECK-NEXT:      Backward:
 ; CHECK-NEXT:           store i32 %0, i32* %arrayidx, align 4 ->
@@ -347,6 +349,7 @@ for.body:                                         ; preds = %entry, %for.body
 ; CHECK: function 'vectorizable_unscaled_Read_Write':
 ; CHECK-NEXT:   for.body:
 ; CHECK-NEXT:     Report: unsafe dependent memory operations in loop
+; CHECK-NEXT:     Backward loop carried data dependence that prevents store-to-load forwarding.
 ; CHECK-NEXT:     Dependences:
 ; CHECK-NEXT:       BackwardVectorizableButPreventsForwarding:
 ; CHECK-NEXT:           %2 = load i32, i32* %arrayidx, align 4 ->
@@ -426,6 +429,7 @@ for.body:                                         ; preds = %entry, %for.body
 ; CHECK: function 'unsafe_unscaled_Read_Write':
 ; CHECK-NEXT:   for.body:
 ; CHECK-NEXT:     Report: unsafe dependent memory operations in loop
+; CHECK-NEXT:     Backward loop carried data dependence.
 ; CHECK-NEXT:     Dependences:
 ; CHECK-NEXT:       Backward:
 ; CHECK-NEXT:           %2 = load i32, i32* %arrayidx, align 4 -> 
@@ -456,6 +460,7 @@ for.body:                                         ; preds = %entry, %for.body
 ; CHECK: function 'unsafe_unscaled_Read_Write2':
 ; CHECK-NEXT:   for.body:
 ; CHECK-NEXT:     Report: unsafe dependent memory operations in loop
+; CHECK-NEXT:     Backward loop carried data dependence.
 ; CHECK-NEXT:     Dependences:
 ; CHECK-NEXT:       Backward:
 ; CHECK-NEXT:           %2 = load i32, i32* %arrayidx, align 4 -> 
@@ -506,6 +511,7 @@ for.body:                                         ; preds = %entry, %for.body
 ; CHECK: function 'interleaved_stores':
 ; CHECK-NEXT:   for.body:
 ; CHECK-NEXT:     Report: unsafe dependent memory operations in loop
+; CHECK-NEXT:     Backward loop carried data dependence.
 ; CHECK-NEXT:     Dependences:
 ; CHECK-NEXT:       Backward:
 ; CHECK-NEXT:           store i32 %4, i32* %arrayidx5, align 4 -> 

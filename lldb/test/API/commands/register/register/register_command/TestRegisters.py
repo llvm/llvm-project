@@ -14,8 +14,6 @@ from lldbsuite.test import lldbutil
 
 
 class RegisterCommandsTestCase(TestBase):
-
-    mydir = TestBase.compute_mydir(__file__)
     NO_DEBUG_INFO_TESTCASE = True
 
     def setUp(self):
@@ -120,7 +118,6 @@ class RegisterCommandsTestCase(TestBase):
 
     @skipIfiOSSimulator
     @skipIf(archs=no_match(['amd64', 'x86_64']))
-    @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr37683")
     def test_convenience_registers_with_process_attach(self):
         """Test convenience registers after a 'process attach'."""
         self.build()
@@ -128,7 +125,6 @@ class RegisterCommandsTestCase(TestBase):
 
     @skipIfiOSSimulator
     @skipIf(archs=no_match(['amd64', 'x86_64']))
-    @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr37683")
     def test_convenience_registers_16bit_with_process_attach(self):
         """Test convenience registers after a 'process attach'."""
         self.build()
@@ -223,8 +219,8 @@ class RegisterCommandsTestCase(TestBase):
         self.assertTrue(matched, STOPPED_DUE_TO_SIGNAL)
 
         process = target.GetProcess()
-        self.assertEqual(process.GetState(), lldb.eStateStopped,
-                        PROCESS_STOPPED)
+        self.assertState(process.GetState(), lldb.eStateStopped,
+                         PROCESS_STOPPED)
 
         thread = process.GetThreadAtIndex(0)
         self.assertTrue(thread.IsValid(), "current thread is valid")

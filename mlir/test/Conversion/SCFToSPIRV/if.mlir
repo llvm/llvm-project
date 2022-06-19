@@ -2,13 +2,13 @@
 
 module attributes {
   spv.target_env = #spv.target_env<
-    #spv.vce<v1.0, [Shader], [SPV_KHR_storage_buffer_storage_class]>, {}>
+    #spv.vce<v1.0, [Shader], [SPV_KHR_storage_buffer_storage_class]>, #spv.resource_limits<>>
 } {
 
 // CHECK-LABEL: @kernel_simple_selection
-func @kernel_simple_selection(%arg2 : memref<10xf32>, %arg3 : i1) {
-  %value = constant 0.0 : f32
-  %i = constant 0 : index
+func.func @kernel_simple_selection(%arg2 : memref<10xf32>, %arg3 : i1) {
+  %value = arith.constant 0.0 : f32
+  %i = arith.constant 0 : index
 
   // CHECK:       spv.mlir.selection {
   // CHECK-NEXT:    spv.BranchConditional {{%.*}}, [[TRUE:\^.*]], [[MERGE:\^.*]]
@@ -26,9 +26,9 @@ func @kernel_simple_selection(%arg2 : memref<10xf32>, %arg3 : i1) {
 }
 
 // CHECK-LABEL: @kernel_nested_selection
-func @kernel_nested_selection(%arg3 : memref<10xf32>, %arg4 : memref<10xf32>, %arg5 : i1, %arg6 : i1) {
-  %i = constant 0 : index
-  %j = constant 9 : index
+func.func @kernel_nested_selection(%arg3 : memref<10xf32>, %arg4 : memref<10xf32>, %arg5 : i1, %arg6 : i1) {
+  %i = arith.constant 0 : index
+  %j = arith.constant 9 : index
 
   // CHECK:       spv.mlir.selection {
   // CHECK-NEXT:    spv.BranchConditional {{%.*}}, [[TRUE_TOP:\^.*]], [[FALSE_TOP:\^.*]]
@@ -80,7 +80,7 @@ func @kernel_nested_selection(%arg3 : memref<10xf32>, %arg4 : memref<10xf32>, %a
 }
 
 // CHECK-LABEL: @simple_if_yield
-func @simple_if_yield(%arg2 : memref<10xf32>, %arg3 : i1) {
+func.func @simple_if_yield(%arg2 : memref<10xf32>, %arg3 : i1) {
   // CHECK: %[[VAR1:.*]] = spv.Variable : !spv.ptr<f32, Function>
   // CHECK: %[[VAR2:.*]] = spv.Variable : !spv.ptr<f32, Function>
   // CHECK:       spv.mlir.selection {
@@ -106,16 +106,16 @@ func @simple_if_yield(%arg2 : memref<10xf32>, %arg3 : i1) {
   // CHECK:       spv.Store "StorageBuffer" {{%.*}}, %[[OUT2]] : f32
   // CHECK:       spv.Return
   %0:2 = scf.if %arg3 -> (f32, f32) {
-    %c0 = constant 0.0 : f32
-    %c1 = constant 1.0 : f32
+    %c0 = arith.constant 0.0 : f32
+    %c1 = arith.constant 1.0 : f32
     scf.yield %c0, %c1 : f32, f32
   } else {
-    %c0 = constant 2.0 : f32
-    %c1 = constant 3.0 : f32
+    %c0 = arith.constant 2.0 : f32
+    %c1 = arith.constant 3.0 : f32
     scf.yield %c1, %c0 : f32, f32
   }
-  %i = constant 0 : index
-  %j = constant 1 : index
+  %i = arith.constant 0 : index
+  %j = arith.constant 1 : index
   memref.store %0#0, %arg2[%i] : memref<10xf32>
   memref.store %0#1, %arg2[%j] : memref<10xf32>
   return
@@ -124,7 +124,7 @@ func @simple_if_yield(%arg2 : memref<10xf32>, %arg3 : i1) {
 // TODO: The transformation should only be legal if VariablePointer capability
 // is supported. This test is still useful to make sure we can handle scf op
 // result with type change.
-func @simple_if_yield_type_change(%arg2 : memref<10xf32>, %arg3 : memref<10xf32>, %arg4 : i1) {
+func.func @simple_if_yield_type_change(%arg2 : memref<10xf32>, %arg3 : memref<10xf32>, %arg4 : i1) {
   // CHECK-LABEL: @simple_if_yield_type_change
   // CHECK:       %[[VAR:.*]] = spv.Variable : !spv.ptr<!spv.ptr<!spv.struct<(!spv.array<10 x f32, stride=4> [0])>, StorageBuffer>, Function>
   // CHECK:       spv.mlir.selection {
@@ -142,8 +142,8 @@ func @simple_if_yield_type_change(%arg2 : memref<10xf32>, %arg3 : memref<10xf32>
   // CHECK:       %[[ADD:.*]] = spv.AccessChain %[[OUT]][{{%.*}}, {{%.*}}] : !spv.ptr<!spv.struct<(!spv.array<10 x f32, stride=4> [0])>, StorageBuffer>
   // CHECK:       spv.Store "StorageBuffer" %[[ADD]], {{%.*}} : f32
   // CHECK:       spv.Return
-  %i = constant 0 : index
-  %value = constant 0.0 : f32
+  %i = arith.constant 0 : index
+  %value = arith.constant 0.0 : f32
   %0 = scf.if %arg4 -> (memref<10xf32>) {
     scf.yield %arg2 : memref<10xf32>
   } else {

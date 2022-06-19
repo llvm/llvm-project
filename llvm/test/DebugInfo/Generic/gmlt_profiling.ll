@@ -1,9 +1,9 @@
-; RUN: %llc_dwarf -O0 -filetype=obj < %S/gmlt_profiling.ll | llvm-dwarfdump -v - | FileCheck %S/gmlt_profiling.ll
+; RUN: %llc_dwarf -O0 -filetype=obj < %S/gmlt_profiling.ll | llvm-dwarfdump - | FileCheck %S/gmlt_profiling.ll
 
 ; CHECK: .debug_info
 ; CHECK: DW_TAG_subprogram
 ; CHECK-NOT: DW_TAG
-; CHECK: DW_AT_name {{.*}} "f1"
+; CHECK: DW_AT_name ("f1")
 ; With debug-info-for-profiling attribute, we need to emit decl_file and
 ; decl_line of the subprogram.
 ; CHECK-NEXT: DW_AT_decl_file

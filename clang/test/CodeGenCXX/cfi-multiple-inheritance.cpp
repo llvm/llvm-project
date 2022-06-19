@@ -1,7 +1,7 @@
 // Test that correct vtable ptr and type metadata are passed to llvm.type.test
 // Related to Bugzilla 43390.
 
-// RUN: %clang_cc1 -triple x86_64-unknown-linux -fvisibility hidden -std=c++11 -fsanitize=cfi-nvcall -emit-llvm -o - %s | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-unknown-linux -fvisibility hidden -std=c++11 -fsanitize=cfi-nvcall -emit-llvm -o - %s | FileCheck %s
 
 class A1 {
 public:
@@ -20,7 +20,7 @@ public:
     int f1() final { return 2; }
 };
 
-// CHECK-LABEL: define hidden i32 @_Z3foov
+// CHECK-LABEL: define hidden noundef i32 @_Z3foov
 int foo() {
     B b;
     return static_cast<A2*>(&b)->f2();

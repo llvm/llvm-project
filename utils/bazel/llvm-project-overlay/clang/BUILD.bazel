@@ -5,6 +5,7 @@
 load("//llvm:tblgen.bzl", "gentbl")
 load("//llvm:binary_alias.bzl", "binary_alias")
 load("//llvm:cc_plugin_library.bzl", "cc_plugin_library")
+load("//llvm:template_rule.bzl", "template_rule")
 
 package(
     default_visibility = ["//visibility:public"],
@@ -29,9 +30,9 @@ cc_binary(
     copts = [
         "$(STACK_FRAME_UNLIMITED)",
     ],
-    linkopts = ["-ldl"],
     stamp = 0,
     deps = [
+        ":support",
         "//llvm:Support",
         "//llvm:TableGen",
         "//llvm:config",
@@ -343,12 +344,13 @@ exports_files(
 genrule(
     name = "basic_version_gen",
     outs = ["include/clang/Basic/Version.inc"],
-    cmd = ("printf " +
-           "\"#define CLANG_VERSION 12.0\n\"" +
-           "\"#define CLANG_VERSION_MAJOR 12\n\"" +
-           "\"#define CLANG_VERSION_MINOR 0\n\"" +
-           "\"#define CLANG_VERSION_PATCHLEVEL 0\n\"" +
-           "\"#define CLANG_VERSION_STRING \\\"git\\\"\n\" > $@"),
+    cmd = (
+        "echo '#define CLANG_VERSION 15.0.0' >> $@\n" +
+        "echo '#define CLANG_VERSION_MAJOR 15' >> $@\n" +
+        "echo '#define CLANG_VERSION_MINOR 0' >> $@\n" +
+        "echo '#define CLANG_VERSION_PATCHLEVEL 0' >> $@\n" +
+        "echo '#define CLANG_VERSION_STRING \"15.0.0\"' >> $@\n"
+    ),
 )
 
 cc_library(
@@ -372,7 +374,7 @@ genrule(
     # are passed through bazel, it's easier to drop generated files next to
     # the other includes.
     outs = ["include/VCSVersion.inc"],
-    cmd = "echo \"#define CLANG_REVISION \\\"git\\\"\" > $@",
+    cmd = "echo '#undef CLANG_REVISION' > $@",
 )
 
 # A hacky library to expose some internal headers of the `basic` library to its
@@ -474,6 +476,7 @@ cc_library(
     includes = ["include"],
     deps = [
         ":basic",
+        ":config",
         "//llvm:Support",
     ],
 )
@@ -488,6 +491,10 @@ gentbl(
         (
             "-gen-clang-attr-classes",
             "include/clang/AST/Attrs.inc",
+        ),
+        (
+            "-gen-clang-attr-doc-table",
+            "lib/AST/AttrDocTable.inc",
         ),
         (
             "-gen-clang-attr-text-node-dump",
@@ -687,13 +694,25 @@ cc_library(
         "lib/AST/*.h",
         "lib/AST/Interp/*.cpp",
         "lib/AST/Interp/*.h",
-    ]),
+    ]) + [
+        "lib/AST/AttrDocTable.inc",
+        "lib/AST/Interp/Opcodes.inc",
+    ],
     hdrs = glob([
         "include/clang/AST/*.h",
     ]),
-    includes = [
-        "include",
-        "lib/AST/Interp",
+    copts = [
+        # FIXME: This is necessary to allow "file relative" include paths from
+        # non-generated `srcs` to find generated `srcs` above. Bazel should
+        # either make this work automatically by creating a unified tree of
+        # `srcs` or at least provide a `local_includes` that has the path
+        # translation logic of `includes` but is only used locally (similar to
+        # `local_defines` vs. `defines`). Until one of those lands, this is the
+        # least bad approach. Using `includes` is *specifically* problematic for
+        # this library because it contains files that collide easily with system
+        # headers such as `CXXABI.h`.
+        "-I$(GENDIR)/external/llvm-project/clang/lib/AST",
+        "-I$(GENDIR)/external/llvm-project/clang/lib/AST/Interp",
     ],
     textual_hdrs = [
         "include/clang/AST/AttrImpl.inc",
@@ -710,7 +729,6 @@ cc_library(
         "include/clang/AST/DeclNodes.inc",
         "include/clang/AST/StmtDataCollectors.inc",
         "include/clang/AST/StmtNodes.inc",
-        "lib/AST/Interp/Opcodes.inc",
     ] + glob([
         "include/clang/AST/*.def",
     ]),
@@ -764,6 +782,8 @@ cc_library(
 cc_library(
     name = "analysis",
     srcs = glob([
+        "lib/Analysis/FlowSensitive/Models/*.cpp",
+        "lib/Analysis/FlowSensitive/*.cpp",
         "lib/Analysis/*.cpp",
         "lib/Analysis/*.h",
     ]),
@@ -962,6 +982,7 @@ cc_library(
 
 cc_library(
     name = "testing",
+    testonly = 1,
     srcs = glob([
         "lib/Testing/*.cpp",
     ]),
@@ -969,7 +990,9 @@ cc_library(
     includes = ["include"],
     deps = [
         ":basic",
+        ":frontend",
         "//llvm:Support",
+        "//llvm:gtest",
     ],
 )
 
@@ -1025,6 +1048,7 @@ cc_library(
     ]),
     hdrs = glob([
         "include/clang/Tooling/Inclusions/**/*.h",
+        "include/clang/Tooling/Inclusions/**/*.inc",
     ]),
     deps = [
         ":basic",
@@ -1307,6 +1331,10 @@ cc_library(
         # directly #including "Tools.h".
         "lib/Driver",
     ],
+    linkopts = select({
+        "@bazel_tools//src/conditions:windows": ["version.lib"],
+        "//conditions:default": [],
+    }),
     textual_hdrs = glob([
         "include/clang/Driver/*.def",
     ]),
@@ -1323,6 +1351,7 @@ cc_library(
         "//llvm:ProfileData",
         "//llvm:Support",
         "//llvm:Target",
+        "//llvm:WindowsDriver",
         "//llvm:config",
     ],
 )
@@ -1577,6 +1606,7 @@ cc_library(
         "//llvm:Coroutines",
         "//llvm:Coverage",
         "//llvm:DebugInfoDWARF",
+        "//llvm:Demangle",
         "//llvm:FrontendOpenMP",
         "//llvm:IPO",
         "//llvm:IRReader",
@@ -1646,6 +1676,20 @@ gentbl(
 )
 
 cc_library(
+    name = "support",
+    srcs = glob([
+        "lib/Support/*.cpp",
+    ]),
+    hdrs = glob([
+        "include/clang/Support/*.h",
+    ]),
+    includes = ["include"],
+    deps = [
+        "//llvm:Support",
+    ],
+)
+
+cc_library(
     name = "serialization",
     srcs = [
         "include/clang/Serialization/AttrPCHRead.inc",
@@ -1690,6 +1734,7 @@ cc_library(
         ":codegen",
         ":config",
         ":driver",
+        ":extract_api",
         ":frontend",
         ":frontend_rewrite",
         ":static_analyzer_frontend",
@@ -1725,12 +1770,13 @@ cc_library(
 )
 
 cc_library(
-    name = "libclang_library",
+    name = "libclang_static",
     srcs = glob([
         "tools/libclang/*.cpp",
         "tools/libclang/*.h",
     ]),
     hdrs = glob(["include/clang-c/*.h"]),
+    defines = ["CINDEX_NO_EXPORTS"],
     deps = [
         ":arc_migrate",
         ":ast",
@@ -1751,18 +1797,36 @@ cc_library(
     ],
 )
 
-cc_library(
-    name = "c-bindings",
-    hdrs = glob(["include/clang-c/*.h"]),
-    deps = [
-        ":libclang_library",
-    ],
-    alwayslink = 1,
-)
-
 cc_plugin_library(
     name = "libclang",
-    deps = [":c-bindings"],
+    srcs = glob([
+        "tools/libclang/*.cpp",
+        "tools/libclang/*.h",
+    ]),
+    hdrs = glob(["include/clang-c/*.h"]),
+    copts = select({
+        "@bazel_tools//src/conditions:windows": ["-D_CINDEX_LIB_"],
+        "//conditions:default": [],
+    }),
+    strip_include_prefix = "include",
+    deps = [
+        ":arc_migrate",
+        ":ast",
+        ":basic",
+        ":codegen",
+        ":config",
+        ":driver",
+        ":frontend",
+        ":index",
+        ":lex",
+        ":rewrite",
+        ":sema",
+        ":tooling",
+        "//llvm:BitstreamReader",
+        "//llvm:FrontendOpenMP",
+        "//llvm:Support",
+        "//llvm:config",
+    ],
 )
 
 filegroup(
@@ -1795,14 +1859,12 @@ cc_binary(
     deps = [
         ":ast",
         ":basic",
-        ":c-bindings",
         ":codegen",
         ":config",
         ":frontend",
         ":index",
         ":lex",
-        ":parse",
-        ":sema",
+        ":libclang",
         ":serialization",
         "//llvm:Core",
         "//llvm:MC",
@@ -1830,11 +1892,14 @@ cc_binary(
     name = "c-arcmt-test",
     testonly = 1,
     srcs = ["tools/c-arcmt-test/c-arcmt-test.c"],
-    copts = ["-std=gnu99"],
+    copts = select({
+        "@bazel_tools//src/conditions:windows": [],
+        "//conditions:default": ["-std=gnu99"],
+    }),
     stamp = 0,
     deps = [
-        ":c-bindings",
         ":codegen",
+        ":libclang",
         "//llvm:MC",
         "//llvm:Support",
     ],
@@ -1861,12 +1926,21 @@ cc_binary(
     ],
 )
 
+template_rule(
+    name = "clang_main",
+    src = "//llvm:cmake/modules/llvm-driver-template.cpp.in",
+    out = "clang-driver.cpp",
+    substitutions = {
+        "@TOOL_NAME@": "clang"
+    },
+)
+
 cc_library(
     name = "clang-driver",
     srcs = glob([
         "tools/driver/*.cpp",
         "tools/driver/*.h",
-    ]),
+    ]) + ["clang-driver.cpp"],
     copts = [
         # Disable stack frame size checks in the driver because
         # clang::ensureStackAddressSpace allocates a large array on the stack.
@@ -2096,6 +2170,24 @@ cc_binary(
         ":frontend",
         ":tooling",
         ":tooling_dependency_scanning",
+        "//llvm:Support",
+    ],
+)
+
+cc_library(
+    name = "extract_api",
+    srcs = glob([
+        "lib/ExtractAPI/**/*.cpp",
+        "lib/ExtractAPI/**/*.h",
+    ]),
+    hdrs = glob(["include/clang/ExtractAPI/**/*.h"]),
+    includes = ["include"],
+    deps = [
+        ":ast",
+        ":basic",
+        ":frontend",
+        ":index",
+        "//llvm:Option",
         "//llvm:Support",
     ],
 )

@@ -27,11 +27,7 @@
 #include "llvm/Analysis/PhiValues.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Analysis/ValueTracking.h"
-#include "llvm/IR/Attributes.h"
 #include "llvm/IR/BasicBlock.h"
-#include "llvm/IR/Constants.h"
-#include "llvm/IR/DataLayout.h"
-#include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/InstrTypes.h"
@@ -44,7 +40,6 @@
 #include "llvm/IR/PredIteratorCache.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/Use.h"
-#include "llvm/IR/User.h"
 #include "llvm/IR/Value.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
@@ -53,10 +48,8 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Debug.h"
-#include "llvm/Support/MathExtras.h"
 #include <algorithm>
 #include <cassert>
-#include <cstdint>
 #include <iterator>
 #include <utility>
 
@@ -414,20 +407,17 @@ MemDepResult MemoryDependenceResults::getSimplePointerDependencyFrom(
       isInvariantLoad = true;
   }
 
-  // Return "true" if and only if the instruction I is either a non-simple
-  // load or a non-simple store.
-  auto isNonSimpleLoadOrStore = [](Instruction *I) -> bool {
+  // True for volatile instruction.
+  // For Load/Store return true if atomic ordering is stronger than AO,
+  // for other instruction just true if it can read or write to memory.
+  auto isComplexForReordering = [](Instruction * I, AtomicOrdering AO)->bool {
+    if (I->isVolatile())
+      return true;
     if (auto *LI = dyn_cast<LoadInst>(I))
-      return !LI->isSimple();
+      return isStrongerThan(LI->getOrdering(), AO);
     if (auto *SI = dyn_cast<StoreInst>(I))
-      return !SI->isSimple();
-    return false;
-  };
-
-  // Return "true" if I is not a load and not a store, but it does access
-  // memory.
-  auto isOtherMemAccess = [](Instruction *I) -> bool {
-    return !isa<LoadInst>(I) && !isa<StoreInst>(I) && I->mayReadOrWriteMemory();
+      return isStrongerThan(SI->getOrdering(), AO);
+    return I->mayReadOrWriteMemory();
   };
 
   // Walk backwards through the basic block, looking for dependencies.
@@ -500,8 +490,8 @@ MemDepResult MemoryDependenceResults::getSimplePointerDependencyFrom(
       // atomic.
       // FIXME: This is overly conservative.
       if (LI->isAtomic() && isStrongerThanUnordered(LI->getOrdering())) {
-        if (!QueryInst || isNonSimpleLoadOrStore(QueryInst) ||
-            isOtherMemAccess(QueryInst))
+        if (!QueryInst ||
+            isComplexForReordering(QueryInst, AtomicOrdering::NotAtomic))
           return MemDepResult::getClobber(LI);
         if (LI->getOrdering() != AtomicOrdering::Monotonic)
           return MemDepResult::getClobber(LI);
@@ -512,10 +502,10 @@ MemDepResult MemoryDependenceResults::getSimplePointerDependencyFrom(
       // If we found a pointer, check if it could be the same as our pointer.
       AliasResult R = BatchAA.alias(LoadLoc, MemLoc);
 
-      if (isLoad) {
-        if (R == AliasResult::NoAlias)
-          continue;
+      if (R == AliasResult::NoAlias)
+        continue;
 
+      if (isLoad) {
         // Must aliased loads are defs of each other.
         if (R == AliasResult::MustAlias)
           return MemDepResult::getDef(Inst);
@@ -532,10 +522,6 @@ MemDepResult MemoryDependenceResults::getSimplePointerDependencyFrom(
         continue;
       }
 
-      // Stores don't depend on other no-aliased accesses.
-      if (R == AliasResult::NoAlias)
-        continue;
-
       // Stores don't alias loads from read-only memory.
       if (BatchAA.pointsToConstantMemory(LoadLoc))
         continue;
@@ -549,20 +535,25 @@ MemDepResult MemoryDependenceResults::getSimplePointerDependencyFrom(
       // A Monotonic store is OK if the query inst is itself not atomic.
       // FIXME: This is overly conservative.
       if (!SI->isUnordered() && SI->isAtomic()) {
-        if (!QueryInst || isNonSimpleLoadOrStore(QueryInst) ||
-            isOtherMemAccess(QueryInst))
+        if (!QueryInst ||
+            isComplexForReordering(QueryInst, AtomicOrdering::Unordered))
           return MemDepResult::getClobber(SI);
-        if (SI->getOrdering() != AtomicOrdering::Monotonic)
-          return MemDepResult::getClobber(SI);
+        // Ok, if we are here the guard above guarantee us that
+        // QueryInst is a non-atomic or unordered load/store.
+        // SI is atomic with monotonic or release semantic (seq_cst for store
+        // is actually a release semantic plus total order over other seq_cst
+        // instructions, as soon as QueryInst is not seq_cst we can consider it
+        // as simple release semantic).
+        // Monotonic and Release semantic allows re-ordering before store
+        // so we are safe to go further and check the aliasing. It will prohibit
+        // re-ordering in case locations are may or must alias.
       }
 
-      // FIXME: this is overly conservative.
       // While volatile access cannot be eliminated, they do not have to clobber
       // non-aliasing locations, as normal accesses can for example be reordered
       // with volatile accesses.
       if (SI->isVolatile())
-        if (!QueryInst || isNonSimpleLoadOrStore(QueryInst) ||
-            isOtherMemAccess(QueryInst))
+        if (!QueryInst || QueryInst->isVolatile())
           return MemDepResult::getClobber(SI);
 
       // If alias analysis can tell that this store is guaranteed to not modify
@@ -594,7 +585,7 @@ MemDepResult MemoryDependenceResults::getSimplePointerDependencyFrom(
     // turn into undef.  Note that we can bypass the allocation itself when
     // looking for a clobber in many cases; that's an alias property and is
     // handled by BasicAA.
-    if (isa<AllocaInst>(Inst) || isNoAliasFn(Inst, &TLI)) {
+    if (isa<AllocaInst>(Inst) || isNoAliasCall(Inst)) {
       const Value *AccessPtr = getUnderlyingObject(MemLoc.Ptr);
       if (AccessPtr == Inst || BatchAA.isMustAlias(Inst, AccessPtr))
         return MemDepResult::getDef(Inst);
@@ -743,8 +734,6 @@ MemoryDependenceResults::getNonLocalCallDependency(CallBase *QueryCall) {
     llvm::sort(Cache);
 
     ++NumCacheDirtyNonLocal;
-    // cerr << "CACHED CASE: " << DirtyBlocks.size() << " dirty: "
-    //     << Cache.size() << " cached: " << *QueryInst;
   } else {
     // Seed DirtyBlocks with each of the preds of QueryInst's block.
     BasicBlock *QueryBB = QueryCall->getParent();
@@ -1204,7 +1193,6 @@ bool MemoryDependenceResults::getNonLocalPointerDepFromBB(
     // If we do process a large number of blocks it becomes very expensive and
     // likely it isn't worth worrying about
     if (Result.size() > NumResultsLimit) {
-      Worklist.clear();
       // Sort it now (if needed) so that recursive invocations of
       // getNonLocalPointerDepFromBB and other routines that could reuse the
       // cache value will only see properly sorted cache arrays.
@@ -1481,11 +1469,11 @@ void MemoryDependenceResults::removeCachedNonLocalPointerDependencies(
   // instructions from the reverse map.
   NonLocalDepInfo &PInfo = It->second.NonLocalDeps;
 
-  for (unsigned i = 0, e = PInfo.size(); i != e; ++i) {
-    Instruction *Target = PInfo[i].getResult().getInst();
+  for (const NonLocalDepEntry &DE : PInfo) {
+    Instruction *Target = DE.getResult().getInst();
     if (!Target)
       continue; // Ignore non-local dep results.
-    assert(Target->getParent() == PInfo[i].getBB());
+    assert(Target->getParent() == DE.getBB());
 
     // Eliminating the dirty entry from 'Cache', so update the reverse info.
     RemoveFromReverseMap(ReverseNonLocalPtrDeps, Target, P);

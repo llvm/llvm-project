@@ -72,12 +72,12 @@ bb:
 ; CHECK: newFuncRoot:
 ; CHECK-NEXT: br label %bb3
 
-; CHECK: bb4.exitStub:
-; CHECK-NEXT: ret void
-
 ; CHECK: bb3:
 ; CHECK-NOT: lifetime.ed
 ; CHECK: br label %bb4.exitStub
+
+; CHECK: bb4.exitStub:
+; CHECK-NEXT: ret void
 
 
 

@@ -1,6 +1,6 @@
 target datalayout = "E-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f32:32:32-f64:64:64-f128:128:128-v128:128:128-n32:64"
 target triple = "powerpc64le-unknown-linux"
-; RUN: opt < %s -basic-aa -aa-eval -print-all-alias-modref-info -disable-output 2>&1 | FileCheck %s
+; RUN: opt < %s -aa-pipeline=basic-aa -passes=aa-eval -print-all-alias-modref-info -disable-output 2>&1 | FileCheck %s
 
 @X = external global [16000 x double], align 32
 @Y = external global [16000 x double], align 32
@@ -27,6 +27,8 @@ for.body4:                                        ; preds = %for.body4, %for.con
   %lsr.iv1 = phi [16000 x double]* [ %i10, %for.body4 ], [ @X, %for.cond2.preheader ]
 
   %lsr.iv = phi i32 [ %lsr.iv.next, %for.body4 ], [ 16000, %for.cond2.preheader ]
+  load [16000 x double], [16000 x double]* %lsr.iv4
+  load [16000 x double], [16000 x double]* %lsr.iv1
   %lsr.iv46 = bitcast [16000 x double]* %lsr.iv4 to <4 x double>*
   %lsr.iv12 = bitcast [16000 x double]* %lsr.iv1 to <4 x double>*
   %scevgep11 = getelementptr <4 x double>, <4 x double>* %lsr.iv46, i64 -2
@@ -50,8 +52,10 @@ for.body4:                                        ; preds = %for.body4, %for.con
 
   %lsr.iv.next = add i32 %lsr.iv, -16
   %scevgep = getelementptr [16000 x double], [16000 x double]* %lsr.iv1, i64 0, i64 16
+  load double, double* %scevgep
   %i10 = bitcast double* %scevgep to [16000 x double]*
   %scevgep5 = getelementptr [16000 x double], [16000 x double]* %lsr.iv4, i64 0, i64 16
+  load double, double* %scevgep5
   %i11 = bitcast double* %scevgep5 to [16000 x double]*
   %exitcond.15 = icmp eq i32 %lsr.iv.next, 0
   br i1 %exitcond.15, label %for.end, label %for.body4

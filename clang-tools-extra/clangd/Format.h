@@ -13,7 +13,6 @@
 #ifndef LLVM_CLANG_TOOLS_EXTRA_CLANGD_FORMAT_H
 #define LLVM_CLANG_TOOLS_EXTRA_CLANGD_FORMAT_H
 
-#include "Protocol.h"
 #include "clang/Format/Format.h"
 #include "clang/Tooling/Core/Replacement.h"
 #include "llvm/ADT/StringRef.h"

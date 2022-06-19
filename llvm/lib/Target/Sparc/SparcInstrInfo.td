@@ -147,7 +147,29 @@ def MEMri : Operand<iPTR> {
   let ParserMatchClass = SparcMEMriAsmOperand;
 }
 
-def TLSSym : Operand<iPTR>;
+// Represents a tail relocation operand for instructions such as add, ld, call.
+class SparcTailRelocSymAsmOperand<string Kind> : AsmOperandClass {
+  let Name = "TailRelocSym" # Kind;
+  let RenderMethod = "addTailRelocSymOperands";
+  let PredicateMethod = "isTailRelocSym";
+  let ParserMethod = "parseTailRelocSym<TailRelocKind::" # Kind # ">";
+}
+
+def TailRelocSymGOTLoad : Operand<iPTR> {
+  let ParserMatchClass = SparcTailRelocSymAsmOperand<"Load_GOT">;
+}
+
+def TailRelocSymTLSAdd : Operand<iPTR> {
+  let ParserMatchClass = SparcTailRelocSymAsmOperand<"Add_TLS">;
+}
+
+def TailRelocSymTLSLoad : Operand<iPTR> {
+  let ParserMatchClass = SparcTailRelocSymAsmOperand<"Load_TLS">;
+}
+
+def TailRelocSymTLSCall : Operand<iPTR> {
+  let ParserMatchClass = SparcTailRelocSymAsmOperand<"Call_TLS">;
+}
 
 def SparcMembarTagAsmOperand : AsmOperandClass {
   let Name = "MembarTag";
@@ -214,6 +236,9 @@ SDTypeProfile<1, 3, [SDTCisInt<0>, SDTCisSameAs<0, 1>, SDTCisPtrTy<2>]>;
 def SDTSPtlsld :
 SDTypeProfile<1, 2, [SDTCisPtrTy<0>, SDTCisPtrTy<1>]>;
 
+def SDTSPloadgdop :
+SDTypeProfile<1, 2, [SDTCisPtrTy<0>, SDTCisPtrTy<1>]>;
+
 def SPcmpicc : SDNode<"SPISD::CMPICC", SDTSPcmpicc, [SDNPOutGlue]>;
 def SPcmpfcc : SDNode<"SPISD::CMPFCC", SDTSPcmpfcc, [SDNPOutGlue]>;
 def SPbricc : SDNode<"SPISD::BRICC", SDTSPbrcc, [SDNPHasChain, SDNPInGlue]>;
@@ -248,6 +273,10 @@ def call          : SDNode<"SPISD::CALL", SDT_SPCall,
                            [SDNPHasChain, SDNPOptInGlue, SDNPOutGlue,
                             SDNPVariadic]>;
 
+def tailcall      : SDNode<"SPISD::TAIL_CALL", SDT_SPCall,
+                           [SDNPHasChain, SDNPOptInGlue, SDNPOutGlue,
+                            SDNPVariadic]>;
+
 def SDT_SPRet     : SDTypeProfile<0, 1, [SDTCisVT<0, i32>]>;
 def retflag       : SDNode<"SPISD::RET_FLAG", SDT_SPRet,
                            [SDNPHasChain, SDNPOptInGlue, SDNPVariadic]>;
@@ -260,6 +289,8 @@ def tlsld         : SDNode<"SPISD::TLS_LD",  SDTSPtlsld>;
 def tlscall       : SDNode<"SPISD::TLS_CALL", SDT_SPCall,
                             [SDNPHasChain, SDNPOptInGlue, SDNPOutGlue,
                              SDNPVariadic]>;
+
+def load_gdop : SDNode<"SPISD::LOAD_GDOP",  SDTSPloadgdop>;
 
 def getPCX        : Operand<iPTR> {
   let PrintMethod = "printGetPCX";
@@ -369,8 +400,7 @@ multiclass Load<string OpcStr, bits<6> Op3Val, SDPatternOperator OpNode,
 
 // TODO: Instructions of the LoadASI class are currently asm only; hooking up
 // CodeGen's address spaces to use these is a future task.
-class LoadASI<string OpcStr, bits<6> Op3Val, SDPatternOperator OpNode,
-              RegisterClass RC, ValueType Ty, InstrItinClass itin = NoItinerary> :
+class LoadASI<string OpcStr, bits<6> Op3Val, RegisterClass RC> :
   F3_1_asi<3, Op3Val, (outs RC:$dst), (ins MEMrr:$addr, i8imm:$asi),
                 !strconcat(OpcStr, "a [$addr] $asi, $dst"),
                 []>;
@@ -380,7 +410,7 @@ multiclass LoadA<string OpcStr, bits<6> Op3Val, bits<6> LoadAOp3Val,
                  SDPatternOperator OpNode, RegisterClass RC, ValueType Ty,
                  InstrItinClass itin = NoItinerary> :
              Load<OpcStr, Op3Val, OpNode, RC, Ty, itin> {
-  def Arr  : LoadASI<OpcStr, LoadAOp3Val, OpNode, RC, Ty>;
+  def Arr  : LoadASI<OpcStr, LoadAOp3Val, RC>;
 }
 
 // The LDSTUB instruction is supported for asm only.
@@ -411,8 +441,7 @@ multiclass Store<string OpcStr, bits<6> Op3Val, SDPatternOperator OpNode,
 
 // TODO: Instructions of the StoreASI class are currently asm only; hooking up
 // CodeGen's address spaces to use these is a future task.
-class StoreASI<string OpcStr, bits<6> Op3Val,
-               SDPatternOperator OpNode, RegisterClass RC, ValueType Ty,
+class StoreASI<string OpcStr, bits<6> Op3Val, RegisterClass RC,
                InstrItinClass itin = IIC_st> :
   F3_1_asi<3, Op3Val, (outs), (ins MEMrr:$addr, RC:$rd, i8imm:$asi),
            !strconcat(OpcStr, "a $rd, [$addr] $asi"),
@@ -420,10 +449,9 @@ class StoreASI<string OpcStr, bits<6> Op3Val,
            itin>;
 
 multiclass StoreA<string OpcStr, bits<6> Op3Val, bits<6> StoreAOp3Val,
-                  SDPatternOperator OpNode, RegisterClass RC, ValueType Ty,
-                  InstrItinClass itin = IIC_st> :
+                  SDPatternOperator OpNode, RegisterClass RC, ValueType Ty> :
              Store<OpcStr, Op3Val, OpNode, RC, Ty> {
-  def Arr : StoreASI<OpcStr, StoreAOp3Val, OpNode, RC, Ty, itin>;
+  def Arr : StoreASI<OpcStr, StoreAOp3Val, RC>;
 }
 
 //===----------------------------------------------------------------------===//
@@ -487,6 +515,27 @@ let Uses = [ICC], usesCustomInserter = 1 in {
             [(set f128:$dst, (SPselecticc f128:$T, f128:$F, imm:$Cond))]>;
 }
 
+let Uses = [ICC], usesCustomInserter = 1 in {
+  def SELECT_CC_Int_XCC
+   : Pseudo<(outs IntRegs:$dst), (ins IntRegs:$T, IntRegs:$F, i32imm:$Cond),
+            "; SELECT_CC_Int_XCC PSEUDO!",
+            [(set i32:$dst, (SPselectxcc i32:$T, i32:$F, imm:$Cond))]>;
+  def SELECT_CC_FP_XCC
+   : Pseudo<(outs FPRegs:$dst), (ins FPRegs:$T, FPRegs:$F, i32imm:$Cond),
+            "; SELECT_CC_FP_XCC PSEUDO!",
+            [(set f32:$dst, (SPselectxcc f32:$T, f32:$F, imm:$Cond))]>;
+
+  def SELECT_CC_DFP_XCC
+   : Pseudo<(outs DFPRegs:$dst), (ins DFPRegs:$T, DFPRegs:$F, i32imm:$Cond),
+            "; SELECT_CC_DFP_XCC PSEUDO!",
+            [(set f64:$dst, (SPselectxcc f64:$T, f64:$F, imm:$Cond))]>;
+
+  def SELECT_CC_QFP_XCC
+   : Pseudo<(outs QFPRegs:$dst), (ins QFPRegs:$T, QFPRegs:$F, i32imm:$Cond),
+            "; SELECT_CC_QFP_XCC PSEUDO!",
+            [(set f128:$dst, (SPselectxcc f128:$T, f128:$F, imm:$Cond))]>;
+}
+
 let usesCustomInserter = 1, Uses = [FCC0] in {
 
   def SELECT_CC_Int_FCC
@@ -523,12 +572,12 @@ let DecoderMethod = "DecodeLoadIntPair" in
 // Section B.2 - Load Floating-point Instructions, p. 92
 let DecoderMethod = "DecodeLoadFP" in {
   defm LDF   : Load<"ld",  0b100000, load,    FPRegs,  f32, IIC_iu_or_fpu_instr>;
-  def LDFArr : LoadASI<"ld",  0b110000, load, FPRegs,  f32, IIC_iu_or_fpu_instr>,
+  def LDFArr : LoadASI<"ld",  0b110000, FPRegs>,
                 Requires<[HasV9]>;
 }
 let DecoderMethod = "DecodeLoadDFP" in {
   defm LDDF   : Load<"ldd", 0b100011, load,    DFPRegs, f64, IIC_ldd>;
-  def LDDFArr : LoadASI<"ldd", 0b110011, load, DFPRegs, f64>,
+  def LDDFArr : LoadASI<"ldd", 0b110011, DFPRegs>,
                  Requires<[HasV9]>;
 }
 let DecoderMethod = "DecodeLoadQFP" in
@@ -565,6 +614,15 @@ let DecoderMethod = "DecodeLoadFP" in
     }
   }
 
+let mayLoad = 1, isAsmParserOnly = 1 in {
+  def GDOP_LDrr : F3_1<3, 0b000000,
+                      (outs IntRegs:$dst),
+                      (ins MEMrr:$addr, TailRelocSymGOTLoad:$sym),
+                      "ld [$addr], $dst, $sym",
+                      [(set i32:$dst,
+                          (load_gdop ADDRrr:$addr, tglobaladdr:$sym))]>;
+}
+
 // Section B.4 - Store Integer Instructions, p. 95
 let DecoderMethod = "DecodeStoreInt" in {
   defm STB   : StoreA<"stb", 0b000101, 0b010101, truncstorei8,  IntRegs, i32>;
@@ -573,17 +631,17 @@ let DecoderMethod = "DecodeStoreInt" in {
 }
 
 let DecoderMethod = "DecodeStoreIntPair" in
-  defm STD   : StoreA<"std", 0b000111, 0b010111, store, IntPair, v2i32, IIC_std>;
+  defm STD   : StoreA<"std", 0b000111, 0b010111, store, IntPair, v2i32>;
 
 // Section B.5 - Store Floating-point Instructions, p. 97
 let DecoderMethod = "DecodeStoreFP" in {
   defm STF   : Store<"st",  0b100100, store,         FPRegs,  f32>;
-  def STFArr : StoreASI<"st",  0b110100, store,      FPRegs,  f32>,
+  def STFArr : StoreASI<"st",  0b110100, FPRegs>,
                Requires<[HasV9]>;
 }
 let DecoderMethod = "DecodeStoreDFP" in {
   defm STDF   : Store<"std", 0b100111, store,         DFPRegs, f64, IIC_std>;
-  def STDFArr : StoreASI<"std", 0b110111, store,      DFPRegs, f64>,
+  def STDFArr : StoreASI<"std", 0b110111, DFPRegs>,
                 Requires<[HasV9]>;
 }
 let DecoderMethod = "DecodeStoreQFP" in
@@ -1347,21 +1405,24 @@ let Defs = [FCC0], rd = 0, isCodeGenOnly = 1 in {
 let isAsmParserOnly = 1 in {
 def TLS_ADDrr : F3_1<2, 0b000000,
                     (outs IntRegs:$rd),
-                    (ins IntRegs:$rs1, IntRegs:$rs2, TLSSym:$sym),
+                    (ins IntRegs:$rs1, IntRegs:$rs2, TailRelocSymTLSAdd:$sym),
                     "add $rs1, $rs2, $rd, $sym",
                     [(set i32:$rd,
                         (tlsadd i32:$rs1, i32:$rs2, tglobaltlsaddr:$sym))]>;
 
-let mayLoad = 1 in
+let mayLoad = 1 in {
   def TLS_LDrr : F3_1<3, 0b000000,
-                      (outs IntRegs:$dst), (ins MEMrr:$addr, TLSSym:$sym),
+                      (outs IntRegs:$dst),
+                      (ins MEMrr:$addr, TailRelocSymTLSLoad:$sym),
                       "ld [$addr], $dst, $sym",
                       [(set i32:$dst,
                           (tlsld ADDRrr:$addr, tglobaltlsaddr:$sym))]>;
+}
 
 let Uses = [O6], isCall = 1, hasDelaySlot = 1 in
   def TLS_CALL : InstSP<(outs),
-                        (ins calltarget:$disp, TLSSym:$sym, variable_ops),
+                        (ins calltarget:$disp, TailRelocSymTLSCall:$sym,
+                         variable_ops),
                         "call $disp, $sym",
                         [(tlscall texternalsym:$disp, tglobaltlsaddr:$sym)],
                         IIC_jmp_or_call> {
@@ -1369,6 +1430,31 @@ let Uses = [O6], isCall = 1, hasDelaySlot = 1 in
   let op = 1;
   let Inst{29-0} = disp;
 }
+}
+
+//===----------------------------------------------------------------------===//
+// Instructions for tail calls.
+//===----------------------------------------------------------------------===//
+let isCodeGenOnly = 1, isReturn = 1,  hasDelaySlot = 1,
+    isTerminator = 1, isBarrier = 1 in {
+  def TAIL_CALL : InstSP<(outs), (ins calltarget:$disp, variable_ops),
+                         "call $disp",
+                         [(tailcall tglobaladdr:$disp)]> {
+  bits<30> disp;
+  let op = 1;
+  let Inst{29-0} = disp;
+  }
+}
+
+def : Pat<(tailcall (iPTR texternalsym:$dst)),
+          (TAIL_CALL texternalsym:$dst)>;
+
+let isCodeGenOnly = 1, isReturn = 1,  hasDelaySlot = 1,  isTerminator = 1,
+    isBarrier = 1, rd = 0 in {
+  def TAIL_CALLri : F3_2<2, 0b111000,
+                         (outs), (ins MEMri:$ptr, variable_ops),
+                         "jmp $ptr",
+                         [(tailcall ADDRri:$ptr)]>;
 }
 
 //===----------------------------------------------------------------------===//
@@ -1418,12 +1504,12 @@ let Predicates = [HasV9], Constraints = "$f = $rd" in {
                (ins DFPRegs:$rs2, DFPRegs:$f, CCOp:$cond),
                "fmovd$cond %icc, $rs2, $rd",
                [(set f64:$rd, (SPselecticc f64:$rs2, f64:$f, imm:$cond))]>;
+    let Predicates = [HasV9, HasHardQuad] in
     def FMOVQ_ICC
       : F4_3<0b110101, 0b000011, (outs QFPRegs:$rd),
                (ins QFPRegs:$rs2, QFPRegs:$f, CCOp:$cond),
                "fmovq$cond %icc, $rs2, $rd",
-               [(set f128:$rd, (SPselecticc f128:$rs2, f128:$f, imm:$cond))]>,
-               Requires<[HasHardQuad]>;
+               [(set f128:$rd, (SPselecticc f128:$rs2, f128:$f, imm:$cond))]>;
   }
 
   let Uses = [FCC0], intcc = 0, opf_cc = 0b00 in {
@@ -1437,12 +1523,12 @@ let Predicates = [HasV9], Constraints = "$f = $rd" in {
              (ins DFPRegs:$rs2, DFPRegs:$f, CCOp:$cond),
              "fmovd$cond %fcc0, $rs2, $rd",
              [(set f64:$rd, (SPselectfcc f64:$rs2, f64:$f, imm:$cond))]>;
+    let Predicates = [HasV9, HasHardQuad] in
     def FMOVQ_FCC
       : F4_3<0b110101, 0b000011, (outs QFPRegs:$rd),
              (ins QFPRegs:$rs2, QFPRegs:$f, CCOp:$cond),
              "fmovq$cond %fcc0, $rs2, $rd",
-             [(set f128:$rd, (SPselectfcc f128:$rs2, f128:$f, imm:$cond))]>,
-             Requires<[HasHardQuad]>;
+             [(set f128:$rd, (SPselectfcc f128:$rs2, f128:$f, imm:$cond))]>;
   }
 
 }
@@ -1452,28 +1538,28 @@ let Predicates = [HasV9] in {
   def FMOVD : F3_3u<2, 0b110100, 0b000000010,
                    (outs DFPRegs:$rd), (ins DFPRegs:$rs2),
                    "fmovd $rs2, $rd", []>;
+  let Predicates = [HasV9, HasHardQuad] in
   def FMOVQ : F3_3u<2, 0b110100, 0b000000011,
                    (outs QFPRegs:$rd), (ins QFPRegs:$rs2),
-                   "fmovq $rs2, $rd", []>,
-                   Requires<[HasHardQuad]>;
+                   "fmovq $rs2, $rd", []>;
   def FNEGD : F3_3u<2, 0b110100, 0b000000110,
                    (outs DFPRegs:$rd), (ins DFPRegs:$rs2),
                    "fnegd $rs2, $rd",
                    [(set f64:$rd, (fneg f64:$rs2))]>;
+  let Predicates = [HasV9, HasHardQuad] in
   def FNEGQ : F3_3u<2, 0b110100, 0b000000111,
                    (outs QFPRegs:$rd), (ins QFPRegs:$rs2),
                    "fnegq $rs2, $rd",
-                   [(set f128:$rd, (fneg f128:$rs2))]>,
-                   Requires<[HasHardQuad]>;
+                   [(set f128:$rd, (fneg f128:$rs2))]>;
   def FABSD : F3_3u<2, 0b110100, 0b000001010,
                    (outs DFPRegs:$rd), (ins DFPRegs:$rs2),
                    "fabsd $rs2, $rd",
                    [(set f64:$rd, (fabs f64:$rs2))]>;
+  let Predicates = [HasV9, HasHardQuad] in
   def FABSQ : F3_3u<2, 0b110100, 0b000001011,
                    (outs QFPRegs:$rd), (ins QFPRegs:$rs2),
                    "fabsq $rs2, $rd",
-                   [(set f128:$rd, (fabs f128:$rs2))]>,
-                   Requires<[HasHardQuad]>;
+                   [(set f128:$rd, (fabs f128:$rs2))]>;
 }
 
 // Floating-point compare instruction with %fcc0-%fcc3.
@@ -1520,11 +1606,11 @@ let Predicates = [HasV9] in {
       : F4_3<0b110101, 0b000010, (outs DFPRegs:$rd),
              (ins FCCRegs:$opf_cc, DFPRegs:$rs2, DFPRegs:$f, CCOp:$cond),
              "fmovd$cond $opf_cc, $rs2, $rd", []>;
+    let Predicates = [HasV9, HasHardQuad] in
     def V9FMOVQ_FCC
       : F4_3<0b110101, 0b000011, (outs QFPRegs:$rd),
              (ins FCCRegs:$opf_cc, QFPRegs:$rs2, QFPRegs:$f, CCOp:$cond),
-             "fmovq$cond $opf_cc, $rs2, $rd", []>,
-             Requires<[HasHardQuad]>;
+             "fmovq$cond $opf_cc, $rs2, $rd", []>;
   } // Constraints = "$f = $rd", ...
 } // let Predicates = [hasV9]
 
@@ -1622,6 +1708,17 @@ let hasSideEffects = 1 in {
   defm TSUBCCTV : F3_12np<"tsubcctv", 0b100011>;
 }
 }
+
+// Section A.42 - Prefetch Data
+let Predicates = [HasV9] in {
+  def PREFETCHr : F3_1<3, 0b101101,
+                   (outs), (ins MEMrr:$addr, shift_imm5:$rd),
+                   "prefetch [$addr], $rd", []>;
+  def PREFETCHi : F3_2<3, 0b101101,
+                   (outs), (ins MEMri:$addr, shift_imm5:$rd),
+                   "prefetch [$addr], $rd", []>;
+}
+
 
 
 // Section A.43 - Read Privileged Register Instructions

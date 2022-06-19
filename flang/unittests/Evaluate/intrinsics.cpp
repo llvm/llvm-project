@@ -237,7 +237,6 @@ void TestIntrinsics() {
   TestCall{defaults, table, "conjg"}
       .Push(Const(Scalar<Complex8>{}))
       .DoCall(Complex8::GetType());
-  TestCall{defaults, table, "dconjg"}.Push(Const(Scalar<Complex4>{})).DoCall();
   TestCall{defaults, table, "dconjg"}
       .Push(Const(Scalar<Complex8>{}))
       .DoCall(Complex8::GetType());
@@ -289,6 +288,34 @@ void TestIntrinsics() {
       .Push(Const(Scalar<Complex8>{}))
       .DoCall(); // bad type
   TestCall{defaults, table, "num_images"}
+      .Push(Const(Scalar<Real4>{}))
+      .DoCall(); // bad type
+
+  // This test temporarily removed because it requires access to
+  // the ISO_FORTRAN_ENV intrinsic module. This module should to
+  // be loaded (somehow) and the following test reinstated.
+  // TestCall{defaults, table, "team_number"}.DoCall(Int4::GetType());
+
+  TestCall{defaults, table, "team_number"}
+      .Push(Const(Scalar<Int4>{}))
+      .Push(Const(Scalar<Int4>{}))
+      .DoCall(); // too many args
+  TestCall{defaults, table, "team_number"}
+      .Push(Named("bad", Const(Scalar<Int4>{})))
+      .DoCall(); // bad keyword
+  TestCall{defaults, table, "team_number"}
+      .Push(Const(Scalar<Int4>{}))
+      .DoCall(); // bad type
+  TestCall{defaults, table, "team_number"}
+      .Push(Const(Scalar<Char>{}))
+      .DoCall(); // bad type
+  TestCall{defaults, table, "team_number"}
+      .Push(Const(Scalar<Log4>{}))
+      .DoCall(); // bad type
+  TestCall{defaults, table, "team_number"}
+      .Push(Const(Scalar<Complex8>{}))
+      .DoCall(); // bad type
+  TestCall{defaults, table, "team_number"}
       .Push(Const(Scalar<Real4>{}))
       .DoCall(); // bad type
 

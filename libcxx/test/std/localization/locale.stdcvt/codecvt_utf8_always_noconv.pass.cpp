@@ -25,12 +25,14 @@
 
 int main(int, char**)
 {
+#ifndef TEST_HAS_NO_WIDE_CHARACTERS
     {
         typedef std::codecvt_utf8<wchar_t> C;
         C c;
         bool r = c.always_noconv();
         assert(r == false);
     }
+#endif
     {
         typedef std::codecvt_utf8<char16_t> C;
         C c;

@@ -8,7 +8,7 @@
 
 // <string>
 
-// int compare(size_type pos1, size_type n1, const basic_string& str) const;
+// int compare(size_type pos1, size_type n1, const basic_string& str) const; // constexpr since C++20
 
 #include <string>
 #include <stdexcept>
@@ -17,7 +17,7 @@
 #include "test_macros.h"
 #include "min_allocator.h"
 
-int sign(int x)
+TEST_CONSTEXPR_CXX20 int sign(int x)
 {
     if (x == 0)
         return 0;
@@ -27,14 +27,14 @@ int sign(int x)
 }
 
 template <class S>
-void
+TEST_CONSTEXPR_CXX20 void
 test(const S& s, typename S::size_type pos1, typename S::size_type n1,
      const S& str, int x)
 {
     if (pos1 <= s.size())
         assert(sign(s.compare(pos1, n1, str)) == sign(x));
 #ifndef TEST_HAS_NO_EXCEPTIONS
-    else
+    else if (!TEST_IS_CONSTANT_EVALUATED)
     {
         try
         {
@@ -50,7 +50,7 @@ test(const S& s, typename S::size_type pos1, typename S::size_type n1,
 }
 
 template <class S>
-void test0()
+TEST_CONSTEXPR_CXX20 void test0()
 {
     test(S(""), 0, 0, S(""), 0);
     test(S(""), 0, 0, S("abcde"), -5);
@@ -155,7 +155,7 @@ void test0()
 }
 
 template <class S>
-void test1()
+TEST_CONSTEXPR_CXX20 void test1()
 {
     test(S("abcde"), 6, 0, S(""), 0);
     test(S("abcde"), 6, 0, S("abcde"), 0);
@@ -260,7 +260,7 @@ void test1()
 }
 
 template <class S>
-void test2()
+TEST_CONSTEXPR_CXX20 void test2()
 {
     test(S("abcdefghijklmnopqrst"), 0, 0, S(""), 0);
     test(S("abcdefghijklmnopqrst"), 0, 0, S("abcde"), -5);
@@ -360,28 +360,37 @@ void test2()
     test(S("abcdefghijklmnopqrst"), 21, 0, S("abcdefghijklmnopqrst"), 0);
 }
 
-int main(int, char**)
-{
-    {
+TEST_CONSTEXPR_CXX20 bool test() {
+  {
     typedef std::string S;
     test0<S>();
     test1<S>();
     test2<S>();
-    }
+  }
 #if TEST_STD_VER >= 11
-    {
+  {
     typedef std::basic_string<char, std::char_traits<char>, min_allocator<char>> S;
     test0<S>();
     test1<S>();
     test2<S>();
-    }
+  }
 #endif
 
 #if TEST_STD_VER > 3
-    {   // LWG 2946
+  { // LWG 2946
     std::string s = " !";
     assert(s.compare(0, 1, {"abc", 1}) < 0);
-    }
+  }
+#endif
+
+  return true;
+}
+
+int main(int, char**)
+{
+  test();
+#if TEST_STD_VER > 17
+  static_assert(test());
 #endif
 
   return 0;

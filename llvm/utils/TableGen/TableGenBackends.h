@@ -67,7 +67,6 @@ void EmitAsmMatcher(RecordKeeper &RK, raw_ostream &OS);
 void EmitAsmWriter(RecordKeeper &RK, raw_ostream &OS);
 void EmitCallingConv(RecordKeeper &RK, raw_ostream &OS);
 void EmitCodeEmitter(RecordKeeper &RK, raw_ostream &OS);
-void EmitCodeBeads(RecordKeeper &RK, raw_ostream &OS);
 void EmitDAGISel(RecordKeeper &RK, raw_ostream &OS);
 void EmitDFAPacketizer(RecordKeeper &RK, raw_ostream &OS);
 void EmitDisassembler(RecordKeeper &RK, raw_ostream &OS);
@@ -88,11 +87,13 @@ void EmitGlobalISel(RecordKeeper &RK, raw_ostream &OS);
 void EmitGICombiner(RecordKeeper &RK, raw_ostream &OS);
 void EmitX86EVEX2VEXTables(RecordKeeper &RK, raw_ostream &OS);
 void EmitX86FoldTables(RecordKeeper &RK, raw_ostream &OS);
+void EmitX86MnemonicTables(RecordKeeper &RK, raw_ostream &OS);
 void EmitRegisterBank(RecordKeeper &RK, raw_ostream &OS);
 void EmitExegesis(RecordKeeper &RK, raw_ostream &OS);
 void EmitAutomata(RecordKeeper &RK, raw_ostream &OS);
 void EmitDirectivesDecl(RecordKeeper &RK, raw_ostream &OS);
 void EmitDirectivesImpl(RecordKeeper &RK, raw_ostream &OS);
+void EmitDXILOperation(RecordKeeper &RK, raw_ostream &OS);
 
 } // End llvm namespace
 

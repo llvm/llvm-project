@@ -7,11 +7,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "derived-api.h"
+#include "flang/Runtime/derived-api.h"
 #include "derived.h"
-#include "descriptor.h"
 #include "terminator.h"
 #include "type-info.h"
+#include "flang/Runtime/descriptor.h"
 
 namespace Fortran::runtime {
 

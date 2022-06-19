@@ -24,7 +24,7 @@ void dumpTest() {
     std::uint64_t raw;
     const char *expected;
   } table[] = {
-      {0x7f876543, "NaN 0x7f876543"},
+      {0x7f876543, "NaN0x7f876543"},
       {0x7f800000, "Inf"},
       {0xff800000, "-Inf"},
       {0x00000000, "0.0"},
@@ -35,8 +35,8 @@ void dumpTest() {
       {0x3f000000, "0x1.0p-1"},
       {0x7f7fffff, "0x1.fffffep127"},
       {0x00800000, "0x1.0p-126"},
-      {0x00400000, "0x0.8p-127"},
-      {0x00000001, "0x0.000002p-127"},
+      {0x00400000, "0x0.8p-126"},
+      {0x00000001, "0x0.000002p-126"},
       {0, nullptr},
   };
   for (int j{0}; table[j].expected != nullptr; ++j) {

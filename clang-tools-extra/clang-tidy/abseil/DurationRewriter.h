@@ -33,10 +33,10 @@ llvm::StringRef getDurationFactoryForScale(DurationScale Scale);
 
 /// Given a 'Scale', return the appropriate factory function call for
 /// constructing a `Time` for that scale.
-llvm::StringRef getTimeFactoryForScale(DurationScale scale);
+llvm::StringRef getTimeFactoryForScale(DurationScale Scale);
 
 // Determine if `Node` represents a literal floating point or integral zero.
-bool IsLiteralZero(const ast_matchers::MatchFinder::MatchResult &Result,
+bool isLiteralZero(const ast_matchers::MatchFinder::MatchResult &Result,
                    const Expr &Node);
 
 /// Possibly strip a floating point cast expression.
@@ -77,7 +77,7 @@ const std::pair<llvm::StringRef, llvm::StringRef> &
 getDurationInverseForScale(DurationScale Scale);
 
 /// Returns the Time inverse function name for a given `Scale`.
-llvm::StringRef getTimeInverseForScale(DurationScale scale);
+llvm::StringRef getTimeInverseForScale(DurationScale Scale);
 
 /// Assuming `Node` has type `double` or `int` representing a time interval of
 /// `Scale`, return the expression to make it a suitable `Duration`.
@@ -138,4 +138,4 @@ AST_MATCHER_FUNCTION_P(ast_matchers::internal::Matcher<Stmt>,
 } // namespace tidy
 } // namespace clang
 
-#endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_ABSEIL_DURATIONCOMPARISONCHECK_H
+#endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_ABSEIL_DURATIONREWRITER_H

@@ -21,6 +21,7 @@ add_llvm_component_library(LLVMMCA
   Stages/RetireStage.cpp
   Stages/Stage.cpp
   Support.cpp
+  View.cpp
 
   ADDITIONAL_HEADER_DIRS
   ${LLVM_MAIN_INCLUDE_DIR}/llvm/MCA

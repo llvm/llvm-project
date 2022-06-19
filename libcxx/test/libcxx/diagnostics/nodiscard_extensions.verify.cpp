@@ -1,4 +1,3 @@
-// -*- C++ -*-
 //===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
@@ -8,10 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 // UNSUPPORTED: c++03
-
-// AppleClang9 doesn't yet support C++17's implicitly synthesized deduction
-// guides from existing ctors, needed by default_searcher() below.
-// UNSUPPORTED: apple-clang-9
 
 // Test that entities declared [[nodiscard]] as an extension by libc++, are
 // only actually declared such when _LIBCPP_ENABLE_NODISCARD is specified.
@@ -23,6 +18,7 @@
 // ADDITIONAL_COMPILE_FLAGS: -D_LIBCPP_ENABLE_NODISCARD
 
 #include <algorithm>
+#include <bit> // bit_cast
 #include <cstddef> // to_integer
 #include <functional> // identity
 #include <iterator>
@@ -327,14 +323,15 @@ void test_template_cast_wrappers(LV&& lv, RV&& rv) {
 
 void test_nontemplate_cast_wrappers()
 {
-#if TEST_STD_VER >= 17
+#if TEST_STD_VER > 14
   std::byte b{42};
   // expected-warning-re@+1 {{ignoring return value of function declared with {{'nodiscard'|warn_unused_result}} attribute}}
   std::to_integer<int>(b);
 #endif
 
-#if TEST_STD_VER >= 20
-  // std::bit_cast<unsigned int>(42);
+#if TEST_STD_VER > 17
+  // expected-warning-re@+1 {{ignoring return value of function declared with {{'nodiscard'|warn_unused_result}} attribute}}
+  std::bit_cast<unsigned int>(42);
 #endif
 
 #if TEST_STD_VER > 20

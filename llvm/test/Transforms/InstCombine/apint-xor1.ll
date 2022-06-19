@@ -1,7 +1,7 @@
 ; This test makes sure that xor instructions are properly eliminated.
 ; This test is for Integer BitWidth <= 64 && BitWidth % 8 != 0.
 
-; RUN: opt < %s -instcombine -S | not grep "xor "
+; RUN: opt < %s -passes=instcombine -S | not grep "xor "
 
 
 define i47 @test1(i47 %A, i47 %B) {

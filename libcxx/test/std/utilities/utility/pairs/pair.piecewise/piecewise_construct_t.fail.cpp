@@ -8,10 +8,6 @@
 
 // UNSUPPORTED: c++03
 
-// Before GCC 6, aggregate initialization kicks in.
-// See https://stackoverflow.com/q/41799015/627587.
-// UNSUPPORTED: gcc-5
-
 // <utility>
 
 // struct piecewise_construct_t { explicit piecewise_construct_t() = default; };

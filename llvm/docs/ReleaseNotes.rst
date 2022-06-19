@@ -1,21 +1,23 @@
-=========================
-LLVM 13.0.0 Release Notes
-=========================
+============================
+LLVM |release| Release Notes
+============================
 
 .. contents::
     :local:
 
-.. warning::
-   These are in-progress notes for the upcoming LLVM 13 release.
-   Release notes for previous releases can be found on
-   `the Download Page <https://releases.llvm.org/download.html>`_.
+.. only:: PreRelease
+
+  .. warning::
+     These are in-progress notes for the upcoming LLVM |version| release.
+     Release notes for previous releases can be found on
+     `the Download Page <https://releases.llvm.org/download.html>`_.
 
 
 Introduction
 ============
 
 This document contains the release notes for the LLVM Compiler Infrastructure,
-release 13.0.0.  Here we describe the status of LLVM, including major improvements
+release |release|.  Here we describe the status of LLVM, including major improvements
 from the previous release, improvements in various subprojects of LLVM, and
 some of the current users of the code.  All LLVM releases may be downloaded
 from the `LLVM releases web site <https://llvm.org/releases/>`_.
@@ -40,36 +42,40 @@ Non-comprehensive list of changes in this release
    functionality, or simply have a lot to talk about), see the `NOTE` below
    for adding a new subsection.
 
+* ...
 
-.. NOTE
-   If you would like to document a larger change, then you can add a
-   subsection about it right here. You can copy the following boilerplate
-   and un-indent it (the indentation causes it to be inside this comment).
+Update on required toolchains to build LLVM
+-------------------------------------------
 
-   Special New Feature
-   -------------------
+With LLVM 15.x we will raise the version requirements of the toolchain used
+to build LLVM. The new requirements are as follows:
 
-   Makes programs 10x faster by doing Special New Thing.
+* GCC >= 7.1
+* Clang >= 5.0
+* Apple Clang >= 9.3
+* Visual Studio 2019 >= 16.7
 
-* Windows Control-flow Enforcement Technology: the ``-ehcontguard`` option now
-  emits valid unwind entrypoints which are validated when the context is being
-  set during exception handling.
+In LLVM 15.x these requirements will be "soft" requirements and the version
+check can be skipped by passing -DLLVM_TEMPORARILY_ALLOW_OLD_TOOLCHAIN=ON
+to CMake.
+
+With the release of LLVM 16.x these requirements will be hard and LLVM developers
+can start using C++17 features, making it impossible to build with older
+versions of these toolchains.
 
 Changes to the LLVM IR
 ----------------------
 
-* The ``inalloca`` attribute now has a mandatory type field, similar
-  to ``byval`` and ``sret``.
-
-* The opaque pointer type ``ptr`` has been introduced. It is still in the
-  process of being worked on and should not be used yet.
-
 Changes to building LLVM
 ------------------------
 
-* The build system now supports building multiple distributions, so that you can
-  e.g. have one distribution containing just tools and another for libraries (to
-  enable development). See :ref:`Multi-distribution configurations` for details.
+* Omitting ``CMAKE_BUILD_TYPE`` when using a single configuration generator is now
+  an error. You now have to pass ``-DCMAKE_BUILD_TYPE=<type>`` in order to configure
+  LLVM. This is done to help new users of LLVM select the correct type: since building
+  LLVM in Debug mode is very resource intensive, we want to make sure that new users
+  make the choice that lines up with their usage. We have also improved documentation
+  around this setting that should help new users. You can find this documentation
+  `here <https://llvm.org/docs/CMake.html#cmake-build-type>`_.
 
 Changes to TableGen
 -------------------
@@ -77,47 +83,62 @@ Changes to TableGen
 Changes to the AArch64 Backend
 ------------------------------
 
-* Introduced support for Armv9-A's Realm Management Extension.
+Changes to the AMDGPU Backend
+-----------------------------
+
+* 8 and 16-bit atomic loads and stores are now supported
+
 
 Changes to the ARM Backend
 --------------------------
 
-During this release ...
+* Added support for the Armv9-A, Armv9.1-A and Armv9.2-A architectures.
+* Added support for the Armv8.1-M PACBTI-M extension.
+* Added support for the Armv9-A, Armv9.1-A and Armv9.2-A architectures.
+* Added support for the Armv8.1-M PACBTI-M extension.
+* Removed the deprecation of ARMv8-A T32 Complex IT blocks. No deprecation
+  warnings will be generated and -mrestrict-it is now always off by default.
+  Previously it was on by default for Armv8 and off for all other architecture
+  versions.
+* Added a pass to workaround Cortex-A57 Erratum 1742098 and Cortex-A72
+  Erratum 1655431. This is enabled by default when targeting either CPU.
+* Implemented generation of Windows SEH unwind information.
+* Switched the MinGW target to use SEH instead of DWARF for unwind information.
 
-Changes to the MIPS Target
+Changes to the AVR Backend
 --------------------------
 
-During this release ...
+* ...
 
-Changes to the Hexagon Target
+Changes to the Hexagon Backend
+------------------------------
+
+* ...
+
+Changes to the MIPS Backend
+---------------------------
+
+* ...
+
+Changes to the PowerPC Backend
+------------------------------
+
+* ...
+
+Changes to the RISC-V Backend
 -----------------------------
 
-* The Hexagon target now supports V68/HVX ISA.
+* The Zvfh extension was added.
 
-Changes to the PowerPC Target
------------------------------
+Changes to the WebAssembly Backend
+----------------------------------
 
-During this release ...
+* ...
 
-Changes to the X86 Target
--------------------------
+Changes to the X86 Backend
+--------------------------
 
-During this release ...
-
-Changes to the AMDGPU Target
------------------------------
-
-During this release ...
-
-Changes to the AVR Target
------------------------------
-
-During this release ...
-
-Changes to the WebAssembly Target
----------------------------------
-
-During this release ...
+* Support ``half`` type on SSE2 and above targets.
 
 Changes to the OCaml bindings
 -----------------------------
@@ -126,10 +147,9 @@ Changes to the OCaml bindings
 Changes to the C API
 --------------------
 
-* The C API function ``LLVMIntrinsicCopyOverloadedName`` has been deprecated.
-  Please migrate to ``LLVMIntrinsicCopyOverloadedName2`` which takes an extra
-  module argument and which also handles unnamed types.
-  ('D99173' <https://reviews.llvm.org/D99173>'_)
+* Add ``LLVMGetCastOpcode`` function to aid users of ``LLVMBuildCast`` in
+  resolving the best cast operation given a source value and destination type.
+  This function is a direct wrapper of ``CastInst::getCastOpcode``.
 
 Changes to the Go bindings
 --------------------------
@@ -138,9 +158,7 @@ Changes to the Go bindings
 Changes to the FastISel infrastructure
 --------------------------------------
 
-* FastISel no longer tracks killed registers, and instead leaves this to the
-  register allocator. This means that ``hasTrivialKill()`` is removed, as well
-  as the ``OpNIsKill`` parameters to the ``fastEmit_*()`` family of functions.
+* ...
 
 Changes to the DAG infrastructure
 ---------------------------------
@@ -154,35 +172,41 @@ During this release ...
 Changes to the LLVM tools
 ---------------------------------
 
-* The options ``--build-id-link-{dir,input,output}`` have been deleted.
-  (`D96310 <https://reviews.llvm.org/D96310>`_)
-
-* Support for in-order processors has been added to ``llvm-mca``.
-  (`D94928 <https://reviews.llvm.org/D94928>`_)
-
-* llvm-objdump supports ``-M {att,intel}`` now.
-  ``--x86-asm-syntax`` is a deprecated internal option which will be removed in LLVM 14.0.0.
-  (`D101695 <https://reviews.llvm.org/D101695>`_)
-
-* The llvm-readobj short aliases ``-s`` (previously ``--sections``) and ``-t``
-  (previously ``--syms``) have been changed to ``--syms`` and
-  ``--section-details`` respectively, to match llvm-readelf.
-  (`D105055 <https://reviews.llvm.org/D105055>`_)
-
-* The llvm-nm short aliases ``-M`` (``--print-armap``), ``-U``
-  (``--defined-only``), and ``-W`` (``--no-weak``) are now deprecated.
-  Use the long form versions instead.
-  The alias ``--just-symbol-name`` is now deprecated in favor of
-  ``--format=just-symbols`` and ``-j``.
-  (`D105330 <https://reviews.llvm.org/D105330>`_)
-
 Changes to LLDB
 ---------------------------------
+
+* The "memory region" command now has a "--all" option to list all
+  memory regions (including unmapped ranges). This is the equivalent
+  of using address 0 then repeating the command until all regions
+  have been listed.
+* Added "--show-tags" option to the "memory find" command. This is off by default.
+  When enabled, if the target value is found in tagged memory, the tags for that
+  memory will be shown inline with the memory contents.
+* Various memory related parts of LLDB have been updated to handle
+  non-address bits (such as AArch64 pointer signatures):
+
+  * "memory read", "memory write" and "memory find" can now be used with
+    addresses with non-address bits.
+  * All the read and write memory methods on SBProccess and SBTarget can
+    be used with addreses with non-address bits.
+  * When printing a pointer expression, LLDB can now dereference the result
+    even if it has non-address bits.
+  * The memory cache now ignores non-address bits when looking up memory
+    locations. This prevents us reading locations multiple times, or not
+    writing out new values if the addresses have different non-address bits.
 
 Changes to Sanitizers
 ---------------------
 
-External Open Source Projects Using LLVM 13
+
+Other Changes
+-------------
+* The code for the `LLVM Visual Studio integration
+  <https://marketplace.visualstudio.com/items?itemName=LLVMExtensions.llvm-toolchain>`_
+  has been removed. This had been obsolete and abandoned since Visual Studio
+  started including an integration by default in 2019.
+
+External Open Source Projects Using LLVM 15
 ===========================================
 
 * A project...

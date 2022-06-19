@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple x86_64-apple-darwin10 -fapple-kext -emit-llvm -o - %s | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-apple-darwin10 -fapple-kext -emit-llvm -o - %s | FileCheck %s
 
 // CHECK: @_ZTV5TemplIiE = internal unnamed_addr constant { [5 x i8*] } { [5 x i8*] [i8* null, i8* bitcast ({ i8*, i8* }* @_ZTI5TemplIiE to i8*), i8* bitcast (void (%struct.Templ*)* @_ZN5TemplIiE1fEv to i8*), i8* bitcast (void (%struct.Templ*)* @_ZN5TemplIiE1gEv to i8*), i8* null] }
 

@@ -69,7 +69,7 @@ int test() {
 // CHECK-NEXT: | | | `-Destructor simple irrelevant trivial
 // CHECK-NEXT: | | |-TemplateArgument type 'int'
 // CHECK-NEXT: | | | `-BuiltinType [[ADDR_9:0x[a-z0-9]*]] 'int'
-// CHECK-NEXT: | | |-CXXRecordDecl [[ADDR_10:0x[a-z0-9]*]] prev [[ADDR_8]] <col:23, col:30> col:30 implicit struct S
+// CHECK-NEXT: | | |-CXXRecordDecl [[ADDR_10:0x[a-z0-9]*]] <col:23, col:30> col:30 implicit struct S
 // CHECK-NEXT: | | |-CXXConstructorDecl [[ADDR_11:0x[a-z0-9]*]] <line:6:3, col:16> col:3 used S 'void (int, int *)'
 // CHECK-NEXT: | | | |-ParmVarDecl [[ADDR_12:0x[a-z0-9]*]] <col:5> col:8 'int'
 // CHECK-NEXT: | | | |-ParmVarDecl [[ADDR_13:0x[a-z0-9]*]] <col:10, col:12> col:13 'int *'

@@ -9,9 +9,9 @@
 #ifndef LLVM_CLANG_TOOLS_EXTRA_CLANGD_GLOBALCOMPILATIONDATABASE_H
 #define LLVM_CLANG_TOOLS_EXTRA_CLANGD_GLOBALCOMPILATIONDATABASE_H
 
-#include "CompileCommands.h"
 #include "support/Function.h"
 #include "support/Path.h"
+#include "support/Threading.h"
 #include "support/ThreadsafeFS.h"
 #include "clang/Tooling/ArgumentsAdjusters.h"
 #include "clang/Tooling/CompilationDatabase.h"
@@ -23,8 +23,6 @@
 
 namespace clang {
 namespace clangd {
-
-class Logger;
 
 struct ProjectInfo {
   // The directory in which the compilation database was discovered.

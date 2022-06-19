@@ -63,13 +63,13 @@ TEST(ProviderTest, Combine) {
   auto Combined = Provider::combine({&Foo, &Bar});
   Config Cfg = Combined->getConfig(Params(), Diags.callback());
   EXPECT_THAT(Diags.Diagnostics,
-              ElementsAre(DiagMessage("foo"), DiagMessage("bar")));
+              ElementsAre(diagMessage("foo"), diagMessage("bar")));
   EXPECT_THAT(getAddedArgs(Cfg), ElementsAre("foo1", "bar1"));
   Diags.Diagnostics.clear();
 
   Cfg = Combined->getConfig(Params(), Diags.callback());
   EXPECT_THAT(Diags.Diagnostics,
-              ElementsAre(DiagMessage("foo"), DiagMessage("bar")));
+              ElementsAre(diagMessage("foo"), diagMessage("bar")));
   EXPECT_THAT(getAddedArgs(Cfg), ElementsAre("foo2", "bar2"));
 }
 
@@ -101,7 +101,7 @@ TEST(ProviderTest, FromYAMLFile) {
   auto P = Provider::fromYAMLFile(testPath("foo.yaml"), /*Directory=*/"", FS);
   auto Cfg = P->getConfig(Params(), Diags.callback());
   EXPECT_THAT(Diags.Diagnostics,
-              ElementsAre(DiagMessage("Unknown CompileFlags key 'Unknown'")));
+              ElementsAre(diagMessage("Unknown CompileFlags key 'Unknown'")));
   EXPECT_THAT(Diags.Files, ElementsAre(testPath("foo.yaml")));
   EXPECT_THAT(getAddedArgs(Cfg), ElementsAre("foo"));
   Diags.clear();
@@ -115,7 +115,7 @@ TEST(ProviderTest, FromYAMLFile) {
   Cfg = P->getConfig(Params(), Diags.callback());
   EXPECT_THAT(
       Diags.Diagnostics,
-      ElementsAre(DiagMessage(
+      ElementsAre(diagMessage(
           "Unknown CompileFlags key 'Removr'; did you mean 'Remove'?")));
   EXPECT_THAT(Diags.Files, ElementsAre(testPath("foo.yaml")));
   EXPECT_THAT(getAddedArgs(Cfg), ElementsAre("foo"));
@@ -159,7 +159,7 @@ TEST(ProviderTest, FromAncestorRelativeYAMLFiles) {
 
   Cfg = P->getConfig(ABCParams, Diags.callback());
   EXPECT_THAT(Diags.Diagnostics,
-              ElementsAre(DiagMessage("Unknown CompileFlags key 'Unknown'")));
+              ElementsAre(diagMessage("Unknown CompileFlags key 'Unknown'")));
   // FIXME: fails on windows: paths have mixed slashes like C:\a/b\c.yaml
   EXPECT_THAT(Diags.Files,
               ElementsAre(testPath("a/foo.yaml"), testPath("a/b/c/foo.yaml")));
@@ -176,44 +176,6 @@ TEST(ProviderTest, FromAncestorRelativeYAMLFiles) {
   EXPECT_THAT(Diags.Diagnostics, IsEmpty());
   EXPECT_THAT(Diags.Files, IsEmpty());
   EXPECT_THAT(getAddedArgs(Cfg), ElementsAre("bar", "baz"));
-}
-
-// FIXME: delete this test, it's covered by FileCacheTests.
-TEST(ProviderTest, Staleness) {
-  MockFS FS;
-
-  auto StartTime = std::chrono::steady_clock::now();
-  Params StaleOK;
-  StaleOK.FreshTime = StartTime;
-  Params MustBeFresh;
-  MustBeFresh.FreshTime = StartTime + std::chrono::hours(1);
-  CapturedDiags Diags;
-  auto P = Provider::fromYAMLFile(testPath("foo.yaml"), /*Directory=*/"", FS);
-
-  // Initial query always reads, regardless of policy.
-  FS.Files["foo.yaml"] = AddFooWithErr;
-  auto Cfg = P->getConfig(StaleOK, Diags.callback());
-  EXPECT_THAT(Diags.Diagnostics,
-              ElementsAre(DiagMessage("Unknown CompileFlags key 'Unknown'")));
-  EXPECT_THAT(getAddedArgs(Cfg), ElementsAre("foo"));
-  Diags.clear();
-
-  // Stale value reused by policy.
-  FS.Files["foo.yaml"] = AddBarBaz;
-  Cfg = P->getConfig(StaleOK, Diags.callback());
-  EXPECT_THAT(Diags.Diagnostics, IsEmpty()) << "Cached, not re-parsed";
-  EXPECT_THAT(getAddedArgs(Cfg), ElementsAre("foo"));
-
-  // Cache revalidated by policy.
-  Cfg = P->getConfig(MustBeFresh, Diags.callback());
-  EXPECT_THAT(Diags.Diagnostics, IsEmpty()) << "New config, no errors";
-  EXPECT_THAT(getAddedArgs(Cfg), ElementsAre("bar", "baz"));
-
-  // Cache revalidated by (default) policy.
-  FS.Files.erase("foo.yaml");
-  Cfg = P->getConfig(Params(), Diags.callback());
-  EXPECT_THAT(Diags.Diagnostics, IsEmpty());
-  EXPECT_THAT(getAddedArgs(Cfg), IsEmpty());
 }
 
 TEST(ProviderTest, SourceInfo) {

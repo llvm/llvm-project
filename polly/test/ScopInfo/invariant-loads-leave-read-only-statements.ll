@@ -1,5 +1,5 @@
-; RUN: opt %loadPolly -polly-scops -polly-invariant-load-hoisting=true -analyze < %s | FileCheck %s
-; RUN: opt %loadPolly -polly-codegen -polly-invariant-load-hoisting=true -analyze < %s
+; RUN: opt %loadPolly -polly-print-scops -polly-invariant-load-hoisting=true -disable-output < %s | FileCheck %s
+; RUN: opt %loadPolly -polly-codegen -polly-invariant-load-hoisting=true -disable-output < %s
 
 ; CHECK:      Statements {
 ; CHECK-NEXT: 	Stmt_L_4

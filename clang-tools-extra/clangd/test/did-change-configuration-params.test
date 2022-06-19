@@ -48,7 +48,7 @@
 #
 # ERR: ASTWorker building file {{.*}}foo.c version 0 with command
 # ERR: [{{.*}}clangd-test2]
-# ERR: clang -c foo.c -Wall -Werror
+# ERR: clang -c -Wall -Werror {{.*}} -- {{.*}}foo.c
 ---
 {"jsonrpc":"2.0","id":5,"method":"shutdown"}
 ---

@@ -15,7 +15,7 @@
 @synthesize myValue=_myValue;
 @end
 
-int main()
+int main(void)
 {
     int val;
     SomeClass *o = [SomeClass new];

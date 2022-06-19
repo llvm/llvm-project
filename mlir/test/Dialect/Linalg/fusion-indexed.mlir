@@ -6,21 +6,21 @@
   indexing_maps = [#id_2d, #id_2d, #id_2d],
   iterator_types = ["parallel", "parallel"]
 }
-func @fuse_indexed_consumer(%A: memref<?x?xf32>,
+func.func @fuse_indexed_consumer(%A: memref<?x?xf32>,
                                     %B: memref<?x?xf32>,
                                     %C: memref<?x?xf32>,
                                     %D: memref<?x?xf32>) {
   linalg.generic #pointwise_2d_trait
     ins(%A, %B: memref<?x?xf32>, memref<?x?xf32>)
    outs(%C : memref<?x?xf32>) {
-  ^bb0(%e: f32, %arg5: f32, %arg6: f32):   // no predecessors
-    %2 = addf %e, %arg5 : f32
+  ^bb0(%e: f32, %arg5: f32, %arg6: f32):   
+    %2 = arith.addf %e, %arg5 : f32
     linalg.yield %2 : f32
   }
-  %c1 = constant 1 : index
-  %c0 = constant 0 : index
-  %c25 = constant 25 : index
-  %c10 = constant 10 : index
+  %c1 = arith.constant 1 : index
+  %c0 = arith.constant 0 : index
+  %c25 = arith.constant 25 : index
+  %c10 = arith.constant 10 : index
   %0 = memref.dim %C, %c0 : memref<?x?xf32>
   %1 = memref.dim %C, %c1 : memref<?x?xf32>
   %2 = memref.dim %D, %c0 : memref<?x?xf32>
@@ -39,14 +39,15 @@ func @fuse_indexed_consumer(%A: memref<?x?xf32>,
       ^bb0(%arg4: f32, %arg5: f32):
         %idx0 = linalg.index 0 : index
         %idx1 = linalg.index 1 : index
-        %6 = addi %idx0, %arg2 : index
-        %7 = addi %idx1, %arg3 : index
-        %8 = index_cast %6 : index to i32
-        %9 = sitofp %8 : i32 to f32
-        %10 = index_cast %7 : index to i32
-        %11 = sitofp %10 : i32 to f32
-        %12 = addf %9, %11 : f32
-        linalg.yield %12 : f32
+        %6 = arith.addi %idx0, %arg2 : index
+        %7 = arith.addi %idx1, %arg3 : index
+        %8 = arith.index_cast %6 : index to i32
+        %9 = arith.sitofp %8 : i32 to f32
+        %10 = arith.index_cast %7 : index to i32
+        %11 = arith.sitofp %10 : i32 to f32
+        %12 = arith.addf %9, %11 : f32
+        %13 = arith.addf %12, %arg4 : f32
+        linalg.yield %13 : f32
       }
     }
   }
@@ -58,27 +59,27 @@ func @fuse_indexed_consumer(%A: memref<?x?xf32>,
 // CHECK-NOT:  scf.for
 // CHECK:      linalg.generic
 // CHECK-NOT:    affine.apply
-// CHECK:        addf
+// CHECK:        arith.addf
 // CHECK:      linalg.generic
-// CHECK:        index_cast
+// CHECK:        arith.index_cast
 
 // -----
 
 #map = affine_map<(d0, d1)[s0, s1, s2] -> (d0 * s1 + s0 + d1 * s2)>
-func @fuse_indexed_producer(%A: memref<?x?xindex>,
+func.func @fuse_indexed_producer(%A: memref<?x?xindex>,
                             %B: memref<?x?xindex>) {
-  %c1 = constant 1 : index
-  %c0 = constant 0 : index
-  %c25 = constant 25 : index
-  %c10 = constant 10 : index
+  %c1 = arith.constant 1 : index
+  %c0 = arith.constant 0 : index
+  %c25 = arith.constant 25 : index
+  %c10 = arith.constant 10 : index
   linalg.generic {
     indexing_maps = [affine_map<(i, j) -> (j, i)>],
     iterator_types = ["parallel", "parallel"]}
     outs(%A : memref<?x?xindex>) {
-  ^bb0(%a: index):   // no predecessors
+  ^bb0(%a: index):   
     %idx0 = linalg.index 0 : index
     %idx1 = linalg.index 1 : index
-    %0 = addi %idx0, %idx1 : index
+    %0 = arith.addi %idx0, %idx1 : index
     linalg.yield %0 : index
   }
   %A_X = memref.dim %A, %c0 : memref<?x?xindex>
@@ -108,26 +109,26 @@ func @fuse_indexed_producer(%A: memref<?x?xindex>,
 // CHECK:      [[i_new:%.*]] = affine.apply [[$MAP]]([[idx0]], [[J]])
 // CHECK:      [[idx1:%.*]] = linalg.index 1 : index
 // CHECK:      [[j_new:%.*]] = affine.apply [[$MAP]]([[idx1]], [[I]])
-// CHECK:      [[sum:%.*]] = addi [[i_new]], [[j_new]] : index
+// CHECK:      [[sum:%.*]] = arith.addi [[i_new]], [[j_new]] : index
 // CHECK:      linalg.yield [[sum]] : index
 // CHECK:    linalg.generic
 
 // -----
 
 #map = affine_map<(d0, d1)[s0, s1, s2] -> (d0 * s1 + s0 + d1 * s2)>
-func @fuse_indexed_producer_tiled_second_dim_only(%A: memref<?x?xindex>,
+func.func @fuse_indexed_producer_tiled_second_dim_only(%A: memref<?x?xindex>,
                                                   %B: memref<?x?xindex>) {
-  %c1 = constant 1 : index
-  %c0 = constant 0 : index
-  %c25 = constant 25 : index
+  %c1 = arith.constant 1 : index
+  %c0 = arith.constant 0 : index
+  %c25 = arith.constant 25 : index
   linalg.generic {
     indexing_maps = [affine_map<(i, j) -> (i, j)>],
     iterator_types = ["parallel", "parallel"]}
     outs(%A : memref<?x?xindex>) {
-  ^bb0(%a: index):   // no predecessors
+  ^bb0(%a: index):   
     %idx0 = linalg.index 0 : index
     %idx1 = linalg.index 1 : index
-    %0 = addi %idx0, %idx1 : index
+    %0 = arith.addi %idx0, %idx1 : index
     linalg.yield %0 : index
   }
   %A_X = memref.dim %A, %c0 : memref<?x?xindex>
@@ -156,7 +157,7 @@ func @fuse_indexed_producer_tiled_second_dim_only(%A: memref<?x?xindex>,
 // CHECK:      [[idx0:%.*]] = linalg.index 0 : index
 // CHECK:      [[idx1:%.*]] = linalg.index 1 : index
 // CHECK:      [[j_new:%.*]] = affine.apply [[$MAP]]([[idx1]], [[J]])
-// CHECK:      [[sum:%.*]] = addi [[idx0]], [[j_new]] : index
+// CHECK:      [[sum:%.*]] = arith.addi [[idx0]], [[j_new]] : index
 // CHECK:      linalg.yield [[sum]] : index
 // CHECK:    linalg.generic
 

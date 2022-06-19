@@ -14,8 +14,8 @@
 #error This header may only be used for libc++ tests
 #endif
 
-#ifndef _LIBCPP_DEBUG
-#error _LIBCPP_DEBUG must be defined before including this header
+#ifndef _LIBCPP_ENABLE_DEBUG_MODE
+#error The library must be built with the debug mode enabled in order to use this header
 #endif
 
 #include <__debug>
@@ -24,19 +24,14 @@
 #include <cstdlib>
 #include <cassert>
 
-#include "test_macros.h"
-#include "debug_mode_helper.h"
+#include "check_assertion.h"
 #include "test_allocator.h"
+#include "test_macros.h"
 
 // These test make use of 'if constexpr'.
 #if TEST_STD_VER <= 14
 #error This header may only be used in C++17 and greater
 #endif
-
-#ifndef __cpp_if_constexpr
-#error These tests require if constexpr
-#endif
-
 
 namespace IteratorDebugChecks {
 

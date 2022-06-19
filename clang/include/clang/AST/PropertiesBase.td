@@ -79,6 +79,7 @@ def AttrKind : EnumPropertyType<"attr::Kind">;
 def AutoTypeKeyword : EnumPropertyType;
 def Bool : PropertyType<"bool">;
 def BuiltinTypeKind : EnumPropertyType<"BuiltinType::Kind">;
+def BTFTypeTagAttr : PropertyType<"const BTFTypeTagAttr *">;
 def CallingConv : EnumPropertyType;
 def DeclarationName : PropertyType;
 def DeclarationNameKind : EnumPropertyType<"DeclarationName::NameKind">;
@@ -107,6 +108,8 @@ def DeclRef : RefPropertyType<"Decl"> { let ConstWhenWriting = 1; }
     SubclassPropertyType<"TemplateTypeParmDecl", DeclRef>;
   def TemplateTemplateParmDeclRef :
     SubclassPropertyType<"TemplateTemplateParmDecl", DeclRef>;
+  def UsingShadowDeclRef :
+    SubclassPropertyType<"UsingShadowDecl", DeclRef>;
   def ValueDeclRef :
     SubclassPropertyType<"ValueDecl", DeclRef>;
 def ElaboratedTypeKeyword : EnumPropertyType;
@@ -617,6 +620,16 @@ let Class = PropertyTypeCase<TemplateName, "Template"> in {
     return TemplateName(declaration);
   }]>;
 }
+
+let Class = PropertyTypeCase<TemplateName, "UsingTemplate"> in {
+  def : Property<"foundDecl", UsingShadowDeclRef> {
+    let Read = [{ node.getAsUsingShadowDecl() }];
+  }
+  def : Creator<[{
+    return TemplateName(foundDecl);
+  }]>;
+}
+
 let Class = PropertyTypeCase<TemplateName, "OverloadedTemplate"> in {
   def : Property<"overloads", Array<NamedDeclRef>> {
     let Read = [{ node.getAsOverloadedTemplate()->decls() }];
@@ -650,12 +663,12 @@ let Class = PropertyTypeCase<TemplateName, "QualifiedTemplate"> in {
   def : Property<"hasTemplateKeyword", Bool> {
     let Read = [{ qtn->hasTemplateKeyword() }];
   }
-  def : Property<"declaration", TemplateDeclRef> {
-    let Read = [{ qtn->getTemplateDecl() }];
+  def : Property<"underlyingTemplateName", TemplateName> {
+    let Read = [{ qtn->getUnderlyingTemplate() }];
   }
   def : Creator<[{
     return ctx.getQualifiedTemplateName(qualifier, hasTemplateKeyword,
-                                        declaration);
+                                        underlyingTemplateName);
   }]>;
 }
 let Class = PropertyTypeCase<TemplateName, "DependentTemplate"> in {

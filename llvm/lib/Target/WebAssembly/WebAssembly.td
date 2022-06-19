@@ -25,6 +25,9 @@ include "llvm/Target/Target.td"
 def FeatureSIMD128 : SubtargetFeature<"simd128", "SIMDLevel", "SIMD128",
                                       "Enable 128-bit SIMD">;
 
+def FeatureRelaxedSIMD : SubtargetFeature<"relaxed-simd", "SIMDLevel", "RelaxedSIMD",
+                                      "Enable relaxed-simd instructions">;
+
 def FeatureAtomics : SubtargetFeature<"atomics", "HasAtomics", "true",
                                       "Enable Atomics">;
 
@@ -63,6 +66,10 @@ def FeatureMutableGlobals :
 def FeatureReferenceTypes :
       SubtargetFeature<"reference-types", "HasReferenceTypes", "true",
                        "Enable reference types">;
+
+def FeatureExtendedConst :
+      SubtargetFeature<"extended-const", "HasExtendedConst", "true",
+                       "Enable extended const expressions">;
 
 //===----------------------------------------------------------------------===//
 // Architectures.

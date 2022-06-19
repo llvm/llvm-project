@@ -4,6 +4,7 @@
 // RUN: not llvm-mc -arch=amdgcn -mcpu=gfx1033 %s 2>&1 | FileCheck --check-prefix=GFX10 --implicit-check-not=error: %s
 // RUN: not llvm-mc -arch=amdgcn -mcpu=gfx1034 %s 2>&1 | FileCheck --check-prefix=GFX10 --implicit-check-not=error: %s
 // RUN: not llvm-mc -arch=amdgcn -mcpu=gfx1035 %s 2>&1 | FileCheck --check-prefix=GFX10 --implicit-check-not=error: %s
+// RUN: not llvm-mc -arch=amdgcn -mcpu=gfx1036 %s 2>&1 | FileCheck --check-prefix=GFX10 --implicit-check-not=error: %s
 
 v_dot8c_i32_i4 v5, v1, v2
 // GFX10: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
@@ -151,3 +152,58 @@ image_msaa_load v[1:4], v5, s[8:15] dmask:0xf dim:SQ_RSRC_IMG_1D
 
 image_msaa_load v5, v[1:2], s[8:15] dmask:0x1 dim:SQ_RSRC_IMG_2D d16
 // GFX10: :[[@LINE-1]]:{{[0-9]+}}: error: invalid dim; must be MSAA type
+
+//===----------------------------------------------------------------------===//
+// s_waitcnt_depctr.
+//===----------------------------------------------------------------------===//
+
+s_waitcnt_depctr depctr_hold_cnt(-1)
+// GFX10: :[[@LINE-1]]:{{[0-9]+}}: error: invalid value for depctr_hold_cnt
+
+s_waitcnt_depctr depctr_sa_sdst(-1)
+// GFX10: :[[@LINE-1]]:{{[0-9]+}}: error: invalid value for depctr_sa_sdst
+
+s_waitcnt_depctr depctr_va_vdst(-1)
+// GFX10: :[[@LINE-1]]:{{[0-9]+}}: error: invalid value for depctr_va_vdst
+
+s_waitcnt_depctr depctr_va_sdst(-1)
+// GFX10: :[[@LINE-1]]:{{[0-9]+}}: error: invalid value for depctr_va_sdst
+
+s_waitcnt_depctr depctr_va_ssrc(-1)
+// GFX10: :[[@LINE-1]]:{{[0-9]+}}: error: invalid value for depctr_va_ssrc
+
+s_waitcnt_depctr depctr_va_vcc(-1)
+// GFX10: :[[@LINE-1]]:{{[0-9]+}}: error: invalid value for depctr_va_vcc
+
+s_waitcnt_depctr depctr_vm_vsrc(-1)
+// GFX10: :[[@LINE-1]]:{{[0-9]+}}: error: invalid value for depctr_vm_vsrc
+
+s_waitcnt_depctr depctr_hold_cnt(2)
+// GFX10: :[[@LINE-1]]:{{[0-9]+}}: error: invalid value for depctr_hold_cnt
+
+s_waitcnt_depctr depctr_sa_sdst(2)
+// GFX10: :[[@LINE-1]]:{{[0-9]+}}: error: invalid value for depctr_sa_sdst
+
+s_waitcnt_depctr depctr_va_vdst(16)
+// GFX10: :[[@LINE-1]]:{{[0-9]+}}: error: invalid value for depctr_va_vdst
+
+s_waitcnt_depctr depctr_va_sdst(8)
+// GFX10: :[[@LINE-1]]:{{[0-9]+}}: error: invalid value for depctr_va_sdst
+
+s_waitcnt_depctr depctr_va_ssrc(2)
+// GFX10: :[[@LINE-1]]:{{[0-9]+}}: error: invalid value for depctr_va_ssrc
+
+s_waitcnt_depctr depctr_va_vcc(2)
+// GFX10: :[[@LINE-1]]:{{[0-9]+}}: error: invalid value for depctr_va_vcc
+
+s_waitcnt_depctr depctr_vm_vsrc(8)
+// GFX10: :[[@LINE-1]]:{{[0-9]+}}: error: invalid value for depctr_vm_vsrc
+
+s_waitcnt_depctr depctr_vm_(8)
+// GFX10: :[[@LINE-1]]:{{[0-9]+}}: error: invalid counter name depctr_vm_
+
+s_waitcnt_depctr depctr_hold_cnt(0) depctr_hold_cnt(0)
+// GFX10: :[[@LINE-1]]:{{[0-9]+}}: error: duplicate counter name depctr_hold_cnt
+
+s_waitcnt_depctr depctr_sa_sdst(0) depctr_sa_sdst(0)
+// GFX10: :[[@LINE-1]]:{{[0-9]+}}: error: duplicate counter name depctr_sa_sdst

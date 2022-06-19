@@ -1,20 +1,18 @@
-// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -fcoroutines-ts -std=c++14 -O1 -emit-llvm %s -o - -disable-llvm-passes | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-unknown-linux-gnu -std=c++20 -O1 -emit-llvm %s -o - -disable-llvm-passes | FileCheck %s
 
 #include "Inputs/coroutine.h"
-
-namespace coro = std::experimental::coroutines_v1;
 
 struct Task {
   struct promise_type {
     Task get_return_object() noexcept {
-      return Task{coro::coroutine_handle<promise_type>::from_promise(*this)};
+      return Task{std::coroutine_handle<promise_type>::from_promise(*this)};
     }
 
     void return_void() noexcept {}
 
     struct final_awaiter {
       bool await_ready() noexcept { return false; }
-      coro::coroutine_handle<> await_suspend(coro::coroutine_handle<promise_type> h) noexcept {
+      std::coroutine_handle<> await_suspend(std::coroutine_handle<promise_type> h) noexcept {
         h.destroy();
         return {};
       }
@@ -25,7 +23,7 @@ struct Task {
 
     final_awaiter final_suspend() noexcept { return {}; }
 
-    coro::suspend_always initial_suspend() noexcept { return {}; }
+    std::suspend_always initial_suspend() noexcept { return {}; }
 
     template <typename Awaitable>
     auto await_transform(Awaitable &&awaitable) {
@@ -33,7 +31,7 @@ struct Task {
     }
   };
 
-  using handle_t = coro::coroutine_handle<promise_type>;
+  using handle_t = std::coroutine_handle<promise_type>;
 
   class Awaiter {
   public:
@@ -43,7 +41,7 @@ struct Task {
     ~Awaiter();
 
     bool await_ready() noexcept { return false; }
-    handle_t await_suspend(coro::coroutine_handle<> continuation) noexcept;
+    handle_t await_suspend(std::coroutine_handle<> continuation) noexcept;
     void await_resume();
 
   private:
@@ -91,10 +89,10 @@ Task bar() {
 // CHECK:         br i1 %{{.+}}, label %[[CASE1_AWAIT_READY:.+]], label %[[CASE1_AWAIT_SUSPEND:.+]]
 // CHECK:       [[CASE1_AWAIT_SUSPEND]]:
 // CHECK-NEXT:    %{{.+}} = call token @llvm.coro.save(i8* null)
-// CHECK-NEXT:    %[[HANDLE11:.+]] = bitcast %"struct.std::experimental::coroutines_v1::coroutine_handle"* %[[TMP1:.+]] to i8*
+// CHECK-NEXT:    %[[HANDLE11:.+]] = bitcast %"struct.std::coroutine_handle"* %[[TMP1:.+]] to i8*
 // CHECK-NEXT:    call void @llvm.lifetime.start.p0i8(i64 8, i8* %[[HANDLE11]])
 
-// CHECK:         %[[HANDLE12:.+]] = bitcast %"struct.std::experimental::coroutines_v1::coroutine_handle"* %[[TMP1]] to i8*
+// CHECK:         %[[HANDLE12:.+]] = bitcast %"struct.std::coroutine_handle"* %[[TMP1]] to i8*
 // CHECK-NEXT:    call void @llvm.lifetime.end.p0i8(i64 8, i8* %[[HANDLE12]])
 // CHECK-NEXT:    call void @llvm.coro.resume
 // CHECK-NEXT:    %{{.+}} = call i8 @llvm.coro.suspend
@@ -110,10 +108,10 @@ Task bar() {
 // CHECK:         br i1 %{{.+}}, label %[[CASE2_AWAIT_READY:.+]], label %[[CASE2_AWAIT_SUSPEND:.+]]
 // CHECK:       [[CASE2_AWAIT_SUSPEND]]:
 // CHECK-NEXT:    %{{.+}} = call token @llvm.coro.save(i8* null)
-// CHECK-NEXT:    %[[HANDLE21:.+]] = bitcast %"struct.std::experimental::coroutines_v1::coroutine_handle"* %[[TMP2:.+]] to i8*
+// CHECK-NEXT:    %[[HANDLE21:.+]] = bitcast %"struct.std::coroutine_handle"* %[[TMP2:.+]] to i8*
 // CHECK-NEXT:    call void @llvm.lifetime.start.p0i8(i64 8, i8* %[[HANDLE21]])
 
-// CHECK:         %[[HANDLE22:.+]] = bitcast %"struct.std::experimental::coroutines_v1::coroutine_handle"* %[[TMP2]] to i8*
+// CHECK:         %[[HANDLE22:.+]] = bitcast %"struct.std::coroutine_handle"* %[[TMP2]] to i8*
 // CHECK-NEXT:    call void @llvm.lifetime.end.p0i8(i64 8, i8* %[[HANDLE22]])
 // CHECK-NEXT:    call void @llvm.coro.resume
 // CHECK-NEXT:    %{{.+}} = call i8 @llvm.coro.suspend

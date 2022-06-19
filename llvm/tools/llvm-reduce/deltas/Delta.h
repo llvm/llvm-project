@@ -23,6 +23,8 @@
 
 namespace llvm {
 
+class MachineFunction;
+
 struct Chunk {
   int Begin;
   int End;
@@ -52,8 +54,8 @@ struct Chunk {
 /// actually understand what is going on.
 class Oracle {
   /// Out of all the features that we promised to be,
-  /// how many have we already processed? 1-based!
-  int Index = 1;
+  /// how many have we already processed?
+  int Index = 0;
 
   /// The actual workhorse, contains the knowledge whether or not
   /// some particular feature should be preserved this time.
@@ -65,20 +67,27 @@ public:
   /// Should be called for each feature on which we are operating.
   /// Name is self-explanatory - if returns true, then it should be preserved.
   bool shouldKeep() {
-    if (ChunksToKeep.empty())
+    if (ChunksToKeep.empty()) {
+      ++Index;
       return false; // All further features are to be discarded.
+    }
 
     // Does the current (front) chunk contain such a feature?
     bool ShouldKeep = ChunksToKeep.front().contains(Index);
-    auto _ = make_scope_exit([&]() { ++Index; }); // Next time - next feature.
 
     // Is this the last feature in the chunk?
     if (ChunksToKeep.front().End == Index)
       ChunksToKeep = ChunksToKeep.drop_front(); // Onto next chunk.
 
+    ++Index;
+
     return ShouldKeep;
   }
+
+  int count() { return Index; }
 };
+
+using ReductionFunc = function_ref<void(Oracle &, ReducerWorkItem &)>;
 
 /// This function implements the Delta Debugging algorithm, it receives a
 /// number of Targets (e.g. Functions, Instructions, Basic Blocks, etc.) and
@@ -92,18 +101,13 @@ public:
 /// RemoveFunctions) and receives three key parameters:
 /// * Test: The main TestRunner instance which is used to run the provided
 /// interesting-ness test, as well as to store and access the reduced Program.
-/// * Targets: The amount of Targets that are going to be reduced by the
-/// algorithm, for example, the RemoveGlobalVars pass would send the amount of
-/// initialized GVs.
 /// * ExtractChunksFromModule: A function used to tailor the main program so it
 /// only contains Targets that are inside Chunks of the given iteration.
 /// Note: This function is implemented by each specialized Delta pass
 ///
 /// Other implementations of the Delta Debugging algorithm can also be found in
 /// the CReduce, Delta, and Lithium projects.
-void runDeltaPass(TestRunner &Test, int Targets,
-                  std::function<void(const std::vector<Chunk> &, Module *)>
-                      ExtractChunksFromModule);
+void runDeltaPass(TestRunner &Test, ReductionFunc ExtractChunksFromModule);
 } // namespace llvm
 
 #endif

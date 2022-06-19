@@ -10,7 +10,6 @@
 #include "lldb/Core/Module.h"
 #include "lldb/Core/ModuleList.h"
 #include "lldb/Core/ModuleSpec.h"
-#include "lldb/Host/FileCache.h"
 #include "lldb/Host/FileSystem.h"
 #include "lldb/Host/Host.h"
 #include "lldb/Host/HostInfo.h"
@@ -72,8 +71,7 @@ Status RemoteAwarePlatform::ResolveExecutable(
   } else {
     if (m_remote_platform_sp) {
       return GetCachedExecutable(resolved_module_spec, exe_module_sp,
-                                 module_search_paths_ptr,
-                                 *m_remote_platform_sp);
+                                 module_search_paths_ptr);
     }
 
     // We may connect to a process and use the provided executable (Don't use
@@ -132,9 +130,11 @@ Status RemoteAwarePlatform::ResolveExecutable(
       // architectures that we should be using (in the correct order) and see
       // if we can find a match that way
       StreamString arch_names;
-      for (uint32_t idx = 0; GetSupportedArchitectureAtIndex(
-               idx, resolved_module_spec.GetArchitecture());
-           ++idx) {
+      llvm::ListSeparator LS;
+      ArchSpec process_host_arch;
+      for (const ArchSpec &arch :
+           GetSupportedArchitectures(process_host_arch)) {
+        resolved_module_spec.GetArchitecture() = arch;
         error = ModuleList::GetSharedModule(resolved_module_spec, exe_module_sp,
                                             module_search_paths_ptr, nullptr, nullptr);
         // Did we find an executable using one of the
@@ -145,19 +145,16 @@ Status RemoteAwarePlatform::ResolveExecutable(
             error.SetErrorToGenericError();
         }
 
-        if (idx > 0)
-          arch_names.PutCString(", ");
-        arch_names.PutCString(
-            resolved_module_spec.GetArchitecture().GetArchitectureName());
+        arch_names << LS << arch.GetArchitectureName();
       }
 
       if (error.Fail() || !exe_module_sp) {
         if (FileSystem::Instance().Readable(
                 resolved_module_spec.GetFileSpec())) {
-          error.SetErrorStringWithFormat(
-              "'%s' doesn't contain any '%s' platform architectures: %s",
-              resolved_module_spec.GetFileSpec().GetPath().c_str(),
-              GetPluginName().GetCString(), arch_names.GetData());
+          error.SetErrorStringWithFormatv(
+              "'{0}' doesn't contain any '{1}' platform architectures: {2}",
+              resolved_module_spec.GetFileSpec(), GetPluginName(),
+              arch_names.GetData());
         } else {
           error.SetErrorStringWithFormat(
               "'%s' is not readable",
@@ -182,14 +179,12 @@ Status RemoteAwarePlatform::RunShellCommand(
     llvm::StringRef shell, llvm::StringRef command, const FileSpec &working_dir,
     int *status_ptr, int *signo_ptr, std::string *command_output,
     const Timeout<std::micro> &timeout) {
-  if (IsHost())
-    return Host::RunShellCommand(shell, command, working_dir, status_ptr,
-                                 signo_ptr, command_output, timeout);
   if (m_remote_platform_sp)
     return m_remote_platform_sp->RunShellCommand(shell, command, working_dir,
                                                  status_ptr, signo_ptr,
                                                  command_output, timeout);
-  return Status("unable to run a remote command without a platform");
+  return Platform::RunShellCommand(shell, command, working_dir, status_ptr,
+                                   signo_ptr, command_output, timeout);
 }
 
 Status RemoteAwarePlatform::MakeDirectory(const FileSpec &file_spec,
@@ -218,16 +213,12 @@ Status RemoteAwarePlatform::SetFilePermissions(const FileSpec &file_spec,
 lldb::user_id_t RemoteAwarePlatform::OpenFile(const FileSpec &file_spec,
                                               File::OpenOptions flags,
                                               uint32_t mode, Status &error) {
-  if (IsHost())
-    return FileCache::GetInstance().OpenFile(file_spec, flags, mode, error);
   if (m_remote_platform_sp)
     return m_remote_platform_sp->OpenFile(file_spec, flags, mode, error);
   return Platform::OpenFile(file_spec, flags, mode, error);
 }
 
 bool RemoteAwarePlatform::CloseFile(lldb::user_id_t fd, Status &error) {
-  if (IsHost())
-    return FileCache::GetInstance().CloseFile(fd, error);
   if (m_remote_platform_sp)
     return m_remote_platform_sp->CloseFile(fd, error);
   return Platform::CloseFile(fd, error);
@@ -236,8 +227,6 @@ bool RemoteAwarePlatform::CloseFile(lldb::user_id_t fd, Status &error) {
 uint64_t RemoteAwarePlatform::ReadFile(lldb::user_id_t fd, uint64_t offset,
                                        void *dst, uint64_t dst_len,
                                        Status &error) {
-  if (IsHost())
-    return FileCache::GetInstance().ReadFile(fd, offset, dst, dst_len, error);
   if (m_remote_platform_sp)
     return m_remote_platform_sp->ReadFile(fd, offset, dst, dst_len, error);
   return Platform::ReadFile(fd, offset, dst, dst_len, error);
@@ -246,20 +235,12 @@ uint64_t RemoteAwarePlatform::ReadFile(lldb::user_id_t fd, uint64_t offset,
 uint64_t RemoteAwarePlatform::WriteFile(lldb::user_id_t fd, uint64_t offset,
                                         const void *src, uint64_t src_len,
                                         Status &error) {
-  if (IsHost())
-    return FileCache::GetInstance().WriteFile(fd, offset, src, src_len, error);
   if (m_remote_platform_sp)
     return m_remote_platform_sp->WriteFile(fd, offset, src, src_len, error);
   return Platform::WriteFile(fd, offset, src, src_len, error);
 }
 
 lldb::user_id_t RemoteAwarePlatform::GetFileSize(const FileSpec &file_spec) {
-  if (IsHost()) {
-    uint64_t Size;
-    if (llvm::sys::fs::file_size(file_spec.GetPath(), Size))
-      return 0;
-    return Size;
-  }
   if (m_remote_platform_sp)
     return m_remote_platform_sp->GetFileSize(file_spec);
   return Platform::GetFileSize(file_spec);
@@ -267,24 +248,18 @@ lldb::user_id_t RemoteAwarePlatform::GetFileSize(const FileSpec &file_spec) {
 
 Status RemoteAwarePlatform::CreateSymlink(const FileSpec &src,
                                           const FileSpec &dst) {
-  if (IsHost())
-    return FileSystem::Instance().Symlink(src, dst);
   if (m_remote_platform_sp)
     return m_remote_platform_sp->CreateSymlink(src, dst);
   return Platform::CreateSymlink(src, dst);
 }
 
 bool RemoteAwarePlatform::GetFileExists(const FileSpec &file_spec) {
-  if (IsHost())
-    return FileSystem::Instance().Exists(file_spec);
   if (m_remote_platform_sp)
     return m_remote_platform_sp->GetFileExists(file_spec);
   return Platform::GetFileExists(file_spec);
 }
 
 Status RemoteAwarePlatform::Unlink(const FileSpec &file_spec) {
-  if (IsHost())
-    return llvm::sys::fs::remove(file_spec.GetPath());
   if (m_remote_platform_sp)
     return m_remote_platform_sp->Unlink(file_spec);
   return Platform::Unlink(file_spec);
@@ -292,11 +267,9 @@ Status RemoteAwarePlatform::Unlink(const FileSpec &file_spec) {
 
 bool RemoteAwarePlatform::CalculateMD5(const FileSpec &file_spec, uint64_t &low,
                                        uint64_t &high) {
-  if (IsHost())
-    return Platform::CalculateMD5(file_spec, low, high);
   if (m_remote_platform_sp)
     return m_remote_platform_sp->CalculateMD5(file_spec, low, high);
-  return false;
+  return Platform::CalculateMD5(file_spec, low, high);
 }
 
 FileSpec RemoteAwarePlatform::GetRemoteWorkingDirectory() {
@@ -332,18 +305,16 @@ bool RemoteAwarePlatform::GetRemoteOSVersion() {
   return false;
 }
 
-bool RemoteAwarePlatform::GetRemoteOSBuildString(std::string &s) {
+llvm::Optional<std::string> RemoteAwarePlatform::GetRemoteOSBuildString() {
   if (m_remote_platform_sp)
-    return m_remote_platform_sp->GetRemoteOSBuildString(s);
-  s.clear();
-  return false;
+    return m_remote_platform_sp->GetRemoteOSBuildString();
+  return llvm::None;
 }
 
-bool RemoteAwarePlatform::GetRemoteOSKernelDescription(std::string &s) {
+llvm::Optional<std::string> RemoteAwarePlatform::GetRemoteOSKernelDescription() {
   if (m_remote_platform_sp)
-    return m_remote_platform_sp->GetRemoteOSKernelDescription(s);
-  s.clear();
-  return false;
+    return m_remote_platform_sp->GetRemoteOSKernelDescription();
+  return llvm::None;
 }
 
 ArchSpec RemoteAwarePlatform::GetRemoteSystemArchitecture() {
@@ -353,55 +324,42 @@ ArchSpec RemoteAwarePlatform::GetRemoteSystemArchitecture() {
 }
 
 const char *RemoteAwarePlatform::GetHostname() {
-  if (IsHost())
-    return Platform::GetHostname();
   if (m_remote_platform_sp)
     return m_remote_platform_sp->GetHostname();
-  return nullptr;
+  return Platform::GetHostname();
 }
 
 UserIDResolver &RemoteAwarePlatform::GetUserIDResolver() {
-  if (IsHost())
-    return HostInfo::GetUserIDResolver();
   if (m_remote_platform_sp)
     return m_remote_platform_sp->GetUserIDResolver();
-  return UserIDResolver::GetNoopResolver();
+  return Platform::GetUserIDResolver();
 }
 
 Environment RemoteAwarePlatform::GetEnvironment() {
-  if (IsRemote()) {
-    if (m_remote_platform_sp)
-      return m_remote_platform_sp->GetEnvironment();
-    return Environment();
-  }
-  return Host::GetEnvironment();
+  if (m_remote_platform_sp)
+    return m_remote_platform_sp->GetEnvironment();
+  return Platform::GetEnvironment();
 }
 
 bool RemoteAwarePlatform::IsConnected() const {
-  if (IsHost())
-    return true;
-  else if (m_remote_platform_sp)
+  if (m_remote_platform_sp)
     return m_remote_platform_sp->IsConnected();
-  return false;
+  return Platform::IsConnected();
 }
 
 bool RemoteAwarePlatform::GetProcessInfo(lldb::pid_t pid,
                                          ProcessInstanceInfo &process_info) {
-  if (IsHost())
-    return Platform::GetProcessInfo(pid, process_info);
   if (m_remote_platform_sp)
     return m_remote_platform_sp->GetProcessInfo(pid, process_info);
-  return false;
+  return Platform::GetProcessInfo(pid, process_info);
 }
 
 uint32_t
 RemoteAwarePlatform::FindProcesses(const ProcessInstanceInfoMatch &match_info,
                                    ProcessInstanceInfoList &process_infos) {
-  if (IsHost())
-    return Platform::FindProcesses(match_info, process_infos);
   if (m_remote_platform_sp)
     return m_remote_platform_sp->FindProcesses(match_info, process_infos);
-  return 0;
+  return Platform::FindProcesses(match_info, process_infos);
 }
 
 lldb::ProcessSP RemoteAwarePlatform::ConnectProcess(llvm::StringRef connect_url,
@@ -417,25 +375,15 @@ lldb::ProcessSP RemoteAwarePlatform::ConnectProcess(llvm::StringRef connect_url,
 }
 
 Status RemoteAwarePlatform::LaunchProcess(ProcessLaunchInfo &launch_info) {
-  Status error;
-
-  if (IsHost()) {
-    error = Platform::LaunchProcess(launch_info);
-  } else {
-    if (m_remote_platform_sp)
-      error = m_remote_platform_sp->LaunchProcess(launch_info);
-    else
-      error.SetErrorString("the platform is not currently connected");
-  }
-  return error;
+  if (m_remote_platform_sp)
+    return m_remote_platform_sp->LaunchProcess(launch_info);
+  return Platform::LaunchProcess(launch_info);
 }
 
 Status RemoteAwarePlatform::KillProcess(const lldb::pid_t pid) {
-  if (IsHost())
-    return Platform::KillProcess(pid);
   if (m_remote_platform_sp)
     return m_remote_platform_sp->KillProcess(pid);
-  return Status("the platform is not currently connected");
+  return Platform::KillProcess(pid);
 }
 
 size_t RemoteAwarePlatform::ConnectToWaitingProcesses(Debugger &debugger,

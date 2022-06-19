@@ -69,12 +69,12 @@ define <8 x float> @test4(<8 x double>* %p) nounwind {
 ; CHECK-LABEL: test4:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; CHECK-NEXT:    cvtpd2ps 16(%eax), %xmm1
+; CHECK-NEXT:    cvtpd2ps 16(%eax), %xmm2
 ; CHECK-NEXT:    cvtpd2ps (%eax), %xmm0
-; CHECK-NEXT:    unpcklpd {{.*#+}} xmm0 = xmm0[0],xmm1[0]
-; CHECK-NEXT:    cvtpd2ps 48(%eax), %xmm2
+; CHECK-NEXT:    cvtpd2ps 48(%eax), %xmm3
 ; CHECK-NEXT:    cvtpd2ps 32(%eax), %xmm1
-; CHECK-NEXT:    unpcklpd {{.*#+}} xmm1 = xmm1[0],xmm2[0]
+; CHECK-NEXT:    unpcklpd {{.*#+}} xmm0 = xmm0[0],xmm2[0]
+; CHECK-NEXT:    unpcklpd {{.*#+}} xmm1 = xmm1[0],xmm3[0]
 ; CHECK-NEXT:    retl
 ;
 ; AVX-LABEL: test4:

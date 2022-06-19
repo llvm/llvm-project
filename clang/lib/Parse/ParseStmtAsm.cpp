@@ -10,10 +10,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "clang/Parse/Parser.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/Basic/Diagnostic.h"
 #include "clang/Basic/TargetInfo.h"
+#include "clang/Parse/Parser.h"
 #include "clang/Parse/RAIIObjectsForParser.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringExtras.h"
@@ -28,8 +28,8 @@
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/MC/MCTargetOptions.h"
+#include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/SourceMgr.h"
-#include "llvm/Support/TargetRegistry.h"
 #include "llvm/Support/TargetSelect.h"
 using namespace clang;
 
@@ -222,7 +222,7 @@ ExprResult Parser::ParseMSAsmIdentifier(llvm::SmallVectorImpl<Token> &LineToks,
   CXXScopeSpec SS;
   if (getLangOpts().CPlusPlus)
     ParseOptionalCXXScopeSpecifier(SS, /*ObjectType=*/nullptr,
-                                   /*ObjectHadErrors=*/false,
+                                   /*ObjectHasErrors=*/false,
                                    /*EnteringContext=*/false);
 
   // Require an identifier here.
@@ -508,7 +508,7 @@ StmtResult Parser::ParseMicrosoftAsmStatement(SourceLocation AsmLoc) {
     TokLoc = Tok.getLocation();
     ++NumTokensRead;
     SkippedStartOfLine = false;
-  } while (1);
+  } while (true);
 
   if (BraceNesting && BraceCount != savedBraceCount) {
     // __asm without closing brace (this can happen at EOF).
@@ -681,7 +681,7 @@ StmtResult Parser::ParseMicrosoftAsmStatement(SourceLocation AsmLoc) {
 ///         asm-qualifier
 ///         asm-qualifier-list asm-qualifier
 bool Parser::parseGNUAsmQualifierListOpt(GNUAsmQualifiers &AQ) {
-  while (1) {
+  while (true) {
     const GNUAsmQualifiers::AQ A = getGNUAsmQualifier(Tok);
     if (A == GNUAsmQualifiers::AQ_unspecified) {
       if (Tok.isNot(tok::l_paren)) {
@@ -810,7 +810,7 @@ StmtResult Parser::ParseAsmStatement(bool &msAsm) {
     }
     // Parse the asm-string list for clobbers if present.
     if (!AteExtraColon && isTokenStringLiteral()) {
-      while (1) {
+      while (true) {
         ExprResult Clobber(ParseAsmStringLiteral(/*ForAsmLabel*/ false));
 
         if (Clobber.isInvalid())
@@ -888,7 +888,7 @@ bool Parser::ParseAsmOperandsOpt(SmallVectorImpl<IdentifierInfo *> &Names,
   if (!isTokenStringLiteral() && Tok.isNot(tok::l_square))
     return false;
 
-  while (1) {
+  while (true) {
     // Read the [id] if present.
     if (Tok.is(tok::l_square)) {
       BalancedDelimiterTracker T(*this, tok::l_square);

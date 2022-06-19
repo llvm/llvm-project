@@ -4,7 +4,7 @@ macro(add_pdb_impl_folder group)
 endmacro()
 
 if(LLVM_ENABLE_DIA_SDK)
-  include_directories(${MSVC_DIA_SDK_DIR}/include)
+  include_directories(SYSTEM ${MSVC_DIA_SDK_DIR}/include)
   set(LIBPDB_LINK_FOLDERS "${MSVC_DIA_SDK_DIR}\\lib")
 
   if ("$ENV{VSCMD_ARG_TGT_ARCH}" STREQUAL "arm64")
@@ -47,12 +47,15 @@ add_pdb_impl_folder(Native
   Native/DbiStream.cpp
   Native/DbiStreamBuilder.cpp
   Native/EnumTables.cpp
+  Native/FormatUtil.cpp
   Native/GlobalsStream.cpp
   Native/Hash.cpp
   Native/HashTable.cpp
   Native/InfoStream.cpp
   Native/InfoStreamBuilder.cpp
   Native/InjectedSourceStream.cpp
+  Native/InputFile.cpp
+  Native/LinePrinter.cpp
   Native/ModuleDebugStream.cpp
   Native/NativeCompilandSymbol.cpp
   Native/NativeEnumGlobals.cpp

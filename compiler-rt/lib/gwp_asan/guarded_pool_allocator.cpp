@@ -59,6 +59,13 @@ void GuardedPoolAllocator::init(const options::Options &Opts) {
   SingletonPtr = this;
   Backtrace = Opts.Backtrace;
 
+  State.VersionMagic = {{AllocatorVersionMagic::kAllocatorVersionMagic[0],
+                         AllocatorVersionMagic::kAllocatorVersionMagic[1],
+                         AllocatorVersionMagic::kAllocatorVersionMagic[2],
+                         AllocatorVersionMagic::kAllocatorVersionMagic[3]},
+                        AllocatorVersionMagic::kAllocatorVersion,
+                        0};
+
   State.MaxSimultaneousAllocations = Opts.MaxSimultaneousAllocations;
 
   const size_t PageSize = getPlatformPageSize();

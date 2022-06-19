@@ -15,10 +15,15 @@
 //===----------------------------------------------------------------------===//
 
 #include "Opts.inc"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Config/config.h"
 #include "llvm/DebugInfo/Symbolize/DIPrinter.h"
+#include "llvm/DebugInfo/Symbolize/SymbolizableModule.h"
 #include "llvm/DebugInfo/Symbolize/Symbolize.h"
+#include "llvm/Debuginfod/DIFetcher.h"
+#include "llvm/Debuginfod/Debuginfod.h"
+#include "llvm/Debuginfod/HTTPClient.h"
 #include "llvm/Option/Arg.h"
 #include "llvm/Option/ArgList.h"
 #include "llvm/Option/Option.h"
@@ -52,7 +57,7 @@ enum ID {
 #include "Opts.inc"
 #undef PREFIX
 
-static const opt::OptTable::Info InfoTable[] = {
+const opt::OptTable::Info InfoTable[] = {
 #define OPTION(PREFIX, NAME, ID, KIND, GROUP, ALIAS, ALIASARGS, FLAGS, PARAM,  \
                HELPTEXT, METAVAR, VALUES)                                      \
   {                                                                            \
@@ -101,9 +106,31 @@ enum class Command {
   Frame,
 };
 
+static void enableDebuginfod(LLVMSymbolizer &Symbolizer) {
+  static bool IsEnabled = false;
+  if (IsEnabled)
+    return;
+  IsEnabled = true;
+  // Look up symbols using the debuginfod client.
+  Symbolizer.addDIFetcher(std::make_unique<DebuginfodDIFetcher>());
+  // The HTTPClient must be initialized for use by the debuginfod client.
+  HTTPClient::initialize();
+}
+
+static SmallVector<uint8_t> parseBuildID(StringRef Str) {
+  std::string Bytes;
+  if (!tryGetFromHex(Str, Bytes))
+    return {};
+  ArrayRef<uint8_t> BuildID(reinterpret_cast<const uint8_t *>(Bytes.data()),
+                            Bytes.size());
+  return SmallVector<uint8_t>(BuildID.begin(), BuildID.end());
+}
+
 static bool parseCommand(StringRef BinaryName, bool IsAddr2Line,
                          StringRef InputString, Command &Cmd,
-                         std::string &ModuleName, uint64_t &ModuleOffset) {
+                         std::string &ModuleName,
+                         SmallVectorImpl<uint8_t> &BuildID,
+                         uint64_t &ModuleOffset) {
   const char kDelimiters[] = " \n\r";
   ModuleName = "";
   if (InputString.consume_front("CODE ")) {
@@ -116,9 +143,31 @@ static bool parseCommand(StringRef BinaryName, bool IsAddr2Line,
     // If no cmd, assume it's CODE.
     Cmd = Command::Code;
   }
-  const char *Pos = InputString.data();
+
+  const char *Pos;
   // Skip delimiters and parse input filename (if needed).
-  if (BinaryName.empty()) {
+  if (BinaryName.empty() && BuildID.empty()) {
+    bool HasFilePrefix = false;
+    bool HasBuildIDPrefix = false;
+    while (true) {
+      if (InputString.consume_front("FILE:")) {
+        if (HasFilePrefix)
+          return false;
+        HasFilePrefix = true;
+        continue;
+      }
+      if (InputString.consume_front("BUILDID:")) {
+        if (HasBuildIDPrefix)
+          return false;
+        HasBuildIDPrefix = true;
+        continue;
+      }
+      break;
+    }
+    if (HasFilePrefix && HasBuildIDPrefix)
+      return false;
+
+    Pos = InputString.data();
     Pos += strspn(Pos, kDelimiters);
     if (*Pos == '"' || *Pos == '\'') {
       char Quote = *Pos;
@@ -133,7 +182,14 @@ static bool parseCommand(StringRef BinaryName, bool IsAddr2Line,
       ModuleName = std::string(Pos, NameLength);
       Pos += NameLength;
     }
+    if (HasBuildIDPrefix) {
+      BuildID = parseBuildID(ModuleName);
+      if (BuildID.empty())
+        return false;
+      ModuleName.clear();
+    }
   } else {
+    Pos = InputString.data();
     ModuleName = BinaryName.str();
   }
   // Skip delimiters and parse module offset.
@@ -147,31 +203,24 @@ static bool parseCommand(StringRef BinaryName, bool IsAddr2Line,
   return !Offset.getAsInteger(IsAddr2Line ? 16 : 0, ModuleOffset);
 }
 
-static void symbolizeInput(const opt::InputArgList &Args, uint64_t AdjustVMA,
-                           bool IsAddr2Line, OutputStyle Style,
-                           StringRef InputString, LLVMSymbolizer &Symbolizer,
-                           DIPrinter &Printer) {
-  Command Cmd;
-  std::string ModuleName;
-  uint64_t Offset = 0;
-  if (!parseCommand(Args.getLastArgValue(OPT_obj_EQ), IsAddr2Line,
-                    StringRef(InputString), Cmd, ModuleName, Offset)) {
-    Printer.printInvalidCommand({ModuleName, None}, InputString);
-    return;
-  }
-
+template <typename T>
+void executeCommand(StringRef ModuleName, const T &ModuleSpec, Command Cmd,
+                    uint64_t Offset, uint64_t AdjustVMA, bool ShouldInline,
+                    OutputStyle Style, LLVMSymbolizer &Symbolizer,
+                    DIPrinter &Printer) {
   uint64_t AdjustedOffset = Offset - AdjustVMA;
+  object::SectionedAddress Address = {AdjustedOffset,
+                                      object::SectionedAddress::UndefSection};
   if (Cmd == Command::Data) {
-    Expected<DIGlobal> ResOrErr = Symbolizer.symbolizeData(
-        ModuleName, {AdjustedOffset, object::SectionedAddress::UndefSection});
+    Expected<DIGlobal> ResOrErr = Symbolizer.symbolizeData(ModuleSpec, Address);
     print({ModuleName, Offset}, ResOrErr, Printer);
   } else if (Cmd == Command::Frame) {
-    Expected<std::vector<DILocal>> ResOrErr = Symbolizer.symbolizeFrame(
-        ModuleName, {AdjustedOffset, object::SectionedAddress::UndefSection});
+    Expected<std::vector<DILocal>> ResOrErr =
+        Symbolizer.symbolizeFrame(ModuleSpec, Address);
     print({ModuleName, Offset}, ResOrErr, Printer);
-  } else if (Args.hasFlag(OPT_inlines, OPT_no_inlines, !IsAddr2Line)) {
-    Expected<DIInliningInfo> ResOrErr = Symbolizer.symbolizeInlinedCode(
-        ModuleName, {AdjustedOffset, object::SectionedAddress::UndefSection});
+  } else if (ShouldInline) {
+    Expected<DIInliningInfo> ResOrErr =
+        Symbolizer.symbolizeInlinedCode(ModuleSpec, Address);
     print({ModuleName, Offset}, ResOrErr, Printer);
   } else if (Style == OutputStyle::GNU) {
     // With PrintFunctions == FunctionNameKind::LinkageName (default)
@@ -180,8 +229,8 @@ static void symbolizeInput(const opt::InputArgList &Args, uint64_t AdjustVMA,
     // caller function in the inlining chain. This contradicts the existing
     // behavior of addr2line. Symbolizer.symbolizeInlinedCode() overrides only
     // the topmost function, which suits our needs better.
-    Expected<DIInliningInfo> ResOrErr = Symbolizer.symbolizeInlinedCode(
-        ModuleName, {AdjustedOffset, object::SectionedAddress::UndefSection});
+    Expected<DIInliningInfo> ResOrErr =
+        Symbolizer.symbolizeInlinedCode(ModuleSpec, Address);
     Expected<DILineInfo> Res0OrErr =
         !ResOrErr
             ? Expected<DILineInfo>(ResOrErr.takeError())
@@ -189,9 +238,38 @@ static void symbolizeInput(const opt::InputArgList &Args, uint64_t AdjustVMA,
                                                     : ResOrErr->getFrame(0));
     print({ModuleName, Offset}, Res0OrErr, Printer);
   } else {
-    Expected<DILineInfo> ResOrErr = Symbolizer.symbolizeCode(
-        ModuleName, {AdjustedOffset, object::SectionedAddress::UndefSection});
+    Expected<DILineInfo> ResOrErr =
+        Symbolizer.symbolizeCode(ModuleSpec, Address);
     print({ModuleName, Offset}, ResOrErr, Printer);
+  }
+  Symbolizer.pruneCache();
+}
+
+static void symbolizeInput(const opt::InputArgList &Args,
+                           ArrayRef<uint8_t> IncomingBuildID,
+                           uint64_t AdjustVMA, bool IsAddr2Line,
+                           OutputStyle Style, StringRef InputString,
+                           LLVMSymbolizer &Symbolizer, DIPrinter &Printer) {
+  Command Cmd;
+  std::string ModuleName;
+  SmallVector<uint8_t> BuildID(IncomingBuildID.begin(), IncomingBuildID.end());
+  uint64_t Offset = 0;
+  if (!parseCommand(Args.getLastArgValue(OPT_obj_EQ), IsAddr2Line,
+                    StringRef(InputString), Cmd, ModuleName, BuildID, Offset)) {
+    Printer.printInvalidCommand({ModuleName, None}, InputString);
+    return;
+  }
+  bool ShouldInline = Args.hasFlag(OPT_inlines, OPT_no_inlines, !IsAddr2Line);
+  if (!BuildID.empty()) {
+    assert(ModuleName.empty());
+    if (!Args.hasArg(OPT_no_debuginfod))
+      enableDebuginfod(Symbolizer);
+    std::string BuildIDStr = toHex(BuildID);
+    executeCommand(BuildIDStr, BuildID, Cmd, Offset, AdjustVMA, ShouldInline,
+                   Style, Symbolizer, Printer);
+  } else {
+    executeCommand(ModuleName, ModuleName, Cmd, Offset, AdjustVMA, ShouldInline,
+                   Style, Symbolizer, Printer);
   }
 }
 
@@ -259,6 +337,23 @@ static FunctionNameKind decideHowToPrintFunctions(const opt::InputArgList &Args,
   return IsAddr2Line ? FunctionNameKind::None : FunctionNameKind::LinkageName;
 }
 
+static SmallVector<uint8_t> parseBuildIDArg(const opt::InputArgList &Args,
+                                            int ID) {
+  const opt::Arg *A = Args.getLastArg(ID);
+  if (!A)
+    return {};
+
+  StringRef V(A->getValue());
+  SmallVector<uint8_t> BuildID = parseBuildID(V);
+  if (BuildID.empty()) {
+    errs() << A->getSpelling() + ": expected a build ID, but got '" + V + "'\n";
+    exit(1);
+  }
+  return BuildID;
+}
+
+ExitOnError ExitOnErr;
+
 int main(int argc, char **argv) {
   InitLLVM X(argc, argv);
   sys::InitializeCOMRAII COM(sys::COMThreadingMode::MultiThreaded);
@@ -301,6 +396,8 @@ int main(int argc, char **argv) {
   }
 #endif
   Opts.UseSymbolTable = true;
+  if (Args.hasArg(OPT_cache_size_EQ))
+    parseIntArg(Args, OPT_cache_size_EQ, Opts.MaxCacheSize);
   Config.PrintAddress = Args.hasArg(OPT_addresses);
   Config.PrintFunctions = Opts.PrintFunctions != FunctionNameKind::None;
   Config.Pretty = Args.hasArg(OPT_pretty_print);
@@ -326,7 +423,23 @@ int main(int argc, char **argv) {
       Style = OutputStyle::LLVM;
   }
 
+  if (Args.hasArg(OPT_build_id_EQ) && Args.hasArg(OPT_obj_EQ)) {
+    errs() << "error: cannot specify both --build-id and --obj\n";
+    return EXIT_FAILURE;
+  }
+  SmallVector<uint8_t> BuildID = parseBuildIDArg(Args, OPT_build_id_EQ);
+
   LLVMSymbolizer Symbolizer(Opts);
+
+  // A debuginfod lookup could succeed if a HTTP client is available and at
+  // least one backing URL is configured.
+  bool ShouldUseDebuginfodByDefault =
+      HTTPClient::isAvailable() &&
+      !ExitOnErr(getDefaultDebuginfodUrls()).empty();
+  if (Args.hasFlag(OPT_debuginfod, OPT_no_debuginfod,
+                   ShouldUseDebuginfodByDefault))
+    enableDebuginfod(Symbolizer);
+
   std::unique_ptr<DIPrinter> Printer;
   if (Style == OutputStyle::GNU)
     Printer = std::make_unique<GNUPrinter>(outs(), errs(), Config);
@@ -345,15 +458,15 @@ int main(int argc, char **argv) {
       std::string StrippedInputString(InputString);
       llvm::erase_if(StrippedInputString,
                      [](char c) { return c == '\r' || c == '\n'; });
-      symbolizeInput(Args, AdjustVMA, IsAddr2Line, Style, StrippedInputString,
-                     Symbolizer, *Printer);
+      symbolizeInput(Args, BuildID, AdjustVMA, IsAddr2Line, Style,
+                     StrippedInputString, Symbolizer, *Printer);
       outs().flush();
     }
   } else {
     Printer->listBegin();
     for (StringRef Address : InputAddresses)
-      symbolizeInput(Args, AdjustVMA, IsAddr2Line, Style, Address, Symbolizer,
-                     *Printer);
+      symbolizeInput(Args, BuildID, AdjustVMA, IsAddr2Line, Style, Address,
+                     Symbolizer, *Printer);
     Printer->listEnd();
   }
 

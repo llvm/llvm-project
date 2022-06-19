@@ -14,7 +14,7 @@ Sphinx <http://sphinx-doc.org/> and then do:
     cd <build-dir>
     cmake -DLLVM_ENABLE_SPHINX=true -DSPHINX_OUTPUT_HTML=true <src-dir>
     make -j3 docs-llvm-html
-    $BROWSER <build-dir>/docs//html/index.html
+    $BROWSER <build-dir>/docs/html/index.html
 
 The mapping between reStructuredText files and generated documentation is
 `docs/Foo.rst` <-> `<build-dir>/docs//html/Foo.html` <-> `https://llvm.org/docs/Foo.html`.
@@ -35,7 +35,7 @@ directory `<build-dir>/docs/man/`.
     cd <build-dir>
     cmake -DLLVM_ENABLE_SPHINX=true -DSPHINX_OUTPUT_MAN=true <src-dir>
     make -j3 docs-llvm-man
-    man -l >build-dir>/docs/man/FileCheck.1
+    man -l <build-dir>/docs/man/FileCheck.1
 
 The correspondence between .rst files and man pages is
 `docs/CommandGuide/Foo.rst` <-> `<build-dir>/docs//man/Foo.1`.
@@ -49,13 +49,14 @@ Checking links
 The reachability of external links in the documentation can be checked by
 running:
 
-    cd docs/
-    make -f Makefile.sphinx linkcheck
+    cd llvm/docs/
+    sphinx-build -b linkcheck . _build/lintcheck/
+    # report will be generated in _build/lintcheck/output.txt
 
 Doxygen page Output
 ==============
 
-Install doxygen <http://www.stack.nl/~dimitri/doxygen/download.html> and dot2tex <https://dot2tex.readthedocs.io/en/latest>.
+Install doxygen <https://www.doxygen.nl/download.html> and dot2tex <https://dot2tex.readthedocs.io/en/latest>.
 
     cd <build-dir>
     cmake -DLLVM_ENABLE_DOXYGEN=On <llvm-top-src-dir>

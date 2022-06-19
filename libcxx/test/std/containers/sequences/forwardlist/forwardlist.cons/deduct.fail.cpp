@@ -8,14 +8,11 @@
 
 // <forward_list>
 // UNSUPPORTED: c++03, c++11, c++14
-// UNSUPPORTED: libcpp-no-deduction-guides
-
 
 // template <class InputIterator, class Allocator = allocator<typename iterator_traits<InputIterator>::value_type>>
 //    forward_list(InputIterator, InputIterator, Allocator = Allocator())
 //    -> forward_list<typename iterator_traits<InputIterator>::value_type, Allocator>;
 //
-
 
 #include <forward_list>
 #include <iterator>

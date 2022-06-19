@@ -28,8 +28,6 @@
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DataLayout.h"
-#include "llvm/IR/DebugInfo.h"
-#include "llvm/IR/DebugLoc.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/Function.h"
@@ -148,10 +146,8 @@ bool StackProtector::ContainsProtectableArray(Type *Ty, bool &IsLarge,
     return false;
 
   bool NeedsProtector = false;
-  for (StructType::element_iterator I = ST->element_begin(),
-                                    E = ST->element_end();
-       I != E; ++I)
-    if (ContainsProtectableArray(*I, IsLarge, Strong, true)) {
+  for (Type *ET : ST->elements())
+    if (ContainsProtectableArray(ET, IsLarge, Strong, true)) {
       // If the element is a protectable array and is large (>= SSPBufferSize)
       // then we are done.  If the protectable array is not large, then
       // keep looking in case a subsequent element is a large array.
@@ -164,7 +160,7 @@ bool StackProtector::ContainsProtectableArray(Type *Ty, bool &IsLarge,
 }
 
 bool StackProtector::HasAddressTaken(const Instruction *AI,
-                                     uint64_t AllocSize) {
+                                     TypeSize AllocSize) {
   const DataLayout &DL = M->getDataLayout();
   for (const User *U : AI->users()) {
     const auto *I = cast<Instruction>(U);
@@ -172,7 +168,8 @@ bool StackProtector::HasAddressTaken(const Instruction *AI,
     // the bounds of the allocated object.
     Optional<MemoryLocation> MemLoc = MemoryLocation::getOrNone(I);
     if (MemLoc.hasValue() && MemLoc->Size.hasValue() &&
-        MemLoc->Size.getValue() > AllocSize)
+        !TypeSize::isKnownGE(AllocSize,
+                             TypeSize::getFixed(MemLoc->Size.getValue())))
       return true;
     switch (I->getOpcode()) {
     case Instruction::Store:
@@ -205,13 +202,19 @@ bool StackProtector::HasAddressTaken(const Instruction *AI,
       // would use it could also be out-of-bounds meaning stack protection is
       // required.
       const GetElementPtrInst *GEP = cast<GetElementPtrInst>(I);
-      unsigned TypeSize = DL.getIndexTypeSizeInBits(I->getType());
-      APInt Offset(TypeSize, 0);
-      APInt MaxOffset(TypeSize, AllocSize);
-      if (!GEP->accumulateConstantOffset(DL, Offset) || Offset.ugt(MaxOffset))
+      unsigned IndexSize = DL.getIndexTypeSizeInBits(I->getType());
+      APInt Offset(IndexSize, 0);
+      if (!GEP->accumulateConstantOffset(DL, Offset))
+        return true;
+      TypeSize OffsetSize = TypeSize::Fixed(Offset.getLimitedValue());
+      if (!TypeSize::isKnownGT(AllocSize, OffsetSize))
         return true;
       // Adjust AllocSize to be the space remaining after this offset.
-      if (HasAddressTaken(I, AllocSize - Offset.getLimitedValue()))
+      // We can't subtract a fixed size from a scalable one, so in that case
+      // assume the scalable value is of minimum size.
+      TypeSize NewAllocSize =
+          TypeSize::Fixed(AllocSize.getKnownMinValue()) - OffsetSize;
+      if (HasAddressTaken(I, NewAllocSize))
         return true;
       break;
     }
@@ -436,13 +439,11 @@ bool StackProtector::InsertStackProtectors() {
   // protection in SDAG.
   bool SupportsSelectionDAGSP =
       TLI->useStackGuardXorFP() ||
-      (EnableSelectionDAGSP && !TM->Options.EnableFastISel &&
-       !TM->Options.EnableGlobalISel);
-  AllocaInst *AI = nullptr;       // Place on stack that stores the stack guard.
+      (EnableSelectionDAGSP && !TM->Options.EnableFastISel);
+  AllocaInst *AI = nullptr; // Place on stack that stores the stack guard.
 
-  for (Function::iterator I = F->begin(), E = F->end(); I != E;) {
-    BasicBlock *BB = &*I++;
-    ReturnInst *RI = dyn_cast<ReturnInst>(BB->getTerminator());
+  for (BasicBlock &BB : llvm::make_early_inc_range(*F)) {
+    ReturnInst *RI = dyn_cast<ReturnInst>(BB.getTerminator());
     if (!RI)
       continue;
 
@@ -530,23 +531,23 @@ bool StackProtector::InsertStackProtectors() {
 
       // Split the basic block before the return instruction.
       BasicBlock *NewBB =
-          BB->splitBasicBlock(CheckLoc->getIterator(), "SP_return");
+          BB.splitBasicBlock(CheckLoc->getIterator(), "SP_return");
 
       // Update the dominator tree if we need to.
-      if (DT && DT->isReachableFromEntry(BB)) {
-        DT->addNewBlock(NewBB, BB);
-        DT->addNewBlock(FailBB, BB);
+      if (DT && DT->isReachableFromEntry(&BB)) {
+        DT->addNewBlock(NewBB, &BB);
+        DT->addNewBlock(FailBB, &BB);
       }
 
       // Remove default branch instruction to the new BB.
-      BB->getTerminator()->eraseFromParent();
+      BB.getTerminator()->eraseFromParent();
 
       // Move the newly created basic block to the point right after the old
       // basic block so that it's in the "fall through" position.
-      NewBB->moveAfter(BB);
+      NewBB->moveAfter(&BB);
 
       // Generate the stack protector instructions in the old basic block.
-      IRBuilder<> B(BB);
+      IRBuilder<> B(&BB);
       Value *Guard = getStackGuard(TLI, M, B);
       LoadInst *LI2 = B.CreateLoad(B.getInt8PtrTy(), AI, true);
       Value *Cmp = B.CreateICmpEQ(Guard, LI2);

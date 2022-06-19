@@ -154,7 +154,7 @@ body:             |
   ; CHECK:   frame-setup CFI_INSTRUCTION def_cfa_offset 8
   ; CHECK:   frame-setup CFI_INSTRUCTION offset $lr, -4
   ; CHECK:   frame-setup CFI_INSTRUCTION offset $r4, -8
-  ; CHECK:   renamable $q0 = MVE_VMOVimmi32 0, 0, $noreg, undef renamable $q0
+  ; CHECK:   renamable $q0 = MVE_VMOVimmi32 0, 0, $noreg, $noreg, undef renamable $q0
   ; CHECK:   $r3 = tMOVr $r1, 14 /* CC::al */, $noreg
   ; CHECK:   $r12 = tMOVr $r0, 14 /* CC::al */, $noreg
   ; CHECK:   $lr = MVE_DLSTP_32 killed renamable $r3
@@ -162,8 +162,8 @@ body:             |
   ; CHECK: bb.1.do.body.i:
   ; CHECK:   successors: %bb.1(0x7c000000), %bb.2(0x04000000)
   ; CHECK:   liveins: $lr, $q0, $r0, $r1, $r2, $r4, $r12
-  ; CHECK:   renamable $r12, renamable $q1 = MVE_VLDRWU32_post killed renamable $r12, 16, 0, $noreg :: (load (s128) from %ir.pSrc.addr.0.i2, align 4)
-  ; CHECK:   renamable $q0 = nnan ninf nsz arcp contract afn reassoc MVE_VADDf32 killed renamable $q0, killed renamable $q1, 0, killed $noreg, killed renamable $q0
+  ; CHECK:   renamable $r12, renamable $q1 = MVE_VLDRWU32_post killed renamable $r12, 16, 0, $noreg, $noreg :: (load (s128) from %ir.pSrc.addr.0.i2, align 4)
+  ; CHECK:   renamable $q0 = nnan ninf nsz arcp contract afn reassoc MVE_VADDf32 killed renamable $q0, killed renamable $q1, 0, killed $noreg, $noreg, killed renamable $q0
   ; CHECK:   $lr = MVE_LETP killed renamable $lr, %bb.1
   ; CHECK: bb.2.arm_mean_f32_mve.exit:
   ; CHECK:   successors: %bb.3(0x80000000)
@@ -175,18 +175,18 @@ body:             |
   ; CHECK:   renamable $s4 = VUITOS killed renamable $s4, 14 /* CC::al */, $noreg
   ; CHECK:   renamable $s0 = nnan ninf nsz arcp contract afn reassoc VDIVS killed renamable $s0, killed renamable $s4, 14 /* CC::al */, $noreg
   ; CHECK:   renamable $r3 = VMOVRS killed renamable $s0, 14 /* CC::al */, $noreg
-  ; CHECK:   renamable $q0 = MVE_VMOVimmi32 0, 0, $noreg, undef renamable $q0
-  ; CHECK:   renamable $q1 = MVE_VDUP32 killed renamable $r3, 0, $noreg, undef renamable $q1
+  ; CHECK:   renamable $q0 = MVE_VMOVimmi32 0, 0, $noreg, $noreg, undef renamable $q0
+  ; CHECK:   renamable $q1 = MVE_VDUP32 killed renamable $r3, 0, $noreg, $noreg, undef renamable $q1
   ; CHECK:   $r3 = tMOVr $r1, 14 /* CC::al */, $noreg
   ; CHECK: bb.3.do.body:
   ; CHECK:   successors: %bb.3(0x7c000000), %bb.4(0x04000000)
   ; CHECK:   liveins: $lr, $q0, $q1, $r0, $r1, $r2, $r3
-  ; CHECK:   renamable $vpr = MVE_VCTP32 renamable $r3, 0, $noreg
+  ; CHECK:   renamable $vpr = MVE_VCTP32 renamable $r3, 0, $noreg, $noreg
   ; CHECK:   renamable $r3, dead $cpsr = tSUBi8 killed renamable $r3, 4, 14 /* CC::al */, $noreg
   ; CHECK:   MVE_VPST 2, implicit $vpr
-  ; CHECK:   renamable $r0, renamable $q2 = MVE_VLDRWU32_post killed renamable $r0, 16, 1, renamable $vpr :: (load (s128) from %ir.pSrc.addr.01, align 4)
-  ; CHECK:   renamable $q2 = nnan ninf nsz arcp contract afn reassoc MVE_VSUBf32 killed renamable $q2, renamable $q1, 1, renamable $vpr, undef renamable $q2
-  ; CHECK:   renamable $q0 = nnan ninf nsz arcp contract afn reassoc MVE_VFMAf32 killed renamable $q0, killed renamable $q2, killed renamable $q2, 1, killed renamable $vpr
+  ; CHECK:   renamable $r0, renamable $q2 = MVE_VLDRWU32_post killed renamable $r0, 16, 1, renamable $vpr, $noreg :: (load (s128) from %ir.pSrc.addr.01, align 4)
+  ; CHECK:   renamable $q2 = nnan ninf nsz arcp contract afn reassoc MVE_VSUBf32 killed renamable $q2, renamable $q1, 1, renamable $vpr, $noreg, undef renamable $q2
+  ; CHECK:   renamable $q0 = nnan ninf nsz arcp contract afn reassoc MVE_VFMAf32 killed renamable $q0, killed renamable $q2, killed renamable $q2, 1, killed renamable $vpr, $noreg
   ; CHECK:   $lr = t2LEUpdate killed renamable $lr, %bb.3
   ; CHECK: bb.4.do.end:
   ; CHECK:   liveins: $q0, $r1, $r2
@@ -211,7 +211,7 @@ body:             |
     renamable $r3 = tMOVi8 $noreg, 4, 10 /* CC::ge */, killed $cpsr, implicit killed renamable $r3, implicit killed $itstate
     renamable $r12 = t2MOVi 1, 14 /* CC::al */, $noreg, $noreg
     renamable $r3, dead $cpsr = tSUBrr renamable $r1, killed renamable $r3, 14 /* CC::al */, $noreg
-    renamable $q0 = MVE_VMOVimmi32 0, 0, $noreg, undef renamable $q0
+    renamable $q0 = MVE_VMOVimmi32 0, 0, $noreg, $noreg, undef renamable $q0
     renamable $r3, dead $cpsr = tADDi8 killed renamable $r3, 3, 14 /* CC::al */, $noreg
     renamable $lr = nuw nsw t2ADDrs killed renamable $r12, killed renamable $r3, 19, 14 /* CC::al */, $noreg, $noreg
     $r3 = tMOVr $r1, 14 /* CC::al */, $noreg
@@ -223,12 +223,12 @@ body:             |
     successors: %bb.1(0x7c000000), %bb.2(0x04000000)
     liveins: $lr, $q0, $r0, $r1, $r2, $r3, $r4, $r12
 
-    renamable $vpr = MVE_VCTP32 renamable $r3, 0, $noreg
+    renamable $vpr = MVE_VCTP32 renamable $r3, 0, $noreg, $noreg
     renamable $r3, dead $cpsr = tSUBi8 killed renamable $r3, 4, 14 /* CC::al */, $noreg
     renamable $lr = t2LoopDec killed renamable $lr, 1
     MVE_VPST 4, implicit $vpr
-    renamable $r12, renamable $q1 = MVE_VLDRWU32_post killed renamable $r12, 16, 1, renamable $vpr :: (load (s128) from %ir.pSrc.addr.0.i2, align 4)
-    renamable $q0 = nnan ninf nsz arcp contract afn reassoc MVE_VADDf32 killed renamable $q0, killed renamable $q1, 1, killed renamable $vpr, renamable $q0
+    renamable $r12, renamable $q1 = MVE_VLDRWU32_post killed renamable $r12, 16, 1, renamable $vpr, $noreg :: (load (s128) from %ir.pSrc.addr.0.i2, align 4)
+    renamable $q0 = nnan ninf nsz arcp contract afn reassoc MVE_VADDf32 killed renamable $q0, killed renamable $q1, 1, killed renamable $vpr, $noreg, renamable $q0
     t2LoopEnd renamable $lr, %bb.1, implicit-def dead $cpsr
     tB %bb.2, 14 /* CC::al */, $noreg
 
@@ -243,21 +243,21 @@ body:             |
     renamable $s4 = VUITOS killed renamable $s4, 14 /* CC::al */, $noreg
     renamable $s0 = nnan ninf nsz arcp contract afn reassoc VDIVS killed renamable $s0, killed renamable $s4, 14 /* CC::al */, $noreg
     renamable $r3 = VMOVRS killed renamable $s0, 14 /* CC::al */, $noreg
-    renamable $q0 = MVE_VMOVimmi32 0, 0, $noreg, undef renamable $q0
-    renamable $q1 = MVE_VDUP32 killed renamable $r3, 0, $noreg, undef renamable $q1
+    renamable $q0 = MVE_VMOVimmi32 0, 0, $noreg, $noreg, undef renamable $q0
+    renamable $q1 = MVE_VDUP32 killed renamable $r3, 0, $noreg, $noreg, undef renamable $q1
     $r3 = tMOVr $r1, 14 /* CC::al */, $noreg
 
   bb.3.do.body:
     successors: %bb.3(0x7c000000), %bb.4(0x04000000)
     liveins: $lr, $q0, $q1, $r0, $r1, $r2, $r3
 
-    renamable $vpr = MVE_VCTP32 renamable $r3, 0, $noreg
+    renamable $vpr = MVE_VCTP32 renamable $r3, 0, $noreg, $noreg
     renamable $r3, dead $cpsr = tSUBi8 killed renamable $r3, 4, 14 /* CC::al */, $noreg
     renamable $lr = t2LoopDec killed renamable $lr, 1
     MVE_VPST 2, implicit $vpr
-    renamable $r0, renamable $q2 = MVE_VLDRWU32_post killed renamable $r0, 16, 1, renamable $vpr :: (load (s128) from %ir.pSrc.addr.01, align 4)
-    renamable $q2 = nnan ninf nsz arcp contract afn reassoc MVE_VSUBf32 killed renamable $q2, renamable $q1, 1, renamable $vpr, undef renamable $q2
-    renamable $q0 = nnan ninf nsz arcp contract afn reassoc MVE_VFMAf32 killed renamable $q0, killed renamable $q2, renamable $q2, 1, killed renamable $vpr
+    renamable $r0, renamable $q2 = MVE_VLDRWU32_post killed renamable $r0, 16, 1, renamable $vpr, $noreg :: (load (s128) from %ir.pSrc.addr.01, align 4)
+    renamable $q2 = nnan ninf nsz arcp contract afn reassoc MVE_VSUBf32 killed renamable $q2, renamable $q1, 1, renamable $vpr, $noreg, undef renamable $q2
+    renamable $q0 = nnan ninf nsz arcp contract afn reassoc MVE_VFMAf32 killed renamable $q0, killed renamable $q2, renamable $q2, 1, killed renamable $vpr, $noreg
     t2LoopEnd renamable $lr, %bb.3, implicit-def dead $cpsr
     tB %bb.4, 14 /* CC::al */, $noreg
 

@@ -298,9 +298,8 @@ for.body.116:                                     ; preds = %for.body.116, %for.
   %conv134 = trunc i32 %add133 to i8
   %scevgep = getelementptr i8, i8* inttoptr (i64 -1 to i8*), i64 %call109.pn2
   store i8 %conv134, i8* %scevgep, align 1, !tbaa !10
-  %12 = call i64 @llvm.loop.dec(i64 %scevgep56, i64 1)
-  %dec.cmp = icmp ne i64 %12, 0
-  br i1 %dec.cmp, label %for.body.116, label %for.cond.cleanup.115
+  %12 = call i1 @llvm.loop.decrement(i64 1)
+  br i1 %12, label %for.body.116, label %for.cond.cleanup.115
 
 if.then.136:                                      ; preds = %for.cond.cleanup.115
   %incdec.ptr137 = getelementptr inbounds i8, i8* %int_part_ptr.0253, i64 -1
@@ -327,7 +326,7 @@ declare i8* @memcpy(i8*, i8* nocapture readonly, i64) #1
 declare void @llvm.set.loop.iterations.i64(i64) #0
 
 ; Function Attrs: nounwind
-declare i64 @llvm.loop.dec(i64, i64) #0
+declare i1 @llvm.loop.decrement(i64) #0
 
 attributes #0 = { nounwind }
 attributes #1 = { nounwind "disable-tail-calls"="false" "less-precise-fpmad"="false" "frame-pointer"="all" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "unsafe-fp-math"="false" "use-soft-float"="false" }

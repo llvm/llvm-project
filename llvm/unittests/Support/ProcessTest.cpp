@@ -102,7 +102,7 @@ protected:
 
 TEST_F(PageSizeTest, PageSize) {
   if (!isSupported())
-    return;
+    GTEST_SKIP();
 
   llvm::Expected<unsigned> Result = llvm::sys::Process::getPageSize();
   ASSERT_FALSE(!Result);

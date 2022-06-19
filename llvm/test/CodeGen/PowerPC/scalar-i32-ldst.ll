@@ -50,8 +50,7 @@ entry:
 define dso_local signext i32 @ld_align32_int32_t_int8_t(i8* nocapture readonly %ptr) {
 ; CHECK-P10-LABEL: ld_align32_int32_t_int8_t:
 ; CHECK-P10:       # %bb.0: # %entry
-; CHECK-P10-NEXT:    pli r4, 99999000
-; CHECK-P10-NEXT:    lbzx r3, r3, r4
+; CHECK-P10-NEXT:    plbz r3, 99999000(r3), 0
 ; CHECK-P10-NEXT:    extsb r3, r3
 ; CHECK-P10-NEXT:    blr
 ;
@@ -199,8 +198,7 @@ define dso_local signext i32 @ld_disjoint_align32_int32_t_int8_t(i64 %ptr) {
 ; CHECK-P10:       # %bb.0: # %entry
 ; CHECK-P10-NEXT:    lis r4, -15264
 ; CHECK-P10-NEXT:    and r3, r3, r4
-; CHECK-P10-NEXT:    pli r4, 999990000
-; CHECK-P10-NEXT:    lbzx r3, r3, r4
+; CHECK-P10-NEXT:    plbz r3, 999990000(r3), 0
 ; CHECK-P10-NEXT:    extsb r3, r3
 ; CHECK-P10-NEXT:    blr
 ;
@@ -373,8 +371,7 @@ entry:
 define dso_local signext i32 @ld_align32_int32_t_int16_t(i8* nocapture readonly %ptr) {
 ; CHECK-P10-LABEL: ld_align32_int32_t_int16_t:
 ; CHECK-P10:       # %bb.0: # %entry
-; CHECK-P10-NEXT:    pli r4, 99999000
-; CHECK-P10-NEXT:    lhax r3, r3, r4
+; CHECK-P10-NEXT:    plha r3, 99999000(r3), 0
 ; CHECK-P10-NEXT:    blr
 ;
 ; CHECK-PREP10-LABEL: ld_align32_int32_t_int16_t:
@@ -515,8 +512,7 @@ define dso_local signext i32 @ld_disjoint_align32_int32_t_int16_t(i64 %ptr) {
 ; CHECK-P10:       # %bb.0: # %entry
 ; CHECK-P10-NEXT:    lis r4, -15264
 ; CHECK-P10-NEXT:    and r3, r3, r4
-; CHECK-P10-NEXT:    pli r4, 999990000
-; CHECK-P10-NEXT:    lhax r3, r3, r4
+; CHECK-P10-NEXT:    plha r3, 999990000(r3), 0
 ; CHECK-P10-NEXT:    blr
 ;
 ; CHECK-P9-LABEL: ld_disjoint_align32_int32_t_int16_t:
@@ -676,8 +672,7 @@ entry:
 define dso_local signext i32 @ld_align32_int32_t_uint32_t(i8* nocapture readonly %ptr) {
 ; CHECK-P10-LABEL: ld_align32_int32_t_uint32_t:
 ; CHECK-P10:       # %bb.0: # %entry
-; CHECK-P10-NEXT:    pli r4, 99999000
-; CHECK-P10-NEXT:    lwax r3, r3, r4
+; CHECK-P10-NEXT:    plwa r3, 99999000(r3), 0
 ; CHECK-P10-NEXT:    blr
 ;
 ; CHECK-PREP10-LABEL: ld_align32_int32_t_uint32_t:
@@ -779,8 +774,7 @@ define dso_local signext i32 @ld_disjoint_unalign16_int32_t_uint32_t(i64 %ptr) {
 ; CHECK-P10-LABEL: ld_disjoint_unalign16_int32_t_uint32_t:
 ; CHECK-P10:       # %bb.0: # %entry
 ; CHECK-P10-NEXT:    rldicr r3, r3, 0, 51
-; CHECK-P10-NEXT:    li r4, 6
-; CHECK-P10-NEXT:    lwax r3, r3, r4
+; CHECK-P10-NEXT:    plwa r3, 6(r3), 0
 ; CHECK-P10-NEXT:    blr
 ;
 ; CHECK-P9-LABEL: ld_disjoint_unalign16_int32_t_uint32_t:
@@ -840,8 +834,7 @@ define dso_local signext i32 @ld_disjoint_align32_int32_t_uint32_t(i64 %ptr) {
 ; CHECK-P10:       # %bb.0: # %entry
 ; CHECK-P10-NEXT:    lis r4, -15264
 ; CHECK-P10-NEXT:    and r3, r3, r4
-; CHECK-P10-NEXT:    pli r4, 999990000
-; CHECK-P10-NEXT:    lwax r3, r3, r4
+; CHECK-P10-NEXT:    plwa r3, 999990000(r3), 0
 ; CHECK-P10-NEXT:    blr
 ;
 ; CHECK-P9-LABEL: ld_disjoint_align32_int32_t_uint32_t:
@@ -986,17 +979,39 @@ entry:
 
 ; Function Attrs: norecurse nounwind readonly uwtable willreturn
 define dso_local signext i32 @ld_unalign16_int32_t_uint64_t(i8* nocapture readonly %ptr) {
-; CHECK-LE-LABEL: ld_unalign16_int32_t_uint64_t:
-; CHECK-LE:       # %bb.0: # %entry
-; CHECK-LE-NEXT:    li r4, 1
-; CHECK-LE-NEXT:    lwax r3, r3, r4
-; CHECK-LE-NEXT:    blr
+; CHECK-P10-LE-LABEL: ld_unalign16_int32_t_uint64_t:
+; CHECK-P10-LE:       # %bb.0: # %entry
+; CHECK-P10-LE-NEXT:    plwa r3, 1(r3), 0
+; CHECK-P10-LE-NEXT:    blr
 ;
-; CHECK-BE-LABEL: ld_unalign16_int32_t_uint64_t:
-; CHECK-BE:       # %bb.0: # %entry
-; CHECK-BE-NEXT:    li r4, 5
-; CHECK-BE-NEXT:    lwax r3, r3, r4
-; CHECK-BE-NEXT:    blr
+; CHECK-P10-BE-LABEL: ld_unalign16_int32_t_uint64_t:
+; CHECK-P10-BE:       # %bb.0: # %entry
+; CHECK-P10-BE-NEXT:    plwa r3, 5(r3), 0
+; CHECK-P10-BE-NEXT:    blr
+;
+; CHECK-P9-LE-LABEL: ld_unalign16_int32_t_uint64_t:
+; CHECK-P9-LE:       # %bb.0: # %entry
+; CHECK-P9-LE-NEXT:    li r4, 1
+; CHECK-P9-LE-NEXT:    lwax r3, r3, r4
+; CHECK-P9-LE-NEXT:    blr
+;
+; CHECK-P9-BE-LABEL: ld_unalign16_int32_t_uint64_t:
+; CHECK-P9-BE:       # %bb.0: # %entry
+; CHECK-P9-BE-NEXT:    li r4, 5
+; CHECK-P9-BE-NEXT:    lwax r3, r3, r4
+; CHECK-P9-BE-NEXT:    blr
+;
+; CHECK-P8-LE-LABEL: ld_unalign16_int32_t_uint64_t:
+; CHECK-P8-LE:       # %bb.0: # %entry
+; CHECK-P8-LE-NEXT:    li r4, 1
+; CHECK-P8-LE-NEXT:    lwax r3, r3, r4
+; CHECK-P8-LE-NEXT:    blr
+;
+; CHECK-P8-BE-LABEL: ld_unalign16_int32_t_uint64_t:
+; CHECK-P8-BE:       # %bb.0: # %entry
+; CHECK-P8-BE-NEXT:    li r4, 5
+; CHECK-P8-BE-NEXT:    lwax r3, r3, r4
+; CHECK-P8-BE-NEXT:    blr
 entry:
   %add.ptr = getelementptr inbounds i8, i8* %ptr, i64 1
   %0 = bitcast i8* %add.ptr to i64*
@@ -1028,14 +1043,12 @@ entry:
 define dso_local signext i32 @ld_align32_int32_t_uint64_t(i8* nocapture readonly %ptr) {
 ; CHECK-P10-LE-LABEL: ld_align32_int32_t_uint64_t:
 ; CHECK-P10-LE:       # %bb.0: # %entry
-; CHECK-P10-LE-NEXT:    pli r4, 99999000
-; CHECK-P10-LE-NEXT:    lwax r3, r3, r4
+; CHECK-P10-LE-NEXT:    plwa r3, 99999000(r3), 0
 ; CHECK-P10-LE-NEXT:    blr
 ;
 ; CHECK-P10-BE-LABEL: ld_align32_int32_t_uint64_t:
 ; CHECK-P10-BE:       # %bb.0: # %entry
-; CHECK-P10-BE-NEXT:    pli r4, 99999004
-; CHECK-P10-BE-NEXT:    lwax r3, r3, r4
+; CHECK-P10-BE-NEXT:    plwa r3, 99999004(r3), 0
 ; CHECK-P10-BE-NEXT:    blr
 ;
 ; CHECK-P9-LE-LABEL: ld_align32_int32_t_uint64_t:
@@ -1223,15 +1236,13 @@ define dso_local signext i32 @ld_disjoint_unalign16_int32_t_uint64_t(i64 %ptr) {
 ; CHECK-P10-LE-LABEL: ld_disjoint_unalign16_int32_t_uint64_t:
 ; CHECK-P10-LE:       # %bb.0: # %entry
 ; CHECK-P10-LE-NEXT:    rldicr r3, r3, 0, 51
-; CHECK-P10-LE-NEXT:    li r4, 6
-; CHECK-P10-LE-NEXT:    lwax r3, r3, r4
+; CHECK-P10-LE-NEXT:    plwa r3, 6(r3), 0
 ; CHECK-P10-LE-NEXT:    blr
 ;
 ; CHECK-P10-BE-LABEL: ld_disjoint_unalign16_int32_t_uint64_t:
 ; CHECK-P10-BE:       # %bb.0: # %entry
 ; CHECK-P10-BE-NEXT:    rldicr r3, r3, 0, 51
-; CHECK-P10-BE-NEXT:    li r4, 10
-; CHECK-P10-BE-NEXT:    lwax r3, r3, r4
+; CHECK-P10-BE-NEXT:    plwa r3, 10(r3), 0
 ; CHECK-P10-BE-NEXT:    blr
 ;
 ; CHECK-P9-LE-LABEL: ld_disjoint_unalign16_int32_t_uint64_t:
@@ -1321,16 +1332,14 @@ define dso_local signext i32 @ld_disjoint_align32_int32_t_uint64_t(i64 %ptr) {
 ; CHECK-P10-LE:       # %bb.0: # %entry
 ; CHECK-P10-LE-NEXT:    lis r4, -15264
 ; CHECK-P10-LE-NEXT:    and r3, r3, r4
-; CHECK-P10-LE-NEXT:    pli r4, 999990000
-; CHECK-P10-LE-NEXT:    lwax r3, r3, r4
+; CHECK-P10-LE-NEXT:    plwa r3, 999990000(r3), 0
 ; CHECK-P10-LE-NEXT:    blr
 ;
 ; CHECK-P10-BE-LABEL: ld_disjoint_align32_int32_t_uint64_t:
 ; CHECK-P10-BE:       # %bb.0: # %entry
 ; CHECK-P10-BE-NEXT:    lis r4, -15264
 ; CHECK-P10-BE-NEXT:    and r3, r3, r4
-; CHECK-P10-BE-NEXT:    pli r4, 999990004
-; CHECK-P10-BE-NEXT:    lwax r3, r3, r4
+; CHECK-P10-BE-NEXT:    plwa r3, 999990004(r3), 0
 ; CHECK-P10-BE-NEXT:    blr
 ;
 ; CHECK-P9-LE-LABEL: ld_disjoint_align32_int32_t_uint64_t:
@@ -1638,8 +1647,7 @@ entry:
 define dso_local signext i32 @ld_align32_int32_t_float(i8* nocapture readonly %ptr) {
 ; CHECK-P10-LABEL: ld_align32_int32_t_float:
 ; CHECK-P10:       # %bb.0: # %entry
-; CHECK-P10-NEXT:    pli r4, 99999000
-; CHECK-P10-NEXT:    lfsx f0, r3, r4
+; CHECK-P10-NEXT:    plfs f0, 99999000(r3), 0
 ; CHECK-P10-NEXT:    xscvdpsxws f0, f0
 ; CHECK-P10-NEXT:    mffprwz r3, f0
 ; CHECK-P10-NEXT:    extsw r3, r3
@@ -1810,8 +1818,7 @@ define dso_local signext i32 @ld_disjoint_align32_int32_t_float(i64 %ptr) {
 ; CHECK-P10:       # %bb.0: # %entry
 ; CHECK-P10-NEXT:    lis r4, -15264
 ; CHECK-P10-NEXT:    and r3, r3, r4
-; CHECK-P10-NEXT:    pli r4, 999990000
-; CHECK-P10-NEXT:    lfsx f0, r3, r4
+; CHECK-P10-NEXT:    plfs f0, 999990000(r3), 0
 ; CHECK-P10-NEXT:    xscvdpsxws f0, f0
 ; CHECK-P10-NEXT:    mffprwz r3, f0
 ; CHECK-P10-NEXT:    extsw r3, r3
@@ -2012,8 +2019,7 @@ entry:
 define dso_local signext i32 @ld_align32_int32_t_double(i8* nocapture readonly %ptr) {
 ; CHECK-P10-LABEL: ld_align32_int32_t_double:
 ; CHECK-P10:       # %bb.0: # %entry
-; CHECK-P10-NEXT:    pli r4, 99999000
-; CHECK-P10-NEXT:    lfdx f0, r3, r4
+; CHECK-P10-NEXT:    plfd f0, 99999000(r3), 0
 ; CHECK-P10-NEXT:    xscvdpsxws f0, f0
 ; CHECK-P10-NEXT:    mffprwz r3, f0
 ; CHECK-P10-NEXT:    extsw r3, r3
@@ -2184,8 +2190,7 @@ define dso_local signext i32 @ld_disjoint_align32_int32_t_double(i64 %ptr) {
 ; CHECK-P10:       # %bb.0: # %entry
 ; CHECK-P10-NEXT:    lis r4, -15264
 ; CHECK-P10-NEXT:    and r3, r3, r4
-; CHECK-P10-NEXT:    pli r4, 999990000
-; CHECK-P10-NEXT:    lfdx f0, r3, r4
+; CHECK-P10-NEXT:    plfd f0, 999990000(r3), 0
 ; CHECK-P10-NEXT:    xscvdpsxws f0, f0
 ; CHECK-P10-NEXT:    mffprwz r3, f0
 ; CHECK-P10-NEXT:    extsw r3, r3
@@ -2379,8 +2384,7 @@ entry:
 define dso_local zeroext i32 @ld_align32_uint32_t_uint8_t(i8* nocapture readonly %ptr) {
 ; CHECK-P10-LABEL: ld_align32_uint32_t_uint8_t:
 ; CHECK-P10:       # %bb.0: # %entry
-; CHECK-P10-NEXT:    pli r4, 99999000
-; CHECK-P10-NEXT:    lbzx r3, r3, r4
+; CHECK-P10-NEXT:    plbz r3, 99999000(r3), 0
 ; CHECK-P10-NEXT:    blr
 ;
 ; CHECK-PREP10-LABEL: ld_align32_uint32_t_uint8_t:
@@ -2501,8 +2505,7 @@ define dso_local zeroext i32 @ld_disjoint_align32_uint32_t_uint8_t(i64 %ptr) {
 ; CHECK-P10:       # %bb.0: # %entry
 ; CHECK-P10-NEXT:    lis r4, -15264
 ; CHECK-P10-NEXT:    and r3, r3, r4
-; CHECK-P10-NEXT:    pli r4, 999990000
-; CHECK-P10-NEXT:    lbzx r3, r3, r4
+; CHECK-P10-NEXT:    plbz r3, 999990000(r3), 0
 ; CHECK-P10-NEXT:    blr
 ;
 ; CHECK-P9-LABEL: ld_disjoint_align32_uint32_t_uint8_t:
@@ -2667,8 +2670,7 @@ entry:
 define dso_local zeroext i32 @ld_align32_uint32_t_int8_t(i8* nocapture readonly %ptr) {
 ; CHECK-P10-LABEL: ld_align32_uint32_t_int8_t:
 ; CHECK-P10:       # %bb.0: # %entry
-; CHECK-P10-NEXT:    pli r4, 99999000
-; CHECK-P10-NEXT:    lbzx r3, r3, r4
+; CHECK-P10-NEXT:    plbz r3, 99999000(r3), 0
 ; CHECK-P10-NEXT:    extsb r3, r3
 ; CHECK-P10-NEXT:    clrldi r3, r3, 32
 ; CHECK-P10-NEXT:    blr
@@ -2807,8 +2809,7 @@ define dso_local zeroext i32 @ld_disjoint_align32_uint32_t_int8_t(i64 %ptr) {
 ; CHECK-P10:       # %bb.0: # %entry
 ; CHECK-P10-NEXT:    lis r4, -15264
 ; CHECK-P10-NEXT:    and r3, r3, r4
-; CHECK-P10-NEXT:    pli r4, 999990000
-; CHECK-P10-NEXT:    lbzx r3, r3, r4
+; CHECK-P10-NEXT:    plbz r3, 999990000(r3), 0
 ; CHECK-P10-NEXT:    extsb r3, r3
 ; CHECK-P10-NEXT:    clrldi r3, r3, 32
 ; CHECK-P10-NEXT:    blr
@@ -2992,8 +2993,7 @@ entry:
 define dso_local zeroext i32 @ld_align32_uint32_t_uint16_t(i8* nocapture readonly %ptr) {
 ; CHECK-P10-LABEL: ld_align32_uint32_t_uint16_t:
 ; CHECK-P10:       # %bb.0: # %entry
-; CHECK-P10-NEXT:    pli r4, 99999000
-; CHECK-P10-NEXT:    lhzx r3, r3, r4
+; CHECK-P10-NEXT:    plhz r3, 99999000(r3), 0
 ; CHECK-P10-NEXT:    blr
 ;
 ; CHECK-PREP10-LABEL: ld_align32_uint32_t_uint16_t:
@@ -3117,8 +3117,7 @@ define dso_local zeroext i32 @ld_disjoint_align32_uint32_t_uint16_t(i64 %ptr) {
 ; CHECK-P10:       # %bb.0: # %entry
 ; CHECK-P10-NEXT:    lis r4, -15264
 ; CHECK-P10-NEXT:    and r3, r3, r4
-; CHECK-P10-NEXT:    pli r4, 999990000
-; CHECK-P10-NEXT:    lhzx r3, r3, r4
+; CHECK-P10-NEXT:    plhz r3, 999990000(r3), 0
 ; CHECK-P10-NEXT:    blr
 ;
 ; CHECK-P9-LABEL: ld_disjoint_align32_uint32_t_uint16_t:
@@ -3282,8 +3281,7 @@ entry:
 define dso_local zeroext i32 @ld_align32_uint32_t_int16_t(i8* nocapture readonly %ptr) {
 ; CHECK-P10-LABEL: ld_align32_uint32_t_int16_t:
 ; CHECK-P10:       # %bb.0: # %entry
-; CHECK-P10-NEXT:    pli r4, 99999000
-; CHECK-P10-NEXT:    lhax r3, r3, r4
+; CHECK-P10-NEXT:    plha r3, 99999000(r3), 0
 ; CHECK-P10-NEXT:    clrldi r3, r3, 32
 ; CHECK-P10-NEXT:    blr
 ;
@@ -3416,8 +3414,7 @@ define dso_local zeroext i32 @ld_disjoint_align32_uint32_t_int16_t(i64 %ptr) {
 ; CHECK-P10:       # %bb.0: # %entry
 ; CHECK-P10-NEXT:    lis r4, -15264
 ; CHECK-P10-NEXT:    and r3, r3, r4
-; CHECK-P10-NEXT:    pli r4, 999990000
-; CHECK-P10-NEXT:    lhax r3, r3, r4
+; CHECK-P10-NEXT:    plha r3, 999990000(r3), 0
 ; CHECK-P10-NEXT:    clrldi r3, r3, 32
 ; CHECK-P10-NEXT:    blr
 ;
@@ -3588,8 +3585,7 @@ entry:
 define dso_local zeroext i32 @ld_align32_uint32_t_uint32_t(i8* nocapture readonly %ptr) {
 ; CHECK-P10-LABEL: ld_align32_uint32_t_uint32_t:
 ; CHECK-P10:       # %bb.0: # %entry
-; CHECK-P10-NEXT:    pli r4, 99999000
-; CHECK-P10-NEXT:    lwzx r3, r3, r4
+; CHECK-P10-NEXT:    plwz r3, 99999000(r3), 0
 ; CHECK-P10-NEXT:    blr
 ;
 ; CHECK-PREP10-LABEL: ld_align32_uint32_t_uint32_t:
@@ -3706,8 +3702,7 @@ define dso_local zeroext i32 @ld_disjoint_align32_uint32_t_uint32_t(i64 %ptr) {
 ; CHECK-P10:       # %bb.0: # %entry
 ; CHECK-P10-NEXT:    lis r4, -15264
 ; CHECK-P10-NEXT:    and r3, r3, r4
-; CHECK-P10-NEXT:    pli r4, 999990000
-; CHECK-P10-NEXT:    lwzx r3, r3, r4
+; CHECK-P10-NEXT:    plwz r3, 999990000(r3), 0
 ; CHECK-P10-NEXT:    blr
 ;
 ; CHECK-P9-LABEL: ld_disjoint_align32_uint32_t_uint32_t:
@@ -3873,14 +3868,12 @@ entry:
 define dso_local zeroext i32 @ld_align32_uint32_t_uint64_t(i8* nocapture readonly %ptr) {
 ; CHECK-P10-LE-LABEL: ld_align32_uint32_t_uint64_t:
 ; CHECK-P10-LE:       # %bb.0: # %entry
-; CHECK-P10-LE-NEXT:    pli r4, 99999000
-; CHECK-P10-LE-NEXT:    lwzx r3, r3, r4
+; CHECK-P10-LE-NEXT:    plwz r3, 99999000(r3), 0
 ; CHECK-P10-LE-NEXT:    blr
 ;
 ; CHECK-P10-BE-LABEL: ld_align32_uint32_t_uint64_t:
 ; CHECK-P10-BE:       # %bb.0: # %entry
-; CHECK-P10-BE-NEXT:    pli r4, 99999004
-; CHECK-P10-BE-NEXT:    lwzx r3, r3, r4
+; CHECK-P10-BE-NEXT:    plwz r3, 99999004(r3), 0
 ; CHECK-P10-BE-NEXT:    blr
 ;
 ; CHECK-P9-LE-LABEL: ld_align32_uint32_t_uint64_t:
@@ -4090,16 +4083,14 @@ define dso_local zeroext i32 @ld_disjoint_align32_uint32_t_uint64_t(i64 %ptr) {
 ; CHECK-P10-LE:       # %bb.0: # %entry
 ; CHECK-P10-LE-NEXT:    lis r4, -15264
 ; CHECK-P10-LE-NEXT:    and r3, r3, r4
-; CHECK-P10-LE-NEXT:    pli r4, 999990000
-; CHECK-P10-LE-NEXT:    lwzx r3, r3, r4
+; CHECK-P10-LE-NEXT:    plwz r3, 999990000(r3), 0
 ; CHECK-P10-LE-NEXT:    blr
 ;
 ; CHECK-P10-BE-LABEL: ld_disjoint_align32_uint32_t_uint64_t:
 ; CHECK-P10-BE:       # %bb.0: # %entry
 ; CHECK-P10-BE-NEXT:    lis r4, -15264
 ; CHECK-P10-BE-NEXT:    and r3, r3, r4
-; CHECK-P10-BE-NEXT:    pli r4, 999990004
-; CHECK-P10-BE-NEXT:    lwzx r3, r3, r4
+; CHECK-P10-BE-NEXT:    plwz r3, 999990004(r3), 0
 ; CHECK-P10-BE-NEXT:    blr
 ;
 ; CHECK-P9-LE-LABEL: ld_disjoint_align32_uint32_t_uint64_t:
@@ -4407,8 +4398,7 @@ entry:
 define dso_local zeroext i32 @ld_align32_uint32_t_float(i8* nocapture readonly %ptr) {
 ; CHECK-P10-LABEL: ld_align32_uint32_t_float:
 ; CHECK-P10:       # %bb.0: # %entry
-; CHECK-P10-NEXT:    pli r4, 99999000
-; CHECK-P10-NEXT:    lfsx f0, r3, r4
+; CHECK-P10-NEXT:    plfs f0, 99999000(r3), 0
 ; CHECK-P10-NEXT:    xscvdpuxws f0, f0
 ; CHECK-P10-NEXT:    mffprwz r3, f0
 ; CHECK-P10-NEXT:    clrldi r3, r3, 32
@@ -4559,8 +4549,7 @@ define dso_local zeroext i32 @ld_disjoint_align32_uint32_t_float(i64 %ptr) {
 ; CHECK-P10:       # %bb.0: # %entry
 ; CHECK-P10-NEXT:    lis r4, -15264
 ; CHECK-P10-NEXT:    and r3, r3, r4
-; CHECK-P10-NEXT:    pli r4, 999990000
-; CHECK-P10-NEXT:    lfsx f0, r3, r4
+; CHECK-P10-NEXT:    plfs f0, 999990000(r3), 0
 ; CHECK-P10-NEXT:    xscvdpuxws f0, f0
 ; CHECK-P10-NEXT:    mffprwz r3, f0
 ; CHECK-P10-NEXT:    clrldi r3, r3, 32
@@ -4761,8 +4750,7 @@ entry:
 define dso_local zeroext i32 @ld_align32_uint32_t_double(i8* nocapture readonly %ptr) {
 ; CHECK-P10-LABEL: ld_align32_uint32_t_double:
 ; CHECK-P10:       # %bb.0: # %entry
-; CHECK-P10-NEXT:    pli r4, 99999000
-; CHECK-P10-NEXT:    lfdx f0, r3, r4
+; CHECK-P10-NEXT:    plfd f0, 99999000(r3), 0
 ; CHECK-P10-NEXT:    xscvdpuxws f0, f0
 ; CHECK-P10-NEXT:    mffprwz r3, f0
 ; CHECK-P10-NEXT:    clrldi r3, r3, 32
@@ -4913,8 +4901,7 @@ define dso_local zeroext i32 @ld_disjoint_align32_uint32_t_double(i64 %ptr) {
 ; CHECK-P10:       # %bb.0: # %entry
 ; CHECK-P10-NEXT:    lis r4, -15264
 ; CHECK-P10-NEXT:    and r3, r3, r4
-; CHECK-P10-NEXT:    pli r4, 999990000
-; CHECK-P10-NEXT:    lfdx f0, r3, r4
+; CHECK-P10-NEXT:    plfd f0, 999990000(r3), 0
 ; CHECK-P10-NEXT:    xscvdpuxws f0, f0
 ; CHECK-P10-NEXT:    mffprwz r3, f0
 ; CHECK-P10-NEXT:    clrldi r3, r3, 32
@@ -5108,8 +5095,7 @@ entry:
 define dso_local void @st_align32_uint32_t_uint8_t(i8* nocapture %ptr, i32 zeroext %str) {
 ; CHECK-P10-LABEL: st_align32_uint32_t_uint8_t:
 ; CHECK-P10:       # %bb.0: # %entry
-; CHECK-P10-NEXT:    pli r5, 99999000
-; CHECK-P10-NEXT:    stbx r4, r3, r5
+; CHECK-P10-NEXT:    pstb r4, 99999000(r3), 0
 ; CHECK-P10-NEXT:    blr
 ;
 ; CHECK-PREP10-LABEL: st_align32_uint32_t_uint8_t:
@@ -5230,8 +5216,7 @@ define dso_local void @st_disjoint_align32_uint32_t_uint8_t(i64 %ptr, i32 zeroex
 ; CHECK-P10:       # %bb.0: # %entry
 ; CHECK-P10-NEXT:    lis r5, -15264
 ; CHECK-P10-NEXT:    and r3, r3, r5
-; CHECK-P10-NEXT:    pli r5, 999990000
-; CHECK-P10-NEXT:    stbx r4, r3, r5
+; CHECK-P10-NEXT:    pstb r4, 999990000(r3), 0
 ; CHECK-P10-NEXT:    blr
 ;
 ; CHECK-P9-LABEL: st_disjoint_align32_uint32_t_uint8_t:
@@ -5393,8 +5378,7 @@ entry:
 define dso_local void @st_align32_uint32_t_uint16_t(i8* nocapture %ptr, i32 zeroext %str) {
 ; CHECK-P10-LABEL: st_align32_uint32_t_uint16_t:
 ; CHECK-P10:       # %bb.0: # %entry
-; CHECK-P10-NEXT:    pli r5, 99999000
-; CHECK-P10-NEXT:    sthx r4, r3, r5
+; CHECK-P10-NEXT:    psth r4, 99999000(r3), 0
 ; CHECK-P10-NEXT:    blr
 ;
 ; CHECK-PREP10-LABEL: st_align32_uint32_t_uint16_t:
@@ -5518,8 +5502,7 @@ define dso_local void @st_disjoint_align32_uint32_t_uint16_t(i64 %ptr, i32 zeroe
 ; CHECK-P10:       # %bb.0: # %entry
 ; CHECK-P10-NEXT:    lis r5, -15264
 ; CHECK-P10-NEXT:    and r3, r3, r5
-; CHECK-P10-NEXT:    pli r5, 999990000
-; CHECK-P10-NEXT:    sthx r4, r3, r5
+; CHECK-P10-NEXT:    psth r4, 999990000(r3), 0
 ; CHECK-P10-NEXT:    blr
 ;
 ; CHECK-P9-LABEL: st_disjoint_align32_uint32_t_uint16_t:
@@ -5679,8 +5662,7 @@ entry:
 define dso_local void @st_align32_uint32_t_uint32_t(i8* nocapture %ptr, i32 zeroext %str) {
 ; CHECK-P10-LABEL: st_align32_uint32_t_uint32_t:
 ; CHECK-P10:       # %bb.0: # %entry
-; CHECK-P10-NEXT:    pli r5, 99999000
-; CHECK-P10-NEXT:    stwx r4, r3, r5
+; CHECK-P10-NEXT:    pstw r4, 99999000(r3), 0
 ; CHECK-P10-NEXT:    blr
 ;
 ; CHECK-PREP10-LABEL: st_align32_uint32_t_uint32_t:
@@ -5797,8 +5779,7 @@ define dso_local void @st_disjoint_align32_uint32_t_uint32_t(i64 %ptr, i32 zeroe
 ; CHECK-P10:       # %bb.0: # %entry
 ; CHECK-P10-NEXT:    lis r5, -15264
 ; CHECK-P10-NEXT:    and r3, r3, r5
-; CHECK-P10-NEXT:    pli r5, 999990000
-; CHECK-P10-NEXT:    stwx r4, r3, r5
+; CHECK-P10-NEXT:    pstw r4, 999990000(r3), 0
 ; CHECK-P10-NEXT:    blr
 ;
 ; CHECK-P9-LABEL: st_disjoint_align32_uint32_t_uint32_t:
@@ -5954,8 +5935,7 @@ entry:
 define dso_local void @st_align32_uint32_t_uint64_t(i8* nocapture %ptr, i32 zeroext %str) {
 ; CHECK-P10-LABEL: st_align32_uint32_t_uint64_t:
 ; CHECK-P10:       # %bb.0: # %entry
-; CHECK-P10-NEXT:    pli r5, 99999000
-; CHECK-P10-NEXT:    stdx r4, r3, r5
+; CHECK-P10-NEXT:    pstd r4, 99999000(r3), 0
 ; CHECK-P10-NEXT:    blr
 ;
 ; CHECK-PREP10-LABEL: st_align32_uint32_t_uint64_t:
@@ -6079,8 +6059,7 @@ define dso_local void @st_disjoint_align32_uint32_t_uint64_t(i64 %ptr, i32 zeroe
 ; CHECK-P10:       # %bb.0: # %entry
 ; CHECK-P10-NEXT:    lis r5, -15264
 ; CHECK-P10-NEXT:    and r3, r3, r5
-; CHECK-P10-NEXT:    pli r5, 999990000
-; CHECK-P10-NEXT:    stdx r4, r3, r5
+; CHECK-P10-NEXT:    pstd r4, 999990000(r3), 0
 ; CHECK-P10-NEXT:    blr
 ;
 ; CHECK-P9-LABEL: st_disjoint_align32_uint32_t_uint64_t:
@@ -6247,9 +6226,8 @@ define dso_local void @st_align32_uint32_t_float(i8* nocapture %ptr, i32 zeroext
 ; CHECK-P10-LABEL: st_align32_uint32_t_float:
 ; CHECK-P10:       # %bb.0: # %entry
 ; CHECK-P10-NEXT:    mtfprwz f0, r4
-; CHECK-P10-NEXT:    pli r4, 99999000
 ; CHECK-P10-NEXT:    xscvuxdsp f0, f0
-; CHECK-P10-NEXT:    stfsx f0, r3, r4
+; CHECK-P10-NEXT:    pstfs f0, 99999000(r3), 0
 ; CHECK-P10-NEXT:    blr
 ;
 ; CHECK-P9-LABEL: st_align32_uint32_t_float:
@@ -6390,8 +6368,8 @@ define dso_local void @st_not_disjoint32_uint32_t_float(i64 %ptr, i32 zeroext %s
 ; CHECK-P10:       # %bb.0: # %entry
 ; CHECK-P10-NEXT:    mtfprwz f0, r4
 ; CHECK-P10-NEXT:    ori r3, r3, 34463
-; CHECK-P10-NEXT:    xscvuxdsp f0, f0
 ; CHECK-P10-NEXT:    oris r3, r3, 1
+; CHECK-P10-NEXT:    xscvuxdsp f0, f0
 ; CHECK-P10-NEXT:    stfs f0, 0(r3)
 ; CHECK-P10-NEXT:    blr
 ;
@@ -6426,10 +6404,9 @@ define dso_local void @st_disjoint_align32_uint32_t_float(i64 %ptr, i32 zeroext 
 ; CHECK-P10:       # %bb.0: # %entry
 ; CHECK-P10-NEXT:    mtfprwz f0, r4
 ; CHECK-P10-NEXT:    lis r5, -15264
-; CHECK-P10-NEXT:    pli r4, 999990000
-; CHECK-P10-NEXT:    xscvuxdsp f0, f0
 ; CHECK-P10-NEXT:    and r3, r3, r5
-; CHECK-P10-NEXT:    stfsx f0, r3, r4
+; CHECK-P10-NEXT:    xscvuxdsp f0, f0
+; CHECK-P10-NEXT:    pstfs f0, 999990000(r3), 0
 ; CHECK-P10-NEXT:    blr
 ;
 ; CHECK-P9-LABEL: st_disjoint_align32_uint32_t_float:
@@ -6637,9 +6614,8 @@ define dso_local void @st_align32_uint32_t_double(i8* nocapture %ptr, i32 zeroex
 ; CHECK-P10-LABEL: st_align32_uint32_t_double:
 ; CHECK-P10:       # %bb.0: # %entry
 ; CHECK-P10-NEXT:    mtfprwz f0, r4
-; CHECK-P10-NEXT:    pli r4, 99999000
 ; CHECK-P10-NEXT:    xscvuxddp f0, f0
-; CHECK-P10-NEXT:    stfdx f0, r3, r4
+; CHECK-P10-NEXT:    pstfd f0, 99999000(r3), 0
 ; CHECK-P10-NEXT:    blr
 ;
 ; CHECK-P9-LABEL: st_align32_uint32_t_double:
@@ -6780,8 +6756,8 @@ define dso_local void @st_not_disjoint32_uint32_t_double(i64 %ptr, i32 zeroext %
 ; CHECK-P10:       # %bb.0: # %entry
 ; CHECK-P10-NEXT:    mtfprwz f0, r4
 ; CHECK-P10-NEXT:    ori r3, r3, 34463
-; CHECK-P10-NEXT:    xscvuxddp f0, f0
 ; CHECK-P10-NEXT:    oris r3, r3, 1
+; CHECK-P10-NEXT:    xscvuxddp f0, f0
 ; CHECK-P10-NEXT:    stfd f0, 0(r3)
 ; CHECK-P10-NEXT:    blr
 ;
@@ -6816,10 +6792,9 @@ define dso_local void @st_disjoint_align32_uint32_t_double(i64 %ptr, i32 zeroext
 ; CHECK-P10:       # %bb.0: # %entry
 ; CHECK-P10-NEXT:    mtfprwz f0, r4
 ; CHECK-P10-NEXT:    lis r5, -15264
-; CHECK-P10-NEXT:    pli r4, 999990000
-; CHECK-P10-NEXT:    xscvuxddp f0, f0
 ; CHECK-P10-NEXT:    and r3, r3, r5
-; CHECK-P10-NEXT:    stfdx f0, r3, r4
+; CHECK-P10-NEXT:    xscvuxddp f0, f0
+; CHECK-P10-NEXT:    pstfd f0, 999990000(r3), 0
 ; CHECK-P10-NEXT:    blr
 ;
 ; CHECK-P9-LABEL: st_disjoint_align32_uint32_t_double:
@@ -7022,8 +6997,7 @@ entry:
 define dso_local void @st_align32_int32_t_uint64_t(i8* nocapture %ptr, i32 signext %str) {
 ; CHECK-P10-LABEL: st_align32_int32_t_uint64_t:
 ; CHECK-P10:       # %bb.0: # %entry
-; CHECK-P10-NEXT:    pli r5, 99999000
-; CHECK-P10-NEXT:    stdx r4, r3, r5
+; CHECK-P10-NEXT:    pstd r4, 99999000(r3), 0
 ; CHECK-P10-NEXT:    blr
 ;
 ; CHECK-PREP10-LABEL: st_align32_int32_t_uint64_t:
@@ -7147,8 +7121,7 @@ define dso_local void @st_disjoint_align32_int32_t_uint64_t(i64 %ptr, i32 signex
 ; CHECK-P10:       # %bb.0: # %entry
 ; CHECK-P10-NEXT:    lis r5, -15264
 ; CHECK-P10-NEXT:    and r3, r3, r5
-; CHECK-P10-NEXT:    pli r5, 999990000
-; CHECK-P10-NEXT:    stdx r4, r3, r5
+; CHECK-P10-NEXT:    pstd r4, 999990000(r3), 0
 ; CHECK-P10-NEXT:    blr
 ;
 ; CHECK-P9-LABEL: st_disjoint_align32_int32_t_uint64_t:
@@ -7315,9 +7288,8 @@ define dso_local void @st_align32_int32_t_float(i8* nocapture %ptr, i32 signext 
 ; CHECK-P10-LABEL: st_align32_int32_t_float:
 ; CHECK-P10:       # %bb.0: # %entry
 ; CHECK-P10-NEXT:    mtfprwa f0, r4
-; CHECK-P10-NEXT:    pli r4, 99999000
 ; CHECK-P10-NEXT:    xscvsxdsp f0, f0
-; CHECK-P10-NEXT:    stfsx f0, r3, r4
+; CHECK-P10-NEXT:    pstfs f0, 99999000(r3), 0
 ; CHECK-P10-NEXT:    blr
 ;
 ; CHECK-P9-LABEL: st_align32_int32_t_float:
@@ -7458,8 +7430,8 @@ define dso_local void @st_not_disjoint32_int32_t_float(i64 %ptr, i32 signext %st
 ; CHECK-P10:       # %bb.0: # %entry
 ; CHECK-P10-NEXT:    mtfprwa f0, r4
 ; CHECK-P10-NEXT:    ori r3, r3, 34463
-; CHECK-P10-NEXT:    xscvsxdsp f0, f0
 ; CHECK-P10-NEXT:    oris r3, r3, 1
+; CHECK-P10-NEXT:    xscvsxdsp f0, f0
 ; CHECK-P10-NEXT:    stfs f0, 0(r3)
 ; CHECK-P10-NEXT:    blr
 ;
@@ -7494,10 +7466,9 @@ define dso_local void @st_disjoint_align32_int32_t_float(i64 %ptr, i32 signext %
 ; CHECK-P10:       # %bb.0: # %entry
 ; CHECK-P10-NEXT:    mtfprwa f0, r4
 ; CHECK-P10-NEXT:    lis r5, -15264
-; CHECK-P10-NEXT:    pli r4, 999990000
-; CHECK-P10-NEXT:    xscvsxdsp f0, f0
 ; CHECK-P10-NEXT:    and r3, r3, r5
-; CHECK-P10-NEXT:    stfsx f0, r3, r4
+; CHECK-P10-NEXT:    xscvsxdsp f0, f0
+; CHECK-P10-NEXT:    pstfs f0, 999990000(r3), 0
 ; CHECK-P10-NEXT:    blr
 ;
 ; CHECK-P9-LABEL: st_disjoint_align32_int32_t_float:
@@ -7705,9 +7676,8 @@ define dso_local void @st_align32_int32_t_double(i8* nocapture %ptr, i32 signext
 ; CHECK-P10-LABEL: st_align32_int32_t_double:
 ; CHECK-P10:       # %bb.0: # %entry
 ; CHECK-P10-NEXT:    mtfprwa f0, r4
-; CHECK-P10-NEXT:    pli r4, 99999000
 ; CHECK-P10-NEXT:    xscvsxddp f0, f0
-; CHECK-P10-NEXT:    stfdx f0, r3, r4
+; CHECK-P10-NEXT:    pstfd f0, 99999000(r3), 0
 ; CHECK-P10-NEXT:    blr
 ;
 ; CHECK-P9-LABEL: st_align32_int32_t_double:
@@ -7848,8 +7818,8 @@ define dso_local void @st_not_disjoint32_int32_t_double(i64 %ptr, i32 signext %s
 ; CHECK-P10:       # %bb.0: # %entry
 ; CHECK-P10-NEXT:    mtfprwa f0, r4
 ; CHECK-P10-NEXT:    ori r3, r3, 34463
-; CHECK-P10-NEXT:    xscvsxddp f0, f0
 ; CHECK-P10-NEXT:    oris r3, r3, 1
+; CHECK-P10-NEXT:    xscvsxddp f0, f0
 ; CHECK-P10-NEXT:    stfd f0, 0(r3)
 ; CHECK-P10-NEXT:    blr
 ;
@@ -7884,10 +7854,9 @@ define dso_local void @st_disjoint_align32_int32_t_double(i64 %ptr, i32 signext 
 ; CHECK-P10:       # %bb.0: # %entry
 ; CHECK-P10-NEXT:    mtfprwa f0, r4
 ; CHECK-P10-NEXT:    lis r5, -15264
-; CHECK-P10-NEXT:    pli r4, 999990000
-; CHECK-P10-NEXT:    xscvsxddp f0, f0
 ; CHECK-P10-NEXT:    and r3, r3, r5
-; CHECK-P10-NEXT:    stfdx f0, r3, r4
+; CHECK-P10-NEXT:    xscvsxddp f0, f0
+; CHECK-P10-NEXT:    pstfd f0, 999990000(r3), 0
 ; CHECK-P10-NEXT:    blr
 ;
 ; CHECK-P9-LABEL: st_disjoint_align32_int32_t_double:

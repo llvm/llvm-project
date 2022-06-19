@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -emit-llvm -fblocks -debug-info-kind=limited  -triple x86_64-apple-darwin10 -fobjc-dispatch-method=mixed -x objective-c < %s -o - | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -emit-llvm -fblocks -debug-info-kind=limited  -triple x86_64-apple-darwin10 -fobjc-dispatch-method=mixed -x objective-c < %s -o - | FileCheck %s
 
 // rdar://problem/9279956
 // Test that we generate the proper debug location for a captured self.
@@ -13,7 +13,7 @@
 // Test that we do emit scope info for the helper functions, and that the
 // parameters to these functions are marked as artificial (so the debugger
 // doesn't accidentally step into the function).
-// CHECK: define {{.*}} @__copy_helper_block_{{.*}}(i8* %0, i8* %1)
+// CHECK: define {{.*}} @__copy_helper_block_{{.*}}(i8* noundef %0, i8* noundef %1)
 // CHECK-NOT: ret
 // CHECK: call {{.*}}, !dbg ![[DBG_LINE:[0-9]+]]
 // CHECK-NOT: ret
@@ -76,7 +76,7 @@ static void run(void (^block)(void))
 
 @end
 
-int main()
+int main(void)
 {
 	A *a = [[A alloc] init];
 	return 0;

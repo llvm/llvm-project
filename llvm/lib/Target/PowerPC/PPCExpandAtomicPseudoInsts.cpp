@@ -74,8 +74,7 @@ bool PPCExpandAtomicPseudo::runOnMachineFunction(MachineFunction &MF) {
   bool Changed = false;
   TII = static_cast<const PPCInstrInfo *>(MF.getSubtarget().getInstrInfo());
   TRI = &TII->getRegisterInfo();
-  for (MachineFunction::iterator I = MF.begin(), E = MF.end(); I != E; ++I) {
-    MachineBasicBlock &MBB = *I;
+  for (MachineBasicBlock &MBB : MF) {
     for (MachineBasicBlock::iterator MBBI = MBB.begin(), MBBE = MBB.end();
          MBBI != MBBE;) {
       MachineInstr &MI = *MBBI;
@@ -102,6 +101,16 @@ bool PPCExpandAtomicPseudo::expandMI(MachineBasicBlock &MBB, MachineInstr &MI,
     return expandAtomicRMW128(MBB, MI, NMBBI);
   case PPC::ATOMIC_CMP_SWAP_I128:
     return expandAtomicCmpSwap128(MBB, MI, NMBBI);
+  case PPC::BUILD_QUADWORD: {
+    Register Dst = MI.getOperand(0).getReg();
+    Register DstHi = TRI->getSubReg(Dst, PPC::sub_gp8_x0);
+    Register DstLo = TRI->getSubReg(Dst, PPC::sub_gp8_x1);
+    Register Lo = MI.getOperand(1).getReg();
+    Register Hi = MI.getOperand(2).getReg();
+    PairedCopy(TII, MBB, MI, MI.getDebugLoc(), DstHi, DstLo, Hi, Lo);
+    MI.eraseFromParent();
+    return true;
+  }
   default:
     return false;
   }

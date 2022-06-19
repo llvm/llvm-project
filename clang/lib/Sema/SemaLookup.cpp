@@ -324,14 +324,14 @@ void LookupResult::configure() {
   }
 }
 
-bool LookupResult::sanity() const {
+bool LookupResult::checkDebugAssumptions() const {
   // This function is never called by NDEBUG builds.
   assert(ResultKind != NotFound || Decls.size() == 0);
   assert(ResultKind != Found || Decls.size() == 1);
   assert(ResultKind != FoundOverloaded || Decls.size() > 1 ||
          (Decls.size() == 1 &&
           isa<FunctionTemplateDecl>((*begin())->getUnderlyingDecl())));
-  assert(ResultKind != FoundUnresolvedValue || sanityCheckUnresolved());
+  assert(ResultKind != FoundUnresolvedValue || checkUnresolved());
   assert(ResultKind != Ambiguous || Decls.size() > 1 ||
          (Decls.size() == 1 && (Ambiguity == AmbiguousBaseSubobjects ||
                                 Ambiguity == AmbiguousBaseSubobjectTypes)));
@@ -620,7 +620,7 @@ void LookupResult::resolveKind() {
     getSema().diagnoseEquivalentInternalLinkageDeclarations(
         getNameLoc(), HasNonFunction, EquivalentNonFunctions);
 
-  Decls.set_size(N);
+  Decls.truncate(N);
 
   if (HasNonFunction && (HasFunction || HasUnresolved))
     Ambiguous = true;
@@ -859,7 +859,8 @@ static void InsertOCLBuiltinDeclarationsFromTable(Sema &S, LookupResult &LR,
     for (const auto &FTy : FunctionList) {
       NewOpenCLBuiltin = FunctionDecl::Create(
           Context, Parent, Loc, Loc, II, FTy, /*TInfo=*/nullptr, SC_Extern,
-          false, FTy->isFunctionProtoType());
+          S.getCurFPFeatures().isFPConstrained(), false,
+          FTy->isFunctionProtoType());
       NewOpenCLBuiltin->setImplicit();
 
       // Create Decl objects for each parameter, adding them to the
@@ -929,9 +930,11 @@ bool Sema::LookupBuiltin(LookupResult &R) {
 
       // If this is a builtin on this (or all) targets, create the decl.
       if (unsigned BuiltinID = II->getBuiltinID()) {
-        // In C++ and OpenCL (spec v1.2 s6.9.f), we don't have any predefined
-        // library functions like 'malloc'. Instead, we'll just error.
-        if ((getLangOpts().CPlusPlus || getLangOpts().OpenCL) &&
+        // In C++, C2x, and OpenCL (spec v1.2 s6.9.f), we don't have any
+        // predefined library functions like 'malloc'. Instead, we'll just
+        // error.
+        if ((getLangOpts().CPlusPlus || getLangOpts().OpenCL ||
+             getLangOpts().C2x) &&
             Context.BuiltinInfo.isPredefinedLibFunction(BuiltinID))
           return false;
 
@@ -1555,13 +1558,39 @@ llvm::DenseSet<Module*> &Sema::getLookupModules() {
   return LookupModulesCache;
 }
 
-/// Determine whether the module M is part of the current module from the
-/// perspective of a module-private visibility check.
-static bool isInCurrentModule(const Module *M, const LangOptions &LangOpts) {
-  // If M is the global module fragment of a module that we've not yet finished
-  // parsing, then it must be part of the current module.
-  return M->getTopLevelModuleName() == LangOpts.CurrentModule ||
-         (M->Kind == Module::GlobalModuleFragment && !M->Parent);
+/// Determine if we could use all the declarations in the module.
+bool Sema::isUsableModule(const Module *M) {
+  assert(M && "We shouldn't check nullness for module here");
+  // Return quickly if we cached the result.
+  if (UsableModuleUnitsCache.count(M))
+    return true;
+
+  // If M is the global module fragment of the current translation unit. So it
+  // should be usable.
+  // [module.global.frag]p1:
+  //   The global module fragment can be used to provide declarations that are
+  //   attached to the global module and usable within the module unit.
+  if (M == GlobalModuleFragment ||
+      // If M is the module we're parsing, it should be usable. This covers the
+      // private module fragment. The private module fragment is usable only if
+      // it is within the current module unit. And it must be the current
+      // parsing module unit if it is within the current module unit according
+      // to the grammar of the private module fragment. NOTE: This is covered by
+      // the following condition. The intention of the check is to avoid string
+      // comparison as much as possible.
+      M == getCurrentModule() ||
+      // The module unit which is in the same module with the current module
+      // unit is usable.
+      //
+      // FIXME: Here we judge if they are in the same module by comparing the
+      // string. Is there any better solution?
+      M->getPrimaryModuleInterfaceName() ==
+          llvm::StringRef(getLangOpts().CurrentModule).split(':').first) {
+    UsableModuleUnitsCache.insert(M);
+    return true;
+  }
+
+  return false;
 }
 
 bool Sema::hasVisibleMergedDefinition(NamedDecl *Def) {
@@ -1573,7 +1602,7 @@ bool Sema::hasVisibleMergedDefinition(NamedDecl *Def) {
 
 bool Sema::hasMergedDefinitionInCurrentModule(NamedDecl *Def) {
   for (const Module *Merged : Context.getModulesWithMergedDefinition(Def))
-    if (isInCurrentModule(Merged, getLangOpts()))
+    if (isUsableModule(Merged))
       return true;
   return false;
 }
@@ -1682,8 +1711,8 @@ bool LookupResult::isVisibleSlow(Sema &SemaRef, NamedDecl *D) {
   Module *DeclModule = SemaRef.getOwningModule(D);
   assert(DeclModule && "hidden decl has no owning module");
 
-  // If the owning module is visible, the decl is visible.
   if (SemaRef.isModuleVisible(DeclModule, D->isModulePrivate()))
+    // If the owning module is visible, the decl is visible.
     return true;
 
   // Determine whether a decl context is a file context for the purpose of
@@ -1752,15 +1781,14 @@ bool LookupResult::isVisibleSlow(Sema &SemaRef, NamedDecl *D) {
 
 bool Sema::isModuleVisible(const Module *M, bool ModulePrivate) {
   // The module might be ordinarily visible. For a module-private query, that
-  // means it is part of the current module. For any other query, that means it
-  // is in our visible module set.
-  if (ModulePrivate) {
-    if (isInCurrentModule(M, getLangOpts()))
-      return true;
-  } else {
-    if (VisibleModules.isVisible(M))
-      return true;
-  }
+  // means it is part of the current module.
+  if (ModulePrivate && isUsableModule(M))
+    return true;
+
+  // For a query which is not module-private, that means it is in our visible
+  // module set.
+  if (!ModulePrivate && VisibleModules.isVisible(M))
+    return true;
 
   // Otherwise, it might be visible by virtue of the query being within a
   // template instantiation or similar that is permitted to look inside M.
@@ -1910,13 +1938,14 @@ NamedDecl *LookupResult::getAcceptableDeclSlow(NamedDecl *D) const {
 /// used to diagnose ambiguities.
 ///
 /// @returns \c true if lookup succeeded and false otherwise.
-bool Sema::LookupName(LookupResult &R, Scope *S, bool AllowBuiltinCreation) {
+bool Sema::LookupName(LookupResult &R, Scope *S, bool AllowBuiltinCreation,
+                      bool ForceNoCPlusPlus) {
   DeclarationName Name = R.getLookupName();
   if (!Name) return false;
 
   LookupNameKind NameKind = R.getLookupKind();
 
-  if (!getLangOpts().CPlusPlus) {
+  if (!getLangOpts().CPlusPlus || ForceNoCPlusPlus) {
     // Unqualified name lookup in C/Objective-C is purely lexical, so
     // search in the declarations attached to the name.
     if (NameKind == Sema::LookupRedeclarationWithLinkage) {
@@ -2934,7 +2963,7 @@ addAssociatedClassesAndNamespaces(AssociatedLookup &Result, QualType Ty) {
     case Type::ExtVector:
     case Type::ConstantMatrix:
     case Type::Complex:
-    case Type::ExtInt:
+    case Type::BitInt:
       break;
 
     // Non-deduced auto types only get here for error cases.
@@ -3845,7 +3874,7 @@ private:
               : Ctx->noload_lookups(/*PreserveInternalState=*/false)) {
       for (auto *D : R) {
         if (auto *ND = Result.getAcceptableDecl(D)) {
-          // Rather than visit immediatelly, we put ND into a vector and visit
+          // Rather than visit immediately, we put ND into a vector and visit
           // all decls, in order, outside of this loop. The reason is that
           // Consumer.FoundDecl() may invalidate the iterators used in the two
           // loops above.
@@ -4306,18 +4335,35 @@ void TypoCorrectionConsumer::addCorrection(TypoCorrection Correction) {
   if (!CList.empty() && !CList.back().isResolved())
     CList.pop_back();
   if (NamedDecl *NewND = Correction.getCorrectionDecl()) {
-    std::string CorrectionStr = Correction.getAsString(SemaRef.getLangOpts());
-    for (TypoResultList::iterator RI = CList.begin(), RIEnd = CList.end();
-         RI != RIEnd; ++RI) {
-      // If the Correction refers to a decl already in the result list,
-      // replace the existing result if the string representation of Correction
-      // comes before the current result alphabetically, then stop as there is
-      // nothing more to be done to add Correction to the candidate set.
-      if (RI->getCorrectionDecl() == NewND) {
-        if (CorrectionStr < RI->getAsString(SemaRef.getLangOpts()))
-          *RI = Correction;
-        return;
-      }
+    auto RI = llvm::find_if(CList, [NewND](const TypoCorrection &TypoCorr) {
+      return TypoCorr.getCorrectionDecl() == NewND;
+    });
+    if (RI != CList.end()) {
+      // The Correction refers to a decl already in the list. No insertion is
+      // necessary and all further cases will return.
+
+      auto IsDeprecated = [](Decl *D) {
+        while (D) {
+          if (D->isDeprecated())
+            return true;
+          D = llvm::dyn_cast_or_null<NamespaceDecl>(D->getDeclContext());
+        }
+        return false;
+      };
+
+      // Prefer non deprecated Corrections over deprecated and only then
+      // sort using an alphabetical order.
+      std::pair<bool, std::string> NewKey = {
+          IsDeprecated(Correction.getFoundDecl()),
+          Correction.getAsString(SemaRef.getLangOpts())};
+
+      std::pair<bool, std::string> PrevKey = {
+          IsDeprecated(RI->getFoundDecl()),
+          RI->getAsString(SemaRef.getLangOpts())};
+
+      if (NewKey < PrevKey)
+        *RI = Correction;
+      return;
     }
   }
   if (CList.empty() || Correction.isResolved())
@@ -4595,9 +4641,7 @@ void TypoCorrectionConsumer::NamespaceSpecifierSet::addNameSpecifier(
                  dyn_cast_or_null<NamedDecl>(NamespaceDeclChain.back())) {
     IdentifierInfo *Name = ND->getIdentifier();
     bool SameNameSpecifier = false;
-    if (std::find(CurNameSpecifierIdentifiers.begin(),
-                  CurNameSpecifierIdentifiers.end(),
-                  Name) != CurNameSpecifierIdentifiers.end()) {
+    if (llvm::is_contained(CurNameSpecifierIdentifiers, Name)) {
       std::string NewNameSpecifier;
       llvm::raw_string_ostream SpecifierOStream(NewNameSpecifier);
       SmallVector<const IdentifierInfo *, 4> NewNameSpecifierIdentifiers;
@@ -4606,8 +4650,7 @@ void TypoCorrectionConsumer::NamespaceSpecifierSet::addNameSpecifier(
       SpecifierOStream.flush();
       SameNameSpecifier = NewNameSpecifier == CurNameSpecifier;
     }
-    if (SameNameSpecifier || llvm::find(CurContextIdentifiers, Name) !=
-                                 CurContextIdentifiers.end()) {
+    if (SameNameSpecifier || llvm::is_contained(CurContextIdentifiers, Name)) {
       // Rebuild the NestedNameSpecifier as a globally-qualified specifier.
       NNS = NestedNameSpecifier::GlobalSpecifier(Context);
       NumSpecifiers =
@@ -5325,11 +5368,8 @@ static NamedDecl *getDefinitionToImport(NamedDecl *D) {
     return FD->getDefinition();
   if (TagDecl *TD = dyn_cast<TagDecl>(D))
     return TD->getDefinition();
-  // The first definition for this ObjCInterfaceDecl might be in the TU
-  // and not associated with any module. Use the one we know to be complete
-  // and have just seen in a module.
   if (ObjCInterfaceDecl *ID = dyn_cast<ObjCInterfaceDecl>(D))
-    return ID;
+    return ID->getDefinition();
   if (ObjCProtocolDecl *PD = dyn_cast<ObjCProtocolDecl>(D))
     return PD->getDefinition();
   if (TemplateDecl *TD = dyn_cast<TemplateDecl>(D))

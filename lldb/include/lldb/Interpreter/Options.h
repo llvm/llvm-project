@@ -86,7 +86,7 @@ public:
                                 const OptionDefinition &option_def,
                                 uint32_t output_max_columns);
 
-  void GenerateOptionUsage(Stream &strm, CommandObject *cmd,
+  void GenerateOptionUsage(Stream &strm, CommandObject &cmd,
                            uint32_t screen_width);
 
   bool SupportsLongOption(const char *long_option);
@@ -169,7 +169,7 @@ public:
   /// user wants returned.
   ///
   /// \return
-  ///     \btrue if we were in an option, \bfalse otherwise.
+  ///     \b true if we were in an option, \b false otherwise.
   bool HandleOptionCompletion(lldb_private::CompletionRequest &request,
                               OptionElementVector &option_map,
                               CommandInterpreter &interpreter);

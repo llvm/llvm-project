@@ -30,9 +30,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "CodeGenDAGPatterns.h"
+#include "CodeGenInstruction.h"
 #include "SubtargetFeatureInfo.h"
 #include "llvm/ADT/Optional.h"
-#include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Support/CodeGenCoverage.h"
 #include "llvm/Support/CommandLine.h"
@@ -109,7 +109,7 @@ public:
     raw_string_ostream OS(Str);
 
     emitCxxEnumValue(OS);
-    return OS.str();
+    return Str;
   }
 
   void emitCxxEnumValue(raw_ostream &OS) const {
@@ -466,7 +466,7 @@ public:
   MatchTableRecord(Optional<unsigned> LabelID_, StringRef EmitStr,
                    unsigned NumElements, unsigned Flags,
                    int64_t RawValue = std::numeric_limits<int64_t>::min())
-      : LabelID(LabelID_.getValueOr(~0u)), EmitStr(EmitStr),
+      : LabelID(LabelID_.value_or(~0u)), EmitStr(EmitStr),
         NumElements(NumElements), Flags(Flags), RawValue(RawValue) {
     assert((!LabelID_.hasValue() || LabelID != ~0u) &&
            "This value is reserved for non-labels");
@@ -668,7 +668,6 @@ MatchTable &operator<<(MatchTable &Table, const MatchTableRecord &Value) {
 class OperandMatcher;
 class MatchAction;
 class PredicateMatcher;
-class RuleMatcher;
 
 class Matcher {
 public:
@@ -883,9 +882,7 @@ protected:
 
 public:
   RuleMatcher(ArrayRef<SMLoc> SrcLoc)
-      : Matchers(), Actions(), InsnVariableIDs(), MutatableInsns(),
-        DefinedOperands(), NextInsnVarID(0), NextOutputInsnID(0),
-        NextTempRegID(0), SrcLoc(SrcLoc), ComplexSubOperands(),
+      : NextInsnVarID(0), NextOutputInsnID(0), NextTempRegID(0), SrcLoc(SrcLoc),
         RuleID(NextRuleID++) {}
   RuleMatcher(RuleMatcher &&Other) = default;
   RuleMatcher &operator=(RuleMatcher &&Other) = default;
@@ -1212,11 +1209,13 @@ PredicateListMatcher<OperandPredicateMatcher>::getNoPredicateComment() const {
 /// one as another.
 class SameOperandMatcher : public OperandPredicateMatcher {
   std::string MatchingName;
+  unsigned OrigOpIdx;
 
 public:
-  SameOperandMatcher(unsigned InsnVarID, unsigned OpIdx, StringRef MatchingName)
+  SameOperandMatcher(unsigned InsnVarID, unsigned OpIdx, StringRef MatchingName,
+                     unsigned OrigOpIdx)
       : OperandPredicateMatcher(OPM_SameOperand, InsnVarID, OpIdx),
-        MatchingName(MatchingName) {}
+        MatchingName(MatchingName), OrigOpIdx(OrigOpIdx) {}
 
   static bool classof(const PredicateMatcher *P) {
     return P->getKind() == OPM_SameOperand;
@@ -1227,6 +1226,7 @@ public:
 
   bool isIdentical(const PredicateMatcher &B) const override {
     return OperandPredicateMatcher::isIdentical(B) &&
+           OrigOpIdx == cast<SameOperandMatcher>(&B)->OrigOpIdx &&
            MatchingName == cast<SameOperandMatcher>(&B)->MatchingName;
   }
 };
@@ -1670,7 +1670,7 @@ public:
         CommentOS << "Operand " << OpIdx;
       else
         CommentOS << SymbolicName;
-      Table << MatchTable::Comment(CommentOS.str()) << MatchTable::LineBreak;
+      Table << MatchTable::Comment(Comment) << MatchTable::LineBreak;
     }
 
     emitPredicateListOpcodes(Table, Rule);
@@ -3291,7 +3291,8 @@ void RuleMatcher::defineOperand(StringRef SymbolicName, OperandMatcher &OM) {
 
   // If the operand is already defined, then we must ensure both references in
   // the matcher have the exact same node.
-  OM.addPredicate<SameOperandMatcher>(OM.getSymbolicName());
+  OM.addPredicate<SameOperandMatcher>(
+      OM.getSymbolicName(), getOperandMatcher(OM.getSymbolicName()).getOpIdx());
 }
 
 void RuleMatcher::definePhysRegOperand(Record *Reg, OperandMatcher &OM) {
@@ -3815,12 +3816,15 @@ Expected<InstructionMatcher &> GlobalISelEmitter::addBuiltinPredicates(
       if (!ParsedAddrSpaces.empty()) {
         InsnMatcher.addPredicate<MemoryAddressSpacePredicateMatcher>(
             0, ParsedAddrSpaces);
+        return InsnMatcher;
       }
     }
 
     int64_t MinAlign = Predicate.getMinAlignment();
-    if (MinAlign > 0)
+    if (MinAlign > 0) {
       InsnMatcher.addPredicate<MemoryAlignmentPredicateMatcher>(0, MinAlign);
+      return InsnMatcher;
+    }
   }
 
   // G_LOAD is used for both non-extending and any-extending loads.
@@ -5533,6 +5537,7 @@ std::vector<Matcher *> GlobalISelEmitter::optimizeRules(
   ProcessCurrentGroup();
 
   LLVM_DEBUG(dbgs() << "NumGroups: " << NumGroups << "\n");
+  (void) NumGroups;
   assert(CurrentGroup->empty() && "The last group wasn't properly processed");
   return OptRules;
 }

@@ -208,7 +208,9 @@ identifiers::
    multiclass string        then          true
 
 .. warning::
-  The ``field`` reserved word is deprecated.
+  The ``field`` reserved word is deprecated, except when used with the
+  CodeEmitterGen backend where it's used to distinguish normal record
+  fields from encoding fields.
 
 Bang operators
 --------------
@@ -217,7 +219,7 @@ TableGen provides "bang operators" that have a wide variety of uses:
 
 .. productionlist::
    BangOperator: one of
-               : !add        !and         !cast        !con         !dag 
+               : !add        !and         !cast        !con         !dag
                : !empty      !eq          !filter      !find        !foldl
                : !foreach    !ge          !getdagop    !gt          !head
                : !if         !interleave  !isa         !le          !listconcat
@@ -330,7 +332,7 @@ to an entity of type ``bits<4>``.
 
 .. productionlist::
    Value: `SimpleValue` `ValueSuffix`*
-        :| `Value` "#" `Value`
+        :| `Value` "#" [`Value`]
    ValueSuffix: "{" `RangeList` "}"
               :| "[" `RangeList` "]"
               :| "." `TokIdentifier`
@@ -536,6 +538,9 @@ previous case, if the *right-hand-side* operand is an undefined name or a
 global name, it is treated as a verbatim string of characters. The
 left-hand-side operand is treated normally.
 
+Values can have a trailing paste operator, in which case the left-hand-side 
+operand is concatenated to an empty string.
+
 `Appendix B: Paste Operator Examples`_ presents examples of the behavior of
 the paste operator.
 
@@ -546,18 +551,19 @@ The following statements may appear at the top level of TableGen source
 files.
 
 .. productionlist::
-   TableGenFile: `Statement`*
+   TableGenFile: (`Statement` | `IncludeDirective`
+            :| `PreprocessorDirective`)*
    Statement: `Assert` | `Class` | `Def` | `Defm` | `Defset` | `Defvar`
             :| `Foreach` | `If` | `Let` | `MultiClass`
 
-The following sections describe each of these top-level statements. 
+The following sections describe each of these top-level statements.
 
 
 ``class`` --- define an abstract record class
 ---------------------------------------------
 
 A ``class`` statement defines an abstract record class from which other
-classes and records can inherit. 
+classes and records can inherit.
 
 .. productionlist::
    Class: "class" `ClassID` [`TemplateArgList`] `RecordBody`
@@ -694,7 +700,7 @@ to that record's parent classes. For example:
     dag the_dag = d;
   }
 
-  def rec1 : A<(ops rec1)>
+  def rec1 : A<(ops rec1)>;
 
 The DAG ``(ops rec1)`` is passed as a template argument to class ``A``. Notice
 that the DAG includes ``rec1``, the record being defined.
@@ -846,7 +852,7 @@ their parent classes. So the ``let`` acts to override inherited field
 values. A ``let`` cannot override the value of a template argument.
 
 Top-level ``let`` statements are often useful when a few fields need to be
-overriden in several records. Here are two examples. Note that ``let``
+overridden in several records. Here are two examples. Note that ``let``
 statements can be nested.
 
 .. code-block:: text
@@ -886,9 +892,8 @@ template that expands into multiple records.
 
 .. productionlist::
    MultiClass: "multiclass" `TokIdentifier` [`TemplateArgList`]
-             : [":" `ParentMultiClassList`]
+             : `ParentClassList`
              : "{" `MultiClassStatement`+ "}"
-   ParentMultiClassList: `MultiClassID` ("," `MultiClassID`)*
    MultiClassID: `TokIdentifier`
    MultiClassStatement: `Assert` | `Def` | `Defm` | `Defvar` | `Foreach` | `If` | `Let`
 
@@ -924,7 +929,7 @@ See `Examples: multiclasses and defms`_ for examples.
 
 Once multiclasses have been defined, you use the ``defm`` statement to
 "invoke" them and process the multiple record definitions in those
-multiclasses. Those record definitions are specified by ``def`` 
+multiclasses. Those record definitions are specified by ``def``
 statements in the multiclasses, and indirectly by ``defm`` statements.
 
 .. productionlist::
@@ -1194,7 +1199,7 @@ Variables defined in a top-level ``foreach`` go out of scope at the end of
 each loop iteration, so their value in one iteration is not available in
 the next iteration.  The following ``defvar`` will not work::
 
-  defvar i = !add(i, 1)
+  defvar i = !add(i, 1);
 
 Variables can also be defined with ``defvar`` in a record body. See
 `Defvar in a Record Body`_ for more details.
@@ -1220,8 +1225,6 @@ The statement list establishes an inner scope. Variables local to a
 ``foreach`` go out of scope at the end of each loop iteration, so their
 values do not carry over from one iteration to the next. Foreach loops may
 be nested.
-
-The ``foreach`` statement can also be used in a record :token:`Body`.
 
 .. Note that the productions involving RangeList and RangePiece have precedence
    over the more generic value parsing based on the first token.
@@ -1324,7 +1327,7 @@ A directed acyclic graph can be represented directly in TableGen using the
 ``dag`` datatype. A DAG node consists of an operator and zero or more
 arguments (or operands). Each argument can be of any desired type. By using
 another DAG node as an argument, an arbitrary graph of DAG nodes can be
-built. 
+built.
 
 The syntax of a ``dag`` instance is:
 
@@ -1332,7 +1335,7 @@ The syntax of a ``dag`` instance is:
 
 The operator must be present and must be a record. There can be zero or more
 arguments, separated by commas. The operator and arguments can have three
-formats. 
+formats.
 
 ====================== =============================================
 Format                 Meaning
@@ -1398,7 +1401,7 @@ abstract records and so go through the same steps.
 
 5. Make a pass over all the fields to resolve any inter-field references.
 
-6. Add the record to the master record list.
+6. Add the record to the final record list.
 
 Because references between fields are resolved (step 5) after ``let`` bindings are
 applied (step 3), the ``let`` statement has unusual power. For example:
@@ -1625,7 +1628,7 @@ and non-0 as true.
 
 ``!eq(`` *a*\ `,` *b*\ ``)``
     This operator produces 1 if *a* is equal to *b*; 0 otherwise.
-    The arguments must be ``bit``, ``bits``, ``int``, ``string``, or 
+    The arguments must be ``bit``, ``bits``, ``int``, ``string``, or
     record values. Use ``!cast<string>`` to compare other types of objects.
 
 ``!filter(``\ *var*\ ``,`` *list*\ ``,`` *predicate*\ ``)``

@@ -50,5 +50,5 @@ entry:
 ; CHECK-NOT: argmemonly
 ; CHECK-NOT: speculatable
 
-; CHECK: Function Attrs: nofree nosync nounwind readnone willreturn
+; CHECK: Function Attrs: nocallback nofree nosync nounwind readnone willreturn
 ; CHECK-NEXT: declare void @llvm.donothing

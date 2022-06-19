@@ -22,7 +22,7 @@ void vla(int N) { // expected-note 5{{here}}
   POD array2[N]; // expected-warning{{variable length arrays are a C99 feature}} expected-note {{parameter 'N'}}
   StillPOD array3[N]; // expected-warning{{variable length arrays are a C99 feature}} expected-note {{parameter 'N'}}
   StillPOD2 array4[N][3]; // expected-warning{{variable length arrays are a C99 feature}} expected-note {{parameter 'N'}}
-  NonPOD array5[N]; // expected-error{{no matching constructor for initialization of 'NonPOD [N]'}}
+  NonPOD array5[N]; // expected-error{{no matching constructor for initialization of 'NonPOD[N]'}}
   // expected-warning@-1{{variable length arrays are a C99 feature}} expected-note@-1 {{parameter 'N'}}
   // expected-note@-16{{candidate constructor not viable}}
   // expected-note@-18{{candidate constructor (the implicit copy constructor) not viable}}

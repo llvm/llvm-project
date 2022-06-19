@@ -1051,6 +1051,8 @@ void __kmp_reap_worker(kmp_info_t *th) {
                   "exit_val = %p\n",
                   th->th.th_info.ds.ds_gtid, exit_val));
   }
+#else
+  (void)status; // unused variable
 #endif /* KMP_DEBUG */
 
   KA_TRACE(10, ("__kmp_reap_worker: done reaping T#%d\n",
@@ -1232,7 +1234,7 @@ static void __kmp_atfork_child(void) {
   // affinity in the parent
   kmp_set_thread_affinity_mask_initial();
 #endif
-  // Set default not to bind threads tightly in the child (we’re expecting
+  // Set default not to bind threads tightly in the child (we're expecting
   // over-subscription after the fork and this can improve things for
   // scripting languages that use OpenMP inside process-parallel code).
   __kmp_affinity_type = affinity_none;
@@ -1407,9 +1409,13 @@ static inline void __kmp_suspend_template(int th_gtid, C *flag) {
   /* TODO: shouldn't this use release semantics to ensure that
      __kmp_suspend_initialize_thread gets called first? */
   old_spin = flag->set_sleeping();
+  TCW_PTR(th->th.th_sleep_loc, (void *)flag);
+  th->th.th_sleep_loc_type = flag->get_type();
   if (__kmp_dflt_blocktime == KMP_MAX_BLOCKTIME &&
       __kmp_pause_status != kmp_soft_paused) {
     flag->unset_sleeping();
+    TCW_PTR(th->th.th_sleep_loc, NULL);
+    th->th.th_sleep_loc_type = flag_unset;
     __kmp_unlock_suspend_mx(th);
     return;
   }
@@ -1417,8 +1423,10 @@ static inline void __kmp_suspend_template(int th_gtid, C *flag) {
                " was %x\n",
                th_gtid, flag->get(), flag->load(), old_spin));
 
-  if (flag->done_check_val(old_spin)) {
-    old_spin = flag->unset_sleeping();
+  if (flag->done_check_val(old_spin) || flag->done_check()) {
+    flag->unset_sleeping();
+    TCW_PTR(th->th.th_sleep_loc, NULL);
+    th->th.th_sleep_loc_type = flag_unset;
     KF_TRACE(5, ("__kmp_suspend_template: T#%d false alarm, reset sleep bit "
                  "for spin(%p)\n",
                  th_gtid, flag->get()));
@@ -1427,7 +1435,6 @@ static inline void __kmp_suspend_template(int th_gtid, C *flag) {
        "with low probability" return when the condition variable has
        not been signaled or broadcast */
     int deactivated = FALSE;
-    TCW_PTR(th->th.th_sleep_loc, (void *)flag);
 
     while (flag->is_sleeping()) {
 #ifdef DEBUG_SUSPEND
@@ -1448,6 +1455,9 @@ static inline void __kmp_suspend_template(int th_gtid, C *flag) {
         }
         deactivated = TRUE;
       }
+
+      KMP_DEBUG_ASSERT(th->th.th_sleep_loc);
+      KMP_DEBUG_ASSERT(flag->get_type() == th->th.th_sleep_loc_type);
 
 #if USE_SUSPEND_TIMEOUT
       struct timespec now;
@@ -1478,6 +1488,18 @@ static inline void __kmp_suspend_template(int th_gtid, C *flag) {
       if ((status != 0) && (status != EINTR) && (status != ETIMEDOUT)) {
         KMP_SYSFAIL("pthread_cond_wait", status);
       }
+
+      KMP_DEBUG_ASSERT(flag->get_type() == flag->get_ptr_type());
+
+      if (!flag->is_sleeping() &&
+          ((status == EINTR) || (status == ETIMEDOUT))) {
+        // if interrupt or timeout, and thread is no longer sleeping, we need to
+        // make sure sleep_loc gets reset; however, this shouldn't be needed if
+        // we woke up with resume
+        flag->unset_sleeping();
+        TCW_PTR(th->th.th_sleep_loc, NULL);
+        th->th.th_sleep_loc_type = flag_unset;
+      }
 #ifdef KMP_DEBUG
       if (status == ETIMEDOUT) {
         if (flag->is_sleeping()) {
@@ -1487,6 +1509,8 @@ static inline void __kmp_suspend_template(int th_gtid, C *flag) {
           KF_TRACE(2, ("__kmp_suspend_template: T#%d timeout wakeup, sleep bit "
                        "not set!\n",
                        th_gtid));
+          TCW_PTR(th->th.th_sleep_loc, NULL);
+          th->th.th_sleep_loc_type = flag_unset;
         }
       } else if (flag->is_sleeping()) {
         KF_TRACE(100,
@@ -1504,6 +1528,13 @@ static inline void __kmp_suspend_template(int th_gtid, C *flag) {
       }
     }
   }
+  // We may have had the loop variable set before entering the loop body;
+  // so we need to reset sleep_loc.
+  TCW_PTR(th->th.th_sleep_loc, NULL);
+  th->th.th_sleep_loc_type = flag_unset;
+
+  KMP_DEBUG_ASSERT(!flag->is_sleeping());
+  KMP_DEBUG_ASSERT(!th->th.th_sleep_loc);
 #ifdef DEBUG_SUSPEND
   {
     char buffer[128];
@@ -1525,6 +1556,10 @@ template <bool C, bool S>
 void __kmp_suspend_64(int th_gtid, kmp_flag_64<C, S> *flag) {
   __kmp_suspend_template(th_gtid, flag);
 }
+template <bool C, bool S>
+void __kmp_atomic_suspend_64(int th_gtid, kmp_atomic_flag_64<C, S> *flag) {
+  __kmp_suspend_template(th_gtid, flag);
+}
 void __kmp_suspend_oncore(int th_gtid, kmp_flag_oncore *flag) {
   __kmp_suspend_template(th_gtid, flag);
 }
@@ -1532,6 +1567,10 @@ void __kmp_suspend_oncore(int th_gtid, kmp_flag_oncore *flag) {
 template void __kmp_suspend_32<false, false>(int, kmp_flag_32<false, false> *);
 template void __kmp_suspend_64<false, true>(int, kmp_flag_64<false, true> *);
 template void __kmp_suspend_64<true, false>(int, kmp_flag_64<true, false> *);
+template void
+__kmp_atomic_suspend_64<false, true>(int, kmp_atomic_flag_64<false, true> *);
+template void
+__kmp_atomic_suspend_64<true, false>(int, kmp_atomic_flag_64<true, false> *);
 
 /* This routine signals the thread specified by target_gtid to wake up
    after setting the sleep bit indicated by the flag argument to FALSE.
@@ -1554,36 +1593,50 @@ static inline void __kmp_resume_template(int target_gtid, C *flag) {
 
   __kmp_lock_suspend_mx(th);
 
-  if (!flag) { // coming from __kmp_null_resume_wrapper
+  if (!flag || flag != th->th.th_sleep_loc) {
+    // coming from __kmp_null_resume_wrapper, or thread is now sleeping on a
+    // different location; wake up at new location
     flag = (C *)CCAST(void *, th->th.th_sleep_loc);
   }
 
   // First, check if the flag is null or its type has changed. If so, someone
   // else woke it up.
-  if (!flag || flag->get_type() != flag->get_ptr_type()) { // get_ptr_type
-    // simply shows what flag was cast to
+  if (!flag) { // Thread doesn't appear to be sleeping on anything
     KF_TRACE(5, ("__kmp_resume_template: T#%d exiting, thread T#%d already "
                  "awake: flag(%p)\n",
-                 gtid, target_gtid, NULL));
+                 gtid, target_gtid, (void *)NULL));
     __kmp_unlock_suspend_mx(th);
+    return;
+  } else if (flag->get_type() != th->th.th_sleep_loc_type) {
+    // Flag type does not appear to match this function template; possibly the
+    // thread is sleeping on something else. Try null resume again.
+    KF_TRACE(
+        5,
+        ("__kmp_resume_template: T#%d retrying, thread T#%d Mismatch flag(%p), "
+         "spin(%p) type=%d ptr_type=%d\n",
+         gtid, target_gtid, flag, flag->get(), flag->get_type(),
+         th->th.th_sleep_loc_type));
+    __kmp_unlock_suspend_mx(th);
+    __kmp_null_resume_wrapper(th);
     return;
   } else { // if multiple threads are sleeping, flag should be internally
     // referring to a specific thread here
-    typename C::flag_t old_spin = flag->unset_sleeping();
-    if (!flag->is_sleeping_val(old_spin)) {
+    if (!flag->is_sleeping()) {
       KF_TRACE(5, ("__kmp_resume_template: T#%d exiting, thread T#%d already "
-                   "awake: flag(%p): "
-                   "%u => %u\n",
-                   gtid, target_gtid, flag->get(), old_spin, flag->load()));
+                   "awake: flag(%p): %u\n",
+                   gtid, target_gtid, flag->get(), (unsigned int)flag->load()));
       __kmp_unlock_suspend_mx(th);
       return;
     }
-    KF_TRACE(5, ("__kmp_resume_template: T#%d about to wakeup T#%d, reset "
-                 "sleep bit for flag's loc(%p): "
-                 "%u => %u\n",
-                 gtid, target_gtid, flag->get(), old_spin, flag->load()));
   }
+  KMP_DEBUG_ASSERT(flag);
+  flag->unset_sleeping();
   TCW_PTR(th->th.th_sleep_loc, NULL);
+  th->th.th_sleep_loc_type = flag_unset;
+
+  KF_TRACE(5, ("__kmp_resume_template: T#%d about to wakeup T#%d, reset "
+               "sleep bit for flag's loc(%p): %u\n",
+               gtid, target_gtid, flag->get(), (unsigned int)flag->load()));
 
 #ifdef DEBUG_SUSPEND
   {
@@ -1609,12 +1662,19 @@ template <bool C, bool S>
 void __kmp_resume_64(int target_gtid, kmp_flag_64<C, S> *flag) {
   __kmp_resume_template(target_gtid, flag);
 }
+template <bool C, bool S>
+void __kmp_atomic_resume_64(int target_gtid, kmp_atomic_flag_64<C, S> *flag) {
+  __kmp_resume_template(target_gtid, flag);
+}
 void __kmp_resume_oncore(int target_gtid, kmp_flag_oncore *flag) {
   __kmp_resume_template(target_gtid, flag);
 }
 
 template void __kmp_resume_32<false, true>(int, kmp_flag_32<false, true> *);
+template void __kmp_resume_32<false, false>(int, kmp_flag_32<false, false> *);
 template void __kmp_resume_64<false, true>(int, kmp_flag_64<false, true> *);
+template void
+__kmp_atomic_resume_64<false, true>(int, kmp_atomic_flag_64<false, true> *);
 
 #if KMP_USE_MONITOR
 void __kmp_resume_monitor() {
@@ -1741,8 +1801,12 @@ static int __kmp_get_xproc(void) {
 
   int r = 0;
 
-#if KMP_OS_LINUX || KMP_OS_DRAGONFLY || KMP_OS_FREEBSD || KMP_OS_NETBSD ||     \
-    KMP_OS_OPENBSD || KMP_OS_HURD
+#if KMP_OS_LINUX
+
+  __kmp_type_convert(sysconf(_SC_NPROCESSORS_CONF), &(r));
+
+#elif KMP_OS_DRAGONFLY || KMP_OS_FREEBSD || KMP_OS_NETBSD || KMP_OS_OPENBSD || \
+    KMP_OS_HURD
 
   __kmp_type_convert(sysconf(_SC_NPROCESSORS_ONLN), &(r));
 

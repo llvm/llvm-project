@@ -77,8 +77,8 @@ using has_impltype_hash_t = decltype(ImplTy::hashKey(std::declval<T>()));
 ///      one-time assignment of the mutable component.
 ///
 /// All storage classes must be registered with the uniquer via
-/// `registerStorageType` using an appropriate unique `TypeID` for the storage
-/// class.
+/// `registerParametricStorageType` or `registerSingletonStorageType`
+/// using an appropriate unique `TypeID` for the storage class.
 class StorageUniquer {
 public:
   /// This class acts as the base storage that all storage classes must derived
@@ -105,8 +105,13 @@ public:
     /// Copy the provided string into memory managed by our bump pointer
     /// allocator.
     StringRef copyInto(StringRef str) {
-      auto result = copyInto(ArrayRef<char>(str.data(), str.size()));
-      return StringRef(result.data(), str.size());
+      if (str.empty())
+        return StringRef();
+
+      char *result = allocator.Allocate<char>(str.size() + 1);
+      std::uninitialized_copy(str.begin(), str.end(), result);
+      result[str.size()] = 0;
+      return StringRef(result, str.size());
     }
 
     /// Allocate an instance of the provided type.
@@ -321,6 +326,6 @@ private:
     return DenseMapInfo<DerivedKey>::getHashValue(derivedKey);
   }
 };
-} // end namespace mlir
+} // namespace mlir
 
 #endif

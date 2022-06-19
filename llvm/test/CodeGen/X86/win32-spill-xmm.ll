@@ -4,7 +4,7 @@
 
 ; CHECK-LABEL: spill_ok
 ; CHECK: subl    $32, %esp
-; CHECK: movaps  %xmm3, (%esp)
+; CHECK: movups  %xmm3, (%esp)
 ; CHECK: movl    $0, 16(%esp)
 ; CHECK: calll   _bar
 define void @spill_ok(i32, <16 x float> *) {
@@ -20,7 +20,7 @@ declare void @bar(<16 x float> %a, i32 %b)
 ; Check that proper alignment of spilled vector does not affect vargs
 
 ; CHECK-LABEL: vargs_not_affected
-; CHECK: movl 28(%ebp), %eax
+; CHECK: movl 28(%esp), %eax
 define i32 @vargs_not_affected(<4 x float> %v, i8* %f, ...) {
 entry:
   %ap = alloca i8*, align 4

@@ -1,5 +1,6 @@
 ; RUN: opt -S -inline < %s | FileCheck %s
 ; RUN: opt -S -passes='cgscc(inline)' < %s | FileCheck %s
+; RUN: opt -S -passes='module-inline' < %s | FileCheck %s
 
 target datalayout = "e-p3:32:32-p4:64:64-n32"
 

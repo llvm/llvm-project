@@ -48,6 +48,10 @@ int64_t __tgt_rtl_init_requires(int64_t RequiresFlags);
 // return an error code.
 int32_t __tgt_rtl_init_device(int32_t ID);
 
+// Deinitialize the specified device. In case of success return 0; otherwise
+// return an error code.
+int32_t __tgt_rtl_deinit_device(int32_t ID);
+
 // Pass an executable image section described by image to the specified
 // device and prepare an address table of target entities. In case of error,
 // return NULL. Otherwise, return a pointer to the built address table.
@@ -141,6 +145,39 @@ int32_t __tgt_rtl_synchronize(int32_t ID, __tgt_async_info *AsyncInfo);
 
 // Set plugin's internal information flag externally.
 void __tgt_rtl_set_info_flag(uint32_t);
+
+// Print the device information
+void __tgt_rtl_print_device_info(int32_t ID);
+
+// Event related interfaces. It is expected to use the interfaces in the
+// following way:
+// 1) Create an event on the target device (__tgt_rtl_create_event).
+// 2) Record the event based on the status of \p AsyncInfo->Queue at the moment
+// of function call to __tgt_rtl_record_event. An event becomes "meaningful"
+// once it is recorded, such that others can depend on it.
+// 3) Call __tgt_rtl_wait_event to set dependence on the event. Whether the
+// operation is blocking or non-blocking depends on the target. It is expected
+// to be non-blocking, just set dependence and return.
+// 4) Call __tgt_rtl_sync_event to sync the event. It is expected to block the
+// thread calling the function.
+// 5) Destroy the event (__tgt_rtl_destroy_event).
+// {
+int32_t __tgt_rtl_create_event(int32_t ID, void **Event);
+
+int32_t __tgt_rtl_record_event(int32_t ID, void *Event,
+                               __tgt_async_info *AsyncInfo);
+
+int32_t __tgt_rtl_wait_event(int32_t ID, void *Event,
+                             __tgt_async_info *AsyncInfo);
+
+int32_t __tgt_rtl_sync_event(int32_t ID, void *Event);
+
+int32_t __tgt_rtl_destroy_event(int32_t ID, void *Event);
+// }
+
+int32_t __tgt_rtl_init_async_info(int32_t ID, __tgt_async_info **AsyncInfoPtr);
+int32_t __tgt_rtl_init_device_info(int32_t ID, __tgt_device_info *DeviceInfoPtr,
+                                   const char **ErrStr);
 
 #ifdef __cplusplus
 }

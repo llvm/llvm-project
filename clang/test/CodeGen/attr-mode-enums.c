@@ -1,10 +1,10 @@
-// RUN: %clang_cc1 -triple x86_64-unknown-unknown -emit-llvm %s -o - | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-unknown-unknown -emit-llvm %s -o - | FileCheck %s
 
 // Test checks that 'mode' attribute is handled correctly with enums, i. e. code
 //   1. "typedef enum { A } __attribute__((mode(HI))) T;" is accepted,
 //   2. "enum X __attribute__((mode(QI))) var;" forms a complete integer type.
 
-int main() {
+int main(void) {
   // CHECK: [[X1:%.+]] = alloca i8
   enum { A1, B1 } __attribute__((mode(QI))) x1 = A1;
 

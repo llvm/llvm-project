@@ -162,4 +162,25 @@ void tfoo6() {
 }
 
 
+// PRINT-LABEL: template <int Tile> void foo7(int start, int stop, int step) {
+// DUMP-LABEL: FunctionTemplateDecl {{.*}} foo7
+template <int Tile>
+void foo7(int start, int stop, int step) {
+  // PRINT: #pragma omp tile sizes(Tile)
+  // DUMP:      OMPTileDirective
+  // DUMP-NEXT:   OMPSizesClause
+  // DUMP-NEXT:     DeclRefExpr {{.*}} 'Tile' 'int'
+  #pragma omp tile sizes(Tile)
+    // PRINT-NEXT:  for (int i = start; i < stop; i += step)
+    // DUMP-NEXT: ForStmt
+    for (int i = start; i < stop; i += step)
+      // PRINT-NEXT: body(i);
+      // DUMP:  CallExpr
+      body(i);
+}
+void tfoo7() {
+  foo7<5>(0, 42, 2);
+}
+
+
 #endif

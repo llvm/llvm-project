@@ -246,7 +246,8 @@ static isl::map makeUnknownForDomain(isl::set Domain) {
 static bool isMapToUnknown(const isl::map &Map) {
   isl::space Space = Map.get_space().range();
   return Space.has_tuple_id(isl::dim::set).is_false() &&
-         Space.is_wrapping().is_false() && Space.dim(isl::dim::set) == 0;
+         Space.is_wrapping().is_false() &&
+         Space.dim(isl::dim::set).release() == 0;
 }
 
 isl::union_map polly::filterKnownValInst(const isl::union_map &UMap) {
@@ -685,10 +686,11 @@ isl::map ZoneAlgorithm::getDefToTarget(ScopStmt *DefStmt,
                    TargetStmt->getSurroundingLoop())) {
     isl::set DefDomain = getDomainFor(DefStmt);
     isl::set TargetDomain = getDomainFor(TargetStmt);
-    assert(DefDomain.tuple_dim() <= TargetDomain.tuple_dim());
+    assert(unsignedFromIslSize(DefDomain.tuple_dim()) <=
+           unsignedFromIslSize(TargetDomain.tuple_dim()));
 
     Result = isl::map::from_domain_and_range(DefDomain, TargetDomain);
-    for (unsigned i = 0, DefDims = DefDomain.tuple_dim(); i < DefDims; i += 1)
+    for (unsigned i : rangeIslSize(0, DefDomain.tuple_dim()))
       Result = Result.equate(isl::dim::in, i, isl::dim::out, i);
   }
 

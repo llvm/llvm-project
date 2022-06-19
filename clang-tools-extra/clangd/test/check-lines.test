@@ -1,6 +1,6 @@
 // RUN: cp %s %t.cpp
-// RUN: not clangd -check=%t.cpp -check-lines=6-14 2>&1 | FileCheck -strict-whitespace %s
-// RUN: not clangd -check=%t.cpp -check-lines=14 2>&1 | FileCheck -strict-whitespace %s
+// RUN: not clangd -enable-config=0 -check=%t.cpp -check-lines=6-14 2>&1 | FileCheck -strict-whitespace %s
+// RUN: not clangd -enable-config=0 -check=%t.cpp -check-lines=14 2>&1 | FileCheck -strict-whitespace %s
 
 // CHECK: Testing on source file {{.*}}check-lines.test
 // CHECK: internal (cc1) args are: -cc1

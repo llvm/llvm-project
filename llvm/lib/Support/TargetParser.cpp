@@ -13,10 +13,8 @@
 
 #include "llvm/Support/TargetParser.h"
 #include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringSwitch.h"
-#include "llvm/ADT/Twine.h"
-#include "llvm/Support/ARMBuildAttributes.h"
+#include "llvm/ADT/Triple.h"
 
 using namespace llvm;
 using namespace AMDGPU;
@@ -106,6 +104,7 @@ constexpr GPUInfo AMDGCNGPUs[] = {
   {{"gfx909"},    {"gfx909"},  GK_GFX909,  FEATURE_FAST_FMA_F32|FEATURE_FAST_DENORMAL_F32|FEATURE_XNACK},
   {{"gfx90a"},    {"gfx90a"},  GK_GFX90A,  FEATURE_FAST_FMA_F32|FEATURE_FAST_DENORMAL_F32|FEATURE_XNACK|FEATURE_SRAMECC},
   {{"gfx90c"},    {"gfx90c"},  GK_GFX90C,  FEATURE_FAST_FMA_F32|FEATURE_FAST_DENORMAL_F32|FEATURE_XNACK},
+  {{"gfx940"},    {"gfx940"},  GK_GFX940,  FEATURE_FAST_FMA_F32|FEATURE_FAST_DENORMAL_F32|FEATURE_XNACK|FEATURE_SRAMECC},
   {{"gfx1010"},   {"gfx1010"}, GK_GFX1010, FEATURE_FAST_FMA_F32|FEATURE_FAST_DENORMAL_F32|FEATURE_WAVE32|FEATURE_XNACK},
   {{"gfx1011"},   {"gfx1011"}, GK_GFX1011, FEATURE_FAST_FMA_F32|FEATURE_FAST_DENORMAL_F32|FEATURE_WAVE32|FEATURE_XNACK},
   {{"gfx1012"},   {"gfx1012"}, GK_GFX1012, FEATURE_FAST_FMA_F32|FEATURE_FAST_DENORMAL_F32|FEATURE_WAVE32|FEATURE_XNACK},
@@ -116,6 +115,11 @@ constexpr GPUInfo AMDGCNGPUs[] = {
   {{"gfx1033"},   {"gfx1033"}, GK_GFX1033, FEATURE_FAST_FMA_F32|FEATURE_FAST_DENORMAL_F32|FEATURE_WAVE32},
   {{"gfx1034"},   {"gfx1034"}, GK_GFX1034, FEATURE_FAST_FMA_F32|FEATURE_FAST_DENORMAL_F32|FEATURE_WAVE32},
   {{"gfx1035"},   {"gfx1035"}, GK_GFX1035, FEATURE_FAST_FMA_F32|FEATURE_FAST_DENORMAL_F32|FEATURE_WAVE32},
+  {{"gfx1036"},   {"gfx1036"}, GK_GFX1036, FEATURE_FAST_FMA_F32|FEATURE_FAST_DENORMAL_F32|FEATURE_WAVE32},
+  {{"gfx1100"},   {"gfx1100"}, GK_GFX1100, FEATURE_FAST_FMA_F32|FEATURE_FAST_DENORMAL_F32|FEATURE_WAVE32},
+  {{"gfx1101"},   {"gfx1101"}, GK_GFX1101, FEATURE_FAST_FMA_F32|FEATURE_FAST_DENORMAL_F32|FEATURE_WAVE32},
+  {{"gfx1102"},   {"gfx1102"}, GK_GFX1102, FEATURE_FAST_FMA_F32|FEATURE_FAST_DENORMAL_F32|FEATURE_WAVE32},
+  {{"gfx1103"},   {"gfx1103"}, GK_GFX1103, FEATURE_FAST_FMA_F32|FEATURE_FAST_DENORMAL_F32|FEATURE_WAVE32},
 };
 
 const GPUInfo *getArchEntry(AMDGPU::GPUKind AK, ArrayRef<GPUInfo> Table) {
@@ -219,6 +223,7 @@ AMDGPU::IsaVersion AMDGPU::getIsaVersion(StringRef GPU) {
   case GK_GFX909:  return {9, 0, 9};
   case GK_GFX90A:  return {9, 0, 10};
   case GK_GFX90C:  return {9, 0, 12};
+  case GK_GFX940:  return {9, 4, 0};
   case GK_GFX1010: return {10, 1, 0};
   case GK_GFX1011: return {10, 1, 1};
   case GK_GFX1012: return {10, 1, 2};
@@ -229,6 +234,11 @@ AMDGPU::IsaVersion AMDGPU::getIsaVersion(StringRef GPU) {
   case GK_GFX1033: return {10, 3, 3};
   case GK_GFX1034: return {10, 3, 4};
   case GK_GFX1035: return {10, 3, 5};
+  case GK_GFX1036: return {10, 3, 6};
+  case GK_GFX1100: return {11, 0, 0};
+  case GK_GFX1101: return {11, 0, 1};
+  case GK_GFX1102: return {11, 0, 2};
+  case GK_GFX1103: return {11, 0, 3};
   default:         return {0, 0, 0};
   }
 }
@@ -333,3 +343,51 @@ bool getCPUFeaturesExceptStdExt(CPUKind Kind,
 
 } // namespace RISCV
 } // namespace llvm
+
+// Parse a branch protection specification, which has the form
+//   standard | none | [bti,pac-ret[+b-key,+leaf]*]
+// Returns true on success, with individual elements of the specification
+// returned in `PBP`. Returns false in error, with `Err` containing
+// an erroneous part of the spec.
+bool ARM::parseBranchProtection(StringRef Spec, ParsedBranchProtection &PBP,
+                                StringRef &Err) {
+  PBP = {"none", "a_key", false};
+  if (Spec == "none")
+    return true; // defaults are ok
+
+  if (Spec == "standard") {
+    PBP.Scope = "non-leaf";
+    PBP.BranchTargetEnforcement = true;
+    return true;
+  }
+
+  SmallVector<StringRef, 4> Opts;
+  Spec.split(Opts, "+");
+  for (int I = 0, E = Opts.size(); I != E; ++I) {
+    StringRef Opt = Opts[I].trim();
+    if (Opt == "bti") {
+      PBP.BranchTargetEnforcement = true;
+      continue;
+    }
+    if (Opt == "pac-ret") {
+      PBP.Scope = "non-leaf";
+      for (; I + 1 != E; ++I) {
+        StringRef PACOpt = Opts[I + 1].trim();
+        if (PACOpt == "leaf")
+          PBP.Scope = "all";
+        else if (PACOpt == "b-key")
+          PBP.Key = "b_key";
+        else
+          break;
+      }
+      continue;
+    }
+    if (Opt == "")
+      Err = "<empty>";
+    else
+      Err = Opt;
+    return false;
+  }
+
+  return true;
+}

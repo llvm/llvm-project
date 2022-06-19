@@ -16,8 +16,8 @@
 ;  } 
 ; }
 
-; CHECK: %.lcssa = phi i32
-; CHECK-NEXT: store i32 %.lcssa, i32* getelementptr inbounds ([2 x i32], [2 x i32]* @g_390, i64 0, i64 1), align 4, !dbg [[storeLocation:![0-9]+]] 
+; CHECK: bb22:
+; CHECK-NEXT: store i32 0, i32* getelementptr inbounds ([2 x i32], [2 x i32]* @g_390, i64 0, i64 1), align 4, !dbg [[storeLocation:![0-9]+]] 
 ; CHECK: [[storeLocation]] = !DILocation(line: 0
 
 target datalayout = "e-m:o-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
@@ -68,8 +68,6 @@ bb16:                                             ; preds = %bb13
 
 bb17:                                             ; preds = %bb16, %bb13
   %i18 = load volatile i32, i32* @c, align 4, !dbg !57, !tbaa !40
-  %i19 = add nsw i32 %i18, 1, !dbg !57
-  store volatile i32 %i19, i32* @c, align 4, !dbg !57, !tbaa !40
   %i20 = load volatile i32, i32* @c, align 4, !dbg !46, !tbaa !40
   %i21 = icmp slt i32 %i20, 6, !dbg !47
   br i1 %i21, label %bb13, label %bb22, !dbg !48, !llvm.loop !58

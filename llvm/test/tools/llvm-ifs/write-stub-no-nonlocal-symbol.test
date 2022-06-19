@@ -1,6 +1,6 @@
 ## Test writing stub elf when symbol table contains no non-local symbol.
 
-# RUN: llvm-ifs --output-format=ELF --output=%t %s
+# RUN: llvm-ifs --output-elf=%t %s
 # RUN: llvm-readobj -S %t | FileCheck %s -DCLASS="64-bit (0x2)" -DDE="LittleEndian (0x1)" -DHS=64 -DPHES=56 -DSHES=64 -DDYNSYMAL=8 -DDYNSYMES=24 -DDYNAMICAL=8 -DDYNAMICES=16 -DDYNTABZ=000000000
 
 --- !ifs-v1

@@ -14,8 +14,7 @@ define half @v_constained_fma_f16_fpexcept_strict(half %x, half %y, half %z) #0 
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX10-NEXT:    v_fmac_f16_e32 v2, v0, v1
-; GFX10-NEXT:    v_mov_b32_e32 v0, v2
+; GFX10-NEXT:    v_fma_f16 v0, v0, v1, v2
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
   %val = call half @llvm.experimental.constrained.fma.f16(half %x, half %y, half %z, metadata !"round.tonearest", metadata !"fpexcept.strict")
   ret half %val
@@ -31,9 +30,9 @@ define <2 x half> @v_constained_fma_v2f16_fpexcept_strict(<2 x half> %x, <2 x ha
 ; GFX8-LABEL: v_constained_fma_v2f16_fpexcept_strict:
 ; GFX8:       ; %bb.0:
 ; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX8-NEXT:    v_lshrrev_b32_e32 v5, 16, v0
 ; GFX8-NEXT:    v_lshrrev_b32_e32 v3, 16, v2
 ; GFX8-NEXT:    v_lshrrev_b32_e32 v4, 16, v1
+; GFX8-NEXT:    v_lshrrev_b32_e32 v5, 16, v0
 ; GFX8-NEXT:    v_fma_f16 v3, v5, v4, v3
 ; GFX8-NEXT:    v_lshlrev_b32_e32 v3, 16, v3
 ; GFX8-NEXT:    v_fma_f16 v0, v0, v1, v2
@@ -61,9 +60,9 @@ define <3 x half> @v_constained_fma_v3f16_fpexcept_strict(<3 x half> %x, <3 x ha
 ; GFX8-LABEL: v_constained_fma_v3f16_fpexcept_strict:
 ; GFX8:       ; %bb.0:
 ; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX8-NEXT:    v_lshrrev_b32_e32 v8, 16, v0
 ; GFX8-NEXT:    v_lshrrev_b32_e32 v6, 16, v4
 ; GFX8-NEXT:    v_lshrrev_b32_e32 v7, 16, v2
+; GFX8-NEXT:    v_lshrrev_b32_e32 v8, 16, v0
 ; GFX8-NEXT:    v_fma_f16 v6, v8, v7, v6
 ; GFX8-NEXT:    v_lshlrev_b32_e32 v6, 16, v6
 ; GFX8-NEXT:    v_fma_f16 v0, v0, v2, v4
@@ -75,9 +74,8 @@ define <3 x half> @v_constained_fma_v3f16_fpexcept_strict(<3 x half> %x, <3 x ha
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX10-NEXT:    v_fmac_f16_e32 v5, v1, v3
 ; GFX10-NEXT:    v_pk_fma_f16 v0, v0, v2, v4
-; GFX10-NEXT:    v_mov_b32_e32 v1, v5
+; GFX10-NEXT:    v_fma_f16 v1, v1, v3, v5
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
   %val = call <3 x half> @llvm.experimental.constrained.fma.v3f16(<3 x half> %x, <3 x half> %y, <3 x half> %z, metadata !"round.tonearest", metadata !"fpexcept.strict")
   ret <3 x half> %val
@@ -87,19 +85,18 @@ define <4 x half> @v_constained_fma_v4f16_fpexcept_strict(<4 x half> %x, <4 x ha
 ; GFX9-LABEL: v_constained_fma_v4f16_fpexcept_strict:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-NEXT:    v_lshrrev_b32_e32 v8, 16, v1
 ; GFX9-NEXT:    v_lshrrev_b32_e32 v6, 16, v5
 ; GFX9-NEXT:    v_lshrrev_b32_e32 v7, 16, v3
+; GFX9-NEXT:    v_lshrrev_b32_e32 v8, 16, v1
 ; GFX9-NEXT:    v_fma_f16 v6, v8, v7, v6
-; GFX9-NEXT:    v_lshrrev_b32_e32 v9, 16, v0
 ; GFX9-NEXT:    v_lshrrev_b32_e32 v7, 16, v4
 ; GFX9-NEXT:    v_lshrrev_b32_e32 v8, 16, v2
-; GFX9-NEXT:    v_fma_f16 v0, v0, v2, v4
-; GFX9-NEXT:    v_mov_b32_e32 v2, 0xffff
+; GFX9-NEXT:    v_lshrrev_b32_e32 v9, 16, v0
 ; GFX9-NEXT:    v_fma_f16 v1, v1, v3, v5
-; GFX9-NEXT:    v_and_b32_e32 v1, v2, v1
+; GFX9-NEXT:    v_fma_f16 v0, v0, v2, v4
 ; GFX9-NEXT:    v_fma_f16 v7, v9, v8, v7
-; GFX9-NEXT:    v_and_b32_e32 v0, v2, v0
+; GFX9-NEXT:    v_and_b32_e32 v0, 0xffff, v0
+; GFX9-NEXT:    v_and_b32_e32 v1, 0xffff, v1
 ; GFX9-NEXT:    v_lshl_or_b32 v0, v7, 16, v0
 ; GFX9-NEXT:    v_lshl_or_b32 v1, v6, 16, v1
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
@@ -107,18 +104,18 @@ define <4 x half> @v_constained_fma_v4f16_fpexcept_strict(<4 x half> %x, <4 x ha
 ; GFX8-LABEL: v_constained_fma_v4f16_fpexcept_strict:
 ; GFX8:       ; %bb.0:
 ; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX8-NEXT:    v_lshrrev_b32_e32 v8, 16, v1
 ; GFX8-NEXT:    v_lshrrev_b32_e32 v6, 16, v5
 ; GFX8-NEXT:    v_lshrrev_b32_e32 v7, 16, v3
+; GFX8-NEXT:    v_lshrrev_b32_e32 v8, 16, v1
 ; GFX8-NEXT:    v_fma_f16 v6, v8, v7, v6
-; GFX8-NEXT:    v_lshrrev_b32_e32 v9, 16, v0
 ; GFX8-NEXT:    v_lshrrev_b32_e32 v7, 16, v4
 ; GFX8-NEXT:    v_lshrrev_b32_e32 v8, 16, v2
+; GFX8-NEXT:    v_lshrrev_b32_e32 v9, 16, v0
 ; GFX8-NEXT:    v_fma_f16 v7, v9, v8, v7
 ; GFX8-NEXT:    v_fma_f16 v0, v0, v2, v4
 ; GFX8-NEXT:    v_lshlrev_b32_e32 v2, 16, v7
-; GFX8-NEXT:    v_or_b32_e32 v0, v0, v2
 ; GFX8-NEXT:    v_fma_f16 v1, v1, v3, v5
+; GFX8-NEXT:    v_or_b32_e32 v0, v0, v2
 ; GFX8-NEXT:    v_lshlrev_b32_e32 v2, 16, v6
 ; GFX8-NEXT:    v_or_b32_e32 v1, v1, v2
 ; GFX8-NEXT:    s_setpc_b64 s[30:31]
@@ -128,20 +125,19 @@ define <4 x half> @v_constained_fma_v4f16_fpexcept_strict(<4 x half> %x, <4 x ha
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    v_lshrrev_b32_e32 v6, 16, v5
-; GFX10-NEXT:    v_lshrrev_b32_e32 v9, 16, v4
 ; GFX10-NEXT:    v_lshrrev_b32_e32 v7, 16, v3
 ; GFX10-NEXT:    v_lshrrev_b32_e32 v8, 16, v1
+; GFX10-NEXT:    v_lshrrev_b32_e32 v9, 16, v4
 ; GFX10-NEXT:    v_lshrrev_b32_e32 v10, 16, v2
 ; GFX10-NEXT:    v_lshrrev_b32_e32 v11, 16, v0
 ; GFX10-NEXT:    v_fmac_f16_e32 v4, v0, v2
-; GFX10-NEXT:    v_mov_b32_e32 v0, 0xffff
 ; GFX10-NEXT:    v_fmac_f16_e32 v5, v1, v3
 ; GFX10-NEXT:    v_fmac_f16_e32 v6, v8, v7
 ; GFX10-NEXT:    v_fmac_f16_e32 v9, v11, v10
-; GFX10-NEXT:    v_and_b32_e32 v1, v0, v4
-; GFX10-NEXT:    v_and_b32_e32 v2, v0, v5
-; GFX10-NEXT:    v_lshl_or_b32 v0, v9, 16, v1
-; GFX10-NEXT:    v_lshl_or_b32 v1, v6, 16, v2
+; GFX10-NEXT:    v_and_b32_e32 v0, 0xffff, v4
+; GFX10-NEXT:    v_and_b32_e32 v1, 0xffff, v5
+; GFX10-NEXT:    v_lshl_or_b32 v0, v9, 16, v0
+; GFX10-NEXT:    v_lshl_or_b32 v1, v6, 16, v1
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
   %val = call <4 x half> @llvm.experimental.constrained.fma.v4f16(<4 x half> %x, <4 x half> %y, <4 x half> %z, metadata !"round.tonearest", metadata !"fpexcept.strict")
   ret <4 x half> %val
@@ -176,8 +172,7 @@ define half @v_constained_fma_f16_fpexcept_strict_fneg_fneg(half %x, half %y, ha
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX10-NEXT:    v_fmac_f16_e64 v2, -v0, -v1
-; GFX10-NEXT:    v_mov_b32_e32 v0, v2
+; GFX10-NEXT:    v_fma_f16 v0, -v0, -v1, v2
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
   %neg.x = fneg half %x
   %neg.y = fneg half %y
@@ -196,8 +191,7 @@ define half @v_constained_fma_f16_fpexcept_strict_fabs_fabs(half %x, half %y, ha
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX10-NEXT:    v_fmac_f16_e64 v2, |v0|, |v1|
-; GFX10-NEXT:    v_mov_b32_e32 v0, v2
+; GFX10-NEXT:    v_fma_f16 v0, |v0|, |v1|, v2
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
   %neg.x = call half @llvm.fabs.f16(half %x)
   %neg.y = call half @llvm.fabs.f16(half %y)
@@ -215,9 +209,9 @@ define <2 x half> @v_constained_fma_v2f16_fpexcept_strict_fneg_fneg(<2 x half> %
 ; GFX8-LABEL: v_constained_fma_v2f16_fpexcept_strict_fneg_fneg:
 ; GFX8:       ; %bb.0:
 ; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX8-NEXT:    v_lshrrev_b32_e32 v5, 16, v0
 ; GFX8-NEXT:    v_lshrrev_b32_e32 v3, 16, v2
 ; GFX8-NEXT:    v_lshrrev_b32_e32 v4, 16, v1
+; GFX8-NEXT:    v_lshrrev_b32_e32 v5, 16, v0
 ; GFX8-NEXT:    v_fma_f16 v3, -v5, -v4, v3
 ; GFX8-NEXT:    v_lshlrev_b32_e32 v3, 16, v3
 ; GFX8-NEXT:    v_fma_f16 v0, -v0, -v1, v2

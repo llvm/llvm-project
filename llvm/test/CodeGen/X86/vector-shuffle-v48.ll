@@ -71,9 +71,9 @@ define <32 x i8> @foo(<48 x i8>* %x0) {
 ; AVX512BW-NEXT:    kmovd %eax, %k1
 ; AVX512BW-NEXT:    vmovdqu8 %ymm2, %ymm1 {%k1}
 ; AVX512BW-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[u,u,u,u,u,u,1,2,4,5,7,8,10,11,13,14]
-; AVX512BW-NEXT:    vinserti128 $1, %xmm0, %ymm0, %ymm2
-; AVX512BW-NEXT:    vmovdqa {{.*#+}} ymm0 = [0,1,2,3,4,5,6,7,8,9,10,27,28,29,30,31]
-; AVX512BW-NEXT:    vpermi2w %ymm2, %ymm1, %ymm0
+; AVX512BW-NEXT:    vinserti128 $1, %xmm0, %ymm0, %ymm0
+; AVX512BW-NEXT:    vpblendw {{.*#+}} ymm0 = ymm1[0,1,2],ymm0[3,4,5,6,7],ymm1[8,9,10],ymm0[11,12,13,14,15]
+; AVX512BW-NEXT:    vpblendd {{.*#+}} ymm0 = ymm1[0,1,2,3],ymm0[4,5,6,7]
 ; AVX512BW-NEXT:    retq
 ;
 ; AVX512VBMI-LABEL: foo:

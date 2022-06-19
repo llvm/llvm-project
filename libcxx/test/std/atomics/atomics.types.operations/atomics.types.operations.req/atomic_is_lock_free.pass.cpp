@@ -5,17 +5,16 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-//
-// UNSUPPORTED: libcpp-has-no-threads
+
 // XFAIL: !is-lockfree-runtime-function
 
 // <atomic>
 
 // template <class T>
-// bool atomic_is_lock_free(const volatile atomic<T>* obj);
+// bool atomic_is_lock_free(const volatile atomic<T>* obj) noexcept;
 //
 // template <class T>
-// bool atomic_is_lock_free(const atomic<T>* obj);
+// bool atomic_is_lock_free(const atomic<T>* obj) noexcept;
 
 #include <atomic>
 #include <cassert>
@@ -33,6 +32,9 @@ struct TestFn {
     volatile A va(t);
     bool b2 = std::atomic_is_lock_free(static_cast<const volatile A*>(&va));
     assert(b1 == b2);
+
+    ASSERT_NOEXCEPT(std::atomic_is_lock_free(static_cast<const A*>(&a)));
+    ASSERT_NOEXCEPT(std::atomic_is_lock_free(static_cast<const volatile A*>(&va)));
   }
 };
 

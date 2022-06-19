@@ -594,7 +594,8 @@ def : SchedAlias<WriteVLD, M5WriteL6>;
 def : SchedAlias<WriteVST, M5WriteVST1>;
 
 // ASIMD FP instructions.
-def : SchedAlias<WriteV, M5WriteNALU1>;
+def : SchedAlias<WriteVd, M5WriteNALU1>;
+def : SchedAlias<WriteVq, M5WriteNALU1>;
 
 // Other miscellaneous instructions.
 def : WriteRes<WriteBarrier, []> { let Latency = 1; }
@@ -616,6 +617,7 @@ def : ReadAdvance<ReadID,      0>;
 def : ReadAdvance<ReadExtrHi,  0>;
 def : ReadAdvance<ReadAdrBase, 0>;
 def : ReadAdvance<ReadVLD,     0>;
+def : ReadAdvance<ReadST,      0>;
 
 //===----------------------------------------------------------------------===//
 // Finer scheduling model.
@@ -846,7 +848,7 @@ def : InstRW<[M5WriteNALU2],  (instregex "^RBITv")>;
 def : InstRW<[M5WriteNALU2],  (instregex "^(BIF|BIT|BSL|BSP)v")>;
 def : InstRW<[M5WriteNALU2],  (instregex "^CL[STZ]v")>;
 def : InstRW<[M5WriteNEONB],  (instregex "^DUPv.+gpr")>;
-def : InstRW<[M5WriteNSHF2],  (instregex "^CPY")>;
+def : InstRW<[M5WriteNSHF2],  (instregex "^DUP(i8|i16|i32|i64)$")>;
 def : InstRW<[M5WriteNSHF2],  (instregex "^DUPv.+lane")>;
 def : InstRW<[M5WriteNSHF2],  (instregex "^EXTv")>;
 def : InstRW<[M5WriteNSHT4A], (instregex "^XTNv")>;

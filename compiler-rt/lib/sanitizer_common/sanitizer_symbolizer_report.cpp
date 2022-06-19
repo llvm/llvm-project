@@ -88,10 +88,16 @@ void ReportErrorSummary(const char *error_type, const StackTrace *stack,
 #endif
 }
 
-void ReportMmapWriteExec(int prot) {
+void ReportMmapWriteExec(int prot, int flags) {
 #if SANITIZER_POSIX && (!SANITIZER_GO && !SANITIZER_ANDROID)
-  if ((prot & (PROT_WRITE | PROT_EXEC)) != (PROT_WRITE | PROT_EXEC))
+  int pflags = (PROT_WRITE | PROT_EXEC);
+  if ((prot & pflags) != pflags)
     return;
+
+#  if SANITIZER_APPLE && defined(MAP_JIT)
+  if ((flags & MAP_JIT) == MAP_JIT)
+    return;
+#  endif
 
   ScopedErrorReportLock l;
   SanitizerCommonDecorator d;
@@ -205,9 +211,9 @@ static void ReportDeadlySignalImpl(const SignalContext &sig, u32 tid,
     Report("Hint: pc points to the zero page.\n");
   if (sig.is_memory_access) {
     const char *access_type =
-        sig.write_flag == SignalContext::WRITE
+        sig.write_flag == SignalContext::Write
             ? "WRITE"
-            : (sig.write_flag == SignalContext::READ ? "READ" : "UNKNOWN");
+            : (sig.write_flag == SignalContext::Read ? "READ" : "UNKNOWN");
     Report("The signal is caused by a %s memory access.\n", access_type);
     if (!sig.is_true_faulting_addr)
       Report("Hint: this fault was caused by a dereference of a high value "

@@ -9,7 +9,7 @@ typedef unsigned int size_t;
 @interface XNSMutableArray
 @end
 
-int main() {
+int main(void) {
 id array;
 id oldObject = array[10]; // expected-warning {{instance method '-objectAtIndexedSubscript:' not found (return type defaults to 'id')}}
 

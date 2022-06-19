@@ -19,7 +19,6 @@
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/Analysis/ValueTracking.h"
-#include "llvm/CodeGen/TargetLowering.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/IR/Dominators.h"
@@ -31,6 +30,10 @@
 #include "llvm/Transforms/Utils/SizeOpts.h"
 
 using namespace llvm;
+
+namespace llvm {
+class TargetLowering;
+}
 
 #define DEBUG_TYPE "expandmemcmp"
 
@@ -70,8 +73,8 @@ class MemCmpExpansion {
   CallInst *const CI;
   ResultBlock ResBlock;
   const uint64_t Size;
-  unsigned MaxLoadSize;
-  uint64_t NumLoadsNonOneByte;
+  unsigned MaxLoadSize = 0;
+  uint64_t NumLoadsNonOneByte = 0;
   const uint64_t NumLoadsPerBlockForZeroCmp;
   std::vector<BasicBlock *> LoadCmpBlocks;
   BasicBlock *EndBlock;
@@ -219,8 +222,7 @@ MemCmpExpansion::MemCmpExpansion(
     const TargetTransformInfo::MemCmpExpansionOptions &Options,
     const bool IsUsedForZeroCmp, const DataLayout &TheDataLayout,
     DomTreeUpdater *DTU)
-    : CI(CI), Size(Size), MaxLoadSize(0), NumLoadsNonOneByte(0),
-      NumLoadsPerBlockForZeroCmp(Options.NumLoadsPerBlock),
+    : CI(CI), Size(Size), NumLoadsPerBlockForZeroCmp(Options.NumLoadsPerBlock),
       IsUsedForZeroCmp(IsUsedForZeroCmp), DL(TheDataLayout), DTU(DTU),
       Builder(CI) {
   assert(Size > 0 && "zero blocks");
@@ -348,17 +350,17 @@ void MemCmpExpansion::emitLoadCompareByteBlock(unsigned BlockIndex,
                                     ConstantInt::get(Diff->getType(), 0));
     BranchInst *CmpBr =
         BranchInst::Create(EndBlock, LoadCmpBlocks[BlockIndex + 1], Cmp);
+    Builder.Insert(CmpBr);
     if (DTU)
       DTU->applyUpdates(
           {{DominatorTree::Insert, BB, EndBlock},
            {DominatorTree::Insert, BB, LoadCmpBlocks[BlockIndex + 1]}});
-    Builder.Insert(CmpBr);
   } else {
     // The last block has an unconditional branch to EndBlock.
     BranchInst *CmpBr = BranchInst::Create(EndBlock);
+    Builder.Insert(CmpBr);
     if (DTU)
       DTU->applyUpdates({{DominatorTree::Insert, BB, EndBlock}});
-    Builder.Insert(CmpBr);
   }
 }
 
@@ -738,7 +740,7 @@ Value *MemCmpExpansion::getMemCmpExpansion() {
 static bool expandMemCmp(CallInst *CI, const TargetTransformInfo *TTI,
                          const TargetLowering *TLI, const DataLayout *DL,
                          ProfileSummaryInfo *PSI, BlockFrequencyInfo *BFI,
-                         DomTreeUpdater *DTU) {
+                         DomTreeUpdater *DTU, const bool IsBCmp) {
   NumMemCmpCalls++;
 
   // Early exit from expansion if -Oz.
@@ -758,7 +760,8 @@ static bool expandMemCmp(CallInst *CI, const TargetTransformInfo *TTI,
   }
   // TTI call to check if target would like to expand memcmp. Also, get the
   // available load sizes.
-  const bool IsUsedForZeroCmp = isOnlyUsedInZeroEqualityComparison(CI);
+  const bool IsUsedForZeroCmp =
+      IsBCmp || isOnlyUsedInZeroEqualityComparison(CI);
   bool OptForSize = CI->getFunction()->hasOptSize() ||
                     llvm::shouldOptimizeForSize(CI->getParent(), PSI, BFI);
   auto Options = TTI->enableMemCmpExpansion(OptForSize,
@@ -862,7 +865,7 @@ bool ExpandMemCmpPass::runOnBlock(BasicBlock &BB, const TargetLibraryInfo *TLI,
     LibFunc Func;
     if (TLI->getLibFunc(*CI, Func) &&
         (Func == LibFunc_memcmp || Func == LibFunc_bcmp) &&
-        expandMemCmp(CI, TTI, TL, &DL, PSI, BFI, DTU)) {
+        expandMemCmp(CI, TTI, TL, &DL, PSI, BFI, DTU, Func == LibFunc_bcmp)) {
       return true;
     }
   }

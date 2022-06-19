@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 %s -emit-llvm -o - | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers %s -emit-llvm -o - | FileCheck %s
 // rdar://7536390
 
 typedef unsigned __INT32_TYPE__ uint32_t;

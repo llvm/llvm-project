@@ -11,7 +11,7 @@
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    ret void
 //
-void foo() {
+void foo(void) {
   static int hex = 0x10;
   static int dec = 10;
 }
@@ -19,7 +19,7 @@ void foo() {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    ret void
 //
-void bar() {
+void bar(void) {
   static int hex = 0x20;
   static int dec = 20;
 }

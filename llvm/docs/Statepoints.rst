@@ -10,21 +10,21 @@ Status
 =======
 
 This document describes a set of extensions to LLVM to support garbage
-collection.  By now, these mechanisms are well proven with commercial java 
-implementation with a fully relocating collector having shipped using them.  
+collection.  By now, these mechanisms are well proven with commercial java
+implementation with a fully relocating collector having shipped using them.
 There are a couple places where bugs might still linger; these are called out
 below.
 
 They are still listed as "experimental" to indicate that no forward or backward
-compatibility guarantees are offered across versions.  If your use case is such 
-that you need some form of forward compatibility guarantee, please raise the 
-issue on the llvm-dev mailing list.  
+compatibility guarantees are offered across versions.  If your use case is such
+that you need some form of forward compatibility guarantee, please raise the
+issue on the llvm-dev mailing list.
 
-LLVM still supports an alternate mechanism for conservative garbage collection 
+LLVM still supports an alternate mechanism for conservative garbage collection
 support using the ``gcroot`` intrinsic.  The ``gcroot`` mechanism is mostly of
 historical interest at this point with one exception - its implementation of
 shadow stacks has been used successfully by a number of language frontends and
-is still supported.  
+is still supported.
 
 Overview & Core Concepts
 ========================
@@ -98,12 +98,12 @@ ensure that all pointers can be read and updated if desired.
 Abstract Machine Model
 ^^^^^^^^^^^^^^^^^^^^^^^
 
-At a high level, LLVM has been extended to support compiling to an abstract 
-machine which extends the actual target with a non-integral pointer type 
-suitable for representing a garbage collected reference to an object.  In 
-particular, such non-integral pointer type have no defined mapping to an 
-integer representation.  This semantic quirk allows the runtime to pick a 
-integer mapping for each point in the program allowing relocations of objects 
+At a high level, LLVM has been extended to support compiling to an abstract
+machine which extends the actual target with a non-integral pointer type
+suitable for representing a garbage collected reference to an object.  In
+particular, such non-integral pointer type have no defined mapping to an
+integer representation.  This semantic quirk allows the runtime to pick a
+integer mapping for each point in the program allowing relocations of objects
 without visible effects.
 
 This high level abstract machine model is used for most of the optimizer.  As
@@ -115,25 +115,25 @@ is an implementation detail.
 Note that most of the value of the abstract machine model comes for collectors
 which need to model potentially relocatable objects.  For a compiler which
 supports only a non-relocating collector, you may wish to consider starting
-with the fully explicit form.  
+with the fully explicit form.
 
-Warning: There is one currently known semantic hole in the definition of 
+Warning: There is one currently known semantic hole in the definition of
 non-integral pointers which has not been addressed upstream.  To work around
-this, you need to disable speculation of loads unless the memory type 
-(non-integral pointer vs anything else) is known to unchanged.  That is, it is 
-not safe to speculate a load if doing causes a non-integral pointer value to 
-be loaded as any other type or vice versa.  In practice, this restriction is 
+this, you need to disable speculation of loads unless the memory type
+(non-integral pointer vs anything else) is known to unchanged.  That is, it is
+not safe to speculate a load if doing causes a non-integral pointer value to
+be loaded as any other type or vice versa.  In practice, this restriction is
 well isolated to isSafeToSpeculate in ValueTracking.cpp.
 
 Explicit Representation
 ^^^^^^^^^^^^^^^^^^^^^^^
 
-A frontend could directly generate this low level explicit form, but 
+A frontend could directly generate this low level explicit form, but
 doing so may inhibit optimization.  Instead, it is recommended that
 compilers with relocating collectors target the abstract machine model just
-described.  
+described.
 
-The heart of the explicit approach is to construct (or rewrite) the IR in a 
+The heart of the explicit approach is to construct (or rewrite) the IR in a
 manner where the possible updates performed by the garbage collector are
 explicitly visible in the IR.  Doing so requires that we:
 
@@ -157,8 +157,8 @@ garbage collected objects.
   collected values, transforming the IR to expose a pointer giving the
   base object for every such live pointer, and inserting all the
   intrinsics correctly is explicitly out of scope for this document.
-  The recommended approach is to use the :ref:`utility passes 
-  <statepoint-utilities>` described below. 
+  The recommended approach is to use the :ref:`utility passes
+  <statepoint-utilities>` described below.
 
 This abstract function call is concretely represented by a sequence of
 intrinsic calls known collectively as a "statepoint relocation sequence".
@@ -167,26 +167,26 @@ Let's consider a simple call in LLVM IR:
 
 .. code-block:: llvm
 
-  define i8 addrspace(1)* @test1(i8 addrspace(1)* %obj) 
+  define i8 addrspace(1)* @test1(i8 addrspace(1)* %obj)
          gc "statepoint-example" {
     call void ()* @foo()
     ret i8 addrspace(1)* %obj
   }
 
-Depending on our language we may need to allow a safepoint during the execution 
-of ``foo``. If so, we need to let the collector update local values in the 
-current frame.  If we don't, we'll be accessing a potential invalid reference 
+Depending on our language we may need to allow a safepoint during the execution
+of ``foo``. If so, we need to let the collector update local values in the
+current frame.  If we don't, we'll be accessing a potential invalid reference
 once we eventually return from the call.
 
-In this example, we need to relocate the SSA value ``%obj``.  Since we can't 
-actually change the value in the SSA value ``%obj``, we need to introduce a new 
+In this example, we need to relocate the SSA value ``%obj``.  Since we can't
+actually change the value in the SSA value ``%obj``, we need to introduce a new
 SSA value ``%obj.relocated`` which represents the potentially changed value of
-``%obj`` after the safepoint and update any following uses appropriately.  The 
+``%obj`` after the safepoint and update any following uses appropriately.  The
 resulting relocation sequence is:
 
 .. code-block:: llvm
 
-  define i8 addrspace(1)* @test1(i8 addrspace(1)* %obj) 
+  define i8 addrspace(1)* @test1(i8 addrspace(1)* %obj)
          gc "statepoint-example" {
     %0 = call token (i64, i32, void ()*, i32, i32, ...)* @llvm.experimental.gc.statepoint.p0f_isVoidf(i64 0, i32 0, void ()* @foo, i32 0, i32 0, i32 0, i32 0, i8 addrspace(1)* %obj)
     %obj.relocated = call coldcc i8 addrspace(1)* @llvm.experimental.gc.relocate.p1i8(token %0, i32 7, i32 7)
@@ -205,13 +205,13 @@ exists only at compile time).  To get back the original return value
 of the call, we use the ``gc.result`` intrinsic.  To get the relocation
 of each pointer in turn, we use the ``gc.relocate`` intrinsic with the
 appropriate index.  Note that both the ``gc.relocate`` and ``gc.result`` are
-tied to the statepoint.  The combination forms a "statepoint relocation 
+tied to the statepoint.  The combination forms a "statepoint relocation
 sequence" and represents the entirety of a parseable call or 'statepoint'.
 
 When lowered, this example would generate the following x86 assembly:
 
 .. code-block:: gas
-  
+
 	  .globl	test1
 	  .align	16, 0x90
 	  pushq	%rax
@@ -230,7 +230,7 @@ exactly what to change.
 The relevant parts of the StackMap section for our example are:
 
 .. code-block:: gas
-  
+
   # This describes the call site
   # Stack Maps: callsite 2882400000
 	  .quad	2882400000
@@ -238,7 +238,7 @@ The relevant parts of the StackMap section for our example are:
 	  .short	0
   # .. 8 entries skipped ..
   # This entry describes the spill slot which is directly addressable
-  # off RSP with offset 0.  Given the value was spilled with a pushq, 
+  # off RSP with offset 0.  Given the value was spilled with a pushq,
   # that makes sense.
   # Stack Maps:   Loc 8: Direct RSP     [encoding: .byte 2, .byte 8, .short 7, .int 0]
 	  .byte	2
@@ -262,14 +262,14 @@ non-relocating collector.  While a non-relocating collector still needs the
 information about which location contain live references, it doesn't need to
 represent explicit relocations.  As such, the previously described explicit
 lowering can be simplified to remove all of the ``gc.relocate`` intrinsic
-calls and leave uses in terms of the original reference value.  
+calls and leave uses in terms of the original reference value.
 
 Here's the explicit lowering for the previous example for a non-relocating
 collector:
 
 .. code-block:: llvm
 
-  define i8 addrspace(1)* @test1(i8 addrspace(1)* %obj) 
+  define i8 addrspace(1)* @test1(i8 addrspace(1)* %obj)
          gc "statepoint-example" {
     call token (i64, i32, void ()*, i32, i32, ...)* @llvm.experimental.gc.statepoint.p0f_isVoidf(i64 0, i32 0, void ()* @foo, i32 0, i32 0, i32 0, i32 0, i8 addrspace(1)* %obj)
     ret i8 addrspace(1)* %obj
@@ -303,41 +303,41 @@ WARNING: At the moment, this alternate form is not well exercised.  It is
 recommended to use this with caution and expect to have to fix a few bugs.
 In particular, the RewriteStatepointsForGC utility pass does not do
 anything for allocas today.
-  
+
 Base & Derived Pointers
 ^^^^^^^^^^^^^^^^^^^^^^^
 
 A "base pointer" is one which points to the starting address of an allocation
 (object).  A "derived pointer" is one which is offset from a base pointer by
-some amount.  When relocating objects, a garbage collector needs to be able 
-to relocate each derived pointer associated with an allocation to the same 
+some amount.  When relocating objects, a garbage collector needs to be able
+to relocate each derived pointer associated with an allocation to the same
 offset from the new address.
 
-"Interior derived pointers" remain within the bounds of the allocation 
-they're associated with.  As a result, the base object can be found at 
+"Interior derived pointers" remain within the bounds of the allocation
+they're associated with.  As a result, the base object can be found at
 runtime provided the bounds of allocations are known to the runtime system.
 
 "Exterior derived pointers" are outside the bounds of the associated object;
 they may even fall within *another* allocations address range.  As a result,
-there is no way for a garbage collector to determine which allocation they 
+there is no way for a garbage collector to determine which allocation they
 are associated with at runtime and compiler support is needed.
 
 The ``gc.relocate`` intrinsic supports an explicit operand for describing the
-allocation associated with a derived pointer.  This operand is frequently 
+allocation associated with a derived pointer.  This operand is frequently
 referred to as the base operand, but does not strictly speaking have to be
 a base pointer, but it does need to lie within the bounds of the associated
 allocation.  Some collectors may require that the operand be an actual base
-pointer rather than merely an internal derived pointer. Note that during 
-lowering both the base and derived pointer operands are required to be live 
-over the associated call safepoint even if the base is otherwise unused 
+pointer rather than merely an internal derived pointer. Note that during
+lowering both the base and derived pointer operands are required to be live
+over the associated call safepoint even if the base is otherwise unused
 afterwards.
 
-If we extend our previous example to include a pointless derived pointer, 
+If we extend our previous example to include a pointless derived pointer,
 we get:
 
 .. code-block:: llvm
 
-  define i8 addrspace(1)* @test1(i8 addrspace(1)* %obj) 
+  define i8 addrspace(1)* @test1(i8 addrspace(1)* %obj)
          gc "statepoint-example" {
     %gep = getelementptr i8, i8 addrspace(1)* %obj, i64 20000
     %token = call token (i64, i32, void ()*, i32, i32, ...)* @llvm.experimental.gc.statepoint.p0f_isVoidf(i64 0, i32 0, void ()* @foo, i32 0, i32 0, i32 0, i32 0, i8 addrspace(1)* %obj, i8 addrspace(1)* %gep)
@@ -468,29 +468,29 @@ Each statepoint generates the following Locations:
   "deopt" operand bundle.  At the moment, only deopt parameters with a bitwidth
   of 64 bits or less are supported.  Values of a type larger than 64 bits can be
   specified and reported only if a) the value is constant at the call site, and
-  b) the constant can be represented with less than 64 bits (assuming zero 
+  b) the constant can be represented with less than 64 bits (assuming zero
   extension to the original bitwidth).
-* Variable number of relocation records, each of which consists of 
+* Variable number of relocation records, each of which consists of
   exactly two Locations.  Relocation records are described in detail
   below.
 
-Each relocation record provides sufficient information for a collector to 
-relocate one or more derived pointers.  Each record consists of a pair of 
-Locations.  The second element in the record represents the pointer (or 
-pointers) which need updated.  The first element in the record provides a 
+Each relocation record provides sufficient information for a collector to
+relocate one or more derived pointers.  Each record consists of a pair of
+Locations.  The second element in the record represents the pointer (or
+pointers) which need updated.  The first element in the record provides a
 pointer to the base of the object with which the pointer(s) being relocated is
-associated.  This information is required for handling generalized derived 
+associated.  This information is required for handling generalized derived
 pointers since a pointer may be outside the bounds of the original allocation,
 but still needs to be relocated with the allocation.  Additionally:
 
-* It is guaranteed that the base pointer must also appear explicitly as a 
-  relocation pair if used after the statepoint. 
+* It is guaranteed that the base pointer must also appear explicitly as a
+  relocation pair if used after the statepoint.
 * There may be fewer relocation records then gc parameters in the IR
   statepoint. Each *unique* pair will occur at least once; duplicates
-  are possible.  
-* The Locations within each record may either be of pointer size or a 
-  multiple of pointer size.  In the later case, the record must be 
-  interpreted as describing a sequence of pointers and their corresponding 
+  are possible.
+* The Locations within each record may either be of pointer size or a
+  multiple of pointer size.  In the later case, the record must be
+  interpreted as describing a sequence of pointers and their corresponding
   base pointers. If the Location is of size N x sizeof(pointer), then
   there will be N records of one pointer each contained within the Location.
   Both Locations in a pair can be assumed to be of the same size.
@@ -551,20 +551,20 @@ RewriteStatepointsForGC
 ^^^^^^^^^^^^^^^^^^^^^^^^
 
 The pass RewriteStatepointsForGC transforms a function's IR to lower from the
-abstract machine model described above to the explicit statepoint model of 
+abstract machine model described above to the explicit statepoint model of
 relocations.  To do this, it replaces all calls or invokes of functions which
 might contain a safepoint poll with a ``gc.statepoint`` and associated full
-relocation sequence, including all required ``gc.relocates``.  
+relocation sequence, including all required ``gc.relocates``.
 
-Note that by default, this pass only runs for the "statepoint-example" or 
-"core-clr" gc strategies.  You will need to add your custom strategy to this 
-list or use one of the predefined ones. 
+Note that by default, this pass only runs for the "statepoint-example" or
+"core-clr" gc strategies.  You will need to add your custom strategy to this
+list or use one of the predefined ones.
 
 As an example, given this code:
 
 .. code-block:: llvm
 
-  define i8 addrspace(1)* @test1(i8 addrspace(1)* %obj) 
+  define i8 addrspace(1)* @test1(i8 addrspace(1)* %obj)
          gc "statepoint-example" {
     call void @foo()
     ret i8 addrspace(1)* %obj
@@ -574,7 +574,7 @@ The pass would produce this IR:
 
 .. code-block:: llvm
 
-  define i8 addrspace(1)* @test1(i8 addrspace(1)* %obj) 
+  define i8 addrspace(1)* @test1(i8 addrspace(1)* %obj)
          gc "statepoint-example" {
     %0 = call token (i64, i32, void ()*, i32, i32, ...)* @llvm.experimental.gc.statepoint.p0f_isVoidf(i64 2882400000, i32 0, void ()* @foo, i32 0, i32 0, i32 0, i32 5, i32 0, i32 -1, i32 0, i32 0, i32 0, i8 addrspace(1)* %obj)
     %obj.relocated = call coldcc i8 addrspace(1)* @llvm.experimental.gc.relocate.p1i8(token %0, i32 12, i32 12)
@@ -586,20 +586,20 @@ that the ``statepoint-example`` GC strategy uses to distinguish references from
 non references.  The pass assumes that all addrspace(1) pointers are non-integral
 pointer types.  Address space 1 is not globally reserved for this purpose.
 
-This pass can be used an utility function by a language frontend that doesn't 
-want to manually reason about liveness, base pointers, or relocation when 
-constructing IR.  As currently implemented, RewriteStatepointsForGC must be 
+This pass can be used an utility function by a language frontend that doesn't
+want to manually reason about liveness, base pointers, or relocation when
+constructing IR.  As currently implemented, RewriteStatepointsForGC must be
 run after SSA construction (i.e. mem2ref).
 
 RewriteStatepointsForGC will ensure that appropriate base pointers are listed
 for every relocation created.  It will do so by duplicating code as needed to
 propagate the base pointer associated with each pointer being relocated to
-the appropriate safepoints.  The implementation assumes that the following 
-IR constructs produce base pointers: loads from the heap, addresses of global 
+the appropriate safepoints.  The implementation assumes that the following
+IR constructs produce base pointers: loads from the heap, addresses of global
 variables, function arguments, function return values. Constant pointers (such
 as null) are also assumed to be base pointers.  In practice, this constraint
-can be relaxed to producing interior derived pointers provided the target 
-collector can find the associated allocation from an arbitrary interior 
+can be relaxed to producing interior derived pointers provided the target
+collector can find the associated allocation from an arbitrary interior
 derived pointer.
 
 By default RewriteStatepointsForGC passes in ``0xABCDEF00`` as the statepoint
@@ -617,8 +617,8 @@ bytes' parameter of the newly constructed ``gc.statepoint``.  The
 are not propagated to the ``gc.statepoint`` call or invoke if they
 could be successfully parsed.
 
-In practice, RewriteStatepointsForGC should be run much later in the pass 
-pipeline, after most optimization is already done.  This helps to improve 
+In practice, RewriteStatepointsForGC should be run much later in the pass
+pipeline, after most optimization is already done.  This helps to improve
 the quality of the generated code when compiled with garbage collection support.
 
 .. _RewriteStatepointsForGC_intrinsic_lowering:
@@ -674,10 +674,10 @@ pointer and offset pairs. For example:
 PlaceSafepoints
 ^^^^^^^^^^^^^^^^
 
-The pass PlaceSafepoints inserts safepoint polls sufficient to ensure running 
-code checks for a safepoint request on a timely manner. This pass is expected 
-to be run before RewriteStatepointsForGC and thus does not produce full 
-relocation sequences.  
+The pass PlaceSafepoints inserts safepoint polls sufficient to ensure running
+code checks for a safepoint request on a timely manner. This pass is expected
+to be run before RewriteStatepointsForGC and thus does not produce full
+relocation sequences.
 
 As an example, given input IR of the following:
 
@@ -705,25 +705,25 @@ This pass would produce the following IR:
     ret void
   }
 
-In this case, we've added an (unconditional) entry safepoint poll.  Note that 
-despite appearances, the entry poll is not necessarily redundant.  We'd have to 
-know that ``foo`` and ``test`` were not mutually recursive for the poll to be 
-redundant.  In practice, you'd probably want to your poll definition to contain 
+In this case, we've added an (unconditional) entry safepoint poll.  Note that
+despite appearances, the entry poll is not necessarily redundant.  We'd have to
+know that ``foo`` and ``test`` were not mutually recursive for the poll to be
+redundant.  In practice, you'd probably want to your poll definition to contain
 a conditional branch of some form.
 
-At the moment, PlaceSafepoints can insert safepoint polls at method entry and 
-loop backedges locations.  Extending this to work with return polls would be 
+At the moment, PlaceSafepoints can insert safepoint polls at method entry and
+loop backedges locations.  Extending this to work with return polls would be
 straight forward if desired.
 
-PlaceSafepoints includes a number of optimizations to avoid placing safepoint 
-polls at particular sites unless needed to ensure timely execution of a poll 
-under normal conditions.  PlaceSafepoints does not attempt to ensure timely 
+PlaceSafepoints includes a number of optimizations to avoid placing safepoint
+polls at particular sites unless needed to ensure timely execution of a poll
+under normal conditions.  PlaceSafepoints does not attempt to ensure timely
 execution of a poll under worst case conditions such as heavy system paging.
 
-The implementation of a safepoint poll action is specified by looking up a 
+The implementation of a safepoint poll action is specified by looking up a
 function of the name ``gc.safepoint_poll`` in the containing Module.  The body
 of this function is inserted at each poll site desired.  While calls or invokes
-inside this method are transformed to a ``gc.statepoints``, recursive poll 
+inside this method are transformed to a ``gc.statepoints``, recursive poll
 insertion is not performed.
 
 This pass is useful for any language frontend which only has to support
@@ -732,14 +732,14 @@ frame information at safepoints (e.g. for deoptimization or introspection),
 you can insert safepoint polls in the frontend.  If you have the later case,
 please ask on llvm-dev for suggestions.  There's been a good amount of work
 done on making such a scheme work well in practice which is not yet documented
-here.  
+here.
 
 
 Supported Architectures
 =======================
 
 Support for statepoint generation requires some code for each backend.
-Today, only X86_64 is supported.
+Today, only Aarch64 and X86_64 are supported.
 
 .. _OpenWork:
 
@@ -769,7 +769,7 @@ stack provided the collector can find a heap map given the stack address.
 The missing pieces are a) integration with rewriting (RS4GC) from the
 abstract machine model and b) support for optionally decomposing on stack
 objects so as not to require heap maps for them.  The later is required
-for ease of integration with some collectors.  
+for ease of integration with some collectors.
 
 Lowering Quality and Representation Overhead
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -795,18 +795,6 @@ also has relocations.  See `this llvm-dev discussion
 <https://groups.google.com/forum/#!topic/llvm-dev/AE417XjgxvI>`_ for more
 detail.
 
-Support for alternate stackmap formats
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-For some use cases, it is
-desirable to directly encode a final memory efficient stackmap format for
-use by the runtime.  This is particularly relevant for ahead of time
-compilers which wish to directly link object files without the need for
-post processing of each individual object file.  While not implemented
-today for statepoints, there is precedent for a GCStrategy to be able to
-select a customer GCMetataPrinter for this purpose.  Patches to enable
-this functionality upstream are welcome.   
-
 Bugs and Enhancements
 =====================
 
@@ -815,8 +803,6 @@ tracked by performing a `bugzilla search
 <https://bugs.llvm.org/buglist.cgi?cmdtype=runnamed&namedcmd=Statepoint%20Bugs&list_id=64342>`_
 for [Statepoint] in the summary field. When filing new bugs, please
 use this tag so that interested parties see the newly filed bug.  As
-with most LLVM features, design discussions take place on `llvm-dev
-<http://lists.llvm.org/mailman/listinfo/llvm-dev>`_, and patches
+with most LLVM features, design discussions take place on the `Discourse forums <https://discourse.llvm.org>`_ and patches
 should be sent to `llvm-commits
 <http://lists.llvm.org/mailman/listinfo/llvm-commits>`_ for review.
-

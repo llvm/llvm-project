@@ -70,6 +70,7 @@ int main(int, char**)
             assert(t.value(char(c), 16) == -1);
         }
     }
+#ifndef TEST_HAS_NO_WIDE_CHARACTERS
     {
         std::regex_traits<wchar_t> t;
 
@@ -122,6 +123,7 @@ int main(int, char**)
             assert(t.value(c, 16) == -1);
         }
     }
+#endif
 
   return 0;
 }

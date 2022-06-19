@@ -1,4 +1,3 @@
-; RUN: opt -insert-gcov-profiling -o - < %s | llvm-dis | FileCheck -check-prefix=EMIT-ARCS %s
 ; RUN: opt -passes=insert-gcov-profiling -o - < %s | llvm-dis | FileCheck -check-prefix=EMIT-ARCS %s
 
 ; EMIT-ARCS-NOT: call void @llvm_gcda_start_file

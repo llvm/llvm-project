@@ -134,11 +134,6 @@ void doIncompleteTypeTest(int expect_alive, Args&&... ctor_args) {
   StoresIncomplete<IncompleteT, Del>::~StoresIncomplete() {}
 #
 
-#if defined(__GNUC__)
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wvariadic-macros"
-#endif
-
 #if TEST_STD_VER >= 11
 #define DEFINE_AND_RUN_IS_INCOMPLETE_TEST(...)                                 \
   static int is_incomplete_test() { __VA_ARGS__ return 0; }                    \
@@ -147,10 +142,6 @@ void doIncompleteTypeTest(int expect_alive, Args&&... ctor_args) {
 #define DEFINE_AND_RUN_IS_INCOMPLETE_TEST(...)                                 \
   static int is_incomplete_test() { return 0; }                                \
   INCOMPLETE_TEST_EPILOGUE()
-#endif
-
-#if defined(__GNUC__)
-#pragma GCC diagnostic pop
 #endif
 
 #endif // TEST_SUPPORT_UNIQUE_PTR_TEST_HELPER_H

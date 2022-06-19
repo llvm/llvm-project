@@ -81,4 +81,9 @@ spv.module Logical GLSL450 requires #spv.vce<v1.0, [Shader], []> {
     %0 = spv.SRem %arg0, %arg1 : vector<4xi32>
     spv.Return
   }
+  spv.func @vector_times_scalar(%arg0 : vector<4xf32>, %arg1 : f32) "None" {
+    // CHECK: {{%.*}} = spv.VectorTimesScalar {{%.*}}, {{%.*}} : (vector<4xf32>, f32) -> vector<4xf32>
+    %0 = spv.VectorTimesScalar %arg0, %arg1 : (vector<4xf32>, f32) -> vector<4xf32>
+    spv.Return
+  }
 }

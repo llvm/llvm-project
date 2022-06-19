@@ -1,6 +1,6 @@
 # Check the various features of the ShTest format.
 #
-# RUN: not %{lit} -j 1 -v %{inputs}/shtest-output-printing > %t.out
+# RUN: not %{lit} -v %{inputs}/shtest-output-printing > %t.out
 # RUN: FileCheck --input-file %t.out %s
 #
 # END.

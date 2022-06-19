@@ -8,9 +8,7 @@ from lldbsuite.test.lldbtest import *
 class CommandRunInterpreterLegacyAPICase(TestBase):
 
     NO_DEBUG_INFO_TESTCASE = True
-    mydir = TestBase.compute_mydir(__file__)
 
-    @skipIfReproducer # lldb::FileSP used in typemap cannot be instrumented.
     def setUp(self):
         TestBase.setUp(self)
 
@@ -45,9 +43,7 @@ class CommandRunInterpreterLegacyAPICase(TestBase):
 class CommandRunInterpreterAPICase(TestBase):
 
     NO_DEBUG_INFO_TESTCASE = True
-    mydir = TestBase.compute_mydir(__file__)
 
-    @skipIfReproducer # lldb::FileSP used in typemap cannot be instrumented.
     def setUp(self):
         TestBase.setUp(self)
 
@@ -77,7 +73,6 @@ class CommandRunInterpreterAPICase(TestBase):
 class SBCommandInterpreterRunOptionsCase(TestBase):
 
     NO_DEBUG_INFO_TESTCASE = True
-    mydir = TestBase.compute_mydir(__file__)
 
     def test_command_interpreter_run_options(self):
         """Test SBCommandInterpreterRunOptions default values, getters & setters """

@@ -19,7 +19,7 @@
 
 namespace llvm {
 class MemoryBuffer;
-}
+} // namespace llvm
 
 namespace mlir {
 struct LogicalResult;

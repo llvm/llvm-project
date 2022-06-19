@@ -3,16 +3,16 @@
 
 // Make sure we don't crash when someone redefines a system function we reason about.
 
-char memmove ();
-char malloc();
-char system();
-char stdin();
-char memccpy();
-char free();
-char strdup();
-char atoi();
+char memmove (void);
+char malloc(void);
+char system(void);
+char stdin(void);
+char memccpy(void);
+char free(void);
+char strdup(void);
+char atoi(void);
 
-int foo () {
+int foo (void) {
   return memmove() + malloc() + system() + stdin() + memccpy() + free() + strdup() + atoi();
 
 }

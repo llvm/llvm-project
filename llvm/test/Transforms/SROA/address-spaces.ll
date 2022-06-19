@@ -1,4 +1,4 @@
-; RUN: opt < %s -sroa -S | FileCheck %s
+; RUN: opt < %s -passes=sroa -S | FileCheck %s
 target datalayout = "e-p:64:64:64-p1:16:16:16-p3:32:32:32-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:32:64-f32:32:32-f64:64:64-v64:64:64-v128:128:128-a0:0:64-n8:16:32:64"
 
 declare void @llvm.memcpy.p0i8.p0i8.i32(i8* nocapture, i8* nocapture readonly, i32, i1)
@@ -52,8 +52,7 @@ define void @test_address_space_0_1(<2 x i64>* %a, i16 addrspace(1)* %b) {
 
 %struct.struct_test_27.0.13 = type { i32, float, i64, i8, [4 x i32] }
 
-; Function Attrs: nounwind
-define void @copy_struct([5 x i64] %in.coerce) {
+define void @copy_struct([5 x i64] %in.coerce, i8 addrspace(1)* align 4 %ptr) {
 ; CHECK-LABEL: @copy_struct(
 ; CHECK-NOT: memcpy
 for.end:
@@ -62,7 +61,7 @@ for.end:
   store [5 x i64] %in.coerce, [5 x i64]* %0, align 8
   %scevgep9 = getelementptr %struct.struct_test_27.0.13, %struct.struct_test_27.0.13* %in, i32 0, i32 4, i32 0
   %scevgep910 = bitcast i32* %scevgep9 to i8*
-  call void @llvm.memcpy.p1i8.p0i8.i32(i8 addrspace(1)* align 4 undef, i8* align 4 %scevgep910, i32 16, i1 false)
+  call void @llvm.memcpy.p1i8.p0i8.i32(i8 addrspace(1)* align 4 %ptr, i8* align 4 %scevgep910, i32 16, i1 false)
   ret void
 }
  

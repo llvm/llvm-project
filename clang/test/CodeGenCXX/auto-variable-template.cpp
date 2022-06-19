@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -std=c++14 %s -triple=x86_64-linux -emit-llvm -o - | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -std=c++14 %s -triple=x86_64-linux -emit-llvm -o - | FileCheck %s
 
 struct f {
   void operator()() const {}

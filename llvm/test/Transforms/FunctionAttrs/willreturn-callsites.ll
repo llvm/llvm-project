@@ -25,7 +25,7 @@ define void @test_fn_willreturn(i32* %ptr) willreturn {
 ; CHECK: Function Attrs: mustprogress willreturn
 ; CHECK-LABEL: @test_fn_willreturn(
 ; CHECK-NOT:     call void @decl_readonly() #
-; CHECK-NOT :    call void @decl_readnone() #
+; CHECK-NOT:    call void @decl_readnone() #
 ; CHECK-NOT:     call void @decl_unknown() #
 ; CHECK-NOT:     call void @decl_argmemonly(i32* [[PTR:%.*]]) #
 ; CHECK:         ret void

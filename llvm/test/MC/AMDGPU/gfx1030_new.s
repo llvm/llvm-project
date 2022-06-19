@@ -4,6 +4,7 @@
 // RUN: llvm-mc -arch=amdgcn -mcpu=gfx1033 -show-encoding %s | FileCheck --check-prefix=GFX10 %s
 // RUN: llvm-mc -arch=amdgcn -mcpu=gfx1034 -show-encoding %s | FileCheck --check-prefix=GFX10 %s
 // RUN: llvm-mc -arch=amdgcn -mcpu=gfx1035 -show-encoding %s | FileCheck --check-prefix=GFX10 %s
+// RUN: llvm-mc -arch=amdgcn -mcpu=gfx1036 -show-encoding %s | FileCheck --check-prefix=GFX10 %s
 
 global_load_dword_addtid v1, s[2:3] offset:16
 // GFX10: encoding: [0x10,0x80,0x58,0xdc,0x00,0x00,0x02,0x01]
@@ -121,3 +122,100 @@ image_msaa_load v[1:4], v[5:8], s[8:15] dmask:0xf dim:SQ_RSRC_IMG_2D_MSAA_ARRAY
 
 image_msaa_load v14, [v204,v11,v14,v19], s[40:47] dmask:0x1 dim:SQ_RSRC_IMG_2D_MSAA_ARRAY
 // GFX10: encoding: [0x3b,0x01,0x00,0xf0,0xcc,0x0e,0x0a,0x00,0x0b,0x0e,0x13,0x00]
+
+//===----------------------------------------------------------------------===//
+// s_waitcnt_depctr.
+//===----------------------------------------------------------------------===//
+
+s_waitcnt_depctr -32768
+// GFX10: encoding: [0x00,0x80,0xa3,0xbf]
+
+s_waitcnt_depctr 65535
+// GFX10: encoding: [0xff,0xff,0xa3,0xbf]
+
+s_waitcnt_depctr depctr_hold_cnt(0)
+// GFX10: encoding: [0x1f,0xff,0xa3,0xbf]
+
+s_waitcnt_depctr depctr_hold_cnt(1)
+// GFX10: encoding: [0x9f,0xff,0xa3,0xbf]
+
+s_waitcnt_depctr depctr_sa_sdst(0)
+// GFX10: encoding: [0x9e,0xff,0xa3,0xbf]
+
+s_waitcnt_depctr depctr_sa_sdst(1)
+// GFX10: encoding: [0x9f,0xff,0xa3,0xbf]
+
+s_waitcnt_depctr depctr_va_vdst(0)
+// GFX10: encoding: [0x9f,0x0f,0xa3,0xbf]
+
+s_waitcnt_depctr depctr_va_vdst(1)
+// GFX10: encoding: [0x9f,0x1f,0xa3,0xbf]
+
+s_waitcnt_depctr depctr_va_vdst(14)
+// GFX10: encoding: [0x9f,0xef,0xa3,0xbf]
+
+s_waitcnt_depctr depctr_va_vdst(15)
+// GFX10: encoding: [0x9f,0xff,0xa3,0xbf]
+
+s_waitcnt_depctr depctr_va_sdst(0)
+// GFX10: encoding: [0x9f,0xf1,0xa3,0xbf]
+
+s_waitcnt_depctr depctr_va_sdst(1)
+// GFX10: encoding: [0x9f,0xf3,0xa3,0xbf]
+
+s_waitcnt_depctr depctr_va_sdst(6)
+// GFX10: encoding: [0x9f,0xfd,0xa3,0xbf]
+
+s_waitcnt_depctr depctr_va_sdst(7)
+// GFX10: encoding: [0x9f,0xff,0xa3,0xbf]
+
+s_waitcnt_depctr depctr_va_ssrc(0)
+// GFX10: encoding: [0x9f,0xfe,0xa3,0xbf]
+
+s_waitcnt_depctr depctr_va_ssrc(1)
+// GFX10: encoding: [0x9f,0xff,0xa3,0xbf]
+
+s_waitcnt_depctr depctr_va_vcc(0)
+// GFX10: encoding: [0x9d,0xff,0xa3,0xbf]
+
+s_waitcnt_depctr depctr_va_vcc(1)
+// GFX10: encoding: [0x9f,0xff,0xa3,0xbf]
+
+s_waitcnt_depctr depctr_vm_vsrc(0)
+// GFX10: encoding: [0x83,0xff,0xa3,0xbf]
+
+s_waitcnt_depctr depctr_vm_vsrc(1)
+// GFX10: encoding: [0x87,0xff,0xa3,0xbf]
+
+s_waitcnt_depctr depctr_vm_vsrc(6)
+// GFX10: encoding: [0x9b,0xff,0xa3,0xbf]
+
+s_waitcnt_depctr depctr_vm_vsrc(7)
+// GFX10: encoding: [0x9f,0xff,0xa3,0xbf]
+
+s_waitcnt_depctr depctr_hold_cnt(0) depctr_sa_sdst(0) depctr_va_vdst(0) depctr_va_sdst(0) depctr_va_ssrc(0) depctr_va_vcc(0) depctr_vm_vsrc(0)
+// GFX10: encoding: [0x00,0x00,0xa3,0xbf]
+
+s_waitcnt_depctr depctr_hold_cnt(1) depctr_sa_sdst(1) depctr_va_vdst(15) depctr_va_sdst(7) depctr_va_ssrc(1) depctr_va_vcc(1) depctr_vm_vsrc(7)
+// GFX10: encoding: [0x9f,0xff,0xa3,0xbf]
+
+s_waitcnt_depctr depctr_hold_cnt(1) & depctr_sa_sdst(1) & depctr_va_vdst(1) & depctr_va_sdst(1) & depctr_va_ssrc(1) & depctr_va_vcc(1) & depctr_vm_vsrc(1)
+// GFX10: encoding: [0x87,0x13,0xa3,0xbf]
+
+s_waitcnt_depctr depctr_hold_cnt(1), depctr_sa_sdst(1), depctr_va_vdst(14), depctr_va_sdst(6), depctr_va_ssrc(1), depctr_va_vcc(1), depctr_vm_vsrc(6)
+// GFX10: encoding: [0x9b,0xed,0xa3,0xbf]
+
+scratch_load_dword off, off offset:1024 lds
+// GFX10: [0x00,0x64,0x30,0xdc,0x00,0x00,0x7f,0x00]
+
+scratch_load_ubyte off, off offset:1024 lds
+// GFX10: [0x00,0x64,0x20,0xdc,0x00,0x00,0x7f,0x00]
+
+scratch_load_sbyte off, off offset:1024 lds
+// GFX10: [0x00,0x64,0x24,0xdc,0x00,0x00,0x7f,0x00]
+
+scratch_load_ushort off, off offset:1024 lds
+// GFX10: [0x00,0x64,0x28,0xdc,0x00,0x00,0x7f,0x00]
+
+scratch_load_sshort off, off offset:1024 lds
+// GFX10: [0x00,0x64,0x2c,0xdc,0x00,0x00,0x7f,0x00]

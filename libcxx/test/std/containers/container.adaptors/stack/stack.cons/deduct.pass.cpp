@@ -8,11 +8,6 @@
 
 // <stack>
 // UNSUPPORTED: c++03, c++11, c++14
-// UNSUPPORTED: clang-5, apple-clang-9
-// UNSUPPORTED: libcpp-no-deduction-guides
-// Clang 5 will generate bad implicit deduction guides
-//	Specifically, for the copy constructor.
-
 
 // template<class Container>
 //   stack(Container) -> stack<typename Container::value_type, Container>;
@@ -21,6 +16,7 @@
 //   stack(Container, Allocator) -> stack<typename Container::value_type, Container>;
 
 
+#include <array>
 #include <stack>
 #include <deque>
 #include <vector>
@@ -30,6 +26,7 @@
 #include <cstddef>
 #include <climits> // INT_MAX
 
+#include "deduction_guides_sfinae_checks.h"
 #include "test_macros.h"
 #include "test_iterators.h"
 #include "test_allocator.h"
@@ -140,6 +137,45 @@ int main(int, char**)
         static_assert(std::is_same_v<decltype(stk), std::stack<T, Cont>>);
         }
     }
+
+    // Deduction guides should be SFINAE'd away when given:
+    // - a "bad" allocator (that is, a type not qualifying as an allocator);
+    // - an allocator instead of a container;
+    // - an allocator and a container that uses a different allocator.
+    {
+        using Cont = std::list<int>;
+        using Alloc = std::allocator<int>;
+        using DiffAlloc = test_allocator<int>;
+        using Iter = int;
+
+        struct NotIter {};
+        struct NotAlloc {};
+
+        static_assert(SFINAEs_away<std::stack, Alloc, Alloc>);
+        static_assert(SFINAEs_away<std::stack, Cont, NotAlloc>);
+        static_assert(SFINAEs_away<std::stack, Cont, DiffAlloc>);
+        static_assert(SFINAEs_away<std::stack, Iter, NotIter>);
+#if TEST_STD_VER > 20
+        static_assert(SFINAEs_away<std::stack, Iter, NotIter, Alloc>);
+        static_assert(SFINAEs_away<std::stack, Iter, Iter, NotAlloc>);
+#endif
+    }
+
+#if TEST_STD_VER > 20
+    {
+        typedef short T;
+        typedef test_allocator<T> Alloc;
+        std::list<T> a;
+        {
+        std::stack s(a.begin(), a.end());
+        static_assert(std::is_same_v<decltype(s), std::stack<T>>);
+        }
+        {
+        std::stack s(a.begin(), a.end(), Alloc());
+        static_assert(std::is_same_v<decltype(s), std::stack<T, std::deque<T, Alloc>>>);
+        }
+    }
+#endif
 
     return 0;
 }

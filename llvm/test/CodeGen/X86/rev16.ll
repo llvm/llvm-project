@@ -40,13 +40,12 @@ define i32 @not_rev16(i32 %a) {
 ;
 ; X64-LABEL: not_rev16:
 ; X64:       # %bb.0:
-; X64-NEXT:    # kill: def $edi killed $edi def $rdi
 ; X64-NEXT:    movl %edi, %eax
 ; X64-NEXT:    shll $8, %eax
 ; X64-NEXT:    shrl $8, %edi
 ; X64-NEXT:    andl $65280, %edi # imm = 0xFF00
 ; X64-NEXT:    andl $16711680, %eax # imm = 0xFF0000
-; X64-NEXT:    addl %edi, %eax
+; X64-NEXT:    orl %edi, %eax
 ; X64-NEXT:    retq
   %l8 = shl i32 %a, 8
   %r8 = lshr i32 %a, 8
@@ -128,13 +127,12 @@ define i32 @different_shift_amount(i32 %a) {
 ;
 ; X64-LABEL: different_shift_amount:
 ; X64:       # %bb.0:
-; X64-NEXT:    # kill: def $edi killed $edi def $rdi
 ; X64-NEXT:    movl %edi, %eax
 ; X64-NEXT:    shll $9, %eax
 ; X64-NEXT:    shrl $8, %edi
 ; X64-NEXT:    andl $-16712192, %eax # imm = 0xFF00FE00
 ; X64-NEXT:    andl $16711935, %edi # imm = 0xFF00FF
-; X64-NEXT:    addl %edi, %eax
+; X64-NEXT:    orl %edi, %eax
 ; X64-NEXT:    retq
   %l8 = shl i32 %a, 9
   %r8 = lshr i32 %a, 8

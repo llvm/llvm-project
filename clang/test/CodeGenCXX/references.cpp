@@ -1,4 +1,4 @@
-// RUN: not %clang_cc1 -triple x86_64-apple-darwin -verify -emit-llvm -o - %s | FileCheck %s
+// RUN: not %clang_cc1 -no-opaque-pointers -triple x86_64-apple-darwin -verify -emit-llvm -o - %s | FileCheck %s
 void t1() {
   // CHECK-LABEL: define{{.*}} void @_Z2t1v
   // CHECK: [[REFLOAD:%.*]] = load i32*, i32** @a, align 8
@@ -241,7 +241,7 @@ struct A {
 };
 
 // CHECK-LABEL: define internal void @__cxx_global_var_init
-// CHECK: call void @_ZN2N31AC1Ei(%"struct.N3::A"* {{[^,]*}} @_ZGRN2N35sA123E_, i32 123)
+// CHECK: call void @_ZN2N31AC1Ei(%"struct.N3::A"* {{[^,]*}} @_ZGRN2N35sA123E_, i32 noundef 123)
 // CHECK: call i32 @__cxa_atexit
 // CHECK: ret void
 const A &sA123 = A(123);

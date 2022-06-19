@@ -15,7 +15,7 @@ struct S3 get_s3(void);
 [[nodiscard]] int f1(void);
 enum [[nodiscard]] E1 { One };
 
-[[nodiscard]] int i; // expected-warning {{'nodiscard' attribute only applies to Objective-C methods, enums, structs, unions, classes, functions, and function pointers}}
+[[nodiscard]] int i; // expected-warning {{'nodiscard' attribute only applies to Objective-C methods, enums, structs, unions, classes, functions, function pointers, and typedefs}}
 
 struct [[nodiscard]] S4 {
   int i;
@@ -25,7 +25,7 @@ struct S4 get_s(void);
 enum [[nodiscard]] E2 { Two };
 enum E2 get_e(void);
 
-[[nodiscard]] int get_i();
+[[nodiscard]] int get_i(void);
 
 void f2(void) {
   get_s(); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}

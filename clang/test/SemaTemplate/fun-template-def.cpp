@@ -21,7 +21,7 @@ int f0(T x) {
 }
 
 template <typename T, typename U>
-T f1(T t1, U u1, int i1)
+T f1(T t1, U u1, int i1, T** tpp)
 {
   T t2 = i1;
   t2 = i1 + u1;
@@ -48,6 +48,7 @@ T f1(T t1, U u1, int i1)
   dummy d2 = offsetof(T, foo); // expected-error {{no viable conversion}}
   dummy d3 = __alignof(u1); // expected-error {{no viable conversion}}
   i1 = typeid(t1); // expected-error {{assigning to 'int' from incompatible type 'const std::type_info'}}
+  i1 = tpp[0].size(); // expected-error {{'T *' is not a structure or union}}
 
   return u1;
 }

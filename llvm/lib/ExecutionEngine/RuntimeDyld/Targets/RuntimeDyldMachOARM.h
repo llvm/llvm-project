@@ -10,7 +10,6 @@
 #define LLVM_LIB_EXECUTIONENGINE_RUNTIMEDYLD_TARGETS_RUNTIMEDYLDMACHOARM_H
 
 #include "../RuntimeDyldMachO.h"
-#include <string>
 
 #define DEBUG_TYPE "dyld"
 
@@ -141,7 +140,7 @@ public:
         return ++RelI;
     }
 
-    // Sanity check relocation type.
+    // Validate the relocation type.
     switch (RelType) {
     UNIMPLEMENTED_RELOC(MachO::ARM_RELOC_PAIR);
     UNIMPLEMENTED_RELOC(MachO::ARM_RELOC_SECTDIFF);

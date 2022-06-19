@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -triple x86_64-linux-gnu -std=c++20 %s -emit-llvm -o - | FileCheck %s --check-prefixes=ITANIUM,CHECK
-// RUN: %clang_cc1 -triple x86_64-windows -std=c++20 %s -emit-llvm -o - | FileCheck %s --check-prefixes=MSABI,CHECK
+// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-linux-gnu -std=c++20 %s -emit-llvm -o - | FileCheck %s --check-prefixes=ITANIUM,CHECK
+// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-windows -std=c++20 %s -emit-llvm -o - | FileCheck %s --check-prefixes=MSABI,CHECK
 
 struct S { char buf[32]; };
 template<S s> constexpr const char *begin() { return s.buf; }
@@ -15,5 +15,5 @@ template<S s> constexpr const char *end() { return s.buf + __builtin_strlen(s.bu
 const char *p = begin<S{"hello world"}>();
 // ITANIUM: @q
 // MSABI: @"?q@@3PEBDEB"
-// CHECK-SAME: global i8* getelementptr (i8, i8* getelementptr inbounds ({{.*}}* [[HELLO]], i32 0, i32 0, i32 0, i32 0), i64 11)
+// CHECK-SAME: global i8* getelementptr ({{.*}}* [[HELLO]], i32 0, i32 0, i32 0, i64 11)
 const char *q = end<S{"hello world"}>();

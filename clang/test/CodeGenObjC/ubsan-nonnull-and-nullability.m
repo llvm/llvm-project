@@ -1,5 +1,5 @@
 // REQUIRES: asserts
-// RUN: %clang_cc1 -x objective-c -emit-llvm -triple x86_64-apple-macosx10.10.0 -fsanitize=nullability-return,returns-nonnull-attribute,nullability-arg,nonnull-attribute %s -o - -w | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -x objective-c -emit-llvm -triple x86_64-apple-macosx10.10.0 -fsanitize=nullability-return,returns-nonnull-attribute,nullability-arg,nonnull-attribute %s -o - -w | FileCheck %s
 
 // If both the annotation and the attribute are present, prefer the attribute,
 // since it actually affects IRGen.
@@ -34,7 +34,7 @@ __attribute__((returns_nonnull)) int *_Nonnull f1(int *_Nonnull p) {
 void f2(int *_Nonnull __attribute__((nonnull)) p) {}
 
 // CHECK-LABEL: define{{.*}} void @call_f2
-void call_f2() {
+void call_f2(void) {
   // CHECK: call void @__ubsan_handle_nonnull_arg_abort
   // CHECK-NOT: call void @__ubsan_handle_nonnull_arg_abort
   f2((void *)0);
@@ -52,7 +52,7 @@ int *f3(int *p) {
 // statement, to avoid accidentally calling the runtime.
 
 // CHECK-LABEL: define{{.*}} nonnull i32* @f4
-__attribute__((returns_nonnull)) int *f4() {
+__attribute__((returns_nonnull)) int *f4(void) {
   // CHECK: store i8* null, i8** [[SLOC_PTR:%.*]]
   // CHECK: [[SLOC:%.*]] = load {{.*}} [[SLOC_PTR]]
   // CHECK: [[SLOC_NONNULL:%.*]] = icmp ne i8* [[SLOC]], null

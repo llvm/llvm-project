@@ -44,12 +44,13 @@ protected:
 
 inline WasmInitExpr intConst(uint64_t value, bool is64) {
   WasmInitExpr ie;
+  ie.Extended = false;
   if (is64) {
-    ie.Opcode = llvm::wasm::WASM_OPCODE_I64_CONST;
-    ie.Value.Int64 = static_cast<int64_t>(value);
+    ie.Inst.Opcode = llvm::wasm::WASM_OPCODE_I64_CONST;
+    ie.Inst.Value.Int64 = static_cast<int64_t>(value);
   } else {
-    ie.Opcode = llvm::wasm::WASM_OPCODE_I32_CONST;
-    ie.Value.Int32 = static_cast<int32_t>(value);
+    ie.Inst.Opcode = llvm::wasm::WASM_OPCODE_I32_CONST;
+    ie.Inst.Value.Int32 = static_cast<int32_t>(value);
   }
   return ie;
 }
@@ -74,14 +75,9 @@ private:
 class InputTag : public InputElement {
 public:
   InputTag(const WasmSignature &s, const WasmTag &t, ObjFile *f)
-      : InputElement(t.SymbolName, f), signature(s), type(t.Type) {}
-
-  const WasmTagType &getType() const { return type; }
+      : InputElement(t.SymbolName, f), signature(s) {}
 
   const WasmSignature &signature;
-
-private:
-  WasmTagType type;
 };
 
 class InputTable : public InputElement {

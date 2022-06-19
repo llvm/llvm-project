@@ -90,9 +90,11 @@ static RValue PerformReturnAdjustment(CodeGenFunction &CGF,
 
   auto ClassDecl = ResultType->getPointeeType()->getAsCXXRecordDecl();
   auto ClassAlign = CGF.CGM.getClassPointerAlignment(ClassDecl);
-  ReturnValue = CGF.CGM.getCXXABI().performReturnAdjustment(CGF,
-                                            Address(ReturnValue, ClassAlign),
-                                            Thunk.Return);
+  ReturnValue = CGF.CGM.getCXXABI().performReturnAdjustment(
+      CGF,
+      Address(ReturnValue, CGF.ConvertTypeForMem(ResultType->getPointeeType()),
+              ClassAlign),
+      Thunk.Return);
 
   if (NullCheckValue) {
     CGF.Builder.CreateBr(AdjustEnd);
@@ -198,10 +200,12 @@ CodeGenFunction::GenerateVarArgsThunk(llvm::Function *Fn,
 
   // Find the first store of "this", which will be to the alloca associated
   // with "this".
-  Address ThisPtr(&*AI, CGM.getClassPointerAlignment(MD->getParent()));
+  Address ThisPtr =
+      Address(&*AI, ConvertTypeForMem(MD->getThisType()->getPointeeType()),
+              CGM.getClassPointerAlignment(MD->getParent()));
   llvm::BasicBlock *EntryBB = &Fn->front();
   llvm::BasicBlock::iterator ThisStore =
-      std::find_if(EntryBB->begin(), EntryBB->end(), [&](llvm::Instruction &I) {
+      llvm::find_if(*EntryBB, [&](llvm::Instruction &I) {
         return isa<llvm::StoreInst>(I) &&
                I.getOperand(0) == ThisPtr.getPointer();
       });
@@ -396,9 +400,7 @@ void CodeGenFunction::EmitMustTailThunk(GlobalDecl GD,
   // to translate AST arguments into LLVM IR arguments.  For thunks, we know
   // that the caller prototype more or less matches the callee prototype with
   // the exception of 'this'.
-  SmallVector<llvm::Value *, 8> Args;
-  for (llvm::Argument &A : CurFn->args())
-    Args.push_back(&A);
+  SmallVector<llvm::Value *, 8> Args(llvm::make_pointer_range(CurFn->args()));
 
   // Set the adjusted 'this' pointer.
   const ABIArgInfo &ThisAI = CurFnInfo->arg_begin()->info;
@@ -1173,12 +1175,15 @@ void CodeGenModule::EmitDeferredVTables() {
   DeferredVTables.clear();
 }
 
-bool CodeGenModule::HasLTOVisibilityPublicStd(const CXXRecordDecl *RD) {
+bool CodeGenModule::AlwaysHasLTOVisibilityPublic(const CXXRecordDecl *RD) {
+  if (RD->hasAttr<LTOVisibilityPublicAttr>() || RD->hasAttr<UuidAttr>())
+    return true;
+
   if (!getCodeGenOpts().LTOVisibilityPublicStd)
     return false;
 
   const DeclContext *DC = RD;
-  while (1) {
+  while (true) {
     auto *D = cast<Decl>(DC);
     DC = DC->getParent();
     if (isa<TranslationUnitDecl>(DC->getRedeclContext())) {
@@ -1198,9 +1203,6 @@ bool CodeGenModule::HasHiddenLTOVisibility(const CXXRecordDecl *RD) {
   if (!isExternallyVisible(LV.getLinkage()))
     return true;
 
-  if (RD->hasAttr<LTOVisibilityPublicAttr>() || RD->hasAttr<UuidAttr>())
-    return false;
-
   if (getTriple().isOSBinFormatCOFF()) {
     if (RD->hasAttr<DLLExportAttr>() || RD->hasAttr<DLLImportAttr>())
       return false;
@@ -1209,7 +1211,7 @@ bool CodeGenModule::HasHiddenLTOVisibility(const CXXRecordDecl *RD) {
       return false;
   }
 
-  return !HasLTOVisibilityPublicStd(RD);
+  return !AlwaysHasLTOVisibilityPublic(RD);
 }
 
 llvm::GlobalObject::VCallVisibility CodeGenModule::GetVCallVisibilityLevel(

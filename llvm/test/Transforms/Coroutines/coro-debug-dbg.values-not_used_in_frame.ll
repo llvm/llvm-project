@@ -1,5 +1,5 @@
 ; Tests whether resume function would remain dbg.value infomation if corresponding values are not used in the frame.
-; RUN: opt < %s -passes='function(coro-early),cgscc(coro-split,coro-split)' -S | FileCheck %s
+; RUN: opt < %s -passes='module(coro-early),cgscc(coro-split,coro-split)' -S | FileCheck %s
 ;
 ; This file is based on coro-debug-frame-variable.ll.
 ; CHECK:  define internal fastcc void @f.resume(%f.Frame* noalias nonnull align 16 dereferenceable(80) %FramePtr) !dbg ![[RESUME_FN_DBG_NUM:[0-9]+]]
@@ -13,7 +13,7 @@
 
 source_filename = "../llvm/test/Transforms/Coroutines/coro-debug-dbg.values-O2.ll"
 
-define void @f(i32 %i, i32 %j) !dbg !8 {
+define void @f(i32 %i, i32 %j) presplitcoroutine !dbg !8 {
 entry:
   %__promise = alloca i8, align 8
   %x = alloca [10 x i32], align 16

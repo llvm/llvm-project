@@ -12,6 +12,7 @@
 
 #include <forward_list>
 #include <cassert>
+#include <iterator>
 
 #include "test_macros.h"
 #include "DefaultOnly.h"
@@ -30,28 +31,28 @@ int main(int, char**)
         C c(std::begin(t), std::end(t));
 
         c.resize(3, 10);
-        assert(distance(c.begin(), c.end()) == 3);
-        assert(*next(c.begin(), 0) == 0);
-        assert(*next(c.begin(), 1) == 1);
-        assert(*next(c.begin(), 2) == 2);
+        assert(std::distance(c.begin(), c.end()) == 3);
+        assert(*std::next(c.begin(), 0) == 0);
+        assert(*std::next(c.begin(), 1) == 1);
+        assert(*std::next(c.begin(), 2) == 2);
 
         c.resize(6, 10);
-        assert(distance(c.begin(), c.end()) == 6);
-        assert(*next(c.begin(), 0) == 0);
-        assert(*next(c.begin(), 1) == 1);
-        assert(*next(c.begin(), 2) == 2);
-        assert(*next(c.begin(), 3) == 10);
-        assert(*next(c.begin(), 4) == 10);
-        assert(*next(c.begin(), 5) == 10);
+        assert(std::distance(c.begin(), c.end()) == 6);
+        assert(*std::next(c.begin(), 0) == 0);
+        assert(*std::next(c.begin(), 1) == 1);
+        assert(*std::next(c.begin(), 2) == 2);
+        assert(*std::next(c.begin(), 3) == 10);
+        assert(*std::next(c.begin(), 4) == 10);
+        assert(*std::next(c.begin(), 5) == 10);
 
         c.resize(6, 12);
-        assert(distance(c.begin(), c.end()) == 6);
-        assert(*next(c.begin(), 0) == 0);
-        assert(*next(c.begin(), 1) == 1);
-        assert(*next(c.begin(), 2) == 2);
-        assert(*next(c.begin(), 3) == 10);
-        assert(*next(c.begin(), 4) == 10);
-        assert(*next(c.begin(), 5) == 10);
+        assert(std::distance(c.begin(), c.end()) == 6);
+        assert(*std::next(c.begin(), 0) == 0);
+        assert(*std::next(c.begin(), 1) == 1);
+        assert(*std::next(c.begin(), 2) == 2);
+        assert(*std::next(c.begin(), 3) == 10);
+        assert(*std::next(c.begin(), 4) == 10);
+        assert(*std::next(c.begin(), 5) == 10);
     }
 #if TEST_STD_VER >= 11
     {
@@ -61,28 +62,28 @@ int main(int, char**)
         C c(std::begin(t), std::end(t));
 
         c.resize(3, 10);
-        assert(distance(c.begin(), c.end()) == 3);
-        assert(*next(c.begin(), 0) == 0);
-        assert(*next(c.begin(), 1) == 1);
-        assert(*next(c.begin(), 2) == 2);
+        assert(std::distance(c.begin(), c.end()) == 3);
+        assert(*std::next(c.begin(), 0) == 0);
+        assert(*std::next(c.begin(), 1) == 1);
+        assert(*std::next(c.begin(), 2) == 2);
 
         c.resize(6, 10);
-        assert(distance(c.begin(), c.end()) == 6);
-        assert(*next(c.begin(), 0) == 0);
-        assert(*next(c.begin(), 1) == 1);
-        assert(*next(c.begin(), 2) == 2);
-        assert(*next(c.begin(), 3) == 10);
-        assert(*next(c.begin(), 4) == 10);
-        assert(*next(c.begin(), 5) == 10);
+        assert(std::distance(c.begin(), c.end()) == 6);
+        assert(*std::next(c.begin(), 0) == 0);
+        assert(*std::next(c.begin(), 1) == 1);
+        assert(*std::next(c.begin(), 2) == 2);
+        assert(*std::next(c.begin(), 3) == 10);
+        assert(*std::next(c.begin(), 4) == 10);
+        assert(*std::next(c.begin(), 5) == 10);
 
         c.resize(6, 12);
-        assert(distance(c.begin(), c.end()) == 6);
-        assert(*next(c.begin(), 0) == 0);
-        assert(*next(c.begin(), 1) == 1);
-        assert(*next(c.begin(), 2) == 2);
-        assert(*next(c.begin(), 3) == 10);
-        assert(*next(c.begin(), 4) == 10);
-        assert(*next(c.begin(), 5) == 10);
+        assert(std::distance(c.begin(), c.end()) == 6);
+        assert(*std::next(c.begin(), 0) == 0);
+        assert(*std::next(c.begin(), 1) == 1);
+        assert(*std::next(c.begin(), 2) == 2);
+        assert(*std::next(c.begin(), 3) == 10);
+        assert(*std::next(c.begin(), 4) == 10);
+        assert(*std::next(c.begin(), 5) == 10);
     }
     {
         // Test that the allocator's construct method is being used to

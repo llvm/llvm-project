@@ -163,7 +163,8 @@ public:
           CurrentSema->getPreprocessor().getIdentifierInfo(CorrectTo);
       auto *NewFunction = FunctionDecl::Create(
           Context, DestContext, SourceLocation(), SourceLocation(), ToIdent,
-          Context.getFunctionType(Context.VoidTy, {}, {}), nullptr, SC_Static);
+          Context.getFunctionType(Context.VoidTy, {}, {}), nullptr, SC_Static,
+          /*UsesFPIntrin*/ false);
       DestContext->addDecl(NewFunction);
       TypoCorrection Correction(ToIdent);
       Correction.addCorrectionDecl(NewFunction);
@@ -219,7 +220,7 @@ public:
 };
 
 // Make sure that the DiagnosticWatcher is not miscounting.
-TEST(ExternalSemaSource, SanityCheck) {
+TEST(ExternalSemaSource, DiagCheck) {
   auto Installer = std::make_unique<ExternalSemaSourceInstaller>();
   DiagnosticWatcher Watcher("AAB", "BBB");
   Installer->PushWatcher(&Watcher);

@@ -1,8 +1,9 @@
 # RUN: rm -rf %t && mkdir -p %t
-# RUN: llvm-mc -triple=x86_64-unknown-linux -position-independent -filetype=obj \
-# RUN:         -large-code-model -o %t/elf_lg_pic_reloc.o %s
-# RUN: llvm-jitlink -noexec -slab-allocate 100Kb -slab-address 0xfff00000 \
-# RUN:              -check %s %t/elf_lg_pic_reloc.o
+# RUN: llvm-mc -triple=x86_64-unknown-linux -position-independent \
+# RUN:     -filetype=obj -large-code-model -o %t/elf_lg_pic_reloc.o %s
+# RUN: llvm-jitlink -noexec \
+# RUN:     -slab-allocate 100Kb -slab-address 0xfff00000 -slab-page-size 4096 \
+# RUN:     -check %s %t/elf_lg_pic_reloc.o
 #
 # Test ELF large/PIC relocations.
 

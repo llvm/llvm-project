@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple i386-unknown-unknown -fopenmp -fno-experimental-new-pass-manager %s -emit-llvm -o - -disable-llvm-optzns | FileCheck %s --check-prefix=RUN1
+// RUN: %clang_cc1 -no-opaque-pointers -triple i386-unknown-unknown -fopenmp %s -emit-llvm -o - -disable-llvm-optzns | FileCheck %s --check-prefix=RUN1
 
 // RUN1-DAG: @broker0({{[^#]*#[0-9]+}} !callback ![[cid0:[0-9]+]]
 __attribute__((callback(1, 2))) void *broker0(void *(*callee)(void *), void *payload) {
@@ -34,7 +34,7 @@ static int ThreeInt2Int(int a, int b, int c) {
   return a * b + c;
 }
 
-void foo() {
+void foo(void) {
   broker0(VoidPtr2VoidPtr, 0l);
   broker1(0l, VoidPtr2VoidPtr);
   broker2(foo);

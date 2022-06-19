@@ -31,13 +31,15 @@ def ROCDL_Dialect : Dialect {
     /// functions.
     static StringRef getKernelFuncAttrName() { return "rocdl.kernel"; }
   }];
+
+  let emitAccessorPrefix = kEmitAccessorPrefix_Both;
 }
 
 //===----------------------------------------------------------------------===//
 // ROCDL op definitions
 //===----------------------------------------------------------------------===//
 
-class ROCDL_Op<string mnemonic, list<OpTrait> traits = []> :
+class ROCDL_Op<string mnemonic, list<Trait> traits = []> :
   LLVM_OpBase<ROCDL_Dialect, mnemonic, traits> {
 }
 
@@ -46,7 +48,7 @@ class ROCDL_Op<string mnemonic, list<OpTrait> traits = []> :
 //===----------------------------------------------------------------------===//
 
 class ROCDL_SpecialRegisterOp<string mnemonic,
-    list<OpTrait> traits = []> :
+    list<Trait> traits = []> :
   ROCDL_Op<mnemonic, !listconcat(traits, [NoSideEffect])>,
   Results<(outs LLVM_Type:$res)>, Arguments<(ins)> {
   string llvmBuilder = "$res = createIntrinsicCall(builder,"
@@ -55,7 +57,7 @@ class ROCDL_SpecialRegisterOp<string mnemonic,
 }
 
 class ROCDL_DeviceFunctionOp<string mnemonic, string device_function,
-                             int parameter, list<OpTrait> traits = []> :
+                             int parameter, list<Trait> traits = []> :
   ROCDL_Op<mnemonic, !listconcat(traits, [NoSideEffect])>,
   Results<(outs LLVM_Type:$res)>, Arguments<(ins)> {
   string llvmBuilder = "$res = createDeviceFunctionCall(builder, \""
@@ -113,7 +115,7 @@ def ROCDL_BarrierOp : ROCDL_Op<"barrier"> {
 //===---------------------------------------------------------------------===//
 // Xdlops intrinsics
 
-class ROCDL_Mfma_IntrOp<string mnemonic, list<OpTrait> traits = []> :
+class ROCDL_Mfma_IntrOp<string mnemonic, list<Trait> traits = []> :
   LLVM_IntrOpBase<ROCDL_Dialect, mnemonic,
                   "amdgcn_" # !subst(".","_", mnemonic),
                   [], [], traits, 1>,
@@ -159,12 +161,7 @@ def ROCDL_MubufLoadOp :
           llvm::Intrinsic::amdgcn_buffer_load, {$rsrc, $vindex, $offset, $glc,
           $slc}, {$_resultType});
   }];
-  let parser = [{ return parseROCDLMubufLoadOp(parser, result); }];
-  let printer = [{
-    Operation *op = this->getOperation();
-    p << op->getName() << " " << op->getOperands()
-      << " : " << op->getResultTypes();
-  }];
+  let hasCustomAssemblyFormat = 1;
 }
 
 def ROCDL_MubufStoreOp :
@@ -181,12 +178,60 @@ def ROCDL_MubufStoreOp :
           llvm::Intrinsic::amdgcn_buffer_store, {$vdata, $rsrc, $vindex,
           $offset, $glc, $slc}, {vdataType});
   }];
-  let parser = [{ return parseROCDLMubufStoreOp(parser, result); }];
-  let printer = [{
-    Operation *op = this->getOperation();
-    p << op->getName() << " " << op->getOperands()
-      << " : " << vdata().getType();
+  let hasCustomAssemblyFormat = 1;
+}
+
+//===---------------------------------------------------------------------===//
+// Raw buffer load/store intrinsics
+
+def ROCDL_RawBufferLoadOp :
+  ROCDL_Op<"raw.buffer.load">,
+  Results<(outs LLVM_Type:$res)>,
+  Arguments<(ins LLVM_Type:$rsrc,
+                 LLVM_Type:$offset,
+                 LLVM_Type:$soffset,
+                 LLVM_Type:$aux)> {
+  string llvmBuilder = [{
+      $res = createIntrinsicCall(builder,
+          llvm::Intrinsic::amdgcn_raw_buffer_load, {$rsrc, $offset,
+          $soffset, $aux}, {$_resultType});
   }];
+  let hasCustomAssemblyFormat = 1;
+}
+
+def ROCDL_RawBufferStoreOp :
+  ROCDL_Op<"raw.buffer.store">,
+  Arguments<(ins LLVM_Type:$vdata,
+                 LLVM_Type:$rsrc,
+                 LLVM_Type:$offset,
+                 LLVM_Type:$soffset,
+                 LLVM_Type:$aux)>{
+  string llvmBuilder = [{
+    auto vdataType = moduleTranslation.convertType(op.vdata().getType());
+    createIntrinsicCall(builder,
+          llvm::Intrinsic::amdgcn_raw_buffer_store, {$vdata, $rsrc,
+          $offset, $soffset, $aux}, {vdataType});
+  }];
+  let hasCustomAssemblyFormat = 1;
+}
+
+//===---------------------------------------------------------------------===//
+// MI-100 and MI-200 buffer atomic floating point add intrinsic
+
+def ROCDL_RawBufferAtomicFAddOp :
+  ROCDL_Op<"raw.buffer.atomic.fadd">,
+  Arguments<(ins LLVM_Type:$vdata,
+                 LLVM_Type:$rsrc,
+                 LLVM_Type:$offset,
+                 LLVM_Type:$soffset,
+                 LLVM_Type:$aux)>{
+  string llvmBuilder = [{
+      auto vdataType = moduleTranslation.convertType(op.vdata().getType());
+      createIntrinsicCall(builder,
+          llvm::Intrinsic::amdgcn_raw_buffer_atomic_fadd, {$vdata, $rsrc,
+            $offset, $soffset, $aux}, {vdataType});
+  }];
+  let hasCustomAssemblyFormat = 1;
 }
 
 #endif // ROCDLIR_OPS

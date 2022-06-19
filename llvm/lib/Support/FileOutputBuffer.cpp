@@ -11,11 +11,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Support/FileOutputBuffer.h"
-#include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/Errc.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Memory.h"
-#include "llvm/Support/Path.h"
 #include <system_error>
 
 #if !defined(_MSC_VER) && !defined(__MINGW32__)

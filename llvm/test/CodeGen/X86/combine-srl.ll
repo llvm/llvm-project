@@ -346,29 +346,28 @@ define <4 x i32> @combine_vec_lshr_lzcnt_bit1(<4 x i32> %x) {
 ; SSE-LABEL: combine_vec_lshr_lzcnt_bit1:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
-; SSE-NEXT:    movdqa {{.*#+}} xmm2 = [4,3,2,2,1,1,1,1,0,0,0,0,0,0,0,0]
-; SSE-NEXT:    movdqa %xmm2, %xmm3
-; SSE-NEXT:    pshufb %xmm0, %xmm3
-; SSE-NEXT:    movdqa %xmm0, %xmm1
-; SSE-NEXT:    psrlw $4, %xmm1
+; SSE-NEXT:    movdqa {{.*#+}} xmm1 = [4,3,2,2,1,1,1,1,0,0,0,0,0,0,0,0]
+; SSE-NEXT:    movdqa %xmm1, %xmm2
+; SSE-NEXT:    pshufb %xmm0, %xmm2
+; SSE-NEXT:    movdqa %xmm0, %xmm3
+; SSE-NEXT:    psrlw $4, %xmm3
 ; SSE-NEXT:    pxor %xmm4, %xmm4
-; SSE-NEXT:    pshufb %xmm1, %xmm2
+; SSE-NEXT:    pshufb %xmm3, %xmm1
+; SSE-NEXT:    pcmpeqb %xmm4, %xmm3
+; SSE-NEXT:    pand %xmm2, %xmm3
+; SSE-NEXT:    paddb %xmm1, %xmm3
+; SSE-NEXT:    movdqa %xmm0, %xmm1
 ; SSE-NEXT:    pcmpeqb %xmm4, %xmm1
-; SSE-NEXT:    pand %xmm3, %xmm1
-; SSE-NEXT:    paddb %xmm2, %xmm1
-; SSE-NEXT:    movdqa %xmm0, %xmm2
-; SSE-NEXT:    pcmpeqb %xmm4, %xmm2
-; SSE-NEXT:    psrlw $8, %xmm2
-; SSE-NEXT:    pand %xmm1, %xmm2
 ; SSE-NEXT:    psrlw $8, %xmm1
-; SSE-NEXT:    paddw %xmm2, %xmm1
+; SSE-NEXT:    pand %xmm3, %xmm1
+; SSE-NEXT:    psrlw $8, %xmm3
+; SSE-NEXT:    paddw %xmm1, %xmm3
 ; SSE-NEXT:    pcmpeqw %xmm4, %xmm0
 ; SSE-NEXT:    psrld $16, %xmm0
-; SSE-NEXT:    pand %xmm1, %xmm0
-; SSE-NEXT:    psrld $16, %xmm1
-; SSE-NEXT:    paddd %xmm0, %xmm1
-; SSE-NEXT:    psrld $5, %xmm1
-; SSE-NEXT:    movdqa %xmm1, %xmm0
+; SSE-NEXT:    pand %xmm3, %xmm0
+; SSE-NEXT:    psrld $16, %xmm3
+; SSE-NEXT:    paddd %xmm3, %xmm0
+; SSE-NEXT:    psrld $5, %xmm0
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: combine_vec_lshr_lzcnt_bit1:

@@ -6,7 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-// <string>
+// UNSUPPORTED: !stdlib=libc++ && (c++03 || c++11 || c++14)
+
+// <string_view>
 
 // constexpr size_type find(const charT* s, size_type pos = 0) const;
 

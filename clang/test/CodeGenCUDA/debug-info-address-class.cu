@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -emit-llvm %s -o - -fcuda-is-device -triple nvptx-unknown-unknown -debug-info-kind=limited -dwarf-version=2 -debugger-tuning=gdb | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -emit-llvm %s -o - -fcuda-is-device -triple nvptx-unknown-unknown -debug-info-kind=limited -dwarf-version=2 -debugger-tuning=gdb | FileCheck %s
 
 #include "Inputs/cuda.h"
 

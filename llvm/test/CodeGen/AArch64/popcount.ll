@@ -5,15 +5,12 @@
 define i8 @popcount128(i128* nocapture nonnull readonly %0) {
 ; CHECK-LABEL: popcount128:
 ; CHECK:       // %bb.0: // %Entry
-; CHECK-NEXT:    ldr x8, [x0, #8]
-; CHECK-NEXT:    ldr d1, [x0]
-; CHECK-NEXT:    // implicit-def: $q0
-; CHECK-NEXT:    mov v0.16b, v1.16b
-; CHECK-NEXT:    mov v0.d[1], x8
+; CHECK-NEXT:    ldr q0, [x0]
 ; CHECK-NEXT:    cnt v0.16b, v0.16b
 ; CHECK-NEXT:    uaddlv h1, v0.16b
 ; CHECK-NEXT:    // implicit-def: $q0
-; CHECK-NEXT:    mov v0.16b, v1.16b
+; CHECK-NEXT:    fmov s0, s1
+; CHECK-NEXT:    // kill: def $s0 killed $s0 killed $q0
 ; CHECK-NEXT:    fmov w0, s0
 ; CHECK-NEXT:    ret
 Entry:
@@ -30,27 +27,38 @@ declare i128 @llvm.ctpop.i128(i128)
 define i16 @popcount256(i256* nocapture nonnull readonly %0) {
 ; CHECK-LABEL: popcount256:
 ; CHECK:       // %bb.0: // %Entry
-; CHECK-NEXT:    ldr x8, [x0, #8]
-; CHECK-NEXT:    ldr x9, [x0, #24]
-; CHECK-NEXT:    ldr d1, [x0, #16]
+; CHECK-NEXT:    ldr x11, [x0]
+; CHECK-NEXT:    ldr x10, [x0, #8]
+; CHECK-NEXT:    ldr x9, [x0, #16]
+; CHECK-NEXT:    ldr x8, [x0, #24]
+; CHECK-NEXT:    // implicit-def: $q1
+; CHECK-NEXT:    mov v1.d[0], x11
+; CHECK-NEXT:    mov v1.d[1], x10
 ; CHECK-NEXT:    // implicit-def: $q0
-; CHECK-NEXT:    mov v0.16b, v1.16b
-; CHECK-NEXT:    mov v0.d[1], x9
-; CHECK-NEXT:    cnt v0.16b, v0.16b
-; CHECK-NEXT:    uaddlv h1, v0.16b
-; CHECK-NEXT:    // implicit-def: $q0
-; CHECK-NEXT:    mov v0.16b, v1.16b
-; CHECK-NEXT:    fmov w9, s0
-; CHECK-NEXT:    ldr d1, [x0]
-; CHECK-NEXT:    // implicit-def: $q0
-; CHECK-NEXT:    mov v0.16b, v1.16b
+; CHECK-NEXT:    mov v0.d[0], x9
 ; CHECK-NEXT:    mov v0.d[1], x8
+; CHECK-NEXT:    cnt v1.16b, v1.16b
+; CHECK-NEXT:    uaddlv h2, v1.16b
+; CHECK-NEXT:    // implicit-def: $q1
+; CHECK-NEXT:    fmov s1, s2
+; CHECK-NEXT:    // kill: def $s1 killed $s1 killed $q1
+; CHECK-NEXT:    fmov w0, s1
+; CHECK-NEXT:    mov w10, wzr
+; CHECK-NEXT:    mov w9, w0
+; CHECK-NEXT:    mov w8, w10
+; CHECK-NEXT:    bfi x9, x8, #32, #32
 ; CHECK-NEXT:    cnt v0.16b, v0.16b
 ; CHECK-NEXT:    uaddlv h1, v0.16b
 ; CHECK-NEXT:    // implicit-def: $q0
-; CHECK-NEXT:    mov v0.16b, v1.16b
-; CHECK-NEXT:    fmov w8, s0
-; CHECK-NEXT:    add w0, w8, w9
+; CHECK-NEXT:    fmov s0, s1
+; CHECK-NEXT:    // kill: def $s0 killed $s0 killed $q0
+; CHECK-NEXT:    fmov w0, s0
+; CHECK-NEXT:    mov w8, w0
+; CHECK-NEXT:    // kill: def $x10 killed $w10
+; CHECK-NEXT:    bfi x8, x10, #32, #32
+; CHECK-NEXT:    adds x8, x8, x9
+; CHECK-NEXT:    cset w9, hs
+; CHECK-NEXT:    mov w0, w8
 ; CHECK-NEXT:    ret
 Entry:
   %1 = load i256, i256* %0, align 16
@@ -66,16 +74,19 @@ define <1 x i128> @popcount1x128(<1 x i128> %0) {
 ; CHECK-LABEL: popcount1x128:
 ; CHECK:       // %bb.0: // %Entry
 ; CHECK-NEXT:    // implicit-def: $q0
-; CHECK-NEXT:    fmov d0, x0
+; CHECK-NEXT:    mov v0.d[0], x0
 ; CHECK-NEXT:    mov v0.d[1], x1
 ; CHECK-NEXT:    cnt v0.16b, v0.16b
 ; CHECK-NEXT:    uaddlv h1, v0.16b
 ; CHECK-NEXT:    // implicit-def: $q0
-; CHECK-NEXT:    mov v0.16b, v1.16b
+; CHECK-NEXT:    fmov s0, s1
+; CHECK-NEXT:    // kill: def $s0 killed $s0 killed $q0
 ; CHECK-NEXT:    fmov w0, s0
+; CHECK-NEXT:    mov w8, wzr
 ; CHECK-NEXT:    // kill: def $x0 killed $w0
-; CHECK-NEXT:    movi v0.2d, #0000000000000000
-; CHECK-NEXT:    mov x1, v0.d[1]
+; CHECK-NEXT:    // kill: def $x8 killed $w8
+; CHECK-NEXT:    bfi x0, x8, #32, #32
+; CHECK-NEXT:    mov x1, xzr
 ; CHECK-NEXT:    ret
 Entry:
   %1 = tail call <1 x i128> @llvm.ctpop.v1.i128(<1 x i128> %0)

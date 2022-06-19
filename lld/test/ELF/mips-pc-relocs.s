@@ -38,11 +38,11 @@ __start:
 # CHECK-NEXT: <__start>:
 # CHECK-NEXT:    20000:       lwpc    $6, 32
 #                                         ^-- (0x20020-0x20000)>>2
-# CHECK-NEXT:    20004:       beqc    $5, $6, 28
+# CHECK-NEXT:    20004:       beqc    $5, $6, 0x20020
 #                                             ^-- (0x20020-4-0x20004)>>2
-# CHECK-NEXT:    20008:       beqzc   $9, 24
+# CHECK-NEXT:    20008:       beqzc   $9, 0x20020
 #                                         ^-- (0x20020-4-0x20008)>>2
-# CHECK-NEXT:    2000c:       bc      20
+# CHECK-NEXT:    2000c:       bc      0x20020
 #                                     ^-- (0x20020-4-0x2000c)>>2
 # CHECK-NEXT:    20010:       aluipc  $2, 0
 #                                         ^-- %hi(0x20020-0x20010)

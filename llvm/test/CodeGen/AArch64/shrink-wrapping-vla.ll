@@ -15,7 +15,7 @@
 ;
 ; RUN: llc -mtriple aarch64-linux %s -o - | FileCheck %s
 
-define dso_local void @f(i32 %n, i32* nocapture %x) {
+define dso_local void @f(i32 %n, i32* nocapture %x) uwtable {
 entry:
   %cmp = icmp slt i32 %n, 0
   br i1 %cmp, label %return, label %if.end
@@ -78,18 +78,28 @@ declare void @llvm.stackrestore(i8*)
 ; CHECK-LABEL: f
 
 ; CHECK:      stp x29, x30, [sp, #-16]!
+; CHECK-NEXT: .cfi_def_cfa_offset 16
 ; CHECK-NEXT: mov x29, sp
+; CHECK-NEXT: .cfi_def_cfa w29, 16
+; CHECK-NEXT: .cfi_offset w30, -8
+; CHECK-NEXT: .cfi_offset w29, -16
+
 
 ; VLA allocation
-; CHECK: add [[X1:x[0-9]+]], [[X1]], #15
 ; CHECK: mov [[X2:x[0-9]+]], sp
+; CHECK: mov [[SAVE:x[0-9]+]], sp
+; CHECK: add [[X1:x[0-9]+]], [[X1]], #15
 ; CHECK: and [[X1]], [[X1]], #0x7fffffff0
 ; Saving the SP via llvm.stacksave()
-; CHECK: mov [[SAVE:x[0-9]+]], sp
 ; CHECK: sub [[X2]], [[X2]], [[X1]]
 
 ; The next instruction comes from llvm.stackrestore()
 ; CHECK:      mov sp, [[SAVE]]
 ; Epilogue
 ; CHECK-NEXT: mov sp, x29
+; CHECK-NEXT: .cfi_def_cfa wsp, 16
 ; CHECK-NEXT: ldp x29, x30, [sp], #16
+; CHECK-NEXT: .cfi_def_cfa_offset 0
+; CHECK-NEXT: .cfi_restore w30
+; CHECK-NEXT: .cfi_restore w29
+; CHECK-NEXT:  ret

@@ -1,7 +1,5 @@
-// RUN: %clang_cc1 -O0 -triple spir -emit-llvm %s -o - | FileCheck %s
-// RUN: %clang_cc1 -O0 -triple spir64 -emit-llvm %s -o - | FileCheck %s
-// RUN: %clang_cc1 -O0 -triple spir -fexperimental-new-pass-manager -emit-llvm %s -o - | FileCheck %s
-// RUN: %clang_cc1 -O0 -triple spir64 -fexperimental-new-pass-manager -emit-llvm %s -o - | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -O0 -triple spir -emit-llvm %s -o - | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -O0 -triple spir64 -emit-llvm %s -o - | FileCheck %s
 
 // This file tests that using the _Float16 type with the spir target will not
 // use the llvm intrinsics but instead will use the half arithmetic
@@ -116,7 +114,7 @@ _Float16 fsub() {
   return a - b - 3.0f16;
 }
 
-// CHECK: define{{.*}} spir_func half @_Z4fmulDF16_(half %arg)
+// CHECK: define{{.*}} spir_func noundef half @_Z4fmulDF16_(half noundef %arg)
 _Float16 fmul(_Float16 arg) {
   _Float16 a = 1.0f16;
   const _Float16 b = 2.0f16;

@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -polly-scops -analyze < %s | FileCheck %s
+; RUN: opt %loadPolly -polly-print-scops -disable-output < %s | FileCheck %s
 ;
 ; CHECK:         Assumed Context:
 ; CHECK-NEXT:    [N] -> {  :  }
@@ -14,7 +14,7 @@
 ; CHECK-NEXT:            ReadAccess :=	[Reduction Type: +] [Scalar: 0]
 ; CHECK-NEXT:                [N] -> { Stmt_for_body[i0] -> MemRef_A[1] : (1 + i0) mod 2 = 0; Stmt_for_body[i0] -> MemRef_A[0] : (i0) mod 2 = 0 }
 ; CHECK-NEXT:            MustWriteAccess :=	[Reduction Type: +] [Scalar: 0]
-; CHECK-NEXT:               [N] -> { Stmt_for_body[i0] -> MemRef_A[1] : (1 + i0) mod 2 = 0; Stmt_for_body[i0] -> MemRef_A[0] : (i0) mod 2 = 0 }; 
+; CHECK-NEXT:               [N] -> { Stmt_for_body[i0] -> MemRef_A[1] : (1 + i0) mod 2 = 0; Stmt_for_body[i0] -> MemRef_A[0] : (i0) mod 2 = 0 };
 ; CHECK-NEXT:    }
 ;
 ;    void f(int *A, int N) {

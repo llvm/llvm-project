@@ -1,6 +1,6 @@
-// RUN: %clang_cc1 -triple x86_64-unknown-unknown -fblocks %s -emit-llvm -o - | FileCheck %s -check-prefix=UNINIT
-// RUN: %clang_cc1 -triple x86_64-unknown-unknown -fblocks -ftrivial-auto-var-init=pattern %s -emit-llvm -o - | FileCheck %s -check-prefix=PATTERN
-// RUN: %clang_cc1 -triple x86_64-unknown-unknown -fblocks -ftrivial-auto-var-init=zero %s -emit-llvm -o - | FileCheck %s -check-prefix=ZERO
+// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-unknown-unknown -fblocks %s -emit-llvm -o - | FileCheck %s -check-prefix=UNINIT
+// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-unknown-unknown -fblocks -ftrivial-auto-var-init=pattern %s -emit-llvm -o - | FileCheck %s -check-prefix=PATTERN
+// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-unknown-unknown -fblocks -ftrivial-auto-var-init=zero %s -emit-llvm -o - | FileCheck %s -check-prefix=ZERO
 
 // None of the synthesized globals should contain `undef`.
 // PATTERN-NOT: undef
@@ -198,6 +198,34 @@ void test_alloca(int size) {
 // PATTERN-NEXT:  call void @llvm.memset{{.*}}(i8* align 128 %[[ALLOCA]], i8 -86, i64 %[[SIZE]], i1 false), !annotation [[AUTO_INIT:!.+]]
 void test_alloca_with_align(int size) {
   void *ptr = __builtin_alloca_with_align(size, 1024);
+  used(ptr);
+}
+
+// UNINIT-LABEL:  test_alloca_uninitialized(
+// ZERO-LABEL:    test_alloca_uninitialized(
+// ZERO:          %[[SIZE:[a-z0-9]+]] = sext i32 %{{.*}} to i64
+// ZERO-NEXT:     %[[ALLOCA:[a-z0-9]+]] = alloca i8, i64 %[[SIZE]], align [[ALIGN:[0-9]+]]
+// ZERO-NOT:      call void @llvm.memset
+// PATTERN-LABEL: test_alloca_uninitialized(
+// PATTERN:       %[[SIZE:[a-z0-9]+]] = sext i32 %{{.*}} to i64
+// PATTERN-NEXT:  %[[ALLOCA:[a-z0-9]+]] = alloca i8, i64 %[[SIZE]], align [[ALIGN:[0-9]+]]
+// PATTERN-NOT:   call void @llvm.memset
+void test_alloca_uninitialized(int size) {
+  void *ptr = __builtin_alloca_uninitialized(size);
+  used(ptr);
+}
+
+// UNINIT-LABEL:  test_alloca_with_align_uninitialized(
+// ZERO-LABEL:    test_alloca_with_align_uninitialized(
+// ZERO:          %[[SIZE:[a-z0-9]+]] = sext i32 %{{.*}} to i64
+// ZERO-NEXT:     %[[ALLOCA:[a-z0-9]+]] = alloca i8, i64 %[[SIZE]], align 128
+// ZERO-NOT:      call void @llvm.memset
+// PATTERN-LABEL: test_alloca_with_align_uninitialized(
+// PATTERN:       %[[SIZE:[a-z0-9]+]] = sext i32 %{{.*}} to i64
+// PATTERN-NEXT:  %[[ALLOCA:[a-z0-9]+]] = alloca i8, i64 %[[SIZE]], align 128
+// PATTERN-NOT:   call void @llvm.memset
+void test_alloca_with_align_uninitialized(int size) {
+  void *ptr = __builtin_alloca_with_align_uninitialized(size, 1024);
   used(ptr);
 }
 

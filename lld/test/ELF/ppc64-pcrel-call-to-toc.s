@@ -11,12 +11,12 @@
 # RUN: llvm-objdump -d --no-show-raw-insn --mcpu=pwr10 %t | FileCheck %s
 
 # RUN: llvm-mc -filetype=obj -triple=powerpc64 %s -o %t.o
-# RUN: ld.lld -T %t.script %t.o -o %t
+# RUN: ld.lld -T %t.script %t.o -o %t --no-power10-stubs --power10-stubs=yes
 # RUN: llvm-readelf -s %t | FileCheck %s --check-prefix=SYMBOL
 # RUN: llvm-objdump -d --no-show-raw-insn --mcpu=pwr10 %t | FileCheck %s
 
 # RUN: llvm-mc -filetype=obj -triple=powerpc64le %s -o %t.o
-# RUN: ld.lld -T %t.script %t.o -o %t --no-power10-stubs
+# RUN: ld.lld -T %t.script %t.o -o %t --power10-stubs=auto --no-power10-stubs
 # RUN: llvm-readelf -s %t | FileCheck %s --check-prefix=SYMBOL
 # RUN: llvm-objdump -d --no-show-raw-insn --mcpu=pwr10 %t \
 # RUN: | FileCheck %s --check-prefix=CHECK-NOP10

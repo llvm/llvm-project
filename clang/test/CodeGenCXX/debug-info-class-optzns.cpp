@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple x86_64-unknown_unknown -emit-llvm -debug-info-kind=limited %s -O1 -fno-experimental-new-pass-manager -o - | FileCheck %s
+// RUN: %clang_cc1 -triple x86_64-unknown_unknown -emit-llvm -debug-info-kind=limited %s -O1 -disable-llvm-passes -o - | FileCheck %s
 
 // Ensure class definitions are not emitted to debug info just because the
 // vtable is emitted for optimization purposes (as available_externally). The

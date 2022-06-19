@@ -14,7 +14,6 @@
 
 #include "mlir/IR/AffineMap.h"
 #include "mlir/IR/BuiltinTypes.h"
-#include "mlir/IR/Identifier.h"
 #include "mlir/IR/MLIRContext.h"
 #include "mlir/IR/OperationSupport.h"
 #include "mlir/IR/TypeRange.h"
@@ -109,8 +108,8 @@ struct TupleTypeStorage final
                                      TypeRange key) {
     // Allocate a new storage instance.
     auto byteSize = TupleTypeStorage::totalSizeToAlloc<Type>(key.size());
-    auto rawMem = allocator.allocate(byteSize, alignof(TupleTypeStorage));
-    auto result = ::new (rawMem) TupleTypeStorage(key.size());
+    auto *rawMem = allocator.allocate(byteSize, alignof(TupleTypeStorage));
+    auto *result = ::new (rawMem) TupleTypeStorage(key.size());
 
     // Copy in the element types into the trailing storage.
     std::uninitialized_copy(key.begin(), key.end(),

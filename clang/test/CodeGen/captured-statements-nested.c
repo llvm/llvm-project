@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -fblocks -emit-llvm %s -o %t
+// RUN: %clang_cc1 -no-opaque-pointers -fblocks -emit-llvm %s -o %t
 // RUN: FileCheck %s -input-file=%t -check-prefix=CHECK1
 // RUN: FileCheck %s -input-file=%t -check-prefix=CHECK2
 
@@ -94,7 +94,7 @@ void test_nest_captured_stmt(int param, int size, int param_arr[size]) {
   }
 }
 
-void test_nest_block() {
+void test_nest_block(void) {
   __block int x;
   int y;
   ^{

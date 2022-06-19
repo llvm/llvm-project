@@ -244,7 +244,7 @@ int printf(const char *, ...);
 // FIXME: Two more (thats it?) interesting cases. Method access on
 // getter w/o setter and method access on setter w/o getter.
 
-int main() {
+int main(void) {
 #define test(N) { \
   Bot##N *ob = [[Bot##N alloc] init]; \
   int x = ob.x; \

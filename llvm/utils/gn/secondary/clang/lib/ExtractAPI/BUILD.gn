@@ -1,0 +1,19 @@
+static_library("ExtractAPI") {
+  output_name = "clangExtractAPI"
+  configs += [ "//llvm/utils/gn/build:clang_code" ]
+  deps = [
+    "//clang/lib/AST",
+    "//clang/lib/Basic",
+    "//clang/lib/Frontend",
+    "//clang/lib/Index",
+    "//llvm/lib/Support",
+  ]
+  sources = [
+    "API.cpp",
+    "DeclarationFragments.cpp",
+    "ExtractAPIConsumer.cpp",
+    "Serialization/SerializerBase.cpp",
+    "Serialization/SymbolGraphSerializer.cpp",
+    "TypedefUnderlyingTypeResolver.cpp",
+  ]
+}

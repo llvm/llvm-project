@@ -65,6 +65,15 @@ int main(int, char**)
         assert(A::count == 1);
     }
     assert(A::count == 0);
+    {
+        std::shared_ptr<A const> sp0(new A);
+        std::weak_ptr<A const> wp(sp0);
+        std::shared_ptr<A const> sp(wp);
+        assert(sp.use_count() == 2);
+        assert(sp.get() == sp0.get());
+        assert(A::count == 1);
+    }
+    assert(A::count == 0);
 #ifndef TEST_HAS_NO_EXCEPTIONS
     {
         std::shared_ptr<A> sp0(new A);
@@ -78,6 +87,18 @@ int main(int, char**)
         catch (std::bad_weak_ptr&)
         {
         }
+    }
+    assert(A::count == 0);
+#endif
+
+#if TEST_STD_VER > 14
+    {
+        std::shared_ptr<A[]> sp0(new A[8]);
+        std::weak_ptr<A[]> wp(sp0);
+        std::shared_ptr<const A[]> sp(wp);
+        assert(sp.use_count() == 2);
+        assert(sp.get() == sp0.get());
+        assert(A::count == 8);
     }
     assert(A::count == 0);
 #endif

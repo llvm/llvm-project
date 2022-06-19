@@ -27,7 +27,6 @@ class MCSymbolWasm : public MCSymbol {
   wasm::WasmSignature *Signature = nullptr;
   Optional<wasm::WasmGlobalType> GlobalType;
   Optional<wasm::WasmTableType> TableType;
-  Optional<wasm::WasmTagType> TagType;
 
   /// An expression describing how to calculate the size of a symbol. If a
   /// symbol has no size this field will be NULL.
@@ -65,6 +64,11 @@ public:
   }
   void setNoStrip() const {
     modifyFlags(wasm::WASM_SYMBOL_NO_STRIP, wasm::WASM_SYMBOL_NO_STRIP);
+  }
+
+  bool isTLS() const { return getFlags() & wasm::WASM_SYMBOL_TLS; }
+  void setTLS() const {
+    modifyFlags(wasm::WASM_SYMBOL_TLS, wasm::WASM_SYMBOL_TLS);
   }
 
   bool isWeak() const { return IsWeak; }
@@ -142,12 +146,6 @@ public:
     wasm::WasmLimits Limits = {wasm::WASM_LIMITS_FLAG_NONE, 0, 0};
     setTableType({uint8_t(VT), Limits});
   }
-
-  const wasm::WasmTagType &getTagType() const {
-    assert(TagType.hasValue());
-    return TagType.getValue();
-  }
-  void setTagType(wasm::WasmTagType ET) { TagType = ET; }
 };
 
 } // end namespace llvm

@@ -363,7 +363,7 @@ let usesCustomInserter = 1 in {
                                  (select GRRegs:$cond, GRRegs:$T, GRRegs:$F))]>;
 }
 
-let hasSideEffects = 1 in
+let hasSideEffects = 1, isMeta = 1 in
 def Int_MemBarrier : PseudoInstXCore<(outs), (ins), "#MEMBARRIER",
                                      [(XCoreMemBarrier)]>;
 

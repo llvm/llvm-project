@@ -11,14 +11,13 @@ from lldbsuite.test.lldbpexpect import PExpectTest
 
 
 class BreakpointCallbackCommandSource(PExpectTest):
-
-    mydir = TestBase.compute_mydir(__file__)
     file_to_source = os.path.join(os.path.abspath(os.path.dirname(__file__)), 'source.lldb')
 
     # PExpect uses many timeouts internally and doesn't play well
     # under ASAN on a loaded machine..
     @skipIfAsan
     @skipIfEditlineSupportMissing
+    @skipIf(oslist=["linux"], archs=["arm", "aarch64"])
     @skipIf(oslist=["freebsd"], bugnumber="llvm.org/pr48316")
     def test_breakpoint_callback_command_source(self):
         self.build()

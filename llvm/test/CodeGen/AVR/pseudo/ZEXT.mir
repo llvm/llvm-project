@@ -18,7 +18,7 @@ body: |
 
     ; CHECK:      $r14 = MOVRdRr $r31
     ; CHECK-NEXT: $r15 = MOVRdRr $r31
-    ; CHECK-NEXT: $r15 = ADDRdRr $r15, killed $r15, implicit-def $sreg
+    ; CHECK-NEXT: $r15 = ADDRdRr killed $r15, killed $r15, implicit-def $sreg
     ; CHECK-NEXT: $r15 = SBCRdRr killed $r15, killed $r15, implicit-def $sreg, implicit killed $sreg
 
     $r15r14 = SEXT $r31, implicit-def $sreg

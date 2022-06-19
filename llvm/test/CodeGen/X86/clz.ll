@@ -704,32 +704,20 @@ define i64 @cttz_i64_zero_test(i64 %n) {
 ; Don't generate the cmovne when the source is known non-zero (and bsr would
 ; not set ZF).
 ; rdar://9490949
-; FIXME: The compare and branch are produced late in IR (by CodeGenPrepare), and
-;        codegen doesn't know how to delete the movl and je.
 define i32 @ctlz_i32_fold_cmov(i32 %n) {
 ; X86-LABEL: ctlz_i32_fold_cmov:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    orl $1, %eax
-; X86-NEXT:    je .LBB16_1
-; X86-NEXT:  # %bb.2: # %cond.false
 ; X86-NEXT:    bsrl %eax, %eax
 ; X86-NEXT:    xorl $31, %eax
-; X86-NEXT:    retl
-; X86-NEXT:  .LBB16_1:
-; X86-NEXT:    movl $32, %eax
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: ctlz_i32_fold_cmov:
 ; X64:       # %bb.0:
 ; X64-NEXT:    orl $1, %edi
-; X64-NEXT:    je .LBB16_1
-; X64-NEXT:  # %bb.2: # %cond.false
 ; X64-NEXT:    bsrl %edi, %eax
 ; X64-NEXT:    xorl $31, %eax
-; X64-NEXT:    retq
-; X64-NEXT:  .LBB16_1:
-; X64-NEXT:    movl $32, %eax
 ; X64-NEXT:    retq
 ;
 ; X86-CLZ-LABEL: ctlz_i32_fold_cmov:
@@ -953,13 +941,8 @@ define i64 @ctlz_i64_zero_test_knownneverzero(i64 %n) {
 ; X64-LABEL: ctlz_i64_zero_test_knownneverzero:
 ; X64:       # %bb.0:
 ; X64-NEXT:    orq $1, %rdi
-; X64-NEXT:    je .LBB21_1
-; X64-NEXT:  # %bb.2: # %cond.false
 ; X64-NEXT:    bsrq %rdi, %rax
 ; X64-NEXT:    xorq $63, %rax
-; X64-NEXT:    retq
-; X64-NEXT:  .LBB21_1:
-; X64-NEXT:    movl $64, %eax
 ; X64-NEXT:    retq
 ;
 ; X86-CLZ-LABEL: ctlz_i64_zero_test_knownneverzero:
@@ -1026,12 +1009,7 @@ define i64 @cttz_i64_zero_test_knownneverzero(i64 %n) {
 ; X64:       # %bb.0:
 ; X64-NEXT:    movabsq $-9223372036854775808, %rax # imm = 0x8000000000000000
 ; X64-NEXT:    orq %rdi, %rax
-; X64-NEXT:    je .LBB22_1
-; X64-NEXT:  # %bb.2: # %cond.false
 ; X64-NEXT:    bsfq %rax, %rax
-; X64-NEXT:    retq
-; X64-NEXT:  .LBB22_1:
-; X64-NEXT:    movl $64, %eax
 ; X64-NEXT:    retq
 ;
 ; X86-CLZ-LABEL: cttz_i64_zero_test_knownneverzero:

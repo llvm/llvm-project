@@ -8,13 +8,13 @@
 // RUN: not %clang_cc1 -triple arm64-none-linux-gnu -target-feature +neon \
 // RUN:   -S -O3 -o - %s 2>&1 | FileCheck --check-prefix=CHECK-NO-CRYPTO %s
 
-// Test new aarch64 intrinsics and types
+// REQUIRES: aarch64-registered-target || arm-registered-target
 
 #include <arm_neon.h>
 
 uint8x16_t test_vaeseq_u8(uint8x16_t data, uint8x16_t key) {
   // CHECK-LABEL: @test_vaeseq_u8
-  // CHECK-NO-CRYPTO: warning: implicit declaration of function 'vaeseq_u8' is invalid in C99
+  // CHECK-NO-CRYPTO: error: call to undeclared function 'vaeseq_u8'
   return vaeseq_u8(data, key);
   // CHECK: call <16 x i8> @llvm.{{arm.neon|aarch64.crypto}}.aese(<16 x i8> %data, <16 x i8> %key)
 }

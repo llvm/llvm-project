@@ -1,3 +1,4 @@
+// UNSUPPORTED: -zos, -aix
 // Tests that dwoIds in modules match the dwoIDs in the main file.
 
 // REQUIRES: asserts

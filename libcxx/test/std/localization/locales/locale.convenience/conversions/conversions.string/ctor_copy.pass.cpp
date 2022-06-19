@@ -17,6 +17,8 @@
 // wstring_convert(wstring_convert const&) = delete;
 // wstring_convert& operator=(wstring_convert const&) = delete;
 
+// XFAIL: no-wide-characters
+
 #include <locale>
 #include <codecvt>
 #include <cassert>

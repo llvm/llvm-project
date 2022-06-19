@@ -1,5 +1,4 @@
 ; REQUIRES: asserts
-; RUN: opt < %s -loop-vectorize -force-vector-width=4 -force-vector-interleave=1 -instcombine -debug-only=loop-vectorize -disable-output -print-after=instcombine 2>&1 -enable-new-pm=0 | FileCheck %s
 ; RUN: opt < %s -passes=loop-vectorize,instcombine -force-vector-width=4 -force-vector-interleave=1 -debug-only=loop-vectorize -disable-output -print-after=instcombine 2>&1 | FileCheck %s
 
 target datalayout = "e-m:e-i64:64-i128:128-n32:64-S128"
@@ -36,14 +35,46 @@ for.end:
 }
 
 ; Check for crash exposed by D76992.
+; CHECK-LABEL: 'test'
 ; CHECK:      VPlan 'Initial VPlan for VF={4},UF>=1' {
-; CHECK-NEXT: loop:
-; CHECK-NEXT:   WIDEN-INDUCTION %iv = phi 0, %iv.next
+; CHECK-NEXT: Live-in vp<[[VEC_TC:%.+]]> = vector-trip-count
+; CHECK-EMPTY:
+; CHECK-NEXT: Live-in vp<[[BTC:%.+]]> = backedge-taken count
+; CHECK-EMPTY:
+; CHECK-NEXT: vector.ph:
+; CHECK-NEXT: Successor(s): vector loop
+; CHECK-EMPTY:
+; CHECK-NEXT: <x1> vector loop: {
+; CHECK-NEXT: vector.body:
+; CHECK-NEXT:   EMIT vp<[[CAN_IV:%.+]]> = CANONICAL-INDUCTION
+; CHECK-NEXT:   WIDEN-INDUCTION %iv = phi 0, %iv.next, ir<1>
+; CHECK-NEXT:   vp<[[STEPS:%.+]]> = SCALAR-STEPS vp<[[CAN_IV]]>, ir<0>, ir<1>
+; CHECK-NEXT:   EMIT vp<[[COND:%.+]]> = icmp ule ir<%iv> vp<[[BTC]]>
 ; CHECK-NEXT:   WIDEN ir<%cond0> = icmp ir<%iv>, ir<13>
 ; CHECK-NEXT:   WIDEN-SELECT ir<%s> = select ir<%cond0>, ir<10>, ir<20>
+; CHECK-NEXT: Successor(s): pred.store
+; CHECK-EMPTY:
+; CHECK-NEXT:  <xVFxUF> pred.store: {
+; CHECK-NEXT:    pred.store.entry:
+; CHECK-NEXT:      BRANCH-ON-MASK vp<[[COND]]>
+; CHECK-NEXT:    Successor(s): pred.store.if, pred.store.continue
+; CHECK-EMPTY:
+; CHECK-NEXT:    pred.store.if:
+; CHECK-NEXT:      REPLICATE ir<%gep> = getelementptr ir<%ptr>, vp<[[STEPS]]>
+; CHECK-NEXT:      REPLICATE store ir<%s>, ir<%gep>
+; CHECK-NEXT:    Successor(s): pred.store.continue
+; CHECK-EMPTY:
+; CHECK-NEXT:    pred.store.continue:
+; CHECK-NEXT:    No successors
+; CHECK-NEXT:  }
+; CHECK-NEXT:  Successor(s): loop.0
+; CHECK-EMPTY:
+; CHECK-NEXT: loop.0:
+; CHECK-NEXT:   EMIT vp<[[CAN_IV_NEXT:%.+]]> = VF * UF + vp<[[CAN_IV]]>
+; CHECK-NEXT:   EMIT branch-on-count vp<[[CAN_IV_NEXT]]> vp<[[VEC_TC]]>
 ; CHECK-NEXT: No successor
 ; CHECK-NEXT: }
-define void @test() {
+define void @test(i32* %ptr) {
 entry:
   br label %loop
 
@@ -51,10 +82,12 @@ loop:                       ; preds = %loop, %entry
   %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
   %cond0 = icmp ult i64 %iv, 13
   %s = select i1 %cond0, i32 10, i32 20
+  %gep = getelementptr inbounds i32, i32* %ptr, i64 %iv
+  store i32 %s, i32* %gep
   %iv.next = add nuw nsw i64 %iv, 1
   %exitcond = icmp eq i64 %iv.next, 14
   br i1 %exitcond, label %exit, label %loop
 
-exit:           ; preds = %loop
+exit:
   ret void
 }

@@ -30,13 +30,6 @@ entry:
 define {%Struct2Ty, %Struct2Ty} @StructOfStructOfStruct(i16 *%Ptr) {
 ; CHECK-LABEL: @StructOfStructOfStruct(
 ; CHECK-NEXT:    [[GEP0:%.*]] = getelementptr inbounds i16, i16* [[PTR:%.*]], i64 0
-; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr inbounds i16, i16* [[PTR]], i64 1
-; CHECK-NEXT:    [[GEP2:%.*]] = getelementptr inbounds i16, i16* [[PTR]], i64 2
-; CHECK-NEXT:    [[GEP3:%.*]] = getelementptr inbounds i16, i16* [[PTR]], i64 3
-; CHECK-NEXT:    [[GEP4:%.*]] = getelementptr inbounds i16, i16* [[PTR]], i64 4
-; CHECK-NEXT:    [[GEP5:%.*]] = getelementptr inbounds i16, i16* [[PTR]], i64 5
-; CHECK-NEXT:    [[GEP6:%.*]] = getelementptr inbounds i16, i16* [[PTR]], i64 6
-; CHECK-NEXT:    [[GEP7:%.*]] = getelementptr inbounds i16, i16* [[PTR]], i64 7
 ; CHECK-NEXT:    [[TMP1:%.*]] = bitcast i16* [[GEP0]] to <8 x i16>*
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <8 x i16>, <8 x i16>* [[TMP1]], align 2
 ; CHECK-NEXT:    [[TMP3:%.*]] = add <8 x i16> [[TMP2]], <i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7, i16 8>

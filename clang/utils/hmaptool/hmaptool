@@ -1,6 +1,7 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 from __future__ import absolute_import, division, print_function
 
+from ctypes import ArgumentError
 import json
 import optparse
 import os
@@ -9,8 +10,8 @@ import sys
 
 ###
 
-k_header_magic_LE = 'pamh'
-k_header_magic_BE = 'hmap'
+k_header_magic_LE = b'pamh'
+k_header_magic_BE = b'hmap'
 
 def hmap_hash(str):
     """hash(str) -> int
@@ -43,7 +44,7 @@ class HeaderMap(object):
                         path,))
 
             (version, reserved, strtable_offset, num_entries,
-             num_buckets, max_value_len) = struct.unpack(header_fmt, data)
+             num_buckets, _) = struct.unpack(header_fmt, data)
 
             if version != 1:
                 raise SystemExit("error: %s: unknown headermap version: %r" % (
@@ -83,7 +84,7 @@ class HeaderMap(object):
             if len(strtable) != strtable_size:
                 raise SystemExit("error: %s: unable to read complete string table"%(
                         path,))
-            if strtable[-1] != '\0':
+            if strtable[-1] != 0:
                 raise SystemExit("error: %s: invalid string table in headermap" % (
                         path,))
 
@@ -97,9 +98,9 @@ class HeaderMap(object):
     def get_string(self, idx):
         if idx >= len(self.strtable):
             raise SystemExit("error: %s: invalid string index" % (
-                    path,))
-        end_idx = self.strtable.index('\0', idx)
-        return self.strtable[idx:end_idx]
+                    idx,))
+        end_idx = self.strtable.index(0, idx)
+        return self.strtable[idx:end_idx].decode()
 
     @property
     def mappings(self):
@@ -220,7 +221,7 @@ def action_write(name, args):
 
     # Write out the headermap.
     with open(output_path, 'wb') as f:
-        f.write(magic.encode())
+        f.write(magic)
         f.write(struct.pack(header_fmt, *header))
         for bucket in table:
             f.write(struct.pack(bucket_fmt, *bucket))

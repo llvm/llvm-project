@@ -6,6 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include <utility>
+
 #include "IRModule.h"
 
 #include "PybindUtils.h"
@@ -17,9 +19,55 @@ namespace py = pybind11;
 using namespace mlir;
 using namespace mlir::python;
 
+using llvm::Optional;
 using llvm::SmallVector;
-using llvm::StringRef;
 using llvm::Twine;
+
+//------------------------------------------------------------------------------
+// Docstrings (trivial, non-duplicated docstrings are included inline).
+//------------------------------------------------------------------------------
+
+static const char kDenseElementsAttrGetDocstring[] =
+    R"(Gets a DenseElementsAttr from a Python buffer or array.
+
+When `type` is not provided, then some limited type inferencing is done based
+on the buffer format. Support presently exists for 8/16/32/64 signed and
+unsigned integers and float16/float32/float64. DenseElementsAttrs of these
+types can also be converted back to a corresponding buffer.
+
+For conversions outside of these types, a `type=` must be explicitly provided
+and the buffer contents must be bit-castable to the MLIR internal
+representation:
+
+  * Integer types (except for i1): the buffer must be byte aligned to the
+    next byte boundary.
+  * Floating point types: Must be bit-castable to the given floating point
+    size.
+  * i1 (bool): Bit packed into 8bit words where the bit pattern matches a
+    row major ordering. An arbitrary Numpy `bool_` array can be bit packed to
+    this specification with: `np.packbits(ary, axis=None, bitorder='little')`.
+
+If a single element buffer is passed (or for i1, a single byte with value 0
+or 255), then a splat will be created.
+
+Args:
+  array: The array or buffer to convert.
+  signless: If inferring an appropriate MLIR type, use signless types for
+    integers (defaults True).
+  type: Skips inference of the MLIR element type and uses this instead. The
+    storage size must be consistent with the actual contents of the buffer.
+  shape: Overrides the shape of the buffer when constructing the MLIR
+    shaped type. This is needed when the physical and logical shape differ (as
+    for i1).
+  context: Explicit context, if not from context manager.
+
+Returns:
+  DenseElementsAttr on success.
+
+Raises:
+  ValueError: If the type of the buffer or array cannot be matched to an MLIR
+    type or if the buffer does not meet expectations.
+)";
 
 namespace {
 
@@ -44,6 +92,24 @@ public:
   }
 };
 
+template <typename T>
+static T pyTryCast(py::handle object) {
+  try {
+    return object.cast<T>();
+  } catch (py::cast_error &err) {
+    std::string msg =
+        std::string(
+            "Invalid attribute when attempting to create an ArrayAttribute (") +
+        err.what() + ")";
+    throw py::cast_error(msg);
+  } catch (py::reference_cast_error &err) {
+    std::string msg = std::string("Invalid attribute (None?) when attempting "
+                                  "to create an ArrayAttribute (") +
+                      err.what() + ")";
+    throw py::cast_error(msg);
+  }
+}
+
 class PyArrayAttribute : public PyConcreteAttribute<PyArrayAttribute> {
 public:
   static constexpr IsAFunctionTy isaFunction = mlirAttributeIsAArray;
@@ -52,7 +118,7 @@ public:
 
   class PyArrayAttributeIterator {
   public:
-    PyArrayAttributeIterator(PyAttribute attr) : attr(attr) {}
+    PyArrayAttributeIterator(PyAttribute attr) : attr(std::move(attr)) {}
 
     PyArrayAttributeIterator &dunderIter() { return *this; }
 
@@ -65,7 +131,8 @@ public:
     }
 
     static void bind(py::module &m) {
-      py::class_<PyArrayAttributeIterator>(m, "ArrayAttributeIterator")
+      py::class_<PyArrayAttributeIterator>(m, "ArrayAttributeIterator",
+                                           py::module_local())
           .def("__iter__", &PyArrayAttributeIterator::dunderIter)
           .def("__next__", &PyArrayAttributeIterator::dunderNext);
     }
@@ -75,6 +142,10 @@ public:
     int nextIndex = 0;
   };
 
+  PyAttribute getItem(intptr_t i) {
+    return PyAttribute(getContext(), mlirArrayAttrGetElement(*this, i));
+  }
+
   static void bindDerived(ClassTy &c) {
     c.def_static(
         "get",
@@ -82,21 +153,7 @@ public:
           SmallVector<MlirAttribute> mlirAttributes;
           mlirAttributes.reserve(py::len(attributes));
           for (auto attribute : attributes) {
-            try {
-              mlirAttributes.push_back(attribute.cast<PyAttribute>());
-            } catch (py::cast_error &err) {
-              std::string msg = std::string("Invalid attribute when attempting "
-                                            "to create an ArrayAttribute (") +
-                                err.what() + ")";
-              throw py::cast_error(msg);
-            } catch (py::reference_cast_error &err) {
-              // This exception seems thrown when the value is "None".
-              std::string msg =
-                  std::string("Invalid attribute (None?) when attempting to "
-                              "create an ArrayAttribute (") +
-                  err.what() + ")";
-              throw py::cast_error(msg);
-            }
+            mlirAttributes.push_back(pyTryCast<PyAttribute>(attribute));
           }
           MlirAttribute attr = mlirArrayAttrGet(
               context->get(), mlirAttributes.size(), mlirAttributes.data());
@@ -108,8 +165,7 @@ public:
           [](PyArrayAttribute &arr, intptr_t i) {
             if (i >= mlirArrayAttrGetNumElements(arr))
               throw py::index_error("ArrayAttribute index out of range");
-            return PyAttribute(arr.getContext(),
-                               mlirArrayAttrGetElement(arr, i));
+            return arr.getItem(i);
           })
         .def("__len__",
              [](const PyArrayAttribute &arr) {
@@ -118,6 +174,18 @@ public:
         .def("__iter__", [](const PyArrayAttribute &arr) {
           return PyArrayAttributeIterator(arr);
         });
+    c.def("__add__", [](PyArrayAttribute arr, py::list extras) {
+      std::vector<MlirAttribute> attributes;
+      intptr_t numOldElements = mlirArrayAttrGetNumElements(arr);
+      attributes.reserve(numOldElements + py::len(extras));
+      for (intptr_t i = 0; i < numOldElements; ++i)
+        attributes.push_back(arr.getItem(i));
+      for (py::handle attr : extras)
+        attributes.push_back(pyTryCast<PyAttribute>(attr));
+      MlirAttribute arrayAttr = mlirArrayAttrGet(
+          arr.getContext()->get(), attributes.size(), attributes.data());
+      return PyArrayAttribute(arr.getContext(), arrayAttr);
+    });
   }
 };
 
@@ -190,8 +258,13 @@ public:
         "Gets an uniqued integer attribute associated to a type");
     c.def_property_readonly(
         "value",
-        [](PyIntegerAttribute &self) {
-          return mlirIntegerAttrGetValueInt(self);
+        [](PyIntegerAttribute &self) -> py::int_ {
+          MlirType type = mlirAttributeGetType(self);
+          if (mlirTypeIsAIndex(type) || mlirIntegerTypeIsSignless(type))
+            return mlirIntegerAttrGetValueInt(self);
+          if (mlirIntegerTypeIsSigned(type))
+            return mlirIntegerAttrGetValueSInt(self);
+          return mlirIntegerAttrGetValueUInt(self);
         },
         "Returns the value of the integer attribute");
   }
@@ -247,6 +320,43 @@ public:
   }
 };
 
+class PyOpaqueAttribute : public PyConcreteAttribute<PyOpaqueAttribute> {
+public:
+  static constexpr IsAFunctionTy isaFunction = mlirAttributeIsAOpaque;
+  static constexpr const char *pyClassName = "OpaqueAttr";
+  using PyConcreteAttribute::PyConcreteAttribute;
+
+  static void bindDerived(ClassTy &c) {
+    c.def_static(
+        "get",
+        [](std::string dialectNamespace, py::buffer buffer, PyType &type,
+           DefaultingPyMlirContext context) {
+          const py::buffer_info bufferInfo = buffer.request();
+          intptr_t bufferSize = bufferInfo.size;
+          MlirAttribute attr = mlirOpaqueAttrGet(
+              context->get(), toMlirStringRef(dialectNamespace), bufferSize,
+              static_cast<char *>(bufferInfo.ptr), type);
+          return PyOpaqueAttribute(context->getRef(), attr);
+        },
+        py::arg("dialect_namespace"), py::arg("buffer"), py::arg("type"),
+        py::arg("context") = py::none(), "Gets an Opaque attribute.");
+    c.def_property_readonly(
+        "dialect_namespace",
+        [](PyOpaqueAttribute &self) {
+          MlirStringRef stringRef = mlirOpaqueAttrGetDialectNamespace(self);
+          return py::str(stringRef.data, stringRef.length);
+        },
+        "Returns the dialect namespace for the Opaque attribute as a string");
+    c.def_property_readonly(
+        "data",
+        [](PyOpaqueAttribute &self) {
+          MlirStringRef stringRef = mlirOpaqueAttrGetData(self);
+          return py::str(stringRef.data, stringRef.length);
+        },
+        "Returns the data for the Opaqued attributes as a string");
+  }
+};
+
 class PyStringAttribute : public PyConcreteAttribute<PyStringAttribute> {
 public:
   static constexpr IsAFunctionTy isaFunction = mlirAttributeIsAString;
@@ -270,7 +380,7 @@ public:
               mlirStringAttrTypedGet(type, toMlirStringRef(value));
           return PyStringAttribute(type.getContext(), attr);
         },
-
+        py::arg("type"), py::arg("value"),
         "Gets a uniqued string attribute associated to a type");
     c.def_property_readonly(
         "value",
@@ -282,7 +392,6 @@ public:
   }
 };
 
-// TODO: Support construction of bool elements.
 // TODO: Support construction of string elements.
 class PyDenseElementsAttribute
     : public PyConcreteAttribute<PyDenseElementsAttribute> {
@@ -292,7 +401,8 @@ public:
   using PyConcreteAttribute::PyConcreteAttribute;
 
   static PyDenseElementsAttribute
-  getFromBuffer(py::buffer array, bool signless,
+  getFromBuffer(py::buffer array, bool signless, Optional<PyType> explicitType,
+                Optional<std::vector<int64_t>> explicitShape,
                 DefaultingPyMlirContext contextWrapper) {
     // Request a contiguous view. In exotic cases, this will cause a copy.
     int flags = PyBUF_C_CONTIGUOUS | PyBUF_FORMAT;
@@ -302,72 +412,98 @@ public:
       throw py::error_already_set();
     }
     py::buffer_info arrayInfo(view);
+    SmallVector<int64_t> shape;
+    if (explicitShape) {
+      shape.append(explicitShape->begin(), explicitShape->end());
+    } else {
+      shape.append(arrayInfo.shape.begin(),
+                   arrayInfo.shape.begin() + arrayInfo.ndim);
+    }
 
+    MlirAttribute encodingAttr = mlirAttributeGetNull();
     MlirContext context = contextWrapper->get();
-    // Switch on the types that can be bulk loaded between the Python and
-    // MLIR-C APIs.
-    // See: https://docs.python.org/3/library/struct.html#format-characters
-    if (arrayInfo.format == "f") {
+
+    // Detect format codes that are suitable for bulk loading. This includes
+    // all byte aligned integer and floating point types up to 8 bytes.
+    // Notably, this excludes, bool (which needs to be bit-packed) and
+    // other exotics which do not have a direct representation in the buffer
+    // protocol (i.e. complex, etc).
+    Optional<MlirType> bulkLoadElementType;
+    if (explicitType) {
+      bulkLoadElementType = *explicitType;
+    } else if (arrayInfo.format == "f") {
       // f32
       assert(arrayInfo.itemsize == 4 && "mismatched array itemsize");
-      return PyDenseElementsAttribute(
-          contextWrapper->getRef(),
-          bulkLoad(context, mlirDenseElementsAttrFloatGet,
-                   mlirF32TypeGet(context), arrayInfo));
+      bulkLoadElementType = mlirF32TypeGet(context);
     } else if (arrayInfo.format == "d") {
       // f64
       assert(arrayInfo.itemsize == 8 && "mismatched array itemsize");
-      return PyDenseElementsAttribute(
-          contextWrapper->getRef(),
-          bulkLoad(context, mlirDenseElementsAttrDoubleGet,
-                   mlirF64TypeGet(context), arrayInfo));
+      bulkLoadElementType = mlirF64TypeGet(context);
+    } else if (arrayInfo.format == "e") {
+      // f16
+      assert(arrayInfo.itemsize == 2 && "mismatched array itemsize");
+      bulkLoadElementType = mlirF16TypeGet(context);
     } else if (isSignedIntegerFormat(arrayInfo.format)) {
       if (arrayInfo.itemsize == 4) {
         // i32
-        MlirType elementType = signless ? mlirIntegerTypeGet(context, 32)
-                                        : mlirIntegerTypeSignedGet(context, 32);
-        return PyDenseElementsAttribute(contextWrapper->getRef(),
-                                        bulkLoad(context,
-                                                 mlirDenseElementsAttrInt32Get,
-                                                 elementType, arrayInfo));
+        bulkLoadElementType = signless ? mlirIntegerTypeGet(context, 32)
+                                       : mlirIntegerTypeSignedGet(context, 32);
       } else if (arrayInfo.itemsize == 8) {
         // i64
-        MlirType elementType = signless ? mlirIntegerTypeGet(context, 64)
-                                        : mlirIntegerTypeSignedGet(context, 64);
-        return PyDenseElementsAttribute(contextWrapper->getRef(),
-                                        bulkLoad(context,
-                                                 mlirDenseElementsAttrInt64Get,
-                                                 elementType, arrayInfo));
+        bulkLoadElementType = signless ? mlirIntegerTypeGet(context, 64)
+                                       : mlirIntegerTypeSignedGet(context, 64);
+      } else if (arrayInfo.itemsize == 1) {
+        // i8
+        bulkLoadElementType = signless ? mlirIntegerTypeGet(context, 8)
+                                       : mlirIntegerTypeSignedGet(context, 8);
+      } else if (arrayInfo.itemsize == 2) {
+        // i16
+        bulkLoadElementType = signless ? mlirIntegerTypeGet(context, 16)
+                                       : mlirIntegerTypeSignedGet(context, 16);
       }
     } else if (isUnsignedIntegerFormat(arrayInfo.format)) {
       if (arrayInfo.itemsize == 4) {
         // unsigned i32
-        MlirType elementType = signless
-                                   ? mlirIntegerTypeGet(context, 32)
-                                   : mlirIntegerTypeUnsignedGet(context, 32);
-        return PyDenseElementsAttribute(contextWrapper->getRef(),
-                                        bulkLoad(context,
-                                                 mlirDenseElementsAttrUInt32Get,
-                                                 elementType, arrayInfo));
+        bulkLoadElementType = signless
+                                  ? mlirIntegerTypeGet(context, 32)
+                                  : mlirIntegerTypeUnsignedGet(context, 32);
       } else if (arrayInfo.itemsize == 8) {
         // unsigned i64
-        MlirType elementType = signless
-                                   ? mlirIntegerTypeGet(context, 64)
-                                   : mlirIntegerTypeUnsignedGet(context, 64);
-        return PyDenseElementsAttribute(contextWrapper->getRef(),
-                                        bulkLoad(context,
-                                                 mlirDenseElementsAttrUInt64Get,
-                                                 elementType, arrayInfo));
+        bulkLoadElementType = signless
+                                  ? mlirIntegerTypeGet(context, 64)
+                                  : mlirIntegerTypeUnsignedGet(context, 64);
+      } else if (arrayInfo.itemsize == 1) {
+        // i8
+        bulkLoadElementType = signless ? mlirIntegerTypeGet(context, 8)
+                                       : mlirIntegerTypeUnsignedGet(context, 8);
+      } else if (arrayInfo.itemsize == 2) {
+        // i16
+        bulkLoadElementType = signless
+                                  ? mlirIntegerTypeGet(context, 16)
+                                  : mlirIntegerTypeUnsignedGet(context, 16);
       }
     }
+    if (bulkLoadElementType) {
+      auto shapedType = mlirRankedTensorTypeGet(
+          shape.size(), shape.data(), *bulkLoadElementType, encodingAttr);
+      size_t rawBufferSize = arrayInfo.size * arrayInfo.itemsize;
+      MlirAttribute attr = mlirDenseElementsAttrRawBufferGet(
+          shapedType, rawBufferSize, arrayInfo.ptr);
+      if (mlirAttributeIsNull(attr)) {
+        throw std::invalid_argument(
+            "DenseElementsAttr could not be constructed from the given buffer. "
+            "This may mean that the Python buffer layout does not match that "
+            "MLIR expected layout and is a bug.");
+      }
+      return PyDenseElementsAttribute(contextWrapper->getRef(), attr);
+    }
 
-    // TODO: Fall back to string-based get.
-    std::string message = "unimplemented array format conversion from format: ";
-    message.append(arrayInfo.format);
-    throw SetPyError(PyExc_ValueError, message);
+    throw std::invalid_argument(
+        std::string("unimplemented array format conversion from format: ") +
+        arrayInfo.format);
   }
 
-  static PyDenseElementsAttribute getSplat(PyType shapedType,
+  static PyDenseElementsAttribute getSplat(const PyType &shapedType,
                                            PyAttribute &elementAttr) {
     auto contextWrapper =
         PyMlirContext::forContext(mlirTypeGetContext(shapedType));
@@ -403,47 +539,88 @@ public:
   intptr_t dunderLen() { return mlirElementsAttrGetNumElements(*this); }
 
   py::buffer_info accessBuffer() {
+    if (mlirDenseElementsAttrIsSplat(*this)) {
+      // TODO: Currently crashes the program.
+      // Reported as https://github.com/pybind/pybind11/issues/3336
+      throw std::invalid_argument(
+          "unsupported data type for conversion to Python buffer");
+    }
+
     MlirType shapedType = mlirAttributeGetType(*this);
     MlirType elementType = mlirShapedTypeGetElementType(shapedType);
+    std::string format;
 
     if (mlirTypeIsAF32(elementType)) {
       // f32
-      return bufferInfo(shapedType, mlirDenseElementsAttrGetFloatValue);
-    } else if (mlirTypeIsAF64(elementType)) {
+      return bufferInfo<float>(shapedType);
+    }
+    if (mlirTypeIsAF64(elementType)) {
       // f64
-      return bufferInfo(shapedType, mlirDenseElementsAttrGetDoubleValue);
-    } else if (mlirTypeIsAInteger(elementType) &&
-               mlirIntegerTypeGetWidth(elementType) == 32) {
+      return bufferInfo<double>(shapedType);
+    }
+    if (mlirTypeIsAF16(elementType)) {
+      // f16
+      return bufferInfo<uint16_t>(shapedType, "e");
+    }
+    if (mlirTypeIsAInteger(elementType) &&
+        mlirIntegerTypeGetWidth(elementType) == 32) {
       if (mlirIntegerTypeIsSignless(elementType) ||
           mlirIntegerTypeIsSigned(elementType)) {
         // i32
-        return bufferInfo(shapedType, mlirDenseElementsAttrGetInt32Value);
-      } else if (mlirIntegerTypeIsUnsigned(elementType)) {
+        return bufferInfo<int32_t>(shapedType);
+      }
+      if (mlirIntegerTypeIsUnsigned(elementType)) {
         // unsigned i32
-        return bufferInfo(shapedType, mlirDenseElementsAttrGetUInt32Value);
+        return bufferInfo<uint32_t>(shapedType);
       }
     } else if (mlirTypeIsAInteger(elementType) &&
                mlirIntegerTypeGetWidth(elementType) == 64) {
       if (mlirIntegerTypeIsSignless(elementType) ||
           mlirIntegerTypeIsSigned(elementType)) {
         // i64
-        return bufferInfo(shapedType, mlirDenseElementsAttrGetInt64Value);
-      } else if (mlirIntegerTypeIsUnsigned(elementType)) {
+        return bufferInfo<int64_t>(shapedType);
+      }
+      if (mlirIntegerTypeIsUnsigned(elementType)) {
         // unsigned i64
-        return bufferInfo(shapedType, mlirDenseElementsAttrGetUInt64Value);
+        return bufferInfo<uint64_t>(shapedType);
+      }
+    } else if (mlirTypeIsAInteger(elementType) &&
+               mlirIntegerTypeGetWidth(elementType) == 8) {
+      if (mlirIntegerTypeIsSignless(elementType) ||
+          mlirIntegerTypeIsSigned(elementType)) {
+        // i8
+        return bufferInfo<int8_t>(shapedType);
+      }
+      if (mlirIntegerTypeIsUnsigned(elementType)) {
+        // unsigned i8
+        return bufferInfo<uint8_t>(shapedType);
+      }
+    } else if (mlirTypeIsAInteger(elementType) &&
+               mlirIntegerTypeGetWidth(elementType) == 16) {
+      if (mlirIntegerTypeIsSignless(elementType) ||
+          mlirIntegerTypeIsSigned(elementType)) {
+        // i16
+        return bufferInfo<int16_t>(shapedType);
+      }
+      if (mlirIntegerTypeIsUnsigned(elementType)) {
+        // unsigned i16
+        return bufferInfo<uint16_t>(shapedType);
       }
     }
 
-    std::string message = "unimplemented array format.";
-    throw SetPyError(PyExc_ValueError, message);
+    // TODO: Currently crashes the program.
+    // Reported as https://github.com/pybind/pybind11/issues/3336
+    throw std::invalid_argument(
+        "unsupported data type for conversion to Python buffer");
   }
 
   static void bindDerived(ClassTy &c) {
     c.def("__len__", &PyDenseElementsAttribute::dunderLen)
         .def_static("get", PyDenseElementsAttribute::getFromBuffer,
                     py::arg("array"), py::arg("signless") = true,
+                    py::arg("type") = py::none(), py::arg("shape") = py::none(),
                     py::arg("context") = py::none(),
-                    "Gets from a buffer or ndarray")
+                    kDenseElementsAttrGetDocstring)
         .def_static("get_splat", PyDenseElementsAttribute::getSplat,
                     py::arg("shaped_type"), py::arg("element_attr"),
                     "Gets a DenseElementsAttr where all values are the same")
@@ -455,21 +632,6 @@ public:
   }
 
 private:
-  template <typename ElementTy>
-  static MlirAttribute
-  bulkLoad(MlirContext context,
-           MlirAttribute (*ctor)(MlirType, intptr_t, ElementTy *),
-           MlirType mlirElementType, py::buffer_info &arrayInfo) {
-    SmallVector<int64_t, 4> shape(arrayInfo.shape.begin(),
-                                  arrayInfo.shape.begin() + arrayInfo.ndim);
-    MlirAttribute encodingAttr = mlirAttributeGetNull();
-    auto shapedType = mlirRankedTensorTypeGet(shape.size(), shape.data(),
-                                              mlirElementType, encodingAttr);
-    intptr_t numElements = arrayInfo.size;
-    const ElementTy *contents = static_cast<const ElementTy *>(arrayInfo.ptr);
-    return ctor(shapedType, numElements, contents);
-  }
-
   static bool isUnsignedIntegerFormat(const std::string &format) {
     if (format.empty())
       return false;
@@ -488,7 +650,7 @@ private:
 
   template <typename Type>
   py::buffer_info bufferInfo(MlirType shapedType,
-                             Type (*value)(MlirAttribute, intptr_t)) {
+                             const char *explicitFormat = nullptr) {
     intptr_t rank = mlirShapedTypeGetRank(shapedType);
     // Prepare the data for the buffer_info.
     // Buffer is configured for read-only access below.
@@ -509,9 +671,14 @@ private:
       strides.push_back(sizeof(Type) * strideFactor);
     }
     strides.push_back(sizeof(Type));
-    return py::buffer_info(data, sizeof(Type),
-                           py::format_descriptor<Type>::format(), rank, shape,
-                           strides, /*readonly=*/true);
+    std::string format;
+    if (explicitFormat) {
+      format = explicitFormat;
+    } else {
+      format = py::format_descriptor<Type>::format();
+    }
+    return py::buffer_info(data, sizeof(Type), format, rank, shape, strides,
+                           /*readonly=*/true);
   }
 }; // namespace
 
@@ -548,6 +715,12 @@ public:
       if (width == 1) {
         return mlirDenseElementsAttrGetBoolValue(*this, pos);
       }
+      if (width == 8) {
+        return mlirDenseElementsAttrGetUInt8Value(*this, pos);
+      }
+      if (width == 16) {
+        return mlirDenseElementsAttrGetUInt16Value(*this, pos);
+      }
       if (width == 32) {
         return mlirDenseElementsAttrGetUInt32Value(*this, pos);
       }
@@ -557,6 +730,12 @@ public:
     } else {
       if (width == 1) {
         return mlirDenseElementsAttrGetBoolValue(*this, pos);
+      }
+      if (width == 8) {
+        return mlirDenseElementsAttrGetInt8Value(*this, pos);
+      }
+      if (width == 16) {
+        return mlirDenseElementsAttrGetInt16Value(*this, pos);
       }
       if (width == 32) {
         return mlirDenseElementsAttrGetInt32Value(*this, pos);
@@ -581,7 +760,13 @@ public:
 
   intptr_t dunderLen() { return mlirDictionaryAttrGetNumElements(*this); }
 
+  bool dunderContains(const std::string &name) {
+    return !mlirAttributeIsNull(
+        mlirDictionaryAttrGetElementByName(*this, toMlirStringRef(name)));
+  }
+
   static void bindDerived(ClassTy &c) {
+    c.def("__contains__", &PyDictAttribute::dunderContains);
     c.def("__len__", &PyDictAttribute::dunderLen);
     c.def_static(
         "get",
@@ -589,19 +774,19 @@ public:
           SmallVector<MlirNamedAttribute> mlirNamedAttributes;
           mlirNamedAttributes.reserve(attributes.size());
           for (auto &it : attributes) {
-            auto &mlir_attr = it.second.cast<PyAttribute &>();
+            auto &mlirAttr = it.second.cast<PyAttribute &>();
             auto name = it.first.cast<std::string>();
             mlirNamedAttributes.push_back(mlirNamedAttributeGet(
-                mlirIdentifierGet(mlirAttributeGetContext(mlir_attr),
+                mlirIdentifierGet(mlirAttributeGetContext(mlirAttr),
                                   toMlirStringRef(name)),
-                mlir_attr));
+                mlirAttr));
           }
           MlirAttribute attr =
               mlirDictionaryAttrGet(context->get(), mlirNamedAttributes.size(),
                                     mlirNamedAttributes.data());
           return PyDictAttribute(context->getRef(), attr);
         },
-        py::arg("value"), py::arg("context") = py::none(),
+        py::arg("value") = py::dict(), py::arg("context") = py::none(),
         "Gets an uniqued dict attribute");
     c.def("__getitem__", [](PyDictAttribute &self, const std::string &name) {
       MlirAttribute attr =
@@ -714,6 +899,7 @@ void mlir::python::populateIRAttributes(py::module &m) {
   PyDenseIntElementsAttribute::bind(m);
   PyDictAttribute::bind(m);
   PyFlatSymbolRefAttribute::bind(m);
+  PyOpaqueAttribute::bind(m);
   PyFloatAttribute::bind(m);
   PyIntegerAttribute::bind(m);
   PyStringAttribute::bind(m);

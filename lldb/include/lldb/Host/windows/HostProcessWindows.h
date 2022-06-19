@@ -25,18 +25,14 @@ public:
   void SetOwnsHandle(bool owns);
 
   Status Terminate() override;
-  Status GetMainModule(FileSpec &file_spec) const override;
 
   lldb::pid_t GetProcessId() const override;
   bool IsRunning() const override;
 
   virtual llvm::Expected<HostThread>
-  StartMonitoring(const Host::MonitorChildProcessCallback &callback,
-                  bool monitor_signals) override;
+  StartMonitoring(const Host::MonitorChildProcessCallback &callback) override;
 
 private:
-  static lldb::thread_result_t MonitorThread(void *thread_arg);
-
   void Close();
 
   bool m_owns_handle;

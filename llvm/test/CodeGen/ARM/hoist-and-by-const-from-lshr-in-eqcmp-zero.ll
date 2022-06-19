@@ -3,8 +3,8 @@
 ; RUN: llc -mtriple=armv7 < %s | FileCheck %s --check-prefixes=ARM,ARM78
 ; RUN: llc -mtriple=armv8a < %s | FileCheck %s --check-prefixes=ARM,ARM78
 ; RUN: llc -mtriple=thumbv6 < %s | FileCheck %s --check-prefixes=THUMB,THUMB6
-; RUN: llc -mtriple=thumbv7 < %s | FileCheck %s --check-prefixes=THUMB,THUMB78,THUMB7
-; RUN: llc -mtriple=thumbv8-eabi < %s | FileCheck %s --check-prefixes=THUMB,THUMB78,THUMB8
+; RUN: llc -mtriple=thumbv7 < %s | FileCheck %s --check-prefixes=THUMB,THUMB78
+; RUN: llc -mtriple=thumbv8-eabi < %s | FileCheck %s --check-prefixes=THUMB,THUMB78
 
 ; We are looking for the following pattern here:
 ;   (X & (C l>> Y)) ==/!= 0
@@ -32,8 +32,8 @@ define i1 @scalar_i8_signbit_eq(i8 %x, i8 %y) nounwind {
 ; THUMB6-NEXT:    uxtb r1, r1
 ; THUMB6-NEXT:    lsls r0, r1
 ; THUMB6-NEXT:    movs r1, #128
-; THUMB6-NEXT:    ands r1, r0
-; THUMB6-NEXT:    rsbs r0, r1, #0
+; THUMB6-NEXT:    ands r0, r1
+; THUMB6-NEXT:    rsbs r1, r0, #0
 ; THUMB6-NEXT:    adcs r0, r1
 ; THUMB6-NEXT:    bx lr
 ;
@@ -64,8 +64,8 @@ define i1 @scalar_i8_lowestbit_eq(i8 %x, i8 %y) nounwind {
 ; THUMB6-NEXT:    uxtb r1, r1
 ; THUMB6-NEXT:    lsls r0, r1
 ; THUMB6-NEXT:    movs r1, #1
-; THUMB6-NEXT:    ands r1, r0
-; THUMB6-NEXT:    rsbs r0, r1, #0
+; THUMB6-NEXT:    ands r0, r1
+; THUMB6-NEXT:    rsbs r1, r0, #0
 ; THUMB6-NEXT:    adcs r0, r1
 ; THUMB6-NEXT:    bx lr
 ;
@@ -97,8 +97,8 @@ define i1 @scalar_i8_bitsinmiddle_eq(i8 %x, i8 %y) nounwind {
 ; THUMB6-NEXT:    uxtb r1, r1
 ; THUMB6-NEXT:    lsls r0, r1
 ; THUMB6-NEXT:    movs r1, #24
-; THUMB6-NEXT:    ands r1, r0
-; THUMB6-NEXT:    rsbs r0, r1, #0
+; THUMB6-NEXT:    ands r0, r1
+; THUMB6-NEXT:    rsbs r1, r0, #0
 ; THUMB6-NEXT:    adcs r0, r1
 ; THUMB6-NEXT:    bx lr
 ;
@@ -134,8 +134,8 @@ define i1 @scalar_i16_signbit_eq(i16 %x, i16 %y) nounwind {
 ; THUMB6-NEXT:    lsls r0, r1
 ; THUMB6-NEXT:    movs r1, #1
 ; THUMB6-NEXT:    lsls r1, r1, #15
-; THUMB6-NEXT:    ands r1, r0
-; THUMB6-NEXT:    rsbs r0, r1, #0
+; THUMB6-NEXT:    ands r0, r1
+; THUMB6-NEXT:    rsbs r1, r0, #0
 ; THUMB6-NEXT:    adcs r0, r1
 ; THUMB6-NEXT:    bx lr
 ;
@@ -166,8 +166,8 @@ define i1 @scalar_i16_lowestbit_eq(i16 %x, i16 %y) nounwind {
 ; THUMB6-NEXT:    uxth r1, r1
 ; THUMB6-NEXT:    lsls r0, r1
 ; THUMB6-NEXT:    movs r1, #1
-; THUMB6-NEXT:    ands r1, r0
-; THUMB6-NEXT:    rsbs r0, r1, #0
+; THUMB6-NEXT:    ands r0, r1
+; THUMB6-NEXT:    rsbs r1, r0, #0
 ; THUMB6-NEXT:    adcs r0, r1
 ; THUMB6-NEXT:    bx lr
 ;
@@ -200,8 +200,8 @@ define i1 @scalar_i16_bitsinmiddle_eq(i16 %x, i16 %y) nounwind {
 ; THUMB6-NEXT:    lsls r0, r1
 ; THUMB6-NEXT:    movs r1, #255
 ; THUMB6-NEXT:    lsls r1, r1, #4
-; THUMB6-NEXT:    ands r1, r0
-; THUMB6-NEXT:    rsbs r0, r1, #0
+; THUMB6-NEXT:    ands r0, r1
+; THUMB6-NEXT:    rsbs r1, r0, #0
 ; THUMB6-NEXT:    adcs r0, r1
 ; THUMB6-NEXT:    bx lr
 ;
@@ -233,8 +233,8 @@ define i1 @scalar_i32_signbit_eq(i32 %x, i32 %y) nounwind {
 ; THUMB6-NEXT:    lsls r0, r1
 ; THUMB6-NEXT:    movs r1, #1
 ; THUMB6-NEXT:    lsls r1, r1, #31
-; THUMB6-NEXT:    ands r1, r0
-; THUMB6-NEXT:    rsbs r0, r1, #0
+; THUMB6-NEXT:    ands r0, r1
+; THUMB6-NEXT:    rsbs r1, r0, #0
 ; THUMB6-NEXT:    adcs r0, r1
 ; THUMB6-NEXT:    bx lr
 ;
@@ -261,8 +261,8 @@ define i1 @scalar_i32_lowestbit_eq(i32 %x, i32 %y) nounwind {
 ; THUMB6:       @ %bb.0:
 ; THUMB6-NEXT:    lsls r0, r1
 ; THUMB6-NEXT:    movs r1, #1
-; THUMB6-NEXT:    ands r1, r0
-; THUMB6-NEXT:    rsbs r0, r1, #0
+; THUMB6-NEXT:    ands r0, r1
+; THUMB6-NEXT:    rsbs r1, r0, #0
 ; THUMB6-NEXT:    adcs r0, r1
 ; THUMB6-NEXT:    bx lr
 ;
@@ -301,8 +301,8 @@ define i1 @scalar_i32_bitsinmiddle_eq(i32 %x, i32 %y) nounwind {
 ; THUMB6:       @ %bb.0:
 ; THUMB6-NEXT:    lsls r0, r1
 ; THUMB6-NEXT:    ldr r1, .LCPI8_0
-; THUMB6-NEXT:    ands r1, r0
-; THUMB6-NEXT:    rsbs r0, r1, #0
+; THUMB6-NEXT:    ands r0, r1
+; THUMB6-NEXT:    rsbs r1, r0, #0
 ; THUMB6-NEXT:    adcs r0, r1
 ; THUMB6-NEXT:    bx lr
 ; THUMB6-NEXT:    .p2align 2
@@ -350,32 +350,18 @@ define i1 @scalar_i64_signbit_eq(i64 %x, i64 %y) nounwind {
 ; THUMB6-NEXT:    adcs r0, r2
 ; THUMB6-NEXT:    pop {r7, pc}
 ;
-; THUMB7-LABEL: scalar_i64_signbit_eq:
-; THUMB7:       @ %bb.0:
-; THUMB7-NEXT:    rsb.w r3, r2, #32
-; THUMB7-NEXT:    lsls r1, r2
-; THUMB7-NEXT:    subs r2, #32
-; THUMB7-NEXT:    lsr.w r3, r0, r3
-; THUMB7-NEXT:    orr.w r1, r1, r3
-; THUMB7-NEXT:    it pl
-; THUMB7-NEXT:    lslpl.w r1, r0, r2
-; THUMB7-NEXT:    mvns r0, r1
-; THUMB7-NEXT:    lsrs r0, r0, #31
-; THUMB7-NEXT:    bx lr
-;
-; THUMB8-LABEL: scalar_i64_signbit_eq:
-; THUMB8:       @ %bb.0:
-; THUMB8-NEXT:    rsb.w r3, r2, #32
-; THUMB8-NEXT:    lsls r1, r2
-; THUMB8-NEXT:    lsr.w r3, r0, r3
-; THUMB8-NEXT:    orrs r1, r3
-; THUMB8-NEXT:    subs r2, #32
-; THUMB8-NEXT:    lsl.w r0, r0, r2
-; THUMB8-NEXT:    it mi
-; THUMB8-NEXT:    movmi r0, r1
-; THUMB8-NEXT:    mvns r0, r0
-; THUMB8-NEXT:    lsrs r0, r0, #31
-; THUMB8-NEXT:    bx lr
+; THUMB78-LABEL: scalar_i64_signbit_eq:
+; THUMB78:       @ %bb.0:
+; THUMB78-NEXT:    rsb.w r3, r2, #32
+; THUMB78-NEXT:    lsls r1, r2
+; THUMB78-NEXT:    subs r2, #32
+; THUMB78-NEXT:    lsr.w r3, r0, r3
+; THUMB78-NEXT:    orr.w r1, r1, r3
+; THUMB78-NEXT:    it pl
+; THUMB78-NEXT:    lslpl.w r1, r0, r2
+; THUMB78-NEXT:    mvns r0, r1
+; THUMB78-NEXT:    lsrs r0, r0, #31
+; THUMB78-NEXT:    bx lr
   %t0 = lshr i64 9223372036854775808, %y
   %t1 = and i64 %t0, %x
   %res = icmp eq i64 %t1, 0
@@ -406,8 +392,8 @@ define i1 @scalar_i64_lowestbit_eq(i64 %x, i64 %y) nounwind {
 ; THUMB6-NEXT:    push {r7, lr}
 ; THUMB6-NEXT:    bl __ashldi3
 ; THUMB6-NEXT:    movs r1, #1
-; THUMB6-NEXT:    ands r1, r0
-; THUMB6-NEXT:    rsbs r0, r1, #0
+; THUMB6-NEXT:    ands r0, r1
+; THUMB6-NEXT:    rsbs r1, r0, #0
 ; THUMB6-NEXT:    adcs r0, r1
 ; THUMB6-NEXT:    pop {r7, pc}
 ;
@@ -471,40 +457,22 @@ define i1 @scalar_i64_bitsinmiddle_eq(i64 %x, i64 %y) nounwind {
 ; THUMB6-NEXT:  .LCPI11_0:
 ; THUMB6-NEXT:    .long 4294901760 @ 0xffff0000
 ;
-; THUMB7-LABEL: scalar_i64_bitsinmiddle_eq:
-; THUMB7:       @ %bb.0:
-; THUMB7-NEXT:    rsb.w r3, r2, #32
-; THUMB7-NEXT:    lsls r1, r2
-; THUMB7-NEXT:    lsr.w r3, r0, r3
-; THUMB7-NEXT:    orrs r1, r3
-; THUMB7-NEXT:    subs.w r3, r2, #32
-; THUMB7-NEXT:    it pl
-; THUMB7-NEXT:    lslpl.w r1, r0, r3
-; THUMB7-NEXT:    lsl.w r0, r0, r2
-; THUMB7-NEXT:    it pl
-; THUMB7-NEXT:    movpl r0, #0
-; THUMB7-NEXT:    pkhbt r0, r1, r0
-; THUMB7-NEXT:    clz r0, r0
-; THUMB7-NEXT:    lsrs r0, r0, #5
-; THUMB7-NEXT:    bx lr
-;
-; THUMB8-LABEL: scalar_i64_bitsinmiddle_eq:
-; THUMB8:       @ %bb.0:
-; THUMB8-NEXT:    rsb.w r3, r2, #32
-; THUMB8-NEXT:    lsls r1, r2
-; THUMB8-NEXT:    lsr.w r3, r0, r3
-; THUMB8-NEXT:    orrs r1, r3
-; THUMB8-NEXT:    subs.w r3, r2, #32
-; THUMB8-NEXT:    lsl.w r3, r0, r3
-; THUMB8-NEXT:    lsl.w r0, r0, r2
-; THUMB8-NEXT:    it mi
-; THUMB8-NEXT:    movmi r3, r1
-; THUMB8-NEXT:    it pl
-; THUMB8-NEXT:    movpl r0, #0
-; THUMB8-NEXT:    pkhbt r0, r3, r0
-; THUMB8-NEXT:    clz r0, r0
-; THUMB8-NEXT:    lsrs r0, r0, #5
-; THUMB8-NEXT:    bx lr
+; THUMB78-LABEL: scalar_i64_bitsinmiddle_eq:
+; THUMB78:       @ %bb.0:
+; THUMB78-NEXT:    rsb.w r3, r2, #32
+; THUMB78-NEXT:    lsls r1, r2
+; THUMB78-NEXT:    lsr.w r3, r0, r3
+; THUMB78-NEXT:    orrs r1, r3
+; THUMB78-NEXT:    subs.w r3, r2, #32
+; THUMB78-NEXT:    it pl
+; THUMB78-NEXT:    lslpl.w r1, r0, r3
+; THUMB78-NEXT:    lsl.w r0, r0, r2
+; THUMB78-NEXT:    it pl
+; THUMB78-NEXT:    movpl r0, #0
+; THUMB78-NEXT:    pkhbt r0, r1, r0
+; THUMB78-NEXT:    clz r0, r0
+; THUMB78-NEXT:    lsrs r0, r0, #5
+; THUMB78-NEXT:    bx lr
   %t0 = lshr i64 281474976645120, %y
   %t1 = and i64 %t0, %x
   %res = icmp eq i64 %t1, 0
@@ -642,14 +610,14 @@ define <4 x i1> @vec_4xi32_nonsplat_eq(<4 x i32> %x, <4 x i32> %y) nounwind {
 ; THUMB6-NEXT:    ldr r4, [sp, #16]
 ; THUMB6-NEXT:    lsls r2, r4
 ; THUMB6-NEXT:    ldr r4, .LCPI13_0
-; THUMB6-NEXT:    ands r4, r2
-; THUMB6-NEXT:    rsbs r2, r4, #0
+; THUMB6-NEXT:    ands r2, r4
+; THUMB6-NEXT:    rsbs r4, r2, #0
 ; THUMB6-NEXT:    adcs r2, r4
 ; THUMB6-NEXT:    ldr r4, [sp, #20]
 ; THUMB6-NEXT:    lsls r3, r4
 ; THUMB6-NEXT:    lsls r4, r0, #31
-; THUMB6-NEXT:    ands r4, r3
-; THUMB6-NEXT:    rsbs r3, r4, #0
+; THUMB6-NEXT:    ands r3, r4
+; THUMB6-NEXT:    rsbs r4, r3, #0
 ; THUMB6-NEXT:    adcs r3, r4
 ; THUMB6-NEXT:    pop {r4, pc}
 ; THUMB6-NEXT:    .p2align 2

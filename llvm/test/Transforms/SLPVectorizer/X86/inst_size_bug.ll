@@ -5,10 +5,7 @@ define void @inst_size(i64* %a, <2 x i64> %b) {
 ; CHECK-LABEL: @inst_size(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[VAL:%.*]] = extractelement <2 x i64> [[B:%.*]], i32 0
-; CHECK-NEXT:    [[PTR2:%.*]] = getelementptr inbounds i64, i64* [[A:%.*]], i64 1
-; CHECK-NEXT:    [[PTR3:%.*]] = getelementptr inbounds i64, i64* [[A]], i64 2
-; CHECK-NEXT:    [[PTR4:%.*]] = getelementptr inbounds i64, i64* [[A]], i64 3
-; CHECK-NEXT:    [[TMP0:%.*]] = bitcast i64* [[A]] to <4 x i64>*
+; CHECK-NEXT:    [[TMP0:%.*]] = bitcast i64* [[A:%.*]] to <4 x i64>*
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i64>, <4 x i64>* [[TMP0]], align 4
 ; CHECK-NEXT:    [[T41:%.*]] = icmp sgt i64 0, [[VAL]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = icmp sgt <4 x i64> zeroinitializer, [[TMP1]]

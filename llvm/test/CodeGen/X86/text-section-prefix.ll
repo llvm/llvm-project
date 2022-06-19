@@ -4,7 +4,7 @@
 ; RUN: llc -mtriple x86_64-windows-gnu -function-sections %s -o - | FileCheck %s --check-prefix=COFF-GNU
 
 define void @foo1(i1 zeroext %0) nounwind !section_prefix !0 {
-;; CHECK hot section name
+;; Check hot section name
 ; ELF:        .section  .text.hot.foo1,"ax",@progbits
 ; ELF-NOUNIQ: .section  .text.hot.,"ax",@progbits,unique,1
 ; COFF-MSVC:  .section  .text$hot,"xr",one_only,foo1
@@ -13,7 +13,7 @@ define void @foo1(i1 zeroext %0) nounwind !section_prefix !0 {
 }
 
 define void @foo2(i1 zeroext %0) nounwind !section_prefix !1 {
-;; CHECK unlikely section name
+;; Check unlikely section name
 ; ELF:        .section  .text.unlikely.foo2,"ax",@progbits
 ; ELF-NOUNIQ: .section  .text.unlikely.,"ax",@progbits,unique,2
 ; COFF-MSVC:  .section  .text$unlikely,"xr",one_only,foo2

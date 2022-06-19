@@ -22,10 +22,14 @@ const size_t N = 1 << 12;
 // Use either `Counters[Idx] = 1` or `Counters[Idx]++;`
 // depending on whether multiple occurrences of the event 'Idx'
 // is important to distinguish from one occurrence.
-#ifdef __linux__
+#if defined(__linux__) || defined(__FreeBSD__)
 __attribute__((section("__libfuzzer_extra_counters")))
 #endif
-static uint8_t Counters[N];
+#ifdef _WIN32
+#  pragma section(".data$__libfuzzer_extra_counters")
+__declspec(allocate(".data$__libfuzzer_extra_counters"))
+#endif
+    static uint8_t Counters[N];
 
 extern "C" int LLVMFuzzerTestOneInput(const uint8_t *Data, size_t Size) {
   static std::set<uint16_t> SeenIdx;

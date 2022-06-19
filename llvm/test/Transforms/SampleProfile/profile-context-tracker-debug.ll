@@ -35,11 +35,11 @@
 ; INLINE-ALL-DAG-NEXT:   Merging context profile into base profile: _Z5funcBi
 ; INLINE-ALL-DAG-NEXT:   Found context tree root to promote: external:10 @ _Z5funcBi
 ; INLINE-ALL-DAG-NEXT:   Context promoted to: _Z5funcBi
+; INLINE-ALL-DAG-NEXT:   Found context tree root to promote: externalA:17 @ _Z5funcBi
+; INLINE-ALL-DAG-NEXT:   Context promoted and merged to: _Z5funcBi
 ; INLINE-ALL-DAG-NEXT:   Found context tree root to promote: main:3.1 @ _Z5funcBi
 ; INLINE-ALL-DAG-NEXT:   Context promoted and merged to: _Z5funcBi
 ; INLINE-ALL-DAG-NEXT:   Context promoted to: _Z5funcBi:1 @ _Z8funcLeafi
-; INLINE-ALL-DAG-NEXT:   Found context tree root to promote: externalA:17 @ _Z5funcBi
-; INLINE-ALL-DAG-NEXT:   Context promoted and merged to: _Z5funcBi
 ; INLINE-ALL-DAG-NEXT:   Getting callee context for instr:   %call = tail call i32 @_Z8funcLeafi
 ; INLINE-ALL-DAG-NEXT:   Callee context found: _Z5funcBi:1 @ _Z8funcLeafi
 ; INLINE-ALL-DAG-NEXT:   Marking context profile as inlined: _Z5funcBi:1 @ _Z8funcLeafi
@@ -73,11 +73,11 @@
 ; INLINE-HOT-DAG-NEXT:   Merging context profile into base profile: _Z5funcBi
 ; INLINE-HOT-DAG-NEXT:   Found context tree root to promote: external:10 @ _Z5funcBi
 ; INLINE-HOT-DAG-NEXT:   Context promoted to: _Z5funcBi
+; INLINE-HOT-DAG-NEXT:   Found context tree root to promote: externalA:17 @ _Z5funcBi
+; INLINE-HOT-DAG-NEXT:   Context promoted and merged to: _Z5funcBi
 ; INLINE-HOT-DAG-NEXT:   Found context tree root to promote: main:3.1 @ _Z5funcBi
 ; INLINE-HOT-DAG-NEXT:   Context promoted and merged to: _Z5funcBi
 ; INLINE-HOT-DAG-NEXT:   Context promoted to: _Z5funcBi:1 @ _Z8funcLeafi
-; INLINE-HOT-DAG-NEXT:   Found context tree root to promote: externalA:17 @ _Z5funcBi
-; INLINE-HOT-DAG-NEXT:   Context promoted and merged to: _Z5funcBi
 ; INLINE-HOT-DAG-NEXT:   Getting callee context for instr:   %call = tail call i32 @_Z8funcLeafi
 ; INLINE-HOT-DAG-NEXT:   Callee context found: _Z5funcBi:1 @ _Z8funcLeafi
 ; INLINE-HOT-DAG-NEXT:   Marking context profile as inlined: _Z5funcBi:1 @ _Z8funcLeafi

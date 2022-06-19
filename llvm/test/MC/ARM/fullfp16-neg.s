@@ -123,24 +123,38 @@
 @ CHECK: instruction requires: full half-float
 
   vrintz.f16 s3, s24
+  vrintz.f16.f16 s3, s24
+@ CHECK: instruction requires: full half-float
 @ CHECK: instruction requires: full half-float
 
   vrintr.f16 s0, s9
+  vrintr.f16.f16 s0, s9
+@ CHECK: instruction requires: full half-float
 @ CHECK: instruction requires: full half-float
 
   vrintx.f16 s10, s14
+  vrintx.f16.f16 s10, s14
+@ CHECK: instruction requires: full half-float
 @ CHECK: instruction requires: full half-float
 
   vrinta.f16 s12, s1
+  vrinta.f16.f16 s12, s1
+@ CHECK: instruction requires: full half-float
 @ CHECK: instruction requires: full half-float
 
   vrintn.f16 s12, s1
+  vrintn.f16.f16 s12, s1
+@ CHECK: instruction requires: full half-float
 @ CHECK: instruction requires: full half-float
 
   vrintp.f16 s12, s1
+  vrintp.f16.f16 s12, s1
+@ CHECK: instruction requires: full half-float
 @ CHECK: instruction requires: full half-float
 
   vrintm.f16 s12, s1
+  vrintm.f16.f16 s12, s1
+@ CHECK: instruction requires: full half-float
 @ CHECK: instruction requires: full half-float
 
   vfma.f16 s2, s7, s4

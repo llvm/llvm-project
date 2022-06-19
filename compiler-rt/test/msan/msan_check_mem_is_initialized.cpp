@@ -16,7 +16,7 @@ int main(void) {
 #ifdef POSITIVE
   __msan_check_mem_is_initialized(p + 5, 20);
   // CHECK: Uninitialized bytes in __msan_check_mem_is_initialized at offset 5 inside [0x{{.*}}, 20)
-  // CHECK-VERBOSE: Shadow map of [0x{{.*}}, 0x{{.*}}), 20 bytes:
+  // CHECK-VERBOSE: Shadow map [0x{{.*}}, 0x{{.*}}) of [0x{{.*}}, 0x{{.*}}), 20 bytes:
   // CHECK-VERBOSE: 0x{{.*}}: ..000000 0000ffff 00000000 00000000
   // CHECK-VERBOSE: 0x{{.*}}: 00000000 00...... ........ ........
 

@@ -1,4 +1,4 @@
-set(LLVM_LINK_COMPONENTS ${LLVM_TARGETS_TO_BUILD} FuzzMutate)
+set(LLVM_LINK_COMPONENTS ${LLVM_TARGETS_TO_BUILD} FuzzerCLI)
 set(CXX_FLAGS_NOFUZZ ${CMAKE_CXX_FLAGS})
 set(DUMMY_MAIN DummyClangFuzzer.cpp)
 if(LLVM_LIB_FUZZING_ENGINE)
@@ -109,6 +109,7 @@ endif()
 
 add_clang_subdirectory(handle-cxx)
 add_clang_subdirectory(handle-llvm)
+add_clang_subdirectory(dictionary)
 
 add_clang_executable(clang-fuzzer
   EXCLUDE_FROM_ALL

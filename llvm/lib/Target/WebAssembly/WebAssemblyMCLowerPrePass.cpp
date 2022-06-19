@@ -33,21 +33,21 @@ using namespace llvm;
 #define DEBUG_TYPE "wasm-mclower-prepass"
 
 namespace {
-class WebAssemblyMCLowerPrePass final : public MachineFunctionPass {
+class WebAssemblyMCLowerPrePass final : public ModulePass {
   StringRef getPassName() const override {
     return "WebAssembly MC Lower Pre Pass";
   }
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.setPreservesCFG();
-    MachineFunctionPass::getAnalysisUsage(AU);
+    ModulePass::getAnalysisUsage(AU);
   }
 
-  bool runOnMachineFunction(MachineFunction &MF) override;
+  bool runOnModule(Module &M) override;
 
 public:
   static char ID; // Pass identification, replacement for typeid
-  WebAssemblyMCLowerPrePass() : MachineFunctionPass(ID) {}
+  WebAssemblyMCLowerPrePass() : ModulePass(ID) {}
 };
 } // end anonymous namespace
 
@@ -57,30 +57,46 @@ INITIALIZE_PASS(
     "Collects information ahead of time for MC lowering",
     false, false)
 
-FunctionPass *llvm::createWebAssemblyMCLowerPrePass() {
+ModulePass *llvm::createWebAssemblyMCLowerPrePass() {
   return new WebAssemblyMCLowerPrePass();
 }
 
-bool WebAssemblyMCLowerPrePass::runOnMachineFunction(MachineFunction &MF) {
-  LLVM_DEBUG(dbgs() << "********** MC Lower Pre Pass **********\n"
-                       "********** Function: "
-                    << MF.getName() << '\n');
+// NOTE: this is a ModulePass since we need to enforce that this code has run
+// for all functions before AsmPrinter. If this way of doing things is ever
+// suboptimal, we could opt to make it a MachineFunctionPass and instead use
+// something like createBarrierNoopPass() to enforce ordering.
+//
+// The information stored here is essential for emitExternalDecls in the Wasm
+// AsmPrinter
+bool WebAssemblyMCLowerPrePass::runOnModule(Module &M) {
+  auto *MMIWP = getAnalysisIfAvailable<MachineModuleInfoWrapperPass>();
+  if (!MMIWP)
+    return true;
 
-  MachineModuleInfo &MMI = MF.getMMI();
+  MachineModuleInfo &MMI = MMIWP->getMMI();
   MachineModuleInfoWasm &MMIW = MMI.getObjFileInfo<MachineModuleInfoWasm>();
 
-  for (MachineBasicBlock &MBB : MF) {
-    for (auto &MI : MBB) {
-      // FIXME: what should all be filtered out beyond these?
-      if (MI.isDebugInstr() || MI.isInlineAsm())
-        continue;
-      for (MachineOperand &MO : MI.uses()) {
-        if (MO.isSymbol()) {
-          MMIW.MachineSymbolsUsed.insert(MO.getSymbolName());
+  for (Function &F : M) {
+    MachineFunction *MF = MMI.getMachineFunction(F);
+    if (!MF)
+      continue;
+
+    LLVM_DEBUG(dbgs() << "********** MC Lower Pre Pass **********\n"
+                         "********** Function: "
+                      << MF->getName() << '\n');
+
+    for (MachineBasicBlock &MBB : *MF) {
+      for (auto &MI : MBB) {
+        // FIXME: what should all be filtered out beyond these?
+        if (MI.isDebugInstr() || MI.isInlineAsm())
+          continue;
+        for (MachineOperand &MO : MI.uses()) {
+          if (MO.isSymbol()) {
+            MMIW.MachineSymbolsUsed.insert(MO.getSymbolName());
+          }
         }
       }
     }
   }
-
   return true;
 }

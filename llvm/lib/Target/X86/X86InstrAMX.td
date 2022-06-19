@@ -48,18 +48,23 @@ let Predicates = [HasAMXTILE, In64BitMode] in {
                      VEX, T8XD;
 
     // Pseduo instruction for RA.
-    def PLDTILECFGV : PseudoI<(outs), (ins opaquemem:$src),
-                              [(int_x86_ldtilecfg_internal addr:$src)]>;
+    let isPseudo = true, mayLoad = 1, hasSideEffects = 1,
+        Defs = [TMM0,TMM1,TMM2,TMM3,TMM4,TMM5,TMM6,TMM7] in
+    def PLDTILECFGV : PseudoI<(outs), (ins opaquemem:$src), []>;
+    let isPseudo = true, mayLoad = 1 in
     def PTILELOADDV : PseudoI<(outs TILE:$dst), (ins GR16:$src1,
                                                      GR16:$src2,
                                                      opaquemem:$src3), []>;
+    let isPseudo = true, mayLoad = 1 in
     def PTILELOADDT1V : PseudoI<(outs TILE:$dst), (ins GR16:$src1,
                                                        GR16:$src2,
                                                        opaquemem:$src3), []>;
+    let isPseudo = true, mayStore = 1 in
     def PTILESTOREDV : PseudoI<(outs), (ins GR16:$src1,
                                             GR16:$src2, opaquemem:$src3,
                                             TILE:$src4), []>;
-    let isReMaterializable = 1, isAsCheapAsAMove = 1, canFoldAsLoad = 1 in
+    let isPseudo = true, isReMaterializable = 1, isAsCheapAsAMove = 1,
+        canFoldAsLoad = 1 in
       def PTILEZEROV : PseudoI<(outs TILE:$dst), (ins GR16:$src1, GR16:$src2),
                                 [(set TILE:$dst, (int_x86_tilezero_internal
                                   GR16:$src1, GR16:$src2))]>;
@@ -67,9 +72,12 @@ let Predicates = [HasAMXTILE, In64BitMode] in {
     let usesCustomInserter = 1 in {
       // Pseudo instructions, using immediates instead of tile registers.
       // To be translated to the actual instructions in X86ISelLowering.cpp
+      let mayLoad = 1 in
       def PTILELOADD : PseudoI<(outs), (ins u8imm:$src1, sibmem:$src2), []>;
+      let mayLoad = 1 in
       def PTILELOADDT1 : PseudoI<(outs), (ins u8imm:$src1,
                                           sibmem:$src2), []>;
+      let mayStore = 1 in
       def PTILESTORED : PseudoI<(outs), (ins i8mem:$dst, u8imm:$src), []>;
       def PTILEZERO : PseudoI<(outs), (ins u8imm:$src),
                               [(int_x86_tilezero timm:$src)]>;
@@ -99,7 +107,7 @@ let Predicates = [HasAMXINT8, In64BitMode] in {
     }
 
     // Pseduo instruction for RA.
-    let Constraints = "$src4 = $dst" in {
+    let isPseudo = true, Constraints = "$src4 = $dst" in {
       def PTDPBSSDV : PseudoI<(outs TILE:$dst), (ins GR16:$src1,
                               GR16:$src2, GR16:$src3, TILE:$src4,
                               TILE:$src5, TILE:$src6),
@@ -158,7 +166,7 @@ let Predicates = [HasAMXBF16, In64BitMode] in {
                       []>, VEX_4V, T8XS;
 
     // Pseduo instruction for RA.
-    let Constraints = "$src4 = $dst" in
+    let isPseudo = true, Constraints = "$src4 = $dst" in
       def PTDPBF16PSV : PseudoI<(outs TILE: $dst), (ins GR16:$src1,
                                  GR16:$src2, GR16:$src3, TILE:$src4,
                                  TILE:$src5, TILE:$src6),

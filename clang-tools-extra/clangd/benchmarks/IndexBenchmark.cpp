@@ -23,11 +23,13 @@ namespace clangd {
 namespace {
 
 std::unique_ptr<SymbolIndex> buildMem() {
-  return loadIndex(IndexFilename, /*UseDex=*/false);
+  return loadIndex(IndexFilename, clang::clangd::SymbolOrigin::Static,
+                   /*UseDex=*/false);
 }
 
 std::unique_ptr<SymbolIndex> buildDex() {
-  return loadIndex(IndexFilename, /*UseDex=*/true);
+  return loadIndex(IndexFilename, clang::clangd::SymbolOrigin::Static,
+                   /*UseDex=*/true);
 }
 
 // Reads JSON array of serialized FuzzyFindRequest's from user-provided file.
@@ -71,29 +73,29 @@ std::vector<FuzzyFindRequest> extractQueriesFromLogs() {
   return Requests;
 }
 
-static void MemQueries(benchmark::State &State) {
+static void memQueries(benchmark::State &State) {
   const auto Mem = buildMem();
   const auto Requests = extractQueriesFromLogs();
   for (auto _ : State)
     for (const auto &Request : Requests)
       Mem->fuzzyFind(Request, [](const Symbol &S) {});
 }
-BENCHMARK(MemQueries);
+BENCHMARK(memQueries);
 
-static void DexQueries(benchmark::State &State) {
+static void dexQueries(benchmark::State &State) {
   const auto Dex = buildDex();
   const auto Requests = extractQueriesFromLogs();
   for (auto _ : State)
     for (const auto &Request : Requests)
       Dex->fuzzyFind(Request, [](const Symbol &S) {});
 }
-BENCHMARK(DexQueries);
+BENCHMARK(dexQueries);
 
-static void DexBuild(benchmark::State &State) {
+static void dexBuild(benchmark::State &State) {
   for (auto _ : State)
     buildDex();
 }
-BENCHMARK(DexBuild);
+BENCHMARK(dexBuild);
 
 } // namespace
 } // namespace clangd

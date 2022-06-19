@@ -8,15 +8,14 @@
 
 #include "lldb/DataFormatters/FormatManager.h"
 
-#include "llvm/ADT/STLExtras.h"
-
-
 #include "lldb/Core/Debugger.h"
 #include "lldb/DataFormatters/FormattersHelpers.h"
 #include "lldb/DataFormatters/LanguageCategory.h"
 #include "lldb/Target/ExecutionContext.h"
 #include "lldb/Target/Language.h"
+#include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
+#include "llvm/ADT/STLExtras.h"
 
 using namespace lldb;
 using namespace lldb_private;
@@ -90,11 +89,11 @@ static bool GetFormatFromFormatChar(char format_char, Format &format) {
   return false;
 }
 
-static bool GetFormatFromFormatName(const char *format_name,
+static bool GetFormatFromFormatName(llvm::StringRef format_name,
                                     bool partial_match_ok, Format &format) {
   uint32_t i;
   for (i = 0; i < g_num_format_infos; ++i) {
-    if (strcasecmp(g_format_infos[i].format_name, format_name) == 0) {
+    if (format_name.equals_insensitive(g_format_infos[i].format_name)) {
       format = g_format_infos[i].format;
       return true;
     }
@@ -102,8 +101,8 @@ static bool GetFormatFromFormatName(const char *format_name,
 
   if (partial_match_ok) {
     for (i = 0; i < g_num_format_infos; ++i) {
-      if (strcasestr(g_format_infos[i].format_name, format_name) ==
-          g_format_infos[i].format_name) {
+      if (llvm::StringRef(g_format_infos[i].format_name)
+              .startswith_insensitive(format_name)) {
         format = g_format_infos[i].format;
         return true;
       }
@@ -614,7 +613,7 @@ ImplSP FormatManager::Get(ValueObject &valobj,
   if (ImplSP retval_sp = GetCached<ImplSP>(match_data))
     return retval_sp;
 
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_DATAFORMATTERS));
+  Log *log = GetLog(LLDBLog::DataFormatters);
 
   LLDB_LOGF(log, "[%s] Search failed. Giving language a chance.", __FUNCTION__);
   for (lldb::LanguageType lang_type : match_data.GetCandidateLanguages()) {
@@ -637,7 +636,7 @@ ImplSP FormatManager::Get(ValueObject &valobj,
 template <typename ImplSP>
 ImplSP FormatManager::GetCached(FormattersMatchData &match_data) {
   ImplSP retval_sp;
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_DATAFORMATTERS));
+  Log *log = GetLog(LLDBLog::DataFormatters);
   if (match_data.GetTypeForCache()) {
     LLDB_LOGF(log, "\n\n[%s] Looking into cache for type %s", __FUNCTION__,
               match_data.GetTypeForCache().AsCString("<invalid>"));
@@ -722,17 +721,16 @@ void FormatManager::LoadSystemFormatters() {
       new StringSummaryFormat(string_flags, "${var%s}"));
 
   lldb::TypeSummaryImplSP string_array_format(
-      new StringSummaryFormat(string_array_flags, "${var%s}"));
+      new StringSummaryFormat(string_array_flags, "${var%char[]}"));
 
-  RegularExpression any_size_char_arr(llvm::StringRef("char \\[[0-9]+\\]"));
+  RegularExpression any_size_char_arr(R"(^((un)?signed )?char ?\[[0-9]+\]$)");
 
   TypeCategoryImpl::SharedPointer sys_category_sp =
       GetCategory(m_system_category_name);
 
-  sys_category_sp->GetTypeSummariesContainer()->Add(ConstString("char *"),
-                                                    string_format);
-  sys_category_sp->GetTypeSummariesContainer()->Add(
-      ConstString("unsigned char *"), string_format);
+  sys_category_sp->GetRegexTypeSummariesContainer()->Add(
+      RegularExpression(R"(^(unsigned )?char ?(\*|\[\])$)"), string_format);
+
   sys_category_sp->GetRegexTypeSummariesContainer()->Add(
       std::move(any_size_char_arr), string_array_format);
 
@@ -773,12 +771,11 @@ void FormatManager::LoadVectorFormatters() {
 
   AddStringSummary(vectors_category_sp, "${var.uint128}",
                    ConstString("builtin_type_vec128"), vector_flags);
-
-  AddStringSummary(vectors_category_sp, "", ConstString("float [4]"),
+  AddStringSummary(vectors_category_sp, "", ConstString("float[4]"),
                    vector_flags);
-  AddStringSummary(vectors_category_sp, "", ConstString("int32_t [4]"),
+  AddStringSummary(vectors_category_sp, "", ConstString("int32_t[4]"),
                    vector_flags);
-  AddStringSummary(vectors_category_sp, "", ConstString("int16_t [8]"),
+  AddStringSummary(vectors_category_sp, "", ConstString("int16_t[8]"),
                    vector_flags);
   AddStringSummary(vectors_category_sp, "", ConstString("vDouble"),
                    vector_flags);

@@ -47,23 +47,26 @@ private:
   };
 
   /// Storage info for derived TypeStorage objects.
-  struct StorageKeyInfo : DenseMapInfo<HashedStorage> {
-    static HashedStorage getEmptyKey() {
+  struct StorageKeyInfo {
+    static inline HashedStorage getEmptyKey() {
       return HashedStorage(0, DenseMapInfo<BaseStorage *>::getEmptyKey());
     }
-    static HashedStorage getTombstoneKey() {
+    static inline HashedStorage getTombstoneKey() {
       return HashedStorage(0, DenseMapInfo<BaseStorage *>::getTombstoneKey());
     }
 
-    static unsigned getHashValue(const HashedStorage &key) {
+    static inline unsigned getHashValue(const HashedStorage &key) {
       return key.hashValue;
     }
-    static unsigned getHashValue(LookupKey key) { return key.hashValue; }
+    static inline unsigned getHashValue(const LookupKey &key) {
+      return key.hashValue;
+    }
 
-    static bool isEqual(const HashedStorage &lhs, const HashedStorage &rhs) {
+    static inline bool isEqual(const HashedStorage &lhs,
+                               const HashedStorage &rhs) {
       return lhs.storage == rhs.storage;
     }
-    static bool isEqual(const LookupKey &lhs, const HashedStorage &rhs) {
+    static inline bool isEqual(const LookupKey &lhs, const HashedStorage &rhs) {
       if (isEqual(rhs, getEmptyKey()) || isEqual(rhs, getTombstoneKey()))
         return false;
       // Invoke the equality function on the lookup key.
@@ -254,7 +257,7 @@ private:
   function_ref<void(BaseStorage *)> destructorFn;
 #endif
 };
-} // end anonymous namespace
+} // namespace
 
 namespace mlir {
 namespace detail {
@@ -325,11 +328,11 @@ struct StorageUniquerImpl {
   /// Flag specifying if multi-threading is enabled within the uniquer.
   bool threadingIsEnabled = true;
 };
-} // end namespace detail
+} // namespace detail
 } // namespace mlir
 
 StorageUniquer::StorageUniquer() : impl(new StorageUniquerImpl()) {}
-StorageUniquer::~StorageUniquer() {}
+StorageUniquer::~StorageUniquer() = default;
 
 /// Set the flag specifying if multi-threading is disabled within the uniquer.
 void StorageUniquer::disableMultithreading(bool disable) {

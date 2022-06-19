@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -mconstructor-aliases %s -triple x86_64-windows-msvc -fms-extensions -emit-llvm -o - | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -mconstructor-aliases %s -triple x86_64-windows-msvc -fms-extensions -emit-llvm -o - | FileCheck %s
 
 // PR32990
 

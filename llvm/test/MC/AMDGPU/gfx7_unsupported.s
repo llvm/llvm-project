@@ -2546,6 +2546,54 @@ v_xor3_b32 v255, v1, v2, v3
 // Unsupported e64 variants.
 //===----------------------------------------------------------------------===//
 
+image_sample_c_cd_cl_g16 v[5:6], v[1:5], s[8:15], s[12:15] dmask:0x3
+// CHECK: error: instruction not supported on this GPU
+
+image_sample_c_cd_cl_o_g16 v[5:6], v[1:6], s[8:15], s[12:15] dmask:0x3
+// CHECK: error: instruction not supported on this GPU
+
+image_sample_c_cd_g16 v[5:6], v[1:4], s[8:15], s[12:15] dmask:0x3
+// CHECK: error: instruction not supported on this GPU
+
+image_sample_c_cd_o_g16 v[5:6], v[1:5], s[8:15], s[12:15] dmask:0x3
+// CHECK: error: instruction not supported on this GPU
+
+image_sample_c_d_cl_g16 v[5:6], v[1:5], s[8:15], s[12:15] dmask:0x3
+// CHECK: error: instruction not supported on this GPU
+
+image_sample_c_d_cl_o_g16 v[5:6], v[1:6], s[8:15], s[12:15] dmask:0x3
+// CHECK: error: instruction not supported on this GPU
+
+image_sample_c_d_g16 v[5:6], v[1:4], s[8:15], s[12:15] dmask:0x3
+// CHECK: error: instruction not supported on this GPU
+
+image_sample_c_d_o_g16 v[5:6], v[1:5], s[8:15], s[12:15] dmask:0x3
+// CHECK: error: instruction not supported on this GPU
+
+image_sample_cd_cl_g16 v[5:6], v[1:4], s[8:15], s[12:15] dmask:0x3
+// CHECK: error: instruction not supported on this GPU
+
+image_sample_cd_cl_o_g16 v[5:6], v[1:5], s[8:15], s[12:15] dmask:0x3
+// CHECK: error: instruction not supported on this GPU
+
+image_sample_cd_g16 v[5:6], v[1:3], s[8:15], s[12:15] dmask:0x3
+// CHECK: error: instruction not supported on this GPU
+
+image_sample_cd_o_g16 v[5:6], v[1:4], s[8:15], s[12:15] dmask:0x3
+// CHECK: error: instruction not supported on this GPU
+
+image_sample_d_cl_g16 v[5:6], v[1:4], s[8:15], s[12:15] dmask:0x3
+// CHECK: error: instruction not supported on this GPU
+
+image_sample_d_cl_o_g16 v[5:6], v[1:5], s[8:15], s[12:15] dmask:0x3
+// CHECK: error: instruction not supported on this GPU
+
+image_sample_d_g16 v[5:6], v[1:3], s[8:15], s[12:15] dmask:0x3
+// CHECK: error: instruction not supported on this GPU
+
+image_sample_d_o_g16 v[5:6], v[1:4], s[8:15], s[12:15] dmask:0x3
+// CHECK: error: instruction not supported on this GPU
+
 v_interp_mov_f32_e64 v255, p10, attr0.x
 // CHECK: error: e64 variant of this instruction is not supported
 

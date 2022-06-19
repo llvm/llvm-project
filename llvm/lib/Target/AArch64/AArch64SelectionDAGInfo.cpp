@@ -15,40 +15,103 @@ using namespace llvm;
 
 #define DEBUG_TYPE "aarch64-selectiondag-info"
 
-SDValue AArch64SelectionDAGInfo::EmitTargetCodeForMemset(
-    SelectionDAG &DAG, const SDLoc &dl, SDValue Chain, SDValue Dst, SDValue Src,
-    SDValue Size, Align Alignment, bool isVolatile,
-    MachinePointerInfo DstPtrInfo) const {
-  // Check to see if there is a specialized entry-point for memory zeroing.
-  ConstantSDNode *V = dyn_cast<ConstantSDNode>(Src);
-  ConstantSDNode *SizeValue = dyn_cast<ConstantSDNode>(Size);
+SDValue AArch64SelectionDAGInfo::EmitMOPS(AArch64ISD::NodeType SDOpcode,
+                                          SelectionDAG &DAG, const SDLoc &DL,
+                                          SDValue Chain, SDValue Dst,
+                                          SDValue SrcOrValue, SDValue Size,
+                                          Align Alignment, bool isVolatile,
+                                          MachinePointerInfo DstPtrInfo,
+                                          MachinePointerInfo SrcPtrInfo) const {
+
+  // Get the constant size of the copy/set.
+  uint64_t ConstSize = 0;
+  if (auto *C = dyn_cast<ConstantSDNode>(Size))
+    ConstSize = C->getZExtValue();
+
+  const bool IsSet = SDOpcode == AArch64ISD::MOPS_MEMSET ||
+                     SDOpcode == AArch64ISD::MOPS_MEMSET_TAGGING;
+
+  const auto MachineOpcode = [&]() {
+    switch (SDOpcode) {
+    case AArch64ISD::MOPS_MEMSET:
+      return AArch64::MOPSMemorySetPseudo;
+    case AArch64ISD::MOPS_MEMSET_TAGGING:
+      return AArch64::MOPSMemorySetTaggingPseudo;
+    case AArch64ISD::MOPS_MEMCOPY:
+      return AArch64::MOPSMemoryCopyPseudo;
+    case AArch64ISD::MOPS_MEMMOVE:
+      return AArch64::MOPSMemoryMovePseudo;
+    default:
+      llvm_unreachable("Unhandled MOPS ISD Opcode");
+    }
+  }();
+
+  MachineMemOperand::Flags Flags = MachineMemOperand::MOStore;
+  if (isVolatile)
+    Flags |= MachineMemOperand::MOVolatile;
+  if (!IsSet)
+    Flags |= MachineMemOperand::MOLoad;
+
+  MachineFunction &MF = DAG.getMachineFunction();
+
+  auto *DstOp =
+      MF.getMachineMemOperand(DstPtrInfo, Flags, ConstSize, Alignment);
+  auto *SrcOp =
+      MF.getMachineMemOperand(SrcPtrInfo, Flags, ConstSize, Alignment);
+
+  if (IsSet) {
+    // Extend value to i64 if required
+    if (SrcOrValue.getValueType() != MVT::i64)
+      SrcOrValue = DAG.getNode(ISD::ANY_EXTEND, DL, MVT::i64, SrcOrValue);
+    SDValue Ops[] = {Dst, Size, SrcOrValue, Chain};
+    const EVT ResultTys[] = {MVT::i64, MVT::i64, MVT::Other};
+    MachineSDNode *Node = DAG.getMachineNode(MachineOpcode, DL, ResultTys, Ops);
+    DAG.setNodeMemRefs(Node, {DstOp});
+    return SDValue(Node, 2);
+  } else {
+    SDValue Ops[] = {Dst, SrcOrValue, Size, Chain};
+    const EVT ResultTys[] = {MVT::i64, MVT::i64, MVT::i64, MVT::Other};
+    MachineSDNode *Node = DAG.getMachineNode(MachineOpcode, DL, ResultTys, Ops);
+    DAG.setNodeMemRefs(Node, {DstOp, SrcOp});
+    return SDValue(Node, 3);
+  }
+}
+
+SDValue AArch64SelectionDAGInfo::EmitTargetCodeForMemcpy(
+    SelectionDAG &DAG, const SDLoc &DL, SDValue Chain, SDValue Dst, SDValue Src,
+    SDValue Size, Align Alignment, bool isVolatile, bool AlwaysInline,
+    MachinePointerInfo DstPtrInfo, MachinePointerInfo SrcPtrInfo) const {
   const AArch64Subtarget &STI =
       DAG.getMachineFunction().getSubtarget<AArch64Subtarget>();
-  const char *bzeroName = (V && V->isNullValue())
-      ? DAG.getTargetLoweringInfo().getLibcallName(RTLIB::BZERO) : nullptr;
-  // For small size (< 256), it is not beneficial to use bzero
-  // instead of memset.
-  if (bzeroName && (!SizeValue || SizeValue->getZExtValue() > 256)) {
-    const AArch64TargetLowering &TLI = *STI.getTargetLowering();
+  if (STI.hasMOPS())
+    return EmitMOPS(AArch64ISD::MOPS_MEMCOPY, DAG, DL, Chain, Dst, Src, Size,
+                    Alignment, isVolatile, DstPtrInfo, SrcPtrInfo);
+  return SDValue();
+}
 
-    EVT IntPtr = TLI.getPointerTy(DAG.getDataLayout());
-    Type *IntPtrTy = Type::getInt8PtrTy(*DAG.getContext());
-    TargetLowering::ArgListTy Args;
-    TargetLowering::ArgListEntry Entry;
-    Entry.Node = Dst;
-    Entry.Ty = IntPtrTy;
-    Args.push_back(Entry);
-    Entry.Node = Size;
-    Args.push_back(Entry);
-    TargetLowering::CallLoweringInfo CLI(DAG);
-    CLI.setDebugLoc(dl)
-        .setChain(Chain)
-        .setLibCallee(CallingConv::C, Type::getVoidTy(*DAG.getContext()),
-                      DAG.getExternalSymbol(bzeroName, IntPtr),
-                      std::move(Args))
-        .setDiscardResult();
-    std::pair<SDValue, SDValue> CallResult = TLI.LowerCallTo(CLI);
-    return CallResult.second;
+SDValue AArch64SelectionDAGInfo::EmitTargetCodeForMemset(
+    SelectionDAG &DAG, const SDLoc &dl, SDValue Chain, SDValue Dst, SDValue Src,
+    SDValue Size, Align Alignment, bool isVolatile, bool AlwaysInline,
+    MachinePointerInfo DstPtrInfo) const {
+  const AArch64Subtarget &STI =
+      DAG.getMachineFunction().getSubtarget<AArch64Subtarget>();
+
+  if (STI.hasMOPS()) {
+    return EmitMOPS(AArch64ISD::MOPS_MEMSET, DAG, dl, Chain, Dst, Src, Size,
+                    Alignment, isVolatile, DstPtrInfo, MachinePointerInfo{});
+  }
+  return SDValue();
+}
+
+SDValue AArch64SelectionDAGInfo::EmitTargetCodeForMemmove(
+    SelectionDAG &DAG, const SDLoc &dl, SDValue Chain, SDValue Dst, SDValue Src,
+    SDValue Size, Align Alignment, bool isVolatile,
+    MachinePointerInfo DstPtrInfo, MachinePointerInfo SrcPtrInfo) const {
+  const AArch64Subtarget &STI =
+      DAG.getMachineFunction().getSubtarget<AArch64Subtarget>();
+  if (STI.hasMOPS()) {
+    return EmitMOPS(AArch64ISD::MOPS_MEMMOVE, DAG, dl, Chain, Dst, Src, Size,
+                    Alignment, isVolatile, DstPtrInfo, SrcPtrInfo);
   }
   return SDValue();
 }

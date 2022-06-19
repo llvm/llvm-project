@@ -24,7 +24,6 @@ class DominatorTree;
 class Instruction;
 class LoadInst;
 class Loop;
-class MDNode;
 class MemoryLocation;
 class ScalarEvolution;
 class TargetLibraryInfo;
@@ -43,8 +42,7 @@ bool isDereferenceablePointer(const Value *V, Type *Ty,
 /// performs context-sensitive analysis and returns true if the pointer is
 /// dereferenceable at the specified instruction.
 bool isDereferenceableAndAlignedPointer(const Value *V, Type *Ty,
-                                        MaybeAlign Alignment,
-                                        const DataLayout &DL,
+                                        Align Alignment, const DataLayout &DL,
                                         const Instruction *CtxI = nullptr,
                                         const DominatorTree *DT = nullptr,
                                         const TargetLibraryInfo *TLI = nullptr);
@@ -77,9 +75,9 @@ bool isSafeToLoadUnconditionally(Value *V, Align Alignment, APInt &Size,
 /// within the specified loop) would access only dereferenceable memory, and
 /// be properly aligned on every iteration of the specified loop regardless of
 /// its placement within the loop. (i.e. does not require predication beyond
-/// that required by the the header itself and could be hoisted into the header
+/// that required by the header itself and could be hoisted into the header
 /// if desired.)  This is more powerful than the variants above when the
-/// address loaded from is analyzeable by SCEV.  
+/// address loaded from is analyzeable by SCEV.
 bool isDereferenceableAndAlignedInLoop(LoadInst *LI, Loop *L,
                                        ScalarEvolution &SE,
                                        DominatorTree &DT);

@@ -5,8 +5,8 @@ define fastcc void @test_sdot_v4i8(i8* noalias nocapture %0, i8* noalias nocaptu
 ; CHECK-LABEL: test_sdot_v4i8:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    ldr w8, [x2]
-; CHECK-NEXT:    ldr w9, [x1]
 ; CHECK-NEXT:    dup v0.2s, wzr
+; CHECK-NEXT:    ldr w9, [x1]
 ; CHECK-NEXT:    fmov s1, w8
 ; CHECK-NEXT:    fmov s2, w9
 ; CHECK-NEXT:    sdot v0.2s, v1.8b, v2.8b
@@ -52,8 +52,8 @@ define fastcc void @test_udot_v4i8(i8* noalias nocapture %0, i8* noalias nocaptu
 ; CHECK-LABEL: test_udot_v4i8:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    ldr w8, [x2]
-; CHECK-NEXT:    ldr w9, [x1]
 ; CHECK-NEXT:    dup v0.2s, wzr
+; CHECK-NEXT:    ldr w9, [x1]
 ; CHECK-NEXT:    fmov s1, w8
 ; CHECK-NEXT:    fmov s2, w9
 ; CHECK-NEXT:    udot v0.2s, v1.8b, v2.8b

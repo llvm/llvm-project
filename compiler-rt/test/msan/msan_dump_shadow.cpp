@@ -18,5 +18,5 @@ int main(void) {
   return 0;
 }
 
-// CHECK: ff ff ff ff ff
-// CHECK: 00 00 00
+// CHECK: 0x{{[0-9a-f]+}}[0x{{[0-9a-f]+}}]  ff ff ff ff ff
+// CHECK: 0x{{[0-9a-f]+}}[0x{{[0-9a-f]+}}]  00 00 00

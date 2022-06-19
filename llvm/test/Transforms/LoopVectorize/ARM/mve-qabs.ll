@@ -7,18 +7,16 @@ target triple = "thumbv8.1m.main-arm-none-eabi"
 define void @arm_abs_q7(i8* nocapture readonly %pSrc, i8* nocapture %pDst, i32 %blockSize) #0 {
 ; CHECK-LABEL: @arm_abs_q7(
 ; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[PSRC2:%.*]] = ptrtoint i8* [[PSRC:%.*]] to i32
+; CHECK-NEXT:    [[PDST1:%.*]] = ptrtoint i8* [[PDST:%.*]] to i32
 ; CHECK-NEXT:    [[CMP_NOT19:%.*]] = icmp eq i32 [[BLOCKSIZE:%.*]], 0
 ; CHECK-NEXT:    br i1 [[CMP_NOT19]], label [[WHILE_END:%.*]], label [[WHILE_BODY_PREHEADER:%.*]]
 ; CHECK:       while.body.preheader:
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i32 [[BLOCKSIZE]], 16
-; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_MEMCHECK:%.*]]
-; CHECK:       vector.memcheck:
-; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, i8* [[PDST:%.*]], i32 [[BLOCKSIZE]]
-; CHECK-NEXT:    [[SCEVGEP1:%.*]] = getelementptr i8, i8* [[PSRC:%.*]], i32 [[BLOCKSIZE]]
-; CHECK-NEXT:    [[BOUND0:%.*]] = icmp ugt i8* [[SCEVGEP1]], [[PDST]]
-; CHECK-NEXT:    [[BOUND1:%.*]] = icmp ugt i8* [[SCEVGEP]], [[PSRC]]
-; CHECK-NEXT:    [[FOUND_CONFLICT:%.*]] = and i1 [[BOUND0]], [[BOUND1]]
-; CHECK-NEXT:    br i1 [[FOUND_CONFLICT]], label [[SCALAR_PH]], label [[VECTOR_PH:%.*]]
+; CHECK-NEXT:    [[TMP0:%.*]] = sub i32 [[PDST1]], [[PSRC2]]
+; CHECK-NEXT:    [[DIFF_CHECK:%.*]] = icmp ult i32 [[TMP0]], 16
+; CHECK-NEXT:    [[OR_COND:%.*]] = select i1 [[MIN_ITERS_CHECK]], i1 true, i1 [[DIFF_CHECK]]
+; CHECK-NEXT:    br i1 [[OR_COND]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    [[N_VEC:%.*]] = and i32 [[BLOCKSIZE]], -16
 ; CHECK-NEXT:    [[IND_END:%.*]] = getelementptr i8, i8* [[PSRC]], i32 [[N_VEC]]
@@ -30,14 +28,14 @@ define void @arm_abs_q7(i8* nocapture readonly %pSrc, i8* nocapture %pDst, i32 %
 ; CHECK-NEXT:    [[NEXT_GEP:%.*]] = getelementptr i8, i8* [[PSRC]], i32 [[INDEX]]
 ; CHECK-NEXT:    [[NEXT_GEP6:%.*]] = getelementptr i8, i8* [[PDST]], i32 [[INDEX]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = bitcast i8* [[NEXT_GEP]] to <16 x i8>*
-; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <16 x i8>, <16 x i8>* [[TMP0]], align 1, !alias.scope !0
+; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <16 x i8>, <16 x i8>* [[TMP0]], align 1
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp sgt <16 x i8> [[WIDE_LOAD]], zeroinitializer
 ; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq <16 x i8> [[WIDE_LOAD]], <i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128>
 ; CHECK-NEXT:    [[TMP3:%.*]] = sub <16 x i8> zeroinitializer, [[WIDE_LOAD]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = select <16 x i1> [[TMP2]], <16 x i8> <i8 127, i8 127, i8 127, i8 127, i8 127, i8 127, i8 127, i8 127, i8 127, i8 127, i8 127, i8 127, i8 127, i8 127, i8 127, i8 127>, <16 x i8> [[TMP3]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = select <16 x i1> [[TMP1]], <16 x i8> [[WIDE_LOAD]], <16 x i8> [[TMP4]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = bitcast i8* [[NEXT_GEP6]] to <16 x i8>*
-; CHECK-NEXT:    store <16 x i8> [[TMP5]], <16 x i8>* [[TMP6]], align 1, !alias.scope !3, !noalias !0
+; CHECK-NEXT:    store <16 x i8> [[TMP5]], <16 x i8>* [[TMP6]], align 1
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 16
 ; CHECK-NEXT:    [[TMP7:%.*]] = icmp eq i32 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP7]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], [[LOOP5:!llvm.loop !.*]]
@@ -45,9 +43,9 @@ define void @arm_abs_q7(i8* nocapture readonly %pSrc, i8* nocapture %pDst, i32 %
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i32 [[N_VEC]], [[BLOCKSIZE]]
 ; CHECK-NEXT:    br i1 [[CMP_N]], label [[WHILE_END]], label [[SCALAR_PH]]
 ; CHECK:       scalar.ph:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i8* [ [[IND_END]], [[MIDDLE_BLOCK]] ], [ [[PSRC]], [[WHILE_BODY_PREHEADER]] ], [ [[PSRC]], [[VECTOR_MEMCHECK]] ]
-; CHECK-NEXT:    [[BC_RESUME_VAL2:%.*]] = phi i32 [ [[IND_END3]], [[MIDDLE_BLOCK]] ], [ [[BLOCKSIZE]], [[WHILE_BODY_PREHEADER]] ], [ [[BLOCKSIZE]], [[VECTOR_MEMCHECK]] ]
-; CHECK-NEXT:    [[BC_RESUME_VAL4:%.*]] = phi i8* [ [[IND_END5]], [[MIDDLE_BLOCK]] ], [ [[PDST]], [[WHILE_BODY_PREHEADER]] ], [ [[PDST]], [[VECTOR_MEMCHECK]] ]
+; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i8* [ [[IND_END]], [[MIDDLE_BLOCK]] ], [ [[PSRC]], [[WHILE_BODY_PREHEADER]] ]
+; CHECK-NEXT:    [[BC_RESUME_VAL2:%.*]] = phi i32 [ [[IND_END3]], [[MIDDLE_BLOCK]] ], [ [[BLOCKSIZE]], [[WHILE_BODY_PREHEADER]] ]
+; CHECK-NEXT:    [[BC_RESUME_VAL4:%.*]] = phi i8* [ [[IND_END5]], [[MIDDLE_BLOCK]] ], [ [[PDST]], [[WHILE_BODY_PREHEADER]] ]
 ; CHECK-NEXT:    br label [[WHILE_BODY:%.*]]
 ; CHECK:       while.body:
 ; CHECK-NEXT:    [[PSRC_ADDR_022:%.*]] = phi i8* [ [[INCDEC_PTR:%.*]], [[WHILE_BODY]] ], [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ]
@@ -102,18 +100,16 @@ while.end:                                        ; preds = %while.end.loopexit,
 define void @arm_abs_q15(i16* nocapture readonly %pSrc, i16* nocapture %pDst, i32 %blockSize) #0 {
 ; CHECK-LABEL: @arm_abs_q15(
 ; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[PSRC2:%.*]] = ptrtoint i16* [[PSRC:%.*]] to i32
+; CHECK-NEXT:    [[PDST1:%.*]] = ptrtoint i16* [[PDST:%.*]] to i32
 ; CHECK-NEXT:    [[CMP_NOT20:%.*]] = icmp eq i32 [[BLOCKSIZE:%.*]], 0
 ; CHECK-NEXT:    br i1 [[CMP_NOT20]], label [[WHILE_END:%.*]], label [[WHILE_BODY_PREHEADER:%.*]]
 ; CHECK:       while.body.preheader:
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i32 [[BLOCKSIZE]], 8
-; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_MEMCHECK:%.*]]
-; CHECK:       vector.memcheck:
-; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr i16, i16* [[PDST:%.*]], i32 [[BLOCKSIZE]]
-; CHECK-NEXT:    [[SCEVGEP4:%.*]] = getelementptr i16, i16* [[PSRC:%.*]], i32 [[BLOCKSIZE]]
-; CHECK-NEXT:    [[BOUND0:%.*]] = icmp ugt i16* [[SCEVGEP4]], [[PDST]]
-; CHECK-NEXT:    [[BOUND1:%.*]] = icmp ugt i16* [[SCEVGEP]], [[PSRC]]
-; CHECK-NEXT:    [[FOUND_CONFLICT:%.*]] = and i1 [[BOUND0]], [[BOUND1]]
-; CHECK-NEXT:    br i1 [[FOUND_CONFLICT]], label [[SCALAR_PH]], label [[VECTOR_PH:%.*]]
+; CHECK-NEXT:    [[TMP0:%.*]] = sub i32 [[PDST1]], [[PSRC2]]
+; CHECK-NEXT:    [[DIFF_CHECK:%.*]] = icmp ult i32 [[TMP0]], 16
+; CHECK-NEXT:    [[OR_COND:%.*]] = select i1 [[MIN_ITERS_CHECK]], i1 true, i1 [[DIFF_CHECK]]
+; CHECK-NEXT:    br i1 [[OR_COND]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    [[N_VEC:%.*]] = and i32 [[BLOCKSIZE]], -8
 ; CHECK-NEXT:    [[IND_END:%.*]] = getelementptr i16, i16* [[PSRC]], i32 [[N_VEC]]
@@ -125,14 +121,14 @@ define void @arm_abs_q15(i16* nocapture readonly %pSrc, i16* nocapture %pDst, i3
 ; CHECK-NEXT:    [[NEXT_GEP:%.*]] = getelementptr i16, i16* [[PSRC]], i32 [[INDEX]]
 ; CHECK-NEXT:    [[NEXT_GEP10:%.*]] = getelementptr i16, i16* [[PDST]], i32 [[INDEX]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = bitcast i16* [[NEXT_GEP]] to <8 x i16>*
-; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <8 x i16>, <8 x i16>* [[TMP0]], align 2, !alias.scope !8
+; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <8 x i16>, <8 x i16>* [[TMP0]], align 2
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp sgt <8 x i16> [[WIDE_LOAD]], zeroinitializer
 ; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq <8 x i16> [[WIDE_LOAD]], <i16 -32768, i16 -32768, i16 -32768, i16 -32768, i16 -32768, i16 -32768, i16 -32768, i16 -32768>
 ; CHECK-NEXT:    [[TMP3:%.*]] = sub <8 x i16> zeroinitializer, [[WIDE_LOAD]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = select <8 x i1> [[TMP2]], <8 x i16> <i16 32767, i16 32767, i16 32767, i16 32767, i16 32767, i16 32767, i16 32767, i16 32767>, <8 x i16> [[TMP3]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = select <8 x i1> [[TMP1]], <8 x i16> [[WIDE_LOAD]], <8 x i16> [[TMP4]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = bitcast i16* [[NEXT_GEP10]] to <8 x i16>*
-; CHECK-NEXT:    store <8 x i16> [[TMP5]], <8 x i16>* [[TMP6]], align 2, !alias.scope !11, !noalias !8
+; CHECK-NEXT:    store <8 x i16> [[TMP5]], <8 x i16>* [[TMP6]], align 2
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 8
 ; CHECK-NEXT:    [[TMP7:%.*]] = icmp eq i32 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP7]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], [[LOOP13:!llvm.loop !.*]]
@@ -140,9 +136,9 @@ define void @arm_abs_q15(i16* nocapture readonly %pSrc, i16* nocapture %pDst, i3
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i32 [[N_VEC]], [[BLOCKSIZE]]
 ; CHECK-NEXT:    br i1 [[CMP_N]], label [[WHILE_END]], label [[SCALAR_PH]]
 ; CHECK:       scalar.ph:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i16* [ [[IND_END]], [[MIDDLE_BLOCK]] ], [ [[PSRC]], [[WHILE_BODY_PREHEADER]] ], [ [[PSRC]], [[VECTOR_MEMCHECK]] ]
-; CHECK-NEXT:    [[BC_RESUME_VAL6:%.*]] = phi i32 [ [[IND_END7]], [[MIDDLE_BLOCK]] ], [ [[BLOCKSIZE]], [[WHILE_BODY_PREHEADER]] ], [ [[BLOCKSIZE]], [[VECTOR_MEMCHECK]] ]
-; CHECK-NEXT:    [[BC_RESUME_VAL8:%.*]] = phi i16* [ [[IND_END9]], [[MIDDLE_BLOCK]] ], [ [[PDST]], [[WHILE_BODY_PREHEADER]] ], [ [[PDST]], [[VECTOR_MEMCHECK]] ]
+; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i16* [ [[IND_END]], [[MIDDLE_BLOCK]] ], [ [[PSRC]], [[WHILE_BODY_PREHEADER]] ]
+; CHECK-NEXT:    [[BC_RESUME_VAL6:%.*]] = phi i32 [ [[IND_END7]], [[MIDDLE_BLOCK]] ], [ [[BLOCKSIZE]], [[WHILE_BODY_PREHEADER]] ]
+; CHECK-NEXT:    [[BC_RESUME_VAL8:%.*]] = phi i16* [ [[IND_END9]], [[MIDDLE_BLOCK]] ], [ [[PDST]], [[WHILE_BODY_PREHEADER]] ]
 ; CHECK-NEXT:    br label [[WHILE_BODY:%.*]]
 ; CHECK:       while.body:
 ; CHECK-NEXT:    [[PSRC_ADDR_023:%.*]] = phi i16* [ [[INCDEC_PTR:%.*]], [[WHILE_BODY]] ], [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ]
@@ -197,18 +193,16 @@ while.end:                                        ; preds = %while.end.loopexit,
 define void @arm_abs_q31(i32* nocapture readonly %pSrc, i32* nocapture %pDst, i32 %blockSize) #0 {
 ; CHECK-LABEL: @arm_abs_q31(
 ; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[PSRC2:%.*]] = ptrtoint i32* [[PSRC:%.*]] to i32
+; CHECK-NEXT:    [[PDST1:%.*]] = ptrtoint i32* [[PDST:%.*]] to i32
 ; CHECK-NEXT:    [[CMP_NOT14:%.*]] = icmp eq i32 [[BLOCKSIZE:%.*]], 0
 ; CHECK-NEXT:    br i1 [[CMP_NOT14]], label [[WHILE_END:%.*]], label [[WHILE_BODY_PREHEADER:%.*]]
 ; CHECK:       while.body.preheader:
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i32 [[BLOCKSIZE]], 4
-; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_MEMCHECK:%.*]]
-; CHECK:       vector.memcheck:
-; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr i32, i32* [[PDST:%.*]], i32 [[BLOCKSIZE]]
-; CHECK-NEXT:    [[SCEVGEP4:%.*]] = getelementptr i32, i32* [[PSRC:%.*]], i32 [[BLOCKSIZE]]
-; CHECK-NEXT:    [[BOUND0:%.*]] = icmp ugt i32* [[SCEVGEP4]], [[PDST]]
-; CHECK-NEXT:    [[BOUND1:%.*]] = icmp ugt i32* [[SCEVGEP]], [[PSRC]]
-; CHECK-NEXT:    [[FOUND_CONFLICT:%.*]] = and i1 [[BOUND0]], [[BOUND1]]
-; CHECK-NEXT:    br i1 [[FOUND_CONFLICT]], label [[SCALAR_PH]], label [[VECTOR_PH:%.*]]
+; CHECK-NEXT:    [[TMP0:%.*]] = sub i32 [[PDST1]], [[PSRC2]]
+; CHECK-NEXT:    [[DIFF_CHECK:%.*]] = icmp ult i32 [[TMP0]], 16
+; CHECK-NEXT:    [[OR_COND:%.*]] = select i1 [[MIN_ITERS_CHECK]], i1 true, i1 [[DIFF_CHECK]]
+; CHECK-NEXT:    br i1 [[OR_COND]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    [[N_VEC:%.*]] = and i32 [[BLOCKSIZE]], -4
 ; CHECK-NEXT:    [[IND_END:%.*]] = getelementptr i32, i32* [[PSRC]], i32 [[N_VEC]]
@@ -220,14 +214,14 @@ define void @arm_abs_q31(i32* nocapture readonly %pSrc, i32* nocapture %pDst, i3
 ; CHECK-NEXT:    [[NEXT_GEP:%.*]] = getelementptr i32, i32* [[PSRC]], i32 [[INDEX]]
 ; CHECK-NEXT:    [[NEXT_GEP10:%.*]] = getelementptr i32, i32* [[PDST]], i32 [[INDEX]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = bitcast i32* [[NEXT_GEP]] to <4 x i32>*
-; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i32>, <4 x i32>* [[TMP0]], align 4, !alias.scope !15
+; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i32>, <4 x i32>* [[TMP0]], align 4
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp sgt <4 x i32> [[WIDE_LOAD]], zeroinitializer
 ; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq <4 x i32> [[WIDE_LOAD]], <i32 -2147483648, i32 -2147483648, i32 -2147483648, i32 -2147483648>
 ; CHECK-NEXT:    [[TMP3:%.*]] = sub nsw <4 x i32> zeroinitializer, [[WIDE_LOAD]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = select <4 x i1> [[TMP2]], <4 x i32> <i32 2147483647, i32 2147483647, i32 2147483647, i32 2147483647>, <4 x i32> [[TMP3]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = select <4 x i1> [[TMP1]], <4 x i32> [[WIDE_LOAD]], <4 x i32> [[TMP4]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = bitcast i32* [[NEXT_GEP10]] to <4 x i32>*
-; CHECK-NEXT:    store <4 x i32> [[TMP5]], <4 x i32>* [[TMP6]], align 4, !alias.scope !18, !noalias !15
+; CHECK-NEXT:    store <4 x i32> [[TMP5]], <4 x i32>* [[TMP6]], align 4
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 4
 ; CHECK-NEXT:    [[TMP7:%.*]] = icmp eq i32 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP7]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], [[LOOP20:!llvm.loop !.*]]
@@ -235,9 +229,9 @@ define void @arm_abs_q31(i32* nocapture readonly %pSrc, i32* nocapture %pDst, i3
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i32 [[N_VEC]], [[BLOCKSIZE]]
 ; CHECK-NEXT:    br i1 [[CMP_N]], label [[WHILE_END]], label [[SCALAR_PH]]
 ; CHECK:       scalar.ph:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i32* [ [[IND_END]], [[MIDDLE_BLOCK]] ], [ [[PSRC]], [[WHILE_BODY_PREHEADER]] ], [ [[PSRC]], [[VECTOR_MEMCHECK]] ]
-; CHECK-NEXT:    [[BC_RESUME_VAL6:%.*]] = phi i32 [ [[IND_END7]], [[MIDDLE_BLOCK]] ], [ [[BLOCKSIZE]], [[WHILE_BODY_PREHEADER]] ], [ [[BLOCKSIZE]], [[VECTOR_MEMCHECK]] ]
-; CHECK-NEXT:    [[BC_RESUME_VAL8:%.*]] = phi i32* [ [[IND_END9]], [[MIDDLE_BLOCK]] ], [ [[PDST]], [[WHILE_BODY_PREHEADER]] ], [ [[PDST]], [[VECTOR_MEMCHECK]] ]
+; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i32* [ [[IND_END]], [[MIDDLE_BLOCK]] ], [ [[PSRC]], [[WHILE_BODY_PREHEADER]] ]
+; CHECK-NEXT:    [[BC_RESUME_VAL6:%.*]] = phi i32 [ [[IND_END7]], [[MIDDLE_BLOCK]] ], [ [[BLOCKSIZE]], [[WHILE_BODY_PREHEADER]] ]
+; CHECK-NEXT:    [[BC_RESUME_VAL8:%.*]] = phi i32* [ [[IND_END9]], [[MIDDLE_BLOCK]] ], [ [[PDST]], [[WHILE_BODY_PREHEADER]] ]
 ; CHECK-NEXT:    br label [[WHILE_BODY:%.*]]
 ; CHECK:       while.body:
 ; CHECK-NEXT:    [[PSRC_ADDR_017:%.*]] = phi i32* [ [[INCDEC_PTR:%.*]], [[WHILE_BODY]] ], [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ]

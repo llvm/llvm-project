@@ -31,4 +31,4 @@ void g() { f(); }
 // CHECK-BITCODE-TIMESTAMP-ON: <INPUT_FILE abbrevid={{.*}} op0={{.*}} op1={{.*}} op2={{[^0]}}
 // CHECK-BITCODE-TIMESTAMP-OFF: <INPUT_FILE abbrevid={{.*}} op0={{.*}} op1={{.*}} op2={{[0]}}
 
-// CHECK-TIMESTAMP: fatal error: file {{.*}} has been modified since the precompiled header {{.*}} was built
+// CHECK-TIMESTAMP: fatal error: file {{.*}} has been modified since the precompiled header {{.*}} was built: mtime changed (was {{.*}}, now {{.*}})

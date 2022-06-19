@@ -873,7 +873,7 @@ define amdgpu_kernel void @test_multi_arg(i32 %a, <2 x i16> %b, <3 x i8> %c) #0
 ; CHECK-NEXT:       AddrSpaceQual: Global
 define amdgpu_kernel void @test_addr_space(i32 addrspace(1)* %g,
                                            i32 addrspace(4)* %c,
-                                           i32 addrspace(3)* %l) #0
+                                           i32 addrspace(3)* align 4 %l) #0
     !kernel_arg_addr_space !50 !kernel_arg_access_qual !23 !kernel_arg_type !51
     !kernel_arg_base_type !51 !kernel_arg_type_qual !25 {
   ret void
@@ -1653,11 +1653,11 @@ define amdgpu_kernel void @test_arg_unknown_builtin_type(
 ; CHECK-NEXT:       AddrSpaceQual: Global
 define amdgpu_kernel void @test_pointee_align(i64 addrspace(1)* %a,
                                               i8 addrspace(3)* %b,
-                                              <2 x i8> addrspace(3)* %c,
-                                              <3 x i8> addrspace(3)* %d,
-                                              <4 x i8> addrspace(3)* %e,
-                                              <8 x i8> addrspace(3)* %f,
-                                              <16 x i8> addrspace(3)* %g,
+                                              <2 x i8> addrspace(3)* align 2 %c,
+                                              <3 x i8> addrspace(3)* align 4 %d,
+                                              <4 x i8> addrspace(3)* align 4 %e,
+                                              <8 x i8> addrspace(3)* align 8 %f,
+                                              <16 x i8> addrspace(3)* align 16 %g,
                                               {} addrspace(3)* %h) #0
     !kernel_arg_addr_space !91 !kernel_arg_access_qual !92 !kernel_arg_type !93
     !kernel_arg_base_type !93 !kernel_arg_type_qual !94 {
@@ -1866,9 +1866,9 @@ define amdgpu_kernel void @unknown_addrspace_kernarg(i32 addrspace(12345)* %ptr)
   ret void
 }
 
-attributes #0 = { "amdgpu-implicitarg-num-bytes"="56" }
-attributes #1 = { "amdgpu-implicitarg-num-bytes"="56" "runtime-handle"="__test_block_invoke_kernel_runtime_handle" }
-attributes #2 = { "amdgpu-implicitarg-num-bytes"="56" "calls-enqueue-kernel" }
+attributes #0 = { optnone noinline "amdgpu-implicitarg-num-bytes"="56" }
+attributes #1 = { optnone noinline "amdgpu-implicitarg-num-bytes"="56" "runtime-handle"="__test_block_invoke_kernel_runtime_handle" }
+attributes #2 = { optnone noinline "amdgpu-implicitarg-num-bytes"="56" "calls-enqueue-kernel" }
 
 !llvm.printf.fmts = !{!100, !101}
 

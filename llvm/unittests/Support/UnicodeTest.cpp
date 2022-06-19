@@ -95,9 +95,9 @@ TEST(Unicode, isPrintable) {
     UTF32 *Target32 = &buf32[0];
     auto status = ConvertUTF8toUTF32(&Target8, Target8 + 1, &Target32,
                                      Target32 + 1, strictConversion);
-    EXPECT_TRUE(status == conversionOK);
-    EXPECT_TRUE((columnWidthUTF8(reinterpret_cast<const char *>(buf8)) == 1) ==
-                (bool)isPrintable(buf32[0]));
+    EXPECT_EQ(status, conversionOK);
+    EXPECT_EQ((columnWidthUTF8(reinterpret_cast<const char *>(buf8)) == 1),
+              (bool)isPrintable(buf32[0]));
   }
 }
 

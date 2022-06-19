@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 %s -triple x86_64-unknown-unknown -emit-llvm -o - | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers %s -triple x86_64-unknown-unknown -emit-llvm -o - | FileCheck %s
 // The store of p.y into the temporary was not
 // getting extended to 32 bits, so uninitialized
 // bits of the temporary were used.  7366161.

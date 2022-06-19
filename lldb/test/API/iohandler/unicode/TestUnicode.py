@@ -12,11 +12,10 @@ from lldbsuite.test.lldbpexpect import PExpectTest
 
 class TestCase(PExpectTest):
 
-    mydir = TestBase.compute_mydir(__file__)
-
     # PExpect uses many timeouts internally and doesn't play well
     # under ASAN on a loaded machine..
     @skipIfAsan
+    @skipIf(oslist=["linux"], archs=["arm", "aarch64"]) # Randomly fails on buildbot
     def test_unicode_input(self):
         self.launch()
 

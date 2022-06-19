@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple s390x-linux-gnu -emit-llvm %s -o - | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -triple s390x-linux-gnu -emit-llvm %s -o - | FileCheck %s
 
 // SystemZ prefers to align all global variables to two bytes.
 

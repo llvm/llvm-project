@@ -16,7 +16,6 @@
 
 #include "llvm/IR/AbstractCallSite.h"
 #include "llvm/ADT/Statistic.h"
-#include "llvm/Support/Debug.h"
 
 using namespace llvm;
 
@@ -121,7 +120,7 @@ AbstractCallSite::AbstractCallSite(const Use *U)
 
   assert(CallbackEncMD->getNumOperands() >= 2 && "Incomplete !callback metadata");
 
-  unsigned NumCallOperands = CB->getNumArgOperands();
+  unsigned NumCallOperands = CB->arg_size();
   // Skip the var-arg flag at the end when reading the metadata.
   for (unsigned u = 0, e = CallbackEncMD->getNumOperands() - 1; u < e; u++) {
     Metadata *OpAsM = CallbackEncMD->getOperand(u).get();

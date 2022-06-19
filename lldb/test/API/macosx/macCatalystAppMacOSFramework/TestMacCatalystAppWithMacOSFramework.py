@@ -8,14 +8,11 @@ import unittest2
 
 class TestMacCatalystAppWithMacOSFramework(TestBase):
 
-    mydir = TestBase.compute_mydir(__file__)
-
     @skipIf(macos_version=["<", "10.15"])
     @skipUnlessDarwin
     @skipIfDarwinEmbedded
     # There is a Clang driver change missing on llvm.org.
     @expectedFailureAll(bugnumber="rdar://problem/54986190>")
-    @skipIfReproducer # This is hitting https://bugs.python.org/issue22393
     def test(self):
         """Test the x86_64-apple-ios-macabi target linked against a macos dylib"""
         self.build()

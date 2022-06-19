@@ -271,7 +271,7 @@ llvm::Error GsymCreator::finalize(llvm::raw_ostream &OS) {
                            }
                          }
                        } else if (Prev.Range.size() == 0 &&
-                                  Curr.Range.contains(Prev.Range.Start)) {
+                                  Curr.Range.contains(Prev.Range.start())) {
                          if (!Quiet) {
                            OS << "warning: removing symbol:\n"
                               << Prev << "\nKeeping:\n"
@@ -291,8 +291,8 @@ llvm::Error GsymCreator::finalize(llvm::raw_ostream &OS) {
   // has no size when doing lookups.
   if (!Funcs.empty() && Funcs.back().Range.size() == 0 && ValidTextRanges) {
     if (auto Range =
-            ValidTextRanges->getRangeThatContains(Funcs.back().Range.Start)) {
-      Funcs.back().Range.End = Range->End;
+            ValidTextRanges->getRangeThatContains(Funcs.back().Range.start())) {
+      Funcs.back().Range = {Funcs.back().Range.start(), Range->end()};
     }
   }
   OS << "Pruned " << NumBefore - Funcs.size() << " functions, ended with "

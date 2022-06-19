@@ -65,9 +65,16 @@ static bool isPreprocessedModuleType(ID Id) {
   return Id == TY_CXXModule || Id == TY_PP_CXXModule;
 }
 
+static bool isPreprocessedHeaderUnitType(ID Id) {
+  return Id == TY_CXXSHeader || Id == TY_CXXUHeader || Id == TY_CXXHUHeader ||
+         Id == TY_PP_CXXHeaderUnit;
+}
+
 types::ID types::getPrecompiledType(ID Id) {
   if (isPreprocessedModuleType(Id))
     return TY_ModuleFile;
+  if (isPreprocessedHeaderUnitType(Id))
+    return TY_HeaderUnit;
   if (onlyPrecompileType(Id))
     return TY_PCH;
   return TY_INVALID;
@@ -139,10 +146,68 @@ bool types::isAcceptedByClang(ID Id) {
   case TY_CLHeader:
   case TY_ObjCHeader: case TY_PP_ObjCHeader:
   case TY_CXXHeader: case TY_PP_CXXHeader:
+  case TY_CXXSHeader:
+  case TY_CXXUHeader:
+  case TY_CXXHUHeader:
+  case TY_PP_CXXHeaderUnit:
   case TY_ObjCXXHeader: case TY_PP_ObjCXXHeader:
   case TY_CXXModule: case TY_PP_CXXModule:
   case TY_AST: case TY_ModuleFile: case TY_PCH:
   case TY_LLVM_IR: case TY_LLVM_BC:
+  case TY_API_INFO:
+    return true;
+  }
+}
+
+bool types::isAcceptedByFlang(ID Id) {
+  switch (Id) {
+  default:
+    return false;
+
+  case TY_Fortran:
+  case TY_PP_Fortran:
+    return true;
+  case TY_LLVM_IR:
+  case TY_LLVM_BC:
+    return true;
+  }
+}
+
+bool types::isDerivedFromC(ID Id) {
+  switch (Id) {
+  default:
+    return false;
+
+  case TY_PP_C:
+  case TY_C:
+  case TY_CL:
+  case TY_CLCXX:
+  case TY_PP_CUDA:
+  case TY_CUDA:
+  case TY_CUDA_DEVICE:
+  case TY_PP_HIP:
+  case TY_HIP:
+  case TY_HIP_DEVICE:
+  case TY_PP_ObjC:
+  case TY_PP_ObjC_Alias:
+  case TY_ObjC:
+  case TY_PP_CXX:
+  case TY_CXX:
+  case TY_PP_ObjCXX:
+  case TY_PP_ObjCXX_Alias:
+  case TY_ObjCXX:
+  case TY_RenderScript:
+  case TY_PP_CHeader:
+  case TY_CHeader:
+  case TY_CLHeader:
+  case TY_PP_ObjCHeader:
+  case TY_ObjCHeader:
+  case TY_PP_CXXHeader:
+  case TY_CXXHeader:
+  case TY_PP_ObjCXXHeader:
+  case TY_ObjCXXHeader:
+  case TY_CXXModule:
+  case TY_PP_CXXModule:
     return true;
   }
 }
@@ -170,6 +235,10 @@ bool types::isCXX(ID Id) {
   case TY_CXX: case TY_PP_CXX:
   case TY_ObjCXX: case TY_PP_ObjCXX: case TY_PP_ObjCXX_Alias:
   case TY_CXXHeader: case TY_PP_CXXHeader:
+  case TY_CXXSHeader:
+  case TY_CXXUHeader:
+  case TY_CXXHUHeader:
+  case TY_PP_CXXHeaderUnit:
   case TY_ObjCXXHeader: case TY_PP_ObjCXXHeader:
   case TY_CXXModule: case TY_PP_CXXModule:
   case TY_CUDA: case TY_PP_CUDA: case TY_CUDA_DEVICE:
@@ -213,16 +282,6 @@ bool types::isHIP(ID Id) {
   case TY_HIP:
   case TY_PP_HIP:
   case TY_HIP_DEVICE:
-    return true;
-  }
-}
-
-bool types::isFortran(ID Id) {
-  switch (Id) {
-  default:
-    return false;
-
-  case TY_Fortran: case TY_PP_Fortran:
     return true;
   }
 }
@@ -283,6 +342,7 @@ types::ID types::lookupTypeForExtension(llvm::StringRef Ext) {
            .Case("hpp", TY_CXXHeader)
            .Case("hxx", TY_CXXHeader)
            .Case("iim", TY_PP_CXXModule)
+           .Case("iih", TY_PP_CXXHeaderUnit)
            .Case("lib", TY_Object)
            .Case("mii", TY_PP_ObjCXX)
            .Case("obj", TY_Object)
@@ -292,6 +352,7 @@ types::ID types::lookupTypeForExtension(llvm::StringRef Ext) {
            .Case("c++m", TY_CXXModule)
            .Case("cppm", TY_CXXModule)
            .Case("cxxm", TY_CXXModule)
+           .Case("hlsl", TY_HLSL)
            .Default(TY_INVALID);
 }
 
@@ -323,46 +384,7 @@ types::getCompilationPhases(ID Id, phases::ID LastPhase) {
 llvm::SmallVector<phases::ID, phases::MaxNumberOfPhases>
 types::getCompilationPhases(const clang::driver::Driver &Driver,
                             llvm::opt::DerivedArgList &DAL, ID Id) {
-  phases::ID LastPhase;
-
-  // Filter to compiler mode. When the compiler is run as a preprocessor then
-  // compilation is not an option.
-  // -S runs the compiler in Assembly listing mode.
-  if (Driver.CCCIsCPP() || DAL.getLastArg(options::OPT_E) ||
-      DAL.getLastArg(options::OPT__SLASH_EP) ||
-      DAL.getLastArg(options::OPT_M, options::OPT_MM) ||
-      DAL.getLastArg(options::OPT__SLASH_P))
-    LastPhase = phases::Preprocess;
-
-  // --precompile only runs up to precompilation.
-  // This is a clang extension and is not compatible with GCC.
-  else if (DAL.getLastArg(options::OPT__precompile))
-    LastPhase = phases::Precompile;
-
-  // -{fsyntax-only,-analyze,emit-ast} only run up to the compiler.
-  else if (DAL.getLastArg(options::OPT_fsyntax_only) ||
-           DAL.getLastArg(options::OPT_print_supported_cpus) ||
-           DAL.getLastArg(options::OPT_module_file_info) ||
-           DAL.getLastArg(options::OPT_verify_pch) ||
-           DAL.getLastArg(options::OPT_rewrite_objc) ||
-           DAL.getLastArg(options::OPT_rewrite_legacy_objc) ||
-           DAL.getLastArg(options::OPT__migrate) ||
-           DAL.getLastArg(options::OPT__analyze) ||
-           DAL.getLastArg(options::OPT_emit_ast))
-    LastPhase = phases::Compile;
-
-  else if (DAL.getLastArg(options::OPT_S) ||
-           DAL.getLastArg(options::OPT_emit_llvm))
-    LastPhase = phases::Backend;
-
-  else if (DAL.getLastArg(options::OPT_c))
-    LastPhase = phases::Assemble;
-
-  // Generally means, do every phase until Link.
-  else
-    LastPhase = phases::LastPhase;
-
-  return types::getCompilationPhases(Id, LastPhase);
+  return types::getCompilationPhases(Id, Driver.getFinalPhase(DAL));
 }
 
 ID types::lookupCXXTypeForCType(ID Id) {

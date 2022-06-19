@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17
-// UNSUPPORTED: libcpp-no-concepts
 
 // template<class T>
 // concept equality_comparable = // see below
@@ -20,7 +19,6 @@
 #include <list>
 #include <map>
 #include <memory>
-#include <mutex>
 #include <optional>
 #include <set>
 #include <unordered_map>
@@ -84,26 +82,17 @@ static_assert(!std::equality_comparable<void>);
 } // namespace fundamentals
 
 namespace standard_types {
-static_assert(std::equality_comparable<std::array<int, 10> >);
-static_assert(std::equality_comparable<std::deque<int> >);
-static_assert(std::equality_comparable<std::forward_list<int> >);
-static_assert(std::equality_comparable<std::list<int> >);
-
-#ifndef _LIBCPP_HAS_NO_THREADS
-static_assert(!std::equality_comparable<std::lock_guard<std::mutex> >);
-static_assert(std::equality_comparable<std::map<int, void*> >);
-static_assert(!std::equality_comparable<std::mutex>);
-static_assert(
-    !std::equality_comparable<std::optional<std::lock_guard<std::mutex> > >);
-static_assert(!std::equality_comparable<std::optional<std::mutex> >);
-#endif
-
-static_assert(std::equality_comparable<std::optional<int> >);
-static_assert(std::equality_comparable<std::set<int> >);
-static_assert(std::equality_comparable<std::unordered_map<int, void*> >);
-static_assert(std::equality_comparable<std::unordered_set<int> >);
-static_assert(std::equality_comparable<std::vector<bool> >);
-static_assert(std::equality_comparable<std::vector<int> >);
+static_assert(std::equality_comparable<std::array<int, 10>>);
+static_assert(std::equality_comparable<std::deque<int>>);
+static_assert(std::equality_comparable<std::forward_list<int>>);
+static_assert(std::equality_comparable<std::list<int>>);
+static_assert(std::equality_comparable<std::map<int, void*>>);
+static_assert(std::equality_comparable<std::optional<int>>);
+static_assert(std::equality_comparable<std::set<int>>);
+static_assert(std::equality_comparable<std::unordered_map<int, void*>>);
+static_assert(std::equality_comparable<std::unordered_set<int>>);
+static_assert(std::equality_comparable<std::vector<bool>>);
+static_assert(std::equality_comparable<std::vector<int>>);
 } // namespace standard_types
 
 namespace types_fit_for_purpose {

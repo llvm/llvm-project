@@ -34,6 +34,22 @@ bool LibcxxWStringSummaryProvider(
     ValueObject &valobj, Stream &stream,
     const TypeSummaryOptions &options); // libc++ std::wstring
 
+bool LibcxxStringViewSummaryProviderASCII(
+    ValueObject &valueObj, Stream &stream,
+    const TypeSummaryOptions &summary_options); // libc++ std::string_view
+
+bool LibcxxStringViewSummaryProviderUTF16(
+    ValueObject &valobj, Stream &stream,
+    const TypeSummaryOptions &summary_options); // libc++ std::u16string_view
+
+bool LibcxxStringViewSummaryProviderUTF32(
+    ValueObject &valobj, Stream &stream,
+    const TypeSummaryOptions &summary_options); // libc++ std::u32string_view
+
+bool LibcxxWStringViewSummaryProvider(
+    ValueObject &valobj, Stream &stream,
+    const TypeSummaryOptions &options); // libc++ std::wstring_view
+
 bool LibcxxOptionalSummaryProvider(
     ValueObject &valobj, Stream &stream,
     const TypeSummaryOptions &options); // libc++ std::optional<>
@@ -57,6 +73,10 @@ LibcxxVectorBoolSyntheticFrontEndCreator(CXXSyntheticChildren *,
 
 bool LibcxxContainerSummaryProvider(ValueObject &valobj, Stream &stream,
                                     const TypeSummaryOptions &options);
+
+/// Formatter for libc++ std::span<>.
+bool LibcxxSpanSummaryProvider(ValueObject &valobj, Stream &stream,
+                               const TypeSummaryOptions &options);
 
 class LibCxxMapIteratorSyntheticFrontEnd : public SyntheticChildrenFrontEnd {
 public:
@@ -170,12 +190,16 @@ SyntheticChildrenFrontEnd *LibcxxTupleFrontEndCreator(CXXSyntheticChildren *,
                                                       lldb::ValueObjectSP);
 
 SyntheticChildrenFrontEnd *
-LibcxxOptionalFrontEndCreator(CXXSyntheticChildren *,
-                              lldb::ValueObjectSP valobj_sp);
+LibcxxOptionalSyntheticFrontEndCreator(CXXSyntheticChildren *,
+                                       lldb::ValueObjectSP valobj_sp);
 
 SyntheticChildrenFrontEnd *
 LibcxxVariantFrontEndCreator(CXXSyntheticChildren *,
                              lldb::ValueObjectSP valobj_sp);
+
+SyntheticChildrenFrontEnd *
+LibcxxStdSpanSyntheticFrontEndCreator(CXXSyntheticChildren *,
+                                      lldb::ValueObjectSP);
 
 } // namespace formatters
 } // namespace lldb_private

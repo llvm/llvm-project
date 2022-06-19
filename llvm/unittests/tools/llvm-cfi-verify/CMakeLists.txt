@@ -15,3 +15,5 @@ add_llvm_unittest(CFIVerifyTests
   GraphBuilder.cpp
   )
 target_link_libraries(CFIVerifyTests PRIVATE LLVMCFIVerify)
+
+set_property(TARGET CFIVerifyTests PROPERTY FOLDER "Tests/UnitTests/ToolTests")

@@ -25,13 +25,16 @@
 int main(int, char**)
 {
     static_assert((std::is_base_of<std::locale::facet, std::money_get<char> >::value), "");
-    static_assert((std::is_base_of<std::locale::facet, std::money_get<wchar_t> >::value), "");
     static_assert((std::is_same<std::money_get<char>::char_type, char>::value), "");
-    static_assert((std::is_same<std::money_get<wchar_t>::char_type, wchar_t>::value), "");
     static_assert((std::is_same<std::money_get<char>::iter_type, std::istreambuf_iterator<char> >::value), "");
-    static_assert((std::is_same<std::money_get<wchar_t>::iter_type, std::istreambuf_iterator<wchar_t> >::value), "");
     static_assert((std::is_same<std::money_get<char>::string_type, std::string>::value), "");
+
+#ifndef TEST_HAS_NO_WIDE_CHARACTERS
+    static_assert((std::is_base_of<std::locale::facet, std::money_get<wchar_t> >::value), "");
+    static_assert((std::is_same<std::money_get<wchar_t>::char_type, wchar_t>::value), "");
+    static_assert((std::is_same<std::money_get<wchar_t>::iter_type, std::istreambuf_iterator<wchar_t> >::value), "");
     static_assert((std::is_same<std::money_get<wchar_t>::string_type, std::wstring>::value), "");
+#endif
 
   return 0;
 }

@@ -12,8 +12,6 @@ from lldbsuite.test import lldbutil
 
 
 class WatchpointIgnoreCountTestCase(TestBase):
-
-    mydir = TestBase.compute_mydir(__file__)
     NO_DEBUG_INFO_TESTCASE = True
 
     def setUp(self):
@@ -24,6 +22,13 @@ class WatchpointIgnoreCountTestCase(TestBase):
         # Find the line number to break inside main().
         self.line = line_number(
             self.source, '// Set break point at this line.')
+
+    # on arm64 targets, lldb has incorrect hit-count / ignore-counts
+    # for watchpoints when they are hit with multiple threads at
+    # the same time.  Tracked as llvm.org/pr49433
+    # or rdar://93863107 inside Apple.
+    def affected_by_radar_93863107(self):
+        return (self.getArchitecture() in ['arm64', 'arm64e']) and self.platformIsDarwin()
 
     # Read-write watchpoints not supported on SystemZ
     @expectedFailureAll(archs=['s390x'])
@@ -48,8 +53,8 @@ class WatchpointIgnoreCountTestCase(TestBase):
 
         # We should be stopped due to the breakpoint.  Get frame #0.
         process = target.GetProcess()
-        self.assertEqual(process.GetState(), lldb.eStateStopped,
-                        PROCESS_STOPPED)
+        self.assertState(process.GetState(), lldb.eStateStopped,
+                         PROCESS_STOPPED)
         thread = lldbutil.get_stopped_thread(
             process, lldb.eStopReasonBreakpoint)
         frame0 = thread.GetFrameAtIndex(0)
@@ -87,5 +92,6 @@ class WatchpointIgnoreCountTestCase(TestBase):
         # Verify some vital statistics.
         self.assertTrue(watchpoint)
         self.assertEqual(watchpoint.GetWatchSize(), 4)
-        self.assertEqual(watchpoint.GetHitCount(), 2)
+        if not self.affected_by_radar_93863107():
+          self.assertEqual(watchpoint.GetHitCount(), 2)
         print(watchpoint)

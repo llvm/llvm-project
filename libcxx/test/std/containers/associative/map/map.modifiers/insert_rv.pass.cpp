@@ -46,14 +46,14 @@ void do_insert_rv_test()
 
     r = m.insert(P(3, 3));
     assert(r.second);
-    assert(r.first == prev(m.end()));
+    assert(r.first == std::prev(m.end()));
     assert(m.size() == 3);
     assert(r.first->first == 3);
     assert(r.first->second == 3);
 
     r = m.insert(P(3, 3));
     assert(!r.second);
-    assert(r.first == prev(m.end()));
+    assert(r.first == std::prev(m.end()));
     assert(m.size() == 3);
     assert(r.first->first == 3);
     assert(r.first->second == 3);
@@ -91,14 +91,14 @@ int main(int, char**)
 
         r = m.insert({3, MoveOnly(3)});
         assert(r.second);
-        assert(r.first == prev(m.end()));
+        assert(r.first == std::prev(m.end()));
         assert(m.size() == 3);
         assert(r.first->first == 3);
         assert(r.first->second == 3);
 
         r = m.insert({3, MoveOnly(3)});
         assert(!r.second);
-        assert(r.first == prev(m.end()));
+        assert(r.first == std::prev(m.end()));
         assert(m.size() == 3);
         assert(r.first->first == 3);
         assert(r.first->second == 3);

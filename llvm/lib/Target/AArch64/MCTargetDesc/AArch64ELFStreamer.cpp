@@ -177,8 +177,8 @@ public:
     // We can't just use EmitIntValue here, as that will emit a data mapping
     // symbol, and swap the endianness on big-endian systems (instructions are
     // always little-endian).
-    for (unsigned I = 0; I < 4; ++I) {
-      Buffer[I] = uint8_t(Inst);
+    for (char &C : Buffer) {
+      C = uint8_t(Inst);
       Inst >>= 8;
     }
 
@@ -254,6 +254,7 @@ void AArch64TargetELFStreamer::emitInst(uint32_t Inst) {
 }
 
 void AArch64TargetELFStreamer::emitDirectiveVariantPCS(MCSymbol *Symbol) {
+  getStreamer().getAssembler().registerSymbol(*Symbol);
   cast<MCSymbolELF>(Symbol)->setOther(ELF::STO_AARCH64_VARIANT_PCS);
 }
 

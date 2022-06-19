@@ -21,7 +21,7 @@ will not change.
   void foo(int N) {
     double *A = malloc(N * omp_get_thread_limit());
     double *B = malloc(N * omp_get_thread_limit());
-  
+
   #pragma omp parallel
     work(&A[omp_get_thread_num() * N]);
   #pragma omp parallel
@@ -30,7 +30,7 @@ will not change.
 
 .. code-block:: console
 
-  $ clang -fopenmp -O2 -Rpass=openmp-opt omp170.c 
+  $ clang -fopenmp -O2 -Rpass=openmp-opt omp170.c
   ompi170.c:2:26: remark: OpenMP runtime call omp_get_thread_limit deduplicated. [OMP170]
   double *A = malloc(N * omp_get_thread_limit());
                          ^

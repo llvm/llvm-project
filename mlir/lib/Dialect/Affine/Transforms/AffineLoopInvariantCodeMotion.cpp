@@ -11,18 +11,20 @@
 //===----------------------------------------------------------------------===//
 
 #include "PassDetail.h"
-#include "mlir/Analysis/AffineAnalysis.h"
-#include "mlir/Analysis/AffineStructures.h"
-#include "mlir/Analysis/LoopAnalysis.h"
 #include "mlir/Analysis/SliceAnalysis.h"
-#include "mlir/Analysis/Utils.h"
+#include "mlir/Dialect/Affine/Analysis/AffineAnalysis.h"
+#include "mlir/Dialect/Affine/Analysis/AffineStructures.h"
+#include "mlir/Dialect/Affine/Analysis/LoopAnalysis.h"
+#include "mlir/Dialect/Affine/Analysis/Utils.h"
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
+#include "mlir/Dialect/Affine/LoopUtils.h"
 #include "mlir/Dialect/Affine/Passes.h"
+#include "mlir/Dialect/Affine/Utils.h"
+#include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
 #include "mlir/IR/AffineExpr.h"
 #include "mlir/IR/AffineMap.h"
 #include "mlir/IR/Builders.h"
-#include "mlir/Transforms/LoopUtils.h"
-#include "mlir/Transforms/Utils.h"
+#include "mlir/IR/Matchers.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/SmallPtrSet.h"
@@ -43,10 +45,10 @@ namespace {
 ///       uses.
 struct LoopInvariantCodeMotion
     : public AffineLoopInvariantCodeMotionBase<LoopInvariantCodeMotion> {
-  void runOnFunction() override;
+  void runOnOperation() override;
   void runOnAffineForOp(AffineForOp forOp);
 };
-} // end anonymous namespace
+} // namespace
 
 static bool
 checkInvarianceOfNestedIfOps(Operation *op, Value indVar, ValueRange iterArgs,
@@ -81,7 +83,7 @@ bool isOpLoopInvariant(Operation &op, Value indVar, ValueRange iterArgs,
   } else if (isa<AffineDmaStartOp, AffineDmaWaitOp>(op)) {
     // TODO: Support DMA ops.
     return false;
-  } else if (!isa<ConstantOp>(op)) {
+  } else if (!matchPattern(&op, m_Constant())) {
     // Register op in the set of ops that have users.
     opsWithUsers.insert(&op);
     if (isa<AffineMapAccessInterface>(op)) {
@@ -195,7 +197,7 @@ bool checkInvarianceOfNestedIfOps(Operation *op, Value indVar,
 void LoopInvariantCodeMotion::runOnAffineForOp(AffineForOp forOp) {
   auto *loopBody = forOp.getBody();
   auto indVar = forOp.getInductionVar();
-  ValueRange iterArgs = forOp.getIterOperands();
+  ValueRange iterArgs = forOp.getRegionIterArgs();
 
   // This is the place where hoisted instructions would reside.
   OpBuilder b(forOp.getOperation());
@@ -226,17 +228,17 @@ void LoopInvariantCodeMotion::runOnAffineForOp(AffineForOp forOp) {
   LLVM_DEBUG(forOp->print(llvm::dbgs() << "Modified loop\n"));
 }
 
-void LoopInvariantCodeMotion::runOnFunction() {
+void LoopInvariantCodeMotion::runOnOperation() {
   // Walk through all loops in a function in innermost-loop-first order.  This
   // way, we first LICM from the inner loop, and place the ops in
   // the outer loop, which in turn can be further LICM'ed.
-  getFunction().walk([&](AffineForOp op) {
+  getOperation().walk([&](AffineForOp op) {
     LLVM_DEBUG(op->print(llvm::dbgs() << "\nOriginal loop\n"));
     runOnAffineForOp(op);
   });
 }
 
-std::unique_ptr<OperationPass<FuncOp>>
+std::unique_ptr<OperationPass<func::FuncOp>>
 mlir::createAffineLoopInvariantCodeMotionPass() {
   return std::make_unique<LoopInvariantCodeMotion>();
 }

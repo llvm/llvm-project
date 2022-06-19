@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "lldb/Utility/ArchSpec.h"
+#include "lldb/Utility/LLDBLog.h"
 
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/StringList.h"
@@ -357,10 +358,10 @@ static const ArchDefinitionEntry g_elf_arch_entries[] = {
      0xFFFFFFFFu, 0xFFFFFFFFu}, // Intel MCU // FIXME: is this correct?
     {ArchSpec::eCore_ppc_generic, llvm::ELF::EM_PPC, LLDB_INVALID_CPUTYPE,
      0xFFFFFFFFu, 0xFFFFFFFFu}, // PowerPC
-    {ArchSpec::eCore_ppc64le_generic, llvm::ELF::EM_PPC64, LLDB_INVALID_CPUTYPE,
-     0xFFFFFFFFu, 0xFFFFFFFFu}, // PowerPC64le
-    {ArchSpec::eCore_ppc64_generic, llvm::ELF::EM_PPC64, LLDB_INVALID_CPUTYPE,
-     0xFFFFFFFFu, 0xFFFFFFFFu}, // PowerPC64
+    {ArchSpec::eCore_ppc64le_generic, llvm::ELF::EM_PPC64,
+     ArchSpec::eCore_ppc64le_generic, 0xFFFFFFFFu, 0xFFFFFFFFu}, // PowerPC64le
+    {ArchSpec::eCore_ppc64_generic, llvm::ELF::EM_PPC64,
+     ArchSpec::eCore_ppc64_generic, 0xFFFFFFFFu, 0xFFFFFFFFu}, // PowerPC64
     {ArchSpec::eCore_arm_generic, llvm::ELF::EM_ARM, LLDB_INVALID_CPUTYPE,
      0xFFFFFFFFu, 0xFFFFFFFFu}, // ARM
     {ArchSpec::eCore_arm_aarch64, llvm::ELF::EM_AARCH64, LLDB_INVALID_CPUTYPE,
@@ -399,8 +400,8 @@ static const ArchDefinitionEntry g_elf_arch_entries[] = {
      LLDB_INVALID_CPUTYPE, 0xFFFFFFFFu, 0xFFFFFFFFu}, // HEXAGON
     {ArchSpec::eCore_arc, llvm::ELF::EM_ARC_COMPACT2, LLDB_INVALID_CPUTYPE,
      0xFFFFFFFFu, 0xFFFFFFFFu}, // ARC
-    {ArchSpec::eCore_avr, llvm::ELF::EM_AVR, LLDB_INVALID_CPUTYPE,
-     0xFFFFFFFFu, 0xFFFFFFFFu}, // AVR
+    {ArchSpec::eCore_avr, llvm::ELF::EM_AVR, LLDB_INVALID_CPUTYPE, 0xFFFFFFFFu,
+     0xFFFFFFFFu}, // AVR
     {ArchSpec::eCore_riscv32, llvm::ELF::EM_RISCV,
      ArchSpec::eRISCVSubType_riscv32, 0xFFFFFFFFu, 0xFFFFFFFFu}, // riscv32
     {ArchSpec::eCore_riscv64, llvm::ELF::EM_RISCV,
@@ -902,7 +903,7 @@ bool ArchSpec::SetArchitecture(ArchitectureType arch_type, uint32_t cpu,
           m_triple.setArch(core_def->machine);
       }
     } else {
-      Log *log(lldb_private::GetLogIfAnyCategoriesSet(LIBLLDB_LOG_TARGET | LIBLLDB_LOG_PROCESS | LIBLLDB_LOG_PLATFORM));
+      Log *log(GetLog(LLDBLog::Target | LLDBLog::Process | LLDBLog::Platform));
       LLDB_LOGF(log,
                 "Unable to find a core definition for cpu 0x%" PRIx32
                 " sub %" PRId32,
@@ -1395,23 +1396,18 @@ bool lldb_private::operator==(const ArchSpec &lhs, const ArchSpec &rhs) {
 }
 
 bool ArchSpec::IsFullySpecifiedTriple() const {
-  const auto &user_specified_triple = GetTriple();
+  if (!TripleOSWasSpecified())
+    return false;
 
-  bool user_triple_fully_specified = false;
+  if (!TripleVendorWasSpecified())
+    return false;
 
-  if ((user_specified_triple.getOS() != llvm::Triple::UnknownOS) ||
-      TripleOSWasSpecified()) {
-    if ((user_specified_triple.getVendor() != llvm::Triple::UnknownVendor) ||
-        TripleVendorWasSpecified()) {
-      const unsigned unspecified = 0;
-      if (!user_specified_triple.isOSDarwin() ||
-          user_specified_triple.getOSMajorVersion() != unspecified) {
-        user_triple_fully_specified = true;
-      }
-    }
-  }
+  const unsigned unspecified = 0;
+  const llvm::Triple &triple = GetTriple();
+  if (triple.isOSDarwin() && triple.getOSMajorVersion() == unspecified)
+    return false;
 
-  return user_triple_fully_specified;
+  return true;
 }
 
 void ArchSpec::PiecewiseTripleCompare(

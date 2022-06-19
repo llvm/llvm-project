@@ -25,12 +25,6 @@
 
 using namespace llvm;
 
-#define SYSTEMZ_COPYPHYSREGS_NAME "SystemZ Copy Physregs"
-
-namespace llvm {
-  void initializeSystemZCopyPhysRegsPass(PassRegistry&);
-}
-
 namespace {
 
 class SystemZCopyPhysRegs : public MachineFunctionPass {
@@ -40,8 +34,6 @@ public:
     : MachineFunctionPass(ID), TII(nullptr), MRI(nullptr) {
     initializeSystemZCopyPhysRegsPass(*PassRegistry::getPassRegistry());
   }
-
-  StringRef getPassName() const override { return SYSTEMZ_COPYPHYSREGS_NAME; }
 
   bool runOnMachineFunction(MachineFunction &MF) override;
   void getAnalysisUsage(AnalysisUsage &AU) const override;
@@ -59,7 +51,7 @@ char SystemZCopyPhysRegs::ID = 0;
 } // end anonymous namespace
 
 INITIALIZE_PASS(SystemZCopyPhysRegs, "systemz-copy-physregs",
-                SYSTEMZ_COPYPHYSREGS_NAME, false, false)
+                "SystemZ Copy Physregs", false, false)
 
 FunctionPass *llvm::createSystemZCopyPhysRegsPass(SystemZTargetMachine &TM) {
   return new SystemZCopyPhysRegs();

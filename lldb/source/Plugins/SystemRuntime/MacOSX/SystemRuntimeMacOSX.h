@@ -39,9 +39,9 @@ public:
 
   static void Terminate();
 
-  static lldb_private::ConstString GetPluginNameStatic();
-
-  static const char *GetPluginDescriptionStatic();
+  static llvm::StringRef GetPluginNameStatic() {
+    return "systemruntime-macosx";
+  }
 
   static lldb_private::SystemRuntime *
   CreateInstance(lldb_private::Process *process);
@@ -98,9 +98,7 @@ public:
   bool SafeToCallFunctionsOnThisThread(lldb::ThreadSP thread_sp) override;
 
   // PluginInterface protocol
-  lldb_private::ConstString GetPluginName() override;
-
-  uint32_t GetPluginVersion() override;
+  llvm::StringRef GetPluginName() override { return GetPluginNameStatic(); }
 
 protected:
   lldb::user_id_t m_break_id;

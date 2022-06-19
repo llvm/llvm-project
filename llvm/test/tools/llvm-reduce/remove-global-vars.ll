@@ -1,7 +1,7 @@
 ; Test that llvm-reduce can remove uninteresting Global Variables as well as
 ; their direct uses (which in turn are replaced with 'undef').
 
-; RUN: llvm-reduce --test FileCheck --test-arg --check-prefixes=CHECK-ALL,CHECK-INTERESTINGNESS --test-arg %s --test-arg --input-file %s -o %t
+; RUN: llvm-reduce --delta-passes=global-variables,global-initializers --test FileCheck --test-arg --check-prefixes=CHECK-ALL,CHECK-INTERESTINGNESS --test-arg %s --test-arg --input-file %s -o %t
 ; RUN: cat %t | FileCheck --check-prefixes=CHECK-ALL,CHECK-FINAL --implicit-check-not=uninteresting %s
 
 $interesting5 = comdat any

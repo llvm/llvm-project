@@ -88,3 +88,41 @@ if.end:                                           ; preds = %if.else, %if.then
   ret void
 }
 
+define void @f3(i64 %a, i8* %b) {
+; CHECK-LABEL: @f3(
+; CHECK-NEXT:    [[C:%.*]] = ptrtoint i8* [[B:%.*]] to i64
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(i8* [[B]], i64 4294967296) ]
+; CHECK-NEXT:    [[D:%.*]] = add i64 [[C]], [[A:%.*]]
+; CHECK-NEXT:    call void @g(i64 [[D]])
+; CHECK-NEXT:    ret void
+;
+  %c = ptrtoint i8* %b to i64
+  call void @llvm.assume(i1 true) [ "align"(i8* %b, i64 4294967296) ]
+  %d = add i64 %a, %c
+  call void @g(i64 %d)
+  ret void
+}
+
+declare void @g(i64)
+
+define i8 @assume_align_zero(i8* %p) {
+; CHECK-LABEL: @assume_align_zero(
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(i8* [[P:%.*]], i64 0) ]
+; CHECK-NEXT:    [[V:%.*]] = load i8, i8* [[P]], align 1
+; CHECK-NEXT:    ret i8 [[V]]
+;
+  call void @llvm.assume(i1 true) [ "align"(i8* %p, i64 0) ]
+  %v = load i8, i8* %p
+  ret i8 %v
+}
+
+define i8 @assume_align_non_pow2(i8* %p) {
+; CHECK-LABEL: @assume_align_non_pow2(
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(i8* [[P:%.*]], i64 123) ]
+; CHECK-NEXT:    [[V:%.*]] = load i8, i8* [[P]], align 1
+; CHECK-NEXT:    ret i8 [[V]]
+;
+  call void @llvm.assume(i1 true) [ "align"(i8* %p, i64 123) ]
+  %v = load i8, i8* %p
+  ret i8 %v
+}

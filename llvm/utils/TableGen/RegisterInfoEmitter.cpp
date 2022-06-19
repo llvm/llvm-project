@@ -268,7 +268,7 @@ EmitRegUnitPressure(raw_ostream &OS, const CodeGenRegBank &RegBank,
   OS << "// Get the name of this register unit pressure set.\n"
      << "const char *" << ClassName << "::\n"
      << "getRegPressureSetName(unsigned Idx) const {\n"
-     << "  static const char *const PressureNameTable[] = {\n";
+     << "  static const char *PressureNameTable[] = {\n";
   unsigned MaxRegUnitWeight = 0;
   for (unsigned i = 0; i < NumSets; ++i ) {
     const RegUnitSet &RegUnits = RegBank.getRegSetAt(i);
@@ -753,7 +753,7 @@ RegisterInfoEmitter::emitComposeSubRegIndices(raw_ostream &OS,
   }
   OS << "  };\n\n";
 
-  OS << "  --IdxA; assert(IdxA < " << SubRegIndicesSize << ");\n"
+  OS << "  --IdxA; assert(IdxA < " << SubRegIndicesSize << "); (void) IdxA;\n"
      << "  --IdxB; assert(IdxB < " << SubRegIndicesSize << ");\n";
   if (Rows.size() > 1)
     OS << "  return Rows[RowMap[IdxA]][IdxB];\n";
@@ -814,12 +814,14 @@ RegisterInfoEmitter::emitComposeSubRegIndexLaneMask(raw_ostream &OS,
     OS << "  // Sequence " << Idx << "\n";
     Idx += Sequence.size() + 1;
   }
+  auto *IntType = getMinimalTypeForRange(*std::max_element(
+      SubReg2SequenceIndexMap.begin(), SubReg2SequenceIndexMap.end()));
   OS << "  };\n"
-        "  static const MaskRolOp *const CompositeSequences[] = {\n";
+        "  static const "
+     << IntType << " CompositeSequences[] = {\n";
   for (size_t i = 0, e = SubRegIndices.size(); i != e; ++i) {
     OS << "    ";
-    unsigned Idx = SubReg2SequenceIndexMap[i];
-    OS << format("&LaneMaskComposeSequences[%u]", Idx);
+    OS << SubReg2SequenceIndexMap[i];
     if (i+1 != e)
       OS << ",";
     OS << " // to " << SubRegIndices[i].getName() << "\n";
@@ -832,7 +834,9 @@ RegisterInfoEmitter::emitComposeSubRegIndexLaneMask(raw_ostream &OS,
         "  --IdxA; assert(IdxA < " << SubRegIndices.size()
      << " && \"Subregister index out of bounds\");\n"
         "  LaneBitmask Result;\n"
-        "  for (const MaskRolOp *Ops = CompositeSequences[IdxA]; Ops->Mask.any(); ++Ops) {\n"
+        "  for (const MaskRolOp *Ops =\n"
+        "       &LaneMaskComposeSequences[CompositeSequences[IdxA]];\n"
+        "       Ops->Mask.any(); ++Ops) {\n"
         "    LaneBitmask::Type M = LaneMask.getAsInteger() & Ops->Mask.getAsInteger();\n"
         "    if (unsigned S = Ops->RotateLeft)\n"
         "      Result |= LaneBitmask((M << S) | (M >> (LaneBitmask::BitWidth - S)));\n"
@@ -849,7 +853,9 @@ RegisterInfoEmitter::emitComposeSubRegIndexLaneMask(raw_ostream &OS,
         "  --IdxA; assert(IdxA < " << SubRegIndices.size()
      << " && \"Subregister index out of bounds\");\n"
         "  LaneBitmask Result;\n"
-        "  for (const MaskRolOp *Ops = CompositeSequences[IdxA]; Ops->Mask.any(); ++Ops) {\n"
+        "  for (const MaskRolOp *Ops =\n"
+        "       &LaneMaskComposeSequences[CompositeSequences[IdxA]];\n"
+        "       Ops->Mask.any(); ++Ops) {\n"
         "    LaneBitmask::Type M = LaneMask.getAsInteger();\n"
         "    if (unsigned S = Ops->RotateLeft)\n"
         "      Result |= LaneBitmask((M >> S) | (M << (LaneBitmask::BitWidth - S)));\n"
@@ -1046,25 +1052,24 @@ RegisterInfoEmitter::runMCDesc(raw_ostream &OS, CodeGenTarget &Target,
 
     RegClassStrings.add(Name);
 
-    // Emit the register list now.
-    OS << "  // " << Name << " Register Class...\n"
-       << "  const MCPhysReg " << Name
-       << "[] = {\n    ";
-    for (Record *Reg : Order) {
-      OS << getQualifiedName(Reg) << ", ";
-    }
-    OS << "\n  };\n\n";
+    // Emit the register list now (unless it would be a zero-length array).
+    if (!Order.empty()) {
+      OS << "  // " << Name << " Register Class...\n"
+         << "  const MCPhysReg " << Name << "[] = {\n    ";
+      for (Record *Reg : Order) {
+        OS << getQualifiedName(Reg) << ", ";
+      }
+      OS << "\n  };\n\n";
 
-    OS << "  // " << Name << " Bit set.\n"
-       << "  const uint8_t " << Name
-       << "Bits[] = {\n    ";
-    BitVectorEmitter BVE;
-    for (Record *Reg : Order) {
-      BVE.add(Target.getRegBank().getReg(Reg)->EnumValue);
+      OS << "  // " << Name << " Bit set.\n"
+         << "  const uint8_t " << Name << "Bits[] = {\n    ";
+      BitVectorEmitter BVE;
+      for (Record *Reg : Order) {
+        BVE.add(Target.getRegBank().getReg(Reg)->EnumValue);
+      }
+      BVE.print(OS);
+      OS << "\n  };\n\n";
     }
-    BVE.print(OS);
-    OS << "\n  };\n\n";
-
   }
   OS << "} // end anonymous namespace\n\n";
 
@@ -1076,14 +1081,17 @@ RegisterInfoEmitter::runMCDesc(raw_ostream &OS, CodeGenTarget &Target,
      << "MCRegisterClasses[] = {\n";
 
   for (const auto &RC : RegisterClasses) {
+    ArrayRef<Record *> Order = RC.getOrder();
+    std::string RCName = Order.empty() ? "nullptr" : RC.getName();
+    std::string RCBitsName = Order.empty() ? "nullptr" : RC.getName() + "Bits";
+    std::string RCBitsSize = Order.empty() ? "0" : "sizeof(" + RCBitsName + ")";
     assert(isInt<8>(RC.CopyCost) && "Copy cost too large.");
     uint32_t RegSize = 0;
     if (RC.RSI.isSimple())
       RegSize = RC.RSI.getSimple().RegSize;
-    OS << "  { " << RC.getName() << ", " << RC.getName() << "Bits, "
+    OS << "  { " << RCName << ", " << RCBitsName << ", "
        << RegClassStrings.get(RC.getName()) << ", " << RC.getOrder().size()
-       << ", sizeof(" << RC.getName() << "Bits), "
-       << RC.getQualifiedName() + "RegClassID"
+       << ", " << RCBitsSize << ", " << RC.getQualifiedName() + "RegClassID"
        << ", " << RegSize << ", " << RC.CopyCost << ", "
        << (RC.Allocatable ? "true" : "false") << " },\n";
   }
@@ -1176,6 +1184,12 @@ RegisterInfoEmitter::runTargetHeader(raw_ostream &OS, CodeGenTarget &Target,
      << "unsigned RegUnit) const override;\n"
      << "  ArrayRef<const char *> getRegMaskNames() const override;\n"
      << "  ArrayRef<const uint32_t *> getRegMasks() const override;\n"
+     << "  bool isGeneralPurposeRegister(const MachineFunction &, "
+     << "MCRegister) const override;\n"
+     << "  bool isFixedRegister(const MachineFunction &, "
+     << "MCRegister) const override;\n"
+     << "  bool isArgumentRegister(const MachineFunction &, "
+     << "MCRegister) const override;\n"
      << "  /// Devirtualized TargetFrameLowering.\n"
      << "  static const " << TargetName << "FrameLowering *getFrameLowering(\n"
      << "      const MachineFunction &MF);\n"
@@ -1250,7 +1264,7 @@ RegisterInfoEmitter::runTargetDesc(raw_ostream &OS, CodeGenTarget &Target,
   OS << "};\n";
 
   // Emit SubRegIndex names, skipping 0.
-  OS << "\nstatic const char *const SubRegIndexNameTable[] = { \"";
+  OS << "\nstatic const char *SubRegIndexNameTable[] = { \"";
 
   for (const auto &Idx : SubRegIndices) {
     OS << Idx.getName();
@@ -1411,6 +1425,7 @@ RegisterInfoEmitter::runTargetDesc(raw_ostream &OS, CodeGenTarget &Target,
          << SuperRegIdxSeqs.get(SuperRegIdxLists[RC.EnumValue]) << ",\n    ";
       printMask(OS, RC.LaneMask);
       OS << ",\n    " << (unsigned)RC.AllocationPriority << ",\n    "
+         << format("0x%02x", RC.TSFlags) << ", /* TSFlags */\n    "
          << (RC.HasDisjunctSubRegs?"true":"false")
          << ", /* HasDisjunctSubRegs */\n    "
          << (RC.CoveredBySubRegs?"true":"false")
@@ -1619,10 +1634,54 @@ RegisterInfoEmitter::runTargetDesc(raw_ostream &OS, CodeGenTarget &Target,
   }
   OS << "}\n\n";
 
+  const std::list<CodeGenRegisterCategory> &RegCategories =
+      RegBank.getRegCategories();
+  OS << "bool " << ClassName << "::\n"
+     << "isGeneralPurposeRegister(const MachineFunction &MF, "
+     << "MCRegister PhysReg) const {\n"
+     << "  return\n";
+  for (const CodeGenRegisterCategory &Category : RegCategories)
+    if (Category.getName() == "GeneralPurposeRegisters") {
+      for (const CodeGenRegisterClass *RC : Category.getClasses())
+        OS << "      " << RC->getQualifiedName()
+           << "RegClass.contains(PhysReg) ||\n";
+      break;
+    }
+  OS << "      false;\n";
+  OS << "}\n\n";
+
+  OS << "bool " << ClassName << "::\n"
+     << "isFixedRegister(const MachineFunction &MF, "
+     << "MCRegister PhysReg) const {\n"
+     << "  return\n";
+  for (const CodeGenRegisterCategory &Category : RegCategories)
+    if (Category.getName() == "FixedRegisters") {
+      for (const CodeGenRegisterClass *RC : Category.getClasses())
+        OS << "      " << RC->getQualifiedName()
+           << "RegClass.contains(PhysReg) ||\n";
+      break;
+    }
+  OS << "      false;\n";
+  OS << "}\n\n";
+
+  OS << "bool " << ClassName << "::\n"
+     << "isArgumentRegister(const MachineFunction &MF, "
+     << "MCRegister PhysReg) const {\n"
+     << "  return\n";
+  for (const CodeGenRegisterCategory &Category : RegCategories)
+    if (Category.getName() == "ArgumentRegisters") {
+      for (const CodeGenRegisterClass *RC : Category.getClasses())
+        OS << "      " << RC->getQualifiedName()
+           << "RegClass.contains(PhysReg) ||\n";
+      break;
+    }
+  OS << "      false;\n";
+  OS << "}\n\n";
+
   OS << "ArrayRef<const char *> " << ClassName
      << "::getRegMaskNames() const {\n";
   if (!CSRSets.empty()) {
-  OS << "  static const char *const Names[] = {\n";
+    OS << "  static const char *Names[] = {\n";
     for (Record *CSRSet : CSRSets)
       OS << "    " << '"' << CSRSet->getName() << '"' << ",\n";
     OS << "  };\n";
@@ -1682,6 +1741,8 @@ void RegisterInfoEmitter::debugDump(raw_ostream &OS) {
     OS << "\tLaneMask: " << PrintLaneMask(RC.LaneMask) << '\n';
     OS << "\tHasDisjunctSubRegs: " << RC.HasDisjunctSubRegs << '\n';
     OS << "\tCoveredBySubRegs: " << RC.CoveredBySubRegs << '\n';
+    OS << "\tAllocatable: " << RC.Allocatable << '\n';
+    OS << "\tAllocationPriority: " << unsigned(RC.AllocationPriority) << '\n';
     OS << "\tRegs:";
     for (const CodeGenRegister *R : RC.getMembers()) {
       OS << " " << R->getName();

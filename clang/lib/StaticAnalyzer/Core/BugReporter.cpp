@@ -188,6 +188,9 @@ public:
   PathPieces &getMutablePieces() { return PD->getMutablePieces(); }
 
   bool shouldAddPathEdges() const { return Consumer->shouldAddPathEdges(); }
+  bool shouldAddControlNotes() const {
+    return Consumer->shouldAddControlNotes();
+  }
   bool shouldGenerateDiagnostics() const {
     return Consumer->shouldGenerateDiagnostics();
   }
@@ -534,10 +537,10 @@ static void removeEdgesToDefaultInitializers(PathPieces &Pieces) {
     if (auto *CF = dyn_cast<PathDiagnosticControlFlowPiece>(I->get())) {
       const Stmt *Start = CF->getStartLocation().asStmt();
       const Stmt *End = CF->getEndLocation().asStmt();
-      if (Start && isa<CXXDefaultInitExpr>(Start)) {
+      if (isa_and_nonnull<CXXDefaultInitExpr>(Start)) {
         I = Pieces.erase(I);
         continue;
-      } else if (End && isa<CXXDefaultInitExpr>(End)) {
+      } else if (isa_and_nonnull<CXXDefaultInitExpr>(End)) {
         PathPieces::iterator Next = std::next(I);
         if (Next != E) {
           if (auto *NextCF =
@@ -1232,8 +1235,11 @@ void PathDiagnosticBuilder::generatePathDiagnosticsForNode(
 
   } else if (auto BE = P.getAs<BlockEdge>()) {
 
-    if (!C.shouldAddPathEdges()) {
+    if (C.shouldAddControlNotes()) {
       generateMinimalDiagForBlockEdge(C, *BE);
+    }
+
+    if (!C.shouldAddPathEdges()) {
       return;
     }
 
@@ -1254,12 +1260,14 @@ void PathDiagnosticBuilder::generatePathDiagnosticsForNode(
       // do-while statements are explicitly excluded here
 
       auto p = std::make_shared<PathDiagnosticEventPiece>(
-          L, "Looping back to the head "
-          "of the loop");
+          L, "Looping back to the head of the loop");
       p->setPrunable(true);
 
       addEdgeToPath(C.getActivePath(), PrevLoc, p->getLocation());
-      C.getActivePath().push_front(std::move(p));
+      // We might've added a very similar control node already
+      if (!C.shouldAddControlNotes()) {
+        C.getActivePath().push_front(std::move(p));
+      }
 
       if (const auto *CS = dyn_cast_or_null<CompoundStmt>(Body)) {
         addEdgeToPath(C.getActivePath(), PrevLoc,
@@ -1300,10 +1308,13 @@ void PathDiagnosticBuilder::generatePathDiagnosticsForNode(
           auto PE = std::make_shared<PathDiagnosticEventPiece>(L, str);
           PE->setPrunable(true);
           addEdgeToPath(C.getActivePath(), PrevLoc, PE->getLocation());
-          C.getActivePath().push_front(std::move(PE));
+
+          // We might've added a very similar control node already
+          if (!C.shouldAddControlNotes()) {
+            C.getActivePath().push_front(std::move(PE));
+          }
         }
-      } else if (isa<BreakStmt>(Term) || isa<ContinueStmt>(Term) ||
-          isa<GotoStmt>(Term)) {
+      } else if (isa<BreakStmt, ContinueStmt, GotoStmt>(Term)) {
         PathDiagnosticLocation L(Term, SM, C.getCurrLocationContext());
         addEdgeToPath(C.getActivePath(), PrevLoc, L);
       }
@@ -1342,9 +1353,7 @@ static const Stmt *getStmtParent(const Stmt *S, const ParentMap &PM) {
     if (!S)
       break;
 
-    if (isa<FullExpr>(S) ||
-        isa<CXXBindTemporaryExpr>(S) ||
-        isa<SubstNonTypeTemplateParmExpr>(S))
+    if (isa<FullExpr, CXXBindTemporaryExpr, SubstNonTypeTemplateParmExpr>(S))
       continue;
 
     break;
@@ -1446,7 +1455,7 @@ static void addContextEdges(PathPieces &pieces, const LocationContext *LC) {
         break;
 
       // If the source is in the same context, we're already good.
-      if (llvm::find(SrcContexts, DstContext) != SrcContexts.end())
+      if (llvm::is_contained(SrcContexts, DstContext))
         break;
 
       // Update the subexpression node to point to the context edge.
@@ -1540,9 +1549,8 @@ static void simplifySimpleBranches(PathPieces &pieces) {
 
     // We only perform this transformation for specific branch kinds.
     // We don't want to do this for do..while, for example.
-    if (!(isa<ForStmt>(s1Start) || isa<WhileStmt>(s1Start) ||
-          isa<IfStmt>(s1Start) || isa<ObjCForCollectionStmt>(s1Start) ||
-          isa<CXXForRangeStmt>(s1Start)))
+    if (!isa<ForStmt, WhileStmt, IfStmt, ObjCForCollectionStmt,
+             CXXForRangeStmt>(s1Start))
       continue;
 
     // Is s1End the branch condition?
@@ -3181,7 +3189,7 @@ findExecutedLines(const SourceManager &SM, const ExplodedNode *N) {
         P = N->getParentMap().getParent(RS);
       }
 
-      if (P && (isa<SwitchCase>(P) || isa<LabelStmt>(P)))
+      if (isa_and_nonnull<SwitchCase, LabelStmt>(P))
         populateExecutedLinesWithStmt(P, SM, *ExecutedLines);
     }
 

@@ -5,44 +5,8 @@
 #
 # see http://frostt.io/tensors/file-formats.html
 #
-# This matrix represents the "B" input to the MTTKRP kernel:
+# This tensor represents the "B" input to the MTTKRP kernel:
 # http://tensor-compiler.org/docs/data_analytics/index.html
-#
-# It can be generated with the following script, adapted from the above link:
-#
-#> import pytaco as pt
-#> import numpy as np
-#> from pytaco import compressed, dense
-#> import random
-#>
-#> # Define formats for storing the sparse tensor and dense matrices.
-#> csf = pt.format([compressed, compressed, compressed])
-#> rm  = pt.format([dense, dense])
-#
-#> B=pt.tensor((2,3,4),csf)
-#> density = 0.25
-#> for i in range(2):
-#>   for j in range(3):
-#>     for k in range(4):
-#>       if random.random() > density:
-#>         B.insert((i,j,k), random.randint(0,100))
-#>
-#> C = pt.from_array(np.arange(B.shape[1]*5).reshape(B.shape[1],5))
-#> D = pt.from_array(np.arange(B.shape[2]*5).reshape(B.shape[2],5))
-#>
-#> # Declare the result to be a dense matrix.
-#> A = pt.tensor([B.shape[0], 5], rm)
-#>
-#> # Declare index vars.
-#> i, j, k, l = pt.get_index_vars(4)
-#>
-#> # Define the MTTKRP computation.
-#> A[i, j] = B[i, k, l] * D[l, j] * C[k, j]
-#>
-#> # Perform the MTTKRP computation and write the result to file.
-#> pt.write("A.tns", A)
-#> pt.write("B.tns", B)
-#
 3 17
 2 3 4
 1 1 3 3

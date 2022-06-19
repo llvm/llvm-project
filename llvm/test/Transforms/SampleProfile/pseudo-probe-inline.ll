@@ -69,8 +69,8 @@ if.end:
 ; CHECK: !llvm.pseudo_probe_desc = !{![[#DESC0:]], ![[#DESC1:]]}
 ; CHECK: ![[#DESC0]] = !{i64 [[#GUID1]], i64 [[#HASH1:]], !"foo"}
 ; CHECK: ![[#DESC1]] = !{i64 [[#GUID2]], i64 [[#HASH2:]], !"zen"}
-; CHECK: ![[PD1]] = !{!"branch_weights", i32 25, i32 1}
-; CHECK: ![[PD2]] = !{!"branch_weights", i32 382916, i32 25}
+; CHECK: ![[PD1]] = !{!"branch_weights", i32 5, i32 0}
+; CHECK: ![[PD2]] = !{!"branch_weights", i32 382915, i32 5}
 
 ; Checking to see if YAML file is generated and contains remarks
 ;YAML: --- !Passed
@@ -79,11 +79,13 @@ if.end:
 ;YAML-NEXT:  DebugLoc:        { File: test.cpp, Line: 10, Column: 11 }
 ;YAML-NEXT:  Function:        foo
 ;YAML-NEXT:  Args:
+;YAML-NEXT:    - String:          ''''
 ;YAML-NEXT:    - Callee:          zen
 ;YAML-NEXT:      DebugLoc:        { File: test.cpp, Line: 38, Column: 0 }
-;YAML-NEXT:    - String:          ' inlined into '
+;YAML-NEXT:    - String:          ''' inlined into '''
 ;YAML-NEXT:    - Caller:          foo
 ;YAML-NEXT:      DebugLoc:        { File: test.cpp, Line: 9, Column: 0 }
+;YAML-NEXT:    - String:          ''''
 ;YAML-NEXT:    - String:          ' to match profiling context'
 ;YAML-NEXT:    - String:          ' with '
 ;YAML-NEXT:    - String:          '(cost='

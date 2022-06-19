@@ -55,14 +55,14 @@ define amdgpu_kernel void @test() #1 {
 ; GFX10-NEXT:    s_waitcnt_depctr 0xffe3
 ; GFX10-NEXT:    s_mov_b64 exec, s[6:7]
 ; GFX10-NEXT:    ;;#ASMSTART
-; GFX10-NEXT:    ; use s[0:3]
+; GFX10-NEXT:    ; use s[0:4]
 ; GFX10-NEXT:    ;;#ASMEND
 ; GFX10-NEXT:    s_endpgm
   %wide.sgpr0 = call <8 x i32> asm sideeffect "; def $0", "={s[0:7]}" () #0
-  %wide.sgpr2 = call <4 x i32> asm sideeffect "; def $0", "={s[8:12]}" () #0
+  %wide.sgpr2 = call <5 x i32> asm sideeffect "; def $0", "={s[8:12]}" () #0
   call void asm sideeffect "", "~{v[0:7]}" () #0
   call void asm sideeffect "; use $0", "s"(<8 x i32> %wide.sgpr0) #0
-  call void asm sideeffect "; use $0", "s"(<4 x i32> %wide.sgpr2) #0
+  call void asm sideeffect "; use $0", "s"(<5 x i32> %wide.sgpr2) #0
   ret void
 }
 

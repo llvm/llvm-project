@@ -17,7 +17,7 @@
 
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/Support/MathExtras.h"
-#include "llvm/Support/WithColor.h"
+#include "llvm/Support/raw_ostream.h"
 
 #include <algorithm>
 #include <array>
@@ -229,7 +229,6 @@ public:
   bool isZero() const { return !Value; }
   bool isNonZero() const { return !isZero(); }
   explicit operator bool() const { return isNonZero(); }
-  ScalarTy getValue() const { return Value; }
   ScalarTy getValue(unsigned Dim) const {
     return Dim == UnivariateDim ? Value : 0;
   }
@@ -250,7 +249,7 @@ public:
 
 //===----------------------------------------------------------------------===//
 // LinearPolySize - base class for fixed- or scalable sizes.
-//  ^  ^ 
+//  ^  ^
 //  |  |
 //  |  +----- ElementCount - Leaf class to represent an element count
 //  |                        (vscale x unsigned)
@@ -294,7 +293,7 @@ public:
   static LeafTy getNull() { return get(0, false); }
 
   /// Returns the minimum value this size can represent.
-  ScalarTy getKnownMinValue() const { return this->getValue(); }
+  ScalarTy getKnownMinValue() const { return this->Value; }
   /// Returns whether the size is scaled by a runtime quantity (vscale).
   bool isScalable() const { return this->UnivariateDim == ScalableDim; }
   /// A return value of true indicates we know at compile time that the number
@@ -363,10 +362,29 @@ public:
         LinearPolySize::get(getKnownMinValue() / RHS, isScalable()));
   }
 
+  LeafTy multiplyCoefficientBy(ScalarTy RHS) const {
+    return static_cast<LeafTy>(
+        LinearPolySize::get(getKnownMinValue() * RHS, isScalable()));
+  }
+
   LeafTy coefficientNextPowerOf2() const {
     return static_cast<LeafTy>(LinearPolySize::get(
         static_cast<ScalarTy>(llvm::NextPowerOf2(getKnownMinValue())),
         isScalable()));
+  }
+
+  /// Returns true if there exists a value X where RHS.multiplyCoefficientBy(X)
+  /// will result in a value whose size matches our own.
+  bool hasKnownScalarFactor(const LinearPolySize &RHS) const {
+    return isScalable() == RHS.isScalable() &&
+           getKnownMinValue() % RHS.getKnownMinValue() == 0;
+  }
+
+  /// Returns a value X where RHS.multiplyCoefficientBy(X) will result in a
+  /// value whose size matches our own.
+  ScalarTy getKnownScalarFactor(const LinearPolySize &RHS) const {
+    assert(hasKnownScalarFactor(RHS) && "Expected RHS to be a known factor!");
+    return getKnownMinValue() / RHS.getKnownMinValue();
   }
 
   /// Printing function.
@@ -500,8 +518,7 @@ inline raw_ostream &operator<<(raw_ostream &OS,
   return OS;
 }
 
-template <typename T> struct DenseMapInfo;
-template <> struct DenseMapInfo<ElementCount> {
+template <> struct DenseMapInfo<ElementCount, void> {
   static inline ElementCount getEmptyKey() {
     return ElementCount::getScalable(~0U);
   }

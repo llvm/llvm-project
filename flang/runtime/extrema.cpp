@@ -10,11 +10,12 @@
 // and shapes and (for MAXLOC & MINLOC) result integer kinds.  Also implements
 // NORM2 using common infrastructure.
 
-#include "character.h"
 #include "reduction-templates.h"
-#include "reduction.h"
-#include "flang/Common/long-double.h"
+#include "flang/Runtime/character.h"
+#include "flang/Runtime/float128.h"
+#include "flang/Runtime/reduction.h"
 #include <algorithm>
+#include <cfloat>
 #include <cinttypes>
 #include <cmath>
 #include <optional>
@@ -60,7 +61,7 @@ private:
 template <typename COMPARE> class ExtremumLocAccumulator {
 public:
   using Type = typename COMPARE::Type;
-  ExtremumLocAccumulator(const Descriptor &array, std::size_t chars = 0)
+  ExtremumLocAccumulator(const Descriptor &array)
       : array_{array}, argRank_{array.rank()}, compare_{array.ElementBytes()} {
     Reinitialize();
   }
@@ -132,7 +133,7 @@ template <TypeCategory CAT, bool IS_MAX> struct TypedMaxOrMinLocHelper {
     void operator()(const char *intrinsic, Descriptor &result,
         const Descriptor &x, int kind, const char *source, int line,
         const Descriptor *mask, bool back) const {
-      DoMaxOrMinLoc<TypeCategory::Integer, KIND, IS_MAX, NumericCompare>(
+      DoMaxOrMinLoc<CAT, KIND, IS_MAX, NumericCompare>(
           intrinsic, result, x, kind, source, line, mask, back);
     }
   };
@@ -176,7 +177,7 @@ inline void TypedMaxOrMinLoc(const char *intrinsic, Descriptor &result,
     break;
   default:
     terminator.Crash(
-        "%s: Bad data type code (%d) for array", intrinsic, x.type().raw());
+        "%s: bad data type code (%d) for array", intrinsic, x.type().raw());
   }
 }
 
@@ -241,28 +242,43 @@ inline void TypedPartialMaxOrMinLoc(const char *intrinsic, Descriptor &result,
   CheckIntegerKind(terminator, kind, intrinsic);
   auto catKind{x.type().GetCategoryAndKind()};
   RUNTIME_CHECK(terminator, catKind.has_value());
+  const Descriptor *maskToUse{mask};
+  SubscriptValue maskAt[maxRank]; // contents unused
+  if (mask && mask->rank() == 0) {
+    if (IsLogicalElementTrue(*mask, maskAt)) {
+      // A scalar MASK that's .TRUE.  In this case, just get rid of the MASK.
+      maskToUse = nullptr;
+    } else {
+      // For scalar MASK arguments that are .FALSE., return all zeroes
+      CreatePartialReductionResult(result, x, dim, terminator, intrinsic,
+          TypeCode{TypeCategory::Integer, kind});
+      std::memset(
+          result.OffsetElement(), 0, result.Elements() * result.ElementBytes());
+      return;
+    }
+  }
   switch (catKind->first) {
   case TypeCategory::Integer:
     ApplyIntegerKind<DoPartialMaxOrMinLocHelper<TypeCategory::Integer, IS_MAX,
                          NumericCompare>::template Functor,
         void>(catKind->second, terminator, intrinsic, result, x, kind, dim,
-        mask, back, terminator);
+        maskToUse, back, terminator);
     break;
   case TypeCategory::Real:
     ApplyFloatingPointKind<DoPartialMaxOrMinLocHelper<TypeCategory::Real,
                                IS_MAX, NumericCompare>::template Functor,
         void>(catKind->second, terminator, intrinsic, result, x, kind, dim,
-        mask, back, terminator);
+        maskToUse, back, terminator);
     break;
   case TypeCategory::Character:
     ApplyCharacterKind<DoPartialMaxOrMinLocHelper<TypeCategory::Character,
                            IS_MAX, CharacterCompare>::template Functor,
         void>(catKind->second, terminator, intrinsic, result, x, kind, dim,
-        mask, back, terminator);
+        maskToUse, back, terminator);
     break;
   default:
     terminator.Crash(
-        "%s: Bad data type code (%d) for array", intrinsic, x.type().raw());
+        "%s: bad data type code (%d) for array", intrinsic, x.type().raw());
   }
 }
 
@@ -496,13 +512,14 @@ CppTypeFor<TypeCategory::Real, 8> RTNAME(MaxvalReal8)(const Descriptor &x,
   return TotalNumericMaxOrMin<TypeCategory::Real, 8, true>(
       x, source, line, dim, mask, "MAXVAL");
 }
-#if LONG_DOUBLE == 80
+#if LDBL_MANT_DIG == 64
 CppTypeFor<TypeCategory::Real, 10> RTNAME(MaxvalReal10)(const Descriptor &x,
     const char *source, int line, int dim, const Descriptor *mask) {
   return TotalNumericMaxOrMin<TypeCategory::Real, 10, true>(
       x, source, line, dim, mask, "MAXVAL");
 }
-#elif LONG_DOUBLE == 128
+#endif
+#if LDBL_MANT_DIG == 113 || HAS_FLOAT128
 CppTypeFor<TypeCategory::Real, 16> RTNAME(MaxvalReal16)(const Descriptor &x,
     const char *source, int line, int dim, const Descriptor *mask) {
   return TotalNumericMaxOrMin<TypeCategory::Real, 16, true>(
@@ -555,13 +572,14 @@ CppTypeFor<TypeCategory::Real, 8> RTNAME(MinvalReal8)(const Descriptor &x,
   return TotalNumericMaxOrMin<TypeCategory::Real, 8, false>(
       x, source, line, dim, mask, "MINVAL");
 }
-#if LONG_DOUBLE == 80
+#if LDBL_MANT_DIG == 64
 CppTypeFor<TypeCategory::Real, 10> RTNAME(MinvalReal10)(const Descriptor &x,
     const char *source, int line, int dim, const Descriptor *mask) {
   return TotalNumericMaxOrMin<TypeCategory::Real, 10, false>(
       x, source, line, dim, mask, "MINVAL");
 }
-#elif LONG_DOUBLE == 128
+#endif
+#if LDBL_MANT_DIG == 113 || HAS_FLOAT128
 CppTypeFor<TypeCategory::Real, 16> RTNAME(MinvalReal16)(const Descriptor &x,
     const char *source, int line, int dim, const Descriptor *mask) {
   return TotalNumericMaxOrMin<TypeCategory::Real, 16, false>(
@@ -597,8 +615,19 @@ void RTNAME(MinvalDim)(Descriptor &result, const Descriptor &x, int dim,
 template <int KIND> class Norm2Accumulator {
 public:
   using Type = CppTypeFor<TypeCategory::Real, KIND>;
-  // Use at least double precision for accumulators
-  using AccumType = CppTypeFor<TypeCategory::Real, std::max(KIND, 8)>;
+  // Use at least double precision for accumulators.
+  // Don't use __float128, it doesn't work with abs() or sqrt() yet.
+  static constexpr int largestLDKind {
+#if LDBL_MANT_DIG == 113
+    16
+#elif LDBL_MANT_DIG == 64
+    10
+#else
+    8
+#endif
+  };
+  using AccumType = CppTypeFor<TypeCategory::Real,
+      std::max(std::min(largestLDKind, KIND), 8)>;
   explicit Norm2Accumulator(const Descriptor &array) : array_{array} {}
   void Reinitialize() { max_ = sum_ = 0; }
   template <typename A> void GetResult(A *p, int /*zeroBasedDim*/ = -1) const {
@@ -606,7 +635,7 @@ public:
     *p = static_cast<Type>(max_ * std::sqrt(1 + sum_));
   }
   bool Accumulate(Type x) {
-    auto absX{AccumType{std::abs(x)}};
+    auto absX{std::abs(static_cast<AccumType>(x))};
     if (!max_) {
       max_ = x;
     } else if (absX > max_) {
@@ -651,13 +680,14 @@ CppTypeFor<TypeCategory::Real, 8> RTNAME(Norm2_8)(const Descriptor &x,
   return GetTotalReduction<TypeCategory::Real, 8>(
       x, source, line, dim, mask, Norm2Accumulator<8>{x}, "NORM2");
 }
-#if LONG_DOUBLE == 80
+#if LDBL_MANT_DIG == 64
 CppTypeFor<TypeCategory::Real, 10> RTNAME(Norm2_10)(const Descriptor &x,
     const char *source, int line, int dim, const Descriptor *mask) {
   return GetTotalReduction<TypeCategory::Real, 10>(
       x, source, line, dim, mask, Norm2Accumulator<10>{x}, "NORM2");
 }
-#elif LONG_DOUBLE == 128
+#endif
+#if LDBL_MANT_DIG == 113
 CppTypeFor<TypeCategory::Real, 16> RTNAME(Norm2_16)(const Descriptor &x,
     const char *source, int line, int dim, const Descriptor *mask) {
   return GetTotalReduction<TypeCategory::Real, 16>(

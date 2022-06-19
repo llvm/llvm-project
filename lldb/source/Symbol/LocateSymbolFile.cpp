@@ -10,11 +10,13 @@
 
 #include "lldb/Core/ModuleList.h"
 #include "lldb/Core/ModuleSpec.h"
+#include "lldb/Core/Progress.h"
 #include "lldb/Host/FileSystem.h"
 #include "lldb/Symbol/ObjectFile.h"
 #include "lldb/Utility/ArchSpec.h"
 #include "lldb/Utility/DataBuffer.h"
 #include "lldb/Utility/DataExtractor.h"
+#include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/Reproducer.h"
 #include "lldb/Utility/StreamString.h"
@@ -128,7 +130,8 @@ static bool LookForDsymNextToExecutablePath(const ModuleSpec &mod_spec,
 
   if (FileSystem::Instance().Exists(dsym_yaa_fspec)) {
     ModuleSpec mutable_mod_spec = mod_spec;
-    if (Symbols::DownloadObjectAndSymbolFile(mutable_mod_spec, true) &&
+    Status error;
+    if (Symbols::DownloadObjectAndSymbolFile(mutable_mod_spec, error, true) &&
         FileSystem::Instance().Exists(mutable_mod_spec.GetSymbolFileSpec())) {
       dsym_fspec = mutable_mod_spec.GetSymbolFileSpec();
       return true;
@@ -152,7 +155,7 @@ static bool LookForDsymNextToExecutablePath(const ModuleSpec &mod_spec,
 
 static bool LocateDSYMInVincinityOfExecutable(const ModuleSpec &module_spec,
                                               FileSpec &dsym_fspec) {
-  Log *log = lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_HOST);
+  Log *log = GetLog(LLDBLog::Host);
   const FileSpec &exec_fspec = module_spec.GetFileSpec();
   if (exec_fspec) {
     if (::LookForDsymNextToExecutablePath(module_spec, exec_fspec,
@@ -261,6 +264,10 @@ Symbols::LocateExecutableSymbolFile(const ModuleSpec &module_spec,
       FileSystem::Instance().Exists(symbol_file_spec))
     return symbol_file_spec;
 
+  Progress progress(llvm::formatv(
+      "Locating external symbol file for {0}",
+      module_spec.GetFileSpec().GetFilename().AsCString("<Unknown>")));
+
   FileSpecList debug_file_search_paths = default_search_paths;
 
   // Add module directory.
@@ -355,17 +362,33 @@ Symbols::LocateExecutableSymbolFile(const ModuleSpec &module_spec,
         lldb_private::ModuleSpecList specs;
         const size_t num_specs =
             ObjectFile::GetModuleSpecifications(file_spec, 0, 0, specs);
-        assert(num_specs <= 1 &&
-               "Symbol Vendor supports only a single architecture");
-        if (num_specs == 1) {
-          ModuleSpec mspec;
-          if (specs.GetModuleSpecAtIndex(0, mspec)) {
-            // Skip the uuids check if module_uuid is invalid. For example,
-            // this happens for *.dwp files since at the moment llvm-dwp
-            // doesn't output build ids, nor does binutils dwp.
-            if (!module_uuid.IsValid() || module_uuid == mspec.GetUUID())
-              return file_spec;
+        ModuleSpec mspec;
+        bool valid_mspec = false;
+        if (num_specs == 2) {
+          // Special case to handle both i386 and i686 from ObjectFilePECOFF
+          ModuleSpec mspec2;
+          if (specs.GetModuleSpecAtIndex(0, mspec) &&
+              specs.GetModuleSpecAtIndex(1, mspec2) &&
+              mspec.GetArchitecture().GetTriple().isCompatibleWith(
+                  mspec2.GetArchitecture().GetTriple())) {
+            valid_mspec = true;
           }
+        }
+        if (!valid_mspec) {
+          assert(num_specs <= 1 &&
+                 "Symbol Vendor supports only a single architecture");
+          if (num_specs == 1) {
+            if (specs.GetModuleSpecAtIndex(0, mspec)) {
+              valid_mspec = true;
+            }
+          }
+        }
+        if (valid_mspec) {
+          // Skip the uuids check if module_uuid is invalid. For example,
+          // this happens for *.dwp files since at the moment llvm-dwp
+          // doesn't output build ids, nor does binutils dwp.
+          if (!module_uuid.IsValid() || module_uuid == mspec.GetUUID())
+            return file_spec;
         }
       }
     }
@@ -384,7 +407,7 @@ FileSpec Symbols::FindSymbolFileInBundle(const FileSpec &symfile_bundle,
 }
 
 bool Symbols::DownloadObjectAndSymbolFile(ModuleSpec &module_spec,
-                                          bool force_lookup) {
+                                          Status &error, bool force_lookup) {
   // Fill in the module_spec.GetFileSpec() for the object file and/or the
   // module_spec.GetSymbolFileSpec() for the debug symbols file.
   return false;

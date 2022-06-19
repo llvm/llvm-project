@@ -186,8 +186,8 @@ define bfloat @test_fncall_soft(bfloat %bf, bfloat (bfloat, bfloat)* %f) {
 ; BASE-THUMB-NEXT:    mov r0, r5
 ; BASE-THUMB-NEXT:    mov r1, r5
 ; BASE-THUMB-NEXT:    blx r4
-; BASE-THUMB-NEXT:    uxth r1, r0
 ; BASE-THUMB-NEXT:    strh.w r0, [sp, #6]
+; BASE-THUMB-NEXT:    uxth r1, r0
 ; BASE-THUMB-NEXT:    mov r0, r5
 ; BASE-THUMB-NEXT:    blx r4
 ; BASE-THUMB-NEXT:    ldrh.w r0, [sp, #6]

@@ -5,9 +5,10 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-//
-// This file defines the ImmutableList class.
-//
+///
+/// \file
+/// This file defines the ImmutableList class.
+///
 //===----------------------------------------------------------------------===//
 
 #ifndef LLVM_ADT_IMMUTABLELIST_H
@@ -220,8 +221,7 @@ public:
 // Partially-specialized Traits.
 //===----------------------------------------------------------------------===//
 
-template<typename T> struct DenseMapInfo;
-template<typename T> struct DenseMapInfo<ImmutableList<T>> {
+template <typename T> struct DenseMapInfo<ImmutableList<T>, void> {
   static inline ImmutableList<T> getEmptyKey() {
     return reinterpret_cast<ImmutableListImpl<T>*>(-1);
   }

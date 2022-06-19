@@ -66,7 +66,7 @@ extern char *dirname(char *);
 #endif
 
 /** Return the default parsing options. */
-static unsigned getDefaultParsingOptions() {
+static unsigned getDefaultParsingOptions(void) {
   unsigned options = CXTranslationUnit_DetailedPreprocessingRecord;
 
   if (getenv("CINDEXTEST_EDITING"))
@@ -3316,7 +3316,7 @@ typedef struct {
   unsigned num_files;
 } ImportedASTFilesData;
 
-static ImportedASTFilesData *importedASTs_create() {
+static ImportedASTFilesData *importedASTs_create(void) {
   ImportedASTFilesData *p;
   p = malloc(sizeof(ImportedASTFilesData));
   assert(p);
@@ -3504,6 +3504,8 @@ static const char *getEntityKindString(CXIdxEntityKind kind) {
   case CXIdxEntity_CXXConversionFunction: return "conversion-func";
   case CXIdxEntity_CXXTypeAlias: return "type-alias";
   case CXIdxEntity_CXXInterface: return "c++-__interface";
+  case CXIdxEntity_CXXConcept:
+    return "concept";
   }
   assert(0 && "Garbage entity kind");
   return 0;
@@ -4407,7 +4409,7 @@ static void print_usr(CXString usr) {
   clang_disposeString(usr);
 }
 
-static void display_usrs() {
+static void display_usrs(void) {
   fprintf(stderr, "-print-usrs options:\n"
         " ObjCCategory <class name> <category name>\n"
         " ObjCClass <class name>\n"

@@ -17,4 +17,4 @@
 // RUN: %clang -target x86_64-apple-macosx10.15-gnu -fsanitize=address \
 // RUN:   -fsanitize-address-destructor=bad_arg %s -### 2>&1 | \
 // RUN:   FileCheck -check-prefix=CHECK-INVALID-ARG %s
-// CHECK-INVALID-ARG: error: unsupported argument 'bad_arg' to option 'fsanitize-address-destructor='
+// CHECK-INVALID-ARG: error: unsupported argument 'bad_arg' to option '-fsanitize-address-destructor='

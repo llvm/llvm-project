@@ -1,4 +1,4 @@
-//===-- M68kInstPrinter.cpp - Convert M68k MCInst to asm ----*- C++ -*-===//
+//===-- M68kInstPrinter.cpp - Convert M68k MCInst to asm --------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -109,7 +109,7 @@ void M68kInstPrinter::printMoveMask(const MCInst *MI, unsigned opNum,
     // Print separation comma only if
     // both data & register parts have bit(s) set
     if (s != 0 && (Mask & 0xFF) && HalfMask)
-      O << ',';
+      O << '/';
 
     for (int i = 0; HalfMask; ++i) {
       if ((HalfMask >> i) & 0b1) {
@@ -130,7 +130,7 @@ void M68kInstPrinter::printMoveMask(const MCInst *MI, unsigned opNum,
         i = j;
 
         if (HalfMask)
-          O << ',';
+          O << '/';
       }
     }
   }

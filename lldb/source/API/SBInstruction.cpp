@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "lldb/API/SBInstruction.h"
-#include "SBReproducerPrivate.h"
+#include "lldb/Utility/Instrumentation.h"
 
 #include "lldb/API/SBAddress.h"
 #include "lldb/API/SBFrame.h"
@@ -66,9 +66,7 @@ protected:
 using namespace lldb;
 using namespace lldb_private;
 
-SBInstruction::SBInstruction() : m_opaque_sp() {
-  LLDB_RECORD_CONSTRUCTOR_NO_ARGS(SBInstruction);
-}
+SBInstruction::SBInstruction() { LLDB_INSTRUMENT_VA(this); }
 
 SBInstruction::SBInstruction(const lldb::DisassemblerSP &disasm_sp,
                              const lldb::InstructionSP &inst_sp)
@@ -76,44 +74,41 @@ SBInstruction::SBInstruction(const lldb::DisassemblerSP &disasm_sp,
 
 SBInstruction::SBInstruction(const SBInstruction &rhs)
     : m_opaque_sp(rhs.m_opaque_sp) {
-  LLDB_RECORD_CONSTRUCTOR(SBInstruction, (const lldb::SBInstruction &), rhs);
+  LLDB_INSTRUMENT_VA(this, rhs);
 }
 
 const SBInstruction &SBInstruction::operator=(const SBInstruction &rhs) {
-  LLDB_RECORD_METHOD(const lldb::SBInstruction &,
-                     SBInstruction, operator=,(const lldb::SBInstruction &),
-                     rhs);
+  LLDB_INSTRUMENT_VA(this, rhs);
 
   if (this != &rhs)
     m_opaque_sp = rhs.m_opaque_sp;
-  return LLDB_RECORD_RESULT(*this);
+  return *this;
 }
 
 SBInstruction::~SBInstruction() = default;
 
 bool SBInstruction::IsValid() {
-  LLDB_RECORD_METHOD_NO_ARGS(bool, SBInstruction, IsValid);
+  LLDB_INSTRUMENT_VA(this);
   return this->operator bool();
 }
 SBInstruction::operator bool() const {
-  LLDB_RECORD_METHOD_CONST_NO_ARGS(bool, SBInstruction, operator bool);
+  LLDB_INSTRUMENT_VA(this);
 
   return m_opaque_sp && m_opaque_sp->IsValid();
 }
 
 SBAddress SBInstruction::GetAddress() {
-  LLDB_RECORD_METHOD_NO_ARGS(lldb::SBAddress, SBInstruction, GetAddress);
+  LLDB_INSTRUMENT_VA(this);
 
   SBAddress sb_addr;
   lldb::InstructionSP inst_sp(GetOpaque());
   if (inst_sp && inst_sp->GetAddress().IsValid())
     sb_addr.SetAddress(inst_sp->GetAddress());
-  return LLDB_RECORD_RESULT(sb_addr);
+  return sb_addr;
 }
 
 const char *SBInstruction::GetMnemonic(SBTarget target) {
-  LLDB_RECORD_METHOD(const char *, SBInstruction, GetMnemonic, (lldb::SBTarget),
-                     target);
+  LLDB_INSTRUMENT_VA(this, target);
 
   lldb::InstructionSP inst_sp(GetOpaque());
   if (inst_sp) {
@@ -132,8 +127,7 @@ const char *SBInstruction::GetMnemonic(SBTarget target) {
 }
 
 const char *SBInstruction::GetOperands(SBTarget target) {
-  LLDB_RECORD_METHOD(const char *, SBInstruction, GetOperands, (lldb::SBTarget),
-                     target);
+  LLDB_INSTRUMENT_VA(this, target);
 
   lldb::InstructionSP inst_sp(GetOpaque());
   if (inst_sp) {
@@ -152,8 +146,7 @@ const char *SBInstruction::GetOperands(SBTarget target) {
 }
 
 const char *SBInstruction::GetComment(SBTarget target) {
-  LLDB_RECORD_METHOD(const char *, SBInstruction, GetComment, (lldb::SBTarget),
-                     target);
+  LLDB_INSTRUMENT_VA(this, target);
 
   lldb::InstructionSP inst_sp(GetOpaque());
   if (inst_sp) {
@@ -172,7 +165,7 @@ const char *SBInstruction::GetComment(SBTarget target) {
 }
 
 size_t SBInstruction::GetByteSize() {
-  LLDB_RECORD_METHOD_NO_ARGS(size_t, SBInstruction, GetByteSize);
+  LLDB_INSTRUMENT_VA(this);
 
   lldb::InstructionSP inst_sp(GetOpaque());
   if (inst_sp)
@@ -181,8 +174,7 @@ size_t SBInstruction::GetByteSize() {
 }
 
 SBData SBInstruction::GetData(SBTarget target) {
-  LLDB_RECORD_METHOD(lldb::SBData, SBInstruction, GetData, (lldb::SBTarget),
-                     target);
+  LLDB_INSTRUMENT_VA(this, target);
 
   lldb::SBData sb_data;
   lldb::InstructionSP inst_sp(GetOpaque());
@@ -192,11 +184,11 @@ SBData SBInstruction::GetData(SBTarget target) {
       sb_data.SetOpaque(data_extractor_sp);
     }
   }
-  return LLDB_RECORD_RESULT(sb_data);
+  return sb_data;
 }
 
 bool SBInstruction::DoesBranch() {
-  LLDB_RECORD_METHOD_NO_ARGS(bool, SBInstruction, DoesBranch);
+  LLDB_INSTRUMENT_VA(this);
 
   lldb::InstructionSP inst_sp(GetOpaque());
   if (inst_sp)
@@ -205,7 +197,7 @@ bool SBInstruction::DoesBranch() {
 }
 
 bool SBInstruction::HasDelaySlot() {
-  LLDB_RECORD_METHOD_NO_ARGS(bool, SBInstruction, HasDelaySlot);
+  LLDB_INSTRUMENT_VA(this);
 
   lldb::InstructionSP inst_sp(GetOpaque());
   if (inst_sp)
@@ -214,7 +206,7 @@ bool SBInstruction::HasDelaySlot() {
 }
 
 bool SBInstruction::CanSetBreakpoint() {
-  LLDB_RECORD_METHOD_NO_ARGS(bool, SBInstruction, CanSetBreakpoint);
+  LLDB_INSTRUMENT_VA(this);
 
   lldb::InstructionSP inst_sp(GetOpaque());
   if (inst_sp)
@@ -235,8 +227,7 @@ void SBInstruction::SetOpaque(const lldb::DisassemblerSP &disasm_sp,
 }
 
 bool SBInstruction::GetDescription(lldb::SBStream &s) {
-  LLDB_RECORD_METHOD(bool, SBInstruction, GetDescription, (lldb::SBStream &),
-                     s);
+  LLDB_INSTRUMENT_VA(this, s);
 
   lldb::InstructionSP inst_sp(GetOpaque());
   if (inst_sp) {
@@ -257,18 +248,18 @@ bool SBInstruction::GetDescription(lldb::SBStream &s) {
 }
 
 void SBInstruction::Print(FILE *outp) {
-  LLDB_RECORD_METHOD(void, SBInstruction, Print, (FILE *), outp);
+  LLDB_INSTRUMENT_VA(this, outp);
   FileSP out = std::make_shared<NativeFile>(outp, /*take_ownership=*/false);
   Print(out);
 }
 
 void SBInstruction::Print(SBFile out) {
-  LLDB_RECORD_METHOD(void, SBInstruction, Print, (SBFile), out);
+  LLDB_INSTRUMENT_VA(this, out);
   Print(out.m_opaque_sp);
 }
 
 void SBInstruction::Print(FileSP out_sp) {
-  LLDB_RECORD_METHOD(void, SBInstruction, Print, (FileSP), out_sp);
+  LLDB_INSTRUMENT_VA(this, out_sp);
 
   if (!out_sp || !out_sp->IsValid())
     return;
@@ -291,8 +282,7 @@ void SBInstruction::Print(FileSP out_sp) {
 
 bool SBInstruction::EmulateWithFrame(lldb::SBFrame &frame,
                                      uint32_t evaluate_options) {
-  LLDB_RECORD_METHOD(bool, SBInstruction, EmulateWithFrame,
-                     (lldb::SBFrame &, uint32_t), frame, evaluate_options);
+  LLDB_INSTRUMENT_VA(this, frame, evaluate_options);
 
   lldb::InstructionSP inst_sp(GetOpaque());
   if (inst_sp) {
@@ -316,8 +306,7 @@ bool SBInstruction::EmulateWithFrame(lldb::SBFrame &frame,
 }
 
 bool SBInstruction::DumpEmulation(const char *triple) {
-  LLDB_RECORD_METHOD(bool, SBInstruction, DumpEmulation, (const char *),
-                     triple);
+  LLDB_INSTRUMENT_VA(this, triple);
 
   lldb::InstructionSP inst_sp(GetOpaque());
   if (inst_sp && triple) {
@@ -328,9 +317,7 @@ bool SBInstruction::DumpEmulation(const char *triple) {
 
 bool SBInstruction::TestEmulation(lldb::SBStream &output_stream,
                                   const char *test_file) {
-  LLDB_RECORD_METHOD(bool, SBInstruction, TestEmulation,
-                     (lldb::SBStream &, const char *), output_stream,
-                     test_file);
+  LLDB_INSTRUMENT_VA(this, output_stream, test_file);
 
   if (!m_opaque_sp)
     SetOpaque(lldb::DisassemblerSP(),
@@ -340,44 +327,4 @@ bool SBInstruction::TestEmulation(lldb::SBStream &output_stream,
   if (inst_sp)
     return inst_sp->TestEmulation(output_stream.get(), test_file);
   return false;
-}
-
-namespace lldb_private {
-namespace repro {
-
-template <>
-void RegisterMethods<SBInstruction>(Registry &R) {
-  LLDB_REGISTER_CONSTRUCTOR(SBInstruction, ());
-  LLDB_REGISTER_CONSTRUCTOR(SBInstruction, (const lldb::SBInstruction &));
-  LLDB_REGISTER_METHOD(
-      const lldb::SBInstruction &,
-      SBInstruction, operator=,(const lldb::SBInstruction &));
-  LLDB_REGISTER_METHOD(bool, SBInstruction, IsValid, ());
-  LLDB_REGISTER_METHOD_CONST(bool, SBInstruction, operator bool, ());
-  LLDB_REGISTER_METHOD(lldb::SBAddress, SBInstruction, GetAddress, ());
-  LLDB_REGISTER_METHOD(const char *, SBInstruction, GetMnemonic,
-                       (lldb::SBTarget));
-  LLDB_REGISTER_METHOD(const char *, SBInstruction, GetOperands,
-                       (lldb::SBTarget));
-  LLDB_REGISTER_METHOD(const char *, SBInstruction, GetComment,
-                       (lldb::SBTarget));
-  LLDB_REGISTER_METHOD(size_t, SBInstruction, GetByteSize, ());
-  LLDB_REGISTER_METHOD(lldb::SBData, SBInstruction, GetData,
-                       (lldb::SBTarget));
-  LLDB_REGISTER_METHOD(bool, SBInstruction, DoesBranch, ());
-  LLDB_REGISTER_METHOD(bool, SBInstruction, HasDelaySlot, ());
-  LLDB_REGISTER_METHOD(bool, SBInstruction, CanSetBreakpoint, ());
-  LLDB_REGISTER_METHOD(bool, SBInstruction, GetDescription,
-                       (lldb::SBStream &));
-  LLDB_REGISTER_METHOD(void, SBInstruction, Print, (FILE *));
-  LLDB_REGISTER_METHOD(void, SBInstruction, Print, (SBFile));
-  LLDB_REGISTER_METHOD(void, SBInstruction, Print, (FileSP));
-  LLDB_REGISTER_METHOD(bool, SBInstruction, EmulateWithFrame,
-                       (lldb::SBFrame &, uint32_t));
-  LLDB_REGISTER_METHOD(bool, SBInstruction, DumpEmulation, (const char *));
-  LLDB_REGISTER_METHOD(bool, SBInstruction, TestEmulation,
-                       (lldb::SBStream &, const char *));
-}
-
-}
 }

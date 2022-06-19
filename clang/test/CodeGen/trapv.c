@@ -1,10 +1,10 @@
-// RUN: %clang_cc1 -triple x86_64-apple-darwin10 -ftrapv %s -emit-llvm -o - | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-apple-darwin10 -ftrapv %s -emit-llvm -o - | FileCheck %s
 
 unsigned int ui, uj, uk;
 int i, j, k;
 
 // CHECK-LABEL: define{{.*}} void @test0()
-void test0() {
+void test0(void) {
   // -ftrapv doesn't affect unsigned arithmetic.
   // CHECK:      [[T1:%.*]] = load i32, i32* @uj
   // CHECK-NEXT: [[T2:%.*]] = load i32, i32* @uk
@@ -24,7 +24,7 @@ void test0() {
 }
 
 // CHECK-LABEL: define{{.*}} void @test1()
-void test1() {
+void test1(void) {
   extern void opaque(int);
   opaque(i++);
 
@@ -38,7 +38,7 @@ void test1() {
 }
 
 // CHECK-LABEL: define{{.*}} void @test2()
-void test2() {
+void test2(void) {
   extern void opaque(int);
   opaque(++i);
 

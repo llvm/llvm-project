@@ -1,4 +1,5 @@
-# RUN: llc -run-pass livedebugvalues -march=x86-64 -o - %s | FileCheck %s
+# RUN: llc -run-pass livedebugvalues -march=x86-64 -o - %s \
+# RUN:  -experimental-debug-variable-locations=true | FileCheck %s
 
 # Generated from the following source with:
 # clang -g -mllvm -stop-before=livedebugvalues -S -O2 test.c -o test.mir
@@ -33,6 +34,8 @@
 
 # Check for the restore.
 # CHECK: $rdi = MOV64rm $rsp,{{.*-8.*}}:: (load (s64) from %stack.0)
+# CHECK-NEXT: $rax = MOV64ri 0
+# CHECK-NEXT: MOV64mr
 # CHECK-NEXT: DBG_VALUE $rdi,{{.*}}![[PVAR]], !DIExpression()
 
 --- |
@@ -309,6 +312,9 @@ body:             |
     MOV64mr $rsp, 1, $noreg, -8, $noreg, killed renamable $rdi :: (store (s64) into %stack.0)
     INLINEASM &"", 1, 12, implicit-def dead early-clobber $rax, 12, implicit-def dead early-clobber $rbx, 12, implicit-def dead early-clobber $rcx, 12, implicit-def dead early-clobber $rdx, 12, implicit-def dead early-clobber $rsi, 12, implicit-def dead early-clobber $rdi, 12, implicit-def dead early-clobber $rbp, 12, implicit-def dead early-clobber $r8, 12, implicit-def dead early-clobber $r9, 12, implicit-def dead early-clobber $r10, 12, implicit-def dead early-clobber $r11, 12, implicit-def dead early-clobber $r12, 12, implicit-def dead early-clobber $r13, 12, implicit-def dead early-clobber $r14, 12, implicit-def dead early-clobber $r15, 12, implicit-def dead early-clobber $eflags, !20, debug-location !18
     renamable $rdi = MOV64rm $rsp, 1, $noreg, -8, $noreg :: (load (s64) from %stack.0)
+    ; Clobber stack location to force variable location to move to $rdi.
+    $rax = MOV64ri 0
+    MOV64mr $rsp, 1, _, -8, _, killed renamable $rax :: (store (s64) into %stack.0)
     $rbx = frame-destroy POP64r implicit-def $rsp, implicit $rsp
     CFI_INSTRUCTION def_cfa_offset 48
     $r12 = frame-destroy POP64r implicit-def $rsp, implicit $rsp
@@ -326,7 +332,7 @@ body:             |
     liveins: $rdi, $rbx, $r12, $r13, $r14, $r15, $rbp
   
     renamable $eax = MOV32rm killed renamable $rdi, 1, $noreg, 4, $noreg, debug-location !23 :: (load (s32) from %ir.add.ptr, !tbaa !24)
-    RETQ $eax, debug-location !28
+    RET64 $eax, debug-location !28
 
 ...
 ---
@@ -401,22 +407,19 @@ body:             |
 
     renamable $eax = MOV32rm killed renamable $rsi, 1, $noreg, 4, $noreg, debug-location !123 :: (load (s32) from %ir.add.ptr, !tbaa !24)
     $rdi = MOV64ri 0
-    RETQ $eax, debug-location !128
+    RET64 $eax, debug-location !128
 
 ...
 ---
 # This third function tests that complex expressions are spilt, and restored
 # correctly within a basic block.
 
-# FIXME: the spilt location below is wrong, there should be a deref between
-# the spill-offset and the DW_OP_plus_uconst.
-
 # CHECK-LABEL: name: h
 # CHECK-LABEL: bb.0.entry:
 # CHECK:       DBG_VALUE $rdi, $noreg, ![[RVAR]], !DIExpression(DW_OP_plus_uconst, 1)
 # CHECK-LABEL: bb.1.if.then:
 # CHECK:       DBG_VALUE $rdi, $noreg, ![[RVAR]], !DIExpression(DW_OP_plus_uconst, 1)
-# CHECK:       DBG_VALUE $rsp, 0, ![[RVAR]], !DIExpression(DW_OP_constu, 8, DW_OP_minus, DW_OP_plus_uconst, 1)
+# CHECK:       DBG_VALUE $rsp, $noreg, ![[RVAR]], !DIExpression(DW_OP_constu, 8, DW_OP_minus, DW_OP_deref, DW_OP_plus_uconst, 1)
 # CHECK:       DBG_VALUE $rdi, $noreg, ![[RVAR]], !DIExpression(DW_OP_plus_uconst, 1)
 # CHECK-LABEL: bb.2.if.end:
 # CHECK:       DBG_VALUE $rdi, $noreg, ![[RVAR]], !DIExpression(DW_OP_plus_uconst, 1)
@@ -490,6 +493,9 @@ body:             |
     MOV64mr $rsp, 1, $noreg, -8, $noreg, killed renamable $rdi :: (store (s64) into %stack.0)
     INLINEASM &"", 1, 12, implicit-def dead early-clobber $rax, 12, implicit-def dead early-clobber $rbx, 12, implicit-def dead early-clobber $rcx, 12, implicit-def dead early-clobber $rdx, 12, implicit-def dead early-clobber $rsi, 12, implicit-def dead early-clobber $rdi, 12, implicit-def dead early-clobber $rbp, 12, implicit-def dead early-clobber $r8, 12, implicit-def dead early-clobber $r9, 12, implicit-def dead early-clobber $r10, 12, implicit-def dead early-clobber $r11, 12, implicit-def dead early-clobber $r12, 12, implicit-def dead early-clobber $r13, 12, implicit-def dead early-clobber $r14, 12, implicit-def dead early-clobber $r15, 12, implicit-def dead early-clobber $eflags, !220, debug-location !218
     renamable $rdi = MOV64rm $rsp, 1, $noreg, -8, $noreg :: (load (s64) from %stack.0)
+    ; Clobber stack location to force variable location to move to $rdi.
+    $rax = MOV64ri 0
+    MOV64mr $rsp, 1, _, -8, _, killed renamable $rax :: (store (s64) into %stack.0)
     $rbx = frame-destroy POP64r implicit-def $rsp, implicit $rsp
     CFI_INSTRUCTION def_cfa_offset 48
     $r12 = frame-destroy POP64r implicit-def $rsp, implicit $rsp
@@ -507,7 +513,7 @@ body:             |
     liveins: $rdi, $rbx, $r12, $r13, $r14, $r15, $rbp
   
     renamable $eax = MOV32rm killed renamable $rdi, 1, $noreg, 4, $noreg, debug-location !223 :: (load (s32) from %ir.add.ptr, !tbaa !24)
-    RETQ $eax, debug-location !228
+    RET64 $eax, debug-location !228
 
 
 
@@ -518,8 +524,6 @@ body:             |
 # bb 2 and 3, neither of which modifies the stack loc. The exit block (3)
 # should still be tracking the spill, and restore it on stack load.
 
-# FIXME: this test too contains a broken spill location.
-
 # Summary: loc is in $rdi in bb0, spills to stack in bb1, remains in stack
 # in bb2, starts in stack then loaded in bb3.
 
@@ -528,11 +532,11 @@ body:             |
 # CHECK:       DBG_VALUE $rdi, $noreg, ![[SVAR]], !DIExpression(DW_OP_plus_uconst, 1)
 # CHECK-LABEL: bb.1.foo:
 # CHECK:       DBG_VALUE $rdi, $noreg, ![[SVAR]], !DIExpression(DW_OP_plus_uconst, 1)
-# CHECK:       DBG_VALUE $rsp, 0, ![[SVAR]], !DIExpression(DW_OP_constu, 8, DW_OP_minus, DW_OP_plus_uconst, 1)
+# CHECK:       DBG_VALUE $rsp, $noreg, ![[SVAR]], !DIExpression(DW_OP_constu, 8, DW_OP_minus, DW_OP_deref, DW_OP_plus_uconst, 1)
 # CHECK-LABEL: bb.2.if.then:
-# CHECK:       DBG_VALUE $rsp, 0, ![[SVAR]], !DIExpression(DW_OP_constu, 8, DW_OP_minus, DW_OP_plus_uconst, 1)
+# CHECK:       DBG_VALUE $rsp, $noreg, ![[SVAR]], !DIExpression(DW_OP_constu, 8, DW_OP_minus, DW_OP_deref, DW_OP_plus_uconst, 1)
 # CHECK-LABEL: bb.3.if.end
-# CHECK:       DBG_VALUE $rsp, 0, ![[SVAR]], !DIExpression(DW_OP_constu, 8, DW_OP_minus, DW_OP_plus_uconst, 1)
+# CHECK:       DBG_VALUE $rsp, $noreg, ![[SVAR]], !DIExpression(DW_OP_constu, 8, DW_OP_minus, DW_OP_deref, DW_OP_plus_uconst, 1)
 # CHECK:       DBG_VALUE $rdi, $noreg, ![[SVAR]], !DIExpression(DW_OP_plus_uconst, 1)
 name:            i
 alignment:       16
@@ -627,8 +631,11 @@ body:             |
     liveins: $rbx, $r12, $r13, $r14, $r15, $rbp
   
     renamable $rdi = MOV64rm $rsp, 1, $noreg, -8, $noreg :: (load (s64) from %stack.0)
+    ; Clobber stack location to force variable location to move to $rdi.
+    $rax = MOV64ri 0
+    MOV64mr $rsp, 1, _, -8, _, killed renamable $rax :: (store (s64) into %stack.0)
     renamable $eax = MOV32rm killed renamable $rdi, 1, $noreg, 4, $noreg, debug-location !323 :: (load (s32) from %ir.add.ptr, !tbaa !24)
-    RETQ $eax, debug-location !328
+    RET64 $eax, debug-location !328
 
 ...
 ---
@@ -641,7 +648,7 @@ body:             |
 # CHECK-LABEL: bb.0.entry:
 # CHECK:       DBG_VALUE $rdi, 0, ![[TVAR]], !DIExpression()
 # CHECK-LABEL: bb.1.if.then:
-# CHECK:       DBG_VALUE $rsp, 0, ![[TVAR]], !DIExpression(DW_OP_constu, 8, DW_OP_minus)
+# CHECK:       DBG_VALUE $rsp, 0, ![[TVAR]], !DIExpression(DW_OP_constu, 8, DW_OP_minus, DW_OP_deref)
 # CHECK:       INLINEASM
 # CHECK:       DBG_VALUE ${{[a-zA-Z0-9]+}}, 0, ![[TVAR]], !DIExpression()
 # CHECK-LABEL: bb.2.if.end
@@ -714,6 +721,9 @@ body:             |
     MOV64mr $rsp, 1, $noreg, -8, $noreg, killed renamable $rdi :: (store (s64) into %stack.0)
     INLINEASM &"", 1, 12, implicit-def dead early-clobber $rax, 12, implicit-def dead early-clobber $rbx, 12, implicit-def dead early-clobber $rcx, 12, implicit-def dead early-clobber $rdx, 12, implicit-def dead early-clobber $rsi, 12, implicit-def dead early-clobber $rdi, 12, implicit-def dead early-clobber $rbp, 12, implicit-def dead early-clobber $r8, 12, implicit-def dead early-clobber $r9, 12, implicit-def dead early-clobber $r10, 12, implicit-def dead early-clobber $r11, 12, implicit-def dead early-clobber $r12, 12, implicit-def dead early-clobber $r13, 12, implicit-def dead early-clobber $r14, 12, implicit-def dead early-clobber $r15, 12, implicit-def dead early-clobber $eflags, !20, debug-location !409
     renamable $rdi = MOV64rm $rsp, 1, $noreg, -8, $noreg :: (load (s64) from %stack.0)
+    ; Clobber stack location to force variable location to move to $rdi.
+    $rax = MOV64ri 0
+    MOV64mr $rsp, 1, _, -8, _, killed renamable $rax :: (store (s64) into %stack.0)
     $rbx = frame-destroy POP64r implicit-def $rsp, implicit $rsp
     CFI_INSTRUCTION def_cfa_offset 48
     $r12 = frame-destroy POP64r implicit-def $rsp, implicit $rsp
@@ -731,6 +741,6 @@ body:             |
     liveins: $rdi, $rbx, $r12, $r13, $r14, $r15, $rbp
   
     renamable $eax = MOV32rm killed renamable $rdi, 1, $noreg, 4, $noreg, debug-location !414 :: (load (s32) from %ir.add.ptr, !tbaa !24)
-    RETQ $eax, debug-location !415
+    RET64 $eax, debug-location !415
 
 ...

@@ -10,7 +10,7 @@
 
 // <string>
 
-// basic_string& assign(initializer_list<charT> il);
+// basic_string& assign(initializer_list<charT> il); // constexpr since C++20
 
 #include <string>
 #include <cassert>
@@ -18,19 +18,28 @@
 #include "test_macros.h"
 #include "min_allocator.h"
 
+TEST_CONSTEXPR_CXX20 bool test() {
+  {
+    std::string s("123");
+    s.assign({'a', 'b', 'c'});
+    assert(s == "abc");
+  }
+  {
+    typedef std::basic_string<char, std::char_traits<char>, min_allocator<char>> S;
+    S s("123");
+    s.assign({'a', 'b', 'c'});
+    assert(s == "abc");
+  }
+
+  return true;
+}
+
 int main(int, char**)
 {
-    {
-        std::string s("123");
-        s.assign({'a', 'b', 'c'});
-        assert(s == "abc");
-    }
-    {
-        typedef std::basic_string<char, std::char_traits<char>, min_allocator<char>> S;
-        S s("123");
-        s.assign({'a', 'b', 'c'});
-        assert(s == "abc");
-    }
+  test();
+#if TEST_STD_VER > 17
+  static_assert(test());
+#endif
 
   return 0;
 }

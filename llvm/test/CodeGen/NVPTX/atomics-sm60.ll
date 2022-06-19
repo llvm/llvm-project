@@ -1,5 +1,7 @@
 ; RUN: llc < %s -march=nvptx -mcpu=sm_60 | FileCheck %s
 ; RUN: llc < %s -march=nvptx64 -mcpu=sm_60 | FileCheck %s
+; RUN: %if ptxas %{ llc < %s -march=nvptx -mcpu=sm_60 | %ptxas-verify -arch=sm_60 %}
+; RUN: %if ptxas %{ llc < %s -march=nvptx64 -mcpu=sm_60 | %ptxas-verify -arch=sm_60 %}
 
 ; CHECK-LABEL: .func test(
 define void @test(double* %dp0, double addrspace(1)* %dp1, double addrspace(3)* %dp3, double %d) {

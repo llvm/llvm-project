@@ -22,10 +22,11 @@ def note_fe_inline_asm_here : Note<"instantiated into assembly here">;
 def err_fe_source_mgr : Error<"%0">, CatSourceMgr;
 def warn_fe_source_mgr : Warning<"%0">, CatSourceMgr, InGroup<BackendSourceMgr>;
 def note_fe_source_mgr : Note<"%0">, CatSourceMgr;
-def err_fe_cannot_link_module : Error<"cannot link module '%0': %1">,
-  DefaultFatal;
+def err_fe_linking_module : Error<"cannot link module '%0': %1">, DefaultFatal;
+def warn_fe_linking_module : Warning<"linking module '%0': %1">, InGroup<LinkerWarnings>;
+def note_fe_linking_module : Note<"linking module '%0': %1">;
 
-def warn_fe_frame_larger_than : Warning<"stack frame size (%0) exceeds limit (%1) in %q2">,
+def warn_fe_frame_larger_than : Warning<"stack frame size (%0) exceeds limit (%1) in '%2'">,
     BackendInfo, InGroup<BackendFrameLargerThan>;
 def warn_fe_backend_frame_larger_than: Warning<"%0">,
     BackendInfo, InGroup<BackendFrameLargerThan>;
@@ -46,6 +47,10 @@ def warn_fe_backend_unsupported_fp_rounding : Warning<
 def warn_fe_backend_unsupported_fp_exceptions : Warning<
     "overriding currently unsupported use of floating point exceptions "
     "on this target">, InGroup<UnsupportedFPOpt>;
+
+def err_incompatible_fp_eval_method_options : Error<
+    "option 'ffp-eval-method' cannot be used with option "
+    "%select{'fapprox-func'|'mreassociate'|'freciprocal'}0">;
 
 def remark_fe_backend_optimization_remark : Remark<"%0">, BackendInfo,
     InGroup<BackendOptimizationRemark>;
@@ -71,6 +76,12 @@ def note_fe_backend_invalid_loc : Note<"could "
 
 def err_fe_backend_unsupported : Error<"%0">, BackendInfo;
 def warn_fe_backend_unsupported : Warning<"%0">, BackendInfo;
+
+def err_fe_backend_error_attr :
+  Error<"call to %0 declared with 'error' attribute: %1">, BackendInfo;
+def warn_fe_backend_warning_attr :
+  Warning<"call to %0 declared with 'warning' attribute: %1">, BackendInfo,
+  InGroup<BackendWarningAttributes>;
 
 def err_fe_invalid_code_complete_file : Error<
     "cannot locate code-completion file %0">, DefaultFatal;
@@ -229,6 +240,8 @@ def remark_module_build : Remark<"building module '%0' as '%1'">,
   InGroup<ModuleBuild>;
 def remark_module_build_done : Remark<"finished building module '%0'">,
   InGroup<ModuleBuild>;
+def remark_module_lock : Remark<"locking '%0' to build module '%1'">,
+  InGroup<ModuleLock>;
 def err_modules_embed_file_not_found :
   Error<"file '%0' specified by '-fmodules-embed-file=' not found">,
   DefaultFatal;
@@ -245,7 +258,7 @@ def err_invalid_vfs_overlay : Error<
   "invalid virtual filesystem overlay file '%0'">, DefaultFatal;
 
 def warn_option_invalid_ocl_version : Warning<
-  "OpenCL version %0 does not support the option '%1'">, InGroup<Deprecated>;
+  "%0 does not support the option '%1'">, InGroup<Deprecated>;
 
 def err_builtin_needs_feature : Error<"%0 needs target feature %1">;
 def err_function_needs_feature : Error<
@@ -302,6 +315,11 @@ def warn_profile_data_missing : Warning<
 def warn_profile_data_unprofiled : Warning<
   "no profile data available for file \"%0\"">,
   InGroup<ProfileInstrUnprofiled>;
+def warn_profile_data_misexpect : Warning<
+  "Potential performance regression from use of __builtin_expect(): "
+  "Annotation was correct on %0 of profiled executions.">,
+  BackendInfo,
+  InGroup<MisExpect>;
 } // end of instrumentation issue category
 
 }

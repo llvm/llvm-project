@@ -6,11 +6,11 @@ Found thread data sharing on the GPU. Expect degraded performance due to data gl
 This missed remark indicates that a globalized value was found on the target
 device that was not either replaced with stack memory by :ref:`OMP110 <omp110>`
 or shared memory by :ref:`OMP111 <omp111>`. Globalization that has not been
-removed will need to be handled by the runtime and will significantly hurt
-performance. 
+removed will need to be handled by the runtime and will significantly impact
+performance.
 
-The OpenMP standard expects that threads can always share their data between
-each-other.  However, this is not true by default when offloading to a target
+The OpenMP standard requires that threads are able to share their data between
+each-other. However, this is not true by default when offloading to a target
 device such as a GPU. Threads on a GPU cannot shared their data unless it is
 first placed in global or shared memory. In order to create standards complaint
 code, the Clang compiler will globalize any variables that could potentially be
@@ -30,21 +30,21 @@ devices.
 
   #include <omp.h>
   #include <cstdio>
-  
+
   #pragma omp declare target
   static int *p;
   #pragma omp end declare target
-  
+
   void foo() {
     int x = omp_get_thread_num();
     if (omp_get_thread_num() == 1)
       p = &x;
-  
+
   #pragma omp barrier
-  
+
     printf ("Thread %d: %d\n", omp_get_thread_num(), *p);
   }
-  
+
   int main() {
   #pragma omp target parallel
     foo();
@@ -52,7 +52,7 @@ devices.
 
 .. code-block:: console
 
-  $ clang++ -fopenmp -fopenmp-targets=nvptx64 -O1 -Rpass-missed=openmp-opt omp112.cpp 
+  $ clang++ -fopenmp -fopenmp-targets=nvptx64 -O1 -Rpass-missed=openmp-opt omp112.cpp
   omp112.cpp:9:7: remark: Found thread data sharing on the GPU. Expect degraded performance
   due to data globalization. [OMP112] [-Rpass-missed=openmp-opt]
   int x = omp_get_thread_num();
@@ -64,12 +64,12 @@ calling functions that aren't visible from the current translation unit.
 .. code-block:: c++
 
   extern void use(int *x);
-  
+
   void foo() {
     int x;
     use(&x);
   }
-  
+
   int main() {
   #pragma omp target parallel
     foo();
@@ -77,7 +77,7 @@ calling functions that aren't visible from the current translation unit.
 
 .. code-block:: console
 
-  $ clang++ -fopenmp -fopenmp-targets=nvptx64 -O1 -Rpass-missed=openmp-opt omp112.cpp 
+  $ clang++ -fopenmp -fopenmp-targets=nvptx64 -O1 -Rpass-missed=openmp-opt omp112.cpp
   omp112.cpp:4:7: remark: Found thread data sharing on the GPU. Expect degraded performance
   due to data globalization. [OMP112] [-Rpass-missed=openmp-opt]
   int x;

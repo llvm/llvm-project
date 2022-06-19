@@ -141,7 +141,7 @@ runCheckOnCode(StringRef Code, std::vector<ClangTidyError> *Errors = nullptr,
     for (const auto &Error : DiagConsumer.take()) {
       ErrorText += Error.Message.Message + "\n";
     }
-    llvm::report_fatal_error(ErrorText);
+    llvm::report_fatal_error(llvm::Twine(ErrorText));
   }
 
   tooling::Replacements Fixes;

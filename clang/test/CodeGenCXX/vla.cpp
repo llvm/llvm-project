@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -std=c++11 -triple x86_64-apple-darwin %s -emit-llvm -o - | FileCheck -check-prefixes=X64,CHECK %s
-// RUN: %clang_cc1 -std=c++11 -triple amdgcn %s -emit-llvm -o - | FileCheck -check-prefixes=AMDGCN,CHECK %s
+// RUN: %clang_cc1 -no-opaque-pointers -std=c++11 -triple x86_64-apple-darwin %s -emit-llvm -o - | FileCheck -check-prefixes=X64,CHECK %s
+// RUN: %clang_cc1 -no-opaque-pointers -std=c++11 -triple amdgcn %s -emit-llvm -o - | FileCheck -check-prefixes=AMDGCN,CHECK %s
 
 template<typename T>
 struct S {
@@ -18,19 +18,19 @@ int f() {
 // rdar://problem/9506377
 void test0(void *array, int n) {
   // CHECK-LABEL: define{{.*}} void @_Z5test0Pvi(
-  // X64:        [[ARRAY:%.*]] = alloca i8*, align 8
   // AMDGCN:        [[ARRAY0:%.*]] = alloca i8*, align 8, addrspace(5)
+  // AMDGCN-NEXT:   [[N0:%.*]] = alloca i32, align 4, addrspace(5)
+  // AMDGCN-NEXT:   [[REF0:%.*]] = alloca i16*, align 8, addrspace(5)
+  // AMDGCN-NEXT:   [[S0:%.*]] = alloca i16, align 2, addrspace(5)
   // AMDGCN-NEXT:   [[ARRAY:%.*]] = addrspacecast i8* addrspace(5)* [[ARRAY0]] to i8**
-  // X64-NEXT:   [[N:%.*]] = alloca i32, align 4
-  // AMDGCN:        [[N0:%.*]] = alloca i32, align 4, addrspace(5)
   // AMDGCN-NEXT:   [[N:%.*]] = addrspacecast i32 addrspace(5)* [[N0]] to i32*
-  // X64-NEXT:   [[REF:%.*]] = alloca i16*, align 8
-  // AMDGCN:        [[REF0:%.*]] = alloca i16*, align 8, addrspace(5)
   // AMDGCN-NEXT:   [[REF:%.*]] = addrspacecast i16* addrspace(5)* [[REF0]] to i16**
-  // X64-NEXT:   [[S:%.*]] = alloca i16, align 2
-  // AMDGCN:        [[S0:%.*]] = alloca i16, align 2, addrspace(5)
   // AMDGCN-NEXT:   [[S:%.*]] = addrspacecast i16 addrspace(5)* [[S0]] to i16*
-  // CHECK-NEXT: store i8* 
+  // X64:        [[ARRAY:%.*]] = alloca i8*, align 8
+  // X64-NEXT:   [[N:%.*]] = alloca i32, align 4
+  // X64-NEXT:   [[REF:%.*]] = alloca i16*, align 8
+  // X64-NEXT:   [[S:%.*]] = alloca i16, align 2
+  // CHECK-NEXT: store i8*
   // CHECK-NEXT: store i32
 
   // Capture the bounds.
@@ -66,7 +66,7 @@ void test0(void *array, int n) {
 
 
 void test2(int b) {
-  // CHECK-LABEL: define{{.*}} void {{.*}}test2{{.*}}(i32 %b)
+  // CHECK-LABEL: define{{.*}} void {{.*}}test2{{.*}}(i32 noundef %b)
   int varr[b];
   // AMDGCN: %__end1 = alloca i32*, align 8, addrspace(5)
   // AMDGCN: [[END:%.*]] = addrspacecast i32* addrspace(5)* %__end1 to i32**
@@ -92,7 +92,7 @@ void test2(int b) {
 }
 
 void test3(int b, int c) {
-  // CHECK-LABEL: define{{.*}} void {{.*}}test3{{.*}}(i32 %b, i32 %c)
+  // CHECK-LABEL: define{{.*}} void {{.*}}test3{{.*}}(i32 noundef %b, i32 noundef %c)
   int varr[b][c];
   // AMDGCN: %__end1 = alloca i32*, align 8, addrspace(5)
   // AMDGCN: [[END:%.*]] = addrspacecast i32* addrspace(5)* %__end1 to i32**

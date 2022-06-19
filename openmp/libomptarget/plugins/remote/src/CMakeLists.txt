@@ -10,7 +10,7 @@
 #
 ##===----------------------------------------------------------------------===##
 
-cmake_minimum_required(VERSION 3.15)
+cmake_minimum_required(VERSION 3.13.4)
 
 # Define the suffix for the runtime messaging dumps.
 add_definitions(-DTARGET_NAME=RPC)
@@ -34,8 +34,9 @@ install(TARGETS omptarget.rtl.rpc LIBRARY DESTINATION "${OPENMP_INSTALL_LIBDIR}"
 target_link_libraries(omptarget.rtl.rpc
   grpc++
   protobuf
-  "-ldl"
+  absl::synchronization
   ${OPENMP_PTHREAD_LIB}
+  omp
   "-Wl,--version-script=${CMAKE_CURRENT_SOURCE_DIR}/../../exports")
 
 # Report to the parent scope that we are building a plugin for RPC.

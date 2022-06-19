@@ -8,6 +8,8 @@
 
 // UNSUPPORTED: c++03
 
+// ADDITIONAL_COMPILE_FLAGS: -D _LIBCPP_USE_IS_CONVERTIBLE_FALLBACK
+
 // type_traits
 
 // is_convertible
@@ -18,11 +20,8 @@
 // `__is_convertible` with the same name when clang doesn't.
 // Because this test forces the use of the fallback even when clang provides
 // it causing a keyword incompatibility.
-#if defined(__clang__)
-#pragma clang diagnostic ignored "-Wkeyword-compat"
-#endif
-
-#define _LIBCPP_USE_IS_CONVERTIBLE_FALLBACK
-#include "is_convertible.pass.cpp"
 
 #include "test_macros.h"
+TEST_CLANG_DIAGNOSTIC_IGNORED("-Wkeyword-compat")
+
+#include "is_convertible.pass.cpp"

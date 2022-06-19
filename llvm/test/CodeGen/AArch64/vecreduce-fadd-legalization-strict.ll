@@ -94,8 +94,8 @@ define float @test_v3f32(<3 x float> %a, float %s) nounwind {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    fadd s1, s1, s0
 ; CHECK-NEXT:    mov s2, v0.s[1]
-; CHECK-NEXT:    fadd s1, s1, s2
 ; CHECK-NEXT:    mov s0, v0.s[2]
+; CHECK-NEXT:    fadd s1, s1, s2
 ; CHECK-NEXT:    fadd s0, s1, s0
 ; CHECK-NEXT:    ret
   %b = call float @llvm.vector.reduce.fadd.f32.v3f32(float %s, <3 x float> %a)
@@ -141,15 +141,15 @@ define float @test_v5f32_neutral(<5 x float> %a) nounwind {
 define fp128 @test_v2f128(<2 x fp128> %a, fp128 %s) nounwind {
 ; CHECK-LABEL: test_v2f128:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    sub sp, sp, #32 // =32
+; CHECK-NEXT:    sub sp, sp, #32
 ; CHECK-NEXT:    str q1, [sp] // 16-byte Folded Spill
 ; CHECK-NEXT:    mov v1.16b, v0.16b
-; CHECK-NEXT:    mov v0.16b, v2.16b
 ; CHECK-NEXT:    str x30, [sp, #16] // 8-byte Folded Spill
+; CHECK-NEXT:    mov v0.16b, v2.16b
 ; CHECK-NEXT:    bl __addtf3
 ; CHECK-NEXT:    ldr q1, [sp] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldr x30, [sp, #16] // 8-byte Folded Reload
-; CHECK-NEXT:    add sp, sp, #32 // =32
+; CHECK-NEXT:    add sp, sp, #32
 ; CHECK-NEXT:    b __addtf3
   %b = call fp128 @llvm.vector.reduce.fadd.f128.v2f128(fp128 %s, <2 x fp128> %a)
   ret fp128 %b
@@ -166,34 +166,34 @@ define fp128 @test_v2f128_neutral(<2 x fp128> %a) nounwind {
 define float @test_v16f32(<16 x float> %a, float %s) nounwind {
 ; CHECK-LABEL: test_v16f32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov s22, v0.s[3]
-; CHECK-NEXT:    mov s23, v0.s[2]
-; CHECK-NEXT:    mov s24, v0.s[1]
+; CHECK-NEXT:    mov s6, v0.s[1]
+; CHECK-NEXT:    fadd s4, s4, s0
+; CHECK-NEXT:    mov s7, v0.s[2]
+; CHECK-NEXT:    mov s0, v0.s[3]
+; CHECK-NEXT:    mov s5, v3.s[1]
+; CHECK-NEXT:    fadd s4, s4, s6
+; CHECK-NEXT:    mov s6, v1.s[2]
+; CHECK-NEXT:    fadd s4, s4, s7
 ; CHECK-NEXT:    fadd s0, s4, s0
-; CHECK-NEXT:    fadd s0, s0, s24
-; CHECK-NEXT:    fadd s0, s0, s23
-; CHECK-NEXT:    fadd s0, s0, s22
-; CHECK-NEXT:    mov s21, v1.s[1]
+; CHECK-NEXT:    mov s4, v1.s[1]
 ; CHECK-NEXT:    fadd s0, s0, s1
-; CHECK-NEXT:    mov s20, v1.s[2]
-; CHECK-NEXT:    fadd s0, s0, s21
-; CHECK-NEXT:    mov s19, v1.s[3]
-; CHECK-NEXT:    fadd s0, s0, s20
-; CHECK-NEXT:    fadd s0, s0, s19
-; CHECK-NEXT:    mov s18, v2.s[1]
-; CHECK-NEXT:    fadd s0, s0, s2
-; CHECK-NEXT:    mov s17, v2.s[2]
-; CHECK-NEXT:    fadd s0, s0, s18
-; CHECK-NEXT:    mov s16, v2.s[3]
-; CHECK-NEXT:    fadd s0, s0, s17
-; CHECK-NEXT:    fadd s0, s0, s16
-; CHECK-NEXT:    mov s7, v3.s[1]
-; CHECK-NEXT:    fadd s0, s0, s3
-; CHECK-NEXT:    mov s6, v3.s[2]
-; CHECK-NEXT:    fadd s0, s0, s7
-; CHECK-NEXT:    mov s5, v3.s[3]
+; CHECK-NEXT:    mov s1, v1.s[3]
+; CHECK-NEXT:    fadd s0, s0, s4
+; CHECK-NEXT:    mov s4, v2.s[2]
 ; CHECK-NEXT:    fadd s0, s0, s6
+; CHECK-NEXT:    fadd s0, s0, s1
+; CHECK-NEXT:    mov s1, v2.s[1]
+; CHECK-NEXT:    fadd s0, s0, s2
+; CHECK-NEXT:    fadd s0, s0, s1
+; CHECK-NEXT:    mov s1, v2.s[3]
+; CHECK-NEXT:    mov s2, v3.s[3]
+; CHECK-NEXT:    fadd s0, s0, s4
+; CHECK-NEXT:    fadd s0, s0, s1
+; CHECK-NEXT:    mov s1, v3.s[2]
+; CHECK-NEXT:    fadd s0, s0, s3
 ; CHECK-NEXT:    fadd s0, s0, s5
+; CHECK-NEXT:    fadd s0, s0, s1
+; CHECK-NEXT:    fadd s0, s0, s2
 ; CHECK-NEXT:    ret
   %b = call float @llvm.vector.reduce.fadd.f32.v16f32(float %s, <16 x float> %a)
   ret float %b
@@ -202,32 +202,32 @@ define float @test_v16f32(<16 x float> %a, float %s) nounwind {
 define float @test_v16f32_neutral(<16 x float> %a) nounwind {
 ; CHECK-LABEL: test_v16f32_neutral:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov s21, v0.s[3]
-; CHECK-NEXT:    mov s22, v0.s[2]
-; CHECK-NEXT:    faddp s0, v0.2s
-; CHECK-NEXT:    fadd s0, s0, s22
-; CHECK-NEXT:    fadd s0, s0, s21
-; CHECK-NEXT:    mov s20, v1.s[1]
+; CHECK-NEXT:    mov s5, v0.s[2]
+; CHECK-NEXT:    faddp s6, v0.2s
+; CHECK-NEXT:    mov s0, v0.s[3]
+; CHECK-NEXT:    mov s4, v2.s[1]
+; CHECK-NEXT:    fadd s5, s6, s5
+; CHECK-NEXT:    mov s6, v1.s[2]
+; CHECK-NEXT:    fadd s0, s5, s0
+; CHECK-NEXT:    mov s5, v1.s[1]
 ; CHECK-NEXT:    fadd s0, s0, s1
-; CHECK-NEXT:    mov s19, v1.s[2]
-; CHECK-NEXT:    fadd s0, s0, s20
-; CHECK-NEXT:    mov s18, v1.s[3]
-; CHECK-NEXT:    fadd s0, s0, s19
-; CHECK-NEXT:    fadd s0, s0, s18
-; CHECK-NEXT:    mov s17, v2.s[1]
-; CHECK-NEXT:    fadd s0, s0, s2
-; CHECK-NEXT:    mov s16, v2.s[2]
-; CHECK-NEXT:    fadd s0, s0, s17
-; CHECK-NEXT:    mov s7, v2.s[3]
-; CHECK-NEXT:    fadd s0, s0, s16
-; CHECK-NEXT:    fadd s0, s0, s7
-; CHECK-NEXT:    mov s6, v3.s[1]
-; CHECK-NEXT:    fadd s0, s0, s3
-; CHECK-NEXT:    mov s5, v3.s[2]
-; CHECK-NEXT:    fadd s0, s0, s6
-; CHECK-NEXT:    mov s4, v3.s[3]
+; CHECK-NEXT:    mov s1, v1.s[3]
 ; CHECK-NEXT:    fadd s0, s0, s5
+; CHECK-NEXT:    fadd s0, s0, s6
+; CHECK-NEXT:    fadd s0, s0, s1
+; CHECK-NEXT:    mov s1, v2.s[2]
+; CHECK-NEXT:    fadd s0, s0, s2
+; CHECK-NEXT:    mov s2, v2.s[3]
 ; CHECK-NEXT:    fadd s0, s0, s4
+; CHECK-NEXT:    fadd s0, s0, s1
+; CHECK-NEXT:    mov s1, v3.s[1]
+; CHECK-NEXT:    fadd s0, s0, s2
+; CHECK-NEXT:    mov s2, v3.s[2]
+; CHECK-NEXT:    fadd s0, s0, s3
+; CHECK-NEXT:    fadd s0, s0, s1
+; CHECK-NEXT:    mov s1, v3.s[3]
+; CHECK-NEXT:    fadd s0, s0, s2
+; CHECK-NEXT:    fadd s0, s0, s1
 ; CHECK-NEXT:    ret
   %b = call float @llvm.vector.reduce.fadd.f32.v16f32(float -0.0, <16 x float> %a)
   ret float %b

@@ -23,42 +23,53 @@ namespace optutils = clang::tidy::utils::options;
 static constexpr std::size_t DefaultMinimumLength = 2;
 
 /// The default value for ignored parameter names.
-static const std::string DefaultIgnoredParameterNames =
-    optutils::serializeStringList({"\"\"", "iterator", "Iterator", "begin",
-                                   "Begin", "end", "End", "first", "First",
-                                   "last", "Last", "lhs", "LHS", "rhs", "RHS"});
+static constexpr llvm::StringLiteral DefaultIgnoredParameterNames = "\"\";"
+                                                                    "iterator;"
+                                                                    "Iterator;"
+                                                                    "begin;"
+                                                                    "Begin;"
+                                                                    "end;"
+                                                                    "End;"
+                                                                    "first;"
+                                                                    "First;"
+                                                                    "last;"
+                                                                    "Last;"
+                                                                    "lhs;"
+                                                                    "LHS;"
+                                                                    "rhs;"
+                                                                    "RHS";
 
 /// The default value for ignored parameter type suffixes.
-static const std::string DefaultIgnoredParameterTypeSuffixes =
-    optutils::serializeStringList({"bool",
-                                   "Bool",
-                                   "_Bool",
-                                   "it",
-                                   "It",
-                                   "iterator",
-                                   "Iterator",
-                                   "inputit",
-                                   "InputIt",
-                                   "forwardit",
-                                   "FowardIt",
-                                   "bidirit",
-                                   "BidirIt",
-                                   "constiterator",
-                                   "const_iterator",
-                                   "Const_Iterator",
-                                   "Constiterator",
-                                   "ConstIterator",
-                                   "RandomIt",
-                                   "randomit",
-                                   "random_iterator",
-                                   "ReverseIt",
-                                   "reverse_iterator",
-                                   "reverse_const_iterator",
-                                   "ConstReverseIterator",
-                                   "Const_Reverse_Iterator",
-                                   "const_reverse_iterator"
-                                   "Constreverseiterator",
-                                   "constreverseiterator"});
+static constexpr llvm::StringLiteral DefaultIgnoredParameterTypeSuffixes =
+    "bool;"
+    "Bool;"
+    "_Bool;"
+    "it;"
+    "It;"
+    "iterator;"
+    "Iterator;"
+    "inputit;"
+    "InputIt;"
+    "forwardit;"
+    "ForwardIt;"
+    "bidirit;"
+    "BidirIt;"
+    "constiterator;"
+    "const_iterator;"
+    "Const_Iterator;"
+    "Constiterator;"
+    "ConstIterator;"
+    "RandomIt;"
+    "randomit;"
+    "random_iterator;"
+    "ReverseIt;"
+    "reverse_iterator;"
+    "reverse_const_iterator;"
+    "ConstReverseIterator;"
+    "Const_Reverse_Iterator;"
+    "const_reverse_iterator;"
+    "Constreverseiterator;"
+    "constreverseiterator";
 
 /// The default value for the QualifiersMix check option.
 static constexpr bool DefaultQualifiersMix = false;
@@ -962,11 +973,8 @@ approximateStandardConversionSequence(const TheCheck &Check, QualType From,
   // LValue->RValue is irrelevant for the check, because it is a thing to be
   // done at a call site, and will be performed if need be performed.
 
-  // Array->Ptr decay.
-  if (const auto *ArrayT = dyn_cast<ArrayType>(From)) {
-    LLVM_DEBUG(llvm::dbgs() << "--- approximateStdConv. Array->Ptr decayed.\n");
-    WorkType = ArrayT->getPointeeType();
-  }
+  // Array->Pointer decay is handled by the main method in desugaring
+  // the parameter's DecayedType as "useless sugar".
 
   // Function->Pointer conversions are also irrelevant, because a
   // "FunctionType" cannot be the type of a parameter variable, so this
@@ -1103,7 +1111,7 @@ public:
   ///     an implicit conversion.
   void addConversion(const CXXMethodDecl *ConvFun, QualType FromType,
                      QualType ToType) {
-    // Try to go from the FromType to the ToType wiht only a single implicit
+    // Try to go from the FromType to the ToType with only a single implicit
     // conversion, to see if the conversion function is applicable.
     MixData Mix = calculateMixability(
         Check, FromType, ToType, ConvFun->getASTContext(),
@@ -1544,7 +1552,7 @@ static bool isIgnoredParameter(const TheCheck &Check, const ParmVarDecl *Node) {
   LLVM_DEBUG(llvm::dbgs() << "\tType name is '" << NodeTypeName << "'\n");
   if (!NodeTypeName.empty()) {
     if (llvm::any_of(Check.IgnoredParameterTypeSuffixes,
-                     [NodeTypeName](const std::string &E) {
+                     [NodeTypeName](StringRef E) {
                        return !E.empty() && NodeTypeName.endswith(E);
                      })) {
       LLVM_DEBUG(llvm::dbgs() << "\tType suffix ignored.\n");
@@ -1556,7 +1564,7 @@ static bool isIgnoredParameter(const TheCheck &Check, const ParmVarDecl *Node) {
 }
 
 /// This namespace contains the implementations for the suppression of
-/// diagnostics from similaly used ("related") parameters.
+/// diagnostics from similarly-used ("related") parameters.
 namespace relatedness_heuristic {
 
 static constexpr std::size_t SmallDataStructureSize = 4;

@@ -25,7 +25,7 @@ using namespace clang;
 static const LangASMap DefaultAddrSpaceMap = {0};
 
 // TargetInfo Constructor.
-TargetInfo::TargetInfo(const llvm::Triple &T) : TargetOpts(), Triple(T) {
+TargetInfo::TargetInfo(const llvm::Triple &T) : Triple(T) {
   // Set defaults.  Defaults are set for a 32-bit RISC platform, like PPC or
   // SPARC.  These should be overridden by concrete targets as needed.
   BigEndian = !T.isLittleEndian();
@@ -34,8 +34,11 @@ TargetInfo::TargetInfo(const llvm::Triple &T) : TargetOpts(), Triple(T) {
   NoAsmVariants = false;
   HasLegalHalfType = false;
   HasFloat128 = false;
+  HasIbm128 = false;
   HasFloat16 = false;
   HasBFloat16 = false;
+  HasLongDouble = true;
+  HasFPReturn = true;
   HasStrictFP = false;
   PointerWidth = PointerAlign = 32;
   BoolWidth = BoolAlign = 8;
@@ -66,11 +69,11 @@ TargetInfo::TargetInfo(const llvm::Triple &T) : TargetOpts(), Triple(T) {
   // From the glibc documentation, on GNU systems, malloc guarantees 16-byte
   // alignment on 64-bit systems and 8-byte alignment on 32-bit systems. See
   // https://www.gnu.org/software/libc/manual/html_node/Malloc-Examples.html.
-  // This alignment guarantee also applies to Windows and Android. On Darwin,
-  // the alignment is 16 bytes on both 64-bit and 32-bit systems.
+  // This alignment guarantee also applies to Windows and Android. On Darwin
+  // and OpenBSD, the alignment is 16 bytes on both 64-bit and 32-bit systems.
   if (T.isGNUEnvironment() || T.isWindowsMSVCEnvironment() || T.isAndroid())
     NewAlign = Triple.isArch64Bit() ? 128 : Triple.isArch32Bit() ? 64 : 0;
-  else if (T.isOSDarwin())
+  else if (T.isOSDarwin() || T.isOSOpenBSD())
     NewAlign = 128;
   else
     NewAlign = 0; // Infer from basic type alignment.
@@ -83,6 +86,7 @@ TargetInfo::TargetInfo(const llvm::Triple &T) : TargetOpts(), Triple(T) {
   LongDoubleWidth = 64;
   LongDoubleAlign = 64;
   Float128Align = 128;
+  Ibm128Align = 128;
   LargeArrayMinWidth = 0;
   LargeArrayAlign = 0;
   MaxAtomicPromoteWidth = MaxAtomicInlineWidth = 0;
@@ -113,6 +117,7 @@ TargetInfo::TargetInfo(const llvm::Triple &T) : TargetOpts(), Triple(T) {
   DoubleFormat = &llvm::APFloat::IEEEdouble();
   LongDoubleFormat = &llvm::APFloat::IEEEdouble();
   Float128Format = &llvm::APFloat::IEEEquad();
+  Ibm128Format = &llvm::APFloat::PPCDoubleDouble();
   MCountName = "mcount";
   UserLabelPrefix = "_";
   RegParmMax = 0;
@@ -126,7 +131,7 @@ TargetInfo::TargetInfo(const llvm::Triple &T) : TargetOpts(), Triple(T) {
   ARMCDECoprocMask = 0;
 
   // Default to no types using fpret.
-  RealTypeUsesObjCFPRet = 0;
+  RealTypeUsesObjCFPRetMask = 0;
 
   // Default to not using fp2ret for __Complex long double
   ComplexLongDoubleUsesFP2Ret = false;
@@ -145,6 +150,10 @@ TargetInfo::TargetInfo(const llvm::Triple &T) : TargetOpts(), Triple(T) {
   PlatformMinVersion = VersionTuple();
 
   MaxOpenCLWorkGroupSize = 1024;
+
+  MaxBitIntWidth.reset();
+
+  ProgramAddrSpace = 0;
 }
 
 // Out of line virtual dtor for TargetInfo.
@@ -276,32 +285,38 @@ TargetInfo::IntType TargetInfo::getLeastIntTypeByWidth(unsigned BitWidth,
   return NoInt;
 }
 
-TargetInfo::RealType TargetInfo::getRealTypeByWidth(unsigned BitWidth,
-                                                    bool ExplicitIEEE) const {
+FloatModeKind TargetInfo::getRealTypeByWidth(unsigned BitWidth,
+                                             FloatModeKind ExplicitType) const {
+  if (getHalfWidth() == BitWidth)
+    return FloatModeKind::Half;
   if (getFloatWidth() == BitWidth)
-    return Float;
+    return FloatModeKind::Float;
   if (getDoubleWidth() == BitWidth)
-    return Double;
+    return FloatModeKind::Double;
 
   switch (BitWidth) {
   case 96:
     if (&getLongDoubleFormat() == &llvm::APFloat::x87DoubleExtended())
-      return LongDouble;
+      return FloatModeKind::LongDouble;
     break;
   case 128:
     // The caller explicitly asked for an IEEE compliant type but we still
     // have to check if the target supports it.
-    if (ExplicitIEEE)
-      return hasFloat128Type() ? Float128 : NoFloat;
+    if (ExplicitType == FloatModeKind::Float128)
+      return hasFloat128Type() ? FloatModeKind::Float128
+                               : FloatModeKind::NoFloat;
+    if (ExplicitType == FloatModeKind::Ibm128)
+      return hasIbm128Type() ? FloatModeKind::Ibm128
+                             : FloatModeKind::NoFloat;
     if (&getLongDoubleFormat() == &llvm::APFloat::PPCDoubleDouble() ||
         &getLongDoubleFormat() == &llvm::APFloat::IEEEquad())
-      return LongDouble;
+      return FloatModeKind::LongDouble;
     if (hasFloat128Type())
-      return Float128;
+      return FloatModeKind::Float128;
     break;
   }
 
-  return NoFloat;
+  return FloatModeKind::NoFloat;
 }
 
 /// getTypeAlign - Return the alignment (in bits) of the specified integer type
@@ -400,14 +415,20 @@ void TargetInfo::adjust(DiagnosticsEngine &Diags, LangOptions &Opts) {
     // OpenCL C v3.0 s6.7.5 - The generic address space requires support for
     // OpenCL C 2.0 or OpenCL C 3.0 with the __opencl_c_generic_address_space
     // feature
-    // FIXME: OpenCLGenericAddressSpace is also defined in setLangDefaults()
+    // OpenCL C v3.0 s6.2.1 - OpenCL pipes require support of OpenCL C 2.0
+    // or later and __opencl_c_pipes feature
+    // FIXME: These language options are also defined in setLangDefaults()
     // for OpenCL C 2.0 but with no access to target capabilities. Target
-    // should be immutable once created and thus this language option needs
+    // should be immutable once created and thus these language options need
     // to be defined only once.
-    if (Opts.OpenCLVersion >= 300) {
+    if (Opts.getOpenCLCompatibleVersion() == 300) {
       const auto &OpenCLFeaturesMap = getSupportedOpenCLOpts();
       Opts.OpenCLGenericAddressSpace = hasFeatureEnabled(
           OpenCLFeaturesMap, "__opencl_c_generic_address_space");
+      Opts.OpenCLPipes =
+          hasFeatureEnabled(OpenCLFeaturesMap, "__opencl_c_pipes");
+      Opts.Blocks =
+          hasFeatureEnabled(OpenCLFeaturesMap, "__opencl_c_device_enqueue");
     }
   }
 
@@ -433,6 +454,20 @@ void TargetInfo::adjust(DiagnosticsEngine &Diags, LangOptions &Opts) {
     } else if (Opts.LongDoubleSize == 128) {
       LongDoubleWidth = LongDoubleAlign = 128;
       LongDoubleFormat = &llvm::APFloat::IEEEquad();
+    } else if (Opts.LongDoubleSize == 80) {
+      LongDoubleFormat = &llvm::APFloat::x87DoubleExtended();
+      if (getTriple().isWindowsMSVCEnvironment()) {
+        LongDoubleWidth = 128;
+        LongDoubleAlign = 128;
+      } else { // Linux
+        if (getTriple().getArch() == llvm::Triple::x86) {
+          LongDoubleWidth = 96;
+          LongDoubleAlign = 32;
+        } else {
+          LongDoubleWidth = 128;
+          LongDoubleAlign = 128;
+        }
+      }
     }
   }
 
@@ -448,6 +483,9 @@ void TargetInfo::adjust(DiagnosticsEngine &Diags, LangOptions &Opts) {
     Diags.Report(diag::err_opt_not_valid_on_target) << "-fprotect-parens";
     Opts.ProtectParens = false;
   }
+
+  if (Opts.MaxBitIntWidth)
+    MaxBitIntWidth = Opts.MaxBitIntWidth;
 }
 
 bool TargetInfo::initFeatureMap(

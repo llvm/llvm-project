@@ -57,7 +57,7 @@ def ArgValueDecl : ArgType { let Name = "const ValueDecl *"; }
 def ArgRecordField : ArgType { let Name = "const Record::Field *"; }
 
 //===----------------------------------------------------------------------===//
-// Classes of types intructions operate on.
+// Classes of types instructions operate on.
 //===----------------------------------------------------------------------===//
 
 class TypeClass {

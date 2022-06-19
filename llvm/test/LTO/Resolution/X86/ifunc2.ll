@@ -6,14 +6,14 @@
 target datalayout = "e-p:64:64"
 target triple = "x86_64-unknown-linux-gnu"
 
-; CHECK: @foo = ifunc i32 (), i32 ()* @foo_resolver.2
-@foo = ifunc i32 (), i32 ()* @foo_resolver
+; CHECK: @foo = ifunc i32 (), ptr @foo_resolver.2
+@foo = ifunc i32 (), i32 ()* ()* @foo_resolver
 
-; CHECK: define internal i32 @foo_resolver.2() {
-; CHECK-NEXT: ret i32 1
-define weak i32 @foo_resolver() {
-  ret i32 1
+; CHECK: define internal ptr @foo_resolver.2() {
+; CHECK-NEXT: ret ptr inttoptr (i32 1 to ptr)
+define weak i32 ()* @foo_resolver() {
+  ret i32 ()* inttoptr (i32 1 to i32 ()*)
 }
 
-; CHECK: define i32 @foo_resolver() {
-; CHECK-NEXT: ret i32 2
+; CHECK: define ptr @foo_resolver() {
+; CHECK-NEXT: ret ptr inttoptr (i32 2 to ptr)

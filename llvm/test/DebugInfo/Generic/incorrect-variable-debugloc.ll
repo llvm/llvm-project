@@ -1,4 +1,4 @@
-; RUN: %llc_dwarf -O2 -filetype=obj < %s | llvm-dwarfdump -v -debug-info - | FileCheck %s
+; RUN: %llc_dwarf -O2 -filetype=obj < %s | llvm-dwarfdump -debug-info - | FileCheck %s
 
 ; This is a test case that's as reduced as I can get it, though I haven't fully
 ; understood the mechanisms by which this bug occurs, so perhaps there's further
@@ -35,16 +35,16 @@
 ; }
 
 ; CHECK: DW_TAG_structure_type
-; CHECK-NEXT: DW_AT_name {{.*}} "C"
+; CHECK-NEXT: DW_AT_name ("C")
 ; CHECK: [[M_FN3_DECL:.*]]:  DW_TAG_subprogram
 ; CHECK-NOT: {{DW_TAG|NULL}}
-; CHECK: DW_AT_name {{.*}} "m_fn3"
+; CHECK: DW_AT_name ("m_fn3")
 
-; CHECK: DW_AT_specification {{.*}} {[[M_FN3_DECL]]}
+; CHECK: DW_AT_specification ([[M_FN3_DECL]]
 ; CHECK-NOT: DW_TAG
 ; CHECK:   DW_TAG_formal_parameter
 ; CHECK-NOT: DW_TAG
-; CHECK:     DW_AT_name {{.*}} "this"
+; CHECK:     DW_AT_name ("this")
 
 %struct.C = type { i32, %struct.B }
 %struct.B = type { i32 }

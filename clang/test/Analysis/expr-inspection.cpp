@@ -1,11 +1,19 @@
-// RUN: %clang_analyze_cc1 -x c++ -analyzer-checker=debug.ExprInspection -verify %s
+// RUN: %clang_analyze_cc1 -x c++ -analyzer-checker=debug.ExprInspection \
+// RUN:    -analyzer-config support-symbolic-integer-casts=false \
+// RUN:    -verify %s
+
+// RUN: %clang_analyze_cc1 -x c++ -analyzer-checker=debug.ExprInspection \
+// RUN:    -analyzer-config support-symbolic-integer-casts=true \
+// RUN:    -verify %s
 
 // Self-tests for the debug.ExprInspection checker.
 
-void clang_analyzer_denote(int x, const char *str);
-void clang_analyzer_express(int x);
+template <typename T>
+void clang_analyzer_denote(T x, const char *str);
+template <typename T>
+void clang_analyzer_express(T x);
 
-// Invalid declarations to test sanity checks.
+// Invalid declarations to test basic correctness checks.
 void clang_analyzer_denote();
 void clang_analyzer_denote(int x);
 void clang_analyzer_express();
@@ -18,6 +26,8 @@ void foo(int x, unsigned y) {
   clang_analyzer_express(x); // expected-warning{{Unable to express}}
 
   clang_analyzer_denote(x, "$x");
+  clang_analyzer_express(-x); // expected-warning{{-$x}}
+
   clang_analyzer_denote(y, "$y");
   clang_analyzer_express(x + y); // expected-warning{{$x + $y}}
 

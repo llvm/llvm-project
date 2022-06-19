@@ -10,6 +10,8 @@
 
 // typedef sub_match<const wchar_t*>   wcsub_match;
 
+// XFAIL: no-wide-characters
+
 #include <regex>
 #include <type_traits>
 #include "test_macros.h"

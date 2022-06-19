@@ -55,6 +55,8 @@ public:
     llvm::StringRef GetArguments();
 
     llvm::StringRef GetQualifiers();
+    
+    bool ContainsPath(llvm::StringRef path);
 
   protected:
     void Parse();
@@ -102,9 +104,15 @@ public:
 
   static lldb_private::Language *CreateInstance(lldb::LanguageType language);
 
-  static lldb_private::ConstString GetPluginNameStatic();
+  static llvm::StringRef GetPluginNameStatic() { return "cplusplus"; }
 
   bool SymbolNameFitsToLanguage(Mangled mangled) const override;
+  
+  bool DemangledNameContainsPath(llvm::StringRef path, 
+                                 ConstString demangled) const override;
+
+  ConstString
+  GetDemangledFunctionNameWithoutArguments(Mangled mangled) const override;
 
   static bool IsCPPMangledName(llvm::StringRef name);
 
@@ -124,16 +132,14 @@ public:
                                           llvm::StringRef &context,
                                           llvm::StringRef &identifier);
 
-  // Given a mangled function name, calculates some alternative manglings since
-  // the compiler mangling may not line up with the symbol we are expecting
-  static uint32_t
-  FindAlternateFunctionManglings(const ConstString mangled,
-                                 std::set<ConstString> &candidates);
+  std::vector<ConstString>
+  GenerateAlternateFunctionManglings(const ConstString mangled) const override;
+
+  ConstString FindBestAlternateFunctionMangledName(
+      const Mangled mangled, const SymbolContext &sym_ctx) const override;
 
   // PluginInterface protocol
-  ConstString GetPluginName() override;
-
-  uint32_t GetPluginVersion() override;
+  llvm::StringRef GetPluginName() override { return GetPluginNameStatic(); }
 };
 
 } // namespace lldb_private

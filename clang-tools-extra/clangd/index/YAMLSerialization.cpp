@@ -12,20 +12,17 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "Index.h"
-#include "Relation.h"
-#include "Serialization.h"
-#include "SymbolLocation.h"
-#include "SymbolOrigin.h"
-#include "dex/Dex.h"
-#include "support/Logger.h"
-#include "support/Trace.h"
+#include "Headers.h"
+#include "index/Ref.h"
+#include "index/Relation.h"
+#include "index/Serialization.h"
+#include "index/Symbol.h"
+#include "index/SymbolLocation.h"
+#include "index/SymbolOrigin.h"
+#include "clang/Tooling/CompilationDatabase.h"
 #include "llvm/ADT/Optional.h"
-#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Allocator.h"
-#include "llvm/Support/Errc.h"
-#include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/StringSaver.h"
 #include "llvm/Support/YAMLTraits.h"
 #include "llvm/Support/raw_ostream.h"
@@ -69,11 +66,9 @@ using clang::clangd::RelationKind;
 using clang::clangd::Symbol;
 using clang::clangd::SymbolID;
 using clang::clangd::SymbolLocation;
-using clang::clangd::SymbolOrigin;
 using clang::index::SymbolInfo;
 using clang::index::SymbolKind;
 using clang::index::SymbolLanguage;
-using clang::index::SymbolRole;
 using clang::tooling::CompileCommand;
 
 // Helper to (de)serialize the SymbolID. We serialize it as a hex string.
@@ -107,17 +102,6 @@ struct NormalizedSymbolFlag {
   }
 
   uint8_t Flag = 0;
-};
-
-struct NormalizedSymbolOrigin {
-  NormalizedSymbolOrigin(IO &) {}
-  NormalizedSymbolOrigin(IO &, SymbolOrigin O) {
-    Origin = static_cast<uint8_t>(O);
-  }
-
-  SymbolOrigin denormalize(IO &) { return static_cast<SymbolOrigin>(Origin); }
-
-  uint8_t Origin = 0;
 };
 
 template <> struct MappingTraits<YPosition> {
@@ -174,19 +158,19 @@ template <> struct MappingTraits<SymbolLocation> {
 };
 
 template <> struct MappingTraits<SymbolInfo> {
-  static void mapping(IO &io, SymbolInfo &SymInfo) {
+  static void mapping(IO &IO, SymbolInfo &SymInfo) {
     // FIXME: expose other fields?
-    io.mapRequired("Kind", SymInfo.Kind);
-    io.mapRequired("Lang", SymInfo.Lang);
+    IO.mapRequired("Kind", SymInfo.Kind);
+    IO.mapRequired("Lang", SymInfo.Lang);
   }
 };
 
 template <>
 struct MappingTraits<clang::clangd::Symbol::IncludeHeaderWithReferences> {
-  static void mapping(IO &io,
+  static void mapping(IO &IO,
                       clang::clangd::Symbol::IncludeHeaderWithReferences &Inc) {
-    io.mapRequired("Header", Inc.IncludeHeader);
-    io.mapRequired("References", Inc.References);
+    IO.mapRequired("Header", Inc.IncludeHeader);
+    IO.mapRequired("References", Inc.References);
   }
 };
 
@@ -195,8 +179,6 @@ template <> struct MappingTraits<Symbol> {
     MappingNormalization<NormalizedSymbolID, SymbolID> NSymbolID(IO, Sym.ID);
     MappingNormalization<NormalizedSymbolFlag, Symbol::SymbolFlag> NSymbolFlag(
         IO, Sym.Flags);
-    MappingNormalization<NormalizedSymbolOrigin, SymbolOrigin> NSymbolOrigin(
-        IO, Sym.Origin);
     IO.mapRequired("ID", NSymbolID->HexString);
     IO.mapRequired("Name", Sym.Name);
     IO.mapRequired("Scope", Sym.Scope);
@@ -205,7 +187,6 @@ template <> struct MappingTraits<Symbol> {
                    SymbolLocation());
     IO.mapOptional("Definition", Sym.Definition, SymbolLocation());
     IO.mapOptional("References", Sym.References, 0u);
-    IO.mapOptional("Origin", NSymbolOrigin->Origin);
     IO.mapOptional("Flags", NSymbolFlag->Flag);
     IO.mapOptional("Signature", Sym.Signature);
     IO.mapOptional("TemplateSpecializationArgs",
@@ -437,7 +418,8 @@ void writeYAML(const IndexFileOut &O, llvm::raw_ostream &OS) {
   }
 }
 
-llvm::Expected<IndexFileIn> readYAML(llvm::StringRef Data) {
+llvm::Expected<IndexFileIn> readYAML(llvm::StringRef Data,
+                                     SymbolOrigin Origin) {
   SymbolSlab::Builder Symbols;
   RefSlab::Builder Refs;
   RelationSlab::Builder Relations;
@@ -454,8 +436,10 @@ llvm::Expected<IndexFileIn> readYAML(llvm::StringRef Data) {
     if (Yin.error())
       return llvm::errorCodeToError(Yin.error());
 
-    if (Variant.Symbol)
+    if (Variant.Symbol) {
+      Variant.Symbol->Origin = Origin;
       Symbols.insert(*Variant.Symbol);
+    }
     if (Variant.Refs)
       for (const auto &Ref : Variant.Refs->second)
         Refs.insert(Variant.Refs->first, Ref);
@@ -527,26 +511,6 @@ std::string toYAML(const Ref &R) {
     Yout << Reference;
   }
   return Buf;
-}
-
-llvm::Expected<clangd::Symbol>
-symbolFromYAML(StringRef YAML, llvm::UniqueStringSaver *Strings) {
-  clangd::Symbol Deserialized;
-  llvm::yaml::Input YAMLInput(YAML, Strings);
-  if (YAMLInput.error())
-    return error("Unable to deserialize Symbol from YAML: {0}", YAML);
-  YAMLInput >> Deserialized;
-  return Deserialized;
-}
-
-llvm::Expected<clangd::Ref> refFromYAML(StringRef YAML,
-                                        llvm::UniqueStringSaver *Strings) {
-  clangd::Ref Deserialized;
-  llvm::yaml::Input YAMLInput(YAML, Strings);
-  if (YAMLInput.error())
-    return error("Unable to deserialize Symbol from YAML: {0}", YAML);
-  YAMLInput >> Deserialized;
-  return Deserialized;
 }
 
 } // namespace clangd

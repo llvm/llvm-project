@@ -1,0 +1,1018 @@
+---
+PdbStream:
+  Age:             1
+  Guid:            '{FFFFFFFF-FFFF-FFFF-FFFF-FFFFFFFFFFFF}'
+  Features:        [ VC140 ]
+  Version:         VC70
+TpiStream:
+  Version:         VC80
+  Records:
+    - Kind:            LF_STRUCTURE
+      Class:
+        MemberCount:     0
+        Options:         [ None, ForwardReference, HasUniqueName ]
+        FieldList:       0
+        Name:            '__vc_attributes::moduleAttribute'
+        UniqueName:      '.?AUmoduleAttribute@__vc_attributes@@'
+        DerivationList:  0
+        VTableShape:     0
+        Size:            0
+    - Kind:            LF_FIELDLIST
+      FieldList:
+        - Kind:            LF_ENUMERATE
+          Enumerator:
+            Attrs:           3
+            Value:           1
+            Name:            dll
+        - Kind:            LF_ENUMERATE
+          Enumerator:
+            Attrs:           3
+            Value:           2
+            Name:            exe
+        - Kind:            LF_ENUMERATE
+          Enumerator:
+            Attrs:           3
+            Value:           3
+            Name:            service
+        - Kind:            LF_ENUMERATE
+          Enumerator:
+            Attrs:           3
+            Value:           4
+            Name:            unspecified
+        - Kind:            LF_ENUMERATE
+          Enumerator:
+            Attrs:           3
+            Value:           2
+            Name:            EXE
+        - Kind:            LF_ENUMERATE
+          Enumerator:
+            Attrs:           3
+            Value:           3
+            Name:            SERVICE
+    - Kind:            LF_ENUM
+      Enum:
+        NumEnumerators:  6
+        Options:         [ None, Nested, HasUniqueName ]
+        FieldList:       4097
+        Name:            '__vc_attributes::moduleAttribute::type_e'
+        UniqueName:      '.?AW4type_e@moduleAttribute@__vc_attributes@@'
+        UnderlyingType:  116
+    - Kind:            LF_MODIFIER
+      Modifier:
+        ModifiedType:    112
+        Modifiers:       [ None, Const ]
+    - Kind:            LF_POINTER
+      Pointer:
+        ReferentType:    4099
+        Attrs:           65548
+    - Kind:            LF_ARGLIST
+      ArgList:
+        ArgIndices:      [ 4098, 4100, 4100, 4100, 116, 48, 4100, 116,
+                           4100, 4100, 116, 48, 48, 4100, 4100 ]
+    - Kind:            LF_POINTER
+      Pointer:
+        ReferentType:    4096
+        Attrs:           66572
+    - Kind:            LF_MFUNCTION
+      MemberFunction:
+        ReturnType:      3
+        ClassType:       4096
+        ThisType:        4102
+        CallConv:        NearC
+        Options:         [ None, Constructor ]
+        ParameterCount:  15
+        ArgumentList:    4101
+        ThisPointerAdjustment: 0
+    - Kind:            LF_ARGLIST
+      ArgList:
+        ArgIndices:      [ 4098 ]
+    - Kind:            LF_MFUNCTION
+      MemberFunction:
+        ReturnType:      3
+        ClassType:       4096
+        ThisType:        4102
+        CallConv:        NearC
+        Options:         [ None, Constructor ]
+        ParameterCount:  1
+        ArgumentList:    4104
+        ThisPointerAdjustment: 0
+    - Kind:            LF_ARGLIST
+      ArgList:
+        ArgIndices:      [  ]
+    - Kind:            LF_MFUNCTION
+      MemberFunction:
+        ReturnType:      3
+        ClassType:       4096
+        ThisType:        4102
+        CallConv:        NearC
+        Options:         [ None, Constructor ]
+        ParameterCount:  0
+        ArgumentList:    4106
+        ThisPointerAdjustment: 0
+    - Kind:            LF_METHODLIST
+      MethodOverloadList:
+        Methods:
+          - Type:            4103
+            Attrs:           3
+            VFTableOffset:   -1
+            Name:            ''
+          - Type:            4105
+            Attrs:           3
+            VFTableOffset:   -1
+            Name:            ''
+          - Type:            4107
+            Attrs:           3
+            VFTableOffset:   -1
+            Name:            ''
+    - Kind:            LF_FIELDLIST
+      FieldList:
+        - Kind:            LF_NESTTYPE
+          NestedType:
+            Type:            4098
+            Name:            type_e
+        - Kind:            LF_METHOD
+          OverloadedMethod:
+            NumOverloads:    3
+            MethodList:      4108
+            Name:            moduleAttribute
+        - Kind:            LF_MEMBER
+          DataMember:
+            Attrs:           3
+            Type:            4098
+            FieldOffset:     0
+            Name:            type
+        - Kind:            LF_MEMBER
+          DataMember:
+            Attrs:           3
+            Type:            4100
+            FieldOffset:     8
+            Name:            name
+        - Kind:            LF_MEMBER
+          DataMember:
+            Attrs:           3
+            Type:            4100
+            FieldOffset:     16
+            Name:            version
+        - Kind:            LF_MEMBER
+          DataMember:
+            Attrs:           3
+            Type:            4100
+            FieldOffset:     24
+            Name:            uuid
+        - Kind:            LF_MEMBER
+          DataMember:
+            Attrs:           3
+            Type:            116
+            FieldOffset:     32
+            Name:            lcid
+        - Kind:            LF_MEMBER
+          DataMember:
+            Attrs:           3
+            Type:            48
+            FieldOffset:     36
+            Name:            control
+        - Kind:            LF_MEMBER
+          DataMember:
+            Attrs:           3
+            Type:            4100
+            FieldOffset:     40
+            Name:            helpstring
+        - Kind:            LF_MEMBER
+          DataMember:
+            Attrs:           3
+            Type:            116
+            FieldOffset:     48
+            Name:            helpstringcontext
+        - Kind:            LF_MEMBER
+          DataMember:
+            Attrs:           3
+            Type:            4100
+            FieldOffset:     56
+            Name:            helpstringdll
+        - Kind:            LF_MEMBER
+          DataMember:
+            Attrs:           3
+            Type:            4100
+            FieldOffset:     64
+            Name:            helpfile
+        - Kind:            LF_MEMBER
+          DataMember:
+            Attrs:           3
+            Type:            116
+            FieldOffset:     72
+            Name:            helpcontext
+        - Kind:            LF_MEMBER
+          DataMember:
+            Attrs:           3
+            Type:            48
+            FieldOffset:     76
+            Name:            hidden
+        - Kind:            LF_MEMBER
+          DataMember:
+            Attrs:           3
+            Type:            48
+            FieldOffset:     77
+            Name:            restricted
+        - Kind:            LF_MEMBER
+          DataMember:
+            Attrs:           3
+            Type:            4100
+            FieldOffset:     80
+            Name:            custom
+        - Kind:            LF_MEMBER
+          DataMember:
+            Attrs:           3
+            Type:            4100
+            FieldOffset:     88
+            Name:            resource_name
+    - Kind:            LF_STRUCTURE
+      Class:
+        MemberCount:     19
+        Options:         [ None, HasConstructorOrDestructor, ContainsNestedClass, HasUniqueName ]
+        FieldList:       4109
+        Name:            '__vc_attributes::moduleAttribute'
+        UniqueName:      '.?AUmoduleAttribute@__vc_attributes@@'
+        DerivationList:  0
+        VTableShape:     0
+        Size:            96
+    - Kind:            LF_STRUCTURE
+      Class:
+        MemberCount:     0
+        Options:         [ None, ForwardReference, HasUniqueName ]
+        FieldList:       0
+        Name:            '__vc_attributes::event_receiverAttribute'
+        UniqueName:      '.?AUevent_receiverAttribute@__vc_attributes@@'
+        DerivationList:  0
+        VTableShape:     0
+        Size:            0
+    - Kind:            LF_FIELDLIST
+      FieldList:
+        - Kind:            LF_ENUMERATE
+          Enumerator:
+            Attrs:           3
+            Value:           0
+            Name:            native
+        - Kind:            LF_ENUMERATE
+          Enumerator:
+            Attrs:           3
+            Value:           1
+            Name:            com
+        - Kind:            LF_ENUMERATE
+          Enumerator:
+            Attrs:           3
+            Value:           2
+            Name:            managed
+    - Kind:            LF_ENUM
+      Enum:
+        NumEnumerators:  3
+        Options:         [ None, Nested, HasUniqueName ]
+        FieldList:       4112
+        Name:            '__vc_attributes::event_receiverAttribute::type_e'
+        UniqueName:      '.?AW4type_e@event_receiverAttribute@__vc_attributes@@'
+        UnderlyingType:  116
+    - Kind:            LF_ARGLIST
+      ArgList:
+        ArgIndices:      [ 4113, 48 ]
+    - Kind:            LF_POINTER
+      Pointer:
+        ReferentType:    4111
+        Attrs:           66572
+    - Kind:            LF_MFUNCTION
+      MemberFunction:
+        ReturnType:      3
+        ClassType:       4111
+        ThisType:        4115
+        CallConv:        NearC
+        Options:         [ None, Constructor ]
+        ParameterCount:  2
+        ArgumentList:    4114
+        ThisPointerAdjustment: 0
+    - Kind:            LF_ARGLIST
+      ArgList:
+        ArgIndices:      [ 4113 ]
+    - Kind:            LF_MFUNCTION
+      MemberFunction:
+        ReturnType:      3
+        ClassType:       4111
+        ThisType:        4115
+        CallConv:        NearC
+        Options:         [ None, Constructor ]
+        ParameterCount:  1
+        ArgumentList:    4117
+        ThisPointerAdjustment: 0
+    - Kind:            LF_MFUNCTION
+      MemberFunction:
+        ReturnType:      3
+        ClassType:       4111
+        ThisType:        4115
+        CallConv:        NearC
+        Options:         [ None, Constructor ]
+        ParameterCount:  0
+        ArgumentList:    4106
+        ThisPointerAdjustment: 0
+    - Kind:            LF_METHODLIST
+      MethodOverloadList:
+        Methods:
+          - Type:            4116
+            Attrs:           3
+            VFTableOffset:   -1
+            Name:            ''
+          - Type:            4118
+            Attrs:           3
+            VFTableOffset:   -1
+            Name:            ''
+          - Type:            4119
+            Attrs:           3
+            VFTableOffset:   -1
+            Name:            ''
+    - Kind:            LF_FIELDLIST
+      FieldList:
+        - Kind:            LF_NESTTYPE
+          NestedType:
+            Type:            4113
+            Name:            type_e
+        - Kind:            LF_METHOD
+          OverloadedMethod:
+            NumOverloads:    3
+            MethodList:      4120
+            Name:            event_receiverAttribute
+        - Kind:            LF_MEMBER
+          DataMember:
+            Attrs:           3
+            Type:            4113
+            FieldOffset:     0
+            Name:            type
+        - Kind:            LF_MEMBER
+          DataMember:
+            Attrs:           3
+            Type:            48
+            FieldOffset:     4
+            Name:            layout_dependent
+    - Kind:            LF_STRUCTURE
+      Class:
+        MemberCount:     6
+        Options:         [ None, HasConstructorOrDestructor, ContainsNestedClass, HasUniqueName ]
+        FieldList:       4121
+        Name:            '__vc_attributes::event_receiverAttribute'
+        UniqueName:      '.?AUevent_receiverAttribute@__vc_attributes@@'
+        DerivationList:  0
+        VTableShape:     0
+        Size:            8
+    - Kind:            LF_STRUCTURE
+      Class:
+        MemberCount:     0
+        Options:         [ None, ForwardReference, HasUniqueName ]
+        FieldList:       0
+        Name:            '__vc_attributes::aggregatableAttribute'
+        UniqueName:      '.?AUaggregatableAttribute@__vc_attributes@@'
+        DerivationList:  0
+        VTableShape:     0
+        Size:            0
+    - Kind:            LF_FIELDLIST
+      FieldList:
+        - Kind:            LF_ENUMERATE
+          Enumerator:
+            Attrs:           3
+            Value:           0
+            Name:            never
+        - Kind:            LF_ENUMERATE
+          Enumerator:
+            Attrs:           3
+            Value:           1
+            Name:            allowed
+        - Kind:            LF_ENUMERATE
+          Enumerator:
+            Attrs:           3
+            Value:           2
+            Name:            always
+    - Kind:            LF_ENUM
+      Enum:
+        NumEnumerators:  3
+        Options:         [ None, Nested, HasUniqueName ]
+        FieldList:       4124
+        Name:            '__vc_attributes::aggregatableAttribute::type_e'
+        UniqueName:      '.?AW4type_e@aggregatableAttribute@__vc_attributes@@'
+        UnderlyingType:  116
+    - Kind:            LF_ARGLIST
+      ArgList:
+        ArgIndices:      [ 4125 ]
+    - Kind:            LF_POINTER
+      Pointer:
+        ReferentType:    4123
+        Attrs:           66572
+    - Kind:            LF_MFUNCTION
+      MemberFunction:
+        ReturnType:      3
+        ClassType:       4123
+        ThisType:        4127
+        CallConv:        NearC
+        Options:         [ None, Constructor ]
+        ParameterCount:  1
+        ArgumentList:    4126
+        ThisPointerAdjustment: 0
+    - Kind:            LF_MFUNCTION
+      MemberFunction:
+        ReturnType:      3
+        ClassType:       4123
+        ThisType:        4127
+        CallConv:        NearC
+        Options:         [ None, Constructor ]
+        ParameterCount:  0
+        ArgumentList:    4106
+        ThisPointerAdjustment: 0
+    - Kind:            LF_METHODLIST
+      MethodOverloadList:
+        Methods:
+          - Type:            4128
+            Attrs:           3
+            VFTableOffset:   -1
+            Name:            ''
+          - Type:            4129
+            Attrs:           3
+            VFTableOffset:   -1
+            Name:            ''
+    - Kind:            LF_FIELDLIST
+      FieldList:
+        - Kind:            LF_NESTTYPE
+          NestedType:
+            Type:            4125
+            Name:            type_e
+        - Kind:            LF_METHOD
+          OverloadedMethod:
+            NumOverloads:    2
+            MethodList:      4130
+            Name:            aggregatableAttribute
+        - Kind:            LF_MEMBER
+          DataMember:
+            Attrs:           3
+            Type:            4125
+            FieldOffset:     0
+            Name:            type
+    - Kind:            LF_STRUCTURE
+      Class:
+        MemberCount:     4
+        Options:         [ None, HasConstructorOrDestructor, ContainsNestedClass, HasUniqueName ]
+        FieldList:       4131
+        Name:            '__vc_attributes::aggregatableAttribute'
+        UniqueName:      '.?AUaggregatableAttribute@__vc_attributes@@'
+        DerivationList:  0
+        VTableShape:     0
+        Size:            4
+    - Kind:            LF_STRUCTURE
+      Class:
+        MemberCount:     0
+        Options:         [ None, ForwardReference, HasUniqueName ]
+        FieldList:       0
+        Name:            '__vc_attributes::threadingAttribute'
+        UniqueName:      '.?AUthreadingAttribute@__vc_attributes@@'
+        DerivationList:  0
+        VTableShape:     0
+        Size:            0
+    - Kind:            LF_FIELDLIST
+      FieldList:
+        - Kind:            LF_ENUMERATE
+          Enumerator:
+            Attrs:           3
+            Value:           1
+            Name:            apartment
+        - Kind:            LF_ENUMERATE
+          Enumerator:
+            Attrs:           3
+            Value:           2
+            Name:            single
+        - Kind:            LF_ENUMERATE
+          Enumerator:
+            Attrs:           3
+            Value:           3
+            Name:            free
+        - Kind:            LF_ENUMERATE
+          Enumerator:
+            Attrs:           3
+            Value:           4
+            Name:            neutral
+        - Kind:            LF_ENUMERATE
+          Enumerator:
+            Attrs:           3
+            Value:           5
+            Name:            both
+    - Kind:            LF_ENUM
+      Enum:
+        NumEnumerators:  5
+        Options:         [ None, Nested, HasUniqueName ]
+        FieldList:       4134
+        Name:            '__vc_attributes::threadingAttribute::threading_e'
+        UniqueName:      '.?AW4threading_e@threadingAttribute@__vc_attributes@@'
+        UnderlyingType:  116
+    - Kind:            LF_ARGLIST
+      ArgList:
+        ArgIndices:      [ 4135 ]
+    - Kind:            LF_POINTER
+      Pointer:
+        ReferentType:    4133
+        Attrs:           66572
+    - Kind:            LF_MFUNCTION
+      MemberFunction:
+        ReturnType:      3
+        ClassType:       4133
+        ThisType:        4137
+        CallConv:        NearC
+        Options:         [ None, Constructor ]
+        ParameterCount:  1
+        ArgumentList:    4136
+        ThisPointerAdjustment: 0
+    - Kind:            LF_MFUNCTION
+      MemberFunction:
+        ReturnType:      3
+        ClassType:       4133
+        ThisType:        4137
+        CallConv:        NearC
+        Options:         [ None, Constructor ]
+        ParameterCount:  0
+        ArgumentList:    4106
+        ThisPointerAdjustment: 0
+    - Kind:            LF_METHODLIST
+      MethodOverloadList:
+        Methods:
+          - Type:            4138
+            Attrs:           3
+            VFTableOffset:   -1
+            Name:            ''
+          - Type:            4139
+            Attrs:           3
+            VFTableOffset:   -1
+            Name:            ''
+    - Kind:            LF_FIELDLIST
+      FieldList:
+        - Kind:            LF_NESTTYPE
+          NestedType:
+            Type:            4135
+            Name:            threading_e
+        - Kind:            LF_METHOD
+          OverloadedMethod:
+            NumOverloads:    2
+            MethodList:      4140
+            Name:            threadingAttribute
+        - Kind:            LF_MEMBER
+          DataMember:
+            Attrs:           3
+            Type:            4135
+            FieldOffset:     0
+            Name:            value
+    - Kind:            LF_STRUCTURE
+      Class:
+        MemberCount:     4
+        Options:         [ None, HasConstructorOrDestructor, ContainsNestedClass, HasUniqueName ]
+        FieldList:       4141
+        Name:            '__vc_attributes::threadingAttribute'
+        UniqueName:      '.?AUthreadingAttribute@__vc_attributes@@'
+        DerivationList:  0
+        VTableShape:     0
+        Size:            4
+    - Kind:            LF_STRUCTURE
+      Class:
+        MemberCount:     0
+        Options:         [ None, ForwardReference, HasUniqueName ]
+        FieldList:       0
+        Name:            '__vc_attributes::helper_attributes::usageAttribute'
+        UniqueName:      '.?AUusageAttribute@helper_attributes@__vc_attributes@@'
+        DerivationList:  0
+        VTableShape:     0
+        Size:            0
+    - Kind:            LF_FIELDLIST
+      FieldList:
+        - Kind:            LF_ENUMERATE
+          Enumerator:
+            Attrs:           3
+            Value:           0
+            Name:            eAnyUsage
+        - Kind:            LF_ENUMERATE
+          Enumerator:
+            Attrs:           3
+            Value:           1
+            Name:            eCoClassUsage
+        - Kind:            LF_ENUMERATE
+          Enumerator:
+            Attrs:           3
+            Value:           2
+            Name:            eCOMInterfaceUsage
+        - Kind:            LF_ENUMERATE
+          Enumerator:
+            Attrs:           3
+            Value:           6
+            Name:            eInterfaceUsage
+        - Kind:            LF_ENUMERATE
+          Enumerator:
+            Attrs:           3
+            Value:           8
+            Name:            eMemberUsage
+        - Kind:            LF_ENUMERATE
+          Enumerator:
+            Attrs:           3
+            Value:           16
+            Name:            eMethodUsage
+        - Kind:            LF_ENUMERATE
+          Enumerator:
+            Attrs:           3
+            Value:           32
+            Name:            eInterfaceMethodUsage
+        - Kind:            LF_ENUMERATE
+          Enumerator:
+            Attrs:           3
+            Value:           64
+            Name:            eInterfaceMemberUsage
+        - Kind:            LF_ENUMERATE
+          Enumerator:
+            Attrs:           3
+            Value:           128
+            Name:            eCoClassMemberUsage
+        - Kind:            LF_ENUMERATE
+          Enumerator:
+            Attrs:           3
+            Value:           256
+            Name:            eCoClassMethodUsage
+        - Kind:            LF_ENUMERATE
+          Enumerator:
+            Attrs:           3
+            Value:           768
+            Name:            eGlobalMethodUsage
+        - Kind:            LF_ENUMERATE
+          Enumerator:
+            Attrs:           3
+            Value:           1024
+            Name:            eGlobalDataUsage
+        - Kind:            LF_ENUMERATE
+          Enumerator:
+            Attrs:           3
+            Value:           2048
+            Name:            eClassUsage
+        - Kind:            LF_ENUMERATE
+          Enumerator:
+            Attrs:           3
+            Value:           4096
+            Name:            eInterfaceParameterUsage
+        - Kind:            LF_ENUMERATE
+          Enumerator:
+            Attrs:           3
+            Value:           12288
+            Name:            eMethodParameterUsage
+        - Kind:            LF_ENUMERATE
+          Enumerator:
+            Attrs:           3
+            Value:           16384
+            Name:            eIDLModuleUsage
+        - Kind:            LF_ENUMERATE
+          Enumerator:
+            Attrs:           3
+            Value:           32768
+            Name:            eAnonymousUsage
+        - Kind:            LF_ENUMERATE
+          Enumerator:
+            Attrs:           3
+            Value:           65536
+            Name:            eTypedefUsage
+        - Kind:            LF_ENUMERATE
+          Enumerator:
+            Attrs:           3
+            Value:           131072
+            Name:            eUnionUsage
+        - Kind:            LF_ENUMERATE
+          Enumerator:
+            Attrs:           3
+            Value:           262144
+            Name:            eEnumUsage
+        - Kind:            LF_ENUMERATE
+          Enumerator:
+            Attrs:           3
+            Value:           524288
+            Name:            eDefineTagUsage
+        - Kind:            LF_ENUMERATE
+          Enumerator:
+            Attrs:           3
+            Value:           1048576
+            Name:            eStructUsage
+        - Kind:            LF_ENUMERATE
+          Enumerator:
+            Attrs:           3
+            Value:           2097152
+            Name:            eLocalUsage
+        - Kind:            LF_ENUMERATE
+          Enumerator:
+            Attrs:           3
+            Value:           4194304
+            Name:            ePropertyUsage
+        - Kind:            LF_ENUMERATE
+          Enumerator:
+            Attrs:           3
+            Value:           8388608
+            Name:            eEventUsage
+        - Kind:            LF_ENUMERATE
+          Enumerator:
+            Attrs:           3
+            Value:           16777216
+            Name:            eTemplateUsage
+        - Kind:            LF_ENUMERATE
+          Enumerator:
+            Attrs:           3
+            Value:           16777216
+            Name:            eModuleUsage
+        - Kind:            LF_ENUMERATE
+          Enumerator:
+            Attrs:           3
+            Value:           33554432
+            Name:            eIllegalUsage
+        - Kind:            LF_ENUMERATE
+          Enumerator:
+            Attrs:           3
+            Value:           67108864
+            Name:            eAsynchronousUsage
+        - Kind:            LF_ENUMERATE
+          Enumerator:
+            Attrs:           3
+            Value:           4161535
+            Name:            eAnyIDLUsage
+    - Kind:            LF_ENUM
+      Enum:
+        NumEnumerators:  30
+        Options:         [ None, Nested, HasUniqueName ]
+        FieldList:       4144
+        Name:            '__vc_attributes::helper_attributes::usageAttribute::usage_e'
+        UniqueName:      '.?AW4usage_e@usageAttribute@helper_attributes@__vc_attributes@@'
+        UnderlyingType:  116
+    - Kind:            LF_ARGLIST
+      ArgList:
+        ArgIndices:      [ 117 ]
+    - Kind:            LF_POINTER
+      Pointer:
+        ReferentType:    4143
+        Attrs:           66572
+    - Kind:            LF_MFUNCTION
+      MemberFunction:
+        ReturnType:      3
+        ClassType:       4143
+        ThisType:        4147
+        CallConv:        NearC
+        Options:         [ None, Constructor ]
+        ParameterCount:  1
+        ArgumentList:    4146
+        ThisPointerAdjustment: 0
+    - Kind:            LF_FIELDLIST
+      FieldList:
+        - Kind:            LF_NESTTYPE
+          NestedType:
+            Type:            4145
+            Name:            usage_e
+        - Kind:            LF_ONEMETHOD
+          OneMethod:
+            Type:            4148
+            Attrs:           3
+            VFTableOffset:   -1
+            Name:            usageAttribute
+        - Kind:            LF_MEMBER
+          DataMember:
+            Attrs:           3
+            Type:            117
+            FieldOffset:     0
+            Name:            value
+    - Kind:            LF_STRUCTURE
+      Class:
+        MemberCount:     3
+        Options:         [ None, HasConstructorOrDestructor, ContainsNestedClass, HasUniqueName ]
+        FieldList:       4149
+        Name:            '__vc_attributes::helper_attributes::usageAttribute'
+        UniqueName:      '.?AUusageAttribute@helper_attributes@__vc_attributes@@'
+        DerivationList:  0
+        VTableShape:     0
+        Size:            4
+    - Kind:            LF_STRUCTURE
+      Class:
+        MemberCount:     0
+        Options:         [ None, ForwardReference, HasUniqueName ]
+        FieldList:       0
+        Name:            '__vc_attributes::helper_attributes::v1_alttypeAttribute'
+        UniqueName:      '.?AUv1_alttypeAttribute@helper_attributes@__vc_attributes@@'
+        DerivationList:  0
+        VTableShape:     0
+        Size:            0
+    - Kind:            LF_FIELDLIST
+      FieldList:
+        - Kind:            LF_ENUMERATE
+          Enumerator:
+            Attrs:           3
+            Value:           0
+            Name:            eBoolean
+        - Kind:            LF_ENUMERATE
+          Enumerator:
+            Attrs:           3
+            Value:           1
+            Name:            eInteger
+        - Kind:            LF_ENUMERATE
+          Enumerator:
+            Attrs:           3
+            Value:           2
+            Name:            eFloat
+        - Kind:            LF_ENUMERATE
+          Enumerator:
+            Attrs:           3
+            Value:           3
+            Name:            eDouble
+    - Kind:            LF_ENUM
+      Enum:
+        NumEnumerators:  4
+        Options:         [ None, Nested, HasUniqueName ]
+        FieldList:       4152
+        Name:            '__vc_attributes::helper_attributes::v1_alttypeAttribute::type_e'
+        UniqueName:      '.?AW4type_e@v1_alttypeAttribute@helper_attributes@__vc_attributes@@'
+        UnderlyingType:  116
+    - Kind:            LF_ARGLIST
+      ArgList:
+        ArgIndices:      [ 4153 ]
+    - Kind:            LF_POINTER
+      Pointer:
+        ReferentType:    4151
+        Attrs:           66572
+    - Kind:            LF_MFUNCTION
+      MemberFunction:
+        ReturnType:      3
+        ClassType:       4151
+        ThisType:        4155
+        CallConv:        NearC
+        Options:         [ None, Constructor ]
+        ParameterCount:  1
+        ArgumentList:    4154
+        ThisPointerAdjustment: 0
+    - Kind:            LF_FIELDLIST
+      FieldList:
+        - Kind:            LF_NESTTYPE
+          NestedType:
+            Type:            4153
+            Name:            type_e
+        - Kind:            LF_ONEMETHOD
+          OneMethod:
+            Type:            4156
+            Attrs:           3
+            VFTableOffset:   -1
+            Name:            v1_alttypeAttribute
+        - Kind:            LF_MEMBER
+          DataMember:
+            Attrs:           3
+            Type:            4153
+            FieldOffset:     0
+            Name:            type
+    - Kind:            LF_STRUCTURE
+      Class:
+        MemberCount:     3
+        Options:         [ None, HasConstructorOrDestructor, ContainsNestedClass, HasUniqueName ]
+        FieldList:       4157
+        Name:            '__vc_attributes::helper_attributes::v1_alttypeAttribute'
+        UniqueName:      '.?AUv1_alttypeAttribute@helper_attributes@__vc_attributes@@'
+        DerivationList:  0
+        VTableShape:     0
+        Size:            4
+    - Kind:            LF_STRUCTURE
+      Class:
+        MemberCount:     0
+        Options:         [ None, ForwardReference, HasUniqueName ]
+        FieldList:       0
+        Name:            '__vc_attributes::event_sourceAttribute'
+        UniqueName:      '.?AUevent_sourceAttribute@__vc_attributes@@'
+        DerivationList:  0
+        VTableShape:     0
+        Size:            0
+    - Kind:            LF_ENUM
+      Enum:
+        NumEnumerators:  3
+        Options:         [ None, Nested, HasUniqueName ]
+        FieldList:       4112
+        Name:            '__vc_attributes::event_sourceAttribute::type_e'
+        UniqueName:      '.?AW4type_e@event_sourceAttribute@__vc_attributes@@'
+        UnderlyingType:  116
+    - Kind:            LF_FIELDLIST
+      FieldList:
+        - Kind:            LF_ENUMERATE
+          Enumerator:
+            Attrs:           3
+            Value:           0
+            Name:            speed
+        - Kind:            LF_ENUMERATE
+          Enumerator:
+            Attrs:           3
+            Value:           1
+            Name:            size
+    - Kind:            LF_ENUM
+      Enum:
+        NumEnumerators:  2
+        Options:         [ None, Nested, HasUniqueName ]
+        FieldList:       4161
+        Name:            '__vc_attributes::event_sourceAttribute::optimize_e'
+        UniqueName:      '.?AW4optimize_e@event_sourceAttribute@__vc_attributes@@'
+        UnderlyingType:  116
+    - Kind:            LF_ARGLIST
+      ArgList:
+        ArgIndices:      [ 4160 ]
+    - Kind:            LF_POINTER
+      Pointer:
+        ReferentType:    4159
+        Attrs:           66572
+    - Kind:            LF_MFUNCTION
+      MemberFunction:
+        ReturnType:      3
+        ClassType:       4159
+        ThisType:        4164
+        CallConv:        NearC
+        Options:         [ None, Constructor ]
+        ParameterCount:  1
+        ArgumentList:    4163
+        ThisPointerAdjustment: 0
+    - Kind:            LF_MFUNCTION
+      MemberFunction:
+        ReturnType:      3
+        ClassType:       4159
+        ThisType:        4164
+        CallConv:        NearC
+        Options:         [ None, Constructor ]
+        ParameterCount:  0
+        ArgumentList:    4106
+        ThisPointerAdjustment: 0
+    - Kind:            LF_METHODLIST
+      MethodOverloadList:
+        Methods:
+          - Type:            4165
+            Attrs:           3
+            VFTableOffset:   -1
+            Name:            ''
+          - Type:            4166
+            Attrs:           3
+            VFTableOffset:   -1
+            Name:            ''
+    - Kind:            LF_FIELDLIST
+      FieldList:
+        - Kind:            LF_NESTTYPE
+          NestedType:
+            Type:            4160
+            Name:            type_e
+        - Kind:            LF_NESTTYPE
+          NestedType:
+            Type:            4162
+            Name:            optimize_e
+        - Kind:            LF_METHOD
+          OverloadedMethod:
+            NumOverloads:    2
+            MethodList:      4167
+            Name:            event_sourceAttribute
+        - Kind:            LF_MEMBER
+          DataMember:
+            Attrs:           3
+            Type:            4160
+            FieldOffset:     0
+            Name:            type
+        - Kind:            LF_MEMBER
+          DataMember:
+            Attrs:           3
+            Type:            4162
+            FieldOffset:     4
+            Name:            optimize
+        - Kind:            LF_MEMBER
+          DataMember:
+            Attrs:           3
+            Type:            48
+            FieldOffset:     8
+            Name:            decorate
+    - Kind:            LF_STRUCTURE
+      Class:
+        MemberCount:     7
+        Options:         [ None, HasConstructorOrDestructor, ContainsNestedClass, HasUniqueName ]
+        FieldList:       4168
+        Name:            '__vc_attributes::event_sourceAttribute'
+        UniqueName:      '.?AUevent_sourceAttribute@__vc_attributes@@'
+        DerivationList:  0
+        VTableShape:     0
+        Size:            12
+    - Kind:            LF_STRUCTURE
+      Class:
+        MemberCount:     0
+        Options:         [ None, ForwardReference, HasUniqueName ]
+        FieldList:       0
+        Name:            Foo
+        UniqueName:      '.?AUFoo@@'
+        DerivationList:  0
+        VTableShape:     0
+        Size:            0
+    - Kind:            LF_FIELDLIST
+      FieldList:
+        - Kind:            LF_MEMBER
+          DataMember:
+            Attrs:           3
+            Type:            116
+            FieldOffset:     0
+            Name:            x
+    - Kind:            LF_STRUCTURE
+      Class:
+        MemberCount:     1
+        Options:         [ None, HasUniqueName ]
+        FieldList:       4171
+        Name:            Foo
+        UniqueName:      '.?AUFoo@@'
+        DerivationList:  0
+        VTableShape:     0
+        Size:            4
+...

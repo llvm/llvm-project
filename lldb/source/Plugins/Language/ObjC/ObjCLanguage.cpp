@@ -48,19 +48,6 @@ void ObjCLanguage::Terminate() {
   PluginManager::UnregisterPlugin(CreateInstance);
 }
 
-lldb_private::ConstString ObjCLanguage::GetPluginNameStatic() {
-  static ConstString g_name("objc");
-  return g_name;
-}
-
-// PluginInterface protocol
-
-lldb_private::ConstString ObjCLanguage::GetPluginName() {
-  return GetPluginNameStatic();
-}
-
-uint32_t ObjCLanguage::GetPluginVersion() { return 1; }
-
 // Static Functions
 
 Language *ObjCLanguage::CreateInstance(lldb::LanguageType language) {
@@ -405,6 +392,9 @@ static void LoadObjCFormatters(TypeCategoryImplSP objc_category_sp) {
       "NSArray summary provider", ConstString("NSArray"), appkit_flags);
   AddCXXSummary(
       objc_category_sp, lldb_private::formatters::NSArraySummaryProvider,
+      "NSArray summary provider", ConstString("NSConstantArray"), appkit_flags);
+  AddCXXSummary(
+      objc_category_sp, lldb_private::formatters::NSArraySummaryProvider,
       "NSArray summary provider", ConstString("NSMutableArray"), appkit_flags);
   AddCXXSummary(
       objc_category_sp, lldb_private::formatters::NSArraySummaryProvider,
@@ -437,6 +427,10 @@ static void LoadObjCFormatters(TypeCategoryImplSP objc_category_sp) {
                 lldb_private::formatters::NSDictionarySummaryProvider<false>,
                 "NSDictionary summary provider", ConstString("NSDictionary"),
                 appkit_flags);
+  AddCXXSummary(objc_category_sp,
+                lldb_private::formatters::NSDictionarySummaryProvider<false>,
+                "NSDictionary summary provider",
+                ConstString("NSConstantDictionary"), appkit_flags);
   AddCXXSummary(objc_category_sp,
                 lldb_private::formatters::NSDictionarySummaryProvider<false>,
                 "NSDictionary summary provider",
@@ -545,6 +539,10 @@ static void LoadObjCFormatters(TypeCategoryImplSP objc_category_sp) {
                   ScriptedSyntheticChildren::Flags());
   AddCXXSynthetic(objc_category_sp,
                   lldb_private::formatters::NSArraySyntheticFrontEndCreator,
+                  "NSArray synthetic children", ConstString("NSConstantArray"),
+                  ScriptedSyntheticChildren::Flags());
+  AddCXXSynthetic(objc_category_sp,
+                  lldb_private::formatters::NSArraySyntheticFrontEndCreator,
                   "NSArray synthetic children", ConstString("NSMutableArray"),
                   ScriptedSyntheticChildren::Flags());
   AddCXXSynthetic(objc_category_sp,
@@ -569,6 +567,11 @@ static void LoadObjCFormatters(TypeCategoryImplSP objc_category_sp) {
       objc_category_sp,
       lldb_private::formatters::NSDictionarySyntheticFrontEndCreator,
       "NSDictionary synthetic children", ConstString("__NSDictionaryM"),
+      ScriptedSyntheticChildren::Flags());
+  AddCXXSynthetic(
+      objc_category_sp,
+      lldb_private::formatters::NSDictionarySyntheticFrontEndCreator,
+      "NSDictionary synthetic children", ConstString("NSConstantDictionary"),
       ScriptedSyntheticChildren::Flags());
   AddCXXSynthetic(
       objc_category_sp,
@@ -791,6 +794,18 @@ static void LoadObjCFormatters(TypeCategoryImplSP objc_category_sp) {
   AddCXXSummary(
       objc_category_sp, lldb_private::formatters::NSNumberSummaryProvider,
       "NSNumber summary provider", ConstString("NSNumber"), appkit_flags);
+  AddCXXSummary(objc_category_sp,
+                lldb_private::formatters::NSNumberSummaryProvider,
+                "NSNumber summary provider",
+                ConstString("NSConstantIntegerNumber"), appkit_flags);
+  AddCXXSummary(objc_category_sp,
+                lldb_private::formatters::NSNumberSummaryProvider,
+                "NSNumber summary provider",
+                ConstString("NSConstantDoubleNumber"), appkit_flags);
+  AddCXXSummary(objc_category_sp,
+                lldb_private::formatters::NSNumberSummaryProvider,
+                "NSNumber summary provider",
+                ConstString("NSConstantFloatNumber"), appkit_flags);
   AddCXXSummary(
       objc_category_sp, lldb_private::formatters::NSNumberSummaryProvider,
       "CFNumberRef summary provider", ConstString("CFNumberRef"), appkit_flags);
@@ -906,7 +921,8 @@ lldb::TypeCategoryImplSP ObjCLanguage::GetFormatters() {
   static TypeCategoryImplSP g_category;
 
   llvm::call_once(g_initialize, [this]() -> void {
-    DataVisualization::Categories::GetCategory(GetPluginName(), g_category);
+    DataVisualization::Categories::GetCategory(ConstString(GetPluginName()),
+                                               g_category);
     if (g_category) {
       LoadCoreMediaFormatters(g_category);
       LoadObjCFormatters(g_category);

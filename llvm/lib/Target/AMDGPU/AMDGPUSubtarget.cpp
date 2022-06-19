@@ -12,12 +12,12 @@
 //===----------------------------------------------------------------------===//
 
 #include "AMDGPUSubtarget.h"
-#include "AMDGPU.h"
 #include "AMDGPUCallLowering.h"
 #include "AMDGPUInstructionSelector.h"
 #include "AMDGPULegalizerInfo.h"
 #include "AMDGPURegisterBankInfo.h"
 #include "AMDGPUTargetMachine.h"
+#include "R600Subtarget.h"
 #include "SIMachineFunctionInfo.h"
 #include "Utils/AMDGPUBaseInfo.h"
 #include "llvm/ADT/SmallString.h"
@@ -38,10 +38,7 @@ using namespace llvm;
 #define GET_SUBTARGETINFO_CTOR
 #define AMDGPUSubtarget GCNSubtarget
 #include "AMDGPUGenSubtargetInfo.inc"
-#define GET_SUBTARGETINFO_TARGET_DESC
-#define GET_SUBTARGETINFO_CTOR
 #undef AMDGPUSubtarget
-#include "R600GenSubtargetInfo.inc"
 
 static cl::opt<bool> DisablePowerSched(
   "amdgpu-disable-power-sched",
@@ -53,29 +50,11 @@ static cl::opt<bool> EnableVGPRIndexMode(
   cl::desc("Use GPR indexing mode instead of movrel for vector indexing"),
   cl::init(false));
 
-static cl::opt<bool> EnableFlatScratch(
-  "amdgpu-enable-flat-scratch",
-  cl::desc("Use flat scratch instructions"),
-  cl::init(false));
-
 static cl::opt<bool> UseAA("amdgpu-use-aa-in-codegen",
                            cl::desc("Enable the use of AA during codegen."),
                            cl::init(true));
 
 GCNSubtarget::~GCNSubtarget() = default;
-
-R600Subtarget &
-R600Subtarget::initializeSubtargetDependencies(const Triple &TT,
-                                               StringRef GPU, StringRef FS) {
-  SmallString<256> FullFS("+promote-alloca,");
-  FullFS += FS;
-  ParseSubtargetFeatures(GPU, /*TuneCPU*/ GPU, FullFS);
-
-  HasMulU24 = getGeneration() >= EVERGREEN;
-  HasMulI24 = hasCaymanISA();
-
-  return *this;
-}
 
 GCNSubtarget &
 GCNSubtarget::initializeSubtargetDependencies(const Triple &TT,
@@ -98,12 +77,12 @@ GCNSubtarget::initializeSubtargetDependencies(const Triple &TT,
   FullFS += "+enable-prt-strict-null,"; // This is overridden by a disable in FS
 
   // Disable mutually exclusive bits.
-  if (FS.find_insensitive("+wavefrontsize") != StringRef::npos) {
-    if (FS.find_insensitive("wavefrontsize16") == StringRef::npos)
+  if (FS.contains_insensitive("+wavefrontsize")) {
+    if (!FS.contains_insensitive("wavefrontsize16"))
       FullFS += "-wavefrontsize16,";
-    if (FS.find_insensitive("wavefrontsize32") == StringRef::npos)
+    if (!FS.contains_insensitive("wavefrontsize32"))
       FullFS += "-wavefrontsize32,";
-    if (FS.find_insensitive("wavefrontsize64") == StringRef::npos)
+    if (!FS.contains_insensitive("wavefrontsize64"))
       FullFS += "-wavefrontsize64,";
   }
 
@@ -175,26 +154,7 @@ GCNSubtarget::initializeSubtargetDependencies(const Triple &TT,
   return *this;
 }
 
-AMDGPUSubtarget::AMDGPUSubtarget(const Triple &TT) :
-  TargetTriple(TT),
-  GCN3Encoding(false),
-  Has16BitInsts(false),
-  HasMadMixInsts(false),
-  HasMadMacF32Insts(false),
-  HasDsSrc2Insts(false),
-  HasSDWA(false),
-  HasVOP3PInsts(false),
-  HasMulI24(true),
-  HasMulU24(true),
-  HasSMulHi(false),
-  HasInv2PiInlineImm(false),
-  HasFminFmaxLegacy(true),
-  EnablePromoteAlloca(false),
-  HasTrigReducedRange(false),
-  MaxWavesPerEU(10),
-  LocalMemorySize(0),
-  WavefrontSizeLog2(0)
-  { }
+AMDGPUSubtarget::AMDGPUSubtarget(const Triple &TT) : TargetTriple(TT) {}
 
 GCNSubtarget::GCNSubtarget(const Triple &TT, StringRef GPU, StringRef FS,
                            const GCNTargetMachine &TM)
@@ -203,121 +163,7 @@ GCNSubtarget::GCNSubtarget(const Triple &TT, StringRef GPU, StringRef FS,
     AMDGPUSubtarget(TT),
     TargetTriple(TT),
     TargetID(*this),
-    Gen(INVALID),
     InstrItins(getInstrItineraryForCPU(GPU)),
-    LDSBankCount(0),
-    MaxPrivateElementSize(0),
-
-    FastFMAF32(false),
-    FastDenormalF32(false),
-    HalfRate64Ops(false),
-    FullRate64Ops(false),
-
-    FlatForGlobal(false),
-    AutoWaitcntBeforeBarrier(false),
-    UnalignedScratchAccess(false),
-    UnalignedAccessMode(false),
-
-    HasApertureRegs(false),
-    SupportsXNACK(false),
-    EnableXNACK(false),
-    EnableTgSplit(false),
-    EnableCuMode(false),
-    TrapHandler(false),
-
-    EnableLoadStoreOpt(false),
-    EnableUnsafeDSOffsetFolding(false),
-    EnableSIScheduler(false),
-    EnableDS128(false),
-    EnablePRTStrictNull(false),
-    DumpCode(false),
-
-    FP64(false),
-    CIInsts(false),
-    GFX8Insts(false),
-    GFX9Insts(false),
-    GFX90AInsts(false),
-    GFX10Insts(false),
-    GFX10_3Insts(false),
-    GFX7GFX8GFX9Insts(false),
-    SGPRInitBug(false),
-    NegativeScratchOffsetBug(false),
-    NegativeUnalignedScratchOffsetBug(false),
-    HasSMemRealTime(false),
-    HasIntClamp(false),
-    HasFmaMixInsts(false),
-    HasMovrel(false),
-    HasVGPRIndexMode(false),
-    HasScalarStores(false),
-    HasScalarAtomics(false),
-    HasSDWAOmod(false),
-    HasSDWAScalar(false),
-    HasSDWASdst(false),
-    HasSDWAMac(false),
-    HasSDWAOutModsVOPC(false),
-    HasDPP(false),
-    HasDPP8(false),
-    Has64BitDPP(false),
-    HasPackedFP32Ops(false),
-    HasExtendedImageInsts(false),
-    HasR128A16(false),
-    HasGFX10A16(false),
-    HasG16(false),
-    HasNSAEncoding(false),
-    NSAMaxSize(0),
-    GFX10_AEncoding(false),
-    GFX10_BEncoding(false),
-    HasDLInsts(false),
-    HasDot1Insts(false),
-    HasDot2Insts(false),
-    HasDot3Insts(false),
-    HasDot4Insts(false),
-    HasDot5Insts(false),
-    HasDot6Insts(false),
-    HasDot7Insts(false),
-    HasMAIInsts(false),
-    HasPkFmacF16Inst(false),
-    HasAtomicFaddInsts(false),
-    SupportsSRAMECC(false),
-    EnableSRAMECC(false),
-    HasNoSdstCMPX(false),
-    HasVscnt(false),
-    HasGetWaveIdInst(false),
-    HasSMemTimeInst(false),
-    HasShaderCyclesRegister(false),
-    HasRegisterBanking(false),
-    HasVOP3Literal(false),
-    HasNoDataDepHazard(false),
-    FlatAddressSpace(false),
-    FlatInstOffsets(false),
-    FlatGlobalInsts(false),
-    FlatScratchInsts(false),
-    ScalarFlatScratchInsts(false),
-    HasArchitectedFlatScratch(false),
-    AddNoCarryInsts(false),
-    HasUnpackedD16VMem(false),
-    LDSMisalignedBug(false),
-    HasMFMAInlineLiteralBug(false),
-    UnalignedBufferAccess(false),
-    UnalignedDSAccess(false),
-    HasPackedTID(false),
-
-    ScalarizeGlobal(false),
-
-    HasVcmpxPermlaneHazard(false),
-    HasVMEMtoScalarWriteHazard(false),
-    HasSMEMtoVectorWriteHazard(false),
-    HasInstFwdPrefetchBug(false),
-    HasVcmpxExecWARHazard(false),
-    HasLdsBranchVmemWARHazard(false),
-    HasNSAtoVMEMBug(false),
-    HasNSAClauseBug(false),
-    HasOffset3fBug(false),
-    HasFlatSegmentOffsetBug(false),
-    HasImageStoreD16Bug(false),
-    HasImageGather4D16Bug(false),
-
-    FeatureDisable(false),
     InstrInfo(initializeSubtargetDependencies(TT, GPU, FS)),
     TLInfo(TM, *this),
     FrameLowering(TargetFrameLowering::StackGrowsUp, getStackAlignment(), 0) {
@@ -331,11 +177,6 @@ GCNSubtarget::GCNSubtarget(const Triple &TT, StringRef GPU, StringRef FS,
   *this, *static_cast<AMDGPURegisterBankInfo *>(RegBankInfo.get()), TM));
 }
 
-bool GCNSubtarget::enableFlatScratch() const {
-  return flatScratchIsArchitected() ||
-         (EnableFlatScratch && hasFlatScratchInsts());
-}
-
 unsigned GCNSubtarget::getConstantBusLimit(unsigned Opcode) const {
   if (getGeneration() < GFX10)
     return 1;
@@ -343,12 +184,15 @@ unsigned GCNSubtarget::getConstantBusLimit(unsigned Opcode) const {
   switch (Opcode) {
   case AMDGPU::V_LSHLREV_B64_e64:
   case AMDGPU::V_LSHLREV_B64_gfx10:
+  case AMDGPU::V_LSHLREV_B64_e64_gfx11:
   case AMDGPU::V_LSHL_B64_e64:
   case AMDGPU::V_LSHRREV_B64_e64:
   case AMDGPU::V_LSHRREV_B64_gfx10:
+  case AMDGPU::V_LSHRREV_B64_e64_gfx11:
   case AMDGPU::V_LSHR_B64_e64:
   case AMDGPU::V_ASHRREV_I64_e64:
   case AMDGPU::V_ASHRREV_I64_gfx10:
+  case AMDGPU::V_ASHRREV_I64_e64_gfx11:
   case AMDGPU::V_ASHR_I64_e64:
     return 1;
   }
@@ -429,21 +273,21 @@ bool GCNSubtarget::zeroesHigh16BitsOfDest(unsigned Opcode) const {
   case AMDGPU::V_MAX_I16_e32:
   case AMDGPU::V_MIN_I16_e64:
   case AMDGPU::V_MIN_I16_e32:
+  case AMDGPU::V_MAD_F16_e64:
+  case AMDGPU::V_MAD_U16_e64:
+  case AMDGPU::V_MAD_I16_e64:
+  case AMDGPU::V_FMA_F16_e64:
+  case AMDGPU::V_DIV_FIXUP_F16_e64:
     // On gfx10, all 16-bit instructions preserve the high bits.
     return getGeneration() <= AMDGPUSubtarget::GFX9;
-  case AMDGPU::V_MAD_F16_e64:
   case AMDGPU::V_MADAK_F16:
   case AMDGPU::V_MADMK_F16:
   case AMDGPU::V_MAC_F16_e64:
   case AMDGPU::V_MAC_F16_e32:
   case AMDGPU::V_FMAMK_F16:
   case AMDGPU::V_FMAAK_F16:
-  case AMDGPU::V_MAD_U16_e64:
-  case AMDGPU::V_MAD_I16_e64:
-  case AMDGPU::V_FMA_F16_e64:
   case AMDGPU::V_FMAC_F16_e64:
   case AMDGPU::V_FMAC_F16_e32:
-  case AMDGPU::V_DIV_FIXUP_F16_e64:
     // In gfx9, the preferred handling of the unused high 16-bits changed. Most
     // instructions maintain the legacy behavior of 0ing. Some instructions
     // changed to preserving the high bits.
@@ -549,12 +393,9 @@ std::pair<unsigned, unsigned> AMDGPUSubtarget::getFlatWorkGroupSizes(
 }
 
 std::pair<unsigned, unsigned> AMDGPUSubtarget::getWavesPerEU(
-  const Function &F) const {
+    const Function &F, std::pair<unsigned, unsigned> FlatWorkGroupSizes) const {
   // Default minimum/maximum number of waves per execution unit.
   std::pair<unsigned, unsigned> Default(1, getMaxWavesPerEU());
-
-  // Default/requested minimum/maximum flat work group sizes.
-  std::pair<unsigned, unsigned> FlatWorkGroupSizes = getFlatWorkGroupSizes(F);
 
   // If minimum/maximum flat work group sizes were explicitly requested using
   // "amdgpu-flat-work-group-size" attribute, then set default minimum/maximum
@@ -563,8 +404,6 @@ std::pair<unsigned, unsigned> AMDGPUSubtarget::getWavesPerEU(
   unsigned MinImpliedByFlatWorkGroupSize =
     getWavesPerEUForWorkGroup(FlatWorkGroupSizes.second);
   Default.first = MinImpliedByFlatWorkGroupSize;
-  bool RequestedFlatWorkGroupSize =
-      F.hasFnAttribute("amdgpu-flat-work-group-size");
 
   // Requested minimum/maximum number of waves per execution unit.
   std::pair<unsigned, unsigned> Requested = AMDGPU::getIntegerPairAttribute(
@@ -581,8 +420,7 @@ std::pair<unsigned, unsigned> AMDGPUSubtarget::getWavesPerEU(
 
   // Make sure requested values are compatible with values implied by requested
   // minimum/maximum flat work group sizes.
-  if (RequestedFlatWorkGroupSize &&
-      Requested.first < MinImpliedByFlatWorkGroupSize)
+  if (Requested.first < MinImpliedByFlatWorkGroupSize)
     return Default;
 
   return Requested;
@@ -670,9 +508,19 @@ bool AMDGPUSubtarget::makeLIDRangeMetadata(Instruction *I) const {
 }
 
 unsigned AMDGPUSubtarget::getImplicitArgNumBytes(const Function &F) const {
+  assert(AMDGPU::isKernel(F.getCallingConv()));
+
+  // We don't allocate the segment if we know the implicit arguments weren't
+  // used, even if the ABI implies we need them.
+  if (F.hasFnAttribute("amdgpu-no-implicitarg-ptr"))
+    return 0;
+
   if (isMesaKernel(F))
     return 16;
-  return AMDGPU::getIntegerAttribute(F, "amdgpu-implicitarg-num-bytes", 0);
+
+  // Assume all implicit inputs are used by default
+  unsigned NBytes = (AMDGPU::getAmdhsaCodeObjectVersion() >= 5) ? 256 : 56;
+  return AMDGPU::getIntegerAttribute(F, "amdgpu-implicitarg-num-bytes", NBytes);
 }
 
 uint64_t AMDGPUSubtarget::getExplicitKernArgSize(const Function &F,
@@ -710,6 +558,7 @@ unsigned AMDGPUSubtarget::getKernArgSegmentSize(const Function &F,
   if (ImplicitBytes != 0) {
     const Align Alignment = getAlignmentForImplicitArgPtr();
     TotalSize = alignTo(ExplicitArgBytes, Alignment) + ImplicitBytes;
+    MaxAlign = std::max(MaxAlign, Alignment);
   }
 
   // Being able to dereference past the end is useful for emitting scalar loads.
@@ -720,23 +569,6 @@ AMDGPUDwarfFlavour AMDGPUSubtarget::getAMDGPUDwarfFlavour() const {
   return getWavefrontSize() == 32 ? AMDGPUDwarfFlavour::Wave32
                                   : AMDGPUDwarfFlavour::Wave64;
 }
-
-R600Subtarget::R600Subtarget(const Triple &TT, StringRef GPU, StringRef FS,
-                             const TargetMachine &TM) :
-  R600GenSubtargetInfo(TT, GPU, /*TuneCPU*/GPU, FS),
-  AMDGPUSubtarget(TT),
-  InstrInfo(*this),
-  FrameLowering(TargetFrameLowering::StackGrowsUp, getStackAlignment(), 0),
-  FMA(false),
-  CaymanISA(false),
-  CFALUBug(false),
-  HasVertexCache(false),
-  R600ALUInst(false),
-  FP64(false),
-  TexVTXClauseSize(0),
-  Gen(R600),
-  TLInfo(TM, initializeSubtargetDependencies(TT, GPU, FS)),
-  InstrItins(getInstrItineraryForCPU(GPU)) { }
 
 void GCNSubtarget::overrideSchedPolicy(MachineSchedPolicy &Policy,
                                       unsigned NumRegionInstrs) const {
@@ -801,11 +633,11 @@ unsigned GCNSubtarget::getOccupancyWithNumVGPRs(unsigned VGPRs) const {
 }
 
 unsigned
-GCNSubtarget::getBaseReservedNumSGPRs(const bool HasFlatScratchInit) const {
+GCNSubtarget::getBaseReservedNumSGPRs(const bool HasFlatScratch) const {
   if (getGeneration() >= AMDGPUSubtarget::GFX10)
     return 2; // VCC. FLAT_SCRATCH and XNACK are no longer in SGPRs.
 
-  if (HasFlatScratchInit) {
+  if (HasFlatScratch || HasArchitectedFlatScratch) {
     if (getGeneration() >= AMDGPUSubtarget::VOLCANIC_ISLANDS)
       return 6; // FLAT_SCRATCH, XNACK, VCC (in that order).
     if (getGeneration() == AMDGPUSubtarget::SEA_ISLANDS)
@@ -823,20 +655,11 @@ unsigned GCNSubtarget::getReservedNumSGPRs(const MachineFunction &MF) const {
 }
 
 unsigned GCNSubtarget::getReservedNumSGPRs(const Function &F) const {
-  // The logic to detect if the function has
-  // flat scratch init is slightly different than how
-  // SIMachineFunctionInfo constructor derives.
-  // We don't use amdgpu-calls, amdgpu-stack-objects
-  // attributes and isAmdHsaOrMesa here as it doesn't really matter.
-  // TODO: Outline this derivation logic and have just
-  // one common function in the backend to avoid duplication.
-  bool isEntry = AMDGPU::isEntryFunctionCC(F.getCallingConv());
-  bool FunctionHasFlatScratchInit = false;
-  if (hasFlatAddressSpace() && isEntry && !flatScratchIsArchitected() &&
-      enableFlatScratch()) {
-    FunctionHasFlatScratchInit = true;
-  }
-  return getBaseReservedNumSGPRs(FunctionHasFlatScratchInit);
+  // In principle we do not need to reserve SGPR pair used for flat_scratch if
+  // we know flat instructions do not access the stack anywhere in the
+  // program. For now assume it's needed if we have flat instructions.
+  const bool KernelUsesFlatScratch = hasFlatAddressSpace();
+  return getBaseReservedNumSGPRs(KernelUsesFlatScratch);
 }
 
 unsigned GCNSubtarget::computeOccupancy(const Function &F, unsigned LDSSize,
@@ -1003,6 +826,13 @@ void GCNSubtarget::adjustSchedDependency(SUnit *Def, int DefOpIdx, SUnit *Use,
       --Lat;
     }
     Dep.setLatency(Lat);
+  } else if (Dep.getLatency() == 0 && Dep.getReg() == AMDGPU::VCC_LO) {
+    // Work around the fact that SIInstrInfo::fixImplicitOperands modifies
+    // implicit operands which come from the MCInstrDesc, which can fool
+    // ScheduleDAGInstrs::addPhysRegDataDeps into treating them as implicit
+    // pseudo operands.
+    Dep.setLatency(InstrInfo.getSchedModel().computeOperandLatency(
+        DefI, DefOpIdx, UseI, UseOpIdx));
   }
 }
 
@@ -1052,7 +882,7 @@ struct FillMFMAShadowMutation : ScheduleDAGMutation {
     return true;
   }
 
-  // Link as much SALU intructions in chain as possible. Return the size
+  // Link as many SALU instructions in chain as possible. Return the size
   // of the chain. Links up to MaxChain instructions.
   unsigned linkSALUChain(SUnit *From, SUnit *To, unsigned MaxChain,
                          SmallPtrSetImpl<SUnit *> &Visited) const {
@@ -1134,6 +964,11 @@ struct FillMFMAShadowMutation : ScheduleDAGMutation {
 void GCNSubtarget::getPostRAMutations(
     std::vector<std::unique_ptr<ScheduleDAGMutation>> &Mutations) const {
   Mutations.push_back(std::make_unique<FillMFMAShadowMutation>(&InstrInfo));
+}
+
+std::unique_ptr<ScheduleDAGMutation>
+GCNSubtarget::createFillMFMAShadowMutation(const TargetInstrInfo *TII) const {
+  return std::make_unique<FillMFMAShadowMutation>(&InstrInfo);
 }
 
 const AMDGPUSubtarget &AMDGPUSubtarget::get(const MachineFunction &MF) {

@@ -1,5 +1,5 @@
 // REQUIRES: xcore-registered-target
-// RUN: %clang_cc1 -triple xcore-unknown-unknown -fno-signed-char -fno-common -emit-llvm -o - %s | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -triple xcore-unknown-unknown -fno-signed-char -fno-common -emit-llvm -o - %s | FileCheck %s
 
 // CHECK: target triple = "xcore-unknown-unknown"
 

@@ -1,6 +1,6 @@
-// RUN: %clang_cc1 -emit-llvm -triple=wasm32-unknown-unknown -o - %s \
+// RUN: %clang_cc1 -no-opaque-pointers -emit-llvm -triple=wasm32-unknown-unknown -target-feature +atomics -target-feature +bulk-memory -o - %s \
 // RUN:   | FileCheck %s -check-prefix=WEBASSEMBLY32
-// RUN: %clang_cc1 -emit-llvm -triple=wasm64-unknown-unknown -o - %s \
+// RUN: %clang_cc1 -no-opaque-pointers -emit-llvm -triple=wasm64-unknown-unknown -target-feature +atomics -target-feature +bulk-memory -o - %s \
 // RUN:   | FileCheck %s -check-prefix=WEBASSEMBLY64
 
 // Test that we don't create common blocks.
@@ -44,11 +44,39 @@ struct A {
 A theA;
 
 // WEBASSEMBLY32: define internal void @__cxx_global_var_init() #3 {
-// WEBASSEMBLY32: call %struct.A* @_ZN1AC1Ev(%struct.A* {{[^,]*}} @theA)
+// WEBASSEMBLY32: call noundef %struct.A* @_ZN1AC1Ev(%struct.A* {{[^,]*}} @theA)
 // WEBASSEMBLY32: define internal void @_GLOBAL__sub_I_static_init_wasm.cpp() #3 {
 // WEBASSEMBLY32: call void @__cxx_global_var_init()
 //
 // WEBASSEMBLY64: define internal void @__cxx_global_var_init() #3 {
-// WEBASSEMBLY64: call %struct.A* @_ZN1AC1Ev(%struct.A* {{[^,]*}} @theA)
+// WEBASSEMBLY64: call noundef %struct.A* @_ZN1AC1Ev(%struct.A* {{[^,]*}} @theA)
 // WEBASSEMBLY64: define internal void @_GLOBAL__sub_I_static_init_wasm.cpp() #3 {
 // WEBASSEMBLY64: call void @__cxx_global_var_init()
+
+// RUN: %clang_cc1 -no-opaque-pointers -emit-llvm -triple=wasm32-unknown-unknown -target-feature +bulk-memory -o - %s \
+// RUN:   | FileCheck %s -check-prefix=NOATOMICS
+// RUN: %clang_cc1 -no-opaque-pointers -emit-llvm -triple=wasm64-unknown-unknown -target-feature +bulk-memory -o - %s \
+// RUN:   | FileCheck %s -check-prefix=NOATOMICS
+
+// NOATOMICS-LABEL: @_Z1gv()
+// NOATOMICS:       %[[R0:.+]] = load i8, i8* @_ZGVZ1gvE1a, align 1
+// NOATOMICS-NEXT:  %guard.uninitialized = icmp eq i8 %[[R0]], 0
+// NOATOMICS-NEXT:  br i1 %guard.uninitialized, label %[[CHECK:.+]], label %[[END:.+]],
+// NOATOMICS:       [[CHECK]]:
+// NOATOMICS-NOT:   __cxa_guard_acquire
+// NOATOMICS:       [[END]]:
+// NOATOMICS-NEXT:  ret void
+
+// RUN: %clang_cc1 -no-opaque-pointers -emit-llvm -triple=wasm32-unknown-unknown -target-feature +atomics -o - %s \
+// RUN:   | FileCheck %s -check-prefix=NOBULKMEM
+// RUN: %clang_cc1 -no-opaque-pointers -emit-llvm -triple=wasm64-unknown-unknown -target-feature +atomics -o - %s \
+// RUN:   | FileCheck %s -check-prefix=NOBULKMEM
+
+// NOBULKMEM-LABEL: @_Z1gv()
+// NOBULKMEM:       %[[R0:.+]] = load i8, i8* @_ZGVZ1gvE1a, align 1
+// NOBULKMEM-NEXT:  %guard.uninitialized = icmp eq i8 %[[R0]], 0
+// NOBULKMEM-NEXT:  br i1 %guard.uninitialized, label %[[CHECK:.+]], label %[[END:.+]],
+// NOBULKMEM:       [[CHECK]]:
+// NOBULKMEM-NOT:   __cxa_guard_acquire
+// NOBULKMEM:       [[END]]:
+// NOBULKMEM-NEXT:  ret void

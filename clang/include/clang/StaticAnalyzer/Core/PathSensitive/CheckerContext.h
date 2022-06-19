@@ -84,6 +84,8 @@ public:
     return Eng.getContext();
   }
 
+  const ASTContext &getASTContext() const { return Eng.getContext(); }
+
   const LangOptions &getLangOpts() const {
     return Eng.getContext().getLangOpts();
   }
@@ -254,6 +256,7 @@ public:
   /// @param IsPrunable Whether the note is prunable. It allows BugReporter
   ///        to omit the note from the report if it would make the displayed
   ///        bug path significantly shorter.
+  LLVM_ATTRIBUTE_RETURNS_NONNULL
   const NoteTag *getNoteTag(NoteTag::Callback &&Cb, bool IsPrunable = false) {
     return Eng.getDataTags().make<NoteTag>(std::move(Cb), IsPrunable);
   }

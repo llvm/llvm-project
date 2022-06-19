@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -fsyntax-only -verify -triple x86_64-linux %s -Wno-tautological-pointer-compare -Wno-pointer-to-int-cast
+// RUN: %clang_cc1 -fsyntax-only -verify -triple powerpc64-ibm-aix-xcoff %s -Wno-tautological-pointer-compare -Wno-pointer-to-int-cast
 
 #define EVAL_EXPR(testno, expr) enum { test##testno = (expr) }; struct check_positive##testno { int a[test##testno]; };
 int x;
@@ -21,7 +22,7 @@ EVAL_EXPR(13, x || 3.0) // expected-error {{not an integer constant expression}}
 unsigned int l_19 = 1;
 EVAL_EXPR(14, (1 ^ l_19) && 1); // expected-error {{not an integer constant expression}}
 
-void f()
+void f(void)
 {
   int a;
   EVAL_EXPR(15, (_Bool)&a);
@@ -74,7 +75,7 @@ const _Bool constbool = 0;
 EVAL_EXPR(35, constbool)
 EVAL_EXPR(36, constbool)
 
-EVAL_EXPR(37, (1,2.0) == 2.0 ? 1 : -1)
+EVAL_EXPR(37, ((void)1,2.0) == 2.0 ? 1 : -1)
 EVAL_EXPR(38, __builtin_expect(1,1) == 1 ? 1 : -1)
 
 // PR7884
@@ -85,7 +86,7 @@ EVAL_EXPR(40, __imag__(1.f) == 0 ? 1 : -1)
 EVAL_EXPR(41, (int)(1+(_Complex unsigned)2))
 
 // rdar://8875946
-void rdar8875946() {
+void rdar8875946(void) {
   double _Complex  P;
   float _Complex  P2 = 3.3f + P;
 }
@@ -132,9 +133,9 @@ EVAL_EXPR(50, &Test50 < (struct Test50S*)((unsigned long)&Test50 + 10)) // expec
 EVAL_EXPR(51, 0 != (float)1e99)
 
 // PR21945
-void PR21945() { int i = (({}), 0l); }
+void PR21945(void) { int i = (({}), 0l); }
 
-void PR24622();
+void PR24622(void);
 struct PR24622 {} pr24622;
 EVAL_EXPR(52, &pr24622 == (void *)&PR24622); // expected-error {{not an integer constant expression}}
 

@@ -20,11 +20,8 @@ using namespace llvm;
 
 /// Removes all aliases aren't inside any of the
 /// desired Chunks.
-static void extractAliasesFromModule(const std::vector<Chunk> &ChunksToKeep,
-                                     Module *Program) {
-  Oracle O(ChunksToKeep);
-
-  for (auto &GA : make_early_inc_range(Program->aliases())) {
+static void extractAliasesFromModule(Oracle &O, Module &Program) {
+  for (auto &GA : make_early_inc_range(Program.aliases())) {
     if (!O.shouldKeep()) {
       GA.replaceAllUsesWith(GA.getAliasee());
       GA.eraseFromParent();
@@ -32,22 +29,8 @@ static void extractAliasesFromModule(const std::vector<Chunk> &ChunksToKeep,
   }
 }
 
-/// Counts the amount of aliases and prints their respective name & index.
-static int countAliases(Module *Program) {
-  // TODO: Silence index with --quiet flag
-  errs() << "----------------------------\n";
-  errs() << "Aliases Index Reference:\n";
-  int Count = 0;
-  for (auto &GA : Program->aliases())
-    errs() << "\t" << ++Count << ": " << GA.getName() << "\n";
-
-  errs() << "----------------------------\n";
-  return Count;
-}
-
 void llvm::reduceAliasesDeltaPass(TestRunner &Test) {
   errs() << "*** Reducing Aliases ...\n";
-  int Functions = countAliases(Test.getProgram());
-  runDeltaPass(Test, Functions, extractAliasesFromModule);
+  runDeltaPass(Test, extractAliasesFromModule);
   errs() << "----------------------------\n";
 }

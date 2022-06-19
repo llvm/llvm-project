@@ -97,7 +97,6 @@ static void BM_DeallocateOnly(benchmark::State& st) {
   const size_t alloc_size = st.range(0);
   const auto NumAllocs = st.max_iterations;
 
-  using PtrT = void*;
   std::vector<void*> Pointers(NumAllocs);
   for (auto& p : Pointers) {
     p = AllocWrapper::Allocate(alloc_size);

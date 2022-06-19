@@ -3,7 +3,7 @@
 // RUN: %clang_cc1 -verify -fopenmp-simd -ferror-limit 100 %s -Wuninitialized
 
 
-struct S1; // expected-note 2 {{declared here}}
+struct S1; // expected-note 2 {{declared here}} // expected-note 2 {{forward declaration of 'S1'}}
 extern S1 a;
 class S2 {
   mutable int a;
@@ -131,14 +131,14 @@ T tmain(T argc, S **argv) {
 
 #pragma omp target
 #pragma omp teams
-#pragma omp distribute parallel for simd shared(ba) // expected-warning {{Type 'const S2 [5]' is not trivially copyable and not guaranteed to be mapped correctly}}
+#pragma omp distribute parallel for simd shared(ba) // expected-warning {{Type 'const S2[5]' is not trivially copyable and not guaranteed to be mapped correctly}}
   for(int k = 0 ; k < n ; k++) {
     acc++;
   }
 
 #pragma omp target
 #pragma omp teams
-#pragma omp distribute parallel for simd shared(ca) // expected-warning {{Type 'const S3 [5]' is not trivially copyable and not guaranteed to be mapped correctly}}
+#pragma omp distribute parallel for simd shared(ca) // expected-warning {{Type 'const S3[5]' is not trivially copyable and not guaranteed to be mapped correctly}}
   for(int k = 0 ; k < n ; k++) {
     acc++;
   }
@@ -305,14 +305,14 @@ int main(int argc, char **argv) {
 
 #pragma omp target
 #pragma omp teams
-#pragma omp distribute parallel for simd shared(ba) // expected-warning {{Type 'const S2 [5]' is not trivially copyable and not guaranteed to be mapped correctly}}
+#pragma omp distribute parallel for simd shared(ba) // expected-warning {{Type 'const S2[5]' is not trivially copyable and not guaranteed to be mapped correctly}}
   for(int k = 0 ; k < n ; k++) {
     acc++;
   }
 
 #pragma omp target
 #pragma omp teams
-#pragma omp distribute parallel for simd shared(ca) // expected-warning {{Type 'const S3 [5]' is not trivially copyable and not guaranteed to be mapped correctly}}
+#pragma omp distribute parallel for simd shared(ca) // expected-warning {{Type 'const S3[5]' is not trivially copyable and not guaranteed to be mapped correctly}}
   for(int k = 0 ; k < n ; k++) {
     acc++;
   }

@@ -258,6 +258,7 @@ def CyReadAdrBase : SchedReadVariant<[
   SchedVar<ScaledIdxPred, [ReadBaseRS]>, // Read base reg after shifting offset.
   SchedVar<NoSchedPred,   [ReadDefault]>]>;   // Read base reg with no shift.
 def : SchedAlias<ReadAdrBase, CyReadAdrBase>; // Map AArch64->Cyclone type.
+def : ReadAdvance<ReadST, 0>;
 
 //---
 // 7.8.9,7.8.11. Load/Store, paired
@@ -303,7 +304,8 @@ def : WriteRes<WriteSys, []> {let Latency = -1;}
 // 7.9 Vector Unit Instructions
 
 // Simple vector operations take 2 cycles.
-def : WriteRes<WriteV, [CyUnitV]> {let Latency = 2;}
+def : WriteRes<WriteVd, [CyUnitV]> {let Latency = 2;}
+def : WriteRes<WriteVq, [CyUnitV]> {let Latency = 2;}
 
 // Define some longer latency vector op types for Cyclone.
 def CyWriteV3 : SchedWriteRes<[CyUnitV]> {let Latency = 3;}
@@ -334,7 +336,7 @@ def : WriteRes<WriteFImm, [CyUnitV]> {let Latency = 2;}
 // COPY is handled above in the WriteMov Variant.
 def WriteVMov    : SchedWriteVariant<[
                      SchedVar<WriteVMovPred, [WriteX]>,
-                     SchedVar<NoSchedPred,   [WriteV]>]>;
+                     SchedVar<NoSchedPred,   [WriteVq]>]>;
 def : InstRW<[WriteVMov], (instrs ORRv16i8)>;
 
 // FMOVSr,FMOVDr are WriteF.
@@ -354,7 +356,7 @@ def : WriteRes<WriteFCopy, [CyUnitLS]> {
 def : InstRW<[WriteLD], (instrs FMOVSWr,FMOVDXr,FMOVDXHighr)>;
 
 // INS V[x],R
-def CyWriteCopyToFPR : WriteSequence<[WriteVLD, WriteV]>;
+def CyWriteCopyToFPR : WriteSequence<[WriteVLD, WriteVq]>;
 def : InstRW<[CyWriteCopyToFPR], (instregex "INSv")>;
 
 // SMOV,UMOV R,V[x]
@@ -570,7 +572,7 @@ def : InstRW<[WriteFRSQRTS], (instregex "FRSQRTSv")>;
 //---
 
 // FCVT lengthen f16/s32
-def : InstRW<[WriteV], (instrs FCVTSHr,FCVTDHr,FCVTDSr)>;
+def : InstRW<[WriteVq], (instrs FCVTSHr,FCVTDHr,FCVTDSr)>;
 
 // FCVT,FCVTN,FCVTXN
 // SCVTF,UCVTF V,V
@@ -680,61 +682,61 @@ def : InstRW<[WriteVLDShuffle],
 def : InstRW<[WriteVLDShuffle, WriteAdr],
              (instregex "LD1Rv(8b|4h|2s|1d|16b|8h|4s|2d)_POST$")>;
 
-def : InstRW<[WriteVLDShuffle, WriteV],
+def : InstRW<[WriteVLDShuffle, WriteVq],
              (instregex "LD2Twov(8b|4h|2s)$")>;
-def : InstRW<[WriteVLDShuffle, WriteAdr, WriteV],
+def : InstRW<[WriteVLDShuffle, WriteAdr, WriteVq],
              (instregex "LD2Twov(8b|4h|2s)_POST$")>;
 def : InstRW<[WriteVLDShuffle, WriteVLDShuffle],
              (instregex "LD2Twov(16b|8h|4s|2d)$")>;
 def : InstRW<[WriteVLDShuffle, WriteAdr, WriteVLDShuffle],
              (instregex "LD2Twov(16b|8h|4s|2d)_POST")>;
 
-def : InstRW<[WriteVLDShuffle, ReadVLD, WriteV],
+def : InstRW<[WriteVLDShuffle, ReadVLD, WriteVq],
              (instregex "LD2i(8|16|32)$")>;
-def : InstRW<[WriteVLDShuffle, ReadVLD, WriteAdr, WriteV],
+def : InstRW<[WriteVLDShuffle, ReadVLD, WriteAdr, WriteVq],
              (instregex "LD2i(8|16|32)_POST")>;
-def : InstRW<[WriteVLDShuffle, ReadVLD, WriteV],
+def : InstRW<[WriteVLDShuffle, ReadVLD, WriteVq],
              (instregex "LD2i64$")>;
-def : InstRW<[WriteVLDShuffle, ReadVLD, WriteAdr, WriteV],
+def : InstRW<[WriteVLDShuffle, ReadVLD, WriteAdr, WriteVq],
              (instregex "LD2i64_POST")>;
 
-def : InstRW<[WriteVLDShuffle, WriteV],
+def : InstRW<[WriteVLDShuffle, WriteVq],
              (instregex "LD2Rv(8b|4h|2s|1d|16b|8h|4s|2d)$")>;
-def : InstRW<[WriteVLDShuffle, WriteAdr, WriteV],
+def : InstRW<[WriteVLDShuffle, WriteAdr, WriteVq],
              (instregex "LD2Rv(8b|4h|2s|1d|16b|8h|4s|2d)_POST")>;
 
-def : InstRW<[WriteVLDShuffle, WriteVLDShuffle, WriteV],
+def : InstRW<[WriteVLDShuffle, WriteVLDShuffle, WriteVq],
              (instregex "LD3Threev(8b|4h|2s)$")>;
-def : InstRW<[WriteVLDShuffle, WriteAdr, WriteVLDShuffle, WriteV],
+def : InstRW<[WriteVLDShuffle, WriteAdr, WriteVLDShuffle, WriteVq],
              (instregex "LD3Threev(8b|4h|2s)_POST")>;
 def : InstRW<[WriteVLDShuffle, WriteVLDShuffle, WriteVLDShuffle],
              (instregex "LD3Threev(16b|8h|4s|2d)$")>;
 def : InstRW<[WriteVLDShuffle, WriteAdr, WriteVLDShuffle, WriteVLDShuffle],
              (instregex "LD3Threev(16b|8h|4s|2d)_POST")>;
 
-def : InstRW<[WriteVLDShuffle, ReadVLD, WriteV, WriteV],
+def : InstRW<[WriteVLDShuffle, ReadVLD, WriteVq, WriteVq],
              (instregex "LD3i(8|16|32)$")>;
-def : InstRW<[WriteVLDShuffle, ReadVLD, WriteAdr, WriteV, WriteV],
+def : InstRW<[WriteVLDShuffle, ReadVLD, WriteAdr, WriteVq, WriteVq],
              (instregex "LD3i(8|16|32)_POST")>;
 
-def : InstRW<[WriteVLDShuffle, ReadVLD, WriteVLDShuffle, WriteV],
+def : InstRW<[WriteVLDShuffle, ReadVLD, WriteVLDShuffle, WriteVq],
              (instregex "LD3i64$")>;
-def : InstRW<[WriteVLDShuffle, ReadVLD, WriteAdr, WriteVLDShuffle, WriteV],
+def : InstRW<[WriteVLDShuffle, ReadVLD, WriteAdr, WriteVLDShuffle, WriteVq],
              (instregex "LD3i64_POST")>;
 
-def : InstRW<[WriteVLDShuffle, WriteV, WriteV],
+def : InstRW<[WriteVLDShuffle, WriteVq, WriteVq],
              (instregex "LD3Rv(8b|4h|2s|16b|8h|4s)$")>;
-def : InstRW<[WriteVLDShuffle, WriteAdr, WriteV, WriteV],
+def : InstRW<[WriteVLDShuffle, WriteAdr, WriteVq, WriteVq],
              (instregex "LD3Rv(8b|4h|2s|16b|8h|4s)_POST")>;
 
-def : InstRW<[WriteVLDShuffle, WriteVLDShuffle, WriteV],
+def : InstRW<[WriteVLDShuffle, WriteVLDShuffle, WriteVq],
              (instrs LD3Rv1d,LD3Rv2d)>;
-def : InstRW<[WriteVLDShuffle, WriteAdr, WriteVLDShuffle, WriteV],
+def : InstRW<[WriteVLDShuffle, WriteAdr, WriteVLDShuffle, WriteVq],
              (instrs LD3Rv1d_POST,LD3Rv2d_POST)>;
 
-def : InstRW<[WriteVLDShuffle, WriteVLDShuffle, WriteV, WriteV],
+def : InstRW<[WriteVLDShuffle, WriteVLDShuffle, WriteVq, WriteVq],
              (instregex "LD4Fourv(8b|4h|2s)$")>;
-def : InstRW<[WriteVLDShuffle, WriteAdr, WriteVLDShuffle, WriteV, WriteV],
+def : InstRW<[WriteVLDShuffle, WriteAdr, WriteVLDShuffle, WriteVq, WriteVq],
              (instregex "LD4Fourv(8b|4h|2s)_POST")>;
 def : InstRW<[WriteVLDPairShuffle, WriteVLDPairShuffle,
               WriteVLDPairShuffle, WriteVLDPairShuffle],
@@ -743,25 +745,25 @@ def : InstRW<[WriteVLDPairShuffle, WriteAdr, WriteVLDPairShuffle,
               WriteVLDPairShuffle, WriteVLDPairShuffle],
              (instregex "LD4Fourv(16b|8h|4s|2d)_POST")>;
 
-def : InstRW<[WriteVLDShuffle, ReadVLD, WriteV, WriteV, WriteV],
+def : InstRW<[WriteVLDShuffle, ReadVLD, WriteVq, WriteVq, WriteVq],
              (instregex "LD4i(8|16|32)$")>;
-def : InstRW<[WriteVLDShuffle, ReadVLD, WriteAdr, WriteV, WriteV, WriteV],
+def : InstRW<[WriteVLDShuffle, ReadVLD, WriteAdr, WriteVq, WriteVq, WriteVq],
              (instregex "LD4i(8|16|32)_POST")>;
 
 
-def : InstRW<[WriteVLDShuffle, ReadVLD, WriteVLDShuffle, WriteV, WriteV],
+def : InstRW<[WriteVLDShuffle, ReadVLD, WriteVLDShuffle, WriteVq, WriteVq],
              (instrs LD4i64)>;
-def : InstRW<[WriteVLDShuffle, ReadVLD, WriteAdr, WriteVLDShuffle, WriteV],
+def : InstRW<[WriteVLDShuffle, ReadVLD, WriteAdr, WriteVLDShuffle, WriteVq],
              (instrs LD4i64_POST)>;
 
-def : InstRW<[WriteVLDShuffle, WriteV, WriteV, WriteV],
+def : InstRW<[WriteVLDShuffle, WriteVq, WriteVq, WriteVq],
              (instregex "LD4Rv(8b|4h|2s|16b|8h|4s)$")>;
-def : InstRW<[WriteVLDShuffle, WriteAdr, WriteV, WriteV, WriteV],
+def : InstRW<[WriteVLDShuffle, WriteAdr, WriteVq, WriteVq, WriteVq],
              (instregex "LD4Rv(8b|4h|2s|16b|8h|4s)_POST")>;
 
-def : InstRW<[WriteVLDShuffle, WriteVLDShuffle, WriteV, WriteV],
+def : InstRW<[WriteVLDShuffle, WriteVLDShuffle, WriteVq, WriteVq],
              (instrs LD4Rv1d,LD4Rv2d)>;
-def : InstRW<[WriteVLDShuffle, WriteAdr, WriteVLDShuffle, WriteV, WriteV],
+def : InstRW<[WriteVLDShuffle, WriteAdr, WriteVLDShuffle, WriteVq, WriteVq],
              (instrs LD4Rv1d_POST,LD4Rv2d_POST)>;
 
 //---

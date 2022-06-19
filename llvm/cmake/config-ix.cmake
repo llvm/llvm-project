@@ -12,6 +12,7 @@ include(CheckCCompilerFlag)
 include(CMakePushCheckState)
 
 include(CheckCompilerVersion)
+include(CheckProblematicConfigurations)
 include(HandleLLVMStdlib)
 
 if( UNIX AND NOT (APPLE OR BEOS OR HAIKU) )
@@ -63,7 +64,6 @@ check_symbol_exists(FE_ALL_EXCEPT "fenv.h" HAVE_DECL_FE_ALL_EXCEPT)
 check_symbol_exists(FE_INEXACT "fenv.h" HAVE_DECL_FE_INEXACT)
 
 check_include_file(mach/mach.h HAVE_MACH_MACH_H)
-check_include_file(histedit.h HAVE_HISTEDIT_H)
 check_include_file(CrashReporterClient.h HAVE_CRASHREPORTERCLIENT_H)
 if(APPLE)
   include(CheckCSourceCompiles)
@@ -87,14 +87,12 @@ endif()
 if( NOT PURE_WINDOWS )
   check_library_exists(pthread pthread_create "" HAVE_LIBPTHREAD)
   if (HAVE_LIBPTHREAD)
-    check_library_exists(pthread pthread_getspecific "" HAVE_PTHREAD_GETSPECIFIC)
     check_library_exists(pthread pthread_rwlock_init "" HAVE_PTHREAD_RWLOCK_INIT)
     check_library_exists(pthread pthread_mutex_lock "" HAVE_PTHREAD_MUTEX_LOCK)
   else()
     # this could be Android
     check_library_exists(c pthread_create "" PTHREAD_IN_LIBC)
     if (PTHREAD_IN_LIBC)
-      check_library_exists(c pthread_getspecific "" HAVE_PTHREAD_GETSPECIFIC)
       check_library_exists(c pthread_rwlock_init "" HAVE_PTHREAD_RWLOCK_INIT)
       check_library_exists(c pthread_mutex_lock "" HAVE_PTHREAD_MUTEX_LOCK)
     endif()
@@ -149,6 +147,7 @@ if(LLVM_ENABLE_LIBXML2)
     cmake_push_check_state()
     list(APPEND CMAKE_REQUIRED_INCLUDES ${LIBXML2_INCLUDE_DIRS})
     list(APPEND CMAKE_REQUIRED_LIBRARIES ${LIBXML2_LIBRARIES})
+    list(APPEND CMAKE_REQUIRED_DEFINITIONS ${LIBXML2_DEFINITIONS})
     check_symbol_exists(xmlReadMemory libxml/xmlreader.h HAVE_LIBXML2)
     cmake_pop_check_state()
     if(LLVM_ENABLE_LIBXML2 STREQUAL FORCE_ON AND NOT HAVE_LIBXML2)
@@ -158,29 +157,45 @@ if(LLVM_ENABLE_LIBXML2)
   set(LLVM_ENABLE_LIBXML2 "${HAVE_LIBXML2}")
 endif()
 
+if(LLVM_ENABLE_CURL)
+  if(LLVM_ENABLE_CURL STREQUAL FORCE_ON)
+    find_package(CURL REQUIRED)
+  else()
+    find_package(CURL)
+  endif()
+  if(CURL_FOUND)
+    # Check if curl we found is usable; for example, we may have found a 32-bit
+    # library on a 64-bit system which would result in a link-time failure.
+    cmake_push_check_state()
+    list(APPEND CMAKE_REQUIRED_LIBRARIES CURL::libcurl)
+    check_symbol_exists(curl_easy_init curl/curl.h HAVE_CURL)
+    cmake_pop_check_state()
+    if(LLVM_ENABLE_CURL STREQUAL FORCE_ON AND NOT HAVE_CURL)
+      message(FATAL_ERROR "Failed to configure curl")
+    endif()
+  endif()
+  set(LLVM_ENABLE_CURL "${HAVE_CURL}")
+endif()
+
 # Don't look for these libraries if we're using MSan, since uninstrumented third
 # party code may call MSan interceptors like strlen, leading to false positives.
 if(NOT LLVM_USE_SANITIZER MATCHES "Memory.*")
   # Don't look for these libraries on Windows.
   if (NOT PURE_WINDOWS)
     # Skip libedit if using ASan as it contains memory leaks.
-    if (LLVM_ENABLE_LIBEDIT AND HAVE_HISTEDIT_H AND NOT LLVM_USE_SANITIZER MATCHES ".*Address.*")
-      check_library_exists(edit el_init "" HAVE_LIBEDIT)
+    if (LLVM_ENABLE_LIBEDIT AND NOT LLVM_USE_SANITIZER MATCHES ".*Address.*")
+      find_package(LibEdit)
+      set(HAVE_LIBEDIT ${LibEdit_FOUND})
     else()
       set(HAVE_LIBEDIT 0)
     endif()
-    if(LLVM_ENABLE_TERMINFO STREQUAL FORCE_ON)
-      set(MAYBE_REQUIRED REQUIRED)
-    else()
-      set(MAYBE_REQUIRED)
-    endif()
     if(LLVM_ENABLE_TERMINFO)
-      find_library(TERMINFO_LIB NAMES terminfo tinfo curses ncurses ncursesw ${MAYBE_REQUIRED})
-    endif()
-    if(TERMINFO_LIB)
-      set(LLVM_ENABLE_TERMINFO 1)
-    else()
-      set(LLVM_ENABLE_TERMINFO 0)
+      if(LLVM_ENABLE_TERMINFO STREQUAL FORCE_ON)
+        find_package(Terminfo REQUIRED)
+      else()
+        find_package(Terminfo)
+      endif()
+      set(LLVM_ENABLE_TERMINFO "${Terminfo_FOUND}")
     endif()
   else()
     set(LLVM_ENABLE_TERMINFO 0)
@@ -191,7 +206,13 @@ endif()
 
 check_library_exists(xar xar_open "" LLVM_HAVE_LIBXAR)
 if(LLVM_HAVE_LIBXAR)
-  set(XAR_LIB xar)
+  message(STATUS "The xar file format has been deprecated: LLVM_HAVE_LIBXAR might be removed in the future.")
+  # The xar file format has been deprecated since macOS 12.0.
+  if (CMAKE_OSX_DEPLOYMENT_TARGET VERSION_GREATER_EQUAL 12)
+    set(LLVM_HAVE_LIBXAR 0)
+  else()
+    set(XAR_LIB xar)
+  endif()
 endif()
 
 # function checks
@@ -210,6 +231,7 @@ endif()
 # Determine whether we can register EH tables.
 check_symbol_exists(__register_frame "${CMAKE_CURRENT_LIST_DIR}/unwind.h" HAVE_REGISTER_FRAME)
 check_symbol_exists(__deregister_frame "${CMAKE_CURRENT_LIST_DIR}/unwind.h" HAVE_DEREGISTER_FRAME)
+check_symbol_exists(__unw_add_dynamic_fde "${CMAKE_CURRENT_LIST_DIR}/unwind.h" HAVE_UNW_ADD_DYNAMIC_FDE)
 
 check_symbol_exists(_Unwind_Backtrace "unwind.h" HAVE__UNWIND_BACKTRACE)
 check_symbol_exists(getpagesize unistd.h HAVE_GETPAGESIZE)
@@ -219,7 +241,6 @@ check_symbol_exists(setrlimit sys/resource.h HAVE_SETRLIMIT)
 check_symbol_exists(isatty unistd.h HAVE_ISATTY)
 check_symbol_exists(futimens sys/stat.h HAVE_FUTIMENS)
 check_symbol_exists(futimes sys/time.h HAVE_FUTIMES)
-check_symbol_exists(posix_fallocate fcntl.h HAVE_POSIX_FALLOCATE)
 # AddressSanitizer conflicts with lib/Support/Unix/Signals.inc
 # Avoid sigaltstack on Apple platforms, where backtrace() cannot handle it
 # (rdar://7089625) and _Unwind_Backtrace is unusable because it cannot unwind
@@ -325,38 +346,19 @@ if (LLVM_ENABLE_DOXYGEN)
   llvm_find_program(dot)
 endif ()
 
-if( LLVM_ENABLE_FFI )
-  find_path(FFI_INCLUDE_PATH ffi.h PATHS ${FFI_INCLUDE_DIR})
-  if( EXISTS "${FFI_INCLUDE_PATH}/ffi.h" )
-    set(FFI_HEADER ffi.h CACHE INTERNAL "")
-    set(HAVE_FFI_H 1 CACHE INTERNAL "")
+if(LLVM_ENABLE_FFI)
+  set(FFI_REQUIRE_INCLUDE On)
+  if(LLVM_ENABLE_FFI STREQUAL FORCE_ON)
+    find_package(FFI REQUIRED)
   else()
-    find_path(FFI_INCLUDE_PATH ffi/ffi.h PATHS ${FFI_INCLUDE_DIR})
-    if( EXISTS "${FFI_INCLUDE_PATH}/ffi/ffi.h" )
-      set(FFI_HEADER ffi/ffi.h CACHE INTERNAL "")
-      set(HAVE_FFI_FFI_H 1 CACHE INTERNAL "")
-    endif()
+    find_package(FFI)
   endif()
-
-  if( NOT FFI_HEADER )
-    message(FATAL_ERROR "libffi includes are not found.")
-  endif()
-
-  find_library(FFI_LIBRARY_PATH ffi PATHS ${FFI_LIBRARY_DIR})
-  if( NOT FFI_LIBRARY_PATH )
-    message(FATAL_ERROR "libffi is not found.")
-  endif()
-
-  list(APPEND CMAKE_REQUIRED_LIBRARIES ${FFI_LIBRARY_PATH})
-  list(APPEND CMAKE_REQUIRED_INCLUDES ${FFI_INCLUDE_PATH})
-  check_symbol_exists(ffi_call ${FFI_HEADER} HAVE_FFI_CALL)
-  list(REMOVE_ITEM CMAKE_REQUIRED_INCLUDES ${FFI_INCLUDE_PATH})
-  list(REMOVE_ITEM CMAKE_REQUIRED_LIBRARIES ${FFI_LIBRARY_PATH})
+  set(LLVM_ENABLE_FFI "${FFI_FOUND}")
 else()
   unset(HAVE_FFI_FFI_H CACHE)
   unset(HAVE_FFI_H CACHE)
   unset(HAVE_FFI_CALL CACHE)
-endif( LLVM_ENABLE_FFI )
+endif()
 
 check_symbol_exists(proc_pid_rusage "libproc.h" HAVE_PROC_PID_RUSAGE)
 
@@ -501,10 +503,19 @@ if( MSVC )
   set(stricmp "_stricmp")
   set(strdup "_strdup")
 
-  # See if the DIA SDK is available and usable.
-  set(MSVC_DIA_SDK_DIR "$ENV{VSINSTALLDIR}DIA SDK" CACHE PATH
-      "Path to the DIA SDK")
+  # Allow setting clang-cl's /winsysroot flag.
+  set(LLVM_WINSYSROOT "" CACHE STRING
+    "If set, argument to clang-cl's /winsysroot")
 
+  if (LLVM_WINSYSROOT)
+    set(MSVC_DIA_SDK_DIR "${LLVM_WINSYSROOT}/DIA SDK" CACHE PATH
+        "Path to the DIA SDK")
+  else()
+    set(MSVC_DIA_SDK_DIR "$ENV{VSINSTALLDIR}DIA SDK" CACHE PATH
+        "Path to the DIA SDK")
+  endif()
+
+  # See if the DIA SDK is available and usable.
   # Due to a bug in MSVC 2013's installation software, it is possible
   # for MSVC 2013 to write the DIA SDK into the Visual Studio 2012
   # install directory.  If this happens, the installation is corrupt
@@ -527,9 +538,6 @@ if( MSVC )
 else()
   set(LLVM_ENABLE_DIA_SDK 0)
 endif( MSVC )
-
-# FIXME: Signal handler return type, currently hardcoded to 'void'
-set(RETSIGTYPE void)
 
 if( LLVM_ENABLE_THREADS )
   # Check if threading primitives aren't supported on this platform
@@ -587,9 +595,9 @@ endif()
 
 find_program(GOLD_EXECUTABLE NAMES ${LLVM_DEFAULT_TARGET_TRIPLE}-ld.gold ld.gold ${LLVM_DEFAULT_TARGET_TRIPLE}-ld ld DOC "The gold linker")
 set(LLVM_BINUTILS_INCDIR "" CACHE PATH
-	"PATH to binutils/include containing plugin-api.h for gold plugin.")
+    "PATH to binutils/include containing plugin-api.h for gold plugin.")
 
-if(CMAKE_GENERATOR STREQUAL "Ninja")
+if(CMAKE_GENERATOR MATCHES "Ninja")
   execute_process(COMMAND ${CMAKE_MAKE_PROGRAM} --version
     OUTPUT_VARIABLE NINJA_VERSION
     OUTPUT_STRIP_TRAILING_WHITESPACE)
@@ -597,7 +605,7 @@ if(CMAKE_GENERATOR STREQUAL "Ninja")
   message(STATUS "Ninja version: ${NINJA_VERSION}")
 endif()
 
-if(CMAKE_GENERATOR STREQUAL "Ninja" AND
+if(CMAKE_GENERATOR MATCHES "Ninja" AND
     NOT "${NINJA_VERSION}" VERSION_LESS "1.9.0" AND
     CMAKE_HOST_APPLE AND CMAKE_HOST_SYSTEM_VERSION VERSION_GREATER "15.6.0")
   set(LLVM_TOUCH_STATIC_LIBRARIES ON)
@@ -637,7 +645,6 @@ else()
       find_ocamlfind_package(ctypes VERSION 0.4 OPTIONAL)
       if( HAVE_OCAML_CTYPES )
         message(STATUS "OCaml bindings enabled.")
-        find_ocamlfind_package(oUnit VERSION 2 OPTIONAL)
         set(LLVM_BINDINGS "${LLVM_BINDINGS} ocaml")
 
         set(LLVM_OCAML_INSTALL_PATH "${OCAML_STDLIB_PATH}" CACHE STRING
@@ -688,3 +695,30 @@ if(PY_PYGMENTS_FOUND AND PY_PYGMENTS_LEXERS_C_CPP_FOUND AND PY_YAML_FOUND)
 else()
   set (LLVM_HAVE_OPT_VIEWER_MODULES 0)
 endif()
+
+function(llvm_get_host_prefixes_and_suffixes)
+  # Not all platform files will set these variables (relying on them being
+  # implicitly empty if they're unset), so unset the variables before including
+  # the platform file, to prevent any values from the target system leaking.
+  unset(CMAKE_STATIC_LIBRARY_PREFIX)
+  unset(CMAKE_STATIC_LIBRARY_SUFFIX)
+  unset(CMAKE_SHARED_LIBRARY_PREFIX)
+  unset(CMAKE_SHARED_LIBRARY_SUFFIX)
+  unset(CMAKE_IMPORT_LIBRARY_PREFIX)
+  unset(CMAKE_IMPORT_LIBRARY_SUFFIX)
+  unset(CMAKE_EXECUTABLE_SUFFIX)
+  unset(CMAKE_LINK_LIBRARY_SUFFIX)
+  include(Platform/${CMAKE_HOST_SYSTEM_NAME} OPTIONAL RESULT_VARIABLE _includedFile)
+  if (_includedFile)
+    set(LLVM_HOST_STATIC_LIBRARY_PREFIX ${CMAKE_STATIC_LIBRARY_PREFIX} PARENT_SCOPE)
+    set(LLVM_HOST_STATIC_LIBRARY_SUFFIX ${CMAKE_STATIC_LIBRARY_SUFFIX} PARENT_SCOPE)
+    set(LLVM_HOST_SHARED_LIBRARY_PREFIX ${CMAKE_SHARED_LIBRARY_PREFIX} PARENT_SCOPE)
+    set(LLVM_HOST_SHARED_LIBRARY_SUFFIX ${CMAKE_SHARED_LIBRARY_SUFFIX} PARENT_SCOPE)
+    set(LLVM_HOST_IMPORT_LIBRARY_PREFIX ${CMAKE_IMPORT_LIBRARY_PREFIX} PARENT_SCOPE)
+    set(LLVM_HOST_IMPORT_LIBRARY_SUFFIX ${CMAKE_IMPORT_LIBRARY_SUFFIX} PARENT_SCOPE)
+    set(LLVM_HOST_EXECUTABLE_SUFFIX ${CMAKE_EXECUTABLE_SUFFIX} PARENT_SCOPE)
+    set(LLVM_HOST_LINK_LIBRARY_SUFFIX ${CMAKE_LINK_LIBRARY_SUFFIX} PARENT_SCOPE)
+  endif()
+endfunction()
+
+llvm_get_host_prefixes_and_suffixes()

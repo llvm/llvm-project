@@ -45,6 +45,8 @@ namespace pdb {
     DILineInfo getLineInfoForAddress(
         object::SectionedAddress Address,
         DILineInfoSpecifier Specifier = DILineInfoSpecifier()) override;
+    DILineInfo
+    getLineInfoForDataAddress(object::SectionedAddress Address) override;
     DILineInfoTable getLineInfoForAddressRange(
         object::SectionedAddress Address, uint64_t Size,
         DILineInfoSpecifier Specifier = DILineInfoSpecifier()) override;

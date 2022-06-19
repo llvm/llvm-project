@@ -11,7 +11,7 @@ target triple = "aarch64-unknown-linux-gnu"
 @a = global i64 0, align 4
 
 
-define i64 @b() {
+define i64 @b() uwtable {
 entry:
   %call = tail call i64 @d()
   %0 = alloca i8, i64 ptrtoint (i64 ()* @d to i64), align 16
@@ -27,14 +27,21 @@ entry:
 
 ; CHECK-LABEL: b:
 ; CHECK:       str     d8, [sp, #-32]!
+; CHECK-NEXT:  .cfi_def_cfa_offset 32
 ; CHECK-NEXT:  stp     x29, x30, [sp, #8]
 ; CHECK-NEXT:  str     x19, [sp, #24]
 ; CHECK-NEXT:  add     x29, sp, #8
 
 ; CHECK:       sub     sp, x29, #8
-; CHECK-NEXT:  ldr     x19, [sp, #24]
+; CHECK-NEXT:  .cfi_def_cfa wsp, 32
 ; CHECK-NEXT:  ldp     x29, x30, [sp, #8]
+; CHECK-NEXT:  ldr     x19, [sp, #24]
 ; CHECK-NEXT:  ldr     d8, [sp], #32
+; CHECK-NEXT: .cfi_def_cfa_offset 0
+; CHECK-NEXT: .cfi_restore w19
+; CHECK-NEXT: .cfi_restore w30
+; CHECK-NEXT: .cfi_restore w29
+; CHECK-NEXT: .cfi_restore b8
 ; CHECK-NEXT:  ret
 
 declare i64 @d()

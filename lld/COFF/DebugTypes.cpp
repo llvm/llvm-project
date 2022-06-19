@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "DebugTypes.h"
+#include "COFFLinkerContext.h"
 #include "Chunks.h"
 #include "Driver.h"
 #include "InputFiles.h"
@@ -14,7 +15,6 @@
 #include "TypeMerger.h"
 #include "lld/Common/ErrorHandler.h"
 #include "lld/Common/Memory.h"
-#include "lld/Common/Timer.h"
 #include "llvm/DebugInfo/CodeView/TypeIndexDiscovery.h"
 #include "llvm/DebugInfo/CodeView/TypeRecord.h"
 #include "llvm/DebugInfo/CodeView/TypeRecordHelpers.h"
@@ -46,8 +46,8 @@ class TypeServerIpiSource;
 // before any dependent OBJ.
 class TypeServerSource : public TpiSource {
 public:
-  explicit TypeServerSource(PDBInputFile *f)
-      : TpiSource(PDB, nullptr), pdbInputFile(f) {
+  explicit TypeServerSource(COFFLinkerContext &ctx, PDBInputFile *f)
+      : TpiSource(ctx, PDB, nullptr), pdbInputFile(f) {
     if (f->loadErr && *f->loadErr)
       return;
     pdb::PDBFile &file = f->session->getPDBFile();
@@ -55,9 +55,13 @@ public:
     if (!expectedInfo)
       return;
     Guid = expectedInfo->getGuid();
-    auto it = mappings.emplace(Guid, this);
-    assert(it.second);
-    (void)it;
+    auto it = ctx.typeServerSourceMappings.emplace(Guid, this);
+    if (!it.second) {
+      // If we hit here we have collision on Guid's in two PDB files.
+      // This can happen if the PDB Guid is invalid or if we are really
+      // unlucky. This should fall back on stright file-system lookup.
+      it.first->second = nullptr;
+    }
   }
 
   Error mergeDebugT(TypeMerger *m) override;
@@ -74,8 +78,6 @@ public:
 
   // The PDB signature GUID.
   codeview::GUID Guid;
-
-  static std::map<codeview::GUID, TypeServerSource *> mappings;
 };
 
 // Companion to TypeServerSource. Stores the index map for the IPI stream in the
@@ -83,7 +85,8 @@ public:
 // invariant of one type index space per source.
 class TypeServerIpiSource : public TpiSource {
 public:
-  explicit TypeServerIpiSource() : TpiSource(PDBIpi, nullptr) {}
+  explicit TypeServerIpiSource(COFFLinkerContext &ctx)
+      : TpiSource(ctx, PDBIpi, nullptr) {}
 
   friend class TypeServerSource;
 
@@ -101,8 +104,8 @@ class UseTypeServerSource : public TpiSource {
   Expected<TypeServerSource *> getTypeServerSource();
 
 public:
-  UseTypeServerSource(ObjFile *f, TypeServer2Record ts)
-      : TpiSource(UsingPDB, f), typeServerDependency(ts) {}
+  UseTypeServerSource(COFFLinkerContext &ctx, ObjFile *f, TypeServer2Record ts)
+      : TpiSource(ctx, UsingPDB, f), typeServerDependency(ts) {}
 
   Error mergeDebugT(TypeMerger *m) override;
 
@@ -121,11 +124,11 @@ public:
 // such files, clang does not.
 class PrecompSource : public TpiSource {
 public:
-  PrecompSource(ObjFile *f) : TpiSource(PCH, f) {
+  PrecompSource(COFFLinkerContext &ctx, ObjFile *f) : TpiSource(ctx, PCH, f) {
     if (!f->pchSignature || !*f->pchSignature)
       fatal(toString(f) +
             " claims to be a PCH object, but does not have a valid signature");
-    auto it = mappings.emplace(*f->pchSignature, this);
+    auto it = ctx.precompSourceMappings.emplace(*f->pchSignature, this);
     if (!it.second)
       fatal("a PCH object with the same signature has already been provided (" +
             toString(it.first->second->file) + " and " + toString(file) + ")");
@@ -134,16 +137,14 @@ public:
   void loadGHashes() override;
 
   bool isDependency() const override { return true; }
-
-  static std::map<uint32_t, PrecompSource *> mappings;
 };
 
 // This class represents the debug type stream of an OBJ file that depends on a
 // Microsoft precompiled headers OBJ (see PrecompSource).
 class UsePrecompSource : public TpiSource {
 public:
-  UsePrecompSource(ObjFile *f, PrecompRecord precomp)
-      : TpiSource(UsingPCH, f), precompDependency(precomp) {}
+  UsePrecompSource(COFFLinkerContext &ctx, ObjFile *f, PrecompRecord precomp)
+      : TpiSource(ctx, UsingPCH, f), precompDependency(precomp) {}
 
   Error mergeDebugT(TypeMerger *m) override;
 
@@ -153,6 +154,10 @@ public:
 private:
   Error mergeInPrecompHeaderObj();
 
+  PrecompSource *findObjByName(StringRef fileNameOnly);
+  PrecompSource *findPrecompSource(ObjFile *file, PrecompRecord &pr);
+  Expected<PrecompSource *> findPrecompMap(ObjFile *file, PrecompRecord &pr);
+
 public:
   // Information about the Precomp OBJ dependency, that needs to be loaded in
   // before merging this OBJ.
@@ -160,13 +165,9 @@ public:
 };
 } // namespace
 
-std::vector<TpiSource *> TpiSource::instances;
-ArrayRef<TpiSource *> TpiSource::dependencySources;
-ArrayRef<TpiSource *> TpiSource::objectSources;
-
-TpiSource::TpiSource(TpiKind k, ObjFile *f)
-    : kind(k), tpiSrcIdx(instances.size()), file(f) {
-  instances.push_back(this);
+TpiSource::TpiSource(COFFLinkerContext &ctx, TpiKind k, ObjFile *f)
+    : ctx(ctx), kind(k), tpiSrcIdx(ctx.tpiSourceList.size()), file(f) {
+  ctx.addTpiSource(this);
 }
 
 // Vtable key method.
@@ -175,51 +176,34 @@ TpiSource::~TpiSource() {
   consumeError(std::move(typeMergingError));
 }
 
-void TpiSource::sortDependencies() {
-  // Order dependencies first, but preserve the existing order.
-  std::vector<TpiSource *> deps;
-  std::vector<TpiSource *> objs;
-  for (TpiSource *s : instances)
-    (s->isDependency() ? deps : objs).push_back(s);
-  uint32_t numDeps = deps.size();
-  uint32_t numObjs = objs.size();
-  instances = std::move(deps);
-  instances.insert(instances.end(), objs.begin(), objs.end());
-  for (uint32_t i = 0, e = instances.size(); i < e; ++i)
-    instances[i]->tpiSrcIdx = i;
-  dependencySources = makeArrayRef(instances.data(), numDeps);
-  objectSources = makeArrayRef(instances.data() + numDeps, numObjs);
+TpiSource *lld::coff::makeTpiSource(COFFLinkerContext &ctx, ObjFile *file) {
+  return make<TpiSource>(ctx, TpiSource::Regular, file);
 }
 
-TpiSource *lld::coff::makeTpiSource(ObjFile *file) {
-  return make<TpiSource>(TpiSource::Regular, file);
-}
-
-TpiSource *lld::coff::makeTypeServerSource(PDBInputFile *pdbInputFile) {
+TpiSource *lld::coff::makeTypeServerSource(COFFLinkerContext &ctx,
+                                           PDBInputFile *pdbInputFile) {
   // Type server sources come in pairs: the TPI stream, and the IPI stream.
-  auto *tpiSource = make<TypeServerSource>(pdbInputFile);
+  auto *tpiSource = make<TypeServerSource>(ctx, pdbInputFile);
   if (pdbInputFile->session->getPDBFile().hasPDBIpiStream())
-    tpiSource->ipiSrc = make<TypeServerIpiSource>();
+    tpiSource->ipiSrc = make<TypeServerIpiSource>(ctx);
   return tpiSource;
 }
 
-TpiSource *lld::coff::makeUseTypeServerSource(ObjFile *file,
+TpiSource *lld::coff::makeUseTypeServerSource(COFFLinkerContext &ctx,
+                                              ObjFile *file,
                                               TypeServer2Record ts) {
-  return make<UseTypeServerSource>(file, ts);
+  return make<UseTypeServerSource>(ctx, file, ts);
 }
 
-TpiSource *lld::coff::makePrecompSource(ObjFile *file) {
-  return make<PrecompSource>(file);
+TpiSource *lld::coff::makePrecompSource(COFFLinkerContext &ctx, ObjFile *file) {
+  return make<PrecompSource>(ctx, file);
 }
 
-TpiSource *lld::coff::makeUsePrecompSource(ObjFile *file,
+TpiSource *lld::coff::makeUsePrecompSource(COFFLinkerContext &ctx,
+                                           ObjFile *file,
                                            PrecompRecord precomp) {
-  return make<UsePrecompSource>(file, precomp);
+  return make<UsePrecompSource>(ctx, file, precomp);
 }
-
-std::map<codeview::GUID, TypeServerSource *> TypeServerSource::mappings;
-
-std::map<uint32_t, PrecompSource *> PrecompSource::mappings;
 
 bool TpiSource::remapTypeIndex(TypeIndex &ti, TiRefKind refKind) const {
   if (ti.isSimple())
@@ -345,7 +329,7 @@ Error TpiSource::mergeDebugT(TypeMerger *m) {
     m->tpiCounts.resize(m->getTypeTable().size());
     m->ipiCounts.resize(m->getIDTable().size());
     uint32_t srcIdx = nbHeadIndices;
-    for (CVType &ty : types) {
+    for (const CVType &ty : types) {
       TypeIndex dstIdx = tpiMap[srcIdx++];
       // Type merging may fail, so a complex source type may become the simple
       // NotTranslated type, which cannot be used as an array index.
@@ -418,13 +402,14 @@ Expected<TypeServerSource *> UseTypeServerSource::getTypeServerSource() {
   const codeview::GUID &tsId = typeServerDependency.getGuid();
   StringRef tsPath = typeServerDependency.getName();
 
-  TypeServerSource *tsSrc;
-  auto it = TypeServerSource::mappings.find(tsId);
-  if (it != TypeServerSource::mappings.end()) {
-    tsSrc = it->second;
-  } else {
+  TypeServerSource *tsSrc = nullptr;
+  auto it = ctx.typeServerSourceMappings.find(tsId);
+  if (it != ctx.typeServerSourceMappings.end()) {
+    tsSrc = (TypeServerSource *)it->second;
+  }
+  if (tsSrc == nullptr) {
     // The file failed to load, lookup by name
-    PDBInputFile *pdb = PDBInputFile::findFromRecordPath(tsPath, file);
+    PDBInputFile *pdb = PDBInputFile::findFromRecordPath(ctx, tsPath, file);
     if (!pdb)
       return createFileError(tsPath, errorCodeToError(std::error_code(
                                          ENOENT, std::generic_category())));
@@ -471,36 +456,37 @@ static bool equalsPath(StringRef path1, StringRef path2) {
 }
 
 // Find by name an OBJ provided on the command line
-static PrecompSource *findObjByName(StringRef fileNameOnly) {
+PrecompSource *UsePrecompSource::findObjByName(StringRef fileNameOnly) {
   SmallString<128> currentPath;
-  for (auto kv : PrecompSource::mappings) {
+  for (auto kv : ctx.precompSourceMappings) {
     StringRef currentFileName = sys::path::filename(kv.second->file->getName(),
                                                     sys::path::Style::windows);
 
     // Compare based solely on the file name (link.exe behavior)
     if (equalsPath(currentFileName, fileNameOnly))
-      return kv.second;
+      return (PrecompSource *)kv.second;
   }
   return nullptr;
 }
 
-static PrecompSource *findPrecompSource(ObjFile *file, PrecompRecord &pr) {
+PrecompSource *UsePrecompSource::findPrecompSource(ObjFile *file,
+                                                   PrecompRecord &pr) {
   // Cross-compile warning: given that Clang doesn't generate LF_PRECOMP
   // records, we assume the OBJ comes from a Windows build of cl.exe. Thusly,
   // the paths embedded in the OBJs are in the Windows format.
   SmallString<128> prFileName =
       sys::path::filename(pr.getPrecompFilePath(), sys::path::Style::windows);
 
-  auto it = PrecompSource::mappings.find(pr.getSignature());
-  if (it != PrecompSource::mappings.end()) {
-    return it->second;
+  auto it = ctx.precompSourceMappings.find(pr.getSignature());
+  if (it != ctx.precompSourceMappings.end()) {
+    return (PrecompSource *)it->second;
   }
   // Lookup by name
   return findObjByName(prFileName);
 }
 
-static Expected<PrecompSource *> findPrecompMap(ObjFile *file,
-                                                PrecompRecord &pr) {
+Expected<PrecompSource *> UsePrecompSource::findPrecompMap(ObjFile *file,
+                                                           PrecompRecord &pr) {
   PrecompSource *precomp = findPrecompSource(file, pr);
 
   if (!precomp)
@@ -553,22 +539,6 @@ Error UsePrecompSource::mergeDebugT(TypeMerger *m) {
     return e;
 
   return TpiSource::mergeDebugT(m);
-}
-
-uint32_t TpiSource::countTypeServerPDBs() {
-  return TypeServerSource::mappings.size();
-}
-
-uint32_t TpiSource::countPrecompObjs() {
-  return PrecompSource::mappings.size();
-}
-
-void TpiSource::clear() {
-  // Clean up any owned ghash allocations.
-  clearGHashes();
-  TpiSource::instances.clear();
-  TypeServerSource::mappings.clear();
-  PrecompSource::mappings.clear();
 }
 
 //===----------------------------------------------------------------------===//
@@ -926,12 +896,17 @@ struct GHashTable {
   /// Insert the cell with the given ghash into the table. Return the insertion
   /// position in the table. It is safe for the caller to store the insertion
   /// position because the table cannot be resized.
-  uint32_t insert(GloballyHashedType ghash, GHashCell newCell);
+  uint32_t insert(COFFLinkerContext &ctx, GloballyHashedType ghash,
+                  GHashCell newCell);
 };
 
 /// A ghash table cell for deduplicating types from TpiSources.
 class GHashCell {
-  uint64_t data = 0;
+  // Force "data" to be 64-bit aligned; otherwise, some versions of clang
+  // will generate calls to libatomic when using some versions of libstdc++
+  // on 32-bit targets.  (Also, in theory, there could be a target where
+  // new[] doesn't always return an 8-byte-aligned allocation.)
+  alignas(sizeof(uint64_t)) uint64_t data = 0;
 
 public:
   GHashCell() = default;
@@ -965,8 +940,8 @@ public:
   bool isItem() const { return data & (1ULL << 63U); }
 
   /// Get the ghash key for this cell.
-  GloballyHashedType getGHash() const {
-    return TpiSource::instances[getTpiSrcIdx()]->ghashes[getGHashIdx()];
+  GloballyHashedType getGHash(const COFFLinkerContext &ctx) const {
+    return ctx.tpiSourceList[getTpiSrcIdx()]->ghashes[getGHashIdx()];
   }
 
   /// The priority function for the cell. The data is stored such that lower
@@ -996,7 +971,8 @@ void GHashTable::init(uint32_t newTableSize) {
   tableSize = newTableSize;
 }
 
-uint32_t GHashTable::insert(GloballyHashedType ghash, GHashCell newCell) {
+uint32_t GHashTable::insert(COFFLinkerContext &ctx, GloballyHashedType ghash,
+                            GHashCell newCell) {
   assert(!newCell.isEmpty() && "cannot insert empty cell value");
 
   // FIXME: The low bytes of SHA1 have low entropy for short records, which
@@ -1015,7 +991,7 @@ uint32_t GHashTable::insert(GloballyHashedType ghash, GHashCell newCell) {
     // - cell has non-matching key: hash collision, probe next cell
     auto *cellPtr = reinterpret_cast<std::atomic<GHashCell> *>(&table[idx]);
     GHashCell oldCell(cellPtr->load());
-    while (oldCell.isEmpty() || oldCell.getGHash() == ghash) {
+    while (oldCell.isEmpty() || oldCell.getGHash(ctx) == ghash) {
       // Check if there is an existing ghash entry with a higher priority
       // (earlier ordering). If so, this is a duplicate, we are done.
       if (!oldCell.isEmpty() && oldCell < newCell)
@@ -1040,22 +1016,22 @@ uint32_t GHashTable::insert(GloballyHashedType ghash, GHashCell newCell) {
   llvm_unreachable("left infloop");
 }
 
-TypeMerger::TypeMerger(llvm::BumpPtrAllocator &alloc)
-    : typeTable(alloc), idTable(alloc) {}
+TypeMerger::TypeMerger(COFFLinkerContext &c, llvm::BumpPtrAllocator &alloc)
+    : typeTable(alloc), idTable(alloc), ctx(c) {}
 
 TypeMerger::~TypeMerger() = default;
 
 void TypeMerger::mergeTypesWithGHash() {
   // Load ghashes. Do type servers and PCH objects first.
   {
-    ScopedTimer t1(loadGHashTimer);
-    parallelForEach(TpiSource::dependencySources,
+    ScopedTimer t1(ctx.loadGHashTimer);
+    parallelForEach(dependencySources,
                     [&](TpiSource *source) { source->loadGHashes(); });
-    parallelForEach(TpiSource::objectSources,
+    parallelForEach(objectSources,
                     [&](TpiSource *source) { source->loadGHashes(); });
   }
 
-  ScopedTimer t2(mergeGHashTimer);
+  ScopedTimer t2(ctx.mergeGHashTimer);
   GHashState ghashState;
 
   // Estimate the size of hash table needed to deduplicate ghashes. This *must*
@@ -1066,7 +1042,7 @@ void TypeMerger::mergeTypesWithGHash() {
   // small compared to total memory usage, at eight bytes per input type record,
   // and most input type records are larger than eight bytes.
   size_t tableSize = 0;
-  for (TpiSource *source : TpiSource::instances)
+  for (TpiSource *source : ctx.tpiSourceList)
     tableSize += source->ghashes.size();
 
   // Cap the table size so that we can use 32-bit cell indices. Type indices are
@@ -1080,8 +1056,8 @@ void TypeMerger::mergeTypesWithGHash() {
   // position. Because the table does not rehash, the position will not change
   // under insertion. After insertion is done, the value of the cell can be read
   // to retrieve the final PDB type index.
-  parallelForEachN(0, TpiSource::instances.size(), [&](size_t tpiSrcIdx) {
-    TpiSource *source = TpiSource::instances[tpiSrcIdx];
+  parallelForEachN(0, ctx.tpiSourceList.size(), [&](size_t tpiSrcIdx) {
+    TpiSource *source = ctx.tpiSourceList[tpiSrcIdx];
     source->indexMapStorage.resize(source->ghashes.size());
     for (uint32_t i = 0, e = source->ghashes.size(); i < e; i++) {
       if (source->shouldOmitFromPdb(i)) {
@@ -1091,7 +1067,7 @@ void TypeMerger::mergeTypesWithGHash() {
       GloballyHashedType ghash = source->ghashes[i];
       bool isItem = source->isItemIndex.test(i);
       uint32_t cellIdx =
-          ghashState.table.insert(ghash, GHashCell(isItem, tpiSrcIdx, i));
+          ghashState.table.insert(ctx, ghash, GHashCell(isItem, tpiSrcIdx, i));
 
       // Store the ghash cell index as a type index in indexMapStorage. Later
       // we will replace it with the PDB type index.
@@ -1137,7 +1113,7 @@ void TypeMerger::mergeTypesWithGHash() {
   for (uint32_t i = 0, e = entries.size(); i < e; ++i) {
     auto &cell = entries[i];
     uint32_t tpiSrcIdx = cell.getTpiSrcIdx();
-    TpiSource *source = TpiSource::instances[tpiSrcIdx];
+    TpiSource *source = ctx.tpiSourceList[tpiSrcIdx];
     source->uniqueTypes.push_back(cell.getGHashIdx());
 
     // Update the ghash table to store the destination PDB type index in the
@@ -1150,21 +1126,37 @@ void TypeMerger::mergeTypesWithGHash() {
   }
 
   // In parallel, remap all types.
-  for_each(TpiSource::dependencySources, [&](TpiSource *source) {
+  for_each(dependencySources, [&](TpiSource *source) {
     source->remapTpiWithGHashes(&ghashState);
   });
-  parallelForEach(TpiSource::objectSources, [&](TpiSource *source) {
+  parallelForEach(objectSources, [&](TpiSource *source) {
     source->remapTpiWithGHashes(&ghashState);
   });
 
   // Build a global map of from function ID to function type.
-  for (TpiSource *source : TpiSource::instances) {
+  for (TpiSource *source : ctx.tpiSourceList) {
     for (auto idToType : source->funcIdToType)
       funcIdToType.insert(idToType);
     source->funcIdToType.clear();
   }
 
-  TpiSource::clearGHashes();
+  clearGHashes();
+}
+
+void TypeMerger::sortDependencies() {
+  // Order dependencies first, but preserve the existing order.
+  std::vector<TpiSource *> deps;
+  std::vector<TpiSource *> objs;
+  for (TpiSource *s : ctx.tpiSourceList)
+    (s->isDependency() ? deps : objs).push_back(s);
+  uint32_t numDeps = deps.size();
+  uint32_t numObjs = objs.size();
+  ctx.tpiSourceList = std::move(deps);
+  ctx.tpiSourceList.insert(ctx.tpiSourceList.end(), objs.begin(), objs.end());
+  for (uint32_t i = 0, e = ctx.tpiSourceList.size(); i < e; ++i)
+    ctx.tpiSourceList[i]->tpiSrcIdx = i;
+  dependencySources = makeArrayRef(ctx.tpiSourceList.data(), numDeps);
+  objectSources = makeArrayRef(ctx.tpiSourceList.data() + numDeps, numObjs);
 }
 
 /// Given the index into the ghash table for a particular type, return the type
@@ -1173,6 +1165,17 @@ static TypeIndex loadPdbTypeIndexFromCell(GHashState *g,
                                           uint32_t ghashCellIdx) {
   GHashCell cell = g->table.table[ghashCellIdx];
   return TypeIndex::fromArrayIndex(cell.getGHashIdx());
+}
+
+/// Free heap allocated ghashes.
+void TypeMerger::clearGHashes() {
+  for (TpiSource *src : ctx.tpiSourceList) {
+    if (src->ownedGHashes)
+      delete[] src->ghashes.data();
+    src->ghashes = {};
+    src->isItemIndex.clear();
+    src->uniqueTypes.clear();
+  }
 }
 
 // Fill in a TPI or IPI index map using ghashes. For each source type, use its
@@ -1185,15 +1188,5 @@ void TpiSource::fillMapFromGHashes(GHashState *g) {
     else
       indexMapStorage[i] =
           loadPdbTypeIndexFromCell(g, fakeCellIndex.toArrayIndex());
-  }
-}
-
-void TpiSource::clearGHashes() {
-  for (TpiSource *src : TpiSource::instances) {
-    if (src->ownedGHashes)
-      delete[] src->ghashes.data();
-    src->ghashes = {};
-    src->isItemIndex.clear();
-    src->uniqueTypes.clear();
   }
 }

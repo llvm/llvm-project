@@ -1,11 +1,11 @@
-// RUN: mlir-opt -allow-unregistered-dialect -test-mapping-to-processing-elements %s | FileCheck %s
+// RUN: mlir-opt -allow-unregistered-dialect -pass-pipeline="func.func(test-mapping-to-processing-elements)" %s | FileCheck %s
 
 // CHECK: #[[mul_map:.+]] = affine_map<()[s0, s1] -> (s0 * s1)>
 // CHECK: #[[add_map:.+]] = affine_map<()[s0, s1] -> (s0 + s1)>
 
 //      CHECK: func @map1d
 // CHECK-SAME: (%[[lb:.*]]: index, %[[ub:.*]]: index, %[[step:.*]]: index)
-func @map1d(%lb: index, %ub: index, %step: index) {
+func.func @map1d(%lb: index, %ub: index, %step: index) {
   // CHECK: %[[threads:.*]]:2 = "new_processor_id_and_range"() : () -> (index, index)
   %0:2 = "new_processor_id_and_range"() : () -> (index, index)
 
@@ -20,7 +20,7 @@ func @map1d(%lb: index, %ub: index, %step: index) {
 
 //      CHECK: func @map2d
 // CHECK-SAME: (%[[lb:.*]]: index, %[[ub:.*]]: index, %[[step:.*]]: index)
-func @map2d(%lb : index, %ub : index, %step : index) {
+func.func @map2d(%lb : index, %ub : index, %step : index) {
   // CHECK: %[[blocks:.*]]:2 = "new_processor_id_and_range"() : () -> (index, index)
   %0:2 = "new_processor_id_and_range"() : () -> (index, index)
 

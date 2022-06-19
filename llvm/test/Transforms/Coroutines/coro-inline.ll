@@ -1,5 +1,5 @@
 ; RUN: opt < %s -passes='always-inline,cgscc(coro-split)' -S | FileCheck %s
-; RUN: opt < %s -sample-profile-file=%S/Inputs/sample.text.prof -pgo-kind=pgo-sample-use-pipeline -passes='sample-profile,cgscc(coro-split)' -disable-inlining=true -S | FileCheck %s
+; RUN: opt < %s -sample-profile-file=%S/Inputs/sample.text.prof -pgo-kind=pgo-sample-use-pipeline -passes='sample-profile,cgscc(coro-split)' -S | FileCheck %s
 
 ; Function Attrs: alwaysinline ssp uwtable
 define void @ff() #0 {
@@ -24,7 +24,7 @@ entry:
 declare token @llvm.coro.id(i32, i8* readnone, i8* nocapture readonly, i8*)
 declare i8* @llvm.coro.begin(token, i8* writeonly)
 
-attributes #0 = { alwaysinline ssp uwtable "coroutine.presplit"="1" "use-sample-profile" }
+attributes #0 = { alwaysinline ssp uwtable presplitcoroutine "use-sample-profile" }
 
 !llvm.dbg.cu = !{}
 !llvm.module.flags = !{!1, !2, !3, !4}

@@ -18,11 +18,13 @@ let Command = "help" in {
 }
 
 let Command = "settings set" in {
-  def setset_global : Option<"global", "g">, Arg<"Filename">,
-    Completion<"DiskFile">,
+  def setset_global : Option<"global", "g">,
     Desc<"Apply the new value to the global default value.">;
   def setset_force : Option<"force", "f">,
     Desc<"Force an empty value to be accepted as the default.">;
+  def setset_exists : Option<"exists", "e">,
+    Desc<"Set the setting if it exists, but do not cause the command to raise "
+    "an error if it does not exist.">;
 }
 
 let Command = "settings write" in {
@@ -73,7 +75,7 @@ let Command = "breakpoint modify" in {
     "index matches this argument.">;
   def breakpoint_modify_thread_id : Option<"thread-id", "t">, Group<1>,
     Arg<"ThreadID">, Desc<"The breakpoint stops only for the thread whose TID "
-    "matches this argument.">;
+    "matches this argument.  The token 'current' resolves to the current thread's ID.">;
   def breakpoint_modify_thread_name : Option<"thread-name", "T">, Group<1>,
     Arg<"ThreadName">, Desc<"The breakpoint stops only for the thread whose "
     "thread name matches this argument.">;
@@ -93,7 +95,7 @@ let Command = "breakpoint modify" in {
   def breakpoint_modify_command : Option<"command", "C">, Group<4>,
     Arg<"Command">,
     Desc<"A command to run when the breakpoint is hit, can be provided more "
-    "than once, the commands will get run in order left to right.">;
+    "than once, the commands will be run in left-to-right order.">;
 }
 
 let Command = "breakpoint dummy" in {
@@ -130,39 +132,39 @@ let Command = "breakpoint set" in {
     "no matter where the binary eventually loads.  Alternately, if you also "
     "specify the module - with the -s option - then the address will be "
     "treated as a file address in that module, and resolved accordingly.  "
-    "Again, this will allow lldb to track that offset on subsequent reloads. "
-    " The module need not have been loaded at the time you specify this "
+    "Again, this will allow lldb to track that offset on subsequent reloads.  "
+    "The module need not have been loaded at the time you specify this "
     "breakpoint, and will get resolved when the module is loaded.">;
   def breakpoint_set_name : Option<"name", "n">, Group<3>, Arg<"FunctionName">,
     Completion<"Symbol">, Required,
     Desc<"Set the breakpoint by function name.  Can be repeated multiple times "
-    "to makeone breakpoint for multiple names">;
+    "to make one breakpoint for multiple names.">;
   def breakpoint_set_source_regexp_function :
     Option<"source-regexp-function", "X">, Group<9>, Arg<"FunctionName">,
     Completion<"Symbol">,
     Desc<"When used with '-p' limits the source regex to source contained in "
-    "the namedfunctions.  Can be repeated multiple times.">;
+    "the named functions.  Can be repeated multiple times.">;
   def breakpoint_set_fullname : Option<"fullname", "F">, Group<4>,
     Arg<"FullName">, Required, Completion<"Symbol">,
     Desc<"Set the breakpoint by fully qualified function names. For C++ this "
     "means namespaces and all arguments, and for Objective-C this means a full "
-    "functionprototype with class and selector.  Can be repeated multiple times"
+    "function prototype with class and selector.  Can be repeated multiple times"
     " to make one breakpoint for multiple names.">;
   def breakpoint_set_selector : Option<"selector", "S">, Group<5>,
     Arg<"Selector">, Required,
-    Desc<"Set the breakpoint by ObjC selector name. Can be repeated multiple "
-    "times tomake one breakpoint for multiple Selectors.">;
+    Desc<"Set the breakpoint by Objective-C selector name.  Can be repeated "
+    "multiple times to make one breakpoint for multiple Selectors.">;
   def breakpoint_set_method : Option<"method", "M">, Group<6>, Arg<"Method">,
     Required, Desc<"Set the breakpoint by C++ method names.  Can be repeated "
-    "multiple times tomake one breakpoint for multiple methods.">;
+    "multiple times to make one breakpoint for multiple methods.">;
   def breakpoint_set_func_regex : Option<"func-regex", "r">, Group<7>,
     Arg<"RegularExpression">, Required, Desc<"Set the breakpoint by function "
     "name, evaluating a regular-expression to find the function name(s).">;
   def breakpoint_set_basename : Option<"basename", "b">, Group<8>,
     Arg<"FunctionName">, Required, Completion<"Symbol">,
     Desc<"Set the breakpoint by function basename (C++ namespaces and arguments"
-    " will beignored).  Can be repeated multiple times to make one breakpoint "
-    "for multiplesymbols.">;
+    " will be ignored).  Can be repeated multiple times to make one breakpoint "
+    "for multiple symbols.">;
   def breakpoint_set_source_pattern_regexp :
     Option<"source-pattern-regexp", "p">, Group<9>, Arg<"RegularExpression">,
     Required, Desc<"Set the breakpoint by specifying a regular expression which"
@@ -333,7 +335,7 @@ let Command = "disassemble" in {
     Arg<"AddressOrExpression">,
     Desc<"Disassemble function containing this address.">;
   def disassemble_options_force : Option<"force", "\\x01">, Groups<[2,3,4,5,7]>,
-    Desc<"Force dissasembly of large functions.">;
+    Desc<"Force disassembly of large functions.">;
 }
 
 let Command = "expression" in {
@@ -355,7 +357,7 @@ let Command = "expression" in {
     Desc<"When specified, debug the JIT code by setting a breakpoint on the "
     "first instruction and forcing breakpoints to not be ignored (-i0) and no "
     "unwinding to happen on error (-u0).">;
-  def expression_options_language : Option<"language", "l">, Groups<[1,2]>,
+  def expression_options_language : Option<"language", "l">, Groups<[1,2,3]>,
     Arg<"Language">, Desc<"Specifies the Language to use when parsing the "
     "expression.  If not set the target.language setting is used.">;
   def expression_options_apply_fixits : Option<"apply-fixits", "X">,
@@ -404,6 +406,13 @@ let Command = "frame recognizer add" in {
     Desc<"Give the name of a Python class to use for this frame recognizer.">;
   def frame_recognizer_regex : Option<"regex", "x">,
     Desc<"Function name and module name are actually regular expressions.">;
+  def frame_recognizer_first_instruction_only : Option<"first-instruction-only", "f">, Arg<"Boolean">,
+    Desc<"If true, only apply this recognizer to frames whose PC currently points to the "
+    "first instruction of the specified function. If false, the recognizer "
+    "will always be applied, regardless of the current position within the specified function. The "
+    "implementer should keep in mind that some features, e.g. accessing function argument "
+    "values via $arg<N>, are not guaranteed to work reliably in this case, so extra care must "
+    "be taken to make the recognizer operate correctly. Defaults to true.">;
 }
 
 let Command = "history" in {
@@ -504,6 +513,20 @@ let Command = "memory write" in {
     Desc<"Start writing bytes from an offset within the input file.">;
 }
 
+let Command = "memory region" in {
+  def memory_region_all : Option<"all", "a">, Group<2>, Required,
+    Desc<"Show all memory regions. This is equivalent to starting from address "
+         "0 and repeating the command. Unmapped areas are included.">;
+}
+
+let Command = "memory tag write" in {
+  def memory_write_end_addr : Option<"end-addr", "e">, Group<1>,
+  Arg<"AddressOrExpression">, Desc<
+    "Set tags for start address to end-addr, repeating tags as needed"
+    " to cover the range. (instead of calculating the range from the"
+    " number of tags given)">;
+}
+
 let Command = "register read" in {
   def register_read_alternate : Option<"alternate", "A">,
     Desc<"Display register names using the alternate register name if there "
@@ -521,6 +544,10 @@ let Command = "source" in {
     Desc<"If true, stop executing commands on continue.">;
   def source_silent_run : Option<"silent-run", "s">, Arg<"Boolean">,
     Desc<"If true don't echo commands while executing.">;
+  def cmd_relative_to_command_file : Option<"relative-to-command-file", "C">,
+    Desc<"Resolve non-absolute paths relative to the location of the "
+    "current command file. This argument can only be used when the command is "
+    "being sourced from a file.">;
 }
 
 let Command = "alias" in {
@@ -715,6 +742,8 @@ let Command = "process load" in {
 }
 
 let Command = "process handle" in {
+  def process_handle_clear : Option<"clear", "c">, Group<2>,
+    Desc<"Removes the signals listed from the Target signal handlers">;
   def process_handle_stop : Option<"stop", "s">, Group<1>, Arg<"Boolean">,
     Desc<"Whether or not the process should be stopped if the signal is "
     "received.">;
@@ -723,6 +752,10 @@ let Command = "process handle" in {
     "received.">;
   def process_handle_pass : Option<"pass", "p">, Group<1>, Arg<"Boolean">,
     Desc<"Whether or not the signal should be passed to the process.">;
+  def process_handle_only_target : Option<"target", "t">, Group<1>,
+    Desc<"Show only the signals with behaviors modified in this target">;
+  def process_handle_dummy : Option<"dummy", "d">, Group<2>,
+    Desc<"Also clear the values in the dummy target so they won't be inherited by new targets.">;
 }
 
 let Command = "process status" in {
@@ -734,6 +767,17 @@ let Command = "process save_core" in {
   def process_save_core_style : Option<"style", "s">, Group<1>,
     EnumArg<"SaveCoreStyle", "SaveCoreStyles()">, Desc<"Request a specific style "
     "of corefile to be saved.">;
+  def process_save_core_plugin_name : Option<"plugin-name", "p">,
+    OptionalArg<"Plugin">, Desc<"Specify a plugin name to create the core file."
+    "This allows core files to be saved in different formats.">;
+}
+
+let Command = "process trace save" in {
+  def process_trace_save_directory: Option<"directory", "d">,
+    Group<1>,
+    Arg<"Value">, Required,
+    Desc<"The directory where the trace will be saved."
+        "It will be created if it does not exist.">;
 }
 
 let Command = "script import" in {
@@ -757,10 +801,21 @@ let Command = "script add" in {
   Desc<"Name of the Python class to bind to this command name.">;
   def script_add_help : Option<"help", "h">, Group<1>, Arg<"HelpText">,
   Desc<"The help text to display for this command.">;
+  def script_add_overwrite : Option<"overwrite", "o">, Groups<[1,2]>,
+  Desc<"Overwrite an existing command at this node.">;
   def script_add_synchronicity : Option<"synchronicity", "s">,
     EnumArg<"ScriptedCommandSynchronicity", "ScriptSynchroType()">,
     Desc<"Set the synchronicity of this command's executions with regard to "
     "LLDB event system.">;
+}
+
+let Command = "container add" in {
+  def container_add_help : Option<"help", "h">, Arg<"HelpText">,
+    Desc<"Help text for this command">;
+  def container_add_long_help : Option<"long-help", "H">, Arg<"HelpText">,
+    Desc<"Long help text for this command">;
+  def container_add_overwrite : Option<"overwrite", "o">, Group<1>,
+  Desc<"Overwrite an existing command at this node.">;
 }
 
 let Command = "script" in {
@@ -818,7 +873,7 @@ let Command = "source list" in {
 
 let Command = "target dependents" in {
   def dependents_no_dependents : Option<"no-dependents", "d">, Group<1>,
-    OptionalEnumArg<"Value", "OptionEnumValues(g_dependents_enumaration)">,
+    OptionalEnumArg<"Value", "OptionEnumValues(g_dependents_enumeration)">,
     Desc<"Whether or not to load dependents when creating a target. If the "
          "option is not specified, the value is implicitly 'default'. If the "
          "option is specified but without a value, the value is implicitly "
@@ -915,6 +970,9 @@ let Command = "target modules lookup" in {
   def target_modules_lookup_type : Option<"type", "t">, Group<6>, Arg<"Name">,
     Required, Desc<"Lookup a type by name in the debug symbols in one or more "
     "target modules.">;
+  def target_modules_lookup_variables_ranges : Option<"show-variable-ranges",
+    "\\x01">, GroupRange<1, 6>, Desc<"Dump valid ranges of variables (must be "
+    "used in conjunction with --verbose">;
   def target_modules_lookup_verbose : Option<"verbose", "v">,
     Desc<"Enable verbose lookup information.">;
   def target_modules_lookup_all : Option<"all", "A">, Desc<"Print all matches, "
@@ -1049,7 +1107,8 @@ let Command = "thread plan list" in {
 }
 
 let Command = "thread trace dump instructions" in {
-  def thread_trace_dump_instructions_forwards: Option<"forwards", "f">, Group<1>,
+  def thread_trace_dump_instructions_forwards: Option<"forwards", "f">,
+    Group<1>,
     Desc<"If specified, the trace is traversed forwards chronologically "
     "starting at the oldest instruction. Otherwise, it starts at the most "
     "recent one and the traversal is backwards.">;
@@ -1057,17 +1116,30 @@ let Command = "thread trace dump instructions" in {
     Arg<"Count">,
     Desc<"The number of instructions to display starting at the most recent "
     "instruction, or the oldest if --forwards is provided.">;
-  def thread_trace_dump_instructions_skip: Option<"skip", "s">,
-    Group<1>,
+  def thread_trace_dump_instructions_id: Option<"id", "i">, Group<1>,
     Arg<"Index">,
-    Desc<"How many instruction to skip from the end of the trace to start "
-    "dumping instructions, or from the beginning if --forwards is provided">;
+    Desc<"Custom starting instruction id from where to start traversing. This "
+    "id can be provided in decimal or hexadecimal representation.">;
+  def thread_trace_dump_instructions_skip: Option<"skip", "s">, Group<1>,
+    Arg<"Index">,
+    Desc<"How many instruction to skip from the starting position of the trace "
+    "before starting the traversal.">;
   def thread_trace_dump_instructions_raw : Option<"raw", "r">,
     Group<1>,
-    Desc<"Dump only instruction address without disassembly nor symbol information.">;
-  def thread_trace_dump_instructions_show_tsc : Option<"tsc", "t">,
+    Desc<"Dump only instruction address without disassembly nor symbol "
+    "information.">;
+  def thread_trace_dump_instructions_show_tsc : Option<"tsc", "t">, Group<1>,
+    Desc<"For each instruction, print the corresponding timestamp counter if "
+    "available.">;
+  def thread_trace_dump_instructions_hide_events : Option<"events", "e">,
     Group<1>,
-    Desc<"For each instruction, print the corresponding timestamp counter if available.">;
+    Desc<"Dump the events that happened during the execution of the target.">;
+  def thread_trace_dump_instructions_continue: Option<"continue", "C">,
+    Group<1>,
+    Desc<"Continue dumping instructions right where the previous invocation of "
+    "this command was left, or from the beginning if this is the first "
+    "invocation. The --skip argument is discarded and the other arguments are "
+    "preserved from the previous invocation when possible.">;
 }
 
 let Command = "thread trace dump info" in {
@@ -1263,4 +1335,9 @@ let Command = "trace dump" in {
 let Command = "trace schema" in {
   def trace_schema_verbose : Option<"verbose", "v">, Group<1>,
     Desc<"Show verbose trace schema logging for debugging the plug-in.">;
+}
+
+let Command = "statistics dump" in {
+  def statistics_dump_all: Option<"all-targets", "a">, Group<1>,
+    Desc<"Include statistics for all targets.">;
 }

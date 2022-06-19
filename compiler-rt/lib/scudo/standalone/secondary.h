@@ -113,6 +113,19 @@ void mapSecondary(Options Options, uptr CommitBase, uptr CommitSize,
   }
 }
 
+// Template specialization to avoid producing zero-length array
+template <typename T, size_t Size> class NonZeroLengthArray {
+public:
+  T &operator[](uptr Idx) { return values[Idx]; }
+
+private:
+  T values[Size];
+};
+template <typename T> class NonZeroLengthArray<T, 0> {
+public:
+  T &operator[](uptr UNUSED Idx) { UNREACHABLE("Unsupported!"); }
+};
+
 template <typename Config> class MapAllocatorCache {
 public:
   // Ensure the default maximum specified fits the array.
@@ -219,7 +232,7 @@ public:
     const u32 MaxCount = atomic_load_relaxed(&MaxEntriesCount);
     bool Found = false;
     CachedBlock Entry;
-    uptr HeaderPos;
+    uptr HeaderPos = 0;
     {
       ScopedLock L(Mutex);
       if (EntriesCount == 0)
@@ -395,7 +408,8 @@ private:
   atomic_s32 ReleaseToOsIntervalMs = {};
 
   CachedBlock Entries[Config::SecondaryCacheEntriesArraySize] = {};
-  CachedBlock Quarantine[Config::SecondaryCacheQuarantineSize] = {};
+  NonZeroLengthArray<CachedBlock, Config::SecondaryCacheQuarantineSize>
+      Quarantine = {};
 };
 
 template <typename Config> class MapAllocator {
@@ -445,7 +459,7 @@ public:
     }
   }
 
-  uptr canCache(uptr Size) { return Cache.canCache(Size); }
+  bool canCache(uptr Size) { return Cache.canCache(Size); }
 
   bool setOption(Option O, sptr Value) { return Cache.setOption(O, Value); }
 
@@ -485,7 +499,7 @@ void *MapAllocator<Config>::allocate(Options Options, uptr Size, uptr Alignment,
                                      FillContentsMode FillContents) {
   if (Options.get(OptionBit::AddLargeAllocationSlack))
     Size += 1UL << SCUDO_MIN_ALIGNMENT_LOG;
-  Alignment = Max(Alignment, 1UL << SCUDO_MIN_ALIGNMENT_LOG);
+  Alignment = Max(Alignment, uptr(1U) << SCUDO_MIN_ALIGNMENT_LOG);
   const uptr PageSize = getPageSizeCached();
   uptr RoundedSize =
       roundUpTo(roundUpTo(Size, Alignment) + LargeBlock::getHeaderSize() +
@@ -602,12 +616,11 @@ void MapAllocator<Config>::deallocate(Options Options, void *Ptr) {
 
 template <typename Config>
 void MapAllocator<Config>::getStats(ScopedString *Str) const {
-  Str->append(
-      "Stats: MapAllocator: allocated %zu times (%zuK), freed %zu times "
-      "(%zuK), remains %zu (%zuK) max %zuM\n",
-      NumberOfAllocs, AllocatedBytes >> 10, NumberOfFrees, FreedBytes >> 10,
-      NumberOfAllocs - NumberOfFrees, (AllocatedBytes - FreedBytes) >> 10,
-      LargestSize >> 20);
+  Str->append("Stats: MapAllocator: allocated %u times (%zuK), freed %u times "
+              "(%zuK), remains %u (%zuK) max %zuM\n",
+              NumberOfAllocs, AllocatedBytes >> 10, NumberOfFrees,
+              FreedBytes >> 10, NumberOfAllocs - NumberOfFrees,
+              (AllocatedBytes - FreedBytes) >> 10, LargestSize >> 20);
 }
 
 } // namespace scudo

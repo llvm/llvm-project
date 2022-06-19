@@ -21,8 +21,7 @@ body:             |
     ; CHECK: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
     ; CHECK: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 1
     ; CHECK: [[ATOMIC_CMPXCHG:%[0-9]+]]:_(s32) = G_ATOMIC_CMPXCHG [[COPY]](p0), [[C]], [[C1]] :: (load store monotonic (s8) on %ir.addr)
-    ; CHECK: [[COPY1:%[0-9]+]]:_(s32) = COPY [[ATOMIC_CMPXCHG]](s32)
-    ; CHECK: $w0 = COPY [[COPY1]](s32)
+    ; CHECK: $w0 = COPY [[ATOMIC_CMPXCHG]](s32)
     %0:_(p0) = COPY $x0
     %1:_(s8) = G_CONSTANT i8 0
     %2:_(s8) = G_CONSTANT i8 1
@@ -42,8 +41,7 @@ body:             |
     ; CHECK: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
     ; CHECK: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 1
     ; CHECK: [[ATOMIC_CMPXCHG:%[0-9]+]]:_(s32) = G_ATOMIC_CMPXCHG [[COPY]](p0), [[C]], [[C1]] :: (load store monotonic (s16) on %ir.addr)
-    ; CHECK: [[COPY1:%[0-9]+]]:_(s32) = COPY [[ATOMIC_CMPXCHG]](s32)
-    ; CHECK: $w0 = COPY [[COPY1]](s32)
+    ; CHECK: $w0 = COPY [[ATOMIC_CMPXCHG]](s32)
     %0:_(p0) = COPY $x0
     %1:_(s16) = G_CONSTANT i16 0
     %2:_(s16) = G_CONSTANT i16 1

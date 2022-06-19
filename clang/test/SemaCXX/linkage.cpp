@@ -3,7 +3,7 @@
 // compared against the earlier cached value.  If we had a way of
 // testing linkage directly in Sema, that would be better.
 
-// RUN: %clang_cc1 -Werror -Wno-non-c-typedef-for-linkage -triple x86_64-apple-darwin10 -emit-llvm %s -o - | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -Werror -Wno-non-c-typedef-for-linkage -triple x86_64-apple-darwin10 -emit-llvm %s -o - | FileCheck %s
 
 // CHECK: @_ZZN5test61A3fooEvE3bar = linkonce_odr global i32 0, align 4
 
@@ -13,7 +13,7 @@ namespace test0 {
     void *foo() { return 0; }
   } A;
 
-  // CHECK: define linkonce_odr i8* @_ZN5test01A3fooEv(
+  // CHECK: define linkonce_odr noundef i8* @_ZN5test01A3fooEv(
 
   void test(A *a) {
     a->foo();
@@ -94,8 +94,8 @@ extern "C" {
   }
 }
 
-// CHECK: define linkonce_odr i8* @_ZN5test11A3fooILj0EEEPvv(
-// CHECK: define linkonce_odr i8* @_ZN5test21A1BILj0EE3fooEv(
+// CHECK: define linkonce_odr noundef i8* @_ZN5test11A3fooILj0EEEPvv(
+// CHECK: define linkonce_odr noundef i8* @_ZN5test21A1BILj0EE3fooEv(
 
 namespace test5 {
   struct foo {

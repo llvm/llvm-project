@@ -14,8 +14,6 @@ exe_name = 'deep-bundle'  # must match Makefile
 
 class DeepBundleTestCase(TestBase):
 
-    mydir = TestBase.compute_mydir(__file__)
-
     def setUp(self):
         TestBase.setUp(self)
         self.source = 'main.c'
@@ -31,7 +29,6 @@ class DeepBundleTestCase(TestBase):
     @skipUnlessDarwin
     # This test is explicitly a dSYM test, it doesn't need to run for any other config.
     @skipIf(debug_info=no_match(["dsym"]))
-    @skipIfReproducer # File synchronization is not supported during replay.
     def test_attach_and_check_dsyms(self):
         """Test attach to binary, see if the framework dSYM is found"""
         exe = self.getBuildArtifact(exe_name)

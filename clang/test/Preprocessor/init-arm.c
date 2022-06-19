@@ -35,7 +35,6 @@
 // ARM:#define __FLT_DENORM_MIN__ 1.40129846e-45F
 // ARM:#define __FLT_DIG__ 6
 // ARM:#define __FLT_EPSILON__ 1.19209290e-7F
-// ARM:#define __FLT_EVAL_METHOD__ 0
 // ARM:#define __FLT_HAS_DENORM__ 1
 // ARM:#define __FLT_HAS_INFINITY__ 1
 // ARM:#define __FLT_HAS_QUIET_NAN__ 1
@@ -199,6 +198,9 @@
 // RUN: %clang_cc1 -E -dM -triple=armv7-apple-ios7.0 -x c++ < /dev/null | FileCheck -match-full-lines -check-prefix ARM-DARWIN-CXX %s
 // ARM-DARWIN-CXX: #define __STDCPP_DEFAULT_NEW_ALIGNMENT__ 16UL
 
+// RUN: %clang_cc1 -E -dM -triple=arm-unknown-openbsd -x c++ < /dev/null | FileCheck -match-full-lines -check-prefix ARM-OPENBSD-CXX %s
+// ARM-OPENBSD-CXX: #define __STDCPP_DEFAULT_NEW_ALIGNMENT__ 16UL
+
 // RUN: %clang_cc1 -dM -ffreestanding -triple arm-none-none -target-abi apcs-gnu -E /dev/null -o - | FileCheck -match-full-lines -check-prefix ARM-APCS-GNU %s
 // ARM-APCS-GNU: #define __INTPTR_TYPE__ int
 // ARM-APCS-GNU: #define __PTRDIFF_TYPE__ int
@@ -235,7 +237,6 @@
 // ARM-BE:#define __FLT_DENORM_MIN__ 1.40129846e-45F
 // ARM-BE:#define __FLT_DIG__ 6
 // ARM-BE:#define __FLT_EPSILON__ 1.19209290e-7F
-// ARM-BE:#define __FLT_EVAL_METHOD__ 0
 // ARM-BE:#define __FLT_HAS_DENORM__ 1
 // ARM-BE:#define __FLT_HAS_INFINITY__ 1
 // ARM-BE:#define __FLT_HAS_QUIET_NAN__ 1
@@ -428,7 +429,6 @@
 // ARMEABISOFTFP:#define __FLT_DENORM_MIN__ 1.40129846e-45F
 // ARMEABISOFTFP:#define __FLT_DIG__ 6
 // ARMEABISOFTFP:#define __FLT_EPSILON__ 1.19209290e-7F
-// ARMEABISOFTFP:#define __FLT_EVAL_METHOD__ 0
 // ARMEABISOFTFP:#define __FLT_HAS_DENORM__ 1
 // ARMEABISOFTFP:#define __FLT_HAS_INFINITY__ 1
 // ARMEABISOFTFP:#define __FLT_HAS_QUIET_NAN__ 1
@@ -623,7 +623,6 @@
 // ARMEABIHARDFP:#define __FLT_DENORM_MIN__ 1.40129846e-45F
 // ARMEABIHARDFP:#define __FLT_DIG__ 6
 // ARMEABIHARDFP:#define __FLT_EPSILON__ 1.19209290e-7F
-// ARMEABIHARDFP:#define __FLT_EVAL_METHOD__ 0
 // ARMEABIHARDFP:#define __FLT_HAS_DENORM__ 1
 // ARMEABIHARDFP:#define __FLT_HAS_INFINITY__ 1
 // ARMEABIHARDFP:#define __FLT_HAS_QUIET_NAN__ 1
@@ -821,7 +820,6 @@
 // ARM-NETBSD:#define __FLT_DENORM_MIN__ 1.40129846e-45F
 // ARM-NETBSD:#define __FLT_DIG__ 6
 // ARM-NETBSD:#define __FLT_EPSILON__ 1.19209290e-7F
-// ARM-NETBSD:#define __FLT_EVAL_METHOD__ 0
 // ARM-NETBSD:#define __FLT_HAS_DENORM__ 1
 // ARM-NETBSD:#define __FLT_HAS_INFINITY__ 1
 // ARM-NETBSD:#define __FLT_HAS_QUIET_NAN__ 1

@@ -6,7 +6,7 @@ add_entrypoint_object(
     fegetround.h
   DEPENDS
     libc.include.fenv
-    libc.utils.FPUtil.fputil
+    libc.src.__support.FPUtil.fputil
   COMPILE_OPTIONS
     -O2
 )
@@ -19,7 +19,7 @@ add_entrypoint_object(
     fesetround.h
   DEPENDS
     libc.include.fenv
-    libc.utils.FPUtil.fputil
+    libc.src.__support.FPUtil.fputil
   COMPILE_OPTIONS
     -O2
 )
@@ -32,7 +32,7 @@ add_entrypoint_object(
     feclearexcept.h
   DEPENDS
     libc.include.fenv
-    libc.utils.FPUtil.fputil
+    libc.src.__support.FPUtil.fputil
   COMPILE_OPTIONS
     -O2
 )
@@ -45,7 +45,7 @@ add_entrypoint_object(
     feraiseexcept.h
   DEPENDS
     libc.include.fenv
-    libc.utils.FPUtil.fputil
+    libc.src.__support.FPUtil.fputil
   COMPILE_OPTIONS
     -O2
 )
@@ -58,7 +58,7 @@ add_entrypoint_object(
     fetestexcept.h
   DEPENDS
     libc.include.fenv
-    libc.utils.FPUtil.fputil
+    libc.src.__support.FPUtil.fputil
   COMPILE_OPTIONS
     -O2
 )
@@ -71,7 +71,7 @@ add_entrypoint_object(
     fegetenv.h
   DEPENDS
     libc.include.fenv
-    libc.utils.FPUtil.fputil
+    libc.src.__support.FPUtil.fputil
   COMPILE_OPTIONS
     -O2
 )
@@ -84,7 +84,7 @@ add_entrypoint_object(
     fesetenv.h
   DEPENDS
     libc.include.fenv
-    libc.utils.FPUtil.fputil
+    libc.src.__support.FPUtil.fputil
   COMPILE_OPTIONS
     -O2
 )
@@ -97,7 +97,7 @@ add_entrypoint_object(
     fegetexceptflag.h
   DEPENDS
     libc.include.fenv
-    libc.utils.FPUtil.fputil
+    libc.src.__support.FPUtil.fputil
   COMPILE_OPTIONS
     -O2
 )
@@ -110,7 +110,7 @@ add_entrypoint_object(
     fesetexceptflag.h
   DEPENDS
     libc.include.fenv
-    libc.utils.FPUtil.fputil
+    libc.src.__support.FPUtil.fputil
   COMPILE_OPTIONS
     -O2
 )
@@ -123,7 +123,7 @@ add_entrypoint_object(
     feholdexcept.h
   DEPENDS
     libc.include.fenv
-    libc.utils.FPUtil.fputil
+    libc.src.__support.FPUtil.fputil
   COMPILE_OPTIONS
     -O2
 )
@@ -136,7 +136,46 @@ add_entrypoint_object(
     feupdateenv.h
   DEPENDS
     libc.include.fenv
-    libc.utils.FPUtil.fputil
+    libc.src.__support.FPUtil.fputil
+  COMPILE_OPTIONS
+    -O2
+)
+
+add_entrypoint_object(
+  feenableexcept
+  SRCS
+    feenableexcept.cpp
+  HDRS
+    feenableexcept.h
+  DEPENDS
+    libc.include.fenv
+    libc.src.__support.FPUtil.fputil
+  COMPILE_OPTIONS
+    -O2
+)
+
+add_entrypoint_object(
+  fedisableexcept
+  SRCS
+    fedisableexcept.cpp
+  HDRS
+    fedisableexcept.h
+  DEPENDS
+    libc.include.fenv
+    libc.src.__support.FPUtil.fputil
+  COMPILE_OPTIONS
+    -O2
+)
+
+add_entrypoint_object(
+  fegetexcept
+  SRCS
+    fegetexcept.cpp
+  HDRS
+    fegetexcept.h
+  DEPENDS
+    libc.include.fenv
+    libc.src.__support.FPUtil.fputil
   COMPILE_OPTIONS
     -O2
 )

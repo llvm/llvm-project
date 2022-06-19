@@ -25,6 +25,7 @@
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCInst.h"
 #include "llvm/MC/MCInstrDesc.h"
+#include "llvm/MC/MCInstrInfo.h"
 #include "llvm/MC/MCObjectFileInfo.h"
 #include "llvm/MC/MCParser/MCAsmLexer.h"
 #include "llvm/MC/MCParser/MCAsmParser.h"
@@ -39,6 +40,7 @@
 #include "llvm/MC/MCSymbolELF.h"
 #include "llvm/MC/MCValue.h"
 #include "llvm/MC/SubtargetFeature.h"
+#include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/Alignment.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
@@ -48,7 +50,6 @@
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/SMLoc.h"
 #include "llvm/Support/SourceMgr.h"
-#include "llvm/Support/TargetRegistry.h"
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
 #include <cassert>
@@ -827,8 +828,7 @@ private:
   } Kind;
 
 public:
-  MipsOperand(KindTy K, MipsAsmParser &Parser)
-      : MCParsedAsmOperand(), Kind(K), AsmParser(Parser) {}
+  MipsOperand(KindTy K, MipsAsmParser &Parser) : Kind(K), AsmParser(Parser) {}
 
   ~MipsOperand() override {
     switch (Kind) {
@@ -3413,10 +3413,10 @@ bool MipsAsmParser::expandLoadSingleImmToFPR(MCInst &Inst, SMLoc IDLoc,
   const MipsMCExpr *LoExpr =
       MipsMCExpr::create(MipsMCExpr::MEK_LO, LoSym, getContext());
 
-  getStreamer().SwitchSection(ReadOnlySection);
+  getStreamer().switchSection(ReadOnlySection);
   getStreamer().emitLabel(Sym, IDLoc);
   getStreamer().emitInt32(ImmOp32);
-  getStreamer().SwitchSection(CS);
+  getStreamer().switchSection(CS);
 
   if (emitPartialAddress(TOut, IDLoc, Sym))
     return true;
@@ -3465,11 +3465,11 @@ bool MipsAsmParser::expandLoadDoubleImmToGPR(MCInst &Inst, SMLoc IDLoc,
   const MipsMCExpr *LoExpr =
       MipsMCExpr::create(MipsMCExpr::MEK_LO, LoSym, getContext());
 
-  getStreamer().SwitchSection(ReadOnlySection);
+  getStreamer().switchSection(ReadOnlySection);
   getStreamer().emitLabel(Sym, IDLoc);
   getStreamer().emitValueToAlignment(8);
   getStreamer().emitIntValue(ImmOp64, 8);
-  getStreamer().SwitchSection(CS);
+  getStreamer().switchSection(CS);
 
   unsigned TmpReg = getATReg(IDLoc);
   if (!TmpReg)
@@ -3548,11 +3548,11 @@ bool MipsAsmParser::expandLoadDoubleImmToFPR(MCInst &Inst, bool Is64FPU,
   const MipsMCExpr *LoExpr =
       MipsMCExpr::create(MipsMCExpr::MEK_LO, LoSym, getContext());
 
-  getStreamer().SwitchSection(ReadOnlySection);
+  getStreamer().switchSection(ReadOnlySection);
   getStreamer().emitLabel(Sym, IDLoc);
   getStreamer().emitValueToAlignment(8);
   getStreamer().emitIntValue(ImmOp64, 8);
-  getStreamer().SwitchSection(CS);
+  getStreamer().switchSection(CS);
 
   if (emitPartialAddress(TOut, IDLoc, Sym))
     return true;
@@ -8180,7 +8180,7 @@ bool MipsAsmParser::parseRSectionDirective(StringRef Section) {
 
   MCSection *ELFSection = getContext().getELFSection(
       Section, ELF::SHT_PROGBITS, ELF::SHF_ALLOC);
-  getParser().getStreamer().SwitchSection(ELFSection);
+  getParser().getStreamer().switchSection(ELFSection);
 
   getParser().Lex(); // Eat EndOfStatement token.
   return false;
@@ -8198,7 +8198,7 @@ bool MipsAsmParser::parseSSectionDirective(StringRef Section, unsigned Type) {
 
   MCSection *ELFSection = getContext().getELFSection(
       Section, Type, ELF::SHF_WRITE | ELF::SHF_ALLOC | ELF::SHF_MIPS_GPREL);
-  getParser().getStreamer().SwitchSection(ELFSection);
+  getParser().getStreamer().switchSection(ELFSection);
 
   getParser().Lex(); // Eat EndOfStatement token.
   return false;

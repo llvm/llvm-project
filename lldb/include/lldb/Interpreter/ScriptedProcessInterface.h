@@ -10,21 +10,20 @@
 #define LLDB_INTERPRETER_SCRIPTEDPROCESSINTERFACE_H
 
 #include "lldb/Core/StructuredDataImpl.h"
-#include "lldb/Interpreter/ScriptInterpreter.h"
+#include "lldb/Interpreter/ScriptedInterface.h"
+#include "lldb/Target/MemoryRegionInfo.h"
+
 #include "lldb/lldb-private.h"
 
 #include <string>
 
 namespace lldb_private {
-class ScriptedProcessInterface {
+class ScriptedProcessInterface : virtual public ScriptedInterface {
 public:
-  ScriptedProcessInterface() : m_object_instance_sp(nullptr) {}
-
-  virtual ~ScriptedProcessInterface() = default;
-
-  virtual StructuredData::GenericSP
-  CreatePluginObject(const llvm::StringRef class_name, lldb::TargetSP target_sp,
-                     StructuredData::DictionarySP args_sp) {
+  StructuredData::GenericSP
+  CreatePluginObject(llvm::StringRef class_name, ExecutionContext &exe_ctx,
+                     StructuredData::DictionarySP args_sp,
+                     StructuredData::Generic *script_obj = nullptr) override {
     return nullptr;
   }
 
@@ -36,10 +35,13 @@ public:
 
   virtual Status Stop() { return Status("ScriptedProcess did not stop"); }
 
-  virtual lldb::MemoryRegionInfoSP
-  GetMemoryRegionContainingAddress(lldb::addr_t address) {
-    return nullptr;
+  virtual llvm::Optional<MemoryRegionInfo>
+  GetMemoryRegionContainingAddress(lldb::addr_t address, Status &error) {
+    error.SetErrorString("ScriptedProcess have no memory region.");
+    return {};
   }
+
+  virtual StructuredData::DictionarySP GetThreadsInfo() { return nullptr; }
 
   virtual StructuredData::DictionarySP GetThreadWithID(lldb::tid_t tid) {
     return nullptr;
@@ -54,14 +56,49 @@ public:
     return nullptr;
   }
 
-  virtual StructuredData::DictionarySP GetLoadedImages() { return nullptr; }
+  virtual StructuredData::ArraySP GetLoadedImages() { return nullptr; }
 
   virtual lldb::pid_t GetProcessID() { return LLDB_INVALID_PROCESS_ID; }
 
   virtual bool IsAlive() { return true; }
 
-private:
-  StructuredData::ObjectSP m_object_instance_sp;
+  virtual llvm::Optional<std::string> GetScriptedThreadPluginName() {
+    return llvm::None;
+  }
+
+protected:
+  friend class ScriptedThread;
+  virtual lldb::ScriptedThreadInterfaceSP CreateScriptedThreadInterface() {
+    return nullptr;
+  }
+};
+
+class ScriptedThreadInterface : virtual public ScriptedInterface {
+public:
+  StructuredData::GenericSP
+  CreatePluginObject(llvm::StringRef class_name, ExecutionContext &exe_ctx,
+                     StructuredData::DictionarySP args_sp,
+                     StructuredData::Generic *script_obj = nullptr) override {
+    return nullptr;
+  }
+
+  virtual lldb::tid_t GetThreadID() { return LLDB_INVALID_THREAD_ID; }
+
+  virtual llvm::Optional<std::string> GetName() { return llvm::None; }
+
+  virtual lldb::StateType GetState() { return lldb::eStateInvalid; }
+
+  virtual llvm::Optional<std::string> GetQueue() { return llvm::None; }
+
+  virtual StructuredData::DictionarySP GetStopReason() { return nullptr; }
+
+  virtual StructuredData::ArraySP GetStackFrames() { return nullptr; }
+
+  virtual StructuredData::DictionarySP GetRegisterInfo() { return nullptr; }
+
+  virtual llvm::Optional<std::string> GetRegisterContext() {
+    return llvm::None;
+  }
 };
 } // namespace lldb_private
 

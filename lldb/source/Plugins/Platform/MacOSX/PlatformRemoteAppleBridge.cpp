@@ -21,6 +21,7 @@
 #include "lldb/Target/Target.h"
 #include "lldb/Utility/ArchSpec.h"
 #include "lldb/Utility/FileSpec.h"
+#include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/StreamString.h"
 
@@ -57,7 +58,7 @@ void PlatformRemoteAppleBridge::Terminate() {
 
 PlatformSP PlatformRemoteAppleBridge::CreateInstance(bool force,
                                                  const ArchSpec *arch) {
-  Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_PLATFORM));
+  Log *log = GetLog(LLDBLog::Platform);
   if (log) {
     const char *arch_name;
     if (arch && arch->GetArchitectureName())
@@ -133,43 +134,13 @@ PlatformSP PlatformRemoteAppleBridge::CreateInstance(bool force,
   return lldb::PlatformSP();
 }
 
-lldb_private::ConstString PlatformRemoteAppleBridge::GetPluginNameStatic() {
-  static ConstString g_name("remote-bridgeos");
-  return g_name;
-}
-
-const char *PlatformRemoteAppleBridge::GetDescriptionStatic() {
+llvm::StringRef PlatformRemoteAppleBridge::GetDescriptionStatic() {
   return "Remote BridgeOS platform plug-in.";
 }
 
-bool PlatformRemoteAppleBridge::GetSupportedArchitectureAtIndex(uint32_t idx,
-                                                            ArchSpec &arch) {
-  ArchSpec system_arch(GetSystemArchitecture());
-
-  const ArchSpec::Core system_core = system_arch.GetCore();
-  switch (system_core) {
-  default:
-    switch (idx) {
-    case 0:
-      arch.SetTriple("arm64-apple-bridgeos");
-      return true;
-    default:
-      break;
-    }
-    break;
-
-  case ArchSpec::eCore_arm_arm64:
-    switch (idx) {
-    case 0:
-      arch.SetTriple("arm64-apple-bridgeos");
-      return true;
-    default:
-      break;
-    }
-    break;
-  }
-  arch.Clear();
-  return false;
+std::vector<ArchSpec> PlatformRemoteAppleBridge::GetSupportedArchitectures(
+    const ArchSpec &process_host_arch) {
+  return {ArchSpec("arm64-apple-bridgeos")};
 }
 
 llvm::StringRef PlatformRemoteAppleBridge::GetDeviceSupportDirectoryName() {

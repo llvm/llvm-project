@@ -32,7 +32,8 @@ if(NOT ANDROID)
     # Use LLVM utils and Clang from the same build tree.
     list(APPEND SANITIZER_COMMON_LIT_TEST_DEPS
       clang clang-resource-headers FileCheck count not llvm-config llvm-nm llvm-objdump
-      llvm-readelf llvm-readobj llvm-size llvm-symbolizer compiler-rt-headers sancov)
+      llvm-readelf llvm-readobj llvm-size llvm-symbolizer compiler-rt-headers sancov
+      llvm-jitlink)
     if (WIN32)
       list(APPEND SANITIZER_COMMON_LIT_TEST_DEPS KillTheDoctor)
     endif()
@@ -41,6 +42,10 @@ if(NOT ANDROID)
   if (TARGET cxx-headers OR HAVE_LIBCXX)
     list(APPEND SANITIZER_COMMON_LIT_TEST_DEPS cxx-headers)
   endif()
+endif()
+
+if(COMPILER_RT_STANDALONE_BUILD)
+  umbrella_lit_testsuite_begin(check-compiler-rt)
 endif()
 
 function(compiler_rt_test_runtime runtime)
@@ -91,7 +96,7 @@ if(COMPILER_RT_CAN_EXECUTE_TESTS)
   if(COMPILER_RT_BUILD_ORC)
     compiler_rt_Test_runtime(orc)
   endif()
-  if(COMPILER_RT_BUILD_CRT AND COMPILER_RT_HAS_CRT)
+  if(COMPILER_RT_BUILD_CRT)
     add_subdirectory(crt)
   endif()
   # ShadowCallStack does not yet provide a runtime with compiler-rt, the tests
@@ -102,15 +107,11 @@ endif()
 if(COMPILER_RT_STANDALONE_BUILD)
   # Now that we've traversed all the directories and know all the lit testsuites,
   # introduce a rule to run to run all of them.
-  get_property(LLVM_LIT_TESTSUITES GLOBAL PROPERTY LLVM_LIT_TESTSUITES)
-  get_property(LLVM_LIT_DEPENDS GLOBAL PROPERTY LLVM_LIT_DEPENDS)
-  add_lit_target(check-compiler-rt
-    "Running all regression tests"
-    ${LLVM_LIT_TESTSUITES}
-    DEPENDS ${LLVM_LIT_DEPENDS})
+  add_custom_target(compiler-rt-test-depends DEPENDS ${LLVM_COMPILER_RT_LIT_DEPENDS})
+  umbrella_lit_testsuite_end(check-compiler-rt)
+
   if(NOT TARGET check-all)
     add_custom_target(check-all)
   endif()
-  add_custom_target(compiler-rt-test-depends DEPENDS ${LLVM_LIT_DEPENDS})
   add_dependencies(check-all check-compiler-rt)
 endif()

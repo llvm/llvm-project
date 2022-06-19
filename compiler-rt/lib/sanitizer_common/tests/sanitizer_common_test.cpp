@@ -11,16 +11,24 @@
 //===----------------------------------------------------------------------===//
 #include <algorithm>
 
+// This ensures that including both internal sanitizer_common headers
+// and the interface headers does not lead to compilation failures.
+// Both may be included in unit tests, where googletest transitively
+// pulls in sanitizer interface headers.
+// The headers are specifically included using relative paths,
+// because a compiler may use a different mismatching version
+// of sanitizer headers.
+#include "../../../include/sanitizer/asan_interface.h"
+#include "../../../include/sanitizer/msan_interface.h"
+#include "../../../include/sanitizer/tsan_interface.h"
+#include "gtest/gtest.h"
 #include "sanitizer_common/sanitizer_allocator_internal.h"
 #include "sanitizer_common/sanitizer_common.h"
 #include "sanitizer_common/sanitizer_file.h"
 #include "sanitizer_common/sanitizer_flags.h"
 #include "sanitizer_common/sanitizer_libc.h"
 #include "sanitizer_common/sanitizer_platform.h"
-
 #include "sanitizer_pthread_wrappers.h"
-
-#include "gtest/gtest.h"
 
 namespace __sanitizer {
 
@@ -85,6 +93,25 @@ TEST(SanitizerCommon, MmapAlignedOrDieOnFatalError) {
       }
     }
   }
+}
+
+TEST(SanitizerCommon, Mprotect) {
+  uptr PageSize = GetPageSizeCached();
+  u8 *mem = reinterpret_cast<u8 *>(MmapOrDie(PageSize, "MprotectTest"));
+  for (u8 *p = mem; p < mem + PageSize; ++p) ++(*p);
+
+  MprotectReadOnly(reinterpret_cast<uptr>(mem), PageSize);
+  for (u8 *p = mem; p < mem + PageSize; ++p) EXPECT_EQ(1u, *p);
+  EXPECT_DEATH(++mem[0], "");
+  EXPECT_DEATH(++mem[PageSize / 2], "");
+  EXPECT_DEATH(++mem[PageSize - 1], "");
+
+  MprotectNoAccess(reinterpret_cast<uptr>(mem), PageSize);
+  volatile u8 t;
+  (void)t;
+  EXPECT_DEATH(t = mem[0], "");
+  EXPECT_DEATH(t = mem[PageSize / 2], "");
+  EXPECT_DEATH(t = mem[PageSize - 1], "");
 }
 
 TEST(SanitizerCommon, InternalMmapVectorRoundUpCapacity) {
@@ -378,7 +405,7 @@ TEST(SanitizerCommon, InternalScopedStringLarge) {
   for (int i = 0; i < 1000; ++i) {
     std::string append(i, 'a' + i % 26);
     expected += append;
-    str.append(append.c_str());
+    str.append("%s", append.c_str());
     EXPECT_EQ(expected, str.data());
   }
 }
@@ -394,7 +421,7 @@ TEST(SanitizerCommon, InternalScopedStringLargeFormat) {
   }
 }
 
-#if SANITIZER_LINUX || SANITIZER_FREEBSD || SANITIZER_MAC || SANITIZER_IOS
+#if SANITIZER_LINUX || SANITIZER_FREEBSD || SANITIZER_APPLE || SANITIZER_IOS
 TEST(SanitizerCommon, GetRandom) {
   u8 buffer_1[32], buffer_2[32];
   for (bool blocking : { false, true }) {

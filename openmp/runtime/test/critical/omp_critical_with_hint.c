@@ -1,4 +1,7 @@
 // RUN: %libomp-compile-and-run
+// critial with hint was introduced with icc 19
+// UNSUPPORTED: icc-18
+
 #include <stdio.h>
 #include <omp.h>
 #include "omp_testsuite.h"

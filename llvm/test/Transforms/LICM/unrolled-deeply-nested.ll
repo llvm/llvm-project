@@ -3,7 +3,7 @@
 ; alias information for inner loops, and in the new PM it is recomputed for each
 ; loop.
 ;
-; RUN: opt -S -aa-pipeline=basic-aa -passes='require<opt-remark-emit>,loop(licm)' < %s | FileCheck %s
+; RUN: opt -S -aa-pipeline=basic-aa -passes='require<opt-remark-emit>,loop-mssa(licm)' < %s | FileCheck %s
 ; RUN: opt -S -basic-aa -licm < %s | FileCheck %s
 
 define i32 @test(i32* %a, i64 %n.0, i64 %n.0.0, i64 %n.0.0.0, i64 %n.0.0.0.0) nounwind uwtable readonly {

@@ -57,7 +57,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Transforms/Utils/SymbolRewriter.h"
-#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/ilist.h"
@@ -184,7 +183,7 @@ performOnModule(Module &M) {
 
     std::string Name = Regex(Pattern).sub(Transform, C.getName(), &Error);
     if (!Error.empty())
-      report_fatal_error("unable to transforn " + C.getName() + " in " +
+      report_fatal_error(Twine("unable to transforn ") + C.getName() + " in " +
                          M.getModuleIdentifier() + ": " + Error);
 
     if (C.getName() == Name)
@@ -256,11 +255,11 @@ bool RewriteMapParser::parse(const std::string &MapFile,
       MemoryBuffer::getFile(MapFile);
 
   if (!Mapping)
-    report_fatal_error("unable to read rewrite map '" + MapFile + "': " +
-                       Mapping.getError().message());
+    report_fatal_error(Twine("unable to read rewrite map '") + MapFile +
+                       "': " + Mapping.getError().message());
 
   if (!parse(*Mapping, DL))
-    report_fatal_error("unable to parse rewrite map '" + MapFile + "'");
+    report_fatal_error(Twine("unable to parse rewrite map '") + MapFile + "'");
 
   return true;
 }

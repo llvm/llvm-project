@@ -31,6 +31,19 @@ let Namespace = "Hexagon" in {
     let HWEncoding{4-0} = num;
   }
 
+  class HexagonSys<bits<7> num, string n, list<string> alt = [],
+                   list<Register> alias = []> : Register<n, alt> {
+    let Aliases = alias;
+    let HWEncoding{6-0} = num;
+  }
+
+  class HexagonDoubleSys<bits<7> num, string n, list<Register> subregs,
+                         list<string> alt = []> :
+        RegisterWithSubRegs<n, subregs> {
+    let AltNames = alt;
+    let HWEncoding{6-0} = num;
+  }
+
   // Registers are identified with 5-bit ID numbers.
   // Ri - 32-bit integer registers.
   class Ri<bits<5> num, string n, list<string> alt = []> :
@@ -71,6 +84,18 @@ let Namespace = "Hexagon" in {
   class Rcc<bits<5> num, string n, list<Register> subregs,
             list<string> alt = []> :
         HexagonDoubleReg<num, n, subregs, alt> {
+    let SubRegs = subregs;
+  }
+
+  // Rs - system registers
+  class Rs<bits<7> num, string n,
+           list<string> alt = [], list<Register> alias = []> :
+        HexagonSys<num, n, alt, alias>;
+
+  // Rss - 64-bit system registers.
+  class Rss<bits<7> num, string n, list<Register> subregs,
+            list<string> alt = []> :
+        HexagonDoubleSys<num, n, subregs, alt> {
     let SubRegs = subregs;
   }
 
@@ -260,6 +285,134 @@ let Namespace = "Hexagon" in {
   def Q2 : Rq<2, "q2">, DwarfRegNum<[133]>;
   def Q3 : Rq<3, "q3">, DwarfRegNum<[134]>;
 
+  // System registers.
+  def SGP0     :  Rs<0,  "sgp0",       ["s0"]>,  DwarfRegNum<[144]>;
+  def SGP1     :  Rs<1,  "sgp1",       ["s1"]>,  DwarfRegNum<[145]>;
+  def STID     :  Rs<2,  "stid",       ["s2"]>,  DwarfRegNum<[146]>;
+  def ELR      :  Rs<3,  "elr",        ["s3"]>,  DwarfRegNum<[147]>;
+  def BADVA0   :  Rs<4,  "badva0",     ["s4"]>,  DwarfRegNum<[148]>;
+  def BADVA1   :  Rs<5,  "badva1",     ["s5"]>,  DwarfRegNum<[149]>;
+  def SSR      :  Rs<6,  "ssr",        ["s6"]>,  DwarfRegNum<[150]>;
+  def CCR      :  Rs<7,  "ccr",        ["s7"]>,  DwarfRegNum<[151]>;
+  def HTID     :  Rs<8,  "htid",       ["s8"]>,  DwarfRegNum<[152]>;
+  def BADVA    :  Rs<9,  "badva",      ["s9"]>,  DwarfRegNum<[153]>;
+  def IMASK    :  Rs<10, "imask",      ["s10"]>, DwarfRegNum<[154]>;
+  def S11      :  Rs<11, "s11">,                 DwarfRegNum<[155]>;
+  def S12      :  Rs<12, "s12">,                 DwarfRegNum<[156]>;
+  def S13      :  Rs<13, "s13">,                 DwarfRegNum<[157]>;
+  def S14      :  Rs<14, "s14">,                 DwarfRegNum<[158]>;
+  def S15      :  Rs<15, "s15">,                 DwarfRegNum<[159]>;
+  def EVB      :  Rs<16, "evb",        ["s16"]>, DwarfRegNum<[160]>;
+  def MODECTL  :  Rs<17, "modectl",    ["s17"]>, DwarfRegNum<[161]>;
+  def SYSCFG   :  Rs<18, "syscfg",     ["s18"]>, DwarfRegNum<[162]>;
+  def S19      :  Rs<19, "s19",        ["s19"]>, DwarfRegNum<[163]>;
+  def S20      :  Rs<20, "s20",        ["s20"]>, DwarfRegNum<[164]>;
+  def VID      :  Rs<21, "vid",        ["s21"]>, DwarfRegNum<[165]>;
+  def S22      :  Rs<22, "s22",        ["s22"]>, DwarfRegNum<[166]>;
+  def S23      :  Rs<23, "s23">,                 DwarfRegNum<[167]>;
+  def S24      :  Rs<24, "s24">,                 DwarfRegNum<[168]>;
+  def S25      :  Rs<25, "s25">,                 DwarfRegNum<[169]>;
+  def S26      :  Rs<26, "s26">,                 DwarfRegNum<[170]>;
+  def CFGBASE  :  Rs<27, "cfgbase",    ["s27"]>, DwarfRegNum<[171]>;
+  def DIAG     :  Rs<28, "diag",       ["s28"]>, DwarfRegNum<[172]>;
+  def REV      :  Rs<29, "rev",        ["s29"]>, DwarfRegNum<[173]>;
+  def PCYCLELO :  Rs<30, "pcyclelo",   ["s30"]>, DwarfRegNum<[174]>;
+  def PCYCLEHI :  Rs<31, "pcyclehi",   ["s31"]>, DwarfRegNum<[175]>;
+  def ISDBST   :  Rs<32, "isdbst",     ["s32"]>, DwarfRegNum<[176]>;
+  def ISDBCFG0 :  Rs<33, "isdbcfg0",   ["s33"]>, DwarfRegNum<[177]>;
+  def ISDBCFG1 :  Rs<34, "isdbcfg1",   ["s34"]>, DwarfRegNum<[178]>;
+  def S35      :  Rs<35, "s35">,                 DwarfRegNum<[179]>;
+  def BRKPTPC0 :  Rs<36, "brkptpc0",   ["s36"]>, DwarfRegNum<[180]>;
+  def BRKPTCFG0:  Rs<37, "brkptcfg0",  ["s37"]>, DwarfRegNum<[181]>;
+  def BRKPTPC1 :  Rs<38, "brkptpc1",   ["s38"]>, DwarfRegNum<[182]>;
+  def BRKPTCFG1:  Rs<39, "brkptcfg1",  ["s39"]>, DwarfRegNum<[183]>;
+  def ISDBMBXIN:  Rs<40, "isdbmbxin",  ["s40"]>, DwarfRegNum<[184]>;
+  def ISDBMBXOUT: Rs<41, "isdbmbxout", ["s41"]>, DwarfRegNum<[185]>;
+  def ISDBEN:     Rs<42, "isdben",     ["s42"]>, DwarfRegNum<[186]>;
+  def ISDBGPR:    Rs<43, "isdbgpr",    ["s43"]>, DwarfRegNum<[187]>;
+  def S44:        Rs<44, "s44">,                 DwarfRegNum<[188]>;
+  def S45:        Rs<45, "s45">,                 DwarfRegNum<[189]>;
+  def S46:        Rs<46, "s46">,                 DwarfRegNum<[190]>;
+  def S47:        Rs<47, "s47">,                 DwarfRegNum<[191]>;
+  def PMUCNT0:    Rs<48, "pmucnt0",    ["s48"]>, DwarfRegNum<[192]>;
+  def PMUCNT1:    Rs<49, "pmucnt1",    ["s49"]>, DwarfRegNum<[193]>;
+  def PMUCNT2:    Rs<50, "pmucnt2",    ["s50"]>, DwarfRegNum<[194]>;
+  def PMUCNT3:    Rs<51, "pmucnt3",    ["s51"]>, DwarfRegNum<[195]>;
+  def PMUEVTCFG:  Rs<52, "pmuevtcfg",  ["s52"]>, DwarfRegNum<[196]>;
+  def PMUCFG:     Rs<53, "pmucfg",     ["s53"]>, DwarfRegNum<[197]>;
+  def S54:        Rs<54, "s54">,                 DwarfRegNum<[198]>;
+  def S55:        Rs<55, "s55">,                 DwarfRegNum<[199]>;
+  def S56:        Rs<56, "s56">,                 DwarfRegNum<[200]>;
+  def S57:        Rs<57, "s57">,                 DwarfRegNum<[201]>;
+  def S58:        Rs<58, "s58">,                 DwarfRegNum<[202]>;
+  def S59:        Rs<59, "s59">,                 DwarfRegNum<[203]>;
+  def S60:        Rs<60, "s60">,                 DwarfRegNum<[204]>;
+  def S61:        Rs<61, "s61">,                 DwarfRegNum<[205]>;
+  def S62:        Rs<62, "s62">,                 DwarfRegNum<[206]>;
+  def S63:        Rs<63, "s63">,                 DwarfRegNum<[207]>;
+  def S64:        Rs<64, "s64">,                 DwarfRegNum<[208]>;
+  def S65:        Rs<65, "s65">,                 DwarfRegNum<[209]>;
+  def S66:        Rs<66, "s66">,                 DwarfRegNum<[210]>;
+  def S67:        Rs<67, "s67">,                 DwarfRegNum<[211]>;
+  def S68:        Rs<68, "s68">,                 DwarfRegNum<[212]>;
+  def S69:        Rs<69, "s69">,                 DwarfRegNum<[213]>;
+  def S70:        Rs<70, "s70">,                 DwarfRegNum<[214]>;
+  def S71:        Rs<71, "s71">,                 DwarfRegNum<[215]>;
+  def S72:        Rs<72, "s72">,                 DwarfRegNum<[216]>;
+  def S73:        Rs<73, "s73">,                 DwarfRegNum<[217]>;
+  def S74:        Rs<74, "s74">,                 DwarfRegNum<[218]>;
+  def S75:        Rs<75, "s75">,                 DwarfRegNum<[219]>;
+  def S76:        Rs<76, "s76">,                 DwarfRegNum<[220]>;
+  def S77:        Rs<77, "s77">,                 DwarfRegNum<[221]>;
+  def S78:        Rs<78, "s78">,                 DwarfRegNum<[222]>;
+  def S79:        Rs<79, "s79">,                 DwarfRegNum<[223]>;
+  def S80:        Rs<80, "s80">,                 DwarfRegNum<[224]>;
+
+  // System Register Pair
+  let SubRegIndices = [isub_lo, isub_hi], CoveredBySubRegs = 1 in {
+    def SGP1_0 : Rss<0,  "s1:0",  [SGP0, SGP1], ["sgp1:0"]>, DwarfRegNum<[144]>;
+    def S3_2   : Rss<2,  "s3:2",  [STID, ELR]>,              DwarfRegNum<[146]>;
+    def S5_4   : Rss<4,  "s5:4",  [BADVA0, BADVA1], ["badva1:0"]>,
+                                                             DwarfRegNum<[148]>;
+    def S7_6   : Rss<6,  "s7:6",  [SSR, CCR], ["ccr:ssr"]>,  DwarfRegNum<[150]>;
+    def S9_8   : Rss<8,  "s9:8",  [HTID, BADVA]>,            DwarfRegNum<[152]>;
+    def S11_10 : Rss<10, "s11:10", [IMASK, S11]>,            DwarfRegNum<[154]>;
+    def S13_12 : Rss<12, "s13:12", [S12, S13]>,              DwarfRegNum<[156]>;
+    def S15_14 : Rss<14, "s15:14", [S14, S15]>,              DwarfRegNum<[158]>;
+    def S17_16 : Rss<16, "s17:16", [EVB, MODECTL]>,          DwarfRegNum<[160]>;
+    def S19_18 : Rss<18, "s19:18", [SYSCFG, S19]>,           DwarfRegNum<[162]>;
+    def S21_20 : Rss<20, "s21:20", [S20, VID]>,              DwarfRegNum<[164]>;
+    def S23_22 : Rss<22, "s23:22", [S22, S23]>,              DwarfRegNum<[166]>;
+    def S25_24 : Rss<24, "s25:24", [S24, S25]>,              DwarfRegNum<[168]>;
+    def S27_26 : Rss<26, "s27:26", [S26, CFGBASE]>,          DwarfRegNum<[170]>;
+    def S29_28 : Rss<28, "s29:28", [DIAG, REV]>,             DwarfRegNum<[172]>;
+    def S31_30 : Rss<30, "s31:30", [PCYCLELO, PCYCLEHI], ["pcycle"]>,    DwarfRegNum<[174]>;
+    def S33_32 : Rss<32, "s33:32", [ISDBST, ISDBCFG0]>,      DwarfRegNum<[176]>;
+    def S35_34 : Rss<34, "s35:34", [ISDBCFG1, S35]>,    DwarfRegNum<[178]>;
+    def S37_36 : Rss<36, "s37:36", [BRKPTPC0, BRKPTCFG0]>,   DwarfRegNum<[180]>;
+    def S39_38 : Rss<38, "s39:38", [BRKPTPC1, BRKPTCFG1]>,   DwarfRegNum<[182]>;
+    def S41_40 : Rss<40, "s41:40", [ISDBMBXIN, ISDBMBXOUT]>, DwarfRegNum<[184]>;
+    def S43_42 : Rss<42, "s43:42", [ISDBEN, ISDBGPR]>,       DwarfRegNum<[186]>;
+    def S45_44 : Rss<44, "s45:44", [S44, S45]>,              DwarfRegNum<[188]>;
+    def S47_46 : Rss<46, "s47:46", [S46, S47]>,              DwarfRegNum<[190]>;
+    def S49_48 : Rss<48, "s49:48", [PMUCNT0, PMUCNT1]>,      DwarfRegNum<[192]>;
+    def S51_50 : Rss<50, "s51:50", [PMUCNT2, PMUCNT3]>,      DwarfRegNum<[194]>;
+    def S53_52 : Rss<52, "s53:52", [PMUEVTCFG, PMUCFG]>,     DwarfRegNum<[196]>;
+    def S55_54 : Rss<54, "s55:54", [S54, S55]>,              DwarfRegNum<[198]>;
+    def S57_56 : Rss<56, "s57:56", [S56, S57]>,              DwarfRegNum<[200]>;
+    def S59_58 : Rss<58, "s59:58", [S58, S59]>,              DwarfRegNum<[202]>;
+    def S61_60 : Rss<60, "s61:60", [S60, S61]>,              DwarfRegNum<[204]>;
+    def S63_62 : Rss<62, "s63:62", [S62, S63]>,              DwarfRegNum<[206]>;
+    def S65_64 : Rss<64, "s65:64", [S64, S65]>,              DwarfRegNum<[208]>;
+    def S67_66 : Rss<66, "s67:66", [S66, S67]>,              DwarfRegNum<[210]>;
+    def S69_68 : Rss<68, "s69:68", [S68, S69]>,              DwarfRegNum<[212]>;
+    def S71_70 : Rss<70, "s71:70", [S70, S71]>,              DwarfRegNum<[214]>;
+    def S73_72 : Rss<72, "s73:72", [S72, S73]>,              DwarfRegNum<[216]>;
+    def S75_74 : Rss<74, "s75:74", [S74, S75]>,              DwarfRegNum<[218]>;
+    def S77_76 : Rss<76, "s77:76", [S77, S76]>,              DwarfRegNum<[219]>;
+    def S79_78 : Rss<78, "s79:78", [S79, S78]>,              DwarfRegNum<[220]>;
+  }
+
   // Guest Registers
   def GELR:      Rg<0,  "gelr", ["g0"]>,       DwarfRegNum<[220]>;
   def GSR:       Rg<1,  "gsr", ["g1"]>,        DwarfRegNum<[221]>;
@@ -326,6 +479,10 @@ def VecI16:  ValueTypeByHwMode<[Hvx64,  Hvx128,  DefaultMode],
                                [v32i16, v64i16,  v32i16]>;
 def VecI32:  ValueTypeByHwMode<[Hvx64,  Hvx128,  DefaultMode],
                                [v16i32, v32i32,  v16i32]>;
+def VecF16:  ValueTypeByHwMode<[Hvx64,  Hvx128,  DefaultMode],
+                               [v32f16, v64f16,  v32f16]>;
+def VecF32:  ValueTypeByHwMode<[Hvx64,  Hvx128,  DefaultMode],
+                               [v16f32, v32f32,  v16f32]>;
 
 def VecPI8:  ValueTypeByHwMode<[Hvx64,  Hvx128,  DefaultMode],
                                [v128i8, v256i8,  v128i8]>;
@@ -333,6 +490,10 @@ def VecPI16: ValueTypeByHwMode<[Hvx64,  Hvx128,  DefaultMode],
                                [v64i16, v128i16, v64i16]>;
 def VecPI32: ValueTypeByHwMode<[Hvx64,  Hvx128,  DefaultMode],
                                [v32i32, v64i32,  v32i32]>;
+def VecPF16: ValueTypeByHwMode<[Hvx64,  Hvx128,  DefaultMode],
+                               [v64f16, v128f16, v64f16]>;
+def VecPF32: ValueTypeByHwMode<[Hvx64,  Hvx128,  DefaultMode],
+                               [v32f32, v64f32,  v32f32]>;
 
 def VecQ8:   ValueTypeByHwMode<[Hvx64,  Hvx128,  DefaultMode],
                                [v64i1,  v128i1,  v64i1]>;
@@ -343,13 +504,13 @@ def VecQ32:  ValueTypeByHwMode<[Hvx64,  Hvx128,  DefaultMode],
 
 // HVX register classes
 
-def HvxVR : RegisterClass<"Hexagon", [VecI8, VecI16, VecI32], 512,
+def HvxVR : RegisterClass<"Hexagon", [VecI8, VecI16, VecI32, VecF16, VecF32], 512,
   (add (sequence "V%u", 0, 31), VTMP)> {
   let RegInfos = RegInfoByHwMode<[Hvx64, Hvx128, DefaultMode],
     [RegInfo<512,512,512>, RegInfo<1024,1024,1024>, RegInfo<512,512,512>]>;
 }
 
-def HvxWR : RegisterClass<"Hexagon", [VecPI8, VecPI16, VecPI32], 1024,
+def HvxWR : RegisterClass<"Hexagon", [VecPI8, VecPI16, VecPI32, VecPF16, VecPF32], 1024,
   (add (sequence "W%u", 0, 15), (sequence "WR%u", 0, 15))> {
   let RegInfos = RegInfoByHwMode<[Hvx64, Hvx128, DefaultMode],
     [RegInfo<1024,1024,1024>, RegInfo<2048,2048,2048>, RegInfo<1024,1024,1024>]>;
@@ -431,6 +592,40 @@ def GuestRegs64 : RegisterClass<"Hexagon", [i64], 64,
        G21_20, G23_22,
        G25_24, G27_26, G29_28,
        G31_30)>;
+
+let Size = 32, isAllocatable = 0 in
+def SysRegs : RegisterClass<"Hexagon", [i32], 32,
+  (add SGP0, SGP1, STID, ELR, BADVA0, BADVA1,
+       SSR, CCR, HTID, BADVA, IMASK,
+       S11, S12, S13, S14, S15,
+       S19, S23, S25,
+       EVB, MODECTL, SYSCFG, S20, VID, S22, S24,
+       S26, CFGBASE, DIAG, REV, PCYCLEHI,
+       PCYCLELO, ISDBST, ISDBCFG0, ISDBCFG1, S35,
+       BRKPTPC0, BRKPTCFG0, BRKPTPC1, BRKPTCFG1,
+       ISDBMBXIN, ISDBMBXOUT, ISDBEN, ISDBGPR,
+       S44, S45, S46, S47,
+       PMUCNT0, PMUCNT1, PMUCNT2, PMUCNT3,
+       PMUEVTCFG, PMUCFG, S54, S55, S56, S57,
+       S58, S59, S60, S61, S62, S63, S64, S65, S66, S67,
+       S68, S69, S70, S71, S72, S73, S74, S75, S76, S77,
+       S78, S79, S80
+       )>;
+
+let Size = 64, isAllocatable = 0 in
+def SysRegs64 : RegisterClass<"Hexagon", [i64], 64,
+  (add SGP1_0,
+       S3_2, S5_4, S7_6, S9_8,
+       S11_10, S13_12, S15_14,
+       S17_16, S19_18, S21_20,
+       S23_22, S25_24,
+       S27_26, S29_28, S31_30, S33_32, S35_34,
+       S37_36, S39_38, S41_40, S43_42, S45_44,
+       S47_46, S49_48, S51_50, S53_52,
+       S55_54, S57_56, S59_58,
+       S61_60, S63_62, S65_64, S67_66, S69_68,
+       S71_70, S73_72, S75_74, S77_76, S79_78
+       )>;
 
 // These registers are new for v62 and onward.
 // The function RegisterMatchesArch() uses this list for validation.

@@ -6,10 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-// <set>
 // UNSUPPORTED: c++03, c++11, c++14
-// UNSUPPORTED: libcpp-no-deduction-guides
-// UNSUPPORTED: apple-clang-9.1
+
+// <set>
 
 // template<class InputIterator,
 //          class Compare = less<iter-value-type<InputIterator>>,
@@ -36,6 +35,7 @@
 #include <set>
 #include <type_traits>
 
+#include "deduction_guides_sfinae_checks.h"
 #include "test_allocator.h"
 
 struct NotAnAllocator {
@@ -186,6 +186,8 @@ int main(int, char **) {
     ASSERT_SAME_TYPE(decltype(s), std::multiset<int *>);
     assert(s.size() == 2);
   }
+
+  AssociativeContainerDeductionGuidesSfinaeAway<std::multiset, std::multiset<int>>();
 
   return 0;
 }

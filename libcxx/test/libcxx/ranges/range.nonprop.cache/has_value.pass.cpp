@@ -7,8 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17
-// UNSUPPORTED: libcpp-no-concepts
-// UNSUPPORTED: gcc-10
+// UNSUPPORTED: libcpp-has-no-incomplete-ranges
 
 // constexpr bool __has_value() const;
 
@@ -28,7 +27,7 @@ constexpr void test() {
 
   // __has_value on a non-empty cache
   {
-    Cache cache; cache.__set(T{});
+    Cache cache; cache.__emplace();
     assert(cache.__has_value());
   }
 }

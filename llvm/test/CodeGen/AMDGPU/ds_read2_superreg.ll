@@ -36,8 +36,8 @@ define amdgpu_kernel void @simple_read2_v2f32_superreg(<2 x float> addrspace(1)*
 }
 
 ; CI-LABEL: {{^}}simple_read2_v4f32_superreg_align4:
-; CI-DAG: ds_read2_b32 v{{\[}}[[REG_X:[0-9]+]]:[[REG_Y:[0-9]+]]{{\]}}, v{{[0-9]+}} offset1:1{{$}}
-; CI-DAG: ds_read2_b32 v{{\[}}[[REG_Z:[0-9]+]]:[[REG_W:[0-9]+]]{{\]}}, v{{[0-9]+}} offset0:2 offset1:3{{$}}
+; CI-DAG: ds_read2_b32 v[[[REG_X:[0-9]+]]:[[REG_Y:[0-9]+]]], v{{[0-9]+}} offset1:1{{$}}
+; CI-DAG: ds_read2_b32 v[[[REG_Z:[0-9]+]]:[[REG_W:[0-9]+]]], v{{[0-9]+}} offset0:2 offset1:3{{$}}
 ; CI-DAG: v_add_f32_e32 v[[ADD0:[0-9]+]], v[[REG_X]], v[[REG_Z]]
 ; CI-DAG: v_add_f32_e32 v[[ADD1:[0-9]+]], v[[REG_Y]], v[[REG_W]]
 ; CI: v_add_f32_e32 v[[ADD2:[0-9]+]], v[[ADD0]], v[[ADD1]]
@@ -62,7 +62,7 @@ define amdgpu_kernel void @simple_read2_v4f32_superreg_align4(float addrspace(1)
 }
 
 ; CI-LABEL: {{^}}simple_read2_v3f32_superreg_align4:
-; CI-DAG: ds_read2_b32 v{{\[}}[[REG_X:[0-9]+]]:[[REG_Y:[0-9]+]]{{\]}}, v{{[0-9]+}} offset1:1{{$}}
+; CI-DAG: ds_read2_b32 v[[[REG_X:[0-9]+]]:[[REG_Y:[0-9]+]]], v{{[0-9]+}} offset1:1{{$}}
 ; CI-DAG: ds_read_b32 v[[REG_Z:[0-9]+]], v{{[0-9]+}} offset:8{{$}}
 ; CI-DAG: v_add_f32_e32 v[[ADD0:[0-9]+]], v[[REG_X]], v[[REG_Z]]
 ; CI-DAG: v_add_f32_e32 v[[ADD1:[0-9]+]], v[[ADD0]], v[[REG_Y]]
@@ -149,9 +149,9 @@ define amdgpu_kernel void @simple_read2_v16f32_superreg(<16 x float> addrspace(1
 
 ; Do scalar loads into the super register we need.
 ; CI-LABEL: {{^}}simple_read2_v2f32_superreg_scalar_loads_align4:
-; CI-DAG: ds_read2_b32 v{{\[}}[[REG_ELT0:[0-9]+]]:[[REG_ELT1:[0-9]+]]{{\]}}, v{{[0-9]+}} offset1:1{{$}}
+; CI-DAG: ds_read2_b32 v[[[REG_ELT0:[0-9]+]]:[[REG_ELT1:[0-9]+]]], v{{[0-9]+}} offset1:1{{$}}
 ; CI-NOT: v_mov {{v[0-9]+}}, {{[sv][0-9]+}}
-; CI: buffer_store_dwordx2 v{{\[}}[[REG_ELT0]]:[[REG_ELT1]]{{\]}}
+; CI: buffer_store_dwordx2 v[[[REG_ELT0]]:[[REG_ELT1]]]
 ; CI: s_endpgm
 define amdgpu_kernel void @simple_read2_v2f32_superreg_scalar_loads_align4(<2 x float> addrspace(1)* %out) #0 {
   %x.i = tail call i32 @llvm.amdgcn.workitem.id.x() #1
@@ -171,10 +171,10 @@ define amdgpu_kernel void @simple_read2_v2f32_superreg_scalar_loads_align4(<2 x 
 
 ; Do scalar loads into the super register we need.
 ; CI-LABEL: {{^}}simple_read2_v4f32_superreg_scalar_loads_align4:
-; CI-DAG: ds_read2_b32 v{{\[}}[[REG_ELT0:[0-9]+]]:[[REG_ELT1:[0-9]+]]{{\]}}, v{{[0-9]+}} offset1:1{{$}}
-; CI-DAG: ds_read2_b32 v{{\[}}[[REG_ELT2:[0-9]+]]:[[REG_ELT3:[0-9]+]]{{\]}}, v{{[0-9]+}} offset0:2 offset1:3{{$}}
+; CI-DAG: ds_read2_b32 v[[[REG_ELT0:[0-9]+]]:[[REG_ELT1:[0-9]+]]], v{{[0-9]+}} offset1:1{{$}}
+; CI-DAG: ds_read2_b32 v[[[REG_ELT2:[0-9]+]]:[[REG_ELT3:[0-9]+]]], v{{[0-9]+}} offset0:2 offset1:3{{$}}
 ; CI-NOT: v_mov {{v[0-9]+}}, {{[sv][0-9]+}}
-; CI: buffer_store_dwordx4 v{{\[}}[[REG_ELT0]]:[[REG_ELT3]]{{\]}}
+; CI: buffer_store_dwordx4 v[[[REG_ELT0]]:[[REG_ELT3]]]
 ; CI: s_endpgm
 define amdgpu_kernel void @simple_read2_v4f32_superreg_scalar_loads_align4(<4 x float> addrspace(1)* %out) #0 {
   %x.i = tail call i32 @llvm.amdgcn.workitem.id.x() #1

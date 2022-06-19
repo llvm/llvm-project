@@ -4,7 +4,11 @@ typedef const struct __CFString * CFStringRef;
 #define CFSTR __builtin___CFStringMakeConstantString
 
 void f() {
+#if !defined(__MVS__) && !defined(_AIX)
+  // Builtin function __builtin___CFStringMakeConstantString is currently
+  // unsupported on z/OS and AIX.
   (void)CFStringRef(CFSTR("Hello"));
+#endif
 }
 
 void a() { __builtin_va_list x, y; ::__builtin_va_copy(x, y); }
@@ -38,6 +42,13 @@ namespace addressof {
 
   S *ptmp = __builtin_addressof(S{}); // expected-error {{taking the address of a temporary}}
 }
+
+namespace function_start {
+void a(void) {}
+int n;
+void *p = __builtin_function_start(n);               // expected-error {{argument must be a function}}
+static_assert(__builtin_function_start(a) == a, ""); // expected-error {{static_assert expression is not an integral constant expression}}
+} // namespace function_start
 
 void no_ms_builtins() {
   __assume(1); // expected-error {{use of undeclared}}

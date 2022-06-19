@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple x86_64-unk-unk -emit-llvm -Os -o %t %s
+// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-unk-unk -emit-llvm -Os -o %t %s
 // RUN: FileCheck < %t %s
 
 struct s0 {
@@ -152,6 +152,6 @@ int f3_d(struct s3 *a) {
 // CHECK:   load double, double* {{.*}}, align 8
 // CHECK: }
 extern double g4[5] __attribute__((aligned(16)));
-double f4() {
+double f4(void) {
   return g4[1];
 }

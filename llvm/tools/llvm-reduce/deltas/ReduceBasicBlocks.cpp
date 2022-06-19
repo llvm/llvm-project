@@ -1,4 +1,4 @@
-//===- ReduceArguments.cpp - Specialized Delta Pass -----------------------===//
+//===- ReduceBasicBlocks.cpp - Specialized Delta Pass ---------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -7,12 +7,14 @@
 //===----------------------------------------------------------------------===//
 //
 // This file implements a function which calls the Generic Delta pass in order
-// to reduce uninteresting Arguments from defined functions.
+// to reduce uninteresting BasicBlocks from defined functions.
 //
 //===----------------------------------------------------------------------===//
 
 #include "ReduceBasicBlocks.h"
+#include "llvm/ADT/DenseSet.h"
 #include "llvm/IR/BasicBlock.h"
+#include "llvm/IR/Constants.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/LLVMContext.h"
@@ -25,15 +27,15 @@ using namespace llvm;
 
 /// Replaces BB Terminator with one that only contains Chunk BBs
 static void replaceBranchTerminator(BasicBlock &BB,
-                                    std::set<BasicBlock *> BBsToKeep) {
+                                    const DenseSet<BasicBlock *> &BBsToKeep) {
   auto *Term = BB.getTerminator();
-  std::vector<BasicBlock *> ChunkSucessors;
+  std::vector<BasicBlock *> ChunkSuccessors;
   for (auto *Succ : successors(&BB))
     if (BBsToKeep.count(Succ))
-      ChunkSucessors.push_back(Succ);
+      ChunkSuccessors.push_back(Succ);
 
   // BB only references Chunk BBs
-  if (ChunkSucessors.size() == Term->getNumSuccessors())
+  if (ChunkSuccessors.size() == Term->getNumSuccessors())
     return;
 
   bool IsBranch = isa<BranchInst>(Term) || isa<InvokeInst>(Term);
@@ -44,7 +46,20 @@ static void replaceBranchTerminator(BasicBlock &BB,
   Term->replaceAllUsesWith(UndefValue::get(Term->getType()));
   Term->eraseFromParent();
 
-  if (ChunkSucessors.empty()) {
+  if (ChunkSuccessors.empty()) {
+    // Scan forward in BB list to try find a block that is kept.
+    Function &F = *BB.getParent();
+    Function::iterator FI = BB.getIterator();
+    FI++;
+    while (FI != F.end()) {
+      auto &FIB = *FI;
+      if (BBsToKeep.count(&FIB) && !isa<PHINode>(FIB.begin())) {
+        BranchInst::Create(&FIB, &BB);
+        return;
+      }
+      FI++;
+    }
+    // If that fails then resort to replacing with a ret.
     auto *FnRetTy = BB.getParent()->getReturnType();
     ReturnInst::Create(BB.getContext(),
                        FnRetTy->isVoidTy() ? nullptr : UndefValue::get(FnRetTy),
@@ -53,12 +68,12 @@ static void replaceBranchTerminator(BasicBlock &BB,
   }
 
   if (IsBranch)
-    BranchInst::Create(ChunkSucessors[0], &BB);
+    BranchInst::Create(ChunkSuccessors[0], &BB);
 
   if (Address) {
     auto *NewIndBI =
-        IndirectBrInst::Create(Address, ChunkSucessors.size(), &BB);
-    for (auto *Dest : ChunkSucessors)
+        IndirectBrInst::Create(Address, ChunkSuccessors.size(), &BB);
+    for (auto *Dest : ChunkSuccessors)
       NewIndBI->addDestination(Dest);
   }
 }
@@ -66,8 +81,9 @@ static void replaceBranchTerminator(BasicBlock &BB,
 /// Removes uninteresting BBs from switch, if the default case ends up being
 /// uninteresting, the switch is replaced with a void return (since it has to be
 /// replace with something)
-static void removeUninterestingBBsFromSwitch(SwitchInst &SwInst,
-                                             std::set<BasicBlock *> BBsToKeep) {
+static void
+removeUninterestingBBsFromSwitch(SwitchInst &SwInst,
+                                 const DenseSet<BasicBlock *> &BBsToKeep) {
   if (!BBsToKeep.count(SwInst.getDefaultDest())) {
     auto *FnRetTy = SwInst.getParent()->getParent()->getReturnType();
     ReturnInst::Create(SwInst.getContext(),
@@ -87,30 +103,25 @@ static void removeUninterestingBBsFromSwitch(SwitchInst &SwInst,
 
 /// Removes out-of-chunk arguments from functions, and modifies their calls
 /// accordingly. It also removes allocations of out-of-chunk arguments.
-static void extractBasicBlocksFromModule(std::vector<Chunk> ChunksToKeep,
-                                         Module *Program) {
-  Oracle O(ChunksToKeep);
+static void extractBasicBlocksFromModule(Oracle &O, Module &Program) {
+  DenseSet<BasicBlock *> BBsToKeep;
 
-  std::set<BasicBlock *> BBsToKeep;
-
-  for (auto &F : *Program)
-    for (auto &BB : F)
+  SmallVector<BasicBlock *> BBsToDelete;
+  for (auto &F : Program) {
+    for (auto &BB : F) {
       if (O.shouldKeep())
         BBsToKeep.insert(&BB);
-
-  std::vector<BasicBlock *> BBsToDelete;
-  for (auto &F : *Program)
-    for (auto &BB : F) {
-      if (!BBsToKeep.count(&BB)) {
+      else {
         BBsToDelete.push_back(&BB);
         // Remove out-of-chunk BB from successor phi nodes
         for (auto *Succ : successors(&BB))
           Succ->removePredecessor(&BB);
       }
     }
+  }
 
   // Replace terminators that reference out-of-chunk BBs
-  for (auto &F : *Program)
+  for (auto &F : Program)
     for (auto &BB : F) {
       if (auto *SwInst = dyn_cast<SwitchInst>(BB.getTerminator()))
         removeUninterestingBBsFromSwitch(*SwInst, BBsToKeep);
@@ -123,28 +134,19 @@ static void extractBasicBlocksFromModule(std::vector<Chunk> ChunksToKeep,
     // Instructions might be referenced in other BBs
     for (auto &I : *BB)
       I.replaceAllUsesWith(UndefValue::get(I.getType()));
-    BB->eraseFromParent();
-  }
-}
-
-/// Counts the amount of basic blocks and prints their name & respective index
-static int countBasicBlocks(Module *Program) {
-  // TODO: Silence index with --quiet flag
-  outs() << "----------------------------\n";
-  int BBCount = 0;
-  for (auto &F : *Program)
-    for (auto &BB : F) {
-      if (BB.hasName())
-        outs() << "\t" << ++BBCount << ": " << BB.getName() << "\n";
-      else
-        outs() << "\t" << ++BBCount << ": Unnamed\n";
+    if (BB->getParent()->size() == 1) {
+      // this is the last basic block of the function, thus we must also make
+      // sure to remove comdat and set linkage to external
+      auto F = BB->getParent();
+      F->deleteBody();
+      F->setComdat(nullptr);
+    } else {
+      BB->eraseFromParent();
     }
-
-  return BBCount;
+  }
 }
 
 void llvm::reduceBasicBlocksDeltaPass(TestRunner &Test) {
   outs() << "*** Reducing Basic Blocks...\n";
-  int BBCount = countBasicBlocks(Test.getProgram());
-  runDeltaPass(Test, BBCount, extractBasicBlocksFromModule);
+  runDeltaPass(Test, extractBasicBlocksFromModule);
 }

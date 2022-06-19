@@ -11,7 +11,7 @@ endif()
 
 add_llvm_library(PrintFunctionNames MODULE PrintFunctionNames.cpp PLUGIN_TOOL clang)
 
-if(LLVM_ENABLE_PLUGINS AND (WIN32 OR CYGWIN))
+if(WIN32 OR CYGWIN)
   set(LLVM_LINK_COMPONENTS
     Support
   )

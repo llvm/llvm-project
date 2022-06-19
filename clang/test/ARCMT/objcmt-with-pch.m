@@ -12,6 +12,6 @@
 + (NSNumber *)numberWithInt:(int)value;
 @end
 
-void foo() {
+void foo(void) {
   NSNumber *n = [NSNumber numberWithInt:1];
 }

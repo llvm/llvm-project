@@ -3,6 +3,8 @@
 // RUN:  -target-feature +sha3 -S -emit-llvm -o - %s \
 // RUN:  | FileCheck %s
 
+// REQUIRES: aarch64-registered-target || arm-registered-target
+
 #include <arm_neon.h>
 
 // CHECK-LABEL: @test_vsha512h(

@@ -11,6 +11,7 @@
 #include "llvm/Analysis/ScalarEvolution.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/AsmParser/Parser.h"
+#include "llvm/IR/Constants.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/Support/SourceMgr.h"
 #include "gtest/gtest.h"
@@ -1546,4 +1547,40 @@ TEST(LoopInfoTest, LoopUserBranch) {
     // L should not have a guard branch
     EXPECT_EQ(L->getLoopGuardBranch(), nullptr);
   });
+}
+
+TEST(LoopInfoTest, LoopInductionVariable) {
+  const char *ModuleStr =
+      "define i32 @foo(i32* %addr) {\n"
+      "entry:\n"
+      "  br label %for.body\n"
+      "for.body:\n"
+      "  %sum.08 = phi i32 [ 0, %entry ], [ %add, %for.body ]\n"
+      "  %addr.addr.06 = phi i32* [ %addr, %entry ], [ %incdec.ptr, %for.body "
+      "]\n"
+      "  %count.07 = phi i32 [ 6000, %entry ], [ %dec, %for.body ]\n"
+      "  %0 = load i32, i32* %addr.addr.06, align 4\n"
+      "  %add = add nsw i32 %0, %sum.08\n"
+      "  %dec = add nsw i32 %count.07, -1\n"
+      "  %incdec.ptr = getelementptr inbounds i32, i32* %addr.addr.06, i64 1\n"
+      "  %cmp = icmp ugt i32 %count.07, 1\n"
+      "  br i1 %cmp, label %for.body, label %for.end\n"
+      "for.end:\n"
+      "  %cmp1 = icmp eq i32 %add, -1\n"
+      "  %conv = zext i1 %cmp1 to i32\n"
+      "  ret i32 %conv\n"
+      "}\n";
+
+  // Parse the module.
+  LLVMContext Context;
+  std::unique_ptr<Module> M = makeLLVMModule(Context, ModuleStr);
+
+  runWithLoopInfoPlus(
+      *M, "foo", [&](Function &F, LoopInfo &LI, ScalarEvolution &SE) {
+        Function::iterator FI = F.begin();
+        BasicBlock *Header = &*(++FI);
+        Loop *L = LI.getLoopFor(Header);
+        EXPECT_NE(L, nullptr);
+        EXPECT_EQ(L->getInductionVariable(SE)->getName(), "count.07");
+      });
 }

@@ -31,7 +31,6 @@ class CXXConstructorDecl;
 class CXXDestructorDecl;
 class CXXMethodDecl;
 class CXXRecordDecl;
-class FieldDecl;
 class MangleContext;
 
 namespace CodeGen {
@@ -57,7 +56,10 @@ protected:
     return CGF.CXXABIThisValue;
   }
   Address getThisAddress(CodeGenFunction &CGF) {
-    return Address(CGF.CXXABIThisValue, CGF.CXXABIThisAlignment);
+    return Address(
+        CGF.CXXABIThisValue,
+        CGF.ConvertTypeForMem(CGF.CXXABIThisDecl->getType()->getPointeeType()),
+        CGF.CXXABIThisAlignment);
   }
 
   /// Issue a diagnostic about unsupported features in the ABI.
@@ -79,6 +81,18 @@ protected:
   void setCXXABIThisValue(CodeGenFunction &CGF, llvm::Value *ThisPtr);
 
   ASTContext &getContext() const { return CGM.getContext(); }
+
+  bool mayNeedDestruction(const VarDecl *VD) const;
+
+  /// Determine whether we will definitely emit this variable with a constant
+  /// initializer, either because the language semantics demand it or because
+  /// we know that the initializer is a constant.
+  // For weak definitions, any initializer available in the current translation
+  // is not necessarily reflective of the initializer used; such initializers
+  // are ignored unless if InspectInitForWeakDef is true.
+  bool
+  isEmittedWithConstantInitializer(const VarDecl *VD,
+                                   bool InspectInitForWeakDef = false) const;
 
   virtual bool requiresArrayCookie(const CXXDeleteExpr *E, QualType eltType);
   virtual bool requiresArrayCookie(const CXXNewExpr *E);

@@ -38,13 +38,13 @@ DominatingValue<RValue>::saved_type::save(CodeGenFunction &CGF, RValue rv) {
 
     // These automatically dominate and don't need to be saved.
     if (!DominatingLLVMValue::needsSaving(V))
-      return saved_type(V, ScalarLiteral);
+      return saved_type(V, nullptr, ScalarLiteral);
 
     // Everything else needs an alloca.
     Address addr =
       CGF.CreateDefaultAlignTempAlloca(V->getType(), "saved-rvalue");
     CGF.Builder.CreateStore(V, addr);
-    return saved_type(addr.getPointer(), ScalarAddress);
+    return saved_type(addr.getPointer(), nullptr, ScalarAddress);
   }
 
   if (rv.isComplex()) {
@@ -54,19 +54,19 @@ DominatingValue<RValue>::saved_type::save(CodeGenFunction &CGF, RValue rv) {
     Address addr = CGF.CreateDefaultAlignTempAlloca(ComplexTy, "saved-complex");
     CGF.Builder.CreateStore(V.first, CGF.Builder.CreateStructGEP(addr, 0));
     CGF.Builder.CreateStore(V.second, CGF.Builder.CreateStructGEP(addr, 1));
-    return saved_type(addr.getPointer(), ComplexAddress);
+    return saved_type(addr.getPointer(), nullptr, ComplexAddress);
   }
 
   assert(rv.isAggregate());
   Address V = rv.getAggregateAddress(); // TODO: volatile?
   if (!DominatingLLVMValue::needsSaving(V.getPointer()))
-    return saved_type(V.getPointer(), AggregateLiteral,
+    return saved_type(V.getPointer(), V.getElementType(), AggregateLiteral,
                       V.getAlignment().getQuantity());
 
   Address addr =
     CGF.CreateTempAlloca(V.getType(), CGF.getPointerAlign(), "saved-rvalue");
   CGF.Builder.CreateStore(V.getPointer(), addr);
-  return saved_type(addr.getPointer(), AggregateAddress,
+  return saved_type(addr.getPointer(), V.getElementType(), AggregateAddress,
                     V.getAlignment().getQuantity());
 }
 
@@ -75,8 +75,9 @@ DominatingValue<RValue>::saved_type::save(CodeGenFunction &CGF, RValue rv) {
 /// point.
 RValue DominatingValue<RValue>::saved_type::restore(CodeGenFunction &CGF) {
   auto getSavingAddress = [&](llvm::Value *value) {
-    auto alignment = cast<llvm::AllocaInst>(value)->getAlignment();
-    return Address(value, CharUnits::fromQuantity(alignment));
+    auto *AI = cast<llvm::AllocaInst>(value);
+    return Address(value, AI->getAllocatedType(),
+                   CharUnits::fromQuantity(AI->getAlign().value()));
   };
   switch (K) {
   case ScalarLiteral:
@@ -84,10 +85,12 @@ RValue DominatingValue<RValue>::saved_type::restore(CodeGenFunction &CGF) {
   case ScalarAddress:
     return RValue::get(CGF.Builder.CreateLoad(getSavingAddress(Value)));
   case AggregateLiteral:
-    return RValue::getAggregate(Address(Value, CharUnits::fromQuantity(Align)));
+    return RValue::getAggregate(
+        Address(Value, ElementType, CharUnits::fromQuantity(Align)));
   case AggregateAddress: {
     auto addr = CGF.Builder.CreateLoad(getSavingAddress(Value));
-    return RValue::getAggregate(Address(addr, CharUnits::fromQuantity(Align)));
+    return RValue::getAggregate(
+        Address(addr, ElementType, CharUnits::fromQuantity(Align)));
   }
   case ComplexAddress: {
     Address address = getSavingAddress(Value);
@@ -180,6 +183,15 @@ void *EHScopeStack::pushCleanup(CleanupKind Kind, size_t Size) {
   bool IsNormalCleanup = Kind & NormalCleanup;
   bool IsEHCleanup = Kind & EHCleanup;
   bool IsLifetimeMarker = Kind & LifetimeMarker;
+
+  // Per C++ [except.terminate], it is implementation-defined whether none,
+  // some, or all cleanups are called before std::terminate. Thus, when
+  // terminate is the current EH scope, we may skip adding any EH cleanup
+  // scopes.
+  if (InnermostEHScope != stable_end() &&
+      find(InnermostEHScope)->getKind() == EHScope::Terminate)
+    IsEHCleanup = false;
+
   EHCleanupScope *Scope =
     new (Buffer) EHCleanupScope(IsNormalCleanup,
                                 IsEHCleanup,

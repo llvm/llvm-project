@@ -4,6 +4,12 @@
 // RUN:   -fsyntax-only -triple=i686-linux-android -std=c11
 // RUN: %clang_cc1 %s -verify -fgnuc-version=4.2.1 -ffreestanding \
 // RUN:   -fsyntax-only -triple=powerpc64-linux-gnu -std=c11
+// RUN: %clang_cc1 %s -verify -fgnuc-version=4.2.1 -ffreestanding \
+// RUN:   -fsyntax-only -triple=powerpc64-linux-gnu -std=c11 \
+// RUN:   -target-cpu pwr7
+// RUN: %clang_cc1 %s -verify -fgnuc-version=4.2.1 -ffreestanding \
+// RUN:   -fsyntax-only -triple=powerpc64le-linux-gnu -std=c11 \
+// RUN:   -target-cpu pwr8 -DPPC64_PWR8
 
 // Basic parsing/Sema tests for __c11_atomic_*
 
@@ -41,7 +47,11 @@ _Static_assert(__c11_atomic_is_lock_free(2), "");
 _Static_assert(__c11_atomic_is_lock_free(3), ""); // expected-error {{not an integral constant expression}}
 _Static_assert(__c11_atomic_is_lock_free(4), "");
 _Static_assert(__c11_atomic_is_lock_free(8), "");
+#ifndef PPC64_PWR8
 _Static_assert(__c11_atomic_is_lock_free(16), ""); // expected-error {{not an integral constant expression}}
+#else
+_Static_assert(__c11_atomic_is_lock_free(16), ""); // expected-no-error
+#endif
 _Static_assert(__c11_atomic_is_lock_free(17), ""); // expected-error {{not an integral constant expression}}
 
 _Static_assert(__atomic_is_lock_free(1, 0), "");
@@ -49,15 +59,23 @@ _Static_assert(__atomic_is_lock_free(2, 0), "");
 _Static_assert(__atomic_is_lock_free(3, 0), ""); // expected-error {{not an integral constant expression}}
 _Static_assert(__atomic_is_lock_free(4, 0), "");
 _Static_assert(__atomic_is_lock_free(8, 0), "");
+#ifndef PPC64_PWR8
 _Static_assert(__atomic_is_lock_free(16, 0), ""); // expected-error {{not an integral constant expression}}
+#else
+_Static_assert(__atomic_is_lock_free(16, 0), ""); // expected-no-error
+#endif
 _Static_assert(__atomic_is_lock_free(17, 0), ""); // expected-error {{not an integral constant expression}}
 
 _Static_assert(atomic_is_lock_free((atomic_char*)0), "");
 _Static_assert(atomic_is_lock_free((atomic_short*)0), "");
 _Static_assert(atomic_is_lock_free((atomic_int*)0), "");
 _Static_assert(atomic_is_lock_free((atomic_long*)0), "");
+#ifndef PPC64_PWR8
 // noi128-error@+1 {{__int128 is not supported on this target}}
 _Static_assert(atomic_is_lock_free((_Atomic(__int128)*)0), ""); // expected-error {{not an integral constant expression}}
+#else
+_Static_assert(atomic_is_lock_free((_Atomic(__int128)*)0), ""); // expected-no-error
+#endif
 _Static_assert(atomic_is_lock_free(0 + (atomic_char*)0), "");
 
 char i8;
@@ -82,7 +100,11 @@ _Static_assert(__atomic_always_lock_free(2, 0), "");
 _Static_assert(!__atomic_always_lock_free(3, 0), "");
 _Static_assert(__atomic_always_lock_free(4, 0), "");
 _Static_assert(__atomic_always_lock_free(8, 0), "");
+#ifndef PPC64_PWR8
 _Static_assert(!__atomic_always_lock_free(16, 0), "");
+#else
+_Static_assert(__atomic_always_lock_free(16, 0), "");
+#endif
 _Static_assert(!__atomic_always_lock_free(17, 0), "");
 
 _Static_assert(__atomic_always_lock_free(1, incomplete), "");
@@ -290,7 +312,7 @@ void f(_Atomic(int) *i, const _Atomic(int) *ci,
 }
 
 _Atomic(int*) PR12527_a;
-void PR12527() { int *b = PR12527_a; }
+void PR12527(void) { int *b = PR12527_a; }
 
 void PR16931(int* x) { // expected-note {{passing argument to parameter 'x' here}}
   typedef struct { _Atomic(_Bool) flag; } flag;
@@ -361,6 +383,13 @@ void memory_checks(_Atomic(int) *Ap, int *p, int val) {
   (void)__c11_atomic_fetch_xor(Ap, val, memory_order_release);
   (void)__c11_atomic_fetch_xor(Ap, val, memory_order_acq_rel);
   (void)__c11_atomic_fetch_xor(Ap, val, memory_order_seq_cst);
+
+  (void)__c11_atomic_fetch_nand(Ap, val, memory_order_relaxed);
+  (void)__c11_atomic_fetch_nand(Ap, val, memory_order_acquire);
+  (void)__c11_atomic_fetch_nand(Ap, val, memory_order_consume);
+  (void)__c11_atomic_fetch_nand(Ap, val, memory_order_release);
+  (void)__c11_atomic_fetch_nand(Ap, val, memory_order_acq_rel);
+  (void)__c11_atomic_fetch_nand(Ap, val, memory_order_seq_cst);
 
   (void)__c11_atomic_fetch_min(Ap, val, memory_order_relaxed);
   (void)__c11_atomic_fetch_min(Ap, val, memory_order_acquire);
@@ -566,7 +595,7 @@ void memory_checks(_Atomic(int) *Ap, int *p, int val) {
   (void)__atomic_compare_exchange_n(p, p, val, 0, memory_order_seq_cst, memory_order_relaxed);
 }
 
-void nullPointerWarning() {
+void nullPointerWarning(void) {
   volatile _Atomic(int) vai;
   _Atomic(int) ai;
   volatile int vi = 42;
@@ -602,6 +631,8 @@ void nullPointerWarning() {
   (void)__c11_atomic_fetch_or((_Atomic(int)*)0, 42, memory_order_relaxed); // expected-warning {{null passed to a callee that requires a non-null argument}}
   (void)__c11_atomic_fetch_xor((volatile _Atomic(int)*)0, 42, memory_order_relaxed); // expected-warning {{null passed to a callee that requires a non-null argument}}
   (void)__c11_atomic_fetch_xor((_Atomic(int)*)0, 42, memory_order_relaxed); // expected-warning {{null passed to a callee that requires a non-null argument}}
+  (void)__c11_atomic_fetch_nand((volatile _Atomic(int)*)0, 42, memory_order_relaxed); // expected-warning {{null passed to a callee that requires a non-null argument}}
+  (void)__c11_atomic_fetch_nand((_Atomic(int)*)0, 42, memory_order_relaxed); // expected-warning {{null passed to a callee that requires a non-null argument}}
 
   __atomic_store_n((volatile int*)0, 42, memory_order_relaxed); // expected-warning {{null passed to a callee that requires a non-null argument}}
   __atomic_store_n((int*)0, 42, memory_order_relaxed); // expected-warning {{null passed to a callee that requires a non-null argument}}
@@ -680,6 +711,8 @@ void nullPointerWarning() {
   (void)__c11_atomic_fetch_or(&ai, 0, memory_order_relaxed);
   (void)__c11_atomic_fetch_xor(&vai, 0, memory_order_relaxed);
   (void)__c11_atomic_fetch_xor(&ai, 0, memory_order_relaxed);
+  (void)__c11_atomic_fetch_nand(&vai, 0, memory_order_relaxed);
+  (void)__c11_atomic_fetch_nand(&ai, 0, memory_order_relaxed);
 
   // Ditto.
   __atomic_store_n(&vi, 0, memory_order_relaxed);

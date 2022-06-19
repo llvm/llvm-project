@@ -12,8 +12,6 @@ from lldbsuite.test import lldbutil
 
 class SymbolContextAPITestCase(TestBase):
 
-    mydir = TestBase.compute_mydir(__file__)
-
     def setUp(self):
         # Call super's setUp().
         TestBase.setUp(self)
@@ -22,7 +20,6 @@ class SymbolContextAPITestCase(TestBase):
             'main.c', '// Find the line number of function "c" here.')
 
     @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr24778")
-    @skipIfReproducer # FIXME: Unexpected packet during (passive) replay
     def test(self):
         """Exercise SBSymbolContext API extensively."""
         self.build()

@@ -58,3 +58,10 @@ define i32 @f5() shadowcallstack nounwind {
   ret i32 %res
 }
 
+define i32 @f6() shadowcallstack nounwind uwtable {
+  ; CHECK: f6:
+  ; CHECK: .cfi_escape 0x16, 0x12, 0x02, 0x82, 0x78
+  %res = call i32 @bar()
+  %res1 = add i32 %res, 1
+  ret i32 %res
+}

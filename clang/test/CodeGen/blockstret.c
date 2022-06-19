@@ -1,6 +1,6 @@
-// RUN: %clang_cc1 -fblocks -triple x86_64-apple-darwin9 %s -emit-llvm -o - | FileCheck %s -check-prefix=X64
-// RUN: %clang_cc1 -fblocks -triple i686-apple-darwin9 %s -emit-llvm -o - | FileCheck %s -check-prefix=X32
-// RUN: %clang_cc1 -fblocks -triple arm64-apple-darwin %s -emit-llvm -o - | FileCheck %s -check-prefix=ARM64
+// RUN: %clang_cc1 -no-opaque-pointers -fblocks -triple x86_64-apple-darwin9 %s -emit-llvm -o - | FileCheck %s -check-prefix=X64
+// RUN: %clang_cc1 -no-opaque-pointers -fblocks -triple i686-apple-darwin9 %s -emit-llvm -o - | FileCheck %s -check-prefix=X32
+// RUN: %clang_cc1 -no-opaque-pointers -fblocks -triple arm64-apple-darwin %s -emit-llvm -o - | FileCheck %s -check-prefix=ARM64
 
 // X64:   internal constant {{.*}} { i8** @_NSConcreteGlobalBlock, i32 1879048192
 // X64:   store i32 1610612736, i32* %want

@@ -75,7 +75,7 @@ bool GetThreadRangesLocked(tid_t os_id, uptr *stack_begin, uptr *stack_end,
 }
 
 void InitializeMainThread() {
-  u32 tid = ThreadCreate(kMainTid, 0, true);
+  u32 tid = ThreadCreate(kMainTid, true);
   CHECK_EQ(tid, kMainTid);
   ThreadStart(tid, GetTid());
 }
@@ -89,6 +89,11 @@ static void OnStackUnwind(const SignalContext &sig, const void *,
 void LsanOnDeadlySignal(int signo, void *siginfo, void *context) {
   HandleDeadlySignal(siginfo, context, GetCurrentThread(), &OnStackUnwind,
                      nullptr);
+}
+
+void InstallAtExitCheckLeaks() {
+  if (common_flags()->detect_leaks && common_flags()->leak_check_at_exit)
+    Atexit(DoLeakCheck);
 }
 
 }  // namespace __lsan

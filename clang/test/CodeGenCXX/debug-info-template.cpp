@@ -1,11 +1,10 @@
-// RUN: %clang -S -emit-llvm -target x86_64-unknown_unknown -g %s -o - -std=c++20 | FileCheck %s
+// RUN: %clang -Xclang -no-opaque-pointers -S -emit-llvm -target x86_64-unknown_unknown -g %s -o - -std=c++20 | FileCheck %s
 
 // CHECK: @tci = dso_local global %"struct.TC<unsigned int, 2, &glb, &foo::e, &foo::f, &foo::g, 1, 2, 3>::nested" zeroinitializer, align 1, !dbg [[TCI:![0-9]+]]
 // CHECK: @tcn = dso_local global %struct.TC zeroinitializer, align 1, !dbg [[TCN:![0-9]+]]
 // CHECK: @nn = dso_local global %struct.NN zeroinitializer, align 1, !dbg [[NN:![0-9]+]]
 
 // CHECK: !DICompileUnit(
-// CHECK: [[EMPTY:![0-9]*]] = !{}
 
 struct foo {
   char pad[8]; // make the member pointer to 'e' a bit more interesting (nonzero)
@@ -31,9 +30,10 @@ void func();
 // CHECK: ![[TCNESTED]] ={{.*}}!DICompositeType(tag: DW_TAG_structure_type, name: "nested",
 // CHECK-SAME:             scope: ![[TC:[0-9]+]],
 
-// CHECK: ![[TC]] = distinct !DICompositeType(tag: DW_TAG_structure_type, name: "TC<unsigned int, 2, &glb, &foo::e, &foo::f, &foo::g, 1, 2, 3>"
+// CHECK: ![[TC]] = distinct !DICompositeType(tag: DW_TAG_structure_type, name: "TC<unsigned int, 2U, &glb, &foo::e, &foo::f, &foo::g, 1, 2, 3>"
 // CHECK-SAME:                              templateParams: [[TCARGS:![0-9]*]]
 TC
+// CHECK: [[EMPTY:![0-9]*]] = !{}
 // CHECK: [[TCARGS]] = !{[[TCARG1:![0-9]*]], [[TCARG2:![0-9]*]], [[TCARG3:![0-9]*]], [[TCARG4:![0-9]*]], [[TCARG5:![0-9]*]], [[TCARG6:![0-9]*]], [[TCARG7:![0-9]*]]}
 // CHECK: [[TCARG1]] = !DITemplateTypeParameter(name: "T", type: [[UINT:![0-9]*]])
 // CHECK: [[UINT:![0-9]*]] = !DIBasicType(name: "unsigned int"
@@ -196,4 +196,77 @@ void f1() {
 }
 template void f1<t1<int>>();
 // CHECK: !DISubprogram(name: "f1<IndirectDefaultArgument::t1<int, int> >",
+} // namespace IndirectDefaultArgument
+
+namespace EmptyTrailingPack {
+template<typename T>
+struct t1 { };
+template<typename T, typename ...Ts>
+void f1() {
 }
+template void f1<t1<int>>();
+// CHECK: !DISubprogram(name: "f1<EmptyTrailingPack::t1<int> >",
+} // namespace EmptyTrailingPack
+
+namespace EmptyInnerPack {
+template<typename ...Ts, typename T = int>
+void f1() {
+}
+template void f1<>();
+// CHECK: !DISubprogram(name: "f1<int>",
+} // namespace EmptyInnerPack
+
+namespace RawFuncQual {
+struct t1; // use this to ensure the type parameter doesn't shift due to other test cases in this file
+template<typename T1, typename T2, typename T3, typename T4>
+void f1() { }
+template void f1<t1 () volatile, t1 () const volatile, t1 () &, t1 () &&>();
+// CHECK: !DISubprogram(name: "f1<RawFuncQual::t1 () volatile, RawFuncQual::t1 () const volatile, RawFuncQual::t1 () &, RawFuncQual::t1 () &&>", 
+// CHECK-SAME: templateParams: ![[RAW_FUNC_QUAL_ARGS:[0-9]*]],
+
+// CHECK: ![[RAW_FUNC_QUAL_ARGS]] = !{![[RAW_FUNC_QUAL_T1:[0-9]*]], ![[RAW_FUNC_QUAL_T2:[0-9]*]], ![[RAW_FUNC_QUAL_T3:[0-9]*]], ![[RAW_FUNC_QUAL_T4:[0-9]*]]}
+// CHECK: ![[RAW_FUNC_QUAL_T1]] = !DITemplateTypeParameter(name: "T1", type: ![[RAW_FUNC_QUAL_VOL:[0-9]*]]) 
+// CHECK: ![[RAW_FUNC_QUAL_VOL]] = !DIDerivedType(tag: DW_TAG_volatile_type, baseType: ![[RAW_FUNC_QUAL_TYPE:[0-9]*]])
+// CHECK: ![[RAW_FUNC_QUAL_TYPE]] = !DISubroutineType(types: ![[RAW_FUNC_QUAL_LIST:[0-9]*]]
+// CHECK: ![[RAW_FUNC_QUAL_LIST]] = !{![[RAW_FUNC_QUAL_STRUCT:[0-9]*]]}
+// CHECK: ![[RAW_FUNC_QUAL_STRUCT]] = !DICompositeType(tag: DW_TAG_structure_type, name: "t1"
+// CHECK: ![[RAW_FUNC_QUAL_T2]] = !DITemplateTypeParameter(name: "T2", type: ![[RAW_FUNC_QUAL_CNST:[0-9]*]]) 
+// CHECK: ![[RAW_FUNC_QUAL_CNST]] = !DIDerivedType(tag: DW_TAG_const_type, baseType: ![[RAW_FUNC_QUAL_TYPE:[0-9]*]])
+// CHECK: ![[RAW_FUNC_QUAL_T3]] = !DITemplateTypeParameter(name: "T3", type: ![[RAW_FUNC_QUAL_REF:[0-9]*]]) 
+// CHECK: ![[RAW_FUNC_QUAL_REF]] = !DISubroutineType(flags: DIFlagLValueReference, types: ![[RAW_FUNC_QUAL_LIST]])
+// CHECK: ![[RAW_FUNC_QUAL_T4]] = !DITemplateTypeParameter(name: "T4", type: ![[RAW_FUNC_QUAL_REF_REF:[0-9]*]]) 
+// CHECK: ![[RAW_FUNC_QUAL_REF_REF]] = !DISubroutineType(flags: DIFlagRValueReference, types: ![[RAW_FUNC_QUAL_LIST]])
+
+} // namespace RawFuncQual
+
+namespace Nullptr_t {
+template <typename T>
+void f1() {}
+template void f1<decltype(nullptr)>();
+// CHECK: !DISubprogram(name: "f1<std::nullptr_t>",
+} // namespace Nullptr_t
+
+namespace TemplateTemplateParamInlineNamespace {
+inline namespace inl {
+  template<typename>
+  struct t1 { };
+} // namespace inl
+template<template<typename> class> void f1() { }
+template void f1<t1>();
+// CHECK: !DISubprogram(name: "f1<TemplateTemplateParamInlineNamespace::inl::t1>",
+// CHECK-SAME: templateParams: ![[TEMP_TEMP_INL_ARGS:[0-9]*]],
+// CHECK: ![[TEMP_TEMP_INL_ARGS]] = !{![[TEMP_TEMP_INL_ARGS_T:[0-9]*]]}
+// CHECK: ![[TEMP_TEMP_INL_ARGS_T]] = !DITemplateValueParameter(tag: DW_TAG_GNU_template_template_param, value: !"TemplateTemplateParamInlineNamespace::inl::t1")
+} // namespace TemplateTemplateParamInlineNamespace
+
+namespace NoPreferredNames {
+template <typename T> struct t1;
+using t1i = t1<int>;
+template <typename T>
+struct __attribute__((__preferred_name__(t1i))) t1 {};
+template <typename T>
+void f1() {}
+template void f1<t1<int>>();
+// CHECK: !DISubprogram(name: "f1<NoPreferredNames::t1<int> >",
+
+} // namespace NoPreferredNames

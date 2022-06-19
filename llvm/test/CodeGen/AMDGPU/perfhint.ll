@@ -76,8 +76,8 @@ bb:
 }
 
 ; GCN-LABEL: {{^}}test_indirect_through_phi:
-; MemoryBound: 0
-; WaveLimiterHint : 0
+; GCN: MemoryBound: 0
+; GCN: WaveLimiterHint : 0
 define amdgpu_kernel void @test_indirect_through_phi(float addrspace(1)* %arg) {
 bb:
   %load = load float, float addrspace(1)* %arg, align 8

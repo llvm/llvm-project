@@ -57,6 +57,24 @@ def testAttrEq():
     print("a1 == None:", a1 == None)
 
 
+# CHECK-LABEL: TEST: testAttrHash
+@run
+def testAttrHash():
+  with Context():
+    a1 = Attribute.parse('"attr1"')
+    a2 = Attribute.parse('"attr2"')
+    a3 = Attribute.parse('"attr1"')
+    # CHECK: hash(a1) == hash(a3): True
+    print("hash(a1) == hash(a3):", a1.__hash__() == a3.__hash__())
+
+    s = set()
+    s.add(a1)
+    s.add(a2)
+    s.add(a3)
+    # CHECK: len(s): 2
+    print("len(s): ", len(s))
+
+
 # CHECK-LABEL: TEST: testAttrCast
 @run
 def testAttrCast():
@@ -65,6 +83,18 @@ def testAttrCast():
     a2 = Attribute(a1)
     # CHECK: a1 == a2: True
     print("a1 == a2:", a1 == a2)
+
+
+# CHECK-LABEL: TEST: testAttrIsInstance
+@run
+def testAttrIsInstance():
+  with Context():
+    a1 = Attribute.parse("42")
+    a2 = Attribute.parse("[42]")
+    assert IntegerAttr.isinstance(a1)
+    assert not IntegerAttr.isinstance(a2)
+    assert not ArrayAttr.isinstance(a1)
+    assert ArrayAttr.isinstance(a2)
 
 
 # CHECK-LABEL: TEST: testAttrEqDoesNotRaise
@@ -159,11 +189,20 @@ def testFloatAttr():
 @run
 def testIntegerAttr():
   with Context() as ctx:
-    iattr = IntegerAttr(Attribute.parse("42"))
-    # CHECK: iattr value: 42
-    print("iattr value:", iattr.value)
-    # CHECK: iattr type: i64
-    print("iattr type:", iattr.type)
+    i_attr = IntegerAttr(Attribute.parse("42"))
+    # CHECK: i_attr value: 42
+    print("i_attr value:", i_attr.value)
+    # CHECK: i_attr type: i64
+    print("i_attr type:", i_attr.type)
+    si_attr = IntegerAttr(Attribute.parse("-1 : si8"))
+    # CHECK: si_attr value: -1
+    print("si_attr value:", si_attr.value)
+    ui_attr = IntegerAttr(Attribute.parse("255 : ui8"))
+    # CHECK: ui_attr value: 255
+    print("ui_attr value:", ui_attr.value)
+    idx_attr = IntegerAttr(Attribute.parse("-1 : index"))
+    # CHECK: idx_attr value: -1
+    print("idx_attr value:", idx_attr.value)
 
     # Test factory methods.
     # CHECK: default_get: 42 : i32
@@ -195,6 +234,24 @@ def testFlatSymbolRefAttr():
     # Test factory methods.
     # CHECK: default_get: @foobar
     print("default_get:", FlatSymbolRefAttr.get("foobar"))
+
+
+# CHECK-LABEL: TEST: testOpaqueAttr
+@run
+def testOpaqueAttr():
+  with Context() as ctx:
+    ctx.allow_unregistered_dialects = True
+    oattr = OpaqueAttr(Attribute.parse("#pytest_dummy.dummyattr<>"))
+    # CHECK: oattr value: pytest_dummy
+    print("oattr value:", oattr.dialect_namespace)
+    # CHECK: oattr value: dummyattr<>
+    print("oattr value:", oattr.data)
+
+    # Test factory methods.
+    # CHECK: default_get: #foobar<"123">
+    print(
+        "default_get:",
+        OpaqueAttr.get("foobar", bytes("123", "utf-8"), NoneType.get()))
 
 
 # CHECK-LABEL: TEST: testStringAttr
@@ -262,6 +319,50 @@ def testDenseIntAttr():
     print(ShapedType(a.type).element_type)
 
 
+# CHECK-LABEL: TEST: testDenseIntAttrGetItem
+@run
+def testDenseIntAttrGetItem():
+  def print_item(attr_asm):
+    attr = DenseIntElementsAttr(Attribute.parse(attr_asm))
+    dtype = ShapedType(attr.type).element_type
+    try:
+      item = attr[0]
+      print(f"{dtype}:", item)
+    except TypeError as e:
+      print(f"{dtype}:", e)
+
+  with Context():
+    # CHECK: i1: 1
+    print_item("dense<true> : tensor<i1>")
+    # CHECK: i8: 123
+    print_item("dense<123> : tensor<i8>")
+    # CHECK: i16: 123
+    print_item("dense<123> : tensor<i16>")
+    # CHECK: i32: 123
+    print_item("dense<123> : tensor<i32>")
+    # CHECK: i64: 123
+    print_item("dense<123> : tensor<i64>")
+    # CHECK: ui8: 123
+    print_item("dense<123> : tensor<ui8>")
+    # CHECK: ui16: 123
+    print_item("dense<123> : tensor<ui16>")
+    # CHECK: ui32: 123
+    print_item("dense<123> : tensor<ui32>")
+    # CHECK: ui64: 123
+    print_item("dense<123> : tensor<ui64>")
+    # CHECK: si8: -123
+    print_item("dense<-123> : tensor<si8>")
+    # CHECK: si16: -123
+    print_item("dense<-123> : tensor<si16>")
+    # CHECK: si32: -123
+    print_item("dense<-123> : tensor<si32>")
+    # CHECK: si64: -123
+    print_item("dense<-123> : tensor<si64>")
+
+    # CHECK: i7: Unsupported integer type
+    print_item("dense<123> : tensor<i7>")
+
+
 # CHECK-LABEL: TEST: testDenseFPAttr
 @run
 def testDenseFPAttr():
@@ -306,6 +407,12 @@ def testDictAttr():
     # CHECK: "string"
     print(a['stringattr'])
 
+    # CHECK: True
+    print('stringattr' in a)
+
+    # CHECK: False
+    print('not_in_dict' in a)
+
     # Check that exceptions are raised as expected.
     try:
       _ = a['does_not_exist']
@@ -320,6 +427,9 @@ def testDictAttr():
       pass
     else:
       assert False, "expected IndexError on accessing an out-of-bounds attribute"
+
+    # CHECK "empty: {}"
+    print("empty: ", DictAttr.get())
 
 
 # CHECK-LABEL: TEST: testTypeAttr
@@ -383,3 +493,8 @@ def testArrayAttr():
       # CHECK: Error: Invalid attribute when attempting to create an ArrayAttribute
       print("Error: ", e)
 
+  with Context():
+    array = ArrayAttr.get([StringAttr.get("a"), StringAttr.get("b")])
+    array = array + [StringAttr.get("c")]
+    # CHECK: concat: ["a", "b", "c"]
+    print("concat: ", array)

@@ -1488,6 +1488,32 @@ void run(A_reg<float> reg, A_ptr<float> ptr, A_ref<float> ref) {
 }
 }
 
+namespace SubstTemplateTypeParmType {
+template <typename T>
+class Array {};
+
+template <class T>
+class S {};
+
+template <class T>
+Array<T> Make();
+
+void Call() {
+  Array<S<int>> v = Make<const S<int>>();
+}
+}
+
+// CHECK-ELIDE-NOTREE: no viable conversion from 'Array<const S<...>>' to 'Array<S<...>>'
+// CHECK-NOELIDE-NOTREE: no viable conversion from 'Array<const S<int>>' to 'Array<S<int>>'
+// CHECK-ELIDE-TREE: no viable conversion
+// CHECK-ELIDE-TREE:   Array<
+// CHECK-ELIDE-TREE:     [const != (no qualifiers)] S<...>>
+// CHECK-NOELIDE-TREE: no viable conversion
+// CHECK-NOELIDE-TREE:   Array<
+// CHECK-NOELIDE-TREE:     [const != (no qualifiers)] S<
+// CHECK-NOELIDE-TREE:       int>>
+}
+
 // CHECK-ELIDE-NOTREE: {{[0-9]*}} errors generated.
 // CHECK-NOELIDE-NOTREE: {{[0-9]*}} errors generated.
 // CHECK-ELIDE-TREE: {{[0-9]*}} errors generated.

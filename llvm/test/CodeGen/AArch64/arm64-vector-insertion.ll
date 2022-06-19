@@ -205,7 +205,7 @@ define <2 x float> @test_insert_v2f32_undef_zero_vector(float %a) {
 ; CHECK-NEXT:    movi d1, #0000000000000000
 ; CHECK-NEXT:    // kill: def $s0 killed $s0 def $q0
 ; CHECK-NEXT:    mov.s v1[1], v0[0]
-; CHECK-NEXT:    mov.16b v0, v1
+; CHECK-NEXT:    fmov d0, d1
 ; CHECK-NEXT:    ret
   %v.0 = insertelement <2 x float> <float 0.000000e+00, float undef>, float %a, i32 1
   ret <2 x float> %v.0

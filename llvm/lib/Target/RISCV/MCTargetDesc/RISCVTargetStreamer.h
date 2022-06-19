@@ -6,9 +6,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIB_TARGET_RISCV_RISCVTARGETSTREAMER_H
-#define LLVM_LIB_TARGET_RISCV_RISCVTARGETSTREAMER_H
+#ifndef LLVM_LIB_TARGET_RISCV_MCTARGETDESC_RISCVTARGETSTREAMER_H
+#define LLVM_LIB_TARGET_RISCV_MCTARGETDESC_RISCVTARGETSTREAMER_H
 
+#include "RISCV.h"
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCSubtargetInfo.h"
 
@@ -17,9 +18,12 @@ namespace llvm {
 class formatted_raw_ostream;
 
 class RISCVTargetStreamer : public MCTargetStreamer {
+  RISCVABI::ABI TargetABI = RISCVABI::ABI_Unknown;
+
 public:
   RISCVTargetStreamer(MCStreamer &S);
   void finish() override;
+  virtual void reset();
 
   virtual void emitDirectiveOptionPush();
   virtual void emitDirectiveOptionPop();
@@ -36,6 +40,8 @@ public:
                                     StringRef StringValue);
 
   void emitTargetAttributes(const MCSubtargetInfo &STI);
+  void setTargetABI(RISCVABI::ABI ABI);
+  RISCVABI::ABI getTargetABI() const { return TargetABI; }
 };
 
 // This part is for ascii assembly output

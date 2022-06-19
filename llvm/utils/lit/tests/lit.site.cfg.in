@@ -5,16 +5,7 @@ import sys
 config.lit_tools_dir = "@LLVM_LIT_TOOLS_DIR@"
 config.llvm_src_root = "@LLVM_SOURCE_DIR@"
 config.llvm_obj_root = "@LLVM_BINARY_DIR@"
-config.llvm_tools_dir = "@LLVM_TOOLS_DIR@"
-
-# Support substitution of the tools_dir with user parameters.
-# This is used when we can't determine the tool dir at configuration time.
-try:
-    config.llvm_tools_dir = config.llvm_tools_dir % lit_config.params
-except KeyError:
-    e = sys.exc_info()[1]
-    key, = e.args
-    lit_config.fatal("unable to find %r parameter, use '--param=%s=VALUE'" % (key,key))
+config.llvm_tools_dir = lit_config.substitute("@LLVM_TOOLS_DIR@")
 
 import lit.llvm
 lit.llvm.initialize(lit_config, config)

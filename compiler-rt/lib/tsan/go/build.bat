@@ -1,11 +1,11 @@
 type ^
   tsan_go.cpp ^
   ..\rtl\tsan_interface_atomic.cpp ^
-  ..\rtl\tsan_clock.cpp ^
   ..\rtl\tsan_flags.cpp ^
   ..\rtl\tsan_md5.cpp ^
   ..\rtl\tsan_report.cpp ^
   ..\rtl\tsan_rtl.cpp ^
+  ..\rtl\tsan_rtl_access.cpp ^
   ..\rtl\tsan_rtl_mutex.cpp ^
   ..\rtl\tsan_rtl_report.cpp ^
   ..\rtl\tsan_rtl_thread.cpp ^
@@ -13,6 +13,7 @@ type ^
   ..\rtl\tsan_suppressions.cpp ^
   ..\rtl\tsan_sync.cpp ^
   ..\rtl\tsan_stack_trace.cpp ^
+  ..\rtl\tsan_vector_clock.cpp ^
   ..\..\sanitizer_common\sanitizer_allocator.cpp ^
   ..\..\sanitizer_common\sanitizer_common.cpp ^
   ..\..\sanitizer_common\sanitizer_flags.cpp ^
@@ -24,8 +25,8 @@ type ^
   ..\rtl\tsan_platform_windows.cpp ^
   ..\..\sanitizer_common\sanitizer_win.cpp ^
   ..\..\sanitizer_common\sanitizer_deadlock_detector1.cpp ^
+  ..\..\sanitizer_common\sanitizer_stack_store.cpp ^
   ..\..\sanitizer_common\sanitizer_stackdepot.cpp ^
-  ..\..\sanitizer_common\sanitizer_persistent_allocator.cpp ^
   ..\..\sanitizer_common\sanitizer_flag_parser.cpp ^
   ..\..\sanitizer_common\sanitizer_symbolizer.cpp ^
   ..\..\sanitizer_common\sanitizer_termination.cpp ^
@@ -58,4 +59,5 @@ gcc ^
   -DSANITIZER_DEBUG=0 ^
   -O3 ^
   -fomit-frame-pointer ^
+  -msse4.2 ^
   -std=c++14

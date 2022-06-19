@@ -1,5 +1,7 @@
 // RUN: %clang_cc1 -ffreestanding %s -triple=x86_64-apple-darwin -target-feature +sse4.2 -emit-llvm -o - -Wall -Werror | FileCheck %s --check-prefixes=CHECK,CHECK64
 // RUN: %clang_cc1 -ffreestanding %s -triple=i686-apple-darwin -target-feature +sse4.2 -emit-llvm -o - -Wall -Werror | FileCheck %s
+// RUN: %clang_cc1 -ffreestanding %s -triple=x86_64-apple-darwin -target-feature +crc32 -emit-llvm -o - -Wall -Werror | FileCheck %s --check-prefixes=CHECK,CHECK64
+// RUN: %clang_cc1 -ffreestanding %s -triple=i686-apple-darwin -target-feature +crc32 -emit-llvm -o - -Wall -Werror | FileCheck %s
 
 #include <x86intrin.h>
 
@@ -26,5 +28,31 @@ unsigned long long test__crc32q(unsigned long long CRC, unsigned long long V) {
 // CHECK64-LABEL: test__crc32q
 // CHECK64: call i64 @llvm.x86.sse42.crc32.64.64(i64 %{{.*}}, i64 %{{.*}})
   return __crc32q(CRC, V);
+}
+#endif
+
+unsigned int test_mm_crc32_u8(unsigned int CRC, unsigned char V) {
+// CHECK-LABEL: test_mm_crc32_u8
+// CHECK: call i32 @llvm.x86.sse42.crc32.32.8(i32 %{{.*}}, i8 %{{.*}})
+  return _mm_crc32_u8(CRC, V);
+}
+
+unsigned int test_mm_crc32_u16(unsigned int CRC, unsigned short V) {
+// CHECK-LABEL: test_mm_crc32_u16
+// CHECK: call i32 @llvm.x86.sse42.crc32.32.16(i32 %{{.*}}, i16 %{{.*}})
+  return _mm_crc32_u16(CRC, V);
+}
+
+unsigned int test_mm_crc32_u32(unsigned int CRC, unsigned int V) {
+// CHECK-LABEL: test_mm_crc32_u32
+// CHECK: call i32 @llvm.x86.sse42.crc32.32.32(i32 %{{.*}}, i32 %{{.*}})
+  return _mm_crc32_u32(CRC, V);
+}
+
+#ifdef __x86_64__
+unsigned long long test_mm_crc32_u64(unsigned long long CRC, unsigned long long V) {
+// CHECK64-LABEL: test_mm_crc32_u64
+// CHECK64: call i64 @llvm.x86.sse42.crc32.64.64(i64 %{{.*}}, i64 %{{.*}})
+  return _mm_crc32_u64(CRC, V);
 }
 #endif

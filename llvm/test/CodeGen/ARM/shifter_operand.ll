@@ -256,3 +256,108 @@ define { i32, i32 } @test_multi_use_add(i32 %base, i32 %offset) {
 
   ret { i32, i32 } %ret
 }
+
+define i32 @test_new(i32 %x, i32 %y) {
+; CHECK-ARM-LABEL: test_new:
+; CHECK-ARM:       @ %bb.0: @ %entry
+; CHECK-ARM-NEXT:    movw r2, #48047
+; CHECK-ARM-NEXT:    mul r1, r1, r2
+; CHECK-ARM-NEXT:    add r0, r0, r1, lsl #1
+; CHECK-ARM-NEXT:    bx lr
+;
+; CHECK-THUMB-LABEL: test_new:
+; CHECK-THUMB:       @ %bb.0: @ %entry
+; CHECK-THUMB-NEXT:    movw r2, #48047
+; CHECK-THUMB-NEXT:    muls r1, r2, r1
+; CHECK-THUMB-NEXT:    add.w r0, r0, r1, lsl #1
+; CHECK-THUMB-NEXT:    bx lr
+entry:
+  %mul = mul i32 %y, 96094
+  %conv = add i32 %mul, %x
+  ret i32 %conv
+}
+
+; This test was hitting issues with deleted nodes because ComplexPatternFuncMutatesDAG
+; was not defined.
+@arr_9 = external dso_local local_unnamed_addr global [15 x [25 x [18 x i8]]], align 1
+define void @test_mutateddag(i32 %b, i32 %c, i32 %d, i1 %cc) {
+; CHECK-THUMB-LABEL: test_mutateddag:
+; CHECK-THUMB:       @ %bb.0: @ %entry
+; CHECK-THUMB-NEXT:    .save {r4, lr}
+; CHECK-THUMB-NEXT:    push {r4, lr}
+; CHECK-THUMB-NEXT:    movw r12, #50608
+; CHECK-THUMB-NEXT:    movw r4, #51512
+; CHECK-THUMB-NEXT:    movt r12, #17917
+; CHECK-THUMB-NEXT:    movt r4, #52
+; CHECK-THUMB-NEXT:    mla r12, r1, r4, r12
+; CHECK-THUMB-NEXT:    mov.w r4, #450
+; CHECK-THUMB-NEXT:    lsls r3, r3, #31
+; CHECK-THUMB-NEXT:    mul lr, r0, r4
+; CHECK-THUMB-NEXT:    movw r0, #48047
+; CHECK-THUMB-NEXT:    muls r0, r1, r0
+; CHECK-THUMB-NEXT:    movw r1, :lower16:arr_9
+; CHECK-THUMB-NEXT:    movt r1, :upper16:arr_9
+; CHECK-THUMB-NEXT:    add.w r0, r2, r0, lsl #1
+; CHECK-THUMB-NEXT:    movw r2, #24420
+; CHECK-THUMB-NEXT:    movt r2, #19356
+; CHECK-THUMB-NEXT:    add.w r0, r0, r0, lsl #3
+; CHECK-THUMB-NEXT:    add.w r0, r1, r0, lsl #1
+; CHECK-THUMB-NEXT:    movw r1, #60920
+; CHECK-THUMB-NEXT:    movt r1, #64028
+; CHECK-THUMB-NEXT:    add r2, r0
+; CHECK-THUMB-NEXT:    add r1, r0
+; CHECK-THUMB-NEXT:    movs r0, #0
+; CHECK-THUMB-NEXT:    b .LBB19_2
+; CHECK-THUMB-NEXT:  .LBB19_1: @ %for.cond1.for.cond.cleanup_crit_edge
+; CHECK-THUMB-NEXT:    @ in Loop: Header=BB19_2 Depth=1
+; CHECK-THUMB-NEXT:    add r1, lr
+; CHECK-THUMB-NEXT:    add r2, lr
+; CHECK-THUMB-NEXT:  .LBB19_2: @ %for.cond
+; CHECK-THUMB-NEXT:    @ =>This Loop Header: Depth=1
+; CHECK-THUMB-NEXT:    @ Child Loop BB19_3 Depth 2
+; CHECK-THUMB-NEXT:    movs r4, #0
+; CHECK-THUMB-NEXT:  .LBB19_3: @ %for.cond2.preheader
+; CHECK-THUMB-NEXT:    @ Parent Loop BB19_2 Depth=1
+; CHECK-THUMB-NEXT:    @ => This Inner Loop Header: Depth=2
+; CHECK-THUMB-NEXT:    cmp r3, #0
+; CHECK-THUMB-NEXT:    str r0, [r1, r4]
+; CHECK-THUMB-NEXT:    bne .LBB19_1
+; CHECK-THUMB-NEXT:  @ %bb.4: @ %for.cond2.preheader.2
+; CHECK-THUMB-NEXT:    @ in Loop: Header=BB19_3 Depth=2
+; CHECK-THUMB-NEXT:    str r0, [r2, r4]
+; CHECK-THUMB-NEXT:    add r4, r12
+; CHECK-THUMB-NEXT:    b .LBB19_3
+entry:
+  %0 = add i32 %d, -4
+  %1 = mul i32 %c, 864846
+  %2 = add i32 %1, 1367306604
+  br label %for.cond
+
+for.cond:                                         ; preds = %for.cond1.for.cond.cleanup_crit_edge, %for.cond.preheader
+  %indvar = phi i32 [ 0, %entry ], [ %indvar.next, %for.cond1.for.cond.cleanup_crit_edge ]
+  %3 = mul i32 %indvar, %b
+  %4 = add i32 %3, -2
+  br label %for.cond2.preheader
+
+for.cond2.preheader:                              ; preds = %for.cond2.preheader.2, %for.cond
+  %indvar24 = phi i32 [ 0, %for.cond ], [ %indvar.next25.3, %for.cond2.preheader.2 ]
+  %indvar.next25 = or i32 %indvar24, 1
+  %l5 = mul i32 %2, %indvar.next25
+  %scevgep.1 = getelementptr [15 x [25 x [18 x i8]]], [15 x [25 x [18 x i8]]]* @arr_9, i32 -217196, i32 %4, i32 %0, i32 %l5
+  %l7 = bitcast i8* %scevgep.1 to i32*
+  store i32 0, i32* %l7, align 1
+  br i1 %cc, label %for.cond1.for.cond.cleanup_crit_edge, label %for.cond2.preheader.2
+
+for.cond2.preheader.2:                            ; preds = %for.cond2.preheader
+  %indvar.next25.1 = or i32 %indvar24, 2
+  %l8 = mul i32 %2, %indvar.next25.1
+  %scevgep.2 = getelementptr [15 x [25 x [18 x i8]]], [15 x [25 x [18 x i8]]]* @arr_9, i32 -217196, i32 %4, i32 %0, i32 %l8
+  %l10 = bitcast i8* %scevgep.2 to i32*
+  store i32 0, i32* %l10, align 1
+  %indvar.next25.3 = add i32 %indvar24, 4
+  br label %for.cond2.preheader
+
+for.cond1.for.cond.cleanup_crit_edge:             ; preds = %for.cond2.preheader
+  %indvar.next = add i32 %indvar, 1
+  br label %for.cond
+}

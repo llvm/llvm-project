@@ -8,6 +8,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "../lib/Transforms/Vectorize/VPlan.h"
+#include "llvm/ADT/DepthFirstIterator.h"
+#include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/Analysis/VectorUtils.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
@@ -707,16 +709,16 @@ edge [fontname=Courier, fontsize=30]
 compound=true
   N0 [label =
     "bb1:\l" +
-    "  EMIT vp\<%0\> = add\l" +
-    "  EMIT vp\<%1\> = sub vp\<%0\>\l" +
-    "  EMIT br vp\<%0\> vp\<%1\>\l" +
+    "  EMIT vp\<%1\> = add\l" +
+    "  EMIT vp\<%2\> = sub vp\<%1\>\l" +
+    "  EMIT br vp\<%1\> vp\<%2\>\l" +
     "Successor(s): bb2\l"
   ]
   N0 -> N1 [ label=""]
   N1 [label =
     "bb2:\l" +
-    "  EMIT vp\<%3\> = mul vp\<%1\> vp\<%0\>\l" +
-    "  EMIT ret vp\<%3\>\l" +
+    "  EMIT vp\<%4\> = mul vp\<%2\> vp\<%1\>\l" +
+    "  EMIT ret vp\<%4\>\l" +
     "No successors\l"
   ]
 }
@@ -724,9 +726,9 @@ compound=true
   EXPECT_EQ(ExpectedStr, FullDump);
 
   const char *ExpectedBlock1Str = R"(bb1:
-  EMIT vp<%0> = add
-  EMIT vp<%1> = sub vp<%0>
-  EMIT br vp<%0> vp<%1>
+  EMIT vp<%1> = add
+  EMIT vp<%2> = sub vp<%1>
+  EMIT br vp<%1> vp<%2>
 Successor(s): bb2
 )";
   std::string Block1Dump;
@@ -736,8 +738,8 @@ Successor(s): bb2
 
   // Ensure that numbering is good when dumping the second block in isolation.
   const char *ExpectedBlock2Str = R"(bb2:
-  EMIT vp<%3> = mul vp<%1> vp<%0>
-  EMIT ret vp<%3>
+  EMIT vp<%4> = mul vp<%2> vp<%1>
+  EMIT ret vp<%4>
 No successors
 )";
   std::string Block2Dump;
@@ -751,7 +753,7 @@ No successors
     VPSlotTracker SlotTracker(&Plan);
     I3->print(OS, "", SlotTracker);
     OS.flush();
-    EXPECT_EQ("EMIT br vp<%0> vp<%1>", I3Dump);
+    EXPECT_EQ("EMIT br vp<%1> vp<%2>", I3Dump);
   }
 
   {
@@ -759,7 +761,7 @@ No successors
     raw_string_ostream OS(I4Dump);
     OS << *I4;
     OS.flush();
-    EXPECT_EQ("EMIT vp<%3> = mul vp<%1> vp<%0>", I4Dump);
+    EXPECT_EQ("EMIT vp<%4> = mul vp<%2> vp<%1>", I4Dump);
   }
 }
 #endif
@@ -936,7 +938,7 @@ TEST(VPRecipeTest, CastVPWidenMemoryInstructionRecipeToVPUserAndVPDef) {
       new LoadInst(Int32, UndefValue::get(Int32Ptr), "", false, Align(1));
   VPValue Addr;
   VPValue Mask;
-  VPWidenMemoryInstructionRecipe Recipe(*Load, &Addr, &Mask);
+  VPWidenMemoryInstructionRecipe Recipe(*Load, &Addr, &Mask, true, false);
   EXPECT_TRUE(isa<VPUser>(&Recipe));
   VPRecipeBase *BaseR = &Recipe;
   EXPECT_TRUE(isa<VPUser>(BaseR));
@@ -1032,7 +1034,7 @@ TEST(VPRecipeTest, MayHaveSideEffectsAndMayReadWriteMemory) {
         new LoadInst(Int32, UndefValue::get(Int32Ptr), "", false, Align(1));
     VPValue Addr;
     VPValue Mask;
-    VPWidenMemoryInstructionRecipe Recipe(*Load, &Addr, &Mask);
+    VPWidenMemoryInstructionRecipe Recipe(*Load, &Addr, &Mask, true, false);
     EXPECT_TRUE(Recipe.mayHaveSideEffects());
     EXPECT_TRUE(Recipe.mayReadFromMemory());
     EXPECT_FALSE(Recipe.mayWriteToMemory());
@@ -1046,7 +1048,8 @@ TEST(VPRecipeTest, MayHaveSideEffectsAndMayReadWriteMemory) {
     VPValue Addr;
     VPValue Mask;
     VPValue StoredV;
-    VPWidenMemoryInstructionRecipe Recipe(*Store, &Addr, &StoredV, &Mask);
+    VPWidenMemoryInstructionRecipe Recipe(*Store, &Addr, &StoredV, &Mask, false,
+                                          false);
     EXPECT_TRUE(Recipe.mayHaveSideEffects());
     EXPECT_FALSE(Recipe.mayReadFromMemory());
     EXPECT_TRUE(Recipe.mayWriteToMemory());
@@ -1096,10 +1099,8 @@ TEST(VPRecipeTest, dump) {
       BinaryOperator::CreateAdd(UndefValue::get(Int32), UndefValue::get(Int32));
   AI->setName("a");
   SmallVector<VPValue *, 2> Args;
-  VPValue *ExtVPV1 = new VPValue();
-  VPValue *ExtVPV2 = new VPValue();
-  Plan.addExternalDef(ExtVPV1);
-  Plan.addExternalDef(ExtVPV2);
+  VPValue *ExtVPV1 = Plan.getOrAddExternalDef(ConstantInt::get(Int32, 1));
+  VPValue *ExtVPV2 = Plan.getOrAddExternalDef(ConstantInt::get(Int32, 2));
   Args.push_back(ExtVPV1);
   Args.push_back(ExtVPV2);
   VPWidenRecipe *WidenR =
@@ -1116,7 +1117,7 @@ TEST(VPRecipeTest, dump) {
           VPV->dump();
           exit(0);
         },
-        testing::ExitedWithCode(0), "WIDEN ir<%a> = add vp<%0>, vp<%1>");
+        testing::ExitedWithCode(0), "WIDEN ir<%a> = add ir<1>, ir<2>");
 
     // Test VPRecipeBase::dump().
     VPRecipeBase *R = WidenR;
@@ -1125,7 +1126,7 @@ TEST(VPRecipeTest, dump) {
           R->dump();
           exit(0);
         },
-        testing::ExitedWithCode(0), "WIDEN ir<%a> = add vp<%0>, vp<%1>");
+        testing::ExitedWithCode(0), "WIDEN ir<%a> = add ir<1>, ir<2>");
 
     // Test VPDef::dump().
     VPDef *D = WidenR;
@@ -1134,7 +1135,7 @@ TEST(VPRecipeTest, dump) {
           D->dump();
           exit(0);
         },
-        testing::ExitedWithCode(0), "WIDEN ir<%a> = add vp<%0>, vp<%1>");
+        testing::ExitedWithCode(0), "WIDEN ir<%a> = add ir<1>, ir<2>");
   }
 
   delete AI;

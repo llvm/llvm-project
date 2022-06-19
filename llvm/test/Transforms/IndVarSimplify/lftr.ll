@@ -706,3 +706,21 @@ if.end:
 
 declare i32 @llvm.loop.decrement.reg.i32(i32, i32)
 
+; This used to crash, we're basically just checking that it doesn't.
+define void @switch_preheader() {
+; CHECK-LABEL: @switch_preheader(
+; CHECK-NEXT:    switch i32 -1, label [[X:%.*]] [
+; CHECK-NEXT:    ]
+; CHECK:       x:
+; CHECK-NEXT:    br i1 false, label [[X]], label [[BB:%.*]]
+; CHECK:       BB:
+; CHECK-NEXT:    ret void
+;
+  switch i32 -1, label %x []
+
+x:                                                ; preds = %x, %0
+  br i1 false, label %x, label %BB
+
+BB:                                               ; preds = %x
+  ret void
+}

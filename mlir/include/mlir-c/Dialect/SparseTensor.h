@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef MLIR_C_DIALECT_SPARSE_TENSOR_H
-#define MLIR_C_DIALECT_SPARSE_TENSOR_H
+#ifndef MLIR_C_DIALECT_SPARSETENSOR_H
+#define MLIR_C_DIALECT_SPARSETENSOR_H
 
 #include "mlir-c/AffineMap.h"
 #include "mlir-c/Registration.h"
@@ -76,4 +76,4 @@ mlirSparseTensorEncodingAttrGetIndexBitWidth(MlirAttribute attr);
 
 #include "mlir/Dialect/SparseTensor/Transforms/Passes.capi.h.inc"
 
-#endif // MLIR_C_DIALECT_SPARSE_TENSOR_H
+#endif // MLIR_C_DIALECT_SPARSETENSOR_H

@@ -26,7 +26,7 @@ namespace {
                                 Is64Bit ?  ELF::EM_SPARCV9 : ELF::EM_SPARC,
                                 /*HasRelocationAddend*/ true) {}
 
-    ~SparcELFObjectWriter() override {}
+    ~SparcELFObjectWriter() override = default;
 
   protected:
     unsigned getRelocType(MCContext &Ctx, const MCValue &Target,
@@ -42,6 +42,9 @@ unsigned SparcELFObjectWriter::getRelocType(MCContext &Ctx,
                                             const MCValue &Target,
                                             const MCFixup &Fixup,
                                             bool IsPCRel) const {
+  MCFixupKind Kind = Fixup.getKind();
+  if (Kind >= FirstLiteralRelocationKind)
+    return Kind - FirstLiteralRelocationKind;
 
   if (const SparcMCExpr *SExpr = dyn_cast<SparcMCExpr>(Fixup.getValue())) {
     if (SExpr->getKind() == SparcMCExpr::VK_Sparc_R_DISP32)
@@ -68,6 +71,7 @@ unsigned SparcELFObjectWriter::getRelocType(MCContext &Ctx,
   switch(Fixup.getTargetKind()) {
   default:
     llvm_unreachable("Unimplemented fixup -> relocation");
+  case FK_NONE:                  return ELF::R_SPARC_NONE;
   case FK_Data_1:                return ELF::R_SPARC_8;
   case FK_Data_2:                return ((Fixup.getOffset() % 2)
                                          ? ELF::R_SPARC_UA16
@@ -108,6 +112,11 @@ unsigned SparcELFObjectWriter::getRelocType(MCContext &Ctx,
   case Sparc::fixup_sparc_tls_ie_add:    return ELF::R_SPARC_TLS_IE_ADD;
   case Sparc::fixup_sparc_tls_le_hix22:  return ELF::R_SPARC_TLS_LE_HIX22;
   case Sparc::fixup_sparc_tls_le_lox10:  return ELF::R_SPARC_TLS_LE_LOX10;
+  case Sparc::fixup_sparc_hix22:         return ELF::R_SPARC_HIX22;
+  case Sparc::fixup_sparc_lox10:         return ELF::R_SPARC_LOX10;
+  case Sparc::fixup_sparc_gotdata_hix22: return ELF::R_SPARC_GOTDATA_HIX22;
+  case Sparc::fixup_sparc_gotdata_lox10: return ELF::R_SPARC_GOTDATA_LOX10;
+  case Sparc::fixup_sparc_gotdata_op:    return ELF::R_SPARC_GOTDATA_OP;
   }
 
   return ELF::R_SPARC_NONE;

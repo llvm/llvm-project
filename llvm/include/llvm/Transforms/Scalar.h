@@ -133,7 +133,8 @@ Pass *createIndVarSimplifyPass();
 //
 Pass *createLICMPass();
 Pass *createLICMPass(unsigned LicmMssaOptCap,
-                     unsigned LicmMssaNoAccForPromotionCap);
+                     unsigned LicmMssaNoAccForPromotionCap,
+                     bool AllowSpeculation);
 
 //===----------------------------------------------------------------------===//
 //
@@ -167,13 +168,6 @@ FunctionPass *createLoopFlattenPass();
 // a loop's canonical induction variable as one of their indices.
 //
 Pass *createLoopStrengthReducePass();
-
-//===----------------------------------------------------------------------===//
-//
-// LoopUnswitch - This pass is a simple loop unswitching pass.
-//
-Pass *createLoopUnswitchPass(bool OptimizeForSize = false,
-                             bool hasBranchDivergence = false);
 
 //===----------------------------------------------------------------------===//
 //
@@ -246,12 +240,18 @@ FunctionPass *createReassociatePass();
 //===----------------------------------------------------------------------===//
 //
 // JumpThreading - Thread control through mult-pred/multi-succ blocks where some
-// preds always go to some succ. If FreezeSelectCond is true, unfold the
-// condition of a select that unfolds to branch. Thresholds other than minus one
+// preds always go to some succ. Thresholds other than minus one
 // override the internal BB duplication default threshold.
 //
-FunctionPass *createJumpThreadingPass(bool FreezeSelectCond = false,
-                                      int Threshold = -1);
+FunctionPass *createJumpThreadingPass(int Threshold = -1);
+
+//===----------------------------------------------------------------------===//
+//
+// DFAJumpThreading - When a switch statement inside a loop is used to
+// implement a deterministic finite automata we can jump thread the switch
+// statement reducing number of conditional jumps.
+//
+FunctionPass *createDFAJumpThreadingPass();
 
 //===----------------------------------------------------------------------===//
 //
@@ -417,6 +417,12 @@ extern char &InferAddressSpacesID;
 // LowerExpectIntrinsics - Removes llvm.expect intrinsics and creates
 // "block_weights" metadata.
 FunctionPass *createLowerExpectIntrinsicPass();
+
+//===----------------------------------------------------------------------===//
+//
+// TLSVariableHoist - This pass reduce duplicated TLS address call.
+//
+FunctionPass *createTLSVariableHoistPass();
 
 //===----------------------------------------------------------------------===//
 //

@@ -53,10 +53,10 @@ using namespace llvm;
 STATISTIC(HexagonNumVectorLoopCarriedReuse,
           "Number of values that were reused from a previous iteration.");
 
-static cl::opt<int> HexagonVLCRIterationLim("hexagon-vlcr-iteration-lim",
-    cl::Hidden,
+static cl::opt<int> HexagonVLCRIterationLim(
+    "hexagon-vlcr-iteration-lim", cl::Hidden,
     cl::desc("Maximum distance of loop carried dependences that are handled"),
-    cl::init(2), cl::ZeroOrMore);
+    cl::init(2));
 
 namespace llvm {
 
@@ -386,8 +386,7 @@ void HexagonVectorLoopCarriedReuse::findValueToReuse() {
                       << " can be reused\n");
 
     SmallVector<Instruction *, 4> PNUsers;
-    for (auto UI = PN->use_begin(), E = PN->use_end(); UI != E; ++UI) {
-      Use &U = *UI;
+    for (Use &U : PN->uses()) {
       Instruction *User = cast<Instruction>(U.getUser());
 
       if (User->getParent() != BB)
@@ -415,9 +414,7 @@ void HexagonVectorLoopCarriedReuse::findValueToReuse() {
     // rematerialized in OtherBB, we may find more such "fixup" opportunities
     // in this block. So, we'll start over again.
     for (Instruction *I : PNUsers) {
-      for (auto UI = BEInst->use_begin(), E = BEInst->use_end(); UI != E;
-           ++UI) {
-        Use &U = *UI;
+      for (Use &U : BEInst->uses()) {
         Instruction *BEUser = cast<Instruction>(U.getUser());
 
         if (BEUser->getParent() != BB)
@@ -662,8 +659,7 @@ void HexagonVectorLoopCarriedReuse::findLoopCarriedDeps() {
       delete D;
   }
   LLVM_DEBUG(dbgs() << "Found " << Dependences.size() << " dependences\n");
-  LLVM_DEBUG(for (size_t i = 0; i < Dependences.size();
-                  ++i) { dbgs() << *Dependences[i] << "\n"; });
+  LLVM_DEBUG(for (const DepChain *D : Dependences) dbgs() << *D << "\n";);
 }
 
 Pass *llvm::createHexagonVectorLoopCarriedReuseLegacyPass() {

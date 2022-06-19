@@ -22,7 +22,7 @@ How to report a security issue?
 
 To report a security issue in the LLVM Project, please `open a new issue`_ in the LLVM project page, on the chromium issue tracker.  Be sure to use the "Security bug report" template.
 
-We aim to acknowledge your report within two business days since you first reach out. If you do not receive any response by then, you can escalate by sending a message to the `llvm-dev mailing list`_ asking to get in touch with someone from the LLVM Security Group. **The escalation mailing list is public**: avoid discussing or mentioning the specific issue when posting on it.
+We aim to acknowledge your report within two business days since you first reach out. If you do not receive any response by then, you can escalate by posting on the `Discourse forums`_ asking to get in touch with someone from the LLVM Security Group. **The escalation mailing list is public**: avoid discussing or mentioning the specific issue when posting on it.
 
 
 Group Composition
@@ -31,24 +31,27 @@ Group Composition
 Security Group Members
 ----------------------
 
-The members of the group represent a wide cross-section of the community, and meet the criteria for inclusion below.
+The members of the group represent a wide cross-section of the community, and meet the criteria for inclusion below. The list is in the format `* ${full_name} (${affiliation}) [${phabricator_username}]`. If a phabricator username for an individual isn't available, the brackets will be empty.
 
-* Ahmed Bougacha (Apple)
-* Artur Pilipenko (Azul Systems Inc)
-* Dimitry Andric (individual; FreeBSD)
-* Ed Maste (individual; FreeBSD)
-* George Burgess IV (Google)
-* Josh Eads (Sony)
-* Kate McInnes (Apple)
-* Kristof Beyls (ARM)
-* Matthew Riley (Google)
-* Oliver Hunt (Apple)
-* Paul Robinson (Sony)
-* Peter Smith (ARM)
-* Pietro Albini (individual; Rust)
-* Serge Guelton (RedHat)
-* Shayne Hiet-Block (Microsoft)
-* Steve Klabnik (Oxide Computer Company; Rust)
+* Ahmed Bougacha (Apple) [ab]
+* Andy Kaylor (Intel) [andykaylor]
+* Artur Pilipenko (Azul Systems Inc) [apilipenko]
+* Dimitry Andric (individual; FreeBSD) [dim]
+* Ed Maste (individual; FreeBSD) [emaste]
+* George Burgess IV (Google) [george.burgess.iv]
+* Josh Stone (RedHat; Rust) [cuviper]
+* Kate McInnes (Apple) []
+* Kristof Beyls (ARM) [kristof.beyls]
+* Matthew Riley (Google) [mattdr]
+* Nikhil Gupta (Nvidia) [nikhgupt]
+* Oliver Hunt (Apple) [ojhunt]
+* Paul Robinson (Sony) [probinson]
+* Peter Smith (ARM) [peter.smith]
+* Pietro Albini (Ferrous Systems; Rust) [pietroalbini]
+* Serge Guelton (RedHat) [serge-sans-paille]
+* Sergey Maslov (Intel) [smaslov-intel]
+* Shayne Hiet-Block (Microsoft) [Shayne]
+* Tim Penge (Sony) [tpenge]
 
 Criteria
 --------
@@ -85,8 +88,9 @@ Nomination process
 
 Anyone who feels they meet these criteria can nominate themselves, or may be nominated by a third party such as an existing LLVM Security Group member. The nomination should state whether the nominee is nominated as an individual, researcher, or as a vendor contact. It should clearly describe the grounds for nomination.
 
-*FUTURE*: where nomination occurs (mailing list, GitHub, etc), can be decided later. See `Discussion Medium`_ below.
+For the moment, nominations are generally proposed, discussed, and voted on using Phabricator. An `example nomination is available here`_. The use of Phabricator helps keep membership discussions open, transparent, and easily accessible to LLVM developers in many ways. If, for any reason, a fully-world-readable nomination seems inappropriate, you may `open a new issue`_, and a discussion can be had about the best way to approach nomination, given the constraints that individuals are under.
 
+Our recommended method of nomination may change as our `Discussion Medium`_ story evolves over time.
 
 Choosing new members
 --------------------
@@ -111,6 +115,8 @@ Transparency Report
 -------------------
 
 Every year, the LLVM Security Group must publish a transparency report. The intent of this report is to keep the community informed by summarizing the disclosures that have been made public in the last year. It shall contain a list of all public disclosures, as well as statistics on time to fix issues, length of embargo periods, and so on.
+
+The transparency reports are published at :doc:`SecurityTransparencyReports`.
 
 
 Privileges and Responsibilities of LLVM Security Group Members
@@ -171,7 +177,7 @@ We also occasionally need to discuss logistics of the LLVM Security Group itself
 * Propose member removal.
 * Suggest policy changes.
 
-We often have these discussions publicly, in our :ref:`monthly public sync-up call <online-sync-ups>` and on public LLVM mailing lists.  For internal or confidential discussions, we also use a private mailing list.
+We often have these discussions publicly, in our :ref:`monthly public sync-up call <online-sync-ups>` and on the Discourse forums.  For internal or confidential discussions, we also use a private mailing list.
 
 Process
 =======
@@ -224,5 +230,6 @@ The parts of the LLVM Project which are currently treated as non-security sensit
 .. _open a new issue: https://bugs.chromium.org/p/llvm/issues/entry
 .. _chromium issue tracker: https://crbug.com
 .. _GitHub security: https://help.github.com/en/articles/about-maintainer-security-advisories
-.. _llvm-dev mailing list: https://lists.llvm.org/mailman/listinfo/llvm-dev
+.. _Discourse forums: https://discourse.llvm.org
 .. _MITRE: https://cve.mitre.org
+.. _example nomination is available here: https://reviews.llvm.org/D99232

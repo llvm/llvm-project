@@ -45,18 +45,18 @@ define void @set_f64_global(double %v) {
   ret void
 }
 
-; CHECK: .globl i32_global
 ; CHECK: .globaltype i32_global, i32
+; CHECK: .globl i32_global
 ; CHECK-LABEL: i32_global:
 
-; CHECK: .globl i64_global
 ; CHECK: .globaltype i64_global, i64
+; CHECK: .globl i64_global
 ; CHECK-LABEL: i64_global:
 
-; CHECK: .globl f32_global
 ; CHECK: .globaltype f32_global, f32
+; CHECK: .globl f32_global
 ; CHECK-LABEL: f32_global:
 
-; CHECK: .globl f64_global
 ; CHECK: .globaltype f64_global, f64
+; CHECK: .globl f64_global
 ; CHECK-LABEL: f64_global:

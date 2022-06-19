@@ -36,14 +36,20 @@ define void @ctpop_2i64() #0 {
 ; SSE42-NEXT:    store i64 [[CTPOP1]], i64* getelementptr inbounds ([4 x i64], [4 x i64]* @dst64, i32 0, i64 1), align 8
 ; SSE42-NEXT:    ret void
 ;
-; AVX-LABEL: @ctpop_2i64(
-; AVX-NEXT:    [[LD0:%.*]] = load i64, i64* getelementptr inbounds ([4 x i64], [4 x i64]* @src64, i32 0, i64 0), align 8
-; AVX-NEXT:    [[LD1:%.*]] = load i64, i64* getelementptr inbounds ([4 x i64], [4 x i64]* @src64, i32 0, i64 1), align 8
-; AVX-NEXT:    [[CTPOP0:%.*]] = call i64 @llvm.ctpop.i64(i64 [[LD0]])
-; AVX-NEXT:    [[CTPOP1:%.*]] = call i64 @llvm.ctpop.i64(i64 [[LD1]])
-; AVX-NEXT:    store i64 [[CTPOP0]], i64* getelementptr inbounds ([4 x i64], [4 x i64]* @dst64, i32 0, i64 0), align 8
-; AVX-NEXT:    store i64 [[CTPOP1]], i64* getelementptr inbounds ([4 x i64], [4 x i64]* @dst64, i32 0, i64 1), align 8
-; AVX-NEXT:    ret void
+; AVX1-LABEL: @ctpop_2i64(
+; AVX1-NEXT:    [[LD0:%.*]] = load i64, i64* getelementptr inbounds ([4 x i64], [4 x i64]* @src64, i32 0, i64 0), align 8
+; AVX1-NEXT:    [[LD1:%.*]] = load i64, i64* getelementptr inbounds ([4 x i64], [4 x i64]* @src64, i32 0, i64 1), align 8
+; AVX1-NEXT:    [[CTPOP0:%.*]] = call i64 @llvm.ctpop.i64(i64 [[LD0]])
+; AVX1-NEXT:    [[CTPOP1:%.*]] = call i64 @llvm.ctpop.i64(i64 [[LD1]])
+; AVX1-NEXT:    store i64 [[CTPOP0]], i64* getelementptr inbounds ([4 x i64], [4 x i64]* @dst64, i32 0, i64 0), align 8
+; AVX1-NEXT:    store i64 [[CTPOP1]], i64* getelementptr inbounds ([4 x i64], [4 x i64]* @dst64, i32 0, i64 1), align 8
+; AVX1-NEXT:    ret void
+;
+; AVX2-LABEL: @ctpop_2i64(
+; AVX2-NEXT:    [[TMP1:%.*]] = load <2 x i64>, <2 x i64>* bitcast ([4 x i64]* @src64 to <2 x i64>*), align 8
+; AVX2-NEXT:    [[TMP2:%.*]] = call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> [[TMP1]])
+; AVX2-NEXT:    store <2 x i64> [[TMP2]], <2 x i64>* bitcast ([4 x i64]* @dst64 to <2 x i64>*), align 8
+; AVX2-NEXT:    ret void
 ;
   %ld0 = load i64, i64* getelementptr inbounds ([4 x i64], [4 x i64]* @src64, i32 0, i64 0), align 8
   %ld1 = load i64, i64* getelementptr inbounds ([4 x i64], [4 x i64]* @src64, i32 0, i64 1), align 8
@@ -57,10 +63,10 @@ define void @ctpop_2i64() #0 {
 define void @ctpop_4i64() #0 {
 ; SSE2-LABEL: @ctpop_4i64(
 ; SSE2-NEXT:    [[TMP1:%.*]] = load <2 x i64>, <2 x i64>* bitcast ([4 x i64]* @src64 to <2 x i64>*), align 4
-; SSE2-NEXT:    [[TMP2:%.*]] = load <2 x i64>, <2 x i64>* bitcast (i64* getelementptr inbounds ([4 x i64], [4 x i64]* @src64, i64 0, i64 2) to <2 x i64>*), align 4
-; SSE2-NEXT:    [[TMP3:%.*]] = call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> [[TMP1]])
-; SSE2-NEXT:    [[TMP4:%.*]] = call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> [[TMP2]])
-; SSE2-NEXT:    store <2 x i64> [[TMP3]], <2 x i64>* bitcast ([4 x i64]* @dst64 to <2 x i64>*), align 4
+; SSE2-NEXT:    [[TMP2:%.*]] = call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> [[TMP1]])
+; SSE2-NEXT:    store <2 x i64> [[TMP2]], <2 x i64>* bitcast ([4 x i64]* @dst64 to <2 x i64>*), align 4
+; SSE2-NEXT:    [[TMP3:%.*]] = load <2 x i64>, <2 x i64>* bitcast (i64* getelementptr inbounds ([4 x i64], [4 x i64]* @src64, i64 0, i64 2) to <2 x i64>*), align 4
+; SSE2-NEXT:    [[TMP4:%.*]] = call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> [[TMP3]])
 ; SSE2-NEXT:    store <2 x i64> [[TMP4]], <2 x i64>* bitcast (i64* getelementptr inbounds ([4 x i64], [4 x i64]* @dst64, i64 0, i64 2) to <2 x i64>*), align 4
 ; SSE2-NEXT:    ret void
 ;
@@ -137,20 +143,26 @@ define void @ctpop_4i32() #0 {
 ; SSE42-NEXT:    store i32 [[CTPOP3]], i32* getelementptr inbounds ([8 x i32], [8 x i32]* @dst32, i32 0, i64 3), align 4
 ; SSE42-NEXT:    ret void
 ;
-; AVX-LABEL: @ctpop_4i32(
-; AVX-NEXT:    [[LD0:%.*]] = load i32, i32* getelementptr inbounds ([8 x i32], [8 x i32]* @src32, i32 0, i64 0), align 4
-; AVX-NEXT:    [[LD1:%.*]] = load i32, i32* getelementptr inbounds ([8 x i32], [8 x i32]* @src32, i32 0, i64 1), align 4
-; AVX-NEXT:    [[LD2:%.*]] = load i32, i32* getelementptr inbounds ([8 x i32], [8 x i32]* @src32, i32 0, i64 2), align 4
-; AVX-NEXT:    [[LD3:%.*]] = load i32, i32* getelementptr inbounds ([8 x i32], [8 x i32]* @src32, i32 0, i64 3), align 4
-; AVX-NEXT:    [[CTPOP0:%.*]] = call i32 @llvm.ctpop.i32(i32 [[LD0]])
-; AVX-NEXT:    [[CTPOP1:%.*]] = call i32 @llvm.ctpop.i32(i32 [[LD1]])
-; AVX-NEXT:    [[CTPOP2:%.*]] = call i32 @llvm.ctpop.i32(i32 [[LD2]])
-; AVX-NEXT:    [[CTPOP3:%.*]] = call i32 @llvm.ctpop.i32(i32 [[LD3]])
-; AVX-NEXT:    store i32 [[CTPOP0]], i32* getelementptr inbounds ([8 x i32], [8 x i32]* @dst32, i32 0, i64 0), align 4
-; AVX-NEXT:    store i32 [[CTPOP1]], i32* getelementptr inbounds ([8 x i32], [8 x i32]* @dst32, i32 0, i64 1), align 4
-; AVX-NEXT:    store i32 [[CTPOP2]], i32* getelementptr inbounds ([8 x i32], [8 x i32]* @dst32, i32 0, i64 2), align 4
-; AVX-NEXT:    store i32 [[CTPOP3]], i32* getelementptr inbounds ([8 x i32], [8 x i32]* @dst32, i32 0, i64 3), align 4
-; AVX-NEXT:    ret void
+; AVX1-LABEL: @ctpop_4i32(
+; AVX1-NEXT:    [[LD0:%.*]] = load i32, i32* getelementptr inbounds ([8 x i32], [8 x i32]* @src32, i32 0, i64 0), align 4
+; AVX1-NEXT:    [[LD1:%.*]] = load i32, i32* getelementptr inbounds ([8 x i32], [8 x i32]* @src32, i32 0, i64 1), align 4
+; AVX1-NEXT:    [[LD2:%.*]] = load i32, i32* getelementptr inbounds ([8 x i32], [8 x i32]* @src32, i32 0, i64 2), align 4
+; AVX1-NEXT:    [[LD3:%.*]] = load i32, i32* getelementptr inbounds ([8 x i32], [8 x i32]* @src32, i32 0, i64 3), align 4
+; AVX1-NEXT:    [[CTPOP0:%.*]] = call i32 @llvm.ctpop.i32(i32 [[LD0]])
+; AVX1-NEXT:    [[CTPOP1:%.*]] = call i32 @llvm.ctpop.i32(i32 [[LD1]])
+; AVX1-NEXT:    [[CTPOP2:%.*]] = call i32 @llvm.ctpop.i32(i32 [[LD2]])
+; AVX1-NEXT:    [[CTPOP3:%.*]] = call i32 @llvm.ctpop.i32(i32 [[LD3]])
+; AVX1-NEXT:    store i32 [[CTPOP0]], i32* getelementptr inbounds ([8 x i32], [8 x i32]* @dst32, i32 0, i64 0), align 4
+; AVX1-NEXT:    store i32 [[CTPOP1]], i32* getelementptr inbounds ([8 x i32], [8 x i32]* @dst32, i32 0, i64 1), align 4
+; AVX1-NEXT:    store i32 [[CTPOP2]], i32* getelementptr inbounds ([8 x i32], [8 x i32]* @dst32, i32 0, i64 2), align 4
+; AVX1-NEXT:    store i32 [[CTPOP3]], i32* getelementptr inbounds ([8 x i32], [8 x i32]* @dst32, i32 0, i64 3), align 4
+; AVX1-NEXT:    ret void
+;
+; AVX2-LABEL: @ctpop_4i32(
+; AVX2-NEXT:    [[TMP1:%.*]] = load <4 x i32>, <4 x i32>* bitcast ([8 x i32]* @src32 to <4 x i32>*), align 4
+; AVX2-NEXT:    [[TMP2:%.*]] = call <4 x i32> @llvm.ctpop.v4i32(<4 x i32> [[TMP1]])
+; AVX2-NEXT:    store <4 x i32> [[TMP2]], <4 x i32>* bitcast ([8 x i32]* @dst32 to <4 x i32>*), align 4
+; AVX2-NEXT:    ret void
 ;
   %ld0 = load i32, i32* getelementptr inbounds ([8 x i32], [8 x i32]* @src32, i32 0, i64 0), align 4
   %ld1 = load i32, i32* getelementptr inbounds ([8 x i32], [8 x i32]* @src32, i32 0, i64 1), align 4
@@ -170,10 +182,10 @@ define void @ctpop_4i32() #0 {
 define void @ctpop_8i32() #0 {
 ; SSE2-LABEL: @ctpop_8i32(
 ; SSE2-NEXT:    [[TMP1:%.*]] = load <4 x i32>, <4 x i32>* bitcast ([8 x i32]* @src32 to <4 x i32>*), align 2
-; SSE2-NEXT:    [[TMP2:%.*]] = load <4 x i32>, <4 x i32>* bitcast (i32* getelementptr inbounds ([8 x i32], [8 x i32]* @src32, i32 0, i64 4) to <4 x i32>*), align 2
-; SSE2-NEXT:    [[TMP3:%.*]] = call <4 x i32> @llvm.ctpop.v4i32(<4 x i32> [[TMP1]])
-; SSE2-NEXT:    [[TMP4:%.*]] = call <4 x i32> @llvm.ctpop.v4i32(<4 x i32> [[TMP2]])
-; SSE2-NEXT:    store <4 x i32> [[TMP3]], <4 x i32>* bitcast ([8 x i32]* @dst32 to <4 x i32>*), align 2
+; SSE2-NEXT:    [[TMP2:%.*]] = call <4 x i32> @llvm.ctpop.v4i32(<4 x i32> [[TMP1]])
+; SSE2-NEXT:    store <4 x i32> [[TMP2]], <4 x i32>* bitcast ([8 x i32]* @dst32 to <4 x i32>*), align 2
+; SSE2-NEXT:    [[TMP3:%.*]] = load <4 x i32>, <4 x i32>* bitcast (i32* getelementptr inbounds ([8 x i32], [8 x i32]* @src32, i32 0, i64 4) to <4 x i32>*), align 2
+; SSE2-NEXT:    [[TMP4:%.*]] = call <4 x i32> @llvm.ctpop.v4i32(<4 x i32> [[TMP3]])
 ; SSE2-NEXT:    store <4 x i32> [[TMP4]], <4 x i32>* bitcast (i32* getelementptr inbounds ([8 x i32], [8 x i32]* @dst32, i32 0, i64 4) to <4 x i32>*), align 2
 ; SSE2-NEXT:    ret void
 ;
@@ -301,10 +313,10 @@ define void @ctpop_8i16() #0 {
 define void @ctpop_16i16() #0 {
 ; SSE-LABEL: @ctpop_16i16(
 ; SSE-NEXT:    [[TMP1:%.*]] = load <8 x i16>, <8 x i16>* bitcast ([16 x i16]* @src16 to <8 x i16>*), align 2
-; SSE-NEXT:    [[TMP2:%.*]] = load <8 x i16>, <8 x i16>* bitcast (i16* getelementptr inbounds ([16 x i16], [16 x i16]* @src16, i16 0, i64 8) to <8 x i16>*), align 2
-; SSE-NEXT:    [[TMP3:%.*]] = call <8 x i16> @llvm.ctpop.v8i16(<8 x i16> [[TMP1]])
-; SSE-NEXT:    [[TMP4:%.*]] = call <8 x i16> @llvm.ctpop.v8i16(<8 x i16> [[TMP2]])
-; SSE-NEXT:    store <8 x i16> [[TMP3]], <8 x i16>* bitcast ([16 x i16]* @dst16 to <8 x i16>*), align 2
+; SSE-NEXT:    [[TMP2:%.*]] = call <8 x i16> @llvm.ctpop.v8i16(<8 x i16> [[TMP1]])
+; SSE-NEXT:    store <8 x i16> [[TMP2]], <8 x i16>* bitcast ([16 x i16]* @dst16 to <8 x i16>*), align 2
+; SSE-NEXT:    [[TMP3:%.*]] = load <8 x i16>, <8 x i16>* bitcast (i16* getelementptr inbounds ([16 x i16], [16 x i16]* @src16, i16 0, i64 8) to <8 x i16>*), align 2
+; SSE-NEXT:    [[TMP4:%.*]] = call <8 x i16> @llvm.ctpop.v8i16(<8 x i16> [[TMP3]])
 ; SSE-NEXT:    store <8 x i16> [[TMP4]], <8 x i16>* bitcast (i16* getelementptr inbounds ([16 x i16], [16 x i16]* @dst16, i16 0, i64 8) to <8 x i16>*), align 2
 ; SSE-NEXT:    ret void
 ;
@@ -426,10 +438,10 @@ define void @ctpop_16i8() #0 {
 define void @ctpop_32i8() #0 {
 ; SSE-LABEL: @ctpop_32i8(
 ; SSE-NEXT:    [[TMP1:%.*]] = load <16 x i8>, <16 x i8>* bitcast ([32 x i8]* @src8 to <16 x i8>*), align 1
-; SSE-NEXT:    [[TMP2:%.*]] = load <16 x i8>, <16 x i8>* bitcast (i8* getelementptr inbounds ([32 x i8], [32 x i8]* @src8, i8 0, i64 16) to <16 x i8>*), align 1
-; SSE-NEXT:    [[TMP3:%.*]] = call <16 x i8> @llvm.ctpop.v16i8(<16 x i8> [[TMP1]])
-; SSE-NEXT:    [[TMP4:%.*]] = call <16 x i8> @llvm.ctpop.v16i8(<16 x i8> [[TMP2]])
-; SSE-NEXT:    store <16 x i8> [[TMP3]], <16 x i8>* bitcast ([32 x i8]* @dst8 to <16 x i8>*), align 1
+; SSE-NEXT:    [[TMP2:%.*]] = call <16 x i8> @llvm.ctpop.v16i8(<16 x i8> [[TMP1]])
+; SSE-NEXT:    store <16 x i8> [[TMP2]], <16 x i8>* bitcast ([32 x i8]* @dst8 to <16 x i8>*), align 1
+; SSE-NEXT:    [[TMP3:%.*]] = load <16 x i8>, <16 x i8>* bitcast (i8* getelementptr inbounds ([32 x i8], [32 x i8]* @src8, i8 0, i64 16) to <16 x i8>*), align 1
+; SSE-NEXT:    [[TMP4:%.*]] = call <16 x i8> @llvm.ctpop.v16i8(<16 x i8> [[TMP3]])
 ; SSE-NEXT:    store <16 x i8> [[TMP4]], <16 x i8>* bitcast (i8* getelementptr inbounds ([32 x i8], [32 x i8]* @dst8, i8 0, i64 16) to <16 x i8>*), align 1
 ; SSE-NEXT:    ret void
 ;

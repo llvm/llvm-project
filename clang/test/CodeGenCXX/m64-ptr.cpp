@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 %s -emit-llvm -triple x86_64-apple-darwin -o - | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers %s -emit-llvm -triple x86_64-apple-darwin -o - | FileCheck %s
 
 // Make sure pointers are passed as pointers, not converted to int.
 // The first load should be of type i8** in either 32 or 64 bit mode.

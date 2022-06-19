@@ -38,14 +38,29 @@ enum NodeType : unsigned {
   MEMBARRIER,             // Compiler barrier only; generate a no-op.
   RET_FLAG,               // Return with a flag operand.
   TS1AM,                  // A TS1AM instruction used for 1/2 bytes swap.
-  VEC_BROADCAST,          // A vector broadcast instruction.
-                          //   0: scalar value, 1: VL
+  VEC_UNPACK_LO,          // unpack the lo v256 slice of a packed v512 vector.
+  VEC_UNPACK_HI,          // unpack the hi v256 slice of a packed v512 vector.
+                          //    0: v512 vector, 1: AVL
+  VEC_PACK,               // pack a lo and a hi vector into one v512 vector
+                          //    0: v256 lo vector, 1: v256 hi vector, 2: AVL
+
+  VEC_BROADCAST, // A vector broadcast instruction.
+                 //   0: scalar value, 1: VL
+  REPL_I32,
+  REPL_F32, // Replicate subregister to other half.
+
+  // Annotation as a wrapper. LEGALAVL(VL) means that VL refers to 64bit of
+  // data, whereas the raw EVL coming in from VP nodes always refers to number
+  // of elements, regardless of their size.
+  LEGALAVL,
 
 // VVP_* nodes.
 #define ADD_VVP_OP(VVP_NAME, ...) VVP_NAME,
 #include "VVPNodes.def"
 };
 }
+
+class VECustomDAG;
 
 class VETargetLowering : public TargetLowering {
   const VESubtarget *Subtarget;
@@ -103,6 +118,9 @@ public:
   }
 
   /// Custom Lower {
+  TargetLoweringBase::LegalizeAction
+  getCustomOperationAction(SDNode &) const override;
+
   SDValue LowerOperation(SDValue Op, SelectionDAG &DAG) const override;
   unsigned getJumpTableEncoding() const override;
   const MCExpr *LowerCustomJumpTableEntry(const MachineJumpTableInfo *MJTI,
@@ -168,6 +186,15 @@ public:
 
   /// VVP Lowering {
   SDValue lowerToVVP(SDValue Op, SelectionDAG &DAG) const;
+  SDValue lowerVVP_LOAD_STORE(SDValue Op, VECustomDAG &) const;
+  SDValue lowerVVP_GATHER_SCATTER(SDValue Op, VECustomDAG &) const;
+
+  SDValue legalizeInternalVectorOp(SDValue Op, SelectionDAG &DAG) const;
+  SDValue legalizeInternalLoadStoreOp(SDValue Op, VECustomDAG &CDAG) const;
+  SDValue splitVectorOp(SDValue Op, VECustomDAG &CDAG) const;
+  SDValue splitPackedLoadStore(SDValue Op, VECustomDAG &CDAG) const;
+  SDValue legalizePackedAVL(SDValue Op, VECustomDAG &CDAG) const;
+  SDValue splitMaskArithmetic(SDValue Op, SelectionDAG &DAG) const;
   /// } VVPLowering
 
   /// Custom DAGCombine {
@@ -219,4 +246,4 @@ public:
 };
 } // namespace llvm
 
-#endif // VE_ISELLOWERING_H
+#endif // LLVM_LIB_TARGET_VE_VEISELLOWERING_H

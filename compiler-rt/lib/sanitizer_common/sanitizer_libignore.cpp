@@ -8,7 +8,7 @@
 
 #include "sanitizer_platform.h"
 
-#if SANITIZER_FREEBSD || SANITIZER_LINUX || SANITIZER_MAC || \
+#if SANITIZER_FREEBSD || SANITIZER_LINUX || SANITIZER_APPLE || \
     SANITIZER_NETBSD
 
 #include "sanitizer_libignore.h"
@@ -22,9 +22,9 @@ LibIgnore::LibIgnore(LinkerInitialized) {
 }
 
 void LibIgnore::AddIgnoredLibrary(const char *name_templ) {
-  BlockingMutexLock lock(&mutex_);
+  Lock lock(&mutex_);
   if (count_ >= kMaxLibs) {
-    Report("%s: too many ignored libraries (max: %d)\n", SanitizerToolName,
+    Report("%s: too many ignored libraries (max: %zu)\n", SanitizerToolName,
            kMaxLibs);
     Die();
   }
@@ -36,7 +36,7 @@ void LibIgnore::AddIgnoredLibrary(const char *name_templ) {
 }
 
 void LibIgnore::OnLibraryLoaded(const char *name) {
-  BlockingMutexLock lock(&mutex_);
+  Lock lock(&mutex_);
   // Try to match suppressions with symlink target.
   InternalMmapVector<char> buf(kMaxPathLength);
   if (name && internal_readlink(name, buf.data(), buf.size() - 1) > 0 &&
@@ -84,7 +84,6 @@ void LibIgnore::OnLibraryLoaded(const char *name) {
         ignored_code_ranges_[idx].begin = range.beg;
         ignored_code_ranges_[idx].end = range.end;
         atomic_store(&ignored_ranges_count_, idx + 1, memory_order_release);
-        atomic_store(&enabled_, 1, memory_order_release);
         break;
       }
     }
@@ -106,7 +105,7 @@ void LibIgnore::OnLibraryLoaded(const char *name) {
           continue;
         if (IsPcInstrumented(range.beg) && IsPcInstrumented(range.end - 1))
           continue;
-        VReport(1, "Adding instrumented range %p-%p from library '%s'\n",
+        VReport(1, "Adding instrumented range 0x%zx-0x%zx from library '%s'\n",
                 range.beg, range.end, mod.full_name());
         const uptr idx =
             atomic_load(&instrumented_ranges_count_, memory_order_relaxed);
@@ -115,7 +114,6 @@ void LibIgnore::OnLibraryLoaded(const char *name) {
         instrumented_code_ranges_[idx].end = range.end;
         atomic_store(&instrumented_ranges_count_, idx + 1,
                      memory_order_release);
-        atomic_store(&enabled_, 1, memory_order_release);
       }
     }
   }
@@ -125,30 +123,7 @@ void LibIgnore::OnLibraryUnloaded() {
   OnLibraryLoaded(nullptr);
 }
 
-bool LibIgnore::IsIgnoredSlow(uptr pc, bool *pc_in_ignored_lib) const {
-  const uptr n = atomic_load(&ignored_ranges_count_, memory_order_acquire);
-  for (uptr i = 0; i < n; i++) {
-    if (IsInRange(pc, ignored_code_ranges_[i])) {
-      *pc_in_ignored_lib = true;
-      return true;
-    }
-  }
-  *pc_in_ignored_lib = false;
-  if (track_instrumented_libs_ && !IsPcInstrumented(pc))
-    return true;
-  return false;
-}
-
-bool LibIgnore::IsPcInstrumented(uptr pc) const {
-  const uptr n = atomic_load(&instrumented_ranges_count_, memory_order_acquire);
-  for (uptr i = 0; i < n; i++) {
-    if (IsInRange(pc, instrumented_code_ranges_[i]))
-      return true;
-  }
-  return false;
-}
-
 } // namespace __sanitizer
 
-#endif  // SANITIZER_FREEBSD || SANITIZER_LINUX || SANITIZER_MAC ||
+#endif  // SANITIZER_FREEBSD || SANITIZER_LINUX || SANITIZER_APPLE ||
         // SANITIZER_NETBSD

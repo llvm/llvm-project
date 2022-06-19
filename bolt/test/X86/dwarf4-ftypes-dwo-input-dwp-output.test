@@ -1,0 +1,30 @@
+# REQUIRES: system-linux
+; RUN: rm -rf %t
+; RUN: mkdir %t
+; RUN: cd %t
+; RUN: llvm-mc --split-dwarf-file=main.dwo --triple=x86_64-unknown-linux-gnu \
+; RUN: --filetype=obj %p/Inputs/dwarf4-ftypes-split-dwarf.s -o=main.o
+; RUN: %clang %cflags -gdwarf-4 -gsplit-dwarf=split main.o -o main.exe
+; RUN: llvm-dwarfdump --show-form --verbose --debug-types main.dwo | FileCheck -check-prefix=PRE-BOLT %s
+; RUN: llvm-bolt main.exe -o main.exe.bolt --update-debug-sections --write-dwp
+; RUN: llvm-dwarfdump --show-form --verbose --debug-types main.exe.bolt.dwp | FileCheck -check-prefix=BOLT %s
+; RUN: llvm-dwarfdump --show-form --verbose --debug-tu-index main.exe.bolt.dwp | FileCheck -check-prefix=BOLT-DWP-TU-INDEX %s
+
+; Test input into bolt a .dwo file with TU Index.
+; Make sure the output .dwp file has a type information.
+
+; PRE-BOLT: DW_TAG_type_unit
+; PRE-BOLT: DW_TAG_type_unit
+
+; PRE-BOLT-DWP-TU-INDEX: version = 2, units = 2, slots = 4
+; PRE-BOLT-DWP-TU-INDEX: Index Signature
+; PRE-BOLT-DWP-TU-INDEX: 0x675d23e4f33235f2
+; PRE-BOLT-DWP-TU-INDEX-NEXT: 0x49dc260088be7e56
+
+; BOLT: DW_TAG_type_unit
+; BOLT: DW_TAG_type_unit
+
+; BOLT-DWP-TU-INDEX: version = 2, units = 2, slots = 4
+; BOLT-DWP-TU-INDEX: Index Signature
+; BOLT-DWP-TU-INDEX: 0x675d23e4f33235f2
+; BOLT-DWP-TU-INDEX-NEXT: 0x49dc260088be7e56

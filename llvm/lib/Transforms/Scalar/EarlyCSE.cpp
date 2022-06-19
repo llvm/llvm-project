@@ -16,7 +16,6 @@
 #include "llvm/ADT/Hashing.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/ScopedHashTable.h"
-#include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/AssumptionCache.h"
@@ -30,19 +29,16 @@
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Constants.h"
-#include "llvm/IR/DataLayout.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
-#include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/IR/PatternMatch.h"
 #include "llvm/IR/Type.h"
-#include "llvm/IR/Use.h"
 #include "llvm/IR/Value.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
@@ -55,7 +51,6 @@
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/Scalar.h"
 #include "llvm/Transforms/Utils/AssumeBundleBuilder.h"
-#include "llvm/Transforms/Utils/GuardUtils.h"
 #include "llvm/Transforms/Utils/Local.h"
 #include <cassert>
 #include <deque>
@@ -293,7 +288,7 @@ static unsigned getHashValueImpl(SimpleValue Val) {
   // TODO: Extend this to handle intrinsics with >2 operands where the 1st
   //       2 operands are commutative.
   auto *II = dyn_cast<IntrinsicInst>(Inst);
-  if (II && II->isCommutative() && II->getNumArgOperands() == 2) {
+  if (II && II->isCommutative() && II->arg_size() == 2) {
     Value *LHS = II->getArgOperand(0), *RHS = II->getArgOperand(1);
     if (LHS > RHS)
       std::swap(LHS, RHS);
@@ -363,7 +358,7 @@ static bool isEqualImpl(SimpleValue LHS, SimpleValue RHS) {
   auto *LII = dyn_cast<IntrinsicInst>(LHSI);
   auto *RII = dyn_cast<IntrinsicInst>(RHSI);
   if (LII && RII && LII->getIntrinsicID() == RII->getIntrinsicID() &&
-      LII->isCommutative() && LII->getNumArgOperands() == 2) {
+      LII->isCommutative() && LII->arg_size() == 2) {
     return LII->getArgOperand(0) == RII->getArgOperand(1) &&
            LII->getArgOperand(1) == RII->getArgOperand(0);
   }
@@ -781,6 +776,21 @@ private:
       return getLoadStorePointerOperand(Inst);
     }
 
+    Type *getValueType() const {
+      // TODO: handle target-specific intrinsics.
+      if (IntrinsicInst *II = dyn_cast<IntrinsicInst>(Inst)) {
+        switch (II->getIntrinsicID()) {
+        case Intrinsic::masked_load:
+          return II->getType();
+        case Intrinsic::masked_store:
+          return II->getArgOperand(0)->getType();
+        default:
+          return nullptr;
+        }
+      }
+      return getLoadStoreType(Inst);
+    }
+
     bool mayReadFromMemory() const {
       if (IntrID != 0)
         return Info.ReadMem;
@@ -827,10 +837,13 @@ private:
                         const ParseMemoryInst &Later);
 
   Value *getOrCreateResult(Value *Inst, Type *ExpectedType) const {
+    // TODO: We could insert relevant casts on type mismatch here.
     if (auto *LI = dyn_cast<LoadInst>(Inst))
-      return LI;
-    if (auto *SI = dyn_cast<StoreInst>(Inst))
-      return SI->getValueOperand();
+      return LI->getType() == ExpectedType ? LI : nullptr;
+    else if (auto *SI = dyn_cast<StoreInst>(Inst)) {
+      Value *V = SI->getValueOperand();
+      return V->getType() == ExpectedType ? V : nullptr;
+    }
     assert(isa<IntrinsicInst>(Inst) && "Instruction not supported");
     auto *II = cast<IntrinsicInst>(Inst);
     if (isHandledNonTargetIntrinsic(II->getIntrinsicID()))
@@ -1159,6 +1172,9 @@ bool EarlyCSE::overridingStores(const ParseMemoryInst &Earlier,
          "Violated invariant");
   if (Earlier.getPointerOperand() != Later.getPointerOperand())
     return false;
+  if (!Earlier.getValueType() || !Later.getValueType() ||
+      Earlier.getValueType() != Later.getValueType())
+    return false;
   if (Earlier.getMatchingId() != Later.getMatchingId())
     return false;
   // At the moment, we don't remove ordered stores, but do remove
@@ -1265,6 +1281,12 @@ bool EarlyCSE::processNode(DomTreeNode *Node) {
       continue;
     }
 
+    // Skip pseudoprobe intrinsics, for the same reason as assume intrinsics.
+    if (match(&Inst, m_Intrinsic<Intrinsic::pseudoprobe>())) {
+      LLVM_DEBUG(dbgs() << "EarlyCSE skipping pseudoprobe: " << Inst << '\n');
+      continue;
+    }
+
     // We can skip all invariant.start intrinsics since they only read memory,
     // and we can forward values across it. For invariant starts without
     // invariant ends, we can use the fact that the invariantness never ends to
@@ -1325,7 +1347,7 @@ bool EarlyCSE::processNode(DomTreeNode *Node) {
 
     // If the instruction can be simplified (e.g. X+0 = X) then replace it with
     // its simpler value.
-    if (Value *V = SimplifyInstruction(&Inst, SQ)) {
+    if (Value *V = simplifyInstruction(&Inst, SQ)) {
       LLVM_DEBUG(dbgs() << "EarlyCSE Simplify: " << Inst << "  to: " << *V
                         << '\n');
       if (!DebugCounter::shouldExecute(CSECounter)) {
@@ -1360,8 +1382,16 @@ bool EarlyCSE::processNode(DomTreeNode *Node) {
           LLVM_DEBUG(dbgs() << "Skipping due to debug counter\n");
           continue;
         }
-        if (auto *I = dyn_cast<Instruction>(V))
-          I->andIRFlags(&Inst);
+        if (auto *I = dyn_cast<Instruction>(V)) {
+          // If I being poison triggers UB, there is no need to drop those
+          // flags. Otherwise, only retain flags present on both I and Inst.
+          // TODO: Currently some fast-math flags are not treated as
+          // poison-generating even though they should. Until this is fixed,
+          // always retain flags present on both I and Inst for floating point
+          // instructions.
+          if (isa<FPMathOperator>(I) || (I->hasPoisonGeneratingFlags() && !programUndefinedIfPoison(I)))
+            I->andIRFlags(&Inst);
+        }
         Inst.replaceAllUsesWith(V);
         salvageKnowledge(&Inst, &AC);
         removeMSSA(Inst);
@@ -1640,6 +1670,16 @@ PreservedAnalyses EarlyCSEPass::run(Function &F,
   if (UseMemorySSA)
     PA.preserve<MemorySSAAnalysis>();
   return PA;
+}
+
+void EarlyCSEPass::printPipeline(
+    raw_ostream &OS, function_ref<StringRef(StringRef)> MapClassName2PassName) {
+  static_cast<PassInfoMixin<EarlyCSEPass> *>(this)->printPipeline(
+      OS, MapClassName2PassName);
+  OS << "<";
+  if (UseMemorySSA)
+    OS << "memssa";
+  OS << ">";
 }
 
 namespace {

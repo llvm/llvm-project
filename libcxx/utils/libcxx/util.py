@@ -102,7 +102,7 @@ def which(command, paths = None):
     (or the PATH environment variable, if unspecified)."""
 
     if paths is None:
-        paths = os.environ.get('PATH','')
+        paths = os.environ.get('PATH', '')
 
     # Check for absolute match first.
     if os.path.isfile(command):
@@ -202,23 +202,20 @@ def executeCommand(command, cwd=None, env=None, input=None, timeout=0):
                          stderr=subprocess.PIPE,
                          env=env, close_fds=kUseCloseFDs)
     timerObject = None
-    # FIXME: Because of the way nested function scopes work in Python 2.x we
-    # need to use a reference to a mutable object rather than a plain
-    # bool. In Python 3 we could use the "nonlocal" keyword but we need
-    # to support Python 2 as well.
-    hitTimeOut = [False]
+    hitTimeOut = False
     try:
         if timeout > 0:
             def killProcess():
                 # We may be invoking a shell so we need to kill the
                 # process and all its children.
-                hitTimeOut[0] = True
+                nonlocal hitTimeOut
+                hitTimeOut = True
                 killProcessAndChildren(p.pid)
 
             timerObject = threading.Timer(timeout, killProcess)
             timerObject.start()
 
-        out,err = p.communicate(input=input)
+        out, err = p.communicate(input=input)
         exitCode = p.wait()
     finally:
         if timerObject != None:
@@ -228,7 +225,7 @@ def executeCommand(command, cwd=None, env=None, input=None, timeout=0):
     out = convert_string(out)
     err = convert_string(err)
 
-    if hitTimeOut[0]:
+    if hitTimeOut:
         raise ExecuteCommandTimeoutException(
             msg='Reached timeout of {} seconds'.format(timeout),
             out=out,

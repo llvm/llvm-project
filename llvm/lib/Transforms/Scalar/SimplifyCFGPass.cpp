@@ -31,19 +31,16 @@
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/CFG.h"
-#include "llvm/IR/Constants.h"
-#include "llvm/IR/DataLayout.h"
+#include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
-#include "llvm/IR/Module.h"
 #include "llvm/IR/ValueHandle.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Transforms/Scalar.h"
 #include "llvm/Transforms/Scalar/SimplifyCFG.h"
-#include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Utils/Local.h"
 #include "llvm/Transforms/Utils/SimplifyCFGOptions.h"
 #include <utility>
@@ -58,6 +55,11 @@ static cl::opt<unsigned> UserBonusInstThreshold(
 static cl::opt<bool> UserKeepLoops(
     "keep-loops", cl::Hidden, cl::init(true),
     cl::desc("Preserve canonical loop structure (default = true)"));
+
+static cl::opt<bool> UserSwitchRangeToICmp(
+    "switch-range-to-icmp", cl::Hidden, cl::init(false),
+    cl::desc(
+        "Convert switches into an integer range comparison (default = false)"));
 
 static cl::opt<bool> UserSwitchToLookup(
     "switch-to-lookup", cl::Hidden, cl::init(false),
@@ -77,6 +79,79 @@ static cl::opt<bool> UserSinkCommonInsts(
 
 
 STATISTIC(NumSimpl, "Number of blocks simplified");
+
+static bool
+performBlockTailMerging(Function &F, ArrayRef<BasicBlock *> BBs,
+                        std::vector<DominatorTree::UpdateType> *Updates) {
+  SmallVector<PHINode *, 1> NewOps;
+
+  // We don't want to change IR just because we can.
+  // Only do that if there are at least two blocks we'll tail-merge.
+  if (BBs.size() < 2)
+    return false;
+
+  if (Updates)
+    Updates->reserve(Updates->size() + BBs.size());
+
+  BasicBlock *CanonicalBB;
+  Instruction *CanonicalTerm;
+  {
+    auto *Term = BBs[0]->getTerminator();
+
+    // Create a canonical block for this function terminator type now,
+    // placing it *before* the first block that will branch to it.
+    CanonicalBB = BasicBlock::Create(
+        F.getContext(), Twine("common.") + Term->getOpcodeName(), &F, BBs[0]);
+    // We'll also need a PHI node per each operand of the terminator.
+    NewOps.resize(Term->getNumOperands());
+    for (auto I : zip(Term->operands(), NewOps)) {
+      std::get<1>(I) = PHINode::Create(std::get<0>(I)->getType(),
+                                       /*NumReservedValues=*/BBs.size(),
+                                       CanonicalBB->getName() + ".op");
+      CanonicalBB->getInstList().push_back(std::get<1>(I));
+    }
+    // Make it so that this canonical block actually has the right
+    // terminator.
+    CanonicalTerm = Term->clone();
+    CanonicalBB->getInstList().push_back(CanonicalTerm);
+    // If the canonical terminator has operands, rewrite it to take PHI's.
+    for (auto I : zip(NewOps, CanonicalTerm->operands()))
+      std::get<1>(I) = std::get<0>(I);
+  }
+
+  // Now, go through each block (with the current terminator type)
+  // we've recorded, and rewrite it to branch to the new common block.
+  const DILocation *CommonDebugLoc = nullptr;
+  for (BasicBlock *BB : BBs) {
+    auto *Term = BB->getTerminator();
+    assert(Term->getOpcode() == CanonicalTerm->getOpcode() &&
+           "All blocks to be tail-merged must be the same "
+           "(function-terminating) terminator type.");
+
+    // Aha, found a new non-canonical function terminator. If it has operands,
+    // forward them to the PHI nodes in the canonical block.
+    for (auto I : zip(Term->operands(), NewOps))
+      std::get<1>(I)->addIncoming(std::get<0>(I), BB);
+
+    // Compute the debug location common to all the original terminators.
+    if (!CommonDebugLoc)
+      CommonDebugLoc = Term->getDebugLoc();
+    else
+      CommonDebugLoc =
+          DILocation::getMergedLocation(CommonDebugLoc, Term->getDebugLoc());
+
+    // And turn BB into a block that just unconditionally branches
+    // to the canonical block.
+    Term->eraseFromParent();
+    BranchInst::Create(CanonicalBB, BB);
+    if (Updates)
+      Updates->push_back({DominatorTree::Insert, BB, CanonicalBB});
+  }
+
+  CanonicalTerm->setDebugLoc(CommonDebugLoc);
+
+  return true;
+}
 
 static bool tailMergeBlocksWithSimilarFunctionTerminators(Function &F,
                                                           DomTreeUpdater *DTU) {
@@ -133,73 +208,8 @@ static bool tailMergeBlocksWithSimilarFunctionTerminators(Function &F,
 
   std::vector<DominatorTree::UpdateType> Updates;
 
-  for (ArrayRef<BasicBlock *> BBs : make_second_range(Structure)) {
-    SmallVector<PHINode *, 1> NewOps;
-
-    // We don't want to change IR just because we can.
-    // Only do that if there are at least two blocks we'll tail-merge.
-    if (BBs.size() < 2)
-      continue;
-
-    Changed = true;
-
-    if (DTU)
-      Updates.reserve(Updates.size() + BBs.size());
-
-    BasicBlock *CanonicalBB;
-    Instruction *CanonicalTerm;
-    {
-      auto *Term = BBs[0]->getTerminator();
-
-      // Create a canonical block for this function terminator type now,
-      // placing it *before* the first block that will branch to it.
-      CanonicalBB = BasicBlock::Create(
-          F.getContext(), Twine("common.") + Term->getOpcodeName(), &F, BBs[0]);
-      // We'll also need a PHI node per each operand of the terminator.
-      NewOps.resize(Term->getNumOperands());
-      for (auto I : zip(Term->operands(), NewOps)) {
-        std::get<1>(I) = PHINode::Create(std::get<0>(I)->getType(),
-                                         /*NumReservedValues=*/BBs.size(),
-                                         CanonicalBB->getName() + ".op");
-        CanonicalBB->getInstList().push_back(std::get<1>(I));
-      }
-      // Make it so that this canonical block actually has the right
-      // terminator.
-      CanonicalTerm = Term->clone();
-      CanonicalBB->getInstList().push_back(CanonicalTerm);
-      // If the canonical terminator has operands, rewrite it to take PHI's.
-      for (auto I : zip(NewOps, CanonicalTerm->operands()))
-        std::get<1>(I) = std::get<0>(I);
-    }
-
-    // Now, go through each block (with the current terminator type)
-    // we've recorded, and rewrite it to branch to the new common block.
-    const DILocation *CommonDebugLoc = nullptr;
-    for (BasicBlock *BB : BBs) {
-      auto *Term = BB->getTerminator();
-
-      // Aha, found a new non-canonical function terminator. If it has operands,
-      // forward them to the PHI nodes in the canonical block.
-      for (auto I : zip(Term->operands(), NewOps))
-        std::get<1>(I)->addIncoming(std::get<0>(I), BB);
-
-      // Compute the debug location common to all the original terminators.
-      if (!CommonDebugLoc)
-        CommonDebugLoc = Term->getDebugLoc();
-      else
-        CommonDebugLoc =
-            DILocation::getMergedLocation(CommonDebugLoc, Term->getDebugLoc());
-
-      // And turn BB into a block that just unconditionally branches
-      // to the canonical block.
-      Term->eraseFromParent();
-      BranchInst::Create(CanonicalBB, BB);
-      if (DTU)
-        Updates.push_back({DominatorTree::Insert, BB, CanonicalBB});
-    }
-
-    CanonicalTerm->setDebugLoc(CommonDebugLoc);
-  }
+  for (ArrayRef<BasicBlock *> BBs : make_second_range(Structure))
+    Changed |= performBlockTailMerging(F, BBs, DTU ? &Updates : nullptr);
 
   if (DTU)
     DTU->applyUpdates(Updates);
@@ -224,7 +234,10 @@ static bool iterativelySimplifyCFG(Function &F, const TargetTransformInfo &TTI,
   SmallVector<WeakVH, 16> LoopHeaders(UniqueLoopHeaders.begin(),
                                       UniqueLoopHeaders.end());
 
+  unsigned IterCnt = 0;
+  (void)IterCnt;
   while (LocalChange) {
+    assert(IterCnt++ < 1000 && "Iterative simplification didn't converge!");
     LocalChange = false;
 
     // Loop over all of the basic blocks and remove them if they are unneeded.
@@ -300,6 +313,8 @@ static void applyCommandLineOverridesToOptions(SimplifyCFGOptions &Options) {
     Options.BonusInstThreshold = UserBonusInstThreshold;
   if (UserForwardSwitchCond.getNumOccurrences())
     Options.ForwardSwitchCondToPhi = UserForwardSwitchCond;
+  if (UserSwitchRangeToICmp.getNumOccurrences())
+    Options.ConvertSwitchRangeToICmp = UserSwitchRangeToICmp;
   if (UserSwitchToLookup.getNumOccurrences())
     Options.ConvertSwitchToLookupTable = UserSwitchToLookup;
   if (UserKeepLoops.getNumOccurrences())
@@ -310,13 +325,30 @@ static void applyCommandLineOverridesToOptions(SimplifyCFGOptions &Options) {
     Options.SinkCommonInsts = UserSinkCommonInsts;
 }
 
-SimplifyCFGPass::SimplifyCFGPass() : Options() {
+SimplifyCFGPass::SimplifyCFGPass() {
   applyCommandLineOverridesToOptions(Options);
 }
 
 SimplifyCFGPass::SimplifyCFGPass(const SimplifyCFGOptions &Opts)
     : Options(Opts) {
   applyCommandLineOverridesToOptions(Options);
+}
+
+void SimplifyCFGPass::printPipeline(
+    raw_ostream &OS, function_ref<StringRef(StringRef)> MapClassName2PassName) {
+  static_cast<PassInfoMixin<SimplifyCFGPass> *>(this)->printPipeline(
+      OS, MapClassName2PassName);
+  OS << "<";
+  OS << "bonus-inst-threshold=" << Options.BonusInstThreshold << ";";
+  OS << (Options.ForwardSwitchCondToPhi ? "" : "no-") << "forward-switch-cond;";
+  OS << (Options.ConvertSwitchRangeToICmp ? "" : "no-")
+     << "switch-range-to-icmp;";
+  OS << (Options.ConvertSwitchToLookupTable ? "" : "no-")
+     << "switch-to-lookup;";
+  OS << (Options.NeedCanonicalLoop ? "" : "no-") << "keep-loops;";
+  OS << (Options.HoistCommonInsts ? "" : "no-") << "hoist-common-insts;";
+  OS << (Options.SinkCommonInsts ? "" : "no-") << "sink-common-insts";
+  OS << ">";
 }
 
 PreservedAnalyses SimplifyCFGPass::run(Function &F,

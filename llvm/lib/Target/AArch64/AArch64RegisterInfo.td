@@ -732,7 +732,9 @@ def Tuples8X : RegisterTuples<
   !foreach(i, [0,1,2,3,4,5,6,7], !cast<SubRegIndex>("x8sub_"#i)),
   !foreach(i, [0,1,2,3,4,5,6,7], (trunc (decimate (rotl GPR64, i), 2), 12))>;
 
-def GPR64x8Class : RegisterClass<"AArch64", [i64], 64, (trunc Tuples8X, 12)>;
+def GPR64x8Class : RegisterClass<"AArch64", [i64x8], 512, (trunc Tuples8X, 12)> {
+  let Size = 512;
+}
 def GPR64x8AsmOp : AsmOperandClass {
   let Name = "GPR64x8";
   let ParserMethod = "tryParseGPR64x8";
@@ -899,16 +901,8 @@ def PPR32  : PPRRegOp<"s", PPRAsmOp32,  ElementSizeS,  PPR>;
 def PPR64  : PPRRegOp<"d", PPRAsmOp64,  ElementSizeD,  PPR>;
 
 def PPRAsmOp3bAny : PPRAsmOperand<"Predicate3bAny", "PPR_3b",  0>;
-def PPRAsmOp3b8   : PPRAsmOperand<"Predicate3bB",   "PPR_3b",  8>;
-def PPRAsmOp3b16  : PPRAsmOperand<"Predicate3bH",   "PPR_3b", 16>;
-def PPRAsmOp3b32  : PPRAsmOperand<"Predicate3bS",   "PPR_3b", 32>;
-def PPRAsmOp3b64  : PPRAsmOperand<"Predicate3bD",   "PPR_3b", 64>;
 
 def PPR3bAny : PPRRegOp<"",  PPRAsmOp3bAny, ElementSizeNone, PPR_3b>;
-def PPR3b8   : PPRRegOp<"b", PPRAsmOp3b8,   ElementSizeB, PPR_3b>;
-def PPR3b16  : PPRRegOp<"h", PPRAsmOp3b16,  ElementSizeH, PPR_3b>;
-def PPR3b32  : PPRRegOp<"s", PPRAsmOp3b32,  ElementSizeS, PPR_3b>;
-def PPR3b64  : PPRRegOp<"d", PPRAsmOp3b64,  ElementSizeD, PPR_3b>;
 
 //******************************************************************************
 
@@ -1218,26 +1212,28 @@ let SubRegIndices = [zasubb] in {
 
 // SME Register Classes
 
-// Accumulator array
-def MPR : RegisterClass<"AArch64", [untyped], 2048, (add ZA)> {
-  let Size = 2048;
-}
+let isAllocatable = 0 in {
+  // Accumulator array
+  def MPR : RegisterClass<"AArch64", [untyped], 2048, (add ZA)> {
+    let Size = 2048;
+  }
 
-// Accumulator array as single tiles
-def MPR8    : RegisterClass<"AArch64", [untyped], 2048, (add (sequence "ZAB%u", 0, 0))> {
-  let Size = 2048;
-}
-def MPR16   : RegisterClass<"AArch64", [untyped], 1024, (add (sequence "ZAH%u", 0, 1))> {
-  let Size = 1024;
-}
-def MPR32   : RegisterClass<"AArch64", [untyped],  512, (add (sequence "ZAS%u", 0, 3))> {
-  let Size = 512;
-}
-def MPR64   : RegisterClass<"AArch64", [untyped],  256, (add (sequence "ZAD%u", 0, 7))> {
-  let Size = 256;
-}
-def MPR128  : RegisterClass<"AArch64", [untyped],  128, (add (sequence "ZAQ%u", 0, 15))> {
-  let Size = 128;
+  // Accumulator array as single tiles
+  def MPR8    : RegisterClass<"AArch64", [untyped], 2048, (add (sequence "ZAB%u", 0, 0))> {
+    let Size = 2048;
+  }
+  def MPR16   : RegisterClass<"AArch64", [untyped], 1024, (add (sequence "ZAH%u", 0, 1))> {
+    let Size = 1024;
+  }
+  def MPR32   : RegisterClass<"AArch64", [untyped],  512, (add (sequence "ZAS%u", 0, 3))> {
+    let Size = 512;
+  }
+  def MPR64   : RegisterClass<"AArch64", [untyped],  256, (add (sequence "ZAD%u", 0, 7))> {
+    let Size = 256;
+  }
+  def MPR128  : RegisterClass<"AArch64", [untyped],  128, (add (sequence "ZAQ%u", 0, 15))> {
+    let Size = 128;
+  }
 }
 
 // SME Register Operands
@@ -1352,6 +1348,22 @@ class MatrixOperand<RegisterClass RC, int EltSize> : RegisterOperand<RC> {
 
 def MatrixOp : MatrixOperand<MPR, 0>;
 
+class MatrixTileListAsmOperand : AsmOperandClass {
+  let Name = "MatrixTileList";
+  let ParserMethod = "tryParseMatrixTileList";
+  let RenderMethod = "addMatrixTileListOperands";
+  let PredicateMethod = "isMatrixTileList";
+}
+
+class MatrixTileListOperand : Operand<i8> {
+  let ParserMatchClass = MatrixTileListAsmOperand<>;
+  let DecoderMethod = "DecodeMatrixTileListRegisterClass";
+  let EncoderMethod = "EncodeMatrixTileListRegisterClass";
+  let PrintMethod = "printMatrixTileList";
+}
+
+def MatrixTileList : MatrixTileListOperand<>;
+
 def MatrixIndexGPR32_12_15 : RegisterClass<"AArch64", [i32], 32, (sequence "W%u", 12, 15)> {
   let DiagnosticType = "InvalidMatrixIndexGPR32_12_15";
 }
@@ -1375,3 +1387,12 @@ def svcr_op : Operand<i32> {
     return AArch64SVCR::lookupSVCRByEncoding(MCOp.getImm()) != nullptr;
   }];
 }
+
+//===----------------------------------------------------------------------===//
+// Register categories.
+//
+
+def GeneralPurposeRegisters : RegisterCategory<[GPR64, GPR32]>;
+
+def FIXED_REGS : RegisterClass<"AArch64", [i64], 64, (add FP, SP, VG, FFR)>;
+def FixedRegisters : RegisterCategory<[CCR, FIXED_REGS]>;

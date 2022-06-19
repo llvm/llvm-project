@@ -24,10 +24,34 @@ using namespace llvm;
 
 WebAssemblyFunctionInfo::~WebAssemblyFunctionInfo() = default; // anchor.
 
+MachineFunctionInfo *WebAssemblyFunctionInfo::clone(
+    BumpPtrAllocator &Allocator, MachineFunction &DestMF,
+    const DenseMap<MachineBasicBlock *, MachineBasicBlock *> &Src2DstMBB)
+    const {
+  WebAssemblyFunctionInfo *Clone =
+      DestMF.cloneInfo<WebAssemblyFunctionInfo>(*this);
+  Clone->MF = &DestMF;
+  return Clone;
+}
+
 void WebAssemblyFunctionInfo::initWARegs(MachineRegisterInfo &MRI) {
   assert(WARegs.empty());
   unsigned Reg = UnusedReg;
   WARegs.resize(MRI.getNumVirtRegs(), Reg);
+}
+
+void llvm::computeLegalValueVTs(const WebAssemblyTargetLowering &TLI,
+                                LLVMContext &Ctx, const DataLayout &DL,
+                                Type *Ty, SmallVectorImpl<MVT> &ValueVTs) {
+  SmallVector<EVT, 4> VTs;
+  ComputeValueVTs(TLI, DL, Ty, VTs);
+
+  for (EVT VT : VTs) {
+    unsigned NumRegs = TLI.getNumRegisters(Ctx, VT);
+    MVT RegisterVT = TLI.getRegisterType(Ctx, VT);
+    for (unsigned I = 0; I != NumRegs; ++I)
+      ValueVTs.push_back(RegisterVT);
+  }
 }
 
 void llvm::computeLegalValueVTs(const Function &F, const TargetMachine &TM,
@@ -35,15 +59,7 @@ void llvm::computeLegalValueVTs(const Function &F, const TargetMachine &TM,
   const DataLayout &DL(F.getParent()->getDataLayout());
   const WebAssemblyTargetLowering &TLI =
       *TM.getSubtarget<WebAssemblySubtarget>(F).getTargetLowering();
-  SmallVector<EVT, 4> VTs;
-  ComputeValueVTs(TLI, DL, Ty, VTs);
-
-  for (EVT VT : VTs) {
-    unsigned NumRegs = TLI.getNumRegisters(F.getContext(), VT);
-    MVT RegisterVT = TLI.getRegisterType(F.getContext(), VT);
-    for (unsigned I = 0; I != NumRegs; ++I)
-      ValueVTs.push_back(RegisterVT);
-  }
+  computeLegalValueVTs(TLI, F.getContext(), DL, Ty, ValueVTs);
 }
 
 void llvm::computeSignatureVTs(const FunctionType *Ty,
@@ -147,7 +163,7 @@ void WebAssemblyFunctionInfo::initializeBaseYamlFields(
     addResult(WebAssembly::parseMVT(VT.Value));
   if (WasmEHInfo) {
     for (auto KV : YamlMFI.SrcToUnwindDest)
-      WasmEHInfo->setUnwindDest(MF.getBlockNumbered(KV.first),
-                                MF.getBlockNumbered(KV.second));
+      WasmEHInfo->setUnwindDest(MF->getBlockNumbered(KV.first),
+                                MF->getBlockNumbered(KV.second));
   }
 }

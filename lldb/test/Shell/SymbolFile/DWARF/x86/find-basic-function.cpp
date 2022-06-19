@@ -10,6 +10,10 @@
 // RUN:   FileCheck --check-prefix=FULL %s
 // RUN: lldb-test symbols --name=_Z3fooi --find=function --function-flags=full %t | \
 // RUN:   FileCheck --check-prefix=FULL-MANGLED %s
+// RUN: lldb-test symbols --name=_ZN3bar3baz3fooEv --find=function --function-flags=full %t | \
+// RUN:   FileCheck --check-prefix=FULL-MANGLED-NAMESPACE %s
+// RUN: lldb-test symbols --name=_ZN4sbar3fooEi --find=function --function-flags=full %t | \
+// RUN:   FileCheck --check-prefix=FULL-MANGLED-METHOD %s
 // RUN: lldb-test symbols --name=foo --context=context --find=function --function-flags=base %t | \
 // RUN:   FileCheck --check-prefix=CONTEXT %s
 // RUN: lldb-test symbols --name=not_there --find=function %t | \
@@ -21,9 +25,13 @@
 // RUN: lldb-test symbols --name=foo --find=function --function-flags=method %t | \
 // RUN:   FileCheck --check-prefix=METHOD %s
 // RUN: lldb-test symbols --name=foo --find=function --function-flags=full %t | \
-// RUN:   FileCheck --check-prefix=FULL-INDEXED %s
+// RUN:   FileCheck --check-prefix=FULL %s
 // RUN: lldb-test symbols --name=_Z3fooi --find=function --function-flags=full %t | \
 // RUN:   FileCheck --check-prefix=FULL-MANGLED %s
+// RUN: lldb-test symbols --name=_ZN3bar3baz3fooEv --find=function --function-flags=full %t | \
+// RUN:   FileCheck --check-prefix=FULL-MANGLED-NAMESPACE %s
+// RUN: lldb-test symbols --name=_ZN4sbar3fooEi --find=function --function-flags=full %t | \
+// RUN:   FileCheck --check-prefix=FULL-MANGLED-METHOD %s
 // RUN: lldb-test symbols --name=foo --context=context --find=function --function-flags=base %t | \
 // RUN:   FileCheck --check-prefix=CONTEXT %s
 // RUN: lldb-test symbols --name=not_there --find=function %t | \
@@ -37,9 +45,13 @@
 // RUN: lldb-test symbols --name=foo --find=function --function-flags=method %t | \
 // RUN:   FileCheck --check-prefix=METHOD %s
 // RUN: lldb-test symbols --name=foo --find=function --function-flags=full %t | \
-// RUN:   FileCheck --check-prefix=FULL-INDEXED %s
+// RUN:   FileCheck --check-prefix=FULL %s
 // RUN: lldb-test symbols --name=_Z3fooi --find=function --function-flags=full %t | \
 // RUN:   FileCheck --check-prefix=FULL-MANGLED %s
+// RUN: lldb-test symbols --name=_ZN3bar3baz3fooEv --find=function --function-flags=full %t | \
+// RUN:   FileCheck --check-prefix=FULL-MANGLED-NAMESPACE %s
+// RUN: lldb-test symbols --name=_ZN4sbar3fooEi --find=function --function-flags=full %t | \
+// RUN:   FileCheck --check-prefix=FULL-MANGLED-METHOD %s
 // RUN: lldb-test symbols --name=foo --context=context --find=function --function-flags=base %t | \
 // RUN:   FileCheck --check-prefix=CONTEXT %s
 // RUN: lldb-test symbols --name=not_there --find=function %t | \
@@ -58,19 +70,16 @@
 // METHOD-DAG: name = "sbar::foo(int)", mangled = "_ZN4sbar3fooEi"
 // METHOD-DAG: name = "ffbar()::sbaz::foo()", mangled = "_ZZ5ffbarvEN4sbaz3fooEv"
 
-// FULL-INDEXED: Found 7 functions:
-// FULL-INDEXED-DAG: name = "foo()", mangled = "_Z3foov"
-// FULL-INDEXED-DAG: name = "foo(int)", mangled = "_Z3fooi"
-// FULL-INDEXED-DAG: name = "bar::foo()", mangled = "_ZN3bar3fooEv"
-// FULL-INDEXED-DAG: name = "bar::baz::foo()", mangled = "_ZN3bar3baz3fooEv"
-// FULL-INDEXED-DAG: name = "sbar::foo()", mangled = "_ZN4sbar3fooEv"
-// FULL-INDEXED-DAG: name = "sbar::foo(int)", mangled = "_ZN4sbar3fooEi"
-// FULL-INDEXED-DAG: name = "ffbar()::sbaz::foo()", mangled = "_ZZ5ffbarvEN4sbaz3fooEv"
-
 // FULL: Found 0 functions:
 
 // FULL-MANGLED: Found 1 functions:
 // FULL-MANGLED-DAG: name = "foo(int)", mangled = "_Z3fooi"
+
+// FULL-MANGLED-NAMESPACE: Found 1 functions:
+// FULL-MANGLED-NAMESPACE-DAG: name = "bar::baz::foo()", mangled = "_ZN3bar3baz3fooEv"
+
+// FULL-MANGLED-METHOD: Found 1 functions:
+// FULL-MANGLED-METHOD-DAG: name = "sbar::foo(int)", mangled = "_ZN4sbar3fooEi"
 
 // CONTEXT: Found 1 functions:
 // CONTEXT-DAG: name = "bar::foo()", mangled = "_ZN3bar3fooEv"

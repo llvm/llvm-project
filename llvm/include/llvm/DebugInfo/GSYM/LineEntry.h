@@ -9,7 +9,7 @@
 #ifndef LLVM_DEBUGINFO_GSYM_LINEENTRY_H
 #define LLVM_DEBUGINFO_GSYM_LINEENTRY_H
 
-#include "llvm/DebugInfo/GSYM/Range.h"
+#include "llvm/DebugInfo/GSYM/ExtractRanges.h"
 
 namespace llvm {
 namespace gsym {

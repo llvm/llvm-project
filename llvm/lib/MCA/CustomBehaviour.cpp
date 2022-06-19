@@ -16,12 +16,30 @@
 namespace llvm {
 namespace mca {
 
-CustomBehaviour::~CustomBehaviour() {}
+CustomBehaviour::~CustomBehaviour() = default;
 
 unsigned CustomBehaviour::checkCustomHazard(ArrayRef<InstRef> IssuedInst,
                                             const InstRef &IR) {
   // 0 signifies that there are no hazards that need to be waited on
   return 0;
+}
+
+std::vector<std::unique_ptr<View>>
+CustomBehaviour::getStartViews(llvm::MCInstPrinter &IP,
+                               llvm::ArrayRef<llvm::MCInst> Insts) {
+  return std::vector<std::unique_ptr<View>>();
+}
+
+std::vector<std::unique_ptr<View>>
+CustomBehaviour::getPostInstrInfoViews(llvm::MCInstPrinter &IP,
+                                       llvm::ArrayRef<llvm::MCInst> Insts) {
+  return std::vector<std::unique_ptr<View>>();
+}
+
+std::vector<std::unique_ptr<View>>
+CustomBehaviour::getEndViews(llvm::MCInstPrinter &IP,
+                             llvm::ArrayRef<llvm::MCInst> Insts) {
+  return std::vector<std::unique_ptr<View>>();
 }
 
 } // namespace mca

@@ -91,7 +91,7 @@
 		2307CCCC1D4A5DAE0016ABC0 /* CMakeLists.txt */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = CMakeLists.txt; sourceTree = "<group>"; };
 		233B4EA51D2DB54300E98261 /* JSON.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = JSON.cpp; sourceTree = "<group>"; };
 		233B4EA61D2DB54300E98261 /* JSON.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = JSON.h; sourceTree = "<group>"; };
-		233B4EA81D2DB96A00E98261 /* StringConvert.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = StringConvert.cpp; path = ../../../source/Host/common/StringConvert.cpp; sourceTree = "<group>"; };
+		233B4EA81D2DB96A00E98261 /* StringConvert.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = StringConvert.cpp; sourceTree = "<group>"; };
 		23D1B0271D497E8B00FF831B /* OsLogger.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = OsLogger.cpp; sourceTree = "<group>"; };
 		23D1B0281D497E8B00FF831B /* OsLogger.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = OsLogger.h; sourceTree = "<group>"; };
 		260828DE0CBAF7F400F95054 /* DNBRuntimeAction.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = DNBRuntimeAction.h; sourceTree = "<group>"; };

@@ -20,11 +20,9 @@
 
 #include <map>
 #include <string>
-#include <vector>
 
 namespace llvm {
 
-struct CodeGenHwModes;
 class Record;
 class raw_ostream;
 

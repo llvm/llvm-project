@@ -215,6 +215,20 @@ LLVM_NODISCARD Value *Negator::visitImpl(Value *V, unsigned Depth) {
                  : Builder.CreateSExt(I->getOperand(0), I->getType(),
                                       I->getName() + ".neg");
     break;
+  case Instruction::Select: {
+    // If both arms of the select are constants, we don't need to recurse.
+    // Therefore, this transform is not limited by uses.
+    auto *Sel = cast<SelectInst>(I);
+    Constant *TrueC, *FalseC;
+    if (match(Sel->getTrueValue(), m_ImmConstant(TrueC)) &&
+        match(Sel->getFalseValue(), m_ImmConstant(FalseC))) {
+      Constant *NegTrueC = ConstantExpr::getNeg(TrueC);
+      Constant *NegFalseC = ConstantExpr::getNeg(FalseC);
+      return Builder.CreateSelect(Sel->getCondition(), NegTrueC, NegFalseC,
+                                  I->getName() + ".neg", /*MDFrom=*/I);
+    }
+    break;
+  }
   default:
     break; // Other instructions require recursive reasoning.
   }
@@ -234,6 +248,20 @@ LLVM_NODISCARD Value *Negator::visitImpl(Value *V, unsigned Depth) {
     return nullptr;
 
   switch (I->getOpcode()) {
+  case Instruction::And: {
+    Constant *ShAmt;
+    // sub(y,and(lshr(x,C),1)) --> add(ashr(shl(x,(BW-1)-C),BW-1),y)
+    if (match(I, m_c_And(m_OneUse(m_TruncOrSelf(
+                             m_LShr(m_Value(X), m_ImmConstant(ShAmt)))),
+                         m_One()))) {
+      unsigned BW = X->getType()->getScalarSizeInBits();
+      Constant *BWMinusOne = ConstantInt::get(X->getType(), BW - 1);
+      Value *R = Builder.CreateShl(X, Builder.CreateSub(BWMinusOne, ShAmt));
+      R = Builder.CreateAShr(R, BWMinusOne);
+      return Builder.CreateTruncOrBitCast(R, I->getType());
+    }
+    break;
+  }
   case Instruction::SDiv:
     // `sdiv` is negatible if divisor is not undef/INT_MIN/1.
     // While this is normally not behind a use-check,
@@ -389,7 +417,7 @@ LLVM_NODISCARD Value *Negator::visitImpl(Value *V, unsigned Depth) {
       NonNegatedOps.emplace_back(Op); // Just record which operand that was.
     }
     assert((NegatedOps.size() + NonNegatedOps.size()) == 2 &&
-           "Internal consistency sanity check.");
+           "Internal consistency check failed.");
     // Did we manage to sink negation into both of the operands?
     if (NegatedOps.size() == 2) // Then we get to keep the `add`!
       return Builder.CreateAdd(NegatedOps[0], NegatedOps[1],

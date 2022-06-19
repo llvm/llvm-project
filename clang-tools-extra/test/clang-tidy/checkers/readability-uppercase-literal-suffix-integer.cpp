@@ -270,3 +270,29 @@ void c() { l &a(); }
 void d();
 void d() { c<b>(); }
 } // namespace
+
+// Check that non-type template parameters do not cause any diags.
+// https://bugs.llvm.org/show_bug.cgi?id=51790
+template <int capacity>
+struct Vector {
+  static constexpr int kCapacity = capacity;
+};
+
+template <int capacity>
+constexpr int Vector<capacity>::kCapacity;
+// CHECK-MESSAGES-NOT: :[[@LINE-1]]:22: warning: integer literal has suffix 'ity', which is not uppercase
+
+template <int foo1u>
+struct Foo {
+  static constexpr int kFoo = foo1u;
+};
+
+template <int foo1u>
+constexpr int Foo<foo1u>::kFoo;
+// CHECK-MESSAGES-NOT: :[[@LINE-1]]:19: warning: integer literal has suffix 'u', which is not uppercase
+
+// The template needs to be instantiated for diagnostics to show up
+void test_non_type_template_parameter() {
+  int x = Vector<10>::kCapacity;
+  int f = Foo<10>::kFoo;
+}

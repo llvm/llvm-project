@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -triple x86_64-apple-darwin10 -fobjc-runtime=macosx-10.10 -emit-llvm -fblocks -fobjc-weak -o - %s | FileCheck %s -check-prefix=CHECK -check-prefix=CHECK-MODERN
-// RUN: %clang_cc1 -triple i386-apple-darwin10 -fobjc-runtime=macosx-fragile-10.10 -emit-llvm -fblocks -fobjc-weak -o - %s | FileCheck %s -check-prefix=CHECK -check-prefix=CHECK-FRAGILE
+// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-apple-darwin10 -fobjc-runtime=macosx-10.10 -emit-llvm -fblocks -fobjc-weak -o - %s | FileCheck %s -check-prefix=CHECK -check-prefix=CHECK-MODERN
+// RUN: %clang_cc1 -no-opaque-pointers -triple i386-apple-darwin10 -fobjc-runtime=macosx-fragile-10.10 -emit-llvm -fblocks -fobjc-weak -o - %s | FileCheck %s -check-prefix=CHECK -check-prefix=CHECK-FRAGILE
 
 @interface Object
 - (instancetype) retain;
@@ -177,7 +177,7 @@ void test9(void) {
   __unsafe_unretained Foo *p = get_object();
   use_block(^{ [p run]; });
 }
-void test9_fin() {}
+void test9_fin(void) {}
 
 // CHECK-LABEL: define{{.*}} void @test10()
 // CHECK-NOT:   define linkonce_odr hidden void @__copy_helper
@@ -188,4 +188,4 @@ void test10(void) {
   UnsafeFooPtr p = get_object();
   use_block(^{ [p run]; });
 }
-void test10_fin() {}
+void test10_fin(void) {}

@@ -1,5 +1,6 @@
 // RUN: %clang_cc1 -ffreestanding %s -triple=x86_64-unknown-unknown -target-feature +3dnowa -emit-llvm -o - -Wall -Werror | FileCheck %s -check-prefix=GCC -check-prefix=CHECK
 // RUN: %clang_cc1 -ffreestanding %s -triple=x86_64-scei-ps4 -target-feature +3dnowa -emit-llvm -o - -Wall -Werror | FileCheck %s -check-prefix=PS4 -check-prefix=CHECK
+// RUN: %clang_cc1 -ffreestanding %s -triple=x86_64-sie-ps5  -target-feature +3dnowa -emit-llvm -o - -Wall -Werror | FileCheck %s -check-prefix=PS4 -check-prefix=CHECK
 
 
 #include <x86intrin.h>

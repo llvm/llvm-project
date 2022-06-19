@@ -24,7 +24,7 @@
 #include "llvm/MC/MCInstBuilder.h"
 #include "llvm/MC/MCSectionELF.h"
 #include "llvm/MC/MCStreamer.h"
-#include "llvm/Support/TargetRegistry.h"
+#include "llvm/MC/TargetRegistry.h"
 
 using namespace llvm;
 
@@ -88,13 +88,19 @@ static const MCSymbolRefExpr *getGlobalOffsetTable(MCContext &Context) {
 // an instruction with the corresponding hint set.
 static void lowerAlignmentHint(const MachineInstr *MI, MCInst &LoweredMI,
                                unsigned Opcode) {
-  if (!MI->hasOneMemOperand())
+  if (MI->memoperands_empty())
     return;
-  const MachineMemOperand *MMO = *MI->memoperands_begin();
+
+  Align Alignment = Align(16);
+  for (MachineInstr::mmo_iterator MMOI = MI->memoperands_begin(),
+         EE = MI->memoperands_end(); MMOI != EE; ++MMOI)
+    if ((*MMOI)->getAlign() < Alignment)
+      Alignment = (*MMOI)->getAlign();
+
   unsigned AlignmentHint = 0;
-  if (MMO->getAlign() >= Align(16))
+  if (Alignment >= Align(16))
     AlignmentHint = 4;
-  else if (MMO->getAlign() >= Align(8))
+  else if (Alignment >= Align(8))
     AlignmentHint = 3;
   if (AlignmentHint == 0)
     return;
@@ -124,17 +130,32 @@ static MCInst lowerSubvectorStore(const MachineInstr *MI, unsigned Opcode) {
     .addImm(0);
 }
 
+// The XPLINK ABI requires that a no-op encoding the call type is emitted after
+// each call to a subroutine. This information can be used by the called
+// function to determine its entry point, e.g. for generating a backtrace. The
+// call type is encoded as a register number in the bcr instruction. See
+// enumeration CallType for the possible values.
+void SystemZAsmPrinter::emitCallInformation(CallType CT) {
+  EmitToStreamer(*OutStreamer,
+                 MCInstBuilder(SystemZ::BCRAsm)
+                     .addImm(0)
+                     .addReg(SystemZMC::GR64Regs[static_cast<unsigned>(CT)]));
+}
+
 void SystemZAsmPrinter::emitInstruction(const MachineInstr *MI) {
   SystemZMCInstLower Lower(MF->getContext(), *this);
-  const SystemZSubtarget *Subtarget = &MF->getSubtarget<SystemZSubtarget>();
   MCInst LoweredMI;
   switch (MI->getOpcode()) {
   case SystemZ::Return:
-    if (Subtarget->isTargetXPLINK64())
-      LoweredMI =
-          MCInstBuilder(SystemZ::B).addReg(SystemZ::R7D).addImm(2).addReg(0);
-    else
-      LoweredMI = MCInstBuilder(SystemZ::BR).addReg(SystemZ::R14D);
+    LoweredMI = MCInstBuilder(SystemZ::BR)
+      .addReg(SystemZ::R14D);
+    break;
+
+  case SystemZ::Return_XPLINK:
+    LoweredMI = MCInstBuilder(SystemZ::B)
+      .addReg(SystemZ::R7D)
+      .addImm(2)
+      .addReg(0);
     break;
 
   case SystemZ::CondReturn:
@@ -142,6 +163,15 @@ void SystemZAsmPrinter::emitInstruction(const MachineInstr *MI) {
       .addImm(MI->getOperand(0).getImm())
       .addImm(MI->getOperand(1).getImm())
       .addReg(SystemZ::R14D);
+    break;
+
+  case SystemZ::CondReturn_XPLINK:
+    LoweredMI = MCInstBuilder(SystemZ::BC)
+      .addImm(MI->getOperand(0).getImm())
+      .addImm(MI->getOperand(1).getImm())
+      .addReg(SystemZ::R7D)
+      .addImm(2)
+      .addReg(0);
     break;
 
   case SystemZ::CRBReturn:
@@ -222,18 +252,21 @@ void SystemZAsmPrinter::emitInstruction(const MachineInstr *MI) {
                        .addReg(SystemZ::R7D)
                        .addExpr(Lower.getExpr(MI->getOperand(0),
                                               MCSymbolRefExpr::VK_PLT)));
-    EmitToStreamer(
-        *OutStreamer,
-        MCInstBuilder(SystemZ::BCRAsm).addImm(0).addReg(SystemZ::R3D));
+    emitCallInformation(CallType::BRASL7);
     return;
 
   case SystemZ::CallBASR_XPLINK64:
     EmitToStreamer(*OutStreamer, MCInstBuilder(SystemZ::BASR)
                                      .addReg(SystemZ::R7D)
                                      .addReg(MI->getOperand(0).getReg()));
-    EmitToStreamer(
-        *OutStreamer,
-        MCInstBuilder(SystemZ::BCRAsm).addImm(0).addReg(SystemZ::R0D));
+    emitCallInformation(CallType::BASR76);
+    return;
+
+  case SystemZ::CallBASR_STACKEXT:
+    EmitToStreamer(*OutStreamer, MCInstBuilder(SystemZ::BASR)
+                                     .addReg(SystemZ::R3D)
+                                     .addReg(MI->getOperand(0).getReg()));
+    emitCallInformation(CallType::BASR33);
     return;
 
   case SystemZ::CallBRASL:
@@ -549,15 +582,17 @@ void SystemZAsmPrinter::emitInstruction(const MachineInstr *MI) {
     Register SrcReg = MI->getOperand(4).getReg();
     int64_t SrcDisp = MI->getOperand(5).getImm();
 
+    SystemZTargetStreamer *TS = getTargetStreamer();
     MCSymbol *DotSym = nullptr;
     MCInst ET = MCInstBuilder(TargetInsOpc).addReg(DestReg)
       .addImm(DestDisp).addImm(1).addReg(SrcReg).addImm(SrcDisp);
-    MCInstSTIPair ET_STI(ET, &MF->getSubtarget());
-    EXRLT2SymMap::iterator I = EXRLTargets2Sym.find(ET_STI);
-    if (I != EXRLTargets2Sym.end())
+    SystemZTargetStreamer::MCInstSTIPair ET_STI(ET, &MF->getSubtarget());
+    SystemZTargetStreamer::EXRLT2SymMap::iterator I =
+        TS->EXRLTargets2Sym.find(ET_STI);
+    if (I != TS->EXRLTargets2Sym.end())
       DotSym = I->second;
     else
-      EXRLTargets2Sym[ET_STI] = DotSym = OutContext.createTempSymbol();
+      TS->EXRLTargets2Sym[ET_STI] = DotSym = OutContext.createTempSymbol();
     const MCSymbolRefExpr *Dot = MCSymbolRefExpr::create(DotSym, OutContext);
     EmitToStreamer(
         *OutStreamer,
@@ -606,11 +641,11 @@ void SystemZAsmPrinter::LowerFENTRY_CALL(const MachineInstr &MI,
   MCContext &Ctx = MF->getContext();
   if (MF->getFunction().hasFnAttribute("mrecord-mcount")) {
     MCSymbol *DotSym = OutContext.createTempSymbol();
-    OutStreamer->PushSection();
-    OutStreamer->SwitchSection(
+    OutStreamer->pushSection();
+    OutStreamer->switchSection(
         Ctx.getELFSection("__mcount_loc", ELF::SHT_PROGBITS, ELF::SHF_ALLOC));
     OutStreamer->emitSymbolValue(DotSym, 8);
-    OutStreamer->PopSection();
+    OutStreamer->popSection();
     OutStreamer->emitLabel(DotSym);
   }
 
@@ -722,19 +757,6 @@ void SystemZAsmPrinter::LowerPATCHPOINT(const MachineInstr &MI,
                             getSubtargetInfo());
 }
 
-void SystemZAsmPrinter::emitEXRLTargetInstructions() {
-  if (EXRLTargets2Sym.empty())
-    return;
-  // Switch to the .text section.
-  OutStreamer->SwitchSection(getObjFileLowering().getTextSection());
-  for (auto &I : EXRLTargets2Sym) {
-    OutStreamer->emitLabel(I.second);
-    const MCInstSTIPair &MCI_STI = I.first;
-    OutStreamer->emitInstruction(MCI_STI.first, *MCI_STI.second);
-  }
-  EXRLTargets2Sym.clear();
-}
-
 // Convert a SystemZ-specific constant pool modifier into the associated
 // MCSymbolRefExpr variant kind.
 static MCSymbolRefExpr::VariantKind
@@ -786,15 +808,302 @@ bool SystemZAsmPrinter::PrintAsmMemoryOperand(const MachineInstr *MI,
                                               unsigned OpNo,
                                               const char *ExtraCode,
                                               raw_ostream &OS) {
-  SystemZInstPrinter::printAddress(MAI, MI->getOperand(OpNo).getReg(),
-                                   MI->getOperand(OpNo + 1).getImm(),
-                                   MI->getOperand(OpNo + 2).getReg(), OS);
+  SystemZInstPrinter::
+    printAddress(MAI, MI->getOperand(OpNo).getReg(),
+                 MCOperand::createImm(MI->getOperand(OpNo + 1).getImm()),
+                 MI->getOperand(OpNo + 2).getReg(), OS);
   return false;
 }
 
 void SystemZAsmPrinter::emitEndOfAsmFile(Module &M) {
-  emitEXRLTargetInstructions();
   emitStackMaps(SM);
+}
+
+void SystemZAsmPrinter::emitFunctionBodyEnd() {
+  if (TM.getTargetTriple().isOSzOS()) {
+    // Emit symbol for the end of function if the z/OS target streamer
+    // is used. This is needed to calculate the size of the function.
+    MCSymbol *FnEndSym = createTempSymbol("func_end");
+    OutStreamer->emitLabel(FnEndSym);
+
+    OutStreamer->pushSection();
+    OutStreamer->switchSection(getObjFileLowering().getPPA1Section());
+    emitPPA1(FnEndSym);
+    OutStreamer->popSection();
+
+    CurrentFnPPA1Sym = nullptr;
+    CurrentFnEPMarkerSym = nullptr;
+  }
+}
+
+static void emitPPA1Flags(std::unique_ptr<MCStreamer> &OutStreamer, bool VarArg,
+                          bool StackProtector, bool FPRMask, bool VRMask) {
+  enum class PPA1Flag1 : uint8_t {
+    DSA64Bit = (0x80 >> 0),
+    VarArg = (0x80 >> 7),
+    LLVM_MARK_AS_BITMASK_ENUM(DSA64Bit)
+  };
+  enum class PPA1Flag2 : uint8_t {
+    ExternalProcedure = (0x80 >> 0),
+    STACKPROTECTOR = (0x80 >> 3),
+    LLVM_MARK_AS_BITMASK_ENUM(ExternalProcedure)
+  };
+  enum class PPA1Flag3 : uint8_t {
+    FPRMask = (0x80 >> 2),
+    LLVM_MARK_AS_BITMASK_ENUM(FPRMask)
+  };
+  enum class PPA1Flag4 : uint8_t {
+    EPMOffsetPresent = (0x80 >> 0),
+    VRMask = (0x80 >> 2),
+    ProcedureNamePresent = (0x80 >> 7),
+    LLVM_MARK_AS_BITMASK_ENUM(EPMOffsetPresent)
+  };
+
+  // Declare optional section flags that can be modified.
+  auto Flags1 = PPA1Flag1(0);
+  auto Flags2 = PPA1Flag2::ExternalProcedure;
+  auto Flags3 = PPA1Flag3(0);
+  auto Flags4 = PPA1Flag4::EPMOffsetPresent | PPA1Flag4::ProcedureNamePresent;
+
+  Flags1 |= PPA1Flag1::DSA64Bit;
+
+  if (VarArg)
+    Flags1 |= PPA1Flag1::VarArg;
+
+  if (StackProtector)
+    Flags2 |= PPA1Flag2::STACKPROTECTOR;
+
+  // SavedGPRMask, SavedFPRMask, and SavedVRMask are precomputed in.
+  if (FPRMask)
+    Flags3 |= PPA1Flag3::FPRMask; // Add emit FPR mask flag.
+
+  if (VRMask)
+    Flags4 |= PPA1Flag4::VRMask; // Add emit VR mask flag.
+
+  OutStreamer->AddComment("PPA1 Flags 1");
+  if ((Flags1 & PPA1Flag1::DSA64Bit) == PPA1Flag1::DSA64Bit)
+    OutStreamer->AddComment("  Bit 0: 1 = 64-bit DSA");
+  else
+    OutStreamer->AddComment("  Bit 0: 0 = 32-bit DSA");
+  if ((Flags1 & PPA1Flag1::VarArg) == PPA1Flag1::VarArg)
+    OutStreamer->AddComment("  Bit 7: 1 = Vararg function");
+  OutStreamer->emitInt8(static_cast<uint8_t>(Flags1)); // Flags 1.
+
+  OutStreamer->AddComment("PPA1 Flags 2");
+  if ((Flags2 & PPA1Flag2::ExternalProcedure) == PPA1Flag2::ExternalProcedure)
+    OutStreamer->AddComment("  Bit 0: 1 = External procedure");
+  if ((Flags2 & PPA1Flag2::STACKPROTECTOR) == PPA1Flag2::STACKPROTECTOR)
+    OutStreamer->AddComment("  Bit 3: 1 = STACKPROTECT is enabled");
+  else
+    OutStreamer->AddComment("  Bit 3: 0 = STACKPROTECT is not enabled");
+  OutStreamer->emitInt8(static_cast<uint8_t>(Flags2)); // Flags 2.
+
+  OutStreamer->AddComment("PPA1 Flags 3");
+  if ((Flags3 & PPA1Flag3::FPRMask) == PPA1Flag3::FPRMask)
+    OutStreamer->AddComment("  Bit 2: 1 = FP Reg Mask is in optional area");
+  OutStreamer->emitInt8(
+      static_cast<uint8_t>(Flags3)); // Flags 3 (optional sections).
+
+  OutStreamer->AddComment("PPA1 Flags 4");
+  if ((Flags4 & PPA1Flag4::VRMask) == PPA1Flag4::VRMask)
+    OutStreamer->AddComment("  Bit 2: 1 = Vector Reg Mask is in optional area");
+  OutStreamer->emitInt8(static_cast<uint8_t>(
+      Flags4)); // Flags 4 (optional sections, always emit these).
+}
+
+void SystemZAsmPrinter::emitPPA1(MCSymbol *FnEndSym) {
+  const TargetRegisterInfo *TRI = MF->getRegInfo().getTargetRegisterInfo();
+  const SystemZSubtarget &Subtarget = MF->getSubtarget<SystemZSubtarget>();
+  const auto TargetHasVector = Subtarget.hasVector();
+
+  const SystemZMachineFunctionInfo *ZFI =
+      MF->getInfo<SystemZMachineFunctionInfo>();
+  const auto *ZFL = static_cast<const SystemZXPLINKFrameLowering *>(
+      Subtarget.getFrameLowering());
+  const MachineFrameInfo &MFFrame = MF->getFrameInfo();
+
+  // Get saved GPR/FPR/VPR masks.
+  const std::vector<CalleeSavedInfo> &CSI = MFFrame.getCalleeSavedInfo();
+  uint16_t SavedGPRMask = 0;
+  uint16_t SavedFPRMask = 0;
+  uint8_t SavedVRMask = 0;
+  int64_t OffsetFPR = 0;
+  int64_t OffsetVR = 0;
+  const int64_t TopOfStack =
+      MFFrame.getOffsetAdjustment() + MFFrame.getStackSize();
+
+  // Loop over the spilled registers. The CalleeSavedInfo can't be used because
+  // it does not contain all spilled registers.
+  for (unsigned I = ZFI->getSpillGPRRegs().LowGPR,
+                E = ZFI->getSpillGPRRegs().HighGPR;
+       I && E && I <= E; ++I) {
+    unsigned V = TRI->getEncodingValue((Register)I);
+    assert(V < 16 && "GPR index out of range");
+    SavedGPRMask |= 1 << (15 - V);
+  }
+
+  for (auto &CS : CSI) {
+    unsigned Reg = CS.getReg();
+    unsigned I = TRI->getEncodingValue(Reg);
+
+    if (SystemZ::FP64BitRegClass.contains(Reg)) {
+      assert(I < 16 && "FPR index out of range");
+      SavedFPRMask |= 1 << (15 - I);
+      int64_t Temp = MFFrame.getObjectOffset(CS.getFrameIdx());
+      if (Temp < OffsetFPR)
+        OffsetFPR = Temp;
+    } else if (SystemZ::VR128BitRegClass.contains(Reg)) {
+      assert(I >= 16 && I <= 23 && "VPR index out of range");
+      unsigned BitNum = I - 16;
+      SavedVRMask |= 1 << (7 - BitNum);
+      int64_t Temp = MFFrame.getObjectOffset(CS.getFrameIdx());
+      if (Temp < OffsetVR)
+        OffsetVR = Temp;
+    }
+  }
+
+  // Adjust the offset.
+  OffsetFPR += (OffsetFPR < 0) ? TopOfStack : 0;
+  OffsetVR += (OffsetVR < 0) ? TopOfStack : 0;
+
+  // Get alloca register.
+  uint8_t FrameReg = TRI->getEncodingValue(TRI->getFrameRegister(*MF));
+  uint8_t AllocaReg = ZFL->hasFP(*MF) ? FrameReg : 0;
+  assert(AllocaReg < 16 && "Can't have alloca register larger than 15");
+  (void)AllocaReg;
+
+  // Build FPR save area offset.
+  uint32_t FrameAndFPROffset = 0;
+  if (SavedFPRMask) {
+    uint64_t FPRSaveAreaOffset = OffsetFPR;
+    assert(FPRSaveAreaOffset < 0x10000000 && "Offset out of range");
+
+    FrameAndFPROffset = FPRSaveAreaOffset & 0x0FFFFFFF; // Lose top 4 bits.
+    FrameAndFPROffset |= FrameReg << 28;                // Put into top 4 bits.
+  }
+
+  // Build VR save area offset.
+  uint32_t FrameAndVROffset = 0;
+  if (TargetHasVector && SavedVRMask) {
+    uint64_t VRSaveAreaOffset = OffsetVR;
+    assert(VRSaveAreaOffset < 0x10000000 && "Offset out of range");
+
+    FrameAndVROffset = VRSaveAreaOffset & 0x0FFFFFFF; // Lose top 4 bits.
+    FrameAndVROffset |= FrameReg << 28;               // Put into top 4 bits.
+  }
+
+  // Emit PPA1 section.
+  OutStreamer->AddComment("PPA1");
+  OutStreamer->emitLabel(CurrentFnPPA1Sym);
+  OutStreamer->AddComment("Version");
+  OutStreamer->emitInt8(0x02); // Version.
+  OutStreamer->AddComment("LE Signature X'CE'");
+  OutStreamer->emitInt8(0xCE); // CEL signature.
+  OutStreamer->AddComment("Saved GPR Mask");
+  OutStreamer->emitInt16(SavedGPRMask);
+
+  emitPPA1Flags(OutStreamer, MF->getFunction().isVarArg(),
+                MFFrame.hasStackProtectorIndex(), SavedFPRMask != 0,
+                TargetHasVector && SavedVRMask != 0);
+
+  OutStreamer->AddComment("Length/4 of Parms");
+  OutStreamer->emitInt16(
+      static_cast<uint16_t>(MFFrame.getMaxCallFrameSize() / 4)); // Parms/4.
+  OutStreamer->AddComment("Length of Code");
+  OutStreamer->emitAbsoluteSymbolDiff(FnEndSym, CurrentFnEPMarkerSym, 4);
+
+  // Emit saved FPR mask and offset to FPR save area (0x20 of flags 3).
+  if (SavedFPRMask) {
+    OutStreamer->AddComment("FPR mask");
+    OutStreamer->emitInt16(SavedFPRMask);
+    OutStreamer->AddComment("AR mask");
+    OutStreamer->emitInt16(0); // AR Mask, unused currently.
+    OutStreamer->AddComment("FPR Save Area Locator");
+    OutStreamer->AddComment(Twine("  Bit 0-3: Register R")
+                                .concat(utostr(FrameAndFPROffset >> 28))
+                                .str());
+    OutStreamer->AddComment(Twine("  Bit 4-31: Offset ")
+                                .concat(utostr(FrameAndFPROffset & 0x0FFFFFFF))
+                                .str());
+    OutStreamer->emitInt32(FrameAndFPROffset); // Offset to FPR save area with
+                                               // register to add value to
+                                               // (alloca reg).
+  }
+
+  // Emit saved VR mask to VR save area.
+  if (TargetHasVector && SavedVRMask) {
+    OutStreamer->AddComment("VR mask");
+    OutStreamer->emitInt8(SavedVRMask);
+    OutStreamer->emitInt8(0);  // Reserved.
+    OutStreamer->emitInt16(0); // Also reserved.
+    OutStreamer->AddComment("VR Save Area Locator");
+    OutStreamer->AddComment(Twine("  Bit 0-3: Register R")
+                                .concat(utostr(FrameAndVROffset >> 28))
+                                .str());
+    OutStreamer->AddComment(Twine("  Bit 4-31: Offset ")
+                                .concat(utostr(FrameAndVROffset & 0x0FFFFFFF))
+                                .str());
+    OutStreamer->emitInt32(FrameAndVROffset);
+  }
+
+  // Emit offset to entry point optional section (0x80 of flags 4).
+  OutStreamer->emitAbsoluteSymbolDiff(CurrentFnEPMarkerSym, CurrentFnPPA1Sym,
+                                      4);
+}
+
+void SystemZAsmPrinter::emitFunctionEntryLabel() {
+  const SystemZSubtarget &Subtarget = MF->getSubtarget<SystemZSubtarget>();
+
+  if (Subtarget.getTargetTriple().isOSzOS()) {
+    MCContext &OutContext = OutStreamer->getContext();
+
+    // Save information for later use.
+    std::string N(MF->getFunction().hasName()
+                      ? Twine(MF->getFunction().getName()).concat("_").str()
+                      : "");
+
+    CurrentFnEPMarkerSym =
+        OutContext.createTempSymbol(Twine("EPM_").concat(N).str(), true);
+    CurrentFnPPA1Sym =
+        OutContext.createTempSymbol(Twine("PPA1_").concat(N).str(), true);
+
+    // EntryPoint Marker
+    const MachineFrameInfo &MFFrame = MF->getFrameInfo();
+    bool IsUsingAlloca = MFFrame.hasVarSizedObjects();
+
+    // Set Flags
+    uint8_t Flags = 0;
+    if (IsUsingAlloca)
+      Flags |= 0x04;
+
+    uint32_t DSASize = MFFrame.getStackSize();
+
+    // Combine into top 27 bits of DSASize and bottom 5 bits of Flags.
+    uint32_t DSAAndFlags = DSASize & 0xFFFFFFE0; // (x/32) << 5
+    DSAAndFlags |= Flags;
+
+    // Emit entry point marker section.
+    OutStreamer->AddComment("XPLINK Routine Layout Entry");
+    OutStreamer->emitLabel(CurrentFnEPMarkerSym);
+    OutStreamer->AddComment("Eyecatcher 0x00C300C500C500");
+    OutStreamer->emitIntValueInHex(0x00C300C500C500, 7); // Eyecatcher.
+    OutStreamer->AddComment("Mark Type C'1'");
+    OutStreamer->emitInt8(0xF1); // Mark Type.
+    OutStreamer->AddComment("Offset to PPA1");
+    OutStreamer->emitAbsoluteSymbolDiff(CurrentFnPPA1Sym, CurrentFnEPMarkerSym,
+                                        4);
+    if (OutStreamer->isVerboseAsm()) {
+      OutStreamer->AddComment("DSA Size 0x" + Twine::utohexstr(DSASize));
+      OutStreamer->AddComment("Entry Flags");
+      if (Flags & 0x04)
+        OutStreamer->AddComment("  Bit 2: 1 = Uses alloca");
+      else
+        OutStreamer->AddComment("  Bit 2: 0 = Does not use alloca");
+    }
+    OutStreamer->emitInt32(DSAAndFlags);
+  }
+
+  AsmPrinter::emitFunctionEntryLabel();
 }
 
 // Force static initialization.

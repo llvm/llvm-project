@@ -101,7 +101,7 @@ LogicalResult LLVM::detail::handleMultidimensionalVectors(
     // For this unrolled `position` corresponding to the `linearIndex`^th
     // element, extract operand vectors
     SmallVector<Value, 4> extractedOperands;
-    for (auto operand : llvm::enumerate(operands)) {
+    for (const auto &operand : llvm::enumerate(operands)) {
       extractedOperands.push_back(rewriter.create<LLVM::ExtractValueOp>(
           loc, operand1DVectorTypes[operand.index()], operand.value(),
           position));
@@ -130,11 +130,10 @@ LogicalResult LLVM::detail::vectorOneToOneRewrite(
 
   auto callback = [op, targetOp, &rewriter](Type llvm1DVectorTy,
                                             ValueRange operands) {
-    OperationState state(op->getLoc(), targetOp);
-    state.addTypes(llvm1DVectorTy);
-    state.addOperands(operands);
-    state.addAttributes(op->getAttrs());
-    return rewriter.createOperation(state)->getResult(0);
+    return rewriter
+        .create(op->getLoc(), rewriter.getStringAttr(targetOp), operands,
+                llvm1DVectorTy, op->getAttrs())
+        ->getResult(0);
   };
 
   return handleMultidimensionalVectors(op, operands, typeConverter, callback,

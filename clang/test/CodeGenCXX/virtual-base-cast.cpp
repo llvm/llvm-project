@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -emit-llvm %s -o - -triple i686-pc-linux-gnu | FileCheck %s
-// RUN: %clang_cc1 -emit-llvm %s -o - -triple i686-pc-win32 | FileCheck -check-prefix MSVC %s
+// RUN: %clang_cc1 -no-opaque-pointers -emit-llvm %s -o - -triple i686-pc-linux-gnu | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -emit-llvm %s -o - -triple i686-pc-win32 | FileCheck -check-prefix MSVC %s
 
 struct A { int a; virtual int aa(); };
 struct B { int b; virtual int bb(); };

@@ -6,7 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-
 // Test the set of C++11 features that Clang provides as an extension in C++03 mode.
 // The language features we expect are:
 //
@@ -20,10 +19,6 @@
 //
 // 1. noexcept and constexpr
 // 2. Two closing '>' without a space.
-
-#ifdef __clang__
-#pragma clang diagnostic ignored "-Wc++11-extensions"
-#endif
 
 #include <type_traits>
 #include <cassert>

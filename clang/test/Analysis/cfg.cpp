@@ -116,8 +116,8 @@ void test_deletedtor() {
 // CHECK: [B1]
 // CHECK-NEXT:   1: 5
 // CHECK-NEXT:   2: CFGNewAllocator(A *)
-// WARNINGS-NEXT:   3:  (CXXConstructExpr, class A [5])
-// ANALYZER-NEXT:   3:  (CXXConstructExpr, [B1.4], class A [5])
+// WARNINGS-NEXT:   3:  (CXXConstructExpr, class A[5])
+// ANALYZER-NEXT:   3:  (CXXConstructExpr, [B1.4], class A[5])
 // CHECK-NEXT:   4: new A {{\[\[}}B1.1]]
 // CHECK-NEXT:   5: A *a = new A [5];
 // CHECK-NEXT:   6: a
@@ -342,8 +342,8 @@ void test_placement_new() {
 // CHECK-NEXT:  4: [B1.3] (ImplicitCastExpr, BitCast, void *)
 // CHECK-NEXT:  5: 5
 // CHECK-NEXT:  6: CFGNewAllocator(MyClass *)
-// WARNINGS-NEXT:  7:  (CXXConstructExpr, class MyClass [5])
-// ANALYZER-NEXT:  7:  (CXXConstructExpr, [B1.8], class MyClass [5])
+// WARNINGS-NEXT:  7:  (CXXConstructExpr, class MyClass[5])
+// ANALYZER-NEXT:  7:  (CXXConstructExpr, [B1.8], class MyClass[5])
 // CHECK-NEXT:  8: new ([B1.4]) MyClass {{\[\[}}B1.5]]
 // CHECK-NEXT:  9: MyClass *obj = new (buffer) MyClass [5];
 // CHECK-NEXT:  Preds (1): B2
@@ -513,7 +513,7 @@ void vla_typedef(int x) {
 // CHECK: [B1]
 // CHECK-NEXT:   1: x
 // CHECK-NEXT:   2: [B1.1] (ImplicitCastExpr, LValueToRValue, int)
-// CHECK-NEXT:   3: using VLA = int [x];
+// CHECK-NEXT:   3: using VLA = int[x];
 void vla_typealias(int x) {
   using VLA = int[x];
 }
@@ -538,7 +538,7 @@ void vla_typedef_multi(int x, int y) {
 // CHECK-NEXT:   5: [B1.4] (ImplicitCastExpr, LValueToRValue, int)
 // CHECK-NEXT:   6: typedef VLA VLA1[y];
 // CHECK-NEXT:   7: 3
-// CHECK-NEXT:   8: using VLA2 = VLA1 [3];
+// CHECK-NEXT:   8: using VLA2 = VLA1[3];
 // CHECK-NEXT:   9: 4
 // CHECK-NEXT:  10: VLA2 vla[4];
 void vla_typedefname_multi(int x, int y) {
@@ -557,8 +557,8 @@ void vla_typedefname_multi(int x, int y) {
 // CHECK-NEXT:   5: x
 // CHECK-NEXT:   6: ++[B1.5]
 // CHECK-NEXT:   7: [B1.6] (ImplicitCastExpr, LValueToRValue, int)
-// CHECK-NEXT:   8: sizeof(int [++x])
-// CHECK-NEXT:   9: alignof(int [++x])
+// CHECK-NEXT:   8: sizeof(int[++x])
+// CHECK-NEXT:   9: alignof(int[++x])
 // CHECK-NEXT:  10: 0
 // CHECK-NEXT:  11: x
 // CHECK-NEXT:  12: [B1.11] (ImplicitCastExpr, LValueToRValue, int)
@@ -591,6 +591,79 @@ namespace CommaTemp {
 }
 void CommaTemp::f() {
   A(), B();
+}
+
+// CHECK-LABEL: int crash_with_thread_local(char *p, int *q)
+// CHECK:       [B7 (ENTRY)]
+// CHECK-NEXT:    Succs (1): B6
+// CHECK:       [B1]
+// CHECK-NEXT:   bail:
+// CHECK-NEXT:    1: 0
+// CHECK-NEXT:    2: return [B1.1];
+// CHECK-NEXT:    Preds (2): B2 B5
+// CHECK-NEXT:    Succs (1): B0
+// CHECK:       [B2]
+// CHECK-NEXT:    1: 0
+// CHECK-NEXT:    2: q
+// CHECK-NEXT:    3: [B2.2] (ImplicitCastExpr, LValueToRValue, int *)
+// CHECK-NEXT:    4: *[B2.3]
+// CHECK-NEXT:    5: [B2.4] = [B2.1]
+// CHECK-NEXT:    Preds (2): B3 B4
+// CHECK-NEXT:    Succs (1): B1
+// CHECK:       [B3]
+// WARNINGS-NEXT: 1:  (CXXConstructExpr, struct ClassWithDtor)
+// ANALYZER-NEXT: 1:  (CXXConstructExpr, [B3.2], struct ClassWithDtor)
+// CHECK-NEXT:    2: thread_local ClassWithDtor a;
+// CHECK-NEXT:    Preds (1): B4
+// CHECK-NEXT:    Succs (1): B2
+// CHECK:       [B4]
+// CHECK-NEXT:    T: static init a
+// CHECK-NEXT:    Preds (1): B6
+// CHECK-NEXT:    Succs (2): B2 B3
+// CHECK:       [B5]
+// CHECK-NEXT:    T: goto bail;
+// CHECK-NEXT:    Preds (1): B6
+// CHECK-NEXT:    Succs (1): B1
+// CHECK:       [B6]
+// CHECK-NEXT:    1: p
+// CHECK-NEXT:    2: [B6.1] (ImplicitCastExpr, LValueToRValue, char *)
+// CHECK-NEXT:    3: 0
+// CHECK-NEXT:    4: [B6.3] (ImplicitCastExpr, NullToPointer, char *)
+// CHECK-NEXT:    5: [B6.2] != [B6.4]
+// CHECK-NEXT:    T: if [B6.5]
+// CHECK-NEXT:    Preds (1): B7
+// CHECK-NEXT:    Succs (2): B5 B4
+// CHECK:       [B0 (EXIT)]
+// CHECK-NEXT:    Preds (1): B1
+
+struct ClassWithDtor {
+  ~ClassWithDtor() {}
+};
+
+int crash_with_thread_local(char *p, int *q) {
+  if (p != 0) {
+    goto bail;
+  }
+  thread_local ClassWithDtor a;
+  *q = 0;
+bail:
+  return 0;
+}
+
+// CHECK-LABEL: void DecompositionDecl()
+// CHECK:       [B1]
+// CHECK-NEXT:    1: int arr[2];
+// CHECK-NEXT:    2: arr
+// CHECK-NEXT:    3: [B1.2] (ImplicitCastExpr, ArrayToPointerDecay, int *)
+// CHECK-NEXT:    4: *
+// CHECK-NEXT:    5: [B1.3]{{\[\[}}B1.4]]
+// CHECK-NEXT:    6: [B1.5] (ImplicitCastExpr, LValueToRValue, int)
+// CHECK-NEXT:    7: {{\{}}[B1.6]{{(\})}}
+// CHECK-NEXT:    8: auto = {{\{}}arr[*]{{(\})}};
+void DecompositionDecl() {
+  int arr[2];
+
+  auto [a, b] = arr;
 }
 
 // CHECK-LABEL: template<> int *PR18472<int>()

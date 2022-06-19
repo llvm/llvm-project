@@ -14,14 +14,17 @@
 #define LLVM_FILECHECK_FILECHECK_H
 
 #include "llvm/ADT/StringRef.h"
-#include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Regex.h"
-#include "llvm/Support/SourceMgr.h"
+#include "llvm/Support/SMLoc.h"
 #include <bitset>
+#include <memory>
 #include <string>
 #include <vector>
 
 namespace llvm {
+class MemoryBuffer;
+class SourceMgr;
+template <typename T> class SmallVectorImpl;
 
 /// Contains info about various FileCheck options.
 struct FileCheckRequest {
@@ -45,6 +48,7 @@ namespace Check {
 
 enum FileCheckKind {
   CheckNone = 0,
+  CheckMisspelled,
   CheckPlain,
   CheckNext,
   CheckSame,
@@ -80,8 +84,7 @@ class FileCheckType {
   std::bitset<FileCheckKindModifier::Size> Modifiers;
 
 public:
-  FileCheckType(FileCheckKind Kind = CheckNone)
-      : Kind(Kind), Count(1), Modifiers() {}
+  FileCheckType(FileCheckKind Kind = CheckNone) : Kind(Kind), Count(1) {}
   FileCheckType(const FileCheckType &) = default;
   FileCheckType &operator=(const FileCheckType &) = default;
 

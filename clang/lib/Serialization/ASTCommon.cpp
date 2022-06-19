@@ -168,6 +168,9 @@ serialization::TypeIdxFromBuiltin(const BuiltinType *BT) {
   case BuiltinType::Float128:
     ID = PREDEF_TYPE_FLOAT128_ID;
     break;
+  case BuiltinType::Ibm128:
+    ID = PREDEF_TYPE_IBM128_ID;
+    break;
   case BuiltinType::NullPtr:
     ID = PREDEF_TYPE_NULLPTR_ID;
     break;
@@ -388,6 +391,7 @@ bool serialization::isRedeclarableDeclKind(unsigned Kind) {
   case Decl::Field:
   case Decl::MSProperty:
   case Decl::MSGuid:
+  case Decl::UnnamedGlobalConstant:
   case Decl::TemplateParamObject:
   case Decl::ObjCIvar:
   case Decl::ObjCAtDefsField:
@@ -474,7 +478,9 @@ bool serialization::needsAnonymousDeclarationNumber(const NamedDecl *D) {
   // Otherwise, we only care about anonymous class members / block-scope decls.
   // FIXME: We need to handle lambdas and blocks within inline / templated
   // variables too.
-  if (D->getDeclName() || !isa<CXXRecordDecl>(D->getLexicalDeclContext()))
+  if (D->getDeclName())
+    return false;
+  if (!isa<RecordDecl, ObjCInterfaceDecl>(D->getLexicalDeclContext()))
     return false;
   return isa<TagDecl>(D) || isa<FieldDecl>(D);
 }

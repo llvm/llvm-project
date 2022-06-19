@@ -48,9 +48,7 @@ int main(int, char**)
     ASSERT_SAME_TYPE(std::size_t, decltype(std::strspn(cpc, cpc)));
     ASSERT_SAME_TYPE(char*,       decltype(std::strstr(cp, cpc)));
     ASSERT_SAME_TYPE(const char*, decltype(std::strstr(cpc, cpc)));
-#ifndef _LIBCPP_HAS_NO_THREAD_UNSAFE_C_FUNCTIONS
     ASSERT_SAME_TYPE(char*,       decltype(std::strtok(cp, cpc)));
-#endif
     ASSERT_SAME_TYPE(void*,       decltype(std::memset(vp, 0, s)));
     ASSERT_SAME_TYPE(char*,       decltype(std::strerror(0)));
     ASSERT_SAME_TYPE(std::size_t, decltype(std::strlen(cpc)));

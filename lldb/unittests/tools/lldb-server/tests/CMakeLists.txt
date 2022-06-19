@@ -3,7 +3,6 @@ add_lldb_unittest(LLDBServerTests
   MessageObjects.cpp
   TestBase.cpp
   TestClient.cpp
-  ThreadIdsInJstopinfoTest.cpp
 
   LINK_LIBS
     lldbHost

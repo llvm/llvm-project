@@ -79,7 +79,7 @@ class LegalizeDataOpForLLVMTranslation : public ConvertOpToLLVMPattern<Op> {
   using ConvertOpToLLVMPattern<Op>::ConvertOpToLLVMPattern;
 
   LogicalResult
-  matchAndRewrite(Op op, ArrayRef<Value> operands,
+  matchAndRewrite(Op op, typename Op::Adaptor adaptor,
                   ConversionPatternRewriter &builder) const override {
     Location loc = op.getLoc();
     TypeConverter *converter = ConvertToLLVMPattern::getTypeConverter();
@@ -87,8 +87,8 @@ class LegalizeDataOpForLLVMTranslation : public ConvertOpToLLVMPattern<Op> {
     unsigned numDataOperand = op.getNumDataOperands();
 
     // Keep the non data operands without modification.
-    auto nonDataOperands =
-        operands.take_front(operands.size() - numDataOperand);
+    auto nonDataOperands = adaptor.getOperands().take_front(
+        adaptor.getOperands().size() - numDataOperand);
     SmallVector<Value> convertedOperands;
     convertedOperands.append(nonDataOperands.begin(), nonDataOperands.end());
 
@@ -138,7 +138,7 @@ class LegalizeDataOpForLLVMTranslation : public ConvertOpToLLVMPattern<Op> {
 } // namespace
 
 void mlir::populateOpenACCToLLVMConversionPatterns(
-    LLVMTypeConverter &converter, OwningRewritePatternList &patterns) {
+    LLVMTypeConverter &converter, RewritePatternSet &patterns) {
   patterns.add<LegalizeDataOpForLLVMTranslation<acc::DataOp>>(converter);
   patterns.add<LegalizeDataOpForLLVMTranslation<acc::EnterDataOp>>(converter);
   patterns.add<LegalizeDataOpForLLVMTranslation<acc::ExitDataOp>>(converter);

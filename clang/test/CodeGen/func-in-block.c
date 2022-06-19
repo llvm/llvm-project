@@ -4,7 +4,7 @@
 extern void PRINTF(const char *);
 extern void B(void (^)(void));
 
-int main()
+int main(void)
 {
     PRINTF(__func__);
     B(

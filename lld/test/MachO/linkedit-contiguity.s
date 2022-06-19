@@ -1,7 +1,7 @@
 # REQUIRES: x86
 # RUN: rm -rf %t; split-file %s %t
 
-## codesign requires that each setion in __LINKEDIT ends where the next one
+## codesign requires that each section in __LINKEDIT ends where the next one
 ## starts. This test enforces that invariant.
 ## It also checks that the last section in __LINKEDIT covers the last byte of
 ## the segment.
@@ -10,7 +10,7 @@
 # RUN: %lld %t/foo.o -dylib -o %t/libfoo.dylib
 
 # RUN: llvm-mc -filetype=obj -triple=x86_64-apple-darwin %t/test.s -o %t/test.o
-# RUN: %lld -lSystem -pie -adhoc_codesign -o %t/test %t/libfoo.dylib %t/test.o
+# RUN: %lld -lSystem -adhoc_codesign -o %t/test %t/libfoo.dylib %t/test.o
 
 # RUN: llvm-objdump --macho --all-headers %t/test | FileCheck %s
 

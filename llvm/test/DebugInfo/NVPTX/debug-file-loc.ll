@@ -1,4 +1,5 @@
 ; RUN: llc < %s -mtriple=nvptx64-nvidia-cuda | FileCheck %s
+; RUN: %if ptxas %{ llc < %s -mtriple=nvptx64-nvidia-cuda | %ptxas-verify %}
 
 ; // Bitcode int this test case is reduced version of compiled code below:
 ;extern "C" {
@@ -27,8 +28,8 @@ bb:
   ret void, !dbg !11
 }
 
-; CHECK-DAG: .file [[FOO]] "{{.*}}foo.h"
-; CHECK-DAG: .file [[BAR]] "{{.*}}bar.cu"
+; CHECK-DAG: .file [[FOO]] "/source/dir{{/|\\\\}}foo.h"
+; CHECK-DAG: .file [[BAR]] "/source/dir{{/|\\\\}}bar.cu"
 ; CHECK: .section .debug_abbrev
 ; CHECK-NEXT: {
 ; CHECK-NEXT: .b8 1                                // Abbreviation Code
@@ -83,8 +84,8 @@ bb:
 ; CHECK-NEXT: .b8 105
 ; CHECK-NEXT: .b8 114
 ; CHECK-NEXT: .b8 0
-; CHECK-NEXT: .b64 Lfunc_begin0                    // DW_AT_low_pc
-; CHECK-NEXT: .b64 Lfunc_end1                      // DW_AT_high_pc
+; CHECK-NEXT: .b64 $L__func_begin0                 // DW_AT_low_pc
+; CHECK-NEXT: .b64 $L__func_end1                   // DW_AT_high_pc
 ; CHECK-NEXT: }
 ; CHECK-NEXT: .section .debug_loc { }
 ; CHECK-NOT: debug_

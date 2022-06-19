@@ -14,7 +14,6 @@
 #include "support/ThreadsafeFS.h"
 #include "support/Trace.h"
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Path.h"

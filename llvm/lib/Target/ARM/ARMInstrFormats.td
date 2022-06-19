@@ -103,15 +103,17 @@ def AddrModeT1_4    : AddrMode<9>;
 def AddrModeT1_s    : AddrMode<10>;
 def AddrModeT2_i12  : AddrMode<11>;
 def AddrModeT2_i8   : AddrMode<12>;
-def AddrModeT2_so   : AddrMode<13>;
-def AddrModeT2_pc   : AddrMode<14>;
-def AddrModeT2_i8s4 : AddrMode<15>;
-def AddrMode_i12    : AddrMode<16>;
-def AddrMode5FP16   : AddrMode<17>;
-def AddrModeT2_ldrex : AddrMode<18>;
-def AddrModeT2_i7s4 : AddrMode<19>;
-def AddrModeT2_i7s2 : AddrMode<20>;
-def AddrModeT2_i7   : AddrMode<21>;
+def AddrModeT2_i8pos : AddrMode<13>;
+def AddrModeT2_i8neg : AddrMode<14>;
+def AddrModeT2_so   : AddrMode<15>;
+def AddrModeT2_pc   : AddrMode<16>;
+def AddrModeT2_i8s4 : AddrMode<17>;
+def AddrMode_i12    : AddrMode<18>;
+def AddrMode5FP16   : AddrMode<19>;
+def AddrModeT2_ldrex : AddrMode<20>;
+def AddrModeT2_i7s4 : AddrMode<21>;
+def AddrModeT2_i7s2 : AddrMode<22>;
+def AddrModeT2_i7   : AddrMode<23>;
 
 // Load / store index mode.
 class IndexMode<bits<2> val> {
@@ -249,10 +251,10 @@ def VPTPredROperand : AsmOperandClass {
 
 // Base class for both kinds of vpred.
 class vpred_ops<dag extra_op, dag extra_mi> : OperandWithDefaultOps<OtherVT,
-            !con((ops (i32 0), (i32 zero_reg)), extra_op)> {
+            !con((ops (i32 0), (i32 zero_reg), (i32 zero_reg)), extra_op)> {
   let PrintMethod = "printVPTPredicateOperand";
   let OperandNamespace = "ARM";
-  let MIOperandInfo = !con((ops i32imm:$cond, VCCR:$cond_reg), extra_mi);
+  let MIOperandInfo = !con((ops i32imm:$cond, VCCR:$cond_reg, GPRlr:$tp_reg), extra_mi);
 
   // For convenience, we provide a string value that can be appended
   // to the constraints string. It's empty for vpred_n, and for
@@ -408,6 +410,7 @@ class InstTemplate<AddrMode am, int sz, IndexMode im,
   // in an IT block).
   bit thumbArithFlagSetting = 0;
 
+  bits<2> VecSize = 0;
   bit validForTailPredication = 0;
   bit retainsPreviousHalfElement = 0;
   bit horizontalReduction = 0;
@@ -428,6 +431,7 @@ class InstTemplate<AddrMode am, int sz, IndexMode im,
   let TSFlags{21}    = retainsPreviousHalfElement;
   let TSFlags{22}    = horizontalReduction;
   let TSFlags{23}    = doubleWidthResult;
+  let TSFlags{25-24} = VecSize;
 
   let Constraints = cstr;
   let Itinerary = itin;
@@ -1385,14 +1389,17 @@ class ThumbXI<dag oops, dag iops, AddrMode am, int sz,
 }
 
 class T2I<dag oops, dag iops, InstrItinClass itin,
-          string opc, string asm, list<dag> pattern>
-  : Thumb2I<oops, iops, AddrModeNone, 4, itin, opc, asm, "", pattern>;
+          string opc, string asm, list<dag> pattern, AddrMode am = AddrModeNone>
+  : Thumb2I<oops, iops, am, 4, itin, opc, asm, "", pattern>;
 class T2Ii12<dag oops, dag iops, InstrItinClass itin,
              string opc, string asm, list<dag> pattern>
   : Thumb2I<oops, iops, AddrModeT2_i12, 4, itin, opc, asm, "",pattern>;
-class T2Ii8<dag oops, dag iops, InstrItinClass itin,
-            string opc, string asm, list<dag> pattern>
-  : Thumb2I<oops, iops, AddrModeT2_i8, 4, itin, opc, asm, "", pattern>;
+class T2Ii8p<dag oops, dag iops, InstrItinClass itin,
+             string opc, string asm, list<dag> pattern>
+  : Thumb2I<oops, iops, AddrModeT2_i8pos, 4, itin, opc, asm, "", pattern>;
+class T2Ii8n<dag oops, dag iops, InstrItinClass itin,
+             string opc, string asm, list<dag> pattern>
+  : Thumb2I<oops, iops, AddrModeT2_i8neg, 4, itin, opc, asm, "", pattern>;
 class T2Iso<dag oops, dag iops, InstrItinClass itin,
             string opc, string asm, list<dag> pattern>
   : Thumb2I<oops, iops, AddrModeT2_so, 4, itin, opc, asm, "", pattern>;
@@ -1582,9 +1589,9 @@ class VFPXI<dag oops, dag iops, AddrMode am, int sz,
 }
 
 class VFPAI<dag oops, dag iops, Format f, InstrItinClass itin,
-            string opc, string asm, list<dag> pattern>
+            string opc, string asm, string cstr, list<dag> pattern>
   : VFPI<oops, iops, AddrModeNone, 4, IndexModeNone, f, itin,
-         opc, asm, "", pattern> {
+         opc, asm, cstr, pattern> {
   let PostEncoderMethod = "VFPThumb2PostEncoder";
 }
 
@@ -1744,8 +1751,8 @@ class AXSI4<dag oops, dag iops, IndexMode im, InstrItinClass itin,
 // Double precision, unary
 class ADuI<bits<5> opcod1, bits<2> opcod2, bits<4> opcod3, bits<2> opcod4,
            bit opcod5, dag oops, dag iops, InstrItinClass itin, string opc,
-           string asm, list<dag> pattern>
-  : VFPAI<oops, iops, VFPUnaryFrm, itin, opc, asm, pattern> {
+           string asm, string cstr, list<dag> pattern>
+  : VFPAI<oops, iops, VFPUnaryFrm, itin, opc, asm, cstr, pattern> {
   // Instruction operands.
   bits<5> Dd;
   bits<5> Dm;
@@ -1797,7 +1804,7 @@ class ADuInp<bits<5> opcod1, bits<2> opcod2, bits<4> opcod3, bits<2> opcod4,
 class ADbI<bits<5> opcod1, bits<2> opcod2, bit op6, bit op4, dag oops,
            dag iops, InstrItinClass itin, string opc, string asm,
            list<dag> pattern>
-  : VFPAI<oops, iops, VFPBinaryFrm, itin, opc, asm, pattern> {
+  : VFPAI<oops, iops, VFPBinaryFrm, itin, opc, asm, "", pattern> {
   // Instruction operands.
   bits<5> Dd;
   bits<5> Dn;
@@ -1855,8 +1862,8 @@ class ADbInp<bits<5> opcod1, bits<2> opcod2, bit opcod3, dag oops, dag iops,
 // Single precision, unary, predicated
 class ASuI<bits<5> opcod1, bits<2> opcod2, bits<4> opcod3, bits<2> opcod4,
            bit opcod5, dag oops, dag iops, InstrItinClass itin, string opc,
-           string asm, list<dag> pattern>
-  : VFPAI<oops, iops, VFPUnaryFrm, itin, opc, asm, pattern> {
+           string asm, string cstr, list<dag> pattern>
+  : VFPAI<oops, iops, VFPUnaryFrm, itin, opc, asm, cstr, pattern> {
   // Instruction operands.
   bits<5> Sd;
   bits<5> Sm;
@@ -1909,14 +1916,14 @@ class ASuIn<bits<5> opcod1, bits<2> opcod2, bits<4> opcod3, bits<2> opcod4,
             bit opcod5, dag oops, dag iops, InstrItinClass itin, string opc,
             string asm, list<dag> pattern>
   : ASuI<opcod1, opcod2, opcod3, opcod4, opcod5, oops, iops, itin, opc, asm,
-         pattern> {
+         "", pattern> {
   list<Predicate> Predicates = [HasVFP2,DontUseNEONForFP];
 }
 
 // Single precision, binary
 class ASbI<bits<5> opcod1, bits<2> opcod2, bit op6, bit op4, dag oops, dag iops,
            InstrItinClass itin, string opc, string asm, list<dag> pattern>
-  : VFPAI<oops, iops, VFPBinaryFrm, itin, opc, asm, pattern> {
+  : VFPAI<oops, iops, VFPBinaryFrm, itin, opc, asm, "", pattern> {
   // Instruction operands.
   bits<5> Sd;
   bits<5> Sn;
@@ -1993,7 +2000,7 @@ class ASbIn<bits<5> opcod1, bits<2> opcod2, bit op6, bit op4, dag oops,
 class AHuI<bits<5> opcod1, bits<2> opcod2, bits<4> opcod3, bits<2> opcod4,
            bit opcod5, dag oops, dag iops, InstrItinClass itin, string opc,
            string asm, list<dag> pattern>
-  : VFPAI<oops, iops, VFPUnaryFrm, itin, opc, asm, pattern> {
+  : VFPAI<oops, iops, VFPUnaryFrm, itin, opc, asm, "", pattern> {
   list<Predicate> Predicates = [HasFullFP16];
 
   // Instruction operands.
@@ -2049,7 +2056,7 @@ class AHuInp<bits<5> opcod1, bits<2> opcod2, bits<4> opcod3, bits<2> opcod4,
 // Half precision, binary
 class AHbI<bits<5> opcod1, bits<2> opcod2, bit op6, bit op4, dag oops, dag iops,
            InstrItinClass itin, string opc, string asm, list<dag> pattern>
-  : VFPAI<oops, iops, VFPBinaryFrm, itin, opc, asm, pattern> {
+  : VFPAI<oops, iops, VFPBinaryFrm, itin, opc, asm, "", pattern> {
   list<Predicate> Predicates = [HasFullFP16];
 
   // Instruction operands.
@@ -2109,7 +2116,7 @@ class AHbInp<bits<5> opcod1, bits<2> opcod2, bit opcod3, dag oops, dag iops,
 class AVConv1I<bits<5> opcod1, bits<2> opcod2, bits<4> opcod3, bits<4> opcod4,
                dag oops, dag iops, InstrItinClass itin, string opc, string asm,
                list<dag> pattern>
-  : VFPAI<oops, iops, VFPConv1Frm, itin, opc, asm, pattern> {
+  : VFPAI<oops, iops, VFPConv1Frm, itin, opc, asm, "", pattern> {
   let Inst{27-23} = opcod1;
   let Inst{21-20} = opcod2;
   let Inst{19-16} = opcod3;
@@ -2142,7 +2149,7 @@ class AVConv1In<bits<5> opcod1, bits<2> opcod2, bits<4> opcod3, bits<4> opcod4,
 class AVConvXI<bits<8> opcod1, bits<4> opcod2, dag oops, dag iops, Format f,
                InstrItinClass itin,
                string opc, string asm, list<dag> pattern>
-  : VFPAI<oops, iops, f, itin, opc, asm, pattern> {
+  : VFPAI<oops, iops, f, itin, opc, asm, "", pattern> {
   let Inst{27-20} = opcod1;
   let Inst{11-8}  = opcod2;
   let Inst{4}     = 1;

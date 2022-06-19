@@ -12,6 +12,7 @@
 
 #include "Error.h"
 #include "llvm/Support/ErrorHandling.h"
+#include <string>
 
 using namespace llvm;
 

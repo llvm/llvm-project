@@ -29,8 +29,9 @@ namespace Fortran::runtime::io {
 // The DataEdit reference is const here (and elsewhere in this header) so that
 // one edit descriptor with a repeat factor may safely serve to edit
 // multiple elements of an array.
-template <typename INT = std::int64_t, typename UINT = std::uint64_t>
-bool EditIntegerOutput(IoStatementState &, const DataEdit &, INT);
+template <int KIND>
+bool EditIntegerOutput(
+    IoStatementState &, const DataEdit &, common::HostSignedIntType<8 * KIND>);
 
 // Encapsulates the state of a REAL output conversion.
 class RealOutputEditingBase {
@@ -51,6 +52,7 @@ protected:
     return *p < '0' || *p > '9';
   }
 
+  // Returns null when the exponent overflows a fixed-size output field.
   const char *FormatExponent(int, const DataEdit &edit, int &length);
   bool EmitPrefix(const DataEdit &, std::size_t length, std::size_t width);
   bool EmitSuffix(const DataEdit &);
@@ -83,7 +85,7 @@ private:
   bool IsZero() const { return x_.IsZero(); }
 
   decimal::ConversionToDecimalResult Convert(
-      int significantDigits, const DataEdit &, int flags = 0);
+      int significantDigits, enum decimal::FortranRounding, int flags = 0);
 
   BinaryFloatingPoint x_;
   char buffer_[BinaryFloatingPoint::maxDecimalConversionDigits +
@@ -93,15 +95,41 @@ private:
 bool ListDirectedLogicalOutput(
     IoStatementState &, ListDirectedStatementState<Direction::Output> &, bool);
 bool EditLogicalOutput(IoStatementState &, const DataEdit &, bool);
-bool ListDirectedDefaultCharacterOutput(IoStatementState &,
-    ListDirectedStatementState<Direction::Output> &, const char *, std::size_t);
-bool EditDefaultCharacterOutput(
-    IoStatementState &, const DataEdit &, const char *, std::size_t);
 
-extern template bool EditIntegerOutput<std::int64_t, std::uint64_t>(
+template <typename CHAR>
+bool ListDirectedCharacterOutput(IoStatementState &,
+    ListDirectedStatementState<Direction::Output> &, const CHAR *,
+    std::size_t chars);
+extern template bool ListDirectedCharacterOutput(IoStatementState &,
+    ListDirectedStatementState<Direction::Output> &, const char *,
+    std::size_t chars);
+extern template bool ListDirectedCharacterOutput(IoStatementState &,
+    ListDirectedStatementState<Direction::Output> &, const char16_t *,
+    std::size_t chars);
+extern template bool ListDirectedCharacterOutput(IoStatementState &,
+    ListDirectedStatementState<Direction::Output> &, const char32_t *,
+    std::size_t chars);
+
+template <typename CHAR>
+bool EditCharacterOutput(
+    IoStatementState &, const DataEdit &, const CHAR *, std::size_t chars);
+extern template bool EditCharacterOutput(
+    IoStatementState &, const DataEdit &, const char *, std::size_t chars);
+extern template bool EditCharacterOutput(
+    IoStatementState &, const DataEdit &, const char16_t *, std::size_t chars);
+extern template bool EditCharacterOutput(
+    IoStatementState &, const DataEdit &, const char32_t *, std::size_t chars);
+
+extern template bool EditIntegerOutput<1>(
+    IoStatementState &, const DataEdit &, std::int8_t);
+extern template bool EditIntegerOutput<2>(
+    IoStatementState &, const DataEdit &, std::int16_t);
+extern template bool EditIntegerOutput<4>(
+    IoStatementState &, const DataEdit &, std::int32_t);
+extern template bool EditIntegerOutput<8>(
     IoStatementState &, const DataEdit &, std::int64_t);
-extern template bool EditIntegerOutput<common::uint128_t, common::uint128_t>(
-    IoStatementState &, const DataEdit &, common::uint128_t);
+extern template bool EditIntegerOutput<16>(
+    IoStatementState &, const DataEdit &, common::int128_t);
 
 extern template class RealOutputEditing<2>;
 extern template class RealOutputEditing<3>;

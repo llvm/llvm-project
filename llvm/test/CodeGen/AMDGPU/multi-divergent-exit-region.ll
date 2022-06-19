@@ -1,4 +1,5 @@
-; RUN: opt -mtriple=amdgcn-- -S -amdgpu-unify-divergent-exit-nodes -verify -structurizecfg -verify -si-annotate-control-flow -simplifycfg-require-and-preserve-domtree=1 %s | FileCheck -check-prefix=IR %s
+; RUN: opt -mtriple=amdgcn-- -mcpu=gfx600 -S -amdgpu-unify-divergent-exit-nodes -verify -structurizecfg -verify -si-annotate-control-flow -simplifycfg-require-and-preserve-domtree=1 %s | FileCheck -check-prefix=IR %s
+; RUN: opt -mtriple=amdgcn-- -mcpu=gfx1100 -mattr=-wavefrontsize32,+wavefrontsize64 -S -amdgpu-unify-divergent-exit-nodes -verify -structurizecfg -verify -si-annotate-control-flow -simplifycfg-require-and-preserve-domtree=1 %s | FileCheck -check-prefix=IR %s
 ; RUN: llc -march=amdgcn -verify-machineinstrs -simplifycfg-require-and-preserve-domtree=1 < %s | FileCheck -check-prefix=GCN %s
 
 ; Add an extra verifier runs. There were some cases where invalid IR
@@ -9,14 +10,14 @@
 ; StructurizeCFG.
 
 ; IR-LABEL: @multi_divergent_region_exit_ret_ret(
-; IR: %0 = call { i1, i64 } @llvm.amdgcn.if.i64(i1 %Pivot.inv)
+; IR: %0 = call { i1, i64 } @llvm.amdgcn.if.i64(i1 %Pivot)
 ; IR: %1 = extractvalue { i1, i64 } %0, 0
 ; IR: %2 = extractvalue { i1, i64 } %0, 1
 ; IR: br i1 %1, label %LeafBlock1, label %Flow
 
 ; IR: Flow:
 ; IR: %3 = phi i1 [ true, %LeafBlock1 ], [ false, %entry ]
-; IR: %4 = phi i1 [ %SwitchLeaf2.inv, %LeafBlock1 ], [ false, %entry ]
+; IR: %4 = phi i1 [ %SwitchLeaf2, %LeafBlock1 ], [ false, %entry ]
 ; IR: %5 = call { i1, i64 } @llvm.amdgcn.else.i64.i64(i64 %2)
 ; IR: %6 = extractvalue { i1, i64 } %5, 0
 ; IR: %7 = extractvalue { i1, i64 } %5, 1
@@ -75,14 +76,13 @@
 ; GCN-NEXT: s_or_saveexec_b64
 ; GCN-NEXT: s_xor_b64
 
-; FIXME: Why is this compare essentially repeated?
 ; GCN: ; %LeafBlock
 ; GCN-DAG:  v_cmp_eq_u32_e32    vcc, 1,
-; GCN-DAG:  v_cmp_ne_u32_e64    [[TMP1:s\[[0-9]+:[0-9]+\]]], 1,
+; GCN-DAG:  v_cmp_ne_u32_e64    [[INV:s\[[0-9]+:[0-9]+\]]], 1,
 ; GCN-DAG:  s_andn2_b64         [[EXIT0]], [[EXIT0]], exec
 ; GCN-DAG:  s_andn2_b64         [[EXIT1]], [[EXIT1]], exec
 ; GCN-DAG:  s_and_b64           [[TMP0:s\[[0-9]+:[0-9]+\]]], vcc, exec
-; GCN-DAG:  s_and_b64           [[TMP1]], [[TMP1]], exec
+; GCN-DAG:  s_and_b64           [[TMP1:s\[[0-9]+:[0-9]+\]]], [[INV]], exec
 ; GCN-DAG:  s_or_b64            [[EXIT0]], [[EXIT0]], [[TMP0]]
 ; GCN-DAG:  s_or_b64            [[EXIT1]], [[EXIT1]], [[TMP1]]
 
@@ -97,7 +97,7 @@
 
 ; GCN: ; %Flow5
 ; GCN-NEXT: s_or_b64            exec, exec,
-; GCN-NEXT; s_and_saveexec_b64  {{s\[[0-9]+:[0-9]+\]}}, [[EXIT0]]
+; GCN-NEXT: s_and_saveexec_b64  {{s\[[0-9]+:[0-9]+\]}}, [[EXIT0]]
 
 ; GCN: ; %exit0
 ; GCN:      buffer_store_dword
@@ -141,7 +141,7 @@ exit1:                                     ; preds = %LeafBlock, %LeafBlock1
 }
 
 ; IR-LABEL: @multi_divergent_region_exit_unreachable_unreachable(
-; IR: %0 = call { i1, i64 } @llvm.amdgcn.if.i64(i1 %Pivot.inv)
+; IR: %0 = call { i1, i64 } @llvm.amdgcn.if.i64(i1 %Pivot)
 
 ; IR: %5 = call { i1, i64 } @llvm.amdgcn.else.i64.i64(i64 %2)
 
@@ -196,24 +196,22 @@ exit1:                                     ; preds = %LeafBlock, %LeafBlock1
 }
 
 ; IR-LABEL: @multi_exit_region_divergent_ret_uniform_ret(
-; IR: %divergent.cond0 = icmp slt i32 %tmp16, 2
+; IR: %divergent.cond0 = icmp sge i32 %tmp16, 2
 ; IR: llvm.amdgcn.if
 ; IR: br i1
 
 ; IR: {{^}}Flow:
 ; IR: %3 = phi i1 [ true, %LeafBlock1 ], [ false, %entry ]
-; IR: %4 = phi i1 [ %uniform.cond0.inv, %LeafBlock1 ], [ false, %entry ]
+; IR: %4 = phi i1 [ %uniform.cond0, %LeafBlock1 ], [ false, %entry ]
 ; IR: %5 = call { i1, i64 } @llvm.amdgcn.else.i64.i64(i64 %2)
 ; IR: br i1 %6, label %LeafBlock, label %Flow1
 
 ; IR: {{^}}LeafBlock:
 ; IR: %divergent.cond1 = icmp eq i32 %tmp16, 1
-; IR: %divergent.cond1.inv = xor i1 %divergent.cond1, true
 ; IR: br label %Flow1
 
 ; IR: LeafBlock1:
-; IR: %uniform.cond0 = icmp eq i32 %arg3, 2
-; IR: %uniform.cond0.inv = xor i1 %uniform.cond0, true
+; IR: %uniform.cond0 = icmp ne i32 %arg3, 2
 ; IR: br label %Flow
 
 ; IR: Flow2:
@@ -279,12 +277,12 @@ exit1:                                     ; preds = %LeafBlock, %LeafBlock1
 }
 
 ; IR-LABEL: @multi_exit_region_uniform_ret_divergent_ret(
-; IR: %0 = call { i1, i64 } @llvm.amdgcn.if.i64(i1 %Pivot.inv)
+; IR: %0 = call { i1, i64 } @llvm.amdgcn.if.i64(i1 %Pivot)
 ; IR: br i1 %1, label %LeafBlock1, label %Flow
 
 ; IR: Flow:
 ; IR: %3 = phi i1 [ true, %LeafBlock1 ], [ false, %entry ]
-; IR: %4 = phi i1 [ %SwitchLeaf2.inv, %LeafBlock1 ], [ false, %entry ]
+; IR: %4 = phi i1 [ %SwitchLeaf2, %LeafBlock1 ], [ false, %entry ]
 ; IR: %5 = call { i1, i64 } @llvm.amdgcn.else.i64.i64(i64 %2)
 
 ; IR: %8 = phi i1 [ false, %exit1 ], [ %12, %Flow1 ]
@@ -362,7 +360,7 @@ exit1:                                     ; preds = %LeafBlock, %LeafBlock1
 
 ; GCN-LABEL: {{^}}uniform_branch_to_multi_divergent_region_exit_ret_ret_return_value:
 ; GCN: s_cmp_gt_i32 s0, 1
-; GCN: s_cbranch_scc0 [[FLOW:BB[0-9]+_[0-9]+]]
+; GCN: s_cbranch_scc0 [[FLOW:.LBB[0-9]+_[0-9]+]]
 
 ; GCN: v_cmp_ne_u32_e32 vcc, 7, v0
 
@@ -373,7 +371,7 @@ exit1:                                     ; preds = %LeafBlock, %LeafBlock1
 ; GCN-NOT: s_and_b64 exec, exec
 ; GCN: v_mov_b32_e32 v0, 1.0
 
-; GCN: {{^BB[0-9]+_[0-9]+}}: ; %UnifiedReturnBlock
+; GCN: {{^.LBB[0-9]+_[0-9]+}}: ; %UnifiedReturnBlock
 ; GCN-NEXT: s_or_b64 exec, exec
 ; GCN-NEXT: s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GCN-NEXT: ; return
@@ -401,11 +399,11 @@ exit1:                                     ; preds = %LeafBlock, %LeafBlock1
 }
 
 ; IR-LABEL: @multi_divergent_region_exit_ret_unreachable(
-; IR: %0 = call { i1, i64 } @llvm.amdgcn.if.i64(i1 %Pivot.inv)
+; IR: %0 = call { i1, i64 } @llvm.amdgcn.if.i64(i1 %Pivot)
 
 ; IR: Flow:
 ; IR: %3 = phi i1 [ true, %LeafBlock1 ], [ false, %entry ]
-; IR: %4 = phi i1 [ %SwitchLeaf2.inv, %LeafBlock1 ], [ false, %entry ]
+; IR: %4 = phi i1 [ %SwitchLeaf2, %LeafBlock1 ], [ false, %entry ]
 ; IR: %5 = call { i1, i64 } @llvm.amdgcn.else.i64.i64(i64 %2)
 
 ; IR: Flow2:
@@ -640,7 +638,7 @@ uniform.ret:
 ; IR: br i1 %6, label %uniform.if, label %Flow2
 
 ; IR: Flow:                                             ; preds = %uniform.then, %uniform.if
-; IR: %7 = phi i1 [ %uniform.cond2.inv, %uniform.then ], [ %uniform.cond1.inv, %uniform.if ]
+; IR: %7 = phi i1 [ %uniform.cond2, %uniform.then ], [ %uniform.cond1.inv, %uniform.if ]
 ; IR: br i1 %7, label %uniform.endif, label %uniform.ret0
 
 ; IR: UnifiedReturnBlock:                               ; preds = %Flow3, %Flow2

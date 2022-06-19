@@ -394,6 +394,9 @@ public:
     const char *
     GetTriple ();
 
+    const char *
+    GetABIName();
+
     %feature("docstring", "
     Architecture data byte width accessor
 
@@ -411,6 +414,9 @@ public:
     ") GetCodeByteSize;
     uint32_t
     GetCodeByteSize ();
+
+    uint32_t
+    GetMaximumNumberOfChildrenToDisplay() const;
 
     lldb::SBError
     SetSectionLoadAddress (lldb::SBSection section,

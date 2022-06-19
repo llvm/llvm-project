@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple x86_64-pc-win32 -emit-llvm < %s | FileCheck %s
+// RUN: %clang_cc1 -triple x86_64-pc-win32 -Wno-strict-prototypes -emit-llvm < %s | FileCheck %s
 
 void __fastcall f1(void);
 void __stdcall f2(void);
@@ -35,5 +35,5 @@ int main(void) {
 void __stdcall f7(foo) int foo; {}
 void f8(void) {
   f7(0);
-  // CHECK: call void @f7(i32 0)
+  // CHECK: call void @f7(i32 noundef 0)
 }

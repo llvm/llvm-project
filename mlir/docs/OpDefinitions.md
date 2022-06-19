@@ -23,7 +23,7 @@ operations. This open and extensible ecosystem leads to the "stringly" type IR
 problem, e.g., repetitive string comparisons during optimization and analysis
 passes, unintuitive accessor methods (e.g., generic/error prone `getOperand(3)`
 vs self-documenting `getStride()`) with more generic return types, verbose and
-generic constructors without default arguments, verbose textual IR dump, and so
+generic constructors without default arguments, verbose textual IR dumps, and so
 on. Furthermore, operation verification is:
 
 1.  best case: a central string-to-verification-function map,
@@ -57,7 +57,7 @@ including but not limited to:
 
 We use TableGen as the language for specifying operation information. TableGen
 itself just provides syntax for writing records; the syntax and constructs
-allowed in a TableGen file (typically with filename suffix `.td`) can be found
+allowed in a TableGen file (typically with the filename suffix `.td`) can be found
 [here][TableGenProgRef].
 
 *   TableGen `class` is similar to C++ class; it can be templated and
@@ -80,7 +80,7 @@ types and expressions supported by TableGen.
 MLIR defines several common constructs to help operation definition and provide
 their semantics via a special [TableGen backend][TableGenBackend]:
 [`OpDefinitionsGen`][OpDefinitionsGen]. These constructs are defined in
-[`OpBase.td`][OpBase]. The main ones are
+[`OpBase.td`][OpBase]. The main ones are:
 
 *   The `Op` class: It is the main construct for defining operations. All facts
     regarding the operation are specified when specializing this class, with the
@@ -90,8 +90,8 @@ their semantics via a special [TableGen backend][TableGenBackend]:
 *   The `OpTrait` class hierarchy: They are used to specify special properties
     and constraints of the operation, including whether the operation has side
     effect or whether its output has the same shape as the input.
-*   The `ins`/`outs` marker: These are two special makers builtin to the
-    `OpDefinitionsGen` backend. They lead the definitions of operands/attributes
+*   The `ins`/`outs` marker: These are two special markers builtin to the
+    `OpDefinitionsGen` backend. They lead to the definitions of operands/attributes
     and results respectively.
 *   The `TypeConstraint` class hierarchy: They are used to specify the
     constraints over operands or results. A notable subclass hierarchy is
@@ -134,7 +134,7 @@ the `Op` class for the complete list of fields supported.
 
 ### Operation name
 
-The operation name is a unique identifier of the operation within MLIR, e.g.,
+The operation name is a unique identifier for the operation within MLIR, e.g.,
 `tf.Add` for addition operation in the TensorFlow dialect. This is the
 equivalent of the mnemonic in assembly language. It is used for parsing and
 printing in the textual format. It is also used for pattern matching in graph
@@ -207,12 +207,13 @@ named argument a named getter will be generated that returns the argument with
 the return type (in the case of attributes the return type will be constructed
 from the storage type, while for operands it will be `Value`). Each attribute's
 raw value (e.g., as stored) can also be accessed via generated `<name>Attr`
-getters for use in transformation passes where the more user friendly return
+getters for use in transformation passes where the more user-friendly return
 type is less suitable.
 
-All the arguments should be named to 1) provide documentation, 2) drive
-auto-generation of getter methods, 3) provide a handle to reference for other
-places like constraints.
+All the arguments should be named to:
+- provide documentation,
+- drive auto-generation of getter methods, and
+- provide a handle to reference for other places like constraints.
 
 #### Variadic operands
 
@@ -221,13 +222,24 @@ To declare a variadic operand, wrap the `TypeConstraint` for the operand with
 
 Normally operations have no variadic operands or just one variadic operand. For
 the latter case, it is easy to deduce which dynamic operands are for the static
-variadic operand definition. Though, if an operation has more than one variable
+variadic operand definition. However, if an operation has more than one variable
 length operands (either optional or variadic), it would be impossible to
 attribute dynamic operands to the corresponding static variadic operand
 definitions without further information from the operation. Therefore, either
 the `SameVariadicOperandSize` or `AttrSizedOperandSegments` trait is needed to
 indicate that all variable length operands have the same number of dynamic
 values.
+
+#### VariadicOfVariadic operands
+
+To declare a variadic operand that has a variadic number of sub-ranges, wrap the
+`TypeConstraint` for the operand with `VariadicOfVariadic<...,
+"<segment-attribute-name>">`.
+
+The second field of the `VariadicOfVariadic` is the name of an `I32ElementsAttr`
+argument that contains the sizes of the variadic sub-ranges. This attribute will
+be used when determining the size of sub-ranges, or when updating the size of
+sub-ranges.
 
 #### Optional operands
 
@@ -236,7 +248,7 @@ To declare an optional operand, wrap the `TypeConstraint` for the operand with
 
 Normally operations have no optional operands or just one optional operand. For
 the latter case, it is easy to deduce which dynamic operands are for the static
-operand definition. Though, if an operation has more than one variable length
+operand definition. However, if an operation has more than one variable length
 operands (either optional or variadic), it would be impossible to attribute
 dynamic operands to the corresponding static variadic operand definitions
 without further information from the operation. Therefore, either the
@@ -343,7 +355,7 @@ various traits in the `mlir::OpTrait` namespace.
 
 Both operation traits, [interfaces](Interfaces.md/#utilizing-the-ods-framework),
 and constraints involving multiple operands/attributes/results are provided as
-the second template parameter to the `Op` class. They should be deriving from
+the third template parameter to the `Op` class. They should be deriving from
 the `OpTrait` class. See [Constraints](#constraints) for more information.
 
 ### Builder methods
@@ -376,7 +388,7 @@ The following builders are generated:
 ```c++
 // All result-types/operands/attributes have one aggregate parameter.
 static void build(OpBuilder &odsBuilder, OperationState &odsState,
-                  ArrayRef<Type> resultTypes,
+                  TypeRange resultTypes,
                   ValueRange operands,
                   ArrayRef<NamedAttribute> attributes);
 
@@ -398,7 +410,7 @@ static void build(OpBuilder &odsBuilder, OperationState &odsState,
 
 // Each operand/attribute has a separate parameter but result type is aggregate.
 static void build(OpBuilder &odsBuilder, OperationState &odsState,
-                  ArrayRef<Type> resultTypes,
+                  TypeRange resultTypes,
                   Value i32_operand, Value f32_operand, ...,
                   IntegerAttr i32_attr, FloatAttr f32_attr, ...);
 
@@ -414,7 +426,7 @@ The first form provides basic uniformity so that we can create ops using the
 same form regardless of the exact op. This is particularly useful for
 implementing declarative pattern rewrites.
 
-The second and third forms are good for use in manually written code given that
+The second and third forms are good for use in manually written code, given that
 they provide better guarantee via signatures.
 
 The third form will be generated if any of the op's attribute has different
@@ -423,14 +435,14 @@ from an unwrapped value (i.e., `Attr.constBuilderCall` is defined.)
 Additionally, for the third form, if an attribute appearing later in the
 `arguments` list has a default value, the default value will be supplied in the
 declaration. This works for `BoolAttr`, `StrAttr`, `EnumAttr` for now and the
-list can grow in the future. So if possible, default valued attribute should be
+list can grow in the future. So if possible, the default-valued attribute should be
 placed at the end of the `arguments` list to leverage this feature. (This
 behavior is essentially due to C++ function parameter default value placement
 restrictions.) Otherwise, the builder of the third form will still be generated
 but default values for the attributes not at the end of the `arguments` list
 will not be supplied in the builder's signature.
 
-ODS will generate a builder that doesn't require return type specified if
+ODS will generate a builder that doesn't require the return type specified if
 
 *   Op implements InferTypeOpInterface interface;
 *   All return types are either buildable types or are the same as a given
@@ -553,14 +565,49 @@ Verification code will be automatically generated for
 _additional_ verification, you can use
 
 ```tablegen
-let verifier = [{
-  ...
-}];
+let hasVerifier = 1;
+let hasRegionVerifier = 1;
 ```
 
-Code placed in `verifier` will be called after the auto-generated verification
-code. The order of trait verification excluding those of `verifier` should not
-be relied upon.
+This will generate `LogicalResult verify()`/`LogicalResult verifyRegions()`
+method declarations on the op class that can be defined with any additional
+verification constraints. For verificaiton which needs to access the nested
+operations, you should use `hasRegionVerifier` to ensure that it won't access
+any ill-formed operation. Except that, The other verifications can be
+implemented with `hasVerifier`. Check the next section for the execution order
+of these verification methods.
+
+#### Verification Ordering
+
+The verification of an operation involves several steps,
+
+1. StructuralOpTrait will be verified first, they can be run independently.
+2. `verifyInvariants` which is constructed by ODS, it verifies the type,
+   attributes, .etc.
+3. Other Traits/Interfaces that have marked their verifier as `verifyTrait` or
+   `verifyWithRegions=0`.
+4. Custom verifier which is defined in the op and has been marked `hasVerifier=1`
+
+If an operation has regions, then it may have the second phase,
+
+1. Traits/Interfaces that have marked their verifier as `verifyRegionTrait` or
+   `verifyWithRegions=1`. This implies the verifier needs to access the
+   operations in its regions.
+2. Custom verifier which is defined in the op and has been marked
+   `hasRegionVerifier=1`
+
+Note that the second phase will be run after the operations in the region are
+verified. Verifiers further down the order can rely on certain invariants being
+verified by a previous verifier and do not need to re-verify them.
+
+#### Emitting diagnostics in custom verifiers
+
+Custom verifiers should avoid printing operations using custom operation
+printers, because they require the printed operation (and sometimes its parent
+operation) to be verified first. In particular, when emitting diagnostics,
+custom verifiers should use the `Error` severity level, which prints operations
+in generic form by default, and avoid using lower severity levels (`Note`,
+`Remark`, `Warning`).
 
 ### Declarative Assembly Format
 
@@ -609,6 +656,14 @@ The available directives are as follows:
     -   The constraints on `inputs` and `results` are the same as the `input` of
         the `type` directive.
 
+*   `oilist` ( \`keyword\` elements | \`otherKeyword\` elements ...)
+
+    -   Represents an optional order-independent list of clauses. Each clause
+        has a keyword and corresponding assembly format.
+    -   Each clause can appear 0 or 1 time (in any order).
+    -   Only literals, types and variables can be used within an oilist element.
+    -   All the variables must be optional or variadic.
+
 *   `operands`
 
     -   Represents all of the operands of an operation.
@@ -639,6 +694,16 @@ The available directives are as follows:
     -   Represents the type of the given input.
     -   `input` must be either an operand or result [variable](#variables), the
         `operands` directive, or the `results` directive.
+
+*   `qualified` ( type_or_attribute )
+
+    -   Wraps a `type` directive or an attribute parameter.
+    -   Used to force printing the type or attribute prefixed with its dialect
+        and mnemonic. For example the `vector.multi_reduction` operation has a
+        `kind` attribute ; by default the declarative assembly will print:
+        `vector.multi_reduction <minf>, ...` but using `qualified($kind)` in the
+        declarative assembly format will print it instead as:
+        `vector.multi_reduction #vector.kind<minf>, ...`.
 
 #### Literals
 
@@ -714,9 +779,11 @@ declarative parameter to `parse` method argument is detailed below:
     -   Single: `<Attribute-Storage-Type>(e.g. Attribute) &`
     -   Optional: `<Attribute-Storage-Type>(e.g. Attribute) &`
 *   Operand Variables
-    -   Single: `OpAsmParser::OperandType &`
-    -   Optional: `Optional<OpAsmParser::OperandType> &`
-    -   Variadic: `SmallVectorImpl<OpAsmParser::OperandType> &`
+    -   Single: `OpAsmParser::UnresolvedOperand &`
+    -   Optional: `Optional<OpAsmParser::UnresolvedOperand> &`
+    -   Variadic: `SmallVectorImpl<OpAsmParser::UnresolvedOperand> &`
+    -   VariadicOfVariadic:
+        `SmallVectorImpl<SmallVector<OpAsmParser::UnresolvedOperand>> &`
 *   Ref Directives
     -   A reference directive is passed to the parser using the same mapping as
         the input operand. For example, a single region would be passed as a
@@ -731,6 +798,7 @@ declarative parameter to `parse` method argument is detailed below:
     -   Single: `Type &`
     -   Optional: `Type &`
     -   Variadic: `SmallVectorImpl<Type> &`
+    -   VariadicOfVariadic: `SmallVectorImpl<SmallVector<Type>> &`
 *   `attr-dict` Directive: `NamedAttrList &`
 
 When a variable is optional, the value should only be specified if the variable
@@ -749,6 +817,7 @@ declarative parameter to `print` method argument is detailed below:
     -   Single: `Value`
     -   Optional: `Value`
     -   Variadic: `OperandRange`
+    -   VariadicOfVariadic: `OperandRangeRange`
 *   Ref Directives
     -   A reference directive is passed to the printer using the same mapping as
         the input operand. For example, a single region would be passed as a
@@ -763,6 +832,7 @@ declarative parameter to `print` method argument is detailed below:
     -   Single: `Type`
     -   Optional: `Type`
     -   Variadic: `TypeRange`
+    -   VariadicOfVariadic: `TypeRangeRange`
 *   `attr-dict` Directive: `DictionaryAttr`
 
 When a variable is optional, the provided value may be null.
@@ -799,7 +869,7 @@ The `elements` of an optional group have the following requirements:
     -   All region variables can be used. When a non-variable length region is
         used, if the group is not present the region is empty.
 
-An example of an operation with an optional group is `std.return`, which has a
+An example of an operation with an optional group is `func.return`, which has a
 variadic number of operands.
 
 ```tablegen
@@ -913,6 +983,11 @@ these equal constraints to discern the types of missing variables. The currently
 supported traits are: `AllTypesMatch`, `TypesMatchWith`, `SameTypeOperands`, and
 `SameOperandsAndResultType`.
 
+*   InferTypeOpInterface
+
+Operations that implement `InferTypeOpInterface` can omit their result types in
+their assembly format since the result types can be inferred from the operands.
+
 ### `hasCanonicalizer`
 
 This boolean field indicate whether canonicalization patterns have been defined
@@ -923,7 +998,7 @@ be defined.
 
 When this boolean field is set to `true`, it indicates that the op implements a
 `canonicalize` method for simple "matchAndRewrite" style canonicalization
-patterns.  If `hasCanonicalizer` is 0, then an implementation of
+patterns. If `hasCanonicalizer` is 0, then an implementation of
 `::getCanonicalizationPatterns()` is implemented to call this function.
 
 ### `hasFolder`
@@ -942,6 +1017,16 @@ literally to the generated C++ op class.
 Note that `extraClassDeclaration` is a mechanism intended for long-tail cases by
 power users; for not-yet-implemented widely-applicable cases, improving the
 infrastructure is preferable.
+
+### Extra definitions
+
+When defining base op classes in TableGen that are inherited many times by
+different ops, users may want to provide common definitions of utility and
+interface functions. However, many of these definitions may not be desirable or
+possible in `extraClassDeclaration`, which append them to the op's C++ class
+declaration. In these cases, users can add an `extraClassDefinition` to define
+code that is added to the generated source file inside the op's C++ namespace.
+The substitution `$cppClass` is replaced by the op's C++ class name.
 
 ### Generated C++ code
 
@@ -1010,7 +1095,7 @@ Constraint is a core concept in table-driven operation definition: operation
 verification and graph operation matching are all based on satisfying
 constraints. So both the operation definition and rewrite rules specification
 significantly involve writing constraints. We have the `Constraint` class in
-[`OpBase.td`][OpBase] has the common base class for all constraints.
+[`OpBase.td`][OpBase] as the common base class for all constraints.
 
 An operation's constraint can cover different range; it may
 
@@ -1095,15 +1180,15 @@ is used. They serve as "hooks" to the enclosing environment. This includes
     information of the current operation.
 *   `$_self` will be replaced with the entity this predicate is attached to.
     E.g., `BoolAttr` is an attribute constraint that wraps a
-    `CPred<"$_self.isa<BoolAttr>()">`. Then for `F32:$attr`,`$_self` will be
+    `CPred<"$_self.isa<BoolAttr>()">`. Then for `BoolAttr:$attr`,`$_self` will be
     replaced by `$attr`. For type constraints, it's a little bit special since
     we want the constraints on each type definition reads naturally and we want
     to attach type constraints directly to an operand/result, `$_self` will be
     replaced by the operand/result's type. E.g., for `F32` in `F32:$operand`,
-    its `$_self` will be expanded as `getOperand(...).getType()`.
+    its `$_self` will be expanded as `operand(...).getType()`.
 
 TODO: Reconsider the leading symbol for special placeholders. Eventually we want
-to allow referencing operand/result $-names; such $-names can start with
+to allow referencing operand/result `$-name`s; such `$-name`s can start with
 underscore.
 
 For example, to write an attribute `attr` is an `IntegerAttr`, in C++ you can
@@ -1179,7 +1264,7 @@ bitwidth.
 
 ODS attributes are defined as having a storage type (corresponding to a backing
 `mlir::Attribute` that _stores_ the attribute), a return type (corresponding to
-the C++ _return_ type of the generated of the helper getters) as well as method
+the C++ _return_ type of the generated helper getters) as well as a method
 to convert between the internal storage and the helper method.
 
 ### Attribute decorators
@@ -1198,13 +1283,12 @@ optionality, default values, etc.:
 
 Some attributes can only take values from a predefined enum, e.g., the
 comparison kind of a comparison op. To define such attributes, ODS provides
-several mechanisms: `StrEnumAttr`, `IntEnumAttr`, and `BitEnumAttr`.
+several mechanisms: `IntEnumAttr`, and `BitEnumAttr`.
 
-*   `StrEnumAttr`: each enum case is a string, the attribute is stored as a
-    [`StringAttr`][StringAttr] in the op.
 *   `IntEnumAttr`: each enum case is an integer, the attribute is stored as a
     [`IntegerAttr`][IntegerAttr] in the op.
-*   `BitEnumAttr`: each enum case is a bit, the attribute is stored as a
+*   `BitEnumAttr`: each enum case is a either the empty case, a single bit,
+    or a group of single bits, and the attribute is stored as a
     [`IntegerAttr`][IntegerAttr] in the op.
 
 All these `*EnumAttr` attributes require fully specifying all of the allowed
@@ -1308,13 +1392,14 @@ llvm::Optional<MyIntEnum> symbolizeMyIntEnum(uint32_t value) {
 Similarly for the following `BitEnumAttr` definition:
 
 ```tablegen
-def None: BitEnumAttrCase<"None", 0x0000>;
-def Bit1: BitEnumAttrCase<"Bit1", 0x0001>;
-def Bit2: BitEnumAttrCase<"Bit2", 0x0002>;
-def Bit3: BitEnumAttrCase<"Bit3", 0x0004>;
+def None: BitEnumAttrCaseNone<"None">;
+def Bit0: BitEnumAttrCaseBit<"Bit0", 0>;
+def Bit1: BitEnumAttrCaseBit<"Bit1", 1>;
+def Bit2: BitEnumAttrCaseBit<"Bit2", 2>;
+def Bit3: BitEnumAttrCaseBit<"Bit3", 3>;
 
 def MyBitEnum: BitEnumAttr<"MyBitEnum", "An example bit enum",
-                           [None, Bit1, Bit2, Bit3]>;
+                           [None, Bit0, Bit1, Bit2, Bit3]>;
 ```
 
 We can have:
@@ -1323,9 +1408,10 @@ We can have:
 // An example bit enum
 enum class MyBitEnum : uint32_t {
   None = 0,
-  Bit1 = 1,
-  Bit2 = 2,
-  Bit3 = 4,
+  Bit0 = 1,
+  Bit1 = 2,
+  Bit2 = 4,
+  Bit3 = 8,
 };
 
 llvm::Optional<MyBitEnum> symbolizeMyBitEnum(uint32_t);
@@ -1366,15 +1452,15 @@ template<> struct DenseMapInfo<::MyBitEnum> {
 ```c++
 std::string stringifyMyBitEnum(MyBitEnum symbol) {
   auto val = static_cast<uint32_t>(symbol);
+  assert(15u == (15u | val) && "invalid bits set in bit enum");
   // Special case for all bits unset.
   if (val == 0) return "None";
-
   llvm::SmallVector<llvm::StringRef, 2> strs;
-  if (1u & val) { strs.push_back("Bit1"); val &= ~1u; }
-  if (2u & val) { strs.push_back("Bit2"); val &= ~2u; }
-  if (4u & val) { strs.push_back("Bit3"); val &= ~4u; }
-
-  if (val) return "";
+  if (1u == (1u & val)) { strs.push_back("Bit0"); }
+  if (2u == (2u & val)) { strs.push_back("Bit1"); }
+  if (4u == (4u & val)) { strs.push_back("Bit2"); }
+  if (8u == (8u & val)) { strs.push_back("Bit3"); }
+  
   return llvm::join(strs, "|");
 }
 
@@ -1388,9 +1474,10 @@ llvm::Optional<MyBitEnum> symbolizeMyBitEnum(llvm::StringRef str) {
   uint32_t val = 0;
   for (auto symbol : symbols) {
     auto bit = llvm::StringSwitch<llvm::Optional<uint32_t>>(symbol)
-      .Case("Bit1", 1)
-      .Case("Bit2", 2)
-      .Case("Bit3", 4)
+      .Case("Bit0", 1)
+      .Case("Bit1", 2)
+      .Case("Bit2", 4)
+      .Case("Bit3", 8)
       .Default(llvm::None);
     if (bit) { val |= *bit; } else { return llvm::None; }
   }
@@ -1401,348 +1488,10 @@ llvm::Optional<MyBitEnum> symbolizeMyBitEnum(uint32_t value) {
   // Special case for all bits unset.
   if (value == 0) return MyBitEnum::None;
 
-  if (value & ~(1u | 2u | 4u)) return llvm::None;
+  if (value & ~(1u | 2u | 4u | 8u)) return llvm::None;
   return static_cast<MyBitEnum>(value);
 }
 ```
-
-## Type Definitions
-
-MLIR defines the TypeDef class hierarchy to enable generation of data types from
-their specifications. A type is defined by specializing the TypeDef class with
-concrete contents for all the fields it requires. For example, an integer type
-could be defined as:
-
-```tablegen
-// All of the types will extend this class.
-class Test_Type<string name> : TypeDef<Test_Dialect, name> { }
-
-// An alternate int type.
-def IntegerType : Test_Type<"TestInteger"> {
-  let mnemonic = "int";
-
-  let summary = "An integer type with special semantics";
-
-  let description = [{
-    An alternate integer type. This type differentiates itself from the
-    standard integer type by not having a SignednessSemantics parameter, just
-    a width.
-  }];
-
-  let parameters = (ins "unsigned":$width);
-
-  // We define the printer inline.
-  let printer = [{
-    $_printer << "int<" << getImpl()->width << ">";
-  }];
-
-  // The parser is defined here also.
-  let parser = [{
-    if ($_parser.parseLess())
-      return Type();
-    int width;
-    if ($_parser.parseInteger(width))
-      return Type();
-    if ($_parser.parseGreater())
-      return Type();
-    return get($_ctxt, width);
-  }];
-}
-```
-
-### Type name
-
-The name of the C++ class which gets generated defaults to
-`<classParamName>Type` (e.g. `TestIntegerType` in the above example). This can
-be overridden via the `cppClassName` field. The field `mnemonic` is to specify
-the asm name for parsing. It is optional and not specifying it will imply that
-no parser or printer methods are attached to this class.
-
-### Type documentation
-
-The `summary` and `description` fields exist and are to be used the same way as
-in Operations. Namely, the summary should be a one-liner and `description`
-should be a longer explanation.
-
-### Type parameters
-
-The `parameters` field is a list of the types parameters. If no parameters are
-specified (the default), this type is considered a singleton type. Parameters
-are in the `"c++Type":$paramName` format. To use C++ types as parameters which
-need allocation in the storage constructor, there are two options:
-
--   Set `hasCustomStorageConstructor` to generate the TypeStorage class with a
-    constructor which is just declared -- no definition -- so you can write it
-    yourself.
--   Use the `TypeParameter` tablegen class instead of the "c++Type" string.
-
-### TypeParameter tablegen class
-
-This is used to further specify attributes about each of the types parameters.
-It includes documentation (`summary` and `syntax`), the C++ type to use, a
-custom allocator to use in the storage constructor method, and a custom
-comparator to decide if two instances of the parameter type are equal.
-
-```tablegen
-// DO NOT DO THIS!
-let parameters = (ins "ArrayRef<int>":$dims);
-```
-
-The default storage constructor blindly copies fields by value. It does not know
-anything about the types. In this case, the ArrayRef<int> requires allocation
-with `dims = allocator.copyInto(dims)`.
-
-You can specify the necessary constructor by specializing the `TypeParameter`
-tblgen class:
-
-```tablegen
-class ArrayRefIntParam :
-    TypeParameter<"::llvm::ArrayRef<int>", "Array of ints"> {
-  let allocator = "$_dst = $_allocator.copyInto($_self);";
-}
-
-...
-
-let parameters = (ins ArrayRefIntParam:$dims);
-```
-
-The `allocator` code block has the following substitutions:
-
--   `$_allocator` is the TypeStorageAllocator in which to allocate objects.
--   `$_dst` is the variable in which to place the allocated data.
-
-The `comparator` code block has the following substitutions:
-
--   `$_lhs` is an instance of the parameter type.
--   `$_rhs` is an instance of the parameter type.
-
-MLIR includes several specialized classes for common situations:
-
--   `StringRefParameter<descriptionOfParam>` for StringRefs.
--   `ArrayRefParameter<arrayOf, descriptionOfParam>` for ArrayRefs of value
-    types
--   `SelfAllocationParameter<descriptionOfParam>` for C++ classes which contain
-    a method called `allocateInto(StorageAllocator &allocator)` to allocate
-    itself into `allocator`.
--   `ArrayRefOfSelfAllocationParameter<arrayOf, descriptionOfParam>` for arrays
-    of objects which self-allocate as per the last specialization.
-
-If we were to use one of these included specializations:
-
-```tablegen
-let parameters = (ins
-  ArrayRefParameter<"int", "The dimensions">:$dims
-);
-```
-
-### Parsing and printing
-
-If a mnemonic is specified, the `printer` and `parser` code fields are active.
-The rules for both are:
-
--   If null, generate just the declaration.
--   If non-null and non-empty, use the code in the definition. The `$_printer`
-    or `$_parser` substitutions are valid and should be used.
--   It is an error to have an empty code block.
-
-For each dialect, two "dispatch" functions will be created: one for parsing and
-one for printing. You should add calls to these in your `Dialect::printType` and
-`Dialect::parseType` methods. They are static functions placed alongside the
-type class definitions and have the following function signatures:
-
-```c++
-static Type generatedTypeParser(MLIRContext* ctxt, DialectAsmParser& parser, StringRef mnemonic);
-LogicalResult generatedTypePrinter(Type type, DialectAsmPrinter& printer);
-```
-
-The mnemonic, parser, and printer fields are optional. If they're not defined,
-the generated code will not include any parsing or printing code and omit the
-type from the dispatch functions above. In this case, the dialect author is
-responsible for parsing/printing the types in `Dialect::printType` and
-`Dialect::parseType`.
-
-### Other fields
-
--   If the `genStorageClass` field is set to 1 (the default) a storage class is
-    generated with member variables corresponding to each of the specified
-    `parameters`.
--   If the `genAccessors` field is 1 (the default) accessor methods will be
-    generated on the Type class (e.g. `int getWidth() const` in the example
-    above).
--   If the `genVerifyDecl` field is set, a declaration for a method `static
-    LogicalResult verify(emitErrorFn, parameters...)` is added to the class as
-    well as a `getChecked(emitErrorFn, parameters...)` method which checks the
-    result of `verify` before calling `get`.
--   The `storageClass` field can be used to set the name of the storage class.
--   The `storageNamespace` field is used to set the namespace where the storage
-    class should sit. Defaults to "detail".
--   The `extraClassDeclaration` field is used to include extra code in the class
-    declaration.
-
-### Type builder methods
-
-For each type, there are a few builders(`get`/`getChecked`) automatically
-generated based on the parameters of the type. For example, given the following
-type definition:
-
-```tablegen
-def MyType : ... {
-  let parameters = (ins "int":$intParam);
-}
-```
-
-The following builders are generated:
-
-```c++
-// Type builders are named `get`, and return a new instance of a type for a
-// given set of parameters.
-static MyType get(MLIRContext *context, int intParam);
-
-// If `genVerifyDecl` is set to 1, the following method is also generated.
-static MyType getChecked(function_ref<InFlightDiagnostic()> emitError,
-                         MLIRContext *context, int intParam);
-```
-
-If these autogenerated methods are not desired, such as when they conflict with
-a custom builder method, a type can set `skipDefaultBuilders` to 1 to signal
-that they should not be generated.
-
-#### Custom type builder methods
-
-The default build methods may cover a majority of the simple cases related to
-type construction, but when they cannot satisfy a type's needs, you can define
-additional convenience get methods in the `builders` field as follows:
-
-```tablegen
-def MyType : ... {
-  let parameters = (ins "int":$intParam);
-
-  let builders = [
-    TypeBuilder<(ins "int":$intParam)>,
-    TypeBuilder<(ins CArg<"int", "0">:$intParam)>,
-    TypeBuilder<(ins CArg<"int", "0">:$intParam), [{
-      // Write the body of the `get` builder inline here.
-      return Base::get($_ctxt, intParam);
-    }]>,
-    TypeBuilderWithInferredContext<(ins "Type":$typeParam), [{
-      // This builder states that it can infer an MLIRContext instance from
-      // its arguments.
-      return Base::get(typeParam.getContext(), ...);
-    }]>,
-  ];
-}
-```
-
-The `builders` field is a list of custom builders that are added to the type
-class. In this example, we provide a several different convenience builders that
-are useful in different scenarios. The `ins` prefix is common to many function
-declarations in ODS, which use a TableGen [`dag`](#tablegen-syntax). What
-follows is a comma-separated list of types (quoted string or CArg) and names
-prefixed with the `$` sign. The use of `CArg` allows for providing a default
-value to that argument. Let's take a look at each of these builders individually
-
-The first builder will generate the declaration of a builder method that looks
-like:
-
-```tablegen
-  let builders = [
-    TypeBuilder<(ins "int":$intParam)>,
-  ];
-```
-
-```c++
-class MyType : /*...*/ {
-  /*...*/
-  static MyType get(::mlir::MLIRContext *context, int intParam);
-};
-```
-
-This builder is identical to the one that will be automatically generated for
-`MyType`. The `context` parameter is implicitly added by the generator, and is
-used when building the file Type instance (with `Base::get`). The distinction
-here is that we can provide the implementation of this `get` method. With this
-style of builder definition only the declaration is generated, the implementor
-of MyType will need to provide a definition of `MyType::get`.
-
-The second builder will generate the declaration of a builder method that looks
-like:
-
-```tablegen
-  let builders = [
-    TypeBuilder<(ins CArg<"int", "0">:$intParam)>,
-  ];
-```
-
-```c++
-class MyType : /*...*/ {
-  /*...*/
-  static MyType get(::mlir::MLIRContext *context, int intParam = 0);
-};
-```
-
-The constraints here are identical to the first builder example except for the
-fact that `intParam` now has a default value attached.
-
-The third builder will generate the declaration of a builder method that looks
-like:
-
-```tablegen
-  let builders = [
-    TypeBuilder<(ins CArg<"int", "0">:$intParam), [{
-      // Write the body of the `get` builder inline here.
-      return Base::get($_ctxt, intParam);
-    }]>,
-  ];
-```
-
-```c++
-class MyType : /*...*/ {
-  /*...*/
-  static MyType get(::mlir::MLIRContext *context, int intParam = 0);
-};
-
-MyType MyType::get(::mlir::MLIRContext *context, int intParam) {
-  // Write the body of the `get` builder inline here.
-  return Base::get(context, intParam);
-}
-```
-
-This is identical to the second builder example. The difference is that now, a
-definition for the builder method will be generated automatically using the
-provided code block as the body. When specifying the body inline, `$_ctxt` may
-be used to access the `MLIRContext *` parameter.
-
-The fourth builder will generate the declaration of a builder method that looks
-like:
-
-```tablegen
-  let builders = [
-    TypeBuilderWithInferredContext<(ins "Type":$typeParam), [{
-      // This builder states that it can infer an MLIRContext instance from
-      // its arguments.
-      return Base::get(typeParam.getContext(), ...);
-    }]>,
-  ];
-```
-
-```c++
-class MyType : /*...*/ {
-  /*...*/
-  static MyType get(Type typeParam);
-};
-
-MyType MyType::get(Type typeParam) {
-  // This builder states that it can infer an MLIRContext instance from its
-  // arguments.
-  return Base::get(typeParam.getContext(), ...);
-}
-```
-
-In this builder example, the main difference from the third builder example
-three is that the `MLIRContext` parameter is no longer added. This is because
-the builder type used `TypeBuilderWithInferredContext` implies that the context
-parameter is not necessary as it can be inferred from the arguments to the
-builder.
 
 ## Debugging Tips
 
@@ -1776,9 +1525,22 @@ mlir-tblgen --gen-op-interface-doc -I /path/to/mlir/include /path/to/input/td/fi
 
 ## Appendix
 
+### Reporting deprecation
+
+Classes/defs can be marked as deprecated by using the `Deprecate` helper class,
+e.g.,
+
+```tablegen
+def OpTraitA : NativeOpTrait<"OpTraitA">, Deprecated<"use `bar` instead">;
+```
+
+would result in marking `OpTraitA` as deprecated and mlir-tblgen can emit a
+warning (default) or error (depending on `-on-deprecated` flag) to make
+deprecated state known.
+
 ### Requirements and existing mechanisms analysis
 
-The op description should as declarative as possible to allow a wide range of
+The op description should be as declarative as possible to allow a wide range of
 tools to work with them and query methods generated from them. In particular
 this means specifying traits, constraints and shape inference information in a
 way that is easily analyzable (e.g., avoid opaque calls to C++ functions where

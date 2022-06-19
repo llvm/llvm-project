@@ -32,7 +32,7 @@ public:
     Symbol callable_symbol;
     Address callable_address;
     LineEntry callable_line_entry;
-    lldb::addr_t member__f_pointer_value = 0u;
+    lldb::addr_t member_f_pointer_value = 0u;
     LibCppStdFunctionCallableCase callable_case =
         LibCppStdFunctionCallableCase::Invalid;
   };

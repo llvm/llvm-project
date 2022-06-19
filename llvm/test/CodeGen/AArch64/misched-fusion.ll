@@ -1,5 +1,5 @@
-; RUN: llc -o - %s -mtriple=aarch64-unknown -aarch64-enable-cond-br-tune=false -mattr=+arith-bcc-fusion | FileCheck %s --check-prefix=FUSEBCC
-; RUN: llc -o - %s -mtriple=aarch64-unknown -aarch64-enable-cond-br-tune=false -mattr=+arith-cbz-fusion | FileCheck %s --check-prefix=FUSECBZ
+; RUN: llc -o - %s -mtriple=aarch64-unknown -aarch64-enable-cond-br-tune=false -mcpu=cortex-a57 -mattr=+arith-bcc-fusion | FileCheck %s --check-prefix=FUSEBCC
+; RUN: llc -o - %s -mtriple=aarch64-unknown -aarch64-enable-cond-br-tune=false -mcpu=cortex-a57 -mattr=+arith-cbz-fusion | FileCheck %s --check-prefix=FUSECBZ
 ; RUN: llc -o - %s -mtriple=aarch64-unknown -aarch64-enable-cond-br-tune=false -mcpu=cyclone            | FileCheck %s --check-prefix=FUSEBCC --check-prefix=FUSECBZ
 
 target triple = "aarch64-unknown"

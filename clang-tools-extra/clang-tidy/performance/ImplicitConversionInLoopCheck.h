@@ -29,7 +29,7 @@ public:
   void check(const ast_matchers::MatchFinder::MatchResult &Result) override;
 
 private:
-  void ReportAndFix(const ASTContext *Context, const VarDecl *VD,
+  void reportAndFix(const ASTContext *Context, const VarDecl *VD,
                     const Expr *OperatorCall);
 };
 

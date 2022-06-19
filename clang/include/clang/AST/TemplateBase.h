@@ -52,7 +52,6 @@ template <> struct PointerLikeTypeTraits<clang::Expr *> {
 namespace clang {
 
 class ASTContext;
-class DiagnosticBuilder;
 class Expr;
 struct PrintingPolicy;
 class TypeSourceInfo;
@@ -619,6 +618,9 @@ private:
 
   ASTTemplateArgumentListInfo(const TemplateArgumentListInfo &List);
 
+  // FIXME: Is it ever necessary to copy to another context?
+  ASTTemplateArgumentListInfo(const ASTTemplateArgumentListInfo *List);
+
 public:
   /// The source location of the left angle bracket ('<').
   SourceLocation LAngleLoc;
@@ -648,6 +650,10 @@ public:
 
   static const ASTTemplateArgumentListInfo *
   Create(const ASTContext &C, const TemplateArgumentListInfo &List);
+
+  // FIXME: Is it ever necessary to copy to another context?
+  static const ASTTemplateArgumentListInfo *
+  Create(const ASTContext &C, const ASTTemplateArgumentListInfo *List);
 };
 
 /// Represents an explicit template argument list in C++, e.g.,

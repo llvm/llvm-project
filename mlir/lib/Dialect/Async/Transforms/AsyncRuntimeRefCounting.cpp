@@ -15,7 +15,8 @@
 #include "mlir/Analysis/Liveness.h"
 #include "mlir/Dialect/Async/IR/Async.h"
 #include "mlir/Dialect/Async/Passes.h"
-#include "mlir/Dialect/StandardOps/IR/Ops.h"
+#include "mlir/Dialect/ControlFlow/IR/ControlFlowOps.h"
+#include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/IR/ImplicitLocOpBuilder.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
@@ -44,7 +45,7 @@ static LogicalResult dropRefIfNoUses(Value value, unsigned count = 1) {
   else
     b.setInsertionPointToStart(value.getParentBlock());
 
-  b.create<RuntimeDropRefOp>(value.getLoc(), value, b.getI32IntegerAttr(1));
+  b.create<RuntimeDropRefOp>(value.getLoc(), value, b.getI64IntegerAttr(1));
   return success();
 }
 
@@ -169,11 +170,11 @@ private:
   ///
   ///   ^entry:
   ///     %token = async.runtime.create : !async.token
-  ///     cond_br %cond, ^bb1, ^bb2
+  ///     cf.cond_br %cond, ^bb1, ^bb2
   ///   ^bb1:
   ///     async.runtime.await %token
   ///     async.runtime.drop_ref %token
-  ///     br ^bb2
+  ///     cf.br ^bb2
   ///   ^bb2:
   ///     return
   ///
@@ -185,14 +186,14 @@ private:
   ///
   ///   ^entry:
   ///     %token = async.runtime.create : !async.token
-  ///     cond_br %cond, ^bb1, ^reference_counting
+  ///     cf.cond_br %cond, ^bb1, ^reference_counting
   ///   ^bb1:
   ///     async.runtime.await %token
   ///     async.runtime.drop_ref %token
-  ///     br ^bb2
+  ///     cf.br ^bb2
   ///   ^reference_counting:
   ///     async.runtime.drop_ref %token
-  ///     br ^bb2
+  ///     cf.br ^bb2
   ///   ^bb2:
   ///     return
   ///
@@ -208,7 +209,7 @@ private:
   ///     async.coro.suspend %ret, ^suspend, ^resume, ^cleanup
   ///   ^resume:
   ///     %0 = async.runtime.load %value
-  ///     br ^cleanup
+  ///     cf.br ^cleanup
   ///   ^cleanup:
   ///     ...
   ///   ^suspend:
@@ -304,7 +305,7 @@ LogicalResult AsyncRuntimeRefCountingPass::addDropRefAfterLastUse(Value value) {
 
     // Add a drop_ref immediately after the last user.
     builder.setInsertionPointAfter(lastUser);
-    builder.create<RuntimeDropRefOp>(loc, value, builder.getI32IntegerAttr(1));
+    builder.create<RuntimeDropRefOp>(loc, value, builder.getI64IntegerAttr(1));
   }
 
   return success();
@@ -316,13 +317,13 @@ AsyncRuntimeRefCountingPass::addAddRefBeforeFunctionCall(Value value) {
   Location loc = value.getLoc();
 
   for (Operation *user : value.getUsers()) {
-    if (!isa<CallOp>(user))
+    if (!isa<func::CallOp>(user))
       continue;
 
     // Add a reference before the function call to pass the value at `+1`
     // reference to the function entry block.
     builder.setInsertionPoint(user);
-    builder.create<RuntimeAddRefOp>(loc, value, builder.getI32IntegerAttr(1));
+    builder.create<RuntimeAddRefOp>(loc, value, builder.getI64IntegerAttr(1));
   }
 
   return success();
@@ -406,19 +407,19 @@ AsyncRuntimeRefCountingPass::addDropRefInDivergentLivenessSuccessor(
         refCountingBlock = &successor->getParent()->emplaceBlock();
         refCountingBlock->moveBefore(successor);
         OpBuilder builder = OpBuilder::atBlockEnd(refCountingBlock);
-        builder.create<BranchOp>(value.getLoc(), successor);
+        builder.create<cf::BranchOp>(value.getLoc(), successor);
       }
 
       OpBuilder builder = OpBuilder::atBlockBegin(refCountingBlock);
       builder.create<RuntimeDropRefOp>(value.getLoc(), value,
-                                       builder.getI32IntegerAttr(1));
+                                       builder.getI64IntegerAttr(1));
 
       // No need to update the terminator operation.
       if (successor == refCountingBlock)
         continue;
 
       // Update terminator `successor` block to `refCountingBlock`.
-      for (auto pair : llvm::enumerate(terminator->getSuccessors()))
+      for (const auto &pair : llvm::enumerate(terminator->getSuccessors()))
         if (pair.value() == successor)
           terminator->setSuccessor(refCountingBlock, pair.index());
     }
@@ -502,13 +503,13 @@ AsyncRuntimePolicyBasedRefCountingPass::addRefCounting(Value value) {
       // Create `add_ref` operation before the operand owner.
       if (cnt > 0) {
         b.setInsertionPoint(operand.getOwner());
-        b.create<RuntimeAddRefOp>(loc, value, b.getI32IntegerAttr(cnt));
+        b.create<RuntimeAddRefOp>(loc, value, b.getI64IntegerAttr(cnt));
       }
 
       // Create `drop_ref` operation after the operand owner.
       if (cnt < 0) {
         b.setInsertionPointAfter(operand.getOwner());
-        b.create<RuntimeDropRefOp>(loc, value, b.getI32IntegerAttr(-cnt));
+        b.create<RuntimeDropRefOp>(loc, value, b.getI64IntegerAttr(-cnt));
       }
     }
   }
@@ -524,10 +525,6 @@ void AsyncRuntimePolicyBasedRefCountingPass::initializeDefaultPolicy() {
     bool isToken = type.isa<TokenType>();
     bool isGroup = type.isa<GroupType>();
     bool isValue = type.isa<ValueType>();
-
-    // Drop reference after async token or group await (sync await)
-    if (auto await = dyn_cast<RuntimeAwaitOp>(op))
-      return (isToken || isGroup) ? -1 : 0;
 
     // Drop reference after async token or group error check (coro await).
     if (auto await = dyn_cast<RuntimeIsErrorOp>(op))

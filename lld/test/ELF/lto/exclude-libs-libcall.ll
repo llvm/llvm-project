@@ -6,7 +6,7 @@
 ; RUN: ld.lld -shared --exclude-libs=b.a %t/a.bc %t/b.a -o %t.so -y __divti3 2>&1 | FileCheck %s --check-prefix=TRACE
 ; RUN: llvm-readelf --dyn-syms %t.so | FileCheck %s
 
-; TRACE:      {{.*}}/b.a: lazy definition of __divti3
+; TRACE:      {{.*}}/b.a(b.o): lazy definition of __divti3
 ; TRACE-NEXT: lto.tmp: reference to __divti3
 ; TRACE-NEXT: {{.*}}/b.a(b.o): definition of __divti3
 

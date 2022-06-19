@@ -1,5 +1,7 @@
 // RUN: %clang_cc1 -triple arm64-apple-ios7 -target-feature +neon -ffreestanding -flax-vector-conversions=none -emit-llvm -o - %s | FileCheck %s
 
+// REQUIRES: aarch64-registered-target || arm-registered-target
+
 #include <arm_neon.h>
 
 float64x2_t rnd5(float64x2_t a) { return vrndq_f64(a); }

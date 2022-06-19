@@ -252,6 +252,32 @@ define void()* @get_external_preemptable_function() {
 ; STATIC: movq external_preemptable_function@GOTPCREL(%rip), %rax
 ; CHECK32: movl external_preemptable_function@GOT(%eax), %eax
 
+$comdat_nodeduplicate_local = comdat nodeduplicate
+$comdat_nodeduplicate_preemptable = comdat nodeduplicate
+$comdat_any_local = comdat any
+
+;; -fpic -fno-semantic-interposition may add dso_local. Some instrumentation
+;; may add comdat nodeduplicate. We should use local aliases to make the symbol
+;; non-preemptible in the linker.
+define dso_local i8* @comdat_nodeduplicate_local() comdat {
+  ret i8* bitcast (i8* ()* @comdat_nodeduplicate_local to i8*)
+}
+; CHECK: leaq .Lcomdat_nodeduplicate_local$local(%rip), %rax
+; STATIC: movl $comdat_nodeduplicate_local, %eax
+
+define dso_preemptable i8* @comdat_nodeduplicate_preemptable() comdat {
+  ret i8* bitcast (i8* ()* @comdat_nodeduplicate_preemptable to i8*)
+}
+; CHECK: movq comdat_nodeduplicate_preemptable@GOTPCREL(%rip), %rax
+; STATIC: movq comdat_nodeduplicate_preemptable@GOTPCREL(%rip), %rax
+
+;; Check the behavior for the invalid construct.
+define dso_local i8* @comdat_any_local() comdat {
+  ret i8* bitcast (i8* ()* @comdat_any_local to i8*)
+}
+; CHECK: leaq comdat_any_local(%rip), %rax
+; STATIC: movl $comdat_any_local, %eax
+
 !llvm.module.flags = !{!0}
 !0 = !{i32 7, !"PIC Level", i32 2}
 

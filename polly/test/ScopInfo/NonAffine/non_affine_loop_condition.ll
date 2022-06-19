@@ -1,18 +1,6 @@
-; RUN: opt %loadPolly -polly-scops \
-; RUN:     -polly-allow-nonaffine-branches -polly-allow-nonaffine-loops \
-; RUN:     -analyze < %s | FileCheck %s
-; RUN: opt %loadPolly -polly-scops -polly-allow-nonaffine-branches \
-; RUN:     -polly-process-unprofitable=false \
-; RUN:     -polly-allow-nonaffine-loops -analyze < %s | FileCheck %s \
-; RUN:     --check-prefix=PROFIT
-
-
-; RUN: opt %loadPolly -polly-scops -polly-detect-reductions \
-; RUN:                -polly-allow-nonaffine-branches \
-; RUN:                \
-; RUN:                -polly-allow-nonaffine-loops -analyze < %s \
-; RUN:                -polly-detect-reductions=false \
-; RUN: | FileCheck %s -check-prefix=NO-REDUCTION
+; RUN: opt %loadPolly -polly-allow-nonaffine-branches -polly-allow-nonaffine-loops                                   -polly-print-scops -disable-output < %s | FileCheck %s
+; RUN: opt %loadPolly -polly-allow-nonaffine-branches -polly-allow-nonaffine-loops -polly-process-unprofitable=false -polly-print-scops -disable-output < %s | FileCheck %s --check-prefix=PROFIT
+; RUN: opt %loadPolly -polly-allow-nonaffine-branches -polly-allow-nonaffine-loops -polly-detect-reductions=false    -polly-print-scops -disable-output < %s | FileCheck %s -check-prefix=NO-REDUCTION
 ;
 ;    void f(int *A, int *C) {
 ;      for (int i = 0; i < 1024; i++) {

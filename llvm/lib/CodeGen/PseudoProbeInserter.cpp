@@ -18,11 +18,9 @@
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/IR/DebugInfoMetadata.h"
+#include "llvm/IR/Module.h"
 #include "llvm/IR/PseudoProbe.h"
 #include "llvm/InitializePasses.h"
-#include "llvm/MC/MCPseudoProbe.h"
-#include "llvm/Target/TargetMachine.h"
-#include <unordered_set>
 
 #define DEBUG_TYPE "pseudo-probe-inserter"
 
@@ -44,7 +42,14 @@ public:
     MachineFunctionPass::getAnalysisUsage(AU);
   }
 
+  bool doInitialization(Module &M) override {
+    ShouldRun = M.getNamedMetadata(PseudoProbeDescMetadataName);
+    return false;
+  }
+
   bool runOnMachineFunction(MachineFunction &MF) override {
+    if (!ShouldRun)
+      return false;
     const TargetInstrInfo *TII = MF.getSubtarget().getInstrInfo();
     bool Changed = false;
     for (MachineBasicBlock &MBB : MF) {
@@ -129,6 +134,8 @@ private:
       Name = SP->getName();
     return Function::getGUID(Name);
   }
+
+  bool ShouldRun = false;
 };
 } // namespace
 

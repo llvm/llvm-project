@@ -1,4 +1,4 @@
-//===------ M68kInstrShiftRotate.td - Logical Instrs -----*- tablegen -*-===//
+//===-- M68kInstrShiftRotate.td - Logical Instrs -----------*- tablegen -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -24,49 +24,55 @@
 ///
 //===----------------------------------------------------------------------===//
 
-def MxRODI_R : MxBead1Bit<0>;
-def MxRODI_L : MxBead1Bit<1>;
+defvar MxROKind_R = true;
+defvar MxROKind_I = false;
 
-def MxROOP_AS  : MxBead2Bits<0b00>;
-def MxROOP_LS  : MxBead2Bits<0b01>;
-def MxROOP_ROX : MxBead2Bits<0b10>;
-def MxROOP_RO  : MxBead2Bits<0b11>;
+defvar MxRODI_R = false;
+defvar MxRODI_L = true;
+
+defvar MxROOP_AS  = 0b00;
+defvar MxROOP_LS  = 0b01;
+defvar MxROOP_ROX = 0b10;
+defvar MxROOP_RO  = 0b11;
 
 /// ------------+---------+---+------+---+------+---------
 ///  F  E  D  C | B  A  9 | 8 | 7  6 | 5 | 4  3 | 2  1  0
 /// ------------+---------+---+------+---+------+---------
 ///  1  1  1  0 | REG/IMM | D | SIZE |R/I|  OP  |   REG
 /// ------------+---------+---+------+---+------+---------
-class MxSREncoding_R<MxBead1Bit DIRECTION, MxBead2Bits ROOP, MxEncSize SIZE>
-    : MxEncoding<MxBeadDReg<0>, ROOP, MxBead1Bit<1>, SIZE, DIRECTION,
-                 MxBeadDReg<2>, MxBead4Bits<0b1110>>;
-
-class MxSREncoding_I<MxBead1Bit DIRECTION, MxBead2Bits ROOP, MxEncSize SIZE>
-    : MxEncoding<MxBeadDReg<0>, ROOP, MxBead1Bit<0>, SIZE, DIRECTION,
-                 MxBead3Imm<2, 1>, MxBead4Bits<0b1110>>;
+class MxSREncoding<bit kind, string src_opnd, string dst_opnd,
+                   bit direction, bits<2> ro_op, MxNewEncSize size> {
+  dag Value = (descend 0b1110,
+    // REG/IMM
+    (operand "$"#src_opnd, 3),
+    direction, size.Value, kind, ro_op,
+    // REG
+    (operand "$"#dst_opnd, 3)
+  );
+}
 
 // $reg <- $reg op $reg
-class MxSR_DD<string MN, MxType TYPE, SDNode NODE,
-              MxBead1Bit RODI, MxBead2Bits ROOP>
+class MxSR_DD<string MN, MxType TYPE, SDNode NODE, bit RODI, bits<2> ROOP>
     : MxInst<(outs TYPE.ROp:$dst), (ins TYPE.ROp:$src, TYPE.ROp:$opd),
              MN#"."#TYPE.Prefix#"\t$opd, $dst",
-             [(set TYPE.VT:$dst, (NODE TYPE.VT:$src, TYPE.VT:$opd))],
-             MxSREncoding_R<RODI, ROOP,
-                            !cast<MxEncSize>("MxEncSize"#TYPE.Size)>>;
+             [(set TYPE.VT:$dst, (NODE TYPE.VT:$src, TYPE.VT:$opd))]> {
+  let Inst = MxSREncoding<MxROKind_R, "opd", "dst", RODI, ROOP,
+                          !cast<MxNewEncSize>("MxNewEncSize"#TYPE.Size)>.Value;
+}
 
 // $reg <- $reg op $imm
-class MxSR_DI<string MN, MxType TYPE, SDNode NODE,
-              MxBead1Bit RODI, MxBead2Bits ROOP>
+class MxSR_DI<string MN, MxType TYPE, SDNode NODE, bit RODI, bits<2> ROOP>
     : MxInst<(outs TYPE.ROp:$dst),
              (ins TYPE.ROp:$src, !cast<Operand>("Mxi"#TYPE.Size#"imm"):$opd),
              MN#"."#TYPE.Prefix#"\t$opd, $dst",
              [(set TYPE.VT:$dst,
                    (NODE TYPE.VT:$src,
-                         !cast<ImmLeaf>("Mximm"#TYPE.Size#"_1to8"):$opd))],
-             MxSREncoding_I<RODI, ROOP,
-                            !cast<MxEncSize>("MxEncSize"#TYPE.Size)>>;
+                         !cast<ImmLeaf>("Mximm"#TYPE.Size#"_1to8"):$opd))]> {
+  let Inst = MxSREncoding<MxROKind_I, "opd", "dst", RODI, ROOP,
+                          !cast<MxNewEncSize>("MxNewEncSize"#TYPE.Size)>.Value;
+}
 
-multiclass MxSROp<string MN, SDNode NODE, MxBead1Bit RODI, MxBead2Bits ROOP> {
+multiclass MxSROp<string MN, SDNode NODE, bit RODI, bits<2> ROOP> {
 
   let Defs = [CCR] in {
   let Constraints = "$src = $dst" in {

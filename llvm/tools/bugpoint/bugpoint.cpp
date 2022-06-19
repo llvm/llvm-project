@@ -65,11 +65,7 @@ static cl::opt<bool>
 // PassNameParser.
 //
 static cl::list<const PassInfo *, bool, PassNameParser>
-    PassList(cl::desc("Passes available:"), cl::ZeroOrMore);
-
-static cl::opt<bool>
-    StandardLinkOpts("std-link-opts",
-                     cl::desc("Include the standard link time optimizations"));
+    PassList(cl::desc("Passes available:"));
 
 static cl::opt<bool>
     OptLevelO1("O1", cl::desc("Optimization level 1. Identical to 'opt -O1'"));
@@ -202,12 +198,6 @@ int main(int argc, char **argv) {
     return 1;
 
   AddToDriver PM(D);
-
-  if (StandardLinkOpts) {
-    PassManagerBuilder Builder;
-    Builder.Inliner = createFunctionInliningPass();
-    Builder.populateLTOPassManager(PM);
-  }
 
   if (OptLevelO1)
     AddOptimizationPasses(PM, 1, 0);

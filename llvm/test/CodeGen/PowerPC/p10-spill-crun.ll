@@ -35,10 +35,9 @@ declare i8 @call_6(%1*, i32) local_unnamed_addr
 
 define dso_local void @P10_Spill_CR_UN(%2* %arg, %1* %arg1, i32 %arg2) local_unnamed_addr {
 ; CHECK-LABEL: P10_Spill_CR_UN:
-; CHECK:         .localentry P10_Spill_CR_UN, 1
-; CHECK-NEXT:  # %bb.0: # %bb
-; CHECK-NEXT:    mflr r0
+; CHECK:       # %bb.0: # %bb
 ; CHECK-NEXT:    mfcr r12
+; CHECK-NEXT:    mflr r0
 ; CHECK-NEXT:    std r0, 16(r1)
 ; CHECK-NEXT:    stw r12, 8(r1)
 ; CHECK-NEXT:    stdu r1, -224(r1)
@@ -85,8 +84,8 @@ define dso_local void @P10_Spill_CR_UN(%2* %arg, %1* %arg1, i32 %arg2) local_unn
 ; CHECK-NEXT:  # %bb.4: # %bb37
 ; CHECK-NEXT:    bc 4, 4*cr5+lt, .LBB0_14
 ; CHECK-NEXT:  .LBB0_5: # %bb42
-; CHECK-NEXT:    li r4, 0
 ; CHECK-NEXT:    paddi r3, 0, global_1@PCREL, 1
+; CHECK-NEXT:    li r4, 0
 ; CHECK-NEXT:    cmpwi r28, 0
 ; CHECK-NEXT:    isel r3, r3, r4, 4*cr2+gt
 ; CHECK-NEXT:    crnot 4*cr2+lt, eq
@@ -147,15 +146,15 @@ define dso_local void @P10_Spill_CR_UN(%2* %arg, %1* %arg1, i32 %arg2) local_unn
 ; CHECK-NEXT:  .LBB0_15: # %bb50
 ; CHECK-NEXT:    li r4, 0
 ; CHECK-NEXT:    xxspltidp vs3, -1082130432
+; CHECK-NEXT:    xxspltidp vs4, -1082130432
 ; CHECK-NEXT:    extsh r9, r3
 ; CHECK-NEXT:    extsw r6, r28
 ; CHECK-NEXT:    li r5, 0
+; CHECK-NEXT:    li r7, 0
 ; CHECK-NEXT:    std r30, 104(r1)
 ; CHECK-NEXT:    std r29, 96(r1)
-; CHECK-NEXT:    li r7, 0
 ; CHECK-NEXT:    li r8, 0
 ; CHECK-NEXT:    li r10, 0
-; CHECK-NEXT:    fmr f4, f3
 ; CHECK-NEXT:    xxlxor f1, f1, f1
 ; CHECK-NEXT:    std r4, 152(r1)
 ; CHECK-NEXT:    li r4, -1
@@ -183,8 +182,8 @@ define dso_local void @P10_Spill_CR_UN(%2* %arg, %1* %arg1, i32 %arg2) local_unn
 ;
 ; CHECK-BE-LABEL: P10_Spill_CR_UN:
 ; CHECK-BE:       # %bb.0: # %bb
-; CHECK-BE-NEXT:    mflr r0
 ; CHECK-BE-NEXT:    mfcr r12
+; CHECK-BE-NEXT:    mflr r0
 ; CHECK-BE-NEXT:    std r0, 16(r1)
 ; CHECK-BE-NEXT:    stw r12, 8(r1)
 ; CHECK-BE-NEXT:    stdu r1, -240(r1)
@@ -305,15 +304,15 @@ define dso_local void @P10_Spill_CR_UN(%2* %arg, %1* %arg1, i32 %arg2) local_unn
 ; CHECK-BE-NEXT:  .LBB0_15: # %bb50
 ; CHECK-BE-NEXT:    li r4, 0
 ; CHECK-BE-NEXT:    xxspltidp vs3, -1082130432
+; CHECK-BE-NEXT:    xxspltidp vs4, -1082130432
 ; CHECK-BE-NEXT:    extsh r9, r3
 ; CHECK-BE-NEXT:    extsw r6, r28
 ; CHECK-BE-NEXT:    li r5, 0
+; CHECK-BE-NEXT:    li r7, 0
 ; CHECK-BE-NEXT:    std r30, 120(r1)
 ; CHECK-BE-NEXT:    std r29, 112(r1)
-; CHECK-BE-NEXT:    li r7, 0
 ; CHECK-BE-NEXT:    li r8, 0
 ; CHECK-BE-NEXT:    li r10, 0
-; CHECK-BE-NEXT:    fmr f4, f3
 ; CHECK-BE-NEXT:    xxlxor f1, f1, f1
 ; CHECK-BE-NEXT:    std r4, 168(r1)
 ; CHECK-BE-NEXT:    li r4, -1

@@ -6,20 +6,15 @@ declare  i32 @llvm.smul.fix.sat.i32  (i32, i32, i32)
 define i32 @func1(i32 %x, i32 %y) nounwind {
 ; CHECK-LABEL: func1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    lis 5, 32767
-; CHECK-NEXT:    mulhw. 6, 3, 4
-; CHECK-NEXT:    lis 7, -32768
+; CHECK-NEXT:    mulhw 5, 3, 4
 ; CHECK-NEXT:    mullw 3, 3, 4
-; CHECK-NEXT:    ori 4, 5, 65535
-; CHECK-NEXT:    srawi 5, 3, 31
-; CHECK-NEXT:    cmplw 1, 6, 5
-; CHECK-NEXT:    bc 12, 0, .LBB0_1
-; CHECK-NEXT:    b .LBB0_2
-; CHECK-NEXT:  .LBB0_1:
-; CHECK-NEXT:    addi 4, 7, 0
-; CHECK-NEXT:  .LBB0_2:
-; CHECK-NEXT:    bclr 12, 6, 0
-; CHECK-NEXT:  # %bb.3:
+; CHECK-NEXT:    srawi 4, 3, 31
+; CHECK-NEXT:    cmplw 5, 4
+; CHECK-NEXT:    srawi 4, 5, 31
+; CHECK-NEXT:    xori 4, 4, 65535
+; CHECK-NEXT:    xoris 4, 4, 32767
+; CHECK-NEXT:    bclr 12, 2, 0
+; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    ori 3, 4, 0
 ; CHECK-NEXT:    blr
   %tmp = call i32 @llvm.smul.fix.sat.i32(i32 %x, i32 %y, i32 0)

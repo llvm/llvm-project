@@ -86,7 +86,7 @@ struct CognitiveComplexity final {
   };
 
   // The helper struct used to record one increment occurrence, with all the
-  // details nessesary.
+  // details necessary.
   struct Detail {
     const SourceLocation Loc;     // What caused the increment?
     const unsigned short Nesting; // How deeply nested is Loc located?
@@ -444,8 +444,7 @@ public:
       // A little beautification.
       // For conditional operator "cond ? true : false" point at the "?"
       // symbol.
-      ConditionalOperator *COp = dyn_cast<ConditionalOperator>(Node);
-      Location = COp->getQuestionLoc();
+      Location = cast<ConditionalOperator>(Node)->getQuestionLoc();
     }
 
     // If we have found any reasons, let's account it.

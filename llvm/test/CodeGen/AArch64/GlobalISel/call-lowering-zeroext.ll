@@ -55,8 +55,8 @@ define i32 @zeroext_param_stack(i64 %a, i64 %b, i64 %c, i64 %d, i64 %e, i64 %f,
   ; CHECK:   [[FRAME_INDEX:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.1
   ; CHECK:   [[LOAD:%[0-9]+]]:_(s64) = G_LOAD [[FRAME_INDEX]](p0) :: (invariant load (s64) from %fixed-stack.1, align 16)
   ; CHECK:   [[FRAME_INDEX1:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.0
-  ; CHECK:   [[LOAD1:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX1]](p0) :: (invariant load (s8) from %fixed-stack.0, align 8)
-  ; CHECK:   [[ASSERT_ZEXT:%[0-9]+]]:_(s32) = G_ASSERT_ZEXT [[LOAD1]], 1
+  ; CHECK:   [[ZEXTLOAD:%[0-9]+]]:_(s32) = G_ZEXTLOAD [[FRAME_INDEX1]](p0) :: (invariant load (s8) from %fixed-stack.0, align 8)
+  ; CHECK:   [[ASSERT_ZEXT:%[0-9]+]]:_(s32) = G_ASSERT_ZEXT [[ZEXTLOAD]], 1
   ; CHECK:   [[TRUNC:%[0-9]+]]:_(s1) = G_TRUNC [[ASSERT_ZEXT]](s32)
   ; CHECK:   [[ZEXT:%[0-9]+]]:_(s32) = G_ZEXT [[TRUNC]](s1)
   ; CHECK:   $w0 = COPY [[ZEXT]](s32)
@@ -106,8 +106,8 @@ define i8 @s8_assert_zext_stack(i64 %a, i64 %b, i64 %c, i64 %d, i64 %e,
   ; CHECK:   [[FRAME_INDEX:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.1
   ; CHECK:   [[LOAD:%[0-9]+]]:_(s64) = G_LOAD [[FRAME_INDEX]](p0) :: (invariant load (s64) from %fixed-stack.1, align 16)
   ; CHECK:   [[FRAME_INDEX1:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.0
-  ; CHECK:   [[LOAD1:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX1]](p0) :: (invariant load (s8) from %fixed-stack.0, align 8)
-  ; CHECK:   [[ASSERT_ZEXT:%[0-9]+]]:_(s32) = G_ASSERT_ZEXT [[LOAD1]], 8
+  ; CHECK:   [[ZEXTLOAD:%[0-9]+]]:_(s32) = G_ZEXTLOAD [[FRAME_INDEX1]](p0) :: (invariant load (s8) from %fixed-stack.0, align 8)
+  ; CHECK:   [[ASSERT_ZEXT:%[0-9]+]]:_(s32) = G_ASSERT_ZEXT [[ZEXTLOAD]], 8
   ; CHECK:   [[TRUNC:%[0-9]+]]:_(s8) = G_TRUNC [[ASSERT_ZEXT]](s32)
   ; CHECK:   [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[TRUNC]](s8)
   ; CHECK:   $w0 = COPY [[ANYEXT]](s32)

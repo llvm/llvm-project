@@ -59,6 +59,56 @@ entry:
   ret <8 x i16> %out
 }
 
+define arm_aapcs_vfpcc <8 x i16> @vmovn32_trunc1_viabitcast(<4 x i32> %src1, <4 x i32> %src2) {
+; CHECK-LABEL: vmovn32_trunc1_viabitcast:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    .pad #16
+; CHECK-NEXT:    sub sp, #16
+; CHECK-NEXT:    vmov.f32 s8, s2
+; CHECK-NEXT:    mov r0, sp
+; CHECK-NEXT:    vmov.f32 s9, s6
+; CHECK-NEXT:    vmov.f32 s10, s3
+; CHECK-NEXT:    vmov.f32 s11, s7
+; CHECK-NEXT:    vstrh.32 q2, [r0, #8]
+; CHECK-NEXT:    vmov.f32 s8, s0
+; CHECK-NEXT:    vmov.f32 s9, s4
+; CHECK-NEXT:    vmov.f32 s10, s1
+; CHECK-NEXT:    vmov.f32 s11, s5
+; CHECK-NEXT:    vstrh.32 q2, [r0]
+; CHECK-NEXT:    vldrw.u32 q0, [r0]
+; CHECK-NEXT:    add sp, #16
+; CHECK-NEXT:    bx lr
+;
+; CHECKBE-LABEL: vmovn32_trunc1_viabitcast:
+; CHECKBE:       @ %bb.0: @ %entry
+; CHECKBE-NEXT:    .pad #16
+; CHECKBE-NEXT:    sub sp, #16
+; CHECKBE-NEXT:    vrev64.32 q2, q1
+; CHECKBE-NEXT:    vrev64.32 q1, q0
+; CHECKBE-NEXT:    vmov.f32 s0, s6
+; CHECKBE-NEXT:    mov r0, sp
+; CHECKBE-NEXT:    vmov.f32 s1, s10
+; CHECKBE-NEXT:    vmov.f32 s2, s7
+; CHECKBE-NEXT:    vmov.f32 s3, s11
+; CHECKBE-NEXT:    vstrh.32 q0, [r0, #8]
+; CHECKBE-NEXT:    vmov.f32 s0, s4
+; CHECKBE-NEXT:    vmov.f32 s1, s8
+; CHECKBE-NEXT:    vmov.f32 s2, s5
+; CHECKBE-NEXT:    vmov.f32 s3, s9
+; CHECKBE-NEXT:    vstrh.32 q0, [r0]
+; CHECKBE-NEXT:    vldrb.u8 q1, [r0]
+; CHECKBE-NEXT:    vrev64.8 q0, q1
+; CHECKBE-NEXT:    add sp, #16
+; CHECKBE-NEXT:    bx lr
+entry:
+  %b1 = bitcast <4 x i32> %src1 to <8 x i16>
+  %b2 = bitcast <4 x i32> %src2 to <8 x i16>
+  %s = shufflevector <8 x i16> %b1, <8 x i16> %b2, <16 x i32> <i32 0, i32 1, i32 8, i32 9, i32 2, i32 3, i32 10, i32 11, i32 4, i32 5, i32 12, i32 13, i32 6, i32 7, i32 14, i32 15>
+  %b3 = bitcast <16 x i16> %s to <8 x i32>
+  %out = trunc <8 x i32> %b3 to <8 x i16>
+  ret <8 x i16> %out
+}
+
 
 define arm_aapcs_vfpcc <16 x i8> @vmovn16_trunc1(<8 x i16> %src1, <8 x i16> %src2) {
 ; CHECK-LABEL: vmovn16_trunc1:
@@ -176,8 +226,8 @@ define arm_aapcs_vfpcc <2 x i64> @vmovn64_b2(<2 x i64> %src1, <2 x i64> %src2) {
 ; CHECK-LABEL: vmovn64_b2:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vmov.f32 s4, s6
-; CHECK-NEXT:    vmov.f32 s5, s7
 ; CHECK-NEXT:    vmov.f32 s6, s0
+; CHECK-NEXT:    vmov.f32 s5, s7
 ; CHECK-NEXT:    vmov.f32 s7, s1
 ; CHECK-NEXT:    vmov q0, q1
 ; CHECK-NEXT:    bx lr
@@ -185,8 +235,8 @@ define arm_aapcs_vfpcc <2 x i64> @vmovn64_b2(<2 x i64> %src1, <2 x i64> %src2) {
 ; CHECKBE-LABEL: vmovn64_b2:
 ; CHECKBE:       @ %bb.0: @ %entry
 ; CHECKBE-NEXT:    vmov.f32 s4, s6
-; CHECKBE-NEXT:    vmov.f32 s5, s7
 ; CHECKBE-NEXT:    vmov.f32 s6, s0
+; CHECKBE-NEXT:    vmov.f32 s5, s7
 ; CHECKBE-NEXT:    vmov.f32 s7, s1
 ; CHECKBE-NEXT:    vmov q0, q1
 ; CHECKBE-NEXT:    bx lr
@@ -199,16 +249,16 @@ define arm_aapcs_vfpcc <2 x i64> @vmovn64_b3(<2 x i64> %src1, <2 x i64> %src2) {
 ; CHECK-LABEL: vmovn64_b3:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vmov.f32 s0, s2
-; CHECK-NEXT:    vmov.f32 s1, s3
 ; CHECK-NEXT:    vmov.f32 s2, s4
+; CHECK-NEXT:    vmov.f32 s1, s3
 ; CHECK-NEXT:    vmov.f32 s3, s5
 ; CHECK-NEXT:    bx lr
 ;
 ; CHECKBE-LABEL: vmovn64_b3:
 ; CHECKBE:       @ %bb.0: @ %entry
 ; CHECKBE-NEXT:    vmov.f32 s0, s2
-; CHECKBE-NEXT:    vmov.f32 s1, s3
 ; CHECKBE-NEXT:    vmov.f32 s2, s4
+; CHECKBE-NEXT:    vmov.f32 s1, s3
 ; CHECKBE-NEXT:    vmov.f32 s3, s5
 ; CHECKBE-NEXT:    bx lr
 entry:
@@ -301,11 +351,11 @@ entry:
 define arm_aapcs_vfpcc <4 x i32> @vmovn32_b2(<4 x i32> %src1, <4 x i32> %src2) {
 ; CHECK-LABEL: vmovn32_b2:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vmov.f32 s8, s5
-; CHECK-NEXT:    vmov.f32 s9, s0
-; CHECK-NEXT:    vmov.f32 s10, s7
-; CHECK-NEXT:    vmov.f32 s11, s2
-; CHECK-NEXT:    vmov q0, q2
+; CHECK-NEXT:    vmov.f32 s4, s5
+; CHECK-NEXT:    vmov.f32 s6, s7
+; CHECK-NEXT:    vmov.f32 s5, s0
+; CHECK-NEXT:    vmov.f32 s7, s2
+; CHECK-NEXT:    vmov q0, q1
 ; CHECK-NEXT:    bx lr
 ;
 ; CHECKBE-LABEL: vmovn32_b2:
@@ -326,22 +376,21 @@ entry:
 define arm_aapcs_vfpcc <4 x i32> @vmovn32_b3(<4 x i32> %src1, <4 x i32> %src2) {
 ; CHECK-LABEL: vmovn32_b3:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vmov.f32 s8, s1
-; CHECK-NEXT:    vmov.f32 s9, s4
-; CHECK-NEXT:    vmov.f32 s10, s3
-; CHECK-NEXT:    vmov.f32 s11, s6
-; CHECK-NEXT:    vmov q0, q2
+; CHECK-NEXT:    vmov.f32 s0, s1
+; CHECK-NEXT:    vmov.f32 s2, s3
+; CHECK-NEXT:    vmov.f32 s1, s4
+; CHECK-NEXT:    vmov.f32 s3, s6
 ; CHECK-NEXT:    bx lr
 ;
 ; CHECKBE-LABEL: vmovn32_b3:
 ; CHECKBE:       @ %bb.0: @ %entry
 ; CHECKBE-NEXT:    vrev64.32 q2, q1
 ; CHECKBE-NEXT:    vrev64.32 q1, q0
-; CHECKBE-NEXT:    vmov.f32 s12, s5
-; CHECKBE-NEXT:    vmov.f32 s13, s8
-; CHECKBE-NEXT:    vmov.f32 s14, s7
-; CHECKBE-NEXT:    vmov.f32 s15, s10
-; CHECKBE-NEXT:    vrev64.32 q0, q3
+; CHECKBE-NEXT:    vmov.f32 s4, s5
+; CHECKBE-NEXT:    vmov.f32 s6, s7
+; CHECKBE-NEXT:    vmov.f32 s5, s8
+; CHECKBE-NEXT:    vmov.f32 s7, s10
+; CHECKBE-NEXT:    vrev64.32 q0, q1
 ; CHECKBE-NEXT:    bx lr
 entry:
   %out = shufflevector <4 x i32> %src1, <4 x i32> %src2, <4 x i32> <i32 1, i32 4, i32 3, i32 6>
@@ -450,15 +499,15 @@ entry:
 define arm_aapcs_vfpcc <8 x i16> @vmovn16_b2(<8 x i16> %src1, <8 x i16> %src2) {
 ; CHECK-LABEL: vmovn16_b2:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vmovx.f16 s9, s5
-; CHECK-NEXT:    vins.f16 s9, s1
-; CHECK-NEXT:    vmovx.f16 s8, s4
-; CHECK-NEXT:    vins.f16 s8, s0
-; CHECK-NEXT:    vmovx.f16 s10, s6
-; CHECK-NEXT:    vins.f16 s10, s2
-; CHECK-NEXT:    vmovx.f16 s11, s7
-; CHECK-NEXT:    vins.f16 s11, s3
-; CHECK-NEXT:    vmov q0, q2
+; CHECK-NEXT:    vmovx.f16 s5, s5
+; CHECK-NEXT:    vmovx.f16 s4, s4
+; CHECK-NEXT:    vmovx.f16 s6, s6
+; CHECK-NEXT:    vmovx.f16 s7, s7
+; CHECK-NEXT:    vins.f16 s5, s1
+; CHECK-NEXT:    vins.f16 s4, s0
+; CHECK-NEXT:    vins.f16 s6, s2
+; CHECK-NEXT:    vins.f16 s7, s3
+; CHECK-NEXT:    vmov q0, q1
 ; CHECK-NEXT:    bx lr
 ;
 ; CHECKBE-LABEL: vmovn16_b2:
@@ -466,12 +515,12 @@ define arm_aapcs_vfpcc <8 x i16> @vmovn16_b2(<8 x i16> %src1, <8 x i16> %src2) {
 ; CHECKBE-NEXT:    vrev64.16 q2, q0
 ; CHECKBE-NEXT:    vrev64.16 q0, q1
 ; CHECKBE-NEXT:    vmovx.f16 s5, s1
-; CHECKBE-NEXT:    vins.f16 s5, s9
 ; CHECKBE-NEXT:    vmovx.f16 s4, s0
-; CHECKBE-NEXT:    vins.f16 s4, s8
 ; CHECKBE-NEXT:    vmovx.f16 s6, s2
-; CHECKBE-NEXT:    vins.f16 s6, s10
 ; CHECKBE-NEXT:    vmovx.f16 s7, s3
+; CHECKBE-NEXT:    vins.f16 s5, s9
+; CHECKBE-NEXT:    vins.f16 s4, s8
+; CHECKBE-NEXT:    vins.f16 s6, s10
 ; CHECKBE-NEXT:    vins.f16 s7, s11
 ; CHECKBE-NEXT:    vrev64.16 q0, q1
 ; CHECKBE-NEXT:    bx lr
@@ -483,28 +532,27 @@ entry:
 define arm_aapcs_vfpcc <8 x i16> @vmovn16_b3(<8 x i16> %src1, <8 x i16> %src2) {
 ; CHECK-LABEL: vmovn16_b3:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vmov q2, q0
-; CHECK-NEXT:    vmovx.f16 s1, s9
+; CHECK-NEXT:    vmovx.f16 s1, s1
+; CHECK-NEXT:    vmovx.f16 s0, s0
+; CHECK-NEXT:    vmovx.f16 s2, s2
+; CHECK-NEXT:    vmovx.f16 s3, s3
 ; CHECK-NEXT:    vins.f16 s1, s5
-; CHECK-NEXT:    vmovx.f16 s0, s8
 ; CHECK-NEXT:    vins.f16 s0, s4
-; CHECK-NEXT:    vmovx.f16 s2, s10
 ; CHECK-NEXT:    vins.f16 s2, s6
-; CHECK-NEXT:    vmovx.f16 s3, s11
 ; CHECK-NEXT:    vins.f16 s3, s7
 ; CHECK-NEXT:    bx lr
 ;
 ; CHECKBE-LABEL: vmovn16_b3:
 ; CHECKBE:       @ %bb.0: @ %entry
-; CHECKBE-NEXT:    vrev64.16 q3, q0
 ; CHECKBE-NEXT:    vrev64.16 q2, q1
-; CHECKBE-NEXT:    vmovx.f16 s5, s13
+; CHECKBE-NEXT:    vrev64.16 q1, q0
+; CHECKBE-NEXT:    vmovx.f16 s5, s5
+; CHECKBE-NEXT:    vmovx.f16 s4, s4
+; CHECKBE-NEXT:    vmovx.f16 s6, s6
+; CHECKBE-NEXT:    vmovx.f16 s7, s7
 ; CHECKBE-NEXT:    vins.f16 s5, s9
-; CHECKBE-NEXT:    vmovx.f16 s4, s12
 ; CHECKBE-NEXT:    vins.f16 s4, s8
-; CHECKBE-NEXT:    vmovx.f16 s6, s14
 ; CHECKBE-NEXT:    vins.f16 s6, s10
-; CHECKBE-NEXT:    vmovx.f16 s7, s15
 ; CHECKBE-NEXT:    vins.f16 s7, s11
 ; CHECKBE-NEXT:    vrev64.16 q0, q1
 ; CHECKBE-NEXT:    bx lr

@@ -31,6 +31,12 @@ enum class DebugCompressionType {
   Z,    ///< zlib style complession
 };
 
+enum class EmitDwarfUnwindType {
+  Always,          // Always emit dwarf unwind
+  NoCompactUnwind, // Only emit if compact unwind isn't available
+  Default,         // Default behavior is based on the target
+};
+
 class StringRef;
 
 class MCTargetOptions {
@@ -47,7 +53,6 @@ public:
   bool MCNoDeprecatedWarn : 1;
   bool MCNoTypeCheck : 1;
   bool MCSaveTempLabels : 1;
-  bool MCUseDwarfDirectory : 1;
   bool MCIncrementalLinkerCompatible : 1;
   bool ShowMCEncoding : 1;
   bool ShowMCInst : 1;
@@ -57,14 +62,28 @@ public:
   bool PreserveAsmComments : 1;
 
   bool Dwarf64 : 1;
+
+  EmitDwarfUnwindType EmitDwarfUnwind;
+
   int DwarfVersion = 0;
+
+  enum DwarfDirectory {
+    // Force disable
+    DisableDwarfDirectory,
+    // Force enable, for assemblers that support
+    // `.file fileno directory filename' syntax
+    EnableDwarfDirectory,
+    // Default is based on the target
+    DefaultDwarfDirectory
+  };
+  DwarfDirectory MCUseDwarfDirectory;
 
   std::string ABIName;
   std::string AssemblyLanguage;
   std::string SplitDwarfFile;
 
   const char *Argv0 = nullptr;
-  ArrayRef<const char *> CommandLineArgs;
+  ArrayRef<std::string> CommandLineArgs;
 
   /// Additional paths to search for `.include` directives when using the
   /// integrated assembler.

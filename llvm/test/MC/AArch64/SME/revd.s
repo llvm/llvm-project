@@ -5,7 +5,7 @@
 // RUN: llvm-mc -triple=aarch64 -filetype=obj -mattr=+sme < %s \
 // RUN:        | llvm-objdump -d --mattr=+sme - | FileCheck %s --check-prefix=CHECK-INST
 // RUN: llvm-mc -triple=aarch64 -filetype=obj -mattr=+sme < %s \
-// RUN:        | llvm-objdump -d - | FileCheck %s --check-prefix=CHECK-UNKNOWN
+// RUN:   | llvm-objdump -d --mattr=-sme - | FileCheck %s --check-prefix=CHECK-UNKNOWN
 // Disassemble encoding and check the re-encoding (-show-encoding) matches.
 // RUN: llvm-mc -triple=aarch64 -show-encoding -mattr=+sme < %s \
 // RUN:        | sed '/.text/d' | sed 's/.*encoding: //g' \
@@ -42,7 +42,7 @@ revd    z31.q, p7/m, z31.q
 movprfx z21, z25
 // CHECK-INST: movprfx  z21, z25
 // CHECK-ENCODING: [0x35,0xbf,0x20,0x04]
-// CHECK-ERROR: instruction requires: sve
+// CHECK-ERROR: instruction requires: sve or sme
 // CHECK-UNKNOWN: 35 bf 20 04 <unknown>
 
 revd    z21.q, p5/m, z10.q

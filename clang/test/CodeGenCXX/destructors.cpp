@@ -1,10 +1,10 @@
-// RUN: %clang_cc1 %s -triple x86_64-apple-darwin10 -emit-llvm -o - -mconstructor-aliases -fcxx-exceptions -fexceptions -O1 -disable-llvm-passes -std=c++03 > %t
+// RUN: %clang_cc1 -no-opaque-pointers %s -triple x86_64-apple-darwin10 -emit-llvm -o - -mconstructor-aliases -fcxx-exceptions -fexceptions -O1 -disable-llvm-passes -std=c++03 > %t
 // RUN: FileCheck --check-prefix=CHECK1 --input-file=%t %s
 // RUN: FileCheck --check-prefix=CHECK2 --input-file=%t %s
 // RUN: FileCheck --check-prefix=CHECK3 --input-file=%t %s
 // RUN: FileCheck --check-prefixes=CHECK4,CHECK4v03 --input-file=%t %s
 // RUN: FileCheck --check-prefixes=CHECK5,CHECK5v03 --input-file=%t %s
-// RUN: %clang_cc1 %s -triple x86_64-apple-darwin10 -emit-llvm -o - -mconstructor-aliases -fcxx-exceptions -fexceptions -O1 -disable-llvm-passes -std=c++11 > %t2
+// RUN: %clang_cc1 -no-opaque-pointers %s -triple x86_64-apple-darwin10 -emit-llvm -o - -mconstructor-aliases -fcxx-exceptions -fexceptions -O1 -disable-llvm-passes -std=c++11 > %t2
 // RUN: FileCheck --check-prefix=CHECK1    --input-file=%t2 %s
 // RUN: FileCheck --check-prefix=CHECK2v11 --input-file=%t2 %s
 // RUN: FileCheck --check-prefix=CHECK3    --input-file=%t2 %s
@@ -116,13 +116,13 @@ namespace test0 {
   B::~B() try { } catch (int i) {}
   // It will suppress the delegation optimization here, though.
 
-// CHECK2-LABEL: define{{.*}} void @_ZN5test01BD2Ev(%"struct.test0::B"* {{[^,]*}} %this, i8** %vtt) unnamed_addr
+// CHECK2-LABEL: define{{.*}} void @_ZN5test01BD2Ev(%"struct.test0::B"* {{[^,]*}} %this, i8** noundef %vtt) unnamed_addr
 // CHECK2: invoke void @_ZN5test06MemberD1Ev
 // CHECK2:   unwind label [[MEM_UNWIND:%[a-zA-Z0-9.]+]]
 // CHECK2: invoke void @_ZN5test04BaseD2Ev
 // CHECK2:   unwind label [[BASE_UNWIND:%[a-zA-Z0-9.]+]]
 
-// CHECK2v11-LABEL: define{{.*}} void @_ZN5test01BD2Ev(%"struct.test0::B"* {{[^,]*}} %this, i8** %vtt) unnamed_addr
+// CHECK2v11-LABEL: define{{.*}} void @_ZN5test01BD2Ev(%"struct.test0::B"* {{[^,]*}} %this, i8** noundef %vtt) unnamed_addr
 // CHECK2v11: call void @_ZN5test06MemberD1Ev
 // CHECK2v11: call void @_ZN5test04BaseD2Ev
 
@@ -182,7 +182,7 @@ namespace test1 {
   // The VTT parameter prevents this.  We could still make this work
   // for calling conventions that are safe against extra parameters.
   struct U : A, virtual B { ~U(); };
-  U::~U() {} // CHECK4-LABEL: define{{.*}} void @_ZN5test11UD2Ev(%"struct.test1::U"* {{[^,]*}} %this, i8** %vtt) unnamed_addr
+  U::~U() {} // CHECK4-LABEL: define{{.*}} void @_ZN5test11UD2Ev(%"struct.test1::U"* {{[^,]*}} %this, i8** noundef %vtt) unnamed_addr
 }
 
 // PR6471
@@ -359,7 +359,7 @@ namespace test6 {
   // FIXME: way too much EH cleanup code follows
 
   C::~C() { opaque(); }
-  // CHECK5-LABEL: define{{.*}} void @_ZN5test61CD2Ev(%"struct.test6::C"* {{[^,]*}} %this, i8** %vtt) unnamed_addr
+  // CHECK5-LABEL: define{{.*}} void @_ZN5test61CD2Ev(%"struct.test6::C"* {{[^,]*}} %this, i8** noundef %vtt) unnamed_addr
   // CHECK5:   invoke void @_ZN5test66opaqueEv
   // CHECK5v03:   invoke void @_ZN5test61AD1Ev
   // CHECK5v03:   invoke void @_ZN5test61AD1Ev
@@ -528,5 +528,39 @@ namespace test11 {
     }
   }
 
+}
+
+namespace final_dtor {
+  struct A {
+    virtual void f();
+    // CHECK6-LABEL: define {{.*}} @_ZN10final_dtor1AD2Ev(
+    // CHECK6: store {{.*}} @_ZTV
+    // CHECK6-LABEL: {{^}}}
+    virtual ~A() { f(); }
+  };
+  struct B : A {
+    // CHECK6-LABEL: define {{.*}} @_ZN10final_dtor1BD2Ev(
+    // CHECK6: store {{.*}} @_ZTV
+    // CHECK6-LABEL: {{^}}}
+    virtual ~B() { f(); }
+  };
+  struct C final : A {
+    // CHECK6-LABEL: define {{.*}} @_ZN10final_dtor1CD2Ev(
+    // CHECK6-NOT: store {{.*}} @_ZTV
+    // CHECK6-LABEL: {{^}}}
+    virtual ~C() { f(); }
+  };
+  struct D : A {
+    // CHECK6-LABEL: define {{.*}} @_ZN10final_dtor1DD2Ev(
+    // CHECK6-NOT: store {{.*}} @_ZTV
+    // CHECK6-LABEL: {{^}}}
+    virtual ~D() final { f(); }
+  };
+  void use() {
+    {A a;}
+    {B b;}
+    {C c;}
+    {D d;}
+  }
 }
 #endif

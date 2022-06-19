@@ -1,6 +1,6 @@
-; RUN: opt %loadPolly -polly-function-scops -analyze < %s \
+; RUN: opt %loadPolly -polly-print-function-scops -disable-output < %s \
 ; RUN:  | FileCheck %s -check-prefix=FUNC-SCOP
-; RUN: opt %loadPolly -polly-function-dependences -analyze < %s \
+; RUN: opt %loadPolly -polly-print-function-dependences -disable-output < %s \
 ; RUN:  | FileCheck %s -check-prefix=FUNC-DEPS
 ;
 ; FUNC-SCOP-NOT: Statement

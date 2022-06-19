@@ -8,9 +8,9 @@
 
 #include "llvm/Transforms/IPO/ForceFunctionAttrs.h"
 #include "llvm/IR/Function.h"
-#include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Module.h"
 #include "llvm/InitializePasses.h"
+#include "llvm/Pass.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
@@ -50,14 +50,14 @@ static void forceAttributes(Function &F) {
     return Kind;
   };
 
-  for (auto &S : ForceAttributes) {
+  for (const auto &S : ForceAttributes) {
     auto Kind = ParseFunctionAndAttr(S);
     if (Kind == Attribute::None || F.hasFnAttribute(Kind))
       continue;
     F.addFnAttr(Kind);
   }
 
-  for (auto &S : ForceRemoveAttributes) {
+  for (const auto &S : ForceRemoveAttributes) {
     auto Kind = ParseFunctionAndAttr(S);
     if (Kind == Attribute::None || !F.hasFnAttribute(Kind))
       continue;

@@ -20,7 +20,7 @@
 #include "lldb/Utility/FileSpec.h"
 #include "lldb/lldb-types.h"
 
-#include "IntelPTManager.h"
+#include "IntelPTCollector.h"
 #include "NativeThreadLinux.h"
 #include "Plugins/Process/POSIX/NativeProcessELF.h"
 #include "Plugins/Process/Utility/NativeProcessSoftwareSingleStep.h"
@@ -83,6 +83,9 @@ public:
   Status ReadMemoryTags(int32_t type, lldb::addr_t addr, size_t len,
                         std::vector<uint8_t> &tags) override;
 
+  Status WriteMemoryTags(int32_t type, lldb::addr_t addr, size_t len,
+                         const std::vector<uint8_t> &tags) override;
+
   size_t UpdateThreads() override;
 
   const ArchSpec &GetArchitecture() const override { return m_arch; }
@@ -132,6 +135,10 @@ public:
 
   bool SupportHardwareSingleStepping() const;
 
+  /// Writes a siginfo_t structure corresponding to the given thread ID to the
+  /// memory region pointed to by \p siginfo.
+  Status GetSignalInfo(lldb::tid_t tid, void *siginfo) const;
+
 protected:
   llvm::Expected<llvm::ArrayRef<uint8_t>>
   GetSoftwareBreakpointTrapOpcode(size_t size_hint) override;
@@ -161,7 +168,7 @@ private:
 
   static Status SetDefaultPtraceOpts(const lldb::pid_t);
 
-  void MonitorCallback(lldb::pid_t pid, bool exited, WaitStatus status);
+  void MonitorCallback(NativeThreadLinux &thread, WaitStatus status);
 
   void WaitForCloneNotification(::pid_t pid);
 
@@ -173,12 +180,11 @@ private:
 
   void MonitorWatchpoint(NativeThreadLinux &thread, uint32_t wp_index);
 
-  void MonitorSignal(const siginfo_t &info, NativeThreadLinux &thread,
-                     bool exited);
+  void MonitorSignal(const siginfo_t &info, NativeThreadLinux &thread);
 
   bool HasThreadNoLock(lldb::tid_t thread_id);
 
-  bool StopTrackingThread(lldb::tid_t thread_id);
+  void StopTrackingThread(NativeThreadLinux &thread);
 
   /// Create a new thread.
   ///
@@ -203,9 +209,9 @@ private:
   /// stopping for threads being destroyed.
   Status NotifyTracersOfThreadDestroyed(lldb::tid_t tid);
 
-  /// Writes a siginfo_t structure corresponding to the given thread ID to the
-  /// memory region pointed to by \p siginfo.
-  Status GetSignalInfo(lldb::tid_t tid, void *siginfo);
+  void NotifyTracersProcessWillResume() override;
+
+  void NotifyTracersProcessDidStop() override;
 
   /// Writes the raw event message code (vis-a-vis PTRACE_GETEVENTMSG)
   /// corresponding to the given thread ID to the memory pointed to by @p
@@ -239,22 +245,11 @@ private:
   Status PopulateMemoryRegionCache();
 
   /// Manages Intel PT process and thread traces.
-  IntelPTManager m_intel_pt_manager;
+  IntelPTCollector m_intel_pt_collector;
 
-  struct CloneInfo {
-    int event;
-    lldb::tid_t parent_tid;
-  };
-
-  // Map of child processes that have been signaled once, and we are
-  // waiting for the second signal.
-  llvm::DenseMap<lldb::pid_t, llvm::Optional<CloneInfo>> m_pending_pid_map;
-
-  // Handle a clone()-like event.  If received by parent, clone_info contains
-  // additional info.  Returns true if the event is handled, or false if it
-  // is pending second notification.
-  bool MonitorClone(lldb::pid_t child_pid,
-                    llvm::Optional<CloneInfo> clone_info);
+  // Handle a clone()-like event.
+  bool MonitorClone(NativeThreadLinux &parent, lldb::pid_t child_pid,
+                    int event);
 };
 
 } // namespace process_linux

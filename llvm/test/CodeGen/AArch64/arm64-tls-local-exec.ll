@@ -47,17 +47,17 @@ define i32 @test_local_exec() {
 ; CHECK-24-RELOC: R_AARCH64_TLSLE_ADD_TPREL_LO12_NC
 
 ; CHECK-32: movz x[[R2:[0-9]+]], #:tprel_g1:local_exec_var
-; CHECK-32: movk x[[R2]], #:tprel_g0_nc:local_exec_var
 ; CHECK-32: mrs x[[R1:[0-9]+]], TPIDR_EL0
+; CHECK-32: movk x[[R2]], #:tprel_g0_nc:local_exec_var
 ; CHECK-32: ldr w0, [x[[R1]], x[[R2]]]
 
 ; CHECK-32-RELOC: R_AARCH64_TLSLE_MOVW_TPREL_G1
 ; CHECK-32-RELOC: R_AARCH64_TLSLE_MOVW_TPREL_G0_NC
 
 ; CHECK-48: movz x[[R2:[0-9]+]], #:tprel_g2:local_exec_var
+; CHECK-48: mrs x[[R1:[0-9]+]], TPIDR_EL0
 ; CHECK-48: movk x[[R2]], #:tprel_g1_nc:local_exec_var
 ; CHECK-48: movk x[[R2]], #:tprel_g0_nc:local_exec_var
-; CHECK-48: mrs x[[R1:[0-9]+]], TPIDR_EL0
 ; CHECK-48: ldr w0, [x[[R1]], x[[R2]]]
 
 ; CHECK-48-RELOC: R_AARCH64_TLSLE_MOVW_TPREL_G2
@@ -85,8 +85,8 @@ define i32* @test_local_exec_addr() {
 ; CHECK-24-RELOC: R_AARCH64_TLSLE_ADD_TPREL_LO12_NC
 
 ; CHECK-32: movz x[[R2:[0-9]+]], #:tprel_g1:local_exec_var
-; CHECK-32: movk x[[R2]], #:tprel_g0_nc:local_exec_var
 ; CHECK-32: mrs x[[R1:[0-9]+]], TPIDR_EL0
+; CHECK-32: movk x[[R2]], #:tprel_g0_nc:local_exec_var
 ; CHECK-32: add x0, x[[R1]], x[[R2]]
 ; CHECK-32: ret
 
@@ -94,9 +94,9 @@ define i32* @test_local_exec_addr() {
 ; CHECK-32-RELOC: R_AARCH64_TLSLE_MOVW_TPREL_G0_NC
 
 ; CHECK-48: movz x[[R2:[0-9]+]], #:tprel_g2:local_exec_var
+; CHECK-48: mrs x[[R1:[0-9]+]], TPIDR_EL0
 ; CHECK-48: movk x[[R2]], #:tprel_g1_nc:local_exec_var
 ; CHECK-48: movk x[[R2]], #:tprel_g0_nc:local_exec_var
-; CHECK-48: mrs x[[R1:[0-9]+]], TPIDR_EL0
 ; CHECK-48: add x0, x[[R1]], x[[R2]]
 ; CHECK-48: ret
 

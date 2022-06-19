@@ -1,5 +1,4 @@
-! RUN: %S/test_errors.sh %s %t %flang_fc1
-! REQUIRES: shell
+! RUN: %python %S/test_errors.py %s %flang_fc1
 ! Confirm enforcement of constraints and restrictions in 7.8
 ! C7110, C7111, C7112, C7113, C7114, C7115
 
@@ -58,7 +57,7 @@ subroutine checkC7115()
   real, dimension(10), parameter :: good1 = [(99.9, i = 1, 10)]
   real, dimension(100), parameter :: good2 = [((88.8, i = 1, 10), j = 1, 10)]
   real, dimension(-1:0), parameter :: good3 = [77.7, 66.6]
-  !ERROR: Implied DO index is active in surrounding implied DO loop and may not have the same name
+  !ERROR: Implied DO index 'i' is active in a surrounding implied DO loop and may not have the same name
   real, dimension(100), parameter :: bad = [((88.8, i = 1, 10), i = 1, 10)]
 
   !ERROR: Value of named constant 'bad2' ([INTEGER(4)::(int(j,kind=4),INTEGER(8)::j=1_8,1_8,0_8)]) cannot be computed as a constant value

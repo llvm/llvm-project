@@ -68,6 +68,7 @@
 
 #include "llvm/Transforms/Utils/FixIrreducible.h"
 #include "llvm/ADT/SCCIterator.h"
+#include "llvm/Analysis/DomTreeUpdater.h"
 #include "llvm/Analysis/LoopIterator.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
@@ -124,7 +125,7 @@ static void reconnectChildLoops(LoopInfo &LI, Loop *ParentLoop, Loop *NewLoop,
   // children to a new vector.
   auto FirstChild = std::partition(
       CandidateLoops.begin(), CandidateLoops.end(), [&](Loop *L) {
-        return L == NewLoop || Blocks.count(L->getHeader()) == 0;
+        return L == NewLoop || !Blocks.contains(L->getHeader());
       });
   SmallVector<Loop *, 8> ChildLoops(FirstChild, CandidateLoops.end());
   CandidateLoops.erase(FirstChild, CandidateLoops.end());
@@ -137,9 +138,17 @@ static void reconnectChildLoops(LoopInfo &LI, Loop *ParentLoop, Loop *NewLoop,
     // not be necessary if we can retain such backedges.
     if (Headers.count(Child->getHeader())) {
       for (auto BB : Child->blocks()) {
+        if (LI.getLoopFor(BB) != Child)
+          continue;
         LI.changeLoopFor(BB, NewLoop);
         LLVM_DEBUG(dbgs() << "moved block from child: " << BB->getName()
                           << "\n");
+      }
+      std::vector<Loop *> GrandChildLoops;
+      std::swap(GrandChildLoops, Child->getSubLoopsVector());
+      for (auto GrandChildLoop : GrandChildLoops) {
+        GrandChildLoop->setParentLoop(nullptr);
+        NewLoop->addChildLoop(GrandChildLoop);
       }
       LI.destroy(Child);
       LLVM_DEBUG(dbgs() << "subsumed child loop (common header)\n");

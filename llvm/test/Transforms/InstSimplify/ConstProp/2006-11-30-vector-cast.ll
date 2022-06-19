@@ -1,6 +1,6 @@
-; RUN: opt < %s -instsimplify -S | \
+; RUN: opt < %s -passes=instsimplify -S | \
 ; RUN:   grep "i32 -1"
-; RUN: opt < %s -instsimplify -S | \
+; RUN: opt < %s -passes=instsimplify -S | \
 ; RUN:   not grep zeroinitializer
 
 define <4 x i32> @test() {

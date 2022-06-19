@@ -14,55 +14,10 @@
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/IR/TypeUtilities.h"
 #include "mlir/Interfaces/FoldInterfaces.h"
+#include "llvm/ADT/StringExtras.h"
 #include <numeric>
 
 using namespace mlir;
-
-OpAsmParser::~OpAsmParser() {}
-
-//===----------------------------------------------------------------------===//
-// OperationName
-//===----------------------------------------------------------------------===//
-
-/// Form the OperationName for an op with the specified string.  This either is
-/// a reference to an AbstractOperation if one is known, or a uniqued Identifier
-/// if not.
-OperationName::OperationName(StringRef name, MLIRContext *context) {
-  if (auto *op = AbstractOperation::lookup(name, context))
-    representation = op;
-  else
-    representation = Identifier::get(name, context);
-}
-
-/// Return the name of the dialect this operation is registered to.
-StringRef OperationName::getDialectNamespace() const {
-  if (Dialect *dialect = getDialect())
-    return dialect->getNamespace();
-  return representation.get<Identifier>().strref().split('.').first;
-}
-
-/// Return the operation name with dialect name stripped, if it has one.
-StringRef OperationName::stripDialect() const {
-  auto splitName = getStringRef().split(".");
-  return splitName.second.empty() ? splitName.first : splitName.second;
-}
-
-/// Return the name of this operation. This always succeeds.
-StringRef OperationName::getStringRef() const {
-  return getIdentifier().strref();
-}
-
-/// Return the name of this operation as an identifier. This always succeeds.
-Identifier OperationName::getIdentifier() const {
-  if (auto *op = representation.dyn_cast<const AbstractOperation *>())
-    return op->name;
-  return representation.get<Identifier>();
-}
-
-OperationName OperationName::getFromOpaquePointer(const void *pointer) {
-  return OperationName(
-      RepresentationUnion::getFromOpaqueValue(const_cast<void *>(pointer)));
-}
 
 //===----------------------------------------------------------------------===//
 // Operation
@@ -117,19 +72,15 @@ Operation *Operation::create(Location location, OperationName name,
 
   // If the operation is known to have no operands, don't allocate an operand
   // storage.
-  bool needsOperandStorage = true;
-  if (operands.empty()) {
-    if (const AbstractOperation *abstractOp = name.getAbstractOperation())
-      needsOperandStorage = !abstractOp->hasTrait<OpTrait::ZeroOperands>();
-  }
+  bool needsOperandStorage =
+      operands.empty() ? !name.hasTrait<OpTrait::ZeroOperands>() : true;
 
   // Compute the byte size for the operation and the operand storage. This takes
   // into account the size of the operation, its trailing objects, and its
   // prefixed objects.
   size_t byteSize =
-      totalSizeToAlloc<BlockOperand, Region, detail::OperandStorage>(
-          numSuccessors, numRegions, needsOperandStorage ? 1 : 0) +
-      detail::OperandStorage::additionalAllocSize(numOperands);
+      totalSizeToAlloc<detail::OperandStorage, BlockOperand, Region, OpOperand>(
+          needsOperandStorage ? 1 : 0, numSuccessors, numRegions, numOperands);
   size_t prefixByteSize = llvm::alignTo(
       Operation::prefixAllocSize(numTrailingResults, numInlineResults),
       alignof(Operation));
@@ -158,8 +109,10 @@ Operation *Operation::create(Location location, OperationName name,
     new (&op->getRegion(i)) Region(op);
 
   // Initialize the operands.
-  if (needsOperandStorage)
-    new (&op->getOperandStorage()) detail::OperandStorage(op, operands);
+  if (needsOperandStorage) {
+    new (&op->getOperandStorage()) detail::OperandStorage(
+        op, op->getTrailingObjects<OpOperand>(), operands);
+  }
 
   // Initialize the successors.
   auto blockOperands = op->getBlockOperands();
@@ -182,7 +135,7 @@ Operation::Operation(Location location, OperationName name, unsigned numResults,
         name.getStringRef() +
         " created with unregistered dialect. If this is intended, please call "
         "allowUnregisteredDialects() on the MLIRContext, or use "
-        "-allow-unregistered-dialect with the MLIR opt tool used");
+        "-allow-unregistered-dialect with the MLIR tool used.");
 #endif
 }
 
@@ -278,17 +231,9 @@ void Operation::insertOperands(unsigned index, ValueRange operands) {
 InFlightDiagnostic Operation::emitError(const Twine &message) {
   InFlightDiagnostic diag = mlir::emitError(getLoc(), message);
   if (getContext()->shouldPrintOpOnDiagnostic()) {
-    // Print out the operation explicitly here so that we can print the generic
-    // form.
-    // TODO: It would be nice if we could instead provide the
-    // specific printing flags when adding the operation as an argument to the
-    // diagnostic.
-    std::string printedOp;
-    {
-      llvm::raw_string_ostream os(printedOp);
-      print(os, OpPrintingFlags().printGenericOpForm().useLocalScope());
-    }
-    diag.attachNote(getLoc()) << "see current operation: " << printedOp;
+    diag.attachNote(getLoc())
+        .append("see current operation: ")
+        .appendOp(*this, OpPrintingFlags().printGenericOpForm());
   }
   return diag;
 }
@@ -404,28 +349,28 @@ void Operation::updateOrderIfNecessary() {
 
 auto llvm::ilist_detail::SpecificNodeAccess<
     typename llvm::ilist_detail::compute_node_options<
-        ::mlir::Operation>::type>::getNodePtr(pointer N) -> node_type * {
-  return NodeAccess::getNodePtr<OptionsT>(N);
+        ::mlir::Operation>::type>::getNodePtr(pointer n) -> node_type * {
+  return NodeAccess::getNodePtr<OptionsT>(n);
 }
 
 auto llvm::ilist_detail::SpecificNodeAccess<
     typename llvm::ilist_detail::compute_node_options<
-        ::mlir::Operation>::type>::getNodePtr(const_pointer N)
+        ::mlir::Operation>::type>::getNodePtr(const_pointer n)
     -> const node_type * {
-  return NodeAccess::getNodePtr<OptionsT>(N);
+  return NodeAccess::getNodePtr<OptionsT>(n);
 }
 
 auto llvm::ilist_detail::SpecificNodeAccess<
     typename llvm::ilist_detail::compute_node_options<
-        ::mlir::Operation>::type>::getValuePtr(node_type *N) -> pointer {
-  return NodeAccess::getValuePtr<OptionsT>(N);
+        ::mlir::Operation>::type>::getValuePtr(node_type *n) -> pointer {
+  return NodeAccess::getValuePtr<OptionsT>(n);
 }
 
 auto llvm::ilist_detail::SpecificNodeAccess<
     typename llvm::ilist_detail::compute_node_options<
-        ::mlir::Operation>::type>::getValuePtr(const node_type *N)
+        ::mlir::Operation>::type>::getValuePtr(const node_type *n)
     -> const_pointer {
-  return NodeAccess::getValuePtr<OptionsT>(N);
+  return NodeAccess::getValuePtr<OptionsT>(n);
 }
 
 void llvm::ilist_traits<::mlir::Operation>::deleteNode(Operation *op) {
@@ -433,9 +378,9 @@ void llvm::ilist_traits<::mlir::Operation>::deleteNode(Operation *op) {
 }
 
 Block *llvm::ilist_traits<::mlir::Operation>::getContainingBlock() {
-  size_t Offset(size_t(&((Block *)nullptr->*Block::getSublistAccess(nullptr))));
-  iplist<Operation> *Anchor(static_cast<iplist<Operation> *>(this));
-  return reinterpret_cast<Block *>(reinterpret_cast<char *>(Anchor) - Offset);
+  size_t offset(size_t(&((Block *)nullptr->*Block::getSublistAccess(nullptr))));
+  iplist<Operation> *anchor(static_cast<iplist<Operation> *>(this));
+  return reinterpret_cast<Block *>(reinterpret_cast<char *>(anchor) - offset);
 }
 
 /// This is a trait method invoked when an operation is added to a block.  We
@@ -515,7 +460,7 @@ void Operation::moveAfter(Operation *existingOp) {
 void Operation::moveAfter(Block *block,
                           llvm::iplist<Operation>::iterator iterator) {
   assert(iterator != block->end() && "cannot move after end of block");
-  moveBefore(&*std::next(iterator));
+  moveBefore(block, std::next(iterator));
 }
 
 /// This drops all operand uses from this operation, which is an essential
@@ -552,8 +497,8 @@ LogicalResult Operation::fold(ArrayRef<Attribute> operands,
                               SmallVectorImpl<OpFoldResult> &results) {
   // If we have a registered operation definition matching this one, use it to
   // try to constant fold the operation.
-  auto *abstractOp = getAbstractOperation();
-  if (abstractOp && succeeded(abstractOp->foldHook(this, operands, results)))
+  Optional<RegisteredOperationName> info = getRegisteredInfo();
+  if (info && succeeded(info->foldHook(this, operands, results)))
     return success();
 
   // Otherwise, fall back on the dialect hook to handle it.
@@ -561,7 +506,7 @@ LogicalResult Operation::fold(ArrayRef<Attribute> operands,
   if (!dialect)
     return failure();
 
-  auto *interface = dialect->getRegisteredInterface<DialectFoldInterface>();
+  auto *interface = dyn_cast<DialectFoldInterface>(dialect);
   if (!interface)
     return failure();
 
@@ -578,32 +523,32 @@ InFlightDiagnostic Operation::emitOpError(const Twine &message) {
 // Operation Cloning
 //===----------------------------------------------------------------------===//
 
+Operation::CloneOptions::CloneOptions()
+    : cloneRegionsFlag(false), cloneOperandsFlag(false) {}
+
+Operation::CloneOptions::CloneOptions(bool cloneRegions, bool cloneOperands)
+    : cloneRegionsFlag(cloneRegions), cloneOperandsFlag(cloneOperands) {}
+
+Operation::CloneOptions Operation::CloneOptions::all() {
+  return CloneOptions().cloneRegions().cloneOperands();
+}
+
+Operation::CloneOptions &Operation::CloneOptions::cloneRegions(bool enable) {
+  cloneRegionsFlag = enable;
+  return *this;
+}
+
+Operation::CloneOptions &Operation::CloneOptions::cloneOperands(bool enable) {
+  cloneOperandsFlag = enable;
+  return *this;
+}
+
 /// Create a deep copy of this operation but keep the operation regions empty.
 /// Operands are remapped using `mapper` (if present), and `mapper` is updated
-/// to contain the results.
+/// to contain the results. The `mapResults` flag specifies whether the results
+/// of the cloned operation should be added to the map.
 Operation *Operation::cloneWithoutRegions(BlockAndValueMapping &mapper) {
-  SmallVector<Value, 8> operands;
-  SmallVector<Block *, 2> successors;
-
-  // Remap the operands.
-  operands.reserve(getNumOperands());
-  for (auto opValue : getOperands())
-    operands.push_back(mapper.lookupOrDefault(opValue));
-
-  // Remap the successors.
-  successors.reserve(getNumSuccessors());
-  for (Block *successor : getSuccessors())
-    successors.push_back(mapper.lookupOrDefault(successor));
-
-  // Create the new operation.
-  auto *newOp = create(getLoc(), getName(), getResultTypes(), operands, attrs,
-                       successors, getNumRegions());
-
-  // Remember the mapping of any results.
-  for (unsigned i = 0, e = getNumResults(); i != e; ++i)
-    mapper.map(getResult(i), newOp->getResult(i));
-
-  return newOp;
+  return clone(mapper, CloneOptions::all().cloneRegions(false));
 }
 
 Operation *Operation::cloneWithoutRegions() {
@@ -616,32 +561,78 @@ Operation *Operation::cloneWithoutRegions() {
 /// them alone if no entry is present).  Replaces references to cloned
 /// sub-operations to the corresponding operation that is copied, and adds
 /// those mappings to the map.
-Operation *Operation::clone(BlockAndValueMapping &mapper) {
-  auto *newOp = cloneWithoutRegions(mapper);
+Operation *Operation::clone(BlockAndValueMapping &mapper,
+                            CloneOptions options) {
+  SmallVector<Value, 8> operands;
+  SmallVector<Block *, 2> successors;
+
+  // Remap the operands.
+  if (options.shouldCloneOperands()) {
+    operands.reserve(getNumOperands());
+    for (auto opValue : getOperands())
+      operands.push_back(mapper.lookupOrDefault(opValue));
+  }
+
+  // Remap the successors.
+  successors.reserve(getNumSuccessors());
+  for (Block *successor : getSuccessors())
+    successors.push_back(mapper.lookupOrDefault(successor));
+
+  // Create the new operation.
+  auto *newOp = create(getLoc(), getName(), getResultTypes(), operands, attrs,
+                       successors, getNumRegions());
 
   // Clone the regions.
-  for (unsigned i = 0; i != numRegions; ++i)
-    getRegion(i).cloneInto(&newOp->getRegion(i), mapper);
+  if (options.shouldCloneRegions()) {
+    for (unsigned i = 0; i != numRegions; ++i)
+      getRegion(i).cloneInto(&newOp->getRegion(i), mapper);
+  }
+
+  // Remember the mapping of any results.
+  for (unsigned i = 0, e = getNumResults(); i != e; ++i)
+    mapper.map(getResult(i), newOp->getResult(i));
 
   return newOp;
 }
 
-Operation *Operation::clone() {
+Operation *Operation::clone(CloneOptions options) {
   BlockAndValueMapping mapper;
-  return clone(mapper);
+  return clone(mapper, options);
 }
 
 //===----------------------------------------------------------------------===//
 // OpState trait class.
 //===----------------------------------------------------------------------===//
 
-// The fallback for the parser is to reject the custom assembly form.
+// The fallback for the parser is to try for a dialect operation parser.
+// Otherwise, reject the custom assembly form.
 ParseResult OpState::parse(OpAsmParser &parser, OperationState &result) {
+  if (auto parseFn = result.name.getDialect()->getParseOperationHook(
+          result.name.getStringRef()))
+    return (*parseFn)(parser, result);
   return parser.emitError(parser.getNameLoc(), "has no custom assembly form");
 }
 
-// The fallback for the printer is to print in the generic assembly form.
-void OpState::print(Operation *op, OpAsmPrinter &p) { p.printGenericOp(op); }
+// The fallback for the printer is to try for a dialect operation printer.
+// Otherwise, it prints the generic form.
+void OpState::print(Operation *op, OpAsmPrinter &p, StringRef defaultDialect) {
+  if (auto printFn = op->getDialect()->getOperationPrinter(op)) {
+    printOpName(op, p, defaultDialect);
+    printFn(op, p);
+  } else {
+    p.printGenericOp(op);
+  }
+}
+
+/// Print an operation name, eliding the dialect prefix if necessary and doesn't
+/// lead to ambiguities.
+void OpState::printOpName(Operation *op, OpAsmPrinter &p,
+                          StringRef defaultDialect) {
+  StringRef name = op->getName().getStringRef();
+  if (name.startswith((defaultDialect + ".").str()) && name.count('.') == 1)
+    name = name.drop_front(defaultDialect.size() + 1);
+  p.getStream() << name;
+}
 
 /// Emit an error about fatal conditions with this operation, reporting up to
 /// any diagnostic handlers that may be listening.
@@ -672,9 +663,13 @@ InFlightDiagnostic OpState::emitRemark(const Twine &message) {
 //===----------------------------------------------------------------------===//
 
 OpFoldResult OpTrait::impl::foldIdempotent(Operation *op) {
-  auto *argumentOp = op->getOperand(0).getDefiningOp();
-  if (argumentOp && op->getName() == argumentOp->getName()) {
-    // Replace the outer operation output with the inner operation.
+  if (op->getNumOperands() == 1) {
+    auto *argumentOp = op->getOperand(0).getDefiningOp();
+    if (argumentOp && op->getName() == argumentOp->getName()) {
+      // Replace the outer operation output with the inner operation.
+      return op->getOperand(0);
+    }
+  } else if (op->getOperand(0) == op->getOperand(1)) {
     return op->getOperand(0);
   }
 
@@ -716,7 +711,8 @@ LogicalResult OpTrait::impl::verifyAtLeastNOperands(Operation *op,
                                                     unsigned numOperands) {
   if (op->getNumOperands() < numOperands)
     return op->emitOpError()
-           << "expected " << numOperands << " or more operands";
+           << "expected " << numOperands << " or more operands, but found "
+           << op->getNumOperands();
   return success();
 }
 
@@ -780,7 +776,7 @@ LogicalResult OpTrait::impl::verifySameTypeOperands(Operation *op) {
   return success();
 }
 
-LogicalResult OpTrait::impl::verifyZeroRegion(Operation *op) {
+LogicalResult OpTrait::impl::verifyZeroRegions(Operation *op) {
   if (op->getNumRegions() != 0)
     return op->emitOpError() << "requires zero regions";
   return success();
@@ -806,7 +802,7 @@ LogicalResult OpTrait::impl::verifyAtLeastNRegions(Operation *op,
   return success();
 }
 
-LogicalResult OpTrait::impl::verifyZeroResult(Operation *op) {
+LogicalResult OpTrait::impl::verifyZeroResults(Operation *op) {
   if (op->getNumResults() != 0)
     return op->emitOpError() << "requires zero results";
   return success();
@@ -936,7 +932,7 @@ static LogicalResult verifyTerminatorSuccessors(Operation *op) {
   return success();
 }
 
-LogicalResult OpTrait::impl::verifyZeroSuccessor(Operation *op) {
+LogicalResult OpTrait::impl::verifyZeroSuccessors(Operation *op) {
   if (op->getNumSuccessors() != 0) {
     return op->emitOpError("requires 0 successors but found ")
            << op->getNumSuccessors();
@@ -997,19 +993,22 @@ OpTrait::impl::verifyResultsAreSignlessIntegerLike(Operation *op) {
   return success();
 }
 
-static LogicalResult verifyValueSizeAttr(Operation *op, StringRef attrName,
-                                         bool isOperand) {
+LogicalResult OpTrait::impl::verifyValueSizeAttr(Operation *op,
+                                                 StringRef attrName,
+                                                 StringRef valueGroupName,
+                                                 size_t expectedCount) {
   auto sizeAttr = op->getAttrOfType<DenseIntElementsAttr>(attrName);
   if (!sizeAttr)
-    return op->emitOpError("requires 1D vector attribute '") << attrName << "'";
-
-  auto sizeAttrType = sizeAttr.getType().dyn_cast<VectorType>();
-  if (!sizeAttrType || sizeAttrType.getRank() != 1 ||
-      !sizeAttrType.getElementType().isInteger(32))
-    return op->emitOpError("requires 1D vector of i32 attribute '")
+    return op->emitOpError("requires 1D i32 elements attribute '")
            << attrName << "'";
 
-  if (llvm::any_of(sizeAttr.getIntValues(), [](const APInt &element) {
+  auto sizeAttrType = sizeAttr.getType();
+  if (sizeAttrType.getRank() != 1 ||
+      !sizeAttrType.getElementType().isInteger(32))
+    return op->emitOpError("requires 1D i32 elements attribute '")
+           << attrName << "'";
+
+  if (llvm::any_of(sizeAttr.getValues<APInt>(), [](const APInt &element) {
         return !element.isNonNegative();
       }))
     return op->emitOpError("'")
@@ -1017,27 +1016,24 @@ static LogicalResult verifyValueSizeAttr(Operation *op, StringRef attrName,
 
   size_t totalCount = std::accumulate(
       sizeAttr.begin(), sizeAttr.end(), 0,
-      [](unsigned all, APInt one) { return all + one.getZExtValue(); });
+      [](unsigned all, const APInt &one) { return all + one.getZExtValue(); });
 
-  if (isOperand && totalCount != op->getNumOperands())
-    return op->emitOpError("operand count (")
-           << op->getNumOperands() << ") does not match with the total size ("
-           << totalCount << ") specified in attribute '" << attrName << "'";
-  else if (!isOperand && totalCount != op->getNumResults())
-    return op->emitOpError("result count (")
-           << op->getNumResults() << ") does not match with the total size ("
-           << totalCount << ") specified in attribute '" << attrName << "'";
+  if (totalCount != expectedCount)
+    return op->emitOpError()
+           << valueGroupName << " count (" << expectedCount
+           << ") does not match with the total size (" << totalCount
+           << ") specified in attribute '" << attrName << "'";
   return success();
 }
 
 LogicalResult OpTrait::impl::verifyOperandSizeAttr(Operation *op,
                                                    StringRef attrName) {
-  return verifyValueSizeAttr(op, attrName, /*isOperand=*/true);
+  return verifyValueSizeAttr(op, attrName, "operand", op->getNumOperands());
 }
 
 LogicalResult OpTrait::impl::verifyResultSizeAttr(Operation *op,
                                                   StringRef attrName) {
-  return verifyValueSizeAttr(op, attrName, /*isOperand=*/false);
+  return verifyValueSizeAttr(op, attrName, "result", op->getNumResults());
 }
 
 LogicalResult OpTrait::impl::verifyNoRegionArguments(Operation *op) {
@@ -1049,8 +1045,7 @@ LogicalResult OpTrait::impl::verifyNoRegionArguments(Operation *op) {
       if (op->getNumRegions() > 1)
         return op->emitOpError("region #")
                << region.getRegionNumber() << " should have no arguments";
-      else
-        return op->emitOpError("region should have no arguments");
+      return op->emitOpError("region should have no arguments");
     }
   }
   return success();
@@ -1114,15 +1109,11 @@ LogicalResult OpTrait::impl::verifyIsIsolatedFromAbove(Operation *isolatedOp) {
     while (!pendingRegions.empty()) {
       for (Operation &op : pendingRegions.pop_back_val()->getOps()) {
         for (Value operand : op.getOperands()) {
-          // operand should be non-null here if the IR is well-formed. But
-          // we don't assert here as this function is called from the verifier
-          // and so could be called on invalid IR.
-          if (!operand)
-            return op.emitOpError("operation's operand is null");
-
           // Check that any value that is used by an operation is defined in the
           // same region as either an operation result.
           auto *operandRegion = operand.getParentRegion();
+          if (!operandRegion)
+            return op.emitError("operation's operand is unlinked");
           if (!region.isAncestor(operandRegion)) {
             return op.emitOpError("using value defined outside the region")
                        .attachNote(isolatedOp->getLoc())
@@ -1151,51 +1142,7 @@ bool OpTrait::hasElementwiseMappableTraits(Operation *op) {
 }
 
 //===----------------------------------------------------------------------===//
-// BinaryOp implementation
-//===----------------------------------------------------------------------===//
-
-// These functions are out-of-line implementations of the methods in BinaryOp,
-// which avoids them being template instantiated/duplicated.
-
-void impl::buildBinaryOp(OpBuilder &builder, OperationState &result, Value lhs,
-                         Value rhs) {
-  assert(lhs.getType() == rhs.getType());
-  result.addOperands({lhs, rhs});
-  result.types.push_back(lhs.getType());
-}
-
-ParseResult impl::parseOneResultSameOperandTypeOp(OpAsmParser &parser,
-                                                  OperationState &result) {
-  SmallVector<OpAsmParser::OperandType, 2> ops;
-  Type type;
-  return failure(parser.parseOperandList(ops) ||
-                 parser.parseOptionalAttrDict(result.attributes) ||
-                 parser.parseColonType(type) ||
-                 parser.resolveOperands(ops, type, result.operands) ||
-                 parser.addTypeToList(type, result.types));
-}
-
-void impl::printOneResultOp(Operation *op, OpAsmPrinter &p) {
-  assert(op->getNumResults() == 1 && "op should have one result");
-
-  // If not all the operand and result types are the same, just use the
-  // generic assembly form to avoid omitting information in printing.
-  auto resultType = op->getResult(0).getType();
-  if (llvm::any_of(op->getOperandTypes(),
-                   [&](Type type) { return type != resultType; })) {
-    p.printGenericOp(op);
-    return;
-  }
-
-  p << op->getName() << ' ';
-  p.printOperands(op->getOperands());
-  p.printOptionalAttrDict(op->getAttrs());
-  // Now we can output only one type for all operands and the result.
-  p << " : " << resultType;
-}
-
-//===----------------------------------------------------------------------===//
-// CastOp implementation
+// CastOpInterface
 //===----------------------------------------------------------------------===//
 
 /// Attempt to fold the given cast operation.
@@ -1240,50 +1187,6 @@ LogicalResult impl::verifyCastInterfaceOp(
   return success();
 }
 
-void impl::buildCastOp(OpBuilder &builder, OperationState &result, Value source,
-                       Type destType) {
-  result.addOperands(source);
-  result.addTypes(destType);
-}
-
-ParseResult impl::parseCastOp(OpAsmParser &parser, OperationState &result) {
-  OpAsmParser::OperandType srcInfo;
-  Type srcType, dstType;
-  return failure(parser.parseOperand(srcInfo) ||
-                 parser.parseOptionalAttrDict(result.attributes) ||
-                 parser.parseColonType(srcType) ||
-                 parser.resolveOperand(srcInfo, srcType, result.operands) ||
-                 parser.parseKeywordType("to", dstType) ||
-                 parser.addTypeToList(dstType, result.types));
-}
-
-void impl::printCastOp(Operation *op, OpAsmPrinter &p) {
-  p << op->getName() << ' ' << op->getOperand(0);
-  p.printOptionalAttrDict(op->getAttrs());
-  p << " : " << op->getOperand(0).getType() << " to "
-    << op->getResult(0).getType();
-}
-
-Value impl::foldCastOp(Operation *op) {
-  // Identity cast
-  if (op->getOperand(0).getType() == op->getResult(0).getType())
-    return op->getOperand(0);
-  return nullptr;
-}
-
-LogicalResult
-impl::verifyCastOp(Operation *op,
-                   function_ref<bool(Type, Type)> areCastCompatible) {
-  auto opType = op->getOperand(0).getType();
-  auto resType = op->getResult(0).getType();
-  if (!areCastCompatible(opType, resType))
-    return op->emitError("operand type ")
-           << opType << " and result type " << resType
-           << " are cast incompatible";
-
-  return success();
-}
-
 //===----------------------------------------------------------------------===//
 // Misc. utils
 //===----------------------------------------------------------------------===//
@@ -1314,39 +1217,4 @@ void impl::ensureRegionTerminator(
     function_ref<Operation *(OpBuilder &, Location)> buildTerminatorOp) {
   OpBuilder opBuilder(builder.getContext());
   ensureRegionTerminator(region, opBuilder, loc, buildTerminatorOp);
-}
-
-//===----------------------------------------------------------------------===//
-// UseIterator
-//===----------------------------------------------------------------------===//
-
-Operation::UseIterator::UseIterator(Operation *op, bool end)
-    : op(op), res(end ? op->result_end() : op->result_begin()) {
-  // Only initialize current use if there are results/can be uses.
-  if (op->getNumResults())
-    skipOverResultsWithNoUsers();
-}
-
-Operation::UseIterator &Operation::UseIterator::operator++() {
-  // We increment over uses, if we reach the last use then move to next
-  // result.
-  if (use != (*res).use_end())
-    ++use;
-  if (use == (*res).use_end()) {
-    ++res;
-    skipOverResultsWithNoUsers();
-  }
-  return *this;
-}
-
-void Operation::UseIterator::skipOverResultsWithNoUsers() {
-  while (res != op->result_end() && (*res).use_empty())
-    ++res;
-
-  // If we are at the last result, then set use to first use of
-  // first result (sentinel value used for end).
-  if (res == op->result_end())
-    use = {};
-  else
-    use = (*res).use_begin();
 }

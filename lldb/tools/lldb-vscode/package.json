@@ -215,7 +215,7 @@
 							},
 							"launchCommands": {
 								"type": "array",
-								"description": "Custom commands that are executed instead of launching a process. A target will be created with the launch arguments prior to executing these commands. The commands may optionally create a new target and must perform a launch. A valid process must exist after these commands complete or the \"launch\" will fail.",
+								"description": "Custom commands that are executed instead of launching a process. A target will be created with the launch arguments prior to executing these commands. The commands may optionally create a new target and must perform a launch. A valid process must exist after these commands complete or the \"launch\" will fail. Launch the process with \"process launch -s\" to make the process to at the entry point since lldb-vscode will auto resume if necessary.",
 								"default": []
 							},
 							"stopCommands": {
@@ -232,6 +232,10 @@
 								"type": "boolean",
 								"description": "Launch the program inside an integrated terminal in the IDE. Useful for debugging interactive command line programs",
 								"default": false
+							},
+							"timeout": {
+								"type": "string",
+								"description": "The time in seconds to wait for a program to stop at entry point when launching with \"launchCommands\". Defaults to 30 seconds."
 							}
 						}
 					},
@@ -307,6 +311,10 @@
 							"coreFile": {
 								"type": "string",
 								"description": "Path to the core file to debug."
+							},
+							"timeout": {
+								"type": "string",
+								"description": "The time in seconds to wait for a program to stop when attaching using \"attachCommands\". Defaults to 30 seconds."
 							}
 						}
 					}

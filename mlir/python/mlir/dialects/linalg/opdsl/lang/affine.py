@@ -53,7 +53,7 @@ Referencing a named symbol:
 
 from typing import Callable, Dict, Optional, Tuple, Union
 
-from mlir import ir as _ir
+from ..... import ir as _ir
 
 __all__ = [
     "AffineBuildState",
@@ -63,9 +63,6 @@ __all__ = [
     "S",
     "SymbolDef",
 ]
-
-# Type aliases.
-SymbolPosMap = Dict[str, int]
 
 
 class AffineBuildState:

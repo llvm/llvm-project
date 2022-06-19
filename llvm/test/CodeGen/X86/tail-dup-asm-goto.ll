@@ -30,7 +30,7 @@ define i8* @test1(i8** %arg1, i8* %arg2) {
   ; CHECK:   [[PHI:%[0-9]+]]:gr64 = PHI [[COPY]], %bb.2, [[MOV64rm]], %bb.1
   ; CHECK:   INLINEASM_BR &"#$0 $1 $2", 9 /* sideeffect mayload attdialect */, 13 /* imm */, 42, 13 /* imm */, 0, 13 /* imm */, blockaddress(@test1, %ir-block.bb17.i.i.i), 12 /* clobber */, implicit-def early-clobber $df, 12 /* clobber */, implicit-def early-clobber $fpsw, 12 /* clobber */, implicit-def early-clobber $eflags
   ; CHECK:   JMP_1 %bb.5
-  ; CHECK: bb.4.bb17.i.i.i (address-taken):
+  ; CHECK: bb.4.bb17.i.i.i (address-taken, inlineasm-br-indirect-target):
   ; CHECK:   successors: %bb.5(0x80000000)
   ; CHECK: bb.5.kmem_cache_has_cpu_partial.exit:
   ; CHECK:   $rax = COPY [[PHI]]
@@ -50,7 +50,7 @@ bb106:                                            ; preds = %bb
 
 bb110:                                            ; preds = %bb106, %bb100
   %i10.1 = phi i8* [ %arg2, %bb106 ], [ %i28.i, %bb100 ]
-  callbr void asm sideeffect "#$0 $1 $2", "i,i,X,~{dirflag},~{fpsr},~{flags}"(i32 42, i1 false, i8* blockaddress(@test1, %bb17.i.i.i))
+  callbr void asm sideeffect "#$0 $1 $2", "i,i,i,~{dirflag},~{fpsr},~{flags}"(i32 42, i1 false, i8* blockaddress(@test1, %bb17.i.i.i))
           to label %kmem_cache_has_cpu_partial.exit [label %bb17.i.i.i]
 
 bb17.i.i.i:                                       ; preds = %bb110

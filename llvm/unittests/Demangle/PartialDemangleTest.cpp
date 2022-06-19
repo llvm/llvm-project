@@ -43,7 +43,7 @@ static ChoppedName NamesToTest[] = {
   {"_ZN1S1fB4MERPIiEEvv", "S", "f", "void", "()"},
 
   {"_ZNSsC1EmcRKSaIcE",
-   "std::basic_string<char, std::char_traits<char>, std::allocator<char> >",
+   "std::basic_string<char, std::char_traits<char>, std::allocator<char>>",
    "basic_string", "", "(unsigned long, char, std::allocator<char> const&)"},
   {"_ZNSsixEm", "std::string", "operator[]", "", "(unsigned long)"},
   {"_ZSt17__throw_bad_allocv", "std", "__throw_bad_alloc", "", "()"},

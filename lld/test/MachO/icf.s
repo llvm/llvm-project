@@ -22,18 +22,21 @@
 # CHECK: [[#%x,DYLIB_REF_2:]]               l     F __TEXT,__text _dylib_ref_1
 # CHECK: [[#%x,DYLIB_REF_2:]]               l     F __TEXT,__text _dylib_ref_2
 # CHECK: [[#%x,DYLIB_REF_3:]]               l     F __TEXT,__text _dylib_ref_3
+# CHECK: [[#%x,DYLIB_REF_4:]]               l     F __TEXT,__text _dylib_ref_4
 # CHECK: [[#%x,ALT:]]                       l     F __TEXT,__text _alt
 # CHECK: [[#%x,WITH_ALT_ENTRY:]]            l     F __TEXT,__text _with_alt_entry
 # CHECK: [[#%x,WITH_ALT_ENTRY:]]            l     F __TEXT,__text _no_alt_entry
 # CHECK: [[#%x,DEFINED_REF_WITH_ADDEND_2:]] l     F __TEXT,__text _defined_ref_with_addend_1
 # CHECK: [[#%x,DEFINED_REF_WITH_ADDEND_2:]] l     F __TEXT,__text _defined_ref_with_addend_2
+# CHECK: [[#%x,DEFINED_REF_WITH_ADDEND_3:]] l     F __TEXT,__text _defined_ref_with_addend_3
 # CHECK: [[#%x,RECURSIVE:]]                 l     F __TEXT,__text _recursive
 # CHECK: [[#%x,CALL_RECURSIVE_2:]]          l     F __TEXT,__text _call_recursive_1
 # CHECK: [[#%x,CALL_RECURSIVE_2:]]          l     F __TEXT,__text _call_recursive_2
 # CHECK: [[#%x,CHECK_LENGTH_1:]]            l     F __TEXT,__text _check_length_1
 # CHECK: [[#%x,CHECK_LENGTH_2:]]            l     F __TEXT,__text _check_length_2
-# CHECK: [[#%x,HAS_UNWIND_1:]]              l     F __TEXT,__text _has_unwind_1
+# CHECK: [[#%x,HAS_UNWIND_2:]]              l     F __TEXT,__text _has_unwind_1
 # CHECK: [[#%x,HAS_UNWIND_2:]]              l     F __TEXT,__text _has_unwind_2
+# CHECK: [[#%x,HAS_UNWIND_3:]]              l     F __TEXT,__text _has_unwind_3
 # CHECK: [[#%x,MUTALLY_RECURSIVE_2:]]       l     F __TEXT,__text _mutually_recursive_1
 # CHECK: [[#%x,MUTALLY_RECURSIVE_2:]]       l     F __TEXT,__text _mutually_recursive_2
 # CHECK: [[#%x,INIT_2:]]                    l     F __TEXT,__text _init_1
@@ -54,18 +57,21 @@
 # CHECK: callq 0x[[#%x,DYLIB_REF_2:]]               <_dylib_ref_2>
 # CHECK: callq 0x[[#%x,DYLIB_REF_2:]]               <_dylib_ref_2>
 # CHECK: callq 0x[[#%x,DYLIB_REF_3:]]               <_dylib_ref_3>
+# CHECK: callq 0x[[#%x,DYLIB_REF_4:]]               <_dylib_ref_4>
 # CHECK: callq 0x[[#%x,ALT:]]                       <_alt>
 # CHECK: callq 0x[[#%x,WITH_ALT_ENTRY:]]            <_with_alt_entry>
 # CHECK: callq 0x[[#%x,WITH_ALT_ENTRY:]]            <_with_alt_entry>
 # CHECK: callq 0x[[#%x,DEFINED_REF_WITH_ADDEND_2:]] <_defined_ref_with_addend_2>
 # CHECK: callq 0x[[#%x,DEFINED_REF_WITH_ADDEND_2:]] <_defined_ref_with_addend_2>
+# CHECK: callq 0x[[#%x,DEFINED_REF_WITH_ADDEND_3:]] <_defined_ref_with_addend_3>
 # CHECK: callq 0x[[#%x,RECURSIVE:]]                 <_recursive>
 # CHECK: callq 0x[[#%x,CALL_RECURSIVE_2:]]          <_call_recursive_2>
 # CHECK: callq 0x[[#%x,CALL_RECURSIVE_2:]]          <_call_recursive_2>
 # CHECK: callq 0x[[#%x,CHECK_LENGTH_1:]]            <_check_length_1>
 # CHECK: callq 0x[[#%x,CHECK_LENGTH_2:]]            <_check_length_2>
-# CHECK: callq 0x[[#%x,HAS_UNWIND_1:]]              <_has_unwind_1>
 # CHECK: callq 0x[[#%x,HAS_UNWIND_2:]]              <_has_unwind_2>
+# CHECK: callq 0x[[#%x,HAS_UNWIND_2:]]              <_has_unwind_2>
+# CHECK: callq 0x[[#%x,HAS_UNWIND_3:]]              <_has_unwind_3>
 # CHECK: callq 0x[[#%x,MUTALLY_RECURSIVE_2:]]       <_mutually_recursive_2>
 # CHECK: callq 0x[[#%x,MUTALLY_RECURSIVE_2:]]       <_mutually_recursive_2>
 ## FIXME: Mutually-recursive functions with identical bodies (see below)
@@ -77,7 +83,7 @@
 
 ### TODO:
 ### * Fold: funcs only differ in alignment
-### * No fold: func is weak? preemptable?
+### * No fold: func is weak? preemptible?
 ### * Test that we hash things appropriately w/ minimal collisions
 
 #--- abs.s
@@ -130,6 +136,11 @@ _dylib_ref_3:
   mov ___inf@GOTPCREL(%rip), %rax
   callq ___inf
 
+## No fold: referent dylib addend differs
+_dylib_ref_4:
+  mov ___nan + 1@GOTPCREL(%rip), %rax
+  callq ___inf + 1
+
 ## We can merge two sections even if one of them has an alt entry. Just make
 ## sure we don't merge the alt entry symbol with a regular symbol.
 .alt_entry _alt
@@ -147,6 +158,10 @@ _defined_ref_with_addend_1:
 
 _defined_ref_with_addend_2:
   callq _with_alt_entry + 4
+
+# No fold: addend differs
+_defined_ref_with_addend_3:
+  callq _with_alt_entry + 8
 
 ## _recursive has the same body as its next two callers, but cannot be folded
 ## with them.
@@ -170,8 +185,7 @@ _check_length_2:
 _my_personality:
   mov $1345, %rax
 
-## No fold: functions have unwind info.
-## FIXME: Fold functions with identical unwind info.
+## Functions with identical unwind info should be folded.
 _has_unwind_1:
   .cfi_startproc
   .cfi_personality 155, _my_personality
@@ -183,6 +197,15 @@ _has_unwind_2:
   .cfi_startproc
   .cfi_personality 155, _my_personality
   .cfi_def_cfa_offset 16
+  ret
+  .cfi_endproc
+
+## This function has different unwind info from the preceding two, and therefore
+## should not be folded.
+_has_unwind_3:
+  .cfi_startproc
+  .cfi_personality 155, _my_personality
+  .cfi_def_cfa_offset 8
   ret
   .cfi_endproc
 
@@ -241,11 +264,13 @@ _main:
   callq _dylib_ref_1
   callq _dylib_ref_2
   callq _dylib_ref_3
+  callq _dylib_ref_4
   callq _alt
   callq _with_alt_entry
   callq _no_alt_entry
   callq _defined_ref_with_addend_1
   callq _defined_ref_with_addend_2
+  callq _defined_ref_with_addend_3
   callq _recursive
   callq _call_recursive_1
   callq _call_recursive_2
@@ -253,6 +278,7 @@ _main:
   callq _check_length_2
   callq _has_unwind_1
   callq _has_unwind_2
+  callq _has_unwind_3
   callq _mutually_recursive_1
   callq _mutually_recursive_2
   callq _asymmetric_recursive_1

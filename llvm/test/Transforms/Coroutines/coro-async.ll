@@ -1,5 +1,5 @@
-; RUN: opt < %s -enable-coroutines -passes='default<O2>' -S | FileCheck --check-prefixes=CHECK %s
-; RUN: opt < %s -enable-coroutines -O0 -S | FileCheck --check-prefixes=CHECK-O0 %s
+; RUN: opt < %s -passes='default<O2>' -S | FileCheck --check-prefixes=CHECK %s
+; RUN: opt < %s -O0 -S | FileCheck --check-prefixes=CHECK-O0 %s
 target datalayout = "p:64:64:64"
 
 %async.task = type { i64 }
@@ -61,7 +61,7 @@ entry:
 }
 
 
-define swiftcc void @my_async_function(i8* swiftasync %async.ctxt, %async.task* %task, %async.actor* %actor) !dbg !1 {
+define swiftcc void @my_async_function(i8* swiftasync %async.ctxt, %async.task* %task, %async.actor* %actor) presplitcoroutine !dbg !1 {
 entry:
   %tmp = alloca { i64, i64 }, align 8
   %vector = alloca <4 x double>, align 16
@@ -203,7 +203,7 @@ define void @my_async_function_pa(i8* %ctxt, %async.task* %task, %async.actor* %
      i32 128    ; Initial async context size without space for frame
   }>
 
-define swiftcc void @my_async_function2(%async.task* %task, %async.actor* %actor, i8* %async.ctxt) "frame-pointer"="all" !dbg !6 {
+define swiftcc void @my_async_function2(%async.task* %task, %async.actor* %actor, i8* %async.ctxt) presplitcoroutine "frame-pointer"="all" !dbg !6 {
 entry:
 
   %id = call token @llvm.coro.id.async(i32 128, i32 16, i32 2, i8* bitcast (<{i32, i32}>* @my_async_function2_fp to i8*))
@@ -325,7 +325,7 @@ is_not_null:
   ret void
 }
 
-define swiftcc void @dont_crash_on_cf(i8* %async.ctxt, %async.task* %task, %async.actor* %actor)  {
+define swiftcc void @dont_crash_on_cf(i8* %async.ctxt, %async.task* %task, %async.actor* %actor) presplitcoroutine  {
 entry:
   %id = call token @llvm.coro.id.async(i32 128, i32 16, i32 0,
           i8* bitcast (<{i32, i32}>* @dont_crash_on_cf_fp to i8*))
@@ -371,7 +371,7 @@ define swiftcc void @must_tail_call_return(i8* %async.ctxt, %async.task* %task, 
   ret void
 }
 
-define swiftcc void @multiple_coro_end_async(i8* %async.ctxt, %async.task* %task, %async.actor* %actor)  {
+define swiftcc void @multiple_coro_end_async(i8* %async.ctxt, %async.task* %task, %async.actor* %actor) presplitcoroutine {
 entry:
   %id = call token @llvm.coro.id.async(i32 128, i32 16, i32 0,
           i8* bitcast (<{i32, i32}>* @dont_crash_on_cf_fp to i8*))
@@ -427,7 +427,7 @@ is_not_equal:
      i32 64    ; Initial async context size without space for frame
 }>
 
-define swiftcc void @polymorphic_suspend_return(i8* swiftasync %async.ctxt, %async.task* %task, %async.actor* %actor)  {
+define swiftcc void @polymorphic_suspend_return(i8* swiftasync %async.ctxt, %async.task* %task, %async.actor* %actor) presplitcoroutine {
 entry:
   %tmp = alloca { i64, i64 }, align 8
   %proj.1 = getelementptr inbounds { i64, i64 }, { i64, i64 }* %tmp, i64 0, i32 0
@@ -496,7 +496,7 @@ entry:
      i32 128    ; Initial async context size without space for frame
 }>
 
-define swiftcc void @no_coro_suspend(i8* %async.ctx) {
+define swiftcc void @no_coro_suspend(i8* %async.ctx) presplitcoroutine {
 entry:
   %some_alloca = alloca i64
   %id = call token @llvm.coro.id.async(i32 128, i32 16, i32 0,
@@ -523,7 +523,7 @@ entry:
 
 declare void @do_with_swifterror(i64** swifterror)
 
-define swiftcc void @no_coro_suspend_swifterror(i8* %async.ctx) {
+define swiftcc void @no_coro_suspend_swifterror(i8* %async.ctx) presplitcoroutine {
 entry:
   %some_alloca = alloca swifterror i64*
   %id = call token @llvm.coro.id.async(i32 128, i32 16, i32 0,
@@ -539,6 +539,34 @@ entry:
  ; CHECK:  [[ALLOCA:%.*]] = alloca swifterror i64*
  ; CHECK:   store i64* null, i64** [[ALLOCA]]
  ; CHECK:   call void @do_with_swifterror(i64** {{.*}}swifterror{{.*}} [[ALLOCA]])
+
+@undefined_coro_async_resume_fp = constant <{ i32, i32 }>
+  <{ i32 trunc (
+       i64 sub (
+         i64 ptrtoint (void (i8*)* @undefined_coro_async_resume to i64),
+         i64 ptrtoint (i32* getelementptr inbounds (<{ i32, i32 }>, <{ i32, i32 }>* @undefined_coro_async_resume_fp, i32 0, i32 1) to i64)
+       )
+     to i32),
+     i32 24
+}>
+
+declare void @crash()
+declare void @use(i8*)
+
+define swiftcc void @undefined_coro_async_resume(i8 *%async.ctx) presplitcoroutine {
+entry:
+  %id = call token @llvm.coro.id.async(i32 24, i32 16, i32 0, i8* bitcast (<{i32, i32}>* @undefined_coro_async_resume_fp to i8*))
+  %hdl = call i8* @llvm.coro.begin(token %id, i8* null)
+  %undefined_resume_pointer = call i8* @llvm.coro.async.resume()
+  call void @use(i8* %undefined_resume_pointer)
+  call void @crash()
+  %unused = call i1 (i8*, i1, ...) @llvm.coro.end.async(i8* %hdl, i1 false)
+  unreachable
+}
+; CHECK-LABEL: define swiftcc void @undefined_coro_async_resume
+; CHECK-NOT: @llvm.coro.async.resume
+; CHECK: call void @use(i8* null)
+; CHECK: unreachable
 
 declare { i8*, i8*, i8*, i8* } @llvm.coro.suspend.async.sl_p0i8p0i8p0i8p0i8s(i32, i8*, i8*, ...)
 declare i8* @llvm.coro.prepare.async(i8*)

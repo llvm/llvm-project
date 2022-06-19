@@ -19,7 +19,6 @@ target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16
 ; CHECK-DAG: @.str0 = private unnamed_addr constant [23 x i8] c";unknown;unknown;0;0;;\00", align 1
 ; CHECK-DAG: @.str1 = private unnamed_addr constant [23 x i8] c";file001;loc0001;0;0;;\00", align 1
 ; CHECK-DAG: @.str2 = private unnamed_addr constant [23 x i8] c";file002;loc0002;0;0;;\00", align 1
-; CHECK-DAG: @3 = private unnamed_addr constant %struct.ident_t { i32 0, i32 2, i32 0, i32 0, i8* getelementptr inbounds ([23 x i8], [23 x i8]* @.str0, i32 0, i32 0) }, align 8
 ; UTC_ARGS: --enable
 
 
@@ -28,9 +27,9 @@ declare void @useI32(i32)
 
 define void @external(i1 %c) {
 ; CHECK-LABEL: define {{[^@]+}}@external
-; CHECK-SAME: (i1 [[C:%.*]])
+; CHECK-SAME: (i1 [[C:%.*]]) {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[C2:%.*]] = tail call i32 @__kmpc_global_thread_num(%struct.ident_t* nonnull @0)
+; CHECK-NEXT:    [[C2:%.*]] = tail call i32 @__kmpc_global_thread_num(%struct.ident_t* nonnull @[[GLOB0:[0-9]+]])
 ; CHECK-NEXT:    br i1 [[C]], label [[T:%.*]], label [[E:%.*]]
 ; CHECK:       t:
 ; CHECK-NEXT:    call void @internal(i32 [[C2]], i32 [[C2]])
@@ -66,7 +65,7 @@ m:
 
 define internal void @internal(i32 %not_gtid, i32 %gtid) {
 ; CHECK-LABEL: define {{[^@]+}}@internal
-; CHECK-SAME: (i32 [[NOT_GTID:%.*]], i32 [[GTID:%.*]])
+; CHECK-SAME: (i32 [[NOT_GTID:%.*]], i32 [[GTID:%.*]]) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[C:%.*]] = icmp eq i32 [[GTID]], [[GTID]]
 ; CHECK-NEXT:    br i1 [[C]], label [[T:%.*]], label [[E:%.*]]
@@ -102,9 +101,9 @@ m:
 
 
 define void @local_and_global_gtid_calls() {
-; CHECK-LABEL: define {{[^@]+}}@local_and_global_gtid_calls()
+; CHECK-LABEL: define {{[^@]+}}@local_and_global_gtid_calls() {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TID5:%.*]] = call i32 @__kmpc_global_thread_num(%struct.ident_t* @3)
+; CHECK-NEXT:    [[TID5:%.*]] = call i32 @__kmpc_global_thread_num(%struct.ident_t* @[[GLOB3:[0-9]+]])
 ; CHECK-NEXT:    [[DOTKMPC_LOC_ADDR:%.*]] = alloca [[STRUCT_IDENT_T:%.*]], align 8
 ; CHECK-NEXT:    call void @useI32(i32 [[TID5]])
 ; CHECK-NEXT:    call void @useI32(i32 [[TID5]])
@@ -132,9 +131,9 @@ entry:
 }
 
 define void @local_gtid_calls_only() {
-; CHECK-LABEL: define {{[^@]+}}@local_gtid_calls_only()
+; CHECK-LABEL: define {{[^@]+}}@local_gtid_calls_only() {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TID5:%.*]] = call i32 @__kmpc_global_thread_num(%struct.ident_t* @3)
+; CHECK-NEXT:    [[TID5:%.*]] = call i32 @__kmpc_global_thread_num(%struct.ident_t* @[[GLOB3]])
 ; CHECK-NEXT:    [[DOTKMPC_LOC_ADDR1:%.*]] = alloca [[STRUCT_IDENT_T:%.*]], align 8
 ; CHECK-NEXT:    [[DOTKMPC_LOC_ADDR2:%.*]] = alloca [[STRUCT_IDENT_T]], align 8
 ; CHECK-NEXT:    [[DOTKMPC_LOC_ADDR3:%.*]] = alloca [[STRUCT_IDENT_T]], align 8
@@ -167,7 +166,7 @@ entry:
 
 declare i32 @omp_get_level()
 define void @local_and_global_glvl_calls() {
-; CHECK-LABEL: define {{[^@]+}}@local_and_global_glvl_calls()
+; CHECK-LABEL: define {{[^@]+}}@local_and_global_glvl_calls() {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TID5:%.*]] = call i32 @omp_get_level()
 ; CHECK-NEXT:    call void @useI32(i32 [[TID5]])
@@ -195,7 +194,7 @@ entry:
 }
 
 define void @local_glvl_calls_only() {
-; CHECK-LABEL: define {{[^@]+}}@local_glvl_calls_only()
+; CHECK-LABEL: define {{[^@]+}}@local_glvl_calls_only() {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TID5:%.*]] = call i32 @omp_get_level()
 ; CHECK-NEXT:    call void @useI32(i32 [[TID5]])

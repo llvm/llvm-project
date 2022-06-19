@@ -46,6 +46,7 @@ bool WebAssemblyTargetInfo::setABI(const std::string &Name) {
 bool WebAssemblyTargetInfo::hasFeature(StringRef Feature) const {
   return llvm::StringSwitch<bool>(Feature)
       .Case("simd128", SIMDLevel >= SIMD128)
+      .Case("relaxed-simd", SIMDLevel >= RelaxedSIMD)
       .Case("nontrapping-fptoint", HasNontrappingFPToInt)
       .Case("sign-ext", HasSignExt)
       .Case("exception-handling", HasExceptionHandling)
@@ -55,11 +56,12 @@ bool WebAssemblyTargetInfo::hasFeature(StringRef Feature) const {
       .Case("multivalue", HasMultivalue)
       .Case("tail-call", HasTailCall)
       .Case("reference-types", HasReferenceTypes)
+      .Case("extended-const", HasExtendedConst)
       .Default(false);
 }
 
 bool WebAssemblyTargetInfo::isValidCPUName(StringRef Name) const {
-  return llvm::find(ValidCPUNames, Name) != std::end(ValidCPUNames);
+  return llvm::is_contained(ValidCPUNames, Name);
 }
 
 void WebAssemblyTargetInfo::fillValidCPUList(
@@ -72,6 +74,8 @@ void WebAssemblyTargetInfo::getTargetDefines(const LangOptions &Opts,
   defineCPUMacros(Builder, "wasm", /*Tuning=*/false);
   if (SIMDLevel >= SIMD128)
     Builder.defineMacro("__wasm_simd128__");
+  if (SIMDLevel >= RelaxedSIMD)
+    Builder.defineMacro("__wasm_relaxed_simd__");
   if (HasNontrappingFPToInt)
     Builder.defineMacro("__wasm_nontrapping_fptoint__");
   if (HasSignExt)
@@ -90,12 +94,17 @@ void WebAssemblyTargetInfo::getTargetDefines(const LangOptions &Opts,
     Builder.defineMacro("__wasm_tail_call__");
   if (HasReferenceTypes)
     Builder.defineMacro("__wasm_reference_types__");
+  if (HasExtendedConst)
+    Builder.defineMacro("__wasm_extended_const__");
 }
 
 void WebAssemblyTargetInfo::setSIMDLevel(llvm::StringMap<bool> &Features,
                                          SIMDEnum Level, bool Enabled) {
   if (Enabled) {
     switch (Level) {
+    case RelaxedSIMD:
+      Features["relaxed-simd"] = true;
+      LLVM_FALLTHROUGH;
     case SIMD128:
       Features["simd128"] = true;
       LLVM_FALLTHROUGH;
@@ -109,6 +118,9 @@ void WebAssemblyTargetInfo::setSIMDLevel(llvm::StringMap<bool> &Features,
   case NoSIMD:
   case SIMD128:
     Features["simd128"] = false;
+    LLVM_FALLTHROUGH;
+  case RelaxedSIMD:
+    Features["relaxed-simd"] = false;
     break;
   }
 }
@@ -118,6 +130,8 @@ void WebAssemblyTargetInfo::setFeatureEnabled(llvm::StringMap<bool> &Features,
                                               bool Enabled) const {
   if (Name == "simd128")
     setSIMDLevel(Features, SIMD128, Enabled);
+  else if (Name == "relaxed-simd")
+    setSIMDLevel(Features, RelaxedSIMD, Enabled);
   else
     Features[Name] = Enabled;
 }
@@ -147,6 +161,14 @@ bool WebAssemblyTargetInfo::handleTargetFeatures(
     }
     if (Feature == "-simd128") {
       SIMDLevel = std::min(SIMDLevel, SIMDEnum(SIMD128 - 1));
+      continue;
+    }
+    if (Feature == "+relaxed-simd") {
+      SIMDLevel = std::max(SIMDLevel, RelaxedSIMD);
+      continue;
+    }
+    if (Feature == "-relaxed-simd") {
+      SIMDLevel = std::min(SIMDLevel, SIMDEnum(RelaxedSIMD - 1));
       continue;
     }
     if (Feature == "+nontrapping-fptoint") {
@@ -221,6 +243,14 @@ bool WebAssemblyTargetInfo::handleTargetFeatures(
       HasReferenceTypes = false;
       continue;
     }
+    if (Feature == "+extended-const") {
+      HasExtendedConst = true;
+      continue;
+    }
+    if (Feature == "-extended-const") {
+      HasExtendedConst = false;
+      continue;
+    }
 
     Diags.Report(diag::err_opt_not_valid_with_opt)
         << Feature << "-target-feature";
@@ -236,11 +266,14 @@ ArrayRef<Builtin::Info> WebAssemblyTargetInfo::getTargetBuiltins() const {
 
 void WebAssemblyTargetInfo::adjust(DiagnosticsEngine &Diags,
                                    LangOptions &Opts) {
-  // If the Atomics feature isn't available, turn off POSIXThreads and
-  // ThreadModel, so that we don't predefine _REENTRANT or __STDCPP_THREADS__.
-  if (!HasAtomics) {
+  TargetInfo::adjust(Diags, Opts);
+  // Turn off POSIXThreads and ThreadModel so that we don't predefine _REENTRANT
+  // or __STDCPP_THREADS__ if we will eventually end up stripping atomics
+  // because they are unsupported.
+  if (!HasAtomics || !HasBulkMemory) {
     Opts.POSIXThreads = false;
     Opts.setThreadModel(LangOptions::ThreadModelKind::Single);
+    Opts.ThreadsafeStatics = false;
   }
 }
 

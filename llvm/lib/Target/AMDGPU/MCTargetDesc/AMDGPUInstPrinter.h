@@ -15,6 +15,7 @@
 #include "llvm/MC/MCInstPrinter.h"
 
 namespace llvm {
+class MCInstrDesc;
 
 class AMDGPUInstPrinter : public MCInstPrinter {
 public:
@@ -50,7 +51,6 @@ private:
   void printOffen(const MCInst *MI, unsigned OpNo, raw_ostream &O);
   void printIdxen(const MCInst *MI, unsigned OpNo, raw_ostream &O);
   void printAddr64(const MCInst *MI, unsigned OpNo, raw_ostream &O);
-  void printMBUFOffset(const MCInst *MI, unsigned OpNo, raw_ostream &O);
   void printOffset(const MCInst *MI, unsigned OpNo, const MCSubtargetInfo &STI,
                    raw_ostream &O);
   void printFlatOffset(const MCInst *MI, unsigned OpNo, const MCSubtargetInfo &STI,
@@ -64,6 +64,8 @@ private:
                        const MCSubtargetInfo &STI, raw_ostream &O);
   void printSMEMOffset(const MCInst *MI, unsigned OpNo,
                        const MCSubtargetInfo &STI, raw_ostream &O);
+  void printSMEMOffsetMod(const MCInst *MI, unsigned OpNo,
+                          const MCSubtargetInfo &STI, raw_ostream &O);
   void printSMRDLiteralOffset(const MCInst *MI, unsigned OpNo,
                               const MCSubtargetInfo &STI, raw_ostream &O);
   void printGDS(const MCInst *MI, unsigned OpNo, const MCSubtargetInfo &STI,
@@ -116,6 +118,8 @@ private:
                         raw_ostream &O);
   void printOperand(const MCInst *MI, unsigned OpNo, const MCSubtargetInfo &STI,
                     raw_ostream &O);
+  void printRegularOperand(const MCInst *MI, unsigned OpNo,
+                           const MCSubtargetInfo &STI, raw_ostream &O);
   void printOperand(const MCInst *MI, uint64_t /*Address*/, unsigned OpNum,
                     const MCSubtargetInfo &STI, raw_ostream &O) {
     printOperand(MI, OpNum, STI, O);
@@ -172,8 +176,13 @@ private:
                  raw_ostream &O);
   void printABID(const MCInst *MI, unsigned OpNo, const MCSubtargetInfo &STI,
                  raw_ostream &O);
-  void printDefaultVccOperand(unsigned OpNo, const MCSubtargetInfo &STI,
+  bool needsImpliedVcc(const MCInstrDesc &Desc, unsigned OpNo) const;
+  void printDefaultVccOperand(bool FirstOperand, const MCSubtargetInfo &STI,
                               raw_ostream &O);
+  void printWaitVDST(const MCInst *MI, unsigned OpNo, const MCSubtargetInfo &STI,
+                    raw_ostream &O);
+  void printWaitEXP(const MCInst *MI, unsigned OpNo, const MCSubtargetInfo &STI,
+                    raw_ostream &O);
 
   void printExpSrcN(const MCInst *MI, unsigned OpNo, const MCSubtargetInfo &STI,
                     raw_ostream &O, unsigned N);
@@ -234,40 +243,14 @@ protected:
                     raw_ostream &O);
   void printWaitFlag(const MCInst *MI, unsigned OpNo,
                      const MCSubtargetInfo &STI, raw_ostream &O);
+  void printDepCtr(const MCInst *MI, unsigned OpNo, const MCSubtargetInfo &STI,
+                   raw_ostream &O);
+  void printDelayFlag(const MCInst *MI, unsigned OpNo,
+                      const MCSubtargetInfo &STI, raw_ostream &O);
   void printHwreg(const MCInst *MI, unsigned OpNo, const MCSubtargetInfo &STI,
                   raw_ostream &O);
   void printEndpgm(const MCInst *MI, unsigned OpNo, const MCSubtargetInfo &STI,
                    raw_ostream &O);
-};
-
-class R600InstPrinter : public MCInstPrinter {
-public:
-  R600InstPrinter(const MCAsmInfo &MAI, const MCInstrInfo &MII,
-                  const MCRegisterInfo &MRI)
-    : MCInstPrinter(MAI, MII, MRI) {}
-
-  void printInst(const MCInst *MI, uint64_t Address, StringRef Annot,
-                 const MCSubtargetInfo &STI, raw_ostream &O) override;
-  std::pair<const char *, uint64_t> getMnemonic(const MCInst *MI) override;
-  void printInstruction(const MCInst *MI, uint64_t Address, raw_ostream &O);
-  static const char *getRegisterName(unsigned RegNo);
-
-  void printAbs(const MCInst *MI, unsigned OpNo, raw_ostream &O);
-  void printBankSwizzle(const MCInst *MI, unsigned OpNo, raw_ostream &O);
-  void printClamp(const MCInst *MI, unsigned OpNo, raw_ostream &O);
-  void printCT(const MCInst *MI, unsigned OpNo, raw_ostream &O);
-  void printKCache(const MCInst *MI, unsigned OpNo, raw_ostream &O);
-  void printLast(const MCInst *MI, unsigned OpNo, raw_ostream &O);
-  void printLiteral(const MCInst *MI, unsigned OpNo, raw_ostream &O);
-  void printMemOperand(const MCInst *MI, unsigned OpNo, raw_ostream &O);
-  void printNeg(const MCInst *MI, unsigned OpNo, raw_ostream &O);
-  void printOMOD(const MCInst *MI, unsigned OpNo, raw_ostream &O);
-  void printOperand(const MCInst *MI, unsigned OpNo, raw_ostream &O);
-  void printRel(const MCInst *MI, unsigned OpNo, raw_ostream &O);
-  void printRSel(const MCInst *MI, unsigned OpNo, raw_ostream &O);
-  void printUpdateExecMask(const MCInst *MI, unsigned OpNo, raw_ostream &O);
-  void printUpdatePred(const MCInst *MI, unsigned OpNo, raw_ostream &O);
-  void printWrite(const MCInst *MI, unsigned OpNo, raw_ostream &O);
 };
 
 } // End namespace llvm

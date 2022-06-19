@@ -13,9 +13,7 @@ using namespace llvm;
 using namespace lld;
 using namespace lld::macho;
 
-uint64_t OutputSection::getSegmentOffset() const {
-  return addr - parent->addr;
-}
+uint64_t OutputSection::getSegmentOffset() const { return addr - parent->addr; }
 
 void OutputSection::assignAddressesToStartEndSymbols() {
   for (Defined *d : sectionStartSymbols)

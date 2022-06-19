@@ -9,8 +9,8 @@
 #ifndef LLD_MACHO_SYMBOLS_H
 #define LLD_MACHO_SYMBOLS_H
 
+#include "Config.h"
 #include "InputFiles.h"
-#include "InputSection.h"
 #include "Target.h"
 #include "lld/Common/ErrorHandler.h"
 #include "lld/Common/Strings.h"
@@ -20,7 +20,6 @@
 namespace lld {
 namespace macho {
 
-class InputSection;
 class MachHeaderSection;
 
 struct StringRefZ {
@@ -38,7 +37,8 @@ public:
     UndefinedKind,
     CommonKind,
     DylibKind,
-    LazyKind,
+    LazyArchiveKind,
+    LazyObjectKind,
   };
 
   virtual ~Symbol() {}
@@ -51,7 +51,10 @@ public:
     return {nameData, nameSize};
   }
 
-  bool isLive() const;
+  bool isLive() const { return used; }
+  bool isLazy() const {
+    return symbolKind == LazyArchiveKind || symbolKind == LazyObjectKind;
+  }
 
   virtual uint64_t getVA() const { return 0; }
 
@@ -60,7 +63,7 @@ public:
   // Only undefined or dylib symbols can be weak references. A weak reference
   // need not be satisfied at runtime, e.g. due to the symbol not being
   // available on a given target platform.
-  virtual bool isWeakRef() const { llvm_unreachable("cannot be a weak ref"); }
+  virtual bool isWeakRef() const { return false; }
 
   virtual bool isTlv() const { llvm_unreachable("cannot be TLV"); }
 
@@ -84,29 +87,29 @@ public:
   // on whether it is a thread-local. A given symbol cannot be referenced by
   // both these sections at once.
   uint32_t gotIndex = UINT32_MAX;
-
+  uint32_t lazyBindOffset = UINT32_MAX;
+  uint32_t stubsHelperIndex = UINT32_MAX;
   uint32_t stubsIndex = UINT32_MAX;
-
   uint32_t symtabIndex = UINT32_MAX;
 
   InputFile *getFile() const { return file; }
 
 protected:
   Symbol(Kind k, StringRefZ name, InputFile *file)
-      : symbolKind(k), nameData(name.data), nameSize(name.size), file(file),
+      : symbolKind(k), nameData(name.data), file(file), nameSize(name.size),
         isUsedInRegularObj(!file || isa<ObjFile>(file)),
         used(!config->deadStrip) {}
 
   Kind symbolKind;
   const char *nameData;
-  mutable uint32_t nameSize;
   InputFile *file;
+  mutable uint32_t nameSize;
 
 public:
   // True if this symbol was referenced by a regular (non-bitcode) object.
   bool isUsedInRegularObj : 1;
 
-  // True if an undefined or dylib symbol is used from a live section.
+  // True if this symbol is used from a live section.
   bool used : 1;
 };
 
@@ -114,43 +117,36 @@ class Defined : public Symbol {
 public:
   Defined(StringRefZ name, InputFile *file, InputSection *isec, uint64_t value,
           uint64_t size, bool isWeakDef, bool isExternal, bool isPrivateExtern,
-          bool isThumb, bool isReferencedDynamically, bool noDeadStrip)
-      : Symbol(DefinedKind, name, file), isec(isec), value(value), size(size),
-        overridesWeakDef(false), privateExtern(isPrivateExtern),
-        includeInSymtab(true), thumb(isThumb),
-        referencedDynamically(isReferencedDynamically),
-        noDeadStrip(noDeadStrip), weakDef(isWeakDef), external(isExternal) {
-    if (auto concatIsec = dyn_cast_or_null<ConcatInputSection>(isec))
-      concatIsec->numRefs++;
-  }
+          bool includeInSymtab, bool isThumb, bool isReferencedDynamically,
+          bool noDeadStrip, bool canOverrideWeakDef = false,
+          bool isWeakDefCanBeHidden = false, bool interposable = false);
 
   bool isWeakDef() const override { return weakDef; }
   bool isExternalWeakDef() const {
     return isWeakDef() && isExternal() && !privateExtern;
   }
-  bool isTlv() const override {
-    return !isAbsolute() && isThreadLocalVariables(isec->getFlags());
-  }
+  bool isTlv() const override;
 
   bool isExternal() const { return external; }
   bool isAbsolute() const { return isec == nullptr; }
 
   uint64_t getVA() const override;
 
+  // Ensure this symbol's pointers to InputSections point to their canonical
+  // copies.
+  void canonicalize();
+
   static bool classof(const Symbol *s) { return s->kind() == DefinedKind; }
 
-  InputSection *isec;
-  // Contains the offset from the containing subsection. Note that this is
-  // different from nlist::n_value, which is the absolute address of the symbol.
-  uint64_t value;
-  // size is only calculated for regular (non-bitcode) symbols.
-  uint64_t size;
-
+  // Place the bitfields first so that they can get placed in the tail padding
+  // of the parent class, on platforms which support it.
   bool overridesWeakDef : 1;
   // Whether this symbol should appear in the output binary's export trie.
   bool privateExtern : 1;
   // Whether this symbol should appear in the output symbol table.
   bool includeInSymtab : 1;
+  // Whether this symbol was folded into a different symbol during ICF.
+  bool wasIdenticalCodeFolded : 1;
   // Only relevant when compiling for Thumb-supporting arm32 archs.
   bool thumb : 1;
   // Symbols marked referencedDynamically won't be removed from the output's
@@ -165,10 +161,30 @@ public:
   // metadata. This is information only for the static linker and not written
   // to the output.
   bool noDeadStrip : 1;
+  // Whether references to this symbol can be interposed at runtime to point to
+  // a different symbol definition (with the same name). For example, if both
+  // dylib A and B define an interposable symbol _foo, and we load A before B at
+  // runtime, then all references to _foo within dylib B will point to the
+  // definition in dylib A.
+  //
+  // Only extern symbols may be interposable.
+  bool interposable : 1;
+
+  bool weakDefCanBeHidden : 1;
 
 private:
   const bool weakDef : 1;
   const bool external : 1;
+
+public:
+  InputSection *isec;
+  // Contains the offset from the containing subsection. Note that this is
+  // different from nlist::n_value, which is the absolute address of the symbol.
+  uint64_t value;
+  // size is only calculated for regular (non-bitcode) symbols.
+  uint64_t size;
+  // This can be a subsection of either __compact_unwind or __eh_frame.
+  ConcatInputSection *unwindEntry = nullptr;
 };
 
 // This enum does double-duty: as a symbol property, it indicates whether & how
@@ -236,7 +252,12 @@ public:
 
   uint64_t getVA() const override;
   bool isWeakDef() const override { return weakDef; }
-  bool isWeakRef() const override { return refState == RefState::Weak; }
+
+  // Symbols from weak libraries/frameworks are also weakly-referenced.
+  bool isWeakRef() const override {
+    return refState == RefState::Weak ||
+           (file && getFile()->umbrella->forceWeakImport);
+  }
   bool isReferenced() const { return refState != RefState::Unreferenced; }
   bool isTlv() const override { return tlv; }
   bool isDynamicLookup() const { return file == nullptr; }
@@ -248,9 +269,6 @@ public:
   }
 
   static bool classof(const Symbol *s) { return s->kind() == DylibKind; }
-
-  uint32_t stubsHelperIndex = UINT32_MAX;
-  uint32_t lazyBindOffset = UINT32_MAX;
 
   RefState getRefState() const { return refState; }
 
@@ -275,18 +293,30 @@ private:
   const bool tlv : 1;
 };
 
-class LazySymbol : public Symbol {
+class LazyArchive : public Symbol {
 public:
-  LazySymbol(ArchiveFile *file, const llvm::object::Archive::Symbol &sym)
-      : Symbol(LazyKind, sym.getName(), file), sym(sym) {}
+  LazyArchive(ArchiveFile *file, const llvm::object::Archive::Symbol &sym)
+      : Symbol(LazyArchiveKind, sym.getName(), file), sym(sym) {}
 
   ArchiveFile *getFile() const { return cast<ArchiveFile>(file); }
   void fetchArchiveMember();
 
-  static bool classof(const Symbol *s) { return s->kind() == LazyKind; }
+  static bool classof(const Symbol *s) { return s->kind() == LazyArchiveKind; }
 
 private:
   const llvm::object::Archive::Symbol sym;
+};
+
+// A defined symbol in an ObjFile/BitcodeFile surrounded by --start-lib and
+// --end-lib.
+class LazyObject : public Symbol {
+public:
+  LazyObject(InputFile &file, StringRef name)
+      : Symbol(LazyObjectKind, name, &file) {
+    isUsedInRegularObj = false;
+  }
+
+  static bool classof(const Symbol *s) { return s->kind() == LazyObjectKind; }
 };
 
 union SymbolUnion {
@@ -294,7 +324,8 @@ union SymbolUnion {
   alignas(Undefined) char b[sizeof(Undefined)];
   alignas(CommonSymbol) char c[sizeof(CommonSymbol)];
   alignas(DylibSymbol) char d[sizeof(DylibSymbol)];
-  alignas(LazySymbol) char e[sizeof(LazySymbol)];
+  alignas(LazyArchive) char e[sizeof(LazyArchive)];
+  alignas(LazyObject) char f[sizeof(LazyObject)];
 };
 
 template <typename T, typename... ArgT>

@@ -12,7 +12,7 @@ entry:
 ; CHECK-LABEL: d:
 ; CHECK: vmov s[[REGISTER:[0-9]+]], r0
 ; CHECK-NEXT: vcvt.f64.s32 d1, s[[REGISTER]]
-; CHECK-NEXT: b pow
+; CHECK-NEXT: b.w pow
 ; CHECK-NOT: __powisf2
 
 define arm_aapcs_vfpcc float @f(float %f, i32 %i) {
@@ -24,7 +24,7 @@ entry:
 ; CHECK-LABEL: f:
 ; CHECK: vmov s[[REGISTER:[0-9]+]], r0
 ; CHECK-NEXT: vcvt.f32.s32 s1, s[[REGISTER]]
-; CHECK-NEXT: b pow
+; CHECK-NEXT: b.w pow
 ; CHECK-NOT: __powisf2
 
 define arm_aapcs_vfpcc float @g(double %d, i32 %i) {

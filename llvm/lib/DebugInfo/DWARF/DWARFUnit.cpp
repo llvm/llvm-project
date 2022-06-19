@@ -9,15 +9,23 @@
 #include "llvm/DebugInfo/DWARF/DWARFUnit.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/DebugInfo/DWARF/DWARFAbbreviationDeclaration.h"
 #include "llvm/DebugInfo/DWARF/DWARFCompileUnit.h"
 #include "llvm/DebugInfo/DWARF/DWARFContext.h"
 #include "llvm/DebugInfo/DWARF/DWARFDebugAbbrev.h"
 #include "llvm/DebugInfo/DWARF/DWARFDebugInfoEntry.h"
+#include "llvm/DebugInfo/DWARF/DWARFDebugLoc.h"
+#include "llvm/DebugInfo/DWARF/DWARFDebugRangeList.h"
 #include "llvm/DebugInfo/DWARF/DWARFDebugRnglists.h"
 #include "llvm/DebugInfo/DWARF/DWARFDie.h"
+#include "llvm/DebugInfo/DWARF/DWARFExpression.h"
 #include "llvm/DebugInfo/DWARF/DWARFFormValue.h"
+#include "llvm/DebugInfo/DWARF/DWARFListTable.h"
+#include "llvm/DebugInfo/DWARF/DWARFObject.h"
+#include "llvm/DebugInfo/DWARF/DWARFSection.h"
 #include "llvm/DebugInfo/DWARF/DWARFTypeUnit.h"
+#include "llvm/Object/ObjectFile.h"
 #include "llvm/Support/DataExtractor.h"
 #include "llvm/Support/Errc.h"
 #include "llvm/Support/Path.h"
@@ -25,7 +33,6 @@
 #include <cassert>
 #include <cstddef>
 #include <cstdint>
-#include <cstdio>
 #include <utility>
 #include <vector>
 
@@ -79,7 +86,14 @@ void DWARFUnitVector::addUnitsImpl(
       if (!IndexEntry && IsDWO) {
         const DWARFUnitIndex &Index = getDWARFUnitIndex(
             Context, Header.isTypeUnit() ? DW_SECT_EXT_TYPES : DW_SECT_INFO);
-        IndexEntry = Index.getFromOffset(Header.getOffset());
+        if (Index) {
+          if (Header.isTypeUnit())
+            IndexEntry = Index.getFromHash(Header.getTypeHash());
+          else if (auto DWOId = Header.getDWOId())
+            IndexEntry = Index.getFromHash(*DWOId);
+        }
+        if (!IndexEntry)
+          IndexEntry = Index.getFromOffset(Header.getOffset());
       }
       if (IndexEntry && !Header.applyIndexEntry(IndexEntry))
         return nullptr;
@@ -214,13 +228,17 @@ DWARFUnit::getAddrOffsetSectionItem(uint32_t Index) const {
   return {{Address, Section}};
 }
 
-Optional<uint64_t> DWARFUnit::getStringOffsetSectionItem(uint32_t Index) const {
+Expected<uint64_t> DWARFUnit::getStringOffsetSectionItem(uint32_t Index) const {
   if (!StringOffsetsTableContribution)
-    return None;
+    return make_error<StringError>(
+        "DW_FORM_strx used without a valid string offsets table",
+        inconvertibleErrorCode());
   unsigned ItemSize = getDwarfStringOffsetsByteSize();
   uint64_t Offset = getStringOffsetsBase() + Index * ItemSize;
   if (StringOffsetSection.Data.size() < Offset + ItemSize)
-    return None;
+    return make_error<StringError>("DW_FORM_strx uses index " + Twine(Index) +
+                                       ", which is too large",
+                                   inconvertibleErrorCode());
   DWARFDataExtractor DA(Context.getDWARFObj(), StringOffsetSection,
                         isLittleEndian, 0);
   return DA.getRelocatedValue(ItemSize, &Offset);
@@ -315,15 +333,10 @@ bool DWARFUnitHeader::extract(DWARFContext &Context,
     return false;
   }
 
-  if (!DWARFContext::isAddressSizeSupported(getAddressByteSize())) {
-    SmallVector<std::string, 3> Sizes;
-    for (auto Size : DWARFContext::getSupportedAddressSizes())
-      Sizes.push_back(std::to_string(Size));
-    Context.getWarningHandler()(createStringError(
-        errc::invalid_argument,
-        "DWARF unit at offset 0x%8.8" PRIx64 " "
-        "has unsupported address size %" PRIu8 ", supported are %s",
-        Offset, getAddressByteSize(), llvm::join(Sizes, ", ").c_str()));
+  if (Error SizeErr = DWARFContext::checkAddressSizeSupported(
+          getAddressByteSize(), errc::invalid_argument,
+          "DWARF unit at offset 0x%8.8" PRIx64, Offset)) {
+    Context.getWarningHandler()(std::move(SizeErr));
     return false;
   }
 
@@ -349,29 +362,6 @@ bool DWARFUnitHeader::applyIndexEntry(const DWARFUnitIndex::Entry *Entry) {
   return true;
 }
 
-// Parse the rangelist table header, including the optional array of offsets
-// following it (DWARF v5 and later).
-template<typename ListTableType>
-static Expected<ListTableType>
-parseListTableHeader(DWARFDataExtractor &DA, uint64_t Offset,
-                        DwarfFormat Format) {
-  // We are expected to be called with Offset 0 or pointing just past the table
-  // header. Correct Offset in the latter case so that it points to the start
-  // of the header.
-  if (Offset > 0) {
-    uint64_t HeaderSize = DWARFListTableHeader::getHeaderSize(Format);
-    if (Offset < HeaderSize)
-      return createStringError(errc::invalid_argument, "did not detect a valid"
-                               " list table with base = 0x%" PRIx64 "\n",
-                               Offset);
-    Offset -= HeaderSize;
-  }
-  ListTableType Table;
-  if (Error E = Table.extractHeaderAndOffsets(DA, &Offset))
-    return std::move(E);
-  return Table;
-}
-
 Error DWARFUnit::extractRangeList(uint64_t RangeListOffset,
                                   DWARFDebugRangeList &RangeList) const {
   // Require that compile unit is extracted.
@@ -390,6 +380,9 @@ void DWARFUnit::clear() {
   AddrOffsetSectionBase = None;
   SU = nullptr;
   clearDIEs(false);
+  AddrDieMap.clear();
+  if (DWO)
+    DWO->clear();
   DWO.reset();
 }
 
@@ -411,11 +404,39 @@ void DWARFUnit::extractDIEsToVector(
   DWARFDataExtractor DebugInfoData = getDebugInfoExtractor();
   // The end offset has been already checked by DWARFUnitHeader::extract.
   assert(DebugInfoData.isValidOffset(NextCUOffset - 1));
-  uint32_t Depth = 0;
+  std::vector<uint32_t> Parents;
+  std::vector<uint32_t> PrevSiblings;
   bool IsCUDie = true;
 
-  while (DIE.extractFast(*this, &DIEOffset, DebugInfoData, NextCUOffset,
-                         Depth)) {
+  assert(
+      ((AppendCUDie && Dies.empty()) || (!AppendCUDie && Dies.size() == 1)) &&
+      "Dies array is not empty");
+
+  // Fill Parents and Siblings stacks with initial value.
+  Parents.push_back(UINT32_MAX);
+  if (!AppendCUDie)
+    Parents.push_back(0);
+  PrevSiblings.push_back(0);
+
+  // Start to extract dies.
+  do {
+    assert(Parents.size() > 0 && "Empty parents stack");
+    assert((Parents.back() == UINT32_MAX || Parents.back() <= Dies.size()) &&
+           "Wrong parent index");
+
+    // Extract die. Stop if any error occurred.
+    if (!DIE.extractFast(*this, &DIEOffset, DebugInfoData, NextCUOffset,
+                         Parents.back()))
+      break;
+
+    // If previous sibling is remembered then update it`s SiblingIdx field.
+    if (PrevSiblings.back() > 0) {
+      assert(PrevSiblings.back() < Dies.size() &&
+             "Previous sibling index is out of Dies boundaries");
+      Dies[PrevSiblings.back()].setSiblingIdx(Dies.size());
+    }
+
+    // Store die into the Dies vector.
     if (IsCUDie) {
       if (AppendCUDie)
         Dies.push_back(DIE);
@@ -425,26 +446,36 @@ void DWARFUnit::extractDIEsToVector(
       // around 14-20 so let's pre-reserve the needed memory for
       // our DIE entries accordingly.
       Dies.reserve(Dies.size() + getDebugInfoSize() / 14);
-      IsCUDie = false;
     } else {
+      // Remember last previous sibling.
+      PrevSiblings.back() = Dies.size();
+
       Dies.push_back(DIE);
     }
 
+    // Check for new children scope.
     if (const DWARFAbbreviationDeclaration *AbbrDecl =
             DIE.getAbbreviationDeclarationPtr()) {
-      // Normal DIE
-      if (AbbrDecl->hasChildren())
-        ++Depth;
-      else if (Depth == 0)
-        break; // This unit has a single DIE with no children.
+      if (AbbrDecl->hasChildren()) {
+        if (AppendCUDie || !IsCUDie) {
+          assert(Dies.size() > 0 && "Dies does not contain any die");
+          Parents.push_back(Dies.size() - 1);
+          PrevSiblings.push_back(0);
+        }
+      } else if (IsCUDie)
+        // Stop if we have single compile unit die w/o children.
+        break;
     } else {
-      // NULL DIE.
-      if (Depth > 0)
-        --Depth;
-      if (Depth == 0)
-        break;  // We are done with this compile unit!
+      // NULL DIE: finishes current children scope.
+      Parents.pop_back();
+      PrevSiblings.pop_back();
     }
-  }
+
+    if (IsCUDie)
+      IsCUDie = false;
+
+    // Stop when compile unit die is removed from the parents stack.
+  } while (Parents.size() > 1);
 }
 
 void DWARFUnit::extractDIEsIfNeeded(bool CUDieOnly) {
@@ -593,17 +624,21 @@ bool DWARFUnit::parseDWO() {
     DWO->setAddrOffsetSection(AddrOffsetSection, *AddrOffsetSectionBase);
   if (getVersion() == 4) {
     auto DWORangesBase = UnitDie.getRangesBaseAttribute();
-    DWO->setRangesSection(RangeSection, DWORangesBase ? *DWORangesBase : 0);
+    DWO->setRangesSection(RangeSection, DWORangesBase.value_or(0));
   }
 
   return true;
 }
 
 void DWARFUnit::clearDIEs(bool KeepCUDie) {
-  if (DieArray.size() > (unsigned)KeepCUDie) {
-    DieArray.resize((unsigned)KeepCUDie);
-    DieArray.shrink_to_fit();
-  }
+  // Do not use resize() + shrink_to_fit() to free memory occupied by dies.
+  // shrink_to_fit() is a *non-binding* request to reduce capacity() to size().
+  // It depends on the implementation whether the request is fulfilled.
+  // Create a new vector with a small capacity and assign it to the DieArray to
+  // have previous contents freed.
+  DieArray = (KeepCUDie && !DieArray.empty())
+                 ? std::vector<DWARFDebugInfoEntry>({DieArray[0]})
+                 : std::vector<DWARFDebugInfoEntry>();
 }
 
 Expected<DWARFAddressRangesVector>
@@ -717,6 +752,100 @@ DWARFDie DWARFUnit::getSubroutineForAddress(uint64_t Address) {
   return R->second.second;
 }
 
+void DWARFUnit::updateVariableDieMap(DWARFDie Die) {
+  for (DWARFDie Child : Die) {
+    if (isType(Child.getTag()))
+      continue;
+    updateVariableDieMap(Child);
+  }
+
+  if (Die.getTag() != DW_TAG_variable)
+    return;
+
+  Expected<DWARFLocationExpressionsVector> Locations =
+      Die.getLocations(DW_AT_location);
+  if (!Locations) {
+    // Missing DW_AT_location is fine here.
+    consumeError(Locations.takeError());
+    return;
+  }
+
+  uint64_t Address = UINT64_MAX;
+
+  for (const DWARFLocationExpression &Location : *Locations) {
+    uint8_t AddressSize = getAddressByteSize();
+    DataExtractor Data(Location.Expr, /*IsLittleEndian=*/true, AddressSize);
+    DWARFExpression Expr(Data, AddressSize);
+    auto It = Expr.begin();
+    if (It == Expr.end())
+      continue;
+
+    // Match exactly the main sequence used to describe global variables:
+    // `DW_OP_addr[x] [+ DW_OP_plus_uconst]`. Currently, this is the sequence
+    // that LLVM produces for DILocalVariables and DIGlobalVariables. If, in
+    // future, the DWARF producer (`DwarfCompileUnit::addLocationAttribute()` is
+    // a good starting point) is extended to use further expressions, this code
+    // needs to be updated.
+    uint64_t LocationAddr;
+    if (It->getCode() == dwarf::DW_OP_addr) {
+      LocationAddr = It->getRawOperand(0);
+    } else if (It->getCode() == dwarf::DW_OP_addrx) {
+      uint64_t DebugAddrOffset = It->getRawOperand(0);
+      if (auto Pointer = getAddrOffsetSectionItem(DebugAddrOffset)) {
+        LocationAddr = Pointer->Address;
+      }
+    } else {
+      continue;
+    }
+
+    // Read the optional 2nd operand, a DW_OP_plus_uconst.
+    if (++It != Expr.end()) {
+      if (It->getCode() != dwarf::DW_OP_plus_uconst)
+        continue;
+
+      LocationAddr += It->getRawOperand(0);
+
+      // Probe for a 3rd operand, if it exists, bail.
+      if (++It != Expr.end())
+        continue;
+    }
+
+    Address = LocationAddr;
+    break;
+  }
+
+  // Get the size of the global variable. If all else fails (i.e. the global has
+  // no type), then we use a size of one to still allow symbolization of the
+  // exact address.
+  uint64_t GVSize = 1;
+  if (DWARFDie BaseType = Die.getAttributeValueAsReferencedDie(DW_AT_type))
+    if (Optional<uint64_t> Size = Die.getTypeSize(getAddressByteSize()))
+      GVSize = *Size;
+
+  if (Address != UINT64_MAX)
+    VariableDieMap[Address] = {Address + GVSize, Die};
+}
+
+DWARFDie DWARFUnit::getVariableForAddress(uint64_t Address) {
+  extractDIEsIfNeeded(false);
+
+  auto RootDie = getUnitDIE();
+
+  auto RootLookup = RootsParsedForVariables.insert(RootDie.getOffset());
+  if (RootLookup.second)
+    updateVariableDieMap(RootDie);
+
+  auto R = VariableDieMap.upper_bound(Address);
+  if (R == VariableDieMap.begin())
+    return DWARFDie();
+
+  // upper_bound's previous item contains Address.
+  --R;
+  if (Address >= R->second.first)
+    return DWARFDie();
+  return R->second.second;
+}
+
 void
 DWARFUnit::getInlinedChainForAddress(uint64_t Address,
                                      SmallVectorImpl<DWARFDie> &InlinedChain) {
@@ -750,65 +879,65 @@ const DWARFUnitIndex &llvm::getDWARFUnitIndex(DWARFContext &Context,
 DWARFDie DWARFUnit::getParent(const DWARFDebugInfoEntry *Die) {
   if (!Die)
     return DWARFDie();
-  const uint32_t Depth = Die->getDepth();
-  // Unit DIEs always have a depth of zero and never have parents.
-  if (Depth == 0)
-    return DWARFDie();
-  // Depth of 1 always means parent is the compile/type unit.
-  if (Depth == 1)
-    return getUnitDIE();
-  // Look for previous DIE with a depth that is one less than the Die's depth.
-  const uint32_t ParentDepth = Depth - 1;
-  for (uint32_t I = getDIEIndex(Die) - 1; I > 0; --I) {
-    if (DieArray[I].getDepth() == ParentDepth)
-      return DWARFDie(this, &DieArray[I]);
+
+  if (Optional<uint32_t> ParentIdx = Die->getParentIdx()) {
+    assert(*ParentIdx < DieArray.size() &&
+           "ParentIdx is out of DieArray boundaries");
+    return DWARFDie(this, &DieArray[*ParentIdx]);
   }
+
   return DWARFDie();
 }
 
 DWARFDie DWARFUnit::getSibling(const DWARFDebugInfoEntry *Die) {
   if (!Die)
     return DWARFDie();
-  uint32_t Depth = Die->getDepth();
-  // Unit DIEs always have a depth of zero and never have siblings.
-  if (Depth == 0)
-    return DWARFDie();
-  // NULL DIEs don't have siblings.
-  if (Die->getAbbreviationDeclarationPtr() == nullptr)
-    return DWARFDie();
 
-  // Find the next DIE whose depth is the same as the Die's depth.
-  for (size_t I = getDIEIndex(Die) + 1, EndIdx = DieArray.size(); I < EndIdx;
-       ++I) {
-    if (DieArray[I].getDepth() == Depth)
-      return DWARFDie(this, &DieArray[I]);
+  if (Optional<uint32_t> SiblingIdx = Die->getSiblingIdx()) {
+    assert(*SiblingIdx < DieArray.size() &&
+           "SiblingIdx is out of DieArray boundaries");
+    return DWARFDie(this, &DieArray[*SiblingIdx]);
   }
+
   return DWARFDie();
 }
 
 DWARFDie DWARFUnit::getPreviousSibling(const DWARFDebugInfoEntry *Die) {
   if (!Die)
     return DWARFDie();
-  uint32_t Depth = Die->getDepth();
-  // Unit DIEs always have a depth of zero and never have siblings.
-  if (Depth == 0)
+
+  Optional<uint32_t> ParentIdx = Die->getParentIdx();
+  if (!ParentIdx)
+    // Die is a root die, there is no previous sibling.
     return DWARFDie();
 
-  // Find the previous DIE whose depth is the same as the Die's depth.
-  for (size_t I = getDIEIndex(Die); I > 0;) {
-    --I;
-    if (DieArray[I].getDepth() == Depth - 1)
-      return DWARFDie();
-    if (DieArray[I].getDepth() == Depth)
-      return DWARFDie(this, &DieArray[I]);
+  assert(*ParentIdx < DieArray.size() &&
+         "ParentIdx is out of DieArray boundaries");
+  assert(getDIEIndex(Die) > 0 && "Die is a root die");
+
+  uint32_t PrevDieIdx = getDIEIndex(Die) - 1;
+  if (PrevDieIdx == *ParentIdx)
+    // Immediately previous node is parent, there is no previous sibling.
+    return DWARFDie();
+
+  while (DieArray[PrevDieIdx].getParentIdx() != *ParentIdx) {
+    PrevDieIdx = *DieArray[PrevDieIdx].getParentIdx();
+
+    assert(PrevDieIdx < DieArray.size() &&
+           "PrevDieIdx is out of DieArray boundaries");
+    assert(PrevDieIdx >= *ParentIdx &&
+           "PrevDieIdx is not a child of parent of Die");
   }
-  return DWARFDie();
+
+  return DWARFDie(this, &DieArray[PrevDieIdx]);
 }
 
 DWARFDie DWARFUnit::getFirstChild(const DWARFDebugInfoEntry *Die) {
   if (!Die->hasChildren())
     return DWARFDie();
 
+  // TODO: Instead of checking here for invalid die we might reject
+  // invalid dies at parsing stage(DWARFUnit::extractDIEsToVector).
   // We do not want access out of bounds when parsing corrupted debug data.
   size_t I = getDIEIndex(Die) + 1;
   if (I >= DieArray.size())
@@ -820,14 +949,30 @@ DWARFDie DWARFUnit::getLastChild(const DWARFDebugInfoEntry *Die) {
   if (!Die->hasChildren())
     return DWARFDie();
 
-  uint32_t Depth = Die->getDepth();
-  for (size_t I = getDIEIndex(Die) + 1, EndIdx = DieArray.size(); I < EndIdx;
-       ++I) {
-    if (DieArray[I].getDepth() == Depth + 1 &&
-        DieArray[I].getTag() == dwarf::DW_TAG_null)
-      return DWARFDie(this, &DieArray[I]);
-    assert(DieArray[I].getDepth() > Depth && "Not processing children?");
+  if (Optional<uint32_t> SiblingIdx = Die->getSiblingIdx()) {
+    assert(*SiblingIdx < DieArray.size() &&
+           "SiblingIdx is out of DieArray boundaries");
+    assert(DieArray[*SiblingIdx - 1].getTag() == dwarf::DW_TAG_null &&
+           "Bad end of children marker");
+    return DWARFDie(this, &DieArray[*SiblingIdx - 1]);
   }
+
+  // If SiblingIdx is set for non-root dies we could be sure that DWARF is
+  // correct and "end of children marker" must be found. For root die we do not
+  // have such a guarantee(parsing root die might be stopped if "end of children
+  // marker" is missing, SiblingIdx is always zero for root die). That is why we
+  // do not use assertion for checking for "end of children marker" for root
+  // die.
+
+  // TODO: Instead of checking here for invalid die we might reject
+  // invalid dies at parsing stage(DWARFUnit::extractDIEsToVector).
+  if (getDIEIndex(Die) == 0 && DieArray.size() > 1 &&
+      DieArray.back().getTag() == dwarf::DW_TAG_null) {
+    // For the unit die we might take last item from DieArray.
+    assert(getDIEIndex(Die) == getDIEIndex(getUnitDIE()) && "Bad unit die");
+    return DWARFDie(this, &DieArray.back());
+  }
+
   return DWARFDie();
 }
 

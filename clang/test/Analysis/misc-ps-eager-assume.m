@@ -1,4 +1,4 @@
-// RUN: %clang_analyze_cc1 -analyzer-checker=core,alpha.core -analyzer-store=region -verify -fblocks %s
+// RUN: %clang_analyze_cc1 -analyzer-checker=core,alpha.core -verify -fblocks %s
 // expected-no-diagnostics
 
 // Delta-reduced header stuff (needed for test cases).
@@ -49,7 +49,7 @@ void handle_assign_of_condition(int x) {
 // a symbolic value for this variable, but in the branch condition it is
 // promoted to 'int'.  Currently the analyzer doesn't reason well about
 // promotions of symbolic values, so this test case tests the logic in
-// 'recoverCastedSymbol()' (GRExprEngine.cpp) to test that we recover
+// 'recoverCastedSymbol()' (ExprEngine.cpp) to test that we recover
 // path-sensitivity and use the symbol for 'needsAnArray' in the branch
 // condition.
 //
@@ -92,7 +92,7 @@ void pr3836(int *a, int *b) {
 
 void rdar7342806_aux(short x);
 
-void rdar7342806() {
+void rdar7342806(void) {
   extern short Count;
   extern short Flag1;
 
@@ -125,10 +125,10 @@ void rdar7342806() {
 
 //===---------------------------------------------------------------------===//
 // PR 5627 - http://llvm.org/bugs/show_bug.cgi?id=5627
-//  This test case depends on using -analyzer-config eagerly-assume=true and
-//  -analyzer-store=region.  The 'eagerly-assume=true' causes the path
+//  This test case depends on using -analyzer-config eagerly-assume=true.
+//  The 'eagerly-assume=true' causes the path
 //  to bifurcate when evaluating the function call argument, and a state
-//  caching bug in GRExprEngine::CheckerVisit (and friends) caused the store
+//  caching bug in ExprEngine::CheckerVisit (and friends) caused the store
 //  to 'p' to not be evaluated along one path, but then an autotransition caused
 //  the path to keep on propagating with 'p' still set to an undefined value.
 //  We would then get a bogus report of returning uninitialized memory.

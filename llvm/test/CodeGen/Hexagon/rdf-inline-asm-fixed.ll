@@ -1,9 +1,9 @@
 ; RUN: llc -march=hexagon < %s | FileCheck %s
 ; CHECK: r0 = #24
-; CHECK-NEXT: r1 =
+; CHECK: r1 =
 ; // R2 should be assigned a value from R3+.
-; CHECK-NEXT: r2 = r{{[3-9]}}
-; CHECK-NEXT: trap0
+; CHECK: r2 = r{{[3-9]}}
+; CHECK: trap0
 
 target datalayout = "e-m:e-p:32:32:32-i64:64:64-i32:32:32-i16:16:16-i1:8:8-f64:64:64-f32:32:32-v64:64:64-v32:32:32-a:0-n16:32"
 target triple = "hexagon"
@@ -15,7 +15,7 @@ entry:
   %0 = bitcast i32* %arg1 to i8*
   call void @llvm.lifetime.start.p0i8(i64 4, i8* %0) #2
   store i32 %status, i32* %arg1, align 4, !tbaa !1
-  %1 = call i32 asm sideeffect "r0 = #$1\0Ar1 = $2\0Ar2 = $4\0Atrap0 (#0)\0A$0 = r0", "=r,i,r,*m,r,~{r0},~{r1},~{r2}"(i32 24, i32* nonnull %arg1, i32* nonnull %arg1, i32 %status) #2, !srcloc !5
+  %1 = call i32 asm sideeffect "r0 = #$1\0Ar1 = $2\0Ar2 = $4\0Atrap0 (#0)\0A$0 = r0", "=r,i,r,*m,r,~{r0},~{r1},~{r2}"(i32 24, i32* nonnull %arg1, i32* elementtype(i32) nonnull %arg1, i32 %status) #2, !srcloc !5
   call void @llvm.lifetime.end.p0i8(i64 4, i8* %0) #2
   ret i32 %1
 }

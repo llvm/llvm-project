@@ -15,17 +15,21 @@ from copy import copy
 from pathlib import PurePath
 from collections import defaultdict, OrderedDict
 
-from dex.utils.Exceptions import CommandParseError
+from dex.utils.Exceptions import CommandParseError, NonFloatValueInCommand
 
 from dex.command.CommandBase import CommandBase
+from dex.command.commands.DexCommandLine import DexCommandLine
 from dex.command.commands.DexDeclareFile import DexDeclareFile
+from dex.command.commands.DexDeclareAddress import DexDeclareAddress
 from dex.command.commands.DexExpectProgramState import DexExpectProgramState
 from dex.command.commands.DexExpectStepKind import DexExpectStepKind
 from dex.command.commands.DexExpectStepOrder import DexExpectStepOrder
 from dex.command.commands.DexExpectWatchType import DexExpectWatchType
 from dex.command.commands.DexExpectWatchValue import DexExpectWatchValue
+from dex.command.commands.DexExpectWatchBase import AddressExpression, DexExpectWatchBase
 from dex.command.commands.DexLabel import DexLabel
 from dex.command.commands.DexLimitSteps import DexLimitSteps
+from dex.command.commands.DexFinishTest import DexFinishTest
 from dex.command.commands.DexUnreachable import DexUnreachable
 from dex.command.commands.DexWatch import DexWatch
 from dex.utils import Timer
@@ -38,6 +42,8 @@ def _get_valid_commands():
         { name (str): command (class) }
     """
     return {
+      DexCommandLine.get_name() : DexCommandLine,
+      DexDeclareAddress.get_name() : DexDeclareAddress,
       DexDeclareFile.get_name() : DexDeclareFile,
       DexExpectProgramState.get_name() : DexExpectProgramState,
       DexExpectStepKind.get_name() : DexExpectStepKind,
@@ -46,6 +52,7 @@ def _get_valid_commands():
       DexExpectWatchValue.get_name() : DexExpectWatchValue,
       DexLabel.get_name() : DexLabel,
       DexLimitSteps.get_name() : DexLimitSteps,
+      DexFinishTest.get_name() : DexFinishTest,
       DexUnreachable.get_name() : DexUnreachable,
       DexWatch.get_name() : DexWatch
     }
@@ -71,7 +78,7 @@ def _merge_subcommands(command_name: str, valid_commands: dict) -> dict:
     return valid_commands
 
 
-def _build_command(command_type, labels, raw_text: str, path: str, lineno: str) -> CommandBase:
+def _build_command(command_type, labels, addresses, raw_text: str, path: str, lineno: str) -> CommandBase:
     """Build a command object from raw text.
 
     This function will call eval().
@@ -88,9 +95,15 @@ def _build_command(command_type, labels, raw_text: str, path: str, lineno: str) 
             return line
         raise format_unresolved_label_err(label_name, raw_text, path, lineno)
 
+    def get_address_object(address_name: str, offset: int=0):
+        if address_name not in addresses:
+            raise format_undeclared_address_err(address_name, raw_text, path, lineno)
+        return AddressExpression(address_name, offset)
+
     valid_commands = _merge_subcommands(
         command_type.get_name(), {
             'ref': label_to_line,
+            'address': get_address_object,
             command_type.get_name(): command_type,
         })
 
@@ -176,6 +189,14 @@ def format_unresolved_label_err(label: str, src: str, filename: str, lineno) -> 
     err.info = f'Unresolved label: \'{label}\''
     return err
 
+def format_undeclared_address_err(address: str, src: str, filename: str, lineno) -> CommandParseError:
+    err = CommandParseError()
+    err.src = src
+    err.caret = '' # Don't bother trying to point to the bad address.
+    err.filename = filename
+    err.lineno = lineno
+    err.info = f'Undeclared address: \'{address}\''
+    return err
 
 def format_parse_err(msg: str, path: str, lines: list, point: TextPoint) -> CommandParseError:
     err = CommandParseError()
@@ -208,9 +229,25 @@ def add_line_label(labels, label, cmd_path, cmd_lineno):
         raise err
     labels[label.eval()] = label.get_line()
 
+def add_address(addresses, address, cmd_path, cmd_lineno):
+    # Enforce unique address variables.
+    address_name = address.get_address_name()
+    if address_name in addresses:
+        err = CommandParseError()
+        err.info = f'Found duplicate address: \'{address_name}\''
+        err.lineno = cmd_lineno
+        err.filename = cmd_path
+        err.src = address.raw_text
+        # Don't both trying to point to it since we're only printing the raw
+        # command, which isn't much text.
+        err.caret = ''
+        raise err
+    addresses.append(address_name)
 
 def _find_all_commands_in_file(path, file_lines, valid_commands, source_root_dir):
     labels = {} # dict of {name: line}.
+    addresses = [] # list of addresses.
+    address_resolutions = {}
     cmd_path = path
     declared_files = set()
     commands = defaultdict(dict)
@@ -256,6 +293,7 @@ def _find_all_commands_in_file(path, file_lines, valid_commands, source_root_dir
                 command = _build_command(
                     valid_commands[command_name],
                     labels,
+                    addresses,
                     raw_text,
                     cmd_path,
                     cmd_point.get_lineno(),
@@ -272,9 +310,15 @@ def _find_all_commands_in_file(path, file_lines, valid_commands, source_root_dir
                 err_point = copy(cmd_point)
                 err_point.char += len(command_name)
                 raise format_parse_err(str(e), path, file_lines, err_point)
+            except NonFloatValueInCommand as e:
+                err_point = copy(cmd_point)
+                err_point.char += len(command_name)
+                raise format_parse_err(str(e), path, file_lines, err_point)
             else:
                 if type(command) is DexLabel:
                     add_line_label(labels, command, path, cmd_point.get_lineno())
+                elif type(command) is DexDeclareAddress:
+                    add_address(addresses, command, path, cmd_point.get_lineno())
                 elif type(command) is DexDeclareFile:
                     cmd_path = command.declared_file
                     if not os.path.isabs(cmd_path):
@@ -284,6 +328,10 @@ def _find_all_commands_in_file(path, file_lines, valid_commands, source_root_dir
                     # TODO: keep stored paths as PurePaths for 'longer'.
                     cmd_path = str(PurePath(cmd_path))
                     declared_files.add(cmd_path)
+                elif type(command) is DexCommandLine and 'DexCommandLine' in commands:
+                    msg = "More than one DexCommandLine in file"
+                    raise format_parse_err(msg, path, file_lines, err_point)
+
                 assert (path, cmd_point) not in commands[command_name], (
                     command_name, commands[command_name])
                 commands[command_name][path, cmd_point] = command

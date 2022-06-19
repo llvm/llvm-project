@@ -56,12 +56,14 @@ llvm::raw_ostream &ConstantBase<RESULT, VALUE>::AsFortran(
     } else if constexpr (Result::category == TypeCategory::Character) {
       o << Result::kind << '_' << parser::QuoteCharacterLiteral(value, true);
     } else if constexpr (Result::category == TypeCategory::Logical) {
-      if (value.IsTrue()) {
-        o << ".true.";
+      if (!value.IsCanonical()) {
+        o << "transfer(" << value.word().ToInt64() << "_8,.false._"
+          << Result::kind << ')';
+      } else if (value.IsTrue()) {
+        o << ".true." << '_' << Result::kind;
       } else {
-        o << ".false.";
+        o << ".false." << '_' << Result::kind;
       }
-      o << '_' << Result::kind;
     } else {
       StructureConstructor{result_.derivedTypeSpec(), value}.AsFortran(o);
     }
@@ -109,7 +111,7 @@ llvm::raw_ostream &ActualArgument::AsFortran(llvm::raw_ostream &o) const {
   if (keyword_) {
     o << keyword_->ToString() << '=';
   }
-  std::visit(
+  common::visit(
       common::visitors{
           [&](const common::CopyableIndirection<Expr<SomeType>> &expr) {
             expr.value().AsFortran(o);
@@ -225,7 +227,7 @@ template <typename T> static Precedence ToPrecedence(const Constant<T> &x) {
   return Precedence::Top;
 }
 template <typename T> static Precedence ToPrecedence(const Expr<T> &expr) {
-  return std::visit([](const auto &x) { return ToPrecedence(x); }, expr.u);
+  return common::visit([](const auto &x) { return ToPrecedence(x); }, expr.u);
 }
 
 template <typename T> static bool IsNegatedScalarConstant(const Expr<T> &expr) {
@@ -240,7 +242,7 @@ template <typename T> static bool IsNegatedScalarConstant(const Expr<T> &expr) {
 
 template <TypeCategory CAT>
 static bool IsNegatedScalarConstant(const Expr<SomeKind<CAT>> &expr) {
-  return std::visit(
+  return common::visit(
       [](const auto &x) { return IsNegatedScalarConstant(x); }, expr.u);
 }
 
@@ -371,7 +373,7 @@ llvm::raw_ostream &Convert<TO, FROMCAT>::AsFortran(llvm::raw_ostream &o) const {
 }
 
 llvm::raw_ostream &Relational<SomeType>::AsFortran(llvm::raw_ostream &o) const {
-  std::visit([&](const auto &rel) { rel.AsFortran(o); }, u);
+  common::visit([&](const auto &rel) { rel.AsFortran(o); }, u);
   return o;
 }
 
@@ -402,7 +404,7 @@ llvm::raw_ostream &EmitArray(
   const char *sep{""};
   for (const auto &value : values) {
     o << sep;
-    std::visit([&](const auto &x) { EmitArray(o, x); }, value.u);
+    common::visit([&](const auto &x) { EmitArray(o, x); }, value.u);
     sep = ",";
   }
   return o;
@@ -442,17 +444,17 @@ std::string ExpressionBase<RESULT>::AsFortran() const {
 template <typename RESULT>
 llvm::raw_ostream &ExpressionBase<RESULT>::AsFortran(
     llvm::raw_ostream &o) const {
-  std::visit(common::visitors{
-                 [&](const BOZLiteralConstant &x) {
-                   o << "z'" << x.Hexadecimal() << "'";
-                 },
-                 [&](const NullPointer &) { o << "NULL()"; },
-                 [&](const common::CopyableIndirection<Substring> &s) {
-                   s.value().AsFortran(o);
-                 },
-                 [&](const ImpliedDoIndex &i) { o << i.name.ToString(); },
-                 [&](const auto &x) { x.AsFortran(o); },
-             },
+  common::visit(common::visitors{
+                    [&](const BOZLiteralConstant &x) {
+                      o << "z'" << x.Hexadecimal() << "'";
+                    },
+                    [&](const NullPointer &) { o << "NULL()"; },
+                    [&](const common::CopyableIndirection<Substring> &s) {
+                      s.value().AsFortran(o);
+                    },
+                    [&](const ImpliedDoIndex &i) { o << i.name.ToString(); },
+                    [&](const auto &x) { x.AsFortran(o); },
+                },
       derived().u);
   return o;
 }
@@ -606,7 +608,7 @@ llvm::raw_ostream &EmitVar(llvm::raw_ostream &o, const std::shared_ptr<A> &p) {
 
 template <typename... A>
 llvm::raw_ostream &EmitVar(llvm::raw_ostream &o, const std::variant<A...> &u) {
-  std::visit([&](const auto &x) { EmitVar(o, x); }, u);
+  common::visit([&](const auto &x) { EmitVar(o, x); }, u);
   return o;
 }
 
@@ -627,10 +629,10 @@ llvm::raw_ostream &Component::AsFortran(llvm::raw_ostream &o) const {
 }
 
 llvm::raw_ostream &NamedEntity::AsFortran(llvm::raw_ostream &o) const {
-  std::visit(common::visitors{
-                 [&](SymbolRef s) { EmitVar(o, s); },
-                 [&](const Component &c) { c.AsFortran(o); },
-             },
+  common::visit(common::visitors{
+                    [&](SymbolRef s) { EmitVar(o, s); },
+                    [&](const Component &c) { c.AsFortran(o); },
+                },
       u_);
   return o;
 }
@@ -710,10 +712,10 @@ llvm::raw_ostream &ProcedureDesignator::AsFortran(llvm::raw_ostream &o) const {
 
 template <typename T>
 llvm::raw_ostream &Designator<T>::AsFortran(llvm::raw_ostream &o) const {
-  std::visit(common::visitors{
-                 [&](SymbolRef symbol) { EmitVar(o, symbol); },
-                 [&](const auto &x) { x.AsFortran(o); },
-             },
+  common::visit(common::visitors{
+                    [&](SymbolRef symbol) { EmitVar(o, symbol); },
+                    [&](const auto &x) { x.AsFortran(o); },
+                },
       u);
   return o;
 }
@@ -730,24 +732,27 @@ llvm::raw_ostream &DescriptorInquiry::AsFortran(llvm::raw_ostream &o) const {
     o << "%STRIDE(";
     break;
   case Field::Rank:
-    o << "rank(";
+    o << "int(rank(";
     break;
   case Field::Len:
+    o << "int(";
     break;
   }
   base_.AsFortran(o);
   if (field_ == Field::Len) {
-    return o << "%len";
+    o << "%len";
+  } else if (field_ == Field::Rank) {
+    o << ")";
   } else {
     if (dimension_ >= 0) {
       o << ",dim=" << (dimension_ + 1);
     }
-    return o << ')';
   }
+  return o << ",kind=" << DescriptorInquiry::Result::kind << ")";
 }
 
 llvm::raw_ostream &Assignment::AsFortran(llvm::raw_ostream &o) const {
-  std::visit(
+  common::visit(
       common::visitors{
           [&](const Assignment::Intrinsic &) {
             rhs.AsFortran(lhs.AsFortran(o) << '=');
@@ -783,6 +788,9 @@ llvm::raw_ostream &Assignment::AsFortran(llvm::raw_ostream &o) const {
   return o;
 }
 
+#ifdef _MSC_VER // disable bogus warning about missing definitions
+#pragma warning(disable : 4661)
+#endif
 INSTANTIATE_CONSTANT_TEMPLATES
 INSTANTIATE_EXPRESSION_TEMPLATES
 INSTANTIATE_VARIABLE_TEMPLATES

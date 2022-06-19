@@ -1,17 +1,17 @@
-// RUN: mlir-opt %s -mlir-disable-threading=true -pass-pipeline='func(cse,canonicalize)' -print-ir-before=cse  -o /dev/null 2>&1 | FileCheck -check-prefix=BEFORE %s
-// RUN: mlir-opt %s -mlir-disable-threading=true -pass-pipeline='func(cse,canonicalize)' -print-ir-before-all -o /dev/null 2>&1 | FileCheck -check-prefix=BEFORE_ALL %s
-// RUN: mlir-opt %s -mlir-disable-threading=true -pass-pipeline='func(cse,canonicalize)' -print-ir-after=cse -o /dev/null 2>&1 | FileCheck -check-prefix=AFTER %s
-// RUN: mlir-opt %s -mlir-disable-threading=true -pass-pipeline='func(cse,canonicalize)' -print-ir-after-all -o /dev/null 2>&1 | FileCheck -check-prefix=AFTER_ALL %s
-// RUN: mlir-opt %s -mlir-disable-threading=true -pass-pipeline='func(cse,canonicalize)' -print-ir-before=cse -print-ir-module-scope -o /dev/null 2>&1 | FileCheck -check-prefix=BEFORE_MODULE %s
-// RUN: mlir-opt %s -mlir-disable-threading=true -pass-pipeline='func(cse,cse)' -print-ir-after-all -print-ir-after-change -o /dev/null 2>&1 | FileCheck -check-prefix=AFTER_ALL_CHANGE %s
-// RUN: not mlir-opt %s -mlir-disable-threading=true -pass-pipeline='func(cse,test-pass-failure)' -print-ir-after-failure -o /dev/null 2>&1 | FileCheck -check-prefix=AFTER_FAILURE %s
+// RUN: mlir-opt %s -mlir-disable-threading=true -pass-pipeline='func.func(cse,canonicalize)' -mlir-print-ir-before=cse  -o /dev/null 2>&1 | FileCheck -check-prefix=BEFORE %s
+// RUN: mlir-opt %s -mlir-disable-threading=true -pass-pipeline='func.func(cse,canonicalize)' -mlir-print-ir-before-all -o /dev/null 2>&1 | FileCheck -check-prefix=BEFORE_ALL %s
+// RUN: mlir-opt %s -mlir-disable-threading=true -pass-pipeline='func.func(cse,canonicalize)' -mlir-print-ir-after=cse -o /dev/null 2>&1 | FileCheck -check-prefix=AFTER %s
+// RUN: mlir-opt %s -mlir-disable-threading=true -pass-pipeline='func.func(cse,canonicalize)' -mlir-print-ir-after-all -o /dev/null 2>&1 | FileCheck -check-prefix=AFTER_ALL %s
+// RUN: mlir-opt %s -mlir-disable-threading=true -pass-pipeline='func.func(cse,canonicalize)' -mlir-print-ir-before=cse -mlir-print-ir-module-scope -o /dev/null 2>&1 | FileCheck -check-prefix=BEFORE_MODULE %s
+// RUN: mlir-opt %s -mlir-disable-threading=true -pass-pipeline='func.func(cse,cse)' -mlir-print-ir-after-all -mlir-print-ir-after-change -o /dev/null 2>&1 | FileCheck -check-prefix=AFTER_ALL_CHANGE %s
+// RUN: not mlir-opt %s -mlir-disable-threading=true -pass-pipeline='func.func(cse,test-pass-failure)' -mlir-print-ir-after-failure -o /dev/null 2>&1 | FileCheck -check-prefix=AFTER_FAILURE %s
 
-func @foo() {
-  %0 = constant 0 : i32
+func.func @foo() {
+  %0 = arith.constant 0 : i32
   return
 }
 
-func @bar() {
+func.func @bar() {
   return
 }
 
@@ -49,10 +49,10 @@ func @bar() {
 // AFTER_ALL: // -----// IR Dump After{{.*}}Canonicalizer //----- //
 // AFTER_ALL-NEXT: func @bar()
 
-// BEFORE_MODULE: // -----// IR Dump Before{{.*}}CSE ('func' operation: @foo) //----- //
+// BEFORE_MODULE: // -----// IR Dump Before{{.*}}CSE ('func.func' operation: @foo) //----- //
 // BEFORE_MODULE: func @foo()
 // BEFORE_MODULE: func @bar()
-// BEFORE_MODULE: // -----// IR Dump Before{{.*}}CSE ('func' operation: @bar) //----- //
+// BEFORE_MODULE: // -----// IR Dump Before{{.*}}CSE ('func.func' operation: @bar) //----- //
 // BEFORE_MODULE: func @foo()
 // BEFORE_MODULE: func @bar()
 
@@ -64,3 +64,4 @@ func @bar() {
 
 // AFTER_FAILURE-NOT: // -----// IR Dump After{{.*}}CSE
 // AFTER_FAILURE: // -----// IR Dump After{{.*}}TestFailurePass Failed //----- //
+// AFTER_FAILURE: func @foo()

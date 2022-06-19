@@ -21,7 +21,8 @@ auto f = '\xE2\x8C\x98'; // expected-warning {{multi-character character constan
 char16_t g = u'ab'; // expected-error {{Unicode character literals may not contain multiple characters}}
 char16_t h = u'\U0010FFFD'; // expected-error {{character too large for enclosing character literal type}}
 
-wchar_t i = L'ab'; // expected-warning {{extraneous characters in character constant ignored}}
+wchar_t i = L'ab'; // expected-error {{wide character literals may not contain multiple characters}}
+
 wchar_t j = L'\U0010FFFD';
 
 char32_t k = U'\U0010FFFD';

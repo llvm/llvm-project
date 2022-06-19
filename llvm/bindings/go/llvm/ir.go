@@ -1277,7 +1277,7 @@ func (v Value) AddCallSiteAttribute(i int, a Attribute) {
 	C.LLVMAddCallSiteAttribute(v.C, C.LLVMAttributeIndex(i), a.C)
 }
 func (v Value) SetInstrParamAlignment(i int, align int) {
-	C.LLVMSetInstrParamAlignment(v.C, C.unsigned(i), C.unsigned(align))
+	C.LLVMSetInstrParamAlignment(v.C, C.LLVMAttributeIndex(i), C.unsigned(align))
 }
 func (v Value) CalledValue() (rv Value) {
 	rv.C = C.LLVMGetCalledValue(v.C)

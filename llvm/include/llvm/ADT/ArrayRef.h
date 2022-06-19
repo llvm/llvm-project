@@ -25,8 +25,7 @@
 #include <vector>
 
 namespace llvm {
-
-  template<typename T> struct DenseMapInfo;
+  template<typename T> class LLVM_NODISCARD MutableArrayRef;
 
   /// ArrayRef - Represent a constant reference to an array (0 or more elements
   /// consecutively in memory), i.e. a start pointer and a length.  It allows
@@ -143,7 +142,7 @@ namespace llvm {
     template <typename U, typename A>
     ArrayRef(const std::vector<U *, A> &Vec,
              std::enable_if_t<std::is_convertible<U *const *, T const *>::value>
-                 * = 0)
+                 * = nullptr)
         : Data(Vec.data()), Length(Vec.size()) {}
 
     /// @}
@@ -177,10 +176,10 @@ namespace llvm {
     }
 
     // copy - Allocate copy in Allocator and return ArrayRef<T> to it.
-    template <typename Allocator> ArrayRef<T> copy(Allocator &A) {
+    template <typename Allocator> MutableArrayRef<T> copy(Allocator &A) {
       T *Buff = A.template Allocate<T>(Length);
       std::uninitialized_copy(begin(), end(), Buff);
-      return ArrayRef<T>(Buff, Length);
+      return MutableArrayRef<T>(Buff, Length);
     }
 
     /// equals - Check for element-wise equality.
@@ -541,6 +540,42 @@ namespace llvm {
     return MutableArrayRef<T>(data, length);
   }
 
+  /// Construct a MutableArrayRef from a SmallVector.
+  template <typename T>
+  MutableArrayRef<T> makeMutableArrayRef(SmallVectorImpl<T> &Vec) {
+    return Vec;
+  }
+
+  /// Construct a MutableArrayRef from a SmallVector.
+  template <typename T, unsigned N>
+  MutableArrayRef<T> makeMutableArrayRef(SmallVector<T, N> &Vec) {
+    return Vec;
+  }
+
+  /// Construct a MutableArrayRef from a std::vector.
+  template<typename T>
+  MutableArrayRef<T> makeMutableArrayRef(std::vector<T> &Vec) {
+    return Vec;
+  }
+
+  /// Construct a MutableArrayRef from a std::array.
+  template <typename T, std::size_t N>
+  MutableArrayRef<T> makeMutableArrayRef(std::array<T, N> &Arr) {
+    return Arr;
+  }
+
+  /// Construct a MutableArrayRef from a MutableArrayRef (no-op) (const)
+  template <typename T>
+  MutableArrayRef<T> makeMutableArrayRef(const MutableArrayRef<T> &Vec) {
+    return Vec;
+  }
+
+  /// Construct a MutableArrayRef from a C array.
+  template<typename T, size_t N>
+  MutableArrayRef<T> makeMutableArrayRef(T (&Arr)[N]) {
+    return MutableArrayRef<T>(Arr);
+  }
+
   /// @}
   /// @name ArrayRef Comparison Operators
   /// @{
@@ -572,7 +607,7 @@ namespace llvm {
   }
 
   // Provide DenseMapInfo for ArrayRefs.
-  template <typename T> struct DenseMapInfo<ArrayRef<T>> {
+  template <typename T> struct DenseMapInfo<ArrayRef<T>, void> {
     static inline ArrayRef<T> getEmptyKey() {
       return ArrayRef<T>(
           reinterpret_cast<const T *>(~static_cast<uintptr_t>(0)), size_t(0));

@@ -1,4 +1,4 @@
-; RUN: opt < %s -instcombine -S | FileCheck %s
+; RUN: opt < %s -passes=instcombine -S | FileCheck %s
 ; Formerly crashed, PR8490.
 
 define fastcc double @gimp_operation_color_balance_map(float %value, double %highlights) nounwind readnone inlinehint {

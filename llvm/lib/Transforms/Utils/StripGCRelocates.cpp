@@ -9,7 +9,7 @@
 // This is a little utility pass that removes the gc.relocates inserted by
 // RewriteStatepointsForGC. Note that the generated IR is incorrect,
 // but this is useful as a single pass in itself, for analysis of IR, without
-// the GC.relocates. The statepoint and gc.result instrinsics would still be
+// the GC.relocates. The statepoint and gc.result intrinsics would still be
 // present.
 //===----------------------------------------------------------------------===//
 
@@ -18,10 +18,8 @@
 #include "llvm/IR/InstIterator.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/Statepoint.h"
-#include "llvm/IR/Type.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
-#include "llvm/Support/raw_ostream.h"
 
 using namespace llvm;
 

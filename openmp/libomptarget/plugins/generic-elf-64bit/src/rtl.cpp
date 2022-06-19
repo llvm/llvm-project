@@ -41,7 +41,7 @@
 
 /// Array of Dynamic libraries loaded for this target.
 struct DynLibTy {
-  char *FileName;
+  std::string FileName;
   void *Handle;
 };
 
@@ -100,7 +100,7 @@ public:
     for (auto &lib : DynLibs) {
       if (lib.Handle) {
         dlclose(lib.Handle);
-        remove(lib.FileName);
+        remove(lib.FileName.c_str());
       }
     }
   }
@@ -248,6 +248,10 @@ __tgt_target_table *__tgt_rtl_load_binary(int32_t device_id,
   elf_end(e);
 
   return DeviceInfo.getOffloadEntriesTable(device_id);
+}
+
+void __tgt_rtl_print_device_info(int32_t device_id) {
+  printf("    This is a generic-elf-64bit device\n");
 }
 
 // Sample implementation of explicit memory allocator. For this plugin all kinds

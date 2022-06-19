@@ -72,7 +72,7 @@ my $AnalyzerTarget;
 # If on OSX, use xcrun to determine the SDK root.
 my $UseXCRUN = 0;
 
-if (`uname -a` =~ m/Darwin/) {
+if (`uname -s` =~ m/Darwin/) {
   $DefaultCCompiler = 'clang';
   $DefaultCXXCompiler = 'clang++';
   # Older versions of OSX do not have xcrun to
@@ -80,6 +80,9 @@ if (`uname -a` =~ m/Darwin/) {
   if (-x "/usr/bin/xcrun") {
     $UseXCRUN = 1;
   }
+} elsif (`uname -s` =~ m/(FreeBSD|OpenBSD)/) {
+  $DefaultCCompiler = 'cc';
+  $DefaultCXXCompiler = 'c++';
 } else {
   $DefaultCCompiler = 'gcc';
   $DefaultCXXCompiler = 'g++';

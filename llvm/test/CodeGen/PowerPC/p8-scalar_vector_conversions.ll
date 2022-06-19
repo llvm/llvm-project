@@ -170,7 +170,7 @@ define <2 x double> @buildd() {
 ;
 ; CHECK-AIX-LABEL: buildd:
 ; CHECK-AIX:       # %bb.0: # %entry
-; CHECK-AIX-NEXT:    ld 3, L..C0(2)
+; CHECK-AIX-NEXT:    ld 3, L..C0(2) # @d
 ; CHECK-AIX-NEXT:    lxvdsx 34, 0, 3
 ; CHECK-AIX-NEXT:    blr
 entry:
@@ -756,11 +756,6 @@ define zeroext i8 @getuc2(<16 x i8> %vuc) {
 entry:
   %vecext = extractelement <16 x i8> %vuc, i32 2
   ret i8 %vecext
-
-
-; CHECK-AIX mfvsrd 3, 34
-; CHECK-AIX rldicl 3, 3, 24, 56
-; CHECK-AIX clrldi 3, 3, 56
 }
 
 ; Function Attrs: norecurse nounwind readnone
@@ -2496,7 +2491,6 @@ entry:
   ret double %vecext
 
 
-; CHECK-AIXT: xxlor 1, 34, 34
 }
 
 ; Function Attrs: norecurse nounwind readnone
@@ -2520,8 +2514,6 @@ define double @getd1(<2 x double> %vd) {
 entry:
   %vecext = extractelement <2 x double> %vd, i32 1
   ret double %vecext
-
-
 }
 
 ; Function Attrs: norecurse nounwind readnone
@@ -2575,9 +2567,11 @@ define <2 x i64> @buildi2(i64 %arg, i32 %arg1) {
 ;
 ; CHECK-LE-LABEL: buildi2:
 ; CHECK-LE:       # %bb.0: # %entry
-; CHECK-LE-NEXT:    mtfprwz f0, r4
+; CHECK-LE-NEXT:    mtfprd f0, r4
 ; CHECK-LE-NEXT:    mtfprd f1, r3
-; CHECK-LE-NEXT:    xxmrgld v2, vs1, vs0
+; CHECK-LE-NEXT:    xxswapd vs0, vs0
+; CHECK-LE-NEXT:    xxswapd v2, vs1
+; CHECK-LE-NEXT:    xxmrgld v2, v2, vs0
 ; CHECK-LE-NEXT:    blr
 ;
 ; CHECK-AIX-LABEL: buildi2:

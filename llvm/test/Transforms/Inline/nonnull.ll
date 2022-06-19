@@ -1,5 +1,6 @@
 ; RUN: opt -S -inline %s | FileCheck %s
 ; RUN: opt -S -passes='cgscc(inline)' %s | FileCheck %s
+; RUN: opt -S -passes='module-inline' %s | FileCheck %s
 
 declare void @foo()
 declare void @bar()

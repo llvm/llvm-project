@@ -35,11 +35,71 @@ LLVM_ATTRIBUTE_UNUSED static std::ostream &operator<<(std::ostream &OS,
                                                       const RangeSet &Set) {
   return OS << toString(Set);
 }
+// We need it here for better fail diagnostics from gtest.
+LLVM_ATTRIBUTE_UNUSED static std::ostream &operator<<(std::ostream &OS,
+                                                      const Range &R) {
+  return OS << toString(R);
+}
+LLVM_ATTRIBUTE_UNUSED static std::ostream &operator<<(std::ostream &OS,
+                                                      APSIntType Ty) {
+  return OS << (Ty.isUnsigned() ? "u" : "s") << Ty.getBitWidth();
+}
 
 } // namespace ento
 } // namespace clang
 
 namespace {
+
+template <class T> constexpr bool is_signed_v = std::is_signed<T>::value;
+
+template <typename T> struct TestValues {
+  static constexpr T MIN = std::numeric_limits<T>::min();
+  static constexpr T MAX = std::numeric_limits<T>::max();
+  // MID is a value in the middle of the range
+  // which unary minus does not affect on,
+  // e.g. int8/int32(0), uint8(128), uint32(2147483648).
+  static constexpr T MID =
+      is_signed_v<T> ? 0 : ~(static_cast<T>(-1) / static_cast<T>(2));
+  static constexpr T A = MID - (MAX - MID) / 3 * 2;
+  static constexpr T B = MID - (MAX - MID) / 3;
+  static constexpr T C = -B;
+  static constexpr T D = -A;
+
+  static_assert(MIN < A && A < B && B < MID && MID < C && C < D && D < MAX,
+                "Values shall be in an ascending order");
+  // Clear bits in low bytes by the given amount.
+  template <T Value, size_t Bytes>
+  static constexpr T ClearLowBytes =
+      static_cast<T>(static_cast<uint64_t>(Value)
+                     << ((Bytes >= CHAR_BIT) ? 0 : Bytes) * CHAR_BIT);
+
+  template <T Value, typename Base>
+  static constexpr T TruncZeroOf = ClearLowBytes<Value + 1, sizeof(Base)>;
+
+  // Random number with active bits in every byte. 0xAAAA'AAAA
+  static constexpr T XAAA = static_cast<T>(
+      0b10101010'10101010'10101010'10101010'10101010'10101010'10101010'10101010);
+  template <typename Base>
+  static constexpr T XAAATruncZeroOf = TruncZeroOf<XAAA, Base>; // 0xAAAA'AB00
+
+  // Random number with active bits in every byte. 0x5555'5555
+  static constexpr T X555 = static_cast<T>(
+      0b01010101'01010101'01010101'01010101'01010101'01010101'01010101'01010101);
+  template <typename Base>
+  static constexpr T X555TruncZeroOf = TruncZeroOf<X555, Base>; // 0x5555'5600
+
+  // Numbers for ranges with the same bits in the lowest byte.
+  // 0xAAAA'AA2A
+  static constexpr T FromA = ClearLowBytes<XAAA, sizeof(T) - 1> + 42;
+  static constexpr T ToA = FromA + 2; // 0xAAAA'AA2C
+  // 0x5555'552A
+  static constexpr T FromB = ClearLowBytes<X555, sizeof(T) - 1> + 42;
+  static constexpr T ToB = FromB + 2; // 0x5555'552C
+};
+
+template <typename T>
+static constexpr APSIntType APSIntTy =
+    APSIntType(sizeof(T) * CHAR_BIT, !is_signed_v<T>);
 
 template <typename BaseType> class RangeSetTest : public testing::Test {
 public:
@@ -52,34 +112,24 @@ public:
   // End init block
 
   using Self = RangeSetTest<BaseType>;
-  using RawRange = std::pair<BaseType, BaseType>;
-  using RawRangeSet = std::initializer_list<RawRange>;
+  template <typename T> using RawRangeT = std::pair<T, T>;
+  template <typename T>
+  using RawRangeSetT = std::initializer_list<RawRangeT<T>>;
+  using RawRange = RawRangeT<BaseType>;
+  using RawRangeSet = RawRangeSetT<BaseType>;
 
-  static constexpr BaseType getMin() {
-    return std::numeric_limits<BaseType>::min();
-  }
-  static constexpr BaseType getMax() {
-    return std::numeric_limits<BaseType>::max();
-  }
-  static constexpr BaseType getMid() {
-    return isSigned() ? 0 : ~(fromInt(-1) / fromInt(2));
-  }
-
-  static constexpr bool isSigned() { return std::is_signed<BaseType>::value; }
-  static constexpr BaseType fromInt(int X) { return static_cast<BaseType>(X); }
-
-  static llvm::APSInt Base;
-  const llvm::APSInt &from(BaseType X) {
-    llvm::APSInt Dummy = Base;
-    Dummy = X;
-    return BVF.getValue(Dummy);
+  template <typename T> const llvm::APSInt &from(T X) {
+    static llvm::APSInt Int = APSIntTy<T>.getZeroValue();
+    Int = X;
+    return BVF.getValue(Int);
   }
 
-  Range from(const RawRange &Init) {
+  template <typename T> Range from(const RawRangeT<T> &Init) {
     return Range(from(Init.first), from(Init.second));
   }
 
-  RangeSet from(const RawRangeSet &Init) {
+  template <typename T>
+  RangeSet from(RawRangeSetT<T> Init, APSIntType Ty = APSIntTy<BaseType>) {
     RangeSet RangeSet = F.getEmptySet();
     for (const auto &Raw : Init) {
       RangeSet = F.add(RangeSet, from(Raw));
@@ -160,11 +210,34 @@ public:
 
   void checkAdd(RawRangeSet RawLHS, RawRangeSet RawRHS,
                 RawRangeSet RawExpected) {
-    wrap(&Self::checkAddImpl<RangeSet>, RawRHS, RawLHS, RawExpected);
+    wrap(&Self::checkAddImpl<RangeSet>, RawLHS, RawRHS, RawExpected);
   }
 
   void checkAdd(RawRangeSet RawLHS, BaseType RawRHS, RawRangeSet RawExpected) {
     wrap(&Self::checkAddImpl<const llvm::APSInt &>, RawLHS, RawRHS,
+         RawExpected);
+  }
+
+  template <class RHSType>
+  void checkUniteImpl(RangeSet LHS, RHSType RHS, RangeSet Expected) {
+    RangeSet Result = F.unite(LHS, RHS);
+    EXPECT_EQ(Result, Expected)
+        << "while uniting " << toString(LHS) << " and " << toString(RHS);
+  }
+
+  void checkUnite(RawRangeSet RawLHS, RawRange RawRHS,
+                  RawRangeSet RawExpected) {
+    wrap(&Self::checkUniteImpl<Range>, RawLHS, RawRHS, RawExpected);
+  }
+
+  void checkUnite(RawRangeSet RawLHS, RawRangeSet RawRHS,
+                  RawRangeSet RawExpected) {
+    wrap(&Self::checkUniteImpl<RangeSet>, RawLHS, RawRHS, RawExpected);
+  }
+
+  void checkUnite(RawRangeSet RawLHS, BaseType RawRHS,
+                  RawRangeSet RawExpected) {
+    wrap(&Self::checkUniteImpl<const llvm::APSInt &>, RawLHS, RawRHS,
          RawExpected);
   }
 
@@ -179,33 +252,34 @@ public:
                    RawRangeSet RawExpected) {
     wrap(&Self::checkDeleteImpl, Point, RawFrom, RawExpected);
   }
+
+  void checkCastToImpl(RangeSet What, APSIntType Ty, RangeSet Expected) {
+    RangeSet Result = F.castTo(What, Ty);
+    EXPECT_EQ(Result, Expected)
+        << "while casting " << toString(What) << " to " << Ty;
+  }
+
+  template <typename From, typename To>
+  void checkCastTo(RawRangeSetT<From> What, RawRangeSetT<To> Expected) {
+    static constexpr APSIntType FromTy = APSIntTy<From>;
+    static constexpr APSIntType ToTy = APSIntTy<To>;
+    this->checkCastToImpl(from(What, FromTy), ToTy, from(Expected, ToTy));
+  }
 };
-
-} // namespace
-
-template <typename BaseType>
-llvm::APSInt RangeSetTest<BaseType>::Base{sizeof(BaseType) * 8, !isSigned()};
 
 using IntTypes = ::testing::Types<int8_t, uint8_t, int16_t, uint16_t, int32_t,
                                   uint32_t, int64_t, uint64_t>;
 TYPED_TEST_SUITE(RangeSetTest, IntTypes, );
 
 TYPED_TEST(RangeSetTest, RangeSetNegateTest) {
-  // Use next values of the range {MIN, A, B, MID, C, D, MAX}.
-
-  constexpr TypeParam MIN = TestFixture::getMin();
-  constexpr TypeParam MAX = TestFixture::getMax();
-  // MID is a value in the middle of the range
-  // which unary minus does not affect on,
-  // e.g. int8/int32(0), uint8(128), uint32(2147483648).
-  constexpr TypeParam MID = TestFixture::getMid();
-  constexpr TypeParam A = MID - TestFixture::fromInt(42 + 42);
-  constexpr TypeParam B = MID - TestFixture::fromInt(42);
-  constexpr TypeParam C = -B;
-  constexpr TypeParam D = -A;
-
-  static_assert(MIN < A && A < B && B < MID && MID < C && C < D && D < MAX,
-                "Values shall be in an ascending order");
+  using TV = TestValues<TypeParam>;
+  constexpr auto MIN = TV::MIN;
+  constexpr auto MAX = TV::MAX;
+  constexpr auto MID = TV::MID;
+  constexpr auto A = TV::A;
+  constexpr auto B = TV::B;
+  constexpr auto C = TV::C;
+  constexpr auto D = TV::D;
 
   this->checkNegate({{MIN, A}}, {{MIN, MIN}, {D, MAX}});
   this->checkNegate({{MIN, C}}, {{MIN, MIN}, {B, MAX}});
@@ -234,8 +308,9 @@ TYPED_TEST(RangeSetTest, RangeSetPointIntersectTest) {
 }
 
 TYPED_TEST(RangeSetTest, RangeSetRangeIntersectTest) {
-  constexpr TypeParam MIN = TestFixture::getMin();
-  constexpr TypeParam MAX = TestFixture::getMax();
+  using TV = TestValues<TypeParam>;
+  constexpr auto MIN = TV::MIN;
+  constexpr auto MAX = TV::MAX;
 
   // Check that we can correctly intersect empty sets.
   this->checkIntersect({}, 10, 20, {});
@@ -300,9 +375,11 @@ TYPED_TEST(RangeSetTest, RangeSetContainsTest) {
   this->checkContains({{0, 5}, {10, 12}, {15, 20}}, 10, true);
   this->checkContains({{0, 5}, {5, 7}, {8, 10}, {12, 41}}, 10, true);
 
-  constexpr TypeParam MIN = TestFixture::getMin();
-  constexpr TypeParam MAX = TestFixture::getMax();
-  constexpr TypeParam MID = TestFixture::getMid();
+  using TV = TestValues<TypeParam>;
+  constexpr auto MIN = TV::MIN;
+  constexpr auto MAX = TV::MAX;
+  constexpr auto MID = TV::MID;
+
   this->checkContains({{MIN, MAX}}, 0, true);
   this->checkContains({{MIN, MAX}}, MID, true);
   this->checkContains({{MIN, MAX}}, -10, true);
@@ -331,9 +408,10 @@ TYPED_TEST(RangeSetTest, RangeSetAddTest) {
 }
 
 TYPED_TEST(RangeSetTest, RangeSetDeletePointTest) {
-  constexpr TypeParam MIN = TestFixture::getMin();
-  constexpr TypeParam MAX = TestFixture::getMax();
-  constexpr TypeParam MID = TestFixture::getMid();
+  using TV = TestValues<TypeParam>;
+  constexpr auto MIN = TV::MIN;
+  constexpr auto MAX = TV::MAX;
+  constexpr auto MID = TV::MID;
 
   this->checkDelete(MID, {{MIN, MAX}}, {{MIN, MID - 1}, {MID + 1, MAX}});
   // Check that delete works with an empty set.
@@ -347,3 +425,658 @@ TYPED_TEST(RangeSetTest, RangeSetDeletePointTest) {
   // Check that delete of the point not from the range set works as expected.
   this->checkDelete(10, {{0, 5}, {20, 30}}, {{0, 5}, {20, 30}});
 }
+
+TYPED_TEST(RangeSetTest, RangeSetUniteTest) {
+  using TV = TestValues<TypeParam>;
+  constexpr auto MIN = TV::MIN;
+  constexpr auto MAX = TV::MAX;
+  constexpr auto MID = TV::MID;
+  constexpr auto A = TV::A;
+  constexpr auto B = TV::B;
+  constexpr auto C = TV::C;
+  constexpr auto D = TV::D;
+
+  // LHS and RHS is empty.
+  // RHS =>
+  // LHS =>                     =
+  //        ___________________   ___________________
+  this->checkUnite({}, {}, {});
+
+  // RHS is empty.
+  // RHS =>
+  // LHS =>        _____        =        _____
+  //        ______/_____\______   ______/_____\______
+  this->checkUnite({{A, B}}, {}, {{A, B}});
+  this->checkUnite({{A, B}, {C, D}}, {}, {{A, B}, {C, D}});
+  this->checkUnite({{MIN, MIN}}, {}, {{MIN, MIN}});
+  this->checkUnite({{MAX, MAX}}, {}, {{MAX, MAX}});
+  this->checkUnite({{MIN, MIN}, {MAX, MAX}}, {}, {{MIN, MIN}, {MAX, MAX}});
+
+  // LHS is empty.
+  // RHS =>         ___
+  // LHS =>        /   \        =        _____
+  //        ______/_____\______   ______/_____\______
+  this->checkUnite({}, B, {{B, B}});
+  this->checkUnite({}, {B, C}, {{B, C}});
+  this->checkUnite({}, {{MIN, B}, {C, MAX}}, {{MIN, B}, {C, MAX}});
+  this->checkUnite({}, {{MIN, MIN}}, {{MIN, MIN}});
+  this->checkUnite({}, {{MAX, MAX}}, {{MAX, MAX}});
+  this->checkUnite({}, {{MIN, MIN}, {MAX, MAX}}, {{MIN, MIN}, {MAX, MAX}});
+
+  // RHS is detached from LHS.
+  // RHS =>             ___
+  // LHS =>    ___     /   \    =    ___     _____
+  //        __/___\___/_____\__   __/___\___/_____\__
+  this->checkUnite({{A, C}}, D, {{A, C}, {D, D}});
+  this->checkUnite({{MID, C}, {D, MAX}}, A, {{A, A}, {MID, C}, {D, MAX}});
+  this->checkUnite({{A, B}}, {MID, D}, {{A, B}, {MID, D}});
+  this->checkUnite({{MIN, A}, {D, MAX}}, {B, C}, {{MIN, A}, {B, C}, {D, MAX}});
+  this->checkUnite({{B, MID}, {D, MAX}}, {{MIN, A}, {C, C}},
+                   {{MIN, A}, {B, MID}, {C, C}, {D, MAX}});
+  this->checkUnite({{MIN, A}, {C, C}}, {{B, MID}, {D, MAX}},
+                   {{MIN, A}, {B, MID}, {C, C}, {D, MAX}});
+  this->checkUnite({{A, B}}, {{MAX, MAX}}, {{A, B}, {MAX, MAX}});
+  this->checkUnite({{MIN, MIN}}, {A, B}, {{MIN, MIN}, {A, B}});
+  this->checkUnite({{MIN, MIN}}, {MAX, MAX}, {{MIN, MIN}, {MAX, MAX}});
+
+  // RHS is inside LHS.
+  // RHS =>         ___
+  // LHS =>     ___/___\___     =     ___________
+  //        ___/__/_____\__\___   ___/___________\___
+  this->checkUnite({{A, C}}, MID, {{A, C}});
+  this->checkUnite({{A, D}}, {B, C}, {{A, D}});
+  this->checkUnite({{MIN, MAX}}, {B, C}, {{MIN, MAX}});
+
+  // RHS wraps LHS.
+  // RHS =>      _________
+  // LHS =>     /  _____  \     =     ___________
+  //        ___/__/_____\__\___   ___/___________\___
+  this->checkUnite({{MID, MID}}, {A, D}, {{A, D}});
+  this->checkUnite({{B, C}}, {A, D}, {{A, D}});
+  this->checkUnite({{A, B}}, {MIN, MAX}, {{MIN, MAX}});
+
+  // RHS equals to LHS.
+  // RHS =>      _________
+  // LHS =>     /_________\     =     ___________
+  //        ___/___________\___   ___/___________\___
+  this->checkUnite({{MIN, MIN}}, MIN, {{MIN, MIN}});
+  this->checkUnite({{A, B}}, {A, B}, {{A, B}});
+  this->checkUnite({{MAX, MAX}}, {{MAX, MAX}}, {{MAX, MAX}});
+  this->checkUnite({{MIN, MIN}}, {{MIN, MIN}}, {{MIN, MIN}});
+  this->checkUnite({{MIN, MIN}, {MAX, MAX}}, {{MIN, MIN}, {MAX, MAX}},
+                   {{MIN, MIN}, {MAX, MAX}});
+
+  // RHS edge is MIN and attached and inside LHS.
+  // RHS =>   _____
+  // LHS =>  /_____\_____     =  ___________
+  //        /_______\____\___   /___________\___
+  this->checkUnite({{MIN, A}}, {MIN, B}, {{MIN, B}});
+
+  // RHS edge is MIN and attached and outsude LHS.
+  // RHS =>   __________
+  // LHS =>  /______    \     =  ___________
+  //        /_______\____\___   /___________\___
+  this->checkUnite({{MIN, B}}, {MIN, A}, {{MIN, B}});
+
+  // RHS intersects right of LHS.
+  // RHS =>         ______
+  // LHS =>     ___/____  \     =     ___________
+  //        ___/__/_____\__\___   ___/___________\___
+  this->checkUnite({{A, C}}, C, {{A, C}});
+  this->checkUnite({{A, C}}, {B, D}, {{A, D}});
+
+  // RHS intersects left of LHS.
+  // RHS =>      ______
+  // LHS =>     /  ____\___     =     ___________
+  //        ___/__/_____\__\___   ___/___________\___
+  this->checkUnite({{B, D}}, B, {{B, D}});
+  this->checkUnite({{B, D}}, {A, C}, {{A, D}});
+  this->checkUnite({{MID, MAX}}, {MIN, MID}, {{MIN, MAX}});
+
+  // RHS adjacent to LHS on right.
+  // RHS =>            _____
+  // LHS =>   ______  /     \   =   _______________
+  //        _/______\/_______\_   _/_______________\_
+  this->checkUnite({{A, B - 1}}, B, {{A, B}});
+  this->checkUnite({{A, C}}, {C + 1, D}, {{A, D}});
+  this->checkUnite({{MIN, MID}}, {MID + 1, MAX}, {{MIN, MAX}});
+
+  // RHS adjacent to LHS on left.
+  // RHS =>    _____
+  // LHS =>   /     \  ______   =   _______________
+  //        _/_______\/______\_   _/_______________\_
+  this->checkUnite({{B + 1, C}}, B, {{B, C}});
+  this->checkUnite({{B, D}}, {A, B - 1}, {{A, D}});
+
+  // RHS adjacent to LHS in between.
+  // RHS =>         ___
+  // LHS =>   ___  /   \  ___   =   _______________
+  //        _/___\/_____\/___\_   _/_______________\_
+  this->checkUnite({{A, MID - 1}, {MID + 1, D}}, MID, {{A, D}});
+  this->checkUnite({{MIN, A}, {D, MAX}}, {A + 1, D - 1}, {{MIN, MAX}});
+
+  // RHS adjacent to LHS on the outside.
+  // RHS =>    __         __
+  // LHS =>   /  \  ___  /  \   =   _______________
+  //        _/____\/___\/____\_   _/_______________\_
+  this->checkUnite({{C, C}}, {{A, C - 1}, {C + 1, D}}, {{A, D}});
+  this->checkUnite({{B, MID}}, {{A, B - 1}, {MID + 1, D}}, {{A, D}});
+
+  // RHS wraps two subranges of LHS.
+  // RHS =>     ___________
+  // LHS =>    / ___   ___ \    =    _____________
+  //        __/_/___\_/___\_\__   __/_____________\__
+  this->checkUnite({{B, B}, {MID, MID}, {C, C}}, {{A, D}}, {{A, D}});
+  this->checkUnite({{A, B}, {MID, C}}, {{MIN, D}}, {{MIN, D}});
+
+  // RHS intersects two subranges of LHS.
+  // RHS =>      _________
+  // LHS =>   __/__      _\__   =   _______________
+  //        _/_/___\____/__\_\_   _/_______________\_
+  this->checkUnite({{MIN, B}, {C, MAX}}, {{A, D}}, {{MIN, MAX}});
+  this->checkUnite({{A, MID}, {C, MAX}}, {{B, D}}, {{A, MAX}});
+
+  // Multiple intersections.
+
+  // clang-format off
+  // RHS =>
+  // LHS =>   /\   /\            =   __   __
+  //        _/__\_/__\_/\_/\_/\_   _/__\_/__\_/\_/\_/\_
+  this->checkUnite({{MID, C}, {C + 2, D - 2}, {D, MAX}},
+                   {{MIN, A}, {A + 2, B}},
+                   {{MIN, A}, {A + 2, B}, {MID, C}, {C + 2, D - 2}, {D, MAX}});
+  this->checkUnite({{B, B}, {C, C}, {MAX, MAX}},
+                   {{MIN, MIN}, {A, A}},
+                   {{MIN, MIN}, {A, A}, {B, B}, {C, C}, {MAX, MAX}});
+
+  // RHS =>
+  // LHS =>             /\   /\   =            __   __
+  //        _/\_/\_/\__/__\_/__\_   _/\_/\_/\_/__\_/__\_
+  this->checkUnite({{MIN, A}, {A + 2, B}, {MID, C}},
+                   {{C + 2, D - 2}, {D, MAX}},
+                   {{MIN, A}, {A + 2, B}, {MID, C}, {C + 2, D - 2}, {D, MAX}});
+  this->checkUnite({{MIN, MIN}, {A, A}, {B, B}},
+                   {{C, C}, {MAX, MAX}},
+                   {{MIN, MIN}, {A, A}, {B, B}, {C, C}, {MAX, MAX}});
+
+  // RHS =>
+  // LHS =>   _   /\   _   /\   _   /\  =
+  //        _/_\_/__\_/_\_/__\_/_\_/__\_
+  //
+  // RSLT =>  _   __   _   __   _   __
+  //        _/_\_/__\_/_\_/__\_/_\_/__\_
+  this->checkUnite({{MIN, A}, {B + 2, MID}, {C + 2, D}},
+                   {{A + 2, B}, {MID + 2, C}, {D + 2, MAX}},
+                   {{MIN, A}, {A + 2, B}, {B + 2, MID}, {MID + 2, C}, {C + 2, D}, {D + 2, MAX}});
+  this->checkUnite({{MIN, MIN}, {B, B}, {D, D}},
+                   {{A, A}, {C, C}, {MAX, MAX}},
+                   {{MIN, MIN}, {A, A}, {B, B}, {C, C}, {D, D}, {MAX, MAX}});
+
+  // RHS =>
+  // LHS =>   /\   _   /\   _   /\   _  =
+  //        _/__\_/_\_/__\_/_\_/__\_/_\_
+  //
+  // RSLT =>  __   _   __   _   __   _
+  //        _/__\_/_\_/__\_/_\_/__\_/_\_
+  this->checkUnite({{A + 2, B}, {MID + 2, C}, {D + 2, MAX}},
+                   {{MIN, A}, {B + 2, MID}, {C + 2, D}},
+                   {{MIN, A}, {A + 2, B}, {B + 2, MID}, {MID + 2, C}, {C + 2, D}, {D + 2, MAX}});
+  this->checkUnite({{A, A}, {C, C}, {MAX, MAX}},
+                   {{MIN, MIN}, {B, B}, {D, D}},
+                   {{MIN, MIN}, {A, A}, {B, B}, {C, C}, {D, D}, {MAX, MAX}});
+
+  // RHS =>    _     __       _
+  // LHS =>   /_\   /_ \  _  / \   =   ___   ____________
+  //        _/___\_/__\_\/_\/___\_   _/___\_/____________\_
+  this->checkUnite({{MIN, A}, {B, C}, {D, MAX}},
+                   {{MIN, A}, {B, C - 2}, {C + 1, D - 1}},
+                   {{MIN, A}, {B, MAX}});
+  this->checkUnite({{A, A}, {B, MID}, {D, D}},
+                   {{A, A}, {B, B}, {MID + 1, D - 1}},
+                   {{A, A}, {B, D}});
+
+  // RHS =>            ___      ___
+  // LHS =>      /\  _/_  \_   / _ \   /\  =
+  //        _/\_/__\//__\ /\\_/_/_\_\_/__\_
+  //
+  // RSLT =>     ___________   _____   __
+  //        _/\_/___________\_/_____\_/__\_
+  this->checkUnite({{MIN, MIN}, {B, MID}, {MID + 1, C}, {C + 4, D - 1}},
+                   {{A, B - 1}, {B + 1, C - 1}, {C + 2, D}, {MAX - 1, MAX}},
+                   {{MIN, MIN}, {A, C}, {C + 2, D}, {MAX - 1, MAX}});
+  // clang-format on
+}
+
+template <typename From, typename To> struct CastType {
+  using FromType = From;
+  using ToType = To;
+};
+
+template <typename Type>
+class RangeSetCastToNoopTest : public RangeSetTest<typename Type::FromType> {};
+template <typename Type>
+class RangeSetCastToPromotionTest
+    : public RangeSetTest<typename Type::FromType> {};
+template <typename Type>
+class RangeSetCastToTruncationTest
+    : public RangeSetTest<typename Type::FromType> {};
+template <typename Type>
+class RangeSetCastToConversionTest
+    : public RangeSetTest<typename Type::FromType> {};
+template <typename Type>
+class RangeSetCastToPromotionConversionTest
+    : public RangeSetTest<typename Type::FromType> {};
+template <typename Type>
+class RangeSetCastToTruncationConversionTest
+    : public RangeSetTest<typename Type::FromType> {};
+
+using NoopCastTypes =
+    ::testing::Types<CastType<int8_t, int8_t>, CastType<uint8_t, uint8_t>,
+                     CastType<int16_t, int16_t>, CastType<uint16_t, uint16_t>,
+                     CastType<int32_t, int32_t>, CastType<uint32_t, uint32_t>,
+                     CastType<int64_t, int64_t>, CastType<uint64_t, uint64_t>>;
+
+using PromotionCastTypes =
+    ::testing::Types<CastType<int8_t, int16_t>, CastType<int8_t, int32_t>,
+                     CastType<int8_t, int64_t>, CastType<uint8_t, uint16_t>,
+                     CastType<uint8_t, uint32_t>, CastType<uint8_t, uint64_t>,
+                     CastType<int16_t, int32_t>, CastType<int16_t, int64_t>,
+                     CastType<uint16_t, uint32_t>, CastType<uint16_t, uint64_t>,
+                     CastType<int32_t, int64_t>, CastType<uint32_t, uint64_t>>;
+
+using TruncationCastTypes =
+    ::testing::Types<CastType<int16_t, int8_t>, CastType<uint16_t, uint8_t>,
+                     CastType<int32_t, int16_t>, CastType<int32_t, int8_t>,
+                     CastType<uint32_t, uint16_t>, CastType<uint32_t, uint8_t>,
+                     CastType<int64_t, int32_t>, CastType<int64_t, int16_t>,
+                     CastType<int64_t, int8_t>, CastType<uint64_t, uint32_t>,
+                     CastType<uint64_t, uint16_t>, CastType<uint64_t, uint8_t>>;
+
+using ConversionCastTypes =
+    ::testing::Types<CastType<int8_t, uint8_t>, CastType<uint8_t, int8_t>,
+                     CastType<int16_t, uint16_t>, CastType<uint16_t, int16_t>,
+                     CastType<int32_t, uint32_t>, CastType<uint32_t, int32_t>,
+                     CastType<int64_t, uint64_t>, CastType<uint64_t, int64_t>>;
+
+using PromotionConversionCastTypes =
+    ::testing::Types<CastType<int8_t, uint16_t>, CastType<int8_t, uint32_t>,
+                     CastType<int8_t, uint64_t>, CastType<uint8_t, int16_t>,
+                     CastType<uint8_t, int32_t>, CastType<uint8_t, int64_t>,
+                     CastType<int16_t, uint32_t>, CastType<int16_t, uint64_t>,
+                     CastType<uint16_t, int32_t>, CastType<uint16_t, int64_t>,
+                     CastType<int32_t, uint64_t>, CastType<uint32_t, int64_t>>;
+
+using TruncationConversionCastTypes =
+    ::testing::Types<CastType<int16_t, uint8_t>, CastType<uint16_t, int8_t>,
+                     CastType<int32_t, uint16_t>, CastType<int32_t, uint8_t>,
+                     CastType<uint32_t, int16_t>, CastType<uint32_t, int8_t>,
+                     CastType<int64_t, uint32_t>, CastType<int64_t, uint16_t>,
+                     CastType<int64_t, uint8_t>, CastType<uint64_t, int32_t>,
+                     CastType<uint64_t, int16_t>, CastType<uint64_t, int8_t>>;
+
+TYPED_TEST_SUITE(RangeSetCastToNoopTest, NoopCastTypes);
+TYPED_TEST_SUITE(RangeSetCastToPromotionTest, PromotionCastTypes);
+TYPED_TEST_SUITE(RangeSetCastToTruncationTest, TruncationCastTypes);
+TYPED_TEST_SUITE(RangeSetCastToConversionTest, ConversionCastTypes);
+TYPED_TEST_SUITE(RangeSetCastToPromotionConversionTest,
+                 PromotionConversionCastTypes);
+TYPED_TEST_SUITE(RangeSetCastToTruncationConversionTest,
+                 TruncationConversionCastTypes);
+
+TYPED_TEST(RangeSetCastToNoopTest, RangeSetCastToNoopTest) {
+  // Just to reduce the verbosity.
+  using F = typename TypeParam::FromType; // From
+  using T = typename TypeParam::ToType;   // To
+
+  using TV = TestValues<F>;
+  constexpr auto MIN = TV::MIN;
+  constexpr auto MAX = TV::MAX;
+  constexpr auto MID = TV::MID;
+  constexpr auto B = TV::B;
+  constexpr auto C = TV::C;
+  // One point
+  this->template checkCastTo<F, T>({{MIN, MIN}}, {{MIN, MIN}});
+  this->template checkCastTo<F, T>({{MAX, MAX}}, {{MAX, MAX}});
+  this->template checkCastTo<F, T>({{MID, MID}}, {{MID, MID}});
+  this->template checkCastTo<F, T>({{B, B}}, {{B, B}});
+  this->template checkCastTo<F, T>({{C, C}}, {{C, C}});
+  // Two points
+  this->template checkCastTo<F, T>({{MIN, MIN}, {MAX, MAX}},
+                                   {{MIN, MIN}, {MAX, MAX}});
+  this->template checkCastTo<F, T>({{MIN, MIN}, {B, B}}, {{MIN, MIN}, {B, B}});
+  this->template checkCastTo<F, T>({{MID, MID}, {MAX, MAX}},
+                                   {{MID, MID}, {MAX, MAX}});
+  this->template checkCastTo<F, T>({{C, C}, {MAX, MAX}}, {{C, C}, {MAX, MAX}});
+  this->template checkCastTo<F, T>({{MID, MID}, {C, C}}, {{MID, MID}, {C, C}});
+  this->template checkCastTo<F, T>({{B, B}, {MID, MID}}, {{B, B}, {MID, MID}});
+  this->template checkCastTo<F, T>({{B, B}, {C, C}}, {{B, B}, {C, C}});
+  // One range
+  this->template checkCastTo<F, T>({{MIN, MAX}}, {{MIN, MAX}});
+  this->template checkCastTo<F, T>({{MIN, MID}}, {{MIN, MID}});
+  this->template checkCastTo<F, T>({{MID, MAX}}, {{MID, MAX}});
+  this->template checkCastTo<F, T>({{B, MAX}}, {{B, MAX}});
+  this->template checkCastTo<F, T>({{C, MAX}}, {{C, MAX}});
+  this->template checkCastTo<F, T>({{MIN, C}}, {{MIN, C}});
+  this->template checkCastTo<F, T>({{MIN, B}}, {{MIN, B}});
+  this->template checkCastTo<F, T>({{B, C}}, {{B, C}});
+  // Two ranges
+  this->template checkCastTo<F, T>({{MIN, B}, {C, MAX}}, {{MIN, B}, {C, MAX}});
+  this->template checkCastTo<F, T>({{B, MID}, {C, MAX}}, {{B, MID}, {C, MAX}});
+  this->template checkCastTo<F, T>({{MIN, B}, {MID, C}}, {{MIN, B}, {MID, C}});
+}
+
+TYPED_TEST(RangeSetCastToPromotionTest, Test) {
+  // Just to reduce the verbosity.
+  using F = typename TypeParam::FromType; // From
+  using T = typename TypeParam::ToType;   // To
+
+  using TV = TestValues<F>;
+  constexpr auto MIN = TV::MIN;
+  constexpr auto MAX = TV::MAX;
+  constexpr auto MID = TV::MID;
+  constexpr auto B = TV::B;
+  constexpr auto C = TV::C;
+  // One point
+  this->template checkCastTo<F, T>({{MIN, MIN}}, {{MIN, MIN}});
+  this->template checkCastTo<F, T>({{MAX, MAX}}, {{MAX, MAX}});
+  this->template checkCastTo<F, T>({{MID, MID}}, {{MID, MID}});
+  this->template checkCastTo<F, T>({{B, B}}, {{B, B}});
+  this->template checkCastTo<F, T>({{C, C}}, {{C, C}});
+  // Two points
+  this->template checkCastTo<F, T>({{MIN, MIN}, {MAX, MAX}},
+                                   {{MIN, MIN}, {MAX, MAX}});
+  this->template checkCastTo<F, T>({{MIN, MIN}, {B, B}}, {{MIN, MIN}, {B, B}});
+  this->template checkCastTo<F, T>({{MID, MID}, {MAX, MAX}},
+                                   {{MID, MID}, {MAX, MAX}});
+  this->template checkCastTo<F, T>({{C, C}, {MAX, MAX}}, {{C, C}, {MAX, MAX}});
+  this->template checkCastTo<F, T>({{MID, MID}, {C, C}}, {{MID, MID}, {C, C}});
+  this->template checkCastTo<F, T>({{B, B}, {MID, MID}}, {{B, B}, {MID, MID}});
+  this->template checkCastTo<F, T>({{B, B}, {C, C}}, {{B, B}, {C, C}});
+  // One range
+  this->template checkCastTo<F, T>({{MIN, MAX}}, {{MIN, MAX}});
+  this->template checkCastTo<F, T>({{MIN, MID}}, {{MIN, MID}});
+  this->template checkCastTo<F, T>({{MID, MAX}}, {{MID, MAX}});
+  this->template checkCastTo<F, T>({{B, MAX}}, {{B, MAX}});
+  this->template checkCastTo<F, T>({{C, MAX}}, {{C, MAX}});
+  this->template checkCastTo<F, T>({{MIN, C}}, {{MIN, C}});
+  this->template checkCastTo<F, T>({{MIN, B}}, {{MIN, B}});
+  this->template checkCastTo<F, T>({{B, C}}, {{B, C}});
+  // Two ranges
+  this->template checkCastTo<F, T>({{MIN, B}, {C, MAX}}, {{MIN, B}, {C, MAX}});
+  this->template checkCastTo<F, T>({{B, MID}, {C, MAX}}, {{B, MID}, {C, MAX}});
+  this->template checkCastTo<F, T>({{MIN, B}, {MID, C}}, {{MIN, B}, {MID, C}});
+}
+
+TYPED_TEST(RangeSetCastToTruncationTest, Test) {
+  // Just to reduce the verbosity.
+  using F = typename TypeParam::FromType; // From
+  using T = typename TypeParam::ToType;   // To
+
+  using TV = TestValues<F>;
+  constexpr auto MIN = TV::MIN;
+  constexpr auto MAX = TV::MAX;
+  constexpr auto MID = TV::MID;
+  constexpr auto B = TV::B;
+  constexpr auto C = TV::C;
+  // One point
+  //
+  // NOTE: We can't use ToMIN, ToMAX, ... everywhere. That would be incorrect:
+  // int16(-32768, 32767) -> int8(-128, 127),
+  //       aka (MIN, MAX) -> (ToMIN, ToMAX) // OK.
+  // int16(-32768, -32768) -> int8(-128, -128),
+  //        aka (MIN, MIN) -> (ToMIN, ToMIN) // NOK.
+  // int16(-32768,-32768) -> int8(0, 0),
+  //       aka (MIN, MIN) -> ((int8)MIN, (int8)MIN) // OK.
+  this->template checkCastTo<F, T>({{MIN, MIN}}, {{MIN, MIN}});
+  this->template checkCastTo<F, T>({{MAX, MAX}}, {{MAX, MAX}});
+  this->template checkCastTo<F, T>({{MID, MID}}, {{MID, MID}});
+  this->template checkCastTo<F, T>({{B, B}}, {{B, B}});
+  this->template checkCastTo<F, T>({{C, C}}, {{C, C}});
+  // Two points
+  // Use `if constexpr` here.
+  if (is_signed_v<F>) {
+    this->template checkCastTo<F, T>({{MIN, MIN}, {MAX, MAX}}, {{MAX, MIN}});
+    this->template checkCastTo<F, T>({{MID, MID}, {MAX, MAX}}, {{MAX, MID}});
+  } else {
+    this->template checkCastTo<F, T>({{MIN, MIN}, {MAX, MAX}},
+                                     {{MIN, MIN}, {MAX, MAX}});
+    this->template checkCastTo<F, T>({{MID, MID}, {MAX, MAX}},
+                                     {{MID, MID}, {MAX, MAX}});
+  }
+  this->template checkCastTo<F, T>({{MIN, MIN}, {B, B}}, {{MIN, MIN}, {B, B}});
+  this->template checkCastTo<F, T>({{C, C}, {MAX, MAX}}, {{C, C}, {MAX, MAX}});
+  this->template checkCastTo<F, T>({{MID, MID}, {C, C}}, {{MID, MID}, {C, C}});
+  this->template checkCastTo<F, T>({{B, B}, {MID, MID}}, {{B, B}, {MID, MID}});
+  this->template checkCastTo<F, T>({{B, B}, {C, C}}, {{B, B}, {C, C}});
+  // One range
+  constexpr auto ToMIN = TestValues<T>::MIN;
+  constexpr auto ToMAX = TestValues<T>::MAX;
+  this->template checkCastTo<F, T>({{MIN, MAX}}, {{ToMIN, ToMAX}});
+  this->template checkCastTo<F, T>({{MIN, MID}}, {{ToMIN, ToMAX}});
+  this->template checkCastTo<F, T>({{MID, MAX}}, {{ToMIN, ToMAX}});
+  this->template checkCastTo<F, T>({{B, MAX}}, {{ToMIN, ToMAX}});
+  this->template checkCastTo<F, T>({{C, MAX}}, {{ToMIN, ToMAX}});
+  this->template checkCastTo<F, T>({{MIN, C}}, {{ToMIN, ToMAX}});
+  this->template checkCastTo<F, T>({{MIN, B}}, {{ToMIN, ToMAX}});
+  this->template checkCastTo<F, T>({{B, C}}, {{ToMIN, ToMAX}});
+  // Two ranges
+  this->template checkCastTo<F, T>({{MIN, B}, {C, MAX}}, {{ToMIN, ToMAX}});
+  this->template checkCastTo<F, T>({{B, MID}, {C, MAX}}, {{ToMIN, ToMAX}});
+  this->template checkCastTo<F, T>({{MIN, B}, {MID, C}}, {{ToMIN, ToMAX}});
+  constexpr auto XAAA = TV::XAAA;
+  constexpr auto X555 = TV::X555;
+  constexpr auto ZA = TV::template XAAATruncZeroOf<T>;
+  constexpr auto Z5 = TV::template X555TruncZeroOf<T>;
+  this->template checkCastTo<F, T>({{XAAA, ZA}, {X555, Z5}},
+                                   {{ToMIN, 0}, {X555, ToMAX}});
+  // Use `if constexpr` here.
+  if (is_signed_v<F>) {
+    // One range
+    this->template checkCastTo<F, T>({{XAAA, ZA}}, {{XAAA, 0}});
+    // Two ranges
+    this->template checkCastTo<F, T>({{XAAA, ZA}, {1, 42}}, {{XAAA, 42}});
+  } else {
+    // One range
+    this->template checkCastTo<F, T>({{XAAA, ZA}}, {{0, 0}, {XAAA, ToMAX}});
+    // Two ranges
+    this->template checkCastTo<F, T>({{1, 42}, {XAAA, ZA}},
+                                     {{0, 42}, {XAAA, ToMAX}});
+  }
+  constexpr auto FromA = TV::FromA;
+  constexpr auto ToA = TV::ToA;
+  constexpr auto FromB = TV::FromB;
+  constexpr auto ToB = TV::ToB;
+  // int16 -> int8
+  // (0x00'01, 0x00'05)U(0xFF'01, 0xFF'05) casts to
+  // (0x01, 0x05)U(0x01, 0x05) unites to
+  // (0x01, 0x05)
+  this->template checkCastTo<F, T>({{FromA, ToA}, {FromB, ToB}},
+                                   {{FromA, ToA}});
+}
+
+TYPED_TEST(RangeSetCastToConversionTest, Test) {
+  // Just to reduce the verbosity.
+  using F = typename TypeParam::FromType; // From
+  using T = typename TypeParam::ToType;   // To
+
+  using TV = TestValues<F>;
+  constexpr auto MIN = TV::MIN;
+  constexpr auto MAX = TV::MAX;
+  constexpr auto MID = TV::MID;
+  constexpr auto B = TV::B;
+  constexpr auto C = TV::C;
+  // One point
+  this->template checkCastTo<F, T>({{MIN, MIN}}, {{MIN, MIN}});
+  this->template checkCastTo<F, T>({{MAX, MAX}}, {{MAX, MAX}});
+  this->template checkCastTo<F, T>({{MID, MID}}, {{MID, MID}});
+  this->template checkCastTo<F, T>({{B, B}}, {{B, B}});
+  this->template checkCastTo<F, T>({{C, C}}, {{C, C}});
+  // Two points
+  this->template checkCastTo<F, T>({{MIN, MIN}, {MAX, MAX}}, {{MAX, MIN}});
+  this->template checkCastTo<F, T>({{MID, MID}, {MAX, MAX}},
+                                   {{MID, MID}, {MAX, MAX}});
+  this->template checkCastTo<F, T>({{MIN, MIN}, {B, B}}, {{MIN, MIN}, {B, B}});
+  this->template checkCastTo<F, T>({{C, C}, {MAX, MAX}}, {{C, C}, {MAX, MAX}});
+  this->template checkCastTo<F, T>({{MID, MID}, {C, C}}, {{MID, MID}, {C, C}});
+  this->template checkCastTo<F, T>({{B, B}, {MID, MID}}, {{B, B}, {MID, MID}});
+  this->template checkCastTo<F, T>({{B, B}, {C, C}}, {{B, B}, {C, C}});
+  // One range
+  constexpr auto ToMIN = TestValues<T>::MIN;
+  constexpr auto ToMAX = TestValues<T>::MAX;
+  this->template checkCastTo<F, T>({{MIN, MAX}}, {{ToMIN, ToMAX}});
+  this->template checkCastTo<F, T>({{MIN, MID}},
+                                   {{ToMIN, ToMIN}, {MIN, ToMAX}});
+  this->template checkCastTo<F, T>({{MID, MAX}}, {{MID, MAX}});
+  this->template checkCastTo<F, T>({{B, MAX}}, {{ToMIN, MAX}, {B, ToMAX}});
+  this->template checkCastTo<F, T>({{C, MAX}}, {{C, MAX}});
+  this->template checkCastTo<F, T>({{MIN, C}}, {{ToMIN, C}, {MIN, ToMAX}});
+  this->template checkCastTo<F, T>({{MIN, B}}, {{MIN, B}});
+  this->template checkCastTo<F, T>({{B, C}}, {{ToMIN, C}, {B, ToMAX}});
+  // Two ranges
+  this->template checkCastTo<F, T>({{MIN, B}, {C, MAX}}, {{C, B}});
+  this->template checkCastTo<F, T>({{B, MID}, {C, MAX}},
+                                   {{MID, MID}, {C, MAX}, {B, ToMAX}});
+  this->template checkCastTo<F, T>({{MIN, B}, {MID, C}}, {{MID, C}, {MIN, B}});
+}
+
+TYPED_TEST(RangeSetCastToPromotionConversionTest, Test) {
+  // Just to reduce the verbosity.
+  using F = typename TypeParam::FromType; // From
+  using T = typename TypeParam::ToType;   // To
+
+  using TV = TestValues<F>;
+  constexpr auto MIN = TV::MIN;
+  constexpr auto MAX = TV::MAX;
+  constexpr auto MID = TV::MID;
+  constexpr auto B = TV::B;
+  constexpr auto C = TV::C;
+  // One point
+  this->template checkCastTo<F, T>({{MIN, MIN}}, {{MIN, MIN}});
+  this->template checkCastTo<F, T>({{MAX, MAX}}, {{MAX, MAX}});
+  this->template checkCastTo<F, T>({{MID, MID}}, {{MID, MID}});
+  this->template checkCastTo<F, T>({{B, B}}, {{B, B}});
+  this->template checkCastTo<F, T>({{C, C}}, {{C, C}});
+  // Two points
+  this->template checkCastTo<F, T>({{MIN, MIN}, {MAX, MAX}},
+                                   {{MAX, MAX}, {MIN, MIN}});
+  this->template checkCastTo<F, T>({{MIN, MIN}, {B, B}}, {{MIN, MIN}, {B, B}});
+  this->template checkCastTo<F, T>({{MID, MID}, {MAX, MAX}},
+                                   {{MID, MID}, {MAX, MAX}});
+  this->template checkCastTo<F, T>({{C, C}, {MAX, MAX}}, {{C, C}, {MAX, MAX}});
+  this->template checkCastTo<F, T>({{MID, MID}, {C, C}}, {{MID, MID}, {C, C}});
+  this->template checkCastTo<F, T>({{B, B}, {MID, MID}}, {{B, B}, {MID, MID}});
+  this->template checkCastTo<F, T>({{B, B}, {C, C}}, {{B, B}, {C, C}});
+
+  // Use `if constexpr` here.
+  if (is_signed_v<F>) {
+    // One range
+    this->template checkCastTo<F, T>({{MIN, MAX}}, {{0, MAX}, {MIN, -1}});
+    this->template checkCastTo<F, T>({{MIN, MID}}, {{0, 0}, {MIN, -1}});
+    this->template checkCastTo<F, T>({{MID, MAX}}, {{0, MAX}});
+    this->template checkCastTo<F, T>({{B, MAX}}, {{0, MAX}, {B, -1}});
+    this->template checkCastTo<F, T>({{C, MAX}}, {{C, MAX}});
+    this->template checkCastTo<F, T>({{MIN, C}}, {{0, C}, {MIN, -1}});
+    this->template checkCastTo<F, T>({{MIN, B}}, {{MIN, B}});
+    this->template checkCastTo<F, T>({{B, C}}, {{0, C}, {B, -1}});
+    // Two ranges
+    this->template checkCastTo<F, T>({{MIN, B}, {C, MAX}},
+                                     {{C, MAX}, {MIN, B}});
+    this->template checkCastTo<F, T>({{B, MID}, {C, MAX}},
+                                     {{0, 0}, {C, MAX}, {B, -1}});
+    this->template checkCastTo<F, T>({{MIN, B}, {MID, C}}, {{0, C}, {MIN, B}});
+  } else {
+    // One range
+    this->template checkCastTo<F, T>({{MIN, MAX}}, {{MIN, MAX}});
+    this->template checkCastTo<F, T>({{MIN, MID}}, {{MIN, MID}});
+    this->template checkCastTo<F, T>({{MID, MAX}}, {{MID, MAX}});
+    this->template checkCastTo<F, T>({{B, MAX}}, {{B, MAX}});
+    this->template checkCastTo<F, T>({{C, MAX}}, {{C, MAX}});
+    this->template checkCastTo<F, T>({{MIN, C}}, {{MIN, C}});
+    this->template checkCastTo<F, T>({{MIN, B}}, {{MIN, B}});
+    this->template checkCastTo<F, T>({{B, C}}, {{B, C}});
+    // Two ranges
+    this->template checkCastTo<F, T>({{MIN, B}, {C, MAX}},
+                                     {{MIN, B}, {C, MAX}});
+    this->template checkCastTo<F, T>({{B, MID}, {C, MAX}},
+                                     {{B, MID}, {C, MAX}});
+    this->template checkCastTo<F, T>({{MIN, B}, {MID, C}},
+                                     {{MIN, B}, {MID, C}});
+  }
+}
+
+TYPED_TEST(RangeSetCastToTruncationConversionTest, Test) {
+  // Just to reduce the verbosity.
+  using F = typename TypeParam::FromType; // From
+  using T = typename TypeParam::ToType;   // To
+
+  using TV = TestValues<F>;
+  constexpr auto MIN = TV::MIN;
+  constexpr auto MAX = TV::MAX;
+  constexpr auto MID = TV::MID;
+  constexpr auto B = TV::B;
+  constexpr auto C = TV::C;
+  // One point
+  this->template checkCastTo<F, T>({{MIN, MIN}}, {{MIN, MIN}});
+  this->template checkCastTo<F, T>({{MAX, MAX}}, {{MAX, MAX}});
+  this->template checkCastTo<F, T>({{MID, MID}}, {{MID, MID}});
+  this->template checkCastTo<F, T>({{B, B}}, {{B, B}});
+  this->template checkCastTo<F, T>({{C, C}}, {{C, C}});
+  // Two points
+  // Use `if constexpr` here.
+  if (is_signed_v<F>) {
+    this->template checkCastTo<F, T>({{MIN, MIN}, {MAX, MAX}},
+                                     {{MIN, MIN}, {MAX, MAX}});
+    this->template checkCastTo<F, T>({{MID, MID}, {MAX, MAX}},
+                                     {{MID, MID}, {MAX, MAX}});
+  } else {
+    this->template checkCastTo<F, T>({{MIN, MIN}, {MAX, MAX}}, {{MAX, MIN}});
+    this->template checkCastTo<F, T>({{MID, MID}, {MAX, MAX}}, {{MAX, MIN}});
+  }
+  this->template checkCastTo<F, T>({{MIN, MIN}, {B, B}}, {{MIN, MIN}, {B, B}});
+  this->template checkCastTo<F, T>({{C, C}, {MAX, MAX}}, {{C, C}, {MAX, MAX}});
+  this->template checkCastTo<F, T>({{MID, MID}, {C, C}}, {{MID, MID}, {C, C}});
+  this->template checkCastTo<F, T>({{B, B}, {MID, MID}}, {{B, B}, {MID, MID}});
+  this->template checkCastTo<F, T>({{B, B}, {C, C}}, {{B, B}, {C, C}});
+  // One range
+  constexpr auto ToMIN = TestValues<T>::MIN;
+  constexpr auto ToMAX = TestValues<T>::MAX;
+  this->template checkCastTo<F, T>({{MIN, MAX}}, {{ToMIN, ToMAX}});
+  this->template checkCastTo<F, T>({{MIN, MID}}, {{ToMIN, ToMAX}});
+  this->template checkCastTo<F, T>({{MID, MAX}}, {{ToMIN, ToMAX}});
+  this->template checkCastTo<F, T>({{B, MAX}}, {{ToMIN, ToMAX}});
+  this->template checkCastTo<F, T>({{C, MAX}}, {{ToMIN, ToMAX}});
+  this->template checkCastTo<F, T>({{MIN, C}}, {{ToMIN, ToMAX}});
+  this->template checkCastTo<F, T>({{MIN, B}}, {{ToMIN, ToMAX}});
+  this->template checkCastTo<F, T>({{B, C}}, {{ToMIN, ToMAX}});
+  // Two ranges
+  this->template checkCastTo<F, T>({{MIN, B}, {C, MAX}}, {{ToMIN, ToMAX}});
+  this->template checkCastTo<F, T>({{B, MID}, {C, MAX}}, {{ToMIN, ToMAX}});
+  this->template checkCastTo<F, T>({{MIN, B}, {MID, C}}, {{ToMIN, ToMAX}});
+  constexpr auto XAAA = TV::XAAA;
+  constexpr auto X555 = TV::X555;
+  constexpr auto ZA = TV::template XAAATruncZeroOf<T>;
+  constexpr auto Z5 = TV::template X555TruncZeroOf<T>;
+  this->template checkCastTo<F, T>({{XAAA, ZA}, {X555, Z5}},
+                                   {{ToMIN, 0}, {X555, ToMAX}});
+  // Use `if constexpr` here.
+  if (is_signed_v<F>) {
+    // One range
+    this->template checkCastTo<F, T>({{XAAA, ZA}}, {{0, 0}, {XAAA, ToMAX}});
+    // Two ranges
+    this->template checkCastTo<F, T>({{XAAA, ZA}, {1, 42}},
+                                     {{0, 42}, {XAAA, ToMAX}});
+  } else {
+    // One range
+    this->template checkCastTo<F, T>({{XAAA, ZA}}, {{XAAA, 0}});
+    // Two ranges
+    this->template checkCastTo<F, T>({{1, 42}, {XAAA, ZA}}, {{XAAA, 42}});
+  }
+  constexpr auto FromA = TV::FromA;
+  constexpr auto ToA = TV::ToA;
+  constexpr auto FromB = TV::FromB;
+  constexpr auto ToB = TV::ToB;
+  this->template checkCastTo<F, T>({{FromA, ToA}, {FromB, ToB}},
+                                   {{FromA, ToA}});
+}
+
+} // namespace

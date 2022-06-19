@@ -18,6 +18,7 @@
 #include "clang/Basic/TargetOptions.h"
 #include "llvm/ADT/Triple.h"
 #include "llvm/Support/Compiler.h"
+#include "llvm/Support/ARMTargetParser.h"
 #include "llvm/Support/TargetParser.h"
 
 namespace clang {
@@ -78,6 +79,9 @@ class LLVM_LIBRARY_VISIBILITY ARMTargetInfo : public TargetInfo {
   unsigned Unaligned : 1;
   unsigned DotProd : 1;
   unsigned HasMatMul : 1;
+  unsigned FPRegsDisabled : 1;
+  unsigned HasPAC : 1;
+  unsigned HasBTI : 1;
 
   enum {
     LDREX_B = (1 << 0), /// byte (8-bit)
@@ -121,6 +125,11 @@ public:
 
   StringRef getABI() const override;
   bool setABI(const std::string &Name) override;
+
+  bool isBranchProtectionSupportedArch(StringRef Arch) const override;
+  bool validateBranchProtection(StringRef Spec, StringRef Arch,
+                                BranchProtectionInfo &BPI,
+                                StringRef &Err) const override;
 
   // FIXME: This should be based on Arch attributes, not CPU names.
   bool
@@ -187,8 +196,8 @@ public:
 
   bool hasSjLjLowering() const override;
 
-  bool hasExtIntType() const override { return true; }
-  
+  bool hasBitIntType() const override { return true; }
+
   const char *getBFloat16Mangling() const override { return "u6__bf16"; };
 };
 

@@ -14,11 +14,36 @@
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/GetElementPtrTypeIterator.h"
 #include "llvm/IR/Instructions.h"
-#include "llvm/IR/Type.h"
 
 #include "ConstantsContext.h"
 
 namespace llvm {
+bool Operator::hasPoisonGeneratingFlags() const {
+  switch (getOpcode()) {
+  case Instruction::Add:
+  case Instruction::Sub:
+  case Instruction::Mul:
+  case Instruction::Shl: {
+    auto *OBO = cast<OverflowingBinaryOperator>(this);
+    return OBO->hasNoUnsignedWrap() || OBO->hasNoSignedWrap();
+  }
+  case Instruction::UDiv:
+  case Instruction::SDiv:
+  case Instruction::AShr:
+  case Instruction::LShr:
+    return cast<PossiblyExactOperator>(this)->isExact();
+  case Instruction::GetElementPtr: {
+    auto *GEP = cast<GEPOperator>(this);
+    // Note: inrange exists on constexpr only
+    return GEP->isInBounds() || GEP->getInRangeIndex() != None;
+  }
+  default:
+    if (const auto *FP = dyn_cast<FPMathOperator>(this))
+      return FP->hasNoNaNs() || FP->hasNoInfs();
+    return false;
+  }
+}
+
 Type *GEPOperator::getSourceElementType() const {
   if (auto *I = dyn_cast<GetElementPtrInst>(this))
     return I->getSourceElementType();
@@ -64,7 +89,7 @@ bool GEPOperator::accumulateConstantOffset(
   assert(Offset.getBitWidth() ==
              DL.getIndexSizeInBits(getPointerAddressSpace()) &&
          "The offset bit width does not match DL specification.");
-  SmallVector<const Value *> Index(value_op_begin() + 1, value_op_end());
+  SmallVector<const Value *> Index(llvm::drop_begin(operand_values()));
   return GEPOperator::accumulateConstantOffset(getSourceElementType(), Index,
                                                DL, Offset, ExternalAnalysis);
 }
@@ -190,13 +215,36 @@ bool GEPOperator::collectOffset(
 
     if (STy || ScalableType)
       return false;
-    // Insert an initial offset of 0 for V iff none exists already, then
-    // increment the offset by IndexedSize.
-    VariableOffsets.insert({V, APInt(BitWidth, 0)});
     APInt IndexedSize =
         APInt(BitWidth, DL.getTypeAllocSize(GTI.getIndexedType()));
-    VariableOffsets[V] += IndexedSize;
+    // Insert an initial offset of 0 for V iff none exists already, then
+    // increment the offset by IndexedSize.
+    if (!IndexedSize.isZero()) {
+      VariableOffsets.insert({V, APInt(BitWidth, 0)});
+      VariableOffsets[V] += IndexedSize;
+    }
   }
   return true;
+}
+
+void FastMathFlags::print(raw_ostream &O) const {
+  if (all())
+    O << " fast";
+  else {
+    if (allowReassoc())
+      O << " reassoc";
+    if (noNaNs())
+      O << " nnan";
+    if (noInfs())
+      O << " ninf";
+    if (noSignedZeros())
+      O << " nsz";
+    if (allowReciprocal())
+      O << " arcp";
+    if (allowContract())
+      O << " contract";
+    if (approxFunc())
+      O << " afn";
+  }
 }
 } // namespace llvm

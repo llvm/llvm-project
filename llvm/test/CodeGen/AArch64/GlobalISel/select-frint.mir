@@ -16,7 +16,7 @@ body:             |
     ; CHECK-LABEL: name: test_f16.rint
     ; CHECK: liveins: $h0
     ; CHECK: [[COPY:%[0-9]+]]:fpr16 = COPY $h0
-    ; CHECK: [[FRINTXHr:%[0-9]+]]:fpr16 = FRINTXHr [[COPY]]
+    ; CHECK: [[FRINTXHr:%[0-9]+]]:fpr16 = nofpexcept FRINTXHr [[COPY]]
     ; CHECK: $h0 = COPY [[FRINTXHr]]
     ; CHECK: RET_ReallyLR implicit $h0
     %0:fpr(s16) = COPY $h0
@@ -39,7 +39,7 @@ body:             |
     ; CHECK-LABEL: name: test_f32.rint
     ; CHECK: liveins: $s0
     ; CHECK: [[COPY:%[0-9]+]]:fpr32 = COPY $s0
-    ; CHECK: [[FRINTXSr:%[0-9]+]]:fpr32 = FRINTXSr [[COPY]]
+    ; CHECK: [[FRINTXSr:%[0-9]+]]:fpr32 = nofpexcept FRINTXSr [[COPY]]
     ; CHECK: $s0 = COPY [[FRINTXSr]]
     ; CHECK: RET_ReallyLR implicit $s0
     %0:fpr(s32) = COPY $s0
@@ -62,7 +62,7 @@ body:             |
     ; CHECK-LABEL: name: test_f64.rint
     ; CHECK: liveins: $d0
     ; CHECK: [[COPY:%[0-9]+]]:fpr64 = COPY $d0
-    ; CHECK: [[FRINTXDr:%[0-9]+]]:fpr64 = FRINTXDr [[COPY]]
+    ; CHECK: [[FRINTXDr:%[0-9]+]]:fpr64 = nofpexcept FRINTXDr [[COPY]]
     ; CHECK: $d0 = COPY [[FRINTXDr]]
     ; CHECK: RET_ReallyLR implicit $d0
     %0:fpr(s64) = COPY $d0
@@ -85,7 +85,7 @@ body:             |
     ; CHECK-LABEL: name: test_v4f32.rint
     ; CHECK: liveins: $q0
     ; CHECK: [[COPY:%[0-9]+]]:fpr128 = COPY $q0
-    ; CHECK: [[FRINTXv4f32_:%[0-9]+]]:fpr128 = FRINTXv4f32 [[COPY]]
+    ; CHECK: [[FRINTXv4f32_:%[0-9]+]]:fpr128 = nofpexcept FRINTXv4f32 [[COPY]]
     ; CHECK: $q0 = COPY [[FRINTXv4f32_]]
     ; CHECK: RET_ReallyLR implicit $q0
     %0:fpr(<4 x s32>) = COPY $q0
@@ -108,7 +108,7 @@ body:             |
     ; CHECK-LABEL: name: test_v2f64.rint
     ; CHECK: liveins: $q0
     ; CHECK: [[COPY:%[0-9]+]]:fpr128 = COPY $q0
-    ; CHECK: [[FRINTXv2f64_:%[0-9]+]]:fpr128 = FRINTXv2f64 [[COPY]]
+    ; CHECK: [[FRINTXv2f64_:%[0-9]+]]:fpr128 = nofpexcept FRINTXv2f64 [[COPY]]
     ; CHECK: $q0 = COPY [[FRINTXv2f64_]]
     ; CHECK: RET_ReallyLR implicit $q0
     %0:fpr(<2 x s64>) = COPY $q0
@@ -131,7 +131,7 @@ body:             |
     ; CHECK-LABEL: name: test_v4f16.rint
     ; CHECK: liveins: $d0
     ; CHECK: [[COPY:%[0-9]+]]:fpr64 = COPY $d0
-    ; CHECK: [[FRINTXv4f16_:%[0-9]+]]:fpr64 = FRINTXv4f16 [[COPY]]
+    ; CHECK: [[FRINTXv4f16_:%[0-9]+]]:fpr64 = nofpexcept FRINTXv4f16 [[COPY]]
     ; CHECK: $d0 = COPY [[FRINTXv4f16_]]
     ; CHECK: RET_ReallyLR implicit $d0
     %0:fpr(<4 x s16>) = COPY $d0
@@ -154,7 +154,7 @@ body:             |
     ; CHECK-LABEL: name: test_v8f16.rint
     ; CHECK: liveins: $q0
     ; CHECK: [[COPY:%[0-9]+]]:fpr128 = COPY $q0
-    ; CHECK: [[FRINTXv8f16_:%[0-9]+]]:fpr128 = FRINTXv8f16 [[COPY]]
+    ; CHECK: [[FRINTXv8f16_:%[0-9]+]]:fpr128 = nofpexcept FRINTXv8f16 [[COPY]]
     ; CHECK: $q0 = COPY [[FRINTXv8f16_]]
     ; CHECK: RET_ReallyLR implicit $q0
     %0:fpr(<8 x s16>) = COPY $q0
@@ -177,7 +177,7 @@ body:             |
     ; CHECK-LABEL: name: test_v2f32.rint
     ; CHECK: liveins: $d0
     ; CHECK: [[COPY:%[0-9]+]]:fpr64 = COPY $d0
-    ; CHECK: [[FRINTXv2f32_:%[0-9]+]]:fpr64 = FRINTXv2f32 [[COPY]]
+    ; CHECK: [[FRINTXv2f32_:%[0-9]+]]:fpr64 = nofpexcept FRINTXv2f32 [[COPY]]
     ; CHECK: $d0 = COPY [[FRINTXv2f32_]]
     ; CHECK: RET_ReallyLR implicit $d0
     %0:fpr(<2 x s32>) = COPY $d0

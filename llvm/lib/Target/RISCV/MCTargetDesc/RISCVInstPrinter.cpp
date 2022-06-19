@@ -85,7 +85,7 @@ void RISCVInstPrinter::printRegName(raw_ostream &O, unsigned RegNo) const {
 void RISCVInstPrinter::printOperand(const MCInst *MI, unsigned OpNo,
                                     const MCSubtargetInfo &STI, raw_ostream &O,
                                     const char *Modifier) {
-  assert((Modifier == 0 || Modifier[0] == 0) && "No modifiers supported");
+  assert((Modifier == nullptr || Modifier[0] == 0) && "No modifiers supported");
   const MCOperand &MO = MI->getOperand(OpNo);
 
   if (MO.isReg()) {
@@ -146,7 +146,7 @@ void RISCVInstPrinter::printFenceArg(const MCInst *MI, unsigned OpNo,
   if ((FenceArg & RISCVFenceField::W) != 0)
     O << 'w';
   if (FenceArg == 0)
-    O << "unknown";
+    O << "0";
 }
 
 void RISCVInstPrinter::printFRMArg(const MCInst *MI, unsigned OpNo,
@@ -156,12 +156,12 @@ void RISCVInstPrinter::printFRMArg(const MCInst *MI, unsigned OpNo,
   O << RISCVFPRndMode::roundingModeToString(FRMArg);
 }
 
-void RISCVInstPrinter::printAtomicMemOp(const MCInst *MI, unsigned OpNo,
-                                        const MCSubtargetInfo &STI,
-                                        raw_ostream &O) {
+void RISCVInstPrinter::printZeroOffsetMemOp(const MCInst *MI, unsigned OpNo,
+                                            const MCSubtargetInfo &STI,
+                                            raw_ostream &O) {
   const MCOperand &MO = MI->getOperand(OpNo);
 
-  assert(MO.isReg() && "printAtomicMemOp can only print register operands");
+  assert(MO.isReg() && "printZeroOffsetMemOp can only print register operands");
   O << "(";
   printRegName(O, MO.getReg());
   O << ")";
@@ -170,6 +170,14 @@ void RISCVInstPrinter::printAtomicMemOp(const MCInst *MI, unsigned OpNo,
 void RISCVInstPrinter::printVTypeI(const MCInst *MI, unsigned OpNo,
                                    const MCSubtargetInfo &STI, raw_ostream &O) {
   unsigned Imm = MI->getOperand(OpNo).getImm();
+  // Print the raw immediate for reserved values: vlmul[2:0]=4, vsew[2:0]=0b1xx,
+  // or non-zero in bits 8 and above.
+  if (RISCVVType::getVLMUL(Imm) == RISCVII::VLMUL::LMUL_RESERVED ||
+      RISCVVType::getSEW(Imm) > 64 || (Imm >> 8) != 0) {
+    O << Imm;
+    return;
+  }
+  // Print the text form.
   RISCVVType::printVType(Imm, O);
 }
 

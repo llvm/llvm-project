@@ -528,6 +528,9 @@
 # CHECK-LE: xxeval 32, 1, 2, 3, 2                 # encoding: [0x02,0x00,0x00,0x05,
 # CHECK-LE-SAME:                                               0xd1,0x10,0x01,0x88]
             xxeval 32, 1, 2, 3, 2
+# CHECK-BE: lxvkq 63, 31                          # encoding: [0xf3,0xff,0xfa,0xd1]
+# CHECK-LE: lxvkq 63, 31                          # encoding: [0xd1,0xfa,0xff,0xf3]
+            lxvkq 63, 31
 # CHECK-BE: vclzdm 1, 2, 3                        # encoding: [0x10,0x22,0x1f,0x84]
 # CHECK-LE: vclzdm 1, 2, 3                        # encoding: [0x84,0x1f,0x22,0x10]
             vclzdm 1, 2, 3
@@ -936,6 +939,12 @@
 # CHECK-BE: xscvsqqp 8, 28                        # encoding: [0xfd,0x0b,0xe6,0x88]
 # CHECK-LE: xscvsqqp 8, 28                        # encoding: [0x88,0xe6,0x0b,0xfd]
             xscvsqqp 8, 28
+# CHECK-BE: xsmaxcqp 2, 2, 3                      # encoding: [0xfc,0x42,0x1d,0x48]
+# CHECK-LE: xsmaxcqp 2, 2, 3                      # encoding: [0x48,0x1d,0x42,0xfc]
+            xsmaxcqp 2, 2, 3
+# CHECK-BE: xsmincqp 2, 2, 3                      # encoding: [0xfc,0x42,0x1d,0xc8]
+# CHECK-LE: xsmincqp 2, 2, 3                      # encoding: [0xc8,0x1d,0x42,0xfc]
+            xsmincqp 2, 2, 3
 # CHECK-BE: vstribr 2, 2                          # encoding: [0x10,0x41,0x10,0x0d]
 # CHECK-LE: vstribr 2, 2                          # encoding: [0x0d,0x10,0x41,0x10]
             vstribr 2, 2

@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple x86_64-apple-darwin10 -emit-llvm -fobjc-runtime-has-weak -fblocks -fobjc-arc -O2 -disable-llvm-passes -o - %s | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-apple-darwin10 -emit-llvm -fobjc-runtime-has-weak -fblocks -fobjc-arc -O2 -disable-llvm-passes -o - %s | FileCheck %s
 
 struct NSFastEnumerationState;
 @interface NSArray
@@ -19,8 +19,8 @@ void test0(__weak id *wp, __weak volatile id *wvp) {
   // TODO: this is sub-optimal, we should retain at the actual call site.
   // TODO: in the non-volatile case, we do not need to be reloading.
 
-  // CHECK:      [[T0:%.*]] = call i8* @_Z12test0_helperv()
-  // CHECK-NEXT: [[T1:%.*]] = notail call i8* @llvm.objc.retainAutoreleasedReturnValue(i8* [[T0]])
+  // CHECK:      [[T1:%.*]] = call noundef i8* @_Z12test0_helperv() [ "clang.arc.attachedcall"(i8* (i8*)* @llvm.objc.retainAutoreleasedReturnValue) ]
+  // CHECK-NEXT: call void (...) @llvm.objc.clang.arc.noop.use(i8* [[T1]])
   // CHECK-NEXT: [[T2:%.*]] = load i8**, i8*** {{%.*}}, align 8
   // CHECK-NEXT: [[T3:%.*]] = call i8* @llvm.objc.storeWeak(i8** [[T2]], i8* [[T1]])
   // CHECK-NEXT: [[T4:%.*]] = call i8* @llvm.objc.retain(i8* [[T3]])
@@ -28,8 +28,8 @@ void test0(__weak id *wp, __weak volatile id *wvp) {
   // CHECK-NEXT: call void @llvm.objc.release(i8* [[T1]])
   id x = *wp = test0_helper();
 
-  // CHECK:      [[T0:%.*]] = call i8* @_Z12test0_helperv()
-  // CHECK-NEXT: [[T1:%.*]] = notail call i8* @llvm.objc.retainAutoreleasedReturnValue(i8* [[T0]])
+  // CHECK:      [[T1:%.*]] = call noundef i8* @_Z12test0_helperv() [ "clang.arc.attachedcall"(i8* (i8*)* @llvm.objc.retainAutoreleasedReturnValue) ]
+  // CHECK-NEXT: call void (...) @llvm.objc.clang.arc.noop.use(i8* [[T1]])
   // CHECK-NEXT: [[T2:%.*]] = load i8**, i8*** {{%.*}}, align 8
   // CHECK-NEXT: [[T3:%.*]] = call i8* @llvm.objc.storeWeak(i8** [[T2]], i8* [[T1]])
   // CHECK-NEXT: [[T4:%.*]] = call i8* @llvm.objc.loadWeakRetained(i8** [[T2]])
@@ -42,7 +42,7 @@ void test0(__weak id *wp, __weak volatile id *wvp) {
 struct Test1_helper { Test1_helper(); };
 @interface Test1 @end
 @implementation Test1 { Test1_helper x; } @end
-// CHECK: define internal i8* @"\01-[Test1 .cxx_construct]"(
+// CHECK: define internal noundef i8* @"\01-[Test1 .cxx_construct]"(
 // CHECK:      call void @_ZN12Test1_helperC1Ev(
 // CHECK-NEXT: load
 // CHECK-NEXT: bitcast
@@ -81,7 +81,7 @@ void test34(int cond) {
   // CHECK-NEXT: store i8* [[T0]], i8** [[TEMP1]]
   // CHECK-NEXT: br label
   // CHECK:      [[W0:%.*]] = phi i8* [ [[T0]], {{%.*}} ], [ undef, {{%.*}} ]
-  // CHECK:      call void @_Z11test34_sinkPU15__autoreleasingP11objc_object(i8** [[T1]])
+  // CHECK:      call void @_Z11test34_sinkPU15__autoreleasingP11objc_object(i8** noundef [[T1]])
   // CHECK-NEXT: [[T0:%.*]] = icmp eq i8** [[ARG]], null
   // CHECK-NEXT: br i1 [[T0]],
   // CHECK:      [[T0:%.*]] = load i8*, i8** [[TEMP1]]
@@ -104,7 +104,7 @@ void test34(int cond) {
   // CHECK-NEXT: store i1 true, i1* [[CONDCLEANUP]]
   // CHECK-NEXT: store i8* [[T0]], i8** [[TEMP2]]
   // CHECK-NEXT: br label
-  // CHECK:      call void @_Z11test34_sinkPU15__autoreleasingP11objc_object(i8** [[T1]])
+  // CHECK:      call void @_Z11test34_sinkPU15__autoreleasingP11objc_object(i8** noundef [[T1]])
   // CHECK-NEXT: [[T0:%.*]] = icmp eq i8** [[ARG]], null
   // CHECK-NEXT: br i1 [[T0]],
   // CHECK:      [[T0:%.*]] = load i8*, i8** [[TEMP2]]
@@ -125,25 +125,25 @@ struct Test35_Helper {
 // CHECK-LABEL: define{{.*}} void @_Z6test3513Test35_HelperPS_
 void test35(Test35_Helper x0, Test35_Helper *x0p) {
   // CHECK: call void @llvm.lifetime.start
-  // CHECK: call i8* @_ZN13Test35_Helper11makeObject1Ev
+  // CHECK: call noundef i8* @_ZN13Test35_Helper11makeObject1Ev
   // CHECK-NOT: call i8* @llvm.objc.retain
   id obj1 = Test35_Helper::makeObject1();
   // CHECK: call void @llvm.lifetime.start
-  // CHECK: call i8* @_ZN13Test35_Helper11makeObject2Ev
+  // CHECK: call noundef i8* @_ZN13Test35_Helper11makeObject2Ev
   // CHECK-NOT: call i8* @llvm.objc.retain
   id obj2 = x0.makeObject2();
   // CHECK: call void @llvm.lifetime.start
-  // CHECK: call i8* @_ZN13Test35_Helper11makeObject2Ev
+  // CHECK: call noundef i8* @_ZN13Test35_Helper11makeObject2Ev
   // CHECK-NOT: call i8* @llvm.objc.retain
   id obj3 = x0p->makeObject2();
   id (Test35_Helper::*pmf)() __attribute__((ns_returns_retained))
     = &Test35_Helper::makeObject2;
   // CHECK: call void @llvm.lifetime.start
-  // CHECK: call i8* %
+  // CHECK: call noundef i8* %
   // CHECK-NOT: call i8* @llvm.objc.retain
   id obj4 = (x0.*pmf)();
   // CHECK: call void @llvm.lifetime.start
-  // CHECK: call i8* %
+  // CHECK: call noundef i8* %
   // CHECK-NOT: call i8* @llvm.objc.retain
   id obj5 = (x0p->*pmf)();
 
@@ -163,25 +163,20 @@ void test35(Test35_Helper x0, Test35_Helper *x0p) {
 // CHECK-LABEL: define{{.*}} void @_Z7test35b13Test35_HelperPS_
 void test35b(Test35_Helper x0, Test35_Helper *x0p) {
   // CHECK: call void @llvm.lifetime.start
-  // CHECK: call i8* @_ZN13Test35_Helper11makeObject3Ev
-  // CHECK: call i8* @llvm.objc.retain
+  // CHECK: call noundef i8* @_ZN13Test35_Helper11makeObject3Ev{{.*}} [ "clang.arc.attachedcall"(i8* (i8*)* @llvm.objc.retainAutoreleasedReturnValue) ]
   id obj1 = Test35_Helper::makeObject3();
   // CHECK: call void @llvm.lifetime.start
-  // CHECK: call i8* @_ZN13Test35_Helper11makeObject4Ev
-  // CHECK: call i8* @llvm.objc.retain
+  // CHECK: call noundef i8* @_ZN13Test35_Helper11makeObject4Ev{{.*}} [ "clang.arc.attachedcall"(i8* (i8*)* @llvm.objc.retainAutoreleasedReturnValue) ]
   id obj2 = x0.makeObject4();
   // CHECK: call void @llvm.lifetime.start
-  // CHECK: call i8* @_ZN13Test35_Helper11makeObject4Ev
-  // CHECK: call i8* @llvm.objc.retain
+  // CHECK: call noundef i8* @_ZN13Test35_Helper11makeObject4Ev{{.*}} [ "clang.arc.attachedcall"(i8* (i8*)* @llvm.objc.retainAutoreleasedReturnValue) ]
   id obj3 = x0p->makeObject4();
   id (Test35_Helper::*pmf)() = &Test35_Helper::makeObject4;
   // CHECK: call void @llvm.lifetime.start
-  // CHECK: call i8* %
-  // CHECK: call i8* @llvm.objc.retain
+  // CHECK: call noundef i8* %{{.*}} [ "clang.arc.attachedcall"(i8* (i8*)* @llvm.objc.retainAutoreleasedReturnValue) ]
   id obj4 = (x0.*pmf)();
   // CHECK: call void @llvm.lifetime.start
-  // CHECK: call i8* %
-  // CHECK: call i8* @llvm.objc.retain
+  // CHECK: call noundef i8* %{{.*}} [ "clang.arc.attachedcall"(i8* (i8*)* @llvm.objc.retainAutoreleasedReturnValue) ]
   id obj5 = (x0p->*pmf)();
 
   // CHECK: call void @llvm.objc.release
@@ -222,26 +217,25 @@ template <class T> void test37(T *a) {
 extern template void test37<Test37>(Test37 *a);
 template void test37<Test37>(Test37 *a);
 // CHECK-LABEL: define weak_odr void @_Z6test37I6Test37EvPT_(
-// CHECK:      [[T0:%.*]] = call [[NSARRAY]]* bitcast (i8* (i8*, i8*, ...)* @objc_msgSend to [[NSARRAY]]* (i8*, i8*)*)(
-// CHECK-NEXT: [[T1:%.*]] = bitcast [[NSARRAY]]* [[T0]] to i8*
-// CHECK-NEXT: [[T2:%.*]] = notail call i8* @llvm.objc.retainAutoreleasedReturnValue(i8* [[T1]])
-// CHECK-NEXT: [[COLL:%.*]] = bitcast i8* [[T2]] to [[NSARRAY]]*
+// CHECK:      [[T2:%.*]] = call noundef [[NSARRAY]]* bitcast (i8* (i8*, i8*, ...)* @objc_msgSend to [[NSARRAY]]* (i8*, i8*)*)({{.*}} [ "clang.arc.attachedcall"(i8* (i8*)* @llvm.objc.retainAutoreleasedReturnValue) ]
+// CHECK-NEXT: call void (...) @llvm.objc.clang.arc.noop.use({{.*}} [[T2]])
 
 // Make sure it's not immediately released before starting the iteration.
+// CHECK-NEXT: [[T0:%.*]] = bitcast [[NSARRAY]]* [[T2]] to i8*
 // CHECK-NEXT: load i8*, i8** @OBJC_SELECTOR_REFERENCES_
-// CHECK-NEXT: [[T0:%.*]] = bitcast [[NSARRAY]]* [[COLL]] to i8*
 // CHECK-NEXT: @objc_msgSend
 
 // This bitcast is for the mutation check.
-// CHECK:      [[T0:%.*]] = bitcast [[NSARRAY]]* [[COLL]] to i8*
+// CHECK:      [[T0:%.*]] = bitcast [[NSARRAY]]* [[T2]] to i8*
 // CHECK-NEXT: @objc_enumerationMutation
 
 // This bitcast is for the 'next' message send.
-// CHECK:      [[T0:%.*]] = bitcast [[NSARRAY]]* [[COLL]] to i8*
+// CHECK:      [[T0:%.*]] = bitcast [[NSARRAY]]* [[T2]] to i8*
+// CHECK-NEXT: load i8*, i8** @OBJC_SELECTOR_REFERENCES_
 // CHECK-NEXT: @objc_msgSend
 
 // This bitcast is for the final release.
-// CHECK:      [[T0:%.*]] = bitcast [[NSARRAY]]* [[COLL]] to i8*
+// CHECK:      [[T0:%.*]] = bitcast [[NSARRAY]]* [[T2]] to i8*
 // CHECK-NEXT: call void @llvm.objc.release(i8* [[T0]])
 
 template<typename T>
@@ -250,10 +244,8 @@ void send_release() {
 }
 
 // CHECK-LABEL: define weak_odr void @_Z12send_releaseIiEvv(
-// CHECK: call %0* bitcast (i8* (i8*, i8*, ...)* @objc_msgSend
-// CHECK-NEXT: bitcast
-// CHECK-NEXT: call i8* @llvm.objc.retainAutoreleasedReturnValue
-// CHECK-NEXT: bitcast
+// CHECK: call noundef %0* bitcast (i8* (i8*, i8*, ...)* @objc_msgSend{{.*}} [ "clang.arc.attachedcall"(i8* (i8*)* @llvm.objc.retainAutoreleasedReturnValue) ]
+// CHECK-NEXT: call void (...) @llvm.objc.clang.arc.noop.use(
 // CHECK-NEXT: bitcast
 // CHECK-NEXT: call void @llvm.objc.release
 // CHECK-NEXT: ret void
@@ -265,9 +257,9 @@ Test37 *instantiate_init() {
   return result;
 }
 
-// CHECK-LABEL: define weak_odr %2* @_Z16instantiate_initIiEP6Test37v
-// CHECK: call i8* bitcast (i8* (i8*, i8*, ...)* @objc_msgSend
-// CHECK: call i8* bitcast (i8* (i8*, i8*, ...)* @objc_msgSend
+// CHECK-LABEL: define weak_odr noundef %2* @_Z16instantiate_initIiEP6Test37v
+// CHECK: call noundef i8* bitcast (i8* (i8*, i8*, ...)* @objc_msgSend
+// CHECK: call noundef i8* bitcast (i8* (i8*, i8*, ...)* @objc_msgSend
 // CHECK: call i8* @llvm.objc.retain
 // CHECK: call void @llvm.objc.release
 // CHECK: call i8* @llvm.objc.autoreleaseReturnValue
@@ -298,11 +290,11 @@ class Test39 : Test39_base1, Test39_base2 { // base2 is at non-zero offset
 id Test39::bar() { return 0; }
 // Note lack of autorelease.
 // CHECK-LABEL:    define{{.*}} i8* @_ZThn8_N6Test393barEv(
-// CHECK:      call i8* @_ZN6Test393barEv(
+// CHECK:      call noundef i8* @_ZN6Test393barEv(
 // CHECK-NEXT: ret i8*
 
 // rdar://13617051
-// Just a basic sanity-check that IR-gen still works after instantiating
+// Just a basic correctness check that IR-gen still works after instantiating
 // a non-dependent message send that requires writeback.
 @interface Test40
 + (void) foo:(id *)errorPtr;
@@ -345,6 +337,6 @@ void test42() {
 // Check that the pointer returned by test42_0 is released after the full expression.
 
 // CHECK-LABEL: define void @_Z6test42v()
-// CHECK: %[[CALL:.*]] = call i8* @_Z8test42_0v()
+// CHECK: %[[CALL:.*]] = call noundef i8* @_Z8test42_0v()
 // CHECK: call void @_Z8test42_2OU15__autoreleasingP11objc_object(
 // CHECK: call void @llvm.objc.release(i8* %[[CALL]])

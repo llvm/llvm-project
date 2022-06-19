@@ -26,7 +26,7 @@ namespace class_templates
   template<typename T> requires (T{}) // expected-error{{atomic constraint must be of type 'bool' (found 'int')}}
   struct B<T**> {};
 
-  static_assert((B<int**>{}, true)); // expected-note{{while checking constraint satisfaction for class template partial specialization 'B<int *>' required here}}
+  static_assert(((void)B<int**>{}, true)); // expected-note{{while checking constraint satisfaction for class template partial specialization 'B<int *>' required here}}
   // expected-note@-1{{while checking constraint satisfaction for class template partial specialization 'B<int>' required here}}
   // expected-note@-2{{during template argument deduction for class template partial specialization 'B<T *>' [with T = int *]}}
   // expected-note@-3{{during template argument deduction for class template partial specialization 'B<T **>' [with T = int]}}

@@ -7,16 +7,16 @@
 //===----------------------------------------------------------------------===//
 
 // UNSUPPORTED: c++03, c++11, c++14
-// UNSUPPORTED: gcc-10
 // <optional>
 
 // template <class U>
 //   optional(optional<U>&& rhs);
 
+#include <cassert>
+#include <memory>
 #include <optional>
 #include <type_traits>
-#include <memory>
-#include <cassert>
+#include <utility>
 
 #include "test_macros.h"
 

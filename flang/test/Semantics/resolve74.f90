@@ -1,5 +1,4 @@
-! RUN: %S/test_errors.sh %s %t %flang_fc1
-! REQUIRES: shell
+! RUN: %python %S/test_errors.py %s %flang_fc1
 ! C722 A function name shall not be declared with an asterisk type-param-value 
 ! unless it is of type CHARACTER and is the name of a dummy function or the 
 ! name of the result of an external function.

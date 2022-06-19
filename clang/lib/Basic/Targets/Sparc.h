@@ -39,18 +39,14 @@ public:
   bool handleTargetFeatures(std::vector<std::string> &Features,
                             DiagnosticsEngine &Diags) override {
     // Check if software floating point is enabled
-    auto Feature = llvm::find(Features, "+soft-float");
-    if (Feature != Features.end()) {
+    if (llvm::is_contained(Features, "+soft-float"))
       SoftFloat = true;
-    }
     return true;
   }
   void getTargetDefines(const LangOptions &Opts,
                         MacroBuilder &Builder) const override;
 
   bool hasFeature(StringRef Feature) const override;
-
-  bool hasSjLjLowering() const override { return true; }
 
   ArrayRef<Builtin::Info> getTargetBuiltins() const override {
     // FIXME: Implement!
@@ -180,8 +176,7 @@ public:
   void getTargetDefines(const LangOptions &Opts,
                         MacroBuilder &Builder) const override;
 
-  bool hasSjLjLowering() const override { return true; }
-  bool hasExtIntType() const override { return true; }
+  bool hasBitIntType() const override { return true; }
 };
 
 // SPARCV8el is the 32-bit little-endian mode selected by Triple::sparcel.
@@ -234,7 +229,7 @@ public:
     return getCPUGeneration(CPU) == CG_V9;
   }
 
-  bool hasExtIntType() const override { return true; }
+  bool hasBitIntType() const override { return true; }
 };
 } // namespace targets
 } // namespace clang

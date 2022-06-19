@@ -6,9 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-// GCC 5 does not evaluate static assertions dependent on a template parameter.
-// UNSUPPORTED: gcc-5
-
 // <array>
 
 // bool operator==(array<T, N> const&, array<T, N> const&);
@@ -24,10 +21,6 @@
 #include <cassert>
 
 #include "test_macros.h"
-
-// std::array is explicitly allowed to be initialized with A a = { init-list };.
-// Disable the missing braces warning for this reason.
-#include "disable_missing_braces_warning.h"
 
 template <class Array>
 void test_compare(const Array& LHS, const Array& RHS) {

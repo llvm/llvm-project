@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -std=c++20 -fblocks -Wno-return-stack-address -triple x86_64-unknown-unknown-gnu -emit-llvm -O1 -fexperimental-new-pass-manager -o - %s | FileCheck %s
+// RUN: %clang_cc1 -std=c++20 -fblocks -Wno-return-stack-address -triple x86_64-unknown-unknown-gnu -emit-llvm -O1 -o - %s | FileCheck %s
 
 struct alignas(4) X {
   X();
@@ -282,3 +282,40 @@ X t5() {
 }
 
 } // namespace test_alignas
+
+namespace PR51862 {
+
+template <class T> T test() {
+  T a;
+  T b;
+  if (0)
+    return a;
+  return b;
+}
+
+struct A {
+  A();
+  A(A &);
+  A(int);
+  operator int();
+};
+
+// CHECK-LABEL: define{{.*}} void @_ZN7PR518624testINS_1AEEET_v
+// CHECK:       call noundef i32 @_ZN7PR518621AcviEv
+// CHECK-NEXT:  call void @_ZN7PR518621AC1Ei
+// CHECK-NEXT:  call void @llvm.lifetime.end
+template A test<A>();
+
+struct BSub {};
+struct B : BSub {
+  B();
+  B(B &);
+  B(const BSub &);
+};
+
+// CHECK-LABEL: define{{.*}} void @_ZN7PR518624testINS_1BEEET_v
+// CHECK:       call void @_ZN7PR518621BC1ERKNS_4BSubE
+// CHECK-NEXT:  call void @llvm.lifetime.end
+template B test<B>();
+
+} // namespace PR51862

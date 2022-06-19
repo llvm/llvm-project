@@ -6,11 +6,11 @@
 ; CHECK-DAG:  - { id: [[STACK0:[0-9]+]], type: default, offset: 0, size: 1,
 ; CHECK-DAG:  - { id: [[STACK8:[0-9]+]], type: default, offset: 1, size: 1,
 ; CHECK:   [[FRAME_INDEX:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.1
-; CHECK:   [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX]](p0) :: (invariant load (s8) from %fixed-stack.1, align 16)
+; CHECK:   [[LOAD:%[0-9]+]]:_(s32) = G_SEXTLOAD [[FRAME_INDEX]](p0) :: (invariant load (s8) from %fixed-stack.1, align 16)
 ; CHECK:   [[ASSERT_SEXT:%[0-9]+]]:_(s32) = G_ASSERT_SEXT [[LOAD]], 8
 ; CHECK:   [[TRUNC:%[0-9]+]]:_(s8) = G_TRUNC [[ASSERT_SEXT]](s32)
 ; CHECK:   [[FRAME_INDEX1:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.0
-; CHECK:   [[LOAD1:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX1]](p0) :: (invariant load (s8) from %fixed-stack.0)
+; CHECK:   [[LOAD1:%[0-9]+]]:_(s32) = G_SEXTLOAD [[FRAME_INDEX1]](p0) :: (invariant load (s8) from %fixed-stack.0)
 ; CHECK:   [[ASSERT_SEXT1:%[0-9]+]]:_(s32) = G_ASSERT_SEXT [[LOAD1]], 8
 ; CHECK:   [[TRUNC1:%[0-9]+]]:_(s8) = G_TRUNC [[ASSERT_SEXT1]](s32)
 ; CHECK:   [[ADD:%[0-9]+]]:_(s8) = G_ADD [[TRUNC]], [[TRUNC1]]

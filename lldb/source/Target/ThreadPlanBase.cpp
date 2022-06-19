@@ -16,6 +16,7 @@
 #include "lldb/Target/Process.h"
 #include "lldb/Target/RegisterContext.h"
 #include "lldb/Target/StopInfo.h"
+#include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/Stream.h"
 
@@ -40,7 +41,7 @@ ThreadPlanBase::ThreadPlanBase(Thread &thread)
 #endif
   new_tracer_sp->EnableTracing(thread.GetTraceEnabledState());
   SetThreadPlanTracer(new_tracer_sp);
-  SetIsMasterPlan(true);
+  SetIsControllingPlan(true);
 }
 
 ThreadPlanBase::~ThreadPlanBase() = default;
@@ -73,7 +74,7 @@ bool ThreadPlanBase::ShouldStop(Event *event_ptr) {
   m_report_stop_vote = eVoteYes;
   m_report_run_vote = eVoteYes;
 
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_STEP));
+  Log *log = GetLog(LLDBLog::Step);
 
   StopInfoSP stop_info_sp = GetPrivateStopInfo();
   if (stop_info_sp) {
@@ -90,8 +91,8 @@ bool ThreadPlanBase::ShouldStop(Event *event_ptr) {
     case eStopReasonWatchpoint:
       if (stop_info_sp->ShouldStopSynchronous(event_ptr)) {
         // If we are going to stop for a breakpoint, then unship the other
-        // plans at this point.  Don't force the discard, however, so Master
-        // plans can stay in place if they want to.
+        // plans at this point.  Don't force the discard, however, so
+        // Controlling plans can stay in place if they want to.
         LLDB_LOGF(
             log,
             "Base plan discarding thread plans for thread tid = 0x%4.4" PRIx64

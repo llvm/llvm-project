@@ -1,0 +1,8 @@
+# REQUIRES: amdgpu-registered-target
+## Check that functions with different IR comments in the output are not merged
+
+# Replace llc with cat, so we can simulate hypothetical output without actually running llc.
+# Copy the simulated output to the temporary directory.
+# RUN: cp -f %S/Inputs/amdgpu_no_merge_comments-O0.s %T/ && cp -f %S/Inputs/amdgpu_no_merge_comments-O3.s %T/
+# RUN: cp -f %S/Inputs/amdgpu_no_merge_comments.ll %t.ll && %update_llc_test_checks --llc-binary cat %t.ll
+# RUN: diff -u %S/Inputs/amdgpu_no_merge_comments.ll.expected %t.ll

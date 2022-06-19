@@ -38,7 +38,7 @@ class LLVMConfig(object):
             # Many tools behave strangely if these environment variables aren't
             # set.
             self.with_system_environment(
-                ['SystemDrive', 'SystemRoot', 'TEMP', 'TMP'])
+                ['SystemDrive', 'SystemRoot', 'TEMP', 'TMP', 'PLATFORM'])
             self.use_lit_shell = True
 
             global lit_path_displayed
@@ -55,6 +55,17 @@ class LLVMConfig(object):
 
         if not self.use_lit_shell:
             features.add('shell')
+
+        self.with_system_environment([
+            'ASAN_SYMBOLIZER_PATH',
+            'MSAN_SYMBOLIZER_PATH',
+            'TSAN_SYMBOLIZER_PATH',
+            'UBSAN_SYMBOLIZER_PATH'
+            'ASAN_OPTIONS',
+            'MSAN_OPTIONS',
+            'TSAN_OPTIONS',
+            'UBSAN_OPTIONS',
+        ])
 
         # Running on Darwin OS
         if platform.system() == 'Darwin':
@@ -118,6 +129,8 @@ class LLVMConfig(object):
             elif re.match(r'^x86_64.*', target_triple):
                 features.add('target-x86_64')
             elif re.match(r'^aarch64.*', target_triple):
+                features.add('target-aarch64')
+            elif re.match(r'^arm64.*', target_triple):
                 features.add('target-aarch64')
             elif re.match(r'^arm.*', target_triple):
                 features.add('target-arm')
@@ -487,7 +500,6 @@ class LLVMConfig(object):
 
         lib_dir_props = [
             self.config.name.lower() + '_libs_dir',
-            'clang_libs_dir',
             'llvm_shlib_dir',
             'llvm_libs_dir',
             ]

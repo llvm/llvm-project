@@ -13,10 +13,10 @@
 #define LLVM_CODEGEN_GLOBALISEL_CSEMIRBUILDER_H
 
 #include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
-#include "llvm/CodeGen/GlobalISel/Utils.h"
 
 namespace llvm {
 
+class GISelInstProfileBuilder;
 /// Defines a builder that does CSE of MachineInstructions using GISelCSEInfo.
 /// Eg usage.
 ///

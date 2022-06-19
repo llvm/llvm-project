@@ -12,24 +12,24 @@
 
 ; DARWIN: foo2
 ; DARWIN: adrp [[R0:x[0-9]+]], ___stack_chk_guard@GOTPAGE
-; DARWIN: ldr [[R1:x[0-9]+]], {{\[}}[[R0]], ___stack_chk_guard@GOTPAGEOFF{{\]}}
-; DARWIN: ldr {{x[0-9]+}}, {{\[}}[[R1]]{{\]}}
+; DARWIN: ldr [[R1:x[0-9]+]], [[[R0]], ___stack_chk_guard@GOTPAGEOFF]
+; DARWIN: ldr {{x[0-9]+}}, [[[R1]]]
 
 ; PIC-LINUX: foo2
 ; PIC-LINUX: adrp [[R0:x[0-9]+]], :got:__stack_chk_guard
-; PIC-LINUX: ldr [[R1:x[0-9]+]], {{\[}}[[R0]], :got_lo12:__stack_chk_guard{{\]}}
-; PIC-LINUX: ldr {{x[0-9]+}}, {{\[}}[[R1]]{{\]}}
+; PIC-LINUX: ldr [[R1:x[0-9]+]], [[[R0]], :got_lo12:__stack_chk_guard]
+; PIC-LINUX: ldr {{x[0-9]+}}, [[[R1]]]
 
 ; STATIC-LARGE: foo2
 ; STATIC-LARGE: movz [[R0:x[0-9]+]], #:abs_g0_nc:__stack_chk_guard
 ; STATIC-LARGE: movk [[R0]], #:abs_g1_nc:__stack_chk_guard
 ; STATIC-LARGE: movk [[R0]], #:abs_g2_nc:__stack_chk_guard
 ; STATIC-LARGE: movk [[R0]], #:abs_g3:__stack_chk_guard
-; STATIC-LARGE: ldr {{x[0-9]+}}, {{\[}}[[R0]]{{\]}}
+; STATIC-LARGE: ldr {{x[0-9]+}}, [[[R0]]]
 
 ; STATIC-SMALL: foo2
 ; STATIC-SMALL: adrp [[R0:x[0-9]+]], __stack_chk_guard
-; STATIC-SMALL: ldr {{x[0-9]+}}, {{\[}}[[R0]], :lo12:__stack_chk_guard{{\]}}
+; STATIC-SMALL: ldr {{x[0-9]+}}, [[[R0]], :lo12:__stack_chk_guard]
 
 ; FALLBACK-NOT: remark:{{.*}}llvm.lifetime.end
 ; FALLBACK-NOT: remark:{{.*}}llvm.lifetime.start

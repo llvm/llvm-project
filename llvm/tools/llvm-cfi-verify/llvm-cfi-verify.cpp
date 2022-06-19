@@ -20,6 +20,7 @@
 #include "lib/GraphBuilder.h"
 
 #include "llvm/BinaryFormat/ELF.h"
+#include "llvm/DebugInfo/Symbolize/SymbolizableModule.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/FormatVariadic.h"
@@ -36,10 +37,10 @@ static cl::OptionCategory CFIVerifyCategory("CFI Verify Options");
 
 cl::opt<std::string> InputFilename(cl::Positional, cl::desc("<input file>"),
                                    cl::Required, cl::cat(CFIVerifyCategory));
-cl::opt<std::string> BlacklistFilename(cl::Positional,
-                                       cl::desc("[blacklist file]"),
-                                       cl::init("-"),
-                                       cl::cat(CFIVerifyCategory));
+cl::opt<std::string> IgnorelistFilename(cl::Positional,
+                                        cl::desc("[ignorelist file]"),
+                                        cl::init("-"),
+                                        cl::cat(CFIVerifyCategory));
 cl::opt<bool> PrintGraphs(
     "print-graphs",
     cl::desc("Print graphs around indirect CF instructions in DOT format."),
@@ -103,7 +104,7 @@ static void printInstructionInformation(const FileAnalysis &Analysis,
 static void printInstructionStatus(unsigned BlameLine, bool CFIProtected,
                                    const DILineInfo &LineInfo) {
   if (BlameLine) {
-    outs() << "Blacklist Match: " << BlacklistFilename << ":" << BlameLine
+    outs() << "Ignorelist Match: " << IgnorelistFilename << ":" << BlameLine
            << "\n";
     if (CFIProtected)
       outs() << "====> Unexpected Protected\n";
@@ -240,9 +241,9 @@ printIndirectCFInstructions(FileAnalysis &Analysis,
   if (!SpecialCaseList)
     return;
 
-  outs() << "\nBlacklist Results:\n";
+  outs() << "\nIgnorelist Results:\n";
   for (const auto &KV : BlameCounter) {
-    outs() << "  " << BlacklistFilename << ":" << KV.first << " affects "
+    outs() << "  " << IgnorelistFilename << ":" << KV.first << " affects "
            << KV.second << " indirect CF instructions.\n";
   }
 }
@@ -265,12 +266,12 @@ int main(int argc, char **argv) {
     PrintBlameContext.setValue(PrintBlameContextAll);
 
   std::unique_ptr<SpecialCaseList> SpecialCaseList;
-  if (BlacklistFilename != "-") {
+  if (IgnorelistFilename != "-") {
     std::string Error;
-    SpecialCaseList = SpecialCaseList::create({BlacklistFilename},
+    SpecialCaseList = SpecialCaseList::create({IgnorelistFilename},
                                               *vfs::getRealFileSystem(), Error);
     if (!SpecialCaseList) {
-      errs() << "Failed to get blacklist: " << Error << "\n";
+      errs() << "Failed to get ignorelist: " << Error << "\n";
       exit(EXIT_FAILURE);
     }
   }

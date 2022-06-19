@@ -233,11 +233,11 @@ APFixedPoint APFixedPoint::mul(const APFixedPoint &Other,
   // Widen the LHS and RHS so we can perform a full multiplication.
   unsigned Wide = CommonFXSema.getWidth() * 2;
   if (CommonFXSema.isSigned()) {
-    ThisVal = ThisVal.sextOrSelf(Wide);
-    OtherVal = OtherVal.sextOrSelf(Wide);
+    ThisVal = ThisVal.sext(Wide);
+    OtherVal = OtherVal.sext(Wide);
   } else {
-    ThisVal = ThisVal.zextOrSelf(Wide);
-    OtherVal = OtherVal.zextOrSelf(Wide);
+    ThisVal = ThisVal.zext(Wide);
+    OtherVal = OtherVal.zext(Wide);
   }
 
   // Perform the full multiplication and downscale to get the same scale.
@@ -290,11 +290,11 @@ APFixedPoint APFixedPoint::div(const APFixedPoint &Other,
   // Widen the LHS and RHS so we can perform a full division.
   unsigned Wide = CommonFXSema.getWidth() * 2;
   if (CommonFXSema.isSigned()) {
-    ThisVal = ThisVal.sextOrSelf(Wide);
-    OtherVal = OtherVal.sextOrSelf(Wide);
+    ThisVal = ThisVal.sext(Wide);
+    OtherVal = OtherVal.sext(Wide);
   } else {
-    ThisVal = ThisVal.zextOrSelf(Wide);
-    OtherVal = OtherVal.zextOrSelf(Wide);
+    ThisVal = ThisVal.zext(Wide);
+    OtherVal = OtherVal.zext(Wide);
   }
 
   // Upscale to compensate for the loss of precision from division, and
@@ -306,7 +306,7 @@ APFixedPoint APFixedPoint::div(const APFixedPoint &Other,
     APInt::sdivrem(ThisVal, OtherVal, Result, Rem);
     // If the quotient is negative and the remainder is nonzero, round
     // towards negative infinity by subtracting epsilon from the result.
-    if (ThisVal.isNegative() != OtherVal.isNegative() && !Rem.isNullValue())
+    if (ThisVal.isNegative() != OtherVal.isNegative() && !Rem.isZero())
       Result = Result - 1;
   } else
     Result = ThisVal.udiv(OtherVal);
@@ -340,9 +340,9 @@ APFixedPoint APFixedPoint::shl(unsigned Amt, bool *Overflow) const {
   // Widen the LHS.
   unsigned Wide = Sema.getWidth() * 2;
   if (Sema.isSigned())
-    ThisVal = ThisVal.sextOrSelf(Wide);
+    ThisVal = ThisVal.sext(Wide);
   else
-    ThisVal = ThisVal.zextOrSelf(Wide);
+    ThisVal = ThisVal.zext(Wide);
 
   // Clamp the shift amount at the original width, and perform the shift.
   Amt = std::min(Amt, ThisVal.getBitWidth());
@@ -381,7 +381,7 @@ void APFixedPoint::toString(SmallVectorImpl<char> &Str) const {
   // Add 4 digits to hold the value after multiplying 10 (the radix)
   unsigned Width = Val.getBitWidth() + 4;
   APInt FractPart = Val.zextOrTrunc(Scale).zext(Width);
-  APInt FractPartMask = APInt::getAllOnesValue(Scale).zext(Width);
+  APInt FractPartMask = APInt::getAllOnes(Scale).zext(Width);
   APInt RadixInt = APInt(Width, 10);
 
   IntPart.toString(Str, /*Radix=*/10);

@@ -1,13 +1,13 @@
-// RUN: %clang_cc1 -triple x86_64-windows -fasync-exceptions -fcxx-exceptions -fexceptions -fms-extensions -x c++ -Wno-implicit-function-declaration -S -emit-llvm %s -o - | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-windows -fasync-exceptions -fcxx-exceptions -fexceptions -fms-extensions -x c++ -Wno-implicit-function-declaration -S -emit-llvm %s -o - | FileCheck %s
 
 // CHECK: invoke void @llvm.seh.try.begin()
 // CHECK: invoke void @llvm.seh.try.begin()
 // CHECK: %[[src:[0-9-]+]] = load volatile i32, i32* %i
-// CHECK-NEXT: i32 %[[src]]
+// CHECK-NEXT: i32 noundef %[[src]]
 // CHECK: invoke void @llvm.seh.try.end()
 // CHECK: invoke void @llvm.seh.try.end()
 
-// CHECK: define internal void @"?fin$0@0@main@@"(i8 %abnormal_termination
+// CHECK: define internal void @"?fin$0@0@main@@"(i8 noundef %abnormal_termination
 // CHECK: invoke void @llvm.seh.try.begin()
 // CHECK: invoke void @llvm.seh.try.end()
 

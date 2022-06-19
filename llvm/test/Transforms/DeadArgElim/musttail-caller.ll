@@ -1,4 +1,4 @@
-; RUN: opt -deadargelim -S < %s | FileCheck %s
+; RUN: opt -passes=deadargelim -S < %s | FileCheck %s
 ; PR36441
 ; Dead arguments should not be removed in presence of `musttail` calls.
 

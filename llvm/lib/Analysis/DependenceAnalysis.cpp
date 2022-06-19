@@ -50,17 +50,15 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Analysis/DependenceAnalysis.h"
-#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/AliasAnalysis.h"
+#include "llvm/Analysis/Delinearization.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/ScalarEvolution.h"
 #include "llvm/Analysis/ScalarEvolutionExpressions.h"
 #include "llvm/Analysis/ValueTracking.h"
-#include "llvm/Config/llvm-config.h"
 #include "llvm/IR/InstIterator.h"
 #include "llvm/IR/Module.h"
-#include "llvm/IR/Operator.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
@@ -108,16 +106,20 @@ STATISTIC(BanerjeeIndependence, "Banerjee independence");
 STATISTIC(BanerjeeSuccesses, "Banerjee successes");
 
 static cl::opt<bool>
-    Delinearize("da-delinearize", cl::init(true), cl::Hidden, cl::ZeroOrMore,
+    Delinearize("da-delinearize", cl::init(true), cl::Hidden,
                 cl::desc("Try to delinearize array references."));
 static cl::opt<bool> DisableDelinearizationChecks(
-    "da-disable-delinearization-checks", cl::init(false), cl::Hidden,
-    cl::ZeroOrMore,
+    "da-disable-delinearization-checks", cl::Hidden,
     cl::desc(
         "Disable checks that try to statically verify validity of "
         "delinearized subscripts. Enabling this option may result in incorrect "
         "dependence vectors for languages that allow the subscript of one "
         "dimension to underflow or overflow into another dimension."));
+
+static cl::opt<unsigned> MIVMaxLevelThreshold(
+    "da-miv-max-level-threshold", cl::init(7), cl::Hidden,
+    cl::desc("Maximum depth allowed for the recursive algorithm used to "
+             "explore MIV direction vectors."));
 
 //===----------------------------------------------------------------------===//
 // basics
@@ -781,6 +783,8 @@ unsigned DependenceInfo::mapSrcLoop(const Loop *SrcLoop) const {
 unsigned DependenceInfo::mapDstLoop(const Loop *DstLoop) const {
   unsigned D = DstLoop->getLoopDepth();
   if (D > CommonLevels)
+    // This tries to make sure that we assign unique numbers to src and dst when
+    // the memory accesses reside in different loops that have the same depth.
     return D - CommonLevels + SrcLevels;
   else
     return D;
@@ -790,10 +794,16 @@ unsigned DependenceInfo::mapDstLoop(const Loop *DstLoop) const {
 // Returns true if Expression is loop invariant in LoopNest.
 bool DependenceInfo::isLoopInvariant(const SCEV *Expression,
                                      const Loop *LoopNest) const {
+  // Unlike ScalarEvolution::isLoopInvariant() we consider an access outside of
+  // any loop as invariant, because we only consier expression evaluation at a
+  // specific position (where the array access takes place), and not across the
+  // entire function.
   if (!LoopNest)
     return true;
-  return SE->isLoopInvariant(Expression, LoopNest) &&
-    isLoopInvariant(Expression, LoopNest->getParentLoop());
+
+  // If the expression is invariant in the outermost loop of the loop nest, it
+  // is invariant anywhere in the loop nest.
+  return SE->isLoopInvariant(Expression, LoopNest->getOutermostLoop());
 }
 
 
@@ -884,13 +894,25 @@ void DependenceInfo::removeMatchingExtensions(Subscript *Pair) {
   }
 }
 
-// Examine the scev and return true iff it's linear.
+// Examine the scev and return true iff it's affine.
 // Collect any loops mentioned in the set of "Loops".
 bool DependenceInfo::checkSubscript(const SCEV *Expr, const Loop *LoopNest,
                                     SmallBitVector &Loops, bool IsSrc) {
   const SCEVAddRecExpr *AddRec = dyn_cast<SCEVAddRecExpr>(Expr);
   if (!AddRec)
     return isLoopInvariant(Expr, LoopNest);
+
+  // The AddRec must depend on one of the containing loops. Otherwise,
+  // mapSrcLoop and mapDstLoop return indices outside the intended range. This
+  // can happen when a subscript in one loop references an IV from a sibling
+  // loop that could not be replaced with a concrete exit value by
+  // getSCEVAtScope.
+  const Loop *L = LoopNest;
+  while (L && AddRec->getLoop() != L)
+    L = L->getParentLoop();
+  if (!L)
+    return false;
+
   const SCEV *Start = AddRec->getStart();
   const SCEV *Step = AddRec->getStepRecurrence(*SE);
   const SCEV *UB = SE->getBackedgeTakenCount(AddRec->getLoop());
@@ -2319,7 +2341,7 @@ bool DependenceInfo::gcdMIVtest(const SCEV *Src, const SCEV *Dst,
   LLVM_DEBUG(dbgs() << "starting gcd\n");
   ++GCDapplications;
   unsigned BitWidth = SE->getTypeSizeInBits(Src->getType());
-  APInt RunningGCD = APInt::getNullValue(BitWidth);
+  APInt RunningGCD = APInt::getZero(BitWidth);
 
   // Examine Src coefficients.
   // Compute running GCD and record source constant.
@@ -2359,7 +2381,7 @@ bool DependenceInfo::gcdMIVtest(const SCEV *Src, const SCEV *Dst,
   }
   const SCEV *DstConst = Coefficients;
 
-  APInt ExtraGCD = APInt::getNullValue(BitWidth);
+  APInt ExtraGCD = APInt::getZero(BitWidth);
   const SCEV *Delta = SE->getMinusSCEV(DstConst, SrcConst);
   LLVM_DEBUG(dbgs() << "    Delta = " << *Delta << "\n");
   const SCEVConstant *Constant = dyn_cast<SCEVConstant>(Delta);
@@ -2602,6 +2624,19 @@ unsigned DependenceInfo::exploreDirections(unsigned Level, CoefficientInfo *A,
                                            const SmallBitVector &Loops,
                                            unsigned &DepthExpanded,
                                            const SCEV *Delta) const {
+  // This algorithm has worst case complexity of O(3^n), where 'n' is the number
+  // of common loop levels. To avoid excessive compile-time, pessimize all the
+  // results and immediately return when the number of common levels is beyond
+  // the given threshold.
+  if (CommonLevels > MIVMaxLevelThreshold) {
+    LLVM_DEBUG(dbgs() << "Number of common levels exceeded the threshold. MIV "
+                         "direction exploration is terminated.\n");
+    for (unsigned K = 1; K <= CommonLevels; ++K)
+      if (Loops[K])
+        Bound[K].DirSet = Dependence::DVEntry::ALL;
+    return 1;
+  }
+
   if (Level > CommonLevels) {
     // record result
     LLVM_DEBUG(dbgs() << "\t[");
@@ -3299,59 +3334,45 @@ bool DependenceInfo::tryDelinearize(Instruction *Src, Instruction *Dst,
   return true;
 }
 
+/// Try to delinearize \p SrcAccessFn and \p DstAccessFn if the underlying
+/// arrays accessed are fixed-size arrays. Return true if delinearization was
+/// successful.
 bool DependenceInfo::tryDelinearizeFixedSize(
     Instruction *Src, Instruction *Dst, const SCEV *SrcAccessFn,
     const SCEV *DstAccessFn, SmallVectorImpl<const SCEV *> &SrcSubscripts,
     SmallVectorImpl<const SCEV *> &DstSubscripts) {
+  LLVM_DEBUG({
+    const SCEVUnknown *SrcBase =
+        dyn_cast<SCEVUnknown>(SE->getPointerBase(SrcAccessFn));
+    const SCEVUnknown *DstBase =
+        dyn_cast<SCEVUnknown>(SE->getPointerBase(DstAccessFn));
+    assert(SrcBase && DstBase && SrcBase == DstBase &&
+           "expected src and dst scev unknowns to be equal");
+    });
 
-  Value *SrcPtr = getLoadStorePointerOperand(Src);
-  Value *DstPtr = getLoadStorePointerOperand(Dst);
-  const SCEVUnknown *SrcBase =
-      dyn_cast<SCEVUnknown>(SE->getPointerBase(SrcAccessFn));
-  const SCEVUnknown *DstBase =
-      dyn_cast<SCEVUnknown>(SE->getPointerBase(DstAccessFn));
-  assert(SrcBase && DstBase && SrcBase == DstBase &&
-         "expected src and dst scev unknowns to be equal");
-
-  // Check the simple case where the array dimensions are fixed size.
-  auto *SrcGEP = dyn_cast<GetElementPtrInst>(SrcPtr);
-  auto *DstGEP = dyn_cast<GetElementPtrInst>(DstPtr);
-  if (!SrcGEP || !DstGEP)
+  SmallVector<int, 4> SrcSizes;
+  SmallVector<int, 4> DstSizes;
+  if (!tryDelinearizeFixedSizeImpl(SE, Src, SrcAccessFn, SrcSubscripts,
+                                   SrcSizes) ||
+      !tryDelinearizeFixedSizeImpl(SE, Dst, DstAccessFn, DstSubscripts,
+                                   DstSizes))
     return false;
-
-  SmallVector<int, 4> SrcSizes, DstSizes;
-  SE->getIndexExpressionsFromGEP(SrcGEP, SrcSubscripts, SrcSizes);
-  SE->getIndexExpressionsFromGEP(DstGEP, DstSubscripts, DstSizes);
 
   // Check that the two size arrays are non-empty and equal in length and
   // value.
-  if (SrcSizes.empty() || SrcSubscripts.size() <= 1 ||
-      SrcSizes.size() != DstSizes.size() ||
+  if (SrcSizes.size() != DstSizes.size() ||
       !std::equal(SrcSizes.begin(), SrcSizes.end(), DstSizes.begin())) {
     SrcSubscripts.clear();
     DstSubscripts.clear();
     return false;
   }
 
-  Value *SrcBasePtr = SrcGEP->getOperand(0);
-  Value *DstBasePtr = DstGEP->getOperand(0);
-  while (auto *PCast = dyn_cast<BitCastInst>(SrcBasePtr))
-    SrcBasePtr = PCast->getOperand(0);
-  while (auto *PCast = dyn_cast<BitCastInst>(DstBasePtr))
-    DstBasePtr = PCast->getOperand(0);
-
-  // Check that for identical base pointers we do not miss index offsets
-  // that have been added before this GEP is applied.
-  if (SrcBasePtr != SrcBase->getValue() || DstBasePtr != DstBase->getValue()) {
-    SrcSubscripts.clear();
-    DstSubscripts.clear();
-    return false;
-  }
-
   assert(SrcSubscripts.size() == DstSubscripts.size() &&
-         SrcSubscripts.size() == SrcSizes.size() + 1 &&
-         "Expected equal number of entries in the list of sizes and "
-         "subscripts.");
+         "Expected equal number of entries in the list of SrcSubscripts and "
+         "DstSubscripts.");
+
+  Value *SrcPtr = getLoadStorePointerOperand(Src);
+  Value *DstPtr = getLoadStorePointerOperand(Dst);
 
   // In general we cannot safely assume that the subscripts recovered from GEPs
   // are in the range of values defined for their corresponding array
@@ -3387,8 +3408,8 @@ bool DependenceInfo::tryDelinearizeFixedSize(
   }
   LLVM_DEBUG({
     dbgs() << "Delinearized subscripts of fixed-size array\n"
-           << "SrcGEP:" << *SrcGEP << "\n"
-           << "DstGEP:" << *DstGEP << "\n";
+           << "SrcGEP:" << *SrcPtr << "\n"
+           << "DstGEP:" << *DstPtr << "\n";
   });
   return true;
 }
@@ -3421,16 +3442,16 @@ bool DependenceInfo::tryDelinearizeParametricSize(
 
   // First step: collect parametric terms in both array references.
   SmallVector<const SCEV *, 4> Terms;
-  SE->collectParametricTerms(SrcAR, Terms);
-  SE->collectParametricTerms(DstAR, Terms);
+  collectParametricTerms(*SE, SrcAR, Terms);
+  collectParametricTerms(*SE, DstAR, Terms);
 
   // Second step: find subscript sizes.
   SmallVector<const SCEV *, 4> Sizes;
-  SE->findArrayDimensions(Terms, Sizes, ElementSize);
+  findArrayDimensions(*SE, Terms, Sizes, ElementSize);
 
   // Third step: compute the access functions for each subscript.
-  SE->computeAccessFunctions(SrcAR, SrcSubscripts, Sizes);
-  SE->computeAccessFunctions(DstAR, DstSubscripts, Sizes);
+  computeAccessFunctions(*SE, SrcAR, SrcSubscripts, Sizes);
+  computeAccessFunctions(*SE, DstAR, DstSubscripts, Sizes);
 
   // Fail when there is only a subscript: that's a linearized access function.
   if (SrcSubscripts.size() < 2 || DstSubscripts.size() < 2 ||

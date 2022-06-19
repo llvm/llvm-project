@@ -14,15 +14,20 @@
 #include "llvm/Analysis/InstructionSimplify.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/InstIterator.h"
-#include "llvm/InitializePasses.h"
-#include "llvm/Pass.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/FileSystem.h"
 
 using namespace llvm;
 
 #define DEBUG_TYPE "coro-elide"
 
 STATISTIC(NumOfCoroElided, "The # of coroutine get elided.");
+
+#ifndef NDEBUG
+static cl::opt<std::string> CoroElideInfoOutputFilename(
+    "coro-elide-info-output-file", cl::value_desc("filename"),
+    cl::desc("File to record the coroutines got elided"), cl::Hidden);
+#endif
 
 namespace {
 // Created on demand if the coro-elide pass has work to do.
@@ -96,21 +101,12 @@ static void removeTailCallAttribute(AllocaInst *Frame, AAResults &AA) {
 
 // Given a resume function @f.resume(%f.frame* %frame), returns the size
 // and expected alignment of %f.frame type.
-static std::pair<uint64_t, Align> getFrameLayout(Function *Resume) {
-  // Prefer to pull information from the function attributes.
+static Optional<std::pair<uint64_t, Align>> getFrameLayout(Function *Resume) {
+  // Pull information from the function attributes.
   auto Size = Resume->getParamDereferenceableBytes(0);
-  auto Align = Resume->getParamAlign(0);
-
-  // If those aren't given, extract them from the type.
-  if (Size == 0 || !Align) {
-    auto *FrameTy = Resume->arg_begin()->getType()->getPointerElementType();
-
-    const DataLayout &DL = Resume->getParent()->getDataLayout();
-    if (!Size) Size = DL.getTypeAllocSize(FrameTy);
-    if (!Align) Align = DL.getABITypeAlign(FrameTy);
-  }
-
-  return std::make_pair(Size, *Align);
+  if (!Size)
+    return None;
+  return std::make_pair(Size, Resume->getParamAlign(0).valueOrOne());
 }
 
 // Finds first non alloca instruction in the entry block of a function.
@@ -120,6 +116,21 @@ static Instruction *getFirstNonAllocaInTheEntryBlock(Function *F) {
       return &I;
   llvm_unreachable("no terminator in the entry block");
 }
+
+#ifndef NDEBUG
+static std::unique_ptr<raw_fd_ostream> getOrCreateLogFile() {
+  assert(!CoroElideInfoOutputFilename.empty() &&
+         "coro-elide-info-output-file shouldn't be empty");
+  std::error_code EC;
+  auto Result = std::make_unique<raw_fd_ostream>(CoroElideInfoOutputFilename,
+                                                 EC, sys::fs::OF_Append);
+  if (!EC)
+    return Result;
+  llvm::errs() << "Error opening coro-elide-info-output-file '"
+               << CoroElideInfoOutputFilename << " for appending!\n";
+  return std::make_unique<raw_fd_ostream>(2, false); // stderr.
+}
+#endif
 
 // To elide heap allocations we need to suppress code blocks guarded by
 // llvm.coro.alloc and llvm.coro.free instructions.
@@ -339,32 +350,20 @@ bool Lowerer::processCoroId(CoroIdInst *CoroId, AAResults &AA,
     replaceWithConstant(DestroyAddrConstant, It.second);
 
   if (ShouldElide) {
-    auto FrameSizeAndAlign = getFrameLayout(cast<Function>(ResumeAddrConstant));
-    elideHeapAllocations(CoroId->getFunction(), FrameSizeAndAlign.first,
-                         FrameSizeAndAlign.second, AA);
-    coro::replaceCoroFree(CoroId, /*Elide=*/true);
-    NumOfCoroElided++;
+    if (auto FrameSizeAndAlign =
+            getFrameLayout(cast<Function>(ResumeAddrConstant))) {
+      elideHeapAllocations(CoroId->getFunction(), FrameSizeAndAlign->first,
+                           FrameSizeAndAlign->second, AA);
+      coro::replaceCoroFree(CoroId, /*Elide=*/true);
+      NumOfCoroElided++;
+#ifndef NDEBUG
+      if (!CoroElideInfoOutputFilename.empty())
+        *getOrCreateLogFile()
+            << "Elide " << CoroId->getCoroutine()->getName() << " in "
+            << CoroId->getFunction()->getName() << "\n";
+#endif
+    }
   }
-
-  return true;
-}
-
-// See if there are any coro.subfn.addr instructions referring to coro.devirt
-// trigger, if so, replace them with a direct call to devirt trigger function.
-static bool replaceDevirtTrigger(Function &F) {
-  SmallVector<CoroSubFnInst *, 1> DevirtAddr;
-  for (auto &I : instructions(F))
-    if (auto *SubFn = dyn_cast<CoroSubFnInst>(&I))
-      if (SubFn->getIndex() == CoroSubFnInst::RestartTrigger)
-        DevirtAddr.push_back(SubFn);
-
-  if (DevirtAddr.empty())
-    return false;
-
-  Module &M = *F.getParent();
-  Function *DevirtFn = M.getFunction(CORO_DEVIRT_TRIGGER_FN);
-  assert(DevirtFn && "coro.devirt.fn not found");
-  replaceWithConstant(DevirtFn, DevirtAddr);
 
   return true;
 }
@@ -394,62 +393,3 @@ PreservedAnalyses CoroElidePass::run(Function &F, FunctionAnalysisManager &AM) {
 
   return Changed ? PreservedAnalyses::none() : PreservedAnalyses::all();
 }
-
-namespace {
-struct CoroElideLegacy : FunctionPass {
-  static char ID;
-  CoroElideLegacy() : FunctionPass(ID) {
-    initializeCoroElideLegacyPass(*PassRegistry::getPassRegistry());
-  }
-
-  std::unique_ptr<Lowerer> L;
-
-  bool doInitialization(Module &M) override {
-    if (declaresCoroElideIntrinsics(M))
-      L = std::make_unique<Lowerer>(M);
-    return false;
-  }
-
-  bool runOnFunction(Function &F) override {
-    if (!L)
-      return false;
-
-    bool Changed = false;
-
-    if (F.hasFnAttribute(CORO_PRESPLIT_ATTR))
-      Changed = replaceDevirtTrigger(F);
-
-    L->CoroIds.clear();
-    L->collectPostSplitCoroIds(&F);
-    // If we did not find any coro.id, there is nothing to do.
-    if (L->CoroIds.empty())
-      return Changed;
-
-    AAResults &AA = getAnalysis<AAResultsWrapperPass>().getAAResults();
-    DominatorTree &DT = getAnalysis<DominatorTreeWrapperPass>().getDomTree();
-
-    for (auto *CII : L->CoroIds)
-      Changed |= L->processCoroId(CII, AA, DT);
-
-    return Changed;
-  }
-  void getAnalysisUsage(AnalysisUsage &AU) const override {
-    AU.addRequired<AAResultsWrapperPass>();
-    AU.addRequired<DominatorTreeWrapperPass>();
-  }
-  StringRef getPassName() const override { return "Coroutine Elision"; }
-};
-}
-
-char CoroElideLegacy::ID = 0;
-INITIALIZE_PASS_BEGIN(
-    CoroElideLegacy, "coro-elide",
-    "Coroutine frame allocation elision and indirect calls replacement", false,
-    false)
-INITIALIZE_PASS_DEPENDENCY(AAResultsWrapperPass)
-INITIALIZE_PASS_END(
-    CoroElideLegacy, "coro-elide",
-    "Coroutine frame allocation elision and indirect calls replacement", false,
-    false)
-
-Pass *llvm::createCoroElideLegacyPass() { return new CoroElideLegacy(); }

@@ -6,7 +6,7 @@
 
 asm ("INST r1, 0"); // expected-error {{GNU-style inline assembly is disabled}}
 
-void foo() __asm("__foo_func"); // AsmLabel is OK
+void foo(void) __asm("__foo_func"); // AsmLabel is OK
 int foo1 asm("bar1") = 0; // OK
 
 asm(" "); // Whitespace is OK

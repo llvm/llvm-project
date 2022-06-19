@@ -129,7 +129,7 @@ void IntegerTypesCheck::check(const MatchFinder::MatchResult &Result) {
   const StringRef Port = "unsigned short port";
   const char *Data = Result.SourceManager->getCharacterData(Loc);
   if (!std::strncmp(Data, Port.data(), Port.size()) &&
-      !isIdentifierBody(Data[Port.size()]))
+      !isAsciiIdentifierContinue(Data[Port.size()]))
     return;
 
   std::string Replacement =

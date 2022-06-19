@@ -34,7 +34,7 @@ struct DummyFile : public vfs::File {
 
 class DummyFileSystem : public vfs::FileSystem {
   int FSID;   // used to produce UniqueIDs
-  int FileID; // used to produce UniqueIDs
+  int FileID = 0; // used to produce UniqueIDs
   std::string cwd;
   std::map<std::string, vfs::Status> FilesAndDirs;
 
@@ -44,7 +44,7 @@ class DummyFileSystem : public vfs::FileSystem {
   }
 
 public:
-  DummyFileSystem() : FSID(getNextFSID()), FileID(0) {}
+  DummyFileSystem() : FSID(getNextFSID()) {}
 
   ErrorOr<vfs::Status> status(const Twine &Path) override {
     std::map<std::string, vfs::Status>::iterator I =
@@ -296,7 +296,7 @@ TEST(FileSystemTest, OpenErrno) {
   FileSpec spec("/file/that/does/not/exist.txt");
 #endif
   FileSystem fs;
-  auto file = fs.Open(spec, File::eOpenOptionRead, 0, true);
+  auto file = fs.Open(spec, File::eOpenOptionReadOnly, 0, true);
   ASSERT_FALSE(file);
   std::error_code code = errorToErrorCode(file.takeError());
   EXPECT_EQ(code.category(), std::system_category());

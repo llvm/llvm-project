@@ -397,5 +397,34 @@ define <64 x i32> @f23(i32 %a0) #1 {
   ret <64 x i32> %v1
 }
 
+; Splat register, 16 bit fp, v68+
+define <64 x half> @f24(i16 %a0) #2 {
+; CHECK-LABEL: f24:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    {
+; CHECK-NEXT:     v0.h = vsplat(r0)
+; CHECK-NEXT:     jumpr r31
+; CHECK-NEXT:    }
+  %v0 = bitcast i16 %a0 to half
+  %v1 = insertelement <64 x half> undef, half %v0, i32 0
+  %v2 = shufflevector <64 x half> %v1, <64 x half> undef, <64 x i32> zeroinitializer
+  ret <64 x half> %v2
+}
+
+; Splat register, 32 bit fp, v68+
+define <32 x float> @f25(float %a0) #2 {
+; CHECK-LABEL: f25:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    {
+; CHECK-NEXT:     v0 = vsplat(r0)
+; CHECK-NEXT:     jumpr r31
+; CHECK-NEXT:    }
+  %v0 = insertelement <32 x float> undef, float %a0, i32 0
+  %v1 = shufflevector <32 x float> %v0, <32 x float> undef, <32 x i32> zeroinitializer
+  ret <32 x float> %v1
+}
+
+
 attributes #0 = { nounwind readnone "target-cpu"="hexagonv60" "target-features"="+hvxv60,+hvx-length128b" }
 attributes #1 = { nounwind readnone "target-cpu"="hexagonv62" "target-features"="+hvxv62,+hvx-length128b" }
+attributes #2 = { nounwind readnone "target-cpu"="hexagonv69" "target-features"="+hvxv69,+hvx-length128b,+hvx-qfloat" }

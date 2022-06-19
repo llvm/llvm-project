@@ -10,52 +10,13 @@
 
 namespace std {
 template <typename>
-class initializer_list
-{
+class initializer_list {
 public:
   initializer_list() noexcept {}
 };
 
-template <typename T>
-class vector {
-public:
-  vector() = default;
-  vector(initializer_list<T>) {}
-
-  void push_back(const T &) {}
-  void push_back(T &&) {}
-
-  template <typename... Args>
-  void emplace_back(Args &&... args){};
-  ~vector();
-};
-template <typename T>
-class list {
-public:
-  void push_back(const T &) {}
-  void push_back(T &&) {}
-
-  template <typename... Args>
-  void emplace_back(Args &&... args){};
-  ~list();
-};
-
-template <typename T>
-class deque {
-public:
-  void push_back(const T &) {}
-  void push_back(T &&) {}
-
-  template <typename... Args>
-  void emplace_back(Args &&... args){};
-  ~deque();
-};
-
-template <typename T> struct remove_reference { using type = T; };
-template <typename T> struct remove_reference<T &> { using type = T; };
-template <typename T> struct remove_reference<T &&> { using type = T; };
-
-template <typename T1, typename T2> class pair {
+template <typename T1, typename T2>
+class pair {
 public:
   pair() = default;
   pair(const pair &) = default;
@@ -64,9 +25,244 @@ public:
   pair(const T1 &, const T2 &) {}
   pair(T1 &&, T2 &&) {}
 
-  template <typename U1, typename U2> pair(const pair<U1, U2> &){};
-  template <typename U1, typename U2> pair(pair<U1, U2> &&){};
+  template <typename U1, typename U2>
+  pair(const pair<U1, U2> &){};
+  template <typename U1, typename U2>
+  pair(pair<U1, U2> &&){};
 };
+
+template <typename T>
+class vector {
+public:
+  using value_type = T;
+
+  class iterator {};
+  class const_iterator {};
+  const_iterator begin() { return const_iterator{}; }
+
+  vector() = default;
+  vector(initializer_list<T>) {}
+
+  void push_back(const T &) {}
+  void push_back(T &&) {}
+
+  template <typename... Args>
+  void emplace_back(Args &&... args){};
+  template <typename... Args>
+  iterator emplace(const_iterator pos, Args &&...args){};
+  ~vector();
+};
+
+template <typename T>
+class list {
+public:
+  using value_type = T;
+
+  class iterator {};
+  class const_iterator {};
+  const_iterator begin() { return const_iterator{}; }
+
+  void push_back(const T &) {}
+  void push_back(T &&) {}
+
+  template <typename... Args>
+  iterator emplace(const_iterator pos, Args &&...args){};
+  template <typename... Args>
+  void emplace_back(Args &&... args){};
+  template <typename... Args>
+  void emplace_front(Args &&...args){};
+  ~list();
+};
+
+template <typename T>
+class deque {
+public:
+  using value_type = T;
+
+  class iterator {};
+  class const_iterator {};
+  const_iterator begin() { return const_iterator{}; }
+
+  void push_back(const T &) {}
+  void push_back(T &&) {}
+
+  template <typename... Args>
+  iterator emplace(const_iterator pos, Args &&...args){};
+  template <typename... Args>
+  void emplace_back(Args &&... args){};
+  template <typename... Args>
+  void emplace_front(Args &&...args){};
+  ~deque();
+};
+
+template <typename T>
+class forward_list {
+public:
+  using value_type = T;
+
+  class iterator {};
+  class const_iterator {};
+  const_iterator begin() { return const_iterator{}; }
+
+  template <typename... Args>
+  void emplace_front(Args &&...args){};
+  template <typename... Args>
+  iterator emplace_after(const_iterator pos, Args &&...args){};
+};
+
+template <typename T>
+class set {
+public:
+  using value_type = T;
+
+  class iterator {};
+  class const_iterator {};
+  const_iterator begin() { return const_iterator{}; }
+
+  template <typename... Args>
+  void emplace(Args &&...args){};
+  template <typename... Args>
+  iterator emplace_hint(const_iterator pos, Args &&...args){};
+};
+
+template <typename Key, typename T>
+class map {
+public:
+  using value_type = std::pair<Key, T>;
+
+  class iterator {};
+  class const_iterator {};
+  const_iterator begin() { return const_iterator{}; }
+
+  template <typename... Args>
+  void emplace(Args &&...args){};
+  template <typename... Args>
+  iterator emplace_hint(const_iterator pos, Args &&...args){};
+};
+
+template <typename T>
+class multiset {
+public:
+  using value_type = T;
+
+  class iterator {};
+  class const_iterator {};
+  const_iterator begin() { return const_iterator{}; }
+
+  template <typename... Args>
+  void emplace(Args &&...args){};
+  template <typename... Args>
+  iterator emplace_hint(const_iterator pos, Args &&...args){};
+};
+
+template <typename Key, typename T>
+class multimap {
+public:
+  using value_type = std::pair<Key, T>;
+
+  class iterator {};
+  class const_iterator {};
+  const_iterator begin() { return const_iterator{}; }
+
+  template <typename... Args>
+  void emplace(Args &&...args){};
+  template <typename... Args>
+  iterator emplace_hint(const_iterator pos, Args &&...args){};
+};
+
+template <typename T>
+class unordered_set {
+public:
+  using value_type = T;
+
+  class iterator {};
+  class const_iterator {};
+  const_iterator begin() { return const_iterator{}; }
+
+  template <typename... Args>
+  void emplace(Args &&...args){};
+  template <typename... Args>
+  iterator emplace_hint(const_iterator pos, Args &&...args){};
+};
+
+template <typename Key, typename T>
+class unordered_map {
+public:
+  using value_type = std::pair<Key, T>;
+
+  class iterator {};
+  class const_iterator {};
+  const_iterator begin() { return const_iterator{}; }
+
+  template <typename... Args>
+  void emplace(Args &&...args){};
+  template <typename... Args>
+  iterator emplace_hint(const_iterator pos, Args &&...args){};
+};
+
+template <typename T>
+class unordered_multiset {
+public:
+  using value_type = T;
+
+  class iterator {};
+  class const_iterator {};
+  const_iterator begin() { return const_iterator{}; }
+
+  template <typename... Args>
+  void emplace(Args &&...args){};
+  template <typename... Args>
+  iterator emplace_hint(const_iterator pos, Args &&...args){};
+};
+
+template <typename Key, typename T>
+class unordered_multimap {
+public:
+  using value_type = std::pair<Key, T>;
+
+  class iterator {};
+  class const_iterator {};
+  const_iterator begin() { return const_iterator{}; }
+
+  template <typename... Args>
+  void emplace(Args &&...args){};
+  template <typename... Args>
+  iterator emplace_hint(const_iterator pos, Args &&...args){};
+};
+
+template <typename T>
+class stack {
+public:
+  using value_type = T;
+
+  template <typename... Args>
+  void emplace(Args &&...args){};
+};
+
+template <typename T>
+class queue {
+public:
+  using value_type = T;
+
+  template <typename... Args>
+  void emplace(Args &&...args){};
+};
+
+template <typename T>
+class priority_queue {
+public:
+  using value_type = T;
+
+  template <typename... Args>
+  void emplace(Args &&...args){};
+};
+
+template <typename T>
+struct remove_reference { using type = T; };
+template <typename T>
+struct remove_reference<T &> { using type = T; };
+template <typename T>
+struct remove_reference<T &&> { using type = T; };
 
 template <typename T1, typename T2>
 pair<typename remove_reference<T1>::type, typename remove_reference<T2>::type>
@@ -74,7 +270,8 @@ make_pair(T1 &&, T2 &&) {
   return {};
 };
 
-template <typename... Ts> class tuple {
+template <typename... Ts>
+class tuple {
 public:
   tuple() = default;
   tuple(const tuple &) = default;
@@ -83,13 +280,17 @@ public:
   tuple(const Ts &...) {}
   tuple(Ts &&...) {}
 
-  template <typename... Us> tuple(const tuple<Us...> &){};
-  template <typename... Us> tuple(tuple<Us...> &&) {}
+  template <typename... Us>
+  tuple(const tuple<Us...> &){};
+  template <typename... Us>
+  tuple(tuple<Us...> &&) {}
 
-  template <typename U1, typename U2> tuple(const pair<U1, U2> &) {
+  template <typename U1, typename U2>
+  tuple(const pair<U1, U2> &) {
     static_assert(sizeof...(Ts) == 2, "Wrong tuple size");
   };
-  template <typename U1, typename U2> tuple(pair<U1, U2> &&) {
+  template <typename U1, typename U2>
+  tuple(pair<U1, U2> &&) {
     static_assert(sizeof...(Ts) == 2, "Wrong tuple size");
   };
 };
@@ -118,7 +319,7 @@ public:
   void emplace_back(Args &&... args){};
 };
 
-} // llvm
+} // namespace llvm
 
 void testInts() {
   std::vector<int> v;
@@ -375,7 +576,7 @@ void testMakePair() {
   // make_pair cannot be removed here, as X is not constructible with two ints.
 
   struct Y {
-    Y(std::pair<int, int>&&) {}
+    Y(std::pair<int, int> &&) {}
   };
   std::vector<Y> y;
   y.push_back(std::make_pair(2, 3));
@@ -402,7 +603,8 @@ void testMakeTuple() {
 }
 
 namespace test {
-template <typename T> struct Single {
+template <typename T>
+struct Single {
   Single() = default;
   Single(const Single &) = default;
   Single(Single &&) = default;
@@ -410,11 +612,15 @@ template <typename T> struct Single {
   Single(const T &) {}
   Single(T &&) {}
 
-  template <typename U> Single(const Single<U> &) {}
-  template <typename U> Single(Single<U> &&) {}
+  template <typename U>
+  Single(const Single<U> &) {}
+  template <typename U>
+  Single(Single<U> &&) {}
 
-  template <typename U> Single(const std::tuple<U> &) {}
-  template <typename U> Single(std::tuple<U> &&) {}
+  template <typename U>
+  Single(const std::tuple<U> &) {}
+  template <typename U>
+  Single(std::tuple<U> &&) {}
 };
 
 template <typename T>
@@ -604,4 +810,241 @@ void testInitializerList() {
   std::vector<PairIntVector> x;
   x.push_back(PairIntVector(3, {4}));
   x.push_back({5, {6}});
+}
+
+class Foo {
+public:
+  Foo(){};
+  Foo(int){};
+  Foo(int, int){};
+  Foo(std::pair<int, int>){};
+
+protected:
+  Foo(char *) : Foo(){};
+};
+
+void testSomeEmplaceCases() {
+  std::vector<std::pair<char *, char *>> v1;
+  std::vector<Foo> v2;
+  std::unordered_map<int, char *> m1;
+
+  v1.emplace_back(std::make_pair("foo", "bar"));
+  // CHECK-MESSAGES: :[[@LINE-1]]:19: warning: unnecessary temporary object created while calling emplace_back
+  // CHECK-FIXES: v1.emplace_back("foo", "bar");
+
+  char *foo = "bar";
+  v1.emplace_back(std::make_pair(foo, "bar"));
+  // CHECK-MESSAGES: :[[@LINE-1]]:19: warning: unnecessary temporary object created while calling emplace_back
+  // CHECK-FIXES: v1.emplace_back(foo, "bar");
+
+  v1.emplace(v1.begin(), std::make_pair("foo", "bar"));
+  // CHECK-MESSAGES: :[[@LINE-1]]:26: warning: unnecessary temporary object created while calling emplace
+  // CHECK-FIXES: v1.emplace(v1.begin(), "foo", "bar");
+
+  v2.emplace_back(Foo());
+  // CHECK-MESSAGES: :[[@LINE-1]]:19: warning: unnecessary temporary object created while calling emplace_back
+  // CHECK-FIXES: v2.emplace_back();
+
+  v2.emplace_back(Foo(13));
+  // CHECK-MESSAGES: :[[@LINE-1]]:19: warning: unnecessary temporary object created while calling emplace_back
+  // CHECK-FIXES: v2.emplace_back(13);
+
+  v2.emplace_back(Foo{13});
+  // CHECK-MESSAGES: :[[@LINE-1]]:19: warning: unnecessary temporary object created while calling emplace_back
+  // CHECK-FIXES: v2.emplace_back(13);
+
+  int a = 31;
+  v2.emplace_back(Foo(13, a));
+  // CHECK-MESSAGES: :[[@LINE-1]]:19: warning: unnecessary temporary object created while calling emplace_back
+  // CHECK-FIXES: v2.emplace_back(13, a);
+
+  v2.emplace_back(std::make_pair(3, 3));
+
+  m1.emplace(std::make_pair(13, "foo"));
+  // CHECK-MESSAGES: :[[@LINE-1]]:14: warning: unnecessary temporary object created while calling emplace
+  // CHECK-FIXES: m1.emplace(13, "foo");
+
+  std::vector<std::pair<int, int>> v3;
+  v3.emplace_back(std::pair<int, int>(13, 71));
+  // CHECK-MESSAGES: :[[@LINE-1]]:19: warning: unnecessary temporary object created while calling emplace_back
+  v3.emplace_back(std::make_pair(13, 71));
+  // CHECK-MESSAGES: :[[@LINE-1]]:19: warning: unnecessary temporary object created while calling emplace_back
+
+  std::vector<std::tuple<int, int, int>> v4;
+  v4.emplace_back(std::tuple<int, int, int>(13, 31, 71));
+  // CHECK-MESSAGES: :[[@LINE-1]]:19: warning: unnecessary temporary object created while calling emplace_back
+  v4.emplace_back(std::make_tuple(13, 31, 71));
+  // CHECK-MESSAGES: :[[@LINE-1]]:19: warning: unnecessary temporary object created while calling emplace_back
+
+  std::vector<test::Single<int>> v5;
+  v5.emplace_back(test::Single<int>(13));
+  // CHECK-MESSAGES: :[[@LINE-1]]:19: warning: unnecessary temporary object created while calling emplace_back
+  v5.emplace_back(test::MakeSingle(13));
+  // CHECK-MESSAGES: :[[@LINE-1]]:19: warning: unnecessary temporary object created while calling emplace_back
+}
+
+void testAllSTLEmplacyFunctions() {
+  std::vector<Foo> vector;
+  std::deque<Foo> deque;
+  std::forward_list<Foo> forward_list;
+  std::list<Foo> list;
+  std::set<Foo> set;
+  std::map<int, Foo> map;
+  std::multiset<Foo> multiset;
+  std::multimap<int, Foo> multimap;
+  std::unordered_set<Foo> unordered_set;
+  std::unordered_map<int, Foo> unordered_map;
+  std::unordered_multiset<Foo> unordered_multiset;
+  std::unordered_multimap<int, Foo> unordered_multimap;
+  std::stack<Foo> stack;
+  std::queue<Foo> queue;
+  std::priority_queue<Foo> priority_queue;
+
+  vector.emplace_back(Foo(13));
+  // CHECK-MESSAGES: :[[@LINE-1]]:23: warning: unnecessary temporary object created while calling emplace_back
+  // CHECK-FIXES: vector.emplace_back(13);
+
+  vector.emplace(vector.begin(), Foo(13));
+  // CHECK-MESSAGES: :[[@LINE-1]]:34: warning: unnecessary temporary object created while calling emplace
+  // CHECK-FIXES: vector.emplace(vector.begin(), 13);
+
+  deque.emplace(deque.begin(), Foo(13));
+  // CHECK-MESSAGES: :[[@LINE-1]]:32: warning: unnecessary temporary object created while calling emplace
+  // CHECK-FIXES: deque.emplace(deque.begin(), 13);
+
+  deque.emplace_front(Foo(13));
+  // CHECK-MESSAGES: :[[@LINE-1]]:23: warning: unnecessary temporary object created while calling emplace_front
+  // CHECK-FIXES: deque.emplace_front(13);
+
+  deque.emplace_back(Foo(13));
+  // CHECK-MESSAGES: :[[@LINE-1]]:22: warning: unnecessary temporary object created while calling emplace_back
+  // CHECK-FIXES: deque.emplace_back(13);
+
+  forward_list.emplace_after(forward_list.begin(), Foo(13));
+  // CHECK-MESSAGES: :[[@LINE-1]]:52: warning: unnecessary temporary object created while calling emplace_after
+  // CHECK-FIXES: forward_list.emplace_after(forward_list.begin(), 13);
+
+  forward_list.emplace_front(Foo(13));
+  // CHECK-MESSAGES: :[[@LINE-1]]:30: warning: unnecessary temporary object created while calling emplace_front
+  // CHECK-FIXES: forward_list.emplace_front(13);
+
+  list.emplace(list.begin(), Foo(13));
+  // CHECK-MESSAGES: :[[@LINE-1]]:30: warning: unnecessary temporary object created while calling emplace
+  // CHECK-FIXES: list.emplace(list.begin(), 13);
+
+  list.emplace_back(Foo(13));
+  // CHECK-MESSAGES: :[[@LINE-1]]:21: warning: unnecessary temporary object created while calling emplace_back
+  // CHECK-FIXES: list.emplace_back(13);
+
+  list.emplace_front(Foo(13));
+  // CHECK-MESSAGES: :[[@LINE-1]]:22: warning: unnecessary temporary object created while calling emplace_front
+  // CHECK-FIXES: list.emplace_front(13);
+
+  set.emplace(Foo(13));
+  // CHECK-MESSAGES: :[[@LINE-1]]:15: warning: unnecessary temporary object created while calling emplace
+  // CHECK-FIXES: set.emplace(13);
+
+  set.emplace_hint(set.begin(), Foo(13));
+  // CHECK-MESSAGES: :[[@LINE-1]]:33: warning: unnecessary temporary object created while calling emplace_hint
+  // CHECK-FIXES: set.emplace_hint(set.begin(), 13);
+
+  map.emplace(std::make_pair(13, Foo(13)));
+  // CHECK-MESSAGES: :[[@LINE-1]]:15: warning: unnecessary temporary object created while calling emplace
+  // CHECK-FIXES: map.emplace(13, Foo(13));
+
+  map.emplace_hint(map.begin(), std::make_pair(13, Foo(13)));
+  // CHECK-MESSAGES: :[[@LINE-1]]:33: warning: unnecessary temporary object created while calling emplace_hint
+  // CHECK-FIXES: map.emplace_hint(map.begin(), 13, Foo(13));
+
+  multiset.emplace(Foo(13));
+  // CHECK-MESSAGES: :[[@LINE-1]]:20: warning: unnecessary temporary object created while calling emplace
+  // CHECK-FIXES: multiset.emplace(13);
+
+  multiset.emplace_hint(multiset.begin(), Foo(13));
+  // CHECK-MESSAGES: :[[@LINE-1]]:43: warning: unnecessary temporary object created while calling emplace_hint
+  // CHECK-FIXES: multiset.emplace_hint(multiset.begin(), 13);
+
+  multimap.emplace(std::make_pair(13, Foo(13)));
+  // CHECK-MESSAGES: :[[@LINE-1]]:20: warning: unnecessary temporary object created while calling emplace
+  // CHECK-FIXES: multimap.emplace(13, Foo(13));
+
+  multimap.emplace_hint(multimap.begin(), std::make_pair(13, Foo(13)));
+  // CHECK-MESSAGES: :[[@LINE-1]]:43: warning: unnecessary temporary object created while calling emplace_hint
+  // CHECK-FIXES: multimap.emplace_hint(multimap.begin(), 13, Foo(13));
+
+  unordered_set.emplace(Foo(13));
+  // CHECK-MESSAGES: :[[@LINE-1]]:25: warning: unnecessary temporary object created while calling emplace
+  // CHECK-FIXES: unordered_set.emplace(13);
+
+  unordered_set.emplace_hint(unordered_set.begin(), Foo(13));
+  // CHECK-MESSAGES: :[[@LINE-1]]:53: warning: unnecessary temporary object created while calling emplace_hint
+  // CHECK-FIXES: unordered_set.emplace_hint(unordered_set.begin(), 13);
+
+  unordered_map.emplace(std::make_pair(13, Foo(13)));
+  // CHECK-MESSAGES: :[[@LINE-1]]:25: warning: unnecessary temporary object created while calling emplace
+  // CHECK-FIXES: unordered_map.emplace(13, Foo(13));
+
+  unordered_map.emplace_hint(unordered_map.begin(), std::make_pair(13, Foo(13)));
+  // CHECK-MESSAGES: :[[@LINE-1]]:53: warning: unnecessary temporary object created while calling emplace_hint
+  // CHECK-FIXES: unordered_map.emplace_hint(unordered_map.begin(), 13, Foo(13));
+
+  unordered_multiset.emplace(Foo(13));
+  // CHECK-MESSAGES: :[[@LINE-1]]:30: warning: unnecessary temporary object created while calling emplace
+  // CHECK-FIXES: unordered_multiset.emplace(13);
+  unordered_multiset.emplace_hint(unordered_multiset.begin(), Foo(13));
+  // CHECK-MESSAGES: :[[@LINE-1]]:63: warning: unnecessary temporary object created while calling emplace_hint
+  // CHECK-FIXES: unordered_multiset.emplace_hint(unordered_multiset.begin(), 13);
+
+  unordered_multimap.emplace(std::make_pair(13, Foo(13)));
+  // CHECK-MESSAGES: :[[@LINE-1]]:30: warning: unnecessary temporary object created while calling emplace
+  // CHECK-FIXES: unordered_multimap.emplace(13, Foo(13));
+  unordered_multimap.emplace_hint(unordered_multimap.begin(), std::make_pair(13, Foo(13)));
+  // CHECK-MESSAGES: :[[@LINE-1]]:63: warning: unnecessary temporary object created while calling emplace_hint
+  // CHECK-FIXES: unordered_multimap.emplace_hint(unordered_multimap.begin(), 13, Foo(13));
+
+  stack.emplace(Foo(13));
+  // CHECK-MESSAGES: :[[@LINE-1]]:17: warning: unnecessary temporary object created while calling emplace
+  // CHECK-FIXES: stack.emplace(13);
+
+  queue.emplace(Foo(13));
+  // CHECK-MESSAGES: :[[@LINE-1]]:17: warning: unnecessary temporary object created while calling emplace
+  // CHECK-FIXES: queue.emplace(13);
+
+  priority_queue.emplace(Foo(13));
+  // CHECK-MESSAGES: :[[@LINE-1]]:26: warning: unnecessary temporary object created while calling emplace
+  // CHECK-FIXES: priority_queue.emplace(13);
+}
+
+struct Bar {
+public:
+  Bar(){};
+  void testWithPrivateAndProtectedCtor() {
+    std::vector<Bar> vec;
+
+    vec.emplace_back(Bar(13));
+    vec.emplace_back(Bar(13, 13));
+  }
+
+protected:
+  Bar(int){};
+
+private:
+  Bar(int, int){};
+};
+
+void testPossibleFalsePositives() {
+  struct Y {
+    Y(std::pair<int, int> &&) {}
+  };
+  std::vector<Y> y;
+  y.emplace_back(std::make_pair(2, 3));
+
+  std::vector<std::pair<int, int>> v;
+  v.emplace_back(std::make_pair<char, char>(0, 3));
+
+  struct D {
+    D(...) {}
+    operator char() const { return 0; }
+  };
+  v.emplace_back(std::make_pair<D, int>(Something(), 2));
 }

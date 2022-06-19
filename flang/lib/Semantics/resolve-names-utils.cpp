@@ -8,6 +8,7 @@
 
 #include "resolve-names-utils.h"
 #include "flang/Common/Fortran-features.h"
+#include "flang/Common/Fortran.h"
 #include "flang/Common/idioms.h"
 #include "flang/Common/indirection.h"
 #include "flang/Evaluate/fold.h"
@@ -43,10 +44,10 @@ Symbol &Resolve(const parser::Name &name, Symbol &symbol) {
   return *Resolve(name, &symbol);
 }
 
-parser::MessageFixedText WithIsFatal(
-    const parser::MessageFixedText &msg, bool isFatal) {
+parser::MessageFixedText WithSeverity(
+    const parser::MessageFixedText &msg, parser::Severity severity) {
   return parser::MessageFixedText{
-      msg.text().begin(), msg.text().size(), isFatal};
+      msg.text().begin(), msg.text().size(), severity};
 }
 
 bool IsIntrinsicOperator(
@@ -125,7 +126,7 @@ void GenericSpecInfo::Analyze(const parser::DefinedOpName &name) {
 
 void GenericSpecInfo::Analyze(const parser::GenericSpec &x) {
   symbolName_ = x.source;
-  kind_ = std::visit(
+  kind_ = common::visit(
       common::visitors{
           [&](const parser::Name &y) -> GenericKind {
             parseName_ = &y;
@@ -133,7 +134,7 @@ void GenericSpecInfo::Analyze(const parser::GenericSpec &x) {
             return GenericKind::OtherKind::Name;
           },
           [&](const parser::DefinedOperator &y) {
-            return std::visit(
+            return common::visit(
                 common::visitors{
                     [&](const parser::DefinedOpName &z) -> GenericKind {
                       Analyze(z);
@@ -264,19 +265,20 @@ ArraySpec AnalyzeCoarraySpec(
 }
 
 ArraySpec ArraySpecAnalyzer::Analyze(const parser::ComponentArraySpec &x) {
-  std::visit([this](const auto &y) { Analyze(y); }, x.u);
+  common::visit([this](const auto &y) { Analyze(y); }, x.u);
   CHECK(!arraySpec_.empty());
   return arraySpec_;
 }
 ArraySpec ArraySpecAnalyzer::Analyze(const parser::ArraySpec &x) {
-  std::visit(common::visitors{
-                 [&](const parser::AssumedSizeSpec &y) {
-                   Analyze(std::get<std::list<parser::ExplicitShapeSpec>>(y.t));
-                   Analyze(std::get<parser::AssumedImpliedSpec>(y.t));
-                 },
-                 [&](const parser::ImpliedShapeSpec &y) { Analyze(y.v); },
-                 [&](const auto &y) { Analyze(y); },
-             },
+  common::visit(common::visitors{
+                    [&](const parser::AssumedSizeSpec &y) {
+                      Analyze(
+                          std::get<std::list<parser::ExplicitShapeSpec>>(y.t));
+                      Analyze(std::get<parser::AssumedImpliedSpec>(y.t));
+                    },
+                    [&](const parser::ImpliedShapeSpec &y) { Analyze(y.v); },
+                    [&](const auto &y) { Analyze(y); },
+                },
       x.u);
   CHECK(!arraySpec_.empty());
   return arraySpec_;
@@ -288,7 +290,7 @@ ArraySpec ArraySpecAnalyzer::AnalyzeDeferredShapeSpecList(
   return arraySpec_;
 }
 ArraySpec ArraySpecAnalyzer::Analyze(const parser::CoarraySpec &x) {
-  std::visit(
+  common::visit(
       common::visitors{
           [&](const parser::DeferredCoshapeSpecList &y) { MakeDeferred(y.v); },
           [&](const parser::ExplicitCoshapeSpec &y) {
@@ -303,7 +305,7 @@ ArraySpec ArraySpecAnalyzer::Analyze(const parser::CoarraySpec &x) {
 }
 
 void ArraySpecAnalyzer::Analyze(const parser::AssumedShapeSpec &x) {
-  arraySpec_.push_back(ShapeSpec::MakeAssumed(GetBound(x.v)));
+  arraySpec_.push_back(ShapeSpec::MakeAssumedShape(GetBound(x.v)));
 }
 void ArraySpecAnalyzer::Analyze(const parser::ExplicitShapeSpec &x) {
   MakeExplicit(std::get<std::optional<parser::SpecificationExpr>>(x.t),
@@ -412,45 +414,55 @@ void EquivalenceSets::FinishSet(const parser::CharBlock &source) {
   currSet_.clear();
 }
 
-// Report an error if sym1 and sym2 cannot be in the same equivalence set.
+// Report an error or warning if sym1 and sym2 cannot be in the same equivalence
+// set.
 bool EquivalenceSets::CheckCanEquivalence(
     const parser::CharBlock &source, const Symbol &sym1, const Symbol &sym2) {
   std::optional<parser::MessageFixedText> msg;
   const DeclTypeSpec *type1{sym1.GetType()};
   const DeclTypeSpec *type2{sym2.GetType()};
-  bool isNum1{IsNumericSequenceType(type1)};
-  bool isNum2{IsNumericSequenceType(type2)};
+  bool isDefaultNum1{IsDefaultNumericSequenceType(type1)};
+  bool isAnyNum1{IsAnyNumericSequenceType(type1)};
+  bool isDefaultNum2{IsDefaultNumericSequenceType(type2)};
+  bool isAnyNum2{IsAnyNumericSequenceType(type2)};
   bool isChar1{IsCharacterSequenceType(type1)};
   bool isChar2{IsCharacterSequenceType(type2)};
   if (sym1.attrs().test(Attr::PROTECTED) &&
       !sym2.attrs().test(Attr::PROTECTED)) { // C8114
     msg = "Equivalence set cannot contain '%s'"
           " with PROTECTED attribute and '%s' without"_err_en_US;
-  } else if (isNum1) {
+  } else if ((isDefaultNum1 && isDefaultNum2) || (isChar1 && isChar2)) {
+    // ok & standard conforming
+  } else if (!(isAnyNum1 || isChar1) &&
+      !(isAnyNum2 || isChar2)) { // C8110 - C8113
+    if (AreTkCompatibleTypes(type1, type2)) {
+      if (context_.ShouldWarn(LanguageFeature::EquivalenceSameNonSequence)) {
+        msg =
+            "nonstandard: Equivalence set contains '%s' and '%s' with same "
+            "type that is neither numeric nor character sequence type"_port_en_US;
+      }
+    } else {
+      msg = "Equivalence set cannot contain '%s' and '%s' with distinct types "
+            "that are not both numeric or character sequence types"_err_en_US;
+    }
+  } else if (isAnyNum1) {
     if (isChar2) {
       if (context_.ShouldWarn(
               LanguageFeature::EquivalenceNumericWithCharacter)) {
-        msg = "Equivalence set contains '%s' that is numeric sequence "
-              "type and '%s' that is character"_en_US;
+        msg = "nonstandard: Equivalence set contains '%s' that is numeric "
+              "sequence type and '%s' that is character"_port_en_US;
       }
-    } else if (!isNum2) { // C8110
-      msg = "Equivalence set cannot contain '%s'"
-            " that is numeric sequence type and '%s' that is not"_err_en_US;
-    }
-  } else if (isChar1) {
-    if (isNum2) {
-      if (context_.ShouldWarn(
-              LanguageFeature::EquivalenceNumericWithCharacter)) {
-        msg = "Equivalence set contains '%s' that is character sequence "
-              "type and '%s' that is numeric"_en_US;
+    } else if (isAnyNum2 &&
+        context_.ShouldWarn(LanguageFeature::EquivalenceNonDefaultNumeric)) {
+      if (isDefaultNum1) {
+        msg =
+            "nonstandard: Equivalence set contains '%s' that is a default "
+            "numeric sequence type and '%s' that is numeric with non-default kind"_port_en_US;
+      } else if (!isDefaultNum2) {
+        msg = "nonstandard: Equivalence set contains '%s' and '%s' that are "
+              "numeric sequence types with non-default kinds"_port_en_US;
       }
-    } else if (!isChar2) { // C8111
-      msg = "Equivalence set cannot contain '%s'"
-            " that is character sequence type and '%s' that is not"_err_en_US;
     }
-  } else if (!isNum2 && !isChar2 && *type1 != *type2) { // C8112, C8113
-    msg = "Equivalence set cannot contain '%s' and '%s' with different types"
-          " that are neither numeric nor character sequence types"_err_en_US;
   }
   if (msg) {
     context_.Say(source, std::move(*msg), sym1.name(), sym2.name());
@@ -484,7 +496,7 @@ const EquivalenceObject *EquivalenceSets::Find(
 }
 
 bool EquivalenceSets::CheckDesignator(const parser::Designator &designator) {
-  return std::visit(
+  return common::visit(
       common::visitors{
           [&](const parser::DataRef &x) {
             return CheckDataRef(designator.source, x);
@@ -509,7 +521,7 @@ bool EquivalenceSets::CheckDesignator(const parser::Designator &designator) {
 
 bool EquivalenceSets::CheckDataRef(
     const parser::CharBlock &source, const parser::DataRef &x) {
-  return std::visit(
+  return common::visit(
       common::visitors{
           [&](const parser::Name &name) { return CheckObject(name); },
           [&](const common::Indirection<parser::StructureComponent> &) {
@@ -521,7 +533,7 @@ bool EquivalenceSets::CheckDataRef(
           [&](const common::Indirection<parser::ArrayElement> &elem) {
             bool ok{CheckDataRef(source, elem.value().base)};
             for (const auto &subscript : elem.value().subscripts) {
-              ok &= std::visit(
+              ok &= common::visit(
                   common::visitors{
                       [&](const parser::SubscriptTriplet &) {
                         context_.Say(source, // C924, R872
@@ -562,7 +574,7 @@ bool EquivalenceSets::CheckObject(const parser::Name &name) {
     return false; // an error has already occurred
   }
   currObject_.symbol = name.symbol;
-  parser::MessageFixedText msg{"", 0};
+  parser::MessageFixedText msg;
   const Symbol &symbol{*name.symbol};
   if (symbol.owner().IsDerivedType()) { // C8107
     msg = "Derived type component '%s'"
@@ -605,7 +617,7 @@ bool EquivalenceSets::CheckObject(const parser::Name &name) {
         msg = "Nonsequence derived type object '%s'"
               " is not allowed in an equivalence set"_err_en_US;
       }
-    } else if (IsAutomaticObject(symbol)) {
+    } else if (IsAutomatic(symbol)) {
       msg = "Automatic object '%s'"
             " is not allowed in an equivalence set"_err_en_US;
     }
@@ -678,15 +690,14 @@ bool EquivalenceSets::IsCharacterSequenceType(const DeclTypeSpec *type) {
 // Numeric or logical type of default kind or DOUBLE PRECISION or DOUBLE COMPLEX
 bool EquivalenceSets::IsDefaultKindNumericType(const IntrinsicTypeSpec &type) {
   if (auto kind{evaluate::ToInt64(type.kind())}) {
-    auto category{type.category()};
-    auto defaultKind{context_.GetDefaultKind(category)};
-    switch (category) {
+    switch (type.category()) {
     case TypeCategory::Integer:
     case TypeCategory::Logical:
-      return *kind == defaultKind;
+      return *kind == context_.GetDefaultKind(TypeCategory::Integer);
     case TypeCategory::Real:
     case TypeCategory::Complex:
-      return *kind == defaultKind || *kind == context_.doublePrecisionKind();
+      return *kind == context_.GetDefaultKind(TypeCategory::Real) ||
+          *kind == context_.doublePrecisionKind();
     default:
       return false;
     }
@@ -694,9 +705,16 @@ bool EquivalenceSets::IsDefaultKindNumericType(const IntrinsicTypeSpec &type) {
   return false;
 }
 
-bool EquivalenceSets::IsNumericSequenceType(const DeclTypeSpec *type) {
+bool EquivalenceSets::IsDefaultNumericSequenceType(const DeclTypeSpec *type) {
   return IsSequenceType(type, [&](const IntrinsicTypeSpec &type) {
     return IsDefaultKindNumericType(type);
+  });
+}
+
+bool EquivalenceSets::IsAnyNumericSequenceType(const DeclTypeSpec *type) {
+  return IsSequenceType(type, [&](const IntrinsicTypeSpec &type) {
+    return type.category() == TypeCategory::Logical ||
+        common::IsNumericTypeCategory(type.category());
   });
 }
 

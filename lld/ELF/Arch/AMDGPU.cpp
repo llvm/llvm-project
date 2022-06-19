@@ -10,7 +10,7 @@
 #include "Symbols.h"
 #include "Target.h"
 #include "lld/Common/ErrorHandler.h"
-#include "llvm/Object/ELF.h"
+#include "llvm/BinaryFormat/ELF.h"
 #include "llvm/Support/Endian.h"
 
 using namespace llvm;
@@ -40,7 +40,6 @@ public:
 AMDGPU::AMDGPU() {
   relativeRel = R_AMDGPU_RELATIVE64;
   gotRel = R_AMDGPU_ABS64;
-  noneRel = R_AMDGPU_NONE;
   symbolicRel = R_AMDGPU_ABS64;
 }
 
@@ -106,7 +105,8 @@ uint32_t AMDGPU::calcEFlagsV4() const {
 }
 
 uint32_t AMDGPU::calcEFlags() const {
-  assert(!objectFiles.empty());
+  if (objectFiles.empty())
+    return 0;
 
   uint8_t abiVersion = cast<ObjFile<ELF64LE>>(objectFiles[0])->getObj()
       .getHeader().e_ident[EI_ABIVERSION];
@@ -115,6 +115,7 @@ uint32_t AMDGPU::calcEFlags() const {
   case ELFABIVERSION_AMDGPU_HSA_V3:
     return calcEFlagsV3();
   case ELFABIVERSION_AMDGPU_HSA_V4:
+  case ELFABIVERSION_AMDGPU_HSA_V5:
     return calcEFlagsV4();
   default:
     error("unknown abi version: " + Twine(abiVersion));

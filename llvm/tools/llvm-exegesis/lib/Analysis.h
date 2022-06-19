@@ -22,8 +22,8 @@
 #include "llvm/MC/MCInstrInfo.h"
 #include "llvm/MC/MCObjectFileInfo.h"
 #include "llvm/MC/MCSubtargetInfo.h"
+#include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/Error.h"
-#include "llvm/Support/TargetRegistry.h"
 #include "llvm/Support/raw_ostream.h"
 #include <memory>
 #include <set>
@@ -36,7 +36,8 @@ namespace exegesis {
 // A helper class to analyze benchmark results for a target.
 class Analysis {
 public:
-  Analysis(const Target &Target, std::unique_ptr<MCInstrInfo> InstrInfo,
+  Analysis(const Target &Target, std::unique_ptr<MCSubtargetInfo> SubtargetInfo,
+           std::unique_ptr<MCInstrInfo> InstrInfo,
            const InstructionBenchmarkClustering &Clustering,
            double AnalysisInconsistencyEpsilon,
            bool AnalysisDisplayUnstableOpcodes,

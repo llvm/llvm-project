@@ -4,7 +4,8 @@ import os
 import time
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test.decorators import *
-from gdbclientutils import *
+from lldbsuite.test.gdbclientutils import *
+from lldbsuite.test.lldbgdbclient import GDBRemoteTestBase
 
 def hexlify(string):
     return binascii.hexlify(string.encode()).decode()
@@ -50,7 +51,7 @@ class TestPlatformClient(GDBRemoteTestBase):
 
         try:
             self.runCmd("platform select remote-linux")
-            self.runCmd("platform connect connect://" + self.server.get_connect_address())
+            self.runCmd("platform connect " + self.server.get_connect_url())
             self.assertTrue(self.dbg.GetSelectedPlatform().IsConnected())
             self.expect("platform process list -x",
                         substrs=["2 matching processes were found", "test_process", "another_test_process"])
@@ -84,8 +85,8 @@ class TestPlatformClient(GDBRemoteTestBase):
         self.runCmd("settings set plugin.process.gdb-remote.packet-timeout 30")
         plat = lldb.SBPlatform("remote-linux")
         try:
-            self.assertSuccess(plat.ConnectRemote(lldb.SBPlatformConnectOptions("connect://"
-                + self.server.get_connect_address())))
+            self.assertSuccess(plat.ConnectRemote(lldb.SBPlatformConnectOptions(
+                self.server.get_connect_url())))
             self.assertEqual(plat.GetWorkingDirectory(), "/foo/bar")
         finally:
             plat.DisconnectRemote()
@@ -98,8 +99,8 @@ class TestPlatformClient(GDBRemoteTestBase):
         self.runCmd("settings set plugin.process.gdb-remote.packet-timeout 3")
         plat = lldb.SBPlatform("remote-linux")
         try:
-            self.assertSuccess(plat.ConnectRemote(lldb.SBPlatformConnectOptions("connect://"
-                + self.server.get_connect_address())))
+            self.assertSuccess(plat.ConnectRemote(lldb.SBPlatformConnectOptions(
+                self.server.get_connect_url())))
             self.assertIsNone(plat.GetWorkingDirectory())
         finally:
             plat.DisconnectRemote()

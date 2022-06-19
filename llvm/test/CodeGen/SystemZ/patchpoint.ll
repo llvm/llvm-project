@@ -97,6 +97,59 @@ entry:
   ret i64 %result
 }
 
+; Test that the number of bytes is reflected in the instruction size and
+; therefore cause relaxation of the initial branch.
+define void @patchpoint_size(i32 %Arg) {
+; CHECK-LABEL: patchpoint_size:
+; CHECK: # %bb.0:
+; CHECK-NEXT: stmg    %r14, %r15, 112(%r15)
+; CHECK-NEXT: .cfi_offset %r14, -48
+; CHECK-NEXT: .cfi_offset %r15, -40
+; CHECK-NEXT: aghi    %r15, -160
+; CHECK-NEXT: .cfi_def_cfa_offset 320
+; CHECK-NEXT: chi     %r2, 0
+; CHECK-NEXT: jge     .LBB6_2
+  %c = icmp eq i32 %Arg, 0
+  br i1 %c, label %block0, label %patch1
+
+block0:
+  call i64 @foo(i64 0, i64 0)
+  br label %exit
+
+patch1:
+  call void (i64, i32, i8*, i32, ...) @llvm.experimental.patchpoint.void(i64 0, i32 65536, i8* null, i32 0)
+  br label %exit
+
+exit:
+  ret void
+}
+
+define void @stackmap_size(i32 %Arg) {
+; CHECK-LABEL: stackmap_size:
+; CHECK: # %bb.0:
+; CHECK-NEXT: stmg    %r14, %r15, 112(%r15)
+; CHECK-NEXT: .cfi_offset %r14, -48
+; CHECK-NEXT: .cfi_offset %r15, -40
+; CHECK-NEXT: aghi    %r15, -160
+; CHECK-NEXT: .cfi_def_cfa_offset 320
+; CHECK-NEXT: chi     %r2, 0
+; CHECK-NEXT: jge     .LBB7_2
+  %c = icmp eq i32 %Arg, 0
+  br i1 %c, label %block0, label %stackmap1
+
+block0:
+  call i64 @foo(i64 0, i64 0)
+  br label %exit
+
+stackmap1:
+  call void (i64, i32, ...) @llvm.experimental.stackmap(i64 1, i32 65536)
+  br label %exit
+
+exit:
+  ret void
+}
+
+
 declare void @llvm.experimental.stackmap(i64, i32, ...)
 declare void @llvm.experimental.patchpoint.void(i64, i32, i8*, i32, ...)
 declare i64 @llvm.experimental.patchpoint.i64(i64, i32, i8*, i32, ...)

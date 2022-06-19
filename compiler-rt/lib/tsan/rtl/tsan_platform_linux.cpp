@@ -85,78 +85,71 @@ static void InitializeLongjmpXorKey();
 static uptr longjmp_xor_key;
 #endif
 
-#ifdef TSAN_RUNTIME_VMA
 // Runtime detected VMA size.
 uptr vmaSize;
-#endif
 
 enum {
-  MemTotal  = 0,
-  MemShadow = 1,
-  MemMeta   = 2,
-  MemFile   = 3,
-  MemMmap   = 4,
-  MemTrace  = 5,
-  MemHeap   = 6,
-  MemOther  = 7,
-  MemCount  = 8,
+  MemTotal,
+  MemShadow,
+  MemMeta,
+  MemFile,
+  MemMmap,
+  MemHeap,
+  MemOther,
+  MemCount,
 };
 
-void FillProfileCallback(uptr p, uptr rss, bool file,
-                         uptr *mem, uptr stats_size) {
+void FillProfileCallback(uptr p, uptr rss, bool file, uptr *mem) {
   mem[MemTotal] += rss;
   if (p >= ShadowBeg() && p < ShadowEnd())
     mem[MemShadow] += rss;
   else if (p >= MetaShadowBeg() && p < MetaShadowEnd())
     mem[MemMeta] += rss;
-#if !SANITIZER_GO
+  else if ((p >= LoAppMemBeg() && p < LoAppMemEnd()) ||
+           (p >= MidAppMemBeg() && p < MidAppMemEnd()) ||
+           (p >= HiAppMemBeg() && p < HiAppMemEnd()))
+    mem[file ? MemFile : MemMmap] += rss;
   else if (p >= HeapMemBeg() && p < HeapMemEnd())
     mem[MemHeap] += rss;
-  else if (p >= LoAppMemBeg() && p < LoAppMemEnd())
-    mem[file ? MemFile : MemMmap] += rss;
-  else if (p >= HiAppMemBeg() && p < HiAppMemEnd())
-    mem[file ? MemFile : MemMmap] += rss;
-#else
-  else if (p >= AppMemBeg() && p < AppMemEnd())
-    mem[file ? MemFile : MemMmap] += rss;
-#endif
-  else if (p >= TraceMemBeg() && p < TraceMemEnd())
-    mem[MemTrace] += rss;
   else
     mem[MemOther] += rss;
 }
 
-void WriteMemoryProfile(char *buf, uptr buf_size, uptr nthread, uptr nlive) {
+void WriteMemoryProfile(char *buf, uptr buf_size, u64 uptime_ns) {
   uptr mem[MemCount];
-  internal_memset(mem, 0, sizeof(mem[0]) * MemCount);
-  __sanitizer::GetMemoryProfile(FillProfileCallback, mem, 7);
-  StackDepotStats *stacks = StackDepotGetStats();
-  internal_snprintf(buf, buf_size,
-      "RSS %zd MB: shadow:%zd meta:%zd file:%zd mmap:%zd"
-      " trace:%zd heap:%zd other:%zd stacks=%zd[%zd] nthr=%zd/%zd\n",
+  internal_memset(mem, 0, sizeof(mem));
+  GetMemoryProfile(FillProfileCallback, mem);
+  auto meta = ctx->metamap.GetMemoryStats();
+  StackDepotStats stacks = StackDepotGetStats();
+  uptr nthread, nlive;
+  ctx->thread_registry.GetNumberOfThreads(&nthread, &nlive);
+  uptr trace_mem;
+  {
+    Lock l(&ctx->slot_mtx);
+    trace_mem = ctx->trace_part_total_allocated * sizeof(TracePart);
+  }
+  uptr internal_stats[AllocatorStatCount];
+  internal_allocator()->GetStats(internal_stats);
+  // All these are allocated from the common mmap region.
+  mem[MemMmap] -= meta.mem_block + meta.sync_obj + trace_mem +
+                  stacks.allocated + internal_stats[AllocatorStatMapped];
+  if (s64(mem[MemMmap]) < 0)
+    mem[MemMmap] = 0;
+  internal_snprintf(
+      buf, buf_size,
+      "==%zu== %llus [%zu]: RSS %zd MB: shadow:%zd meta:%zd file:%zd"
+      " mmap:%zd heap:%zd other:%zd intalloc:%zd memblocks:%zd syncobj:%zu"
+      " trace:%zu stacks=%zd threads=%zu/%zu\n",
+      internal_getpid(), uptime_ns / (1000 * 1000 * 1000), ctx->global_epoch,
       mem[MemTotal] >> 20, mem[MemShadow] >> 20, mem[MemMeta] >> 20,
-      mem[MemFile] >> 20, mem[MemMmap] >> 20, mem[MemTrace] >> 20,
-      mem[MemHeap] >> 20, mem[MemOther] >> 20,
-      stacks->allocated >> 20, stacks->n_uniq_ids,
-      nlive, nthread);
-}
-
-#if SANITIZER_LINUX
-void FlushShadowMemoryCallback(
-    const SuspendedThreadsList &suspended_threads_list,
-    void *argument) {
-  ReleaseMemoryPagesToOS(ShadowBeg(), ShadowEnd());
-}
-#endif
-
-void FlushShadowMemory() {
-#if SANITIZER_LINUX
-  StopTheWorld(FlushShadowMemoryCallback, 0);
-#endif
+      mem[MemFile] >> 20, mem[MemMmap] >> 20, mem[MemHeap] >> 20,
+      mem[MemOther] >> 20, internal_stats[AllocatorStatMapped] >> 20,
+      meta.mem_block >> 20, meta.sync_obj >> 20, trace_mem >> 20,
+      stacks.allocated >> 20, nlive, nthread);
 }
 
 #if !SANITIZER_GO
-// Mark shadow for .rodata sections with the special kShadowRodata marker.
+// Mark shadow for .rodata sections with the special Shadow::kRodata marker.
 // Accesses to .rodata can't race, so this saves time, memory and trace space.
 static void MapRodata() {
   // First create temp file.
@@ -177,13 +170,14 @@ static void MapRodata() {
     return;
   internal_unlink(name);  // Unlink it now, so that we can reuse the buffer.
   fd_t fd = openrv;
-  // Fill the file with kShadowRodata.
-  const uptr kMarkerSize = 512 * 1024 / sizeof(u64);
-  InternalMmapVector<u64> marker(kMarkerSize);
+  // Fill the file with Shadow::kRodata.
+  const uptr kMarkerSize = 512 * 1024 / sizeof(RawShadow);
+  InternalMmapVector<RawShadow> marker(kMarkerSize);
   // volatile to prevent insertion of memset
-  for (volatile u64 *p = marker.data(); p < marker.data() + kMarkerSize; p++)
-    *p = kShadowRodata;
-  internal_write(fd, marker.data(), marker.size() * sizeof(u64));
+  for (volatile RawShadow *p = marker.data(); p < marker.data() + kMarkerSize;
+       p++)
+    *p = Shadow::kRodata;
+  internal_write(fd, marker.data(), marker.size() * sizeof(RawShadow));
   // Map the file into memory.
   uptr page = internal_mmap(0, GetPageSizeCached(), PROT_READ | PROT_WRITE,
                             MAP_PRIVATE | MAP_ANONYMOUS, fd, 0);
@@ -203,9 +197,10 @@ static void MapRodata() {
       char *shadow_start = (char *)MemToShadow(segment.start);
       char *shadow_end = (char *)MemToShadow(segment.end);
       for (char *p = shadow_start; p < shadow_end;
-           p += marker.size() * sizeof(u64)) {
-        internal_mmap(p, Min<uptr>(marker.size() * sizeof(u64), shadow_end - p),
-                      PROT_READ, MAP_PRIVATE | MAP_FIXED, fd, 0);
+           p += marker.size() * sizeof(RawShadow)) {
+        internal_mmap(
+            p, Min<uptr>(marker.size() * sizeof(RawShadow), shadow_end - p),
+            PROT_READ, MAP_PRIVATE | MAP_FIXED, fd, 0);
       }
     }
   }
@@ -219,7 +214,6 @@ void InitializeShadowMemoryPlatform() {
 #endif  // #if !SANITIZER_GO
 
 void InitializePlatformEarly() {
-#ifdef TSAN_RUNTIME_VMA
   vmaSize =
     (MostSignificantSetBitIndex(GET_CURRENT_FRAME()) + 1);
 #if defined(__aarch64__)
@@ -264,7 +258,6 @@ void InitializePlatformEarly() {
     Die();
   }
 # endif
-#endif
 #endif
 }
 
@@ -341,7 +334,7 @@ int ExtractResolvFDs(void *state, int *fds, int nfd) {
 }
 
 // Extract file descriptors passed via UNIX domain sockets.
-// This is requried to properly handle "open" of these fds.
+// This is required to properly handle "open" of these fds.
 // see 'man recvmsg' and 'man 3 cmsg'.
 int ExtractRecvmsgFDs(void *msgp, int *fds, int nfd) {
   int res = 0;
@@ -409,7 +402,11 @@ static uptr UnmangleLongJmpSp(uptr mangled_sp) {
 #elif defined(__powerpc__)
 # define LONG_JMP_SP_ENV_SLOT 0
 #elif SANITIZER_FREEBSD
-# define LONG_JMP_SP_ENV_SLOT 2
+# ifdef __aarch64__
+#  define LONG_JMP_SP_ENV_SLOT 1
+# else
+#  define LONG_JMP_SP_ENV_SLOT 2
+# endif
 #elif SANITIZER_LINUX
 # ifdef __aarch64__
 #  define LONG_JMP_SP_ENV_SLOT 13
@@ -447,6 +444,8 @@ static void InitializeLongjmpXorKey() {
 }
 #endif
 
+extern "C" void __tsan_tls_initialization() {}
+
 void ImitateTlsWrite(ThreadState *thr, uptr tls_addr, uptr tls_size) {
   // Check that the thr object is in tls;
   const uptr thr_beg = (uptr)thr;
@@ -456,9 +455,10 @@ void ImitateTlsWrite(ThreadState *thr, uptr tls_addr, uptr tls_size) {
   CHECK_GE(thr_end, tls_addr);
   CHECK_LE(thr_end, tls_addr + tls_size);
   // Since the thr object is huge, skip it.
-  MemoryRangeImitateWrite(thr, /*pc=*/2, tls_addr, thr_beg - tls_addr);
-  MemoryRangeImitateWrite(thr, /*pc=*/2, thr_end,
-                          tls_addr + tls_size - thr_end);
+  const uptr pc = StackTrace::GetNextInstructionPc(
+      reinterpret_cast<uptr>(__tsan_tls_initialization));
+  MemoryRangeImitateWrite(thr, pc, tls_addr, thr_beg - tls_addr);
+  MemoryRangeImitateWrite(thr, pc, thr_end, tls_addr + tls_size - thr_end);
 }
 
 // Note: this function runs with async signals enabled,

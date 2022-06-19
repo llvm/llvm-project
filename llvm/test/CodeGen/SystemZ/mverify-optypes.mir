@@ -31,8 +31,8 @@ body:             |
     %4:addr64bit = LARL @gsrc
     %4:addr64bit = LARL $r2l
 
-    MVCLoop %4, 0, %3, 0, 1680, %0, implicit-def $cc
-    MVCLoop %4, 0, %3, 0, %1, %0, implicit-def $cc
+    MVCImm %4, 0, %3, 0, 1680, implicit-def $cc
+    MVCImm %4, 0, %3, 0, %1, implicit-def $cc
 
     BCR 0, 0, $r2d, implicit $cc
     BCR 0, $r2d, $r2d, implicit $cc
@@ -63,7 +63,7 @@ body:             |
 # CHECK: - operand 1:   $r2l
 
 # CHECK: *** Bad machine code: Expected a non-register operand. ***
-# CHECK: - instruction: MVCLoop %4:addr64bit, 0, %3:addr64bit, 0, %1:addr64bit, %0:gr64bit, implicit-def $cc
+# CHECK: - instruction: MVCImm %4:addr64bit, 0, %3:addr64bit, 0, %1:addr64bit, implicit-def $cc
 # CHECK: - operand 4:   %1:addr64bit
 
 # CHECK: *** Bad machine code: Expected a non-register operand. ***

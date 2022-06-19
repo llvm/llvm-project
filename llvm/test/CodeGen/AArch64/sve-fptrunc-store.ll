@@ -69,10 +69,10 @@ define void @fptrunc8_f64_f16(<vscale x 8 x half> *%dst, <vscale x 8 x double> *
 ; CHECK-NEXT:    ld1d { z1.d }, p0/z, [x1, #1, mul vl]
 ; CHECK-NEXT:    ld1d { z2.d }, p0/z, [x1, #2, mul vl]
 ; CHECK-NEXT:    ld1d { z3.d }, p0/z, [x1, #3, mul vl]
-; CHECK-NEXT:    fcvt z0.h, p0/m, z0.d
 ; CHECK-NEXT:    fcvt z1.h, p0/m, z1.d
-; CHECK-NEXT:    fcvt z2.h, p0/m, z2.d
+; CHECK-NEXT:    fcvt z0.h, p0/m, z0.d
 ; CHECK-NEXT:    fcvt z3.h, p0/m, z3.d
+; CHECK-NEXT:    fcvt z2.h, p0/m, z2.d
 ; CHECK-NEXT:    uzp1 z2.s, z2.s, z3.s
 ; CHECK-NEXT:    uzp1 z0.s, z0.s, z1.s
 ; CHECK-NEXT:    uzp1 z0.h, z0.h, z2.h

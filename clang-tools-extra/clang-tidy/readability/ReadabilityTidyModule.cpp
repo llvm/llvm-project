@@ -12,12 +12,16 @@
 #include "AvoidConstParamsInDecls.h"
 #include "BracesAroundStatementsCheck.h"
 #include "ConstReturnTypeCheck.h"
+#include "ContainerContainsCheck.h"
+#include "ContainerDataPointerCheck.h"
 #include "ContainerSizeEmptyCheck.h"
 #include "ConvertMemberFunctionsToStatic.h"
 #include "DeleteNullPointerCheck.h"
+#include "DuplicateIncludeCheck.h"
 #include "ElseAfterReturnCheck.h"
 #include "FunctionCognitiveComplexityCheck.h"
 #include "FunctionSizeCheck.h"
+#include "IdentifierLengthCheck.h"
 #include "IdentifierNamingCheck.h"
 #include "ImplicitBoolConversionCheck.h"
 #include "InconsistentDeclarationParameterNameCheck.h"
@@ -61,18 +65,26 @@ public:
         "readability-braces-around-statements");
     CheckFactories.registerCheck<ConstReturnTypeCheck>(
         "readability-const-return-type");
+    CheckFactories.registerCheck<ContainerContainsCheck>(
+        "readability-container-contains");
+    CheckFactories.registerCheck<ContainerDataPointerCheck>(
+        "readability-container-data-pointer");
     CheckFactories.registerCheck<ContainerSizeEmptyCheck>(
         "readability-container-size-empty");
     CheckFactories.registerCheck<ConvertMemberFunctionsToStatic>(
         "readability-convert-member-functions-to-static");
     CheckFactories.registerCheck<DeleteNullPointerCheck>(
         "readability-delete-null-pointer");
+    CheckFactories.registerCheck<DuplicateIncludeCheck>(
+        "readability-duplicate-include");
     CheckFactories.registerCheck<ElseAfterReturnCheck>(
         "readability-else-after-return");
     CheckFactories.registerCheck<FunctionCognitiveComplexityCheck>(
         "readability-function-cognitive-complexity");
     CheckFactories.registerCheck<FunctionSizeCheck>(
         "readability-function-size");
+    CheckFactories.registerCheck<IdentifierLengthCheck>(
+        "readability-identifier-length");
     CheckFactories.registerCheck<IdentifierNamingCheck>(
         "readability-identifier-naming");
     CheckFactories.registerCheck<ImplicitBoolConversionCheck>(

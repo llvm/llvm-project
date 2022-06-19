@@ -1,5 +1,4 @@
-! RUN: %S/test_errors.sh %s %t %flang_fc1
-! REQUIRES: shell
+! RUN: %python %S/test_errors.py %s %flang_fc1
 ! C1121 -- any procedure referenced in a concurrent header must be pure
 
 ! Also, check that the step expressions are not zero.  This is prohibited by

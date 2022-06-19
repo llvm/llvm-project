@@ -6,7 +6,7 @@
 
 void bar(int);
 
-void foo() {
+void foo(void) {
   int a;
   bar(a); // expected-warning{{1st function call argument is an uninitialized value}}
 }

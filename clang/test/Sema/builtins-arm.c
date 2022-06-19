@@ -15,37 +15,37 @@ void __clear_cache(void*, void*);
 
 #if defined(__ARM_PCS) || defined(__ARM_EABI__)
 // va_list on ARM AAPCS is struct { void* __ap }.
-void test1() {
+void test1(void) {
   __builtin_va_list ptr;
   ptr.__ap = "x";
   *(ptr.__ap) = '0'; // expected-error {{incomplete type 'void' is not assignable}}
 }
 #else
 // va_list on ARM apcs-gnu is void*.
-void test1() {
+void test1(void) {
   __builtin_va_list ptr;
   ptr.__ap = "x";  // expected-error {{member reference base type '__builtin_va_list' is not a structure or union}}
   *(ptr.__ap) = '0';// expected-error {{member reference base type '__builtin_va_list' is not a structure or union}}
 }
 
-void test2() {
+void test2(void) {
   __builtin_va_list ptr = "x";
   *ptr = '0'; // expected-error {{incomplete type 'void' is not assignable}}
 }
 #endif
 
-void test3() {
+void test3(void) {
   __builtin_arm_dsb(16); // expected-error-re {{argument value {{.*}} is outside the valid range}}
   __builtin_arm_dmb(17); // expected-error-re {{argument value {{.*}} is outside the valid range}}
   __builtin_arm_isb(18); // expected-error-re {{argument value {{.*}} is outside the valid range}}
 }
 
-void test4() {
+void test4(void) {
   __builtin_arm_prefetch(0, 2, 0); // expected-error-re {{argument value {{.*}} is outside the valid range}}
   __builtin_arm_prefetch(0, 0, 2); // expected-error-re {{argument value {{.*}} is outside the valid range}}
 }
 
-void test5() {
+void test5(void) {
   __builtin_arm_dbg(16); // expected-error-re {{argument value {{.*}} is outside the valid range}}
 }
 

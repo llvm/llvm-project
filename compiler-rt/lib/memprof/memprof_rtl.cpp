@@ -21,6 +21,7 @@
 #include "memprof_thread.h"
 #include "sanitizer_common/sanitizer_atomic.h"
 #include "sanitizer_common/sanitizer_flags.h"
+#include "sanitizer_common/sanitizer_interface_internal.h"
 #include "sanitizer_common/sanitizer_libc.h"
 #include "sanitizer_common/sanitizer_symbolizer.h"
 
@@ -38,6 +39,7 @@ static void MemprofDie() {
   if (atomic_fetch_add(&num_calls, 1, memory_order_relaxed) != 0) {
     // Don't die twice - run a busy loop.
     while (1) {
+      internal_sched_yield();
     }
   }
   if (common_flags()->print_module_map >= 1)
@@ -132,13 +134,6 @@ void PrintAddressSpaceLayout() {
   Printf("SHADOW_OFFSET: 0x%zx\n", (uptr)SHADOW_OFFSET);
   CHECK(SHADOW_SCALE >= 3 && SHADOW_SCALE <= 7);
 }
-
-static bool UNUSED __local_memprof_dyninit = [] {
-  MaybeStartBackgroudThread();
-  SetSoftRssLimitExceededCallback(MemprofSoftRssLimitExceededCallback);
-
-  return false;
-}();
 
 static void MemprofInitInternal() {
   if (LIKELY(memprof_inited))
@@ -264,14 +259,9 @@ void __memprof_record_access(void const volatile *addr) {
   __memprof::RecordAccess((uptr)addr);
 }
 
-// We only record the access on the first location in the range,
-// since we will later accumulate the access counts across the
-// full allocation, and we don't want to inflate the hotness from
-// a memory intrinsic on a large range of memory.
-// TODO: Should we do something else so we can better track utilization?
-void __memprof_record_access_range(void const volatile *addr,
-                                   UNUSED uptr size) {
-  __memprof::RecordAccess((uptr)addr);
+void __memprof_record_access_range(void const volatile *addr, uptr size) {
+  for (uptr a = (uptr)addr; a < (uptr)addr + size; a += kWordSize)
+    __memprof::RecordAccess(a);
 }
 
 extern "C" SANITIZER_INTERFACE_ATTRIBUTE u16

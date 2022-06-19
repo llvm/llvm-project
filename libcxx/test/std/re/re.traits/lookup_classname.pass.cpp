@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-// XFAIL: LIBCXX-WINDOWS-FIXME
+// XFAIL: LIBCXX-AIX-FIXME
 
 // <regex>
 
@@ -158,6 +158,7 @@ int main(int, char**)
     test("", std::ctype_base::mask());
     test("digits", std::ctype_base::mask());
 
+#ifndef TEST_HAS_NO_WIDE_CHARACTERS
     test(L"d", std::ctype_base::digit);
     test(L"D", std::ctype_base::digit);
     test(L"d", std::ctype_base::digit, true);
@@ -245,6 +246,7 @@ int main(int, char**)
     test(L"dig", std::ctype_base::mask());
     test(L"", std::ctype_base::mask());
     test(L"digits", std::ctype_base::mask());
+#endif
 
   return 0;
 }

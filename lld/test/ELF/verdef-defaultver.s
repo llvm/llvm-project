@@ -1,7 +1,7 @@
 # REQUIRES: x86
 
 # RUN: llvm-mc -filetype=obj -triple=x86_64-unknown-linux %p/Inputs/verdef-defaultver.s -o %t1
-# RUN: echo "V1 { global: a; local: *; };" > %t.script
+# RUN: echo "V1 { global: a; b; local: *; };" > %t.script
 # RUN: echo "V2 { global: b; c; } V1;" >> %t.script
 # RUN: ld.lld --hash-style=sysv -shared -soname shared %t1 --version-script %t.script -o %t.so
 # RUN: llvm-readobj -V --dyn-syms %t.so | FileCheck --check-prefix=DSO %s

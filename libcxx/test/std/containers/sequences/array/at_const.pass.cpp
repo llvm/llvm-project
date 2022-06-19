@@ -10,9 +10,6 @@
 
 // const_reference at (size_type) const; // constexpr in C++14
 
-// GCC 5 doesn't implement the required constexpr support
-// UNSUPPORTED: gcc-5
-
 #include <array>
 #include <cassert>
 
@@ -21,11 +18,6 @@
 #endif
 
 #include "test_macros.h"
-
-// std::array is explicitly allowed to be initialized with A a = { init-list };.
-// Disable the missing braces warning for this reason.
-#include "disable_missing_braces_warning.h"
-
 
 TEST_CONSTEXPR_CXX14 bool tests()
 {

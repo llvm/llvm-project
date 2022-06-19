@@ -8,8 +8,6 @@
 
 // <array>
 // UNSUPPORTED: c++03, c++11, c++14
-// UNSUPPORTED: libcpp-no-deduction-guides
-
 
 // template <class T, class... U>
 //   array(T, U...) -> array<T, 1 + sizeof...(U)>;
@@ -20,11 +18,6 @@
 #include <array>
 #include <cassert>
 #include <cstddef>
-
-// std::array is explicitly allowed to be initialized with A a = { init-list };.
-// Disable the missing braces warning for this reason.
-#include "disable_missing_braces_warning.h"
-
 
 #include "test_macros.h"
 

@@ -26,9 +26,9 @@
 #include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCSubtargetInfo.h"
+#include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/ErrorHandling.h"
-#include "llvm/Support/TargetRegistry.h"
 
 using namespace llvm;
 
@@ -52,6 +52,8 @@ static MCSubtargetInfo *
 createAArch64MCSubtargetInfo(const Triple &TT, StringRef CPU, StringRef FS) {
   if (CPU.empty()) {
     CPU = "generic";
+    if (FS.empty())
+      FS = "+v8a";
 
     if (TT.isArm64e())
       CPU = "apple-a12";
@@ -230,8 +232,33 @@ void AArch64_MC::initLLVMToCVRegMapping(MCRegisterInfo *MRI) {
       {codeview::RegisterId::ARM64_Q31, AArch64::Q31},
 
   };
-  for (unsigned I = 0; I < array_lengthof(RegMap); ++I)
-    MRI->mapLLVMRegToCVReg(RegMap[I].Reg, static_cast<int>(RegMap[I].CVReg));
+  for (const auto &I : RegMap)
+    MRI->mapLLVMRegToCVReg(I.Reg, static_cast<int>(I.CVReg));
+}
+
+bool AArch64_MC::isQForm(const MCInst &MI, const MCInstrInfo *MCII) {
+  const auto &FPR128 = AArch64MCRegisterClasses[AArch64::FPR128RegClassID];
+  return llvm::any_of(MI, [&](const MCOperand &Op) {
+    return Op.isReg() && FPR128.contains(Op.getReg());
+  });
+}
+
+bool AArch64_MC::isFpOrNEON(const MCInst &MI, const MCInstrInfo *MCII) {
+  const auto &FPR128 = AArch64MCRegisterClasses[AArch64::FPR128RegClassID];
+  const auto &FPR64 = AArch64MCRegisterClasses[AArch64::FPR64RegClassID];
+  const auto &FPR32 = AArch64MCRegisterClasses[AArch64::FPR32RegClassID];
+  const auto &FPR16 = AArch64MCRegisterClasses[AArch64::FPR16RegClassID];
+  const auto &FPR8 = AArch64MCRegisterClasses[AArch64::FPR8RegClassID];
+
+  auto IsFPR = [&](const MCOperand &Op) {
+    if (!Op.isReg())
+      return false;
+    auto Reg = Op.getReg();
+    return FPR128.contains(Reg) || FPR64.contains(Reg) || FPR32.contains(Reg) ||
+           FPR16.contains(Reg) || FPR8.contains(Reg);
+  };
+
+  return llvm::any_of(MI, IsFPR);
 }
 
 static MCRegisterInfo *createAArch64MCRegisterInfo(const Triple &Triple) {

@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -emit-llvm -o - %s
+// RUN: %clang_cc1 -std=c89 -emit-llvm -o - %s
 // <rdar://problem/6108358>
 
 /* For posterity, the issue here begins initial "char []" decl for
@@ -23,6 +23,6 @@ static void bar(void *db) {
 
 char s[5] = "hi";
 
-int foo() {
+int foo(void) {
   bar(0);
 }

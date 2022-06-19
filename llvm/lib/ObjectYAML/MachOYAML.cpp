@@ -26,10 +26,10 @@ namespace llvm {
 MachOYAML::LoadCommand::~LoadCommand() = default;
 
 bool MachOYAML::LinkEditData::isEmpty() const {
-  return 0 ==
-         RebaseOpcodes.size() + BindOpcodes.size() + WeakBindOpcodes.size() +
-             LazyBindOpcodes.size() + ExportTrie.Children.size() +
-             NameList.size() + StringTable.size();
+  return 0 == RebaseOpcodes.size() + BindOpcodes.size() +
+                  WeakBindOpcodes.size() + LazyBindOpcodes.size() +
+                  ExportTrie.Children.size() + NameList.size() +
+                  StringTable.size() + FunctionStarts.size();
 }
 
 namespace yaml {
@@ -110,6 +110,9 @@ void MappingTraits<MachOYAML::Object>::mapping(IO &IO,
   Object.DWARF.Is64BitAddrSize = Object.Header.magic == MachO::MH_MAGIC_64 ||
                                  Object.Header.magic == MachO::MH_CIGAM_64;
   IO.mapOptional("LoadCommands", Object.LoadCommands);
+
+  if (Object.RawLinkEditSegment || !IO.outputting())
+    IO.mapOptional("__LINKEDIT", Object.RawLinkEditSegment);
   if(!Object.LinkEdit.isEmpty() || !IO.outputting())
     IO.mapOptional("LinkEditData", Object.LinkEdit);
 
@@ -161,6 +164,8 @@ void MappingTraits<MachOYAML::LinkEditData>::mapping(
     IO.mapOptional("ExportTrie", LinkEditData.ExportTrie);
   IO.mapOptional("NameList", LinkEditData.NameList);
   IO.mapOptional("StringTable", LinkEditData.StringTable);
+  IO.mapOptional("IndirectSymbols", LinkEditData.IndirectSymbols);
+  IO.mapOptional("FunctionStarts", LinkEditData.FunctionStarts);
 }
 
 void MappingTraits<MachOYAML::RebaseOpcode>::mapping(
@@ -218,19 +223,43 @@ void mapLoadCommandData<MachO::segment_command_64>(
 template <>
 void mapLoadCommandData<MachO::dylib_command>(
     IO &IO, MachOYAML::LoadCommand &LoadCommand) {
-  IO.mapOptional("PayloadString", LoadCommand.PayloadString);
+  IO.mapOptional("Content", LoadCommand.Content);
 }
 
 template <>
 void mapLoadCommandData<MachO::rpath_command>(
     IO &IO, MachOYAML::LoadCommand &LoadCommand) {
-  IO.mapOptional("PayloadString", LoadCommand.PayloadString);
+  IO.mapOptional("Content", LoadCommand.Content);
 }
 
 template <>
 void mapLoadCommandData<MachO::dylinker_command>(
     IO &IO, MachOYAML::LoadCommand &LoadCommand) {
-  IO.mapOptional("PayloadString", LoadCommand.PayloadString);
+  IO.mapOptional("Content", LoadCommand.Content);
+}
+
+template <>
+void mapLoadCommandData<MachO::sub_framework_command>(
+    IO &IO, MachOYAML::LoadCommand &LoadCommand) {
+  IO.mapOptional("Content", LoadCommand.Content);
+}
+
+template <>
+void mapLoadCommandData<MachO::sub_umbrella_command>(
+    IO &IO, MachOYAML::LoadCommand &LoadCommand) {
+  IO.mapOptional("Content", LoadCommand.Content);
+}
+
+template <>
+void mapLoadCommandData<MachO::sub_client_command>(
+    IO &IO, MachOYAML::LoadCommand &LoadCommand) {
+  IO.mapOptional("Content", LoadCommand.Content);
+}
+
+template <>
+void mapLoadCommandData<MachO::sub_library_command>(
+    IO &IO, MachOYAML::LoadCommand &LoadCommand) {
+  IO.mapOptional("Content", LoadCommand.Content);
 }
 
 template <>

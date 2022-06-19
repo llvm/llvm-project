@@ -1,4 +1,5 @@
 ; RUN: llc -mtriple=nvptx64-nvidia-cuda < %s | FileCheck %s
+; RUN: %if ptxas %{ llc -mtriple=nvptx64-nvidia-cuda < %s | %ptxas-verify %}
 
 @GLOBAL = addrspace(1) externally_initialized global i32 0, align 4, !dbg !0
 @SHARED = addrspace(3) externally_initialized global i32 undef, align 4, !dbg !6
@@ -256,8 +257,8 @@ declare void @llvm.dbg.declare(metadata, metadata, metadata)
 ; CHECK-NEXT:.b8 109
 ; CHECK-NEXT:.b8 112
 ; CHECK-NEXT:.b8 0
-; CHECK-NEXT:.b64 Lfunc_begin0                       // DW_AT_low_pc
-; CHECK-NEXT:.b64 Lfunc_end0                         // DW_AT_high_pc
+; CHECK-NEXT:.b64 $L__func_begin0                    // DW_AT_low_pc
+; CHECK-NEXT:.b64 $L__func_end0                      // DW_AT_high_pc
 ; CHECK-NEXT:.b8 2                                   // Abbrev [2] 0x65:0x1a DW_TAG_variable
 ; CHECK-NEXT:.b8 71                                  // DW_AT_name
 ; CHECK-NEXT:.b8 76
@@ -298,8 +299,8 @@ declare void @llvm.dbg.declare(metadata, metadata, metadata)
 ; CHECK-NEXT:.b8 3
 ; CHECK-NEXT:.b64 SHARED
 ; CHECK-NEXT:.b8 4                                   // Abbrev [4] 0xa0:0x45 DW_TAG_subprogram
-; CHECK-NEXT:.b64 Lfunc_begin0                       // DW_AT_low_pc
-; CHECK-NEXT:.b64 Lfunc_end0                         // DW_AT_high_pc
+; CHECK-NEXT:.b64 $L__func_begin0                    // DW_AT_low_pc
+; CHECK-NEXT:.b64 $L__func_end0                      // DW_AT_high_pc
 ; CHECK-NEXT:.b8 1                                   // DW_AT_frame_base
 ; CHECK-NEXT:.b8 156
 ; CHECK-NEXT:.b8 116                                 // DW_AT_MIPS_linkage_name

@@ -87,8 +87,10 @@ class X86SchedWriteWidths<X86FoldableSchedWrite sScl,
 }
 
 // Multiclass that wraps X86SchedWriteWidths for each fp vector type.
-class X86SchedWriteSizes<X86SchedWriteWidths sPS,
+class X86SchedWriteSizes<X86SchedWriteWidths sPH,
+                         X86SchedWriteWidths sPS,
                          X86SchedWriteWidths sPD> {
+  X86SchedWriteWidths PH = sPH;
   X86SchedWriteWidths PS = sPS;
   X86SchedWriteWidths PD = sPD;
 }
@@ -146,7 +148,10 @@ defm WriteIMul32Reg : X86SchedWritePair; // Integer 32-bit multiplication by reg
 defm WriteIMul64    : X86SchedWritePair; // Integer 64-bit multiplication.
 defm WriteIMul64Imm : X86SchedWritePair; // Integer 64-bit multiplication by immediate.
 defm WriteIMul64Reg : X86SchedWritePair; // Integer 64-bit multiplication by register.
-def  WriteIMulH     : SchedWrite;        // Integer multiplication, high part.
+defm WriteMULX32    : X86SchedWritePair; // Integer 32-bit Multiplication without affecting flags.
+defm WriteMULX64    : X86SchedWritePair; // Integer 64-bit Multiplication without affecting flags.
+def  WriteIMulH     : SchedWrite;        // Integer multiplication, high part (only used by the RR variant of MULX).
+def  WriteIMulHLd   : SchedWrite;        // Integer multiplication, high part (only used by the RM variant of MULX).
 
 def  WriteBSWAP32 : SchedWrite; // Byte Order (Endianness) 32-bit Swap.
 def  WriteBSWAP64 : SchedWrite; // Byte Order (Endianness) 64-bit Swap.
@@ -234,6 +239,7 @@ def  WriteFMaskedStore64Y : SchedWrite;
 def  WriteFMove         : SchedWrite;
 def  WriteFMoveX        : SchedWrite;
 def  WriteFMoveY        : SchedWrite;
+def  WriteFMoveZ        : SchedWrite;
 
 defm WriteFAdd    : X86SchedWritePair<ReadAfterVecLd>;  // Floating point add/sub.
 defm WriteFAddX   : X86SchedWritePair<ReadAfterVecXLd>; // Floating point add/sub (XMM).
@@ -349,6 +355,7 @@ def  WriteVecMaskedStore64Y : SchedWrite;
 def  WriteVecMove         : SchedWrite;
 def  WriteVecMoveX        : SchedWrite;
 def  WriteVecMoveY        : SchedWrite;
+def  WriteVecMoveZ        : SchedWrite;
 def  WriteVecMoveToGpr    : SchedWrite;
 def  WriteVecMoveFromGpr  : SchedWrite;
 
@@ -511,9 +518,11 @@ def WriteFMoveLSX
  : X86SchedWriteMoveLS<WriteFMoveX, WriteFLoadX, WriteFStoreX>;
 def WriteFMoveLSY
  : X86SchedWriteMoveLS<WriteFMoveY, WriteFLoadY, WriteFStoreY>;
+def WriteFMoveLSZ
+ : X86SchedWriteMoveLS<WriteFMoveZ, WriteFLoadY, WriteFStoreY>;
 def SchedWriteFMoveLS
   : X86SchedWriteMoveLSWidths<WriteFMoveLS, WriteFMoveLSX,
-                              WriteFMoveLSY, WriteFMoveLSY>;
+                              WriteFMoveLSY, WriteFMoveLSZ>;
 
 def WriteFMoveLSNT
  : X86SchedWriteMoveLS<WriteFMove, WriteFLoad, WriteFStoreNT>;
@@ -531,9 +540,11 @@ def WriteVecMoveLSX
  : X86SchedWriteMoveLS<WriteVecMoveX, WriteVecLoadX, WriteVecStoreX>;
 def WriteVecMoveLSY
  : X86SchedWriteMoveLS<WriteVecMoveY, WriteVecLoadY, WriteVecStoreY>;
+def WriteVecMoveLSZ
+ : X86SchedWriteMoveLS<WriteVecMoveZ, WriteVecLoadY, WriteVecStoreY>;
 def SchedWriteVecMoveLS
   : X86SchedWriteMoveLSWidths<WriteVecMoveLS, WriteVecMoveLSX,
-                              WriteVecMoveLSY, WriteVecMoveLSY>;
+                              WriteVecMoveLSY, WriteVecMoveLSZ>;
 
 def WriteVecMoveLSNT
  : X86SchedWriteMoveLS<WriteVecMove, WriteVecLoadNT, WriteVecStoreNT>;
@@ -681,20 +692,22 @@ def SchedWriteVarBlend
                        WriteVarBlendY, WriteVarBlendZ>;
 
 // Vector size wrappers.
+// FIXME: Currently PH uses the same schedule method as PS.
+// We may refine them later.
 def SchedWriteFAddSizes
- : X86SchedWriteSizes<SchedWriteFAdd, SchedWriteFAdd64>;
+ : X86SchedWriteSizes<SchedWriteFAdd, SchedWriteFAdd, SchedWriteFAdd64>;
 def SchedWriteFCmpSizes
- : X86SchedWriteSizes<SchedWriteFCmp, SchedWriteFCmp64>;
+ : X86SchedWriteSizes<SchedWriteFCmp, SchedWriteFCmp, SchedWriteFCmp64>;
 def SchedWriteFMulSizes
- : X86SchedWriteSizes<SchedWriteFMul, SchedWriteFMul64>;
+ : X86SchedWriteSizes<SchedWriteFMul, SchedWriteFMul, SchedWriteFMul64>;
 def SchedWriteFDivSizes
- : X86SchedWriteSizes<SchedWriteFDiv, SchedWriteFDiv64>;
+ : X86SchedWriteSizes<SchedWriteFDiv, SchedWriteFDiv, SchedWriteFDiv64>;
 def SchedWriteFSqrtSizes
- : X86SchedWriteSizes<SchedWriteFSqrt, SchedWriteFSqrt64>;
+ : X86SchedWriteSizes<SchedWriteFSqrt, SchedWriteFSqrt, SchedWriteFSqrt64>;
 def SchedWriteFLogicSizes
- : X86SchedWriteSizes<SchedWriteFLogic, SchedWriteFLogic>;
+ : X86SchedWriteSizes<SchedWriteFLogic, SchedWriteFLogic, SchedWriteFLogic>;
 def SchedWriteFShuffleSizes
- : X86SchedWriteSizes<SchedWriteFShuffle, SchedWriteFShuffle>;
+ : X86SchedWriteSizes<SchedWriteFShuffle, SchedWriteFShuffle, SchedWriteFShuffle>;
 
 //===----------------------------------------------------------------------===//
 // Generic Processor Scheduler Models.

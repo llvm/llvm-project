@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -std=c++2a -emit-llvm %s -o - -triple %itanium_abi_triple | \
+// RUN: %clang_cc1 -no-opaque-pointers -std=c++2a -emit-llvm %s -o - -triple %itanium_abi_triple | \
 // RUN:    FileCheck %s \
 // RUN:          '-DSO="class.std::__1::strong_ordering"' \
 // RUN:          '-DPO="class.std::__1::partial_ordering"' \

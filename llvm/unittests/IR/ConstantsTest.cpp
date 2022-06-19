@@ -134,6 +134,9 @@ TEST(ConstantsTest, PointerCast) {
   VectorType *Int8PtrVecTy = FixedVectorType::get(Int8PtrTy, 4);
   VectorType *Int32PtrVecTy = FixedVectorType::get(Int32PtrTy, 4);
   VectorType *Int64VecTy = FixedVectorType::get(Int64Ty, 4);
+  VectorType *Int8PtrScalableVecTy = ScalableVectorType::get(Int8PtrTy, 4);
+  VectorType *Int32PtrScalableVecTy = ScalableVectorType::get(Int32PtrTy, 4);
+  VectorType *Int64ScalableVecTy = ScalableVectorType::get(Int64Ty, 4);
 
   // ptrtoint i8* to i64
   EXPECT_EQ(
@@ -150,10 +153,22 @@ TEST(ConstantsTest, PointerCast) {
             ConstantExpr::getPointerCast(Constant::getNullValue(Int8PtrVecTy),
                                          Int64VecTy));
 
+  // ptrtoint <vscale x 4 x i8*> to <vscale x 4 x i64>
+  EXPECT_EQ(
+      Constant::getNullValue(Int64ScalableVecTy),
+      ConstantExpr::getPointerCast(Constant::getNullValue(Int8PtrScalableVecTy),
+                                   Int64ScalableVecTy));
+
   // bitcast <4 x i8*> to <4 x i32*>
   EXPECT_EQ(Constant::getNullValue(Int32PtrVecTy),
             ConstantExpr::getPointerCast(Constant::getNullValue(Int8PtrVecTy),
                                          Int32PtrVecTy));
+
+  // bitcast <vscale x 4 x i8*> to <vscale x 4 x i32*>
+  EXPECT_EQ(
+      Constant::getNullValue(Int32PtrScalableVecTy),
+      ConstantExpr::getPointerCast(Constant::getNullValue(Int8PtrScalableVecTy),
+                                   Int32PtrScalableVecTy));
 
   Type *Int32Ptr1Ty = Type::getInt32PtrTy(C, 1);
   ConstantInt *K = ConstantInt::get(Type::getInt64Ty(C), 1234);
@@ -218,13 +233,13 @@ TEST(ConstantsTest, AsInstructionsTest) {
   Constant *Undef64 = UndefValue::get(Int64Ty);
   Constant *PoisonV16 = PoisonValue::get(P6->getType());
 
-#define P0STR "ptrtoint (i32** @dummy to i32)"
-#define P1STR "uitofp (i32 ptrtoint (i32** @dummy to i32) to float)"
-#define P2STR "uitofp (i32 ptrtoint (i32** @dummy to i32) to double)"
-#define P3STR "ptrtoint (i32** @dummy to i1)"
-#define P4STR "ptrtoint (i32** @dummy2 to i32)"
-#define P5STR "uitofp (i32 ptrtoint (i32** @dummy2 to i32) to float)"
-#define P6STR "bitcast (i32 ptrtoint (i32** @dummy2 to i32) to <2 x i16>)"
+#define P0STR "ptrtoint (ptr @dummy to i32)"
+#define P1STR "uitofp (i32 ptrtoint (ptr @dummy to i32) to float)"
+#define P2STR "uitofp (i32 ptrtoint (ptr @dummy to i32) to double)"
+#define P3STR "ptrtoint (ptr @dummy to i1)"
+#define P4STR "ptrtoint (ptr @dummy2 to i32)"
+#define P5STR "uitofp (i32 ptrtoint (ptr @dummy2 to i32) to float)"
+#define P6STR "bitcast (i32 ptrtoint (ptr @dummy2 to i32) to <2 x i16>)"
 
   CHECK(ConstantExpr::getNeg(P0), "sub i32 0, " P0STR);
   CHECK(ConstantExpr::getFNeg(P1), "fneg float " P1STR);
@@ -283,7 +298,7 @@ TEST(ConstantsTest, AsInstructionsTest) {
   //      "getelementptr i32*, i32** @dummy, i32 1");
   CHECK(ConstantExpr::getInBoundsGetElementPtr(PointerType::getUnqual(Int32Ty),
                                                Global, V),
-        "getelementptr inbounds i32*, i32** @dummy, i32 1");
+        "getelementptr inbounds ptr, ptr @dummy, i32 1");
 
   CHECK(ConstantExpr::getExtractElement(P6, One),
         "extractelement <2 x i16> " P6STR ", i32 1");
@@ -385,7 +400,7 @@ TEST(ConstantsTest, GEPReplaceWithConstant) {
       new GlobalVariable(*M, PtrTy, false, GlobalValue::ExternalLinkage, GEP);
   ASSERT_EQ(GEP, Ref->getInitializer());
 
-  auto *Global = new GlobalVariable(*M, PtrTy, false,
+  auto *Global = new GlobalVariable(*M, IntTy, false,
                                     GlobalValue::ExternalLinkage, nullptr);
   auto *Alias = GlobalAlias::create(IntTy, 0, GlobalValue::ExternalLinkage,
                                     "alias", Global, M.get());
@@ -404,7 +419,7 @@ TEST(ConstantsTest, AliasCAPI) {
   Type *I16PTy = PointerType::get(I16Ty, 0);
   Constant *Aliasee = ConstantExpr::getBitCast(G, I16PTy);
   LLVMValueRef AliasRef =
-      LLVMAddAlias(wrap(M.get()), wrap(I16PTy), wrap(Aliasee), "a");
+      LLVMAddAlias2(wrap(M.get()), wrap(I16Ty), 0, wrap(Aliasee), "a");
   ASSERT_EQ(unwrap<GlobalAlias>(AliasRef)->getAliasee(), Aliasee);
 }
 
@@ -469,8 +484,9 @@ TEST(ConstantsTest, BuildConstantDataVectors) {
   }
 }
 
-TEST(ConstantsTest, BitcastToGEP) {
+void bitcastToGEPHelper(bool useOpaquePointers) {
   LLVMContext Context;
+  Context.setOpaquePointers(useOpaquePointers);
   std::unique_ptr<Module> M(new Module("MyModule", Context));
 
   auto *i32 = Type::getInt32Ty(Context);
@@ -482,7 +498,17 @@ TEST(ConstantsTest, BitcastToGEP) {
       new GlobalVariable(*M, S, false, GlobalValue::ExternalLinkage, nullptr);
   auto *PtrTy = PointerType::get(i32, 0);
   auto *C = ConstantExpr::getBitCast(G, PtrTy);
-  ASSERT_EQ(cast<ConstantExpr>(C)->getOpcode(), Instruction::BitCast);
+  if (Context.supportsTypedPointers()) {
+    EXPECT_EQ(cast<ConstantExpr>(C)->getOpcode(), Instruction::BitCast);
+  } else {
+    /* With opaque pointers, no cast is necessary. */
+    EXPECT_EQ(C, G);
+  }
+}
+
+TEST(ConstantsTest, BitcastToGEP) {
+  bitcastToGEPHelper(true);
+  bitcastToGEPHelper(false);
 }
 
 bool foldFuncPtrAndConstToNull(LLVMContext &Context, Module *TheModule,
@@ -756,6 +782,33 @@ TEST(ConstantsTest, GetSplatValueRoundTrip) {
       }
     }
   }
+}
+
+TEST(ConstantsTest, ComdatUserTracking) {
+  LLVMContext Context;
+  Module M("MyModule", Context);
+
+  Comdat *C = M.getOrInsertComdat("comdat");
+  const SmallPtrSetImpl<GlobalObject *> &Users = C->getUsers();
+  EXPECT_TRUE(Users.size() == 0);
+
+  Type *Ty = Type::getInt8Ty(Context);
+  GlobalVariable *GV1 = cast<GlobalVariable>(M.getOrInsertGlobal("gv1", Ty));
+  GV1->setComdat(C);
+  EXPECT_TRUE(Users.size() == 1);
+  EXPECT_TRUE(Users.contains(GV1));
+
+  GlobalVariable *GV2 = cast<GlobalVariable>(M.getOrInsertGlobal("gv2", Ty));
+  GV2->setComdat(C);
+  EXPECT_TRUE(Users.size() == 2);
+  EXPECT_TRUE(Users.contains(GV2));
+
+  GV1->eraseFromParent();
+  EXPECT_TRUE(Users.size() == 1);
+  EXPECT_TRUE(Users.contains(GV2));
+
+  GV2->eraseFromParent();
+  EXPECT_TRUE(Users.size() == 0);
 }
 
 } // end anonymous namespace

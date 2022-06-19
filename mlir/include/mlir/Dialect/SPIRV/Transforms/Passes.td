@@ -17,6 +17,11 @@ def SPIRVCompositeTypeLayout
   let constructor = "mlir::spirv::createDecorateSPIRVCompositeTypeLayoutPass()";
 }
 
+def SPIRVCanonicalizeGLSL : Pass<"spirv-canonicalize-glsl", ""> {
+  let summary = "Run canonicalization involving GLSL ops";
+  let constructor = "mlir::spirv::createCanonicalizeGLSLPass()";
+}
+
 def SPIRVLowerABIAttributes : Pass<"spirv-lower-abi-attrs", "spirv::ModuleOp"> {
   let summary = "Decorate SPIR-V composite type with layout info";
   let constructor = "mlir::spirv::createLowerABIAttributesPass()";
@@ -26,6 +31,13 @@ def SPIRVRewriteInsertsPass : Pass<"spirv-rewrite-inserts", "spirv::ModuleOp"> {
   let summary = "Rewrite sequential chains of spv.CompositeInsert operations into "
                 "spv.CompositeConstruct operations";
   let constructor = "mlir::spirv::createRewriteInsertsPass()";
+}
+
+def SPIRVUnifyAliasedResourcePass
+    : Pass<"spirv-unify-aliased-resource", "spirv::ModuleOp"> {
+  let summary = "Unify access of multiple aliased resources into access of one "
+                "single resource";
+  let constructor = "mlir::spirv::createUnifyAliasedResourcePass()";
 }
 
 def SPIRVUpdateVCE : Pass<"spirv-update-vce", "spirv::ModuleOp"> {

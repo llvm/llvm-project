@@ -218,6 +218,9 @@ static unsigned getRelocType64(MCContext &Ctx, SMLoc Loc,
       return ELF::R_X86_64_REX_GOTPCRELX;
     }
     llvm_unreachable("unexpected relocation type!");
+  case MCSymbolRefExpr::VK_GOTPCREL_NORELAX:
+    checkIs32(Ctx, Loc, Type);
+    return ELF::R_X86_64_GOTPCREL;
   case MCSymbolRefExpr::VK_X86_PLTOFF:
     checkIs64(Ctx, Loc, Type);
     return ELF::R_X86_64_PLTOFF64;
