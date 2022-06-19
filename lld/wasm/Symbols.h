@@ -570,7 +570,7 @@ struct WasmSym {
   static DefinedFunction *applyGlobalRelocs;
 
   // __wasm_apply_global_tls_relocs
-  // Like applyGlobalRelocs but for globals that hold TLS addresess.  These
+  // Like applyGlobalRelocs but for globals that hold TLS addresses.  These
   // must be delayed until __wasm_init_tls.
   static DefinedFunction *applyGlobalTLSRelocs;
 
