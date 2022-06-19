@@ -69,8 +69,7 @@ bool CallGraph::invalidate(Module &, const PreservedAnalyses &PA,
   // Check whether the analysis, all analyses on functions, or the function's
   // CFG have been preserved.
   auto PAC = PA.getChecker<CallGraphAnalysis>();
-  return !(PAC.preserved() || PAC.preservedSet<AllAnalysesOn<Module>>() ||
-           PAC.preservedSet<CFGAnalyses>());
+  return !(PAC.preserved() || PAC.preservedSet<AllAnalysesOn<Module>>());
 }
 
 void CallGraph::addToCallGraph(Function *F) {
