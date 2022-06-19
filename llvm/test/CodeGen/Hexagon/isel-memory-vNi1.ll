@@ -36,7 +36,7 @@ define i32 @f1(<4 x i1>* %a0, <4 x i8> %a1) #0 {
 ; CHECK-NEXT:     r3:2 = combine(#0,#0)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     r5:4 = vsxtbh(r1)
+; CHECK-NEXT:     r5:4 = vzxtbh(r1)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:     p0 = r0

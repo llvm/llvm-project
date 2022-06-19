@@ -160,14 +160,22 @@ define float @t6(<8 x float> *%a0) {
 ; X64-SSSE3-NEXT:    orps %xmm2, %xmm0
 ; X64-SSSE3-NEXT:    retq
 ;
-; X64-AVX-LABEL: t6:
-; X64-AVX:       # %bb.0:
-; X64-AVX-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; X64-AVX-NEXT:    vxorps %xmm1, %xmm1, %xmm1
-; X64-AVX-NEXT:    vcmpeqss %xmm1, %xmm0, %xmm1
-; X64-AVX-NEXT:    vmovss {{.*#+}} xmm2 = mem[0],zero,zero,zero
-; X64-AVX-NEXT:    vblendvps %xmm1, %xmm2, %xmm0, %xmm0
-; X64-AVX-NEXT:    retq
+; X64-AVX1-LABEL: t6:
+; X64-AVX1:       # %bb.0:
+; X64-AVX1-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; X64-AVX1-NEXT:    vxorps %xmm1, %xmm1, %xmm1
+; X64-AVX1-NEXT:    vcmpeqss %xmm1, %xmm0, %xmm1
+; X64-AVX1-NEXT:    vblendvps %xmm1, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; X64-AVX1-NEXT:    retq
+;
+; X64-AVX2-LABEL: t6:
+; X64-AVX2:       # %bb.0:
+; X64-AVX2-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; X64-AVX2-NEXT:    vxorps %xmm1, %xmm1, %xmm1
+; X64-AVX2-NEXT:    vcmpeqss %xmm1, %xmm0, %xmm1
+; X64-AVX2-NEXT:    vbroadcastss {{.*#+}} xmm2 = [1.0E+0,1.0E+0,1.0E+0,1.0E+0]
+; X64-AVX2-NEXT:    vblendvps %xmm1, %xmm2, %xmm0, %xmm0
+; X64-AVX2-NEXT:    retq
   %vecload = load <8 x float>, <8 x float>* %a0, align 32
   %vecext = extractelement <8 x float> %vecload, i32 1
   %cmp = fcmp oeq float %vecext, 0.000000e+00
@@ -251,14 +259,22 @@ define float @PR43971_1(<8 x float> *%a0) nounwind {
 ; X64-SSSE3-NEXT:    orps %xmm2, %xmm0
 ; X64-SSSE3-NEXT:    retq
 ;
-; X64-AVX-LABEL: PR43971_1:
-; X64-AVX:       # %bb.0: # %entry
-; X64-AVX-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; X64-AVX-NEXT:    vxorps %xmm1, %xmm1, %xmm1
-; X64-AVX-NEXT:    vcmpeqss %xmm1, %xmm0, %xmm1
-; X64-AVX-NEXT:    vmovss {{.*#+}} xmm2 = mem[0],zero,zero,zero
-; X64-AVX-NEXT:    vblendvps %xmm1, %xmm2, %xmm0, %xmm0
-; X64-AVX-NEXT:    retq
+; X64-AVX1-LABEL: PR43971_1:
+; X64-AVX1:       # %bb.0: # %entry
+; X64-AVX1-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; X64-AVX1-NEXT:    vxorps %xmm1, %xmm1, %xmm1
+; X64-AVX1-NEXT:    vcmpeqss %xmm1, %xmm0, %xmm1
+; X64-AVX1-NEXT:    vblendvps %xmm1, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; X64-AVX1-NEXT:    retq
+;
+; X64-AVX2-LABEL: PR43971_1:
+; X64-AVX2:       # %bb.0: # %entry
+; X64-AVX2-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; X64-AVX2-NEXT:    vxorps %xmm1, %xmm1, %xmm1
+; X64-AVX2-NEXT:    vcmpeqss %xmm1, %xmm0, %xmm1
+; X64-AVX2-NEXT:    vbroadcastss {{.*#+}} xmm2 = [1.0E+0,1.0E+0,1.0E+0,1.0E+0]
+; X64-AVX2-NEXT:    vblendvps %xmm1, %xmm2, %xmm0, %xmm0
+; X64-AVX2-NEXT:    retq
 entry:
   %0 = load <8 x float>, <8 x float>* %a0, align 32
   %vecext = extractelement <8 x float> %0, i32 1
