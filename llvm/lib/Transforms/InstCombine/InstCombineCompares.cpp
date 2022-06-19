@@ -2215,22 +2215,35 @@ Instruction *InstCombinerImpl::foldICmpShrConstant(ICmpInst &Cmp,
   if (Cmp.isEquality() && Shr->isExact() && C.isZero())
     return new ICmpInst(Pred, X, Cmp.getOperand(1));
 
-  const APInt *ShiftVal;
-  if (Cmp.isEquality() && match(Shr->getOperand(0), m_APInt(ShiftVal)))
-    return foldICmpShrConstConst(Cmp, Shr->getOperand(1), C, *ShiftVal);
+  bool IsAShr = Shr->getOpcode() == Instruction::AShr;
+  const APInt *ShiftValC;
+  if (match(Shr->getOperand(0), m_APInt(ShiftValC))) {
+    if (Cmp.isEquality())
+      return foldICmpShrConstConst(Cmp, Shr->getOperand(1), C, *ShiftValC);
 
-  const APInt *ShiftAmt;
-  if (!match(Shr->getOperand(1), m_APInt(ShiftAmt)))
+    // If the shifted constant is a power-of-2, test the shift amount directly:
+    // (ShiftValC >> X) >u C --> X <u (LZ(C) - LZ(ShiftValC))
+    // TODO: Handle ult.
+    if (!IsAShr && Pred == CmpInst::ICMP_UGT && ShiftValC->isPowerOf2()) {
+      assert(ShiftValC->ugt(C) && "Expected simplify of compare");
+      unsigned CmpLZ = C.countLeadingZeros();
+      unsigned ShiftLZ = ShiftValC->countLeadingZeros();
+      Constant *NewC = ConstantInt::get(Shr->getType(), CmpLZ - ShiftLZ);
+      return new ICmpInst(ICmpInst::ICMP_ULT, Shr->User::getOperand(1), NewC);
+    }
+  }
+
+  const APInt *ShiftAmtC;
+  if (!match(Shr->getOperand(1), m_APInt(ShiftAmtC)))
     return nullptr;
 
   // Check that the shift amount is in range. If not, don't perform undefined
   // shifts. When the shift is visited it will be simplified.
   unsigned TypeBits = C.getBitWidth();
-  unsigned ShAmtVal = ShiftAmt->getLimitedValue(TypeBits);
+  unsigned ShAmtVal = ShiftAmtC->getLimitedValue(TypeBits);
   if (ShAmtVal >= TypeBits || ShAmtVal == 0)
     return nullptr;
 
-  bool IsAShr = Shr->getOpcode() == Instruction::AShr;
   bool IsExact = Shr->isExact();
   Type *ShrTy = Shr->getType();
   // TODO: If we could guarantee that InstSimplify would handle all of the
