@@ -2117,21 +2117,21 @@ define i1 @samesign(i32 %x, i32 %y) {
   ret i1 %r
 }
 
-define i1 @samesign_different_sign_bittest1(i32 %x, i32 %y) {
+define <2 x i1> @samesign_different_sign_bittest1(<2 x i32> %x, <2 x i32> %y) {
 ; CHECK-LABEL: @samesign_different_sign_bittest1(
-; CHECK-NEXT:    [[A:%.*]] = and i32 [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    [[LT:%.*]] = icmp slt i32 [[A]], 0
-; CHECK-NEXT:    [[O:%.*]] = or i32 [[X]], [[Y]]
-; CHECK-NEXT:    [[GT:%.*]] = icmp sgt i32 [[O]], -1
-; CHECK-NEXT:    [[R:%.*]] = or i1 [[LT]], [[GT]]
-; CHECK-NEXT:    ret i1 [[R]]
+; CHECK-NEXT:    [[A:%.*]] = and <2 x i32> [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[LT:%.*]] = icmp slt <2 x i32> [[A]], zeroinitializer
+; CHECK-NEXT:    [[O:%.*]] = or <2 x i32> [[X]], [[Y]]
+; CHECK-NEXT:    [[GT:%.*]] = icmp sgt <2 x i32> [[O]], <i32 -1, i32 -1>
+; CHECK-NEXT:    [[R:%.*]] = or <2 x i1> [[LT]], [[GT]]
+; CHECK-NEXT:    ret <2 x i1> [[R]]
 ;
-  %a = and i32 %x, %y
-  %lt = icmp sle i32 %a, -1
-  %o = or i32 %x, %y
-  %gt = icmp sgt i32 %o, -1
-  %r = or i1 %lt, %gt
-  ret i1 %r
+  %a = and <2 x i32> %x, %y
+  %lt = icmp sle <2 x i32> %a, <i32 -1, i32 -1>
+  %o = or <2 x i32> %x, %y
+  %gt = icmp sgt <2 x i32> %o, <i32 -1, i32 -1>
+  %r = or <2 x i1> %lt, %gt
+  ret <2 x i1> %r
 }
 
 define i1 @samesign_different_sign_bittest2(i32 %x, i32 %y) {
@@ -2244,7 +2244,7 @@ define i1 @samesign_mult_use(i32 %x, i32 %y) {
 ; CHECK-NEXT:    [[O:%.*]] = or i32 [[X]], [[Y]]
 ; CHECK-NEXT:    call void @use32(i32 [[O]])
 ; CHECK-NEXT:    [[GT:%.*]] = icmp sgt i32 [[O]], -1
-; CHECK-NEXT:    [[R:%.*]] = and i1 [[LT]], [[GT]]
+; CHECK-NEXT:    [[R:%.*]] = or i1 [[LT]], [[GT]]
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %a = and i32 %x, %y
@@ -2253,7 +2253,7 @@ define i1 @samesign_mult_use(i32 %x, i32 %y) {
   %o = or i32 %x, %y
   call void @use32(i32 %o)
   %gt = icmp sgt i32 %o, -1
-  %r = and i1 %lt, %gt
+  %r = or i1 %lt, %gt
   ret i1 %r
 }
 
@@ -2261,11 +2261,30 @@ define i1 @samesign_mult_use2(i32 %x, i32 %y) {
 ; CHECK-LABEL: @samesign_mult_use2(
 ; CHECK-NEXT:    [[A:%.*]] = and i32 [[X:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    [[LT:%.*]] = icmp slt i32 [[A]], 0
+; CHECK-NEXT:    [[O:%.*]] = or i32 [[X]], [[Y]]
+; CHECK-NEXT:    [[GT:%.*]] = icmp sgt i32 [[O]], -1
+; CHECK-NEXT:    call void @use(i1 [[GT]])
+; CHECK-NEXT:    [[R:%.*]] = or i1 [[LT]], [[GT]]
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %a = and i32 %x, %y
+  %lt = icmp slt i32 %a, 0
+  %o = or i32 %x, %y
+  %gt = icmp sgt i32 %o, -1
+  call void @use(i1 %gt)
+  %r = or i1 %lt, %gt
+  ret i1 %r
+}
+
+define i1 @samesign_mult_use3(i32 %x, i32 %y) {
+; CHECK-LABEL: @samesign_mult_use3(
+; CHECK-NEXT:    [[A:%.*]] = and i32 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[LT:%.*]] = icmp slt i32 [[A]], 0
 ; CHECK-NEXT:    call void @use(i1 [[LT]])
 ; CHECK-NEXT:    [[O:%.*]] = or i32 [[X]], [[Y]]
 ; CHECK-NEXT:    [[GT:%.*]] = icmp sgt i32 [[O]], -1
 ; CHECK-NEXT:    call void @use(i1 [[GT]])
-; CHECK-NEXT:    [[R:%.*]] = and i1 [[LT]], [[GT]]
+; CHECK-NEXT:    [[R:%.*]] = or i1 [[LT]], [[GT]]
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %a = and i32 %x, %y
@@ -2274,7 +2293,7 @@ define i1 @samesign_mult_use2(i32 %x, i32 %y) {
   %o = or i32 %x, %y
   %gt = icmp sgt i32 %o, -1
   call void @use(i1 %gt)
-  %r = and i1 %lt, %gt
+  %r = or i1 %lt, %gt
   ret i1 %r
 }
 
