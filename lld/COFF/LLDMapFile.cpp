@@ -75,7 +75,7 @@ static SymbolMapTy getSectionSyms(ArrayRef<DefinedRegular *> syms) {
 static DenseMap<DefinedRegular *, std::string>
 getSymbolStrings(ArrayRef<DefinedRegular *> syms) {
   std::vector<std::string> str(syms.size());
-  parallelForEachN((size_t)0, syms.size(), [&](size_t i) {
+  parallelFor((size_t)0, syms.size(), [&](size_t i) {
     raw_string_ostream os(str[i]);
     writeHeader(os, syms[i]->getRVA(), 0, 0);
     os << indent16 << toString(*syms[i]);

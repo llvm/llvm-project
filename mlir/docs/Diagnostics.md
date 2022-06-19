@@ -381,7 +381,7 @@ ParallelDiagnosticHandler handler(context);
 
 // Process a list of operations in parallel.
 std::vector<Operation *> opsToProcess = ...;
-llvm::parallelForEachN(0, opsToProcess.size(), [&](size_t i) {
+llvm::parallelFor(0, opsToProcess.size(), [&](size_t i) {
   // Notify the handler that we are processing the i'th operation.
   handler.setOrderIDForThread(i);
   auto *op = opsToProcess[i];
