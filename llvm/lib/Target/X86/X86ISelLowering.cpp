@@ -48127,7 +48127,7 @@ static SDValue combineOr(SDNode *N, SelectionDAG &DAG,
     APInt UpperElts = APInt::getHighBitsSet(NumElts, HalfElts);
     if (NumElts >= 16 && N1.getOpcode() == X86ISD::KSHIFTL &&
         N1.getConstantOperandAPInt(1) == HalfElts &&
-        DAG.MaskedValueIsZero(N0, APInt(1, 1), UpperElts)) {
+        DAG.MaskedVectorIsZero(N0, UpperElts)) {
       return DAG.getNode(
           ISD::CONCAT_VECTORS, dl, VT,
           extractSubVector(N0, 0, DAG, dl, HalfElts),
@@ -48135,7 +48135,7 @@ static SDValue combineOr(SDNode *N, SelectionDAG &DAG,
     }
     if (NumElts >= 16 && N0.getOpcode() == X86ISD::KSHIFTL &&
         N0.getConstantOperandAPInt(1) == HalfElts &&
-        DAG.MaskedValueIsZero(N1, APInt(1, 1), UpperElts)) {
+        DAG.MaskedVectorIsZero(N1, UpperElts)) {
       return DAG.getNode(
           ISD::CONCAT_VECTORS, dl, VT,
           extractSubVector(N1, 0, DAG, dl, HalfElts),
