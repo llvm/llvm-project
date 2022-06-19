@@ -148,7 +148,7 @@ LinalgOpInstancePromotionOptions::LinalgOpInstancePromotionOptions(
       alignment(options.alignment) {
   assert(linalgOp.hasBufferSemantics() && "revisit usage of shaped operand");
   auto vUseFullTileBuffers =
-      options.useFullTileBuffers.getValueOr(llvm::SmallBitVector());
+      options.useFullTileBuffers.value_or(llvm::SmallBitVector());
   vUseFullTileBuffers.resize(linalgOp.getNumInputsAndOutputs(),
                              options.useFullTileBuffersDefault);
 

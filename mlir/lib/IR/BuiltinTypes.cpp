@@ -258,7 +258,7 @@ void VectorType::walkImmediateSubElements(
 
 VectorType VectorType::cloneWith(Optional<ArrayRef<int64_t>> shape,
                                  Type elementType) const {
-  return VectorType::get(shape.getValueOr(getShape()), elementType,
+  return VectorType::get(shape.value_or(getShape()), elementType,
                          getNumScalableDims());
 }
 
@@ -290,8 +290,8 @@ TensorType TensorType::cloneWith(Optional<ArrayRef<int64_t>> shape,
   if (!shape)
     return RankedTensorType::get(rankedTy.getShape(), elementType,
                                  rankedTy.getEncoding());
-  return RankedTensorType::get(shape.getValueOr(rankedTy.getShape()),
-                               elementType, rankedTy.getEncoding());
+  return RankedTensorType::get(shape.value_or(rankedTy.getShape()), elementType,
+                               rankedTy.getEncoding());
 }
 
 // Check if "elementType" can be an element type of a tensor.

@@ -73,7 +73,7 @@ OperationType OperationType::get(Context &context, Optional<StringRef> name,
                                  const ods::Operation *odsOp) {
   return context.getTypeUniquer().get<ImplTy>(
       /*initFn=*/function_ref<void(ImplTy *)>(),
-      std::make_pair(name.getValueOr(""), odsOp));
+      std::make_pair(name.value_or(""), odsOp));
 }
 
 Optional<StringRef> OperationType::getName() const {

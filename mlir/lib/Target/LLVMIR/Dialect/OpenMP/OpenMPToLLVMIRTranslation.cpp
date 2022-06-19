@@ -371,7 +371,7 @@ convertOmpCritical(Operation &opInst, llvm::IRBuilderBase &builder,
                                static_cast<int>(criticalDeclareOp.hint_val()));
   }
   builder.restoreIP(moduleTranslation.getOpenMPBuilder()->createCritical(
-      ompLoc, bodyGenCB, finiCB, criticalOp.name().getValueOr(""), hint));
+      ompLoc, bodyGenCB, finiCB, criticalOp.name().value_or(""), hint));
   return success();
 }
 
@@ -687,8 +687,7 @@ convertOmpWsLoop(Operation &opInst, llvm::IRBuilderBase &builder,
     return failure();
 
   // Static is the default.
-  auto schedule =
-      loop.schedule_val().getValueOr(omp::ClauseScheduleKind::Static);
+  auto schedule = loop.schedule_val().value_or(omp::ClauseScheduleKind::Static);
 
   // Find the loop configuration.
   llvm::Value *step = moduleTranslation.lookupValue(loop.step()[0]);

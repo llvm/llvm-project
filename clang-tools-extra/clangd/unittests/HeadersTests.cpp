@@ -112,7 +112,7 @@ protected:
       return "";
     auto Path = Inserter.calculateIncludePath(Inserted, MainFile);
     Action.EndSourceFile();
-    return Path.getValueOr("");
+    return Path.value_or("");
   }
 
   llvm::Optional<TextEdit> insert(llvm::StringRef VerbatimHeader) {

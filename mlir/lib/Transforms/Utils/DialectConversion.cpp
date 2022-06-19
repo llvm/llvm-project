@@ -3151,7 +3151,7 @@ auto ConversionTarget::isLegal(Operation *op) const
     auto legalityFnIt = opRecursiveLegalityFns.find(op->getName());
     if (legalityFnIt != opRecursiveLegalityFns.end()) {
       legalityDetails.isRecursivelyLegal =
-          legalityFnIt->second(op).getValueOr(true);
+          legalityFnIt->second(op).value_or(true);
     } else {
       legalityDetails.isRecursivelyLegal = true;
     }
