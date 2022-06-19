@@ -328,8 +328,7 @@ void Writer::layoutMemory() {
     WasmSym::heapBase->setVA(memoryPtr);
   }
 
-  uint64_t maxMemorySetting = 1ULL
-                              << (config->is64.getValueOr(false) ? 48 : 32);
+  uint64_t maxMemorySetting = 1ULL << (config->is64.value_or(false) ? 48 : 32);
 
   if (config->initialMemory != 0) {
     if (config->initialMemory != alignTo(config->initialMemory, WasmPageSize))
@@ -1057,7 +1056,7 @@ void Writer::createInitMemoryFunction() {
     assert(WasmSym::initMemoryFlag);
     flagAddress = WasmSym::initMemoryFlag->getVA();
   }
-  bool is64 = config->is64.getValueOr(false);
+  bool is64 = config->is64.value_or(false);
   std::string bodyContent;
   {
     raw_string_ostream os(bodyContent);
