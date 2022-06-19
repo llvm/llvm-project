@@ -855,7 +855,7 @@ Expected<StringRef> ELFFile<ELFT>::getSymbolVersionByIndex(
 
   const VersionEntry &Entry = *VersionMap[VersionIndex];
   // A default version (@@) is only available for defined symbols.
-  if (!Entry.IsVerDef || IsSymHidden.getValueOr(false))
+  if (!Entry.IsVerDef || IsSymHidden.value_or(false))
     IsDefault = false;
   else
     IsDefault = !(SymbolVersionIndex & llvm::ELF::VERSYM_HIDDEN);

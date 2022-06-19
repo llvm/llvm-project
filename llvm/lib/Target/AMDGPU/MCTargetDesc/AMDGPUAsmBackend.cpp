@@ -263,5 +263,5 @@ MCAsmBackend *llvm::createAMDGPUAsmBackend(const Target &T,
                                            const MCRegisterInfo &MRI,
                                            const MCTargetOptions &Options) {
   return new ELFAMDGPUAsmBackend(T, STI.getTargetTriple(),
-                                 getHsaAbiVersion(&STI).getValueOr(0));
+                                 getHsaAbiVersion(&STI).value_or(0));
 }

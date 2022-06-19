@@ -397,11 +397,10 @@ static void emitOneV5FileEntry(MCStreamer *MCOS, const MCDwarfFile &DwarfFile,
   }
   if (HasSource) {
     if (LineStr)
-      LineStr->emitRef(MCOS, DwarfFile.Source.getValueOr(StringRef()));
+      LineStr->emitRef(MCOS, DwarfFile.Source.value_or(StringRef()));
     else {
-      MCOS->emitBytes(
-          DwarfFile.Source.getValueOr(StringRef())); // Source and...
-      MCOS->emitBytes(StringRef("\0", 1));           // its null terminator.
+      MCOS->emitBytes(DwarfFile.Source.value_or(StringRef())); // Source and...
+      MCOS->emitBytes(StringRef("\0", 1)); // its null terminator.
     }
   }
 }

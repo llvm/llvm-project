@@ -687,7 +687,7 @@ template <> struct MDNodeKeyImpl<DIFile> {
   unsigned getHashValue() const {
     return hash_combine(Filename, Directory, Checksum ? Checksum->Kind : 0,
                         Checksum ? Checksum->Value : nullptr,
-                        Source.getValueOr(nullptr));
+                        Source.value_or(nullptr));
   }
 };
 

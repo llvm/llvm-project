@@ -152,7 +152,7 @@ InstructionInfoView::toJSON(const InstructionInfoViewData &IIVD) const {
                    {"mayLoad", IIVD.mayLoad},
                    {"mayStore", IIVD.mayStore},
                    {"hasUnmodeledSideEffects", IIVD.hasUnmodeledSideEffects}});
-  JO.try_emplace("RThroughput", IIVD.RThroughput.getValueOr(0.0));
+  JO.try_emplace("RThroughput", IIVD.RThroughput.value_or(0.0));
   return JO;
 }
 

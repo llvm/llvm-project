@@ -923,7 +923,7 @@ bool MIRParserImpl::initializeConstantPool(PerFunctionMIParsingState &PFS,
       return error(Error, YamlConstant.Value.SourceRange);
     const Align PrefTypeAlign =
         M.getDataLayout().getPrefTypeAlign(Value->getType());
-    const Align Alignment = YamlConstant.Alignment.getValueOr(PrefTypeAlign);
+    const Align Alignment = YamlConstant.Alignment.value_or(PrefTypeAlign);
     unsigned Index = ConstantPool.getConstantPoolIndex(Value, Alignment);
     if (!ConstantPoolSlots.insert(std::make_pair(YamlConstant.ID.Value, Index))
              .second)

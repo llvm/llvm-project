@@ -44,7 +44,7 @@ static void emitDXILValidatorVersion(Module &M, VersionTuple &ValidatorVer) {
   auto &Ctx = M.getContext();
   Metadata *MDVals[DXILVersionNumFields];
   MDVals[0] = Uint32ToConstMD(ValidatorVer.getMajor(), Ctx);
-  MDVals[1] = Uint32ToConstMD(ValidatorVer.getMinor().getValueOr(0), Ctx);
+  MDVals[1] = Uint32ToConstMD(ValidatorVer.getMinor().value_or(0), Ctx);
 
   DXILValidatorVersionMD->addOperand(MDNode::get(Ctx, MDVals));
 }
