@@ -181,27 +181,9 @@ IncrementalParser::ParseOrWrapTopLevelDecl() {
 
   DiagnosticsEngine &Diags = getCI()->getDiagnostics();
   if (Diags.hasErrorOccurred()) {
-    TranslationUnitDecl *MostRecentTU = C.getTranslationUnitDecl();
-    TranslationUnitDecl *PreviousTU = MostRecentTU->getPreviousDecl();
-    assert(PreviousTU && "Must have a TU from the ASTContext initialization!");
-    TranslationUnitDecl *FirstTU = MostRecentTU->getFirstDecl();
-    assert(FirstTU);
-    FirstTU->RedeclLink.setLatest(PreviousTU);
-    C.TUDecl = PreviousTU;
-    S.TUScope->setEntity(PreviousTU);
-
-    // Clean up the lookup table
-    if (StoredDeclsMap *Map = PreviousTU->getPrimaryContext()->getLookupPtr()) {
-      for (auto I = Map->begin(); I != Map->end(); ++I) {
-        StoredDeclsList &List = I->second;
-        DeclContextLookupResult R = List.getLookupResult();
-        for (NamedDecl *D : R)
-          if (D->getTranslationUnitDecl() == MostRecentTU)
-            List.remove(D);
-        if (List.isNull())
-          Map->erase(I);
-      }
-    }
+    PartialTranslationUnit MostRecentPTU = {C.getTranslationUnitDecl(),
+                                            nullptr};
+    CleanUpPTU(MostRecentPTU);
 
     Diags.Reset(/*soft=*/true);
     Diags.getClient()->clear();
@@ -294,6 +276,24 @@ IncrementalParser::Parse(llvm::StringRef input) {
   }
 
   return PTU;
+}
+
+void IncrementalParser::CleanUpPTU(PartialTranslationUnit &PTU) {
+  TranslationUnitDecl *MostRecentTU = PTU.TUPart;
+  TranslationUnitDecl *FirstTU = MostRecentTU->getFirstDecl();
+  if (StoredDeclsMap *Map = FirstTU->getPrimaryContext()->getLookupPtr()) {
+    for (auto I = Map->begin(); I != Map->end(); ++I) {
+      StoredDeclsList &List = I->second;
+      DeclContextLookupResult R = List.getLookupResult();
+      for (NamedDecl *D : R) {
+        if (D->getTranslationUnitDecl() == MostRecentTU) {
+          List.remove(D);
+        }
+      }
+      if (List.isNull())
+        Map->erase(I);
+    }
+  }
 }
 
 llvm::StringRef IncrementalParser::GetMangledName(GlobalDecl GD) const {
