@@ -22,4 +22,4 @@ int r3 = foo();
 struct D { float f = 1.0; D *m = nullptr; D(){} ~D() { printf("D[f=%f, m=0x%llx]\n", f, reinterpret_cast<unsigned long long>(m)); }} d;
 // CHECK: D[f=1.000000, m=0x0]
 
-quit
+%quit

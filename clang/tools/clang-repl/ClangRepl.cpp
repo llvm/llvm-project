@@ -111,8 +111,14 @@ int main(int argc, const char **argv) {
     llvm::LineEditor LE("clang-repl");
     // FIXME: Add LE.setListCompleter
     while (llvm::Optional<std::string> Line = LE.readLine()) {
-      if (*Line == "quit")
+      if (*Line == R"(%quit)")
         break;
+      if (*Line == R"(%undo)") {
+        if (auto Err = Interp->Undo())
+          llvm::logAllUnhandledErrors(std::move(Err), llvm::errs(), "error: ");
+        continue;
+      }
+
       if (auto Err = Interp->ParseAndExecute(*Line))
         llvm::logAllUnhandledErrors(std::move(Err), llvm::errs(), "error: ");
     }
