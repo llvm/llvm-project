@@ -52,8 +52,8 @@ define void @splat_v2i64(<2 x i64>* %x, i64 %y) {
 ; LMULMAX8-RV32-NEXT:    .cfi_def_cfa_offset 16
 ; LMULMAX8-RV32-NEXT:    sw a2, 12(sp)
 ; LMULMAX8-RV32-NEXT:    sw a1, 8(sp)
-; LMULMAX8-RV32-NEXT:    vsetivli zero, 2, e64, m1, ta, mu
 ; LMULMAX8-RV32-NEXT:    addi a1, sp, 8
+; LMULMAX8-RV32-NEXT:    vsetivli zero, 2, e64, m1, ta, mu
 ; LMULMAX8-RV32-NEXT:    vlse64.v v8, (a1), zero
 ; LMULMAX8-RV32-NEXT:    vse64.v v8, (a0)
 ; LMULMAX8-RV32-NEXT:    addi sp, sp, 16
@@ -65,8 +65,8 @@ define void @splat_v2i64(<2 x i64>* %x, i64 %y) {
 ; LMULMAX2-RV32-NEXT:    .cfi_def_cfa_offset 16
 ; LMULMAX2-RV32-NEXT:    sw a2, 12(sp)
 ; LMULMAX2-RV32-NEXT:    sw a1, 8(sp)
-; LMULMAX2-RV32-NEXT:    vsetivli zero, 2, e64, m1, ta, mu
 ; LMULMAX2-RV32-NEXT:    addi a1, sp, 8
+; LMULMAX2-RV32-NEXT:    vsetivli zero, 2, e64, m1, ta, mu
 ; LMULMAX2-RV32-NEXT:    vlse64.v v8, (a1), zero
 ; LMULMAX2-RV32-NEXT:    vse64.v v8, (a0)
 ; LMULMAX2-RV32-NEXT:    addi sp, sp, 16
@@ -78,8 +78,8 @@ define void @splat_v2i64(<2 x i64>* %x, i64 %y) {
 ; LMULMAX1-RV32-NEXT:    .cfi_def_cfa_offset 16
 ; LMULMAX1-RV32-NEXT:    sw a2, 12(sp)
 ; LMULMAX1-RV32-NEXT:    sw a1, 8(sp)
-; LMULMAX1-RV32-NEXT:    vsetivli zero, 2, e64, m1, ta, mu
 ; LMULMAX1-RV32-NEXT:    addi a1, sp, 8
+; LMULMAX1-RV32-NEXT:    vsetivli zero, 2, e64, m1, ta, mu
 ; LMULMAX1-RV32-NEXT:    vlse64.v v8, (a1), zero
 ; LMULMAX1-RV32-NEXT:    vse64.v v8, (a0)
 ; LMULMAX1-RV32-NEXT:    addi sp, sp, 16
@@ -207,8 +207,8 @@ define void @splat_v4i64(<4 x i64>* %x, i64 %y) {
 ; LMULMAX8-RV32-NEXT:    .cfi_def_cfa_offset 16
 ; LMULMAX8-RV32-NEXT:    sw a2, 12(sp)
 ; LMULMAX8-RV32-NEXT:    sw a1, 8(sp)
-; LMULMAX8-RV32-NEXT:    vsetivli zero, 4, e64, m2, ta, mu
 ; LMULMAX8-RV32-NEXT:    addi a1, sp, 8
+; LMULMAX8-RV32-NEXT:    vsetivli zero, 4, e64, m2, ta, mu
 ; LMULMAX8-RV32-NEXT:    vlse64.v v8, (a1), zero
 ; LMULMAX8-RV32-NEXT:    vse64.v v8, (a0)
 ; LMULMAX8-RV32-NEXT:    addi sp, sp, 16
@@ -220,8 +220,8 @@ define void @splat_v4i64(<4 x i64>* %x, i64 %y) {
 ; LMULMAX2-RV32-NEXT:    .cfi_def_cfa_offset 16
 ; LMULMAX2-RV32-NEXT:    sw a2, 12(sp)
 ; LMULMAX2-RV32-NEXT:    sw a1, 8(sp)
-; LMULMAX2-RV32-NEXT:    vsetivli zero, 4, e64, m2, ta, mu
 ; LMULMAX2-RV32-NEXT:    addi a1, sp, 8
+; LMULMAX2-RV32-NEXT:    vsetivli zero, 4, e64, m2, ta, mu
 ; LMULMAX2-RV32-NEXT:    vlse64.v v8, (a1), zero
 ; LMULMAX2-RV32-NEXT:    vse64.v v8, (a0)
 ; LMULMAX2-RV32-NEXT:    addi sp, sp, 16
