@@ -1298,6 +1298,12 @@ public:
                     (Flags, CC, TypeArray))
 
   TempDISubroutineType clone() const { return cloneImpl(); }
+  // Returns a new temporary DISubroutineType with updated CC
+  TempDISubroutineType cloneWithCC(uint8_t CC) const {
+    auto NewTy = clone();
+    NewTy->CC = CC;
+    return NewTy;
+  }
 
   uint8_t getCC() const { return CC; }
 
@@ -1995,6 +2001,10 @@ public:
   }
   DIType *getContainingType() const {
     return cast_or_null<DIType>(getRawContainingType());
+  }
+  void replaceType(DISubroutineType *Ty) {
+    assert(isDistinct() && "Only distinct nodes can mutate");
+    replaceOperandWith(4, Ty);
   }
 
   DICompileUnit *getUnit() const {

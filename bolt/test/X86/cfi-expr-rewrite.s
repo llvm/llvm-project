@@ -3,7 +3,7 @@
 
 # RUN: llvm-mc -filetype=obj -triple x86_64-unknown-unknown %s -o %t.o
 # RUN: %clang %cflags %t.o -o %t.exe
-# RUN: llvm-bolt %t.exe -o %t && llvm-dwarfdump -eh-frame %t | FileCheck %s
+# RUN: llvm-bolt %t.exe -o %t && llvm-dwarfdump --eh-frame %t | FileCheck %s
 #
 # CHECK:       DW_CFA_advance_loc: 5
 # CHECK-NEXT:  DW_CFA_def_cfa: R10 +0

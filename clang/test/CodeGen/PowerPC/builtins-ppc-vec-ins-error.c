@@ -1,9 +1,17 @@
 // REQUIRES: powerpc-registered-target
 
-// RUN: %clang_cc1 -target-feature +vsx -target-cpu pwr10 \
-// RUN:   -triple powerpc64le-unknown-unknown -fsyntax-only %s -verify
-// RUN: %clang_cc1 -target-feature +vsx -target-cpu pwr10 \
-// RUN:   -triple powerpc64-unknown-unknown -fsyntax-only %s -verify
+// RUN: %clang_cc1 -flax-vector-conversions=none -target-feature +vsx -target-cpu pwr10 \
+// RUN:   -triple powerpc64le-unknown-unknown -emit-llvm -ferror-limit 10 %s -verify -D __TEST_ELT_SI
+// RUN: %clang_cc1 -flax-vector-conversions=none -target-feature +vsx -target-cpu pwr10 \
+// RUN:   -triple powerpc64-unknown-unknown -emit-llvm -ferror-limit 10 %s -verify -D __TEST_ELT_F
+// RUN: %clang_cc1 -flax-vector-conversions=none -target-feature +vsx -target-cpu pwr10 \
+// RUN:   -triple powerpc64le-unknown-unknown -emit-llvm -ferror-limit 10 %s -verify -D __TEST_ELT_SLL
+// RUN: %clang_cc1 -flax-vector-conversions=none -target-feature +vsx -target-cpu pwr10 \
+// RUN:   -triple powerpc64-unknown-unknown -emit-llvm -ferror-limit 10 %s -verify -D __TEST_ELT_D
+// RUN: %clang_cc1 -flax-vector-conversions=none -target-feature +vsx -target-cpu pwr10 \
+// RUN:   -triple powerpc64le-unknown-unknown -emit-llvm -ferror-limit 10 %s -verify -D __TEST_UNALIGNED_UI
+// RUN: %clang_cc1 -flax-vector-conversions=none -target-feature +vsx -target-cpu pwr10 \
+// RUN:   -triple powerpc64-unknown-unknown -emit-llvm -ferror-limit 10 %s -verify
 
 #include <altivec.h>
 
@@ -20,62 +28,33 @@ unsigned long long ulla;
 float fa;
 double da;
 
+#ifdef __TEST_ELT_SI
 vector signed int test_vec_replace_elt_si(void) {
-  return vec_replace_elt(vsia, sia, 13); // expected-error {{argument value 13 is outside the valid range [0, 12]}}
+  return vec_replace_elt(vsia, sia, 4); // expected-error {{element number 4 is outside of the valid range [0, 3]}}
 }
 
-vector unsigned int test_vec_replace_elt_ui(void) {
-  return vec_replace_elt(vuia, sia, 1); // expected-error {{arguments are of different types ('unsigned int' vs 'int')}}
-}
-
+#elif defined(__TEST_ELT_F)
 vector float test_vec_replace_elt_f(void) {
-  return vec_replace_elt(vfa, fa, 20); // expected-error {{argument value 20 is outside the valid range [0, 12]}}
+  return vec_replace_elt(vfa, fa, 10); // expected-error {{element number 10 is outside of the valid range [0, 3]}}
 }
 
-vector float test_vec_replace_elt_f_2(void) {
-  return vec_replace_elt(vfa, da, 0); // expected-error {{arguments are of different types ('float' vs 'double')}}
-}
-
+#elif defined(__TEST_ELT_SLL)
 vector signed long long test_vec_replace_elt_sll(void) {
-  return vec_replace_elt(vslla, slla, 9); // expected-error {{argument value 9 is outside the valid range [0, 8]}}
+  return vec_replace_elt(vslla, slla, 2); // expected-error {{element number 2 is outside of the valid range [0, 1]}}
 }
 
-vector unsigned long long test_vec_replace_elt_ull(void) {
-  return vec_replace_elt(vulla, vda, 0); // expected-error {{arguments are of different types ('unsigned long long' vs '__vector double' (vector of 2 'double' values))}}
-}
-
-vector unsigned long long test_vec_replace_elt_ull_2(void) {
-  return vec_replace_elt(vulla, vulla, vsia); // expected-error {{argument to '__builtin_altivec_vec_replace_elt' must be a constant integer}}
-}
-
+#elif defined(__TEST_ELT_D)
 vector double test_vec_replace_elt_d(void) {
-  return vec_replace_elt(vda, da, 33); // expected-error {{argument value 33 is outside the valid range [0, 8]}}
+  return vec_replace_elt(vda, da, 3); // expected-error {{element number 3 is outside of the valid range [0, 1]}}
 }
 
-vector unsigned char test_vec_replace_unaligned_si(void) {
-  return vec_replace_unaligned(vsia, da, 6); // expected-error {{arguments are of different types ('int' vs 'double')}}
+#elif defined(__TEST_UNALIGNED_UI)
+vector unsigned int test_vec_replace_unaligned_ui(void) {
+  return vec_replace_unaligned(vuia, uia, 16); // expected-error {{byte number 16 is outside of the valid range [0, 12]}}
 }
 
-vector unsigned char test_vec_replace_unaligned_ui(void) {
-  return vec_replace_unaligned(vuia, uia, 14); // expected-error {{argument value 14 is outside the valid range [0, 12]}}
+#else
+vector unsigned long long test_vec_replace_unaligned_ull(void) {
+  return vec_replace_unaligned(vulla, ulla, 12); // expected-error {{byte number 12 is outside of the valid range [0, 8]}}
 }
-
-vector unsigned char test_vec_replace_unaligned_f(void) {
-  return vec_replace_unaligned(vfa, fa, 19); // expected-error {{argument value 19 is outside the valid range [0, 12]}}
-}
-
-vector unsigned char test_vec_replace_unaligned_sll(void) {
-  return vec_replace_unaligned(vslla, fa, 0); // expected-error {{arguments are of different types ('long long' vs 'float')}}
-}
-
-vector unsigned char test_vec_replace_unaligned_ull(void) {
-  return vec_replace_unaligned(vulla, ulla, 12); // expected-error {{argument value 12 is outside the valid range [0, 8]}}
-}
-
-vector unsigned char test_vec_replace_unaligned_d(void) {
-  return vec_replace_unaligned(vda, fa, 8); // expected-error {{arguments are of different types ('double' vs 'float')}}
-}
-
-vector unsigned char test_vec_replace_unaligned_d_2(void) {
-  return vec_replace_unaligned(vda, vda, da); // expected-error {{argument to '__builtin_altivec_vec_replace_unaligned' must be a constant integer}}
-}
+#endif

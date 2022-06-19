@@ -12,6 +12,7 @@
 #include "Target.h"
 
 #include "lld/Common/ErrorHandler.h"
+#include "mach-o/compact_unwind_encoding.h"
 #include "llvm/BinaryFormat/MachO.h"
 #include "llvm/Support/Endian.h"
 
@@ -184,6 +185,10 @@ void X86_64::relaxGotLoad(uint8_t *loc, uint8_t type) const {
 X86_64::X86_64() : TargetInfo(LP64()) {
   cpuType = CPU_TYPE_X86_64;
   cpuSubtype = CPU_SUBTYPE_X86_64_ALL;
+
+  modeDwarfEncoding = UNWIND_X86_MODE_DWARF;
+  subtractorRelocType = X86_64_RELOC_SUBTRACTOR;
+  unsignedRelocType = X86_64_RELOC_UNSIGNED;
 
   stubSize = sizeof(stub);
   stubHelperHeaderSize = sizeof(stubHelperHeader);

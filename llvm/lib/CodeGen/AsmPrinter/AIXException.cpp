@@ -50,7 +50,7 @@ void AIXException::emitExceptionInfoTable(const MCSymbol *LSDA,
     EHInfo = Asm->OutContext.getXCOFFSection(NameStr, EHInfo->getKind(),
                                              EHInfo->getCsectProp());
   }
-  Asm->OutStreamer->SwitchSection(EHInfo);
+  Asm->OutStreamer->switchSection(EHInfo);
   MCSymbol *EHInfoLabel =
       TargetLoweringObjectFileXCOFF::getEHInfoTableSymbol(Asm->MF);
   Asm->OutStreamer->emitLabel(EHInfoLabel);

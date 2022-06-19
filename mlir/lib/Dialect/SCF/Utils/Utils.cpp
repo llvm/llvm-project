@@ -23,6 +23,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallPtrSet.h"
+#include "llvm/ADT/SmallVector.h"
 
 using namespace mlir;
 
@@ -101,17 +102,45 @@ mlir::replaceLoopWithNewYields(OpBuilder &builder, scf::ForOp loop,
   return newLoop;
 }
 
+SmallVector<scf::ForOp> mlir::replaceLoopNestWithNewYields(
+    OpBuilder &builder, ArrayRef<scf::ForOp> loopNest,
+    ValueRange newIterOperands, NewYieldValueFn newYieldValueFn) {
+  if (loopNest.empty())
+    return {};
+  SmallVector<scf::ForOp> newLoopNest(loopNest.size());
+
+  newLoopNest.back() = replaceLoopWithNewYields(
+      builder, loopNest.back(), newIterOperands, newYieldValueFn);
+
+  for (unsigned loopDepth :
+       llvm::reverse(llvm::seq<unsigned>(0, loopNest.size() - 1))) {
+    NewYieldValueFn fn = [&](OpBuilder &innerBuilder, Location loc,
+                             ArrayRef<BlockArgument> innerNewBBArgs) {
+      SmallVector<Value> newYields(
+          newLoopNest[loopDepth + 1]->getResults().take_back(
+              newIterOperands.size()));
+      return newYields;
+    };
+    newLoopNest[loopDepth] = replaceLoopWithNewYields(
+        builder, loopNest[loopDepth], newIterOperands, fn);
+  }
+  return newLoopNest;
+}
+
 /// Outline a region with a single block into a new FuncOp.
 /// Assumes the FuncOp result types is the type of the yielded operands of the
 /// single block. This constraint makes it easy to determine the result.
 /// This method also clones the `arith::ConstantIndexOp` at the start of
-/// `outlinedFuncBody` to alloc simple canonicalizations.
+/// `outlinedFuncBody` to alloc simple canonicalizations. If `callOp` is
+/// provided, it will be set to point to the operation that calls the outlined
+/// function.
 // TODO: support more than single-block regions.
 // TODO: more flexible constant handling.
 FailureOr<func::FuncOp> mlir::outlineSingleBlockRegion(RewriterBase &rewriter,
                                                        Location loc,
                                                        Region &region,
-                                                       StringRef funcName) {
+                                                       StringRef funcName,
+                                                       func::CallOp *callOp) {
   assert(!funcName.empty() && "funcName cannot be empty");
   if (!region.hasOneBlock())
     return failure();
@@ -176,8 +205,9 @@ FailureOr<func::FuncOp> mlir::outlineSingleBlockRegion(RewriterBase &rewriter,
     SmallVector<Value> callValues;
     llvm::append_range(callValues, newBlock->getArguments());
     llvm::append_range(callValues, outlinedValues);
-    Operation *call =
-        rewriter.create<func::CallOp>(loc, outlinedFunc, callValues);
+    auto call = rewriter.create<func::CallOp>(loc, outlinedFunc, callValues);
+    if (callOp)
+      *callOp = call;
 
     // `originalTerminator` was moved to `outlinedFuncBody` and is still valid.
     // Clone `originalTerminator` to take the callOp results then erase it from

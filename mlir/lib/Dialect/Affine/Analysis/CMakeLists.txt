@@ -12,11 +12,11 @@ add_mlir_dialect_library(MLIRAffineAnalysis
   mlir-headers
 
   LINK_LIBS PUBLIC
-  MLIRAffine
+  MLIRAffineDialect
   MLIRAnalysis
   MLIRCallInterfaces
   MLIRControlFlowInterfaces
   MLIRInferTypeOpInterface
   MLIRPresburger
-  MLIRSCF
+  MLIRSCFDialect
   )

@@ -63,7 +63,7 @@ PresburgerRelation::unionSet(const PresburgerRelation &set) const {
 /// A point is contained in the union iff any of the parts contain the point.
 bool PresburgerRelation::containsPoint(ArrayRef<int64_t> point) const {
   return llvm::any_of(disjuncts, [&](const IntegerRelation &disjunct) {
-    return (disjunct.containsPoint(point));
+    return (disjunct.containsPointNoLocal(point));
   });
 }
 
@@ -291,16 +291,29 @@ static PresburgerRelation getSetDifference(IntegerRelation b,
         continue;
       }
 
-      simplex.detectRedundant();
-
       // Equalities are added to simplex as a pair of inequalities.
       unsigned totalNewSimplexInequalities =
           2 * sI.getNumEqualities() + sI.getNumInequalities();
+      // Look for redundant constraints among the constraints of sI. We don't
+      // care about redundant constraints in `b` at this point.
+      //
+      // When there are two copies of a constraint in `simplex`, i.e., among the
+      // constraints of `b` and `sI`, only one of them can be marked redundant.
+      // (Assuming no other constraint makes these redundant.)
+      //
+      // In a case where there is one copy in `b` and one in `sI`, we want the
+      // one in `sI` to be marked, not the one in `b`. Therefore, it's not
+      // enough to ignore the constraints of `b` when checking which
+      // constraints `detectRedundant` has marked redundant; we explicitly tell
+      // `detectRedundant` to only mark constraints from `sI` as being
+      // redundant.
+      simplex.detectRedundant(offset, totalNewSimplexInequalities);
       for (unsigned j = 0; j < totalNewSimplexInequalities; j++)
         canIgnoreIneq[j] = simplex.isMarkedRedundant(offset + j);
       simplex.rollback(snapshotBeforeIntersect);
 
-      SmallVector<unsigned, 8> ineqsToProcess(totalNewSimplexInequalities);
+      SmallVector<unsigned, 8> ineqsToProcess;
+      ineqsToProcess.reserve(totalNewSimplexInequalities);
       for (unsigned i = 0; i < totalNewSimplexInequalities; ++i)
         if (!canIgnoreIneq[i])
           ineqsToProcess.push_back(i);

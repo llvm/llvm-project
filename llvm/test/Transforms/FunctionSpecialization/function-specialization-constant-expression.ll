@@ -10,11 +10,6 @@
 @Global = internal constant %struct {i8 0, i16 1, i32 2, i64 3, i64 4}
 
 define internal i64 @func2(i64 *%x) {
-; CHECK-LABEL: @func2(
-; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[VAL:%.*]] = ptrtoint i64* [[X:%.*]] to i64
-; CHECK-NEXT:    ret i64 [[VAL]]
-;
 entry:
   %val = ptrtoint i64* %x to i64
   ret i64 %val
@@ -36,10 +31,10 @@ define internal i64 @zoo(i1 %flag) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br i1 [[FLAG:%.*]], label [[PLUS:%.*]], label [[MINUS:%.*]]
 ; CHECK:       plus:
-; CHECK-NEXT:    [[TMP0:%.*]] = call i64 @func2(i64* getelementptr inbounds ([[STRUCT:%.*]], %struct* @Global, i32 0, i32 3))
+; CHECK-NEXT:    [[TMP0:%.*]] = call i64 @func2.2(i64* getelementptr inbounds ([[STRUCT:%.*]], %struct* @Global, i32 0, i32 3))
 ; CHECK-NEXT:    br label [[MERGE:%.*]]
 ; CHECK:       minus:
-; CHECK-NEXT:    [[TMP1:%.*]] = call i64 @func2(i64* getelementptr inbounds ([[STRUCT]], %struct* @Global, i32 0, i32 4))
+; CHECK-NEXT:    [[TMP1:%.*]] = call i64 @func2.1(i64* getelementptr inbounds ([[STRUCT]], %struct* @Global, i32 0, i32 4))
 ; CHECK-NEXT:    br label [[MERGE]]
 ; CHECK:       merge:
 ; CHECK-NEXT:    [[TMP2:%.*]] = phi i64 [ [[TMP0]], [[PLUS]] ], [ [[TMP1]], [[MINUS]] ]

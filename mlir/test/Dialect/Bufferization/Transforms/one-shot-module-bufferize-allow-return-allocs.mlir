@@ -1,5 +1,5 @@
-// RUN: mlir-opt %s -one-shot-bufferize="bufferize-function-boundaries=1 allow-return-allocs" -split-input-file | FileCheck %s
-// RUN: mlir-opt %s -one-shot-bufferize="bufferize-function-boundaries=1 allow-return-allocs drop-equivalent-func-results=false" -split-input-file | FileCheck %s --check-prefix=EQUIV
+// RUN: mlir-opt %s -one-shot-bufferize="bufferize-function-boundaries=1 allow-return-allocs" -drop-equivalent-buffer-results -split-input-file | FileCheck %s
+// RUN: mlir-opt %s -one-shot-bufferize="bufferize-function-boundaries=1 allow-return-allocs" -split-input-file | FileCheck %s --check-prefix=NO-DROP
 
 // Run fuzzer with different seeds.
 // RUN: mlir-opt %s -one-shot-bufferize="bufferize-function-boundaries=1 allow-return-allocs test-analysis-only analysis-fuzzer-seed=23" -split-input-file -o /dev/null
@@ -48,12 +48,11 @@ func.func @return_slice(%t: tensor<?xf32>, %sz: index) -> (tensor<?xf32>) {
 
 // CHECK-LABEL: func @main(
 //  CHECK-SAME:     %[[t:.*]]: memref<?xf32
+//       CHECK:   %[[call:.*]] = call @return_slice(%[[t]]
 //       CHECK:   %[[alloc:.*]] = memref.alloc
-//   CHECK-DAG:   memref.copy %[[t]], %[[alloc]]
-//   CHECK-DAG:   %[[casted:.*]] = memref.cast %[[alloc]]
-//       CHECK:   %[[call:.*]] = call @return_slice(%[[casted]]
+//       CHECK:   memref.copy %[[call]], %[[alloc]]
 //       CHECK:   linalg.fill ins({{.*}}) outs(%[[t]]
-//       CHECK:   memref.load %[[call]]
+//       CHECK:   memref.load %[[alloc]]
 //       CHECK:   memref.load %[[t]]
 func.func @main(%t: tensor<?xf32>, %sz: index, %idx: index) -> (f32, f32) {
   %cst = arith.constant 1.0 : f32
@@ -73,6 +72,6 @@ func.func @return_arg(%A: tensor<?xf32>) -> tensor<?xf32> {
 // CHECK-SAME:      %[[A:.*]]: memref<?xf32
 //  CHECK-NOT:    return %[[A]]
 
-// EQUIV-LABEL: func @return_arg
-// EQUIV-SAME:      %[[A:.*]]: memref<?xf32
-//      EQUIV:    return %[[A]]
+// NO-DROP-LABEL: func @return_arg
+//  NO-DROP-SAME:     %[[A:.*]]: memref<?xf32
+//       No_DROP:   return %[[A]]

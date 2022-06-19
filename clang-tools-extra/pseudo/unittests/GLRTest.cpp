@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang-pseudo/GLR.h"
-#include "clang-pseudo/Grammar.h"
+#include "clang-pseudo/grammar/Grammar.h"
 #include "clang-pseudo/Token.h"
 #include "clang/Basic/LangOptions.h"
 #include "clang/Basic/TokenKinds.h"
@@ -391,6 +391,51 @@ TEST_F(GLRTest, GLRReduceOrder) {
             "[  0, end) └─test := foo\n"
             "[  0, end)   └─foo := IDENTIFIER\n"
             "[  0, end)     └─IDENTIFIER := tok[0]\n");
+}
+
+TEST_F(GLRTest, NoExplicitAccept) {
+  build(R"bnf(
+    _ := test
+
+    test := IDENTIFIER test
+    test := IDENTIFIER
+  )bnf");
+  clang::LangOptions LOptions;
+  // Given the following input, and the grammar above, we perform two reductions
+  // of the nonterminal `test` when the next token is `eof`, verify that the
+  // parser stops at the right state.
+  const TokenStream &Tokens = cook(lex("id id", LOptions), LOptions);
+  auto LRTable = LRTable::buildSLR(*G);
+
+  const ForestNode &Parsed =
+      glrParse(Tokens, {*G, LRTable, Arena, GSStack}, id("test"));
+  EXPECT_EQ(Parsed.dumpRecursive(*G),
+            "[  0, end) test := IDENTIFIER test\n"
+            "[  0,   1) ├─IDENTIFIER := tok[0]\n"
+            "[  1, end) └─test := IDENTIFIER\n"
+            "[  1, end)   └─IDENTIFIER := tok[1]\n");
+}
+
+TEST(GSSTest, GC) {
+  //      ┌-A-┬-AB
+  //      ├-B-┘
+  // Root-+-C
+  //      ├-D
+  //      └-E
+  GSS GSStack;
+  auto *Root = GSStack.addNode(0, nullptr, {});
+  auto *A = GSStack.addNode(0, nullptr, {Root});
+  auto *B = GSStack.addNode(0, nullptr, {Root});
+  auto *C = GSStack.addNode(0, nullptr, {Root});
+  auto *D = GSStack.addNode(0, nullptr, {Root});
+  auto *AB = GSStack.addNode(0, nullptr, {A, B});
+
+  EXPECT_EQ(1u, GSStack.gc({AB, C})) << "D is destroyed";
+  EXPECT_EQ(0u, GSStack.gc({AB, C})) << "D is already gone";
+  auto *E = GSStack.addNode(0, nullptr, {Root});
+  EXPECT_EQ(D, E) << "Storage of GCed node D is reused for E";
+  EXPECT_EQ(3u, GSStack.gc({A, E})) << "Destroys B, AB, C";
+  EXPECT_EQ(1u, GSStack.gc({E})) << "Destroys A";
 }
 
 } // namespace

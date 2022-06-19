@@ -473,8 +473,8 @@ ForOp mlir::scf::getForInductionVarOwner(Value val) {
 /// correspond to the loop iterator operands, i.e., those excluding the
 /// induction variable. LoopOp only has one region, so 0 is the only valid value
 /// for `index`.
-OperandRange ForOp::getSuccessorEntryOperands(unsigned index) {
-  assert(index == 0 && "invalid region index");
+OperandRange ForOp::getSuccessorEntryOperands(Optional<unsigned> index) {
+  assert(index && *index == 0 && "invalid region index");
 
   // The initial operands map to the loop arguments after the induction
   // variable.
@@ -986,7 +986,7 @@ struct LastTensorLoadCanonicalization : public OpRewritePattern<ForOp> {
       if (!isTensor || !tensorLoadOp || (!bbArg.use_empty() && !tensorToMemref))
         continue;
       // If tensorToMemref is present, it must feed into the `ToTensorOp`.
-      if (tensorToMemref && tensorLoadOp.memref() != tensorToMemref)
+      if (tensorToMemref && tensorLoadOp.getMemref() != tensorToMemref)
         continue;
       // TODO: Any aliasing write of tensorLoadOp.memref() nested under `forOp`
       // must be before `ToTensorOp` in the block so that the lastWrite
@@ -1000,14 +1000,14 @@ struct LastTensorLoadCanonicalization : public OpRewritePattern<ForOp> {
       if (tensorToMemref) {
         rewriter.setInsertionPoint(forOp);
         rewriter.replaceOpWithNewOp<bufferization::ToMemrefOp>(
-            tensorToMemref, tensorToMemref.memref().getType(),
-            tensorToMemref.tensor());
+            tensorToMemref, tensorToMemref.getMemref().getType(),
+            tensorToMemref.getTensor());
       }
 
       // Clone the tensorLoad after forOp.
       rewriter.setInsertionPointAfter(forOp);
       Value newTensorLoad = rewriter.create<bufferization::ToTensorOp>(
-          loc, tensorLoadOp.memref());
+          loc, tensorLoadOp.getMemref());
       Value forOpResult = forOp.getResult(bbArg.getArgNumber() - /*iv=*/1);
       replacements.insert(std::make_pair(forOpResult, newTensorLoad));
 
@@ -1138,10 +1138,11 @@ void ForeachThreadOp::build(mlir::OpBuilder &builder,
   result.addOperands(numThreads);
 
   Region *bodyRegion = result.addRegion();
-  {
-    OpBuilder::InsertionGuard g(builder);
-    builder.createBlock(bodyRegion);
-  }
+  OpBuilder::InsertionGuard g(builder);
+  // createBlock sets the IP inside the block.
+  // Generally we would guard against that but the default ensureTerminator impl
+  // expects it ..
+  builder.createBlock(bodyRegion);
   Block &bodyBlock = bodyRegion->front();
   bodyBlock.addArguments(
       SmallVector<Type>(numThreads.size(), builder.getIndexType()),
@@ -1158,8 +1159,9 @@ void ForeachThreadOp::build(
     function_ref<void(OpBuilder &, Location, ValueRange)> bodyBuilder) {
   result.addOperands(numThreads);
 
+  OpBuilder::InsertionGuard g(builder);
   Region *bodyRegion = result.addRegion();
-  bodyRegion->push_back(new Block);
+  builder.createBlock(bodyRegion);
   Block &bodyBlock = bodyRegion->front();
   bodyBlock.addArguments(
       SmallVector<Type>(numThreads.size(), builder.getIndexType()),
@@ -1167,9 +1169,11 @@ void ForeachThreadOp::build(
 
   OpBuilder::InsertionGuard guard(builder);
   builder.setInsertionPointToStart(&bodyBlock);
-  bodyBuilder(builder, result.location, bodyBlock.getArgument(0));
+  bodyBuilder(builder, result.location, bodyBlock.getArguments());
   auto terminator =
-      llvm::cast<PerformConcurrentlyOp>(bodyBlock.getTerminator());
+      llvm::dyn_cast<PerformConcurrentlyOp>(bodyBlock.getTerminator());
+  assert(terminator &&
+         "expected bodyBuilder to create PerformConcurrentlyOp terminator");
   result.addTypes(terminator.yieldedTypes());
 }
 
@@ -1271,6 +1275,13 @@ void ParallelInsertSliceOp::getCanonicalizationPatterns(
 //===----------------------------------------------------------------------===//
 // PerformConcurrentlyOp
 //===----------------------------------------------------------------------===//
+
+// Build a PerformConcurrentlyOp with mixed static and dynamic entries.
+void PerformConcurrentlyOp::build(OpBuilder &b, OperationState &result) {
+  OpBuilder::InsertionGuard g(b);
+  Region *bodyRegion = result.addRegion();
+  b.createBlock(bodyRegion);
+}
 
 LogicalResult PerformConcurrentlyOp::verify() {
   // TODO: PerformConcurrentlyOpInterface.
@@ -2456,14 +2467,10 @@ struct MergeNestedParallelLoops : public OpRewritePattern<ParallelOp> {
     if (!innerOp)
       return failure();
 
-    auto hasVal = [](const auto &range, Value val) {
-      return llvm::find(range, val) != range.end();
-    };
-
     for (auto val : outerBody.getArguments())
-      if (hasVal(innerOp.getLowerBound(), val) ||
-          hasVal(innerOp.getUpperBound(), val) ||
-          hasVal(innerOp.getStep(), val))
+      if (llvm::is_contained(innerOp.getLowerBound(), val) ||
+          llvm::is_contained(innerOp.getUpperBound(), val) ||
+          llvm::is_contained(innerOp.getStep(), val))
         return failure();
 
     // Reductions are not supported yet.
@@ -2598,8 +2605,8 @@ LogicalResult ReduceReturnOp::verify() {
 // WhileOp
 //===----------------------------------------------------------------------===//
 
-OperandRange WhileOp::getSuccessorEntryOperands(unsigned index) {
-  assert(index == 0 &&
+OperandRange WhileOp::getSuccessorEntryOperands(Optional<unsigned> index) {
+  assert(index && *index == 0 &&
          "WhileOp is expected to branch only to the first region");
 
   return getInits();
@@ -2624,21 +2631,26 @@ Block::BlockArgListType WhileOp::getAfterArguments() {
 void WhileOp::getSuccessorRegions(Optional<unsigned> index,
                                   ArrayRef<Attribute> operands,
                                   SmallVectorImpl<RegionSuccessor> &regions) {
-  (void)operands;
-
+  // The parent op always branches to the condition region.
   if (!index.hasValue()) {
     regions.emplace_back(&getBefore(), getBefore().getArguments());
     return;
   }
 
   assert(*index < 2 && "there are only two regions in a WhileOp");
-  if (*index == 0) {
-    regions.emplace_back(&getAfter(), getAfter().getArguments());
-    regions.emplace_back(getResults());
+  // The body region always branches back to the condition region.
+  if (*index == 1) {
+    regions.emplace_back(&getBefore(), getBefore().getArguments());
     return;
   }
 
-  regions.emplace_back(&getBefore(), getBefore().getArguments());
+  // Try to narrow the successor to the condition region.
+  assert(!operands.empty() && "expected at least one operand");
+  auto cond = operands[0].dyn_cast_or_null<BoolAttr>();
+  if (!cond || !cond.getValue())
+    regions.emplace_back(getResults());
+  if (!cond || cond.getValue())
+    regions.emplace_back(&getAfter(), getAfter().getArguments());
 }
 
 /// Parses a `while` op.
@@ -2738,7 +2750,7 @@ static TerminatorTy verifyAndGetTerminator(scf::WhileOp op, Region &region,
   return nullptr;
 }
 
-LogicalResult scf::WhileOp::verifyRegions() {
+LogicalResult scf::WhileOp::verify() {
   auto beforeTerminator = verifyAndGetTerminator<scf::ConditionOp>(
       *this, getBefore(),
       "expects the 'before' region to terminate with 'scf.condition'");

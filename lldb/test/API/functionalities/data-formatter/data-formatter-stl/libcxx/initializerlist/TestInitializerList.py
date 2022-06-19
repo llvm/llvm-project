@@ -12,8 +12,6 @@ from lldbsuite.test import lldbutil
 
 class InitializerListTestCase(TestBase):
 
-    mydir = TestBase.compute_mydir(__file__)
-
     @add_test_categories(["libc++"])
     def test(self):
         """Test that that file and class static variables display correctly."""

@@ -38,15 +38,37 @@ def TransformOpInterface : OpInterface<"TransformOpInterface"> {
         accepts as arguments the object that must be populated with results of
         the current transformation and a transformation state object that can be
         used for queries, e.g., to obtain the list of operations on which the
-        transformation represented by the current op is targeted.
+        transformation represented by the current op is targeted. Returns a
+        special status object indicating whether the transformation succeeded
+        or failed, and, if it failed, whether the failure is recoverable or not.
       }],
-      /*returnType=*/"::mlir::LogicalResult",
+      /*returnType=*/"::mlir::DiagnosedSilenceableFailure",
       /*name=*/"apply",
       /*arguments=*/(ins
           "::mlir::transform::TransformResults &":$transformResults,
           "::mlir::transform::TransformState &":$state
     )>,
   ];
+
+  let extraSharedClassDeclaration = [{
+    /// Emits a generic transform error for the current transform operation
+    /// targeting the given Payload IR operation and returns failure. Should
+    /// be only used as a last resort when the transformation itself provides
+    /// no further indication as to the reason of the failure.
+    ::mlir::LogicalResult reportUnknownTransformError(
+        ::mlir::Operation *target) {
+      ::mlir::InFlightDiagnostic diag = $_op->emitError() << "failed to apply";
+      diag.attachNote(target->getLoc()) << "attempted to apply to this op";
+      return diag;
+    }
+
+    /// Creates the silencable failure object with a diagnostic located at the
+    /// current operation.
+    DiagnosedSilenceableFailure emitSilenceableError() {
+      Diagnostic diag($_op->getLoc(), DiagnosticSeverity::Error);
+      return DiagnosedSilenceableFailure::silencableFailure(std::move(diag));
+    }
+  }];
 }
 
 def FunctionalStyleTransformOpTrait
@@ -55,6 +77,10 @@ def FunctionalStyleTransformOpTrait
 }
 
 def TransformEachOpTrait : NativeOpTrait<"TransformEachOpTrait"> {
+  let cppNamespace = "::mlir::transform";
+}
+
+def NavigationTransformOpTrait : NativeOpTrait<"NavigationTransformOpTrait"> {
   let cppNamespace = "::mlir::transform";
 }
 

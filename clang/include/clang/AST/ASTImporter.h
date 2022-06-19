@@ -231,7 +231,7 @@ class TypeSourceInfo;
     /// imported. The same declaration may or may not be included in
     /// ImportedDecls. This map is updated continuously during imports and never
     /// cleared (like ImportedDecls).
-    llvm::DenseMap<Decl *, ImportError> ImportDeclErrors;
+    llvm::DenseMap<Decl *, ASTImportError> ImportDeclErrors;
 
     /// Mapping from the already-imported declarations in the "to"
     /// context to the corresponding declarations in the "from" context.
@@ -564,10 +564,10 @@ class TypeSourceInfo;
     /// Return if import of the given declaration has failed and if yes
     /// the kind of the problem. This gives the first error encountered with
     /// the node.
-    llvm::Optional<ImportError> getImportDeclErrorIfAny(Decl *FromD) const;
+    llvm::Optional<ASTImportError> getImportDeclErrorIfAny(Decl *FromD) const;
 
     /// Mark (newly) imported declaration with error.
-    void setImportDeclError(Decl *From, ImportError Error);
+    void setImportDeclError(Decl *From, ASTImportError Error);
 
     /// Determine whether the given types are structurally
     /// equivalent.

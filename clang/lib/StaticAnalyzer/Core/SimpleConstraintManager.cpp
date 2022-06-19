@@ -44,7 +44,7 @@ ProgramStateRef SimpleConstraintManager::assumeInternal(ProgramStateRef State,
 ProgramStateRef SimpleConstraintManager::assume(ProgramStateRef State,
                                                 NonLoc Cond, bool Assumption) {
   State = assumeAux(State, Cond, Assumption);
-  if (NotifyAssumeClients && EE)
+  if (EE)
     return EE->processAssume(State, Cond, Assumption);
   return State;
 }

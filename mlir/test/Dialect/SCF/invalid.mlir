@@ -476,7 +476,7 @@ func.func @while_cross_region_type_mismatch() {
 func.func @while_cross_region_type_mismatch() {
   %true = arith.constant true
   // expected-error@+1 {{'scf.while' op  along control flow edge from Region #0 to Region #1: source type #0 'i1' should match input type #0 'i32'}}
-  scf.while : () -> () {
+  %0 = scf.while : () -> (i1) {
     scf.condition(%true) %true : i1
   } do {
   ^bb0(%arg0: i32):

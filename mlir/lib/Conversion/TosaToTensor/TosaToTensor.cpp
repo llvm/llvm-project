@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Conversion/TosaToTensor/TosaToTensor.h"
+#include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "mlir/Dialect/Tosa/IR/TosaOps.h"
 #include "mlir/IR/PatternMatch.h"
@@ -27,14 +28,32 @@ public:
 
   LogicalResult matchAndRewrite(tosa::SliceOp sliceOp,
                                 PatternRewriter &rewriter) const final {
+    Location loc = sliceOp.getLoc();
     Value input = sliceOp.input();
     SmallVector<int64_t> strides;
+    auto starts = sliceOp.start();
+    auto sizes = sliceOp.size();
     strides.resize(sliceOp.getType().template cast<ShapedType>().getRank(), 1);
 
-    rewriter.replaceOpWithNewOp<tensor::ExtractSliceOp>(
-        sliceOp, sliceOp.getType(), input, ValueRange({}), ValueRange({}),
-        ValueRange({}), sliceOp.start(), sliceOp.size(),
-        rewriter.getI64ArrayAttr(strides));
+    SmallVector<Value> dynSizes;
+    for (auto i : llvm::enumerate(sizes)) {
+      int64_t size = i.value().cast<IntegerAttr>().getInt();
+      size_t index = i.index();
+      if (size != ShapedType::kDynamicSize)
+        continue;
+
+      auto dim = rewriter.create<tensor::DimOp>(loc, input, index);
+      auto offset = rewriter.create<arith::ConstantOp>(
+          loc,
+          rewriter.getIndexAttr(starts[index].cast<IntegerAttr>().getInt()));
+      dynSizes.push_back(rewriter.create<arith::SubIOp>(loc, dim, offset));
+    }
+
+    auto newSliceOp = rewriter.create<tensor::ExtractSliceOp>(
+        sliceOp.getLoc(), sliceOp.getType(), input, ValueRange({}), dynSizes,
+        ValueRange({}), starts, sizes, rewriter.getI64ArrayAttr(strides));
+
+    rewriter.replaceOp(sliceOp, newSliceOp.getResult());
     return success();
   }
 };

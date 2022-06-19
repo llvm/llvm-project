@@ -194,9 +194,8 @@ body:             |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:gprnox0 = COPY $x11
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:gpr = COPY $x10
-    ; CHECK-NEXT: dead $x0 = PseudoVSETVLI [[COPY]], 87 /* e32, mf2, ta, mu */, implicit-def $vl, implicit-def $vtype
+    ; CHECK-NEXT: dead $x0 = PseudoVSETVLI [[COPY]], 88 /* e64, m1, ta, mu */, implicit-def $vl, implicit-def $vtype
     ; CHECK-NEXT: [[PseudoVLE32_V_MF2_:%[0-9]+]]:vr = PseudoVLE32_V_MF2 [[COPY1]], $noreg, 5 /* e32 */, implicit $vl, implicit $vtype
-    ; CHECK-NEXT: dead $x0 = PseudoVSETVLIX0 killed $x0, 88 /* e64, m1, ta, mu */, implicit-def $vl, implicit-def $vtype, implicit $vl
     ; CHECK-NEXT: early-clobber %3:vr = PseudoVZEXT_VF2_M1 killed [[PseudoVLE32_V_MF2_]], $noreg, 6 /* e64 */, implicit $vl, implicit $vtype
     ; CHECK-NEXT: $v8 = COPY %3
     ; CHECK-NEXT: PseudoRET implicit $v8

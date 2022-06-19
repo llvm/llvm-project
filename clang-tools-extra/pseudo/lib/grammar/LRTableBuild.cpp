@@ -6,9 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "clang-pseudo/Grammar.h"
-#include "clang-pseudo/LRGraph.h"
-#include "clang-pseudo/LRTable.h"
+#include "clang-pseudo/grammar/Grammar.h"
+#include "clang-pseudo/grammar/LRGraph.h"
+#include "clang-pseudo/grammar/LRTable.h"
 #include "clang/Basic/TokenKinds.h"
 #include <cstdint>
 
@@ -44,7 +44,7 @@ public:
       : StartStates(StartStates) {}
 
   bool insert(Entry E) { return Entries.insert(std::move(E)).second; }
-  LRTable build(const GrammarTable &GT) && {
+  LRTable build(const GrammarTable &GT, unsigned NumStates) && {
     // E.g. given the following parsing table with 3 states and 3 terminals:
     //
     //            a    b     c
@@ -55,44 +55,34 @@ public:
     // +-------+----+-------+-+
     //
     // The final LRTable:
-    //  - TerminalOffset: [a] = 0, [b] = 1, [c] = 4, [d] = 4 (d is a sentinel)
-    //  -  States:     [ 1,    0,  0,  2]
-    //    Actions:     [ acc, s0, r0, r1]
-    //                   ~~~ corresponding range for terminal a
-    //                        ~~~~~~~~~~ corresponding range for terminal b
-    // First step, we sort all entries by (Symbol, State, Action).
+    //  - StateOffset: [s0] = 0, [s1] = 2, [s2] = 3, [sentinel] = 4
+    //  - Symbols:     [ b,   b,   a,  b]
+    //    Actions:     [ s0, r0, acc, r1]
+    //                   ~~~~~~ range for state 0
+    //                           ~~~~ range for state 1
+    //                                ~~ range for state 2
+    // First step, we sort all entries by (State, Symbol, Action).
     std::vector<Entry> Sorted(Entries.begin(), Entries.end());
     llvm::sort(Sorted, [](const Entry &L, const Entry &R) {
-      return std::forward_as_tuple(L.Symbol, L.State, L.Act.opaque()) <
-             std::forward_as_tuple(R.Symbol, R.State, R.Act.opaque());
+      return std::forward_as_tuple(L.State, L.Symbol, L.Act.opaque()) <
+             std::forward_as_tuple(R.State, R.Symbol, R.Act.opaque());
     });
 
     LRTable Table;
     Table.Actions.reserve(Sorted.size());
-    Table.States.reserve(Sorted.size());
+    Table.Symbols.reserve(Sorted.size());
     // We are good to finalize the States and Actions.
     for (const auto &E : Sorted) {
       Table.Actions.push_back(E.Act);
-      Table.States.push_back(E.State);
+      Table.Symbols.push_back(E.Symbol);
     }
     // Initialize the terminal and nonterminal offset, all ranges are empty by
     // default.
-    Table.TerminalOffset = std::vector<uint32_t>(GT.Terminals.size() + 1, 0);
-    Table.NontermOffset = std::vector<uint32_t>(GT.Nonterminals.size() + 1, 0);
+    Table.StateOffset = std::vector<uint32_t>(NumStates + 1, 0);
     size_t SortedIndex = 0;
-    for (SymbolID NonterminalID = 0; NonterminalID < Table.NontermOffset.size();
-         ++NonterminalID) {
-      Table.NontermOffset[NonterminalID] = SortedIndex;
-      while (SortedIndex < Sorted.size() &&
-             Sorted[SortedIndex].Symbol == NonterminalID)
-        ++SortedIndex;
-    }
-    for (size_t Terminal = 0; Terminal < Table.TerminalOffset.size();
-         ++Terminal) {
-      Table.TerminalOffset[Terminal] = SortedIndex;
-      while (SortedIndex < Sorted.size() &&
-             Sorted[SortedIndex].Symbol ==
-                 tokenSymbol(static_cast<tok::TokenKind>(Terminal)))
+    for (StateID State = 0; State < Table.StateOffset.size(); ++State) {
+      Table.StateOffset[State] = SortedIndex;
+      while (SortedIndex < Sorted.size() && Sorted[SortedIndex].State == State)
         ++SortedIndex;
     }
     Table.StartStates = std::move(StartStates);
@@ -106,10 +96,13 @@ private:
 
 LRTable LRTable::buildForTests(const GrammarTable &GT,
                                llvm::ArrayRef<Entry> Entries) {
+  StateID MaxState = 0;
+  for (const auto &Entry : Entries)
+    MaxState = std::max(MaxState, Entry.State);
   Builder Build({});
   for (const Entry &E : Entries)
     Build.insert(E);
-  return std::move(Build).build(GT);
+  return std::move(Build).build(GT, /*NumStates=*/MaxState + 1);
 }
 
 LRTable LRTable::buildSLR(const Grammar &G) {
@@ -124,11 +117,11 @@ LRTable LRTable::buildSLR(const Grammar &G) {
   auto FollowSets = followSets(G);
   for (StateID SID = 0; SID < Graph.states().size(); ++SID) {
     for (const Item &I : Graph.states()[SID].Items) {
-      // If we've just parsed the start symbol, we can accept the input.
-      if (G.lookupRule(I.rule()).Target == G.underscore() && !I.hasNext()) {
-        Build.insert({SID, tokenSymbol(tok::eof), Action::accept(I.rule())});
+      // If we've just parsed the start symbol, this means we successfully parse
+      // the input. We don't add the reduce action of `_ := start_symbol` in the
+      // LRTable (the GLR parser handles it specifically).
+      if (G.lookupRule(I.rule()).Target == G.underscore() && !I.hasNext())
         continue;
-      }
       if (!I.hasNext()) {
         // If we've reached the end of a rule A := ..., then we can reduce if
         // the next token is in the follow set of A.
@@ -139,7 +132,7 @@ LRTable LRTable::buildSLR(const Grammar &G) {
       }
     }
   }
-  return std::move(Build).build(G.table());
+  return std::move(Build).build(G.table(), Graph.states().size());
 }
 
 } // namespace pseudo

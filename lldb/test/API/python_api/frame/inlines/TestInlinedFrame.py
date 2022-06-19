@@ -13,8 +13,6 @@ from lldbsuite.test import lldbutil
 
 class InlinedFrameAPITestCase(TestBase):
 
-    mydir = TestBase.compute_mydir(__file__)
-
     def setUp(self):
         # Call super's setUp().
         TestBase.setUp(self)
@@ -46,8 +44,8 @@ class InlinedFrameAPITestCase(TestBase):
             None, None, self.get_process_working_directory())
 
         process = target.GetProcess()
-        self.assertEqual(process.GetState(), lldb.eStateStopped,
-                        PROCESS_STOPPED)
+        self.assertState(process.GetState(), lldb.eStateStopped,
+                         PROCESS_STOPPED)
 
         import lldbsuite.test.lldbutil as lldbutil
         stack_traces1 = lldbutil.print_stacktraces(process, string_buffer=True)
@@ -78,8 +76,8 @@ class InlinedFrameAPITestCase(TestBase):
 
             # Expect to break again for the second time.
             process.Continue()
-            self.assertEqual(process.GetState(), lldb.eStateStopped,
-                            PROCESS_STOPPED)
+            self.assertState(process.GetState(), lldb.eStateStopped,
+                             PROCESS_STOPPED)
             stack_traces2 = lldbutil.print_stacktraces(
                 process, string_buffer=True)
             if self.TraceOn():

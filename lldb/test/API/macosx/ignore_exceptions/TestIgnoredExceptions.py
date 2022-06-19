@@ -10,8 +10,6 @@ from lldbsuite.test.lldbtest import *
 
 class TestDarwinSignalHandlers(TestBase):
 
-    mydir = TestBase.compute_mydir(__file__)
-
     NO_DEBUG_INFO_TESTCASE = True
 
     @skipUnlessDarwin
@@ -41,7 +39,7 @@ class TestDarwinSignalHandlers(TestBase):
         self.assertEqual(return_bkpt.GetNumLocations(), 1, "Found return breakpoint")
         # Now continue, and we should stop with a stop reason of SIGBUS:
         process.Continue()
-        self.assertEqual(process.state, lldb.eStateStopped, "Stopped after continue to SIGBUS")
+        self.assertState(process.state, lldb.eStateStopped, "Stopped after continue to SIGBUS")
         if thread.stop_reason == lldb.eStopReasonBreakpoint:
             id = thread.GetStopReasonDataAtIndex(0)
             name = thread.frame[0].name

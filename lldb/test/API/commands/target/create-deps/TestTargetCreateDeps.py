@@ -12,8 +12,6 @@ from lldbsuite.test import lldbutil
 @skipIfWindows # Windows deals differently with shared libs.
 class TargetDependentsTestCase(TestBase):
 
-    mydir = TestBase.compute_mydir(__file__)
-
     NO_DEBUG_INFO_TESTCASE = True
 
     def setUp(self):

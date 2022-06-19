@@ -262,8 +262,8 @@ define amdgpu_kernel void @test_copy_v4i8_extra_use(<4 x i8> addrspace(1)* %out0
 ; SI-NEXT:    v_lshrrev_b32_e32 v1, 16, v0
 ; SI-NEXT:    v_add_i32_e32 v3, vcc, 9, v0
 ; SI-NEXT:    v_and_b32_e32 v2, 0xff00, v0
-; SI-NEXT:    v_and_b32_e32 v4, 0xff00, v1
 ; SI-NEXT:    v_and_b32_e32 v3, 0xff, v3
+; SI-NEXT:    v_and_b32_e32 v4, 0xff00, v1
 ; SI-NEXT:    v_add_i32_e32 v1, vcc, 9, v1
 ; SI-NEXT:    v_or_b32_e32 v2, v2, v3
 ; SI-NEXT:    v_and_b32_e32 v1, 0xff, v1
@@ -347,8 +347,8 @@ define amdgpu_kernel void @test_copy_v4i8_x2_extra_use(<4 x i8> addrspace(1)* %o
 ; SI-NEXT:    v_lshrrev_b32_e32 v1, 16, v0
 ; SI-NEXT:    v_add_i32_e32 v3, vcc, 9, v0
 ; SI-NEXT:    v_and_b32_e32 v2, 0xff00, v0
-; SI-NEXT:    v_and_b32_e32 v4, 0xff00, v1
 ; SI-NEXT:    v_and_b32_e32 v3, 0xff, v3
+; SI-NEXT:    v_and_b32_e32 v4, 0xff00, v1
 ; SI-NEXT:    v_add_i32_e32 v1, vcc, 9, v1
 ; SI-NEXT:    v_or_b32_e32 v2, v2, v3
 ; SI-NEXT:    v_and_b32_e32 v1, 0xff, v1

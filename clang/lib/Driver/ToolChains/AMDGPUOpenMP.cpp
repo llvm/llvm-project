@@ -125,9 +125,8 @@ const char *AMDGCN::OpenMPLinker::constructLLVMLinkCommand(
       //    the device-libs bitcode through that on the way to this llvm-link
       SmallVector<std::string, 12> BCLibs =
           AMDGPUOpenMPTC.getCommonDeviceLibNames(Args, SubArchName.str());
-      llvm::for_each(BCLibs, [&](StringRef BCFile) {
+      for (StringRef BCFile : BCLibs)
         CmdArgs.push_back(Args.MakeArgString(BCFile));
-      });
     }
   }
 

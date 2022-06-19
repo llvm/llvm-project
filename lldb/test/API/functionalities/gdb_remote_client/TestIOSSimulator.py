@@ -6,8 +6,6 @@ from lldbsuite.test.lldbgdbclient import GDBRemoteTestBase
 
 class TestIOSSimulator(GDBRemoteTestBase):
 
-    mydir = TestBase.compute_mydir(__file__)
-
     """
     Test that an ios simulator process is recognized as such.
     """

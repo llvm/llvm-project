@@ -166,47 +166,46 @@ define <vscale x 4 x float> @bitcast() {
 
 ; getelementptr
 
-define <vscale x 4 x i32*> @getelementptr_constant_foldable_1() {
+define <vscale x 4 x ptr> @getelementptr_constant_foldable_1() {
 ; CHECK-LABEL: @getelementptr_constant_foldable_1(
-; CHECK-NEXT:    ret <vscale x 4 x i32*> zeroinitializer
+; CHECK-NEXT:    ret <vscale x 4 x ptr> zeroinitializer
 ;
-  %ptr = getelementptr i32, <vscale x 4 x i32*> zeroinitializer, <vscale x 4 x i64> undef
-  ret <vscale x 4 x i32*> %ptr
+  %ptr = getelementptr i32, <vscale x 4 x ptr> zeroinitializer, <vscale x 4 x i64> undef
+  ret <vscale x 4 x ptr> %ptr
 }
 
-define <vscale x 4 x <vscale x 4 x i32>*> @getelementptr_constant_foldable_2() {
+define <vscale x 4 x ptr> @getelementptr_constant_foldable_2() {
 ; CHECK-LABEL: @getelementptr_constant_foldable_2(
-; CHECK-NEXT:    ret <vscale x 4 x <vscale x 4 x i32>*> zeroinitializer
+; CHECK-NEXT:    ret <vscale x 4 x ptr> zeroinitializer
 ;
-  %ptr = getelementptr <vscale x 4 x i32>, <vscale x 4 x i32>* null, <vscale x 4 x i64> undef
-  ret <vscale x 4 x <vscale x 4 x i32>*> %ptr
+  %ptr = getelementptr <vscale x 4 x i32>, ptr null, <vscale x 4 x i64> undef
+  ret <vscale x 4 x ptr> %ptr
 }
 
 ; fold getelementptr P, 0 -> P.
-define <vscale x 4 x i32>* @getelementptr_constant_foldable_3() {
+define ptr @getelementptr_constant_foldable_3() {
 ; CHECK-LABEL: @getelementptr_constant_foldable_3(
-; CHECK-NEXT:    ret <vscale x 4 x i32>* null
+; CHECK-NEXT:    ret ptr null
 ;
-  %ptr = getelementptr <vscale x 4 x i32>, <vscale x 4 x i32>* null, i64 0
-  ret <vscale x 4 x i32>* %ptr
+  ret ptr null
 }
 
-define <vscale x 4 x i32>* @getelementptr_not_constant_foldable(i64 %x) {
+define ptr @getelementptr_not_constant_foldable(i64 %x) {
 ; CHECK-LABEL: @getelementptr_not_constant_foldable(
-; CHECK-NEXT:    [[PTR:%.*]] = getelementptr <vscale x 4 x i32>, <vscale x 4 x i32>* null, i64 [[X:%.*]]
-; CHECK-NEXT:    ret <vscale x 4 x i32>* [[PTR]]
+; CHECK-NEXT:    [[PTR:%.*]] = getelementptr <vscale x 4 x i32>, ptr null, i64 [[X:%.*]]
+; CHECK-NEXT:    ret ptr [[PTR]]
 ;
-  %ptr = getelementptr <vscale x 4 x i32>, <vscale x 4 x i32>* null, i64 %x
-  ret <vscale x 4 x i32>* %ptr
+  %ptr = getelementptr <vscale x 4 x i32>, ptr null, i64 %x
+  ret ptr %ptr
 }
 
 ; Check GEP's result is known to be non-null.
-define i1 @getelementptr_check_non_null(<vscale x 16 x i8>* %ptr) {
+define i1 @getelementptr_check_non_null(ptr %ptr) {
 ; CHECK-LABEL: @getelementptr_check_non_null(
 ; CHECK-NEXT:    ret i1 false
 ;
-  %x = getelementptr inbounds <vscale x 16 x i8>, <vscale x 16 x i8>* %ptr, i32 1
-  %cmp = icmp eq <vscale x 16 x i8>* %x, null
+  %x = getelementptr inbounds <vscale x 16 x i8>, ptr %ptr, i32 1
+  %cmp = icmp eq ptr %x, null
   ret i1 %cmp
 }
 

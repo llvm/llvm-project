@@ -14,8 +14,6 @@ from lldbsuite.test import lldbutil
 
 class FrameAPITestCase(TestBase):
 
-    mydir = TestBase.compute_mydir(__file__)
-
     def test_get_arg_vals_for_call_stack(self):
         """Exercise SBFrame.GetVariables() API to get argument vals."""
         self.build()
@@ -37,8 +35,8 @@ class FrameAPITestCase(TestBase):
             None, None, self.get_process_working_directory())
 
         process = target.GetProcess()
-        self.assertEqual(process.GetState(), lldb.eStateStopped,
-                        PROCESS_STOPPED)
+        self.assertState(process.GetState(), lldb.eStateStopped,
+                         PROCESS_STOPPED)
 
         # Keeps track of the number of times 'a' is called where it is within a
         # depth of 3 of the 'c' leaf function.
@@ -140,8 +138,8 @@ class FrameAPITestCase(TestBase):
             None, None, self.get_process_working_directory())
 
         process = target.GetProcess()
-        self.assertEqual(process.GetState(), lldb.eStateStopped,
-                        PROCESS_STOPPED)
+        self.assertState(process.GetState(), lldb.eStateStopped,
+                         PROCESS_STOPPED)
 
         thread = lldbutil.get_stopped_thread(
             process, lldb.eStopReasonBreakpoint)
@@ -181,8 +179,8 @@ class FrameAPITestCase(TestBase):
             None, None, self.get_process_working_directory())
 
         process = target.GetProcess()
-        self.assertEqual(process.GetState(), lldb.eStateStopped,
-                        PROCESS_STOPPED)
+        self.assertState(process.GetState(), lldb.eStateStopped,
+                         PROCESS_STOPPED)
 
         thread = lldbutil.get_stopped_thread(
             process, lldb.eStopReasonBreakpoint)

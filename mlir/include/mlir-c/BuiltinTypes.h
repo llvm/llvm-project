@@ -325,6 +325,29 @@ MLIR_CAPI_EXPORTED MlirType mlirFunctionTypeGetInput(MlirType type,
 MLIR_CAPI_EXPORTED MlirType mlirFunctionTypeGetResult(MlirType type,
                                                       intptr_t pos);
 
+//===----------------------------------------------------------------------===//
+// Opaque type.
+//===----------------------------------------------------------------------===//
+
+/// Checks whether the given type is an opaque type.
+MLIR_CAPI_EXPORTED bool mlirTypeIsAOpaque(MlirType type);
+
+/// Creates an opaque type in the given context associated with the dialect
+/// identified by its namespace. The type contains opaque byte data of the
+/// specified length (data need not be null-terminated).
+MLIR_CAPI_EXPORTED MlirType mlirOpaqueTypeGet(MlirContext ctx,
+                                              MlirStringRef dialectNamespace,
+                                              MlirStringRef typeData);
+
+/// Returns the namespace of the dialect with which the given opaque type
+/// is associated. The namespace string is owned by the context.
+MLIR_CAPI_EXPORTED MlirStringRef
+mlirOpaqueTypeGetDialectNamespace(MlirType type);
+
+/// Returns the raw data as a string reference. The data remains live as long as
+/// the context in which the type lives.
+MLIR_CAPI_EXPORTED MlirStringRef mlirOpaqueTypeGetData(MlirType type);
+
 #ifdef __cplusplus
 }
 #endif

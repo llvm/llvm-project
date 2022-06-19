@@ -105,12 +105,12 @@ static cl::list<std::string> InputFiles(cl::Positional, cl::OneOrMore,
 // Command line arguments to pass to the JITed main function.
 static cl::list<std::string> InputArgv("args", cl::Positional,
                                        cl::desc("<program arguments>..."),
-                                       cl::ZeroOrMore, cl::PositionalEatsArgs);
+                                       cl::PositionalEatsArgs);
 
 // Given paths must exist on the remote target.
 static cl::list<std::string>
     Dylibs("dlopen", cl::desc("Dynamic libraries to load before linking"),
-           cl::value_desc("filename"), cl::ZeroOrMore);
+           cl::value_desc("filename"));
 
 // File path of the executable to launch for execution in a child process.
 // Inter-process communication will go through stdin/stdout pipes.

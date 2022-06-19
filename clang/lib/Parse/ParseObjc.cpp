@@ -650,19 +650,21 @@ void Parser::ParseObjCInterfaceDeclList(tok::ObjCKeywordKind contextKey,
       if (Tok.is(tok::r_brace))
         break;
 
-      ParsedAttributes attrs(AttrFactory);
+      ParsedAttributes EmptyAttrs(AttrFactory);
 
       // Since we call ParseDeclarationOrFunctionDefinition() instead of
       // ParseExternalDeclaration() below (so that this doesn't parse nested
       // @interfaces), this needs to duplicate some code from the latter.
       if (Tok.isOneOf(tok::kw_static_assert, tok::kw__Static_assert)) {
         SourceLocation DeclEnd;
-        allTUVariables.push_back(
-            ParseDeclaration(DeclaratorContext::File, DeclEnd, attrs));
+        ParsedAttributes EmptyDeclSpecAttrs(AttrFactory);
+        allTUVariables.push_back(ParseDeclaration(
+            DeclaratorContext::File, DeclEnd, EmptyAttrs, EmptyDeclSpecAttrs));
         continue;
       }
 
-      allTUVariables.push_back(ParseDeclarationOrFunctionDefinition(attrs));
+      allTUVariables.push_back(
+          ParseDeclarationOrFunctionDefinition(EmptyAttrs));
       continue;
     }
 
@@ -1225,6 +1227,10 @@ static void takeDeclAttributes(ParsedAttributesView &attrs,
 /// declarator and add them to the given list.
 static void takeDeclAttributes(ParsedAttributes &attrs,
                                Declarator &D) {
+  // This gets called only from Parser::ParseObjCTypeName(), and that should
+  // never add declaration attributes to the Declarator.
+  assert(D.getDeclarationAttributes().empty());
+
   // First, take ownership of all attributes.
   attrs.getPool().takeAllFrom(D.getAttributePool());
   attrs.getPool().takeAllFrom(D.getDeclSpec().getAttributePool());
@@ -1268,7 +1274,7 @@ ParsedType Parser::ParseObjCTypeName(ObjCDeclSpec &DS,
     if (context == DeclaratorContext::ObjCResult)
       dsContext = DeclSpecContext::DSC_objc_method_result;
     ParseSpecifierQualifierList(declSpec, AS_none, dsContext);
-    Declarator declarator(declSpec, context);
+    Declarator declarator(declSpec, ParsedAttributesView::none(), context);
     ParseDeclarator(declarator);
 
     // If that's not invalid, extract a type.
@@ -1487,7 +1493,8 @@ Decl *Parser::ParseObjCMethodDecl(SourceLocation mLoc,
     DeclSpec DS(AttrFactory);
     ParseDeclarationSpecifiers(DS);
     // Parse the declarator.
-    Declarator ParmDecl(DS, DeclaratorContext::Prototype);
+    Declarator ParmDecl(DS, ParsedAttributesView::none(),
+                        DeclaratorContext::Prototype);
     ParseDeclarator(ParmDecl);
     IdentifierInfo *ParmII = ParmDecl.getIdentifier();
     Decl *Param = Actions.ActOnParamDeclarator(getCurScope(), ParmDecl);
@@ -1693,7 +1700,8 @@ void Parser::parseObjCTypeArgsOrProtocolQualifiers(
                          typeArg, Actions.getASTContext().getPrintingPolicy());
 
       // Form a declarator to turn this into a type.
-      Declarator D(DS, DeclaratorContext::TypeName);
+      Declarator D(DS, ParsedAttributesView::none(),
+                   DeclaratorContext::TypeName);
       TypeResult fullTypeArg = Actions.ActOnTypeName(getCurScope(), D);
       if (fullTypeArg.isUsable()) {
         typeArgs.push_back(fullTypeArg.get());
@@ -2538,7 +2546,8 @@ StmtResult Parser::ParseObjCTryStmt(SourceLocation atLoc) {
         if (Tok.isNot(tok::ellipsis)) {
           DeclSpec DS(AttrFactory);
           ParseDeclarationSpecifiers(DS);
-          Declarator ParmDecl(DS, DeclaratorContext::ObjCCatch);
+          Declarator ParmDecl(DS, ParsedAttributesView::none(),
+                              DeclaratorContext::ObjCCatch);
           ParseDeclarator(ParmDecl);
 
           // Inform the actions module about the declarator, so it
@@ -2954,7 +2963,8 @@ bool Parser::ParseObjCXXMessageReceiver(bool &IsExpr, void *&TypeOrExpr) {
   // We have a class message. Turn the simple-type-specifier or
   // typename-specifier we parsed into a type and parse the
   // remainder of the class message.
-  Declarator DeclaratorInfo(DS, DeclaratorContext::TypeName);
+  Declarator DeclaratorInfo(DS, ParsedAttributesView::none(),
+                            DeclaratorContext::TypeName);
   TypeResult Type = Actions.ActOnTypeName(getCurScope(), DeclaratorInfo);
   if (Type.isInvalid())
     return true;

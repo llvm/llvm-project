@@ -1188,8 +1188,11 @@ void DenseIntOrFPElementsAttr::convertEndianOfArrayRefForBEmachine(
   size_t elementBitWidth = getDenseElementStorageWidth(elementType);
   assert(numElements * elementBitWidth == inRawData.size() * CHAR_BIT &&
          inRawData.size() <= outRawData.size());
-  convertEndianOfCharForBEmachine(inRawData.begin(), outRawData.begin(),
-                                  elementBitWidth, numElements);
+  if (elementBitWidth <= CHAR_BIT)
+    std::memcpy(outRawData.begin(), inRawData.begin(), inRawData.size());
+  else
+    convertEndianOfCharForBEmachine(inRawData.begin(), outRawData.begin(),
+                                    elementBitWidth, numElements);
 }
 
 //===----------------------------------------------------------------------===//

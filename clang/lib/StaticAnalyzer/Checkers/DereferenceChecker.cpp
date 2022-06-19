@@ -248,7 +248,7 @@ void DereferenceChecker::checkLocation(SVal l, bool isLoad, const Stmt* S,
   DefinedOrUnknownSVal location = l.castAs<DefinedOrUnknownSVal>();
 
   // Check for null dereferences.
-  if (!location.getAs<Loc>())
+  if (!isa<Loc>(location))
     return;
 
   ProgramStateRef state = C.getState();

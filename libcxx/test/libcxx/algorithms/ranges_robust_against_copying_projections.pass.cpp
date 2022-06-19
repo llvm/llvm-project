@@ -72,8 +72,8 @@ constexpr bool all_the_algorithms()
     int count = 1;
 
     int copies = 0;
-    //(void)std::ranges::adjacent_find(first, last, Equal(), Proj(&copies)); assert(copies == 0);
-    //(void)std::ranges::adjacent_find(a, Equal(), Proj(&copies)); assert(copies == 0);
+    (void)std::ranges::adjacent_find(first, last, Equal(), Proj(&copies)); assert(copies == 0);
+    (void)std::ranges::adjacent_find(a, Equal(), Proj(&copies)); assert(copies == 0);
     (void)std::ranges::all_of(first, last, UnaryTrue(), Proj(&copies)); assert(copies == 0);
     (void)std::ranges::all_of(a, UnaryTrue(), Proj(&copies)); assert(copies == 0);
     (void)std::ranges::any_of(first, last, UnaryTrue(), Proj(&copies)); assert(copies == 0);
@@ -98,8 +98,8 @@ constexpr bool all_the_algorithms()
     (void)std::ranges::find(a, value, Proj(&copies)); assert(copies == 0);
     //(void)std::ranges::find_end(first, last, first2, mid2, Equal(), Proj(&copies), Proj(&copies)); assert(copies == 0);
     //(void)std::ranges::find_end(a, b, Equal(), Proj(&copies), Proj(&copies)); assert(copies == 0);
-    //(void)std::ranges::find_first_of(first, last, first2, last2, Equal(), Proj(&copies), Proj(&copies)); assert(copies == 0);
-    //(void)std::ranges::find_first_of(a, b, Equal(), Proj(&copies), Proj(&copies)); assert(copies == 0);
+    (void)std::ranges::find_first_of(first, last, first2, last2, Equal(), Proj(&copies), Proj(&copies)); assert(copies == 0);
+    (void)std::ranges::find_first_of(a, b, Equal(), Proj(&copies), Proj(&copies)); assert(copies == 0);
     (void)std::ranges::find_if(first, last, UnaryTrue(), Proj(&copies)); assert(copies == 0);
     (void)std::ranges::find_if(a, UnaryTrue(), Proj(&copies)); assert(copies == 0);
     (void)std::ranges::find_if_not(first, last, UnaryTrue(), Proj(&copies)); assert(copies == 0);
@@ -123,8 +123,8 @@ constexpr bool all_the_algorithms()
     (void)std::ranges::is_sorted_until(a, Less(), Proj(&copies)); assert(copies == 0);
     //if (!std::is_constant_evaluated()) { (void)std::ranges::inplace_merge(first, mid, last, Less(), Proj(&copies)); assert(copies == 0); }
     //if (!std::is_constant_evaluated()) { (void)std::ranges::inplace_merge(a, mid, Less(), Proj(&copies)); assert(copies == 0); }
-    //(void)std::ranges::lexicographical_compare(first, last, first2, last2, Less(), Proj(&copies), Proj(&copies)); assert(copies == 0);
-    //(void)std::ranges::lexicographical_compare(a, b, Less(), Proj(&copies), Proj(&copies)); assert(copies == 0);
+    (void)std::ranges::lexicographical_compare(first, last, first2, last2, Less(), Proj(&copies), Proj(&copies)); assert(copies == 0);
+    (void)std::ranges::lexicographical_compare(a, b, Less(), Proj(&copies), Proj(&copies)); assert(copies == 0);
     //(void)std::ranges::lower_bound(first, last, value, Less(), Proj(&copies)); assert(copies == 0);
     //(void)std::ranges::lower_bound(a, value, Less(), Proj(&copies)); assert(copies == 0);
     //(void)std::ranges::make_heap(first, last, Less(), Proj(&copies)); assert(copies == 0);
@@ -182,10 +182,10 @@ constexpr bool all_the_algorithms()
     //(void)std::ranges::replace_copy(a, first2, value, T(), Proj(&copies)); assert(copies == 0);
     //(void)std::ranges::replace_copy_if(first, last, first2, UnaryTrue(), T(), Proj(&copies)); assert(copies == 0);
     //(void)std::ranges::replace_copy_if(a, first2, UnaryTrue(), T(), Proj(&copies)); assert(copies == 0);
-    //(void)std::ranges::replace(first, last, value, T(), Proj(&copies)); assert(copies == 0);
-    //(void)std::ranges::replace(a, value, T(), Proj(&copies)); assert(copies == 0);
-    //(void)std::ranges::replace_if(first, last, UnaryTrue(), T(), Proj(&copies)); assert(copies == 0);
-    //(void)std::ranges::replace_if(a, UnaryTrue(), T(), Proj(&copies)); assert(copies == 0);
+    (void)std::ranges::replace(first, last, value, T(), Proj(&copies)); assert(copies == 0);
+    (void)std::ranges::replace(a, value, T(), Proj(&copies)); assert(copies == 0);
+    (void)std::ranges::replace_if(first, last, UnaryTrue(), T(), Proj(&copies)); assert(copies == 0);
+    (void)std::ranges::replace_if(a, UnaryTrue(), T(), Proj(&copies)); assert(copies == 0);
     //(void)std::ranges::search(first, last, first2, mid2, Equal(), Proj(&copies), Proj(&copies)); assert(copies == 0);
     //(void)std::ranges::search(a, b, Equal(), Proj(&copies), Proj(&copies)); assert(copies == 0);
     //(void)std::ranges::search_n(first, last, count, value, Equal(), Proj(&copies)); assert(copies == 0);
@@ -198,8 +198,8 @@ constexpr bool all_the_algorithms()
     //(void)std::ranges::set_symmetric_difference(a, b, first2, Less(), Proj(&copies), Proj(&copies)); assert(copies == 0);
     //(void)std::ranges::set_union(first, mid, mid, last, first2, Less(), Proj(&copies), Proj(&copies)); assert(copies == 0);
     //(void)std::ranges::set_union(a, b, first2, Less(), Proj(&copies), Proj(&copies)); assert(copies == 0);
-    //(void)std::ranges::sort(first, last, Less(), Proj(&copies)); assert(copies == 0);
-    //(void)std::ranges::sort(a, Less(), Proj(&copies)); assert(copies == 0);
+    (void)std::ranges::sort(first, last, Less(), Proj(&copies)); assert(copies == 0);
+    (void)std::ranges::sort(a, Less(), Proj(&copies)); assert(copies == 0);
     //(void)std::ranges::sort_heap(first, last, Less(), Proj(&copies)); assert(copies == 0);
     //(void)std::ranges::sort_heap(a, Less(), Proj(&copies)); assert(copies == 0);
     //if (!std::is_constant_evaluated()) { (void)std::ranges::stable_partition(first, last, UnaryTrue(), Proj(&copies)); assert(copies == 0); }

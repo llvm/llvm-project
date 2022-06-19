@@ -293,7 +293,7 @@ int FormatControl<CONTEXT>::CueUpNextDataEdit(Context &context, bool stop) {
       ++offset_;
       std::size_t chars{
           static_cast<std::size_t>(&format_[offset_] - &format_[start])};
-      if (PeekNext() == quote) {
+      if (offset_ < formatLength_ && format_[offset_] == quote) {
         // subtle: handle doubled quote character in a literal by including
         // the first in the output, then treating the second as the start
         // of another character literal.
@@ -433,6 +433,11 @@ DataEdit FormatControl<CONTEXT>::GetNextDataEdit(
     }
   } else if (edit.descriptor != DataEdit::DefinedDerivedType) {
     edit.width = GetIntField(context);
+  }
+  if constexpr (std::is_base_of_v<InputStatementState, CONTEXT>) {
+    if (edit.width.value_or(-1) == 0) {
+      ReportBadFormat(context, "Input field width is zero", start);
+    }
   }
   if (edit.descriptor != DataEdit::DefinedDerivedType && PeekNext() == '.') {
     ++offset_;

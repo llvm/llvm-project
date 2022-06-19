@@ -1340,11 +1340,6 @@ void AArch64InstPrinter::printGPRSeqPairsClassOperand(const MCInst *MI,
   O << getRegisterName(Even) << ", " << getRegisterName(Odd);
 }
 
-static const unsigned MatrixZADRegisterTable[] = {
-  AArch64::ZAD0, AArch64::ZAD1, AArch64::ZAD2, AArch64::ZAD3,
-  AArch64::ZAD4, AArch64::ZAD5, AArch64::ZAD6, AArch64::ZAD7
-};
-
 void AArch64InstPrinter::printMatrixTileList(const MCInst *MI, unsigned OpNum,
                                              const MCSubtargetInfo &STI,
                                              raw_ostream &O) {
@@ -1362,7 +1357,7 @@ void AArch64InstPrinter::printMatrixTileList(const MCInst *MI, unsigned OpNum,
     unsigned Reg = RegMask & (1 << I);
     if (Reg == 0)
       continue;
-    O << getRegisterName(MatrixZADRegisterTable[I]);
+    O << getRegisterName(AArch64::ZAD0 + I);
     if (Printed + 1 != NumRegs)
       O << ", ";
     ++Printed;

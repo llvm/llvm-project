@@ -69,13 +69,11 @@ enum DynoStatsSortOrder : char {
   Descending
 };
 
-static cl::opt<DynoStatsSortOrder>
-DynoStatsSortOrderOpt("print-sorted-by-order",
-  cl::desc("use ascending or descending order when printing functions "
-           "ordered by dyno stats"),
-  cl::ZeroOrMore,
-  cl::init(DynoStatsSortOrder::Descending),
-  cl::cat(BoltOptCategory));
+static cl::opt<DynoStatsSortOrder> DynoStatsSortOrderOpt(
+    "print-sorted-by-order",
+    cl::desc("use ascending or descending order when printing functions "
+             "ordered by dyno stats"),
+    cl::init(DynoStatsSortOrder::Descending), cl::cat(BoltOptCategory));
 
 cl::list<std::string>
 HotTextMoveSections("hot-text-move-sections",
@@ -97,13 +95,11 @@ bool isHotTextMover(const BinaryFunction &Function) {
   return false;
 }
 
-static cl::opt<bool>
-MinBranchClusters("min-branch-clusters",
-  cl::desc("use a modified clustering algorithm geared towards minimizing "
-           "branches"),
-  cl::ZeroOrMore,
-  cl::Hidden,
-  cl::cat(BoltOptCategory));
+static cl::opt<bool> MinBranchClusters(
+    "min-branch-clusters",
+    cl::desc("use a modified clustering algorithm geared towards minimizing "
+             "branches"),
+    cl::Hidden, cl::cat(BoltOptCategory));
 
 static cl::list<Peepholes::PeepholeOpts> Peepholes(
     "peepholes", cl::CommaSeparated, cl::desc("enable peephole optimizations"),
@@ -120,11 +116,9 @@ static cl::list<Peepholes::PeepholeOpts> Peepholes(
     cl::ZeroOrMore, cl::cat(BoltOptCategory));
 
 static cl::opt<unsigned>
-PrintFuncStat("print-function-statistics",
-  cl::desc("print statistics about basic block ordering"),
-  cl::init(0),
-  cl::ZeroOrMore,
-  cl::cat(BoltOptCategory));
+    PrintFuncStat("print-function-statistics",
+                  cl::desc("print statistics about basic block ordering"),
+                  cl::init(0), cl::cat(BoltOptCategory));
 
 static cl::list<bolt::DynoStats::Category>
 PrintSortedBy("print-sorted-by",
@@ -144,21 +138,18 @@ PrintSortedBy("print-sorted-by",
   cl::cat(BoltOptCategory));
 
 static cl::opt<bool>
-PrintUnknown("print-unknown",
-  cl::desc("print names of functions with unknown control flow"),
-  cl::init(false),
-  cl::ZeroOrMore,
-  cl::cat(BoltCategory),
-  cl::Hidden);
+    PrintUnknown("print-unknown",
+                 cl::desc("print names of functions with unknown control flow"),
+                 cl::cat(BoltCategory), cl::Hidden);
 
 static cl::opt<bool>
-PrintUnknownCFG("print-unknown-cfg",
-  cl::desc("dump CFG of functions with unknown control flow"),
-  cl::init(false),
-  cl::ZeroOrMore,
-  cl::cat(BoltCategory),
-  cl::ReallyHidden);
+    PrintUnknownCFG("print-unknown-cfg",
+                    cl::desc("dump CFG of functions with unknown control flow"),
+                    cl::cat(BoltCategory), cl::ReallyHidden);
 
+// Please MSVC19 with a forward declaration: otherwise it reports an error about
+// an undeclared variable inside a callback.
+extern cl::opt<bolt::ReorderBasicBlocks::LayoutType> ReorderBlocks;
 cl::opt<bolt::ReorderBasicBlocks::LayoutType> ReorderBlocks(
     "reorder-blocks", cl::desc("change layout of basic blocks in a function"),
     cl::init(bolt::ReorderBasicBlocks::LT_NONE),
@@ -176,29 +167,31 @@ cl::opt<bolt::ReorderBasicBlocks::LayoutType> ReorderBlocks(
         clEnumValN(bolt::ReorderBasicBlocks::LT_OPTIMIZE_CACHE, "cache",
                    "perform optimal layout prioritizing I-cache "
                    "behavior"),
-        clEnumValN(bolt::ReorderBasicBlocks::LT_OPTIMIZE_EXT_TSP, "cache+",
+        clEnumValN(bolt::ReorderBasicBlocks::LT_OPTIMIZE_CACHE_PLUS, "cache+",
                    "perform layout optimizing I-cache behavior"),
         clEnumValN(bolt::ReorderBasicBlocks::LT_OPTIMIZE_EXT_TSP, "ext-tsp",
                    "perform layout optimizing I-cache behavior"),
         clEnumValN(bolt::ReorderBasicBlocks::LT_OPTIMIZE_SHUFFLE,
                    "cluster-shuffle", "perform random layout of clusters")),
-    cl::ZeroOrMore, cl::cat(BoltOptCategory));
+    cl::ZeroOrMore, cl::cat(BoltOptCategory),
+    cl::callback([](const bolt::ReorderBasicBlocks::LayoutType &option) {
+      if (option == bolt::ReorderBasicBlocks::LT_OPTIMIZE_CACHE_PLUS) {
+        WithColor::warning()
+            << "'-reorder-blocks=cache+' is deprecated, "
+            << "please use '-reorder-blocks=ext-tsp' instead\n";
+        ReorderBlocks = bolt::ReorderBasicBlocks::LT_OPTIMIZE_EXT_TSP;
+      }
+    }));
 
-static cl::opt<unsigned>
-ReportBadLayout("report-bad-layout",
-  cl::desc("print top <uint> functions with suboptimal code layout on input"),
-  cl::init(0),
-  cl::ZeroOrMore,
-  cl::Hidden,
-  cl::cat(BoltOptCategory));
+static cl::opt<unsigned> ReportBadLayout(
+    "report-bad-layout",
+    cl::desc("print top <uint> functions with suboptimal code layout on input"),
+    cl::init(0), cl::Hidden, cl::cat(BoltOptCategory));
 
 static cl::opt<bool>
-ReportStaleFuncs("report-stale",
-  cl::desc("print the list of functions with stale profile"),
-  cl::init(false),
-  cl::ZeroOrMore,
-  cl::Hidden,
-  cl::cat(BoltOptCategory));
+    ReportStaleFuncs("report-stale",
+                     cl::desc("print the list of functions with stale profile"),
+                     cl::Hidden, cl::cat(BoltOptCategory));
 
 enum SctcModes : char {
   SctcAlways,
@@ -229,23 +222,18 @@ StaleThreshold("stale-threshold",
     cl::Hidden,
     cl::cat(BoltOptCategory));
 
-static cl::opt<unsigned>
-TSPThreshold("tsp-threshold",
-  cl::desc("maximum number of hot basic blocks in a function for which to use "
-           "a precise TSP solution while re-ordering basic blocks"),
-  cl::init(10),
-  cl::ZeroOrMore,
-  cl::Hidden,
-  cl::cat(BoltOptCategory));
+static cl::opt<unsigned> TSPThreshold(
+    "tsp-threshold",
+    cl::desc(
+        "maximum number of hot basic blocks in a function for which to use "
+        "a precise TSP solution while re-ordering basic blocks"),
+    cl::init(10), cl::Hidden, cl::cat(BoltOptCategory));
 
-static cl::opt<unsigned>
-TopCalledLimit("top-called-limit",
-  cl::desc("maximum number of functions to print in top called "
-           "functions section"),
-  cl::init(100),
-  cl::ZeroOrMore,
-  cl::Hidden,
-  cl::cat(BoltCategory));
+static cl::opt<unsigned> TopCalledLimit(
+    "top-called-limit",
+    cl::desc("maximum number of functions to print in top called "
+             "functions section"),
+    cl::init(100), cl::Hidden, cl::cat(BoltCategory));
 
 } // namespace opts
 
@@ -1226,8 +1214,7 @@ void AssignSections::runOnFunctions(BinaryContext &BC) {
       continue;
     }
 
-    if (!UseColdSection || Function.hasValidIndex() ||
-        Function.hasValidProfile())
+    if (!UseColdSection || Function.hasValidIndex())
       Function.setCodeSectionName(BC.getMainCodeSectionName());
     else
       Function.setCodeSectionName(BC.getColdCodeSectionName());
@@ -1773,8 +1760,8 @@ void SpecializeMemcpy1::runOnFunctions(BinaryContext &BC) {
           assert(NextBB && "unexpected call to memcpy() with no return");
         }
 
-        BinaryBasicBlock *MemcpyBB =
-            Function.addBasicBlock(CurBB->getInputOffset());
+        BinaryBasicBlock *MemcpyBB = Function.addBasicBlock();
+        MemcpyBB->setOffset(CurBB->getInputOffset());
         InstructionListType CmpJCC =
             BC.MIB->createCmpJE(BC.MIB->getIntArgRegister(2), 1,
                                 OneByteMemcpyBB->getLabel(), BC.Ctx.get());

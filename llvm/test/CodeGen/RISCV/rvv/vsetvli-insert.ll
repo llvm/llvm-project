@@ -492,14 +492,13 @@ entry:
 }
 
 ; Fault first loads can modify VL.
-; TODO: The first and third VSETVLIs are redundant here.
+; TODO: The VSETVLI of vadd could be removed here.
 define <vscale x 1 x i64> @vleNff(i64* %str, i64 %n, i64 %x) {
 ; CHECK-LABEL: vleNff:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli zero, a1, e64, m1, ta, mu
 ; CHECK-NEXT:    vle64ff.v v8, (a0)
-; CHECK-NEXT:    csrr a0, vl
-; CHECK-NEXT:    vsetvli zero, a0, e64, m1, tu, mu
+; CHECK-NEXT:    vsetvli zero, zero, e64, m1, tu, mu
 ; CHECK-NEXT:    vadd.vx v8, v8, a2
 ; CHECK-NEXT:    ret
 entry:
@@ -509,6 +508,25 @@ entry:
   %3 = extractvalue { <vscale x 1 x i64>, i64 } %2, 0
   %4 = extractvalue { <vscale x 1 x i64>, i64 } %2, 1
   %5 = tail call <vscale x 1 x i64> @llvm.riscv.vadd.nxv1i64.i64.i64(<vscale x 1 x i64> %3, <vscale x 1 x i64> %3, i64 %x, i64 %4)
+  ret <vscale x 1 x i64> %5
+}
+
+; Similiar test case, but use same policy for vleff and vadd.
+; Note: The test may be redundant if we could fix the TODO of @vleNff.
+define <vscale x 1 x i64> @vleNff2(i64* %str, i64 %n, i64 %x) {
+; CHECK-LABEL: vleNff2:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    vsetvli zero, a1, e64, m1, ta, mu
+; CHECK-NEXT:    vle64ff.v v8, (a0)
+; CHECK-NEXT:    vadd.vx v8, v8, a2
+; CHECK-NEXT:    ret
+entry:
+  %0 = tail call i64 @llvm.riscv.vsetvli.i64(i64 %n, i64 0, i64 2)
+  %1 = bitcast i64* %str to <vscale x 1 x i64>*
+  %2 = tail call { <vscale x 1 x i64>, i64 } @llvm.riscv.vleff.nxv1i64.i64(<vscale x 1 x i64> undef, <vscale x 1 x i64>* %1, i64 %0)
+  %3 = extractvalue { <vscale x 1 x i64>, i64 } %2, 0
+  %4 = extractvalue { <vscale x 1 x i64>, i64 } %2, 1
+  %5 = tail call <vscale x 1 x i64> @llvm.riscv.vadd.nxv1i64.i64.i64(<vscale x 1 x i64> undef, <vscale x 1 x i64> %3, i64 %x, i64 %4)
   ret <vscale x 1 x i64> %5
 }
 

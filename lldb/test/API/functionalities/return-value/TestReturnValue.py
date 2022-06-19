@@ -12,8 +12,6 @@ from lldbsuite.test import lldbutil
 
 class ReturnValueTestCase(TestBase):
 
-    mydir = TestBase.compute_mydir(__file__)
-
     def affected_by_pr33042(self):
         return ("clang" in self.getCompiler() and self.isAArch64() and
             self.getPlatform() == "linux")
@@ -62,7 +60,7 @@ class ReturnValueTestCase(TestBase):
 
         thread.StepOut()
 
-        self.assertEquals(self.process.GetState(), lldb.eStateStopped)
+        self.assertState(self.process.GetState(), lldb.eStateStopped)
         self.assertEquals(thread.GetStopReason(), lldb.eStopReasonPlanComplete)
 
         frame = thread.GetFrameAtIndex(0)
@@ -94,7 +92,7 @@ class ReturnValueTestCase(TestBase):
 
         thread.StepOutOfFrame(frame)
 
-        self.assertEquals(self.process.GetState(), lldb.eStateStopped)
+        self.assertState(self.process.GetState(), lldb.eStateStopped)
         self.assertEquals(thread.GetStopReason(), lldb.eStopReasonPlanComplete)
         frame = thread.GetFrameAtIndex(0)
         fun_name = frame.GetFunctionName()
@@ -123,7 +121,7 @@ class ReturnValueTestCase(TestBase):
         in_float = float(in_value.GetValue())
         thread.StepOut()
 
-        self.assertEquals(self.process.GetState(), lldb.eStateStopped)
+        self.assertState(self.process.GetState(), lldb.eStateStopped)
         self.assertEquals(thread.GetStopReason(), lldb.eStopReasonPlanComplete)
 
         frame = thread.GetFrameAtIndex(0)
@@ -175,7 +173,7 @@ class ReturnValueTestCase(TestBase):
             "3.6"],
         archs=["i386"])
     @expectedFailureAll(compiler=["gcc"], archs=["x86_64", "i386"])
-    @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr24778")
+    @expectedFailureAll(oslist=["windows"], archs=["i[3-6]86", "x86_64"], bugnumber="llvm.org/pr24778")
     def test_vector_values(self):
         self.build()
         exe = self.getBuildArtifact("a.out")
@@ -263,7 +261,7 @@ class ReturnValueTestCase(TestBase):
 
         thread.StepOut()
 
-        self.assertEquals(self.process.GetState(), lldb.eStateStopped)
+        self.assertState(self.process.GetState(), lldb.eStateStopped)
         self.assertEquals(thread.GetStopReason(), lldb.eStopReasonPlanComplete)
 
         # Assuming all these functions step out to main.  Could figure out the caller dynamically

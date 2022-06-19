@@ -22,13 +22,9 @@ extern llvm::cl::OptionCategory BoltCategory;
 extern llvm::cl::opt<unsigned> Verbosity;
 
 llvm::cl::opt<bool>
-ForcePatch("force-patch",
-  llvm::cl::desc("force patching of original entry points"),
-  llvm::cl::init(false),
-  llvm::cl::Hidden,
-  llvm::cl::ZeroOrMore,
-  llvm::cl::cat(BoltCategory));
-
+    ForcePatch("force-patch",
+               llvm::cl::desc("force patching of original entry points"),
+               llvm::cl::Hidden, llvm::cl::cat(BoltCategory));
 }
 
 namespace llvm {
@@ -122,7 +118,7 @@ void PatchEntries::runOnFunctions(BinaryContext &BC) {
 
       InstructionListType Seq;
       BC.MIB->createLongTailCall(Seq, Patch.Symbol, BC.Ctx.get());
-      PatchFunction->addBasicBlock(0)->addInstructions(Seq);
+      PatchFunction->addBasicBlock()->addInstructions(Seq);
 
       // Verify the size requirements.
       uint64_t HotSize, ColdSize;

@@ -13,11 +13,12 @@ define i64 @rolq_extract_shl(i64 %i) nounwind {
 ; X86-LABEL: rolq_extract_shl:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl %eax, %ecx
 ; X86-NEXT:    shldl $3, %edx, %ecx
+; X86-NEXT:    shll $3, %eax
 ; X86-NEXT:    shll $3, %edx
-; X86-NEXT:    movl %edx, %eax
-; X86-NEXT:    shldl $7, %ecx, %eax
+; X86-NEXT:    shrdl $25, %edx, %eax
 ; X86-NEXT:    shrdl $25, %ecx, %edx
 ; X86-NEXT:    retl
 ;
@@ -164,18 +165,18 @@ define i32 @no_extract_shrl(i32 %i) nounwind {
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl %eax, %ecx
-; X86-NEXT:    andl $-8, %ecx
-; X86-NEXT:    shll $25, %ecx
-; X86-NEXT:    shrl $9, %eax
+; X86-NEXT:    shrl $9, %ecx
+; X86-NEXT:    andl $-8, %eax
+; X86-NEXT:    shll $25, %eax
 ; X86-NEXT:    orl %ecx, %eax
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: no_extract_shrl:
 ; X64:       # %bb.0:
 ; X64-NEXT:    movl %edi, %eax
-; X64-NEXT:    andl $-8, %eax
-; X64-NEXT:    shll $25, %eax
-; X64-NEXT:    shrl $9, %edi
+; X64-NEXT:    shrl $9, %eax
+; X64-NEXT:    andl $-8, %edi
+; X64-NEXT:    shll $25, %edi
 ; X64-NEXT:    orl %edi, %eax
 ; X64-NEXT:    retq
   %lhs_div = lshr i32 %i, 3

@@ -52,7 +52,7 @@ void FaultMaps::serializeToFaultMapSection() {
   // Create the section.
   MCSection *FaultMapSection =
       OutContext.getObjectFileInfo()->getFaultMapSection();
-  OS.SwitchSection(FaultMapSection);
+  OS.switchSection(FaultMapSection);
 
   // Emit a dummy symbol to force section inclusion.
   OS.emitLabel(OutContext.getOrCreateSymbol(Twine("__LLVM_FaultMaps")));

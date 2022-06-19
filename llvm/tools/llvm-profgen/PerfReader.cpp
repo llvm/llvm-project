@@ -13,34 +13,31 @@
 
 #define DEBUG_TYPE "perf-reader"
 
-cl::opt<bool> SkipSymbolization("skip-symbolization", cl::init(false),
-                                cl::ZeroOrMore,
+cl::opt<bool> SkipSymbolization("skip-symbolization",
                                 cl::desc("Dump the unsymbolized profile to the "
                                          "output file. It will show unwinder "
                                          "output for CS profile generation."));
 
-static cl::opt<bool> ShowMmapEvents("show-mmap-events", cl::init(false),
-                                    cl::ZeroOrMore,
+static cl::opt<bool> ShowMmapEvents("show-mmap-events",
                                     cl::desc("Print binary load events."));
 
 static cl::opt<bool>
-    UseOffset("use-offset", cl::init(true), cl::ZeroOrMore,
+    UseOffset("use-offset", cl::init(true),
               cl::desc("Work with `--skip-symbolization` or "
                        "`--unsymbolized-profile` to write/read the "
                        "offset instead of virtual address."));
 
 static cl::opt<bool> UseLoadableSegmentAsBase(
-    "use-first-loadable-segment-as-base", cl::init(false), cl::ZeroOrMore,
+    "use-first-loadable-segment-as-base",
     cl::desc("Use first loadable segment address as base address "
              "for offsets in unsymbolized profile. By default "
              "first executable segment address is used"));
 
 static cl::opt<bool>
-    IgnoreStackSamples("ignore-stack-samples", cl::init(false), cl::ZeroOrMore,
+    IgnoreStackSamples("ignore-stack-samples",
                        cl::desc("Ignore call stack samples for hybrid samples "
                                 "and produce context-insensitive profile."));
-cl::opt<bool> ShowDetailedWarning("show-detailed-warning", cl::init(false),
-                                  cl::ZeroOrMore,
+cl::opt<bool> ShowDetailedWarning("show-detailed-warning",
                                   cl::desc("Show detailed warning message."));
 
 extern cl::opt<std::string> PerfTraceFilename;
@@ -470,9 +467,9 @@ static std::string getContextKeyStr(ContextKey *K,
       if (OContextStr.str().size())
         OContextStr << " @ ";
       OContextStr << "0x"
-                  << to_hexString(
+                  << utohexstr(
                          Binary->virtualAddrToOffset(CtxKey->Context[I]),
-                         false);
+                         /*LowerCase=*/true);
     }
     return OContextStr.str();
   } else {

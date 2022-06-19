@@ -1,4 +1,4 @@
-add_mlir_dialect_library(MLIRTosa
+add_mlir_dialect_library(MLIRTosaDialect
   Utils/ConversionUtils.cpp
   Utils/QuantUtils.cpp
   IR/TosaOps.cpp
@@ -7,8 +7,8 @@ add_mlir_dialect_library(MLIRTosa
   ${MLIR_MAIN_INCLUDE_DIR}/mlir/Dialect/Tosa
 
   DEPENDS
+  MLIRTosaAttributesIncGen
   MLIRTosaOpsIncGen
-  MLIRTosaStructsIncGen
   MLIRTosaInterfacesIncGen
 
   LINK_LIBS PUBLIC
@@ -16,10 +16,10 @@ add_mlir_dialect_library(MLIRTosa
   MLIRDialect
   MLIRCallInterfaces
   MLIRControlFlowInterfaces
-  MLIRQuant
+  MLIRQuantDialect
   MLIRQuantUtils
   MLIRSideEffectInterfaces
-  MLIRTensor
+  MLIRTensorDialect
   MLIRViewLikeInterface
   )
 

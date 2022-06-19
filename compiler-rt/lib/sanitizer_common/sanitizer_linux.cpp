@@ -901,6 +901,10 @@ bool internal_sigismember(__sanitizer_sigset_t *set, int signum) {
   return k_set->sig[idx] & ((uptr)1 << bit);
 }
 #elif SANITIZER_FREEBSD
+uptr internal_procctl(int type, int id, int cmd, void *data) {
+  return internal_syscall(SYSCALL(procctl), type, id, cmd, data);
+}
+
 void internal_sigdelset(__sanitizer_sigset_t *set, int signum) {
   sigset_t *rset = reinterpret_cast<sigset_t *>(set);
   sigdelset(rset, signum);
@@ -1789,7 +1793,7 @@ void *internal_start_thread(void *(*func)(void *), void *arg) { return 0; }
 void internal_join_thread(void *th) {}
 #endif
 
-#if defined(__aarch64__)
+#if SANITIZER_LINUX && defined(__aarch64__)
 // Android headers in the older NDK releases miss this definition.
 struct __sanitizer_esr_context {
   struct _aarch64_ctx head;
@@ -1808,6 +1812,11 @@ static bool Aarch64GetESR(ucontext_t *ucontext, u64 *esr) {
     }
     aux += ctx->size;
   }
+  return false;
+}
+#elif SANITIZER_FREEBSD && defined(__aarch64__)
+// FreeBSD doesn't provide ESR in the ucontext.
+static bool Aarch64GetESR(ucontext_t *ucontext, u64 *esr) {
   return false;
 }
 #endif
@@ -2035,10 +2044,17 @@ static void GetPcSpBp(void *context, uptr *pc, uptr *sp, uptr *bp) {
   *bp = ucontext->uc_mcontext.arm_fp;
   *sp = ucontext->uc_mcontext.arm_sp;
 #elif defined(__aarch64__)
+# if SANITIZER_FREEBSD
+  ucontext_t *ucontext = (ucontext_t*)context;
+  *pc = ucontext->uc_mcontext.mc_gpregs.gp_elr;
+  *bp = ucontext->uc_mcontext.mc_gpregs.gp_x[29];
+  *sp = ucontext->uc_mcontext.mc_gpregs.gp_sp;
+# else
   ucontext_t *ucontext = (ucontext_t*)context;
   *pc = ucontext->uc_mcontext.pc;
   *bp = ucontext->uc_mcontext.regs[29];
   *sp = ucontext->uc_mcontext.sp;
+# endif
 #elif defined(__hppa__)
   ucontext_t *ucontext = (ucontext_t*)context;
   *pc = ucontext->uc_mcontext.sc_iaoq[0];
@@ -2186,7 +2202,8 @@ void CheckASLR() {
   }
 #elif SANITIZER_FREEBSD
   int aslr_status;
-  if (UNLIKELY(procctl(P_PID, 0, PROC_ASLR_STATUS, &aslr_status) == -1)) {
+  int r = internal_procctl(P_PID, 0, PROC_ASLR_STATUS, &aslr_status);
+  if (UNLIKELY(r == -1)) {
     // We're making things less 'dramatic' here since
     // the cmd is not necessarily guaranteed to be here
     // just yet regarding FreeBSD release

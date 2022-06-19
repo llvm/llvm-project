@@ -111,6 +111,10 @@ def ExecuteRegionOp : SCF_Op<"execute_region", [
   let hasVerifier = 1;
 }
 
+//===----------------------------------------------------------------------===//
+// ForOp
+//===----------------------------------------------------------------------===//
+
 def ForOp : SCF_Op<"for",
       [AutomaticAllocationScope, DeclareOpInterfaceMethods<LoopLikeOpInterface,
        ["getSingleInductionVar", "getSingleLowerBound", "getSingleStep",
@@ -305,7 +309,7 @@ def ForOp : SCF_Op<"for",
     /// correspond to the loop iterator operands, i.e., those exclusing the
     /// induction variable. LoopOp only has one region, so 0 is the only valid
     /// value for `index`.
-    OperandRange getSuccessorEntryOperands(unsigned index);
+    OperandRange getSuccessorEntryOperands(Optional<unsigned> index);
   }];
 
   let hasCanonicalizer = 1;
@@ -357,7 +361,8 @@ def ForeachThreadOp : SCF_Op<"foreach_thread", [
     writes to memory is unspecified across threads.
 
     Example:
-    ```
+
+    ```mlir
     //
     // Sequential context.
     //
@@ -392,8 +397,7 @@ def ForeachThreadOp : SCF_Op<"foreach_thread", [
     // Implicit synchronization point.
     // Sequential context.
     //
-```
-
+    ```
   }];
   let arguments = (ins Variadic<Index>:$num_threads);
 
@@ -427,6 +431,10 @@ def ForeachThreadOp : SCF_Op<"foreach_thread", [
   }];
 }
 
+//===----------------------------------------------------------------------===//
+// PerformConcurrentlyOp
+//===----------------------------------------------------------------------===//
+
 def PerformConcurrentlyOp : SCF_Op<"foreach_thread.perform_concurrently", [
        NoSideEffect,
        Terminator,
@@ -448,6 +456,12 @@ def PerformConcurrentlyOp : SCF_Op<"foreach_thread.perform_concurrently", [
   let hasCustomAssemblyFormat = 1;
   let hasVerifier = 1;
 
+  // The default builder does not add a region with an empty body, add our own.
+  let skipDefaultBuilders = 1;
+  let builders = [
+    OpBuilder<(ins)>,
+  ];
+
   // TODO: Add a `PerformConcurrentlyOpInterface` interface for ops that can
   // appear inside perform_concurrently.
   let extraClassDeclaration = [{
@@ -455,6 +469,10 @@ def PerformConcurrentlyOp : SCF_Op<"foreach_thread.perform_concurrently", [
     ::llvm::iterator_range<Block::iterator> yieldingOps();
   }];
 }
+
+//===----------------------------------------------------------------------===//
+// ParallelInsertSliceOp
+//===----------------------------------------------------------------------===//
 
 // TODO: Implement PerformConcurrentlyOpInterface.
 def ParallelInsertSliceOp : SCF_Op<"foreach_thread.parallel_insert_slice", [
@@ -646,6 +664,10 @@ def IfOp : SCF_Op<"if",
   let hasVerifier = 1;
 }
 
+//===----------------------------------------------------------------------===//
+// ParallelOp
+//===----------------------------------------------------------------------===//
+
 def ParallelOp : SCF_Op<"parallel",
     [AutomaticAllocationScope,
      AttrSizedOperandSegments,
@@ -730,6 +752,10 @@ def ParallelOp : SCF_Op<"parallel",
   let hasVerifier = 1;
 }
 
+//===----------------------------------------------------------------------===//
+// ReduceOp
+//===----------------------------------------------------------------------===//
+
 def ReduceOp : SCF_Op<"reduce", [HasParent<"ParallelOp">]> {
   let summary = "reduce operation for parallel for";
   let description = [{
@@ -780,6 +806,10 @@ def ReduceOp : SCF_Op<"reduce", [HasParent<"ParallelOp">]> {
   let hasRegionVerifier = 1;
 }
 
+//===----------------------------------------------------------------------===//
+// ReduceReturnOp
+//===----------------------------------------------------------------------===//
+
 def ReduceReturnOp :
     SCF_Op<"reduce.return", [HasParent<"ReduceOp">, NoSideEffect,
                               Terminator]> {
@@ -798,6 +828,10 @@ def ReduceReturnOp :
   let assemblyFormat = "$result attr-dict `:` type($result)";
   let hasVerifier = 1;
 }
+
+//===----------------------------------------------------------------------===//
+// WhileOp
+//===----------------------------------------------------------------------===//
 
 def WhileOp : SCF_Op<"while",
     [DeclareOpInterfaceMethods<RegionBranchOpInterface>,
@@ -921,7 +955,7 @@ def WhileOp : SCF_Op<"while",
   let regions = (region SizedRegion<1>:$before, SizedRegion<1>:$after);
 
   let extraClassDeclaration = [{
-    OperandRange getSuccessorEntryOperands(unsigned index);
+    OperandRange getSuccessorEntryOperands(Optional<unsigned> index);
     ConditionOp getConditionOp();
     YieldOp getYieldOp();
     Block::BlockArgListType getBeforeArguments();
@@ -930,8 +964,12 @@ def WhileOp : SCF_Op<"while",
 
   let hasCanonicalizer = 1;
   let hasCustomAssemblyFormat = 1;
-  let hasRegionVerifier = 1;
+  let hasVerifier = 1;
 }
+
+//===----------------------------------------------------------------------===//
+// YieldOp
+//===----------------------------------------------------------------------===//
 
 def YieldOp : SCF_Op<"yield", [NoSideEffect, ReturnLike, Terminator,
                                ParentOneOf<["ExecuteRegionOp, ForOp",

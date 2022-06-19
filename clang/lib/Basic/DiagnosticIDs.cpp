@@ -607,6 +607,7 @@ namespace {
     uint16_t NameOffset;
     uint16_t Members;
     uint16_t SubGroups;
+    StringRef Documentation;
 
     // String is stored with a pascal-style length byte.
     StringRef getName() const {
@@ -618,11 +619,16 @@ namespace {
 
 // Second the table of options, sorted by name for fast binary lookup.
 static const WarningOption OptionTable[] = {
-#define DIAG_ENTRY(GroupName, FlagNameOffset, Members, SubGroups)              \
-  {FlagNameOffset, Members, SubGroups},
+#define DIAG_ENTRY(GroupName, FlagNameOffset, Members, SubGroups, Docs)        \
+  {FlagNameOffset, Members, SubGroups, Docs},
 #include "clang/Basic/DiagnosticGroups.inc"
 #undef DIAG_ENTRY
 };
+
+/// Given a diagnostic group ID, return its documentation.
+StringRef DiagnosticIDs::getWarningOptionDocumentation(diag::Group Group) {
+  return OptionTable[static_cast<int>(Group)].Documentation;
+}
 
 StringRef DiagnosticIDs::getWarningOptionForGroup(diag::Group Group) {
   return OptionTable[static_cast<int>(Group)].getName();
@@ -653,7 +659,7 @@ StringRef DiagnosticIDs::getWarningOptionForDiag(unsigned DiagID) {
 }
 
 std::vector<std::string> DiagnosticIDs::getDiagnosticFlags() {
-  std::vector<std::string> Res;
+  std::vector<std::string> Res{"-W", "-Wno-"};
   for (size_t I = 1; DiagGroupNames[I] != '\0';) {
     std::string Diag(DiagGroupNames + I + 1, DiagGroupNames[I]);
     I += DiagGroupNames[I] + 1;

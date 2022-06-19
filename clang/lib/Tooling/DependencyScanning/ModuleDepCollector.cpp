@@ -61,9 +61,17 @@ CompilerInvocation ModuleDepCollector::makeInvocationForModuleBuildWithoutPaths(
   CI.getLangOpts()->ModuleName = Deps.ID.ModuleName;
   CI.getFrontendOpts().IsSystemModule = Deps.IsSystem;
 
+  // Disable implicit modules and canonicalize options that are only used by
+  // implicit modules.
   CI.getLangOpts()->ImplicitModules = false;
   CI.getHeaderSearchOpts().ImplicitModuleMaps = false;
   CI.getHeaderSearchOpts().ModuleCachePath.clear();
+  CI.getHeaderSearchOpts().ModulesValidateOncePerBuildSession = false;
+  CI.getHeaderSearchOpts().BuildSessionTimestamp = 0;
+  // The specific values we canonicalize to for pruning don't affect behaviour,
+  /// so use the default values so they will be dropped from the command-line.
+  CI.getHeaderSearchOpts().ModuleCachePruneInterval = 7 * 24 * 60 * 60;
+  CI.getHeaderSearchOpts().ModuleCachePruneAfter = 31 * 24 * 60 * 60;
 
   // Report the prebuilt modules this module uses.
   for (const auto &PrebuiltModule : Deps.PrebuiltModuleDeps)
@@ -199,7 +207,7 @@ void ModuleDepCollectorPP::EndOfMainFile() {
   MDC.Consumer.handleDependencyOutputOpts(*MDC.Opts);
 
   for (auto &&I : MDC.ModularDeps)
-    MDC.Consumer.handleModuleDependency(I.second);
+    MDC.Consumer.handleModuleDependency(*I.second);
 
   for (auto &&I : MDC.FileDeps)
     MDC.Consumer.handleFileDependency(I);
@@ -212,11 +220,12 @@ ModuleID ModuleDepCollectorPP::handleTopLevelModule(const Module *M) {
   assert(M == M->getTopLevelModule() && "Expected top level module!");
 
   // If this module has been handled already, just return its ID.
-  auto ModI = MDC.ModularDeps.insert({M, ModuleDeps{}});
+  auto ModI = MDC.ModularDeps.insert({M, nullptr});
   if (!ModI.second)
-    return ModI.first->second.ID;
+    return ModI.first->second->ID;
 
-  ModuleDeps &MD = ModI.first->second;
+  ModI.first->second = std::make_unique<ModuleDeps>();
+  ModuleDeps &MD = *ModI.first->second;
 
   MD.ID.ModuleName = M->getFullModuleName();
   MD.ImportedByMainFile = DirectModularDeps.contains(M);
@@ -308,13 +317,28 @@ ModuleID ModuleDepCollectorPP::handleTopLevelModule(const Module *M) {
   return MD.ID;
 }
 
+static void forEachSubmoduleSorted(const Module *M,
+                                   llvm::function_ref<void(const Module *)> F) {
+  // Submodule order depends on order of header includes for inferred submodules
+  // we don't care about the exact order, so sort so that it's consistent across
+  // TUs to improve sharing.
+  SmallVector<const Module *> Submodules(M->submodule_begin(),
+                                         M->submodule_end());
+  llvm::stable_sort(Submodules, [](const Module *A, const Module *B) {
+    return A->Name < B->Name;
+  });
+  for (const Module *SubM : Submodules)
+    F(SubM);
+}
+
 void ModuleDepCollectorPP::addAllSubmodulePrebuiltDeps(
     const Module *M, ModuleDeps &MD,
     llvm::DenseSet<const Module *> &SeenSubmodules) {
   addModulePrebuiltDeps(M, MD, SeenSubmodules);
 
-  for (const Module *SubM : M->submodules())
+  forEachSubmoduleSorted(M, [&](const Module *SubM) {
     addAllSubmodulePrebuiltDeps(SubM, MD, SeenSubmodules);
+  });
 }
 
 void ModuleDepCollectorPP::addModulePrebuiltDeps(
@@ -332,8 +356,9 @@ void ModuleDepCollectorPP::addAllSubmoduleDeps(
     llvm::DenseSet<const Module *> &AddedModules) {
   addModuleDep(M, MD, AddedModules);
 
-  for (const Module *SubM : M->submodules())
+  forEachSubmoduleSorted(M, [&](const Module *SubM) {
     addAllSubmoduleDeps(SubM, MD, AddedModules);
+  });
 }
 
 void ModuleDepCollectorPP::addModuleDep(

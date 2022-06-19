@@ -686,18 +686,12 @@ void llvm::deleteDeadLoop(Loop *L, DominatorTree *DT, ScalarEvolution *SE,
   }
 }
 
-static Loop *getOutermostLoop(Loop *L) {
-  while (Loop *Parent = L->getParentLoop())
-    L = Parent;
-  return L;
-}
-
 void llvm::breakLoopBackedge(Loop *L, DominatorTree &DT, ScalarEvolution &SE,
                              LoopInfo &LI, MemorySSA *MSSA) {
   auto *Latch = L->getLoopLatch();
   assert(Latch && "multiple latches not yet supported");
   auto *Header = L->getHeader();
-  Loop *OutermostLoop = getOutermostLoop(L);
+  Loop *OutermostLoop = L->getOutermostLoop();
 
   SE.forgetLoop(L);
 
@@ -1531,6 +1525,11 @@ static PointerBounds expandBounds(const RuntimeCheckingPtrGroup *CG,
   LLVM_DEBUG(dbgs() << "LAA: Adding RT check for range:\n");
   Start = Exp.expandCodeFor(CG->Low, PtrArithTy, Loc);
   End = Exp.expandCodeFor(CG->High, PtrArithTy, Loc);
+  if (CG->NeedsFreeze) {
+    IRBuilder<> Builder(Loc);
+    Start = Builder.CreateFreeze(Start, Start->getName() + ".fr");
+    End = Builder.CreateFreeze(End, End->getName() + ".fr");
+  }
   LLVM_DEBUG(dbgs() << "Start: " << *CG->Low << " End: " << *CG->High << "\n");
   return {Start, End};
 }
@@ -1629,6 +1628,11 @@ Value *llvm::addDiffRuntimeChecks(
                              ConstantInt::get(Ty, IC * C.AccessSize));
     Value *Sink = Expander.expandCodeFor(C.SinkStart, Ty, Loc);
     Value *Src = Expander.expandCodeFor(C.SrcStart, Ty, Loc);
+    if (C.NeedsFreeze) {
+      IRBuilder<> Builder(Loc);
+      Sink = Builder.CreateFreeze(Sink, Sink->getName() + ".fr");
+      Src = Builder.CreateFreeze(Src, Src->getName() + ".fr");
+    }
     Value *Diff = ChkBuilder.CreateSub(Sink, Src);
     Value *IsConflict =
         ChkBuilder.CreateICmpULT(Diff, VFTimesUFTimesSize, "diff.check");

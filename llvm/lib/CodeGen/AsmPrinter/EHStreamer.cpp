@@ -457,7 +457,7 @@ MCSymbol *EHStreamer::emitExceptionTable() {
   // Sometimes we want not to emit the data into separate section (e.g. ARM
   // EHABI). In this case LSDASection will be NULL.
   if (LSDASection)
-    Asm->OutStreamer->SwitchSection(LSDASection);
+    Asm->OutStreamer->switchSection(LSDASection);
   Asm->emitAlignment(Align(4));
 
   // Emit the LSDA.
@@ -805,7 +805,7 @@ void EHStreamer::emitTypeInfos(unsigned TTypeEncoding, MCSymbol *TTBaseLabel) {
   // Emit the Catch TypeInfos.
   if (VerboseAsm && !TypeInfos.empty()) {
     Asm->OutStreamer->AddComment(">> Catch TypeInfos <<");
-    Asm->OutStreamer->AddBlankLine();
+    Asm->OutStreamer->addBlankLine();
     Entry = TypeInfos.size();
   }
 
@@ -820,7 +820,7 @@ void EHStreamer::emitTypeInfos(unsigned TTypeEncoding, MCSymbol *TTBaseLabel) {
   // Emit the Exception Specifications.
   if (VerboseAsm && !FilterIds.empty()) {
     Asm->OutStreamer->AddComment(">> Filter TypeInfos <<");
-    Asm->OutStreamer->AddBlankLine();
+    Asm->OutStreamer->addBlankLine();
     Entry = 0;
   }
   for (std::vector<unsigned>::const_iterator

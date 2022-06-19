@@ -1768,7 +1768,9 @@ struct SymbolVisitor {
   template <typename A>
   bool Pre(const A &x) {
     if constexpr (Fortran::parser::HasTypedExpr<A>::value)
-      if (const auto *expr = Fortran::semantics::GetExpr(x))
+      // Some parse tree Expr may legitimately be un-analyzed after semantics
+      // (for instance PDT component initial value in the PDT definition body).
+      if (const auto *expr = Fortran::semantics::GetExpr(nullptr, x))
         visitExpr(*expr);
     return true;
   }
@@ -1806,6 +1808,15 @@ void Fortran::lower::pft::visitAllSymbols(
     const std::function<void(const Fortran::semantics::Symbol &)> callBack) {
   SymbolVisitor visitor{callBack};
   funit.visit([&](const auto &functionParserNode) {
+    parser::Walk(functionParserNode, visitor);
+  });
+}
+
+void Fortran::lower::pft::visitAllSymbols(
+    const Fortran::lower::pft::Evaluation &eval,
+    const std::function<void(const Fortran::semantics::Symbol &)> callBack) {
+  SymbolVisitor visitor{callBack};
+  eval.visit([&](const auto &functionParserNode) {
     parser::Walk(functionParserNode, visitor);
   });
 }

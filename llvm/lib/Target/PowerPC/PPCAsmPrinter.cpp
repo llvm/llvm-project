@@ -882,7 +882,7 @@ void PPCAsmPrinter::emitInstruction(const MachineInstr *MI) {
 
       // Print MO for better readability
       if (isVerbose())
-        OutStreamer->GetCommentOS() << MO << '\n';
+        OutStreamer->getCommentOS() << MO << '\n';
       EmitToStreamer(*OutStreamer, TmpInst);
       return;
     }
@@ -953,7 +953,7 @@ void PPCAsmPrinter::emitInstruction(const MachineInstr *MI) {
 
     // Print MO for better readability
     if (isVerbose() && IsAIX)
-      OutStreamer->GetCommentOS() << MO << '\n';
+      OutStreamer->getCommentOS() << MO << '\n';
     EmitToStreamer(*OutStreamer, TmpInst);
     return;
   }
@@ -1585,7 +1585,7 @@ void PPCLinuxAsmPrinter::emitStartOfAsmFile(Module &M) {
   if (M.getPICLevel() == PICLevel::SmallPIC)
     return AsmPrinter::emitStartOfAsmFile(M);
 
-  OutStreamer->SwitchSection(OutContext.getELFSection(
+  OutStreamer->switchSection(OutContext.getELFSection(
       ".got2", ELF::SHT_PROGBITS, ELF::SHF_WRITE | ELF::SHF_ALLOC));
 
   MCSymbol *TOCSym = OutContext.getOrCreateSymbol(Twine(".LTOC"));
@@ -1602,7 +1602,7 @@ void PPCLinuxAsmPrinter::emitStartOfAsmFile(Module &M) {
 
   OutStreamer->emitAssignment(TOCSym, tocExpr);
 
-  OutStreamer->SwitchSection(getObjFileLowering().getTextSection());
+  OutStreamer->switchSection(getObjFileLowering().getTextSection());
 }
 
 void PPCLinuxAsmPrinter::emitFunctionEntryLabel() {
@@ -1660,7 +1660,7 @@ void PPCLinuxAsmPrinter::emitFunctionEntryLabel() {
   MCSectionSubPair Current = OutStreamer->getCurrentSection();
   MCSectionELF *Section = OutStreamer->getContext().getELFSection(
       ".opd", ELF::SHT_PROGBITS, ELF::SHF_WRITE | ELF::SHF_ALLOC);
-  OutStreamer->SwitchSection(Section);
+  OutStreamer->switchSection(Section);
   OutStreamer->emitLabel(CurrentFnSym);
   OutStreamer->emitValueToAlignment(8);
   MCSymbol *Symbol1 = CurrentFnSymForSize;
@@ -1675,7 +1675,7 @@ void PPCLinuxAsmPrinter::emitFunctionEntryLabel() {
     8/*size*/);
   // Emit a null environment pointer.
   OutStreamer->emitIntValue(0, 8 /* size */);
-  OutStreamer->SwitchSection(Current.first, Current.second);
+  OutStreamer->switchSection(Current.first, Current.second);
 }
 
 void PPCLinuxAsmPrinter::emitEndOfAsmFile(Module &M) {
@@ -1692,7 +1692,7 @@ void PPCLinuxAsmPrinter::emitEndOfAsmFile(Module &M) {
     const char *Name = isPPC64 ? ".toc" : ".got2";
     MCSectionELF *Section = OutContext.getELFSection(
         Name, ELF::SHT_PROGBITS, ELF::SHF_WRITE | ELF::SHF_ALLOC);
-    OutStreamer->SwitchSection(Section);
+    OutStreamer->switchSection(Section);
     if (!isPPC64)
       OutStreamer->emitValueToAlignment(4);
 
@@ -1964,7 +1964,7 @@ void PPCAIXAsmPrinter::emitFunctionBodyEnd() {
   if (!TargetLoweringObjectFileXCOFF::ShouldEmitEHBlock(MF) &&
       (getNumberOfVRSaved() > 0)) {
     // Emit dummy EH Info Table.
-    OutStreamer->SwitchSection(getObjFileLowering().getCompactUnwindSection());
+    OutStreamer->switchSection(getObjFileLowering().getCompactUnwindSection());
     MCSymbol *EHInfoLabel =
         TargetLoweringObjectFileXCOFF::getEHInfoTableSymbol(MF);
     OutStreamer->emitLabel(EHInfoLabel);
@@ -1979,7 +1979,7 @@ void PPCAIXAsmPrinter::emitFunctionBodyEnd() {
 
     OutStreamer->emitIntValue(0, PointerSize);
     OutStreamer->emitIntValue(0, PointerSize);
-    OutStreamer->SwitchSection(MF->getSection());
+    OutStreamer->switchSection(MF->getSection());
   }
 }
 
@@ -2390,9 +2390,9 @@ void PPCAIXAsmPrinter::emitGlobalVariableHelper(const GlobalVariable *GV) {
   // Print GV in verbose mode
   if (isVerbose()) {
     if (GV->hasInitializer()) {
-      GV->printAsOperand(OutStreamer->GetCommentOS(),
+      GV->printAsOperand(OutStreamer->getCommentOS(),
                          /*PrintType=*/false, GV->getParent());
-      OutStreamer->GetCommentOS() << '\n';
+      OutStreamer->getCommentOS() << '\n';
     }
   }
 
@@ -2400,7 +2400,7 @@ void PPCAIXAsmPrinter::emitGlobalVariableHelper(const GlobalVariable *GV) {
       getObjFileLowering().SectionForGlobal(GV, GVKind, TM));
 
   // Switch to the containing csect.
-  OutStreamer->SwitchSection(Csect);
+  OutStreamer->switchSection(Csect);
 
   const DataLayout &DL = GV->getParent()->getDataLayout();
 
@@ -2432,9 +2432,8 @@ void PPCAIXAsmPrinter::emitGlobalVariableHelper(const GlobalVariable *GV) {
   }
 
   // Emit aliasing label for global variable.
-  llvm::for_each(GOAliasMap[GV], [this](const GlobalAlias *Alias) {
+  for (const GlobalAlias *Alias : GOAliasMap[GV])
     OutStreamer->emitLabel(getSymbol(Alias));
-  });
 
   emitGlobalConstant(GV->getParent()->getDataLayout(), GV->getInitializer());
 }
@@ -2445,14 +2444,12 @@ void PPCAIXAsmPrinter::emitFunctionDescriptor() {
 
   MCSectionSubPair Current = OutStreamer->getCurrentSection();
   // Emit function descriptor.
-  OutStreamer->SwitchSection(
+  OutStreamer->switchSection(
       cast<MCSymbolXCOFF>(CurrentFnDescSym)->getRepresentedCsect());
 
   // Emit aliasing label for function descriptor csect.
-  llvm::for_each(GOAliasMap[&MF->getFunction()],
-                 [this](const GlobalAlias *Alias) {
-                   OutStreamer->emitLabel(getSymbol(Alias));
-                 });
+  for (const GlobalAlias *Alias : GOAliasMap[&MF->getFunction()])
+    OutStreamer->emitLabel(getSymbol(Alias));
 
   // Emit function entry point address.
   OutStreamer->emitValue(MCSymbolRefExpr::create(CurrentFnSym, OutContext),
@@ -2466,7 +2463,7 @@ void PPCAIXAsmPrinter::emitFunctionDescriptor() {
   // Emit a null environment pointer.
   OutStreamer->emitIntValue(0, PointerSize);
 
-  OutStreamer->SwitchSection(Current.first, Current.second);
+  OutStreamer->switchSection(Current.first, Current.second);
 }
 
 void PPCAIXAsmPrinter::emitFunctionEntryLabel() {
@@ -2476,11 +2473,9 @@ void PPCAIXAsmPrinter::emitFunctionEntryLabel() {
     PPCAsmPrinter::emitFunctionEntryLabel();
 
   // Emit aliasing label for function entry point label.
-  llvm::for_each(
-      GOAliasMap[&MF->getFunction()], [this](const GlobalAlias *Alias) {
-        OutStreamer->emitLabel(
-            getObjFileLowering().getFunctionEntryPointSymbol(Alias, TM));
-      });
+  for (const GlobalAlias *Alias : GOAliasMap[&MF->getFunction()])
+    OutStreamer->emitLabel(
+        getObjFileLowering().getFunctionEntryPointSymbol(Alias, TM));
 }
 
 void PPCAIXAsmPrinter::emitPGORefs() {
@@ -2492,7 +2487,7 @@ void PPCAIXAsmPrinter::emitPGORefs() {
         XCOFF::CsectProperties(XCOFF::XMC_RW, XCOFF::XTY_SD),
         /*MultiSymbolsAllowed*/ true);
 
-    OutStreamer->SwitchSection(CntsSection);
+    OutStreamer->switchSection(CntsSection);
     if (OutContext.hasXCOFFSection(
             "__llvm_prf_data",
             XCOFF::CsectProperties(XCOFF::XMC_RW, XCOFF::XTY_SD)))
@@ -2517,7 +2512,7 @@ void PPCAIXAsmPrinter::emitEndOfAsmFile(Module &M) {
   emitPGORefs();
 
   // Switch to section to emit TOC base.
-  OutStreamer->SwitchSection(getObjFileLowering().getTOCBaseSection());
+  OutStreamer->switchSection(getObjFileLowering().getTOCBaseSection());
 
   PPCTargetStreamer *TS =
       static_cast<PPCTargetStreamer *>(OutStreamer->getTargetStreamer());
@@ -2539,7 +2534,7 @@ void PPCAIXAsmPrinter::emitEndOfAsmFile(Module &M) {
       TCEntry = cast<MCSectionXCOFF>(
           getObjFileLowering().getSectionForTOCEntry(I.first.first, TM));
     }
-    OutStreamer->SwitchSection(TCEntry);
+    OutStreamer->switchSection(TCEntry);
 
     OutStreamer->emitLabel(I.second);
     if (TS != nullptr)

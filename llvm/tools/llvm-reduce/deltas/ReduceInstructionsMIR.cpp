@@ -14,6 +14,7 @@
 #include "ReduceInstructionsMIR.h"
 #include "Delta.h"
 
+#include "llvm/ADT/SetVector.h"
 #include "llvm/CodeGen/MachineDominators.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
@@ -105,14 +106,17 @@ static void extractInstrFromFunction(Oracle &O, MachineFunction &MF) {
         MachineBasicBlock::reverse_iterator RI(*MI);
         MachineBasicBlock *BB = MI->getParent();
         ++RI;
-        while (NewReg == 0 && BB) {
-          NewReg = getPrevDefOfRCInMBB(*BB, RI, RegRC, RegTy, ToDelete);
-          // Prepare for idom(BB).
-          if (auto *IDM = MDT.getNode(BB)->getIDom()) {
-            BB = IDM->getBlock();
-            RI = BB->rbegin();
-          } else {
-            BB = nullptr;
+
+        if (MDT.isReachableFromEntry(BB)) {
+          while (NewReg == 0 && BB) {
+            NewReg = getPrevDefOfRCInMBB(*BB, RI, RegRC, RegTy, ToDelete);
+            // Prepare for idom(BB).
+            if (auto *IDM = MDT.getNode(BB)->getIDom()) {
+              BB = IDM->getBlock();
+              RI = BB->rbegin();
+            } else {
+              BB = nullptr;
+            }
           }
         }
       }

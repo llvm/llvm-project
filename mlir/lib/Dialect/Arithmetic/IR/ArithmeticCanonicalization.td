@@ -187,4 +187,22 @@ def OrOfExtSI :
     Pat<(Arith_OrIOp (Arith_ExtSIOp $x), (Arith_ExtSIOp $y)), (Arith_ExtSIOp (Arith_OrIOp $x, $y)),
       [(Constraint<CPred<"$0.getType() == $1.getType()">> $x, $y)]>;
 
+//===----------------------------------------------------------------------===//
+// MulFOp
+//===----------------------------------------------------------------------===//
+
+// mulf(negf(x), negf(y)) -> mulf(x,y)
+def MulFOfNegF :
+    Pat<(Arith_MulFOp (Arith_NegFOp $x), (Arith_NegFOp $y)), (Arith_MulFOp $x, $y),
+      [(Constraint<CPred<"$0.getType() == $1.getType()">> $x, $y)]>;
+
+//===----------------------------------------------------------------------===//
+// DivFOp
+//===----------------------------------------------------------------------===//
+
+// divf(negf(x), negf(y)) -> divf(x,y)
+def DivFOfNegF :
+    Pat<(Arith_DivFOp (Arith_NegFOp $x), (Arith_NegFOp $y)), (Arith_DivFOp $x, $y),
+      [(Constraint<CPred<"$0.getType() == $1.getType()">> $x, $y)]>;
+
 #endif // ARITHMETIC_PATTERNS

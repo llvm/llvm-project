@@ -11,7 +11,7 @@ module attributes {
         StorageBuffer16BitAccess, StorageUniform16, StoragePushConstant16,
         StorageBuffer8BitAccess, UniformAndStorageBuffer8BitAccess, StoragePushConstant8
       ],
-      [SPV_KHR_16bit_storage, SPV_KHR_8bit_storage, SPV_KHR_storage_buffer_storage_class]>, {}>
+      [SPV_KHR_16bit_storage, SPV_KHR_8bit_storage, SPV_KHR_storage_buffer_storage_class]>, #spv.resource_limits<>>
 } {
 
 // CHECK-LABEL: @load_store_zero_rank_float
@@ -114,7 +114,7 @@ func.func @store_i1(%dst: memref<4xi1>, %i: index) {
 // TODO: Test i64 types.
 module attributes {
   spv.target_env = #spv.target_env<
-    #spv.vce<v1.0, [Shader], [SPV_KHR_storage_buffer_storage_class]>, {}>
+    #spv.vce<v1.0, [Shader], [SPV_KHR_storage_buffer_storage_class]>, #spv.resource_limits<>>
 } {
 
 // CHECK-LABEL: @load_i1
@@ -314,7 +314,7 @@ func.func @store_f32(%arg0: memref<f32>, %value: f32) {
 module attributes {
   spv.target_env = #spv.target_env<
     #spv.vce<v1.0, [Int16, StorageBuffer16BitAccess, Shader],
-    [SPV_KHR_storage_buffer_storage_class, SPV_KHR_16bit_storage]>, {}>
+    [SPV_KHR_storage_buffer_storage_class, SPV_KHR_16bit_storage]>, #spv.resource_limits<>>
 } {
 
 // CHECK-LABEL: @load_i8

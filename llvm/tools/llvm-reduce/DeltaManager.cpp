@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "DeltaManager.h"
+#include "ReducerWorkItem.h"
 #include "TestRunner.h"
 #include "deltas/Delta.h"
 #include "deltas/ReduceAliases.h"
@@ -34,8 +35,10 @@
 #include "deltas/ReduceOperands.h"
 #include "deltas/ReduceOperandsSkip.h"
 #include "deltas/ReduceOperandsToArgs.h"
+#include "deltas/ReduceRegisterUses.h"
 #include "deltas/ReduceSpecialGlobals.h"
 #include "deltas/ReduceVirtualRegisters.h"
+#include "deltas/SimplifyInstructions.h"
 #include "llvm/Support/CommandLine.h"
 
 using namespace llvm;
@@ -60,6 +63,7 @@ static cl::opt<std::string>
   DELTA_PASS("metadata", reduceMetadataDeltaPass)                              \
   DELTA_PASS("arguments", reduceArgumentsDeltaPass)                            \
   DELTA_PASS("instructions", reduceInstructionsDeltaPass)                      \
+  DELTA_PASS("simplify-instructions", simplifyInstructionsDeltaPass)           \
   DELTA_PASS("operands-zero", reduceOperandsZeroDeltaPass)                     \
   DELTA_PASS("operands-one", reduceOperandsOneDeltaPass)                       \
   DELTA_PASS("operands-undef", reduceOperandsUndefDeltaPass)                   \
@@ -76,6 +80,7 @@ static cl::opt<std::string>
   DELTA_PASS("ir-block-references", reduceIRBlockReferencesDeltaPass)          \
   DELTA_PASS("ir-function-references", reduceIRFunctionReferencesDeltaPass)    \
   DELTA_PASS("instruction-flags", reduceInstructionFlagsMIRDeltaPass)          \
+  DELTA_PASS("register-uses", reduceRegisterUsesMIRDeltaPass)                  \
   DELTA_PASS("register-hints", reduceVirtualRegisterHintsDeltaPass)
 
 static void runAllDeltaPasses(TestRunner &Tester) {

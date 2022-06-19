@@ -17,10 +17,10 @@ entry:
 define <2 x i64> @test1(<2 x i64> %x, <2 x i64> %y) nounwind {
 entry:
   %conv.i94 = bitcast <2 x i64> %y to <4 x i32>   ; <<4 x i32>> [#uses=1]
-  %sub.i97 = sub <4 x i32> %conv.i94, undef       ; <<4 x i32>> [#uses=1]
+  %sub.i97 = sub <4 x i32> %conv.i94, poison       ; <<4 x i32>> [#uses=1]
   %conv3.i98 = bitcast <4 x i32> %sub.i97 to <2 x i64> ; <<2 x i64>> [#uses=2]
   %conv2.i86 = bitcast <2 x i64> %conv3.i98 to <4 x i32> ; <<4 x i32>> [#uses=1]
-  %cmp.i87 = icmp sgt <4 x i32> undef, %conv2.i86 ; <<4 x i1>> [#uses=1]
+  %cmp.i87 = icmp sgt <4 x i32> poison, %conv2.i86 ; <<4 x i1>> [#uses=1]
   %sext.i88 = sext <4 x i1> %cmp.i87 to <4 x i32> ; <<4 x i32>> [#uses=1]
   %conv3.i89 = bitcast <4 x i32> %sext.i88 to <2 x i64> ; <<2 x i64>> [#uses=1]
   %and.i = and <2 x i64> %conv3.i89, %conv3.i98   ; <<2 x i64>> [#uses=1]
@@ -35,12 +35,12 @@ entry:
 ; PR4908
 define void @test2(<1 x i16>* nocapture %b, i32* nocapture %c) nounwind ssp {
 entry:
-  %arrayidx = getelementptr inbounds <1 x i16>, <1 x i16>* %b, i64 undef ; <<1 x i16>*>
+  %arrayidx = getelementptr inbounds <1 x i16>, <1 x i16>* %b, i64 0 ; <<1 x i16>*>
   %tmp2 = load <1 x i16>, <1 x i16>* %arrayidx               ; <<1 x i16>> [#uses=1]
   %tmp6 = bitcast <1 x i16> %tmp2 to i16          ; <i16> [#uses=1]
   %tmp7 = zext i16 %tmp6 to i32                   ; <i32> [#uses=1]
   %ins = or i32 0, %tmp7                          ; <i32> [#uses=1]
-  %arrayidx20 = getelementptr inbounds i32, i32* %c, i64 undef ; <i32*> [#uses=1]
+  %arrayidx20 = getelementptr inbounds i32, i32* %c, i64 0 ; <i32*> [#uses=1]
   store i32 %ins, i32* %arrayidx20
   ret void
 }
@@ -131,8 +131,8 @@ define i32 @test5a() {
        ret i32 0
 }
 
-define void @test5() personality i32 (...)* @__gxx_personality_v0 {
-  store i1 true, i1* undef
+define void @test5(i1* %ptr) personality i32 (...)* @__gxx_personality_v0 {
+  store i1 true, i1* %ptr
   %r = invoke i32 @test5a() to label %exit unwind label %unwind
 unwind:
   %exn = landingpad {i8*, i32}
@@ -207,10 +207,10 @@ declare void @_Unwind_Resume_or_Rethrow(i8*)
 
 
 ; rdar://7590304
-define i8* @test10(i8* %self, i8* %tmp3) personality i32 (...)* @__gxx_personality_v0 {
+define i8* @test10(i8* %self, i8* %tmp3, i1* %ptr1, i1* %ptr2) personality i32 (...)* @__gxx_personality_v0 {
 entry:
-  store i1 true, i1* undef
-  store i1 true, i1* undef
+  store i1 true, i1* %ptr1
+  store i1 true, i1* %ptr2
   invoke void @test10a()
           to label %invoke.cont unwind label %try.handler ; <i8*> [#uses=0]
 
@@ -249,21 +249,21 @@ entry:
   %cmp3 = icmp ne i32 %tmp2, 0                    ; <i1> [#uses=1]
   %conv4 = zext i1 %cmp3 to i32                   ; <i32> [#uses=1]
   %or = or i32 %conv, %conv4                      ; <i32> [#uses=1]
-  %cmp5 = icmp ugt i32 undef, %or                 ; <i1> [#uses=1]
+  %cmp5 = icmp ugt i32 0, %or                 ; <i1> [#uses=1]
   %conv6 = zext i1 %cmp5 to i32                   ; <i32> [#uses=0]
   ret void
 }
 
 %s1 = type { %s2, %s2, [6 x %s2], i32, i32, i32, [1 x i32], [0 x i8] }
 %s2 = type { i64 }
-define void @test13() nounwind ssp {
+define void @test13(i32* %ptr1, i32* %ptr2, i32* %ptr3) nounwind {
 entry:
   %0 = getelementptr inbounds %s1, %s1* null, i64 0, i32 2, i64 0, i32 0
   %1 = bitcast i64* %0 to i32*
   %2 = getelementptr inbounds %s1, %s1* null, i64 0, i32 2, i64 1, i32 0
   %.pre = load i32, i32* %1, align 8
   %3 = lshr i32 %.pre, 19
-  %brmerge = or i1 undef, undef
+  %brmerge = or i1 1, 0
   %4 = and i32 %3, 3
   %5 = add nsw i32 %4, 1
   %6 = shl i32 %5, 19
@@ -277,13 +277,13 @@ entry:
   %13 = and i32 %12, -24577
   %14 = or i32 %13, 16384
   %15 = or i32 %14, 98304
-  store i32 %15, i32* undef, align 8
+  store i32 %15, i32* %ptr1, align 8
   %16 = and i32 %15, -1572865
   %17 = or i32 %16, %8
-  store i32 %17, i32* undef, align 8
+  store i32 %17, i32* %ptr2, align 8
   %18 = and i32 %17, -449
   %19 = or i32 %18, 64
-  store i32 %19, i32* undef, align 8
+  store i32 %19, i32* %ptr3, align 8
   unreachable
 }
 
@@ -291,10 +291,10 @@ entry:
 ; PR8807
 declare i32 @test14f(i8* (i8*)*) nounwind
 
-define void @test14() nounwind readnone {
+define void @test14(i32* %ptr) nounwind readnone {
 entry:
   %tmp = bitcast i32 (i8* (i8*)*)* @test14f to i32 (i32*)*
-  %call10 = call i32 %tmp(i32* byval(i32) undef)
+  %call10 = call i32 %tmp(i32* byval(i32) %ptr)
   ret void
 }
 
@@ -302,7 +302,7 @@ entry:
 ; PR8896
 @g_54 = external global [7 x i16]
 
-define void @test15(i32* %p_92) nounwind {
+define void @test15(i32* %p_92, i1 %c1) nounwind {
 entry:
 %0 = load i32, i32* %p_92, align 4
 %1 = icmp ne i32 %0, 0
@@ -311,7 +311,7 @@ entry:
 %4 = trunc i32 %3 to i16
 %5 = sext i16 %4 to i32
 %6 = trunc i32 %5 to i16
-br i1 undef, label %"3", label %"5"
+br i1 %c1, label %"3", label %"5"
 
 "3":                                              ; preds = %entry
 %7 = sext i16 %6 to i32
@@ -349,7 +349,7 @@ define double @test16(i32 %a) nounwind {
 
 define %struct.basic_ios *@test17() ssp {
 entry:
-  %add.ptr.i = getelementptr i8, i8* null, i64 undef
+  %add.ptr.i = getelementptr i8, i8* null, i64 0
   %0 = bitcast i8* %add.ptr.i to %struct.basic_ios*
   ret %struct.basic_ios* %0
 }

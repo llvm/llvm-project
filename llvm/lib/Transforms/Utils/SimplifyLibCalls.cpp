@@ -201,6 +201,11 @@ static Value *copyFlags(const CallInst &Old, Value *New) {
   return New;
 }
 
+// Helper to avoid truncating the length if size_t is 32-bits.
+static StringRef substr(StringRef Str, uint64_t Len) {
+  return Len >= Str.size() ? Str : Str.substr(0, Len);
+}
+
 //===----------------------------------------------------------------------===//
 // String and Memory Library Call Optimizations
 //===----------------------------------------------------------------------===//
@@ -452,10 +457,8 @@ Value *LibCallSimplifier::optimizeStrNCmp(CallInst *CI, IRBuilderBase &B) {
   // strncmp(x, y)  -> cnst  (if both x and y are constant strings)
   if (HasStr1 && HasStr2) {
     // Avoid truncating the 64-bit Length to 32 bits in ILP32.
-    StringRef::size_type MinLen1 = std::min((uint64_t)Str1.size(), Length);
-    StringRef::size_type MinLen2 = std::min((uint64_t)Str2.size(), Length);
-    StringRef SubStr1 = Str1.substr(0, MinLen1);
-    StringRef SubStr2 = Str2.substr(0, MinLen2);
+    StringRef SubStr1 = substr(Str1, Length);
+    StringRef SubStr2 = substr(Str2, Length);
     return ConstantInt::get(CI->getType(), SubStr1.compare(SubStr2));
   }
 
@@ -1003,11 +1006,12 @@ Value *LibCallSimplifier::optimizeMemChr(CallInst *CI, IRBuilderBase &B) {
   Value *CharVal = CI->getArgOperand(1);
   ConstantInt *CharC = dyn_cast<ConstantInt>(CharVal);
   ConstantInt *LenC = dyn_cast<ConstantInt>(Size);
+  Value *NullPtr = Constant::getNullValue(CI->getType());
 
   // memchr(x, y, 0) -> null
   if (LenC) {
     if (LenC->isZero())
-      return Constant::getNullValue(CI->getType());
+      return NullPtr;
 
     if (LenC->isOne()) {
       // Fold memchr(x, y, 1) --> *x == y ? x : null for any x and y,
@@ -1016,7 +1020,6 @@ Value *LibCallSimplifier::optimizeMemChr(CallInst *CI, IRBuilderBase &B) {
       // Slice off the character's high end bits.
       CharVal = B.CreateTrunc(CharVal, B.getInt8Ty());
       Value *Cmp = B.CreateICmpEQ(Val, CharVal, "memchr.char0cmp");
-      Value *NullPtr = Constant::getNullValue(CI->getType());
       return B.CreateSelect(Cmp, SrcStr, NullPtr, "memchr.sel");
     }
   }
@@ -1030,27 +1033,61 @@ Value *LibCallSimplifier::optimizeMemChr(CallInst *CI, IRBuilderBase &B) {
     if (Pos == StringRef::npos)
       // When the character is not in the source array fold the result
       // to null regardless of Size.
-      return Constant::getNullValue(CI->getType());
+      return NullPtr;
 
     // Fold memchr(s, c, n) -> n <= Pos ? null : s + Pos
     // When the constant Size is less than or equal to the character
     // position also fold the result to null.
     Value *Cmp = B.CreateICmpULE(Size, ConstantInt::get(Size->getType(), Pos),
                                  "memchr.cmp");
-    Value *NullPtr = Constant::getNullValue(CI->getType());
     Value *SrcPlus =
         B.CreateGEP(B.getInt8Ty(), SrcStr, B.getInt64(Pos), "memchr.ptr");
     return B.CreateSelect(Cmp, NullPtr, SrcPlus);
   }
 
+  if (LenC)
+    Str = substr(Str, LenC->getZExtValue());
+
+  size_t Pos = Str.find_first_not_of(Str[0]);
+  if (Pos == StringRef::npos
+      || Str.find_first_not_of(Str[Pos], Pos) == StringRef::npos) {
+    // If the source array consists of at most two consecutive sequences
+    // of the same characters, then for any C and N (whether in bounds or
+    // not), fold memchr(S, C, N) to
+    //   N != 0 && *S == C ? S : null
+    // or for the two sequences to:
+    //   N != 0 && *S == C ? S : (N > Pos && S[Pos] == C ? S + Pos : null)
+    //   ^Sel2                   ^Sel1 are denoted above.
+    // The latter makes it also possible to fold strchr() calls with strings
+    // of the same characters.
+    Type *SizeTy = Size->getType();
+    Type *Int8Ty = B.getInt8Ty();
+
+    // Slice off the sought character's high end bits.
+    CharVal = B.CreateTrunc(CharVal, Int8Ty);
+
+    Value *Sel1 = NullPtr;
+    if (Pos != StringRef::npos) {
+      // Handle two consecutive sequences of the same characters.
+      Value *PosVal = ConstantInt::get(SizeTy, Pos);
+      Value *StrPos = ConstantInt::get(Int8Ty, Str[Pos]);
+      Value *CEqSPos = B.CreateICmpEQ(CharVal, StrPos);
+      Value *NGtPos = B.CreateICmp(ICmpInst::ICMP_UGT, Size, PosVal);
+      Value *And = B.CreateAnd(CEqSPos, NGtPos);
+      Value *SrcPlus = B.CreateInBoundsGEP(B.getInt8Ty(), SrcStr, PosVal);
+      Sel1 = B.CreateSelect(And, SrcPlus, NullPtr, "memchr.sel1");
+    }
+
+    Value *Str0 = ConstantInt::get(Int8Ty, Str[0]);
+    Value *CEqS0 = B.CreateICmpEQ(Str0, CharVal);
+    Value *NNeZ = B.CreateICmpNE(Size, ConstantInt::get(SizeTy, 0));
+    Value *And = B.CreateAnd(NNeZ, CEqS0);
+    return B.CreateSelect(And, SrcStr, Sel1, "memchr.sel2");
+  }
+
   if (!LenC)
     // From now on we need a constant length and constant array.
     return nullptr;
-
-  // Truncate the string to LenC without slicing when targeting LP64
-  // on an ILP32 host.
-  uint64_t EndOff = std::min(LenC->getZExtValue(), (uint64_t)StringRef::npos);
-  Str = Str.substr(0, EndOff);
 
   // If the char is variable but the input str and length are not we can turn
   // this memchr call into a simple bit field test. Of course this only works
@@ -1105,6 +1142,45 @@ Value *LibCallSimplifier::optimizeMemChr(CallInst *CI, IRBuilderBase &B) {
                           CI->getType());
 }
 
+// Optimize a memcmp call CI with constant arrays LHS and RHS and nonconstant
+// Size.
+static Value *optimizeMemCmpVarSize(CallInst *CI, Value *LHS, Value *RHS,
+                                    Value *Size, IRBuilderBase &B,
+                                    const DataLayout &DL) {
+  if (LHS == RHS) // memcmp(s,s,x) -> 0
+    return Constant::getNullValue(CI->getType());
+
+  StringRef LStr, RStr;
+  if (!getConstantStringInfo(LHS, LStr, 0, /*TrimAtNul=*/false) ||
+      !getConstantStringInfo(RHS, RStr, 0, /*TrimAtNul=*/false))
+    return nullptr;
+
+  // If the contents of both constant arrays are known, fold a call to
+  // memcmp(A, B, N) to
+  //   N <= Pos ? 0 : (A < B ? -1 : B < A ? +1 : 0)
+  // where Pos is the first mismatch between A and B, determined below.
+
+  Value *Zero = ConstantInt::get(CI->getType(), 0);
+
+  uint64_t MinSize = std::min(LStr.size(), RStr.size());
+  for (uint64_t Pos = 0; Pos < MinSize; ++Pos) {
+    if (LStr[Pos] != RStr[Pos]) {
+      Value *MaxSize = ConstantInt::get(Size->getType(), Pos);
+      Value *Cmp = B.CreateICmp(ICmpInst::ICMP_ULE, Size, MaxSize);
+      typedef unsigned char UChar;
+      int IRes = UChar(LStr[Pos]) < UChar(RStr[Pos]) ? -1 : 1;
+      Value *Res = ConstantInt::get(CI->getType(), IRes);
+      return B.CreateSelect(Cmp, Zero, Res);
+    }
+  }
+
+  // One array is a leading part of the other of equal or greater size.
+  // Fold the result to zero.  Size is assumed to be in bounds, since
+  // otherwise the call would be undefined.
+  return Zero;
+}
+
+// Optimize a memcmp call CI with constant size Len.
 static Value *optimizeMemCmpConstantSize(CallInst *CI, Value *LHS, Value *RHS,
                                          uint64_t Len, IRBuilderBase &B,
                                          const DataLayout &DL) {
@@ -1159,25 +1235,6 @@ static Value *optimizeMemCmpConstantSize(CallInst *CI, Value *LHS, Value *RHS,
     }
   }
 
-  // Constant folding: memcmp(x, y, Len) -> constant (all arguments are const).
-  // TODO: This is limited to i8 arrays.
-  StringRef LHSStr, RHSStr;
-  if (getConstantStringInfo(LHS, LHSStr) &&
-      getConstantStringInfo(RHS, RHSStr)) {
-    // Make sure we're not reading out-of-bounds memory.
-    if (Len > LHSStr.size() || Len > RHSStr.size())
-      return nullptr;
-    // Fold the memcmp and normalize the result.  This way we get consistent
-    // results across multiple platforms.
-    uint64_t Ret = 0;
-    int Cmp = memcmp(LHSStr.data(), RHSStr.data(), Len);
-    if (Cmp < 0)
-      Ret = -1;
-    else if (Cmp > 0)
-      Ret = 1;
-    return ConstantInt::get(CI->getType(), Ret);
-  }
-
   return nullptr;
 }
 
@@ -1187,23 +1244,17 @@ Value *LibCallSimplifier::optimizeMemCmpBCmpCommon(CallInst *CI,
   Value *LHS = CI->getArgOperand(0), *RHS = CI->getArgOperand(1);
   Value *Size = CI->getArgOperand(2);
 
-  if (LHS == RHS) // memcmp(s,s,x) -> 0
-    return Constant::getNullValue(CI->getType());
-
   annotateNonNullAndDereferenceable(CI, {0, 1}, Size, DL);
-  // Handle constant lengths.
+
+  if (Value *Res = optimizeMemCmpVarSize(CI, LHS, RHS, Size, B, DL))
+    return Res;
+
+  // Handle constant Size.
   ConstantInt *LenC = dyn_cast<ConstantInt>(Size);
   if (!LenC)
     return nullptr;
 
-  // memcmp(d,s,0) -> 0
-  if (LenC->getZExtValue() == 0)
-    return Constant::getNullValue(CI->getType());
-
-  if (Value *Res =
-          optimizeMemCmpConstantSize(CI, LHS, RHS, LenC->getZExtValue(), B, DL))
-    return Res;
-  return nullptr;
+  return optimizeMemCmpConstantSize(CI, LHS, RHS, LenC->getZExtValue(), B, DL);
 }
 
 Value *LibCallSimplifier::optimizeMemCmp(CallInst *CI, IRBuilderBase &B) {

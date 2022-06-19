@@ -25,11 +25,10 @@ template <class _Tp>
 struct __has_result_type
 {
 private:
-    struct __two {char __lx; char __lxx;};
-    template <class _Up> static __two __test(...);
-    template <class _Up> static char __test(typename _Up::result_type* = 0);
+    template <class _Up> static false_type __test(...);
+    template <class _Up> static true_type __test(typename _Up::result_type* = 0);
 public:
-    static const bool value = sizeof(__test<_Tp>(0)) == 1;
+    static const bool value = decltype(__test<_Tp>(0))::value;
 };
 
 // __weak_result_type
@@ -213,8 +212,6 @@ struct __weak_result_type<_Rp (_Cp::*)(_A1) const volatile>
 {
 };
 
-
-#ifndef _LIBCPP_CXX03_LANG
 // 3 or more arguments
 
 template <class _Rp, class _A1, class _A2, class _A3, class ..._A4>
@@ -264,217 +261,6 @@ struct __invoke_return
 {
     typedef decltype(_VSTD::__invoke(declval<_Tp>(), declval<_Args>()...)) type;
 };
-
-#else // defined(_LIBCPP_CXX03_LANG)
-
-template <class _Ret, class _T1, bool _IsFunc, bool _IsBase>
-struct __enable_invoke_imp;
-
-template <class _Ret, class _T1>
-struct __enable_invoke_imp<_Ret, _T1, true, true> {
-    typedef _Ret _Bullet1;
-    typedef _Bullet1 type;
-};
-
-template <class _Ret, class _T1>
-struct __enable_invoke_imp<_Ret, _T1, true, false>  {
-    typedef _Ret _Bullet2;
-    typedef _Bullet2 type;
-};
-
-template <class _Ret, class _T1>
-struct __enable_invoke_imp<_Ret, _T1, false, true>  {
-    typedef typename add_lvalue_reference<
-                typename __apply_cv<_T1, _Ret>::type
-            >::type _Bullet3;
-    typedef _Bullet3 type;
-};
-
-template <class _Ret, class _T1>
-struct __enable_invoke_imp<_Ret, _T1, false, false>  {
-    typedef typename add_lvalue_reference<
-                typename __apply_cv<decltype(*declval<_T1>()), _Ret>::type
-            >::type _Bullet4;
-    typedef _Bullet4 type;
-};
-
-template <class _Ret, class _T1>
-struct __enable_invoke_imp<_Ret, _T1*, false, false>  {
-    typedef typename add_lvalue_reference<
-                typename __apply_cv<_T1, _Ret>::type
-            >::type _Bullet4;
-    typedef _Bullet4  type;
-};
-
-template <class _Fn, class _T1,
-          class _Traits = __member_pointer_traits<_Fn>,
-          class _Ret = typename _Traits::_ReturnType,
-          class _Class = typename _Traits::_ClassType>
-struct __enable_invoke : __enable_invoke_imp<
-    _Ret, _T1,
-    is_member_function_pointer<_Fn>::value,
-    is_base_of<_Class, typename remove_reference<_T1>::type>::value>
-{
-};
-
-__nat __invoke(__any, ...);
-
-// first bullet
-
-template <class _Fn, class _T1>
-inline _LIBCPP_INLINE_VISIBILITY
-typename __enable_invoke<_Fn, _T1>::_Bullet1
-__invoke(_Fn __f, _T1& __t1) {
-    return (__t1.*__f)();
-}
-
-template <class _Fn, class _T1, class _A0>
-inline _LIBCPP_INLINE_VISIBILITY
-typename __enable_invoke<_Fn, _T1>::_Bullet1
-__invoke(_Fn __f, _T1& __t1, _A0& __a0) {
-    return (__t1.*__f)(__a0);
-}
-
-template <class _Fn, class _T1, class _A0, class _A1>
-inline _LIBCPP_INLINE_VISIBILITY
-typename __enable_invoke<_Fn, _T1>::_Bullet1
-__invoke(_Fn __f, _T1& __t1, _A0& __a0, _A1& __a1) {
-    return (__t1.*__f)(__a0, __a1);
-}
-
-template <class _Fn, class _T1, class _A0, class _A1, class _A2>
-inline _LIBCPP_INLINE_VISIBILITY
-typename __enable_invoke<_Fn, _T1>::_Bullet1
-__invoke(_Fn __f, _T1& __t1, _A0& __a0, _A1& __a1, _A2& __a2) {
-    return (__t1.*__f)(__a0, __a1, __a2);
-}
-
-template <class _Fn, class _T1>
-inline _LIBCPP_INLINE_VISIBILITY
-typename __enable_invoke<_Fn, _T1>::_Bullet2
-__invoke(_Fn __f, _T1& __t1) {
-    return ((*__t1).*__f)();
-}
-
-template <class _Fn, class _T1, class _A0>
-inline _LIBCPP_INLINE_VISIBILITY
-typename __enable_invoke<_Fn, _T1>::_Bullet2
-__invoke(_Fn __f, _T1& __t1, _A0& __a0) {
-    return ((*__t1).*__f)(__a0);
-}
-
-template <class _Fn, class _T1, class _A0, class _A1>
-inline _LIBCPP_INLINE_VISIBILITY
-typename __enable_invoke<_Fn, _T1>::_Bullet2
-__invoke(_Fn __f, _T1& __t1, _A0& __a0, _A1& __a1) {
-    return ((*__t1).*__f)(__a0, __a1);
-}
-
-template <class _Fn, class _T1, class _A0, class _A1, class _A2>
-inline _LIBCPP_INLINE_VISIBILITY
-typename __enable_invoke<_Fn, _T1>::_Bullet2
-__invoke(_Fn __f, _T1& __t1, _A0& __a0, _A1& __a1, _A2& __a2) {
-    return ((*__t1).*__f)(__a0, __a1, __a2);
-}
-
-template <class _Fn, class _T1>
-inline _LIBCPP_INLINE_VISIBILITY
-typename __enable_invoke<_Fn, _T1>::_Bullet3
-__invoke(_Fn __f, _T1& __t1) {
-    return __t1.*__f;
-}
-
-template <class _Fn, class _T1>
-inline _LIBCPP_INLINE_VISIBILITY
-typename __enable_invoke<_Fn, _T1>::_Bullet4
-__invoke(_Fn __f, _T1& __t1) {
-    return (*__t1).*__f;
-}
-
-// fifth bullet
-
-template <class _Fp>
-inline _LIBCPP_INLINE_VISIBILITY
-decltype(declval<_Fp&>()())
-__invoke(_Fp& __f)
-{
-    return __f();
-}
-
-template <class _Fp, class _A0>
-inline _LIBCPP_INLINE_VISIBILITY
-decltype(declval<_Fp&>()(declval<_A0&>()))
-__invoke(_Fp& __f, _A0& __a0)
-{
-    return __f(__a0);
-}
-
-template <class _Fp, class _A0, class _A1>
-inline _LIBCPP_INLINE_VISIBILITY
-decltype(declval<_Fp&>()(declval<_A0&>(), declval<_A1&>()))
-__invoke(_Fp& __f, _A0& __a0, _A1& __a1)
-{
-    return __f(__a0, __a1);
-}
-
-template <class _Fp, class _A0, class _A1, class _A2>
-inline _LIBCPP_INLINE_VISIBILITY
-decltype(declval<_Fp&>()(declval<_A0&>(), declval<_A1&>(), declval<_A2&>()))
-__invoke(_Fp& __f, _A0& __a0, _A1& __a1, _A2& __a2)
-{
-    return __f(__a0, __a1, __a2);
-}
-
-template <class _Fp, bool = __has_result_type<__weak_result_type<_Fp> >::value>
-struct __invoke_return
-{
-    typedef typename __weak_result_type<_Fp>::result_type type;
-};
-
-template <class _Fp>
-struct __invoke_return<_Fp, false>
-{
-    typedef decltype(_VSTD::__invoke(declval<_Fp&>())) type;
-};
-
-template <class _Tp, class _A0>
-struct __invoke_return0
-{
-    typedef decltype(_VSTD::__invoke(declval<_Tp&>(), declval<_A0&>())) type;
-};
-
-template <class _Rp, class _Tp, class _A0>
-struct __invoke_return0<_Rp _Tp::*, _A0>
-{
-    typedef typename __enable_invoke<_Rp _Tp::*, _A0>::type type;
-};
-
-template <class _Tp, class _A0, class _A1>
-struct __invoke_return1
-{
-    typedef decltype(_VSTD::__invoke(declval<_Tp&>(), declval<_A0&>(),
-                                                      declval<_A1&>())) type;
-};
-
-template <class _Rp, class _Class, class _A0, class _A1>
-struct __invoke_return1<_Rp _Class::*, _A0, _A1> {
-    typedef typename __enable_invoke<_Rp _Class::*, _A0>::type type;
-};
-
-template <class _Tp, class _A0, class _A1, class _A2>
-struct __invoke_return2
-{
-    typedef decltype(_VSTD::__invoke(declval<_Tp&>(), declval<_A0&>(),
-                                                      declval<_A1&>(),
-                                                      declval<_A2&>())) type;
-};
-
-template <class _Ret, class _Class, class _A0, class _A1, class _A2>
-struct __invoke_return2<_Ret _Class::*, _A0, _A1, _A2> {
-    typedef typename __enable_invoke<_Ret _Class::*, _A0>::type type;
-};
-
-#endif // !defined(_LIBCPP_CXX03_LANG)
 
 _LIBCPP_END_NAMESPACE_STD
 

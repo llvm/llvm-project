@@ -798,6 +798,14 @@ public:
 
   void setDSOLocal(llvm::GlobalValue *GV) const;
 
+  bool shouldMapVisibilityToDLLExport(const NamedDecl *D) const {
+    return getLangOpts().hasDefaultVisibilityExportMapping() && D &&
+           (D->getLinkageAndVisibility().getVisibility() ==
+            DefaultVisibility) &&
+           (getLangOpts().isAllDefaultVisibilityExportMapping() ||
+            (getLangOpts().isExplicitDefaultVisibilityExportMapping() &&
+             D->getLinkageAndVisibility().isVisibilityExplicit()));
+  }
   void setDLLImportDLLExport(llvm::GlobalValue *GV, GlobalDecl D) const;
   void setDLLImportDLLExport(llvm::GlobalValue *GV, const NamedDecl *D) const;
   /// Set visibility, dllimport/dllexport and dso_local.
@@ -1306,8 +1314,9 @@ public:
   bool isInNoSanitizeList(SanitizerMask Kind, llvm::Function *Fn,
                           SourceLocation Loc) const;
 
-  bool isInNoSanitizeList(llvm::GlobalVariable *GV, SourceLocation Loc,
-                          QualType Ty, StringRef Category = StringRef()) const;
+  bool isInNoSanitizeList(SanitizerMask Kind, llvm::GlobalVariable *GV,
+                          SourceLocation Loc, QualType Ty,
+                          StringRef Category = StringRef()) const;
 
   /// Imbue XRay attributes to a function, applying the always/never attribute
   /// lists in the process. Returns true if we did imbue attributes this way,
@@ -1373,10 +1382,10 @@ public:
   /// optimization.
   bool HasHiddenLTOVisibility(const CXXRecordDecl *RD);
 
-  /// Returns whether the given record has public std LTO visibility
-  /// and therefore may not participate in (single-module) CFI and whole-program
-  /// vtable optimization.
-  bool HasLTOVisibilityPublicStd(const CXXRecordDecl *RD);
+  /// Returns whether the given record has public LTO visibility (regardless of
+  /// -lto-whole-program-visibility) and therefore may not participate in
+  /// (single-module) CFI and whole-program vtable optimization.
+  bool AlwaysHasLTOVisibilityPublic(const CXXRecordDecl *RD);
 
   /// Returns the vcall visibility of the given type. This is the scope in which
   /// a virtual function call could be made which ends up being dispatched to a
@@ -1476,6 +1485,33 @@ public:
   /// does not define separate macros via the -cc1 options.
   void printPostfixForExternalizedDecl(llvm::raw_ostream &OS,
                                        const Decl *D) const;
+
+  /// Move some lazily-emitted states to the NewBuilder. This is especially
+  /// essential for the incremental parsing environment like Clang Interpreter,
+  /// because we'll lose all important information after each repl.
+  void moveLazyEmissionStates(CodeGenModule *NewBuilder) {
+    assert(DeferredDeclsToEmit.empty() &&
+           "Should have emitted all decls deferred to emit.");
+    assert(NewBuilder->DeferredDecls.empty() &&
+           "Newly created module should not have deferred decls");
+    NewBuilder->DeferredDecls = std::move(DeferredDecls);
+
+    assert(NewBuilder->DeferredVTables.empty() &&
+           "Newly created module should not have deferred vtables");
+    NewBuilder->DeferredVTables = std::move(DeferredVTables);
+
+    assert(NewBuilder->MangledDeclNames.empty() &&
+           "Newly created module should not have mangled decl names");
+    assert(NewBuilder->Manglings.empty() &&
+           "Newly created module should not have manglings");
+    NewBuilder->Manglings = std::move(Manglings);
+
+    assert(WeakRefReferences.empty() &&
+           "Not all WeakRefRefs have been applied");
+    NewBuilder->WeakRefReferences = std::move(WeakRefReferences);
+
+    NewBuilder->TBAA = std::move(TBAA);
+  }
 
 private:
   llvm::Constant *GetOrCreateLLVMFunction(

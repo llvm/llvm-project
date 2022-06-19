@@ -16,6 +16,7 @@
 #include "flang/Common/Fortran.h"
 #include "flang/Lower/PFTDefs.h"
 #include "flang/Optimizer/Builder/BoxValue.h"
+#include "flang/Semantics/symbol.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "llvm/ADT/ArrayRef.h"
 
@@ -76,6 +77,9 @@ public:
   /// Get the mlir instance of a symbol.
   virtual mlir::Value getSymbolAddress(SymbolRef sym) = 0;
 
+  virtual fir::ExtendedValue
+  getSymbolExtendedValue(const Fortran::semantics::Symbol &sym) = 0;
+
   /// Get the binding of an implied do variable by name.
   virtual mlir::Value impliedDoBinding(llvm::StringRef name) = 0;
 
@@ -98,6 +102,12 @@ public:
   createHostAssociateVarClone(const Fortran::semantics::Symbol &sym) = 0;
 
   virtual void copyHostAssociateVar(const Fortran::semantics::Symbol &sym) = 0;
+
+  /// Collect the set of symbols flagged as \p flag in \p eval region.
+  virtual void collectSymbolSet(
+      pft::Evaluation &eval,
+      llvm::SetVector<const Fortran::semantics::Symbol *> &symbolSet,
+      Fortran::semantics::Symbol::Flag flag) = 0;
 
   //===--------------------------------------------------------------------===//
   // Expressions

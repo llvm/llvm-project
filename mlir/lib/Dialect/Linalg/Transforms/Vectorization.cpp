@@ -432,6 +432,14 @@ static bool hasOnlyScalarElementwiseOp(Region &r) {
   return true;
 }
 
+/// Returns `true` if all indexing maps of the linalg op are projected
+/// permutations.
+static bool allIndexingsAreProjectedPermutation(LinalgOp op) {
+  return llvm::all_of(op.getIndexingMaps(), [](AffineMap m) {
+    return m.isProjectedPermutation(/*allowZeroInResults=*/true);
+  });
+}
+
 // Return true if the op is an element-wise linalg op.
 static bool isElementwise(Operation *op) {
   auto linalgOp = dyn_cast<linalg::LinalgOp>(op);
@@ -439,6 +447,10 @@ static bool isElementwise(Operation *op) {
     return false;
   if (linalgOp.getNumLoops() != linalgOp.getNumParallelLoops())
     return false;
+
+  if (!allIndexingsAreProjectedPermutation(linalgOp))
+    return false;
+
   // TODO: relax the restrictions on indexing map.
   for (OpOperand *opOperand : linalgOp.getOutputOperands()) {
     if (!linalgOp.getTiedIndexingMap(opOperand).isPermutation())
@@ -562,17 +574,6 @@ vectorizeAsLinalgGeneric(OpBuilder &b, LinalgOp linalgOp,
   }
 
   return success();
-}
-
-/// Helper function to vectorize a `linalgOp` with contraction semantics in a
-/// generic fashion.
-/// This helper is needed atm because the truly generic implementation requires
-/// good vector.multi_reduce folding patterns that are currently NYI.
-// TODO: drop reliance on a specific pattern.
-static bool allIndexingsAreProjectedPermutation(LinalgOp op) {
-  return llvm::all_of(op.getIndexingMaps(), [](AffineMap m) {
-    return m.isProjectedPermutation(/*allowZeroInResults=*/true);
-  });
 }
 
 // TODO: probably need some extra checks for reduction followed by consumer
@@ -1373,10 +1374,29 @@ struct Conv1DNwcGenerator : public StructuredGenerator<LinalgOp> {
     maybeKind = getCombinerOpKind(reduceOp);
     if (!maybeKind || *maybeKind != vector::CombiningKind::ADD)
       return;
-    maybeKind = getCombinerOpKind(&(linalgOp->getRegion(0).front().front()));
-    if (!maybeKind || *maybeKind != vector::CombiningKind::MUL)
+    // Check for single `mul` predecessor. The `mul` operands must be block
+    // arguments or extension of block arguments.
+    Operation *mulOp = nullptr;
+    for (Value operand : reduceOp->getOperands()) {
+      if (operand.isa<BlockArgument>())
+        continue;
+      if (mulOp)
+        return;
+      mulOp = operand.getDefiningOp();
+      if (!mulOp || !isa<arith::MulIOp, arith::MulFOp>(mulOp))
+        return;
+    }
+    if (!mulOp)
       return;
-
+    for (Value operand : mulOp->getOperands()) {
+      if (Operation *def = operand.getDefiningOp()) {
+        if (!isa<arith::ExtFOp>(def))
+          return;
+        operand = def->getOperand(0);
+      }
+      if (!operand.isa<BlockArgument>())
+        return;
+    }
     // The op is now known to be valid.
     valid = true;
   }

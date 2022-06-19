@@ -176,7 +176,7 @@ inline bool FormattedCharacterIO(
         if (!EditCharacterOutput(io, *edit, x, length)) {
           return false;
         }
-      } else {
+      } else { // input
         if (edit->descriptor != DataEdit::ListDirectedNullValue) {
           if (EditCharacterInput(io, *edit, x, length)) {
             anyInput = true;

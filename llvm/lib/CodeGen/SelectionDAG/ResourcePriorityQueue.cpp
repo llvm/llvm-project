@@ -32,13 +32,13 @@ using namespace llvm;
 
 #define DEBUG_TYPE "scheduler"
 
-static cl::opt<bool> DisableDFASched("disable-dfa-sched", cl::Hidden,
-  cl::ZeroOrMore, cl::init(false),
-  cl::desc("Disable use of DFA during scheduling"));
+static cl::opt<bool>
+    DisableDFASched("disable-dfa-sched", cl::Hidden,
+                    cl::desc("Disable use of DFA during scheduling"));
 
 static cl::opt<int> RegPressureThreshold(
-  "dfa-sched-reg-pressure-threshold", cl::Hidden, cl::ZeroOrMore, cl::init(5),
-  cl::desc("Track reg pressure and switch priority to in-depth"));
+    "dfa-sched-reg-pressure-threshold", cl::Hidden, cl::init(5),
+    cl::desc("Track reg pressure and switch priority to in-depth"));
 
 ResourcePriorityQueue::ResourcePriorityQueue(SelectionDAGISel *IS)
     : Picker(this), InstrItins(IS->MF->getSubtarget().getInstrItineraryData()) {

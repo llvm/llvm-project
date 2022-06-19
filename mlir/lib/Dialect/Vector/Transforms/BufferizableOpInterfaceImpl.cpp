@@ -46,14 +46,11 @@ struct TransferReadOpInterface
   }
 
   LogicalResult bufferize(Operation *op, RewriterBase &rewriter,
-                          BufferizationState &state) const {
+                          const BufferizationOptions &options) const {
     auto readOp = cast<vector::TransferReadOp>(op);
     assert(readOp.getShapedType().isa<TensorType>() &&
            "only tensor types expected");
-
-    // TransferReadOp always reads from the bufferized op.source().
-    Value buffer =
-        *state.getBuffer(rewriter, readOp->getOpOperand(0) /*source*/);
+    Value buffer = getBuffer(rewriter, readOp.getSource(), options);
     replaceOpWithNewBufferizedOp<vector::TransferReadOp>(
         rewriter, readOp, readOp.getVectorType(), buffer, readOp.getIndices(),
         readOp.getPermutationMap(), readOp.getPadding(), readOp.getMask(),
@@ -94,23 +91,18 @@ struct TransferWriteOpInterface
   }
 
   LogicalResult bufferize(Operation *op, RewriterBase &rewriter,
-                          BufferizationState &state) const {
+                          const BufferizationOptions &options) const {
     auto writeOp = cast<vector::TransferWriteOp>(op);
     assert(writeOp.getShapedType().isa<TensorType>() &&
            "only tensor types expected");
 
     // Create a new transfer_write on buffer that doesn't have a return value.
-    // Leave the previous transfer_write to dead code as it still has uses at
-    // this point.
-    FailureOr<Value> resultBuffer =
-        state.getBuffer(rewriter, op->getOpOperand(1) /*source*/);
-    if (failed(resultBuffer))
-      return failure();
+    Value resultBuffer = getBuffer(rewriter, writeOp.getSource(), options);
     rewriter.create<vector::TransferWriteOp>(
-        writeOp.getLoc(), writeOp.getVector(), *resultBuffer,
+        writeOp.getLoc(), writeOp.getVector(), resultBuffer,
         writeOp.getIndices(), writeOp.getPermutationMapAttr(),
         writeOp.getInBoundsAttr());
-    replaceOpWithBufferizedValues(rewriter, op, *resultBuffer);
+    replaceOpWithBufferizedValues(rewriter, op, resultBuffer);
 
     return success();
   }

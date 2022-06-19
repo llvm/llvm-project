@@ -9,7 +9,6 @@ load("@bazel_skylib//lib:selects.bzl", "selects")
 
 package(
     default_visibility = ["//visibility:public"],
-    features = ["-use_header_modules"],
     licenses = ["notice"],
 )
 
@@ -86,10 +85,7 @@ cc_library(
     hdrs = [
         "src/__support/CPP/UInt.h",
     ],
-    deps = [
-        "__support_cpp_array",
-        ":libc_root",
-    ],
+    deps = [":libc_root","__support_cpp_array"],
 )
 
 cc_library(
@@ -97,10 +93,7 @@ cc_library(
     hdrs = [
         "src/__support/CPP/TypeTraits.h",
     ],
-    deps = [
-        "__support_cpp_uint",
-        ":libc_root",
-    ],
+    deps = [":libc_root","__support_cpp_uint"],
 )
 
 cc_library(
@@ -158,6 +151,7 @@ fputil_common_hdrs = [
     "src/__support/FPUtil/NearestIntegerOperations.h",
     "src/__support/FPUtil/NormalFloat.h",
     "src/__support/FPUtil/PlatformDefs.h",
+    "src/__support/FPUtil/builtin_wrappers.h",
 ]
 
 fputil_hdrs = selects.with_or({
@@ -420,6 +414,25 @@ cc_library(
     deps = [
         ":libc_root",
         ":math_utils",
+    ],
+)
+
+cc_library(
+    name = "common_constants",
+    srcs = ["src/math/generic/common_constants.cpp"],
+    hdrs = ["src/math/generic/common_constants.h"],
+    deps = [
+        ":libc_root",
+    ],
+)
+
+libc_math_function(
+    name = "expm1f",
+    additional_deps = [
+        ":__support_fputil_fma",
+        ":__support_fputil_multiply_add",
+        ":__support_fputil_polyeval",
+        ":common_constants",
     ],
 )
 
@@ -795,7 +808,7 @@ cc_library(
         ":__support_common",
         ":__support_cpp_bitset",
         ":libc_root",
-        ":string_memory_utils"
+        ":string_memory_utils",
     ],
 )
 
@@ -813,6 +826,11 @@ libc_function(
     name = "memcpy",
     srcs = ["src/string/memcpy.cpp"],
     hdrs = ["src/string/memcpy.h"],
+    copts = [
+        "-fno-builtin-memcpy",
+        "-fno-builtin-memmove",
+        "-mllvm --tail-merge-threshold=0",
+    ],
     features = no_sanitize_features,
     deps = [
         ":__support_common",
@@ -824,6 +842,9 @@ libc_function(
     name = "memset",
     srcs = ["src/string/memset.cpp"],
     hdrs = ["src/string/memset.h"],
+    copts = [
+        "-fno-builtin-memset",
+    ],
     features = no_sanitize_features,
     deps = [
         ":__support_common",
@@ -835,11 +856,13 @@ libc_function(
     name = "memmove",
     srcs = ["src/string/memmove.cpp"],
     hdrs = ["src/string/memmove.h"],
+    copts = [
+        "-fno-builtin-memmove",
+    ],
     features = no_sanitize_features,
     deps = [
         ":__support_common",
         ":__support_integer_operations",
-        ":memcpy",
         ":string_memory_utils",
     ],
 )
@@ -848,6 +871,9 @@ libc_function(
     name = "memcmp",
     srcs = ["src/string/memcmp.cpp"],
     hdrs = ["src/string/memcmp.h"],
+    copts = [
+        "-fno-builtin-memcmp",
+    ],
     features = no_sanitize_features,
     deps = [
         ":__support_common",
@@ -860,6 +886,10 @@ libc_function(
     name = "bcmp",
     srcs = ["src/string/bcmp.cpp"],
     hdrs = ["src/string/bcmp.h"],
+    copts = [
+        "-fno-builtin-bcmp",
+        "-fno-builtin-memcmp",
+    ],
     features = no_sanitize_features,
     deps = [
         ":__support_common",
@@ -871,6 +901,10 @@ libc_function(
     name = "bzero",
     srcs = ["src/string/bzero.cpp"],
     hdrs = ["src/string/bzero.h"],
+    copts = [
+        "-fno-builtin-bzero",
+        "-fno-builtin-memset",
+    ],
     features = no_sanitize_features,
     deps = [
         ":__support_common",

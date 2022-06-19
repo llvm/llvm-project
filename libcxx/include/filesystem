@@ -257,8 +257,10 @@ inline constexpr bool std::ranges::enable_view<std::filesystem::recursive_direct
 #include <__filesystem/recursive_directory_iterator.h>
 #include <__filesystem/space_info.h>
 #include <__filesystem/u8path.h>
-#include <compare>
 #include <version>
+
+// standard-mandated includes
+#include <compare>
 
 #if defined(_LIBCPP_HAS_NO_FILESYSTEM_LIBRARY)
 # error "The <filesystem> library is not supported since libc++ has been configured without support for a filesystem."

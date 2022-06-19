@@ -1002,6 +1002,8 @@ void PyOperationBase::print(py::object fileObject, bool binary,
     mlirOpPrintingFlagsEnableDebugInfo(flags, /*prettyForm=*/prettyDebugInfo);
   if (printGenericOpForm)
     mlirOpPrintingFlagsPrintGenericOpForm(flags);
+  if (useLocalScope)
+    mlirOpPrintingFlagsUseLocalScope(flags);
 
   PyFileAccumulator accum(fileObject, binary);
   mlirOperationPrintWithFlags(operation, flags, accum.getCallback(),

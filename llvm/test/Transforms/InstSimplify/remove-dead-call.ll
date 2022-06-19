@@ -7,20 +7,20 @@
 ;
 ; DETAILS: Made Modification 'Remove redundant instructions' on Function 'main'
 
-define internal void @func_1(i64* nocapture readnone %0) #0 {
+define internal void @func_1(ptr nocapture readnone %0) #0 {
 ; CHECK-LABEL: @func_1(
 ; CHECK-NEXT:    ret void
 ;
   ret void
 }
 
-define i16 @main(i16 %0, i16** nocapture readnone %1) #1 {
+define i16 @main(i16 %0, ptr nocapture readnone %1) #1 {
 ; CHECK-LABEL: @main(
 ; CHECK-NEXT:  bb1:
 ; CHECK-NEXT:    unreachable
 ;
 bb1:
-  call void @func_1(i64* undef)
+  call void @func_1(ptr undef)
   unreachable
 }
 

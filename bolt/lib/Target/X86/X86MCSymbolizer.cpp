@@ -47,54 +47,88 @@ bool X86MCSymbolizer::tryAddingSymbolicOperand(
     Inst.addOperand(MCOperand::createExpr(Expr));
   };
 
-  // Check for relocations against the operand.
+  // Check if the operand being added is a displacement part of a compound
+  // memory operand that uses PC-relative addressing. If it is, try to symbolize
+  // it without relocations. Return true on success, false otherwise.
+  auto processPCRelOperandNoRel = [&]() {
+    const int MemOp = BC.MIB->getMemoryOperandNo(Inst);
+    if (MemOp == -1)
+      return false;
+
+    const unsigned DispOp = MemOp + X86::AddrDisp;
+    if (Inst.getNumOperands() != DispOp)
+      return false;
+
+    const MCOperand &Base = Inst.getOperand(MemOp + X86::AddrBaseReg);
+    if (Base.getReg() != BC.MRI->getProgramCounter())
+      return false;
+
+    const MCOperand &Scale = Inst.getOperand(MemOp + X86::AddrScaleAmt);
+    const MCOperand &Index = Inst.getOperand(MemOp + X86::AddrIndexReg);
+    if (Scale.getImm() != 0 && Index.getReg() != MCRegister::NoRegister)
+      return false;
+
+    const MCSymbol *TargetSymbol;
+    uint64_t TargetOffset;
+    std::tie(TargetSymbol, TargetOffset) =
+        BC.handleAddressRef(Value, Function, /*IsPCRel=*/true);
+
+    addOperand(TargetSymbol, TargetOffset);
+
+    return true;
+  };
+
+  // Check for GOTPCRELX relocations first. Because these relocations allow the
+  // linker to modify the instruction, we have to check the offset range
+  // corresponding to the instruction, not the offset of the operand.
+  // Note that if there is GOTPCRELX relocation against the instruction, there
+  // will be no other relocation in this range, since GOTPCRELX applies only to
+  // certain instruction types.
   const uint64_t InstOffset = InstAddress - Function.getAddress();
-  if (const Relocation *Relocation =
-          Function.getRelocationAt(InstOffset + ImmOffset)) {
-    uint64_t SymbolValue = Relocation->Value - Relocation->Addend;
-    if (Relocation->isPCRelative())
-      SymbolValue += InstAddress + ImmOffset;
+  const Relocation *Relocation =
+      Function.getRelocationInRange(InstOffset, InstOffset + InstSize);
+  if (Relocation && Relocation::isX86GOTPCRELX(Relocation->Type)) {
+    // If the operand is PC-relative, convert it without using the relocation
+    // information. For GOTPCRELX, it is safe to use the absolute address
+    // instead of extracting the addend from the relocation, as non-standard
+    // forms will be rejected by linker conversion process and the operand
+    // will always reference GOT which we don't rewrite.
+    if (processPCRelOperandNoRel())
+      return true;
 
-    // Process reference to the symbol.
-    BC.handleAddressRef(SymbolValue, Function, Relocation->isPCRelative());
+    // The linker converted the PC-relative address to an absolute one.
+    // Symbolize this address.
+    BC.handleAddressRef(Value, Function, /*IsPCRel=*/false);
+    const BinaryData *Target = BC.getBinaryDataAtAddress(Value);
+    assert(Target &&
+           "BinaryData should exist at converted GOTPCRELX destination");
 
-    uint64_t Addend = Relocation->Addend;
-    // Real addend for pc-relative targets is adjusted with a delta from
-    // the relocation placement to the next instruction.
-    if (Relocation->isPCRelative())
-      Addend += InstOffset + InstSize - Relocation->Offset;
-
-    addOperand(Relocation->Symbol, Addend);
+    addOperand(Target->getSymbol(), /*Addend=*/0);
 
     return true;
   }
 
-  // Check if the operand being added is a displacement part of a compound
-  // memory operand that uses PC-relative addressing. If it is, try to symbolize
-  // it without relocations.
-  const int MemOp = BC.MIB->getMemoryOperandNo(Inst);
-  if (MemOp == -1)
-    return false;
+  // Check for relocations against the operand.
+  if (!Relocation || Relocation->Offset != InstOffset + ImmOffset)
+    Relocation = Function.getRelocationAt(InstOffset + ImmOffset);
 
-  const unsigned DispOp = MemOp + X86::AddrDisp;
-  if (Inst.getNumOperands() != DispOp)
-    return false;
+  if (!Relocation)
+    return processPCRelOperandNoRel();
 
-  const MCOperand &Base = Inst.getOperand(MemOp + X86::AddrBaseReg);
-  if (Base.getReg() != BC.MRI->getProgramCounter())
-    return false;
+  uint64_t SymbolValue = Relocation->Value - Relocation->Addend;
+  if (Relocation->isPCRelative())
+    SymbolValue += InstAddress + ImmOffset;
 
-  const MCOperand &Scale = Inst.getOperand(MemOp + X86::AddrScaleAmt);
-  const MCOperand &Index = Inst.getOperand(MemOp + X86::AddrIndexReg);
-  if (Scale.getImm() != 0 && Index.getReg() != MCRegister::NoRegister)
-    return false;
+  // Process reference to the symbol.
+  BC.handleAddressRef(SymbolValue, Function, Relocation->isPCRelative());
 
-  const MCSymbol *TargetSymbol;
-  uint64_t TargetOffset;
-  std::tie(TargetSymbol, TargetOffset) =
-      BC.handleAddressRef(Value, Function, /*IsPCRel*/ true);
+  uint64_t Addend = Relocation->Addend;
+  // Real addend for pc-relative targets is adjusted with a delta from
+  // the relocation placement to the next instruction.
+  if (Relocation->isPCRelative())
+    Addend += InstOffset + InstSize - Relocation->Offset;
 
-  addOperand(TargetSymbol, TargetOffset);
+  addOperand(Relocation->Symbol, Addend);
 
   return true;
 }

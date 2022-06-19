@@ -92,7 +92,6 @@ add_fp_unittest(
   DEPENDS
     .exhaustive_test
     libc.include.math
-    libc.src.math.expf
     libc.src.math.expm1f
     libc.src.__support.FPUtil.fputil
   LINK_LIBRARIES

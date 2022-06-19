@@ -12,8 +12,6 @@ from lldbsuite.test import lldbutil
 
 class DataFormatterOneIsSingularTestCase(TestBase):
 
-    mydir = TestBase.compute_mydir(__file__)
-
     @skipUnlessDarwin
     def test_one_is_singular_with_run_command(self):
         """Test that 1 item is not as reported as 1 items."""

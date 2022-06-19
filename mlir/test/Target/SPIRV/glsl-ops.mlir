@@ -75,4 +75,10 @@ spv.module Logical GLSL450 requires #spv.vce<v1.0, [Shader], []> {
     %13 = spv.GLSL.Fma %arg0, %arg1, %arg2 : f32
     spv.Return
   }
+
+  spv.func @findumsb(%arg0 : i32) "None" {
+    // CHECK: spv.GLSL.FindUMsb {{%.*}} : i32
+    %2 = spv.GLSL.FindUMsb %arg0 : i32
+    spv.Return
+  }
 }

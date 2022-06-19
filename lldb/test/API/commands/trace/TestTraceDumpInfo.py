@@ -5,7 +5,6 @@ from lldbsuite.test import lldbutil
 from lldbsuite.test.decorators import *
 
 class TestTraceDumpInfo(TraceIntelPTTestCaseBase):
-    mydir = TestBase.compute_mydir(__file__)
 
     def testErrorMessages(self):
         # We first check the output when there are no targets
@@ -45,8 +44,8 @@ thread #1: tid = 3842849
     Total approximate memory usage (excluding raw trace): 1.27 KiB
     Average memory usage per instruction (excluding raw trace): 61.76 bytes
 
-  Timing:
-    Decoding instructions: ''', '''s
+  Timing for this thread:
+    Decoding instructions: ''', '''
 
   Events:
     Number of instructions with events: 1

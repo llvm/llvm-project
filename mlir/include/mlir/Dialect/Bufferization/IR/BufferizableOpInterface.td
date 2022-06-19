@@ -164,8 +164,7 @@ def BufferizableOpInterface : OpInterface<"BufferizableOpInterface"> {
               continue;
             SmallVector<OpResult> aliasingOpResults =
                 bufferizableOp.getAliasingOpResult(opOperand, state);
-            if (llvm::find(aliasingOpResults, opResult)
-                != aliasingOpResults.end())
+            if (llvm::is_contained(aliasingOpResults, opResult))
               result.push_back(&opOperand);
           }
           return result;
@@ -195,8 +194,34 @@ def BufferizableOpInterface : OpInterface<"BufferizableOpInterface"> {
       >,
       InterfaceMethod<
         /*desc=*/[{
+          Resolve all inplacability conflicts by inserting explicit
+          `bufferization.alloc_tensor` ops. Examples of inplacability conflicts
+          are read-after-write conflicts or writes into non-writable buffers.
+
+          This method should rewrite the IR in such a way that for each tensor
+          OpOperand t, buffer(t) can be directly used when during bufferization.
+          The bufferization does no longer have to care about inplacability
+          conflicts.
+
+          This method can query analysis information from the given analysis
+          state.
+        }],
+        /*retType=*/"LogicalResult",
+        /*methodName=*/"resolveConflicts",
+        /*args=*/(ins "RewriterBase &":$rewriter,
+                      "const AnalysisState &":$state),
+        /*methodBody=*/"",
+        /*defaultImplementation=*/[{
+          auto bufferizableOp =
+              cast<BufferizableOpInterface>($_op.getOperation());
+          return bufferizableOp.resolveTensorOpOperandConflicts(
+              rewriter, state);
+        }]
+      >,
+      InterfaceMethod<
+        /*desc=*/[{
           Bufferize this op, i.e., rewrite it into a memref-based equivalent.
-          Buffers of tensor SSA values can be retrieved via `state.getBuffer`.
+          Buffers of tensor SSA values can be retrieved via `getBuffer`.
           Uses of tensor results of the existing tensor op can be replaced with
           `replaceOpWithBufferizedValues` or `replaceOpWithNewBufferizedOp`.
           These two functions automatically handle the tensor-to-memref type
@@ -207,12 +232,6 @@ def BufferizableOpInterface : OpInterface<"BufferizableOpInterface"> {
           tensor result `r` may only be replaced with:
           a) A buffer that aliases one of buffers in getAliasingOpOperand(r).
           b) Or: A newly allocated buffer.
-
-          Regions of an op should be inlined into the new op instead of cloning
-          them. This is not only more efficient, but also necessary so that no
-          analysis results are lost. (Bufferization decisions are tracked via
-          OpOperand pointers and cloned ops have new OpOperands.) If regions are
-          cloned instead of inlined, additional buffer copies may be inserted.
 
           This method will never be called on ops that do not have at least one
           tensor operand/result.
@@ -227,7 +246,7 @@ def BufferizableOpInterface : OpInterface<"BufferizableOpInterface"> {
         /*retType=*/"LogicalResult",
         /*methodName=*/"bufferize",
         /*args=*/(ins "RewriterBase &":$rewriter,
-                      "BufferizationState &":$state),
+                      "const BufferizationOptions &":$options),
         /*methodBody=*/"",
         /*defaultImplementation=*/[{
           llvm_unreachable("bufferize not implemented");
@@ -302,6 +321,11 @@ def BufferizableOpInterface : OpInterface<"BufferizableOpInterface"> {
   ];
 
   let extraClassDeclaration = [{
+    /// Resolve out-of-place tensor OpOperands with explicit allocations in the
+    /// form of `bufferization.alloc_tensor` ops.
+    LogicalResult resolveTensorOpOperandConflicts(
+        RewriterBase &rewriter, const AnalysisState &state);
+
     /// Return `true` if the given OpOperand creates an alias but does neither
     /// read nor write. This implies that `bufferizesToMemoryRead` and
     /// `bufferizesToMemoryWrite` must return `false`. This method will never

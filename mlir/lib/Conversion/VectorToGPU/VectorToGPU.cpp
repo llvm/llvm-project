@@ -18,9 +18,9 @@
 #include "../PassDetail.h"
 #include "mlir/Analysis/SliceAnalysis.h"
 #include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
-#include "mlir/Dialect/GPU/GPUDialect.h"
+#include "mlir/Dialect/GPU/IR/GPUDialect.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
-#include "mlir/Dialect/NVGPU/NVGPUDialect.h"
+#include "mlir/Dialect/NVGPU/IR/NVGPUDialect.h"
 #include "mlir/Dialect/SCF/SCF.h"
 #include "mlir/Dialect/Utils/StructuredOpsUtils.h"
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
@@ -624,7 +624,8 @@ convertTransferReadToLoads(vector::TransferReadOp op,
   // at least 8 rows to read and  the width to read for the transpose is 128
   // bits.
   if (!op.getPermutationMap().isMinorIdentity() &&
-      (vecTy.getDimSize(1) < 8 || vecTy.getDimSize(0) * bitWidth < 128))
+      (bitWidth != 16 || vecTy.getDimSize(1) < 8 ||
+       vecTy.getDimSize(0) * bitWidth < 128))
     isLdMatrixCompatible = false;
 
   if (!isLdMatrixCompatible)

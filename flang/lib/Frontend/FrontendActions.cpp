@@ -32,6 +32,7 @@
 #include "flang/Semantics/unparse-with-symbols.h"
 
 #include "mlir/IR/Dialect.h"
+#include "mlir/Parser/Parser.h"
 #include "mlir/Pass/PassManager.h"
 #include "mlir/Target/LLVMIR/ModuleTranslation.h"
 #include "clang/Basic/Diagnostic.h"
@@ -41,6 +42,7 @@
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/Bitcode/BitcodeWriterPass.h"
 #include "llvm/IR/LegacyPassManager.h"
+#include "llvm/IR/Verifier.h"
 #include "llvm/IRReader/IRReader.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Passes/PassBuilder.h"
@@ -78,29 +80,63 @@ bool PrescanAndSemaDebugAction::beginSourceFileAction() {
 
 bool CodeGenAction::beginSourceFileAction() {
   llvmCtx = std::make_unique<llvm::LLVMContext>();
+  CompilerInstance &ci = this->getInstance();
 
   // If the input is an LLVM file, just parse it and return.
   if (this->getCurrentInput().getKind().getLanguage() == Language::LLVM_IR) {
     llvm::SMDiagnostic err;
     llvmModule = llvm::parseIRFile(getCurrentInput().getFile(), err, *llvmCtx);
+    if (!llvmModule || llvm::verifyModule(*llvmModule, &llvm::errs())) {
+      err.print("flang-new", llvm::errs());
+      unsigned diagID = ci.getDiagnostics().getCustomDiagID(
+          clang::DiagnosticsEngine::Error, "Could not parse IR");
+      ci.getDiagnostics().Report(diagID);
+      return false;
+    }
 
-    return (nullptr != llvmModule);
+    return true;
   }
-
-  // Otherwise, generate an MLIR module from the input Fortran source
-  assert(getCurrentInput().getKind().getLanguage() == Language::Fortran &&
-         "Invalid input type - expecting a Fortran file");
-  bool res = runPrescan() && runParse() && runSemanticChecks();
-  if (!res)
-    return res;
-
-  CompilerInstance &ci = this->getInstance();
 
   // Load the MLIR dialects required by Flang
   mlir::DialectRegistry registry;
   mlirCtx = std::make_unique<mlir::MLIRContext>(registry);
   fir::support::registerNonCodegenDialects(registry);
   fir::support::loadNonCodegenDialects(*mlirCtx);
+  fir::support::loadDialects(*mlirCtx);
+  fir::support::registerLLVMTranslation(*mlirCtx);
+
+  // If the input is an MLIR file, just parse it and return.
+  if (this->getCurrentInput().getKind().getLanguage() == Language::MLIR) {
+    llvm::SourceMgr sourceMgr;
+    llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>> fileOrErr =
+        llvm::MemoryBuffer::getFileOrSTDIN(getCurrentInput().getFile());
+    sourceMgr.AddNewSourceBuffer(std::move(*fileOrErr), llvm::SMLoc());
+    mlir::OwningOpRef<mlir::ModuleOp> module =
+        mlir::parseSourceFile<mlir::ModuleOp>(sourceMgr, mlirCtx.get());
+
+    if (!module || mlir::failed(module->verifyInvariants())) {
+      unsigned diagID = ci.getDiagnostics().getCustomDiagID(
+          clang::DiagnosticsEngine::Error, "Could not parse FIR");
+      ci.getDiagnostics().Report(diagID);
+      return false;
+    }
+
+    mlirModule = std::make_unique<mlir::ModuleOp>(module.release());
+    return true;
+  }
+
+  // Otherwise, generate an MLIR module from the input Fortran source
+  if (getCurrentInput().getKind().getLanguage() != Language::Fortran) {
+    unsigned diagID = ci.getDiagnostics().getCustomDiagID(
+        clang::DiagnosticsEngine::Error,
+        "Invalid input type - expecting a Fortran file");
+    ci.getDiagnostics().Report(diagID);
+    return false;
+  }
+  bool res = runPrescan() && runParse() && runSemanticChecks() &&
+             generateRtTypeTables();
+  if (!res)
+    return res;
 
   // Create a LoweringBridge
   const common::IntrinsicTypeDefaultKinds &defKinds =

@@ -239,7 +239,7 @@ public:
   Optional<DWARFUnit *> getDWOCU(uint64_t DWOId);
 
   /// Returns DWOContext if it exists.
-  DWARFContext *getDWOContext();
+  DWARFContext *getDWOContext() const;
 
   /// Get Number of DWOCUs in a map.
   uint32_t getNumDWOCUs() { return DWOCUs.size(); }
@@ -498,6 +498,14 @@ public:
   /// to function \p BF.
   std::string generateJumpTableName(const BinaryFunction &BF, uint64_t Address);
 
+  /// Free memory used by jump table offsets
+  void clearJumpTableOffsets() {
+    for (auto &JTI : JumpTables) {
+      JumpTable &JT = *JTI.second;
+      JumpTable::OffsetsType Temp;
+      Temp.swap(JT.OffsetEntries);
+    }
+  }
   /// Return true if the array of bytes represents a valid code padding.
   bool hasValidCodePadding(const BinaryFunction &BF);
 

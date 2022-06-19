@@ -14,6 +14,7 @@
 
 #include <forward_list>
 #include <cassert>
+#include <iterator>
 
 #include "test_macros.h"
 #include "test_allocator.h"

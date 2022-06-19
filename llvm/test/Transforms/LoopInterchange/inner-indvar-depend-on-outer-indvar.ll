@@ -2,7 +2,6 @@
 ; RUN: opt < %s -basic-aa -loop-interchange -verify-dom-info -verify-loop-info \
 ; RUN:     -S -debug 2>&1 | FileCheck %s
 
-target triple = "powerpc64le-unknown-linux-gnu"
 @A = common global [100 x [100 x i64]] zeroinitializer
 @N = dso_local local_unnamed_addr global i64 100, align 8
 

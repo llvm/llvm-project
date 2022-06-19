@@ -6,6 +6,10 @@
 //
 //===----------------------------------------------------------------------===//
 
+#ifndef LLVM_LIBC_SRC_STDIO_PRINTF_CORE_STRING_CONVERTER_H
+#define LLVM_LIBC_SRC_STDIO_PRINTF_CORE_STRING_CONVERTER_H
+
+#include "src/stdio/printf_core/converter_utils.h"
 #include "src/stdio/printf_core/core_structs.h"
 #include "src/stdio/printf_core/writer.h"
 
@@ -14,7 +18,7 @@
 namespace __llvm_libc {
 namespace printf_core {
 
-void convert_string(Writer *writer, const FormatSection &to_conv) {
+int inline convert_string(Writer *writer, const FormatSection &to_conv) {
   int string_len = 0;
 
   for (char *cur_str = reinterpret_cast<char *>(to_conv.conv_val_ptr);
@@ -28,19 +32,25 @@ void convert_string(Writer *writer, const FormatSection &to_conv) {
   if (to_conv.min_width > string_len) {
     if ((to_conv.flags & FormatFlags::LEFT_JUSTIFIED) ==
         FormatFlags::LEFT_JUSTIFIED) {
-      writer->write(reinterpret_cast<const char *>(to_conv.conv_val_ptr),
-                    string_len);
-      writer->write_chars(' ', to_conv.min_width - string_len);
+      RET_IF_RESULT_NEGATIVE(writer->write(
+          reinterpret_cast<const char *>(to_conv.conv_val_ptr), string_len));
+      RET_IF_RESULT_NEGATIVE(
+          writer->write_chars(' ', to_conv.min_width - string_len));
+
     } else {
-      writer->write_chars(' ', to_conv.min_width - string_len);
-      writer->write(reinterpret_cast<const char *>(to_conv.conv_val_ptr),
-                    string_len);
+      RET_IF_RESULT_NEGATIVE(
+          writer->write_chars(' ', to_conv.min_width - string_len));
+      RET_IF_RESULT_NEGATIVE(writer->write(
+          reinterpret_cast<const char *>(to_conv.conv_val_ptr), string_len));
     }
   } else {
-    writer->write(reinterpret_cast<const char *>(to_conv.conv_val_ptr),
-                  string_len);
+    RET_IF_RESULT_NEGATIVE(writer->write(
+        reinterpret_cast<const char *>(to_conv.conv_val_ptr), string_len));
   }
+  return 0;
 }
 
 } // namespace printf_core
 } // namespace __llvm_libc
+
+#endif // LLVM_LIBC_SRC_STDIO_PRINTF_CORE_STRING_CONVERTER_H

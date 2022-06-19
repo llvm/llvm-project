@@ -340,9 +340,8 @@ Liveness::getAllReachingDefsRecImpl(RegisterRef RefRR, NodeAddr<RefNode*> RefA,
     if (!(DA.Addr->getFlags() & NodeAttrs::PhiRef))
       continue;
     NodeAddr<PhiNode*> PA = DA.Addr->getOwner(DFG);
-    if (Visited.count(PA.Id))
+    if (!Visited.insert(PA.Id).second)
       continue;
-    Visited.insert(PA.Id);
     // Go over all phi uses and get the reaching defs for each use.
     for (auto U : PA.Addr->members_if(DFG.IsRef<NodeAttrs::Use>, DFG)) {
       const auto &T = getAllReachingDefsRecImpl(RefRR, U, Visited, TmpDefs,

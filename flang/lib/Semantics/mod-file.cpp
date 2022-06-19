@@ -419,8 +419,11 @@ static const Attrs subprogramPrefixAttrs{Attr::ELEMENTAL, Attr::IMPURE,
     Attr::MODULE, Attr::NON_RECURSIVE, Attr::PURE, Attr::RECURSIVE};
 
 void ModFileWriter::PutSubprogram(const Symbol &symbol) {
-  auto attrs{symbol.attrs()};
   auto &details{symbol.get<SubprogramDetails>()};
+  if (const Symbol * interface{details.moduleInterface()}) {
+    PutSubprogram(*interface);
+  }
+  auto attrs{symbol.attrs()};
   Attrs bindAttrs{};
   if (attrs.test(Attr::BIND_C)) {
     // bind(c) is a suffix, not prefix
@@ -518,8 +521,14 @@ void ModFileWriter::PutGeneric(const Symbol &symbol) {
 void ModFileWriter::PutUse(const Symbol &symbol) {
   auto &details{symbol.get<UseDetails>()};
   auto &use{details.symbol()};
-  uses_ << "use " << GetUsedModule(details).name();
-  PutGenericName(uses_ << ",only:", symbol);
+  const Symbol &module{GetUsedModule(details)};
+  if (use.owner().parent().IsIntrinsicModules()) {
+    uses_ << "use,intrinsic::";
+  } else {
+    uses_ << "use ";
+  }
+  uses_ << module.name() << ",only:";
+  PutGenericName(uses_, symbol);
   // Can have intrinsic op with different local-name and use-name
   // (e.g. `operator(<)` and `operator(.lt.)`) but rename is not allowed
   if (!IsIntrinsicOp(symbol) && use.name() != symbol.name()) {
@@ -953,6 +962,7 @@ Scope *ModFileReader::Read(const SourceName &name,
       std::remove(options.searchDirectories.begin(),
           options.searchDirectories.end(), dir);
     }
+    options.searchDirectories.insert(options.searchDirectories.begin(), "."s);
   }
   if (isIntrinsic.value_or(true)) {
     for (const auto &dir : context_.intrinsicModuleDirectories()) {
@@ -1085,6 +1095,9 @@ void SubprogramSymbolCollector::Collect() {
         const Symbol *dt{generic->derivedType()};
         needed = needed || (spec && useSet_.count(*spec) > 0) ||
             (dt && useSet_.count(*dt) > 0);
+      } else if (const auto *subp{ultimate.detailsIf<SubprogramDetails>()}) {
+        const Symbol *interface { subp->moduleInterface() };
+        needed = needed || (interface && useSet_.count(*interface) > 0);
       }
       if (needed) {
         need_.push_back(symbol);

@@ -57,11 +57,9 @@ define <2 x i32> @icmp_ne_and_pow2_shl1_vec(<2 x i32> %0) {
 
 define i32 @icmp_eq_and_pow2_shl_pow2(i32 %0) {
 ; CHECK-LABEL: @icmp_eq_and_pow2_shl_pow2(
-; CHECK-NEXT:    [[SHL:%.*]] = shl i32 2, [[TMP0:%.*]]
-; CHECK-NEXT:    [[AND:%.*]] = lshr i32 [[SHL]], 4
-; CHECK-NEXT:    [[AND_LOBIT:%.*]] = and i32 [[AND]], 1
-; CHECK-NEXT:    [[TMP2:%.*]] = xor i32 [[AND_LOBIT]], 1
-; CHECK-NEXT:    ret i32 [[TMP2]]
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp ne i32 [[TMP0:%.*]], 3
+; CHECK-NEXT:    [[TMP3:%.*]] = zext i1 [[TMP2]] to i32
+; CHECK-NEXT:    ret i32 [[TMP3]]
 ;
   %shl = shl i32 2, %0
   %and = and i32 %shl, 16
@@ -72,11 +70,9 @@ define i32 @icmp_eq_and_pow2_shl_pow2(i32 %0) {
 
 define <2 x i32> @icmp_eq_and_pow2_shl_pow2_vec(<2 x i32> %0) {
 ; CHECK-LABEL: @icmp_eq_and_pow2_shl_pow2_vec(
-; CHECK-NEXT:    [[SHL:%.*]] = shl <2 x i32> <i32 4, i32 4>, [[TMP0:%.*]]
-; CHECK-NEXT:    [[AND:%.*]] = lshr <2 x i32> [[SHL]], <i32 4, i32 4>
-; CHECK-NEXT:    [[AND_LOBIT:%.*]] = and <2 x i32> [[AND]], <i32 1, i32 1>
-; CHECK-NEXT:    [[TMP2:%.*]] = xor <2 x i32> [[AND_LOBIT]], <i32 1, i32 1>
-; CHECK-NEXT:    ret <2 x i32> [[TMP2]]
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp ne <2 x i32> [[TMP0:%.*]], <i32 2, i32 2>
+; CHECK-NEXT:    [[TMP3:%.*]] = zext <2 x i1> [[TMP2]] to <2 x i32>
+; CHECK-NEXT:    ret <2 x i32> [[TMP3]]
 ;
   %shl = shl <2 x i32> <i32 4, i32 4>, %0
   %and = and <2 x i32> %shl, <i32 16, i32 16>
@@ -87,9 +83,8 @@ define <2 x i32> @icmp_eq_and_pow2_shl_pow2_vec(<2 x i32> %0) {
 
 define i32 @icmp_ne_and_pow2_shl_pow2(i32 %0) {
 ; CHECK-LABEL: @icmp_ne_and_pow2_shl_pow2(
-; CHECK-NEXT:    [[SHL:%.*]] = shl i32 2, [[TMP0:%.*]]
-; CHECK-NEXT:    [[AND:%.*]] = lshr i32 [[SHL]], 4
-; CHECK-NEXT:    [[AND_LOBIT:%.*]] = and i32 [[AND]], 1
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i32 [[TMP0:%.*]], 3
+; CHECK-NEXT:    [[AND_LOBIT:%.*]] = zext i1 [[TMP2]] to i32
 ; CHECK-NEXT:    ret i32 [[AND_LOBIT]]
 ;
   %shl = shl i32 2, %0
@@ -101,9 +96,8 @@ define i32 @icmp_ne_and_pow2_shl_pow2(i32 %0) {
 
 define <2 x i32> @icmp_ne_and_pow2_shl_pow2_vec(<2 x i32> %0) {
 ; CHECK-LABEL: @icmp_ne_and_pow2_shl_pow2_vec(
-; CHECK-NEXT:    [[SHL:%.*]] = shl <2 x i32> <i32 4, i32 4>, [[TMP0:%.*]]
-; CHECK-NEXT:    [[AND:%.*]] = lshr <2 x i32> [[SHL]], <i32 4, i32 4>
-; CHECK-NEXT:    [[AND_LOBIT:%.*]] = and <2 x i32> [[AND]], <i32 1, i32 1>
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq <2 x i32> [[TMP0:%.*]], <i32 2, i32 2>
+; CHECK-NEXT:    [[AND_LOBIT:%.*]] = zext <2 x i1> [[TMP2]] to <2 x i32>
 ; CHECK-NEXT:    ret <2 x i32> [[AND_LOBIT]]
 ;
   %shl = shl <2 x i32> <i32 4, i32 4>, %0
@@ -335,9 +329,9 @@ define i32 @icmp_ne_and1_lshr_pow2(i32 %0) {
 
 define <2 x i32> @icmp_ne_and1_lshr_pow2_vec(<2 x i32> %0) {
 ; CHECK-LABEL: @icmp_ne_and1_lshr_pow2_vec(
-; CHECK-NEXT:    [[AND:%.*]] = lshr <2 x i32> <i32 2, i32 2>, [[TMP0:%.*]]
-; CHECK-NEXT:    [[AND_LOBIT:%.*]] = and <2 x i32> [[AND]], <i32 1, i32 1>
-; CHECK-NEXT:    ret <2 x i32> [[AND_LOBIT]]
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq <2 x i32> [[TMP0:%.*]], <i32 1, i32 1>
+; CHECK-NEXT:    [[CONV:%.*]] = zext <2 x i1> [[TMP2]] to <2 x i32>
+; CHECK-NEXT:    ret <2 x i32> [[CONV]]
 ;
   %lshr = lshr <2 x i32> <i32 8, i32 8>, %0
   %and  = and <2 x i32> %lshr, <i32 4, i32 4>
@@ -348,10 +342,9 @@ define <2 x i32> @icmp_ne_and1_lshr_pow2_vec(<2 x i32> %0) {
 
 define i32 @icmp_eq_and_pow2_lshr_pow2(i32 %0) {
 ; CHECK-LABEL: @icmp_eq_and_pow2_lshr_pow2(
-; CHECK-NEXT:    [[AND:%.*]] = lshr i32 2, [[TMP0:%.*]]
-; CHECK-NEXT:    [[AND_LOBIT:%.*]] = and i32 [[AND]], 1
-; CHECK-NEXT:    [[TMP2:%.*]] = xor i32 [[AND_LOBIT]], 1
-; CHECK-NEXT:    ret i32 [[TMP2]]
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp ne i32 [[TMP0:%.*]], 1
+; CHECK-NEXT:    [[CONV:%.*]] = zext i1 [[TMP2]] to i32
+; CHECK-NEXT:    ret i32 [[CONV]]
 ;
   %lshr = lshr i32 8, %0
   %and  = and i32 %lshr, 4
@@ -373,10 +366,9 @@ define i32 @icmp_eq_and_pow2_lshr_pow2_case2(i32 %0) {
 
 define <2 x i32> @icmp_eq_and_pow2_lshr_pow2_vec(<2 x i32> %0) {
 ; CHECK-LABEL: @icmp_eq_and_pow2_lshr_pow2_vec(
-; CHECK-NEXT:    [[AND:%.*]] = lshr <2 x i32> <i32 2, i32 2>, [[TMP0:%.*]]
-; CHECK-NEXT:    [[AND_LOBIT:%.*]] = and <2 x i32> [[AND]], <i32 1, i32 1>
-; CHECK-NEXT:    [[TMP2:%.*]] = xor <2 x i32> [[AND_LOBIT]], <i32 1, i32 1>
-; CHECK-NEXT:    ret <2 x i32> [[TMP2]]
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp ne <2 x i32> [[TMP0:%.*]], <i32 1, i32 1>
+; CHECK-NEXT:    [[CONV:%.*]] = zext <2 x i1> [[TMP2]] to <2 x i32>
+; CHECK-NEXT:    ret <2 x i32> [[CONV]]
 ;
   %lshr = lshr <2 x i32> <i32 8, i32 8>, %0
   %and  = and <2 x i32> %lshr, <i32 4, i32 4>
@@ -387,10 +379,9 @@ define <2 x i32> @icmp_eq_and_pow2_lshr_pow2_vec(<2 x i32> %0) {
 
 define i32 @icmp_ne_and_pow2_lshr_pow2(i32 %0) {
 ; CHECK-LABEL: @icmp_ne_and_pow2_lshr_pow2(
-; CHECK-NEXT:    [[AND:%.*]] = lshr i32 2, [[TMP0:%.*]]
-; CHECK-NEXT:    [[AND_LOBIT:%.*]] = and i32 [[AND]], 1
-; CHECK-NEXT:    [[TMP2:%.*]] = xor i32 [[AND_LOBIT]], 1
-; CHECK-NEXT:    ret i32 [[TMP2]]
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp ne i32 [[TMP0:%.*]], 1
+; CHECK-NEXT:    [[CONV:%.*]] = zext i1 [[TMP2]] to i32
+; CHECK-NEXT:    ret i32 [[CONV]]
 ;
   %lshr = lshr i32 8, %0
   %and  = and i32 %lshr, 4
@@ -412,9 +403,9 @@ define i32 @icmp_ne_and_pow2_lshr_pow2_case2(i32 %0) {
 
 define <2 x i32> @icmp_ne_and_pow2_lshr_pow2_vec(<2 x i32> %0) {
 ; CHECK-LABEL: @icmp_ne_and_pow2_lshr_pow2_vec(
-; CHECK-NEXT:    [[AND:%.*]] = lshr <2 x i32> <i32 2, i32 2>, [[TMP0:%.*]]
-; CHECK-NEXT:    [[AND_LOBIT:%.*]] = and <2 x i32> [[AND]], <i32 1, i32 1>
-; CHECK-NEXT:    ret <2 x i32> [[AND_LOBIT]]
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq <2 x i32> [[TMP0:%.*]], <i32 1, i32 1>
+; CHECK-NEXT:    [[CONV:%.*]] = zext <2 x i1> [[TMP2]] to <2 x i32>
+; CHECK-NEXT:    ret <2 x i32> [[CONV]]
 ;
   %lshr = lshr <2 x i32> <i32 8, i32 8>, %0
   %and  = and <2 x i32> %lshr, <i32 4, i32 4>

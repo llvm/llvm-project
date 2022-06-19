@@ -116,8 +116,10 @@
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/IR/AbstractCallSite.h"
 #include "llvm/IR/ConstantRange.h"
+#include "llvm/IR/Constants.h"
 #include "llvm/IR/InstIterator.h"
 #include "llvm/IR/PassManager.h"
+#include "llvm/Support/Alignment.h"
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/DOTGraphTraits.h"
@@ -155,6 +157,16 @@ enum ValueScope : uint8_t {
   Interprocedural = 2,
 };
 
+struct ValueAndContext : public std::pair<Value *, const Instruction *> {
+  using Base = std::pair<Value *, const Instruction *>;
+  ValueAndContext(const Base &B) : Base(B) {}
+  ValueAndContext(Value &V, const Instruction *CtxI) : Base(&V, CtxI) {}
+  ValueAndContext(Value &V, const Instruction &CtxI) : Base(&V, &CtxI) {}
+
+  Value *getValue() const { return this->first; }
+  const Instruction *getCtxI() const { return this->second; }
+};
+
 /// Return true if \p I is a `nosync` instruction. Use generic reasoning and
 /// potentially the corresponding AANoSync.
 bool isNoSyncInst(Attributor &A, const Instruction &I,
@@ -172,11 +184,10 @@ bool isDynamicallyUnique(Attributor &A, const AbstractAttribute &QueryingAA,
 /// instruction/argument of \p Scope.
 bool isValidInScope(const Value &V, const Function *Scope);
 
-/// Return true if \p V is a valid value at position \p CtxI, that is a
-/// constant, an argument of the same function as \p CtxI, or an instruction in
-/// that function that dominates \p CtxI.
-bool isValidAtPosition(const Value &V, const Instruction &CtxI,
-                       InformationCache &InfoCache);
+/// Return true if the value of \p VAC is a valid at the position of \p VAC,
+/// that is a constant, an argument of the same function, or an instruction in
+/// that function that dominates the position.
+bool isValidAtPosition(const ValueAndContext &VAC, InformationCache &InfoCache);
 
 /// Try to convert \p V to type \p Ty without introducing new instructions. If
 /// this is not possible return `nullptr`. Note: this function basically knows
@@ -273,6 +284,26 @@ bool isPotentiallyReachable(
     std::function<bool(const Function &F)> GoBackwardsCB);
 
 } // namespace AA
+
+template <>
+struct DenseMapInfo<AA::ValueAndContext>
+    : public DenseMapInfo<AA::ValueAndContext::Base> {
+  using Base = DenseMapInfo<AA::ValueAndContext::Base>;
+  static inline AA::ValueAndContext getEmptyKey() {
+    return Base::getEmptyKey();
+  }
+  static inline AA::ValueAndContext getTombstoneKey() {
+    return Base::getTombstoneKey();
+  }
+  static unsigned getHashValue(const AA::ValueAndContext &VAC) {
+    return Base::getHashValue(VAC);
+  }
+
+  static bool isEqual(const AA::ValueAndContext &LHS,
+                      const AA::ValueAndContext &RHS) {
+    return Base::isEqual(LHS, RHS);
+  }
+};
 
 /// The value passed to the line option that defines the maximal initialization
 /// chain length.
@@ -1560,11 +1591,17 @@ struct Attributor {
     return true;
   }
 
-  /// Helper function to replace all uses of \p V with \p NV. Return true if
-  /// there is any change. The flag \p ChangeDroppable indicates if dropppable
-  /// uses should be changed too.
-  bool changeValueAfterManifest(Value &V, Value &NV,
-                                bool ChangeDroppable = true) {
+  /// Helper function to replace all uses associated with \p IRP with \p NV.
+  /// Return true if there is any change. The flag \p ChangeDroppable indicates
+  /// if dropppable uses should be changed too.
+  bool changeAfterManifest(const IRPosition IRP, Value &NV,
+                           bool ChangeDroppable = true) {
+    if (IRP.getPositionKind() == IRPosition::IRP_CALL_SITE_ARGUMENT) {
+      auto *CB = cast<CallBase>(IRP.getCtxI());
+      return changeUseAfterManifest(
+          CB->getArgOperandUse(IRP.getCallSiteArgNo()), NV);
+    }
+    Value &V = IRP.getAssociatedValue();
     auto &Entry = ToBeChangedValues[&V];
     Value *&CurNV = Entry.first;
     if (CurNV && (CurNV->stripPointerCasts() == NV.stripPointerCasts() ||
@@ -2573,16 +2610,6 @@ struct IntegerRangeState : public AbstractState {
     unionAssumed(R.getAssumed());
   }
 
-  /// Unite known range with the passed state.
-  void unionKnown(const ConstantRange &R) {
-    // Don't loose a known range.
-    Known = Known.unionWith(R);
-    Assumed = Assumed.unionWith(Known);
-  }
-
-  /// See IntegerRangeState::unionKnown(..).
-  void unionKnown(const IntegerRangeState &R) { unionKnown(R.getKnown()); }
-
   /// Intersect known range with the passed state.
   void intersectKnown(const ConstantRange &R) {
     Assumed = Assumed.intersectWith(R);
@@ -2612,8 +2639,8 @@ struct IntegerRangeState : public AbstractState {
   IntegerRangeState operator&=(const IntegerRangeState &R) {
     // NOTE: `&=` operator seems like `intersect` but in this case, we need to
     // take `union`.
-    unionKnown(R);
-    unionAssumed(R);
+    Known = Known.unionWith(R.getKnown());
+    Assumed = Assumed.unionWith(R.getAssumed());
     return *this;
   }
 };
@@ -3682,10 +3709,10 @@ struct AAAlign : public IRAttribute<
   AAAlign(const IRPosition &IRP, Attributor &A) : IRAttribute(IRP) {}
 
   /// Return assumed alignment.
-  uint64_t getAssumedAlign() const { return getAssumed(); }
+  Align getAssumedAlign() const { return Align(getAssumed()); }
 
   /// Return known alignment.
-  uint64_t getKnownAlign() const { return getKnown(); }
+  Align getKnownAlign() const { return Align(getKnown()); }
 
   /// See AbstractAttribute::getName()
   const std::string getName() const override { return "AAAlign"; }
@@ -4254,13 +4281,14 @@ struct AAValueConstantRange
 
   /// Return an assumed constant for the associated value a program point \p
   /// CtxI.
-  Optional<ConstantInt *>
-  getAssumedConstantInt(Attributor &A,
-                        const Instruction *CtxI = nullptr) const {
+  Optional<Constant *>
+  getAssumedConstant(Attributor &A, const Instruction *CtxI = nullptr) const {
     ConstantRange RangeV = getAssumedConstantRange(A, CtxI);
-    if (auto *C = RangeV.getSingleElement())
-      return cast<ConstantInt>(
-          ConstantInt::get(getAssociatedValue().getType(), *C));
+    if (auto *C = RangeV.getSingleElement()) {
+      Type *Ty = getAssociatedValue().getType();
+      return cast_or_null<Constant>(
+          AA::getWithType(*ConstantInt::get(Ty->getContext(), *C), *Ty));
+    }
     if (RangeV.isEmptySet())
       return llvm::None;
     return nullptr;
@@ -4497,18 +4525,19 @@ struct AAPotentialConstantValues
                                                       Attributor &A);
 
   /// Return assumed constant for the associated value
-  Optional<ConstantInt *>
-  getAssumedConstantInt(Attributor &A,
-                        const Instruction *CtxI = nullptr) const {
+  Optional<Constant *>
+  getAssumedConstant(Attributor &A, const Instruction *CtxI = nullptr) const {
     if (!isValidState())
       return nullptr;
-    if (getAssumedSet().size() == 1)
-      return cast<ConstantInt>(ConstantInt::get(getAssociatedValue().getType(),
-                                                *(getAssumedSet().begin())));
+    if (getAssumedSet().size() == 1) {
+      Type *Ty = getAssociatedValue().getType();
+      return cast_or_null<Constant>(AA::getWithType(
+          *ConstantInt::get(Ty->getContext(), *(getAssumedSet().begin())),
+          *Ty));
+    }
     if (getAssumedSet().size() == 0) {
       if (undefIsContained())
-        return cast<ConstantInt>(
-            ConstantInt::get(getAssociatedValue().getType(), 0));
+        return UndefValue::get(getAssociatedValue().getType());
       return llvm::None;
     }
 

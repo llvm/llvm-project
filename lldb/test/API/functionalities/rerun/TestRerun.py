@@ -11,8 +11,6 @@ from lldbsuite.test import lldbutil
 
 class TestRerun(TestBase):
 
-    mydir = TestBase.compute_mydir(__file__)
-
     def test(self):
         self.build()
         exe = self.getBuildArtifact("a.out")

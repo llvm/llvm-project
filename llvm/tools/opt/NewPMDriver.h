@@ -20,7 +20,6 @@
 #ifndef LLVM_TOOLS_OPT_NEWPMDRIVER_H
 #define LLVM_TOOLS_OPT_NEWPMDRIVER_H
 
-#include "llvm/ADT/ArrayRef.h"
 #include "llvm/Support/CommandLine.h"
 
 namespace llvm {

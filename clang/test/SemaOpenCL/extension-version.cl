@@ -217,51 +217,51 @@
 // Check that pragmas for the OpenCL 3.0 features are rejected.
 
 #pragma OPENCL EXTENSION __opencl_c_int64 : disable
-//expected-warning@-1{{unknown OpenCL extension '__opencl_c_int64' - ignoring}}
+//expected-warning@-1{{OpenCL extension '__opencl_c_int64' unknown or does not require pragma - ignoring}}
 #pragma OPENCL EXTENSION __opencl_c_3d_image_writes : disable
-//expected-warning@-1{{unknown OpenCL extension '__opencl_c_3d_image_writes' - ignoring}}
+//expected-warning@-1{{OpenCL extension '__opencl_c_3d_image_writes' unknown or does not require pragma - ignoring}}
 #pragma OPENCL EXTENSION __opencl_c_atomic_order_acq_rel : disable
-//expected-warning@-1{{unknown OpenCL extension '__opencl_c_atomic_order_acq_rel' - ignoring}}
+//expected-warning@-1{{OpenCL extension '__opencl_c_atomic_order_acq_rel' unknown or does not require pragma - ignoring}}
 #pragma OPENCL EXTENSION __opencl_c_atomic_order_seq_cst : disable
-//expected-warning@-1{{unknown OpenCL extension '__opencl_c_atomic_order_seq_cst' - ignoring}}
+//expected-warning@-1{{OpenCL extension '__opencl_c_atomic_order_seq_cst' unknown or does not require pragma - ignoring}}
 #pragma OPENCL EXTENSION __opencl_c_device_enqueue : disable
-//expected-warning@-1{{unknown OpenCL extension '__opencl_c_device_enqueue' - ignoring}}
+//expected-warning@-1{{OpenCL extension '__opencl_c_device_enqueue' unknown or does not require pragma - ignoring}}
 #pragma OPENCL EXTENSION __opencl_c_fp64 : disable
-//expected-warning@-1{{unknown OpenCL extension '__opencl_c_fp64' - ignoring}}
+//expected-warning@-1{{OpenCL extension '__opencl_c_fp64' unknown or does not require pragma - ignoring}}
 #pragma OPENCL EXTENSION __opencl_c_generic_address_space : disable
-//expected-warning@-1{{unknown OpenCL extension '__opencl_c_generic_address_space' - ignoring}}
+//expected-warning@-1{{OpenCL extension '__opencl_c_generic_address_space' unknown or does not require pragma - ignoring}}
 #pragma OPENCL EXTENSION __opencl_c_images : disable
-//expected-warning@-1{{unknown OpenCL extension '__opencl_c_images' - ignoring}}
+//expected-warning@-1{{OpenCL extension '__opencl_c_images' unknown or does not require pragma - ignoring}}
 #pragma OPENCL EXTENSION __opencl_c_pipes : disable
-//expected-warning@-1{{unknown OpenCL extension '__opencl_c_pipes' - ignoring}}
+//expected-warning@-1{{OpenCL extension '__opencl_c_pipes' unknown or does not require pragma - ignoring}}
 #pragma OPENCL EXTENSION __opencl_c_program_scope_global_variables : disable
-//expected-warning@-1{{unknown OpenCL extension '__opencl_c_program_scope_global_variables' - ignoring}}
+//expected-warning@-1{{OpenCL extension '__opencl_c_program_scope_global_variables' unknown or does not require pragma - ignoring}}
 #pragma OPENCL EXTENSION __opencl_c_read_write_images : disable
-//expected-warning@-1{{unknown OpenCL extension '__opencl_c_read_write_images' - ignoring}}
+//expected-warning@-1{{OpenCL extension '__opencl_c_read_write_images' unknown or does not require pragma - ignoring}}
 #pragma OPENCL EXTENSION __opencl_c_subgroups : disable
-//expected-warning@-1{{unknown OpenCL extension '__opencl_c_subgroups' - ignoring}}
+//expected-warning@-1{{OpenCL extension '__opencl_c_subgroups' unknown or does not require pragma - ignoring}}
 
 #pragma OPENCL EXTENSION __opencl_c_int64 : enable
-//expected-warning@-1{{unknown OpenCL extension '__opencl_c_int64' - ignoring}}
+//expected-warning@-1{{OpenCL extension '__opencl_c_int64' unknown or does not require pragma - ignoring}}
 #pragma OPENCL EXTENSION __opencl_c_3d_image_writes : enable
-//expected-warning@-1{{unknown OpenCL extension '__opencl_c_3d_image_writes' - ignoring}}
+//expected-warning@-1{{OpenCL extension '__opencl_c_3d_image_writes' unknown or does not require pragma - ignoring}}
 #pragma OPENCL EXTENSION __opencl_c_atomic_order_acq_rel : enable
-//expected-warning@-1{{unknown OpenCL extension '__opencl_c_atomic_order_acq_rel' - ignoring}}
+//expected-warning@-1{{OpenCL extension '__opencl_c_atomic_order_acq_rel' unknown or does not require pragma - ignoring}}
 #pragma OPENCL EXTENSION __opencl_c_atomic_order_seq_cst : enable
-//expected-warning@-1{{unknown OpenCL extension '__opencl_c_atomic_order_seq_cst' - ignoring}}
+//expected-warning@-1{{OpenCL extension '__opencl_c_atomic_order_seq_cst' unknown or does not require pragma - ignoring}}
 #pragma OPENCL EXTENSION __opencl_c_device_enqueue : enable
-//expected-warning@-1{{unknown OpenCL extension '__opencl_c_device_enqueue' - ignoring}}
+//expected-warning@-1{{OpenCL extension '__opencl_c_device_enqueue' unknown or does not require pragma - ignoring}}
 #pragma OPENCL EXTENSION __opencl_c_fp64 : enable
-//expected-warning@-1{{unknown OpenCL extension '__opencl_c_fp64' - ignoring}}
+//expected-warning@-1{{OpenCL extension '__opencl_c_fp64' unknown or does not require pragma - ignoring}}
 #pragma OPENCL EXTENSION __opencl_c_generic_address_space : enable
-//expected-warning@-1{{unknown OpenCL extension '__opencl_c_generic_address_space' - ignoring}}
+//expected-warning@-1{{OpenCL extension '__opencl_c_generic_address_space' unknown or does not require pragma - ignoring}}
 #pragma OPENCL EXTENSION __opencl_c_images : enable
-//expected-warning@-1{{unknown OpenCL extension '__opencl_c_images' - ignoring}}
+//expected-warning@-1{{OpenCL extension '__opencl_c_images' unknown or does not require pragma - ignoring}}
 #pragma OPENCL EXTENSION __opencl_c_pipes : enable
-//expected-warning@-1{{unknown OpenCL extension '__opencl_c_pipes' - ignoring}}
+//expected-warning@-1{{OpenCL extension '__opencl_c_pipes' unknown or does not require pragma - ignoring}}
 #pragma OPENCL EXTENSION __opencl_c_program_scope_global_variables : enable
-//expected-warning@-1{{unknown OpenCL extension '__opencl_c_program_scope_global_variables' - ignoring}}
+//expected-warning@-1{{OpenCL extension '__opencl_c_program_scope_global_variables' unknown or does not require pragma - ignoring}}
 #pragma OPENCL EXTENSION __opencl_c_read_write_images : enable
-//expected-warning@-1{{unknown OpenCL extension '__opencl_c_read_write_images' - ignoring}}
+//expected-warning@-1{{OpenCL extension '__opencl_c_read_write_images' unknown or does not require pragma - ignoring}}
 #pragma OPENCL EXTENSION __opencl_c_subgroups : enable
-//expected-warning@-1{{unknown OpenCL extension '__opencl_c_subgroups' - ignoring}}
+//expected-warning@-1{{OpenCL extension '__opencl_c_subgroups' unknown or does not require pragma - ignoring}}

@@ -57,12 +57,11 @@ enum ITMode {
 };
 
 static cl::opt<ITMode>
-IT(cl::desc("IT block support"), cl::Hidden, cl::init(DefaultIT),
-   cl::ZeroOrMore,
-   cl::values(clEnumValN(DefaultIT, "arm-default-it",
-                         "Generate any type of IT block"),
-              clEnumValN(RestrictedIT, "arm-restrict-it",
-                         "Disallow complex IT blocks")));
+    IT(cl::desc("IT block support"), cl::Hidden, cl::init(DefaultIT),
+       cl::values(clEnumValN(DefaultIT, "arm-default-it",
+                             "Generate any type of IT block"),
+                  clEnumValN(RestrictedIT, "arm-restrict-it",
+                             "Disallow complex IT blocks")));
 
 /// ForceFastISel - Use the fast-isel, even for subtargets where it is not
 /// currently supported (for testing only).

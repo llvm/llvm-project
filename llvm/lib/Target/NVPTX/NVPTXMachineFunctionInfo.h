@@ -26,6 +26,13 @@ private:
 public:
   NVPTXMachineFunctionInfo(MachineFunction &MF) {}
 
+  MachineFunctionInfo *
+  clone(BumpPtrAllocator &Allocator, MachineFunction &DestMF,
+        const DenseMap<MachineBasicBlock *, MachineBasicBlock *> &Src2DstMBB)
+      const override {
+    return DestMF.cloneInfo<NVPTXMachineFunctionInfo>(*this);
+  }
+
   /// Returns the index for the symbol \p Symbol. If the symbol was previously,
   /// added, the same index is returned. Otherwise, the symbol is added and the
   /// new index is returned.

@@ -477,6 +477,19 @@ Error COFFObjectFile::getRvaPtr(uint32_t Addr, uintptr_t &Res,
     uint32_t SectionStart = Section->VirtualAddress;
     uint32_t SectionEnd = Section->VirtualAddress + Section->VirtualSize;
     if (SectionStart <= Addr && Addr < SectionEnd) {
+      // A table/directory entry can be pointing to somewhere in a stripped
+      // section, in an object that went through `objcopy --only-keep-debug`.
+      // In this case we don't want to cause the parsing of the object file to
+      // fail, otherwise it will be impossible to use this object as debug info
+      // in LLDB. Return SectionStrippedError here so that
+      // COFFObjectFile::initialize can ignore the error.
+      // Somewhat common binaries may have RVAs pointing outside of the
+      // provided raw data. Instead of rejecting the binaries, just
+      // treat the section as stripped for these purposes.
+      if (Section->SizeOfRawData < Section->VirtualSize &&
+          Addr >= SectionStart + Section->SizeOfRawData) {
+        return make_error<SectionStrippedError>();
+      }
       uint32_t Offset = Addr - SectionStart;
       Res = reinterpret_cast<uintptr_t>(base()) + Section->PointerToRawData +
             Offset;
@@ -602,6 +615,9 @@ Error COFFObjectFile::initDelayImportTablePtr() {
   uintptr_t IntPtr = 0;
   if (Error E = getRvaPtr(RVA, IntPtr, "delay import table"))
     return E;
+  if (Error E = checkOffset(Data, IntPtr, DataEntry->Size))
+    return E;
+
   DelayImportDirectory = reinterpret_cast<
       const delay_import_directory_table_entry *>(IntPtr);
   return Error::success();
@@ -623,6 +639,9 @@ Error COFFObjectFile::initExportTablePtr() {
   uintptr_t IntPtr = 0;
   if (Error E = getRvaPtr(ExportTableRva, IntPtr, "export table"))
     return E;
+  if (Error E = checkOffset(Data, IntPtr, DataEntry->Size))
+    return E;
+
   ExportDirectory =
       reinterpret_cast<const export_directory_table_entry *>(IntPtr);
   return Error::success();
@@ -640,6 +659,9 @@ Error COFFObjectFile::initBaseRelocPtr() {
   if (Error E = getRvaPtr(DataEntry->RelativeVirtualAddress, IntPtr,
                           "base reloc table"))
     return E;
+  if (Error E = checkOffset(Data, IntPtr, DataEntry->Size))
+    return E;
+
   BaseRelocHeader = reinterpret_cast<const coff_base_reloc_block_header *>(
       IntPtr);
   BaseRelocEnd = reinterpret_cast<coff_base_reloc_block_header *>(
@@ -668,6 +690,9 @@ Error COFFObjectFile::initDebugDirectoryPtr() {
   if (Error E = getRvaPtr(DataEntry->RelativeVirtualAddress, IntPtr,
                           "debug directory"))
     return E;
+  if (Error E = checkOffset(Data, IntPtr, DataEntry->Size))
+    return E;
+
   DebugDirectoryBegin = reinterpret_cast<const debug_directory *>(IntPtr);
   DebugDirectoryEnd = reinterpret_cast<const debug_directory *>(
       IntPtr + DataEntry->Size);
@@ -700,6 +725,8 @@ Error COFFObjectFile::initTLSDirectoryPtr() {
   if (Error E =
           getRvaPtr(DataEntry->RelativeVirtualAddress, IntPtr, "TLS directory"))
     return E;
+  if (Error E = checkOffset(Data, IntPtr, DataEntry->Size))
+    return E;
 
   if (is64())
     TLSDirectory64 = reinterpret_cast<const coff_tls_directory64 *>(IntPtr);
@@ -721,6 +748,8 @@ Error COFFObjectFile::initLoadConfigPtr() {
   uintptr_t IntPtr = 0;
   if (Error E = getRvaPtr(DataEntry->RelativeVirtualAddress, IntPtr,
                           "load config table"))
+    return E;
+  if (Error E = checkOffset(Data, IntPtr, DataEntry->Size))
     return E;
 
   LoadConfig = (const void *)IntPtr;
@@ -745,6 +774,14 @@ COFFObjectFile::COFFObjectFile(MemoryBufferRef Object)
       BaseRelocHeader(nullptr), BaseRelocEnd(nullptr),
       DebugDirectoryBegin(nullptr), DebugDirectoryEnd(nullptr),
       TLSDirectory32(nullptr), TLSDirectory64(nullptr) {}
+
+static Error ignoreStrippedErrors(Error E) {
+  if (E.isA<SectionStrippedError>()) {
+    consumeError(std::move(E));
+    return Error::success();
+  }
+  return E;
+}
 
 Error COFFObjectFile::initialize() {
   // Check that we at least have enough room for a header.
@@ -861,28 +898,28 @@ Error COFFObjectFile::initialize() {
   }
 
   // Initialize the pointer to the beginning of the import table.
-  if (Error E = initImportTablePtr())
+  if (Error E = ignoreStrippedErrors(initImportTablePtr()))
     return E;
-  if (Error E = initDelayImportTablePtr())
+  if (Error E = ignoreStrippedErrors(initDelayImportTablePtr()))
     return E;
 
   // Initialize the pointer to the export table.
-  if (Error E = initExportTablePtr())
+  if (Error E = ignoreStrippedErrors(initExportTablePtr()))
     return E;
 
   // Initialize the pointer to the base relocation table.
-  if (Error E = initBaseRelocPtr())
+  if (Error E = ignoreStrippedErrors(initBaseRelocPtr()))
     return E;
 
   // Initialize the pointer to the debug directory.
-  if (Error E = initDebugDirectoryPtr())
+  if (Error E = ignoreStrippedErrors(initDebugDirectoryPtr()))
     return E;
 
   // Initialize the pointer to the TLS directory.
-  if (Error E = initTLSDirectoryPtr())
+  if (Error E = ignoreStrippedErrors(initTLSDirectoryPtr()))
     return E;
 
-  if (Error E = initLoadConfigPtr())
+  if (Error E = ignoreStrippedErrors(initLoadConfigPtr()))
     return E;
 
   return Error::success();
@@ -1109,13 +1146,7 @@ uint32_t COFFObjectFile::getSymbolIndex(COFFSymbolRef Symbol) const {
 
 Expected<StringRef>
 COFFObjectFile::getSectionName(const coff_section *Sec) const {
-  StringRef Name;
-  if (Sec->Name[COFF::NameSize - 1] == 0)
-    // Null terminated, let ::strlen figure out the length.
-    Name = Sec->Name;
-  else
-    // Not null terminated, use all 8 bytes.
-    Name = StringRef(Sec->Name, COFF::NameSize);
+  StringRef Name = StringRef(Sec->Name, COFF::NameSize).split('\0').first;
 
   // Check for string table entry. First byte is '/'.
   if (Name.startswith("/")) {

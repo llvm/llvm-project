@@ -1859,6 +1859,48 @@ TEST(APFloatTest, convert) {
   EXPECT_EQ(0x7fc00000, test.bitcastToAPInt());
   EXPECT_TRUE(losesInfo);
   EXPECT_EQ(status, APFloat::opOK);
+
+  // Test that subnormals are handled correctly in double to float conversion
+  test = APFloat(APFloat::IEEEdouble(), "0x0.0000010000000p-1022");
+  test.convert(APFloat::IEEEsingle(), APFloat::rmNearestTiesToEven, &losesInfo);
+  EXPECT_EQ(0.0f, test.convertToFloat());
+  EXPECT_TRUE(losesInfo);
+
+  test = APFloat(APFloat::IEEEdouble(), "0x0.0000010000001p-1022");
+  test.convert(APFloat::IEEEsingle(), APFloat::rmNearestTiesToEven, &losesInfo);
+  EXPECT_EQ(0.0f, test.convertToFloat());
+  EXPECT_TRUE(losesInfo);
+
+  test = APFloat(APFloat::IEEEdouble(), "-0x0.0000010000001p-1022");
+  test.convert(APFloat::IEEEsingle(), APFloat::rmNearestTiesToEven, &losesInfo);
+  EXPECT_EQ(0.0f, test.convertToFloat());
+  EXPECT_TRUE(losesInfo);
+
+  test = APFloat(APFloat::IEEEdouble(), "0x0.0000020000000p-1022");
+  test.convert(APFloat::IEEEsingle(), APFloat::rmNearestTiesToEven, &losesInfo);
+  EXPECT_EQ(0.0f, test.convertToFloat());
+  EXPECT_TRUE(losesInfo);
+
+  test = APFloat(APFloat::IEEEdouble(), "0x0.0000020000001p-1022");
+  test.convert(APFloat::IEEEsingle(), APFloat::rmNearestTiesToEven, &losesInfo);
+  EXPECT_EQ(0.0f, test.convertToFloat());
+  EXPECT_TRUE(losesInfo);
+
+  // Test subnormal conversion to bfloat
+  test = APFloat(APFloat::IEEEsingle(), "0x0.01p-126");
+  test.convert(APFloat::BFloat(), APFloat::rmNearestTiesToEven, &losesInfo);
+  EXPECT_EQ(0.0f, test.convertToFloat());
+  EXPECT_TRUE(losesInfo);
+
+  test = APFloat(APFloat::IEEEsingle(), "0x0.02p-126");
+  test.convert(APFloat::BFloat(), APFloat::rmNearestTiesToEven, &losesInfo);
+  EXPECT_EQ(0x01, test.bitcastToAPInt());
+  EXPECT_FALSE(losesInfo);
+
+  test = APFloat(APFloat::IEEEsingle(), "0x0.01p-126");
+  test.convert(APFloat::BFloat(), APFloat::rmNearestTiesToAway, &losesInfo);
+  EXPECT_EQ(0x01, test.bitcastToAPInt());
+  EXPECT_TRUE(losesInfo);
 }
 
 TEST(APFloatTest, PPCDoubleDouble) {

@@ -2561,7 +2561,7 @@ TEST_F(OpenMPIRBuilderTest, OrderedDirectiveDependSource) {
     ASSERT_NE(StoreValue, nullptr);
     EXPECT_EQ(StoreValue->getValueOperand(), StoreValues[Iter]);
     EXPECT_EQ(StoreValue->getPointerOperand(), DependAddrGEPIter);
-    EXPECT_EQ(StoreValue->getAlignment(), 8UL);
+    EXPECT_EQ(StoreValue->getAlign(), Align(8));
     IterInst = dyn_cast<Instruction>(StoreValue);
   }
 
@@ -2646,7 +2646,7 @@ TEST_F(OpenMPIRBuilderTest, OrderedDirectiveDependSink) {
     ASSERT_NE(StoreValue, nullptr);
     EXPECT_EQ(StoreValue->getValueOperand(), StoreValues[Iter]);
     EXPECT_EQ(StoreValue->getPointerOperand(), DependAddrGEPIter);
-    EXPECT_EQ(StoreValue->getAlignment(), 8UL);
+    EXPECT_EQ(StoreValue->getAlign(), Align(8));
     IterInst = dyn_cast<Instruction>(StoreValue);
   }
 
@@ -4776,8 +4776,9 @@ TEST_F(OpenMPIRBuilderTest, CreateTask) {
 
   // Verify that the argument data has been copied
   for (User *in : TaskAllocCall->users()) {
-    if (MemCpyInst *memCpyInst = dyn_cast<MemCpyInst>(in))
+    if (MemCpyInst *memCpyInst = dyn_cast<MemCpyInst>(in)) {
       EXPECT_EQ(memCpyInst->getDest(), TaskAllocCall);
+    }
   }
 }
 
@@ -4828,6 +4829,59 @@ TEST_F(OpenMPIRBuilderTest, CreateTaskUntied) {
   ConstantInt *Flags = dyn_cast<ConstantInt>(TaskAllocCall->getArgOperand(2));
   ASSERT_NE(Flags, nullptr);
   EXPECT_EQ(Flags->getZExtValue() & 1U, 0U);
+
+  EXPECT_FALSE(verifyModule(*M, &errs()));
+}
+
+TEST_F(OpenMPIRBuilderTest, CreateTaskFinal) {
+  using InsertPointTy = OpenMPIRBuilder::InsertPointTy;
+  OpenMPIRBuilder OMPBuilder(*M);
+  OMPBuilder.initialize();
+  F->setName("func");
+  IRBuilder<> Builder(BB);
+  auto BodyGenCB = [&](InsertPointTy AllocaIP, InsertPointTy CodeGenIP) {};
+  IRBuilderBase::InsertPoint AllocaIP = Builder.saveIP();
+  BasicBlock *BodyBB = splitBB(Builder, /*CreateBranch=*/true, "alloca.split");
+  Builder.SetInsertPoint(BodyBB);
+  Value *Final = Builder.CreateICmp(
+      CmpInst::Predicate::ICMP_EQ, F->getArg(0),
+      ConstantInt::get(Type::getInt32Ty(M->getContext()), 0U));
+  OpenMPIRBuilder::LocationDescription Loc(Builder.saveIP(), DL);
+  Builder.restoreIP(OMPBuilder.createTask(Loc, AllocaIP, BodyGenCB,
+                                          /*Tied=*/false, Final));
+  OMPBuilder.finalize();
+  Builder.CreateRetVoid();
+
+  // Check for the `Tied` argument
+  CallInst *TaskAllocCall = dyn_cast<CallInst>(
+      OMPBuilder.getOrCreateRuntimeFunctionPtr(OMPRTL___kmpc_omp_task_alloc)
+          ->user_back());
+  ASSERT_NE(TaskAllocCall, nullptr);
+  BinaryOperator *OrInst =
+      dyn_cast<BinaryOperator>(TaskAllocCall->getArgOperand(2));
+  ASSERT_NE(OrInst, nullptr);
+  EXPECT_EQ(OrInst->getOpcode(), BinaryOperator::BinaryOps::Or);
+
+  // One of the arguments to `or` instruction is the tied flag, which is equal
+  // to zero.
+  EXPECT_TRUE(any_of(OrInst->operands(), [](Value *op) {
+    if (ConstantInt *TiedValue = dyn_cast<ConstantInt>(op))
+      return TiedValue->getSExtValue() == 0;
+    return false;
+  }));
+
+  // One of the arguments to `or` instruction is the final condition.
+  EXPECT_TRUE(any_of(OrInst->operands(), [Final](Value *op) {
+    if (SelectInst *Select = dyn_cast<SelectInst>(op)) {
+      ConstantInt *TrueValue = dyn_cast<ConstantInt>(Select->getTrueValue());
+      ConstantInt *FalseValue = dyn_cast<ConstantInt>(Select->getFalseValue());
+      if (!TrueValue || !FalseValue)
+        return false;
+      return Select->getCondition() == Final &&
+             TrueValue->getSExtValue() == 2 && FalseValue->getSExtValue() == 0;
+    }
+    return false;
+  }));
 
   EXPECT_FALSE(verifyModule(*M, &errs()));
 }

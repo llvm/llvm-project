@@ -56,8 +56,7 @@ STATISTIC(NumOfPGOMemOPAnnotate, "Number of memop intrinsics annotated.");
 
 // The minimum call count to optimize memory intrinsic calls.
 static cl::opt<unsigned>
-    MemOPCountThreshold("pgo-memop-count-threshold", cl::Hidden, cl::ZeroOrMore,
-                        cl::init(1000),
+    MemOPCountThreshold("pgo-memop-count-threshold", cl::Hidden, cl::init(1000),
                         cl::desc("The minimum count to optimize memory "
                                  "intrinsic calls"));
 
@@ -69,14 +68,13 @@ static cl::opt<bool> DisableMemOPOPT("disable-memop-opt", cl::init(false),
 // The percent threshold to optimize memory intrinsic calls.
 static cl::opt<unsigned>
     MemOPPercentThreshold("pgo-memop-percent-threshold", cl::init(40),
-                          cl::Hidden, cl::ZeroOrMore,
+                          cl::Hidden,
                           cl::desc("The percentage threshold for the "
                                    "memory intrinsic calls optimization"));
 
 // Maximum number of versions for optimizing memory intrinsic call.
 static cl::opt<unsigned>
     MemOPMaxVersion("pgo-memop-max-version", cl::init(3), cl::Hidden,
-                    cl::ZeroOrMore,
                     cl::desc("The max version for the optimized memory "
                              " intrinsic calls"));
 

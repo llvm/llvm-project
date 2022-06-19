@@ -49,8 +49,7 @@ struct CreateDebugCounterOption {
     return new DebugCounterList(
         "debug-counter", cl::Hidden,
         cl::desc("Comma separated list of debug counter skip and count"),
-        cl::CommaSeparated, cl::ZeroOrMore,
-        cl::location(DebugCounter::instance()));
+        cl::CommaSeparated, cl::location(DebugCounter::instance()));
   }
 };
 } // namespace

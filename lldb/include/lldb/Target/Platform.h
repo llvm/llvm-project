@@ -945,7 +945,7 @@ private:
 
 class PlatformList {
 public:
-  PlatformList() {}
+  PlatformList() = default;
 
   ~PlatformList() = default;
 

@@ -45,12 +45,8 @@ multiclass AMO_rr_aq_rl<bits<5> funct5, bits<3> funct3, string opcodestr> {
 
 multiclass AtomicStPat<PatFrag StoreOp, RVInst Inst, RegisterClass StTy,
                        ValueType vt = XLenVT> {
-  def : Pat<(StoreOp BaseAddr:$rs1, (vt StTy:$rs2)),
-            (Inst StTy:$rs2, BaseAddr:$rs1, 0)>;
-  def : Pat<(StoreOp (add BaseAddr:$rs1, simm12:$imm12), (vt StTy:$rs2)),
-            (Inst StTy:$rs2, BaseAddr:$rs1, simm12:$imm12)>;
-  def : Pat<(StoreOp (IsOrAdd AddrFI:$rs1, simm12:$imm12), (vt StTy:$rs2)),
-            (Inst StTy:$rs2, AddrFI:$rs1, simm12:$imm12)>;
+  def : Pat<(StoreOp (AddrRegImm GPR:$rs1, simm12:$imm12), (vt StTy:$rs2)),
+            (Inst StTy:$rs2, GPR:$rs1, simm12:$imm12)>;
 }
 
 //===----------------------------------------------------------------------===//

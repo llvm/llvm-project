@@ -8,7 +8,7 @@
 // Check that non-32-bit integer types are converted to 32-bit types if the
 // corresponding capabilities are not available.
 module attributes {
-  spv.target_env = #spv.target_env<#spv.vce<v1.0, [], []>, {}>
+  spv.target_env = #spv.target_env<#spv.vce<v1.0, [], []>, #spv.resource_limits<>>
 } {
 
 // CHECK-LABEL: spv.func @integer8
@@ -48,7 +48,7 @@ func.func @integer64(%arg0: i64, %arg1: si64, %arg2: ui64) { return }
 // Check that non-32-bit integer types are kept untouched if the corresponding
 // capabilities are available.
 module attributes {
-  spv.target_env = #spv.target_env<#spv.vce<v1.0, [Int8, Int16, Int64], []>, {}>
+  spv.target_env = #spv.target_env<#spv.vce<v1.0, [Int8, Int16, Int64], []>, #spv.resource_limits<>>
 } {
 
 // CHECK-LABEL: spv.func @integer8
@@ -87,7 +87,7 @@ func.func @integer64(%arg0: i64, %arg1: si64, %arg2: ui64) { return }
 
 // Check that weird bitwidths are not supported.
 module attributes {
-  spv.target_env = #spv.target_env<#spv.vce<v1.0, [], []>, {}>
+  spv.target_env = #spv.target_env<#spv.vce<v1.0, [], []>, #spv.resource_limits<>>
 } {
 
 // CHECK-NOT: spv.func @integer4
@@ -108,7 +108,7 @@ func.func @integer42(%arg0: i42) { return }
 
 // The index type is always converted into i32.
 module attributes {
-  spv.target_env = #spv.target_env<#spv.vce<v1.0, [], []>, {}>
+  spv.target_env = #spv.target_env<#spv.vce<v1.0, [], []>, #spv.resource_limits<>>
 } {
 
 // CHECK-LABEL: spv.func @index_type
@@ -126,7 +126,7 @@ func.func @index_type(%arg0: index) { return }
 // Check that non-32-bit float types are converted to 32-bit types if the
 // corresponding capabilities are not available.
 module attributes {
-  spv.target_env = #spv.target_env<#spv.vce<v1.0, [], []>, {}>
+  spv.target_env = #spv.target_env<#spv.vce<v1.0, [], []>, #spv.resource_limits<>>
 } {
 
 // CHECK-LABEL: spv.func @float16
@@ -148,7 +148,7 @@ func.func @float64(%arg0: f64) { return }
 // Check that non-32-bit float types are kept untouched if the corresponding
 // capabilities are available.
 module attributes {
-  spv.target_env = #spv.target_env<#spv.vce<v1.0, [Float16, Float64], []>, {}>
+  spv.target_env = #spv.target_env<#spv.vce<v1.0, [Float16, Float64], []>, #spv.resource_limits<>>
 } {
 
 // CHECK-LABEL: spv.func @float16
@@ -169,7 +169,7 @@ func.func @float64(%arg0: f64) { return }
 
 // Check that bf16 is not supported.
 module attributes {
-  spv.target_env = #spv.target_env<#spv.vce<v1.0, [], []>, {}>
+  spv.target_env = #spv.target_env<#spv.vce<v1.0, [], []>, #spv.resource_limits<>>
 } {
 
 // CHECK-NOT: spv.func @bf16_type
@@ -186,7 +186,7 @@ func.func @bf16_type(%arg0: bf16) { return }
 // Check that capabilities for scalar types affects vector types too: no special
 // capabilities available means using turning element types to 32-bit.
 module attributes {
-  spv.target_env = #spv.target_env<#spv.vce<v1.0, [], []>, {}>
+  spv.target_env = #spv.target_env<#spv.vce<v1.0, [], []>, #spv.resource_limits<>>
 } {
 
 // CHECK-LABEL: spv.func @int_vector
@@ -215,7 +215,7 @@ func.func @float_vector(
 // special capabilities means keep vector types untouched.
 module attributes {
   spv.target_env = #spv.target_env<
-    #spv.vce<v1.0, [Int8, Int16, Int64, Float16, Float64], []>, {}>
+    #spv.vce<v1.0, [Int8, Int16, Int64, Float16, Float64], []>, #spv.resource_limits<>>
 } {
 
 // CHECK-LABEL: spv.func @int_vector
@@ -246,7 +246,7 @@ func.func @one_element_vector(%arg0: vector<1xi32>) { return }
 
 // Check that > 4-element vectors are not supported.
 module attributes {
-  spv.target_env = #spv.target_env<#spv.vce<v1.0, [], []>, {}>
+  spv.target_env = #spv.target_env<#spv.vce<v1.0, [], []>, #spv.resource_limits<>>
 } {
 
 // CHECK-NOT: spv.func @large_vector
@@ -263,7 +263,7 @@ func.func @large_vector(%arg0: vector<1024xi32>) { return }
 // Check memory spaces.
 module attributes {
   spv.target_env = #spv.target_env<
-    #spv.vce<v1.0, [], [SPV_KHR_storage_buffer_storage_class]>, {}>
+    #spv.vce<v1.0, [], [SPV_KHR_storage_buffer_storage_class]>, #spv.resource_limits<>>
 } {
 
 // CHECK-LABEL: func @memref_mem_space
@@ -301,7 +301,7 @@ func.func @memref_1bit_type(
 // requires special capability and extension: convert them to 32-bit if not
 // satisfied.
 module attributes {
-  spv.target_env = #spv.target_env<#spv.vce<v1.0, [], []>, {}>
+  spv.target_env = #spv.target_env<#spv.vce<v1.0, [], []>, #spv.resource_limits<>>
 } {
 
 // An i1 is store in 8-bit, so 5xi1 has 40 bits, which is stored in 2xi32.
@@ -399,7 +399,7 @@ func.func @memref_64bit_Output(%arg4: memref<16xf64, 10>) { return }
 module attributes {
   spv.target_env = #spv.target_env<
     #spv.vce<v1.0, [StoragePushConstant8, StoragePushConstant16, Int64, Float64],
-             [SPV_KHR_8bit_storage, SPV_KHR_16bit_storage]>, {}>
+             [SPV_KHR_8bit_storage, SPV_KHR_16bit_storage]>, #spv.resource_limits<>>
 } {
 
 // CHECK-LABEL: spv.func @memref_8bit_PushConstant
@@ -440,7 +440,7 @@ func.func @memref_64bit_PushConstant(
 module attributes {
   spv.target_env = #spv.target_env<
     #spv.vce<v1.0, [StorageBuffer8BitAccess, StorageBuffer16BitAccess, Int64, Float64],
-             [SPV_KHR_8bit_storage, SPV_KHR_16bit_storage]>, {}>
+             [SPV_KHR_8bit_storage, SPV_KHR_16bit_storage]>, #spv.resource_limits<>>
 } {
 
 // CHECK-LABEL: spv.func @memref_8bit_StorageBuffer
@@ -481,7 +481,7 @@ func.func @memref_64bit_StorageBuffer(
 module attributes {
   spv.target_env = #spv.target_env<
     #spv.vce<v1.0, [UniformAndStorageBuffer8BitAccess, StorageUniform16, Int64, Float64],
-             [SPV_KHR_8bit_storage, SPV_KHR_16bit_storage]>, {}>
+             [SPV_KHR_8bit_storage, SPV_KHR_16bit_storage]>, #spv.resource_limits<>>
 } {
 
 // CHECK-LABEL: spv.func @memref_8bit_Uniform
@@ -521,7 +521,7 @@ func.func @memref_64bit_Uniform(
 // and extension is available.
 module attributes {
   spv.target_env = #spv.target_env<
-    #spv.vce<v1.0, [StorageInputOutput16, Int64, Float64], [SPV_KHR_16bit_storage]>, {}>
+    #spv.vce<v1.0, [StorageInputOutput16, Int64, Float64], [SPV_KHR_16bit_storage]>, #spv.resource_limits<>>
 } {
 
 // CHECK-LABEL: spv.func @memref_16bit_Input
@@ -565,7 +565,7 @@ func.func @memref_64bit_Output(
 // Check that memref offset and strides affect the array size.
 module attributes {
   spv.target_env = #spv.target_env<
-    #spv.vce<v1.0, [StorageBuffer16BitAccess], [SPV_KHR_16bit_storage]>, {}>
+    #spv.vce<v1.0, [StorageBuffer16BitAccess], [SPV_KHR_16bit_storage]>, #spv.resource_limits<>>
 } {
 
 // CHECK-LABEL: spv.func @memref_offset_strides
@@ -599,7 +599,7 @@ func.func @memref_offset_strides(
 
 // Dynamic shapes
 module attributes {
-  spv.target_env = #spv.target_env<#spv.vce<v1.0, [], []>, {}>
+  spv.target_env = #spv.target_env<#spv.vce<v1.0, [], []>, #spv.resource_limits<>>
 } {
 
 // Check that unranked shapes are not supported.
@@ -677,7 +677,7 @@ func.func @memref_16bit_Output(%arg4: memref<?xf16, 10>) { return }
 
 // Vector types
 module attributes {
-  spv.target_env = #spv.target_env<#spv.vce<v1.0, [], []>, {}>
+  spv.target_env = #spv.target_env<#spv.vce<v1.0, [], []>, #spv.resource_limits<>>
 } {
 
 // CHECK-LABEL: func @memref_vector
@@ -701,7 +701,7 @@ func.func @dynamic_dim_memref_vector(%arg0: memref<8x?xvector<4xi32>>,
 
 // Vector types, check that sizes not available in SPIR-V are not transformed.
 module attributes {
-  spv.target_env = #spv.target_env<#spv.vce<v1.0, [], []>, {}>
+  spv.target_env = #spv.target_env<#spv.vce<v1.0, [], []>, #spv.resource_limits<>>
 } {
 
 // CHECK-LABEL: func @memref_vector_wrong_size
@@ -721,7 +721,7 @@ func.func @memref_vector_wrong_size(
 // Check that tensor element types are kept untouched with proper capabilities.
 module attributes {
   spv.target_env = #spv.target_env<
-    #spv.vce<v1.0, [Int8, Int16, Int64, Float16, Float64], []>, {}>
+    #spv.vce<v1.0, [Int8, Int16, Int64, Float16, Float64], []>, #spv.resource_limits<>>
 } {
 
 // CHECK-LABEL: spv.func @int_tensor_types
@@ -752,7 +752,7 @@ func.func @float_tensor_types(
 
 // Check that tensor element types are changed to 32-bit without capabilities.
 module attributes {
-  spv.target_env = #spv.target_env<#spv.vce<v1.0, [], []>, {}>
+  spv.target_env = #spv.target_env<#spv.vce<v1.0, [], []>, #spv.resource_limits<>>
 } {
 
 // CHECK-LABEL: spv.func @int_tensor_types
@@ -783,7 +783,7 @@ func.func @float_tensor_types(
 
 // Check that dynamic shapes are not supported.
 module attributes {
-  spv.target_env = #spv.target_env<#spv.vce<v1.0, [], []>, {}>
+  spv.target_env = #spv.target_env<#spv.vce<v1.0, [], []>, #spv.resource_limits<>>
 } {
 
 // CHECK-LABEL: func @unranked_tensor

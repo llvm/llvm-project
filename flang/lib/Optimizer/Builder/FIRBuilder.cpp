@@ -7,12 +7,12 @@
 //===----------------------------------------------------------------------===//
 
 #include "flang/Optimizer/Builder/FIRBuilder.h"
-#include "flang/Lower/Todo.h"
 #include "flang/Optimizer/Builder/BoxValue.h"
 #include "flang/Optimizer/Builder/Character.h"
 #include "flang/Optimizer/Builder/Complex.h"
 #include "flang/Optimizer/Builder/MutableBox.h"
 #include "flang/Optimizer/Builder/Runtime/Assign.h"
+#include "flang/Optimizer/Builder/Todo.h"
 #include "flang/Optimizer/Dialect/FIRAttr.h"
 #include "flang/Optimizer/Dialect/FIROpsSupport.h"
 #include "flang/Optimizer/Support/FatalError.h"
@@ -510,13 +510,14 @@ genNullPointerComparison(fir::FirOpBuilder &builder, mlir::Location loc,
   return builder.create<mlir::arith::CmpIOp>(loc, condition, ptrToInt, c0);
 }
 
-mlir::Value fir::FirOpBuilder::genIsNotNull(mlir::Location loc,
-                                            mlir::Value addr) {
+mlir::Value fir::FirOpBuilder::genIsNotNullAddr(mlir::Location loc,
+                                                mlir::Value addr) {
   return genNullPointerComparison(*this, loc, addr,
                                   mlir::arith::CmpIPredicate::ne);
 }
 
-mlir::Value fir::FirOpBuilder::genIsNull(mlir::Location loc, mlir::Value addr) {
+mlir::Value fir::FirOpBuilder::genIsNullAddr(mlir::Location loc,
+                                             mlir::Value addr) {
   return genNullPointerComparison(*this, loc, addr,
                                   mlir::arith::CmpIPredicate::eq);
 }
@@ -1005,21 +1006,30 @@ static void genComponentByComponentAssignment(fir::FirOpBuilder &builder,
                                               mlir::Location loc,
                                               const fir::ExtendedValue &lhs,
                                               const fir::ExtendedValue &rhs) {
-  auto baseType = fir::unwrapPassByRefType(fir::getBase(lhs).getType());
-  auto lhsType = baseType.dyn_cast<fir::RecordType>();
+  auto lbaseType = fir::unwrapPassByRefType(fir::getBase(lhs).getType());
+  auto lhsType = lbaseType.dyn_cast<fir::RecordType>();
   assert(lhsType && "lhs must be a scalar record type");
+  auto rbaseType = fir::unwrapPassByRefType(fir::getBase(rhs).getType());
+  auto rhsType = rbaseType.dyn_cast<fir::RecordType>();
+  assert(rhsType && "rhs must be a scalar record type");
   auto fieldIndexType = fir::FieldType::get(lhsType.getContext());
-  for (auto [fieldName, fieldType] : lhsType.getTypeList()) {
-    assert(!fir::hasDynamicSize(fieldType));
-    mlir::Value field = builder.create<fir::FieldIndexOp>(
-        loc, fieldIndexType, fieldName, lhsType, fir::getTypeParams(lhs));
-    auto fieldRefType = builder.getRefType(fieldType);
+  for (auto [lhsPair, rhsPair] :
+       llvm::zip(lhsType.getTypeList(), rhsType.getTypeList())) {
+    auto &[lFieldName, lFieldTy] = lhsPair;
+    auto &[rFieldName, rFieldTy] = rhsPair;
+    assert(!fir::hasDynamicSize(lFieldTy) && !fir::hasDynamicSize(rFieldTy));
+    mlir::Value rField = builder.create<fir::FieldIndexOp>(
+        loc, fieldIndexType, rFieldName, rhsType, fir::getTypeParams(rhs));
+    auto rFieldRefType = builder.getRefType(rFieldTy);
     mlir::Value fromCoor = builder.create<fir::CoordinateOp>(
-        loc, fieldRefType, fir::getBase(rhs), field);
+        loc, rFieldRefType, fir::getBase(rhs), rField);
+    mlir::Value field = builder.create<fir::FieldIndexOp>(
+        loc, fieldIndexType, lFieldName, lhsType, fir::getTypeParams(lhs));
+    auto fieldRefType = builder.getRefType(lFieldTy);
     mlir::Value toCoor = builder.create<fir::CoordinateOp>(
         loc, fieldRefType, fir::getBase(lhs), field);
     llvm::Optional<fir::DoLoopOp> outerLoop;
-    if (auto sequenceType = fieldType.dyn_cast<fir::SequenceType>()) {
+    if (auto sequenceType = lFieldTy.dyn_cast<fir::SequenceType>()) {
       // Create loops to assign array components elements by elements.
       // Note that, since these are components, they either do not overlap,
       // or are the same and exactly overlap. They also have compile time
@@ -1045,14 +1055,14 @@ static void genComponentByComponentAssignment(fir::FirOpBuilder &builder,
       fromCoor = builder.create<fir::CoordinateOp>(loc, elementRefType,
                                                    fromCoor, indices);
     }
-    auto fieldElementType = fir::unwrapSequenceType(fieldType);
-    if (fieldElementType.isa<fir::BoxType>()) {
-      assert(fieldElementType.cast<fir::BoxType>()
-                 .getEleTy()
-                 .isa<fir::PointerType>() &&
-             "allocatable require deep copy");
+    if (auto fieldEleTy = fir::unwrapSequenceType(lFieldTy);
+        fieldEleTy.isa<fir::BoxType>()) {
+      assert(
+          fieldEleTy.cast<fir::BoxType>().getEleTy().isa<fir::PointerType>() &&
+          "allocatable members require deep copy");
       auto fromPointerValue = builder.create<fir::LoadOp>(loc, fromCoor);
-      builder.create<fir::StoreOp>(loc, fromPointerValue, toCoor);
+      auto castTo = builder.createConvert(loc, fieldEleTy, fromPointerValue);
+      builder.create<fir::StoreOp>(loc, castTo, toCoor);
     } else {
       auto from =
           fir::factory::componentToExtendedValue(builder, loc, fromCoor);
@@ -1215,4 +1225,18 @@ llvm::Optional<std::int64_t> fir::factory::getIntIfConstant(mlir::Value value) {
       if (auto intAttr = cst.getValue().dyn_cast<mlir::IntegerAttr>())
         return intAttr.getInt();
   return {};
+}
+
+mlir::Value fir::factory::genMaxWithZero(fir::FirOpBuilder &builder,
+                                         mlir::Location loc,
+                                         mlir::Value value) {
+  mlir::Value zero = builder.createIntegerConstant(loc, value.getType(), 0);
+  if (mlir::Operation *definingOp = value.getDefiningOp())
+    if (auto cst = mlir::dyn_cast<mlir::arith::ConstantOp>(definingOp))
+      if (auto intAttr = cst.getValue().dyn_cast<mlir::IntegerAttr>())
+        return intAttr.getInt() > 0 ? value : zero;
+  mlir::Value valueIsGreater = builder.create<mlir::arith::CmpIOp>(
+      loc, mlir::arith::CmpIPredicate::sgt, value, zero);
+  return builder.create<mlir::arith::SelectOp>(loc, valueIsGreater, value,
+                                               zero);
 }

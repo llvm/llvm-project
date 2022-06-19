@@ -78,7 +78,6 @@ struct FormatSection {
     return true;
   }
 };
-
 } // namespace printf_core
 } // namespace __llvm_libc
 

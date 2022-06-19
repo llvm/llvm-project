@@ -37,8 +37,12 @@ public:
 
   static bool IsSupported();
 
-  /// To be invoked whenever the state of the target process has changed.
-  void OnProcessStateChanged(lldb::StateType state);
+  /// To be invoked as soon as we know the process stopped.
+  void ProcessDidStop();
+
+  /// To be invoked before the process will resume, so that we can capture the
+  /// first instructions after the resume.
+  void ProcessWillResume();
 
   /// If "process tracing" is enabled, then trace the given thread.
   llvm::Error OnThreadCreated(lldb::tid_t tid);
@@ -69,29 +73,19 @@ private:
   llvm::Error TraceStart(lldb::tid_t tid,
                          const TraceIntelPTStartRequest &request);
 
-  llvm::Expected<IntelPTSingleBufferTrace &> GetTracedThread(lldb::tid_t tid);
+  /// \return
+  ///   The conversion object between TSC and wall time.
+  llvm::Expected<LinuxPerfZeroTscConversion &>
+  FetchPerfTscConversionParameters();
 
-  bool IsProcessTracingEnabled() const;
-
-  void ClearProcessTracing();
-
+  /// The target process.
   NativeProcessProtocol &m_process;
   /// Threads traced due to "thread tracing"
   IntelPTThreadTraceCollection m_thread_traces;
 
-  /// Only one of the following "process tracing" handlers can be active at a
-  /// given time.
-  ///
-  /// \{
-  /// Threads traced due to per-thread "process tracing".  This might be \b
-  /// nullptr.
-  IntelPTPerThreadProcessTraceUP m_per_thread_process_trace_up;
-  /// Cores traced due to per-core "process tracing".  This might be \b nullptr.
-  IntelPTMultiCoreTraceUP m_per_core_process_trace_up;
-  /// \}
-
-  /// TSC to wall time conversion.
-  TraceTscConversionUP m_tsc_conversion;
+  /// Only one instance of "process trace" can be active at a given time.
+  /// It might be \b nullptr.
+  IntelPTProcessTraceUP m_process_trace_up;
 };
 
 } // namespace process_linux

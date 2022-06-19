@@ -6,8 +6,6 @@ from lldbsuite.test.lldbgdbclient import GDBRemoteTestBase
 
 class TestqOffsets(GDBRemoteTestBase):
 
-    mydir = TestBase.compute_mydir(__file__)
-
     class Responder(MockGDBServerResponder):
         def qOffsets(self):
             return 'Text=470000;Data=470000'

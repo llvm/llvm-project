@@ -11,8 +11,6 @@ from lldbsuite.test import lldbutil
 @skipUnlessDarwin
 class AddDsymMidExecutionCommandCase(TestBase):
 
-    mydir = TestBase.compute_mydir(__file__)
-
     def setUp(self):
         # Call super's setUp().
         TestBase.setUp(self)
@@ -36,8 +34,8 @@ class AddDsymMidExecutionCommandCase(TestBase):
         self.assertTrue(self.process, PROCESS_IS_VALID)
 
         # The stop reason of the thread should be breakpoint.
-        self.assertEquals(self.process.GetState(), lldb.eStateStopped,
-                        STOPPED_DUE_TO_BREAKPOINT)
+        self.assertState(self.process.GetState(), lldb.eStateStopped,
+                         STOPPED_DUE_TO_BREAKPOINT)
 
         self.runCmd("add-dsym " +
                     self.getBuildArtifact("hide.app/Contents/a.out.dSYM"))

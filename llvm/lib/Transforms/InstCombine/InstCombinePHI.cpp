@@ -1121,6 +1121,13 @@ Instruction *InstCombinerImpl::SliceUpIllegalIntegerPHI(PHINode &FirstPhi) {
       return nullptr;
     }
 
+    // If the incoming value is a PHI node before a catchswitch, we cannot
+    // extract the value within that BB because we cannot insert any non-PHI
+    // instructions in the BB.
+    for (auto *Pred : PN->blocks())
+      if (Pred->getFirstInsertionPt() == Pred->end())
+        return nullptr;
+
     for (User *U : PN->users()) {
       Instruction *UserI = cast<Instruction>(U);
 
@@ -1363,7 +1370,7 @@ static Value *simplifyUsingControlFlow(InstCombiner &Self, PHINode &PN,
 // PHINode simplification
 //
 Instruction *InstCombinerImpl::visitPHINode(PHINode &PN) {
-  if (Value *V = SimplifyInstruction(&PN, SQ.getWithInstruction(&PN)))
+  if (Value *V = simplifyInstruction(&PN, SQ.getWithInstruction(&PN)))
     return replaceInstUsesWith(PN, V);
 
   if (Instruction *Result = foldPHIArgZextsIntoPHI(PN))

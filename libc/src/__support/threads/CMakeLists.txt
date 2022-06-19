@@ -8,6 +8,9 @@ add_header_library(
   thread_attrib
   HDRS
     thread_attrib.h
+  DEPENDS
+    libc.src.__support.common
+    libc.src.__support.CPP.atomic
 )
 
 if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/${LIBC_TARGET_OS})

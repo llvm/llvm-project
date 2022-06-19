@@ -17,7 +17,10 @@
 #include <__algorithm/rotate.h>
 #include <__algorithm/upper_bound.h>
 #include <__config>
+#include <__iterator/advance.h>
+#include <__iterator/distance.h>
 #include <__iterator/iterator_traits.h>
+#include <__iterator/reverse_iterator.h>
 #include <__utility/swap.h>
 #include <memory>
 
@@ -166,7 +169,7 @@ __inplace_merge(_BidirectionalIterator __first, _BidirectionalIterator __middle,
             __len11 = __len1 / 2;
             __m1 = __first;
             _VSTD::advance(__m1, __len11);
-            __m2 = _VSTD::__lower_bound<_Compare>(__middle, __last, *__m1, __comp);
+            __m2 = std::lower_bound(__middle, __last, *__m1, __comp);
             __len21 = _VSTD::distance(__middle, __m2);
         }
         difference_type __len12 = __len1 - __len11;  // distance(__m1, __middle)

@@ -6,8 +6,6 @@ from lldbsuite.test.decorators import *
 
 class TestTraceTimestampCounters(TraceIntelPTTestCaseBase):
 
-    mydir = TestBase.compute_mydir(__file__)
-
     @testSBAPIAndCommands
     @skipIf(oslist=no_match(['linux']), archs=no_match(['i386', 'x86_64']))
     def testTscPerThread(self):

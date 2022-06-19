@@ -32,12 +32,9 @@ namespace opts {
 
 extern cl::OptionCategory BoltCategory;
 
-llvm::cl::opt<bool>
-InsertRetpolines("insert-retpolines",
-  cl::desc("run retpoline insertion pass"),
-  cl::init(false),
-  cl::ZeroOrMore,
-  cl::cat(BoltCategory));
+llvm::cl::opt<bool> InsertRetpolines("insert-retpolines",
+                                     cl::desc("run retpoline insertion pass"),
+                                     cl::cat(BoltCategory));
 
 llvm::cl::opt<bool>
 RetpolineLfence("retpoline-lfence",
@@ -94,8 +91,7 @@ BinaryFunction *createNewRetpoline(BinaryContext &BC,
   for (int I = 0; I < 3; I++) {
     MCSymbol *Symbol =
         Ctx.createNamedTempSymbol(Twine(RetpolineTag + "_BB" + to_string(I)));
-    NewBlocks[I] = NewRetpoline->createBasicBlock(
-        BinaryBasicBlock::INVALID_OFFSET, Symbol);
+    NewBlocks[I] = NewRetpoline->createBasicBlock(Symbol);
     NewBlocks[I].get()->setCFIState(0);
   }
 
