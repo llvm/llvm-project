@@ -125,7 +125,7 @@ public:
     for (const DotClangTidyCache *Cache : Caches)
       if (auto Config = Cache->get(FS, FreshTime)) {
         OptionStack.push_back(std::move(Config));
-        if (!OptionStack.back()->InheritParentConfig.getValueOr(false))
+        if (!OptionStack.back()->InheritParentConfig.value_or(false))
           break;
       }
     unsigned Order = 1u;

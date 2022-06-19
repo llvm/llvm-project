@@ -362,7 +362,7 @@ private:
   Context handlerContext() const {
     return Context::current().derive(
         kCurrentOffsetEncoding,
-        Server.Opts.Encoding.getValueOr(OffsetEncoding::UTF16));
+        Server.Opts.Encoding.value_or(OffsetEncoding::UTF16));
   }
 
   // We run cancelable requests in a context that does two things:
@@ -786,7 +786,7 @@ void ClangdLSPServer::onWorkspaceSymbol(
     const WorkspaceSymbolParams &Params,
     Callback<std::vector<SymbolInformation>> Reply) {
   Server->workspaceSymbols(
-      Params.query, Params.limit.getValueOr(Opts.CodeComplete.Limit),
+      Params.query, Params.limit.value_or(Opts.CodeComplete.Limit),
       [Reply = std::move(Reply),
        this](llvm::Expected<std::vector<SymbolInformation>> Items) mutable {
         if (!Items)
@@ -1110,7 +1110,7 @@ void ClangdLSPServer::onGoToDefinition(const TextDocumentPositionParams &Params,
         for (auto &S : *Symbols) {
           if (Location *Toggle = getToggle(Params, S))
             return Reply(std::vector<Location>{std::move(*Toggle)});
-          Defs.push_back(S.Definition.getValueOr(S.PreferredDeclaration));
+          Defs.push_back(S.Definition.value_or(S.PreferredDeclaration));
         }
         Reply(std::move(Defs));
       });

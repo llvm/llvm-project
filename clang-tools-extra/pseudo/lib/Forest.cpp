@@ -78,7 +78,7 @@ std::string ForestNode::dumpRecursive(const Grammar &G,
               assert(Children[0]->startTokenIndex() == P->startTokenIndex() &&
                      EndOfElement(0) == End);
               return Dump(Children[0], End,
-                          /*ElidedParent=*/ElidedParent.getValueOr(P->symbol()),
+                          /*ElidedParent=*/ElidedParent.value_or(P->symbol()),
                           LineDec);
             }
           }
