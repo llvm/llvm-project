@@ -789,7 +789,7 @@ void DWARFUnit::ComputeCompDirAndGuessPathStyle() {
       die->GetAttributeValueAsString(this, DW_AT_comp_dir, nullptr));
   if (!comp_dir.empty()) {
     FileSpec::Style comp_dir_style =
-        FileSpec::GuessPathStyle(comp_dir).getValueOr(FileSpec::Style::native);
+        FileSpec::GuessPathStyle(comp_dir).value_or(FileSpec::Style::native);
     m_comp_dir = FileSpec(comp_dir, comp_dir_style);
   } else {
     // Try to detect the style based on the DW_AT_name attribute, but just store
@@ -797,7 +797,7 @@ void DWARFUnit::ComputeCompDirAndGuessPathStyle() {
     const char *name =
         die->GetAttributeValueAsString(this, DW_AT_name, nullptr);
     m_comp_dir = FileSpec(
-        "", FileSpec::GuessPathStyle(name).getValueOr(FileSpec::Style::native));
+        "", FileSpec::GuessPathStyle(name).value_or(FileSpec::Style::native));
   }
 }
 

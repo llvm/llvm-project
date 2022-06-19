@@ -20,7 +20,7 @@ using namespace llvm;
 static bool IsTotalBufferLimitReached(ArrayRef<cpu_id_t> cores,
                                       const TraceIntelPTStartRequest &request) {
   uint64_t required = cores.size() * request.ipt_trace_size;
-  uint64_t limit = request.process_buffer_size_limit.getValueOr(
+  uint64_t limit = request.process_buffer_size_limit.value_or(
       std::numeric_limits<uint64_t>::max());
   return required > limit;
 }

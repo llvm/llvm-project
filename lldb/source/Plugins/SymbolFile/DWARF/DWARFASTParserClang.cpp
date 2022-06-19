@@ -614,7 +614,7 @@ DWARFASTParserClang::ParseTypeModifier(const SymbolContext &sc,
     resolve_state = Type::ResolveState::Full;
     clang_type = m_ast.GetBuiltinTypeForDWARFEncodingAndBitSize(
         attrs.name.GetStringRef(), attrs.encoding,
-        attrs.byte_size.getValueOr(0) * 8);
+        attrs.byte_size.value_or(0) * 8);
     break;
 
   case DW_TAG_pointer_type:
@@ -849,7 +849,7 @@ TypeSP DWARFASTParserClang::ParseEnum(const SymbolContext &sc,
       bool is_signed = false;
       enumerator_clang_type.IsIntegerType(is_signed);
       ParseChildEnumerators(clang_type, is_signed,
-                            type_sp->GetByteSize(nullptr).getValueOr(0), die);
+                            type_sp->GetByteSize(nullptr).value_or(0), die);
     }
     TypeSystemClang::CompleteTagDeclarationDefinition(clang_type);
   } else {
@@ -1297,7 +1297,7 @@ TypeSP DWARFASTParserClang::ParseArrayType(const DWARFDIE &die,
     attrs.bit_stride = array_info->bit_stride;
   }
   if (attrs.byte_stride == 0 && attrs.bit_stride == 0)
-    attrs.byte_stride = element_type->GetByteSize(nullptr).getValueOr(0);
+    attrs.byte_stride = element_type->GetByteSize(nullptr).value_or(0);
   CompilerType array_element_type = element_type->GetForwardCompilerType();
   RequireCompleteType(array_element_type);
 
@@ -1532,7 +1532,7 @@ DWARFASTParserClang::ParseStructureLikeDIE(const SymbolContext &sc,
     }
 
     if (dwarf->GetUniqueDWARFASTTypeMap().Find(
-            unique_typename, die, unique_decl, attrs.byte_size.getValueOr(-1),
+            unique_typename, die, unique_decl, attrs.byte_size.value_or(-1),
             *unique_ast_entry_up)) {
       type_sp = unique_ast_entry_up->m_type_sp;
       if (type_sp) {
@@ -1757,7 +1757,7 @@ DWARFASTParserClang::ParseStructureLikeDIE(const SymbolContext &sc,
   unique_ast_entry_up->m_type_sp = type_sp;
   unique_ast_entry_up->m_die = die;
   unique_ast_entry_up->m_declaration = unique_decl;
-  unique_ast_entry_up->m_byte_size = attrs.byte_size.getValueOr(0);
+  unique_ast_entry_up->m_byte_size = attrs.byte_size.value_or(0);
   dwarf->GetUniqueDWARFASTTypeMap().Insert(unique_typename,
                                            *unique_ast_entry_up);
 
@@ -2114,7 +2114,7 @@ bool DWARFASTParserClang::CompleteRecordType(const DWARFDIE &die,
   if (!layout_info.field_offsets.empty() || !layout_info.base_offsets.empty() ||
       !layout_info.vbase_offsets.empty()) {
     if (type)
-      layout_info.bit_size = type->GetByteSize(nullptr).getValueOr(0) * 8;
+      layout_info.bit_size = type->GetByteSize(nullptr).value_or(0) * 8;
     if (layout_info.bit_size == 0)
       layout_info.bit_size =
           die.GetAttributeValueAsUnsigned(DW_AT_byte_size, 0) * 8;
@@ -2136,7 +2136,7 @@ bool DWARFASTParserClang::CompleteEnumType(const DWARFDIE &die,
       bool is_signed = false;
       clang_type.IsIntegerType(is_signed);
       ParseChildEnumerators(clang_type, is_signed,
-                            type->GetByteSize(nullptr).getValueOr(0), die);
+                            type->GetByteSize(nullptr).value_or(0), die);
     }
     TypeSystemClang::CompleteTagDeclarationDefinition(clang_type);
   }
@@ -2488,7 +2488,7 @@ MemberAttributes::MemberAttributes(const DWARFDIE &die,
   // are not sane, remove them. If we don't do this then we will end up
   // with a crash if we try to use this type in an expression when clang
   // becomes unhappy with its recycled debug info.
-  if (byte_size.getValueOr(0) == 0 && bit_offset < 0) {
+  if (byte_size.value_or(0) == 0 && bit_offset < 0) {
     bit_size = 0;
     bit_offset = 0;
   }
@@ -2669,7 +2669,7 @@ void DWARFASTParserClang::ParseSingleMember(
 
       ObjectFile *objfile = die.GetDWARF()->GetObjectFile();
       if (objfile->GetByteOrder() == eByteOrderLittle) {
-        this_field_info.bit_offset += attrs.byte_size.getValueOr(0) * 8;
+        this_field_info.bit_offset += attrs.byte_size.value_or(0) * 8;
         this_field_info.bit_offset -= (attrs.bit_offset + attrs.bit_size);
       } else {
         this_field_info.bit_offset += attrs.bit_offset;

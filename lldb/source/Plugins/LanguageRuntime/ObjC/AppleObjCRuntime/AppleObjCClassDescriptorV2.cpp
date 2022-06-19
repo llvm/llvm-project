@@ -569,7 +569,7 @@ void ClassDescriptorV2::iVarsStorage::fill(AppleObjCRuntimeV2 &runtime,
                 "name = {0}, encoding = {1}, offset_ptr = {2:x}, size = "
                 "{3}, type_size = {4}",
                 name, type, offset_ptr, size,
-                ivar_type.GetByteSize(nullptr).getValueOr(0));
+                ivar_type.GetByteSize(nullptr).value_or(0));
       Scalar offset_scalar;
       Status error;
       const int offset_ptr_size = 4;
