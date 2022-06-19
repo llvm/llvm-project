@@ -67,6 +67,7 @@ MachineBasicBlock *llvm::PeelSingleBlockLoop(LoopPeelDirection Direction,
               MRI.constrainRegClass(R, MRI.getRegClass(Use->getReg()));
           assert(ConstrainRegClass &&
                  "Expected a valid constrained register class!");
+          (void)ConstrainRegClass;
           Use->setReg(R);
         }
       }
