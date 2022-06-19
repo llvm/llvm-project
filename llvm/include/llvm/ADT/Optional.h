@@ -60,7 +60,7 @@ template <typename T,
 class OptionalStorage {
   union {
     char empty;
-    T value;
+    T val;
   };
   bool hasVal = false;
 
@@ -71,22 +71,22 @@ public:
 
   constexpr OptionalStorage(OptionalStorage const &other) : OptionalStorage() {
     if (other.hasValue()) {
-      emplace(other.value);
+      emplace(other.val);
     }
   }
   constexpr OptionalStorage(OptionalStorage &&other) : OptionalStorage() {
     if (other.hasValue()) {
-      emplace(std::move(other.value));
+      emplace(std::move(other.val));
     }
   }
 
   template <class... Args>
   constexpr explicit OptionalStorage(in_place_t, Args &&...args)
-      : value(std::forward<Args>(args)...), hasVal(true) {}
+      : val(std::forward<Args>(args)...), hasVal(true) {}
 
   void reset() noexcept {
     if (hasVal) {
-      value.~T();
+      val.~T();
       hasVal = false;
     }
   }
@@ -95,37 +95,37 @@ public:
 
   T &getValue() &noexcept {
     assert(hasVal);
-    return value;
+    return val;
   }
   constexpr T const &getValue() const &noexcept {
     assert(hasVal);
-    return value;
+    return val;
   }
   T &&getValue() &&noexcept {
     assert(hasVal);
-    return std::move(value);
+    return std::move(val);
   }
 
   template <class... Args> void emplace(Args &&...args) {
     reset();
-    ::new ((void *)std::addressof(value)) T(std::forward<Args>(args)...);
+    ::new ((void *)std::addressof(val)) T(std::forward<Args>(args)...);
     hasVal = true;
   }
 
   OptionalStorage &operator=(T const &y) {
     if (hasValue()) {
-      value = y;
+      val = y;
     } else {
-      ::new ((void *)std::addressof(value)) T(y);
+      ::new ((void *)std::addressof(val)) T(y);
       hasVal = true;
     }
     return *this;
   }
   OptionalStorage &operator=(T &&y) {
     if (hasValue()) {
-      value = std::move(y);
+      val = std::move(y);
     } else {
-      ::new ((void *)std::addressof(value)) T(std::move(y));
+      ::new ((void *)std::addressof(val)) T(std::move(y));
       hasVal = true;
     }
     return *this;
@@ -134,9 +134,9 @@ public:
   OptionalStorage &operator=(OptionalStorage const &other) {
     if (other.hasValue()) {
       if (hasValue()) {
-        value = other.value;
+        val = other.val;
       } else {
-        ::new ((void *)std::addressof(value)) T(other.value);
+        ::new ((void *)std::addressof(val)) T(other.val);
         hasVal = true;
       }
     } else {
@@ -148,9 +148,9 @@ public:
   OptionalStorage &operator=(OptionalStorage &&other) {
     if (other.hasValue()) {
       if (hasValue()) {
-        value = std::move(other.value);
+        val = std::move(other.val);
       } else {
-        ::new ((void *)std::addressof(value)) T(std::move(other.value));
+        ::new ((void *)std::addressof(val)) T(std::move(other.val));
         hasVal = true;
       }
     } else {
@@ -163,7 +163,7 @@ public:
 template <typename T> class OptionalStorage<T, true> {
   union {
     char empty;
-    T value;
+    T val;
   };
   bool hasVal = false;
 
@@ -179,12 +179,12 @@ public:
   OptionalStorage &operator=(OptionalStorage &&other) = default;
 
   template <class... Args>
-  constexpr explicit OptionalStorage(in_place_t, Args &&... args)
-      : value(std::forward<Args>(args)...), hasVal(true) {}
+  constexpr explicit OptionalStorage(in_place_t, Args &&...args)
+      : val(std::forward<Args>(args)...), hasVal(true) {}
 
   void reset() noexcept {
     if (hasVal) {
-      value.~T();
+      val.~T();
       hasVal = false;
     }
   }
@@ -193,37 +193,37 @@ public:
 
   T &getValue() &noexcept {
     assert(hasVal);
-    return value;
+    return val;
   }
   constexpr T const &getValue() const &noexcept {
     assert(hasVal);
-    return value;
+    return val;
   }
   T &&getValue() &&noexcept {
     assert(hasVal);
-    return std::move(value);
+    return std::move(val);
   }
 
   template <class... Args> void emplace(Args &&...args) {
     reset();
-    ::new ((void *)std::addressof(value)) T(std::forward<Args>(args)...);
+    ::new ((void *)std::addressof(val)) T(std::forward<Args>(args)...);
     hasVal = true;
   }
 
   OptionalStorage &operator=(T const &y) {
     if (hasValue()) {
-      value = y;
+      val = y;
     } else {
-      ::new ((void *)std::addressof(value)) T(y);
+      ::new ((void *)std::addressof(val)) T(y);
       hasVal = true;
     }
     return *this;
   }
   OptionalStorage &operator=(T &&y) {
     if (hasValue()) {
-      value = std::move(y);
+      val = std::move(y);
     } else {
-      ::new ((void *)std::addressof(value)) T(std::move(y));
+      ::new ((void *)std::addressof(val)) T(std::move(y));
       hasVal = true;
     }
     return *this;
