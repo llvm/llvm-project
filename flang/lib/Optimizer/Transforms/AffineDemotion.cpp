@@ -50,7 +50,7 @@ public:
   LogicalResult
   matchAndRewrite(mlir::AffineLoadOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
-    SmallVector<Value> indices(adaptor.indices());
+    SmallVector<Value> indices(adaptor.getIndices());
     auto maybeExpandedMap =
         expandAffineMap(rewriter, op.getLoc(), op.getAffineMap(), indices);
     if (!maybeExpandedMap)
@@ -58,7 +58,7 @@ public:
 
     auto coorOp = rewriter.create<fir::CoordinateOp>(
         op.getLoc(), fir::ReferenceType::get(op.getResult().getType()),
-        adaptor.memref(), *maybeExpandedMap);
+        adaptor.getMemref(), *maybeExpandedMap);
 
     rewriter.replaceOpWithNewOp<fir::LoadOp>(op, coorOp.getResult());
     return success();
@@ -72,7 +72,7 @@ public:
   LogicalResult
   matchAndRewrite(mlir::AffineStoreOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
-    SmallVector<Value> indices(op.indices());
+    SmallVector<Value> indices(op.getIndices());
     auto maybeExpandedMap =
         expandAffineMap(rewriter, op.getLoc(), op.getAffineMap(), indices);
     if (!maybeExpandedMap)
@@ -80,8 +80,8 @@ public:
 
     auto coorOp = rewriter.create<fir::CoordinateOp>(
         op.getLoc(), fir::ReferenceType::get(op.getValueToStore().getType()),
-        adaptor.memref(), *maybeExpandedMap);
-    rewriter.replaceOpWithNewOp<fir::StoreOp>(op, adaptor.value(),
+        adaptor.getMemref(), *maybeExpandedMap);
+    rewriter.replaceOpWithNewOp<fir::StoreOp>(op, adaptor.getValue(),
                                               coorOp.getResult());
     return success();
   }

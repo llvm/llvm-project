@@ -66,8 +66,8 @@ static bool isLastMemrefDimUnitStride(MemRefType type) {
 }
 
 LogicalResult DeviceAsyncCopyOp::verify() {
-  auto srcMemref = src().getType().cast<MemRefType>();
-  auto dstMemref = dst().getType().cast<MemRefType>();
+  auto srcMemref = getSrc().getType().cast<MemRefType>();
+  auto dstMemref = getDst().getType().cast<MemRefType>();
   unsigned workgroupAddressSpace = gpu::GPUDialect::getWorkgroupAddressSpace();
   if (!isLastMemrefDimUnitStride(srcMemref))
     return emitError("source memref most minor dim must have unit stride");
@@ -78,12 +78,13 @@ LogicalResult DeviceAsyncCopyOp::verify() {
            << workgroupAddressSpace;
   if (dstMemref.getElementType() != srcMemref.getElementType())
     return emitError("source and destination must have the same element type");
-  if (size_t(srcMemref.getRank()) != srcIndices().size())
+  if (size_t(srcMemref.getRank()) != getSrcIndices().size())
     return emitOpError() << "expected " << srcMemref.getRank()
-                         << " source indices, got " << srcIndices().size();
-  if (size_t(dstMemref.getRank()) != dstIndices().size())
+                         << " source indices, got " << getSrcIndices().size();
+  if (size_t(dstMemref.getRank()) != getDstIndices().size())
     return emitOpError() << "expected " << dstMemref.getRank()
-                         << " destination indices, got " << dstIndices().size();
+                         << " destination indices, got "
+                         << getDstIndices().size();
   return success();
 }
 
