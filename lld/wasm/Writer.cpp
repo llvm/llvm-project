@@ -542,8 +542,8 @@ void Writer::populateTargetFeatures() {
 done:
   // Normally we don't include bss segments in the binary.  In particular if
   // memory is not being imported then we can assume its zero initialized.
-  // In the case the memory is imported, we and we can use the memory.fill
-  // instrction than we can also avoid inluding the segments.
+  // In the case the memory is imported, and we can use the memory.fill
+  // instruction, then we can also avoid including the segments.
   if (config->importMemory && !allowed.count("bulk-memory"))
     config->emitBssSegments = true;
 
@@ -1169,7 +1169,7 @@ void Writer::createInitMemoryFunction() {
       if (needsPassiveInitialization(s)) {
         // For passive BSS segments we can simple issue a memory.fill(0).
         // For non-BSS segments we do a memory.init.  Both these
-        // instructions take as thier first argument the destination
+        // instructions take as their first argument the destination
         // address.
         writePtrConst(os, s->startVA, is64, "destination address");
         if (config->isPic) {
@@ -1255,7 +1255,7 @@ void Writer::createInitMemoryFunction() {
     for (const OutputSegment *s : segments) {
       if (needsPassiveInitialization(s) && !s->isBss) {
         // The TLS region should not be dropped since its is needed
-        // during the intiailizing of each thread (__wasm_init_tls).
+        // during the initialization of each thread (__wasm_init_tls).
         if (config->sharedMemory && s->isTLS())
           continue;
         // data.drop instruction
