@@ -63,7 +63,10 @@ MachineBasicBlock *llvm::PeelSingleBlockLoop(LoopPeelDirection Direction,
           if (Use.getParent()->getParent() != Loop)
             Uses.push_back(&Use);
         for (auto *Use : Uses) {
-          MRI.constrainRegClass(R, MRI.getRegClass(Use->getReg()));
+          const TargetRegisterClass *ConstrainRegClass =
+              MRI.constrainRegClass(R, MRI.getRegClass(Use->getReg()));
+          assert(ConstrainRegClass &&
+                 "Expected a valid constrained register class!");
           Use->setReg(R);
         }
       }
