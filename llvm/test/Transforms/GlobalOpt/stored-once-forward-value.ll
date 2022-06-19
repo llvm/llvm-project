@@ -6,6 +6,7 @@
 @g3 = internal unnamed_addr global i32 0
 @g4 = internal unnamed_addr global i32 0
 @g5 = internal unnamed_addr global i32 0
+@g6 = internal unnamed_addr global i32 0
 
 declare void @b()
 
@@ -92,3 +93,17 @@ define i1 @other() {
   %r = load i1, ptr @g5
   ret i1 %r
 }
+
+define i1 @dom_volatile() {
+; CHECK-LABEL: @dom_volatile(
+; CHECK-NEXT:    store i1 true, ptr @g6, align 1
+; CHECK-NEXT:    call void @b()
+; CHECK-NEXT:    [[R:%.*]] = load volatile i1, ptr @g6, align 1
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  store i1 true, ptr @g6
+  call void @b()
+  %r = load volatile i1, ptr @g6
+  ret i1 %r
+}
+
