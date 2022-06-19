@@ -1163,8 +1163,17 @@ void ModuloScheduleExpander::rewriteScheduledInstr(
     if (!InProlog && !Phi->isPHI() && StagePhi < StageSched)
       ReplaceReg = NewReg;
     if (ReplaceReg) {
-      MRI.constrainRegClass(ReplaceReg, MRI.getRegClass(OldReg));
-      UseOp.setReg(ReplaceReg);
+      const TargetRegisterClass *NRC =
+          MRI.constrainRegClass(ReplaceReg, MRI.getRegClass(OldReg));
+      if (NRC)
+        UseOp.setReg(ReplaceReg);
+      else {
+        Register SplitReg = MRI.createVirtualRegister(MRI.getRegClass(OldReg));
+        BuildMI(*BB, UseMI, UseMI->getDebugLoc(), TII->get(TargetOpcode::COPY),
+                SplitReg)
+            .addReg(ReplaceReg);
+        UseOp.setReg(SplitReg);
+      }
     }
   }
 }
@@ -1209,8 +1218,12 @@ void EliminateDeadPhis(MachineBasicBlock *MBB, MachineRegisterInfo &MRI,
         MI.eraseFromParent();
         Changed = true;
       } else if (!KeepSingleSrcPhi && MI.getNumExplicitOperands() == 3) {
-        MRI.constrainRegClass(MI.getOperand(1).getReg(),
-                              MRI.getRegClass(MI.getOperand(0).getReg()));
+        const TargetRegisterClass *ConstrainRegClass =
+            MRI.constrainRegClass(MI.getOperand(1).getReg(),
+                                  MRI.getRegClass(MI.getOperand(0).getReg()));
+        assert(ConstrainRegClass &&
+               "Expected a valid constrained register class!");
+        (void)ConstrainRegClass;
         MRI.replaceRegWith(MI.getOperand(0).getReg(),
                            MI.getOperand(1).getReg());
         if (LIS)
@@ -1458,7 +1471,10 @@ Register KernelRewriter::phi(Register LoopReg, Optional<Register> InitReg,
     MachineInstr *MI = MRI.getVRegDef(R);
     MI->getOperand(1).setReg(InitReg.getValue());
     Phis.insert({{LoopReg, InitReg.getValue()}, R});
-    MRI.constrainRegClass(R, MRI.getRegClass(InitReg.getValue()));
+    const TargetRegisterClass *ConstrainRegClass =
+        MRI.constrainRegClass(R, MRI.getRegClass(InitReg.getValue()));
+    assert(ConstrainRegClass && "Expected a valid constrained register class!");
+    (void)ConstrainRegClass;
     UndefPhis.erase(I);
     return R;
   }
@@ -1467,8 +1483,12 @@ Register KernelRewriter::phi(Register LoopReg, Optional<Register> InitReg,
   if (!RC)
     RC = MRI.getRegClass(LoopReg);
   Register R = MRI.createVirtualRegister(RC);
-  if (InitReg.hasValue())
-    MRI.constrainRegClass(R, MRI.getRegClass(*InitReg));
+  if (InitReg.hasValue()) {
+    const TargetRegisterClass *ConstrainRegClass =
+        MRI.constrainRegClass(R, MRI.getRegClass(*InitReg));
+    assert(ConstrainRegClass && "Expected a valid constrained register class!");
+    (void)ConstrainRegClass;
+  }
   BuildMI(*BB, BB->getFirstNonPHI(), DebugLoc(), TII->get(TargetOpcode::PHI), R)
       .addReg(InitReg.hasValue() ? *InitReg : undef(RC))
       .addMBB(PreheaderBB)
