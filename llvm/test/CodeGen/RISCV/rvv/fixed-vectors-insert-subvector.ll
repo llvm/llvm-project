@@ -574,9 +574,8 @@ define void @insert_v2i64_nxv16i64_hi(<2 x i64>* %psv, <vscale x 16 x i64>* %out
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    slli a0, a0, 3
 ; CHECK-NEXT:    addi a2, sp, 64
-; CHECK-NEXT:    add a2, a2, a0
-; CHECK-NEXT:    vl8re64.v v8, (a2)
-; CHECK-NEXT:    addi a2, sp, 64
+; CHECK-NEXT:    add a3, a2, a0
+; CHECK-NEXT:    vl8re64.v v8, (a3)
 ; CHECK-NEXT:    vl8re64.v v16, (a2)
 ; CHECK-NEXT:    add a0, a1, a0
 ; CHECK-NEXT:    vs8r.v v8, (a0)
