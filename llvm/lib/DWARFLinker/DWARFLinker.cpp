@@ -490,7 +490,7 @@ unsigned DWARFLinker::shouldKeepSubprogramDIE(
     // generation bugs aside, this is really wrong in the case of labels, where
     // a label marking the end of a function will have a PC == CU's high_pc.
     if (dwarf::toAddress(OrigUnit.getUnitDIE().find(dwarf::DW_AT_high_pc))
-            .getValueOr(UINT64_MAX) <= LowPc)
+            .value_or(UINT64_MAX) <= LowPc)
       return Flags;
     Unit.addLabelLowPc(*LowPc, MyInfo.AddrAdjust);
     return Flags | TF_Keep;
@@ -1480,12 +1480,12 @@ DIE *DWARFLinker::DIECloner::cloneDIE(const DWARFDie &InputDIE,
     uint32_t Hash = hashFullyQualifiedName(InputDIE, Unit, File);
     uint64_t RuntimeLang =
         dwarf::toUnsigned(InputDIE.find(dwarf::DW_AT_APPLE_runtime_class))
-            .getValueOr(0);
+            .value_or(0);
     bool ObjCClassIsImplementation =
         (RuntimeLang == dwarf::DW_LANG_ObjC ||
          RuntimeLang == dwarf::DW_LANG_ObjC_plus_plus) &&
         dwarf::toUnsigned(InputDIE.find(dwarf::DW_AT_APPLE_objc_complete_type))
-            .getValueOr(0);
+            .value_or(0);
     Unit.addTypeAccelerator(Die, AttrInfo.Name, ObjCClassIsImplementation,
                             Hash);
   }

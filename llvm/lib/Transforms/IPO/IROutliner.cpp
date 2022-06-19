@@ -186,7 +186,7 @@ Value *OutlinableRegion::findCorrespondingValueIn(const OutlinableRegion &Other,
   Optional<unsigned> CanonNum = Candidate->getCanonicalNum(*GVN);
   Optional<unsigned> FirstGVN = Other.Candidate->fromCanonicalNum(*CanonNum);
   Optional<Value *> FoundValueOpt = Other.Candidate->fromGVN(*FirstGVN);
-  return FoundValueOpt.getValueOr(nullptr);
+  return FoundValueOpt.value_or(nullptr);
 }
 
 BasicBlock *
