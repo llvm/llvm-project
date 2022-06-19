@@ -827,7 +827,7 @@ void CXXRecordDecl::addedMember(Decl *D) {
 
   // Handle member functions.
   if (const auto *Method = dyn_cast<CXXMethodDecl>(D)) {
-    if (const auto *DD = dyn_cast<CXXDestructorDecl>(D))
+    if (isa<CXXDestructorDecl>(D))
       SMKind |= SMF_Destructor;
 
     if (Method->isCopyAssignmentOperator()) {
