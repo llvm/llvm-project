@@ -217,7 +217,7 @@ static LogicalResult printConstantOp(CppEmitter &emitter, Operation *operation,
 static LogicalResult printOperation(CppEmitter &emitter,
                                     emitc::ConstantOp constantOp) {
   Operation *operation = constantOp.getOperation();
-  Attribute value = constantOp.value();
+  Attribute value = constantOp.getValue();
 
   return printConstantOp(emitter, operation, value);
 }
@@ -225,7 +225,7 @@ static LogicalResult printOperation(CppEmitter &emitter,
 static LogicalResult printOperation(CppEmitter &emitter,
                                     emitc::VariableOp variableOp) {
   Operation *operation = variableOp.getOperation();
-  Attribute value = variableOp.value();
+  Attribute value = variableOp.getValue();
 
   return printConstantOp(emitter, operation, value);
 }
@@ -330,7 +330,7 @@ static LogicalResult printOperation(CppEmitter &emitter, emitc::CallOp callOp) {
 
   if (failed(emitter.emitAssignPrefix(op)))
     return failure();
-  os << callOp.callee();
+  os << callOp.getCallee();
 
   auto emitArgs = [&](Attribute attr) -> LogicalResult {
     if (auto t = attr.dyn_cast<IntegerAttr>()) {
@@ -352,9 +352,10 @@ static LogicalResult printOperation(CppEmitter &emitter, emitc::CallOp callOp) {
     return success();
   };
 
-  if (callOp.template_args()) {
+  if (callOp.getTemplateArgs()) {
     os << "<";
-    if (failed(interleaveCommaWithError(*callOp.template_args(), os, emitArgs)))
+    if (failed(
+            interleaveCommaWithError(*callOp.getTemplateArgs(), os, emitArgs)))
       return failure();
     os << ">";
   }
@@ -362,8 +363,9 @@ static LogicalResult printOperation(CppEmitter &emitter, emitc::CallOp callOp) {
   os << "(";
 
   LogicalResult emittedArgs =
-      callOp.args() ? interleaveCommaWithError(*callOp.args(), os, emitArgs)
-                    : emitter.emitOperands(op);
+      callOp.getArgs()
+          ? interleaveCommaWithError(*callOp.getArgs(), os, emitArgs)
+          : emitter.emitOperands(op);
   if (failed(emittedArgs))
     return failure();
   os << ")";
@@ -377,7 +379,7 @@ static LogicalResult printOperation(CppEmitter &emitter,
 
   if (failed(emitter.emitAssignPrefix(op)))
     return failure();
-  os << applyOp.applicableOperator();
+  os << applyOp.getApplicableOperator();
   os << emitter.getOrCreateName(applyOp.getOperand());
 
   return success();
@@ -403,10 +405,10 @@ static LogicalResult printOperation(CppEmitter &emitter,
   raw_ostream &os = emitter.ostream();
 
   os << "#include ";
-  if (includeOp.is_standard_include())
-    os << "<" << includeOp.include() << ">";
+  if (includeOp.getIsStandardInclude())
+    os << "<" << includeOp.getInclude() << ">";
   else
-    os << "\"" << includeOp.include() << "\"";
+    os << "\"" << includeOp.getInclude() << "\"";
 
   return success();
 }
