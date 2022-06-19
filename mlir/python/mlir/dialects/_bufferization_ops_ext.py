@@ -18,15 +18,20 @@ class AllocTensorOp:
   def __init__(self,
                tensor_type: Type,
                dynamic_sizes: Sequence[Value],
+               copy: Value,
+               escape: BoolAttr,
                *,
                loc=None,
                ip=None):
     """Constructs an `alloc_tensor` with static and/or dynamic sizes."""
     context = get_default_loc_context(loc)
+    attributes = {}
+    if escape:
+      attributes["escape"] = escape
     op = self.build_generic(
         results=[tensor_type],
-        operands=dynamic_sizes,
-        attributes={},
+        operands=[dynamic_sizes, copy],
+        attributes=attributes,
         loc=loc,
         ip=ip)
     OpView.__init__(self, op)

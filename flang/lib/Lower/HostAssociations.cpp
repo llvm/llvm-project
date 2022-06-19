@@ -15,9 +15,9 @@
 #include "flang/Lower/ConvertType.h"
 #include "flang/Lower/PFTBuilder.h"
 #include "flang/Lower/SymbolMap.h"
-#include "flang/Lower/Todo.h"
 #include "flang/Optimizer/Builder/Character.h"
 #include "flang/Optimizer/Builder/FIRBuilder.h"
+#include "flang/Optimizer/Builder/Todo.h"
 #include "flang/Optimizer/Support/FatalError.h"
 #include "flang/Semantics/tools.h"
 #include "llvm/ADT/TypeSwitch.h"
@@ -402,7 +402,7 @@ public:
         if (!fir::isa_ref_type(eleTy))
           eleTy = builder.getRefType(eleTy);
         auto addr = builder.create<fir::BoxAddrOp>(loc, eleTy, box);
-        mlir::Value isPresent = builder.genIsNotNull(loc, addr);
+        mlir::Value isPresent = builder.genIsNotNullAddr(loc, addr);
         auto absentBox = builder.create<fir::AbsentOp>(loc, boxTy);
         box = builder.create<mlir::arith::SelectOp>(loc, isPresent, box,
                                                     absentBox);

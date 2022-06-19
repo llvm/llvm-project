@@ -303,18 +303,11 @@
 /* Linker version detected at compile time. */
 /* #undef HOST_LINK_VERSION */
 
-/* Target triple LLVM will generate code for by default */
-/* Doesn't use `cmakedefine` because it is allowed to be empty. */
-/* LLVM_DEFAULT_TARGET_TRIPLE defined in Bazel */
-
 /* Define if zlib compression is available */
 /* LLVM_ENABLE_ZLIB defined in Bazel */
 
 /* Define if overriding target triple is enabled */
 /* #undef LLVM_TARGET_TRIPLE_ENV */
-
-/* LLVM version information */
-/* #undef LLVM_VERSION_INFO */
 
 /* Whether tools show host and target info when invoked with --version */
 #define LLVM_VERSION_PRINTER_SHOW_HOST_TARGET_INFO 1
@@ -339,9 +332,6 @@
 
 /* Define to the vendor of this package. */
 /* #undef PACKAGE_VENDOR */
-
-/* Define as the return type of signal handlers (`int' or `void'). */
-#define RETSIGTYPE void
 
 /* Define if std::is_trivially_copyable is supported */
 #define HAVE_STD_IS_TRIVIALLY_COPYABLE 1

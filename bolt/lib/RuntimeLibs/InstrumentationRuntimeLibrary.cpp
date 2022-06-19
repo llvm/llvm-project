@@ -27,7 +27,7 @@ namespace opts {
 cl::opt<std::string> RuntimeInstrumentationLib(
     "runtime-instrumentation-lib",
     cl::desc("specify file name of the runtime instrumentation library"),
-    cl::ZeroOrMore, cl::init("libbolt_rt_instr.a"), cl::cat(BoltOptCategory));
+    cl::init("libbolt_rt_instr.a"), cl::cat(BoltOptCategory));
 
 extern cl::opt<bool> InstrumentationFileAppendPID;
 extern cl::opt<bool> ConservativeInstrumentation;
@@ -87,7 +87,7 @@ void InstrumentationRuntimeLibrary::emitBinary(BinaryContext &BC,
   }
 
   Section->setAlignment(llvm::Align(BC.RegularPageSize));
-  Streamer.SwitchSection(Section);
+  Streamer.switchSection(Section);
 
   // EmitOffset is used to determine padding size for data alignment
   uint64_t EmitOffset = 0;
@@ -185,7 +185,7 @@ void InstrumentationRuntimeLibrary::emitBinary(BinaryContext &BC,
     MCSection *TablesSection = BC.Ctx->getMachOSection(
         "__BOLT", "__tables", MachO::S_REGULAR, SectionKind::getData());
     TablesSection->setAlignment(llvm::Align(BC.RegularPageSize));
-    Streamer.SwitchSection(TablesSection);
+    Streamer.switchSection(TablesSection);
     emitString("__bolt_instr_tables", buildTables(BC));
   }
 }

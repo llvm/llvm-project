@@ -10,8 +10,11 @@
 #include "mlir/Dialect/SPIRV/IR/SPIRVDialect.h"
 #include "mlir/Dialect/SPIRV/IR/SPIRVTypes.h"
 #include "mlir/IR/Builders.h"
+#include "mlir/IR/DialectImplementation.h"
+#include "llvm/ADT/TypeSwitch.h"
 
 using namespace mlir;
+using namespace mlir::spirv;
 
 //===----------------------------------------------------------------------===//
 // TableGen'erated attribute utility functions
@@ -21,15 +24,6 @@ namespace mlir {
 namespace spirv {
 #include "mlir/Dialect/SPIRV/IR/SPIRVAttrUtils.inc"
 } // namespace spirv
-} // namespace mlir
-
-//===----------------------------------------------------------------------===//
-// DictionaryDict derived attributes
-//===----------------------------------------------------------------------===//
-
-#include "mlir/Dialect/SPIRV/IR/TargetAndABI.cpp.inc"
-
-namespace mlir {
 
 //===----------------------------------------------------------------------===//
 // Attribute storage classes
@@ -292,7 +286,7 @@ spirv::TargetEnvAttr spirv::TargetEnvAttr::get(spirv::VerCapExtAttr triple,
                                                Vendor vendorID,
                                                DeviceType deviceType,
                                                uint32_t deviceID,
-                                               DictionaryAttr limits) {
+                                               ResourceLimitsAttr limits) {
   assert(triple && limits && "expected valid triple and limits");
   MLIRContext *context = triple.getContext();
   return Base::get(context, triple, vendorID, deviceType, deviceID, limits);
@@ -340,16 +334,332 @@ spirv::ResourceLimitsAttr spirv::TargetEnvAttr::getResourceLimits() const {
   return getImpl()->limits.cast<spirv::ResourceLimitsAttr>();
 }
 
-LogicalResult
-spirv::TargetEnvAttr::verify(function_ref<InFlightDiagnostic()> emitError,
-                             spirv::VerCapExtAttr /*triple*/,
-                             spirv::Vendor /*vendorID*/,
-                             spirv::DeviceType /*deviceType*/,
-                             uint32_t /*deviceID*/, DictionaryAttr limits) {
-  if (!limits.isa<spirv::ResourceLimitsAttr>())
-    return emitError() << "expected spirv::ResourceLimitsAttr for limits";
+//===----------------------------------------------------------------------===//
+// ODS Generated Attributes
+//===----------------------------------------------------------------------===//
 
-  return success();
+#define GET_ATTRDEF_CLASSES
+#include "mlir/Dialect/SPIRV/IR/SPIRVAttributes.cpp.inc"
+
+//===----------------------------------------------------------------------===//
+// Attribute Parsing
+//===----------------------------------------------------------------------===//
+
+/// Parses a comma-separated list of keywords, invokes `processKeyword` on each
+/// of the parsed keyword, and returns failure if any error occurs.
+static ParseResult
+parseKeywordList(DialectAsmParser &parser,
+                 function_ref<LogicalResult(SMLoc, StringRef)> processKeyword) {
+  if (parser.parseLSquare())
+    return failure();
+
+  // Special case for empty list.
+  if (succeeded(parser.parseOptionalRSquare()))
+    return success();
+
+  // Keep parsing the keyword and an optional comma following it. If the comma
+  // is successfully parsed, then we have more keywords to parse.
+  if (failed(parser.parseCommaSeparatedList([&]() {
+        auto loc = parser.getCurrentLocation();
+        StringRef keyword;
+        if (parser.parseKeyword(&keyword) ||
+            failed(processKeyword(loc, keyword)))
+          return failure();
+        return success();
+      })))
+    return failure();
+  return parser.parseRSquare();
+}
+
+/// Parses a spirv::InterfaceVarABIAttr.
+static Attribute parseInterfaceVarABIAttr(DialectAsmParser &parser) {
+  if (parser.parseLess())
+    return {};
+
+  Builder &builder = parser.getBuilder();
+
+  if (parser.parseLParen())
+    return {};
+
+  IntegerAttr descriptorSetAttr;
+  {
+    auto loc = parser.getCurrentLocation();
+    uint32_t descriptorSet = 0;
+    auto descriptorSetParseResult = parser.parseOptionalInteger(descriptorSet);
+
+    if (!descriptorSetParseResult.hasValue() ||
+        failed(*descriptorSetParseResult)) {
+      parser.emitError(loc, "missing descriptor set");
+      return {};
+    }
+    descriptorSetAttr = builder.getI32IntegerAttr(descriptorSet);
+  }
+
+  if (parser.parseComma())
+    return {};
+
+  IntegerAttr bindingAttr;
+  {
+    auto loc = parser.getCurrentLocation();
+    uint32_t binding = 0;
+    auto bindingParseResult = parser.parseOptionalInteger(binding);
+
+    if (!bindingParseResult.hasValue() || failed(*bindingParseResult)) {
+      parser.emitError(loc, "missing binding");
+      return {};
+    }
+    bindingAttr = builder.getI32IntegerAttr(binding);
+  }
+
+  if (parser.parseRParen())
+    return {};
+
+  IntegerAttr storageClassAttr;
+  {
+    if (succeeded(parser.parseOptionalComma())) {
+      auto loc = parser.getCurrentLocation();
+      StringRef storageClass;
+      if (parser.parseKeyword(&storageClass))
+        return {};
+
+      if (auto storageClassSymbol =
+              spirv::symbolizeStorageClass(storageClass)) {
+        storageClassAttr = builder.getI32IntegerAttr(
+            static_cast<uint32_t>(*storageClassSymbol));
+      } else {
+        parser.emitError(loc, "unknown storage class: ") << storageClass;
+        return {};
+      }
+    }
+  }
+
+  if (parser.parseGreater())
+    return {};
+
+  return spirv::InterfaceVarABIAttr::get(descriptorSetAttr, bindingAttr,
+                                         storageClassAttr);
+}
+
+static Attribute parseVerCapExtAttr(DialectAsmParser &parser) {
+  if (parser.parseLess())
+    return {};
+
+  Builder &builder = parser.getBuilder();
+
+  IntegerAttr versionAttr;
+  {
+    auto loc = parser.getCurrentLocation();
+    StringRef version;
+    if (parser.parseKeyword(&version) || parser.parseComma())
+      return {};
+
+    if (auto versionSymbol = spirv::symbolizeVersion(version)) {
+      versionAttr =
+          builder.getI32IntegerAttr(static_cast<uint32_t>(*versionSymbol));
+    } else {
+      parser.emitError(loc, "unknown version: ") << version;
+      return {};
+    }
+  }
+
+  ArrayAttr capabilitiesAttr;
+  {
+    SmallVector<Attribute, 4> capabilities;
+    SMLoc errorloc;
+    StringRef errorKeyword;
+
+    auto processCapability = [&](SMLoc loc, StringRef capability) {
+      if (auto capSymbol = spirv::symbolizeCapability(capability)) {
+        capabilities.push_back(
+            builder.getI32IntegerAttr(static_cast<uint32_t>(*capSymbol)));
+        return success();
+      }
+      return errorloc = loc, errorKeyword = capability, failure();
+    };
+    if (parseKeywordList(parser, processCapability) || parser.parseComma()) {
+      if (!errorKeyword.empty())
+        parser.emitError(errorloc, "unknown capability: ") << errorKeyword;
+      return {};
+    }
+
+    capabilitiesAttr = builder.getArrayAttr(capabilities);
+  }
+
+  ArrayAttr extensionsAttr;
+  {
+    SmallVector<Attribute, 1> extensions;
+    SMLoc errorloc;
+    StringRef errorKeyword;
+
+    auto processExtension = [&](SMLoc loc, StringRef extension) {
+      if (spirv::symbolizeExtension(extension)) {
+        extensions.push_back(builder.getStringAttr(extension));
+        return success();
+      }
+      return errorloc = loc, errorKeyword = extension, failure();
+    };
+    if (parseKeywordList(parser, processExtension)) {
+      if (!errorKeyword.empty())
+        parser.emitError(errorloc, "unknown extension: ") << errorKeyword;
+      return {};
+    }
+
+    extensionsAttr = builder.getArrayAttr(extensions);
+  }
+
+  if (parser.parseGreater())
+    return {};
+
+  return spirv::VerCapExtAttr::get(versionAttr, capabilitiesAttr,
+                                   extensionsAttr);
+}
+
+/// Parses a spirv::TargetEnvAttr.
+static Attribute parseTargetEnvAttr(DialectAsmParser &parser) {
+  if (parser.parseLess())
+    return {};
+
+  spirv::VerCapExtAttr tripleAttr;
+  if (parser.parseAttribute(tripleAttr) || parser.parseComma())
+    return {};
+
+  // Parse [vendor[:device-type[:device-id]]]
+  Vendor vendorID = Vendor::Unknown;
+  DeviceType deviceType = DeviceType::Unknown;
+  uint32_t deviceID = spirv::TargetEnvAttr::kUnknownDeviceID;
+  {
+    auto loc = parser.getCurrentLocation();
+    StringRef vendorStr;
+    if (succeeded(parser.parseOptionalKeyword(&vendorStr))) {
+      if (auto vendorSymbol = spirv::symbolizeVendor(vendorStr)) {
+        vendorID = *vendorSymbol;
+      } else {
+        parser.emitError(loc, "unknown vendor: ") << vendorStr;
+      }
+
+      if (succeeded(parser.parseOptionalColon())) {
+        loc = parser.getCurrentLocation();
+        StringRef deviceTypeStr;
+        if (parser.parseKeyword(&deviceTypeStr))
+          return {};
+        if (auto deviceTypeSymbol = spirv::symbolizeDeviceType(deviceTypeStr)) {
+          deviceType = *deviceTypeSymbol;
+        } else {
+          parser.emitError(loc, "unknown device type: ") << deviceTypeStr;
+        }
+
+        if (succeeded(parser.parseOptionalColon())) {
+          loc = parser.getCurrentLocation();
+          if (parser.parseInteger(deviceID))
+            return {};
+        }
+      }
+      if (parser.parseComma())
+        return {};
+    }
+  }
+
+  ResourceLimitsAttr limitsAttr;
+  if (parser.parseAttribute(limitsAttr) || parser.parseGreater())
+    return {};
+
+  return spirv::TargetEnvAttr::get(tripleAttr, vendorID, deviceType, deviceID,
+                                   limitsAttr);
+}
+
+Attribute SPIRVDialect::parseAttribute(DialectAsmParser &parser,
+                                       Type type) const {
+  // SPIR-V attributes are dictionaries so they do not have type.
+  if (type) {
+    parser.emitError(parser.getNameLoc(), "unexpected type");
+    return {};
+  }
+
+  // Parse the kind keyword first.
+  StringRef attrKind;
+  if (parser.parseKeyword(&attrKind))
+    return {};
+
+  Attribute attr;
+  OptionalParseResult result =
+      generatedAttributeParser(parser, attrKind, type, attr);
+  if (result.hasValue()) {
+    if (failed(result.getValue()))
+      return {};
+    return attr;
+  }
+
+  if (attrKind == spirv::TargetEnvAttr::getKindName())
+    return parseTargetEnvAttr(parser);
+  if (attrKind == spirv::VerCapExtAttr::getKindName())
+    return parseVerCapExtAttr(parser);
+  if (attrKind == spirv::InterfaceVarABIAttr::getKindName())
+    return parseInterfaceVarABIAttr(parser);
+
+  parser.emitError(parser.getNameLoc(), "unknown SPIR-V attribute kind: ")
+      << attrKind;
+  return {};
+}
+
+//===----------------------------------------------------------------------===//
+// Attribute Printing
+//===----------------------------------------------------------------------===//
+
+static void print(spirv::VerCapExtAttr triple, DialectAsmPrinter &printer) {
+  auto &os = printer.getStream();
+  printer << spirv::VerCapExtAttr::getKindName() << "<"
+          << spirv::stringifyVersion(triple.getVersion()) << ", [";
+  llvm::interleaveComma(
+      triple.getCapabilities(), os,
+      [&](spirv::Capability cap) { os << spirv::stringifyCapability(cap); });
+  printer << "], [";
+  llvm::interleaveComma(triple.getExtensionsAttr(), os, [&](Attribute attr) {
+    os << attr.cast<StringAttr>().getValue();
+  });
+  printer << "]>";
+}
+
+static void print(spirv::TargetEnvAttr targetEnv, DialectAsmPrinter &printer) {
+  printer << spirv::TargetEnvAttr::getKindName() << "<#spv.";
+  print(targetEnv.getTripleAttr(), printer);
+  spirv::Vendor vendorID = targetEnv.getVendorID();
+  spirv::DeviceType deviceType = targetEnv.getDeviceType();
+  uint32_t deviceID = targetEnv.getDeviceID();
+  if (vendorID != spirv::Vendor::Unknown) {
+    printer << ", " << spirv::stringifyVendor(vendorID);
+    if (deviceType != spirv::DeviceType::Unknown) {
+      printer << ":" << spirv::stringifyDeviceType(deviceType);
+      if (deviceID != spirv::TargetEnvAttr::kUnknownDeviceID)
+        printer << ":" << deviceID;
+    }
+  }
+  printer << ", " << targetEnv.getResourceLimits() << ">";
+}
+
+static void print(spirv::InterfaceVarABIAttr interfaceVarABIAttr,
+                  DialectAsmPrinter &printer) {
+  printer << spirv::InterfaceVarABIAttr::getKindName() << "<("
+          << interfaceVarABIAttr.getDescriptorSet() << ", "
+          << interfaceVarABIAttr.getBinding() << ")";
+  auto storageClass = interfaceVarABIAttr.getStorageClass();
+  if (storageClass)
+    printer << ", " << spirv::stringifyStorageClass(*storageClass);
+  printer << ">";
+}
+
+void SPIRVDialect::printAttribute(Attribute attr,
+                                  DialectAsmPrinter &printer) const {
+  if (succeeded(generatedAttributePrinter(attr, printer)))
+    return;
+
+  if (auto targetEnv = attr.dyn_cast<TargetEnvAttr>())
+    print(targetEnv, printer);
+  else if (auto vceAttr = attr.dyn_cast<VerCapExtAttr>())
+    print(vceAttr, printer);
+  else if (auto interfaceVarABIAttr = attr.dyn_cast<InterfaceVarABIAttr>())
+    print(interfaceVarABIAttr, printer);
+  else
+    llvm_unreachable("unhandled SPIR-V attribute kind");
 }
 
 //===----------------------------------------------------------------------===//
@@ -358,4 +668,8 @@ spirv::TargetEnvAttr::verify(function_ref<InFlightDiagnostic()> emitError,
 
 void spirv::SPIRVDialect::registerAttributes() {
   addAttributes<InterfaceVarABIAttr, TargetEnvAttr, VerCapExtAttr>();
+  addAttributes<
+#define GET_ATTRDEF_LIST
+#include "mlir/Dialect/SPIRV/IR/SPIRVAttributes.cpp.inc"
+      >();
 }

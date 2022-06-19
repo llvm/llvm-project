@@ -1,7 +1,7 @@
 RUN: llvm-mc -filetype=obj -triple x86_64-unknown-unknown %p/Inputs/dwarfdump-gdbindex.s -o %t.o
 RUN: llvm-mc -filetype=obj -triple x86_64-unknown-unknown %p/Inputs/dwarfdump-gdbindex2.s -o %t2.o
 RUN: ld.lld --gdb-index %t.o %t2.o -o %tfile.exe
-RUN: llvm-bolt %tfile.exe -o %tfile.exe.bolt -update-debug-sections
+RUN: llvm-bolt %tfile.exe -o %tfile.exe.bolt --update-debug-sections
 RUN: llvm-dwarfdump -gdb-index %tfile.exe.bolt | FileCheck %s
 
 ; test.cpp:

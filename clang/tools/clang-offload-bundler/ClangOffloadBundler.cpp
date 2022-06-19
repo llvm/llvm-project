@@ -63,23 +63,23 @@ static cl::opt<bool> Help("h", cl::desc("Alias for -help"), cl::Hidden);
 static cl::OptionCategory
     ClangOffloadBundlerCategory("clang-offload-bundler options");
 static cl::list<std::string>
-    InputFileNames("input", cl::ZeroOrMore,
+    InputFileNames("input",
                    cl::desc("Input file."
                             " Can be specified multiple times "
                             "for multiple input files."),
                    cl::cat(ClangOffloadBundlerCategory));
 static cl::list<std::string>
-    InputFileNamesDeprecatedOpt("inputs", cl::CommaSeparated, cl::ZeroOrMore,
+    InputFileNamesDeprecatedOpt("inputs", cl::CommaSeparated,
                                 cl::desc("[<input file>,...] (deprecated)"),
                                 cl::cat(ClangOffloadBundlerCategory));
 static cl::list<std::string>
-    OutputFileNames("output", cl::ZeroOrMore,
+    OutputFileNames("output",
                     cl::desc("Output file."
                              " Can be specified multiple times "
                              "for multiple output files."),
                     cl::cat(ClangOffloadBundlerCategory));
 static cl::list<std::string>
-    OutputFileNamesDeprecatedOpt("outputs", cl::CommaSeparated, cl::ZeroOrMore,
+    OutputFileNamesDeprecatedOpt("outputs", cl::CommaSeparated,
                                  cl::desc("[<output file>,...] (deprecated)"),
                                  cl::cat(ClangOffloadBundlerCategory));
 static cl::list<std::string>

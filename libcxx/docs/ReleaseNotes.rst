@@ -35,16 +35,14 @@ see the `releases page <https://llvm.org/releases/>`_.
 What's New in Libc++ 15.0.0?
 ============================
 
-New Features
-------------
+Implemented Papers
+------------------
 
-- Implemented P0627R6 (Function to mark unreachable code)
-
-- Implemented P1165R1 (Make stateful allocator propagation more consistent for ``operator+(basic_string)``)
-
-- Implemented P0674R1 (Support arrays in ``make_shared`` and ``allocate_shared``)
-
-- Implemented P0980R1 (Making ``std::string`` constexpr)
+- P0627R6 (Function to mark unreachable code)
+- P1165R1 (Make stateful allocator propagation more consistent for ``operator+(basic_string)``)
+- P0674R1 (Support arrays in ``make_shared`` and ``allocate_shared``)
+- P0980R1 (Making ``std::string`` constexpr)
+- P2216R3 (std::format improvements)
 
 - Marked the following papers as "Complete" (note that some of those might have
   been implemented in a previous release but not marked as such):
@@ -59,6 +57,9 @@ New Features
     - P1970R2 (Consistency for ``size()`` functions: Add ``ranges::ssize``);
     - P1983R0 (Wording for GB301, US296, US292, US291, and US283).
 
+New Features
+------------
+
 - `pop_heap` now uses an algorithm known as "bottom-up heapsort" or
   "heapsort with bounce" to reduce the number of comparisons, and rearranges
   elements using move-assignment instead of `swap`.
@@ -68,6 +69,17 @@ New Features
   (and incomplete) Debug Mode. Vendors can select whether the library they ship
   should include assertions or not by default. For details, see
   :ref:`the documentation <assertions-mode>` about this new feature.
+
+- The implementation of the function ``std::to_chars`` for integral types has
+  moved from the dylib to the header. This means the function no longer has a
+  minimum deployment target.
+
+- The format functions (``std::format``, ``std::format_to``, ``std::format_to_n``, and
+  ``std::formatted_size``) now validate the format string at compile time.
+  When the format string is invalid this will make the code ill-formed instead
+  of throwing an exception at run-time.  (This does not affect the ``v``
+  functions.)
+
 
 API Changes
 -----------
@@ -85,7 +97,11 @@ API Changes
 - Some libc++ headers no longer transitively include all of:
     - ``<algorithm>``
     - ``<chrono>``
+    - ``<exception>``
     - ``<functional>``
+    - ``<iterator>``
+    - ``<new>``
+    - ``<typeinfo>``
     - ``<utility>``
 
   If, after updating libc++, you see compiler errors related to missing declarations
@@ -109,6 +125,27 @@ API Changes
 - ``vector<bool>::const_reference``, ``vector<bool>::const_iterator::reference``
   and ``bitset::const_reference`` are now aliases for `bool` in the unstable ABI.
 
+- The ``_LIBCPP_DEBUG`` macro is not supported anymore. It will be honoured until
+  LLVM 16, and then it will be an error to define that macro. To enable basic
+  assertions (previously ``_LIBCPP_DEBUG=0``), please use ``_LIBCPP_ENABLE_ASSERTIONS=1``.
+  To enable the debug mode (previously ``_LIBCPP_DEBUG=1|2``), please ensure that
+  the library has been built with support for the debug mode, and it will be
+  enabled automatically (no need to define ``_LIBCPP_DEBUG``).
+
+- The ``_LIBCPP_DISABLE_EXTERN_TEMPLATE`` macro is not honored anymore when defined by
+  users of libc++. Instead, users not wishing to take a dependency on libc++ should link
+  against the static version of libc++, which will result in no dependency being
+  taken against the shared library.
+
+- The ``_LIBCPP_ENABLE_CXX20_REMOVED_ALLOCATOR_VOID_SPECIALIZATION`` macro has been added to allow
+  re-enabling the ``allocator<void>`` specialization. When used in conjuction with
+  ``_LIBCPP_ENABLE_CXX20_REMOVED_ALLOCATOR_MEMBERS``, this ensures that the members of
+  ``allocator<void>`` removed in C++20 can be accessed.
+
+- The experimental versions of ``boyer_moore_searcher`` and ``boyer_moore_horspool_searcher``
+  will be removed in LLVM 17. You can disable the deprecation warnings by defining
+  ``_LIBCPP_NO_EXPERIMENTAL_DEPRECATION_WARNING_SEARCHERS``.
+
 ABI Changes
 -----------
 
@@ -121,6 +158,17 @@ ABI Changes
   top of ``arc4random()`` instead of reading from ``/dev/urandom``. Any implementation-defined
   token used when constructing a ``std::random_device`` will now be ignored instead of
   interpreted as a file to read entropy from.
+
+- ``std::valarray``'s unary operators ``!``, ``+``, ``~`` and ``-`` now return an expression
+  object instead of a ``valarray``. This was done to fix an issue where any expression involving
+  other ``valarray`` operators and one of these unary operators would end up with a dangling
+  reference. This is a potential ABI break for code that exposes ``std::valarray`` on an ABI
+  boundary, specifically if the return type of an ABI-boundary function is ``auto``-deduced
+  from an expression involving unary operators on ``valarray``. If you are concerned by this,
+  you can audit whether your executable or library exports any function that returns a
+  ``valarray``, and if so ensure that any such function uses ``std::valarray`` directly
+  as a return type instead of relying on the type of ``valarray``-expressions, which is
+  not guaranteed by the Standard anyway.
 
 Build System Changes
 --------------------
@@ -153,3 +201,12 @@ Build System Changes
   configuration and isn't supported by one of the configurations in ``libcxx/test/configs``,
   ``libcxxabi/test/configs`` or ``libunwind/test/configs``, please move to one of those
   configurations or define your own.
+
+- The ``LIBCXX_ENABLE_DEBUG_MODE_SUPPORT`` CMake configuration is not supported anymore. If you
+  were disabling support for the debug mode with that flag, please use ``LIBCXX_ENABLE_BACKWARDS_COMPATIBILITY_DEBUG_MODE_SYMBOLS=OFF``
+  instead.
+
+- MinGW DLL builds of libc++ no longer use dllimport in their headers, which
+  means that the same set of installed headers works for both DLL and static
+  linkage. This means that distributors finally can build both library
+  versions with a single CMake invocation.

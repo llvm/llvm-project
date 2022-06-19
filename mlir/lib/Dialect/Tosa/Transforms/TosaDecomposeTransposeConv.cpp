@@ -1,5 +1,4 @@
-//===- TosaDecomposeTransposeConv.cpp
-//------------------------------------------===//
+//===- TosaDecomposeTransposeConv.cpp -------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -215,8 +214,7 @@ public:
       weight = createOpAndInfer<tosa::PadOp>(
           rewriter, loc, UnrankedTensorType::get(weightETy), weight,
           weightPaddingVal, nullptr,
-          PadOpQuantizationAttr::get(quantInfo.weight_zp(),
-                                     rewriter.getContext()));
+          rewriter.getAttr<PadOpQuantizationAttr>(quantInfo.getWeightZp()));
 
     } else {
       weight = createOpAndInfer<tosa::PadOp>(rewriter, loc,
@@ -280,8 +278,7 @@ public:
       input = createOpAndInfer<tosa::PadOp>(
           rewriter, loc, UnrankedTensorType::get(inputETy), input,
           inputPaddingVal, nullptr,
-          PadOpQuantizationAttr::get(quantInfo.input_zp(),
-                                     rewriter.getContext()));
+          rewriter.getAttr<PadOpQuantizationAttr>(quantInfo.getInputZp()));
     } else {
       input = createOpAndInfer<tosa::PadOp>(rewriter, loc,
                                             UnrankedTensorType::get(inputETy),

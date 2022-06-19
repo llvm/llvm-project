@@ -2,7 +2,7 @@
 ; RUN: "-aa-pipeline=basic-aa,tbaa" 2>&1 | FileCheck %s
 
 ; CHECK:      Src:  %v = load i32, i32* %arrayidx1, align 4 --> Dst:  store i32 %add, i32* %a.lcssa, align 4
-; CHECK-NEXT: da analyze - confused!
+; CHECK-NEXT: da analyze - anti [*|<]!
 
 define void @f(i32 *%a, i32 %n, i64 %n2) {
 entry:

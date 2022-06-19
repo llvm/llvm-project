@@ -118,17 +118,9 @@ namespace {
 /// the construction context was present and contained references to these
 /// AST nodes.
 class ConstructedObjectKey {
-  typedef std::pair<ConstructionContextItem, const LocationContext *>
-      ConstructedObjectKeyImpl;
-
+  using ConstructedObjectKeyImpl =
+      std::pair<ConstructionContextItem, const LocationContext *>;
   const ConstructedObjectKeyImpl Impl;
-
-  const void *getAnyASTNodePtr() const {
-    if (const Stmt *S = getItem().getStmtOrNull())
-      return S;
-    else
-      return getItem().getCXXCtorInitializer();
-  }
 
 public:
   explicit ConstructedObjectKey(const ConstructionContextItem &Item,
@@ -312,7 +304,7 @@ ProgramStateRef ExprEngine::createTemporaryRegionIfNeeded(
   if (!Result) {
     // If we don't have an explicit result expression, we're in "if needed"
     // mode. Only create a region if the current value is a NonLoc.
-    if (!InitValWithAdjustments.getAs<NonLoc>()) {
+    if (!isa<NonLoc>(InitValWithAdjustments)) {
       if (OutRegionWithAdjustments)
         *OutRegionWithAdjustments = nullptr;
       return State;
@@ -321,7 +313,7 @@ ProgramStateRef ExprEngine::createTemporaryRegionIfNeeded(
   } else {
     // We need to create a region no matter what. Make sure we don't try to
     // stuff a Loc into a non-pointer temporary region.
-    assert(!InitValWithAdjustments.getAs<Loc>() ||
+    assert(!isa<Loc>(InitValWithAdjustments) ||
            Loc::isLocType(Result->getType()) ||
            Result->getType()->isMemberPointerType());
   }
@@ -613,6 +605,8 @@ void ExprEngine::printJson(raw_ostream &Out, ProgramStateRef State,
 }
 
 void ExprEngine::processEndWorklist() {
+  // This prints the name of the top-level function if we crash.
+  PrettyStackTraceLocationContext CrashInfo(getRootLocationContext());
   getCheckerManager().runCheckersForEndAnalysis(G, BR, *this);
 }
 
@@ -1244,6 +1238,7 @@ void ExprEngine::Visit(const Stmt *S, ExplodedNode *Pred,
     case Stmt::OMPParallelForSimdDirectiveClass:
     case Stmt::OMPParallelSectionsDirectiveClass:
     case Stmt::OMPParallelMasterDirectiveClass:
+    case Stmt::OMPParallelMaskedDirectiveClass:
     case Stmt::OMPTaskDirectiveClass:
     case Stmt::OMPTaskyieldDirectiveClass:
     case Stmt::OMPBarrierDirectiveClass:
@@ -2341,7 +2336,7 @@ void ExprEngine::processIndirectGoto(IndirectGotoNodeBuilder &builder) {
     llvm_unreachable("No block with label.");
   }
 
-  if (V.getAs<loc::ConcreteInt>() || V.getAs<UndefinedVal>()) {
+  if (isa<UndefinedVal, loc::ConcreteInt>(V)) {
     // Dispatch to the first target and mark it as a sink.
     //ExplodedNode* N = builder.generateNode(builder.begin(), state, true);
     // FIXME: add checker visit.
@@ -2596,9 +2591,22 @@ void ExprEngine::VisitCommonDeclRefExpr(const Expr *Ex, const NamedDecl *D,
     // operator&.
     return;
   }
-  if (isa<BindingDecl>(D)) {
-    // FIXME: proper support for bound declarations.
-    // For now, let's just prevent crashing.
+  if (const auto *BD = dyn_cast<BindingDecl>(D)) {
+    const auto *DD = cast<DecompositionDecl>(BD->getDecomposedDecl());
+
+    if (const auto *ME = dyn_cast<MemberExpr>(BD->getBinding())) {
+      const auto *Field = cast<FieldDecl>(ME->getMemberDecl());
+
+      SVal Base = state->getLValue(DD, LCtx);
+      if (DD->getType()->isReferenceType()) {
+        Base = state->getSVal(Base.getAsRegion());
+      }
+
+      SVal V = state->getLValue(Field, Base);
+
+      Bldr.generateNode(Ex, Pred, state->BindExpr(Ex, LCtx, V));
+    }
+
     return;
   }
 
@@ -2892,7 +2900,7 @@ void ExprEngine::evalBind(ExplodedNodeSet &Dst, const Stmt *StoreE,
 
   // If the location is not a 'Loc', it will already be handled by
   // the checkers.  There is nothing left to do.
-  if (!location.getAs<Loc>()) {
+  if (!isa<Loc>(location)) {
     const ProgramPoint L = PostStore(StoreE, LC, /*Loc*/nullptr,
                                      /*tag*/nullptr);
     ProgramStateRef state = Pred->getState();
@@ -2962,7 +2970,7 @@ void ExprEngine::evalLoad(ExplodedNodeSet &Dst,
                           SVal location,
                           const ProgramPointTag *tag,
                           QualType LoadTy) {
-  assert(!location.getAs<NonLoc>() && "location cannot be a NonLoc.");
+  assert(!isa<NonLoc>(location) && "location cannot be a NonLoc.");
   assert(NodeEx);
   assert(BoundEx);
   // Evaluate the location (checks for bad dereferences).
@@ -3093,7 +3101,7 @@ void ExprEngine::VisitGCCAsmStmt(const GCCAsmStmt *A, ExplodedNode *Pred,
 
   for (const Expr *O : A->outputs()) {
     SVal X = state->getSVal(O, Pred->getLocationContext());
-    assert(!X.getAs<NonLoc>());  // Should be an Lval, or unknown, undef.
+    assert(!isa<NonLoc>(X)); // Should be an Lval, or unknown, undef.
 
     if (Optional<Loc> LV = X.getAs<Loc>())
       state = state->bindLoc(*LV, UnknownVal(), Pred->getLocationContext());

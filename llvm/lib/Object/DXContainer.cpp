@@ -53,6 +53,18 @@ Error DXContainer::parseHeader() {
   return readStruct(Data.getBuffer(), Data.getBuffer().data(), Header);
 }
 
+Error DXContainer::parseDXILHeader(uint32_t Offset) {
+  if (DXIL)
+    return parseFailed("More than one DXIL part is present in the file");
+  const char *Current = Data.getBuffer().data() + Offset;
+  dxbc::ProgramHeader Header;
+  if (Error Err = readStruct(Data.getBuffer(), Current, Header))
+    return Err;
+  Current += offsetof(dxbc::ProgramHeader, Bitcode) + Header.Bitcode.Offset;
+  DXIL.emplace(std::make_pair(Header, Current));
+  return Error::success();
+}
+
 Error DXContainer::parsePartOffsets() {
   const char *Current = Data.getBuffer().data() + sizeof(dxbc::Header);
   for (uint32_t Part = 0; Part < Header.PartCount; ++Part) {
@@ -60,9 +72,20 @@ Error DXContainer::parsePartOffsets() {
     if (Error Err = readInteger(Data.getBuffer(), Current, PartOffset))
       return Err;
     Current += sizeof(uint32_t);
-    if (PartOffset + sizeof(dxbc::PartHeader) > Data.getBufferSize())
+    // We need to ensure that each part offset leaves enough space for a part
+    // header. To prevent overflow, we subtract the part header size from the
+    // buffer size, rather than adding to the offset. Since the file header is
+    // larger than the part header we can't reach this code unless the buffer
+    // is larger than the part header, so this can't underflow.
+    if (PartOffset > Data.getBufferSize() - sizeof(dxbc::PartHeader))
       return parseFailed("Part offset points beyond boundary of the file");
     PartOffsets.push_back(PartOffset);
+
+    // If this isn't a dxil part stop here...
+    if (Data.getBuffer().substr(PartOffset, 4) != "DXIL")
+      continue;
+    if (Error Err = parseDXILHeader(PartOffset + sizeof(dxbc::PartHeader)))
+      return Err;
   }
   return Error::success();
 }
@@ -84,4 +107,5 @@ void DXContainer::PartIterator::updateIteratorImpl(const uint32_t Offset) {
   cantFail(readStruct(Buffer, Current, IteratorState.Part));
   IteratorState.Data =
       StringRef(Current + sizeof(dxbc::PartHeader), IteratorState.Part.Size);
+  IteratorState.Offset = Offset;
 }

@@ -28,18 +28,22 @@ public:
     return Find(n);
   }
 
-  ExternalFileUnit &LookUpOrCreate(
+  ExternalFileUnit *LookUpOrCreate(
       int n, const Terminator &terminator, bool &wasExtant) {
     CriticalSection critical{lock_};
-    auto *p{Find(n)};
-    wasExtant = p != nullptr;
-    return p ? *p : Create(n, terminator);
+    if (auto *p{Find(n)}) {
+      wasExtant = true;
+      return p;
+    } else {
+      wasExtant = false;
+      return n >= 0 ? &Create(n, terminator) : nullptr;
+    }
   }
 
   // Unit look-up by name is needed for INQUIRE(FILE="...")
-  ExternalFileUnit *LookUp(const char *path) {
+  ExternalFileUnit *LookUp(const char *path, std::size_t pathLen) {
     CriticalSection critical{lock_};
-    return Find(path);
+    return Find(path, pathLen);
   }
 
   ExternalFileUnit &NewUnit(const Terminator &);
@@ -84,7 +88,7 @@ private:
     }
     return nullptr;
   }
-  ExternalFileUnit *Find(const char *path);
+  ExternalFileUnit *Find(const char *path, std::size_t pathLen);
 
   ExternalFileUnit &Create(int, const Terminator &);
 

@@ -96,7 +96,8 @@ int main(int argc, char **argv) {
   } else if (argc == 2 && !strcmp(argv[1], "--test-callsite-attributes")) {
     return llvm_test_callsite_attributes();
   } else if ((argc == 2 || argc == 3) && !strcmp(argv[1], "--echo")) {
-    return llvm_echo(argc == 3 ? !strcmp(argv[2], "--opaque-pointers") : 0);
+    return llvm_echo(argc == 3 ? strcmp(argv[2], "--no-opaque-pointers") != 0
+                               : 1);
   } else if (argc == 2 && !strcmp(argv[1], "--test-diagnostic-handler")) {
     return llvm_test_diagnostic_handler();
   } else if (argc == 2 && !strcmp(argv[1], "--test-dibuilder")) {

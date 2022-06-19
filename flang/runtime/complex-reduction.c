@@ -8,7 +8,7 @@
  */
 
 #include "complex-reduction.h"
-#include "flang/Common/long-double.h"
+#include <float.h>
 
 struct CppComplexFloat {
   float r, i;
@@ -90,10 +90,10 @@ ADAPT_REDUCTION(SumComplex4, float_Complex_t, CppComplexFloat, CMPLXF,
     REDUCTION_ARGS, REDUCTION_ARG_NAMES)
 ADAPT_REDUCTION(SumComplex8, double_Complex_t, CppComplexDouble, CMPLX,
     REDUCTION_ARGS, REDUCTION_ARG_NAMES)
-#if LONG_DOUBLE == 80
+#if LDBL_MANT_DIG == 64
 ADAPT_REDUCTION(SumComplex10, long_double_Complex_t, CppComplexLongDouble,
     CMPLXL, REDUCTION_ARGS, REDUCTION_ARG_NAMES)
-#elif LONG_DOUBLE == 128
+#elif LDBL_MANT_DIG == 113
 ADAPT_REDUCTION(SumComplex16, long_double_Complex_t, CppComplexLongDouble,
     CMPLXL, REDUCTION_ARGS, REDUCTION_ARG_NAMES)
 #endif
@@ -103,10 +103,10 @@ ADAPT_REDUCTION(ProductComplex4, float_Complex_t, CppComplexFloat, CMPLXF,
     REDUCTION_ARGS, REDUCTION_ARG_NAMES)
 ADAPT_REDUCTION(ProductComplex8, double_Complex_t, CppComplexDouble, CMPLX,
     REDUCTION_ARGS, REDUCTION_ARG_NAMES)
-#if LONG_DOUBLE == 80
+#if LDBL_MANT_DIG == 64
 ADAPT_REDUCTION(ProductComplex10, long_double_Complex_t, CppComplexLongDouble,
     CMPLXL, REDUCTION_ARGS, REDUCTION_ARG_NAMES)
-#elif LONG_DOUBLE == 128
+#elif LDBL_MANT_DIG == 113
 ADAPT_REDUCTION(ProductComplex16, long_double_Complex_t, CppComplexLongDouble,
     CMPLXL, REDUCTION_ARGS, REDUCTION_ARG_NAMES)
 #endif
@@ -116,10 +116,10 @@ ADAPT_REDUCTION(DotProductComplex4, float_Complex_t, CppComplexFloat, CMPLXF,
     DOT_PRODUCT_ARGS, DOT_PRODUCT_ARG_NAMES)
 ADAPT_REDUCTION(DotProductComplex8, double_Complex_t, CppComplexDouble, CMPLX,
     DOT_PRODUCT_ARGS, DOT_PRODUCT_ARG_NAMES)
-#if LONG_DOUBLE == 80
+#if LDBL_MANT_DIG == 64
 ADAPT_REDUCTION(DotProductComplex10, long_double_Complex_t,
     CppComplexLongDouble, CMPLXL, DOT_PRODUCT_ARGS, DOT_PRODUCT_ARG_NAMES)
-#elif LONG_DOUBLE == 128
+#elif LDBL_MANT_DIG == 113
 ADAPT_REDUCTION(DotProductComplex16, long_double_Complex_t,
     CppComplexLongDouble, CMPLXL, DOT_PRODUCT_ARGS, DOT_PRODUCT_ARG_NAMES)
 #endif

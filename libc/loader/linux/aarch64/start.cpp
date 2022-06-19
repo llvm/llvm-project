@@ -8,10 +8,15 @@
 
 #include "config/linux/app.h"
 #include "src/__support/OSUtil/syscall.h"
+#include "src/string/memory_utils/memcpy_implementations.h"
+
+#include <arm_acle.h>
 
 #include <linux/auxvec.h>
 #include <linux/elf.h>
+#include <stddef.h>
 #include <stdint.h>
+#include <sys/mman.h>
 #include <sys/syscall.h>
 
 extern "C" int main(int, char **, char **);
@@ -21,7 +26,55 @@ extern "C" int main(int, char **, char **);
 
 namespace __llvm_libc {
 
+#ifdef SYS_mmap2
+static constexpr long MMAP_SYSCALL_NUMBER = SYS_mmap2;
+#elif SYS_mmap
+static constexpr long MMAP_SYSCALL_NUMBER = SYS_mmap;
+#else
+#error "Target platform does not have SYS_mmap or SYS_mmap2 defined"
+#endif
+
 AppProperties app;
+
+void initTLS() {
+  if (app.tls.size == 0)
+    return;
+
+  // aarch64 follows the variant 1 TLS layout:
+  //
+  // 1. First entry is the dynamic thread vector pointer
+  // 2. Second entry is a 8-byte reserved word.
+  // 3. Padding for alignment.
+  // 4. The TLS data from the ELF image.
+  //
+  // The thread pointer points to the first entry.
+
+  const size_t size_of_pointers = 2 * sizeof(uintptr_t);
+  size_t padding = 0;
+  const size_t ALIGNMENT_MASK = app.tls.align - 1;
+  size_t diff = size_of_pointers & ALIGNMENT_MASK;
+  if (diff != 0)
+    padding += (ALIGNMENT_MASK - diff) + 1;
+
+  size_t alloc_size = size_of_pointers + padding + app.tls.size;
+
+  // We cannot call the mmap function here as the functions set errno on
+  // failure. Since errno is implemented via a thread local variable, we cannot
+  // use errno before TLS is setup.
+  long mmap_ret_val = __llvm_libc::syscall(MMAP_SYSCALL_NUMBER, nullptr,
+                                           alloc_size, PROT_READ | PROT_WRITE,
+                                           MAP_ANONYMOUS | MAP_PRIVATE, -1, 0);
+  // We cannot check the return value with MAP_FAILED as that is the return
+  // of the mmap function and not the mmap syscall.
+  if (mmap_ret_val < 0 && static_cast<uintptr_t>(mmap_ret_val) > -app.pageSize)
+    __llvm_libc::syscall(SYS_exit, 1);
+  uintptr_t thread_ptr = uintptr_t(reinterpret_cast<uintptr_t *>(mmap_ret_val));
+  uintptr_t tls_addr = thread_ptr + size_of_pointers + padding;
+  __llvm_libc::inline_memcpy(reinterpret_cast<char *>(tls_addr),
+                             reinterpret_cast<const char *>(app.tls.address),
+                             app.tls.init_size);
+  __arm_wsr64("tpidr_el0", thread_ptr);
+}
 
 } // namespace __llvm_libc
 
@@ -50,9 +103,17 @@ extern "C" void _start() {
 
   // After the env array, is the aux-vector. The end of the aux-vector is
   // denoted by an AT_NULL entry.
+  Elf64_Phdr *programHdrTable = nullptr;
+  uintptr_t programHdrCount;
   for (AuxEntry *aux_entry = reinterpret_cast<AuxEntry *>(env_end_marker + 1);
        aux_entry->type != AT_NULL; ++aux_entry) {
     switch (aux_entry->type) {
+    case AT_PHDR:
+      programHdrTable = reinterpret_cast<Elf64_Phdr *>(aux_entry->value);
+      break;
+    case AT_PHNUM:
+      programHdrCount = aux_entry->value;
+      break;
     case AT_PAGESZ:
       app.pageSize = aux_entry->value;
       break;
@@ -61,7 +122,19 @@ extern "C" void _start() {
     }
   }
 
-  // TODO: Init TLS
+  app.tls.size = 0;
+  for (uintptr_t i = 0; i < programHdrCount; ++i) {
+    Elf64_Phdr *phdr = programHdrTable + i;
+    if (phdr->p_type != PT_TLS)
+      continue;
+    // TODO: p_vaddr value has to be adjusted for static-pie executables.
+    app.tls.address = phdr->p_vaddr;
+    app.tls.size = phdr->p_memsz;
+    app.tls.init_size = phdr->p_filesz;
+    app.tls.align = phdr->p_align;
+  }
+
+  __llvm_libc::initTLS();
 
   __llvm_libc::syscall(SYS_exit, main(app.args->argc,
                                       reinterpret_cast<char **>(app.args->argv),

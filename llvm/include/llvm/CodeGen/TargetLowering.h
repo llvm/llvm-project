@@ -1891,7 +1891,7 @@ public:
   /// minimum size the object must be to be aligned and PrefAlign is set to the
   /// preferred alignment.
   virtual bool shouldAlignPointerArgs(CallInst * /*CI*/, unsigned & /*MinSize*/,
-                                      unsigned & /*PrefAlign*/) const {
+                                      Align & /*PrefAlign*/) const {
     return false;
   }
 
@@ -2286,12 +2286,14 @@ protected:
   /// Indicate that the specified operation does not work with the specified
   /// type and indicate what to do about it. Note that VT may refer to either
   /// the type of a result or that of an operand of Op.
+  void setOperationAction(unsigned Op, MVT VT, LegalizeAction Action) {
+    assert(Op < array_lengthof(OpActions[0]) && "Table isn't big enough!");
+    OpActions[(unsigned)VT.SimpleTy][Op] = Action;
+  }
   void setOperationAction(ArrayRef<unsigned> Ops, MVT VT,
                           LegalizeAction Action) {
-    for (auto Op : Ops) {
-      assert(Op < array_lengthof(OpActions[0]) && "Table isn't big enough!");
-      OpActions[(unsigned)VT.SimpleTy][Op] = Action;
-    }
+    for (auto Op : Ops)
+      setOperationAction(Op, VT, Action);
   }
   void setOperationAction(ArrayRef<unsigned> Ops, ArrayRef<MVT> VTs,
                           LegalizeAction Action) {
@@ -2301,20 +2303,20 @@ protected:
 
   /// Indicate that the specified load with extension does not work with the
   /// specified type and indicate what to do about it.
+  void setLoadExtAction(unsigned ExtType, MVT ValVT, MVT MemVT,
+                        LegalizeAction Action) {
+    assert(ExtType < ISD::LAST_LOADEXT_TYPE && ValVT.isValid() &&
+           MemVT.isValid() && "Table isn't big enough!");
+    assert((unsigned)Action < 0x10 && "too many bits for bitfield array");
+    unsigned Shift = 4 * ExtType;
+    LoadExtActions[ValVT.SimpleTy][MemVT.SimpleTy] &= ~((uint16_t)0xF << Shift);
+    LoadExtActions[ValVT.SimpleTy][MemVT.SimpleTy] |= (uint16_t)Action << Shift;
+  }
   void setLoadExtAction(ArrayRef<unsigned> ExtTypes, MVT ValVT, MVT MemVT,
                         LegalizeAction Action) {
-    for (auto ExtType : ExtTypes) {
-      assert(ExtType < ISD::LAST_LOADEXT_TYPE && ValVT.isValid() &&
-             MemVT.isValid() && "Table isn't big enough!");
-      assert((unsigned)Action < 0x10 && "too many bits for bitfield array");
-      unsigned Shift = 4 * ExtType;
-      LoadExtActions[ValVT.SimpleTy][MemVT.SimpleTy] &=
-          ~((uint16_t)0xF << Shift);
-      LoadExtActions[ValVT.SimpleTy][MemVT.SimpleTy] |= (uint16_t)Action
-                                                        << Shift;
-    }
+    for (auto ExtType : ExtTypes)
+      setLoadExtAction(ExtType, ValVT, MemVT, Action);
   }
-
   void setLoadExtAction(ArrayRef<unsigned> ExtTypes, MVT ValVT,
                         ArrayRef<MVT> MemVTs, LegalizeAction Action) {
     for (auto MemVT : MemVTs)
@@ -3054,9 +3056,12 @@ public:
   //
 
   /// Rename the default libcall routine name for the specified libcall.
+  void setLibcallName(RTLIB::Libcall Call, const char *Name) {
+    LibcallRoutineNames[Call] = Name;
+  }
   void setLibcallName(ArrayRef<RTLIB::Libcall> Calls, const char *Name) {
     for (auto Call : Calls)
-      LibcallRoutineNames[Call] = Name;
+      setLibcallName(Call, Name);
   }
 
   /// Get the libcall routine name for the specified libcall.
@@ -3539,6 +3544,7 @@ public:
 
   /// Determines the optimal series of memory ops to replace the memset / memcpy.
   /// Return true if the number of memory ops is below the threshold (Limit).
+  /// Note that this is always the case when Limit is ~0.
   /// It returns the types of the sequence of memory ops to perform
   /// memset / memcpy by reference.
   virtual bool

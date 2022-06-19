@@ -1581,7 +1581,7 @@ bool HexagonDAGToDAGISel::keepsLowBits(const SDValue &Val, unsigned NumBits,
 }
 
 bool HexagonDAGToDAGISel::isAlignedMemNode(const MemSDNode *N) const {
-  return N->getAlignment() >= N->getMemoryVT().getStoreSize();
+  return N->getAlign().value() >= N->getMemoryVT().getStoreSize();
 }
 
 bool HexagonDAGToDAGISel::isSmallStackStore(const StoreSDNode *N) const {

@@ -90,14 +90,6 @@ struct ConstraintTy {
   /// Returns true if all preconditions for this list of constraints are
   /// satisfied given \p CS and the corresponding \p Value2Index mapping.
   bool isValid(const ConstraintInfo &Info) const;
-
-  /// Returns true if there is exactly one constraint in the list and isValid is
-  /// also true.
-  bool isValidSingle(const ConstraintInfo &Info) const {
-    if (size() != 1)
-      return false;
-    return isValid(Info);
-  }
 };
 
 /// Wrapper encapsulating separate constraint systems and corresponding value
@@ -290,10 +282,6 @@ getConstraint(CmpInst::Predicate Pred, Value *Op0, Value *Op1,
   if (ADec.empty() || BDec.empty())
     return {};
 
-  // Skip trivial constraints without any variables.
-  if (ADec.size() == 1 && BDec.size() == 1)
-    return {};
-
   int64_t Offset1 = ADec[0].first;
   int64_t Offset2 = BDec[0].first;
   Offset1 *= -1;
@@ -358,7 +346,7 @@ bool ConstraintTy::isValid(const ConstraintInfo &Info) const {
                Info.getValue2Index(CmpInst::isSigned(C.Pred)), NewIndices);
            // TODO: properly check NewIndices.
            return NewIndices.empty() && R.Preconditions.empty() && !R.IsEq &&
-                  R.size() >= 2 &&
+                  R.size() >= 1 &&
                   Info.getCS(CmpInst::isSigned(C.Pred))
                       .isConditionImplied(R.Coefficients);
          });
@@ -639,7 +627,7 @@ static bool eliminateConstraints(Function &F, DominatorTree &DT) {
 
         DenseMap<Value *, unsigned> NewIndices;
         auto R = getConstraint(Cmp, Info, NewIndices);
-        if (R.IsEq || R.size() < 2 || R.needsNewIndices(NewIndices) ||
+        if (R.IsEq || R.empty() || R.needsNewIndices(NewIndices) ||
             !R.isValid(Info))
           continue;
 

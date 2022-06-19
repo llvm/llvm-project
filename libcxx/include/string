@@ -524,22 +524,26 @@ basic_string<char32_t> operator "" s( const char32_t *str, size_t len );        
 #include <__config>
 #include <__debug>
 #include <__format/enable_insertable.h>
+#include <__functional/hash.h>
 #include <__functional/unary_function.h>
 #include <__ios/fpos.h>
+#include <__iterator/distance.h>
+#include <__iterator/iterator_traits.h>
+#include <__iterator/reverse_iterator.h>
 #include <__iterator/wrap_iter.h>
 #include <__memory/allocate_at_least.h>
+#include <__string/char_traits.h>
+#include <__string/extern_template_lists.h>
 #include <__utility/auto_cast.h>
 #include <__utility/move.h>
 #include <__utility/swap.h>
 #include <__utility/unreachable.h>
 #include <climits>
-#include <compare>
+#include <cstdint>
 #include <cstdio>  // EOF
 #include <cstdlib>
 #include <cstring>
-#include <initializer_list>
 #include <iosfwd>
-#include <iterator>
 #include <limits>
 #include <memory>
 #include <stdexcept>
@@ -547,17 +551,22 @@ basic_string<char32_t> operator "" s( const char32_t *str, size_t len );        
 #include <type_traits>
 #include <version>
 
-// TODO: remove these headers
-#include <new>
-#include <typeinfo>
-
 #ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
 #  include <cwchar>
 #endif
 
-#ifndef _LIBCPP_HAS_NO_UNICODE_CHARS
-#  include <cstdint>
-#endif
+// standard-mandated includes
+
+// [iterator.range]
+#include <__iterator/access.h>
+#include <__iterator/data.h>
+#include <__iterator/empty.h>
+#include <__iterator/reverse_access.h>
+#include <__iterator/size.h>
+
+// [string.syn]
+#include <compare>
+#include <initializer_list>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -597,7 +606,7 @@ _LIBCPP_CONSTEXPR_AFTER_CXX17
 basic_string<_CharT, _Traits, _Allocator>
 operator+(const basic_string<_CharT, _Traits, _Allocator>& __x, _CharT __y);
 
-_LIBCPP_EXTERN_TEMPLATE(_LIBCPP_FUNC_VIS string operator+<char, char_traits<char>, allocator<char> >(char const*, string const&))
+extern template _LIBCPP_FUNC_VIS string operator+<char, char_traits<char>, allocator<char> >(char const*, string const&);
 
 template <class _Iter>
 struct __string_is_trivial_iterator : public false_type {};
@@ -619,11 +628,8 @@ struct __can_be_converted_to_string_view : public _BoolConstant<
 #ifndef _LIBCPP_HAS_NO_CHAR8_T
 typedef basic_string<char8_t> u8string;
 #endif
-
-#ifndef _LIBCPP_HAS_NO_UNICODE_CHARS
 typedef basic_string<char16_t> u16string;
 typedef basic_string<char32_t> u32string;
-#endif
 
 struct __uninitialized_size_tag {};
 
@@ -633,10 +639,8 @@ class
 #ifndef _LIBCPP_HAS_NO_CHAR8_T
     _LIBCPP_PREFERRED_NAME(u8string)
 #endif
-#ifndef _LIBCPP_HAS_NO_UNICODE_CHARS
     _LIBCPP_PREFERRED_NAME(u16string)
     _LIBCPP_PREFERRED_NAME(u32string)
-#endif
     basic_string
 {
 public:
@@ -686,8 +690,8 @@ private:
     {
         value_type __data_[__min_cap];
         unsigned char __padding_[sizeof(value_type) - 1];
-        size_type __size_ : 7;
-        size_type __is_long_ : 1;
+        unsigned char __size_ : 7;
+        unsigned char __is_long_ : 1;
     };
 
 // The __endian_factor is required because the field we use to store the size
@@ -730,13 +734,15 @@ private:
 
     struct __short
     {
-        size_type __is_long_ : 1;
-        size_type __size_ : 7;
+        unsigned char __is_long_ : 1;
+        unsigned char __size_ : 7;
         char __padding_[sizeof(value_type) - 1];
         value_type __data_[__min_cap];
     };
 
 #endif // _LIBCPP_ABI_ALTERNATE_STRING_LAYOUT
+
+    static_assert(sizeof(__short) == (sizeof(value_type) * (__min_cap + 1)), "__short has an unexpected size.");
 
     union __ulx{__long __lx; __short __lxx;};
 
@@ -900,7 +906,6 @@ public:
 #endif
     _LIBCPP_CONSTEXPR_AFTER_CXX17 basic_string& operator=(value_type __c);
 
-#if _LIBCPP_DEBUG_LEVEL == 2
     _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_AFTER_CXX17
     iterator begin() _NOEXCEPT
         {return iterator(this, __get_pointer());}
@@ -913,20 +918,7 @@ public:
     _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_AFTER_CXX17
     const_iterator end() const _NOEXCEPT
         {return const_iterator(this, __get_pointer() + size());}
-#else
-    _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_AFTER_CXX17
-    iterator begin() _NOEXCEPT
-        {return iterator(__get_pointer());}
-    _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_AFTER_CXX17
-    const_iterator begin() const _NOEXCEPT
-        {return const_iterator(__get_pointer());}
-    _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_AFTER_CXX17
-    iterator end() _NOEXCEPT
-        {return iterator(__get_pointer() + size());}
-    _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_AFTER_CXX17
-    const_iterator end() const _NOEXCEPT
-        {return const_iterator(__get_pointer() + size());}
-#endif // _LIBCPP_DEBUG_LEVEL == 2
+
     _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_AFTER_CXX17
     reverse_iterator rbegin() _NOEXCEPT
         {return reverse_iterator(end());}
@@ -1464,14 +1456,14 @@ public:
 
     _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_AFTER_CXX17 void __clear_and_shrink() _NOEXCEPT;
 
-#if _LIBCPP_DEBUG_LEVEL == 2
+#ifdef _LIBCPP_ENABLE_DEBUG_MODE
 
     bool __dereferenceable(const const_iterator* __i) const;
     bool __decrementable(const const_iterator* __i) const;
     bool __addable(const const_iterator* __i, ptrdiff_t __n) const;
     bool __subscriptable(const const_iterator* __i, ptrdiff_t __n) const;
 
-#endif // _LIBCPP_DEBUG_LEVEL == 2
+#endif // _LIBCPP_ENABLE_DEBUG_MODE
 
 private:
     template<class _Alloc>
@@ -1808,17 +1800,19 @@ private:
 
 // These declarations must appear before any functions are implicitly used
 // so that they have the correct visibility specifier.
+#define _LIBCPP_DECLARE(...) extern template __VA_ARGS__;
 #ifdef _LIBCPP_ABI_STRING_OPTIMIZED_EXTERNAL_INSTANTIATION
-    _LIBCPP_STRING_UNSTABLE_EXTERN_TEMPLATE_LIST(_LIBCPP_EXTERN_TEMPLATE, char)
+    _LIBCPP_STRING_UNSTABLE_EXTERN_TEMPLATE_LIST(_LIBCPP_DECLARE, char)
 #   ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
-        _LIBCPP_STRING_UNSTABLE_EXTERN_TEMPLATE_LIST(_LIBCPP_EXTERN_TEMPLATE, wchar_t)
+        _LIBCPP_STRING_UNSTABLE_EXTERN_TEMPLATE_LIST(_LIBCPP_DECLARE, wchar_t)
 #   endif
 #else
-    _LIBCPP_STRING_V1_EXTERN_TEMPLATE_LIST(_LIBCPP_EXTERN_TEMPLATE, char)
+    _LIBCPP_STRING_V1_EXTERN_TEMPLATE_LIST(_LIBCPP_DECLARE, char)
 #   ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
-        _LIBCPP_STRING_V1_EXTERN_TEMPLATE_LIST(_LIBCPP_EXTERN_TEMPLATE, wchar_t)
+        _LIBCPP_STRING_V1_EXTERN_TEMPLATE_LIST(_LIBCPP_DECLARE, wchar_t)
 #   endif
 #endif
+#undef _LIBCPP_DECLARE
 
 
 #if _LIBCPP_STD_VER >= 17
@@ -1854,7 +1848,7 @@ inline _LIBCPP_CONSTEXPR_AFTER_CXX17
 void
 basic_string<_CharT, _Traits, _Allocator>::__invalidate_iterators_past(size_type __pos)
 {
-#if _LIBCPP_DEBUG_LEVEL == 2
+#ifdef _LIBCPP_ENABLE_DEBUG_MODE
     if (!__libcpp_is_constant_evaluated()) {
         __c_node* __c = __get_db()->__find_c_and_lock(this);
         if (__c)
@@ -1876,7 +1870,7 @@ basic_string<_CharT, _Traits, _Allocator>::__invalidate_iterators_past(size_type
     }
 #else
     (void)__pos;
-#endif // _LIBCPP_DEBUG_LEVEL == 2
+#endif // _LIBCPP_ENABLE_DEBUG_MODE
 }
 
 template <class _CharT, class _Traits, class _Allocator>
@@ -4609,7 +4603,7 @@ inline _LIBCPP_HIDE_FROM_ABI
 }
 #endif
 
-#if _LIBCPP_DEBUG_LEVEL == 2
+#ifdef _LIBCPP_ENABLE_DEBUG_MODE
 
 template<class _CharT, class _Traits, class _Allocator>
 bool
@@ -4643,7 +4637,7 @@ basic_string<_CharT, _Traits, _Allocator>::__subscriptable(const const_iterator*
     return data() <= __p && __p < data() + size();
 }
 
-#endif // _LIBCPP_DEBUG_LEVEL == 2
+#endif // _LIBCPP_ENABLE_DEBUG_MODE
 
 #if _LIBCPP_STD_VER > 11
 // Literal suffixes for basic_string [basic.string.literals]

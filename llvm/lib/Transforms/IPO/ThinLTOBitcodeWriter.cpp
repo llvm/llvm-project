@@ -542,11 +542,11 @@ class WriteThinLTOBitcode : public ModulePass {
   raw_ostream &OS; // raw_ostream to print on
   // The output stream on which to emit a minimized module for use
   // just in the thin link, if requested.
-  raw_ostream *ThinLinkOS;
+  raw_ostream *ThinLinkOS = nullptr;
 
 public:
   static char ID; // Pass identification, replacement for typeid
-  WriteThinLTOBitcode() : ModulePass(ID), OS(dbgs()), ThinLinkOS(nullptr) {
+  WriteThinLTOBitcode() : ModulePass(ID), OS(dbgs()) {
     initializeWriteThinLTOBitcodePass(*PassRegistry::getPassRegistry());
   }
 

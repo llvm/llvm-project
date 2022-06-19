@@ -211,15 +211,16 @@ def CSImm12MulBy4 : PatLeaf<(imm), [{
     return false;
   int64_t C = N->getSExtValue();
   // Skip if C is simm12 or can be optimized by the PatLeaf AddiPair.
-  return !isInt<13>(C) && isInt<14>(C) && (C & 3) == 0;
+  return !isInt<13>(C) && isShiftedInt<12, 2>(C);
 }]>;
 
 def CSImm12MulBy8 : PatLeaf<(imm), [{
   if (!N->hasOneUse())
     return false;
   int64_t C = N->getSExtValue();
-  // Skip if C is simm12 or can be optimized by the PatLeaf AddiPair.
-  return !isInt<13>(C) && isInt<15>(C) && (C & 7) == 0;
+  // Skip if C is simm12 or can be optimized by the PatLeaf AddiPair or
+  // CSImm12MulBy4.
+  return !isInt<14>(C) && isShiftedInt<12, 3>(C);
 }]>;
 
 def SimmShiftRightBy2XForm : SDNodeXForm<imm, [{

@@ -290,7 +290,7 @@ bool RISCVExpandPseudo::expandVSPILL(MachineBasicBlock &MBB,
   Register SrcReg = MBBI->getOperand(0).getReg();
   Register Base = MBBI->getOperand(1).getReg();
   Register VL = MBBI->getOperand(2).getReg();
-  auto ZvlssegInfo = TII->isRVVSpillForZvlsseg(MBBI->getOpcode());
+  auto ZvlssegInfo = RISCV::isRVVSpillForZvlsseg(MBBI->getOpcode());
   if (!ZvlssegInfo)
     return false;
   unsigned NF = ZvlssegInfo->first;
@@ -314,10 +314,15 @@ bool RISCVExpandPseudo::expandVSPILL(MachineBasicBlock &MBB,
     assert(LMUL == 1 && "LMUL must be 1, 2, or 4.");
 
   for (unsigned I = 0; I < NF; ++I) {
+    // Adding implicit-use of super register to describe we are using part of
+    // super register, that prevents machine verifier complaining when part of
+    // subreg is undef, see comment in MachineVerifier::checkLiveness for more
+    // detail.
     BuildMI(MBB, MBBI, DL, TII->get(Opcode))
         .addReg(TRI->getSubReg(SrcReg, SubRegIdx + I))
         .addReg(Base)
-        .addMemOperand(*(MBBI->memoperands_begin()));
+        .addMemOperand(*(MBBI->memoperands_begin()))
+        .addReg(SrcReg, RegState::Implicit);
     if (I != NF - 1)
       BuildMI(MBB, MBBI, DL, TII->get(RISCV::ADD), Base)
           .addReg(Base)
@@ -335,7 +340,7 @@ bool RISCVExpandPseudo::expandVRELOAD(MachineBasicBlock &MBB,
   Register DestReg = MBBI->getOperand(0).getReg();
   Register Base = MBBI->getOperand(1).getReg();
   Register VL = MBBI->getOperand(2).getReg();
-  auto ZvlssegInfo = TII->isRVVSpillForZvlsseg(MBBI->getOpcode());
+  auto ZvlssegInfo = RISCV::isRVVSpillForZvlsseg(MBBI->getOpcode());
   if (!ZvlssegInfo)
     return false;
   unsigned NF = ZvlssegInfo->first;

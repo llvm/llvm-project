@@ -977,18 +977,6 @@ RegisterRef DataFlowGraph::makeRegRef(const MachineOperand &Op) const {
   return RegisterRef(PRI.getRegMaskId(Op.getRegMask()), LaneBitmask::getAll());
 }
 
-RegisterRef DataFlowGraph::restrictRef(RegisterRef AR, RegisterRef BR) const {
-  if (AR.Reg == BR.Reg) {
-    LaneBitmask M = AR.Mask & BR.Mask;
-    return M.any() ? RegisterRef(AR.Reg, M) : RegisterRef();
-  }
-  // This isn't strictly correct, because the overlap may happen in the
-  // part masked out.
-  if (PRI.alias(AR, BR))
-    return AR;
-  return RegisterRef();
-}
-
 // For each stack in the map DefM, push the delimiter for block B on it.
 void DataFlowGraph::markBlock(NodeId B, DefStackMap &DefM) {
   // Push block delimiters.

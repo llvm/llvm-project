@@ -456,10 +456,9 @@ declare <4 x half> @llvm.copysign.v4f16(<4 x half>, <4 x half>)
 define void @copysign_neg_ext_v2f64_v2f32(<2 x double>* %x, <2 x float>* %y) {
 ; CHECK-LABEL: copysign_neg_ext_v2f64_v2f32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 2, e64, m1, ta, mu
+; CHECK-NEXT:    vsetivli zero, 2, e32, mf2, ta, mu
 ; CHECK-NEXT:    vle32.v v8, (a1)
 ; CHECK-NEXT:    vle64.v v9, (a0)
-; CHECK-NEXT:    vsetvli zero, zero, e32, mf2, ta, mu
 ; CHECK-NEXT:    vfwcvt.f.f.v v10, v8
 ; CHECK-NEXT:    vsetvli zero, zero, e64, m1, ta, mu
 ; CHECK-NEXT:    vfsgnjn.vv v8, v9, v10

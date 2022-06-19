@@ -563,7 +563,7 @@ void BinaryBasicBlock::dump() const {
   if (Label)
     outs() << Label->getName() << ":\n";
   BC.printInstructions(outs(), Instructions.begin(), Instructions.end(),
-                       getOffset());
+                       getOffset(), Function);
   outs() << "preds:";
   for (auto itr = pred_begin(); itr != pred_end(); ++itr) {
     outs() << " " << (*itr)->getName();
@@ -608,7 +608,7 @@ BinaryBasicBlock::getBranchInfo(const MCSymbol *Label) {
 BinaryBasicBlock *BinaryBasicBlock::splitAt(iterator II) {
   assert(II != end() && "expected iterator pointing to instruction");
 
-  BinaryBasicBlock *NewBlock = getFunction()->addBasicBlock(0);
+  BinaryBasicBlock *NewBlock = getFunction()->addBasicBlock();
 
   // Adjust successors/predecessors and propagate the execution count.
   moveAllSuccessorsTo(NewBlock);

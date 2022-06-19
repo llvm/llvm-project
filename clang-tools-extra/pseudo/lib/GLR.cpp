@@ -7,11 +7,12 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang-pseudo/GLR.h"
-#include "clang-pseudo/Grammar.h"
-#include "clang-pseudo/LRTable.h"
+#include "clang-pseudo/grammar/Grammar.h"
+#include "clang-pseudo/grammar/LRTable.h"
 #include "clang/Basic/TokenKinds.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -38,13 +39,14 @@ llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, const GSS::Node &N) {
 
 const ForestNode &glrParse(const TokenStream &Tokens, const ParseParams &Params,
                            SymbolID StartSymbol) {
+  assert(isNonterminal(StartSymbol) && "Start symbol must be a nonterminal");
   llvm::ArrayRef<ForestNode> Terminals = Params.Forest.createTerminals(Tokens);
   auto &G = Params.G;
   (void)G;
   auto &GSS = Params.GSStack;
 
-  // Lists of active shift, reduce, accept actions.
-  std::vector<ParseStep> PendingShift, PendingReduce, PendingAccept;
+  // Lists of active shift, reduce actions.
+  std::vector<ParseStep> PendingShift, PendingReduce;
   auto AddSteps = [&](const GSS::Node *Head, SymbolID NextTok) {
     for (const auto &Action : Params.Table.getActions(Head->State, NextTok)) {
       switch (Action.kind()) {
@@ -54,17 +56,27 @@ const ForestNode &glrParse(const TokenStream &Tokens, const ParseParams &Params,
       case LRTable::Action::Reduce:
         PendingReduce.push_back({Head, Action});
         break;
-      case LRTable::Action::Accept:
-        PendingAccept.push_back({Head, Action});
-        break;
       default:
         llvm_unreachable("unexpected action kind!");
       }
     }
   };
+  StateID StartState = Params.Table.getStartState(StartSymbol);
   std::vector<const GSS::Node *> NewHeads = {
-      GSS.addNode(/*State=*/Params.Table.getStartState(StartSymbol),
+      GSS.addNode(/*State=*/StartState,
                   /*ForestNode=*/nullptr, {})};
+  auto MaybeGC = [&, Roots(std::vector<const GSS::Node *>{}), I(0u)]() mutable {
+    assert(PendingShift.empty() && PendingReduce.empty() &&
+           "Running GC at the wrong time!");
+
+    if (++I != 20) // Run periodically to balance CPU and memory usage.
+      return;
+    I = 0;
+
+    // We need to copy the list: Roots is consumed by the GC.
+    Roots = NewHeads;
+    GSS.gc(std::move(Roots));
+  };
   for (const ForestNode &Terminal : Terminals) {
     LLVM_DEBUG(llvm::dbgs() << llvm::formatv("Next token {0} (id={1})\n",
                                              G.symbolName(Terminal.symbol()),
@@ -80,28 +92,36 @@ const ForestNode &glrParse(const TokenStream &Tokens, const ParseParams &Params,
 
     glrShift(PendingShift, Terminal, Params,
              [&](const GSS::Node *NewHead) { NewHeads.push_back(NewHead); });
+    MaybeGC();
   }
   LLVM_DEBUG(llvm::dbgs() << llvm::formatv("Next is eof\n"));
   for (const auto *Heads : NewHeads)
     AddSteps(Heads, tokenSymbol(tok::eof));
-  glrReduce(PendingReduce, Params,
-            [&](const GSS::Node * NewHead) {
-              // A reduce will enable more steps.
-              AddSteps(NewHead, tokenSymbol(tok::eof));
-            });
 
-  if (!PendingAccept.empty()) {
-    LLVM_DEBUG({
-      llvm::dbgs() << llvm::formatv("Accept: {0} accepted result:\n",
-                                             PendingAccept.size());
-      for (const auto &Accept : PendingAccept)
-        llvm::dbgs() << "  - " << G.symbolName(Accept.Head->Payload->symbol())
-                     << "\n";
-    });
-    assert(PendingAccept.size() == 1);
-    return *PendingAccept.front().Head->Payload;
+  StateID AcceptState = Params.Table.getGoToState(StartState, StartSymbol);
+  // Collect new heads created from the final reduce.
+  std::vector<const GSS::Node*> Heads;
+  glrReduce(PendingReduce, Params, [&](const GSS::Node *NewHead) {
+    Heads.push_back(NewHead);
+    // A reduce will enable more steps.
+    AddSteps(NewHead, tokenSymbol(tok::eof));
+  });
+
+  const ForestNode *Result = nullptr;
+  for (const auto *Head : Heads) {
+    if (Head->State == AcceptState) {
+      assert(Head->Payload->symbol() == StartSymbol);
+      assert(Result == nullptr && "multiple results!");
+      Result = Head->Payload;
+    }
   }
+  if (Result)
+    return *Result;
   // We failed to parse the input, returning an opaque forest node for recovery.
+  //
+  // FIXME: We will need to invoke our generic error-recovery handlers when we
+  // reach EOF without reaching accept state, and involving the eof
+  // token in the above main for-loopmay be the best way to reuse the code).
   return Params.Forest.createOpaque(StartSymbol, /*Token::Index=*/0);
 }
 
@@ -259,18 +279,16 @@ void glrReduce(std::vector<ParseStep> &PendingReduce, const ParseParams &Params,
     }
   };
 
-  // The base nodes are the heads after popping the GSS nodes we are reducing.
-  // We don't care which rule yielded each base. If Family.Symbol is S, the
-  // base includes an item X := ... • S ... and since the grammar is
-  // context-free, *all* parses of S are valid here.
-  // FIXME: reuse the queues across calls instead of reallocating.
-  KeyedQueue<Family, const GSS::Node *> Bases;
-
   // A sequence is the ForestNode payloads of the GSS nodes we are reducing.
   // These are the RHS of the rule, the RuleID is stored in the Family.
   // They specify a sequence ForestNode we may build (but we dedup first).
   using Sequence = llvm::SmallVector<const ForestNode *, Rule::MaxElements>;
-  KeyedQueue<Family, Sequence> Sequences;
+  struct PushSpec {
+    // A base node is the head after popping the GSS nodes we are reducing.
+    const GSS::Node* Base = nullptr;
+    Sequence Seq;
+  };
+  KeyedQueue<Family, PushSpec> Sequences;
 
   Sequence TempSequence;
   // Pop walks up the parent chain(s) for a reduction from Head by to Rule.
@@ -283,9 +301,8 @@ void glrReduce(std::vector<ParseStep> &PendingReduce, const ParseParams &Params,
     auto DFS = [&](const GSS::Node *N, unsigned I, auto &DFS) {
       if (I == Rule.Size) {
         F.Start = TempSequence.front()->startTokenIndex();
-        Bases.emplace(F, N);
         LLVM_DEBUG(llvm::dbgs() << "    --> base at S" << N->State << "\n");
-        Sequences.emplace(F, TempSequence);
+        Sequences.emplace(F, PushSpec{N, TempSequence});
         return;
       }
       TempSequence[Rule.Size - 1 - I] = N->Payload;
@@ -311,20 +328,26 @@ void glrReduce(std::vector<ParseStep> &PendingReduce, const ParseParams &Params,
   //  - process one family at a time, forming a forest node
   //  - produces new GSS heads which may enable more pops
   PopPending();
-  while (!Bases.empty()) {
-    // We should always have bases and sequences for the same families.
-    Family F = Bases.top().first;
-    assert(!Sequences.empty());
-    assert(Sequences.top().first == F);
+  while (!Sequences.empty()) {
+    Family F = Sequences.top().first;
 
     LLVM_DEBUG(llvm::dbgs() << "  Push " << Params.G.symbolName(F.Symbol)
                             << " from token " << F.Start << "\n");
 
-    // Grab the sequences for this family.
+    // Grab the sequences and bases for this family.
+    // We don't care which rule yielded each base. If Family.Symbol is S, the
+    // base includes an item X := ... • S ... and since the grammar is
+    // context-free, *all* parses of S are valid here.
     FamilySequences.clear();
+    FamilyBases.clear();
     do {
       FamilySequences.emplace_back(Sequences.top().first.Rule,
-                                   Sequences.top().second);
+                                   Sequences.top().second.Seq);
+      FamilyBases.emplace_back(
+          Params.Table.getGoToState(Sequences.top().second.Base->State,
+                                    F.Symbol),
+          Sequences.top().second.Base);
+
       Sequences.pop();
     } while (!Sequences.empty() && Sequences.top().first == F);
     // Build a forest node for each unique sequence.
@@ -341,15 +364,7 @@ void glrReduce(std::vector<ParseStep> &PendingReduce, const ParseParams &Params,
             : &Params.Forest.createAmbiguous(F.Symbol, SequenceNodes);
     LLVM_DEBUG(llvm::dbgs() << "    --> " << Parsed->dump(Params.G) << "\n");
 
-    // Grab the bases for this family.
-    // As well as deduplicating them, we'll group by the goto state.
-    FamilyBases.clear();
-    do {
-      FamilyBases.emplace_back(
-          Params.Table.getGoToState(Bases.top().second->State, F.Symbol),
-          Bases.top().second);
-      Bases.pop();
-    } while (!Bases.empty() && Bases.top().first == F);
+    // Bases for this family, deduplicate them, and group by the goTo State.
     sortAndUnique(FamilyBases);
     // Create a GSS node for each unique goto state.
     llvm::ArrayRef<decltype(FamilyBases)::value_type> BasesLeft = FamilyBases;
@@ -371,6 +386,73 @@ void glrReduce(std::vector<ParseStep> &PendingReduce, const ParseParams &Params,
     PopPending();
   }
   assert(Sequences.empty());
+}
+
+const GSS::Node *GSS::addNode(LRTable::StateID State, const ForestNode *Symbol,
+                              llvm::ArrayRef<const Node *> Parents) {
+  Node *Result = new (allocate(Parents.size()))
+      Node({State, GCParity, static_cast<unsigned>(Parents.size())});
+  Alive.push_back(Result);
+  ++NodesCreated;
+  Result->Payload = Symbol;
+  if (!Parents.empty())
+    llvm::copy(Parents, reinterpret_cast<const Node **>(Result + 1));
+  return Result;
+}
+
+GSS::Node *GSS::allocate(unsigned Parents) {
+  if (FreeList.size() <= Parents)
+    FreeList.resize(Parents + 1);
+  auto &SizedList = FreeList[Parents];
+  if (!SizedList.empty()) {
+    auto *Result = SizedList.back();
+    SizedList.pop_back();
+    return Result;
+  }
+  return static_cast<Node *>(
+      Arena.Allocate(sizeof(Node) + Parents * sizeof(Node *), alignof(Node)));
+}
+
+void GSS::destroy(Node *N) {
+  unsigned ParentCount = N->ParentCount;
+  N->~Node();
+  assert(FreeList.size() > ParentCount && "established on construction!");
+  FreeList[ParentCount].push_back(N);
+}
+
+unsigned GSS::gc(std::vector<const Node *> &&Queue) {
+#ifndef NDEBUG
+  auto ParityMatches = [&](const Node *N) { return N->GCParity == GCParity; };
+  assert("Before GC" && llvm::all_of(Alive, ParityMatches));
+  auto Deferred = llvm::make_scope_exit(
+      [&] { assert("After GC" && llvm::all_of(Alive, ParityMatches)); });
+  assert(llvm::all_of(
+      Queue, [&](const Node *R) { return llvm::is_contained(Alive, R); }));
+#endif
+  unsigned InitialCount = Alive.size();
+
+  // Mark
+  GCParity = !GCParity;
+  while (!Queue.empty()) {
+    Node *N = const_cast<Node *>(Queue.back()); // Safe: we created these nodes.
+    Queue.pop_back();
+    if (N->GCParity != GCParity) { // Not seen yet
+      N->GCParity = GCParity;      // Mark as seen
+      for (const Node *P : N->parents()) // And walk parents
+        Queue.push_back(P);
+    }
+  }
+  // Sweep
+  llvm::erase_if(Alive, [&](Node *N) {
+    if (N->GCParity == GCParity) // Walk reached this node.
+      return false;
+    destroy(N);
+    return true;
+  });
+
+  LLVM_DEBUG(llvm::dbgs() << "GC pruned " << (InitialCount - Alive.size())
+                          << "/" << InitialCount << " GSS nodes\n");
+  return InitialCount - Alive.size();
 }
 
 } // namespace pseudo

@@ -7,8 +7,6 @@ from lldbsuite.test import lldbutil
 
 class TestWithGmodulesDebugInfo(TestBase):
 
-    mydir = TestBase.compute_mydir(__file__)
-
     @skipIf(bugnumber="llvm.org/pr36146", oslist=["linux"], archs=["i386"])
     @add_test_categories(["gmodules"])
     def test_specialized_typedef_from_pch(self):
@@ -38,7 +36,7 @@ class TestWithGmodulesDebugInfo(TestBase):
         self.assertTrue(process.IsValid(), PROCESS_IS_VALID)
 
         # Get the thread of the process
-        self.assertEquals(process.GetState(), lldb.eStateStopped)
+        self.assertState(process.GetState(), lldb.eStateStopped)
         thread = lldbutil.get_stopped_thread(
             process, lldb.eStopReasonBreakpoint)
         self.assertTrue(

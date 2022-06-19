@@ -823,11 +823,15 @@ SymbolNode *Demangler::parse(StringView &MangledName) {
 }
 
 TagTypeNode *Demangler::parseTagUniqueName(StringView &MangledName) {
-  if (!MangledName.consumeFront(".?A"))
+  if (!MangledName.consumeFront(".?A")) {
+    Error = true;
     return nullptr;
+  }
   MangledName.consumeFront(".?A");
-  if (MangledName.empty())
+  if (MangledName.empty()) {
+    Error = true;
     return nullptr;
+  }
 
   return demangleClassType(MangledName);
 }

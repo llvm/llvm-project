@@ -250,6 +250,7 @@ void InterfaceGenerator::emitModelDecl(const Interface &interface) {
      << ">\n";
   os << "  class ExternalModel : public FallbackModel<ConcreteModel> {\n";
   os << "  public:\n";
+  os << "    using ConcreteEntity = " << valueTemplate << ";\n";
 
   // Emit declarations for methods that have default implementations. Other
   // methods are expected to be implemented by the concrete derived model.

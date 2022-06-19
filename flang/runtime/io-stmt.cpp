@@ -206,6 +206,10 @@ int ExternalIoStatementBase::EndIoStatement() {
   return result;
 }
 
+void ExternalIoStatementBase::SetAsynchronous() {
+  asynchronousID_ = unit().GetAsynchronousId(*this);
+}
+
 void OpenStatementState::set_path(const char *path, std::size_t length) {
   pathLength_ = TrimTrailingSpaces(path, length);
   path_ = SaveDefaultCharacter(path, pathLength_, *this);
@@ -283,6 +287,7 @@ int CloseStatementState::EndIoStatement() {
 }
 
 void NoUnitIoStatementState::CompleteOperation() {
+  SignalPendingError();
   IoStatementBase::CompleteOperation();
 }
 
@@ -315,20 +320,18 @@ void ExternalIoStatementState<DIR>::CompleteOperation() {
   }
   if constexpr (DIR == Direction::Input) {
     BeginReadingRecord(); // in case there were no I/O items
-    if (mutableModes().nonAdvancing) {
+    if (mutableModes().nonAdvancing && !InError()) {
       unit().leftTabLimit = unit().furthestPositionInRecord;
-    }
-    if (!mutableModes().nonAdvancing || GetIoStat() == IostatEor) {
+    } else {
       FinishReadingRecord();
     }
   } else { // output
     if (mutableModes().nonAdvancing) {
       // Make effects of positioning past the last Emit() visible with blanks.
       std::int64_t n{unit().positionInRecord - unit().furthestPositionInRecord};
-      unit().positionInRecord = unit().furthestPositionInRecord;
       while (n-- > 0 && unit().Emit(" ", 1, 1, *this)) {
       }
-      unit().leftTabLimit = unit().furthestPositionInRecord;
+      unit().leftTabLimit = unit().positionInRecord;
     } else {
       unit().AdvanceRecord(*this);
     }
@@ -796,7 +799,9 @@ ListDirectedStatementState<Direction::Input>::GetNextDataEdit(
     if (remaining_ > 0) {
       repeatPosition_.emplace(io);
     }
-    return edit;
+    if (!imaginaryPart_) {
+      return edit;
+    }
   }
   // Skip separators, handle a "r*c" repeat count; see 13.10.2 in Fortran 2018
   if (imaginaryPart_) {
@@ -1024,6 +1029,8 @@ void ExternalMiscIoStatementState::CompleteOperation() {
   case Rewind:
     ext.Rewind(*this);
     break;
+  case Wait:
+    break; // handled in io-api.cpp BeginWait
   }
   return IoStatementBase::CompleteOperation();
 }
@@ -1483,8 +1490,10 @@ bool InquireUnconnectedFileState::Inquire(
   case HashInquiryKeyword("NUMBER"):
   case HashInquiryKeyword("POS"):
   case HashInquiryKeyword("RECL"):
-  case HashInquiryKeyword("SIZE"):
     result = -1;
+    return true;
+  case HashInquiryKeyword("SIZE"):
+    result = SizeInBytes(path_.get());
     return true;
   default:
     BadInquiryKeywordHashCrash(inquiry);
@@ -1518,6 +1527,9 @@ bool InquireIOLengthState::Emit(const char32_t *p, std::size_t n) {
 
 int ErroneousIoStatementState::EndIoStatement() {
   SignalPendingError();
+  if (unit_) {
+    unit_->EndIoStatement();
+  }
   return IoStatementBase::EndIoStatement();
 }
 

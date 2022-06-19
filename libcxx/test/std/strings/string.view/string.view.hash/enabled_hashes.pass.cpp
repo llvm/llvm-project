@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 // UNSUPPORTED: c++03
+// UNSUPPORTED: !stdlib=libc++ && (c++11 || c++14)
 
 // <string_view>
 
@@ -29,10 +30,8 @@ int main(int, char**) {
 #if defined(__cpp_lib_char8_t) && __cpp_lib_char8_t >= 201811L
     test_hash_enabled_for_type<std::u8string_view>();
 #endif
-#ifndef TEST_HAS_NO_UNICODE_CHARS
     test_hash_enabled_for_type<std::u16string_view>();
     test_hash_enabled_for_type<std::u32string_view>();
-#endif
   }
 
   return 0;

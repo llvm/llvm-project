@@ -13,6 +13,7 @@
 #include "mlir/Dialect/Bufferization/Transforms/OneShotAnalysis.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/SCF/SCF.h"
+#include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "mlir/IR/Dialect.h"
 #include "mlir/IR/Operation.h"
 #include "mlir/IR/PatternMatch.h"
@@ -72,7 +73,7 @@ struct ExecuteRegionOpInterface
   }
 
   LogicalResult bufferize(Operation *op, RewriterBase &rewriter,
-                          BufferizationState &state) const {
+                          const BufferizationOptions &options) const {
     auto executeRegionOp = cast<scf::ExecuteRegionOp>(op);
 
     // Compute new result types.
@@ -80,7 +81,7 @@ struct ExecuteRegionOpInterface
     for (Type type : executeRegionOp->getResultTypes()) {
       if (auto tensorType = type.dyn_cast<TensorType>()) {
         // TODO: Infer the result type instead of computing it.
-        newResultTypes.push_back(getMemRefType(tensorType, state.getOptions()));
+        newResultTypes.push_back(getMemRefType(tensorType, options));
       } else {
         newResultTypes.push_back(type);
       }
@@ -182,7 +183,7 @@ struct IfOpInterface
   }
 
   LogicalResult bufferize(Operation *op, RewriterBase &rewriter,
-                          BufferizationState &state) const {
+                          const BufferizationOptions &options) const {
     auto ifOp = cast<scf::IfOp>(op);
 
     // Compute new types of the bufferized scf.if op.
@@ -190,7 +191,7 @@ struct IfOpInterface
     for (Type returnType : ifOp->getResultTypes()) {
       if (auto tensorType = returnType.dyn_cast<TensorType>()) {
         // TODO: Infer the result type instead of computing it.
-        newTypes.push_back(getMemRefType(tensorType, state.getOptions()));
+        newTypes.push_back(getMemRefType(tensorType, options));
       } else {
         newTypes.push_back(returnType);
       }
@@ -308,14 +309,12 @@ static Value castBuffer(OpBuilder &b, Value buffer, Type type) {
 /// given OpOperands. If an operand is not a tensor, return the original value.
 static SmallVector<Value> getBuffers(RewriterBase &rewriter,
                                      MutableArrayRef<OpOperand> operands,
-                                     BufferizationState &state) {
+                                     const BufferizationOptions &options) {
   SmallVector<Value> result;
   for (OpOperand &opOperand : operands) {
     if (opOperand.get().getType().isa<TensorType>()) {
-      FailureOr<Value> resultBuffer = state.getBuffer(rewriter, opOperand);
-      if (failed(resultBuffer))
-        return {};
-      result.push_back(*resultBuffer);
+      Value resultBuffer = getBuffer(rewriter, opOperand.get(), options);
+      result.push_back(resultBuffer);
     } else {
       result.push_back(opOperand.get());
     }
@@ -324,55 +323,14 @@ static SmallVector<Value> getBuffers(RewriterBase &rewriter,
 }
 
 /// Helper function for loop bufferization. Compute the buffer that should be
-/// yielded from a loop block (loop body or loop condition). If the given tensor
-/// is equivalent to the corresponding block argument (as indicated by
-/// `isEquivalent`), the buffer can be yielded directly. Otherwise, a new buffer
-/// copy must be yielded.
-///
-/// According to the `BufferizableOpInterface` implementation of scf loops, a
-/// a bufferized OpResult may alias only with the corresponding bufferized
-/// init_arg and with no other buffers. I.e., the i-th OpResult may alias with
-/// the i-th init_arg; but not with any other OpOperand. If a corresponding
-/// OpResult/init_arg pair bufferized to equivalent buffers (as indicated by
-/// `isEquivalent`), this aliasing requirement is satisfied. Otherwise, we
-/// cannot be sure and must yield a new buffer copy. (New buffer copies do not
-/// alias with any buffer.)
+/// yielded from a loop block (loop body or loop condition).
 static Value getYieldedBuffer(RewriterBase &rewriter, Value tensor,
-                              BaseMemRefType type, bool isEquivalent,
-                              BufferizationState &state) {
+                              BaseMemRefType type,
+                              const BufferizationOptions &options) {
   assert(tensor.getType().isa<TensorType>() && "expected tensor");
   ensureToMemrefOpIsValid(tensor, type);
-  Value yieldedVal =
-      bufferization::lookupBuffer(rewriter, tensor, state.getOptions());
-
-  if (isEquivalent)
-    // Yielded value is equivalent to the corresponding iter_arg bbArg.
-    // Yield the value directly. Most IR should be like that. Everything
-    // else must be resolved with copies and is potentially inefficient.
-    // By default, such problematic IR would already have been rejected
-    // during `verifyAnalysis`, unless `allow-return-allocs`.
-    return castBuffer(rewriter, yieldedVal, type);
-
-  // It is not certain that the yielded value and the iter_arg bbArg
-  // have the same buffer. Allocate a new buffer and copy. The yielded
-  // buffer will get deallocated by `deallocateBuffers`.
-
-  // TODO: There are cases in which it is not neccessary to return a new
-  // buffer allocation. E.g., when equivalent values are yielded in a
-  // different order. This could be resolved with copies.
-  Optional<Value> yieldedAlloc = state.createAlloc(
-      rewriter, tensor.getLoc(), yieldedVal, /*deallocMemref=*/false);
-  // TODO: We should rollback, but for now just assume that this always
-  // succeeds.
-  assert(yieldedAlloc.hasValue() && "could not create alloc");
-  LogicalResult copyStatus = state.getOptions().createMemCpy(
-      rewriter, tensor.getLoc(), yieldedVal, *yieldedAlloc);
-  (void)copyStatus;
-  assert(succeeded(copyStatus) && "could not create memcpy");
-
-  // The iter_arg memref type may have a layout map. Cast the new buffer
-  // to the same type if needed.
-  return castBuffer(rewriter, *yieldedAlloc, type);
+  Value yieldedVal = getBuffer(rewriter, tensor, options);
+  return castBuffer(rewriter, yieldedVal, type);
 }
 
 /// Helper function for loop bufferization. Given a range of values, apply
@@ -395,13 +353,12 @@ convertTensorValues(ValueRange values, const DenseSet<int64_t> &tensorIndices,
 SmallVector<Value> getYieldedValues(RewriterBase &rewriter, ValueRange values,
                                     TypeRange bufferizedTypes,
                                     const DenseSet<int64_t> &tensorIndices,
-                                    const DenseSet<int64_t> &equivalentTensors,
-                                    BufferizationState &state) {
+                                    const BufferizationOptions &options) {
   return convertTensorValues(
       values, tensorIndices, [&](Value val, int64_t index) {
         return getYieldedBuffer(rewriter, val,
                                 bufferizedTypes[index].cast<BaseMemRefType>(),
-                                equivalentTensors.contains(index), state);
+                                options);
       });
 }
 
@@ -467,25 +424,66 @@ struct ForOpInterface
     return true;
   }
 
-  LogicalResult bufferize(Operation *op, RewriterBase &rewriter,
-                          BufferizationState &state) const {
+  LogicalResult resolveConflicts(Operation *op, RewriterBase &rewriter,
+                                 const AnalysisState &state) const {
+    auto bufferizableOp = cast<BufferizableOpInterface>(op);
+    if (failed(bufferizableOp.resolveTensorOpOperandConflicts(rewriter, state)))
+      return failure();
+
+    if (!state.getOptions().enforceAliasingInvariants)
+      return success();
+
+    // According to the `getAliasing...` implementations, a bufferized OpResult
+    // may alias only with the corresponding bufferized init_arg and with no
+    // other buffers. I.e., the i-th OpResult may alias with the i-th init_arg;
+    // but not with any other OpOperand. If a corresponding OpResult/init_arg
+    // pair bufferizes to equivalent buffers, this aliasing requirement is
+    // satisfied. Otherwise, we cannot be sure and must yield a new buffer copy.
+    // (New buffer copies do not alias with any buffer.)
     auto forOp = cast<scf::ForOp>(op);
-    auto oldYieldOp =
+    auto yieldOp =
         cast<scf::YieldOp>(forOp.getLoopBody().front().getTerminator());
-    Block *oldLoopBody = &forOp.getLoopBody().front();
+    OpBuilder::InsertionGuard g(rewriter);
+    rewriter.setInsertionPoint(yieldOp);
 
     // Indices of all iter_args that have tensor type. These are the ones that
     // are bufferized.
     DenseSet<int64_t> indices = getTensorIndices(forOp.getInitArgs());
     // For every yielded value, is the value equivalent to its corresponding
     // bbArg?
-    DenseSet<int64_t> equivalentYields =
-        getEquivalentBuffers(forOp.getRegionIterArgs(), oldYieldOp.getResults(),
-                             state.getAnalysisState());
+    DenseSet<int64_t> equivalentYields = getEquivalentBuffers(
+        forOp.getRegionIterArgs(), yieldOp.getResults(), state);
+    SmallVector<Value> yieldValues;
+    for (int64_t idx = 0;
+         idx < static_cast<int64_t>(yieldOp.getResults().size()); ++idx) {
+      Value value = yieldOp.getResults()[idx];
+      if (!indices.contains(idx) || equivalentYields.contains(idx)) {
+        yieldValues.push_back(value);
+        continue;
+      }
+      Value alloc = rewriter.create<bufferization::AllocTensorOp>(
+          yieldOp.getLoc(), value.getType().cast<RankedTensorType>(),
+          /*dynamicSizes=*/ValueRange(), value, /*escape=*/true);
+      yieldValues.push_back(alloc);
+    }
+
+    rewriter.updateRootInPlace(
+        yieldOp, [&]() { yieldOp.getResultsMutable().assign(yieldValues); });
+    return success();
+  }
+
+  LogicalResult bufferize(Operation *op, RewriterBase &rewriter,
+                          const BufferizationOptions &options) const {
+    auto forOp = cast<scf::ForOp>(op);
+    Block *oldLoopBody = &forOp.getLoopBody().front();
+
+    // Indices of all iter_args that have tensor type. These are the ones that
+    // are bufferized.
+    DenseSet<int64_t> indices = getTensorIndices(forOp.getInitArgs());
 
     // The new memref init_args of the loop.
     SmallVector<Value> initArgs =
-        getBuffers(rewriter, forOp.getIterOpOperands(), state);
+        getBuffers(rewriter, forOp.getIterOpOperands(), options);
 
     // Construct a new scf.for op with memref instead of tensor values.
     auto newForOp = rewriter.create<scf::ForOp>(
@@ -513,9 +511,8 @@ struct ForOpInterface
     // Update scf.yield of new loop.
     auto yieldOp = cast<scf::YieldOp>(loopBody->getTerminator());
     rewriter.setInsertionPoint(yieldOp);
-    SmallVector<Value> yieldValues =
-        getYieldedValues(rewriter, yieldOp.getResults(), initArgsTypes, indices,
-                         equivalentYields, state);
+    SmallVector<Value> yieldValues = getYieldedValues(
+        rewriter, yieldOp.getResults(), initArgsTypes, indices, options);
     yieldOp.getResultsMutable().assign(yieldValues);
 
     // Replace loop results.
@@ -631,8 +628,84 @@ struct WhileOpInterface
     return true;
   }
 
+  LogicalResult resolveConflicts(Operation *op, RewriterBase &rewriter,
+                                 const AnalysisState &state) const {
+    auto bufferizableOp = cast<BufferizableOpInterface>(op);
+    if (failed(bufferizableOp.resolveTensorOpOperandConflicts(rewriter, state)))
+      return failure();
+
+    if (!state.getOptions().enforceAliasingInvariants)
+      return success();
+
+    // According to the `getAliasing...` implementations, a bufferized OpResult
+    // may alias only with the corresponding bufferized init_arg and with no
+    // other buffers. I.e., the i-th OpResult may alias with the i-th init_arg;
+    // but not with any other OpOperand. If a corresponding OpResult/init_arg
+    // pair bufferizes to equivalent buffers, this aliasing requirement is
+    // satisfied. Otherwise, we cannot be sure and must yield a new buffer copy.
+    // (New buffer copies do not alias with any buffer.)
+    OpBuilder::InsertionGuard g(rewriter);
+    auto whileOp = cast<scf::WhileOp>(op);
+    auto conditionOp = whileOp.getConditionOp();
+    auto yieldOp = whileOp.getYieldOp();
+
+    // Indices of all bbArgs that have tensor type. These are the ones that
+    // are bufferized. The "before" and "after" regions may have different args.
+    DenseSet<int64_t> indicesBefore = getTensorIndices(whileOp.getInits());
+    DenseSet<int64_t> indicesAfter =
+        getTensorIndices(whileOp.getAfterArguments());
+
+    // For every yielded value, is the value equivalent to its corresponding
+    // bbArg?
+    DenseSet<int64_t> equivalentYieldsBefore = getEquivalentBuffers(
+        whileOp.getBeforeArguments(), conditionOp.getArgs(), state);
+    DenseSet<int64_t> equivalentYieldsAfter = getEquivalentBuffers(
+        whileOp.getAfterArguments(), whileOp.getYieldOp().getResults(), state);
+
+    // Update "before" region.
+    rewriter.setInsertionPoint(conditionOp);
+    SmallVector<Value> beforeYieldValues;
+    for (int64_t idx = 0;
+         idx < static_cast<int64_t>(conditionOp.getArgs().size()); ++idx) {
+      Value value = conditionOp.getArgs()[idx];
+      if (!indicesBefore.contains(idx) ||
+          equivalentYieldsBefore.contains(idx)) {
+        beforeYieldValues.push_back(value);
+        continue;
+      }
+      Value alloc = rewriter.create<bufferization::AllocTensorOp>(
+          conditionOp.getLoc(), value.getType().cast<RankedTensorType>(),
+          /*dynamicSizes=*/ValueRange(), value, /*escape=*/true);
+      beforeYieldValues.push_back(alloc);
+    }
+    rewriter.updateRootInPlace(conditionOp, [&]() {
+      conditionOp.getArgsMutable().assign(beforeYieldValues);
+    });
+
+    // Update "after" region.
+    rewriter.setInsertionPoint(yieldOp);
+    SmallVector<Value> afterYieldValues;
+    for (int64_t idx = 0;
+         idx < static_cast<int64_t>(yieldOp.getResults().size()); ++idx) {
+      Value value = yieldOp.getResults()[idx];
+      if (!indicesAfter.contains(idx) || equivalentYieldsAfter.contains(idx)) {
+        afterYieldValues.push_back(value);
+        continue;
+      }
+      Value alloc = rewriter.create<bufferization::AllocTensorOp>(
+          yieldOp.getLoc(), value.getType().cast<RankedTensorType>(),
+          /*dynamicSizes=*/ValueRange(), value, /*escape=*/true);
+      afterYieldValues.push_back(alloc);
+    }
+    rewriter.updateRootInPlace(yieldOp, [&]() {
+      yieldOp.getResultsMutable().assign(afterYieldValues);
+    });
+
+    return success();
+  }
+
   LogicalResult bufferize(Operation *op, RewriterBase &rewriter,
-                          BufferizationState &state) const {
+                          const BufferizationOptions &options) const {
     auto whileOp = cast<scf::WhileOp>(op);
 
     assert(whileOp.getBefore().getBlocks().size() == 1 &&
@@ -648,23 +721,14 @@ struct WhileOpInterface
     DenseSet<int64_t> indicesAfter =
         getTensorIndices(whileOp.getAfterArguments());
 
-    // For every yielded value, is the value equivalent to its corresponding
-    // bbArg?
-    DenseSet<int64_t> equivalentYieldsBefore = getEquivalentBuffers(
-        whileOp.getBeforeArguments(), whileOp.getConditionOp().getArgs(),
-        state.getAnalysisState());
-    DenseSet<int64_t> equivalentYieldsAfter = getEquivalentBuffers(
-        whileOp.getAfterArguments(), whileOp.getYieldOp().getResults(),
-        state.getAnalysisState());
-
     // The new memref init_args of the loop.
     SmallVector<Value> initArgs =
-        getBuffers(rewriter, whileOp->getOpOperands(), state);
+        getBuffers(rewriter, whileOp->getOpOperands(), options);
 
     // The result types of a WhileOp are the same as the "after" bbArg types.
     SmallVector<Type> argsTypesAfter = llvm::to_vector(
         llvm::map_range(whileOp.getAfterArguments(), [&](BlockArgument bbArg) {
-          return state.getBufferType(bbArg).cast<Type>();
+          return getBufferType(bbArg, options).cast<Type>();
         }));
 
     // Construct a new scf.while op with memref instead of tensor values.
@@ -698,7 +762,7 @@ struct WhileOpInterface
     // TODO: This could be relaxed for better bufferization results.
     SmallVector<Value> newConditionArgs =
         getYieldedValues(rewriter, newConditionOp.getArgs(), argsTypesAfter,
-                         indicesAfter, equivalentYieldsBefore, state);
+                         indicesAfter, options);
     newConditionOp.getArgsMutable().assign(newConditionArgs);
 
     // Set up new iter_args and move the loop body block to the new op.
@@ -717,7 +781,7 @@ struct WhileOpInterface
     // TODO: This could be relaxed for better bufferization results.
     SmallVector<Value> newYieldValues =
         getYieldedValues(rewriter, newYieldOp.getResults(), argsTypesBefore,
-                         indicesBefore, equivalentYieldsAfter, state);
+                         indicesBefore, options);
     newYieldOp.getResultsMutable().assign(newYieldValues);
 
     // Replace loop results.
@@ -803,12 +867,331 @@ struct YieldOpInterface
   }
 
   LogicalResult bufferize(Operation *op, RewriterBase &rewriter,
-                          BufferizationState &state) const {
+                          const BufferizationOptions &options) const {
     auto yieldOp = cast<scf::YieldOp>(op);
     if (!isa<scf::ExecuteRegionOp, scf::IfOp, scf::ForOp, scf::WhileOp>(
             yieldOp->getParentOp()))
       return yieldOp->emitError("unsupported scf::YieldOp parent");
     return success();
+  }
+};
+
+using tensor::ExtractSliceOp;
+
+/// Return the destinations that an ForeachThreadOp is inserting into. One per
+/// ParallelInsertSliceOp.
+static SmallVector<OpOperand *>
+getInsertionDest(ForeachThreadOp foreachThreadOp) {
+  PerformConcurrentlyOp terminator = foreachThreadOp.getTerminator();
+  SmallVector<OpOperand *> result;
+  terminator.walk([&](ParallelInsertSliceOp insertOp) {
+    result.push_back(&insertOp->getOpOperand(1) /*dest*/);
+  });
+  return result;
+}
+
+/// Bufferization of ForeachThreadOp. This also bufferizes the terminator of the
+/// region. There are op interfaces for the terminators (PerformConcurrentlyOp
+/// and ParallelInsertSliceOp), but these are only used during analysis. Not
+/// for bufferization.
+struct ForeachThreadOpInterface
+    : public BufferizableOpInterface::ExternalModel<ForeachThreadOpInterface,
+                                                    ForeachThreadOp> {
+  SmallVector<OpOperand *>
+  getAliasingOpOperand(Operation *op, OpResult opResult,
+                       const AnalysisState &state) const {
+    // Get OpOperand (dest) from corresponding ParallelInsertSliceOp.
+    auto foreachThreadOp = cast<ForeachThreadOp>(op);
+    return {getInsertionDest(foreachThreadOp)[opResult.getResultNumber()]};
+  }
+
+  bool isMemoryWrite(Operation *op, OpResult opResult,
+                     const AnalysisState &state) const {
+    // This op is a memory write. Stop lookup here to avoid finding false
+    // conflicts involving this op and one of the ops in the region. This is
+    // similar to how scf.if ops are analyzed.
+    return true;
+  }
+
+  BufferRelation bufferRelation(Operation *op, OpResult opResult,
+                                const AnalysisState &state) const {
+    return BufferRelation::Equivalent;
+  }
+
+  LogicalResult resolveConflicts(Operation *op, RewriterBase &rewriter,
+                                 const AnalysisState &state) const {
+    auto bufferizableOp = cast<BufferizableOpInterface>(op);
+    if (failed(bufferizableOp.resolveTensorOpOperandConflicts(rewriter, state)))
+      return failure();
+
+    OpBuilder::InsertionGuard g(rewriter);
+    auto foreachThreadOp = cast<ForeachThreadOp>(op);
+    for (OpResult opResult : foreachThreadOp->getOpResults()) {
+      SmallVector<OpOperand *> destOperands =
+          state.getAliasingOpOperand(opResult);
+      assert(destOperands.size() == 1 &&
+             "expected exactly one aliasing OpOperand");
+      assert(isa<ParallelInsertSliceOp>(destOperands.front()->getOwner()) &&
+             "expected ParallelInsertSliceOp");
+
+      // Nothing to do if there is no conflict.
+      if (state.isInPlace(*destOperands.front()))
+        continue;
+
+      // Create AllocTensorOp.
+      bool isYielded = state.isTensorYielded(opResult);
+      auto resultType = opResult.getType().cast<RankedTensorType>();
+      Value alloc = rewriter.create<bufferization::AllocTensorOp>(
+          op->getLoc(), resultType, /*dynamicDims=*/ValueRange(),
+          /*copy=*/destOperands.front()->get(),
+          /*escape=*/isYielded);
+
+      // Update terminator operand.
+      rewriter.updateRootInPlace(destOperands.front()->getOwner(),
+                                 [&]() { destOperands.front()->set(alloc); });
+    }
+
+    return success();
+  }
+
+  LogicalResult bufferize(Operation *op, RewriterBase &b,
+                          const BufferizationOptions &options) const {
+    OpBuilder::InsertionGuard g(b);
+    auto foreachThreadOp = cast<ForeachThreadOp>(op);
+
+    // Gather new results of the ForeachThreadOp.
+    SmallVector<Value> newResults;
+    for (OpResult opResult : foreachThreadOp->getOpResults()) {
+      OpOperand *insertDest =
+          getInsertionDest(foreachThreadOp)[opResult.getResultNumber()];
+      // Insert copies right before the PerformConcurrentlyOp terminator. They
+      // should not be inside terminator (which would be the default insertion
+      // point).
+      Value buffer = getBuffer(b, insertDest->get(), options);
+      newResults.push_back(buffer);
+    }
+
+    // Create new ForeachThreadOp without any results and drop the automatically
+    // introduced terminator.
+    TypeRange newResultTypes;
+    auto newForeachThreadOp =
+        b.create<ForeachThreadOp>(foreachThreadOp.getLoc(), newResultTypes,
+                                  foreachThreadOp.getNumThreads());
+    newForeachThreadOp.getBody()->getTerminator()->erase();
+
+    // Move over block contents of the old op.
+    b.mergeBlocks(foreachThreadOp.getBody(), newForeachThreadOp.getBody(),
+                  {newForeachThreadOp.getBody()->getArguments()});
+
+    // Bufferize terminator.
+    auto performConcurrentlyOp = cast<PerformConcurrentlyOp>(
+        newForeachThreadOp.getBody()->getTerminator());
+    b.setInsertionPoint(performConcurrentlyOp);
+    unsigned resultCounter = 0;
+    WalkResult walkResult =
+        performConcurrentlyOp.walk([&](ParallelInsertSliceOp insertOp) {
+          Location loc = insertOp.getLoc();
+          Type srcType = getMemRefType(
+              insertOp.getSource().getType().cast<RankedTensorType>(), options);
+          // ParallelInsertSliceOp bufferizes to a copy.
+          auto srcMemref = b.create<bufferization::ToMemrefOp>(
+              loc, srcType, insertOp.getSource());
+          Value destMemref = newResults[resultCounter++];
+          Value subview = b.create<memref::SubViewOp>(
+              loc, destMemref, insertOp.getMixedOffsets(),
+              insertOp.getMixedSizes(), insertOp.getMixedStrides());
+          // This memcpy will fold away if everything bufferizes in-place.
+          if (failed(options.createMemCpy(b, insertOp.getLoc(), srcMemref,
+                                          subview)))
+            return WalkResult::interrupt();
+          b.eraseOp(insertOp);
+          return WalkResult::advance();
+        });
+    if (walkResult.wasInterrupted())
+      return failure();
+
+    // Replace the op.
+    replaceOpWithBufferizedValues(b, op, newResults);
+
+    return success();
+  }
+};
+
+/// Nothing to do for PerformConcurrentlyOp.
+struct PerformConcurrentlyOpInterface
+    : public BufferizableOpInterface::ExternalModel<
+          PerformConcurrentlyOpInterface, PerformConcurrentlyOp> {
+  LogicalResult bufferize(Operation *op, RewriterBase &b,
+                          const BufferizationOptions &options) const {
+    llvm_unreachable("op does not have any tensor OpOperands / OpResults");
+    return failure();
+  }
+};
+
+/// Return true if the (ExtractSliceOp, ParallelInsertSliceOp) pair match (i.e.
+/// equivalent operand / result and same offset/sizes/strides specification).
+static bool areEquivalentExtractSliceOps(const AnalysisState &state,
+                                         ExtractSliceOp st,
+                                         ParallelInsertSliceOp sti) {
+  if (!st || !sti)
+    return false;
+  if (st != sti &&
+      !state.areEquivalentBufferizedValues(st.getSource(), sti.getDest()))
+    return false;
+  if (!sameOffsetsSizesAndStrides(st, sti, isEqualConstantIntOrValue))
+    return false;
+  return true;
+}
+
+/// Return true if `value` is originating from an ExtractSliceOp that matches
+/// the given InsertSliceOp.
+static bool hasMatchingExtractSliceOp(const AnalysisState &state, Value value,
+                                      ParallelInsertSliceOp insertOp) {
+  auto condition = [&](Value val) {
+    if (auto extractOp = val.getDefiningOp<ExtractSliceOp>())
+      if (areEquivalentExtractSliceOps(state, extractOp, insertOp))
+        return true;
+    return false;
+  };
+
+  return llvm::all_of(state.findValueInReverseUseDefChain(value, condition),
+                      condition);
+}
+
+/// Analysis of ParallelInsertSliceOp.
+struct ParallelInsertSliceOpInterface
+    : public BufferizableOpInterface::ExternalModel<
+          ParallelInsertSliceOpInterface, ParallelInsertSliceOp> {
+  SmallVector<OpResult> getAliasingOpResult(Operation *op, OpOperand &opOperand,
+                                            const AnalysisState &state) const {
+    if (&opOperand != &op->getOpOperand(1) /*dest*/)
+      return {};
+
+    // ParallelInsertSliceOp itself has no results. Tensors are returned via
+    // the parent op.
+    auto foreachThreadOp = op->getParentOfType<ForeachThreadOp>();
+    assert(foreachThreadOp &&
+           "could not find valid owner of parallel_insert_slice");
+
+    // The i-th ParallelInsertSliceOp result is returned via the i-th OpResult
+    // of the parent ForeachThreadOp.
+    Block *block = op->getBlock();
+    unsigned int opIdx = 0;
+    for (ParallelInsertSliceOp insertOp :
+         block->getOps<ParallelInsertSliceOp>()) {
+      if (insertOp.getOperation() == op)
+        break;
+      ++opIdx;
+    }
+    assert(opIdx < foreachThreadOp->getNumResults() &&
+           "could not find op inside terminator op");
+
+    return {foreachThreadOp->getResult(opIdx)};
+  }
+
+  bool bufferizesToMemoryRead(Operation *op, OpOperand &opOperand,
+                              const AnalysisState &state) const {
+    return true;
+  }
+
+  bool bufferizesToMemoryWrite(Operation *op, OpOperand &opOperand,
+                               const AnalysisState &state) const {
+    return &opOperand == &op->getOpOperand(1) /*dest*/;
+  }
+
+  BufferRelation bufferRelation(Operation *op, OpResult opResult,
+                                const AnalysisState &state) const {
+    return BufferRelation::Equivalent;
+  }
+
+  LogicalResult resolveConflicts(Operation *op, RewriterBase &rewriter,
+                                 const AnalysisState &state) const {
+    return success();
+  }
+
+  LogicalResult bufferize(Operation *op, RewriterBase &b,
+                          const BufferizationOptions &options) const {
+    // Will be bufferized as part of ForeachThreadOp.
+    return failure();
+  }
+
+  // TODO: This is copied from TensorInterfaceImpl.cpp. Find a way to share
+  // the code.
+  bool isNotConflicting(Operation *op, OpOperand *uRead,
+                        OpOperand *uConflictingWrite,
+                        const AnalysisState &state) const {
+    Operation *readingOp = uRead->getOwner();
+    Operation *conflictingWritingOp = uConflictingWrite->getOwner();
+
+    // Special rules for matching ExtractSliceOp/InsertSliceOp pairs. If
+    // uRead is an InsertSliceOp...
+    if (auto insertSliceOp = dyn_cast<ParallelInsertSliceOp>(readingOp)) {
+      // As an example, consider the following IR.
+      //
+      // %0 = tensor.extract_slice %t[%a, %b][%c, %d][1, 1] {inplace = [true] }
+      // %1 = linalg.fill %cst, %0 {inplace= [true] }
+      // %2 = tensor.insert_slice %1 into %t[%a, %b][%c, %d][1, 1]
+      //     {inplace= [true] }
+
+      // TODO: Use insertSliceOp.getDestOpOperand etc. when available.
+      if (uRead == &insertSliceOp->getOpOperand(1) /*dest*/ &&
+          hasMatchingExtractSliceOp(state, uConflictingWrite->get(),
+                                    insertSliceOp))
+        // Case 1: The main insight is that InsertSliceOp reads only part of
+        // the destination tensor. The overwritten area is not read. If
+        // uConflictingWrite writes into exactly the memory location that is
+        // being read by uRead, this is not a conflict.
+        //
+        // In the above example:
+        // uRead             = OpOperand 1 (%t) of tensor.insert_slice
+        // uConflictingWrite = OpOperand 1 (%0) of linalg.fill
+        //
+        // The read of %t does not conflict with the write of the FillOp
+        // (same aliases!) because the area that the FillOp operates on is
+        // exactly the one that is *not* read via %t.
+        return true;
+
+      if (uRead == &insertSliceOp->getOpOperand(0) /*source*/ &&
+          uConflictingWrite == &insertSliceOp->getOpOperand(1) /*dest*/ &&
+          hasMatchingExtractSliceOp(state, uRead->get(), insertSliceOp))
+        // Case 2: The read of the source tensor and the write to the dest
+        // tensor via an InsertSliceOp is not a conflict if the read is
+        // reading exactly that part of an equivalent tensor that the
+        // InsertSliceOp is writing.
+        //
+        // In the above example:
+        // uRead             = OpOperand 0 (%1) of tensor.insert_slice
+        // uConflictingWrite = OpOperand 1 (%t) of tensor.insert_slice
+        return true;
+    }
+
+    // If uConflictingWrite is an InsertSliceOp...
+    if (auto insertSliceOp =
+            dyn_cast<ParallelInsertSliceOp>(conflictingWritingOp))
+      // As an example, consider the following IR.
+      //
+      // %0 = tensor.extract_slice %t[%a, %b][%c, %d][1, 1] {inplace = [true] }
+      // %1 = linalg.fill %cst, %0 {inplace= [true] }
+      // %2 = tensor.insert_slice %1 into %t[%a, %b][%c, %d][1, 1]
+      //     {inplace= [true] }
+      // %3 = vector.transfer_read %1, %cst
+      //
+      // In the above example:
+      // uRead             = OpOperand 0 (%1) of vector.transfer_read
+      // uConflictingWrite = OpOperand 1 (%t) of tensor.insert_slice
+      // lastWrite         = %1
+      //
+      // This is not a conflict because the InsertSliceOp overwrites the
+      // memory segment of %1 with the exact same data. (Effectively, there
+      // is no memory write here.)
+      if (uConflictingWrite == &insertSliceOp->getOpOperand(1) /*dest*/ &&
+          state.areEquivalentBufferizedValues(uRead->get(),
+                                              insertSliceOp.getSource()) &&
+          hasMatchingExtractSliceOp(state, insertSliceOp.getSource(),
+                                    insertSliceOp))
+        return true;
+
+    return false;
   }
 };
 
@@ -822,6 +1205,11 @@ void mlir::scf::registerBufferizableOpInterfaceExternalModels(
     ExecuteRegionOp::attachInterface<ExecuteRegionOpInterface>(*ctx);
     ForOp::attachInterface<ForOpInterface>(*ctx);
     IfOp::attachInterface<IfOpInterface>(*ctx);
+    ForeachThreadOp::attachInterface<ForeachThreadOpInterface>(*ctx);
+    ParallelInsertSliceOp::attachInterface<ParallelInsertSliceOpInterface>(
+        *ctx);
+    PerformConcurrentlyOp::attachInterface<PerformConcurrentlyOpInterface>(
+        *ctx);
     WhileOp::attachInterface<WhileOpInterface>(*ctx);
     YieldOp::attachInterface<YieldOpInterface>(*ctx);
   });

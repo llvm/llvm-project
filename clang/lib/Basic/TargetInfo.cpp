@@ -131,7 +131,7 @@ TargetInfo::TargetInfo(const llvm::Triple &T) : Triple(T) {
   ARMCDECoprocMask = 0;
 
   // Default to no types using fpret.
-  RealTypeUsesObjCFPRet = 0;
+  RealTypeUsesObjCFPRetMask = 0;
 
   // Default to not using fp2ret for __Complex long double
   ComplexLongDoubleUsesFP2Ret = false;
@@ -150,6 +150,9 @@ TargetInfo::TargetInfo(const llvm::Triple &T) : Triple(T) {
   PlatformMinVersion = VersionTuple();
 
   MaxOpenCLWorkGroupSize = 1024;
+
+  MaxBitIntWidth.reset();
+
   ProgramAddrSpace = 0;
 }
 
@@ -284,6 +287,8 @@ TargetInfo::IntType TargetInfo::getLeastIntTypeByWidth(unsigned BitWidth,
 
 FloatModeKind TargetInfo::getRealTypeByWidth(unsigned BitWidth,
                                              FloatModeKind ExplicitType) const {
+  if (getHalfWidth() == BitWidth)
+    return FloatModeKind::Half;
   if (getFloatWidth() == BitWidth)
     return FloatModeKind::Float;
   if (getDoubleWidth() == BitWidth)
@@ -478,6 +483,9 @@ void TargetInfo::adjust(DiagnosticsEngine &Diags, LangOptions &Opts) {
     Diags.Report(diag::err_opt_not_valid_on_target) << "-fprotect-parens";
     Opts.ProtectParens = false;
   }
+
+  if (Opts.MaxBitIntWidth)
+    MaxBitIntWidth = Opts.MaxBitIntWidth;
 }
 
 bool TargetInfo::initFeatureMap(

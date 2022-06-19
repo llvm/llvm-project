@@ -10,8 +10,6 @@ from lldbsuite.test.lldbgdbclient import GDBRemoteTestBase
 @skipIfRemote
 class TestProcessConnect(GDBRemoteTestBase):
 
-    mydir = TestBase.compute_mydir(__file__)
-
     NO_DEBUG_INFO_TESTCASE = True
 
     def test_gdb_remote_sync(self):

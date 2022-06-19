@@ -5833,6 +5833,15 @@ attribute can also be written using C++11 syntax: ``[[mig::server_routine]]``.
 }];
 }
 
+def MinSizeDocs : Documentation {
+  let Category = DocCatFunction;
+  let Content = [{
+This function attribute indicates that optimization passes and code generator passes
+make choices that keep the function code size as small as possible. Optimizations may
+also sacrifice runtime performance in order to minimize the size of the generated code.
+  }];
+}
+
 def MSAllocatorDocs : Documentation {
   let Category = DocCatFunction;
   let Content = [{
@@ -6475,5 +6484,105 @@ data binding to map the group index to the specified parameter. This attribute
 is only supported in compute shaders.
 
 The full documentation is available here: https://docs.microsoft.com/en-us/windows/win32/direct3dhlsl/sv-groupindex
+  }];
+}
+
+def AnnotateTypeDocs : Documentation {
+  let Category = DocCatType;
+  let Heading = "annotate_type";
+  let Content = [{
+This attribute is used to add annotations to types, typically for use by static
+analysis tools that are not integrated into the core Clang compiler (e.g.,
+Clang-Tidy checks or out-of-tree Clang-based tools). It is a counterpart to the
+`annotate` attribute, which serves the same purpose, but for declarations.
+
+The attribute takes a mandatory string literal argument specifying the
+annotation category and an arbitrary number of optional arguments that provide
+additional information specific to the annotation category. The optional
+arguments must be constant expressions of arbitrary type.
+
+For example:
+
+.. code-block:: c++
+
+  int* [[clang::annotate("category1", "foo", 1)]] f(int[[clang::annotate("category2")]] *);
+
+The attribute does not have any effect on the semantics of the type system,
+neither type checking rules, nor runtime semantics. In particular:
+
+- ``std::is_same<T, T [[clang::annotate_type("foo")]]>`` is true for all types
+  ``T``.
+
+- It is not permissible for overloaded functions or template specializations
+  to differ merely by an ``annotate_type`` attribute.
+
+- The presence of an ``annotate_type`` attribute will not affect name
+  mangling.
+  }];
+}
+
+def WeakDocs : Documentation {
+  let Category = DocCatDecl;
+  let Content = [{
+
+In supported output formats the ``weak`` attribute can be used to
+specify that a variable or function should be emitted as a symbol with
+``weak`` (if a definition) or ``extern_weak`` (if a declaration of an
+external symbol) `linkage
+<https://llvm.org/docs/LangRef.html#linkage-types>`_.
+
+If there is a non-weak definition of the symbol the linker will select
+that over the weak. They must have same type and alignment (variables
+must also have the same size), but may have a different value.
+
+If there are multiple weak definitions of same symbol, but no non-weak
+definition, they should have same type, size, alignment and value, the
+linker will select one of them (see also selectany_ attribute).
+
+If the ``weak`` attribute is applied to a ``const`` qualified variable
+definition that variable is no longer consider a compiletime constant
+as its value can change during linking (or dynamic linking). This
+means that it can e.g no longer be part of an initializer expression.
+
+.. code-block:: c
+
+  const int ANSWER __attribute__ ((weak)) = 42;
+
+  /* This function may be replaced link-time */
+  __attribute__ ((weak)) void debug_log(const char *msg)
+  {
+      fprintf(stderr, "DEBUG: %s\n", msg);
+  }
+
+  int main(int argc, const char **argv)
+  {
+      debug_log ("Starting up...");
+
+      /* This may print something else than "6 * 7 = 42",
+         if there is a non-weak definition of "ANSWER" in
+	 an object linked in */
+      printf("6 * 7 = %d\n", ANSWER);
+
+      return 0;
+   }
+
+If an external declaration is marked weak and that symbol does not
+exist during linking (possibly dynamic) the address of the symbol will
+evaluate to NULL.
+
+.. code-block:: c
+
+  void may_not_exist(void) __attribute__ ((weak));
+
+  int main(int argc, const char **argv)
+  {
+      if (may_not_exist) {
+          may_not_exist();
+      } else {
+          printf("Function did not exist\n");
+      }
+      return 0;
+  }
+
   }];
 }

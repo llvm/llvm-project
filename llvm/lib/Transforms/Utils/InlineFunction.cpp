@@ -84,7 +84,7 @@ EnableNoAliasConversion("enable-noalias-to-md-conversion", cl::init(true),
 
 static cl::opt<bool>
     UseNoAliasIntrinsic("use-noalias-intrinsic-during-inlining", cl::Hidden,
-                        cl::ZeroOrMore, cl::init(true),
+                        cl::init(true),
                         cl::desc("Use the llvm.experimental.noalias.scope.decl "
                                  "intrinsic during inlining."));
 
@@ -2650,7 +2650,7 @@ llvm::InlineResult llvm::InlineFunction(CallBase &CB, InlineFunctionInfo &IFI,
     AssumptionCache *AC =
         IFI.GetAssumptionCache ? &IFI.GetAssumptionCache(*Caller) : nullptr;
     auto &DL = Caller->getParent()->getDataLayout();
-    if (Value *V = SimplifyInstruction(PHI, {DL, nullptr, nullptr, AC})) {
+    if (Value *V = simplifyInstruction(PHI, {DL, nullptr, nullptr, AC})) {
       PHI->replaceAllUsesWith(V);
       PHI->eraseFromParent();
     }

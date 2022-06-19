@@ -12,10 +12,15 @@
 #include <__algorithm/comp.h>
 #include <__algorithm/comp_ref_type.h>
 #include <__algorithm/half_positive.h>
+#include <__algorithm/iterator_operations.h>
 #include <__algorithm/lower_bound.h>
 #include <__algorithm/upper_bound.h>
 #include <__config>
-#include <iterator>
+#include <__functional/identity.h>
+#include <__iterator/advance.h>
+#include <__iterator/distance.h>
+#include <__iterator/iterator_traits.h>
+#include <__utility/pair.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -46,10 +51,11 @@ __equal_range(_ForwardIterator __first, _ForwardIterator __last, const _Tp& __va
         }
         else
         {
+            auto __proj = std::__identity();
             _ForwardIterator __mp1 = __m;
             return pair<_ForwardIterator, _ForwardIterator>
                    (
-                      _VSTD::__lower_bound<_Compare>(__first, __m, __value_, __comp),
+                      _VSTD::__lower_bound_impl<_StdIterOps>(__first, __m, __value_, __comp, __proj),
                       _VSTD::__upper_bound<_Compare>(++__mp1, __last, __value_, __comp)
                    );
         }

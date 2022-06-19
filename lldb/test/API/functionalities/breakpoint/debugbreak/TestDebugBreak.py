@@ -11,8 +11,6 @@ from lldbsuite.test import lldbutil
 
 class DebugBreakTestCase(TestBase):
 
-    mydir = TestBase.compute_mydir(__file__)
-
     @skipIf(archs=no_match(["i386", "i686", "x86_64"]))
     @no_debug_info_test
     def test_asm_int_3(self):
@@ -26,7 +24,7 @@ class DebugBreakTestCase(TestBase):
             None, None, self.get_process_working_directory())
 
         # We've hit the first stop, so grab the frame.
-        self.assertEqual(process.GetState(), lldb.eStateStopped)
+        self.assertState(process.GetState(), lldb.eStateStopped)
         stop_reason = lldb.eStopReasonException if (lldbplatformutil.getPlatform(
         ) == "windows" or lldbplatformutil.getPlatform() == "macosx") else lldb.eStopReasonSignal
         thread = lldbutil.get_stopped_thread(process, stop_reason)

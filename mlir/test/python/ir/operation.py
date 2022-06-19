@@ -535,7 +535,7 @@ def testOperationPrint():
   module = Module.parse(
       r"""
     func.func @f1(%arg0: i32) -> i32 {
-      %0 = arith.constant dense<[1, 2, 3, 4]> : tensor<4xi32>
+      %0 = arith.constant dense<[1, 2, 3, 4]> : tensor<4xi32> loc("nom")
       return %arg0 : i32
     }
   """, ctx)
@@ -561,6 +561,10 @@ def testOperationPrint():
   bytes_value = f.getvalue()
   print(bytes_value.__class__)
   print(bytes_value)
+
+  # Test get_asm local_scope.
+  # CHECK: constant dense<[1, 2, 3, 4]> : tensor<4xi32> loc("nom")
+  module.operation.print(enable_debug_info=True, use_local_scope=True)
 
   # Test get_asm with options.
   # CHECK: value = opaque<"elided_large_const", "0xDEADBEEF"> : tensor<4xi32>

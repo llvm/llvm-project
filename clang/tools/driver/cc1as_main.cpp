@@ -137,6 +137,9 @@ struct AssemblerInvocation {
   unsigned IncrementalLinkerCompatible : 1;
   unsigned EmbedBitcode : 1;
 
+  /// Whether to emit DWARF unwind info.
+  EmitDwarfUnwindType EmitDwarfUnwind;
+
   /// The name of the relocation model to use.
   std::string RelocationModel;
 
@@ -167,6 +170,7 @@ public:
     Dwarf64 = 0;
     DwarfVersion = 0;
     EmbedBitcode = 0;
+    EmitDwarfUnwind = EmitDwarfUnwindType::Default;
   }
 
   static bool CreateFromArgs(AssemblerInvocation &Res,
@@ -317,6 +321,14 @@ bool AssemblerInvocation::CreateFromArgs(AssemblerInvocation &Opts,
                             .Default(0);
   }
 
+  if (auto *A = Args.getLastArg(OPT_femit_dwarf_unwind_EQ)) {
+    Opts.EmitDwarfUnwind =
+        llvm::StringSwitch<EmitDwarfUnwindType>(A->getValue())
+            .Case("always", EmitDwarfUnwindType::Always)
+            .Case("no-compact-unwind", EmitDwarfUnwindType::NoCompactUnwind)
+            .Case("default", EmitDwarfUnwindType::Default);
+  }
+
   return Success;
 }
 
@@ -367,6 +379,8 @@ static bool ExecuteAssemblerImpl(AssemblerInvocation &Opts,
   assert(MRI && "Unable to create target register info!");
 
   MCTargetOptions MCOptions;
+  MCOptions.EmitDwarfUnwind = Opts.EmitDwarfUnwind;
+
   std::unique_ptr<MCAsmInfo> MAI(
       TheTarget->createMCAsmInfo(*MRI, Opts.Triple, MCOptions));
   assert(MAI && "Unable to create target asm info!");
@@ -505,7 +519,7 @@ static bool ExecuteAssemblerImpl(AssemblerInvocation &Opts,
   if (Opts.EmbedBitcode && Ctx.getObjectFileType() == MCContext::IsMachO) {
     MCSection *AsmLabel = Ctx.getMachOSection(
         "__LLVM", "__asm", MachO::S_REGULAR, 4, SectionKind::getReadOnly());
-    Str.get()->SwitchSection(AsmLabel);
+    Str.get()->switchSection(AsmLabel);
     Str.get()->emitZeros(1);
   }
 

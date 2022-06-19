@@ -675,7 +675,7 @@ simplifyAndDCEInstruction(Instruction *I,
     return true;
   }
 
-  if (Value *SimpleV = SimplifyInstruction(I, DL)) {
+  if (Value *SimpleV = simplifyInstruction(I, DL)) {
     // Add the users to the worklist. CAREFUL: an instruction can use itself,
     // in the case of a phi node.
     for (User *U : I->users()) {
@@ -1126,7 +1126,7 @@ bool llvm::TryToSimplifyUncondBranchFromEmptyBlock(BasicBlock *BB,
     // If there is more than one pred of succ, and there are PHI nodes in
     // the successor, then we need to add incoming edges for the PHI nodes
     //
-    const PredBlockVector BBPreds(pred_begin(BB), pred_end(BB));
+    const PredBlockVector BBPreds(predecessors(BB));
 
     // Loop over all of the PHI nodes in the successor of BB.
     for (BasicBlock::iterator I = Succ->begin(); isa<PHINode>(I); ++I) {

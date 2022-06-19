@@ -13,8 +13,6 @@ from lldbsuite.test import lldbutil
 
 class ConsecutiveBreakpointsTestCase(TestBase):
 
-    mydir = TestBase.compute_mydir(__file__)
-
     def prepare_test(self):
         self.build()
 
@@ -37,7 +35,7 @@ class ConsecutiveBreakpointsTestCase(TestBase):
     def finish_test(self):
         # Run the process until termination
         self.process.Continue()
-        self.assertEquals(self.process.GetState(), lldb.eStateExited)
+        self.assertState(self.process.GetState(), lldb.eStateExited)
 
     @no_debug_info_test
     def test_continue(self):
@@ -45,7 +43,7 @@ class ConsecutiveBreakpointsTestCase(TestBase):
         self.prepare_test()
 
         self.process.Continue()
-        self.assertEquals(self.process.GetState(), lldb.eStateStopped)
+        self.assertState(self.process.GetState(), lldb.eStateStopped)
         # We should be stopped at the second breakpoint
         self.thread = lldbutil.get_one_thread_stopped_at_breakpoint(
             self.process, self.breakpoint2)
@@ -63,7 +61,7 @@ class ConsecutiveBreakpointsTestCase(TestBase):
         step_over = False
         self.thread.StepInstruction(step_over)
 
-        self.assertEquals(self.process.GetState(), lldb.eStateStopped)
+        self.assertState(self.process.GetState(), lldb.eStateStopped)
         self.assertEquals(
             self.thread.GetFrameAtIndex(0).GetPCAddress().GetLoadAddress(
                 self.target), self.bkpt_address.GetLoadAddress(
@@ -90,7 +88,7 @@ class ConsecutiveBreakpointsTestCase(TestBase):
         step_over = False
         self.thread.StepInstruction(step_over)
 
-        self.assertEquals(self.process.GetState(), lldb.eStateStopped)
+        self.assertState(self.process.GetState(), lldb.eStateStopped)
         self.assertEquals(
             self.thread.GetFrameAtIndex(0).GetPCAddress().GetLoadAddress(
                 self.target), self.bkpt_address.GetLoadAddress(

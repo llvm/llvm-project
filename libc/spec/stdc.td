@@ -474,6 +474,9 @@ def StdC : StandardSpec<"stdc"> {
       [
           Macro<"stderr">,
           Macro<"stdout">,
+          Macro<"_IOFBF">,
+          Macro<"_IOLBF">,
+          Macro<"_IONBF">,
       ], // Macros
       [ // Types
           SizeTType,
@@ -798,6 +801,11 @@ def StdC : StandardSpec<"stdc"> {
                   ArgSpec<ThrdTTypePtr>,
                   ArgSpec<IntPtr>,
               ]
+          >,
+          FunctionSpec<
+              "thrd_detach",
+              RetValSpec<IntType>,
+              [ArgSpec<ThrdTType>]
           >
       ]
   >;

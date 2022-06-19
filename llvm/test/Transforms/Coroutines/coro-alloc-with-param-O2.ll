@@ -3,7 +3,7 @@
 ; RUN: opt < %s -passes='cgscc(coro-split),simplifycfg,early-cse' -S | FileCheck %s
 
 ; using this directly (as it would happen under -O2)
-define i8* @f_direct(i64 %this) "coroutine.presplit"="1" {
+define i8* @f_direct(i64 %this) presplitcoroutine {
 entry:
   %id = call token @llvm.coro.id(i32 0, i8* null, i8* null, i8* null)
   %size = call i32 @llvm.coro.size.i32()

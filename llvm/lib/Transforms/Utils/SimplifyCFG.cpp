@@ -91,8 +91,8 @@ using namespace PatternMatch;
 #define DEBUG_TYPE "simplifycfg"
 
 cl::opt<bool> llvm::RequireAndPreserveDomTree(
-    "simplifycfg-require-and-preserve-domtree", cl::Hidden, cl::ZeroOrMore,
-    cl::init(false),
+    "simplifycfg-require-and-preserve-domtree", cl::Hidden,
+
     cl::desc("Temorary development switch used to gradually uplift SimplifyCFG "
              "into preserving DomTree,"));
 
@@ -382,6 +382,13 @@ static InstructionCost computeSpeculationCost(const User *I,
   return TTI.getUserCost(I, TargetTransformInfo::TCK_SizeAndLatency);
 }
 
+/// Check whether this is a potentially trapping constant.
+static bool canTrap(const Value *V) {
+  if (auto *C = dyn_cast<Constant>(V))
+    return C->canTrap();
+  return false;
+}
+
 /// If we have a merge point of an "if condition" as accepted above,
 /// return true if the specified value dominates the block.  We
 /// don't handle the true generality of domination here, just a special case
@@ -416,10 +423,7 @@ static bool dominatesMergePoint(Value *V, BasicBlock *BB,
   if (!I) {
     // Non-instructions all dominate instructions, but not all constantexprs
     // can be executed unconditionally.
-    if (ConstantExpr *C = dyn_cast<ConstantExpr>(V))
-      if (C->canTrap())
-        return false;
-    return true;
+    return !canTrap(V);
   }
   BasicBlock *PBB = I->getParent();
 
@@ -2675,15 +2679,15 @@ static bool validateAndCostRequiredSelects(BasicBlock *BB, BasicBlock *ThenBB,
         passingValueIsAlwaysUndefined(ThenV, &PN))
       return false;
 
+    if (canTrap(OrigV) || canTrap(ThenV))
+      return false;
+
     HaveRewritablePHIs = true;
     ConstantExpr *OrigCE = dyn_cast<ConstantExpr>(OrigV);
     ConstantExpr *ThenCE = dyn_cast<ConstantExpr>(ThenV);
     if (!OrigCE && !ThenCE)
-      continue; // Known safe and cheap.
+      continue; // Known cheap (FIXME: Maybe not true for aggregates).
 
-    if ((ThenCE && !isSafeToSpeculativelyExecute(ThenCE)) ||
-        (OrigCE && !isSafeToSpeculativelyExecute(OrigCE)))
-      return false;
     InstructionCost OrigCost = OrigCE ? computeSpeculationCost(OrigCE, TTI) : 0;
     InstructionCost ThenCost = ThenCE ? computeSpeculationCost(ThenCE, TTI) : 0;
     InstructionCost MaxCost =
@@ -3103,7 +3107,7 @@ FoldCondBranchOnValueKnownInPredecessorImpl(BranchInst *BI, DomTreeUpdater *DTU,
       }
 
       // Check for trivial simplification.
-      if (Value *V = SimplifyInstruction(N, {DL, nullptr, nullptr, AC})) {
+      if (Value *V = simplifyInstruction(N, {DL, nullptr, nullptr, AC})) {
         if (!BBI->use_empty())
           TranslateMap[&*BBI] = V;
         if (!N->mayHaveSideEffects()) {
@@ -3244,7 +3248,7 @@ static bool FoldTwoEntryPHINode(PHINode *PN, const TargetTransformInfo &TTI,
   bool Changed = false;
   for (BasicBlock::iterator II = BB->begin(); isa<PHINode>(II);) {
     PHINode *PN = cast<PHINode>(II++);
-    if (Value *V = SimplifyInstruction(PN, {DL, PN})) {
+    if (Value *V = simplifyInstruction(PN, {DL, PN})) {
       PN->replaceAllUsesWith(V);
       PN->eraseFromParent();
       Changed = true;
@@ -3591,12 +3595,10 @@ bool llvm::FoldBranchToCommonDest(BranchInst *BI, DomTreeUpdater *DTU,
 
   // Cond is known to be a compare or binary operator.  Check to make sure that
   // neither operand is a potentially-trapping constant expression.
-  if (ConstantExpr *CE = dyn_cast<ConstantExpr>(Cond->getOperand(0)))
-    if (CE->canTrap())
-      return false;
-  if (ConstantExpr *CE = dyn_cast<ConstantExpr>(Cond->getOperand(1)))
-    if (CE->canTrap())
-      return false;
+  if (canTrap(Cond->getOperand(0)))
+    return false;
+  if (canTrap(Cond->getOperand(1)))
+    return false;
 
   // Finally, don't infinitely unroll conditional loops.
   if (is_contained(successors(BB), BB))
@@ -4105,9 +4107,8 @@ static bool SimplifyCondBranchToCondBranch(BranchInst *PBI, BranchInst *BI,
   if (tryWidenCondBranchToCondBranch(PBI, BI, DTU))
     return true;
 
-  if (auto *CE = dyn_cast<ConstantExpr>(BI->getCondition()))
-    if (CE->canTrap())
-      return false;
+  if (canTrap(BI->getCondition()))
+    return false;
 
   // If both branches are conditional and both contain stores to the same
   // address, remove the stores from the conditionals and create a conditional
@@ -4164,15 +4165,13 @@ static bool SimplifyCondBranchToCondBranch(BranchInst *PBI, BranchInst *BI,
 
     PHINode *PN = cast<PHINode>(II);
     Value *BIV = PN->getIncomingValueForBlock(BB);
-    if (ConstantExpr *CE = dyn_cast<ConstantExpr>(BIV))
-      if (CE->canTrap())
-        return false;
+    if (canTrap(BIV))
+      return false;
 
     unsigned PBBIdx = PN->getBasicBlockIndex(PBI->getParent());
     Value *PBIV = PN->getIncomingValue(PBBIdx);
-    if (ConstantExpr *CE = dyn_cast<ConstantExpr>(PBIV))
-      if (CE->canTrap())
-        return false;
+    if (canTrap(PBIV))
+      return false;
   }
 
   // Finally, if everything is ok, fold the branches to logical ops.
@@ -4489,7 +4488,7 @@ bool SimplifyCFGOpt::tryToSimplifyUncondBranchWithICmpInIt(
     assert(VVal && "Should have a unique destination value");
     ICI->setOperand(0, VVal);
 
-    if (Value *V = SimplifyInstruction(ICI, {DL, ICI})) {
+    if (Value *V = simplifyInstruction(ICI, {DL, ICI})) {
       ICI->replaceAllUsesWith(V);
       ICI->eraseFromParent();
     }
@@ -5185,8 +5184,9 @@ static void createUnreachableSwitchDefault(SwitchInst *Switch,
   }
 }
 
-/// Turn a switch with two reachable destinations into an integer range
-/// comparison and branch.
+/// Turn a switch into an integer range comparison and branch.
+/// Switches with more than 2 destinations are ignored.
+/// Switches with 1 destination are also ignored.
 bool SimplifyCFGOpt::TurnSwitchRangeIntoICmp(SwitchInst *SI,
                                              IRBuilder<> &Builder) {
   assert(SI->getNumCases() > 1 && "Degenerate switch?");
@@ -5218,6 +5218,8 @@ bool SimplifyCFGOpt::TurnSwitchRangeIntoICmp(SwitchInst *SI,
     }
     return false; // More than two destinations.
   }
+  if (!DestB)
+    return false; // All destinations are the same and the default is unreachable
 
   assert(DestA && DestB &&
          "Single-destination switch should have been folded.");
@@ -6107,6 +6109,27 @@ static bool isTypeLegalForLookupTable(Type *Ty, const TargetTransformInfo &TTI,
          DL.fitsInLegalInteger(IT->getBitWidth());
 }
 
+static bool isSwitchDense(uint64_t NumCases, uint64_t CaseRange) {
+  // 40% is the default density for building a jump table in optsize/minsize
+  // mode. See also TargetLoweringBase::isSuitableForJumpTable(), which this
+  // function was based on.
+  const uint64_t MinDensity = 40;
+
+  if (CaseRange >= UINT64_MAX / 100)
+    return false; // Avoid multiplication overflows below.
+
+  return NumCases * 100 >= CaseRange * MinDensity;
+}
+
+static bool isSwitchDense(ArrayRef<int64_t> Values) {
+  uint64_t Diff = (uint64_t)Values.back() - (uint64_t)Values.front();
+  uint64_t Range = Diff + 1;
+  if (Range < Diff)
+    return false; // Overflow.
+
+  return isSwitchDense(Values.size(), Range);
+}
+
 /// Determine whether a lookup table should be built for this switch, based on
 /// the number of cases, size of the table, and the types of the results.
 // TODO: We could support larger than legal types by limiting based on the
@@ -6116,8 +6139,8 @@ static bool
 ShouldBuildLookupTable(SwitchInst *SI, uint64_t TableSize,
                        const TargetTransformInfo &TTI, const DataLayout &DL,
                        const SmallDenseMap<PHINode *, Type *> &ResultTypes) {
-  if (SI->getNumCases() > TableSize || TableSize >= UINT64_MAX / 10)
-    return false; // TableSize overflowed, or mul below might overflow.
+  if (SI->getNumCases() > TableSize)
+    return false; // TableSize overflowed.
 
   bool AllTablesFitInRegister = true;
   bool HasIllegalType = false;
@@ -6147,10 +6170,7 @@ ShouldBuildLookupTable(SwitchInst *SI, uint64_t TableSize,
   if (HasIllegalType)
     return false;
 
-  // The table density should be at least 40%. This is the same criterion as for
-  // jump tables, see SelectionDAGBuilder::handleJTSwitchCase.
-  // FIXME: Find the best cut-off.
-  return SI->getNumCases() * 10 >= TableSize * 4;
+  return isSwitchDense(SI->getNumCases(), TableSize);
 }
 
 /// Try to reuse the switch table index compare. Following pattern:
@@ -6484,17 +6504,6 @@ static bool SwitchToLookupTable(SwitchInst *SI, IRBuilder<> &Builder,
   if (NeedMask)
     ++NumLookupTablesHoles;
   return true;
-}
-
-static bool isSwitchDense(ArrayRef<int64_t> Values) {
-  // See also SelectionDAGBuilder::isDense(), which this function was based on.
-  uint64_t Diff = (uint64_t)Values.back() - (uint64_t)Values.front();
-  uint64_t Range = Diff + 1;
-  uint64_t NumCases = Values.size();
-  // 40% is the default density for building a jump table in optsize/minsize mode.
-  uint64_t MinDensity = 40;
-
-  return NumCases * 100 >= Range * MinDensity;
 }
 
 /// Try to transform a switch that has "holes" in it to a contiguous sequence

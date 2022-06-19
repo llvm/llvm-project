@@ -73,6 +73,26 @@ include(LLVMCheckCompilerLinkerFlag)
 include(CheckCCompilerFlag)
 include(CheckCXXCompilerFlag)
 
+# CMake omits default compiler include paths, but in runtimes build, we use
+# -nostdinc and -nostdinc++ and control include paths manually so this behavior
+# is undesirable. Filtering CMAKE_{LANG}_IMPLICIT_INCLUDE_DIRECTORIES to remove
+# paths that are inside the build directory disables this behavior.
+#
+# See https://gitlab.kitware.com/cmake/cmake/-/issues/19227 for further details.
+
+function(filter_prefixed list prefix outvar)
+  foreach(str ${list})
+    string(FIND "${str}" "${prefix}" out)
+    if(NOT "${out}" EQUAL 0)
+      list(APPEND result ${str})
+    endif()
+  endforeach()
+  set(${outvar} ${result} PARENT_SCOPE)
+endfunction()
+
+filter_prefixed("${CMAKE_C_IMPLICIT_INCLUDE_DIRECTORIES}" ${LLVM_BINARY_DIR} CMAKE_C_IMPLICIT_INCLUDE_DIRECTORIES)
+filter_prefixed("${CMAKE_CXX_IMPLICIT_INCLUDE_DIRECTORIES}" ${LLVM_BINARY_DIR} CMAKE_CXX_IMPLICIT_INCLUDE_DIRECTORIES)
+filter_prefixed("${CMAKE_ASM_IMPLICIT_INCLUDE_DIRECTORIES}" ${LLVM_BINARY_DIR} CMAKE_ASM_IMPLICIT_INCLUDE_DIRECTORIES)
 
 check_c_compiler_flag("" LLVM_RUNTIMES_LINKING_WORKS)
 if (NOT LLVM_RUNTIMES_LINKING_WORKS)
@@ -207,6 +227,10 @@ foreach(entry ${runtimes})
 endforeach()
 
 if(LLVM_INCLUDE_TESTS)
+  # LLVM_RUNTIMES_LIT_DEPENDS is populated when lit tests are added between
+  # umbrella_list_testsuite begin and end. The bootstrap runtimes builds
+  # currently assumes this target exists.
+  add_custom_target(runtimes-test-depends ${LLVM_RUNTIMES_LIT_DEPENDS})
   # Add a global check rule now that all subdirectories have been traversed
   # and we know the total set of lit testsuites.
   umbrella_lit_testsuite_end(check-runtimes)

@@ -30,6 +30,7 @@ class RewritePatternSet;
 class Operation;
 class Value;
 class ValueRange;
+class PatternRewriter;
 
 namespace scf {
 
@@ -140,29 +141,25 @@ struct PipeliningOption {
   using AnnotationlFnType =
       std::function<void(Operation *, PipelinerPart, unsigned)>;
   AnnotationlFnType annotateFn = nullptr;
-  // TODO: add option to decide if the prologue/epilogue should be peeled.
+
+  /// Control whether the epilogue should be peeled out of the loop or
+  /// operations should be predicated to skip the early stages in the last loop
+  /// iterations. If the epilogue is predicated; the user needs to provide a
+  /// lambda to generate the predicated version of operations.
+  bool peelEpilogue = true;
+
+  // Lamdba to predicate operations when the prologue or epilogue are not
+  // peeled. This takes the original operation, an i1 predicate value and the
+  // pattern rewriter.
+  using PredicateOpFn =
+      std::function<Operation *(Operation *, Value, PatternRewriter &)>;
+  PredicateOpFn predicateFn = nullptr;
+
+  // TODO: add option to decide if the prologue should be peeled.
 };
 
-/// Populate patterns for SCF software pipelining transformation.
-/// This transformation generates the pipelined loop and doesn't do any
-/// assumptions on the schedule dictated by the option structure.
-/// Software pipelining is usually done in two part. The first part of
-/// pipelining is to schedule the loop and assign a stage and cycle to each
-/// operations. This is highly dependent on the target and is implemented as an
-/// heuristic based on operation latencies, and other hardware characteristics.
-/// The second part is to take the schedule and generate the pipelined loop as
-/// well as the prologue and epilogue. It is independent of the target.
-/// This pattern only implement the second part.
-/// For example if we break a loop into 3 stages named S0, S1, S2 we would
-/// generate the following code with the number in parenthesis the iteration
-/// index:
-/// S0(0)                        // Prologue
-/// S0(1) S1(0)                  // Prologue
-/// scf.for %I = %C0 to %N - 2 {
-///  S0(I+2) S1(I+1) S2(I)       // Pipelined kernel
-/// }
-/// S1(N) S2(N-1)                // Epilogue
-/// S2(N)                        // Epilogue
+/// Populate patterns for SCF software pipelining transformation. See the
+/// ForLoopPipeliningPattern for the transformation details.
 void populateSCFLoopPipeliningPatterns(RewritePatternSet &patterns,
                                        const PipeliningOption &options);
 

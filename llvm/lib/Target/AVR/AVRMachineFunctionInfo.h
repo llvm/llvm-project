@@ -61,6 +61,13 @@ public:
                             MF.getFunction().hasFnAttribute("signal");
   }
 
+  MachineFunctionInfo *
+  clone(BumpPtrAllocator &Allocator, MachineFunction &DestMF,
+        const DenseMap<MachineBasicBlock *, MachineBasicBlock *> &Src2DstMBB)
+      const override {
+    return DestMF.cloneInfo<AVRMachineFunctionInfo>(*this);
+  }
+
   bool getHasSpills() const { return HasSpills; }
   void setHasSpills(bool B) { HasSpills = B; }
 

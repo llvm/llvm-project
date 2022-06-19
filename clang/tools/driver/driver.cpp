@@ -327,7 +327,7 @@ static int ExecuteCC1Tool(SmallVectorImpl<const char *> &ArgV) {
   return 1;
 }
 
-int main(int Argc, const char **Argv) {
+int clang_main(int Argc, char **Argv) {
   clock_t StartTime = clock();
   noteBottomOfStack();
   llvm::InitLLVM X(Argc, Argv);

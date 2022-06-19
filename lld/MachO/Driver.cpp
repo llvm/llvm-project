@@ -938,8 +938,8 @@ bool SymbolPatterns::match(StringRef symbolName) const {
   return matchLiteral(symbolName) || matchGlob(symbolName);
 }
 
-static void handleSymbolPatternsListHelper(const Arg *arg,
-                                           SymbolPatterns &symbolPatterns) {
+static void parseSymbolPatternsFile(const Arg *arg,
+                                    SymbolPatterns &symbolPatterns) {
   StringRef path = arg->getValue();
   Optional<MemoryBufferRef> buffer = readFile(path);
   if (!buffer) {
@@ -953,6 +953,7 @@ static void handleSymbolPatternsListHelper(const Arg *arg,
       symbolPatterns.insert(line);
   }
 }
+
 static void handleSymbolPatterns(InputArgList &args,
                                  SymbolPatterns &symbolPatterns,
                                  unsigned singleOptionCode,
@@ -960,7 +961,7 @@ static void handleSymbolPatterns(InputArgList &args,
   for (const Arg *arg : args.filtered(singleOptionCode))
     symbolPatterns.insert(arg->getValue());
   for (const Arg *arg : args.filtered(listFileOptionCode))
-    handleSymbolPatternsListHelper(arg, symbolPatterns);
+    parseSymbolPatternsFile(arg, symbolPatterns);
 }
 
 static void createFiles(const InputArgList &args) {
@@ -1038,8 +1039,9 @@ static void gatherInputSections() {
   int inputOrder = 0;
   for (const InputFile *file : inputFiles) {
     for (const Section *section : file->sections) {
+      // Compact unwind entries require special handling elsewhere. (In
+      // contrast, EH frames are handled like regular ConcatInputSections.)
       if (section->name == section_names::compactUnwind)
-        // Compact unwind entries require special handling elsewhere.
         continue;
       ConcatOutputSection *osec = nullptr;
       for (const Subsection &subsection : section->subsections) {
@@ -1301,6 +1303,7 @@ bool macho::link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
   config->callGraphProfileSort = args.hasFlag(
       OPT_call_graph_profile_sort, OPT_no_call_graph_profile_sort, true);
   config->printSymbolOrder = args.getLastArgValue(OPT_print_symbol_order);
+  config->parseEhFrames = static_cast<bool>(getenv("LLD_IN_TEST"));
 
   // FIXME: Add a commandline flag for this too.
   config->zeroModTime = getenv("ZERO_AR_DATE");
@@ -1400,15 +1403,18 @@ bool macho::link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
     config->segmentProtections.push_back({segName, maxProt, initProt});
   }
 
+  config->hasExplicitExports =
+      args.hasArg(OPT_no_exported_symbols) ||
+      args.hasArgNoClaim(OPT_exported_symbol, OPT_exported_symbols_list);
   handleSymbolPatterns(args, config->exportedSymbols, OPT_exported_symbol,
                        OPT_exported_symbols_list);
   handleSymbolPatterns(args, config->unexportedSymbols, OPT_unexported_symbol,
                        OPT_unexported_symbols_list);
-  if (!config->exportedSymbols.empty() && !config->unexportedSymbols.empty()) {
-    error("cannot use both -exported_symbol* and -unexported_symbol* options\n"
-          ">>> ignoring unexports");
-    config->unexportedSymbols.clear();
-  }
+  if (config->hasExplicitExports && !config->unexportedSymbols.empty())
+    error("cannot use both -exported_symbol* and -unexported_symbol* options");
+
+  if (args.hasArg(OPT_no_exported_symbols) && !config->exportedSymbols.empty())
+    error("cannot use both -exported_symbol* and -no_exported_symbols options");
 
   // Imitating LD64's:
   // -non_global_symbols_no_strip_list and -non_global_symbols_strip_list can't
@@ -1426,7 +1432,6 @@ bool macho::link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
       switch (arg->getOption().getID()) {
       case OPT_x:
         config->localSymbolsPresence = SymtabPresence::None;
-
         break;
       case OPT_non_global_symbols_no_strip_list:
         if (excludeLocal) {
@@ -1435,7 +1440,7 @@ bool macho::link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
         } else {
           includeLocal = true;
           config->localSymbolsPresence = SymtabPresence::SelectivelyIncluded;
-          handleSymbolPatternsListHelper(arg, config->localSymbolPatterns);
+          parseSymbolPatternsFile(arg, config->localSymbolPatterns);
         }
         break;
       case OPT_non_global_symbols_strip_list:
@@ -1445,7 +1450,7 @@ bool macho::link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
         } else {
           excludeLocal = true;
           config->localSymbolsPresence = SymtabPresence::SelectivelyExcluded;
-          handleSymbolPatternsListHelper(arg, config->localSymbolPatterns);
+          parseSymbolPatternsFile(arg, config->localSymbolPatterns);
         }
         break;
       default:
@@ -1553,7 +1558,7 @@ bool macho::link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
     createSyntheticSections();
     createSyntheticSymbols();
 
-    if (!config->exportedSymbols.empty()) {
+    if (config->hasExplicitExports) {
       parallelForEach(symtab->getSymbols(), [](Symbol *sym) {
         if (auto *defined = dyn_cast<Defined>(sym)) {
           StringRef symbolName = defined->getName();

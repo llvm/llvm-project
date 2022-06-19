@@ -64,23 +64,18 @@ extern cl::opt<unsigned> Verbosity;
 
 extern bool processAllFunctions();
 
-cl::opt<bool>
-CheckEncoding("check-encoding",
-  cl::desc("perform verification of LLVM instruction encoding/decoding. "
-           "Every instruction in the input is decoded and re-encoded. "
-           "If the resulting bytes do not match the input, a warning message "
-           "is printed."),
-  cl::init(false),
-  cl::ZeroOrMore,
-  cl::Hidden,
-  cl::cat(BoltCategory));
+cl::opt<bool> CheckEncoding(
+    "check-encoding",
+    cl::desc("perform verification of LLVM instruction encoding/decoding. "
+             "Every instruction in the input is decoded and re-encoded. "
+             "If the resulting bytes do not match the input, a warning message "
+             "is printed."),
+    cl::Hidden, cl::cat(BoltCategory));
 
-static cl::opt<bool>
-DotToolTipCode("dot-tooltip-code",
-  cl::desc("add basic block instructions as tool tips on nodes"),
-  cl::ZeroOrMore,
-  cl::Hidden,
-  cl::cat(BoltCategory));
+static cl::opt<bool> DotToolTipCode(
+    "dot-tooltip-code",
+    cl::desc("add basic block instructions as tool tips on nodes"), cl::Hidden,
+    cl::cat(BoltCategory));
 
 cl::opt<JumpTableSupportLevel>
 JumpTables("jump-tables",
@@ -102,21 +97,17 @@ JumpTables("jump-tables",
   cl::ZeroOrMore,
   cl::cat(BoltOptCategory));
 
-static cl::opt<bool>
-NoScan("no-scan",
-  cl::desc("do not scan cold functions for external references (may result in "
-           "slower binary)"),
-  cl::init(false),
-  cl::ZeroOrMore,
-  cl::Hidden,
-  cl::cat(BoltOptCategory));
+static cl::opt<bool> NoScan(
+    "no-scan",
+    cl::desc(
+        "do not scan cold functions for external references (may result in "
+        "slower binary)"),
+    cl::Hidden, cl::cat(BoltOptCategory));
 
 cl::opt<bool>
-PreserveBlocksAlignment("preserve-blocks-alignment",
-  cl::desc("try to preserve basic block alignment"),
-  cl::init(false),
-  cl::ZeroOrMore,
-  cl::cat(BoltOptCategory));
+    PreserveBlocksAlignment("preserve-blocks-alignment",
+                            cl::desc("try to preserve basic block alignment"),
+                            cl::cat(BoltOptCategory));
 
 cl::opt<bool>
 PrintDynoStats("dyno-stats",
@@ -139,11 +130,9 @@ PrintOnly("print-only",
   cl::cat(BoltCategory));
 
 cl::opt<bool>
-TimeBuild("time-build",
-  cl::desc("print time spent constructing binary functions"),
-  cl::ZeroOrMore,
-  cl::Hidden,
-  cl::cat(BoltCategory));
+    TimeBuild("time-build",
+              cl::desc("print time spent constructing binary functions"),
+              cl::Hidden, cl::cat(BoltCategory));
 
 cl::opt<bool>
 TrapOnAVX512("trap-avx512",
@@ -1394,6 +1383,9 @@ add_instruction:
   // Reset symbolizer for the disassembler.
   BC.SymbolicDisAsm->setSymbolizer(nullptr);
 
+  if (uint64_t Offset = getFirstInstructionOffset())
+    Labels[Offset] = BC.Ctx->createNamedTempSymbol();
+
   clearList(Relocations);
 
   if (!IsSimple) {
@@ -1662,11 +1654,13 @@ void BinaryFunction::postProcessJumpTables() {
                 "detected in function "
              << *this << '\n';
     }
-    for (unsigned I = 0; I < JT.OffsetEntries.size(); ++I) {
-      MCSymbol *Label =
-          getOrCreateLocalLabel(getAddress() + JT.OffsetEntries[I],
-                                /*CreatePastEnd*/ true);
-      JT.Entries.push_back(Label);
+    if (JT.Entries.empty()) {
+      for (unsigned I = 0; I < JT.OffsetEntries.size(); ++I) {
+        MCSymbol *Label =
+            getOrCreateLocalLabel(getAddress() + JT.OffsetEntries[I],
+                                  /*CreatePastEnd*/ true);
+        JT.Entries.push_back(Label);
+      }
     }
 
     const uint64_t BDSize =
@@ -1707,12 +1701,6 @@ void BinaryFunction::postProcessJumpTables() {
     }
   }
   clearList(JTSites);
-
-  // Free memory used by jump table offsets.
-  for (auto &JTI : JumpTables) {
-    JumpTable &JT = *JTI.second;
-    clearList(JT.OffsetEntries);
-  }
 
   // Conservatively populate all possible destinations for unknown indirect
   // branches.
@@ -1906,7 +1894,7 @@ bool BinaryFunction::buildCFG(MCPlusBuilder::AllocatorIdTy AllocatorId) {
     return false;
 
   assert(BasicBlocks.empty() && "basic block list should be empty");
-  assert((Labels.find(0) != Labels.end()) &&
+  assert((Labels.find(getFirstInstructionOffset()) != Labels.end()) &&
          "first instruction should always have a label");
 
   // Create basic blocks in the original layout order:
@@ -1965,8 +1953,10 @@ bool BinaryFunction::buildCFG(MCPlusBuilder::AllocatorIdTy AllocatorId) {
     if (LI != Labels.end()) {
       // Always create new BB at branch destination.
       PrevBB = InsertBB ? InsertBB : PrevBB;
-      InsertBB = addBasicBlock(LI->first, LI->second,
-                               opts::PreserveBlocksAlignment && IsLastInstrNop);
+      InsertBB = addBasicBlockAt(LI->first, LI->second);
+      if (opts::PreserveBlocksAlignment && IsLastInstrNop)
+        InsertBB->setDerivedAlignment();
+
       if (PrevBB)
         updateOffset(LastInstrOffset);
     }
@@ -2005,14 +1995,15 @@ bool BinaryFunction::buildCFG(MCPlusBuilder::AllocatorIdTy AllocatorId) {
           auto L = BC.scopeLock();
           Label = BC.Ctx->createNamedTempSymbol("FT");
         }
-        InsertBB = addBasicBlock(
-            Offset, Label, opts::PreserveBlocksAlignment && IsLastInstrNop);
+        InsertBB = addBasicBlockAt(Offset, Label);
+        if (opts::PreserveBlocksAlignment && IsLastInstrNop)
+          InsertBB->setDerivedAlignment();
         updateOffset(LastInstrOffset);
       }
     }
-    if (Offset == 0) {
-      // Add associated CFI pseudos in the first offset (0)
-      addCFIPlaceholders(0, InsertBB);
+    if (Offset == getFirstInstructionOffset()) {
+      // Add associated CFI pseudos in the first offset
+      addCFIPlaceholders(Offset, InsertBB);
     }
 
     const bool IsBlockEnd = MIB->isTerminator(Instr);
@@ -2263,8 +2254,9 @@ void BinaryFunction::removeConditionalTailCalls() {
     // Link new BBs to the original input offset of the BB where the CTC
     // is, so we can map samples recorded in new BBs back to the original BB
     // seem in the input binary (if using BAT)
-    std::unique_ptr<BinaryBasicBlock> TailCallBB = createBasicBlock(
-        BB.getInputOffset(), BC.Ctx->createNamedTempSymbol("TC"));
+    std::unique_ptr<BinaryBasicBlock> TailCallBB =
+        createBasicBlock(BC.Ctx->createNamedTempSymbol("TC"));
+    TailCallBB->setOffset(BB.getInputOffset());
     TailCallBB->addInstruction(TailCallInstr);
     TailCallBB->setCFIState(CFIStateBeforeCTC);
 
@@ -3841,8 +3833,8 @@ BinaryBasicBlock *BinaryFunction::splitEdge(BinaryBasicBlock *From,
   // Link new BBs to the original input offset of the From BB, so we can map
   // samples recorded in new BBs back to the original BB seem in the input
   // binary (if using BAT)
-  std::unique_ptr<BinaryBasicBlock> NewBB =
-      createBasicBlock(From->getInputOffset(), Tmp);
+  std::unique_ptr<BinaryBasicBlock> NewBB = createBasicBlock(Tmp);
+  NewBB->setOffset(From->getInputOffset());
   BinaryBasicBlock *NewBBPtr = NewBB.get();
 
   // Update "From" BB

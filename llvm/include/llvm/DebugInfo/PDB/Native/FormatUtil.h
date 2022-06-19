@@ -22,14 +22,6 @@
 namespace llvm {
 namespace pdb {
 
-std::string truncateStringBack(StringRef S, uint32_t MaxLen);
-std::string truncateStringMiddle(StringRef S, uint32_t MaxLen);
-std::string truncateStringFront(StringRef S, uint32_t MaxLen);
-std::string truncateQuotedNameFront(StringRef Label, StringRef Name,
-                                    uint32_t MaxLen);
-std::string truncateQuotedNameBack(StringRef Label, StringRef Name,
-                                   uint32_t MaxLen);
-
 #define PUSH_MASKED_FLAG(Enum, Mask, TheOpt, Value, Text)                      \
   if (Enum::TheOpt == (Value & Mask))                                          \
     Opts.push_back(Text);

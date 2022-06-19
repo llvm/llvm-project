@@ -80,15 +80,17 @@ static bool ShouldSignWithBKey(const Function &F) {
   return Key.equals_insensitive("b_key");
 }
 
-AArch64FunctionInfo::AArch64FunctionInfo(MachineFunction &MF) : MF(MF) {
+AArch64FunctionInfo::AArch64FunctionInfo(MachineFunction &MF_) : MF(&MF_) {
   // If we already know that the function doesn't have a redzone, set
   // HasRedZone here.
-  if (MF.getFunction().hasFnAttribute(Attribute::NoRedZone))
+  if (MF->getFunction().hasFnAttribute(Attribute::NoRedZone))
     HasRedZone = false;
 
-  const Function &F = MF.getFunction();
+  const Function &F = MF->getFunction();
   std::tie(SignReturnAddress, SignReturnAddressAll) = GetSignReturnAddress(F);
   SignWithBKey = ShouldSignWithBKey(F);
+  // TODO: skip functions that have no instrumented allocas for optimization
+  IsMTETagged = F.hasFnAttribute(Attribute::SanitizeMemTag);
 
   if (!F.hasFnAttribute("branch-target-enforcement")) {
     if (const auto *BTE = mdconst::extract_or_null<ConstantInt>(
@@ -104,6 +106,15 @@ AArch64FunctionInfo::AArch64FunctionInfo(MachineFunction &MF) : MF(MF) {
   BranchTargetEnforcement = BTIEnable.equals_insensitive("true");
 }
 
+MachineFunctionInfo *AArch64FunctionInfo::clone(
+    BumpPtrAllocator &Allocator, MachineFunction &DestMF,
+    const DenseMap<MachineBasicBlock *, MachineBasicBlock *> &Src2DstMBB)
+    const {
+  AArch64FunctionInfo *InfoClone = DestMF.cloneInfo<AArch64FunctionInfo>(*this);
+  InfoClone->MF = &DestMF;
+  return InfoClone;
+}
+
 bool AArch64FunctionInfo::shouldSignReturnAddress(bool SpillsLR) const {
   if (!SignReturnAddress)
     return false;
@@ -114,21 +125,21 @@ bool AArch64FunctionInfo::shouldSignReturnAddress(bool SpillsLR) const {
 
 bool AArch64FunctionInfo::shouldSignReturnAddress() const {
   return shouldSignReturnAddress(llvm::any_of(
-      MF.getFrameInfo().getCalleeSavedInfo(),
+      MF->getFrameInfo().getCalleeSavedInfo(),
       [](const auto &Info) { return Info.getReg() == AArch64::LR; }));
 }
 
 bool AArch64FunctionInfo::needsDwarfUnwindInfo() const {
   if (!NeedsDwarfUnwindInfo)
-    NeedsDwarfUnwindInfo = MF.needsFrameMoves() &&
-                           !MF.getTarget().getMCAsmInfo()->usesWindowsCFI();
+    NeedsDwarfUnwindInfo = MF->needsFrameMoves() &&
+                           !MF->getTarget().getMCAsmInfo()->usesWindowsCFI();
 
   return *NeedsDwarfUnwindInfo;
 }
 
 bool AArch64FunctionInfo::needsAsyncDwarfUnwindInfo() const {
   if (!NeedsAsyncDwarfUnwindInfo) {
-    const Function &F = MF.getFunction();
+    const Function &F = MF->getFunction();
     //  The check got "minsize" is because epilogue unwind info is not emitted
     //  (yet) for homogeneous epilogues, outlined functions, and functions
     //  outlined from.

@@ -5,8 +5,6 @@ import lldbsuite.test.lldbutil as lldbutil
 
 class TestUnionMembers(TestBase):
 
-    mydir = TestBase.compute_mydir(__file__)
-
     def test_union_members(self):
         self._load_exe()
 

@@ -831,7 +831,7 @@ bool JumpThreadingPass::computeValueKnownInPredecessorsImpl(
           LHS = CmpLHS->DoPHITranslation(BB, PredBB);
           RHS = PN->getIncomingValue(i);
         }
-        Value *Res = SimplifyCmpInst(Pred, LHS, RHS, {DL});
+        Value *Res = simplifyCmpInst(Pred, LHS, RHS, {DL});
         if (!Res) {
           if (!isa<Constant>(RHS))
             continue;
@@ -1559,10 +1559,8 @@ findMostPopularDest(BasicBlock *BB,
       DestPopularity[PredToDest.second]++;
 
   // Find the most popular dest.
-  using VT = decltype(DestPopularity)::value_type;
   auto MostPopular = std::max_element(
-      DestPopularity.begin(), DestPopularity.end(),
-      [](const VT &L, const VT &R) { return L.second < R.second; });
+      DestPopularity.begin(), DestPopularity.end(), llvm::less_second());
 
   // Okay, we have finally picked the most popular destination.
   return MostPopular->first;
@@ -2664,7 +2662,7 @@ bool JumpThreadingPass::duplicateCondBranchOnPHIIntoPred(
     // If this instruction can be simplified after the operands are updated,
     // just use the simplified value instead.  This frequently happens due to
     // phi translation.
-    if (Value *IV = SimplifyInstruction(
+    if (Value *IV = simplifyInstruction(
             New,
             {BB->getModule()->getDataLayout(), TLI, nullptr, nullptr, New})) {
       ValueMapping[&*BI] = IV;

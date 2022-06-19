@@ -42,19 +42,18 @@ using namespace llvm;
 #define DEBUG_TYPE "machine-scheduler"
 
 static cl::opt<bool> IgnoreBBRegPressure("ignore-bb-reg-pressure", cl::Hidden,
-                                         cl::ZeroOrMore, cl::init(false));
+                                         cl::init(false));
 
 static cl::opt<bool> UseNewerCandidate("use-newer-candidate", cl::Hidden,
-                                       cl::ZeroOrMore, cl::init(true));
+                                       cl::init(true));
 
 static cl::opt<unsigned> SchedDebugVerboseLevel("misched-verbose-level",
-                                                cl::Hidden, cl::ZeroOrMore,
-                                                cl::init(1));
+                                                cl::Hidden, cl::init(1));
 
 // Check if the scheduler should penalize instructions that are available to
 // early due to a zero-latency dependence.
 static cl::opt<bool> CheckEarlyAvail("check-early-avail", cl::Hidden,
-                                     cl::ZeroOrMore, cl::init(true));
+                                     cl::init(true));
 
 // This value is used to determine if a register class is a high pressure set.
 // We compute the maximum number of registers needed and divided by the total

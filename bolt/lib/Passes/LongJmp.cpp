@@ -23,12 +23,9 @@ extern cl::opt<unsigned> AlignFunctions;
 extern cl::opt<bool> UseOldText;
 extern cl::opt<bool> HotFunctionsAtEnd;
 
-static cl::opt<bool>
-GroupStubs("group-stubs",
-  cl::desc("share stubs across functions"),
-  cl::init(true),
-  cl::ZeroOrMore,
-  cl::cat(BoltOptCategory));
+static cl::opt<bool> GroupStubs("group-stubs",
+                                cl::desc("share stubs across functions"),
+                                cl::init(true), cl::cat(BoltOptCategory));
 }
 
 namespace llvm {
@@ -80,7 +77,7 @@ LongJmpPass::createNewStub(BinaryBasicBlock &SourceBB, const MCSymbol *TgtSym,
   const BinaryContext &BC = Func.getBinaryContext();
   const bool IsCold = SourceBB.isCold();
   MCSymbol *StubSym = BC.Ctx->createNamedTempSymbol("Stub");
-  std::unique_ptr<BinaryBasicBlock> StubBB = Func.createBasicBlock(0, StubSym);
+  std::unique_ptr<BinaryBasicBlock> StubBB = Func.createBasicBlock(StubSym);
   MCInst Inst;
   BC.MIB->createUncondBranch(Inst, TgtSym, BC.Ctx.get());
   if (TgtIsFunc)

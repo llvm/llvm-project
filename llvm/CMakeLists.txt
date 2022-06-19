@@ -2,6 +2,11 @@
 
 cmake_minimum_required(VERSION 3.13.4)
 
+# CMP0114: ExternalProject step targets fully adopt their steps.
+# New in CMake 3.19: https://cmake.org/cmake/help/latest/policy/CMP0114.html
+if(POLICY CMP0114)
+  cmake_policy(SET CMP0114 OLD)
+endif()
 # CMP0116: Ninja generators transform `DEPFILE`s from `add_custom_command()`
 # New in CMake 3.20. https://cmake.org/cmake/help/latest/policy/CMP0116.html
 if(POLICY CMP0116)
@@ -268,6 +273,8 @@ include(VersionFromVCS)
 
 option(LLVM_APPEND_VC_REV
   "Embed the version control system revision in LLVM" ON)
+
+option(LLVM_TOOL_LLVM_DRIVER_BUILD "Enables building the llvm multicall tool" OFF)
 
 set(PACKAGE_NAME LLVM)
 set(PACKAGE_STRING "${PACKAGE_NAME} ${PACKAGE_VERSION}")
@@ -749,7 +756,12 @@ endif()
 set(LLVM_TARGET_TRIPLE_ENV CACHE STRING "The name of environment variable to override default target. Disabled by blank.")
 mark_as_advanced(LLVM_TARGET_TRIPLE_ENV)
 
-set(LLVM_ENABLE_PER_TARGET_RUNTIME_DIR OFF CACHE BOOL
+if(CMAKE_SYSTEM_NAME MATCHES "Linux")
+  set(LLVM_ENABLE_PER_TARGET_RUNTIME_DIR_default ON)
+else()
+  set(LLVM_ENABLE_PER_TARGET_RUNTIME_DIR_default OFF)
+endif()
+set(LLVM_ENABLE_PER_TARGET_RUNTIME_DIR ${LLVM_ENABLE_PER_TARGET_RUNTIME_DIR_default} CACHE BOOL
   "Enable per-target runtimes directory")
 
 set(LLVM_PROFDATA_FILE "" CACHE FILEPATH

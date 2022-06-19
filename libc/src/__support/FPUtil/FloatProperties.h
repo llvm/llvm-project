@@ -22,7 +22,7 @@ template <> struct FloatProperties<float> {
   static_assert(sizeof(BitsType) == sizeof(float),
                 "Unexpected size of 'float' type.");
 
-  static constexpr uint32_t BIT_WIDTH = sizeof(BitsType) << 3;
+  static constexpr uint32_t BIT_WIDTH = sizeof(BitsType) * 8;
 
   static constexpr uint32_t MANTISSA_WIDTH = 23;
   static constexpr uint32_t EXPONENT_WIDTH = 8;
@@ -31,6 +31,10 @@ template <> struct FloatProperties<float> {
                                         << (EXPONENT_WIDTH + MANTISSA_WIDTH);
   static constexpr BitsType EXPONENT_MASK = ~(SIGN_MASK | MANTISSA_MASK);
   static constexpr uint32_t EXPONENT_BIAS = 127;
+
+  static constexpr BitsType EXP_MANT_MASK = MANTISSA_MASK + EXPONENT_MASK;
+  static_assert(EXP_MANT_MASK == ~SIGN_MASK,
+                "Exponent and mantissa masks are not as expected.");
 
   // If a number x is a NAN, then it is a quiet NAN if:
   //   QuietNaNMask & bits(x) != 0
@@ -43,7 +47,7 @@ template <> struct FloatProperties<double> {
   static_assert(sizeof(BitsType) == sizeof(double),
                 "Unexpected size of 'double' type.");
 
-  static constexpr uint32_t BIT_WIDTH = sizeof(BitsType) << 3;
+  static constexpr uint32_t BIT_WIDTH = sizeof(BitsType) * 8;
 
   static constexpr uint32_t MANTISSA_WIDTH = 52;
   static constexpr uint32_t EXPONENT_WIDTH = 11;
@@ -52,6 +56,10 @@ template <> struct FloatProperties<double> {
                                         << (EXPONENT_WIDTH + MANTISSA_WIDTH);
   static constexpr BitsType EXPONENT_MASK = ~(SIGN_MASK | MANTISSA_MASK);
   static constexpr uint32_t EXPONENT_BIAS = 1023;
+
+  static constexpr BitsType EXP_MANT_MASK = MANTISSA_MASK + EXPONENT_MASK;
+  static_assert(EXP_MANT_MASK == ~SIGN_MASK,
+                "Exponent and mantissa masks are not as expected.");
 
   // If a number x is a NAN, then it is a quiet NAN if:
   //   QuietNaNMask & bits(x) != 0
@@ -81,6 +89,11 @@ template <> struct FloatProperties<long double> {
   static constexpr uint32_t EXPONENT_BIAS =
       FloatProperties<double>::EXPONENT_BIAS;
 
+  static constexpr BitsType EXP_MANT_MASK =
+      FloatProperties<double>::EXP_MANT_MASK;
+  static_assert(EXP_MANT_MASK == ~SIGN_MASK,
+                "Exponent and mantissa masks are not as expected.");
+
   // If a number x is a NAN, then it is a quiet NAN if:
   //   QuietNaNMask & bits(x) != 0
   // Else, it is a signalling NAN.
@@ -95,16 +108,27 @@ template <> struct FloatProperties<long double> {
   static_assert(sizeof(BitsType) == sizeof(long double),
                 "Unexpected size of 'long double' type.");
 
-  static constexpr uint32_t BIT_WIDTH = (sizeof(BitsType) << 3) - 48;
+  static constexpr uint32_t BIT_WIDTH = (sizeof(BitsType) * 8) - 48;
+  static constexpr BitsType FULL_WIDTH_MASK = ((BitsType(1) << BIT_WIDTH) - 1);
 
   static constexpr uint32_t MANTISSA_WIDTH = 63;
   static constexpr uint32_t EXPONENT_WIDTH = 15;
   static constexpr BitsType MANTISSA_MASK = (BitsType(1) << MANTISSA_WIDTH) - 1;
+
+  // The x86 80 bit float represents the leading digit of the mantissa
+  // explicitly. This is the mask for that bit.
+  static constexpr BitsType EXPLICIT_BIT_MASK = (BitsType(1) << MANTISSA_WIDTH);
+
   static constexpr BitsType SIGN_MASK =
       BitsType(1) << (EXPONENT_WIDTH + MANTISSA_WIDTH + 1);
   static constexpr BitsType EXPONENT_MASK =
       ((BitsType(1) << EXPONENT_WIDTH) - 1) << (MANTISSA_WIDTH + 1);
   static constexpr uint32_t EXPONENT_BIAS = 16383;
+
+  static constexpr BitsType EXP_MANT_MASK =
+      MANTISSA_MASK + EXPLICIT_BIT_MASK + EXPONENT_MASK;
+  static_assert(EXP_MANT_MASK == (~SIGN_MASK & FULL_WIDTH_MASK),
+                "Exponent and mantissa masks are not as expected.");
 
   // If a number x is a NAN, then it is a quiet NAN if:
   //   QuietNaNMask & bits(x) != 0
@@ -129,6 +153,10 @@ template <> struct FloatProperties<long double> {
                                         << (EXPONENT_WIDTH + MANTISSA_WIDTH);
   static constexpr BitsType EXPONENT_MASK = ~(SIGN_MASK | MANTISSA_MASK);
   static constexpr uint32_t EXPONENT_BIAS = 16383;
+
+  static constexpr BitsType EXP_MANT_MASK = MANTISSA_MASK + EXPONENT_MASK;
+  static_assert(EXP_MANT_MASK == ~SIGN_MASK,
+                "Exponent and mantissa masks are not as expected.");
 
   // If a number x is a NAN, then it is a quiet NAN if:
   //   QuietNaNMask & bits(x) != 0

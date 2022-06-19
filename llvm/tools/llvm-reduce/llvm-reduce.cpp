@@ -19,6 +19,8 @@
 #include "TestRunner.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/CodeGen/CommandFlags.h"
+#include "llvm/CodeGen/MachineFunction.h"
+#include "llvm/CodeGen/MachineModuleInfo.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Verifier.h"
 #include "llvm/IRReader/IRReader.h"
@@ -58,7 +60,7 @@ static cl::opt<std::string>
                  cl::cat(LLVMReduceOptions));
 
 static cl::list<std::string>
-    TestArguments("test-arg", cl::ZeroOrMore,
+    TestArguments("test-arg",
                   cl::desc("Arguments passed onto the interesting-ness test"),
                   cl::cat(LLVMReduceOptions));
 

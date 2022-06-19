@@ -774,6 +774,8 @@ static uint64_t getAttrKindEncoding(Attribute::AttrKind Kind) {
     return bitc::ATTR_KIND_BYREF;
   case Attribute::MustProgress:
     return bitc::ATTR_KIND_MUSTPROGRESS;
+  case Attribute::PresplitCoroutine:
+    return bitc::ATTR_KIND_PRESPLIT_COROUTINE;
   case Attribute::EndAttrKinds:
     llvm_unreachable("Can not encode end-attribute kinds marker.");
   case Attribute::None:
@@ -1223,6 +1225,14 @@ static StringEncoding getStringEncoding(StringRef Str) {
   return SE_Fixed7;
 }
 
+static_assert(sizeof(GlobalValue::SanitizerMetadata) <= sizeof(unsigned),
+              "Sanitizer Metadata is too large for naive serialization.");
+static unsigned
+serializeSanitizerMetadata(const GlobalValue::SanitizerMetadata &Meta) {
+  return Meta.NoAddress | (Meta.NoHWAddress << 1) |
+         (Meta.NoMemtag << 2) | (Meta.IsDynInit << 3);
+}
+
 /// Emit top-level description of module, including target triple, inline asm,
 /// descriptors for global variables, and function prototype info.
 /// Returns the bit offset to backpatch with the location of the real VST.
@@ -1346,7 +1356,7 @@ void ModuleBitcodeWriter::writeModuleInfo() {
     // GLOBALVAR: [strtab offset, strtab size, type, isconst, initid,
     //             linkage, alignment, section, visibility, threadlocal,
     //             unnamed_addr, externally_initialized, dllstorageclass,
-    //             comdat, attributes, DSO_Local]
+    //             comdat, attributes, DSO_Local, GlobalSanitizer]
     Vals.push_back(addToStrtab(GV.getName()));
     Vals.push_back(GV.getName().size());
     Vals.push_back(VE.getTypeID(GV.getValueType()));
@@ -1362,10 +1372,8 @@ void ModuleBitcodeWriter::writeModuleInfo() {
         GV.getUnnamedAddr() != GlobalValue::UnnamedAddr::None ||
         GV.isExternallyInitialized() ||
         GV.getDLLStorageClass() != GlobalValue::DefaultStorageClass ||
-        GV.hasComdat() ||
-        GV.hasAttributes() ||
-        GV.isDSOLocal() ||
-        GV.hasPartition()) {
+        GV.hasComdat() || GV.hasAttributes() || GV.isDSOLocal() ||
+        GV.hasPartition() || GV.hasSanitizerMetadata()) {
       Vals.push_back(getEncodedVisibility(GV));
       Vals.push_back(getEncodedThreadLocalMode(GV));
       Vals.push_back(getEncodedUnnamedAddr(GV));
@@ -1379,6 +1387,10 @@ void ModuleBitcodeWriter::writeModuleInfo() {
       Vals.push_back(GV.isDSOLocal());
       Vals.push_back(addToStrtab(GV.getPartition()));
       Vals.push_back(GV.getPartition().size());
+
+      Vals.push_back((GV.hasSanitizerMetadata() ? serializeSanitizerMetadata(
+                                                      GV.getSanitizerMetadata())
+                                                : 0));
     } else {
       AbbrevToUse = SimpleGVarAbbrev;
     }

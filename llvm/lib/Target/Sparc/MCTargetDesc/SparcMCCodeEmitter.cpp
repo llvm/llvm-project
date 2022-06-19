@@ -104,17 +104,21 @@ void SparcMCCodeEmitter::encodeInstruction(const MCInst &MI, raw_ostream &OS,
   support::endian::write(OS, Bits,
                          Ctx.getAsmInfo()->isLittleEndian() ? support::little
                                                             : support::big);
-  unsigned tlsOpNo = 0;
+
+  // Some instructions have phantom operands that only contribute a fixup entry.
+  unsigned SymOpNo = 0;
   switch (MI.getOpcode()) {
   default: break;
-  case SP::TLS_CALL:   tlsOpNo = 1; break;
+  case SP::TLS_CALL:   SymOpNo = 1; break;
+  case SP::GDOP_LDrr:
+  case SP::GDOP_LDXrr:
   case SP::TLS_ADDrr:
   case SP::TLS_ADDXrr:
   case SP::TLS_LDrr:
-  case SP::TLS_LDXrr:  tlsOpNo = 3; break;
+  case SP::TLS_LDXrr:  SymOpNo = 3; break;
   }
-  if (tlsOpNo != 0) {
-    const MCOperand &MO = MI.getOperand(tlsOpNo);
+  if (SymOpNo != 0) {
+    const MCOperand &MO = MI.getOperand(SymOpNo);
     uint64_t op = getMachineOpValue(MI, MO, Fixups, STI);
     assert(op == 0 && "Unexpected operand value!");
     (void)op; // suppress warning.

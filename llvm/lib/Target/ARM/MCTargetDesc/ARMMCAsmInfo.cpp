@@ -111,7 +111,8 @@ ARMCOFFMCAsmInfoGNU::ARMCOFFMCAsmInfoGNU() {
   PrivateLabelPrefix = ".L";
 
   SupportsDebugInformation = true;
-  ExceptionsType = ExceptionHandling::DwarfCFI;
+  ExceptionsType = ExceptionHandling::WinEH;
+  WinEHEncodingType = WinEH::EncodingType::Itanium;
   UseParensForSymbolVariant = true;
 
   DwarfRegNumForCFI = false;

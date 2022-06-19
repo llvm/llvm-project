@@ -43,7 +43,13 @@ DeclarationMatcher optionalClass() {
       hasTemplateArgument(0, refersToType(type().bind("T"))));
 }
 
-auto hasOptionalType() { return hasType(optionalClass()); }
+auto optionalOrAliasType() {
+  return hasUnqualifiedDesugaredType(
+      recordType(hasDeclaration(optionalClass())));
+}
+
+/// Matches any of the spellings of the optional types and sugar, aliases, etc.
+auto hasOptionalType() { return hasType(optionalOrAliasType()); }
 
 auto isOptionalMemberCallWithName(
     llvm::StringRef MemberName,
@@ -158,19 +164,36 @@ auto isValueOrNotEqX() {
                                ComparesToSame(integerLiteral(equals(0)))));
 }
 
+auto isCallReturningOptional() {
+  return callExpr(hasType(qualType(anyOf(
+      optionalOrAliasType(), referenceType(pointee(optionalOrAliasType()))))));
+}
+
+/// Sets `HasValueVal` as the symbolic value that represents the "has_value"
+/// property of the optional value `OptionalVal`.
+void setHasValue(Value &OptionalVal, BoolValue &HasValueVal) {
+  OptionalVal.setProperty("has_value", HasValueVal);
+}
+
 /// Creates a symbolic value for an `optional` value using `HasValueVal` as the
 /// symbolic value of its "has_value" property.
 StructValue &createOptionalValue(Environment &Env, BoolValue &HasValueVal) {
   auto OptionalVal = std::make_unique<StructValue>();
-  OptionalVal->setProperty("has_value", HasValueVal);
+  setHasValue(*OptionalVal, HasValueVal);
   return Env.takeOwnership(std::move(OptionalVal));
 }
 
 /// Returns the symbolic value that represents the "has_value" property of the
-/// optional value `Val`. Returns null if `Val` is null.
-BoolValue *getHasValue(Value *Val) {
-  if (auto *OptionalVal = cast_or_null<StructValue>(Val)) {
-    return cast<BoolValue>(OptionalVal->getProperty("has_value"));
+/// optional value `OptionalVal`. Returns null if `OptionalVal` is null.
+BoolValue *getHasValue(Environment &Env, Value *OptionalVal) {
+  if (OptionalVal != nullptr) {
+    auto *HasValueVal =
+        cast_or_null<BoolValue>(OptionalVal->getProperty("has_value"));
+    if (HasValueVal == nullptr) {
+      HasValueVal = &Env.makeAtomicBoolValue();
+      OptionalVal->setProperty("has_value", *HasValueVal);
+    }
+    return HasValueVal;
   }
   return nullptr;
 }
@@ -207,26 +230,92 @@ int countOptionalWrappers(const ASTContext &ASTCtx, QualType Type) {
                      .getDesugaredType(ASTCtx));
 }
 
+/// Tries to initialize the `optional`'s value (that is, contents), and return
+/// its location. Returns nullptr if the value can't be represented.
+StorageLocation *maybeInitializeOptionalValueMember(QualType Q,
+                                                    Value &OptionalVal,
+                                                    Environment &Env) {
+  // The "value" property represents a synthetic field. As such, it needs
+  // `StorageLocation`, like normal fields (and other variables). So, we model
+  // it with a `ReferenceValue`, since that includes a storage location.  Once
+  // the property is set, it will be shared by all environments that access the
+  // `Value` representing the optional (here, `OptionalVal`).
+  if (auto *ValueProp = OptionalVal.getProperty("value")) {
+    auto *ValueRef = clang::cast<ReferenceValue>(ValueProp);
+    auto &ValueLoc = ValueRef->getReferentLoc();
+    if (Env.getValue(ValueLoc) == nullptr) {
+      // The property was previously set, but the value has been lost. This can
+      // happen, for example, because of an environment merge (where the two
+      // environments mapped the property to different values, which resulted in
+      // them both being discarded), or when two blocks in the CFG, with neither
+      // a dominator of the other, visit the same optional value, or even when a
+      // block is revisited during testing to collect per-statement state.
+      // FIXME: This situation means that the optional contents are not shared
+      // between branches and the like. Practically, this lack of sharing
+      // reduces the precision of the model when the contents are relevant to
+      // the check, like another optional or a boolean that influences control
+      // flow.
+      auto *ValueVal = Env.createValue(ValueLoc.getType());
+      if (ValueVal == nullptr)
+        return nullptr;
+      Env.setValue(ValueLoc, *ValueVal);
+    }
+    return &ValueLoc;
+  }
+
+  auto Ty = stripReference(Q);
+  auto *ValueVal = Env.createValue(Ty);
+  if (ValueVal == nullptr)
+    return nullptr;
+  auto &ValueLoc = Env.createStorageLocation(Ty);
+  Env.setValue(ValueLoc, *ValueVal);
+  auto ValueRef = std::make_unique<ReferenceValue>(ValueLoc);
+  OptionalVal.setProperty("value", Env.takeOwnership(std::move(ValueRef)));
+  return &ValueLoc;
+}
+
 void initializeOptionalReference(const Expr *OptionalExpr,
                                  const MatchFinder::MatchResult &,
                                  LatticeTransferState &State) {
-  if (auto *OptionalVal = cast_or_null<StructValue>(
-          State.Env.getValue(*OptionalExpr, SkipPast::Reference))) {
+  if (auto *OptionalVal =
+          State.Env.getValue(*OptionalExpr, SkipPast::Reference)) {
     if (OptionalVal->getProperty("has_value") == nullptr) {
-      OptionalVal->setProperty("has_value", State.Env.makeAtomicBoolValue());
+      setHasValue(*OptionalVal, State.Env.makeAtomicBoolValue());
     }
   }
 }
 
+/// Returns true if and only if `OptionalVal` is initialized and known to be
+/// empty in `Env.
+bool isEmptyOptional(const Value &OptionalVal, const Environment &Env) {
+  auto *HasValueVal =
+      cast_or_null<BoolValue>(OptionalVal.getProperty("has_value"));
+  return HasValueVal != nullptr &&
+         Env.flowConditionImplies(Env.makeNot(*HasValueVal));
+}
+
+/// Returns true if and only if `OptionalVal` is initialized and known to be
+/// non-empty in `Env.
+bool isNonEmptyOptional(const Value &OptionalVal, const Environment &Env) {
+  auto *HasValueVal =
+      cast_or_null<BoolValue>(OptionalVal.getProperty("has_value"));
+  return HasValueVal != nullptr && Env.flowConditionImplies(*HasValueVal);
+}
+
 void transferUnwrapCall(const Expr *UnwrapExpr, const Expr *ObjectExpr,
                         LatticeTransferState &State) {
-  if (auto *OptionalVal = cast_or_null<StructValue>(
-          State.Env.getValue(*ObjectExpr, SkipPast::ReferenceThenPointer))) {
-    auto *HasValueVal = getHasValue(OptionalVal);
-    assert(HasValueVal != nullptr);
+  if (auto *OptionalVal =
+          State.Env.getValue(*ObjectExpr, SkipPast::ReferenceThenPointer)) {
+    if (State.Env.getStorageLocation(*UnwrapExpr, SkipPast::None) == nullptr)
+      if (auto *Loc = maybeInitializeOptionalValueMember(
+              UnwrapExpr->getType(), *OptionalVal, State.Env))
+        State.Env.setStorageLocation(*UnwrapExpr, *Loc);
 
-    if (State.Env.flowConditionImplies(*HasValueVal))
-      return;
+    auto *Prop = OptionalVal->getProperty("has_value");
+    if (auto *HasValueVal = cast_or_null<BoolValue>(Prop)) {
+      if (State.Env.flowConditionImplies(*HasValueVal))
+        return;
+    }
   }
 
   // Record that this unwrap is *not* provably safe.
@@ -247,12 +336,9 @@ void transferMakeOptionalCall(const CallExpr *E,
 void transferOptionalHasValueCall(const CXXMemberCallExpr *CallExpr,
                                   const MatchFinder::MatchResult &,
                                   LatticeTransferState &State) {
-  if (auto *OptionalVal = cast_or_null<StructValue>(
-          State.Env.getValue(*CallExpr->getImplicitObjectArgument(),
-                             SkipPast::ReferenceThenPointer))) {
-    auto *HasValueVal = getHasValue(OptionalVal);
-    assert(HasValueVal != nullptr);
-
+  if (auto *HasValueVal = getHasValue(
+          State.Env, State.Env.getValue(*CallExpr->getImplicitObjectArgument(),
+                                        SkipPast::ReferenceThenPointer))) {
     auto &CallExprLoc = State.Env.createStorageLocation(*CallExpr);
     State.Env.setValue(CallExprLoc, *HasValueVal);
     State.Env.setStorageLocation(*CallExpr, CallExprLoc);
@@ -273,12 +359,11 @@ void transferValueOrImpl(const clang::Expr *ValueOrPredExpr,
       Result.Nodes.getNodeAs<clang::CXXMemberCallExpr>(ValueOrCallID)
           ->getImplicitObjectArgument();
 
-  auto *OptionalVal = cast_or_null<StructValue>(
-      Env.getValue(*ObjectArgumentExpr, SkipPast::ReferenceThenPointer));
-  if (OptionalVal == nullptr)
+  auto *HasValueVal = getHasValue(
+      State.Env,
+      State.Env.getValue(*ObjectArgumentExpr, SkipPast::ReferenceThenPointer));
+  if (HasValueVal == nullptr)
     return;
-  auto *HasValueVal = getHasValue(OptionalVal);
-  assert(HasValueVal != nullptr);
 
   auto *ExprValue = cast_or_null<BoolValue>(
       State.Env.getValue(*ValueOrPredExpr, SkipPast::None));
@@ -322,6 +407,18 @@ void transferValueOrNotEqX(const Expr *ComparisonExpr,
                       });
 }
 
+void transferCallReturningOptional(const CallExpr *E,
+                                   const MatchFinder::MatchResult &Result,
+                                   LatticeTransferState &State) {
+  if (State.Env.getStorageLocation(*E, SkipPast::None) != nullptr)
+    return;
+
+  auto &Loc = State.Env.createStorageLocation(*E);
+  State.Env.setStorageLocation(*E, Loc);
+  State.Env.setValue(
+      Loc, createOptionalValue(State.Env, State.Env.makeAtomicBoolValue()));
+}
+
 void assignOptionalValue(const Expr &E, LatticeTransferState &State,
                          BoolValue &HasValueVal) {
   if (auto *OptionalLoc =
@@ -353,8 +450,9 @@ getValueOrConversionHasValue(const FunctionDecl &F, const Expr &E,
 
   // This is a constructor/assignment call for `optional<T>` with argument of
   // type `optional<U>` such that `T` is constructible from `U`.
-  if (BoolValue *Val = getHasValue(State.Env.getValue(E, SkipPast::Reference)))
-    return *Val;
+  if (auto *HasValueVal =
+          getHasValue(State.Env, State.Env.getValue(E, SkipPast::Reference)))
+    return *HasValueVal;
   return State.Env.makeAtomicBoolValue();
 }
 
@@ -375,7 +473,8 @@ void transferAssignment(const CXXOperatorCallExpr *E, BoolValue &HasValueVal,
 
   auto *OptionalLoc =
       State.Env.getStorageLocation(*E->getArg(0), SkipPast::Reference);
-  assert(OptionalLoc != nullptr);
+  if (OptionalLoc == nullptr)
+    return;
 
   State.Env.setValue(*OptionalLoc, createOptionalValue(State.Env, HasValueVal));
 
@@ -462,8 +561,9 @@ auto buildTransferMatchSwitch(
   return MatchSwitchBuilder<LatticeTransferState>()
       // Attach a symbolic "has_value" state to optional values that we see for
       // the first time.
-      .CaseOf<Expr>(expr(anyOf(declRefExpr(), memberExpr()), hasOptionalType()),
-                    initializeOptionalReference)
+      .CaseOf<Expr>(
+          expr(anyOf(declRefExpr(), memberExpr()), hasOptionalType()),
+          initializeOptionalReference)
 
       // make_optional
       .CaseOf<CallExpr>(isMakeOptionalCall(), transferMakeOptionalCall)
@@ -547,6 +647,10 @@ auto buildTransferMatchSwitch(
       // opt.value_or(X) != X
       .CaseOf<Expr>(isValueOrNotEqX(), transferValueOrNotEqX)
 
+      // returns optional
+      .CaseOf<CallExpr>(isCallReturningOptional(),
+                        transferCallReturningOptional)
+
       .Build();
 }
 
@@ -568,6 +672,32 @@ void UncheckedOptionalAccessModel::transfer(const Stmt *S,
                                             Environment &Env) {
   LatticeTransferState State(L, Env);
   TransferMatchSwitch(*S, getASTContext(), State);
+}
+
+bool UncheckedOptionalAccessModel::compareEquivalent(QualType Type,
+                                                     const Value &Val1,
+                                                     const Environment &Env1,
+                                                     const Value &Val2,
+                                                     const Environment &Env2) {
+  return isNonEmptyOptional(Val1, Env1) == isNonEmptyOptional(Val2, Env2);
+}
+
+bool UncheckedOptionalAccessModel::merge(QualType Type, const Value &Val1,
+                                         const Environment &Env1,
+                                         const Value &Val2,
+                                         const Environment &Env2,
+                                         Value &MergedVal,
+                                         Environment &MergedEnv) {
+  if (!IsOptionalType(Type))
+    return true;
+
+  auto &HasValueVal = MergedEnv.makeAtomicBoolValue();
+  if (isNonEmptyOptional(Val1, Env1) && isNonEmptyOptional(Val2, Env2))
+    MergedEnv.addToFlowCondition(HasValueVal);
+  else if (isEmptyOptional(Val1, Env1) && isEmptyOptional(Val2, Env2))
+    MergedEnv.addToFlowCondition(MergedEnv.makeNot(HasValueVal));
+  setHasValue(MergedVal, HasValueVal);
+  return true;
 }
 
 } // namespace dataflow

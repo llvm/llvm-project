@@ -9,6 +9,7 @@
 #ifndef ALMOST_SATISFIES_TYPES_H
 #define ALMOST_SATISFIES_TYPES_H
 
+#include <functional>
 #include <iterator>
 #include <ranges>
 
@@ -300,5 +301,99 @@ static_assert(std::input_or_output_iterator<OutputIteratorNotIndirectlyWritable>
 static_assert(!std::indirectly_writable<OutputIteratorNotIndirectlyWritable, int>);
 static_assert(!std::output_iterator<OutputIteratorNotIndirectlyWritable, int>);
 static_assert(!std::ranges::output_range<OutputIteratorNotIndirectlyWritable, int>);
+
+class IndirectBinaryPredicateNotIndirectlyReadable {
+public:
+  using difference_type = long;
+  using iterator_category = std::input_iterator_tag;
+
+  int& operator++();
+  void operator++(int);
+  const int& operator*() const;
+};
+
+using InputRangeIndirectBinaryPredicateNotIndirectlyReadable
+     = UncheckedRange<cpp20_input_iterator<int*>, IndirectBinaryPredicateNotIndirectlyReadable>;
+
+static_assert(!std::indirect_binary_predicate<std::ranges::equal_to, IndirectBinaryPredicateNotIndirectlyReadable, int*>);
+
+class RandomAccessIteratorNotDerivedFrom {
+  using Self = RandomAccessIteratorNotDerivedFrom;
+
+public:
+  using value_type = int;
+  using difference_type = long;
+  using pointer = int*;
+  using reference = int&;
+  // Deliberately not using the `std::random_access_iterator_tag` category.
+  using iterator_category = std::bidirectional_iterator_tag;
+
+  reference operator*() const;
+  reference operator[](difference_type) const;
+
+  Self& operator++();
+  Self& operator--();
+  Self operator++(int);
+  Self operator--(int);
+
+  Self& operator+=(difference_type);
+  Self& operator-=(difference_type);
+  friend Self operator+(Self, difference_type);
+  friend Self operator+(difference_type, Self);
+  friend Self operator-(Self, difference_type);
+  friend difference_type operator-(Self, Self);
+
+  auto operator<=>(const Self&) const = default;
+};
+
+static_assert(std::bidirectional_iterator<RandomAccessIteratorNotDerivedFrom>);
+static_assert(!std::random_access_iterator<RandomAccessIteratorNotDerivedFrom>);
+
+using RandomAccessRangeNotDerivedFrom = UncheckedRange<RandomAccessIteratorNotDerivedFrom>;
+
+class RandomAccessIteratorBadIndex {
+  using Self = RandomAccessIteratorBadIndex;
+
+public:
+  using value_type = int;
+  using difference_type = long;
+  using pointer = int*;
+  using reference = int&;
+  using iterator_category = std::random_access_iterator_tag;
+
+  reference operator*() const;
+  // Deliberately returning a type different from `reference`.
+  const int& operator[](difference_type) const;
+
+  Self& operator++();
+  Self& operator--();
+  Self operator++(int);
+  Self operator--(int);
+
+  Self& operator+=(difference_type);
+  Self& operator-=(difference_type);
+  friend Self operator+(Self, difference_type);
+  friend Self operator+(difference_type, Self);
+  friend Self operator-(Self, difference_type);
+  friend difference_type operator-(Self, Self);
+
+  auto operator<=>(const Self&) const = default;
+};
+
+static_assert(std::bidirectional_iterator<RandomAccessIteratorBadIndex>);
+static_assert(!std::random_access_iterator<RandomAccessIteratorBadIndex>);
+
+using RandomAccessRangeBadIndex = UncheckedRange<RandomAccessIteratorBadIndex>;
+
+template <class Iter>
+class ComparatorNotCopyable {
+public:
+  ComparatorNotCopyable(ComparatorNotCopyable&&) = default;
+  ComparatorNotCopyable& operator=(ComparatorNotCopyable&&) = default;
+  ComparatorNotCopyable(const ComparatorNotCopyable&) = delete;
+  ComparatorNotCopyable& operator=(const ComparatorNotCopyable&) = delete;
+
+  bool operator()(Iter&, Iter&) const;
+};
 
 #endif // ALMOST_SATISFIES_TYPES_H

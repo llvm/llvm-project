@@ -58,7 +58,7 @@ public:
 
   /// Generate the code to check whether the parameter should be printed.
   MethodBody &genPrintGuard(FmtContext &ctx, MethodBody &os) const {
-    std::string self = getParameterAccessorName(getName()) + "()";
+    std::string self = param.getAccessorName() + "()";
     ctx.withSelf(self);
     os << tgfmt("($_self", &ctx);
     if (llvm::Optional<StringRef> defaultValue = getParam().getDefaultValue()) {
@@ -250,9 +250,11 @@ void DefFormat::genParser(MethodBody &os) {
   FmtContext ctx;
   ctx.addSubst("_parser", "odsParser");
   ctx.addSubst("_ctx", "odsParser.getContext()");
+  ctx.withBuilder("odsBuilder");
   if (isa<AttrDef>(def))
     ctx.addSubst("_type", "odsType");
   os.indent();
+  os << "::mlir::Builder odsBuilder(odsParser.getContext());\n";
 
   // Declare variables to store all of the parameters. Allocated parameters
   // such as `ArrayRef` and `StringRef` must provide a `storageType`. Store
@@ -668,7 +670,9 @@ void DefFormat::genPrinter(MethodBody &os) {
   FmtContext ctx;
   ctx.addSubst("_printer", "odsPrinter");
   ctx.addSubst("_ctx", "getContext()");
+  ctx.withBuilder("odsBuilder");
   os.indent();
+  os << "::mlir::Builder odsBuilder(getContext());\n";
 
   // Generate printers.
   shouldEmitSpace = true;
@@ -714,7 +718,7 @@ void DefFormat::genLiteralPrinter(StringRef value, FmtContext &ctx,
 void DefFormat::genVariablePrinter(ParameterElement *el, FmtContext &ctx,
                                    MethodBody &os, bool skipGuard) {
   const AttrOrTypeParameter &param = el->getParam();
-  ctx.withSelf(getParameterAccessorName(param.getName()) + "()");
+  ctx.withSelf(param.getAccessorName() + "()");
 
   // Guard the printer on the presence of optional parameters and that they
   // aren't equal to their default values (if they have one).
@@ -808,8 +812,7 @@ void DefFormat::genCustomPrinter(CustomDirective *el, FmtContext &ctx,
     if (auto *ref = dyn_cast<RefDirective>(arg))
       param = ref->getArg();
     os << ",\n"
-       << getParameterAccessorName(cast<ParameterElement>(param)->getName())
-       << "()";
+       << cast<ParameterElement>(param)->getParam().getAccessorName() << "()";
   }
   os.unindent() << ");\n";
 }

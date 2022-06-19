@@ -83,7 +83,6 @@ static cl::opt<bool> EnableNonTrivialUnswitch(
 
 static cl::opt<int>
     UnswitchThreshold("unswitch-threshold", cl::init(50), cl::Hidden,
-                      cl::ZeroOrMore,
                       cl::desc("The cost threshold for unswitching a loop."));
 
 static cl::opt<bool> EnableUnswitchCostMultiplier(
@@ -2805,8 +2804,7 @@ static bool unswitchBestCondition(
       PartialIVInfo = *Info;
       PartialIVCondBranch = L.getHeader()->getTerminator();
       TinyPtrVector<Value *> ValsToDuplicate;
-      for (auto *Inst : Info->InstToDuplicate)
-        ValsToDuplicate.push_back(Inst);
+      llvm::append_range(ValsToDuplicate, Info->InstToDuplicate);
       UnswitchCandidates.push_back(
           {L.getHeader()->getTerminator(), std::move(ValsToDuplicate)});
     }

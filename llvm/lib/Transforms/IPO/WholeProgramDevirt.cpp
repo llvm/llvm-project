@@ -144,13 +144,12 @@ static cl::opt<std::string> ClWriteSummary(
 
 static cl::opt<unsigned>
     ClThreshold("wholeprogramdevirt-branch-funnel-threshold", cl::Hidden,
-                cl::init(10), cl::ZeroOrMore,
+                cl::init(10),
                 cl::desc("Maximum number of call targets per "
                          "call site to enable branch funnels"));
 
 static cl::opt<bool>
     PrintSummaryDevirt("wholeprogramdevirt-print-index-based", cl::Hidden,
-                       cl::init(false), cl::ZeroOrMore,
                        cl::desc("Print index-based devirtualization messages"));
 
 /// Provide a way to force enable whole program visibility in tests.
@@ -158,22 +157,20 @@ static cl::opt<bool>
 /// !vcall_visibility metadata (the mere presense of type tests
 /// previously implied hidden visibility).
 static cl::opt<bool>
-    WholeProgramVisibility("whole-program-visibility", cl::init(false),
-                           cl::Hidden, cl::ZeroOrMore,
+    WholeProgramVisibility("whole-program-visibility", cl::Hidden,
                            cl::desc("Enable whole program visibility"));
 
 /// Provide a way to force disable whole program for debugging or workarounds,
 /// when enabled via the linker.
 static cl::opt<bool> DisableWholeProgramVisibility(
-    "disable-whole-program-visibility", cl::init(false), cl::Hidden,
-    cl::ZeroOrMore,
+    "disable-whole-program-visibility", cl::Hidden,
     cl::desc("Disable whole program visibility (overrides enabling options)"));
 
 /// Provide way to prevent certain function from being devirtualized
 static cl::list<std::string>
     SkipFunctionNames("wholeprogramdevirt-skip",
                       cl::desc("Prevent function(s) from being devirtualized"),
-                      cl::Hidden, cl::ZeroOrMore, cl::CommaSeparated);
+                      cl::Hidden, cl::CommaSeparated);
 
 /// Mechanism to add runtime checking of devirtualization decisions, optionally
 /// trapping or falling back to indirect call on any that are not correct.
@@ -182,7 +179,7 @@ static cl::list<std::string>
 /// visibility may be compromised.
 enum WPDCheckMode { None, Trap, Fallback };
 static cl::opt<WPDCheckMode> DevirtCheckMode(
-    "wholeprogramdevirt-check", cl::Hidden, cl::ZeroOrMore,
+    "wholeprogramdevirt-check", cl::Hidden,
     cl::desc("Type of checking for incorrect devirtualizations"),
     cl::values(clEnumValN(WPDCheckMode::None, "none", "No checking"),
                clEnumValN(WPDCheckMode::Trap, "trap", "Trap when incorrect"),

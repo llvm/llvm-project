@@ -280,8 +280,10 @@ public:
     if (IsSignBitSet()) {
       result.value = result.value.Negate().value;
     }
-    if (IsSignBitSet() != result.value.IsNegative()) {
-      result.flags.set(RealFlag::Overflow);
+    if (!result.value.IsZero()) {
+      if (IsSignBitSet() != result.value.IsNegative()) {
+        result.flags.set(RealFlag::Overflow);
+      }
     }
     if (result.flags.test(RealFlag::Overflow)) {
       result.value =

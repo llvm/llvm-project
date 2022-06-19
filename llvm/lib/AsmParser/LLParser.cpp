@@ -1103,6 +1103,45 @@ bool LLParser::parseAliasOrIFunc(const std::string &Name, LocTy NameLoc,
   return false;
 }
 
+static bool isSanitizer(lltok::Kind Kind) {
+  switch (Kind) {
+  case lltok::kw_no_sanitize_address:
+  case lltok::kw_no_sanitize_hwaddress:
+  case lltok::kw_no_sanitize_memtag:
+  case lltok::kw_sanitize_address_dyninit:
+    return true;
+  default:
+    return false;
+  }
+}
+
+bool LLParser::parseSanitizer(GlobalVariable *GV) {
+  using SanitizerMetadata = GlobalValue::SanitizerMetadata;
+  SanitizerMetadata Meta;
+  if (GV->hasSanitizerMetadata())
+    Meta = GV->getSanitizerMetadata();
+
+  switch (Lex.getKind()) {
+  case lltok::kw_no_sanitize_address:
+    Meta.NoAddress = true;
+    break;
+  case lltok::kw_no_sanitize_hwaddress:
+    Meta.NoHWAddress = true;
+    break;
+  case lltok::kw_no_sanitize_memtag:
+    Meta.NoMemtag = true;
+    break;
+  case lltok::kw_sanitize_address_dyninit:
+    Meta.IsDynInit = true;
+    break;
+  default:
+    return tokError("non-sanitizer token passed to LLParser::parseSanitizer()");
+  }
+  GV->setSanitizerMetadata(Meta);
+  Lex.Lex();
+  return false;
+}
+
 /// parseGlobal
 ///   ::= GlobalVar '=' OptionalLinkage OptionalPreemptionSpecifier
 ///       OptionalVisibility OptionalDLLStorageClass
@@ -1220,6 +1259,9 @@ bool LLParser::parseGlobal(const std::string &Name, LocTy NameLoc,
       GV->setAlignment(Alignment);
     } else if (Lex.getKind() == lltok::MetadataVar) {
       if (parseGlobalObjectMetadataAttachment(*GV))
+        return true;
+    } else if (isSanitizer(Lex.getKind())) {
+      if (parseSanitizer(GV))
         return true;
     } else {
       Comdat *C;
@@ -3967,11 +4009,11 @@ struct MDAPSIntField : public MDFieldImpl<APSInt> {
 };
 
 struct MDSignedField : public MDFieldImpl<int64_t> {
-  int64_t Min;
-  int64_t Max;
+  int64_t Min = INT64_MIN;
+  int64_t Max = INT64_MAX;
 
   MDSignedField(int64_t Default = 0)
-      : ImplTy(Default), Min(INT64_MIN), Max(INT64_MAX) {}
+      : ImplTy(Default) {}
   MDSignedField(int64_t Default, int64_t Min, int64_t Max)
       : ImplTy(Default), Min(Min), Max(Max) {}
 };

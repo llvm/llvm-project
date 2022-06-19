@@ -5,8 +5,6 @@ from lldbsuite.test import lldbutil
 
 class ExprCharTestCase(TestBase):
 
-    mydir = TestBase.compute_mydir(__file__)
-
     def do_test(self, dictionary=None):
         """These basic expression commands should work as expected."""
         self.build(dictionary=dictionary)
@@ -20,10 +18,9 @@ class ExprCharTestCase(TestBase):
     def test_default_char(self):
         self.do_test()
 
-    @skipIf(oslist=["linux"], archs=["arm"], bugnumber="llvm.org/pr23069")
+    @skipIf(oslist=["linux"], archs=["aarch64", "arm"], bugnumber="llvm.org/pr23069")
     @expectedFailureAll(
         archs=[
-            "aarch64",
             "powerpc64le",
             "s390x"],
         bugnumber="llvm.org/pr23069")

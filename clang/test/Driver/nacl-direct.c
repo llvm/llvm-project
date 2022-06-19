@@ -1,10 +1,10 @@
 // Test clang changes for NaCl Support including:
 //    include paths, library paths, emulation, default static
 //
-// RUN: %clang -no-canonical-prefixes -### -o %t.o %s \
-// RUN:     -target i686-unknown-nacl -resource-dir foo 2>&1 \
+// RUN: %clang -### %s \
+// RUN:     --target=i686-unknown-nacl -resource-dir foo 2>&1 \
 // RUN:   | FileCheck --check-prefix=CHECK-I686 %s
-// CHECK-I686: {{.*}}clang{{.*}}" "-cc1"
+// CHECK-I686: "-cc1"
 // CHECK-I686-NOT: "-fno-use-init-array"
 // CHECK-I686: "-target-cpu" "pentium4"
 // CHECK-I686: "-resource-dir" "foo"
@@ -21,10 +21,10 @@
 // CHECK-I686: "-Lfoo{{/|\\\\}}lib{{/|\\\\}}i686-nacl"
 // CHECK-I686-NOT: -lpthread
 //
-// RUN: %clang -no-canonical-prefixes -### -o %t.o %s \
-// RUN:     -target x86_64-unknown-nacl -resource-dir foo 2>&1 \
+// RUN: %clang -### %s \
+// RUN:     --target=x86_64-unknown-nacl -resource-dir foo 2>&1 \
 // RUN:   | FileCheck --check-prefix=CHECK-x86_64 %s
-// CHECK-x86_64: {{.*}}clang{{.*}}" "-cc1"
+// CHECK-x86_64: "-cc1"
 // CHECK-x86_64-NOT: "-fno-use-init-array"
 // CHECK-x86_64: "-target-cpu" "x86-64"
 // CHECK-x86_64: "-resource-dir" "foo"
@@ -41,10 +41,10 @@
 // CHECK-x86_64: "-Lfoo{{/|\\\\}}lib{{/|\\\\}}x86_64-nacl"
 // CHECK-X86_64-NOT: -lpthread
 //
-// RUN: %clang -no-canonical-prefixes -### -o %t.o %s \
-// RUN:     -target armv7a-unknown-nacl-gnueabihf -resource-dir foo 2>&1 \
+// RUN: %clang -### %s \
+// RUN:     --target=armv7a-unknown-nacl-gnueabihf -resource-dir foo 2>&1 \
 // RUN:   | FileCheck --check-prefix=CHECK-ARM %s
-// CHECK-ARM: {{.*}}clang{{.*}}" "-cc1"
+// CHECK-ARM: "-cc1"
 // CHECK-ARM-NOT: "-fno-use-init-array"
 // CHECK-ARM: "-target-cpu" "generic"
 // CHECK-ARM: "-target-abi" "aapcs-linux"
@@ -64,10 +64,10 @@
 // CHECK-ARM: "-Lfoo{{/|\\\\}}lib{{/|\\\\}}arm-nacl"
 // CHECK-ARM-NOT: -lpthread
 //
-// RUN: %clang -no-canonical-prefixes -### -o %t.o %s \
-// RUN:     -target mipsel-unknown-nacl -resource-dir foo 2>&1 \
+// RUN: %clang -### %s \
+// RUN:     --target=mipsel-unknown-nacl -resource-dir foo 2>&1 \
 // RUN:   | FileCheck --check-prefix=CHECK-MIPS %s
-// CHECK-MIPS: {{.*}}clang{{.*}}" "-cc1"
+// CHECK-MIPS: "-cc1"
 // CHECK-MIPS-NOT: "-fno-use-init-array"
 // CHECK-MIPS: "-target-cpu" "mips32r2"
 // CHECK-MIPS: "-target-abi" "o32"
@@ -89,8 +89,8 @@
 
 // Check that even when the target arch is just "arm" (as will be the case when
 // it is inferred from the binary name) that we get the right ABI flags
-// RUN: %clang -no-canonical-prefixes -### -o %t.o %s 2>&1 \
-// RUN:     -target arm-nacl \
+// RUN: %clang -### %s 2>&1 \
+// RUN:     --target=arm-nacl \
 // RUN:   | FileCheck --check-prefix=CHECK-ARM-NOV7 %s
 // CHECK-ARM-NOV7: "-triple" "armv7-unknown-nacl-gnueabihf"
 // CHECK-ARM-NOV7: "-target-abi" "aapcs-linux"
@@ -100,10 +100,10 @@
 
 // Test clang c++ include dirs and link line when using clang++
 
-// RUN: %clangxx -no-canonical-prefixes -### -o %t.o %s \
-// RUN:     -target armv7a-unknown-nacl-gnueabihf -resource-dir foo 2>&1 \
+// RUN: %clangxx -### %s \
+// RUN:     --target=armv7a-unknown-nacl-gnueabihf -resource-dir foo 2>&1 \
 // RUN:   | FileCheck --check-prefix=CHECK-ARM-CXX %s
-// CHECK-ARM-CXX: {{.*}}clang{{.*}}" "-cc1"
+// CHECK-ARM-CXX: "-cc1"
 // CHECK-ARM-CXX: "-resource-dir" "foo"
 // CHECK-ARM-CXX: "-internal-isystem" "{{.*}}{{/|\\\\}}..{{/|\\\\}}arm-nacl{{/|\\\\}}include{{/|\\\\}}c++{{/|\\\\}}v1"
 // CHECK-ARM-CXX: "-internal-isystem" "foo{{/|\\\\}}include"
@@ -111,10 +111,10 @@
 // CHECK-ARM-CXX: "-internal-isystem" "{{.*}}{{/|\\\\}}..{{/|\\\\}}arm-nacl{{/|\\\\}}include"
 // CHECK-ARM-CXX: "-lpthread"
 
-// RUN: %clangxx -no-canonical-prefixes -### -o %t.o %s \
-// RUN:     -target i686-unknown-nacl -resource-dir foo 2>&1 \
+// RUN: %clangxx -### %s \
+// RUN:     --target=i686-unknown-nacl -resource-dir foo 2>&1 \
 // RUN:   | FileCheck --check-prefix=CHECK-I686-CXX %s
-// CHECK-I686-CXX: {{.*}}clang{{.*}}" "-cc1"
+// CHECK-I686-CXX: "-cc1"
 // CHECK-I686-CXX: "-resource-dir" "foo"
 // CHECK-I686-CXX: "-internal-isystem" "{{.*}}{{/|\\\\}}..{{/|\\\\}}x86_64-nacl{{/|\\\\}}include{{/|\\\\}}c++{{/|\\\\}}v1"
 // CHECK-I686-CXX: "-internal-isystem" "foo{{/|\\\\}}include"
@@ -122,10 +122,10 @@
 // CHECK-I686-CXX: "-internal-isystem" "{{.*}}{{/|\\\\}}..{{/|\\\\}}x86_64-nacl{{/|\\\\}}include"
 // CHECK-I686-CXX: "-lpthread"
 
-// RUN: %clangxx -no-canonical-prefixes -### -o %t.o %s \
-// RUN:     -target x86_64-unknown-nacl -resource-dir foo 2>&1 \
+// RUN: %clangxx -### %s \
+// RUN:     --target=x86_64-unknown-nacl -resource-dir foo 2>&1 \
 // RUN:   | FileCheck --check-prefix=CHECK-x86_64-CXX %s
-// CHECK-x86_64-CXX: {{.*}}clang{{.*}}" "-cc1"
+// CHECK-x86_64-CXX: "-cc1"
 // CHECK-x86_64-CXX: "-resource-dir" "foo"
 // CHECK-x86_64-CXX: "-internal-isystem" "{{.*}}{{/|\\\\}}..{{/|\\\\}}x86_64-nacl{{/|\\\\}}include{{/|\\\\}}c++{{/|\\\\}}v1"
 // CHECK-x86_64-CXX: "-internal-isystem" "foo{{/|\\\\}}include"
@@ -133,10 +133,10 @@
 // CHECK-x86_64-CXX: "-internal-isystem" "{{.*}}{{/|\\\\}}..{{/|\\\\}}x86_64-nacl{{/|\\\\}}include"
 // CHECK-x86_64-CXX: "-lpthread"
 
-// RUN: %clangxx -no-canonical-prefixes -### -o %t.o %s \
-// RUN:     -target mipsel-unknown-nacl -resource-dir foo 2>&1 \
+// RUN: %clangxx -### %s \
+// RUN:     --target=mipsel-unknown-nacl -resource-dir foo 2>&1 \
 // RUN:   | FileCheck --check-prefix=CHECK-MIPS-CXX %s
-// CHECK-MIPS-CXX: {{.*}}clang{{.*}}" "-cc1"
+// CHECK-MIPS-CXX: "-cc1"
 // CHECK-MIPS-CXX: "-resource-dir" "foo"
 // CHECK-MIPS-CXX: "-internal-isystem" "{{.*}}{{/|\\\\}}..{{/|\\\\}}mipsel-nacl{{/|\\\\}}include{{/|\\\\}}c++{{/|\\\\}}v1"
 // CHECK-MIPS-CXX: "-internal-isystem" "foo{{/|\\\\}}include"

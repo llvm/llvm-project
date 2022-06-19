@@ -190,12 +190,14 @@ func.func @sparse_nop_cast(%arg0: tensor<64xf32, #SparseVector>) -> tensor<?xf32
 //       CHECK: %[[C:.*]] = call @newSparseTensor(%[[X]], %[[Y]], %[[Z]], %{{.*}}, %{{.*}}, %{{.*}}, %[[EmptyCOO]], %[[NP]])
 //       CHECK: %[[M:.*]] = memref.alloca() : memref<1xindex>
 //       CHECK: %[[T:.*]] = memref.cast %[[M]] : memref<1xindex> to memref<?xindex>
+//       CHECK: %[[BUF:.*]] = memref.alloca() : memref<i32>
 //       CHECK: scf.for %[[I:.*]] = %[[C0]] to %[[U]] step %[[C1]] {
 //       CHECK:   %[[E:.*]] = tensor.extract %[[A]][%[[I]]] : tensor<?xi32>
 //       CHECK:   %[[N:.*]] = arith.cmpi ne, %[[E]], %[[I0]] : i32
 //       CHECK:   scf.if %[[N]] {
 //       CHECK:     memref.store %[[I]], %[[M]][%[[C0]]] : memref<1xindex>
-//       CHECK:     call @addEltI32(%[[C]], %[[E]], %[[T]], %[[Z]])
+//       CHECK:     memref.store %[[E]], %[[BUF]][] : memref<i32>
+//       CHECK:     call @addEltI32(%[[C]], %[[BUF]], %[[T]], %[[Z]])
 //       CHECK:   }
 //       CHECK: }
 //       CHECK: %[[T:.*]] = call @newSparseTensor(%[[X]], %[[Y]], %[[Z]], %{{.*}}, %{{.*}}, %{{.*}}, %[[FromCOO]], %[[C]])
@@ -274,12 +276,14 @@ func.func @sparse_convert_1d_ss(%arg0: tensor<?xf32, #SparseVector64>) -> tensor
 //       CHECK: %[[C:.*]] = call @newSparseTensor(%[[X]], %[[Y]], %[[Z]], %{{.*}}, %{{.*}}, %{{.*}}, %[[EmptyCOO]], %[[NP]])
 //       CHECK: %[[M:.*]] = memref.alloca() : memref<2xindex>
 //       CHECK: %[[T:.*]] = memref.cast %[[M]] : memref<2xindex> to memref<?xindex>
+//       CHECK: %[[BUF:.*]] = memref.alloca() : memref<f64>
 //       CHECK: scf.for %[[I:.*]] = %[[C0]] to %{{.*}} step %[[C1]] {
 //       CHECK:   scf.for %[[J:.*]] = %[[C0]] to %{{.*}} step %[[C1]] {
 //       CHECK:     %[[E:.*]] = tensor.extract %[[A]][%[[I]], %[[J]]] : tensor<2x4xf64>
 //       CHECK:     memref.store %[[I]], %[[M]][%[[C0]]] : memref<2xindex>
 //       CHECK:     memref.store %[[J]], %[[M]][%[[C1]]] : memref<2xindex>
-//       CHECK:     call @addEltF64(%[[C]], %[[E]], %[[T]], %[[Z]])
+//       CHECK:     memref.store %[[E]], %[[BUF]][] : memref<f64>
+//       CHECK:     call @addEltF64(%[[C]], %[[BUF]], %[[T]], %[[Z]])
 //       CHECK:   }
 //       CHECK: }
 //       CHECK: %[[T:.*]] = call @newSparseTensor(%[[X]], %[[Y]], %[[Z]], %{{.*}}, %{{.*}}, %{{.*}}, %[[FromCOO]], %[[C]])
@@ -306,11 +310,13 @@ func.func @sparse_convert_2d(%arg0: tensor<2x4xf64>) -> tensor<2x4xf64, #SparseM
 //       CHECK: %[[C:.*]] = call @newSparseTensor(%[[X]], %[[Y]], %[[Z]], %{{.*}}, %{{.*}}, %{{.*}}, %[[EmptyCOO]], %[[NP]])
 //       CHECK: %[[M:.*]] = memref.alloca() : memref<2xindex>
 //       CHECK: %[[N:.*]] = memref.cast %[[M]] : memref<2xindex> to memref<?xindex>
+//       CHECK: %[[BUF:.*]] = memref.alloca() : memref<f32>
 //       CHECK: scf.for %[[I:.*]] = %[[C0]] to %[[C2]] step %[[C1]] {
 //       CHECK:   memref.store %{{.*}}, %[[M]][%[[C0]]] : memref<2xindex>
 //       CHECK:   memref.store %{{.*}}, %[[M]][%[[C1]]] : memref<2xindex>
 //       CHECK:   %[[V:.*]] = tensor.extract %{{.*}}[%[[I]]] : tensor<2xf32>
-//       CHECK:   call @addEltF32(%{{.*}}, %[[V]], %[[N]], %{{.*}})
+//       CHECK:   memref.store %[[V]], %[[BUF]][] : memref<f32>
+//       CHECK:   call @addEltF32(%{{.*}}, %[[BUF]], %[[N]], %{{.*}})
 //       CHECK: }
 //       CHECK: %[[T:.*]] = call @newSparseTensor(%[[X]], %[[Y]], %[[Z]], %{{.*}}, %{{.*}}, %{{.*}}, %[[FromCOO]], %[[C]])
 //       CHECK: call @delSparseTensorCOOF32(%[[C]])
@@ -343,6 +349,7 @@ func.func @sparse_constant() -> tensor<8x7xf32, #SparseMatrix>{
 //       CHECK: %[[C:.*]] = call @newSparseTensor(%[[X]], %[[Y]], %[[Z]], %{{.*}}, %{{.*}}, %{{.*}}, %[[EmptyCOO]], %[[NP]])
 //       CHECK: %[[M:.*]] = memref.alloca() : memref<3xindex>
 //       CHECK: %[[N:.*]] = memref.cast %[[M]] : memref<3xindex> to memref<?xindex>
+//       CHECK: %[[BUF:.*]] = memref.alloca() : memref<f64>
 //       CHECK: scf.for %[[I:.*]] = %[[C0]] to %[[U1]] step %[[C1]] {
 //       CHECK:   scf.for %[[J:.*]] = %[[C0]] to %[[U2]] step %[[C1]] {
 //       CHECK:     scf.for %[[K:.*]] = %[[C0]] to %[[U3]] step %[[C1]] {
@@ -350,7 +357,8 @@ func.func @sparse_constant() -> tensor<8x7xf32, #SparseMatrix>{
 //       CHECK:       memref.store %[[I]], %[[M]][%[[C0]]] : memref<3xindex>
 //       CHECK:       memref.store %[[J]], %[[M]][%[[C1]]] : memref<3xindex>
 //       CHECK:       memref.store %[[K]], %[[M]][%[[C2]]] : memref<3xindex>
-//       CHECK:       call @addEltF64(%[[C]], %[[E]], %[[N]], %[[Z]])
+//       CHECK:       memref.store %[[E]], %[[BUF]][] : memref<f64>
+//       CHECK:       call @addEltF64(%[[C]], %[[BUF]], %[[N]], %[[Z]])
 //       CHECK:     }
 //       CHECK:   }
 //       CHECK: }
@@ -493,13 +501,13 @@ func.func @sparse_reconstruct_ins(%arg0: tensor<128xf32, #SparseVector>) -> tens
 // CHECK-LABEL: func @sparse_insert(
 //  CHECK-SAME: %[[A:.*]]: !llvm.ptr<i8>,
 //  CHECK-SAME: %[[B:.*]]: memref<?xindex>,
-//  CHECK-SAME: %[[C:.*]]: f32) {
-//       CHECK: call @lexInsertF32(%[[A]], %[[B]], %[[C]]) : (!llvm.ptr<i8>, memref<?xindex>, f32) -> ()
+//  CHECK-SAME: %[[C:.*]]: memref<f32>) {
+//       CHECK: call @lexInsertF32(%[[A]], %[[B]], %[[C]]) : (!llvm.ptr<i8>, memref<?xindex>, memref<f32>) -> ()
 //       CHECK: return
 func.func @sparse_insert(%arg0: tensor<128xf32, #SparseVector>,
                     %arg1: memref<?xindex>,
-                    %arg2: f32) {
-  sparse_tensor.lex_insert %arg0, %arg1, %arg2 : tensor<128xf32, #SparseVector>, memref<?xindex>, f32
+                    %arg2: memref<f32>) {
+  sparse_tensor.lex_insert %arg0, %arg1, %arg2 : tensor<128xf32, #SparseVector>, memref<?xindex>, memref<f32>
   return
 }
 

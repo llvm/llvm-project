@@ -358,9 +358,10 @@ static void outputXML(const Replacements &Replaces,
   if (!Status.FormatComplete)
     outs() << " line='" << Status.Line << "'";
   outs() << ">\n";
-  if (Cursor.getNumOccurrences() != 0)
+  if (Cursor.getNumOccurrences() != 0) {
     outs() << "<cursor>" << FormatChanges.getShiftedCodePosition(CursorPosition)
            << "</cursor>\n";
+  }
 
   outputReplacementsXML(Replaces);
   outs() << "</replacements>\n";
@@ -436,11 +437,11 @@ static bool format(StringRef FileName) {
           .Case("left", FormatStyle::QAS_Left)
           .Default(FormatStyle->QualifierAlignment);
 
-  if (FormatStyle->QualifierAlignment == FormatStyle::QAS_Left)
+  if (FormatStyle->QualifierAlignment == FormatStyle::QAS_Left) {
     FormatStyle->QualifierOrder = {"const", "volatile", "type"};
-  else if (FormatStyle->QualifierAlignment == FormatStyle::QAS_Right)
+  } else if (FormatStyle->QualifierAlignment == FormatStyle::QAS_Right) {
     FormatStyle->QualifierOrder = {"type", "const", "volatile"};
-  else if (QualifierAlignmentOrder.contains("type")) {
+  } else if (QualifierAlignmentOrder.contains("type")) {
     FormatStyle->QualifierAlignment = FormatStyle::QAS_Custom;
     SmallVector<StringRef> Qualifiers;
     QualifierAlignmentOrder.split(Qualifiers, " ", /*MaxSplit=*/-1,
@@ -463,9 +464,8 @@ static bool format(StringRef FileName) {
   if (FormatStyle->isJson() && !FormatStyle->DisableFormat) {
     auto Err = Replaces.add(tooling::Replacement(
         tooling::Replacement(AssumedFileName, 0, 0, "x = ")));
-    if (Err) {
+    if (Err)
       llvm::errs() << "Bad Json variable insertion\n";
-    }
   }
 
   auto ChangedCode = tooling::applyAllReplacements(Code->getBuffer(), Replaces);
@@ -480,11 +480,10 @@ static bool format(StringRef FileName) {
       reformat(*FormatStyle, *ChangedCode, Ranges, AssumedFileName, &Status);
   Replaces = Replaces.merge(FormatChanges);
   if (OutputXML || DryRun) {
-    if (DryRun) {
+    if (DryRun)
       return emitReplacementWarnings(Replaces, AssumedFileName, Code);
-    } else {
+    else
       outputXML(Replaces, FormatChanges, Status, Cursor, CursorPosition);
-    }
   } else {
     IntrusiveRefCntPtr<llvm::vfs::InMemoryFileSystem> InMemoryFileSystem(
         new llvm::vfs::InMemoryFileSystem);
@@ -579,9 +578,8 @@ int main(int argc, const char **argv) {
     return 0;
   }
 
-  if (DumpConfig) {
+  if (DumpConfig)
     return dumpConfig();
-  }
 
   if (!Files.empty()) {
     std::ifstream ExternalFileOfFiles{std::string(Files)};
@@ -608,9 +606,10 @@ int main(int argc, const char **argv) {
 
   unsigned FileNo = 1;
   for (const auto &FileName : FileNames) {
-    if (Verbose)
+    if (Verbose) {
       errs() << "Formatting [" << FileNo++ << "/" << FileNames.size() << "] "
              << FileName << "\n";
+    }
     Error |= clang::format::format(FileName);
   }
   return Error ? 1 : 0;

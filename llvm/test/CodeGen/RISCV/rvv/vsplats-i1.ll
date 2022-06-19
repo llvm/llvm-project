@@ -191,3 +191,24 @@ define <vscale x 16 x i1> @vsplat_nxv16i1_2(i1 %x) {
   %splat = shufflevector <vscale x 16 x i1> %head, <vscale x 16 x i1> poison, <vscale x 16 x i32> zeroinitializer
   ret <vscale x 16 x i1> %splat
 }
+
+define <vscale x 4 x i1> @splat_idx_nxv4i32(<vscale x 4 x i1> %v, i64 %idx) {
+; CHECK-LABEL: splat_idx_nxv4i32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli a1, zero, e8, mf2, ta, mu
+; CHECK-NEXT:    vmv.v.i v8, 0
+; CHECK-NEXT:    vmerge.vim v8, v8, 1, v0
+; CHECK-NEXT:    vsetivli zero, 1, e8, mf2, ta, mu
+; CHECK-NEXT:    vslidedown.vx v8, v8, a0
+; CHECK-NEXT:    vmv.x.s a0, v8
+; CHECK-NEXT:    andi a0, a0, 1
+; CHECK-NEXT:    vsetvli a1, zero, e8, mf2, ta, mu
+; CHECK-NEXT:    vmv.v.x v8, a0
+; CHECK-NEXT:    vmsne.vi v0, v8, 0
+; CHECK-NEXT:    ret
+  %x = extractelement <vscale x 4 x i1> %v, i64 %idx
+  %ins = insertelement <vscale x 4 x i1> poison, i1 %x, i32 0
+  %splat = shufflevector <vscale x 4 x i1> %ins, <vscale x 4 x i1> poison, <vscale x 4 x i32> zeroinitializer
+  ret <vscale x 4 x i1> %splat
+}
+

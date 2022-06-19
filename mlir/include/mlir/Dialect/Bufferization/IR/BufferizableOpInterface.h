@@ -230,6 +230,16 @@ struct BufferizationOptions {
   /// bufferized or not.
   bool bufferizeFunctionBoundaries = false;
 
+  /// Certain ops have aliasing OpOperand/OpResult invariants (e.g., scf.for).
+  /// If this flag is set to `false`, those invariants are no longer enforced
+  /// with buffer copies.
+  ///
+  /// Note: Deactivating this flag can lead to incorrect bufferization results
+  /// when used incorrectly. This flag is useful with
+  /// `AlwaysCopyAnalysisState` which bufferizes all writing tensor
+  /// OpOperands out-of-place.
+  bool enforceAliasingInvariants = true;
+
   /// This flag controls buffer types on function signatures.
   ///
   /// * InferLayoutMap: All function parameter types have a fully dynamic layout
@@ -243,9 +253,7 @@ struct BufferizationOptions {
   ///   additional buffer allocs and copies because layout maps cannot be casted
   ///   away.
   ///
-  /// If `bufferizeFunctionBoundaries` is not set, this flag has no effect. If
-  /// `promoteBufferResultsToOutParams` is set, `kInferMostPreciseLayoutMap` is
-  /// is an invalid option.
+  /// If `bufferizeFunctionBoundaries` is not set, this flag has no effect.
   ///
   /// Note: Inferred layout maps may not be desireable when interacting with
   /// external functions, because the generated function signatures will be less
@@ -284,24 +292,6 @@ struct BufferizationOptions {
   /// If set to `true`, the IR is annotated with details about RaW conflicts.
   /// For debugging only. Should be used together with `testAnalysisOnly`.
   bool printConflicts = false;
-
-  /// If set to `true`, buffers that are returned from functions are replaced
-  /// with buffer "out" parameters. At the call site, new buffers are allocated.
-  bool promoteBufferResultsToOutParams = false;
-
-  /// If set to `true`, an `getAliasingOpResult` will return the corresponding
-  /// "out"/"dest" OpOperand for every op that has the notion of an "out"/"dest"
-  /// operand. I.e., the aliasing OpOperand of the i-th tensor OpResult is
-  /// usually the i-th "out" tensor OpOperand. This is in line with
-  /// destination-passing style and the default behavior. Op interface
-  /// implementations must follow this contract to avoid surprising behavior.
-  ///
-  /// If set to `false`, BufferizableOpInterface implementations can try to be
-  /// smart and choose to alias with "in" operands or other operands. E.g., the
-  /// result of a `linalg.generic` op could bufferize in-place with an "in"
-  /// OpOperand if the corresponding "out" operand is not used within the
-  /// computation. Whether this pays off or not can be very input IR-specific.
-  bool alwaysAliasingWithDest = true;
 
   /// Buffer alignment for new memory allocations.
   unsigned int bufferAlignment = 128;
@@ -362,6 +352,10 @@ public:
   /// an alias. Return false if the op is not bufferizable.
   bool bufferizesToAliasOnly(OpOperand &opOperand) const;
 
+  /// Return true if a copy can always be avoided when allocating a new tensor
+  /// for the given OpOperand.
+  bool canOmitTensorCopy(OpOperand &opOperand) const;
+
   /// Return true if the given value is read by an op that bufferizes to a
   /// memory read. Also takes into account ops that create an alias but do not
   /// read by themselves (e.g., ExtractSliceOp).
@@ -404,23 +398,23 @@ public:
   SetVector<Value> findLastPrecedingWrite(Value value) const;
 
   /// Return `true` if the given OpResult has been decided to bufferize inplace.
-  virtual bool isInPlace(OpOperand &opOperand) const = 0;
+  virtual bool isInPlace(OpOperand &opOperand) const;
 
   /// Return true if `v1` and `v2` bufferize to equivalent buffers.
-  virtual bool areEquivalentBufferizedValues(Value v1, Value v2) const = 0;
+  virtual bool areEquivalentBufferizedValues(Value v1, Value v2) const;
 
   /// Return true if `v1` and `v2` may bufferize to aliasing buffers.
-  virtual bool areAliasingBufferizedValues(Value v1, Value v2) const = 0;
+  virtual bool areAliasingBufferizedValues(Value v1, Value v2) const;
 
   /// Return `true` if the given tensor has undefined contents.
-  virtual bool hasUndefinedContents(OpOperand *opOperand) const = 0;
+  virtual bool hasUndefinedContents(OpOperand *opOperand) const;
 
   /// Return true if the given tensor (or an aliasing tensor) is yielded from
   /// the containing block. Also include all aliasing tensors in the same block.
   ///
   /// Note: In the absence of an analysis, an implementation may return true for
   /// any given tensor.
-  virtual bool isTensorYielded(Value tensor) const = 0;
+  virtual bool isTensorYielded(Value tensor) const;
 
   /// Return `true` if the given dialect state exists.
   bool hasDialectState(StringRef name) const {
@@ -455,13 +449,12 @@ public:
   /// Return a reference to the BufferizationOptions.
   const BufferizationOptions &getOptions() const { return options; }
 
-protected:
   explicit AnalysisState(const BufferizationOptions &options);
 
   // AnalysisState should be passed as a reference.
   AnalysisState(const AnalysisState &) = delete;
 
-  ~AnalysisState() = default;
+  virtual ~AnalysisState() = default;
 
 private:
   /// Dialect-specific analysis state.
@@ -471,78 +464,29 @@ private:
   const BufferizationOptions &options;
 };
 
-/// BufferizationState provides helper functions for performing bufferization
-/// rewrites and handling memref buffers.
-struct BufferizationState {
-  enum ForceInPlacability { FORCE_INPLACE, FORCE_OUT_OF_PLACE };
+/// Create an AllocTensorOp for the given shaped value (memref or tensor).
+/// If `copy` is set, the shaped value is copied. Otherwise, a tensor with
+/// undefined contents is allocated.
+Value allocateTensorForShapedValue(OpBuilder &b, Location loc,
+                                   Value shapedValue, bool escape,
+                                   bool copy = true);
 
-  BufferizationState(const AnalysisState &analysisState)
-      : analysisState(analysisState) {}
+/// Lookup the buffer for the given value. If the value was not bufferized
+/// yet, wrap it in a ToMemrefOp. Otherwise, it is the result of a ToTensorOp,
+/// from which the memref operand is returned.
+Value getBuffer(RewriterBase &rewriter, Value value,
+                const BufferizationOptions &options);
 
-  /// Creates a memref allocation for the given shaped value. `dealloc`
-  /// indicates whether the buffer should be deallocated or not. When `dealloc`
-  /// is `false`, this would create a memory leak, unless the buffer is
-  /// deallocated through some other mechanism.
-  ///
-  /// `dealloc` is optional. By default, this function will figure out by itself
-  /// if it is safe to deallocate the buffer. In essence, when returning the
-  /// buffer from a block, it is not safe to deallocate the buffer. This
-  /// information is queried via `AnalysisState::isTensorYielded`.
-  ///
-  /// Note: `shapedValue` is typically a tensor value. However, if it is a
-  /// memref value, `dealloc` is no longer optional and must be specified.
-  FailureOr<Value> createAlloc(OpBuilder &b, Location loc, Value shapedValue,
-                               Optional<bool> dealloc = None);
-
-  /// Return the buffer (memref) for a given OpOperand (tensor). Allocate
-  /// a new buffer and copy over data from the existing buffer if out-of-place
-  /// bufferization was decided.
-  ///
-  /// Whether a buffer is in-place or out-of-place is queried from the analysis
-  /// state. Some analyses may always conservatively opt for out-of-place
-  /// bufferization. Inplacability decisions can be overridden with the optional
-  /// `overrideInPlace` parameter.
-  FailureOr<Value>
-  getBuffer(RewriterBase &rewriter, OpOperand &opOperand,
-            Optional<ForceInPlacability> overrideInPlace = None,
-            Optional<Operation *> customCopyInsertionPoint = None);
-
-  /// Return the buffer type for a given Value (tensor) after bufferization.
-  ///
-  /// Note: Op implementations should preferrably call `getBuffer()->getType()`.
-  /// This function should only be used if `getBuffer` cannot be used.
-  BaseMemRefType getBufferType(Value value) const;
-
-  /// Return a reference to the BufferizationOptions.
-  const BufferizationOptions &getOptions() const {
-    return analysisState.getOptions();
-  }
-
-  const AnalysisState &getAnalysisState() const { return analysisState; }
-
-protected:
-  // BufferizationState should be passed as a reference.
-  BufferizationState(const BufferizationState &) = delete;
-
-private:
-  const AnalysisState &analysisState;
-};
+/// Return the buffer type for a given Value (tensor) after bufferization.
+///
+/// Note: Op implementations should preferrably call `getBuffer()->getType()`.
+/// This function should only be used if `getBuffer` cannot be used.
+BaseMemRefType getBufferType(Value value, const BufferizationOptions &options);
 
 /// Replace an op with replacement values. The op is deleted. Tensor OpResults
 /// must be replaced with memref values.
 void replaceOpWithBufferizedValues(RewriterBase &rewriter, Operation *op,
                                    ValueRange values);
-
-/// Lookup the buffer for the given value. If the value was not bufferized yet,
-/// wrap it in a ToMemrefOp. Otherwise, it is the result of a ToTensorOp, from
-/// which the memref operand is returned.
-///
-/// Note: Use `BufferizationState::getBuffer` during bufferization.
-/// `lookupBuffer` is just for compatibility and gradual migration of
-/// bufferization patterns to BufferizableOpInterface-based bufferization. It
-/// does not insert any buffer copies.
-Value lookupBuffer(RewriterBase &rewriter, Value tensor,
-                   const BufferizationOptions &options);
 
 /// Replace an op with a new op. The new op must have the same number of
 /// results as the replaced op. The new op may not return any tensor values.
@@ -581,15 +525,6 @@ BaseMemRefType getMemRefTypeWithFullyDynamicLayout(TensorType tensorType,
 BaseMemRefType
 getMemRefTypeWithStaticIdentityLayout(TensorType tensorType,
                                       Attribute memorySpace = {});
-
-/// Create alloc/dealloc ops as specified in the bufferization options. If
-/// `onlyLeakingAlloc`, only those buffer allocations are processed for which no
-/// buffer deallocation can be created. `changed` is set to `true` if the IR was
-/// modified.
-LogicalResult createAllocDeallocOps(Operation *op,
-                                    const BufferizationOptions &options,
-                                    bool onlyLeakingAllocs = false,
-                                    bool *changed = nullptr);
 
 } // namespace bufferization
 } // namespace mlir

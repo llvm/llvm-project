@@ -564,38 +564,47 @@ void llvm::deleteConstant(Constant *C) {
 }
 
 static bool canTrapImpl(const Constant *C,
-                        SmallPtrSetImpl<const ConstantExpr *> &NonTrappingOps) {
-  assert(C->getType()->isFirstClassType() && "Cannot evaluate aggregate vals!");
-  // The only thing that could possibly trap are constant exprs.
+                        SmallPtrSetImpl<const Constant *> &NonTrappingOps) {
+  assert(C->getType()->isFirstClassType() &&
+         "Cannot evaluate non-first-class types!");
+  // ConstantExpr or ConstantAggregate trap if any operands can trap.
+  if (isa<ConstantExpr>(C) || isa<ConstantAggregate>(C)) {
+    for (unsigned i = 0, e = C->getNumOperands(); i != e; ++i) {
+      const Constant *Op = cast<Constant>(C->getOperand(i));
+      if (isa<ConstantExpr>(Op) || isa<ConstantAggregate>(Op)) {
+        if (NonTrappingOps.insert(Op).second && canTrapImpl(Op, NonTrappingOps))
+          return true;
+      }
+    }
+  }
+
+  // The only leafs that can trap are constant expressions.
   const ConstantExpr *CE = dyn_cast<ConstantExpr>(C);
   if (!CE)
     return false;
-
-  // ConstantExpr traps if any operands can trap.
-  for (unsigned i = 0, e = C->getNumOperands(); i != e; ++i) {
-    if (ConstantExpr *Op = dyn_cast<ConstantExpr>(CE->getOperand(i))) {
-      if (NonTrappingOps.insert(Op).second && canTrapImpl(Op, NonTrappingOps))
-        return true;
-    }
-  }
 
   // Otherwise, only specific operations can trap.
   switch (CE->getOpcode()) {
   default:
     return false;
-  case Instruction::UDiv:
   case Instruction::SDiv:
-  case Instruction::URem:
   case Instruction::SRem:
-    // Div and rem can trap if the RHS is not known to be non-zero.
-    if (!isa<ConstantInt>(CE->getOperand(1)) ||CE->getOperand(1)->isNullValue())
+    // Signed div/rem can trap for SignedMin / -1.
+    if (!CE->getOperand(0)->isNotMinSignedValue() &&
+        (!isa<ConstantInt>(CE->getOperand(1)) ||
+         CE->getOperand(1)->isAllOnesValue()))
       return true;
-    return false;
+    LLVM_FALLTHROUGH;
+  case Instruction::UDiv:
+  case Instruction::URem:
+    // Div and rem can trap if the RHS is not known to be non-zero.
+    return !isa<ConstantInt>(CE->getOperand(1)) ||
+           CE->getOperand(1)->isNullValue();
   }
 }
 
 bool Constant::canTrap() const {
-  SmallPtrSet<const ConstantExpr *, 4> NonTrappingOps;
+  SmallPtrSet<const Constant *, 4> NonTrappingOps;
   return canTrapImpl(this, NonTrappingOps);
 }
 
@@ -1037,9 +1046,9 @@ Constant *ConstantFP::getSNaN(Type *Ty, bool Negative, APInt *Payload) {
   return C;
 }
 
-Constant *ConstantFP::getNegativeZero(Type *Ty) {
+Constant *ConstantFP::getZero(Type *Ty, bool Negative) {
   const fltSemantics &Semantics = Ty->getScalarType()->getFltSemantics();
-  APFloat NegZero = APFloat::getZero(Semantics, /*Negative=*/true);
+  APFloat NegZero = APFloat::getZero(Semantics, Negative);
   Constant *C = get(Ty->getContext(), NegZero);
 
   if (VectorType *VTy = dyn_cast<VectorType>(Ty))
@@ -1047,7 +1056,6 @@ Constant *ConstantFP::getNegativeZero(Type *Ty) {
 
   return C;
 }
-
 
 Constant *ConstantFP::getZeroValueForNegation(Type *Ty) {
   if (Ty->isFPOrFPVectorTy())
@@ -2835,7 +2843,7 @@ Constant *ConstantExpr::getExactLogBase2(Constant *C) {
 }
 
 Constant *ConstantExpr::getBinOpIdentity(unsigned Opcode, Type *Ty,
-                                         bool AllowRHSConstant) {
+                                         bool AllowRHSConstant, bool NSZ) {
   assert(Instruction::isBinaryOp(Opcode) && "Only binops allowed");
 
   // Commutative opcodes: it does not matter if AllowRHSConstant is set.
@@ -2850,8 +2858,7 @@ Constant *ConstantExpr::getBinOpIdentity(unsigned Opcode, Type *Ty,
       case Instruction::And: // X & -1 = X
         return Constant::getAllOnesValue(Ty);
       case Instruction::FAdd: // X + -0.0 = X
-        // TODO: If the fadd has 'nsz', should we return +0.0?
-        return ConstantFP::getNegativeZero(Ty);
+        return ConstantFP::getZero(Ty, !NSZ);
       case Instruction::FMul: // X * 1.0 = X
         return ConstantFP::get(Ty, 1.0);
       default:

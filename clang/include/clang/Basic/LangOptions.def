@@ -88,6 +88,7 @@ LANGOPT(C11               , 1, 0, "C11")
 LANGOPT(C17               , 1, 0, "C17")
 LANGOPT(C2x               , 1, 0, "C2x")
 LANGOPT(MSVCCompat        , 1, 0, "Microsoft Visual C++ full compatibility mode")
+LANGOPT(Kernel            , 1, 0, "Kernel mode")
 LANGOPT(MicrosoftExt      , 1, 0, "Microsoft C++ extensions")
 LANGOPT(AsmBlocks         , 1, 0, "Microsoft inline asm blocks")
 LANGOPT(Borland           , 1, 0, "Borland extensions")
@@ -289,6 +290,7 @@ BENIGN_LANGOPT(DumpRecordLayoutsComplete , 1, 0, "dumping the AST layout of all 
 BENIGN_LANGOPT(DumpVTableLayouts , 1, 0, "dumping the layouts of emitted vtables")
 LANGOPT(NoConstantCFStrings , 1, 0, "no constant CoreFoundation strings")
 BENIGN_LANGOPT(InlineVisibilityHidden , 1, 0, "hidden visibility for inline C++ methods")
+BENIGN_ENUM_LANGOPT(DefaultVisibilityExportMapping, DefaultVisiblityExportMapping, 2, DefaultVisiblityExportMapping::None, "controls mapping of default visibility to dllexport")
 BENIGN_LANGOPT(IgnoreXCOFFVisibility, 1, 0, "All the visibility attributes that are specified in the source code are ignored in aix XCOFF.")
 BENIGN_LANGOPT(VisibilityInlinesHiddenStaticLocalVar, 1, 0,
                "hidden visibility for static local variables in inline C++ "
@@ -444,6 +446,11 @@ ENUM_LANGOPT(ExtendIntArgs, ExtendArgsKind, 1, ExtendArgsKind::ExtendTo32,
              "to unprototyped and varargs functions")
 
 VALUE_LANGOPT(FuchsiaAPILevel, 32, 0, "Fuchsia API level")
+
+// This option will be removed in the future once the backend
+// supports all operations (like division or float-to-integer conversion)
+// on large _BitInts.
+BENIGN_VALUE_LANGOPT(MaxBitIntWidth, 32, 128, "Maximum width of a _BitInt")
 
 #undef LANGOPT
 #undef COMPATIBLE_LANGOPT

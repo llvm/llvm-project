@@ -3434,6 +3434,13 @@ struct OmpReductionClause {
   std::tuple<OmpReductionOperator, OmpObjectList> t;
 };
 
+// OMP 5.0 2.19.5.6 in_reduction-clause -> IN_REDUCTION (reduction-identifier:
+//                                         variable-name-list)
+struct OmpInReductionClause {
+  TUPLE_CLASS_BOILERPLATE(OmpInReductionClause);
+  std::tuple<OmpReductionOperator, OmpObjectList> t;
+};
+
 // OMP 5.0 2.11.4 allocate-clause -> ALLOCATE ([allocator:] variable-name-list)
 struct OmpAllocateClause {
   TUPLE_CLASS_BOILERPLATE(OmpAllocateClause);

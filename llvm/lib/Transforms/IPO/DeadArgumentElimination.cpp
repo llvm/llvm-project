@@ -23,6 +23,7 @@
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Constants.h"
+#include "llvm/IR/DIBuilder.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/IRBuilder.h"
@@ -520,20 +521,10 @@ void DeadArgumentEliminationPass::SurveyFunction(const Function &F) {
   RetUses MaybeLiveRetUses(RetCount);
 
   bool HasMustTailCalls = false;
-
-  for (Function::const_iterator BB = F.begin(), E = F.end(); BB != E; ++BB) {
-    if (const ReturnInst *RI = dyn_cast<ReturnInst>(BB->getTerminator())) {
-      if (RI->getNumOperands() != 0 && RI->getOperand(0)->getType()
-          != F.getFunctionType()->getReturnType()) {
-        // We don't support old style multiple return values.
-        MarkLive(F);
-        return;
-      }
-    }
-
+  for (const BasicBlock &BB : F) {
     // If we have any returns of `musttail` results - the signature can't
     // change
-    if (BB->getTerminatingMustTailCall() != nullptr)
+    if (BB.getTerminatingMustTailCall() != nullptr)
       HasMustTailCalls = true;
   }
 
@@ -1082,6 +1073,16 @@ bool DeadArgumentEliminationPass::RemoveDeadStuffFromFunction(Function *F) {
   F->getAllMetadata(MDs);
   for (auto MD : MDs)
     NF->addMetadata(MD.first, *MD.second);
+
+  // If either the return value(s) or argument(s) are removed, then probably the
+  // function does not follow standard calling conventions anymore. Hence add
+  // DW_CC_nocall to DISubroutineType to inform debugger that it may not safe to
+  // call this function or try to interpret the return value.
+  if (NFTy != FTy && NF->getSubprogram()) {
+    DISubprogram *SP = NF->getSubprogram();
+    auto Temp = SP->getType()->cloneWithCC(llvm::dwarf::DW_CC_nocall);
+    SP->replaceType(MDNode::replaceWithPermanent(std::move(Temp)));
+  }
 
   // Now that the old function is dead, delete it.
   F->eraseFromParent();

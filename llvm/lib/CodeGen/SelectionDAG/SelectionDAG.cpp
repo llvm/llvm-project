@@ -2718,9 +2718,7 @@ bool SelectionDAG::isSplatValue(SDValue V, const APInt &DemandedElts,
         SubDemandedElts &= ScaledDemandedElts;
         if (!isSplatValue(Src, SubDemandedElts, SubUndefElts, Depth + 1))
           return false;
-        // TODO: Add support for merging sub undef elements.
-        if (SubDemandedElts.isSubsetOf(SubUndefElts))
-          return false;
+        UndefElts |= APIntOps::ScaleBitMask(SubUndefElts, NumElts);
       }
       return true;
     }
@@ -3175,6 +3173,14 @@ KnownBits SelectionDAG::computeKnownBits(SDValue Op, const APInt &DemandedElts,
       SelfMultiply &= isGuaranteedNotToBeUndefOrPoison(
           Op.getOperand(0), DemandedElts, false, Depth + 1);
     Known = KnownBits::mul(Known, Known2, SelfMultiply);
+
+    // If the multiplication is known not to overflow, the product of a number
+    // with itself is non-negative. Only do this if we didn't already computed
+    // the opposite value for the sign bit.
+    if (Op->getFlags().hasNoSignedWrap() &&
+        Op.getOperand(0) == Op.getOperand(1) &&
+        !Known.isNegative())
+      Known.makeNonNegative();
     break;
   }
   case ISD::MULHU: {
@@ -3697,6 +3703,14 @@ KnownBits SelectionDAG::computeKnownBits(SDValue Op, const APInt &DemandedElts,
         }
       }
     }
+
+    Known = computeKnownBits(Op.getOperand(0), DemandedElts, Depth + 1);
+    Known2 = computeKnownBits(Op.getOperand(1), DemandedElts, Depth + 1);
+    if (IsMax)
+      Known = KnownBits::smax(Known, Known2);
+    else
+      Known = KnownBits::smin(Known, Known2);
+
     // For SMAX, if CstLow is non-negative we know the result will be
     // non-negative and thus all sign bits are 0.
     // TODO: There's an equivalent of this for smin with negative constant for
@@ -3706,16 +3720,9 @@ KnownBits SelectionDAG::computeKnownBits(SDValue Op, const APInt &DemandedElts,
       if (ValueLow.isNonNegative()) {
         unsigned SignBits = ComputeNumSignBits(Op.getOperand(0), Depth + 1);
         Known.Zero.setHighBits(std::min(SignBits, ValueLow.getNumSignBits()));
-        break;
       }
     }
 
-    Known = computeKnownBits(Op.getOperand(0), DemandedElts, Depth + 1);
-    Known2 = computeKnownBits(Op.getOperand(1), DemandedElts, Depth + 1);
-    if (IsMax)
-      Known = KnownBits::smax(Known, Known2);
-    else
-      Known = KnownBits::smin(Known, Known2);
     break;
   }
   case ISD::FP_TO_UINT_SAT: {
@@ -4972,9 +4979,11 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
     case ISD::CTTZ_ZERO_UNDEF:
       return getConstant(Val.countTrailingZeros(), DL, VT, C->isTargetOpcode(),
                          C->isOpaque());
-    case ISD::FP16_TO_FP: {
+    case ISD::FP16_TO_FP:
+    case ISD::BF16_TO_FP: {
       bool Ignored;
-      APFloat FPV(APFloat::IEEEhalf(),
+      APFloat FPV(Opcode == ISD::FP16_TO_FP ? APFloat::IEEEhalf()
+                                            : APFloat::BFloat(),
                   (Val.getBitWidth() == 16) ? Val : Val.trunc(16));
 
       // This can return overflow, underflow, or inexact; we don't care.
@@ -5048,11 +5057,13 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
       if (VT == MVT::i64 && C->getValueType(0) == MVT::f64)
         return getConstant(V.bitcastToAPInt().getZExtValue(), DL, VT);
       break;
-    case ISD::FP_TO_FP16: {
+    case ISD::FP_TO_FP16:
+    case ISD::FP_TO_BF16: {
       bool Ignored;
       // This can return overflow, underflow, or inexact; we don't care.
       // FIXME need to be more flexible about rounding mode.
-      (void)V.convert(APFloat::IEEEhalf(),
+      (void)V.convert(Opcode == ISD::FP_TO_FP16 ? APFloat::IEEEhalf()
+                                                : APFloat::BFloat(),
                       APFloat::rmNearestTiesToEven, &Ignored);
       return getConstant(V.bitcastToAPInt().getZExtValue(), DL, VT);
     }
@@ -6980,17 +6991,18 @@ static SDValue getMemmoveLoadsAndStores(SelectionDAG &DAG, const SDLoc &dl,
 /// \param Size Number of bytes to write.
 /// \param Alignment Alignment of the destination in bytes.
 /// \param isVol True if destination is volatile.
+/// \param AlwaysInline Makes sure no function call is generated.
 /// \param DstPtrInfo IR information on the memory pointer.
 /// \returns New head in the control flow, if lowering was successful, empty
 /// SDValue otherwise.
 ///
 /// The function tries to replace 'llvm.memset' intrinsic with several store
 /// operations and value calculation code. This is usually profitable for small
-/// memory size.
+/// memory size or when the semantic requires inlining.
 static SDValue getMemsetStores(SelectionDAG &DAG, const SDLoc &dl,
                                SDValue Chain, SDValue Dst, SDValue Src,
                                uint64_t Size, Align Alignment, bool isVol,
-                               MachinePointerInfo DstPtrInfo,
+                               bool AlwaysInline, MachinePointerInfo DstPtrInfo,
                                const AAMDNodes &AAInfo) {
   // Turn a memset of undef to nop.
   // FIXME: We need to honor volatile even is Src is undef.
@@ -7010,8 +7022,10 @@ static SDValue getMemsetStores(SelectionDAG &DAG, const SDLoc &dl,
     DstAlignCanChange = true;
   bool IsZeroVal =
       isa<ConstantSDNode>(Src) && cast<ConstantSDNode>(Src)->isZero();
+  unsigned Limit = AlwaysInline ? ~0 : TLI.getMaxStoresPerMemset(OptSize);
+
   if (!TLI.findOptimalMemOpLowering(
-          MemOps, TLI.getMaxStoresPerMemset(OptSize),
+          MemOps, Limit,
           MemOp::Set(Size, DstAlignCanChange, Alignment, IsZeroVal, isVol),
           DstPtrInfo.getAddrSpace(), ~0u, MF.getFunction().getAttributes()))
     return SDValue();
@@ -7162,10 +7176,9 @@ SDValue SelectionDAG::getMemcpy(SDValue Chain, const SDLoc &dl, SDValue Dst,
 }
 
 SDValue SelectionDAG::getAtomicMemcpy(SDValue Chain, const SDLoc &dl,
-                                      SDValue Dst, unsigned DstAlign,
-                                      SDValue Src, unsigned SrcAlign,
-                                      SDValue Size, Type *SizeTy,
-                                      unsigned ElemSz, bool isTailCall,
+                                      SDValue Dst, SDValue Src, SDValue Size,
+                                      Type *SizeTy, unsigned ElemSz,
+                                      bool isTailCall,
                                       MachinePointerInfo DstPtrInfo,
                                       MachinePointerInfo SrcPtrInfo) {
   // Emit a library call.
@@ -7265,10 +7278,9 @@ SDValue SelectionDAG::getMemmove(SDValue Chain, const SDLoc &dl, SDValue Dst,
 }
 
 SDValue SelectionDAG::getAtomicMemmove(SDValue Chain, const SDLoc &dl,
-                                       SDValue Dst, unsigned DstAlign,
-                                       SDValue Src, unsigned SrcAlign,
-                                       SDValue Size, Type *SizeTy,
-                                       unsigned ElemSz, bool isTailCall,
+                                       SDValue Dst, SDValue Src, SDValue Size,
+                                       Type *SizeTy, unsigned ElemSz,
+                                       bool isTailCall,
                                        MachinePointerInfo DstPtrInfo,
                                        MachinePointerInfo SrcPtrInfo) {
   // Emit a library call.
@@ -7307,7 +7319,7 @@ SDValue SelectionDAG::getAtomicMemmove(SDValue Chain, const SDLoc &dl,
 
 SDValue SelectionDAG::getMemset(SDValue Chain, const SDLoc &dl, SDValue Dst,
                                 SDValue Src, SDValue Size, Align Alignment,
-                                bool isVol, bool isTailCall,
+                                bool isVol, bool AlwaysInline, bool isTailCall,
                                 MachinePointerInfo DstPtrInfo,
                                 const AAMDNodes &AAInfo) {
   // Check to see if we should lower the memset to stores first.
@@ -7320,7 +7332,7 @@ SDValue SelectionDAG::getMemset(SDValue Chain, const SDLoc &dl, SDValue Dst,
 
     SDValue Result = getMemsetStores(*this, dl, Chain, Dst, Src,
                                      ConstantSize->getZExtValue(), Alignment,
-                                     isVol, DstPtrInfo, AAInfo);
+                                     isVol, false, DstPtrInfo, AAInfo);
 
     if (Result.getNode())
       return Result;
@@ -7330,45 +7342,75 @@ SDValue SelectionDAG::getMemset(SDValue Chain, const SDLoc &dl, SDValue Dst,
   // code. If the target chooses to do this, this is the next best.
   if (TSI) {
     SDValue Result = TSI->EmitTargetCodeForMemset(
-        *this, dl, Chain, Dst, Src, Size, Alignment, isVol, DstPtrInfo);
+        *this, dl, Chain, Dst, Src, Size, Alignment, isVol, AlwaysInline, DstPtrInfo);
     if (Result.getNode())
       return Result;
+  }
+
+  // If we really need inline code and the target declined to provide it,
+  // use a (potentially long) sequence of loads and stores.
+  if (AlwaysInline) {
+    assert(ConstantSize && "AlwaysInline requires a constant size!");
+    SDValue Result = getMemsetStores(*this, dl, Chain, Dst, Src,
+                                     ConstantSize->getZExtValue(), Alignment,
+                                     isVol, true, DstPtrInfo, AAInfo);
+    assert(Result &&
+           "getMemsetStores must return a valid sequence when AlwaysInline");
+    return Result;
   }
 
   checkAddrSpaceIsValidForLibcall(TLI, DstPtrInfo.getAddrSpace());
 
   // Emit a library call.
-  TargetLowering::ArgListTy Args;
-  TargetLowering::ArgListEntry Entry;
-  Entry.Node = Dst; Entry.Ty = Type::getInt8PtrTy(*getContext());
-  Args.push_back(Entry);
-  Entry.Node = Src;
-  Entry.Ty = Src.getValueType().getTypeForEVT(*getContext());
-  Args.push_back(Entry);
-  Entry.Node = Size;
-  Entry.Ty = getDataLayout().getIntPtrType(*getContext());
-  Args.push_back(Entry);
+  auto &Ctx = *getContext();
+  const auto& DL = getDataLayout();
 
-  // FIXME: pass in SDLoc
   TargetLowering::CallLoweringInfo CLI(*this);
-  CLI.setDebugLoc(dl)
-      .setChain(Chain)
-      .setLibCallee(TLI->getLibcallCallingConv(RTLIB::MEMSET),
-                    Dst.getValueType().getTypeForEVT(*getContext()),
-                    getExternalSymbol(TLI->getLibcallName(RTLIB::MEMSET),
-                                      TLI->getPointerTy(getDataLayout())),
-                    std::move(Args))
-      .setDiscardResult()
-      .setTailCall(isTailCall);
+  // FIXME: pass in SDLoc
+  CLI.setDebugLoc(dl).setChain(Chain);
 
-  std::pair<SDValue,SDValue> CallResult = TLI->LowerCallTo(CLI);
+  ConstantSDNode *ConstantSrc = dyn_cast<ConstantSDNode>(Src);
+  const bool SrcIsZero = ConstantSrc && ConstantSrc->isZero();
+  const char *BzeroName = getTargetLoweringInfo().getLibcallName(RTLIB::BZERO);
+
+  // Helper function to create an Entry from Node and Type.
+  const auto CreateEntry = [](SDValue Node, Type *Ty) {
+    TargetLowering::ArgListEntry Entry;
+    Entry.Node = Node;
+    Entry.Ty = Ty;
+    return Entry;
+  };
+
+  // If zeroing out and bzero is present, use it.
+  if (SrcIsZero && BzeroName) {
+    TargetLowering::ArgListTy Args;
+    Args.push_back(CreateEntry(Dst, Type::getInt8PtrTy(Ctx)));
+    Args.push_back(CreateEntry(Size, DL.getIntPtrType(Ctx)));
+    CLI.setLibCallee(
+        TLI->getLibcallCallingConv(RTLIB::BZERO), Type::getVoidTy(Ctx),
+        getExternalSymbol(BzeroName, TLI->getPointerTy(DL)), std::move(Args));
+  } else {
+    TargetLowering::ArgListTy Args;
+    Args.push_back(CreateEntry(Dst, Type::getInt8PtrTy(Ctx)));
+    Args.push_back(CreateEntry(Src, Src.getValueType().getTypeForEVT(Ctx)));
+    Args.push_back(CreateEntry(Size, DL.getIntPtrType(Ctx)));
+    CLI.setLibCallee(TLI->getLibcallCallingConv(RTLIB::MEMSET),
+                     Dst.getValueType().getTypeForEVT(Ctx),
+                     getExternalSymbol(TLI->getLibcallName(RTLIB::MEMSET),
+                                       TLI->getPointerTy(DL)),
+                     std::move(Args));
+  }
+
+  CLI.setDiscardResult().setTailCall(isTailCall);
+
+  std::pair<SDValue, SDValue> CallResult = TLI->LowerCallTo(CLI);
   return CallResult.second;
 }
 
 SDValue SelectionDAG::getAtomicMemset(SDValue Chain, const SDLoc &dl,
-                                      SDValue Dst, unsigned DstAlign,
-                                      SDValue Value, SDValue Size, Type *SizeTy,
-                                      unsigned ElemSz, bool isTailCall,
+                                      SDValue Dst, SDValue Value, SDValue Size,
+                                      Type *SizeTy, unsigned ElemSz,
+                                      bool isTailCall,
                                       MachinePointerInfo DstPtrInfo) {
   // Emit a library call.
   TargetLowering::ArgListTy Args;
@@ -10624,10 +10666,9 @@ bool llvm::isNullOrNullSplat(SDValue N, bool AllowUndefs) {
 }
 
 bool llvm::isOneOrOneSplat(SDValue N, bool AllowUndefs) {
-  // TODO: may want to use peekThroughBitcast() here.
-  unsigned BitWidth = N.getScalarValueSizeInBits();
-  ConstantSDNode *C = isConstOrConstSplat(N, AllowUndefs);
-  return C && C->isOne() && C->getValueSizeInBits(0) == BitWidth;
+  ConstantSDNode *C =
+      isConstOrConstSplat(N, AllowUndefs, /*AllowTruncation*/ true);
+  return C && C->isOne();
 }
 
 bool llvm::isAllOnesOrAllOnesSplat(SDValue N, bool AllowUndefs) {

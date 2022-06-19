@@ -4,10 +4,6 @@ LLDB module which provides the abstract base class of lldb test case.
 The concrete subclass can override lldbtest.TestBase in order to inherit the
 common behavior for unitest.TestCase.setUp/tearDown implemented in this file.
 
-The subclass should override the attribute mydir in order for the python runtime
-to locate the individual test cases when running as part of a large test suite
-or when running each test case as a separate python invocation.
-
 ./dotest.py provides a test driver which sets up the environment to run the
 entire of part of the test suite .  Example:
 
@@ -519,9 +515,9 @@ class Base(unittest2.TestCase):
         # /abs/path/to/packages/group/subdir/mytest.py -> group/subdir
         lldb_test_src = configuration.test_src_root
         if not test_file.startswith(lldb_test_src):
-          raise Exception(
-              "Test file '%s' must reside within lldb_test_src "
-              "(which is '%s')." % (test_file, lldb_test_src))
+            raise Exception(
+                "Test file '%s' must reside within lldb_test_src "
+                "(which is '%s')." % (test_file, lldb_test_src))
         return os.path.dirname(os.path.relpath(test_file, start=lldb_test_src))
 
     def TraceOn(self):
@@ -539,7 +535,9 @@ class Base(unittest2.TestCase):
         Do current directory manipulation.
         """
         # Fail fast if 'mydir' attribute is not overridden.
-        if not cls.mydir or len(cls.mydir) == 0:
+        if not cls.mydir:
+            cls.mydir = Base.compute_mydir(sys.modules[cls.__module__].__file__)
+        if not cls.mydir:
             raise Exception("Subclasses must override the 'mydir' attribute.")
 
         # Save old working directory.
@@ -1703,11 +1701,6 @@ class TestBase(Base):
 
     Important things for test class writers:
 
-        - Overwrite the mydir class attribute, otherwise your test class won't
-          run.  It specifies the relative directory to the top level 'test' so
-          the test harness can change to the correct working directory before
-          running your test.
-
         - The setUp method sets up things to facilitate subsequent interactions
           with the debugger as part of the test.  These include:
               - populate the test method name
@@ -1775,7 +1768,7 @@ class TestBase(Base):
         if self.hasDarwinFramework():
             include_stmt = "'#include <%s>' % os.path.join('LLDB', header)"
         else:
-            include_stmt = "'#include <%s>' % os.path.join('" + public_api_dir + "', header)"
+            include_stmt = "'#include <%s>' % os.path.join(r'" + public_api_dir + "', header)"
         list = [eval(include_stmt) for header in public_headers if (
             header.startswith("SB") and header.endswith(".h"))]
         includes = '\n'.join(list)
@@ -2473,6 +2466,14 @@ FileCheck output:
             error = obj.GetCString()
             self.fail(self._formatMessage(msg,
                 "'{}' is not success".format(error)))
+
+    """Assert two states are equal"""
+    def assertState(self, first, second, msg=None):
+        if first != second:
+            error = "{} ({}) != {} ({})".format(
+                lldbutil.state_type_to_str(first), first,
+                lldbutil.state_type_to_str(second), second)
+            self.fail(self._formatMessage(msg, error))
 
     def createTestTarget(self, file_path=None, msg=None,
                          load_dependent_modules=True):

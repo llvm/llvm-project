@@ -83,6 +83,10 @@ def riscv_read_cycle_wide : SDNode<"RISCVISD::READ_CYCLE_WIDE",
                                    SDT_RISCVReadCycleWide,
                                    [SDNPHasChain, SDNPSideEffect]>;
 
+def riscv_add_lo : SDNode<"RISCVISD::ADD_LO", SDTIntBinOp>;
+def riscv_hi : SDNode<"RISCVISD::HI", SDTIntUnaryOp>;
+def riscv_lla : SDNode<"RISCVISD::LLA", SDTIntUnaryOp>;
+
 //===----------------------------------------------------------------------===//
 // Operand and SDNode transformation definitions.
 //===----------------------------------------------------------------------===//
@@ -367,8 +371,10 @@ def uimm6gt32 : ImmLeaf<XLenVT, [{
 
 // Addressing modes.
 // Necessary because a frameindex can't be matched directly in a pattern.
-def AddrFI : ComplexPattern<iPTR, 1, "SelectAddrFI">;
+def FrameAddrRegImm : ComplexPattern<iPTR, 2, "SelectFrameAddrRegImm",
+                                     [frameindex, or, add]>;
 def BaseAddr : ComplexPattern<iPTR, 1, "SelectBaseAddr">;
+def AddrRegImm : ComplexPattern<iPTR, 2, "SelectAddrRegImm">;
 
 // Return the negation of an immediate value.
 def NegImm : SDNodeXForm<imm, [{
@@ -1115,9 +1121,6 @@ class PatGprUimmLog2XLen<SDPatternOperator OpNode, RVInstIShift Inst>
 
 /// Predicates
 
-def IsOrAdd: PatFrag<(ops node:$A, node:$B), (or node:$A, node:$B), [{
-  return isOrEquivalentToAdd(N);
-}]>;
 def assertsexti32 : PatFrag<(ops node:$src), (assertsext node:$src), [{
   return cast<VTSDNode>(N->getOperand(1))->getVT().bitsLE(MVT::i32);
 }]>;
@@ -1205,10 +1208,24 @@ def PseudoAddTPRel : Pseudo<(outs GPR:$rd),
 
 /// FrameIndex calculations
 
-def : Pat<(add (XLenVT AddrFI:$Rs), simm12:$imm12),
-          (ADDI (XLenVT AddrFI:$Rs), simm12:$imm12)>;
-def : Pat<(IsOrAdd (XLenVT AddrFI:$Rs), simm12:$imm12),
-          (ADDI (XLenVT AddrFI:$Rs), simm12:$imm12)>;
+def : Pat<(FrameAddrRegImm GPR:$rs1, simm12:$imm12),
+          (ADDI GPR:$rs1, simm12:$imm12)>;
+
+// HI and ADD_LO address nodes.
+
+def : Pat<(riscv_hi tglobaladdr:$in), (LUI tglobaladdr:$in)>;
+def : Pat<(riscv_hi tblockaddress:$in), (LUI tblockaddress:$in)>;
+def : Pat<(riscv_hi tjumptable:$in), (LUI tjumptable:$in)>;
+def : Pat<(riscv_hi tconstpool:$in), (LUI tconstpool:$in)>;
+
+def : Pat<(riscv_add_lo GPR:$hi, tglobaladdr:$lo),
+          (ADDI GPR:$hi, tglobaladdr:$lo)>;
+def : Pat<(riscv_add_lo GPR:$hi, tblockaddress:$lo),
+          (ADDI GPR:$hi, tblockaddress:$lo)>;
+def : Pat<(riscv_add_lo GPR:$hi, tjumptable:$lo),
+          (ADDI GPR:$hi, tjumptable:$lo)>;
+def : Pat<(riscv_add_lo GPR:$hi, tconstpool:$lo),
+          (ADDI GPR:$hi, tconstpool:$lo)>;
 
 /// Setcc
 
@@ -1344,7 +1361,7 @@ def PseudoTAILIndirect : Pseudo<(outs), (ins GPRTC:$rs1),
                          PseudoInstExpansion<(JALR X0, GPR:$rs1, 0)>;
 
 def : Pat<(riscv_tail (iPTR tglobaladdr:$dst)),
-          (PseudoTAIL texternalsym:$dst)>;
+          (PseudoTAIL tglobaladdr:$dst)>;
 def : Pat<(riscv_tail (iPTR texternalsym:$dst)),
           (PseudoTAIL texternalsym:$dst)>;
 
@@ -1359,6 +1376,11 @@ let hasSideEffects = 0, mayLoad = 0, mayStore = 0, Size = 8, isCodeGenOnly = 0,
     isAsmParserOnly = 1 in
 def PseudoLLA : Pseudo<(outs GPR:$dst), (ins bare_symbol:$src), [],
                        "lla", "$dst, $src">;
+
+def : Pat<(riscv_lla tglobaladdr:$in), (PseudoLLA tglobaladdr:$in)>;
+def : Pat<(riscv_lla tblockaddress:$in), (PseudoLLA tblockaddress:$in)>;
+def : Pat<(riscv_lla tjumptable:$in), (PseudoLLA tjumptable:$in)>;
+def : Pat<(riscv_lla tconstpool:$in), (PseudoLLA tconstpool:$in)>;
 
 let hasSideEffects = 0, mayLoad = 1, mayStore = 0, Size = 8, isCodeGenOnly = 0,
     isAsmParserOnly = 1 in
@@ -1397,11 +1419,8 @@ def PseudoZEXT_W : Pseudo<(outs GPR:$rd), (ins GPR:$rs), [], "zext.w", "$rd, $rs
 /// Loads
 
 multiclass LdPat<PatFrag LoadOp, RVInst Inst, ValueType vt = XLenVT> {
-  def : Pat<(vt (LoadOp BaseAddr:$rs1)), (Inst BaseAddr:$rs1, 0)>;
-  def : Pat<(vt (LoadOp (add BaseAddr:$rs1, simm12:$imm12))),
-            (Inst BaseAddr:$rs1, simm12:$imm12)>;
-  def : Pat<(vt (LoadOp (IsOrAdd AddrFI:$rs1, simm12:$imm12))),
-            (Inst AddrFI:$rs1, simm12:$imm12)>;
+  def : Pat<(vt (LoadOp (AddrRegImm GPR:$rs1, simm12:$imm12))),
+            (Inst GPR:$rs1, simm12:$imm12)>;
 }
 
 defm : LdPat<sextloadi8, LB>;
@@ -1416,12 +1435,8 @@ defm : LdPat<zextloadi16, LHU>;
 
 multiclass StPat<PatFrag StoreOp, RVInst Inst, RegisterClass StTy,
                  ValueType vt> {
-  def : Pat<(StoreOp (vt StTy:$rs2), BaseAddr:$rs1),
-            (Inst StTy:$rs2, BaseAddr:$rs1, 0)>;
-  def : Pat<(StoreOp (vt StTy:$rs2), (add BaseAddr:$rs1, simm12:$imm12)),
-            (Inst StTy:$rs2, BaseAddr:$rs1, simm12:$imm12)>;
-  def : Pat<(StoreOp (vt StTy:$rs2), (IsOrAdd AddrFI:$rs1, simm12:$imm12)),
-            (Inst StTy:$rs2, AddrFI:$rs1, simm12:$imm12)>;
+  def : Pat<(StoreOp (vt StTy:$rs2), (AddrRegImm GPR:$rs1, simm12:$imm12)),
+            (Inst StTy:$rs2, GPR:$rs1, simm12:$imm12)>;
 }
 
 defm : StPat<truncstorei8, SB, GPR, XLenVT>;

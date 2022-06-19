@@ -188,6 +188,8 @@ private:
                          SDValue &VOffset, SDValue &Offset) const;
   bool SelectScratchSAddr(SDNode *N, SDValue Addr, SDValue &SAddr,
                           SDValue &Offset) const;
+  bool checkFlatScratchSVSSwizzleBug(SDValue VAddr, SDValue SAddr,
+                                     uint64_t ImmOffset) const;
   bool SelectScratchSVAddr(SDNode *N, SDValue Addr, SDValue &VAddr,
                            SDValue &SAddr, SDValue &Offset) const;
 
@@ -216,12 +218,19 @@ private:
   bool SelectVOP3NoMods0(SDValue In, SDValue &Src, SDValue &SrcMods,
                          SDValue &Clamp, SDValue &Omod) const;
 
+  bool SelectVINTERPModsImpl(SDValue In, SDValue &Src, SDValue &SrcMods,
+                             bool OpSel) const;
+  bool SelectVINTERPMods(SDValue In, SDValue &Src, SDValue &SrcMods) const;
+  bool SelectVINTERPModsHi(SDValue In, SDValue &Src, SDValue &SrcMods) const;
+
   bool SelectVOP3OMods(SDValue In, SDValue &Src, SDValue &Clamp,
                        SDValue &Omod) const;
 
   bool SelectVOP3PMods(SDValue In, SDValue &Src, SDValue &SrcMods,
                        bool IsDOT = false) const;
   bool SelectVOP3PModsDOT(SDValue In, SDValue &Src, SDValue &SrcMods) const;
+
+  bool SelectDotIUVOP3PMods(SDValue In, SDValue &Src) const;
 
   bool SelectVOP3OpSel(SDValue In, SDValue &Src, SDValue &SrcMods) const;
 

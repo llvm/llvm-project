@@ -36,10 +36,8 @@ void test() {
 #ifndef TEST_HAS_NO_CHAR8_T
   test<char8_t>();
 #endif
-#ifndef TEST_HAS_NO_UNICODE_CHARS
   test<char16_t>();
   test<char32_t>();
-#endif
 }
 
 int main(int, char**) {

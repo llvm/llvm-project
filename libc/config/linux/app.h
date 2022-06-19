@@ -20,8 +20,15 @@ struct TLS {
   // The load address of the TLS.
   uintptr_t address;
 
-  // The bytes size of the TLS.
+  // The byte size of the TLS image consisting of both initialized and
+  // uninitialized memory. In ELF executables, it is size of .tdata + size of
+  // .tbss. Put in another way, it is the memsz field of the PT_TLS header.
   uintptr_t size;
+
+  // The byte size of initialized memory in the TLS image. In ELF exectubles,
+  // this is the size of .tdata. Put in another way, it is the filesz of the
+  // PT_TLS header.
+  uintptr_t init_size;
 
   // The alignment of the TLS layout. It assumed that the alignment
   // value is a power of 2.

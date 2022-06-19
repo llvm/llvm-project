@@ -128,7 +128,7 @@ body:             |
     ; CHECK-NEXT: [[MOV32rm:%[0-9]+]]:gr32 = MOV32rm $noreg, 1, $noreg, @csum_ipv6_magic_daddr, $noreg :: (dereferenceable load (s32) from @csum_ipv6_magic_daddr, !tbaa !4)
     ; CHECK-NEXT: [[MOV32rm1:%[0-9]+]]:gr32 = MOV32rm $noreg, 1, $noreg, @csum_ipv6_magic_proto, $noreg :: (dereferenceable load (s32) from @csum_ipv6_magic_proto, !tbaa !4)
     ; CHECK-NEXT: [[MOV32r0_:%[0-9]+]]:gr32 = MOV32r0 implicit-def dead $eflags
-    ; CHECK-NEXT: INLINEASM &"", 0 /* attdialect */, 2293771 /* regdef-ec:GR32 */, def early-clobber %2, 65545 /* reguse:GR8 */, [[MOV8rm]], 2293769 /* reguse:GR32 */, [[MOV32rm]], 2293769 /* reguse:GR32 */, [[MOV32r0_]], 2293769 /* reguse:GR32 */, [[MOV32rm1]], 12 /* clobber */, implicit-def dead early-clobber $df, 12 /* clobber */, implicit-def early-clobber $fpsw, 12 /* clobber */, implicit-def dead early-clobber $eflags, !8
+    ; CHECK-NEXT: INLINEASM &"", 0 /* attdialect */, 2359307 /* regdef-ec:GR32 */, def early-clobber %2, 65545 /* reguse:GR8 */, [[MOV8rm]], 2359305 /* reguse:GR32 */, [[MOV32rm]], 2359305 /* reguse:GR32 */, [[MOV32r0_]], 2359305 /* reguse:GR32 */, [[MOV32rm1]], 12 /* clobber */, implicit-def dead early-clobber $df, 12 /* clobber */, implicit-def early-clobber $fpsw, 12 /* clobber */, implicit-def dead early-clobber $eflags, !8
     ; CHECK-NEXT: MOV32mr $noreg, 1, $noreg, @csum_ipv6_magic_sum, $noreg, %2 :: (store (s32) into @csum_ipv6_magic_sum, !tbaa !4)
     ; CHECK-NEXT: [[MOV32rm2:%[0-9]+]]:gr32 = MOV32rm $noreg, 1, $noreg, @synproxy_send_tcp_ipv6_nskb, $noreg :: (dereferenceable load (s32) from `i8** bitcast (%struct.sk_buff** @synproxy_send_tcp_ipv6_nskb to i8**)`, !tbaa !9)
     ; CHECK-NEXT: OR8mi [[MOV32rm2]], 1, $noreg, 0, $noreg, 3, implicit-def dead $eflags :: (store (s8) into %ir.4), (load (s8) from %ir.4)
@@ -143,7 +143,7 @@ body:             |
     %4:gr32 = MOV32rm $noreg, 1, $noreg, @csum_ipv6_magic_daddr, $noreg :: (dereferenceable load (s32) from @csum_ipv6_magic_daddr, !tbaa !5)
     %6:gr32 = MOV32rm $noreg, 1, $noreg, @csum_ipv6_magic_proto, $noreg :: (dereferenceable load (s32) from @csum_ipv6_magic_proto, !tbaa !5)
     %5:gr32 = MOV32r0 implicit-def dead $eflags
-    INLINEASM &"", 0 /* attdialect */, 2293771 /* regdef-ec:GR32 */, def early-clobber %2, 65545 /* reguse:GR8 */, %3, 2293769 /* reguse:GR32 */, %4, 2293769 /* reguse:GR32 */, %5, 2293769 /* reguse:GR32 */, %6, 12 /* clobber */, implicit-def dead early-clobber $df, 12 /* clobber */, implicit-def early-clobber $fpsw, 12 /* clobber */, implicit-def dead early-clobber $eflags, !9
+    INLINEASM &"", 0 /* attdialect */, 2359307 /* regdef-ec:GR32 */, def early-clobber %2, 65545 /* reguse:GR8 */, %3, 2359305 /* reguse:GR32 */, %4, 2359305 /* reguse:GR32 */, %5, 2359305 /* reguse:GR32 */, %6, 12 /* clobber */, implicit-def dead early-clobber $df, 12 /* clobber */, implicit-def early-clobber $fpsw, 12 /* clobber */, implicit-def dead early-clobber $eflags, !9
     MOV32mr $noreg, 1, $noreg, @csum_ipv6_magic_sum, $noreg, %2 :: (store (s32) into @csum_ipv6_magic_sum, !tbaa !5)
     %7:gr32 = MOV32rm $noreg, 1, $noreg, @synproxy_send_tcp_ipv6_nskb, $noreg :: (dereferenceable load (s32) from `i8** bitcast (%struct.sk_buff** @synproxy_send_tcp_ipv6_nskb to i8**)`, !tbaa !10)
     OR8mi %7, 1, $noreg, 0, $noreg, 3, implicit-def dead $eflags :: (store (s8) into %ir.4), (load (s8) from %ir.4)

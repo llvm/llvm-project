@@ -765,6 +765,7 @@ bool X86InstrInfo::isReallyTriviallyReMaterializable(const MachineInstr &MI,
   case X86::AVX_SET0:
   case X86::FsFLD0SD:
   case X86::FsFLD0SS:
+  case X86::FsFLD0SH:
   case X86::FsFLD0F128:
   case X86::KSET0D:
   case X86::KSET0Q:
@@ -1185,8 +1186,11 @@ MachineInstr *X86InstrInfo::convertToThreeAddressWithLEA(unsigned MIOpc,
   case X86::SHL8ri:
   case X86::SHL16ri: {
     unsigned ShAmt = MI.getOperand(2).getImm();
-    MIB.addReg(0).addImm(1ULL << ShAmt)
-       .addReg(InRegLEA, RegState::Kill).addImm(0).addReg(0);
+    MIB.addReg(0)
+        .addImm(1LL << ShAmt)
+        .addReg(InRegLEA, RegState::Kill)
+        .addImm(0)
+        .addReg(0);
     break;
   }
   case X86::INC8r:
@@ -1349,7 +1353,7 @@ MachineInstr *X86InstrInfo::convertToThreeAddress(MachineInstr &MI,
     NewMI = BuildMI(MF, MI.getDebugLoc(), get(X86::LEA64r))
                 .add(Dest)
                 .addReg(0)
-                .addImm(1ULL << ShAmt)
+                .addImm(1LL << ShAmt)
                 .add(Src)
                 .addImm(0)
                 .addReg(0);
@@ -1373,7 +1377,7 @@ MachineInstr *X86InstrInfo::convertToThreeAddress(MachineInstr &MI,
         BuildMI(MF, MI.getDebugLoc(), get(Opc))
             .add(Dest)
             .addReg(0)
-            .addImm(1ULL << ShAmt)
+            .addImm(1LL << ShAmt)
             .addReg(SrcReg, getKillRegState(isKill))
             .addImm(0)
             .addReg(0);
@@ -3039,8 +3043,7 @@ bool X86InstrInfo::AnalyzeBranchImpl(
       }
 
       // If the block has any instructions after a JMP, delete them.
-      while (std::next(I) != MBB.end())
-        std::next(I)->eraseFromParent();
+      MBB.erase(std::next(I), MBB.end());
 
       Cond.clear();
       FBB = nullptr;
@@ -3581,10 +3584,6 @@ static unsigned getLoadStoreRegOpcode(Register Reg,
   case 2:
     if (X86::VK16RegClass.hasSubClassEq(RC))
       return load ? X86::KMOVWkm : X86::KMOVWmk;
-    if (X86::FR16XRegClass.hasSubClassEq(RC)) {
-      assert(STI.hasFP16());
-      return load ? X86::VMOVSHZrm_alt : X86::VMOVSHZmr;
-    }
     assert(X86::GR16RegClass.hasSubClassEq(RC) && "Unknown 2-byte regclass");
     return load ? X86::MOV16rm : X86::MOV16mr;
   case 4:
@@ -3612,6 +3611,10 @@ static unsigned getLoadStoreRegOpcode(Register Reg,
         X86::VK8PAIRRegClass.hasSubClassEq(RC) ||
         X86::VK16PAIRRegClass.hasSubClassEq(RC))
       return load ? X86::MASKPAIR16LOAD : X86::MASKPAIR16STORE;
+    if ((X86::FR16RegClass.hasSubClassEq(RC) ||
+         X86::FR16XRegClass.hasSubClassEq(RC)) &&
+        STI.hasFP16())
+      return load ? X86::VMOVSHZrm_alt : X86::VMOVSHZmr;
     llvm_unreachable("Unknown 4-byte regclass");
   case 8:
     if (X86::GR64RegClass.hasSubClassEq(RC))
@@ -3851,12 +3854,12 @@ void X86InstrInfo::storeRegToStackSlot(MachineBasicBlock &MBB,
                                        const TargetRegisterInfo *TRI) const {
   const MachineFunction &MF = *MBB.getParent();
   const MachineFrameInfo &MFI = MF.getFrameInfo();
+  MachineRegisterInfo &RegInfo = MBB.getParent()->getRegInfo();
   assert(MFI.getObjectSize(FrameIdx) >= TRI->getSpillSize(*RC) &&
          "Stack slot too small for store");
   if (RC->getID() == X86::TILERegClassID) {
     unsigned Opc = X86::TILESTORED;
     // tilestored %tmm, (%sp, %idx)
-    MachineRegisterInfo &RegInfo = MBB.getParent()->getRegInfo();
     Register VirtReg = RegInfo.createVirtualRegister(&X86::GR64_NOSPRegClass);
     BuildMI(MBB, MI, DebugLoc(), get(X86::MOV64ri), VirtReg).addImm(64);
     MachineInstr *NewMI =
@@ -3865,6 +3868,14 @@ void X86InstrInfo::storeRegToStackSlot(MachineBasicBlock &MBB,
     MachineOperand &MO = NewMI->getOperand(2);
     MO.setReg(VirtReg);
     MO.setIsKill(true);
+  } else if ((RC->getID() == X86::FR16RegClassID ||
+              RC->getID() == X86::FR16XRegClassID) &&
+             !Subtarget.hasFP16()) {
+    unsigned Opc = Subtarget.hasAVX512() ? X86::VMOVSSZmr
+                   : Subtarget.hasAVX()  ? X86::VMOVSSmr
+                                         : X86::MOVSSmr;
+    addFrameReference(BuildMI(MBB, MI, DebugLoc(), get(Opc)), FrameIdx)
+        .addReg(SrcReg, getKillRegState(isKill));
   } else {
     unsigned Alignment = std::max<uint32_t>(TRI->getSpillSize(*RC), 16);
     bool isAligned =
@@ -3893,6 +3904,14 @@ void X86InstrInfo::loadRegFromStackSlot(MachineBasicBlock &MBB,
     MachineOperand &MO = NewMI->getOperand(3);
     MO.setReg(VirtReg);
     MO.setIsKill(true);
+  } else if ((RC->getID() == X86::FR16RegClassID ||
+              RC->getID() == X86::FR16XRegClassID) &&
+             !Subtarget.hasFP16()) {
+    unsigned Opc = Subtarget.hasAVX512() ? X86::VMOVSSZrm
+                   : Subtarget.hasAVX()  ? X86::VMOVSSrm
+                                         : X86::MOVSSrm;
+    addFrameReference(BuildMI(MBB, MI, DebugLoc(), get(Opc), DestReg),
+                      FrameIdx);
   } else {
     const MachineFunction &MF = *MBB.getParent();
     const MachineFrameInfo &MFI = MF.getFrameInfo();
@@ -4868,6 +4887,7 @@ bool X86InstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
   case X86::V_SET0:
   case X86::FsFLD0SS:
   case X86::FsFLD0SD:
+  case X86::FsFLD0SH:
   case X86::FsFLD0F128:
     return Expand2AddrUndef(MIB, get(HasAVX ? X86::VXORPSrr : X86::XORPSrr));
   case X86::AVX_SET0: {
@@ -6603,6 +6623,7 @@ MachineInstr *X86InstrInfo::foldMemoryOperandImpl(
     case X86::AVX512_FsFLD0SS:
       Alignment = Align(4);
       break;
+    case X86::FsFLD0SH:
     case X86::AVX512_FsFLD0SH:
       Alignment = Align(2);
       break;
@@ -6641,6 +6662,7 @@ MachineInstr *X86InstrInfo::foldMemoryOperandImpl(
   case X86::AVX512_256_SET0:
   case X86::AVX512_512_SET0:
   case X86::AVX512_512_SETALLONES:
+  case X86::FsFLD0SH:
   case X86::AVX512_FsFLD0SH:
   case X86::FsFLD0SD:
   case X86::AVX512_FsFLD0SD:
@@ -6680,7 +6702,7 @@ MachineInstr *X86InstrInfo::foldMemoryOperandImpl(
       Ty = Type::getDoubleTy(MF.getFunction().getContext());
     else if (Opc == X86::FsFLD0F128 || Opc == X86::AVX512_FsFLD0F128)
       Ty = Type::getFP128Ty(MF.getFunction().getContext());
-    else if (Opc == X86::AVX512_FsFLD0SH)
+    else if (Opc == X86::FsFLD0SH || Opc == X86::AVX512_FsFLD0SH)
       Ty = Type::getHalfTy(MF.getFunction().getContext());
     else if (Opc == X86::AVX512_512_SET0 || Opc == X86::AVX512_512_SETALLONES)
       Ty = FixedVectorType::get(Type::getInt32Ty(MF.getFunction().getContext()),
@@ -9488,12 +9510,10 @@ outliner::OutlinedFunction X86InstrInfo::getOutliningCandidateInfo(
   // We check to see if CFI Instructions are present, and if they are
   // we find the number of CFI Instructions in the candidates.
   unsigned CFICount = 0;
-  MachineBasicBlock::iterator MBBI = RepeatedSequenceLocs[0].front();
-  for (unsigned Loc = RepeatedSequenceLocs[0].getStartIdx();
-       Loc < RepeatedSequenceLocs[0].getEndIdx() + 1; Loc++) {
-    if (MBBI->isCFIInstruction())
+  for (auto &I : make_range(RepeatedSequenceLocs[0].front(),
+                            std::next(RepeatedSequenceLocs[0].back()))) {
+    if (I.isCFIInstruction())
       CFICount++;
-    MBBI++;
   }
 
   // We compare the number of found CFI Instructions to  the number of CFI

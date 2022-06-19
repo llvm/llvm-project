@@ -13,7 +13,7 @@
 
 #include "mlir/Conversion/GPUToNVVM/GPUToNVVMPass.h"
 #include "mlir/Conversion/LLVMCommon/Pattern.h"
-#include "mlir/Dialect/GPU/GPUDialect.h"
+#include "mlir/Dialect/GPU/IR/GPUDialect.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Dialect/LLVMIR/NVVMDialect.h"
 #include "mlir/IR/TypeUtilities.h"
@@ -293,7 +293,7 @@ static Value createMinMaxF(OpBuilder &builder, Location loc, Value lhs,
       loc, lhs.getType(),
       builder.getFloatAttr(floatType,
                            APFloat::getQNaN(floatType.getFloatSemantics())));
-  return builder.create<LLVM::SelectOp>(loc, isNan, sel, nan);
+  return builder.create<LLVM::SelectOp>(loc, isNan, nan, sel);
 }
 
 static Value createScalarOp(OpBuilder &builder, Location loc,

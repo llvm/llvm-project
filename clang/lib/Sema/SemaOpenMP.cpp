@@ -3971,6 +3971,7 @@ void Sema::ActOnOpenMPRegionStart(OpenMPDirectiveKind DKind, Scope *CurScope) {
   case OMPD_parallel_for_simd:
   case OMPD_parallel_sections:
   case OMPD_parallel_master:
+  case OMPD_parallel_masked:
   case OMPD_parallel_loop:
   case OMPD_teams:
   case OMPD_teams_distribute:
@@ -4912,6 +4913,7 @@ static bool checkNestingOfRegions(Sema &SemaRef, const DSAStackTy *Stack,
           isOpenMPTaskingDirective(ParentRegion) ||
           ParentRegion == OMPD_master || ParentRegion == OMPD_masked ||
           ParentRegion == OMPD_parallel_master ||
+          ParentRegion == OMPD_parallel_masked ||
           ParentRegion == OMPD_critical || ParentRegion == OMPD_ordered;
     } else if (isOpenMPWorksharingDirective(CurrentRegion) &&
                !isOpenMPParallelDirective(CurrentRegion) &&
@@ -4926,6 +4928,7 @@ static bool checkNestingOfRegions(Sema &SemaRef, const DSAStackTy *Stack,
           isOpenMPTaskingDirective(ParentRegion) ||
           ParentRegion == OMPD_master || ParentRegion == OMPD_masked ||
           ParentRegion == OMPD_parallel_master ||
+          ParentRegion == OMPD_parallel_masked ||
           ParentRegion == OMPD_critical || ParentRegion == OMPD_ordered;
       Recommend = ShouldBeInParallelRegion;
     } else if (CurrentRegion == OMPD_ordered) {
@@ -6113,6 +6116,11 @@ StmtResult Sema::ActOnOpenMPExecutableDirective(
     break;
   case OMPD_parallel_master:
     Res = ActOnOpenMPParallelMasterDirective(ClausesWithImplicit, AStmt,
+                                             StartLoc, EndLoc);
+    AllowedNameModifiers.push_back(OMPD_parallel);
+    break;
+  case OMPD_parallel_masked:
+    Res = ActOnOpenMPParallelMaskedDirective(ClausesWithImplicit, AStmt,
                                              StartLoc, EndLoc);
     AllowedNameModifiers.push_back(OMPD_parallel);
     break;
@@ -10698,6 +10706,29 @@ Sema::ActOnOpenMPParallelMasterDirective(ArrayRef<OMPClause *> Clauses,
 }
 
 StmtResult
+Sema::ActOnOpenMPParallelMaskedDirective(ArrayRef<OMPClause *> Clauses,
+                                         Stmt *AStmt, SourceLocation StartLoc,
+                                         SourceLocation EndLoc) {
+  if (!AStmt)
+    return StmtError();
+
+  assert(isa<CapturedStmt>(AStmt) && "Captured statement expected");
+  auto *CS = cast<CapturedStmt>(AStmt);
+  // 1.2.2 OpenMP Language Terminology
+  // Structured block - An executable statement with a single entry at the
+  // top and a single exit at the bottom.
+  // The point of exit cannot be a branch out of the structured block.
+  // longjmp() and throw() must not violate the entry/exit criteria.
+  CS->getCapturedDecl()->setNothrow();
+
+  setFunctionHasBranchProtectedScope();
+
+  return OMPParallelMaskedDirective::Create(
+      Context, StartLoc, EndLoc, Clauses, AStmt,
+      DSAStack->getTaskgroupReductionRef());
+}
+
+StmtResult
 Sema::ActOnOpenMPParallelSectionsDirective(ArrayRef<OMPClause *> Clauses,
                                            Stmt *AStmt, SourceLocation StartLoc,
                                            SourceLocation EndLoc) {
@@ -11632,6 +11663,7 @@ public:
   Expr *getV() const { return V; }
   Expr *getR() const { return R; }
   bool isFailOnly() const { return IsFailOnly; }
+  bool isPostfixUpdate() const { return IsPostfixUpdate; }
 
   /// Check if statement \a S is valid for <tt>atomic compare capture</tt>.
   bool checkStmt(Stmt *S, ErrorInfoTy &ErrorInfo);
@@ -11661,6 +11693,8 @@ private:
   Expr *R = nullptr;
   /// If 'v' is only updated when the comparison fails.
   bool IsFailOnly = false;
+  /// If original value of 'x' must be stored in 'v', not an updated one.
+  bool IsPostfixUpdate = false;
 };
 
 bool OpenMPAtomicCompareCaptureChecker::checkType(ErrorInfoTy &ErrorInfo) {
@@ -11963,9 +11997,11 @@ bool OpenMPAtomicCompareCaptureChecker::checkStmt(Stmt *S,
       UpdateStmt = S1;
       CondUpdateStmt = S2;
       // Check if form 45.
-      if (dyn_cast<BinaryOperator>(BO->getRHS()->IgnoreImpCasts()) &&
-          dyn_cast<IfStmt>(S2))
+      if (isa<BinaryOperator>(BO->getRHS()->IgnoreImpCasts()) &&
+          isa<IfStmt>(S2))
         return checkForm45(CS, ErrorInfo);
+      // It cannot be set before we the check for form45.
+      IsPostfixUpdate = true;
     } else {
       // { cond-update-stmt v = x; }
       UpdateStmt = S2;
@@ -12141,8 +12177,10 @@ StmtResult Sema::ActOnOpenMPAtomicDirective(ArrayRef<OMPClause *> Clauses,
   Expr *UE = nullptr;
   Expr *D = nullptr;
   Expr *CE = nullptr;
+  Expr *R = nullptr;
   bool IsXLHSInRHSPart = false;
   bool IsPostfixUpdate = false;
+  bool IsFailOnly = false;
   // OpenMP [2.12.6, atomic Construct]
   // In the next expressions:
   // * x and v (as applicable) are both l-value expressions with scalar type.
@@ -12538,8 +12576,16 @@ StmtResult Sema::ActOnOpenMPAtomicDirective(ArrayRef<OMPClause *> Clauses,
             << ErrorInfo.Error << ErrorInfo.NoteRange;
         return StmtError();
       }
-      // TODO: We don't set X, D, E, etc. here because in code gen we will emit
-      // error directly.
+      X = Checker.getX();
+      E = Checker.getE();
+      D = Checker.getD();
+      CE = Checker.getCond();
+      V = Checker.getV();
+      R = Checker.getR();
+      // We reuse IsXLHSInRHSPart to tell if it is in the form 'x ordop expr'.
+      IsXLHSInRHSPart = Checker.isXBinopExpr();
+      IsFailOnly = Checker.isFailOnly();
+      IsPostfixUpdate = Checker.isPostfixUpdate();
     } else {
       OpenMPAtomicCompareChecker::ErrorInfoTy ErrorInfo;
       OpenMPAtomicCompareChecker Checker(*this);
@@ -12547,7 +12593,7 @@ StmtResult Sema::ActOnOpenMPAtomicDirective(ArrayRef<OMPClause *> Clauses,
         Diag(ErrorInfo.ErrorLoc, diag::err_omp_atomic_compare)
             << ErrorInfo.ErrorRange;
         Diag(ErrorInfo.NoteLoc, diag::note_omp_atomic_compare)
-            << ErrorInfo.Error << ErrorInfo.NoteRange;
+          << ErrorInfo.Error << ErrorInfo.NoteRange;
         return StmtError();
       }
       X = Checker.getX();
@@ -12563,7 +12609,7 @@ StmtResult Sema::ActOnOpenMPAtomicDirective(ArrayRef<OMPClause *> Clauses,
 
   return OMPAtomicDirective::Create(
       Context, StartLoc, EndLoc, Clauses, AStmt,
-      {X, V, E, UE, D, CE, IsXLHSInRHSPart, IsPostfixUpdate});
+      {X, V, R, E, UE, D, CE, IsXLHSInRHSPart, IsPostfixUpdate, IsFailOnly});
 }
 
 StmtResult Sema::ActOnOpenMPTargetDirective(ArrayRef<OMPClause *> Clauses,
@@ -14808,6 +14854,7 @@ static OpenMPDirectiveKind getOpenMPCaptureRegionForClause(
     case OMPD_cancel:
     case OMPD_parallel:
     case OMPD_parallel_master:
+    case OMPD_parallel_masked:
     case OMPD_parallel_sections:
     case OMPD_parallel_for:
     case OMPD_parallel_loop:
@@ -14883,6 +14930,7 @@ static OpenMPDirectiveKind getOpenMPCaptureRegionForClause(
       break;
     case OMPD_parallel:
     case OMPD_parallel_master:
+    case OMPD_parallel_masked:
     case OMPD_parallel_sections:
     case OMPD_parallel_for:
     case OMPD_parallel_for_simd:
@@ -14989,6 +15037,7 @@ static OpenMPDirectiveKind getOpenMPCaptureRegionForClause(
     case OMPD_cancel:
     case OMPD_parallel:
     case OMPD_parallel_master:
+    case OMPD_parallel_masked:
     case OMPD_parallel_sections:
     case OMPD_parallel_for:
     case OMPD_parallel_for_simd:
@@ -15075,6 +15124,7 @@ static OpenMPDirectiveKind getOpenMPCaptureRegionForClause(
     case OMPD_cancel:
     case OMPD_parallel:
     case OMPD_parallel_master:
+    case OMPD_parallel_masked:
     case OMPD_parallel_sections:
     case OMPD_parallel_for:
     case OMPD_parallel_for_simd:
@@ -15167,6 +15217,7 @@ static OpenMPDirectiveKind getOpenMPCaptureRegionForClause(
     case OMPD_cancel:
     case OMPD_parallel:
     case OMPD_parallel_master:
+    case OMPD_parallel_masked:
     case OMPD_parallel_sections:
     case OMPD_threadprivate:
     case OMPD_allocate:
@@ -15253,6 +15304,7 @@ static OpenMPDirectiveKind getOpenMPCaptureRegionForClause(
     case OMPD_cancel:
     case OMPD_parallel:
     case OMPD_parallel_master:
+    case OMPD_parallel_masked:
     case OMPD_parallel_sections:
     case OMPD_threadprivate:
     case OMPD_allocate:
@@ -15340,6 +15392,7 @@ static OpenMPDirectiveKind getOpenMPCaptureRegionForClause(
     case OMPD_cancel:
     case OMPD_parallel:
     case OMPD_parallel_master:
+    case OMPD_parallel_masked:
     case OMPD_parallel_sections:
     case OMPD_parallel_for:
     case OMPD_parallel_for_simd:
@@ -15426,6 +15479,7 @@ static OpenMPDirectiveKind getOpenMPCaptureRegionForClause(
     case OMPD_cancel:
     case OMPD_parallel:
     case OMPD_parallel_master:
+    case OMPD_parallel_masked:
     case OMPD_parallel_sections:
     case OMPD_parallel_for:
     case OMPD_parallel_for_simd:

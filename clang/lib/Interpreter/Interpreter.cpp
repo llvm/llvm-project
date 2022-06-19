@@ -116,6 +116,9 @@ CreateCI(const llvm::opt::ArgStringList &Argv) {
   // times, reusing the same AST.
   Clang->getCodeGenOpts().ClearASTBeforeBackend = false;
 
+  Clang->getFrontendOpts().DisableFree = false;
+  Clang->getCodeGenOpts().DisableFree = false;
+
   return std::move(Clang);
 }
 

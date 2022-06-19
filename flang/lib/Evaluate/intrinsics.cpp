@@ -420,6 +420,8 @@ static const IntrinsicInterface genericIntrinsicFunction[]{
         {{"a", ExtensibleDerived, Rank::anyOrAssumedRank},
             {"mold", ExtensibleDerived, Rank::anyOrAssumedRank}},
         DefaultLogical, Rank::scalar, IntrinsicClass::inquiryFunction},
+    {"failed_images", {OptionalTEAM, SizeDefaultKIND}, KINDInt, Rank::vector,
+        IntrinsicClass::transformationalFunction},
     {"findloc",
         {{"array", AnyNumeric, Rank::array},
             {"value", AnyNumeric, Rank::scalar}, RequiredDIM, OptionalMASK,
@@ -629,6 +631,8 @@ static const IntrinsicInterface genericIntrinsicFunction[]{
     // NULL() is a special case handled in Probe() below
     {"num_images", {}, DefaultInt, Rank::scalar,
         IntrinsicClass::transformationalFunction},
+    {"num_images", {{"team", TeamType, Rank::scalar}}, DefaultInt, Rank::scalar,
+        IntrinsicClass::transformationalFunction},
     {"num_images", {{"team_number", AnyInt, Rank::scalar}}, DefaultInt,
         Rank::scalar, IntrinsicClass::transformationalFunction},
     {"out_of_range",
@@ -834,7 +838,7 @@ static const IntrinsicInterface genericIntrinsicFunction[]{
 };
 
 // TODO: Coarray intrinsic functions
-//   LCOBOUND, UCOBOUND, FAILED_IMAGES, IMAGE_INDEX,
+//   LCOBOUND, UCOBOUND, IMAGE_INDEX,
 //   STOPPED_IMAGES, COSHAPE
 // TODO: Non-standard intrinsic functions
 //  LSHIFT, RSHIFT, SHIFT, ZEXT, IZEXT,

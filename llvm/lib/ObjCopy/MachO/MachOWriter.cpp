@@ -634,9 +634,7 @@ void MachOWriter::writeTail() {
     }
   }
 
-  llvm::sort(Queue, [](const WriteOperation &LHS, const WriteOperation &RHS) {
-    return LHS.first < RHS.first;
-  });
+  llvm::sort(Queue, llvm::less_first());
 
   for (auto WriteOp : Queue)
     (this->*WriteOp.second)();

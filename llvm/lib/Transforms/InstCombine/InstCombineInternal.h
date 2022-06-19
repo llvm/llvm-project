@@ -173,6 +173,7 @@ public:
   Instruction *visitVAEndInst(VAEndInst &I);
   Value *pushFreezeToPreventPoisonFromPropagating(FreezeInst &FI);
   bool freezeOtherUses(FreezeInst &FI);
+  Instruction *foldFreezeIntoRecurrence(FreezeInst &I, PHINode *PN);
   Instruction *visitFreeze(FreezeInst &I);
 
   /// Specify what to return for unhandled instructions.
@@ -411,7 +412,7 @@ public:
     // If we are replacing the instruction with itself, this must be in a
     // segment of unreachable code, so just clobber the instruction.
     if (&I == V)
-      V = UndefValue::get(I.getType());
+      V = PoisonValue::get(I.getType());
 
     LLVM_DEBUG(dbgs() << "IC: Replacing " << I << "\n"
                       << "    with " << *V << '\n');
@@ -439,7 +440,7 @@ public:
   void CreateNonTerminatorUnreachable(Instruction *InsertAt) {
     auto &Ctx = InsertAt->getContext();
     new StoreInst(ConstantInt::getTrue(Ctx),
-                  UndefValue::get(Type::getInt1PtrTy(Ctx)),
+                  PoisonValue::get(Type::getInt1PtrTy(Ctx)),
                   InsertAt);
   }
 

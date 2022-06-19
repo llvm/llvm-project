@@ -1003,7 +1003,7 @@ MachineInstr *ModuloScheduleExpander::cloneAndChangeInstr(
 }
 
 /// Update the machine instruction with new virtual registers.  This
-/// function may change the defintions and/or uses.
+/// function may change the definitions and/or uses.
 void ModuloScheduleExpander::updateInstruction(MachineInstr *NewMI,
                                                bool LastDef,
                                                unsigned CurStageNum,
@@ -1797,10 +1797,10 @@ void PeelingModuloScheduleExpander::peelPrologAndEpilogs() {
 
   // Iterate in reverse order over all instructions, remapping as we go.
   for (MachineBasicBlock *B : reverse(Blocks)) {
-    for (auto I = B->getFirstInstrTerminator()->getReverseIterator();
+    for (auto I = B->instr_rbegin();
          I != std::next(B->getFirstNonPHI()->getReverseIterator());) {
-      MachineInstr *MI = &*I++;
-      rewriteUsesOf(MI);
+      MachineBasicBlock::reverse_instr_iterator MI = I++;
+      rewriteUsesOf(&*MI);
     }
   }
   for (auto *MI : IllegalPhisToDelete) {

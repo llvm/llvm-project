@@ -1052,25 +1052,26 @@ public:
                      const AAMDNodes &AAInfo = AAMDNodes());
 
   SDValue getMemset(SDValue Chain, const SDLoc &dl, SDValue Dst, SDValue Src,
-                    SDValue Size, Align Alignment, bool isVol, bool isTailCall,
+                    SDValue Size, Align Alignment, bool isVol,
+                    bool AlwaysInline, bool isTailCall,
                     MachinePointerInfo DstPtrInfo,
                     const AAMDNodes &AAInfo = AAMDNodes());
 
   SDValue getAtomicMemcpy(SDValue Chain, const SDLoc &dl, SDValue Dst,
-                          unsigned DstAlign, SDValue Src, unsigned SrcAlign,
-                          SDValue Size, Type *SizeTy, unsigned ElemSz,
-                          bool isTailCall, MachinePointerInfo DstPtrInfo,
+                          SDValue Src, SDValue Size, Type *SizeTy,
+                          unsigned ElemSz, bool isTailCall,
+                          MachinePointerInfo DstPtrInfo,
                           MachinePointerInfo SrcPtrInfo);
 
   SDValue getAtomicMemmove(SDValue Chain, const SDLoc &dl, SDValue Dst,
-                           unsigned DstAlign, SDValue Src, unsigned SrcAlign,
-                           SDValue Size, Type *SizeTy, unsigned ElemSz,
-                           bool isTailCall, MachinePointerInfo DstPtrInfo,
+                           SDValue Src, SDValue Size, Type *SizeTy,
+                           unsigned ElemSz, bool isTailCall,
+                           MachinePointerInfo DstPtrInfo,
                            MachinePointerInfo SrcPtrInfo);
 
   SDValue getAtomicMemset(SDValue Chain, const SDLoc &dl, SDValue Dst,
-                          unsigned DstAlign, SDValue Value, SDValue Size,
-                          Type *SizeTy, unsigned ElemSz, bool isTailCall,
+                          SDValue Value, SDValue Size, Type *SizeTy,
+                          unsigned ElemSz, bool isTailCall,
                           MachinePointerInfo DstPtrInfo);
 
   /// Helper function to make it easier to build SetCC's if you just have an
@@ -2136,11 +2137,6 @@ public:
 
   /// Compute the default alignment value for the given type.
   Align getEVTAlign(EVT MemoryVT) const;
-  /// Compute the default alignment value for the given type.
-  /// FIXME: Remove once transition to Align is over.
-  inline unsigned getEVTAlignment(EVT MemoryVT) const {
-    return getEVTAlign(MemoryVT).value();
-  }
 
   /// Test whether the given value is a constant int or similar node.
   SDNode *isConstantIntBuildVectorOrConstantInt(SDValue N) const;

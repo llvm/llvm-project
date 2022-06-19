@@ -6,7 +6,7 @@
 ;     http://llvm.org/docs/DeveloperPolicy.html#ir-backwards-compatibility
 
 ; RUN: llvm-as < %s | llvm-dis | llvm-as | llvm-dis | FileCheck %s
-; RUN-PR24755: verify-uselistorder < %s
+; RUN: verify-uselistorder < %s
 
 target datalayout = "E"
 ; CHECK: target datalayout = "E"
@@ -202,6 +202,18 @@ declare void @g.f1()
 ; CHECK: @llvm.global_ctors = appending global [1 x %pri.func.data] [%pri.func.data { i32 0, void ()* @g.f1, i8* @g.used3 }], section "llvm.metadata"
 @llvm.global_dtors = appending global [1 x %pri.func.data] [%pri.func.data { i32 0, void ()* @g.f1, i8* @g.used3 }], section "llvm.metadata"
 ; CHECK: @llvm.global_dtors = appending global [1 x %pri.func.data] [%pri.func.data { i32 0, void ()* @g.f1, i8* @g.used3 }], section "llvm.metadata"
+
+; Global Variables -- sanitizers
+@g.no_sanitize_address = global i32 0, no_sanitize_address
+@g.no_sanitize_hwaddress = global i32 0, no_sanitize_hwaddress
+@g.no_sanitize_memtag = global i32 0, no_sanitize_memtag
+@g.no_sanitize_multiple = global i32 0, no_sanitize_address, no_sanitize_hwaddress, no_sanitize_memtag
+@g.sanitize_address_dyninit = global i32 0, sanitize_address_dyninit
+; CHECK: @g.no_sanitize_address = global i32 0, no_sanitize_address
+; CHECK: @g.no_sanitize_hwaddress = global i32 0, no_sanitize_hwaddress
+; CHECK: @g.no_sanitize_memtag = global i32 0, no_sanitize_memtag
+; CHECK: @g.no_sanitize_multiple = global i32 0, no_sanitize_address, no_sanitize_hwaddress, no_sanitize_memtag
+; CHECK: @g.sanitize_address_dyninit = global i32 0, sanitize_address_dyninit
 
 ;; Aliases
 ; Format: @<Name> = [Linkage] [Visibility] [DLLStorageClass] [ThreadLocal]

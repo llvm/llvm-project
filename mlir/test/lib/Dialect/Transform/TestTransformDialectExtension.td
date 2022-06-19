@@ -34,6 +34,15 @@ def TestProduceParamOrForwardOperandOp
   let hasVerifier = 1;
 }
 
+def TestConsumeOperand : Op<Transform_Dialect, "test_consume_operand",
+     [DeclareOpInterfaceMethods<TransformOpInterface>]> {
+  let arguments = (ins
+    Arg<PDL_Operation, "",
+        [TransformMappingRead, TransformMappingFree]>:$operand);
+  let assemblyFormat = "$operand attr-dict";
+  let cppNamespace = "::mlir::test";
+}
+
 def TestConsumeOperandIfMatchesParamOrFail
   : Op<Transform_Dialect, "test_consume_operand_if_matches_param_or_fail",
        [DeclareOpInterfaceMethods<TransformOpInterface>]> {
@@ -106,6 +115,16 @@ def TestBranchingTransformOpTerminator
        [Terminator, DeclareOpInterfaceMethods<TransformOpInterface>,
         DeclareOpInterfaceMethods<MemoryEffectsOpInterface>]> {
   let successors = (successor VariadicSuccessor<AnySuccessor>:$succ);
+  let cppNamespace = "::mlir::test";
+}
+
+def TestEmitRemarkAndEraseOperandOp
+  : Op<Transform_Dialect, "test_emit_remark_and_erase_operand",
+    [DeclareOpInterfaceMethods<TransformOpInterface>,
+     MemoryEffectsOpInterface, FunctionalStyleTransformOpTrait]> {
+  let arguments = (ins PDL_Operation:$target, StrAttr:$remark,
+                   UnitAttr:$fail_after_erase);
+  let assemblyFormat = "$target `,` $remark attr-dict";
   let cppNamespace = "::mlir::test";
 }
 

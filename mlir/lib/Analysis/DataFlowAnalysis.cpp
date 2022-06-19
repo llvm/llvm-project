@@ -359,11 +359,20 @@ void ForwardDataFlowSolver::visitOperation(Operation *op) {
     if (auto branch = dyn_cast<RegionBranchOpInterface>(op))
       return visitRegionBranchOperation(branch, operandLattices);
 
-    // If we can't, conservatively mark all regions as executable.
-    // TODO: Let the `visitOperation` method decide how to propagate
-    // information to the block arguments.
-    for (Region &region : op->getRegions())
-      markEntryBlockExecutable(&region, /*markPessimisticFixpoint=*/true);
+    for (Region &region : op->getRegions()) {
+      analysis.visitNonControlFlowArguments(op, RegionSuccessor(&region),
+                                            operandLattices);
+      // `visitNonControlFlowArguments` is required to define all of the region
+      // argument lattices.
+      assert(llvm::none_of(
+                 region.getArguments(),
+                 [&](Value value) {
+                   return analysis.getLatticeElement(value).isUninitialized();
+                 }) &&
+             "expected `visitNonControlFlowArguments` to define all argument "
+             "lattices");
+      markEntryBlockExecutable(&region, /*markPessimisticFixpoint=*/false);
+    }
   }
 
   // If this op produces no results, it can't produce any constants.
@@ -461,11 +470,10 @@ void ForwardDataFlowSolver::visitRegionBranchOperation(
   // also allow for the parent operation to have itself as a region successor.
   if (successors.empty())
     return markAllPessimisticFixpoint(branch, branch->getResults());
-  return visitRegionSuccessors(
-      branch, successors, operandLattices, [&](Optional<unsigned> index) {
-        assert(index && "expected valid region index");
-        return branch.getSuccessorEntryOperands(*index);
-      });
+  return visitRegionSuccessors(branch, successors, operandLattices,
+                               [&](Optional<unsigned> index) {
+                                 return branch.getSuccessorEntryOperands(index);
+                               });
 }
 
 void ForwardDataFlowSolver::visitRegionSuccessors(
@@ -580,7 +588,7 @@ void ForwardDataFlowSolver::visitTerminatorOperation(
     // propagate the operand states to the successors.
     if (isRegionReturnLike(op)) {
       auto getOperands = [&](Optional<unsigned> regionIndex) {
-        // Determine the individual region  successor operands for the given
+        // Determine the individual region successor operands for the given
         // region index (if any).
         return *getRegionBranchSuccessorOperands(op, regionIndex);
       };

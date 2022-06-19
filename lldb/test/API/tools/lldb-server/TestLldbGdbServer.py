@@ -26,8 +26,6 @@ from lldbsuite.test import lldbutil, lldbplatformutil
 
 class LldbGdbServerTestCase(gdbremote_testcase.GdbRemoteTestCaseBase, DwarfOpcodeParser):
 
-    mydir = TestBase.compute_mydir(__file__)
-
     def test_thread_suffix_supported(self):
         server = self.connect_to_debug_monitor()
         self.assertIsNotNone(server)
@@ -525,7 +523,6 @@ class LldbGdbServerTestCase(gdbremote_testcase.GdbRemoteTestCaseBase, DwarfOpcod
 
     @expectedFailureDarwin
     @skipIfWindows # no SIGSEGV support
-    @expectedFailureAll(oslist=["freebsd"], bugnumber="llvm.org/pr48419")
     @expectedFailureNetBSD
     def test_Hc_then_Csignal_signals_correct_thread_launch(self):
         self.build()

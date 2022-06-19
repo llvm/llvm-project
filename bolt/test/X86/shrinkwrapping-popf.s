@@ -6,7 +6,7 @@
 # RUN: link_fdata %s %t.o %t.fdata
 # RUN: llvm-strip --strip-unneeded %t.o
 # RUN: %clang %cflags %t.o -o %t.exe -Wl,-q -nostdlib
-# RUN: llvm-bolt %t.exe -o %t.out -data %t.fdata -frame-opt=all -lite=0
+# RUN: llvm-bolt %t.exe -o %t.out --data %t.fdata --frame-opt=all --lite=0
 
 
   .globl _start

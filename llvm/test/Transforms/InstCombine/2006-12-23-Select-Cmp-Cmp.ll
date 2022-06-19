@@ -12,11 +12,11 @@ target triple = "i686-pc-linux-gnu"
 	%struct.mng_savedata = type { i8, i8, i8, i8, i8, i8, i8, i16, i16, i16, i8, i16, i8, i8, i32, i32, i8, i32, i32, i32, i32, i32, [256 x %struct.mng_palette8e], i32, [256 x i8], i32, i32, i32, i32, i32, i32, i32, i32, i32, i8, i32, i8*, i16, i16, i16 }
 	%struct.z_stream = type { i8*, i32, i32, i8*, i32, i32, i8*, %struct.internal_state*, i8* (i8*, i32, i32)*, void (i8*, i8*)*, i8*, i32, i32, i32 }
 
-define void @mng_write_basi() {
+define void @mng_write_basi(i8* %src1, i16* %src2) {
 entry:
-	%tmp = load i8, i8* null		; <i8> [#uses=1]
+	%tmp = load i8, i8* %src1 ; <i8> [#uses=1]
 	%tmp.upgrd.1 = icmp ugt i8 %tmp, 8		; <i1> [#uses=1]
-	%tmp.upgrd.2 = load i16, i16* null		; <i16> [#uses=2]
+	%tmp.upgrd.2 = load i16, i16* %src2; <i16> [#uses=2]
 	%tmp3 = icmp eq i16 %tmp.upgrd.2, 255		; <i1> [#uses=1]
 	%tmp7 = icmp eq i16 %tmp.upgrd.2, -1		; <i1> [#uses=1]
 	%bOpaque.0.in = select i1 %tmp.upgrd.1, i1 %tmp7, i1 %tmp3		; <i1> [#uses=1]

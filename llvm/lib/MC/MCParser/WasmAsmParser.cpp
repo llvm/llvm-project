@@ -93,7 +93,7 @@ public:
 
   bool parseSectionDirectiveData(StringRef, SMLoc) {
     auto *S = getContext().getObjectFileInfo()->getDataSection();
-    getStreamer().SwitchSection(S);
+    getStreamer().switchSection(S);
     return false;
   }
 
@@ -201,7 +201,7 @@ public:
       WS->setPassive();
     }
 
-    getStreamer().SwitchSection(WS);
+    getStreamer().switchSection(WS);
     return false;
   }
 

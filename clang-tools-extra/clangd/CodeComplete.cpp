@@ -1673,6 +1673,14 @@ private:
     return Output;
   }
 
+  bool includeSymbolFromIndex(const Symbol &Sym) {
+    if (CCContextKind == CodeCompletionContext::CCC_ObjCProtocolName) {
+      return Sym.SymInfo.Lang == index::SymbolLanguage::ObjC &&
+          Sym.SymInfo.Kind == index::SymbolKind::Protocol;
+    }
+    return true;
+  }
+
   SymbolSlab queryIndex() {
     trace::Span Tracer("Query index");
     SPAN_ATTACH(Tracer, "limit", int64_t(Opts.Limit));
@@ -1706,8 +1714,10 @@ private:
 
     // Run the query against the index.
     SymbolSlab::Builder ResultsBuilder;
-    if (Opts.Index->fuzzyFind(
-            Req, [&](const Symbol &Sym) { ResultsBuilder.insert(Sym); }))
+    if (Opts.Index->fuzzyFind(Req, [&](const Symbol &Sym) {
+          if (includeSymbolFromIndex(Sym))
+            ResultsBuilder.insert(Sym);
+        }))
       Incomplete = true;
     return std::move(ResultsBuilder).build();
   }

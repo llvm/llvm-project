@@ -164,7 +164,7 @@ DIEAbbrev &DIEAbbrevSet::uniqueAbbreviation(DIE &Die) {
 void DIEAbbrevSet::Emit(const AsmPrinter *AP, MCSection *Section) const {
   if (!Abbreviations.empty()) {
     // Start the debug abbrev section.
-    AP->OutStreamer->SwitchSection(Section);
+    AP->OutStreamer->switchSection(Section);
     AP->emitDwarfAbbrevs(Abbreviations);
   }
 }
@@ -373,7 +373,7 @@ void DIEInteger::emitValue(const AsmPrinter *Asm, dwarf::Form Form) const {
   case dwarf::DW_FORM_flag_present:
     // Emit something to keep the lines and comments in sync.
     // FIXME: Is there a better way to do this?
-    Asm->OutStreamer->AddBlankLine();
+    Asm->OutStreamer->addBlankLine();
     return;
   case dwarf::DW_FORM_flag:
   case dwarf::DW_FORM_ref1:

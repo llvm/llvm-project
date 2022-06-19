@@ -20,7 +20,7 @@
 !----------------
 ! Compiler invocation to generate the object file
 ! CHECK-LABEL: {{.*}} "-emit-obj"
-! CHECK-SAME:  "-o" "[[object_file:.*]]" {{.*}}Inputs/hello.f90
+! CHECK-SAME:  "-o" "[[object_file:.*\.o]]" {{.*}}Inputs/hello.f90
 
 ! Linker invocation to generate the executable
 ! CHECK-LABEL:  "/usr/bin/ld"

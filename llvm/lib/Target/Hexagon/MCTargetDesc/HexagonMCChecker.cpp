@@ -30,8 +30,8 @@
 using namespace llvm;
 
 static cl::opt<bool>
-    RelaxNVChecks("relax-nv-checks", cl::init(false), cl::ZeroOrMore,
-                  cl::Hidden, cl::desc("Relax checks of new-value validity"));
+    RelaxNVChecks("relax-nv-checks", cl::Hidden,
+                  cl::desc("Relax checks of new-value validity"));
 
 const HexagonMCChecker::PredSense
     HexagonMCChecker::Unconditional(Hexagon::NoRegister, false);

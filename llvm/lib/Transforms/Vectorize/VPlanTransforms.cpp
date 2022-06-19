@@ -27,8 +27,12 @@ void VPlanTransforms::VPInstructionsToVPRecipes(
   ReversePostOrderTraversal<VPBlockRecursiveTraversalWrapper<VPBlockBase *>>
       RPOT(Plan->getEntry());
   for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(RPOT)) {
+    VPRecipeBase *Term = VPBB->getTerminator();
+    auto EndIter = Term ? Term->getIterator() : VPBB->end();
     // Introduce each ingredient into VPlan.
-    for (VPRecipeBase &Ingredient : llvm::make_early_inc_range(*VPBB)) {
+    for (VPRecipeBase &Ingredient :
+         make_early_inc_range(make_range(VPBB->begin(), EndIter))) {
+
       VPValue *VPV = Ingredient.getVPSingleValue();
       Instruction *Inst = cast<Instruction>(VPV->getUnderlyingValue());
       if (DeadInstructions.count(Inst)) {
@@ -45,8 +49,8 @@ void VPlanTransforms::VPInstructionsToVPRecipes(
           VPValue *Start = Plan->getOrAddVPValue(II->getStartValue());
           VPValue *Step =
               vputils::getOrCreateVPValueForSCEVExpr(*Plan, II->getStep(), SE);
-          NewRecipe = new VPWidenIntOrFpInductionRecipe(Phi, Start, Step, *II,
-                                                        false, true);
+          NewRecipe =
+              new VPWidenIntOrFpInductionRecipe(Phi, Start, Step, *II, true);
         } else {
           Plan->addVPValue(Phi, VPPhi);
           continue;
@@ -357,7 +361,7 @@ void VPlanTransforms::removeRedundantCanonicalIVs(VPlan &Plan) {
   }
 }
 
-void VPlanTransforms::removeDeadRecipes(VPlan &Plan, Loop &OrigLoop) {
+void VPlanTransforms::removeDeadRecipes(VPlan &Plan) {
   VPBasicBlock *Header = Plan.getVectorLoopRegion()->getEntryBasicBlock();
   // Remove dead recipes in header block. The recipes in the block are processed
   // in reverse order, to catch chains of dead recipes.
@@ -376,7 +380,8 @@ void VPlanTransforms::optimizeInductions(VPlan &Plan, ScalarEvolution &SE) {
   VPBasicBlock *HeaderVPBB = Plan.getVectorLoopRegion()->getEntryBasicBlock();
   for (VPRecipeBase &Phi : HeaderVPBB->phis()) {
     auto *IV = dyn_cast<VPWidenIntOrFpInductionRecipe>(&Phi);
-    if (!IV || !IV->needsScalarIV())
+    if (!IV ||
+        all_of(IV->users(), [IV](VPUser *U) { return !U->usesScalars(IV); }))
       continue;
 
     const InductionDescriptor &ID = IV->getInductionDescriptor();
@@ -388,15 +393,8 @@ void VPlanTransforms::optimizeInductions(VPlan &Plan, ScalarEvolution &SE) {
         IV->getStartValue(), Step, TruncI ? TruncI->getType() : nullptr);
     HeaderVPBB->insert(Steps, HeaderVPBB->getFirstNonPhi());
 
-    // If there are no vector users of IV, simply update all users to use Step
-    // instead.
-    if (!IV->needsVectorIV()) {
-      IV->replaceAllUsesWith(Steps);
-      continue;
-    }
-
-    // Otherwise only update scalar users of IV to use Step instead. Use
-    // SetVector to ensure the list of users doesn't contain duplicates.
+    // Update scalar users of IV to use Step instead. Use SetVector to ensure
+    // the list of users doesn't contain duplicates.
     SetVector<VPUser *> Users(IV->user_begin(), IV->user_end());
     for (VPUser *U : Users) {
       if (!U->usesScalars(IV))

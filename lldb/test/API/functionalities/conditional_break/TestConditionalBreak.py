@@ -18,8 +18,6 @@ from lldbsuite.test import lldbutil
 
 class ConditionalBreakTestCase(TestBase):
 
-    mydir = TestBase.compute_mydir(__file__)
-
     @add_test_categories(['pyapi'])
     def test_with_python(self):
         """Exercise some thread and frame APIs to break if c() is called by a()."""
@@ -48,8 +46,8 @@ class ConditionalBreakTestCase(TestBase):
         self.assertTrue(process, PROCESS_IS_VALID)
 
         # The stop reason of the thread should be breakpoint.
-        self.assertEqual(process.GetState(), lldb.eStateStopped,
-                        STOPPED_DUE_TO_BREAKPOINT)
+        self.assertState(process.GetState(), lldb.eStateStopped,
+                         STOPPED_DUE_TO_BREAKPOINT)
 
         # Find the line number where a's parent frame function is c.
         line = line_number(
