@@ -126,8 +126,7 @@ bool MergedIndex::refs(const RefsRequest &Req,
                        llvm::function_ref<void(const Ref &)> Callback) const {
   trace::Span Tracer("MergedIndex refs");
   bool More = false;
-  uint32_t Remaining =
-      Req.Limit.getValueOr(std::numeric_limits<uint32_t>::max());
+  uint32_t Remaining = Req.Limit.value_or(std::numeric_limits<uint32_t>::max());
   // We don't want duplicated refs from the static/dynamic indexes,
   // and we can't reliably deduplicate them because offsets may differ slightly.
   // We consider the dynamic index authoritative and report all its refs,
@@ -167,8 +166,7 @@ MergedIndex::indexedFiles() const {
 void MergedIndex::relations(
     const RelationsRequest &Req,
     llvm::function_ref<void(const SymbolID &, const Symbol &)> Callback) const {
-  uint32_t Remaining =
-      Req.Limit.getValueOr(std::numeric_limits<uint32_t>::max());
+  uint32_t Remaining = Req.Limit.value_or(std::numeric_limits<uint32_t>::max());
   // Return results from both indexes but avoid duplicates.
   // We might return stale relations from the static index;
   // we don't currently have a good way of identifying them.
