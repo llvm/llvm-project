@@ -4009,11 +4009,11 @@ struct MDAPSIntField : public MDFieldImpl<APSInt> {
 };
 
 struct MDSignedField : public MDFieldImpl<int64_t> {
-  int64_t Min;
-  int64_t Max;
+  int64_t Min = INT64_MIN;
+  int64_t Max = INT64_MAX;
 
   MDSignedField(int64_t Default = 0)
-      : ImplTy(Default), Min(INT64_MIN), Max(INT64_MAX) {}
+      : ImplTy(Default) {}
   MDSignedField(int64_t Default, int64_t Min, int64_t Max)
       : ImplTy(Default), Min(Min), Max(Max) {}
 };
