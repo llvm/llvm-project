@@ -3140,9 +3140,8 @@ bool NewGVN::singleReachablePHIPath(
   // connected component finding in this routine, and it's probably not worth
   // the complexity for the time being. So, we just keep a set of visited
   // MemoryAccess and return true when we hit a cycle.
-  if (Visited.count(First))
+  if (!Visited.insert(First).second)
     return true;
-  Visited.insert(First);
 
   const auto *EndDef = First;
   for (auto *ChainDef : optimized_def_chain(First)) {

@@ -720,9 +720,8 @@ void SelectOptimize::getExclBackwardsSlice(Instruction *I,
     Worklist.pop();
 
     // Avoid cycles.
-    if (Visited.count(II))
+    if (!Visited.insert(II).second)
       continue;
-    Visited.insert(II);
 
     if (!II->hasOneUse())
       continue;
