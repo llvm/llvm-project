@@ -2994,13 +2994,15 @@ bool AMDGPUInstructionSelector::selectG_SHUFFLE_VECTOR(
 
 bool AMDGPUInstructionSelector::selectAMDGPU_BUFFER_ATOMIC_FADD(
   MachineInstr &MI) const {
-  if (STI.hasGFX90AInsts())
+  const Register DefReg = MI.getOperand(0).getReg();
+  LLT DefTy = MRI->getType(DefReg);
+  if (AMDGPU::hasAtomicFaddRtnForTy(STI, DefTy))
     return selectImpl(MI, *CoverageInfo);
 
   MachineBasicBlock *MBB = MI.getParent();
   const DebugLoc &DL = MI.getDebugLoc();
 
-  if (!MRI->use_nodbg_empty(MI.getOperand(0).getReg())) {
+  if (!MRI->use_nodbg_empty(DefReg)) {
     Function &F = MBB->getParent()->getFunction();
     DiagnosticInfoUnsupported
       NoFpRet(F, "return versions of fp atomics not supported",
