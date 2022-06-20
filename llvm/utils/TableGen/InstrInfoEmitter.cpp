@@ -379,6 +379,9 @@ void InstrInfoEmitter::emitOperandTypeMappings(
   OS << "namespace " << Namespace << " {\n";
   OS << "LLVM_READONLY\n";
   OS << "static int getOperandType(uint16_t Opcode, uint16_t OpIdx) {\n";
+  auto getInstrName = [&](int I) -> StringRef {
+    return NumberedInstructions[I]->TheDef->getName();
+  };
   // TODO: Factor out duplicate operand lists to compress the tables.
   if (!NumberedInstructions.empty()) {
     std::vector<int> OperandOffsets;
@@ -408,8 +411,10 @@ void InstrInfoEmitter::emitOperandTypeMappings(
     OS << ((OperandRecords.size() <= UINT16_MAX) ? "  const uint16_t"
                                                  : "  const uint32_t");
     OS << " Offsets[] = {\n";
-    for (int I = 0, E = OperandOffsets.size(); I != E; ++I)
+    for (int I = 0, E = OperandOffsets.size(); I != E; ++I) {
+      OS << "    /* " << getInstrName(I) << " */\n";
       OS << "    " << OperandOffsets[I] << ",\n";
+    }
     OS << "  };\n";
 
     // Add an entry for the end so that we don't need to special case it below.
@@ -419,22 +424,22 @@ void InstrInfoEmitter::emitOperandTypeMappings(
     // Size the signed integer operand type to save space.
     assert(EnumVal <= INT16_MAX &&
            "Too many operand types for operand types table");
+    OS << "\n  using namespace OpTypes;\n";
     OS << ((EnumVal <= INT8_MAX) ? "  const int8_t" : "  const int16_t");
     OS << " OpcodeOperandTypes[] = {\n    ";
-    for (int I = 0, E = OperandRecords.size(), CurOffset = 1; I != E; ++I) {
+    for (int I = 0, E = OperandRecords.size(), CurOffset = 0; I != E; ++I) {
       // We print each Opcode's operands in its own row.
       if (I == OperandOffsets[CurOffset]) {
-        OS << "\n    ";
-        // If there are empty rows, mark them with an empty comment.
+        OS << "\n    /* " << getInstrName(CurOffset) << " */\n    ";
         while (OperandOffsets[++CurOffset] == I)
-          OS << "/**/\n    ";
+          OS << "/* " << getInstrName(CurOffset) << " */\n    ";
       }
       Record *OpR = OperandRecords[I];
       if ((OpR->isSubClassOf("Operand") ||
            OpR->isSubClassOf("RegisterOperand") ||
            OpR->isSubClassOf("RegisterClass")) &&
           !OpR->isAnonymous())
-        OS << "OpTypes::" << OpR->getName();
+        OS << OpR->getName();
       else
         OS << -1;
       OS << ", ";
