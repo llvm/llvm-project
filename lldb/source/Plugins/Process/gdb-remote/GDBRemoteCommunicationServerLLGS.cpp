@@ -1422,7 +1422,10 @@ GDBRemoteCommunicationServerLLGS::Handle_qC(StringExtractorGDBRemote &packet) {
     return SendErrorResponse(69);
 
   StreamString response;
-  response.Printf("QC%" PRIx64, thread->GetID());
+  response.PutCString("QC");
+  if (bool(m_extensions_supported & NativeProcessProtocol::Extension::multiprocess))
+    response.Format("p{0:x-}.", m_current_process->GetID());
+  response.Format("{0:x-}", thread->GetID());
 
   return SendPacketNoLock(response.GetString());
 }

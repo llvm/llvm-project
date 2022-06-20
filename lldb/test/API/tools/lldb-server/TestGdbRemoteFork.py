@@ -11,7 +11,6 @@ class TestGdbRemoteFork(gdbremote_testcase.GdbRemoteTestCaseBase):
                   "{}:p([0-9a-f]+)[.]([0-9a-f]+).*")
     fork_capture = {1: "parent_pid", 2: "parent_tid",
                     3: "child_pid", 4: "child_tid"}
-    procinfo_regex = "[$]pid:([0-9a-f]+);.*"
 
     @add_test_categories(["fork"])
     def test_fork_multithreaded(self):
@@ -68,7 +67,7 @@ class TestGdbRemoteFork(gdbremote_testcase.GdbRemoteTestCaseBase):
             "send packet: $OK#00",
             # verify that the current process is correct
             "read packet: $qC#00",
-            "send packet: $QC{}#00".format(parent_tid),
+            "send packet: $QCp{}.{}#00".format(parent_pid, parent_tid),
             # verify that the correct processes are detached/available
             "read packet: $Hgp{}.{}#00".format(child_pid, child_tid),
             "send packet: $Eff#00",
@@ -167,12 +166,9 @@ class TestGdbRemoteFork(gdbremote_testcase.GdbRemoteTestCaseBase):
 
         # get process pid
         self.test_sequence.add_log_lines([
-            "read packet: $qProcessInfo#00",
-            {"direction": "send", "regex": self.procinfo_regex,
-             "capture": {1: "pid"}},
             "read packet: $qC#00",
-            {"direction": "send", "regex": "[$]QC([0-9a-f]+)#.*",
-             "capture": {1: "tid"}},
+            {"direction": "send", "regex": "[$]QCp([0-9a-f]+).([0-9a-f]+)#.*",
+             "capture": {1: "pid", 2: "tid"}},
         ], True)
         ret = self.expect_gdbremote_sequence()
         pid, tid = (int(ret[x], 16) for x in ("pid", "tid"))
@@ -208,8 +204,8 @@ class TestGdbRemoteFork(gdbremote_testcase.GdbRemoteTestCaseBase):
 
         # get process pid
         self.test_sequence.add_log_lines([
-            "read packet: $qProcessInfo#00",
-            {"direction": "send", "regex": self.procinfo_regex,
+            "read packet: $qC#00",
+            {"direction": "send", "regex": "[$]QCp([0-9a-f]+).[0-9a-f]+#.*",
              "capture": {1: "pid"}},
         ], True)
         ret = self.expect_gdbremote_sequence()
@@ -817,3 +813,56 @@ class TestGdbRemoteFork(gdbremote_testcase.GdbRemoteTestCaseBase):
             data = ret.get("data")
             self.assertIsNotNone(data)
             self.assertEqual(data, old_val[1])
+
+    @add_test_categories(["fork"])
+    def test_qC(self):
+        self.build()
+        self.prep_debug_monitor_and_inferior(
+            inferior_args=["fork",
+                           "thread:new",
+                           "trap",
+                           ])
+        self.add_qSupported_packets(["multiprocess+",
+                                     "fork-events+"])
+        ret = self.expect_gdbremote_sequence()
+        self.assertIn("fork-events+", ret["qSupported_response"])
+        self.reset_test_sequence()
+
+        # continue and expect fork
+        self.test_sequence.add_log_lines([
+            "read packet: $c#00",
+            {"direction": "send", "regex": self.fork_regex.format("fork"),
+             "capture": self.fork_capture},
+        ], True)
+        self.add_threadinfo_collection_packets()
+        ret = self.expect_gdbremote_sequence()
+        pidtids = [
+            (ret["parent_pid"], ret["parent_tid"]),
+            (ret["child_pid"], ret["child_tid"]),
+        ]
+        self.reset_test_sequence()
+
+        for pidtid in pidtids:
+            self.test_sequence.add_log_lines(
+                ["read packet: $Hcp{}.{}#00".format(*pidtid),
+                 "send packet: $OK#00",
+                 "read packet: $c#00",
+                 {"direction": "send",
+                  "regex": "^[$]T05thread:p{}.{}.*".format(*pidtid),
+                  },
+                 ], True)
+
+        self.add_threadinfo_collection_packets()
+        ret = self.expect_gdbremote_sequence()
+        self.reset_test_sequence()
+
+        pidtids = set(self.parse_threadinfo_packets(ret))
+        self.assertEqual(len(pidtids), 4)
+        for pidtid in pidtids:
+            self.test_sequence.add_log_lines(
+                ["read packet: $Hgp{:x}.{:x}#00".format(*pidtid),
+                 "send packet: $OK#00",
+                 "read packet: $qC#00",
+                 "send packet: $QCp{:x}.{:x}#00".format(*pidtid),
+                 ], True)
+        self.expect_gdbremote_sequence()
