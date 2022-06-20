@@ -29,7 +29,7 @@ public:
 
   DIERef(llvm::Optional<uint32_t> dwo_num, Section section,
          dw_offset_t die_offset)
-      : m_dwo_num(dwo_num.getValueOr(0)), m_dwo_num_valid(bool(dwo_num)),
+      : m_dwo_num(dwo_num.value_or(0)), m_dwo_num_valid(bool(dwo_num)),
         m_section(section), m_die_offset(die_offset) {
     assert(this->dwo_num() == dwo_num && "Dwo number out of range?");
   }

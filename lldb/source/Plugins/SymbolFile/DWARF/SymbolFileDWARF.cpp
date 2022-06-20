@@ -1384,8 +1384,8 @@ user_id_t SymbolFileDWARF::GetUID(DIERef ref) {
   if (GetDebugMapSymfile())
     return GetID() | ref.die_offset();
 
-  lldbassert(GetDwoNum().getValueOr(0) <= 0x3fffffff);
-  return user_id_t(GetDwoNum().getValueOr(0)) << 32 | ref.die_offset() |
+  lldbassert(GetDwoNum().value_or(0) <= 0x3fffffff);
+  return user_id_t(GetDwoNum().value_or(0)) << 32 | ref.die_offset() |
          lldb::user_id_t(GetDwoNum().hasValue()) << 62 |
          lldb::user_id_t(ref.section() == DIERef::Section::DebugTypes) << 63;
 }
@@ -1920,7 +1920,7 @@ SymbolFileDWARF::GlobalVariableMap &SymbolFileDWARF::GetGlobalAranges() {
                     lldb::addr_t byte_size = 1;
                     if (var_sp->GetType())
                       byte_size =
-                          var_sp->GetType()->GetByteSize(nullptr).getValueOr(0);
+                          var_sp->GetType()->GetByteSize(nullptr).value_or(0);
                     m_global_aranges_up->Append(GlobalVariableMap::Entry(
                         file_addr, byte_size, var_sp.get()));
                   }
@@ -3333,7 +3333,7 @@ VariableSP SymbolFileDWARF::ParseVariableDIE(const SymbolContext &sc,
       DataExtractor data = die.GetCU()->GetLocationData();
       dw_offset_t offset = location_form.Unsigned();
       if (location_form.Form() == DW_FORM_loclistx)
-        offset = die.GetCU()->GetLoclistOffset(offset).getValueOr(-1);
+        offset = die.GetCU()->GetLoclistOffset(offset).value_or(-1);
       if (data.ValidOffset(offset)) {
         data = DataExtractor(data, offset, data.GetByteSize() - offset);
         location = DWARFExpression(module, data, die.GetCU());
@@ -3554,7 +3554,7 @@ VariableSP SymbolFileDWARF::ParseVariableDIE(const SymbolContext &sc,
 
   if (use_type_size_for_value && type_sp->GetType())
     location.UpdateValue(const_value_form.Unsigned(),
-                         type_sp->GetType()->GetByteSize(nullptr).getValueOr(0),
+                         type_sp->GetType()->GetByteSize(nullptr).value_or(0),
                          die.GetCU()->GetAddressByteSize());
 
   // Swift let-bindings are marked by a DW_TAG_const_type.

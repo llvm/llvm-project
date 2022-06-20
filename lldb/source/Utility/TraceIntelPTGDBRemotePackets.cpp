@@ -19,7 +19,7 @@ const char *IntelPTDataKinds::kPerfContextSwitchTrace =
     "perfContextSwitchTrace";
 
 bool TraceIntelPTStartRequest::IsPerCpuTracing() const {
-  return per_cpu_tracing.getValueOr(false);
+  return per_cpu_tracing.value_or(false);
 }
 
 json::Value toJSON(const JSONUINT64 &uint64, bool hex) {

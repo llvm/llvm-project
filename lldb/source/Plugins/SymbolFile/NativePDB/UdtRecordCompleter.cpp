@@ -71,7 +71,7 @@ clang::QualType UdtRecordCompleter::AddBaseClassForTypeIndex(
     return {};
 
   m_bases.push_back(
-      std::make_pair(vtable_idx.getValueOr(0), std::move(base_spec)));
+      std::make_pair(vtable_idx.value_or(0), std::move(base_spec)));
 
   return qt;
 }
