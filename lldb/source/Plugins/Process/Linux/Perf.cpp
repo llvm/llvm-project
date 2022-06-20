@@ -77,8 +77,8 @@ llvm::Expected<PerfEvent> PerfEvent::Init(perf_event_attr &attr,
                                           Optional<long> group_fd,
                                           unsigned long flags) {
   errno = 0;
-  long fd = syscall(SYS_perf_event_open, &attr, pid.getValueOr(-1),
-                    cpu.getValueOr(-1), group_fd.getValueOr(-1), flags);
+  long fd = syscall(SYS_perf_event_open, &attr, pid.value_or(-1),
+                    cpu.value_or(-1), group_fd.value_or(-1), flags);
   if (fd == -1) {
     std::string err_msg =
         llvm::formatv("perf event syscall failed: {0}", std::strerror(errno));

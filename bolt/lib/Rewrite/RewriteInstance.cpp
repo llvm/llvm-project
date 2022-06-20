@@ -1686,11 +1686,6 @@ void RewriteInstance::adjustCommandLineOptions() {
     opts::SplitEH = false;
   }
 
-  if (opts::SplitEH && !BC->HasFixedLoadAddress) {
-    errs() << "BOLT-WARNING: disabling -split-eh for shared object\n";
-    opts::SplitEH = false;
-  }
-
   if (opts::StrictMode && !BC->HasRelocations) {
     errs() << "BOLT-WARNING: disabling strict mode (-strict) in non-relocation "
               "mode\n";
@@ -5206,8 +5201,6 @@ uint64_t RewriteInstance::getNewFunctionAddress(uint64_t OldAddress) {
   const BinaryFunction *Function = BC->getBinaryFunctionAtAddress(OldAddress);
   if (!Function)
     return 0;
-
-  assert(!Function->isFragment() && "cannot get new address for a fragment");
 
   return Function->getOutputAddress();
 }

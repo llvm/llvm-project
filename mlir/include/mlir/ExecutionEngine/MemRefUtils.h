@@ -103,7 +103,7 @@ allocAligned(size_t nElements, AllocFunType allocFun = &::malloc,
              llvm::Optional<uint64_t> alignment = llvm::Optional<uint64_t>()) {
   assert(sizeof(T) < (1ul << 32) && "Elemental type overflows");
   auto size = nElements * sizeof(T);
-  auto desiredAlignment = alignment.getValueOr(nextPowerOf2(sizeof(T)));
+  auto desiredAlignment = alignment.value_or(nextPowerOf2(sizeof(T)));
   assert((desiredAlignment & (desiredAlignment - 1)) == 0);
   assert(desiredAlignment >= sizeof(T));
   T *data = reinterpret_cast<T *>(allocFun(size + desiredAlignment));
@@ -175,7 +175,7 @@ public:
     } else {
       memset(descriptor.data, 0,
              nElements * sizeof(T) +
-                 alignment.getValueOr(detail::nextPowerOf2(sizeof(T))));
+                 alignment.value_or(detail::nextPowerOf2(sizeof(T))));
     }
   }
   /// Take ownership of an existing descriptor with a custom deleter.

@@ -70,8 +70,8 @@ Value *VectorBuilder::createVectorInstruction(unsigned Opcode, Type *ReturnTy,
 
   // Whether the mask and vlen parameter are at the end of the parameter list.
   bool TrailingMaskAndVLen =
-      std::min<size_t>(MaskPosOpt.getValueOr(NumInstParams),
-                       VLenPosOpt.getValueOr(NumInstParams)) >= NumInstParams;
+      std::min<size_t>(MaskPosOpt.value_or(NumInstParams),
+                       VLenPosOpt.value_or(NumInstParams)) >= NumInstParams;
 
   if (TrailingMaskAndVLen) {
     // Fast path for trailing mask, vector length.
@@ -82,8 +82,8 @@ Value *VectorBuilder::createVectorInstruction(unsigned Opcode, Type *ReturnTy,
     // Insert mask and evl operands in between the instruction operands.
     for (size_t VPParamIdx = 0, ParamIdx = 0; VPParamIdx < NumVPParams;
          ++VPParamIdx) {
-      if ((MaskPosOpt && MaskPosOpt.getValueOr(NumVPParams) == VPParamIdx) ||
-          (VLenPosOpt && VLenPosOpt.getValueOr(NumVPParams) == VPParamIdx))
+      if ((MaskPosOpt && MaskPosOpt.value_or(NumVPParams) == VPParamIdx) ||
+          (VLenPosOpt && VLenPosOpt.value_or(NumVPParams) == VPParamIdx))
         continue;
       assert(ParamIdx < NumInstParams);
       IntrinParams[VPParamIdx] = InstOpArray[ParamIdx++];
