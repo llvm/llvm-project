@@ -3145,6 +3145,12 @@ FoldCondBranchOnValueKnownInPredecessorImpl(BranchInst *BI, DomTreeUpdater *DTU,
       DTU->applyUpdates(Updates);
     }
 
+    // For simplicity, we created a separate basic block for the edge. Merge
+    // it back into the predecessor if possible. This not only avoids
+    // unnecessary SimplifyCFG iterations, but also makes sure that we don't
+    // bypass the check for trivial cycles above.
+    MergeBlockIntoPredecessor(EdgeBB, DTU);
+
     // Signal repeat, simplifying any other constants.
     return None;
   }
