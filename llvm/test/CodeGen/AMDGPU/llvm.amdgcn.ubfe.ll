@@ -683,8 +683,8 @@ define amdgpu_kernel void @bfe_u32_test_6(i32 addrspace(1)* %out, i32 addrspace(
 ; SI-NEXT:    s_mov_b32 s4, s0
 ; SI-NEXT:    s_mov_b32 s5, s1
 ; SI-NEXT:    s_waitcnt vmcnt(0)
-; SI-NEXT:    v_lshlrev_b32_e32 v0, 31, v0
-; SI-NEXT:    v_lshrrev_b32_e32 v0, 1, v0
+; SI-NEXT:    v_lshlrev_b32_e32 v0, 30, v0
+; SI-NEXT:    v_and_b32_e32 v0, 2.0, v0
 ; SI-NEXT:    buffer_store_dword v0, off, s[4:7], 0
 ; SI-NEXT:    s_endpgm
 ;
@@ -702,8 +702,8 @@ define amdgpu_kernel void @bfe_u32_test_6(i32 addrspace(1)* %out, i32 addrspace(
 ; VI-NEXT:    s_mov_b32 s4, s0
 ; VI-NEXT:    s_mov_b32 s5, s1
 ; VI-NEXT:    s_waitcnt vmcnt(0)
-; VI-NEXT:    v_lshlrev_b32_e32 v0, 31, v0
-; VI-NEXT:    v_lshrrev_b32_e32 v0, 1, v0
+; VI-NEXT:    v_lshlrev_b32_e32 v0, 30, v0
+; VI-NEXT:    v_and_b32_e32 v0, 2.0, v0
 ; VI-NEXT:    buffer_store_dword v0, off, s[4:7], 0
 ; VI-NEXT:    s_endpgm
   %x = load i32, i32 addrspace(1)* %in, align 4

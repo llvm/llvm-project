@@ -337,17 +337,25 @@ define i8 @test_i8_lshr_lshr_1(i8 %a0) {
 ; X86-LABEL: test_i8_lshr_lshr_1:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movb {{[0-9]+}}(%esp), %al
-; X86-NEXT:    shlb $3, %al
-; X86-NEXT:    shrb $5, %al
+; X86-NEXT:    shrb $2, %al
+; X86-NEXT:    andb $7, %al
 ; X86-NEXT:    retl
 ;
-; X64-LABEL: test_i8_lshr_lshr_1:
-; X64:       # %bb.0:
-; X64-NEXT:    # kill: def $edi killed $edi def $rdi
-; X64-NEXT:    leal (,%rdi,8), %eax
-; X64-NEXT:    shrb $5, %al
-; X64-NEXT:    # kill: def $al killed $al killed $eax
-; X64-NEXT:    retq
+; X64-MASK-LABEL: test_i8_lshr_lshr_1:
+; X64-MASK:       # %bb.0:
+; X64-MASK-NEXT:    movl %edi, %eax
+; X64-MASK-NEXT:    shrb $2, %al
+; X64-MASK-NEXT:    andb $7, %al
+; X64-MASK-NEXT:    # kill: def $al killed $al killed $eax
+; X64-MASK-NEXT:    retq
+;
+; X64-SHIFT-LABEL: test_i8_lshr_lshr_1:
+; X64-SHIFT:       # %bb.0:
+; X64-SHIFT-NEXT:    # kill: def $edi killed $edi def $rdi
+; X64-SHIFT-NEXT:    leal (,%rdi,8), %eax
+; X64-SHIFT-NEXT:    shrb $5, %al
+; X64-SHIFT-NEXT:    # kill: def $al killed $al killed $eax
+; X64-SHIFT-NEXT:    retq
   %1 = shl i8 %a0, 3
   %2 = lshr i8 %1, 5
   ret i8 %2
@@ -357,17 +365,25 @@ define i8 @test_i8_lshr_lshr_2(i8 %a0) {
 ; X86-LABEL: test_i8_lshr_lshr_2:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movb {{[0-9]+}}(%esp), %al
-; X86-NEXT:    shlb $5, %al
-; X86-NEXT:    shrb $3, %al
+; X86-NEXT:    shlb $2, %al
+; X86-NEXT:    andb $28, %al
 ; X86-NEXT:    retl
 ;
-; X64-LABEL: test_i8_lshr_lshr_2:
-; X64:       # %bb.0:
-; X64-NEXT:    movl %edi, %eax
-; X64-NEXT:    shlb $5, %al
-; X64-NEXT:    shrb $3, %al
-; X64-NEXT:    # kill: def $al killed $al killed $eax
-; X64-NEXT:    retq
+; X64-MASK-LABEL: test_i8_lshr_lshr_2:
+; X64-MASK:       # %bb.0:
+; X64-MASK-NEXT:    # kill: def $edi killed $edi def $rdi
+; X64-MASK-NEXT:    leal (,%rdi,4), %eax
+; X64-MASK-NEXT:    andb $28, %al
+; X64-MASK-NEXT:    # kill: def $al killed $al killed $eax
+; X64-MASK-NEXT:    retq
+;
+; X64-SHIFT-LABEL: test_i8_lshr_lshr_2:
+; X64-SHIFT:       # %bb.0:
+; X64-SHIFT-NEXT:    movl %edi, %eax
+; X64-SHIFT-NEXT:    shlb $5, %al
+; X64-SHIFT-NEXT:    shrb $3, %al
+; X64-SHIFT-NEXT:    # kill: def $al killed $al killed $eax
+; X64-SHIFT-NEXT:    retq
   %1 = shl i8 %a0, 5
   %2 = lshr i8 %1, 3
   ret i8 %2
@@ -476,16 +492,23 @@ define i32 @test_i32_lshr_lshr_1(i32 %a0) {
 ; X86-LABEL: test_i32_lshr_lshr_1:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    shll $3, %eax
-; X86-NEXT:    shrl $5, %eax
+; X86-NEXT:    shrl $2, %eax
+; X86-NEXT:    andl $134217727, %eax # imm = 0x7FFFFFF
 ; X86-NEXT:    retl
 ;
-; X64-LABEL: test_i32_lshr_lshr_1:
-; X64:       # %bb.0:
-; X64-NEXT:    # kill: def $edi killed $edi def $rdi
-; X64-NEXT:    leal (,%rdi,8), %eax
-; X64-NEXT:    shrl $5, %eax
-; X64-NEXT:    retq
+; X64-MASK-LABEL: test_i32_lshr_lshr_1:
+; X64-MASK:       # %bb.0:
+; X64-MASK-NEXT:    movl %edi, %eax
+; X64-MASK-NEXT:    shrl $2, %eax
+; X64-MASK-NEXT:    andl $134217727, %eax # imm = 0x7FFFFFF
+; X64-MASK-NEXT:    retq
+;
+; X64-SHIFT-LABEL: test_i32_lshr_lshr_1:
+; X64-SHIFT:       # %bb.0:
+; X64-SHIFT-NEXT:    # kill: def $edi killed $edi def $rdi
+; X64-SHIFT-NEXT:    leal (,%rdi,8), %eax
+; X64-SHIFT-NEXT:    shrl $5, %eax
+; X64-SHIFT-NEXT:    retq
   %1 = shl i32 %a0, 3
   %2 = lshr i32 %1, 5
   ret i32 %2
@@ -495,16 +518,23 @@ define i32 @test_i32_lshr_lshr_2(i32 %a0) {
 ; X86-LABEL: test_i32_lshr_lshr_2:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    shll $5, %eax
-; X86-NEXT:    shrl $3, %eax
+; X86-NEXT:    shll $2, %eax
+; X86-NEXT:    andl $536870908, %eax # imm = 0x1FFFFFFC
 ; X86-NEXT:    retl
 ;
-; X64-LABEL: test_i32_lshr_lshr_2:
-; X64:       # %bb.0:
-; X64-NEXT:    movl %edi, %eax
-; X64-NEXT:    shll $5, %eax
-; X64-NEXT:    shrl $3, %eax
-; X64-NEXT:    retq
+; X64-MASK-LABEL: test_i32_lshr_lshr_2:
+; X64-MASK:       # %bb.0:
+; X64-MASK-NEXT:    # kill: def $edi killed $edi def $rdi
+; X64-MASK-NEXT:    leal (,%rdi,4), %eax
+; X64-MASK-NEXT:    andl $536870908, %eax # imm = 0x1FFFFFFC
+; X64-MASK-NEXT:    retq
+;
+; X64-SHIFT-LABEL: test_i32_lshr_lshr_2:
+; X64-SHIFT:       # %bb.0:
+; X64-SHIFT-NEXT:    movl %edi, %eax
+; X64-SHIFT-NEXT:    shll $5, %eax
+; X64-SHIFT-NEXT:    shrl $3, %eax
+; X64-SHIFT-NEXT:    retq
   %1 = shl i32 %a0, 5
   %2 = lshr i32 %1, 3
   ret i32 %2
@@ -556,17 +586,23 @@ define i64 @test_i64_lshr_lshr_1(i64 %a0) {
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; X86-NEXT:    shldl $3, %eax, %edx
-; X86-NEXT:    shll $3, %eax
-; X86-NEXT:    shrdl $5, %edx, %eax
-; X86-NEXT:    shrl $5, %edx
+; X86-NEXT:    shrdl $2, %edx, %eax
+; X86-NEXT:    shrl $2, %edx
+; X86-NEXT:    andl $134217727, %edx # imm = 0x7FFFFFF
 ; X86-NEXT:    retl
 ;
-; X64-LABEL: test_i64_lshr_lshr_1:
-; X64:       # %bb.0:
-; X64-NEXT:    leaq (,%rdi,8), %rax
-; X64-NEXT:    shrq $5, %rax
-; X64-NEXT:    retq
+; X64-MASK-LABEL: test_i64_lshr_lshr_1:
+; X64-MASK:       # %bb.0:
+; X64-MASK-NEXT:    shrq $2, %rdi
+; X64-MASK-NEXT:    movabsq $576460752303423487, %rax # imm = 0x7FFFFFFFFFFFFFF
+; X64-MASK-NEXT:    andq %rdi, %rax
+; X64-MASK-NEXT:    retq
+;
+; X64-SHIFT-LABEL: test_i64_lshr_lshr_1:
+; X64-SHIFT:       # %bb.0:
+; X64-SHIFT-NEXT:    leaq (,%rdi,8), %rax
+; X64-SHIFT-NEXT:    shrq $5, %rax
+; X64-SHIFT-NEXT:    retq
   %1 = shl i64 %a0, 3
   %2 = lshr i64 %1, 5
   ret i64 %2
@@ -577,20 +613,24 @@ define i64 @test_i64_lshr_lshr_2(i64 %a0) {
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; X86-NEXT:    shldl $5, %eax, %edx
-; X86-NEXT:    movl %eax, %ecx
-; X86-NEXT:    shll $5, %ecx
-; X86-NEXT:    shrl $27, %eax
-; X86-NEXT:    shldl $29, %ecx, %eax
-; X86-NEXT:    shrl $3, %edx
+; X86-NEXT:    shldl $2, %eax, %edx
+; X86-NEXT:    shll $2, %eax
+; X86-NEXT:    andl $536870911, %edx # imm = 0x1FFFFFFF
 ; X86-NEXT:    retl
 ;
-; X64-LABEL: test_i64_lshr_lshr_2:
-; X64:       # %bb.0:
-; X64-NEXT:    movq %rdi, %rax
-; X64-NEXT:    shlq $5, %rax
-; X64-NEXT:    shrq $3, %rax
-; X64-NEXT:    retq
+; X64-MASK-LABEL: test_i64_lshr_lshr_2:
+; X64-MASK:       # %bb.0:
+; X64-MASK-NEXT:    leaq (,%rdi,4), %rcx
+; X64-MASK-NEXT:    movabsq $2305843009213693948, %rax # imm = 0x1FFFFFFFFFFFFFFC
+; X64-MASK-NEXT:    andq %rcx, %rax
+; X64-MASK-NEXT:    retq
+;
+; X64-SHIFT-LABEL: test_i64_lshr_lshr_2:
+; X64-SHIFT:       # %bb.0:
+; X64-SHIFT-NEXT:    movq %rdi, %rax
+; X64-SHIFT-NEXT:    shlq $5, %rax
+; X64-SHIFT-NEXT:    shrq $3, %rax
+; X64-SHIFT-NEXT:    retq
   %1 = shl i64 %a0, 5
   %2 = lshr i64 %1, 3
   ret i64 %2
