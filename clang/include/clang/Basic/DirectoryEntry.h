@@ -138,7 +138,7 @@ public:
     return MaybeRef;
   }
   RefTy &getValue() & {
-    assert(hasValue());
+    assert(has_value());
     return MaybeRef;
   }
   RefTy const &value() const & {
@@ -146,7 +146,7 @@ public:
     return MaybeRef;
   }
   RefTy const &getValue() const & {
-    assert(hasValue());
+    assert(has_value());
     return MaybeRef;
   }
   RefTy &&value() && {
@@ -154,7 +154,7 @@ public:
     return std::move(MaybeRef);
   }
   RefTy &&getValue() && {
-    assert(hasValue());
+    assert(has_value());
     return std::move(MaybeRef);
   }
 
