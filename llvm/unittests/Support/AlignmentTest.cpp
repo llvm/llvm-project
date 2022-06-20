@@ -93,11 +93,7 @@ TEST(AlignmentTest, AlignTo) {
       return reinterpret_cast<const void *>(offset);
     }
   } kTests[] = {
-      // MaybeAlign
-      {0, 0, 0},
-      {0, 1, 1},
-      {0, 5, 5},
-      // MaybeAlign / Align
+      // Align
       {1, 0, 0},
       {1, 1, 1},
       {1, 5, 5},
@@ -112,14 +108,9 @@ TEST(AlignmentTest, AlignTo) {
       {4, 6, 8},
   };
   for (const auto &T : kTests) {
-    MaybeAlign A(T.alignment);
-    // Test MaybeAlign
+    Align A = Align(T.alignment);
     EXPECT_EQ(alignTo(T.offset, A), T.rounded);
-    // Test Align
-    if (A) {
-      EXPECT_EQ(alignTo(T.offset, A.getValue()), T.rounded);
-      EXPECT_EQ(alignAddr(T.forgedAddr(), A.getValue()), T.rounded);
-    }
+    EXPECT_EQ(alignAddr(T.forgedAddr(), A), T.rounded);
   }
 }
 

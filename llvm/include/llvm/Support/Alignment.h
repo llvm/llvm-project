@@ -184,12 +184,6 @@ inline uint64_t alignTo(uint64_t Size, Align A, uint64_t Skew) {
   return alignTo(Size - Skew, A) + Skew;
 }
 
-/// Returns a multiple of A needed to store `Size` bytes.
-/// Returns `Size` if current alignment is undefined.
-inline uint64_t alignTo(uint64_t Size, MaybeAlign A) {
-  return A ? alignTo(Size, A.getValue()) : Size;
-}
-
 /// Aligns `Addr` to `Alignment` bytes, rounding up.
 inline uintptr_t alignAddr(const void *Addr, Align Alignment) {
   uintptr_t ArithAddr = reinterpret_cast<uintptr_t>(Addr);

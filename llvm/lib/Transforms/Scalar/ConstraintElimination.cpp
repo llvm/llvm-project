@@ -49,6 +49,22 @@ namespace {
 
 class ConstraintInfo;
 
+struct StackEntry {
+  unsigned NumIn;
+  unsigned NumOut;
+  Instruction *Condition;
+  bool IsNot;
+  bool IsSigned = false;
+  /// Variables that can be removed from the system once the stack entry gets
+  /// removed.
+  SmallVector<Value *, 2> ValuesToRelease;
+
+  StackEntry(unsigned NumIn, unsigned NumOut, CmpInst *Condition, bool IsNot,
+             bool IsSigned, SmallVector<Value *, 2> ValuesToRelease)
+      : NumIn(NumIn), NumOut(NumOut), Condition(Condition), IsNot(IsNot),
+        IsSigned(IsSigned), ValuesToRelease(ValuesToRelease) {}
+};
+
 /// Struct to express a pre-condition of the form %Op0 Pred %Op1.
 struct PreconditionTy {
   CmpInst::Predicate Pred;
@@ -124,6 +140,9 @@ public:
   void popLastNVariables(bool Signed, unsigned N) {
     getCS(Signed).popLastNVariables(N);
   }
+
+  void addFact(CmpInst *Condition, bool IsNegated, unsigned NumIn,
+               unsigned NumOut, SmallVectorImpl<StackEntry> &DFSInStack);
 };
 
 } // namespace
@@ -373,22 +392,6 @@ struct ConstraintOrBlock {
         Not(Not), Condition(Condition) {}
 };
 
-struct StackEntry {
-  unsigned NumIn;
-  unsigned NumOut;
-  Instruction *Condition;
-  bool IsNot;
-  bool IsSigned = false;
-  /// Variables that can be removed from the system once the stack entry gets
-  /// removed.
-  SmallVector<Value *, 2> ValuesToRelease;
-
-  StackEntry(unsigned NumIn, unsigned NumOut, CmpInst *Condition, bool IsNot,
-             bool IsSigned, SmallVector<Value *, 2> ValuesToRelease)
-      : NumIn(NumIn), NumOut(NumOut), Condition(Condition), IsNot(IsNot),
-        IsSigned(IsSigned), ValuesToRelease(ValuesToRelease) {}
-};
-
 /// Keep state required to build worklist.
 struct State {
   DominatorTree &DT;
@@ -504,6 +507,55 @@ void State::addInfoFor(BasicBlock &BB) {
     WorkList.emplace_back(DT.getNode(Br->getSuccessor(0)), CmpI, false);
   if (canAddSuccessor(BB, Br->getSuccessor(1)))
     WorkList.emplace_back(DT.getNode(Br->getSuccessor(1)), CmpI, true);
+}
+
+void ConstraintInfo::addFact(CmpInst *Condition, bool IsNegated, unsigned NumIn,
+                             unsigned NumOut,
+                             SmallVectorImpl<StackEntry> &DFSInStack) {
+  // If the constraint has a pre-condition, skip the constraint if it does not
+  // hold.
+  DenseMap<Value *, unsigned> NewIndices;
+  auto R = getConstraint(Condition, *this, NewIndices);
+  if (!R.isValid(*this))
+    return;
+
+  LLVM_DEBUG(dbgs() << "Adding " << *Condition << " " << IsNegated << "\n");
+  bool Added = false;
+  assert(CmpInst::isSigned(Condition->getPredicate()) == R.IsSigned &&
+         "condition and constraint signs must match");
+  auto &CSToUse = getCS(R.IsSigned);
+  if (R.Coefficients.empty())
+    return;
+
+  Added |= CSToUse.addVariableRowFill(R.Coefficients);
+
+  // If R has been added to the system, queue it for removal once it goes
+  // out-of-scope.
+  if (Added) {
+    SmallVector<Value *, 2> ValuesToRelease;
+    for (auto &KV : NewIndices) {
+      getValue2Index(R.IsSigned).insert(KV);
+      ValuesToRelease.push_back(KV.first);
+    }
+
+    LLVM_DEBUG({
+      dbgs() << "  constraint: ";
+      dumpWithNames(R, getValue2Index(R.IsSigned));
+    });
+
+    DFSInStack.emplace_back(NumIn, NumOut, Condition, IsNegated, R.IsSigned,
+                            ValuesToRelease);
+
+    if (R.IsEq) {
+      // Also add the inverted constraint for equality constraints.
+      for (auto &Coeff : R.Coefficients)
+        Coeff *= -1;
+      CSToUse.addVariableRowFill(R.Coefficients);
+
+      DFSInStack.emplace_back(NumIn, NumOut, Condition, IsNegated, R.IsSigned,
+                              SmallVector<Value *, 2>());
+    }
+  }
 }
 
 static void
@@ -690,48 +742,7 @@ static bool eliminateConstraints(Function &F, DominatorTree &DT) {
 
     // Otherwise, add the condition to the system and stack, if we can transform
     // it into a constraint.
-    DenseMap<Value *, unsigned> NewIndices;
-    auto R = getConstraint(CB.Condition, Info, NewIndices);
-    if (!R.isValid(Info))
-      continue;
-
-    LLVM_DEBUG(dbgs() << "Adding " << *CB.Condition << " " << CB.Not << "\n");
-    bool Added = false;
-    assert(CmpInst::isSigned(CB.Condition->getPredicate()) == R.IsSigned &&
-           "condition and constraint signs must match");
-    auto &CSToUse = Info.getCS(R.IsSigned);
-    if (R.Coefficients.empty())
-      continue;
-
-    Added |= CSToUse.addVariableRowFill(R.Coefficients);
-
-    // If R has been added to the system, queue it for removal once it goes
-    // out-of-scope.
-    if (Added) {
-      SmallVector<Value *, 2> ValuesToRelease;
-      for (auto &KV : NewIndices) {
-        Info.getValue2Index(R.IsSigned).insert(KV);
-        ValuesToRelease.push_back(KV.first);
-      }
-
-      LLVM_DEBUG({
-        dbgs() << "  constraint: ";
-        dumpWithNames(R, Info.getValue2Index(R.IsSigned));
-      });
-
-      DFSInStack.emplace_back(CB.NumIn, CB.NumOut, CB.Condition, CB.Not,
-                              R.IsSigned, ValuesToRelease);
-
-      if (R.IsEq) {
-        // Also add the inverted constraint for equality constraints.
-        for (auto &Coeff : R.Coefficients)
-          Coeff *= -1;
-        CSToUse.addVariableRowFill(R.Coefficients);
-
-        DFSInStack.emplace_back(CB.NumIn, CB.NumOut, CB.Condition, CB.Not,
-                                R.IsSigned, SmallVector<Value *, 2>());
-      }
-    }
+    Info.addFact(CB.Condition, CB.Not, CB.NumIn, CB.NumOut, DFSInStack);
   }
 
 #ifndef NDEBUG
