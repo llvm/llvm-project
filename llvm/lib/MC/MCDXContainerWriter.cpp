@@ -109,7 +109,7 @@ uint64_t DXContainerObjectWriter::writeObject(MCAssembler &Asm,
     W.write<uint32_t>(static_cast<uint32_t>(PartSize));
     if (Sec.getName() == "DXIL") {
       dxbc::ProgramHeader Header;
-      bzero(reinterpret_cast<void *>(&Header), sizeof(dxbc::ProgramHeader));
+      memset(reinterpret_cast<void *>(&Header), 0, sizeof(dxbc::ProgramHeader));
 
       const Triple &TT = Asm.getContext().getTargetTriple();
       VersionTuple Version = TT.getOSVersion();
