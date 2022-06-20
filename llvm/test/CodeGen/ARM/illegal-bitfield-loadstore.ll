@@ -90,19 +90,16 @@ define void @i56_or(i56* %a) {
 ;
 ; BE-LABEL: i56_or:
 ; BE:       @ %bb.0:
-; BE-NEXT:    mov r1, r0
-; BE-NEXT:    ldr r12, [r0]
-; BE-NEXT:    ldrh r2, [r1, #4]!
-; BE-NEXT:    ldrb r3, [r1, #2]
+; BE-NEXT:    ldr r1, [r0]
+; BE-NEXT:    strb r1, [r0, #3]
+; BE-NEXT:    ldrh r2, [r0, #4]!
+; BE-NEXT:    ldrb r3, [r0, #2]
 ; BE-NEXT:    orr r2, r3, r2, lsl #8
-; BE-NEXT:    orr r2, r2, r12, lsl #24
-; BE-NEXT:    orr r2, r2, #384
-; BE-NEXT:    strb r2, [r1, #2]
-; BE-NEXT:    lsr r3, r2, #8
-; BE-NEXT:    strh r3, [r1]
-; BE-NEXT:    bic r1, r12, #255
-; BE-NEXT:    orr r1, r1, r2, lsr #24
-; BE-NEXT:    str r1, [r0]
+; BE-NEXT:    orr r1, r2, r1, lsl #24
+; BE-NEXT:    orr r1, r1, #384
+; BE-NEXT:    strb r1, [r0, #2]
+; BE-NEXT:    lsr r1, r1, #8
+; BE-NEXT:    strh r1, [r0]
 ; BE-NEXT:    mov pc, lr
   %aa = load i56, i56* %a
   %b = or i56 %aa, 384
@@ -121,20 +118,17 @@ define void @i56_and_or(i56* %a) {
 ;
 ; BE-LABEL: i56_and_or:
 ; BE:       @ %bb.0:
-; BE-NEXT:    mov r1, r0
+; BE-NEXT:    ldr r1, [r0]
 ; BE-NEXT:    mov r2, #128
-; BE-NEXT:    ldrh r12, [r1, #4]!
-; BE-NEXT:    ldrb r3, [r1, #2]
-; BE-NEXT:    strb r2, [r1, #2]
+; BE-NEXT:    strb r1, [r0, #3]
+; BE-NEXT:    ldrh r12, [r0, #4]!
+; BE-NEXT:    ldrb r3, [r0, #2]
+; BE-NEXT:    strb r2, [r0, #2]
 ; BE-NEXT:    orr r2, r3, r12, lsl #8
-; BE-NEXT:    ldr r12, [r0]
-; BE-NEXT:    orr r2, r2, r12, lsl #24
-; BE-NEXT:    orr r2, r2, #384
-; BE-NEXT:    lsr r3, r2, #8
-; BE-NEXT:    strh r3, [r1]
-; BE-NEXT:    bic r1, r12, #255
-; BE-NEXT:    orr r1, r1, r2, lsr #24
-; BE-NEXT:    str r1, [r0]
+; BE-NEXT:    orr r1, r2, r1, lsl #24
+; BE-NEXT:    orr r1, r1, #384
+; BE-NEXT:    lsr r1, r1, #8
+; BE-NEXT:    strh r1, [r0]
 ; BE-NEXT:    mov pc, lr
 
   %b = load i56, i56* %a, align 1
@@ -155,22 +149,16 @@ define void @i56_insert_bit(i56* %a, i1 zeroext %bit) {
 ;
 ; BE-LABEL: i56_insert_bit:
 ; BE:       @ %bb.0:
-; BE-NEXT:    .save {r11, lr}
-; BE-NEXT:    push {r11, lr}
-; BE-NEXT:    mov r2, r0
-; BE-NEXT:    ldr lr, [r0]
-; BE-NEXT:    ldrh r12, [r2, #4]!
-; BE-NEXT:    ldrb r3, [r2, #2]
-; BE-NEXT:    orr r12, r3, r12, lsl #8
-; BE-NEXT:    orr r3, r12, lr, lsl #24
-; BE-NEXT:    bic r3, r3, #8192
-; BE-NEXT:    orr r1, r3, r1, lsl #13
-; BE-NEXT:    lsr r3, r1, #8
-; BE-NEXT:    strh r3, [r2]
-; BE-NEXT:    bic r2, lr, #255
-; BE-NEXT:    orr r1, r2, r1, lsr #24
-; BE-NEXT:    str r1, [r0]
-; BE-NEXT:    pop {r11, lr}
+; BE-NEXT:    ldr r2, [r0]
+; BE-NEXT:    strb r2, [r0, #3]
+; BE-NEXT:    ldrh r12, [r0, #4]!
+; BE-NEXT:    ldrb r3, [r0, #2]
+; BE-NEXT:    orr r3, r3, r12, lsl #8
+; BE-NEXT:    orr r2, r3, r2, lsl #24
+; BE-NEXT:    bic r2, r2, #8192
+; BE-NEXT:    orr r1, r2, r1, lsl #13
+; BE-NEXT:    lsr r1, r1, #8
+; BE-NEXT:    strh r1, [r0]
 ; BE-NEXT:    mov pc, lr
   %extbit = zext i1 %bit to i56
   %b = load i56, i56* %a, align 1
