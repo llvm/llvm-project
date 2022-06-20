@@ -203,21 +203,31 @@ bool M88kInstructionSelector::selectUbfx(MachineInstr &I,
                                          MachineBasicBlock &MBB,
                                          MachineRegisterInfo &MRI) const {
   assert(I.getOpcode() == TargetOpcode::G_UBFX ||
-         I.getOpcode() == TargetOpcode::G_SBFX && "Unexpected G code");
+         I.getOpcode() == TargetOpcode::G_SBFX ||
+         I.getOpcode() == TargetOpcode::G_SEXT_INREG && "Unexpected G code");
 
   const unsigned NewOpc =
       I.getOpcode() == TargetOpcode::G_UBFX ? M88k::EXTUrwo : M88k::EXTrwo;
-  auto Offset =
-      getIConstantVRegValWithLookThrough(I.getOperand(2).getReg(), MRI, true);
-  if (!Offset)
-    return false;
+  int64_t WO;
+  if (I.getOpcode() == TargetOpcode::G_SEXT_INREG) {
+    // For G_SEXT_INREG, the width is the immediate in operand 2. The offset is
+    // always 0.
+    int64_t Width = I.getOperand(2).getImm() + 1;
+    assert(Width < 32 && "Can't sign-extend 32bit value");
+    WO = Width << 5;
+  } else {
+    auto Offset =
+        getIConstantVRegValWithLookThrough(I.getOperand(2).getReg(), MRI, true);
+    if (!Offset)
+      return false;
 
-  auto Width =
-      getIConstantVRegValWithLookThrough(I.getOperand(3).getReg(), MRI, true);
-  if (!Width)
-    return false;
+    auto Width =
+        getIConstantVRegValWithLookThrough(I.getOperand(3).getReg(), MRI, true);
+    if (!Width)
+      return false;
 
-  int64_t WO = Width->Value.getZExtValue() << 5 | Offset->Value.getZExtValue();
+    WO = Width->Value.getZExtValue() << 5 | Offset->Value.getZExtValue();
+  }
 
   MachineInstr *MI = BuildMI(MBB, I, I.getDebugLoc(), TII.get(NewOpc))
                          .add(I.getOperand(0))
@@ -226,14 +236,6 @@ bool M88kInstructionSelector::selectUbfx(MachineInstr &I,
 
   I.eraseFromParent();
   return constrainSelectedInstRegOperands(*MI, TII, TRI, RBI);
-}
-
-bool M88kInstructionSelector::selectICmp(MachineInstr &I,
-                                         MachineBasicBlock &MBB,
-                                         MachineRegisterInfo &MRI) const {
-  // cmp + extu
-  llvm_unreachable("Not yet implemented");
-  return false;
 }
 
 enum class ICC : unsigned {
@@ -306,6 +308,44 @@ static CC0 getCCforBCOND(CmpInst::Predicate Pred) {
   default:
     llvm_unreachable("Unexpected predicate");
   }
+}
+
+bool M88kInstructionSelector::selectICmp(MachineInstr &I,
+                                         MachineBasicBlock &MBB,
+                                         MachineRegisterInfo &MRI) const {
+  assert(I.getOpcode() == TargetOpcode::G_ICMP && "Unexpected G code");
+
+  MachineInstr *MI = nullptr;
+  CmpInst::Predicate Pred =
+      static_cast<CmpInst::Predicate>(I.getOperand(1).getPredicate());
+  ICC CCCode = getCCforICMP(Pred);
+  Register LHS = I.getOperand(2).getReg();
+  Register Temp = MRI.createVirtualRegister(&M88k::GPRRCRegClass);
+
+  auto Cst =
+      getIConstantVRegValWithLookThrough(I.getOperand(2).getReg(), MRI, true);
+  if (Cst && isInt<16>(Cst->Value.getZExtValue())) {
+    MI = BuildMI(MBB, I, I.getDebugLoc(), TII.get(M88k::CMPri))
+             .addReg(Temp, RegState::Define)
+             .addReg(LHS)
+             .addImm(Cst->Value.getZExtValue());
+  } else {
+    MI = BuildMI(MBB, I, I.getDebugLoc(), TII.get(M88k::CMPrr))
+             .addReg(Temp, RegState::Define)
+             .addReg(LHS)
+             .add(I.getOperand(3));
+  }
+  if (!constrainSelectedInstRegOperands(*MI, TII, TRI, RBI))
+    return false;
+
+    int64_t WO = 1 << 5 | int64_t(CCCode);
+    MI = BuildMI(MBB, I, I.getDebugLoc(), TII.get(M88k::EXTUrwo))
+             .add(I.getOperand(0))
+             .addReg(Temp, RegState::Kill)
+             .addImm(WO);
+
+  I.eraseFromParent();
+  return constrainSelectedInstRegOperands(*MI, TII, TRI, RBI);
 }
 
 bool M88kInstructionSelector::selectCondBr(MachineInstr &I,
@@ -736,7 +776,10 @@ bool M88kInstructionSelector::select(MachineInstr &I) {
     return selectGlobalValue(I, MBB, MRI);
   case TargetOpcode::G_UBFX:
   case TargetOpcode::G_SBFX:
+  case TargetOpcode::G_SEXT_INREG:
     return selectUbfx(I, MBB, MRI);
+  case TargetOpcode::G_ICMP:
+    return selectICmp(I, MBB, MRI);
   case TargetOpcode::G_BRCOND:
     return selectCondBr(I, MBB, MRI);
   case TargetOpcode::G_SEXTLOAD:

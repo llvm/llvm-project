@@ -196,6 +196,10 @@ M88kRegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
   case TargetOpcode::G_TRUNC:
     OperandsMapping = getValueMapping(PMI_GR32);
     break;
+  case TargetOpcode::G_SEXT_INREG:
+    OperandsMapping = getOperandsMapping(
+        {getValueMapping(PMI_GR32), getValueMapping(PMI_GR32), nullptr});
+    break;
   case TargetOpcode::G_SEXTLOAD:
   case TargetOpcode::G_ZEXTLOAD:
   case TargetOpcode::G_LOAD:
@@ -213,6 +217,13 @@ M88kRegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
     break;
   case TargetOpcode::G_ICMP:
     OperandsMapping = getOperandsMapping({getValueMapping(PMI_GR32), nullptr,
+                                          getValueMapping(PMI_GR32),
+                                          getValueMapping(PMI_GR32)});
+    break;
+  case TargetOpcode::G_SELECT:
+    // TODO FP not handled.
+    OperandsMapping = getOperandsMapping({getValueMapping(PMI_GR32),
+                                          getValueMapping(PMI_GR32),
                                           getValueMapping(PMI_GR32),
                                           getValueMapping(PMI_GR32)});
     break;
