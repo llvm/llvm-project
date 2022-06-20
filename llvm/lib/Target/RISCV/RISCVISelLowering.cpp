@@ -942,6 +942,8 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
     setTargetDAGCombine({ISD::FCOPYSIGN, ISD::MGATHER, ISD::MSCATTER,
                          ISD::VP_GATHER, ISD::VP_SCATTER, ISD::SRA, ISD::SRL,
                          ISD::SHL, ISD::STORE, ISD::SPLAT_VECTOR});
+  if (Subtarget.useRVVForFixedLengthVectors())
+    setTargetDAGCombine(ISD::BITCAST);
 
   setLibcallName(RTLIB::FPEXT_F16_F32, "__extendhfsf2");
   setLibcallName(RTLIB::FPROUND_F32_F16, "__truncsfhf2");
@@ -9048,6 +9050,26 @@ SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
       return DAG.getConstant(0, DL, VT);
     }
     }
+  }
+  case ISD::BITCAST: {
+    assert(Subtarget.useRVVForFixedLengthVectors());
+    SDValue N0 = N->getOperand(0);
+    EVT VT = N->getValueType(0);
+    EVT SrcVT = N0.getValueType();
+    // If this is a bitcast between a MVT::v4i1/v2i1/v1i1 and an illegal integer
+    // type, widen both sides to avoid a trip through memory.
+    if ((SrcVT == MVT::v1i1 || SrcVT == MVT::v2i1 || SrcVT == MVT::v4i1) &&
+        VT.isScalarInteger()) {
+      unsigned NumConcats = 8 / SrcVT.getVectorNumElements();
+      SmallVector<SDValue, 4> Ops(NumConcats, DAG.getUNDEF(SrcVT));
+      Ops[0] = N0;
+      SDLoc DL(N);
+      N0 = DAG.getNode(ISD::CONCAT_VECTORS, DL, MVT::v8i1, Ops);
+      N0 = DAG.getBitcast(MVT::i8, N0);
+      return DAG.getNode(ISD::TRUNCATE, DL, VT, N0);
+    }
+
+    return SDValue();
   }
   }
 
