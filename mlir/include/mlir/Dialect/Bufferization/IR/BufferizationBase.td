@@ -41,6 +41,7 @@ def Bufferization_Dialect : Dialect {
         kBufferLayoutAttrName = "bufferization.buffer_layout";
   }];
   let hasOperationAttrVerify = 1;
+  let emitAccessorPrefix = kEmitAccessorPrefix_Prefixed;
 }
 
 #endif // BUFFERIZATION_BASE

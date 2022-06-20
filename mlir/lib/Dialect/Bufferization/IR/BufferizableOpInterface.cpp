@@ -484,7 +484,7 @@ Value bufferization::getBuffer(RewriterBase &rewriter, Value value,
 
   // Replace "%t = to_tensor %m" with %m.
   if (auto toTensorOp = value.getDefiningOp<bufferization::ToTensorOp>())
-    return toTensorOp.memref();
+    return toTensorOp.getMemref();
 
   // Insert to_memref op.
   OpBuilder::InsertionGuard g(rewriter);
@@ -502,7 +502,7 @@ bufferization::getBufferType(Value value, const BufferizationOptions &options) {
   assert(tensorType && "unexpected non-tensor type");
 
   if (auto toTensorOp = value.getDefiningOp<bufferization::ToTensorOp>())
-    return toTensorOp.memref().getType().cast<BaseMemRefType>();
+    return toTensorOp.getMemref().getType().cast<BaseMemRefType>();
 
   return getMemRefType(tensorType, options);
 }
