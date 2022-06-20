@@ -3,7 +3,7 @@
 ; The difference between this and coro-split-musttail5.ll and coro-split-musttail5.ll
 ; is that this contains dead instruction generated during the transformation,
 ; which makes the optimization harder.
-; RUN: opt < %s -passes='cgscc(coro-split),simplifycfg,early-cse' -S | FileCheck %s
+; RUN: opt < %s -passes='cgscc(coro-split<optimizing>),simplifycfg,early-cse' -S | FileCheck %s
 
 declare void @fakeresume1(i64* align 8)
 
