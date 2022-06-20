@@ -14,10 +14,18 @@
 // LoongArch specific DAG Nodes.
 //===----------------------------------------------------------------------===//
 
+// Target-dependent type requirements.
+def SDT_LoongArchIntBinOpW : SDTypeProfile<1, 2, [
+  SDTCisSameAs<0, 1>, SDTCisSameAs<0, 2>, SDTCisVT<0, i64>
+]>;
+
 // TODO: Add LoongArch specific DAG Nodes
 // Target-dependent nodes.
 def loongarch_ret : SDNode<"LoongArchISD::RET", SDTNone,
                            [SDNPHasChain, SDNPOptInGlue, SDNPVariadic]>;
+def loongarch_sll_w : SDNode<"LoongArchISD::SLL_W", SDT_LoongArchIntBinOpW>;
+def loongarch_sra_w : SDNode<"LoongArchISD::SRA_W", SDT_LoongArchIntBinOpW>;
+def loongarch_srl_w : SDNode<"LoongArchISD::SRL_W", SDT_LoongArchIntBinOpW>;
 
 //===----------------------------------------------------------------------===//
 // Operand and SDNode transformation definitions.
@@ -52,11 +60,11 @@ def uimm3 : Operand<GRLenVT> {
   let ParserMatchClass = UImmAsmOperand<3>;
 }
 
-def uimm5 : Operand<GRLenVT> {
+def uimm5 : Operand<GRLenVT>, ImmLeaf<GRLenVT, [{return isUInt<5>(Imm);}]> {
   let ParserMatchClass = UImmAsmOperand<5>;
 }
 
-def uimm6 : Operand<GRLenVT> {
+def uimm6 : Operand<GRLenVT>, ImmLeaf<GRLenVT, [{return isUInt<6>(Imm);}]> {
   let ParserMatchClass = UImmAsmOperand<6>;
 }
 
@@ -64,7 +72,7 @@ def uimm8 : Operand<GRLenVT> {
   let ParserMatchClass = UImmAsmOperand<8>;
 }
 
-def uimm12 : Operand<GRLenVT> {
+def uimm12 : Operand<GRLenVT>, ImmLeaf<GRLenVT, [{return isUInt<12>(Imm);}]> {
   let ParserMatchClass = UImmAsmOperand<12>;
 }
 
@@ -114,6 +122,18 @@ def simm26_lsl2 : Operand<GRLenVT> {
   let EncoderMethod = "getImmOpValueAsr2";
   let DecoderMethod = "decodeSImmOperand<26, 2>";
 }
+
+// Standalone (codegen-only) immleaf patterns.
+
+// A 12-bit signed immediate plus one where the imm range will be [-2047, 2048].
+def simm12_plus1 : ImmLeaf<GRLenVT,
+  [{return (isInt<12>(Imm) && Imm != -2048) || Imm == 2048;}]>;
+
+// Return the negation of an immediate value.
+def NegImm : SDNodeXForm<imm, [{
+  return CurDAG->getTargetConstant(-N->getSExtValue(), SDLoc(N),
+                                   N->getValueType(0));
+}]>;
 
 //===----------------------------------------------------------------------===//
 // Instruction Formats
@@ -511,6 +531,21 @@ class PatGprImm_32<SDPatternOperator OpNode, LAInst Inst, Operand ImmOpnd>
 
 /// Simple arithmetic operations
 
+// Match both a plain shift and one where the shift amount is masked (this is
+// typically introduced when the legalizer promotes the shift amount and
+// zero-extends it). For LoongArch, the mask is unnecessary as shifts in the
+// base ISA only read the least significant 5 bits (LA32) or 6 bits (LA64).
+def shiftMaskGRLen
+    : ComplexPattern<GRLenVT, 1, "selectShiftMaskGRLen", [], [], 0>;
+def shiftMask32 : ComplexPattern<i64, 1, "selectShiftMask32", [], [], 0>;
+
+class shiftop<SDPatternOperator operator>
+    : PatFrag<(ops node:$val, node:$count),
+              (operator node:$val, (GRLenVT (shiftMaskGRLen node:$count)))>;
+class shiftopw<SDPatternOperator operator>
+    : PatFrag<(ops node:$val, node:$count),
+              (operator node:$val, (i64 (shiftMask32 node:$count)))>;
+
 let Predicates = [IsLA32] in {
 def : PatGprGpr<add, ADD_W>;
 def : PatGprImm<add, ADDI_W, simm12>;
@@ -527,10 +562,39 @@ def : PatGprGpr_32<sub, SUB_W>;
 } // Predicates = [IsLA64]
 
 def : PatGprGpr<and, AND>;
+def : PatGprImm<and, ANDI, uimm12>;
 def : PatGprGpr<or, OR>;
+def : PatGprImm<or, ORI, uimm12>;
 def : PatGprGpr<xor, XOR>;
+def : PatGprImm<xor, XORI, uimm12>;
+
+/// Shift
+
+let Predicates = [IsLA32] in {
+def : PatGprGpr<shiftop<shl>, SLL_W>;
+def : PatGprGpr<shiftop<sra>, SRA_W>;
+def : PatGprGpr<shiftop<srl>, SRL_W>;
+def : PatGprImm<shl, SLLI_W, uimm5>;
+def : PatGprImm<sra, SRAI_W, uimm5>;
+def : PatGprImm<srl, SRLI_W, uimm5>;
+} // Predicates = [IsLA32]
+
+let Predicates = [IsLA64] in {
+def : PatGprGpr<shiftopw<loongarch_sll_w>, SLL_W>;
+def : PatGprGpr<shiftopw<loongarch_sra_w>, SRA_W>;
+def : PatGprGpr<shiftopw<loongarch_srl_w>, SRL_W>;
+def : PatGprGpr<shiftop<shl>, SLL_D>;
+def : PatGprGpr<shiftop<sra>, SRA_D>;
+def : PatGprGpr<shiftop<srl>, SRL_D>;
+def : PatGprImm<shl, SLLI_D, uimm6>;
+def : PatGprImm<sra, SRAI_D, uimm6>;
+def : PatGprImm<srl, SRLI_D, uimm6>;
+} // Predicates = [IsLA64]
 
 /// sext and zext
+
+def : Pat<(sext_inreg GPR:$rj, i8), (EXT_W_B GPR:$rj)>;
+def : Pat<(sext_inreg GPR:$rj, i16), (EXT_W_H GPR:$rj)>;
 
 let Predicates = [IsLA64] in {
 def : Pat<(sext_inreg GPR:$rj, i32), (ADDI_W GPR:$rj, 0)>;
@@ -538,7 +602,44 @@ def : Pat<(sext_inreg GPR:$rj, i32), (ADDI_W GPR:$rj, 0)>;
 
 /// Setcc
 
+def : PatGprGpr<setlt, SLT>;
+def : PatGprImm<setlt, SLTI, simm12>;
 def : PatGprGpr<setult, SLTU>;
+def : PatGprImm<setult, SLTUI, simm12>;
+
+// Define pattern expansions for setcc operations that aren't directly
+// handled by a LoongArch instruction.
+def : Pat<(seteq GPR:$rj, 0), (SLTUI GPR:$rj, 1)>;
+def : Pat<(seteq GPR:$rj, GPR:$rk), (SLTUI (XOR GPR:$rj, GPR:$rk), 1)>;
+let Predicates = [IsLA32] in {
+def : Pat<(seteq GPR:$rj, simm12_plus1:$imm12),
+          (SLTUI (ADDI_W GPR:$rj, (NegImm simm12_plus1:$imm12)), 1)>;
+} // Predicates = [IsLA32]
+let Predicates = [IsLA64] in {
+def : Pat<(seteq GPR:$rj, simm12_plus1:$imm12),
+          (SLTUI (ADDI_D GPR:$rj, (NegImm simm12_plus1:$imm12)), 1)>;
+} // Predicates = [IsLA64]
+def : Pat<(setne GPR:$rj, 0), (SLTU R0, GPR:$rj)>;
+def : Pat<(setne GPR:$rj, GPR:$rk), (SLTU R0, (XOR GPR:$rj, GPR:$rk))>;
+let Predicates = [IsLA32] in {
+def : Pat<(setne GPR:$rj, simm12_plus1:$imm12),
+          (SLTU R0, (ADDI_W GPR:$rj, (NegImm simm12_plus1:$imm12)))>;
+} // Predicates = [IsLA32]
+let Predicates = [IsLA64] in {
+def : Pat<(setne GPR:$rj, simm12_plus1:$imm12),
+          (SLTU R0, (ADDI_D GPR:$rj, (NegImm simm12_plus1:$imm12)))>;
+} // Predicates = [IsLA64]
+def : Pat<(setugt GPR:$rj, GPR:$rk), (SLTU GPR:$rk, GPR:$rj)>;
+def : Pat<(setuge GPR:$rj, GPR:$rk), (XORI (SLTU GPR:$rj, GPR:$rk), 1)>;
+def : Pat<(setule GPR:$rj, GPR:$rk), (XORI (SLTU GPR:$rk, GPR:$rj), 1)>;
+def : Pat<(setgt GPR:$rj, GPR:$rk), (SLT GPR:$rk, GPR:$rj)>;
+def : Pat<(setge GPR:$rj, GPR:$rk), (XORI (SLT GPR:$rj, GPR:$rk), 1)>;
+def : Pat<(setle GPR:$rj, GPR:$rk), (XORI (SLT GPR:$rk, GPR:$rj), 1)>;
+
+/// Select
+
+def : Pat<(select GPR:$cond, GPR:$t, GPR:$f),
+          (OR (MASKEQZ GPR:$t, GPR:$cond), (MASKNEZ GPR:$f, GPR:$cond))>;
 
 /// Branches and jumps
 
