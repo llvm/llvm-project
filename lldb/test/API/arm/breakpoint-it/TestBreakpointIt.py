@@ -11,8 +11,6 @@ from lldbsuite.test import lldbutil
 
 
 class TestBreakpointIt(TestBase):
-
-    mydir = TestBase.compute_mydir(__file__)
     NO_DEBUG_INFO_TESTCASE = True
 
     @skipIf(archs=no_match(["arm"]))

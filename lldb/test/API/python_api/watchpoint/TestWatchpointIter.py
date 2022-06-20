@@ -13,8 +13,6 @@ from lldbsuite.test import lldbutil
 
 
 class WatchpointIteratorTestCase(TestBase):
-
-    mydir = TestBase.compute_mydir(__file__)
     NO_DEBUG_INFO_TESTCASE = True
 
     # hardware watchpoints are not reported with a hardware index # on armv7 on ios devices

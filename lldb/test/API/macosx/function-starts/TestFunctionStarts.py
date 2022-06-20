@@ -13,8 +13,6 @@ exe_name = "StripMe"  # Must match Makefile
 
 class FunctionStartsTestCase(TestBase):
 
-    mydir = TestBase.compute_mydir(__file__)
-
     NO_DEBUG_INFO_TESTCASE = True
 
     @skipIfRemote

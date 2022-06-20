@@ -14,8 +14,6 @@ from lldbsuite.test import lldbutil
 
 class TestBreakpointInMemberFuncWNonPrimitiveParams(TestBase):
 
-    mydir = TestBase.compute_mydir(__file__)
-
     @add_test_categories(["gmodules"])
     def test_breakpint_in_member_func_w_non_primitie_params(self):
         self.build()

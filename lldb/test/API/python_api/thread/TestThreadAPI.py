@@ -14,8 +14,6 @@ from lldbsuite.test.lldbutil import get_stopped_thread, get_caller_symbol
 
 class ThreadAPITestCase(TestBase):
 
-    mydir = TestBase.compute_mydir(__file__)
-
     def test_get_process(self):
         """Test Python SBThread.GetProcess() API."""
         self.build()

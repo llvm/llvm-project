@@ -12,8 +12,6 @@ import lldbsuite.test.lldbutil as lldbutil
 
 class TestBreakpointLanguage(TestBase):
 
-    mydir = TestBase.compute_mydir(__file__)
-
     def check_location_file(self, bp, loc, test_name):
         bp_loc = bp.GetLocationAtIndex(loc)
         addr = bp_loc.GetAddress()

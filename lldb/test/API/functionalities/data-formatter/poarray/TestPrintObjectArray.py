@@ -12,8 +12,6 @@ from lldbsuite.test import lldbutil
 
 class PrintObjectArrayTestCase(TestBase):
 
-    mydir = TestBase.compute_mydir(__file__)
-
     @skipUnlessDarwin
     def test_print_array(self):
         """Test that expr -O -Z works"""

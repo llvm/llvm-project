@@ -14,8 +14,6 @@ from lldbsuite.test import lldbutil
 
 class AvoidBreakpointInDelaySlotAPITestCase(TestBase):
 
-    mydir = TestBase.compute_mydir(__file__)
-
     @skipIf(archs=no_match(re.compile('mips*')))
     def test(self):
         self.build()

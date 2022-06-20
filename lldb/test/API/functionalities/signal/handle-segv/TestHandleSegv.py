@@ -11,8 +11,6 @@ from lldbsuite.test import lldbutil
 
 class HandleSegvTestCase(TestBase):
 
-    mydir = TestBase.compute_mydir(__file__)
-
     @skipIfWindows  # signals do not exist on Windows
     @skipIfDarwin
     @expectedFailureNetBSD

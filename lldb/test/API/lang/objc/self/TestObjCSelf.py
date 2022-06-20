@@ -9,8 +9,6 @@ from lldbsuite.test import lldbutil
 
 class ObjCSelfTestCase(TestBase):
 
-    mydir = TestBase.compute_mydir(__file__)
-
     def test_with_run_command(self):
         """Test that the appropriate member variables are available when stopped in Objective-C class and instance methods"""
         self.build()

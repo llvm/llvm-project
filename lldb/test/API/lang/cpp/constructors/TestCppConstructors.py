@@ -5,8 +5,6 @@ from lldbsuite.test import lldbutil
 
 class TestCase(TestBase):
 
-    mydir = TestBase.compute_mydir(__file__)
-
     @expectedFailureAll(bugnumber="llvm.org/pr50814", compiler="gcc")
     def test_constructors(self):
         self.build()

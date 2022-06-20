@@ -10,8 +10,6 @@ from lldbsuite.test.lldbtest import *
 
 class TestStepVrsInterruptTimeout(TestBase):
 
-    mydir = TestBase.compute_mydir(__file__)
-
     NO_DEBUG_INFO_TESTCASE = True
 
     def test_step_vrs_interrupt(self):

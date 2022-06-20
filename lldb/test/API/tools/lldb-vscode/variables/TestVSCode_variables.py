@@ -21,8 +21,6 @@ def make_buffer_verify_dict(start_idx, count, offset=0):
 
 class TestVSCode_variables(lldbvscode_testcase.VSCodeTestCaseBase):
 
-    mydir = TestBase.compute_mydir(__file__)
-
     def verify_values(self, verify_dict, actual, varref_dict=None, expression=None):
         if 'equals' in verify_dict:
             verify = verify_dict['equals']

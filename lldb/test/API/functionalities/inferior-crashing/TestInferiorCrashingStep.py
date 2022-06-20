@@ -10,8 +10,6 @@ from lldbsuite.test.lldbtest import *
 
 class CrashingInferiorStepTestCase(TestBase):
 
-    mydir = TestBase.compute_mydir(__file__)
-
     @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr24778")
     @expectedFailureNetBSD
     def test_inferior_crashing(self):

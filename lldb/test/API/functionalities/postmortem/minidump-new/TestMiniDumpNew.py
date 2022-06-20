@@ -14,8 +14,6 @@ from lldbsuite.test import lldbutil
 
 class MiniDumpNewTestCase(TestBase):
 
-    mydir = TestBase.compute_mydir(__file__)
-
     NO_DEBUG_INFO_TESTCASE = True
 
     _linux_x86_64_pid = 29917

@@ -11,8 +11,6 @@ from lldbsuite.test import lldbutil
 
 
 class WatchLocationUsingWatchpointSetTestCase(TestBase):
-
-    mydir = TestBase.compute_mydir(__file__)
     NO_DEBUG_INFO_TESTCASE = True
 
     # on arm64 targets, lldb has incorrect hit-count / ignore-counts

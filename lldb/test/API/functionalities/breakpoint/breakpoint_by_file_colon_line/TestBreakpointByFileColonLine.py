@@ -12,8 +12,6 @@ from lldbsuite.test import lldbutil
 
 class BreakpointByLineAndColumnTestCase(TestBase):
 
-    mydir = TestBase.compute_mydir(__file__)
-
     def testBreakpointSpecWithLine(self):
         self.build()
         target = self.createTestTarget()

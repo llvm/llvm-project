@@ -9,8 +9,6 @@ from lldbsuite.test import lldbutil
 
 class TestCppNsImport(TestBase):
 
-    mydir = TestBase.compute_mydir(__file__)
-
     @expectedFailureAll(oslist=['freebsd'], bugnumber="llvm.org/pr25925")
     def test_with_run_command(self):
         """Tests imported namespaces in C++."""

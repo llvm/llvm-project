@@ -13,7 +13,6 @@ import lldbvscode_testcase
 
 
 class TestVSCode_optimized(lldbvscode_testcase.VSCodeTestCaseBase):
-    mydir = TestBase.compute_mydir(__file__)
 
     @skipIfWindows
     @skipIfRemote

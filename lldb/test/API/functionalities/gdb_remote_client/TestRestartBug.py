@@ -8,8 +8,6 @@ from lldbsuite.test.lldbgdbclient import GDBRemoteTestBase
 
 class TestRestartBug(GDBRemoteTestBase):
 
-    mydir = TestBase.compute_mydir(__file__)
-
     @expectedFailureAll(bugnumber="llvm.org/pr24530")
     def test(self):
         """

@@ -14,8 +14,6 @@ import lldbsuite.test.lldbutil as lldbutil
 
 
 class TestOSPluginStepping(TestBase):
-
-    mydir = TestBase.compute_mydir(__file__)
     NO_DEBUG_INFO_TESTCASE = True
 
     @skipIfWindows

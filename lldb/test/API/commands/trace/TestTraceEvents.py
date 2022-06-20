@@ -6,8 +6,6 @@ from lldbsuite.test.decorators import *
 
 class TestTraceEvents(TraceIntelPTTestCaseBase):
 
-    mydir = TestBase.compute_mydir(__file__)
-
     @testSBAPIAndCommands
     def testPauseEvents(self):
       '''

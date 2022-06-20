@@ -12,8 +12,6 @@ from lldbsuite.test import lldbutil
 
 @skipIfWindows  # signals do not exist on Windows
 class RaiseTestCase(TestBase):
-
-    mydir = TestBase.compute_mydir(__file__)
     NO_DEBUG_INFO_TESTCASE = True
 
     @skipIfNetBSD  # Hangs on NetBSD

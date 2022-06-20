@@ -10,8 +10,6 @@ from lldbsuite.test import lldbutil
 
 class UnknownCommandTestCase(TestBase):
 
-    mydir = TestBase.compute_mydir(__file__)
-
     @no_debug_info_test
     def test_ambiguous_command(self):
         command_interpreter = self.dbg.GetCommandInterpreter()

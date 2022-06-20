@@ -10,8 +10,6 @@ import re
 
 class TestAppleSimulatorOSType(gdbremote_testcase.GdbRemoteTestCaseBase):
 
-    mydir = TestBase.compute_mydir(__file__)
-
     # Number of stderr lines to read from the simctl output.
     READ_LINES = 10
 

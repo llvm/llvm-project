@@ -5,8 +5,6 @@ from lldbsuite.test import lldbutil
 
 class TestCaseClassTemplateTypeParameterPack(TestBase):
 
-    mydir = TestBase.compute_mydir(__file__)
-
     @expectedFailureAll(oslist=["windows"], archs=["i[3-6]86", "x86_64"]) # Fails to read memory from target.
     @no_debug_info_test
     def test(self):

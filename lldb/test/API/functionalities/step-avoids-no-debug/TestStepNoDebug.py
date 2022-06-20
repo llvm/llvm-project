@@ -13,8 +13,6 @@ from lldbsuite.test import lldbutil
 
 class StepAvoidsNoDebugTestCase(TestBase):
 
-    mydir = TestBase.compute_mydir(__file__)
-
     @add_test_categories(['pyapi'])
     def test_step_out_with_python(self):
         """Test stepping out using avoid-no-debug with dsyms."""

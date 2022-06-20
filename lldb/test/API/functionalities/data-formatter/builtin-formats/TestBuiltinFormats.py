@@ -9,8 +9,6 @@ from lldbsuite.test import lldbutil
 
 class TestCase(TestBase):
 
-    mydir = TestBase.compute_mydir(__file__)
-
     def getFormatted(self, format, expr):
         """
         Evaluates the expression and formats the result with the given format.

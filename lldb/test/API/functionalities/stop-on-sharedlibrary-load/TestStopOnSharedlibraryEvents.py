@@ -6,8 +6,6 @@ from lldbsuite.test import lldbutil
 
 class TestStopOnSharedlibraryEvents(TestBase):
 
-    mydir = TestBase.compute_mydir(__file__)
-
     @skipIfRemote
     @skipIfWindows
     @no_debug_info_test

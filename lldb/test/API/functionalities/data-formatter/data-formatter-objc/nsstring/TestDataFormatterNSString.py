@@ -13,8 +13,6 @@ from lldbsuite.test import lldbutil
 
 class NSStringDataFormatterTestCase(TestBase):
 
-    mydir = TestBase.compute_mydir(__file__)
-
     def appkit_tester_impl(self, commands):
         self.build()
         self.runCmd("file " + self.getBuildArtifact("a.out"), CURRENT_EXECUTABLE_SET)

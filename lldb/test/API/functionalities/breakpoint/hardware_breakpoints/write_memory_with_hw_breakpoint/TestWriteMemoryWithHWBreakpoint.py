@@ -12,7 +12,6 @@ from lldbsuite.test import lldbutil
 from functionalities.breakpoint.hardware_breakpoints.base import *
 
 class WriteMemoryWithHWBreakpoint(HardwareBreakpointTestBase):
-    mydir = TestBase.compute_mydir(__file__)
 
     def does_not_support_hw_breakpoints(self):
         return not super().supports_hw_breakpoints()

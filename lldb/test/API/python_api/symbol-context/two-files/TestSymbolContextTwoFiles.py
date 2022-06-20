@@ -12,8 +12,6 @@ from lldbsuite.test import lldbutil
 
 class SymbolContextTwoFilesTestCase(TestBase):
 
-    mydir = TestBase.compute_mydir(__file__)
-
     @expectedFailureAll(oslist=["windows"])
     def test_lookup_by_address(self):
         """Test lookup by address in a module with multiple compilation units"""

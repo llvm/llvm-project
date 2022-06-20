@@ -10,8 +10,6 @@ import lldbsuite.test.lldbutil as lldbutil
 
 
 class BlocksTestCase(TestBase):
-
-    mydir = TestBase.compute_mydir(__file__)
     lines = []
 
     def setUp(self):

@@ -14,8 +14,6 @@ import re
 
 class TestVSCode_module(lldbvscode_testcase.VSCodeTestCaseBase):
 
-    mydir = TestBase.compute_mydir(__file__)
-
     def run_test(self, symbol_basename, expect_debug_info_size):
         program_basename = "a.out.stripped"
         program = self.getBuildArtifact(program_basename)

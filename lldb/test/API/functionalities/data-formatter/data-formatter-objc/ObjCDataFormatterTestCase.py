@@ -12,8 +12,6 @@ from lldbsuite.test import lldbutil
 
 class ObjCDataFormatterTestCase(TestBase):
 
-   mydir = TestBase.compute_mydir(__file__)
-
    def appkit_tester_impl(self, commands, use_constant_classes):
       if use_constant_classes:
          self.build()

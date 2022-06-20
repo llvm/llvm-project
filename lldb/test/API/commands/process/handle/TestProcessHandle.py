@@ -5,8 +5,6 @@ from lldbsuite.test.decorators import *
 
 class TestProcessHandle(TestBase):
 
-    mydir = TestBase.compute_mydir(__file__)
-
     @no_debug_info_test
     @skipIfWindows
     def test_process_handle(self):

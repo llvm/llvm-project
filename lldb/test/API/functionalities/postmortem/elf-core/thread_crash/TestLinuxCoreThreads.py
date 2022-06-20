@@ -13,8 +13,6 @@ from lldbsuite.test import lldbutil
 class LinuxCoreThreadsTestCase(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
 
-    mydir = TestBase.compute_mydir(__file__)
-
     _i386_pid = 5193
     _x86_64_pid = 5222
 

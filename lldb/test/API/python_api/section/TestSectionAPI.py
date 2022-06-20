@@ -11,8 +11,6 @@ from lldbsuite.test import lldbutil
 
 class SectionAPITestCase(TestBase):
 
-    mydir = TestBase.compute_mydir(__file__)
-
     def test_get_target_byte_size(self):
         d = {'EXE': 'b.out'}
         self.build(dictionary=d)
