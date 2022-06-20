@@ -448,7 +448,7 @@ struct GenerateOpInterface
     auto parallel =
         rewriter.create<scf::ParallelOp>(loc, lowerBounds, upperBounds, steps);
     Block *parallelBody = parallel.getBody();
-    rewriter.mergeBlockBefore(generateOp.getBody(),
+    rewriter.mergeBlockBefore(&generateOp.getBody().front(),
                               parallelBody->getTerminator(),
                               parallelBody->getArguments());
     // Replace the inlined yield op with a store op. The scf.parallel's builder

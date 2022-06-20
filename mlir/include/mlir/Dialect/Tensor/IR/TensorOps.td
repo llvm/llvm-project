@@ -680,7 +680,7 @@ class Tensor_ReassociativeReshapeOp<string mnemonic, list<Trait> traits = []> :
     Results<(outs AnyTensor:$result)> {
 
   code commonExtraClassDeclaration = [{
-    static StringRef getReassociationAttrName() { return "reassociation"; }
+    static StringRef getReassociationAttrStrName() { return "reassociation"; }
     SmallVector<AffineMap, 4> getReassociationMaps();
     SmallVector<ReassociationExprs, 4> getReassociationExprs();
     SmallVector<ReassociationIndices, 4> getReassociationIndices() {
@@ -921,11 +921,11 @@ def Tensor_PadOp : Tensor_Op<"pad", [AttrSizedOperandSegments, NoSideEffect,
   }];
 
   let extraClassDeclaration = [{
-    static StringRef getStaticLowAttrName() {
+    static StringRef getStaticLowAttrStrName() {
       return "static_low";
     }
 
-    static StringRef getStaticHighAttrName() {
+    static StringRef getStaticHighAttrStrName() {
       return "static_high";
     }
 

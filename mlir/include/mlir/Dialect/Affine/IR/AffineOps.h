@@ -115,7 +115,7 @@ public:
   /// Returns the affine map used to access the source memref.
   AffineMap getSrcMap() { return getSrcMapAttr().getValue(); }
   AffineMapAttr getSrcMapAttr() {
-    return (*this)->getAttr(getSrcMapAttrName()).cast<AffineMapAttr>();
+    return (*this)->getAttr(getSrcMapAttrStrName()).cast<AffineMapAttr>();
   }
 
   /// Returns the source memref affine map indices for this DMA operation.
@@ -154,7 +154,7 @@ public:
   /// Returns the affine map used to access the destination memref.
   AffineMap getDstMap() { return getDstMapAttr().getValue(); }
   AffineMapAttr getDstMapAttr() {
-    return (*this)->getAttr(getDstMapAttrName()).cast<AffineMapAttr>();
+    return (*this)->getAttr(getDstMapAttrStrName()).cast<AffineMapAttr>();
   }
 
   /// Returns the destination memref indices for this DMA operation.
@@ -183,7 +183,7 @@ public:
   /// Returns the affine map used to access the tag memref.
   AffineMap getTagMap() { return getTagMapAttr().getValue(); }
   AffineMapAttr getTagMapAttr() {
-    return (*this)->getAttr(getTagMapAttrName()).cast<AffineMapAttr>();
+    return (*this)->getAttr(getTagMapAttrStrName()).cast<AffineMapAttr>();
   }
 
   /// Returns the tag memref indices for this DMA operation.
@@ -203,14 +203,14 @@ public:
   /// Returns the AffineMapAttr associated with 'memref'.
   NamedAttribute getAffineMapAttrForMemRef(Value memref) {
     if (memref == getSrcMemRef())
-      return {StringAttr::get(getContext(), getSrcMapAttrName()),
+      return {StringAttr::get(getContext(), getSrcMapAttrStrName()),
               getSrcMapAttr()};
     if (memref == getDstMemRef())
-      return {StringAttr::get(getContext(), getDstMapAttrName()),
+      return {StringAttr::get(getContext(), getDstMapAttrStrName()),
               getDstMapAttr()};
     assert(memref == getTagMemRef() &&
            "DmaStartOp expected source, destination or tag memref");
-    return {StringAttr::get(getContext(), getTagMapAttrName()),
+    return {StringAttr::get(getContext(), getTagMapAttrStrName()),
             getTagMapAttr()};
   }
 
@@ -233,9 +233,9 @@ public:
     return isSrcMemorySpaceFaster() ? 0 : getDstMemRefOperandIndex();
   }
 
-  static StringRef getSrcMapAttrName() { return "src_map"; }
-  static StringRef getDstMapAttrName() { return "dst_map"; }
-  static StringRef getTagMapAttrName() { return "tag_map"; }
+  static StringRef getSrcMapAttrStrName() { return "src_map"; }
+  static StringRef getDstMapAttrStrName() { return "dst_map"; }
+  static StringRef getTagMapAttrStrName() { return "tag_map"; }
 
   static StringRef getOperationName() { return "affine.dma_start"; }
   static ParseResult parse(OpAsmParser &parser, OperationState &result);
@@ -301,7 +301,7 @@ public:
   /// Returns the affine map used to access the tag memref.
   AffineMap getTagMap() { return getTagMapAttr().getValue(); }
   AffineMapAttr getTagMapAttr() {
-    return (*this)->getAttr(getTagMapAttrName()).cast<AffineMapAttr>();
+    return (*this)->getAttr(getTagMapAttrStrName()).cast<AffineMapAttr>();
   }
 
   /// Returns the tag memref index for this DMA operation.
@@ -319,14 +319,14 @@ public:
   /// associated with 'memref'.
   NamedAttribute getAffineMapAttrForMemRef(Value memref) {
     assert(memref == getTagMemRef());
-    return {StringAttr::get(getContext(), getTagMapAttrName()),
+    return {StringAttr::get(getContext(), getTagMapAttrStrName()),
             getTagMapAttr()};
   }
 
   /// Returns the number of elements transferred by the associated DMA op.
   Value getNumElements() { return getOperand(1 + getTagMap().getNumInputs()); }
 
-  static StringRef getTagMapAttrName() { return "tag_map"; }
+  static StringRef getTagMapAttrStrName() { return "tag_map"; }
   static ParseResult parse(OpAsmParser &parser, OperationState &result);
   void print(OpAsmPrinter &p);
   LogicalResult verifyInvariantsImpl();

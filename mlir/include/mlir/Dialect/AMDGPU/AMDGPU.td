@@ -21,6 +21,8 @@ def AMDGPU_Dialect : Dialect {
     more generic dialects, such as `gpu` and `vector`, when generating LLVM IR
     that will eventually be executed on AMD hardware.
   }];
+
+  let emitAccessorPrefix = kEmitAccessorPrefix_Both;
 }
 
 //===----------------------------------------------------------------------===//

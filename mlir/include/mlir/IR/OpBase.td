@@ -1421,6 +1421,17 @@ def I64ArrayAttr : TypedArrayAttrBase<I64Attr,
                                       "64-bit integer array attribute"> {
   let constBuilderCall = "$_builder.getI64ArrayAttr($0)";
 }
+// Variant of I64ArrayAttr whose user accessor is SmallVector<in64_t>.
+def I64SmallVectorArrayAttr :
+    TypedArrayAttrBase<I64Attr, "64-bit integer array attribute"> {
+  let returnType = [{ ::llvm::SmallVector<int64_t, 8> }];
+  let convertFromStorage = [{
+    llvm::to_vector<4>(
+      llvm::map_range($_self.getAsRange<mlir::IntegerAttr>(),
+      [](IntegerAttr attr) { return attr.getInt(); }));
+  }];
+  let constBuilderCall = "$_builder.getI64ArrayAttr($0)";
+}
 def F32ArrayAttr : TypedArrayAttrBase<F32Attr, "32-bit float array attribute"> {
   let constBuilderCall = "$_builder.getF32ArrayAttr($0)";
 }

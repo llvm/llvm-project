@@ -194,9 +194,8 @@ public:
       upperBoundTuple.push_back(upper);
     }
     steps.reserve(op.steps().size());
-    for (Attribute step : op.steps())
-      steps.push_back(rewriter.create<arith::ConstantIndexOp>(
-          loc, step.cast<IntegerAttr>().getInt()));
+    for (int64_t step : op.steps())
+      steps.push_back(rewriter.create<arith::ConstantIndexOp>(loc, step));
 
     // Get the terminator op.
     Operation *affineParOpTerminator = op.getBody()->getTerminator();
