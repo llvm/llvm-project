@@ -77,7 +77,7 @@ TEST(AlignmentTest, CheckMaybeAlignHasValue) {
 TEST(AlignmentTest, Division) {
   for (uint64_t Value : getValidAlignments()) {
     if (Value > 1) {
-      EXPECT_EQ(Align(Value) / 2, Value / 2);
+      EXPECT_EQ(Align(Value).previous(), Value / 2);
     }
   }
 }
@@ -290,13 +290,6 @@ std::vector<uint64_t> getNonPowerOfTwo() { return {3, 10, 15}; }
 
 TEST(AlignmentDeathTest, CantConvertUnsetMaybe) {
   EXPECT_DEATH((MaybeAlign(0).getValue()), ".*");
-}
-
-TEST(AlignmentDeathTest, Division) {
-  EXPECT_DEATH(Align(1) / 2, "Can't halve byte alignment");
-
-  EXPECT_DEATH(Align(8) / 0, "Divisor must be positive and a power of 2");
-  EXPECT_DEATH(Align(8) / 3, "Divisor must be positive and a power of 2");
 }
 
 TEST(AlignmentDeathTest, InvalidCTors) {
