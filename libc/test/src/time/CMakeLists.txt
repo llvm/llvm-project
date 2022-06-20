@@ -9,6 +9,8 @@ add_libc_unittest(
   HDRS
     TmHelper.h
     TmMatcher.h
+  CXX_STANDARD
+    20
   DEPENDS
     libc.src.time.asctime
 )
@@ -22,6 +24,8 @@ add_libc_unittest(
   HDRS
     TmHelper.h
     TmMatcher.h
+  CXX_STANDARD
+    20
   DEPENDS
     libc.src.time.asctime_r
 )
@@ -59,6 +63,8 @@ add_libc_unittest(
   HDRS
     TmHelper.h
     TmMatcher.h
+  CXX_STANDARD
+    20
   DEPENDS
     libc.src.time.mktime
 )
