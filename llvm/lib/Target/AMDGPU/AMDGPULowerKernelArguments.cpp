@@ -92,9 +92,8 @@ bool AMDGPULowerKernelArguments::runOnFunction(Function &F) {
   for (Argument &Arg : F.args()) {
     const bool IsByRef = Arg.hasByRefAttr();
     Type *ArgTy = IsByRef ? Arg.getParamByRefType() : Arg.getType();
-    MaybeAlign ABITypeAlign = IsByRef ? Arg.getParamAlign() : None;
-    if (!ABITypeAlign)
-      ABITypeAlign = DL.getABITypeAlign(ArgTy);
+    MaybeAlign ParamAlign = IsByRef ? Arg.getParamAlign() : None;
+    Align ABITypeAlign = DL.getValueOrABITypeAlignment(ParamAlign, ArgTy);
 
     uint64_t Size = DL.getTypeSizeInBits(ArgTy);
     uint64_t AllocSize = DL.getTypeAllocSize(ArgTy);
