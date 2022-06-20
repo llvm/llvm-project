@@ -99,7 +99,9 @@ define void @p() norecurse {
 }
 
 ; CHECK: Function Attrs
-; CHECK-SAME: norecurse nosync readnone
+; CHECK-NOT: norecurse
+; CHECK-SAME: nosync readnone
+; CHECK-NOT: norecurse
 ; CHECK-NEXT: define internal i32 @escapes_as_parameter
 define internal i32 @escapes_as_parameter(ptr %p) {
   %a = call i32 @k()

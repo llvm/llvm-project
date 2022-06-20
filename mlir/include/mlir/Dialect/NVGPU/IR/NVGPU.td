@@ -34,6 +34,8 @@ def NVGPU_Dialect : Dialect {
   }];
 
   let useDefaultTypePrinterParser = 1;
+
+  let emitAccessorPrefix = kEmitAccessorPrefix_Both;
 }
 
 /// Device-side synchronization token.

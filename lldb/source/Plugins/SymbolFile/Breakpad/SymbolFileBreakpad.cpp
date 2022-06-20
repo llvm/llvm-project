@@ -488,7 +488,7 @@ void SymbolFileBreakpad::AddSymbols(Symtab &symtab) {
         /*is_global*/ true, /*is_debug*/ false,
         /*is_trampoline*/ false, /*is_artificial*/ false,
         AddressRange(section_sp, address - section_sp->GetFileAddress(),
-                     size.getValueOr(0)),
+                     size.value_or(0)),
         size.hasValue(), /*contains_linker_annotations*/ false, /*flags*/ 0);
   };
 
@@ -806,7 +806,7 @@ void SymbolFileBreakpad::ParseFileRecords() {
     if (record->Number >= m_files->size())
       m_files->resize(record->Number + 1);
     FileSpec::Style style = FileSpec::GuessPathStyle(record->Name)
-                                .getValueOr(FileSpec::Style::native);
+                                .value_or(FileSpec::Style::native);
     (*m_files)[record->Number] = FileSpec(record->Name, style);
   }
 }

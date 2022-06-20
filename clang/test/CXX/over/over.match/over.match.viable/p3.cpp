@@ -49,7 +49,6 @@ struct S {
   S(A) requires false;
   S(double) requires true;
   ~S() requires false;
-  // expected-note@-1 2{{because 'false' evaluated to false}}
   ~S() requires true;
   operator int() requires true;
   operator int() requires false;
@@ -58,11 +57,7 @@ struct S {
 void bar() {
   WrapsStatics<int>::foo(A{});
   S<int>{1.}.foo(A{});
-  // expected-error@-1{{invalid reference to function '~S': constraints not satisfied}}
-  // Note - this behavior w.r.t. constrained dtors is a consequence of current
-  // wording, which does not invoke overload resolution when a dtor is called.
-  // P0848 is set to address this issue.
+
   S<int> s = 1;
-  // expected-error@-1{{invalid reference to function '~S': constraints not satisfied}}
   int a = s;
 }

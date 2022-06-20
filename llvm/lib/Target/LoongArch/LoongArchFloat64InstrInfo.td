@@ -131,3 +131,58 @@ def MOVGR2FR_D  : FP_MOV<0b0000000100010100101010, "movgr2fr.d", FPR64, GPR>;
 def MOVFR2GR_D  : FP_MOV<0b0000000100010100101110, "movfr2gr.d", GPR, FPR64>;
 } // Predicates = [HasBasicD, IsLA64]
 
+//===----------------------------------------------------------------------===//
+// Pseudo-instructions and codegen patterns
+//===----------------------------------------------------------------------===//
+
+let Predicates = [HasBasicD] in {
+
+/// Float arithmetic operations
+
+def : PatFprFpr<fadd, FADD_D, FPR64>;
+def : PatFprFpr<fsub, FSUB_D, FPR64>;
+def : PatFprFpr<fmul, FMUL_D, FPR64>;
+def : PatFprFpr<fdiv, FDIV_D, FPR64>;
+def : PatFpr<fneg, FNEG_D, FPR64>;
+
+/// Setcc
+
+// Match non-signaling comparison
+
+// TODO: Change setcc to any_fsetcc after call is supported because
+// we need to call llvm.experimental.constrained.fcmp.f64 in testcase.
+// See RISCV float-fcmp-strict.ll for reference.
+
+// SETOGT/SETOGE/SETUGT/SETUGE will expand into SETOLT/SETOLE/SETULT/SETULE.
+def : PatFPSetcc<SETOEQ, FCMP_CEQ_D,  FPR64>;
+def : PatFPSetcc<SETOLT, FCMP_CLT_D,  FPR64>;
+def : PatFPSetcc<SETOLE, FCMP_CLE_D,  FPR64>;
+def : PatFPSetcc<SETONE, FCMP_CNE_D,  FPR64>;
+def : PatFPSetcc<SETO,   FCMP_COR_D,  FPR64>;
+def : PatFPSetcc<SETUEQ, FCMP_CUEQ_D, FPR64>;
+def : PatFPSetcc<SETULT, FCMP_CULT_D, FPR64>;
+def : PatFPSetcc<SETULE, FCMP_CULE_D, FPR64>;
+def : PatFPSetcc<SETUNE, FCMP_CUNE_D, FPR64>;
+def : PatFPSetcc<SETUO,  FCMP_CUN_D,  FPR64>;
+
+// TODO: Match signaling comparison strict_fsetccs with FCMP_S*_D instructions.
+
+/// Select
+
+def : Pat<(select GPR:$cc, FPR64:$fk, FPR64:$fj),
+          (FSEL_D FPR64:$fj, FPR64:$fk, (MOVGR2CF GPR:$cc))>;
+
+/// Selectcc
+
+def : PatFPSelectcc<SETOEQ, FCMP_CEQ_D,  FSEL_D, FPR64>;
+def : PatFPSelectcc<SETOLT, FCMP_CLT_D,  FSEL_D, FPR64>;
+def : PatFPSelectcc<SETOLE, FCMP_CLE_D,  FSEL_D, FPR64>;
+def : PatFPSelectcc<SETONE, FCMP_CNE_D,  FSEL_D, FPR64>;
+def : PatFPSelectcc<SETO,   FCMP_COR_D,  FSEL_D, FPR64>;
+def : PatFPSelectcc<SETUEQ, FCMP_CUEQ_D, FSEL_D, FPR64>;
+def : PatFPSelectcc<SETULT, FCMP_CULT_D, FSEL_D, FPR64>;
+def : PatFPSelectcc<SETULE, FCMP_CULE_D, FSEL_D, FPR64>;
+def : PatFPSelectcc<SETUNE, FCMP_CUNE_D, FSEL_D, FPR64>;
+def : PatFPSelectcc<SETUO,  FCMP_CUN_D,  FSEL_D, FPR64>;
+
+} // Predicates = [HasBasicD]

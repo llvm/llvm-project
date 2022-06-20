@@ -20,6 +20,7 @@ endif()
 
 if (LLVM_DIR)
   # Builds that use pre-installed LLVM have LLVM_DIR set.
+  # A standalone or LLVM_ENABLE_RUNTIMES=openmp build takes this route
   find_program(CLANG_TOOL clang PATHS ${LLVM_TOOLS_BINARY_DIR} NO_DEFAULT_PATH)
   find_program(LINK_TOOL llvm-link PATHS ${LLVM_TOOLS_BINARY_DIR}
     NO_DEFAULT_PATH)
@@ -32,6 +33,7 @@ if (LLVM_DIR)
   endif()
 elseif (LLVM_TOOL_CLANG_BUILD AND NOT CMAKE_CROSSCOMPILING AND NOT OPENMP_STANDALONE_BUILD)
   # LLVM in-tree builds may use CMake target names to discover the tools.
+  # A LLVM_ENABLE_PROJECTS=openmp build takes this route
   set(CLANG_TOOL $<TARGET_FILE:clang>)
   set(LINK_TOOL $<TARGET_FILE:llvm-link>)
   set(OPT_TOOL $<TARGET_FILE:opt>)

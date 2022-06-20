@@ -34,9 +34,9 @@ static llvm::cl::opt<unsigned>
                             llvm::cl::init(4));
 
 // TODO-GFX11: Remove this when full 16-bit codegen is implemented.
-static llvm::cl::opt<bool> LimitTo128VGPRs(
-  "amdgpu-npi-limit-to-128-vgprs", llvm::cl::Hidden,
-  llvm::cl::desc("Never use more than 128 VGPRs"));
+static llvm::cl::opt<bool>
+    LimitTo128VGPRs("amdgpu-limit-to-128-vgprs", llvm::cl::Hidden,
+                    llvm::cl::desc("Never use more than 128 VGPRs"));
 
 namespace {
 
@@ -854,7 +854,8 @@ unsigned getTotalNumVGPRs(const MCSubtargetInfo *STI) {
 }
 
 unsigned getAddressableNumVGPRs(const MCSubtargetInfo *STI) {
-  if (LimitTo128VGPRs.getNumOccurrences() ? LimitTo128VGPRs : isGFX11Plus(*STI)) {
+  if (LimitTo128VGPRs.getNumOccurrences() ? LimitTo128VGPRs
+                                          : isGFX11Plus(*STI)) {
     // GFX11 changes the encoding of 16-bit operands in VOP1/2/C instructions
     // such that values 128..255 no longer mean v128..v255, they mean
     // v0.hi..v127.hi instead. Until the compiler understands this, it is not

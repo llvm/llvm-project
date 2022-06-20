@@ -28,6 +28,8 @@ def ArmNeon_Dialect : Dialect {
   // Note: this does not need to depend on LLVMDialect as long as functions in
   // this dialect (such as canonicalization) do not produce entities belonging
   // to the LLVMDialect (ops or types).
+
+  let emitAccessorPrefix = kEmitAccessorPrefix_Both;
 }
 
 //===----------------------------------------------------------------------===//
