@@ -51,12 +51,18 @@ def CastKind : I32EnumAttr<
 
 def CastOp : CIR_Op<"cast", [Pure]> {
   // FIXME: not all conversions are free of side effects.
-  let summary = "cast";
+  let summary = "Conversion between values of different types";
   let description = [{
-    Apply C/C++ usual conversions rules between types. The full list of those
-    can be seen in clang/include/clang/AST/OperationKinds.def, but note that some
-    of the conversions aren't implemented in terms of cir.cast, lvalue-to-rvalue
-    for instance is modeled as a load.
+    Apply C/C++ usual conversions rules between values. Currently supported kinds:
+
+    - `int_to_bool`
+    - `array_to_ptrdecay`
+    - `integral`
+
+    This is effectively a subset of the rules from
+    `llvm-project/clang/include/clang/AST/OperationKinds.def`; but note that some
+    of the conversions aren't implemented in terms of `cir.cast`, `lvalue-to-rvalue`
+    for instance is modeled as a regular `cir.load`.
 
     ```mlir
     %4 = cir.cast (int_to_bool, %3 : i32), !cir.bool
@@ -86,10 +92,10 @@ def SameFirstOperandAndResultType :
 
 def PtrStrideOp : CIR_Op<"ptr_stride",
                          [Pure, SameFirstOperandAndResultType]> {
-  let summary = "pointer access with stride";
+  let summary = "Pointer access with stride";
   let description = [{
     Given a base pointer as operand, provides a new pointer after applying
-    a stride. Used for array subscripts, vectors, etc.
+    a stride. Currently only used for array subscripts.
 
     ```mlir
     %3 = cir.cst(0 : i32) : i32
@@ -118,10 +124,10 @@ def ConstantOp : CIR_Op<"cst",
   // FIXME: Use SameOperandsAndResultType or similar and prevent eye bleeding
   // type repetition in the assembly form.
 
-  let summary = "constant operation";
+  let summary = "Defines a CIR constant";
   let description = [{
-    Constant operation turns a literal into an SSA value. The data is attached
-    to the operation as an attribute. For example:
+    The `cir.cst` operation turns a literal into an SSA value. The data is
+    attached to the operation as an attribute.
 
     ```mlir
       %0 = cir.cst(42 : i32) : i32
@@ -246,10 +252,12 @@ def LoadOp : CIR_Op<"load", [
                  "addr", "result",
                  "$_self.cast<PointerType>().getPointee()">]> {
 
-  let summary = "load operation";
+  let summary = "Load value from memory adddress";
   let description = [{
-    `cir.load` reads a variable (lvalue to rvalue conversion) given an address
-    backed up by a `cir.ptr` type.
+    `cir.load` reads a value (lvalue to rvalue conversion) given an address
+    backed up by a `cir.ptr` type. A unit attribute `deref` can be used to
+    mark the resulting value as used by another operation to dereference
+    a pointer.
 
     Example:
 
@@ -258,8 +266,8 @@ def LoadOp : CIR_Op<"load", [
     // Read from local variable, address in %0.
     %1 = cir.load %0 : !cir.ptr<i32>, i32
 
-    // Load address from memory at address %0. %3 provides
-    // the address used while dereferecing a pointer.
+    // Load address from memory at address %0. %3 is used by at least one
+    // operation that dereferences a pointer.
     %3 = cir.load deref %0 : cir.ptr <!cir.ptr<i32>>
     ```
   }];
@@ -274,6 +282,8 @@ def LoadOp : CIR_Op<"load", [
     (`deref` $isDeref^)? $addr `:` `cir.ptr` type($addr) `,`
                                    type($result) attr-dict
   }];
+
+  // FIXME: add verifier.
 }
 
 //===----------------------------------------------------------------------===//
@@ -285,16 +295,17 @@ def StoreOp : CIR_Op<"store", [
                  "addr", "value",
                  "$_self.cast<PointerType>().getPointee()">]> {
 
-  let summary = "store operation";
+  let summary = "Store value to memory address";
   let description = [{
-    `cir.load` reads a variable using a pointer type.
+    `cir.store` stores a value (first operand) to the memory address specified
+    in the second operand.
 
     Example:
 
     ```mlir
-
-    // Store to local variable, address in %0.
+    // Store a function argument to local storage, address in %0.
     cir.store %arg0, %0 : i32, !cir.ptr<i32>
+    ```
   }];
 
   let arguments = (ins AnyType:$value,
@@ -305,6 +316,8 @@ def StoreOp : CIR_Op<"store", [
   // from the pointer type directly.
   let assemblyFormat =
       "$value `,` $addr attr-dict `:` type($value) `,` `cir.ptr` type($addr)";
+
+  // FIXME: add verifier.
 }
 
 //===----------------------------------------------------------------------===//
@@ -313,17 +326,17 @@ def StoreOp : CIR_Op<"store", [
 
 def ReturnOp : CIR_Op<"return", [HasParent<"FuncOp, ScopeOp, IfOp, SwitchOp, LoopOp">,
                                  Terminator]> {
-  let summary = "return operation";
+  let summary = "Return from function";
   let description = [{
     The "return" operation represents a return operation within a function.
     The operation takes an optional operand and produces no results.
     The operand type must match the signature of the function that contains
-    the operation. For example:
+    the operation.
 
     ```mlir
-      func @foo() -> AnyType {
+      func @foo() -> i32 {
         ...
-        cir.return %0 : AnyType
+        cir.return %0 : i32
       }
     ```
   }];
@@ -355,14 +368,11 @@ def ReturnOp : CIR_Op<"return", [HasParent<"FuncOp, ScopeOp, IfOp, SwitchOp, Loo
 def IfOp : CIR_Op<"if",
       [DeclareOpInterfaceMethods<RegionBranchOpInterface>,
        RecursivelySpeculatable, AutomaticAllocationScope, NoRegionArguments]> {
-  let summary = "if-then-else operation";
+  let summary = "The if-then-else operation";
   let description = [{
     The `cir.if` operation represents an if-then-else construct for
-    conditionally executing two regions of code. The operand to an if operation
-    is a boolean value.
-
-    Each region can contain an arbitrary number of blocks but there usually be
-    only one block in each region unless the presence of return and goto.
+    conditionally executing two regions of code. The operand is a `cir.bool`
+    type.
 
     Examples:
 
@@ -379,7 +389,7 @@ def IfOp : CIR_Op<"if",
 
     cir.if %c  {
       ...
-      br ^a
+      cir.br ^a
     ^a:
       cir.yield
     }
@@ -423,28 +433,30 @@ def YieldOpKind : I32EnumAttr<
 def YieldOp : CIR_Op<"yield", [ReturnLike, Terminator,
                                ParentOneOf<["IfOp", "ScopeOp", "SwitchOp",
                                             "LoopOp"]>]> {
-  let summary = "termination operation for regions inside if, for, scope, etc";
+  let summary = "Terminate CIR regions";
   let description = [{
-    "cir.yield" yields an SSA value from a CIR dialect op region and
-    terminates the regions. The semantics of how the values are yielded is
-    defined by the parent operation.
+    The `cir.yield` operation terminates regions on different CIR operations:
+    `cir.if`, `cir.scope`, `cir.switch` and `cir.loop`.
 
-    Currently, there are not parents where `cir.yield` has any operands,
-    but it will be useful to represent lifetime extension in the future.
+    Might yield an SSA value and the semantics of how the values are yielded is
+    defined by the parent operation. Note: there are currently no uses of
+    `cir.yield` with operands - should be helpful to represent lifetime
+    extension out of short lived scopes in the future.
 
-    When used to leave `cir.switch` regions there are two possible meanings:
-    1. `cir.yield break` has "breaking out of the outermost" switch semantics.
-    2. `cir.yield fallthrough` means the next region in the case list should
-    be executed.
+    Optionally, `cir.yield` can be annotated with extra kind specifiers:
+    - `break`: breaking out of the innermost `cir.switch` / `cir.loop` semantics,
+    cannot be used if not dominated by these parent operations.
+    - `fallthrough`: execution falls to the next region in `cir.switch` case list.
+    Only available inside `cir.switch` regions.
+    - `continue`: only allowed under `cir.loop`, continue execution to the next
+    loop step.
 
-    `cir.yield loopcondition %val` is another form that must terminate cond
-    regions within `cir.loop`s.
-
-    The `cir.yield` must be explicitly used whenever a region has more than
-    one block, or within `cir.switch` regions not `cir.return` terminated.
+    As a general rule, `cir.yield` must be explicitly used whenever a region has
+    more than one block and no terminator, or within `cir.switch` regions not
+    `cir.return` terminated.
 
     Example:
-    ```
+    ```mlir
     cir.if %4 {
       ...
       cir.yield
@@ -504,17 +516,17 @@ def YieldOp : CIR_Op<"yield", [ReturnLike, Terminator,
 
 def ScopeOp : CIR_Op<"scope", [DeclareOpInterfaceMethods<RegionBranchOpInterface>,
        RecursivelySpeculatable, AutomaticAllocationScope, NoRegionArguments]> {
-  let summary = "";
+  let summary = "Represents a C/C++ scope";
   let description = [{
-    "cir.scope" contains one region and defines a strict "scope" for all new
+    `cir.scope` contains one region and defines a strict "scope" for all new
     values produced within its blocks.
 
-    The region can contain an arbitrary number of blocks but should usually be
-    only one block if return and goto are not present.
+    Its region can contain an arbitrary number of blocks but usually defaults
+    to one. The `cir.yield` is a required terminator and can be optionally omitted.
 
-    "cir.yield" is required as a terminator and can have results, in which case
-    it can be omitted. Not used anywhere just yet but might be used to explicitly
-    model lifetime extension.
+    A resulting value can also be specificed, though not currently used - together
+    with `cir.yield` should be helpful to represent lifetime extension out of short
+    lived scopes in the future.
   }];
 
   let results = (outs Variadic<AnyType>:$results);
@@ -562,18 +574,17 @@ def BinOp : CIR_Op<"binop", [Pure,
 
   let summary = "Binary operations (arith and logic)";
   let description = [{
-    "cir.binop performs the binary operation according to
-     the specified opcode kind: [mul, div, rem, add, sub, shl,
-     shr, and, xor, or].
+    cir.binop performs the binary operation according to
+    the specified opcode kind: [mul, div, rem, add, sub, shl,
+    shr, and, xor, or].
 
-     It requires two input operands and has one result, all types
-     should be the same.
+    It requires two input operands and has one result, all types
+    should be the same.
 
-     Example
-     ```
-     %7 = binop(add, %1, %2) : i32
-     %7 = binop(mul, %1, %2) : i8
-     ```
+    ```mlir
+    %7 = binop(add, %1, %2) : i32
+    %7 = binop(mul, %1, %2) : i8
+    ```
   }];
 
   // TODO: get more accurate than AnyType
@@ -611,16 +622,15 @@ def CmpOpKind : I32EnumAttr<
 // FIXME: Pure might not work when we add overloading.
 def CmpOp : CIR_Op<"cmp", [Pure, SameTypeOperands]> {
 
-  let summary = "compare operation";
+  let summary = "Compare values two values and produce a boolean result";
   let description = [{
-    "cir.cmp compares two input operands and produces a bool result. The input
-     operands must have the same type. The kinds of comparison available are:
-     [lt,gt,ge,eq,ne]
+    `cir.cmp` compares two input operands of the same type and produces a
+    `cir.bool` result. The kinds of comparison available are:
+    [lt,gt,ge,eq,ne]
 
-     Example
-     ```
-     %7 = cir.cmp(gt, %1, %2) : i32, !cir.bool
-     ```
+    ```mlir
+    %7 = cir.cmp(gt, %1, %2) : i32, !cir.bool
+    ```
   }];
 
   // TODO: get more accurate than AnyType
@@ -673,23 +683,21 @@ def SwitchOp : CIR_Op<"switch",
       [SameVariadicOperandSize,
        DeclareOpInterfaceMethods<RegionBranchOpInterface>,
        RecursivelySpeculatable, AutomaticAllocationScope, NoRegionArguments]> {
-  let summary = "a switch operation";
+  let summary = "Switch operation";
   let description = [{
     The `cir.switch` operation represents C/C++ switch functionality for
     conditionally executing multiple regions of code. The operand to an switch
     is an integral condition value.
 
     A variadic list of "case" attribute operands and regions track the possible
-    control flow within `cir.switch`. Each "case" first operand could be:
-    - "equal": equality check against the condition.
-    - "anyof": equals to any of the values in a following list.
-    - "default": any other value.
+    control flow within `cir.switch`. A `case` must be in one of the following forms:
+    - `equal, <constant>`: equality of the second case operand against the
+    condition.
+    - `anyof, [constant-list]`: equals to any of the values in a subsequent
+    following list.
+    - `default`: any other value.
 
-    An optional second operand denotes the actual value (or list of).
-    Types value(s) should match the condition and among themselves (in the list
-    case).
-
-    Each case region must be explicitly terminated with a cir.yield operation.
+    Each case region must be explicitly terminated.
 
     Examples:
 
@@ -739,16 +747,17 @@ def SwitchOp : CIR_Op<"switch",
 def BrOp : CIR_Op<"br",
       [DeclareOpInterfaceMethods<BranchOpInterface, ["getSuccessorForOperands"]>,
      Pure, Terminator]> {
-  let summary = "branch operation";
+  let summary = "Unconditional branch";
   let description = [{
-    The `cir.br` branches unconditionally to a block.
+    The `cir.br` branches unconditionally to a block. Used to represent C/C++
+    goto's and general block branching.
 
     Example:
 
     ```mlir
       ...
         cir.br ^bb3
-      ^bb3:  // pred: ^bb2
+      ^bb3:
         cir.return
     ```
   }];
@@ -775,7 +784,7 @@ def BrOp : CIR_Op<"br",
 def BrCondOp : CIR_Op<"brcond",
       [DeclareOpInterfaceMethods<BranchOpInterface, ["getSuccessorForOperands"]>,
        Pure, Terminator, SameVariadicOperandSize]> {
-  let summary = "conditional branch operation";
+  let summary = "Conditional branch";
   let description = [{
     The `cir.brcond %cond, ^bb0, ^bb1` branches to 'bb0' block in case
     %cond (which must be a !cir.bool type) evaluates to true, otherwise
@@ -837,8 +846,37 @@ def LoopOp : CIR_Op<"loop",
       [DeclareOpInterfaceMethods<LoopLikeOpInterface>,
        DeclareOpInterfaceMethods<RegionBranchOpInterface>,
        RecursivelySpeculatable, NoRegionArguments]> {
-  let summary = "loop operation";
+  let summary = "Loop";
   let description = [{
+    `cir.loop` represents C/C++ loop forms. It defines 3 blocks:
+    - `cond`: region can contain multiple blocks, terminated by regular
+    `cir.yield` when control should yield back to the parent, and
+    `cir.yield continue` when execution continues to another region.
+    The region destination depends on the loop form specified.
+    - `step`: region with one block, containing code to compute the
+    loop step, must be terminated with `cir.yield`.
+    - `body`: region for the loop's body, can contain an arbitrary
+    number of blocks.
+
+    The loop form: `for`, `while` and `dowhile` must also be specified and
+    each implies the loop regions execution order.
+
+    ```mlir
+      // while (true) {
+      //  i = i + 1;
+      // }
+      cir.loop while(cond :  {
+        cir.yield continue
+      }, step :  {
+        cir.yield
+      })  {
+        %3 = cir.load %1 : cir.ptr <i32>, i32
+        %4 = cir.cst(1 : i32) : i32
+        %5 = cir.binop(add, %3, %4) : i32
+        cir.store %5, %1 : i32, cir.ptr <i32>
+        cir.yield
+      }
+    ```
   }];
 
   let arguments = (ins Arg<LoopOpKind, "loop kind">:$kind);
@@ -876,7 +914,7 @@ def LoopOp : CIR_Op<"loop",
 //===----------------------------------------------------------------------===//
 
 def GlobalOp : CIR_Op<"global", [Symbol]> {
-  let summary = "declare or define a global variable";
+  let summary = "Declares or defines a global variable";
   let description = [{
     The `cir.global` operation declares or defines a named global variable.
 
@@ -890,10 +928,13 @@ def GlobalOp : CIR_Op<"global", [Symbol]> {
     `constant` unit attribute. Writing to such constant global variables is
     undefined.
 
+    Symbol visibility is defined in terms of MLIR's visibility, and C/C++
+    linkage types are still TBD.
+
     Example:
 
     ```mlir
-    // Externally available and constant variable with initial value.
+    // Public and constant variable with initial value.
     cir.global public constant @c : i32 = 4;
     ```
   }];
@@ -939,12 +980,12 @@ def GlobalOp : CIR_Op<"global", [Symbol]> {
 
 def GetGlobalOp : CIR_Op<"get_global",
     [Pure, DeclareOpInterfaceMethods<SymbolUserOpInterface>]> {
-  let summary = "get the memref pointing to a global variable";
+  let summary = "Get the address of a global variable";
   let description = [{
      The `cir.get_global` operation retrieves the address pointing to a
      named global variable. If the global variable is marked constant, writing
      to the resulting address (such as through a `cir.store` operation) is
-     undefined. Resulting type must always be a !cir.ptr<...> type.
+     undefined. Resulting type must always be a `!cir.ptr<...>` type.
 
      Example:
 
@@ -964,8 +1005,13 @@ def GetGlobalOp : CIR_Op<"get_global",
   let hasVerifier = 0;
 }
 
+//===----------------------------------------------------------------------===//
+// StructElementAddr
+//===----------------------------------------------------------------------===//
+
+// FIXME: rename this among the lines of GetGlobalOp.
 def StructElementAddr : CIR_Op<"struct_element_addr"> {
-  let summary = "get the address of a member of a struct";
+  let summary = "Get the address of a member of a struct";
   let description = [{
     The `cir.struct_element_addr` operaration gets the address of a particular
     named member from the input struct.
@@ -978,7 +1024,7 @@ def StructElementAddr : CIR_Op<"struct_element_addr"> {
     ...
     %1 = cir.struct_element_addr %0, "Bar.a"
     %2 = cir.load %1 : cir.ptr <int>, int
-    WIP
+    ...
     ```
   }];
 
@@ -987,7 +1033,8 @@ def StructElementAddr : CIR_Op<"struct_element_addr"> {
     StrAttr:$member_name);
 
   let results = (outs Res<CIR_PointerType, "">:$result);
+
+  // FIXME: add verifier.
 }
 
 #endif // MLIR_CIR_DIALECT_CIR_OPS
-
