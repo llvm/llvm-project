@@ -4,7 +4,7 @@
 // Not implemented yet.
 
 func.func @gentypedesc() {
-// CHECK: not yet implemented fir.gentypedesc codegen
+// CHECK: not yet implemented: fir.gentypedesc codegen
   %0 = fir.gentypedesc !fir.type<derived3>
   return
 }

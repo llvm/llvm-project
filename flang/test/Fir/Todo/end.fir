@@ -4,6 +4,6 @@
 // Not implemented yet.
 
 func.func @end_test() {
-// CHECK: not yet implemented fir.end codegen
+// CHECK: not yet implemented: fir.end codegen
   "fir.end"() : () -> ()
 }

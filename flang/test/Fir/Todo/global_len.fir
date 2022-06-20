@@ -4,7 +4,7 @@
 // Not implemented yet.
 
 fir.global @global_derived : !fir.type<minez(f:i32)> {
-// CHECK: not yet implemented fir.global_len codegen
+// CHECK: not yet implemented: fir.global_len codegen
   fir.global_len f, 1 : i32
   %0 = fir.undefined !fir.type<minez>
   fir.has_value %0 : !fir.type<minez>
