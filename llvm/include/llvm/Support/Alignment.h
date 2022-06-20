@@ -331,12 +331,6 @@ inline Align operator/(Align Lhs, uint64_t Divisor) {
   return Align(Lhs.value() / Divisor);
 }
 
-inline MaybeAlign operator/(MaybeAlign Lhs, uint64_t Divisor) {
-  assert(llvm::isPowerOf2_64(Divisor) &&
-         "Divisor must be positive and a power of 2");
-  return Lhs ? Lhs.getValue() / Divisor : MaybeAlign();
-}
-
 inline Align max(MaybeAlign Lhs, Align Rhs) {
   return Lhs && *Lhs > Rhs ? *Lhs : Rhs;
 }
