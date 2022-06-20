@@ -240,7 +240,7 @@ public:
 
     std::unique_ptr<FrontendAction> Action;
 
-    if (ModuleName.hasValue())
+    if (ModuleName)
       Action = std::make_unique<GetDependenciesByModuleNameAction>(*ModuleName);
     else
       Action = std::make_unique<ReadPCHAndPreprocessAction>();
@@ -317,7 +317,7 @@ llvm::Error DependencyScanningWorker::computeDependencies(
       Files ? Files : new FileManager(FileSystemOptions(), RealFS);
 
   Optional<std::vector<std::string>> ModifiedCommandLine;
-  if (ModuleName.hasValue()) {
+  if (ModuleName) {
     ModifiedCommandLine = CommandLine;
     InMemoryFS->addFile(*ModuleName, 0, llvm::MemoryBuffer::getMemBuffer(""));
     ModifiedCommandLine->emplace_back(*ModuleName);

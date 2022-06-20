@@ -676,7 +676,7 @@ public:
     if (!HasFlagEnum && HasFlagEnum)
       setFlagEnum(RHS.isFlagEnum());
 
-    if (!EnumExtensibility.hasValue())
+    if (!EnumExtensibility)
       EnumExtensibility = RHS.EnumExtensibility;
 
     return *this;
@@ -706,7 +706,7 @@ public:
 
   TypedefInfo &operator|=(const TypedefInfo &RHS) {
     static_cast<CommonTypeInfo &>(*this) |= RHS;
-    if (!SwiftWrapper.hasValue())
+    if (!SwiftWrapper)
       SwiftWrapper = RHS.SwiftWrapper;
     return *this;
   }

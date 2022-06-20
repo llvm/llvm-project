@@ -4537,7 +4537,7 @@ static QualType mergeTypeNullabilityForRedecl(Sema &S, SourceLocation loc,
   auto prevNullability = prevType->getNullability(S.Context);
 
   // Easy case: both have nullability.
-  if (nullability.hasValue() == prevNullability.hasValue()) {
+  if (nullability.has_value() == prevNullability.has_value()) {
     // Neither has nullability; continue.
     if (!nullability)
       return type;

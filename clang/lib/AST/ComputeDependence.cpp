@@ -696,7 +696,7 @@ ExprDependence clang::computeDependence(CXXNewExpr *E) {
       E->getAllocatedTypeSourceInfo()->getType()->getDependence());
   D |= toExprDependenceForImpliedType(E->getAllocatedType()->getDependence());
   auto Size = E->getArraySize();
-  if (Size.hasValue() && *Size)
+  if (Size && *Size)
     D |= turnTypeToValueDependence((*Size)->getDependence());
   if (auto *I = E->getInitializer())
     D |= turnTypeToValueDependence(I->getDependence());

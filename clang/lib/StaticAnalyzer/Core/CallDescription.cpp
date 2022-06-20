@@ -86,7 +86,7 @@ bool ento::CallDescription::matchesImpl(const FunctionDecl *Callee,
            (!RequiredParams || *RequiredParams <= ParamCount);
   }
 
-  if (!II.hasValue()) {
+  if (!II) {
     II = &FD->getASTContext().Idents.get(getFunctionName());
   }
 

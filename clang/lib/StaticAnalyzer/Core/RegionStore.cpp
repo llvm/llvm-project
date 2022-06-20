@@ -2500,7 +2500,7 @@ RegionStoreManager::bindArray(RegionBindingsConstRef B,
   // If the init list is shorter than the array length (or the array has
   // variable length), set the array default value. Values that are already set
   // are not overwritten.
-  if (!Size.hasValue() || i < Size.getValue())
+  if (!Size || i < *Size)
     NewB = setImplicitDefaultValue(NewB, R, ElementTy);
 
   return NewB;

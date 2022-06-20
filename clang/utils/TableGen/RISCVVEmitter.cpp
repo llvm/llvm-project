@@ -467,7 +467,7 @@ void RVVEmitter::createRVVIntrinsics(
         Optional<RVVTypes> Types =
             RVVType::computeTypes(BT, Log2LMUL, NF, Prototype);
         // Ignored to create new intrinsic if there are any illegal types.
-        if (!Types.hasValue())
+        if (!Types)
           continue;
 
         auto SuffixStr = RVVIntrinsic::getSuffixStr(BT, Log2LMUL, SuffixDesc);

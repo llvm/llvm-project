@@ -2554,7 +2554,7 @@ public:
                                        bool IsParam) const {
     auto SubTnullability = SubT->getNullability(*this);
     auto SuperTnullability = SuperT->getNullability(*this);
-    if (SubTnullability.hasValue() == SuperTnullability.hasValue()) {
+    if (SubTnullability.has_value() == SuperTnullability.has_value()) {
       // Neither has nullability; return true
       if (!SubTnullability)
         return true;
