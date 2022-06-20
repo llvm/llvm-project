@@ -444,7 +444,7 @@ DecodeStatus AMDGPUDisassembler::getInstruction(MCInst &MI, uint64_t &Size,
       if (Res) {
         if (MCII->get(MI.getOpcode()).TSFlags & SIInstrFlags::VOP3P)
           convertVOP3PDPPInst(MI);
-        else if (MCII->get(MI.getOpcode()).TSFlags & SIInstrFlags::VOPC)
+        else if (AMDGPU::isVOPC64DPP(MI.getOpcode()))
           convertVOPCDPPInst(MI);
         break;
       }

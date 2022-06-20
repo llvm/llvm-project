@@ -455,6 +455,9 @@ bool getVOP2IsSingle(unsigned Opc);
 LLVM_READONLY
 bool getVOP3IsSingle(unsigned Opc);
 
+LLVM_READONLY
+bool isVOPC64DPP(unsigned Opc);
+
 /// Returns true if MAI operation is a double precision GEMM.
 LLVM_READONLY
 bool getMAIIsDGEMM(unsigned Opc);

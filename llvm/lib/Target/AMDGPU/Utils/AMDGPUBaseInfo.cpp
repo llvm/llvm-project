@@ -273,6 +273,10 @@ struct VOPInfo {
   bool IsSingle;
 };
 
+struct VOPC64DPPInfo {
+  uint16_t Opcode;
+};
+
 #define GET_MTBUFInfoTable_DECL
 #define GET_MTBUFInfoTable_IMPL
 #define GET_MUBUFInfoTable_DECL
@@ -285,6 +289,10 @@ struct VOPInfo {
 #define GET_VOP2InfoTable_IMPL
 #define GET_VOP3InfoTable_DECL
 #define GET_VOP3InfoTable_IMPL
+#define GET_VOPC64DPPTable_DECL
+#define GET_VOPC64DPPTable_IMPL
+#define GET_VOPC64DPP8Table_DECL
+#define GET_VOPC64DPP8Table_IMPL
 #include "AMDGPUGenSearchableTables.inc"
 
 int getMTBUFBaseOpcode(unsigned Opc) {
@@ -370,6 +378,10 @@ bool getVOP2IsSingle(unsigned Opc) {
 bool getVOP3IsSingle(unsigned Opc) {
   const VOPInfo *Info = getVOP3OpcodeHelper(Opc);
   return Info ? Info->IsSingle : false;
+}
+
+bool isVOPC64DPP(unsigned Opc) {
+  return isVOPC64DPPOpcodeHelper(Opc) || isVOPC64DPP8OpcodeHelper(Opc);
 }
 
 bool getMAIIsDGEMM(unsigned Opc) {
