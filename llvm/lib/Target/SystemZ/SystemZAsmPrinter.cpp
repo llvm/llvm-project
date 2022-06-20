@@ -663,8 +663,7 @@ void SystemZAsmPrinter::LowerFENTRY_CALL(const MachineInstr &MI,
 }
 
 void SystemZAsmPrinter::LowerSTACKMAP(const MachineInstr &MI) {
-  const SystemZInstrInfo *TII =
-    static_cast<const SystemZInstrInfo *>(MF->getSubtarget().getInstrInfo());
+  auto *TII = MF->getSubtarget<SystemZSubtarget>().getInstrInfo();
 
   unsigned NumNOPBytes = MI.getOperand(1).getImm();
 
