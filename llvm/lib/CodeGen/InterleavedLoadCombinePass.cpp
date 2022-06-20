@@ -171,10 +171,10 @@ class Polynomial {
   };
 
   /// Number of Error Bits e
-  unsigned ErrorMSBs;
+  unsigned ErrorMSBs = (unsigned)-1;
 
   /// Value
-  Value *V;
+  Value *V = nullptr;
 
   /// Coefficient B
   SmallVector<std::pair<BOps, APInt>, 4> B;
@@ -183,7 +183,7 @@ class Polynomial {
   APInt A;
 
 public:
-  Polynomial(Value *V) : ErrorMSBs((unsigned)-1), V(V) {
+  Polynomial(Value *V) : V(V) {
     IntegerType *Ty = dyn_cast<IntegerType>(V->getType());
     if (Ty) {
       ErrorMSBs = 0;
@@ -193,12 +193,12 @@ public:
   }
 
   Polynomial(const APInt &A, unsigned ErrorMSBs = 0)
-      : ErrorMSBs(ErrorMSBs), V(nullptr), A(A) {}
+      : ErrorMSBs(ErrorMSBs), A(A) {}
 
   Polynomial(unsigned BitWidth, uint64_t A, unsigned ErrorMSBs = 0)
-      : ErrorMSBs(ErrorMSBs), V(nullptr), A(BitWidth, A) {}
+      : ErrorMSBs(ErrorMSBs), A(BitWidth, A) {}
 
-  Polynomial() : ErrorMSBs((unsigned)-1), V(nullptr) {}
+  Polynomial() = default;
 
   /// Increment and clamp the number of undefined bits.
   void incErrorMSBs(unsigned amt) {
