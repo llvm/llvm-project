@@ -155,10 +155,10 @@ private:
   /// The values from the last parsed cpp hash file line comment if any.
   struct CppHashInfoTy {
     StringRef Filename;
-    int64_t LineNumber;
+    int64_t LineNumber = 0;
     SMLoc Loc;
-    unsigned Buf;
-    CppHashInfoTy() : LineNumber(0), Buf(0) {}
+    unsigned Buf = 0;
+    CppHashInfoTy() = default;
   };
   CppHashInfoTy CppHashInfo;
 
