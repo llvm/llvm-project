@@ -6,10 +6,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef MLIR_DIALECT_SCF_TILEUSINGINTERFACE_H
-#define MLIR_DIALECT_SCF_TILEUSINGINTERFACE_H
+#ifndef MLIR_DIALECT_SCF_TRANSFORMS_TILEUSINGINTERFACE_H
+#define MLIR_DIALECT_SCF_TRANSFORMS_TILEUSINGINTERFACE_H
 
-#include "mlir/Dialect/SCF/SCF.h"
+#include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Interfaces/TilingInterface.h"
 
@@ -84,4 +84,4 @@ private:
 } // namespace scf
 } // namespace mlir
 
-#endif // MLIR_DIALECT_SCF_TILEUSINGINTERFACE_H
+#endif // MLIR_DIALECT_SCF_TRANSFORMS_TILEUSINGINTERFACE_H

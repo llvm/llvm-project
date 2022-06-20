@@ -9,9 +9,8 @@ define void @fn1() {
 ; CHECK-LABEL: fn1:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    xorl %eax, %eax
-; CHECK-NEXT:    cmpl $1, c(%rip)
-; CHECK-NEXT:    sbbl %eax, %eax
-; CHECK-NEXT:    andl $1, %eax
+; CHECK-NEXT:    cmpl $0, c(%rip)
+; CHECK-NEXT:    sete %al
 ; CHECK-NEXT:    movl %eax, d(%rip)
 ; CHECK-NEXT:    retq
   %t0 = load i32, i32* @c, align 4
