@@ -161,7 +161,7 @@ struct TypeBuilder {
       int rank = expr.Rank();
       if (rank < 0)
         TODO(converter.getCurrentLocation(),
-             "Assumed rank expression type lowering");
+             "assumed rank expression type lowering");
       for (int dim = 0; dim < rank; ++dim)
         shape.emplace_back(fir::SequenceType::getUnknownExtent());
     }
@@ -328,7 +328,7 @@ struct TypeBuilder {
     if (!ps.empty()) {
       // This type is a PDT (parametric derived type). Create the functions to
       // use for allocation, dereferencing, and address arithmetic here.
-      TODO(loc, "parametrized derived types lowering");
+      TODO(loc, "parameterized derived types lowering");
     }
     LLVM_DEBUG(llvm::dbgs() << "derived type: " << rec << '\n');
 

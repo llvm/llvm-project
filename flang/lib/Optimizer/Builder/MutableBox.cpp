@@ -396,7 +396,7 @@ fir::factory::genMutableBoxRead(fir::FirOpBuilder &builder, mlir::Location loc,
                                 const fir::MutableBoxValue &box,
                                 bool mayBePolymorphic) {
   if (box.hasAssumedRank())
-    TODO(loc, "Assumed rank allocatables or pointers");
+    TODO(loc, "assumed rank allocatables or pointers");
   llvm::SmallVector<mlir::Value> lbounds;
   llvm::SmallVector<mlir::Value> extents;
   llvm::SmallVector<mlir::Value> lengths;
@@ -526,7 +526,7 @@ void fir::factory::associateMutableBox(fir::FirOpBuilder &builder,
                             "Cannot write MutableBox to another MutableBox");
       },
       [&](const fir::ProcBoxValue &) {
-        TODO(loc, "Procedure pointer assignment");
+        TODO(loc, "procedure pointer assignment");
       });
 }
 
@@ -623,7 +623,7 @@ void fir::factory::associateMutableBoxWithRemap(
                             "Cannot write MutableBox to another MutableBox");
       },
       [&](const fir::ProcBoxValue &) {
-        TODO(loc, "Procedure pointer assignment");
+        TODO(loc, "procedure pointer assignment");
       });
 }
 
