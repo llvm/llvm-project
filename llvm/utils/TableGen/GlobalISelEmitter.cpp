@@ -4273,7 +4273,7 @@ Error GlobalISelEmitter::importChildMatcher(
 
     auto MaybeInsnOperand = OM.addPredicate<InstructionOperandMatcher>(
         InsnMatcher.getRuleMatcher(), SrcChild->getName());
-    if (!MaybeInsnOperand.hasValue()) {
+    if (!MaybeInsnOperand) {
       // This isn't strictly true. If the user were to provide exactly the same
       // matchers as the original operand then we could allow it. However, it's
       // simpler to not permit the redundant specification.
@@ -4404,7 +4404,7 @@ Expected<action_iterator> GlobalISelEmitter::importExplicitUseRenderer(
     TreePatternNode *DstChild) {
 
   const auto &SubOperand = Rule.getComplexSubOperand(DstChild->getName());
-  if (SubOperand.hasValue()) {
+  if (SubOperand) {
     DstMIBuilder.addRenderer<RenderComplexPatternOperand>(
         *std::get<0>(*SubOperand), DstChild->getName(),
         std::get<1>(*SubOperand), std::get<2>(*SubOperand));
@@ -4806,7 +4806,7 @@ Expected<action_iterator> GlobalISelEmitter::importExplicitUseRenderers(
 
     const auto SrcRCDstRCPair =
       RC->getMatchingSubClassWithSubRegs(CGRegs, SubIdx);
-    if (SrcRCDstRCPair.hasValue()) {
+    if (SrcRCDstRCPair) {
       assert(SrcRCDstRCPair->second && "Couldn't find a matching subclass");
       if (SrcRCDstRCPair->first != RC)
         return failedImport("EXTRACT_SUBREG requires an additional COPY");

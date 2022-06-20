@@ -137,7 +137,7 @@ void NativeTypeEnum::dump(raw_ostream &OS, int Indent,
   dumpSymbolField(OS, "name", getName(), Indent);
   dumpSymbolIdField(OS, "typeId", getTypeId(), Indent, Session,
                     PdbSymbolIdField::Type, ShowIdFields, RecurseIdFields);
-  if (Modifiers.hasValue())
+  if (Modifiers)
     dumpSymbolIdField(OS, "unmodifiedTypeId", getUnmodifiedTypeId(), Indent,
                       Session, PdbSymbolIdField::UnmodifiedType, ShowIdFields,
                       RecurseIdFields);

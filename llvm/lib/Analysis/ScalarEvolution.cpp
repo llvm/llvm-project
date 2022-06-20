@@ -6885,7 +6885,7 @@ ConstantRange ScalarEvolution::getRangeViaFactoring(const SCEV *Start,
       FalseValue = *FalseVal;
 
       // Re-apply the cast we peeled off earlier
-      if (CastOp.hasValue())
+      if (CastOp)
         switch (*CastOp) {
         default:
           llvm_unreachable("Unknown SCEV cast type!");
@@ -9733,7 +9733,7 @@ static Optional<APInt> MinOptional(Optional<APInt> X, Optional<APInt> Y) {
 /// equation are BW+1 bits wide (to avoid truncation when converting from
 /// the addrec to the equation).
 static Optional<APInt> TruncIfPossible(Optional<APInt> X, unsigned BitWidth) {
-  if (!X.hasValue())
+  if (!X)
     return None;
   unsigned W = X->getBitWidth();
   if (BitWidth > 1 && BitWidth < W && X->isIntN(BitWidth))
@@ -9802,7 +9802,7 @@ SolveQuadraticAddRecRange(const SCEVAddRecExpr *AddRec,
   APInt A, B, C, M;
   unsigned BitWidth;
   auto T = GetQuadraticEquation(AddRec);
-  if (!T.hasValue())
+  if (!T)
     return None;
 
   // Be careful about the return value: there can be two reasons for not
@@ -9847,7 +9847,7 @@ SolveQuadraticAddRecRange(const SCEVAddRecExpr *AddRec,
     // If SolveQuadraticEquationWrap returns None, it means that there can
     // be a solution, but the function failed to find it. We cannot treat it
     // as "no solution".
-    if (!SO.hasValue() || !UO.hasValue())
+    if (!SO || !UO)
       return { None, false };
 
     // Check the smaller value first to see if it leaves the range.

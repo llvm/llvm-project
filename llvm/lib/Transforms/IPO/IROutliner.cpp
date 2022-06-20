@@ -1183,7 +1183,7 @@ static Optional<unsigned> getGVNForPHINode(OutlinableRegion &Region,
     // adding an extra input.  We ignore this case for now, and so ignore the
     // region.
     Optional<unsigned> OGVN = Cand.getGVN(Incoming);
-    if (!OGVN.hasValue() && Blocks.contains(IncomingBlock)) {
+    if (!OGVN && Blocks.contains(IncomingBlock)) {
       Region.IgnoreRegion = true;
       return None;
     }
@@ -1206,7 +1206,7 @@ static Optional<unsigned> getGVNForPHINode(OutlinableRegion &Region,
     // If there is no number for the incoming block, it is becaause we have
     // split the candidate basic blocks.  So we use the previous block that it
     // was split from to find the valid global value numbering for the PHINode.
-    if (!OGVN.hasValue()) {
+    if (!OGVN) {
       assert(Cand.getStartBB() == IncomingBlock &&
              "Unknown basic block used in exit path PHINode.");
 
@@ -1367,7 +1367,7 @@ findExtractedOutputToOverallOutputMapping(OutlinableRegion &Region,
       // If two PHINodes have the same canonical values, but different aggregate
       // argument locations, then they will have distinct Canonical Values.
       GVN = getGVNForPHINode(Region, PN, BlocksInRegion, AggArgIdx);
-      if (!GVN.hasValue())
+      if (!GVN)
         return;
     } else {
       // If we do not have a PHINode we use the global value numbering for the
@@ -1883,7 +1883,7 @@ replaceArgumentUses(OutlinableRegion &Region,
       PHINode *PN = cast<PHINode>(SI->getValueOperand());
       // If it has a value, it was not split by the code extractor, which
       // is what we are looking for.
-      if (Region.Candidate->getGVN(PN).hasValue())
+      if (Region.Candidate->getGVN(PN))
         continue;
 
       // We record the parent block for the PHINode in the Region so that
@@ -2678,7 +2678,7 @@ void IROutliner::updateOutputMapping(OutlinableRegion &Region,
 
   // If we found an output register, place a mapping of the new value
   // to the original in the mapping.
-  if (!OutputIdx.hasValue())
+  if (!OutputIdx)
     return;
 
   if (OutputMappings.find(Outputs[OutputIdx.getValue()]) ==

@@ -392,7 +392,7 @@ public:
       else if (I.isPPIfElse() || I.isEmptyLine())
         SR = {SM, LocStart, LocEnd};
 
-      if (!SR.hasValue())
+      if (!SR)
         continue;
       auto Region = CounterMappingRegion::makeSkipped(
           *CovFileID, SR->LineStart, SR->ColumnStart, SR->LineEnd,
@@ -587,7 +587,7 @@ struct CounterCoverageMappingBuilder
                     Optional<SourceLocation> EndLoc = None,
                     Optional<Counter> FalseCount = None) {
 
-    if (StartLoc && !FalseCount.hasValue()) {
+    if (StartLoc && !FalseCount) {
       MostRecentLocation = *StartLoc;
     }
 

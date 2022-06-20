@@ -85,7 +85,7 @@ void IRSpeculationLayer::emit(std::unique_ptr<MaterializationResponsibility> R,
 
         auto IRNames = QueryAnalysis(Fn);
         // Instrument and register if Query has result
-        if (IRNames.hasValue()) {
+        if (IRNames) {
 
           // Emit globals for each function.
           auto LoadValueTy = Type::getInt8Ty(MContext);

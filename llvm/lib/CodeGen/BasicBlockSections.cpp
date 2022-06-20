@@ -221,7 +221,7 @@ assignSections(MachineFunction &MF,
       // set every basic block's section ID equal to its number (basic block
       // id). This further ensures that basic blocks are ordered canonically.
       MBB.setSectionID({static_cast<unsigned int>(MBB.getNumber())});
-    } else if (FuncBBClusterInfo[MBB.getNumber()].hasValue())
+    } else if (FuncBBClusterInfo[MBB.getNumber()])
       MBB.setSectionID(FuncBBClusterInfo[MBB.getNumber()]->ClusterID);
     else {
       // BB goes into the special cold section if it is not specified in the
