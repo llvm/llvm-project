@@ -728,7 +728,7 @@ GetJSONThreadsInfo(NativeProcessProtocol &process, bool abridged) {
       return llvm::make_error<llvm::StringError>(
           "failed to get stop reason", llvm::inconvertibleErrorCode());
 
-    const int signum = tid_stop_info.details.signal.signo;
+    const int signum = tid_stop_info.signo;
     if (log) {
       LLDB_LOGF(log,
                 "GDBRemoteCommunicationServerLLGS::%s pid %" PRIu64
@@ -804,7 +804,7 @@ GDBRemoteCommunicationServerLLGS::PrepareStopReplyPacketForThread(
 
   // Output the T packet with the thread
   response.PutChar('T');
-  int signum = tid_stop_info.details.signal.signo;
+  int signum = tid_stop_info.signo;
   LLDB_LOG(
       log,
       "pid {0}, tid {1}, got signal signo = {2}, reason = {3}, exc_type = {4}",
