@@ -73,7 +73,7 @@ Permutation,shuffle,Not assigned,n/a,Not started
 Permutation,unique,Not assigned,n/a,Not started
 Permutation,partition,Not assigned,n/a,Not started
 Permutation,stable_partition,Not assigned,n/a,Not started
-Permutation,sort,`D127557 <https://llvm.org/D127557>`_,Konstantin Varlamov,✅
+Permutation,sort,Konstantin Varlamov,`D127557 <https://llvm.org/D127557>`_,✅
 Permutation,stable_sort,Konstantin Varlamov,n/a,In progress
 Permutation,partial_sort,Konstantin Varlamov,n/a,In progress
 Permutation,nth_element,Not assigned,n/a,Not started
