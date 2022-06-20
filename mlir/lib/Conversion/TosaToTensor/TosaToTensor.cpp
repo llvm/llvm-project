@@ -36,7 +36,7 @@ public:
     strides.resize(sliceOp.getType().template cast<ShapedType>().getRank(), 1);
 
     SmallVector<Value> dynSizes;
-    for (auto i : llvm::enumerate(sizes)) {
+    for (const auto &i : llvm::enumerate(sizes)) {
       int64_t size = i.value().cast<IntegerAttr>().getInt();
       size_t index = i.index();
       if (size != ShapedType::kDynamicSize)
