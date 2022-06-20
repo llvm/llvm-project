@@ -353,8 +353,10 @@ public:
       if (!Result.second)
         Result.first->second = NewValue;
       ActiveMLocs[M].insert(Var.first);
+      SmallVector<ResolvedDbgOp> ResolvedOps;
+      ResolvedOps.push_back(M);
       PendingDbgValues.push_back(
-          MTracker->emitLoc(M, Var.first, Var.second.Properties));
+          MTracker->emitLoc(ResolvedOps, Var.first, Var.second.Properties));
     }
     flushDbgValues(MBB.begin(), &MBB);
   }
@@ -392,7 +394,10 @@ public:
       if (!UseBeforeDefVariables.count(Use.Var))
         continue;
 
-      PendingDbgValues.push_back(MTracker->emitLoc(L, Use.Var, Use.Properties));
+      SmallVector<ResolvedDbgOp> ResolvedOps;
+      ResolvedOps.push_back(L);
+      PendingDbgValues.push_back(
+          MTracker->emitLoc(ResolvedOps, Use.Var, Use.Properties));
     }
     flushDbgValues(pos, nullptr);
   }
@@ -591,7 +596,11 @@ public:
       // is None and a $noreg DBG_VALUE will be created. Otherwise, a DBG_VALUE
       // identifying the alternative location will be emitted.
       const DbgValueProperties &Properties = ActiveVLocIt->second.Properties;
-      PendingDbgValues.push_back(MTracker->emitLoc(NewLoc, Var, Properties));
+      SmallVector<ResolvedDbgOp> ResolvedOps;
+      if (NewLoc)
+        ResolvedOps.push_back(*NewLoc);
+      PendingDbgValues.push_back(
+          MTracker->emitLoc(ResolvedOps, Var, Properties));
 
       // Update machine locations <=> variable locations maps. Defer updating
       // ActiveMLocs to avoid invalidaing the ActiveMLocIt iterator.
@@ -643,8 +652,10 @@ public:
       assert(ActiveVLocIt != ActiveVLocs.end());
       ActiveVLocIt->second.Loc = Dst;
 
+      SmallVector<ResolvedDbgOp> ResolvedOps;
+      ResolvedOps.push_back(Dst);
       MachineInstr *MI =
-          MTracker->emitLoc(Dst, Var, ActiveVLocIt->second.Properties);
+          MTracker->emitLoc(ResolvedOps, Var, ActiveVLocIt->second.Properties);
       PendingDbgValues.push_back(MI);
     }
     ActiveMLocs[Src].clear();
@@ -894,9 +905,10 @@ LLVM_DUMP_METHOD void MLocTracker::dump_mloc_map() {
 }
 #endif
 
-MachineInstrBuilder MLocTracker::emitLoc(Optional<LocIdx> MLoc,
-                                         const DebugVariable &Var,
-                                         const DbgValueProperties &Properties) {
+MachineInstrBuilder
+MLocTracker::emitLoc(const SmallVectorImpl<ResolvedDbgOp> &DbgOps,
+                     const DebugVariable &Var,
+                     const DbgValueProperties &Properties) {
   DebugLoc DL = DILocation::get(Var.getVariable()->getContext(), 0, 0,
                                 Var.getVariable()->getScope(),
                                 const_cast<DILocation *>(Var.getInlinedAt()));
@@ -904,6 +916,17 @@ MachineInstrBuilder MLocTracker::emitLoc(Optional<LocIdx> MLoc,
   const MCInstrDesc &Desc = Properties.IsVariadic
                                 ? TII.get(TargetOpcode::DBG_VALUE_LIST)
                                 : TII.get(TargetOpcode::DBG_VALUE);
+
+#ifdef EXPENSIVE_CHECKS
+  assert(all_of(DbgOps,
+                [](const ResolvedDbgOp &Op) {
+                  return Op.IsConst || !Op.Loc.isIllegal();
+                }) &&
+         "Did not expect illegal ops in DbgOps.");
+  assert((DbgOps.size() == 0 ||
+          DbgOps.size() == Properties.getLocationOpCount()) &&
+         "Expected to have either one DbgOp per MI LocationOp, or none.");
+#endif
 
   auto GetRegOp = [](unsigned Reg) -> MachineOperand {
     return MachineOperand::CreateReg(
@@ -922,104 +945,114 @@ MachineInstrBuilder MLocTracker::emitLoc(Optional<LocIdx> MLoc,
                    Properties.DIExpr);
   };
 
-  // Only 1 location is currently supported.
-  if (Properties.IsVariadic && Properties.getLocationOpCount() != 1)
+  // Don't bother passing any real operands to BuildMI if any of them would be
+  // $noreg.
+  if (DbgOps.empty())
     return EmitUndef();
 
   bool Indirect = Properties.Indirect;
 
   const DIExpression *Expr = Properties.DIExpr;
-  if (!MLoc) {
-    // No location -> DBG_VALUE $noreg
-    return EmitUndef();
-  } else if (LocIdxToLocID[*MLoc] >= NumRegs) {
-    unsigned LocID = LocIdxToLocID[*MLoc];
-    SpillLocationNo SpillID = locIDToSpill(LocID);
-    StackSlotPos StackIdx = locIDToSpillIdx(LocID);
-    unsigned short Offset = StackIdx.second;
 
-    // TODO: support variables that are located in spill slots, with non-zero
-    // offsets from the start of the spill slot. It would require some more
-    // complex DIExpression calculations. This doesn't seem to be produced by
-    // LLVM right now, so don't try and support it.
-    // Accept no-subregister slots and subregisters where the offset is zero.
-    // The consumer should already have type information to work out how large
-    // the variable is.
-    if (Offset == 0) {
-      const SpillLoc &Spill = SpillLocs[SpillID.id()];
-      unsigned Base = Spill.SpillBase;
-      MOs.push_back(GetRegOp(Base));
+  assert(DbgOps.size() == Properties.getLocationOpCount());
 
-      // There are several ways we can dereference things, and several inputs
-      // to consider:
-      // * NRVO variables will appear with IsIndirect set, but should have
-      //   nothing else in their DIExpressions,
-      // * Variables with DW_OP_stack_value in their expr already need an
-      //   explicit dereference of the stack location,
-      // * Values that don't match the variable size need DW_OP_deref_size,
-      // * Everything else can just become a simple location expression.
+  // If all locations are valid, accumulate them into our list of
+  // MachineOperands. For any spilled locations, either update the indirectness
+  // register or apply the appropriate transformations in the DIExpression.
+  for (size_t Idx = 0; Idx < Properties.getLocationOpCount(); ++Idx) {
+    const ResolvedDbgOp &Op = DbgOps[Idx];
 
-      // We need to use deref_size whenever there's a mismatch between the
-      // size of value and the size of variable portion being read.
-      // Additionally, we should use it whenever dealing with stack_value
-      // fragments, to avoid the consumer having to determine the deref size
-      // from DW_OP_piece.
-      bool UseDerefSize = false;
-      unsigned ValueSizeInBits = getLocSizeInBits(*MLoc);
-      unsigned DerefSizeInBytes = ValueSizeInBits / 8;
-      if (auto Fragment = Var.getFragment()) {
-        unsigned VariableSizeInBits = Fragment->SizeInBits;
-        if (VariableSizeInBits != ValueSizeInBits || Expr->isComplex())
-          UseDerefSize = true;
-      } else if (auto Size = Var.getVariable()->getSizeInBits()) {
-        if (*Size != ValueSizeInBits) {
-          UseDerefSize = true;
+    if (Op.IsConst) {
+      MOs.push_back(Op.MO);
+      continue;
+    }
+
+    LocIdx MLoc = Op.Loc;
+    unsigned LocID = LocIdxToLocID[MLoc];
+    if (LocID >= NumRegs) {
+      SpillLocationNo SpillID = locIDToSpill(LocID);
+      StackSlotPos StackIdx = locIDToSpillIdx(LocID);
+      unsigned short Offset = StackIdx.second;
+
+      // TODO: support variables that are located in spill slots, with non-zero
+      // offsets from the start of the spill slot. It would require some more
+      // complex DIExpression calculations. This doesn't seem to be produced by
+      // LLVM right now, so don't try and support it.
+      // Accept no-subregister slots and subregisters where the offset is zero.
+      // The consumer should already have type information to work out how large
+      // the variable is.
+      if (Offset == 0) {
+        const SpillLoc &Spill = SpillLocs[SpillID.id()];
+        unsigned Base = Spill.SpillBase;
+
+        // There are several ways we can dereference things, and several inputs
+        // to consider:
+        // * NRVO variables will appear with IsIndirect set, but should have
+        //   nothing else in their DIExpressions,
+        // * Variables with DW_OP_stack_value in their expr already need an
+        //   explicit dereference of the stack location,
+        // * Values that don't match the variable size need DW_OP_deref_size,
+        // * Everything else can just become a simple location expression.
+
+        // We need to use deref_size whenever there's a mismatch between the
+        // size of value and the size of variable portion being read.
+        // Additionally, we should use it whenever dealing with stack_value
+        // fragments, to avoid the consumer having to determine the deref size
+        // from DW_OP_piece.
+        bool UseDerefSize = false;
+        unsigned ValueSizeInBits = getLocSizeInBits(MLoc);
+        unsigned DerefSizeInBytes = ValueSizeInBits / 8;
+        if (auto Fragment = Var.getFragment()) {
+          unsigned VariableSizeInBits = Fragment->SizeInBits;
+          if (VariableSizeInBits != ValueSizeInBits || Expr->isComplex())
+            UseDerefSize = true;
+        } else if (auto Size = Var.getVariable()->getSizeInBits()) {
+          if (*Size != ValueSizeInBits) {
+            UseDerefSize = true;
+          }
         }
-      }
 
-      if (Properties.Indirect) {
-        // This is something like an NRVO variable, where the pointer has been
-        // spilt to the stack, or a dbg.addr pointing at a coroutine frame
-        // field. It should end up being a memory location, with the pointer
-        // to the variable loaded off the stack with a deref. It can't be a
-        // DW_OP_stack_value expression.
-        assert(!Expr->isImplicit());
-        Expr = TRI.prependOffsetExpression(
-            Expr, DIExpression::ApplyOffset | DIExpression::DerefAfter,
-            Spill.SpillOffset);
-      } else if (UseDerefSize) {
-        // We're loading a value off the stack that's not the same size as the
-        // variable. Add / subtract stack offset, explicitly deref with a size,
-        // and add DW_OP_stack_value if not already present.
-        SmallVector<uint64_t, 2> Ops = {dwarf::DW_OP_deref_size,
-                                        DerefSizeInBytes};
-        Expr = DIExpression::prependOpcodes(Expr, Ops, true);
-        unsigned Flags = DIExpression::StackValue | DIExpression::ApplyOffset;
-        Expr = TRI.prependOffsetExpression(Expr, Flags, Spill.SpillOffset);
-      } else if (Expr->isComplex()) {
-        // A variable with no size ambiguity, but with extra elements in it's
-        // expression. Manually dereference the stack location.
-        assert(Expr->isComplex());
-        Expr = TRI.prependOffsetExpression(
-            Expr, DIExpression::ApplyOffset | DIExpression::DerefAfter,
-            Spill.SpillOffset);
+        SmallVector<uint64_t, 5> OffsetOps;
+        TRI.getOffsetOpcodes(Spill.SpillOffset, OffsetOps);
+        bool StackValue = false;
+
+        if (Properties.Indirect) {
+          // This is something like an NRVO variable, where the pointer has been
+          // spilt to the stack. It should end up being a memory location, with
+          // the pointer to the variable loaded off the stack with a deref:
+          assert(!Expr->isImplicit());
+          OffsetOps.push_back(dwarf::DW_OP_deref);
+        } else if (UseDerefSize && !Properties.IsVariadic) {
+          // TODO: Figure out how to handle deref size issues for variadic
+          // values.
+          // We're loading a value off the stack that's not the same size as the
+          // variable. Add / subtract stack offset, explicitly deref with a
+          // size, and add DW_OP_stack_value if not already present.
+          OffsetOps.push_back(dwarf::DW_OP_deref_size);
+          OffsetOps.push_back(DerefSizeInBytes);
+          StackValue = true;
+        } else if (Expr->isComplex()) {
+          // A variable with no size ambiguity, but with extra elements in it's
+          // expression. Manually dereference the stack location.
+          OffsetOps.push_back(dwarf::DW_OP_deref);
+        } else {
+          // A plain value that has been spilt to the stack, with no further
+          // context. Request a location expression, marking the DBG_VALUE as
+          // IsIndirect.
+          Indirect = true;
+        }
+
+        Expr = DIExpression::appendOpsToArg(Expr, OffsetOps, Idx, StackValue);
+        MOs.push_back(GetRegOp(Base));
       } else {
-        // A plain value that has been spilt to the stack, with no further
-        // context. Request a location expression, marking the DBG_VALUE as
-        // IsIndirect.
-        Expr = TRI.prependOffsetExpression(Expr, DIExpression::ApplyOffset,
-                                           Spill.SpillOffset);
-        Indirect = true;
+        // This is a stack location with a weird subregister offset: emit an
+        // undef DBG_VALUE instead.
+        return EmitUndef();
       }
     } else {
-      // This is a stack location with a weird subregister offset: emit an undef
-      // DBG_VALUE instead.
-      return EmitUndef();
+      // Non-empty, non-stack slot, must be a plain register.
+      MOs.push_back(GetRegOp(LocID));
     }
-  } else {
-    // Non-empty, non-stack slot, must be a plain register.
-    unsigned LocID = LocIdxToLocID[*MLoc];
-    MOs.push_back(GetRegOp(LocID));
   }
 
   return BuildMI(MF, DL, Desc, Indirect, MOs, Var.getVariable(), Expr);
@@ -1376,7 +1409,10 @@ bool InstrRefBasedLDV::transferDebugInstrRef(MachineInstr &MI,
   // This DBG_VALUE is potentially a $noreg / undefined location, if
   // FoundLoc is None.
   // (XXX -- could morph the DBG_INSTR_REF in the future).
-  MachineInstr *DbgMI = MTracker->emitLoc(FoundLoc, V, Properties);
+  SmallVector<ResolvedDbgOp> ResolvedOps;
+  if (FoundLoc)
+    ResolvedOps.push_back(*FoundLoc);
+  MachineInstr *DbgMI = MTracker->emitLoc(ResolvedOps, V, Properties);
 
   TTracker->PendingDbgValues.push_back(DbgMI);
   TTracker->flushDbgValues(MI.getIterator(), nullptr);
