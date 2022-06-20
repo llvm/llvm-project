@@ -588,8 +588,7 @@ public:
 
   /// Return true if operand \p OpIdx is a subregister index.
   bool isOperandSubregIdx(unsigned OpIdx) const {
-    assert(getOperand(OpIdx).getType() == MachineOperand::MO_Immediate &&
-           "Expected MO_Immediate operand type.");
+    assert(getOperand(OpIdx).isImm() && "Expected MO_Immediate operand type.");
     if (isExtractSubreg() && OpIdx == 2)
       return true;
     if (isInsertSubreg() && OpIdx == 3)
