@@ -383,9 +383,9 @@ bool StackSafetyLocalAnalysis::isSafeAccess(const Use &U, AllocaInst *AI,
   const SCEV *Max = SE.getMinusSCEV(ToDiffTy(SE.getConstant(Size.getUpper())),
                                     ToDiffTy(AccessSize));
   return SE.evaluatePredicateAt(ICmpInst::Predicate::ICMP_SGE, Diff, Min, I)
-             .getValueOr(false) &&
+             .value_or(false) &&
          SE.evaluatePredicateAt(ICmpInst::Predicate::ICMP_SLE, Diff, Max, I)
-             .getValueOr(false);
+             .value_or(false);
 }
 
 /// The function analyzes all local uses of Ptr (alloca or argument) and

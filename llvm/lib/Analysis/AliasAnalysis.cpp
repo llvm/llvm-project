@@ -679,7 +679,7 @@ ModRefInfo AAResults::getModRefInfo(const Instruction *I,
     }
   }
 
-  const MemoryLocation &Loc = OptLoc.getValueOr(MemoryLocation());
+  const MemoryLocation &Loc = OptLoc.value_or(MemoryLocation());
 
   switch (I->getOpcode()) {
   case Instruction::VAArg:

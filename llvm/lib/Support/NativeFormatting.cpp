@@ -133,7 +133,7 @@ void llvm::write_hex(raw_ostream &S, uint64_t N, HexPrintStyle Style,
                      Optional<size_t> Width) {
   const size_t kMaxWidth = 128u;
 
-  size_t W = std::min(kMaxWidth, Width.getValueOr(0u));
+  size_t W = std::min(kMaxWidth, Width.value_or(0u));
 
   unsigned Nibbles = (64 - countLeadingZeros(N) + 3) / 4;
   bool Prefix = (Style == HexPrintStyle::PrefixLower ||
@@ -161,7 +161,7 @@ void llvm::write_hex(raw_ostream &S, uint64_t N, HexPrintStyle Style,
 
 void llvm::write_double(raw_ostream &S, double N, FloatStyle Style,
                         Optional<size_t> Precision) {
-  size_t Prec = Precision.getValueOr(getDefaultPrecision(Style));
+  size_t Prec = Precision.value_or(getDefaultPrecision(Style));
 
   if (std::isnan(N)) {
     S << "nan";

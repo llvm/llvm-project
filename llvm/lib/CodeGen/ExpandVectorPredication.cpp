@@ -119,7 +119,7 @@ static bool maySpeculateLanes(VPIntrinsic &VPI) {
     return false;
   // Fallback to whether the intrinsic is speculatable.
   Optional<unsigned> OpcOpt = VPI.getFunctionalOpcode();
-  unsigned FunctionalOpc = OpcOpt.getValueOr((unsigned)Instruction::Call);
+  unsigned FunctionalOpc = OpcOpt.value_or((unsigned)Instruction::Call);
   return isSafeToSpeculativelyExecuteWithOpcode(FunctionalOpc,
                                                 cast<Operator>(&VPI));
 }

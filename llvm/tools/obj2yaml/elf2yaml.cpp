@@ -206,7 +206,7 @@ bool ELFDumper<ELFT>::shouldPrintSection(const ELFYAML::Section &S,
           RawSec->EntSize)
         return true;
 
-      ELFYAML::ELF_SHF ShFlags = RawSec->Flags.getValueOr(ELFYAML::ELF_SHF(0));
+      ELFYAML::ELF_SHF ShFlags = RawSec->Flags.value_or(ELFYAML::ELF_SHF(0));
 
       if (SecName == "debug_str")
         return ShFlags != ELFYAML::ELF_SHF(ELF::SHF_MERGE | ELF::SHF_STRINGS);
@@ -226,7 +226,7 @@ bool ELFDumper<ELFT>::shouldPrintSection(const ELFYAML::Section &S,
   // are empty, which should not normally happen.
   if (S.Type == ELF::SHT_STRTAB || S.Type == ELF::SHT_SYMTAB ||
       S.Type == ELF::SHT_DYNSYM) {
-    return S.Size || S.Flags.getValueOr(ELFYAML::ELF_SHF(0)) & ELF::SHF_ALLOC;
+    return S.Size || S.Flags.value_or(ELFYAML::ELF_SHF(0)) & ELF::SHF_ALLOC;
   }
 
   return true;

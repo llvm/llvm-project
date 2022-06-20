@@ -2407,7 +2407,7 @@ void PPCAIXAsmPrinter::emitGlobalVariableHelper(const GlobalVariable *GV) {
   // Handle common and zero-initialized local symbols.
   if (GV->hasCommonLinkage() || GVKind.isBSSLocal() ||
       GVKind.isThreadBSSLocal()) {
-    Align Alignment = GV->getAlign().getValueOr(DL.getPreferredAlign(GV));
+    Align Alignment = GV->getAlign().value_or(DL.getPreferredAlign(GV));
     uint64_t Size = DL.getTypeAllocSize(GV->getValueType());
     GVSym->setStorageClass(
         TargetLoweringObjectFileXCOFF::getStorageClassForGlobal(GV));

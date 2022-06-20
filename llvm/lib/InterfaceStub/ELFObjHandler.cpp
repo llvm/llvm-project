@@ -217,7 +217,7 @@ public:
       // time as long as it is not SHN_UNDEF. Set shndx to 1, which
       // points to ".dynsym".
       uint16_t Shndx = Sym.Undefined ? SHN_UNDEF : 1;
-      uint64_t Size = Sym.Size.getValueOr(0);
+      uint64_t Size = Sym.Size.value_or(0);
       DynSym.Content.add(DynStr.Content.getOffset(Sym.Name), Size, Bind,
                          convertIFSSymbolTypeToELF(Sym.Type), 0, Shndx);
     }

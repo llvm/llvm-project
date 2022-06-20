@@ -816,7 +816,7 @@ static void yamlToPdb(StringRef Path) {
   pdb::yaml::PdbTpiStream DefaultTpiStream;
   pdb::yaml::PdbTpiStream DefaultIpiStream;
 
-  const auto &Info = YamlObj.PdbStream.getValueOr(DefaultInfoStream);
+  const auto &Info = YamlObj.PdbStream.value_or(DefaultInfoStream);
 
   auto &InfoBuilder = Builder.getInfoBuilder();
   InfoBuilder.setAge(Info.Age);
@@ -826,7 +826,7 @@ static void yamlToPdb(StringRef Path) {
   for (auto F : Info.Features)
     InfoBuilder.addFeature(F);
 
-  const auto &Dbi = YamlObj.DbiStream.getValueOr(DefaultDbiStream);
+  const auto &Dbi = YamlObj.DbiStream.value_or(DefaultDbiStream);
   auto &DbiBuilder = Builder.getDbiBuilder();
   DbiBuilder.setAge(Dbi.Age);
   DbiBuilder.setBuildNumber(Dbi.BuildNumber);
@@ -861,7 +861,7 @@ static void yamlToPdb(StringRef Path) {
   }
 
   auto &TpiBuilder = Builder.getTpiBuilder();
-  const auto &Tpi = YamlObj.TpiStream.getValueOr(DefaultTpiStream);
+  const auto &Tpi = YamlObj.TpiStream.value_or(DefaultTpiStream);
   TpiBuilder.setVersionHeader(Tpi.Version);
   AppendingTypeTableBuilder TS(Allocator);
   for (const auto &R : Tpi.Records) {
@@ -869,7 +869,7 @@ static void yamlToPdb(StringRef Path) {
     TpiBuilder.addTypeRecord(Type.RecordData, None);
   }
 
-  const auto &Ipi = YamlObj.IpiStream.getValueOr(DefaultIpiStream);
+  const auto &Ipi = YamlObj.IpiStream.value_or(DefaultIpiStream);
   auto &IpiBuilder = Builder.getIpiBuilder();
   IpiBuilder.setVersionHeader(Ipi.Version);
   for (const auto &R : Ipi.Records) {

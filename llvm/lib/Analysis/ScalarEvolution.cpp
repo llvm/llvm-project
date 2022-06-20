@@ -7826,7 +7826,7 @@ unsigned ScalarEvolution::getSmallConstantTripMultiple(const Loop *L) {
       Res = Multiple;
     Res = (unsigned)GreatestCommonDivisor64(*Res, Multiple);
   }
-  return Res.getValueOr(1);
+  return Res.value_or(1);
 }
 
 unsigned ScalarEvolution::getSmallConstantTripMultiple(const Loop *L,

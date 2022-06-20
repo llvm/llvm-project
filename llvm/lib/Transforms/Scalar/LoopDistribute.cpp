@@ -775,13 +775,13 @@ public:
                   "may not insert runtime check with convergent operation");
     }
 
-    if (Pred.getComplexity() > (IsForced.getValueOr(false)
+    if (Pred.getComplexity() > (IsForced.value_or(false)
                                     ? PragmaDistributeSCEVCheckThreshold
                                     : DistributeSCEVCheckThreshold))
       return fail("TooManySCEVRuntimeChecks",
                   "too many SCEV run-time checks needed.\n");
 
-    if (!IsForced.getValueOr(false) && hasDisableAllTransformsHint(L))
+    if (!IsForced.value_or(false) && hasDisableAllTransformsHint(L))
       return fail("HeuristicDisabled", "distribution heuristic disabled");
 
     LLVM_DEBUG(dbgs() << "\nDistributing loop: " << *L << "\n");
@@ -858,7 +858,7 @@ public:
   /// Provide diagnostics then \return with false.
   bool fail(StringRef RemarkName, StringRef Message) {
     LLVMContext &Ctx = F->getContext();
-    bool Forced = isForced().getValueOr(false);
+    bool Forced = isForced().value_or(false);
 
     LLVM_DEBUG(dbgs() << "Skipping; " << Message << "\n");
 
@@ -990,7 +990,7 @@ static bool runImpl(Function &F, LoopInfo *LI, DominatorTree *DT,
 
     // If distribution was forced for the specific loop to be
     // enabled/disabled, follow that.  Otherwise use the global flag.
-    if (LDL.isForced().getValueOr(EnableLoopDistribute))
+    if (LDL.isForced().value_or(EnableLoopDistribute))
       Changed |= LDL.processLoop(GetLAA);
   }
 

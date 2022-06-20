@@ -190,7 +190,7 @@ template <typename T>
 T getWithDefaultOverride(const cl::opt<T> &ClOption,
                          const llvm::Optional<T> &DefaultOverride) {
   return ClOption.getNumOccurrences() ? ClOption
-                                      : DefaultOverride.getValueOr(ClOption);
+                                      : DefaultOverride.value_or(ClOption);
 }
 
 class ScalarizerVisitor : public InstVisitor<ScalarizerVisitor, bool> {

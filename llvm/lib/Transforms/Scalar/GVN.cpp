@@ -693,24 +693,24 @@ void GVNPass::ValueTable::verifyRemoved(const Value *V) const {
 //===----------------------------------------------------------------------===//
 
 bool GVNPass::isPREEnabled() const {
-  return Options.AllowPRE.getValueOr(GVNEnablePRE);
+  return Options.AllowPRE.value_or(GVNEnablePRE);
 }
 
 bool GVNPass::isLoadPREEnabled() const {
-  return Options.AllowLoadPRE.getValueOr(GVNEnableLoadPRE);
+  return Options.AllowLoadPRE.value_or(GVNEnableLoadPRE);
 }
 
 bool GVNPass::isLoadInLoopPREEnabled() const {
-  return Options.AllowLoadInLoopPRE.getValueOr(GVNEnableLoadInLoopPRE);
+  return Options.AllowLoadInLoopPRE.value_or(GVNEnableLoadInLoopPRE);
 }
 
 bool GVNPass::isLoadPRESplitBackedgeEnabled() const {
-  return Options.AllowLoadPRESplitBackedge.getValueOr(
+  return Options.AllowLoadPRESplitBackedge.value_or(
       GVNEnableSplitBackedgeInLoadPRE);
 }
 
 bool GVNPass::isMemDepEnabled() const {
-  return Options.AllowMemDep.getValueOr(GVNEnableMemDep);
+  return Options.AllowMemDep.value_or(GVNEnableMemDep);
 }
 
 PreservedAnalyses GVNPass::run(Function &F, FunctionAnalysisManager &AM) {
