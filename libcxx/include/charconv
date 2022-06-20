@@ -487,16 +487,21 @@ template <typename _Tp, typename enable_if<is_integral<_Tp>::value, int>::type =
 inline _LIBCPP_HIDE_FROM_ABI to_chars_result
 to_chars(char* __first, char* __last, _Tp __value)
 {
-    return __to_chars_itoa(__first, __last, __value, is_signed<_Tp>());
+  using _Type = __make_32_64_or_128_bit_t<_Tp>;
+  static_assert(!is_same<_Type, void>::value, "unsupported integral type used in to_chars");
+  static_assert(sizeof(_Tp) <= sizeof(int64_t), "128-bit integral support isn't available yet in to_chars");
+  return std::__to_chars_itoa(__first, __last, static_cast<_Type>(__value), is_signed<_Tp>());
 }
 
 template <typename _Tp, typename enable_if<is_integral<_Tp>::value, int>::type = 0>
 inline _LIBCPP_HIDE_FROM_ABI to_chars_result
 to_chars(char* __first, char* __last, _Tp __value, int __base)
 {
-    _LIBCPP_ASSERT(2 <= __base && __base <= 36, "base not in [2, 36]");
-    return __to_chars_integral(__first, __last, __value, __base,
-                               is_signed<_Tp>());
+  _LIBCPP_ASSERT(2 <= __base && __base <= 36, "base not in [2, 36]");
+
+  using _Type = __make_32_64_or_128_bit_t<_Tp>;
+  static_assert(sizeof(_Tp) <= sizeof(int64_t), "128-bit integral support isn't available yet in to_chars");
+  return std::__to_chars_integral(__first, __last, static_cast<_Type>(__value), __base, is_signed<_Tp>());
 }
 
 template <typename _It, typename _Tp, typename _Fn, typename... _Ts>
