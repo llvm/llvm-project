@@ -1634,7 +1634,6 @@ let SubtargetPredicate = isGFX90APlus in {
   defm : BufferAtomicIntrPat<"int_amdgcn_global_atomic_fadd", f64, "BUFFER_ATOMIC_ADD_F64">;
   defm : BufferAtomicIntrPat<"int_amdgcn_global_atomic_fmin", f64, "BUFFER_ATOMIC_MIN_F64">;
   defm : BufferAtomicIntrPat<"int_amdgcn_global_atomic_fmax", f64, "BUFFER_ATOMIC_MAX_F64">;
-  defm : SIBufferAtomicPat<"SIbuffer_atomic_fadd", f32,   "BUFFER_ATOMIC_ADD_F32">;
   defm : SIBufferAtomicPat<"SIbuffer_atomic_fadd", v2f16, "BUFFER_ATOMIC_PK_ADD_F16">;
 
   defm : SIBufferAtomicPat<"SIbuffer_atomic_fadd", f64, "BUFFER_ATOMIC_ADD_F64">;
