@@ -315,11 +315,11 @@ public:
   constexpr const T &operator*() const & { return getValue(); }
   T &operator*() & { return getValue(); }
 
-  template <typename U> constexpr T value_or(U &&value) const & {
-    return hasValue() ? getValue() : std::forward<U>(value);
+  template <typename U> constexpr T value_or(U &&alt) const & {
+    return hasValue() ? getValue() : std::forward<U>(alt);
   }
-  template <typename U> constexpr T getValueOr(U &&value) const & {
-    return hasValue() ? getValue() : std::forward<U>(value);
+  template <typename U> constexpr T getValueOr(U &&alt) const & {
+    return hasValue() ? getValue() : std::forward<U>(alt);
   }
 
   /// Apply a function to the value if present; otherwise return None.
@@ -334,11 +334,11 @@ public:
   T &&getValue() && { return std::move(Storage.getValue()); }
   T &&operator*() && { return std::move(Storage.getValue()); }
 
-  template <typename U> T value_or(U &&value) && {
-    return hasValue() ? std::move(getValue()) : std::forward<U>(value);
+  template <typename U> T value_or(U &&alt) && {
+    return hasValue() ? std::move(getValue()) : std::forward<U>(alt);
   }
-  template <typename U> T getValueOr(U &&value) && {
-    return hasValue() ? std::move(getValue()) : std::forward<U>(value);
+  template <typename U> T getValueOr(U &&alt) && {
+    return hasValue() ? std::move(getValue()) : std::forward<U>(alt);
   }
 
   /// Apply a function to the value if present; otherwise return None.
