@@ -1412,10 +1412,12 @@ defm : MUBUF_StoreIntrinsicPat<SIbuffer_store_short, i32, "BUFFER_STORE_SHORT">;
 multiclass BufferAtomicPat<string OpPrefix, ValueType vt, string Inst, bit isIntr = 0> {
   foreach RtnMode = ["ret", "noret"] in {
 
-  defvar Op = !cast<SDPatternOperator>(OpPrefix # "_" # RtnMode
+  defvar Op = !cast<SDPatternOperator>(OpPrefix
+                                       # !if(!eq(RtnMode, "ret"), "", "_noret")
                                        # !if(isIntr, "", "_" # vt.Size));
   defvar InstSuffix = !if(!eq(RtnMode, "ret"), "_RTN", "");
 
+  let AddedComplexity = !if(!eq(RtnMode, "ret"), 0, 1) in {
   def : GCNPat<
     (vt (Op (MUBUFOffset v4i32:$srsrc, i32:$soffset, i16:$offset), vt:$vdata_in)),
     (!cast<MUBUF_Pseudo>(Inst # "_OFFSET" # InstSuffix) getVregSrcForVT<vt>.ret:$vdata_in,
@@ -1428,6 +1430,7 @@ multiclass BufferAtomicPat<string OpPrefix, ValueType vt, string Inst, bit isInt
     (!cast<MUBUF_Pseudo>(Inst # "_ADDR64" # InstSuffix) getVregSrcForVT<vt>.ret:$vdata_in,
       VReg_64:$vaddr, SReg_128:$srsrc, SCSrc_b32:$soffset, offset:$offset)
   >;
+  } // end let AddedComplexity
 
   } // end foreach RtnMode
 }
@@ -1439,10 +1442,12 @@ multiclass BufferAtomicIntrPat<string OpPrefix, ValueType vt, string Inst> {
 multiclass BufferAtomicCmpSwapPat<ValueType vt, ValueType data_vt, string Inst> {
   foreach RtnMode = ["ret", "noret"] in {
 
-  defvar Op = !cast<SDPatternOperator>("AMDGPUatomic_cmp_swap_global_" # RtnMode
+  defvar Op = !cast<SDPatternOperator>("AMDGPUatomic_cmp_swap_global"
+                                       # !if(!eq(RtnMode, "ret"), "", "_noret")
                                        # "_" # vt.Size);
   defvar InstSuffix = !if(!eq(RtnMode, "ret"), "_RTN", "");
 
+  let AddedComplexity = !if(!eq(RtnMode, "ret"), 0, 1) in {
   defvar OffsetResDag = (!cast<MUBUF_Pseudo>(Inst # "_OFFSET" # InstSuffix)
     getVregSrcForVT<data_vt>.ret:$vdata_in, SReg_128:$srsrc, SCSrc_b32:$soffset,
     offset:$offset);
@@ -1465,6 +1470,7 @@ multiclass BufferAtomicCmpSwapPat<ValueType vt, ValueType data_vt, string Inst> 
         !if(!eq(vt, i32), sub0, sub0_sub1)),
       Addr64ResDag)
   >;
+  } // end let AddedComplexity
 
   } // end foreach RtnMode
 }
@@ -1495,13 +1501,14 @@ multiclass SIBufferAtomicPat<string OpPrefix, ValueType vt, string Inst,
                              list<string> RtnModes = ["ret", "noret"]> {
   foreach RtnMode = RtnModes in {
 
-  defvar Op = !cast<SDPatternOperator>(!if(!eq(RtnMode, "none"),
-    OpPrefix, OpPrefix # "_" # RtnMode));
-  defvar InstSuffix = !if(!or(!eq(RtnMode, "none"), !eq(RtnMode, "ret")),
-    "_RTN", "");
-  defvar CachePolicy = !if(!or(!eq(RtnMode, "none"), !eq(RtnMode, "ret")),
+  defvar Op = !cast<SDPatternOperator>(OpPrefix
+                                       # !if(!eq(RtnMode, "ret"), "", "_noret"));
+
+  defvar InstSuffix = !if(!eq(RtnMode, "ret"), "_RTN", "");
+  defvar CachePolicy = !if(!eq(RtnMode, "ret"),
     (set_glc $cachepolicy), (timm:$cachepolicy));
 
+  let AddedComplexity = !if(!eq(RtnMode, "ret"), 0, 1) in {
   def : GCNPat<
     (vt (Op vt:$vdata_in, v4i32:$rsrc, 0, 0, i32:$soffset,
               timm:$offset, timm:$cachepolicy, 0)),
@@ -1534,6 +1541,7 @@ multiclass SIBufferAtomicPat<string OpPrefix, ValueType vt, string Inst,
       (REG_SEQUENCE VReg_64, VGPR_32:$vindex, sub0, VGPR_32:$voffset, sub1),
         SReg_128:$rsrc, SCSrc_b32:$soffset, (as_i16timm $offset), CachePolicy)
   >;
+  } // end let AddedComplexity
 
   } // end foreach RtnMode
 }
@@ -1551,7 +1559,7 @@ defm : SIBufferAtomicPat<"SIbuffer_atomic_or", i32, "BUFFER_ATOMIC_OR">;
 defm : SIBufferAtomicPat<"SIbuffer_atomic_xor", i32, "BUFFER_ATOMIC_XOR">;
 defm : SIBufferAtomicPat<"SIbuffer_atomic_inc", i32, "BUFFER_ATOMIC_INC">;
 defm : SIBufferAtomicPat<"SIbuffer_atomic_dec", i32, "BUFFER_ATOMIC_DEC">;
-defm : SIBufferAtomicPat<"SIbuffer_atomic_csub", i32, "BUFFER_ATOMIC_CSUB", ["none"]>;
+defm : SIBufferAtomicPat<"SIbuffer_atomic_csub", i32, "BUFFER_ATOMIC_CSUB", ["ret"]>;
 defm : SIBufferAtomicPat<"SIbuffer_atomic_swap", i64, "BUFFER_ATOMIC_SWAP_X2">;
 defm : SIBufferAtomicPat<"SIbuffer_atomic_add", i64,  "BUFFER_ATOMIC_ADD_X2">;
 defm : SIBufferAtomicPat<"SIbuffer_atomic_sub", i64, "BUFFER_ATOMIC_SUB_X2">;
@@ -1643,7 +1651,8 @@ let SubtargetPredicate = isGFX90APlus in {
 
 foreach RtnMode = ["ret", "noret"] in {
 
-defvar Op = !cast<SDPatternOperator>(SIbuffer_atomic_cmpswap # "_" # RtnMode);
+defvar Op = !cast<SDPatternOperator>(SIbuffer_atomic_cmpswap
+                                     # !if(!eq(RtnMode, "ret"), "", "_noret"));
 defvar InstSuffix = !if(!eq(RtnMode, "ret"), "_RTN", "");
 defvar CachePolicy = !if(!eq(RtnMode, "ret"), (set_glc $cachepolicy),
   (timm:$cachepolicy));
