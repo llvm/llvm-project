@@ -2561,11 +2561,8 @@ static InstructionCost findCostForOutputBlocks(Module &M,
 
     for (Value *V : ID.OperVals) {
       BasicBlock *BB = static_cast<BasicBlock *>(V);
-      DenseSet<BasicBlock *>::iterator CBIt = CandidateBlocks.find(BB);
-      if (CBIt != CandidateBlocks.end() || FoundBlocks.contains(BB))
-        continue;
-      FoundBlocks.insert(BB);
-      NumOutputBranches++;
+      if (!CandidateBlocks.contains(BB) && FoundBlocks.insert(BB).second)
+        NumOutputBranches++;
     }
   }
 
