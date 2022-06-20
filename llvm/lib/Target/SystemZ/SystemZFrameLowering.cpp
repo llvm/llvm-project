@@ -96,8 +96,7 @@ typedef std::vector<SZFrameSortingObj> SZFrameObjVec;
 void SystemZELFFrameLowering::orderFrameObjects(
     const MachineFunction &MF, SmallVectorImpl<int> &ObjectsToAllocate) const {
   const MachineFrameInfo &MFI = MF.getFrameInfo();
-  const SystemZInstrInfo *TII =
-      static_cast<const SystemZInstrInfo *>(MF.getSubtarget().getInstrInfo());
+  auto *TII = MF.getSubtarget<SystemZSubtarget>().getInstrInfo();
 
   // Make a vector of sorting objects to track all MFI objects and mark those
   // to be sorted as valid.
