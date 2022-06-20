@@ -21,39 +21,42 @@ define float @test_float_fadd_ieee() #0 {
 
 define float @test_float_fadd_pzero_out() #1 {
 ; CHECK-LABEL: @test_float_fadd_pzero_out(
-; CHECK-NEXT:    ret float 0xB800000000000000
-; default ieee mode leaves result as a denormal
+; CHECK-NEXT:    ret float 0.000000e+00
+; denormal result is flushed to positive zero
   %result = fadd float 0xB810000000000000, 0x3800000000000000
   ret float %result
 }
 
 define float @test_float_fadd_psign_out() #2 {
 ; CHECK-LABEL: @test_float_fadd_psign_out(
-; CHECK-NEXT:    ret float 0xB800000000000000
-; default ieee mode leaves result as a denormal
+; CHECK-NEXT:    ret float -0.000000e+00
+; denormal result is flushed to sign preserved zero
   %result = fadd float 0xB810000000000000, 0x3800000000000000
   ret float %result
 }
 
 define float @test_float_fadd_pzero_in() #3 {
 ; CHECK-LABEL: @test_float_fadd_pzero_in(
-; CHECK-NEXT:    ret float 0xB800000000000000
-; default ieee mode leaves result as a denormal
+; CHECK-NEXT:    ret float 0xB810000000000000
+; denormal operand is treated as zero
+; normal operand added to zero results in the same operand as a result
   %result = fadd float 0xB810000000000000, 0x3800000000000000
   ret float %result
 }
 
 define float @test_float_fadd_psign_in() #4 {
 ; CHECK-LABEL: @test_float_fadd_psign_in(
-; CHECK-NEXT:    ret float 0xB800000000000000
-; default ieee mode leaves result as a denormal
+; CHECK-NEXT:    ret float 0xB810000000000000
+; denormal operand is treated as zero
+; normal operand added to zero results in the same operand as a result
   %result = fadd float 0xB810000000000000, 0x3800000000000000
   ret float %result
 }
 
 define float @test_float_fadd_pzero_f32_out() #5 {
 ; CHECK-LABEL: @test_float_fadd_pzero_f32_out(
-; CHECK-NEXT:    ret float 0xB800000000000000
+; CHECK-NEXT:    ret float 0.000000e+00
+; f32 only attribute should flush float output
 ; default ieee mode leaves result as a denormal
   %result = fadd float 0xB810000000000000, 0x3800000000000000
   ret float %result
@@ -69,32 +72,34 @@ define double @test_double_fadd_ieee() #0 {
 
 define double @test_double_fadd_pzero_out() #1 {
 ; CHECK-LABEL: @test_double_fadd_pzero_out(
-; CHECK-NEXT:    ret double 0x8008000000000000
-; default ieee mode leaves result as a denormal
+; CHECK-NEXT:    ret double 0.000000e+00
+; denormal result is flushed to positive zero
   %result = fadd double 0x8010000000000000, 0x8000000000000
   ret double %result
 }
 
 define double @test_double_fadd_psign_out() #2 {
 ; CHECK-LABEL: @test_double_fadd_psign_out(
-; CHECK-NEXT:    ret double 0x8008000000000000
-; default ieee mode leaves result as a denormal
+; CHECK-NEXT:    ret double -0.000000e+00
+; denormal result is flushed to sign preserved zero
   %result = fadd double 0x8010000000000000, 0x8000000000000
   ret double %result
 }
 
 define double @test_double_fadd_pzero_in() #3 {
 ; CHECK-LABEL: @test_double_fadd_pzero_in(
-; CHECK-NEXT:    ret double 0x8008000000000000
-; default ieee mode leaves result as a denormal
+; CHECK-NEXT:    ret double 0x8010000000000000
+; denormal operand is treated as zero
+; normal operand added to zero results in the same operand as a result
   %result = fadd double 0x8010000000000000, 0x8000000000000
   ret double %result
 }
 
 define double @test_double_fadd_psign_in() #4 {
 ; CHECK-LABEL: @test_double_fadd_psign_in(
-; CHECK-NEXT:    ret double 0x8008000000000000
-; default ieee mode leaves result as a denormal
+; CHECK-NEXT:    ret double 0x8010000000000000
+; denormal operand is treated as zero
+; normal operand added to zero results in the same operand as a result
   %result = fadd double 0x8010000000000000, 0x8000000000000
   ret double %result
 }
@@ -102,6 +107,7 @@ define double @test_double_fadd_psign_in() #4 {
 define double @test_double_fadd_f32_ieee() #5 {
 ; CHECK-LABEL: @test_double_fadd_f32_ieee(
 ; CHECK-NEXT:    ret double 0x8008000000000000
+; f32 only attribute should not flush doubles
 ; default ieee mode leaves result as a denormal
   %result = fadd double 0x8010000000000000, 0x8000000000000
   ret double %result
@@ -125,40 +131,43 @@ define float @test_float_fsub_ieee() #0 {
 
 define float @test_float_fsub_pzero_out() #1 {
 ; CHECK-LABEL: @test_float_fsub_pzero_out(
-; CHECK-NEXT:    ret float 0xB800000000000000
-; default ieee mode leaves result as a denormal
+; CHECK-NEXT:    ret float 0.000000e+00
+; denormal result is flushed to positive zero
   %result = fsub float 0x3800000000000000, 0x3810000000000000
   ret float %result
 }
 
 define float @test_float_fsub_psign_out() #2 {
 ; CHECK-LABEL: @test_float_fsub_psign_out(
-; CHECK-NEXT:    ret float 0xB800000000000000
-; default ieee mode leaves result as a denormal
+; CHECK-NEXT:    ret float -0.000000e+00
+; denormal result is flushed to sign preserved zero
   %result = fsub float 0x3800000000000000, 0x3810000000000000
   ret float %result
 }
 
 define float @test_float_fsub_pzero_in() #3 {
 ; CHECK-LABEL: @test_float_fsub_pzero_in(
-; CHECK-NEXT:    ret float 0xB800000000000000
-; default ieee mode leaves result as a denormal
+; CHECK-NEXT:    ret float 0xB810000000000000
+; denormal operand is treated as zero
+; normal operand subtracted from zero produces the same operand, negated
   %result = fsub float 0x3800000000000000, 0x3810000000000000
   ret float %result
 }
 
 define float @test_float_fsub_psign_in() #4 {
 ; CHECK-LABEL: @test_float_fsub_psign_in(
-; CHECK-NEXT:    ret float 0xB800000000000000
-; default ieee mode leaves result as a denormal
+; CHECK-NEXT:    ret float 0xB810000000000000
+; denormal operand is treated as zero
+; normal operand subtracted from zero produces the same operand, negated
   %result = fsub float 0x3800000000000000, 0x3810000000000000
   ret float %result
 }
 
 define float @test_float_fsub_pzero_f32_out() #5 {
 ; CHECK-LABEL: @test_float_fsub_pzero_f32_out(
-; CHECK-NEXT:    ret float 0xB800000000000000
-; default ieee mode leaves result as a denormal
+; CHECK-NEXT:    ret float 0.000000e+00
+; f32 only attribute should flush float output
+; same as pzero_out above
   %result = fsub float 0x3800000000000000, 0x3810000000000000
   ret float %result
 }
@@ -173,32 +182,34 @@ define double @test_double_fsub_ieee() #0 {
 
 define double @test_double_fsub_pzero_out() #1 {
 ; CHECK-LABEL: @test_double_fsub_pzero_out(
-; CHECK-NEXT:    ret double 0x8008000000000000
-; default ieee mode leaves result as a denormal
+; CHECK-NEXT:    ret double 0.000000e+00
+; denormal result is flushed to positive zero
   %result = fsub double 0x8000000000000, 0x10000000000000
   ret double %result
 }
 
 define double @test_double_fsub_psign_out() #2 {
 ; CHECK-LABEL: @test_double_fsub_psign_out(
-; CHECK-NEXT:    ret double 0x8008000000000000
-; default ieee mode leaves result as a denormal
+; CHECK-NEXT:    ret double -0.000000e+00
+; denormal result is flushed to sign preserved zero
   %result = fsub double 0x8000000000000, 0x10000000000000
   ret double %result
 }
 
 define double @test_double_fsub_pzero_in() #3 {
 ; CHECK-LABEL: @test_double_fsub_pzero_in(
-; CHECK-NEXT:    ret double 0x8008000000000000
-; default ieee mode leaves result as a denormal
+; CHECK-NEXT:    ret double 0x8010000000000000
+; denormal operand is treated as zero
+; normal operand subtracted from zero produces the same operand, negated
   %result = fsub double 0x8000000000000, 0x10000000000000
   ret double %result
 }
 
 define double @test_double_fsub_psign_in() #4 {
 ; CHECK-LABEL: @test_double_fsub_psign_in(
-; CHECK-NEXT:    ret double 0x8008000000000000
-; default ieee mode leaves result as a denormal
+; CHECK-NEXT:    ret double 0x8010000000000000
+; denormal operand is treated as zero
+; normal operand subtracted from zero produces the same operand, negated
   %result = fsub double 0x8000000000000, 0x10000000000000
   ret double %result
 }
@@ -206,6 +217,7 @@ define double @test_double_fsub_psign_in() #4 {
 define double @test_double_fsub_f32_ieee() #5 {
 ; CHECK-LABEL: @test_double_fsub_f32_ieee(
 ; CHECK-NEXT:    ret double 0x8008000000000000
+; f32 only attribute should not flush doubles
 ; default ieee mode leaves result as a denormal
   %result = fsub double 0x8000000000000, 0x10000000000000
   ret double %result
@@ -231,40 +243,43 @@ define float @test_float_fmul_ieee() #0 {
 
 define float @test_float_fmul_pzero_out() #1 {
 ; CHECK-LABEL: @test_float_fmul_pzero_out(
-; CHECK-NEXT:    ret float 0xB800000000000000
-; default ieee mode leaves result as a denormal
+; CHECK-NEXT:    ret float 0.000000e+00
+; denormal result is flushed to positive zero
   %result = fmul float 0x3810000000000000, -5.000000e-01
   ret float %result
 }
 
 define float @test_float_fmul_psign_out() #2 {
 ; CHECK-LABEL: @test_float_fmul_psign_out(
-; CHECK-NEXT:    ret float 0xB800000000000000
-; default ieee mode leaves result as a denormal
+; CHECK-NEXT:    ret float -0.000000e+00
+; denormal result is flushed to sign preserved zero
   %result = fmul float 0x3810000000000000, -5.000000e-01
   ret float %result
 }
 
 define float @test_float_fmul_pzero_in() #3 {
 ; CHECK-LABEL: @test_float_fmul_pzero_in(
-; CHECK-NEXT:    ret float 0xB810000000000000
-; default ieee mode leaves result as a normal
+; CHECK-NEXT:    ret float 0.000000e+00
+; denormal operand is treated as positive zero
+; anything multiplied by zero gives a zero result
   %result = fmul float 0xB800000000000000, 2.000000e-00
   ret float %result
 }
 
 define float @test_float_fmul_psign_in() #4 {
 ; CHECK-LABEL: @test_float_fmul_psign_in(
-; CHECK-NEXT:    ret float 0xB810000000000000
-; default ieee mode leaves result as a normal
+; CHECK-NEXT:    ret float -0.000000e+00
+; denormal operand is treated as signed zero
+; anything multiplied by zero gives a zero result
   %result = fmul float 0xB800000000000000, 2.000000e-00
   ret float %result
 }
 
 define float @test_float_fmul_pzero_f32_out() #1 {
 ; CHECK-LABEL: @test_float_fmul_pzero_f32_out(
-; CHECK-NEXT:    ret float 0xB800000000000000
-; default ieee mode leaves result as a denormal
+; CHECK-NEXT:    ret float 0.000000e+00
+; f32 only attribute should flush float output
+; same as pzero_out above
   %result = fmul float 0x3810000000000000, -5.000000e-01
   ret float %result
 }
@@ -279,32 +294,34 @@ define double @test_double_fmul_ieee() #0 {
 
 define double @test_double_fmul_pzero_out() #1 {
 ; CHECK-LABEL: @test_double_fmul_pzero_out(
-; CHECK-NEXT:    ret double 0x8008000000000000
-; default ieee mode leaves result as a denormal
+; CHECK-NEXT:    ret double 0.000000e+00
+; denormal result is flushed to positive zero
   %result = fmul double 0x10000000000000, -5.000000e-01
   ret double %result
 }
 
 define double @test_double_fmul_psign_out() #2 {
 ; CHECK-LABEL: @test_double_fmul_psign_out(
-; CHECK-NEXT:    ret double 0x8008000000000000
-; default ieee mode leaves result as a denormal
+; CHECK-NEXT:    ret double -0.000000e+00
+; denormal result is flushed to sign preserved zero
   %result = fmul double 0x10000000000000, -5.000000e-01
   ret double %result
 }
 
 define double @test_double_fmul_pzero_in() #3 {
 ; CHECK-LABEL: @test_double_fmul_pzero_in(
-; CHECK-NEXT:    ret double 0x8010000000000000
-; default ieee mode leaves result as a normal
+; CHECK-NEXT:    ret double 0.000000e+00
+; denormal operand is treated as positive zero
+; anything multiplied by zero gives a zero result
   %result = fmul double 0x8008000000000000, 2.000000e-00
   ret double %result
 }
 
 define double @test_double_fmul_psign_in() #4 {
 ; CHECK-LABEL: @test_double_fmul_psign_in(
-; CHECK-NEXT:    ret double 0x8010000000000000
-; default ieee mode leaves result as a normal
+; CHECK-NEXT:    ret double -0.000000e+00
+; denormal operand is treated as signed zero
+; anything multiplied by zero gives a zero result
   %result = fmul double 0x8008000000000000, 2.000000e-00
   ret double %result
 }
@@ -312,6 +329,7 @@ define double @test_double_fmul_psign_in() #4 {
 define double @test_double_fmul_f32_ieee() #5 {
 ; CHECK-LABEL: @test_double_fmul_f32_ieee(
 ; CHECK-NEXT:    ret double 0x8008000000000000
+; f32 only attribute should not flush doubles
 ; default ieee mode leaves result as a denormal
   %result = fmul double 0x10000000000000, -5.000000e-01
   ret double %result
@@ -337,40 +355,43 @@ define float @test_float_fdiv_ieee() #0 {
 
 define float @test_float_fdiv_pzero_out() #1 {
 ; CHECK-LABEL: @test_float_fdiv_pzero_out(
-; CHECK-NEXT:    ret float 0xB800000000000000
-; default ieee mode leaves result as a denormal
+; CHECK-NEXT:    ret float 0.000000e+00
+; denormal result is flushed to positive zero
   %result = fdiv float 0x3810000000000000, -2.000000e-00
   ret float %result
 }
 
 define float @test_float_fdiv_psign_out() #2 {
 ; CHECK-LABEL: @test_float_fdiv_psign_out(
-; CHECK-NEXT:    ret float 0xB800000000000000
-; default ieee mode leaves result as a denormal
+; CHECK-NEXT:    ret float -0.000000e+00
+; denormal result is flushed to sign preserved zero
   %result = fdiv float 0x3810000000000000, -2.000000e-00
   ret float %result
 }
 
 define float @test_float_fdiv_pzero_in() #3 {
 ; CHECK-LABEL: @test_float_fdiv_pzero_in(
-; CHECK-NEXT:    ret float 0xB810000000000000
-; default ieee mode leaves result as a normal
+; CHECK-NEXT:    ret float 0.000000e+00
+; denormal operand is treated as zero
+; zero divided by anything gives a zero result
   %result = fdiv float 0xB800000000000000, 5.000000e-01
   ret float %result
 }
 
 define float @test_float_fdiv_psign_in() #4 {
 ; CHECK-LABEL: @test_float_fdiv_psign_in(
-; CHECK-NEXT:    ret float 0xB7F0000000000000
-; default ieee mode leaves result as a normal
+; CHECK-NEXT:    ret float -0.000000e+00
+; denormal operand is treated as zero
+; zero divided by anything gives a zero result
   %result = fmul float 0xB800000000000000, 5.000000e-01
   ret float %result
 }
 
 define float @test_float_fdiv_pzero_f32_out() #1 {
 ; CHECK-LABEL: @test_float_fdiv_pzero_f32_out(
-; CHECK-NEXT:    ret float 0xB800000000000000
-; default ieee mode leaves result as a denormal
+; CHECK-NEXT:    ret float 0.000000e+00
+; f32 only attribute should flush float output
+; same as pzero_out above
   %result = fdiv float 0x3810000000000000, -2.000000e-00
   ret float %result
 }
@@ -385,32 +406,34 @@ define double @test_double_fdiv_ieee() #0 {
 
 define double @test_double_fdiv_pzero_out() #1 {
 ; CHECK-LABEL: @test_double_fdiv_pzero_out(
-; CHECK-NEXT:    ret double 0x8008000000000000
-; default ieee mode leaves result as a denormal
+; CHECK-NEXT:    ret double 0.000000e+00
+; denormal result is flushed to positive zero
   %result = fdiv double 0x10000000000000, -2.000000e-00
   ret double %result
 }
 
 define double @test_double_fdiv_psign_out() #2 {
 ; CHECK-LABEL: @test_double_fdiv_psign_out(
-; CHECK-NEXT:    ret double 0x8008000000000000
-; default ieee mode leaves result as a denormal
+; CHECK-NEXT:    ret double -0.000000e+00
+; denormal result is flushed to sign preserved zero
   %result = fdiv double 0x10000000000000, -2.000000e-00
   ret double %result
 }
 
 define double @test_double_fdiv_pzero_in() #3 {
 ; CHECK-LABEL: @test_double_fdiv_pzero_in(
-; CHECK-NEXT:    ret double 0x8010000000000000
-; default ieee mode leaves result as a normal
+; CHECK-NEXT:    ret double 0.000000e+00
+; denormal operand is treated as zero
+; zero divided by anything gives a zero result
   %result = fdiv double 0x8008000000000000, 5.000000e-01
   ret double %result
 }
 
 define double @test_double_fdiv_psign_in() #4 {
 ; CHECK-LABEL: @test_double_fdiv_psign_in(
-; CHECK-NEXT:    ret double 0x8010000000000000
-; default ieee mode leaves result as a normal
+; CHECK-NEXT:    ret double -0.000000e+00
+; denormal operand is treated as zero
+; zero divided by anything gives a zero result
   %result = fdiv double 0x8008000000000000, 5.000000e-01
   ret double %result
 }
@@ -418,6 +441,7 @@ define double @test_double_fdiv_psign_in() #4 {
 define double @test_double_fdiv_f32_ieee() #5 {
 ; CHECK-LABEL: @test_double_fdiv_f32_ieee(
 ; CHECK-NEXT:    ret double 0x8008000000000000
+; f32 only attribute should not flush doubles
 ; default ieee mode leaves result as a denormal
   %result = fdiv double 0x10000000000000, -2.000000e-00
   ret double %result
@@ -443,16 +467,16 @@ define float @test_float_frem_ieee_out() #0 {
 
 define float @test_float_frem_pzero_out() #1 {
 ; CHECK-LABEL: @test_float_frem_pzero_out(
-; CHECK-NEXT:    ret float 0xB800000000000000
-; default ieee mode leaves result as a denormal
+; CHECK-NEXT:    ret float 0.000000e+00
+; denormal result is flushed to positive zero
   %result = frem float 0xB818000000000000, 0x3810000000000000
   ret float %result
 }
 
 define float @test_float_frem_psign_out() #2 {
 ; CHECK-LABEL: @test_float_frem_psign_out(
-; CHECK-NEXT:    ret float 0xB800000000000000
-; default ieee mode leaves result as a denormal
+; CHECK-NEXT:    ret float -0.000000e+00
+; denormal result is flushed to sign preserved zero
   %result = frem float 0xB818000000000000, 0x3810000000000000
   ret float %result
 }
@@ -467,24 +491,27 @@ define float @test_float_frem_ieee_in() #0 {
 
 define float @test_float_frem_pzero_in() #3 {
 ; CHECK-LABEL: @test_float_frem_pzero_in(
-; CHECK-NEXT:    ret float 0x3800000000000000
-; default ieee mode leaves result same as input
+; CHECK-NEXT:    ret float 0.000000e+00
+; denormal operand is treated as zero
+; remainder is now zero
   %result = frem float 0x3800000000000000, 2.000000e+00
   ret float %result
 }
 
 define float @test_float_frem_psign_in() #4 {
 ; CHECK-LABEL: @test_float_frem_psign_in(
-; CHECK-NEXT:    ret float 0x3800000000000000
-; default ieee mode leaves result same as input
+; CHECK-NEXT:    ret float 0.000000e+00
+; denormal operand is treated as zero
+; remainder is now zero
   %result = frem float 0x3800000000000000, 2.000000e+00
   ret float %result
 }
 
 define float @test_float_frem_pzero_f32_out() #1 {
 ; CHECK-LABEL: @test_float_frem_pzero_f32_out(
-; CHECK-NEXT:    ret float 0xB800000000000000
-; default ieee mode leaves result as a denormal
+; CHECK-NEXT:    ret float 0.000000e+00
+; f32 only attribute should flush float output
+; same as pzero_out above
   %result = frem float 0xB818000000000000, 0x3810000000000000
   ret float %result
 }
@@ -499,16 +526,16 @@ define double @test_double_frem_ieee_out() #0 {
 
 define double @test_double_frem_pzero_out() #1 {
 ; CHECK-LABEL: @test_double_frem_pzero_out(
-; CHECK-NEXT:    ret double 0x8008000000000000
-; default ieee mode leaves result as a denormal
+; CHECK-NEXT:    ret double 0.000000e+00
+; denormal result is flushed to positive zero
   %result = frem double 0x8018000000000000, 0x10000000000000
   ret double %result
 }
 
 define double @test_double_frem_psign_out() #2 {
 ; CHECK-LABEL: @test_double_frem_psign_out(
-; CHECK-NEXT:    ret double 0x8008000000000000
-; default ieee mode leaves result as a denormal
+; CHECK-NEXT:    ret double -0.000000e+00
+; denormal result is flushed to sign preserved zero
   %result = frem double 0x8018000000000000, 0x10000000000000
   ret double %result
 }
@@ -523,16 +550,18 @@ define double @test_double_frem_ieee_in() #0 {
 
 define double @test_double_frem_pzero_in() #3 {
 ; CHECK-LABEL: @test_double_frem_pzero_in( 
-; CHECK-NEXT:    ret double 0x8000000000000
-; default ieee mode leaves result same as input
+; CHECK-NEXT:    ret double 0.000000e+00
+; denormal operand is treated as zero
+; remainder is now zero
   %result = frem double 0x8000000000000, 2.000000e+00
   ret double %result
 }
 
 define double @test_double_frem_psign_in() #4 {
 ; CHECK-LABEL: @test_double_frem_psign_in(
-; CHECK-NEXT:    ret double 0x8000000000000
-; default ieee mode leaves result same as input
+; CHECK-NEXT:    ret double 0.000000e+00
+; denormal operand is treated as zero
+; remainder is now zero
   %result = frem double 0x8000000000000, 2.000000e+00
   ret double %result
 }
@@ -540,6 +569,7 @@ define double @test_double_frem_psign_in() #4 {
 define double @test_double_frem_f32_ieee() #5 {
 ; CHECK-LABEL: @test_double_frem_f32_ieee(
 ; CHECK-NEXT:    ret double 0x8008000000000000
+; f32 only attribute should not flush doubles
 ; default ieee mode leaves result as a denormal
   %result = frem double 0x8018000000000000, 0x10000000000000
   ret double %result

@@ -85,6 +85,13 @@ Constant *ConstantFoldUnaryOpOperand(unsigned Opcode, Constant *Op,
 Constant *ConstantFoldBinaryOpOperands(unsigned Opcode, Constant *LHS,
                                        Constant *RHS, const DataLayout &DL);
 
+/// Attempt to constant fold a floating point binary operation with the
+/// specified operands, applying the denormal handling mod to the operands.  If
+/// it fails, it returns a constant expression of the specified operands.
+Constant *ConstantFoldFPInstOperands(unsigned Opcode, Constant *LHS,
+                                     Constant *RHS, const DataLayout &DL,
+                                     const Instruction *I);
+
 /// Attempt to constant fold a select instruction with the specified
 /// operands. The constant result is returned if successful; if not, null is
 /// returned.
