@@ -46,10 +46,7 @@ def InstC : Instruction {
 }
 
 // CHECK: #ifdef GET_INSTRINFO_OPERAND_TYPE
-// CHECK:        /* InstA */
-// CHECK-NEXT:   OpA, OpB, i32imm,
-// CHECK-NEXT:   /* InstB */
-// CHECK-NEXT:   i32imm, -1,
-// CHECK-NEXT:   /* InstC */
-// CHECK-NEXT:   RegClass, RegOp,
+// CHECK:        OpTypes::OpA, OpTypes::OpB, OpTypes::i32imm,
+// CHECK-NEXT:   OpTypes::i32imm, -1,
+// CHECK-NEXT:   OpTypes::RegClass, OpTypes::RegOp,
 // CHECK: #endif // GET_INSTRINFO_OPERAND_TYPE
