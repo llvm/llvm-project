@@ -645,6 +645,13 @@ bool M88kInstructionSelector::earlySelect(MachineInstr &I) {
     //   G_OR $dst, $src, ((2**width - 1) << offset
     // to
     //   SETrwo $dst, $src, width<offset>
+    //
+    // The special cases
+    //   G_AND $dst, $src, 0
+    // and
+    //   G_OR $dst, $src, -1
+    // are lowered to
+    //   G_COPY $msk
     bool IsAnd = I.getOpcode() == TargetOpcode::G_AND;
     Register DstReg = I.getOperand(0).getReg();
     if (!MRI.getType(DstReg).isScalar())
@@ -660,21 +667,30 @@ bool M88kInstructionSelector::earlySelect(MachineInstr &I) {
     }
 
     // Check that the mask is a (negated) shifted mask.
+    Mask &= 0xFFFFFFFF;
     if (IsAnd)
       Mask = ~static_cast<uint64_t>(Mask) & 0xFFFFFFFF;
     uint64_t MaskWidth, MaskOffset;
     if (!isShiftedMask(Mask, MaskWidth, MaskOffset))
       return false;
 
-    assert(MaskWidth >= 0 && MaskWidth < 32 && "Width out of range");
+    assert(MaskWidth > 0 && MaskWidth <= 32 && "Width out of range");
     assert(MaskOffset >= 0 && MaskOffset < 32 && "Offset out of range");
 
-    unsigned NewOpc = IsAnd ? M88k::CLRrwo : M88k::SETrwo;
-    MachineInstr *MI = BuildMI(MBB, I, I.getDebugLoc(), TII.get(NewOpc))
-                           .add(I.getOperand(0))
-                           .addReg(SrcReg)
-                           .addImm((MaskWidth << 5) | MaskOffset);
-
+    MachineInstr *MI;
+    if (MaskWidth == 32 && MaskOffset == 0) {
+      MI = BuildMI(MBB, I, I.getDebugLoc(), TII.get(TargetOpcode::COPY),
+                   I.getOperand(0).getReg())
+               .addReg(MskReg);
+      RBI.constrainGenericRegister(I.getOperand(0).getReg(),
+                                   M88k::GPRRCRegClass, MRI);
+    } else {
+      unsigned NewOpc = IsAnd ? M88k::CLRrwo : M88k::SETrwo;
+      MI = BuildMI(MBB, I, I.getDebugLoc(), TII.get(NewOpc))
+               .add(I.getOperand(0))
+               .addReg(SrcReg)
+               .addImm(((MaskWidth << 5) | MaskOffset) & 0x3ff);
+    }
     I.eraseFromParent();
     return constrainSelectedInstRegOperands(*MI, TII, TRI, RBI);
   }
