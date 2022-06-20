@@ -5738,7 +5738,8 @@ bool AMDGPULegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,
   case Intrinsic::amdgcn_raw_buffer_atomic_fadd:
   case Intrinsic::amdgcn_struct_buffer_atomic_fadd: {
     Register DstReg = MI.getOperand(0).getReg();
-    if (!MRI.use_empty(DstReg) && !ST.hasGFX90AInsts()) {
+    if (!MRI.use_empty(DstReg) &&
+        !AMDGPU::hasAtomicFaddRtnForTy(ST, MRI.getType(DstReg))) {
       Function &F = B.getMF().getFunction();
       DiagnosticInfoUnsupported NoFpRet(
           F, "return versions of fp atomics not supported", B.getDebugLoc(),
