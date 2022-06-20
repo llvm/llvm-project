@@ -64,7 +64,7 @@ public:
   const WasmInitExpr &getInitExpr() const { return initExpr; }
 
   void setPointerValue(uint64_t value) {
-    initExpr = intConst(value, config->is64.getValueOr(false));
+    initExpr = intConst(value, config->is64.value_or(false));
   }
 
 private:

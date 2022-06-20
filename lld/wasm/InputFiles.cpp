@@ -47,7 +47,7 @@ void InputFile::checkArch(Triple::ArchType arch) const {
   if (is64 && !config->is64.hasValue()) {
     fatal(toString(this) +
           ": must specify -mwasm64 to process wasm64 object files");
-  } else if (config->is64.getValueOr(false) != is64) {
+  } else if (config->is64.value_or(false) != is64) {
     fatal(toString(this) +
           ": wasm32 object file can't be linked in wasm64 mode");
   }

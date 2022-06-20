@@ -115,7 +115,7 @@ void DataSection::finalizeContents() {
   writeUleb128(os, segmentCount, "data segment count");
   os.flush();
   bodySize = dataSectionHeader.size();
-  bool is64 = config->is64.getValueOr(false);
+  bool is64 = config->is64.value_or(false);
 
   for (OutputSegment *segment : segments) {
     if (!segment->requiredInBinary())
