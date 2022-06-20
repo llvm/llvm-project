@@ -134,7 +134,10 @@ IncrementalParser::IncrementalParser(std::unique_ptr<CompilerInstance> Instance,
   P->Initialize();
 }
 
-IncrementalParser::~IncrementalParser() { Act->FinalizeAction(); }
+IncrementalParser::~IncrementalParser() {
+  P.reset();
+  Act->FinalizeAction();
+}
 
 llvm::Expected<PartialTranslationUnit &>
 IncrementalParser::ParseOrWrapTopLevelDecl() {
