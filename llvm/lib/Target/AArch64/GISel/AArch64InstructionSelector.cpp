@@ -6525,7 +6525,7 @@ AArch64InstructionSelector::selectAddrModeIndexed(MachineOperand &Root,
 
   // Before falling back to our general case, check if the unscaled
   // instructions can handle this. If so, that's preferable.
-  if (selectAddrModeUnscaled(Root, Size).hasValue())
+  if (selectAddrModeUnscaled(Root, Size))
     return None;
 
   return {{

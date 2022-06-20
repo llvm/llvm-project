@@ -303,7 +303,7 @@ SubtargetFeatures ELFObjectFileBase::getRISCVFeatures() const {
   }
 
   Optional<StringRef> Attr = Attributes.getAttributeString(RISCVAttrs::ARCH);
-  if (Attr.hasValue()) {
+  if (Attr) {
     // The Arch pattern is [rv32|rv64][i|e]version(_[m|a|f|d|c]version)*
     // Version string pattern is (major)p(minor). Major and minor are optional.
     // For example, a version number could be 2p0, 2, or p92.

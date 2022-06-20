@@ -108,7 +108,7 @@ llvm::Expected<uint64_t> FunctionInfo::encode(FileWriter &O) const {
   // Write the name of this function as a uint32_t string table offset.
   O.writeU32(Name);
 
-  if (OptLineTable.hasValue()) {
+  if (OptLineTable) {
     O.writeU32(InfoType::LineTableInfo);
     // Write a uint32_t length as zero for now, we will fix this up after
     // writing the LineTable out with the number of bytes that were written.
@@ -126,7 +126,7 @@ llvm::Expected<uint64_t> FunctionInfo::encode(FileWriter &O) const {
   }
 
   // Write out the inline function info if we have any and if it is valid.
-  if (Inline.hasValue()) {
+  if (Inline) {
     O.writeU32(InfoType::InlineInfo);
     // Write a uint32_t length as zero for now, we will fix this up after
     // writing the LineTable out with the number of bytes that were written.

@@ -274,7 +274,7 @@ static Reloc::Model getEffectiveRelocModel(const Triple &TT,
   // On ELF platforms the default static relocation model has a smart enough
   // linker to cope with referencing external symbols defined in a shared
   // library. Hence DynamicNoPIC doesn't need to be promoted to PIC.
-  if (!RM.hasValue() || *RM == Reloc::DynamicNoPIC)
+  if (!RM || *RM == Reloc::DynamicNoPIC)
     return Reloc::Static;
   return *RM;
 }

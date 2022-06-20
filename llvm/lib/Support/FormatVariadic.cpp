@@ -130,7 +130,7 @@ formatv_object_base::splitLiteralAndReplacement(StringRef Fmt) {
     StringRef Right = Fmt.substr(BC + 1);
 
     auto RI = parseReplacementItem(Spec);
-    if (RI.hasValue())
+    if (RI)
       return std::make_pair(*RI, Right);
 
     // If there was an error parsing the replacement item, treat it as an

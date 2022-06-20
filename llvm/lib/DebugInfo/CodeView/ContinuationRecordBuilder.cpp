@@ -158,7 +158,7 @@ CVType ContinuationRecordBuilder::createSegmentRecord(
   RecordPrefix *Prefix = reinterpret_cast<RecordPrefix *>(Data.data());
   Prefix->RecordLen = Data.size() - sizeof(RecordPrefix::RecordLen);
 
-  if (RefersTo.hasValue()) {
+  if (RefersTo) {
     auto Continuation = Data.take_back(ContinuationLength);
     ContinuationRecord *CR =
         reinterpret_cast<ContinuationRecord *>(Continuation.data());

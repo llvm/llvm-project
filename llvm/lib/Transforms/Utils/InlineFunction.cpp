@@ -1609,7 +1609,7 @@ void llvm::updateProfileCallee(
     Function *Callee, int64_t EntryDelta,
     const ValueMap<const Value *, WeakTrackingVH> *VMap) {
   auto CalleeCount = Callee->getEntryCount();
-  if (!CalleeCount.hasValue())
+  if (!CalleeCount)
     return;
 
   const uint64_t PriorEntryCount = CalleeCount->getCount();
