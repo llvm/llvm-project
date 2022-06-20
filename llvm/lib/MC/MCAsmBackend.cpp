@@ -9,6 +9,7 @@
 #include "llvm/MC/MCAsmBackend.h"
 #include "llvm/ADT/None.h"
 #include "llvm/ADT/STLArrayExtras.h"
+#include "llvm/MC/MCDXContainerWriter.h"
 #include "llvm/MC/MCELFObjectWriter.h"
 #include "llvm/MC/MCFixupKindInfo.h"
 #include "llvm/MC/MCMachObjectWriter.h"
@@ -49,6 +50,9 @@ MCAsmBackend::createObjectWriter(raw_pwrite_stream &OS) const {
   case Triple::XCOFF:
     return createXCOFFObjectWriter(
         cast<MCXCOFFObjectTargetWriter>(std::move(TW)), OS);
+  case Triple::DXContainer:
+    return createDXContainerObjectWriter(
+        cast<MCDXContainerTargetWriter>(std::move(TW)), OS);
   default:
     llvm_unreachable("unexpected object format");
   }
