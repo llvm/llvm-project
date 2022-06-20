@@ -474,6 +474,8 @@ GDBRemoteCommunicationServerLLGS::SendWResponse(
 
   StreamGDBRemote response;
   response.Format("{0:g}", *wait_status);
+  if (bool(m_extensions_supported & NativeProcessProtocol::Extension::multiprocess))
+    response.Format(";process:{0:x-}", process->GetID());
   return SendPacketNoLock(response.GetString());
 }
 
@@ -807,8 +809,12 @@ GDBRemoteCommunicationServerLLGS::SendStopReplyPacketForThread(
   // Print the signal number.
   response.PutHex8(signum & 0xff);
 
-  // Include the tid.
-  response.Printf("thread:%" PRIx64 ";", tid);
+  // Include the (pid and) tid.
+  response.PutCString("thread:");
+  if (bool(m_extensions_supported &
+           NativeProcessProtocol::Extension::multiprocess))
+    response.Format("p{0:x-}.", m_current_process->GetID());
+  response.Format("{0:x-};", tid);
 
   // Include the thread name if there is one.
   const std::string thread_name = thread->GetName();

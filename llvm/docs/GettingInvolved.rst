@@ -107,6 +107,7 @@ Forums & Mailing Lists
 
 If you can't find what you need in these docs, try consulting the
 Discourse forums. There are also commit mailing lists for all commits to the LLVM Project.
+The :doc:`CodeOfConduct` applies to all these forums and mailing lists.
 
 `LLVM Discourse`__
   The forums for all things LLVM and related sub-projects. There are categories and subcategories for a wide variety of areas within LLVM. You can also view tags or search for a specific topic. 
@@ -140,7 +141,8 @@ Online Sync-Ups
 
 A number of regular calls are organized on specific topics. It should be
 expected that the range of topics will change over time. At the time of
-writing, the following sync-ups are organized:
+writing, the following sync-ups are organized.
+The :doc:`CodeOfConduct` applies to all online sync-ups.
 
 .. list-table:: LLVM regular sync-up calls
    :widths: 25 25 25 25
@@ -228,6 +230,8 @@ A number of experienced LLVM contributors make themselves available for a chat
 on a regular schedule, to anyone who is looking for some guidance. Please find
 the list of who is available when, through which medium, and what their area of
 expertise is. Don't be too shy to dial in!
+
+The :doc:`CodeOfConduct` applies to all office hours.
 
 Of course, people take time off from time to time, so if you dial in and you
 don't find anyone present, chances are they happen to be off that day.
@@ -359,17 +363,12 @@ can be better.
 .. toctree::
    :hidden:
 
-   CodeOfConduct
    Proposals/GitHubMove
    BugpointRedesign
    Proposals/TestSuite
    Proposals/VariableNames
    Proposals/VectorizationPlan
    Proposals/VectorPredication
-
-:doc:`CodeOfConduct`
-   Proposal to adopt a code of conduct on the LLVM social spaces (lists, events,
-   IRC, etc).
 
 :doc:`Proposals/GitHubMove`
    Proposal to move from SVN/Git to GitHub.

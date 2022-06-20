@@ -84,6 +84,14 @@ public:
   /// Needed to interact with C for instance.
   uint64_t value() const { return uint64_t(1) << ShiftValue; }
 
+  // Returns the previous alignment.
+  Align previous() const {
+    assert(ShiftValue != 0 && "Undefined operation");
+    Align Out;
+    Out.ShiftValue = ShiftValue - 1;
+    return Out;
+  }
+
   /// Allow constructions of constexpr Align.
   template <size_t kValue> constexpr static LogValue Constant() {
     return LogValue{static_cast<uint8_t>(CTLog2<kValue>())};
@@ -173,7 +181,7 @@ inline uint64_t alignTo(uint64_t Size, Align A) {
 inline uint64_t alignTo(uint64_t Size, Align A, uint64_t Skew) {
   const uint64_t Value = A.value();
   Skew %= Value;
-  return ((Size + Value - 1 - Skew) & ~(Value - 1U)) + Skew;
+  return alignTo(Size - Skew, A) + Skew;
 }
 
 /// Returns a multiple of A needed to store `Size` bytes.
@@ -313,13 +321,6 @@ bool operator<=(MaybeAlign Lhs, MaybeAlign Rhs) = delete;
 bool operator>=(MaybeAlign Lhs, MaybeAlign Rhs) = delete;
 bool operator<(MaybeAlign Lhs, MaybeAlign Rhs) = delete;
 bool operator>(MaybeAlign Lhs, MaybeAlign Rhs) = delete;
-
-inline Align operator/(Align Lhs, uint64_t Divisor) {
-  assert(llvm::isPowerOf2_64(Divisor) &&
-         "Divisor must be positive and a power of 2");
-  assert(Lhs != 1 && "Can't halve byte alignment");
-  return Align(Lhs.value() / Divisor);
-}
 
 #ifndef NDEBUG
 // For usage in LLVM_DEBUG macros.

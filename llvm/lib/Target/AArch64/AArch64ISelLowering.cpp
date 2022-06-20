@@ -2376,6 +2376,23 @@ AArch64TargetLowering::EmitInsertVectorToTile(unsigned Opc, unsigned BaseReg,
   return BB;
 }
 
+MachineBasicBlock *
+AArch64TargetLowering::EmitZero(MachineInstr &MI, MachineBasicBlock *BB) const {
+  const TargetInstrInfo *TII = Subtarget->getInstrInfo();
+  MachineInstrBuilder MIB =
+      BuildMI(*BB, MI, MI.getDebugLoc(), TII->get(AArch64::ZERO_M));
+  MIB.add(MI.getOperand(0)); // Mask
+
+  unsigned Mask = MI.getOperand(0).getImm();
+  for (unsigned I = 0; I < 8; I++) {
+    if (Mask & (1 << I))
+      MIB.addDef(AArch64::ZAD0 + I, RegState::ImplicitDefine);
+  }
+
+  MI.eraseFromParent(); // The pseudo is gone now.
+  return BB;
+}
+
 MachineBasicBlock *AArch64TargetLowering::EmitInstrWithCustomInserter(
     MachineInstr &MI, MachineBasicBlock *BB) const {
   switch (MI.getOpcode()) {
@@ -2458,6 +2475,8 @@ MachineBasicBlock *AArch64TargetLowering::EmitInstrWithCustomInserter(
   case AArch64::INSERT_MXIPZ_V_PSEUDO_Q:
     return EmitInsertVectorToTile(AArch64::INSERT_MXIPZ_V_Q, AArch64::ZAQ0, MI,
                                   BB);
+  case AArch64::ZERO_M_PSEUDO:
+    return EmitZero(MI, BB);
   }
 }
 

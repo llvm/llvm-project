@@ -2840,7 +2840,7 @@ private:
       const Fortran::semantics::Symbol &procSymbol =
           funit.getSubprogramSymbol();
       if (procSymbol.owner().IsSubmodule()) {
-        TODO(toLocation(), "support submodules");
+        TODO(toLocation(), "support for submodules");
         return;
       }
     }
