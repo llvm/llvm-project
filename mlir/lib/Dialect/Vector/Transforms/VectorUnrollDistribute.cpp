@@ -169,7 +169,7 @@ getUnrollOrder(unsigned numLoops, Operation *op,
       llvm::to_vector(llvm::seq<int64_t>(0, static_cast<int64_t>(numLoops)));
   if (options.traversalOrderCallback != nullptr) {
     Optional<SmallVector<int64_t>> order = options.traversalOrderCallback(op);
-    if (order.hasValue()) {
+    if (order) {
       loopOrder = std::move(*order);
     }
   }

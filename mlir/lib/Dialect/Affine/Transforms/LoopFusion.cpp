@@ -633,7 +633,7 @@ static bool canRemoveSrcNodeAfterFusion(
   // that all the dependences are preserved.
   if (hasOutDepsAfterFusion || !escapingMemRefs.empty()) {
     Optional<bool> isMaximal = fusionSlice.isMaximal();
-    if (!isMaximal.hasValue()) {
+    if (!isMaximal) {
       LLVM_DEBUG(llvm::dbgs() << "Src loop can't be removed: can't determine "
                                  "if fusion is maximal\n");
       return false;
@@ -1234,7 +1234,7 @@ static bool isFusionProfitable(Operation *srcOpInst, Operation *srcStoreOpInst,
 
   // A simple cost model: fuse if it reduces the memory footprint.
 
-  if (!bestDstLoopDepth.hasValue()) {
+  if (!bestDstLoopDepth) {
     LLVM_DEBUG(
         llvm::dbgs()
         << "All fusion choices involve more than the threshold amount of "
@@ -1242,7 +1242,7 @@ static bool isFusionProfitable(Operation *srcOpInst, Operation *srcStoreOpInst,
     return false;
   }
 
-  if (!bestDstLoopDepth.hasValue()) {
+  if (!bestDstLoopDepth) {
     LLVM_DEBUG(llvm::dbgs() << "no fusion depth could be evaluated.\n");
     return false;
   }
@@ -1263,7 +1263,7 @@ static bool isFusionProfitable(Operation *srcOpInst, Operation *srcStoreOpInst,
 
   Optional<double> storageReduction = None;
 
-  if (!dstMemSize.hasValue() || !srcMemSize.hasValue()) {
+  if (!dstMemSize || !srcMemSize) {
     LLVM_DEBUG(llvm::dbgs()
                << "  fusion memory benefit cannot be evaluated; NOT fusing.\n");
     return false;

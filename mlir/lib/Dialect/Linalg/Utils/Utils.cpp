@@ -254,7 +254,7 @@ void getUpperBoundForIndex(Value value, AffineMap &boundMap,
   if (constantRequired) {
     auto ubConst = constraints.getConstantBound(
         FlatAffineValueConstraints::BoundType::UB, pos);
-    if (!ubConst.hasValue())
+    if (!ubConst)
       return;
 
     boundMap =
@@ -474,7 +474,7 @@ void GenerateLoopNest<scf::ForOp>::doit(
   // Create procInfo so it dominates loops, if appropriate.
   SmallVector<ProcInfo, 4> procInfo;
   SmallVector<DistributionMethod, 0> distributionMethod;
-  if (distributionOptions.hasValue()) {
+  if (distributionOptions) {
     // Collect loop ranges for parallel dimensions.
     SmallVector<Range, 2> parallelLoopRanges;
     for (const auto &iteratorType : enumerate(iteratorTypes))

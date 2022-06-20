@@ -870,7 +870,7 @@ static ParseResult parseGroupNonUniformArithmeticOp(OpAsmParser &parser,
   if (parser.resolveOperand(valueInfo, resultType, state.operands))
     return failure();
 
-  if (clusterSizeInfo.hasValue()) {
+  if (clusterSizeInfo) {
     Type i32Type = parser.getBuilder().getIntegerType(32);
     if (parser.resolveOperand(*clusterSizeInfo, i32Type, state.operands))
       return failure();
