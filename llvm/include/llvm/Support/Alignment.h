@@ -314,35 +314,11 @@ bool operator>=(MaybeAlign Lhs, MaybeAlign Rhs) = delete;
 bool operator<(MaybeAlign Lhs, MaybeAlign Rhs) = delete;
 bool operator>(MaybeAlign Lhs, MaybeAlign Rhs) = delete;
 
-inline Align operator*(Align Lhs, uint64_t Rhs) {
-  assert(Rhs > 0 && "Rhs must be positive");
-  return Align(Lhs.value() * Rhs);
-}
-
-inline MaybeAlign operator*(MaybeAlign Lhs, uint64_t Rhs) {
-  assert(Rhs > 0 && "Rhs must be positive");
-  return Lhs ? Lhs.getValue() * Rhs : MaybeAlign();
-}
-
 inline Align operator/(Align Lhs, uint64_t Divisor) {
   assert(llvm::isPowerOf2_64(Divisor) &&
          "Divisor must be positive and a power of 2");
   assert(Lhs != 1 && "Can't halve byte alignment");
   return Align(Lhs.value() / Divisor);
-}
-
-inline MaybeAlign operator/(MaybeAlign Lhs, uint64_t Divisor) {
-  assert(llvm::isPowerOf2_64(Divisor) &&
-         "Divisor must be positive and a power of 2");
-  return Lhs ? Lhs.getValue() / Divisor : MaybeAlign();
-}
-
-inline Align max(MaybeAlign Lhs, Align Rhs) {
-  return Lhs && *Lhs > Rhs ? *Lhs : Rhs;
-}
-
-inline Align max(Align Lhs, MaybeAlign Rhs) {
-  return Rhs && *Rhs > Lhs ? *Rhs : Lhs;
 }
 
 #ifndef NDEBUG

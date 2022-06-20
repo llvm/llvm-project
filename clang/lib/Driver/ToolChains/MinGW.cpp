@@ -218,6 +218,11 @@ void tools::MinGW::Linker::ConstructJob(Compilation &C, const JobAction &JA,
 
   AddLinkerInputs(TC, Inputs, Args, CmdArgs, JA);
 
+  if (C.getDriver().IsFlangMode()) {
+    addFortranRuntimeLibraryPath(TC, Args, CmdArgs);
+    addFortranRuntimeLibs(TC, CmdArgs);
+  }
+
   // TODO: Add profile stuff here
 
   if (TC.ShouldLinkCXXStdlib(Args)) {

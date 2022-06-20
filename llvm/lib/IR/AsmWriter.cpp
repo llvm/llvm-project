@@ -2075,7 +2075,7 @@ static void writeDIFile(raw_ostream &Out, const DIFile *N, AsmWriterContext &) {
   // Print all values for checksum together, or not at all.
   if (N->getChecksum())
     Printer.printChecksum(*N->getChecksum());
-  Printer.printString("source", N->getSource().getValueOr(StringRef()),
+  Printer.printString("source", N->getSource().value_or(StringRef()),
                       /* ShouldSkipEmpty */ true);
   Out << ")";
 }
@@ -4725,9 +4725,8 @@ struct MDTreeAsmWriterContext : public AsmWriterContext {
       : AsmWriterContext(TP, ST, M), Level(0U), Visited({InitMD}), MainOS(OS) {}
 
   void onWriteMetadataAsOperand(const Metadata *MD) override {
-    if (Visited.count(MD))
+    if (!Visited.insert(MD).second)
       return;
-    Visited.insert(MD);
 
     std::string Str;
     raw_string_ostream SS(Str);

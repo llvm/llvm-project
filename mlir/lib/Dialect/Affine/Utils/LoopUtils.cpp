@@ -20,7 +20,7 @@
 #include "mlir/Dialect/Affine/Utils.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
-#include "mlir/Dialect/SCF/SCF.h"
+#include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/IR/BlockAndValueMapping.h"
 #include "mlir/IR/IntegerSet.h"
 #include "mlir/Support/MathExtras.h"

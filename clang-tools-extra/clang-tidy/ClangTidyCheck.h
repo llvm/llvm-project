@@ -213,7 +213,7 @@ public:
     template <typename T>
     std::enable_if_t<std::is_integral<T>::value, T> get(StringRef LocalName,
                                                         T Default) const {
-      return get<T>(LocalName).getValueOr(Default);
+      return get<T>(LocalName).value_or(Default);
     }
 
     /// Read a named option from the ``Context`` and parse it as an
@@ -258,7 +258,7 @@ public:
     template <typename T>
     std::enable_if_t<std::is_integral<T>::value, T>
     getLocalOrGlobal(StringRef LocalName, T Default) const {
-      return getLocalOrGlobal<T>(LocalName).getValueOr(Default);
+      return getLocalOrGlobal<T>(LocalName).value_or(Default);
     }
 
     /// Read a named option from the ``Context`` and parse it as an
@@ -297,7 +297,7 @@ public:
     template <typename T>
     std::enable_if_t<std::is_enum<T>::value, T>
     get(StringRef LocalName, T Default, bool IgnoreCase = false) const {
-      return get<T>(LocalName, IgnoreCase).getValueOr(Default);
+      return get<T>(LocalName, IgnoreCase).value_or(Default);
     }
 
     /// Read a named option from the ``Context`` and parse it as an
@@ -339,7 +339,7 @@ public:
     std::enable_if_t<std::is_enum<T>::value, T>
     getLocalOrGlobal(StringRef LocalName, T Default,
                      bool IgnoreCase = false) const {
-      return getLocalOrGlobal<T>(LocalName, IgnoreCase).getValueOr(Default);
+      return getLocalOrGlobal<T>(LocalName, IgnoreCase).value_or(Default);
     }
 
     /// Stores an option with the check-local name \p LocalName with

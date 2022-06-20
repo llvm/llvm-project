@@ -66,7 +66,7 @@ void initTLS() {
 
   __llvm_libc::inline_memcpy(reinterpret_cast<char *>(tlsAddr),
                              reinterpret_cast<const char *>(app.tls.address),
-                             app.tls.size);
+                             app.tls.init_size);
   if (__llvm_libc::syscall(SYS_arch_prctl, ARCH_SET_FS, endPtr) == -1)
     __llvm_libc::syscall(SYS_exit, 1);
 }
@@ -132,6 +132,7 @@ extern "C" void _start() {
     }
   }
 
+  app.tls.size = 0;
   for (uintptr_t i = 0; i < programHdrCount; ++i) {
     Elf64_Phdr *phdr = programHdrTable + i;
     if (phdr->p_type != PT_TLS)
@@ -139,6 +140,7 @@ extern "C" void _start() {
     // TODO: p_vaddr value has to be adjusted for static-pie executables.
     app.tls.address = phdr->p_vaddr;
     app.tls.size = phdr->p_memsz;
+    app.tls.init_size = phdr->p_filesz;
     app.tls.align = phdr->p_align;
   }
 

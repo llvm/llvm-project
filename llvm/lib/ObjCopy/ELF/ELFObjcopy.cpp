@@ -774,7 +774,7 @@ Error objcopy::elf::executeObjcopyOnIHex(const CommonConfig &Config,
     return Obj.takeError();
 
   const ElfType OutputElfType =
-      getOutputElfType(Config.OutputArch.getValueOr(MachineInfo()));
+      getOutputElfType(Config.OutputArch.value_or(MachineInfo()));
   if (Error E = handleArgs(Config, ELFConfig, **Obj))
     return E;
   return writeOutput(Config, **Obj, Out, OutputElfType);
@@ -792,7 +792,7 @@ Error objcopy::elf::executeObjcopyOnRawBinary(const CommonConfig &Config,
   // Prefer OutputArch (-O<format>) if set, otherwise fallback to BinaryArch
   // (-B<arch>).
   const ElfType OutputElfType =
-      getOutputElfType(Config.OutputArch.getValueOr(MachineInfo()));
+      getOutputElfType(Config.OutputArch.value_or(MachineInfo()));
   if (Error E = handleArgs(Config, ELFConfig, **Obj))
     return E;
   return writeOutput(Config, **Obj, Out, OutputElfType);

@@ -412,7 +412,7 @@ ELFState<ELFT>::ELFState(ELFYAML::Object &D, yaml::ErrorHandler EH)
     }
   // TODO: Only create the .strtab here if any symbols have been requested.
   ImplicitSections.insert(".strtab");
-  if (!SecHdrTable || !SecHdrTable->NoHeaders.getValueOr(false))
+  if (!SecHdrTable || !SecHdrTable->NoHeaders.value_or(false))
     ImplicitSections.insert(SectionHeaderStringTableName);
 
   // Insert placeholders for implicit sections that are not
@@ -600,8 +600,7 @@ unsigned ELFState<ELFT>::toSectionIndex(StringRef S, StringRef LocSec,
       SectionHeaders.isDefault())
     return Index;
 
-  assert(!SectionHeaders.NoHeaders.getValueOr(false) ||
-         !SectionHeaders.Sections);
+  assert(!SectionHeaders.NoHeaders.value_or(false) || !SectionHeaders.Sections);
   size_t FirstExcluded =
       SectionHeaders.Sections ? SectionHeaders.Sections->size() : 0;
   if (Index > FirstExcluded) {
@@ -771,7 +770,7 @@ void ELFState<ELFT>::initSectionHeaders(std::vector<Elf_Shdr> &SHeaders,
 
     if (ELFYAML::SectionHeaderTable *S =
             dyn_cast<ELFYAML::SectionHeaderTable>(D.get())) {
-      if (S->NoHeaders.getValueOr(false))
+      if (S->NoHeaders.value_or(false))
         continue;
 
       if (!S->Offset)
@@ -808,7 +807,7 @@ void ELFState<ELFT>::initSectionHeaders(std::vector<Elf_Shdr> &SHeaders,
       SHeader.sh_entsize = *Sec->EntSize;
     else
       SHeader.sh_entsize = ELFYAML::getDefaultShEntSize<ELFT>(
-          Doc.Header.Machine.getValueOr(ELF::EM_NONE), Sec->Type, Sec->Name);
+          Doc.Header.Machine.value_or(ELF::EM_NONE), Sec->Type, Sec->Name);
 
     // We have a few sections like string or symbol tables that are usually
     // added implicitly to the end. However, if they are explicitly specified
@@ -958,9 +957,9 @@ ELFState<ELFT>::toELFSymbols(ArrayRef<ELFYAML::Symbol> Symbols,
     else if (Sym.Index)
       Symbol.st_shndx = *Sym.Index;
 
-    Symbol.st_value = Sym.Value.getValueOr(yaml::Hex64(0));
+    Symbol.st_value = Sym.Value.value_or(yaml::Hex64(0));
     Symbol.st_other = Sym.Other ? *Sym.Other : 0;
-    Symbol.st_size = Sym.Size.getValueOr(yaml::Hex64(0));
+    Symbol.st_size = Sym.Size.value_or(yaml::Hex64(0));
   }
 
   return Ret;
@@ -1399,7 +1398,7 @@ void ELFState<ELFT>::writeSectionContent(
     // Write number of BBEntries (number of basic blocks in the function). This
     // is overridden by the 'NumBlocks' YAML field when specified.
     uint64_t NumBlocks =
-        E.NumBlocks.getValueOr(E.BBEntries ? E.BBEntries->size() : 0);
+        E.NumBlocks.value_or(E.BBEntries ? E.BBEntries->size() : 0);
     SHeader.sh_size += sizeof(uintX_t) + CBA.writeULEB128(NumBlocks);
     // Write all BBEntries.
     if (!E.BBEntries)
@@ -1486,10 +1485,10 @@ void ELFState<ELFT>::writeSectionContent(Elf_Shdr &SHeader,
     return;
 
   CBA.write<uint32_t>(
-      Section.NBucket.getValueOr(llvm::yaml::Hex64(Section.Bucket->size())),
+      Section.NBucket.value_or(llvm::yaml::Hex64(Section.Bucket->size())),
       ELFT::TargetEndianness);
   CBA.write<uint32_t>(
-      Section.NChain.getValueOr(llvm::yaml::Hex64(Section.Chain->size())),
+      Section.NChain.value_or(llvm::yaml::Hex64(Section.Chain->size())),
       ELFT::TargetEndianness);
 
   for (uint32_t Val : *Section.Bucket)
@@ -1518,10 +1517,10 @@ void ELFState<ELFT>::writeSectionContent(Elf_Shdr &SHeader,
     const ELFYAML::VerdefEntry &E = (*Section.Entries)[I];
 
     Elf_Verdef VerDef;
-    VerDef.vd_version = E.Version.getValueOr(1);
-    VerDef.vd_flags = E.Flags.getValueOr(0);
-    VerDef.vd_ndx = E.VersionNdx.getValueOr(0);
-    VerDef.vd_hash = E.Hash.getValueOr(0);
+    VerDef.vd_version = E.Version.value_or(1);
+    VerDef.vd_flags = E.Flags.value_or(0);
+    VerDef.vd_ndx = E.VersionNdx.value_or(0);
+    VerDef.vd_hash = E.Hash.value_or(0);
     VerDef.vd_aux = sizeof(Elf_Verdef);
     VerDef.vd_cnt = E.VerNames.size();
     if (I == Section.Entries->size() - 1)
@@ -1830,7 +1829,7 @@ template <class ELFT> void ELFState<ELFT>::buildSectionIndex() {
       if (!ExcludedSectionHeaders.insert(Hdr.Name).second)
         llvm_unreachable("buildSectionIndex() failed");
 
-  if (SectionHeaders.NoHeaders.getValueOr(false))
+  if (SectionHeaders.NoHeaders.value_or(false))
     for (const ELFYAML::Section *S : Sections)
       if (!ExcludedSectionHeaders.insert(S->Name).second)
         llvm_unreachable("buildSectionIndex() failed");
@@ -1960,7 +1959,7 @@ bool ELFState<ELFT>::writeELF(raw_ostream &OS, ELFYAML::Object &Doc,
   writeArrayData(OS, makeArrayRef(PHeaders));
 
   const ELFYAML::SectionHeaderTable &SHT = Doc.getSectionHeaderTable();
-  if (!SHT.NoHeaders.getValueOr(false))
+  if (!SHT.NoHeaders.value_or(false))
     CBA.updateDataAt(*SHT.Offset, SHeaders.data(),
                      SHT.getNumHeaders(SHeaders.size()) * sizeof(Elf_Shdr));
 

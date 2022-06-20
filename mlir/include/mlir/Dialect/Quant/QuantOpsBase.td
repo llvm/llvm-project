@@ -20,6 +20,8 @@ def Quantization_Dialect : Dialect {
   let cppNamespace = "::mlir::quant";
 
   let useDefaultTypePrinterParser = 1;
+
+  let emitAccessorPrefix = kEmitAccessorPrefix_Both;
 }
 
 //===----------------------------------------------------------------------===//

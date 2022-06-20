@@ -28,6 +28,13 @@ enum NodeType : unsigned {
 
   // TODO: add more LoongArchISDs
   RET,
+  // 32-bit shifts, directly matching the semantics of the named LoongArch
+  // instructions.
+  SLL_W,
+  SRA_W,
+  SRL_W,
+
+  BSTRPICK,
 
 };
 } // namespace LoongArchISD
@@ -40,6 +47,13 @@ public:
                                    const LoongArchSubtarget &STI);
 
   const LoongArchSubtarget &getSubtarget() const { return Subtarget; }
+
+  // Provide custom lowering hooks for some operations.
+  SDValue LowerOperation(SDValue Op, SelectionDAG &DAG) const override;
+  void ReplaceNodeResults(SDNode *N, SmallVectorImpl<SDValue> &Results,
+                          SelectionDAG &DAG) const override;
+
+  SDValue PerformDAGCombine(SDNode *N, DAGCombinerInfo &DCI) const override;
 
   // This method returns the name of a target specific DAG node.
   const char *getTargetNodeName(unsigned Opcode) const override;
@@ -71,6 +85,9 @@ private:
   void analyzeOutputArgs(CCState &CCInfo,
                          const SmallVectorImpl<ISD::OutputArg> &Outs,
                          LoongArchCCAssignFn Fn) const;
+
+  SDValue lowerShiftLeftParts(SDValue Op, SelectionDAG &DAG) const;
+  SDValue lowerShiftRightParts(SDValue Op, SelectionDAG &DAG, bool IsSRA) const;
 };
 
 } // end namespace llvm

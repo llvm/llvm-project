@@ -192,10 +192,8 @@ private:
 
     void push_back(Value *V) {
       // Do not push back duplicates.
-      if (!S.count(V)) {
+      if (S.insert(V).second)
         Q.push_back(V);
-        S.insert(V);
-      }
     }
 
     Value *pop_front_val() {
@@ -1152,9 +1150,8 @@ bool PolynomialMultiplyRecognize::findCycle(Value *Out, Value *In,
     if (IsPhi && HadPhi)
       return false;
     HadPhi |= IsPhi;
-    if (Cycle.count(I))
+    if (!Cycle.insert(I))
       return false;
-    Cycle.insert(I);
     if (findCycle(I, In, Cycle))
       break;
     Cycle.remove(I);

@@ -195,10 +195,9 @@ define i32 @and_signbit_lshr(i32 %x, i32* %dst) {
 ;
 ; X86-LABEL: and_signbit_lshr:
 ; X86:       # %bb.0:
-; X86-NEXT:    movzwl 6(%esp), %eax
-; X86-NEXT:    shll $16, %eax
 ; X86-NEXT:    movl 8(%esp), %ecx
-; X86-NEXT:    shrl $8, %eax
+; X86-NEXT:    movzwl 6(%esp), %eax
+; X86-NEXT:    shll $8, %eax
 ; X86-NEXT:    movl %eax, (%ecx)
 ; X86-NEXT:    retl
   %t0 = and i32 %x, 4294901760 ; 0xFFFF0000
