@@ -1431,3 +1431,15 @@ class VOPInfoTable <string Format> : GenericTable {
 def VOP1InfoTable : VOPInfoTable<"VOP1">;
 def VOP2InfoTable : VOPInfoTable<"VOP2">;
 def VOP3InfoTable : VOPInfoTable<"VOP3">;
+
+class VOPC64Table <string Format> : GenericTable {
+  let FilterClass = "VOPC64_" # Format # "_Base";
+  let CppTypeName = "VOPC64DPPInfo";
+  let Fields = ["Opcode"];
+
+  let PrimaryKey = ["Opcode"];
+  let PrimaryKeyName = "isVOPC64" # Format # "OpcodeHelper";
+}
+
+def VOPC64DPPTable : VOPC64Table<"DPP">;
+def VOPC64DPP8Table : VOPC64Table<"DPP8">;
