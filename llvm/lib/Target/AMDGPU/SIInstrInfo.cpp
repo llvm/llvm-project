@@ -6173,6 +6173,7 @@ MachineBasicBlock *SIInstrInfo::moveToVALU(MachineInstr &TopInst,
 
     case AMDGPU::S_PACK_LL_B32_B16:
     case AMDGPU::S_PACK_LH_B32_B16:
+    case AMDGPU::S_PACK_HL_B32_B16:
     case AMDGPU::S_PACK_HH_B32_B16:
       movePackToVALU(Worklist, MRI, Inst);
       Inst.eraseFromParent();
@@ -7084,6 +7085,17 @@ void SIInstrInfo::movePackToVALU(SetVectorType &Worklist,
       .addReg(ImmReg, RegState::Kill)
       .add(Src0)
       .add(Src1);
+    break;
+  }
+  case AMDGPU::S_PACK_HL_B32_B16: {
+    Register TmpReg = MRI.createVirtualRegister(&AMDGPU::VGPR_32RegClass);
+    BuildMI(*MBB, Inst, DL, get(AMDGPU::V_LSHRREV_B32_e64), TmpReg)
+        .addImm(16)
+        .add(Src0);
+    BuildMI(*MBB, Inst, DL, get(AMDGPU::V_LSHL_OR_B32_e64), ResultReg)
+        .add(Src1)
+        .addImm(16)
+        .addReg(TmpReg, RegState::Kill);
     break;
   }
   case AMDGPU::S_PACK_HH_B32_B16: {
