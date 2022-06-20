@@ -912,8 +912,8 @@ void BinaryEmitter::emitLSDA(BinaryFunction &BF, bool EmitColdPart) {
   // defined in the same section and hence cannot place the landing pad into a
   // cold fragment when the corresponding call site is in the hot fragment.
   // Because of this issue and the previously described issue of possible
-  // zero-offset landing pad we disable splitting of exception-handling
-  // code for shared objects.
+  // zero-offset landing pad we have to place landing pads in the same section
+  // as the corresponding invokes for shared objects.
   std::function<void(const MCSymbol *)> emitLandingPad;
   if (BC.HasFixedLoadAddress) {
     Streamer.emitIntValue(dwarf::DW_EH_PE_udata4, 1); // LPStart format
@@ -925,8 +925,6 @@ void BinaryEmitter::emitLSDA(BinaryFunction &BF, bool EmitColdPart) {
         Streamer.emitSymbolValue(LPSymbol, 4);
     };
   } else {
-    assert(!EmitColdPart &&
-           "cannot have exceptions in cold fragment for shared object");
     Streamer.emitIntValue(dwarf::DW_EH_PE_omit, 1); // LPStart format
     emitLandingPad = [&](const MCSymbol *LPSymbol) {
       if (!LPSymbol)
