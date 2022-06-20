@@ -49,6 +49,22 @@ namespace {
 
 class ConstraintInfo;
 
+struct StackEntry {
+  unsigned NumIn;
+  unsigned NumOut;
+  Instruction *Condition;
+  bool IsNot;
+  bool IsSigned = false;
+  /// Variables that can be removed from the system once the stack entry gets
+  /// removed.
+  SmallVector<Value *, 2> ValuesToRelease;
+
+  StackEntry(unsigned NumIn, unsigned NumOut, CmpInst *Condition, bool IsNot,
+             bool IsSigned, SmallVector<Value *, 2> ValuesToRelease)
+      : NumIn(NumIn), NumOut(NumOut), Condition(Condition), IsNot(IsNot),
+        IsSigned(IsSigned), ValuesToRelease(ValuesToRelease) {}
+};
+
 /// Struct to express a pre-condition of the form %Op0 Pred %Op1.
 struct PreconditionTy {
   CmpInst::Predicate Pred;
@@ -371,22 +387,6 @@ struct ConstraintOrBlock {
   ConstraintOrBlock(DomTreeNode *DTN, CmpInst *Condition, bool Not)
       : NumIn(DTN->getDFSNumIn()), NumOut(DTN->getDFSNumOut()), IsBlock(false),
         Not(Not), Condition(Condition) {}
-};
-
-struct StackEntry {
-  unsigned NumIn;
-  unsigned NumOut;
-  Instruction *Condition;
-  bool IsNot;
-  bool IsSigned = false;
-  /// Variables that can be removed from the system once the stack entry gets
-  /// removed.
-  SmallVector<Value *, 2> ValuesToRelease;
-
-  StackEntry(unsigned NumIn, unsigned NumOut, CmpInst *Condition, bool IsNot,
-             bool IsSigned, SmallVector<Value *, 2> ValuesToRelease)
-      : NumIn(NumIn), NumOut(NumOut), Condition(Condition), IsNot(IsNot),
-        IsSigned(IsSigned), ValuesToRelease(ValuesToRelease) {}
 };
 
 /// Keep state required to build worklist.
