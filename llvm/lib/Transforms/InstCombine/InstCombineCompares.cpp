@@ -4620,18 +4620,21 @@ Instruction *InstCombinerImpl::foldICmpEquality(ICmpInst &I) {
 
   // (A >> C) == (B >> C) --> (A^B) u< (1 << C)
   // For lshr and ashr pairs.
-  if ((match(Op0, m_OneUse(m_LShr(m_Value(A), m_ConstantInt(Cst1)))) &&
-       match(Op1, m_OneUse(m_LShr(m_Value(B), m_Specific(Cst1))))) ||
-      (match(Op0, m_OneUse(m_AShr(m_Value(A), m_ConstantInt(Cst1)))) &&
-       match(Op1, m_OneUse(m_AShr(m_Value(B), m_Specific(Cst1)))))) {
-    unsigned TypeBits = Cst1->getBitWidth();
-    unsigned ShAmt = (unsigned)Cst1->getLimitedValue(TypeBits);
+  const APInt *AP1, *AP2;
+  if ((match(Op0, m_OneUse(m_LShr(m_Value(A), m_APIntAllowUndef(AP1)))) &&
+       match(Op1, m_OneUse(m_LShr(m_Value(B), m_APIntAllowUndef(AP2))))) ||
+      (match(Op0, m_OneUse(m_AShr(m_Value(A), m_APIntAllowUndef(AP1)))) &&
+       match(Op1, m_OneUse(m_AShr(m_Value(B), m_APIntAllowUndef(AP2)))))) {
+    if (AP1 != AP2)
+      return nullptr;
+    unsigned TypeBits = AP1->getBitWidth();
+    unsigned ShAmt = AP1->getLimitedValue(TypeBits);
     if (ShAmt < TypeBits && ShAmt != 0) {
       ICmpInst::Predicate NewPred =
           Pred == ICmpInst::ICMP_NE ? ICmpInst::ICMP_UGE : ICmpInst::ICMP_ULT;
       Value *Xor = Builder.CreateXor(A, B, I.getName() + ".unshifted");
       APInt CmpVal = APInt::getOneBitSet(TypeBits, ShAmt);
-      return new ICmpInst(NewPred, Xor, Builder.getInt(CmpVal));
+      return new ICmpInst(NewPred, Xor, ConstantInt::get(A->getType(), CmpVal));
     }
   }
 
