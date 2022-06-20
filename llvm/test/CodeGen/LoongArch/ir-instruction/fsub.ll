@@ -30,3 +30,31 @@ define double @fsub_d(double %x, double %y) {
   %sub = fsub double %x, %y
   ret double %sub
 }
+
+define float @fneg_s(float %x) {
+; LA32-LABEL: fneg_s:
+; LA32:       # %bb.0:
+; LA32-NEXT:    fneg.s $fa0, $fa0
+; LA32-NEXT:    jirl $zero, $ra, 0
+;
+; LA64-LABEL: fneg_s:
+; LA64:       # %bb.0:
+; LA64-NEXT:    fneg.s $fa0, $fa0
+; LA64-NEXT:    jirl $zero, $ra, 0
+    %res = fsub float -0.0, %x
+    ret float %res
+}
+
+define double @fneg_d(double %x) {
+; LA32-LABEL: fneg_d:
+; LA32:       # %bb.0:
+; LA32-NEXT:    fneg.d $fa0, $fa0
+; LA32-NEXT:    jirl $zero, $ra, 0
+;
+; LA64-LABEL: fneg_d:
+; LA64:       # %bb.0:
+; LA64-NEXT:    fneg.d $fa0, $fa0
+; LA64-NEXT:    jirl $zero, $ra, 0
+    %res = fsub double -0.0, %x
+    ret double %res
+}

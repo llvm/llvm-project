@@ -143,5 +143,6 @@ def : PatFprFpr<fadd, FADD_D, FPR64>;
 def : PatFprFpr<fsub, FSUB_D, FPR64>;
 def : PatFprFpr<fmul, FMUL_D, FPR64>;
 def : PatFprFpr<fdiv, FDIV_D, FPR64>;
+def : PatFpr<fneg, FNEG_D, FPR64>;
 
 } // Predicates = [HasBasicD]
