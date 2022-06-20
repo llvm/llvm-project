@@ -8,6 +8,7 @@
 // CHECK-DAG: @ctanh(complex<f64>) -> complex<f64>
 // CHECK-DAG: @ccos(complex<f64>) -> complex<f64>
 // CHECK-DAG: @csin(complex<f64>) -> complex<f64>
+// CHECK-DAG: @conj(complex<f64>) -> complex<f64>
 
 // CHECK-LABEL: func @cpow_caller
 // CHECK-SAME: %[[FLOAT:.*]]: complex<f32>
@@ -65,6 +66,18 @@ func.func @csin_caller(%float: complex<f32>, %double: complex<f64>) -> (complex<
   %float_result = complex.sin %float : complex<f32>
   // CHECK: %[[DOUBLE_RESULT:.*]] = call @csin(%[[DOUBLE]])
   %double_result = complex.sin %double : complex<f64>
+  // CHECK: return %[[FLOAT_RESULT]], %[[DOUBLE_RESULT]]
+  return %float_result, %double_result : complex<f32>, complex<f64>
+}
+
+// CHECK-LABEL: func @conj_caller
+// CHECK-SAME: %[[FLOAT:.*]]: complex<f32>
+// CHECK-SAME: %[[DOUBLE:.*]]: complex<f64>
+func.func @conj_caller(%float: complex<f32>, %double: complex<f64>) -> (complex<f32>, complex<f64>)  {
+  // CHECK: %[[FLOAT_RESULT:.*]] = call @conjf(%[[FLOAT]])
+  %float_result = complex.conj %float : complex<f32>
+  // CHECK: %[[DOUBLE_RESULT:.*]] = call @conj(%[[DOUBLE]])
+  %double_result = complex.conj %double : complex<f64>
   // CHECK: return %[[FLOAT_RESULT]], %[[DOUBLE_RESULT]]
   return %float_result, %double_result : complex<f32>, complex<f64>
 }
