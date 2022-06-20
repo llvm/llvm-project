@@ -319,11 +319,6 @@ inline Align operator*(Align Lhs, uint64_t Rhs) {
   return Align(Lhs.value() * Rhs);
 }
 
-inline MaybeAlign operator*(MaybeAlign Lhs, uint64_t Rhs) {
-  assert(Rhs > 0 && "Rhs must be positive");
-  return Lhs ? Lhs.getValue() * Rhs : MaybeAlign();
-}
-
 inline Align operator/(Align Lhs, uint64_t Divisor) {
   assert(llvm::isPowerOf2_64(Divisor) &&
          "Divisor must be positive and a power of 2");
