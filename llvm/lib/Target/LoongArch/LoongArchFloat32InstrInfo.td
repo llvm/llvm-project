@@ -128,4 +128,50 @@ def : PatFprFpr<fmul, FMUL_S, FPR32>;
 def : PatFprFpr<fdiv, FDIV_S, FPR32>;
 def : PatFpr<fneg, FNEG_S, FPR32>;
 
+/// Setcc
+
+// Match non-signaling comparison
+
+// TODO: change setcc to any_fsetcc after call is supported because
+// we need to call llvm.experimental.constrained.fcmp.f32 in testcase.
+// See RISCV float-fcmp-strict.ll for reference.
+class PatFPSetcc<CondCode cc, LAInst CmpInst, RegisterClass RegTy>
+    : Pat<(setcc RegTy:$fj, RegTy:$fk, cc),
+          (MOVCF2GR (CmpInst RegTy:$fj, RegTy:$fk))>;
+// SETOGT/SETOGE/SETUGT/SETUGE will expand into SETOLT/SETOLE/SETULT/SETULE.
+def : PatFPSetcc<SETOEQ, FCMP_CEQ_S,  FPR32>;
+def : PatFPSetcc<SETOLT, FCMP_CLT_S,  FPR32>;
+def : PatFPSetcc<SETOLE, FCMP_CLE_S,  FPR32>;
+def : PatFPSetcc<SETONE, FCMP_CNE_S,  FPR32>;
+def : PatFPSetcc<SETO,   FCMP_COR_S,  FPR32>;
+def : PatFPSetcc<SETUEQ, FCMP_CUEQ_S, FPR32>;
+def : PatFPSetcc<SETULT, FCMP_CULT_S, FPR32>;
+def : PatFPSetcc<SETULE, FCMP_CULE_S, FPR32>;
+def : PatFPSetcc<SETUNE, FCMP_CUNE_S, FPR32>;
+def : PatFPSetcc<SETUO,  FCMP_CUN_S,  FPR32>;
+
+// TODO: Match signaling comparison strict_fsetccs with FCMP_S*_S instructions.
+
+/// Select
+
+def : Pat<(select GPR:$cc, FPR32:$fk, FPR32:$fj),
+          (FSEL_S FPR32:$fj, FPR32:$fk, (MOVGR2CF GPR:$cc))>;
+
+/// Selectcc
+
+class PatFPSelectcc<CondCode cc, LAInst CmpInst, LAInst SelInst,
+                    RegisterClass RegTy>
+    : Pat<(select (GRLenVT (setcc RegTy:$a, RegTy:$b, cc)), RegTy:$t, RegTy:$f),
+          (SelInst RegTy:$f, RegTy:$t, (CmpInst RegTy:$a, RegTy:$b))>;
+def : PatFPSelectcc<SETOEQ, FCMP_CEQ_S,  FSEL_S, FPR32>;
+def : PatFPSelectcc<SETOLT, FCMP_CLT_S,  FSEL_S, FPR32>;
+def : PatFPSelectcc<SETOLE, FCMP_CLE_S,  FSEL_S, FPR32>;
+def : PatFPSelectcc<SETONE, FCMP_CNE_S,  FSEL_S, FPR32>;
+def : PatFPSelectcc<SETO,   FCMP_COR_S,  FSEL_S, FPR32>;
+def : PatFPSelectcc<SETUEQ, FCMP_CUEQ_S, FSEL_S, FPR32>;
+def : PatFPSelectcc<SETULT, FCMP_CULT_S, FSEL_S, FPR32>;
+def : PatFPSelectcc<SETULE, FCMP_CULE_S, FSEL_S, FPR32>;
+def : PatFPSelectcc<SETUNE, FCMP_CUNE_S, FSEL_S, FPR32>;
+def : PatFPSelectcc<SETUO,  FCMP_CUN_S,  FSEL_S, FPR32>;
+
 } // Predicates = [HasBasicF]
