@@ -34,6 +34,8 @@ enum NodeType : unsigned {
   SRA_W,
   SRL_W,
 
+  BSTRPICK,
+
 };
 } // namespace LoongArchISD
 
@@ -50,6 +52,8 @@ public:
   SDValue LowerOperation(SDValue Op, SelectionDAG &DAG) const override;
   void ReplaceNodeResults(SDNode *N, SmallVectorImpl<SDValue> &Results,
                           SelectionDAG &DAG) const override;
+
+  SDValue PerformDAGCombine(SDNode *N, DAGCombinerInfo &DCI) const override;
 
   // This method returns the name of a target specific DAG node.
   const char *getTargetNodeName(unsigned Opcode) const override;

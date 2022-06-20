@@ -72,6 +72,8 @@ LoongArchTargetLowering::LoongArchTargetLowering(const TargetMachine &TM,
   // Function alignments.
   const Align FunctionAlignment(4);
   setMinFunctionAlignment(FunctionAlignment);
+
+  setTargetDAGCombine(ISD::AND);
 }
 
 SDValue LoongArchTargetLowering::LowerOperation(SDValue Op,
@@ -237,6 +239,81 @@ void LoongArchTargetLowering::ReplaceNodeResults(
   }
 }
 
+static SDValue performANDCombine(SDNode *N, SelectionDAG &DAG,
+                                 TargetLowering::DAGCombinerInfo &DCI,
+                                 const LoongArchSubtarget &Subtarget) {
+  if (DCI.isBeforeLegalizeOps())
+    return SDValue();
+
+  SDValue FirstOperand = N->getOperand(0);
+  SDValue SecondOperand = N->getOperand(1);
+  unsigned FirstOperandOpc = FirstOperand.getOpcode();
+  EVT ValTy = N->getValueType(0);
+  SDLoc DL(N);
+  uint64_t lsb, msb;
+  unsigned SMIdx, SMLen;
+  ConstantSDNode *CN;
+  SDValue NewOperand;
+  MVT GRLenVT = Subtarget.getGRLenVT();
+
+  // Op's second operand must be a shifted mask.
+  if (!(CN = dyn_cast<ConstantSDNode>(SecondOperand)) ||
+      !isShiftedMask_64(CN->getZExtValue(), SMIdx, SMLen))
+    return SDValue();
+
+  if (FirstOperandOpc == ISD::SRA || FirstOperandOpc == ISD::SRL) {
+    // Pattern match BSTRPICK.
+    //  $dst = and ((sra or srl) $src , lsb), (2**len - 1)
+    //  => BSTRPICK $dst, $src, msb, lsb
+    //  where msb = lsb + len - 1
+
+    // The second operand of the shift must be an immediate.
+    if (!(CN = dyn_cast<ConstantSDNode>(FirstOperand.getOperand(1))))
+      return SDValue();
+
+    lsb = CN->getZExtValue();
+
+    // Return if the shifted mask does not start at bit 0 or the sum of its
+    // length and lsb exceeds the word's size.
+    if (SMIdx != 0 || lsb + SMLen > ValTy.getSizeInBits())
+      return SDValue();
+
+    NewOperand = FirstOperand.getOperand(0);
+  } else {
+    // Pattern match BSTRPICK.
+    //  $dst = and $src, (2**len- 1) , if len > 12
+    //  => BSTRPICK $dst, $src, msb, lsb
+    //  where lsb = 0 and msb = len - 1
+
+    // If the mask is <= 0xfff, andi can be used instead.
+    if (CN->getZExtValue() <= 0xfff)
+      return SDValue();
+
+    // Return if the mask doesn't start at position 0.
+    if (SMIdx)
+      return SDValue();
+
+    lsb = 0;
+    NewOperand = FirstOperand;
+  }
+  msb = lsb + SMLen - 1;
+  return DAG.getNode(LoongArchISD::BSTRPICK, DL, ValTy, NewOperand,
+                     DAG.getConstant(msb, DL, GRLenVT),
+                     DAG.getConstant(lsb, DL, GRLenVT));
+}
+
+SDValue LoongArchTargetLowering::PerformDAGCombine(SDNode *N,
+                                                   DAGCombinerInfo &DCI) const {
+  SelectionDAG &DAG = DCI.DAG;
+  switch (N->getOpcode()) {
+  default:
+    break;
+  case ISD::AND:
+    return performANDCombine(N, DAG, DCI, Subtarget);
+  }
+  return SDValue();
+}
+
 const char *LoongArchTargetLowering::getTargetNodeName(unsigned Opcode) const {
   switch ((LoongArchISD::NodeType)Opcode) {
   case LoongArchISD::FIRST_NUMBER:
@@ -251,6 +328,7 @@ const char *LoongArchTargetLowering::getTargetNodeName(unsigned Opcode) const {
     NODE_NAME_CASE(SLL_W)
     NODE_NAME_CASE(SRA_W)
     NODE_NAME_CASE(SRL_W)
+    NODE_NAME_CASE(BSTRPICK)
   }
 #undef NODE_NAME_CASE
   return nullptr;
