@@ -546,6 +546,18 @@ def VforkChecker : Checker<"Vfork">,
 
 let ParentPackage = UnixAlpha in {
 
+def ErrnoChecker : Checker<"Errno">,
+  HelpText<"Check for improper use of 'errno'">,
+  Dependencies<[ErrnoModeling]>,
+  CheckerOptions<[
+    CmdLineOption<Boolean,
+                  "AllowErrnoReadOutsideConditionExpressions",
+                  "Allow read of undefined value from errno outside of conditions",
+                  "true",
+                  InAlpha>,
+  ]>,
+  Documentation<HasDocumentation>;
+
 def ChrootChecker : Checker<"Chroot">,
   HelpText<"Check improper use of chroot">,
   Documentation<HasDocumentation>;
