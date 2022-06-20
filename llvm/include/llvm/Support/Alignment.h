@@ -314,11 +314,6 @@ bool operator>=(MaybeAlign Lhs, MaybeAlign Rhs) = delete;
 bool operator<(MaybeAlign Lhs, MaybeAlign Rhs) = delete;
 bool operator>(MaybeAlign Lhs, MaybeAlign Rhs) = delete;
 
-inline Align operator*(Align Lhs, uint64_t Rhs) {
-  assert(Rhs > 0 && "Rhs must be positive");
-  return Align(Lhs.value() * Rhs);
-}
-
 inline Align operator/(Align Lhs, uint64_t Divisor) {
   assert(llvm::isPowerOf2_64(Divisor) &&
          "Divisor must be positive and a power of 2");
