@@ -601,7 +601,7 @@ Expected<bool> parseInlinerPassOptions(StringRef Params) {
 }
 
 Expected<bool> parseCoroSplitPassOptions(StringRef Params) {
-  return parseSinglePassOption(Params, "reuse-storage", "CoroSplitPass");
+  return parseSinglePassOption(Params, "optimizing", "CoroSplitPass");
 }
 
 Expected<bool> parseEarlyCSEPassOptions(StringRef Params) {
