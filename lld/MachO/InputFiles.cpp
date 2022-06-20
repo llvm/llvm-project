@@ -998,6 +998,8 @@ void ObjFile::parseDebugInfo() {
   if (!dObj)
     return;
 
+  // We do not re-use the context from getDwarf() here as that function
+  // constructs an expensive DWARFCache object.
   auto *ctx = make<DWARFContext>(
       std::move(dObj), "",
       [&](Error err) {
@@ -1373,6 +1375,31 @@ void ObjFile::registerEhFrames(Section &ehFrameSection) {
   }
 }
 
+std::string ObjFile::sourceFile() const {
+  SmallString<261> dir(compileUnit->getCompilationDir());
+  StringRef sep = sys::path::get_separator();
+  // We don't use `path::append` here because we want an empty `dir` to result
+  // in an absolute path. `append` would give us a relative path for that case.
+  if (!dir.endswith(sep))
+    dir += sep;
+  return (dir + compileUnit->getUnitDIE().getShortName()).str();
+}
+
+lld::DWARFCache *ObjFile::getDwarf() {
+  llvm::call_once(initDwarf, [this]() {
+    auto dwObj = DwarfObject::create(this);
+    if (!dwObj)
+      return;
+    dwarfCache = std::make_unique<DWARFCache>(std::make_unique<DWARFContext>(
+        std::move(dwObj), "",
+        [&](Error err) { warn(getName() + ": " + toString(std::move(err))); },
+        [&](Error warning) {
+          warn(getName() + ": " + toString(std::move(warning)));
+        }));
+  });
+
+  return dwarfCache.get();
+}
 // The path can point to either a dylib or a .tbd file.
 static DylibFile *loadDylib(StringRef path, DylibFile *umbrella) {
   Optional<MemoryBufferRef> mbref = readFile(path);
