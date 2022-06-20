@@ -116,6 +116,11 @@ TEST_F(DefineOutlineTest, ApplyTest) {
           "void foo(int x, int y = 5, int = 2, int (*foo)(int) = nullptr) ;",
           "void foo(int x, int y , int , int (*foo)(int) ) {}",
       },
+      {
+          "struct Bar{Bar();}; void fo^o(Bar x = {}) {}",
+          "struct Bar{Bar();}; void foo(Bar x = {}) ;",
+          "void foo(Bar x ) {}",
+      },
       // Constructors
       {
           R"cpp(
