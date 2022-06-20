@@ -603,8 +603,20 @@ static Constant *foldOrCommuteConstant(Instruction::BinaryOps Opcode,
                                        Value *&Op0, Value *&Op1,
                                        const SimplifyQuery &Q) {
   if (auto *CLHS = dyn_cast<Constant>(Op0)) {
-    if (auto *CRHS = dyn_cast<Constant>(Op1))
+    if (auto *CRHS = dyn_cast<Constant>(Op1)) {
+      switch (Opcode) {
+      default:
+        break;
+      case Instruction::FAdd:
+      case Instruction::FSub:
+      case Instruction::FMul:
+      case Instruction::FDiv:
+      case Instruction::FRem:
+        if (Q.CxtI != nullptr)
+          return ConstantFoldFPInstOperands(Opcode, CLHS, CRHS, Q.DL, Q.CxtI);
+      }
       return ConstantFoldBinaryOpOperands(Opcode, CLHS, CRHS, Q.DL);
+    }
 
     // Canonicalize the constant to the RHS if this is a commutative operation.
     if (Instruction::isCommutative(Opcode))
