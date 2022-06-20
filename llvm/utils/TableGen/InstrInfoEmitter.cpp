@@ -449,6 +449,31 @@ void InstrInfoEmitter::emitOperandTypeMappings(
   OS << "} // end namespace " << Namespace << "\n";
   OS << "} // end namespace llvm\n";
   OS << "#endif // GET_INSTRINFO_OPERAND_TYPE\n\n";
+
+  OS << "#ifdef GET_INSTRINFO_MEM_OPERAND_SIZE\n";
+  OS << "#undef GET_INSTRINFO_MEM_OPERAND_SIZE\n";
+  OS << "namespace llvm {\n";
+  OS << "namespace " << Namespace << " {\n";
+  OS << "LLVM_READONLY\n";
+  OS << "static int getMemOperandSize(int OpType) {\n";
+  OS << "  switch (OpType) {\n";
+  std::map<int, std::vector<StringRef>> SizeToOperandName;
+  for (const Record *Op : Operands) {
+    if (!Op->isSubClassOf("X86MemOperand"))
+      continue;
+    if (int Size = Op->getValueAsInt("Size"))
+      SizeToOperandName[Size].push_back(Op->getName());
+  }
+  OS << "  default: return 0;\n";
+  for (auto KV : SizeToOperandName) {
+    for (const StringRef &OperandName : KV.second)
+      OS << "  case OpTypes::" << OperandName << ":\n";
+    OS << "    return " << KV.first << ";\n\n";
+  }
+  OS << "  }\n}\n";
+  OS << "} // end namespace " << Namespace << "\n";
+  OS << "} // end namespace llvm\n";
+  OS << "#endif // GET_INSTRINFO_MEM_OPERAND_SIZE\n\n";
 }
 
 void InstrInfoEmitter::emitLogicalOperandSizeMappings(
