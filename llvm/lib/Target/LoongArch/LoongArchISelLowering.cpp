@@ -31,6 +31,10 @@ LoongArchTargetLowering::LoongArchTargetLowering(const TargetMachine &TM,
   MVT GRLenVT = Subtarget.getGRLenVT();
   // Set up the register classes.
   addRegisterClass(GRLenVT, &LoongArch::GPRRegClass);
+  if (Subtarget.hasBasicF())
+    addRegisterClass(MVT::f32, &LoongArch::FPR32RegClass);
+  if (Subtarget.hasBasicD())
+    addRegisterClass(MVT::f64, &LoongArch::FPR64RegClass);
 
   // TODO: add necessary setOperationAction calls later.
 
@@ -38,6 +42,8 @@ LoongArchTargetLowering::LoongArchTargetLowering(const TargetMachine &TM,
   computeRegisterProperties(STI.getRegisterInfo());
 
   setStackPointerRegisterToSaveRestore(LoongArch::R3);
+
+  setBooleanContents(ZeroOrOneBooleanContent);
 
   // Function alignments.
   const Align FunctionAlignment(4);
@@ -64,16 +70,29 @@ const char *LoongArchTargetLowering::getTargetNodeName(unsigned Opcode) const {
 //                     Calling Convention Implementation
 //===----------------------------------------------------------------------===//
 // FIXME: Now, we only support CallingConv::C with fixed arguments which are
-// passed with integer registers.
+// passed with integer or floating-point registers.
 const MCPhysReg ArgGPRs[] = {LoongArch::R4,  LoongArch::R5, LoongArch::R6,
                              LoongArch::R7,  LoongArch::R8, LoongArch::R9,
                              LoongArch::R10, LoongArch::R11};
+const MCPhysReg ArgFPR32s[] = {LoongArch::F0, LoongArch::F1, LoongArch::F2,
+                               LoongArch::F3, LoongArch::F4, LoongArch::F5,
+                               LoongArch::F6, LoongArch::F7};
+const MCPhysReg ArgFPR64s[] = {
+    LoongArch::F0_64, LoongArch::F1_64, LoongArch::F2_64, LoongArch::F3_64,
+    LoongArch::F4_64, LoongArch::F5_64, LoongArch::F6_64, LoongArch::F7_64};
 
 // Implements the LoongArch calling convention. Returns true upon failure.
 static bool CC_LoongArch(unsigned ValNo, MVT ValVT,
                          CCValAssign::LocInfo LocInfo, CCState &State) {
   // Allocate to a register if possible.
-  Register Reg = State.AllocateReg(ArgGPRs);
+  Register Reg;
+
+  if (ValVT == MVT::f32)
+    Reg = State.AllocateReg(ArgFPR32s);
+  else if (ValVT == MVT::f64)
+    Reg = State.AllocateReg(ArgFPR64s);
+  else
+    Reg = State.AllocateReg(ArgGPRs);
   if (Reg) {
     State.addLoc(CCValAssign::getReg(ValNo, ValVT, Reg, ValVT, LocInfo));
     return false;

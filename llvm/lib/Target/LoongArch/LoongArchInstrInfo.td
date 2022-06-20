@@ -509,34 +509,42 @@ class PatGprImm_32<SDPatternOperator OpNode, LAInst Inst, Operand ImmOpnd>
     : Pat<(sext_inreg (OpNode GPR:$rj, ImmOpnd:$imm), i32),
           (Inst GPR:$rj, ImmOpnd:$imm)>;
 
+/// Simple arithmetic operations
+
+let Predicates = [IsLA32] in {
+def : PatGprGpr<add, ADD_W>;
+def : PatGprImm<add, ADDI_W, simm12>;
+def : PatGprGpr<sub, SUB_W>;
+} // Predicates = [IsLA32]
+
+let Predicates = [IsLA64] in {
+def : PatGprGpr<add, ADD_D>;
+def : PatGprGpr_32<add, ADD_W>;
+def : PatGprImm<add, ADDI_D, simm12>;
+def : PatGprImm_32<add, ADDI_W, simm12>;
+def : PatGprGpr<sub, SUB_D>;
+def : PatGprGpr_32<sub, SUB_W>;
+} // Predicates = [IsLA64]
+
 def : PatGprGpr<and, AND>;
 def : PatGprGpr<or, OR>;
 def : PatGprGpr<xor, XOR>;
+
+/// sext and zext
+
+let Predicates = [IsLA64] in {
+def : Pat<(sext_inreg GPR:$rj, i32), (ADDI_W GPR:$rj, 0)>;
+} // Predicates = [IsLA64]
+
+/// Setcc
+
+def : PatGprGpr<setult, SLTU>;
 
 /// Branches and jumps
 
 let isBarrier = 1, isReturn = 1, isTerminator = 1 in
 def PseudoRET : Pseudo<(outs), (ins), [(loongarch_ret)]>,
                 PseudoInstExpansion<(JIRL R0, R1, 0)>;
-
-/// LA32 patterns
-
-let Predicates = [IsLA32] in {
-def : PatGprGpr<add, ADD_W>;
-def : PatGprImm<add, ADDI_W, simm12>;
-} // Predicates = [IsLA32]
-
-/// LA64 patterns
-
-let Predicates = [IsLA64] in {
-def : Pat<(sext_inreg GPR:$rj, i32), (ADDI_W GPR:$rj, 0)>;
-
-def : PatGprGpr<add, ADD_D>;
-def : PatGprGpr_32<add, ADD_W>;
-
-def : PatGprImm<add, ADDI_D, simm12>;
-def : PatGprImm_32<add, ADDI_W, simm12>;
-} // Predicates = [IsLA64]
 
 //===----------------------------------------------------------------------===//
 // Assembler Pseudo Instructions
