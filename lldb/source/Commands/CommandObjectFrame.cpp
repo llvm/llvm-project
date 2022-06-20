@@ -304,7 +304,7 @@ protected:
     Thread *thread = m_exe_ctx.GetThreadPtr();
 
     uint32_t frame_idx = UINT32_MAX;
-    if (m_options.relative_frame_offset.hasValue()) {
+    if (m_options.relative_frame_offset) {
       // The one and only argument is a signed relative frame index
       frame_idx = thread->GetSelectedFrameIndex();
       if (frame_idx == UINT32_MAX)

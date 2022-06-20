@@ -34,7 +34,7 @@ bool mapOptOrNull(const llvm::json::Value &Params, llvm::StringLiteral Prop,
   assert(O);
   auto *V = O->get(Prop);
   // Field is missing or null.
-  if (!V || V->getAsNull().hasValue())
+  if (!V || V->getAsNull())
     return true;
   return fromJSON(*V, Out, P.field(Prop));
 }
@@ -608,7 +608,7 @@ llvm::json::Value toJSON(const Diagnostic &D) {
     Diag["codeActions"] = D.codeActions;
   if (!D.code.empty())
     Diag["code"] = D.code;
-  if (D.codeDescription.hasValue())
+  if (D.codeDescription)
     Diag["codeDescription"] = *D.codeDescription;
   if (!D.source.empty())
     Diag["source"] = D.source;
@@ -926,7 +926,7 @@ llvm::json::Value toJSON(const MarkupContent &MC) {
 llvm::json::Value toJSON(const Hover &H) {
   llvm::json::Object Result{{"contents", toJSON(H.contents)}};
 
-  if (H.range.hasValue())
+  if (H.range)
     Result["range"] = toJSON(*H.range);
 
   return std::move(Result);
@@ -1024,7 +1024,7 @@ llvm::json::Value toJSON(const CompletionList &L) {
 }
 
 llvm::json::Value toJSON(const ParameterInformation &PI) {
-  assert((PI.labelOffsets.hasValue() || !PI.labelString.empty()) &&
+  assert((PI.labelOffsets || !PI.labelString.empty()) &&
          "parameter information label is required");
   llvm::json::Object Result;
   if (PI.labelOffsets)

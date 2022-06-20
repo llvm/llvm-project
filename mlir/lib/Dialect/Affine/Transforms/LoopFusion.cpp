@@ -1272,7 +1272,7 @@ static bool isFusionProfitable(Operation *srcOpInst, Operation *srcStoreOpInst,
   auto srcMemSizeVal = srcMemSize.getValue();
   auto dstMemSizeVal = dstMemSize.getValue();
 
-  assert(sliceMemEstimate.hasValue() && "expected value");
+  assert(sliceMemEstimate && "expected value");
   auto fusedMem = dstMemSizeVal + sliceMemEstimate.getValue();
 
   LLVM_DEBUG(llvm::dbgs() << "   src mem: " << srcMemSizeVal << "\n"

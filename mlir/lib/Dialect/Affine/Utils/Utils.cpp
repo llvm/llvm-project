@@ -1791,7 +1791,7 @@ MemRefType mlir::normalizeMemRefType(MemRefType memrefType, OpBuilder b,
       auto ubConst = fac.getConstantBound(IntegerPolyhedron::UB, d);
       // For a static memref and an affine map with no symbols, this is
       // always bounded.
-      assert(ubConst.hasValue() && "should always have an upper bound");
+      assert(ubConst && "should always have an upper bound");
       if (ubConst.getValue() < 0)
         // This is due to an invalid map that maps to a negative space.
         return memrefType;

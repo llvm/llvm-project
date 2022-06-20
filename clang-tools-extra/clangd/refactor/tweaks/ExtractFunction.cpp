@@ -820,7 +820,7 @@ tooling::Replacement replaceWithFuncCall(const NewFunction &ExtractedFunc,
 tooling::Replacement createFunctionDefinition(const NewFunction &ExtractedFunc,
                                               const SourceManager &SM) {
   FunctionDeclKind DeclKind = InlineDefinition;
-  if (ExtractedFunc.ForwardDeclarationPoint.hasValue())
+  if (ExtractedFunc.ForwardDeclarationPoint)
     DeclKind = OutOfLineDefinition;
   std::string FunctionDef = ExtractedFunc.renderDeclaration(
       DeclKind, *ExtractedFunc.SemanticDC, *ExtractedFunc.SyntacticDC, SM);

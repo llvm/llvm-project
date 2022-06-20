@@ -1313,7 +1313,7 @@ void Debugger::ReportProgress(uint64_t progress_id, const std::string &message,
                               uint64_t completed, uint64_t total,
                               llvm::Optional<lldb::user_id_t> debugger_id) {
   // Check if this progress is for a specific debugger.
-  if (debugger_id.hasValue()) {
+  if (debugger_id) {
     // It is debugger specific, grab it and deliver the event if the debugger
     // still exists.
     DebuggerSP debugger_sp = FindDebuggerWithID(*debugger_id);

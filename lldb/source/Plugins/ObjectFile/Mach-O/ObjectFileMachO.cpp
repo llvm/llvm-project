@@ -6003,7 +6003,7 @@ llvm::VersionTuple ObjectFileMachO::GetMinimumOSVersion() {
 }
 
 llvm::VersionTuple ObjectFileMachO::GetSDKVersion() {
-  if (!m_sdk_versions.hasValue()) {
+  if (!m_sdk_versions) {
     lldb::offset_t offset = MachHeaderSizeFromMagic(m_header.magic);
     for (uint32_t i = 0; i < m_header.ncmds; ++i) {
       const lldb::offset_t load_cmd_offset = offset;
@@ -6032,7 +6032,7 @@ llvm::VersionTuple ObjectFileMachO::GetSDKVersion() {
       offset = load_cmd_offset + lc.cmdsize;
     }
 
-    if (!m_sdk_versions.hasValue()) {
+    if (!m_sdk_versions) {
       offset = MachHeaderSizeFromMagic(m_header.magic);
       for (uint32_t i = 0; i < m_header.ncmds; ++i) {
         const lldb::offset_t load_cmd_offset = offset;
@@ -6069,7 +6069,7 @@ llvm::VersionTuple ObjectFileMachO::GetSDKVersion() {
       }
     }
 
-    if (!m_sdk_versions.hasValue())
+    if (!m_sdk_versions)
       m_sdk_versions = llvm::VersionTuple();
   }
 

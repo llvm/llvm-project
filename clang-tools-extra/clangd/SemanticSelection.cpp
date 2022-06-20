@@ -121,7 +121,7 @@ llvm::Expected<SelectionRange> getSemanticRanges(ParsedAST &AST, Position Pos) {
     }
 
     auto SR = toHalfOpenFileRange(SM, LangOpts, Node->ASTNode.getSourceRange());
-    if (!SR.hasValue() || SM.getFileID(SR->getBegin()) != SM.getMainFileID()) {
+    if (!SR || SM.getFileID(SR->getBegin()) != SM.getMainFileID()) {
       continue;
     }
     Range R;

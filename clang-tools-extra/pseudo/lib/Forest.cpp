@@ -90,7 +90,7 @@ std::string ForestNode::dumpRecursive(const Grammar &G,
           Result += llvm::formatv("[{0,3}, {1,3}) ", P->startTokenIndex(), End);
         Result += LineDec.Prefix;
         Result += LineDec.First;
-        if (ElidedParent.hasValue()) {
+        if (ElidedParent) {
           Result += G.symbolName(*ElidedParent);
           Result += "~";
         }

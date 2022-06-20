@@ -319,7 +319,7 @@ bool AppleObjCRuntime::AppleIsModuleObjCLibrary(const ModuleSP &module_sp) {
 // we use the version of Foundation to make assumptions about the ObjC runtime
 // on a target
 uint32_t AppleObjCRuntime::GetFoundationVersion() {
-  if (!m_Foundation_major.hasValue()) {
+  if (!m_Foundation_major) {
     const ModuleList &modules = m_process->GetTarget().GetImages();
     for (uint32_t idx = 0; idx < modules.GetSize(); idx++) {
       lldb::ModuleSP module_sp = modules.GetModuleAtIndex(idx);

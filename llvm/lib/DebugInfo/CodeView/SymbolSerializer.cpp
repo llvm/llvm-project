@@ -24,7 +24,7 @@ SymbolSerializer::SymbolSerializer(BumpPtrAllocator &Allocator,
       Mapping(Writer, Container) {}
 
 Error SymbolSerializer::visitSymbolBegin(CVSymbol &Record) {
-  assert(!CurrentSymbol.hasValue() && "Already in a symbol mapping!");
+  assert(!CurrentSymbol && "Already in a symbol mapping!");
 
   Writer.setOffset(0);
 
@@ -39,7 +39,7 @@ Error SymbolSerializer::visitSymbolBegin(CVSymbol &Record) {
 }
 
 Error SymbolSerializer::visitSymbolEnd(CVSymbol &Record) {
-  assert(CurrentSymbol.hasValue() && "Not in a symbol mapping!");
+  assert(CurrentSymbol && "Not in a symbol mapping!");
 
   if (auto EC = Mapping.visitSymbolEnd(Record))
     return EC;

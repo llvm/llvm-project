@@ -84,7 +84,7 @@ bool SelectHelper::FDIsSetError(lldb::socket_t fd) const {
 
 static void updateMaxFd(llvm::Optional<lldb::socket_t> &vold,
                         lldb::socket_t vnew) {
-  if (!vold.hasValue())
+  if (!vold)
     vold = vnew;
   else
     vold = std::max(*vold, vnew);
@@ -123,7 +123,7 @@ lldb_private::Status SelectHelper::Select() {
     updateMaxFd(max_fd, fd);
   }
 
-  if (!max_fd.hasValue()) {
+  if (!max_fd) {
     error.SetErrorString("no valid file descriptors");
     return error;
   }

@@ -130,7 +130,7 @@ public:
     Inputs.ClangTidyProvider = Opts.ClangTidyProvider;
     Inputs.Opts.PreambleParseForwardingFunctions =
         Opts.PreambleParseForwardingFunctions;
-    if (Contents.hasValue()) {
+    if (Contents) {
       Inputs.Contents = *Contents;
       log("Imaginary source file contents:\n{0}", Inputs.Contents);
     } else {

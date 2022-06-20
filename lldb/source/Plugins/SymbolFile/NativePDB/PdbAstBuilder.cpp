@@ -1453,7 +1453,7 @@ void PdbAstBuilder::ParseAllNamespacesPlusChildrenOf(
 
     CVTagRecord tag = CVTagRecord::create(cvt);
 
-    if (!parent.hasValue()) {
+    if (!parent) {
       clang::QualType qt = GetOrCreateType(tid);
       CompleteType(qt);
       continue;

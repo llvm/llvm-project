@@ -2064,7 +2064,7 @@ private:
       return;
     }
 
-    if (lbounds.hasValue()) {
+    if (lbounds) {
       // Array of POINTER entities, with elemental assignment.
       if (!Fortran::lower::isWholePointer(assign.lhs))
         fir::emitFatalError(toLocation(), "pointer assignment to non-pointer");

@@ -182,7 +182,7 @@ static void getSortedConstantKeys(std::vector<Value *> &SortedKeys,
 Value *OutlinableRegion::findCorrespondingValueIn(const OutlinableRegion &Other,
                                                   Value *V) {
   Optional<unsigned> GVN = Candidate->getGVN(V);
-  assert(GVN.hasValue() && "No GVN for incoming value");
+  assert(GVN && "No GVN for incoming value");
   Optional<unsigned> CanonNum = Candidate->getCanonicalNum(*GVN);
   Optional<unsigned> FirstGVN = Other.Candidate->fromCanonicalNum(*CanonNum);
   Optional<Value *> FoundValueOpt = Other.Candidate->fromGVN(*FirstGVN);
@@ -1196,7 +1196,7 @@ static Optional<unsigned> getGVNForPHINode(OutlinableRegion &Region,
     // Collect the canonical numbers of the values in the PHINode.
     unsigned GVN = OGVN.getValue();
     OGVN = Cand.getCanonicalNum(GVN);
-    assert(OGVN.hasValue() && "No GVN found for incoming value?");
+    assert(OGVN && "No GVN found for incoming value?");
     PHIGVNs.push_back(*OGVN);
 
     // Find the incoming block and use the canonical numbering as well to define
@@ -1225,7 +1225,7 @@ static Optional<unsigned> getGVNForPHINode(OutlinableRegion &Region,
     }
     GVN = OGVN.getValue();
     OGVN = Cand.getCanonicalNum(GVN);
-    assert(OGVN.hasValue() && "No GVN found for incoming block?");
+    assert(OGVN && "No GVN found for incoming block?");
     PHIGVNs.push_back(*OGVN);
   }
 

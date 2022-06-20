@@ -835,7 +835,7 @@ struct CompletionRecorder : public CodeCompleteConsumer {
         continue;
       // Skip injected class name when no class scope is not explicitly set.
       // E.g. show injected A::A in `using A::A^` but not in "A^".
-      if (Result.Declaration && !Context.getCXXScopeSpecifier().hasValue() &&
+      if (Result.Declaration && !Context.getCXXScopeSpecifier() &&
           isInjectedClass(*Result.Declaration))
         continue;
       // We choose to never append '::' to completion results in clangd.
@@ -1439,7 +1439,7 @@ public:
     HeuristicPrefix = guessCompletionPrefix(SemaCCInput.ParseInput.Contents,
                                             SemaCCInput.Offset);
     populateContextWords(SemaCCInput.ParseInput.Contents);
-    if (Opts.Index && SpecFuzzyFind && SpecFuzzyFind->CachedReq.hasValue()) {
+    if (Opts.Index && SpecFuzzyFind && SpecFuzzyFind->CachedReq) {
       assert(!SpecFuzzyFind->Result.valid());
       SpecReq = speculativeFuzzyFindRequestForCompletion(
           *SpecFuzzyFind->CachedReq, HeuristicPrefix);

@@ -97,7 +97,7 @@ struct UpdateIndexCallbacks : public ParsingCallbacks {
     if (FIndex)
       FIndex->updateMain(Path, AST);
 
-    assert(AST.getDiagnostics().hasValue() &&
+    assert(AST.getDiagnostics() &&
            "We issue callback only with fresh preambles");
     std::vector<Diag> Diagnostics = *AST.getDiagnostics();
     if (ServerCallbacks)
@@ -672,7 +672,7 @@ void ClangdServer::applyTweak(PathRef File, Range Sel, StringRef TweakID,
       }
       Effect = T.takeError();
     }
-    assert(Effect.hasValue() && "Expected at least one selection");
+    assert(Effect && "Expected at least one selection");
     if (*Effect && (*Effect)->FormatEdits) {
       // Format tweaks that require it centrally here.
       for (auto &It : (*Effect)->ApplyEdits) {
