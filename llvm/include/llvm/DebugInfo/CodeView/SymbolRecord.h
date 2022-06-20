@@ -249,7 +249,7 @@ private:
   }
 
   bool ParseCurrentAnnotation() {
-    if (Current.hasValue())
+    if (Current)
       return true;
 
     Next = Data;

@@ -64,7 +64,7 @@ void IRInstructionData::initializeInstruction() {
   // Here we collect the operands and their types for determining whether
   // the structure of the operand use matches between two different candidates.
   for (Use &OI : Inst->operands()) {
-    if (isa<CmpInst>(Inst) && RevisedPredicate.hasValue()) {
+    if (isa<CmpInst>(Inst) && RevisedPredicate) {
       // If we have a CmpInst where the predicate is reversed, it means the
       // operands must be reversed as well.
       OperVals.insert(OperVals.begin(), OI.get());

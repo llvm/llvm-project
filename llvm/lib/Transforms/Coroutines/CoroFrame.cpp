@@ -1479,7 +1479,7 @@ private:
       auto Itr = AliasOffetMap.find(&I);
       if (Itr == AliasOffetMap.end()) {
         AliasOffetMap[&I] = Offset;
-      } else if (Itr->second.hasValue() && Itr->second.getValue() != Offset) {
+      } else if (Itr->second && *Itr->second != Offset) {
         // If we have seen two different possible values for this alias, we set
         // it to empty.
         AliasOffetMap[&I].reset();
