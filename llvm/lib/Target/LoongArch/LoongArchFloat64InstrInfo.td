@@ -131,3 +131,17 @@ def MOVGR2FR_D  : FP_MOV<0b0000000100010100101010, "movgr2fr.d", FPR64, GPR>;
 def MOVFR2GR_D  : FP_MOV<0b0000000100010100101110, "movfr2gr.d", GPR, FPR64>;
 } // Predicates = [HasBasicD, IsLA64]
 
+//===----------------------------------------------------------------------===//
+// Pseudo-instructions and codegen patterns
+//===----------------------------------------------------------------------===//
+
+let Predicates = [HasBasicD] in {
+
+/// Float arithmetic operations
+
+def : PatFprFpr<fadd, FADD_D, FPR64>;
+def : PatFprFpr<fsub, FSUB_D, FPR64>;
+def : PatFprFpr<fmul, FMUL_D, FPR64>;
+def : PatFprFpr<fdiv, FDIV_D, FPR64>;
+
+} // Predicates = [HasBasicD]
