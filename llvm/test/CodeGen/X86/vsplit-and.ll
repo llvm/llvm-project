@@ -41,7 +41,7 @@ define void @t2(<3 x i64>* %dst, <3 x i64> %src1, <3 x i64> %src2) nounwind read
 ; CHECK-NEXT:    shufps {{.*#+}} xmm1 = xmm1[0,2],xmm3[0,2]
 ; CHECK-NEXT:    xorps %xmm0, %xmm1
 ; CHECK-NEXT:    andnps %xmm1, %xmm2
-; CHECK-NEXT:    pshufd {{.*#+}} xmm0 = xmm2[2,2,3,3]
+; CHECK-NEXT:    pshufd {{.*#+}} xmm0 = xmm2[2,3,2,3]
 ; CHECK-NEXT:    psllq $63, %xmm0
 ; CHECK-NEXT:    psrad $31, %xmm0
 ; CHECK-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[1,1,3,3]
