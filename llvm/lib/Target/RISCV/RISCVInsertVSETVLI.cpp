@@ -408,6 +408,8 @@ static DemandedFields getDemanded(const MachineInstr &MI) {
   // They instead demand the ratio of the two which is used in computing
   // EMUL, but which allows us the flexibility to change SEW and LMUL
   // provided we don't change the ratio.
+  // Note: We assume that the instructions initial SEW is the EEW encoded
+  // in the opcode.  This is asserted when constructing the VSETVLIInfo.
   if (getEEWForLoadStore(MI)) {
     Res.SEW = false;
     Res.LMUL = false;
@@ -885,6 +887,11 @@ static VSETVLIInfo computeInfoForInstr(const MachineInstr &MI, uint64_t TSFlags,
   } else {
     InstrInfo.setAVLReg(RISCV::NoRegister);
   }
+#ifndef NDEBUG
+  if (Optional<unsigned> EEW = getEEWForLoadStore(MI)) {
+    assert(SEW == EEW && "Initial SEW doesn't match expected EEW");
+  }
+#endif
   InstrInfo.setVTYPE(VLMul, SEW, TailAgnostic, MaskAgnostic);
 
   return InstrInfo;
