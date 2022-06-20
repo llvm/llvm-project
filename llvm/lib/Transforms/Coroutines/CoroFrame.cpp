@@ -495,7 +495,7 @@ public:
                           coro::Shape &Shape);
 
   /// Add a field to this structure.
-  LLVM_NODISCARD FieldIDType addField(Type *Ty, MaybeAlign FieldAlignment,
+  LLVM_NODISCARD FieldIDType addField(Type *Ty, MaybeAlign MaybeFieldAlignment,
                                       bool IsHeader = false,
                                       bool IsSpillOfValue = false) {
     assert(!IsFinished && "adding fields to a finished builder");
@@ -514,23 +514,19 @@ public:
     // to remember the type alignment anyway to build the type.
     // If we are spilling values we don't need to worry about ABI alignment
     // concerns.
-    auto ABIAlign = DL.getABITypeAlign(Ty);
-    Align TyAlignment =
-        (IsSpillOfValue && MaxFrameAlignment)
-            ? (*MaxFrameAlignment < ABIAlign ? *MaxFrameAlignment : ABIAlign)
-            : ABIAlign;
-    if (!FieldAlignment) {
-      FieldAlignment = TyAlignment;
-    }
+    Align ABIAlign = DL.getABITypeAlign(Ty);
+    Align TyAlignment = ABIAlign;
+    if (IsSpillOfValue && MaxFrameAlignment && *MaxFrameAlignment < ABIAlign)
+      TyAlignment = *MaxFrameAlignment;
+    Align FieldAlignment = MaybeFieldAlignment.value_or(TyAlignment);
 
     // The field alignment could be bigger than the max frame case, in that case
     // we request additional storage to be able to dynamically align the
     // pointer.
     uint64_t DynamicAlignBuffer = 0;
-    if (MaxFrameAlignment &&
-        (FieldAlignment.valueOrOne() > *MaxFrameAlignment)) {
+    if (MaxFrameAlignment && (FieldAlignment > *MaxFrameAlignment)) {
       DynamicAlignBuffer =
-          offsetToAlignment((*MaxFrameAlignment).value(), *FieldAlignment);
+          offsetToAlignment(MaxFrameAlignment->value(), FieldAlignment);
       FieldAlignment = *MaxFrameAlignment;
       FieldSize = FieldSize + DynamicAlignBuffer;
     }
@@ -541,12 +537,12 @@ public:
       Offset = alignTo(StructSize, FieldAlignment);
       StructSize = Offset + FieldSize;
 
-    // Everything else has a flexible offset.
+      // Everything else has a flexible offset.
     } else {
       Offset = OptimizedStructLayoutField::FlexibleOffset;
     }
 
-    Fields.push_back({FieldSize, Offset, Ty, 0, *FieldAlignment, TyAlignment,
+    Fields.push_back({FieldSize, Offset, Ty, 0, FieldAlignment, TyAlignment,
                       DynamicAlignBuffer});
     return Fields.size() - 1;
   }
