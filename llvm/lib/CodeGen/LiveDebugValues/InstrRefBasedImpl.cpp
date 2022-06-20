@@ -536,6 +536,17 @@ public:
 
     // What was the old variable value?
     ValueIDNum OldValue = VarLocs[MLoc.asU64()];
+    clobberMloc(MLoc, OldValue, Pos, MakeUndef);
+  }
+  /// Overload that takes an explicit value \p OldValue for when the value in
+  /// \p MLoc has changed and the TransferTracker's locations have not been
+  /// updated yet.
+  void clobberMloc(LocIdx MLoc, ValueIDNum OldValue,
+                   MachineBasicBlock::iterator Pos, bool MakeUndef = true) {
+    auto ActiveMLocIt = ActiveMLocs.find(MLoc);
+    if (ActiveMLocIt == ActiveMLocs.end())
+      return;
+
     VarLocs[MLoc.asU64()] = ValueIDNum::EmptyValue;
 
     // Examine the remaining variable locations: if we can find the same value
@@ -1730,8 +1741,34 @@ bool InstrRefBasedLDV::transferRegisterCopy(MachineInstr &MI) {
   if (EmulateOldLDV && !SrcRegOp->isKill())
     return false;
 
+  // Before we update MTracker, remember which values were present in each of
+  // the locations about to be overwritten, so that we can recover any
+  // potentially clobbered variables.
+  DenseMap<LocIdx, ValueIDNum> ClobberedLocs;
+  if (TTracker) {
+    for (MCRegAliasIterator RAI(DestReg, TRI, true); RAI.isValid(); ++RAI) {
+      LocIdx ClobberedLoc = MTracker->getRegMLoc(*RAI);
+      auto MLocIt = TTracker->ActiveMLocs.find(ClobberedLoc);
+      // If ActiveMLocs isn't tracking this location or there are no variables
+      // using it, don't bother remembering.
+      if (MLocIt == TTracker->ActiveMLocs.end() || MLocIt->second.empty())
+        continue;
+      ValueIDNum Value = MTracker->readReg(*RAI);
+      ClobberedLocs[ClobberedLoc] = Value;
+    }
+  }
+
   // Copy MTracker info, including subregs if available.
   InstrRefBasedLDV::performCopy(SrcReg, DestReg);
+
+  // The copy might have clobbered variables based on the destination register.
+  // Tell TTracker about it, passing the old ValueIDNum to search for
+  // alternative locations (or else terminating those variables).
+  if (TTracker) {
+    for (auto LocVal : ClobberedLocs) {
+      TTracker->clobberMloc(LocVal.first, LocVal.second, MI.getIterator(), false);
+    }
+  }
 
   // Only produce a transfer of DBG_VALUE within a block where old LDV
   // would have. We might make use of the additional value tracking in some
@@ -1743,15 +1780,6 @@ bool InstrRefBasedLDV::transferRegisterCopy(MachineInstr &MI) {
   // VarLocBasedImpl would quit tracking the old location after copying.
   if (EmulateOldLDV && SrcReg != DestReg)
     MTracker->defReg(SrcReg, CurBB, CurInst);
-
-  // Finally, the copy might have clobbered variables based on the destination
-  // register. Tell TTracker about it, in case a backup location exists.
-  if (TTracker) {
-    for (MCRegAliasIterator RAI(DestReg, TRI, true); RAI.isValid(); ++RAI) {
-      LocIdx ClobberedLoc = MTracker->getRegMLoc(*RAI);
-      TTracker->clobberMloc(ClobberedLoc, MI.getIterator(), false);
-    }
-  }
 
   return true;
 }
