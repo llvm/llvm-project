@@ -1174,7 +1174,7 @@ uint8_t ELFObjectFile<ELFT>::getBytesInAddress() const {
 
 template <class ELFT>
 StringRef ELFObjectFile<ELFT>::getFileFormatName() const {
-  bool IsLittleEndian = ELFT::TargetEndianness == support::little;
+  constexpr bool IsLittleEndian = ELFT::TargetEndianness == support::little;
   switch (EF.getHeader().e_ident[ELF::EI_CLASS]) {
   case ELF::ELFCLASS32:
     switch (EF.getHeader().e_machine) {
