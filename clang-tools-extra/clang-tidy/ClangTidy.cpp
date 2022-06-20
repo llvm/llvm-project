@@ -104,7 +104,7 @@ public:
               DiagPrinter),
         SourceMgr(Diags, Files), Context(Context), ApplyFixes(ApplyFixes),
         TotalFixes(0), AppliedFixes(0), WarningsAsErrors(0) {
-    DiagOpts->ShowColors = Context.getOptions().UseColor.getValueOr(
+    DiagOpts->ShowColors = Context.getOptions().UseColor.value_or(
         llvm::sys::Process::StandardOutHasColors());
     DiagPrinter->BeginSourceFile(LangOpts);
     if (DiagOpts->ShowColors && !llvm::sys::Process::StandardOutIsDisplayed()) {

@@ -204,13 +204,13 @@ void ClangTidyCheck::OptionsView::diagnoseBadEnumOption(
 
 StringRef ClangTidyCheck::OptionsView::get(StringRef LocalName,
                                            StringRef Default) const {
-  return get(LocalName).getValueOr(Default);
+  return get(LocalName).value_or(Default);
 }
 
 StringRef
 ClangTidyCheck::OptionsView::getLocalOrGlobal(StringRef LocalName,
                                               StringRef Default) const {
-  return getLocalOrGlobal(LocalName).getValueOr(Default);
+  return getLocalOrGlobal(LocalName).value_or(Default);
 }
 } // namespace tidy
 } // namespace clang
