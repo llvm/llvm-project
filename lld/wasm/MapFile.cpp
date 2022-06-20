@@ -75,7 +75,7 @@ static SymbolMapTy getSectionSyms(ArrayRef<Symbol *> syms) {
 static DenseMap<Symbol *, std::string>
 getSymbolStrings(ArrayRef<Symbol *> syms) {
   std::vector<std::string> str(syms.size());
-  parallelForEachN(0, syms.size(), [&](size_t i) {
+  parallelFor(0, syms.size(), [&](size_t i) {
     raw_string_ostream os(str[i]);
     auto *chunk = syms[i]->getChunk();
     if (chunk == nullptr)

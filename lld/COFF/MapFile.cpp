@@ -141,7 +141,7 @@ static void getSymbols(const COFFLinkerContext &ctx,
 static DenseMap<Defined *, std::string>
 getSymbolStrings(const COFFLinkerContext &ctx, ArrayRef<Defined *> syms) {
   std::vector<std::string> str(syms.size());
-  parallelForEachN((size_t)0, syms.size(), [&](size_t i) {
+  parallelFor((size_t)0, syms.size(), [&](size_t i) {
     raw_string_ostream os(str[i]);
     Defined *sym = syms[i];
 

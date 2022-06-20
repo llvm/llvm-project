@@ -175,8 +175,8 @@ void TaskGroup::spawn(std::function<void()> F) {
 } // namespace llvm
 #endif // LLVM_ENABLE_THREADS
 
-void llvm::parallelForEachN(size_t Begin, size_t End,
-                            llvm::function_ref<void(size_t)> Fn) {
+void llvm::parallelFor(size_t Begin, size_t End,
+                       llvm::function_ref<void(size_t)> Fn) {
   // If we have zero or one items, then do not incur the overhead of spinning up
   // a task group.  They are surprisingly expensive, and because they do not
   // support nested parallelism, a single entry task group can block parallel
