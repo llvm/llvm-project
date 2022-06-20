@@ -1194,6 +1194,15 @@ PerformConcurrentlyOp ForeachThreadOp::getTerminator() {
   return cast<PerformConcurrentlyOp>(getBody()->getTerminator());
 }
 
+ForeachThreadOp mlir::scf::getForeachThreadOpThreadIndexOwner(Value val) {
+  auto tidxArg = val.dyn_cast<BlockArgument>();
+  if (!tidxArg)
+    return ForeachThreadOp();
+  assert(tidxArg.getOwner() && "unlinked block argument");
+  auto *containingOp = tidxArg.getOwner()->getParentOp();
+  return dyn_cast<ForeachThreadOp>(containingOp);
+}
+
 //===----------------------------------------------------------------------===//
 // ParallelInsertSliceOp
 //===----------------------------------------------------------------------===//
