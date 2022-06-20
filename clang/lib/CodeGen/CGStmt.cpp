@@ -2289,6 +2289,9 @@ static void UpdateAsmCallInst(llvm::CallBase &Result, bool HasSideEffect,
 }
 
 void CodeGenFunction::EmitAsmStmt(const AsmStmt &S) {
+  // Pop all cleanup blocks at the end of the asm statement.
+  CodeGenFunction::RunCleanupsScope Cleanups(*this);
+
   // Assemble the final asm string.
   std::string AsmString = S.generateAsmString(getContext());
 
