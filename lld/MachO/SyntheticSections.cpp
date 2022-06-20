@@ -834,9 +834,16 @@ SymtabSection::SymtabSection(StringTableSection &stringTableSection)
     : LinkEditSection(segment_names::linkEdit, section_names::symbolTable),
       stringTableSection(stringTableSection) {}
 
-void SymtabSection::emitBeginSourceStab(StringRef sourceFile) {
+void SymtabSection::emitBeginSourceStab(DWARFUnit *compileUnit) {
   StabsEntry stab(N_SO);
-  stab.strx = stringTableSection.addString(saver().save(sourceFile));
+  SmallString<261> dir(compileUnit->getCompilationDir());
+  StringRef sep = sys::path::get_separator();
+  // We don't use `path::append` here because we want an empty `dir` to result
+  // in an absolute path. `append` would give us a relative path for that case.
+  if (!dir.endswith(sep))
+    dir += sep;
+  stab.strx = stringTableSection.addString(
+      saver().save(dir + compileUnit->getUnitDIE().getShortName()));
   stabs.emplace_back(std::move(stab));
 }
 
@@ -931,7 +938,7 @@ void SymtabSection::emitStabs() {
         emitEndSourceStab();
       lastFile = file;
 
-      emitBeginSourceStab(file->sourceFile());
+      emitBeginSourceStab(file->compileUnit);
       emitObjectFileStab(file);
     }
 

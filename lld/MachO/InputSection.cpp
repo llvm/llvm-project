@@ -55,21 +55,17 @@ static uint64_t resolveSymbolVA(const Symbol *sym, uint8_t type) {
   return sym->getVA();
 }
 
-const Defined *InputSection::getContainingSymbol(uint64_t off) const {
-  auto *nextSym = llvm::upper_bound(
-      symbols, off, [](uint64_t a, const Defined *b) { return a < b->value; });
-  if (nextSym == symbols.begin())
-    return nullptr;
-  return *std::prev(nextSym);
-}
-
 std::string InputSection::getLocation(uint64_t off) const {
   // First, try to find a symbol that's near the offset. Use it as a reference
   // point.
-  if (auto *sym = getContainingSymbol(off))
+  auto *nextSym = llvm::upper_bound(
+      symbols, off, [](uint64_t a, const Defined *b) { return a < b->value; });
+  if (nextSym != symbols.begin()) {
+    auto &sym = *std::prev(nextSym);
     return (toString(getFile()) + ":(symbol " + sym->getName() + "+0x" +
             Twine::utohexstr(off - sym->value) + ")")
         .str();
+  }
 
   // If that fails, use the section itself as a reference point.
   for (const Subsection &subsec : section.subsections) {
@@ -78,59 +74,9 @@ std::string InputSection::getLocation(uint64_t off) const {
       break;
     }
   }
-
   return (toString(getFile()) + ":(" + getName() + "+0x" +
           Twine::utohexstr(off) + ")")
       .str();
-}
-
-std::string InputSection::getSourceLocation(uint64_t off) const {
-  auto *obj = dyn_cast<ObjFile>(getFile());
-  if (!obj)
-    return {};
-
-  DWARFCache *dwarf = obj->getDwarf();
-  if (!dwarf)
-    return std::string();
-
-  for (const Subsection &subsec : section.subsections) {
-    if (subsec.isec == this) {
-      off += subsec.offset;
-      break;
-    }
-  }
-
-  auto createMsg = [&](StringRef path, unsigned line) {
-    std::string filename = sys::path::filename(path).str();
-    std::string lineStr = (":" + Twine(line)).str();
-    if (filename == path)
-      return filename + lineStr;
-    return (filename + lineStr + " (" + path + lineStr + ")").str();
-  };
-
-  // First, look up a function for a given offset.
-  if (Optional<DILineInfo> li = dwarf->getDILineInfo(
-          section.addr + off, object::SectionedAddress::UndefSection))
-    return createMsg(li->FileName, li->Line);
-
-  // If it failed, look up again as a variable.
-  if (const Defined *sym = getContainingSymbol(off)) {
-    // Symbols are generally prefixed with an underscore, which is not included
-    // in the debug information.
-    StringRef symName = sym->getName();
-    if (!symName.empty() && symName[0] == '_')
-      symName = symName.substr(1);
-
-    if (Optional<std::pair<std::string, unsigned>> fileLine =
-            dwarf->getVariableLoc(symName))
-      return createMsg(fileLine->first, fileLine->second);
-  }
-
-  // Try to get the source file's name from the DWARF information.
-  if (obj->compileUnit)
-    return obj->sourceFile();
-
-  return {};
 }
 
 void ConcatInputSection::foldIdentical(ConcatInputSection *copy) {

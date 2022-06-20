@@ -381,11 +381,8 @@ void macho::reportPendingUndefinedSymbols() {
          locations.codeReferences) {
       if (i >= maxUndefinedReferences)
         break;
-      message += "\n>>> referenced by ";
-      std::string src = loc.isec->getSourceLocation(loc.offset);
-      if (!src.empty())
-        message += src + "\n>>>               ";
-      message += loc.isec->getLocation(loc.offset);
+      // TODO: Get source file/line from debug information.
+      message += "\n>>> referenced by " + loc.isec->getLocation(loc.offset);
       ++i;
     }
 
