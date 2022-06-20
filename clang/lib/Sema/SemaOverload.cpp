@@ -8200,6 +8200,49 @@ static  Qualifiers CollectVRQualifiers(ASTContext &Context, Expr* ArgExpr) {
     return VRQuals;
 }
 
+// Note: We're currently only handling qualifiers that are meaningful for the
+// LHS of compound assignment overloading.
+static void forAllQualifierCombinationsImpl(
+    QualifiersAndAtomic Available, QualifiersAndAtomic Applied,
+    llvm::function_ref<void(QualifiersAndAtomic)> Callback) {
+  // _Atomic
+  if (Available.hasAtomic()) {
+    Available.removeAtomic();
+    forAllQualifierCombinationsImpl(Available, Applied.withAtomic(), Callback);
+    forAllQualifierCombinationsImpl(Available, Applied, Callback);
+    return;
+  }
+
+  // volatile
+  if (Available.hasVolatile()) {
+    Available.removeVolatile();
+    assert(!Applied.hasVolatile());
+    forAllQualifierCombinationsImpl(Available, Applied.withVolatile(),
+                                    Callback);
+    forAllQualifierCombinationsImpl(Available, Applied, Callback);
+    return;
+  }
+
+  Callback(Applied);
+}
+
+static void forAllQualifierCombinations(
+    QualifiersAndAtomic Quals,
+    llvm::function_ref<void(QualifiersAndAtomic)> Callback) {
+  return forAllQualifierCombinationsImpl(Quals, QualifiersAndAtomic(),
+                                         Callback);
+}
+
+static QualType makeQualifiedLValueReferenceType(QualType Base,
+                                                 QualifiersAndAtomic Quals,
+                                                 Sema &S) {
+  if (Quals.hasAtomic())
+    Base = S.Context.getAtomicType(Base);
+  if (Quals.hasVolatile())
+    Base = S.Context.getVolatileType(Base);
+  return S.Context.getLValueReferenceType(Base);
+}
+
 namespace {
 
 /// Helper class to manage the addition of builtin operator overload
@@ -8210,7 +8253,7 @@ class BuiltinOperatorOverloadBuilder {
   // Common instance state available to all overload candidate addition methods.
   Sema &S;
   ArrayRef<Expr *> Args;
-  Qualifiers VisibleTypeConversionsQuals;
+  QualifiersAndAtomic VisibleTypeConversionsQuals;
   bool HasArithmeticOrEnumeralCandidateType;
   SmallVectorImpl<BuiltinCandidateTypeSet> &CandidateTypes;
   OverloadCandidateSet &CandidateSet;
@@ -8334,7 +8377,7 @@ class BuiltinOperatorOverloadBuilder {
 public:
   BuiltinOperatorOverloadBuilder(
     Sema &S, ArrayRef<Expr *> Args,
-    Qualifiers VisibleTypeConversionsQuals,
+    QualifiersAndAtomic VisibleTypeConversionsQuals,
     bool HasArithmeticOrEnumeralCandidateType,
     SmallVectorImpl<BuiltinCandidateTypeSet> &CandidateTypes,
     OverloadCandidateSet &CandidateSet)
@@ -8955,18 +8998,14 @@ public:
         ParamTypes[1] = ArithmeticTypes[Right];
         auto LeftBaseTy = AdjustAddressSpaceForBuiltinOperandType(
             S, ArithmeticTypes[Left], Args[0]);
-        // Add this built-in operator as a candidate (VQ is empty).
-        ParamTypes[0] = S.Context.getLValueReferenceType(LeftBaseTy);
-        S.AddBuiltinCandidate(ParamTypes, Args, CandidateSet,
-                              /*IsAssignmentOperator=*/isEqualOp);
 
-        // Add this built-in operator as a candidate (VQ is 'volatile').
-        if (VisibleTypeConversionsQuals.hasVolatile()) {
-          ParamTypes[0] = S.Context.getVolatileType(LeftBaseTy);
-          ParamTypes[0] = S.Context.getLValueReferenceType(ParamTypes[0]);
-          S.AddBuiltinCandidate(ParamTypes, Args, CandidateSet,
-                                /*IsAssignmentOperator=*/isEqualOp);
-        }
+        forAllQualifierCombinations(
+            VisibleTypeConversionsQuals, [&](QualifiersAndAtomic Quals) {
+              ParamTypes[0] =
+                  makeQualifiedLValueReferenceType(LeftBaseTy, Quals, S);
+              S.AddBuiltinCandidate(ParamTypes, Args, CandidateSet,
+                                    /*IsAssignmentOperator=*/isEqualOp);
+            });
       }
     }
 
@@ -9013,16 +9052,13 @@ public:
         ParamTypes[1] = ArithmeticTypes[Right];
         auto LeftBaseTy = AdjustAddressSpaceForBuiltinOperandType(
             S, ArithmeticTypes[Left], Args[0]);
-        // Add this built-in operator as a candidate (VQ is empty).
-        ParamTypes[0] = S.Context.getLValueReferenceType(LeftBaseTy);
-        S.AddBuiltinCandidate(ParamTypes, Args, CandidateSet);
-        if (VisibleTypeConversionsQuals.hasVolatile()) {
-          // Add this built-in operator as a candidate (VQ is 'volatile').
-          ParamTypes[0] = LeftBaseTy;
-          ParamTypes[0] = S.Context.getVolatileType(ParamTypes[0]);
-          ParamTypes[0] = S.Context.getLValueReferenceType(ParamTypes[0]);
-          S.AddBuiltinCandidate(ParamTypes, Args, CandidateSet);
-        }
+
+        forAllQualifierCombinations(
+            VisibleTypeConversionsQuals, [&](QualifiersAndAtomic Quals) {
+              ParamTypes[0] =
+                  makeQualifiedLValueReferenceType(LeftBaseTy, Quals, S);
+              S.AddBuiltinCandidate(ParamTypes, Args, CandidateSet);
+            });
       }
     }
   }
@@ -9186,10 +9222,13 @@ void Sema::AddBuiltinOperatorCandidates(OverloadedOperatorKind Op,
   // if the operator we're looking at has built-in operator candidates
   // that make use of these types. Also record whether we encounter non-record
   // candidate types or either arithmetic or enumeral candidate types.
-  Qualifiers VisibleTypeConversionsQuals;
+  QualifiersAndAtomic VisibleTypeConversionsQuals;
   VisibleTypeConversionsQuals.addConst();
-  for (unsigned ArgIdx = 0, N = Args.size(); ArgIdx != N; ++ArgIdx)
+  for (unsigned ArgIdx = 0, N = Args.size(); ArgIdx != N; ++ArgIdx) {
     VisibleTypeConversionsQuals += CollectVRQualifiers(Context, Args[ArgIdx]);
+    if (Args[ArgIdx]->getType()->isAtomicType())
+      VisibleTypeConversionsQuals.addAtomic();
+  }
 
   bool HasNonRecordCandidateType = false;
   bool HasArithmeticOrEnumeralCandidateType = false;
