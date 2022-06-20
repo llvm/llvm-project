@@ -648,7 +648,7 @@ STATISTIC(ObjectVisitorLoad,
 
 APInt ObjectSizeOffsetVisitor::align(APInt Size, MaybeAlign Alignment) {
   if (Options.RoundToAlign && Alignment)
-    return APInt(IntTyBits, alignTo(Size.getZExtValue(), Alignment));
+    return APInt(IntTyBits, alignTo(Size.getZExtValue(), *Alignment));
   return Size;
 }
 
