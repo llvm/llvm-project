@@ -80,7 +80,7 @@ void BufferPlacementAllocs::build(Operation *op) {
     // Find the associated dealloc value and register the allocation entry.
     llvm::Optional<Operation *> dealloc = memref::findDealloc(allocValue);
     // If the allocation has > 1 dealloc associated with it, skip handling it.
-    if (!dealloc.hasValue())
+    if (!dealloc)
       return;
     allocs.push_back(std::make_tuple(allocValue, *dealloc));
   });

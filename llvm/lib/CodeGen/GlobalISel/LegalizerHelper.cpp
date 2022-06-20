@@ -7587,7 +7587,7 @@ LegalizerHelper::lowerMemcpyInline(MachineInstr &MI) {
   // See if this is a constant length copy
   auto LenVRegAndVal = getIConstantVRegValWithLookThrough(Len, MRI);
   // FIXME: support dynamically sized G_MEMCPY_INLINE
-  assert(LenVRegAndVal.hasValue() &&
+  assert(LenVRegAndVal &&
          "inline memcpy with dynamic size is not yet supported");
   uint64_t KnownLen = LenVRegAndVal->Value.getZExtValue();
   if (KnownLen == 0) {

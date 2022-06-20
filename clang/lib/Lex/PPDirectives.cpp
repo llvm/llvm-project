@@ -2073,7 +2073,7 @@ Optional<FileEntryRef> Preprocessor::LookupHeaderIncludeOrImport(
   }
 
   // If the file is still not found, just go with the vanilla diagnostic
-  assert(!File.hasValue() && "expected missing file");
+  assert(!File && "expected missing file");
   Diag(FilenameTok, diag::err_pp_file_not_found)
       << OriginalFilename << FilenameRange;
   if (IsFrameworkFound) {

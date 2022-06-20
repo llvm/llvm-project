@@ -193,7 +193,7 @@ StringRef IRInstructionData::getCalleeName() const {
   assert(isa<CallInst>(Inst) &&
          "Can only get a name from a call instruction");
 
-  assert(CalleeName.hasValue() && "CalleeName has not been set");
+  assert(CalleeName && "CalleeName has not been set");
 
   return *CalleeName;
 }

@@ -468,7 +468,7 @@ unsigned DWARFLinker::shouldKeepSubprogramDIE(
   if (!LowPc)
     return Flags;
 
-  assert(LowPc.hasValue() && "low_pc attribute is not an address.");
+  assert(LowPc && "low_pc attribute is not an address.");
   if (!RelocMgr.isLiveSubprogram(DIE, MyInfo))
     return Flags;
 

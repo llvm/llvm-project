@@ -1805,11 +1805,21 @@ bool AArch64TargetLowering::targetShrinkDemandedConstant(
 /// computeKnownBitsForTargetNode - Determine which of the bits specified in
 /// Mask are known to be either zero or one and return them Known.
 void AArch64TargetLowering::computeKnownBitsForTargetNode(
-    const SDValue Op, KnownBits &Known,
-    const APInt &DemandedElts, const SelectionDAG &DAG, unsigned Depth) const {
+    const SDValue Op, KnownBits &Known, const APInt &DemandedElts,
+    const SelectionDAG &DAG, unsigned Depth) const {
   switch (Op.getOpcode()) {
   default:
     break;
+  case AArch64ISD::DUP: {
+    SDValue SrcOp = Op.getOperand(0);
+    Known = DAG.computeKnownBits(SrcOp, Depth + 1);
+    if (SrcOp.getValueSizeInBits() != Op.getScalarValueSizeInBits()) {
+      assert(SrcOp.getValueSizeInBits() > Op.getScalarValueSizeInBits() &&
+             "Expected DUP implicit truncation");
+      Known = Known.trunc(Op.getScalarValueSizeInBits());
+    }
+    break;
+  }
   case AArch64ISD::CSEL: {
     KnownBits Known2;
     Known = DAG.computeKnownBits(Op->getOperand(0), Depth + 1);
@@ -14857,6 +14867,10 @@ performExtractVectorEltCombine(SDNode *N, TargetLowering::DAGCombinerInfo &DCI,
   EVT VT = N->getValueType(0);
   const bool FullFP16 = DAG.getSubtarget<AArch64Subtarget>().hasFullFP16();
   bool IsStrict = N0->isStrictFPOpcode();
+
+  // extract(dup x) -> x
+  if (N0.getOpcode() == AArch64ISD::DUP)
+    return DAG.getZExtOrTrunc(N0.getOperand(0), SDLoc(N), VT);
 
   // Rewrite for pairwise fadd pattern
   //   (f32 (extract_vector_elt

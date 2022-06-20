@@ -2493,7 +2493,7 @@ private:
           return mlir::emitError(loc, "invalid coordinate/check failed");
 
         // check if the i-th coordinate relates to an array
-        if (dims.hasValue()) {
+        if (dims) {
           arrIdx.push_back(nxtOpnd);
           int dimsLeft = *dims;
           if (dimsLeft > 1) {
@@ -2529,7 +2529,7 @@ private:
 
         offs.push_back(nxtOpnd);
       }
-      if (dims.hasValue())
+      if (dims)
         offs.append(arrIdx.rbegin(), arrIdx.rend());
       mlir::Value base = operands[0];
       mlir::Value retval = genGEP(loc, ty, rewriter, base, offs);

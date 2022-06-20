@@ -1684,7 +1684,7 @@ struct AffineForEmptyLoopFolder : public OpRewritePattern<AffineForOp> {
     if (forOp.getNumResults() == 0)
       return success();
     Optional<uint64_t> tripCount = getTrivialConstantTripCount(forOp);
-    if (tripCount.hasValue() && tripCount.getValue() == 0) {
+    if (tripCount && *tripCount == 0) {
       // The initial values of the iteration arguments would be the op's
       // results.
       rewriter.replaceOp(forOp, forOp.getIterOperands());
@@ -1771,7 +1771,7 @@ void AffineForOp::getSuccessorRegions(
 
   // From the loop body, if the trip count is one, we can only branch back to
   // the parent.
-  if (index.hasValue() && tripCount.hasValue() && tripCount.getValue() == 1) {
+  if (index && tripCount && *tripCount == 1) {
     regions.push_back(RegionSuccessor(getResults()));
     return;
   }

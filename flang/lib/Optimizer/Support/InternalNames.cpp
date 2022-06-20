@@ -38,7 +38,7 @@ static std::string doModules(llvm::ArrayRef<llvm::StringRef> mods) {
 static std::string doModulesHost(llvm::ArrayRef<llvm::StringRef> mods,
                                  llvm::Optional<llvm::StringRef> host) {
   std::string result = doModules(mods);
-  if (host.hasValue())
+  if (host)
     result.append("F").append(host->lower());
   return result;
 }

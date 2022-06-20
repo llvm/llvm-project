@@ -1013,7 +1013,7 @@ void SSANameState::printValueID(Value value, bool printResultNo,
     stream << nameIt->second;
   }
 
-  if (resultNo.hasValue() && printResultNo)
+  if (resultNo && printResultNo)
     stream << '#' << resultNo;
 }
 
