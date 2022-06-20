@@ -215,9 +215,8 @@ define double @fsub_noundef_ee (<8 x double> %x225, <8 x double> %x227) {
 ; KNL-LABEL: fsub_noundef_ee:
 ; KNL:       # %bb.0:
 ; KNL-NEXT:    vextractf32x4 $2, %zmm1, %xmm0
-; KNL-NEXT:    vmovddup {{.*#+}} xmm1 = xmm0[0,0]
-; KNL-NEXT:    vsubpd %xmm0, %xmm1, %xmm0
-; KNL-NEXT:    vpermilpd {{.*#+}} xmm0 = xmm0[1,0]
+; KNL-NEXT:    vpermilpd {{.*#+}} xmm1 = xmm0[1,0]
+; KNL-NEXT:    vsubsd %xmm1, %xmm0, %xmm0
 ; KNL-NEXT:    retq
 ;
 ; SKX-LABEL: fsub_noundef_ee:
