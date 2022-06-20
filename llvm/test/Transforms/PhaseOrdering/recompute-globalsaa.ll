@@ -9,6 +9,7 @@
 define i32 @main() {
 ; CHECK-LABEL: @main(
 ; CHECK-NEXT:  entry:
+; CHECK-NEXT:    store i1 true, i1* @a, align 4
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i32*, i32** @e, align 8
 ; CHECK-NEXT:    store i32 0, i32* [[TMP0]], align 4
 ; CHECK-NEXT:    store i32* null, i32** @e, align 8
