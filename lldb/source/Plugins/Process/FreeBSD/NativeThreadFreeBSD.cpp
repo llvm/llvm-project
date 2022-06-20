@@ -81,7 +81,7 @@ void NativeThreadFreeBSD::SetStoppedBySignal(uint32_t signo,
   SetStopped();
 
   m_stop_info.reason = StopReason::eStopReasonSignal;
-  m_stop_info.details.signal.signo = signo;
+  m_stop_info.signo = signo;
 
   m_stop_description.clear();
   if (info) {
@@ -100,19 +100,19 @@ void NativeThreadFreeBSD::SetStoppedBySignal(uint32_t signo,
 void NativeThreadFreeBSD::SetStoppedByBreakpoint() {
   SetStopped();
   m_stop_info.reason = StopReason::eStopReasonBreakpoint;
-  m_stop_info.details.signal.signo = SIGTRAP;
+  m_stop_info.signo = SIGTRAP;
 }
 
 void NativeThreadFreeBSD::SetStoppedByTrace() {
   SetStopped();
   m_stop_info.reason = StopReason::eStopReasonTrace;
-  m_stop_info.details.signal.signo = SIGTRAP;
+  m_stop_info.signo = SIGTRAP;
 }
 
 void NativeThreadFreeBSD::SetStoppedByExec() {
   SetStopped();
   m_stop_info.reason = StopReason::eStopReasonExec;
-  m_stop_info.details.signal.signo = SIGTRAP;
+  m_stop_info.signo = SIGTRAP;
 }
 
 void NativeThreadFreeBSD::SetStoppedByWatchpoint(uint32_t wp_index) {
@@ -127,7 +127,7 @@ void NativeThreadFreeBSD::SetStoppedByWatchpoint(uint32_t wp_index) {
   SetStopped();
   m_stop_description = ostr.str();
   m_stop_info.reason = StopReason::eStopReasonWatchpoint;
-  m_stop_info.details.signal.signo = SIGTRAP;
+  m_stop_info.signo = SIGTRAP;
 }
 
 void NativeThreadFreeBSD::SetStoppedByFork(lldb::pid_t child_pid,
@@ -135,6 +135,7 @@ void NativeThreadFreeBSD::SetStoppedByFork(lldb::pid_t child_pid,
   SetStopped();
 
   m_stop_info.reason = StopReason::eStopReasonFork;
+  m_stop_info.signo = SIGTRAP;
   m_stop_info.details.fork.child_pid = child_pid;
   m_stop_info.details.fork.child_tid = child_tid;
 }
@@ -144,6 +145,7 @@ void NativeThreadFreeBSD::SetStoppedByVFork(lldb::pid_t child_pid,
   SetStopped();
 
   m_stop_info.reason = StopReason::eStopReasonVFork;
+  m_stop_info.signo = SIGTRAP;
   m_stop_info.details.fork.child_pid = child_pid;
   m_stop_info.details.fork.child_tid = child_tid;
 }
@@ -152,13 +154,14 @@ void NativeThreadFreeBSD::SetStoppedByVForkDone() {
   SetStopped();
 
   m_stop_info.reason = StopReason::eStopReasonVForkDone;
+  m_stop_info.signo = SIGTRAP;
 }
 
 void NativeThreadFreeBSD::SetStoppedWithNoReason() {
   SetStopped();
 
   m_stop_info.reason = StopReason::eStopReasonNone;
-  m_stop_info.details.signal.signo = 0;
+  m_stop_info.signo = 0;
 }
 
 void NativeThreadFreeBSD::SetStopped() {
