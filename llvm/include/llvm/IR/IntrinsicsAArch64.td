@@ -2650,6 +2650,7 @@ let TargetPrefix = "aarch64" in {
   def int_aarch64_sme_writeq_horiz : SME_VectorToTile_Intrinsic;
   def int_aarch64_sme_writeq_vert  : SME_VectorToTile_Intrinsic;
 
+  def int_aarch64_sme_zero : DefaultAttrsIntrinsic<[], [llvm_i64_ty]>;
 
   //
   // Counting elements
