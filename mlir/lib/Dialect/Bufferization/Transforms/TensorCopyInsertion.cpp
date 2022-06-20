@@ -86,7 +86,7 @@ struct TensorCopyInsertionPass
   }
 
   void runOnOperation() override {
-    if (options.hasValue()) {
+    if (options) {
       if (failed(insertTensorCopies(getOperation(), *options)))
         signalPassFailure();
     } else {

@@ -101,7 +101,7 @@ static void buildStructuredOp(OpBuilder &b, OperationState &state,
   // Derive the result types if needed.
   SmallVector<Type> derivedResultTypes =
       resultTensorTypes.value_or(TypeRange());
-  if (!resultTensorTypes.hasValue())
+  if (!resultTensorTypes)
     copy_if(outputs.getTypes(), std::back_inserter(derivedResultTypes),
             [](Type type) { return type.isa<RankedTensorType>(); });
 

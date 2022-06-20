@@ -372,7 +372,7 @@ mlir::linalg::promoteSubviewsPrecondition(Operation *op,
     auto sv =
         isa_and_nonnull<memref::SubViewOp>(opOperand->get().getDefiningOp());
     if (sv) {
-      if (!options.operandsToPromote.hasValue() ||
+      if (!options.operandsToPromote ||
           options.operandsToPromote->count(opOperand->getOperandNumber()))
         return success();
     }

@@ -367,7 +367,7 @@ void AssumingOp::getSuccessorRegions(
   // AssumingOp has unconditional control flow into the region and back to the
   // parent, so return the correct RegionSuccessor purely based on the index
   // being None or 0.
-  if (index.hasValue()) {
+  if (index) {
     regions.push_back(RegionSuccessor(getResults()));
     return;
   }

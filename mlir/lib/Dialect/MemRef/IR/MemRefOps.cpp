@@ -290,7 +290,7 @@ ParseResult AllocaScopeOp::parse(OpAsmParser &parser, OperationState &result) {
 void AllocaScopeOp::getSuccessorRegions(
     Optional<unsigned> index, ArrayRef<Attribute> operands,
     SmallVectorImpl<RegionSuccessor> &regions) {
-  if (index.hasValue()) {
+  if (index) {
     regions.push_back(RegionSuccessor(getResults()));
     return;
   }
@@ -756,7 +756,7 @@ Optional<int64_t> DimOp::getConstantIndex() {
 LogicalResult DimOp::verify() {
   // Assume unknown index to be in range.
   Optional<int64_t> index = getConstantIndex();
-  if (!index.hasValue())
+  if (!index)
     return success();
 
   // Check that constant index is not knowingly out of range.
@@ -2323,7 +2323,7 @@ isRankReducedMemRefType(MemRefType originalType,
       originalType, candidateRankReducedType, sizes);
 
   // Sizes cannot be matched in case empty vector is returned.
-  if (!optionalUnusedDimsMask.hasValue())
+  if (!optionalUnusedDimsMask)
     return SliceVerificationResult::LayoutMismatch;
 
   if (originalType.getMemorySpace() !=

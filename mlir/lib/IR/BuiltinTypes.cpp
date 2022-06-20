@@ -460,7 +460,7 @@ mlir::isRankReducedType(ShapedType originalType,
       computeRankReductionMask(originalShape, candidateReducedShape);
 
   // Sizes cannot be matched in case empty vector is returned.
-  if (!optionalUnusedDimsMask.hasValue())
+  if (!optionalUnusedDimsMask)
     return SliceVerificationResult::SizeMismatch;
 
   if (originalShapedType.getElementType() !=

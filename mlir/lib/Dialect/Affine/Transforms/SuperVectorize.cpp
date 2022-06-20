@@ -1663,7 +1663,7 @@ static void vectorizeLoops(Operation *parentOp, DenseSet<Operation *> &loops,
   // Compute 1-D, 2-D or 3-D loop pattern to be matched on the target loops.
   Optional<NestedPattern> pattern =
       makePattern(loops, vectorSizes.size(), fastestVaryingPattern);
-  if (!pattern.hasValue()) {
+  if (!pattern) {
     LLVM_DEBUG(dbgs() << "\n[early-vect] pattern couldn't be computed\n");
     return;
   }

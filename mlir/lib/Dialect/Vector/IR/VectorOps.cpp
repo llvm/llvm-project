@@ -4759,7 +4759,7 @@ ParseResult WarpExecuteOnLane0Op::parse(OpAsmParser &parser,
 void WarpExecuteOnLane0Op::getSuccessorRegions(
     Optional<unsigned> index, ArrayRef<Attribute> operands,
     SmallVectorImpl<RegionSuccessor> &regions) {
-  if (index.hasValue()) {
+  if (index) {
     regions.push_back(RegionSuccessor(getResults()));
     return;
   }

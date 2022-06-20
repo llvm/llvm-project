@@ -599,7 +599,7 @@ AffineExpr AffineParser::parseAffineConstraint(bool *isEq) {
   if (consumeIf(Token::greater) && consumeIf(Token::equal) &&
       getToken().is(Token::integer)) {
     auto dim = getToken().getUnsignedIntegerValue();
-    if (dim.hasValue() && dim.getValue() == 0) {
+    if (dim && *dim == 0) {
       consumeToken(Token::integer);
       *isEq = false;
       return expr;
@@ -610,7 +610,7 @@ AffineExpr AffineParser::parseAffineConstraint(bool *isEq) {
   if (consumeIf(Token::equal) && consumeIf(Token::equal) &&
       getToken().is(Token::integer)) {
     auto dim = getToken().getUnsignedIntegerValue();
-    if (dim.hasValue() && dim.getValue() == 0) {
+    if (dim && *dim == 0) {
       consumeToken(Token::integer);
       *isEq = true;
       return expr;

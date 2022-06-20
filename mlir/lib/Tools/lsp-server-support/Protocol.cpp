@@ -37,7 +37,7 @@ static bool mapOptOrNull(const llvm::json::Value &params,
 
   // Field is missing or null.
   auto *v = o->get(prop);
-  if (!v || v->getAsNull().hasValue())
+  if (!v || v->getAsNull())
     return true;
   return fromJSON(*v, out, path.field(prop));
 }
@@ -545,7 +545,7 @@ llvm::json::Value mlir::lsp::toJSON(const MarkupContent &mc) {
 
 llvm::json::Value mlir::lsp::toJSON(const Hover &hover) {
   llvm::json::Object result{{"contents", toJSON(hover.contents)}};
-  if (hover.range.hasValue())
+  if (hover.range)
     result["range"] = toJSON(*hover.range);
   return std::move(result);
 }

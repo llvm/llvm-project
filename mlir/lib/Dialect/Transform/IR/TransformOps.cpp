@@ -124,7 +124,7 @@ LogicalResult PatternApplicatorExtension::findAllMatches(
 
 OperandRange
 transform::AlternativesOp::getSuccessorEntryOperands(Optional<unsigned> index) {
-  if (index.hasValue() && getOperation()->getNumOperands() == 1)
+  if (index && getOperation()->getNumOperands() == 1)
     return getOperation()->getOperands();
   return OperandRange(getOperation()->operand_end(),
                       getOperation()->operand_end());
@@ -471,7 +471,7 @@ transform::SequenceOp::getSuccessorEntryOperands(Optional<unsigned> index) {
 void transform::SequenceOp::getSuccessorRegions(
     Optional<unsigned> index, ArrayRef<Attribute> operands,
     SmallVectorImpl<RegionSuccessor> &regions) {
-  if (!index.hasValue()) {
+  if (!index) {
     Region *bodyRegion = &getBody();
     regions.emplace_back(bodyRegion, !operands.empty()
                                          ? bodyRegion->getArguments()

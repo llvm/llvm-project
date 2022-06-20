@@ -184,7 +184,7 @@ verifyScheduleModifiers(OpAsmParser &parser,
     // Translate the string. If it has no value, then it was not a valid
     // modifier!
     auto symbol = symbolizeScheduleModifier(mod);
-    if (!symbol.hasValue())
+    if (!symbol)
       return parser.emitError(parser.getNameLoc())
              << " unknown modifier type: " << mod;
   }

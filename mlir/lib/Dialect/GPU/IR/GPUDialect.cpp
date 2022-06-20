@@ -310,7 +310,7 @@ static void printAsyncDependencies(OpAsmPrinter &printer, Operation *op,
 //===----------------------------------------------------------------------===//
 
 LogicalResult gpu::AllReduceOp::verifyRegions() {
-  if (body().empty() != op().hasValue())
+  if (body().empty() != op().has_value())
     return emitError("expected either an op attribute or a non-empty body");
   if (!body().empty()) {
     if (body().getNumArguments() != 2)

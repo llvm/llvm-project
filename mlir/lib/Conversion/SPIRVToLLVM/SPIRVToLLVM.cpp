@@ -897,7 +897,7 @@ public:
   LogicalResult
   matchAndRewrite(SPIRVOp op, typename SPIRVOp::Adaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
-    if (!op.memory_access().hasValue()) {
+    if (!op.memory_access()) {
       return replaceWithLoadOrStore(op, adaptor.getOperands(), rewriter,
                                     this->typeConverter, /*alignment=*/0,
                                     /*isVolatile=*/false,

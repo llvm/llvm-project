@@ -191,7 +191,7 @@ struct RawBufferOpLowering : public ConvertOpToLLVMPattern<GpuOp> {
       voffset =
           voffset ? rewriter.create<LLVM::AddOp>(loc, voffset, index) : index;
     }
-    if (adaptor.getIndexOffset().hasValue()) {
+    if (adaptor.getIndexOffset()) {
       int32_t indexOffset = *gpuOp.getIndexOffset() * elementByteWidth;
       Value extraOffsetConst = createI32Constant(rewriter, loc, indexOffset);
       voffset =

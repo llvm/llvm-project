@@ -230,7 +230,7 @@ Optional<bool> ComputationSliceState::isSliceValid() {
   // TODO: Store the result of the fast check, as it might be used again in
   // `canRemoveSrcNodeAfterFusion`.
   Optional<bool> isValidFastCheck = isSliceMaximalFastCheck();
-  if (isValidFastCheck.hasValue() && isValidFastCheck.getValue())
+  if (isValidFastCheck && *isValidFastCheck)
     return true;
 
   // Create constraints for the source loop nest using which slice is computed.
@@ -292,7 +292,7 @@ Optional<bool> ComputationSliceState::isMaximal() const {
   // Fast check to determine if the computation slice is maximal. If the result
   // is inconclusive, we proceed with a more expensive analysis.
   Optional<bool> isMaximalFastCheck = isSliceMaximalFastCheck();
-  if (isMaximalFastCheck.hasValue())
+  if (isMaximalFastCheck)
     return isMaximalFastCheck;
 
   // Create constraints for the src loop nest being sliced.
@@ -630,7 +630,7 @@ Optional<int64_t> MemRefRegion::getRegionSize() {
 
   // Compute the extents of the buffer.
   Optional<int64_t> numElements = getConstantBoundingSizeAndShape();
-  if (!numElements.hasValue()) {
+  if (!numElements) {
     LLVM_DEBUG(llvm::dbgs() << "Dynamic shapes not yet supported\n");
     return None;
   }
@@ -960,7 +960,7 @@ mlir::computeSliceUnion(ArrayRef<Operation *> opsA, ArrayRef<Operation *> opsB,
   // Check if the slice computed is valid. Return success only if it is verified
   // that the slice is valid, otherwise return appropriate failure status.
   Optional<bool> isSliceValid = sliceUnion->isSliceValid();
-  if (!isSliceValid.hasValue()) {
+  if (!isSliceValid) {
     LLVM_DEBUG(llvm::dbgs() << "Cannot determine if the slice is valid\n");
     return SliceComputationResult::GenericFailure;
   }

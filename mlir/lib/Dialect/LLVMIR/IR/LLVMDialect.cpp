@@ -215,7 +215,7 @@ void AllocaOp::print(OpAsmPrinter &p) {
       FunctionType::get(getContext(), {getArraySize().getType()}, {getType()});
 
   p << ' ' << getArraySize() << " x " << elemTy;
-  if (getAlignment().hasValue() && *getAlignment() != 0)
+  if (getAlignment() && *getAlignment() != 0)
     p.printOptionalAttrDict((*this)->getAttrs(), {kElemTypeAttrName});
   else
     p.printOptionalAttrDict((*this)->getAttrs(),
@@ -1040,7 +1040,7 @@ ParseResult InvokeOp::parse(OpAsmParser &parser, OperationState &result) {
 LogicalResult LandingpadOp::verify() {
   Value value;
   if (LLVMFuncOp func = (*this)->getParentOfType<LLVMFuncOp>()) {
-    if (!func.getPersonality().hasValue())
+    if (!func.getPersonality())
       return emitError(
           "llvm.landingpad needs to be in a function with a personality");
   }
@@ -2748,7 +2748,7 @@ LogicalResult LLVMDialect::verifyOperationAttribute(Operation *op,
                                << "' to be a dictionary attribute";
     Optional<NamedAttribute> parallelAccessGroup =
         loopAttr.getNamed(LLVMDialect::getParallelAccessAttrName());
-    if (parallelAccessGroup.hasValue()) {
+    if (parallelAccessGroup) {
       auto accessGroups = parallelAccessGroup->getValue().dyn_cast<ArrayAttr>();
       if (!accessGroups)
         return op->emitOpError()
@@ -3010,7 +3010,7 @@ LoopOptionsAttrBuilder &LoopOptionsAttrBuilder::setOption(LoopOptionCase tag,
   auto option = llvm::find_if(
       options, [tag](auto option) { return option.first == tag; });
   if (option != options.end()) {
-    if (value.hasValue())
+    if (value)
       option->second = *value;
     else
       options.erase(option);

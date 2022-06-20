@@ -413,7 +413,7 @@ struct TestVectorDistributePatterns
                                   perm, ctx);
         Optional<mlir::vector::DistributeOps> ops = distributPointwiseVectorOp(
             builder, op.getOperation(), ids, mul, map);
-        if (ops.hasValue()) {
+        if (ops) {
           SmallPtrSet<Operation *, 1> extractOp({ops->extract, ops->insert});
           op.getResult().replaceAllUsesExcept(ops->insert.getResult(),
                                               extractOp);
@@ -474,7 +474,7 @@ struct TestVectorToLoopPatterns
       Optional<mlir::vector::DistributeOps> ops = distributPointwiseVectorOp(
           builder, op.getOperation(), {forOp.getInductionVar()}, {multiplicity},
           map);
-      if (ops.hasValue()) {
+      if (ops) {
         SmallPtrSet<Operation *, 1> extractOp({ops->extract, ops->insert});
         op.getResult().replaceAllUsesExcept(ops->insert.getResult(), extractOp);
       }
