@@ -101,9 +101,9 @@ static void transformIndices(OpBuilder &builder, Location loc,
 
 Operation::operand_range getIndices(Operation *op) {
   if (auto ldmatrixOp = dyn_cast<LdMatrixOp>(op))
-    return ldmatrixOp.indices();
+    return ldmatrixOp.getIndices();
   if (auto copyOp = dyn_cast<DeviceAsyncCopyOp>(op))
-    return copyOp.dstIndices();
+    return copyOp.getDstIndices();
   if (auto loadOp = dyn_cast<memref::LoadOp>(op))
     return loadOp.indices();
   if (auto storeOp = dyn_cast<memref::StoreOp>(op))
@@ -117,9 +117,9 @@ Operation::operand_range getIndices(Operation *op) {
 
 void setIndices(Operation *op, ArrayRef<Value> indices) {
   if (auto ldmatrixOp = dyn_cast<LdMatrixOp>(op))
-    return ldmatrixOp.indicesMutable().assign(indices);
+    return ldmatrixOp.getIndicesMutable().assign(indices);
   if (auto copyOp = dyn_cast<DeviceAsyncCopyOp>(op))
-    return copyOp.dstIndicesMutable().assign(indices);
+    return copyOp.getDstIndicesMutable().assign(indices);
   if (auto loadOp = dyn_cast<memref::LoadOp>(op))
     return loadOp.indicesMutable().assign(indices);
   if (auto storeOp = dyn_cast<memref::StoreOp>(op))

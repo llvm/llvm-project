@@ -1036,7 +1036,7 @@ static bool areEquivalentExtractSliceOps(const AnalysisState &state,
   if (!st || !sti)
     return false;
   if (st != sti &&
-      !state.areEquivalentBufferizedValues(st.source(), sti.getDest()))
+      !state.areEquivalentBufferizedValues(st.getSource(), sti.getDest()))
     return false;
   if (!sameOffsetsSizesAndStrides(st, sti, isEqualConstantIntOrValue))
     return false;

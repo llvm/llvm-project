@@ -221,14 +221,15 @@ struct MmaLdMatrixOpToNVVM : public ConvertOpToLLVMPattern<nvgpu::LdMatrixOp> {
       ldMatrixResultType = rewriter.getI32Type();
     }
 
-    auto srcMemrefType = op.srcMemref().getType().cast<MemRefType>();
-    Value srcPtr = getStridedElementPtr(loc, srcMemrefType, adaptor.srcMemref(),
-                                        adaptor.indices(), rewriter);
+    auto srcMemrefType = op.getSrcMemref().getType().cast<MemRefType>();
+    Value srcPtr =
+        getStridedElementPtr(loc, srcMemrefType, adaptor.getSrcMemref(),
+                             adaptor.getIndices(), rewriter);
     Value ldMatrixResult = rewriter.create<NVVM::LdMatrixOp>(
         loc, ldMatrixResultType, srcPtr,
-        /*num=*/op.numTiles(),
-        /*layout=*/op.transpose() ? NVVM::MMALayout::col
-                                  : NVVM::MMALayout::row);
+        /*num=*/op.getNumTiles(),
+        /*layout=*/op.getTranspose() ? NVVM::MMALayout::col
+                                     : NVVM::MMALayout::row);
 
     // The ldmatrix operation returns either a single i32 value or a struct of
     // i32 values. Here we unpack those values and cast them back to their
@@ -262,12 +263,12 @@ struct MmaSyncOptoNVVM : public ConvertOpToLLVMPattern<nvgpu::MmaSyncOp> {
     Location loc = op->getLoc();
     // Get the shapes of the MMAMatrix type being used. The shapes will
     // choose which intrinsic this op will be lowered to.
-    auto aType = op.matrixA().getType().cast<VectorType>();
-    auto cType = op.matrixC().getType().cast<VectorType>();
+    auto aType = op.getMatrixA().getType().cast<VectorType>();
+    auto cType = op.getMatrixC().getType().cast<VectorType>();
 
-    int64_t m = op.mmaShape()[0].cast<IntegerAttr>().getInt();
-    int64_t n = op.mmaShape()[1].cast<IntegerAttr>().getInt();
-    int64_t k = op.mmaShape()[2].cast<IntegerAttr>().getInt();
+    int64_t m = op.getMmaShape()[0].cast<IntegerAttr>().getInt();
+    int64_t n = op.getMmaShape()[1].cast<IntegerAttr>().getInt();
+    int64_t k = op.getMmaShape()[2].cast<IntegerAttr>().getInt();
     std::array<int64_t, 3> gemmShape{m, n, k};
 
     NVVM::MMATypes ptxTypeA;
@@ -302,11 +303,11 @@ struct MmaSyncOptoNVVM : public ConvertOpToLLVMPattern<nvgpu::MmaSyncOp> {
     }
 
     SmallVector<Value> matA =
-        unpackOperandVector(rewriter, loc, adaptor.matrixA(), ptxTypeA);
+        unpackOperandVector(rewriter, loc, adaptor.getMatrixA(), ptxTypeA);
     SmallVector<Value> matB =
-        unpackOperandVector(rewriter, loc, adaptor.matrixB(), ptxTypeB);
+        unpackOperandVector(rewriter, loc, adaptor.getMatrixB(), ptxTypeB);
     SmallVector<Value> matC =
-        unpackOperandVector(rewriter, loc, adaptor.matrixC(), *ptxTypeC);
+        unpackOperandVector(rewriter, loc, adaptor.getMatrixC(), *ptxTypeC);
 
     Type desiredRetTy = typeConverter->convertType(op->getResultTypes()[0]);
     Type intrinsicResTy = inferIntrinsicResultType(
@@ -359,18 +360,18 @@ struct NVGPUAsyncCopyLowering
   matchAndRewrite(nvgpu::DeviceAsyncCopyOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
     Location loc = op->getLoc();
-    auto dstMemrefType = op.dst().getType().cast<MemRefType>();
-    Value dstPtr = getStridedElementPtr(loc, dstMemrefType, adaptor.dst(),
-                                        adaptor.dstIndices(), rewriter);
+    auto dstMemrefType = op.getDst().getType().cast<MemRefType>();
+    Value dstPtr = getStridedElementPtr(loc, dstMemrefType, adaptor.getDst(),
+                                        adaptor.getDstIndices(), rewriter);
     auto i8Ty = IntegerType::get(op.getContext(), 8);
     auto dstPointerType =
         LLVM::LLVMPointerType::get(i8Ty, dstMemrefType.getMemorySpaceAsInt());
     dstPtr = rewriter.create<LLVM::BitcastOp>(loc, dstPointerType, dstPtr);
 
-    auto srcMemrefType = op.src().getType().cast<MemRefType>();
+    auto srcMemrefType = op.getSrc().getType().cast<MemRefType>();
 
-    Value scrPtr = getStridedElementPtr(loc, srcMemrefType, adaptor.src(),
-                                        adaptor.srcIndices(), rewriter);
+    Value scrPtr = getStridedElementPtr(loc, srcMemrefType, adaptor.getSrc(),
+                                        adaptor.getSrcIndices(), rewriter);
     auto srcPointerType =
         LLVM::LLVMPointerType::get(i8Ty, srcMemrefType.getMemorySpaceAsInt());
     scrPtr = rewriter.create<LLVM::BitcastOp>(loc, srcPointerType, scrPtr);
@@ -379,12 +380,13 @@ struct NVGPUAsyncCopyLowering
         i8Ty, NVVM::NVVMMemorySpace::kGlobalMemorySpace);
     scrPtr = rewriter.create<LLVM::AddrSpaceCastOp>(loc, srcPointerGlobalType,
                                                     scrPtr);
-    int64_t numElements = adaptor.numElements().getZExtValue();
+    int64_t numElements = adaptor.getNumElements().getZExtValue();
     int64_t sizeInBytes =
         (dstMemrefType.getElementTypeBitWidth() * numElements) / 8;
     // bypass L1 is only supported for byte sizes of 16, we drop the hint
     // otherwise.
-    UnitAttr bypassL1 = sizeInBytes == 16 ? adaptor.bypassL1Attr() : UnitAttr();
+    UnitAttr bypassL1 =
+        sizeInBytes == 16 ? adaptor.getBypassL1Attr() : UnitAttr();
     rewriter.create<NVVM::CpAsyncOp>(
         loc, dstPtr, scrPtr, rewriter.getI32IntegerAttr(sizeInBytes), bypassL1);
 
@@ -424,7 +426,7 @@ struct NVGPUAsyncWaitLowering
   matchAndRewrite(nvgpu::DeviceAsyncWaitOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
     // If numGroup is not present pick 0 as a conservative correct value.
-    int32_t numGroups = adaptor.numGroups() ? *adaptor.numGroups() : 0;
+    int32_t numGroups = adaptor.getNumGroups() ? *adaptor.getNumGroups() : 0;
     rewriter.create<NVVM::CpAsyncWaitGroupOp>(op.getLoc(), numGroups);
     rewriter.eraseOp(op);
     return success();

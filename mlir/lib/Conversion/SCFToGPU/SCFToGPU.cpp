@@ -106,7 +106,7 @@ static Value getOrEmitUpperBound(AffineForOp forOp, OpBuilder &builder) {
 // rewriting infrastructure.
 static LogicalResult checkAffineLoopNestMappableImpl(AffineForOp forOp,
                                                      unsigned numDims) {
-  Region &limit = forOp.region();
+  Region &limit = forOp.getRegion();
   for (unsigned i = 0, e = numDims; i < e; ++i) {
     Operation *nested = &forOp.getBody()->front();
     if (!areValuesDefinedAbove(getLowerBoundOperands(forOp), limit) ||
@@ -320,7 +320,7 @@ static Value deriveStaticUpperBound(Value upperBound,
   }
 
   if (auto minOp = upperBound.getDefiningOp<AffineMinOp>()) {
-    for (const AffineExpr &result : minOp.map().getResults()) {
+    for (const AffineExpr &result : minOp.getMap().getResults()) {
       if (auto constExpr = result.dyn_cast<AffineConstantExpr>()) {
         return rewriter.create<arith::ConstantIndexOp>(minOp.getLoc(),
                                                        constExpr.getValue());
