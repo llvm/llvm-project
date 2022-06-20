@@ -13,6 +13,7 @@
 #include "LoongArchISelDAGToDAG.h"
 #include "MCTargetDesc/LoongArchMCTargetDesc.h"
 #include "MCTargetDesc/LoongArchMatInt.h"
+#include "llvm/Support/KnownBits.h"
 
 using namespace llvm;
 
@@ -64,6 +65,54 @@ void LoongArchDAGToDAGISel::Select(SDNode *Node) {
   // Select the default instruction.
   SelectCode(Node);
 }
+
+bool LoongArchDAGToDAGISel::selectShiftMask(SDValue N, unsigned ShiftWidth,
+                                            SDValue &ShAmt) {
+  // Shift instructions on LoongArch only read the lower 5 or 6 bits of the
+  // shift amount. If there is an AND on the shift amount, we can bypass it if
+  // it doesn't affect any of those bits.
+  if (N.getOpcode() == ISD::AND && isa<ConstantSDNode>(N.getOperand(1))) {
+    const APInt &AndMask = N->getConstantOperandAPInt(1);
+
+    // Since the max shift amount is a power of 2 we can subtract 1 to make a
+    // mask that covers the bits needed to represent all shift amounts.
+    assert(isPowerOf2_32(ShiftWidth) && "Unexpected max shift amount!");
+    APInt ShMask(AndMask.getBitWidth(), ShiftWidth - 1);
+
+    if (ShMask.isSubsetOf(AndMask)) {
+      ShAmt = N.getOperand(0);
+      return true;
+    }
+
+    // SimplifyDemandedBits may have optimized the mask so try restoring any
+    // bits that are known zero.
+    KnownBits Known = CurDAG->computeKnownBits(N->getOperand(0));
+    if (ShMask.isSubsetOf(AndMask | Known.Zero)) {
+      ShAmt = N.getOperand(0);
+      return true;
+    }
+  } else if (N.getOpcode() == ISD::SUB &&
+             isa<ConstantSDNode>(N.getOperand(0))) {
+    uint64_t Imm = N.getConstantOperandVal(0);
+    // If we are shifting by N-X where N == 0 mod Size, then just shift by -X to
+    // generate a NEG instead of a SUB of a constant.
+    if (Imm != 0 && Imm % ShiftWidth == 0) {
+      SDLoc DL(N);
+      EVT VT = N.getValueType();
+      SDValue Zero =
+          CurDAG->getCopyFromReg(CurDAG->getEntryNode(), DL, LoongArch::R0, VT);
+      unsigned NegOpc = VT == MVT::i64 ? LoongArch::SUB_D : LoongArch::SUB_W;
+      MachineSDNode *Neg =
+          CurDAG->getMachineNode(NegOpc, DL, VT, Zero, N.getOperand(1));
+      ShAmt = SDValue(Neg, 0);
+      return true;
+    }
+  }
+
+  ShAmt = N;
+  return true;
+}
+
 // This pass converts a legalized DAG into a LoongArch-specific DAG, ready
 // for instruction scheduling.
 FunctionPass *llvm::createLoongArchISelDag(LoongArchTargetMachine &TM) {
