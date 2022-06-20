@@ -12,8 +12,7 @@ define void @init() #0 {
 ; CHECK-NEXT:    [[MALLOCCALL:%.*]] = tail call i8* @malloc(i64 4)
 ; CHECK-NEXT:    [[P:%.*]] = bitcast i8* [[MALLOCCALL]] to i32*
 ; CHECK-NEXT:    store i32* [[P]], i32** @G, align 8
-; CHECK-NEXT:    [[GV:%.*]] = load i32*, i32** @G, align 8
-; CHECK-NEXT:    store i32 0, i32* [[GV]], align 4
+; CHECK-NEXT:    store i32 0, i32* [[P]], align 4
 ; CHECK-NEXT:    ret void
 ;
   %malloccall = tail call i8* @malloc(i64 4)
