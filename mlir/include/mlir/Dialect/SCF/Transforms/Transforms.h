@@ -10,8 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef MLIR_DIALECT_SCF_TRANSFORMS_H_
-#define MLIR_DIALECT_SCF_TRANSFORMS_H_
+#ifndef MLIR_DIALECT_SCF_TRANSFORMS_TRANSFORMS_H_
+#define MLIR_DIALECT_SCF_TRANSFORMS_TRANSFORMS_H_
 
 #include "mlir/Dialect/SCF/Utils/AffineCanonicalizationUtils.h"
 #include "mlir/Support/LLVM.h"
@@ -171,4 +171,4 @@ void populateSCFForLoopCanonicalizationPatterns(RewritePatternSet &patterns);
 } // namespace scf
 } // namespace mlir
 
-#endif // MLIR_DIALECT_SCF_TRANSFORMS_H_
+#endif // MLIR_DIALECT_SCF_TRANSFORMS_TRANSFORMS_H_

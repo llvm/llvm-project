@@ -6,11 +6,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef MLIR_DIALECT_SCF_PATTERNS_H
-#define MLIR_DIALECT_SCF_PATTERNS_H
+#ifndef MLIR_DIALECT_SCF_TRANSFORMS_PATTERNS_H
+#define MLIR_DIALECT_SCF_TRANSFORMS_PATTERNS_H
 
-#include "mlir/Dialect/SCF/SCF.h"
-#include "mlir/Dialect/SCF/Transforms.h"
+#include "mlir/Dialect/SCF/IR/SCF.h"
+#include "mlir/Dialect/SCF/Transforms/Transforms.h"
 #include "mlir/IR/PatternMatch.h"
 
 namespace mlir {
@@ -51,4 +51,4 @@ protected:
 } // namespace scf
 } // namespace mlir
 
-#endif // MLIR_DIALECT_SCF_PATTERNS_H
+#endif // MLIR_DIALECT_SCF_TRANSFORMS_PATTERNS_H

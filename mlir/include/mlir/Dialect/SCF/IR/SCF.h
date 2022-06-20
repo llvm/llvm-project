@@ -27,10 +27,10 @@ void buildTerminatedBody(OpBuilder &builder, Location loc);
 } // namespace scf
 } // namespace mlir
 
-#include "mlir/Dialect/SCF/SCFOpsDialect.h.inc"
+#include "mlir/Dialect/SCF/IR/SCFOpsDialect.h.inc"
 
 #define GET_OP_CLASSES
-#include "mlir/Dialect/SCF/SCFOps.h.inc"
+#include "mlir/Dialect/SCF/IR/SCFOps.h.inc"
 
 namespace mlir {
 namespace scf {
