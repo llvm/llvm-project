@@ -2439,8 +2439,8 @@ define <4 x float> @combine_undef_input_test20(<4 x float> %a) {
 define <8 x i32> @combine_unneeded_subvector1(<8 x i32> %a) {
 ; SSE-LABEL: combine_unneeded_subvector1:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    paddd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
 ; SSE-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[3,2,1,0]
+; SSE-NEXT:    paddd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; SSE-NEXT:    movdqa %xmm0, %xmm1
 ; SSE-NEXT:    retq
 ;
@@ -2454,8 +2454,8 @@ define <8 x i32> @combine_unneeded_subvector1(<8 x i32> %a) {
 ;
 ; AVX2-SLOW-LABEL: combine_unneeded_subvector1:
 ; AVX2-SLOW:       # %bb.0:
-; AVX2-SLOW-NEXT:    vpaddd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0
 ; AVX2-SLOW-NEXT:    vpshufd {{.*#+}} ymm0 = ymm0[3,2,1,0,7,6,5,4]
+; AVX2-SLOW-NEXT:    vpaddd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0
 ; AVX2-SLOW-NEXT:    vpermq {{.*#+}} ymm0 = ymm0[2,3,2,3]
 ; AVX2-SLOW-NEXT:    retq
 ;
@@ -2469,8 +2469,8 @@ define <8 x i32> @combine_unneeded_subvector1(<8 x i32> %a) {
 ;
 ; AVX2-FAST-PERLANE-LABEL: combine_unneeded_subvector1:
 ; AVX2-FAST-PERLANE:       # %bb.0:
-; AVX2-FAST-PERLANE-NEXT:    vpaddd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0
 ; AVX2-FAST-PERLANE-NEXT:    vpshufd {{.*#+}} ymm0 = ymm0[3,2,1,0,7,6,5,4]
+; AVX2-FAST-PERLANE-NEXT:    vpaddd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0
 ; AVX2-FAST-PERLANE-NEXT:    vpermq {{.*#+}} ymm0 = ymm0[2,3,2,3]
 ; AVX2-FAST-PERLANE-NEXT:    retq
   %b = add <8 x i32> %a, <i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8>
@@ -2481,9 +2481,9 @@ define <8 x i32> @combine_unneeded_subvector1(<8 x i32> %a) {
 define <8 x i32> @combine_unneeded_subvector2(<8 x i32> %a, <8 x i32> %b) {
 ; SSE-LABEL: combine_unneeded_subvector2:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    paddd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
 ; SSE-NEXT:    pshufd {{.*#+}} xmm0 = xmm3[3,2,1,0]
 ; SSE-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[3,2,1,0]
+; SSE-NEXT:    paddd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
 ; SSE-NEXT:    retq
 ;
 ; AVX1-LABEL: combine_unneeded_subvector2:
@@ -3419,13 +3419,12 @@ define void @SpinningCube() {
 ; AVX1-NEXT:    vmovaps {{.*#+}} xmm0 = <u,u,u,1.0E+0>
 ; AVX1-NEXT:    vmovaps {{.*#+}} xmm1 = <0.0E+0,0.0E+0,-2.0E+0,u>
 ; AVX1-NEXT:    vmovss {{.*#+}} xmm2 = mem[0],zero,zero,zero
-; AVX1-NEXT:    vinsertps {{.*#+}} xmm1 = xmm1[0,1,2],xmm2[0]
+; AVX1-NEXT:    vinsertps {{.*#+}} xmm3 = xmm1[0,1,2],xmm2[0]
 ; AVX1-NEXT:    vinsertps {{.*#+}} xmm2 = xmm0[0],xmm2[0],xmm0[2,3]
-; AVX1-NEXT:    vaddps %xmm2, %xmm1, %xmm1
-; AVX1-NEXT:    vmovaps %xmm1, (%rax)
-; AVX1-NEXT:    vbroadcastss (%rax), %xmm1
-; AVX1-NEXT:    vmulps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm1
-; AVX1-NEXT:    vpermilps {{.*#+}} xmm1 = xmm1[0,0,1,3]
+; AVX1-NEXT:    vaddps %xmm2, %xmm3, %xmm2
+; AVX1-NEXT:    vmovaps %xmm2, (%rax)
+; AVX1-NEXT:    vbroadcastss (%rax), %xmm2
+; AVX1-NEXT:    vmulps %xmm1, %xmm2, %xmm1
 ; AVX1-NEXT:    vaddps %xmm0, %xmm1, %xmm0
 ; AVX1-NEXT:    vmovaps %xmm0, (%rax)
 ; AVX1-NEXT:    retq
@@ -3436,13 +3435,12 @@ define void @SpinningCube() {
 ; AVX2-NEXT:    vbroadcastss {{.*#+}} xmm0 = [1.0E+0,1.0E+0,1.0E+0,1.0E+0]
 ; AVX2-NEXT:    vmovaps {{.*#+}} xmm1 = <0.0E+0,0.0E+0,-2.0E+0,u>
 ; AVX2-NEXT:    vmovss {{.*#+}} xmm2 = mem[0],zero,zero,zero
-; AVX2-NEXT:    vinsertps {{.*#+}} xmm1 = xmm1[0,1,2],xmm2[0]
+; AVX2-NEXT:    vinsertps {{.*#+}} xmm3 = xmm1[0,1,2],xmm2[0]
 ; AVX2-NEXT:    vinsertps {{.*#+}} xmm2 = xmm0[0],xmm2[0],xmm0[2,3]
-; AVX2-NEXT:    vaddps %xmm2, %xmm1, %xmm1
-; AVX2-NEXT:    vmovaps %xmm1, (%rax)
-; AVX2-NEXT:    vbroadcastss (%rax), %xmm1
-; AVX2-NEXT:    vmulps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm1
-; AVX2-NEXT:    vpermilps {{.*#+}} xmm1 = xmm1[0,0,1,3]
+; AVX2-NEXT:    vaddps %xmm2, %xmm3, %xmm2
+; AVX2-NEXT:    vmovaps %xmm2, (%rax)
+; AVX2-NEXT:    vbroadcastss (%rax), %xmm2
+; AVX2-NEXT:    vmulps %xmm1, %xmm2, %xmm1
 ; AVX2-NEXT:    vaddps %xmm0, %xmm1, %xmm0
 ; AVX2-NEXT:    vmovaps %xmm0, (%rax)
 ; AVX2-NEXT:    retq
