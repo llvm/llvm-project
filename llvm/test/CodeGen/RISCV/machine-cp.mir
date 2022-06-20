@@ -18,14 +18,14 @@ body:             |
     ; RV32-LABEL: name: foo
     ; RV32: liveins: $v28_v29_v30, $v8_v9, $v1
     ; RV32-NEXT: {{  $}}
-    ; RV32-NEXT: renamable $v4_v5_v6_v7_v8_v9_v10_v11 = COPY renamable $v0_v1_v2_v3_v4_v5_v6_v7
-    ; RV32-NEXT: renamable $v28 = COPY $v1, implicit killed $v28_v29_v30, implicit-def $v28_v29_v30
+    ; RV32-NEXT: renamable $v4_v5_v6_v7_v8_v9_v10_v11 = COPY killed renamable $v0_v1_v2_v3_v4_v5_v6_v7
+    ; RV32-NEXT: renamable $v28 = COPY renamable $v8, implicit killed $v28_v29_v30, implicit-def $v28_v29_v30
     ; RV32-NEXT: PseudoRET implicit $v28
     ; RV64-LABEL: name: foo
     ; RV64: liveins: $v28_v29_v30, $v8_v9, $v1
     ; RV64-NEXT: {{  $}}
-    ; RV64-NEXT: renamable $v4_v5_v6_v7_v8_v9_v10_v11 = COPY renamable $v0_v1_v2_v3_v4_v5_v6_v7
-    ; RV64-NEXT: renamable $v28 = COPY $v1, implicit killed $v28_v29_v30, implicit-def $v28_v29_v30
+    ; RV64-NEXT: renamable $v4_v5_v6_v7_v8_v9_v10_v11 = COPY killed renamable $v0_v1_v2_v3_v4_v5_v6_v7
+    ; RV64-NEXT: renamable $v28 = COPY renamable $v8, implicit killed $v28_v29_v30, implicit-def $v28_v29_v30
     ; RV64-NEXT: PseudoRET implicit $v28
     renamable $v8 = COPY renamable $v1, implicit killed $v8_v9, implicit-def $v8_v9
     renamable $v4_v5_v6_v7_v8_v9_v10_v11 = COPY killed renamable $v0_v1_v2_v3_v4_v5_v6_v7
