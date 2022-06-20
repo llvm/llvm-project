@@ -298,7 +298,7 @@ void DefFormat::genParser(MethodBody &os) {
   for (const AttrOrTypeParameter &param : params) {
     os << ",\n    ";
     if (param.isOptional()) {
-      os << formatv("_result_{0}.getValueOr(", param.getName());
+      os << formatv("_result_{0}.value_or(", param.getName());
       if (Optional<StringRef> defaultValue = param.getDefaultValue())
         os << tgfmt(*defaultValue, &ctx);
       else

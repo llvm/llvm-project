@@ -1424,8 +1424,9 @@ Optional<ValueLatticeElement> LazyValueInfoImpl::getEdgeValue(
   if (Constant *VC = dyn_cast<Constant>(Val))
     return ValueLatticeElement::get(VC);
 
-  ValueLatticeElement LocalResult = getEdgeValueLocal(Val, BBFrom, BBTo)
-      .getValueOr(ValueLatticeElement::getOverdefined());
+  ValueLatticeElement LocalResult =
+      getEdgeValueLocal(Val, BBFrom, BBTo)
+          .value_or(ValueLatticeElement::getOverdefined());
   if (hasSingleValue(LocalResult))
     // Can't get any more precise here
     return LocalResult;

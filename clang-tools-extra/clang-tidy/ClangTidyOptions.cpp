@@ -207,7 +207,7 @@ std::vector<OptionsSource>
 ConfigOptionsProvider::getRawOptions(llvm::StringRef FileName) {
   std::vector<OptionsSource> RawOptions =
       DefaultOptionsProvider::getRawOptions(FileName);
-  if (ConfigOptions.InheritParentConfig.getValueOr(false)) {
+  if (ConfigOptions.InheritParentConfig.value_or(false)) {
     LLVM_DEBUG(llvm::dbgs()
                << "Getting options for file " << FileName << "...\n");
     assert(FS && "FS must be set.");
@@ -276,7 +276,7 @@ void FileOptionsBaseProvider::addRawFileOptions(
       CachedOptions[Path] = *Result;
 
       CurOptions.push_back(*Result);
-      if (!Result->first.InheritParentConfig.getValueOr(false))
+      if (!Result->first.InheritParentConfig.value_or(false))
         break;
     }
   }

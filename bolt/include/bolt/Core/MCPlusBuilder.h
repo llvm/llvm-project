@@ -1046,8 +1046,13 @@ public:
   /// Return handler and action info for invoke instruction if present.
   Optional<MCPlus::MCLandingPad> getEHInfo(const MCInst &Inst) const;
 
-  // Add handler and action info for call instruction.
+  /// Add handler and action info for call instruction.
   void addEHInfo(MCInst &Inst, const MCPlus::MCLandingPad &LP);
+
+  /// Update exception-handling info for the invoke instruction \p Inst.
+  /// Return true on success and false otherwise, e.g. if the instruction is
+  /// not an invoke.
+  bool updateEHInfo(MCInst &Inst, const MCPlus::MCLandingPad &LP);
 
   /// Return non-negative GNU_args_size associated with the instruction
   /// or -1 if there's no associated info.

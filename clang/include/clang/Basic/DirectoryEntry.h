@@ -130,18 +130,31 @@ public:
 
   void reset() { MaybeRef = optional_none_tag(); }
 
+  bool has_value() const { return MaybeRef.hasOptionalValue(); }
   bool hasValue() const { return MaybeRef.hasOptionalValue(); }
 
+  RefTy &value() & {
+    assert(has_value());
+    return MaybeRef;
+  }
   RefTy &getValue() & {
-    assert(hasValue());
+    assert(has_value());
+    return MaybeRef;
+  }
+  RefTy const &value() const & {
+    assert(has_value());
     return MaybeRef;
   }
   RefTy const &getValue() const & {
-    assert(hasValue());
+    assert(has_value());
     return MaybeRef;
   }
+  RefTy &&value() && {
+    assert(has_value());
+    return std::move(MaybeRef);
+  }
   RefTy &&getValue() && {
-    assert(hasValue());
+    assert(has_value());
     return std::move(MaybeRef);
   }
 
