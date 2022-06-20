@@ -61,6 +61,7 @@ LoongArchTargetLowering::LoongArchTargetLowering(const TargetMachine &TM,
   }
 
   setOperationAction(ISD::SELECT_CC, GRLenVT, Expand);
+  setOperationAction(ISD::SIGN_EXTEND_INREG, MVT::i1, Expand);
 
   // Compute derived properties from the register classes.
   computeRegisterProperties(STI.getRegisterInfo());
