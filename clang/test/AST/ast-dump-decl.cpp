@@ -303,7 +303,7 @@ namespace testClassTemplateDecl {
 // CHECK-NEXT:  | | |-MoveConstructor
 // CHECK-NEXT:  | | |-CopyAssignment simple trivial has_const_param needs_implicit implicit_has_const_param
 // CHECK-NEXT:  | | |-MoveAssignment
-// CHECK-NEXT:  | | `-Destructor non_trivial user_declared
+// CHECK-NEXT:  | | `-Destructor
 // CHECK-NEXT:  | |-CXXRecordDecl 0x{{.+}} <col:24, col:30> col:30 implicit referenced class TestClassTemplate
 // CHECK-NEXT:  | |-AccessSpecDecl 0x{{.+}} <line:[[@LINE-50]]:3, col:9> col:3 public
 // CHECK-NEXT:  | |-CXXConstructorDecl 0x{{.+}} <line:[[@LINE-50]]:5, col:23> col:5 TestClassTemplate<T> 'void ()'
