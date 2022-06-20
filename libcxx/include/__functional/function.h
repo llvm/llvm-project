@@ -1242,7 +1242,7 @@ void
 swap(function<_Rp(_ArgTypes...)>& __x, function<_Rp(_ArgTypes...)>& __y) _NOEXCEPT
 {return __x.swap(__y);}
 
-#else // _LIBCPP_CXX03_LANG
+#elif defined(_LIBCPP_ENABLE_CXX03_FUNCTION)
 
 namespace __function {
 
@@ -2808,7 +2808,7 @@ void
 swap(function<_Fp>& __x, function<_Fp>& __y)
 {return __x.swap(__y);}
 
-#endif
+#endif // _LIBCPP_CXX03_LANG
 
 _LIBCPP_END_NAMESPACE_STD
 
