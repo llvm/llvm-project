@@ -1929,7 +1929,7 @@ cc_binary(
 template_rule(
     name = "clang_main",
     src = "//llvm:cmake/modules/llvm-driver-template.cpp.in",
-    out = "clang_main.cpp",
+    out = "clang-driver.cpp",
     substitutions = {
         "@TOOL_NAME@": "clang"
     },
@@ -1940,7 +1940,7 @@ cc_library(
     srcs = glob([
         "tools/driver/*.cpp",
         "tools/driver/*.h",
-    ]) + ["clang_main.cpp"],
+    ]) + ["clang-driver.cpp"],
     copts = [
         # Disable stack frame size checks in the driver because
         # clang::ensureStackAddressSpace allocates a large array on the stack.
