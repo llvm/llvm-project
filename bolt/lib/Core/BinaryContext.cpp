@@ -764,12 +764,31 @@ BinaryFunction *BinaryContext::createBinaryFunction(
 const MCSymbol *
 BinaryContext::getOrCreateJumpTable(BinaryFunction &Function, uint64_t Address,
                                     JumpTable::JumpTableType Type) {
+  auto isFragmentOf = [](BinaryFunction *Fragment, BinaryFunction *Parent) {
+    return (Fragment->isFragment() && Fragment->isParentFragment(Parent));
+  };
+
   if (JumpTable *JT = getJumpTableContainingAddress(Address)) {
     assert(JT->Type == Type && "jump table types have to match");
-    assert(JT->Parent == &Function &&
+    bool HasMultipleParents = isFragmentOf(JT->Parent, &Function) ||
+                              isFragmentOf(&Function, JT->Parent);
+    assert((JT->Parent == &Function || HasMultipleParents) &&
            "cannot re-use jump table of a different function");
     assert(Address == JT->getAddress() && "unexpected non-empty jump table");
 
+    // Flush OffsetEntries with INVALID_OFFSET if multiple parents
+    // Duplicate the entry for the parent function for easy access
+    if (HasMultipleParents) {
+      if (opts::Verbosity > 2) {
+        outs() << "BOLT-WARNING: Multiple fragments access same jump table: "
+               << JT->Parent->getPrintName() << "; " << Function.getPrintName()
+               << "\n";
+      }
+      constexpr uint64_t INVALID_OFFSET = std::numeric_limits<uint64_t>::max();
+      for (unsigned I = 0; I < JT->OffsetEntries.size(); ++I)
+        JT->OffsetEntries[I] = INVALID_OFFSET;
+      Function.JumpTables.emplace(Address, JT);
+    }
     return JT->getFirstLabel();
   }
 

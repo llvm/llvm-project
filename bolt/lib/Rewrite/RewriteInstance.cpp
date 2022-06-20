@@ -2903,6 +2903,7 @@ void RewriteInstance::disassembleFunctions() {
     BC->processInterproceduralReferences(Function);
   }
 
+  BC->clearJumpTableOffsets();
   BC->populateJumpTables();
   BC->skipMarkedFragments();
 
