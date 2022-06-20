@@ -92,7 +92,11 @@ def _get_support_func_locator() -> _SupportFuncLocator:
                      (np.float32, c_lib.convertToMLIRSparseTensorF32,
                       c_lib.convertFromMLIRSparseTensorF32),
                      (np.float64, c_lib.convertToMLIRSparseTensorF64,
-                      c_lib.convertFromMLIRSparseTensorF64)]
+                      c_lib.convertFromMLIRSparseTensorF64),
+                     (np.complex64, c_lib.convertToMLIRSparseTensorC32,
+                      c_lib.convertFromMLIRSparseTensorC32),
+                     (np.complex128, c_lib.convertToMLIRSparseTensorC64,
+                      c_lib.convertFromMLIRSparseTensorC64)]
   except Exception as e:
     raise ValueError(f"Missing supporting function: {e}") from e
   for i, info in enumerate(support_types):
@@ -134,14 +138,15 @@ def sparse_tensor_to_coo_tensor(
   rank = ctypes.c_ulonglong(0)
   nse = ctypes.c_ulonglong(0)
   shape = ctypes.POINTER(ctypes.c_ulonglong)()
-  values = ctypes.POINTER(np.ctypeslib.as_ctypes_type(dtype))()
+
+  values = ctypes.POINTER(runtime.as_ctype(np.dtype(dtype)))()
   indices = ctypes.POINTER(ctypes.c_ulonglong)()
   convert_from(sparse_tensor, ctypes.byref(rank), ctypes.byref(nse),
                ctypes.byref(shape), ctypes.byref(values), ctypes.byref(indices))
 
   # Convert the returned values to the corresponding numpy types.
   shape = np.ctypeslib.as_array(shape, shape=[rank.value])
-  values = np.ctypeslib.as_array(values, shape=[nse.value])
+  values = runtime.to_numpy(np.ctypeslib.as_array(values, shape=[nse.value]))
   indices = np.ctypeslib.as_array(indices, shape=[nse.value, rank.value])
   return rank.value, nse.value, shape, values, indices
 
@@ -175,7 +180,7 @@ def coo_tensor_to_sparse_tensor(np_shape: np.ndarray, np_values: np.ndarray,
   nse = ctypes.c_ulonglong(len(np_values))
   shape = np_shape.ctypes.data_as(ctypes.POINTER(ctypes.c_ulonglong))
   values = np_values.ctypes.data_as(
-      ctypes.POINTER(np.ctypeslib.as_ctypes_type(np_values.dtype)))
+      ctypes.POINTER(runtime.as_ctype(np.dtype(np_values.dtype))))
   indices = np_indices.ctypes.data_as(ctypes.POINTER(ctypes.c_ulonglong))
 
   perm = np_perm.ctypes.data_as(ctypes.POINTER(ctypes.c_ulonglong))
