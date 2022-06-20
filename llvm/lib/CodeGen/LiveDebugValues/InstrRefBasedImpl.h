@@ -1402,6 +1402,7 @@ public:
   void dump_mloc_transfer(const MLocTransferMap &mloc_transfer) const;
 
   bool isCalleeSaved(LocIdx L) const;
+  bool isCalleeSavedReg(Register R) const;
 
   bool hasFoldedStackStore(const MachineInstr &MI) {
     // Instruction must have a memory operand that's a stack slot, and isn't
