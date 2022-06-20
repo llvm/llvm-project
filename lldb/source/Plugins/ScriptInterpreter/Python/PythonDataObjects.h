@@ -636,7 +636,7 @@ public:
   const char *toCString() const;
   PythonException(const char *caller = nullptr);
   void Restore();
-  ~PythonException();
+  ~PythonException() override;
   void log(llvm::raw_ostream &OS) const override;
   std::error_code convertToErrorCode() const override;
   bool Matches(PyObject *exc) const;

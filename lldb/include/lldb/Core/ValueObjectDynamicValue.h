@@ -32,7 +32,7 @@ class Status;
 /// set lldb type.
 class ValueObjectDynamicValue : public ValueObject {
 public:
-  ~ValueObjectDynamicValue() = default;
+  ~ValueObjectDynamicValue() override = default;
 
   llvm::Optional<uint64_t> GetByteSize() override;
 

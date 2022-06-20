@@ -43,7 +43,7 @@ public:
   /// \}
 
   SymbolFileOnDemand(std::unique_ptr<SymbolFile> &&symbol_file);
-  virtual ~SymbolFileOnDemand() override;
+  ~SymbolFileOnDemand() override;
 
   // PluginInterface protocol
   llvm::StringRef GetPluginName() override { return "ondemand"; }

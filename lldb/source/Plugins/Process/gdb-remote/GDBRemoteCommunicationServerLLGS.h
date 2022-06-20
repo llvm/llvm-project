@@ -241,7 +241,7 @@ protected:
 
   static std::string XMLEncodeAttributeValue(llvm::StringRef value);
 
-  virtual std::vector<std::string> HandleFeatures(
+  std::vector<std::string> HandleFeatures(
       const llvm::ArrayRef<llvm::StringRef> client_features) override;
 
 private:

@@ -57,7 +57,7 @@ public:
   DiagnosticEventData(Type type, std::string message, bool debugger_specific)
       : m_message(std::move(message)), m_type(type),
         m_debugger_specific(debugger_specific) {}
-  ~DiagnosticEventData() {}
+  ~DiagnosticEventData() override {}
 
   const std::string &GetMessage() const { return m_message; }
   bool IsDebuggerSpecific() const { return m_debugger_specific; }

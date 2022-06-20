@@ -18,7 +18,7 @@ class RegisterContextKDP_arm64 : public RegisterContextDarwin_arm64 {
 public:
   RegisterContextKDP_arm64(ThreadKDP &thread, uint32_t concrete_frame_idx);
 
-  virtual ~RegisterContextKDP_arm64();
+  ~RegisterContextKDP_arm64() override;
 
 protected:
   int DoReadGPR(lldb::tid_t tid, int flavor, GPR &gpr) override;

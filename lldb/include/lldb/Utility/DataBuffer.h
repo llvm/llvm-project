@@ -96,7 +96,7 @@ public:
   /// and be downcast to the DataBuffer pure virtual interface. The virtual
   /// destructor ensures that destructing the base class will destruct the
   /// class that inherited from it correctly.
-  virtual ~WritableDataBuffer() = default;
+  ~WritableDataBuffer() override = default;
 
   using DataBuffer::GetBytes;
   using DataBuffer::GetData;
