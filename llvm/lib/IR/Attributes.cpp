@@ -55,8 +55,7 @@ static const unsigned AllocSizeNumElemsNotPresent = -1;
 
 static uint64_t packAllocSizeArgs(unsigned ElemSizeArg,
                                   const Optional<unsigned> &NumElemsArg) {
-  assert((!NumElemsArg.hasValue() ||
-          *NumElemsArg != AllocSizeNumElemsNotPresent) &&
+  assert((!NumElemsArg || *NumElemsArg != AllocSizeNumElemsNotPresent) &&
          "Attempting to pack a reserved value");
 
   return uint64_t(ElemSizeArg) << 32 |

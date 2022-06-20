@@ -1096,8 +1096,7 @@ LogicalResult mlir::loopUnrollByFactor(
 
   Optional<uint64_t> mayBeConstantTripCount = getConstantTripCount(forOp);
   if (unrollFactor == 1) {
-    if (mayBeConstantTripCount.hasValue() &&
-        mayBeConstantTripCount.getValue() == 1 &&
+    if (mayBeConstantTripCount && *mayBeConstantTripCount == 1 &&
         failed(promoteIfSingleIteration(forOp)))
       return failure();
     return success();
@@ -1206,8 +1205,7 @@ LogicalResult mlir::loopUnrollJamByFactor(AffineForOp forOp,
 
   Optional<uint64_t> mayBeConstantTripCount = getConstantTripCount(forOp);
   if (unrollJamFactor == 1) {
-    if (mayBeConstantTripCount.hasValue() &&
-        mayBeConstantTripCount.getValue() == 1 &&
+    if (mayBeConstantTripCount && *mayBeConstantTripCount == 1 &&
         failed(promoteIfSingleIteration(forOp)))
       return failure();
     return success();

@@ -59,8 +59,7 @@ template <> struct MappingTraits<remarks::Remark *> {
 
     if (auto *Serializer = dyn_cast<YAMLStrTabRemarkSerializer>(
             reinterpret_cast<RemarkSerializer *>(io.getContext()))) {
-      assert(Serializer->StrTab.hasValue() &&
-             "YAMLStrTabSerializer with no StrTab.");
+      assert(Serializer->StrTab && "YAMLStrTabSerializer with no StrTab.");
       StringTable &StrTab = *Serializer->StrTab;
       unsigned PassID = StrTab.add(Remark->PassName).first;
       unsigned NameID = StrTab.add(Remark->RemarkName).first;
@@ -84,8 +83,7 @@ template <> struct MappingTraits<RemarkLocation> {
 
     if (auto *Serializer = dyn_cast<YAMLStrTabRemarkSerializer>(
             reinterpret_cast<RemarkSerializer *>(io.getContext()))) {
-      assert(Serializer->StrTab.hasValue() &&
-             "YAMLStrTabSerializer with no StrTab.");
+      assert(Serializer->StrTab && "YAMLStrTabSerializer with no StrTab.");
       StringTable &StrTab = *Serializer->StrTab;
       unsigned FileID = StrTab.add(File).first;
       io.mapRequired("File", FileID);
@@ -139,8 +137,7 @@ template <> struct MappingTraits<Argument> {
 
     if (auto *Serializer = dyn_cast<YAMLStrTabRemarkSerializer>(
             reinterpret_cast<RemarkSerializer *>(io.getContext()))) {
-      assert(Serializer->StrTab.hasValue() &&
-             "YAMLStrTabSerializer with no StrTab.");
+      assert(Serializer->StrTab && "YAMLStrTabSerializer with no StrTab.");
       StringTable &StrTab = *Serializer->StrTab;
       auto ValueID = StrTab.add(A.Val).first;
       io.mapRequired(A.Key.data(), ValueID);

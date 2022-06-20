@@ -165,8 +165,7 @@ ChangeResult detail::IntRangeAnalysisImpl::visitOperation(
       bool isYieldedResult = llvm::any_of(v.getUsers(), [](Operation *op) {
         return op->hasTrait<OpTrait::IsTerminator>();
       });
-      if (isYieldedResult && oldRange.hasValue() &&
-          !(lattice.getValue() == *oldRange)) {
+      if (isYieldedResult && oldRange && !(lattice.getValue() == *oldRange)) {
         LLVM_DEBUG(llvm::dbgs() << "Loop variant loop result detected\n");
         result |= lattice.markPessimisticFixpoint();
       }
@@ -269,8 +268,7 @@ ChangeResult detail::IntRangeAnalysisImpl::visitNonControlFlowArguments(
       bool isYieldedValue = llvm::any_of(v.getUsers(), [](Operation *op) {
         return op->hasTrait<OpTrait::IsTerminator>();
       });
-      if (isYieldedValue && oldRange.hasValue() &&
-          !(lattice.getValue() == *oldRange)) {
+      if (isYieldedValue && oldRange && !(lattice.getValue() == *oldRange)) {
         LLVM_DEBUG(llvm::dbgs() << "Loop variant loop result detected\n");
         result |= lattice.markPessimisticFixpoint();
       }
