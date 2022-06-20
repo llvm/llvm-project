@@ -281,6 +281,10 @@ Generate CodeView debug information
 
 Emit type record hashes in a .debug$H section
 
+.. option:: -gen-reproducer=<arg>, -fno-crash-diagnostics (equivalent to -gen-reproducer=off)
+
+Emit reproducer on (option: off, crash (default), error, always)
+
 .. option:: --gpu-instrument-lib=<arg>
 
 Instrument device library for HIP, which is a LLVM bitcode containing \_\_cyg\_profile\_func\_enter and \_\_cyg\_profile\_func\_exit
@@ -339,7 +343,7 @@ Allow unsafe floating-point math optimizations which may decrease precision
 
 .. option:: -mharden-sls=<arg>
 
-Select straight-line speculation hardening scope
+Select straight-line speculation hardening scope (ARM/AArch64/X86 only). <arg> must be: all, none, retbr(ARM/AArch64), blr(ARM/AArch64), comdat(ARM/AArch64), nocomdat(ARM/AArch64), return(X86), indirect-jmp(X86)
 
 .. option:: --migrate
 
@@ -550,6 +554,10 @@ Use pipes between commands, when possible
 .. option:: -preload
 
 .. option:: --print-diagnostic-categories
+
+.. option:: -print-diagnostic-options, --print-diagnostic-options
+
+Print all of Clang's warning options
 
 .. option:: -print-effective-triple, --print-effective-triple
 
@@ -817,6 +825,10 @@ Generate Interface Stub Files, emit merged text not binary.
 
 Extract API information
 
+.. option:: -fdriver-only
+
+Only run the driver.
+
 .. option:: -fsyntax-only
 
 .. option:: -module-file-info
@@ -928,10 +940,6 @@ Inline suitable functions
 .. option:: -finline-hint-functions
 
 Inline functions which are (explicitly or implicitly) marked inline
-
-.. option:: -fno-crash-diagnostics
-
-Disable auto-generation of preprocessed source files and a script for reproduction during a clang crash
 
 .. option:: -fno-legacy-pass-manager, -fexperimental-new-pass-manager
 
@@ -1106,7 +1114,9 @@ Include comments in preprocessed output
 
 Include comments from within macros in preprocessed output
 
-.. option:: -D<macro>=<value>, --define-macro <arg>, --define-macro=<arg>
+.. program:: clang2
+.. option:: -D<macro>=<value>, --D<arg>, /D<arg>, -D<arg>, --define-macro <arg>, --define-macro=<arg>
+.. program:: clang
 
 Define <macro> to <value> (or 1 if <value> omitted)
 
@@ -1727,6 +1737,10 @@ Embed Offloading device-side binary into host object file as a section.
 
 Emit all declarations, even if unused
 
+.. option:: -femit-dwarf-unwind=<arg>
+
+When to emit DWARF unwind (EH frame) info. <arg> must be 'always', 'no-compact-unwind' or 'default'.
+
 .. option:: -femulated-tls, -fno-emulated-tls
 
 Use emutls functions to access thread\_local variables
@@ -1902,6 +1916,10 @@ Enable the integrated assembler
 .. option:: -fintegrated-cc1, -fno-integrated-cc1
 
 Run cc1 in-process
+
+.. option:: -fintegrated-objemitter, -fno-integrated-objemitter
+
+Use internal machine object code emitter.
 
 .. option:: -fjmc, -fno-jmc
 
@@ -2767,7 +2785,7 @@ When using -fxray-function-groups, select which group of functions to instrument
 
 .. option:: -fzero-call-used-regs=<arg>
 
-Clear call-used registers upon function return. <arg> must be 'skip', 'used-gpr-arg', 'used-gpr', 'used-arg', 'used', 'all-gpr-arg', 'all-gpr', 'all-arg' or 'all'.
+Clear call-used registers upon function return (AArch64/x86 only). <arg> must be 'skip', 'used-gpr-arg', 'used-gpr', 'used-arg', 'used', 'all-gpr-arg', 'all-gpr', 'all-arg' or 'all'.
 
 .. option:: -fzero-initialized-in-bss, -fno-zero-initialized-in-bss
 
@@ -2794,6 +2812,10 @@ OpenCL flags
 .. option:: -cl-denorms-are-zero
 
 OpenCL only. Allow denormals to be flushed to zero.
+
+.. option:: -cl-ext=<arg1>,<arg2>...
+
+OpenCL only. Enable or disable OpenCL extensions/optional features. The argument is a comma-separated sequence of one or more extension names, each prefixed by '+' or '-'.
 
 .. option:: -cl-fast-relaxed-math
 
@@ -3072,6 +3094,10 @@ Specify code object ABI version. Defaults to 4. (AMDGPU only). <arg> must be 'no
 Allow use of CRC instructions (ARM/Mips only)
 
 .. option:: -mdefault-build-attributes<arg>, -mno-default-build-attributes<arg>
+
+.. option:: -mdefault-visibility-export-mapping=<arg>
+
+Mapping between default visibility and export. <arg> must be 'none', 'explicit' or 'all'.
 
 .. option:: -mdll<arg>
 
@@ -4209,19 +4235,15 @@ Set starting address of TEXT to <addr>
 
 Pass the comma separated arguments in <arg> to the linker
 
-.. option:: --offload-link
-
-Use the linker supporting offloading device linking.
-
 .. option:: -X
 
 .. option:: -Xlinker <arg>, --for-linker <arg>, --for-linker=<arg>
 
 Pass <arg> to the linker
 
-.. option:: -Xoffload-linker <arg>, -Xoffload-linker-<triple> <arg>
+.. option:: -Xoffload-linker<triple> <arg>
 
-Pass <arg> to all the device linking jobs, or for only <triple> if specified.
+Pass <arg> to the offload linkers or the ones idenfied by -<triple>
 
 .. program:: clang1
 .. option:: -Z
@@ -4254,6 +4276,10 @@ path to a pass plugin for HIP to SPIR-V passes.
 .. program:: clang1
 .. option:: -nostdlib, --no-standard-libraries
 .. program:: clang
+
+.. option:: --offload-link
+
+Use the new offloading linker to perform the link job.
 
 .. option:: -pie
 
@@ -4295,15 +4321,21 @@ Pass -z <arg> to the linker
 ===================
 dxc compatibility options
 
-.. program:: clang2
+.. program:: clang3
 .. option:: /T<profile>, -T<profile>
 .. program:: clang
 
 Set target profile. <profile> must be 'ps_6_0', ' ps_6_1', ' ps_6_2', ' ps_6_3', ' ps_6_4', ' ps_6_5', ' ps_6_6', ' ps_6_7', 'vs_6_0', ' vs_6_1', ' vs_6_2', ' vs_6_3', ' vs_6_4', ' vs_6_5', ' vs_6_6', ' vs_6_7', 'gs_6_0', ' gs_6_1', ' gs_6_2', ' gs_6_3', ' gs_6_4', ' gs_6_5', ' gs_6_6', ' gs_6_7', 'hs_6_0', ' hs_6_1', ' hs_6_2', ' hs_6_3', ' hs_6_4', ' hs_6_5', ' hs_6_6', ' hs_6_7', 'ds_6_0', ' ds_6_1', ' ds_6_2', ' ds_6_3', ' ds_6_4', ' ds_6_5', ' ds_6_6', ' ds_6_7', 'cs_6_0', ' cs_6_1', ' cs_6_2', ' cs_6_3', ' cs_6_4', ' cs_6_5', ' cs_6_6', ' cs_6_7', 'lib_6_3', ' lib_6_4', ' lib_6_5', ' lib_6_6', ' lib_6_7', ' lib_6_x', 'ms_6_5', ' ms_6_6', ' ms_6_7', 'as_6_5', ' as_6_6' or ' as_6_7'.
 
-.. program:: clang3
+.. program:: clang4
 .. option:: /emit-pristine-llvm, -emit-pristine-llvm, /fcgl, -fcgl
 .. program:: clang
 
 Emit pristine LLVM IR from the frontend by not running any LLVM passes at all.Same as -S + -emit-llvm + -disable-llvm-passes.
+
+.. program:: clang5
+.. option:: /hlsl-no-stdinc, -hlsl-no-stdinc
+.. program:: clang
+
+HLSL only. Disables all standard includes containing non-native compiler types and functions.
 
