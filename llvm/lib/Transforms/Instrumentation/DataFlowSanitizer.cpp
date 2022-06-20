@@ -2746,13 +2746,8 @@ void DFSanVisitor::visitMemTransferInst(MemTransferInst &I) {
   auto *MTI = cast<MemTransferInst>(
       IRB.CreateCall(I.getFunctionType(), I.getCalledOperand(),
                      {DestShadow, SrcShadow, LenShadow, I.getVolatileCst()}));
-  if (ClPreserveAlignment) {
-    MTI->setDestAlignment(I.getDestAlign() * DFSF.DFS.ShadowWidthBytes);
-    MTI->setSourceAlignment(I.getSourceAlign() * DFSF.DFS.ShadowWidthBytes);
-  } else {
-    MTI->setDestAlignment(Align(DFSF.DFS.ShadowWidthBytes));
-    MTI->setSourceAlignment(Align(DFSF.DFS.ShadowWidthBytes));
-  }
+  MTI->setDestAlignment(DFSF.getShadowAlign(I.getDestAlign().valueOrOne()));
+  MTI->setSourceAlignment(DFSF.getShadowAlign(I.getSourceAlign().valueOrOne()));
   if (ClEventCallbacks) {
     IRB.CreateCall(DFSF.DFS.DFSanMemTransferCallbackFn,
                    {RawDestShadow,
