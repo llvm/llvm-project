@@ -6242,13 +6242,14 @@ struct AAHeapToStackFunction final : public AAHeapToStack {
 
       Align Alignment(1);
       if (MaybeAlign RetAlign = AI.CB->getRetAlign())
-        Alignment = max(Alignment, RetAlign);
+        Alignment = std::max(Alignment, *RetAlign);
       if (Value *Align = getAllocAlignment(AI.CB, TLI)) {
         Optional<APInt> AlignmentAPI = getAPInt(A, *this, *Align);
         assert(AlignmentAPI.hasValue() &&
+               AlignmentAPI.getValue().getZExtValue() > 0 &&
                "Expected an alignment during manifest!");
-        Alignment =
-            max(Alignment, MaybeAlign(AlignmentAPI.getValue().getZExtValue()));
+        Alignment = std::max(
+            Alignment, assumeAligned(AlignmentAPI.getValue().getZExtValue()));
       }
 
       // TODO: Hoist the alloca towards the function entry.
