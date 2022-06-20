@@ -41,10 +41,10 @@ define amdgpu_kernel void @a_kernel2() #0 {
 ; GCN-ASM-NEXT:   [[END_LABEL3:\.Lfunc_end.*]]:
 ; GCN-ASM-NEXT:           .size   a_function, [[END_LABEL3]]-a_function
 ; GFX10END-ASM:           .p2alignl 6, 3214868480
-; GFX11END-ASM:           .p2alignl 6, 3214868480
+; GFX11END-ASM:           .p2alignl 7, 3214868480
 ; GFX90AEND-ASM:          .p2alignl 6, 3212836864
 ; GFX10END-ASM-NEXT:      .fill 48, 4, 3214868480
-; GFX11END-ASM-NEXT:      .fill 48, 4, 3214868480
+; GFX11END-ASM-NEXT:      .fill 96, 4, 3214868480
 ; GFX90AEND-ASM-NEXT:     .fill 256, 4, 3212836864
 ; GFX10NOEND-NOT:         .fill
 ; GFX11NOEND-NOT:         .fill
