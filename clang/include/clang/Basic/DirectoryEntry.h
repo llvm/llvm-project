@@ -130,6 +130,7 @@ public:
 
   void reset() { MaybeRef = optional_none_tag(); }
 
+  bool has_value() const { return MaybeRef.hasOptionalValue(); }
   bool hasValue() const { return MaybeRef.hasOptionalValue(); }
 
   RefTy &getValue() & {

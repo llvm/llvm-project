@@ -70,12 +70,12 @@ public:
   constexpr OptionalStorage() noexcept : empty() {}
 
   constexpr OptionalStorage(OptionalStorage const &other) : OptionalStorage() {
-    if (other.hasValue()) {
+    if (other.has_value()) {
       emplace(other.val);
     }
   }
   constexpr OptionalStorage(OptionalStorage &&other) : OptionalStorage() {
-    if (other.hasValue()) {
+    if (other.has_value()) {
       emplace(std::move(other.val));
     }
   }
@@ -126,7 +126,7 @@ public:
   }
 
   OptionalStorage &operator=(T const &y) {
-    if (hasValue()) {
+    if (has_value()) {
       val = y;
     } else {
       ::new ((void *)std::addressof(val)) T(y);
@@ -135,7 +135,7 @@ public:
     return *this;
   }
   OptionalStorage &operator=(T &&y) {
-    if (hasValue()) {
+    if (has_value()) {
       val = std::move(y);
     } else {
       ::new ((void *)std::addressof(val)) T(std::move(y));
@@ -145,8 +145,8 @@ public:
   }
 
   OptionalStorage &operator=(OptionalStorage const &other) {
-    if (other.hasValue()) {
-      if (hasValue()) {
+    if (other.has_value()) {
+      if (has_value()) {
         val = other.val;
       } else {
         ::new ((void *)std::addressof(val)) T(other.val);
@@ -159,8 +159,8 @@ public:
   }
 
   OptionalStorage &operator=(OptionalStorage &&other) {
-    if (other.hasValue()) {
-      if (hasValue()) {
+    if (other.has_value()) {
+      if (has_value()) {
         val = std::move(other.val);
       } else {
         ::new ((void *)std::addressof(val)) T(std::move(other.val));
@@ -237,7 +237,7 @@ public:
   }
 
   OptionalStorage &operator=(T const &y) {
-    if (hasValue()) {
+    if (has_value()) {
       val = y;
     } else {
       ::new ((void *)std::addressof(val)) T(y);
@@ -246,7 +246,7 @@ public:
     return *this;
   }
   OptionalStorage &operator=(T &&y) {
-    if (hasValue()) {
+    if (has_value()) {
       val = std::move(y);
     } else {
       ::new ((void *)std::addressof(val)) T(std::move(y));
@@ -307,19 +307,19 @@ public:
   T &value() & { return Storage.getValue(); }
   T &getValue() & { return Storage.getValue(); }
 
-  constexpr explicit operator bool() const { return hasValue(); }
-  constexpr bool has_value() const { return Storage.hasValue(); }
-  constexpr bool hasValue() const { return Storage.hasValue(); }
+  constexpr explicit operator bool() const { return has_value(); }
+  constexpr bool has_value() const { return Storage.has_value(); }
+  constexpr bool hasValue() const { return Storage.has_value(); }
   constexpr const T *operator->() const { return getPointer(); }
   T *operator->() { return getPointer(); }
   constexpr const T &operator*() const & { return getValue(); }
   T &operator*() & { return getValue(); }
 
   template <typename U> constexpr T value_or(U &&alt) const & {
-    return hasValue() ? getValue() : std::forward<U>(alt);
+    return has_value() ? getValue() : std::forward<U>(alt);
   }
   template <typename U> constexpr T getValueOr(U &&alt) const & {
-    return hasValue() ? getValue() : std::forward<U>(alt);
+    return has_value() ? getValue() : std::forward<U>(alt);
   }
 
   /// Apply a function to the value if present; otherwise return None.
@@ -335,10 +335,10 @@ public:
   T &&operator*() && { return std::move(Storage.getValue()); }
 
   template <typename U> T value_or(U &&alt) && {
-    return hasValue() ? std::move(getValue()) : std::forward<U>(alt);
+    return has_value() ? std::move(getValue()) : std::forward<U>(alt);
   }
   template <typename U> T getValueOr(U &&alt) && {
-    return hasValue() ? std::move(getValue()) : std::forward<U>(alt);
+    return has_value() ? std::move(getValue()) : std::forward<U>(alt);
   }
 
   /// Apply a function to the value if present; otherwise return None.
@@ -359,7 +359,7 @@ template <typename T, typename U>
 constexpr bool operator==(const Optional<T> &X, const Optional<U> &Y) {
   if (X && Y)
     return *X == *Y;
-  return X.hasValue() == Y.hasValue();
+  return X.has_value() == Y.has_value();
 }
 
 template <typename T, typename U>
@@ -371,7 +371,7 @@ template <typename T, typename U>
 constexpr bool operator<(const Optional<T> &X, const Optional<U> &Y) {
   if (X && Y)
     return *X < *Y;
-  return X.hasValue() < Y.hasValue();
+  return X.has_value() < Y.has_value();
 }
 
 template <typename T, typename U>
@@ -414,7 +414,7 @@ template <typename T> constexpr bool operator<(const Optional<T> &, NoneType) {
 }
 
 template <typename T> constexpr bool operator<(NoneType, const Optional<T> &X) {
-  return X.hasValue();
+  return X.has_value();
 }
 
 template <typename T>
