@@ -89,6 +89,12 @@ public:
     extendFlowCondition(*Cond);
   }
 
+  void VisitDoStmt(const DoStmt *S) {
+    auto *Cond = S->getCond();
+    assert(Cond != nullptr);
+    extendFlowCondition(*Cond);
+  }
+
   void VisitForStmt(const ForStmt *S) {
     auto *Cond = S->getCond();
     assert(Cond != nullptr);
