@@ -47,8 +47,7 @@ enum {
   CCMaskFirst            = (1 << 18),
   CCMaskLast             = (1 << 19),
   IsLogical              = (1 << 20),
-  CCIfNoSignedWrap       = (1 << 21),
-  MemMemOp               = (1 << 22)
+  CCIfNoSignedWrap       = (1 << 21)
 };
 
 static inline unsigned getAccessSize(unsigned int Flags) {
