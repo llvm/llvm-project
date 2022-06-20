@@ -3123,16 +3123,16 @@ void AMDGPURegisterBankInfo::applyMappingImpl(
       constrainOpWithReadfirstlane(MI, MRI, 2);
       return;
     }
-    case Intrinsic::amdgcn_exp_row:
-      applyDefaultMapping(OpdMapper);
-      constrainOpWithReadfirstlane(MI, MRI, 8); // M0
-      return;
     case Intrinsic::amdgcn_lds_direct_load: {
       applyDefaultMapping(OpdMapper);
       // Readlane for m0 value, which is always the last operand.
       constrainOpWithReadfirstlane(MI, MRI, MI.getNumOperands() - 1); // Index
       return;
     }
+    case Intrinsic::amdgcn_exp_row:
+      applyDefaultMapping(OpdMapper);
+      constrainOpWithReadfirstlane(MI, MRI, 8); // M0
+      return;
     default: {
       if (const AMDGPU::RsrcIntrinsic *RSrcIntrin =
               AMDGPU::lookupRsrcIntrinsic(IntrID)) {
