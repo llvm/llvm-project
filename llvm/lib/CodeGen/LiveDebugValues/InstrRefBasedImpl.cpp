@@ -193,9 +193,25 @@ public:
     SmallVector<MachineInstr *, 4> Insts; /// Vector of DBG_VALUEs to insert.
   };
 
-  struct LocAndProperties {
-    LocIdx Loc;
+  /// Stores the resolved operands (machine locations and constants) and
+  /// qualifying meta-information needed to construct a concrete DBG_VALUE-like
+  /// instruction.
+  struct ResolvedDbgValue {
+    SmallVector<ResolvedDbgOp> Ops;
     DbgValueProperties Properties;
+
+    ResolvedDbgValue(SmallVectorImpl<ResolvedDbgOp> &Ops,
+                     DbgValueProperties Properties)
+        : Ops(Ops.begin(), Ops.end()), Properties(Properties) {}
+
+    /// Returns all the LocIdx values used in this struct, in the order in which
+    /// they appear as operands in the debug value; may contain duplicates.
+    auto loc_indices() const {
+      return map_range(
+          make_filter_range(
+              Ops, [](const ResolvedDbgOp &Op) { return !Op.IsConst; }),
+          [](const ResolvedDbgOp &Op) { return Op.Loc; });
+    }
   };
 
   /// Collection of transfers (DBG_VALUEs) to be inserted.
@@ -215,7 +231,7 @@ public:
   /// Map from DebugVariable to it's current location and qualifying meta
   /// information. To be used in conjunction with ActiveMLocs to construct
   /// enough information for the DBG_VALUEs for a particular LocIdx.
-  DenseMap<DebugVariable, LocAndProperties> ActiveVLocs;
+  DenseMap<DebugVariable, ResolvedDbgValue> ActiveVLocs;
 
   /// Temporary cache of DBG_VALUEs to be entered into the Transfers collection.
   SmallVector<MachineInstr *, 4> PendingDbgValues;
@@ -225,11 +241,15 @@ public:
   /// defined in this block.
   struct UseBeforeDef {
     /// Value of this variable, def'd in block.
-    ValueIDNum ID;
+    SmallVector<DbgOp> Values;
     /// Identity of this variable.
     DebugVariable Var;
     /// Additional variable properties.
     DbgValueProperties Properties;
+    UseBeforeDef(ArrayRef<DbgOp> Values, const DebugVariable &Var,
+                 const DbgValueProperties &Properties)
+        : Values(Values.begin(), Values.end()), Var(Var),
+          Properties(Properties) {}
   };
 
   /// Map from instruction index (within the block) to the set of UseBeforeDefs
@@ -254,6 +274,103 @@ public:
     ShouldEmitDebugEntryValues = TM.Options.ShouldEmitDebugEntryValues();
   }
 
+  bool isCalleeSaved(LocIdx L) {
+    unsigned Reg = MTracker->LocIdxToLocID[L];
+    if (Reg >= MTracker->NumRegs)
+      return false;
+    for (MCRegAliasIterator RAI(Reg, &TRI, true); RAI.isValid(); ++RAI)
+      if (CalleeSavedRegs.test(*RAI))
+        return true;
+    return false;
+  };
+
+  /// For a variable \p Var with the live-in value \p Value, attempts to resolve
+  /// the DbgValue to a concrete DBG_VALUE, emitting that value and loading the
+  /// tracking information to track Var throughout the block.
+  /// \p ValueToLoc is a map containing the best known location for every
+  ///    ValueIDNum that Value may use.
+  /// \p MBB is the basic block that we are loading the live-in value for.
+  /// \p DbgOpStore is the map containing the DbgOpID->DbgOp mapping needed to
+  ///    determine the values used by Value.
+  void loadVarInloc(MachineBasicBlock &MBB, DbgOpIDMap &DbgOpStore,
+                    const DenseMap<ValueIDNum, LocIdx> &ValueToLoc,
+                    DebugVariable Var, DbgValue Value) {
+    SmallVector<DbgOp> DbgOps;
+    SmallVector<ResolvedDbgOp> ResolvedDbgOps;
+    bool IsValueValid = true;
+    unsigned LastUseBeforeDef = 0;
+
+    // If every value used by the incoming DbgValue is available at block
+    // entry, ResolvedDbgOps will contain the machine locations/constants for
+    // those values and will be used to emit a debug location.
+    // If one or more values are not yet available, but will all be defined in
+    // this block, then LastUseBeforeDef will track the instruction index in
+    // this BB at which the last of those values is defined, DbgOps will
+    // contain the values that we will emit when we reach that instruction.
+    // If one or more values are undef or not available throughout this block,
+    // and we can't recover as an entry value, we set IsValueValid=false and
+    // skip this variable.
+    for (DbgOpID ID : Value.getDbgOpIDs()) {
+      DbgOp Op = DbgOpStore.find(ID);
+      DbgOps.push_back(Op);
+      if (ID.isUndef()) {
+        IsValueValid = false;
+        break;
+      }
+      if (ID.isConst()) {
+        ResolvedDbgOps.push_back(Op.MO);
+        continue;
+      }
+
+      // If the value has no location, we can't make a variable location.
+      const ValueIDNum &Num = Op.ID;
+      auto ValuesPreferredLoc = ValueToLoc.find(Num);
+      if (ValuesPreferredLoc->second.isIllegal()) {
+        // If it's a def that occurs in this block, register it as a
+        // use-before-def to be resolved as we step through the block.
+        // Continue processing values so that we add any other UseBeforeDef
+        // entries needed for later.
+        if (Num.getBlock() == (unsigned)MBB.getNumber() && !Num.isPHI()) {
+          LastUseBeforeDef = std::max(LastUseBeforeDef,
+                                      static_cast<unsigned>(Num.getInst()));
+          continue;
+        }
+        recoverAsEntryValue(Var, Value.Properties, Num);
+        IsValueValid = false;
+        break;
+      }
+
+      // Defer modifying ActiveVLocs until after we've confirmed we have a
+      // live range.
+      LocIdx M = ValuesPreferredLoc->second;
+      ResolvedDbgOps.push_back(M);
+    }
+
+    // If we cannot produce a valid value for the LiveIn value within this
+    // block, skip this variable.
+    if (!IsValueValid)
+      return;
+
+    // Add UseBeforeDef entry for the last value to be defined in this block.
+    if (LastUseBeforeDef) {
+      addUseBeforeDef(Var, Value.Properties, DbgOps,
+                      LastUseBeforeDef);
+      return;
+    }
+
+    // The LiveIn value is available at block entry, begin tracking and record
+    // the transfer.
+    for (const ResolvedDbgOp &Op : ResolvedDbgOps)
+      if (!Op.IsConst)
+        ActiveMLocs[Op.Loc].insert(Var);
+    auto NewValue = ResolvedDbgValue{ResolvedDbgOps, Value.Properties};
+    auto Result = ActiveVLocs.insert(std::make_pair(Var, NewValue));
+    if (!Result.second)
+      Result.first->second = NewValue;
+    PendingDbgValues.push_back(
+        MTracker->emitLoc(ResolvedDbgOps, Var, Value.Properties));
+  }
+
   /// Load object with live-in variable values. \p mlocs contains the live-in
   /// values in each machine location, while \p vlocs the live-in variable
   /// values. This method picks variable locations for the live-in variables,
@@ -271,28 +388,17 @@ public:
     UseBeforeDefs.clear();
     UseBeforeDefVariables.clear();
 
-    auto isCalleeSaved = [&](LocIdx L) {
-      unsigned Reg = MTracker->LocIdxToLocID[L];
-      if (Reg >= MTracker->NumRegs)
-        return false;
-      for (MCRegAliasIterator RAI(Reg, &TRI, true); RAI.isValid(); ++RAI)
-        if (CalleeSavedRegs.test(*RAI))
-          return true;
-      return false;
-    };
-
     // Map of the preferred location for each value.
     DenseMap<ValueIDNum, LocIdx> ValueToLoc;
 
     // Initialized the preferred-location map with illegal locations, to be
     // filled in later.
-    for (const auto &VLoc : VLocs) {
-      if (VLoc.second.Kind == DbgValue::Def &&
-          !VLoc.second.getDbgOpID(0).isConst()) {
-        ValueToLoc.insert({DbgOpStore.find(VLoc.second.getDbgOpID(0)).ID,
-                           LocIdx::MakeIllegalLoc()});
-      }
-    }
+    for (const auto &VLoc : VLocs)
+      if (VLoc.second.Kind == DbgValue::Def)
+        for (DbgOpID OpID : VLoc.second.getDbgOpIDs())
+          if (!OpID.ID.IsConst)
+            ValueToLoc.insert(
+                {DbgOpStore.find(OpID).ID, LocIdx::MakeIllegalLoc()});
 
     ActiveMLocs.reserve(VLocs.size());
     ActiveVLocs.reserve(VLocs.size());
@@ -326,37 +432,7 @@ public:
 
     // Now map variables to their picked LocIdxes.
     for (const auto &Var : VLocs) {
-      DbgOpID OpID = Var.second.getDbgOpID(0);
-      DbgOp Op = DbgOpStore.find(OpID);
-      if (Var.second.Kind == DbgValue::Def && OpID.isConst()) {
-        PendingDbgValues.push_back(
-            emitMOLoc(Op.MO, Var.first, Var.second.Properties));
-        continue;
-      }
-
-      // If the value has no location, we can't make a variable location.
-      const ValueIDNum &Num = Op.ID;
-      auto ValuesPreferredLoc = ValueToLoc.find(Num);
-      if (ValuesPreferredLoc->second.isIllegal()) {
-        // If it's a def that occurs in this block, register it as a
-        // use-before-def to be resolved as we step through the block.
-        if (Num.getBlock() == (unsigned)MBB.getNumber() && !Num.isPHI())
-          addUseBeforeDef(Var.first, Var.second.Properties, Num);
-        else
-          recoverAsEntryValue(Var.first, Var.second.Properties, Num);
-        continue;
-      }
-
-      LocIdx M = ValuesPreferredLoc->second;
-      auto NewValue = LocAndProperties{M, Var.second.Properties};
-      auto Result = ActiveVLocs.insert(std::make_pair(Var.first, NewValue));
-      if (!Result.second)
-        Result.first->second = NewValue;
-      ActiveMLocs[M].insert(Var.first);
-      SmallVector<ResolvedDbgOp> ResolvedOps;
-      ResolvedOps.push_back(M);
-      PendingDbgValues.push_back(
-          MTracker->emitLoc(ResolvedOps, Var.first, Var.second.Properties));
+      loadVarInloc(MBB, DbgOpStore, ValueToLoc, Var.first, Var.second);
     }
     flushDbgValues(MBB.begin(), &MBB);
   }
@@ -364,9 +440,9 @@ public:
   /// Record that \p Var has value \p ID, a value that becomes available
   /// later in the function.
   void addUseBeforeDef(const DebugVariable &Var,
-                       const DbgValueProperties &Properties, ValueIDNum ID) {
-    UseBeforeDef UBD = {ID, Var, Properties};
-    UseBeforeDefs[ID.getInst()].push_back(UBD);
+                       const DbgValueProperties &Properties,
+                       const SmallVectorImpl<DbgOp> &DbgOps, unsigned Inst) {
+    UseBeforeDefs[Inst].emplace_back(DbgOps, Var, Properties);
     UseBeforeDefVariables.insert(Var);
   }
 
@@ -379,25 +455,80 @@ public:
     if (MIt == UseBeforeDefs.end())
       return;
 
+    // Map of values to the locations that store them for every value used by
+    // the variables that may have become available.
+    SmallDenseMap<ValueIDNum, LocIdx> ValueToLoc;
+
+    // Populate ValueToLoc with illegal default mappings for every value used by
+    // any UseBeforeDef variables for this instruction.
     for (auto &Use : MIt->second) {
-      LocIdx L = Use.ID.getLoc();
-
-      // If something goes very wrong, we might end up labelling a COPY
-      // instruction or similar with an instruction number, where it doesn't
-      // actually define a new value, instead it moves a value. In case this
-      // happens, discard.
-      if (MTracker->readMLoc(L) != Use.ID)
-        continue;
-
-      // If a different debug instruction defined the variable value / location
-      // since the start of the block, don't materialize this use-before-def.
       if (!UseBeforeDefVariables.count(Use.Var))
         continue;
 
-      SmallVector<ResolvedDbgOp> ResolvedOps;
-      ResolvedOps.push_back(L);
+      for (DbgOp &Op : Use.Values) {
+        assert(!Op.isUndef() && "UseBeforeDef erroneously created for a "
+                                "DbgValue with undef values.");
+        if (Op.IsConst)
+          continue;
+
+        ValueToLoc.insert(std::make_pair(Op.ID, LocIdx::MakeIllegalLoc()));
+      }
+    }
+
+    // Exit early if we have no DbgValues to produce.
+    if (ValueToLoc.empty())
+      return;
+
+    // Determine the best location for each desired value.
+    for (auto Location : MTracker->locations()) {
+      LocIdx Idx = Location.Idx;
+      ValueIDNum &LocValueID = Location.Value;
+
+      // Is there a variable that wants a location for this value? If not, skip.
+      auto VIt = ValueToLoc.find(LocValueID);
+      if (VIt == ValueToLoc.end())
+        continue;
+
+      LocIdx CurLoc = VIt->second;
+      // In order of preference, pick:
+      //  * Callee saved registers,
+      //  * Other registers,
+      //  * Spill slots.
+      if (CurLoc.isIllegal() || MTracker->isSpill(CurLoc) ||
+          (!isCalleeSaved(CurLoc) && isCalleeSaved(Idx.asU64()))) {
+        // Insert, or overwrite if insertion failed.
+        VIt->second = Idx;
+      }
+    }
+
+    // Using the map of values to locations, produce a final set of values for
+    // this variable.
+    for (auto &Use : MIt->second) {
+      if (!UseBeforeDefVariables.count(Use.Var))
+        continue;
+
+      SmallVector<ResolvedDbgOp> DbgOps;
+
+      for (DbgOp &Op : Use.Values) {
+        if (Op.IsConst) {
+          DbgOps.push_back(Op.MO);
+          continue;
+        }
+        LocIdx NewLoc = ValueToLoc.find(Op.ID)->second;
+        if (NewLoc.isIllegal())
+          break;
+        DbgOps.push_back(NewLoc);
+      }
+
+      // If at least one value used by this debug value is no longer available,
+      // i.e. one of the values was killed before we finished defining all of
+      // the values used by this variable, discard.
+      if (DbgOps.size() != Use.Values.size())
+        continue;
+
+      // Otherwise, we're good to go.
       PendingDbgValues.push_back(
-          MTracker->emitLoc(ResolvedOps, Use.Var, Use.Properties));
+          MTracker->emitLoc(DbgOps, Use.Var, Use.Properties));
     }
     flushDbgValues(pos, nullptr);
   }
@@ -484,62 +615,100 @@ public:
                       MI.getDebugLoc()->getInlinedAt());
     DbgValueProperties Properties(MI);
 
-    const MachineOperand &MO = MI.getDebugOperand(0);
-
     // Ignore non-register locations, we don't transfer those.
-    if (!MO.isReg() || MO.getReg() == 0) {
+    if (MI.isUndefDebugValue() ||
+        all_of(MI.debug_operands(),
+               [](const MachineOperand &MO) { return !MO.isReg(); })) {
       auto It = ActiveVLocs.find(Var);
       if (It != ActiveVLocs.end()) {
-        ActiveMLocs[It->second.Loc].erase(Var);
+        for (LocIdx Loc : It->second.loc_indices())
+          ActiveMLocs[Loc].erase(Var);
         ActiveVLocs.erase(It);
-     }
+      }
       // Any use-before-defs no longer apply.
       UseBeforeDefVariables.erase(Var);
       return;
     }
 
-    Register Reg = MO.getReg();
-    LocIdx NewLoc = MTracker->getRegMLoc(Reg);
-    redefVar(MI, Properties, NewLoc);
+    SmallVector<ResolvedDbgOp> NewLocs;
+    for (const MachineOperand &MO : MI.debug_operands()) {
+      if (MO.isReg()) {
+        // Any undef regs have already been filtered out above.
+        Register Reg = MO.getReg();
+        LocIdx NewLoc = MTracker->getRegMLoc(Reg);
+        NewLocs.push_back(NewLoc);
+      } else {
+        NewLocs.push_back(MO);
+      }
+    }
+
+    redefVar(MI, Properties, NewLocs);
   }
 
   /// Handle a change in variable location within a block. Terminate the
   /// variables current location, and record the value it now refers to, so
   /// that we can detect location transfers later on.
   void redefVar(const MachineInstr &MI, const DbgValueProperties &Properties,
-                Optional<LocIdx> OptNewLoc) {
+                SmallVectorImpl<ResolvedDbgOp> &NewLocs) {
     DebugVariable Var(MI.getDebugVariable(), MI.getDebugExpression(),
                       MI.getDebugLoc()->getInlinedAt());
     // Any use-before-defs no longer apply.
     UseBeforeDefVariables.erase(Var);
 
-    // Erase any previous location,
+    // Erase any previous location.
     auto It = ActiveVLocs.find(Var);
-    if (It != ActiveVLocs.end())
-      ActiveMLocs[It->second.Loc].erase(Var);
-
-    // If there _is_ no new location, all we had to do was erase.
-    if (!OptNewLoc)
-      return;
-    LocIdx NewLoc = *OptNewLoc;
-
-    // Check whether our local copy of values-by-location in #VarLocs is out of
-    // date. Wipe old tracking data for the location if it's been clobbered in
-    // the meantime.
-    if (MTracker->readMLoc(NewLoc) != VarLocs[NewLoc.asU64()]) {
-      for (const auto &P : ActiveMLocs[NewLoc]) {
-        ActiveVLocs.erase(P);
-      }
-      ActiveMLocs[NewLoc.asU64()].clear();
-      VarLocs[NewLoc.asU64()] = MTracker->readMLoc(NewLoc);
+    if (It != ActiveVLocs.end()) {
+      for (LocIdx Loc : It->second.loc_indices())
+        ActiveMLocs[Loc].erase(Var);
     }
 
-    ActiveMLocs[NewLoc].insert(Var);
+    // If there _is_ no new location, all we had to do was erase.
+    if (NewLocs.empty()) {
+      if (It != ActiveVLocs.end())
+        ActiveVLocs.erase(It);
+      return;
+    }
+
+    SmallVector<std::pair<LocIdx, DebugVariable>> LostMLocs;
+    for (ResolvedDbgOp &Op : NewLocs) {
+      if (Op.IsConst)
+        continue;
+
+      LocIdx NewLoc = Op.Loc;
+
+      // Check whether our local copy of values-by-location in #VarLocs is out
+      // of date. Wipe old tracking data for the location if it's been clobbered
+      // in the meantime.
+      if (MTracker->readMLoc(NewLoc) != VarLocs[NewLoc.asU64()]) {
+        for (const auto &P : ActiveMLocs[NewLoc]) {
+          auto LostVLocIt = ActiveVLocs.find(P);
+          if (LostVLocIt != ActiveVLocs.end()) {
+            for (LocIdx Loc : LostVLocIt->second.loc_indices()) {
+              // Every active variable mapping for NewLoc will be cleared, no
+              // need to track individual variables.
+              if (Loc == NewLoc)
+                continue;
+              LostMLocs.emplace_back(Loc, P);
+            }
+          }
+          ActiveVLocs.erase(P);
+        }
+        for (const auto &LostMLoc : LostMLocs)
+          ActiveMLocs[LostMLoc.first].erase(LostMLoc.second);
+        LostMLocs.clear();
+        It = ActiveVLocs.find(Var);
+        ActiveMLocs[NewLoc.asU64()].clear();
+        VarLocs[NewLoc.asU64()] = MTracker->readMLoc(NewLoc);
+      }
+
+      ActiveMLocs[NewLoc].insert(Var);
+    }
+
     if (It == ActiveVLocs.end()) {
       ActiveVLocs.insert(
-          std::make_pair(Var, LocAndProperties{NewLoc, Properties}));
+          std::make_pair(Var, ResolvedDbgValue(NewLocs, Properties)));
     } else {
-      It->second.Loc = NewLoc;
+      It->second.Ops.assign(NewLocs);
       It->second.Properties = Properties;
     }
   }
@@ -590,32 +759,57 @@ public:
 
     // Examine all the variables based on this location.
     DenseSet<DebugVariable> NewMLocs;
+    // If no new location has been found, every variable that depends on this
+    // MLoc is dead, so end their existing MLoc->Var mappings as well.
+    SmallVector<std::pair<LocIdx, DebugVariable>> LostMLocs;
     for (const auto &Var : ActiveMLocIt->second) {
       auto ActiveVLocIt = ActiveVLocs.find(Var);
       // Re-state the variable location: if there's no replacement then NewLoc
       // is None and a $noreg DBG_VALUE will be created. Otherwise, a DBG_VALUE
       // identifying the alternative location will be emitted.
       const DbgValueProperties &Properties = ActiveVLocIt->second.Properties;
-      SmallVector<ResolvedDbgOp> ResolvedOps;
-      if (NewLoc)
-        ResolvedOps.push_back(*NewLoc);
-      PendingDbgValues.push_back(
-          MTracker->emitLoc(ResolvedOps, Var, Properties));
+
+      // Produce the new list of debug ops - an empty list if no new location
+      // was found, or the existing list with the substitution MLoc -> NewLoc
+      // otherwise.
+      SmallVector<ResolvedDbgOp> DbgOps;
+      if (NewLoc) {
+        ResolvedDbgOp OldOp(MLoc);
+        ResolvedDbgOp NewOp(*NewLoc);
+        // Insert illegal ops to overwrite afterwards.
+        DbgOps.insert(DbgOps.begin(), ActiveVLocIt->second.Ops.size(),
+                      ResolvedDbgOp(LocIdx::MakeIllegalLoc()));
+        replace_copy(ActiveVLocIt->second.Ops, DbgOps.begin(), OldOp, NewOp);
+      }
+
+      PendingDbgValues.push_back(MTracker->emitLoc(DbgOps, Var, Properties));
 
       // Update machine locations <=> variable locations maps. Defer updating
-      // ActiveMLocs to avoid invalidaing the ActiveMLocIt iterator.
+      // ActiveMLocs to avoid invalidating the ActiveMLocIt iterator.
       if (!NewLoc) {
+        for (LocIdx Loc : ActiveVLocIt->second.loc_indices()) {
+          if (Loc != MLoc)
+            LostMLocs.emplace_back(Loc, Var);
+        }
         ActiveVLocs.erase(ActiveVLocIt);
       } else {
-        ActiveVLocIt->second.Loc = *NewLoc;
+        ActiveVLocIt->second.Ops = DbgOps;
         NewMLocs.insert(Var);
       }
     }
 
-    // Commit any deferred ActiveMLoc changes.
-    if (!NewMLocs.empty())
-      for (auto &Var : NewMLocs)
-        ActiveMLocs[*NewLoc].insert(Var);
+    // Remove variables from ActiveMLocs if they no longer use any other MLocs
+    // due to being killed by this clobber.
+    for (auto &LocVarIt : LostMLocs) {
+      auto LostMLocIt = ActiveMLocs.find(LocVarIt.first);
+      assert(LostMLocIt != ActiveMLocs.end() &&
+             "Variable was using this MLoc, but ActiveMLocs[MLoc] has no "
+             "entries?");
+      assert(LostMLocIt->second.contains(LocVarIt.second) &&
+             "Variable was using this MLoc, but does not appear in "
+             "ActiveMLocs?");
+      LostMLocIt->second.erase(LocVarIt.second);
+    }
 
     // We lazily track what locations have which values; if we've found a new
     // location for the clobbered value, remember it.
@@ -624,9 +818,11 @@ public:
 
     flushDbgValues(Pos, nullptr);
 
-    // Re-find ActiveMLocIt, iterator could have been invalidated.
-    ActiveMLocIt = ActiveMLocs.find(MLoc);
+    // Commit ActiveMLoc changes.
     ActiveMLocIt->second.clear();
+    if (!NewMLocs.empty())
+      for (auto &Var : NewMLocs)
+        ActiveMLocs[*NewLoc].insert(Var);
   }
 
   /// Transfer variables based on \p Src to be based on \p Dst. This handles
@@ -643,19 +839,22 @@ public:
 
     // Move set of active variables from one location to another.
     auto MovingVars = ActiveMLocs[Src];
-    ActiveMLocs[Dst] = MovingVars;
+    ActiveMLocs[Dst].insert(MovingVars.begin(), MovingVars.end());
     VarLocs[Dst.asU64()] = VarLocs[Src.asU64()];
 
     // For each variable based on Src; create a location at Dst.
+    ResolvedDbgOp SrcOp(Src);
+    ResolvedDbgOp DstOp(Dst);
     for (const auto &Var : MovingVars) {
       auto ActiveVLocIt = ActiveVLocs.find(Var);
       assert(ActiveVLocIt != ActiveVLocs.end());
-      ActiveVLocIt->second.Loc = Dst;
 
-      SmallVector<ResolvedDbgOp> ResolvedOps;
-      ResolvedOps.push_back(Dst);
-      MachineInstr *MI =
-          MTracker->emitLoc(ResolvedOps, Var, ActiveVLocIt->second.Properties);
+      // Update all instances of Src in the variable's tracked values to Dst.
+      std::replace(ActiveVLocIt->second.Ops.begin(),
+                   ActiveVLocIt->second.Ops.end(), SrcOp, DstOp);
+
+      MachineInstr *MI = MTracker->emitLoc(ActiveVLocIt->second.Ops, Var,
+                                           ActiveVLocIt->second.Properties);
       PendingDbgValues.push_back(MI);
     }
     ActiveMLocs[Src].clear();
@@ -1063,7 +1262,10 @@ InstrRefBasedLDV::InstrRefBasedLDV() = default;
 
 bool InstrRefBasedLDV::isCalleeSaved(LocIdx L) const {
   unsigned Reg = MTracker->LocIdxToLocID[L];
-  for (MCRegAliasIterator RAI(Reg, TRI, true); RAI.isValid(); ++RAI)
+  return isCalleeSavedReg(Reg);
+}
+bool InstrRefBasedLDV::isCalleeSavedReg(Register R) const {
+  for (MCRegAliasIterator RAI(R, TRI, true); RAI.isValid(); ++RAI)
     if (CalleeSavedRegs.test(*RAI))
       return true;
   return false;
@@ -1144,19 +1346,19 @@ bool InstrRefBasedLDV::transferDebugValue(const MachineInstr &MI) {
   // Interpret it like a DBG_VALUE $noreg.
   if (MI.isDebugValueList()) {
     SmallVector<DbgOpID> EmptyDebugOps;
+    SmallVector<ResolvedDbgOp> EmptyResolvedDebugOps;
     if (VTracker)
       VTracker->defVar(MI, Properties, EmptyDebugOps);
     if (TTracker)
-      TTracker->redefVar(MI, Properties, None);
+      TTracker->redefVar(MI, Properties, EmptyResolvedDebugOps);
     return true;
   }
 
-  const MachineOperand &MO = MI.getDebugOperand(0);
-
   // MLocTracker needs to know that this register is read, even if it's only
   // read by a debug inst.
-  if (MO.isReg() && MO.getReg() != 0)
-    (void)MTracker->readReg(MO.getReg());
+  for (const MachineOperand &MO : MI.debug_operands())
+    if (MO.isReg() && MO.getReg() != 0)
+      (void)MTracker->readReg(MO.getReg());
 
   // If we're preparing for the second analysis (variables), the machine value
   // locations are already solved, and we report this DBG_VALUE and the value
@@ -1166,14 +1368,16 @@ bool InstrRefBasedLDV::transferDebugValue(const MachineInstr &MI) {
     // Feed defVar the new variable location, or if this is a DBG_VALUE $noreg,
     // feed defVar None.
     if (!MI.isUndefDebugValue()) {
-      // There should be no undef registers here, as we've screened for undef
-      // debug values.
-      if (MO.isReg()) {
-        DebugOps.push_back(DbgOpStore.insert(MTracker->readReg(MO.getReg())));
-      } else if (MO.isImm() || MO.isFPImm() || MO.isCImm()) {
-        DebugOps.push_back(DbgOpStore.insert(MO));
-      } else {
-        llvm_unreachable("Unexpected debug operand type.");
+      for (const MachineOperand &MO : MI.debug_operands()) {
+        // There should be no undef registers here, as we've screened for undef
+        // debug values.
+        if (MO.isReg()) {
+          DebugOps.push_back(DbgOpStore.insert(MTracker->readReg(MO.getReg())));
+        } else if (MO.isImm() || MO.isFPImm() || MO.isCImm()) {
+          DebugOps.push_back(DbgOpStore.insert(MO));
+        } else {
+          llvm_unreachable("Unexpected debug operand type.");
+        }
       }
     }
     VTracker->defVar(MI, Properties, DebugOps);
@@ -1395,24 +1599,27 @@ bool InstrRefBasedLDV::transferDebugInstrRef(MachineInstr &MI,
     }
   }
 
+  SmallVector<ResolvedDbgOp> NewLocs;
+  if (FoundLoc)
+    NewLocs.push_back(*FoundLoc);
   // Tell transfer tracker that the variable value has changed.
-  TTracker->redefVar(MI, Properties, FoundLoc);
+  TTracker->redefVar(MI, Properties, NewLocs);
 
   // If there was a value with no location; but the value is defined in a
   // later instruction in this block, this is a block-local use-before-def.
   if (!FoundLoc && NewID && NewID->getBlock() == CurBB &&
-      NewID->getInst() > CurInst)
+      NewID->getInst() > CurInst) {
+    SmallVector<DbgOp> UseBeforeDefLocs;
+    UseBeforeDefLocs.push_back(*NewID);
     TTracker->addUseBeforeDef(V, {MI.getDebugExpression(), false, false},
-                              *NewID);
+                              UseBeforeDefLocs, NewID->getInst());
+  }
 
   // Produce a DBG_VALUE representing what this DBG_INSTR_REF meant.
   // This DBG_VALUE is potentially a $noreg / undefined location, if
   // FoundLoc is None.
   // (XXX -- could morph the DBG_INSTR_REF in the future).
-  SmallVector<ResolvedDbgOp> ResolvedOps;
-  if (FoundLoc)
-    ResolvedOps.push_back(*FoundLoc);
-  MachineInstr *DbgMI = MTracker->emitLoc(ResolvedOps, V, Properties);
+  MachineInstr *DbgMI = MTracker->emitLoc(NewLocs, V, Properties);
 
   TTracker->PendingDbgValues.push_back(DbgMI);
   TTracker->flushDbgValues(MI.getIterator(), nullptr);
@@ -1812,13 +2019,6 @@ bool InstrRefBasedLDV::transferRegisterCopy(MachineInstr &MI) {
 
   const MachineOperand *DestRegOp = DestSrc->Destination;
   const MachineOperand *SrcRegOp = DestSrc->Source;
-
-  auto isCalleeSavedReg = [&](unsigned Reg) {
-    for (MCRegAliasIterator RAI(Reg, TRI, true); RAI.isValid(); ++RAI)
-      if (CalleeSavedRegs.test(*RAI))
-        return true;
-    return false;
-  };
 
   Register SrcReg = SrcRegOp->getReg();
   Register DestReg = DestRegOp->getReg();

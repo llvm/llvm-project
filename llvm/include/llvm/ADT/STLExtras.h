@@ -1645,6 +1645,24 @@ OutputIt copy(R &&Range, OutputIt Out) {
   return std::copy(adl_begin(Range), adl_end(Range), Out);
 }
 
+/// Provide wrappers to std::replace_copy_if which take ranges instead of having
+/// to pass begin/end explicitly.
+template <typename R, typename OutputIt, typename UnaryPredicate, typename T>
+OutputIt replace_copy_if(R &&Range, OutputIt Out, UnaryPredicate P,
+                         const T &NewValue) {
+  return std::replace_copy_if(adl_begin(Range), adl_end(Range), Out, P,
+                              NewValue);
+}
+
+/// Provide wrappers to std::replace_copy which take ranges instead of having to
+/// pass begin/end explicitly.
+template <typename R, typename OutputIt, typename T>
+OutputIt replace_copy(R &&Range, OutputIt Out, const T &OldValue,
+                      const T &NewValue) {
+  return std::replace_copy(adl_begin(Range), adl_end(Range), Out, OldValue,
+                           NewValue);
+}
+
 /// Provide wrappers to std::move which take ranges instead of having to
 /// pass begin/end explicitly.
 template <typename R, typename OutputIt>
