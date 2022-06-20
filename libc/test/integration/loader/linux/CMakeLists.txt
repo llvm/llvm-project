@@ -38,10 +38,6 @@ add_integration_test(
     main_without_args.cpp
 )
 
-if(NOT (${LIBC_TARGET_ARCHITECTURE} STREQUAL "x86_64"))
-  return()
-endif()
-
 add_integration_test(
   loader_tls_test
   SUITE libc-loader-tests

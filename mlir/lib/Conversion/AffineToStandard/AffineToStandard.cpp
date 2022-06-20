@@ -17,7 +17,7 @@
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/Affine/Utils.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
-#include "mlir/Dialect/SCF/SCF.h"
+#include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
 #include "mlir/IR/BlockAndValueMapping.h"
 #include "mlir/IR/IntegerSet.h"
@@ -194,9 +194,8 @@ public:
       upperBoundTuple.push_back(upper);
     }
     steps.reserve(op.steps().size());
-    for (Attribute step : op.steps())
-      steps.push_back(rewriter.create<arith::ConstantIndexOp>(
-          loc, step.cast<IntegerAttr>().getInt()));
+    for (int64_t step : op.steps())
+      steps.push_back(rewriter.create<arith::ConstantIndexOp>(loc, step));
 
     // Get the terminator op.
     Operation *affineParOpTerminator = op.getBody()->getTerminator();

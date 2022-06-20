@@ -732,7 +732,7 @@ ProgramStateRef ExprEngine::bindReturnValue(const CallEvent &Call,
 
       // Store the extent of the allocated object(s).
       SVal ElementCount;
-      if (const Expr *SizeExpr = CNE->getArraySize().getValueOr(nullptr)) {
+      if (const Expr *SizeExpr = CNE->getArraySize().value_or(nullptr)) {
         ElementCount = State->getSVal(SizeExpr, LCtx);
       } else {
         ElementCount = svalBuilder.makeIntVal(1, /*IsUnsigned=*/true);

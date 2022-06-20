@@ -1,5 +1,5 @@
 ; Check that we can handle spills of array allocas
-; RUN: opt < %s -passes='cgscc(coro-split<reuse-storage>),simplifycfg,early-cse' -S | FileCheck %s
+; RUN: opt < %s -passes='cgscc(coro-split<optimizing>),simplifycfg,early-cse' -S | FileCheck %s
 
 %struct.big_structure = type { [500 x i8] }
 declare void @consume(%struct.big_structure*)

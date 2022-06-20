@@ -4477,7 +4477,7 @@ void SwitchInstProfUpdateWrapper::addCase(
     Weights.getValue()[SI.getNumSuccessors() - 1] = *W;
   } else if (Weights) {
     Changed = true;
-    Weights.getValue().push_back(W.getValueOr(0));
+    Weights.getValue().push_back(W.value_or(0));
   }
   if (Weights)
     assert(SI.getNumSuccessors() == Weights->size() &&

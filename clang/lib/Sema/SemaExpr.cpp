@@ -14473,8 +14473,7 @@ static void RecordModifiableNonNullParam(Sema &S, const Expr *Exp) {
     if (!FD->hasAttr<NonNullAttr>() && !Param->hasAttr<NonNullAttr>())
       return;
   if (FunctionScopeInfo *FD = S.getCurFunction())
-    if (!FD->ModifiedNonNullParams.count(Param))
-      FD->ModifiedNonNullParams.insert(Param);
+    FD->ModifiedNonNullParams.insert(Param);
 }
 
 /// CheckIndirectionOperand - Type check unary indirection (prefix '*').

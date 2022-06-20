@@ -1298,8 +1298,7 @@ bool SwingSchedulerDAG::Circuits::circuit(int V, int S, NodeSetType &NodeSets,
     for (auto W : AdjK[V]) {
       if (W < S)
         continue;
-      if (B[W].count(SV) == 0)
-        B[W].insert(SV);
+      B[W].insert(SV);
     }
   }
   Stack.pop_back();

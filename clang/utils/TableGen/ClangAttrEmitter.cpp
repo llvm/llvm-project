@@ -4321,9 +4321,8 @@ void EmitClangAttrParsedAttrKinds(RecordKeeper &Records, raw_ostream &OS) {
       if (Attr.isSubClassOf("TargetSpecificAttr") &&
           !Attr.isValueUnset("ParseKind")) {
         AttrName = std::string(Attr.getValueAsString("ParseKind"));
-        if (Seen.find(AttrName) != Seen.end())
+        if (!Seen.insert(AttrName).second)
           continue;
-        Seen.insert(AttrName);
       } else
         AttrName = NormalizeAttrName(StringRef(Attr.getName())).str();
 
@@ -4493,7 +4492,7 @@ void EmitClangAttrDocTable(RecordKeeper &Records, raw_ostream &OS) {
     // Only look at the first documentation if there are several.
     // (Currently there's only one such attr, revisit if this becomes common).
     StringRef Text =
-        Docs.front()->getValueAsOptionalString("Content").getValueOr("");
+        Docs.front()->getValueAsOptionalString("Content").value_or("");
     OS << "\nstatic const char AttrDoc_" << A->getName() << "[] = "
        << "R\"reST(" << Text.trim() << ")reST\";\n";
   }

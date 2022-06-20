@@ -2647,6 +2647,39 @@ Value *InstCombinerImpl::foldAndOrOfICmps(ICmpInst *LHS, ICmpInst *RHS,
     }
   }
 
+  // Match naive pattern (and its inverted form) for checking if two values
+  // share same sign. An example of the pattern:
+  // (icmp slt (X & Y), 0) | (icmp sgt (X | Y), -1) -> (icmp sgt (X ^ Y), -1)
+  // Inverted form (example):
+  // (icmp slt (X | Y), 0) & (icmp sgt (X & Y), -1) -> (icmp slt (X ^ Y), 0)
+  bool TrueIfSignedL, TrueIfSignedR;
+  if (InstCombiner::isSignBitCheck(PredL, *LHSC, TrueIfSignedL) &&
+      InstCombiner::isSignBitCheck(PredR, *RHSC, TrueIfSignedR) &&
+      (RHS->hasOneUse() || LHS->hasOneUse())) {
+    Value *X, *Y;
+    if (IsAnd) {
+      if ((TrueIfSignedL && !TrueIfSignedR &&
+           match(LHS0, m_Or(m_Value(X), m_Value(Y))) &&
+           match(RHS0, m_c_And(m_Specific(X), m_Specific(Y)))) ||
+          (!TrueIfSignedL && TrueIfSignedR &&
+           match(LHS0, m_And(m_Value(X), m_Value(Y))) &&
+           match(RHS0, m_c_Or(m_Specific(X), m_Specific(Y))))) {
+        Value *NewXor = Builder.CreateXor(X, Y);
+        return Builder.CreateIsNeg(NewXor);
+      }
+    } else {
+      if ((TrueIfSignedL && !TrueIfSignedR &&
+            match(LHS0, m_And(m_Value(X), m_Value(Y))) &&
+            match(RHS0, m_c_Or(m_Specific(X), m_Specific(Y)))) ||
+          (!TrueIfSignedL && TrueIfSignedR &&
+           match(LHS0, m_Or(m_Value(X), m_Value(Y))) &&
+           match(RHS0, m_c_And(m_Specific(X), m_Specific(Y))))) {
+        Value *NewXor = Builder.CreateXor(X, Y);
+        return Builder.CreateIsNotNeg(NewXor);
+      }
+    }
+  }
+
   return foldAndOrOfICmpsUsingRanges(LHS, RHS, IsAnd);
 }
 

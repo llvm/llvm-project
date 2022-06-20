@@ -93,7 +93,7 @@ bool RISCVMergeBaseOffsetOpt::detectLuiAddiGlobal(MachineInstr &HiLUI,
                                                   MachineInstr *&LoADDI) {
   if (HiLUI.getOpcode() != RISCV::LUI ||
       HiLUI.getOperand(1).getTargetFlags() != RISCVII::MO_HI ||
-      HiLUI.getOperand(1).getType() != MachineOperand::MO_GlobalAddress ||
+      !HiLUI.getOperand(1).isGlobal() ||
       HiLUI.getOperand(1).getOffset() != 0 ||
       !MRI->hasOneUse(HiLUI.getOperand(0).getReg()))
     return false;
@@ -101,7 +101,7 @@ bool RISCVMergeBaseOffsetOpt::detectLuiAddiGlobal(MachineInstr &HiLUI,
   LoADDI = &*MRI->use_instr_begin(HiLuiDestReg);
   if (LoADDI->getOpcode() != RISCV::ADDI ||
       LoADDI->getOperand(2).getTargetFlags() != RISCVII::MO_LO ||
-      LoADDI->getOperand(2).getType() != MachineOperand::MO_GlobalAddress ||
+      !LoADDI->getOperand(2).isGlobal() ||
       LoADDI->getOperand(2).getOffset() != 0 ||
       !MRI->hasOneUse(LoADDI->getOperand(0).getReg()))
     return false;

@@ -22,11 +22,11 @@ using namespace mlir::x86vector;
 /// Extracts the "main" vector element type from the given X86Vector operation.
 template <typename OpTy>
 static Type getSrcVectorElementType(OpTy op) {
-  return op.src().getType().template cast<VectorType>().getElementType();
+  return op.getSrc().getType().template cast<VectorType>().getElementType();
 }
 template <>
 Type getSrcVectorElementType(Vp2IntersectOp op) {
-  return op.a().getType().template cast<VectorType>().getElementType();
+  return op.getA().getType().template cast<VectorType>().getElementType();
 }
 
 namespace {
@@ -70,21 +70,21 @@ struct MaskCompressOpConversion
   LogicalResult
   matchAndRewrite(MaskCompressOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
-    auto opType = adaptor.a().getType();
+    auto opType = adaptor.getA().getType();
 
     Value src;
-    if (op.src()) {
-      src = adaptor.src();
-    } else if (op.constant_src()) {
+    if (op.getSrc()) {
+      src = adaptor.getSrc();
+    } else if (op.getConstantSrc()) {
       src = rewriter.create<arith::ConstantOp>(op.getLoc(), opType,
-                                               op.constant_srcAttr());
+                                               op.getConstantSrcAttr());
     } else {
       Attribute zeroAttr = rewriter.getZeroAttr(opType);
       src = rewriter.create<arith::ConstantOp>(op->getLoc(), opType, zeroAttr);
     }
 
-    rewriter.replaceOpWithNewOp<MaskCompressIntrOp>(op, opType, adaptor.a(),
-                                                    src, adaptor.k());
+    rewriter.replaceOpWithNewOp<MaskCompressIntrOp>(op, opType, adaptor.getA(),
+                                                    src, adaptor.getK());
 
     return success();
   }
@@ -96,8 +96,8 @@ struct RsqrtOpConversion : public ConvertOpToLLVMPattern<RsqrtOp> {
   LogicalResult
   matchAndRewrite(RsqrtOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
-    auto opType = adaptor.a().getType();
-    rewriter.replaceOpWithNewOp<RsqrtIntrOp>(op, opType, adaptor.a());
+    auto opType = adaptor.getA().getType();
+    rewriter.replaceOpWithNewOp<RsqrtIntrOp>(op, opType, adaptor.getA());
     return success();
   }
 };
@@ -108,14 +108,14 @@ struct DotOpConversion : public ConvertOpToLLVMPattern<DotOp> {
   LogicalResult
   matchAndRewrite(DotOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
-    auto opType = adaptor.a().getType();
+    auto opType = adaptor.getA().getType();
     Type llvmIntType = IntegerType::get(&getTypeConverter()->getContext(), 8);
     // Dot product of all elements, broadcasted to all elements.
     auto attr = rewriter.getI8IntegerAttr(static_cast<int8_t>(0xff));
     Value scale =
         rewriter.create<LLVM::ConstantOp>(op.getLoc(), llvmIntType, attr);
-    rewriter.replaceOpWithNewOp<DotIntrOp>(op, opType, adaptor.a(), adaptor.b(),
-                                           scale);
+    rewriter.replaceOpWithNewOp<DotIntrOp>(op, opType, adaptor.getA(),
+                                           adaptor.getB(), scale);
     return success();
   }
 };

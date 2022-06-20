@@ -323,7 +323,7 @@ bool IRForTarget::CreateResultVariable(llvm::Function &llvm_function) {
 
   LLDB_LOG(log, "Creating a new result global: \"{0}\" with size {1}",
            m_result_name,
-           m_result_type.GetByteSize(target_sp.get()).getValueOr(0));
+           m_result_type.GetByteSize(target_sp.get()).value_or(0));
 
   // Construct a new result global and set up its metadata
 

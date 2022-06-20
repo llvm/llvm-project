@@ -3464,8 +3464,7 @@ AMDGPUAsmParser::validateConstantBusLimitations(const MCInst &Inst,
           //   flat_scratch_lo, flat_scratch_hi
           // are theoretically valid but they are disabled anyway.
           // Note that this code mimics SIInstrInfo::verifyInstruction
-          if (!SGPRsUsed.count(LastSGPR)) {
-            SGPRsUsed.insert(LastSGPR);
+          if (SGPRsUsed.insert(LastSGPR).second) {
             ++ConstantBusUseCount;
           }
         } else { // Expression or a literal
@@ -4911,9 +4910,8 @@ bool AMDGPUAsmParser::ParseDirectiveAMDHSAKernel() {
     if (ID == ".end_amdhsa_kernel")
       break;
 
-    if (Seen.find(ID) != Seen.end())
+    if (!Seen.insert(ID).second)
       return TokError(".amdhsa_ directives cannot be repeated");
-    Seen.insert(ID);
 
     SMLoc ValStart = getLoc();
     int64_t IVal;

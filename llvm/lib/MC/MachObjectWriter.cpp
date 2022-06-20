@@ -915,8 +915,8 @@ uint64_t MachObjectWriter::writeObject(MCAssembler &Asm,
       [&](const MCAssembler::VersionInfoType &VersionInfo) {
         auto EncodeVersion = [](VersionTuple V) -> uint32_t {
           assert(!V.empty() && "empty version");
-          unsigned Update = V.getSubminor().getValueOr(0);
-          unsigned Minor = V.getMinor().getValueOr(0);
+          unsigned Update = V.getSubminor().value_or(0);
+          unsigned Minor = V.getMinor().value_or(0);
           assert(Update < 256 && "unencodable update target version");
           assert(Minor < 256 && "unencodable minor target version");
           assert(V.getMajor() < 65536 && "unencodable major target version");

@@ -89,7 +89,7 @@ Error BytesOutputStyle::dump() {
 
   if (opts::bytes::DumpBlockRange.hasValue()) {
     auto &R = *opts::bytes::DumpBlockRange;
-    uint32_t Max = R.Max.getValueOr(R.Min);
+    uint32_t Max = R.Max.value_or(R.Min);
 
     if (Max < R.Min)
       return make_error<StringError>(
@@ -106,7 +106,7 @@ Error BytesOutputStyle::dump() {
 
   if (opts::bytes::DumpByteRange.hasValue()) {
     auto &R = *opts::bytes::DumpByteRange;
-    uint32_t Max = R.Max.getValueOr(File.getFileSize());
+    uint32_t Max = R.Max.value_or(File.getFileSize());
 
     if (Max < R.Min)
       return make_error<StringError>("Invalid byte range specified.  Max < Min",
