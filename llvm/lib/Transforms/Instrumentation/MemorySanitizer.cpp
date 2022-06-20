@@ -4848,8 +4848,8 @@ struct VarArgPowerPC64Helper : public VarArgHelper {
         assert(A->getType()->isPointerTy());
         Type *RealTy = CB.getParamByValType(ArgNo);
         uint64_t ArgSize = DL.getTypeAllocSize(RealTy);
-        MaybeAlign ArgAlign = CB.getParamAlign(ArgNo);
-        if (!ArgAlign || *ArgAlign < Align(8))
+        Align ArgAlign = CB.getParamAlign(ArgNo).value_or(Align(8));
+        if (ArgAlign < 8)
           ArgAlign = Align(8);
         VAArgOffset = alignTo(VAArgOffset, ArgAlign);
         if (!IsFixed) {
@@ -4865,27 +4865,27 @@ struct VarArgPowerPC64Helper : public VarArgHelper {
                              kShadowTLSAlignment, ArgSize);
           }
         }
-        VAArgOffset += alignTo(ArgSize, 8);
+        VAArgOffset += alignTo(ArgSize, Align(8));
       } else {
         Value *Base;
         uint64_t ArgSize = DL.getTypeAllocSize(A->getType());
-        uint64_t ArgAlign = 8;
+        Align ArgAlign = Align(8);
         if (A->getType()->isArrayTy()) {
           // Arrays are aligned to element size, except for long double
           // arrays, which are aligned to 8 bytes.
           Type *ElementTy = A->getType()->getArrayElementType();
           if (!ElementTy->isPPC_FP128Ty())
-            ArgAlign = DL.getTypeAllocSize(ElementTy);
+            ArgAlign = Align(DL.getTypeAllocSize(ElementTy));
         } else if (A->getType()->isVectorTy()) {
           // Vectors are naturally aligned.
-          ArgAlign = DL.getTypeAllocSize(A->getType());
+          ArgAlign = Align(ArgSize);
         }
         if (ArgAlign < 8)
-          ArgAlign = 8;
+          ArgAlign = Align(8);
         VAArgOffset = alignTo(VAArgOffset, ArgAlign);
         if (DL.isBigEndian()) {
-          // Adjusting the shadow for argument with size < 8 to match the placement
-          // of bits in big endian system
+          // Adjusting the shadow for argument with size < 8 to match the
+          // placement of bits in big endian system
           if (ArgSize < 8)
             VAArgOffset += (8 - ArgSize);
         }
@@ -4896,7 +4896,7 @@ struct VarArgPowerPC64Helper : public VarArgHelper {
             IRB.CreateAlignedStore(MSV.getShadow(A), Base, kShadowTLSAlignment);
         }
         VAArgOffset += ArgSize;
-        VAArgOffset = alignTo(VAArgOffset, 8);
+        VAArgOffset = alignTo(VAArgOffset, Align(8));
       }
       if (IsFixed)
         VAArgBase = VAArgOffset;
