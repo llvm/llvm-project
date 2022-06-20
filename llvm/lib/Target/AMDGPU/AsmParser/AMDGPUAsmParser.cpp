@@ -3464,8 +3464,7 @@ AMDGPUAsmParser::validateConstantBusLimitations(const MCInst &Inst,
           //   flat_scratch_lo, flat_scratch_hi
           // are theoretically valid but they are disabled anyway.
           // Note that this code mimics SIInstrInfo::verifyInstruction
-          if (!SGPRsUsed.count(LastSGPR)) {
-            SGPRsUsed.insert(LastSGPR);
+          if (SGPRsUsed.insert(LastSGPR).second) {
             ++ConstantBusUseCount;
           }
         } else { // Expression or a literal

@@ -831,8 +831,6 @@ public:
   void getBasicBlocks(DenseSet<BasicBlock *> &BBSet) const {
     for (IRInstructionData &ID : *this) {
       BasicBlock *BB = ID.Inst->getParent();
-      if (BBSet.contains(BB))
-        continue;
       BBSet.insert(BB);
     }
   }
@@ -843,10 +841,8 @@ public:
                       SmallVector<BasicBlock *> &BBList) const {
     for (IRInstructionData &ID : *this) {
       BasicBlock *BB = ID.Inst->getParent();
-      if (BBSet.contains(BB))
-        continue;
-      BBSet.insert(BB);
-      BBList.push_back(BB);
+      if (BBSet.insert(BB).second)
+        BBList.push_back(BB);
     }
   }
 
