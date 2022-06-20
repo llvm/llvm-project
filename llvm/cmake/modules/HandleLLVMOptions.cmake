@@ -522,16 +522,8 @@ if( MSVC )
     endif()
   endif()
 
-  # Disable string literal const->non-const type conversion.
-  # "When specified, the compiler requires strict const-qualification
-  # conformance for pointers initialized by using string literals."
-  append("/Zc:strictStrings" CMAKE_C_FLAGS CMAKE_CXX_FLAGS)
-
   # "Generate Intrinsic Functions".
   append("/Oi" CMAKE_C_FLAGS CMAKE_CXX_FLAGS)
-
-  # "Enforce type conversion rules".
-  append("/Zc:rvalueCast" CMAKE_CXX_FLAGS)
 
   if (CMAKE_CXX_COMPILER_ID MATCHES "Clang" AND NOT LLVM_ENABLE_LTO)
     # clang-cl and cl by default produce non-deterministic binaries because
@@ -561,6 +553,10 @@ if( MSVC )
   # but in many objects files need more than that. This flag is to increase the
   # number of sections.
   append("/bigobj" CMAKE_CXX_FLAGS)
+
+  # Enable standards conformance mode.
+  # This ensures handling of various C/C++ constructs is more similar to other compilers.
+  append("/permissive-" CMAKE_C_FLAGS CMAKE_CXX_FLAGS)
 endif( MSVC )
 
 # Warnings-as-errors handling for GCC-compatible compilers:
