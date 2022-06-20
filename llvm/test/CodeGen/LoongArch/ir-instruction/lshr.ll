@@ -34,17 +34,13 @@ define i8 @lshr_i8(i8 %x, i8 %y) {
 define i16 @lshr_i16(i16 %x, i16 %y) {
 ; LA32-LABEL: lshr_i16:
 ; LA32:       # %bb.0:
-; LA32-NEXT:    lu12i.w $a2, 15
-; LA32-NEXT:    ori $a2, $a2, 4095
-; LA32-NEXT:    and $a0, $a0, $a2
+; LA32-NEXT:    bstrpick.w $a0, $a0, 15, 0
 ; LA32-NEXT:    srl.w $a0, $a0, $a1
 ; LA32-NEXT:    jirl $zero, $ra, 0
 ;
 ; LA64-LABEL: lshr_i16:
 ; LA64:       # %bb.0:
-; LA64-NEXT:    lu12i.w $a2, 15
-; LA64-NEXT:    ori $a2, $a2, 4095
-; LA64-NEXT:    and $a0, $a0, $a2
+; LA64-NEXT:    bstrpick.d $a0, $a0, 15, 0
 ; LA64-NEXT:    srl.d $a0, $a0, $a1
 ; LA64-NEXT:    jirl $zero, $ra, 0
   %lshr = lshr i16 %x, %y

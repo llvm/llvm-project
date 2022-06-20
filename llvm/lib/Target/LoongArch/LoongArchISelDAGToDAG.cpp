@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "LoongArchISelDAGToDAG.h"
+#include "LoongArchISelLowering.h"
 #include "MCTargetDesc/LoongArchMCTargetDesc.h"
 #include "MCTargetDesc/LoongArchMatInt.h"
 #include "llvm/Support/KnownBits.h"
@@ -88,6 +89,17 @@ bool LoongArchDAGToDAGISel::selectShiftMask(SDValue N, unsigned ShiftWidth,
     // bits that are known zero.
     KnownBits Known = CurDAG->computeKnownBits(N->getOperand(0));
     if (ShMask.isSubsetOf(AndMask | Known.Zero)) {
+      ShAmt = N.getOperand(0);
+      return true;
+    }
+  } else if (N.getOpcode() == LoongArchISD::BSTRPICK) {
+    // Similar to the above AND, if there is a BSTRPICK on the shift amount, we
+    // can bypass it.
+    assert(isPowerOf2_32(ShiftWidth) && "Unexpected max shift amount!");
+    assert(isa<ConstantSDNode>(N.getOperand(1)) && "Illegal msb operand!");
+    assert(isa<ConstantSDNode>(N.getOperand(2)) && "Illegal lsb operand!");
+    uint64_t msb = N.getConstantOperandVal(1), lsb = N.getConstantOperandVal(2);
+    if (lsb == 0 && Log2_32(ShiftWidth) <= msb + 1) {
       ShAmt = N.getOperand(0);
       return true;
     }
