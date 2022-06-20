@@ -25,7 +25,7 @@ namespace lldb_private {
 
 class StructuredDataImpl {
 public:
-  StructuredDataImpl() {}
+  StructuredDataImpl() = default;
 
   StructuredDataImpl(const StructuredDataImpl &rhs) = default;
 

@@ -144,7 +144,7 @@ public:
   RepeatTagsForRange(const std::vector<lldb::addr_t> &tags,
                      TagRange range) const = 0;
 
-  virtual ~MemoryTagManager() {}
+  virtual ~MemoryTagManager() = default;
 };
 
 } // namespace lldb_private

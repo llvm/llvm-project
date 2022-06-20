@@ -932,7 +932,7 @@ public:
   /// correctly.
   class LookupInfo {
   public:
-    LookupInfo() {}
+    LookupInfo() = default;
 
     LookupInfo(ConstString name, lldb::FunctionNameType name_type_mask,
                lldb::LanguageType language);

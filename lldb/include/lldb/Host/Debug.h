@@ -32,7 +32,7 @@ struct ResumeAction {
 // send a signal to the thread when the action is run or step.
 class ResumeActionList {
 public:
-  ResumeActionList() {}
+  ResumeActionList() = default;
 
   ResumeActionList(lldb::StateType default_action, int signal) {
     SetDefaultThreadActionIfNeeded(default_action, signal);

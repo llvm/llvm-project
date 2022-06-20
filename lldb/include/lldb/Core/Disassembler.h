@@ -465,7 +465,7 @@ protected:
     uint32_t line = LLDB_INVALID_LINE_NUMBER;
     uint32_t column = 0;
 
-    SourceLine() {}
+    SourceLine() = default;
 
     bool operator==(const SourceLine &rhs) const {
       return file == rhs.file && line == rhs.line && rhs.column == column;
@@ -489,7 +489,7 @@ protected:
     // Whether to print a blank line at the end of the source lines.
     bool print_source_context_end_eol = true;
 
-    SourceLinesToDisplay() {}
+    SourceLinesToDisplay() = default;
   };
 
   // Get the function's declaration line number, hopefully a line number
