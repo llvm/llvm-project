@@ -48,7 +48,7 @@ public:
     assert(getSeverity() != Severity::DK_Note &&
            "cannot attach a Note to a Note");
     notes.emplace_back(
-        new Diagnostic(Severity::DK_Note, noteLoc.getValueOr(location), msg));
+        new Diagnostic(Severity::DK_Note, noteLoc.value_or(location), msg));
     return *notes.back();
   }
 

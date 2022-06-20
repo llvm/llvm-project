@@ -1607,12 +1607,12 @@ TEST(DWARFDebugInfo, TestFindRecurse) {
   // Test the dwarf::toString() helper function.
   auto StringOpt = toString(NameOpt);
   EXPECT_TRUE(StringOpt);
-  EXPECT_EQ(SpecDieName, StringOpt.getValueOr(nullptr));
+  EXPECT_EQ(SpecDieName, StringOpt.value_or(nullptr));
   // Test the dwarf::toString() helper function with a default value specified.
   EXPECT_EQ(SpecDieName, toString(NameOpt, nullptr));
 
   auto LinkageNameOpt = FuncDie.findRecursively(DW_AT_linkage_name);
-  EXPECT_EQ(SpecLinkageName, toString(LinkageNameOpt).getValueOr(nullptr));
+  EXPECT_EQ(SpecLinkageName, toString(LinkageNameOpt).value_or(nullptr));
 
   // Make sure we can't extract the name from the abstract origin die when using
   // DWARFDie::find() since it won't check the DW_AT_abstract_origin DIE.
@@ -1626,7 +1626,7 @@ TEST(DWARFDebugInfo, TestFindRecurse) {
   // Test the dwarf::toString() helper function.
   StringOpt = toString(NameOpt);
   EXPECT_TRUE(StringOpt);
-  EXPECT_EQ(AbsDieName, StringOpt.getValueOr(nullptr));
+  EXPECT_EQ(AbsDieName, StringOpt.value_or(nullptr));
 }
 
 TEST(DWARFDebugInfo, TestDwarfToFunctions) {

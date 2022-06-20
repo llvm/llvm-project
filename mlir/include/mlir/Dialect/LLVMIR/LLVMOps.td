@@ -1240,7 +1240,7 @@ def LLVM_GlobalOp : LLVM_Op<"mlir.global",
     }
     /// Return the initializer attribute if it exists, or a null attribute.
     Attribute getValueOrNull() {
-      return getValue().getValueOr(Attribute());
+      return getValue().value_or(Attribute());
     }
     /// Return the initializer region. This may be empty, but if it is not it
     /// terminates in an `llvm.return` op with the initializer value.

@@ -2686,7 +2686,7 @@ def fir_GlobalOp : fir_Op<"global", [IsolatedFromAbove, Symbol]> {
     mlir::Type resultType();
 
     /// Return the initializer attribute if it exists, or a null attribute.
-    mlir::Attribute getValueOrNull() { return getInitVal().getValueOr(mlir::Attribute()); }
+    mlir::Attribute getValueOrNull() { return getInitVal().value_or(mlir::Attribute()); }
 
     /// Append the next initializer value to the `GlobalOp` to construct
     /// the variable's initial value.

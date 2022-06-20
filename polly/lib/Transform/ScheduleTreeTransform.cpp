@@ -428,7 +428,7 @@ static bool containsExtensionNode(isl::schedule Schedule) {
 /// Find a named MDNode property in a LoopID.
 static MDNode *findOptionalNodeOperand(MDNode *LoopMD, StringRef Name) {
   return dyn_cast_or_null<MDNode>(
-      findMetadataOperand(LoopMD, Name).getValueOr(nullptr));
+      findMetadataOperand(LoopMD, Name).value_or(nullptr));
 }
 
 /// Is this node of type mark?
