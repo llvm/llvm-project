@@ -19,6 +19,10 @@ def SDT_LoongArchIntBinOpW : SDTypeProfile<1, 2, [
   SDTCisSameAs<0, 1>, SDTCisSameAs<0, 2>, SDTCisVT<0, i64>
 ]>;
 
+def SDT_LoongArchBStrPick: SDTypeProfile<1, 3, [
+  SDTCisInt<0>, SDTCisSameAs<0, 1>, SDTCisInt<2>, SDTCisSameAs<2, 3>
+]>;
+
 // TODO: Add LoongArch specific DAG Nodes
 // Target-dependent nodes.
 def loongarch_ret : SDNode<"LoongArchISD::RET", SDTNone,
@@ -26,6 +30,8 @@ def loongarch_ret : SDNode<"LoongArchISD::RET", SDTNone,
 def loongarch_sll_w : SDNode<"LoongArchISD::SLL_W", SDT_LoongArchIntBinOpW>;
 def loongarch_sra_w : SDNode<"LoongArchISD::SRA_W", SDT_LoongArchIntBinOpW>;
 def loongarch_srl_w : SDNode<"LoongArchISD::SRL_W", SDT_LoongArchIntBinOpW>;
+def loongarch_bstrpick
+    : SDNode<"LoongArchISD::BSTRPICK", SDT_LoongArchBStrPick>;
 
 //===----------------------------------------------------------------------===//
 // Operand and SDNode transformation definitions.
@@ -646,6 +652,16 @@ def : Pat<(select GPR:$cond, GPR:$t, GPR:$f),
 let isBarrier = 1, isReturn = 1, isTerminator = 1 in
 def PseudoRET : Pseudo<(outs), (ins), [(loongarch_ret)]>,
                 PseudoInstExpansion<(JIRL R0, R1, 0)>;
+
+/// BSTRPICK
+
+let Predicates = [IsLA32] in
+def : Pat<(loongarch_bstrpick GPR:$rj, uimm5:$msbd, uimm5:$lsbd),
+          (BSTRPICK_W GPR:$rj, uimm5:$msbd, uimm5:$lsbd)>;
+
+let Predicates = [IsLA64] in
+def : Pat<(loongarch_bstrpick GPR:$rj, uimm6:$msbd, uimm6:$lsbd),
+          (BSTRPICK_D GPR:$rj, uimm6:$msbd, uimm6:$lsbd)>;
 
 //===----------------------------------------------------------------------===//
 // Assembler Pseudo Instructions
