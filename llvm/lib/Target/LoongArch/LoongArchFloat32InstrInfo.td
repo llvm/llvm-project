@@ -106,3 +106,23 @@ def FSTGT_S : FP_STORE_3R<0b00111000011101100, "fstgt.s", FPR32>;
 def FSTLE_S : FP_STORE_3R<0b00111000011101110, "fstle.s", FPR32>;
 
 } // Predicates = [HasBasicF]
+
+//===----------------------------------------------------------------------===//
+// Pseudo-instructions and codegen patterns
+//===----------------------------------------------------------------------===//
+
+/// Generic pattern classes
+
+class PatFprFpr<SDPatternOperator OpNode, LAInst Inst, RegisterClass RegTy>
+    : Pat<(OpNode RegTy:$fj, RegTy:$fk), (Inst $fj, $fk)>;
+
+let Predicates = [HasBasicF] in {
+
+/// Float arithmetic operations
+
+def : PatFprFpr<fadd, FADD_S, FPR32>;
+def : PatFprFpr<fsub, FSUB_S, FPR32>;
+def : PatFprFpr<fmul, FMUL_S, FPR32>;
+def : PatFprFpr<fdiv, FDIV_S, FPR32>;
+
+} // Predicates = [HasBasicF]
