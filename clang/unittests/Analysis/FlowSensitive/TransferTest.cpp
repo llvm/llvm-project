@@ -3628,25 +3628,81 @@ TEST_F(TransferTest, WhileStmtBranchExtendsFlowCondition) {
     void target(bool Foo) {
       while (Foo) {
         (void)0;
-        // [[while_branch]]
+        // [[loop_body]]
       }
+      (void)0;
+      // [[after_loop]]
     }
   )";
-  runDataflow(Code,
-              [](llvm::ArrayRef<
-                     std::pair<std::string, DataflowAnalysisState<NoopLattice>>>
-                     Results,
-                 ASTContext &ASTCtx) {
-                ASSERT_THAT(Results, ElementsAre(Pair("while_branch", _)));
-                const Environment &Env = Results[0].second.Env;
+  runDataflow(
+      Code, [](llvm::ArrayRef<
+                   std::pair<std::string, DataflowAnalysisState<NoopLattice>>>
+                   Results,
+               ASTContext &ASTCtx) {
+        ASSERT_THAT(Results,
+                    ElementsAre(Pair("after_loop", _), Pair("loop_body", _)));
+        const Environment &LoopBodyEnv = Results[1].second.Env;
+        const Environment &AfterLoopEnv = Results[0].second.Env;
 
-                const ValueDecl *FooDecl = findValueDecl(ASTCtx, "Foo");
-                ASSERT_THAT(FooDecl, NotNull());
+        const ValueDecl *FooDecl = findValueDecl(ASTCtx, "Foo");
+        ASSERT_THAT(FooDecl, NotNull());
 
-                BoolValue &FooVal =
-                    *cast<BoolValue>(Env.getValue(*FooDecl, SkipPast::None));
-                EXPECT_TRUE(Env.flowConditionImplies(FooVal));
-              });
+        BoolValue &LoopBodyFooVal =
+            *cast<BoolValue>(LoopBodyEnv.getValue(*FooDecl, SkipPast::None));
+        EXPECT_TRUE(LoopBodyEnv.flowConditionImplies(LoopBodyFooVal));
+
+        BoolValue &AfterLoopFooVal =
+            *cast<BoolValue>(AfterLoopEnv.getValue(*FooDecl, SkipPast::None));
+        EXPECT_TRUE(AfterLoopEnv.flowConditionImplies(
+            AfterLoopEnv.makeNot(AfterLoopFooVal)));
+      });
+}
+
+TEST_F(TransferTest, DoWhileStmtBranchExtendsFlowCondition) {
+  std::string Code = R"(
+    void target(bool Foo) {
+      bool Bar = true;
+      do {
+        (void)0;
+        // [[loop_body]]
+        Bar = false;
+      } while (Foo);
+      (void)0;
+      // [[after_loop]]
+    }
+  )";
+  runDataflow(
+      Code, [](llvm::ArrayRef<
+                   std::pair<std::string, DataflowAnalysisState<NoopLattice>>>
+                   Results,
+               ASTContext &ASTCtx) {
+        ASSERT_THAT(Results,
+                    ElementsAre(Pair("after_loop", _), Pair("loop_body", _)));
+        const Environment &LoopBodyEnv = Results[1].second.Env;
+        const Environment &AfterLoopEnv = Results[0].second.Env;
+
+        const ValueDecl *FooDecl = findValueDecl(ASTCtx, "Foo");
+        ASSERT_THAT(FooDecl, NotNull());
+
+        const ValueDecl *BarDecl = findValueDecl(ASTCtx, "Bar");
+        ASSERT_THAT(BarDecl, NotNull());
+
+        BoolValue &LoopBodyFooVal =
+            *cast<BoolValue>(LoopBodyEnv.getValue(*FooDecl, SkipPast::None));
+        BoolValue &LoopBodyBarVal =
+            *cast<BoolValue>(LoopBodyEnv.getValue(*BarDecl, SkipPast::None));
+        EXPECT_TRUE(LoopBodyEnv.flowConditionImplies(
+            LoopBodyEnv.makeOr(LoopBodyBarVal, LoopBodyFooVal)));
+
+        BoolValue &AfterLoopFooVal =
+            *cast<BoolValue>(AfterLoopEnv.getValue(*FooDecl, SkipPast::None));
+        BoolValue &AfterLoopBarVal =
+            *cast<BoolValue>(AfterLoopEnv.getValue(*BarDecl, SkipPast::None));
+        EXPECT_TRUE(AfterLoopEnv.flowConditionImplies(
+            AfterLoopEnv.makeNot(AfterLoopFooVal)));
+        EXPECT_TRUE(AfterLoopEnv.flowConditionImplies(
+            AfterLoopEnv.makeNot(AfterLoopBarVal)));
+      });
 }
 
 TEST_F(TransferTest, ForStmtBranchExtendsFlowCondition) {
@@ -3654,25 +3710,34 @@ TEST_F(TransferTest, ForStmtBranchExtendsFlowCondition) {
     void target(bool Foo) {
       for (; Foo;) {
         (void)0;
-        // [[for_branch]]
+        // [[loop_body]]
       }
+      (void)0;
+      // [[after_loop]]
     }
   )";
-  runDataflow(Code,
-              [](llvm::ArrayRef<
-                     std::pair<std::string, DataflowAnalysisState<NoopLattice>>>
-                     Results,
-                 ASTContext &ASTCtx) {
-                ASSERT_THAT(Results, ElementsAre(Pair("for_branch", _)));
-                const Environment &Env = Results[0].second.Env;
+  runDataflow(
+      Code, [](llvm::ArrayRef<
+                   std::pair<std::string, DataflowAnalysisState<NoopLattice>>>
+                   Results,
+               ASTContext &ASTCtx) {
+        ASSERT_THAT(Results,
+                    ElementsAre(Pair("after_loop", _), Pair("loop_body", _)));
+        const Environment &LoopBodyEnv = Results[1].second.Env;
+        const Environment &AfterLoopEnv = Results[0].second.Env;
 
-                const ValueDecl *FooDecl = findValueDecl(ASTCtx, "Foo");
-                ASSERT_THAT(FooDecl, NotNull());
+        const ValueDecl *FooDecl = findValueDecl(ASTCtx, "Foo");
+        ASSERT_THAT(FooDecl, NotNull());
 
-                BoolValue &FooVal =
-                    *cast<BoolValue>(Env.getValue(*FooDecl, SkipPast::None));
-                EXPECT_TRUE(Env.flowConditionImplies(FooVal));
-              });
+        BoolValue &LoopBodyFooVal =
+            *cast<BoolValue>(LoopBodyEnv.getValue(*FooDecl, SkipPast::None));
+        EXPECT_TRUE(LoopBodyEnv.flowConditionImplies(LoopBodyFooVal));
+
+        BoolValue &AfterLoopFooVal =
+            *cast<BoolValue>(AfterLoopEnv.getValue(*FooDecl, SkipPast::None));
+        EXPECT_TRUE(AfterLoopEnv.flowConditionImplies(
+            AfterLoopEnv.makeNot(AfterLoopFooVal)));
+      });
 }
 
 } // namespace
