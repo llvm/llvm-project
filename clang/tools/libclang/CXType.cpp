@@ -1168,7 +1168,7 @@ CXType clang_Type_getTemplateArgumentAsType(CXType CT, unsigned index) {
     return MakeCXType(QualType(), GetTU(CT));
 
   Optional<QualType> QT = FindTemplateArgumentTypeAt(TA.getValue(), index);
-  return MakeCXType(QT.getValueOr(QualType()), GetTU(CT));
+  return MakeCXType(QT.value_or(QualType()), GetTU(CT));
 }
 
 CXType clang_Type_getObjCObjectBaseType(CXType CT) {

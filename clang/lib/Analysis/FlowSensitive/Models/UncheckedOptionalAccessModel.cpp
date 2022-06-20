@@ -431,10 +431,9 @@ void assignOptionalValue(const Expr &E, LatticeTransferState &State,
 /// Returns a symbolic value for the "has_value" property of an `optional<T>`
 /// value that is constructed/assigned from a value of type `U` or `optional<U>`
 /// where `T` is constructible from `U`.
-BoolValue &
-getValueOrConversionHasValue(const FunctionDecl &F, const Expr &E,
-                             const MatchFinder::MatchResult &MatchRes,
-                             LatticeTransferState &State) {
+BoolValue &value_orConversionHasValue(const FunctionDecl &F, const Expr &E,
+                                      const MatchFinder::MatchResult &MatchRes,
+                                      LatticeTransferState &State) {
   assert(F.getTemplateSpecializationArgs()->size() > 0);
 
   const int TemplateParamOptionalWrappersCount = countOptionalWrappers(
@@ -462,9 +461,9 @@ void transferValueOrConversionConstructor(
   assert(E->getNumArgs() > 0);
 
   assignOptionalValue(*E, State,
-                      getValueOrConversionHasValue(*E->getConstructor(),
-                                                   *E->getArg(0), MatchRes,
-                                                   State));
+                      value_orConversionHasValue(*E->getConstructor(),
+                                                 *E->getArg(0), MatchRes,
+                                                 State));
 }
 
 void transferAssignment(const CXXOperatorCallExpr *E, BoolValue &HasValueVal,
@@ -487,8 +486,8 @@ void transferValueOrConversionAssignment(
     LatticeTransferState &State) {
   assert(E->getNumArgs() > 1);
   transferAssignment(E,
-                     getValueOrConversionHasValue(
-                         *E->getDirectCallee(), *E->getArg(1), MatchRes, State),
+                     value_orConversionHasValue(*E->getDirectCallee(),
+                                                *E->getArg(1), MatchRes, State),
                      State);
 }
 

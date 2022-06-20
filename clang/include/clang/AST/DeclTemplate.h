@@ -1233,7 +1233,7 @@ class TemplateTypeParmDecl final : public TypeDecl,
       : TypeDecl(TemplateTypeParm, DC, IdLoc, Id, KeyLoc), Typename(Typename),
         HasTypeConstraint(HasTypeConstraint), TypeConstraintInitialized(false),
         ExpandedParameterPack(NumExpanded),
-        NumExpanded(NumExpanded.getValueOr(0)) {}
+        NumExpanded(NumExpanded.value_or(0)) {}
 
 public:
   static TemplateTypeParmDecl *Create(const ASTContext &C, DeclContext *DC,

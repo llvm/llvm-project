@@ -700,7 +700,7 @@ void MSVCToolChain::AddClangSystemIncludeArgs(const ArgList &DriverArgs,
         if (major >= 10) {
           llvm::VersionTuple Tuple;
           if (!Tuple.tryParse(windowsSDKIncludeVersion) &&
-              Tuple.getSubminor().getValueOr(0) >= 17134) {
+              Tuple.getSubminor().value_or(0) >= 17134) {
             AddSystemIncludeWithSubfolder(DriverArgs, CC1Args, WindowsSDKDir,
                                           "Include", windowsSDKIncludeVersion,
                                           "cppwinrt");
@@ -758,8 +758,8 @@ MSVCToolChain::ComputeEffectiveClangTriple(const ArgList &Args,
   // The MSVC version doesn't care about the architecture, even though it
   // may look at the triple internally.
   VersionTuple MSVT = computeMSVCVersion(/*D=*/nullptr, Args);
-  MSVT = VersionTuple(MSVT.getMajor(), MSVT.getMinor().getValueOr(0),
-                      MSVT.getSubminor().getValueOr(0));
+  MSVT = VersionTuple(MSVT.getMajor(), MSVT.getMinor().value_or(0),
+                      MSVT.getSubminor().value_or(0));
 
   // For the rest of the triple, however, a computed architecture name may
   // be needed.

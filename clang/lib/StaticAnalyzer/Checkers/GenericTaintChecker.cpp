@@ -824,7 +824,7 @@ void GenericTaintRule::process(const GenericTaintChecker &Checker,
   /// Check for taint sinks.
   ForEachCallArg([this, &Checker, &C, &State](ArgIdxTy I, const Expr *E, SVal) {
     if (SinkArgs.contains(I) && isTaintedOrPointsToTainted(E, State, C))
-      Checker.generateReportIfTainted(E, SinkMsg.getValueOr(MsgCustomSink), C);
+      Checker.generateReportIfTainted(E, SinkMsg.value_or(MsgCustomSink), C);
   });
 
   /// Check for taint filters.

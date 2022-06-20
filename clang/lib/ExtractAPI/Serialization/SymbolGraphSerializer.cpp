@@ -63,8 +63,8 @@ Optional<Object> serializeSemanticVersion(const VersionTuple &V) {
 
   Object Version;
   Version["major"] = V.getMajor();
-  Version["minor"] = V.getMinor().getValueOr(0);
-  Version["patch"] = V.getSubminor().getValueOr(0);
+  Version["minor"] = V.getMinor().value_or(0);
+  Version["patch"] = V.getSubminor().value_or(0);
   return Version;
 }
 

@@ -550,9 +550,7 @@ public:
   }
 
   /// Return true if the diagnostic piece is prunable.
-  bool isPrunable() const {
-    return IsPrunable.getValueOr(false);
-  }
+  bool isPrunable() const { return IsPrunable.value_or(false); }
 
   void dump() const override;
 
