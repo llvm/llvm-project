@@ -35,6 +35,8 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 
 // bad_function_call
 
+_LIBCPP_DIAGNOSTIC_PUSH
+_LIBCPP_CLANG_DIAGNOSTIC_IGNORED("-Wweak-vtables")
 class _LIBCPP_EXCEPTION_ABI bad_function_call
     : public exception
 {
@@ -52,6 +54,7 @@ public:
     virtual const char* what() const _NOEXCEPT;
 #endif
 };
+_LIBCPP_DIAGNOSTIC_POP
 
 _LIBCPP_NORETURN inline _LIBCPP_INLINE_VISIBILITY
 void __throw_bad_function_call()
