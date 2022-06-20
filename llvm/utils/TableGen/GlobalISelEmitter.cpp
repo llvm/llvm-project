@@ -468,7 +468,7 @@ public:
                    int64_t RawValue = std::numeric_limits<int64_t>::min())
       : LabelID(LabelID_.value_or(~0u)), EmitStr(EmitStr),
         NumElements(NumElements), Flags(Flags), RawValue(RawValue) {
-    assert((!LabelID_.hasValue() || LabelID != ~0u) &&
+    assert((!LabelID_ || LabelID != ~0u) &&
            "This value is reserved for non-labels");
   }
   MatchTableRecord(const MatchTableRecord &Other) = default;

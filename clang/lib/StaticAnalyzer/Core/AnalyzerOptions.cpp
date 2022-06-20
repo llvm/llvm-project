@@ -120,7 +120,7 @@ AnalyzerOptions::mayInlineCXXMemberFunction(
     .Case("none", CIMK_None)
     .Default(None);
 
-  assert(K.hasValue() && "Invalid c++ member function inlining mode.");
+  assert(K && "Invalid c++ member function inlining mode.");
 
   return *K >= Param;
 }

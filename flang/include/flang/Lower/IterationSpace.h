@@ -500,7 +500,7 @@ public:
   }
 
   void attachLoopCleanup(std::function<void(fir::FirOpBuilder &builder)> fn) {
-    if (!loopCleanup.hasValue()) {
+    if (!loopCleanup) {
       loopCleanup = fn;
       return;
     }

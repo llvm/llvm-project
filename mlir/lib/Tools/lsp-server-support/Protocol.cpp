@@ -781,7 +781,7 @@ bool mlir::lsp::fromJSON(const llvm::json::Value &value,
 //===----------------------------------------------------------------------===//
 
 llvm::json::Value mlir::lsp::toJSON(const ParameterInformation &value) {
-  assert((value.labelOffsets.hasValue() || !value.labelString.empty()) &&
+  assert((value.labelOffsets || !value.labelString.empty()) &&
          "parameter information label is required");
   llvm::json::Object result;
   if (value.labelOffsets)
