@@ -581,6 +581,10 @@ Static Analyzer
   `strcmp``, ``strncmp``, ``strcpy``, ``strlen``, ``strsep`` and many more. Although
   this checker currently is in list of alpha checkers due to a false positive.
 
+- Added a new checker ``alpha.unix.Errno``. This can find the first read
+  of ``errno`` after successful standard function calls, such use of ``errno``
+  could be unsafe.
+
 - Deprecate the ``-analyzer-store region`` and
   ``-analyzer-opt-analyze-nested-blocks`` analyzer flags.
   These flags are still accepted, but a warning will be displayed.
