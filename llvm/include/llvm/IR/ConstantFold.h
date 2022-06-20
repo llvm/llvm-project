@@ -1,4 +1,4 @@
-//===-- ConstantFolding.h - Internal Constant Folding Interface -*- C++ -*-===//
+//==-- ConstantFold.h - DL-independent Constant Folding Interface -*- C++ -*-=//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,23 +6,26 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file defines the (internal) constant folding interfaces for LLVM.  These
-// interfaces are used by the ConstantExpr::get* methods to automatically fold
-// constants when possible.
+// This file defines the DataLayout-independent constant folding interface.
+// When possible, the DataLayout-aware constant folding interface in
+// Analysis/ConstantFolding.h should be preferred.
+//
+// These interfaces are used by the ConstantExpr::get* methods to automatically
+// fold constants when possible.
 //
 // These operators may return a null object if they don't know how to perform
 // the specified operation on the specified constant types.
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIB_IR_CONSTANTFOLD_H
-#define LLVM_LIB_IR_CONSTANTFOLD_H
+#ifndef LLVM_IR_CONSTANTFOLD_H
+#define LLVM_IR_CONSTANTFOLD_H
 
 #include "llvm/ADT/Optional.h"
 #include "llvm/IR/InstrTypes.h"
 
 namespace llvm {
-template <typename T> class ArrayRef;
+  template <typename T> class ArrayRef;
   class Value;
   class Constant;
   class Type;
