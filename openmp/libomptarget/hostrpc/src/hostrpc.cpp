@@ -43,7 +43,7 @@ hostrpc_invoke_zeros(uint32_t id, uint64_t arg0 = 0, uint64_t arg1 = 0,
 // override the weak symbol for __ockl_devmem_request and
 // __ockl_sanitizer_report in ockl.bc because by default ockl uses hostcall. But
 // OpenMP uses hostrpc.
-EXTERN uint64_t __ockl_devmem_request(uint64_t addr, uint64_t size) {
+EXTERN NOINLINE uint64_t __ockl_devmem_request(uint64_t addr, uint64_t size) {
   uint64_t arg0;
   if (size) { // allocation request
     arg0 = size;

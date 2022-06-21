@@ -3841,20 +3841,6 @@ bool CompilerInvocation::ParseLangArgs(LangOptions &Opts, ArgList &Args,
       Opts.OpenMP && Args.hasArg(options::OPT_fopenmp_enable_irbuilder);
   bool IsTargetSpecified =
       Opts.OpenMPIsDevice || Args.hasArg(options::OPT_fopenmp_targets_EQ);
-  // Default in Options.td should be true. For AMD, we temporarily override
-  // default to false unless testing with -fopenmp-target-new-runtime
-  if (T.isAMDGCN()) {
-    // FIXME: we may need to change host pass to false when it is
-    // offloading to AMDGCN.  Would require parsing march, offload-arch,
-    Opts.OpenMPTargetNewRuntime = false;
-    if (Args.hasArg(options::OPT_fopenmp_target_new_runtime))
-      Opts.OpenMPTargetNewRuntime = true;
-  } else {
-    Opts.OpenMPTargetNewRuntime = true;
-    if (Args.hasArg(options::OPT_fno_openmp_target_new_runtime))
-      Opts.OpenMPTargetNewRuntime = false;
-  }
-
   Opts.ConvergentFunctions = Opts.ConvergentFunctions || Opts.OpenMPIsDevice;
 
   if (Opts.OpenMP || Opts.OpenMPSimd) {

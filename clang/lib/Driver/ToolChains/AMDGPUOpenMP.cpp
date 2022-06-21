@@ -143,13 +143,16 @@ const char *AMDGCN::OpenMPLinker::constructLLVMLinkCommand(
 
   StringRef disable_fn = Args.MakeArgString(
       C.getDriver().Dir + "/../lib/disable_dynamic_devmem.ll");
-  // OpenMP default is to disable host assisted device memory management
-  // to avoid host service thread for potential performance concerns.
+  // When requested by the user via -fdisable-host-devmem,
+  // to avoid host service thread for potential performance concerns,
+  // disable host assisted device memory
+  // management by providing empty implementation of devmem routine
+  // (only available in new device rtl)
   if (llvm::sys::fs::exists(disable_fn) &&
       Args.hasFlag(options::OPT_fdisable_host_devmem,
-                   options::OPT_fenable_host_devmem, true) &&
+                   options::OPT_fenable_host_devmem, false) &&
       Args.hasFlag(options::OPT_fopenmp_target_new_runtime,
-                   options::OPT_fno_openmp_target_new_runtime, false)) {
+                   options::OPT_fno_openmp_target_new_runtime, true)) {
     input_count++;
     CmdArgs.push_back(Args.MakeArgString(disable_fn));
   }
@@ -215,7 +218,7 @@ const char *AMDGCN::OpenMPLinker::constructLLVMLinkCommand(
   }
 
   if (Args.hasFlag(options::OPT_fopenmp_target_new_runtime,
-                   options::OPT_fno_openmp_target_new_runtime, false))
+                   options::OPT_fno_openmp_target_new_runtime, true))
     BCLibs.push_back(Args.MakeArgString(libpath + "/libomptarget-new-amdgpu-" +
                                         GPUArch + ".bc"));
   else

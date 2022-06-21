@@ -38,6 +38,8 @@ SOFTWARE.
 #define EXTERN extern
 #endif
 
+#define NOINLINE __attribute__((noinline))
+
 #include <stdint.h>
 #include <stdio.h>
 
