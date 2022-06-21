@@ -3076,8 +3076,6 @@ define <2 x i64> @test_128_i64_x_2_18446744065119617024_mask_ashr_1(<2 x i64> %a
 ;
 ; X86-AVX2-LABEL: test_128_i64_x_2_18446744065119617024_mask_ashr_1:
 ; X86-AVX2:       # %bb.0:
-; X86-AVX2-NEXT:    vpbroadcastd {{.*#+}} xmm1 = [4294967294,4294967294,4294967294,4294967294]
-; X86-AVX2-NEXT:    vpand %xmm1, %xmm0, %xmm0
 ; X86-AVX2-NEXT:    vpsrad $1, %xmm0, %xmm0
 ; X86-AVX2-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; X86-AVX2-NEXT:    vpblendd {{.*#+}} xmm0 = xmm1[0],xmm0[1],xmm1[2],xmm0[3]
