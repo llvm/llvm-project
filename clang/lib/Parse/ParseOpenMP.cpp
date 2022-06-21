@@ -1562,7 +1562,7 @@ bool Parser::parseOpenMPAppendArgs(
     // Parse the interop-types.
     if (Optional<OMPDeclareVariantAttr::InteropType> IType =
             parseInteropTypeList(*this))
-      InterOpTypes.push_back(IType.getValue());
+      InterOpTypes.push_back(*IType);
     else
       HasError = true;
 
@@ -1892,7 +1892,7 @@ void Parser::ParseOMPDeclareTargetClauses(
           case OMPC_DEVICE_TYPE_unknown:
             llvm_unreachable("Unexpected device_type");
           }
-          DeviceTypeLoc = DevTypeData.getValue().Loc;
+          DeviceTypeLoc = DevTypeData->Loc;
         }
         continue;
       }

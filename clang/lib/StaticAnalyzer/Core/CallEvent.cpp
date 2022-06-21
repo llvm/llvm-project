@@ -1201,7 +1201,7 @@ lookupRuntimeDefinition(const ObjCInterfaceDecl *Interface,
     }
   }
 
-  return Val.getValue();
+  return *Val;
 }
 
 RuntimeDefinition ObjCMethodCall::getRuntimeDefinition() const {

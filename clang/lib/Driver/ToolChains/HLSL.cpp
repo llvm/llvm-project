@@ -118,7 +118,7 @@ bool isLegalValidatorVersion(StringRef ValVersionStr, const Driver &D) {
   }
 
   uint64_t Major = Version.getMajor();
-  uint64_t Minor = Version.getMinor().getValue();
+  uint64_t Minor = *Version.getMinor();
   if (Major == 0 && Minor != 0) {
     D.Diag(diag::err_drv_invalid_empty_dxil_validator_version) << ValVersionStr;
     return false;
