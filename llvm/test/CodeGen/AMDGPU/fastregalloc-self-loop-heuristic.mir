@@ -55,11 +55,11 @@ body:             |
   ; GCN:   renamable $vgpr2 = GLOBAL_LOAD_DWORD renamable $vgpr0_vgpr1, 0, 0, implicit $exec
   ; GCN:   GLOBAL_STORE_DWORD renamable $vgpr0_vgpr1, renamable $vgpr2, 0, 0, implicit $exec
   ; GCN:   renamable $vgpr2 = GLOBAL_LOAD_DWORD renamable $vgpr0_vgpr1, 0, 0, implicit $exec
-  ; GCN:   SI_SPILL_V32_SAVE $vgpr2, %stack.1, $sgpr32, 0, implicit $exec :: (store (s32) into %stack.1, addrspace 5)
-  ; GCN:   GLOBAL_STORE_DWORD renamable $vgpr0_vgpr1, renamable $vgpr2, 0, 0, implicit $exec
+  ; GCN:   GLOBAL_STORE_DWORD renamable $vgpr0_vgpr1, killed renamable $vgpr2, 0, 0, implicit $exec
   ; GCN:   S_CBRANCH_EXECZ %bb.1, implicit $exec
   ; GCN: bb.2:
   ; GCN:   S_ENDPGM 0
+
   bb.0:
     liveins: $vgpr0_vgpr1
     %0:vreg_64 = COPY $vgpr0_vgpr1

@@ -51,7 +51,7 @@
 ; CHECK-NEXT:   DW_LLE_end_of_list   ()
 ; CHECK:      [[E]]:
 ; CHECK-NEXT:   DW_LLE_startx_length (0x00000004, 0x0000000b): DW_OP_reg0 RAX
-; CHECK-NEXT:   DW_LLE_startx_length (0x00000005, 0x0000005a): DW_OP_breg7 RSP-48
+; CHECK-NEXT:   DW_LLE_startx_length (0x00000005, 0x0000005a): DW_OP_breg7 RSP-36
 ; CHECK-NEXT:   DW_LLE_end_of_list   ()
 ; CHECK:      [[B]]:
 ; CHECK-NEXT:   DW_LLE_startx_length (0x00000006, 0x0000000b): DW_OP_reg0 RAX
