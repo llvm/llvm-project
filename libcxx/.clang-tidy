@@ -1,14 +1,17 @@
-InheritParentConfig: true
 Checks: >
   bugprone-copy-constructor-init,
   bugprone-dangling-handle,
   bugprone-infinite-loop,
+  bugprone-stringview-nullptr,
+  bugprone-use-after-move,
 
-  -llvm-else-after-return,
-  -llvm-header-guard,
-  -llvm-qualified-auto,
+  llvm-include-order,
+  llvm-namespace-comment,
 
-  -misc-unconventional-assign-operator,
+  misc-definitions-in-headers,
+  misc-misplaced-const,
+  misc-non-copyable-objects,
+  misc-uniqueptr-reset-release,
 
   modernize-loop-convert,
   modernize-redundant-void-arg,
@@ -16,7 +19,6 @@ Checks: >
   readability-duplicate-include,
   readability-function-cognitive-complexity,
   readability-function-size,
-  -readability-identifier-naming,
   readability-misplaced-array-index,
   readability-redundant-control-flow,
   readability-redundant-function-ptr-dereference,
@@ -34,6 +36,7 @@ CheckOptions:
 # bugprone-branch-clone,
 # bugprone-macro-parentheses,
 # cppcoreguidelines-prefer-member-initializer,
+# misc-unused-parameters,
 # modernize-use-bool-literals,
 # modernize-use-default-member-init,
 # modernize-use-equals-default,
