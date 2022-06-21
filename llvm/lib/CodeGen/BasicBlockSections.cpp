@@ -245,7 +245,7 @@ assignSections(MachineFunction &MF,
   if (EHPadsSectionID == MBBSectionID::ExceptionSectionID)
     for (auto &MBB : MF)
       if (MBB.isEHPad())
-        MBB.setSectionID(EHPadsSectionID.getValue());
+        MBB.setSectionID(*EHPadsSectionID);
 }
 
 void llvm::sortBasicBlocksAndUpdateBranches(

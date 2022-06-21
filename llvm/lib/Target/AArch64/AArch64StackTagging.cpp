@@ -417,7 +417,7 @@ bool AArch64StackTagging::isInterestingAlloca(const AllocaInst &AI) {
   bool IsInteresting =
       AI.getAllocatedType()->isSized() && AI.isStaticAlloca() &&
       // alloca() may be called with 0 size, ignore it.
-      AI.getAllocationSizeInBits(*DL).getValue() > 0 &&
+      *AI.getAllocationSizeInBits(*DL) > 0 &&
       // inalloca allocas are not treated as static, and we don't want
       // dynamic alloca instrumentation for them as well.
       !AI.isUsedWithInAlloca() &&
@@ -573,7 +573,7 @@ bool AArch64StackTagging::runOnFunction(Function &Fn) {
           End->eraseFromParent();
       }
     } else {
-      uint64_t Size = Info.AI->getAllocationSizeInBits(*DL).getValue() / 8;
+      uint64_t Size = *Info.AI->getAllocationSizeInBits(*DL) / 8;
       Value *Ptr = IRB.CreatePointerCast(TagPCall, IRB.getInt8PtrTy());
       tagAlloca(AI, &*IRB.GetInsertPoint(), Ptr, Size);
       for (auto &RI : SInfo.RetVec) {

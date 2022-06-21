@@ -148,8 +148,7 @@ static Error compileAndExecute(Options &options, ModuleOp module,
                                CompileAndExecuteConfig config, void **args) {
   Optional<llvm::CodeGenOpt::Level> jitCodeGenOptLevel;
   if (auto clOptLevel = getCommandLineOptLevel(options))
-    jitCodeGenOptLevel =
-        static_cast<llvm::CodeGenOpt::Level>(clOptLevel.getValue());
+    jitCodeGenOptLevel = static_cast<llvm::CodeGenOpt::Level>(*clOptLevel);
 
   // If shared library implements custom mlir-runner library init and destroy
   // functions, we'll use them to register the library with the execution

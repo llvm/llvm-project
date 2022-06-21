@@ -13196,7 +13196,7 @@ static QualType chooseRecoveryType(OverloadCandidateSet &CS,
 
   if (!Result)
     return QualType();
-  auto Value = Result.getValue();
+  auto Value = *Result;
   if (Value.isNull() || Value->isUndeducedType())
     return QualType();
   return Value;

@@ -539,8 +539,7 @@ public:
     ElementsAttr branchWeights = nullptr;
     if (auto weights = op.branch_weights()) {
       VectorType weightType = VectorType::get(2, rewriter.getI32Type());
-      branchWeights =
-          DenseElementsAttr::get(weightType, weights.getValue().getValue());
+      branchWeights = DenseElementsAttr::get(weightType, weights->getValue());
     }
 
     rewriter.replaceOpWithNewOp<LLVM::CondBrOp>(
@@ -902,7 +901,7 @@ public:
                                     /*isVolatile=*/false,
                                     /*isNonTemporal=*/false);
     }
-    auto memoryAccess = op.memory_access().getValue();
+    auto memoryAccess = *op.memory_access();
     switch (memoryAccess) {
     case spirv::MemoryAccess::Aligned:
     case spirv::MemoryAccess::None:

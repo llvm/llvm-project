@@ -351,7 +351,7 @@ static unsigned scanFromBlock(const CFGBlock *Start,
             shouldTreatSuccessorsAsReachable(item, *PP);
         }
 
-        if (TreatAllSuccessorsAsReachable.getValue()) {
+        if (*TreatAllSuccessorsAsReachable) {
           B = UB;
           break;
         }
