@@ -1414,24 +1414,6 @@ public:
     default:
       break;
 
-    case Intrinsic::powi:
-      if (auto *RHSC = dyn_cast<ConstantInt>(Args[1])) {
-        bool ShouldOptForSize = I->getParent()->getParent()->hasOptSize();
-        if (getTLI()->isBeneficialToExpandPowI(RHSC->getSExtValue(),
-                                               ShouldOptForSize)) {
-          // The cost is modeled on the expansion performed by ExpandPowI in
-          // SelectionDAGBuilder.
-          unsigned ActiveBits = RHSC->getValue().getActiveBits();
-          InstructionCost Cost =
-              ActiveBits * thisT()->getArithmeticInstrCost(Instruction::FMul,
-                                                           RetTy, CostKind);
-          if (RHSC->getSExtValue() < 0)
-            Cost += thisT()->getArithmeticInstrCost(Instruction::FDiv, RetTy,
-                                                    CostKind);
-          return Cost;
-        }
-      }
-      break;
     case Intrinsic::cttz:
       // FIXME: If necessary, this should go in target-specific overrides.
       if (RetVF.isScalar() && getTLI()->isCheapToSpeculateCttz())
