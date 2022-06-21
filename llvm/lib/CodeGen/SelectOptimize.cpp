@@ -924,7 +924,7 @@ Optional<uint64_t> SelectOptimize::computeInstCost(const Instruction *I) {
   InstructionCost ICost =
       TTI->getInstructionCost(I, TargetTransformInfo::TCK_Latency);
   if (auto OC = ICost.getValue())
-    return Optional<uint64_t>(OC.getValue());
+    return Optional<uint64_t>(*OC);
   return Optional<uint64_t>(None);
 }
 

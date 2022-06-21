@@ -669,7 +669,7 @@ Error write(MCStreamer &Out, ArrayRef<std::string> Inputs) {
             FoundCUUnit = true;
           } else if (Header.UnitType == dwarf::DW_UT_split_type) {
             auto P = TypeIndexEntries.insert(
-                std::make_pair(Header.Signature.getValue(), Entry));
+                std::make_pair(*Header.Signature, Entry));
             if (!P.second)
               continue;
           }

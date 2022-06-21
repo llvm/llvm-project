@@ -203,7 +203,7 @@ void DbgValueHistoryMap::trimLocationRanges(
       if (auto R = intersects(StartMI, EndMI, ScopeRanges, Ordering)) {
         // Adjust ScopeRanges to exclude ranges which subsequent location ranges
         // cannot possibly intersect.
-        ScopeRanges = ArrayRef<InsnRange>(R.getValue(), ScopeRanges.end());
+        ScopeRanges = ArrayRef<InsnRange>(*R, ScopeRanges.end());
       } else {
         // If the location range does not intersect any scope range then the
         // DBG_VALUE which opened this location range is usless, mark it for
