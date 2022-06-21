@@ -8164,6 +8164,7 @@ ExprResult InitializationSequence::Perform(Sema &S,
   // use the syntax of a C++-like constructor.
   bool IsHLSLVectorInit = S.getLangOpts().HLSL && DestType->isExtVectorType() &&
                           isa<InitListExpr>(Args[0]);
+  (void)IsHLSLVectorInit;
 
   // For initialization steps that start with a single initializer,
   // grab the only argument out the Args and place it into the "current"
