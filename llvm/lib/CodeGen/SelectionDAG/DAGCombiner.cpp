@@ -13333,21 +13333,6 @@ SDValue DAGCombiner::visitTRUNCATE(SDNode *N) {
   if (SimplifyDemandedBits(SDValue(N, 0)))
     return SDValue(N, 0);
 
-  // (trunc adde(X, Y, Carry)) -> (adde trunc(X), trunc(Y), Carry)
-  // (trunc addcarry(X, Y, Carry)) -> (addcarry trunc(X), trunc(Y), Carry)
-  // When the adde's carry is not used.
-  if ((N0.getOpcode() == ISD::ADDE || N0.getOpcode() == ISD::ADDCARRY) &&
-      N0.hasOneUse() && !N0->hasAnyUseOfValue(1) &&
-      // We only do for addcarry before legalize operation
-      ((!LegalOperations && N0.getOpcode() == ISD::ADDCARRY) ||
-       TLI.isOperationLegal(N0.getOpcode(), VT))) {
-    SDLoc SL(N);
-    auto X = DAG.getNode(ISD::TRUNCATE, SL, VT, N0.getOperand(0));
-    auto Y = DAG.getNode(ISD::TRUNCATE, SL, VT, N0.getOperand(1));
-    auto VTs = DAG.getVTList(VT, N0->getValueType(1));
-    return DAG.getNode(N0.getOpcode(), SL, VTs, X, Y, N0.getOperand(2));
-  }
-
   // fold (truncate (extract_subvector(ext x))) ->
   //      (extract_subvector x)
   // TODO: This can be generalized to cover cases where the truncate and extract
@@ -13390,6 +13375,22 @@ SDValue DAGCombiner::visitTRUNCATE(SDNode *N) {
         SDValue NarrowR = DAG.getNode(ISD::TRUNCATE, DL, VT, N0.getOperand(1));
         return DAG.getNode(N0.getOpcode(), DL, VT, NarrowL, NarrowR);
       }
+    }
+    break;
+  case ISD::ADDE:
+  case ISD::ADDCARRY:
+    // (trunc adde(X, Y, Carry)) -> (adde trunc(X), trunc(Y), Carry)
+    // (trunc addcarry(X, Y, Carry)) -> (addcarry trunc(X), trunc(Y), Carry)
+    // When the adde's carry is not used.
+    // We only do for addcarry before legalize operation
+    if (((!LegalOperations && N0.getOpcode() == ISD::ADDCARRY) ||
+         TLI.isOperationLegal(N0.getOpcode(), VT)) &&
+        N0.hasOneUse() && !N0->hasAnyUseOfValue(1)) {
+      SDLoc DL(N);
+      SDValue X = DAG.getNode(ISD::TRUNCATE, DL, VT, N0.getOperand(0));
+      SDValue Y = DAG.getNode(ISD::TRUNCATE, DL, VT, N0.getOperand(1));
+      SDVTList VTs = DAG.getVTList(VT, N0->getValueType(1));
+      return DAG.getNode(N0.getOpcode(), DL, VTs, X, Y, N0.getOperand(2));
     }
     break;
   case ISD::USUBSAT:
