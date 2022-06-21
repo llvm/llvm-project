@@ -247,33 +247,53 @@ public:
 
   constexpr bool operator>(const UInt<Bits> &other) const {
     for (size_t i = WordCount; i > 0; --i) {
-      if (val[i - 1] <= other.val[i - 1])
+      uint64_t word = val[i - 1];
+      uint64_t other_word = other.val[i - 1];
+      if (word > other_word)
+        return true;
+      else if (word < other_word)
         return false;
     }
-    return true;
+    // Equal
+    return false;
   }
 
   constexpr bool operator>=(const UInt<Bits> &other) const {
     for (size_t i = WordCount; i > 0; --i) {
-      if (val[i - 1] < other.val[i - 1])
+      uint64_t word = val[i - 1];
+      uint64_t other_word = other.val[i - 1];
+      if (word > other_word)
+        return true;
+      else if (word < other_word)
         return false;
     }
+    // Equal
     return true;
   }
 
   constexpr bool operator<(const UInt<Bits> &other) const {
     for (size_t i = WordCount; i > 0; --i) {
-      if (val[i - 1] >= other.val[i - 1])
+      uint64_t word = val[i - 1];
+      uint64_t other_word = other.val[i - 1];
+      if (word > other_word)
         return false;
+      else if (word < other_word)
+        return true;
     }
-    return true;
+    // Equal
+    return false;
   }
 
   constexpr bool operator<=(const UInt<Bits> &other) const {
     for (size_t i = WordCount; i > 0; --i) {
-      if (val[i - 1] > other.val[i - 1])
+      uint64_t word = val[i - 1];
+      uint64_t other_word = other.val[i - 1];
+      if (word > other_word)
         return false;
+      else if (word < other_word)
+        return true;
     }
+    // Equal
     return true;
   }
 
