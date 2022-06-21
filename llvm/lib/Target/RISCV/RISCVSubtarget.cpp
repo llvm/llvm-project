@@ -201,6 +201,9 @@ bool RISCVSubtarget::useRVVForFixedLengthVectors() const {
 }
 
 bool RISCVSubtarget::enableSubRegLiveness() const {
-  // TODO: Enable for for RVV to better handle LMUL>1 and segment load/store.
-  return EnableSubRegLiveness;
+  if (EnableSubRegLiveness.getNumOccurrences())
+    return EnableSubRegLiveness;
+  // Enable subregister liveness for RVV to better handle LMUL>1 and segment
+  // load/store.
+  return hasVInstructions();
 }
