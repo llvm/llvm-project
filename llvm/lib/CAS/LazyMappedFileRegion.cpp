@@ -15,6 +15,8 @@
 #include "llvm/Support/Path.h"
 #include "llvm/Support/raw_ostream.h"
 
+#if LLVM_ENABLE_ONDISK_CAS
+
 using namespace llvm;
 using namespace llvm::cas;
 
@@ -197,3 +199,4 @@ LazyMappedFileRegion::createShared(
   Node->LMFR = SharedLMFR;
   return std::move(SharedLMFR);
 }
+#endif // LLVM_ENABLE_ONDISK_CAS

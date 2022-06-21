@@ -13,6 +13,7 @@
 #include "llvm/Testing/Support/SupportHelpers.h"
 #include "gtest/gtest.h"
 
+#if LLVM_ENABLE_ONDISK_CAS
 using namespace llvm;
 using namespace llvm::cas;
 
@@ -143,3 +144,5 @@ TEST(OnDiskHashMappedTrieTest, Insertion) {
 }
 
 } // namespace
+
+#endif

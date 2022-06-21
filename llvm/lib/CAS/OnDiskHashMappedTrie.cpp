@@ -18,6 +18,8 @@
 #include "llvm/Support/Path.h"
 #include "llvm/Support/raw_ostream.h"
 
+#if LLVM_ENABLE_ONDISK_CAS
+
 using namespace llvm;
 using namespace llvm::cas;
 
@@ -1270,3 +1272,5 @@ OnDiskDataAllocator::OnDiskDataAllocator(OnDiskDataAllocator &&RHS) = default;
 OnDiskDataAllocator &
 OnDiskDataAllocator::operator=(OnDiskDataAllocator &&RHS) = default;
 OnDiskDataAllocator::~OnDiskDataAllocator() = default;
+
+#endif // LLVM_ENABLE_ONDISK_CAS

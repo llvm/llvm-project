@@ -36,6 +36,7 @@ config.python_executable = "@Python3_EXECUTABLE@"
 config.use_z3_solver = lit_config.params.get('USE_Z3_SOLVER', "@USE_Z3_SOLVER@")
 config.has_plugins = @CLANG_PLUGIN_SUPPORT@
 config.clang_vendor_uti = "@CLANG_VENDOR_UTI@"
+config.have_ondisk_cas = @LLVM_ENABLE_ONDISK_CAS@
 config.llvm_external_lit = path(r"@LLVM_EXTERNAL_LIT@")
 
 import lit.llvm

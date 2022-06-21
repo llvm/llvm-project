@@ -146,6 +146,9 @@ if tar_executable:
     if 'GNU tar' in sout.decode():
         config.available_features.add('gnutar')
 
+if config.have_ondisk_cas:
+    config.available_features.add('ondisk_cas')
+
 # ELF tests expect the default target for ld.lld to be ELF.
 if config.ld_lld_default_mingw:
     config.excludes.append('ELF')

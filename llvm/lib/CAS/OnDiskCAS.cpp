@@ -11,6 +11,7 @@
 #include "llvm/ADT/PointerUnion.h"
 #include "llvm/CAS/BuiltinObjectHasher.h"
 #include "llvm/CAS/OnDiskHashMappedTrie.h"
+#include "llvm/Config/llvm-config.h"
 #include "llvm/Support/Alignment.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/MemoryBuffer.h"
@@ -23,6 +24,7 @@ using namespace llvm;
 using namespace llvm::cas;
 using namespace llvm::cas::builtin;
 
+#if LLVM_ENABLE_ONDISK_CAS
 namespace {
 
 /// Trie record data: 8B, atomic<uint64_t>
@@ -2214,6 +2216,28 @@ OnDiskCAS::OnDiskCAS(StringRef RootPath, OnDiskHashMappedTrie Index,
   TempPrefix = Temp.str().str();
 }
 
+Expected<std::unique_ptr<CASDB>> cas::createOnDiskCAS(const Twine &Path) {
+  // FIXME: An absolute path isn't really good enough. Should open a directory
+  // and use openat() for files underneath.
+  SmallString<256> AbsPath;
+  Path.toVector(AbsPath);
+  sys::fs::make_absolute(AbsPath);
+
+  // FIXME: Remove this and update clients to do this logic.
+  if (AbsPath == getDefaultOnDiskCASStableID())
+    AbsPath = StringRef(getDefaultOnDiskCASPath());
+
+  return OnDiskCAS::open(AbsPath);
+}
+
+#else /* LLVM_ENABLE_ONDISK_CAS */
+
+Expected<std::unique_ptr<CASDB>> cas::createOnDiskCAS(const Twine &Path) {
+  return createStringError(inconvertibleErrorCode(), "OnDiskCAS is disabled");
+}
+
+#endif /* LLVM_ENABLE_ONDISK_CAS */
+
 // FIXME: Proxy not portable. Maybe also error-prone?
 constexpr StringLiteral DefaultDirProxy = "/^llvm::cas::builtin::default";
 constexpr StringLiteral DefaultName = "llvm.cas.builtin.default";
@@ -2240,18 +2264,4 @@ std::string cas::getDefaultOnDiskCASPath() {
   SmallString<128> Path;
   getDefaultOnDiskCASPath(Path);
   return Path.str().str();
-}
-
-Expected<std::unique_ptr<CASDB>> cas::createOnDiskCAS(const Twine &Path) {
-  // FIXME: An absolute path isn't really good enough. Should open a directory
-  // and use openat() for files underneath.
-  SmallString<256> AbsPath;
-  Path.toVector(AbsPath);
-  sys::fs::make_absolute(AbsPath);
-
-  // FIXME: Remove this and update clients to do this logic.
-  if (AbsPath == getDefaultOnDiskCASStableID())
-    AbsPath = StringRef(getDefaultOnDiskCASPath());
-
-  return OnDiskCAS::open(AbsPath);
 }

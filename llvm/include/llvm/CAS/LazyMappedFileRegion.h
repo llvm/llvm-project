@@ -9,10 +9,13 @@
 #ifndef LLVM_CAS_LAZYMAPPEDFILEREGION_H
 #define LLVM_CAS_LAZYMAPPEDFILEREGION_H
 
+#include "llvm/Config/llvm-config.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/FileSystem.h"
 #include <atomic>
 #include <mutex>
+
+#if LLVM_ENABLE_ONDISK_CAS
 
 namespace llvm {
 
@@ -139,4 +142,5 @@ private:
 } // namespace cas
 } // namespace llvm
 
+#endif // LLVM_ENABLE_ONDISK_CAS
 #endif // LLVM_CAS_LAZYMAPPEDFILEREGION_H
