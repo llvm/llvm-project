@@ -37,7 +37,7 @@ TraceInstructionDumper::TraceInstructionDumper(
 
   m_cursor_up->SetForwards(m_options.forwards);
   if (m_options.skip) {
-    uint64_t to_skip = m_options.skip.getValue();
+    uint64_t to_skip = *m_options.skip;
     if (m_cursor_up->Seek((m_options.forwards ? 1 : -1) * to_skip,
                           TraceCursor::SeekType::Current) < to_skip) {
       // This happens when the skip value was more than the number of

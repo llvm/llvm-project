@@ -705,7 +705,7 @@ static void updateARMVFPArgs(const ARMAttributeParser &attributes,
     // as a clash.
     return;
 
-  unsigned vfpArgs = attr.getValue();
+  unsigned vfpArgs = *attr;
   ARMVFPArgKind arg;
   switch (vfpArgs) {
   case ARMBuildAttrs::BaseAAPCS:

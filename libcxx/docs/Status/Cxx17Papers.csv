@@ -50,7 +50,7 @@
 "`p0088r3 <https://wg21.link/p0088r3>`__","LWG","Variant: a type-safe union for C++17","Oulu","|Complete|","4.0"
 "`p0137r1 <https://wg21.link/p0137r1>`__","CWG","Core Issue 1776: Replacement of class objects containing reference members","Oulu","|Complete|","6.0"
 "`p0163r0 <https://wg21.link/p0163r0>`__","LWG","shared_ptr::weak_type","Oulu","|Complete|","3.9"
-"`p0174r2 <https://wg21.link/p0174r2>`__","LWG","Deprecating Vestigial Library Parts in C++17","Oulu","|Partial|",""
+"`p0174r2 <https://wg21.link/p0174r2>`__","LWG","Deprecating Vestigial Library Parts in C++17","Oulu","|Complete|","15.0"
 "`p0175r1 <https://wg21.link/p0175r1>`__","LWG","Synopses for the C library","Oulu","",""
 "`p0180r2 <https://wg21.link/p0180r2>`__","LWG","Reserve a New Library Namespace for Future Standardization","Oulu","|Nothing To Do|","n/a"
 "`p0181r1 <https://wg21.link/p0181r1>`__","LWG","Ordered by Default","Oulu","*Removed in Kona*","n/a"

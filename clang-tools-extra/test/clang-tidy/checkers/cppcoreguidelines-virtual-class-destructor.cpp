@@ -320,3 +320,22 @@ protected:
 #undef XMACRO
 #undef CONCAT
 } // namespace macro_tests
+
+namespace FinalClassCannotBeBaseClass {
+class Base {
+public:
+  Base() = default;
+  virtual void func() = 0;
+
+protected:
+  ~Base() = default;
+};
+
+// no-warning: 'MostDerived' cannot be a base class, since it's marked 'final'.
+class MostDerived final : public Base {
+public:
+  MostDerived() = default;
+  ~MostDerived() = default;
+  void func() final;
+};
+} // namespace FinalClassCannotBeBaseClass
