@@ -8944,7 +8944,11 @@ VPlanPtr LoopVectorizationPlanner::buildVPlanWithVPRecipes(
     VPBasicBlock *InsertBlock = PrevRecipe->getParent();
     auto *Region = GetReplicateRegion(PrevRecipe);
     if (Region)
-      InsertBlock = cast<VPBasicBlock>(Region->getSingleSuccessor());
+      InsertBlock = dyn_cast<VPBasicBlock>(Region->getSingleSuccessor());
+    if (!InsertBlock) {
+      InsertBlock = new VPBasicBlock(Region->getName() + ".succ");
+      VPBlockUtils::insertBlockAfter(InsertBlock, Region);
+    }
     if (Region || PrevRecipe->isPhi())
       Builder.setInsertPoint(InsertBlock, InsertBlock->getFirstNonPhi());
     else
