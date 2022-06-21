@@ -27,7 +27,7 @@ using namespace mlir;
 /// Returns true if the the given `attrOrValue` is a constant zero.
 static bool isZero(OpFoldResult attrOrValue) {
   if (Optional<int64_t> val = getConstantIntValue(attrOrValue))
-    return val.getValue() == 0;
+    return *val == 0;
   return false;
 }
 

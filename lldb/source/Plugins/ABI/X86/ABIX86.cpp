@@ -60,7 +60,7 @@ addPartialRegisters(std::vector<DynamicRegisterInfo::Register> &regs,
                     uint32_t subreg_size, uint32_t subreg_offset = 0) {
   for (const RegData *subreg : subregs) {
     assert(subreg);
-    uint32_t base_index = subreg->base_index.getValue();
+    uint32_t base_index = *subreg->base_index;
     DynamicRegisterInfo::Register &full_reg = regs[base_index];
     if (full_reg.byte_size != base_size)
       continue;

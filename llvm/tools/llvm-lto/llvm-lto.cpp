@@ -1066,7 +1066,7 @@ int main(int argc, char **argv) {
   CodeGen.setAttrs(codegen::getMAttrs());
 
   if (auto FT = codegen::getExplicitFileType())
-    CodeGen.setFileType(FT.getValue());
+    CodeGen.setFileType(*FT);
 
   if (!OutputFilename.empty()) {
     if (SaveLinkedModuleFile) {

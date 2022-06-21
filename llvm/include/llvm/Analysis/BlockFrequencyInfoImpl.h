@@ -1299,7 +1299,7 @@ bool BlockFrequencyInfoImpl<BT>::computeMassInLoop(LoopData &Loop) {
       auto &HeaderNode = Loop.Nodes[H];
       assert(!getBlock(HeaderNode)->getIrrLoopHeaderWeight() &&
              "Shouldn't have a weight metadata");
-      uint64_t MinWeight = MinHeaderWeight.getValue();
+      uint64_t MinWeight = *MinHeaderWeight;
       LLVM_DEBUG(dbgs() << "Giving weight " << MinWeight << " to "
                         << getBlockName(HeaderNode) << "\n");
       if (MinWeight)
@@ -1869,7 +1869,7 @@ struct BFIDOTGraphTraitsBase : public DefaultDOTGraphTraits {
     case GVDT_Count: {
       auto Count = Graph->getBlockProfileCount(Node);
       if (Count)
-        OS << Count.getValue();
+        OS << *Count;
       else
         OS << "Unknown";
       break;

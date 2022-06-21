@@ -158,7 +158,7 @@ static ParseResult parseCmpOp(OpAsmParser &parser, OperationState &result) {
       return parser.emitError(predicateLoc)
              << "'" << predicateAttr.getValue()
              << "' is an incorrect value of the 'predicate' attribute";
-    predicateValue = static_cast<int64_t>(predicate.getValue());
+    predicateValue = static_cast<int64_t>(*predicate);
   } else {
     Optional<FCmpPredicate> predicate =
         symbolizeFCmpPredicate(predicateAttr.getValue());
@@ -166,7 +166,7 @@ static ParseResult parseCmpOp(OpAsmParser &parser, OperationState &result) {
       return parser.emitError(predicateLoc)
              << "'" << predicateAttr.getValue()
              << "' is an incorrect value of the 'predicate' attribute";
-    predicateValue = static_cast<int64_t>(predicate.getValue());
+    predicateValue = static_cast<int64_t>(*predicate);
   }
 
   result.attributes.set("predicate",
@@ -2425,7 +2425,7 @@ static ParseResult parseAtomicBinOp(OpAsmParser &parser, OperationState &result,
            << "' attribute";
   }
 
-  auto value = static_cast<int64_t>(kind.getValue());
+  auto value = static_cast<int64_t>(*kind);
   auto attr = parser.getBuilder().getI64IntegerAttr(value);
   result.addAttribute(attrName, attr);
 
@@ -2452,7 +2452,7 @@ static ParseResult parseAtomicOrdering(OpAsmParser &parser,
            << "' attribute";
   }
 
-  auto value = static_cast<int64_t>(kind.getValue());
+  auto value = static_cast<int64_t>(*kind);
   auto attr = parser.getBuilder().getI64IntegerAttr(value);
   result.addAttribute(attrName, attr);
 

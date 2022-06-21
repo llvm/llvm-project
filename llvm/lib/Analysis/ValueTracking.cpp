@@ -1755,8 +1755,7 @@ static void computeKnownBitsFromOperator(const Operator *I,
           break;
         }
 
-        unsigned FirstZeroHighBit =
-            32 - countLeadingZeros(VScaleMax.getValue());
+        unsigned FirstZeroHighBit = 32 - countLeadingZeros(*VScaleMax);
         if (FirstZeroHighBit < BitWidth)
           Known.Zero.setBitsFrom(FirstZeroHighBit);
 

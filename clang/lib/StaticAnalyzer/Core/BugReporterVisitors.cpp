@@ -2355,7 +2355,7 @@ public:
       // well. Try to use the correct type when looking up the value.
       SVal RVal;
       if (ExplodedGraph::isInterestingLValueExpr(Inner))
-        RVal = LVState->getRawSVal(L.getValue(), Inner->getType());
+        RVal = LVState->getRawSVal(*L, Inner->getType());
       else if (CanDereference)
         RVal = LVState->getSVal(L->getRegion());
 

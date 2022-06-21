@@ -777,7 +777,7 @@ unsigned LoopPredication::collectChecks(SmallVectorImpl<Value *> &Checks,
     if (ICmpInst *ICI = dyn_cast<ICmpInst>(Condition)) {
       if (auto NewRangeCheck = widenICmpRangeCheck(ICI, Expander,
                                                    Guard)) {
-        Checks.push_back(NewRangeCheck.getValue());
+        Checks.push_back(*NewRangeCheck);
         NumWidened++;
         continue;
       }

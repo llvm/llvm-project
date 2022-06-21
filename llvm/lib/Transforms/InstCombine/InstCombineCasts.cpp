@@ -1000,7 +1000,7 @@ Instruction *InstCombinerImpl::visitTrunc(TruncInst &Trunc) {
       Attribute Attr =
           Trunc.getFunction()->getFnAttribute(Attribute::VScaleRange);
       if (Optional<unsigned> MaxVScale = Attr.getVScaleRangeMax()) {
-        if (Log2_32(MaxVScale.getValue()) < DestWidth) {
+        if (Log2_32(*MaxVScale) < DestWidth) {
           Value *VScale = Builder.CreateVScale(ConstantInt::get(DestTy, 1));
           return replaceInstUsesWith(Trunc, VScale);
         }
@@ -1372,7 +1372,7 @@ Instruction *InstCombinerImpl::visitZExt(ZExtInst &CI) {
       Attribute Attr = CI.getFunction()->getFnAttribute(Attribute::VScaleRange);
       if (Optional<unsigned> MaxVScale = Attr.getVScaleRangeMax()) {
         unsigned TypeWidth = Src->getType()->getScalarSizeInBits();
-        if (Log2_32(MaxVScale.getValue()) < TypeWidth) {
+        if (Log2_32(*MaxVScale) < TypeWidth) {
           Value *VScale = Builder.CreateVScale(ConstantInt::get(DestTy, 1));
           return replaceInstUsesWith(CI, VScale);
         }
@@ -1645,7 +1645,7 @@ Instruction *InstCombinerImpl::visitSExt(SExtInst &CI) {
         CI.getFunction()->hasFnAttribute(Attribute::VScaleRange)) {
       Attribute Attr = CI.getFunction()->getFnAttribute(Attribute::VScaleRange);
       if (Optional<unsigned> MaxVScale = Attr.getVScaleRangeMax()) {
-        if (Log2_32(MaxVScale.getValue()) < (SrcBitSize - 1)) {
+        if (Log2_32(*MaxVScale) < (SrcBitSize - 1)) {
           Value *VScale = Builder.CreateVScale(ConstantInt::get(DestTy, 1));
           return replaceInstUsesWith(CI, VScale);
         }

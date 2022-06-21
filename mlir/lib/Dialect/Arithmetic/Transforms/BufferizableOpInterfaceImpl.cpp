@@ -41,7 +41,7 @@ struct ConstantOpInterface
         getGlobalFor(constantOp, options.bufferAlignment);
     if (failed(globalOp))
       return failure();
-    memref::GlobalOp globalMemref = globalOp.getValue();
+    memref::GlobalOp globalMemref = *globalOp;
     replaceOpWithNewBufferizedOp<memref::GetGlobalOp>(
         rewriter, op, globalMemref.type(), globalMemref.getName());
 
