@@ -1008,33 +1008,62 @@ bool DAGCombiner::reassociationCanBreakAddressingModePattern(unsigned Opc,
   // (load/store (add, (add, x, offset1), offset2)) ->
   // (load/store (add, x, offset1+offset2)).
 
+  // (load/store (add, (add, x, y), offset2)) ->
+  // (load/store (add, (add, x, offset2), y)).
+
   if (Opc != ISD::ADD || N0.getOpcode() != ISD::ADD)
     return false;
 
-  if (N0.hasOneUse())
-    return false;
-
-  auto *C1 = dyn_cast<ConstantSDNode>(N0.getOperand(1));
   auto *C2 = dyn_cast<ConstantSDNode>(N1);
-  if (!C1 || !C2)
+  if (!C2)
     return false;
 
-  const APInt &C1APIntVal = C1->getAPIntValue();
   const APInt &C2APIntVal = C2->getAPIntValue();
-  if (C1APIntVal.getBitWidth() > 64 || C2APIntVal.getBitWidth() > 64)
-    return false;
+  if (auto *C1 = dyn_cast<ConstantSDNode>(N0.getOperand(1))) {
+    if (N0.hasOneUse())
+      return false;
 
-  const APInt CombinedValueIntVal = C1APIntVal + C2APIntVal;
-  if (CombinedValueIntVal.getBitWidth() > 64)
-    return false;
-  const int64_t CombinedValue = CombinedValueIntVal.getSExtValue();
+    const APInt &C1APIntVal = C1->getAPIntValue();
+    if (C1APIntVal.getBitWidth() > 64 || C2APIntVal.getBitWidth() > 64)
+      return false;
 
-  for (SDNode *Node : N->uses()) {
-    auto LoadStore = dyn_cast<MemSDNode>(Node);
-    if (LoadStore) {
-      // Is x[offset2] already not a legal addressing mode? If so then
-      // reassociating the constants breaks nothing (we test offset2 because
-      // that's the one we hope to fold into the load or store).
+    const APInt CombinedValueIntVal = C1APIntVal + C2APIntVal;
+    if (CombinedValueIntVal.getBitWidth() > 64)
+      return false;
+    const int64_t CombinedValue = CombinedValueIntVal.getSExtValue();
+
+    for (SDNode *Node : N->uses()) {
+      if (auto *LoadStore = dyn_cast<MemSDNode>(Node)) {
+        // Is x[offset2] already not a legal addressing mode? If so then
+        // reassociating the constants breaks nothing (we test offset2 because
+        // that's the one we hope to fold into the load or store).
+        TargetLoweringBase::AddrMode AM;
+        AM.HasBaseReg = true;
+        AM.BaseOffs = C2APIntVal.getSExtValue();
+        EVT VT = LoadStore->getMemoryVT();
+        unsigned AS = LoadStore->getAddressSpace();
+        Type *AccessTy = VT.getTypeForEVT(*DAG.getContext());
+        if (!TLI.isLegalAddressingMode(DAG.getDataLayout(), AM, AccessTy, AS))
+          continue;
+
+        // Would x[offset1+offset2] still be a legal addressing mode?
+        AM.BaseOffs = CombinedValue;
+        if (!TLI.isLegalAddressingMode(DAG.getDataLayout(), AM, AccessTy, AS))
+          return true;
+      }
+    }
+  } else {
+    if (auto *GA = dyn_cast<GlobalAddressSDNode>(N0.getOperand(1)))
+      if (GA->getOpcode() == ISD::GlobalAddress && TLI.isOffsetFoldingLegal(GA))
+        return false;
+
+    for (SDNode *Node : N->uses()) {
+      auto *LoadStore = dyn_cast<MemSDNode>(Node);
+      if (!LoadStore)
+        return false;
+
+      // Is x[offset2] a legal addressing mode? If so then
+      // reassociating the constants breaks address pattern
       TargetLoweringBase::AddrMode AM;
       AM.HasBaseReg = true;
       AM.BaseOffs = C2APIntVal.getSExtValue();
@@ -1042,13 +1071,9 @@ bool DAGCombiner::reassociationCanBreakAddressingModePattern(unsigned Opc,
       unsigned AS = LoadStore->getAddressSpace();
       Type *AccessTy = VT.getTypeForEVT(*DAG.getContext());
       if (!TLI.isLegalAddressingMode(DAG.getDataLayout(), AM, AccessTy, AS))
-        continue;
-
-      // Would x[offset1+offset2] still be a legal addressing mode?
-      AM.BaseOffs = CombinedValue;
-      if (!TLI.isLegalAddressingMode(DAG.getDataLayout(), AM, AccessTy, AS))
-        return true;
+        return false;
     }
+    return true;
   }
 
   return false;
@@ -1097,6 +1122,20 @@ SDValue DAGCombiner::reassociateOpsCommutative(unsigned Opc, const SDLoc &DL,
     // (N00 ^ N01) ^ N01 --> N00
     if (N1 == N01)
       return N00;
+  }
+
+  if (TLI.isReassocProfitable(DAG, N0, N1)) {
+    // Reassociate if (op N00, N1) already exist
+    if (N1 != N01)
+      if (SDNode *ExistNode =
+              DAG.getNodeIfExists(Opc, DAG.getVTList(VT), {N00, N1}))
+        return DAG.getNode(Opc, DL, VT, SDValue(ExistNode, 0), N01);
+
+    // Reassociate if (op N01, N1) already exist
+    if (N1 != N00)
+      if (SDNode *ExistNode =
+              DAG.getNodeIfExists(Opc, DAG.getVTList(VT), {N01, N1}))
+        return DAG.getNode(Opc, DL, VT, SDValue(ExistNode, 0), N00);
   }
 
   return SDValue();
