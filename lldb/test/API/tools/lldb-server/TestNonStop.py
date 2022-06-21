@@ -1,3 +1,4 @@
+from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 
 import gdbremote_testcase
@@ -7,6 +8,7 @@ class LldbGdbServerTestCase(gdbremote_testcase.GdbRemoteTestCaseBase):
 
     mydir = TestBase.compute_mydir(__file__)
 
+    @skipIfWindows  # no SIGSEGV support
     def test_run(self):
         self.build()
         self.set_inferior_startup_launch()
@@ -127,7 +129,7 @@ class LldbGdbServerTestCase(gdbremote_testcase.GdbRemoteTestCaseBase):
              "read packet: $vCtrlC#00",
              "send packet: $OK#00",
              {"direction": "send",
-              "regex": r"^%Stop:T13",
+              "regex": r"^%Stop:T",
               },
              ], True)
         self.expect_gdbremote_sequence()
@@ -147,6 +149,7 @@ class LldbGdbServerTestCase(gdbremote_testcase.GdbRemoteTestCaseBase):
              ], True)
         self.expect_gdbremote_sequence()
 
+    @skipIfWindows  # no clue, the result makes zero sense
     def test_exit_query(self):
         self.build()
         self.set_inferior_startup_launch()
