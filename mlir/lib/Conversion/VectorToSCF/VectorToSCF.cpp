@@ -163,7 +163,7 @@ static Value generateInBoundsCheck(
   Value cond; // Condition to be built...
 
   // Condition check 1: Access in-bounds?
-  bool isBroadcast = !dim.hasValue(); // No in-bounds check for broadcasts.
+  bool isBroadcast = !dim; // No in-bounds check for broadcasts.
   Location loc = xferOp.getLoc();
   ImplicitLocOpBuilder lb(xferOp.getLoc(), b);
   if (!xferOp.isDimInBounds(0) && !isBroadcast) {

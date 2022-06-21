@@ -253,7 +253,7 @@ public:
       vlog("    definition: {0}", Definitions);
 
       auto Hover = getHover(*AST, Pos, Style, &Index);
-      vlog("    hover: {0}", Hover.hasValue());
+      vlog("    hover: {0}", Hover.has_value());
 
       unsigned DocHighlights = findDocumentHighlights(*AST, Pos).size();
       vlog("    documentHighlight: {0}", DocHighlights);

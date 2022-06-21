@@ -145,7 +145,7 @@ public:
   DefaultInlineAdvice(InlineAdvisor *Advisor, CallBase &CB,
                       Optional<InlineCost> OIC, OptimizationRemarkEmitter &ORE,
                       bool EmitRemarks = true)
-      : InlineAdvice(Advisor, CB, ORE, OIC.hasValue()), OriginalCB(&CB),
+      : InlineAdvice(Advisor, CB, ORE, OIC.has_value()), OriginalCB(&CB),
         OIC(OIC), EmitRemarks(EmitRemarks) {}
 
 private:

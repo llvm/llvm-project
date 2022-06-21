@@ -572,7 +572,7 @@ private:
       for (const auto &T : A.getTokenBuffer().expandedTokens().drop_back()) {
         auto *L = new (A.getAllocator()) syntax::Leaf(&T);
         L->Original = true;
-        L->CanModify = A.getTokenBuffer().spelledForExpanded(T).hasValue();
+        L->CanModify = A.getTokenBuffer().spelledForExpanded(T).has_value();
         Trees.insert(Trees.end(), {&T, L});
       }
     }
@@ -646,7 +646,7 @@ private:
       // Mark that this node came from the AST and is backed by the source code.
       Node->Original = true;
       Node->CanModify =
-          A.getTokenBuffer().spelledForExpanded(Tokens).hasValue();
+          A.getTokenBuffer().spelledForExpanded(Tokens).has_value();
 
       Trees.erase(BeginChildren, EndChildren);
       Trees.insert({FirstToken, Node});

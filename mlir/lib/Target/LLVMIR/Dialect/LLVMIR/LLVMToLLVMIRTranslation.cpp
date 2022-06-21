@@ -315,7 +315,7 @@ convertOperationImpl(Operation &opInst, llvm::IRBuilderBase &builder,
     }
     auto ft = LLVM::LLVMFunctionType::get(resultType, operandTypes);
     llvm::InlineAsm *inlineAsmInst =
-        inlineAsmOp.getAsmDialect().hasValue()
+        inlineAsmOp.getAsmDialect()
             ? llvm::InlineAsm::get(
                   static_cast<llvm::FunctionType *>(
                       moduleTranslation.convertType(ft)),

@@ -65,7 +65,7 @@ AttrOrTypeDef::AttrOrTypeDef(const llvm::Record *def) : def(def) {
 
   // Verify the use of the mnemonic field.
   bool hasCppFormat = hasCustomAssemblyFormat();
-  bool hasDeclarativeFormat = getAssemblyFormat().hasValue();
+  bool hasDeclarativeFormat = getAssemblyFormat().has_value();
   if (getMnemonic()) {
     if (hasCppFormat && hasDeclarativeFormat) {
       PrintFatalError(getLoc(), "cannot specify both 'assemblyFormat' "
@@ -269,7 +269,7 @@ StringRef AttrOrTypeParameter::getSyntax() const {
 bool AttrOrTypeParameter::isOptional() const {
   // Parameters with default values are automatically optional.
   return getDefValue<llvm::BitInit>("isOptional").value_or(false) ||
-         getDefaultValue().hasValue();
+         getDefaultValue();
 }
 
 Optional<StringRef> AttrOrTypeParameter::getDefaultValue() const {

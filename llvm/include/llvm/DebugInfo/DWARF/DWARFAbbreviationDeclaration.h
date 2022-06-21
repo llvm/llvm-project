@@ -34,7 +34,7 @@ public:
     AttributeSpec(dwarf::Attribute A, dwarf::Form F, Optional<uint8_t> ByteSize)
         : Attr(A), Form(F) {
       assert(!isImplicitConst());
-      this->ByteSize.HasByteSize = ByteSize.hasValue();
+      this->ByteSize.HasByteSize = ByteSize.has_value();
       if (this->ByteSize.HasByteSize)
         this->ByteSize.ByteSize = *ByteSize;
     }

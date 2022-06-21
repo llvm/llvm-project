@@ -489,7 +489,7 @@ void SymbolFileBreakpad::AddSymbols(Symtab &symtab) {
         /*is_trampoline*/ false, /*is_artificial*/ false,
         AddressRange(section_sp, address - section_sp->GetFileAddress(),
                      size.value_or(0)),
-        size.hasValue(), /*contains_linker_annotations*/ false, /*flags*/ 0);
+        size.has_value(), /*contains_linker_annotations*/ false, /*flags*/ 0);
   };
 
   for (llvm::StringRef line : lines(Record::Public)) {

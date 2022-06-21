@@ -339,7 +339,7 @@ static bool genericValueTraversal(
     if (auto *SI = dyn_cast<SelectInst>(V)) {
       Optional<Constant *> C = A.getAssumedConstant(
           *SI->getCondition(), QueryingAA, UsedAssumedInformation);
-      bool NoValueYet = !C.hasValue();
+      bool NoValueYet = !C;
       if (NoValueYet || isa_and_nonnull<UndefValue>(*C))
         continue;
       if (auto *CI = dyn_cast_or_null<ConstantInt>(*C)) {
@@ -9576,7 +9576,7 @@ struct AANoUndefImpl : AANoUndef {
     // considered to be dead. We don't manifest noundef in such positions for
     // the same reason above.
     if (!A.getAssumedSimplified(getIRPosition(), *this, UsedAssumedInformation)
-             .hasValue())
+             .has_value())
       return ChangeStatus::UNCHANGED;
     return AANoUndef::manifest(A);
   }

@@ -86,7 +86,7 @@ def SPIRV_Dialect : Dialect {
 // enum class with `name`.
 class SPV_IsKnownEnumCaseFor<string name> :
     CPred<"::mlir::spirv::symbolize" # name # "("
-          "$_self.cast<IntegerAttr>().getValue().getZExtValue()).hasValue()">;
+          "$_self.cast<IntegerAttr>().getValue().getZExtValue()).has_value()">;
 
 // Wrapper over base BitEnumAttr to set common fields.
 class SPV_BitEnumAttr<string name, string description,

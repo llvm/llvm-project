@@ -626,7 +626,7 @@ Optional<FileEntryRef> DirectoryLookup::DoFrameworkLookup(
 
   // Set out flags.
   InUserSpecifiedSystemFramework = CacheEntry.IsUserSpecifiedSystemFramework;
-  IsFrameworkFound = CacheEntry.Directory.hasValue();
+  IsFrameworkFound = CacheEntry.Directory.has_value();
 
   if (RelativePath) {
     RelativePath->clear();

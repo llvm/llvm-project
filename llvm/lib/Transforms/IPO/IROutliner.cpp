@@ -964,7 +964,7 @@ findExtractedInputToOverallInputMapping(OutlinableRegion &Region,
       // argument in the overall function.
       if (Input->isSwiftError()) {
         assert(
-            !Group.SwiftErrorArgument.hasValue() &&
+            !Group.SwiftErrorArgument &&
             "Argument already marked with swifterr for this OutlinableGroup!");
         Group.SwiftErrorArgument = TypeIndex;
       }
@@ -1871,7 +1871,7 @@ replaceArgumentUses(OutlinableRegion &Region,
       // If this is storing a PHINode, we must make sure it is included in the
       // overall function.
       if (!isa<PHINode>(ValueOperand) ||
-          Region.Candidate->getGVN(ValueOperand).hasValue()) {
+          Region.Candidate->getGVN(ValueOperand).has_value()) {
         if (FirstFunction)
           continue;
         Value *CorrVal =
