@@ -35,9 +35,11 @@ class TestSwiftMoveFunctionAsyncType(TestBase):
         """
         self.build()
 
-        self.target, self.process, self.thread, self.bkpt = \
+        self.breakpoints = []
+        self.target, self.process, self.thread, bkpt = \
             lldbutil.run_to_source_breakpoint(
-                self, 'Set breakpoint', lldb.SBFileSpec('main.swift'))
+                self, 'Set breakpoint 00', lldb.SBFileSpec('main.swift'))
+        self.breakpoints.append(bkpt)
 
         # We setup a single breakpoint in copyable var test so we can disable it
         # after we hit it.
@@ -46,112 +48,99 @@ class TestSwiftMoveFunctionAsyncType(TestBase):
         self.do_check_copyable_value_test()
         self.do_check_copyable_var_test()
 
-    def setUp(self):
-        TestBase.setUp(self)
-        self.main_source = "main.swift"
-        self.main_source_spec = lldb.SBFileSpec(self.main_source)
-        self.exec_name = "a.out"
-
     def get_var(self, name):
         frame = self.thread.frames[0]
         return frame.FindVariable(name)
 
     def do_setup_breakpoints(self):
-        self.breakpoints = []
-        pattern = 'Special breakpoint'
-        brk = self.target.BreakpointCreateBySourceRegex(
-            pattern, self.main_source_spec)
-        self.assertGreater(brk.GetNumLocations(), 0, VALID_BREAKPOINT)
-        self.breakpoints.append(brk)
+        for i in range(1, 11):
+            bkpt = self.target.BreakpointCreateBySourceRegex(
+                'Set breakpoint %02d'%i, lldb.SBFileSpec('main.swift'))
+            self.assertGreater(bkpt.GetNumLocations(), 0, VALID_BREAKPOINT)
+            self.breakpoints.append(bkpt)
+        self.assertEqual(len(self.breakpoints), 11)
+
+    def continue_to(self, bkpt_id):
+        while self.process.is_alive and \
+              not lldbutil.continue_to_breakpoint(self.process,
+                                                  self.breakpoints[bkpt_id]):
+            pass
+        self.assertTrue(self.process.is_alive)
 
     def do_check_copyable_value_test(self):
         # We haven't defined varK yet.
         varK = self.get_var('k')
         self.assertEqual(varK.unsigned, 0, "varK initialized too early?!")
 
-        # Go to break point 2.1. k should be valid.
-        self.process.Continue()
+        # Go to break point 1.1. k should be valid.
+        self.continue_to(1)
         varK = self.get_var('k')
         self.assertGreater(varK.unsigned, 0, "varK not initialized?!")
 
-        # Go to breakpoint 2.2. k should still be valid. And we should be on the
+        # Go to breakpoint `1.2. k should still be valid. And we should be on the
         # other side of the force split.
-        self.process.Continue()
+        self.continue_to(1)
         varK = self.get_var('k')
         self.assertGreater(varK.unsigned, 0, "varK not initialized?!")
 
-        # Go to breakpoint 3. k should still be valid. We should be at the move
+        # Go to breakpoint 2. k should still be valid. We should be at the move
         # on the other side of the forceSplit.
-        self.process.Continue()
+        self.continue_to(2)
         varK = self.get_var('k')
         self.assertGreater(varK.unsigned, 0, "varK not initialized?!")
 
-        # We are now at break point 4. We have moved k, it should be empty.
-        self.process.Continue()
+        # We are now at break point 3. We have moved k, it should be empty.
+        self.continue_to(3)
         varK = self.get_var('k')
         self.assertIsNone(varK.value, "K is live but was moved?!")
 
         # Finally, we are on the other side of the final force split. Make sure
         # the value still isn't available.
-        self.process.Continue()
+        self.continue_to(4)
         varK = self.get_var('k')
         self.assertIsNone(varK.value, "K is live but was moved?!")
 
+    def do_check_copyable_var_test(self):
         # Run so we hit the next breakpoint to jump to the next test's
         # breakpoint.
-        self.process.Continue()
-
-    def do_check_copyable_var_test(self):
+        self.continue_to(5)
         # We haven't defined varK yet.
         varK = self.get_var('k')
         self.assertEqual(varK.unsigned, 0, "varK initialized too early?!")
 
-        # Go to break point 2.1. k should be valid.
-        self.process.Continue()
+        # Go to break point 6.1. k should be valid.
+        self.continue_to(6)
         varK = self.get_var('k')
         self.assertGreater(varK.unsigned, 0, "varK not initialized?!")
 
-        # Go to breakpoint 2.2. k should still be valid. And we should be on the
+        # Go to breakpoint 6.2. k should still be valid. And we should be on the
         # other side of the force split.
-        self.process.Continue()
+        self.continue_to(6)
         varK = self.get_var('k')
         self.assertGreater(varK.unsigned, 0, "varK not initialized?!")
 
-        # Go to breakpoint 3. k should still be valid. We should be at the move
+        # Go to breakpoint 7. k should still be valid. We should be at the move
         # on the other side of the forceSplit.
-        self.process.Continue()
+        self.continue_to(7)
         varK = self.get_var('k')
         self.assertGreater(varK.unsigned, 0, "varK not initialized?!")
 
-        # There is an instruction with the wrong debug location on Linux,
-        # causing us to jump back to 'step backwards' to an earlier location
-        # before we have run the move. So disable that breakpoint so when we
-        # continue, we get to the appropriate location on Linux and other
-        # platforms.
-        #
-        # TODO: Investigate why this is happening!
-        self.runCmd('# Skipping bad loc by disabling earlier break point 6')
-        self.runCmd('break dis 2')
-
-        # We are now at break point 4. We have moved k, it should be empty.
-        self.process.Continue()
+        # We are now at break point 8. We have moved k, it should be empty.
+        self.continue_to(8)
         varK = self.get_var('k')
         self.assertIsNone(varK.value, "K is live but was moved?!")
 
         # Now, we are on the other side of the final force split. Make sure
         # the value still isn't available.
-        self.process.Continue()
+        self.continue_to(9)
         self.runCmd('# On other side of force split')
         varK = self.get_var('k')
         self.assertIsNone(varK.value, "K is live but was moved?!")
 
         # Finally, we have reinitialized k, look for k.
-        self.process.Continue()
+        self.continue_to(10)
         self.runCmd('# After var reinit')
         varK = self.get_var('k')
         self.assertGreater(varK.unsigned, 0, "varK not initialized?!")
 
-        # Run so we hit the next breakpoint to jump to the next test's
-        # breakpoint.
         self.runCmd('# At end of routine!')
-        self.process.Continue()
