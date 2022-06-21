@@ -246,7 +246,7 @@ LogicalResult mlir::affineForOpBodySkew(AffineForOp forOp,
   // better way to pipeline for such loops is to first tile them and extract
   // constant trip count "full tiles" before applying this.
   auto mayBeConstTripCount = getConstantTripCount(forOp);
-  if (!mayBeConstTripCount.hasValue()) {
+  if (!mayBeConstTripCount) {
     LLVM_DEBUG(forOp.emitRemark("non-constant trip count loop not handled"));
     return success();
   }
@@ -1096,8 +1096,7 @@ LogicalResult mlir::loopUnrollByFactor(
 
   Optional<uint64_t> mayBeConstantTripCount = getConstantTripCount(forOp);
   if (unrollFactor == 1) {
-    if (mayBeConstantTripCount.hasValue() &&
-        mayBeConstantTripCount.getValue() == 1 &&
+    if (mayBeConstantTripCount && *mayBeConstantTripCount == 1 &&
         failed(promoteIfSingleIteration(forOp)))
       return failure();
     return success();
@@ -1109,8 +1108,7 @@ LogicalResult mlir::loopUnrollByFactor(
 
   // If the trip count is lower than the unroll factor, no unrolled body.
   // TODO: option to specify cleanup loop unrolling.
-  if (mayBeConstantTripCount.hasValue() &&
-      mayBeConstantTripCount.getValue() < unrollFactor)
+  if (mayBeConstantTripCount && *mayBeConstantTripCount < unrollFactor)
     return failure();
 
   // Generate the cleanup loop if trip count isn't a multiple of unrollFactor.
@@ -1206,8 +1204,7 @@ LogicalResult mlir::loopUnrollJamByFactor(AffineForOp forOp,
 
   Optional<uint64_t> mayBeConstantTripCount = getConstantTripCount(forOp);
   if (unrollJamFactor == 1) {
-    if (mayBeConstantTripCount.hasValue() &&
-        mayBeConstantTripCount.getValue() == 1 &&
+    if (mayBeConstantTripCount && *mayBeConstantTripCount == 1 &&
         failed(promoteIfSingleIteration(forOp)))
       return failure();
     return success();
@@ -1218,8 +1215,7 @@ LogicalResult mlir::loopUnrollJamByFactor(AffineForOp forOp,
     return success();
 
   // If the trip count is lower than the unroll jam factor, no unroll jam.
-  if (mayBeConstantTripCount.hasValue() &&
-      mayBeConstantTripCount.getValue() < unrollJamFactor) {
+  if (mayBeConstantTripCount && *mayBeConstantTripCount < unrollJamFactor) {
     LLVM_DEBUG(llvm::dbgs() << "[failed] trip count < unroll-jam factor\n");
     return failure();
   }
@@ -1440,7 +1436,7 @@ static bool checkLoopInterchangeDependences(
     // This iterates through loops in the desired order.
     for (unsigned j = 0; j < maxLoopDepth; ++j) {
       unsigned permIndex = loopPermMapInv[j];
-      assert(depComps[permIndex].lb.hasValue());
+      assert(depComps[permIndex].lb);
       int64_t depCompLb = depComps[permIndex].lb.getValue();
       if (depCompLb > 0)
         break;
@@ -2094,7 +2090,7 @@ static LogicalResult generateCopy(
   lbs.reserve(rank);
   Optional<int64_t> numElements = region.getConstantBoundingSizeAndShape(
       &fastBufferShape, &lbs, &lbDivisors);
-  if (!numElements.hasValue()) {
+  if (!numElements) {
     LLVM_DEBUG(llvm::dbgs() << "Non-constant region size not supported\n");
     return failure();
   }

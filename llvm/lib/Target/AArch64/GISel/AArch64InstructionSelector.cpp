@@ -5831,7 +5831,7 @@ bool AArch64InstructionSelector::selectIntrinsic(MachineInstr &I,
     uint64_t Key = I.getOperand(3).getImm();
     Register DiscReg = I.getOperand(4).getReg();
     auto DiscVal = getIConstantVRegVal(DiscReg, MRI);
-    bool IsDiscZero = DiscVal.hasValue() && DiscVal->isNullValue();
+    bool IsDiscZero = DiscVal && DiscVal->isNullValue();
 
     if (Key > 3)
       return false;
@@ -6525,7 +6525,7 @@ AArch64InstructionSelector::selectAddrModeIndexed(MachineOperand &Root,
 
   // Before falling back to our general case, check if the unscaled
   // instructions can handle this. If so, that's preferable.
-  if (selectAddrModeUnscaled(Root, Size).hasValue())
+  if (selectAddrModeUnscaled(Root, Size))
     return None;
 
   return {{

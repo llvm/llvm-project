@@ -34,7 +34,6 @@ using namespace NVVM;
 
 #include "mlir/Dialect/LLVMIR/NVVMOpsDialect.cpp.inc"
 #include "mlir/Dialect/LLVMIR/NVVMOpsEnums.cpp.inc"
-#include "mlir/Dialect/LLVMIR/NVVMOpsStructs.cpp.inc"
 
 //===----------------------------------------------------------------------===//
 // Printing/parsing for NVVM ops
@@ -203,7 +202,7 @@ void MmaOp::build(OpBuilder &builder, OperationState &result, Type resultType,
   result.addOperands(operandB);
   result.addOperands(operandC);
 
-  if (multiplicandPtxTypes.hasValue()) {
+  if (multiplicandPtxTypes) {
     result.addAttribute("multiplicandAPtxType",
                         MMATypesAttr::get(ctx, (*multiplicandPtxTypes)[0]));
     result.addAttribute("multiplicandBPtxType",
@@ -215,7 +214,7 @@ void MmaOp::build(OpBuilder &builder, OperationState &result, Type resultType,
       result.addAttribute("multiplicandBPtxType", MMATypesAttr::get(ctx, *res));
   }
 
-  if (multiplicandLayouts.hasValue()) {
+  if (multiplicandLayouts) {
     result.addAttribute("layoutA",
                         MMALayoutAttr::get(ctx, (*multiplicandLayouts)[0]));
     result.addAttribute("layoutB",
@@ -506,7 +505,7 @@ LogicalResult MmaOp::verify() {
   }
 
   // Ensure that binary MMA variants have a b1 MMA operation defined.
-  if (getMultiplicandAPtxType() == MMATypes::b1 && !getB1Op().hasValue()) {
+  if (getMultiplicandAPtxType() == MMATypes::b1 && !getB1Op()) {
     return emitOpError("op requires " + getB1OpAttrName().strref() +
                        " attribute");
   }
@@ -515,7 +514,7 @@ LogicalResult MmaOp::verify() {
   // attribute.
   if (isInt4PtxType(*getMultiplicandAPtxType()) ||
       isInt8PtxType(*getMultiplicandAPtxType())) {
-    if (!getIntOverflowBehavior().hasValue())
+    if (!getIntOverflowBehavior())
       return emitOpError("op requires " +
                          getIntOverflowBehaviorAttrName().strref() +
                          " attribute");

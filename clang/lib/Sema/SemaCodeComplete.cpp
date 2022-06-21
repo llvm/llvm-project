@@ -5645,7 +5645,7 @@ void Sema::CodeCompleteMemberReferenceExpr(Scope *S, Expr *Base,
       // Objective-C property reference. Bail if we're performing fix-it code
       // completion since Objective-C properties are normally backed by ivars,
       // most Objective-C fix-its here would have little value.
-      if (AccessOpFixIt.hasValue()) {
+      if (AccessOpFixIt) {
         return false;
       }
       AddedPropertiesSet AddedProperties;
@@ -5670,7 +5670,7 @@ void Sema::CodeCompleteMemberReferenceExpr(Scope *S, Expr *Base,
       // Objective-C instance variable access. Bail if we're performing fix-it
       // code completion since Objective-C properties are normally backed by
       // ivars, most Objective-C fix-its here would have little value.
-      if (AccessOpFixIt.hasValue()) {
+      if (AccessOpFixIt) {
         return false;
       }
       ObjCInterfaceDecl *Class = nullptr;

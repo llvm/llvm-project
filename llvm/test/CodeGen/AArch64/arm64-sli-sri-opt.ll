@@ -164,10 +164,9 @@ define void @testRightBad4x16(<4 x i16> %src1, <4 x i16> %src2, <4 x i16>* %dest
 ; CHECK-LABEL: testRightBad4x16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov w8, #16500
-; CHECK-NEXT:    ushr.4h v1, v1, #14
 ; CHECK-NEXT:    dup.4h v2, w8
 ; CHECK-NEXT:    and.8b v0, v0, v2
-; CHECK-NEXT:    orr.8b v0, v0, v1
+; CHECK-NEXT:    usra.4h v0, v1, #14
 ; CHECK-NEXT:    str d0, [x0]
 ; CHECK-NEXT:    ret
   %and.i = and <4 x i16> %src1, <i16 16500, i16 16500, i16 16500, i16 16500>
@@ -224,10 +223,9 @@ define void @testRightBad8x16(<8 x i16> %src1, <8 x i16> %src2, <8 x i16>* %dest
 ; CHECK-LABEL: testRightBad8x16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov w8, #16500
-; CHECK-NEXT:    ushr.8h v1, v1, #14
 ; CHECK-NEXT:    dup.8h v2, w8
 ; CHECK-NEXT:    and.16b v0, v0, v2
-; CHECK-NEXT:    orr.16b v0, v0, v1
+; CHECK-NEXT:    usra.8h v0, v1, #14
 ; CHECK-NEXT:    str q0, [x0]
 ; CHECK-NEXT:    ret
   %and.i = and <8 x i16> %src1, <i16 16500, i16 16500, i16 16500, i16 16500, i16 16500, i16 16500, i16 16500, i16 16500>

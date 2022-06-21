@@ -29,7 +29,7 @@ void h(double b);
 void i(const char *c);
 void j(int a, int b, int c);
 
-double operator"" _km(long double);
+double operator"" _km(long double value);
 
 void test() {
   A a;
@@ -171,6 +171,8 @@ void test() {
   g((1));
   // FIXME But we should not add argument comments here.
   g(_Generic(0, int : 0));
+
+  402.0_km;
 }
 
 void f(bool _with_underscores_);

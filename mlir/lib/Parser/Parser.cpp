@@ -275,7 +275,7 @@ ParseResult Parser::parseFloatFromIntegerLiteral(
   }
 
   Optional<uint64_t> value = tok.getUInt64IntegerValue();
-  if (!value.hasValue())
+  if (!value)
     return emitError(loc, "hexadecimal float constant out of range for type");
 
   if (&semantics == &APFloat::IEEEdouble()) {
@@ -949,7 +949,7 @@ ParseResult OperationParser::parseOperation() {
 
         // Check that number of results is > 0.
         auto val = getToken().getUInt64IntegerValue();
-        if (!val.hasValue() || val.getValue() < 1)
+        if (!val || *val < 1)
           return emitError(
               "expected named operation to have at least 1 result");
         consumeToken(Token::integer);
@@ -1691,7 +1691,7 @@ OperationParser::parseCustomOperation(ArrayRef<ResultRecord> resultIDs) {
     Optional<Dialect::ParseOpHook> dialectHook;
     if (Dialect *dialect = opNameInfo->getDialect())
       dialectHook = dialect->getParseOperationHook(opName);
-    if (!dialectHook.hasValue()) {
+    if (!dialectHook) {
       InFlightDiagnostic diag =
           emitError(opLoc) << "custom op '" << originalOpName << "' is unknown";
       if (originalOpName != opName)

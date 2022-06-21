@@ -12525,7 +12525,7 @@ Sema::resolveAddressOfSingleOverloadCandidate(Expr *E, DeclAccessPair &Pair) {
     // We skipped over some ambiguous declarations which might be ambiguous with
     // the selected result.
     for (FunctionDecl *Skipped : AmbiguousDecls)
-      if (!CheckMoreConstrained(Skipped, Result).hasValue())
+      if (!CheckMoreConstrained(Skipped, Result))
         return nullptr;
     Pair = DAP;
   }

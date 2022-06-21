@@ -248,7 +248,7 @@ private:
     Optional<uint32_t> MaxLength;
 
     Optional<uint32_t> bytesRemaining(uint32_t CurrentOffset) const {
-      if (!MaxLength.hasValue())
+      if (!MaxLength)
         return None;
       assert(CurrentOffset >= BeginOffset);
 

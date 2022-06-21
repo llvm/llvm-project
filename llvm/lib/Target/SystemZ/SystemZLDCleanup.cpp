@@ -66,7 +66,7 @@ bool SystemZLDCleanup::runOnMachineFunction(MachineFunction &F) {
   if (skipFunction(F.getFunction()))
     return false;
 
-  TII = static_cast<const SystemZInstrInfo *>(F.getSubtarget().getInstrInfo());
+  TII = F.getSubtarget<SystemZSubtarget>().getInstrInfo();
   MF = &F;
 
   SystemZMachineFunctionInfo* MFI = F.getInfo<SystemZMachineFunctionInfo>();

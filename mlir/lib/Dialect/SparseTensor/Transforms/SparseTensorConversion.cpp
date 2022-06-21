@@ -411,7 +411,7 @@ public:
     if (!enc)
       return failure();
     Optional<int64_t> index = op.getConstantIndex();
-    if (!index.hasValue())
+    if (!index)
       return failure();
     // Generate the call.
     Value src = adaptor.getOperands()[0];
@@ -657,7 +657,7 @@ public:
     Value zero = constantIndex(rewriter, loc, 0);
     Value one = constantIndex(rewriter, loc, 1);
     auto indicesValues = genSplitSparseConstant(rewriter, loc, src);
-    bool isCOOConstant = indicesValues.hasValue();
+    bool isCOOConstant = indicesValues.has_value();
     Value indices;
     Value values;
     if (isCOOConstant) {

@@ -1037,7 +1037,7 @@ bool ExprEngine::shouldInlineCall(const CallEvent &Call, const Decl *D,
   CallInlinePolicy CIP = mayInlineCallKind(Call, Pred, Opts, CallOpts);
   if (CIP != CIP_Allowed) {
     if (CIP == CIP_DisallowedAlways) {
-      assert(!MayInline.hasValue() || MayInline.getValue());
+      assert(!MayInline || *MayInline);
       Engine.FunctionSummaries->markShouldNotInline(D);
     }
     return false;

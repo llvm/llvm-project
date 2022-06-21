@@ -185,7 +185,7 @@ LogicalResult AllocTensorOp::bufferize(RewriterBase &rewriter,
   // Should the buffer be deallocated?
   AnalysisState analysisState(options);
   bool dealloc;
-  if (getEscape().hasValue()) {
+  if (getEscape()) {
     dealloc = !*getEscape();
   } else {
     // No "escape" annotation found.

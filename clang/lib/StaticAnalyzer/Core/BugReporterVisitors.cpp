@@ -258,7 +258,7 @@ static bool isVarAnInterestingCondition(const Expr *CondVarExpr,
 static bool isInterestingExpr(const Expr *E, const ExplodedNode *N,
                               const PathSensitiveBugReport *B) {
   if (Optional<SVal> V = getSValForVar(E, N))
-    return B->getInterestingnessKind(*V).hasValue();
+    return B->getInterestingnessKind(*V).has_value();
   return false;
 }
 
@@ -3077,7 +3077,7 @@ bool ConditionBRVisitor::printValue(const Expr *CondVarExpr, raw_ostream &Out,
   if (!IsAssuming)
     IntValue = getConcreteIntegerValue(CondVarExpr, N);
 
-  if (IsAssuming || !IntValue.hasValue()) {
+  if (IsAssuming || !IntValue) {
     if (Ty->isBooleanType())
       Out << (TookTrue ? "true" : "false");
     else

@@ -1438,37 +1438,6 @@ static void makeAllConstantUsesInstructions(Constant *C) {
   }
 }
 
-// For a global variable with one store, if the store dominates any loads,
-// those loads will always load the stored value (as opposed to the
-// initializer), even in the presence of recursion.
-static bool forwardStoredOnceStore(
-    GlobalVariable *GV, const StoreInst *StoredOnceStore,
-    function_ref<DominatorTree &(Function &)> LookupDomTree) {
-  const Value *StoredOnceValue = StoredOnceStore->getValueOperand();
-  SmallVector<LoadInst *> Loads;
-  const Function *F = StoredOnceStore->getFunction();
-  for (User *U : GV->users()) {
-    if (auto *LI = dyn_cast<LoadInst>(U)) {
-      if (LI->getFunction() == F &&
-          LI->getType() == StoredOnceValue->getType() && LI->isSimple())
-        Loads.push_back(LI);
-    }
-  }
-  // Only compute DT if we have any loads to examine.
-  bool MadeChange = false;
-  if (!Loads.empty()) {
-    auto &DT = LookupDomTree(*const_cast<Function *>(F));
-    for (auto *LI : Loads) {
-      if (DT.dominates(StoredOnceStore, LI)) {
-        LI->replaceAllUsesWith(const_cast<Value *>(StoredOnceValue));
-        LI->eraseFromParent();
-        MadeChange = true;
-      }
-    }
-  }
-  return MadeChange;
-}
-
 /// Analyze the specified global variable and optimize
 /// it if possible.  If we make a change, return true.
 static bool
@@ -1626,10 +1595,6 @@ processInternalGlobal(GlobalVariable *GV, const GlobalStatus &GS,
     // Try to optimize globals based on the knowledge that only one value
     // (besides its initializer) is ever stored to the global.
     if (optimizeOnceStoredGlobal(GV, StoredOnceValue, DL, GetTLI))
-      return true;
-
-    // Try to forward the store to any loads.
-    if (forwardStoredOnceStore(GV, GS.StoredOnceStore, LookupDomTree))
       return true;
 
     // Otherwise, if the global was not a boolean, we can shrink it to be a
@@ -1941,8 +1906,7 @@ OptimizeFunctions(Module &M,
                   function_ref<TargetTransformInfo &(Function &)> GetTTI,
                   function_ref<BlockFrequencyInfo &(Function &)> GetBFI,
                   function_ref<DominatorTree &(Function &)> LookupDomTree,
-                  SmallPtrSetImpl<const Comdat *> &NotDiscardableComdats,
-                  function_ref<void(Function &F)> ChangedCFGCallback) {
+                  SmallPtrSetImpl<const Comdat *> &NotDiscardableComdats) {
 
   bool Changed = false;
 
@@ -1975,11 +1939,13 @@ OptimizeFunctions(Module &M,
     // So, remove unreachable blocks from the function, because a) there's
     // no point in analyzing them and b) GlobalOpt should otherwise grow
     // some more complicated logic to break these cycles.
-    // Notify the analysis manager that we've modified the function's CFG.
+    // Removing unreachable blocks might invalidate the dominator so we
+    // recalculate it.
     if (!F.isDeclaration()) {
       if (removeUnreachableBlocks(F)) {
+        auto &DT = LookupDomTree(F);
+        DT.recalculate(F);
         Changed = true;
-        ChangedCFGCallback(F);
       }
     }
 
@@ -2442,13 +2408,12 @@ static bool OptimizeEmptyGlobalCXXDtors(Function *CXAAtExitFn) {
   return Changed;
 }
 
-static bool
-optimizeGlobalsInModule(Module &M, const DataLayout &DL,
-                        function_ref<TargetLibraryInfo &(Function &)> GetTLI,
-                        function_ref<TargetTransformInfo &(Function &)> GetTTI,
-                        function_ref<BlockFrequencyInfo &(Function &)> GetBFI,
-                        function_ref<DominatorTree &(Function &)> LookupDomTree,
-                        function_ref<void(Function &F)> ChangedCFGCallback) {
+static bool optimizeGlobalsInModule(
+    Module &M, const DataLayout &DL,
+    function_ref<TargetLibraryInfo &(Function &)> GetTLI,
+    function_ref<TargetTransformInfo &(Function &)> GetTTI,
+    function_ref<BlockFrequencyInfo &(Function &)> GetBFI,
+    function_ref<DominatorTree &(Function &)> LookupDomTree) {
   SmallPtrSet<const Comdat *, 8> NotDiscardableComdats;
   bool Changed = false;
   bool LocalChange = true;
@@ -2473,7 +2438,7 @@ optimizeGlobalsInModule(Module &M, const DataLayout &DL,
 
     // Delete functions that are trivially dead, ccc -> fastcc
     LocalChange |= OptimizeFunctions(M, GetTLI, GetTTI, GetBFI, LookupDomTree,
-                                     NotDiscardableComdats, ChangedCFGCallback);
+                                     NotDiscardableComdats);
 
     // Optimize global_ctors list.
     LocalChange |=
@@ -2526,22 +2491,10 @@ PreservedAnalyses GlobalOptPass::run(Module &M, ModuleAnalysisManager &AM) {
     auto GetBFI = [&FAM](Function &F) -> BlockFrequencyInfo & {
       return FAM.getResult<BlockFrequencyAnalysis>(F);
     };
-    auto ChangedCFGCallback = [&FAM](Function &F) {
-      FAM.invalidate(F, PreservedAnalyses::none());
-    };
 
-    if (!optimizeGlobalsInModule(M, DL, GetTLI, GetTTI, GetBFI, LookupDomTree,
-                                 ChangedCFGCallback))
+    if (!optimizeGlobalsInModule(M, DL, GetTLI, GetTTI, GetBFI, LookupDomTree))
       return PreservedAnalyses::all();
-
-    PreservedAnalyses PA = PreservedAnalyses::none();
-    // We have not removed or replaced any functions.
-    PA.preserve<FunctionAnalysisManagerModuleProxy>();
-    // The only place we modify the CFG is when calling
-    // removeUnreachableBlocks(), but there we make sure to invalidate analyses
-    // for modified functions.
-    PA.preserveSet<CFGAnalyses>();
-    return PA;
+    return PreservedAnalyses::none();
 }
 
 namespace {
@@ -2572,13 +2525,8 @@ struct GlobalOptLegacyPass : public ModulePass {
       return this->getAnalysis<BlockFrequencyInfoWrapperPass>(F).getBFI();
     };
 
-    auto ChangedCFGCallback = [&LookupDomTree](Function &F) {
-      auto &DT = LookupDomTree(F);
-      DT.recalculate(F);
-    };
-
-    return optimizeGlobalsInModule(M, DL, GetTLI, GetTTI, GetBFI, LookupDomTree,
-                                   ChangedCFGCallback);
+    return optimizeGlobalsInModule(M, DL, GetTLI, GetTTI, GetBFI,
+                                   LookupDomTree);
   }
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {

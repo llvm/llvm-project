@@ -1243,7 +1243,7 @@ static bool EvaluateHasIncludeCommon(Token &Tok, IdentifierInfo *II,
   }
 
   // Get the result value.  A result of true means the file exists.
-  return File.hasValue();
+  return File.has_value();
 }
 
 bool Preprocessor::EvaluateHasInclude(Token &Tok, IdentifierInfo *II) {
@@ -1311,7 +1311,7 @@ already_lexed:
 
       case tok::l_paren:
         ++ParenDepth;
-        if (Result.hasValue())
+        if (Result)
           break;
         if (!SuppressDiagnostic) {
           PP.Diag(Tok.getLocation(), diag::err_pp_nested_paren) << II;
@@ -1341,7 +1341,7 @@ already_lexed:
 
       default: {
         // Parse the macro argument, if one not found so far.
-        if (Result.hasValue())
+        if (Result)
           break;
 
         bool HasLexedNextToken = false;

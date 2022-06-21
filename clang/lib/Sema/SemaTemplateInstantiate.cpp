@@ -1996,8 +1996,7 @@ TemplateInstantiator::TransformExprRequirement(concepts::ExprRequirement *Req) {
       TransRetReq.emplace(TPL);
     }
   }
-  assert(TransRetReq.hasValue() &&
-         "All code paths leading here must set TransRetReq");
+  assert(TransRetReq && "All code paths leading here must set TransRetReq");
   if (Expr *E = TransExpr.dyn_cast<Expr *>())
     return RebuildExprRequirement(E, Req->isSimple(), Req->getNoexceptLoc(),
                                   std::move(*TransRetReq));

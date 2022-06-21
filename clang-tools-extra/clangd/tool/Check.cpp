@@ -130,7 +130,7 @@ public:
     Inputs.ClangTidyProvider = Opts.ClangTidyProvider;
     Inputs.Opts.PreambleParseForwardingFunctions =
         Opts.PreambleParseForwardingFunctions;
-    if (Contents.hasValue()) {
+    if (Contents) {
       Inputs.Contents = *Contents;
       log("Imaginary source file contents:\n{0}", Inputs.Contents);
     } else {
@@ -253,7 +253,7 @@ public:
       vlog("    definition: {0}", Definitions);
 
       auto Hover = getHover(*AST, Pos, Style, &Index);
-      vlog("    hover: {0}", Hover.hasValue());
+      vlog("    hover: {0}", Hover.has_value());
 
       unsigned DocHighlights = findDocumentHighlights(*AST, Pos).size();
       vlog("    documentHighlight: {0}", DocHighlights);

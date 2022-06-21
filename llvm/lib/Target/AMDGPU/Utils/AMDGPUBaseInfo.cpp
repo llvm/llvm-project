@@ -273,6 +273,10 @@ struct VOPInfo {
   bool IsSingle;
 };
 
+struct VOPC64DPPInfo {
+  uint16_t Opcode;
+};
+
 struct VOPDComponentInfo {
   uint16_t BaseVOP;
   uint16_t VOPDOp;
@@ -297,6 +301,10 @@ struct VOPDInfo {
 #define GET_VOP2InfoTable_IMPL
 #define GET_VOP3InfoTable_DECL
 #define GET_VOP3InfoTable_IMPL
+#define GET_VOPC64DPPTable_DECL
+#define GET_VOPC64DPPTable_IMPL
+#define GET_VOPC64DPP8Table_DECL
+#define GET_VOPC64DPP8Table_IMPL
 #define GET_VOPDComponentTable_DECL
 #define GET_VOPDComponentTable_IMPL
 #define GET_VOPDPairs_DECL
@@ -390,6 +398,10 @@ bool getVOP2IsSingle(unsigned Opc) {
 bool getVOP3IsSingle(unsigned Opc) {
   const VOPInfo *Info = getVOP3OpcodeHelper(Opc);
   return Info ? Info->IsSingle : false;
+}
+
+bool isVOPC64DPP(unsigned Opc) {
+  return isVOPC64DPPOpcodeHelper(Opc) || isVOPC64DPP8OpcodeHelper(Opc);
 }
 
 bool getMAIIsDGEMM(unsigned Opc) {
