@@ -498,6 +498,8 @@ class InMemoryFileSystem : public FileSystem {
 
   ErrorOr<const detail::InMemoryNode *> lookupNode(const Twine &P) const;
 
+  class DirIterator;
+
 public:
   explicit InMemoryFileSystem(bool UseNormalizedPaths = true);
   ~InMemoryFileSystem() override;

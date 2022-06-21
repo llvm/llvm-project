@@ -980,10 +980,8 @@ InMemoryFileSystem::openFileForRead(const Twine &Path) {
   return make_error_code(llvm::errc::invalid_argument);
 }
 
-namespace {
-
 /// Adaptor from InMemoryDir::iterator to directory_iterator.
-class InMemoryDirIterator : public llvm::vfs::detail::DirIterImpl {
+class InMemoryFileSystem::DirIterator : public llvm::vfs::detail::DirIterImpl {
   detail::InMemoryDirectory::const_iterator I;
   detail::InMemoryDirectory::const_iterator E;
   std::string RequestedDirName;
@@ -1011,10 +1009,10 @@ class InMemoryDirIterator : public llvm::vfs::detail::DirIterImpl {
   }
 
 public:
-  InMemoryDirIterator() = default;
+  DirIterator() = default;
 
-  explicit InMemoryDirIterator(const detail::InMemoryDirectory &Dir,
-                               std::string RequestedDirName)
+  explicit DirIterator(const detail::InMemoryDirectory &Dir,
+                       std::string RequestedDirName)
       : I(Dir.begin()), E(Dir.end()),
         RequestedDirName(std::move(RequestedDirName)) {
     setCurrentEntry();
@@ -1027,22 +1025,20 @@ public:
   }
 };
 
-} // namespace
-
 directory_iterator InMemoryFileSystem::dir_begin(const Twine &Dir,
                                                  std::error_code &EC) {
   auto Node = lookupNode(Dir);
   if (!Node) {
     EC = Node.getError();
-    return directory_iterator(std::make_shared<InMemoryDirIterator>());
+    return directory_iterator(std::make_shared<DirIterator>());
   }
 
   if (auto *DirNode = dyn_cast<detail::InMemoryDirectory>(*Node))
     return directory_iterator(
-        std::make_shared<InMemoryDirIterator>(*DirNode, Dir.str()));
+        std::make_shared<DirIterator>(*DirNode, Dir.str()));
 
   EC = make_error_code(llvm::errc::not_a_directory);
-  return directory_iterator(std::make_shared<InMemoryDirIterator>());
+  return directory_iterator(std::make_shared<DirIterator>());
 }
 
 std::error_code InMemoryFileSystem::setCurrentWorkingDirectory(const Twine &P) {
