@@ -13,6 +13,7 @@
 
 #include "ReduceArguments.h"
 #include "Delta.h"
+#include "Utils.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/Instructions.h"
@@ -79,7 +80,7 @@ static void extractArgumentsFromModule(Oracle &O, Module &Program) {
       if (!ArgsToKeep.count(&A)) {
         // By adding undesired arguments to the VMap, CloneFunction will remove
         // them from the resulting Function
-        VMap[&A] = UndefValue::get(A.getType());
+        VMap[&A] = getDefaultValue(A.getType());
         for (auto *U : A.users())
           if (auto *I = dyn_cast<Instruction>(*&U))
             InstToDelete.push_back(I);
@@ -89,7 +90,7 @@ static void extractArgumentsFromModule(Oracle &O, Module &Program) {
       if (!V)
         continue;
       auto *I = cast<Instruction>(V);
-      I->replaceAllUsesWith(UndefValue::get(I->getType()));
+      I->replaceAllUsesWith(getDefaultValue(I->getType()));
       if (!I->isTerminator())
         I->eraseFromParent();
     }
