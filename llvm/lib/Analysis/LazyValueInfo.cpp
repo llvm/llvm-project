@@ -1353,7 +1353,7 @@ static Optional<ValueLatticeElement> getEdgeValueLocal(Value *Val,
               ValueLatticeElement OpLatticeVal =
                   getValueFromCondition(Op, Condition, isTrueDest);
               if (Optional<APInt> OpConst = OpLatticeVal.asConstantInteger()) {
-                Result = constantFoldUser(Usr, Op, OpConst.getValue(), DL);
+                Result = constantFoldUser(Usr, Op, *OpConst, DL);
                 break;
               }
             }

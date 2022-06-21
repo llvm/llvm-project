@@ -288,8 +288,7 @@ LogicalResult TileLoopNest::tileRootOp(
                       .setTileSizes(tileSizes)
                       .setLoopType(LinalgTilingLoopType::Loops);
   if (tileDistribution)
-    tilingOptions =
-        tilingOptions.setDistributionOptions(tileDistribution.getValue());
+    tilingOptions = tilingOptions.setDistributionOptions(*tileDistribution);
 
   // TODO: Propagate RewriterBase everywhere.
   IRRewriter rewriter(b);

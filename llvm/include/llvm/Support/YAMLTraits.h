@@ -1692,7 +1692,7 @@ void IO::processKeyWithDefault(const char *Key, Optional<T> &Val,
     if (IsNone)
       Val = DefaultValue;
     else
-      yamlize(*this, Val.getValue(), Required, Ctx);
+      yamlize(*this, *Val, Required, Ctx);
     this->postflightKey(SaveInfo);
   } else {
     if (UseDefault)

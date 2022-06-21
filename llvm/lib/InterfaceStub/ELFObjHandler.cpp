@@ -194,7 +194,7 @@ public:
     for (const std::string &Lib : Stub.NeededLibs)
       DynStr.Content.add(Lib);
     if (Stub.SoName)
-      DynStr.Content.add(Stub.SoName.getValue());
+      DynStr.Content.add(*Stub.SoName);
 
     std::vector<OutputSection<ELFT> *> Sections = {&DynSym, &DynStr, &DynTab,
                                                    &ShStrTab};
@@ -231,7 +231,7 @@ public:
       DynTab.Content.addValue(DT_NEEDED, DynStr.Content.getOffset(Lib));
     if (Stub.SoName)
       DynTab.Content.addValue(DT_SONAME,
-                              DynStr.Content.getOffset(Stub.SoName.getValue()));
+                              DynStr.Content.getOffset(*Stub.SoName));
     DynTab.Size = DynTab.Content.getSize();
     // Calculate sections' addresses and offsets.
     uint64_t CurrentOffset = sizeof(Elf_Ehdr);
@@ -250,8 +250,7 @@ public:
     fillStrTabShdr(ShStrTab);
 
     // Finish initializing the ELF header.
-    initELFHeader<ELFT>(ElfHeader,
-                        static_cast<uint16_t>(Stub.Target.Arch.getValue()));
+    initELFHeader<ELFT>(ElfHeader, static_cast<uint16_t>(*Stub.Target.Arch));
     ElfHeader.e_shstrndx = ShStrTab.Index;
     ElfHeader.e_shnum = LastSection->Index + 1;
     ElfHeader.e_shoff =

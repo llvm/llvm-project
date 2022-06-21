@@ -519,7 +519,7 @@ int main(int argc, char *argv[]) {
     // TODO: Remove OutputFormat flag in the next revision.
     WithColor::warning() << "--output-format option is deprecated, please use "
                             "--output-{FILE_FORMAT} options instead\n";
-    switch (Config.OutputFormat.getValue()) {
+    switch (*Config.OutputFormat) {
     case FileFormat::TBD: {
       std::error_code SysErr;
       raw_fd_ostream Out(*Config.Output, SysErr);

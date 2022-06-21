@@ -207,7 +207,7 @@ getTypeNumBytes(const SPIRVTypeConverter::Options &options, Type type) {
     auto elementSize = getTypeNumBytes(options, vecType.getElementType());
     if (!elementSize)
       return llvm::None;
-    return vecType.getNumElements() * elementSize.getValue();
+    return vecType.getNumElements() * *elementSize;
   }
 
   if (auto memRefType = type.dyn_cast<MemRefType>()) {
@@ -239,7 +239,7 @@ getTypeNumBytes(const SPIRVTypeConverter::Options &options, Type type) {
     for (const auto &shape : enumerate(dims))
       memrefSize = std::max(memrefSize, shape.value() * strides[shape.index()]);
 
-    return (offset + memrefSize) * elementSize.getValue();
+    return (offset + memrefSize) * *elementSize;
   }
 
   if (auto tensorType = type.dyn_cast<TensorType>()) {
@@ -250,7 +250,7 @@ getTypeNumBytes(const SPIRVTypeConverter::Options &options, Type type) {
     if (!elementSize)
       return llvm::None;
 
-    int64_t size = elementSize.getValue();
+    int64_t size = *elementSize;
     for (auto shape : tensorType.getShape())
       size *= shape;
 
@@ -604,7 +604,7 @@ static spirv::GlobalVariableOp getBuiltinVariable(Block &body,
             spirv::SPIRVDialect::getAttributeName(
                 spirv::Decoration::BuiltIn))) {
       auto varBuiltIn = spirv::symbolizeBuiltIn(builtinAttr.getValue());
-      if (varBuiltIn && varBuiltIn.getValue() == builtin) {
+      if (varBuiltIn && *varBuiltIn == builtin) {
         return varOp;
       }
     }

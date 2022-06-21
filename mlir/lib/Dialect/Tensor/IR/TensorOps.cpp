@@ -309,7 +309,7 @@ LogicalResult DimOp::verify() {
   // Check that constant index is not knowingly out of range.
   auto type = source().getType();
   if (auto tensorType = type.dyn_cast<RankedTensorType>()) {
-    if (index.getValue() >= tensorType.getRank())
+    if (*index >= tensorType.getRank())
       return emitOpError("index is out of range");
   } else if (type.isa<UnrankedTensorType>()) {
     // Assume index to be in range.
@@ -1138,7 +1138,7 @@ llvm::SmallBitVector ExtractSliceOp::getDroppedDims() {
     // If the size is not 1, or if the current matched dimension of the result
     // is the same static shape as the size value (which is 1), then the
     // dimension is preserved.
-    if (!sizeVal || sizeVal.getValue() != 1 ||
+    if (!sizeVal || *sizeVal != 1 ||
         (shapePos < resultShape.size() && resultShape[shapePos] == 1)) {
       shapePos++;
       continue;
