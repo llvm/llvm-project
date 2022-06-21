@@ -22,6 +22,7 @@
 #include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/Support/Chrono.h"
 #include "llvm/Support/ErrorOr.h"
+#include "llvm/Support/Errc.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/SourceMgr.h"
@@ -478,6 +479,24 @@ struct NewInMemoryNodeInfo {
   Status makeStatus() const;
 };
 
+class NamedNodeOrError {
+  ErrorOr<std::pair<llvm::SmallString<128>, const detail::InMemoryNode *>>
+      Value;
+
+public:
+  NamedNodeOrError(llvm::SmallString<128> Name,
+                   const detail::InMemoryNode *Node)
+      : Value(std::make_pair(Name, Node)) {}
+  NamedNodeOrError(std::error_code EC) : Value(EC) {}
+  NamedNodeOrError(llvm::errc EC) : Value(EC) {}
+
+  StringRef getName() const { return (*Value).first; }
+  explicit operator bool() const { return static_cast<bool>(Value); }
+  operator std::error_code() const { return Value.getError(); }
+  std::error_code getError() const { return Value.getError(); }
+  const detail::InMemoryNode *operator*() const { return (*Value).second; }
+};
+
 } // namespace detail
 
 /// An in-memory file system.
@@ -496,7 +515,11 @@ class InMemoryFileSystem : public FileSystem {
                Optional<llvm::sys::fs::file_type> Type,
                Optional<llvm::sys::fs::perms> Perms, MakeNodeFn MakeNode);
 
-  ErrorOr<const detail::InMemoryNode *> lookupNode(const Twine &P) const;
+  /// Looks up the in-memory node for the path \param P.
+  /// If \param FollowFinalSymlink is true, the returned node is guaranteed to
+  /// not be a symlink and its path may differ from \param P.
+  detail::NamedNodeOrError lookupNode(const Twine &P, bool FollowFinalSymlink,
+                                      size_t SymlinkDepth = 0) const;
 
   class DirIterator;
 
@@ -531,6 +554,18 @@ public:
   /// \return true if the above condition is satisfied and hardlink was
   /// successfully created, false otherwise.
   bool addHardLink(const Twine &NewLink, const Twine &Target);
+
+  /// Arbitrary max depth to search through symlinks. We can get into problems
+  /// if a link links to a link that links back to the link, for example.
+  static constexpr size_t MaxSymlinkDepth = 16;
+
+  /// Add a symbolic link. Unlike a HardLink, because \param Target doesn't need
+  /// to refer to a file (or refer to anything, as it happens). Also, an
+  /// in-memory directory for \param Target isn't automatically created.
+  bool addSymbolicLink(const Twine &NewLink, const Twine &Target,
+                       time_t ModificationTime, Optional<uint32_t> User = None,
+                       Optional<uint32_t> Group = None,
+                       Optional<llvm::sys::fs::perms> Perms = None);
 
   /// Add a buffer to the VFS with a path. The VFS does not own the buffer.
   /// If present, User, Group, Type and Perms apply to the newly-created file

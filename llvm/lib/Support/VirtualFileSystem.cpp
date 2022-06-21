@@ -590,10 +590,15 @@ namespace vfs {
 
 namespace detail {
 
-enum InMemoryNodeKind { IME_File, IME_Directory, IME_HardLink };
+enum InMemoryNodeKind {
+  IME_File,
+  IME_Directory,
+  IME_HardLink,
+  IME_SymbolicLink,
+};
 
 /// The in memory file system is a tree of Nodes. Every node can either be a
-/// file , hardlink or a directory.
+/// file, symlink, hardlink or a directory.
 class InMemoryNode {
   InMemoryNodeKind Kind;
   std::string FileName;
@@ -659,6 +664,30 @@ public:
 
   static bool classof(const InMemoryNode *N) {
     return N->getKind() == IME_HardLink;
+  }
+};
+
+class InMemorySymbolicLink : public InMemoryNode {
+  std::string TargetPath;
+  Status Stat;
+
+public:
+  InMemorySymbolicLink(StringRef Path, StringRef TargetPath, Status Stat)
+      : InMemoryNode(Path, IME_SymbolicLink), TargetPath(std::move(TargetPath)),
+        Stat(Stat) {}
+
+  std::string toString(unsigned Indent) const override {
+    return std::string(Indent, ' ') + "SymbolicLink to -> " + TargetPath;
+  }
+
+  Status getStatus(const Twine &RequestedName) const override {
+    return Status::copyWithNewName(Stat, RequestedName);
+  }
+
+  StringRef getTargetPath() const { return TargetPath; }
+
+  static bool classof(const InMemoryNode *N) {
+    return N->getKind() == IME_SymbolicLink;
   }
 };
 
@@ -897,8 +926,9 @@ bool InMemoryFileSystem::addFileNoOwn(const Twine &P, time_t ModificationTime,
                  });
 }
 
-ErrorOr<const detail::InMemoryNode *>
-InMemoryFileSystem::lookupNode(const Twine &P) const {
+detail::NamedNodeOrError
+InMemoryFileSystem::lookupNode(const Twine &P, bool FollowFinalSymlink,
+                               size_t SymlinkDepth) const {
   SmallString<128> Path;
   P.toVector(Path);
 
@@ -912,7 +942,7 @@ InMemoryFileSystem::lookupNode(const Twine &P) const {
 
   const detail::InMemoryDirectory *Dir = Root.get();
   if (Path.empty())
-    return Dir;
+    return detail::NamedNodeOrError(Path, Dir);
 
   auto I = llvm::sys::path::begin(Path), E = llvm::sys::path::end(Path);
   while (true) {
@@ -921,30 +951,63 @@ InMemoryFileSystem::lookupNode(const Twine &P) const {
     if (!Node)
       return errc::no_such_file_or_directory;
 
+    if (auto Symlink = dyn_cast<detail::InMemorySymbolicLink>(Node)) {
+      // If we're at the end of the path, and we're not following through
+      // terminal symlinks, then we're done.
+      if (I == E && !FollowFinalSymlink)
+        return detail::NamedNodeOrError(Path, Symlink);
+
+      if (SymlinkDepth > InMemoryFileSystem::MaxSymlinkDepth)
+        return errc::no_such_file_or_directory;
+
+      SmallString<128> TargetPath = Symlink->getTargetPath();
+      if (std::error_code EC = makeAbsolute(TargetPath))
+        return EC;
+
+      // Keep going with the target. We always want to follow symlinks here
+      // because we're either at the end of a path that we want to follow, or
+      // not at the end of a path, in which case we need to follow the symlink
+      // regardless.
+      auto Target =
+          lookupNode(TargetPath, /*FollowFinalSymlink=*/true, SymlinkDepth + 1);
+      if (!Target || I == E)
+        return Target;
+
+      if (!isa<detail::InMemoryDirectory>(*Target))
+        return errc::no_such_file_or_directory;
+
+      // Otherwise, continue on the search in the symlinked directory.
+      Dir = cast<detail::InMemoryDirectory>(*Target);
+      continue;
+    }
+
     // Return the file if it's at the end of the path.
     if (auto File = dyn_cast<detail::InMemoryFile>(Node)) {
       if (I == E)
-        return File;
+        return detail::NamedNodeOrError(Path, File);
       return errc::no_such_file_or_directory;
     }
 
     // If Node is HardLink then return the resolved file.
     if (auto File = dyn_cast<detail::InMemoryHardLink>(Node)) {
       if (I == E)
-        return &File->getResolvedFile();
+        return detail::NamedNodeOrError(Path, &File->getResolvedFile());
       return errc::no_such_file_or_directory;
     }
     // Traverse directories.
     Dir = cast<detail::InMemoryDirectory>(Node);
     if (I == E)
-      return Dir;
+      return detail::NamedNodeOrError(Path, Dir);
   }
 }
 
 bool InMemoryFileSystem::addHardLink(const Twine &NewLink,
                                      const Twine &Target) {
-  auto NewLinkNode = lookupNode(NewLink);
-  auto TargetNode = lookupNode(Target);
+  auto NewLinkNode = lookupNode(NewLink, /*FollowFinalSymlink=*/false);
+  // Whether symlinks in the hardlink target are followed is
+  // implementation-defined in POSIX.
+  // We're following symlinks here to be consistent with macOS.
+  auto TargetNode = lookupNode(Target, /*FollowFinalSymlink=*/true);
   // FromPath must not have been added before. ToPath must have been added
   // before. Resolved ToPath must be a File.
   if (!TargetNode || NewLinkNode || !isa<detail::InMemoryFile>(*TargetNode))
@@ -957,8 +1020,30 @@ bool InMemoryFileSystem::addHardLink(const Twine &NewLink,
                  });
 }
 
+bool InMemoryFileSystem::addSymbolicLink(const Twine &NewLink,
+                                         const Twine &Target,
+                                         time_t ModificationTime,
+                                         Optional<uint32_t> User,
+                                         Optional<uint32_t> Group,
+                                         Optional<llvm::sys::fs::perms> Perms) {
+  auto NewLinkNode = lookupNode(NewLink, /*FollowFinalSymlink=*/false);
+  if (NewLinkNode)
+    return false;
+
+  SmallString<128> NewLinkStr, TargetStr;
+  NewLink.toVector(NewLinkStr);
+  Target.toVector(TargetStr);
+
+  return addFile(NewLinkStr, ModificationTime, nullptr, User, Group,
+                 sys::fs::file_type::symlink_file, Perms,
+                 [&](detail::NewInMemoryNodeInfo NNI) {
+                   return std::make_unique<detail::InMemorySymbolicLink>(
+                       NewLinkStr, TargetStr, NNI.makeStatus());
+                 });
+}
+
 llvm::ErrorOr<Status> InMemoryFileSystem::status(const Twine &Path) {
-  auto Node = lookupNode(Path);
+  auto Node = lookupNode(Path, /*FollowFinalSymlink=*/true);
   if (Node)
     return (*Node)->getStatus(Path);
   return Node.getError();
@@ -966,7 +1051,7 @@ llvm::ErrorOr<Status> InMemoryFileSystem::status(const Twine &Path) {
 
 llvm::ErrorOr<std::unique_ptr<File>>
 InMemoryFileSystem::openFileForRead(const Twine &Path) {
-  auto Node = lookupNode(Path);
+  auto Node = lookupNode(Path,/*FollowFinalSymlink=*/true);
   if (!Node)
     return Node.getError();
 
@@ -982,6 +1067,7 @@ InMemoryFileSystem::openFileForRead(const Twine &Path) {
 
 /// Adaptor from InMemoryDir::iterator to directory_iterator.
 class InMemoryFileSystem::DirIterator : public llvm::vfs::detail::DirIterImpl {
+  const InMemoryFileSystem *FS;
   detail::InMemoryDirectory::const_iterator I;
   detail::InMemoryDirectory::const_iterator E;
   std::string RequestedDirName;
@@ -999,6 +1085,13 @@ class InMemoryFileSystem::DirIterator : public llvm::vfs::detail::DirIterImpl {
       case detail::IME_Directory:
         Type = sys::fs::file_type::directory_file;
         break;
+      case detail::IME_SymbolicLink:
+        if (auto SymlinkTarget =
+                FS->lookupNode(Path, /*FollowFinalSymlink=*/true)) {
+          Path = SymlinkTarget.getName();
+          Type = (*SymlinkTarget)->getStatus(Path).getType();
+        }
+        break;
       }
       CurrentEntry = directory_entry(std::string(Path.str()), Type);
     } else {
@@ -1011,9 +1104,10 @@ class InMemoryFileSystem::DirIterator : public llvm::vfs::detail::DirIterImpl {
 public:
   DirIterator() = default;
 
-  explicit DirIterator(const detail::InMemoryDirectory &Dir,
-                       std::string RequestedDirName)
-      : I(Dir.begin()), E(Dir.end()),
+  DirIterator(const InMemoryFileSystem *FS,
+              const detail::InMemoryDirectory &Dir,
+              std::string RequestedDirName)
+      : FS(FS), I(Dir.begin()), E(Dir.end()),
         RequestedDirName(std::move(RequestedDirName)) {
     setCurrentEntry();
   }
@@ -1027,7 +1121,7 @@ public:
 
 directory_iterator InMemoryFileSystem::dir_begin(const Twine &Dir,
                                                  std::error_code &EC) {
-  auto Node = lookupNode(Dir);
+  auto Node = lookupNode(Dir, /*FollowFinalSymlink=*/true);
   if (!Node) {
     EC = Node.getError();
     return directory_iterator(std::make_shared<DirIterator>());
@@ -1035,7 +1129,7 @@ directory_iterator InMemoryFileSystem::dir_begin(const Twine &Dir,
 
   if (auto *DirNode = dyn_cast<detail::InMemoryDirectory>(*Node))
     return directory_iterator(
-        std::make_shared<DirIterator>(*DirNode, Dir.str()));
+        std::make_shared<DirIterator>(this, *DirNode, Dir.str()));
 
   EC = make_error_code(llvm::errc::not_a_directory);
   return directory_iterator(std::make_shared<DirIterator>());
