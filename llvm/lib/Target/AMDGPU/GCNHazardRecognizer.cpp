@@ -475,11 +475,9 @@ hasHazard(StateT State,
 // Only scans until \p IsExpired does not return true.
 // Can only be run in a hazard recognizer mode.
 static int getWaitStatesSince(
-    GCNHazardRecognizer::IsHazardFn IsHazard,
-    const MachineBasicBlock *MBB,
-    MachineBasicBlock::const_reverse_instr_iterator I,
-    int WaitStates, IsExpiredFn IsExpired,
-    DenseSet<const MachineBasicBlock *> &Visited,
+    GCNHazardRecognizer::IsHazardFn IsHazard, const MachineBasicBlock *MBB,
+    MachineBasicBlock::const_reverse_instr_iterator I, int WaitStates,
+    IsExpiredFn IsExpired, DenseSet<const MachineBasicBlock *> &Visited,
     GetNumWaitStatesFn GetNumWaitStates = SIInstrInfo::getNumWaitStates) {
   for (auto E = MBB->instr_rend(); I != E; ++I) {
     // Don't add WaitStates for parent BUNDLE instructions.
@@ -503,9 +501,8 @@ static int getWaitStatesSince(
     if (!Visited.insert(Pred).second)
       continue;
 
-    int W = getWaitStatesSince(IsHazard, Pred, Pred->instr_rbegin(),
-                               WaitStates, IsExpired, Visited,
-                               GetNumWaitStates);
+    int W = getWaitStatesSince(IsHazard, Pred, Pred->instr_rbegin(), WaitStates,
+                               IsExpired, Visited, GetNumWaitStates);
 
     MinWaitStates = std::min(MinWaitStates, W);
   }
@@ -1398,22 +1395,22 @@ bool GCNHazardRecognizer::fixLdsDirectVALUHazard(MachineInstr *MI) {
     return SIInstrInfo::isVMEM(I) || SIInstrInfo::isFLAT(I) ||
            SIInstrInfo::isDS(I) || SIInstrInfo::isEXP(I);
   };
-  auto GetWaitStatesFn = [] (const MachineInstr &MI) {
+  auto GetWaitStatesFn = [](const MachineInstr &MI) {
     return SIInstrInfo::isVALU(MI) ? 1 : 0;
   };
 
   DenseSet<const MachineBasicBlock *> Visited;
   auto Count = ::getWaitStatesSince(IsHazardFn, MI->getParent(),
-                            std::next(MI->getReverseIterator()),
-                            0, IsExpiredFn, Visited,
-                            GetWaitStatesFn);
+                                    std::next(MI->getReverseIterator()), 0,
+                                    IsExpiredFn, Visited, GetWaitStatesFn);
 
   // Transcendentals can execute in parallel to other VALUs.
   // This makes va_vdst count unusable with a mixture of VALU and TRANS.
   if (VisitedTrans)
     Count = 0;
 
-  MachineOperand *WaitVdstOp = TII.getNamedOperand(*MI, AMDGPU::OpName::waitvdst);
+  MachineOperand *WaitVdstOp =
+      TII.getNamedOperand(*MI, AMDGPU::OpName::waitvdst);
   WaitVdstOp->setImm(std::min(Count, NoHazardWaitStates));
 
   return true;

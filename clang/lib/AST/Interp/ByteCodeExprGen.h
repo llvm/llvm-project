@@ -284,7 +284,7 @@ public:
   ~LocalScope() override { this->emitDestruction(); }
 
   void addLocal(const Scope::Local &Local) override {
-    if (!Idx.hasValue()) {
+    if (!Idx) {
       Idx = this->Ctx->Descriptors.size();
       this->Ctx->Descriptors.emplace_back();
     }
@@ -293,7 +293,7 @@ public:
   }
 
   void emitDestruction() override {
-    if (!Idx.hasValue())
+    if (!Idx)
       return;
     this->Ctx->emitDestroy(*Idx, SourceInfo{});
   }

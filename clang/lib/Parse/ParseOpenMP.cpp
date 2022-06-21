@@ -1835,7 +1835,7 @@ void Parser::ParseOMPDeclareTargetClauses(
 
       bool IsIndirectClause = getLangOpts().OpenMP >= 51 &&
                               getOpenMPClauseKind(ClauseName) == OMPC_indirect;
-      if (DTCI.Indirect.hasValue() && IsIndirectClause) {
+      if (DTCI.Indirect && IsIndirectClause) {
         Diag(Tok, diag::err_omp_more_one_clause)
             << getOpenMPDirectiveName(OMPD_declare_target)
             << getOpenMPClauseName(OMPC_indirect) << 0;
@@ -1933,7 +1933,7 @@ void Parser::ParseOMPDeclareTargetClauses(
       ConsumeToken();
   }
 
-  if (DTCI.Indirect.hasValue() && DTCI.DT != OMPDeclareTargetDeclAttr::DT_Any)
+  if (DTCI.Indirect && DTCI.DT != OMPDeclareTargetDeclAttr::DT_Any)
     Diag(DeviceTypeLoc, diag::err_omp_declare_target_indirect_device_type);
 
   // For declare target require at least 'to' or 'link' to be present.

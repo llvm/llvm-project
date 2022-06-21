@@ -2732,7 +2732,7 @@ public:
   }
 
   /// Return whether this is a piece of an aggregate variable.
-  bool isFragment() const { return getFragmentInfo().hasValue(); }
+  bool isFragment() const { return getFragmentInfo().has_value(); }
 
   /// Return whether this is an implicit location description.
   bool isImplicit() const;

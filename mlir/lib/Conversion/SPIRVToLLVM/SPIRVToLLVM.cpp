@@ -251,8 +251,7 @@ static Optional<Type> convertArrayType(spirv::ArrayType type,
   unsigned stride = type.getArrayStride();
   Type elementType = type.getElementType();
   auto sizeInBytes = elementType.cast<spirv::SPIRVType>().getSizeInBytes();
-  if (stride != 0 &&
-      !(sizeInBytes.hasValue() && sizeInBytes.getValue() == stride))
+  if (stride != 0 && !(sizeInBytes && *sizeInBytes == stride))
     return llvm::None;
 
   auto llvmElementType = converter.convertType(elementType);
@@ -897,7 +896,7 @@ public:
   LogicalResult
   matchAndRewrite(SPIRVOp op, typename SPIRVOp::Adaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
-    if (!op.memory_access().hasValue()) {
+    if (!op.memory_access()) {
       return replaceWithLoadOrStore(op, adaptor.getOperands(), rewriter,
                                     this->typeConverter, /*alignment=*/0,
                                     /*isVolatile=*/false,

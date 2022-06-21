@@ -560,7 +560,7 @@ private:
 
   Optional<StratifiedIndex> indexOf(const T &Val) {
     auto MaybeVal = get(Val);
-    if (!MaybeVal.hasValue())
+    if (!MaybeVal)
       return None;
     auto *Info = *MaybeVal;
     auto &Link = linksAt(Info->Index);

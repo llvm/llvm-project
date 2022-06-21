@@ -489,7 +489,7 @@ void SymbolFileBreakpad::AddSymbols(Symtab &symtab) {
         /*is_trampoline*/ false, /*is_artificial*/ false,
         AddressRange(section_sp, address - section_sp->GetFileAddress(),
                      size.value_or(0)),
-        size.hasValue(), /*contains_linker_annotations*/ false, /*flags*/ 0);
+        size.has_value(), /*contains_linker_annotations*/ false, /*flags*/ 0);
   };
 
   for (llvm::StringRef line : lines(Record::Public)) {
@@ -511,7 +511,7 @@ SymbolFileBreakpad::GetParameterStackSize(Symbol &symbol) {
           symbol.GetAddress().GetFileAddress())) {
     auto record = StackWinRecord::parse(
         *LineIterator(*m_objfile_sp, Record::StackWin, entry->data));
-    assert(record.hasValue());
+    assert(record);
     return record->ParameterSize;
   }
   return llvm::createStringError(llvm::inconvertibleErrorCode(),
@@ -655,7 +655,7 @@ SymbolFileBreakpad::ParseCFIUnwindPlan(const Bookmark &bookmark,
   LineIterator It(*m_objfile_sp, Record::StackCFI, bookmark),
       End(*m_objfile_sp);
   llvm::Optional<StackCFIRecord> init_record = StackCFIRecord::parse(*It);
-  assert(init_record.hasValue() && init_record->Size.hasValue() &&
+  assert(init_record && init_record->Size &&
          "Record already parsed successfully in ParseUnwindData!");
 
   auto plan_sp = std::make_shared<UnwindPlan>(lldb::eRegisterKindLLDB);
@@ -698,8 +698,7 @@ SymbolFileBreakpad::ParseWinUnwindPlan(const Bookmark &bookmark,
 
   LineIterator It(*m_objfile_sp, Record::StackWin, bookmark);
   llvm::Optional<StackWinRecord> record = StackWinRecord::parse(*It);
-  assert(record.hasValue() &&
-         "Record already parsed successfully in ParseUnwindData!");
+  assert(record && "Record already parsed successfully in ParseUnwindData!");
 
   auto plan_sp = std::make_shared<UnwindPlan>(lldb::eRegisterKindLLDB);
   plan_sp->SetSourceName("breakpad STACK WIN");

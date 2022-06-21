@@ -917,7 +917,7 @@ Parser::parseMatcherExpression(StringRef &Code, Sema *S,
   }
   llvm::Optional<DynTypedMatcher> Result =
       Value.getMatcher().getSingleMatcher();
-  if (!Result.hasValue()) {
+  if (!Result) {
     Error->addError(SourceRange(), Error->ET_ParserOverloadedType)
         << Value.getTypeAsString();
   }

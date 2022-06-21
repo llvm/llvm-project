@@ -858,7 +858,7 @@ bool ClangUserExpression::Complete(ExecutionContext &exe_ctx,
   // The line and column of the user expression inside the transformed source
   // code.
   unsigned user_expr_line, user_expr_column;
-  if (m_user_expression_start_pos.hasValue())
+  if (m_user_expression_start_pos)
     AbsPosToLineColumnPos(*m_user_expression_start_pos, m_transformed_text,
                           user_expr_line, user_expr_column);
   else

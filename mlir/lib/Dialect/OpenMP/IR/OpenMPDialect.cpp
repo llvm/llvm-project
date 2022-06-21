@@ -184,7 +184,7 @@ verifyScheduleModifiers(OpAsmParser &parser,
     // Translate the string. If it has no value, then it was not a valid
     // modifier!
     auto symbol = symbolizeScheduleModifier(mod);
-    if (!symbol.hasValue())
+    if (!symbol)
       return parser.emitError(parser.getNameLoc())
              << " unknown modifier type: " << mod;
   }
@@ -726,6 +726,14 @@ LogicalResult ReductionOp::verify() {
 //===----------------------------------------------------------------------===//
 LogicalResult TaskOp::verify() {
   return verifyReductionVarList(*this, in_reductions(), in_reduction_vars());
+}
+
+//===----------------------------------------------------------------------===//
+// TaskGroupOp
+//===----------------------------------------------------------------------===//
+LogicalResult TaskGroupOp::verify() {
+  return verifyReductionVarList(*this, task_reductions(),
+                                task_reduction_vars());
 }
 
 //===----------------------------------------------------------------------===//

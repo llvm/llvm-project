@@ -389,7 +389,7 @@ void PlistPrinter::ReportMacroExpansions(raw_ostream &o, unsigned indent) {
     const Optional<StringRef> ExpansionText =
         getExpandedMacro(MacroExpansionLoc, CTU, MacroExpansions, SM);
 
-    if (!MacroName.hasValue() || !ExpansionText.hasValue())
+    if (!MacroName || !ExpansionText)
       continue;
 
     Indent(o, indent) << "<dict>\n";

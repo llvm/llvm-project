@@ -323,7 +323,7 @@ void CompileUnit::ResolveSymbolContext(
   const bool inlines = false;
   const bool exact = true;
   const llvm::Optional<uint16_t> column =
-      src_location_spec.GetColumn().hasValue()
+      src_location_spec.GetColumn()
           ? llvm::Optional<uint16_t>(line_entry.column)
           : llvm::None;
 

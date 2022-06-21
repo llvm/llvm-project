@@ -1540,7 +1540,7 @@ static bool ClassTemplateAllowsToInstantiationArgs(
     return false;
 
   // Ensure that <typename...> != <typename>.
-  if (pack_parameter.hasValue() != instantiation_values.hasParameterPack())
+  if (pack_parameter.has_value() != instantiation_values.hasParameterPack())
     return false;
 
   // Compare the first pack parameter that was found with the first pack

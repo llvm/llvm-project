@@ -66,7 +66,7 @@ getFileExtension(StringRef FileName, const FileExtensionsSet &FileExtensions) {
 
 bool isFileExtension(StringRef FileName,
                      const FileExtensionsSet &FileExtensions) {
-  return getFileExtension(FileName, FileExtensions).hasValue();
+  return getFileExtension(FileName, FileExtensions).has_value();
 }
 
 } // namespace utils

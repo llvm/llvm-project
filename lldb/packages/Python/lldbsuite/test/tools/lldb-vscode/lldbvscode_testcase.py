@@ -22,13 +22,15 @@ class VSCodeTestCaseBase(TestBase):
         self.build()
         self.create_debug_adaptor(lldbVSCodeEnv)
 
-    def set_source_breakpoints(self, source_path, lines, condition=None,
-                               hitCondition=None):
+    def set_source_breakpoints(self, source_path, lines, data=None):
         '''Sets source breakpoints and returns an array of strings containing
            the breakpoint IDs ("1", "2") for each breakpoint that was set.
+           Parameter data is array of data objects for breakpoints.
+           Each object in data is 1:1 mapping with the entry in lines.
+           It contains optional location/hitCondition/logMessage parameters.
         '''
         response = self.vscode.request_setBreakpoints(
-            source_path, lines, condition=condition, hitCondition=hitCondition)
+            source_path, lines, data)
         if response is None:
             return []
         breakpoints = response['body']['breakpoints']

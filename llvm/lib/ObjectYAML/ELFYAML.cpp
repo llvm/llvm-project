@@ -1337,7 +1337,7 @@ static void sectionMapping(IO &IO, ELFYAML::RawContentSection &Section) {
 
   // We also support reading a content as array of bytes using the ContentArray
   // key. obj2yaml never prints this field.
-  assert(!IO.outputting() || !Section.ContentBuf.hasValue());
+  assert(!IO.outputting() || !Section.ContentBuf);
   IO.mapOptional("ContentArray", Section.ContentBuf);
   if (Section.ContentBuf) {
     if (Section.Content)
@@ -1366,8 +1366,7 @@ static void sectionMapping(IO &IO, ELFYAML::HashSection &Section) {
 
   // obj2yaml does not dump these fields. They can be used to override nchain
   // and nbucket values for creating broken sections.
-  assert(!IO.outputting() ||
-         (!Section.NBucket.hasValue() && !Section.NChain.hasValue()));
+  assert(!IO.outputting() || (!Section.NBucket && !Section.NChain));
   IO.mapOptional("NChain", Section.NChain);
   IO.mapOptional("NBucket", Section.NBucket);
 }

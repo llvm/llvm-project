@@ -165,7 +165,7 @@ CFLSteensAAResult::FunctionInfo::FunctionInfo(
     assert(RetVal != nullptr);
     assert(RetVal->getType()->isPointerTy());
     auto RetInfo = Sets.find(InstantiatedValue{RetVal, 0});
-    if (RetInfo.hasValue())
+    if (RetInfo)
       AddToRetParamRelations(0, RetInfo->Index);
   }
 
@@ -174,7 +174,7 @@ CFLSteensAAResult::FunctionInfo::FunctionInfo(
   for (auto &Param : Fn.args()) {
     if (Param.getType()->isPointerTy()) {
       auto ParamInfo = Sets.find(InstantiatedValue{&Param, 0});
-      if (ParamInfo.hasValue())
+      if (ParamInfo)
         AddToRetParamRelations(I + 1, ParamInfo->Index);
     }
     ++I;

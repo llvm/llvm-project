@@ -267,7 +267,7 @@ define <128 x i32> @vtrunc_nxv128i32_nxv128i64(<128 x i64> %a, <128 x i1> %m, i3
 ; CHECK-NEXT:    mv a4, a3
 ; CHECK-NEXT:  .LBB16_2:
 ; CHECK-NEXT:    vsetivli zero, 4, e8, mf2, ta, mu
-; CHECK-NEXT:    vslidedown.vi v3, v2, 4
+; CHECK-NEXT:    vslidedown.vi v28, v2, 4
 ; CHECK-NEXT:    addi a6, a4, -32
 ; CHECK-NEXT:    addi a3, a1, 640
 ; CHECK-NEXT:    mv a5, a2
@@ -276,7 +276,7 @@ define <128 x i32> @vtrunc_nxv128i32_nxv128i64(<128 x i64> %a, <128 x i1> %m, i3
 ; CHECK-NEXT:    mv a5, a6
 ; CHECK-NEXT:  .LBB16_4:
 ; CHECK-NEXT:    vsetivli zero, 2, e8, mf4, ta, mu
-; CHECK-NEXT:    vslidedown.vi v0, v3, 2
+; CHECK-NEXT:    vslidedown.vi v0, v28, 2
 ; CHECK-NEXT:    vsetivli zero, 16, e64, m8, ta, mu
 ; CHECK-NEXT:    vle64.v v16, (a3)
 ; CHECK-NEXT:    addi t0, a5, -16
@@ -301,7 +301,7 @@ define <128 x i32> @vtrunc_nxv128i32_nxv128i64(<128 x i64> %a, <128 x i1> %m, i3
 ; CHECK-NEXT:  .LBB16_8:
 ; CHECK-NEXT:    vsetvli zero, a5, e32, m4, ta, mu
 ; CHECK-NEXT:    li a5, 64
-; CHECK-NEXT:    vmv1r.v v0, v3
+; CHECK-NEXT:    vmv1r.v v0, v28
 ; CHECK-NEXT:    vncvt.x.x.w v16, v8, v0.t
 ; CHECK-NEXT:    csrr a6, vlenb
 ; CHECK-NEXT:    li t0, 48
@@ -314,7 +314,7 @@ define <128 x i32> @vtrunc_nxv128i32_nxv128i64(<128 x i64> %a, <128 x i1> %m, i3
 ; CHECK-NEXT:    li a7, 64
 ; CHECK-NEXT:  .LBB16_10:
 ; CHECK-NEXT:    vsetivli zero, 4, e8, mf2, ta, mu
-; CHECK-NEXT:    vslidedown.vi v3, v1, 4
+; CHECK-NEXT:    vslidedown.vi v28, v1, 4
 ; CHECK-NEXT:    addi t0, a7, -32
 ; CHECK-NEXT:    addi a5, a1, 128
 ; CHECK-NEXT:    mv a6, a2
@@ -323,7 +323,7 @@ define <128 x i32> @vtrunc_nxv128i32_nxv128i64(<128 x i64> %a, <128 x i1> %m, i3
 ; CHECK-NEXT:    mv a6, t0
 ; CHECK-NEXT:  .LBB16_12:
 ; CHECK-NEXT:    vsetivli zero, 2, e8, mf4, ta, mu
-; CHECK-NEXT:    vslidedown.vi v0, v3, 2
+; CHECK-NEXT:    vslidedown.vi v0, v28, 2
 ; CHECK-NEXT:    vsetivli zero, 16, e64, m8, ta, mu
 ; CHECK-NEXT:    vle64.v v16, (a5)
 ; CHECK-NEXT:    addi a5, a6, -16
@@ -347,7 +347,7 @@ define <128 x i32> @vtrunc_nxv128i32_nxv128i64(<128 x i64> %a, <128 x i1> %m, i3
 ; CHECK-NEXT:  .LBB16_16:
 ; CHECK-NEXT:    addi t0, a1, 384
 ; CHECK-NEXT:    vsetvli zero, a6, e32, m4, ta, mu
-; CHECK-NEXT:    vmv1r.v v0, v3
+; CHECK-NEXT:    vmv1r.v v0, v28
 ; CHECK-NEXT:    vncvt.x.x.w v16, v8, v0.t
 ; CHECK-NEXT:    csrr a6, vlenb
 ; CHECK-NEXT:    li t1, 40

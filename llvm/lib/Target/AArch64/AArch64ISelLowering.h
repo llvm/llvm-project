@@ -567,6 +567,7 @@ public:
   MachineBasicBlock *EmitInsertVectorToTile(unsigned Opc, unsigned BaseReg,
                                             MachineInstr &MI,
                                             MachineBasicBlock *BB) const;
+  MachineBasicBlock *EmitZero(MachineInstr &MI, MachineBasicBlock *BB) const;
 
   MachineBasicBlock *
   EmitInstrWithCustomInserter(MachineInstr &MI,
@@ -1127,6 +1128,11 @@ private:
                                          KnownBits &Known,
                                          TargetLoweringOpt &TLO,
                                          unsigned Depth) const override;
+
+  bool isTargetCanonicalConstantNode(SDValue Op) const override {
+    return Op.getOpcode() == AArch64ISD::DUP ||
+           TargetLowering::isTargetCanonicalConstantNode(Op);
+  }
 
   // Normally SVE is only used for byte size vectors that do not fit within a
   // NEON vector. This changes when OverrideNEON is true, allowing SVE to be
