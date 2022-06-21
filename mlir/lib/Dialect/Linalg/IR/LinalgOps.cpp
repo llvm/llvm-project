@@ -1472,7 +1472,7 @@ AffineMap mlir::linalg::extractOrIdentityMap(Optional<AffineMap> maybeMap,
                                              unsigned rank,
                                              MLIRContext *context) {
   if (maybeMap)
-    return maybeMap.getValue();
+    return *maybeMap;
   if (rank == 0)
     return AffineMap::get(context);
   return AffineMap::getMultiDimIdentityMap(rank, context);

@@ -442,7 +442,7 @@ CodeGen::RValue CGObjCRuntime::GeneratePossiblySpecializedMessageSend(
   if (Optional<llvm::Value *> SpecializedResult =
           tryGenerateSpecializedMessageSend(CGF, ResultType, Receiver, Args,
                                             Sel, Method, isClassMessage)) {
-    return RValue::get(SpecializedResult.getValue());
+    return RValue::get(*SpecializedResult);
   }
   return GenerateMessageSend(CGF, Return, ResultType, Sel, Receiver, Args, OID,
                              Method);

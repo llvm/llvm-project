@@ -87,7 +87,7 @@ struct Conv2DIsFullyConnected : public OpRewritePattern<tosa::Conv2DOp> {
           rewriter
               .create<tosa::FullyConnectedOp>(
                   op.getLoc(), fullyConnectedShapeType, reshapedInput,
-                  reshapedWeight, op.bias(), op.quantization_info().getValue())
+                  reshapedWeight, op.bias(), *op.quantization_info())
               .getResult();
     } else {
       fullyConnectedValue = rewriter

@@ -497,7 +497,7 @@ void ForOp::getSuccessorRegions(Optional<unsigned> index,
   }
 
   // Otherwise, the loop may branch back to itself or the parent operation.
-  assert(index.getValue() == 0 && "expected loop region");
+  assert(*index == 0 && "expected loop region");
   regions.push_back(RegionSuccessor(&getLoopBody(), getRegionIterArgs()));
   regions.push_back(RegionSuccessor(getResults()));
 }
@@ -1194,6 +1194,15 @@ PerformConcurrentlyOp ForeachThreadOp::getTerminator() {
   return cast<PerformConcurrentlyOp>(getBody()->getTerminator());
 }
 
+ForeachThreadOp mlir::scf::getForeachThreadOpThreadIndexOwner(Value val) {
+  auto tidxArg = val.dyn_cast<BlockArgument>();
+  if (!tidxArg)
+    return ForeachThreadOp();
+  assert(tidxArg.getOwner() && "unlinked block argument");
+  auto *containingOp = tidxArg.getOwner()->getParentOp();
+  return dyn_cast<ForeachThreadOp>(containingOp);
+}
+
 //===----------------------------------------------------------------------===//
 // ParallelInsertSliceOp
 //===----------------------------------------------------------------------===//
@@ -1266,6 +1275,40 @@ public:
   }
 };
 } // namespace
+
+/// Fold a parallel_insert_slice source coming from a tensor.cast op.
+///
+/// Example:
+/// ```
+/// %0 = scf.foreach_thread (%arg0) in (%c2) -> (tensor<128xf32>) {
+///   %1 = compute_some_tensor() : tensor<64xf32>
+///   %2 = tensor.cast %1 : tensor<64xf32> to tensor<?xf32>
+///   scf.foreach_thread.perform_concurrently {
+///     scf.foreach_thread.parallel_insert_slice %2 into %out[...] [64] [1] :
+///        tensor<?xf32> into tensor<128xf32>
+///   }
+/// }
+/// ```
+///
+/// is folded into:
+/// ```
+/// %0 = scf.foreach_thread (%arg0) in (%c2) -> (tensor<128xf32>) {
+///   %1 = compute_some_tensor() : tensor<64xf32>
+///   scf.foreach_thread.perform_concurrently {
+///     scf.foreach_thread.parallel_insert_slice %1 into %out[...] [64] [1] :
+///        tensor<64xf32> into tensor<128xf32>
+///   }
+/// }
+/// ```
+LogicalResult
+ParallelInsertSliceOp::fold(ArrayRef<Attribute> operands,
+                            SmallVectorImpl<OpFoldResult> &results) {
+  auto sourceCast = getSource().getDefiningOp<tensor::CastOp>();
+  if (!sourceCast)
+    return failure();
+  getSourceMutable().assign(sourceCast.getSource());
+  return success();
+}
 
 void ParallelInsertSliceOp::getCanonicalizationPatterns(
     RewritePatternSet &results, MLIRContext *context) {

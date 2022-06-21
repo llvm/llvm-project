@@ -1307,8 +1307,7 @@ public:
 
       // Scale the cost of the load by the fraction of legal instructions that
       // will be used.
-      Cost = divideCeil(UsedInsts.count() * Cost.getValue().getValue(),
-                        NumLegalInsts);
+      Cost = divideCeil(UsedInsts.count() * *Cost.getValue(), NumLegalInsts);
     }
 
     // Then plus the cost of interleave operation.

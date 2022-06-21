@@ -399,6 +399,33 @@ let SubtargetPredicate = isGFX11Plus in {
   }
 } // End SubtargetPredicate = isGFX11Plus
 
+let SubtargetPredicate = HasSALUFloatInsts, Uses = [MODE],
+    SchedRW = [WriteSFPU], isReMaterializable = 1 in {
+  def S_CVT_F32_I32 : SOP1_32<"s_cvt_f32_i32">;
+  def S_CVT_F32_U32 : SOP1_32<"s_cvt_f32_u32">;
+
+  let mayRaiseFPException = 1 in {
+    def S_CVT_I32_F32    : SOP1_32<"s_cvt_i32_f32">;
+    def S_CVT_U32_F32    : SOP1_32<"s_cvt_u32_f32">;
+    def S_CVT_F32_F16    : SOP1_32<"s_cvt_f32_f16">;
+    def S_CVT_HI_F32_F16 : SOP1_32<"s_cvt_hi_f32_f16">;
+
+    def S_CEIL_F32  : SOP1_32<"s_ceil_f32">;
+    def S_FLOOR_F32 : SOP1_32<"s_floor_f32">;
+    def S_TRUNC_F32 : SOP1_32<"s_trunc_f32">;
+    def S_RNDNE_F32 : SOP1_32<"s_rndne_f32">;
+
+    let FPDPRounding = 1 in
+      def S_CVT_F16_F32 : SOP1_32<"s_cvt_f16_f32">;
+
+    def S_CEIL_F16  : SOP1_32<"s_ceil_f16">;
+    def S_FLOOR_F16 : SOP1_32<"s_floor_f16">;
+    def S_TRUNC_F16 : SOP1_32<"s_trunc_f16">;
+    def S_RNDNE_F16 : SOP1_32<"s_rndne_f16">;
+  } // End mayRaiseFPException = 1
+} // End SubtargetPredicate = HasSALUFloatInsts, Uses = [MODE]
+  // SchedRW = [WriteSFPU], isReMaterializable = 1
+
 //===----------------------------------------------------------------------===//
 // SOP2 Instructions
 //===----------------------------------------------------------------------===//
@@ -455,9 +482,50 @@ class SOP2_Real<bits<7> op, SOP_Pseudo ps, string real_name = ps.Mnemonic> :
   let Inst{31-30} = 0x2; // encoding
 }
 
+class SOP2_FMAK<bits<7> op, SOP_Pseudo ps, string real_name = ps.Mnemonic> :
+  InstSI <ps.OutOperandList, ps.InOperandList,
+          real_name # " " # ps.AsmOperands>,
+  Enc64 {
+  let SALU = 1;
+  let SOP2 = 1;
+  let isPseudo = 0;
+  let isCodeGenOnly = 0;
+
+  // copy relevant pseudo op flags
+  let SubtargetPredicate   = ps.SubtargetPredicate;
+  let AsmMatchConverter    = ps.AsmMatchConverter;
+  let UseNamedOperandTable = ps.UseNamedOperandTable;
+  let TSFlags              = ps.TSFlags;
+  let SchedRW              = ps.SchedRW;
+  let mayLoad              = ps.mayLoad;
+  let mayStore             = ps.mayStore;
+
+  // encoding
+  bits<7> sdst;
+  bits<8> src0;
+  bits<8> src1;
+  bits<32> imm;
+
+  let Inst{7-0}   = src0;
+  let Inst{15-8}  = src1;
+  let Inst{22-16} = !if(ps.has_sdst, sdst, ?);
+  let Inst{29-23} = op;
+  let Inst{31-30} = 0x2; // encoding
+  let Inst{63-32} = imm;
+}
+
+class SOP2_F16 <string opName, list<dag> pattern=[]> : SOP2_Pseudo <
+  opName, (outs SReg_32:$sdst), (ins SSrc_f16:$src0, SSrc_f16:$src1),
+  "$sdst, $src0, $src1", pattern
+>;
 
 class SOP2_32 <string opName, list<dag> pattern=[]> : SOP2_Pseudo <
   opName, (outs SReg_32:$sdst), (ins SSrc_b32:$src0, SSrc_b32:$src1),
+  "$sdst, $src0, $src1", pattern
+>;
+
+class SOP2_F32 <string opName, list<dag> pattern=[]> : SOP2_Pseudo <
+  opName, (outs SReg_32:$sdst), (ins SSrc_f32:$src0, SSrc_f32:$src1),
   "$sdst, $src0, $src1", pattern
 >;
 
@@ -707,6 +775,61 @@ let SubtargetPredicate = isGFX9Plus in {
 let SubtargetPredicate = isGFX11Plus in {
   def S_PACK_HL_B32_B16 : SOP2_32<"s_pack_hl_b32_b16">;
 } // End SubtargetPredicate = isGFX11Plus
+
+let SubtargetPredicate = HasSALUFloatInsts, mayRaiseFPException = 1,
+    Uses = [MODE], SchedRW = [WriteSFPU] in {
+  let isReMaterializable = 1 in {
+    let isCommutable = 1 in {
+      def S_ADD_F32 : SOP2_F32<"s_add_f32">;
+      def S_MIN_F32 : SOP2_F32<"s_min_f32">;
+      def S_MAX_F32 : SOP2_F32<"s_max_f32">;
+      def S_MUL_F32 : SOP2_F32<"s_mul_f32">;
+
+      def S_FMAAK_F32 : SOP2_Pseudo<
+        "s_fmaak_f32", (outs SReg_32:$sdst),
+        (ins SSrc_f32_Deferred:$src0, SSrc_f32_Deferred:$src1, f32kimm:$imm),
+        "$sdst, $src0, $src1, $imm"
+      >;
+
+      let FPDPRounding = 1 in {
+        def S_ADD_F16 : SOP2_F16<"s_add_f16">;
+        def S_MUL_F16 : SOP2_F16<"s_mul_f16">;
+      } // End FPDPRounding
+
+      def S_MIN_F16 : SOP2_F16<"s_min_f16">;
+      def S_MAX_F16 : SOP2_F16<"s_max_f16">;
+    } // End isCommutable = 1
+
+    let FPDPRounding = 1 in
+      def S_SUB_F16 : SOP2_F16<"s_sub_f16">;
+
+    def S_SUB_F32            : SOP2_F32<"s_sub_f32">;
+    def S_CVT_PK_RTZ_F16_F32 : SOP2_F32<"s_cvt_pk_rtz_f16_f32">;
+
+    def S_FMAMK_F32 : SOP2_Pseudo<
+      "s_fmamk_f32", (outs SReg_32:$sdst),
+      (ins SSrc_f32_Deferred:$src0, f32kimm:$imm, SSrc_f32_Deferred:$src1),
+      "$sdst, $src0, $imm, $src1"
+    >;
+  } // End isReMaterializable = 1
+
+  let Constraints = "$sdst = $src2", DisableEncoding="$src2",
+      isCommutable = 1 in {
+    def S_FMAC_F32 : SOP2_Pseudo<
+      "s_fmac_f32", (outs SReg_32:$sdst),
+      (ins SSrc_f32:$src0, SSrc_f32:$src1, SReg_32:$src2),
+      "$sdst, $src0, $src1"
+    >;
+
+    def S_FMAC_F16 : SOP2_Pseudo<
+      "s_fmac_f16", (outs SReg_32:$sdst),
+      (ins SSrc_f16:$src0, SSrc_f16:$src1, SReg_32:$src2),
+      "$sdst, $src0, $src1"
+    >;
+  } // End Constraints = "$sdst = $src2", DisableEncoding="$src2",
+    // isCommutable = 1
+} // End SubtargetPredicate = HasSALUFloatInsts, mayRaiseFPException = 1,
+  // Uses = [MODE], SchedRW = [WriteSFPU]
 
 //===----------------------------------------------------------------------===//
 // SOPK Instructions
@@ -1040,6 +1163,30 @@ class SOPC_CMP_32<string opName,
   let isCommutable = 1;
 }
 
+class SOPC_CMP_F32<string opName,
+                  SDPatternOperator cond = COND_NULL, string revOp = opName>
+  : SOPC_Helper<SSrc_b32, f32, opName, cond>,
+    Commutable_REV<revOp, !eq(revOp, opName)>,
+    SOPKInstTable<0, opName> {
+  let isCompare = 1;
+  let isCommutable = 1;
+  let mayRaiseFPException = 1;
+  let Uses = [MODE];
+  let SchedRW = [WriteSFPU];
+}
+
+class SOPC_CMP_F16<string opName,
+                  SDPatternOperator cond = COND_NULL, string revOp = opName>
+  : SOPC_Helper<SSrc_b16, f16, opName, cond>,
+    Commutable_REV<revOp, !eq(revOp, opName)>,
+    SOPKInstTable<0, opName> {
+  let isCompare = 1;
+  let isCommutable = 1;
+  let mayRaiseFPException = 1;
+  let Uses = [MODE];
+  let SchedRW = [WriteSFPU];
+}
+
 class SOPC_CMP_64<string opName,
                   SDPatternOperator cond = COND_NULL, string revOp = opName>
   : SOPC_Helper<SSrc_b64, i64, opName, cond>,
@@ -1095,6 +1242,40 @@ def S_SET_GPR_IDX_ON : SOPC_Pseudo <
   let FixedSize = 1;
 }
 }
+
+let SubtargetPredicate = HasSALUFloatInsts in {
+
+def S_CMP_LT_F32  : SOPC_CMP_F32<"s_cmp_lt_f32", COND_OLT, "s_cmp_gt_f32">;
+def S_CMP_EQ_F32  : SOPC_CMP_F32<"s_cmp_eq_f32", COND_OEQ>;
+def S_CMP_LE_F32  : SOPC_CMP_F32<"s_cmp_le_f32", COND_OLE, "s_cmp_ge_f32">;
+def S_CMP_GT_F32  : SOPC_CMP_F32<"s_cmp_gt_f32", COND_OGT>;
+def S_CMP_LG_F32  : SOPC_CMP_F32<"s_cmp_lg_f32", COND_ONE>;
+def S_CMP_GE_F32  : SOPC_CMP_F32<"s_cmp_ge_f32", COND_OGE>;
+def S_CMP_O_F32   : SOPC_CMP_F32<"s_cmp_o_f32", COND_O>;
+def S_CMP_U_F32   : SOPC_CMP_F32<"s_cmp_u_f32", COND_UO>;
+def S_CMP_NGE_F32 : SOPC_CMP_F32<"s_cmp_nge_f32", COND_ULT, "s_cmp_nle_f32">;
+def S_CMP_NLG_F32 : SOPC_CMP_F32<"s_cmp_nlg_f32", COND_UEQ>;
+def S_CMP_NGT_F32 : SOPC_CMP_F32<"s_cmp_ngt_f32", COND_ULE, "s_cmp_nlt_f32">;
+def S_CMP_NLE_F32 : SOPC_CMP_F32<"s_cmp_nle_f32", COND_UGT>;
+def S_CMP_NEQ_F32 : SOPC_CMP_F32<"s_cmp_neq_f32", COND_UNE>;
+def S_CMP_NLT_F32 : SOPC_CMP_F32<"s_cmp_nlt_f32", COND_UGE>;
+
+def S_CMP_LT_F16  : SOPC_CMP_F16<"s_cmp_lt_f16", COND_OLT, "s_cmp_gt_f16">;
+def S_CMP_EQ_F16  : SOPC_CMP_F16<"s_cmp_eq_f16", COND_OEQ>;
+def S_CMP_LE_F16  : SOPC_CMP_F16<"s_cmp_le_f16", COND_OLE, "s_cmp_ge_f16">;
+def S_CMP_GT_F16  : SOPC_CMP_F16<"s_cmp_gt_f16", COND_OGT>;
+def S_CMP_LG_F16  : SOPC_CMP_F16<"s_cmp_lg_f16", COND_ONE>;
+def S_CMP_GE_F16  : SOPC_CMP_F16<"s_cmp_ge_f16", COND_OGE>;
+def S_CMP_O_F16   : SOPC_CMP_F16<"s_cmp_o_f16", COND_O>;
+def S_CMP_U_F16   : SOPC_CMP_F16<"s_cmp_u_f16", COND_UO>;
+def S_CMP_NGE_F16 : SOPC_CMP_F16<"s_cmp_nge_f16", COND_ULT, "s_cmp_nle_f16">;
+def S_CMP_NLG_F16 : SOPC_CMP_F16<"s_cmp_nlg_f16", COND_UEQ>;
+def S_CMP_NGT_F16 : SOPC_CMP_F16<"s_cmp_ngt_f16", COND_ULE, "s_cmp_nlt_f16">;
+def S_CMP_NLE_F16 : SOPC_CMP_F16<"s_cmp_nle_f16", COND_UGT>;
+def S_CMP_NEQ_F16 : SOPC_CMP_F16<"s_cmp_neq_f16", COND_UNE>;
+def S_CMP_NLT_F16 : SOPC_CMP_F16<"s_cmp_nlt_f16", COND_UGE>;
+
+} // End SubtargetPredicate = HasSALUFloatInsts
 
 //===----------------------------------------------------------------------===//
 // SOPP Instructions
@@ -1625,6 +1806,26 @@ defm S_SENDMSG_RTN_B32       : SOP1_Real_gfx11_gfx12<0x04c>;
 defm S_SENDMSG_RTN_B64       : SOP1_Real_gfx11_gfx12<0x04d>;
 
 //===----------------------------------------------------------------------===//
+// SOP1 - GFX1150
+//===----------------------------------------------------------------------===//
+
+defm S_CEIL_F32          : SOP1_Real_gfx11<0x060>;
+defm S_FLOOR_F32         : SOP1_Real_gfx11<0x061>;
+defm S_TRUNC_F32         : SOP1_Real_gfx11<0x062>;
+defm S_RNDNE_F32         : SOP1_Real_gfx11<0x063>;
+defm S_CVT_F32_I32       : SOP1_Real_gfx11<0x064>;
+defm S_CVT_F32_U32       : SOP1_Real_gfx11<0x065>;
+defm S_CVT_I32_F32       : SOP1_Real_gfx11<0x066>;
+defm S_CVT_U32_F32       : SOP1_Real_gfx11<0x067>;
+defm S_CVT_F16_F32       : SOP1_Real_gfx11<0x068>;
+defm S_CVT_F32_F16       : SOP1_Real_gfx11<0x069>;
+defm S_CVT_HI_F32_F16    : SOP1_Real_gfx11<0x06a>;
+defm S_CEIL_F16          : SOP1_Real_gfx11<0x06b>;
+defm S_FLOOR_F16         : SOP1_Real_gfx11<0x06c>;
+defm S_TRUNC_F16         : SOP1_Real_gfx11<0x06d>;
+defm S_RNDNE_F16         : SOP1_Real_gfx11<0x06e>;
+
+//===----------------------------------------------------------------------===//
 // SOP1 - GFX10.
 //===----------------------------------------------------------------------===//
 
@@ -1799,6 +2000,37 @@ defm S_MUL_HI_I32      : SOP2_Real_gfx11_gfx12<0x02e>;
 defm S_CSELECT_B32     : SOP2_Real_gfx11_gfx12<0x030>;
 defm S_CSELECT_B64     : SOP2_Real_gfx11_gfx12<0x031>;
 defm S_PACK_HL_B32_B16 : SOP2_Real_gfx11_gfx12<0x035>;
+
+//===----------------------------------------------------------------------===//
+// SOP2 - GFX1150
+//===----------------------------------------------------------------------===//
+
+multiclass SOP2_FMAK_gfx11<bits<7> op> {
+  def _gfx11 : SOP2_FMAK<op, !cast<SOP2_Pseudo>(NAME)>,
+               Select_gfx11<!cast<SOP2_Pseudo>(NAME).Mnemonic>;
+}
+
+let Constraints = "$sdst = $src2", DisableEncoding = "$src2" in
+multiclass SOP2_FMAC_gfx11<bits<7> op> {
+  def _gfx11 : SOP2_Real<op, !cast<SOP2_Pseudo>(NAME)>,
+               Select_gfx11<!cast<SOP2_Pseudo>(NAME).Mnemonic>;
+}
+
+defm S_ADD_F32            : SOP2_Real_gfx11<0x040>;
+defm S_SUB_F32            : SOP2_Real_gfx11<0x041>;
+defm S_MIN_F32            : SOP2_Real_gfx11<0x042>;
+defm S_MAX_F32            : SOP2_Real_gfx11<0x043>;
+defm S_MUL_F32            : SOP2_Real_gfx11<0x044>;
+defm S_FMAAK_F32          : SOP2_FMAK_gfx11<0x045>;
+defm S_FMAMK_F32          : SOP2_FMAK_gfx11<0x046>;
+defm S_FMAC_F32           : SOP2_FMAC_gfx11<0x047>;
+defm S_CVT_PK_RTZ_F16_F32 : SOP2_Real_gfx11<0x048>;
+defm S_ADD_F16            : SOP2_Real_gfx11<0x049>;
+defm S_SUB_F16            : SOP2_Real_gfx11<0x04a>;
+defm S_MIN_F16            : SOP2_Real_gfx11<0x04b>;
+defm S_MAX_F16            : SOP2_Real_gfx11<0x04c>;
+defm S_MUL_F16            : SOP2_Real_gfx11<0x04d>;
+defm S_FMAC_F16           : SOP2_FMAC_gfx11<0x04e>;
 
 //===----------------------------------------------------------------------===//
 // SOP2 - GFX10.
@@ -2272,6 +2504,40 @@ defm S_BITCMP0_B64    : SOPC_Real_gfx11_gfx12<0x0e>;
 defm S_BITCMP1_B64    : SOPC_Real_gfx11_gfx12<0x0f>;
 defm S_CMP_EQ_U64     : SOPC_Real_gfx11_gfx12<0x10>;
 defm S_CMP_LG_U64     : SOPC_Real_gfx11_gfx12<0x11>;
+
+//===----------------------------------------------------------------------===//
+// SOPC - GFX1150
+//===----------------------------------------------------------------------===//
+
+defm S_CMP_LT_F32  : SOPC_Real_gfx11<0x41>;
+defm S_CMP_EQ_F32  : SOPC_Real_gfx11<0x42>;
+defm S_CMP_LE_F32  : SOPC_Real_gfx11<0x43>;
+defm S_CMP_GT_F32  : SOPC_Real_gfx11<0x44>;
+defm S_CMP_LG_F32  : SOPC_Real_gfx11<0x45>;
+defm S_CMP_GE_F32  : SOPC_Real_gfx11<0x46>;
+defm S_CMP_O_F32   : SOPC_Real_gfx11<0x47>;
+defm S_CMP_U_F32   : SOPC_Real_gfx11<0x48>;
+defm S_CMP_NGE_F32 : SOPC_Real_gfx11<0x49>;
+defm S_CMP_NLG_F32 : SOPC_Real_gfx11<0x4a>;
+defm S_CMP_NGT_F32 : SOPC_Real_gfx11<0x4b>;
+defm S_CMP_NLE_F32 : SOPC_Real_gfx11<0x4c>;
+defm S_CMP_NEQ_F32 : SOPC_Real_gfx11<0x4d>;
+defm S_CMP_NLT_F32 : SOPC_Real_gfx11<0x4e>;
+
+defm S_CMP_LT_F16  : SOPC_Real_gfx11<0x51>;
+defm S_CMP_EQ_F16  : SOPC_Real_gfx11<0x52>;
+defm S_CMP_LE_F16  : SOPC_Real_gfx11<0x53>;
+defm S_CMP_GT_F16  : SOPC_Real_gfx11<0x54>;
+defm S_CMP_LG_F16  : SOPC_Real_gfx11<0x55>;
+defm S_CMP_GE_F16  : SOPC_Real_gfx11<0x56>;
+defm S_CMP_O_F16   : SOPC_Real_gfx11<0x57>;
+defm S_CMP_U_F16   : SOPC_Real_gfx11<0x58>;
+defm S_CMP_NGE_F16 : SOPC_Real_gfx11<0x59>;
+defm S_CMP_NLG_F16 : SOPC_Real_gfx11<0x5a>;
+defm S_CMP_NGT_F16 : SOPC_Real_gfx11<0x5b>;
+defm S_CMP_NLE_F16 : SOPC_Real_gfx11<0x5c>;
+defm S_CMP_NEQ_F16 : SOPC_Real_gfx11<0x5d>;
+defm S_CMP_NLT_F16 : SOPC_Real_gfx11<0x5e>;
 
 //===----------------------------------------------------------------------===//
 // SOPC - GFX6, GFX7, GFX8, GFX9, GFX10

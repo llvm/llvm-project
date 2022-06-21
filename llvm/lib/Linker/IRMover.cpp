@@ -1046,7 +1046,7 @@ Expected<Constant *> IRLinker::linkGlobalValueProto(GlobalValue *SGV,
   if (Function *F = dyn_cast<Function>(NewGV))
     if (auto Remangled = Intrinsic::remangleIntrinsicFunction(F)) {
       NewGV->eraseFromParent();
-      NewGV = Remangled.getValue();
+      NewGV = *Remangled;
       NeedsRenaming = false;
     }
 

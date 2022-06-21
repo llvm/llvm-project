@@ -419,7 +419,7 @@ findTypeValue(StringRef typeVar, SmallVectorImpl<LinalgOperandDef> &args) {
         it.value().kind != LinalgOperandDefKind::Scalar &&
         it.value().kind != LinalgOperandDefKind::OutputTensor)
       continue;
-    if (it.value().typeVar.getValue() == typeVar)
+    if (*it.value().typeVar == typeVar)
       return llvm::formatv("block.getArgument({0}).getType()", it.index())
           .str();
   }

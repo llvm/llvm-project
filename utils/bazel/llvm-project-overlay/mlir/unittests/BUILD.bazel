@@ -106,6 +106,20 @@ cc_test(
 )
 
 cc_test(
+    name = "memref_tests",
+    size = "small",
+    srcs = glob([
+        "Dialect/MemRef/*.cpp",
+        "Dialect/MemRef/*.h",
+    ]),
+    deps = [
+        "//llvm:TestingSupport",
+        "//llvm:gtest_main",
+        "//mlir:MemRefDialect",
+    ],
+)
+
+cc_test(
     name = "quantops_tests",
     size = "small",
     srcs = glob([

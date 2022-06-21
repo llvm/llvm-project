@@ -704,6 +704,12 @@ def FeatureVOPD : SubtargetFeature<"vopd",
   "Has VOPD dual issue wave32 instructions"
 >;
 
+def FeatureSALUFloatInsts : SubtargetFeature<"salu-float",
+  "HasSALUFloatInsts",
+  "true",
+  "Has SALU floating point instructions"
+>;
+
 //===------------------------------------------------------------===//
 // Subtarget Features (options and debugging)
 //===------------------------------------------------------------===//
@@ -1295,10 +1301,15 @@ def FeatureISAVersion11_0 : FeatureSet<
   !listconcat(FeatureISAVersion11_Common.Features,
     [FeatureGFX11ExtraVGPRs])>;
 
-// Features for GFX 11.0.2 and 11.0.3 and 11.5.0
+// Features for GFX 11.0.2 and 11.0.3
 def FeatureISAVersion11_0_2 : FeatureSet<
   !listconcat(FeatureISAVersion11_Common.Features,
     [])>;
+
+// Features for GFX 11.5.0
+def FeatureISAVersion11_5_0 : FeatureSet<
+  !listconcat(FeatureISAVersion11_Common.Features,
+    [FeatureSALUFloatInsts])>;
 
 def FeatureISAVersion12 : FeatureSet<
   [FeatureGFX12,
@@ -1790,6 +1801,9 @@ def DisableFlatScratch : Predicate<"!Subtarget->enableFlatScratch()">;
 
 def HasUnalignedAccessMode : Predicate<"Subtarget->hasUnalignedAccessMode()">,
   AssemblerPredicate<(all_of FeatureUnalignedAccessMode)>;
+
+def HasSALUFloatInsts : Predicate<"Subtarget->hasSALUFloatInsts()">,
+  AssemblerPredicate<(all_of FeatureSALUFloatInsts)>;
 
 // Include AMDGPU TD files
 include "SISchedule.td"

@@ -196,7 +196,7 @@ bool tryMoveToMainFile(Diag &D, FullSourceLoc DiagLoc) {
     return false;
 
   // Add a note that will point to real diagnostic.
-  auto FE = SM.getFileEntryRefForID(SM.getFileID(DiagLoc)).getValue();
+  auto FE = *SM.getFileEntryRefForID(SM.getFileID(DiagLoc));
   D.Notes.emplace(D.Notes.begin());
   Note &N = D.Notes.front();
   N.AbsFile = std::string(FE.getFileEntry().tryGetRealPathName());

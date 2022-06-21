@@ -392,7 +392,7 @@ AArch64TargetMachine::getSubtargetImpl(const Function &F) const {
   if (VScaleRangeAttr.isValid()) {
     Optional<unsigned> VScaleMax = VScaleRangeAttr.getVScaleRangeMax();
     MinSVEVectorSize = VScaleRangeAttr.getVScaleRangeMin() * 128;
-    MaxSVEVectorSize = VScaleMax ? VScaleMax.getValue() * 128 : 0;
+    MaxSVEVectorSize = VScaleMax ? *VScaleMax * 128 : 0;
   } else {
     MinSVEVectorSize = SVEVectorBitsMinOpt;
     MaxSVEVectorSize = SVEVectorBitsMaxOpt;

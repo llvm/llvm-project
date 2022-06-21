@@ -450,9 +450,7 @@ void dumpDebugLines(DWARFContext &DCtx, DWARFYAML::Data &Y) {
 
           default:
             for (uint8_t i = 0;
-                 i <
-                 DebugLines.StandardOpcodeLengths.getValue()[NewOp.Opcode - 1];
-                 ++i)
+                 i < (*DebugLines.StandardOpcodeLengths)[NewOp.Opcode - 1]; ++i)
               NewOp.StandardOpcodeData.push_back(LineData.getULEB128(&Offset));
           }
         }

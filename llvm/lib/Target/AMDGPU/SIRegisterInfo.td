@@ -1094,6 +1094,18 @@ def SSrcOrLds_b32 : RegisterOperand<SRegOrLds_32> {
 }
 
 //===----------------------------------------------------------------------===//
+//  SSrc_32_Deferred Operands with an SGPR or a 32-bit immediate for use with
+//  FMAMK/FMAAK
+//===----------------------------------------------------------------------===//
+
+def SSrc_f32_Deferred :  RegisterOperand<SReg_32> {
+  let OperandNamespace = "AMDGPU";
+  let OperandType = "OPERAND_REG_IMM_FP32_DEFERRED";
+  let ParserMatchClass = RegImmMatcher<"SSrcF32">;
+  let DecoderMethod = "decodeOperand_VS_32_Deferred";
+}
+
+//===----------------------------------------------------------------------===//
 //  SCSrc_* Operands with an SGPR or a inline constant
 //===----------------------------------------------------------------------===//
 
