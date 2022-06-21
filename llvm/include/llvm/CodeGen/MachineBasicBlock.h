@@ -246,6 +246,7 @@ public:
       MachineInstrBundleIterator<const MachineInstr, true>;
 
   unsigned size() const { return (unsigned)Insts.size(); }
+  bool sizeWithoutDebugLargerThan(unsigned Limit) const;
   bool empty() const { return Insts.empty(); }
 
   MachineInstr       &instr_front()       { return Insts.front(); }
