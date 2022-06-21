@@ -306,7 +306,7 @@ public:
     // Check for a floating point value.
     if (curTok.is(Token::floatliteral)) {
       auto val = curTok.getFloatingPointValue();
-      if (!val.hasValue())
+      if (!val)
         return emitError(loc, "floating point value too large");
       parser.consumeToken(Token::floatliteral);
       result = isNegative ? -*val : *val;

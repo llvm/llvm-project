@@ -671,7 +671,7 @@ let Class = TemplateSpecializationType in {
 
   def : Creator<[{
     QualType result;
-    if (!underlyingType.hasValue()) {
+    if (!underlyingType) {
       result = ctx.getCanonicalTemplateSpecializationType(templateName,
                                                           templateArguments);
     } else {

@@ -239,8 +239,8 @@ InstructionCost RISCVTTIImpl::getGatherScatterOpCost(
   InstructionCost MemOpCost = getMemoryOpCost(Opcode, VTy.getElementType(),
                                               Alignment, 0, CostKind, I);
   if (isa<ScalableVectorType>(VTy)) {
-    const unsigned EltSize = VTy.getScalarSizeInBits();
-    const unsigned MinSize = VTy.getPrimitiveSizeInBits().getKnownMinValue();
+    const unsigned EltSize = DL.getTypeSizeInBits(VTy.getElementType());
+    const unsigned MinSize = DL.getTypeSizeInBits(&VTy).getKnownMinValue();
     const unsigned VectorBitsMax = ST->getRealMaxVLen();
     const unsigned MaxVLMAX =
       RISCVTargetLowering::computeVLMAX(VectorBitsMax, EltSize, MinSize);

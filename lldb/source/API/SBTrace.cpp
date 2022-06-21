@@ -9,6 +9,7 @@
 #include "lldb/Target/Process.h"
 #include "lldb/Utility/Instrumentation.h"
 
+#include "lldb/API/SBDebugger.h"
 #include "lldb/API/SBStructuredData.h"
 #include "lldb/API/SBThread.h"
 #include "lldb/API/SBTrace.h"
@@ -19,11 +20,27 @@
 
 using namespace lldb;
 using namespace lldb_private;
+using namespace llvm;
 
 SBTrace::SBTrace() { LLDB_INSTRUMENT_VA(this); }
 
 SBTrace::SBTrace(const lldb::TraceSP &trace_sp) : m_opaque_sp(trace_sp) {
   LLDB_INSTRUMENT_VA(this, trace_sp);
+}
+
+SBTrace SBTrace::LoadTraceFromFile(SBError &error, SBDebugger &debugger,
+                                   const SBFileSpec &trace_description_file) {
+  LLDB_INSTRUMENT_VA(error, debugger, trace_description_file);
+
+  Expected<lldb::TraceSP> trace_or_err = Trace::LoadPostMortemTraceFromFile(
+      debugger.ref(), trace_description_file.ref());
+
+  if (!trace_or_err) {
+    error.SetErrorString(toString(trace_or_err.takeError()).c_str());
+    return SBTrace();
+  }
+
+  return SBTrace(trace_or_err.get());
 }
 
 const char *SBTrace::GetStartConfigurationHelp() {

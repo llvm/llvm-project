@@ -2306,7 +2306,7 @@ void ASTWriter::WritePreprocessor(const Preprocessor &PP, bool IsModule) {
   if (PP.isRecordingPreamble() && PP.hasRecordedPreamble()) {
     assert(!IsModule);
     auto SkipInfo = PP.getPreambleSkipInfo();
-    if (SkipInfo.hasValue()) {
+    if (SkipInfo) {
       Record.push_back(true);
       AddSourceLocation(SkipInfo->HashTokenLoc, Record);
       AddSourceLocation(SkipInfo->IfTokenLoc, Record);

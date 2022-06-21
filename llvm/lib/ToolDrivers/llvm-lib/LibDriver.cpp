@@ -77,7 +77,7 @@ static std::vector<StringRef> getSearchPaths(opt::InputArgList *Args,
 
   // Add $LIB.
   Optional<std::string> EnvOpt = sys::Process::GetEnv("LIB");
-  if (!EnvOpt.hasValue())
+  if (!EnvOpt)
     return Ret;
   StringRef Env = Saver.save(*EnvOpt);
   while (!Env.empty()) {

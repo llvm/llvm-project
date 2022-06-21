@@ -28,7 +28,7 @@ NativeProcessELF::GetAuxValue(enum AuxVector::EntryType type) {
 }
 
 lldb::addr_t NativeProcessELF::GetSharedLibraryInfoAddress() {
-  if (!m_shared_library_info_addr.hasValue()) {
+  if (!m_shared_library_info_addr) {
     if (GetAddressByteSize() == 8)
       m_shared_library_info_addr =
           GetELFImageInfoAddress<llvm::ELF::Elf64_Ehdr, llvm::ELF::Elf64_Phdr,

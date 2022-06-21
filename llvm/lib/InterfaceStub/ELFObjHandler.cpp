@@ -493,7 +493,7 @@ static Error populateDynamic(DynamicEntries &Dyn,
     return createError(
         "Couldn't locate dynamic symbol table (no DT_SYMTAB entry)");
   }
-  if (Dyn.SONameOffset.hasValue() && *Dyn.SONameOffset >= Dyn.StrSize) {
+  if (Dyn.SONameOffset && *Dyn.SONameOffset >= Dyn.StrSize) {
     return createStringError(object_error::parse_failed,
                              "DT_SONAME string offset (0x%016" PRIx64
                              ") outside of dynamic string table",
@@ -608,7 +608,7 @@ buildStub(const ELFObjectFile<ELFT> &ElfObj) {
   DestStub->Target.ObjectFormat = "ELF";
 
   // Populate SoName from .dynamic entries and dynamic string table.
-  if (DynEnt.SONameOffset.hasValue()) {
+  if (DynEnt.SONameOffset) {
     Expected<StringRef> NameOrErr =
         terminatedSubstr(DynStr, *DynEnt.SONameOffset);
     if (!NameOrErr) {

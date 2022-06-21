@@ -544,7 +544,7 @@ IncludeFixer::unresolvedNameRecorder() {
 }
 
 std::vector<Fix> IncludeFixer::fixUnresolvedName() const {
-  assert(LastUnresolvedName.hasValue());
+  assert(LastUnresolvedName);
   auto &Unresolved = *LastUnresolvedName;
   vlog("Trying to fix unresolved name \"{0}\" in scopes: [{1}]",
        Unresolved.Name, llvm::join(Unresolved.Scopes, ", "));

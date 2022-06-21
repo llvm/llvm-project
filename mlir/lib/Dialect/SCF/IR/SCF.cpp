@@ -248,7 +248,7 @@ void ExecuteRegionOp::getSuccessorRegions(
     Optional<unsigned> index, ArrayRef<Attribute> operands,
     SmallVectorImpl<RegionSuccessor> &regions) {
   // If the predecessor is the ExecuteRegionOp, branch into the body.
-  if (!index.hasValue()) {
+  if (!index) {
     regions.push_back(RegionSuccessor(&getRegion()));
     return;
   }
@@ -491,7 +491,7 @@ void ForOp::getSuccessorRegions(Optional<unsigned> index,
                                 SmallVectorImpl<RegionSuccessor> &regions) {
   // If the predecessor is the ForOp, branch into the body using the iterator
   // arguments.
-  if (!index.hasValue()) {
+  if (!index) {
     regions.push_back(RegionSuccessor(&getLoopBody(), getRegionIterArgs()));
     return;
   }
@@ -1475,7 +1475,7 @@ void IfOp::getSuccessorRegions(Optional<unsigned> index,
                                ArrayRef<Attribute> operands,
                                SmallVectorImpl<RegionSuccessor> &regions) {
   // The `then` and the `else` region branch back to the parent operation.
-  if (index.hasValue()) {
+  if (index) {
     regions.push_back(RegionSuccessor(getResults()));
     return;
   }
@@ -2632,7 +2632,7 @@ void WhileOp::getSuccessorRegions(Optional<unsigned> index,
                                   ArrayRef<Attribute> operands,
                                   SmallVectorImpl<RegionSuccessor> &regions) {
   // The parent op always branches to the condition region.
-  if (!index.hasValue()) {
+  if (!index) {
     regions.emplace_back(&getBefore(), getBefore().getArguments());
     return;
   }

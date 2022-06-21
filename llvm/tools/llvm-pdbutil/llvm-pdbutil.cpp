@@ -791,7 +791,7 @@ static void yamlToPdb(StringRef Path) {
   PDBFileBuilder Builder(Allocator);
 
   uint32_t BlockSize = 4096;
-  if (YamlObj.Headers.hasValue())
+  if (YamlObj.Headers)
     BlockSize = YamlObj.Headers->SuperBlock.BlockSize;
   ExitOnErr(Builder.initialize(BlockSize));
   // Add each of the reserved streams.  We ignore stream metadata in the
@@ -806,7 +806,7 @@ static void yamlToPdb(StringRef Path) {
   StringsAndChecksums Strings;
   Strings.setStrings(std::make_shared<DebugStringTableSubsection>());
 
-  if (YamlObj.StringTable.hasValue()) {
+  if (YamlObj.StringTable) {
     for (auto S : *YamlObj.StringTable)
       Strings.strings()->insert(S);
   }
@@ -841,7 +841,7 @@ static void yamlToPdb(StringRef Path) {
 
     for (auto S : MI.SourceFiles)
       ExitOnErr(DbiBuilder.addModuleSourceFile(ModiBuilder, S));
-    if (MI.Modi.hasValue()) {
+    if (MI.Modi) {
       const auto &ModiStream = *MI.Modi;
       for (auto Symbol : ModiStream.Symbols) {
         ModiBuilder.addSymbol(

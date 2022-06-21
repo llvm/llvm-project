@@ -152,7 +152,7 @@ Optional<SVal> getTaintedPointeeOrPointer(const CheckerContext &C, SVal Arg) {
 
 bool isTaintedOrPointsToTainted(const Expr *E, const ProgramStateRef &State,
                                 CheckerContext &C) {
-  return getTaintedPointeeOrPointer(C, C.getSVal(E)).hasValue();
+  return getTaintedPointeeOrPointer(C, C.getSVal(E)).has_value();
 }
 
 /// ArgSet is used to describe arguments relevant for taint detection or

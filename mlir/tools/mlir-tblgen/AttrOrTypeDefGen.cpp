@@ -251,7 +251,7 @@ void DefGen::emitParserPrinter() {
   mnemonic->body().indent() << strfmt("return {\"{0}\"};", *def.getMnemonic());
 
   // Declare the parser and printer, if needed.
-  bool hasAssemblyFormat = def.getAssemblyFormat().hasValue();
+  bool hasAssemblyFormat = def.getAssemblyFormat().has_value();
   if (!def.hasCustomAssemblyFormat() && !hasAssemblyFormat)
     return;
 
@@ -765,7 +765,7 @@ static const char *const dialectDynamicTypePrinterDispatch = R"(
 /// functions from their dialect's print/parse methods.
 void DefGenerator::emitParsePrintDispatch(ArrayRef<AttrOrTypeDef> defs) {
   if (llvm::none_of(defs, [](const AttrOrTypeDef &def) {
-        return def.getMnemonic().hasValue();
+        return def.getMnemonic().has_value();
       })) {
     return;
   }

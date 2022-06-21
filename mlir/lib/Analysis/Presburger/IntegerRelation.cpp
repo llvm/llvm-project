@@ -626,9 +626,7 @@ Matrix IntegerRelation::getBoundedDirections() const {
   return dirs;
 }
 
-bool IntegerRelation::isIntegerEmpty() const {
-  return !findIntegerSample().hasValue();
-}
+bool IntegerRelation::isIntegerEmpty() const { return !findIntegerSample(); }
 
 /// Let this set be S. If S is bounded then we directly call into the GBR
 /// sampling algorithm. Otherwise, there are some unbounded directions, i.e.,
@@ -1423,7 +1421,7 @@ Optional<int64_t> IntegerRelation::getConstantBoundOnDimSize(
       }
     }
   }
-  if (lb && minDiff.hasValue()) {
+  if (lb && minDiff) {
     // Set lb to the symbolic lower bound.
     lb->resize(getNumSymbolIds() + 1);
     if (ub)

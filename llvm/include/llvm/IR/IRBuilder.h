@@ -300,7 +300,7 @@ public:
   void setDefaultConstrainedExcept(fp::ExceptionBehavior NewExcept) {
 #ifndef NDEBUG
     Optional<StringRef> ExceptStr = convertExceptionBehaviorToStr(NewExcept);
-    assert(ExceptStr.hasValue() && "Garbage strict exception behavior!");
+    assert(ExceptStr && "Garbage strict exception behavior!");
 #endif
     DefaultConstrainedExcept = NewExcept;
   }
@@ -309,7 +309,7 @@ public:
   void setDefaultConstrainedRounding(RoundingMode NewRounding) {
 #ifndef NDEBUG
     Optional<StringRef> RoundingStr = convertRoundingModeToStr(NewRounding);
-    assert(RoundingStr.hasValue() && "Garbage strict rounding mode!");
+    assert(RoundingStr && "Garbage strict rounding mode!");
 #endif
     DefaultConstrainedRounding = NewRounding;
   }

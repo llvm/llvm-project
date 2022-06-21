@@ -1529,10 +1529,7 @@ public:
 
   /// Get the profiler's count for the given statement.
   uint64_t getProfileCount(const Stmt *S) {
-    Optional<uint64_t> Count = PGO.getStmtCount(S);
-    if (!Count.hasValue())
-      return 0;
-    return *Count;
+    return PGO.getStmtCount(S).value_or(0);
   }
 
   /// Set the profiler's current count.

@@ -613,7 +613,7 @@ static bool shouldImport(Symbol *sym) {
   if (config->allowUndefinedSymbols.count(sym->getName()) != 0)
     return true;
 
-  return sym->importName.hasValue();
+  return sym->importName.has_value();
 }
 
 void Writer::calculateImports() {
@@ -754,7 +754,7 @@ void Writer::createCommandExportWrappers() {
     const std::string &funcName = commandExportWrapperNames.back();
 
     auto func = make<SyntheticFunction>(*f->getSignature(), funcName);
-    if (f->function->getExportName().hasValue())
+    if (f->function->getExportName())
       func->setExportName(f->function->getExportName()->str());
     else
       func->setExportName(f->getName().str());
