@@ -13,13 +13,11 @@
 #include "llvm/CAS/CASDB.h"
 #include "llvm/CAS/HashMappedTrie.h"
 #include "llvm/CAS/HierarchicalTreeBuilder.h"
+#include "llvm/Config/config.h"
 #include "llvm/Support/AlignOf.h"
 #include "llvm/Support/Allocator.h"
+#include "llvm/Support/FileSystem.h"
 #include <mutex>
-
-// FIXME: Put the functions we need in FileSystem.h.
-#include <fcntl.h>
-#include <unistd.h>
 
 using namespace llvm;
 using namespace llvm::cas;
@@ -68,7 +66,7 @@ public:
   makeSymlinkTo(DirectoryEntry &Parent, StringRef TreePath, StringRef Target);
 
   Expected<DirectoryEntry *> makeFile(DirectoryEntry &Parent,
-                                      StringRef TreePath, int BorrowedFD,
+                                      StringRef TreePath, sys::fs::file_t F,
                                       sys::fs::file_status Status);
 
   /// Create an entry for \p TreePath, which is contained in \p Parent. If
@@ -303,8 +301,11 @@ CachingOnDiskFileSystemImpl::makeDirectory(DirectoryEntry &Parent,
   return &Cache->makeDirectory(Parent, TreePath);
 }
 
+
+#if defined(HAVE_UNISTD_H)
 // FIXME: sink into llvm::sys::fs?
-static Error readlink(const llvm::Twine &Path, SmallVectorImpl<char> &Dest) {
+#include <unistd.h>
+static Error readLink(const llvm::Twine &Path, SmallVectorImpl<char> &Dest) {
   SmallString<128> PathStorage;
   StringRef P = Path.toNullTerminatedStringRef(PathStorage);
   char TargetBuffer[PATH_MAX] = {0};
@@ -314,12 +315,19 @@ static Error readlink(const llvm::Twine &Path, SmallVectorImpl<char> &Dest) {
   Dest.assign(TargetBuffer, TargetBuffer + TargetLength);
   return Error::success();
 }
+#else
+// Use real_path implementation for platforms that doesn't have readlink().
+static Error readLink(const llvm::Twine &Path, SmallVectorImpl<char> &Dest) {
+  std::error_code EC = sys::fs::real_path(Path, Dest);
+  return errorCodeToError(EC);
+}
+#endif
 
 Expected<FileSystemCache::DirectoryEntry *>
 CachingOnDiskFileSystemImpl::makeSymlink(DirectoryEntry &Parent,
                                          StringRef TreePath) {
   SmallString<128> Target;
-  if (auto Err = readlink(TreePath, Target))
+  if (auto Err = readLink(TreePath, Target))
     return std::move(Err);
   return makeSymlinkTo(Parent, TreePath, Target);
 }
@@ -337,9 +345,9 @@ CachingOnDiskFileSystemImpl::makeSymlinkTo(DirectoryEntry &Parent,
 
 Expected<FileSystemCache::DirectoryEntry *>
 CachingOnDiskFileSystemImpl::makeFile(DirectoryEntry &Parent,
-                                      StringRef TreePath, int BorrowedFD,
+                                      StringRef TreePath, sys::fs::file_t F,
                                       sys::fs::file_status Status) {
-  Expected<NodeHandle> Node = DB.storeNodeFromOpenFile(BorrowedFD, Status);
+  Expected<NodeHandle> Node = DB.storeNodeFromOpenFile(F, Status);
   if (!Node)
     return Node.takeError();
 
@@ -369,13 +377,13 @@ CachingOnDiskFileSystemImpl::makeEntry(
   if (Status.type() == sys::fs::file_type::symlink_file)
     return makeSymlink(Parent, TreePath);
 
-  int FD;
-  if (std::error_code EC =
-          sys::fs::openFile(TreePath, FD, sys::fs::CD_OpenExisting,
-                            sys::fs::FA_Read, sys::fs::OF_None))
-    return errorCodeToError(EC);
-  auto CloseOnExit = make_scope_exit([&FD]() { ::close(FD); });
-  return makeFile(Parent, TreePath, FD, Status);
+  auto F = sys::fs::openNativeFile(TreePath, sys::fs::CD_OpenExisting,
+                                   sys::fs::FA_Read, sys::fs::OF_None);
+  if (!F)
+    return F.takeError();
+
+  auto CloseOnExit = make_scope_exit([&F]() { sys::fs::closeFile(*F); });
+  return makeFile(Parent, TreePath, *F, Status);
 }
 
 ErrorOr<vfs::Status>
@@ -531,12 +539,12 @@ CachingOnDiskFileSystemImpl::preloadRealPath(DirectoryEntry &From,
     // Don't reuse Status below since there could be a race.
   }
 
-  int FD;
   SmallString<256> RealPath;
-  if (std::error_code EC = sys::fs::openFileForRead(
-          ExpectedRealPath, FD, sys::fs::OF_None, &RealPath))
-    return errorCodeToError(EC);
-  auto CloseOnExit = make_scope_exit([&FD]() { ::close(FD); });
+  auto FD = sys::fs::openNativeFileForRead(ExpectedRealPath, sys::fs::OF_None,
+                                           &RealPath);
+  if (!FD)
+    return FD.takeError();
+  auto CloseOnExit = make_scope_exit([&FD]() { sys::fs::closeFile(*FD); });
 
   FileSystemCache::LookupPathState State(Cache->getRoot(), RealPath);
 
@@ -572,13 +580,13 @@ CachingOnDiskFileSystemImpl::preloadRealPath(DirectoryEntry &From,
 
   // Skip all errors from here out. This is just priming the cache.
   sys::fs::file_status Status;
-  if (/*std::error_code EC =*/sys::fs::status(FD, Status))
+  if (/*std::error_code EC =*/sys::fs::status(*FD, Status))
     return nullptr;
 
   if (Status.type() == sys::fs::file_type::directory_file)
     return makeDirectory(*State.Entry, RealPath);
 
-  auto F = makeFile(*State.Entry, RealPath, FD, Status);
+  auto F = makeFile(*State.Entry, RealPath, *FD, Status);
   if (F)
     return *F;
   llvm::consumeError(F.takeError());
