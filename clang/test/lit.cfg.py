@@ -156,9 +156,6 @@ if platform.system() not in ['Windows']:
 if platform.system() not in ['Darwin', 'Fuchsia']:
     config.available_features.add('libgcc')
 
-# This is CAS enabled branch:
-config.available_features.add('cas')
-
 # Feature for the build directory path is not too long for certain tests.
 if len(config.clang_obj_root) < 50:
     config.available_features.add('short-build-dir-path')
@@ -254,6 +251,9 @@ if config.enable_shared:
 # Add a vendor-specific feature.
 if config.clang_vendor_uti:
     config.available_features.add('clang-vendor=' + config.clang_vendor_uti)
+
+if config.have_ondisk_cas:
+    config.available_features.add('ondisk_cas')
 
 def exclude_unsupported_files_for_aix(dirname):
     for filename in os.listdir(dirname):

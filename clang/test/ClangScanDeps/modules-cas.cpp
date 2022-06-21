@@ -1,3 +1,4 @@
+// REQUIRES: ondisk_cas
 // RUN: rm -rf %t.dir
 // RUN: rm -rf %t.cdb
 // RUN: rm -rf %t_clangcl.cdb

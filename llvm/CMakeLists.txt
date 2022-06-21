@@ -204,7 +204,7 @@ if(LLVM_CCACHE_BUILD)
       # RULE_LAUNCH_COMPILE should work with Ninja but currently has issues
       # with cmd.exe and some MSVC tools other than cl.exe
       set(CMAKE_C_COMPILER_LAUNCHER ${CCACHE_PROGRAM})
-      set(CMAKE_CXX_COMPILER_LAUNCHER ${CCACHE_PROGRAM})     
+      set(CMAKE_CXX_COMPILER_LAUNCHER ${CCACHE_PROGRAM})
     endif()
   else()
     message(FATAL_ERROR "Unable to find the program ccache. Set LLVM_CCACHE_BUILD to OFF")
@@ -653,6 +653,7 @@ option (LLVM_ENABLE_DOXYGEN "Use doxygen to generate llvm API documentation." OF
 option (LLVM_ENABLE_SPHINX "Use Sphinx to generate llvm documentation." OFF)
 option (LLVM_ENABLE_OCAMLDOC "Build OCaml bindings documentation." ON)
 option (LLVM_ENABLE_BINDINGS "Build bindings." ON)
+option (LLVM_ENABLE_ONDISK_CAS "Build OnDiskCAS." ON)
 
 set(LLVM_INSTALL_DOXYGEN_HTML_DIR "${CMAKE_INSTALL_DOCDIR}/llvm/doxygen-html"
     CACHE STRING "Doxygen-generated HTML documentation install directory")
@@ -1286,6 +1287,13 @@ if (LLVM_INCLUDE_BENCHMARKS)
   add_subdirectory(${LLVM_THIRD_PARTY_DIR}/benchmark
     ${CMAKE_CURRENT_BINARY_DIR}/third-party/benchmark)
   add_subdirectory(benchmarks)
+endif()
+
+if (LLVM_ENABLE_ONDISK_CAS)
+  # Disable OnDisk CAS on windows and non-Unix systems.
+  if(WIN32 OR NOT UNIX)
+    set(LLVM_ENABLE_ONDISK_CAS OFF CACHE BOOL "Build OnDiskCAS." FORCE)
+  endif()
 endif()
 
 if (LLVM_INCLUDE_UTILS AND LLVM_INCLUDE_TOOLS)

@@ -1,4 +1,4 @@
-// REQUIRES: case_insensitive_src_dir
+// REQUIRES: case_insensitive_src_dir,ondisk_cas
 
 // RUN: rm -rf %t
 // RUN: split-file %s %t

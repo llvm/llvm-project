@@ -11,6 +11,7 @@
 #include "clang/Basic/DiagnosticIDs.h"
 #include "clang/Basic/DiagnosticOptions.h"
 #include "llvm/CAS/CASDB.h"
+#include "llvm/Config/llvm-config.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Testing/Support/Error.h"
@@ -26,12 +27,14 @@ TEST(CASOptionsTest, getKind) {
   CASOptions Opts;
   EXPECT_EQ(CASOptions::InMemoryCAS, Opts.getKind());
 
+#if LLVM_ENABLE_ONDISK_CAS
   Opts.CASPath = "auto";
   unittest::TempDir Dir("cas-options", /*Unique=*/true);
   EXPECT_EQ(CASOptions::OnDiskCAS, Opts.getKind());
 
   Opts.CASPath = Dir.path("cas").str().str();
   EXPECT_EQ(CASOptions::OnDiskCAS, Opts.getKind());
+#endif
 }
 
 TEST(CASOptionsTest, getOrCreateCAS) {
@@ -45,6 +48,7 @@ TEST(CASOptionsTest, getOrCreateCAS) {
   EXPECT_EQ(InMemory, Opts.getOrCreateCAS(Diags));
   EXPECT_EQ(CASOptions::InMemoryCAS, Opts.getKind());
 
+#if LLVM_ENABLE_ONDISK_CAS
   // Create an on-disk CAS.
   unittest::TempDir Dir("cas-options", /*Unique=*/true);
   Opts.CASPath = Dir.path("cas").str().str();
@@ -69,8 +73,10 @@ TEST(CASOptionsTest, getOrCreateCAS) {
   EXPECT_NE(OnDiskAuto, InMemory2);
   EXPECT_EQ(InMemory2, Opts.getOrCreateCAS(Diags));
   EXPECT_EQ(CASOptions::InMemoryCAS, Opts.getKind());
+#endif
 }
 
+#if LLVM_ENABLE_ONDISK_CAS
 TEST(CASOptionsTest, getOrCreateCASInvalid) {
   DiagnosticsEngine Diags(new DiagnosticIDs(), new DiagnosticOptions,
                           new IgnoringDiagConsumer());
@@ -126,5 +132,6 @@ TEST(CASOptionsTest, getOrCreateCASAndHideConfig) {
   EXPECT_EQ(CAS, Opts.getOrCreateCASAndHideConfig(Diags));
   EXPECT_EQ(CASOptions::UnknownCAS, Opts.getKind());
 }
+#endif
 
 } // end namespace

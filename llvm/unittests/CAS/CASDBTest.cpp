@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/CAS/CASDB.h"
+#include "llvm/Config/llvm-config.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Testing/Support/Error.h"
 #include "llvm/Testing/Support/SupportHelpers.h"
@@ -459,6 +460,8 @@ TEST_P(CASDBTest, NodesBig) {
 INSTANTIATE_TEST_SUITE_P(InMemoryCAS, CASDBTest, ::testing::Values([](int) {
                            return TestingAndDir{createInMemoryCAS(), None};
                          }));
+
+#if LLVM_ENABLE_ONDISK_CAS
 static TestingAndDir createOnDisk(int I) {
   unittest::TempDir Temp("on-disk-cas", /*Unique=*/true);
   std::unique_ptr<CASDB> CAS;
@@ -466,3 +469,4 @@ static TestingAndDir createOnDisk(int I) {
   return TestingAndDir{std::move(CAS), std::move(Temp)};
 }
 INSTANTIATE_TEST_SUITE_P(OnDiskCAS, CASDBTest, ::testing::Values(createOnDisk));
+#endif /* LLVM_ENABLE_ONDISK_CAS */

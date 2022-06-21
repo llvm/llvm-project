@@ -10,9 +10,12 @@
 #define LLVM_CAS_LAZYMAPPEDFILEREGIONBUMPPTR_H
 
 #include "llvm/CAS/LazyMappedFileRegion.h"
+#include "llvm/Config/llvm-config.h"
 #include "llvm/Support/Alignment.h"
 #include "llvm/Support/FileSystem.h"
 #include <atomic>
+
+#if LLVM_ENABLE_ONDISK_CAS
 
 namespace llvm {
 
@@ -68,4 +71,5 @@ private:
 } // namespace cas
 } // namespace llvm
 
+#endif // LLVM_ENABLE_ONDISK_CAS
 #endif // LLVM_CAS_LAZYMAPPEDFILEREGIONBUMPPTR_H
