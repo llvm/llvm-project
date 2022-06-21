@@ -42,6 +42,10 @@ define void @masked_scatter_aligned() {
 ; GENERIC-NEXT:  Cost Model: Found an estimated cost of 4096 for instruction: call void @llvm.masked.scatter.nxv4i8.nxv4p0i8(<vscale x 4 x i8> undef, <vscale x 4 x i8*> undef, i32 1, <vscale x 4 x i1> undef)
 ; GENERIC-NEXT:  Cost Model: Found an estimated cost of 2048 for instruction: call void @llvm.masked.scatter.nxv2i8.nxv2p0i8(<vscale x 2 x i8> undef, <vscale x 2 x i8*> undef, i32 1, <vscale x 2 x i1> undef)
 ; GENERIC-NEXT:  Cost Model: Found an estimated cost of 1024 for instruction: call void @llvm.masked.scatter.nxv1i8.nxv1p0i8(<vscale x 1 x i8> undef, <vscale x 1 x i8*> undef, i32 1, <vscale x 1 x i1> undef)
+; GENERIC-NEXT:  Cost Model: Found an estimated cost of 8192 for instruction: call void @llvm.masked.scatter.nxv8p0i8.nxv8p0p0i8(<vscale x 8 x i8*> undef, <vscale x 8 x i8**> undef, i32 8, <vscale x 8 x i1> undef)
+; GENERIC-NEXT:  Cost Model: Found an estimated cost of 4096 for instruction: call void @llvm.masked.scatter.nxv4p0i8.nxv4p0p0i8(<vscale x 4 x i8*> undef, <vscale x 4 x i8**> undef, i32 8, <vscale x 4 x i1> undef)
+; GENERIC-NEXT:  Cost Model: Found an estimated cost of 2048 for instruction: call void @llvm.masked.scatter.nxv2p0i8.nxv2p0p0i8(<vscale x 2 x i8*> undef, <vscale x 2 x i8**> undef, i32 8, <vscale x 2 x i1> undef)
+; GENERIC-NEXT:  Cost Model: Found an estimated cost of 1024 for instruction: call void @llvm.masked.scatter.nxv1p0i8.nxv1p0p0i8(<vscale x 1 x i8*> undef, <vscale x 1 x i8**> undef, i32 8, <vscale x 1 x i1> undef)
 ; GENERIC-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
 ; MAX256-LABEL: 'masked_scatter_aligned'
@@ -82,6 +86,10 @@ define void @masked_scatter_aligned() {
 ; MAX256-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: call void @llvm.masked.scatter.nxv4i8.nxv4p0i8(<vscale x 4 x i8> undef, <vscale x 4 x i8*> undef, i32 1, <vscale x 4 x i1> undef)
 ; MAX256-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: call void @llvm.masked.scatter.nxv2i8.nxv2p0i8(<vscale x 2 x i8> undef, <vscale x 2 x i8*> undef, i32 1, <vscale x 2 x i1> undef)
 ; MAX256-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: call void @llvm.masked.scatter.nxv1i8.nxv1p0i8(<vscale x 1 x i8> undef, <vscale x 1 x i8*> undef, i32 1, <vscale x 1 x i1> undef)
+; MAX256-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: call void @llvm.masked.scatter.nxv8p0i8.nxv8p0p0i8(<vscale x 8 x i8*> undef, <vscale x 8 x i8**> undef, i32 8, <vscale x 8 x i1> undef)
+; MAX256-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: call void @llvm.masked.scatter.nxv4p0i8.nxv4p0p0i8(<vscale x 4 x i8*> undef, <vscale x 4 x i8**> undef, i32 8, <vscale x 4 x i1> undef)
+; MAX256-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: call void @llvm.masked.scatter.nxv2p0i8.nxv2p0p0i8(<vscale x 2 x i8*> undef, <vscale x 2 x i8**> undef, i32 8, <vscale x 2 x i1> undef)
+; MAX256-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: call void @llvm.masked.scatter.nxv1p0i8.nxv1p0p0i8(<vscale x 1 x i8*> undef, <vscale x 1 x i8**> undef, i32 8, <vscale x 1 x i1> undef)
 ; MAX256-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
 ; UNSUPPORTED-LABEL: 'masked_scatter_aligned'
@@ -122,6 +130,10 @@ define void @masked_scatter_aligned() {
 ; UNSUPPORTED-NEXT:  Cost Model: Invalid cost for instruction: call void @llvm.masked.scatter.nxv4i8.nxv4p0i8(<vscale x 4 x i8> undef, <vscale x 4 x i8*> undef, i32 1, <vscale x 4 x i1> undef)
 ; UNSUPPORTED-NEXT:  Cost Model: Invalid cost for instruction: call void @llvm.masked.scatter.nxv2i8.nxv2p0i8(<vscale x 2 x i8> undef, <vscale x 2 x i8*> undef, i32 1, <vscale x 2 x i1> undef)
 ; UNSUPPORTED-NEXT:  Cost Model: Invalid cost for instruction: call void @llvm.masked.scatter.nxv1i8.nxv1p0i8(<vscale x 1 x i8> undef, <vscale x 1 x i8*> undef, i32 1, <vscale x 1 x i1> undef)
+; UNSUPPORTED-NEXT:  Cost Model: Invalid cost for instruction: call void @llvm.masked.scatter.nxv8p0i8.nxv8p0p0i8(<vscale x 8 x i8*> undef, <vscale x 8 x i8**> undef, i32 8, <vscale x 8 x i1> undef)
+; UNSUPPORTED-NEXT:  Cost Model: Invalid cost for instruction: call void @llvm.masked.scatter.nxv4p0i8.nxv4p0p0i8(<vscale x 4 x i8*> undef, <vscale x 4 x i8**> undef, i32 8, <vscale x 4 x i1> undef)
+; UNSUPPORTED-NEXT:  Cost Model: Invalid cost for instruction: call void @llvm.masked.scatter.nxv2p0i8.nxv2p0p0i8(<vscale x 2 x i8*> undef, <vscale x 2 x i8**> undef, i32 8, <vscale x 2 x i1> undef)
+; UNSUPPORTED-NEXT:  Cost Model: Invalid cost for instruction: call void @llvm.masked.scatter.nxv1p0i8.nxv1p0p0i8(<vscale x 1 x i8*> undef, <vscale x 1 x i8**> undef, i32 8, <vscale x 1 x i1> undef)
 ; UNSUPPORTED-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
   call void @llvm.masked.scatter.nxv8f64.nxv8p0f64(<vscale x 8 x double> undef, <vscale x 8 x double*> undef, i32 8, <vscale x 8 x i1> undef)
@@ -168,6 +180,11 @@ define void @masked_scatter_aligned() {
   call void @llvm.masked.scatter.nxv2i8.nxv2p0i8(<vscale x 2 x i8> undef, <vscale x 2 x i8*> undef, i32 1, <vscale x 2 x i1> undef)
   call void @llvm.masked.scatter.nxv1i8.nxv1p0i8(<vscale x 1 x i8> undef, <vscale x 1 x i8*> undef, i32 1, <vscale x 1 x i1> undef)
 
+  call void @llvm.masked.scatter.nxv8p0i8.nxv8p0p0i8(<vscale x 8 x i8*> undef, <vscale x 8 x i8**> undef, i32 8, <vscale x 8 x i1> undef)
+  call void @llvm.masked.scatter.nxv4p0i8.nxv4p0p0i8(<vscale x 4 x i8*> undef, <vscale x 4 x i8**> undef, i32 8, <vscale x 4 x i1> undef)
+  call void @llvm.masked.scatter.nxv2p0i8.nxv2p0p0i8(<vscale x 2 x i8*> undef, <vscale x 2 x i8**> undef, i32 8, <vscale x 2 x i1> undef)
+  call void @llvm.masked.scatter.nxv1p0i8.nxv1p0p0i8(<vscale x 1 x i8*> undef, <vscale x 1 x i8**> undef, i32 8, <vscale x 1 x i1> undef)
+
   ret void
 }
 
@@ -203,6 +220,10 @@ define void @masked_scatter_unaligned() {
 ; CHECK-NEXT:  Cost Model: Invalid cost for instruction: call void @llvm.masked.scatter.nxv4i16.nxv4p0i16(<vscale x 4 x i16> undef, <vscale x 4 x i16*> undef, i32 1, <vscale x 4 x i1> undef)
 ; CHECK-NEXT:  Cost Model: Invalid cost for instruction: call void @llvm.masked.scatter.nxv2i16.nxv2p0i16(<vscale x 2 x i16> undef, <vscale x 2 x i16*> undef, i32 1, <vscale x 2 x i1> undef)
 ; CHECK-NEXT:  Cost Model: Invalid cost for instruction: call void @llvm.masked.scatter.nxv1i16.nxv1p0i16(<vscale x 1 x i16> undef, <vscale x 1 x i16*> undef, i32 1, <vscale x 1 x i1> undef)
+; CHECK-NEXT:  Cost Model: Invalid cost for instruction: call void @llvm.masked.scatter.nxv8p0i8.nxv8p0p0i8(<vscale x 8 x i8*> undef, <vscale x 8 x i8**> undef, i32 1, <vscale x 8 x i1> undef)
+; CHECK-NEXT:  Cost Model: Invalid cost for instruction: call void @llvm.masked.scatter.nxv4p0i8.nxv4p0p0i8(<vscale x 4 x i8*> undef, <vscale x 4 x i8**> undef, i32 1, <vscale x 4 x i1> undef)
+; CHECK-NEXT:  Cost Model: Invalid cost for instruction: call void @llvm.masked.scatter.nxv2p0i8.nxv2p0p0i8(<vscale x 2 x i8*> undef, <vscale x 2 x i8**> undef, i32 1, <vscale x 2 x i1> undef)
+; CHECK-NEXT:  Cost Model: Invalid cost for instruction: call void @llvm.masked.scatter.nxv1p0i8.nxv1p0p0i8(<vscale x 1 x i8*> undef, <vscale x 1 x i8**> undef, i32 1, <vscale x 1 x i1> undef)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
   call void @llvm.masked.scatter.nxv8f64.nxv8p0f64(<vscale x 8 x double> undef, <vscale x 8 x double*> undef, i32 2, <vscale x 8 x i1> undef)
@@ -240,6 +261,11 @@ define void @masked_scatter_unaligned() {
   call void @llvm.masked.scatter.nxv4i16.nxv4p0i16(<vscale x 4 x i16> undef, <vscale x 4 x i16*> undef, i32 1, <vscale x 4 x i1> undef)
   call void @llvm.masked.scatter.nxv2i16.nxv2p0i16(<vscale x 2 x i16> undef, <vscale x 2 x i16*> undef, i32 1, <vscale x 2 x i1> undef)
   call void @llvm.masked.scatter.nxv1i16.nxv1p0i16(<vscale x 1 x i16> undef, <vscale x 1 x i16*> undef, i32 1, <vscale x 1 x i1> undef)
+
+  call void @llvm.masked.scatter.nxv8p0i8.nxv8p0p0i8(<vscale x 8 x i8*> undef, <vscale x 8 x i8**> undef, i32 1, <vscale x 8 x i1> undef)
+  call void @llvm.masked.scatter.nxv4p0i8.nxv4p0p0i8(<vscale x 4 x i8*> undef, <vscale x 4 x i8**> undef, i32 1, <vscale x 4 x i1> undef)
+  call void @llvm.masked.scatter.nxv2p0i8.nxv2p0p0i8(<vscale x 2 x i8*> undef, <vscale x 2 x i8**> undef, i32 1, <vscale x 2 x i1> undef)
+  call void @llvm.masked.scatter.nxv1p0i8.nxv1p0p0i8(<vscale x 1 x i8*> undef, <vscale x 1 x i8**> undef, i32 1, <vscale x 1 x i1> undef)
 
   ret void
 }
@@ -287,3 +313,9 @@ declare void @llvm.masked.scatter.nxv8i8.nxv8p0i8(<vscale x 8 x i8>, <vscale x 8
 declare void @llvm.masked.scatter.nxv4i8.nxv4p0i8(<vscale x 4 x i8>, <vscale x 4 x i8*>, i32, <vscale x 4 x i1>)
 declare void @llvm.masked.scatter.nxv2i8.nxv2p0i8(<vscale x 2 x i8>, <vscale x 2 x i8*>, i32, <vscale x 2 x i1>)
 declare void @llvm.masked.scatter.nxv1i8.nxv1p0i8(<vscale x 1 x i8>, <vscale x 1 x i8*>, i32, <vscale x 1 x i1>)
+
+declare void @llvm.masked.scatter.nxv8p0i8.nxv8p0p0i8(<vscale x 8 x i8*>, <vscale x 8 x i8**>, i32, <vscale x 8 x i1>)
+declare void @llvm.masked.scatter.nxv4p0i8.nxv4p0p0i8(<vscale x 4 x i8*>, <vscale x 4 x i8**>, i32, <vscale x 4 x i1>)
+declare void @llvm.masked.scatter.nxv2p0i8.nxv2p0p0i8(<vscale x 2 x i8*>, <vscale x 2 x i8**>, i32, <vscale x 2 x i1>)
+declare void @llvm.masked.scatter.nxv1p0i8.nxv1p0p0i8(<vscale x 1 x i8*>, <vscale x 1 x i8**>, i32, <vscale x 1 x i1>)
+
