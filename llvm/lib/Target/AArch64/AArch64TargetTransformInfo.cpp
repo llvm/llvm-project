@@ -1968,8 +1968,9 @@ InstructionCost AArch64TTIImpl::getCFInstrCost(unsigned Opcode,
   return 0;
 }
 
-InstructionCost AArch64TTIImpl::getVectorInstrCost(unsigned Opcode, Type *Val,
-                                                   unsigned Index) {
+InstructionCost AArch64TTIImpl::getVectorInstrCostHelper(Type *Val,
+                                                         unsigned Index,
+                                                         bool HasRealUse) {
   assert(Val->isVectorTy() && "This must be a vector type");
 
   if (Index != -1U) {
@@ -1988,12 +1989,33 @@ InstructionCost AArch64TTIImpl::getVectorInstrCost(unsigned Opcode, Type *Val,
     }
 
     // The element at index zero is already inside the vector.
-    if (Index == 0)
+    // - For a physical (HasRealUse==true) insert-element or extract-element
+    // instruction that extracts integers, an explicit FPR -> GPR move is
+    // needed. So it has non-zero cost.
+    // - For the rest of cases (virtual instruction or element type is float),
+    // consider the instruction free.
+    //
+    // FIXME:
+    // If the extract-element and insert-element instructions could be
+    // simplified away (e.g., could be combined into users by looking at use-def
+    // context), they have no cost. This is not done in the first place for
+    // compile-time considerations.
+    if (Index == 0 && (!HasRealUse || !Val->getScalarType()->isIntegerTy()))
       return 0;
   }
 
   // All other insert/extracts cost this much.
   return ST->getVectorInsertExtractBaseCost();
+}
+
+InstructionCost AArch64TTIImpl::getVectorInstrCost(unsigned Opcode, Type *Val,
+                                                   unsigned Index) {
+  return getVectorInstrCostHelper(Val, Index, false /* HasRealUse */);
+}
+
+InstructionCost AArch64TTIImpl::getVectorInstrCost(const Instruction &I,
+                                                   Type *Val, unsigned Index) {
+  return getVectorInstrCostHelper(Val, Index, true /* HasRealUse */);
 }
 
 InstructionCost AArch64TTIImpl::getArithmeticInstrCost(
