@@ -165,6 +165,12 @@ Changes in existing checks
   Fixed an issue when there was already an initializer in the constructor and
   the check would try to create another initializer for the same member.
 
+- Fixed a false positive in :doc:`cppcoreguidelines-virtual-class-destructor
+  <clang-tidy/checks/cppcoreguidelines-virtual-class-destructor>` involving
+  ``final`` classes. The check will not diagnose classes marked ``final``, since
+  those cannot be used as base classes, consequently, they can not violate the
+  rule.
+
 - Fixed a crash in :doc:`llvmlibc-callee-namespace
   <clang-tidy/checks/llvmlibc/callee-namespace>` when executing for C++ code
   that contain calls to advanced constructs, e.g. overloaded operators.
