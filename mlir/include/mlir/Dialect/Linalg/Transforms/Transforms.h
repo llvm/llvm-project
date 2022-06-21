@@ -1466,6 +1466,7 @@ public:
 /// reduction dimension. The dimension index is used to control where the extra
 /// dimension is added to the intermediate tensor shape. If the ratio value is
 /// less or equal to 1 then nothing will be done.
+// TODO: don't use unsigned unless doing bit manipulation.
 using ControlSplitReductionFn =
     std::function<std::pair<int64_t, unsigned>(LinalgOp op)>;
 
@@ -1518,6 +1519,18 @@ FailureOr<LinalgOp>
 splitReduction(PatternRewriter &b, LinalgOp op,
                const ControlSplitReductionFn &controlSplitReductionFn,
                const LinalgTransformationFilter &f);
+
+/// Filterless version of the above.
+/// Returns both the new linalg ops as well as the fillOp needed to initialize
+/// the temporary expanded tensor with the proper neutral element.
+struct SplitReductionResult {
+  FillOp fillOp;
+  LinalgOp splitLinalgOp;
+  LinalgOp resultCombiningLinalgOp;
+};
+FailureOr<SplitReductionResult>
+splitReduction(PatternRewriter &b, LinalgOp op,
+               const ControlSplitReductionFn &controlSplitReductionFn);
 
 } // namespace linalg
 } // namespace mlir
