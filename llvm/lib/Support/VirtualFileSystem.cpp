@@ -941,18 +941,19 @@ lookupInMemoryNode(const InMemoryFileSystem &FS, detail::InMemoryDirectory *Dir,
   }
 }
 
-bool InMemoryFileSystem::addHardLink(const Twine &FromPath,
-                                     const Twine &ToPath) {
-  auto FromNode = lookupInMemoryNode(*this, Root.get(), FromPath);
-  auto ToNode = lookupInMemoryNode(*this, Root.get(), ToPath);
+bool InMemoryFileSystem::addHardLink(const Twine &NewLink,
+                                     const Twine &Target) {
+  auto NewLinkNode = lookupInMemoryNode(*this, Root.get(), NewLink);
+  auto TargetNode = lookupInMemoryNode(*this, Root.get(), Target);
   // FromPath must not have been added before. ToPath must have been added
   // before. Resolved ToPath must be a File.
-  if (!ToNode || FromNode || !isa<detail::InMemoryFile>(*ToNode))
+  if (!TargetNode || NewLinkNode || !isa<detail::InMemoryFile>(*TargetNode))
     return false;
-  return addFile(FromPath, 0, nullptr, None, None, None, None,
+  return addFile(NewLink, 0, nullptr, None, None, None, None,
                  [&](detail::NewInMemoryNodeInfo NNI) {
                    return std::make_unique<detail::InMemoryHardLink>(
-                       NNI.Path.str(), *cast<detail::InMemoryFile>(*ToNode));
+                       NNI.Path.str(),
+                       *cast<detail::InMemoryFile>(*TargetNode));
                  });
 }
 

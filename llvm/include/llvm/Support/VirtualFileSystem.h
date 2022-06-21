@@ -513,18 +513,20 @@ public:
                Optional<llvm::sys::fs::perms> Perms = None);
 
   /// Add a hard link to a file.
+  ///
   /// Here hard links are not intended to be fully equivalent to the classical
   /// filesystem. Both the hard link and the file share the same buffer and
   /// status (and thus have the same UniqueID). Because of this there is no way
   /// to distinguish between the link and the file after the link has been
   /// added.
   ///
-  /// The To path must be an existing file or a hardlink. The From file must not
-  /// have been added before. The To Path must not be a directory. The From Node
-  /// is added as a hard link which points to the resolved file of To Node.
+  /// The \param Target path must be an existing file or a hardlink. The
+  /// \param NewLink file must not have been added before. The \param Target
+  /// path must not be a directory. The \param NewLink node is added as a hard
+  /// link which points to the resolved file of \param Target node.
   /// \return true if the above condition is satisfied and hardlink was
   /// successfully created, false otherwise.
-  bool addHardLink(const Twine &From, const Twine &To);
+  bool addHardLink(const Twine &NewLink, const Twine &Target);
 
   /// Add a buffer to the VFS with a path. The VFS does not own the buffer.
   /// If present, User, Group, Type and Perms apply to the newly-created file
