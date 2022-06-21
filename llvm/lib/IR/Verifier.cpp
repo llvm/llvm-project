@@ -4887,7 +4887,7 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
 
     Optional<RoundingMode> RoundMode =
         convertStrToRoundingMode(cast<MDString>(MD)->getString());
-    Check(RoundMode.hasValue() && RoundMode.getValue() != RoundingMode::Dynamic,
+    Check(RoundMode && *RoundMode != RoundingMode::Dynamic,
           "unsupported rounding mode argument", Call);
     break;
   }
@@ -6067,7 +6067,7 @@ void Verifier::verifyAttachedCallBundle(const CallBase &Call,
 }
 
 void Verifier::verifySourceDebugInfo(const DICompileUnit &U, const DIFile &F) {
-  bool HasSource = F.getSource().hasValue();
+  bool HasSource = F.getSource().has_value();
   if (!HasSourceDebugInfo.count(&U))
     HasSourceDebugInfo[&U] = HasSource;
   CheckDI(HasSource == HasSourceDebugInfo[&U],

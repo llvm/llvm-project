@@ -126,7 +126,7 @@ const char *SBMemoryRegionInfo::GetName() {
 bool SBMemoryRegionInfo::HasDirtyMemoryPageList() {
   LLDB_INSTRUMENT_VA(this);
 
-  return m_opaque_up->GetDirtyPageList().hasValue();
+  return m_opaque_up->GetDirtyPageList().has_value();
 }
 
 uint32_t SBMemoryRegionInfo::GetNumDirtyPages() {

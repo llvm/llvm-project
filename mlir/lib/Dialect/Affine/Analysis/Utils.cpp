@@ -1134,8 +1134,7 @@ void mlir::getComputationSliceState(
     //    3. Is being inserted at the innermost insertion point.
     Optional<bool> isMaximal = sliceState->isMaximal();
     if (isLoopParallelAndContainsReduction(getSliceLoop(i)) &&
-        isInnermostInsertion() && srcIsUnitSlice() && isMaximal.hasValue() &&
-        isMaximal.getValue())
+        isInnermostInsertion() && srcIsUnitSlice() && isMaximal && *isMaximal)
       continue;
     for (unsigned j = i; j < numSliceLoopIVs; ++j) {
       sliceState->lbs[j] = AffineMap();

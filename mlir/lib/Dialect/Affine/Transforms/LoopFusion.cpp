@@ -1297,9 +1297,7 @@ static bool isFusionProfitable(Operation *srcOpInst, Operation *srcStoreOpInst,
     msg << " fusion is most profitable at depth " << *dstLoopDepth << " with "
         << std::setprecision(2) << additionalComputeFraction
         << "% redundant computation and a ";
-    msg << (storageReduction.hasValue()
-                ? std::to_string(storageReduction.getValue())
-                : "<unknown>");
+    msg << (storageReduction ? std::to_string(*storageReduction) : "<unknown>");
     msg << "% storage reduction.\n";
     llvm::dbgs() << msg.str();
   });

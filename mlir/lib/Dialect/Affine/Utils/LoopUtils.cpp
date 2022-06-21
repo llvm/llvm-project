@@ -1108,8 +1108,7 @@ LogicalResult mlir::loopUnrollByFactor(
 
   // If the trip count is lower than the unroll factor, no unrolled body.
   // TODO: option to specify cleanup loop unrolling.
-  if (mayBeConstantTripCount.hasValue() &&
-      mayBeConstantTripCount.getValue() < unrollFactor)
+  if (mayBeConstantTripCount && *mayBeConstantTripCount < unrollFactor)
     return failure();
 
   // Generate the cleanup loop if trip count isn't a multiple of unrollFactor.
@@ -1216,8 +1215,7 @@ LogicalResult mlir::loopUnrollJamByFactor(AffineForOp forOp,
     return success();
 
   // If the trip count is lower than the unroll jam factor, no unroll jam.
-  if (mayBeConstantTripCount.hasValue() &&
-      mayBeConstantTripCount.getValue() < unrollJamFactor) {
+  if (mayBeConstantTripCount && *mayBeConstantTripCount < unrollJamFactor) {
     LLVM_DEBUG(llvm::dbgs() << "[failed] trip count < unroll-jam factor\n");
     return failure();
   }

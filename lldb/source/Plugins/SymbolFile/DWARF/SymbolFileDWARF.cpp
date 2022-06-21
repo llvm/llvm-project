@@ -1373,7 +1373,7 @@ user_id_t SymbolFileDWARF::GetUID(DIERef ref) {
 
   lldbassert(GetDwoNum().value_or(0) <= 0x3fffffff);
   return user_id_t(GetDwoNum().value_or(0)) << 32 | ref.die_offset() |
-         lldb::user_id_t(GetDwoNum().hasValue()) << 62 |
+         lldb::user_id_t(GetDwoNum().has_value()) << 62 |
          lldb::user_id_t(ref.section() == DIERef::Section::DebugTypes) << 63;
 }
 

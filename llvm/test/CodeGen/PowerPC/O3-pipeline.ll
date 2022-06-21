@@ -131,6 +131,9 @@
 ; CHECK-NEXT:       PowerPC TOC Register Dependencies
 ; CHECK-NEXT:       MachineDominator Tree Construction
 ; CHECK-NEXT:       Machine Natural Loop Construction
+; CHECK-NEXT:       PowerPC CTR loops generation
+; CHECK-NEXT:       MachineDominator Tree Construction
+; CHECK-NEXT:       Machine Natural Loop Construction
 ; CHECK-NEXT:       Slot index numbering
 ; CHECK-NEXT:       Live Interval Analysis
 ; CHECK-NEXT:       Lazy Machine Block Frequency Analysis
