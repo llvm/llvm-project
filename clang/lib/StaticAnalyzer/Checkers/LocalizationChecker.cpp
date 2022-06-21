@@ -1005,7 +1005,7 @@ NonLocalizedStringBRVisitor::VisitNode(const ExplodedNode *Succ,
     return nullptr;
 
   Optional<StmtPoint> Point = Succ->getLocation().getAs<StmtPoint>();
-  if (!Point.hasValue())
+  if (!Point)
     return nullptr;
 
   auto *LiteralExpr = dyn_cast<ObjCStringLiteral>(Point->getStmt());

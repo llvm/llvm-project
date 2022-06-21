@@ -19152,7 +19152,7 @@ Sema::FunctionEmissionStatus Sema::getEmissionStatus(FunctionDecl *FD,
     // be ommitted.
     Optional<OMPDeclareTargetDeclAttr::DevTypeTy> DevTy =
         OMPDeclareTargetDeclAttr::getDeviceType(FD->getCanonicalDecl());
-    if (DevTy.hasValue())
+    if (DevTy)
       if (*DevTy == OMPDeclareTargetDeclAttr::DT_NoHost)
         return FunctionEmissionStatus::OMPDiscarded;
   }

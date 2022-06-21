@@ -377,7 +377,7 @@ bool Sema::inferCUDATargetForImplicitSpecialMember(CXXRecordDecl *ClassDecl,
       continue;
 
     CUDAFunctionTarget BaseMethodTarget = IdentifyCUDATarget(SMOR.getMethod());
-    if (!InferredTarget.hasValue()) {
+    if (!InferredTarget) {
       InferredTarget = BaseMethodTarget;
     } else {
       bool ResolutionError = resolveCalleeCUDATargetConflict(
@@ -421,7 +421,7 @@ bool Sema::inferCUDATargetForImplicitSpecialMember(CXXRecordDecl *ClassDecl,
 
     CUDAFunctionTarget FieldMethodTarget =
         IdentifyCUDATarget(SMOR.getMethod());
-    if (!InferredTarget.hasValue()) {
+    if (!InferredTarget) {
       InferredTarget = FieldMethodTarget;
     } else {
       bool ResolutionError = resolveCalleeCUDATargetConflict(

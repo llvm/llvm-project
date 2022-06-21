@@ -260,7 +260,7 @@ SVal GTestChecker::getAssertionResultSuccessFieldValue(
 
   Optional<Loc> FieldLoc =
       State->getLValue(SuccessField, Instance).getAs<Loc>();
-  if (!FieldLoc.hasValue())
+  if (!FieldLoc)
     return UnknownVal();
 
   return State->getSVal(*FieldLoc);

@@ -1883,7 +1883,7 @@ static bool optimizeEdges(const PathDiagnosticConstruct &C, PathPieces &path,
                  lexicalContains(PM, s1Start, s1End)) {
           SourceRange EdgeRange(PieceI->getEndLocation().asLocation(),
                                 PieceI->getStartLocation().asLocation());
-          if (!getLengthOnSingleLine(SM, EdgeRange).hasValue())
+          if (!getLengthOnSingleLine(SM, EdgeRange))
             removeEdge = true;
         }
       }

@@ -295,7 +295,7 @@ static Optional<StringRef> findSimilarStr(
   for (StringRef C : Candidates) {
     size_t CurDist = LHS.edit_distance(C, true);
     if (CurDist <= MaxDist) {
-      if (!SimilarStr.hasValue()) {
+      if (!SimilarStr) {
         // The first similar string found.
         SimilarStr = {C, CurDist};
       } else if (CurDist < SimilarStr->second) {
@@ -305,7 +305,7 @@ static Optional<StringRef> findSimilarStr(
     }
   }
 
-  if (SimilarStr.hasValue()) {
+  if (SimilarStr) {
     return SimilarStr->first;
   } else {
     return None;
