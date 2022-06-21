@@ -201,7 +201,7 @@ canonicalizeMinMaxOp(RewriterBase &rewriter, Operation *op, AffineMap map,
 
 static LogicalResult
 addLoopRangeConstraints(FlatAffineValueConstraints &constraints, Value iv,
-                        Value lb, Value ub, Value step,
+                        OpFoldResult lb, OpFoldResult ub, OpFoldResult step,
                         RewriterBase &rewriter) {
   // IntegerPolyhedron does not support semi-affine expressions.
   // Therefore, only constant step values are supported.
@@ -210,8 +210,12 @@ addLoopRangeConstraints(FlatAffineValueConstraints &constraints, Value iv,
     return failure();
 
   unsigned dimIv = constraints.appendDimId(iv);
-  unsigned dimLb = constraints.appendDimId(lb);
-  unsigned dimUb = constraints.appendDimId(ub);
+  auto lbv = lb.dyn_cast<Value>();
+  unsigned dimLb =
+      lbv ? constraints.appendDimId(lbv) : constraints.appendDimId(/*num=*/1);
+  auto ubv = ub.dyn_cast<Value>();
+  unsigned dimUb =
+      ubv ? constraints.appendDimId(ubv) : constraints.appendDimId(/*num=*/1);
 
   // If loop lower/upper bounds are constant: Add EQ constraint.
   Optional<int64_t> lbInt = getConstantIntValue(lb);
@@ -276,7 +280,7 @@ LogicalResult scf::canonicalizeMinMaxOpInLoop(RewriterBase &rewriter,
     // If `operand` is an iteration variable: Find corresponding loop
     // bounds and step.
     Value iv = operand;
-    Value lb, ub, step;
+    OpFoldResult lb, ub, step;
     if (failed(loopMatcher(operand, lb, ub, step)))
       continue;
     allIvs.insert(iv);

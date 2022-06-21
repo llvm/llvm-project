@@ -138,7 +138,7 @@ struct DimOfLoopResultFolder : public OpRewritePattern<OpTy> {
     unsigned resultNumber = opResult.getResultNumber();
     if (!isShapePreserving(forOp, resultNumber))
       return failure();
-    rewriter.updateRootInPlace(dimOp, [&](){
+    rewriter.updateRootInPlace(dimOp, [&]() {
       dimOp.sourceMutable().assign(forOp.getIterOperands()[resultNumber]);
     });
     return success();
@@ -153,7 +153,8 @@ struct AffineOpSCFCanonicalizationPattern : public OpRewritePattern<OpTy> {
 
   LogicalResult matchAndRewrite(OpTy op,
                                 PatternRewriter &rewriter) const override {
-    auto loopMatcher = [](Value iv, Value &lb, Value &ub, Value &step) {
+    auto loopMatcher = [](Value iv, OpFoldResult &lb, OpFoldResult &ub,
+                          OpFoldResult &step) {
       if (scf::ForOp forOp = scf::getForInductionVarOwner(iv)) {
         lb = forOp.getLowerBound();
         ub = forOp.getUpperBound();
@@ -166,6 +167,18 @@ struct AffineOpSCFCanonicalizationPattern : public OpRewritePattern<OpTy> {
             lb = parOp.getLowerBound()[idx];
             ub = parOp.getUpperBound()[idx];
             step = parOp.getStep()[idx];
+            return success();
+          }
+        }
+        return failure();
+      }
+      if (scf::ForeachThreadOp foreachThreadOp =
+              scf::getForeachThreadOpThreadIndexOwner(iv)) {
+        for (int64_t idx = 0; idx < foreachThreadOp.getRank(); ++idx) {
+          if (foreachThreadOp.getThreadIndices()[idx] == iv) {
+            lb = OpBuilder(iv.getContext()).getIndexAttr(0);
+            ub = foreachThreadOp.getNumThreads()[idx];
+            step = OpBuilder(iv.getContext()).getIndexAttr(1);
             return success();
           }
         }
