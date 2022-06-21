@@ -1998,7 +1998,7 @@ RegionStoreManager::getBindingForDerivedDefaultValue(RegionBindingsConstRef B,
                                                      QualType Ty) {
 
   if (const Optional<SVal> &D = B.getDefaultBinding(superR)) {
-    const SVal &val = D.getValue();
+    const SVal &val = *D;
     if (SymbolRef parentSym = val.getAsSymbol())
       return svalBuilder.getDerivedRegionValueSymbolVal(parentSym, R);
 
@@ -2213,7 +2213,7 @@ SVal RegionStoreManager::getBindingForVar(RegionBindingsConstRef B,
 
     if (Optional<SVal> V = getBindingForDerivedDefaultValue(B, MS, R, T)) {
       assert(!V->getAs<nonloc::LazyCompoundVal>());
-      return V.getValue();
+      return *V;
     }
 
     return svalBuilder.getRegionValueSymbolVal(R);

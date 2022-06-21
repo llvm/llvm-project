@@ -495,7 +495,7 @@ public:
       if (ResultKind == Ambiguous) {
         (void)WasAmbiguous;
         assert(WasAmbiguous);
-        Ambiguity = SavedAK.getValue();
+        Ambiguity = *SavedAK;
       } else if (Paths) {
         deletePaths(Paths);
         Paths = nullptr;

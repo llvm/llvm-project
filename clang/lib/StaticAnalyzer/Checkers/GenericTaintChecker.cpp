@@ -732,7 +732,7 @@ void GenericTaintChecker::initTaintRules(CheckerContext &C) const {
   }
 
   GenericTaintRuleParser::RulesContTy Rules{
-      ConfigParser.parseConfiguration(Option, std::move(Config.getValue()))};
+      ConfigParser.parseConfiguration(Option, std::move(*Config))};
 
   DynamicTaintRules.emplace(std::make_move_iterator(Rules.begin()),
                             std::make_move_iterator(Rules.end()));

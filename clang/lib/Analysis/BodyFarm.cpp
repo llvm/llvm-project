@@ -737,7 +737,7 @@ Stmt *BodyFarm::getBody(const FunctionDecl *D) {
 
   if (FF) { Val = FF(C, D); }
   else if (Injector) { Val = Injector->getBody(D); }
-  return Val.getValue();
+  return *Val;
 }
 
 static const ObjCIvarDecl *findBackingIvar(const ObjCPropertyDecl *Prop) {
@@ -900,5 +900,5 @@ Stmt *BodyFarm::getBody(const ObjCMethodDecl *D) {
 
   Val = createObjCPropertyGetter(C, D);
 
-  return Val.getValue();
+  return *Val;
 }

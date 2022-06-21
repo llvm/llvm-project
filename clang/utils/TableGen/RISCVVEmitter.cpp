@@ -478,8 +478,7 @@ void RVVEmitter::createRVVIntrinsics(
             Name, SuffixStr, OverloadedName, OverloadedSuffixStr, IRName,
             /*IsMasked=*/false, /*HasMaskedOffOperand=*/false, HasVL,
             UnMaskedPolicy, HasUnMaskedOverloaded, HasBuiltinAlias,
-            ManualCodegen, Types.getValue(), IntrinsicTypes, RequiredFeatures,
-            NF));
+            ManualCodegen, *Types, IntrinsicTypes, RequiredFeatures, NF));
         if (HasMasked) {
           // Create a masked intrinsic
           Optional<RVVTypes> MaskTypes =
@@ -489,7 +488,7 @@ void RVVEmitter::createRVVIntrinsics(
               MaskedIRName,
               /*IsMasked=*/true, HasMaskedOffOperand, HasVL, MaskedPolicy,
               HasUnMaskedOverloaded, HasBuiltinAlias, MaskedManualCodegen,
-              MaskTypes.getValue(), IntrinsicTypes, RequiredFeatures, NF));
+              *MaskTypes, IntrinsicTypes, RequiredFeatures, NF));
         }
       } // end for Log2LMULList
     }   // end for TypeRange

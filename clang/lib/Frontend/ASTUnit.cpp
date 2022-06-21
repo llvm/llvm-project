@@ -1756,8 +1756,7 @@ ASTUnit *ASTUnit::LoadFromCommandLine(
       SkipFunctionBodies == SkipFunctionBodiesScope::PreambleAndMainFile;
 
   if (ModuleFormat)
-    CI->getHeaderSearchOpts().ModuleFormat =
-        std::string(ModuleFormat.getValue());
+    CI->getHeaderSearchOpts().ModuleFormat = std::string(*ModuleFormat);
 
   if (ForSerialization)
     CI->getLangOpts()->NeededByPCHOrCompilationUsesPCH = true;

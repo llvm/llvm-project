@@ -213,7 +213,7 @@ void RVVType::initBuiltinStr() {
       BuiltinStr += "*";
     return;
   }
-  BuiltinStr = "q" + utostr(Scale.getValue()) + BuiltinStr;
+  BuiltinStr = "q" + utostr(*Scale) + BuiltinStr;
   // Pointer to vector types. Defined for segment load intrinsics.
   // segment load intrinsics have pointer type arguments to store the loaded
   // vector values.
@@ -228,7 +228,7 @@ void RVVType::initClangBuiltinStr() {
   ClangBuiltinStr = "__rvv_";
   switch (ScalarType) {
   case ScalarTypeKind::Boolean:
-    ClangBuiltinStr += "bool" + utostr(64 / Scale.getValue()) + "_t";
+    ClangBuiltinStr += "bool" + utostr(64 / *Scale) + "_t";
     return;
   case ScalarTypeKind::Float:
     ClangBuiltinStr += "float";
@@ -282,7 +282,7 @@ void RVVType::initTypeStr() {
     else
       // Vector bool is special case, the formulate is
       // `vbool<N>_t = MVT::nxv<64/N>i1` ex. vbool16_t = MVT::4i1
-      Str += "vbool" + utostr(64 / Scale.getValue()) + "_t";
+      Str += "vbool" + utostr(64 / *Scale) + "_t";
     break;
   case ScalarTypeKind::Float:
     if (isScalar()) {
@@ -314,7 +314,7 @@ void RVVType::initShortStr() {
   switch (ScalarType) {
   case ScalarTypeKind::Boolean:
     assert(isVector());
-    ShortStr = "b" + utostr(64 / Scale.getValue());
+    ShortStr = "b" + utostr(64 / *Scale);
     return;
   case ScalarTypeKind::Float:
     ShortStr = "f" + utostr(ElementBitwidth);
@@ -926,7 +926,7 @@ std::string RVVIntrinsic::getSuffixStr(
   SmallVector<std::string> SuffixStrs;
   for (auto PD : PrototypeDescriptors) {
     auto T = RVVType::computeType(Type, Log2LMUL, PD);
-    SuffixStrs.push_back(T.getValue()->getShortStr());
+    SuffixStrs.push_back((*T)->getShortStr());
   }
   return join(SuffixStrs, "_");
 }

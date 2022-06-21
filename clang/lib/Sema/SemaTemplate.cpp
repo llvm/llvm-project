@@ -867,7 +867,7 @@ bool Sema::DiagnoseUninstantiableTemplate(SourceLocation PointOfInstantiation,
     }
   }
   if (Note) // Diagnostics were emitted.
-    Diag(Pattern->getLocation(), Note.getValue());
+    Diag(Pattern->getLocation(), *Note);
 
   // In general, Instantiation isn't marked invalid to get more than one
   // error for multiple undefined instantiations. But the code that does
