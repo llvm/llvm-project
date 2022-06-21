@@ -954,12 +954,23 @@ Status ProcessGDBRemote::ConnectToDebugserver(llvm::StringRef connect_url) {
   m_gdb_comm.GetVAttachOrWaitSupported();
   m_gdb_comm.EnableErrorStringInPacket();
 
-  size_t num_cmds = GetExtraStartupCommands().GetArgumentCount();
-  for (size_t idx = 0; idx < num_cmds; idx++) {
-    StringExtractorGDBRemote response;
-    m_gdb_comm.SendPacketAndWaitForResponse(
-        GetExtraStartupCommands().GetArgumentAtIndex(idx), response);
+  // First dispatch any commands from the platform:
+  auto handle_cmds = [&] (const Args &args) ->  void {
+    for (const Args::ArgEntry &entry : args) {
+      StringExtractorGDBRemote response;
+      m_gdb_comm.SendPacketAndWaitForResponse(
+          entry.c_str(), response);
+    }
+  };
+  
+  PlatformSP platform_sp = GetTarget().GetPlatform();
+  if (platform_sp) {
+    handle_cmds(platform_sp->GetExtraStartupCommands());
   }
+  
+  // Then dispatch any process commands:
+  handle_cmds(GetExtraStartupCommands());
+
   return error;
 }
 
