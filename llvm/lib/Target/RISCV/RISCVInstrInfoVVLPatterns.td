@@ -1871,13 +1871,6 @@ foreach vti = AllIntegerVectors in {
     defvar emul_str = octuple_to_str<octuple_emul>.ret;
     defvar ivti = !cast<VTypeInfo>("VI16" # emul_str);
     defvar inst = "PseudoVRGATHEREI16_VV_" # vti.LMul.MX # "_" # emul_str;
-    def : Pat<(vti.Vector (riscv_vrgatherei16_vv_vl (vti.Vector srcvalue),
-                                                    vti.RegClass:$rs2,
-                                                    (ivti.Vector ivti.RegClass:$rs1),
-                                                    (vti.Mask true_mask),
-                                                    VLOpFrag)),
-              (!cast<Instruction>(inst)
-                   vti.RegClass:$rs2, ivti.RegClass:$rs1, GPR:$vl, vti.Log2SEW)>;
 
     def : Pat<(vti.Vector
                (riscv_vrgatherei16_vv_vl vti.RegClass:$merge,
@@ -1943,13 +1936,6 @@ foreach vti = AllFloatVectors in {
     defvar emul_str = octuple_to_str<octuple_emul>.ret;
     defvar ivti = !cast<VTypeInfo>("VI16" # emul_str);
     defvar inst = "PseudoVRGATHEREI16_VV_" # vti.LMul.MX # "_" # emul_str;
-    def : Pat<(vti.Vector (riscv_vrgatherei16_vv_vl (vti.Vector srcvalue),
-                                                    vti.RegClass:$rs2,
-                                                    (ivti.Vector ivti.RegClass:$rs1),
-                                                    (vti.Mask true_mask),
-                                                    VLOpFrag)),
-              (!cast<Instruction>(inst)
-                   vti.RegClass:$rs2, ivti.RegClass:$rs1, GPR:$vl, vti.Log2SEW)>;
 
     def : Pat<(vti.Vector
                (riscv_vrgatherei16_vv_vl vti.RegClass:$merge,
