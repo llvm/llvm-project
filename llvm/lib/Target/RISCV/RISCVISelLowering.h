@@ -50,6 +50,9 @@ enum NodeType : unsigned {
   // Represents an AUIPC+ADDI pair. Selected to PseudoLLA.
   LLA,
 
+  // Selected as PseudoAddTPRel. Used to emit a TP-relative relocation.
+  ADD_TPREL,
+
   // Multiply high for signedxunsigned.
   MULHSU,
   // RV64I shifts, directly matching the semantics of the named RISC-V
