@@ -125,9 +125,9 @@ struct _LIBCPP_HIDDEN __traits_base
         return __t - (__v < __table<>::__pow10_64[__t]) + 1;
     }
 
-    static _LIBCPP_HIDE_FROM_ABI char* __convert(_Tp __v, char* __p)
+    static _LIBCPP_HIDE_FROM_ABI char* __convert(char* __p, _Tp __v)
     {
-        return __itoa::__base_10_u64(__v, __p);
+        return __itoa::__base_10_u64(__p, __v);
     }
 
     static _LIBCPP_HIDE_FROM_ABI decltype(__table<>::__pow10_64)& __pow() { return __table<>::__pow10_64; }
@@ -145,9 +145,9 @@ struct _LIBCPP_HIDDEN
         return __t - (__v < __table<>::__pow10_32[__t]) + 1;
     }
 
-    static _LIBCPP_HIDE_FROM_ABI char* __convert(_Tp __v, char* __p)
+    static _LIBCPP_HIDE_FROM_ABI char* __convert(char* __p, _Tp __v)
     {
-        return __itoa::__base_10_u32(__v, __p);
+        return __itoa::__base_10_u32(__p, __v);
     }
 
     static _LIBCPP_HIDE_FROM_ABI decltype(__table<>::__pow10_32)& __pow() { return __table<>::__pow10_32; }
@@ -262,7 +262,7 @@ __to_chars_itoa(char* __first, char* __last, _Tp __value, false_type)
     auto __diff = __last - __first;
 
     if (__tx::digits <= __diff || __tx::__width(__value) <= __diff)
-        return {__tx::__convert(__value, __first), errc(0)};
+        return {__tx::__convert(__first, __value), errc(0)};
     else
         return {__last, errc::value_too_large};
 }
