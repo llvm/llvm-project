@@ -2642,13 +2642,13 @@ func.func @coordinate_ref_derived_nested(%arg0: !fir.ref<!fir.type<derived_5{fie
 // 5.3 `fir.char`
 func.func @test_coordinate_of_char(%arr : !fir.ref<!fir.char<10, 2>>) {
   %1 = arith.constant 10 : i32
-  %2 = fir.coordinate_of %arr, %1 : (!fir.ref<!fir.char<10, 2>>, i32) -> !fir.ref<i80>
+  %2 = fir.coordinate_of %arr, %1 : (!fir.ref<!fir.char<10, 2>>, i32) -> !fir.ref<!fir.char<10>>
   return
 }
 // CHECK-LABEL:   llvm.func @test_coordinate_of_char(
 // CHECK-SAME:    %[[VAL_0:.*]]: !llvm.ptr<array<2 x i80>>) {
 // CHECK:           %[[VAL_1:.*]] = llvm.mlir.constant(10 : i32) : i32
-// CHECK:           %[[VAL_2:.*]] = llvm.getelementptr %[[VAL_0]]{{\[}}%[[VAL_1]]] : (!llvm.ptr<array<2 x i80>>, i32) -> !llvm.ptr<i80>
+// CHECK:           %[[VAL_2:.*]] = llvm.getelementptr %[[VAL_0]]{{\[}}%[[VAL_1]]] : (!llvm.ptr<array<2 x i80>>, i32) -> !llvm.ptr<array<1 x i80>>
 // CHECK:           llvm.return
 // CHECK:         }
 

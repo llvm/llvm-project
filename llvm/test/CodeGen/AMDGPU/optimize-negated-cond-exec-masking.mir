@@ -16,7 +16,7 @@ body:             |
     S_BRANCH %bb.1
 
   bb.1:
-    S_BRANCH %bb.0
+    S_BRANCH %bb.2
 
   bb.2:
     S_ENDPGM 0
@@ -38,7 +38,7 @@ body:             |
     S_BRANCH %bb.1
 
   bb.1:
-    S_BRANCH %bb.0
+    S_BRANCH %bb.2
 
   bb.2:
     S_ENDPGM 0
@@ -64,7 +64,7 @@ body:             |
     S_BRANCH %bb.1
 
   bb.1:
-    S_BRANCH %bb.0
+    S_BRANCH %bb.2
 
   bb.2:
     S_ENDPGM 0
@@ -90,7 +90,7 @@ body:             |
     S_BRANCH %bb.1
 
   bb.1:
-    S_BRANCH %bb.0
+    S_BRANCH %bb.2
 
   bb.2:
     S_ENDPGM 0
@@ -116,7 +116,7 @@ body:             |
     S_BRANCH %bb.1
 
   bb.1:
-    S_BRANCH %bb.0
+    S_BRANCH %bb.2
 
   bb.2:
     S_ENDPGM 0
@@ -134,7 +134,7 @@ body:             |
     S_BRANCH %bb.1
 
   bb.1:
-    S_BRANCH %bb.0
+    S_BRANCH %bb.2
 
   bb.2:
     S_ENDPGM 0
@@ -156,7 +156,7 @@ body:             |
     S_BRANCH %bb.1
 
   bb.1:
-    S_BRANCH %bb.0
+    S_BRANCH %bb.2
 
   bb.2:
     S_ENDPGM 0
@@ -178,7 +178,7 @@ body:             |
     S_BRANCH %bb.1
 
   bb.1:
-    S_BRANCH %bb.0
+    S_BRANCH %bb.2
 
   bb.2:
     S_ENDPGM 0
@@ -204,7 +204,7 @@ body:             |
     S_BRANCH %bb.1
 
   bb.1:
-    S_BRANCH %bb.0
+    S_BRANCH %bb.2
 
   bb.2:
     S_ENDPGM 0
@@ -227,7 +227,7 @@ body:             |
     S_BRANCH %bb.1
 
   bb.1:
-    S_BRANCH %bb.0
+    S_BRANCH %bb.2
 
   bb.2:
     $vgpr0 = COPY %1
@@ -254,7 +254,7 @@ body:             |
     S_BRANCH %bb.1
 
   bb.1:
-    S_BRANCH %bb.0
+    S_BRANCH %bb.2
 
   bb.2:
     S_ENDPGM 0
@@ -272,7 +272,7 @@ name:            negated_cond_vop3_sel_wrong_subreg1
 body:             |
   bb.0:
     %0:sreg_64_xexec = IMPLICIT_DEF
-    %1.sub1 = IMPLICIT_DEF
+    undef %1.sub1 = IMPLICIT_DEF
     %1.sub0:vreg_64 = V_CNDMASK_B32_e64 0, 0, 0, 1, %0, implicit $exec
     %2:sreg_64_xexec = V_CMP_NE_U32_e64 %1.sub1, 1, implicit $exec
     $vcc = S_AND_B64 killed %2, $exec, implicit-def dead $scc
@@ -280,7 +280,7 @@ body:             |
     S_BRANCH %bb.1
 
   bb.1:
-    S_BRANCH %bb.0
+    S_BRANCH %bb.2
 
   bb.2:
     S_ENDPGM 0
@@ -298,7 +298,7 @@ name:            negated_cond_vop3_sel_wrong_subreg2
 body:             |
   bb.0:
     %0:sreg_64_xexec = IMPLICIT_DEF
-    %1.sub0:vreg_64 = V_CNDMASK_B32_e64 0, 0, 0, 1, %0, implicit $exec
+    undef %1.sub0:vreg_64 = V_CNDMASK_B32_e64 0, 0, 0, 1, %0, implicit $exec
     %1.sub1 = IMPLICIT_DEF
     %2:sreg_64_xexec = V_CMP_NE_U32_e64 %1.sub1, 1, implicit $exec
     $vcc = S_AND_B64 killed %2, $exec, implicit-def dead $scc
@@ -306,7 +306,7 @@ body:             |
     S_BRANCH %bb.1
 
   bb.1:
-    S_BRANCH %bb.0
+    S_BRANCH %bb.2
 
   bb.2:
     S_ENDPGM 0
@@ -322,7 +322,7 @@ name:            negated_cond_vop3_sel_right_subreg1
 body:             |
   bb.0:
     %0:sreg_64_xexec = IMPLICIT_DEF
-    %1.sub1 = IMPLICIT_DEF
+    undef %1.sub1 = IMPLICIT_DEF
     %1.sub0:vreg_64 = V_CNDMASK_B32_e64 0, 0, 0, 1, %0, implicit $exec
     %2:sreg_64_xexec = V_CMP_NE_U32_e64 %1.sub0, 1, implicit $exec
     $vcc = S_AND_B64 killed %2, $exec, implicit-def dead $scc
@@ -330,7 +330,7 @@ body:             |
     S_BRANCH %bb.1
 
   bb.1:
-    S_BRANCH %bb.0
+    S_BRANCH %bb.2
 
   bb.2:
     S_ENDPGM 0
@@ -346,7 +346,7 @@ name:            negated_cond_vop3_sel_right_subreg2
 body:             |
   bb.0:
     %0:sreg_64_xexec = IMPLICIT_DEF
-    %1.sub0:vreg_64 = V_CNDMASK_B32_e64 0, 0, 0, 1, %0, implicit $exec
+    undef %1.sub0:vreg_64 = V_CNDMASK_B32_e64 0, 0, 0, 1, %0, implicit $exec
     %1.sub1 = IMPLICIT_DEF
     %2:sreg_64_xexec = V_CMP_NE_U32_e64 %1.sub0, 1, implicit $exec
     $vcc = S_AND_B64 killed %2, $exec, implicit-def dead $scc
@@ -354,7 +354,7 @@ body:             |
     S_BRANCH %bb.1
 
   bb.1:
-    S_BRANCH %bb.0
+    S_BRANCH %bb.2
 
   bb.2:
     S_ENDPGM 0
@@ -372,7 +372,7 @@ name:            negated_cond_vop3_sel_subreg_overlap
 body:             |
   bb.0:
     %0:sreg_64_xexec = IMPLICIT_DEF
-    %1.sub2:vreg_128 = V_CNDMASK_B32_e64 0, 0, 0, 1, %0, implicit $exec
+    undef %1.sub2:vreg_128 = V_CNDMASK_B32_e64 0, 0, 0, 1, %0, implicit $exec
     %1.sub2_sub3 = IMPLICIT_DEF
     %2:sreg_64_xexec = V_CMP_NE_U32_e64 %1.sub2, 1, implicit $exec
     $vcc = S_AND_B64 killed %2, $exec, implicit-def dead $scc
@@ -380,7 +380,7 @@ body:             |
     S_BRANCH %bb.1
 
   bb.1:
-    S_BRANCH %bb.0
+    S_BRANCH %bb.2
 
   bb.2:
     S_ENDPGM 0
@@ -472,15 +472,15 @@ body:             |
 name:            negated_cond_subreg
 body:             |
   bb.0:
-    %0.sub0_sub1:sgpr_128 = IMPLICIT_DEF
+    undef %0.sub0_sub1:sgpr_128 = IMPLICIT_DEF
     %1:vgpr_32 = V_CNDMASK_B32_e64 0, 0, 0, 1, %0.sub0_sub1, implicit $exec
-    %2.sub0_sub1:sgpr_128 = V_CMP_NE_U32_e64 %1, 1, implicit $exec
+    undef %2.sub0_sub1:sgpr_128 = V_CMP_NE_U32_e64 %1, 1, implicit $exec
     $vcc = S_AND_B64 $exec, %2.sub0_sub1:sgpr_128, implicit-def dead $scc
     S_CBRANCH_VCCNZ %bb.2, implicit killed $vcc
     S_BRANCH %bb.1
 
   bb.1:
-    S_BRANCH %bb.0
+    S_BRANCH %bb.2
 
   bb.2:
     S_ENDPGM 0
