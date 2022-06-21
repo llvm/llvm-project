@@ -30,7 +30,6 @@ template <typename LinalgOpTy>
 struct LinalgOpTilingInterface
     : public TilingInterface::ExternalModel<LinalgOpTilingInterface<LinalgOpTy>,
                                             LinalgOpTy> {
-
   /// Return the destination operands.
   SmallVector<Value> getDestinationOperands(Operation *op, OpBuilder &b) const {
     return llvm::cast<LinalgOp>(op).getOutputOperands();
@@ -47,6 +46,8 @@ struct LinalgOpTilingInterface
 
   /// Return the iteration domain range.
   SmallVector<Range> getIterationDomain(Operation *op, OpBuilder &b) const {
+    OpBuilder::InsertionGuard g(b);
+    b.setInsertionPoint(op);
     Location loc = op->getLoc();
     LinalgOp linalgOp = cast<LinalgOp>(op);
     auto allShapesSizes = linalgOp.createFlatListOfOperandDims(b, loc);
@@ -129,16 +130,65 @@ struct LinalgOpTilingInterface
     resultSizes = sliceOp.getMixedSizes();
     return success();
   }
+
+  FailureOr<Value> generateResultTileValue(Operation *op, OpBuilder &b,
+                                           unsigned resultNumber,
+                                           ValueRange dest,
+                                           ArrayRef<OpFoldResult> offsets,
+                                           ArrayRef<OpFoldResult> sizes,
+                                           bool tileDestOperands) const {
+    auto linalgOp = cast<LinalgOp>(op);
+
+    // Check that the indexing map used for the output is a projected
+    // permutation. This could be relaxed with a more general approach that can
+    // map the offsets and sizes from the result to iteration space tiles
+    // (filling in full extent for dimensions not used to access the result).
+    AffineMap indexingMap =
+        linalgOp.getTiedIndexingMapForResult(op->getResult(resultNumber));
+    if (!indexingMap.isProjectedPermutation()) {
+      return op->emitOpError(
+          "unhandled tiled implementation generation when result is not "
+          "accessed using a permuted projection");
+    }
+
+    auto numLoops = linalgOp.getNumLoops();
+    auto tilingInterfaceOp = cast<TilingInterface>(op);
+    SmallVector<OpFoldResult> iterationTileOffsets(numLoops),
+        iterationTileSizes(numLoops);
+    if (!indexingMap.isPermutation()) {
+      SmallVector<Range> iterationDomain =
+          tilingInterfaceOp.getIterationDomain(b);
+      for (auto range : llvm::enumerate(iterationDomain)) {
+        iterationTileOffsets[range.index()] = range.value().offset;
+        iterationTileSizes[range.index()] = range.value().size;
+      }
+    }
+    for (auto resultExpr : llvm::enumerate(indexingMap.getResults())) {
+      unsigned dimPosition =
+          resultExpr.value().cast<AffineDimExpr>().getPosition();
+      iterationTileOffsets[dimPosition] = offsets[resultExpr.index()];
+      iterationTileSizes[dimPosition] = sizes[resultExpr.index()];
+    }
+
+    SmallVector<Operation *> tiledOp = tilingInterfaceOp.getTiledImplementation(
+        b, dest, iterationTileOffsets, iterationTileSizes, tileDestOperands);
+    if (tiledOp.size() != 1)
+      return op->emitOpError("failed to generate tiled implementation");
+
+    return tiledOp[0]->getResult(resultNumber);
+  }
 };
 
 } // namespace
 
-template <typename OpType> static void registerOne(MLIRContext *ctx) {
+template <typename OpType>
+static void registerOne(MLIRContext *ctx) {
   OpType::template attachInterface<LinalgOpTilingInterface<OpType>>(*ctx);
 }
 
 /// Variadic helper function.
-template <typename... OpTypes> static void registerAll(MLIRContext *ctx) {
+template <typename... OpTypes>
+static void registerAll(MLIRContext *ctx) {
   // FIXME: In c++17 this can be simplified by using 'fold expressions'.
   (void)std::initializer_list<int>{0, (registerOne<OpTypes>(ctx), 0)...};
 }
