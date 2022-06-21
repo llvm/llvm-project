@@ -141,6 +141,8 @@ public:
     getCS(Signed).popLastNVariables(N);
   }
 
+  bool doesHold(CmpInst::Predicate Pred, Value *A, Value *B) const;
+
   void addFact(CmpInst *Condition, bool IsNegated, unsigned NumIn,
                unsigned NumOut, SmallVectorImpl<StackEntry> &DFSInStack);
 
@@ -364,14 +366,22 @@ ConstraintInfo::getConstraint(CmpInst::Predicate Pred, Value *Op0, Value *Op1,
 bool ConstraintTy::isValid(const ConstraintInfo &Info) const {
   return Coefficients.size() > 0 &&
          all_of(Preconditions, [&Info](const PreconditionTy &C) {
-           DenseMap<Value *, unsigned> NewIndices;
-           auto R = Info.getConstraint(C.Pred, C.Op0, C.Op1, NewIndices);
-           // TODO: properly check NewIndices.
-           return NewIndices.empty() && R.Preconditions.empty() && !R.IsEq &&
-                  R.size() >= 1 &&
-                  Info.getCS(CmpInst::isSigned(C.Pred))
-                      .isConditionImplied(R.Coefficients);
+           return Info.doesHold(C.Pred, C.Op0, C.Op1);
          });
+}
+
+bool ConstraintInfo::doesHold(CmpInst::Predicate Pred, Value *A,
+                              Value *B) const {
+  DenseMap<Value *, unsigned> NewIndices;
+  auto R = getConstraint(Pred, A, B, NewIndices);
+
+  if (!NewIndices.empty())
+    return false;
+
+  // TODO: properly check NewIndices.
+  return NewIndices.empty() && R.Preconditions.empty() && !R.IsEq &&
+         !R.empty() &&
+         getCS(CmpInst::isSigned(Pred)).isConditionImplied(R.Coefficients);
 }
 
 namespace {
