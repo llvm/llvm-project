@@ -3785,6 +3785,12 @@ public:
                                          APInt &UndefElts,
                                          unsigned Depth = 0) const;
 
+  /// Returns true if the given Opc is considered a canonical constant for the
+  /// target, which should not be transformed back into a BUILD_VECTOR.
+  virtual bool isTargetCanonicalConstantNode(SDValue Op) const {
+    return Op.getOpcode() == ISD::SPLAT_VECTOR;
+  }
+
   struct DAGCombinerInfo {
     void *DC;  // The DAG Combiner object.
     CombineLevel Level;

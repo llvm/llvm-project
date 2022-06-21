@@ -2588,7 +2588,8 @@ bool TargetLowering::SimplifyDemandedBits(
 
   // If we know the value of all of the demanded bits, return this as a
   // constant.
-  if (DemandedBits.isSubsetOf(Known.Zero | Known.One)) {
+  if (!isTargetCanonicalConstantNode(Op) &&
+      DemandedBits.isSubsetOf(Known.Zero | Known.One)) {
     // Avoid folding to a constant if any OpaqueConstant is involved.
     const SDNode *N = Op.getNode();
     for (SDNode *Op :
