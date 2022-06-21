@@ -1617,6 +1617,16 @@ MachineBasicBlock::liveout_iterator MachineBasicBlock::liveout_begin() const {
   return liveout_iterator(*this, ExceptionPointer, ExceptionSelector, false);
 }
 
+bool MachineBasicBlock::sizeWithoutDebugLargerThan(unsigned Limit) const {
+  unsigned Cntr = 0;
+  auto R = instructionsWithoutDebug(begin(), end());
+  for (auto I = R.begin(), E = R.end(); I != E; ++I) {
+    if (++Cntr > Limit)
+      return true;
+  }
+  return false;
+}
+
 const MBBSectionID MBBSectionID::ColdSectionID(MBBSectionID::SectionType::Cold);
 const MBBSectionID
     MBBSectionID::ExceptionSectionID(MBBSectionID::SectionType::Exception);
