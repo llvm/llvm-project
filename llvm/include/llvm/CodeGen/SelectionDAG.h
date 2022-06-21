@@ -1862,16 +1862,6 @@ public:
   /// simplify nodes with multiple uses more aggressively.)
   SDValue GetDemandedBits(SDValue V, const APInt &DemandedBits);
 
-  /// See if the specified operand can be simplified with the knowledge that
-  /// only the bits specified by DemandedBits are used in the elements specified
-  /// by DemandedElts.  If so, return the simpler operand, otherwise return a
-  /// null SDValue.
-  ///
-  /// (This exists alongside SimplifyDemandedBits because GetDemandedBits can
-  /// simplify nodes with multiple uses more aggressively.)
-  SDValue GetDemandedBits(SDValue V, const APInt &DemandedBits,
-                          const APInt &DemandedElts);
-
   /// Return true if the sign bit of Op is known to be zero.
   /// We use this predicate to simplify operations downstream.
   bool SignBitIsZero(SDValue Op, unsigned Depth = 0) const;
