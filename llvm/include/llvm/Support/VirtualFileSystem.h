@@ -496,6 +496,8 @@ class InMemoryFileSystem : public FileSystem {
                Optional<llvm::sys::fs::file_type> Type,
                Optional<llvm::sys::fs::perms> Perms, MakeNodeFn MakeNode);
 
+  ErrorOr<const detail::InMemoryNode *> lookupNode(const Twine &P) const;
+
 public:
   explicit InMemoryFileSystem(bool UseNormalizedPaths = true);
   ~InMemoryFileSystem() override;
