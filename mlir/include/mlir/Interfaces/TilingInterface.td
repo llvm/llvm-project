@@ -120,7 +120,48 @@ def TilingInterface : OpInterface<"TilingInterface"> {
         /*defaultImplementation=*/[{
           return failure();
         }]
+      >,
+      InterfaceMethod<
+        /*desc=*/[{
+          Method to generate the code that produces a tile of the result.
+
+          Generates the IR that computes the tile of a result of the
+          operation.  The `offsets` and `sizes` describe the tile of
+          the output required. This is different from
+          `getTiledImplementation` which generates the tiled
+          implementation of the operation given a tile of the
+          iteration space. This method generates a tiled
+          implementation of the operation based on the tile of the
+          result required. This method enables fusion by using tile
+          and fuse. The method returns failure if the operation can't be
+          tiled to generate the result tile. In practical terms this
+          implies it cannot be tiled and fused with its consumers.        
+
+          - `dest` are the Value into which the result of the tiled
+            operation is to be inserted into. The type of the `dest`
+            Values is same as the types returned by
+            `getDestinationOperands` method.
+          - `offsets` provides the offset of the tile within the
+            iteration space
+          - `sizes` provides the size of the tile.
+          - `tileDestOperands` specifies whether to also tile `dest` operands
+            or not. Avoiding tiling `dest` operands can be useful for 
+            composition with various looping container ops.
+        }],
+        /*retType=*/"FailureOr<Value>",
+        /*methodName=*/"generateResultTileValue",
+        /*args=*/(ins
+          "OpBuilder &":$b,
+          "unsigned":$resultNumber,
+          "ValueRange":$dest,
+          "ArrayRef<OpFoldResult>":$offsets,
+          "ArrayRef<OpFoldResult>":$sizes,
+          "bool":$tileDestOperands),
+        /*methodBody=*/"",
+        /*defaultImplementation=*/[{
+          return failure();
+        }]
       >
-  ];
+  ];  
 }
 #endif // MLIR_TILINGINTERFACE
