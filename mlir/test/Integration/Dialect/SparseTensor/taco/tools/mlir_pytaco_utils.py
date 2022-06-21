@@ -89,6 +89,8 @@ def _get_support_func_locator() -> _SupportFuncLocator:
                       c_lib.convertFromMLIRSparseTensorI32),
                      (np.int64, c_lib.convertToMLIRSparseTensorI64,
                       c_lib.convertFromMLIRSparseTensorI64),
+                     (np.float16, c_lib.convertToMLIRSparseTensorF16,
+                      c_lib.convertFromMLIRSparseTensorF16),
                      (np.float32, c_lib.convertToMLIRSparseTensorF32,
                       c_lib.convertFromMLIRSparseTensorF32),
                      (np.float64, c_lib.convertToMLIRSparseTensorF64,

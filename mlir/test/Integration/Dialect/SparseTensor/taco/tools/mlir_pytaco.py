@@ -72,7 +72,7 @@ class Type(enum.Enum):
   INT16 = np.int16
   INT32 = np.int32
   INT64 = np.int64
-  # numpy _ctype_from_dtype_scalar can't handle np.float16 yet.
+  FLOAT16 = np.float16
   FLOAT32 = np.float32
   FLOAT64 = np.float64
   COMPLEX64 = np.complex64
@@ -80,15 +80,15 @@ class Type(enum.Enum):
 
 
 # All floating point type enums.
-_FLOAT_TYPES = (Type.FLOAT32, Type.FLOAT64)
+_FLOAT_TYPES = (Type.FLOAT16, Type.FLOAT32, Type.FLOAT64)
 # All integral type enums.
 _INT_TYPES = (Type.INT8, Type.INT16, Type.INT32, Type.INT64)
 # All complex type enums.
 _COMPLEX_TYPES = (Type.COMPLEX64, Type.COMPLEX128)
 # Type alias for any numpy type used to implement the runtime support for the
 # enum data types.
-_AnyRuntimeType = Union[np.int8, np.int16, np.int32, np.int64, np.float32,
-                        np.float64, np.complex64, np.complex128]
+_AnyRuntimeType = Union[np.int8, np.int16, np.int32, np.int64, np.float16,
+                        np.float32, np.float64, np.complex64, np.complex128]
 
 
 @dataclasses.dataclass(frozen=True)
@@ -132,6 +132,7 @@ def _dtype_to_mlir_str(dtype: DType) -> str:
       Type.INT16: "i16",
       Type.INT32: "i32",
       Type.INT64: "i64",
+      Type.FLOAT16: "f16",
       Type.FLOAT32: "f32",
       Type.FLOAT64: "f64",
       Type.COMPLEX64: "complex<f32>",
@@ -147,6 +148,7 @@ def _nptype_to_taco_type(ty: np.dtype) -> DType:
       np.int16: Type.INT16,
       np.int32: Type.INT32,
       np.int64: Type.INT64,
+      np.float16: Type.FLOAT16,
       np.float32: Type.FLOAT32,
       np.float64: Type.FLOAT64,
       np.complex64: Type.COMPLEX64,
@@ -162,6 +164,7 @@ def _mlir_type_from_taco_type(dtype: DType) -> ir.Type:
       Type.INT16: ir.IntegerType.get_signless(16),
       Type.INT32: ir.IntegerType.get_signless(32),
       Type.INT64: ir.IntegerType.get_signless(64),
+      Type.FLOAT16: ir.F16Type.get(),
       Type.FLOAT32: ir.F32Type.get(),
       Type.FLOAT64: ir.F64Type.get(),
       Type.COMPLEX64: ir.ComplexType.get(ir.F32Type.get()),
