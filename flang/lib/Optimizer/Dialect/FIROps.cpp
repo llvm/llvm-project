@@ -924,7 +924,7 @@ mlir::ParseResult fir::CoordinateOp::parse(mlir::OpAsmParser &parser,
 }
 
 mlir::LogicalResult fir::CoordinateOp::verify() {
-  auto refTy = getRef().getType();
+  const mlir::Type refTy = getRef().getType();
   if (fir::isa_ref_type(refTy)) {
     auto eleTy = fir::dyn_cast_ptrEleTy(refTy);
     if (auto arrTy = eleTy.dyn_cast<fir::SequenceType>()) {
@@ -935,18 +935,70 @@ mlir::LogicalResult fir::CoordinateOp::verify() {
     }
     if (!(fir::isa_aggregate(eleTy) || fir::isa_complex(eleTy) ||
           fir::isa_char_string(eleTy)))
-      return emitOpError("cannot apply coordinate_of to this type");
+      return emitOpError("cannot apply to this element type");
   }
-  // Recovering a LEN type parameter only makes sense from a boxed value. For a
-  // bare reference, the LEN type parameters must be passed as additional
-  // arguments to `op`.
-  for (auto co : getCoor())
-    if (mlir::dyn_cast_or_null<fir::LenParamIndexOp>(co.getDefiningOp())) {
-      if (getNumOperands() != 2)
-        return emitOpError("len_param_index must be last argument");
-      if (!getRef().getType().isa<BoxType>())
-        return emitOpError("len_param_index must be used on box type");
+  auto eleTy = fir::dyn_cast_ptrOrBoxEleTy(refTy);
+  unsigned dimension = 0;
+  const unsigned numCoors = getCoor().size();
+  for (auto coorOperand : llvm::enumerate(getCoor())) {
+    auto co = coorOperand.value();
+    if (dimension == 0 && eleTy.isa<fir::SequenceType>()) {
+      dimension = eleTy.cast<fir::SequenceType>().getDimension();
+      if (dimension == 0)
+        return emitOpError("cannot apply to array of unknown rank");
     }
+    if (auto *defOp = co.getDefiningOp()) {
+      if (auto index = mlir::dyn_cast<fir::LenParamIndexOp>(defOp)) {
+        // Recovering a LEN type parameter only makes sense from a boxed
+        // value. For a bare reference, the LEN type parameters must be
+        // passed as additional arguments to `index`.
+        if (refTy.isa<fir::BoxType>()) {
+          if (coorOperand.index() != numCoors - 1)
+            return emitOpError("len_param_index must be last argument");
+          if (getNumOperands() != 2)
+            return emitOpError("too many operands for len_param_index case");
+        }
+        if (eleTy != index.getOnType())
+          emitOpError(
+              "len_param_index type not compatible with reference type");
+        return mlir::success();
+      } else if (auto index = mlir::dyn_cast<fir::FieldIndexOp>(defOp)) {
+        if (eleTy != index.getOnType())
+          emitOpError("field_index type not compatible with reference type");
+        if (auto recTy = eleTy.dyn_cast<fir::RecordType>()) {
+          eleTy = recTy.getType(index.getFieldName());
+          continue;
+        }
+        return emitOpError("field_index not applied to !fir.type");
+      }
+    }
+    if (dimension) {
+      if (--dimension == 0)
+        eleTy = eleTy.cast<fir::SequenceType>().getEleTy();
+    } else {
+      if (auto t = eleTy.dyn_cast<mlir::TupleType>()) {
+        // FIXME: Generally, we don't know which field of the tuple is being
+        // referred to unless the operand is a constant. Just assume everything
+        // is good in the tuple case for now.
+        return mlir::success();
+      } else if (auto t = eleTy.dyn_cast<fir::RecordType>()) {
+        // FIXME: This is the same as the tuple case.
+        return mlir::success();
+      } else if (auto t = eleTy.dyn_cast<fir::ComplexType>()) {
+        eleTy = t.getElementType();
+      } else if (auto t = eleTy.dyn_cast<mlir::ComplexType>()) {
+        eleTy = t.getElementType();
+      } else if (auto t = eleTy.dyn_cast<fir::CharacterType>()) {
+        if (t.getLen() == fir::CharacterType::singleton())
+          return emitOpError("cannot apply to character singleton");
+        eleTy = fir::CharacterType::getSingleton(t.getContext(), t.getFKind());
+        if (fir::unwrapRefType(getType()) != eleTy)
+          return emitOpError("character type mismatch");
+      } else {
+        return emitOpError("invalid parameters (too many)");
+      }
+    }
+  }
   return mlir::success();
 }
 
@@ -1331,19 +1383,20 @@ void fir::GlobalLenOp::print(mlir::OpAsmPrinter &p) {
 // FieldIndexOp
 //===----------------------------------------------------------------------===//
 
-mlir::ParseResult fir::FieldIndexOp::parse(mlir::OpAsmParser &parser,
-                                           mlir::OperationState &result) {
+template <typename TY>
+mlir::ParseResult parseFieldLikeOp(mlir::OpAsmParser &parser,
+                                   mlir::OperationState &result) {
   llvm::StringRef fieldName;
   auto &builder = parser.getBuilder();
   mlir::Type recty;
   if (parser.parseOptionalKeyword(&fieldName) || parser.parseComma() ||
       parser.parseType(recty))
     return mlir::failure();
-  result.addAttribute(fir::FieldIndexOp::fieldAttrName(),
+  result.addAttribute(fir::FieldIndexOp::getFieldAttrName(),
                       builder.getStringAttr(fieldName));
   if (!recty.dyn_cast<fir::RecordType>())
     return mlir::failure();
-  result.addAttribute(fir::FieldIndexOp::typeAttrName(),
+  result.addAttribute(fir::FieldIndexOp::getTypeAttrName(),
                       mlir::TypeAttr::get(recty));
   if (!parser.parseOptionalLParen()) {
     llvm::SmallVector<mlir::OpAsmParser::UnresolvedOperand> operands;
@@ -1354,23 +1407,30 @@ mlir::ParseResult fir::FieldIndexOp::parse(mlir::OpAsmParser &parser,
         parser.resolveOperands(operands, types, loc, result.operands))
       return mlir::failure();
   }
-  mlir::Type fieldType = fir::FieldType::get(builder.getContext());
+  mlir::Type fieldType = TY::get(builder.getContext());
   if (parser.addTypeToList(fieldType, result.types))
     return mlir::failure();
   return mlir::success();
 }
 
-void fir::FieldIndexOp::print(mlir::OpAsmPrinter &p) {
+mlir::ParseResult fir::FieldIndexOp::parse(mlir::OpAsmParser &parser,
+                                           mlir::OperationState &result) {
+  return parseFieldLikeOp<fir::FieldType>(parser, result);
+}
+
+template <typename OP>
+void printFieldLikeOp(mlir::OpAsmPrinter &p, OP &op) {
   p << ' '
-    << getOperation()
-           ->getAttrOfType<mlir::StringAttr>(fir::FieldIndexOp::fieldAttrName())
+    << op.getOperation()
+           ->template getAttrOfType<mlir::StringAttr>(
+               fir::FieldIndexOp::getFieldAttrName())
            .getValue()
-    << ", " << getOperation()->getAttr(fir::FieldIndexOp::typeAttrName());
-  if (getNumOperands()) {
+    << ", " << op.getOperation()->getAttr(fir::FieldIndexOp::getTypeAttrName());
+  if (op.getNumOperands()) {
     p << '(';
-    p.printOperands(getTypeparams());
-    const auto *sep = ") : ";
-    for (auto op : getTypeparams()) {
+    p.printOperands(op.getTypeparams());
+    auto sep = ") : ";
+    for (auto op : op.getTypeparams()) {
       p << sep;
       if (op)
         p.printType(op.getType());
@@ -1381,12 +1441,16 @@ void fir::FieldIndexOp::print(mlir::OpAsmPrinter &p) {
   }
 }
 
+void fir::FieldIndexOp::print(mlir::OpAsmPrinter &p) {
+  printFieldLikeOp(p, *this);
+}
+
 void fir::FieldIndexOp::build(mlir::OpBuilder &builder,
                               mlir::OperationState &result,
                               llvm::StringRef fieldName, mlir::Type recTy,
                               mlir::ValueRange operands) {
-  result.addAttribute(fieldAttrName(), builder.getStringAttr(fieldName));
-  result.addAttribute(typeAttrName(), mlir::TypeAttr::get(recTy));
+  result.addAttribute(getFieldAttrName(), builder.getStringAttr(fieldName));
+  result.addAttribute(getTypeAttrName(), mlir::TypeAttr::get(recTy));
   result.addOperands(operands);
 }
 
@@ -1767,31 +1831,27 @@ mlir::Value fir::IterWhileOp::blockArgToSourceOp(unsigned blockArgNum) {
 
 mlir::ParseResult fir::LenParamIndexOp::parse(mlir::OpAsmParser &parser,
                                               mlir::OperationState &result) {
-  llvm::StringRef fieldName;
-  auto &builder = parser.getBuilder();
-  mlir::Type recty;
-  if (parser.parseOptionalKeyword(&fieldName) || parser.parseComma() ||
-      parser.parseType(recty))
-    return mlir::failure();
-  result.addAttribute(fir::LenParamIndexOp::fieldAttrName(),
-                      builder.getStringAttr(fieldName));
-  if (!recty.dyn_cast<fir::RecordType>())
-    return mlir::failure();
-  result.addAttribute(fir::LenParamIndexOp::typeAttrName(),
-                      mlir::TypeAttr::get(recty));
-  mlir::Type lenType = fir::LenType::get(builder.getContext());
-  if (parser.addTypeToList(lenType, result.types))
-    return mlir::failure();
-  return mlir::success();
+  return parseFieldLikeOp<fir::LenType>(parser, result);
 }
 
 void fir::LenParamIndexOp::print(mlir::OpAsmPrinter &p) {
-  p << ' '
-    << getOperation()
-           ->getAttrOfType<mlir::StringAttr>(
-               fir::LenParamIndexOp::fieldAttrName())
-           .getValue()
-    << ", " << getOperation()->getAttr(fir::LenParamIndexOp::typeAttrName());
+  printFieldLikeOp(p, *this);
+}
+
+void fir::LenParamIndexOp::build(mlir::OpBuilder &builder,
+                                 mlir::OperationState &result,
+                                 llvm::StringRef fieldName, mlir::Type recTy,
+                                 mlir::ValueRange operands) {
+  result.addAttribute(getFieldAttrName(), builder.getStringAttr(fieldName));
+  result.addAttribute(getTypeAttrName(), mlir::TypeAttr::get(recTy));
+  result.addOperands(operands);
+}
+
+llvm::SmallVector<mlir::Attribute> fir::LenParamIndexOp::getAttributes() {
+  llvm::SmallVector<mlir::Attribute> attrs;
+  attrs.push_back(getFieldIdAttr());
+  attrs.push_back(getOnTypeAttr());
+  return attrs;
 }
 
 //===----------------------------------------------------------------------===//
