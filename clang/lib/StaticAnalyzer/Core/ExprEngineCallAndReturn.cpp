@@ -732,7 +732,7 @@ ProgramStateRef ExprEngine::bindReturnValue(const CallEvent &Call,
 
       // Store the extent of the allocated object(s).
       SVal ElementCount;
-      if (const Expr *SizeExpr = CNE->getArraySize().getValueOr(nullptr)) {
+      if (const Expr *SizeExpr = CNE->getArraySize().value_or(nullptr)) {
         ElementCount = State->getSVal(SizeExpr, LCtx);
       } else {
         ElementCount = svalBuilder.makeIntVal(1, /*IsUnsigned=*/true);
@@ -1037,7 +1037,7 @@ bool ExprEngine::shouldInlineCall(const CallEvent &Call, const Decl *D,
   CallInlinePolicy CIP = mayInlineCallKind(Call, Pred, Opts, CallOpts);
   if (CIP != CIP_Allowed) {
     if (CIP == CIP_DisallowedAlways) {
-      assert(!MayInline.hasValue() || MayInline.getValue());
+      assert(!MayInline || *MayInline);
       Engine.FunctionSummaries->markShouldNotInline(D);
     }
     return false;

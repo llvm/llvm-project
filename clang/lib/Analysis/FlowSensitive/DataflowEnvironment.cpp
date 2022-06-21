@@ -87,8 +87,13 @@ static Value *mergeDistinctValues(QualType Type, Value *Val1,
   // have mutually exclusive conditions.
   if (auto *Expr1 = dyn_cast<BoolValue>(Val1)) {
     auto *Expr2 = cast<BoolValue>(Val2);
-    return &Env1.makeOr(Env1.makeAnd(Env1.getFlowConditionToken(), *Expr1),
-                        Env1.makeAnd(Env2.getFlowConditionToken(), *Expr2));
+    auto &MergedVal = MergedEnv.makeAtomicBoolValue();
+    MergedEnv.addToFlowCondition(MergedEnv.makeOr(
+        MergedEnv.makeAnd(Env1.getFlowConditionToken(),
+                          MergedEnv.makeIff(MergedVal, *Expr1)),
+        MergedEnv.makeAnd(Env2.getFlowConditionToken(),
+                          MergedEnv.makeIff(MergedVal, *Expr2))));
+    return &MergedVal;
   }
 
   // FIXME: add unit tests that cover this statement.
@@ -457,8 +462,7 @@ Value *Environment::createValueUnlessSelfReferential(
     QualType PointeeType = Type->castAs<ReferenceType>()->getPointeeType();
     auto &PointeeLoc = createStorageLocation(PointeeType);
 
-    if (!Visited.contains(PointeeType.getCanonicalType())) {
-      Visited.insert(PointeeType.getCanonicalType());
+    if (Visited.insert(PointeeType.getCanonicalType()).second) {
       Value *PointeeVal = createValueUnlessSelfReferential(
           PointeeType, Visited, Depth, CreatedValuesCount);
       Visited.erase(PointeeType.getCanonicalType());
@@ -475,8 +479,7 @@ Value *Environment::createValueUnlessSelfReferential(
     QualType PointeeType = Type->castAs<PointerType>()->getPointeeType();
     auto &PointeeLoc = createStorageLocation(PointeeType);
 
-    if (!Visited.contains(PointeeType.getCanonicalType())) {
-      Visited.insert(PointeeType.getCanonicalType());
+    if (Visited.insert(PointeeType.getCanonicalType()).second) {
       Value *PointeeVal = createValueUnlessSelfReferential(
           PointeeType, Visited, Depth, CreatedValuesCount);
       Visited.erase(PointeeType.getCanonicalType());

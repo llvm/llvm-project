@@ -15,8 +15,6 @@ from lldbsuite.test import lldbutil
 
 class LoadUnloadTestCase(TestBase):
 
-    mydir = TestBase.compute_mydir(__file__)
-
     NO_DEBUG_INFO_TESTCASE = True
 
     def setUp(self):
@@ -203,6 +201,7 @@ class LoadUnloadTestCase(TestBase):
         hostoslist=["windows"],
         triple='.*-android')
     @expectedFailureAll(oslist=["windows"]) # process load not implemented
+    @expectedFailureAll(oslist=["linux"], archs=["arm"]) # Fails on ubuntu jammy
     def test_lldb_process_load_and_unload_commands(self):
         self.setSvr4Support(False)
         self.run_lldb_process_load_and_unload_commands()
@@ -296,6 +295,7 @@ class LoadUnloadTestCase(TestBase):
         self.runCmd("process continue")
 
     @expectedFailureAll(oslist=["windows"]) # breakpoint not hit
+    @expectedFailureAll(oslist=["linux"], archs=["arm"]) # Fails on ubuntu jammy
     def test_load_unload(self):
         self.setSvr4Support(False)
         self.run_load_unload()

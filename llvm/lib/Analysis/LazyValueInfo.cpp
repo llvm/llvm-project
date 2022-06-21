@@ -942,7 +942,7 @@ Optional<ValueLatticeElement> LazyValueInfoImpl::solveBlockValueBinaryOpImpl(
   // @foo()), 32"
   Optional<ConstantRange> LHSRes = getRangeFor(I->getOperand(0), I, BB);
   Optional<ConstantRange> RHSRes = getRangeFor(I->getOperand(1), I, BB);
-  if (!LHSRes.hasValue() || !RHSRes.hasValue())
+  if (!LHSRes || !RHSRes)
     // More work to do before applying this transfer rule.
     return None;
 
@@ -1424,8 +1424,9 @@ Optional<ValueLatticeElement> LazyValueInfoImpl::getEdgeValue(
   if (Constant *VC = dyn_cast<Constant>(Val))
     return ValueLatticeElement::get(VC);
 
-  ValueLatticeElement LocalResult = getEdgeValueLocal(Val, BBFrom, BBTo)
-      .getValueOr(ValueLatticeElement::getOverdefined());
+  ValueLatticeElement LocalResult =
+      getEdgeValueLocal(Val, BBFrom, BBTo)
+          .value_or(ValueLatticeElement::getOverdefined());
   if (hasSingleValue(LocalResult))
     // Can't get any more precise here
     return LocalResult;

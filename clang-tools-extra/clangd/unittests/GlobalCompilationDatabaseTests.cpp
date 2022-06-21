@@ -300,7 +300,7 @@ TEST(GlobalCompilationDatabaseTest, BuildDir) {
     DirectoryBasedGlobalCompilationDatabase::Options Opts(FS);
     return DirectoryBasedGlobalCompilationDatabase(Opts)
         .getCompileCommand(testPath(Relative))
-        .getValueOr(tooling::CompileCommand())
+        .value_or(tooling::CompileCommand())
         .CommandLine;
   };
   EXPECT_THAT(Command("x/foo.cc"), IsEmpty());

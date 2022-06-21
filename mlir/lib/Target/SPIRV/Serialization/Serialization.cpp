@@ -24,7 +24,7 @@ namespace mlir {
 LogicalResult spirv::serialize(spirv::ModuleOp module,
                                SmallVectorImpl<uint32_t> &binary,
                                const SerializationOptions &options) {
-  if (!module.vce_triple().hasValue())
+  if (!module.vce_triple())
     return module.emitError(
         "module must have 'vce_triple' attribute to be serializeable");
 

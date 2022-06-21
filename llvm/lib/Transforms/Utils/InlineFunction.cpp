@@ -1421,7 +1421,8 @@ static Value *HandleByValArgument(Type *ByValType, Value *Arg,
   // If the byval had an alignment specified, we *must* use at least that
   // alignment, as it is required by the byval argument (and uses of the
   // pointer inside the callee).
-  Alignment = max(Alignment, MaybeAlign(ByValAlignment));
+  if (ByValAlignment > 0)
+    Alignment = std::max(Alignment, Align(ByValAlignment));
 
   Value *NewAlloca =
       new AllocaInst(ByValType, DL.getAllocaAddrSpace(), nullptr, Alignment,
@@ -1600,7 +1601,7 @@ static void updateCallProfile(Function *Callee, const ValueToValueMapTy &VMap,
     return;
   auto CallSiteCount = PSI ? PSI->getProfileCount(TheCall, CallerBFI) : None;
   int64_t CallCount =
-      std::min(CallSiteCount.getValueOr(0), CalleeEntryCount.getCount());
+      std::min(CallSiteCount.value_or(0), CalleeEntryCount.getCount());
   updateProfileCallee(Callee, -CallCount, &VMap);
 }
 
@@ -1608,7 +1609,7 @@ void llvm::updateProfileCallee(
     Function *Callee, int64_t EntryDelta,
     const ValueMap<const Value *, WeakTrackingVH> *VMap) {
   auto CalleeCount = Callee->getEntryCount();
-  if (!CalleeCount.hasValue())
+  if (!CalleeCount)
     return;
 
   const uint64_t PriorEntryCount = CalleeCount->getCount();

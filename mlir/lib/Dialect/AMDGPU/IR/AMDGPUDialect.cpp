@@ -31,14 +31,14 @@ void amdgpu::AMDGPUDialect::initialize() {
 //===----------------------------------------------------------------------===//
 template <typename T>
 static LogicalResult verifyRawBufferOp(T &op) {
-  MemRefType bufferType = op.memref().getType().template cast<MemRefType>();
+  MemRefType bufferType = op.getMemref().getType().template cast<MemRefType>();
   if (bufferType.getMemorySpaceAsInt() != 0)
     return op.emitOpError(
         "Buffer ops must operate on a memref in global memory");
   if (!bufferType.hasRank())
     return op.emitOpError(
         "Cannot meaningfully buffer_store to an unranked memref");
-  if (static_cast<int64_t>(op.indices().size()) != bufferType.getRank())
+  if (static_cast<int64_t>(op.getIndices().size()) != bufferType.getRank())
     return op.emitOpError("Expected " + Twine(bufferType.getRank()) +
                           " indices to memref");
   return success();

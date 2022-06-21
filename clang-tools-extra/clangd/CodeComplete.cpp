@@ -192,7 +192,7 @@ struct CompletionCandidate {
   // 0 indicates it's not part of any overload set.
   size_t overloadSet(const CodeCompleteOptions &Opts, llvm::StringRef FileName,
                      IncludeInserter *Inserter) const {
-    if (!Opts.BundleOverloads.getValueOr(false))
+    if (!Opts.BundleOverloads.value_or(false))
       return 0;
 
     // Depending on the index implementation, we can see different header
@@ -648,7 +648,7 @@ getQueryScopes(CodeCompletionContext &CCContext, const Sema &CCSema,
   }
 
   const CXXScopeSpec *SemaSpecifier =
-      CCContext.getCXXScopeSpecifier().getValueOr(nullptr);
+      CCContext.getCXXScopeSpecifier().value_or(nullptr);
   // Case 1: unqualified completion.
   if (!SemaSpecifier) {
     // Case 2 (exception): sema saw no qualifier, but there appears to be one!
@@ -835,7 +835,7 @@ struct CompletionRecorder : public CodeCompleteConsumer {
         continue;
       // Skip injected class name when no class scope is not explicitly set.
       // E.g. show injected A::A in `using A::A^` but not in "A^".
-      if (Result.Declaration && !Context.getCXXScopeSpecifier().hasValue() &&
+      if (Result.Declaration && !Context.getCXXScopeSpecifier() &&
           isInjectedClass(*Result.Declaration))
         continue;
       // We choose to never append '::' to completion results in clangd.
@@ -1439,7 +1439,7 @@ public:
     HeuristicPrefix = guessCompletionPrefix(SemaCCInput.ParseInput.Contents,
                                             SemaCCInput.Offset);
     populateContextWords(SemaCCInput.ParseInput.Contents);
-    if (Opts.Index && SpecFuzzyFind && SpecFuzzyFind->CachedReq.hasValue()) {
+    if (Opts.Index && SpecFuzzyFind && SpecFuzzyFind->CachedReq) {
       assert(!SpecFuzzyFind->Result.valid());
       SpecReq = speculativeFuzzyFindRequestForCompletion(
           *SpecFuzzyFind->CachedReq, HeuristicPrefix);

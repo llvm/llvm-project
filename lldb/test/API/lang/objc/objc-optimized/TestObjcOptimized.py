@@ -20,8 +20,6 @@ from lldbsuite.test import lldbutil
 
 
 class ObjcOptimizedTestCase(TestBase):
-
-    mydir = TestBase.compute_mydir(__file__)
     myclass = "MyClass"
     mymethod = "description"
     method_spec = "-[%s %s]" % (myclass, mymethod)

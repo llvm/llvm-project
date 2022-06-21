@@ -1190,7 +1190,7 @@ bool MasmParser::expandMacros() {
     }
   }
 
-  if (!ExpandedValue.hasValue())
+  if (!ExpandedValue)
     return true;
   std::unique_ptr<MemoryBuffer> Instantiation =
       MemoryBuffer::getMemBufferCopy(*ExpandedValue, "<instantiation>");
@@ -2902,7 +2902,7 @@ bool MasmParser::expandMacro(raw_svector_ostream &OS, StringRef Body,
       if (Body[Pos] == '&')
         break;
       if (isMacroParameterChar(Body[Pos])) {
-        if (!CurrentQuote.hasValue())
+        if (!CurrentQuote)
           break;
         if (IdentifierPos == End)
           IdentifierPos = Pos;
@@ -2911,7 +2911,7 @@ bool MasmParser::expandMacro(raw_svector_ostream &OS, StringRef Body,
       }
 
       // Track quotation status
-      if (!CurrentQuote.hasValue()) {
+      if (!CurrentQuote) {
         if (Body[Pos] == '\'' || Body[Pos] == '"')
           CurrentQuote = Body[Pos];
       } else if (Body[Pos] == CurrentQuote) {
@@ -3330,7 +3330,7 @@ bool MasmParser::handleMacroInvocation(const MCAsmMacro *M, SMLoc NameLoc) {
     ParseStatementInfo Info(&AsmStrRewrites);
     bool Parsed = parseStatement(Info, nullptr);
 
-    if (!Parsed && Info.ExitValue.hasValue()) {
+    if (!Parsed && Info.ExitValue) {
       ExitValue = std::move(*Info.ExitValue);
       break;
     }
@@ -3625,7 +3625,7 @@ bool MasmParser::parseTextItem(std::string &Data) {
       if (BuiltinIt != BuiltinSymbolMap.end()) {
         llvm::Optional<std::string> BuiltinText =
             evaluateBuiltinTextMacro(BuiltinIt->getValue(), StartLoc);
-        if (!BuiltinText.hasValue()) {
+        if (!BuiltinText) {
           // Not a text macro; break without substituting
           break;
         }

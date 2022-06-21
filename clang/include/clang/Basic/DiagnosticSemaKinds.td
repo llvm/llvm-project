@@ -4707,6 +4707,10 @@ def err_bound_member_function : Error<
   "reference to non-static member function must be called"
   "%select{|; did you mean to call it with no arguments?}0">;
 def note_possible_target_of_call : Note<"possible target for call">;
+def err_no_viable_destructor : Error<
+  "no viable destructor found for class %0">;
+def err_ambiguous_destructor : Error<
+  "destructor of class %0 is ambiguous">;
 
 def err_ovl_no_viable_object_call : Error<
   "no matching function for call to object of type %0">;
@@ -7579,6 +7583,12 @@ def warn_deprecated_altivec_src_compat : Warning<
   "deprecated. The default behaviour will soon change to that implied by the "
   "'-altivec-compat=xl' option">,
   InGroup<DiagGroup<"deprecated-altivec-src-compat">>;
+
+def warn_deprecated_lax_vec_conv_all : Warning<
+  "Implicit conversion between vector types ('%0' and '%1') is deprecated. "
+  "In the future, the behavior implied by '-fno-lax-vector-conversions' "
+  "will be the default.">,
+  InGroup<DiagGroup<"deprecate-lax-vec-conv-all">>;
 
 def err_catch_incomplete_ptr : Error<
   "cannot catch pointer to incomplete type %0">;

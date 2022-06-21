@@ -1,6 +1,10 @@
 // REQUIRES: powerpc-registered-target
-// RUN: %clang_cc1 -flax-vector-conversions=none -no-opaque-pointers -target-feature +altivec -target-feature +vsx -triple powerpc64-unknown-unknown -emit-llvm %s -o - | FileCheck %s
-// RUN: %clang_cc1 -flax-vector-conversions=none -no-opaque-pointers -target-feature +altivec -target-feature +vsx -triple powerpc64le-unknown-unknown -emit-llvm %s -o - | FileCheck %s -check-prefix=CHECK-LE
+// RUN: %clang_cc1 -flax-vector-conversions=none -no-opaque-pointers -target-feature \
+// RUN:   +altivec -target-feature +vsx -triple powerpc64-unknown-unknown -emit-llvm \
+// RUN:   -U__XL_COMPAT_ALTIVEC__ %s -o - | FileCheck %s
+// RUN: %clang_cc1 -flax-vector-conversions=none -no-opaque-pointers -target-feature \
+// RUN:   +altivec -target-feature +vsx -triple powerpc64le-unknown-unknown \
+// RUN:   -emit-llvm -U__XL_COMPAT_ALTIVEC__ %s -o - | FileCheck %s -check-prefix=CHECK-LE
 #include <altivec.h>
 
 vector bool char vbc = { 0, 1, 0, 1, 0, 1, 0, 1,

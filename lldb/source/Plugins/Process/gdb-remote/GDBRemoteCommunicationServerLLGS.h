@@ -113,9 +113,11 @@ protected:
 
   PacketResult SendWResponse(NativeProcessProtocol *process);
 
-  PacketResult SendStopReplyPacketForThread(lldb::tid_t tid);
+  PacketResult SendStopReplyPacketForThread(NativeProcessProtocol &process,
+                                            lldb::tid_t tid);
 
-  PacketResult SendStopReasonForState(lldb::StateType process_state);
+  PacketResult SendStopReasonForState(NativeProcessProtocol &process,
+                                      lldb::StateType process_state);
 
   PacketResult Handle_k(StringExtractorGDBRemote &packet);
 
@@ -241,7 +243,7 @@ protected:
 
   static std::string XMLEncodeAttributeValue(llvm::StringRef value);
 
-  virtual std::vector<std::string> HandleFeatures(
+  std::vector<std::string> HandleFeatures(
       const llvm::ArrayRef<llvm::StringRef> client_features) override;
 
 private:

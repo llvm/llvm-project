@@ -559,8 +559,10 @@ define void @testRedundantPrimeUnprime(<512 x i1>* %dst, <16 x i8> %vc) nounwind
 ; CHECK-NEXT:    stxv vs3, 0(r3)
 ; CHECK-NEXT:    xvf32gerpp acc1, v2, v2
 ; CHECK-NEXT:    xxmfacc acc1
-; CHECK-NEXT:    stxvp vsp4, 64(r1)
-; CHECK-NEXT:    stxvp vsp6, 32(r1)
+; CHECK-NEXT:    stxv vs4, 80(r1)
+; CHECK-NEXT:    stxv vs5, 64(r1)
+; CHECK-NEXT:    stxv vs6, 48(r1)
+; CHECK-NEXT:    stxv vs7, 32(r1)
 ; CHECK-NEXT:    bl testRedundantPrimeUnprimeF@notoc
 ; CHECK-NEXT:    lxvp vsp0, 64(r1)
 ; CHECK-NEXT:    lxvp vsp2, 32(r1)
@@ -590,8 +592,10 @@ define void @testRedundantPrimeUnprime(<512 x i1>* %dst, <16 x i8> %vc) nounwind
 ; CHECK-BE-NEXT:    stxv vs2, 32(r3)
 ; CHECK-BE-NEXT:    xvf32gerpp acc1, v2, v2
 ; CHECK-BE-NEXT:    xxmfacc acc1
-; CHECK-BE-NEXT:    stxvp vsp4, 112(r1)
-; CHECK-BE-NEXT:    stxvp vsp6, 144(r1)
+; CHECK-BE-NEXT:    stxv vs4, 112(r1)
+; CHECK-BE-NEXT:    stxv vs5, 128(r1)
+; CHECK-BE-NEXT:    stxv vs6, 144(r1)
+; CHECK-BE-NEXT:    stxv vs7, 160(r1)
 ; CHECK-BE-NEXT:    bl testRedundantPrimeUnprimeF
 ; CHECK-BE-NEXT:    nop
 ; CHECK-BE-NEXT:    lxvp vsp0, 112(r1)

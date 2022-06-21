@@ -5934,7 +5934,7 @@ template <class ELFT>
 SmallVector<uint32_t> ELFDumper<ELFT>::getSymbolIndexesForFunctionAddress(
     uint64_t SymValue, Optional<const Elf_Shdr *> FunctionSec) {
   SmallVector<uint32_t> SymbolIndexes;
-  if (!this->AddressToIndexMap.hasValue()) {
+  if (!this->AddressToIndexMap) {
     // Populate the address to index map upon the first invocation of this
     // function.
     this->AddressToIndexMap.emplace();
@@ -6087,9 +6087,8 @@ void ELFDumper<ELFT>::printStackSize(const Relocation<ELFT> &R,
     return;
   }
 
-  uint64_t SymValue =
-      Resolver(R.Type, Offset, RelocSymValue, Data.getAddress(&Offset),
-               R.Addend.getValueOr(0));
+  uint64_t SymValue = Resolver(R.Type, Offset, RelocSymValue,
+                               Data.getAddress(&Offset), R.Addend.value_or(0));
   this->printFunctionStackSize(SymValue, FunctionSec, StackSizeSec, Data,
                                &Offset);
 }

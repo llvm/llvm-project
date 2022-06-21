@@ -133,3 +133,13 @@ class TraceIntelPTTestCaseBase(TestBase):
             if thread is not None:
                 command += " " + str(thread.GetIndexID())
             self.expect(command, error=error, substrs=substrs)
+
+    def traceLoad(self, traceDescriptionFilePath="trace.json", error=False, substrs=None):
+        if self.USE_SB_API:
+            traceDescriptionFile = lldb.SBFileSpec(traceDescriptionFilePath, True)
+            loadTraceError = lldb.SBError()
+            _trace = self.dbg.LoadTraceFromFile(loadTraceError, traceDescriptionFile)
+            self.assertSBError(loadTraceError, error)
+        else:
+            command = f"trace load -v {traceDescriptionFilePath}"
+            self.expect(command, error=error, substrs=substrs)

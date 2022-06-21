@@ -1802,7 +1802,7 @@ gentbl_cc_library(
 
 td_library(
     name = "SCFTdFiles",
-    srcs = ["include/mlir/Dialect/SCF/SCFOps.td"],
+    srcs = ["include/mlir/Dialect/SCF/IR/SCFOps.td"],
     includes = ["include"],
     deps = [
         ":ControlFlowInterfacesTdFiles",
@@ -1818,23 +1818,23 @@ gentbl_cc_library(
     tbl_outs = [
         (
             ["-gen-op-decls"],
-            "include/mlir/Dialect/SCF/SCFOps.h.inc",
+            "include/mlir/Dialect/SCF/IR/SCFOps.h.inc",
         ),
         (
             ["-gen-op-defs"],
-            "include/mlir/Dialect/SCF/SCFOps.cpp.inc",
+            "include/mlir/Dialect/SCF/IR/SCFOps.cpp.inc",
         ),
         (
             ["-gen-dialect-decls"],
-            "include/mlir/Dialect/SCF/SCFOpsDialect.h.inc",
+            "include/mlir/Dialect/SCF/IR/SCFOpsDialect.h.inc",
         ),
         (
             ["-gen-dialect-defs"],
-            "include/mlir/Dialect/SCF/SCFOpsDialect.cpp.inc",
+            "include/mlir/Dialect/SCF/IR/SCFOpsDialect.cpp.inc",
         ),
     ],
     tblgen = ":mlir-tblgen",
-    td_file = "include/mlir/Dialect/SCF/SCFOps.td",
+    td_file = "include/mlir/Dialect/SCF/IR/SCFOps.td",
     deps = [":SCFTdFiles"],
 )
 
@@ -1847,11 +1847,11 @@ gentbl_cc_library(
                 "-gen-pass-decls",
                 "-name=SCF",
             ],
-            "include/mlir/Dialect/SCF/Passes.h.inc",
+            "include/mlir/Dialect/SCF/Transforms/Passes.h.inc",
         ),
     ],
     tblgen = ":mlir-tblgen",
-    td_file = "include/mlir/Dialect/SCF/Passes.td",
+    td_file = "include/mlir/Dialect/SCF/Transforms/Passes.td",
     deps = [":PassBaseTdFiles"],
 )
 
@@ -1861,13 +1861,9 @@ cc_library(
         "lib/Dialect/SCF/Transforms/*.cpp",
         "lib/Dialect/SCF/Transforms/*.h",
     ]),
-    hdrs = [
-        "include/mlir/Dialect/SCF/BufferizableOpInterfaceImpl.h",
-        "include/mlir/Dialect/SCF/Passes.h",
-        "include/mlir/Dialect/SCF/Patterns.h",
-        "include/mlir/Dialect/SCF/TileUsingInterface.h",
-        "include/mlir/Dialect/SCF/Transforms.h",
-    ],
+    hdrs = glob([
+        "include/mlir/Dialect/SCF/Transforms/*.h",
+    ]),
     includes = ["include"],
     deps = [
         ":AffineAnalysis",
@@ -2143,7 +2139,7 @@ cc_library(
 
 td_library(
     name = "NVGPUTdFiles",
-    srcs = ["include/mlir/Dialect/NVGPU/NVGPU.td"],
+    srcs = ["include/mlir/Dialect/NVGPU/IR/NVGPU.td"],
     includes = ["include"],
     deps = [
         ":SideEffectInterfacesTdFiles",
@@ -2159,22 +2155,22 @@ gentbl_cc_library(
                 "-gen-dialect-decls",
                 "-dialect=nvgpu",
             ],
-            "include/mlir/Dialect/NVGPU/NVGPUDialect.h.inc",
+            "include/mlir/Dialect/NVGPU/IR/NVGPUDialect.h.inc",
         ),
         (
             [
                 "-gen-dialect-defs",
                 "-dialect=nvgpu",
             ],
-            "include/mlir/Dialect/NVGPU/NVGPUDialect.cpp.inc",
+            "include/mlir/Dialect/NVGPU/IR/NVGPUDialect.cpp.inc",
         ),
         (
             ["-gen-op-decls"],
-            "include/mlir/Dialect/NVGPU/NVGPU.h.inc",
+            "include/mlir/Dialect/NVGPU/IR/NVGPU.h.inc",
         ),
         (
             ["-gen-op-defs"],
-            "include/mlir/Dialect/NVGPU/NVGPU.cpp.inc",
+            "include/mlir/Dialect/NVGPU/IR/NVGPU.cpp.inc",
         ),
         (
             ["-gen-op-doc"],
@@ -2182,20 +2178,68 @@ gentbl_cc_library(
         ),
     ],
     tblgen = ":mlir-tblgen",
-    td_file = "include/mlir/Dialect/NVGPU/NVGPU.td",
+    td_file = "include/mlir/Dialect/NVGPU/IR/NVGPU.td",
     deps = [":NVGPUTdFiles"],
+)
+
+gentbl_cc_library(
+    name = "NVGPUPassIncGen",
+    strip_include_prefix = "include",
+    tbl_outs = [
+        (
+            [
+                "-gen-pass-decls",
+                "-name=NVGPU",
+            ],
+            "include/mlir/Dialect/NVGPU/Passes.h.inc",
+        ),
+    ],
+    tblgen = ":mlir-tblgen",
+    td_file = "include/mlir/Dialect/NVGPU/Passes.td",
+    deps = [":PassBaseTdFiles"],
 )
 
 cc_library(
     name = "NVGPUDialect",
     srcs = ["lib/Dialect/NVGPU/IR/NVGPUDialect.cpp"],
-    hdrs = ["include/mlir/Dialect/NVGPU/NVGPUDialect.h"],
+    hdrs = ["include/mlir/Dialect/NVGPU/IR/NVGPUDialect.h"],
     includes = ["include"],
     deps = [
         ":GPUDialect",
         ":IR",
         ":NVGPUIncGen",
+        ":NVGPUPassIncGen",
         ":SideEffectInterfaces",
+        "//llvm:Core",
+        "//llvm:Support",
+    ],
+)
+
+cc_library(
+    name = "NVGPUTransforms",
+    srcs = [
+        "lib/Dialect/NVGPU/Transforms/OptimizeSharedMemory.cpp",
+        "lib/Dialect/NVGPU/Transforms/PassDetail.h",
+    ],
+    hdrs = [
+        "include/mlir/Dialect/NVGPU/Passes.h",
+        "include/mlir/Dialect/NVGPU/Transforms/Transforms.h",
+    ],
+    includes = ["include"],
+    deps = [
+        ":AffineDialect",
+        ":ArithmeticDialect",
+        ":FuncDialect",
+        ":GPUDialect",
+        ":IR",
+        ":MemRefDialect",
+        ":NVGPUDialect",
+        ":NVGPUPassIncGen",
+        ":Pass",
+        ":SideEffectInterfaces",
+        ":Support",
+        ":Transforms",
+        ":VectorDialect",
         "//llvm:Core",
         "//llvm:Support",
     ],
@@ -2637,19 +2681,13 @@ cc_library(
     name = "SCFDialect",
     srcs = glob(
         [
-            "lib/Dialect/SCF/*.cpp",
-            "lib/Dialect/SCF/*.h",
+            "lib/Dialect/SCF/IR/*.cpp",
+            "lib/Dialect/SCF/IR/*.h",
         ],
     ),
     hdrs = glob(
         [
-            "include/mlir/Dialect/SCF/*.h",
-        ],
-        exclude = [
-            "include/mlir/Dialect/SCF/BufferizableOpInterfaceImpl.h",
-            "include/mlir/Dialect/SCF/Patterns.h",
-            "include/mlir/Dialect/SCF/TileUsingInterface.h",
-            "include/mlir/Dialect/SCF/Transforms.h",
+            "include/mlir/Dialect/SCF/IR/*.h",
         ],
     ),
     includes = ["include"],
@@ -3397,6 +3435,7 @@ cc_library(
     hdrs = glob(["include/mlir/Dialect/LLVMIR/Transforms/*.h"]),
     includes = ["include"],
     deps = [
+        ":FuncDialect",
         ":IR",
         ":LLVMDialect",
         ":LLVMPassIncGen",
@@ -6214,7 +6253,9 @@ cc_library(
         ":MemRefToSPIRV",
         ":MemRefTransforms",
         ":NVGPUDialect",
+        ":NVGPUPassIncGen",
         ":NVGPUToNVVM",
+        ":NVGPUTransforms",
         ":NVVMDialect",
         ":OpenACCDialect",
         ":OpenMPDialect",
@@ -6484,6 +6525,7 @@ cc_binary(
         ":GPUTransforms",
         ":LLVMCommonConversion",
         ":LLVMDialect",
+        ":LLVMIRTransforms",
         ":LLVMToLLVMIRTranslation",
         ":MemRefDialect",
         ":MemRefToLLVM",
@@ -7273,6 +7315,7 @@ cc_library(
         ":ConversionPassIncGen",
         ":FuncDialect",
         ":IR",
+        ":LLVMDialect",
         ":LinalgDialect",
         ":LinalgTransforms",
         ":MemRefDialect",

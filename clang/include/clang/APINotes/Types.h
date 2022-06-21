@@ -239,7 +239,7 @@ public:
   }
   void setSwiftImportAsNonGeneric(llvm::Optional<bool> Value) {
     SwiftImportAsNonGenericSpecified = Value.hasValue();
-    SwiftImportAsNonGeneric = Value.getValueOr(false);
+    SwiftImportAsNonGeneric = Value.value_or(false);
   }
 
   llvm::Optional<bool> getSwiftObjCMembers() const {
@@ -248,7 +248,7 @@ public:
   }
   void setSwiftObjCMembers(llvm::Optional<bool> Value) {
     SwiftObjCMembersSpecified = Value.hasValue();
-    SwiftObjCMembers = Value.getValueOr(false);
+    SwiftObjCMembers = Value.value_or(false);
   }
 
   /// Strip off any information within the class information structure that is
@@ -366,7 +366,7 @@ public:
   }
   void setSwiftImportAsAccessors(llvm::Optional<bool> Value) {
     SwiftImportAsAccessorsSpecified = Value.hasValue();
-    SwiftImportAsAccessors = Value.getValueOr(false);
+    SwiftImportAsAccessors = Value.value_or(false);
   }
 
   friend bool operator==(const ObjCPropertyInfo &, const ObjCPropertyInfo &);
@@ -430,7 +430,7 @@ public:
   }
   void setNoEscape(llvm::Optional<bool> Value) {
     NoEscapeSpecified = Value.hasValue();
-    NoEscape = Value.getValueOr(false);
+    NoEscape = Value.value_or(false);
   }
 
   llvm::Optional<RetainCountConventionKind> getRetainCountConvention() const {
@@ -667,7 +667,7 @@ public:
   }
   void setFlagEnum(llvm::Optional<bool> Value) {
     HasFlagEnum = Value.hasValue();
-    IsFlagEnum = Value.getValueOr(false);
+    IsFlagEnum = Value.value_or(false);
   }
 
   TagInfo &operator|=(const TagInfo &RHS) {
@@ -676,7 +676,7 @@ public:
     if (!HasFlagEnum && HasFlagEnum)
       setFlagEnum(RHS.isFlagEnum());
 
-    if (!EnumExtensibility.hasValue())
+    if (!EnumExtensibility)
       EnumExtensibility = RHS.EnumExtensibility;
 
     return *this;
@@ -706,7 +706,7 @@ public:
 
   TypedefInfo &operator|=(const TypedefInfo &RHS) {
     static_cast<CommonTypeInfo &>(*this) |= RHS;
-    if (!SwiftWrapper.hasValue())
+    if (!SwiftWrapper)
       SwiftWrapper = RHS.SwiftWrapper;
     return *this;
   }

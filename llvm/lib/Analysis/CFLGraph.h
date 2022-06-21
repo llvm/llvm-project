@@ -403,7 +403,7 @@ template <typename CFLAA> class CFLGraphBuilder {
         auto &RetParamRelations = Summary->RetParamRelations;
         for (auto &Relation : RetParamRelations) {
           auto IRelation = instantiateExternalRelation(Relation, Call);
-          if (IRelation.hasValue()) {
+          if (IRelation) {
             Graph.addNode(IRelation->From);
             Graph.addNode(IRelation->To);
             Graph.addEdge(IRelation->From, IRelation->To);
@@ -413,7 +413,7 @@ template <typename CFLAA> class CFLGraphBuilder {
         auto &RetParamAttributes = Summary->RetParamAttributes;
         for (auto &Attribute : RetParamAttributes) {
           auto IAttr = instantiateExternalAttribute(Attribute, Call);
-          if (IAttr.hasValue())
+          if (IAttr)
             Graph.addNode(IAttr->IValue, IAttr->Attr);
         }
       }

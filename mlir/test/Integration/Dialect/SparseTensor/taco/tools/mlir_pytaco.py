@@ -75,16 +75,20 @@ class Type(enum.Enum):
   # numpy _ctype_from_dtype_scalar can't handle np.float16 yet.
   FLOAT32 = np.float32
   FLOAT64 = np.float64
+  COMPLEX64 = np.complex64
+  COMPLEX128 = np.complex128
 
 
 # All floating point type enums.
 _FLOAT_TYPES = (Type.FLOAT32, Type.FLOAT64)
 # All integral type enums.
 _INT_TYPES = (Type.INT8, Type.INT16, Type.INT32, Type.INT64)
+# All complex type enums.
+_COMPLEX_TYPES = (Type.COMPLEX64, Type.COMPLEX128)
 # Type alias for any numpy type used to implement the runtime support for the
 # enum data types.
 _AnyRuntimeType = Union[np.int8, np.int16, np.int32, np.int64, np.float32,
-                        np.float64]
+                        np.float64, np.complex64, np.complex128]
 
 
 @dataclasses.dataclass(frozen=True)
@@ -111,6 +115,10 @@ class DType:
     """Returns whether the data type represents an integral value."""
     return self.kind in _INT_TYPES
 
+  def is_complex(self) -> bool:
+    """Returns whether the data type represents a complex value."""
+    return self.kind in _COMPLEX_TYPES
+
   @property
   def value(self) -> _AnyRuntimeType:
     """Returns the numpy dtype for the data type."""
@@ -125,7 +133,9 @@ def _dtype_to_mlir_str(dtype: DType) -> str:
       Type.INT32: "i32",
       Type.INT64: "i64",
       Type.FLOAT32: "f32",
-      Type.FLOAT64: "f64"
+      Type.FLOAT64: "f64",
+      Type.COMPLEX64: "complex<f32>",
+      Type.COMPLEX128: "complex<f64>"
   }
   return dtype_to_str[dtype.kind]
 
@@ -138,7 +148,9 @@ def _nptype_to_taco_type(ty: np.dtype) -> DType:
       np.int32: Type.INT32,
       np.int64: Type.INT64,
       np.float32: Type.FLOAT32,
-      np.float64: Type.FLOAT64
+      np.float64: Type.FLOAT64,
+      np.complex64: Type.COMPLEX64,
+      np.complex128: Type.COMPLEX128
   }
   return DType(nptype_to_dtype[ty])
 
@@ -151,7 +163,9 @@ def _mlir_type_from_taco_type(dtype: DType) -> ir.Type:
       Type.INT32: ir.IntegerType.get_signless(32),
       Type.INT64: ir.IntegerType.get_signless(64),
       Type.FLOAT32: ir.F32Type.get(),
-      Type.FLOAT64: ir.F64Type.get()
+      Type.FLOAT64: ir.F64Type.get(),
+      Type.COMPLEX64: ir.ComplexType.get(ir.F32Type.get()),
+      Type.COMPLEX128: ir.ComplexType.get(ir.F64Type.get())
   }
   return dtype_to_irtype[dtype.kind]
 
@@ -1004,8 +1018,8 @@ class Tensor:
       raise ValueError(f"Invalid format argument: {fmt}.")
 
   def __init__(self,
-               value_or_shape: Optional[Union[List[int], Tuple[int, ...], float,
-                                              int]] = None,
+               value_or_shape: Optional[Union[List[int], Tuple[int, ...],
+                                              complex, float, int]] = None,
                fmt: Optional[Union[ModeFormat, List[ModeFormat],
                                    Format]] = None,
                dtype: Optional[DType] = None,
@@ -1059,7 +1073,7 @@ class Tensor:
     self._values = []
     self._stats = _Stats()
     if value_or_shape is None or isinstance(value_or_shape, int) or isinstance(
-        value_or_shape, float):
+        value_or_shape, float) or isinstance(value_or_shape, complex):
       # Create a scalar tensor and ignore the fmt parameter.
       self._shape = []
       self._format = _make_format([], [])
@@ -1108,7 +1122,7 @@ class Tensor:
     return (f"Tensor(_name={repr(self._name)} "
             f"_dtype={repr(self._dtype)} : ") + value_str
 
-  def insert(self, coords: List[int], val: Union[float, int]) -> None:
+  def insert(self, coords: List[int], val: Union[complex, float, int]) -> None:
     """Inserts a value to the given coordinate.
 
     Args:
@@ -1134,7 +1148,8 @@ class Tensor:
       raise ValueError("Invalid coordinate for rank: "
                        f"{self.order}, {coords}.")
 
-    if not isinstance(val, int) and not isinstance(val, float):
+    if not isinstance(val, int) and not isinstance(
+        val, float) and not isinstance(val, complex):
       raise ValueError(f"Value is neither int nor float: {val}.")
 
     self._coords.append(tuple(coords))

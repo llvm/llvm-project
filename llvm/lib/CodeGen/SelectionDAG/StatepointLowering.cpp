@@ -280,7 +280,7 @@ static void reservePreviousStackSlotForValue(const Value *IncomingValue,
   const int LookUpDepth = 6;
   Optional<int> Index =
       findPreviousSpillSlot(IncomingValue, Builder, LookUpDepth);
-  if (!Index.hasValue())
+  if (!Index)
     return;
 
   const auto &StatepointSlots = Builder.FuncInfo.StatepointStackSlots;
@@ -1169,8 +1169,8 @@ void SelectionDAGBuilder::LowerCallSiteWithDeoptBundleImpl(
   unsigned DefaultID = StatepointDirectives::DeoptBundleStatepointID;
 
   auto SD = parseStatepointDirectivesFromAttrs(Call->getAttributes());
-  SI.ID = SD.StatepointID.getValueOr(DefaultID);
-  SI.NumPatchBytes = SD.NumPatchBytes.getValueOr(0);
+  SI.ID = SD.StatepointID.value_or(DefaultID);
+  SI.NumPatchBytes = SD.NumPatchBytes.value_or(0);
 
   SI.DeoptState =
       ArrayRef<const Use>(DeoptBundle.Inputs.begin(), DeoptBundle.Inputs.end());

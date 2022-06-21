@@ -303,7 +303,7 @@ Optional<int64_t> DimOp::getConstantIndex() {
 LogicalResult DimOp::verify() {
   // Assume unknown index to be in range.
   Optional<int64_t> index = getConstantIndex();
-  if (!index.hasValue())
+  if (!index)
     return success();
 
   // Check that constant index is not knowingly out of range.
@@ -687,7 +687,7 @@ struct ExtractFromTensorGenerate : public OpRewritePattern<tensor::ExtractOp> {
       return failure();
 
     BlockAndValueMapping mapping;
-    Block *body = tensorFromElements.getBody();
+    Block *body = &tensorFromElements.getBody().front();
     mapping.map(body->getArguments(), extract.indices());
     for (auto &op : body->without_terminator())
       rewriter.clone(op, mapping);
@@ -840,7 +840,7 @@ void CollapseShapeOp::build(OpBuilder &b, OperationState &result, Value src,
       getSymbolLessAffineMaps(
           convertReassociationIndicesToExprs(b.getContext(), reassociation)));
   build(b, result, resultType, src, attrs);
-  result.addAttribute(getReassociationAttrName(),
+  result.addAttribute(getReassociationAttrStrName(),
                       getReassociationIndicesAttribute(b, reassociation));
 }
 

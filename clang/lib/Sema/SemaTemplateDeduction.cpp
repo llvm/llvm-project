@@ -3406,7 +3406,7 @@ static unsigned getPackIndexForParam(Sema &S,
   for (auto *PD : FunctionTemplate->getTemplatedDecl()->parameters()) {
     if (PD->isParameterPack()) {
       unsigned NumExpansions =
-          S.getNumArgumentsInExpansion(PD->getType(), Args).getValueOr(1);
+          S.getNumArgumentsInExpansion(PD->getType(), Args).value_or(1);
       if (Idx + NumExpansions > ParamIdx)
         return ParamIdx - Idx;
       Idx += NumExpansions;
@@ -4637,7 +4637,7 @@ Sema::DeduceAutoType(TypeLoc Type, Expr *&Init, QualType &Result,
   }
 
   // Find the depth of template parameter to synthesize.
-  unsigned Depth = DependentDeductionDepth.getValueOr(0);
+  unsigned Depth = DependentDeductionDepth.value_or(0);
 
   // If this is a 'decltype(auto)' specifier, do the decltype dance.
   // Since 'decltype(auto)' can only occur at the top of the type, we

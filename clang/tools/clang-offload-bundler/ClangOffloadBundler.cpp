@@ -1402,7 +1402,7 @@ static Error UnbundleArchive() {
 
     Optional<StringRef> OptionalCurBundleID = *CurBundleIDOrErr;
     // No device code in this child, skip.
-    if (!OptionalCurBundleID.hasValue())
+    if (!OptionalCurBundleID)
       continue;
     StringRef CodeObject = *OptionalCurBundleID;
 

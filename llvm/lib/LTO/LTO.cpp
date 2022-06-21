@@ -639,7 +639,7 @@ Error LTO::addModule(InputFile &Input, unsigned ModI,
   if (!LTOInfo)
     return LTOInfo.takeError();
 
-  if (EnableSplitLTOUnit.hasValue()) {
+  if (EnableSplitLTOUnit) {
     // If only some modules were split, flag this in the index so that
     // we can skip or error on optimizations that need consistently split
     // modules (whole program devirt and lower type tests).
@@ -819,9 +819,10 @@ LTO::addRegularLTO(BitcodeModule BM, ArrayRef<InputFile::Symbol> Syms,
       // For now they aren't reported correctly by ModuleSymbolTable.
       auto &CommonRes = RegularLTO.Commons[std::string(Sym.getIRName())];
       CommonRes.Size = std::max(CommonRes.Size, Sym.getCommonSize());
-      MaybeAlign SymAlign(Sym.getCommonAlignment());
-      if (SymAlign)
-        CommonRes.Align = max(*SymAlign, CommonRes.Align);
+      if (uint32_t SymAlignValue = Sym.getCommonAlignment()) {
+        const Align SymAlign(SymAlignValue);
+        CommonRes.Align = std::max(SymAlign, CommonRes.Align.valueOrOne());
+      }
       CommonRes.Prevailing |= Res.Prevailing;
     }
   }

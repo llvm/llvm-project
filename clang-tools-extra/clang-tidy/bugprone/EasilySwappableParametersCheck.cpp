@@ -1683,7 +1683,7 @@ public:
         if (CalledFn->getParamDecl(Idx) == PassedToParam)
           TargetIdx.emplace(Idx);
 
-      assert(TargetIdx.hasValue() && "Matched, but didn't find index?");
+      assert(TargetIdx && "Matched, but didn't find index?");
       TargetParams[PassedParamOfThisFn].insert(
           {CalledFn->getCanonicalDecl(), *TargetIdx});
     }

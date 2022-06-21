@@ -650,6 +650,22 @@ bail:
   return 0;
 }
 
+// CHECK-LABEL: void DecompositionDecl()
+// CHECK:       [B1]
+// CHECK-NEXT:    1: int arr[2];
+// CHECK-NEXT:    2: arr
+// CHECK-NEXT:    3: [B1.2] (ImplicitCastExpr, ArrayToPointerDecay, int *)
+// CHECK-NEXT:    4: *
+// CHECK-NEXT:    5: [B1.3]{{\[\[}}B1.4]]
+// CHECK-NEXT:    6: [B1.5] (ImplicitCastExpr, LValueToRValue, int)
+// CHECK-NEXT:    7: {{\{}}[B1.6]{{(\})}}
+// CHECK-NEXT:    8: auto = {{\{}}arr[*]{{(\})}};
+void DecompositionDecl() {
+  int arr[2];
+
+  auto [a, b] = arr;
+}
+
 // CHECK-LABEL: template<> int *PR18472<int>()
 // CHECK: [B2 (ENTRY)]
 // CHECK-NEXT:   Succs (1): B1

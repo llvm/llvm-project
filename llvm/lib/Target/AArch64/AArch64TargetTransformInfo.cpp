@@ -420,6 +420,12 @@ AArch64TTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
     }
     break;
   }
+  case Intrinsic::fshl:
+  case Intrinsic::fshr:
+    // FIXME: Match legacy behavior; this is probably not the right costing.
+    if (isa<ScalableVectorType>(RetTy))
+      return 1;
+    break;
   default:
     break;
   }
@@ -2079,6 +2085,10 @@ AArch64TTIImpl::enableMemCmpExpansion(bool OptSize, bool IsZeroCmp) const {
   // they could be used with no holds barred (-O3).
   Options.LoadSizes = {8, 4, 2, 1};
   return Options;
+}
+
+bool AArch64TTIImpl::prefersVectorizedAddressing() const {
+  return ST->hasSVE();
 }
 
 InstructionCost

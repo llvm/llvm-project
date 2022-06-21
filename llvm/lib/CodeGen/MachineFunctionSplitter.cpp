@@ -80,7 +80,7 @@ static bool isColdBlock(const MachineBasicBlock &MBB,
                         const MachineBlockFrequencyInfo *MBFI,
                         ProfileSummaryInfo *PSI) {
   Optional<uint64_t> Count = MBFI->getBlockProfileCount(&MBB);
-  if (!Count.hasValue())
+  if (!Count)
     return true;
 
   if (PercentileCutoff > 0) {

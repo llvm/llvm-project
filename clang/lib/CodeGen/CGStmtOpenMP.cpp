@@ -80,7 +80,7 @@ public:
         InlinedShareds(CGF) {
     if (EmitPreInitStmt)
       emitPreInitStmt(CGF, S);
-    if (!CapturedRegion.hasValue())
+    if (!CapturedRegion)
       return;
     assert(S.hasAssociatedStmt() &&
            "Expected associated statement for inlined directive.");

@@ -7587,7 +7587,7 @@ LegalizerHelper::lowerMemcpyInline(MachineInstr &MI) {
   // See if this is a constant length copy
   auto LenVRegAndVal = getIConstantVRegValWithLookThrough(Len, MRI);
   // FIXME: support dynamically sized G_MEMCPY_INLINE
-  assert(LenVRegAndVal.hasValue() &&
+  assert(LenVRegAndVal &&
          "inline memcpy with dynamic size is not yet supported");
   uint64_t KnownLen = LenVRegAndVal->Value.getZExtValue();
   if (KnownLen == 0) {
@@ -7662,7 +7662,7 @@ LegalizerHelper::lowerMemcpy(MachineInstr &MI, Register Dst, Register Src,
     const TargetRegisterInfo *TRI = MF.getSubtarget().getRegisterInfo();
     if (!TRI->hasStackRealignment(MF))
       while (NewAlign > Alignment && DL.exceedsNaturalStackAlignment(NewAlign))
-        NewAlign = NewAlign / 2;
+        NewAlign = NewAlign.previous();
 
     if (NewAlign > Alignment) {
       Alignment = NewAlign;
@@ -7770,7 +7770,7 @@ LegalizerHelper::lowerMemmove(MachineInstr &MI, Register Dst, Register Src,
     const TargetRegisterInfo *TRI = MF.getSubtarget().getRegisterInfo();
     if (!TRI->hasStackRealignment(MF))
       while (NewAlign > Alignment && DL.exceedsNaturalStackAlignment(NewAlign))
-        NewAlign = NewAlign / 2;
+        NewAlign = NewAlign.previous();
 
     if (NewAlign > Alignment) {
       Alignment = NewAlign;

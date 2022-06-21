@@ -32,6 +32,10 @@ if (OPENMP_STANDALONE_BUILD)
   list(APPEND LIBOMPTARGET_LLVM_INCLUDE_DIRS ${LLVM_INCLUDE_DIRS})
   list(APPEND CMAKE_MODULE_PATH ${LLVM_CMAKE_DIR})
   include(AddLLVM)
+  if(TARGET omptarget)
+    message(FATAL_ERROR "CMake target 'omptarget' already exists. "
+                        "Use an LLVM installation that doesn't expose its 'omptarget' target.")
+  endif()
 else()
   # Note that OPENMP_STANDALONE_BUILD is FALSE, when
   # openmp is built with -DLLVM_ENABLE_RUNTIMES="openmp" vs

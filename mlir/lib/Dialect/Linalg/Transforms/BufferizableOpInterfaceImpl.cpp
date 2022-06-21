@@ -20,11 +20,9 @@ using namespace mlir::bufferization;
 
 namespace {
 
-// TODO: Ops in the linalg dialect can directly implement this interface.
-
 /// Generic conversion for any LinalgOp on tensors.
 static LogicalResult bufferizeLinalgOp(RewriterBase &rewriter, LinalgOp op,
-                                       BufferizationState &state) {
+                                       const BufferizationOptions &options) {
   // Take a guard before anything else.
   OpBuilder::InsertionGuard g(rewriter);
   rewriter.setInsertionPoint(op);
@@ -46,23 +44,15 @@ static LogicalResult bufferizeLinalgOp(RewriterBase &rewriter, LinalgOp op,
       newInputBuffers.push_back(opOperand->get());
       continue;
     }
-    // Input operands are never written to.
-    newInputBuffers.push_back(*state.getBuffer(
-        rewriter, *opOperand,
-        BufferizationState::ForceInPlacability::FORCE_INPLACE));
+    newInputBuffers.push_back(getBuffer(rewriter, opOperand->get(), options));
   }
 
   // New output operands for the cloned op.
   SmallVector<Value> newOutputBuffers;
   for (OpResult opResult : op->getOpResults()) {
-    SmallVector<OpOperand *> aliasingOpOperands =
-        state.getAnalysisState().getAliasingOpOperand(opResult);
-    assert(aliasingOpOperands.size() == 1 && "expected 1 OpOperand");
-    FailureOr<Value> resultBuffer =
-        state.getBuffer(rewriter, *aliasingOpOperands.front());
-    if (failed(resultBuffer))
-      return failure();
-    newOutputBuffers.push_back(*resultBuffer);
+    OpOperand *opOperand = op.getOutputOperand(opResult.getResultNumber());
+    Value resultBuffer = getBuffer(rewriter, opOperand->get(), options);
+    newOutputBuffers.push_back(resultBuffer);
   }
 
   // Merge input/output operands.
@@ -131,8 +121,8 @@ struct LinalgOpInterface
   }
 
   LogicalResult bufferize(Operation *op, RewriterBase &rewriter,
-                          BufferizationState &state) const {
-    return bufferizeLinalgOp(rewriter, cast<LinalgOp>(op), state);
+                          const BufferizationOptions &options) const {
+    return bufferizeLinalgOp(rewriter, cast<LinalgOp>(op), options);
   }
 };
 

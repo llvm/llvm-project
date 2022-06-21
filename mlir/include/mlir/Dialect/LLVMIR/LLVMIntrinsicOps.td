@@ -548,4 +548,4 @@ def LLVM_VPSIToFPOp : LLVM_VPCastI<"sitofp">;
 def LLVM_VPPtrToIntOp : LLVM_VPCastPtr<"ptrtoint">;
 def LLVM_VPIntToPtrOp : LLVM_VPCastI<"inttoptr">;
 
-#endif // LLVM_INTRINSIC_OPS
+#endif // LLVM_INTRINSIC_OP

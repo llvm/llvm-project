@@ -658,9 +658,8 @@ llvm::computeMinimumValueSizes(ArrayRef<BasicBlock *> Blocks, DemandedBits &DB,
     Value *Val = Worklist.pop_back_val();
     Value *Leader = ECs.getOrInsertLeaderValue(Val);
 
-    if (Visited.count(Val))
+    if (!Visited.insert(Val).second)
       continue;
-    Visited.insert(Val);
 
     // Non-instructions terminate a chain successfully.
     if (!isa<Instruction>(Val))

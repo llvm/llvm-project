@@ -146,7 +146,7 @@ protected:
       valobj_sp = frame_sp->GuessValueForAddress(m_options.address.getValue());
     } else if (m_options.reg.hasValue()) {
       valobj_sp = frame_sp->GuessValueForRegisterAndOffset(
-          m_options.reg.getValue(), m_options.offset.getValueOr(0));
+          m_options.reg.getValue(), m_options.offset.value_or(0));
     } else {
       StopInfoSP stop_info_sp = thread->GetStopInfo();
       if (!stop_info_sp) {
@@ -304,7 +304,7 @@ protected:
     Thread *thread = m_exe_ctx.GetThreadPtr();
 
     uint32_t frame_idx = UINT32_MAX;
-    if (m_options.relative_frame_offset.hasValue()) {
+    if (m_options.relative_frame_offset) {
       // The one and only argument is a signed relative frame index
       frame_idx = thread->GetSelectedFrameIndex();
       if (frame_idx == UINT32_MAX)

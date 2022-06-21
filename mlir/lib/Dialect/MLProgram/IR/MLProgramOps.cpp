@@ -18,12 +18,11 @@ using namespace mlir::ml_program;
 //===----------------------------------------------------------------------===//
 
 /// Parse and print an ordering clause for a variadic of consuming tokens
-/// and an optional producing token.
+/// and an producing token.
 ///
 /// Syntax:
 ///   ordering(%0, %1 -> !ml_program.token)
 ///   ordering(() -> !ml_program.token)
-///   ordering(%0, %1)
 ///
 /// If both the consuming and producing token are not present on the op, then
 /// the clause prints nothing.
@@ -46,10 +45,11 @@ static ParseResult parseTokenOrdering(
       return failure();
   }
 
-  // Parse optional producer token.
-  if (succeeded(parser.parseOptionalArrow()))
-    if (failed(parser.parseType(produceTokenType)))
-      return failure();
+  // Parse producer token.
+  if (failed(parser.parseArrow()))
+    return failure();
+  if (failed(parser.parseType(produceTokenType)))
+    return failure();
 
   if (failed(parser.parseRParen()))
     return failure();
@@ -221,6 +221,30 @@ GlobalLoadConstOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
 }
 
 //===----------------------------------------------------------------------===//
+// GlobalLoadGraphOp
+//===----------------------------------------------------------------------===//
+
+GlobalOp GlobalLoadGraphOp::getGlobalOp(SymbolTableCollection &symbolTable) {
+  return symbolTable.lookupNearestSymbolFrom<GlobalOp>(
+      getOperation()->getParentOp(), getGlobalAttr());
+}
+
+LogicalResult
+GlobalLoadGraphOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
+  GlobalOp referrent = getGlobalOp(symbolTable);
+  if (!referrent)
+    return emitOpError() << "undefined global: " << getGlobal();
+
+  if (referrent.getType() != getResult().getType()) {
+    return emitOpError() << "cannot load from global typed "
+                         << referrent.getType() << " as "
+                         << getResult().getType();
+  }
+
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
 // GlobalStoreOp
 //===----------------------------------------------------------------------===//
 
@@ -231,6 +255,35 @@ GlobalOp GlobalStoreOp::getGlobalOp(SymbolTableCollection &symbolTable) {
 
 LogicalResult
 GlobalStoreOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
+  GlobalOp referrent = getGlobalOp(symbolTable);
+  if (!referrent)
+    return emitOpError() << "undefined global: " << getGlobal();
+
+  if (!referrent.getIsMutable()) {
+    return emitOpError() << "cannot store to an immutable global "
+                         << getGlobal();
+  }
+
+  if (referrent.getType() != getValue().getType()) {
+    return emitOpError() << "cannot store to a global typed "
+                         << referrent.getType() << " from "
+                         << getValue().getType();
+  }
+
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
+// GlobalStoreGraphOp
+//===----------------------------------------------------------------------===//
+
+GlobalOp GlobalStoreGraphOp::getGlobalOp(SymbolTableCollection &symbolTable) {
+  return symbolTable.lookupNearestSymbolFrom<GlobalOp>(
+      getOperation()->getParentOp(), getGlobalAttr());
+}
+
+LogicalResult
+GlobalStoreGraphOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
   GlobalOp referrent = getGlobalOp(symbolTable);
   if (!referrent)
     return emitOpError() << "undefined global: " << getGlobal();

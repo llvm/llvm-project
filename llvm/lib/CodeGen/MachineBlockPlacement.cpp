@@ -50,6 +50,7 @@
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/IR/DebugLoc.h"
 #include "llvm/IR/Function.h"
+#include "llvm/IR/PrintPasses.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/Allocator.h"
@@ -3657,6 +3658,9 @@ INITIALIZE_PASS_END(MachineBlockPlacementStats, "block-placement-stats",
 bool MachineBlockPlacementStats::runOnMachineFunction(MachineFunction &F) {
   // Check for single-block functions and skip them.
   if (std::next(F.begin()) == F.end())
+    return false;
+
+  if (!isFunctionInPrintList(F.getName()))
     return false;
 
   MBPI = &getAnalysis<MachineBranchProbabilityInfo>();

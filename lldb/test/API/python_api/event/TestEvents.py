@@ -14,8 +14,6 @@ from lldbsuite.test import lldbutil
 
 @skipIfLinux   # llvm.org/pr25924, sometimes generating SIGSEGV
 class EventAPITestCase(TestBase):
-
-    mydir = TestBase.compute_mydir(__file__)
     NO_DEBUG_INFO_TESTCASE = True
 
     def setUp(self):
@@ -199,7 +197,6 @@ class EventAPITestCase(TestBase):
         oslist=["linux"],
         bugnumber="llvm.org/pr23617 Flaky, fails ~1/10 cases")
     @skipIfWindows # This is flakey on Windows AND when it fails, it hangs: llvm.org/pr38373
-    @expectedFailureAll(oslist=["freebsd"], bugnumber="llvm.org/pr48417")
     @expectedFailureNetBSD
     def test_add_listener_to_broadcaster(self):
         """Exercise some SBBroadcaster APIs."""

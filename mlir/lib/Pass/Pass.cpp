@@ -145,7 +145,7 @@ struct OpPassManagerImpl {
   /// of an operation, or the result of `getAnyOpAnchorName()` in the case of an
   /// op-agnostic pass manager.
   StringRef getOpAnchorName() const {
-    return getOpName().getValueOr(OpPassManager::getAnyOpAnchorName());
+    return getOpName().value_or(OpPassManager::getAnyOpAnchorName());
   }
 
   /// Indicate if the current pass manager can be scheduled on the given

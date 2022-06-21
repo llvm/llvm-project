@@ -720,9 +720,8 @@ void SelectOptimize::getExclBackwardsSlice(Instruction *I,
     Worklist.pop();
 
     // Avoid cycles.
-    if (Visited.count(II))
+    if (!Visited.insert(II).second)
       continue;
-    Visited.insert(II);
 
     if (!II->hasOneUse())
       continue;
@@ -863,7 +862,7 @@ bool SelectOptimize::computeLoopCosts(
           }
         }
         auto ILatency = computeInstCost(&I);
-        if (!ILatency.hasValue()) {
+        if (!ILatency) {
           OptimizationRemarkMissed ORmissL(DEBUG_TYPE, "SelectOpti", &I);
           ORmissL << "Invalid instruction cost preventing analysis and "
                      "optimization of the inner-most loop containing this "

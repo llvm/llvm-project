@@ -180,6 +180,7 @@ static OpenMPDirectiveKindExWrapper parseOpenMPDirectiveKind(Parser &P) {
       {OMPD_master, OMPD_taskloop, OMPD_master_taskloop},
       {OMPD_master_taskloop, OMPD_simd, OMPD_master_taskloop_simd},
       {OMPD_parallel, OMPD_master, OMPD_parallel_master},
+      {OMPD_parallel, OMPD_masked, OMPD_parallel_masked},
       {OMPD_parallel_master, OMPD_taskloop, OMPD_parallel_master_taskloop},
       {OMPD_parallel_master_taskloop, OMPD_simd,
        OMPD_parallel_master_taskloop_simd}};
@@ -1834,7 +1835,7 @@ void Parser::ParseOMPDeclareTargetClauses(
 
       bool IsIndirectClause = getLangOpts().OpenMP >= 51 &&
                               getOpenMPClauseKind(ClauseName) == OMPC_indirect;
-      if (DTCI.Indirect.hasValue() && IsIndirectClause) {
+      if (DTCI.Indirect && IsIndirectClause) {
         Diag(Tok, diag::err_omp_more_one_clause)
             << getOpenMPDirectiveName(OMPD_declare_target)
             << getOpenMPClauseName(OMPC_indirect) << 0;
@@ -1932,7 +1933,7 @@ void Parser::ParseOMPDeclareTargetClauses(
       ConsumeToken();
   }
 
-  if (DTCI.Indirect.hasValue() && DTCI.DT != OMPDeclareTargetDeclAttr::DT_Any)
+  if (DTCI.Indirect && DTCI.DT != OMPDeclareTargetDeclAttr::DT_Any)
     Diag(DeviceTypeLoc, diag::err_omp_declare_target_indirect_device_type);
 
   // For declare target require at least 'to' or 'link' to be present.
@@ -2367,6 +2368,7 @@ Parser::DeclGroupPtrTy Parser::ParseOpenMPDeclarativeDirectiveWithExtDecl(
   case OMPD_parallel_for_simd:
   case OMPD_parallel_sections:
   case OMPD_parallel_master:
+  case OMPD_parallel_masked:
   case OMPD_atomic:
   case OMPD_target:
   case OMPD_teams:
@@ -2762,6 +2764,7 @@ StmtResult Parser::ParseOpenMPDeclarativeOrExecutableDirective(
   case OMPD_parallel_for_simd:
   case OMPD_parallel_sections:
   case OMPD_parallel_master:
+  case OMPD_parallel_masked:
   case OMPD_task:
   case OMPD_ordered:
   case OMPD_atomic:

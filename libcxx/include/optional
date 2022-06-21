@@ -171,12 +171,14 @@ template<class T>
 #include <__utility/in_place.h>
 #include <__utility/move.h>
 #include <__utility/swap.h>
-#include <compare>
 #include <initializer_list>
 #include <new>
 #include <stdexcept>
 #include <type_traits>
 #include <version>
+
+// standard-mandated includes
+#include <compare>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header

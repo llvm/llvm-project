@@ -795,13 +795,24 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
     .narrowScalarFor({{S64, S16}}, changeTo(0, S32))
     .scalarize(0);
 
-  getActionDefinitionsBuilder(G_FSUB)
+  auto &FSubActions = getActionDefinitionsBuilder(G_FSUB);
+  if (ST.has16BitInsts()) {
+    FSubActions
+      // Use actual fsub instruction
+      .legalFor({S32, S16})
+      // Must use fadd + fneg
+      .lowerFor({S64, V2S16});
+  } else {
+    FSubActions
       // Use actual fsub instruction
       .legalFor({S32})
       // Must use fadd + fneg
-      .lowerFor({S64, S16, V2S16})
-      .scalarize(0)
-      .clampScalar(0, S32, S64);
+      .lowerFor({S64, S16, V2S16});
+  }
+
+  FSubActions
+    .scalarize(0)
+    .clampScalar(0, S32, S64);
 
   // Whether this is legal depends on the floating point mode for the function.
   auto &FMad = getActionDefinitionsBuilder(G_FMAD);

@@ -2396,7 +2396,7 @@ OpenMPClauseKind Sema::isOpenMPPrivateDecl(ValueDecl *D, unsigned Level,
   // User-defined allocators are private since they must be defined in the
   // context of target region.
   if (DSAStack->hasExplicitDirective(isOpenMPTargetExecutionDirective, Level) &&
-      DSAStack->isUsesAllocatorsDecl(Level, D).getValueOr(
+      DSAStack->isUsesAllocatorsDecl(Level, D).value_or(
           DSAStackTy::UsesAllocatorsDeclKind::AllocatorTrait) ==
           DSAStackTy::UsesAllocatorsDeclKind::UserDefinedAllocator)
     return OMPC_private;
@@ -3541,7 +3541,7 @@ public:
           !Stack->isImplicitTaskFirstprivate(VD))
         return;
       // Skip allocators in uses_allocators clauses.
-      if (Stack->isUsesAllocatorsDecl(VD).hasValue())
+      if (Stack->isUsesAllocatorsDecl(VD))
         return;
 
       DSAStackTy::DSAVarData DVar = Stack->getTopDSA(VD, /*FromParent=*/false);
@@ -3972,6 +3972,7 @@ void Sema::ActOnOpenMPRegionStart(OpenMPDirectiveKind DKind, Scope *CurScope) {
   case OMPD_parallel_for_simd:
   case OMPD_parallel_sections:
   case OMPD_parallel_master:
+  case OMPD_parallel_masked:
   case OMPD_parallel_loop:
   case OMPD_teams:
   case OMPD_teams_distribute:
@@ -4913,6 +4914,7 @@ static bool checkNestingOfRegions(Sema &SemaRef, const DSAStackTy *Stack,
           isOpenMPTaskingDirective(ParentRegion) ||
           ParentRegion == OMPD_master || ParentRegion == OMPD_masked ||
           ParentRegion == OMPD_parallel_master ||
+          ParentRegion == OMPD_parallel_masked ||
           ParentRegion == OMPD_critical || ParentRegion == OMPD_ordered;
     } else if (isOpenMPWorksharingDirective(CurrentRegion) &&
                !isOpenMPParallelDirective(CurrentRegion) &&
@@ -4927,6 +4929,7 @@ static bool checkNestingOfRegions(Sema &SemaRef, const DSAStackTy *Stack,
           isOpenMPTaskingDirective(ParentRegion) ||
           ParentRegion == OMPD_master || ParentRegion == OMPD_masked ||
           ParentRegion == OMPD_parallel_master ||
+          ParentRegion == OMPD_parallel_masked ||
           ParentRegion == OMPD_critical || ParentRegion == OMPD_ordered;
       Recommend = ShouldBeInParallelRegion;
     } else if (CurrentRegion == OMPD_ordered) {
@@ -5187,8 +5190,7 @@ class AllocatorChecker final : public ConstStmtVisitor<AllocatorChecker, bool> {
 public:
   bool VisitDeclRefExpr(const DeclRefExpr *E) {
     return S->isUsesAllocatorsDecl(E->getDecl())
-               .getValueOr(
-                   DSAStackTy::UsesAllocatorsDeclKind::AllocatorTrait) ==
+               .value_or(DSAStackTy::UsesAllocatorsDeclKind::AllocatorTrait) ==
            DSAStackTy::UsesAllocatorsDeclKind::AllocatorTrait;
   }
   bool VisitStmt(const Stmt *S) {
@@ -6114,6 +6116,11 @@ StmtResult Sema::ActOnOpenMPExecutableDirective(
     break;
   case OMPD_parallel_master:
     Res = ActOnOpenMPParallelMasterDirective(ClausesWithImplicit, AStmt,
+                                             StartLoc, EndLoc);
+    AllowedNameModifiers.push_back(OMPD_parallel);
+    break;
+  case OMPD_parallel_masked:
+    Res = ActOnOpenMPParallelMaskedDirective(ClausesWithImplicit, AStmt,
                                              StartLoc, EndLoc);
     AllowedNameModifiers.push_back(OMPD_parallel);
     break;
@@ -7644,7 +7651,7 @@ public:
   bool doesCondDependOnLC() const { return CondDependOnLC.hasValue(); }
   /// Returns index of the loop we depend on (starting from 1), or 0 otherwise.
   unsigned getLoopDependentIdx() const {
-    return InitDependOnLC.getValueOr(CondDependOnLC.getValueOr(0));
+    return InitDependOnLC.value_or(CondDependOnLC.value_or(0));
   }
 
 private:
@@ -8043,7 +8050,7 @@ bool OpenMPIterationSpaceChecker::checkAndSetCond(Expr *S) {
           CE->getArg(1), CE->getSourceRange(), CE->getOperatorLoc());
     }
   }
-  if (Res.hasValue())
+  if (Res)
     return *Res;
   if (dependent() || SemaRef.CurContext->isDependentContext())
     return false;
@@ -10694,6 +10701,29 @@ Sema::ActOnOpenMPParallelMasterDirective(ArrayRef<OMPClause *> Clauses,
   setFunctionHasBranchProtectedScope();
 
   return OMPParallelMasterDirective::Create(
+      Context, StartLoc, EndLoc, Clauses, AStmt,
+      DSAStack->getTaskgroupReductionRef());
+}
+
+StmtResult
+Sema::ActOnOpenMPParallelMaskedDirective(ArrayRef<OMPClause *> Clauses,
+                                         Stmt *AStmt, SourceLocation StartLoc,
+                                         SourceLocation EndLoc) {
+  if (!AStmt)
+    return StmtError();
+
+  assert(isa<CapturedStmt>(AStmt) && "Captured statement expected");
+  auto *CS = cast<CapturedStmt>(AStmt);
+  // 1.2.2 OpenMP Language Terminology
+  // Structured block - An executable statement with a single entry at the
+  // top and a single exit at the bottom.
+  // The point of exit cannot be a branch out of the structured block.
+  // longjmp() and throw() must not violate the entry/exit criteria.
+  CS->getCapturedDecl()->setNothrow();
+
+  setFunctionHasBranchProtectedScope();
+
+  return OMPParallelMaskedDirective::Create(
       Context, StartLoc, EndLoc, Clauses, AStmt,
       DSAStack->getTaskgroupReductionRef());
 }
@@ -14824,6 +14854,7 @@ static OpenMPDirectiveKind getOpenMPCaptureRegionForClause(
     case OMPD_cancel:
     case OMPD_parallel:
     case OMPD_parallel_master:
+    case OMPD_parallel_masked:
     case OMPD_parallel_sections:
     case OMPD_parallel_for:
     case OMPD_parallel_loop:
@@ -14899,6 +14930,7 @@ static OpenMPDirectiveKind getOpenMPCaptureRegionForClause(
       break;
     case OMPD_parallel:
     case OMPD_parallel_master:
+    case OMPD_parallel_masked:
     case OMPD_parallel_sections:
     case OMPD_parallel_for:
     case OMPD_parallel_for_simd:
@@ -15005,6 +15037,7 @@ static OpenMPDirectiveKind getOpenMPCaptureRegionForClause(
     case OMPD_cancel:
     case OMPD_parallel:
     case OMPD_parallel_master:
+    case OMPD_parallel_masked:
     case OMPD_parallel_sections:
     case OMPD_parallel_for:
     case OMPD_parallel_for_simd:
@@ -15091,6 +15124,7 @@ static OpenMPDirectiveKind getOpenMPCaptureRegionForClause(
     case OMPD_cancel:
     case OMPD_parallel:
     case OMPD_parallel_master:
+    case OMPD_parallel_masked:
     case OMPD_parallel_sections:
     case OMPD_parallel_for:
     case OMPD_parallel_for_simd:
@@ -15183,6 +15217,7 @@ static OpenMPDirectiveKind getOpenMPCaptureRegionForClause(
     case OMPD_cancel:
     case OMPD_parallel:
     case OMPD_parallel_master:
+    case OMPD_parallel_masked:
     case OMPD_parallel_sections:
     case OMPD_threadprivate:
     case OMPD_allocate:
@@ -15269,6 +15304,7 @@ static OpenMPDirectiveKind getOpenMPCaptureRegionForClause(
     case OMPD_cancel:
     case OMPD_parallel:
     case OMPD_parallel_master:
+    case OMPD_parallel_masked:
     case OMPD_parallel_sections:
     case OMPD_threadprivate:
     case OMPD_allocate:
@@ -15356,6 +15392,7 @@ static OpenMPDirectiveKind getOpenMPCaptureRegionForClause(
     case OMPD_cancel:
     case OMPD_parallel:
     case OMPD_parallel_master:
+    case OMPD_parallel_masked:
     case OMPD_parallel_sections:
     case OMPD_parallel_for:
     case OMPD_parallel_for_simd:
@@ -15442,6 +15479,7 @@ static OpenMPDirectiveKind getOpenMPCaptureRegionForClause(
     case OMPD_cancel:
     case OMPD_parallel:
     case OMPD_parallel_master:
+    case OMPD_parallel_masked:
     case OMPD_parallel_sections:
     case OMPD_parallel_for:
     case OMPD_parallel_for_simd:
@@ -22146,7 +22184,7 @@ static void checkDeclInTargetContext(SourceLocation SL, SourceRange SR,
       return;
     }
   }
-  if (MapTy.hasValue())
+  if (MapTy)
     return;
   SemaRef.Diag(VD->getLocation(), diag::warn_omp_not_in_target_context);
   SemaRef.Diag(SL, diag::note_used_here) << SR;

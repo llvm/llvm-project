@@ -194,7 +194,7 @@ static void dumpAttribute(raw_ostream &OS, const DWARFDie &Die,
             Die.getAttributeValueAsReferencedDie(FormValue).getName(
                 DINameKind::LinkageName))
       OS << Space << "\"" << Name << '\"';
-  } else if (Attr == DW_AT_type) {
+  } else if (Attr == DW_AT_type || Attr == DW_AT_containing_type) {
     DWARFDie D = resolveReferencedType(Die, FormValue);
     if (D && !D.isNULL()) {
       OS << Space << "\"";
@@ -533,7 +533,7 @@ Optional<uint64_t> DWARFDie::getTypeSize(uint64_t PointerSize) {
                 UpperBoundAttr->getAsSignedConstant()) {
           int64_t LowerBound = 0;
           if (auto LowerBoundAttr = Child.find(DW_AT_lower_bound))
-            LowerBound = LowerBoundAttr->getAsSignedConstant().getValueOr(0);
+            LowerBound = LowerBoundAttr->getAsSignedConstant().value_or(0);
           Size *= *UpperBound - LowerBound + 1;
         }
     }

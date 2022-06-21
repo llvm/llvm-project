@@ -97,7 +97,7 @@ struct UpdateIndexCallbacks : public ParsingCallbacks {
     if (FIndex)
       FIndex->updateMain(Path, AST);
 
-    assert(AST.getDiagnostics().hasValue() &&
+    assert(AST.getDiagnostics() &&
            "We issue callback only with fresh preambles");
     std::vector<Diag> Diagnostics = *AST.getDiagnostics();
     if (ServerCallbacks)
@@ -538,7 +538,7 @@ void ClangdServer::prepareRename(PathRef File, Position Pos,
     // prepareRename is latency-sensitive: we don't query the index, as we
     // only need main-file references
     auto Results =
-        clangd::rename({Pos, NewName.getValueOr("__clangd_rename_placeholder"),
+        clangd::rename({Pos, NewName.value_or("__clangd_rename_placeholder"),
                         InpAST->AST, File, /*FS=*/nullptr,
                         /*Index=*/nullptr, RenameOpts});
     if (!Results) {
@@ -672,7 +672,7 @@ void ClangdServer::applyTweak(PathRef File, Range Sel, StringRef TweakID,
       }
       Effect = T.takeError();
     }
-    assert(Effect.hasValue() && "Expected at least one selection");
+    assert(Effect && "Expected at least one selection");
     if (*Effect && (*Effect)->FormatEdits) {
       // Format tweaks that require it centrally here.
       for (auto &It : (*Effect)->ApplyEdits) {
@@ -815,7 +815,7 @@ void ClangdServer::workspaceSymbols(
       "getWorkspaceSymbols", /*Path=*/"",
       [Query = Query.str(), Limit, CB = std::move(CB), this]() mutable {
         CB(clangd::getWorkspaceSymbols(Query, Limit, Index,
-                                       WorkspaceRoot.getValueOr("")));
+                                       WorkspaceRoot.value_or("")));
       });
 }
 

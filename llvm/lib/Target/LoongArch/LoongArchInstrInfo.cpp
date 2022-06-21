@@ -33,6 +33,17 @@ void LoongArchInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
     return;
   }
 
-  // TODO: Now, we only support GPR->GPR copies.
-  llvm_unreachable("LoongArch didn't implement copyPhysReg");
+  // FPR->FPR copies.
+  unsigned Opc;
+  if (LoongArch::FPR32RegClass.contains(DstReg, SrcReg)) {
+    Opc = LoongArch::FMOV_S;
+  } else if (LoongArch::FPR64RegClass.contains(DstReg, SrcReg)) {
+    Opc = LoongArch::FMOV_D;
+  } else {
+    // TODO: support other copies.
+    llvm_unreachable("Impossible reg-to-reg copy");
+  }
+
+  BuildMI(MBB, MBBI, DL, get(Opc), DstReg)
+      .addReg(SrcReg, getKillRegState(KillSrc));
 }

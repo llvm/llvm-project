@@ -249,7 +249,7 @@ void CompileUnit::ResolveSymbolContext(
     const SourceLocationSpec &src_location_spec,
     SymbolContextItem resolve_scope, SymbolContextList &sc_list) {
   const FileSpec file_spec = src_location_spec.GetFileSpec();
-  const uint32_t line = src_location_spec.GetLine().getValueOr(0);
+  const uint32_t line = src_location_spec.GetLine().value_or(0);
   const bool check_inlines = src_location_spec.GetCheckInlines();
 
   // First find all of the file indexes that match our "file_spec". If

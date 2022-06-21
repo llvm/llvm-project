@@ -887,7 +887,7 @@ ASTContext::getCanonicalTemplateTemplateParmDecl(
 
 TargetCXXABI::Kind ASTContext::getCXXABIKind() const {
   auto Kind = getTargetInfo().getCXXABI().getKind();
-  return getLangOpts().CXXABI.getValueOr(Kind);
+  return getLangOpts().CXXABI.value_or(Kind);
 }
 
 CXXABI *ASTContext::createCXXABI(const TargetInfo &T) {
@@ -11759,6 +11759,8 @@ QualType ASTContext::getRealTypeForBitwidth(unsigned DestWidth,
   FloatModeKind Ty =
       getTargetInfo().getRealTypeByWidth(DestWidth, ExplicitType);
   switch (Ty) {
+  case FloatModeKind::Half:
+    return HalfTy;
   case FloatModeKind::Float:
     return FloatTy;
   case FloatModeKind::Double:

@@ -18,7 +18,7 @@
 #include "mlir/Dialect/Complex/IR/Complex.h"
 #include "mlir/Dialect/Math/IR/Math.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
-#include "mlir/Dialect/SCF/SCF.h"
+#include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/Dialect/SparseTensor/IR/SparseTensor.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "mlir/Dialect/Utils/ReshapeOpsUtils.h"
@@ -100,8 +100,8 @@ static void buildStructuredOp(OpBuilder &b, OperationState &state,
                               RegionBuilderFn regionBuilder) {
   // Derive the result types if needed.
   SmallVector<Type> derivedResultTypes =
-      resultTensorTypes.getValueOr(TypeRange());
-  if (!resultTensorTypes.hasValue())
+      resultTensorTypes.value_or(TypeRange());
+  if (!resultTensorTypes)
     copy_if(outputs.getTypes(), std::back_inserter(derivedResultTypes),
             [](Type type) { return type.isa<RankedTensorType>(); });
 

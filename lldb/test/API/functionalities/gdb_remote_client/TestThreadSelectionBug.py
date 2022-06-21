@@ -7,8 +7,6 @@ from lldbsuite.test.lldbgdbclient import GDBRemoteTestBase
 
 class TestThreadSelectionBug(GDBRemoteTestBase):
 
-    mydir = TestBase.compute_mydir(__file__)
-
     def test(self):
         class MyResponder(MockGDBServerResponder):
             def cont(self):

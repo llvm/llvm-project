@@ -45,8 +45,7 @@ llvm::ArrayRef<uint8_t> MinidumpParser::GetData() {
 }
 
 llvm::ArrayRef<uint8_t> MinidumpParser::GetStream(StreamType stream_type) {
-  return m_file->getRawStream(stream_type)
-      .getValueOr(llvm::ArrayRef<uint8_t>());
+  return m_file->getRawStream(stream_type).value_or(llvm::ArrayRef<uint8_t>());
 }
 
 UUID MinidumpParser::GetModuleUUID(const minidump::Module *module) {
@@ -237,7 +236,7 @@ llvm::Optional<lldb::pid_t> MinidumpParser::GetPid() {
   }
 
   llvm::Optional<LinuxProcStatus> proc_status = GetLinuxProcStatus();
-  if (proc_status.hasValue()) {
+  if (proc_status) {
     return proc_status->GetPid();
   }
 

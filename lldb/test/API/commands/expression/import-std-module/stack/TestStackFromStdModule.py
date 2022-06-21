@@ -8,8 +8,6 @@ from lldbsuite.test import lldbutil
 
 class TestStack(TestBase):
 
-    mydir = TestBase.compute_mydir(__file__)
-
     @add_test_categories(["libc++"])
     @skipIf(compiler=no_match("clang"))
     @skipIfLinux # Declaration in some Linux headers causes LLDB to crash.

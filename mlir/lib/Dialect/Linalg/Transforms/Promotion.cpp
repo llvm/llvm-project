@@ -17,7 +17,7 @@
 #include "mlir/Dialect/Linalg/Passes.h"
 #include "mlir/Dialect/Linalg/Transforms/Transforms.h"
 #include "mlir/Dialect/Linalg/Utils/Utils.h"
-#include "mlir/Dialect/SCF/SCF.h"
+#include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/IR/AffineExpr.h"
 #include "mlir/IR/AffineExprVisitor.h"
 #include "mlir/IR/AffineMap.h"
@@ -148,7 +148,7 @@ LinalgOpInstancePromotionOptions::LinalgOpInstancePromotionOptions(
       alignment(options.alignment) {
   assert(linalgOp.hasBufferSemantics() && "revisit usage of shaped operand");
   auto vUseFullTileBuffers =
-      options.useFullTileBuffers.getValueOr(llvm::SmallBitVector());
+      options.useFullTileBuffers.value_or(llvm::SmallBitVector());
   vUseFullTileBuffers.resize(linalgOp.getNumInputsAndOutputs(),
                              options.useFullTileBuffersDefault);
 
@@ -372,7 +372,7 @@ mlir::linalg::promoteSubviewsPrecondition(Operation *op,
     auto sv =
         isa_and_nonnull<memref::SubViewOp>(opOperand->get().getDefiningOp());
     if (sv) {
-      if (!options.operandsToPromote.hasValue() ||
+      if (!options.operandsToPromote ||
           options.operandsToPromote->count(opOperand->getOperandNumber()))
         return success();
     }

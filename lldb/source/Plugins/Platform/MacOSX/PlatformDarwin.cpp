@@ -824,7 +824,7 @@ FileSpec PlatformDarwin::GetSDKDirectoryForModules(XcodeSDK::Type sdk_type) {
         FileSpec native_sdk_spec = sdks_spec;
         StreamString native_sdk_name;
         native_sdk_name.Printf("MacOSX%u.%u.sdk", version.getMajor(),
-                               version.getMinor().getValueOr(0));
+                               version.getMinor().value_or(0));
         native_sdk_spec.AppendPathComponent(native_sdk_name.GetString());
 
         if (FileSystem::Instance().Exists(native_sdk_spec)) {

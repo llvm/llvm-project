@@ -1654,11 +1654,13 @@ void BinaryFunction::postProcessJumpTables() {
                 "detected in function "
              << *this << '\n';
     }
-    for (unsigned I = 0; I < JT.OffsetEntries.size(); ++I) {
-      MCSymbol *Label =
-          getOrCreateLocalLabel(getAddress() + JT.OffsetEntries[I],
-                                /*CreatePastEnd*/ true);
-      JT.Entries.push_back(Label);
+    if (JT.Entries.empty()) {
+      for (unsigned I = 0; I < JT.OffsetEntries.size(); ++I) {
+        MCSymbol *Label =
+            getOrCreateLocalLabel(getAddress() + JT.OffsetEntries[I],
+                                  /*CreatePastEnd*/ true);
+        JT.Entries.push_back(Label);
+      }
     }
 
     const uint64_t BDSize =
@@ -1699,12 +1701,6 @@ void BinaryFunction::postProcessJumpTables() {
     }
   }
   clearList(JTSites);
-
-  // Free memory used by jump table offsets.
-  for (auto &JTI : JumpTables) {
-    JumpTable &JT = *JTI.second;
-    clearList(JT.OffsetEntries);
-  }
 
   // Conservatively populate all possible destinations for unknown indirect
   // branches.

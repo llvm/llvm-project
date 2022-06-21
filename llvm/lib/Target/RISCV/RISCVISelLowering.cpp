@@ -113,16 +113,17 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
   if (Subtarget.hasVInstructions()) {
     auto addRegClassForRVV = [this](MVT VT) {
       unsigned Size = VT.getSizeInBits().getKnownMinValue();
-      assert(Size <= 512 && isPowerOf2_32(Size));
       const TargetRegisterClass *RC;
-      if (Size <= 64)
+      if (Size <= RISCV::RVVBitsPerBlock)
         RC = &RISCV::VRRegClass;
-      else if (Size == 128)
+      else if (Size == 2 * RISCV::RVVBitsPerBlock)
         RC = &RISCV::VRM2RegClass;
-      else if (Size == 256)
+      else if (Size == 4 * RISCV::RVVBitsPerBlock)
         RC = &RISCV::VRM4RegClass;
-      else
+      else if (Size == 8 * RISCV::RVVBitsPerBlock)
         RC = &RISCV::VRM8RegClass;
+      else
+        llvm_unreachable("Unexpected size");
 
       addRegisterClass(VT, RC);
     };
@@ -941,6 +942,8 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
     setTargetDAGCombine({ISD::FCOPYSIGN, ISD::MGATHER, ISD::MSCATTER,
                          ISD::VP_GATHER, ISD::VP_SCATTER, ISD::SRA, ISD::SRL,
                          ISD::SHL, ISD::STORE, ISD::SPLAT_VECTOR});
+  if (Subtarget.useRVVForFixedLengthVectors())
+    setTargetDAGCombine(ISD::BITCAST);
 
   setLibcallName(RTLIB::FPEXT_F16_F32, "__extendhfsf2");
   setLibcallName(RTLIB::FPROUND_F32_F16, "__truncsfhf2");
@@ -9048,6 +9051,26 @@ SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
     }
     }
   }
+  case ISD::BITCAST: {
+    assert(Subtarget.useRVVForFixedLengthVectors());
+    SDValue N0 = N->getOperand(0);
+    EVT VT = N->getValueType(0);
+    EVT SrcVT = N0.getValueType();
+    // If this is a bitcast between a MVT::v4i1/v2i1/v1i1 and an illegal integer
+    // type, widen both sides to avoid a trip through memory.
+    if ((SrcVT == MVT::v1i1 || SrcVT == MVT::v2i1 || SrcVT == MVT::v4i1) &&
+        VT.isScalarInteger()) {
+      unsigned NumConcats = 8 / SrcVT.getVectorNumElements();
+      SmallVector<SDValue, 4> Ops(NumConcats, DAG.getUNDEF(SrcVT));
+      Ops[0] = N0;
+      SDLoc DL(N);
+      N0 = DAG.getNode(ISD::CONCAT_VECTORS, DL, MVT::v8i1, Ops);
+      N0 = DAG.getBitcast(MVT::i8, N0);
+      return DAG.getNode(ISD::TRUNCATE, DL, VT, N0);
+    }
+
+    return SDValue();
+  }
   }
 
   return SDValue();
@@ -9877,7 +9900,7 @@ static unsigned allocateRVVReg(MVT ValVT, unsigned ValNo,
     // Assign the first mask argument to V0.
     // This is an interim calling convention and it may be changed in the
     // future.
-    if (FirstMaskArgument.hasValue() && ValNo == FirstMaskArgument.getValue())
+    if (FirstMaskArgument && ValNo == *FirstMaskArgument)
       return State.AllocateReg(RISCV::V0);
     return State.AllocateReg(ArgVRs);
   }

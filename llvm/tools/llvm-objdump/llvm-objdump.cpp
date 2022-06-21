@@ -1709,7 +1709,7 @@ static void disassembleObject(const ObjectFile *Obj, bool InlineRelocs) {
                 "no assembly info for target " + TripleName);
 
   if (MCPU.empty())
-    MCPU = Obj->tryGetCPUName().getValueOr("").str();
+    MCPU = Obj->tryGetCPUName().value_or("").str();
 
   std::unique_ptr<const MCSubtargetInfo> STI(
       TheTarget->createMCSubtargetInfo(TripleName, MCPU, Features.getString()));
@@ -2283,7 +2283,7 @@ static void printFaultMaps(const ObjectFile *Obj) {
 
   outs() << "FaultMap table:\n";
 
-  if (!FaultMapSection.hasValue()) {
+  if (!FaultMapSection) {
     outs() << "<not found>\n";
     return;
   }

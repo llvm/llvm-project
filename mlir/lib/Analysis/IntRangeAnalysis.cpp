@@ -109,7 +109,7 @@ static APInt getLoopBoundFromFold(Optional<OpFoldResult> loopBound,
                                   detail::IntRangeAnalysisImpl &analysis,
                                   bool getUpper) {
   unsigned int width = ConstantIntRanges::getStorageBitwidth(boundType);
-  if (loopBound.hasValue()) {
+  if (loopBound) {
     if (loopBound->is<Attribute>()) {
       if (auto bound =
               loopBound->get<Attribute>().dyn_cast_or_null<IntegerAttr>())
@@ -165,8 +165,7 @@ ChangeResult detail::IntRangeAnalysisImpl::visitOperation(
       bool isYieldedResult = llvm::any_of(v.getUsers(), [](Operation *op) {
         return op->hasTrait<OpTrait::IsTerminator>();
       });
-      if (isYieldedResult && oldRange.hasValue() &&
-          !(lattice.getValue() == *oldRange)) {
+      if (isYieldedResult && oldRange && !(lattice.getValue() == *oldRange)) {
         LLVM_DEBUG(llvm::dbgs() << "Loop variant loop result detected\n");
         result |= lattice.markPessimisticFixpoint();
       }
@@ -269,8 +268,7 @@ ChangeResult detail::IntRangeAnalysisImpl::visitNonControlFlowArguments(
       bool isYieldedValue = llvm::any_of(v.getUsers(), [](Operation *op) {
         return op->hasTrait<OpTrait::IsTerminator>();
       });
-      if (isYieldedValue && oldRange.hasValue() &&
-          !(lattice.getValue() == *oldRange)) {
+      if (isYieldedValue && oldRange && !(lattice.getValue() == *oldRange)) {
         LLVM_DEBUG(llvm::dbgs() << "Loop variant loop result detected\n");
         result |= lattice.markPessimisticFixpoint();
       }
@@ -290,7 +288,7 @@ ChangeResult detail::IntRangeAnalysisImpl::visitNonControlFlowArguments(
   // Infer bounds for loop arguments that have static bounds
   if (auto loop = dyn_cast<LoopLikeOpInterface>(op)) {
     Optional<Value> iv = loop.getSingleInductionVar();
-    if (!iv.hasValue()) {
+    if (!iv) {
       return ForwardDataFlowAnalysis<
           IntRangeLattice>::visitNonControlFlowArguments(op, region, operands);
     }
