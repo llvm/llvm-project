@@ -1276,6 +1276,40 @@ public:
 };
 } // namespace
 
+/// Fold a parallel_insert_slice source coming from a tensor.cast op.
+///
+/// Example:
+/// ```
+/// %0 = scf.foreach_thread (%arg0) in (%c2) -> (tensor<128xf32>) {
+///   %1 = compute_some_tensor() : tensor<64xf32>
+///   %2 = tensor.cast %1 : tensor<64xf32> to tensor<?xf32>
+///   scf.foreach_thread.perform_concurrently {
+///     scf.foreach_thread.parallel_insert_slice %2 into %out[...] [64] [1] :
+///        tensor<?xf32> into tensor<128xf32>
+///   }
+/// }
+/// ```
+///
+/// is folded into:
+/// ```
+/// %0 = scf.foreach_thread (%arg0) in (%c2) -> (tensor<128xf32>) {
+///   %1 = compute_some_tensor() : tensor<64xf32>
+///   scf.foreach_thread.perform_concurrently {
+///     scf.foreach_thread.parallel_insert_slice %1 into %out[...] [64] [1] :
+///        tensor<64xf32> into tensor<128xf32>
+///   }
+/// }
+/// ```
+LogicalResult
+ParallelInsertSliceOp::fold(ArrayRef<Attribute> operands,
+                            SmallVectorImpl<OpFoldResult> &results) {
+  auto sourceCast = getSource().getDefiningOp<tensor::CastOp>();
+  if (!sourceCast)
+    return failure();
+  getSourceMutable().assign(sourceCast.getSource());
+  return success();
+}
+
 void ParallelInsertSliceOp::getCanonicalizationPatterns(
     RewritePatternSet &results, MLIRContext *context) {
   results.add<ParallelInsertSliceOpConstantArgumentFolder>(context);
