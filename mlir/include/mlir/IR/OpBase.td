@@ -1447,45 +1447,6 @@ def TypeArrayAttr : TypedArrayAttrBase<TypeAttr, "type array attribute"> {
 def IndexListArrayAttr :
   TypedArrayAttrBase<I64ArrayAttr, "Array of 64-bit integer array attributes">;
 
-// Attribute information for an Attribute field within a StructAttr.
-class StructFieldAttr<string thisName, Attr thisType>
-    : Deprecated<"StructAttr is being removed on June 20"> {
-  // Name of this field in the StructAttr.
-  string name = thisName;
-
-  // Attribute type wrapped by the struct attr.
-  Attr type = thisType;
-}
-
-// Structured attribute that wraps a DictionaryAttr and provides both a
-// validation method and set of accessors for a fixed set of fields. This is
-// useful when representing data that would normally be in a structure.
-class StructAttr<string name, Dialect d,
-                 list<StructFieldAttr> attributes> :
-    Deprecated<"StructAttr is being removed on June 20">,
-    DictionaryAttrBase<CPred<"$_self.isa<" # d.cppNamespace
-                                           # "::" # name # ">()">,
-        "DictionaryAttr with field(s): " #
-        !interleave(!foreach(a, attributes, "'" # a.name # "'"), ", ") #
-        " (each field having its own constraints)"> {
-  // Name for this StructAttr.
-  string className = name;
-
-  // Return type should match the name of the structure.
-  let returnType = d.cppNamespace # "::" # name;
-
-  // Storage type should match the name of the structure.
-  let storageType = d.cppNamespace # "::" # name;
-
-  // The dialect this StructAttr belongs to.
-  Dialect dialect = d;
-
-  let cppNamespace = d.cppNamespace;
-
-  // List of fields that the StructAttr contains.
-  list<StructFieldAttr> fields = attributes;
-}
-
 // Attributes containing symbol references.
 def SymbolRefAttr : Attr<CPred<"$_self.isa<::mlir::SymbolRefAttr>()">,
                         "symbol reference attribute"> {
