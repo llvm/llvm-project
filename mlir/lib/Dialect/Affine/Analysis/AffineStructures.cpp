@@ -359,7 +359,7 @@ static bool LLVM_ATTRIBUTE_UNUSED areIdsUnique(
   ArrayRef<Optional<Value>> maybeValues =
       cst.getMaybeValues().slice(start, end - start);
   for (Optional<Value> val : maybeValues) {
-    if (val.hasValue() && !uniqueIds.insert(val.getValue()).second)
+    if (val && !uniqueIds.insert(*val).second)
       return false;
   }
   return true;
@@ -831,7 +831,7 @@ static bool detectAsMod(const FlatAffineValueConstraints &cst, unsigned pos,
                                      dimExpr.getPosition());
       // If `id_n` has an upperbound that is less than the divisor, mod can be
       // eliminated altogether.
-      if (ub.hasValue() && ub.getValue() < divisor)
+      if (ub && *ub < divisor)
         memo[pos] = dimExpr;
       else
         memo[pos] = dimExpr % divisor;
@@ -1330,7 +1330,7 @@ LogicalResult FlatAffineValueConstraints::addSliceBounds(
 bool FlatAffineValueConstraints::findId(Value val, unsigned *pos) const {
   unsigned i = 0;
   for (const auto &mayBeId : values) {
-    if (mayBeId.hasValue() && mayBeId.getValue() == val) {
+    if (mayBeId && *mayBeId == val) {
       *pos = i;
       return true;
     }

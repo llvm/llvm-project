@@ -312,7 +312,7 @@ ParseResult Parser::parseAttributeDict(NamedAttrList &attributes) {
 /// Parse a float attribute.
 Attribute Parser::parseFloatAttr(Type type, bool isNegative) {
   auto val = getToken().getFloatingPointValue();
-  if (!val.hasValue())
+  if (!val)
     return (emitError("floating point value too large for attribute"), nullptr);
   consumeToken(Token::floatliteral);
   if (!type) {
@@ -517,7 +517,7 @@ DenseElementsAttr TensorLiteralParser::getAttr(SMLoc loc,
   Type eltType = type.getElementType();
 
   // Check to see if we parse the literal from a hex string.
-  if (hexStorage.hasValue() &&
+  if (hexStorage &&
       (eltType.isIntOrIndexOrFloat() || eltType.isa<ComplexType>()))
     return getHexAttr(loc, type);
 
@@ -530,7 +530,7 @@ DenseElementsAttr TensorLiteralParser::getAttr(SMLoc loc,
   }
 
   // Handle the case where no elements were parsed.
-  if (!hexStorage.hasValue() && storage.empty() && type.getNumElements()) {
+  if (!hexStorage && storage.empty() && type.getNumElements()) {
     p.emitError(loc) << "parsed zero elements, but type (" << type
                      << ") expected at least 1";
     return nullptr;
@@ -648,7 +648,7 @@ TensorLiteralParser::getFloatAttrElements(SMLoc loc, FloatType eltTy,
 
     // Build the float values from tokens.
     auto val = token.getFloatingPointValue();
-    if (!val.hasValue())
+    if (!val)
       return p.emitError("floating point value too large for attribute");
 
     APFloat apVal(isNegative ? -*val : *val);

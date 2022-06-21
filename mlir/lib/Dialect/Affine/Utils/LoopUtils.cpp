@@ -246,7 +246,7 @@ LogicalResult mlir::affineForOpBodySkew(AffineForOp forOp,
   // better way to pipeline for such loops is to first tile them and extract
   // constant trip count "full tiles" before applying this.
   auto mayBeConstTripCount = getConstantTripCount(forOp);
-  if (!mayBeConstTripCount.hasValue()) {
+  if (!mayBeConstTripCount) {
     LLVM_DEBUG(forOp.emitRemark("non-constant trip count loop not handled"));
     return success();
   }
@@ -2094,7 +2094,7 @@ static LogicalResult generateCopy(
   lbs.reserve(rank);
   Optional<int64_t> numElements = region.getConstantBoundingSizeAndShape(
       &fastBufferShape, &lbs, &lbDivisors);
-  if (!numElements.hasValue()) {
+  if (!numElements) {
     LLVM_DEBUG(llvm::dbgs() << "Non-constant region size not supported\n");
     return failure();
   }

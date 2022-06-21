@@ -77,7 +77,7 @@ void ExecuteOp::getSuccessorRegions(Optional<unsigned> index,
                                     ArrayRef<Attribute>,
                                     SmallVectorImpl<RegionSuccessor> &regions) {
   // The `body` region branch back to the parent operation.
-  if (index.hasValue()) {
+  if (index) {
     assert(*index == 0 && "invalid region index");
     regions.push_back(RegionSuccessor(results()));
     return;

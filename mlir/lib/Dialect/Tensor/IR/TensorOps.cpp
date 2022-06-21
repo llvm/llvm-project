@@ -303,7 +303,7 @@ Optional<int64_t> DimOp::getConstantIndex() {
 LogicalResult DimOp::verify() {
   // Assume unknown index to be in range.
   Optional<int64_t> index = getConstantIndex();
-  if (!index.hasValue())
+  if (!index)
     return success();
 
   // Check that constant index is not knowingly out of range.

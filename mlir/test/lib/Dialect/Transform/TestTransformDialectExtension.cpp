@@ -115,7 +115,7 @@ mlir::test::TestProduceParamOrForwardOperandOp::apply(
 }
 
 LogicalResult mlir::test::TestProduceParamOrForwardOperandOp::verify() {
-  if (getParameter().hasValue() ^ (getNumOperands() != 1))
+  if (getParameter().has_value() ^ (getNumOperands() != 1))
     return emitOpError() << "expects either a parameter or an operand";
   return success();
 }

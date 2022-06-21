@@ -127,7 +127,7 @@ void VectorizerTestPass::testVectorShapeRatio(llvm::raw_ostream &outs) {
     // future we can always extend.
     auto superVectorType = opInst->getResult(0).getType().cast<VectorType>();
     auto ratio = shapeRatio(superVectorType, subVectorType);
-    if (!ratio.hasValue()) {
+    if (!ratio) {
       opInst->emitRemark("NOT MATCHED");
     } else {
       outs << "\nmatched: " << *opInst << " with shape ratio: ";

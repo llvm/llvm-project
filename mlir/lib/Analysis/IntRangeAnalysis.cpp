@@ -109,7 +109,7 @@ static APInt getLoopBoundFromFold(Optional<OpFoldResult> loopBound,
                                   detail::IntRangeAnalysisImpl &analysis,
                                   bool getUpper) {
   unsigned int width = ConstantIntRanges::getStorageBitwidth(boundType);
-  if (loopBound.hasValue()) {
+  if (loopBound) {
     if (loopBound->is<Attribute>()) {
       if (auto bound =
               loopBound->get<Attribute>().dyn_cast_or_null<IntegerAttr>())
@@ -290,7 +290,7 @@ ChangeResult detail::IntRangeAnalysisImpl::visitNonControlFlowArguments(
   // Infer bounds for loop arguments that have static bounds
   if (auto loop = dyn_cast<LoopLikeOpInterface>(op)) {
     Optional<Value> iv = loop.getSingleInductionVar();
-    if (!iv.hasValue()) {
+    if (!iv) {
       return ForwardDataFlowAnalysis<
           IntRangeLattice>::visitNonControlFlowArguments(op, region, operands);
     }
