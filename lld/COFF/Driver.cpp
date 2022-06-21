@@ -1729,7 +1729,7 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
   if (!icfLevel)
     icfLevel = doGC ? ICFLevel::All : ICFLevel::None;
   config->doGC = doGC;
-  config->doICF = icfLevel.getValue();
+  config->doICF = *icfLevel;
   config->tailMerge =
       (tailMerge == 1 && config->doICF != ICFLevel::None) || tailMerge == 2;
   config->ltoDebugPassManager = ltoDebugPM;

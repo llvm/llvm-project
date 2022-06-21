@@ -446,7 +446,7 @@ llvm::Expected<IndexFileIn> readYAML(llvm::StringRef Data,
     if (Variant.Relation)
       Relations.insert(*Variant.Relation);
     if (Variant.Source) {
-      auto &IGN = Variant.Source.getValue();
+      auto &IGN = *Variant.Source;
       auto Entry = Sources.try_emplace(IGN.URI).first;
       Entry->getValue() = std::move(IGN);
       // Fixup refs to refer to map keys which will live on

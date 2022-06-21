@@ -2071,7 +2071,7 @@ private:
 
       Fortran::lower::createArrayOfPointerAssignment(
           *this, assign.lhs, assign.rhs, explicitIterSpace, implicitIterSpace,
-          lbounds.getValue(), ubounds, localSymbols, stmtCtx);
+          *lbounds, ubounds, localSymbols, stmtCtx);
       return;
     }
 

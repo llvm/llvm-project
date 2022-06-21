@@ -560,7 +560,7 @@ clang::DeclContext *PdbAstBuilder::GetOrCreateDeclContextForUid(PdbSymUid uid) {
   auto option = GetOrCreateDeclForUid(uid);
   if (!option)
     return nullptr;
-  clang::Decl *decl = FromCompilerDecl(option.getValue());
+  clang::Decl *decl = FromCompilerDecl(*option);
   if (!decl)
     return nullptr;
 

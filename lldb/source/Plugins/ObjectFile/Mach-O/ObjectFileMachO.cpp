@@ -6104,7 +6104,7 @@ llvm::VersionTuple ObjectFileMachO::GetSDKVersion() {
       m_sdk_versions = llvm::VersionTuple();
   }
 
-  return m_sdk_versions.getValue();
+  return *m_sdk_versions;
 }
 
 bool ObjectFileMachO::GetIsDynamicLinkEditor() {

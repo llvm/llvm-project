@@ -1329,7 +1329,7 @@ approximateImplicitConversion(const TheCheck &Check, QualType LType,
   if (AfterFirstStdConv) {
     LLVM_DEBUG(llvm::dbgs() << "--- approximateImplicitConversion. Standard "
                                "Pre-Conversion found!\n");
-    ImplicitSeq.AfterFirstStandard = AfterFirstStdConv.getValue();
+    ImplicitSeq.AfterFirstStandard = *AfterFirstStdConv;
     WorkType = ImplicitSeq.AfterFirstStandard;
   }
 
@@ -1349,7 +1349,7 @@ approximateImplicitConversion(const TheCheck &Check, QualType LType,
       if (ConversionOperatorResult) {
         LLVM_DEBUG(llvm::dbgs() << "--- approximateImplicitConversion. Found "
                                    "conversion operator.\n");
-        ImplicitSeq.update(ConversionOperatorResult.getValue());
+        ImplicitSeq.update(*ConversionOperatorResult);
         WorkType = ImplicitSeq.getTypeAfterUserDefinedConversion();
         FoundConversionOperator = true;
       }
@@ -1364,7 +1364,7 @@ approximateImplicitConversion(const TheCheck &Check, QualType LType,
       if (ConvCtorResult) {
         LLVM_DEBUG(llvm::dbgs() << "--- approximateImplicitConversion. Found "
                                    "converting constructor.\n");
-        ImplicitSeq.update(ConvCtorResult.getValue());
+        ImplicitSeq.update(*ConvCtorResult);
         WorkType = ImplicitSeq.getTypeAfterUserDefinedConversion();
         FoundConvertingCtor = true;
       }

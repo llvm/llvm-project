@@ -89,7 +89,7 @@ static void prepareMinOrMaxArguments(
     const Fortran::lower::OperandPrepare &prepareOtherArgument,
     Fortran::lower::AbstractConverter &converter) {
   assert(retTy && "MIN and MAX must have a return type");
-  mlir::Type resultType = retTy.getValue();
+  mlir::Type resultType = *retTy;
   mlir::Location loc = converter.getCurrentLocation();
   if (fir::isa_char(resultType))
     TODO(loc,
@@ -123,7 +123,7 @@ lowerMinOrMax(fir::FirOpBuilder &builder, mlir::Location loc,
   assert(numOperands >= 2 && !isPresentCheck(0) && !isPresentCheck(1) &&
          "min/max must have at least two non-optional args");
   assert(retTy && "MIN and MAX must have a return type");
-  mlir::Type resultType = retTy.getValue();
+  mlir::Type resultType = *retTy;
   llvm::SmallVector<fir::ExtendedValue> args;
   args.push_back(getOperand(0));
   args.push_back(getOperand(1));
@@ -136,7 +136,7 @@ lowerMinOrMax(fir::FirOpBuilder &builder, mlir::Location loc,
       // Argument is dynamically optional.
       extremum =
           builder
-              .genIfOp(loc, {resultType}, isPresentRuntimeCheck.getValue(),
+              .genIfOp(loc, {resultType}, *isPresentRuntimeCheck,
                        /*withElseRegion=*/true)
               .genThen([&]() {
                 llvm::SmallVector<fir::ExtendedValue> args;
