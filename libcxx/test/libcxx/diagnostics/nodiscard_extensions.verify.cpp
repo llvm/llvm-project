@@ -16,6 +16,7 @@
 // be listed in `UsingLibcxx.rst` in the documentation for the extension.
 
 // ADDITIONAL_COMPILE_FLAGS: -D_LIBCPP_ENABLE_NODISCARD
+// ADDITIONAL_COMPILE_FLAGS: -D_LIBCPP_DISABLE_DEPRECATION_WARNINGS
 
 #include <algorithm>
 #include <bit> // bit_cast
