@@ -26,7 +26,12 @@
     ret void
   }
 
+  define amdgpu_ps void @early_term_depth_only() #1 {
+    ret void
+  }
+
   attributes #0 = { "amdgpu-color-export"="0" "amdgpu-depth-export"="0" }
+  attributes #1 = { "amdgpu-color-export"="0" "amdgpu-depth-export"="1" }
 ...
 
 ---
@@ -253,5 +258,43 @@ body: |
   bb.1:
     liveins: $vgpr0
     EXP_DONE 0, $vgpr0, $vgpr0, $vgpr0, $vgpr0, -1, -1, 15, implicit $exec
+    S_ENDPGM 0
+...
+
+---
+name: early_term_depth_only
+tracksRegLiveness: true
+liveins:
+  - { reg: '$sgpr0' }
+  - { reg: '$sgpr1' }
+body: |
+  ; GCN-LABEL: name: early_term_depth_only
+  ; GCN: bb.0:
+  ; GCN:   successors: %bb.1(0x80000000), %bb.2(0x00000000)
+  ; GCN:   liveins: $sgpr0, $sgpr1
+  ; GCN:   $vgpr0 = V_MOV_B32_e32 0, implicit $exec
+  ; GCN:   dead $sgpr0 = S_AND_B32 $sgpr0, killed $sgpr1, implicit-def $scc
+  ; GCN:   S_CBRANCH_SCC0 %bb.2, implicit $scc
+  ; GCN: bb.1:
+  ; GCN:   liveins: $vgpr0
+  ; GCN:   EXP_DONE 8, $vgpr0, $vgpr0, $vgpr0, $vgpr0, -1, -1, 15, implicit $exec
+  ; GCN:   S_ENDPGM 0
+  ; GCN: bb.2:
+  ; GCN:   $exec = S_MOV_B64 0
+  ; GFX9:  EXP_DONE 9, undef $vgpr0, undef $vgpr0, undef $vgpr0, undef $vgpr0, 1, 0, 0, implicit $exec
+  ; GFX10: EXP_DONE 9, undef $vgpr0, undef $vgpr0, undef $vgpr0, undef $vgpr0, 1, 0, 0, implicit $exec
+  ; GFX11: EXP_DONE 8, undef $vgpr0, undef $vgpr0, undef $vgpr0, undef $vgpr0, 1, 0, 0, implicit $exec
+  ; GCN:   S_ENDPGM 0
+  bb.0:
+    liveins: $sgpr0, $sgpr1
+    successors: %bb.1
+
+    $vgpr0 = V_MOV_B32_e32 0, implicit $exec
+    dead $sgpr0 = S_AND_B32 $sgpr0, killed $sgpr1, implicit-def $scc
+    SI_EARLY_TERMINATE_SCC0 implicit $scc, implicit $exec
+
+  bb.1:
+    liveins: $vgpr0
+    EXP_DONE 8, $vgpr0, $vgpr0, $vgpr0, $vgpr0, -1, -1, 15, implicit $exec
     S_ENDPGM 0
 ...
