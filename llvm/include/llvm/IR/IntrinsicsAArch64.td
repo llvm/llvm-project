@@ -2689,4 +2689,24 @@ let TargetPrefix = "aarch64" in {
   def int_aarch64_sme_set_tpidr2
       : DefaultAttrsIntrinsic<[], [llvm_i64_ty],
                               [IntrNoMem, IntrHasSideEffects]>;
+  // Clamp
+  //
+
+  def int_aarch64_sve_sclamp : AdvSIMD_3VectorArg_Intrinsic;
+  def int_aarch64_sve_uclamp : AdvSIMD_3VectorArg_Intrinsic;
+
+  //
+  // Reversal
+  //
+
+  def int_aarch64_sve_revd : AdvSIMD_Merged1VectorArg_Intrinsic;
+
+  //
+  // Predicate selection
+  //
+
+  def int_aarch64_sve_psel
+      : DefaultAttrsIntrinsic<[llvm_anyvector_ty],
+                              [LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>,
+                               LLVMMatchType<0>, llvm_i32_ty]>;
 }
