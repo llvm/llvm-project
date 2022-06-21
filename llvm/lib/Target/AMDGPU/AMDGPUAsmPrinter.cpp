@@ -977,8 +977,10 @@ void AMDGPUAsmPrinter::EmitProgramInfoSI(const MachineFunction &MF,
 
   if (MF.getFunction().getCallingConv() == CallingConv::AMDGPU_PS) {
     OutStreamer->emitInt32(R_00B02C_SPI_SHADER_PGM_RSRC2_PS);
-    OutStreamer->emitInt32(
-        S_00B02C_EXTRA_LDS_SIZE(CurrentProgramInfo.LDSBlocks));
+    unsigned ExtraLDSSize = STM.getGeneration() >= AMDGPUSubtarget::GFX11
+                                ? divideCeil(CurrentProgramInfo.LDSBlocks, 2)
+                                : CurrentProgramInfo.LDSBlocks;
+    OutStreamer->emitInt32(S_00B02C_EXTRA_LDS_SIZE(ExtraLDSSize));
     OutStreamer->emitInt32(R_0286CC_SPI_PS_INPUT_ENA);
     OutStreamer->emitInt32(MFI->getPSInputEnable());
     OutStreamer->emitInt32(R_0286D0_SPI_PS_INPUT_ADDR);
@@ -1022,7 +1024,10 @@ void AMDGPUAsmPrinter::EmitPALMetadata(const MachineFunction &MF,
   // ScratchSize is in bytes, 16 aligned.
   MD->setScratchSize(CC, alignTo(CurrentProgramInfo.ScratchSize, 16));
   if (MF.getFunction().getCallingConv() == CallingConv::AMDGPU_PS) {
-    MD->setRsrc2(CC, S_00B02C_EXTRA_LDS_SIZE(CurrentProgramInfo.LDSBlocks));
+    unsigned ExtraLDSSize = STM.getGeneration() >= AMDGPUSubtarget::GFX11
+                                ? divideCeil(CurrentProgramInfo.LDSBlocks, 2)
+                                : CurrentProgramInfo.LDSBlocks;
+    MD->setRsrc2(CC, S_00B02C_EXTRA_LDS_SIZE(ExtraLDSSize));
     MD->setSpiPsInputEna(MFI->getPSInputEnable());
     MD->setSpiPsInputAddr(MFI->getPSInputAddr());
   }
