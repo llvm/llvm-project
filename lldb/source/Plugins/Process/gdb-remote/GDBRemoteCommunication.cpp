@@ -125,6 +125,29 @@ GDBRemoteCommunication::SendPacketNoLock(llvm::StringRef payload) {
 }
 
 GDBRemoteCommunication::PacketResult
+GDBRemoteCommunication::SendNotificationPacketNoLock(
+    llvm::StringRef notify_type, std::deque<std::string> &queue,
+    llvm::StringRef payload) {
+  PacketResult ret = PacketResult::Success;
+
+  // If there are no notification in the queue, send the notification
+  // packet.
+  if (queue.empty()) {
+    StreamString packet(0, 4, eByteOrderBig);
+    packet.PutChar('%');
+    packet.Write(notify_type.data(), notify_type.size());
+    packet.PutChar(':');
+    packet.Write(payload.data(), payload.size());
+    packet.PutChar('#');
+    packet.PutHex8(CalculcateChecksum(payload));
+    ret = SendRawPacketNoLock(packet.GetString(), true);
+  }
+
+  queue.push_back(payload.str());
+  return ret;
+}
+
+GDBRemoteCommunication::PacketResult
 GDBRemoteCommunication::SendRawPacketNoLock(llvm::StringRef packet,
                                             bool skip_ack) {
   if (IsConnected()) {

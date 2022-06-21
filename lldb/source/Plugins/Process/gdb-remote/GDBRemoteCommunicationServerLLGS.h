@@ -106,6 +106,8 @@ protected:
   uint32_t m_next_saved_registers_id = 1;
   bool m_thread_suffix_supported = false;
   bool m_list_threads_in_stop_reply = false;
+  bool m_non_stop = false;
+  std::deque<std::string> m_stop_notification_queue;
 
   NativeProcessProtocol::Extension m_extensions_supported = {};
 
@@ -113,11 +115,17 @@ protected:
 
   PacketResult SendWResponse(NativeProcessProtocol *process);
 
+  StreamString PrepareStopReplyPacketForThread(NativeThreadProtocol &thread);
+
   PacketResult SendStopReplyPacketForThread(NativeProcessProtocol &process,
-                                            lldb::tid_t tid);
+                                            lldb::tid_t tid,
+                                            bool force_synchronous);
 
   PacketResult SendStopReasonForState(NativeProcessProtocol &process,
-                                      lldb::StateType process_state);
+                                      lldb::StateType process_state,
+                                      bool force_synchronous);
+
+  void EnqueueStopReplyPackets(lldb::tid_t thread_to_skip);
 
   PacketResult Handle_k(StringExtractorGDBRemote &packet);
 
@@ -219,6 +227,12 @@ protected:
 
   PacketResult Handle_qSaveCore(StringExtractorGDBRemote &packet);
 
+  PacketResult Handle_QNonStop(StringExtractorGDBRemote &packet);
+
+  PacketResult Handle_vStopped(StringExtractorGDBRemote &packet);
+
+  PacketResult Handle_vCtrlC(StringExtractorGDBRemote &packet);
+
   PacketResult Handle_g(StringExtractorGDBRemote &packet);
 
   PacketResult Handle_qMemTags(StringExtractorGDBRemote &packet);
@@ -245,6 +259,10 @@ protected:
 
   std::vector<std::string> HandleFeatures(
       const llvm::ArrayRef<llvm::StringRef> client_features) override;
+
+  // Provide a response for successful continue action, i.e. send "OK"
+  // in non-stop mode, no response otherwise.
+  PacketResult SendContinueSuccessResponse();
 
 private:
   llvm::Expected<std::unique_ptr<llvm::MemoryBuffer>> BuildTargetXml();

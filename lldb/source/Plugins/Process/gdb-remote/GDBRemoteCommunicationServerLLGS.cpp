@@ -235,6 +235,16 @@ void GDBRemoteCommunicationServerLLGS::RegisterPacketHandlers() {
   RegisterMemberFunctionHandler(
       StringExtractorGDBRemote::eServerPacketType_qLLDBSaveCore,
       &GDBRemoteCommunicationServerLLGS::Handle_qSaveCore);
+
+  RegisterMemberFunctionHandler(
+      StringExtractorGDBRemote::eServerPacketType_QNonStop,
+      &GDBRemoteCommunicationServerLLGS::Handle_QNonStop);
+  RegisterMemberFunctionHandler(
+      StringExtractorGDBRemote::eServerPacketType_vStopped,
+      &GDBRemoteCommunicationServerLLGS::Handle_vStopped);
+  RegisterMemberFunctionHandler(
+      StringExtractorGDBRemote::eServerPacketType_vCtrlC,
+      &GDBRemoteCommunicationServerLLGS::Handle_vCtrlC);
 }
 
 void GDBRemoteCommunicationServerLLGS::SetLaunchInfo(const ProcessLaunchInfo &info) {
@@ -476,6 +486,9 @@ GDBRemoteCommunicationServerLLGS::SendWResponse(
   response.Format("{0:g}", *wait_status);
   if (bool(m_extensions_supported & NativeProcessProtocol::Extension::multiprocess))
     response.Format(";process:{0:x-}", process->GetID());
+  if (m_non_stop)
+    return SendNotificationPacketNoLock("Stop", m_stop_notification_queue,
+                                        response.GetString());
   return SendPacketNoLock(response.GetString());
 }
 
@@ -766,23 +779,22 @@ GetJSONThreadsInfo(NativeProcessProtocol &process, bool abridged) {
   return threads_array;
 }
 
-GDBRemoteCommunication::PacketResult
-GDBRemoteCommunicationServerLLGS::SendStopReplyPacketForThread(
-    NativeProcessProtocol &process, lldb::tid_t tid) {
+StreamString
+GDBRemoteCommunicationServerLLGS::PrepareStopReplyPacketForThread(
+    NativeThreadProtocol &thread) {
   Log *log = GetLog(LLDBLog::Process | LLDBLog::Thread);
 
-  LLDB_LOG(log, "preparing packet for pid {0} tid {1}", process.GetID(), tid);
+  NativeProcessProtocol &process = thread.GetProcess();
 
-  // Ensure we can get info on the given thread.
-  NativeThreadProtocol *thread = process.GetThreadByID(tid);
-  if (!thread)
-    return SendErrorResponse(51);
+  LLDB_LOG(log, "preparing packet for pid {0} tid {1}", process.GetID(),
+           thread.GetID());
 
   // Grab the reason this thread stopped.
+  StreamString response;
   struct ThreadStopInfo tid_stop_info;
   std::string description;
-  if (!thread->GetStopReason(tid_stop_info, description))
-    return SendErrorResponse(52);
+  if (!thread.GetStopReason(tid_stop_info, description))
+    return response;
 
   // FIXME implement register handling for exec'd inferiors.
   // if (tid_stop_info.reason == eStopReasonExec) {
@@ -790,14 +802,13 @@ GDBRemoteCommunicationServerLLGS::SendStopReplyPacketForThread(
   //     InitializeRegisters(force);
   // }
 
-  StreamString response;
   // Output the T packet with the thread
   response.PutChar('T');
   int signum = tid_stop_info.details.signal.signo;
   LLDB_LOG(
       log,
       "pid {0}, tid {1}, got signal signo = {2}, reason = {3}, exc_type = {4}",
-      process.GetID(), tid, signum, int(tid_stop_info.reason),
+      process.GetID(), thread.GetID(), signum, int(tid_stop_info.reason),
       tid_stop_info.details.exception.type);
 
   // Print the signal number.
@@ -808,10 +819,10 @@ GDBRemoteCommunicationServerLLGS::SendStopReplyPacketForThread(
   if (bool(m_extensions_supported &
            NativeProcessProtocol::Extension::multiprocess))
     response.Format("p{0:x-}.", process.GetID());
-  response.Format("{0:x-};", tid);
+  response.Format("{0:x-};", thread.GetID());
 
   // Include the thread name if there is one.
-  const std::string thread_name = thread->GetName();
+  const std::string thread_name = thread.GetName();
   if (!thread_name.empty()) {
     size_t thread_name_len = thread_name.length();
 
@@ -875,7 +886,7 @@ GDBRemoteCommunicationServerLLGS::SendStopReplyPacketForThread(
     char delimiter = ':';
     for (NativeThreadProtocol *thread;
          (thread = process.GetThreadAtIndex(i)) != nullptr; ++i) {
-      NativeRegisterContext& reg_ctx = thread->GetRegisterContext();
+      NativeRegisterContext &reg_ctx = thread->GetRegisterContext();
 
       uint32_t reg_to_read = reg_ctx.ConvertRegisterKindToRegisterNumber(
           eRegisterKindGeneric, LLDB_REGNUM_GENERIC_PC);
@@ -906,7 +917,7 @@ GDBRemoteCommunicationServerLLGS::SendStopReplyPacketForThread(
   //
 
   // Grab the register context.
-  NativeRegisterContext& reg_ctx = thread->GetRegisterContext();
+  NativeRegisterContext &reg_ctx = thread.GetRegisterContext();
   const auto expedited_regs =
       reg_ctx.GetExpeditedRegisters(ExpeditedRegs::Full);
 
@@ -923,8 +934,9 @@ GDBRemoteCommunicationServerLLGS::SendStopReplyPacketForThread(
                                           &reg_value, lldb::eByteOrderBig);
         response.PutChar(';');
       } else {
-        LLDB_LOGF(log, "GDBRemoteCommunicationServerLLGS::%s failed to read "
-                       "register '%s' index %" PRIu32 ": %s",
+        LLDB_LOGF(log,
+                  "GDBRemoteCommunicationServerLLGS::%s failed to read "
+                  "register '%s' index %" PRIu32 ": %s",
                   __FUNCTION__,
                   reg_info_p->name ? reg_info_p->name : "<unnamed-register>",
                   reg_num, error.AsCString());
@@ -973,7 +985,44 @@ GDBRemoteCommunicationServerLLGS::SendStopReplyPacketForThread(
                     tid_stop_info.details.fork.child_tid);
   }
 
+  return response;
+}
+
+GDBRemoteCommunication::PacketResult
+GDBRemoteCommunicationServerLLGS::SendStopReplyPacketForThread(
+    NativeProcessProtocol &process, lldb::tid_t tid, bool force_synchronous) {
+  // Ensure we can get info on the given thread.
+  NativeThreadProtocol *thread = process.GetThreadByID(tid);
+  if (!thread)
+    return SendErrorResponse(51);
+
+  StreamString response = PrepareStopReplyPacketForThread(*thread);
+  if (response.Empty())
+    return SendErrorResponse(42);
+
+  if (m_non_stop && !force_synchronous) {
+    PacketResult ret = SendNotificationPacketNoLock(
+        "Stop", m_stop_notification_queue, response.GetString());
+    // Queue notification events for the remaining threads.
+    EnqueueStopReplyPackets(tid);
+    return ret;
+  }
+
   return SendPacketNoLock(response.GetString());
+}
+
+void GDBRemoteCommunicationServerLLGS::EnqueueStopReplyPackets(
+    lldb::tid_t thread_to_skip) {
+  if (!m_non_stop)
+    return;
+
+  uint32_t thread_index = 0;
+  while (NativeThreadProtocol *listed_thread =
+             m_current_process->GetThreadAtIndex(thread_index++)) {
+    if (listed_thread->GetID() != thread_to_skip)
+      m_stop_notification_queue.push_back(
+          PrepareStopReplyPacketForThread(*listed_thread).GetString().str());
+  }
 }
 
 void GDBRemoteCommunicationServerLLGS::HandleInferiorState_Exited(
@@ -983,8 +1032,8 @@ void GDBRemoteCommunicationServerLLGS::HandleInferiorState_Exited(
   Log *log = GetLog(LLDBLog::Process);
   LLDB_LOGF(log, "GDBRemoteCommunicationServerLLGS::%s called", __FUNCTION__);
 
-  PacketResult result =
-      SendStopReasonForState(*process, StateType::eStateExited);
+  PacketResult result = SendStopReasonForState(
+      *process, StateType::eStateExited, /*force_synchronous=*/false);
   if (result != PacketResult::Success) {
     LLDB_LOGF(log,
               "GDBRemoteCommunicationServerLLGS::%s failed to send stop "
@@ -996,9 +1045,13 @@ void GDBRemoteCommunicationServerLLGS::HandleInferiorState_Exited(
   // up.
   MaybeCloseInferiorTerminalConnection();
 
-  // We are ready to exit the debug monitor.
-  m_exit_now = true;
-  m_mainloop.RequestTermination();
+  // When running in non-stop mode, wait for the vStopped to clear
+  // the notification queue.
+  if (!m_non_stop) {
+    // We are ready to exit the debug monitor.
+    m_exit_now = true;
+    m_mainloop.RequestTermination();
+  }
 }
 
 void GDBRemoteCommunicationServerLLGS::HandleInferiorState_Stopped(
@@ -1016,8 +1069,8 @@ void GDBRemoteCommunicationServerLLGS::HandleInferiorState_Stopped(
     break;
   default:
     // In all other cases, send the stop reason.
-    PacketResult result =
-        SendStopReasonForState(*process, StateType::eStateStopped);
+    PacketResult result = SendStopReasonForState(
+        *process, StateType::eStateStopped, /*force_synchronous=*/false);
     if (result != PacketResult::Success) {
       LLDB_LOGF(log,
                 "GDBRemoteCommunicationServerLLGS::%s failed to send stop "
@@ -1373,9 +1426,11 @@ GDBRemoteCommunicationServerLLGS::Handle_k(StringExtractorGDBRemote &packet) {
     LLDB_LOG(log, "Failed to kill debugged process {0}: {1}",
              m_current_process->GetID(), error);
 
-  // No OK response for kill packet.
-  // return SendOKResponse ();
-  return PacketResult::Success;
+  // The response to kill packet is undefined per the spec.  LLDB
+  // follows the same rules as for continue packets, i.e. no response
+  // in all-stop mode, and "OK" in non-stop mode; in both cases this
+  // is followed by the actual stop reason.
+  return SendContinueSuccessResponse();
 }
 
 GDBRemoteCommunication::PacketResult
@@ -1503,8 +1558,9 @@ GDBRemoteCommunicationServerLLGS::Handle_C(StringExtractorGDBRemote &packet) {
     return SendErrorResponse(0x38);
   }
 
-  // Don't send an "OK" packet; response is the stopped/exited message.
-  return PacketResult::Success;
+  // Don't send an "OK" packet, except in non-stop mode;
+  // otherwise, the response is the stopped/exited message.
+  return SendContinueSuccessResponse();
 }
 
 GDBRemoteCommunication::PacketResult
@@ -1543,8 +1599,8 @@ GDBRemoteCommunicationServerLLGS::Handle_c(StringExtractorGDBRemote &packet) {
   }
 
   LLDB_LOG(log, "continued process {0}", m_continue_process->GetID());
-  // No response required from continue.
-  return PacketResult::Success;
+
+  return SendContinueSuccessResponse();
 }
 
 GDBRemoteCommunication::PacketResult
@@ -1582,6 +1638,9 @@ GDBRemoteCommunicationServerLLGS::Handle_vCont(
     // Move past the ';', then do a simple 's'.
     packet.SetFilePos(packet.GetFilePos() + 1);
     return Handle_s(packet);
+  } else if (m_non_stop && ::strcmp(packet.Peek(), ";t") == 0) {
+    // TODO: add full support for "t" action
+    return SendOKResponse();
   }
 
   // Ensure we have a native process.
@@ -1659,8 +1718,8 @@ GDBRemoteCommunicationServerLLGS::Handle_vCont(
   }
 
   LLDB_LOG(log, "continued process {0}", m_continue_process->GetID());
-  // No response required from vCont.
-  return PacketResult::Success;
+
+  return SendContinueSuccessResponse();
 }
 
 void GDBRemoteCommunicationServerLLGS::SetCurrentThreadID(lldb::tid_t tid) {
@@ -1688,13 +1747,38 @@ GDBRemoteCommunicationServerLLGS::Handle_stop_reason(
   if (!m_current_process)
     return SendErrorResponse(02);
 
+  if (m_non_stop) {
+    // Clear the notification queue first, except for pending exit
+    // notifications.
+    llvm::erase_if(m_stop_notification_queue, [](const std::string &x) {
+      return x.front() != 'W' && x.front() != 'X';
+    });
+
+    // Queue stop reply packets for all active threads.  Start with the current
+    // thread (for clients that don't actually support multiple stop reasons).
+    NativeThreadProtocol *thread = m_current_process->GetCurrentThread();
+    if (thread)
+      m_stop_notification_queue.push_back(
+          PrepareStopReplyPacketForThread(*thread).GetString().str());
+    EnqueueStopReplyPackets(thread ? thread->GetID() : LLDB_INVALID_THREAD_ID);
+
+    // If the notification queue is empty (i.e. everything is running), send OK.
+    if (m_stop_notification_queue.empty())
+      return SendOKResponse();
+
+    // Send the first item from the new notification queue synchronously.
+    return SendPacketNoLock(m_stop_notification_queue.front());
+  }
+
   return SendStopReasonForState(*m_current_process,
-                                m_current_process->GetState());
+                                m_current_process->GetState(),
+                                /*force_synchronous=*/true);
 }
 
 GDBRemoteCommunication::PacketResult
 GDBRemoteCommunicationServerLLGS::SendStopReasonForState(
-    NativeProcessProtocol &process, lldb::StateType process_state) {
+    NativeProcessProtocol &process, lldb::StateType process_state,
+    bool force_synchronous) {
   Log *log = GetLog(LLDBLog::Process);
 
   switch (process_state) {
@@ -1714,7 +1798,7 @@ GDBRemoteCommunicationServerLLGS::SendStopReasonForState(
     // Make sure we set the current thread so g and p packets return the data
     // the gdb will expect.
     SetCurrentThreadID(tid);
-    return SendStopReplyPacketForThread(process, tid);
+    return SendStopReplyPacketForThread(process, tid, force_synchronous);
   }
 
   case eStateInvalid:
@@ -2806,8 +2890,9 @@ GDBRemoteCommunicationServerLLGS::Handle_s(StringExtractorGDBRemote &packet) {
     return SendErrorResponse(0x49);
   }
 
-  // No response here - the stop or exit will come from the resulting action.
-  return PacketResult::Success;
+  // No response here, unless in non-stop mode.
+  // Otherwise, the stop or exit will come from the resulting action.
+  return SendContinueSuccessResponse();
 }
 
 llvm::Expected<std::unique_ptr<llvm::MemoryBuffer>>
@@ -3176,7 +3261,8 @@ GDBRemoteCommunicationServerLLGS::Handle_vAttach(
   // Notify we attached by sending a stop packet.
   assert(m_current_process);
   return SendStopReasonForState(*m_current_process,
-                                m_current_process->GetState());
+                                m_current_process->GetState(),
+                                /*force_synchronous=*/false);
 }
 
 GDBRemoteCommunication::PacketResult
@@ -3208,7 +3294,8 @@ GDBRemoteCommunicationServerLLGS::Handle_vAttachWait(
   // Notify we attached by sending a stop packet.
   assert(m_current_process);
   return SendStopReasonForState(*m_current_process,
-                                m_current_process->GetState());
+                                m_current_process->GetState(),
+                                /*force_synchronous=*/false);
 }
 
 GDBRemoteCommunication::PacketResult
@@ -3246,7 +3333,8 @@ GDBRemoteCommunicationServerLLGS::Handle_vAttachOrWait(
   // Notify we attached by sending a stop packet.
   assert(m_current_process);
   return SendStopReasonForState(*m_current_process,
-                                m_current_process->GetState());
+                                m_current_process->GetState(),
+                                /*force_synchronous=*/false);
 }
 
 GDBRemoteCommunication::PacketResult
@@ -3277,7 +3365,8 @@ GDBRemoteCommunicationServerLLGS::Handle_vRun(
     if (m_process_launch_error.Success()) {
       assert(m_current_process);
       return SendStopReasonForState(*m_current_process,
-                                    m_current_process->GetState());
+                                    m_current_process->GetState(),
+                                    /*force_synchronous=*/true);
     }
     LLDB_LOG(log, "failed to launch exe: {0}", m_process_launch_error);
   }
@@ -3349,7 +3438,8 @@ GDBRemoteCommunicationServerLLGS::Handle_qThreadStopInfo(
               __FUNCTION__, packet.GetStringRef().data());
     return SendErrorResponse(0x15);
   }
-  return SendStopReplyPacketForThread(*m_current_process, tid);
+  return SendStopReplyPacketForThread(*m_current_process, tid,
+                                      /*force_synchronous=*/true);
 }
 
 GDBRemoteCommunication::PacketResult
@@ -3672,6 +3762,59 @@ GDBRemoteCommunicationServerLLGS::Handle_qSaveCore(
   return SendPacketNoLock(response.GetString());
 }
 
+GDBRemoteCommunication::PacketResult
+GDBRemoteCommunicationServerLLGS::Handle_QNonStop(
+    StringExtractorGDBRemote &packet) {
+  StringRef packet_str{packet.GetStringRef()};
+  assert(packet_str.startswith("QNonStop:"));
+  packet_str.consume_front("QNonStop:");
+  if (packet_str == "0") {
+    m_non_stop = false;
+    // TODO: stop all threads
+  } else if (packet_str == "1") {
+    m_non_stop = true;
+  } else
+    return SendErrorResponse(Status("Invalid QNonStop packet"));
+  return SendOKResponse();
+}
+
+GDBRemoteCommunication::PacketResult
+GDBRemoteCommunicationServerLLGS::Handle_vStopped(
+    StringExtractorGDBRemote &packet) {
+  // Per the protocol, the first message put into the queue is sent
+  // immediately.  However, it remains the queue until the client ACKs
+  // it via vStopped -- then we pop it and send the next message.
+  // The process repeats until the last message in the queue is ACK-ed,
+  // in which case the vStopped packet sends an OK response.
+
+  if (m_stop_notification_queue.empty())
+    return SendErrorResponse(Status("No pending notification to ack"));
+  m_stop_notification_queue.pop_front();
+  if (!m_stop_notification_queue.empty())
+    return SendPacketNoLock(m_stop_notification_queue.front());
+  // If this was the last notification and the process exited, terminate
+  // the server.
+  if (m_inferior_prev_state == eStateExited) {
+    m_exit_now = true;
+    m_mainloop.RequestTermination();
+  }
+  return SendOKResponse();
+}
+
+GDBRemoteCommunication::PacketResult
+GDBRemoteCommunicationServerLLGS::Handle_vCtrlC(
+    StringExtractorGDBRemote &packet) {
+  if (!m_non_stop)
+    return SendErrorResponse(Status("vCtrl is only valid in non-stop mode"));
+
+  PacketResult interrupt_res = Handle_interrupt(packet);
+  // If interrupting the process failed, pass the result through.
+  if (interrupt_res != PacketResult::Success)
+    return interrupt_res;
+  // Otherwise, vCtrlC should issue an OK response (normal interrupts do not).
+  return SendOKResponse();
+}
+
 void GDBRemoteCommunicationServerLLGS::MaybeCloseInferiorTerminalConnection() {
   Log *log = GetLog(LLDBLog::Process);
 
@@ -3855,6 +3998,7 @@ std::vector<std::string> GDBRemoteCommunicationServerLLGS::HandleFeatures(
                             "QThreadSuffixSupported+",
                             "QListThreadsInStopReply+",
                             "qXfer:features:read+",
+                            "QNonStop+",
                         });
 
   // report server-only features
@@ -3907,6 +4051,11 @@ void GDBRemoteCommunicationServerLLGS::SetEnabledExtensions(
   NativeProcessProtocol::Extension flags = m_extensions_supported;
   assert(!bool(flags & ~m_process_factory.GetSupportedExtensions()));
   process.SetEnabledExtensions(flags);
+}
+
+GDBRemoteCommunication::PacketResult
+GDBRemoteCommunicationServerLLGS::SendContinueSuccessResponse() {
+  return m_non_stop ? SendOKResponse() : PacketResult::Success;
 }
 
 std::string
