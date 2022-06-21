@@ -3346,6 +3346,9 @@ struct AAKernelInfoFunction : AAKernelInfo {
   }
 
   bool changeToSPMDMode(Attributor &A, ChangeStatus &Changed) {
+    if (!mayContainParallelRegion())
+      return false;
+
     auto &OMPInfoCache = static_cast<OMPInformationCache &>(A.getInfoCache());
 
     if (!SPMDCompatibilityTracker.isAssumed()) {
