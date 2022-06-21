@@ -201,8 +201,7 @@ MacroDirective::DefInfo MacroDirective::getDefinition() {
   Optional<bool> isPublic;
   for (; MD; MD = MD->getPrevious()) {
     if (DefMacroDirective *DefMD = dyn_cast<DefMacroDirective>(MD))
-      return DefInfo(DefMD, UndefLoc,
-                     !isPublic.hasValue() || isPublic.getValue());
+      return DefInfo(DefMD, UndefLoc, !isPublic || *isPublic);
 
     if (UndefMacroDirective *UndefMD = dyn_cast<UndefMacroDirective>(MD)) {
       UndefLoc = UndefMD->getLocation();
