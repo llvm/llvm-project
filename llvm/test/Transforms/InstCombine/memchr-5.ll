@@ -15,85 +15,39 @@ declare i8* @memchr(i8*, i32, i64)
 
 define void @fold_memchr_a(i64* %pcmp) {
 ; BE-LABEL: @fold_memchr_a(
-; BE-NEXT:    [[PA:%.*]] = call i8* @memchr(i8* noundef nonnull dereferenceable(1) bitcast ([4 x i32]* @a to i8*), i32 97, i64 16)
-; BE-NEXT:    [[IPA:%.*]] = ptrtoint i8* [[PA]] to i64
-; BE-NEXT:    [[OFFA:%.*]] = sub i64 [[IPA]], ptrtoint ([4 x i32]* @a to i64)
-; BE-NEXT:    store i64 [[OFFA]], i64* [[PCMP:%.*]], align 4
-; BE-NEXT:    [[PB:%.*]] = call i8* @memchr(i8* noundef nonnull dereferenceable(1) bitcast ([4 x i32]* @a to i8*), i32 98, i64 16)
-; BE-NEXT:    [[IPB:%.*]] = ptrtoint i8* [[PB]] to i64
-; BE-NEXT:    [[OFFB:%.*]] = sub i64 [[IPB]], ptrtoint ([4 x i32]* @a to i64)
+; BE-NEXT:    store i64 0, i64* [[PCMP:%.*]], align 4
 ; BE-NEXT:    [[PSTOR1:%.*]] = getelementptr i64, i64* [[PCMP]], i64 1
-; BE-NEXT:    store i64 [[OFFB]], i64* [[PSTOR1]], align 4
-; BE-NEXT:    [[PC:%.*]] = call i8* @memchr(i8* noundef nonnull dereferenceable(1) bitcast ([4 x i32]* @a to i8*), i32 99, i64 16)
-; BE-NEXT:    [[IPC:%.*]] = ptrtoint i8* [[PC]] to i64
-; BE-NEXT:    [[OFFC:%.*]] = sub i64 [[IPC]], ptrtoint ([4 x i32]* @a to i64)
+; BE-NEXT:    store i64 1, i64* [[PSTOR1]], align 4
 ; BE-NEXT:    [[PSTOR2:%.*]] = getelementptr i64, i64* [[PCMP]], i64 2
-; BE-NEXT:    store i64 [[OFFC]], i64* [[PSTOR2]], align 4
-; BE-NEXT:    [[PD:%.*]] = call i8* @memchr(i8* noundef nonnull dereferenceable(1) bitcast ([4 x i32]* @a to i8*), i32 100, i64 16)
-; BE-NEXT:    [[IPD:%.*]] = ptrtoint i8* [[PD]] to i64
-; BE-NEXT:    [[OFFD:%.*]] = sub i64 [[IPD]], ptrtoint ([4 x i32]* @a to i64)
+; BE-NEXT:    store i64 2, i64* [[PSTOR2]], align 4
 ; BE-NEXT:    [[PSTOR3:%.*]] = getelementptr i64, i64* [[PCMP]], i64 3
-; BE-NEXT:    store i64 [[OFFD]], i64* [[PSTOR3]], align 4
-; BE-NEXT:    [[PN:%.*]] = call i8* @memchr(i8* noundef nonnull dereferenceable(1) bitcast ([4 x i32]* @a to i8*), i32 110, i64 16)
-; BE-NEXT:    [[IPN:%.*]] = ptrtoint i8* [[PN]] to i64
-; BE-NEXT:    [[OFFN:%.*]] = sub i64 [[IPN]], ptrtoint ([4 x i32]* @a to i64)
+; BE-NEXT:    store i64 3, i64* [[PSTOR3]], align 4
 ; BE-NEXT:    [[PSTOR4:%.*]] = getelementptr i64, i64* [[PCMP]], i64 4
-; BE-NEXT:    store i64 [[OFFN]], i64* [[PSTOR4]], align 4
-; BE-NEXT:    [[PO:%.*]] = call i8* @memchr(i8* noundef nonnull dereferenceable(1) bitcast ([4 x i32]* @a to i8*), i32 111, i64 16)
-; BE-NEXT:    [[IPO:%.*]] = ptrtoint i8* [[PO]] to i64
-; BE-NEXT:    [[OFFO:%.*]] = sub i64 [[IPO]], ptrtoint ([4 x i32]* @a to i64)
+; BE-NEXT:    store i64 13, i64* [[PSTOR4]], align 4
 ; BE-NEXT:    [[PSTOR6:%.*]] = getelementptr i64, i64* [[PCMP]], i64 6
-; BE-NEXT:    store i64 [[OFFO]], i64* [[PSTOR6]], align 4
-; BE-NEXT:    [[PP:%.*]] = call i8* @memchr(i8* noundef nonnull dereferenceable(1) bitcast ([4 x i32]* @a to i8*), i32 112, i64 16)
-; BE-NEXT:    [[IPP:%.*]] = ptrtoint i8* [[PP]] to i64
-; BE-NEXT:    [[OFFP:%.*]] = sub i64 [[IPP]], ptrtoint ([4 x i32]* @a to i64)
+; BE-NEXT:    store i64 14, i64* [[PSTOR6]], align 4
 ; BE-NEXT:    [[PSTOR7:%.*]] = getelementptr i64, i64* [[PCMP]], i64 7
-; BE-NEXT:    store i64 [[OFFP]], i64* [[PSTOR7]], align 4
-; BE-NEXT:    [[PQ:%.*]] = call i8* @memchr(i8* noundef nonnull dereferenceable(1) bitcast ([4 x i32]* @a to i8*), i32 113, i64 16)
-; BE-NEXT:    [[IPQ:%.*]] = ptrtoint i8* [[PQ]] to i64
+; BE-NEXT:    store i64 15, i64* [[PSTOR7]], align 4
 ; BE-NEXT:    [[PSTOR8:%.*]] = getelementptr i64, i64* [[PCMP]], i64 8
-; BE-NEXT:    store i64 [[IPQ]], i64* [[PSTOR8]], align 4
+; BE-NEXT:    store i64 0, i64* [[PSTOR8]], align 4
 ; BE-NEXT:    ret void
 ;
 ; LE-LABEL: @fold_memchr_a(
-; LE-NEXT:    [[PA:%.*]] = call i8* @memchr(i8* noundef nonnull dereferenceable(1) bitcast ([4 x i32]* @a to i8*), i32 97, i64 16)
-; LE-NEXT:    [[IPA:%.*]] = ptrtoint i8* [[PA]] to i64
-; LE-NEXT:    [[OFFA:%.*]] = sub i64 [[IPA]], ptrtoint ([4 x i32]* @a to i64)
-; LE-NEXT:    store i64 [[OFFA]], i64* [[PCMP:%.*]], align 4
-; LE-NEXT:    [[PB:%.*]] = call i8* @memchr(i8* noundef nonnull dereferenceable(1) bitcast ([4 x i32]* @a to i8*), i32 98, i64 16)
-; LE-NEXT:    [[IPB:%.*]] = ptrtoint i8* [[PB]] to i64
-; LE-NEXT:    [[OFFB:%.*]] = sub i64 [[IPB]], ptrtoint ([4 x i32]* @a to i64)
+; LE-NEXT:    store i64 3, i64* [[PCMP:%.*]], align 4
 ; LE-NEXT:    [[PSTOR1:%.*]] = getelementptr i64, i64* [[PCMP]], i64 1
-; LE-NEXT:    store i64 [[OFFB]], i64* [[PSTOR1]], align 4
-; LE-NEXT:    [[PC:%.*]] = call i8* @memchr(i8* noundef nonnull dereferenceable(1) bitcast ([4 x i32]* @a to i8*), i32 99, i64 16)
-; LE-NEXT:    [[IPC:%.*]] = ptrtoint i8* [[PC]] to i64
-; LE-NEXT:    [[OFFC:%.*]] = sub i64 [[IPC]], ptrtoint ([4 x i32]* @a to i64)
+; LE-NEXT:    store i64 2, i64* [[PSTOR1]], align 4
 ; LE-NEXT:    [[PSTOR2:%.*]] = getelementptr i64, i64* [[PCMP]], i64 2
-; LE-NEXT:    store i64 [[OFFC]], i64* [[PSTOR2]], align 4
-; LE-NEXT:    [[PD:%.*]] = call i8* @memchr(i8* noundef nonnull dereferenceable(1) bitcast ([4 x i32]* @a to i8*), i32 100, i64 16)
-; LE-NEXT:    [[IPD:%.*]] = ptrtoint i8* [[PD]] to i64
-; LE-NEXT:    [[OFFD:%.*]] = sub i64 [[IPD]], ptrtoint ([4 x i32]* @a to i64)
+; LE-NEXT:    store i64 1, i64* [[PSTOR2]], align 4
 ; LE-NEXT:    [[PSTOR3:%.*]] = getelementptr i64, i64* [[PCMP]], i64 3
-; LE-NEXT:    store i64 [[OFFD]], i64* [[PSTOR3]], align 4
-; LE-NEXT:    [[PN:%.*]] = call i8* @memchr(i8* noundef nonnull dereferenceable(1) bitcast ([4 x i32]* @a to i8*), i32 110, i64 16)
-; LE-NEXT:    [[IPN:%.*]] = ptrtoint i8* [[PN]] to i64
-; LE-NEXT:    [[OFFN:%.*]] = sub i64 [[IPN]], ptrtoint ([4 x i32]* @a to i64)
+; LE-NEXT:    store i64 0, i64* [[PSTOR3]], align 4
 ; LE-NEXT:    [[PSTOR4:%.*]] = getelementptr i64, i64* [[PCMP]], i64 4
-; LE-NEXT:    store i64 [[OFFN]], i64* [[PSTOR4]], align 4
-; LE-NEXT:    [[PO:%.*]] = call i8* @memchr(i8* noundef nonnull dereferenceable(1) bitcast ([4 x i32]* @a to i8*), i32 111, i64 16)
-; LE-NEXT:    [[IPO:%.*]] = ptrtoint i8* [[PO]] to i64
-; LE-NEXT:    [[OFFO:%.*]] = sub i64 [[IPO]], ptrtoint ([4 x i32]* @a to i64)
+; LE-NEXT:    store i64 14, i64* [[PSTOR4]], align 4
 ; LE-NEXT:    [[PSTOR6:%.*]] = getelementptr i64, i64* [[PCMP]], i64 6
-; LE-NEXT:    store i64 [[OFFO]], i64* [[PSTOR6]], align 4
-; LE-NEXT:    [[PP:%.*]] = call i8* @memchr(i8* noundef nonnull dereferenceable(1) bitcast ([4 x i32]* @a to i8*), i32 112, i64 16)
-; LE-NEXT:    [[IPP:%.*]] = ptrtoint i8* [[PP]] to i64
-; LE-NEXT:    [[OFFP:%.*]] = sub i64 [[IPP]], ptrtoint ([4 x i32]* @a to i64)
+; LE-NEXT:    store i64 13, i64* [[PSTOR6]], align 4
 ; LE-NEXT:    [[PSTOR7:%.*]] = getelementptr i64, i64* [[PCMP]], i64 7
-; LE-NEXT:    store i64 [[OFFP]], i64* [[PSTOR7]], align 4
-; LE-NEXT:    [[PQ:%.*]] = call i8* @memchr(i8* noundef nonnull dereferenceable(1) bitcast ([4 x i32]* @a to i8*), i32 113, i64 16)
-; LE-NEXT:    [[IPQ:%.*]] = ptrtoint i8* [[PQ]] to i64
+; LE-NEXT:    store i64 12, i64* [[PSTOR7]], align 4
 ; LE-NEXT:    [[PSTOR8:%.*]] = getelementptr i64, i64* [[PCMP]], i64 8
-; LE-NEXT:    store i64 [[IPQ]], i64* [[PSTOR8]], align 4
+; LE-NEXT:    store i64 0, i64* [[PSTOR8]], align 4
 ; LE-NEXT:    ret void
 ;
   %p0 = getelementptr [4 x i32], [4 x i32]* @a, i64 0, i64 0
@@ -171,63 +125,31 @@ define void @fold_memchr_a(i64* %pcmp) {
 
 define void @fold_memchr_a_p1(i64* %pcmp) {
 ; BE-LABEL: @fold_memchr_a_p1(
-; BE-NEXT:    [[PE:%.*]] = call i8* @memchr(i8* noundef nonnull dereferenceable(1) bitcast (i32* getelementptr inbounds ([4 x i32], [4 x i32]* @a, i64 0, i64 1) to i8*), i32 101, i64 12)
-; BE-NEXT:    [[IPE:%.*]] = ptrtoint i8* [[PE]] to i64
-; BE-NEXT:    [[OFFE:%.*]] = sub i64 [[IPE]], ptrtoint (i32* getelementptr inbounds ([4 x i32], [4 x i32]* @a, i64 0, i64 1) to i64)
-; BE-NEXT:    store i64 [[OFFE]], i64* [[PCMP:%.*]], align 4
-; BE-NEXT:    [[PF:%.*]] = call i8* @memchr(i8* noundef nonnull dereferenceable(1) bitcast (i32* getelementptr inbounds ([4 x i32], [4 x i32]* @a, i64 0, i64 1) to i8*), i32 102, i64 12)
-; BE-NEXT:    [[IPF:%.*]] = ptrtoint i8* [[PF]] to i64
-; BE-NEXT:    [[OFFF:%.*]] = sub i64 [[IPF]], ptrtoint (i32* getelementptr inbounds ([4 x i32], [4 x i32]* @a, i64 0, i64 1) to i64)
+; BE-NEXT:    store i64 0, i64* [[PCMP:%.*]], align 4
 ; BE-NEXT:    [[PSTOR1:%.*]] = getelementptr i64, i64* [[PCMP]], i64 1
-; BE-NEXT:    store i64 [[OFFF]], i64* [[PSTOR1]], align 4
-; BE-NEXT:    [[PG:%.*]] = call i8* @memchr(i8* noundef nonnull dereferenceable(1) bitcast (i32* getelementptr inbounds ([4 x i32], [4 x i32]* @a, i64 0, i64 1) to i8*), i32 103, i64 12)
-; BE-NEXT:    [[IPG:%.*]] = ptrtoint i8* [[PG]] to i64
-; BE-NEXT:    [[OFFG:%.*]] = sub i64 [[IPG]], ptrtoint (i32* getelementptr inbounds ([4 x i32], [4 x i32]* @a, i64 0, i64 1) to i64)
+; BE-NEXT:    store i64 1, i64* [[PSTOR1]], align 4
 ; BE-NEXT:    [[PSTOR2:%.*]] = getelementptr i64, i64* [[PCMP]], i64 2
-; BE-NEXT:    store i64 [[OFFG]], i64* [[PSTOR2]], align 4
-; BE-NEXT:    [[PH:%.*]] = call i8* @memchr(i8* noundef nonnull dereferenceable(1) bitcast (i32* getelementptr inbounds ([4 x i32], [4 x i32]* @a, i64 0, i64 1) to i8*), i32 104, i64 12)
-; BE-NEXT:    [[IPH:%.*]] = ptrtoint i8* [[PH]] to i64
-; BE-NEXT:    [[OFFH:%.*]] = sub i64 [[IPH]], ptrtoint (i32* getelementptr inbounds ([4 x i32], [4 x i32]* @a, i64 0, i64 1) to i64)
+; BE-NEXT:    store i64 2, i64* [[PSTOR2]], align 4
 ; BE-NEXT:    [[PSTOR3:%.*]] = getelementptr i64, i64* [[PCMP]], i64 3
-; BE-NEXT:    store i64 [[OFFH]], i64* [[PSTOR3]], align 4
-; BE-NEXT:    [[PA:%.*]] = call i8* @memchr(i8* noundef nonnull dereferenceable(1) bitcast (i32* getelementptr inbounds ([4 x i32], [4 x i32]* @a, i64 0, i64 1) to i8*), i32 97, i64 12)
-; BE-NEXT:    [[IPA:%.*]] = ptrtoint i8* [[PA]] to i64
+; BE-NEXT:    store i64 3, i64* [[PSTOR3]], align 4
 ; BE-NEXT:    [[PSTOR4:%.*]] = getelementptr i64, i64* [[PCMP]], i64 4
-; BE-NEXT:    store i64 [[IPA]], i64* [[PSTOR4]], align 4
-; BE-NEXT:    [[PD:%.*]] = call i8* @memchr(i8* noundef nonnull dereferenceable(1) bitcast (i32* getelementptr inbounds ([4 x i32], [4 x i32]* @a, i64 0, i64 1) to i8*), i32 100, i64 12)
-; BE-NEXT:    [[IPD:%.*]] = ptrtoint i8* [[PD]] to i64
+; BE-NEXT:    store i64 0, i64* [[PSTOR4]], align 4
 ; BE-NEXT:    [[PSTOR5:%.*]] = getelementptr i64, i64* [[PCMP]], i64 5
-; BE-NEXT:    store i64 [[IPD]], i64* [[PSTOR5]], align 4
+; BE-NEXT:    store i64 0, i64* [[PSTOR5]], align 4
 ; BE-NEXT:    ret void
 ;
 ; LE-LABEL: @fold_memchr_a_p1(
-; LE-NEXT:    [[PE:%.*]] = call i8* @memchr(i8* noundef nonnull dereferenceable(1) bitcast (i32* getelementptr inbounds ([4 x i32], [4 x i32]* @a, i64 0, i64 1) to i8*), i32 101, i64 12)
-; LE-NEXT:    [[IPE:%.*]] = ptrtoint i8* [[PE]] to i64
-; LE-NEXT:    [[OFFE:%.*]] = sub i64 [[IPE]], ptrtoint (i32* getelementptr inbounds ([4 x i32], [4 x i32]* @a, i64 0, i64 1) to i64)
-; LE-NEXT:    store i64 [[OFFE]], i64* [[PCMP:%.*]], align 4
-; LE-NEXT:    [[PF:%.*]] = call i8* @memchr(i8* noundef nonnull dereferenceable(1) bitcast (i32* getelementptr inbounds ([4 x i32], [4 x i32]* @a, i64 0, i64 1) to i8*), i32 102, i64 12)
-; LE-NEXT:    [[IPF:%.*]] = ptrtoint i8* [[PF]] to i64
-; LE-NEXT:    [[OFFF:%.*]] = sub i64 [[IPF]], ptrtoint (i32* getelementptr inbounds ([4 x i32], [4 x i32]* @a, i64 0, i64 1) to i64)
+; LE-NEXT:    store i64 3, i64* [[PCMP:%.*]], align 4
 ; LE-NEXT:    [[PSTOR1:%.*]] = getelementptr i64, i64* [[PCMP]], i64 1
-; LE-NEXT:    store i64 [[OFFF]], i64* [[PSTOR1]], align 4
-; LE-NEXT:    [[PG:%.*]] = call i8* @memchr(i8* noundef nonnull dereferenceable(1) bitcast (i32* getelementptr inbounds ([4 x i32], [4 x i32]* @a, i64 0, i64 1) to i8*), i32 103, i64 12)
-; LE-NEXT:    [[IPG:%.*]] = ptrtoint i8* [[PG]] to i64
-; LE-NEXT:    [[OFFG:%.*]] = sub i64 [[IPG]], ptrtoint (i32* getelementptr inbounds ([4 x i32], [4 x i32]* @a, i64 0, i64 1) to i64)
+; LE-NEXT:    store i64 2, i64* [[PSTOR1]], align 4
 ; LE-NEXT:    [[PSTOR2:%.*]] = getelementptr i64, i64* [[PCMP]], i64 2
-; LE-NEXT:    store i64 [[OFFG]], i64* [[PSTOR2]], align 4
-; LE-NEXT:    [[PH:%.*]] = call i8* @memchr(i8* noundef nonnull dereferenceable(1) bitcast (i32* getelementptr inbounds ([4 x i32], [4 x i32]* @a, i64 0, i64 1) to i8*), i32 104, i64 12)
-; LE-NEXT:    [[IPH:%.*]] = ptrtoint i8* [[PH]] to i64
-; LE-NEXT:    [[OFFH:%.*]] = sub i64 [[IPH]], ptrtoint (i32* getelementptr inbounds ([4 x i32], [4 x i32]* @a, i64 0, i64 1) to i64)
+; LE-NEXT:    store i64 1, i64* [[PSTOR2]], align 4
 ; LE-NEXT:    [[PSTOR3:%.*]] = getelementptr i64, i64* [[PCMP]], i64 3
-; LE-NEXT:    store i64 [[OFFH]], i64* [[PSTOR3]], align 4
-; LE-NEXT:    [[PA:%.*]] = call i8* @memchr(i8* noundef nonnull dereferenceable(1) bitcast (i32* getelementptr inbounds ([4 x i32], [4 x i32]* @a, i64 0, i64 1) to i8*), i32 97, i64 12)
-; LE-NEXT:    [[IPA:%.*]] = ptrtoint i8* [[PA]] to i64
+; LE-NEXT:    store i64 0, i64* [[PSTOR3]], align 4
 ; LE-NEXT:    [[PSTOR4:%.*]] = getelementptr i64, i64* [[PCMP]], i64 4
-; LE-NEXT:    store i64 [[IPA]], i64* [[PSTOR4]], align 4
-; LE-NEXT:    [[PD:%.*]] = call i8* @memchr(i8* noundef nonnull dereferenceable(1) bitcast (i32* getelementptr inbounds ([4 x i32], [4 x i32]* @a, i64 0, i64 1) to i8*), i32 100, i64 12)
-; LE-NEXT:    [[IPD:%.*]] = ptrtoint i8* [[PD]] to i64
+; LE-NEXT:    store i64 0, i64* [[PSTOR4]], align 4
 ; LE-NEXT:    [[PSTOR5:%.*]] = getelementptr i64, i64* [[PCMP]], i64 5
-; LE-NEXT:    store i64 [[IPD]], i64* [[PSTOR5]], align 4
+; LE-NEXT:    store i64 0, i64* [[PSTOR5]], align 4
 ; LE-NEXT:    ret void
 ;
   %p0 = getelementptr [4 x i32], [4 x i32]* @a, i64 0, i64 1
