@@ -538,8 +538,9 @@ static void scan_state_tab(scan_results& results, _Unwind_Action actions, bool n
 }
 
 // Personality routine for EH using the state table.
-_Unwind_Reason_Code __xlcxx_personality_v0(int version, _Unwind_Action actions, uint64_t exceptionClass,
-                                           _Unwind_Exception* unwind_exception, _Unwind_Context* context) {
+_LIBCXXABI_FUNC_VIS _Unwind_Reason_Code
+__xlcxx_personality_v0(int version, _Unwind_Action actions, uint64_t exceptionClass,
+                       _Unwind_Exception* unwind_exception, _Unwind_Context* context) {
   if (version != 1 || unwind_exception == 0 || context == 0)
     return _URC_FATAL_PHASE1_ERROR;
 
@@ -574,7 +575,8 @@ _Unwind_Reason_Code __xlcxx_personality_v0(int version, _Unwind_Action actions, 
 // Check whether the thrown object matches the catch handler's exception
 // declaration. If there is a match, the function returns true with adjusted
 // address of the thrown object. Otherwise, returns false.
-bool __xlc_catch_matchv2(_Unwind_Exception* exceptionObject, std::type_info* catchTypeInfo, void*& obj) {
+_LIBCXXABI_FUNC_VIS bool
+__xlc_catch_matchv2(_Unwind_Exception* exceptionObject, std::type_info* catchTypeInfo, void*& obj) {
   _LIBCXXABI_TRACE_STATETAB("Entering %s, exceptionObject=%p\n", __func__, reinterpret_cast<void*>(exceptionObject));
 
   if (!__isOurExceptionClass(exceptionObject)) {
@@ -625,7 +627,7 @@ bool __xlc_catch_matchv2(_Unwind_Exception* exceptionObject, std::type_info* cat
 // During unwinding for this bad_exception, the previous exception which is
 // not matching the throw spec will be cleaned up. Thus having the same
 // effect as replace the top most exception (which is bad) with a bad_exception.
-void __xlc_throw_badexception() {
+_LIBCXXABI_FUNC_VIS void __xlc_throw_badexception() {
   _LIBCXXABI_TRACE_STATETAB("Entering function: %s\n\n", __func__);
   void* newexception = new (__cxa_allocate_exception(sizeof(std::bad_exception))) std::bad_exception;
   __cxa_throw(newexception, const_cast<std::type_info*>(&typeid(std::bad_exception)), 0);
@@ -634,23 +636,24 @@ void __xlc_throw_badexception() {
 // __xlc_exception_handle
 // This function is for xlclang++. It returns the address of the exception
 // object set in gpr14 by the personality routine for xlclang++ compiled code.
-uintptr_t __xlc_exception_handle() {
+_LIBCXXABI_FUNC_VIS uintptr_t __xlc_exception_handle() {
   uintptr_t exceptionObject;
   asm("mr %0, 14" : "=r"(exceptionObject));
   return exceptionObject;
 }
 
 // xlclang++ may generate calls to __Deleted_Virtual.
-void __Deleted_Virtual() { abort(); }
+_LIBCXXABI_FUNC_VIS void __Deleted_Virtual() { abort(); }
 
 // __catchThrownException is called during AIX library initialization and
 // termination to handle exceptions.  An implementation is also provided in
 // libC.a(shrcore.o).  This implementation is provided for applications that
 // link with -lc++ (the xlclang++ or ibm-clang++ link default.)
-int __catchThrownException(void (*cdfunc)(void),   // function which may fail
-                           void (*cleanup)(void*), // cleanup function
-                           void* cleanuparg,       // parameter to cleanup function
-                           int action) {           // control exception throwing and termination
+_LIBCXXABI_FUNC_VIS int
+__catchThrownException(void (*cdfunc)(void),   // function which may fail
+                       void (*cleanup)(void*), // cleanup function
+                       void* cleanuparg,       // parameter to cleanup function
+                       int action) {           // control exception throwing and termination
   enum Action : int { None = 0, Rethrow = 1, Terminate = 2 };
   if (!cdfunc)
     return 0;
