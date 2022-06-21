@@ -34,16 +34,16 @@
 // In a release build, just give a message and exit.
 #define TODO_NOLOC(ToDoMsg)                                                    \
   do {                                                                         \
-    llvm::errs() << __FILE__ << ':' << __LINE__ << ": not yet implemented "    \
-                 << ToDoMsg << '\n';                                           \
+    llvm::errs() << __FILE__ << ':' << __LINE__                                \
+                 << ": not yet implemented: " << ToDoMsg << '\n';              \
     std::exit(1);                                                              \
   } while (false)
 
 #undef TODO_DEFN
 #define TODO_DEFN(MlirLoc, ToDoMsg, ToDoFile, ToDoLine)                        \
   do {                                                                         \
-    mlir::emitError(MlirLoc, ToDoFile                                          \
-                    ":" TODOQUOTE(ToDoLine) ": not yet implemented " ToDoMsg); \
+    mlir::emitError(MlirLoc, ToDoFile ":" TODOQUOTE(                           \
+                                 ToDoLine) ": not yet implemented: " ToDoMsg); \
     std::exit(1);                                                              \
   } while (false)
 
@@ -56,7 +56,7 @@
 #define TODO_NOLOCDEFN(ToDoMsg, ToDoFile, ToDoLine)                            \
   do {                                                                         \
     llvm::report_fatal_error(                                                  \
-        __FILE__ ":" TODOQUOTE(__LINE__) ": not yet implemented " ToDoMsg);    \
+        ToDoFile ":" TODOQUOTE(ToDoLine) ": not yet implemented: " ToDoMsg);   \
   } while (false)
 
 #define TODO_NOLOC(ToDoMsg) TODO_NOLOCDEFN(ToDoMsg, __FILE__, __LINE__)
@@ -66,7 +66,7 @@
   do {                                                                         \
     fir::emitFatalError(                                                       \
         MlirLoc,                                                               \
-        ToDoFile ":" TODOQUOTE(ToDoLine) ": not yet implemented " ToDoMsg);    \
+        ToDoFile ":" TODOQUOTE(ToDoLine) ": not yet implemented: " ToDoMsg);   \
   } while (false)
 
 #define TODO(MlirLoc, ToDoMsg) TODO_DEFN(MlirLoc, ToDoMsg, __FILE__, __LINE__)

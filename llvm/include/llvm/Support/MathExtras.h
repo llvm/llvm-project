@@ -735,27 +735,34 @@ inline uint64_t PowerOf2Ceil(uint64_t A) {
 /// Returns the next integer (mod 2**64) that is greater than or equal to
 /// \p Value and is a multiple of \p Align. \p Align must be non-zero.
 ///
-/// If non-zero \p Skew is specified, the return value will be a minimal
-/// integer that is greater than or equal to \p Value and equal to
-/// \p Align * N + \p Skew for some integer N. If \p Skew is larger than
-/// \p Align, its value is adjusted to '\p Skew mod \p Align'.
-///
 /// Examples:
 /// \code
 ///   alignTo(5, 8) = 8
 ///   alignTo(17, 8) = 24
 ///   alignTo(~0LL, 8) = 0
 ///   alignTo(321, 255) = 510
+/// \endcode
+inline uint64_t alignTo(uint64_t Value, uint64_t Align) {
+  assert(Align != 0u && "Align can't be 0.");
+  return (Value + Align - 1) / Align * Align;
+}
+
+/// If non-zero \p Skew is specified, the return value will be a minimal integer
+/// that is greater than or equal to \p Size and equal to \p A * N + \p Skew for
+/// some integer N. If \p Skew is larger than \p A, its value is adjusted to '\p
+/// Skew mod \p A'. \p Align must be non-zero.
 ///
+/// Examples:
+/// \code
 ///   alignTo(5, 8, 7) = 7
 ///   alignTo(17, 8, 1) = 17
 ///   alignTo(~0LL, 8, 3) = 3
 ///   alignTo(321, 255, 42) = 552
 /// \endcode
-inline uint64_t alignTo(uint64_t Value, uint64_t Align, uint64_t Skew = 0) {
+inline uint64_t alignTo(uint64_t Value, uint64_t Align, uint64_t Skew) {
   assert(Align != 0u && "Align can't be 0.");
   Skew %= Align;
-  return (Value + Align - 1 - Skew) / Align * Align + Skew;
+  return alignTo(Value - Skew, Align) + Skew;
 }
 
 /// Returns the next integer (mod 2**64) that is greater than or equal to

@@ -310,7 +310,7 @@ struct ComposeExpandOfCollapseOp : public OpRewritePattern<ExpandOpTy> {
       auto composedReassociation = findCollapsingReassociation(
           srcReassociation, resultReassociation, srcType.getShape(),
           resultType.getShape());
-      if (!composedReassociation.hasValue())
+      if (!composedReassociation)
         return failure();
 
       rewriter.replaceOpWithNewOp<CollapseOpTy>(
@@ -320,7 +320,7 @@ struct ComposeExpandOfCollapseOp : public OpRewritePattern<ExpandOpTy> {
     auto composedReassociation =
         findCollapsingReassociation(resultReassociation, srcReassociation,
                                     resultType.getShape(), srcType.getShape());
-    if (!composedReassociation.hasValue())
+    if (!composedReassociation)
       return failure();
 
     rewriter.replaceOpWithNewOp<ExpandOpTy>(
@@ -357,7 +357,7 @@ private:
       // Find reassociation to collapse `srcSubShape` into `resultSubShape`.
       auto subShapeReassociation =
           getReassociationIndicesForCollapse(srcSubShape, resultSubShape);
-      if (!subShapeReassociation.hasValue())
+      if (!subShapeReassociation)
         return llvm::None;
 
       // Remap the subshape indices back to the original srcShape.

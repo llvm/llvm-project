@@ -807,13 +807,13 @@ private:
     if (obj.attrs.test(Attrs::Optional))
       addMLIRAttr(fir::getOptionalAttrName());
     if (obj.attrs.test(Attrs::Asynchronous))
-      TODO(loc, "Asynchronous in procedure interface");
+      TODO(loc, "ASYNCHRONOUS in procedure interface");
     if (obj.attrs.test(Attrs::Contiguous))
       addMLIRAttr(fir::getContiguousAttrName());
     if (obj.attrs.test(Attrs::Value))
       isValueAttr = true; // TODO: do we want an mlir::Attribute as well?
     if (obj.attrs.test(Attrs::Volatile))
-      TODO(loc, "Volatile in procedure interface");
+      TODO(loc, "VOLATILE in procedure interface");
     if (obj.attrs.test(Attrs::Target))
       addMLIRAttr(fir::getTargetAttrName());
 
@@ -823,9 +823,9 @@ private:
     const Fortran::evaluate::characteristics::TypeAndShape::Attrs &shapeAttrs =
         obj.type.attrs();
     if (shapeAttrs.test(ShapeAttr::AssumedRank))
-      TODO(loc, "Assumed Rank in procedure interface");
+      TODO(loc, "assumed rank in procedure interface");
     if (shapeAttrs.test(ShapeAttr::Coarray))
-      TODO(loc, "Coarray in procedure interface");
+      TODO(loc, "coarray in procedure interface");
 
     // So far assume that if the argument cannot be passed by implicit interface
     // it must be by box. That may no be always true (e.g for simple optionals)

@@ -337,22 +337,22 @@ static void PrintStackTraceForThread(llvm::raw_ostream &OS, HANDLE hProcess,
     OS << format("0x%08lX", static_cast<DWORD>(PC));
 #endif
 
-// Print the parameters.  Assume there are four.
-#if defined(_M_X64) || defined(_M_ARM64)
-    OS << format(" (0x%016llX 0x%016llX 0x%016llX 0x%016llX)",
-            StackFrame.Params[0], StackFrame.Params[1], StackFrame.Params[2],
-            StackFrame.Params[3]);
-#elif defined(_M_IX86) || defined(_M_ARM)
-    OS << format(" (0x%08lX 0x%08lX 0x%08lX 0x%08lX)",
-            static_cast<DWORD>(StackFrame.Params[0]),
-            static_cast<DWORD>(StackFrame.Params[1]),
-            static_cast<DWORD>(StackFrame.Params[2]),
-            static_cast<DWORD>(StackFrame.Params[3]));
-#endif
     // Verify the PC belongs to a module in this process.
     if (!fSymGetModuleBase64(hProcess, PC)) {
       OS << " <unknown module>\n";
       continue;
+    }
+
+    IMAGEHLP_MODULE64 M;
+    memset(&M, 0, sizeof(IMAGEHLP_MODULE64));
+    M.SizeOfStruct = sizeof(IMAGEHLP_MODULE64);
+    if (fSymGetModuleInfo64(hProcess, fSymGetModuleBase64(hProcess, PC), &M)) {
+      DWORD64 const disp = PC - M.BaseOfImage;
+      OS << format(", %s(0x%016llX) + 0x%llX byte(s)",
+                   static_cast<char *>(M.ImageName), M.BaseOfImage,
+                   static_cast<long long>(disp));
+    } else {
+      OS << ", <unknown module>";
     }
 
     // Print the symbol name.
@@ -369,20 +369,16 @@ static void PrintStackTraceForThread(llvm::raw_ostream &OS, HANDLE hProcess,
     }
 
     buffer[511] = 0;
-    if (dwDisp > 0)
-      OS << format(", %s() + 0x%llX bytes(s)", (const char*)symbol->Name,
-                   dwDisp);
-    else
-      OS << format(", %s", (const char*)symbol->Name);
+    OS << format(", %s() + 0x%llX byte(s)", static_cast<char *>(symbol->Name),
+                 static_cast<long long>(dwDisp));
 
     // Print the source file and line number information.
     IMAGEHLP_LINE64 line = {};
     DWORD dwLineDisp;
     line.SizeOfStruct = sizeof(line);
     if (fSymGetLineFromAddr64(hProcess, PC, &dwLineDisp, &line)) {
-      OS << format(", %s, line %lu", line.FileName, line.LineNumber);
-      if (dwLineDisp > 0)
-        OS << format(" + 0x%lX byte(s)", dwLineDisp);
+      OS << format(", %s, line %lu + 0x%lX byte(s)", line.FileName,
+                   line.LineNumber, dwLineDisp);
     }
 
     OS << '\n';
@@ -820,6 +816,12 @@ void sys::CleanupOnSignal(uintptr_t Context) {
 
 static LONG WINAPI LLVMUnhandledExceptionFilter(LPEXCEPTION_POINTERS ep) {
   Cleanup(true);
+
+  // Write out the exception code.
+  if (ep && ep->ExceptionRecord)
+    llvm::errs() << format("Exception Code: 0x%08X",
+                           ep->ExceptionRecord->ExceptionCode)
+                 << "\n";
 
   // We'll automatically write a Minidump file here to help diagnose
   // the nasty sorts of crashes that aren't 100% reproducible from a set of

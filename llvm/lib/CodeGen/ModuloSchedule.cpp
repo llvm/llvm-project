@@ -850,7 +850,7 @@ void ModuloScheduleExpander::addBranches(MachineBasicBlock &PreheaderBB,
     Optional<bool> StaticallyGreater =
         LoopInfo->createTripCountGreaterCondition(j + 1, *Prolog, Cond);
     unsigned numAdded = 0;
-    if (!StaticallyGreater.hasValue()) {
+    if (!StaticallyGreater) {
       Prolog->addSuccessor(Epilog);
       numAdded = TII->insertBranch(*Prolog, Epilog, LastPro, Cond, DebugLoc());
     } else if (*StaticallyGreater == false) {
@@ -1421,7 +1421,7 @@ Register KernelRewriter::remapUse(Register Reg, MachineInstr &MI) {
   while (DefaultI != Defaults.rend())
     LoopReg = phi(LoopReg, *DefaultI++, MRI.getRegClass(Reg));
 
-  if (IllegalPhiDefault.hasValue()) {
+  if (IllegalPhiDefault) {
     // The consumer optionally consumes LoopProducer in the same iteration
     // (because the producer is scheduled at an earlier cycle than the consumer)
     // or the initial value. To facilitate this we create an illegal block here
@@ -1463,7 +1463,7 @@ Register KernelRewriter::phi(Register LoopReg, Optional<Register> InitReg,
   auto I = UndefPhis.find(LoopReg);
   if (I != UndefPhis.end()) {
     Register R = I->second;
-    if (!InitReg.hasValue())
+    if (!InitReg)
       // Found a phi taking undef as input, and this input is undef so return
       // without any more changes.
       return R;
@@ -1943,7 +1943,7 @@ void PeelingModuloScheduleExpander::fixupBranches() {
     TII->removeBranch(*Prolog);
     Optional<bool> StaticallyGreater =
         LoopInfo->createTripCountGreaterCondition(TC, *Prolog, Cond);
-    if (!StaticallyGreater.hasValue()) {
+    if (!StaticallyGreater) {
       LLVM_DEBUG(dbgs() << "Dynamic: TC > " << TC << "\n");
       // Dynamically branch based on Cond.
       TII->insertBranch(*Prolog, Epilog, Fallthrough, Cond, DebugLoc());

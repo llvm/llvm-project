@@ -181,13 +181,7 @@ inline uint64_t alignTo(uint64_t Size, Align A) {
 inline uint64_t alignTo(uint64_t Size, Align A, uint64_t Skew) {
   const uint64_t Value = A.value();
   Skew %= Value;
-  return ((Size + Value - 1 - Skew) & ~(Value - 1U)) + Skew;
-}
-
-/// Returns a multiple of A needed to store `Size` bytes.
-/// Returns `Size` if current alignment is undefined.
-inline uint64_t alignTo(uint64_t Size, MaybeAlign A) {
-  return A ? alignTo(Size, A.getValue()) : Size;
+  return alignTo(Size - Skew, A) + Skew;
 }
 
 /// Aligns `Addr` to `Alignment` bytes, rounding up.

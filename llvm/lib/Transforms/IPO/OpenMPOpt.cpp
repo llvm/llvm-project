@@ -2412,8 +2412,7 @@ struct AAICVTrackerFunction : public AAICVTracker {
 
       auto CallCheck = [&](Instruction &I) {
         Optional<Value *> ReplVal = getValueForCall(A, I, ICV);
-        if (ReplVal.hasValue() &&
-            ValuesMap.insert(std::make_pair(&I, *ReplVal)).second)
+        if (ReplVal && ValuesMap.insert(std::make_pair(&I, *ReplVal)).second)
           HasChanged = ChangeStatus::CHANGED;
 
         return true;
@@ -2545,7 +2544,7 @@ struct AAICVTrackerFunction : public AAICVTracker {
       }
 
       // If we are in the same BB and we have a value, we are done.
-      if (CurrBB == I->getParent() && ReplVal.hasValue())
+      if (CurrBB == I->getParent() && ReplVal)
         return ReplVal;
 
       // Go through all predecessors and add terminators for analysis.
@@ -2603,7 +2602,7 @@ struct AAICVTrackerFunctionReturned : AAICVTracker {
             ICVTrackingAA.getReplacementValue(ICV, &I, A);
 
         // If we found a second ICV value there is no unique returned value.
-        if (UniqueICVValue.hasValue() && UniqueICVValue != NewReplVal)
+        if (UniqueICVValue && UniqueICVValue != NewReplVal)
           return false;
 
         UniqueICVValue = NewReplVal;
@@ -2654,7 +2653,7 @@ struct AAICVTrackerCallSite : AAICVTracker {
   }
 
   ChangeStatus manifest(Attributor &A) override {
-    if (!ReplVal.hasValue() || !ReplVal.getValue())
+    if (!ReplVal || !*ReplVal)
       return ChangeStatus::UNCHANGED;
 
     A.changeAfterManifest(IRPosition::inst(*getCtxI()), **ReplVal);
@@ -4494,7 +4493,7 @@ struct AAFoldRuntimeCallCallSiteReturned : AAFoldRuntimeCall {
   ChangeStatus manifest(Attributor &A) override {
     ChangeStatus Changed = ChangeStatus::UNCHANGED;
 
-    if (SimplifiedValue.hasValue() && SimplifiedValue.getValue()) {
+    if (SimplifiedValue && *SimplifiedValue) {
       Instruction &I = *getCtxI();
       A.changeAfterManifest(IRPosition::inst(I), **SimplifiedValue);
       A.deleteAfterManifest(I);
@@ -4582,7 +4581,7 @@ private:
       // We have empty reaching kernels, therefore we cannot tell if the
       // associated call site can be folded. At this moment, SimplifiedValue
       // must be none.
-      assert(!SimplifiedValue.hasValue() && "SimplifiedValue should be none");
+      assert(!SimplifiedValue && "SimplifiedValue should be none");
     }
 
     return SimplifiedValue == SimplifiedValueBefore ? ChangeStatus::UNCHANGED
@@ -4625,7 +4624,7 @@ private:
       return indicatePessimisticFixpoint();
 
     if (CallerKernelInfoAA.ReachingKernelEntries.empty()) {
-      assert(!SimplifiedValue.hasValue() &&
+      assert(!SimplifiedValue &&
              "SimplifiedValue should keep none at this point");
       return ChangeStatus::UNCHANGED;
     }

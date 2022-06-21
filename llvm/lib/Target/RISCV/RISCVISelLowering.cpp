@@ -9900,7 +9900,7 @@ static unsigned allocateRVVReg(MVT ValVT, unsigned ValNo,
     // Assign the first mask argument to V0.
     // This is an interim calling convention and it may be changed in the
     // future.
-    if (FirstMaskArgument.hasValue() && ValNo == FirstMaskArgument.getValue())
+    if (FirstMaskArgument && ValNo == *FirstMaskArgument)
       return State.AllocateReg(RISCV::V0);
     return State.AllocateReg(ArgVRs);
   }

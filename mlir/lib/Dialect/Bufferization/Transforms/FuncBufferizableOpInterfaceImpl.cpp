@@ -104,7 +104,7 @@ getFuncAnalysisState(const AnalysisState &state) {
   Optional<const FuncAnalysisState *> maybeState =
       state.getDialectState<FuncAnalysisState>(
           func::FuncDialect::getDialectNamespace());
-  assert(maybeState.hasValue() && "FuncAnalysisState does not exist");
+  assert(maybeState && "FuncAnalysisState does not exist");
   return **maybeState;
 }
 
@@ -240,7 +240,7 @@ struct CallOpInterface
     const FuncAnalysisState &funcState = getFuncAnalysisState(state);
     Optional<int64_t> maybeEquiv =
         getEquivalentFuncArgIdx(funcOp, funcState, opResult.getResultNumber());
-    if (maybeEquiv.hasValue()) {
+    if (maybeEquiv) {
 #ifndef NDEBUG
       SmallVector<OpOperand *> aliasingOpOperands =
           getAliasingOpOperand(op, opResult, state);
