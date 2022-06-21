@@ -710,7 +710,7 @@ public:
 
   UniqueID getUniqueID() const { return Stat.getUniqueID(); }
 
-  InMemoryNode *getChild(StringRef Name) {
+  InMemoryNode *getChild(StringRef Name) const {
     auto I = Entries.find(Name);
     if (I != Entries.end())
       return I->second.get();
@@ -897,20 +897,20 @@ bool InMemoryFileSystem::addFileNoOwn(const Twine &P, time_t ModificationTime,
                  });
 }
 
-static ErrorOr<const detail::InMemoryNode *>
-lookupInMemoryNode(const InMemoryFileSystem &FS, detail::InMemoryDirectory *Dir,
-                   const Twine &P) {
+ErrorOr<const detail::InMemoryNode *>
+InMemoryFileSystem::lookupNode(const Twine &P) const {
   SmallString<128> Path;
   P.toVector(Path);
 
   // Fix up relative paths. This just prepends the current working directory.
-  std::error_code EC = FS.makeAbsolute(Path);
+  std::error_code EC = makeAbsolute(Path);
   assert(!EC);
   (void)EC;
 
-  if (FS.useNormalizedPaths())
+  if (useNormalizedPaths())
     llvm::sys::path::remove_dots(Path, /*remove_dot_dot=*/true);
 
+  const detail::InMemoryDirectory *Dir = Root.get();
   if (Path.empty())
     return Dir;
 
@@ -943,8 +943,8 @@ lookupInMemoryNode(const InMemoryFileSystem &FS, detail::InMemoryDirectory *Dir,
 
 bool InMemoryFileSystem::addHardLink(const Twine &NewLink,
                                      const Twine &Target) {
-  auto NewLinkNode = lookupInMemoryNode(*this, Root.get(), NewLink);
-  auto TargetNode = lookupInMemoryNode(*this, Root.get(), Target);
+  auto NewLinkNode = lookupNode(NewLink);
+  auto TargetNode = lookupNode(Target);
   // FromPath must not have been added before. ToPath must have been added
   // before. Resolved ToPath must be a File.
   if (!TargetNode || NewLinkNode || !isa<detail::InMemoryFile>(*TargetNode))
@@ -958,7 +958,7 @@ bool InMemoryFileSystem::addHardLink(const Twine &NewLink,
 }
 
 llvm::ErrorOr<Status> InMemoryFileSystem::status(const Twine &Path) {
-  auto Node = lookupInMemoryNode(*this, Root.get(), Path);
+  auto Node = lookupNode(Path);
   if (Node)
     return (*Node)->getStatus(Path);
   return Node.getError();
@@ -966,7 +966,7 @@ llvm::ErrorOr<Status> InMemoryFileSystem::status(const Twine &Path) {
 
 llvm::ErrorOr<std::unique_ptr<File>>
 InMemoryFileSystem::openFileForRead(const Twine &Path) {
-  auto Node = lookupInMemoryNode(*this, Root.get(), Path);
+  auto Node = lookupNode(Path);
   if (!Node)
     return Node.getError();
 
@@ -1031,7 +1031,7 @@ public:
 
 directory_iterator InMemoryFileSystem::dir_begin(const Twine &Dir,
                                                  std::error_code &EC) {
-  auto Node = lookupInMemoryNode(*this, Root.get(), Dir);
+  auto Node = lookupNode(Dir);
   if (!Node) {
     EC = Node.getError();
     return directory_iterator(std::make_shared<InMemoryDirIterator>());
