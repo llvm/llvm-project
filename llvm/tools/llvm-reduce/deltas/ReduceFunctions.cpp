@@ -14,6 +14,7 @@
 
 #include "ReduceFunctions.h"
 #include "Delta.h"
+#include "Utils.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/Instructions.h"
@@ -42,8 +43,8 @@ static void extractFunctionsFromModule(Oracle &O, Module &Program) {
 
   // And finally, we can actually delete them.
   for (Function &F : FuncsToRemove) {
-    // Replace all *still* remaining uses with undef.
-    F.replaceAllUsesWith(UndefValue::get(F.getType()));
+    // Replace all *still* remaining uses with the default value.
+    F.replaceAllUsesWith(getDefaultValue(F.getType()));
     // And finally, fully drop it.
     F.eraseFromParent();
   }
