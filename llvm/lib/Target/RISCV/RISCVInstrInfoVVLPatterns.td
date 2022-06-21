@@ -143,30 +143,33 @@ def riscv_setcc_vl : SDNode<"RISCVISD::SETCC_VL",
                                                  SDTCisVT<5, XLenVT>]>>;
 
 def riscv_vrgather_vx_vl : SDNode<"RISCVISD::VRGATHER_VX_VL",
-                                  SDTypeProfile<1, 4, [SDTCisVec<0>,
+                                  SDTypeProfile<1, 5, [SDTCisVec<0>,
                                                        SDTCisSameAs<0, 1>,
-                                                       SDTCisVT<2, XLenVT>,
-                                                       SDTCVecEltisVT<3, i1>,
-                                                       SDTCisSameNumEltsAs<0, 3>,
-                                                       SDTCisVT<4, XLenVT>]>>;
+                                                       SDTCisSameAs<0, 2>,
+                                                       SDTCisVT<3, XLenVT>,
+                                                       SDTCVecEltisVT<4, i1>,
+                                                       SDTCisSameNumEltsAs<0, 4>,
+                                                       SDTCisVT<5, XLenVT>]>>;
 def riscv_vrgather_vv_vl : SDNode<"RISCVISD::VRGATHER_VV_VL",
-                                  SDTypeProfile<1, 4, [SDTCisVec<0>,
+                                  SDTypeProfile<1, 5, [SDTCisVec<0>,
                                                        SDTCisSameAs<0, 1>,
-                                                       SDTCisInt<2>,
-                                                       SDTCisSameNumEltsAs<0, 2>,
-                                                       SDTCisSameSizeAs<0, 2>,
-                                                       SDTCVecEltisVT<3, i1>,
+                                                       SDTCisSameAs<0, 2>,
+                                                       SDTCisInt<3>,
                                                        SDTCisSameNumEltsAs<0, 3>,
-                                                       SDTCisVT<4, XLenVT>]>>;
+                                                       SDTCisSameSizeAs<0, 3>,
+                                                       SDTCVecEltisVT<4, i1>,
+                                                       SDTCisSameNumEltsAs<0, 4>,
+                                                       SDTCisVT<5, XLenVT>]>>;
 def riscv_vrgatherei16_vv_vl : SDNode<"RISCVISD::VRGATHEREI16_VV_VL",
-                                      SDTypeProfile<1, 4, [SDTCisVec<0>,
+                                      SDTypeProfile<1, 5, [SDTCisVec<0>,
                                                            SDTCisSameAs<0, 1>,
-                                                           SDTCisInt<2>,
-                                                           SDTCVecEltisVT<2, i16>,
-                                                           SDTCisSameNumEltsAs<0, 2>,
-                                                           SDTCVecEltisVT<3, i1>,
+                                                           SDTCisSameAs<0, 2>,
+                                                           SDTCisInt<3>,
+                                                           SDTCVecEltisVT<3, i16>,
                                                            SDTCisSameNumEltsAs<0, 3>,
-                                                           SDTCisVT<4, XLenVT>]>>;
+                                                           SDTCVecEltisVT<4, i1>,
+                                                           SDTCisSameNumEltsAs<0, 4>,
+                                                           SDTCisVT<5, XLenVT>]>>;
 
 def SDT_RISCVSelect_VL  : SDTypeProfile<1, 4, [
   SDTCisVec<0>, SDTCisVec<1>, SDTCisSameNumEltsAs<0, 1>, SDTCVecEltisVT<1, i1>,
@@ -1835,43 +1838,40 @@ foreach vti = AllIntegerVectors in {
             (!cast<Instruction>("PseudoVMV_S_X_"#vti.LMul.MX)
                 vti.RegClass:$merge,
                 (vti.Scalar vti.ScalarRegClass:$rs1), GPR:$vl, vti.Log2SEW)>;
-  def : Pat<(vti.Vector (riscv_vrgather_vv_vl vti.RegClass:$rs2,
+  def : Pat<(vti.Vector (riscv_vrgather_vv_vl (vti.Vector srcvalue),
+                                              vti.RegClass:$rs2,
                                               (vti.Vector vti.RegClass:$rs1),
                                               (vti.Mask true_mask),
                                               VLOpFrag)),
             (!cast<Instruction>("PseudoVRGATHER_VV_"# vti.LMul.MX)
                  vti.RegClass:$rs2, vti.RegClass:$rs1, GPR:$vl, vti.Log2SEW)>;
-  def : Pat<(vti.Vector (riscv_vrgather_vx_vl vti.RegClass:$rs2, GPR:$rs1,
+  def : Pat<(vti.Vector (riscv_vrgather_vx_vl (vti.Vector srcvalue),
+                                              vti.RegClass:$rs2, GPR:$rs1,
                                               (vti.Mask true_mask),
                                               VLOpFrag)),
             (!cast<Instruction>("PseudoVRGATHER_VX_"# vti.LMul.MX)
                  vti.RegClass:$rs2, GPR:$rs1, GPR:$vl, vti.Log2SEW)>;
-  def : Pat<(vti.Vector (riscv_vrgather_vx_vl vti.RegClass:$rs2, uimm5:$imm,
+  def : Pat<(vti.Vector (riscv_vrgather_vx_vl (vti.Vector srcvalue),
+                                              vti.RegClass:$rs2, uimm5:$imm,
                                               (vti.Mask true_mask),
                                               VLOpFrag)),
             (!cast<Instruction>("PseudoVRGATHER_VI_"# vti.LMul.MX)
                  vti.RegClass:$rs2, uimm5:$imm, GPR:$vl, vti.Log2SEW)>;
 
-  def : Pat<(vti.Vector (riscv_vselect_vl (vti.Mask V0),
-                                          (riscv_vrgather_vv_vl
-                                            vti.RegClass:$rs2,
-                                            vti.RegClass:$rs1,
-                                            (vti.Mask true_mask),
-                                            VLOpFrag),
-                                          vti.RegClass:$merge,
-                                          VLOpFrag)),
+  def : Pat<(vti.Vector (riscv_vrgather_vv_vl vti.RegClass:$merge,
+                                              vti.RegClass:$rs2,
+                                              vti.RegClass:$rs1,
+                                              (vti.Mask V0),
+                                              VLOpFrag)),
             (!cast<Instruction>("PseudoVRGATHER_VV_"# vti.LMul.MX#"_MASK")
                  vti.RegClass:$merge, vti.RegClass:$rs2, vti.RegClass:$rs1,
                  (vti.Mask V0), GPR:$vl, vti.Log2SEW, TAIL_AGNOSTIC)>;
 
-  def : Pat<(vti.Vector (riscv_vselect_vl (vti.Mask V0),
-                                          (riscv_vrgather_vx_vl
-                                            vti.RegClass:$rs2,
-                                            uimm5:$imm,
-                                            (vti.Mask true_mask),
-                                            VLOpFrag),
-                                          vti.RegClass:$merge,
-                                          VLOpFrag)),
+  def : Pat<(vti.Vector (riscv_vrgather_vx_vl vti.RegClass:$merge,
+                                              vti.RegClass:$rs2,
+                                              uimm5:$imm,
+                                              (vti.Mask V0),
+                                              VLOpFrag)),
             (!cast<Instruction>("PseudoVRGATHER_VI_"# vti.LMul.MX#"_MASK")
                  vti.RegClass:$merge, vti.RegClass:$rs2, uimm5:$imm,
                  (vti.Mask V0), GPR:$vl, vti.Log2SEW, TAIL_AGNOSTIC)>;
@@ -1884,21 +1884,20 @@ foreach vti = AllIntegerVectors in {
     defvar emul_str = octuple_to_str<octuple_emul>.ret;
     defvar ivti = !cast<VTypeInfo>("VI16" # emul_str);
     defvar inst = "PseudoVRGATHEREI16_VV_" # vti.LMul.MX # "_" # emul_str;
-    def : Pat<(vti.Vector (riscv_vrgatherei16_vv_vl vti.RegClass:$rs2,
+    def : Pat<(vti.Vector (riscv_vrgatherei16_vv_vl (vti.Vector srcvalue),
+                                                    vti.RegClass:$rs2,
                                                     (ivti.Vector ivti.RegClass:$rs1),
                                                     (vti.Mask true_mask),
                                                     VLOpFrag)),
               (!cast<Instruction>(inst)
                    vti.RegClass:$rs2, ivti.RegClass:$rs1, GPR:$vl, vti.Log2SEW)>;
 
-    def : Pat<(vti.Vector (riscv_vselect_vl (vti.Mask V0),
-                                            (riscv_vrgatherei16_vv_vl
-                                              vti.RegClass:$rs2,
-                                              (ivti.Vector ivti.RegClass:$rs1),
-                                              (vti.Mask true_mask),
-                                              VLOpFrag),
-                                            vti.RegClass:$merge,
-                                            VLOpFrag)),
+    def : Pat<(vti.Vector
+               (riscv_vrgatherei16_vv_vl vti.RegClass:$merge,
+                                         vti.RegClass:$rs2,
+                                         (ivti.Vector ivti.RegClass:$rs1),
+                                         (vti.Mask V0),
+                                         VLOpFrag)),
               (!cast<Instruction>(inst#"_MASK")
                    vti.RegClass:$merge, vti.RegClass:$rs2, ivti.RegClass:$rs1,
                    (vti.Mask V0), GPR:$vl, vti.Log2SEW, TAIL_AGNOSTIC)>;
@@ -1923,43 +1922,42 @@ foreach vti = AllFloatVectors in {
                 vti.RegClass:$merge,
                 (vti.Scalar vti.ScalarRegClass:$rs1), GPR:$vl, vti.Log2SEW)>;
   defvar ivti = GetIntVTypeInfo<vti>.Vti;
-  def : Pat<(vti.Vector (riscv_vrgather_vv_vl vti.RegClass:$rs2,
+  def : Pat<(vti.Vector (riscv_vrgather_vv_vl (vti.Vector srcvalue),
+                                              vti.RegClass:$rs2,
                                               (ivti.Vector vti.RegClass:$rs1),
                                               (vti.Mask true_mask),
                                               VLOpFrag)),
             (!cast<Instruction>("PseudoVRGATHER_VV_"# vti.LMul.MX)
                  vti.RegClass:$rs2, vti.RegClass:$rs1, GPR:$vl, vti.Log2SEW)>;
-  def : Pat<(vti.Vector (riscv_vrgather_vx_vl vti.RegClass:$rs2, GPR:$rs1,
+  def : Pat<(vti.Vector (riscv_vrgather_vx_vl (vti.Vector srcvalue),
+                                              vti.RegClass:$rs2, GPR:$rs1,
                                               (vti.Mask true_mask),
                                               VLOpFrag)),
             (!cast<Instruction>("PseudoVRGATHER_VX_"# vti.LMul.MX)
                  vti.RegClass:$rs2, GPR:$rs1, GPR:$vl, vti.Log2SEW)>;
-  def : Pat<(vti.Vector (riscv_vrgather_vx_vl vti.RegClass:$rs2, uimm5:$imm,
+  def : Pat<(vti.Vector (riscv_vrgather_vx_vl (vti.Vector srcvalue),
+                                              vti.RegClass:$rs2, uimm5:$imm,
                                               (vti.Mask true_mask),
                                               VLOpFrag)),
             (!cast<Instruction>("PseudoVRGATHER_VI_"# vti.LMul.MX)
                  vti.RegClass:$rs2, uimm5:$imm, GPR:$vl, vti.Log2SEW)>;
 
-  def : Pat<(vti.Vector (riscv_vselect_vl (vti.Mask V0),
-                                          (riscv_vrgather_vv_vl
-                                            vti.RegClass:$rs2,
-                                            (ivti.Vector vti.RegClass:$rs1),
-                                            (vti.Mask true_mask),
-                                            VLOpFrag),
-                                          vti.RegClass:$merge,
-                                          VLOpFrag)),
+  def : Pat<(vti.Vector
+             (riscv_vrgather_vv_vl vti.RegClass:$merge,
+                                   vti.RegClass:$rs2,
+                                   (ivti.Vector vti.RegClass:$rs1),
+                                   (vti.Mask V0),
+                                   VLOpFrag)),
             (!cast<Instruction>("PseudoVRGATHER_VV_"# vti.LMul.MX#"_MASK")
                  vti.RegClass:$merge, vti.RegClass:$rs2, vti.RegClass:$rs1,
                  (vti.Mask V0), GPR:$vl, vti.Log2SEW, TAIL_AGNOSTIC)>;
 
-  def : Pat<(vti.Vector (riscv_vselect_vl (vti.Mask V0),
-                                          (riscv_vrgather_vx_vl
-                                            vti.RegClass:$rs2,
-                                            uimm5:$imm,
-                                            (vti.Mask true_mask),
-                                            VLOpFrag),
-                                          vti.RegClass:$merge,
-                                          VLOpFrag)),
+  def : Pat<(vti.Vector
+             (riscv_vrgather_vx_vl vti.RegClass:$merge,
+                                   vti.RegClass:$rs2,
+                                   uimm5:$imm,
+                                   (vti.Mask V0),
+                                   VLOpFrag)),
             (!cast<Instruction>("PseudoVRGATHER_VI_"# vti.LMul.MX#"_MASK")
                  vti.RegClass:$merge, vti.RegClass:$rs2, uimm5:$imm,
                  (vti.Mask V0), GPR:$vl, vti.Log2SEW, TAIL_AGNOSTIC)>;
@@ -1971,21 +1969,20 @@ foreach vti = AllFloatVectors in {
     defvar emul_str = octuple_to_str<octuple_emul>.ret;
     defvar ivti = !cast<VTypeInfo>("VI16" # emul_str);
     defvar inst = "PseudoVRGATHEREI16_VV_" # vti.LMul.MX # "_" # emul_str;
-    def : Pat<(vti.Vector (riscv_vrgatherei16_vv_vl vti.RegClass:$rs2,
+    def : Pat<(vti.Vector (riscv_vrgatherei16_vv_vl (vti.Vector srcvalue),
+                                                    vti.RegClass:$rs2,
                                                     (ivti.Vector ivti.RegClass:$rs1),
                                                     (vti.Mask true_mask),
                                                     VLOpFrag)),
               (!cast<Instruction>(inst)
                    vti.RegClass:$rs2, ivti.RegClass:$rs1, GPR:$vl, vti.Log2SEW)>;
 
-    def : Pat<(vti.Vector (riscv_vselect_vl (vti.Mask V0),
-                                            (riscv_vrgatherei16_vv_vl
-                                              vti.RegClass:$rs2,
-                                              (ivti.Vector ivti.RegClass:$rs1),
-                                              (vti.Mask true_mask),
-                                              VLOpFrag),
-                                            vti.RegClass:$merge,
-                                            VLOpFrag)),
+    def : Pat<(vti.Vector
+               (riscv_vrgatherei16_vv_vl vti.RegClass:$merge,
+                                         vti.RegClass:$rs2,
+                                         (ivti.Vector ivti.RegClass:$rs1),
+                                         (vti.Mask V0),
+                                         VLOpFrag)),
               (!cast<Instruction>(inst#"_MASK")
                    vti.RegClass:$merge, vti.RegClass:$rs2, ivti.RegClass:$rs1,
                    (vti.Mask V0), GPR:$vl, vti.Log2SEW, TAIL_AGNOSTIC)>;
