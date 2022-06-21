@@ -103,7 +103,8 @@ void BreakpointBase::SetLogMessage() {
     last_raw_text_start = curly_braces_range.second + 1;
   }
   // Trailing raw text after close curly brace.
-  if (logMessage.size() > last_raw_text_start)
+  assert(last_raw_text_start >= 0);
+  if (logMessage.size() > (size_t)last_raw_text_start)
     logMessageParts.emplace_back(
         llvm::StringRef(logMessage.c_str() + last_raw_text_start,
                         logMessage.size() - last_raw_text_start),
@@ -127,7 +128,8 @@ bool BreakpointBase::BreakpointHitCallback(
     if (messagePart.is_expr) {
       // Try local frame variables first before fall back to expression
       // evaluation
-      const char *expr = messagePart.text.str().c_str();
+      std::string expr_str = messagePart.text.str();
+      const char *expr = expr_str.c_str();
       lldb::SBValue value =
           frame.GetValueForVariablePath(expr, lldb::eDynamicDontRunTarget);
       if (value.GetError().Fail())
