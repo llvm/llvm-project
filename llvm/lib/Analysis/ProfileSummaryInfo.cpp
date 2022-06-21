@@ -165,7 +165,7 @@ bool ProfileSummaryInfo::isFunctionColdInCallGraph(
 
 bool ProfileSummaryInfo::isFunctionHotnessUnknown(const Function &F) const {
   assert(hasPartialSampleProfile() && "Expect partial sample profile");
-  return !F.getEntryCount().hasValue();
+  return !F.getEntryCount();
 }
 
 template <bool isHot>

@@ -139,7 +139,7 @@ public:
   }
 
   /// For convenience, returns a valid alignment or 1 if undefined.
-  Align valueOrOne() const { return hasValue() ? getValue() : Align(); }
+  Align valueOrOne() const { return value_or(Align()); }
 };
 
 /// Checks that SizeInBytes is a multiple of the alignment.

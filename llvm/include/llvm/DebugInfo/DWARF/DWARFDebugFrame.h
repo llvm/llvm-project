@@ -261,7 +261,7 @@ public:
   UnwindRow() : CFAValue(UnwindLocation::createUnspecified()) {}
 
   /// Returns true if the address is valid in this object.
-  bool hasAddress() const { return Address.hasValue(); }
+  bool hasAddress() const { return Address.has_value(); }
 
   /// Get the address for this row.
   ///

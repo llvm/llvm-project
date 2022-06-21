@@ -1243,7 +1243,7 @@ static bool EvaluateHasIncludeCommon(Token &Tok, IdentifierInfo *II,
   }
 
   // Get the result value.  A result of true means the file exists.
-  return File.hasValue();
+  return File.has_value();
 }
 
 bool Preprocessor::EvaluateHasInclude(Token &Tok, IdentifierInfo *II) {

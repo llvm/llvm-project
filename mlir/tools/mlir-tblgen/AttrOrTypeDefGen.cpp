@@ -765,7 +765,7 @@ static const char *const dialectDynamicTypePrinterDispatch = R"(
 /// functions from their dialect's print/parse methods.
 void DefGenerator::emitParsePrintDispatch(ArrayRef<AttrOrTypeDef> defs) {
   if (llvm::none_of(defs, [](const AttrOrTypeDef &def) {
-        return def.getMnemonic().hasValue();
+        return def.getMnemonic().has_value();
       })) {
     return;
   }

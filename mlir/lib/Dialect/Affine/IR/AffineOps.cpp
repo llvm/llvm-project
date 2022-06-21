@@ -1785,7 +1785,7 @@ void AffineForOp::getSuccessorRegions(
 /// Returns true if the affine.for has zero iterations in trivial cases.
 static bool hasTrivialZeroTripCount(AffineForOp op) {
   Optional<uint64_t> tripCount = getTrivialConstantTripCount(op);
-  return tripCount.hasValue() && tripCount.getValue() == 0;
+  return tripCount && *tripCount == 0;
 }
 
 LogicalResult AffineForOp::fold(ArrayRef<Attribute> operands,

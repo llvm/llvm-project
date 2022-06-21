@@ -2427,7 +2427,7 @@ static Optional<std::pair<int, int>> parseVectorKind(StringRef Suffix,
 }
 
 static bool isValidVectorKind(StringRef Suffix, RegKind VectorKind) {
-  return parseVectorKind(Suffix, VectorKind).hasValue();
+  return parseVectorKind(Suffix, VectorKind).has_value();
 }
 
 static unsigned matchSVEDataVectorRegName(StringRef Name) {

@@ -121,7 +121,7 @@ collectContributionData(DWARFContext::unit_iterator_range Units) {
                 const Optional<StrOffsetsContributionDescriptor> &R) {
                if (L && R)
                  return L->Base < R->Base;
-               return R.hasValue();
+               return R.has_value();
              });
 
   // Uniquify contributions, as it is possible that units (specifically

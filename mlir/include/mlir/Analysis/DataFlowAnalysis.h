@@ -120,7 +120,7 @@ public:
   }
 
   /// Returns true if the value of this lattice hasn't yet been initialized.
-  bool isUninitialized() const final { return !optimisticValue.hasValue(); }
+  bool isUninitialized() const final { return !optimisticValue; }
 
   /// Join the information contained in the 'rhs' lattice into this
   /// lattice. Returns if the state of the current lattice changed.

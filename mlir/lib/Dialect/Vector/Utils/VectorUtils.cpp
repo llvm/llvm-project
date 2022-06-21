@@ -315,5 +315,5 @@ bool matcher::operatesOnSuperVectorsOf(Operation &op,
   // This could be useful information if we wanted to reshape at the level of
   // the vector type (but we would have to look at the compute and distinguish
   // between parallel, reduction and possibly other cases.
-  return ratio.hasValue();
+  return ratio.has_value();
 }

@@ -530,7 +530,7 @@ public:
   bool blockUntilIdle(Deadline Timeout) {
     std::unique_lock<std::mutex> Lock(Mu);
     return wait(Lock, CV, Timeout,
-                [&] { return Queue.empty() && !ActiveTask.hasValue(); });
+                [&] { return Queue.empty() && !ActiveTask; });
   }
 
   ~BroadcastThread() {

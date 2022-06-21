@@ -1196,7 +1196,7 @@ std::shared_ptr<const PreambleData> ASTWorker::getPossiblyStalePreamble(
 
 void ASTWorker::waitForFirstPreamble() const {
   std::unique_lock<std::mutex> Lock(Mutex);
-  PreambleCV.wait(Lock, [this] { return LatestPreamble.hasValue() || Done; });
+  PreambleCV.wait(Lock, [this] { return LatestPreamble || Done; });
 }
 
 tooling::CompileCommand ASTWorker::getCurrentCompileCommand() const {

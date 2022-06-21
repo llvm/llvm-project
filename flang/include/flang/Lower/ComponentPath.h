@@ -49,7 +49,7 @@ public:
   bool hasComponents() const { return !suffixComponents.empty(); }
   void clear();
 
-  bool hasExtendCoorRef() const { return extendCoorRef.hasValue(); }
+  bool hasExtendCoorRef() const { return extendCoorRef.has_value(); }
   ExtendRefFunc getExtendCoorRef() const;
   void resetExtendCoorRef() { extendCoorRef = llvm::None; }
   void resetPC();

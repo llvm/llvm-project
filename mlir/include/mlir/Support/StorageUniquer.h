@@ -124,7 +124,7 @@ public:
 
     /// Returns true if this allocator allocated the provided object pointer.
     bool allocated(const void *ptr) {
-      return allocator.identifyObject(ptr).hasValue();
+      return allocator.identifyObject(ptr).has_value();
     }
 
   private:
