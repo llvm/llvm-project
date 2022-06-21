@@ -572,3 +572,14 @@ func.func @sparse_out2(%arg0: tensor<?x?x?xf32, #SparseTensor>, %arg1: !llvm.ptr
   sparse_tensor.out %arg0, %arg1 : tensor<?x?x?xf32, #SparseTensor>, !llvm.ptr<i8>
   return
 }
+
+// CHECK-LABEL: func @sparse_and_dense_init(
+//       CHECK: %[[S:.*]] = call @newSparseTensor
+//       CHECK: %[[D:.*]] = bufferization.alloc_tensor
+//       CHECK: return %[[S]], %[[D]] : !llvm.ptr<i8>, tensor<?x?xf64>
+func.func @sparse_and_dense_init(%arg0: index, %arg1: index)
+           -> (tensor<?x?xf64, #SparseMatrix>, tensor<?x?xf64>) {
+  %0 = bufferization.alloc_tensor(%arg0, %arg1) : tensor<?x?xf64, #SparseMatrix>
+  %1 = bufferization.alloc_tensor(%arg0, %arg1) : tensor<?x?xf64>
+  return %0, %1 : tensor<?x?xf64, #SparseMatrix>, tensor<?x?xf64>
+}
