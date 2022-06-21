@@ -2164,9 +2164,8 @@ Type SubViewOp::inferRankReducedResultType(unsigned resultRank,
       if (!dimsToProject.test(pos))
         projectedShape.push_back(shape[pos]);
 
-    AffineMap map = inferredType.getLayout().getAffineMap();
-    if (!map.isIdentity())
-      map = getProjectedMap(map, dimsToProject);
+    AffineMap map =
+        getProjectedMap(inferredType.getLayout().getAffineMap(), dimsToProject);
     inferredType =
         MemRefType::get(projectedShape, inferredType.getElementType(), map,
                         inferredType.getMemorySpace());
