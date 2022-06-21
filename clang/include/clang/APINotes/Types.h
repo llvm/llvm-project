@@ -440,8 +440,7 @@ public:
   }
   void
   setRetainCountConvention(llvm::Optional<RetainCountConventionKind> Value) {
-    RawRetainCountConvention =
-        Value.hasValue() ? static_cast<unsigned>(Value.getValue()) + 1 : 0;
+    RawRetainCountConvention = Value ? static_cast<unsigned>(*Value) + 1 : 0;
     assert(getRetainCountConvention() == Value && "bitfield too small");
   }
 
@@ -559,8 +558,7 @@ public:
   }
   void
   setRetainCountConvention(llvm::Optional<RetainCountConventionKind> Value) {
-    RawRetainCountConvention =
-        Value.hasValue() ? static_cast<unsigned>(Value.getValue()) + 1 : 0;
+    RawRetainCountConvention = Value ? static_cast<unsigned>(*Value) + 1 : 0;
     assert(getRetainCountConvention() == Value && "bitfield too small");
   }
 

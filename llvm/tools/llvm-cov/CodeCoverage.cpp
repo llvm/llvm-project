@@ -265,8 +265,7 @@ bool CodeCoverageTool::isEquivalentFile(StringRef FilePath1,
                                         StringRef FilePath2) {
   auto Status1 = getFileStatus(FilePath1);
   auto Status2 = getFileStatus(FilePath2);
-  return Status1.hasValue() && Status2.hasValue() &&
-         sys::fs::equivalent(Status1.getValue(), Status2.getValue());
+  return Status1 && Status2 && sys::fs::equivalent(*Status1, *Status2);
 }
 
 ErrorOr<const MemoryBuffer &>
