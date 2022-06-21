@@ -21,6 +21,13 @@ PresburgerRelation::PresburgerRelation(const IntegerRelation &disjunct)
   unionInPlace(disjunct);
 }
 
+void PresburgerRelation::setSpace(const PresburgerSpace &oSpace) {
+  assert(space.getNumLocalIds() == 0 && "no locals should be present");
+  space = oSpace;
+  for (IntegerRelation &disjunct : disjuncts)
+    disjunct.setSpaceExceptLocals(space);
+}
+
 unsigned PresburgerRelation::getNumDisjuncts() const {
   return disjuncts.size();
 }
@@ -768,6 +775,12 @@ LogicalResult SetCoalescer::coalescePair(unsigned i, unsigned j) {
 
 PresburgerRelation PresburgerRelation::coalesce() const {
   return SetCoalescer(*this).coalesce();
+}
+
+bool PresburgerRelation::hasOnlyDivLocals() const {
+  return llvm::all_of(disjuncts, [](const IntegerRelation &rel) {
+    return rel.hasOnlyDivLocals();
+  });
 }
 
 void PresburgerRelation::print(raw_ostream &os) const {

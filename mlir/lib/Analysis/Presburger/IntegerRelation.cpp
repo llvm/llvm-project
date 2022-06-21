@@ -38,6 +38,19 @@ std::unique_ptr<IntegerPolyhedron> IntegerPolyhedron::clone() const {
   return std::make_unique<IntegerPolyhedron>(*this);
 }
 
+void IntegerRelation::setSpace(const PresburgerSpace &oSpace) {
+  assert(space.getNumIds() == oSpace.getNumIds() && "invalid space!");
+  space = oSpace;
+}
+
+void IntegerRelation::setSpaceExceptLocals(const PresburgerSpace &oSpace) {
+  assert(oSpace.getNumLocalIds() == 0 && "no locals should be present!");
+  assert(oSpace.getNumIds() <= getNumIds() && "invalid space!");
+  unsigned newNumLocals = getNumIds() - oSpace.getNumIds();
+  space = oSpace;
+  space.insertId(IdKind::Local, 0, newNumLocals);
+}
+
 void IntegerRelation::append(const IntegerRelation &other) {
   assert(space.isEqual(other.getSpace()) && "Spaces must be equal.");
 
@@ -150,6 +163,67 @@ void IntegerRelation::truncate(const CountsSnapshot &counts) {
   truncateIdKind(IdKind::Local, counts);
   removeInequalityRange(counts.getNumIneqs(), getNumInequalities());
   removeEqualityRange(counts.getNumEqs(), getNumEqualities());
+}
+
+PresburgerSet IntegerPolyhedron::computeReprWithOnlyDivLocals() const {
+  // If there are no locals, we're done.
+  if (getNumLocalIds() == 0)
+    return PresburgerSet(*this);
+
+  // Move all the non-div locals to the end, as the current API to
+  // SymbolicLexMin requires these to form a contiguous range.
+  //
+  // Take a copy so we can perform mutations.
+  IntegerPolyhedron copy = *this;
+  std::vector<MaybeLocalRepr> reprs;
+  copy.getLocalReprs(reprs);
+
+  // Iterate through all the locals. The last `numNonDivLocals` are the locals
+  // that have been scanned already and do not have division representations.
+  unsigned numNonDivLocals = 0;
+  unsigned offset = copy.getIdKindOffset(IdKind::Local);
+  for (unsigned i = 0, e = copy.getNumLocalIds(); i < e - numNonDivLocals;) {
+    if (!reprs[i]) {
+      // Whenever we come across a local that does not have a division
+      // representation, we swap it to the `numNonDivLocals`-th last position
+      // and increment `numNonDivLocal`s. `reprs` also needs to be swapped.
+      copy.swapId(offset + i, offset + e - numNonDivLocals - 1);
+      std::swap(reprs[i], reprs[e - numNonDivLocals - 1]);
+      ++numNonDivLocals;
+      continue;
+    }
+    ++i;
+  }
+
+  // If there are no non-div locals, we're done.
+  if (numNonDivLocals == 0)
+    return PresburgerSet(*this);
+
+  // We computeSymbolicIntegerLexMin by considering the non-div locals as
+  // "non-symbols" and considering everything else as "symbols". This will
+  // compute a function mapping assignments to "symbols" to the
+  // lexicographically minimal valid assignment of "non-symbols", when a
+  // satisfying assignment exists. It separately returns the set of assignments
+  // to the "symbols" such that a satisfying assignment to the "non-symbols"
+  // exists but the lexmin is unbounded. We basically want to find the set of
+  // values of the "symbols" such that an assignment to the "non-symbols"
+  // exists, which is the union of the domain of the returned lexmin function
+  // and the returned set of assignments to the "symbols" that makes the lexmin
+  // unbounded.
+  SymbolicLexMin lexminResult =
+      SymbolicLexSimplex(copy, /*symbolOffset*/ 0,
+                         IntegerPolyhedron(PresburgerSpace::getSetSpace(
+                             /*numDims=*/copy.getNumIds() - numNonDivLocals)))
+          .computeSymbolicIntegerLexMin();
+  PresburgerSet result =
+      lexminResult.lexmin.getDomain().unionSet(lexminResult.unboundedDomain);
+
+  // The result set might lie in the wrong space -- all its ids are dims.
+  // Set it to the desired space and return.
+  PresburgerSpace space = getSpace();
+  space.removeIdRange(IdKind::Local, 0, getNumLocalIds());
+  result.setSpace(space);
+  return result;
 }
 
 SymbolicLexMin IntegerPolyhedron::findSymbolicIntegerLexMin() const {
@@ -1118,6 +1192,13 @@ unsigned IntegerRelation::mergeLocalIds(IntegerRelation &other) {
   // Since we do not remove duplicate divisions in relA, this is guranteed to be
   // non-negative.
   return relA.getNumLocalIds() - oldALocals;
+}
+
+bool IntegerRelation::hasOnlyDivLocals() const {
+  std::vector<MaybeLocalRepr> reprs;
+  getLocalReprs(reprs);
+  return llvm::all_of(reprs,
+                      [](const MaybeLocalRepr &repr) { return bool(repr); });
 }
 
 void IntegerRelation::removeDuplicateDivs() {
