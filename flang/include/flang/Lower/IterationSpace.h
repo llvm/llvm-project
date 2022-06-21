@@ -504,7 +504,7 @@ public:
       loopCleanup = fn;
       return;
     }
-    std::function<void(fir::FirOpBuilder &)> oldFn = loopCleanup.getValue();
+    std::function<void(fir::FirOpBuilder &)> oldFn = *loopCleanup;
     loopCleanup = [=](fir::FirOpBuilder &builder) {
       oldFn(builder);
       fn(builder);

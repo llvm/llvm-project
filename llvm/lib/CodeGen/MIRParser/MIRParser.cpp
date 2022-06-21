@@ -643,7 +643,7 @@ bool MIRParserImpl::parseRegisterInfo(PerFunctionMIParsingState &PFS,
   // be saved for the caller).
   if (YamlMF.CalleeSavedRegisters) {
     SmallVector<MCPhysReg, 16> CalleeSavedRegisters;
-    for (const auto &RegSource : YamlMF.CalleeSavedRegisters.getValue()) {
+    for (const auto &RegSource : *YamlMF.CalleeSavedRegisters) {
       Register Reg;
       if (parseNamedRegisterReference(PFS, Reg, RegSource.Value, Error))
         return error(Error, RegSource.SourceRange);
@@ -814,7 +814,7 @@ bool MIRParserImpl::initializeFrameInfo(PerFunctionMIParsingState &PFS,
                                  Object.CalleeSavedRestored, ObjectIdx))
       return true;
     if (Object.LocalOffset)
-      MFI.mapLocalFrameObject(ObjectIdx, Object.LocalOffset.getValue());
+      MFI.mapLocalFrameObject(ObjectIdx, *Object.LocalOffset);
     if (parseStackObjectsDebugInfo(PFS, Object, ObjectIdx))
       return true;
   }

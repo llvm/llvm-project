@@ -538,7 +538,7 @@ void SourceCoverageViewHTML::renderLine(raw_ostream &OS, LineRef L,
   auto Highlight = [&](const std::string &Snippet, unsigned LC, unsigned RC) {
     if (getOptions().Debug)
       HighlightedRanges.emplace_back(LC, RC);
-    return tag("span", Snippet, std::string(Color.getValue()));
+    return tag("span", Snippet, std::string(*Color));
   };
 
   auto CheckIfUncovered = [&](const CoverageSegment *S) {

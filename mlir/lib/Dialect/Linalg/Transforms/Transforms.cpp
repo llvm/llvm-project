@@ -116,7 +116,7 @@ bool mlir::linalg::LinalgTransformationFilter::hasReplacementFilter(
     return false;
   auto attr = op->getAttr(LinalgTransforms::kLinalgTransformMarker)
                   .dyn_cast<StringAttr>();
-  return attr && attr == replacement.getValue();
+  return attr && attr == *replacement;
 }
 
 LinalgTilingOptions &
@@ -239,7 +239,7 @@ static FailureOr<Value> padOperandToSmallestStaticBoundingBox(
       LLVM_DEBUG(DBGS() << "No constant bounding box can be found for padding");
       return failure();
     }
-    paddedShape[shapeIdx++] = upperBound.getValue();
+    paddedShape[shapeIdx++] = *upperBound;
   }
   assert(shapeIdx == static_cast<int64_t>(shape.size()) &&
          "expect the dynamic and static ranks to match");
@@ -393,7 +393,7 @@ LogicalResult mlir::linalg::LinalgBaseTileAndFusePattern::matchAndRewrite(
     // could assert, but continue if this is not the case.
     if (!operandNumber)
       continue;
-    if (!fusionOptions.indicesToFuse.count(operandNumber.getValue()))
+    if (!fusionOptions.indicesToFuse.count(*operandNumber))
       continue;
     if (isa<LinalgOp>(dependence.getDependentOp()))
       producers.insert(dependence.getDependentOp());
@@ -554,7 +554,7 @@ mlir::linalg::LinalgPaddingPattern::returningMatchAndRewrite(
         padOp, en.value(), transposeVector, hoistedOp, transposeOps);
     if (failed(newResult))
       continue;
-    rewriter.replaceOp(padOp, newResult.getValue());
+    rewriter.replaceOp(padOp, *newResult);
 
     // Do not apply hoist padding to the newly introduced transpose operations.
     for (GenericOp transposeOp : transposeOps)
@@ -562,7 +562,7 @@ mlir::linalg::LinalgPaddingPattern::returningMatchAndRewrite(
   }
 
   // Replace the original operation to pad.
-  rewriter.replaceOp(linalgOp, newResults.getValue());
+  rewriter.replaceOp(linalgOp, *newResults);
   filter.replaceLinalgTransformationFilter(rewriter, paddedOp);
 
   return paddedOp;
@@ -969,7 +969,7 @@ LogicalResult ExtractSliceOfPadTensorSwapPattern::matchAndRewrite(
   bool zeroSliceGuard = true;
   if (controlFn) {
     if (Optional<bool> control = controlFn(sliceOp))
-      zeroSliceGuard = control.getValue();
+      zeroSliceGuard = *control;
     else
       return failure();
   }

@@ -44,6 +44,8 @@ Implemented Papers
 - P0980R1 (Making ``std::string`` constexpr)
 - P2216R3 (std::format improvements)
 
+- Implemented P0174R2 (Deprecating Vestigial Library Parts in C++17)
+
 - Marked the following papers as "Complete" (note that some of those might have
   been implemented in a previous release but not marked as such):
 
