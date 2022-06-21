@@ -43,6 +43,7 @@
 // CHECK: "--hash-style=gnu"
 // CHECK-AARCH64: "--fix-cortex-a53-843419"
 // CHECK: "-dynamic-linker" "ld.so.1"
+// CHECK-RISCV64: "-X"
 // CHECK: Scrt1.o
 // CHECK-NOT: crti.o
 // CHECK-NOT: crtbegin.o
