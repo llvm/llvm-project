@@ -1493,3 +1493,38 @@ func.func @omp_cancellationpoint_sections() -> () {
   }
   return
 }
+
+// CHECK-LABEL: @omp_taskgroup_no_tasks
+func.func @omp_taskgroup_no_tasks() -> () {
+
+  // CHECK: omp.taskgroup
+  omp.taskgroup {
+    // CHECK: "test.foo"() : () -> ()
+    "test.foo"() : () -> ()
+    // CHECK: omp.terminator
+    omp.terminator
+  }
+  return
+}
+
+// CHECK-LABEL: @omp_taskgroup_multiple_tasks
+func.func @omp_taskgroup_multiple_tasks() -> () {
+  // CHECK: omp.taskgroup
+  omp.taskgroup {
+    // CHECK: omp.task
+    omp.task {
+      "test.foo"() : () -> ()
+      // CHECK: omp.terminator
+      omp.terminator
+    }
+    // CHECK: omp.task
+    omp.task {
+      "test.foo"() : () -> ()
+      // CHECK: omp.terminator
+      omp.terminator
+    }
+    // CHECK: omp.terminator
+    omp.terminator
+  }
+  return
+}
