@@ -141,9 +141,11 @@ ScalarOpToLibmCall<Op>::matchAndRewrite(Op op,
 void mlir::populateMathToLibmConversionPatterns(RewritePatternSet &patterns,
                                                 PatternBenefit benefit) {
   patterns.add<VecOpToScalarOp<math::Atan2Op>, VecOpToScalarOp<math::ExpM1Op>,
-               VecOpToScalarOp<math::TanhOp>>(patterns.getContext(), benefit);
+               VecOpToScalarOp<math::TanhOp>, VecOpToScalarOp<math::CosOp>,
+               VecOpToScalarOp<math::SinOp>>(patterns.getContext(), benefit);
   patterns.add<PromoteOpToF32<math::Atan2Op>, PromoteOpToF32<math::ExpM1Op>,
-               PromoteOpToF32<math::TanhOp>>(patterns.getContext(), benefit);
+               PromoteOpToF32<math::TanhOp>, PromoteOpToF32<math::CosOp>,
+               PromoteOpToF32<math::SinOp>>(patterns.getContext(), benefit);
   patterns.add<ScalarOpToLibmCall<math::Atan2Op>>(patterns.getContext(),
                                                   "atan2f", "atan2", benefit);
   patterns.add<ScalarOpToLibmCall<math::ErfOp>>(patterns.getContext(), "erff",
@@ -154,6 +156,10 @@ void mlir::populateMathToLibmConversionPatterns(RewritePatternSet &patterns,
                                                  "tanh", benefit);
   patterns.add<ScalarOpToLibmCall<math::RoundOp>>(patterns.getContext(),
                                                   "roundf", "round", benefit);
+  patterns.add<ScalarOpToLibmCall<math::CosOp>>(patterns.getContext(), "cosf",
+                                                "cos", benefit);
+  patterns.add<ScalarOpToLibmCall<math::SinOp>>(patterns.getContext(), "sinf",
+                                                "sin", benefit);
 }
 
 namespace {
