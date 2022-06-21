@@ -61,8 +61,7 @@ Expected<json::Value> FifoFileIO::ReadJSON(std::chrono::milliseconds timeout) {
         if (!buffer.empty())
           line = buffer;
       }));
-  if (future->wait_for(timeout) == std::future_status::timeout ||
-      !line.hasValue())
+  if (future->wait_for(timeout) == std::future_status::timeout || !line)
     return createStringError(inconvertibleErrorCode(),
                              "Timed out trying to get messages from the " +
                                  m_other_endpoint_name);

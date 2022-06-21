@@ -701,8 +701,7 @@ PreservedAnalyses LoopSimplifyCFGPass::run(Loop &L, LoopAnalysisManager &AM,
     MSSAU = MemorySSAUpdater(AR.MSSA);
   bool DeleteCurrentLoop = false;
   if (!simplifyLoopCFG(L, AR.DT, AR.LI, AR.SE,
-                       MSSAU.hasValue() ? MSSAU.getPointer() : nullptr,
-                       DeleteCurrentLoop))
+                       MSSAU ? MSSAU.getPointer() : nullptr, DeleteCurrentLoop))
     return PreservedAnalyses::all();
 
   if (DeleteCurrentLoop)

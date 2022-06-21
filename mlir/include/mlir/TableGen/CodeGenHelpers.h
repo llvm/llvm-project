@@ -229,8 +229,7 @@ template <> struct stringifier<Twine> {
 template <typename OptionalT>
 struct stringifier<Optional<OptionalT>> {
   static std::string apply(Optional<OptionalT> optional) {
-    return optional.hasValue() ? stringifier<OptionalT>::apply(*optional)
-                               : std::string();
+    return optional ? stringifier<OptionalT>::apply(*optional) : std::string();
   }
 };
 } // namespace detail

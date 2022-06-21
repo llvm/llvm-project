@@ -251,8 +251,7 @@ static Optional<Type> convertArrayType(spirv::ArrayType type,
   unsigned stride = type.getArrayStride();
   Type elementType = type.getElementType();
   auto sizeInBytes = elementType.cast<spirv::SPIRVType>().getSizeInBytes();
-  if (stride != 0 &&
-      !(sizeInBytes.hasValue() && sizeInBytes.getValue() == stride))
+  if (stride != 0 && !(sizeInBytes && *sizeInBytes == stride))
     return llvm::None;
 
   auto llvmElementType = converter.convertType(elementType);
