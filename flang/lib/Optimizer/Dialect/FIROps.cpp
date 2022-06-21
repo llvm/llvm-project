@@ -3079,7 +3079,7 @@ void fir::StringLitOp::build(mlir::OpBuilder &builder,
                              fir::CharacterType inType, llvm::StringRef val,
                              llvm::Optional<int64_t> len) {
   auto valAttr = builder.getNamedAttr(value(), builder.getStringAttr(val));
-  int64_t length = len.hasValue() ? len.getValue() : inType.getLen();
+  int64_t length = len ? *len : inType.getLen();
   auto lenAttr = mkNamedIntegerAttr(builder, size(), length);
   result.addAttributes({valAttr, lenAttr});
   result.addTypes(inType);
@@ -3102,7 +3102,7 @@ void fir::StringLitOp::build(mlir::OpBuilder &builder,
                              llvm::Optional<std::int64_t> len) {
   auto valAttr =
       builder.getNamedAttr(xlist(), convertToArrayAttr(builder, vlist));
-  std::int64_t length = len.hasValue() ? len.getValue() : inType.getLen();
+  std::int64_t length = len ? *len : inType.getLen();
   auto lenAttr = mkNamedIntegerAttr(builder, size(), length);
   result.addAttributes({valAttr, lenAttr});
   result.addTypes(inType);
@@ -3115,7 +3115,7 @@ void fir::StringLitOp::build(mlir::OpBuilder &builder,
                              llvm::Optional<std::int64_t> len) {
   auto valAttr =
       builder.getNamedAttr(xlist(), convertToArrayAttr(builder, vlist));
-  std::int64_t length = len.hasValue() ? len.getValue() : inType.getLen();
+  std::int64_t length = len ? *len : inType.getLen();
   auto lenAttr = mkNamedIntegerAttr(builder, size(), length);
   result.addAttributes({valAttr, lenAttr});
   result.addTypes(inType);
@@ -3128,7 +3128,7 @@ void fir::StringLitOp::build(mlir::OpBuilder &builder,
                              llvm::Optional<std::int64_t> len) {
   auto valAttr =
       builder.getNamedAttr(xlist(), convertToArrayAttr(builder, vlist));
-  std::int64_t length = len.hasValue() ? len.getValue() : inType.getLen();
+  std::int64_t length = len ? *len : inType.getLen();
   auto lenAttr = mkNamedIntegerAttr(builder, size(), length);
   result.addAttributes({valAttr, lenAttr});
   result.addTypes(inType);
