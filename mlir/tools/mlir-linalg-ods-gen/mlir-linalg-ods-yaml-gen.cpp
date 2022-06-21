@@ -718,7 +718,7 @@ static LogicalResult generateNamedGenericOpOds(LinalgOpConfig &opConfig,
       static const char stmtFmt[] = "$_state.addAttribute(\"{0}\", {0});";
       // Add the type conversion attributes to the op definition and builders.
       if (isFunctionAttribute(arg.kind)) {
-        assert(arg.defaultFn.hasValue());
+        assert(arg.defaultFn);
         std::string enumName = convertOperandKindToEnumName(arg.kind);
         static const char typeFmt[] = "{0}::{1}";
         static const char defFmt[] = "DefaultValuedAttr<{0}, \"{1}\">:${2}";
@@ -861,7 +861,7 @@ exprs.push_back(getAffineConstantExpr(cst{1}, context));
         for (LinalgOperandDef &arg : opConfig.structuredOp->args) {
           if (arg.kind != LinalgOperandDefKind::IndexAttr)
             continue;
-          assert(arg.indexAttrMap.hasValue());
+          assert(arg.indexAttrMap);
           for (auto &en :
                llvm::enumerate(arg.indexAttrMap->affineMap().getResults())) {
             if (auto symbol = en.value().dyn_cast<AffineSymbolExpr>()) {
@@ -958,7 +958,7 @@ std::string {0}::getLibraryCallName() {{
     for (LinalgOperandDef &arg : opConfig.structuredOp->args) {
       if (arg.kind != LinalgOperandDefKind::IndexAttr)
         continue;
-      assert(arg.indexAttrMap.hasValue());
+      assert(arg.indexAttrMap);
       // Verify index attribute. Paramters:
       // {0}: Attribute name
       // {1}: Attribute size

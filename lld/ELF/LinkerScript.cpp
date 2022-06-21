@@ -1350,7 +1350,7 @@ SmallVector<PhdrEntry *, 0> LinkerScript::createPhdrs() {
     // Assign headers specified by linker script
     for (size_t id : getPhdrIndices(sec)) {
       ret[id]->add(sec);
-      if (!phdrsCommands[id].flags.hasValue())
+      if (!phdrsCommands[id].flags)
         ret[id]->p_flags |= sec->getPhdrFlags();
     }
   }

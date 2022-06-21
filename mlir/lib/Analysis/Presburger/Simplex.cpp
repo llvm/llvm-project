@@ -1162,7 +1162,7 @@ void Simplex::undoLastConstraint() {
       pivot(*maybeRow, column);
     } else {
       Optional<unsigned> row = findAnyPivotRow(column);
-      assert(row.hasValue() && "Pivot should always exist for a constraint!");
+      assert(row && "Pivot should always exist for a constraint!");
       pivot(*row, column);
     }
   }
@@ -1181,7 +1181,7 @@ void LexSimplexBase::undoLastConstraint() {
     // long as we get the unknown to row orientation and remove it.
     unsigned column = con.back().pos;
     Optional<unsigned> row = findAnyPivotRow(column);
-    assert(row.hasValue() && "Pivot should always exist for a constraint!");
+    assert(row && "Pivot should always exist for a constraint!");
     pivot(*row, column);
   }
   removeLastConstraintRowOrientation();

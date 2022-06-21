@@ -4582,7 +4582,7 @@ private:
       // We have empty reaching kernels, therefore we cannot tell if the
       // associated call site can be folded. At this moment, SimplifiedValue
       // must be none.
-      assert(!SimplifiedValue.hasValue() && "SimplifiedValue should be none");
+      assert(!SimplifiedValue && "SimplifiedValue should be none");
     }
 
     return SimplifiedValue == SimplifiedValueBefore ? ChangeStatus::UNCHANGED
@@ -4625,7 +4625,7 @@ private:
       return indicatePessimisticFixpoint();
 
     if (CallerKernelInfoAA.ReachingKernelEntries.empty()) {
-      assert(!SimplifiedValue.hasValue() &&
+      assert(!SimplifiedValue &&
              "SimplifiedValue should keep none at this point");
       return ChangeStatus::UNCHANGED;
     }

@@ -208,7 +208,7 @@ void LinkerDriver::addFile(StringRef path, bool withLOption) {
   using namespace sys::fs;
 
   Optional<MemoryBufferRef> buffer = readFile(path);
-  if (!buffer.hasValue())
+  if (!buffer)
     return;
   MemoryBufferRef mbref = *buffer;
 

@@ -234,7 +234,7 @@ std::vector<MemoryBufferRef> static getArchiveMembers(MemoryBufferRef mb) {
 
 void LinkerDriver::addFile(StringRef path) {
   Optional<MemoryBufferRef> buffer = readFile(path);
-  if (!buffer.hasValue())
+  if (!buffer)
     return;
   MemoryBufferRef mbref = *buffer;
 

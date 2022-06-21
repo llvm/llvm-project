@@ -199,7 +199,7 @@ public:
     // to call.
     int dropFront = 0;
     if constexpr (std::is_same_v<std::decay_t<A>, fir::CallOp>) {
-      if (!callOp.getCallee().hasValue()) {
+      if (!callOp.getCallee()) {
         newInTys.push_back(fnTy.getInput(0));
         newOpers.push_back(callOp.getOperand(0));
         dropFront = 1;
@@ -327,7 +327,7 @@ public:
         newCall = rewriter->create<A>(loc, newResTys, newOpers);
       }
       LLVM_DEBUG(llvm::dbgs() << "replacing call with " << newCall << '\n');
-      if (wrap.hasValue())
+      if (wrap)
         replaceOp(callOp, (*wrap)(newCall.getOperation()));
       else
         replaceOp(callOp, newCall.getResults());

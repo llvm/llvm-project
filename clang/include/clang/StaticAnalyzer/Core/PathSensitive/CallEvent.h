@@ -216,7 +216,7 @@ public:
   }
 
   bool isForeign() const {
-    assert(Foreign.hasValue() && "Foreign must be set before querying");
+    assert(Foreign && "Foreign must be set before querying");
     return *Foreign;
   }
   void setForeign(bool B) const { Foreign = B; }

@@ -1971,7 +1971,7 @@ void Function::setEntryCount(ProfileCount Count,
                              const DenseSet<GlobalValue::GUID> *S) {
 #if !defined(NDEBUG)
   auto PrevCount = getEntryCount();
-  assert(!PrevCount.hasValue() || PrevCount->getType() == Count.getType());
+  assert(!PrevCount || PrevCount->getType() == Count.getType());
 #endif
 
   auto ImportGUIDs = getImportGUIDs();

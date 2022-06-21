@@ -65,7 +65,7 @@ analyzeFunction(const FunctionDecl &FuncDecl, ASTContext &ASTCtx) {
   // `runDataflowAnalysis` doesn't guarantee that the exit block is visited;
   // for example, when it is unreachable.
   // FIXME: Diagnose violations even when the exit block is unreachable.
-  if (!ExitBlockState.hasValue())
+  if (!ExitBlockState)
     return llvm::None;
 
   return std::move(ExitBlockState->Lattice);

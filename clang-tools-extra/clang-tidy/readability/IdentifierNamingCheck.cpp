@@ -258,7 +258,7 @@ IdentifierNamingCheck::FileStyle IdentifierNamingCheck::getFileStyleFromOptions(
 
     auto HPTOpt =
         Options.get<IdentifierNamingCheck::HungarianPrefixType>(StyleString);
-    if (HPTOpt.hasValue() && !HungarianNotation.checkOptionValid(I))
+    if (HPTOpt && !HungarianNotation.checkOptionValid(I))
       configurationDiag("invalid identifier naming option '%0'") << StyleString;
 
     memcpy(&StyleString[StyleSize], "IgnoredRegexp", 13);

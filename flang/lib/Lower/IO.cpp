@@ -1852,7 +1852,7 @@ void genBeginDataTransferCallArgs(
   if constexpr (hasIOCtrl) { // READ or WRITE
     if (isInternal) {
       // descriptor or scalar variable; maybe explicit format; scratch area
-      if (descRef.hasValue()) {
+      if (descRef) {
         mlir::Value desc = builder.createBox(loc, *descRef);
         ioArgs.push_back(
             builder.createConvert(loc, ioFuncTy.getInput(ioArgs.size()), desc));

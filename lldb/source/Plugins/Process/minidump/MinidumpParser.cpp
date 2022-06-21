@@ -236,7 +236,7 @@ llvm::Optional<lldb::pid_t> MinidumpParser::GetPid() {
   }
 
   llvm::Optional<LinuxProcStatus> proc_status = GetLinuxProcStatus();
-  if (proc_status.hasValue()) {
+  if (proc_status) {
     return proc_status->GetPid();
   }
 

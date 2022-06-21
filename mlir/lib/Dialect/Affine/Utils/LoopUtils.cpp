@@ -1440,7 +1440,7 @@ static bool checkLoopInterchangeDependences(
     // This iterates through loops in the desired order.
     for (unsigned j = 0; j < maxLoopDepth; ++j) {
       unsigned permIndex = loopPermMapInv[j];
-      assert(depComps[permIndex].lb.hasValue());
+      assert(depComps[permIndex].lb);
       int64_t depCompLb = depComps[permIndex].lb.getValue();
       if (depCompLb > 0)
         break;

@@ -697,7 +697,7 @@ static void updateARMVFPArgs(const ARMAttributeParser &attributes,
                              const InputFile *f) {
   Optional<unsigned> attr =
       attributes.getAttributeValue(ARMBuildAttrs::ABI_VFP_args);
-  if (!attr.hasValue())
+  if (!attr)
     // If an ABI tag isn't present then it is implicitly given the value of 0
     // which maps to ARMBuildAttrs::BaseAAPCS. However many assembler files,
     // including some in glibc that don't use FP args (and should have value 3)

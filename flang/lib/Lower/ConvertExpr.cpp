@@ -2590,7 +2590,7 @@ public:
       return *allocatedResult;
     }
 
-    if (!resultType.hasValue())
+    if (!resultType)
       return mlir::Value{}; // subroutine call
     // For now, Fortran return values are implemented with a single MLIR
     // function return value.
@@ -6410,7 +6410,7 @@ private:
       mem = copyNeeded ? copyNextArrayCtorSection(exv, buffPos, buffSize, mem,
                                                   eleSz, eleTy, eleRefTy, resTy)
                        : fir::getBase(exv);
-      if (fir::isa_char(seqTy.getEleTy()) && !charLen.hasValue()) {
+      if (fir::isa_char(seqTy.getEleTy()) && !charLen) {
         charLen = builder.createTemporary(loc, builder.getI64Type());
         mlir::Value castLen =
             builder.createConvert(loc, builder.getI64Type(), fir::getLen(exv));
@@ -6492,7 +6492,7 @@ private:
       mem = copyNeeded ? copyNextArrayCtorSection(exv, buffPos, buffSize, mem,
                                                   eleSz, eleTy, eleRefTy, resTy)
                        : fir::getBase(exv);
-      if (fir::isa_char(seqTy.getEleTy()) && !charLen.hasValue()) {
+      if (fir::isa_char(seqTy.getEleTy()) && !charLen) {
         charLen = builder.createTemporary(loc, builder.getI64Type());
         mlir::Value castLen =
             builder.createConvert(loc, builder.getI64Type(), fir::getLen(exv));

@@ -525,7 +525,7 @@ SymbolGroupIterator &SymbolGroupIterator::operator++() {
 }
 
 void SymbolGroupIterator::scanToNextDebugS() {
-  assert(SectionIter.hasValue());
+  assert(SectionIter);
   auto End = Value.File->obj().section_end();
   auto &Iter = *SectionIter;
   assert(!isEnd());
@@ -551,7 +551,7 @@ bool SymbolGroupIterator::isEnd() const {
     return Index == Count;
   }
 
-  assert(SectionIter.hasValue());
+  assert(SectionIter);
   return *SectionIter == Value.File->obj().section_end();
 }
 

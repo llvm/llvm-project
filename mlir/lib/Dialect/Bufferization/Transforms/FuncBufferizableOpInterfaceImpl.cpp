@@ -104,7 +104,7 @@ getFuncAnalysisState(const AnalysisState &state) {
   Optional<const FuncAnalysisState *> maybeState =
       state.getDialectState<FuncAnalysisState>(
           func::FuncDialect::getDialectNamespace());
-  assert(maybeState.hasValue() && "FuncAnalysisState does not exist");
+  assert(maybeState && "FuncAnalysisState does not exist");
   return **maybeState;
 }
 

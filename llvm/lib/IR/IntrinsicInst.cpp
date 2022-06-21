@@ -617,7 +617,7 @@ CmpInst::Predicate VPCmpIntrinsic::getPredicate() const {
 #define END_REGISTER_VP_INTRINSIC(VPID) break;
 #include "llvm/IR/VPIntrinsics.def"
   }
-  assert(CCArgIdx.hasValue() && "Unexpected vector-predicated comparison");
+  assert(CCArgIdx && "Unexpected vector-predicated comparison");
   return IsFP ? getFPPredicateFromMD(getArgOperand(*CCArgIdx))
               : getIntPredicateFromMD(getArgOperand(*CCArgIdx));
 }

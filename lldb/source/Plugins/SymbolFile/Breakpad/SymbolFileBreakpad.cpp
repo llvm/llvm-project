@@ -511,7 +511,7 @@ SymbolFileBreakpad::GetParameterStackSize(Symbol &symbol) {
           symbol.GetAddress().GetFileAddress())) {
     auto record = StackWinRecord::parse(
         *LineIterator(*m_objfile_sp, Record::StackWin, entry->data));
-    assert(record.hasValue());
+    assert(record);
     return record->ParameterSize;
   }
   return llvm::createStringError(llvm::inconvertibleErrorCode(),
@@ -655,7 +655,7 @@ SymbolFileBreakpad::ParseCFIUnwindPlan(const Bookmark &bookmark,
   LineIterator It(*m_objfile_sp, Record::StackCFI, bookmark),
       End(*m_objfile_sp);
   llvm::Optional<StackCFIRecord> init_record = StackCFIRecord::parse(*It);
-  assert(init_record.hasValue() && init_record->Size.hasValue() &&
+  assert(init_record && init_record->Size &&
          "Record already parsed successfully in ParseUnwindData!");
 
   auto plan_sp = std::make_shared<UnwindPlan>(lldb::eRegisterKindLLDB);
