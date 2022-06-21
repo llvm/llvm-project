@@ -214,25 +214,6 @@ gentbl_cc_library(
     ],
 )
 
-gentbl_cc_library(
-    name = "StructsIncGen",
-    tbl_outs = [
-        (
-            ["-gen-struct-attr-decls"],
-            "TableGen/StructAttrGenTest.h.inc",
-        ),
-        (
-            ["-gen-struct-attr-defs"],
-            "TableGen/StructAttrGenTest.cpp.inc",
-        ),
-    ],
-    tblgen = "//mlir:mlir-tblgen",
-    td_file = "TableGen/structs.td",
-    deps = [
-        "//mlir:OpBaseTdFiles",
-    ],
-)
-
 cc_test(
     name = "tablegen_tests",
     size = "small",
@@ -242,14 +223,11 @@ cc_test(
     ]) + [
         "TableGen/EnumsGenTest.cpp.inc",
         "TableGen/EnumsGenTest.h.inc",
-        "TableGen/StructAttrGenTest.cpp.inc",
-        "TableGen/StructAttrGenTest.h.inc",
     ],
     includes = ["TableGen/"],
     deps = [
         ":EnumsIncGen",
         ":PassIncGen",
-        ":StructsIncGen",
         "//llvm:Support",
         "//llvm:TestingSupport",
         "//llvm:gtest_main",
