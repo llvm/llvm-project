@@ -139,8 +139,7 @@ static void dumpAttribute(raw_ostream &OS, const DWARFDie &Die,
     Color = HighlightColor::String;
     if (const auto *LT = U->getContext().getLineTableForUnit(U))
       if (LT->getFileNameByIndex(
-              FormValue.getAsUnsignedConstant().getValue(),
-              U->getCompilationDir(),
+              *FormValue.getAsUnsignedConstant(), U->getCompilationDir(),
               DILineInfoSpecifier::FileLineInfoKind::AbsoluteFilePath, File)) {
         File = '"' + File + '"';
         Name = File;

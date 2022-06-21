@@ -390,7 +390,7 @@ MVEGatherScatterLowering::getVarAndConst(Value *Inst, int TypeScale) {
     return ReturnFalse;
 
   // Check that the constant is small enough for an incrementing gather
-  int64_t Immediate = Const.getValue() << TypeScale;
+  int64_t Immediate = *Const << TypeScale;
   if (Immediate > 512 || Immediate < -512 || Immediate % 4 != 0)
     return ReturnFalse;
 

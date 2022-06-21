@@ -367,7 +367,7 @@ static void computeFunctionSummary(
         // We should have named any anonymous globals
         assert(CalledFunction->hasName());
         auto ScaledCount = PSI->getProfileCount(*CB, BFI);
-        auto Hotness = ScaledCount ? getHotness(ScaledCount.getValue(), PSI)
+        auto Hotness = ScaledCount ? getHotness(*ScaledCount, PSI)
                                    : CalleeInfo::HotnessType::Unknown;
         if (ForceSummaryEdgesCold != FunctionSummary::FSHT_None)
           Hotness = CalleeInfo::HotnessType::Cold;

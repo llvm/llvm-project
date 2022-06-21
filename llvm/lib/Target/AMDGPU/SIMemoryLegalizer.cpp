@@ -714,7 +714,7 @@ Optional<SIMemOpInfo> SIMemOpAccess::constructFromMIWithMMO(
         return None;
       }
 
-      SSID = IsSyncScopeInclusion.getValue() ? SSID : MMO->getSyncScopeID();
+      SSID = *IsSyncScopeInclusion ? SSID : MMO->getSyncScopeID();
       Ordering = getMergedAtomicOrdering(Ordering, OpOrdering);
       assert(MMO->getFailureOrdering() != AtomicOrdering::Release &&
              MMO->getFailureOrdering() != AtomicOrdering::AcquireRelease);
@@ -733,7 +733,7 @@ Optional<SIMemOpInfo> SIMemOpAccess::constructFromMIWithMMO(
       return None;
     }
     std::tie(Scope, OrderingAddrSpace, IsCrossAddressSpaceOrdering) =
-      ScopeOrNone.getValue();
+        *ScopeOrNone;
     if ((OrderingAddrSpace == SIAtomicAddrSpace::NONE) ||
         ((OrderingAddrSpace & SIAtomicAddrSpace::ATOMIC) != OrderingAddrSpace) ||
         ((InstrAddrSpace & SIAtomicAddrSpace::ATOMIC) == SIAtomicAddrSpace::NONE)) {
@@ -795,7 +795,7 @@ Optional<SIMemOpInfo> SIMemOpAccess::getAtomicFenceInfo(
   SIAtomicAddrSpace OrderingAddrSpace = SIAtomicAddrSpace::NONE;
   bool IsCrossAddressSpaceOrdering = false;
   std::tie(Scope, OrderingAddrSpace, IsCrossAddressSpaceOrdering) =
-    ScopeOrNone.getValue();
+      *ScopeOrNone;
 
   if ((OrderingAddrSpace == SIAtomicAddrSpace::NONE) ||
       ((OrderingAddrSpace & SIAtomicAddrSpace::ATOMIC) != OrderingAddrSpace)) {

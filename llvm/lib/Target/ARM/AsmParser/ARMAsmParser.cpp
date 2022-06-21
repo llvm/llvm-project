@@ -11385,7 +11385,7 @@ bool ARMAsmParser::parseDirectiveEabiAttr(SMLoc L) {
       Error(TagLoc, "attribute name not recognised: " + Name);
       return false;
     }
-    Tag = Ret.getValue();
+    Tag = *Ret;
     Parser.Lex();
   } else {
     const MCExpr *AttrExpr;

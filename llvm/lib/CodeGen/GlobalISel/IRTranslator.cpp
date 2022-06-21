@@ -1817,7 +1817,7 @@ static unsigned getConstrainedOpcode(Intrinsic::ID ID) {
 
 bool IRTranslator::translateConstrainedFPIntrinsic(
   const ConstrainedFPIntrinsic &FPI, MachineIRBuilder &MIRBuilder) {
-  fp::ExceptionBehavior EB = FPI.getExceptionBehavior().getValue();
+  fp::ExceptionBehavior EB = *FPI.getExceptionBehavior();
 
   unsigned Opcode = getConstrainedOpcode(FPI.getIntrinsicID());
   if (!Opcode)
@@ -2264,7 +2264,7 @@ bool IRTranslator::translateKnownIntrinsic(const CallInst &CI, Intrinsic::ID ID,
         .buildInstr(TargetOpcode::G_INTRINSIC_FPTRUNC_ROUND,
                     {getOrCreateVReg(CI)},
                     {getOrCreateVReg(*CI.getArgOperand(0))}, Flags)
-        .addImm((int)RoundMode.getValue());
+        .addImm((int)*RoundMode);
 
     return true;
   }

@@ -1514,7 +1514,7 @@ bool GCNTargetMachine::parseMachineFunctionInfo(
       Arg = ArgDescriptor::createStack(A->StackOffset);
     // Check and apply the optional mask.
     if (A->Mask)
-      Arg = ArgDescriptor::createArg(Arg, A->Mask.getValue());
+      Arg = ArgDescriptor::createArg(Arg, *A->Mask);
 
     MFI->NumUserSGPRs += UserSGPRs;
     MFI->NumSystemSGPRs += SystemSGPRs;

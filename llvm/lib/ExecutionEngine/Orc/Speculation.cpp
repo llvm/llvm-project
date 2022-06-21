@@ -126,7 +126,7 @@ void IRSpeculationLayer::emit(std::unique_ptr<MaterializationResponsibility> R,
 
           assert(Mutator.GetInsertBlock()->getParent() == &Fn &&
                  "IR builder association mismatch?");
-          S.registerSymbols(internToJITSymbols(IRNames.getValue()),
+          S.registerSymbols(internToJITSymbols(*IRNames),
                             &R->getTargetJITDylib());
         }
       }

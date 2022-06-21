@@ -2056,7 +2056,7 @@ static Constant *ConstantFoldScalarCall1(StringRef Name,
     case Intrinsic::experimental_constrained_rint: {
       auto CI = cast<ConstrainedFPIntrinsic>(Call);
       RM = CI->getRoundingMode();
-      if (!RM || RM.getValue() == RoundingMode::Dynamic)
+      if (!RM || *RM == RoundingMode::Dynamic)
         return nullptr;
       break;
     }

@@ -415,7 +415,7 @@ bool AArch64MIPeepholeOpt::splitTwoPartImm(
     Imm &= 0xFFFFFFFF;
   OpcodePair Opcode;
   if (auto R = SplitAndOpc(Imm, RegSize, Imm0, Imm1))
-    Opcode = R.getValue();
+    Opcode = *R;
   else
     return false;
 

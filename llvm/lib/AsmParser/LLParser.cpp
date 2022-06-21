@@ -270,7 +270,7 @@ bool LLParser::validateEndOfModule(bool UpgradeDebugInfo) {
   // remangle intrinsics names as well.
   for (Function &F : llvm::make_early_inc_range(*M)) {
     if (auto Remangled = Intrinsic::remangleIntrinsicFunction(&F)) {
-      F.replaceAllUsesWith(Remangled.getValue());
+      F.replaceAllUsesWith(*Remangled);
       F.eraseFromParent();
     }
   }

@@ -276,7 +276,7 @@ void WebAssemblyAsmPrinter::emitSymbolType(const MCSymbolWasm *Sym) {
   if (!WasmTy)
     return;
 
-  switch (WasmTy.getValue()) {
+  switch (*WasmTy) {
   case wasm::WASM_SYMBOL_TYPE_GLOBAL:
     getTargetStreamer()->emitGlobalType(Sym);
     break;

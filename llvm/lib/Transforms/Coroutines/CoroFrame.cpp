@@ -1391,7 +1391,7 @@ struct AllocaUseVisitor : PtrUseVisitor<AllocaUseVisitor> {
   bool getShouldLiveOnFrame() const {
     if (!ShouldLiveOnFrame)
       ShouldLiveOnFrame = computeShouldLiveOnFrame();
-    return ShouldLiveOnFrame.getValue();
+    return *ShouldLiveOnFrame;
   }
 
   bool getMayWriteBeforeCoroBegin() const { return MayWriteBeforeCoroBegin; }
@@ -1793,7 +1793,7 @@ static void insertSpills(const FrameDataInfo &FrameData, coro::Shape &Shape) {
       auto *FramePtr = GetFramePointer(Alloca);
       auto *FramePtrRaw =
           Builder.CreateBitCast(FramePtr, Type::getInt8PtrTy(C));
-      auto &Value = Alias.second.getValue();
+      auto &Value = *Alias.second;
       auto ITy = IntegerType::get(C, Value.getBitWidth());
       auto *AliasPtr = Builder.CreateGEP(Type::getInt8Ty(C), FramePtrRaw,
                                          ConstantInt::get(ITy, Value));
