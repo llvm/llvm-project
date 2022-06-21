@@ -411,7 +411,7 @@ std::string selectHexagonFS(StringRef CPU, StringRef FS) {
 }
 
 static bool isCPUValid(StringRef CPU) {
-  return Hexagon::getCpu(CPU).hasValue();
+  return Hexagon::getCpu(CPU).has_value();
 }
 
 namespace {

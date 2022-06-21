@@ -183,7 +183,7 @@ convertElementwiseOpToMMA(Operation *op) {
 
 /// Return true if the op is supported as elementwise op on MMAMatrix type.
 static bool elementwiseSupportsMMAMatrixType(Operation *op) {
-  return convertElementwiseOpToMMA(op).hasValue();
+  return convertElementwiseOpToMMA(op).has_value();
 }
 
 static bool supportsMMaMatrixType(Operation *op, bool useNvGpu) {

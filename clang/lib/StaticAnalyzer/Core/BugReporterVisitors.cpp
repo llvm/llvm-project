@@ -258,7 +258,7 @@ static bool isVarAnInterestingCondition(const Expr *CondVarExpr,
 static bool isInterestingExpr(const Expr *E, const ExplodedNode *N,
                               const PathSensitiveBugReport *B) {
   if (Optional<SVal> V = getSValForVar(E, N))
-    return B->getInterestingnessKind(*V).hasValue();
+    return B->getInterestingnessKind(*V).has_value();
   return false;
 }
 

@@ -236,7 +236,7 @@ OpPrintingFlags &OpPrintingFlags::printValueUsers() {
 
 /// Return if the given ElementsAttr should be elided.
 bool OpPrintingFlags::shouldElideElementsAttr(ElementsAttr attr) const {
-  return elementsAttrElementLimit.hasValue() &&
+  return elementsAttrElementLimit &&
          *elementsAttrElementLimit < int64_t(attr.getNumElements()) &&
          !attr.isa<SplatElementsAttr>();
 }

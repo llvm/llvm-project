@@ -613,7 +613,7 @@ static bool shouldImport(Symbol *sym) {
   if (config->allowUndefinedSymbols.count(sym->getName()) != 0)
     return true;
 
-  return sym->importName.hasValue();
+  return sym->importName.has_value();
 }
 
 void Writer::calculateImports() {

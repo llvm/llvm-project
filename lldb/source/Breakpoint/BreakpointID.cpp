@@ -33,7 +33,7 @@ bool BreakpointID::IsRangeIdentifier(llvm::StringRef str) {
 }
 
 bool BreakpointID::IsValidIDExpression(llvm::StringRef str) {
-  return BreakpointID::ParseCanonicalReference(str).hasValue();
+  return BreakpointID::ParseCanonicalReference(str).has_value();
 }
 
 llvm::ArrayRef<llvm::StringRef> BreakpointID::GetRangeSpecifiers() {

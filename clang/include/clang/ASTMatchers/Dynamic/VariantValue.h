@@ -188,7 +188,7 @@ public:
 
   bool hasTypedMatcher(ASTNodeKind NK) const {
     if (!Value) return false;
-    return Value->getTypedMatcher(MatcherOps(NK)).hasValue();
+    return Value->getTypedMatcher(MatcherOps(NK)).has_value();
   }
 
   /// Determines if the contained matcher can be converted to \p Kind.

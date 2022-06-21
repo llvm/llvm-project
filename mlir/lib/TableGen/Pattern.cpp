@@ -236,7 +236,7 @@ int SymbolInfoMap::SymbolInfo::getStaticValueCount() const {
 }
 
 std::string SymbolInfoMap::SymbolInfo::getVarName(StringRef name) const {
-  return alternativeName.hasValue() ? alternativeName.getValue() : name.str();
+  return alternativeName ? *alternativeName : name.str();
 }
 
 std::string SymbolInfoMap::SymbolInfo::getVarTypeStr(StringRef name) const {
