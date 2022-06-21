@@ -397,7 +397,7 @@ importAccesses(Scop &S, const json::Object &JScop, const DataLayout &DL,
                << StatementIdx << ".\n";
         return false;
       }
-      StringRef Accesses = JsonMemoryAccess->getString("relation").getValue();
+      StringRef Accesses = *JsonMemoryAccess->getString("relation");
       isl_map *NewAccessMap =
           isl_map_read_from_str(S.getIslCtx().get(), Accesses.str().c_str());
 
@@ -566,7 +566,7 @@ static bool areArraysEqual(ScopArrayInfo *SAI, const json::Object &Array) {
     return false;
   }
 
-  if (SAI->getName() != Array.getString("name").getValue())
+  if (SAI->getName() != *Array.getString("name"))
     return false;
 
   if (SAI->getNumberOfDimensions() != Array.getArray("sizes")->size())
@@ -662,7 +662,7 @@ static bool importArrays(Scop &S, const json::Object &JScop) {
     const json::Array &SizesArray = *Array.getArray("sizes");
     std::vector<unsigned> DimSizes;
     for (unsigned i = 0; i < SizesArray.size(); i++) {
-      auto Size = std::stoi(SizesArray[i].getAsString().getValue().str());
+      auto Size = std::stoi(SizesArray[i].getAsString()->str());
 
       // Check if the size if positive.
       if (Size <= 0) {

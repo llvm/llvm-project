@@ -552,7 +552,7 @@ void SuspiciousCallArgumentCheck::storeOptions(
     SmallString<32> Key = HeuristicToString[Idx];
     Key.append(BK == BoundKind::DissimilarBelow ? "DissimilarBelow"
                                                 : "SimilarAbove");
-    Options.store(Opts, Key, getBound(H, BK).getValue());
+    Options.store(Opts, Key, *getBound(H, BK));
   };
 
   for (std::size_t Idx = 0; Idx < HeuristicCount; ++Idx) {
@@ -783,7 +783,7 @@ bool SuspiciousCallArgumentCheck::areNamesSimilar(StringRef Arg,
                                                   BoundKind BK) const {
   int8_t Threshold = -1;
   if (Optional<int8_t> GotBound = getBound(H, BK))
-    Threshold = GotBound.getValue();
+    Threshold = *GotBound;
 
   switch (H) {
   case Heuristic::Equality:

@@ -59,9 +59,7 @@ getVirtualKeywordRange(const CXXDestructorDecl &Destructor,
   /// Range ends with \c StartOfNextToken so that any whitespace after \c
   /// virtual is included.
   SourceLocation StartOfNextToken =
-      Lexer::findNextToken(VirtualEndLoc, SM, LangOpts)
-          .getValue()
-          .getLocation();
+      Lexer::findNextToken(VirtualEndLoc, SM, LangOpts)->getLocation();
 
   return CharSourceRange::getCharRange(VirtualBeginLoc, StartOfNextToken);
 }

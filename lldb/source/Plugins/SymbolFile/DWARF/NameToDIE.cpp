@@ -107,7 +107,7 @@ bool NameToDIE::Decode(const DataExtractor &data, lldb::offset_t *offset_ptr,
     if (str.empty())
       return false;
     if (llvm::Optional<DIERef> die_ref = DIERef::Decode(data, offset_ptr))
-      m_map.Append(ConstString(str), die_ref.getValue());
+      m_map.Append(ConstString(str), *die_ref);
     else
       return false;
   }

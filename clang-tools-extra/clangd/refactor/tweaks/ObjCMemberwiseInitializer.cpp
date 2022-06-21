@@ -45,7 +45,7 @@ static std::string getTypeStr(const QualType &OrigT, const Decl &D,
   // `nullable` form for the method parameter.
   if (PropertyAttributes & ObjCPropertyAttribute::kind_nullability) {
     if (auto Kind = AttributedType::stripOuterNullability(T)) {
-      switch (Kind.getValue()) {
+      switch (*Kind) {
       case NullabilityKind::Nullable:
         Prefix = "nullable ";
         break;
@@ -238,7 +238,7 @@ ObjCMemberwiseInitializer::paramsForSelection(const SelectionTree::Node *N) {
   // Base case: selected a single ivar or property.
   if (const auto *D = N->ASTNode.get<Decl>()) {
     if (auto Param = MethodParameter::parameterFor(*D)) {
-      Params.push_back(Param.getValue());
+      Params.push_back(*Param);
       return Params;
     }
   }
@@ -256,7 +256,7 @@ ObjCMemberwiseInitializer::paramsForSelection(const SelectionTree::Node *N) {
       continue;
     if (auto P = MethodParameter::parameterFor(*D))
       if (Names.insert(P->Name).second)
-        Params.push_back(P.getValue());
+        Params.push_back(*P);
   }
   return Params;
 }

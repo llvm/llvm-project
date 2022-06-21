@@ -779,7 +779,7 @@ llvm::Expected<NewFunction> getExtractedFunction(ExtractionZone &ExtZone,
         toHalfOpenFileRange(SM, LangOpts, FirstOriginalDecl->getSourceRange());
     if (!DeclPos)
       return error("Declaration is inside a macro");
-    ExtractedFunc.ForwardDeclarationPoint = DeclPos.getValue().getBegin();
+    ExtractedFunc.ForwardDeclarationPoint = DeclPos->getBegin();
     ExtractedFunc.ForwardDeclarationSyntacticDC = ExtractedFunc.SemanticDC;
   }
 
@@ -834,7 +834,7 @@ tooling::Replacement createForwardDeclaration(const NewFunction &ExtractedFunc,
   std::string FunctionDecl = ExtractedFunc.renderDeclaration(
       ForwardDeclaration, *ExtractedFunc.SemanticDC,
       *ExtractedFunc.ForwardDeclarationSyntacticDC, SM);
-  SourceLocation DeclPoint = ExtractedFunc.ForwardDeclarationPoint.getValue();
+  SourceLocation DeclPoint = *ExtractedFunc.ForwardDeclarationPoint;
 
   return tooling::Replacement(SM, DeclPoint, 0, FunctionDecl);
 }
