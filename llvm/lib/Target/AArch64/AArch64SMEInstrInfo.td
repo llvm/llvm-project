@@ -148,11 +148,11 @@ def : Pat<(i64 (int_aarch64_sme_get_tpidr2)),
 // SVE2 instructions
 //===----------------------------------------------------------------------===//
 
-def REVD_ZPmZ : sve2_int_perm_revd<"revd">;
+defm REVD_ZPmZ : sve2_int_perm_revd<"revd", AArch64revd_mt>;
 
-defm SCLAMP_ZZZ : sve2_clamp<"sclamp", 0b0>;
-defm UCLAMP_ZZZ : sve2_clamp<"uclamp", 0b1>;
+defm SCLAMP_ZZZ : sve2_clamp<"sclamp", 0b0, int_aarch64_sve_sclamp>;
+defm UCLAMP_ZZZ : sve2_clamp<"uclamp", 0b1, int_aarch64_sve_uclamp>;
 
-defm PSEL_PPPRI : sve2_int_perm_sel_p<"psel">;
+defm PSEL_PPPRI : sve2_int_perm_sel_p<"psel", int_aarch64_sve_psel>;
 
 } // End let Predicates = [HasSME]

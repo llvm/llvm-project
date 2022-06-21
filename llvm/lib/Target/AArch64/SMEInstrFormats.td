@@ -1037,6 +1037,15 @@ class sve2_int_perm_revd<string asm>
   let ElementSize = ZPR128.ElementSize;
 }
 
+multiclass sve2_int_perm_revd<string asm, SDPatternOperator op> {
+  def NAME : sve2_int_perm_revd<asm>;
+
+  def : SVE_1_Op_Passthru_Pat<nxv16i8, op, nxv16i1, nxv16i8, !cast<Instruction>(NAME)>;
+  def : SVE_1_Op_Passthru_Pat<nxv8i16, op, nxv8i1,  nxv8i16, !cast<Instruction>(NAME)>;
+  def : SVE_1_Op_Passthru_Pat<nxv4i32, op, nxv4i1,  nxv4i32, !cast<Instruction>(NAME)>;
+  def : SVE_1_Op_Passthru_Pat<nxv2i64, op, nxv2i1,  nxv2i64, !cast<Instruction>(NAME)>;
+}
+
 class sve2_clamp<string asm, bits<2> sz, bit U, ZPRRegOp zpr_ty>
     : I<(outs zpr_ty:$Zd), (ins zpr_ty:$Zn, zpr_ty:$Zm, zpr_ty:$_Zd),
         asm, "\t$Zd, $Zn, $Zm", "", []>,
@@ -1058,11 +1067,16 @@ class sve2_clamp<string asm, bits<2> sz, bit U, ZPRRegOp zpr_ty>
   let ElementSize = zpr_ty.ElementSize;
 }
 
-multiclass sve2_clamp<string asm, bit U> {
+multiclass sve2_clamp<string asm, bit U, SDPatternOperator op> {
   def _B : sve2_clamp<asm, 0b00, U, ZPR8>;
   def _H : sve2_clamp<asm, 0b01, U, ZPR16>;
   def _S : sve2_clamp<asm, 0b10, U, ZPR32>;
   def _D : sve2_clamp<asm, 0b11, U, ZPR64>;
+
+  def : SVE_3_Op_Pat<nxv16i8, op, nxv16i8, nxv16i8, nxv16i8, !cast<Instruction>(NAME # _B)>;
+  def : SVE_3_Op_Pat<nxv8i16, op, nxv8i16, nxv8i16, nxv8i16, !cast<Instruction>(NAME # _H)>;
+  def : SVE_3_Op_Pat<nxv4i32, op, nxv4i32, nxv4i32, nxv4i32, !cast<Instruction>(NAME # _S)>;
+  def : SVE_3_Op_Pat<nxv2i64, op, nxv2i64, nxv2i64, nxv2i64, !cast<Instruction>(NAME # _D)>;
 }
 
 class sve2_int_perm_sel_p<string asm, PPRRegOp ppr_ty, Operand imm_ty>
@@ -1085,7 +1099,7 @@ class sve2_int_perm_sel_p<string asm, PPRRegOp ppr_ty, Operand imm_ty>
   let Inst{3-0}   = Pd;
 }
 
-multiclass sve2_int_perm_sel_p<string asm> {
+multiclass sve2_int_perm_sel_p<string asm, SDPatternOperator op> {
   def _B : sve2_int_perm_sel_p<asm, PPR8, sme_elm_idx0_15> {
     bits<4> imm;
     let Inst{23-22} = imm{3-2};
@@ -1108,5 +1122,33 @@ multiclass sve2_int_perm_sel_p<string asm> {
     let Inst{23}    = imm;
     let Inst{22}    = 0b1;
     let Inst{20-18} = 0b000;
+  }
+
+  def : Pat<(nxv16i1 (op (nxv16i1 PPRAny:$Pn), (nxv16i1 PPRAny:$Pm),
+             MatrixIndexGPR32Op12_15:$idx)),
+            (!cast<Instruction>(NAME # _B) $Pn, $Pm, $idx, 0)>;
+  def : Pat<(nxv8i1 (op (nxv8i1 PPRAny:$Pn), (nxv8i1 PPRAny:$Pm),
+             MatrixIndexGPR32Op12_15:$idx)),
+            (!cast<Instruction>(NAME # _H) $Pn, $Pm, $idx, 0)>;
+  def : Pat<(nxv4i1 (op (nxv4i1 PPRAny:$Pn), (nxv4i1 PPRAny:$Pm),
+             MatrixIndexGPR32Op12_15:$idx)),
+            (!cast<Instruction>(NAME # _S) $Pn, $Pm, $idx, 0)>;
+  def : Pat<(nxv2i1 (op (nxv2i1 PPRAny:$Pn), (nxv2i1 PPRAny:$Pm),
+             MatrixIndexGPR32Op12_15:$idx)),
+            (!cast<Instruction>(NAME # _D) $Pn, $Pm, $idx, 0)>;
+
+  let AddedComplexity = 1 in {
+    def : Pat<(nxv16i1 (op (nxv16i1 PPRAny:$Pn), (nxv16i1 PPRAny:$Pm),
+               (i32 (tileslice8 MatrixIndexGPR32Op12_15:$idx, sme_elm_idx0_15:$imm)))),
+              (!cast<Instruction>(NAME # _B) $Pn, $Pm, $idx, $imm)>;
+    def : Pat<(nxv8i1 (op (nxv8i1 PPRAny:$Pn), (nxv8i1 PPRAny:$Pm),
+               (i32 (tileslice16 MatrixIndexGPR32Op12_15:$idx, sme_elm_idx0_7:$imm)))),
+              (!cast<Instruction>(NAME # _H) $Pn, $Pm, $idx, $imm)>;
+    def : Pat<(nxv4i1 (op (nxv4i1 PPRAny:$Pn), (nxv4i1 PPRAny:$Pm),
+               (i32 (tileslice32 MatrixIndexGPR32Op12_15:$idx, sme_elm_idx0_3:$imm)))),
+              (!cast<Instruction>(NAME # _S) $Pn, $Pm, $idx, $imm)>;
+    def : Pat<(nxv2i1 (op (nxv2i1 PPRAny:$Pn), (nxv2i1 PPRAny:$Pm),
+               (i32 (tileslice64 MatrixIndexGPR32Op12_15:$idx, sme_elm_idx0_1:$imm)))),
+              (!cast<Instruction>(NAME # _D) $Pn, $Pm, $idx, $imm)>;
   }
 }
