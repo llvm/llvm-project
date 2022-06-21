@@ -118,8 +118,10 @@
 #include "llvm/IR/ConstantRange.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/InstIterator.h"
+#include "llvm/IR/Instruction.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/Support/Alignment.h"
+#include "llvm/IR/Value.h"
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/DOTGraphTraits.h"
@@ -155,6 +157,7 @@ namespace AA {
 enum ValueScope : uint8_t {
   Intraprocedural = 1,
   Interprocedural = 2,
+  AnyScope = Intraprocedural | Interprocedural,
 };
 
 struct ValueAndContext : public std::pair<Value *, const Instruction *> {
@@ -217,12 +220,11 @@ Constant *getInitialValueForObj(Value &Obj, Type &Ty,
 /// \returns True if \p Objects contains all assumed underlying objects, and
 ///          false if something went wrong and the objects could not be
 ///          determined.
-bool getAssumedUnderlyingObjects(Attributor &A, const Value &Ptr,
-                                 SmallVectorImpl<Value *> &Objects,
-                                 const AbstractAttribute &QueryingAA,
-                                 const Instruction *CtxI,
-                                 bool &UsedAssumedInformation,
-                                 AA::ValueScope VS = Interprocedural);
+bool getAssumedUnderlyingObjects(
+    Attributor &A, const Value &Ptr, SmallSetVector<Value *, 8> &Objects,
+    const AbstractAttribute &QueryingAA, const Instruction *CtxI,
+    bool &UsedAssumedInformation, AA::ValueScope VS = AA::Interprocedural,
+    SmallPtrSetImpl<Value *> *SeenObjects = nullptr);
 
 /// Collect all potential values \p LI could read into \p PotentialValues. That
 /// is, the only values read by \p LI are assumed to be known and all are in
@@ -301,6 +303,24 @@ struct DenseMapInfo<AA::ValueAndContext>
 
   static bool isEqual(const AA::ValueAndContext &LHS,
                       const AA::ValueAndContext &RHS) {
+    return Base::isEqual(LHS, RHS);
+  }
+};
+
+template <>
+struct DenseMapInfo<AA::ValueScope> : public DenseMapInfo<unsigned char> {
+  using Base = DenseMapInfo<unsigned char>;
+  static inline AA::ValueScope getEmptyKey() {
+    return AA::ValueScope(Base::getEmptyKey());
+  }
+  static inline AA::ValueScope getTombstoneKey() {
+    return AA::ValueScope(Base::getTombstoneKey());
+  }
+  static unsigned getHashValue(const AA::ValueScope &S) {
+    return Base::getHashValue(S);
+  }
+
+  static bool isEqual(const AA::ValueScope &LHS, const AA::ValueScope &RHS) {
     return Base::isEqual(LHS, RHS);
   }
 };
@@ -1643,8 +1663,6 @@ struct Attributor {
 
   /// Record that \p F is deleted after information was manifested.
   void deleteAfterManifest(Function &F) {
-    errs() << "Delete " << F.getName() << " : " << (Configuration.DeleteFns)
-           << "\n";
     if (Configuration.DeleteFns)
       ToBeDeletedFunctions.insert(&F);
   }
@@ -1664,14 +1682,16 @@ struct Attributor {
   /// return None, otherwise return `nullptr`.
   Optional<Value *> getAssumedSimplified(const IRPosition &IRP,
                                          const AbstractAttribute &AA,
-                                         bool &UsedAssumedInformation) {
-    return getAssumedSimplified(IRP, &AA, UsedAssumedInformation);
+                                         bool &UsedAssumedInformation,
+                                         AA::ValueScope S) {
+    return getAssumedSimplified(IRP, &AA, UsedAssumedInformation, S);
   }
   Optional<Value *> getAssumedSimplified(const Value &V,
                                          const AbstractAttribute &AA,
-                                         bool &UsedAssumedInformation) {
+                                         bool &UsedAssumedInformation,
+                                         AA::ValueScope S) {
     return getAssumedSimplified(IRPosition::value(V), AA,
-                                UsedAssumedInformation);
+                                UsedAssumedInformation, S);
   }
 
   /// If \p V is assumed simplified, return it, if it is unclear yet,
@@ -1679,7 +1699,17 @@ struct Attributor {
   /// except that it can be used without recording dependences on any \p AA.
   Optional<Value *> getAssumedSimplified(const IRPosition &V,
                                          const AbstractAttribute *AA,
-                                         bool &UsedAssumedInformation);
+                                         bool &UsedAssumedInformation,
+                                         AA::ValueScope S);
+
+  /// Try to simplify \p IRP and in the scope \p S. If successful, true is
+  /// returned and all potential values \p IRP can take are put into \p Values.
+  /// If false is returned no other information is valid.
+  bool getAssumedSimplifiedValues(const IRPosition &IRP,
+                                  const AbstractAttribute *AA,
+                                  SmallVectorImpl<AA::ValueAndContext> &Values,
+                                  AA::ValueScope S,
+                                  bool &UsedAssumedInformation);
 
   /// Register \p CB as a simplification callback.
   /// `Attributor::getAssumedSimplified` will use these callbacks before
@@ -4409,6 +4439,10 @@ template <typename MemberTy> struct PotentialValuesState : AbstractState {
     return *this;
   }
 
+  bool contains(const MemberTy &V) const {
+    return !isValidState() ? true : Set.contains(V);
+  }
+
 protected:
   SetTy &getAssumedSet() {
     assert(isValidState() && "This set shoud not be used when it is invalid!");
@@ -4490,9 +4524,12 @@ private:
 };
 
 using PotentialConstantIntValuesState = PotentialValuesState<APInt>;
+using PotentialLLVMValuesState =
+    PotentialValuesState<std::pair<AA::ValueAndContext, AA::ValueScope>>;
 
 raw_ostream &operator<<(raw_ostream &OS,
                         const PotentialConstantIntValuesState &R);
+raw_ostream &operator<<(raw_ostream &OS, const PotentialLLVMValuesState &R);
 
 /// An abstract interface for potential values analysis.
 ///
@@ -4508,7 +4545,7 @@ raw_ostream &operator<<(raw_ostream &OS,
 ///   2. We tried to initialize on a Value that we cannot handle (e.g. an
 ///      operator we do not currently handle).
 ///
-/// TODO: Support values other than constant integers.
+/// For non constant integers see AAPotentialValues.
 struct AAPotentialConstantValues
     : public StateWrapper<PotentialConstantIntValuesState, AbstractAttribute> {
   using Base = StateWrapper<PotentialConstantIntValuesState, AbstractAttribute>;
@@ -4560,6 +4597,48 @@ struct AAPotentialConstantValues
 
   /// Unique ID (due to the unique address)
   static const char ID;
+};
+
+struct AAPotentialValues
+    : public StateWrapper<PotentialLLVMValuesState, AbstractAttribute> {
+  using Base = StateWrapper<PotentialLLVMValuesState, AbstractAttribute>;
+  AAPotentialValues(const IRPosition &IRP, Attributor &A) : Base(IRP) {}
+
+  /// See AbstractAttribute::getState(...).
+  PotentialLLVMValuesState &getState() override { return *this; }
+  const PotentialLLVMValuesState &getState() const override { return *this; }
+
+  /// Create an abstract attribute view for the position \p IRP.
+  static AAPotentialValues &createForPosition(const IRPosition &IRP,
+                                              Attributor &A);
+
+  /// Extract the single value in \p Values if any.
+  static Value *getSingleValue(Attributor &A, const AbstractAttribute &AA,
+                               const IRPosition &IRP,
+                               SmallVectorImpl<AA::ValueAndContext> &Values);
+
+  /// See AbstractAttribute::getName()
+  const std::string getName() const override { return "AAPotentialValues"; }
+
+  /// See AbstractAttribute::getIdAddr()
+  const char *getIdAddr() const override { return &ID; }
+
+  /// This function should return true if the type of the \p AA is
+  /// AAPotentialValues
+  static bool classof(const AbstractAttribute *AA) {
+    return (AA->getIdAddr() == &ID);
+  }
+
+  /// Unique ID (due to the unique address)
+  static const char ID;
+
+private:
+  virtual bool
+  getAssumedSimplifiedValues(Attributor &A,
+                             SmallVectorImpl<AA::ValueAndContext> &Values,
+                             AA::ValueScope) const = 0;
+
+  friend struct Attributor;
 };
 
 /// An abstract interface for all noundef attributes.
