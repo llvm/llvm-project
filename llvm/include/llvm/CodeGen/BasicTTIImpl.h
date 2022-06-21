@@ -1500,8 +1500,6 @@ public:
     }
     case Intrinsic::fshl:
     case Intrinsic::fshr: {
-      if (isa<ScalableVectorType>(RetTy))
-        return BaseT::getIntrinsicInstrCost(ICA, CostKind);
       const Value *X = Args[0];
       const Value *Y = Args[1];
       const Value *Z = Args[2];
