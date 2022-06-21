@@ -15,7 +15,7 @@ class TestGdbRemoteFork(gdbremote_testcase.GdbRemoteTestCaseBase):
         self.reset_test_sequence()
 
         # continue and expect fork
-        fork_regex = "[$]T.*;fork:p([0-9a-f]+)[.]([0-9a-f]+).*"
+        fork_regex = "[$]T05.*;fork:p([0-9a-f]+)[.]([0-9a-f]+).*"
         self.test_sequence.add_log_lines([
             "read packet: $c#00",
             {"direction": "send", "regex": fork_regex,
@@ -49,7 +49,7 @@ class TestGdbRemoteFork(gdbremote_testcase.GdbRemoteTestCaseBase):
         self.reset_test_sequence()
 
         # continue and expect fork
-        fork_regex = "[$]T.*;{}:p([0-9a-f]+)[.]([0-9a-f]+).*".format(variant)
+        fork_regex = "[$]T05.*;{}:p([0-9a-f]+)[.]([0-9a-f]+).*".format(variant)
         self.test_sequence.add_log_lines([
             "read packet: $c#00",
             {"direction": "send", "regex": fork_regex,
@@ -85,7 +85,7 @@ class TestGdbRemoteFork(gdbremote_testcase.GdbRemoteTestCaseBase):
         # resume the parent
         self.test_sequence.add_log_lines([
             "read packet: $c#00",
-            {"direction": "send", "regex": r"[$]T.*vforkdone.*"},
+            {"direction": "send", "regex": r"[$]T05.*vforkdone.*"},
             "read packet: $c#00",
             {"direction": "send", "regex": r"[$]W00;process:[0-9a-f]+#.*"},
         ], True)
