@@ -64,7 +64,8 @@ BuiltinCAS::storeNodeFromOpenFileImpl(sys::fs::file_t FD,
 
   constexpr size_t MinMappedSize = 4 * 4096;
   auto readWithStream = [&]() -> Expected<NodeHandle> {
-    SmallString<MinMappedSize * 2> Data;
+    // FIXME: MSVC: SmallString<MinMappedSize * 2>
+    SmallString<4 * 4096 * 2> Data;
     if (Error E = sys::fs::readNativeFileToEOF(FD, Data, MinMappedSize))
       return std::move(E);
     return storeNode(None, makeArrayRef(Data.data(), Data.size()));

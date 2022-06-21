@@ -45,7 +45,9 @@ public:
     return InternalRef;
   }
 
-  unsigned getDenseMapHash() const { return (unsigned)hash_value(InternalRef); }
+  unsigned getDenseMapHash() const {
+    return (unsigned)llvm::hash_value(InternalRef);
+  }
   bool isDenseMapEmpty() const { return InternalRef == getDenseMapEmptyRef(); }
   bool isDenseMapTombstone() const {
     return InternalRef == getDenseMapTombstoneRef();
