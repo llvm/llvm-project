@@ -4,23 +4,19 @@
 ; SROA should keep `!tbaa.struct` metadata
 
 %vector = type { float, float }
-declare void @llvm.memcpy.p0i8.p0i8.i64(i8* writeonly, i8* readonly, i64, i1 immarg)
-declare <2 x float> @foo(%vector* %0)
+declare void @llvm.memcpy.p0.p0.i64(ptr writeonly, ptr readonly, i64, i1 immarg)
+declare <2 x float> @foo(ptr %0)
 
-define void @bar(%vector* %y2) {
+define void @bar(ptr %y2) {
 ; CHECK-LABEL: @bar(
-; CHECK-NEXT:    [[X14:%.*]] = call <2 x float> @foo(%vector* [[Y2:%.*]])
-; CHECK-NEXT:    [[X7_SROA_0_0_X18_SROA_CAST:%.*]] = bitcast %vector* [[Y2]] to <2 x float>*
-; CHECK-NEXT:    store <2 x float> [[X14]], <2 x float>* [[X7_SROA_0_0_X18_SROA_CAST]], align 4, !tbaa.struct !0
+; CHECK-NEXT:    [[X14:%.*]] = call <2 x float> @foo(ptr [[Y2:%.*]])
+; CHECK-NEXT:    store <2 x float> [[X14]], ptr [[Y2]], align 4, !tbaa.struct !0
 ; CHECK-NEXT:    ret void
 ;
   %x7 = alloca %vector
-  %x14 = call <2 x float> @foo(%vector* %y2)
-  %x15 = bitcast %vector* %x7 to <2 x float>*
-  store <2 x float> %x14, <2 x float>* %x15
-  %x19 = bitcast %vector* %x7 to i8*
-  %x18 = bitcast %vector* %y2 to i8*
-  call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 4 %x18, i8* align 4 %x19, i64 8, i1 false), !tbaa.struct !10
+  %x14 = call <2 x float> @foo(ptr %y2)
+  store <2 x float> %x14, ptr %x7
+  call void @llvm.memcpy.p0.p0.i64(ptr align 4 %y2, ptr align 4 %x7, i64 8, i1 false), !tbaa.struct !10
   ret void
 }
 

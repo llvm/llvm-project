@@ -16,12 +16,11 @@ define i32 @test1() {
 entry:
   %a = alloca [2 x i32]
 
-  %a0 = getelementptr [2 x i32], [2 x i32]* %a, i64 0, i32 0
-  %a1 = getelementptr [2 x i32], [2 x i32]* %a, i64 0, i32 1
-  store i32 0, i32* %a0
-  store i32 1, i32* %a1
-  %v0 = load i32, i32* %a0
-  %v1 = load i32, i32* %a1
+  %a1 = getelementptr [2 x i32], ptr %a, i64 0, i32 1
+  store i32 0, ptr %a
+  store i32 1, ptr %a1
+  %v0 = load i32, ptr %a
+  %v1 = load i32, ptr %a1
 
   %cond = icmp sle i32 %v0, %v1
   br i1 %cond, label %then, label %exit
@@ -30,9 +29,9 @@ then:
   br label %exit
 
 exit:
-  %phi = phi i32* [ %a1, %then ], [ %a0, %entry ]
+  %phi = phi ptr [ %a1, %then ], [ %a, %entry ]
 
-  %result = load i32, i32* %phi
+  %result = load i32, ptr %phi
   ret i32 %result
 }
 
@@ -46,17 +45,16 @@ define i32 @test2() {
 entry:
   %a = alloca [2 x i32]
 
-  %a0 = getelementptr [2 x i32], [2 x i32]* %a, i64 0, i32 0
-  %a1 = getelementptr [2 x i32], [2 x i32]* %a, i64 0, i32 1
-  store i32 0, i32* %a0
-  store i32 1, i32* %a1
-  %v0 = load i32, i32* %a0
-  %v1 = load i32, i32* %a1
+  %a1 = getelementptr [2 x i32], ptr %a, i64 0, i32 1
+  store i32 0, ptr %a
+  store i32 1, ptr %a1
+  %v0 = load i32, ptr %a
+  %v1 = load i32, ptr %a1
 
   %cond = icmp sle i32 %v0, %v1
-  %select = select i1 %cond, i32* %a1, i32* %a0
+  %select = select i1 %cond, ptr %a1, ptr %a
 
-  %result = load i32, i32* %select
+  %result = load i32, ptr %select
   ret i32 %result
 }
 
@@ -71,16 +69,14 @@ define float @test2_bitcast() {
 ;
 entry:
   %a = alloca [2 x i32]
-  %a0 = getelementptr [2 x i32], [2 x i32]* %a, i64 0, i32 0
-  %a1 = getelementptr [2 x i32], [2 x i32]* %a, i64 0, i32 1
-  store i32 0, i32* %a0
-  store i32 1, i32* %a1
-  %v0 = load i32, i32* %a0
-  %v1 = load i32, i32* %a1
+  %a1 = getelementptr [2 x i32], ptr %a, i64 0, i32 1
+  store i32 0, ptr %a
+  store i32 1, ptr %a1
+  %v0 = load i32, ptr %a
+  %v1 = load i32, ptr %a1
   %cond = icmp sle i32 %v0, %v1
-  %select = select i1 %cond, i32* %a1, i32* %a0
-  %select.bc = bitcast i32* %select to float*
-  %result = load float, float* %select.bc
+  %select = select i1 %cond, ptr %a1, ptr %a
+  %result = load float, ptr %select
   ret float %result
 }
 
@@ -89,28 +85,27 @@ define i32 @test2_addrspacecast() {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[A_SROA_0:%.*]] = alloca i32, align 4
 ; CHECK-NEXT:    [[A_SROA_3:%.*]] = alloca i32, align 4
-; CHECK-NEXT:    store i32 0, i32* [[A_SROA_0]], align 4
-; CHECK-NEXT:    store i32 1, i32* [[A_SROA_3]], align 4
-; CHECK-NEXT:    [[A_SROA_0_0_A_SROA_0_0_V0:%.*]] = load i32, i32* [[A_SROA_0]], align 4
-; CHECK-NEXT:    [[A_SROA_3_0_A_SROA_3_4_V1:%.*]] = load i32, i32* [[A_SROA_3]], align 4
+; CHECK-NEXT:    store i32 0, ptr [[A_SROA_0]], align 4
+; CHECK-NEXT:    store i32 1, ptr [[A_SROA_3]], align 4
+; CHECK-NEXT:    [[A_SROA_0_0_A_SROA_0_0_V0:%.*]] = load i32, ptr [[A_SROA_0]], align 4
+; CHECK-NEXT:    [[A_SROA_3_0_A_SROA_3_4_V1:%.*]] = load i32, ptr [[A_SROA_3]], align 4
 ; CHECK-NEXT:    [[COND:%.*]] = icmp sle i32 [[A_SROA_0_0_A_SROA_0_0_V0]], [[A_SROA_3_0_A_SROA_3_4_V1]]
-; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], i32* [[A_SROA_3]], i32* [[A_SROA_0]]
-; CHECK-NEXT:    [[SELECT_ASC:%.*]] = addrspacecast i32* [[SELECT]] to i32 addrspace(1)*
-; CHECK-NEXT:    [[RESULT:%.*]] = load i32, i32 addrspace(1)* [[SELECT_ASC]], align 4
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], ptr [[A_SROA_3]], ptr [[A_SROA_0]]
+; CHECK-NEXT:    [[SELECT_ASC:%.*]] = addrspacecast ptr [[SELECT]] to ptr addrspace(1)
+; CHECK-NEXT:    [[RESULT:%.*]] = load i32, ptr addrspace(1) [[SELECT_ASC]], align 4
 ; CHECK-NEXT:    ret i32 [[RESULT]]
 ;
 entry:
   %a = alloca [2 x i32]
-  %a0 = getelementptr [2 x i32], [2 x i32]* %a, i64 0, i32 0
-  %a1 = getelementptr [2 x i32], [2 x i32]* %a, i64 0, i32 1
-  store i32 0, i32* %a0
-  store i32 1, i32* %a1
-  %v0 = load i32, i32* %a0
-  %v1 = load i32, i32* %a1
+  %a1 = getelementptr [2 x i32], ptr %a, i64 0, i32 1
+  store i32 0, ptr %a
+  store i32 1, ptr %a1
+  %v0 = load i32, ptr %a
+  %v1 = load i32, ptr %a1
   %cond = icmp sle i32 %v0, %v1
-  %select = select i1 %cond, i32* %a1, i32* %a0
-  %select.asc = addrspacecast i32* %select to i32 addrspace(1)*
-  %result = load i32, i32 addrspace(1)* %select.asc
+  %select = select i1 %cond, ptr %a1, ptr %a
+  %select.asc = addrspacecast ptr %select to ptr addrspace(1)
+  %result = load i32, ptr addrspace(1) %select.asc
   ret i32 %result
 }
 
@@ -152,12 +147,10 @@ entry:
   ; Note that we build redundant GEPs here to ensure that having different GEPs
   ; into the same alloca partation continues to work with PHI speculation. This
   ; was the underlying cause of PR13926.
-  %a0 = getelementptr [2 x i32], [2 x i32]* %a, i64 0, i32 0
-  %a0b = getelementptr [2 x i32], [2 x i32]* %a, i64 0, i32 0
-  %a1 = getelementptr [2 x i32], [2 x i32]* %a, i64 0, i32 1
-  %a1b = getelementptr [2 x i32], [2 x i32]* %a, i64 0, i32 1
-  store i32 0, i32* %a0
-  store i32 1, i32* %a1
+  %a1 = getelementptr [2 x i32], ptr %a, i64 0, i32 1
+  %a1b = getelementptr [2 x i32], ptr %a, i64 0, i32 1
+  store i32 0, ptr %a
+  store i32 1, ptr %a1
 
   switch i32 %x, label %bb0 [ i32 1, label %bb1
   i32 2, label %bb2
@@ -185,10 +178,10 @@ bb7:
   br label %exit
 
 exit:
-  %phi = phi i32* [ %a1, %bb0 ], [ %a0, %bb1 ], [ %a0, %bb2 ], [ %a1, %bb3 ],
-  [ %a1b, %bb4 ], [ %a0b, %bb5 ], [ %a0b, %bb6 ], [ %a1b, %bb7 ]
+  %phi = phi ptr [ %a1, %bb0 ], [ %a, %bb1 ], [ %a, %bb2 ], [ %a1, %bb3 ],
+  [ %a1b, %bb4 ], [ %a, %bb5 ], [ %a, %bb6 ], [ %a1b, %bb7 ]
 
-  %result = load i32, i32* %phi
+  %result = load i32, ptr %phi
   ret i32 %result
 }
 
@@ -200,21 +193,20 @@ define i32 @test4() {
 entry:
   %a = alloca [2 x i32]
 
-  %a0 = getelementptr [2 x i32], [2 x i32]* %a, i64 0, i32 0
-  %a1 = getelementptr [2 x i32], [2 x i32]* %a, i64 0, i32 1
-  store i32 0, i32* %a0
-  store i32 1, i32* %a1
-  %v0 = load i32, i32* %a0
-  %v1 = load i32, i32* %a1
+  %a1 = getelementptr [2 x i32], ptr %a, i64 0, i32 1
+  store i32 0, ptr %a
+  store i32 1, ptr %a1
+  %v0 = load i32, ptr %a
+  %v1 = load i32, ptr %a1
 
   %cond = icmp sle i32 %v0, %v1
-  %select = select i1 %cond, i32* %a0, i32* %a0
+  %select = select i1 %cond, ptr %a, ptr %a
 
-  %result = load i32, i32* %select
+  %result = load i32, ptr %select
   ret i32 %result
 }
 
-define i32 @test5(i32* %b) {
+define i32 @test5(ptr %b) {
 ; CHECK-LABEL: @test5(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    ret i32 1
@@ -222,45 +214,45 @@ define i32 @test5(i32* %b) {
 entry:
   %a = alloca [2 x i32]
 
-  %a1 = getelementptr [2 x i32], [2 x i32]* %a, i64 0, i32 1
-  store i32 1, i32* %a1
+  %a1 = getelementptr [2 x i32], ptr %a, i64 0, i32 1
+  store i32 1, ptr %a1
 
-  %select = select i1 true, i32* %a1, i32* %b
+  %select = select i1 true, ptr %a1, ptr %b
 
-  %result = load i32, i32* %select
+  %result = load i32, ptr %select
 
   ret i32 %result
 }
 
-declare void @f(i32*, i32*)
+declare void @f(ptr, ptr)
 
-define i32 @test6(i32* %b) {
+define i32 @test6(ptr %b) {
 ; CHECK-LABEL: @test6(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[SELECT2:%.*]] = select i1 false, i32* poison, i32* [[B:%.*]]
-; CHECK-NEXT:    [[SELECT3:%.*]] = select i1 false, i32* poison, i32* [[B]]
-; CHECK-NEXT:    call void @f(i32* [[SELECT2]], i32* [[SELECT3]])
+; CHECK-NEXT:    [[SELECT2:%.*]] = select i1 false, ptr poison, ptr [[B:%.*]]
+; CHECK-NEXT:    [[SELECT3:%.*]] = select i1 false, ptr poison, ptr [[B]]
+; CHECK-NEXT:    call void @f(ptr [[SELECT2]], ptr [[SELECT3]])
 ; CHECK-NEXT:    ret i32 1
 ;
 entry:
   %a = alloca [2 x i32]
   %c = alloca i32
 
-  %a1 = getelementptr [2 x i32], [2 x i32]* %a, i64 0, i32 1
-  store i32 1, i32* %a1
+  %a1 = getelementptr [2 x i32], ptr %a, i64 0, i32 1
+  store i32 1, ptr %a1
 
-  %select = select i1 true, i32* %a1, i32* %b
-  %select2 = select i1 false, i32* %a1, i32* %b
-  %select3 = select i1 false, i32* %c, i32* %b
+  %select = select i1 true, ptr %a1, ptr %b
+  %select2 = select i1 false, ptr %a1, ptr %b
+  %select3 = select i1 false, ptr %c, ptr %b
 
   ; Note, this would potentially escape the alloca pointer except for the
   ; constant folding of the select.
-  call void @f(i32* %select2, i32* %select3)
+  call void @f(ptr %select2, ptr %select3)
 
 
-  %result = load i32, i32* %select
+  %result = load i32, ptr %select
 
-  %dead = load i32, i32* %c
+  %dead = load i32, ptr %c
 
   ret i32 %result
 }
@@ -272,7 +264,7 @@ define i32 @test7(i1 %c1) {
 ; CHECK:       good:
 ; CHECK-NEXT:    br label [[EXIT:%.*]]
 ; CHECK:       bad:
-; CHECK-NEXT:    [[P_SROA_SPECULATE_LOAD_BAD:%.*]] = load i32, i32* poison, align 4
+; CHECK-NEXT:    [[P_SROA_SPECULATE_LOAD_BAD:%.*]] = load i32, ptr poison, align 4
 ; CHECK-NEXT:    br label [[EXIT]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    [[P_SROA_SPECULATED:%.*]] = phi i32 [ 0, [[GOOD]] ], [ [[P_SROA_SPECULATE_LOAD_BAD]], [[BAD]] ]
@@ -284,22 +276,21 @@ entry:
   br i1 %c1, label %good, label %bad
 
 good:
-  %Y1 = getelementptr i32, i32* %X, i64 0
-  store i32 0, i32* %Y1
+  store i32 0, ptr %X
   br label %exit
 
 bad:
-  %Y2 = getelementptr i32, i32* %X, i64 1
-  store i32 0, i32* %Y2
+  %Y2 = getelementptr i32, ptr %X, i64 1
+  store i32 0, ptr %Y2
   br label %exit
 
 exit:
-  %P = phi i32* [ %Y1, %good ], [ %Y2, %bad ]
-  %Z2 = load i32, i32* %P
+  %P = phi ptr [ %X, %good ], [ %Y2, %bad ]
+  %Z2 = load i32, ptr %P
   ret i32 %Z2
 }
 
-define i32 @test8(i32 %b, i32* %ptr) {
+define i32 @test8(i32 %b, ptr %ptr) {
 ; Ensure that we rewrite allocas to the used type when that use is hidden by
 ; a PHI that can be speculated.
 ; CHECK-LABEL: @test8(
@@ -307,7 +298,7 @@ define i32 @test8(i32 %b, i32* %ptr) {
 ; CHECK-NEXT:    [[TEST:%.*]] = icmp ne i32 [[B:%.*]], 0
 ; CHECK-NEXT:    br i1 [[TEST]], label [[THEN:%.*]], label [[ELSE:%.*]]
 ; CHECK:       then:
-; CHECK-NEXT:    [[PHI_SROA_SPECULATE_LOAD_THEN:%.*]] = load i32, i32* [[PTR:%.*]], align 4
+; CHECK-NEXT:    [[PHI_SROA_SPECULATE_LOAD_THEN:%.*]] = load i32, ptr [[PTR:%.*]], align 4
 ; CHECK-NEXT:    br label [[EXIT:%.*]]
 ; CHECK:       else:
 ; CHECK-NEXT:    br label [[EXIT]]
@@ -325,52 +316,49 @@ then:
   br label %exit
 
 else:
-  %bitcast = bitcast float* %f to i32*
   br label %exit
 
 exit:
-  %phi = phi i32* [ %bitcast, %else ], [ %ptr, %then ]
-  %loaded = load i32, i32* %phi, align 4
+  %phi = phi ptr [ %f, %else ], [ %ptr, %then ]
+  %loaded = load i32, ptr %phi, align 4
   ret i32 %loaded
 }
 
-define i32 @test9(i32 %b, i32* %ptr) {
+define i32 @test9(i32 %b, ptr %ptr) {
 ; Same as @test8 but for a select rather than a PHI node.
 ; CHECK-LABEL: @test9(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    store i32 0, i32* [[PTR:%.*]], align 4
+; CHECK-NEXT:    store i32 0, ptr [[PTR:%.*]], align 4
 ; CHECK-NEXT:    [[TEST:%.*]] = icmp ne i32 [[B:%.*]], 0
-; CHECK-NEXT:    [[LOADED_SROA_SPECULATE_LOAD_FALSE:%.*]] = load i32, i32* [[PTR]], align 4
+; CHECK-NEXT:    [[LOADED_SROA_SPECULATE_LOAD_FALSE:%.*]] = load i32, ptr [[PTR]], align 4
 ; CHECK-NEXT:    [[LOADED_SROA_SPECULATED:%.*]] = select i1 [[TEST]], i32 undef, i32 [[LOADED_SROA_SPECULATE_LOAD_FALSE]]
 ; CHECK-NEXT:    ret i32 [[LOADED_SROA_SPECULATED]]
 ;
 
 entry:
   %f = alloca float
-  store i32 0, i32* %ptr
+  store i32 0, ptr %ptr
   %test = icmp ne i32 %b, 0
-  %bitcast = bitcast float* %f to i32*
-  %select = select i1 %test, i32* %bitcast, i32* %ptr
-  %loaded = load i32, i32* %select, align 4
+  %select = select i1 %test, ptr %f, ptr %ptr
+  %loaded = load i32, ptr %select, align 4
   ret i32 %loaded
 }
 
-define float @test10(i32 %b, float* %ptr) {
+define float @test10(i32 %b, ptr %ptr) {
 ; Don't try to promote allocas which are not elligible for it even after
 ; rewriting due to the necessity of inserting bitcasts when speculating a PHI
 ; node.
 ; CHECK-LABEL: @test10(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[F:%.*]] = alloca double, align 8
-; CHECK-NEXT:    store double 0.000000e+00, double* [[F]], align 8
+; CHECK-NEXT:    store double 0.000000e+00, ptr [[F]], align 8
 ; CHECK-NEXT:    [[TEST:%.*]] = icmp ne i32 [[B:%.*]], 0
 ; CHECK-NEXT:    br i1 [[TEST]], label [[THEN:%.*]], label [[ELSE:%.*]]
 ; CHECK:       then:
-; CHECK-NEXT:    [[PHI_SROA_SPECULATE_LOAD_THEN:%.*]] = load float, float* [[PTR:%.*]], align 4
+; CHECK-NEXT:    [[PHI_SROA_SPECULATE_LOAD_THEN:%.*]] = load float, ptr [[PTR:%.*]], align 4
 ; CHECK-NEXT:    br label [[EXIT:%.*]]
 ; CHECK:       else:
-; CHECK-NEXT:    [[F_0_F_0_BITCAST_SROA_CAST:%.*]] = bitcast double* [[F]] to float*
-; CHECK-NEXT:    [[F_0_PHI_SROA_SPECULATE_LOAD_ELSE:%.*]] = load float, float* [[F_0_F_0_BITCAST_SROA_CAST]], align 8
+; CHECK-NEXT:    [[F_0_PHI_SROA_SPECULATE_LOAD_ELSE:%.*]] = load float, ptr [[F]], align 8
 ; CHECK-NEXT:    br label [[EXIT]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    [[PHI_SROA_SPECULATED:%.*]] = phi float [ [[F_0_PHI_SROA_SPECULATE_LOAD_ELSE]], [[ELSE]] ], [ [[PHI_SROA_SPECULATE_LOAD_THEN]], [[THEN]] ]
@@ -379,7 +367,7 @@ define float @test10(i32 %b, float* %ptr) {
 
 entry:
   %f = alloca double
-  store double 0.0, double* %f
+  store double 0.0, ptr %f
   %test = icmp ne i32 %b, 0
   br i1 %test, label %then, label %else
 
@@ -387,42 +375,39 @@ then:
   br label %exit
 
 else:
-  %bitcast = bitcast double* %f to float*
   br label %exit
 
 exit:
-  %phi = phi float* [ %bitcast, %else ], [ %ptr, %then ]
-  %loaded = load float, float* %phi, align 4
+  %phi = phi ptr [ %f, %else ], [ %ptr, %then ]
+  %loaded = load float, ptr %phi, align 4
   ret float %loaded
 }
 
-define float @test11(i32 %b, float* %ptr) {
+define float @test11(i32 %b, ptr %ptr) {
 ; Same as @test10 but for a select rather than a PHI node.
 ; CHECK-LABEL: @test11(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[F:%.*]] = alloca double, align 8
-; CHECK-NEXT:    store double 0.000000e+00, double* [[F]], align 8
-; CHECK-NEXT:    store float 0.000000e+00, float* [[PTR:%.*]], align 4
+; CHECK-NEXT:    store double 0.000000e+00, ptr [[F]], align 8
+; CHECK-NEXT:    store float 0.000000e+00, ptr [[PTR:%.*]], align 4
 ; CHECK-NEXT:    [[TEST:%.*]] = icmp ne i32 [[B:%.*]], 0
-; CHECK-NEXT:    [[F_0_F_0_BITCAST_SROA_CAST:%.*]] = bitcast double* [[F]] to float*
-; CHECK-NEXT:    [[F_0_LOADED_SROA_SPECULATE_LOAD_TRUE:%.*]] = load float, float* [[F_0_F_0_BITCAST_SROA_CAST]], align 8
-; CHECK-NEXT:    [[LOADED_SROA_SPECULATE_LOAD_FALSE:%.*]] = load float, float* [[PTR]], align 4
+; CHECK-NEXT:    [[F_0_LOADED_SROA_SPECULATE_LOAD_TRUE:%.*]] = load float, ptr [[F]], align 8
+; CHECK-NEXT:    [[LOADED_SROA_SPECULATE_LOAD_FALSE:%.*]] = load float, ptr [[PTR]], align 4
 ; CHECK-NEXT:    [[LOADED_SROA_SPECULATED:%.*]] = select i1 [[TEST]], float [[F_0_LOADED_SROA_SPECULATE_LOAD_TRUE]], float [[LOADED_SROA_SPECULATE_LOAD_FALSE]]
 ; CHECK-NEXT:    ret float [[LOADED_SROA_SPECULATED]]
 ;
 
 entry:
   %f = alloca double
-  store double 0.0, double* %f
-  store float 0.0, float* %ptr
+  store double 0.0, ptr %f
+  store float 0.0, ptr %ptr
   %test = icmp ne i32 %b, 0
-  %bitcast = bitcast double* %f to float*
-  %select = select i1 %test, float* %bitcast, float* %ptr
-  %loaded = load float, float* %select, align 4
+  %select = select i1 %test, ptr %f, ptr %ptr
+  %loaded = load float, ptr %select, align 4
   ret float %loaded
 }
 
-define i32 @test12(i32 %x, i32* %p, i1 %c1) {
+define i32 @test12(i32 %x, ptr %p, i1 %c1) {
 ; Ensure we don't crash or fail to nuke dead selects of allocas if no load is
 ; never found.
 ; CHECK-LABEL: @test12(
@@ -432,13 +417,13 @@ define i32 @test12(i32 %x, i32* %p, i1 %c1) {
 
 entry:
   %a = alloca i32
-  store i32 %x, i32* %a
-  %dead = select i1 %c1, i32* %a, i32* %p
-  %load = load i32, i32* %a
+  store i32 %x, ptr %a
+  %dead = select i1 %c1, ptr %a, ptr %p
+  %load = load i32, ptr %a
   ret i32 %load
 }
 
-define i32 @test13(i32 %x, i32* %p, i1 %c1) {
+define i32 @test13(i32 %x, ptr %p, i1 %c1) {
 ; Ensure we don't crash or fail to nuke dead phis of allocas if no load is ever
 ; found.
 ; CHECK-LABEL: @test13(
@@ -452,19 +437,19 @@ define i32 @test13(i32 %x, i32* %p, i1 %c1) {
 
 entry:
   %a = alloca i32
-  store i32 %x, i32* %a
+  store i32 %x, ptr %a
   br label %loop
 
 loop:
-  %phi = phi i32* [ %p, %entry ], [ %a, %loop ]
+  %phi = phi ptr [ %p, %entry ], [ %a, %loop ]
   br i1 %c1, label %loop, label %exit
 
 exit:
-  %load = load i32, i32* %a
+  %load = load i32, ptr %a
   ret i32 %load
 }
 
-define i32 @test14(i1 %b1, i1 %b2, i32* %ptr) {
+define i32 @test14(i1 %b1, i1 %b2, ptr %ptr) {
 ; Check for problems when there are both selects and phis and one is
 ; speculatable toward promotion but the other is not. That should block all of
 ; the speculation.
@@ -472,20 +457,20 @@ define i32 @test14(i1 %b1, i1 %b2, i32* %ptr) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[F:%.*]] = alloca i32, align 4
 ; CHECK-NEXT:    [[G:%.*]] = alloca i32, align 4
-; CHECK-NEXT:    store i32 0, i32* [[F]], align 4
-; CHECK-NEXT:    store i32 0, i32* [[G]], align 4
-; CHECK-NEXT:    [[F_SELECT:%.*]] = select i1 [[B1:%.*]], i32* [[F]], i32* [[PTR:%.*]]
+; CHECK-NEXT:    store i32 0, ptr [[F]], align 4
+; CHECK-NEXT:    store i32 0, ptr [[G]], align 4
+; CHECK-NEXT:    [[F_SELECT:%.*]] = select i1 [[B1:%.*]], ptr [[F]], ptr [[PTR:%.*]]
 ; CHECK-NEXT:    br i1 [[B2:%.*]], label [[THEN:%.*]], label [[ELSE:%.*]]
 ; CHECK:       then:
 ; CHECK-NEXT:    br label [[EXIT:%.*]]
 ; CHECK:       else:
 ; CHECK-NEXT:    br label [[EXIT]]
 ; CHECK:       exit:
-; CHECK-NEXT:    [[F_PHI:%.*]] = phi i32* [ [[F]], [[THEN]] ], [ [[F_SELECT]], [[ELSE]] ]
-; CHECK-NEXT:    [[G_PHI:%.*]] = phi i32* [ [[G]], [[THEN]] ], [ [[PTR]], [[ELSE]] ]
-; CHECK-NEXT:    [[F_LOADED:%.*]] = load i32, i32* [[F_PHI]], align 4
-; CHECK-NEXT:    [[G_SELECT:%.*]] = select i1 [[B1]], i32* [[G]], i32* [[G_PHI]]
-; CHECK-NEXT:    [[G_LOADED:%.*]] = load i32, i32* [[G_SELECT]], align 4
+; CHECK-NEXT:    [[F_PHI:%.*]] = phi ptr [ [[F]], [[THEN]] ], [ [[F_SELECT]], [[ELSE]] ]
+; CHECK-NEXT:    [[G_PHI:%.*]] = phi ptr [ [[G]], [[THEN]] ], [ [[PTR]], [[ELSE]] ]
+; CHECK-NEXT:    [[F_LOADED:%.*]] = load i32, ptr [[F_PHI]], align 4
+; CHECK-NEXT:    [[G_SELECT:%.*]] = select i1 [[B1]], ptr [[G]], ptr [[G_PHI]]
+; CHECK-NEXT:    [[G_LOADED:%.*]] = load i32, ptr [[G_SELECT]], align 4
 ; CHECK-NEXT:    [[RESULT:%.*]] = add i32 [[F_LOADED]], [[G_LOADED]]
 ; CHECK-NEXT:    ret i32 [[RESULT]]
 ;
@@ -493,9 +478,9 @@ define i32 @test14(i1 %b1, i1 %b2, i32* %ptr) {
 entry:
   %f = alloca i32
   %g = alloca i32
-  store i32 0, i32* %f
-  store i32 0, i32* %g
-  %f.select = select i1 %b1, i32* %f, i32* %ptr
+  store i32 0, ptr %f
+  store i32 0, ptr %g
+  %f.select = select i1 %b1, ptr %f, ptr %ptr
   br i1 %b2, label %then, label %else
 
 then:
@@ -505,11 +490,11 @@ else:
   br label %exit
 
 exit:
-  %f.phi = phi i32* [ %f, %then ], [ %f.select, %else ]
-  %g.phi = phi i32* [ %g, %then ], [ %ptr, %else ]
-  %f.loaded = load i32, i32* %f.phi
-  %g.select = select i1 %b1, i32* %g, i32* %g.phi
-  %g.loaded = load i32, i32* %g.select
+  %f.phi = phi ptr [ %f, %then ], [ %f.select, %else ]
+  %g.phi = phi ptr [ %g, %then ], [ %ptr, %else ]
+  %f.loaded = load i32, ptr %f.phi
+  %g.select = select i1 %b1, ptr %g, ptr %g.phi
+  %g.loaded = load i32, ptr %g.select
   %result = add i32 %f.loaded, %g.loaded
   ret i32 %result
 }
@@ -525,24 +510,24 @@ define void @PR13905(i1 %c1, i1 %c2, i1 %c3) {
 ; CHECK:       loop2:
 ; CHECK-NEXT:    br i1 [[C3:%.*]], label [[LOOP1]], label [[EXIT]]
 ; CHECK:       exit:
-; CHECK-NEXT:    [[PHI2:%.*]] = phi i32* [ poison, [[LOOP2]] ], [ null, [[ENTRY:%.*]] ]
+; CHECK-NEXT:    [[PHI2:%.*]] = phi ptr [ poison, [[LOOP2]] ], [ null, [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    ret void
 ;
 
 entry:
   %h = alloca i32
-  store i32 0, i32* %h
+  store i32 0, ptr %h
   br i1 %c1, label %loop1, label %exit
 
 loop1:
-  %phi1 = phi i32* [ null, %entry ], [ %h, %loop1 ], [ %h, %loop2 ]
+  %phi1 = phi ptr [ null, %entry ], [ %h, %loop1 ], [ %h, %loop2 ]
   br i1 %c2, label %loop1, label %loop2
 
 loop2:
   br i1 %c3, label %loop1, label %exit
 
 exit:
-  %phi2 = phi i32* [ %phi1, %loop2 ], [ null, %entry ]
+  %phi2 = phi ptr [ %phi1, %loop2 ], [ null, %entry ]
   ret void
 }
 
@@ -561,15 +546,15 @@ define i32 @PR13906(i1 %c1, i1 %c2) {
 
 entry:
   %c = alloca i32
-  store i32 0, i32* %c
+  store i32 0, ptr %c
   br label %for.cond
 
 for.cond:
-  %d.0 = phi i32* [ poison, %entry ], [ %c, %if.then ], [ %d.0, %for.cond ]
+  %d.0 = phi ptr [ poison, %entry ], [ %c, %if.then ], [ %d.0, %for.cond ]
   br i1 %c1, label %if.then, label %for.cond
 
 if.then:
-  %tmpcast.d.0 = select i1 %c2, i32* %c, i32* %d.0
+  %tmpcast.d.0 = select i1 %c2, ptr %c, ptr %d.0
   br label %for.cond
 }
 
@@ -594,21 +579,20 @@ define i64 @PR14132(i1 %flag) {
 entry:
   %a = alloca i64, align 8
   %b = alloca i8, align 8
-  %ptr = alloca i64*, align 8
+  %ptr = alloca ptr, align 8
 
-  %ptr.cast = bitcast i64** %ptr to i8**
-  store i64 0, i64* %a, align 8
-  store i8 1, i8* %b, align 8
-  store i64* %a, i64** %ptr, align 8
+  store i64 0, ptr %a, align 8
+  store i8 1, ptr %b, align 8
+  store ptr %a, ptr %ptr, align 8
   br i1 %flag, label %if.then, label %if.end
 
 if.then:
-  store i8* %b, i8** %ptr.cast, align 8
+  store ptr %b, ptr %ptr, align 8
   br label %if.end
 
 if.end:
-  %tmp = load i64*, i64** %ptr, align 8
-  %result = load i64, i64* %tmp, align 8
+  %tmp = load ptr, ptr %ptr, align 8
+  %result = load i64, ptr %tmp, align 8
 
   ret i64 %result
 }
@@ -636,22 +620,19 @@ define float @PR16687(i64 %x, i1 %flag) {
 
 entry:
   %a = alloca i64, align 8
-  store i64 %x, i64* %a
+  store i64 %x, ptr %a
   br i1 %flag, label %then, label %else
 
 then:
-  %a.f = bitcast i64* %a to float*
   br label %end
 
 else:
-  %a.raw = bitcast i64* %a to i8*
-  %a.raw.4 = getelementptr i8, i8* %a.raw, i64 4
-  %a.raw.4.f = bitcast i8* %a.raw.4 to float*
+  %a.raw.4 = getelementptr i8, ptr %a, i64 4
   br label %end
 
 end:
-  %a.phi.f = phi float* [ %a.f, %then ], [ %a.raw.4.f, %else ]
-  %f = load float, float* %a.phi.f
+  %a.phi.f = phi ptr [ %a, %then ], [ %a.raw.4, %else ]
+  %f = load float, ptr %a.phi.f
   ret float %f
 }
 
@@ -661,7 +642,7 @@ end:
 ; %0 = slice
 ; %1 = slice
 ; %2 = phi(%0, %1) // == slice
-define float @simplify_phi_nodes_that_equal_slice(i1 %cond, float* %temp) {
+define float @simplify_phi_nodes_that_equal_slice(i1 %cond, ptr %temp) {
 ; CHECK-LABEL: @simplify_phi_nodes_that_equal_slice(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br i1 [[COND:%.*]], label [[THEN:%.*]], label [[ELSE:%.*]]
@@ -671,7 +652,7 @@ define float @simplify_phi_nodes_that_equal_slice(i1 %cond, float* %temp) {
 ; CHECK-NEXT:    br label [[MERGE]]
 ; CHECK:       merge:
 ; CHECK-NEXT:    [[ARR_SROA_0_0:%.*]] = phi float [ 1.000000e+00, [[THEN]] ], [ 2.000000e+00, [[ELSE]] ]
-; CHECK-NEXT:    store float 0.000000e+00, float* [[TEMP:%.*]], align 4
+; CHECK-NEXT:    store float 0.000000e+00, ptr [[TEMP:%.*]], align 4
 ; CHECK-NEXT:    ret float [[ARR_SROA_0_0]]
 ;
 entry:
@@ -679,19 +660,19 @@ entry:
   br i1 %cond, label %then, label %else
 
 then:
-  %0 = getelementptr inbounds [4 x float], [4 x float]* %arr, i64 0, i64 3
-  store float 1.000000e+00, float* %0, align 4
+  %0 = getelementptr inbounds [4 x float], ptr %arr, i64 0, i64 3
+  store float 1.000000e+00, ptr %0, align 4
   br label %merge
 
 else:
-  %1 = getelementptr inbounds [4 x float], [4 x float]* %arr, i64 0, i64 3
-  store float 2.000000e+00, float* %1, align 4
+  %1 = getelementptr inbounds [4 x float], ptr %arr, i64 0, i64 3
+  store float 2.000000e+00, ptr %1, align 4
   br label %merge
 
 merge:
-  %2 = phi float* [ %0, %then ], [ %1, %else ]
-  store float 0.000000e+00, float* %temp, align 4
-  %3 = load float, float* %2, align 4
+  %2 = phi ptr [ %0, %then ], [ %1, %else ]
+  store float 0.000000e+00, ptr %temp, align 4
+  %3 = load float, ptr %2, align 4
   ret float %3
 }
 
@@ -701,7 +682,7 @@ merge:
 ; %1 = phi(%0) // == slice
 ; %2 = slice
 ; %3 = phi(%1, %2) // == slice
-define float @simplify_phi_nodes_that_equal_slice_2(i1 %cond, float* %temp) {
+define float @simplify_phi_nodes_that_equal_slice_2(i1 %cond, ptr %temp) {
 ; CHECK-LABEL: @simplify_phi_nodes_that_equal_slice_2(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br i1 [[COND:%.*]], label [[THEN:%.*]], label [[ELSE:%.*]]
@@ -713,7 +694,7 @@ define float @simplify_phi_nodes_that_equal_slice_2(i1 %cond, float* %temp) {
 ; CHECK-NEXT:    br label [[MERGE]]
 ; CHECK:       merge:
 ; CHECK-NEXT:    [[ARR_SROA_0_0:%.*]] = phi float [ 2.000000e+00, [[THEN2]] ], [ 3.000000e+00, [[ELSE]] ]
-; CHECK-NEXT:    store float 0.000000e+00, float* [[TEMP:%.*]], align 4
+; CHECK-NEXT:    store float 0.000000e+00, ptr [[TEMP:%.*]], align 4
 ; CHECK-NEXT:    ret float [[ARR_SROA_0_0]]
 ;
 entry:
@@ -721,24 +702,24 @@ entry:
   br i1 %cond, label %then, label %else
 
 then:
-  %0 = getelementptr inbounds [4 x float], [4 x float]* %arr, i64 0, i64 3
-  store float 1.000000e+00, float* %0, align 4
+  %0 = getelementptr inbounds [4 x float], ptr %arr, i64 0, i64 3
+  store float 1.000000e+00, ptr %0, align 4
   br label %then2
 
 then2:
-  %1 = phi float* [ %0, %then ]
-  store float 2.000000e+00, float* %1, align 4
+  %1 = phi ptr [ %0, %then ]
+  store float 2.000000e+00, ptr %1, align 4
   br label %merge
 
 else:
-  %2 = getelementptr inbounds [4 x float], [4 x float]* %arr, i64 0, i64 3
-  store float 3.000000e+00, float* %2, align 4
+  %2 = getelementptr inbounds [4 x float], ptr %arr, i64 0, i64 3
+  store float 3.000000e+00, ptr %2, align 4
   br label %merge
 
 merge:
-  %3 = phi float* [ %1, %then2 ], [ %2, %else ]
-  store float 0.000000e+00, float* %temp, align 4
-  %4 = load float, float* %3, align 4
+  %3 = phi ptr [ %1, %then2 ], [ %2, %else ]
+  store float 0.000000e+00, ptr %temp, align 4
+  %4 = load float, ptr %3, align 4
   ret float %4
 }
 
@@ -749,7 +730,7 @@ merge:
 ; when the incoming pointer is itself from a PHI node. We would previously
 ; insert a bitcast instruction *before* a PHI, producing an invalid module;
 ; make sure we insert *after* the first non-PHI instruction.
-define void @PR20822(i1 %c1, i1 %c2, %struct.S* %ptr) {
+define void @PR20822(i1 %c1, i1 %c2, ptr %ptr) {
 ; CHECK-LABEL: @PR20822(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[F_SROA_0:%.*]] = alloca i32, align 4
@@ -758,14 +739,13 @@ define void @PR20822(i1 %c1, i1 %c2, %struct.S* %ptr) {
 ; CHECK-NEXT:    br label [[IF_END]]
 ; CHECK:       if.end:
 ; CHECK-NEXT:    [[TMP0:%.*]] = phi i32 [ poison, [[ENTRY:%.*]] ], [ poison, [[FOR_COND]] ]
-; CHECK-NEXT:    [[F_SROA_0_0_F2_SROA_CAST1:%.*]] = bitcast i32* [[F_SROA_0]] to %struct.S*
 ; CHECK-NEXT:    br i1 [[C2:%.*]], label [[IF_THEN5:%.*]], label [[IF_THEN2:%.*]]
 ; CHECK:       if.then2:
 ; CHECK-NEXT:    br label [[IF_THEN5]]
 ; CHECK:       if.then5:
-; CHECK-NEXT:    [[F1:%.*]] = phi %struct.S* [ [[PTR:%.*]], [[IF_THEN2]] ], [ [[F_SROA_0_0_F2_SROA_CAST1]], [[IF_END]] ]
-; CHECK-NEXT:    [[DOTFCA_0_GEP:%.*]] = getelementptr inbounds [[STRUCT_S:%.*]], %struct.S* [[F1]], i32 0, i32 0
-; CHECK-NEXT:    store i32 0, i32* [[DOTFCA_0_GEP]], align 4
+; CHECK-NEXT:    [[F1:%.*]] = phi ptr [ [[PTR:%.*]], [[IF_THEN2]] ], [ [[F_SROA_0]], [[IF_END]] ]
+; CHECK-NEXT:    [[DOTFCA_0_GEP:%.*]] = getelementptr inbounds [[STRUCT_S:%.*]], ptr [[F1]], i32 0, i32 0
+; CHECK-NEXT:    store i32 0, ptr [[DOTFCA_0_GEP]], align 4
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -776,7 +756,7 @@ for.cond:                                         ; preds = %for.cond, %entry
   br label %if.end
 
 if.end:                                           ; preds = %for.cond, %entry
-  %f2 = phi %struct.S* [ %f, %entry ], [ %f, %for.cond ]
+  %f2 = phi ptr [ %f, %entry ], [ %f, %for.cond ]
   phi i32 [ poison, %entry ], [ poison, %for.cond ]
   br i1 %c2, label %if.then5, label %if.then2
 
@@ -784,47 +764,40 @@ if.then2:                                         ; preds = %if.end
   br label %if.then5
 
 if.then5:                                         ; preds = %if.then2, %if.end
-  %f1 = phi %struct.S* [ %ptr, %if.then2 ], [ %f2, %if.end ]
-  store %struct.S zeroinitializer, %struct.S* %f1, align 4
+  %f1 = phi ptr [ %ptr, %if.then2 ], [ %f2, %if.end ]
+  store %struct.S zeroinitializer, ptr %f1, align 4
   ret void
 }
 
-define i32 @phi_align(i32* %z) {
+define i32 @phi_align(ptr %z) {
 ; CHECK-LABEL: @phi_align(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[A_SROA_0:%.*]] = alloca [7 x i8], align 1
-; CHECK-NEXT:    [[A_SROA_0_3_A1_SROA_IDX:%.*]] = getelementptr inbounds [7 x i8], [7 x i8]* [[A_SROA_0]], i64 0, i64 3
-; CHECK-NEXT:    [[A_SROA_0_3_A1_SROA_CAST:%.*]] = bitcast i8* [[A_SROA_0_3_A1_SROA_IDX]] to i32*
-; CHECK-NEXT:    [[A_SROA_0_0_A0_SROA_CAST:%.*]] = bitcast [7 x i8]* [[A_SROA_0]] to i32*
-; CHECK-NEXT:    store i32 0, i32* [[A_SROA_0_0_A0_SROA_CAST]], align 1
-; CHECK-NEXT:    [[A_SROA_0_3_A1_SROA_IDX7:%.*]] = getelementptr inbounds [7 x i8], [7 x i8]* [[A_SROA_0]], i64 0, i64 3
-; CHECK-NEXT:    [[A_SROA_0_3_A1_SROA_CAST8:%.*]] = bitcast i8* [[A_SROA_0_3_A1_SROA_IDX7]] to i32*
-; CHECK-NEXT:    store i32 1, i32* [[A_SROA_0_3_A1_SROA_CAST8]], align 1
-; CHECK-NEXT:    [[A_SROA_0_0_A0_SROA_CAST6:%.*]] = bitcast [7 x i8]* [[A_SROA_0]] to i32*
-; CHECK-NEXT:    [[A_SROA_0_0_A_SROA_0_1_V0:%.*]] = load i32, i32* [[A_SROA_0_0_A0_SROA_CAST6]], align 1
-; CHECK-NEXT:    [[A_SROA_0_3_A1_SROA_IDX9:%.*]] = getelementptr inbounds [7 x i8], [7 x i8]* [[A_SROA_0]], i64 0, i64 3
-; CHECK-NEXT:    [[A_SROA_0_3_A1_SROA_CAST10:%.*]] = bitcast i8* [[A_SROA_0_3_A1_SROA_IDX9]] to i32*
-; CHECK-NEXT:    [[A_SROA_0_3_A_SROA_0_4_V1:%.*]] = load i32, i32* [[A_SROA_0_3_A1_SROA_CAST10]], align 1
+; CHECK-NEXT:    [[A_SROA_0_3_A1X_SROA_IDX:%.*]] = getelementptr inbounds i8, ptr [[A_SROA_0]], i64 3
+; CHECK-NEXT:    store i32 0, ptr [[A_SROA_0]], align 1
+; CHECK-NEXT:    [[A_SROA_0_3_A1X_SROA_IDX3:%.*]] = getelementptr inbounds i8, ptr [[A_SROA_0]], i64 3
+; CHECK-NEXT:    store i32 1, ptr [[A_SROA_0_3_A1X_SROA_IDX3]], align 1
+; CHECK-NEXT:    [[A_SROA_0_0_A_SROA_0_1_V0:%.*]] = load i32, ptr [[A_SROA_0]], align 1
+; CHECK-NEXT:    [[A_SROA_0_3_A1X_SROA_IDX4:%.*]] = getelementptr inbounds i8, ptr [[A_SROA_0]], i64 3
+; CHECK-NEXT:    [[A_SROA_0_3_A_SROA_0_4_V1:%.*]] = load i32, ptr [[A_SROA_0_3_A1X_SROA_IDX4]], align 1
 ; CHECK-NEXT:    [[COND:%.*]] = icmp sle i32 [[A_SROA_0_0_A_SROA_0_1_V0]], [[A_SROA_0_3_A_SROA_0_4_V1]]
 ; CHECK-NEXT:    br i1 [[COND]], label [[THEN:%.*]], label [[EXIT:%.*]]
 ; CHECK:       then:
 ; CHECK-NEXT:    br label [[EXIT]]
 ; CHECK:       exit:
-; CHECK-NEXT:    [[PHI:%.*]] = phi i32* [ [[A_SROA_0_3_A1_SROA_CAST]], [[THEN]] ], [ [[Z:%.*]], [[ENTRY:%.*]] ]
-; CHECK-NEXT:    [[RESULT:%.*]] = load i32, i32* [[PHI]], align 1
+; CHECK-NEXT:    [[PHI:%.*]] = phi ptr [ [[A_SROA_0_3_A1X_SROA_IDX]], [[THEN]] ], [ [[Z:%.*]], [[ENTRY:%.*]] ]
+; CHECK-NEXT:    [[RESULT:%.*]] = load i32, ptr [[PHI]], align 1
 ; CHECK-NEXT:    ret i32 [[RESULT]]
 ;
 entry:
   %a = alloca [8 x i8], align 8
 
-  %a0x = getelementptr [8 x i8], [8 x i8]* %a, i64 0, i32 1
-  %a0 = bitcast i8* %a0x to i32*
-  %a1x = getelementptr [8 x i8], [8 x i8]* %a, i64 0, i32 4
-  %a1 = bitcast i8* %a1x to i32*
-  store i32 0, i32* %a0, align 1
-  store i32 1, i32* %a1, align 4
-  %v0 = load i32, i32* %a0, align 1
-  %v1 = load i32, i32* %a1, align 4
+  %a0x = getelementptr [8 x i8], ptr %a, i64 0, i32 1
+  %a1x = getelementptr [8 x i8], ptr %a, i64 0, i32 4
+  store i32 0, ptr %a0x, align 1
+  store i32 1, ptr %a1x, align 4
+  %v0 = load i32, ptr %a0x, align 1
+  %v1 = load i32, ptr %a1x, align 4
   %cond = icmp sle i32 %v0, %v1
   br i1 %cond, label %then, label %exit
 
@@ -832,25 +805,25 @@ then:
   br label %exit
 
 exit:
-  %phi = phi i32* [ %a1, %then ], [ %z, %entry ]
-  %result = load i32, i32* %phi, align 4
+  %phi = phi ptr [ %a1x, %then ], [ %z, %entry ]
+  %result = load i32, ptr %phi, align 4
   ret i32 %result
 }
 
 ; Don't speculate a load based on an earlier volatile operation.
-define i8 @volatile_select(i8* %p, i1 %b) {
+define i8 @volatile_select(ptr %p, i1 %b) {
 ; CHECK-LABEL: @volatile_select(
 ; CHECK-NEXT:    [[P2:%.*]] = alloca i8, align 1
-; CHECK-NEXT:    store i8 0, i8* [[P2]], align 1
-; CHECK-NEXT:    store volatile i8 0, i8* [[P:%.*]], align 1
-; CHECK-NEXT:    [[PX:%.*]] = select i1 [[B:%.*]], i8* [[P]], i8* [[P2]]
-; CHECK-NEXT:    [[V2:%.*]] = load i8, i8* [[PX]], align 1
+; CHECK-NEXT:    store i8 0, ptr [[P2]], align 1
+; CHECK-NEXT:    store volatile i8 0, ptr [[P:%.*]], align 1
+; CHECK-NEXT:    [[PX:%.*]] = select i1 [[B:%.*]], ptr [[P]], ptr [[P2]]
+; CHECK-NEXT:    [[V2:%.*]] = load i8, ptr [[PX]], align 1
 ; CHECK-NEXT:    ret i8 [[V2]]
 ;
   %p2 = alloca i8
-  store i8 0, i8* %p2
-  store volatile i8 0, i8* %p
-  %px = select i1 %b, i8* %p, i8* %p2
-  %v2 = load i8, i8* %px
+  store i8 0, ptr %p2
+  store volatile i8 0, ptr %p
+  %px = select i1 %b, ptr %p, ptr %p2
+  %v2 = load i8, ptr %px
   ret i8 %v2
 }
