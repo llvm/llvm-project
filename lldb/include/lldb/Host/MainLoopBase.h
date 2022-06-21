@@ -46,6 +46,13 @@ public:
     llvm_unreachable("Not implemented");
   }
 
+  // Add a pending callback that will be executed once after all the pending
+  // events are processed. The callback will be executed even if termination
+  // was requested.
+  virtual void AddPendingCallback(const Callback &callback) {
+    llvm_unreachable("Not implemented");
+  }
+
   // Waits for registered events and invoke the proper callbacks. Returns when
   // all callbacks deregister themselves or when someone requests termination.
   virtual Status Run() { llvm_unreachable("Not implemented"); }
