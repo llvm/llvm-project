@@ -23,7 +23,6 @@ add_llvm_component_library(LLVMOrcJIT
   LookupAndRecordAddrs.cpp
   LLJIT.cpp
   MachOPlatform.cpp
-  MemoryMapper.cpp
   ELFNixPlatform.cpp
   Mangling.cpp
   ObjectLinkingLayer.cpp

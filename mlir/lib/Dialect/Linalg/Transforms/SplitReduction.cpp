@@ -64,11 +64,30 @@ FailureOr<LinalgOp> mlir::linalg::splitReduction(
       op.getNumReductionLoops() != 1 || op.getNumOutputs() != 1 ||
       !op.hasOnlyProjectedPermutations())
     return b.notifyMatchFailure(op, "precondition not met");
+
+  FailureOr<SplitReductionResult> res =
+      splitReduction(b, op, controlSplitReductionFn);
+  if (failed(res))
+    return failure();
+
+  filter.replaceLinalgTransformationFilter(b, res->splitLinalgOp);
+  filter.replaceLinalgTransformationFilter(b, res->resultCombiningLinalgOp);
+
+  return res->splitLinalgOp;
+}
+
+FailureOr<SplitReductionResult> mlir::linalg::splitReduction(
+    PatternRewriter &b, LinalgOp op,
+    const ControlSplitReductionFn &controlSplitReductionFn) {
+  OpBuilder::InsertionGuard guard(b);
+  b.setInsertionPoint(op);
+
   std::pair<int64_t, unsigned> control = controlSplitReductionFn(op);
   int64_t ratio = control.first;
   unsigned insertDimIndex = control.second;
   if (ratio <= 1)
     return b.notifyMatchFailure(op, "split ratio needs to be greater than 1");
+
   SmallVector<unsigned> dims;
   op.getReductionDims(dims);
   assert(dims.size() == 1);
@@ -79,14 +98,16 @@ FailureOr<LinalgOp> mlir::linalg::splitReduction(
       reductionDimSize % ratio != 0 || insertDimIndex >= loopRanges.size())
     return b.notifyMatchFailure(
         op, "Reduction dimension not divisible by split ratio");
+
   SmallVector<Operation *, 4> combinerOps;
   if (!matchReduction(op.getRegionOutputArgs(), 0, combinerOps) ||
       combinerOps.size() != 1)
     return b.notifyMatchFailure(op, "Cannot match the reduction pattern");
+
   Operation *reductionOp = combinerOps[0];
   Optional<Attribute> identity = getIdentity(reductionOp);
   if (!identity)
-    return b.notifyMatchFailure(op, "Unknown identity value for the redution");
+    return b.notifyMatchFailure(op, "Unknown identity value for the reduction");
 
   Location loc = op->getLoc();
   SmallVector<Value> newInputs;
@@ -127,6 +148,7 @@ FailureOr<LinalgOp> mlir::linalg::splitReduction(
         loc, newType, operand->get(), reassociation);
     newInputs.push_back(newInput);
   }
+
   // Calculate the new output map and shape, we insert the new dimension based
   // on the index returned by `controlSplitReductionFn`.
   SmallVector<int64_t> newOutputShape;
@@ -169,8 +191,8 @@ FailureOr<LinalgOp> mlir::linalg::splitReduction(
   b.inlineRegionBefore(op->getRegion(0), genericOp.region(),
                        genericOp.region().begin());
 
-  // Then create a new reduction that only reduce the newly added dimension from
-  // the previous op.
+  // Then create a new reduction that only reduce the newly added dimension
+  // from the previous op.
   unsigned intermRank = newOutputShape.size();
   AffineMap inputMap = b.getMultiDimIdentityMap(intermRank);
   SmallVector<Value> outputOperands = op.getOutputOperands();
@@ -197,9 +219,10 @@ FailureOr<LinalgOp> mlir::linalg::splitReduction(
         b.create<linalg::YieldOp>(loc, clonedReductionOp->getResult(0));
       });
   b.replaceOp(op, reduction.getResults());
-  filter.replaceLinalgTransformationFilter(b, genericOp);
-  filter.replaceLinalgTransformationFilter(b, reduction);
-  return cast<LinalgOp>(genericOp.getOperation());
+
+  return SplitReductionResult{identityTensor.getDefiningOp<FillOp>(),
+                              cast<LinalgOp>(genericOp.getOperation()),
+                              reduction};
 }
 
 namespace {
