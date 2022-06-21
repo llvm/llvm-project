@@ -50,6 +50,9 @@ enum NodeType : unsigned {
   // Represents an AUIPC+ADDI pair. Selected to PseudoLLA.
   LLA,
 
+  // Selected as PseudoAddTPRel. Used to emit a TP-relative relocation.
+  ADD_TPREL,
+
   // Multiply high for signedxunsigned.
   MULHSU,
   // RV64I shifts, directly matching the semantics of the named RISC-V
@@ -286,8 +289,8 @@ enum NodeType : unsigned {
   VMCLR_VL,
   VMSET_VL,
 
-  // Matches the semantics of vrgather.vx and vrgather.vv with an extra operand
-  // for VL.
+  // Matches the semantics of vrgather.vx and vrgather.vv with extra operands
+  // for passthru and VL. First operand is the passthru operand.
   VRGATHER_VX_VL,
   VRGATHER_VV_VL,
   VRGATHEREI16_VV_VL,

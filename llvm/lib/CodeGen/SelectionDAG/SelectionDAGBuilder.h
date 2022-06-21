@@ -689,9 +689,7 @@ struct RegsForValue {
                const DataLayout &DL, unsigned Reg, Type *Ty,
                Optional<CallingConv::ID> CC);
 
-  bool isABIMangled() const {
-    return CallConv.hasValue();
-  }
+  bool isABIMangled() const { return CallConv.has_value(); }
 
   /// Add the specified values to this one.
   void append(const RegsForValue &RHS) {

@@ -1957,8 +1957,8 @@ static SDValue matchSplatAsGather(SDValue SplatVal, MVT VT, const SDLoc &DL,
   SDValue Mask, VL;
   std::tie(Mask, VL) = getDefaultVLOps(VT, ContainerVT, DL, DAG, Subtarget);
 
-  SDValue Gather = DAG.getNode(RISCVISD::VRGATHER_VX_VL, DL, ContainerVT, Vec,
-                               Idx, Mask, VL);
+  SDValue Gather = DAG.getNode(RISCVISD::VRGATHER_VX_VL, DL, ContainerVT,
+                               DAG.getUNDEF(ContainerVT), Vec, Idx, Mask, VL);
 
   if (!VT.isFixedLengthVector())
     return Gather;
@@ -2581,9 +2581,9 @@ static SDValue lowerVECTOR_SHUFFLE(SDValue Op, SelectionDAG &DAG,
 
       V1 = convertToScalableVector(ContainerVT, V1, DAG, Subtarget);
       assert(Lane < (int)NumElts && "Unexpected lane!");
-      SDValue Gather =
-          DAG.getNode(RISCVISD::VRGATHER_VX_VL, DL, ContainerVT, V1,
-                      DAG.getConstant(Lane, DL, XLenVT), TrueMask, VL);
+      SDValue Gather = DAG.getNode(
+          RISCVISD::VRGATHER_VX_VL, DL, ContainerVT, DAG.getUNDEF(ContainerVT),
+          V1, DAG.getConstant(Lane, DL, XLenVT), TrueMask, VL);
       return convertFromScalableVector(VT, Gather, DAG, Subtarget);
     }
   }
@@ -2793,16 +2793,17 @@ static SDValue lowerVECTOR_SHUFFLE(SDValue Op, SelectionDAG &DAG,
     // that's beneficial.
     if (LHSIndexCounts.size() == 1) {
       int SplatIndex = LHSIndexCounts.begin()->getFirst();
-      Gather =
-          DAG.getNode(GatherVXOpc, DL, ContainerVT, V1,
-                      DAG.getConstant(SplatIndex, DL, XLenVT), TrueMask, VL);
+      Gather = DAG.getNode(
+          GatherVXOpc, DL, ContainerVT, DAG.getUNDEF(ContainerVT), V1,
+          DAG.getConstant(SplatIndex, DL, XLenVT), TrueMask, VL);
     } else {
       SDValue LHSIndices = DAG.getBuildVector(IndexVT, DL, GatherIndicesLHS);
       LHSIndices =
           convertToScalableVector(IndexContainerVT, LHSIndices, DAG, Subtarget);
 
-      Gather = DAG.getNode(GatherVVOpc, DL, ContainerVT, V1, LHSIndices,
-                           TrueMask, VL);
+      Gather =
+          DAG.getNode(GatherVVOpc, DL, ContainerVT, DAG.getUNDEF(ContainerVT),
+                      V1, LHSIndices, TrueMask, VL);
     }
   }
 
@@ -2810,27 +2811,26 @@ static SDValue lowerVECTOR_SHUFFLE(SDValue Op, SelectionDAG &DAG,
   // additional vrgather.
   if (!V2.isUndef()) {
     V2 = convertToScalableVector(ContainerVT, V2, DAG, Subtarget);
-    // If only one index is used, we can use a "splat" vrgather.
-    // TODO: We can splat the most-common index and fix-up any stragglers, if
-    // that's beneficial.
-    if (RHSIndexCounts.size() == 1) {
-      int SplatIndex = RHSIndexCounts.begin()->getFirst();
-      V2 = DAG.getNode(GatherVXOpc, DL, ContainerVT, V2,
-                       DAG.getConstant(SplatIndex, DL, XLenVT), TrueMask, VL);
-    } else {
-      SDValue RHSIndices = DAG.getBuildVector(IndexVT, DL, GatherIndicesRHS);
-      RHSIndices =
-          convertToScalableVector(IndexContainerVT, RHSIndices, DAG, Subtarget);
-      V2 = DAG.getNode(GatherVVOpc, DL, ContainerVT, V2, RHSIndices, TrueMask,
-                       VL);
-    }
 
     MVT MaskContainerVT = ContainerVT.changeVectorElementType(MVT::i1);
     SelectMask =
         convertToScalableVector(MaskContainerVT, SelectMask, DAG, Subtarget);
 
-    Gather = DAG.getNode(RISCVISD::VSELECT_VL, DL, ContainerVT, SelectMask, V2,
-                         Gather, VL);
+    // If only one index is used, we can use a "splat" vrgather.
+    // TODO: We can splat the most-common index and fix-up any stragglers, if
+    // that's beneficial.
+    if (RHSIndexCounts.size() == 1) {
+      int SplatIndex = RHSIndexCounts.begin()->getFirst();
+      Gather =
+          DAG.getNode(GatherVXOpc, DL, ContainerVT, Gather, V2,
+                      DAG.getConstant(SplatIndex, DL, XLenVT), SelectMask, VL);
+    } else {
+      SDValue RHSIndices = DAG.getBuildVector(IndexVT, DL, GatherIndicesRHS);
+      RHSIndices =
+          convertToScalableVector(IndexContainerVT, RHSIndices, DAG, Subtarget);
+      Gather = DAG.getNode(GatherVVOpc, DL, ContainerVT, Gather, V2, RHSIndices,
+                           SelectMask, VL);
+    }
   }
 
   return convertFromScalableVector(VT, Gather, DAG, Subtarget);
@@ -3719,12 +3719,11 @@ SDValue RISCVTargetLowering::getStaticTLSAddr(GlobalAddressSDNode *N,
   SDValue AddrLo =
       DAG.getTargetGlobalAddress(GV, DL, Ty, 0, RISCVII::MO_TPREL_LO);
 
-  SDValue MNHi = SDValue(DAG.getMachineNode(RISCV::LUI, DL, Ty, AddrHi), 0);
+  SDValue MNHi = DAG.getNode(RISCVISD::HI, DL, Ty, AddrHi);
   SDValue TPReg = DAG.getRegister(RISCV::X4, XLenVT);
-  SDValue MNAdd = SDValue(
-      DAG.getMachineNode(RISCV::PseudoAddTPRel, DL, Ty, MNHi, TPReg, AddrAdd),
-      0);
-  return SDValue(DAG.getMachineNode(RISCV::ADDI, DL, Ty, MNAdd, AddrLo), 0);
+  SDValue MNAdd =
+      DAG.getNode(RISCVISD::ADD_TPREL, DL, Ty, MNHi, TPReg, AddrAdd);
+  return DAG.getNode(RISCVISD::ADD_LO, DL, Ty, MNAdd, AddrLo);
 }
 
 SDValue RISCVTargetLowering::getDynamicTLSAddr(GlobalAddressSDNode *N,
@@ -5691,7 +5690,8 @@ SDValue RISCVTargetLowering::lowerVECTOR_REVERSE(SDValue Op,
   SDValue Indices =
       DAG.getNode(RISCVISD::SUB_VL, DL, IntVT, SplatVL, VID, Mask, VL);
 
-  return DAG.getNode(GatherOpc, DL, VecVT, Op.getOperand(0), Indices, Mask, VL);
+  return DAG.getNode(GatherOpc, DL, VecVT, DAG.getUNDEF(VecVT),
+                     Op.getOperand(0), Indices, Mask, VL);
 }
 
 SDValue RISCVTargetLowering::lowerVECTOR_SPLICE(SDValue Op,
@@ -11184,6 +11184,7 @@ const char *RISCVTargetLowering::getTargetNodeName(unsigned Opcode) const {
   NODE_NAME_CASE(ADD_LO)
   NODE_NAME_CASE(HI)
   NODE_NAME_CASE(LLA)
+  NODE_NAME_CASE(ADD_TPREL)
   NODE_NAME_CASE(MULHSU)
   NODE_NAME_CASE(SLLW)
   NODE_NAME_CASE(SRAW)
@@ -11940,7 +11941,7 @@ bool RISCVTargetLowering::allowsMisalignedMemoryAccesses(
 bool RISCVTargetLowering::splitValueIntoRegisterParts(
     SelectionDAG &DAG, const SDLoc &DL, SDValue Val, SDValue *Parts,
     unsigned NumParts, MVT PartVT, Optional<CallingConv::ID> CC) const {
-  bool IsABIRegCopy = CC.hasValue();
+  bool IsABIRegCopy = CC.has_value();
   EVT ValueVT = Val.getValueType();
   if (IsABIRegCopy && ValueVT == MVT::f16 && PartVT == MVT::f32) {
     // Cast the f16 to i16, extend to i32, pad with ones to make a float nan,
@@ -11994,7 +11995,7 @@ bool RISCVTargetLowering::splitValueIntoRegisterParts(
 SDValue RISCVTargetLowering::joinRegisterPartsIntoValue(
     SelectionDAG &DAG, const SDLoc &DL, const SDValue *Parts, unsigned NumParts,
     MVT PartVT, EVT ValueVT, Optional<CallingConv::ID> CC) const {
-  bool IsABIRegCopy = CC.hasValue();
+  bool IsABIRegCopy = CC.has_value();
   if (IsABIRegCopy && ValueVT == MVT::f16 && PartVT == MVT::f32) {
     SDValue Val = Parts[0];
 

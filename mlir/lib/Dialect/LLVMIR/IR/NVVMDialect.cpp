@@ -34,7 +34,6 @@ using namespace NVVM;
 
 #include "mlir/Dialect/LLVMIR/NVVMOpsDialect.cpp.inc"
 #include "mlir/Dialect/LLVMIR/NVVMOpsEnums.cpp.inc"
-#include "mlir/Dialect/LLVMIR/NVVMOpsStructs.cpp.inc"
 
 //===----------------------------------------------------------------------===//
 // Printing/parsing for NVVM ops

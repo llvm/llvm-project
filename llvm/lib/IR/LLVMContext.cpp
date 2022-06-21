@@ -156,7 +156,7 @@ uint64_t LLVMContext::getDiagnosticsMisExpectTolerance() const {
 }
 
 bool LLVMContext::isDiagnosticsHotnessThresholdSetFromPSI() const {
-  return !pImpl->DiagnosticsHotnessThreshold.hasValue();
+  return !pImpl->DiagnosticsHotnessThreshold.has_value();
 }
 
 remarks::RemarkStreamer *LLVMContext::getMainRemarkStreamer() {

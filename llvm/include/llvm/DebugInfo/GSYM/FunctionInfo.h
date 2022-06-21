@@ -102,9 +102,7 @@ struct FunctionInfo {
   /// debug info, we might end up with multiple FunctionInfo objects for the
   /// same range and we need to be able to tell which one is the better object
   /// to use.
-  bool hasRichInfo() const {
-    return OptLineTable.hasValue() || Inline.hasValue();
-  }
+  bool hasRichInfo() const { return OptLineTable || Inline; }
 
   /// Query if a FunctionInfo object is valid.
   ///

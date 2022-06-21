@@ -616,7 +616,7 @@ static ParseResult parseCustomDirectiveOptionalOperandRef(
   if (parser.parseInteger(operandCount))
     return failure();
   bool expectedOptionalOperand = operandCount == 0;
-  return success(expectedOptionalOperand != optOperand.hasValue());
+  return success(expectedOptionalOperand != optOperand.has_value());
 }
 
 //===----------------------------------------------------------------------===//
@@ -1465,7 +1465,6 @@ void TestReflectBoundsOp::inferResultRanges(
 
 #include "TestOpEnums.cpp.inc"
 #include "TestOpInterfaces.cpp.inc"
-#include "TestOpStructs.cpp.inc"
 #include "TestTypeInterfaces.cpp.inc"
 
 #define GET_OP_CLASSES

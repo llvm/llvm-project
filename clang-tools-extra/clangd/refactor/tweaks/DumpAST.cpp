@@ -38,7 +38,7 @@ public:
          N = N->Parent)
       if (dumpable(N->ASTNode))
         Node = N->ASTNode;
-    return Node.hasValue();
+    return Node.has_value();
   }
   Expected<Effect> apply(const Selection &Inputs) override;
   std::string title() const override {

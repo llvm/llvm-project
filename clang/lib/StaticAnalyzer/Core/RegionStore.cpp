@@ -2481,7 +2481,7 @@ RegionStoreManager::bindArray(RegionBindingsConstRef B,
 
   RegionBindingsRef NewB(B);
 
-  for (; Size.hasValue() ? i < Size.getValue() : true ; ++i, ++VI) {
+  for (; Size ? i < *Size : true; ++i, ++VI) {
     // The init list might be shorter than the array length.
     if (VI == VE)
       break;

@@ -377,7 +377,7 @@ private:
 
   /// Returns true if the diagnostic is still active, i.e. it has a live
   /// diagnostic.
-  bool isActive() const { return impl.hasValue(); }
+  bool isActive() const { return impl.has_value(); }
 
   /// Returns true if the diagnostic is still in flight to be reported.
   bool isInFlight() const { return owner; }
