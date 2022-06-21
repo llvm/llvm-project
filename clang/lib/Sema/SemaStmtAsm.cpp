@@ -736,6 +736,9 @@ StmtResult Sema::ActOnGCCAsmStmt(SourceLocation AsmLoc, bool IsSimple,
   }
   if (NS->isAsmGoto())
     setFunctionHasBranchIntoScope();
+
+  CleanupVarDeclMarking();
+  DiscardCleanupsInEvaluationContext();
   return NS;
 }
 

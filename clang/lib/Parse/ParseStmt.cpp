@@ -300,7 +300,6 @@ Retry:
     ProhibitAttributes(Attrs);
     bool msAsm = false;
     Res = ParseAsmStatement(msAsm);
-    Res = Actions.ActOnFinishFullStmt(Res.get());
     if (msAsm) return Res;
     SemiError = "asm";
     break;
