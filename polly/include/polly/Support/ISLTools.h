@@ -17,6 +17,7 @@
 #include "llvm/ADT/Sequence.h"
 #include "llvm/ADT/iterator.h"
 #include "isl/isl-noexceptions.h"
+#include <algorithm>
 #include <cassert>
 
 /// In debug builds assert that the @p Size is valid, in non-debug builds
