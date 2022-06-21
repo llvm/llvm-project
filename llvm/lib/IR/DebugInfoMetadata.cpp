@@ -1582,7 +1582,7 @@ DIExpression *DIExpression::appendToStack(const DIExpression *Expr,
   //
   // Match .* DW_OP_stack_value (DW_OP_LLVM_fragment A B)?.
   Optional<FragmentInfo> FI = Expr->getFragmentInfo();
-  unsigned DropUntilStackValue = FI.hasValue() ? 3 : 0;
+  unsigned DropUntilStackValue = FI ? 3 : 0;
   ArrayRef<uint64_t> ExprOpsBeforeFragment =
       Expr->getElements().drop_back(DropUntilStackValue);
   bool NeedsDeref = (Expr->getNumElements() > DropUntilStackValue) &&

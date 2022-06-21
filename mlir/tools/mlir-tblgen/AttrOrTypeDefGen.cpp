@@ -251,7 +251,7 @@ void DefGen::emitParserPrinter() {
   mnemonic->body().indent() << strfmt("return {\"{0}\"};", *def.getMnemonic());
 
   // Declare the parser and printer, if needed.
-  bool hasAssemblyFormat = def.getAssemblyFormat().hasValue();
+  bool hasAssemblyFormat = def.getAssemblyFormat().has_value();
   if (!def.hasCustomAssemblyFormat() && !hasAssemblyFormat)
     return;
 

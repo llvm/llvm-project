@@ -295,7 +295,7 @@ void HexagonShuffler::restrictBranchOrder(HexagonPacketSummary const &Summary) {
     Summary.branchInsts[0]->Core.setUnits(jumpSlot.first);
     Summary.branchInsts[1]->Core.setUnits(jumpSlot.second);
 
-    const bool HasShuffledPacket = tryAuction(Summary).hasValue();
+    const bool HasShuffledPacket = tryAuction(Summary).has_value();
     if (HasShuffledPacket)
       return;
 
@@ -599,7 +599,7 @@ void HexagonShuffler::restrictPreferSlot3(HexagonPacketSummary const &Summary,
   // and then pin it to slot #3
   const unsigned saveUnits = PrefSlot3Inst->Core.getUnits();
   PrefSlot3Inst->Core.setUnits(saveUnits & Slot3Mask);
-  const bool HasShuffledPacket = tryAuction(Summary).hasValue();
+  const bool HasShuffledPacket = tryAuction(Summary).has_value();
   if (HasShuffledPacket)
     return;
 

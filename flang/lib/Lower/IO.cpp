@@ -1229,7 +1229,7 @@ genConditionHandlerCall(Fortran::lower::AbstractConverter &converter,
                                            boolValue(csi.hasErr),
                                            boolValue(csi.hasEnd),
                                            boolValue(csi.hasEor),
-                                           boolValue(csi.ioMsg.hasValue())};
+                                           boolValue(csi.ioMsg.has_value())};
   builder.create<fir::CallOp>(loc, enableHandlers, ioArgs);
 }
 
@@ -1902,7 +1902,7 @@ genDataTransferStmt(Fortran::lower::AbstractConverter &converter,
   llvm::Optional<fir::ExtendedValue> descRef =
       isInternal ? maybeGetInternalIODescriptor(converter, stmt, stmtCtx)
                  : llvm::None;
-  const bool isInternalWithDesc = descRef.hasValue();
+  const bool isInternalWithDesc = descRef.has_value();
   const bool isAsync = isDataTransferAsynchronous(loc, stmt);
   const bool isNml = isDataTransferNamelist(stmt);
 

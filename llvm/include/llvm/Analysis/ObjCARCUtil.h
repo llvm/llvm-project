@@ -35,7 +35,7 @@ inline bool hasAttachedCallOpBundle(const CallBase *CB) {
   // functions.
   return !CB->getFunctionType()->getReturnType()->isVoidTy() &&
          CB->getOperandBundle(LLVMContext::OB_clang_arc_attachedcall)
-             .hasValue();
+             .has_value();
 }
 
 /// This function returns operand bundle clang_arc_attachedcall's argument,

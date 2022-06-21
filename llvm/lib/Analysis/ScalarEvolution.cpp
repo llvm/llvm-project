@@ -8858,7 +8858,7 @@ ScalarEvolution::ExitLimit ScalarEvolution::computeShiftCompareExitLimit(
 
         // and the kind of shift should be match the kind of shift we peeled
         // off, if any.
-        (!PostShiftOpCode.hasValue() || *PostShiftOpCode == OpCodeOut);
+        (!PostShiftOpCode || *PostShiftOpCode == OpCodeOut);
   };
 
   PHINode *PN;

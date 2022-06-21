@@ -1318,7 +1318,7 @@ static Error UnbundleArchive() {
       if (!NextTripleOrErr)
         return NextTripleOrErr.takeError();
 
-      CodeObject = ((*NextTripleOrErr).hasValue()) ? **NextTripleOrErr : "";
+      CodeObject = NextTripleOrErr->value_or("");
     } // End of processing of all bundle entries of this child of input archive.
   }   // End of while over children of input archive.
 
