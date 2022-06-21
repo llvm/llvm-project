@@ -13,8 +13,8 @@ body:             |
   bb.0:
     ; CHECK-LABEL: name: undef_subreg_use_after_full_copy_coalesce_0
     ; CHECK: undef %0.sub0:vreg_96 = V_MOV_B32_e32 0, implicit $exec
-    ; CHECK: dead %0.sub1:vreg_96 = V_MOV_B32_e32 0, implicit $exec
-    ; CHECK: S_ENDPGM 0, implicit undef %0.sub2
+    ; CHECK-NEXT: dead %0.sub1:vreg_96 = V_MOV_B32_e32 0, implicit $exec
+    ; CHECK-NEXT: S_ENDPGM 0, implicit undef %0.sub2
     undef %0.sub0:vreg_96 = V_MOV_B32_e32 0, implicit $exec
     %0.sub1:vreg_96 = V_MOV_B32_e32 0, implicit $exec
     %1:vreg_96 = COPY killed %0
@@ -31,8 +31,8 @@ body:             |
   bb.0:
     ; CHECK-LABEL: name: undef_subreg_use_after_full_copy_coalesce_composed
     ; CHECK: undef %0.sub0:vreg_128 = V_MOV_B32_e32 0, implicit $exec
-    ; CHECK: dead %0.sub1:vreg_128 = V_MOV_B32_e32 0, implicit $exec
-    ; CHECK: S_ENDPGM 0, implicit undef %2.sub1:vreg_64
+    ; CHECK-NEXT: dead %0.sub1:vreg_128 = V_MOV_B32_e32 0, implicit $exec
+    ; CHECK-NEXT: S_ENDPGM 0, implicit undef %2.sub1:vreg_64
     undef %0.sub0:vreg_128 = V_MOV_B32_e32 0, implicit $exec
     %0.sub1:vreg_128 = V_MOV_B32_e32 0, implicit $exec
     %1:vreg_128 = COPY killed %0
@@ -64,11 +64,12 @@ body:             |
 
     ; CHECK-LABEL: name: undef_subreg_use_after_full_copy_coalesce_1
     ; CHECK: liveins: $vgpr0, $vgpr1, $vgpr2
-    ; CHECK: undef %2.sub0:vreg_96 = COPY $vgpr0
-    ; CHECK: %2.sub1:vreg_96 = COPY $vgpr1
-    ; CHECK: S_NOP 0, implicit undef %2.sub2
-    ; CHECK: S_NOP 0, implicit %2.sub1
-    ; CHECK: S_ENDPGM 0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: undef %2.sub0:vreg_96 = COPY $vgpr0
+    ; CHECK-NEXT: %2.sub1:vreg_96 = COPY $vgpr1
+    ; CHECK-NEXT: S_NOP 0, implicit undef %2.sub2
+    ; CHECK-NEXT: S_NOP 0, implicit %2.sub1
+    ; CHECK-NEXT: S_ENDPGM 0
     %0:vgpr_32 = COPY killed $vgpr0
     %1:vgpr_32 = COPY killed $vgpr1
     undef %2.sub0:vreg_96 = COPY killed %0
