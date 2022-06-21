@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "src/__support/CPP/UInt128.h"
 #include "src/__support/high_precision_decimal.h"
 
 #include "utils/UnitTest/Test.h"
@@ -344,34 +345,26 @@ TEST(LlvmLibcHighPrecisionDecimalTest, RoundingTest) {
 
   EXPECT_EQ(hpd.round_to_integer_type<uint32_t>(), uint32_t(1));
   EXPECT_EQ(hpd.round_to_integer_type<uint64_t>(), uint64_t(1));
-#ifdef __SIZEOF_INT128__
-  EXPECT_EQ(hpd.round_to_integer_type<__uint128_t>(), __uint128_t(1));
-#endif
+  EXPECT_EQ(hpd.round_to_integer_type<UInt128>(), UInt128(1));
 
   hpd.shift(1); // shift left 1 to get 2.469 (rounds to 2)
 
   EXPECT_EQ(hpd.round_to_integer_type<uint32_t>(), uint32_t(2));
   EXPECT_EQ(hpd.round_to_integer_type<uint64_t>(), uint64_t(2));
-#ifdef __SIZEOF_INT128__
-  EXPECT_EQ(hpd.round_to_integer_type<__uint128_t>(), __uint128_t(2));
-#endif
+  EXPECT_EQ(hpd.round_to_integer_type<UInt128>(), UInt128(2));
 
   hpd.shift(1); // shift left 1 to get 4.938 (rounds to 5)
 
   EXPECT_EQ(hpd.round_to_integer_type<uint32_t>(), uint32_t(5));
   EXPECT_EQ(hpd.round_to_integer_type<uint64_t>(), uint64_t(5));
-#ifdef __SIZEOF_INT128__
-  EXPECT_EQ(hpd.round_to_integer_type<__uint128_t>(), __uint128_t(5));
-#endif
+  EXPECT_EQ(hpd.round_to_integer_type<UInt128>(), UInt128(5));
 
   // 2.5 is right between two integers, so we round to even (2)
   hpd = __llvm_libc::internal::HighPrecisionDecimal("2.5");
 
   EXPECT_EQ(hpd.round_to_integer_type<uint32_t>(), uint32_t(2));
   EXPECT_EQ(hpd.round_to_integer_type<uint64_t>(), uint64_t(2));
-#ifdef __SIZEOF_INT128__
-  EXPECT_EQ(hpd.round_to_integer_type<__uint128_t>(), __uint128_t(2));
-#endif
+  EXPECT_EQ(hpd.round_to_integer_type<UInt128>(), UInt128(2));
 
   // unless it's marked as having truncated, which means it's actually slightly
   // higher, forcing a round up (3)
@@ -379,9 +372,7 @@ TEST(LlvmLibcHighPrecisionDecimalTest, RoundingTest) {
 
   EXPECT_EQ(hpd.round_to_integer_type<uint32_t>(), uint32_t(3));
   EXPECT_EQ(hpd.round_to_integer_type<uint64_t>(), uint64_t(3));
-#ifdef __SIZEOF_INT128__
-  EXPECT_EQ(hpd.round_to_integer_type<__uint128_t>(), __uint128_t(3));
-#endif
+  EXPECT_EQ(hpd.round_to_integer_type<UInt128>(), UInt128(3));
 
   // Check that the larger int types are being handled properly (overflow is not
   // handled, so int types that are too small are ignored for this test.)
@@ -390,16 +381,13 @@ TEST(LlvmLibcHighPrecisionDecimalTest, RoundingTest) {
   hpd = __llvm_libc::internal::HighPrecisionDecimal("1099511627776");
 
   EXPECT_EQ(hpd.round_to_integer_type<uint64_t>(), uint64_t(1099511627776));
-#ifdef __SIZEOF_INT128__
-  EXPECT_EQ(hpd.round_to_integer_type<__uint128_t>(),
-            __uint128_t(1099511627776));
+  EXPECT_EQ(hpd.round_to_integer_type<UInt128>(), UInt128(1099511627776));
 
   // 1267650600228229401496703205376 = 2^100
   hpd = __llvm_libc::internal::HighPrecisionDecimal(
       "1267650600228229401496703205376");
 
-  __uint128_t result = __uint128_t(1) << 100;
+  UInt128 result = UInt128(1) << 100;
 
-  EXPECT_EQ(hpd.round_to_integer_type<__uint128_t>(), result);
-#endif
+  EXPECT_EQ(hpd.round_to_integer_type<UInt128>(), result);
 }

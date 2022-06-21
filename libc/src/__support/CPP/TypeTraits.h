@@ -56,9 +56,13 @@ template <typename Type> struct IsIntegral {
       IsSameV<unsigned int, TypeNoCV> || IsSameV<long, TypeNoCV> ||
       IsSameV<unsigned long, TypeNoCV> || IsSameV<long long, TypeNoCV> ||
       IsSameV<unsigned long long, TypeNoCV> || IsSameV<bool, TypeNoCV> ||
-      IsSameV<UInt<128>, TypeNoCV>
+      // We need to include UInt<128> and __uint128_t when available because
+      // we want to unittest UInt<128>. If we include only UInt128, then on
+      // platform where it resolves to __uint128_t, we cannot unittest
+      // UInt<128>.
+      IsSameV<__llvm_libc::cpp::UInt<128>, TypeNoCV>
 #ifdef __SIZEOF_INT128__
-      || IsSameV<__uint128_t, TypeNoCV> || IsSameV<__int128_t, TypeNoCV>
+      || IsSameV<__uint128_t, TypeNoCV>
 #endif
       ;
 };
