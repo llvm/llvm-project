@@ -108,15 +108,24 @@ bool PPCCTRLoops::runOnMachineFunction(MachineFunction &MF) {
 }
 
 bool PPCCTRLoops::isCTRClobber(MachineInstr *MI, bool CheckReads) const {
+  if (!CheckReads) {
+    // If we are only checking for defs, that is we are going to find
+    // definitions before MTCTRloop, for this case:
+    // CTR defination inside the callee of a call instruction will not impact
+    // the defination of MTCTRloop, so we can use definesRegister() for the
+    // check, no need to check the regmask.
+    return (MI->definesRegister(PPC::CTR) &&
+            !MI->registerDefIsDead(PPC::CTR)) ||
+           (MI->definesRegister(PPC::CTR8) &&
+            !MI->registerDefIsDead(PPC::CTR8));
+  }
+
   if ((MI->modifiesRegister(PPC::CTR) && !MI->registerDefIsDead(PPC::CTR)) ||
       (MI->modifiesRegister(PPC::CTR8) && !MI->registerDefIsDead(PPC::CTR8)))
     return true;
 
   if (MI->getDesc().isCall())
     return true;
-
-  if (!CheckReads)
-    return false;
 
   // We define the CTR in the loop preheader, so if there is any CTR reader in
   // the loop, we also can not use CTR loop form.
