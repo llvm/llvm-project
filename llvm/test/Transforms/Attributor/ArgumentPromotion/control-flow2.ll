@@ -57,7 +57,7 @@ define i32 @foo() {
 ; IS__CGSCC_NPM: Function Attrs: nofree nosync nounwind readnone willreturn
 ; IS__CGSCC_NPM-LABEL: define {{[^@]+}}@foo
 ; IS__CGSCC_NPM-SAME: () #[[ATTR1:[0-9]+]] {
-; IS__CGSCC_NPM-NEXT:    [[X:%.*]] = call i32 @callee(i32 noundef 17) #[[ATTR2:[0-9]+]]
+; IS__CGSCC_NPM-NEXT:    [[X:%.*]] = call i32 @callee(i32 17) #[[ATTR2:[0-9]+]]
 ; IS__CGSCC_NPM-NEXT:    ret i32 [[X]]
 ;
   %A = alloca i32         ; <i32*> [#uses=2]

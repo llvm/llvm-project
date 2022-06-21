@@ -326,7 +326,7 @@ static bool getPotentialCopiesOfMemoryValue(
                     << " (only exact: " << OnlyExact << ")\n";);
 
   Value &Ptr = *I.getPointerOperand();
-  SmallVector<Value *, 8> Objects;
+  SmallSetVector<Value *, 8> Objects;
   if (!AA::getAssumedUnderlyingObjects(A, Ptr, Objects, QueryingAA, &I,
                                        UsedAssumedInformation)) {
     LLVM_DEBUG(
@@ -352,8 +352,8 @@ static bool getPotentialCopiesOfMemoryValue(
       // be OK. We do not try to optimize the latter.
       if (!NullPointerIsDefined(I.getFunction(),
                                 Ptr.getType()->getPointerAddressSpace()) &&
-          A.getAssumedSimplified(Ptr, QueryingAA, UsedAssumedInformation) ==
-              Obj)
+          A.getAssumedSimplified(Ptr, QueryingAA, UsedAssumedInformation,
+                                 AA::Interprocedural) == Obj)
         continue;
       LLVM_DEBUG(
           dbgs() << "Underlying object is a valid nullptr, giving up.\n";);
@@ -375,10 +375,24 @@ static bool getPotentialCopiesOfMemoryValue(
         return false;
       }
 
+    bool NullOnly = true;
+    bool NullRequired = false;
+    auto CheckForNullOnlyAndUndef = [&](Optional<Value *> V) {
+      if (!V || *V == nullptr)
+        NullOnly = false;
+      else if (isa<UndefValue>(*V))
+        /* No op */;
+      else if (isa<Constant>(*V) && cast<Constant>(*V)->isNullValue())
+        NullRequired = true;
+      else
+        NullOnly = false;
+    };
+
     if (IsLoad) {
       Value *InitialValue = AA::getInitialValueForObj(*Obj, *I.getType(), TLI);
       if (!InitialValue)
         return false;
+      CheckForNullOnlyAndUndef(InitialValue);
       NewCopies.push_back(InitialValue);
       NewCopyOrigins.push_back(nullptr);
     }
@@ -388,10 +402,17 @@ static bool getPotentialCopiesOfMemoryValue(
         return true;
       if (IsLoad && Acc.isWrittenValueYetUndetermined())
         return true;
-      if (OnlyExact && !IsExact &&
+      CheckForNullOnlyAndUndef(Acc.getContent());
+      if (OnlyExact && !IsExact && !NullOnly &&
           !isa_and_nonnull<UndefValue>(Acc.getWrittenValue())) {
         LLVM_DEBUG(dbgs() << "Non exact access " << *Acc.getRemoteInst()
                           << ", abort!\n");
+        return false;
+      }
+      if (NullRequired && !NullOnly) {
+        LLVM_DEBUG(dbgs() << "Required all `null` accesses due to non exact "
+                             "one, however found non-null one: "
+                          << *Acc.getRemoteInst() << ", abort!\n");
         return false;
       }
       if (IsLoad) {
@@ -1038,60 +1059,74 @@ Attributor::getAssumedConstant(const IRPosition &IRP,
   }
   if (auto *C = dyn_cast<Constant>(&IRP.getAssociatedValue()))
     return C;
-  const auto &ValueSimplifyAA =
-      getAAFor<AAValueSimplify>(AA, IRP, DepClassTy::NONE);
-  Optional<Value *> SimplifiedV =
-      ValueSimplifyAA.getAssumedSimplifiedValue(*this);
-  bool IsKnown = ValueSimplifyAA.isAtFixpoint();
-  UsedAssumedInformation |= !IsKnown;
-  if (!SimplifiedV) {
-    recordDependence(ValueSimplifyAA, AA, DepClassTy::OPTIONAL);
-    return llvm::None;
+  SmallVector<AA::ValueAndContext> Values;
+  if (getAssumedSimplifiedValues(IRP, &AA, Values,
+                                 AA::ValueScope::Interprocedural,
+                                 UsedAssumedInformation)) {
+    if (Values.empty())
+      return llvm::None;
+    if (auto *C = dyn_cast_or_null<Constant>(
+            AAPotentialValues::getSingleValue(*this, AA, IRP, Values)))
+      return C;
   }
-  if (isa_and_nonnull<UndefValue>(SimplifiedV.getValue())) {
-    recordDependence(ValueSimplifyAA, AA, DepClassTy::OPTIONAL);
-    return UndefValue::get(IRP.getAssociatedType());
-  }
-  Constant *CI = dyn_cast_or_null<Constant>(SimplifiedV.getValue());
-  if (CI)
-    CI = dyn_cast_or_null<Constant>(
-        AA::getWithType(*CI, *IRP.getAssociatedType()));
-  if (CI)
-    recordDependence(ValueSimplifyAA, AA, DepClassTy::OPTIONAL);
-  return CI;
+  return nullptr;
 }
 
-Optional<Value *>
-Attributor::getAssumedSimplified(const IRPosition &IRP,
-                                 const AbstractAttribute *AA,
-                                 bool &UsedAssumedInformation) {
+Optional<Value *> Attributor::getAssumedSimplified(const IRPosition &IRP,
+                                                   const AbstractAttribute *AA,
+                                                   bool &UsedAssumedInformation,
+                                                   AA::ValueScope S) {
   // First check all callbacks provided by outside AAs. If any of them returns
   // a non-null value that is different from the associated value, or None, we
   // assume it's simplified.
   for (auto &CB : SimplificationCallbacks.lookup(IRP))
     return CB(IRP, AA, UsedAssumedInformation);
 
-  // If no high-level/outside simplification occurred, use AAValueSimplify.
-  const auto &ValueSimplifyAA =
-      getOrCreateAAFor<AAValueSimplify>(IRP, AA, DepClassTy::NONE);
-  Optional<Value *> SimplifiedV =
-      ValueSimplifyAA.getAssumedSimplifiedValue(*this);
-  bool IsKnown = ValueSimplifyAA.isAtFixpoint();
-  UsedAssumedInformation |= !IsKnown;
-  if (!SimplifiedV) {
-    if (AA)
-      recordDependence(ValueSimplifyAA, *AA, DepClassTy::OPTIONAL);
+  SmallVector<AA::ValueAndContext> Values;
+  if (!getAssumedSimplifiedValues(IRP, AA, Values, S, UsedAssumedInformation))
+    return &IRP.getAssociatedValue();
+  if (Values.empty())
     return llvm::None;
+  if (AA)
+    if (Value *V = AAPotentialValues::getSingleValue(*this, *AA, IRP, Values))
+      return V;
+  if (IRP.getPositionKind() == IRPosition::IRP_RETURNED ||
+      IRP.getPositionKind() == IRPosition::IRP_CALL_SITE_RETURNED)
+    return nullptr;
+  return &IRP.getAssociatedValue();
+}
+
+bool Attributor::getAssumedSimplifiedValues(
+    const IRPosition &IRP, const AbstractAttribute *AA,
+    SmallVectorImpl<AA::ValueAndContext> &Values, AA::ValueScope S,
+    bool &UsedAssumedInformation) {
+  // First check all callbacks provided by outside AAs. If any of them returns
+  // a non-null value that is different from the associated value, or None, we
+  // assume it's simplified.
+  const auto &SimplificationCBs = SimplificationCallbacks.lookup(IRP);
+  for (auto &CB : SimplificationCBs) {
+    Optional<Value *> CBResult = CB(IRP, AA, UsedAssumedInformation);
+    if (!CBResult.hasValue())
+      continue;
+    Value *V = CBResult.getValue();
+    if (!V)
+      return false;
+    if ((S & AA::ValueScope::Interprocedural) ||
+        AA::isValidInScope(*V, IRP.getAnchorScope()))
+      Values.push_back(AA::ValueAndContext{*V, nullptr});
+    else
+      return false;
   }
-  if (*SimplifiedV == nullptr)
-    return const_cast<Value *>(&IRP.getAssociatedValue());
-  if (Value *SimpleV =
-          AA::getWithType(**SimplifiedV, *IRP.getAssociatedType())) {
-    if (AA)
-      recordDependence(ValueSimplifyAA, *AA, DepClassTy::OPTIONAL);
-    return SimpleV;
-  }
-  return const_cast<Value *>(&IRP.getAssociatedValue());
+  if (!SimplificationCBs.empty())
+    return true;
+
+  // If no high-level/outside simplification occurred, use AAPotentialValues.
+  const auto &PotentialValuesAA =
+      getOrCreateAAFor<AAPotentialValues>(IRP, AA, DepClassTy::OPTIONAL);
+  if (!PotentialValuesAA.getAssumedSimplifiedValues(*this, Values, S))
+    return false;
+  UsedAssumedInformation |= !PotentialValuesAA.isAtFixpoint();
+  return true;
 }
 
 Optional<Value *> Attributor::translateArgumentToCallSiteContent(
@@ -1106,7 +1141,7 @@ Optional<Value *> Attributor::translateArgumentToCallSiteContent(
       if (!Arg->hasPointeeInMemoryValueAttr())
         return getAssumedSimplified(
             IRPosition::callsite_argument(CB, Arg->getArgNo()), AA,
-            UsedAssumedInformation);
+            UsedAssumedInformation, AA::Intraprocedural);
   return nullptr;
 }
 
@@ -1918,7 +1953,8 @@ ChangeStatus Attributor::cleanupIR() {
                     << ToBeDeletedInsts.size() << " instructions and "
                     << ToBeChangedValues.size() << " values and "
                     << ToBeChangedUses.size() << " uses. To insert "
-                    << ToBeChangedToUnreachableInsts.size() << " unreachables."
+                    << ToBeChangedToUnreachableInsts.size()
+                    << " unreachables.\n"
                     << "Preserve manifest added " << ManifestAddedBlocks.size()
                     << " blocks\n");
 
@@ -2046,6 +2082,8 @@ ChangeStatus Attributor::cleanupIR() {
   }
   for (auto &V : ToBeChangedToUnreachableInsts)
     if (Instruction *I = dyn_cast_or_null<Instruction>(V)) {
+      LLVM_DEBUG(dbgs() << "[Attributor] Change to unreachable: " << *I
+                        << "\n");
       assert(isRunOn(*I->getFunction()) &&
              "Cannot replace an instruction outside the current SCC!");
       CGModifiedFunctions.insert(I->getFunction());
@@ -2877,7 +2915,8 @@ void Attributor::identifyDefaultAbstractAttributes(Function &F) {
 
     // Every function might be simplified.
     bool UsedAssumedInformation = false;
-    getAssumedSimplified(RetPos, nullptr, UsedAssumedInformation);
+    getAssumedSimplified(RetPos, nullptr, UsedAssumedInformation,
+                         AA::Intraprocedural);
 
     // Every returned value might be marked noundef.
     getOrCreateAAFor<AANoUndef>(RetPos);
@@ -2906,7 +2945,8 @@ void Attributor::identifyDefaultAbstractAttributes(Function &F) {
     // interface though as outside AAs can register custom simplification
     // callbacks.
     bool UsedAssumedInformation = false;
-    getAssumedSimplified(ArgPos, /* AA */ nullptr, UsedAssumedInformation);
+    getAssumedSimplified(ArgPos, /* AA */ nullptr, UsedAssumedInformation,
+                         AA::Intraprocedural);
 
     // Every argument might be dead.
     getOrCreateAAFor<AAIsDead>(ArgPos);
@@ -2970,7 +3010,8 @@ void Attributor::identifyDefaultAbstractAttributes(Function &F) {
 
       IRPosition CBRetPos = IRPosition::callsite_returned(CB);
       bool UsedAssumedInformation = false;
-      getAssumedSimplified(CBRetPos, nullptr, UsedAssumedInformation);
+      getAssumedSimplified(CBRetPos, nullptr, UsedAssumedInformation,
+                           AA::Intraprocedural);
     }
 
     for (int I = 0, E = CB.arg_size(); I < E; ++I) {
@@ -2984,7 +3025,8 @@ void Attributor::identifyDefaultAbstractAttributes(Function &F) {
       // Attributor interface though as outside AAs can register custom
       // simplification callbacks.
       bool UsedAssumedInformation = false;
-      getAssumedSimplified(CBArgPos, /* AA */ nullptr, UsedAssumedInformation);
+      getAssumedSimplified(CBArgPos, /* AA */ nullptr, UsedAssumedInformation,
+                           AA::Intraprocedural);
 
       // Every call site argument might be marked "noundef".
       getOrCreateAAFor<AANoUndef>(CBArgPos);
@@ -3034,12 +3076,12 @@ void Attributor::identifyDefaultAbstractAttributes(Function &F) {
           IRPosition::value(*cast<LoadInst>(I).getPointerOperand()));
       if (SimplifyAllLoads)
         getAssumedSimplified(IRPosition::value(I), nullptr,
-                             UsedAssumedInformation);
+                             UsedAssumedInformation, AA::Intraprocedural);
     } else {
       auto &SI = cast<StoreInst>(I);
       getOrCreateAAFor<AAIsDead>(IRPosition::inst(I));
       getAssumedSimplified(IRPosition::value(*SI.getValueOperand()), nullptr,
-                           UsedAssumedInformation);
+                           UsedAssumedInformation, AA::Intraprocedural);
       getOrCreateAAFor<AAAlign>(IRPosition::value(*SI.getPointerOperand()));
     }
     return true;
@@ -3118,6 +3160,26 @@ raw_ostream &llvm::operator<<(raw_ostream &OS,
   else {
     for (auto &It : S.getAssumedSet())
       OS << It << ", ";
+    if (S.undefIsContained())
+      OS << "undef ";
+  }
+  OS << "} >)";
+
+  return OS;
+}
+
+raw_ostream &llvm::operator<<(raw_ostream &OS,
+                              const PotentialLLVMValuesState &S) {
+  OS << "set-state(< {";
+  if (!S.isValidState())
+    OS << "full-set";
+  else {
+    for (auto &It : S.getAssumedSet()) {
+      if (auto *F = dyn_cast<Function>(It.first.getValue()))
+        OS << "@" << F->getName() << "[" << int(It.second) << "], ";
+      else
+        OS << *It.first.getValue() << "[" << int(It.second) << "], ";
+    }
     if (S.undefIsContained())
       OS << "undef ";
   }
