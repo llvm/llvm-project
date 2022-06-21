@@ -18,7 +18,7 @@ declare void @did_not_throw(i32)
 declare void @thrown()
 
 ; CHECK-INTERESTINGNESS: define void @caller(
-; CHECK-FINAL: define void @caller(i32 %arg)
+; CHECK-FINAL: define void @caller()
 define void @caller(i32 %arg) personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*) {
 ; CHECK-ALL: bb:
 bb:

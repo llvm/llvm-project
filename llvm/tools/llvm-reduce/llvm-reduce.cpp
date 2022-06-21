@@ -89,8 +89,8 @@ static cl::opt<InputLanguages>
 static cl::opt<int>
     MaxPassIterations("max-pass-iterations",
                       cl::desc("Maximum number of times to run the full set "
-                               "of delta passes (default=1)"),
-                      cl::init(1), cl::cat(LLVMReduceOptions));
+                               "of delta passes (default=5)"),
+                      cl::init(5), cl::cat(LLVMReduceOptions));
 
 static codegen::RegisterCodeGenFlags CGF;
 
