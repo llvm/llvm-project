@@ -1013,7 +1013,7 @@ void ObjFile::parseDebugInfo() {
   // FIXME: There can be more than one compile unit per object file. See
   // PR48637.
   auto it = units.begin();
-  compileUnit = it->get();
+  compileUnit = it != units.end() ? it->get() : nullptr;
 }
 
 ArrayRef<data_in_code_entry> ObjFile::getDataInCode() const {
