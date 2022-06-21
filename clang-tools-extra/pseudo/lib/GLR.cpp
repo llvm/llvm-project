@@ -192,13 +192,32 @@ class GLRReduce {
   };
 
   // A sequence is the ForestNode payloads of the GSS nodes we are reducing.
-  // These are the RHS of the rule, the RuleID is stored in the Family.
-  // They specify a sequence ForestNode we may build (but we dedup first).
   using Sequence = llvm::SmallVector<const ForestNode *, Rule::MaxElements>;
+  // Like ArrayRef<const ForestNode*>, but with the missing operator<.
+  // (Sequences are big to move by value as the collections gets rearranged).
+  struct SequenceRef {
+    SequenceRef(const Sequence &S) : S(S) {}
+    llvm::ArrayRef<const ForestNode *> S;
+    friend bool operator==(SequenceRef A, SequenceRef B) { return A.S == B.S; }
+    friend bool operator<(const SequenceRef &A, const SequenceRef &B) {
+      return std::lexicographical_compare(A.S.begin(), A.S.end(), B.S.begin(),
+                                          B.S.end());
+    }
+  };
+  // Underlying storage for sequences pointed to by stored SequenceRefs.
+  std::deque<Sequence> SequenceStorage;
+  // We don't actually destroy the sequences between calls, to reuse storage.
+  // Everything SequenceStorage[ >=SequenceStorageCount ] is reusable scratch.
+  unsigned SequenceStorageCount;
+
+  // Halfway through a reduction (after the pop, before the push), we have
+  // collected nodes for the RHS of a rule, and reached a base node.
+  // They specify a sequence ForestNode we may build (but we dedup first).
+  // (The RuleID is not stored here, but rather in the Family).
   struct PushSpec {
     // A base node is the head after popping the GSS nodes we are reducing.
     const GSS::Node* Base = nullptr;
-    Sequence Seq;
+    Sequence *Seq = nullptr;
   };
   KeyedQueue<Family, PushSpec> Sequences; // FIXME: rename => PendingPushes?
 
@@ -219,6 +238,7 @@ public:
     this->Heads = &Heads;
     this->Lookahead = Lookahead;
     assert(Sequences.empty());
+    SequenceStorageCount = 0;
 
     popPending();
     while (!Sequences.empty()) {
@@ -239,7 +259,14 @@ private:
       if (I == Rule.Size) {
         F.Start = TempSequence.front()->startTokenIndex();
         LLVM_DEBUG(llvm::dbgs() << "    --> base at S" << N->State << "\n");
-        Sequences.emplace(F, PushSpec{N, TempSequence});
+
+        // Copy the chain to stable storage so it can be enqueued.
+        if (SequenceStorageCount == SequenceStorage.size())
+          SequenceStorage.emplace_back();
+        SequenceStorage[SequenceStorageCount] = TempSequence;
+        Sequence *Seq = &SequenceStorage[SequenceStorageCount++];
+
+        Sequences.emplace(F, PushSpec{N, Seq});
         return;
       }
       TempSequence[Rule.Size - 1 - I] = N->Payload;
@@ -266,7 +293,7 @@ private:
 
   // Storage reused by each call to pushNext.
   std::vector<std::pair</*Goto*/ StateID, const GSS::Node *>> FamilyBases;
-  std::vector<std::pair<RuleID, Sequence>> FamilySequences;
+  std::vector<std::pair<RuleID, SequenceRef>> FamilySequences;
   std::vector<const GSS::Node *> Parents;
   std::vector<const ForestNode *> SequenceNodes;
 
@@ -287,7 +314,7 @@ private:
     FamilyBases.clear();
     do {
       FamilySequences.emplace_back(Sequences.top().first.Rule,
-                                   Sequences.top().second.Seq);
+                                   *Sequences.top().second.Seq);
       FamilyBases.emplace_back(
           Params.Table.getGoToState(Sequences.top().second.Base->State,
                                     F.Symbol),
@@ -300,7 +327,7 @@ private:
     SequenceNodes.clear();
     for (const auto &SequenceSpec : FamilySequences)
       SequenceNodes.push_back(&Params.Forest.createSequence(
-          F.Symbol, SequenceSpec.first, SequenceSpec.second));
+          F.Symbol, SequenceSpec.first, SequenceSpec.second.S));
     // Wrap in an ambiguous node if needed.
     const ForestNode *Parsed =
         SequenceNodes.size() == 1
