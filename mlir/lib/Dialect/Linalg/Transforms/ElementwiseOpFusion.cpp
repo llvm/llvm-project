@@ -841,7 +841,7 @@ public:
           fuseWithReshapeByExpansion(genericOp, reshapeOp, opOperand, rewriter);
       if (!replacementValues)
         return failure();
-      rewriter.replaceOp(genericOp, replacementValues.getValue());
+      rewriter.replaceOp(genericOp, *replacementValues);
       return success();
     }
     return failure();
@@ -876,7 +876,7 @@ struct FoldReshapeWithGenericOpByExpansion
         producer, reshapeOp, producer.getOutputOperand(0), rewriter);
     if (!replacementValues)
       return failure();
-    rewriter.replaceOp(reshapeOp, replacementValues.getValue());
+    rewriter.replaceOp(reshapeOp, *replacementValues);
     return success();
   }
 
@@ -1465,7 +1465,7 @@ public:
             genericOp, "failed to do the fusion by collapsing transformation");
       }
 
-      rewriter.replaceOp(genericOp, replacements.getValue());
+      rewriter.replaceOp(genericOp, *replacements);
       return success();
     }
     return failure();

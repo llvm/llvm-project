@@ -771,7 +771,7 @@ Optional<SmallVector<int64_t, 8>> IntegerRelation::findIntegerSample() const {
   SmallVector<int64_t, 8> coneSample(llvm::map_range(shrunkenConeSample, ceil));
 
   // 6) Return transform * concat(boundedSample, coneSample).
-  SmallVector<int64_t, 8> &sample = boundedSample.getValue();
+  SmallVector<int64_t, 8> &sample = *boundedSample;
   sample.append(coneSample.begin(), coneSample.end());
   return transform.postMultiplyWithColumn(sample);
 }

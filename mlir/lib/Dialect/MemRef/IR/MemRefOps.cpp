@@ -762,7 +762,7 @@ LogicalResult DimOp::verify() {
   // Check that constant index is not knowingly out of range.
   auto type = source().getType();
   if (auto memrefType = type.dyn_cast<MemRefType>()) {
-    if (index.getValue() >= memrefType.getRank())
+    if (*index >= memrefType.getRank())
       return emitOpError("index is out of range");
   } else if (type.isa<UnrankedMemRefType>()) {
     // Assume index to be in range.
@@ -1316,7 +1316,7 @@ LogicalResult GlobalOp::verify() {
   }
 
   if (Optional<uint64_t> alignAttr = alignment()) {
-    uint64_t alignment = alignAttr.getValue();
+    uint64_t alignment = *alignAttr;
 
     if (!llvm::isPowerOf2_64(alignment))
       return emitError() << "alignment attribute value " << alignment
@@ -2452,7 +2452,7 @@ static MemRefType getCanonicalSubViewResultType(
   }
   AffineMap layoutMap = nonRankReducedType.getLayout().getAffineMap();
   if (!layoutMap.isIdentity())
-    layoutMap = getProjectedMap(layoutMap, unusedDims.getValue());
+    layoutMap = getProjectedMap(layoutMap, *unusedDims);
   return MemRefType::get(shape, nonRankReducedType.getElementType(), layoutMap,
                          nonRankReducedType.getMemorySpace());
 }
@@ -2499,7 +2499,7 @@ static bool isTrivialSubViewOp(SubViewOp subViewOp) {
   ArrayRef<int64_t> sourceShape = subViewOp.getSourceType().getShape();
   for (const auto &size : llvm::enumerate(mixedSizes)) {
     Optional<int64_t> intValue = getConstantIntValue(size.value());
-    if (!intValue || intValue.getValue() != sourceShape[size.index()])
+    if (!intValue || *intValue != sourceShape[size.index()])
       return false;
   }
   // All conditions met. The `SubViewOp` is foldable as a no-op.

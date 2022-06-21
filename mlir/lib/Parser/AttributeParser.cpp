@@ -325,7 +325,7 @@ Attribute Parser::parseFloatAttr(Type type, bool isNegative) {
   if (!type.isa<FloatType>())
     return (emitError("floating point value not valid for specified type"),
             nullptr);
-  return FloatAttr::get(type, isNegative ? -val.getValue() : val.getValue());
+  return FloatAttr::get(type, isNegative ? -*val : *val);
 }
 
 /// Construct an APint from a parsed value, a known attribute type and
@@ -696,7 +696,7 @@ DenseElementsAttr TensorLiteralParser::getHexAttr(SMLoc loc,
   }
 
   std::string data;
-  if (parseElementAttrHexValues(p, hexStorage.getValue(), data))
+  if (parseElementAttrHexValues(p, *hexStorage, data))
     return nullptr;
 
   ArrayRef<char> rawData(data.data(), data.size());

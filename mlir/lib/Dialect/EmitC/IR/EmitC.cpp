@@ -85,7 +85,7 @@ LogicalResult emitc::CallOp::verify() {
     return emitOpError("callee must not be empty");
 
   if (Optional<ArrayAttr> argsAttr = args()) {
-    for (Attribute arg : argsAttr.getValue()) {
+    for (Attribute arg : *argsAttr) {
       if (arg.getType().isa<IndexType>()) {
         int64_t index = arg.cast<IntegerAttr>().getInt();
         // Args with elements of type index must be in range
@@ -101,7 +101,7 @@ LogicalResult emitc::CallOp::verify() {
   }
 
   if (Optional<ArrayAttr> templateArgsAttr = template_args()) {
-    for (Attribute tArg : templateArgsAttr.getValue()) {
+    for (Attribute tArg : *templateArgsAttr) {
       if (!tArg.isa<TypeAttr>() && !tArg.isa<IntegerAttr>() &&
           !tArg.isa<FloatAttr>() && !tArg.isa<emitc::OpaqueAttr>())
         return emitOpError("template argument has invalid type");

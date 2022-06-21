@@ -210,7 +210,7 @@ LogicalResult Serializer::processDecoration(Location loc, uint32_t resultID,
            << attrName;
   }
   SmallVector<uint32_t, 1> args;
-  switch (decoration.getValue()) {
+  switch (*decoration) {
   case spirv::Decoration::Binding:
   case spirv::Decoration::DescriptorSet:
   case spirv::Decoration::Location:
@@ -223,7 +223,7 @@ LogicalResult Serializer::processDecoration(Location loc, uint32_t resultID,
     if (auto strAttr = attr.getValue().dyn_cast<StringAttr>()) {
       auto enumVal = spirv::symbolizeBuiltIn(strAttr.getValue());
       if (enumVal) {
-        args.push_back(static_cast<uint32_t>(enumVal.getValue()));
+        args.push_back(static_cast<uint32_t>(*enumVal));
         break;
       }
       return emitError(loc, "invalid ")
@@ -244,7 +244,7 @@ LogicalResult Serializer::processDecoration(Location loc, uint32_t resultID,
   default:
     return emitError(loc, "unhandled decoration ") << decorationName;
   }
-  return emitDecoration(resultID, decoration.getValue(), args);
+  return emitDecoration(resultID, *decoration, args);
 }
 
 LogicalResult Serializer::processName(uint32_t resultID, StringRef name) {

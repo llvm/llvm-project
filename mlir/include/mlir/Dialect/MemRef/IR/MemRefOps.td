@@ -875,7 +875,7 @@ def MemRef_GlobalOp : MemRef_Op<"global", [Symbol]> {
   let extraClassDeclaration = [{
      bool isExternal() { return !initial_value(); }
      bool isUninitialized() {
-       return !isExternal() && initial_value().getValue().isa<UnitAttr>();
+       return !isExternal() && initial_value()->isa<UnitAttr>();
      }
      /// Returns the constant initial value if the memref.global is a constant,
      /// or null otherwise.

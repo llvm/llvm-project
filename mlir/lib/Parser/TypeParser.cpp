@@ -161,7 +161,7 @@ ParseResult Parser::parseStridedLayout(int64_t &offset,
   bool question = getToken().is(Token::question);
   if (!maybeOffset && !question)
     return emitWrongTokenError("invalid offset");
-  offset = maybeOffset ? static_cast<int64_t>(maybeOffset.getValue())
+  offset = maybeOffset ? static_cast<int64_t>(*maybeOffset)
                        : MemRefType::getDynamicStrideOrOffset();
   consumeToken();
 
@@ -323,7 +323,7 @@ Type Parser::parseNonFunctionType() {
       signSemantics = *signedness ? IntegerType::Signed : IntegerType::Unsigned;
 
     consumeToken(Token::inttype);
-    return IntegerType::get(getContext(), width.getValue(), signSemantics);
+    return IntegerType::get(getContext(), *width, signSemantics);
   }
 
   // float-type
@@ -590,7 +590,7 @@ ParseResult Parser::parseIntegerInDimensionList(int64_t &value) {
     if (!dimension ||
         *dimension > (uint64_t)std::numeric_limits<int64_t>::max())
       return emitError("invalid dimension");
-    value = (int64_t)dimension.getValue();
+    value = (int64_t)*dimension;
     consumeToken(Token::integer);
   }
   return success();

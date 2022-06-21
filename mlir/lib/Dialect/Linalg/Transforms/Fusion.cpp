@@ -302,8 +302,7 @@ findFusableProducer(OpOperand &consumerOpOperand,
                    elem.getIndexingOpViewOperandNum();
                return isa<LinalgOp>(elem.getDependentOp()) &&
                       v == consumerOpOperand.get() && operandNum &&
-                      operandNum.getValue() ==
-                          consumerOpOperand.getOperandNumber();
+                      *operandNum == consumerOpOperand.getOperandNumber();
              })) {
       // Consumer consumes this view, `isStructurallyFusableProducer` also
       // checks whether it is a strict subview of the producer view.
@@ -533,7 +532,7 @@ static bool doesTransposeAccess(AffineMap map,
       lastFusableLoop = pos;
       continue;
     }
-    if (pos <= lastFusableLoop.getValue())
+    if (pos <= *lastFusableLoop)
       return true;
     lastFusableLoop = pos;
   }

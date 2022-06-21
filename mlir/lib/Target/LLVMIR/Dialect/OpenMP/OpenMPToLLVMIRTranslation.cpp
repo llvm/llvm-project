@@ -536,7 +536,7 @@ convertOmpOrdered(Operation &opInst, llvm::IRBuilderBase &builder,
 
   omp::ClauseDepend dependType = *orderedOp.depend_type_val();
   bool isDependSource = dependType == omp::ClauseDepend::dependsource;
-  unsigned numLoops = orderedOp.num_loops_val().getValue();
+  unsigned numLoops = *orderedOp.num_loops_val();
   SmallVector<llvm::Value *> vecValues =
       moduleTranslation.lookupValues(orderedOp.depend_vec_vars());
 

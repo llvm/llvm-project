@@ -257,8 +257,7 @@ void getUpperBoundForIndex(Value value, AffineMap &boundMap,
     if (!ubConst)
       return;
 
-    boundMap =
-        AffineMap::getConstantMap(ubConst.getValue(), value.getContext());
+    boundMap = AffineMap::getConstantMap(*ubConst, value.getContext());
     return;
   }
 
@@ -714,7 +713,7 @@ void GenerateLoopNest<scf::ParallelOp>::doit(
   // Modify the lb, ub, and step based on the distribution options.
   SmallVector<DistributionMethod, 0> distributionMethod;
   if (distributionOptions) {
-    auto &options = distributionOptions.getValue();
+    auto &options = *distributionOptions;
     distributionMethod.assign(distributionOptions->distributionMethod.begin(),
                               distributionOptions->distributionMethod.end());
     SmallVector<Range, 2> parallelLoopRanges;

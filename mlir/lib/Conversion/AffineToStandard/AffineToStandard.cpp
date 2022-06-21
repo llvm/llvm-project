@@ -224,7 +224,7 @@ public:
           arith::symbolizeAtomicRMWKind(
               static_cast<uint64_t>(reduction.cast<IntegerAttr>().getInt()));
       assert(reductionOp && "Reduction operation cannot be of None Type");
-      arith::AtomicRMWKind reductionOpValue = reductionOp.getValue();
+      arith::AtomicRMWKind reductionOpValue = *reductionOp;
       identityVals.push_back(
           arith::getIdentityValue(reductionOpValue, resultType, rewriter, loc));
     }
@@ -244,7 +244,7 @@ public:
           arith::symbolizeAtomicRMWKind(
               reductions[i].cast<IntegerAttr>().getInt());
       assert(reductionOp && "Reduction Operation cannot be of None Type");
-      arith::AtomicRMWKind reductionOpValue = reductionOp.getValue();
+      arith::AtomicRMWKind reductionOpValue = *reductionOp;
       rewriter.setInsertionPoint(&parOp.getBody()->back());
       auto reduceOp = rewriter.create<scf::ReduceOp>(
           loc, affineParOpTerminator->getOperand(i));

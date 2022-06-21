@@ -415,7 +415,7 @@ public:
       return failure();
     // Generate the call.
     Value src = adaptor.getOperands()[0];
-    int64_t idx = index.getValue();
+    int64_t idx = *index;
     rewriter.replaceOp(op, genDimSizeCall(rewriter, op, enc, src, idx));
     return success();
   }

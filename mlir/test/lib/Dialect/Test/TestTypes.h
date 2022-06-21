@@ -61,7 +61,7 @@ struct FieldParser<test::CustomParam> {
     auto value = FieldParser<int>::parse(parser);
     if (failed(value))
       return failure();
-    return test::CustomParam{value.getValue()};
+    return test::CustomParam{*value};
   }
 };
 

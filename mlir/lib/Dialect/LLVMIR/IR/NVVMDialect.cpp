@@ -372,7 +372,7 @@ LogicalResult MmaOp::verify() {
   if (mmaShape[0] == 16) {
     int64_t kFactor;
     Type multiplicandFragType;
-    switch (getMultiplicandAPtxType().getValue()) {
+    switch (*getMultiplicandAPtxType()) {
     case MMATypes::tf32:
       kFactor = 4;
       multiplicandFragType = i32Ty;
@@ -421,7 +421,7 @@ LogicalResult MmaOp::verify() {
 
   // In the M=8 case, there is only 1 possible case per data type.
   if (mmaShape[0] == 8) {
-    if (getMultiplicandAPtxType().getValue() == MMATypes::f16) {
+    if (*getMultiplicandAPtxType() == MMATypes::f16) {
       expectedA.emplace_back(2, f16x2Ty);
       expectedB.emplace_back(2, f16x2Ty);
       expectedResult.push_back(f16x2x4StructTy);
@@ -430,7 +430,7 @@ LogicalResult MmaOp::verify() {
       expectedC.emplace_back(8, f32Ty);
       allowedShapes.push_back({8, 8, 4});
     }
-    if (getMultiplicandAPtxType().getValue() == MMATypes::f64) {
+    if (*getMultiplicandAPtxType() == MMATypes::f64) {
       Type f64Ty = Float64Type::get(context);
       expectedA.emplace_back(1, f64Ty);
       expectedB.emplace_back(1, f64Ty);

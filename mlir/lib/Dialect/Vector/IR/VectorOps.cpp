@@ -272,7 +272,7 @@ Attribute CombiningKindAttr::parse(AsmParser &parser, Type type) {
   if (failed(parser.parseGreater()))
     return {};
 
-  return CombiningKindAttr::get(kind.getValue(), parser.getContext());
+  return CombiningKindAttr::get(*kind, parser.getContext());
 }
 
 Attribute VectorDialect::parseAttribute(DialectAsmParser &parser,

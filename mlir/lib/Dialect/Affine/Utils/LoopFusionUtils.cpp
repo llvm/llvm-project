@@ -370,7 +370,7 @@ LogicalResult promoteSingleIterReductionLoop(AffineForOp forOp,
                                              bool siblingFusionUser) {
   // Check if the reduction loop is a single iteration loop.
   Optional<uint64_t> tripCount = getConstantTripCount(forOp);
-  if (!tripCount || tripCount.getValue() != 1)
+  if (!tripCount || *tripCount != 1)
     return failure();
   auto iterOperands = forOp.getIterOperands();
   auto *parentOp = forOp->getParentOp();
@@ -509,7 +509,7 @@ bool mlir::getLoopNestStats(AffineForOp forOpRoot, LoopNestStats *stats) {
       return WalkResult::interrupt();
     }
 
-    stats->tripCountMap[childForOp] = maybeConstTripCount.getValue();
+    stats->tripCountMap[childForOp] = *maybeConstTripCount;
     return WalkResult::advance();
   });
   return !walkResult.wasInterrupted();

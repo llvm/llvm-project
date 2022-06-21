@@ -118,7 +118,7 @@ struct FieldParser<
       auto element = FieldParser<ElementT>::parse(parser);
       if (failed(element))
         return failure();
-      elements.push_back(element.getValue());
+      elements.push_back(*element);
       return success();
     };
     if (parser.parseCommaSeparatedList(elementParser))
