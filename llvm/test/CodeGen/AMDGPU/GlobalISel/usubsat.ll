@@ -3,7 +3,7 @@
 ; RUN: llc -global-isel -mtriple=amdgcn-amd-amdpal -mcpu=fiji -o - %s | FileCheck -check-prefix=GFX8 %s
 ; RUN: llc -global-isel -mtriple=amdgcn-amd-amdpal -mcpu=gfx900 -o - %s | FileCheck -check-prefix=GFX9 %s
 ; RUN: llc -global-isel -mtriple=amdgcn-amd-amdpal -mcpu=gfx1010 -o - %s | FileCheck -check-prefixes=GFX10PLUS,GFX10 %s
-; RUN: llc -global-isel -mtriple=amdgcn-amd-amdpal -mcpu=gfx1100 -o - %s | FileCheck -check-prefixes=GFX10PLUS,GFX11 %s
+; RUN: llc -global-isel -mtriple=amdgcn-amd-amdpal -mcpu=gfx1100 -amdgpu-enable-delay-alu=0 -o - %s | FileCheck -check-prefixes=GFX10PLUS,GFX11 %s
 
 define i7 @v_usubsat_i7(i7 %lhs, i7 %rhs) {
 ; GFX6-LABEL: v_usubsat_i7:

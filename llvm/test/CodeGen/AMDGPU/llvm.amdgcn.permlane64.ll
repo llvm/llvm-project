@@ -14,6 +14,7 @@ define amdgpu_kernel void @test_s(i32 addrspace(1)* %out, i32 %src0) {
 ; GFX11-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    v_mov_b32_e32 v0, s2
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-NEXT:    v_permlane64_b32 v0, v0
 ; GFX11-NEXT:    global_store_b32 v1, v0, s[0:1]
 ; GFX11-NEXT:    s_endpgm
@@ -28,6 +29,7 @@ define amdgpu_kernel void @test_i(i32 addrspace(1)* %out) {
 ; GFX11-NEXT:    s_load_b64 s[0:1], s[0:1], 0x24
 ; GFX11-NEXT:    v_mov_b32_e32 v0, 0x63
 ; GFX11-NEXT:    v_mov_b32_e32 v1, 0
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2)
 ; GFX11-NEXT:    v_permlane64_b32 v0, v0
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    global_store_b32 v1, v0, s[0:1]

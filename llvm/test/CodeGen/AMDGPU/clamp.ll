@@ -265,6 +265,7 @@ define amdgpu_kernel void @v_clamp_negzero_f32(float addrspace(1)* %out, float a
 ; GFX11-NEXT:    global_load_b32 v1, v0, s[2:3]
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    v_add_f32_e32 v1, 0.5, v1
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX11-NEXT:    v_max_f32_e32 v1, 0x80000000, v1
 ; GFX11-NEXT:    v_min_f32_e32 v1, 1.0, v1
 ; GFX11-NEXT:    global_store_b32 v0, v1, s[0:1]
@@ -342,6 +343,7 @@ define amdgpu_kernel void @v_clamp_negzero_maybe_snan_f32(float addrspace(1)* %o
 ; GFX11-NEXT:    global_load_b32 v1, v0, s[2:3]
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    v_max_f32_e32 v1, v1, v1
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX11-NEXT:    v_max_f32_e32 v1, 0x80000000, v1
 ; GFX11-NEXT:    v_min_f32_e32 v1, 1.0, v1
 ; GFX11-NEXT:    global_store_b32 v0, v1, s[0:1]
@@ -423,6 +425,7 @@ define amdgpu_kernel void @v_clamp_multi_use_max_f32(float addrspace(1)* %out, f
 ; GFX11-NEXT:    global_load_b32 v1, v0, s[2:3]
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    v_max_f32_e32 v1, v1, v1
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX11-NEXT:    v_max_f32_e32 v1, 0, v1
 ; GFX11-NEXT:    v_min_f32_e32 v2, 1.0, v1
 ; GFX11-NEXT:    global_store_b32 v0, v2, s[0:1]
@@ -1650,6 +1653,7 @@ define amdgpu_kernel void @v_clamp_f32_no_dx10_clamp(float addrspace(1)* %out, f
 ; GFX11-NEXT:    global_load_b32 v1, v0, s[2:3]
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    v_add_f32_e32 v1, 0.5, v1
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-NEXT:    v_med3_f32 v1, v1, 0, 1.0
 ; GFX11-NEXT:    global_store_b32 v0, v1, s[0:1]
 ; GFX11-NEXT:    s_endpgm
@@ -1788,6 +1792,7 @@ define amdgpu_kernel void @v_clamp_f32_snan_no_dx10clamp(float addrspace(1)* %ou
 ; GFX11-NEXT:    global_load_b32 v1, v0, s[2:3]
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    v_max_f32_e32 v1, v1, v1
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-NEXT:    v_med3_f32 v1, v1, 0, 1.0
 ; GFX11-NEXT:    global_store_b32 v0, v1, s[0:1]
 ; GFX11-NEXT:    s_endpgm
@@ -1858,6 +1863,7 @@ define amdgpu_kernel void @v_clamp_f32_snan_no_dx10clamp_nnan_src(float addrspac
 ; GFX11-NEXT:    global_load_b32 v1, v0, s[2:3]
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    v_add_f32_e32 v1, 1.0, v1
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-NEXT:    v_med3_f32 v1, v1, 0, 1.0
 ; GFX11-NEXT:    global_store_b32 v0, v1, s[0:1]
 ; GFX11-NEXT:    s_endpgm
@@ -2582,6 +2588,7 @@ define amdgpu_kernel void @v_clamp_v2f16_not_zero(<2 x half> addrspace(1)* %out,
 ; GFX11-NEXT:    global_load_b32 v1, v0, s[2:3]
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    v_pk_max_f16 v1, v1, v1
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX11-NEXT:    v_pk_max_f16 v1, v1, 2.0
 ; GFX11-NEXT:    v_pk_min_f16 v1, v1, 1.0 op_sel_hi:[1,0]
 ; GFX11-NEXT:    global_store_b32 v0, v1, s[0:1]
@@ -2664,6 +2671,7 @@ define amdgpu_kernel void @v_clamp_v2f16_not_one(<2 x half> addrspace(1)* %out, 
 ; GFX11-NEXT:    global_load_b32 v1, v0, s[2:3]
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    v_pk_max_f16 v1, v1, v1
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX11-NEXT:    v_pk_max_f16 v1, v1, 0
 ; GFX11-NEXT:    v_pk_min_f16 v1, v1, 1.0 op_sel:[0,1] op_sel_hi:[1,0]
 ; GFX11-NEXT:    global_store_b32 v0, v1, s[0:1]
@@ -2818,6 +2826,7 @@ define amdgpu_kernel void @v_clamp_negabs_v2f16(<2 x half> addrspace(1)* %out, <
 ; GFX11-NEXT:    global_load_b32 v1, v0, s[2:3]
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    v_and_b32_e32 v1, 0x7fff7fff, v1
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-NEXT:    v_pk_max_f16 v1, v1, v1 neg_lo:[1,1] neg_hi:[1,1] clamp
 ; GFX11-NEXT:    global_store_b32 v0, v1, s[0:1]
 ; GFX11-NEXT:    s_endpgm
@@ -3298,6 +3307,7 @@ define amdgpu_kernel void @v_clamp_diff_source_f32(float addrspace(1)* %out, flo
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    v_add_f32_e64 v0, s4, s5
 ; GFX11-NEXT:    v_add_f32_e64 v1, s4, s2
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-NEXT:    v_max_f32_e64 v0, v0, v1 clamp
 ; GFX11-NEXT:    global_store_b32 v2, v0, s[0:1] offset:12
 ; GFX11-NEXT:    s_endpgm

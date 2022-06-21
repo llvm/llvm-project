@@ -1,0 +1,561 @@
+# RUN: llc -march=amdgcn -mcpu=gfx1100 -mattr=-wavefrontsize32,+wavefrontsize64 -verify-machineinstrs -start-before=amdgpu-insert-delay-alu %s -o - | FileCheck %s
+
+---
+name: valu_dep_1
+body: |
+  bb.0:
+    ; CHECK-LABEL: {{^}}valu_dep_1:
+    ; CHECK: %bb.0:
+    ; CHECK-NEXT: v_add_nc_u32_e32 v0, v0, v0
+    ; CHECK-NEXT: s_delay_alu instid0(VALU_DEP_1)
+    ; CHECK-NEXT: v_add_nc_u32_e32 v0, v0, v0
+    $vgpr0 = V_ADD_U32_e32 $vgpr0, $vgpr0, implicit $exec
+    $vgpr0 = V_ADD_U32_e32 $vgpr0, $vgpr0, implicit $exec
+...
+
+---
+name: valu_dep_2
+body: |
+  bb.0:
+    ; CHECK-LABEL: {{^}}valu_dep_2:
+    ; CHECK: %bb.0:
+    ; CHECK-NEXT: v_add_nc_u32_e32 v0, v0, v0
+    ; CHECK-NEXT: v_add_nc_u32_e32 v1, v1, v1
+    ; CHECK-NEXT: s_delay_alu instid0(VALU_DEP_2)
+    ; CHECK-NEXT: v_add_nc_u32_e32 v0, v0, v0
+    $vgpr0 = V_ADD_U32_e32 $vgpr0, $vgpr0, implicit $exec
+    $vgpr1 = V_ADD_U32_e32 $vgpr1, $vgpr1, implicit $exec
+    $vgpr0 = V_ADD_U32_e32 $vgpr0, $vgpr0, implicit $exec
+...
+
+---
+name: valu_dep_3
+body: |
+  bb.0:
+    ; CHECK-LABEL: {{^}}valu_dep_3:
+    ; CHECK: %bb.0:
+    ; CHECK-NEXT: v_add_nc_u32_e32 v0, v0, v0
+    ; CHECK-NEXT: v_add_nc_u32_e32 v1, v1, v1
+    ; CHECK-NEXT: v_add_nc_u32_e32 v2, v2, v2
+    ; CHECK-NEXT: s_delay_alu instid0(VALU_DEP_3)
+    ; CHECK-NEXT: v_add_nc_u32_e32 v0, v0, v0
+    $vgpr0 = V_ADD_U32_e32 $vgpr0, $vgpr0, implicit $exec
+    $vgpr1 = V_ADD_U32_e32 $vgpr1, $vgpr1, implicit $exec
+    $vgpr2 = V_ADD_U32_e32 $vgpr2, $vgpr2, implicit $exec
+    $vgpr0 = V_ADD_U32_e32 $vgpr0, $vgpr0, implicit $exec
+...
+
+---
+name: valu_dep_4
+body: |
+  bb.0:
+    ; CHECK-LABEL: {{^}}valu_dep_4:
+    ; CHECK: %bb.0:
+    ; CHECK-NEXT: v_add_nc_u32_e32 v0, v0, v0
+    ; CHECK-NEXT: v_add_nc_u32_e32 v1, v1, v1
+    ; CHECK-NEXT: v_add_nc_u32_e32 v2, v2, v2
+    ; CHECK-NEXT: v_add_nc_u32_e32 v3, v3, v3
+    ; CHECK-NEXT: s_delay_alu instid0(VALU_DEP_4)
+    ; CHECK-NEXT: v_add_nc_u32_e32 v0, v0, v0
+    $vgpr0 = V_ADD_U32_e32 $vgpr0, $vgpr0, implicit $exec
+    $vgpr1 = V_ADD_U32_e32 $vgpr1, $vgpr1, implicit $exec
+    $vgpr2 = V_ADD_U32_e32 $vgpr2, $vgpr2, implicit $exec
+    $vgpr3 = V_ADD_U32_e32 $vgpr3, $vgpr3, implicit $exec
+    $vgpr0 = V_ADD_U32_e32 $vgpr0, $vgpr0, implicit $exec
+...
+
+# There's no encoding for VALU_DEP_5. A normal VALU instruction will have
+# completed already.
+---
+name: valu_dep_5
+body: |
+  bb.0:
+    ; CHECK-LABEL: {{^}}valu_dep_5:
+    ; CHECK: %bb.0:
+    ; CHECK-NEXT: v_add_nc_u32_e32 v0, v0, v0
+    ; CHECK-NEXT: v_add_nc_u32_e32 v1, v1, v1
+    ; CHECK-NEXT: v_add_nc_u32_e32 v2, v2, v2
+    ; CHECK-NEXT: v_add_nc_u32_e32 v3, v3, v3
+    ; CHECK-NEXT: v_add_nc_u32_e32 v4, v4, v4
+    ; CHECK-NEXT: v_add_nc_u32_e32 v0, v0, v0
+    $vgpr0 = V_ADD_U32_e32 $vgpr0, $vgpr0, implicit $exec
+    $vgpr1 = V_ADD_U32_e32 $vgpr1, $vgpr1, implicit $exec
+    $vgpr2 = V_ADD_U32_e32 $vgpr2, $vgpr2, implicit $exec
+    $vgpr3 = V_ADD_U32_e32 $vgpr3, $vgpr3, implicit $exec
+    $vgpr4 = V_ADD_U32_e32 $vgpr4, $vgpr4, implicit $exec
+    $vgpr0 = V_ADD_U32_e32 $vgpr0, $vgpr0, implicit $exec
+...
+
+---
+name: trans32_dep_1
+body: |
+  bb.0:
+    ; CHECK-LABEL: {{^}}trans32_dep_1:
+    ; CHECK: %bb.0:
+    ; CHECK-NEXT: v_exp_f32_e32 v0, v0
+    ; CHECK-NEXT: s_delay_alu instid0(TRANS32_DEP_1)
+    ; CHECK-NEXT: v_add_nc_u32_e32 v0, v0, v0
+    $vgpr0 = V_EXP_F32_e32 $vgpr0, implicit $exec, implicit $mode
+    $vgpr0 = V_ADD_U32_e32 $vgpr0, $vgpr0, implicit $exec
+...
+
+---
+name: trans32_dep_2
+body: |
+  bb.0:
+    ; CHECK-LABEL: {{^}}trans32_dep_2:
+    ; CHECK: %bb.0:
+    ; CHECK-NEXT: v_exp_f32_e32 v0, v0
+    ; CHECK-NEXT: v_exp_f32_e32 v1, v1
+    ; CHECK-NEXT: s_delay_alu instid0(TRANS32_DEP_2)
+    ; CHECK-NEXT: v_add_nc_u32_e32 v0, v0, v0
+    $vgpr0 = V_EXP_F32_e32 $vgpr0, implicit $exec, implicit $mode
+    $vgpr1 = V_EXP_F32_e32 $vgpr1, implicit $exec, implicit $mode
+    $vgpr0 = V_ADD_U32_e32 $vgpr0, $vgpr0, implicit $exec
+...
+
+---
+name: trans32_dep_3
+body: |
+  bb.0:
+    ; CHECK-LABEL: {{^}}trans32_dep_3:
+    ; CHECK: %bb.0:
+    ; CHECK-NEXT: v_exp_f32_e32 v0, v0
+    ; CHECK-NEXT: v_exp_f32_e32 v1, v1
+    ; CHECK-NEXT: v_exp_f32_e32 v2, v2
+    ; CHECK-NEXT: s_delay_alu instid0(TRANS32_DEP_3)
+    ; CHECK-NEXT: v_add_nc_u32_e32 v0, v0, v0
+    $vgpr0 = V_EXP_F32_e32 $vgpr0, implicit $exec, implicit $mode
+    $vgpr1 = V_EXP_F32_e32 $vgpr1, implicit $exec, implicit $mode
+    $vgpr2 = V_EXP_F32_e32 $vgpr2, implicit $exec, implicit $mode
+    $vgpr0 = V_ADD_U32_e32 $vgpr0, $vgpr0, implicit $exec
+...
+
+# There's no encoding for TRANS32_DEP_4. A normal TRANS instruction will have
+# completed already.
+---
+name: trans32_dep_4
+body: |
+  bb.0:
+    ; CHECK-LABEL: {{^}}trans32_dep_4:
+    ; CHECK: %bb.0:
+    ; CHECK-NEXT: v_exp_f32_e32 v0, v0
+    ; CHECK-NEXT: v_exp_f32_e32 v1, v1
+    ; CHECK-NEXT: v_exp_f32_e32 v2, v2
+    ; CHECK-NEXT: v_exp_f32_e32 v3, v3
+    ; CHECK-NEXT: v_add_nc_u32_e32 v0, v0, v0
+    $vgpr0 = V_EXP_F32_e32 $vgpr0, implicit $exec, implicit $mode
+    $vgpr1 = V_EXP_F32_e32 $vgpr1, implicit $exec, implicit $mode
+    $vgpr2 = V_EXP_F32_e32 $vgpr2, implicit $exec, implicit $mode
+    $vgpr3 = V_EXP_F32_e32 $vgpr3, implicit $exec, implicit $mode
+    $vgpr0 = V_ADD_U32_e32 $vgpr0, $vgpr0, implicit $exec
+...
+
+---
+name: salu_cycle_1
+body: |
+  bb.0:
+    ; CHECK-LABEL: {{^}}salu_cycle_1:
+    ; CHECK: %bb.0:
+    ; CHECK-NEXT: s_mov_b32 s0, 0
+    ; CHECK-NEXT: s_delay_alu instid0(SALU_CYCLE_1)
+    ; CHECK-NEXT: v_add_nc_u32_e32 v0, s0, v0
+    $sgpr0 = S_MOV_B32 0
+    $vgpr0 = V_ADD_U32_e32 $sgpr0, $vgpr0, implicit $exec
+...
+
+# There's no need for SALU_CYCLE_2 here because the s_mov will have completed
+# already.
+---
+name: salu_cycle_2
+body: |
+  bb.0:
+    ; CHECK-LABEL: {{^}}salu_cycle_2:
+    ; CHECK: %bb.0:
+    ; CHECK-NEXT: s_mov_b32 s0, 0
+    ; CHECK-NEXT: v_add_nc_u32_e32 v1, v1, v1
+    ; CHECK-NEXT: v_add_nc_u32_e32 v0, s0, v0
+    $sgpr0 = S_MOV_B32 0
+    $vgpr1 = V_ADD_U32_e32 $vgpr1, $vgpr1, implicit $exec
+    $vgpr0 = V_ADD_U32_e32 $sgpr0, $vgpr0, implicit $exec
+...
+
+---
+name: valu_dep_1_same_trans32_dep_1
+body: |
+  bb.0:
+    ; CHECK-LABEL: {{^}}valu_dep_1_same_trans32_dep_1:
+    ; CHECK: %bb.0:
+    ; CHECK-NEXT: v_exp_f32_e32 v0, v0
+    ; CHECK-NEXT: v_add_nc_u32_e32 v1, v1, v1
+    ; CHECK-NEXT: s_delay_alu instid0(TRANS32_DEP_1) | instid1(VALU_DEP_1)
+    ; CHECK-NEXT: v_add_nc_u32_e32 v0, v0, v1
+    $vgpr0 = V_EXP_F32_e32 $vgpr0, implicit $exec, implicit $mode
+    $vgpr1 = V_ADD_U32_e32 $vgpr1, $vgpr1, implicit $exec
+    $vgpr0 = V_ADD_U32_e32 $vgpr0, $vgpr1, implicit $exec
+...
+
+# There's no need to encode the VALU depdendency because it will complete before
+# the TRANS.
+---
+name: trans32_dep_1_only
+body: |
+  bb.0:
+    ; CHECK-LABEL: {{^}}trans32_dep_1_only:
+    ; CHECK: %bb.0:
+    ; CHECK-NEXT: v_add_nc_u32_e32 v0, v0, v0
+    ; CHECK-NEXT: v_exp_f32_e32 v1, v1
+    ; CHECK-NEXT: s_delay_alu instid0(TRANS32_DEP_1)
+    ; CHECK-NEXT: v_add_nc_u32_e32 v0, v0, v1
+    $vgpr0 = V_ADD_U32_e32 $vgpr0, $vgpr0, implicit $exec
+    $vgpr1 = V_EXP_F32_e32 $vgpr1, implicit $exec, implicit $mode
+    $vgpr0 = V_ADD_U32_e32 $vgpr0, $vgpr1, implicit $exec
+...
+
+---
+name: valu_dep_1_same_salu_cycle_1
+body: |
+  bb.0:
+    ; CHECK-LABEL: {{^}}valu_dep_1_same_salu_cycle_1:
+    ; CHECK: %bb.0:
+    ; CHECK-NEXT: v_add_nc_u32_e32 v0, v0, v0
+    ; CHECK-NEXT: s_mov_b32 s0, 0
+    ; CHECK-NEXT: s_delay_alu instid0(VALU_DEP_1) | instid1(SALU_CYCLE_1)
+    ; CHECK-NEXT: v_add_nc_u32_e32 v0, s0, v0
+    $vgpr0 = V_ADD_U32_e32 $vgpr0, $vgpr0, implicit $exec
+    $sgpr0 = S_MOV_B32 0
+    $vgpr0 = V_ADD_U32_e32 $sgpr0, $vgpr0, implicit $exec
+...
+
+---
+name: valu_dep_1_next_valu_dep_1
+body: |
+  bb.0:
+    ; CHECK-LABEL: {{^}}valu_dep_1_next_valu_dep_1:
+    ; CHECK: %bb.0:
+    ; CHECK-NEXT: v_add_nc_u32_e32 v0, v0, v0
+    ; CHECK-NEXT: s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+    ; CHECK-NEXT: v_add_nc_u32_e32 v0, v0, v0
+    ; CHECK-NEXT: v_add_nc_u32_e32 v0, v0, v0
+    $vgpr0 = V_ADD_U32_e32 $vgpr0, $vgpr0, implicit $exec
+    $vgpr0 = V_ADD_U32_e32 $vgpr0, $vgpr0, implicit $exec
+    $vgpr0 = V_ADD_U32_e32 $vgpr0, $vgpr0, implicit $exec
+...
+
+---
+name: valu_dep_2_next_valu_dep_2
+body: |
+  bb.0:
+    ; CHECK-LABEL: {{^}}valu_dep_2_next_valu_dep_2:
+    ; CHECK: %bb.0:
+    ; CHECK-NEXT: v_add_nc_u32_e32 v0, v0, v0
+    ; CHECK-NEXT: v_add_nc_u32_e32 v1, v1, v1
+    ; CHECK-NEXT: s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
+    ; CHECK-NEXT: v_add_nc_u32_e32 v0, v0, v0
+    ; CHECK-NEXT: v_add_nc_u32_e32 v1, v1, v1
+    $vgpr0 = V_ADD_U32_e32 $vgpr0, $vgpr0, implicit $exec
+    $vgpr1 = V_ADD_U32_e32 $vgpr1, $vgpr1, implicit $exec
+    $vgpr0 = V_ADD_U32_e32 $vgpr0, $vgpr0, implicit $exec
+    $vgpr1 = V_ADD_U32_e32 $vgpr1, $vgpr1, implicit $exec
+...
+
+# There's no need to encode a dependency for the second mul, because the
+# dependency for the first mul has already guaranteed that the add has
+# completed.
+---
+name: valu_dep_1_no_next_1
+body: |
+  bb.0:
+    ; CHECK-LABEL: {{^}}valu_dep_1_no_next_1:
+    ; CHECK: %bb.0:
+    ; CHECK-NEXT: v_add_f32_e32 v0, v0, v0
+    ; CHECK-NEXT: s_delay_alu instid0(VALU_DEP_1)
+    ; CHECK-NEXT: v_mul_f32_e32 v1, v0, v0
+    ; CHECK-NEXT: v_mul_f32_e32 v2, v0, v0
+    $vgpr0 = V_ADD_F32_e32 $vgpr0, $vgpr0, implicit $exec, implicit $mode
+    $vgpr1 = V_MUL_F32_e32 $vgpr0, $vgpr0, implicit $exec, implicit $mode
+    $vgpr2 = V_MUL_F32_e32 $vgpr0, $vgpr0, implicit $exec, implicit $mode
+...
+
+# There's no need to encode a dependency for the second add, because the
+# dependency for the second mul has already guaranteed that a later VALU has
+# completed.
+---
+name: valu_dep_1_no_next_2
+body: |
+  bb.0:
+    ; CHECK-LABEL: {{^}}valu_dep_1_no_next_2:
+    ; CHECK: %bb.0:
+    ; CHECK-NEXT: v_add_f32_e32 v0, v0, v0
+    ; CHECK-NEXT: v_mul_f32_e32 v1, v1, v1
+    ; CHECK-NEXT: s_delay_alu instid0(VALU_DEP_1)
+    ; CHECK-NEXT: v_mul_f32_e32 v1, v1, v1
+    ; CHECK-NEXT: v_add_f32_e32 v0, v0, v0
+    $vgpr0 = V_ADD_F32_e32 $vgpr0, $vgpr0, implicit $exec, implicit $mode
+    $vgpr1 = V_MUL_F32_e32 $vgpr1, $vgpr1, implicit $exec, implicit $mode
+    $vgpr1 = V_MUL_F32_e32 $vgpr1, $vgpr1, implicit $exec, implicit $mode
+    $vgpr0 = V_ADD_F32_e32 $vgpr0, $vgpr0, implicit $exec, implicit $mode
+...
+
+# There are no wait states between an add/sub/cmp generating carry and an
+# add/sub/cndmask that consumes it, so no need to encode a dependency.
+
+---
+name: implicit_cmp_cndmask
+body: |
+  bb.0:
+    ; CHECK-LABEL: {{^}}implicit_cmp_cndmask:
+    ; CHECK: %bb.0:
+    ; CHECK-NEXT: v_cmp_eq_i32_e32 vcc, v0, v1
+    ; CHECK-NEXT: v_cndmask_b32_e64 v2, v3, v4, vcc
+    implicit $vcc = V_CMP_EQ_I32_e32 $vgpr0, $vgpr1, implicit $exec
+    $vgpr2 = V_CNDMASK_B32_e64 0, $vgpr3, 0, $vgpr4, $vcc, implicit $exec
+...
+
+# TODO: There should be no s_delay_alu here.
+---
+name: explicit_cmp_cndmask
+body: |
+  bb.0:
+    ; CHECK-LABEL: {{^}}explicit_cmp_cndmask:
+    ; CHECK: %bb.0:
+    ; CHECK-NEXT: v_cmp_eq_i32_e64 s[0:1], v0, v1
+    ; CHECK-NEXT: s_delay_alu instid0(VALU_DEP_1)
+    ; CHECK-NEXT: v_cndmask_b32_e64 v2, v3, v4, s[0:1]
+    $sgpr0_sgpr1 = V_CMP_EQ_I32_e64 $vgpr0, $vgpr1, implicit $exec
+    $vgpr2 = V_CNDMASK_B32_e64 0, $vgpr3, 0, $vgpr4, $sgpr0_sgpr1, implicit $exec
+...
+
+---
+name: implicit_addc_addc
+body: |
+  bb.0:
+    ; CHECK-LABEL: {{^}}implicit_addc_addc:
+    ; CHECK: %bb.0:
+    ; CHECK-NEXT: v_add_co_ci_u32_e32 v0, vcc, v0, v0, vcc
+    ; CHECK-NEXT: v_add_co_ci_u32_e32 v1, vcc, v1, v1, vcc
+    $vgpr0 = V_ADDC_U32_e32 $vgpr0, $vgpr0, implicit-def $vcc, implicit $vcc, implicit $exec
+    $vgpr1 = V_ADDC_U32_e32 $vgpr1, $vgpr1, implicit-def $vcc, implicit $vcc, implicit $exec
+...
+
+---
+name: explicit_addc_addc
+body: |
+  bb.0:
+    ; CHECK-LABEL: {{^}}explicit_addc_addc:
+    ; CHECK: %bb.0:
+    ; CHECK-NEXT: v_add_co_u32 v0, vcc, v0, v0
+    ; CHECK-NEXT: v_add_co_ci_u32_e32 v1, vcc, v1, v1, vcc
+    $vgpr0,$vcc = V_ADD_CO_U32_e64 $vgpr0, $vgpr0, 0, implicit $exec
+    $vgpr1 = V_ADDC_U32_e32 $vgpr1, $vgpr1, implicit-def $vcc, implicit $vcc, implicit $exec
+...
+
+---
+name: valu_dep_3_bundle
+body: |
+  bb.0:
+    ; CHECK-LABEL: {{^}}valu_dep_3_bundle:
+    ; CHECK: %bb.0:
+    ; CHECK-NEXT: v_add_nc_u32_e32 v0, v0, v0
+    ; CHECK-NEXT: v_add_nc_u32_e32 v1, v1, v1
+    ; CHECK-NEXT: v_add_nc_u32_e32 v2, v2, v2
+    ; CHECK-NEXT: s_delay_alu instid0(VALU_DEP_3)
+    ; CHECK-NEXT: v_add_nc_u32_e32 v0, v0, v0
+    $vgpr0 = V_ADD_U32_e32 $vgpr0, $vgpr0, implicit $exec
+    BUNDLE {
+      $vgpr1 = V_ADD_U32_e32 $vgpr1, $vgpr1, implicit $exec
+      $vgpr2 = V_ADD_U32_e32 $vgpr2, $vgpr2, implicit $exec
+    }
+    $vgpr0 = V_ADD_U32_e32 $vgpr0, $vgpr0, implicit $exec
+...
+
+---
+name: if
+body: |
+  bb.0:
+    ; CHECK-LABEL: {{^}}if:
+    ; CHECK: %bb.0:
+    ; CHECK-NEXT: s_cbranch_vccz .LBB23_2
+    ; CHECK-NEXT: %bb.1:
+    ; CHECK-NEXT: v_add_nc_u32_e32 v0, v0, v0
+    ; CHECK-NEXT: .LBB23_2:
+    ; CHECK-NEXT: s_delay_alu instid0(VALU_DEP_1)
+    ; CHECK-NEXT: v_add_nc_u32_e32 v0, v0, v0
+    S_CBRANCH_VCCZ %bb.2, implicit $vcc
+  bb.1:
+    $vgpr0 = V_ADD_U32_e32 $vgpr0, $vgpr0, implicit $exec
+  bb.2:
+    $vgpr0 = V_ADD_U32_e32 $vgpr0, $vgpr0, implicit $exec
+...
+
+---
+name: else
+body: |
+  bb.0:
+    ; CHECK-LABEL: {{^}}else:
+    ; CHECK: %bb.0:
+    ; CHECK-NEXT: s_cbranch_vccz .LBB24_2
+    ; CHECK-NEXT: %bb.1
+    ; CHECK-NEXT: s_branch .LBB24_3
+    ; CHECK-NEXT: .LBB24_2:
+    ; CHECK-NEXT: v_add_nc_u32_e32 v0, v0, v0
+    ; CHECK-NEXT: .LBB24_3:
+    ; CHECK-NEXT: s_delay_alu instid0(VALU_DEP_1)
+    ; CHECK-NEXT: v_add_nc_u32_e32 v0, v0, v0
+    S_CBRANCH_VCCZ %bb.2, implicit $vcc
+  bb.1:
+    S_BRANCH %bb.3
+  bb.2:
+    $vgpr0 = V_ADD_U32_e32 $vgpr0, $vgpr0, implicit $exec
+  bb.3:
+    $vgpr0 = V_ADD_U32_e32 $vgpr0, $vgpr0, implicit $exec
+...
+
+---
+name: if_else
+body: |
+  bb.0:
+    ; CHECK-LABEL: {{^}}if_else:
+    ; CHECK: %bb.0:
+    ; CHECK-NEXT: s_cbranch_vccz .LBB25_2
+    ; CHECK-NEXT: %bb.1:
+    ; CHECK-NEXT: v_add_nc_u32_e32 v0, v0, v0
+    ; CHECK-NEXT: s_branch .LBB25_3
+    ; CHECK-NEXT: .LBB25_2:
+    ; CHECK-NEXT: v_add_nc_u32_e32 v0, v0, v0
+    ; CHECK-NEXT: v_add_nc_u32_e32 v0, v1, v1
+    ; CHECK-NEXT: .LBB25_3:
+    ; CHECK-NEXT: s_delay_alu instid0(VALU_DEP_1)
+    ; CHECK-NEXT: v_add_nc_u32_e32 v0, v0, v0
+    S_CBRANCH_VCCZ %bb.2, implicit $vcc
+  bb.1:
+    $vgpr0 = V_ADD_U32_e32 $vgpr0, $vgpr0, implicit $exec
+    S_BRANCH %bb.3
+  bb.2:
+    $vgpr0 = V_ADD_U32_e32 $vgpr0, $vgpr0, implicit $exec
+    $vgpr0 = V_ADD_U32_e32 $vgpr1, $vgpr1, implicit $exec
+  bb.3:
+    $vgpr0 = V_ADD_U32_e32 $vgpr0, $vgpr0, implicit $exec
+...
+
+# Dependency from outside the loop.
+---
+name: loop_1
+body: |
+  bb.0:
+    ; CHECK-LABEL: {{^}}loop_1:
+    ; CHECK: %bb.0:
+    ; CHECK-NEXT: v_add_nc_u32_e32 v0, v0, v0
+    ; CHECK-NEXT: .LBB26_1:
+    ; CHECK-NEXT: s_delay_alu instid0(VALU_DEP_1)
+    ; CHECK-NEXT: v_add_nc_u32_e32 v1, v0, v0
+    ; CHECK-NEXT: s_cbranch_vccz .LBB26_1
+    $vgpr0 = V_ADD_U32_e32 $vgpr0, $vgpr0, implicit $exec
+  bb.1:
+    $vgpr1 = V_ADD_U32_e32 $vgpr0, $vgpr0, implicit $exec
+    S_CBRANCH_VCCZ %bb.1, implicit $vcc
+  bb.2:
+...
+
+# Dependency from inside the loop.
+---
+name: loop_2
+body: |
+  bb.0:
+    ; CHECK-LABEL: {{^}}loop_2:
+    ; CHECK: %bb.0:
+    ; CHECK-NEXT: .LBB27_1:
+    ; CHECK-NEXT: s_delay_alu instid0(VALU_DEP_1)
+    ; CHECK-NEXT: v_add_nc_u32_e32 v0, v0, v0
+    ; CHECK-NEXT: s_cbranch_vccz .LBB27_1
+  bb.1:
+    $vgpr0 = V_ADD_U32_e32 $vgpr0, $vgpr0, implicit $exec
+    S_CBRANCH_VCCZ %bb.1, implicit $vcc
+  bb.2:
+...
+
+# No VALU delay across s_sendmsg_rtn because it waits for all outstanding VALU
+# to complete.
+---
+name: sendmsg_rtn
+body: |
+  bb.0:
+    ; CHECK-LABEL: {{^}}sendmsg_rtn:
+    ; CHECK: %bb.0:
+    ; CHECK-NEXT: v_mov_b32_e32 v0, 0
+    ; CHECK-NEXT: s_sendmsg_rtn_b32 s0, sendmsg(MSG_RTN_GET_DOORBELL)
+    ; CHECK-NEXT: s_delay_alu instid0(SALU_CYCLE_1)
+    ; CHECK-NEXT: s_add_u32 s0, s0, s0
+    ; CHECK-NEXT: v_add_nc_u32_e32 v0, v0, v0
+    $vgpr0 = V_MOV_B32_e32 0, implicit $exec
+    $sgpr0 = S_SENDMSG_RTN_B32 128
+    $sgpr0 = S_ADD_U32 $sgpr0, $sgpr0, implicit-def $scc
+    $vgpr0 = V_ADD_U32_e32 $vgpr0, $vgpr0, implicit $exec
+...
+
+# No VALU delay before or across FLAT because it waits for all outstanding VALU
+# to complete.
+---
+name: flat_load
+body: |
+  bb.0:
+    ; CHECK-LABEL: {{^}}flat_load:
+    ; CHECK: %bb.0:
+    ; CHECK-NEXT: v_mov_b32_e32 v0, 0
+    ; CHECK-NEXT: v_mov_b32_e32 v1, 0
+    ; CHECK-NEXT: v_mov_b32_e32 v2, 0
+    ; CHECK-NEXT: flat_load_b32 v0, v[0:1]
+    ; CHECK-NEXT: v_add_nc_u32_e32 v0, v2, v2
+    $vgpr0 = V_MOV_B32_e32 0, implicit $exec
+    $vgpr1 = V_MOV_B32_e32 0, implicit $exec
+    $vgpr2 = V_MOV_B32_e32 0, implicit $exec
+    $vgpr0 = FLAT_LOAD_DWORD $vgpr0_vgpr1, 0, 0, implicit $exec, implicit $flat_scr
+    $vgpr0 = V_ADD_U32_e32 $vgpr2, $vgpr2, implicit $exec
+...
+
+# No VALU delay across an s_waitcnt_depctr that waits for all outstanding VALU
+# to complete.
+---
+name: waitcnt_depctr
+body: |
+  bb.0:
+    ; CHECK-LABEL: {{^}}waitcnt_depctr:
+    ; CHECK: %bb.0:
+    ; CHECK-NEXT: v_mov_b32_e32 v0, 0
+    ; CHECK-NEXT: s_waitcnt_depctr 0xfff
+    ; CHECK-NEXT: v_add_nc_u32_e32 v0, v0, v0
+    $vgpr0 = V_MOV_B32_e32 0, implicit $exec
+    S_WAITCNT_DEPCTR 4095
+    $vgpr0 = V_ADD_U32_e32 $vgpr0, $vgpr0, implicit $exec
+...
+
+# Check that no delays are emitted for writelane instructions.
+---
+name: writelane1
+body: |
+  bb.0:
+    ; CHECK-LABEL: {{^}}writelane1:
+    ; CHECK: %bb.0:
+    ; CHECK-NEXT: v_writelane_b32 v0, s0, 0
+    ; CHECK-NEXT: v_writelane_b32 v0, s0, 1
+    ; CHECK-NEXT: v_writelane_b32 v0, s0, 2
+    ; CHECK-NEXT: v_writelane_b32 v0, s0, 3
+    $vgpr0 = V_WRITELANE_B32 $sgpr0, 0, $vgpr0
+    $vgpr0 = V_WRITELANE_B32 $sgpr0, 1, $vgpr0
+    $vgpr0 = V_WRITELANE_B32 $sgpr0, 2, $vgpr0
+    $vgpr0 = V_WRITELANE_B32 $sgpr0, 3, $vgpr0
+...
+
+# Check if a VALU delay is added after writelane.
+---
+name: writelane2
+body: |
+  bb.0:
+    ; CHECK-LABEL: {{^}}writelane2:
+    ; CHECK: %bb.0:
+    ; CHECK-NEXT: v_writelane_b32 v0, s0, 3
+    ; CHECK-NEXT: s_delay_alu instid0(VALU_DEP_1)
+    ; CHECK-NEXT: v_add_nc_u32_e32 v0, v0, v0
+    $vgpr0 = V_WRITELANE_B32 $sgpr0, 3, $vgpr0
+    $vgpr0 = V_ADD_U32_e32 $vgpr0, $vgpr0, implicit $exec
+...
