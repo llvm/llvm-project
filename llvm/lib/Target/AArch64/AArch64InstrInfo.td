@@ -734,6 +734,22 @@ def AArch64tbl : SDNode<"AArch64ISD::TBL", SDT_AArch64TBL>;
 def AArch64mrs : SDNode<"AArch64ISD::MRS",
                         SDTypeProfile<1, 1, [SDTCisVT<0, i64>, SDTCisVT<1, i32>]>,
                         [SDNPHasChain, SDNPOutGlue]>;
+
+// Match add node and also treat an 'or' node is as an 'add' if the or'ed operands
+// have no common bits.
+def add_and_or_is_add : PatFrags<(ops node:$lhs, node:$rhs),
+                         [(add node:$lhs, node:$rhs), (or node:$lhs, node:$rhs)],[{
+   if (N->getOpcode() == ISD::ADD)
+     return true;
+   return CurDAG->haveNoCommonBitsSet(N->getOperand(0), N->getOperand(1));
+}]> {
+  let GISelPredicateCode = [{
+     // Only handle G_ADD for now. FIXME. build capability to compute whether
+     // operands of G_OR have common bits set or not.
+     return MI.getOpcode() == TargetOpcode::G_ADD;
+  }];
+}
+
 //===----------------------------------------------------------------------===//
 
 //===----------------------------------------------------------------------===//
@@ -6472,22 +6488,6 @@ def : Pat<(int_aarch64_neon_sqdmulls_scalar (i32 FPR32:$Rn),
                                           (vector_extract (v4i32 V128:$Vm),
                                                            VectorIndexS:$idx)),
           (SQDMULLv1i64_indexed FPR32:$Rn, V128:$Vm, VectorIndexS:$idx)>;
-
-// Match add node and also treat an 'or' node is as an 'add' if the or'ed operands
-// have no common bits.
-def add_and_or_is_add : PatFrags<(ops node:$lhs, node:$rhs),
-                         [(add node:$lhs, node:$rhs), (or node:$lhs, node:$rhs)],[{
-   if (N->getOpcode() == ISD::ADD)
-     return true;
-   return CurDAG->haveNoCommonBitsSet(N->getOperand(0), N->getOperand(1));
-}]> {
-  let GISelPredicateCode = [{
-     // Only handle G_ADD for now. FIXME. build capability to compute whether
-     // operands of G_OR have common bits set or not.
-     return MI.getOpcode() == TargetOpcode::G_ADD;
-  }];
-}
-
 
 //----------------------------------------------------------------------------
 // AdvSIMD scalar shift instructions
