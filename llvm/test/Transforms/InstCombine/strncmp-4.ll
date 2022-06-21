@@ -15,30 +15,22 @@ define void @fold_strncmp_Aa_b(i32* %pcmp) {
 ; CHECK-NEXT:    store i32 0, i32* [[PCMP:%.*]], align 4
 ; CHECK-NEXT:    [[PCMP1:%.*]] = getelementptr i32, i32* [[PCMP]], i64 1
 ; CHECK-NEXT:    store i32 0, i32* [[PCMP1]], align 4
-; CHECK-NEXT:    [[CMP2:%.*]] = call i32 @strncmp(i8* noundef nonnull dereferenceable(1) getelementptr inbounds ([[STRUCT_A:%.*]], %struct.A* @a, i64 0, i32 0, i64 0), i8* noundef nonnull dereferenceable(1) getelementptr inbounds ([[STRUCT_A]], %struct.A* @a, i64 0, i32 1, i64 0), i64 2)
 ; CHECK-NEXT:    [[PCMP2:%.*]] = getelementptr i32, i32* [[PCMP]], i64 2
-; CHECK-NEXT:    store i32 [[CMP2]], i32* [[PCMP2]], align 4
-; CHECK-NEXT:    [[CMP3:%.*]] = call i32 @strncmp(i8* noundef nonnull dereferenceable(1) getelementptr inbounds ([[STRUCT_A]], %struct.A* @a, i64 0, i32 0, i64 0), i8* noundef nonnull dereferenceable(1) getelementptr inbounds ([[STRUCT_A]], %struct.A* @a, i64 0, i32 1, i64 0), i64 3)
+; CHECK-NEXT:    store i32 0, i32* [[PCMP2]], align 4
 ; CHECK-NEXT:    [[PCMP3:%.*]] = getelementptr i32, i32* [[PCMP]], i64 3
-; CHECK-NEXT:    store i32 [[CMP3]], i32* [[PCMP3]], align 4
-; CHECK-NEXT:    [[CMP4:%.*]] = call i32 @strncmp(i8* noundef nonnull dereferenceable(1) getelementptr inbounds ([[STRUCT_A]], %struct.A* @a, i64 0, i32 0, i64 0), i8* noundef nonnull dereferenceable(1) getelementptr inbounds ([[STRUCT_A]], %struct.A* @a, i64 0, i32 1, i64 0), i64 4)
+; CHECK-NEXT:    store i32 0, i32* [[PCMP3]], align 4
 ; CHECK-NEXT:    [[PCMP4:%.*]] = getelementptr i32, i32* [[PCMP]], i64 4
-; CHECK-NEXT:    store i32 [[CMP4]], i32* [[PCMP4]], align 4
-; CHECK-NEXT:    [[CMP5:%.*]] = call i32 @strncmp(i8* noundef nonnull dereferenceable(1) getelementptr inbounds ([[STRUCT_A]], %struct.A* @a, i64 0, i32 0, i64 0), i8* noundef nonnull dereferenceable(1) getelementptr inbounds ([[STRUCT_A]], %struct.A* @a, i64 0, i32 1, i64 0), i64 5)
+; CHECK-NEXT:    store i32 0, i32* [[PCMP4]], align 4
 ; CHECK-NEXT:    [[PCMP5:%.*]] = getelementptr i32, i32* [[PCMP]], i64 5
-; CHECK-NEXT:    store i32 [[CMP5]], i32* [[PCMP5]], align 4
-; CHECK-NEXT:    [[CMP6:%.*]] = call i32 @strncmp(i8* noundef nonnull dereferenceable(1) getelementptr inbounds ([[STRUCT_A]], %struct.A* @a, i64 0, i32 0, i64 0), i8* noundef nonnull dereferenceable(1) getelementptr inbounds ([[STRUCT_A]], %struct.A* @a, i64 0, i32 1, i64 0), i64 6)
+; CHECK-NEXT:    store i32 0, i32* [[PCMP5]], align 4
 ; CHECK-NEXT:    [[PCMP6:%.*]] = getelementptr i32, i32* [[PCMP]], i64 6
-; CHECK-NEXT:    store i32 [[CMP6]], i32* [[PCMP6]], align 4
-; CHECK-NEXT:    [[CMP7:%.*]] = call i32 @strncmp(i8* noundef nonnull dereferenceable(1) getelementptr inbounds ([[STRUCT_A]], %struct.A* @a, i64 0, i32 0, i64 0), i8* noundef nonnull dereferenceable(1) getelementptr inbounds ([[STRUCT_A]], %struct.A* @a, i64 0, i32 1, i64 0), i64 7)
+; CHECK-NEXT:    store i32 0, i32* [[PCMP6]], align 4
 ; CHECK-NEXT:    [[PCMP7:%.*]] = getelementptr i32, i32* [[PCMP]], i64 7
-; CHECK-NEXT:    store i32 [[CMP7]], i32* [[PCMP7]], align 4
-; CHECK-NEXT:    [[CMP8:%.*]] = call i32 @strncmp(i8* noundef nonnull dereferenceable(1) getelementptr inbounds ([[STRUCT_A]], %struct.A* @a, i64 0, i32 0, i64 0), i8* noundef nonnull dereferenceable(1) getelementptr inbounds ([[STRUCT_A]], %struct.A* @a, i64 0, i32 1, i64 0), i64 8)
+; CHECK-NEXT:    store i32 -1, i32* [[PCMP7]], align 4
 ; CHECK-NEXT:    [[PCMP8:%.*]] = getelementptr i32, i32* [[PCMP]], i64 8
-; CHECK-NEXT:    store i32 [[CMP8]], i32* [[PCMP8]], align 4
-; CHECK-NEXT:    [[CMP9:%.*]] = call i32 @strncmp(i8* noundef nonnull dereferenceable(1) getelementptr inbounds ([[STRUCT_A]], %struct.A* @a, i64 0, i32 0, i64 0), i8* noundef nonnull dereferenceable(1) getelementptr inbounds ([[STRUCT_A]], %struct.A* @a, i64 0, i32 1, i64 0), i64 9)
+; CHECK-NEXT:    store i32 -1, i32* [[PCMP8]], align 4
 ; CHECK-NEXT:    [[PCMP9:%.*]] = getelementptr i32, i32* [[PCMP]], i64 9
-; CHECK-NEXT:    store i32 [[CMP9]], i32* [[PCMP9]], align 4
+; CHECK-NEXT:    store i32 -1, i32* [[PCMP9]], align 4
 ; CHECK-NEXT:    ret void
 ;
 ; p1 = a.a
@@ -110,18 +102,14 @@ define void @fold_strncmp_Ab_a(i32* %pcmp) {
 ; CHECK-NEXT:    store i32 0, i32* [[PCMP:%.*]], align 4
 ; CHECK-NEXT:    [[PCMP1:%.*]] = getelementptr i32, i32* [[PCMP]], i64 1
 ; CHECK-NEXT:    store i32 0, i32* [[PCMP1]], align 4
-; CHECK-NEXT:    [[CMP2:%.*]] = call i32 @strncmp(i8* noundef nonnull dereferenceable(1) getelementptr inbounds ([[STRUCT_A:%.*]], %struct.A* @a, i64 0, i32 1, i64 3), i8* noundef nonnull dereferenceable(1) getelementptr inbounds ([[STRUCT_A]], %struct.A* @a, i64 0, i32 0, i64 0), i64 2)
 ; CHECK-NEXT:    [[PCMP2:%.*]] = getelementptr i32, i32* [[PCMP]], i64 2
-; CHECK-NEXT:    store i32 [[CMP2]], i32* [[PCMP2]], align 4
-; CHECK-NEXT:    [[CMP3:%.*]] = call i32 @strncmp(i8* noundef nonnull dereferenceable(1) getelementptr inbounds ([[STRUCT_A]], %struct.A* @a, i64 0, i32 1, i64 3), i8* noundef nonnull dereferenceable(1) getelementptr inbounds ([[STRUCT_A]], %struct.A* @a, i64 0, i32 0, i64 0), i64 3)
+; CHECK-NEXT:    store i32 0, i32* [[PCMP2]], align 4
 ; CHECK-NEXT:    [[PCMP3:%.*]] = getelementptr i32, i32* [[PCMP]], i64 3
-; CHECK-NEXT:    store i32 [[CMP3]], i32* [[PCMP3]], align 4
-; CHECK-NEXT:    [[CMP4:%.*]] = call i32 @strncmp(i8* noundef nonnull dereferenceable(1) getelementptr inbounds ([[STRUCT_A]], %struct.A* @a, i64 0, i32 1, i64 3), i8* noundef nonnull dereferenceable(1) getelementptr inbounds ([[STRUCT_A]], %struct.A* @a, i64 0, i32 0, i64 0), i64 4)
+; CHECK-NEXT:    store i32 0, i32* [[PCMP3]], align 4
 ; CHECK-NEXT:    [[PCMP4:%.*]] = getelementptr i32, i32* [[PCMP]], i64 4
-; CHECK-NEXT:    store i32 [[CMP4]], i32* [[PCMP4]], align 4
-; CHECK-NEXT:    [[CMP5:%.*]] = call i32 @strncmp(i8* noundef nonnull dereferenceable(1) getelementptr inbounds ([[STRUCT_A]], %struct.A* @a, i64 0, i32 1, i64 3), i8* noundef nonnull dereferenceable(1) getelementptr inbounds ([[STRUCT_A]], %struct.A* @a, i64 0, i32 0, i64 0), i64 5)
+; CHECK-NEXT:    store i32 1, i32* [[PCMP4]], align 4
 ; CHECK-NEXT:    [[PCMP5:%.*]] = getelementptr i32, i32* [[PCMP]], i64 5
-; CHECK-NEXT:    store i32 [[CMP5]], i32* [[PCMP5]], align 4
+; CHECK-NEXT:    store i32 1, i32* [[PCMP5]], align 4
 ; CHECK-NEXT:    ret void
 ;
 ; p1 = &a.b[3]
