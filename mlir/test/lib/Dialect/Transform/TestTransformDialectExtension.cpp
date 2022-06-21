@@ -226,6 +226,11 @@ DiagnosedSilenceableFailure mlir::test::TestEmitRemarkAndEraseOperandOp::apply(
   return DiagnosedSilenceableFailure::success();
 }
 
+FailureOr<SmallVector<Operation *>>
+mlir::test::TestWrongNumberOfResultsOp::applyToOne(Operation *) {
+  return SmallVector<Operation *>{};
+}
+
 namespace {
 /// Test extension of the Transform dialect. Registers additional ops and
 /// declares PDL as dependent dialect since the additional ops are using PDL

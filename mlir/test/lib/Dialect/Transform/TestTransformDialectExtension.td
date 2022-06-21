@@ -128,4 +128,20 @@ def TestEmitRemarkAndEraseOperandOp
   let cppNamespace = "::mlir::test";
 }
 
+def TestWrongNumberOfResultsOp
+  : Op<Transform_Dialect, "test_wrong_number_of_results",
+    [FunctionalStyleTransformOpTrait, MemoryEffectsOpInterface, 
+     TransformEachOpTrait, TransformOpInterface]> {
+  let arguments = (ins PDL_Operation:$target);
+  let results = (outs PDL_Operation:$a,
+                      PDL_Operation:$b,
+                      PDL_Operation:$c);
+  let assemblyFormat = "$target attr-dict";
+  let cppNamespace = "::mlir::test";
+  let extraClassDeclaration = [{
+    ::mlir::FailureOr<::llvm::SmallVector<::mlir::Operation *>> applyToOne(
+        ::mlir::Operation *target);
+  }];
+}
+
 #endif // MLIR_TESTTRANSFORMDIALECTEXTENSION_TD

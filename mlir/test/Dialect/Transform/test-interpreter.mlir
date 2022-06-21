@@ -378,3 +378,10 @@ transform.with_pdl_patterns {
     }
   }
 }
+// -----
+
+transform.sequence {
+^bb0(%arg0: !pdl.operation):
+  // expected-error @below {{unexpected number of results (got 0 expected 3)}}
+  transform.test_wrong_number_of_results %arg0
+}

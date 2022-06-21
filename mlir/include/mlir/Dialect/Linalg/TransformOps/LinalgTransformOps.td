@@ -153,6 +153,75 @@ def ScalarizeOp : Op<Transform_Dialect, "structured.scalarize",
   }];
 }
 
+def SplitReductionOp : Op<Transform_Dialect, "structured.split_reduction",
+       [FunctionalStyleTransformOpTrait, MemoryEffectsOpInterface,
+        TransformEachOpTrait, TransformOpInterface]> {
+  let description = [{
+    Indicates that the given `target` op should be transformed with the 
+    `splitReduction` transformation and split factor provided as attribute.
+
+    The `splitReduction` transformation splits the first single linalg op 
+    reduction into a parallel and reduction dimension. 
+    A new `linalg.generic` op is created to perform the rest of the reduction. 
+    
+    Example:
+    
+    ```
+      %r = linalg.generic {indexing_maps = [affine_map<(d0) -> (d0)>,
+                                            affine_map<(d0) -> ()>],
+            iterator_types = ["reduction"]}
+      ins(%in : tensor<32xf32>)
+      outs(%out : tensor<f32>) {
+      ^bb0(%arg1: f32, %arg2: f32):
+        %y = arith.addf %arg1, %arg2 : f32
+        linalg.yield %y : f32
+      } -> tensor<f32>
+    ```
+    
+    To:
+    
+    ```
+      %cst = arith.constant 0.000000e+00 : f32
+      %0 = tensor.expand_shape %in [[0, 1]] : tensor<32xf32> into tensor<4x8xf32>
+      %1 = linalg.init_tensor [4] : tensor<4xf32>
+      %2 = linalg.fill ins(%cst : f32) outs(%1 : tensor<4xf32>) -> tensor<4xf32>
+      %3 = linalg.generic {indexing_maps = [affine_map<(d0, d1) -> (d0, d1)>,
+                                            affine_map<(d0, d1) -> (d0)>],
+        iterator_types = ["parallel", "reduction"]}
+        ins(%0 : tensor<4x8xf32>) outs(%2 : tensor<4xf32>) {
+        ^bb0(%arg3: f32, %arg5: f32):
+        %5 = arith.addf %arg3, %arg4 : f32
+        linalg.yield %5 : f32
+      } -> tensor<4xf32>
+      %r = linalg.generic {indexing_maps = [affine_map<(d0) -> (d0)>,
+                                            affine_map<(d0) -> ()>],
+        iterator_types = ["reduction"]}
+        ins(%3 : tensor<4xf32>) outs(%out : tensor<f32>) {
+        ^bb0(%arg3: f32, %arg4: f32):
+        %5 = arith.addf %arg3, %arg4 : f32
+        linalg.yield %5 : f32
+      } -> tensor<f32>
+    ```
+
+    This op returns handles to the fill op used to initialize the neutral 
+    element, the split op and the result-combining op.
+  }];
+
+  let arguments = (ins PDL_Operation:$target,
+                   DefaultValuedAttr<I64Attr, "{}">:$split_factor,
+                   DefaultValuedAttr<I64Attr, "{}">:$insert_split_dimension);
+  let results = (outs PDL_Operation:$fill_op,
+                      PDL_Operation:$split_linalg_op,
+                      PDL_Operation:$combining_linalg_op);
+
+  let assemblyFormat = "$target attr-dict";
+
+  let extraClassDeclaration = [{
+    ::mlir::FailureOr<::llvm::SmallVector<::mlir::Operation *>> applyToOne(
+        ::mlir::linalg::LinalgOp target);
+  }];
+}
+
 def TileOp : Op<Transform_Dialect, "structured.tile",
        [DeclareOpInterfaceMethods<TransformOpInterface>,
         FunctionalStyleTransformOpTrait, MemoryEffectsOpInterface]> {

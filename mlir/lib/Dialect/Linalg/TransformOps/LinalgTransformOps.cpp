@@ -395,6 +395,27 @@ FailureOr<LinalgOp> transform::ScalarizeOp::applyToOne(LinalgOp target) {
 }
 
 //===----------------------------------------------------------------------===//
+// SplitReductionOp
+//===----------------------------------------------------------------------===//
+
+FailureOr<SmallVector<Operation *>>
+transform::SplitReductionOp::applyToOne(LinalgOp target) {
+  ControlSplitReductionFn splitFn = [&](LinalgOp) {
+    return std::pair<int64_t, unsigned>(getSplitFactor(),
+                                        getInsertSplitDimension());
+  };
+  SimpleRewriter rewriter(getContext());
+  rewriter.setInsertionPoint(target);
+  FailureOr<SplitReductionResult> splitResult =
+      splitReduction(rewriter, target, splitFn);
+  if (failed(splitResult))
+    return getOperation()->emitError("failed to apply");
+  return SmallVector<Operation *>{splitResult->fillOp,
+                                  splitResult->splitLinalgOp,
+                                  splitResult->resultCombiningLinalgOp};
+}
+
+//===----------------------------------------------------------------------===//
 // TileOp
 //===----------------------------------------------------------------------===//
 
