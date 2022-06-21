@@ -5341,6 +5341,39 @@ bool X86TTIImpl::isLegalMaskedGather(Type *DataTy, Align Alignment) {
   return IntWidth == 32 || IntWidth == 64;
 }
 
+bool X86TTIImpl::isLegalAltInstr(VectorType *VecTy, unsigned Opcode0,
+                                 unsigned Opcode1,
+                                 const SmallBitVector &OpcodeMask) const {
+  // ADDSUBPS  4xf32 SSE3
+  // VADDSUBPS 4xf32 AVX
+  // VADDSUBPS 8xf32 AVX2
+  // ADDSUBPD  2xf64 SSE3
+  // VADDSUBPD 2xf64 AVX
+  // VADDSUBPD 4xf64 AVX2
+
+  unsigned NumElements = cast<FixedVectorType>(VecTy)->getNumElements();
+  assert(OpcodeMask.size() == NumElements && "Mask and VecTy are incompatible");
+  if (!isPowerOf2_32(NumElements))
+    return false;
+  // Check the opcode pattern. We apply the mask on the opcode arguments and
+  // then check if it is what we expect.
+  for (int Lane : seq<int>(0, NumElements)) {
+    unsigned Opc = OpcodeMask.test(Lane) ? Opcode1 : Opcode0;
+    // We expect FSub for even lanes and FAdd for odd lanes.
+    if (Lane % 2 == 0 && Opc != Instruction::FSub)
+      return false;
+    if (Lane % 2 == 1 && Opc != Instruction::FAdd)
+      return false;
+  }
+  // Now check that the pattern is supported by the target ISA.
+  Type *ElemTy = cast<VectorType>(VecTy)->getElementType();
+  if (ElemTy->isFloatTy())
+    return ST->hasSSE3() && NumElements % 4 == 0;
+  if (ElemTy->isDoubleTy())
+    return ST->hasSSE3() && NumElements % 2 == 0;
+  return false;
+}
+
 bool X86TTIImpl::isLegalMaskedScatter(Type *DataType, Align Alignment) {
   // AVX2 doesn't support scatter
   if (!ST->hasAVX512())

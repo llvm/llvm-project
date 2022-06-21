@@ -36,6 +36,17 @@ define <vscale x 16 x i8> @saba_b_promoted_ops(<vscale x 16 x i8> %a, <vscale x 
   ret <vscale x 16 x i8> %add
 }
 
+define <vscale x 16 x i8> @saba_b_from_sabd(<vscale x 16 x i8> %a, <vscale x 16 x i8> %b, <vscale x 16 x i8> %c) #0 {
+; CHECK-LABEL: saba_b_from_sabd:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    saba z0.b, z1.b, z2.b
+; CHECK-NEXT:    ret
+  %1 = call <vscale x 16 x i1> @llvm.aarch64.sve.ptrue.nxv16i1(i32 31)
+  %2 = call <vscale x 16 x i8> @llvm.aarch64.sve.sabd.nxv16i8(<vscale x 16 x i1> %1, <vscale x 16 x i8> %b, <vscale x 16 x i8> %c)
+  %3 = add <vscale x 16 x i8> %2, %a
+  ret <vscale x 16 x i8> %3
+}
+
 define <vscale x 8 x i16> @saba_h(<vscale x 8 x i16> %a, <vscale x 8 x i16> %b, <vscale x 8 x i16> %c) #0 {
 ; CHECK-LABEL: saba_h:
 ; CHECK:       // %bb.0:
@@ -64,6 +75,17 @@ define <vscale x 8 x i16> @saba_h_promoted_ops(<vscale x 8 x i16> %a, <vscale x 
   %abs = call <vscale x 8 x i16> @llvm.abs.nxv8i16(<vscale x 8 x i16> %sub, i1 true)
   %add = add <vscale x 8 x i16> %a, %abs
   ret <vscale x 8 x i16> %add
+}
+
+define <vscale x 8 x i16> @saba_h_from_sabd(<vscale x 8 x i16> %a, <vscale x 8 x i16> %b, <vscale x 8 x i16> %c) #0 {
+; CHECK-LABEL: saba_h_from_sabd:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    saba z0.h, z1.h, z2.h
+; CHECK-NEXT:    ret
+  %1 = call <vscale x 8 x i1> @llvm.aarch64.sve.ptrue.nxv8i1(i32 31)
+  %2 = call <vscale x 8 x i16> @llvm.aarch64.sve.sabd.nxv8i16(<vscale x 8 x i1> %1, <vscale x 8 x i16> %b, <vscale x 8 x i16> %c)
+  %3 = add <vscale x 8 x i16> %2, %a
+  ret <vscale x 8 x i16> %3
 }
 
 define <vscale x 4 x i32> @saba_s(<vscale x 4 x i32> %a, <vscale x 4 x i32> %b, <vscale x 4 x i32> %c) #0 {
@@ -96,6 +118,17 @@ define <vscale x 4 x i32> @saba_s_promoted_ops(<vscale x 4 x i32> %a, <vscale x 
   ret <vscale x 4 x i32> %add
 }
 
+define <vscale x 4 x i32> @saba_s_from_sabd(<vscale x 4 x i32> %a, <vscale x 4 x i32> %b, <vscale x 4 x i32> %c) #0 {
+; CHECK-LABEL: saba_s_from_sabd:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    saba z0.s, z1.s, z2.s
+; CHECK-NEXT:    ret
+  %1 = call <vscale x 4 x i1> @llvm.aarch64.sve.ptrue.nxv4i1(i32 31)
+  %2 = call <vscale x 4 x i32> @llvm.aarch64.sve.sabd.nxv4i32(<vscale x 4 x i1> %1, <vscale x 4 x i32> %b, <vscale x 4 x i32> %c)
+  %3 = add <vscale x 4 x i32> %2, %a
+  ret <vscale x 4 x i32> %3
+}
+
 define <vscale x 2 x i64> @saba_d(<vscale x 2 x i64> %a, <vscale x 2 x i64> %b, <vscale x 2 x i64> %c) #0 {
 ; CHECK-LABEL: saba_d:
 ; CHECK:       // %bb.0:
@@ -124,6 +157,17 @@ define <vscale x 2 x i64> @saba_d_promoted_ops(<vscale x 2 x i64> %a, <vscale x 
   %abs = call <vscale x 2 x i64> @llvm.abs.nxv2i64(<vscale x 2 x i64> %sub, i1 true)
   %add = add <vscale x 2 x i64> %a, %abs
   ret <vscale x 2 x i64> %add
+}
+
+define <vscale x 2 x i64> @saba_d_from_sabd(<vscale x 2 x i64> %a, <vscale x 2 x i64> %b, <vscale x 2 x i64> %c) #0 {
+; CHECK-LABEL: saba_d_from_sabd:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    saba z0.d, z1.d, z2.d
+; CHECK-NEXT:    ret
+  %1 = call <vscale x 2 x i1> @llvm.aarch64.sve.ptrue.nxv2i1(i32 31)
+  %2 = call <vscale x 2 x i64> @llvm.aarch64.sve.sabd.nxv2i64(<vscale x 2 x i1> %1, <vscale x 2 x i64> %b, <vscale x 2 x i64> %c)
+  %3 = add <vscale x 2 x i64> %2, %a
+  ret <vscale x 2 x i64> %3
 }
 
 ;
@@ -159,6 +203,17 @@ define <vscale x 16 x i8> @uaba_b_promoted_ops(<vscale x 16 x i8> %a, <vscale x 
   ret <vscale x 16 x i8> %add
 }
 
+define <vscale x 16 x i8> @uaba_b_from_uabd(<vscale x 16 x i8> %a, <vscale x 16 x i8> %b, <vscale x 16 x i8> %c) #0 {
+; CHECK-LABEL: uaba_b_from_uabd:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    uaba z0.b, z1.b, z2.b
+; CHECK-NEXT:    ret
+  %1 = call <vscale x 16 x i1> @llvm.aarch64.sve.ptrue.nxv16i1(i32 31)
+  %2 = call <vscale x 16 x i8> @llvm.aarch64.sve.uabd.nxv16i8(<vscale x 16 x i1> %1, <vscale x 16 x i8> %b, <vscale x 16 x i8> %c)
+  %3 = add <vscale x 16 x i8> %2, %a
+  ret <vscale x 16 x i8> %3
+}
+
 define <vscale x 8 x i16> @uaba_h(<vscale x 8 x i16> %a, <vscale x 8 x i16> %b, <vscale x 8 x i16> %c) #0 {
 ; CHECK-LABEL: uaba_h:
 ; CHECK:       // %bb.0:
@@ -186,6 +241,17 @@ define <vscale x 8 x i16> @uaba_h_promoted_ops(<vscale x 8 x i16> %a, <vscale x 
   %abs = call <vscale x 8 x i16> @llvm.abs.nxv8i16(<vscale x 8 x i16> %sub, i1 true)
   %add = add <vscale x 8 x i16> %a, %abs
   ret <vscale x 8 x i16> %add
+}
+
+define <vscale x 8 x i16> @uaba_h_from_uabd(<vscale x 8 x i16> %a, <vscale x 8 x i16> %b, <vscale x 8 x i16> %c) #0 {
+; CHECK-LABEL: uaba_h_from_uabd:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    uaba z0.h, z1.h, z2.h
+; CHECK-NEXT:    ret
+  %1 = call <vscale x 8 x i1> @llvm.aarch64.sve.ptrue.nxv8i1(i32 31)
+  %2 = call <vscale x 8 x i16> @llvm.aarch64.sve.uabd.nxv8i16(<vscale x 8 x i1> %1, <vscale x 8 x i16> %b, <vscale x 8 x i16> %c)
+  %3 = add <vscale x 8 x i16> %2, %a
+  ret <vscale x 8 x i16> %3
 }
 
 define <vscale x 4 x i32> @uaba_s(<vscale x 4 x i32> %a, <vscale x 4 x i32> %b, <vscale x 4 x i32> %c) #0 {
@@ -217,6 +283,17 @@ define <vscale x 4 x i32> @uaba_s_promoted_ops(<vscale x 4 x i32> %a, <vscale x 
   ret <vscale x 4 x i32> %add
 }
 
+define <vscale x 4 x i32> @uaba_s_from_uabd(<vscale x 4 x i32> %a, <vscale x 4 x i32> %b, <vscale x 4 x i32> %c) #0 {
+; CHECK-LABEL: uaba_s_from_uabd:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    uaba z0.s, z1.s, z2.s
+; CHECK-NEXT:    ret
+  %1 = call <vscale x 4 x i1> @llvm.aarch64.sve.ptrue.nxv4i1(i32 31)
+  %2 = call <vscale x 4 x i32> @llvm.aarch64.sve.uabd.nxv4i32(<vscale x 4 x i1> %1, <vscale x 4 x i32> %b, <vscale x 4 x i32> %c)
+  %3 = add <vscale x 4 x i32> %2, %a
+  ret <vscale x 4 x i32> %3
+}
+
 define <vscale x 2 x i64> @uaba_d(<vscale x 2 x i64> %a, <vscale x 2 x i64> %b, <vscale x 2 x i64> %c) #0 {
 ; CHECK-LABEL: uaba_d:
 ; CHECK:       // %bb.0:
@@ -246,6 +323,17 @@ define <vscale x 2 x i64> @uaba_d_promoted_ops(<vscale x 2 x i64> %a, <vscale x 
   ret <vscale x 2 x i64> %add
 }
 
+define <vscale x 2 x i64> @uaba_d_from_uabd(<vscale x 2 x i64> %a, <vscale x 2 x i64> %b, <vscale x 2 x i64> %c) #0 {
+; CHECK-LABEL: uaba_d_from_uabd:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    uaba z0.d, z1.d, z2.d
+; CHECK-NEXT:    ret
+  %1 = call <vscale x 2 x i1> @llvm.aarch64.sve.ptrue.nxv2i1(i32 31)
+  %2 = call <vscale x 2 x i64> @llvm.aarch64.sve.uabd.nxv2i64(<vscale x 2 x i1> %1, <vscale x 2 x i64> %b, <vscale x 2 x i64> %c)
+  %3 = add <vscale x 2 x i64> %2, %a
+  ret <vscale x 2 x i64> %3
+}
+
 ; A variant of uaba_s but with the add operands switched.
 define <vscale x 4 x i32> @uaba_s_commutative(<vscale x 4 x i32> %a, <vscale x 4 x i32> %b, <vscale x 4 x i32> %c) #0 {
 ; CHECK-LABEL: uaba_s_commutative:
@@ -262,16 +350,27 @@ define <vscale x 4 x i32> @uaba_s_commutative(<vscale x 4 x i32> %a, <vscale x 4
 }
 
 declare <vscale x 16 x i8> @llvm.abs.nxv16i8(<vscale x 16 x i8>, i1)
-
 declare <vscale x 8 x i16> @llvm.abs.nxv8i16(<vscale x 8 x i16>, i1)
 declare <vscale x 16 x i16> @llvm.abs.nxv16i16(<vscale x 16 x i16>, i1)
-
 declare <vscale x 4 x i32> @llvm.abs.nxv4i32(<vscale x 4 x i32>, i1)
 declare <vscale x 8 x i32> @llvm.abs.nxv8i32(<vscale x 8 x i32>, i1)
-
 declare <vscale x 2 x i64> @llvm.abs.nxv2i64(<vscale x 2 x i64>, i1)
 declare <vscale x 4 x i64> @llvm.abs.nxv4i64(<vscale x 4 x i64>, i1)
-
 declare <vscale x 2 x i128> @llvm.abs.nxv2i128(<vscale x 2 x i128>, i1)
+
+declare <vscale x 2 x i1> @llvm.aarch64.sve.ptrue.nxv2i1(i32)
+declare <vscale x 4 x i1> @llvm.aarch64.sve.ptrue.nxv4i1(i32)
+declare <vscale x 8 x i1> @llvm.aarch64.sve.ptrue.nxv8i1(i32)
+declare <vscale x 16 x i1> @llvm.aarch64.sve.ptrue.nxv16i1(i32)
+
+declare <vscale x 16 x i8> @llvm.aarch64.sve.sabd.nxv16i8(<vscale x 16 x i1>, <vscale x 16 x i8>, <vscale x 16 x i8>)
+declare <vscale x 8 x i16> @llvm.aarch64.sve.sabd.nxv8i16(<vscale x 8 x i1>, <vscale x 8 x i16>, <vscale x 8 x i16>)
+declare <vscale x 4 x i32> @llvm.aarch64.sve.sabd.nxv4i32(<vscale x 4 x i1>, <vscale x 4 x i32>, <vscale x 4 x i32>)
+declare <vscale x 2 x i64> @llvm.aarch64.sve.sabd.nxv2i64(<vscale x 2 x i1>, <vscale x 2 x i64>, <vscale x 2 x i64>)
+
+declare <vscale x 16 x i8> @llvm.aarch64.sve.uabd.nxv16i8(<vscale x 16 x i1>, <vscale x 16 x i8>, <vscale x 16 x i8>)
+declare <vscale x 8 x i16> @llvm.aarch64.sve.uabd.nxv8i16(<vscale x 8 x i1>, <vscale x 8 x i16>, <vscale x 8 x i16>)
+declare <vscale x 4 x i32> @llvm.aarch64.sve.uabd.nxv4i32(<vscale x 4 x i1>, <vscale x 4 x i32>, <vscale x 4 x i32>)
+declare <vscale x 2 x i64> @llvm.aarch64.sve.uabd.nxv2i64(<vscale x 2 x i1>, <vscale x 2 x i64>, <vscale x 2 x i64>)
 
 attributes #0 = { "target-features"="+neon,+sve,+sve2" }
