@@ -36732,6 +36732,28 @@ void X86TargetLowering::computeKnownBitsForTargetNode(const SDValue Op,
       Known.setAllZero();
     break;
   }
+  case X86ISD::VBROADCAST_LOAD: {
+    APInt UndefElts;
+    SmallVector<APInt, 16> EltBits;
+    if (getTargetConstantBitsFromNode(Op, BitWidth, UndefElts, EltBits,
+                                      /*AllowWholeUndefs*/ false,
+                                      /*AllowPartialUndefs*/ false)) {
+      Known.Zero.setAllBits();
+      Known.One.setAllBits();
+      for (unsigned I = 0; I != NumElts; ++I) {
+        if (!DemandedElts[I])
+          continue;
+        if (UndefElts[I]) {
+          Known.resetAll();
+          break;
+        }
+        KnownBits Known2 = KnownBits::makeConstant(EltBits[I]);
+        Known = KnownBits::commonBits(Known, Known2);
+      }
+      return;
+    }
+    break;
+  }
   }
 
   // Handle target shuffles.
