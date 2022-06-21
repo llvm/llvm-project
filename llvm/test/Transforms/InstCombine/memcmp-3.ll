@@ -8,69 +8,55 @@ declare i32 @memcmp(i8*, i8*, i64)
 
 ; BE representation: { 'a', 'b', 'c', ..., 'f', 'g', 'h' }
 ; LE representation: { 'b', 'a', 'd', ..., 'e', 'h', 'g' }
-@ia6a = constant [4 x i16] [i16 24930, i16 25444, i16 25958, i16 26472]
+@ia16a = constant [4 x i16] [i16 24930, i16 25444, i16 25958, i16 26472]
 
 ; Same as the BE representation above except ending in "gg".
 @i8a = constant [8 x i8] c"abcdefgg"
 
-; Fold memcmp(ia6a, i8a, N) for N in [0, 8].
+; Fold memcmp(ia16a, i8a, N) for N in [0, 8].
 
-define void @fold_memcmp_ia6a_i8a(i32* %pcmp) {
-; BE-LABEL: @fold_memcmp_ia6a_i8a(
+define void @fold_memcmp_ia16a_i8a(i32* %pcmp) {
+; BE-LABEL: @fold_memcmp_ia16a_i8a(
 ; BE-NEXT:    store i32 0, i32* [[PCMP:%.*]], align 4
 ; BE-NEXT:    [[PSTOR1:%.*]] = getelementptr i32, i32* [[PCMP]], i64 1
 ; BE-NEXT:    store i32 0, i32* [[PSTOR1]], align 4
-; BE-NEXT:    [[CMP2:%.*]] = call i32 @memcmp(i8* noundef nonnull dereferenceable(2) bitcast ([4 x i16]* @ia6a to i8*), i8* noundef nonnull dereferenceable(2) getelementptr inbounds ([8 x i8], [8 x i8]* @i8a, i64 0, i64 0), i64 2)
 ; BE-NEXT:    [[PSTOR2:%.*]] = getelementptr i32, i32* [[PCMP]], i64 2
-; BE-NEXT:    store i32 [[CMP2]], i32* [[PSTOR2]], align 4
-; BE-NEXT:    [[CMP3:%.*]] = call i32 @memcmp(i8* noundef nonnull dereferenceable(3) bitcast ([4 x i16]* @ia6a to i8*), i8* noundef nonnull dereferenceable(3) getelementptr inbounds ([8 x i8], [8 x i8]* @i8a, i64 0, i64 0), i64 3)
+; BE-NEXT:    store i32 0, i32* [[PSTOR2]], align 4
 ; BE-NEXT:    [[PSTOR3:%.*]] = getelementptr i32, i32* [[PCMP]], i64 3
-; BE-NEXT:    store i32 [[CMP3]], i32* [[PSTOR3]], align 4
-; BE-NEXT:    [[CMP4:%.*]] = call i32 @memcmp(i8* noundef nonnull dereferenceable(4) bitcast ([4 x i16]* @ia6a to i8*), i8* noundef nonnull dereferenceable(4) getelementptr inbounds ([8 x i8], [8 x i8]* @i8a, i64 0, i64 0), i64 4)
+; BE-NEXT:    store i32 0, i32* [[PSTOR3]], align 4
 ; BE-NEXT:    [[PSTOR4:%.*]] = getelementptr i32, i32* [[PCMP]], i64 4
-; BE-NEXT:    store i32 [[CMP4]], i32* [[PSTOR4]], align 4
-; BE-NEXT:    [[CMP5:%.*]] = call i32 @memcmp(i8* noundef nonnull dereferenceable(5) bitcast ([4 x i16]* @ia6a to i8*), i8* noundef nonnull dereferenceable(5) getelementptr inbounds ([8 x i8], [8 x i8]* @i8a, i64 0, i64 0), i64 5)
+; BE-NEXT:    store i32 0, i32* [[PSTOR4]], align 4
 ; BE-NEXT:    [[PSTOR5:%.*]] = getelementptr i32, i32* [[PCMP]], i64 5
-; BE-NEXT:    store i32 [[CMP5]], i32* [[PSTOR5]], align 4
-; BE-NEXT:    [[CMP6:%.*]] = call i32 @memcmp(i8* noundef nonnull dereferenceable(6) bitcast ([4 x i16]* @ia6a to i8*), i8* noundef nonnull dereferenceable(6) getelementptr inbounds ([8 x i8], [8 x i8]* @i8a, i64 0, i64 0), i64 6)
+; BE-NEXT:    store i32 0, i32* [[PSTOR5]], align 4
 ; BE-NEXT:    [[PSTOR6:%.*]] = getelementptr i32, i32* [[PCMP]], i64 6
-; BE-NEXT:    store i32 [[CMP6]], i32* [[PSTOR6]], align 4
-; BE-NEXT:    [[CMP7:%.*]] = call i32 @memcmp(i8* noundef nonnull dereferenceable(7) bitcast ([4 x i16]* @ia6a to i8*), i8* noundef nonnull dereferenceable(7) getelementptr inbounds ([8 x i8], [8 x i8]* @i8a, i64 0, i64 0), i64 7)
+; BE-NEXT:    store i32 0, i32* [[PSTOR6]], align 4
 ; BE-NEXT:    [[PSTOR7:%.*]] = getelementptr i32, i32* [[PCMP]], i64 7
-; BE-NEXT:    store i32 [[CMP7]], i32* [[PSTOR7]], align 4
-; BE-NEXT:    [[CMP8:%.*]] = call i32 @memcmp(i8* noundef nonnull dereferenceable(8) bitcast ([4 x i16]* @ia6a to i8*), i8* noundef nonnull dereferenceable(8) getelementptr inbounds ([8 x i8], [8 x i8]* @i8a, i64 0, i64 0), i64 8)
+; BE-NEXT:    store i32 0, i32* [[PSTOR7]], align 4
 ; BE-NEXT:    [[PSTOR8:%.*]] = getelementptr i32, i32* [[PCMP]], i64 8
-; BE-NEXT:    store i32 [[CMP8]], i32* [[PSTOR8]], align 4
+; BE-NEXT:    store i32 1, i32* [[PSTOR8]], align 4
 ; BE-NEXT:    ret void
 ;
-; LE-LABEL: @fold_memcmp_ia6a_i8a(
+; LE-LABEL: @fold_memcmp_ia16a_i8a(
 ; LE-NEXT:    store i32 0, i32* [[PCMP:%.*]], align 4
 ; LE-NEXT:    [[PSTOR1:%.*]] = getelementptr i32, i32* [[PCMP]], i64 1
 ; LE-NEXT:    store i32 1, i32* [[PSTOR1]], align 4
-; LE-NEXT:    [[CMP2:%.*]] = call i32 @memcmp(i8* noundef nonnull dereferenceable(2) bitcast ([4 x i16]* @ia6a to i8*), i8* noundef nonnull dereferenceable(2) getelementptr inbounds ([8 x i8], [8 x i8]* @i8a, i64 0, i64 0), i64 2)
 ; LE-NEXT:    [[PSTOR2:%.*]] = getelementptr i32, i32* [[PCMP]], i64 2
-; LE-NEXT:    store i32 [[CMP2]], i32* [[PSTOR2]], align 4
-; LE-NEXT:    [[CMP3:%.*]] = call i32 @memcmp(i8* noundef nonnull dereferenceable(3) bitcast ([4 x i16]* @ia6a to i8*), i8* noundef nonnull dereferenceable(3) getelementptr inbounds ([8 x i8], [8 x i8]* @i8a, i64 0, i64 0), i64 3)
+; LE-NEXT:    store i32 1, i32* [[PSTOR2]], align 4
 ; LE-NEXT:    [[PSTOR3:%.*]] = getelementptr i32, i32* [[PCMP]], i64 3
-; LE-NEXT:    store i32 [[CMP3]], i32* [[PSTOR3]], align 4
-; LE-NEXT:    [[CMP4:%.*]] = call i32 @memcmp(i8* noundef nonnull dereferenceable(4) bitcast ([4 x i16]* @ia6a to i8*), i8* noundef nonnull dereferenceable(4) getelementptr inbounds ([8 x i8], [8 x i8]* @i8a, i64 0, i64 0), i64 4)
+; LE-NEXT:    store i32 1, i32* [[PSTOR3]], align 4
 ; LE-NEXT:    [[PSTOR4:%.*]] = getelementptr i32, i32* [[PCMP]], i64 4
-; LE-NEXT:    store i32 [[CMP4]], i32* [[PSTOR4]], align 4
-; LE-NEXT:    [[CMP5:%.*]] = call i32 @memcmp(i8* noundef nonnull dereferenceable(5) bitcast ([4 x i16]* @ia6a to i8*), i8* noundef nonnull dereferenceable(5) getelementptr inbounds ([8 x i8], [8 x i8]* @i8a, i64 0, i64 0), i64 5)
+; LE-NEXT:    store i32 1, i32* [[PSTOR4]], align 4
 ; LE-NEXT:    [[PSTOR5:%.*]] = getelementptr i32, i32* [[PCMP]], i64 5
-; LE-NEXT:    store i32 [[CMP5]], i32* [[PSTOR5]], align 4
-; LE-NEXT:    [[CMP6:%.*]] = call i32 @memcmp(i8* noundef nonnull dereferenceable(6) bitcast ([4 x i16]* @ia6a to i8*), i8* noundef nonnull dereferenceable(6) getelementptr inbounds ([8 x i8], [8 x i8]* @i8a, i64 0, i64 0), i64 6)
+; LE-NEXT:    store i32 1, i32* [[PSTOR5]], align 4
 ; LE-NEXT:    [[PSTOR6:%.*]] = getelementptr i32, i32* [[PCMP]], i64 6
-; LE-NEXT:    store i32 [[CMP6]], i32* [[PSTOR6]], align 4
-; LE-NEXT:    [[CMP7:%.*]] = call i32 @memcmp(i8* noundef nonnull dereferenceable(7) bitcast ([4 x i16]* @ia6a to i8*), i8* noundef nonnull dereferenceable(7) getelementptr inbounds ([8 x i8], [8 x i8]* @i8a, i64 0, i64 0), i64 7)
+; LE-NEXT:    store i32 1, i32* [[PSTOR6]], align 4
 ; LE-NEXT:    [[PSTOR7:%.*]] = getelementptr i32, i32* [[PCMP]], i64 7
-; LE-NEXT:    store i32 [[CMP7]], i32* [[PSTOR7]], align 4
-; LE-NEXT:    [[CMP8:%.*]] = call i32 @memcmp(i8* noundef nonnull dereferenceable(8) bitcast ([4 x i16]* @ia6a to i8*), i8* noundef nonnull dereferenceable(8) getelementptr inbounds ([8 x i8], [8 x i8]* @i8a, i64 0, i64 0), i64 8)
+; LE-NEXT:    store i32 1, i32* [[PSTOR7]], align 4
 ; LE-NEXT:    [[PSTOR8:%.*]] = getelementptr i32, i32* [[PCMP]], i64 8
-; LE-NEXT:    store i32 [[CMP8]], i32* [[PSTOR8]], align 4
+; LE-NEXT:    store i32 1, i32* [[PSTOR8]], align 4
 ; LE-NEXT:    ret void
 ;
-  %p0 = getelementptr [4 x i16], [4 x i16]* @ia6a, i64 0, i64 0
+  %p0 = getelementptr [4 x i16], [4 x i16]* @ia16a, i64 0, i64 0
   %p1 = bitcast i16* %p0 to i8*
   %q = getelementptr [8 x i8], [8 x i8]* @i8a, i64 0, i64 0
 
@@ -114,52 +100,42 @@ define void @fold_memcmp_ia6a_i8a(i32* %pcmp) {
 }
 
 
-; Fold memcmp(ia6a + 1, i8a + 2, N) for N in [0, 6].
+; Fold memcmp(ia16a + 1, i8a + 2, N) for N in [0, 6].
 
-define void @fold_memcmp_ia6a_p1_i8a_p1(i32* %pcmp) {
-; BE-LABEL: @fold_memcmp_ia6a_p1_i8a_p1(
+define void @fold_memcmp_ia16a_p1_i8a_p1(i32* %pcmp) {
+; BE-LABEL: @fold_memcmp_ia16a_p1_i8a_p1(
 ; BE-NEXT:    store i32 0, i32* [[PCMP:%.*]], align 4
 ; BE-NEXT:    [[PSTOR1:%.*]] = getelementptr i32, i32* [[PCMP]], i64 1
 ; BE-NEXT:    store i32 1, i32* [[PSTOR1]], align 4
-; BE-NEXT:    [[CMP2:%.*]] = call i32 @memcmp(i8* noundef nonnull dereferenceable(2) bitcast (i16* getelementptr inbounds ([4 x i16], [4 x i16]* @ia6a, i64 0, i64 1) to i8*), i8* noundef nonnull dereferenceable(2) getelementptr inbounds ([8 x i8], [8 x i8]* @i8a, i64 0, i64 1), i64 2)
 ; BE-NEXT:    [[PSTOR2:%.*]] = getelementptr i32, i32* [[PCMP]], i64 2
-; BE-NEXT:    store i32 [[CMP2]], i32* [[PSTOR2]], align 4
-; BE-NEXT:    [[CMP3:%.*]] = call i32 @memcmp(i8* noundef nonnull dereferenceable(3) bitcast (i16* getelementptr inbounds ([4 x i16], [4 x i16]* @ia6a, i64 0, i64 1) to i8*), i8* noundef nonnull dereferenceable(3) getelementptr inbounds ([8 x i8], [8 x i8]* @i8a, i64 0, i64 1), i64 3)
+; BE-NEXT:    store i32 1, i32* [[PSTOR2]], align 4
 ; BE-NEXT:    [[PSTOR3:%.*]] = getelementptr i32, i32* [[PCMP]], i64 3
-; BE-NEXT:    store i32 [[CMP3]], i32* [[PSTOR3]], align 4
-; BE-NEXT:    [[CMP4:%.*]] = call i32 @memcmp(i8* noundef nonnull dereferenceable(4) bitcast (i16* getelementptr inbounds ([4 x i16], [4 x i16]* @ia6a, i64 0, i64 1) to i8*), i8* noundef nonnull dereferenceable(4) getelementptr inbounds ([8 x i8], [8 x i8]* @i8a, i64 0, i64 1), i64 4)
+; BE-NEXT:    store i32 1, i32* [[PSTOR3]], align 4
 ; BE-NEXT:    [[PSTOR4:%.*]] = getelementptr i32, i32* [[PCMP]], i64 4
-; BE-NEXT:    store i32 [[CMP4]], i32* [[PSTOR4]], align 4
-; BE-NEXT:    [[CMP5:%.*]] = call i32 @memcmp(i8* noundef nonnull dereferenceable(5) bitcast (i16* getelementptr inbounds ([4 x i16], [4 x i16]* @ia6a, i64 0, i64 1) to i8*), i8* noundef nonnull dereferenceable(5) getelementptr inbounds ([8 x i8], [8 x i8]* @i8a, i64 0, i64 1), i64 5)
+; BE-NEXT:    store i32 1, i32* [[PSTOR4]], align 4
 ; BE-NEXT:    [[PSTOR5:%.*]] = getelementptr i32, i32* [[PCMP]], i64 5
-; BE-NEXT:    store i32 [[CMP5]], i32* [[PSTOR5]], align 4
-; BE-NEXT:    [[CMP6:%.*]] = call i32 @memcmp(i8* noundef nonnull dereferenceable(6) bitcast (i16* getelementptr inbounds ([4 x i16], [4 x i16]* @ia6a, i64 0, i64 1) to i8*), i8* noundef nonnull dereferenceable(6) getelementptr inbounds ([8 x i8], [8 x i8]* @i8a, i64 0, i64 1), i64 6)
+; BE-NEXT:    store i32 1, i32* [[PSTOR5]], align 4
 ; BE-NEXT:    [[PSTOR6:%.*]] = getelementptr i32, i32* [[PCMP]], i64 6
-; BE-NEXT:    store i32 [[CMP6]], i32* [[PSTOR6]], align 4
+; BE-NEXT:    store i32 1, i32* [[PSTOR6]], align 4
 ; BE-NEXT:    ret void
 ;
-; LE-LABEL: @fold_memcmp_ia6a_p1_i8a_p1(
+; LE-LABEL: @fold_memcmp_ia16a_p1_i8a_p1(
 ; LE-NEXT:    store i32 0, i32* [[PCMP:%.*]], align 4
 ; LE-NEXT:    [[PSTOR1:%.*]] = getelementptr i32, i32* [[PCMP]], i64 1
-; LE-NEXT:    store i32 2, i32* [[PSTOR1]], align 4
-; LE-NEXT:    [[CMP2:%.*]] = call i32 @memcmp(i8* noundef nonnull dereferenceable(2) bitcast (i16* getelementptr inbounds ([4 x i16], [4 x i16]* @ia6a, i64 0, i64 1) to i8*), i8* noundef nonnull dereferenceable(2) getelementptr inbounds ([8 x i8], [8 x i8]* @i8a, i64 0, i64 1), i64 2)
+; LE-NEXT:    store i32 1, i32* [[PSTOR1]], align 4
 ; LE-NEXT:    [[PSTOR2:%.*]] = getelementptr i32, i32* [[PCMP]], i64 2
-; LE-NEXT:    store i32 [[CMP2]], i32* [[PSTOR2]], align 4
-; LE-NEXT:    [[CMP3:%.*]] = call i32 @memcmp(i8* noundef nonnull dereferenceable(3) bitcast (i16* getelementptr inbounds ([4 x i16], [4 x i16]* @ia6a, i64 0, i64 1) to i8*), i8* noundef nonnull dereferenceable(3) getelementptr inbounds ([8 x i8], [8 x i8]* @i8a, i64 0, i64 1), i64 3)
+; LE-NEXT:    store i32 1, i32* [[PSTOR2]], align 4
 ; LE-NEXT:    [[PSTOR3:%.*]] = getelementptr i32, i32* [[PCMP]], i64 3
-; LE-NEXT:    store i32 [[CMP3]], i32* [[PSTOR3]], align 4
-; LE-NEXT:    [[CMP4:%.*]] = call i32 @memcmp(i8* noundef nonnull dereferenceable(4) bitcast (i16* getelementptr inbounds ([4 x i16], [4 x i16]* @ia6a, i64 0, i64 1) to i8*), i8* noundef nonnull dereferenceable(4) getelementptr inbounds ([8 x i8], [8 x i8]* @i8a, i64 0, i64 1), i64 4)
+; LE-NEXT:    store i32 1, i32* [[PSTOR3]], align 4
 ; LE-NEXT:    [[PSTOR4:%.*]] = getelementptr i32, i32* [[PCMP]], i64 4
-; LE-NEXT:    store i32 [[CMP4]], i32* [[PSTOR4]], align 4
-; LE-NEXT:    [[CMP5:%.*]] = call i32 @memcmp(i8* noundef nonnull dereferenceable(5) bitcast (i16* getelementptr inbounds ([4 x i16], [4 x i16]* @ia6a, i64 0, i64 1) to i8*), i8* noundef nonnull dereferenceable(5) getelementptr inbounds ([8 x i8], [8 x i8]* @i8a, i64 0, i64 1), i64 5)
+; LE-NEXT:    store i32 1, i32* [[PSTOR4]], align 4
 ; LE-NEXT:    [[PSTOR5:%.*]] = getelementptr i32, i32* [[PCMP]], i64 5
-; LE-NEXT:    store i32 [[CMP5]], i32* [[PSTOR5]], align 4
-; LE-NEXT:    [[CMP6:%.*]] = call i32 @memcmp(i8* noundef nonnull dereferenceable(6) bitcast (i16* getelementptr inbounds ([4 x i16], [4 x i16]* @ia6a, i64 0, i64 1) to i8*), i8* noundef nonnull dereferenceable(6) getelementptr inbounds ([8 x i8], [8 x i8]* @i8a, i64 0, i64 1), i64 6)
+; LE-NEXT:    store i32 1, i32* [[PSTOR5]], align 4
 ; LE-NEXT:    [[PSTOR6:%.*]] = getelementptr i32, i32* [[PCMP]], i64 6
-; LE-NEXT:    store i32 [[CMP6]], i32* [[PSTOR6]], align 4
+; LE-NEXT:    store i32 1, i32* [[PSTOR6]], align 4
 ; LE-NEXT:    ret void
 ;
-  %p0 = getelementptr [4 x i16], [4 x i16]* @ia6a, i64 0, i64 1
+  %p0 = getelementptr [4 x i16], [4 x i16]* @ia16a, i64 0, i64 1
   %p1 = bitcast i16* %p0 to i8*
   %q = getelementptr [8 x i8], [8 x i8]* @i8a, i64 0, i64 1
 
@@ -190,64 +166,6 @@ define void @fold_memcmp_ia6a_p1_i8a_p1(i32* %pcmp) {
   %cmp6 = call i32 @memcmp(i8* %p1, i8* %q, i64 6)
   %pstor6 = getelementptr i32, i32* %pcmp, i64 6
   store i32 %cmp6, i32* %pstor6
-
-  ret void
-}
-
-
-; Don't fold calls with excessive sizes.
-
-define void @call_memcmp_too_big(i32* %pcmp) {
-; BE-LABEL: @call_memcmp_too_big(
-; BE-NEXT:    [[CMP9:%.*]] = call i32 @memcmp(i8* noundef nonnull dereferenceable(9) bitcast ([4 x i16]* @ia6a to i8*), i8* noundef nonnull dereferenceable(9) getelementptr inbounds ([8 x i8], [8 x i8]* @i8a, i64 0, i64 0), i64 9)
-; BE-NEXT:    store i32 [[CMP9]], i32* [[PCMP:%.*]], align 4
-; BE-NEXT:    [[CMPM1:%.*]] = call i32 @memcmp(i8* noundef nonnull dereferenceable(18446744073709551615) bitcast ([4 x i16]* @ia6a to i8*), i8* noundef nonnull dereferenceable(18446744073709551615) getelementptr inbounds ([8 x i8], [8 x i8]* @i8a, i64 0, i64 0), i64 -1)
-; BE-NEXT:    [[PSTORM1:%.*]] = getelementptr i32, i32* [[PCMP]], i64 1
-; BE-NEXT:    store i32 [[CMPM1]], i32* [[PSTORM1]], align 4
-; BE-NEXT:    [[CMPX2:%.*]] = call i32 @memcmp(i8* noundef nonnull dereferenceable(8) bitcast ([4 x i16]* @ia6a to i8*), i8* noundef nonnull dereferenceable(8) getelementptr inbounds ([8 x i8], [8 x i8]* @i8a, i64 0, i64 1), i64 8)
-; BE-NEXT:    [[PSTORX2:%.*]] = getelementptr i32, i32* [[PCMP]], i64 2
-; BE-NEXT:    store i32 [[CMPX2]], i32* [[PSTORX2]], align 4
-; BE-NEXT:    [[CMPX1:%.*]] = call i32 @memcmp(i8* noundef nonnull dereferenceable(8) getelementptr (i8, i8* bitcast ([4 x i16]* @ia6a to i8*), i64 1), i8* noundef nonnull dereferenceable(8) getelementptr inbounds ([8 x i8], [8 x i8]* @i8a, i64 0, i64 0), i64 8)
-; BE-NEXT:    [[PSTORX1:%.*]] = getelementptr i32, i32* [[PCMP]], i64 2
-; BE-NEXT:    store i32 [[CMPX1]], i32* [[PSTORX1]], align 4
-; BE-NEXT:    ret void
-;
-; LE-LABEL: @call_memcmp_too_big(
-; LE-NEXT:    [[CMP9:%.*]] = call i32 @memcmp(i8* noundef nonnull dereferenceable(9) bitcast ([4 x i16]* @ia6a to i8*), i8* noundef nonnull dereferenceable(9) getelementptr inbounds ([8 x i8], [8 x i8]* @i8a, i64 0, i64 0), i64 9)
-; LE-NEXT:    store i32 [[CMP9]], i32* [[PCMP:%.*]], align 4
-; LE-NEXT:    [[CMPM1:%.*]] = call i32 @memcmp(i8* noundef nonnull dereferenceable(18446744073709551615) bitcast ([4 x i16]* @ia6a to i8*), i8* noundef nonnull dereferenceable(18446744073709551615) getelementptr inbounds ([8 x i8], [8 x i8]* @i8a, i64 0, i64 0), i64 -1)
-; LE-NEXT:    [[PSTORM1:%.*]] = getelementptr i32, i32* [[PCMP]], i64 1
-; LE-NEXT:    store i32 [[CMPM1]], i32* [[PSTORM1]], align 4
-; LE-NEXT:    [[CMPX2:%.*]] = call i32 @memcmp(i8* noundef nonnull dereferenceable(8) bitcast ([4 x i16]* @ia6a to i8*), i8* noundef nonnull dereferenceable(8) getelementptr inbounds ([8 x i8], [8 x i8]* @i8a, i64 0, i64 1), i64 8)
-; LE-NEXT:    [[PSTORX2:%.*]] = getelementptr i32, i32* [[PCMP]], i64 2
-; LE-NEXT:    store i32 [[CMPX2]], i32* [[PSTORX2]], align 4
-; LE-NEXT:    [[CMPX1:%.*]] = call i32 @memcmp(i8* noundef nonnull dereferenceable(8) getelementptr (i8, i8* bitcast ([4 x i16]* @ia6a to i8*), i64 1), i8* noundef nonnull dereferenceable(8) getelementptr inbounds ([8 x i8], [8 x i8]* @i8a, i64 0, i64 0), i64 8)
-; LE-NEXT:    [[PSTORX1:%.*]] = getelementptr i32, i32* [[PCMP]], i64 2
-; LE-NEXT:    store i32 [[CMPX1]], i32* [[PSTORX1]], align 4
-; LE-NEXT:    ret void
-;
-  %p0 = getelementptr [4 x i16], [4 x i16]* @ia6a, i64 0, i64 0
-  %p1 = bitcast i16* %p0 to i8*
-  %q = getelementptr [8 x i8], [8 x i8]* @i8a, i64 0, i64 0
-
-  %cmp9 = call i32 @memcmp(i8* %p1, i8* %q, i64 9)
-  %pstor9 = getelementptr i32, i32* %pcmp, i64 0
-  store i32 %cmp9, i32* %pstor9
-
-  %cmpm1 = call i32 @memcmp(i8* %p1, i8* %q, i64 -1)
-  %pstorm1 = getelementptr i32, i32* %pcmp, i64 1
-  store i32 %cmpm1, i32* %pstorm1
-
-  ; Exercise size that's greater than just one of the arrays.
-  %q2 = getelementptr [8 x i8], [8 x i8]* @i8a, i64 0, i64 1
-  %cmpx2 = call i32 @memcmp(i8* %p1, i8* %q2, i64 8)
-  %pstorx2 = getelementptr i32, i32* %pcmp, i64 2
-  store i32 %cmpx2, i32* %pstorx2
-
-  %p2 = getelementptr i8, i8* %p1, i64 1
-  %cmpx1 = call i32 @memcmp(i8* %p2, i8* %q, i64 8)
-  %pstorx1 = getelementptr i32, i32* %pcmp, i64 2
-  store i32 %cmpx1, i32* %pstorx1
 
   ret void
 }

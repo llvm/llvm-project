@@ -690,6 +690,7 @@ Value *LibCallSimplifier::optimizeStringLength(CallInst *CI, IRBuilderBase &B,
   // very useful because calling strlen for a pointer of other types is
   // very uncommon.
   if (GEPOperator *GEP = dyn_cast<GEPOperator>(Src)) {
+    // TODO: Handle subobjects.
     if (!isGEPBasedOnPointerToString(GEP, CharSize))
       return nullptr;
 
@@ -1142,8 +1143,8 @@ Value *LibCallSimplifier::optimizeMemChr(CallInst *CI, IRBuilderBase &B) {
                           CI->getType());
 }
 
-// Optimize a memcmp call CI with constant arrays LHS and RHS and nonconstant
-// Size.
+// Optimize a memcmp call CI with constant arrays LHS and RHS and either
+// nonconstant Size or constant size known to be in bounds.
 static Value *optimizeMemCmpVarSize(CallInst *CI, Value *LHS, Value *RHS,
                                     Value *Size, IRBuilderBase &B,
                                     const DataLayout &DL) {
@@ -1174,9 +1175,15 @@ static Value *optimizeMemCmpVarSize(CallInst *CI, Value *LHS, Value *RHS,
     }
   }
 
+  if (auto *SizeC = dyn_cast<ConstantInt>(Size))
+    if (MinSize < SizeC->getZExtValue())
+      // Fail if the bound happens to be constant and excessive and
+      // let sanitizers catch it.
+      return nullptr;
+
   // One array is a leading part of the other of equal or greater size.
-  // Fold the result to zero.  Size is assumed to be in bounds, since
-  // otherwise the call would be undefined.
+  // Fold the result to zero.  Nonconstant size is assumed to be in bounds,
+  // since otherwise the call would be undefined.
   return Zero;
 }
 
@@ -1309,6 +1316,7 @@ Value *LibCallSimplifier::optimizeMemCCpy(CallInst *CI, IRBuilderBase &B) {
       return Constant::getNullValue(CI->getType());
     if (!getConstantStringInfo(Src, SrcStr, /*Offset=*/0,
                                /*TrimAtNul=*/false) ||
+        // TODO: Handle zeroinitializer.
         !StopChar)
       return nullptr;
   } else {

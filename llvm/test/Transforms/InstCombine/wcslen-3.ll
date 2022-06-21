@@ -68,8 +68,8 @@ define i1 @test_simplify5() {
 
 define i1 @test_simplify6(i16* %str_p) {
 ; CHECK-LABEL: @test_simplify6(
-; CHECK-NEXT:    [[STRLENFIRST:%.*]] = load i16, i16* [[STR_P:%.*]], align 2
-; CHECK-NEXT:    [[EQ_NULL:%.*]] = icmp eq i16 [[STRLENFIRST]], 0
+; CHECK-NEXT:    [[CHAR0:%.*]] = load i16, i16* [[STR_P:%.*]], align 2
+; CHECK-NEXT:    [[EQ_NULL:%.*]] = icmp eq i16 [[CHAR0]], 0
 ; CHECK-NEXT:    ret i1 [[EQ_NULL]]
 ;
   %str_l = call i64 @wcslen(i16* %str_p)
@@ -91,8 +91,8 @@ define i1 @test_simplify7() {
 
 define i1 @test_simplify8(i16* %str_p) {
 ; CHECK-LABEL: @test_simplify8(
-; CHECK-NEXT:    [[STRLENFIRST:%.*]] = load i16, i16* [[STR_P:%.*]], align 2
-; CHECK-NEXT:    [[NE_NULL:%.*]] = icmp ne i16 [[STRLENFIRST]], 0
+; CHECK-NEXT:    [[CHAR0:%.*]] = load i16, i16* [[STR_P:%.*]], align 2
+; CHECK-NEXT:    [[NE_NULL:%.*]] = icmp ne i16 [[CHAR0]], 0
 ; CHECK-NEXT:    ret i1 [[NE_NULL]]
 ;
   %str_l = call i64 @wcslen(i16* %str_p)
@@ -185,12 +185,11 @@ define i64 @test_no_simplify3(i16 %x) {
 
 @str32 = constant [1 x i32] [i32 0]
 
-; This could in principle be simplified, but the current implementation bails on
-; type mismatches.
+; This is safe to simplify despite the type mismatch.
+
 define i64 @test_no_simplify4() {
 ; CHECK-LABEL: @test_no_simplify4(
-; CHECK-NEXT:    [[L:%.*]] = call i64 @wcslen(i16* bitcast ([1 x i32]* @str32 to i16*))
-; CHECK-NEXT:    ret i64 [[L]]
+; CHECK-NEXT:    ret i64 0
 ;
   %l = call i64 @wcslen(i16* bitcast ([1 x i32]* @str32 to i16*))
   ret i64 %l
