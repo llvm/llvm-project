@@ -143,6 +143,21 @@ public:
 
   void addFact(CmpInst *Condition, bool IsNegated, unsigned NumIn,
                unsigned NumOut, SmallVectorImpl<StackEntry> &DFSInStack);
+
+  /// Turn a comparison of the form \p Op0 \p Pred \p Op1 into a vector of
+  /// constraints, using indices from the corresponding constraint system.
+  /// Additional indices for newly discovered values are added to \p NewIndices.
+  ConstraintTy getConstraint(CmpInst::Predicate Pred, Value *Op0, Value *Op1,
+                             DenseMap<Value *, unsigned> &NewIndices) const;
+
+  /// Turn a condition \p CmpI into a vector of constraints, using indices from
+  /// the corresponding constraint system. Additional indices for newly
+  /// discovered values are added to \p NewIndices.
+  ConstraintTy getConstraint(CmpInst *Cmp,
+                             DenseMap<Value *, unsigned> &NewIndices) const {
+    return getConstraint(Cmp->getPredicate(), Cmp->getOperand(0),
+                         Cmp->getOperand(1), NewIndices);
+  }
 };
 
 } // namespace
@@ -250,13 +265,9 @@ decompose(Value *V, SmallVector<PreconditionTy, 4> &Preconditions,
   return {{0, nullptr}, {1, V}};
 }
 
-/// Turn a condition \p CmpI into a vector of constraints, using indices from \p
-/// Value2Index. Additional indices for newly discovered values are added to \p
-/// NewIndices.
-static ConstraintTy
-getConstraint(CmpInst::Predicate Pred, Value *Op0, Value *Op1,
-              const DenseMap<Value *, unsigned> &Value2Index,
-              DenseMap<Value *, unsigned> &NewIndices) {
+ConstraintTy
+ConstraintInfo::getConstraint(CmpInst::Predicate Pred, Value *Op0, Value *Op1,
+                              DenseMap<Value *, unsigned> &NewIndices) const {
   bool IsEq = false;
   // Try to convert Pred to one of ULE/SLT/SLE/SLT.
   switch (Pred) {
@@ -293,6 +304,7 @@ getConstraint(CmpInst::Predicate Pred, Value *Op0, Value *Op1,
 
   SmallVector<PreconditionTy, 4> Preconditions;
   bool IsSigned = CmpInst::isSigned(Pred);
+  auto &Value2Index = getValue2Index(IsSigned);
   auto ADec = decompose(Op0->stripPointerCastsSameRepresentation(),
                         Preconditions, IsSigned);
   auto BDec = decompose(Op1->stripPointerCastsSameRepresentation(),
@@ -349,20 +361,11 @@ getConstraint(CmpInst::Predicate Pred, Value *Op0, Value *Op1,
   return Res;
 }
 
-static ConstraintTy getConstraint(CmpInst *Cmp, ConstraintInfo &Info,
-                                  DenseMap<Value *, unsigned> &NewIndices) {
-  return getConstraint(
-      Cmp->getPredicate(), Cmp->getOperand(0), Cmp->getOperand(1),
-      Info.getValue2Index(CmpInst::isSigned(Cmp->getPredicate())), NewIndices);
-}
-
 bool ConstraintTy::isValid(const ConstraintInfo &Info) const {
   return Coefficients.size() > 0 &&
          all_of(Preconditions, [&Info](const PreconditionTy &C) {
            DenseMap<Value *, unsigned> NewIndices;
-           auto R = getConstraint(
-               C.Pred, C.Op0, C.Op1,
-               Info.getValue2Index(CmpInst::isSigned(C.Pred)), NewIndices);
+           auto R = Info.getConstraint(C.Pred, C.Op0, C.Op1, NewIndices);
            // TODO: properly check NewIndices.
            return NewIndices.empty() && R.Preconditions.empty() && !R.IsEq &&
                   R.size() >= 1 &&
@@ -515,7 +518,7 @@ void ConstraintInfo::addFact(CmpInst *Condition, bool IsNegated, unsigned NumIn,
   // If the constraint has a pre-condition, skip the constraint if it does not
   // hold.
   DenseMap<Value *, unsigned> NewIndices;
-  auto R = getConstraint(Condition, *this, NewIndices);
+  auto R = getConstraint(Condition, NewIndices);
   if (!R.isValid(*this))
     return;
 
@@ -564,8 +567,7 @@ tryToSimplifyOverflowMath(IntrinsicInst *II, ConstraintInfo &Info,
   auto DoesConditionHold = [](CmpInst::Predicate Pred, Value *A, Value *B,
                               ConstraintInfo &Info) {
     DenseMap<Value *, unsigned> NewIndices;
-    auto R = getConstraint(
-        Pred, A, B, Info.getValue2Index(CmpInst::isSigned(Pred)), NewIndices);
+    auto R = Info.getConstraint(Pred, A, B, NewIndices);
     if (R.size() < 2 || R.needsNewIndices(NewIndices) || !R.isValid(Info))
       return false;
 
@@ -678,7 +680,7 @@ static bool eliminateConstraints(Function &F, DominatorTree &DT) {
           continue;
 
         DenseMap<Value *, unsigned> NewIndices;
-        auto R = getConstraint(Cmp, Info, NewIndices);
+        auto R = Info.getConstraint(Cmp, NewIndices);
         if (R.IsEq || R.empty() || R.needsNewIndices(NewIndices) ||
             !R.isValid(Info))
           continue;
