@@ -21,7 +21,6 @@
 #include "clang/Sema/Ownership.h"
 #include "llvm/ADT/PointerUnion.h"
 #include "llvm/ADT/SmallVector.h"
-#include "llvm/ADT/TinyPtrVector.h"
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/Registry.h"
 #include "llvm/Support/VersionTuple.h"
@@ -783,7 +782,7 @@ class AttributePool {
   friend class AttributeFactory;
   friend class ParsedAttributes;
   AttributeFactory &Factory;
-  llvm::TinyPtrVector<ParsedAttr *> Attrs;
+  llvm::SmallVector<ParsedAttr *> Attrs;
 
   void *allocate(size_t size) {
     return Factory.allocate(size);
@@ -908,7 +907,7 @@ public:
 };
 
 class ParsedAttributesView {
-  using VecTy = llvm::TinyPtrVector<ParsedAttr *>;
+  using VecTy = llvm::SmallVector<ParsedAttr *>;
   using SizeType = decltype(std::declval<VecTy>().size());
 
 public:
