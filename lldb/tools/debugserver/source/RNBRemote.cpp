@@ -2704,7 +2704,7 @@ rnb_err_t RNBRemote::SendStopReplyPacketForThread(nub_thread_t tid) {
     std::ostringstream ostrm;
     // Output the T packet with the thread
     ostrm << 'T';
-    int signum = tid_stop_info.signo;
+    int signum = tid_stop_info.details.signal.signo;
     DNBLogThreadedIf(
         LOG_RNB_PROC, "%8d %s got signal signo = %u, exc_type = %u",
         (uint32_t)m_comm.Timer().ElapsedMicroSeconds(true), __FUNCTION__,
@@ -5450,9 +5450,9 @@ RNBRemote::GetJSONThreadsInfo(bool threads_with_valid_stop_info_only) {
           break;
 
         case eStopTypeSignal:
-          if (tid_stop_info.signo != 0) {
+          if (tid_stop_info.details.signal.signo != 0) {
             thread_dict_sp->AddIntegerItem("signal",
-                                           tid_stop_info.signo);
+                                           tid_stop_info.details.signal.signo);
             reason_value = "signal";
           }
           break;
