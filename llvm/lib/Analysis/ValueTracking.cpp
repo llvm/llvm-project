@@ -1070,7 +1070,7 @@ static void computeKnownBitsFromShiftOperator(
     // bits. This check is sunk down as far as possible to avoid the expensive
     // call to isKnownNonZero if the cheaper checks above fail.
     if (ShiftAmt == 0) {
-      if (!ShifterOperandIsNonZero.hasValue())
+      if (!ShifterOperandIsNonZero)
         ShifterOperandIsNonZero =
             isKnownNonZero(I->getOperand(1), DemandedElts, Depth + 1, Q);
       if (*ShifterOperandIsNonZero)

@@ -546,7 +546,7 @@ static int compileModule(char **argv, LLVMContext &Context) {
 
       // On AIX, setting the relocation model to anything other than PIC is
       // considered a user error.
-      if (TheTriple.isOSAIX() && RM.hasValue() && *RM != Reloc::PIC_)
+      if (TheTriple.isOSAIX() && RM && *RM != Reloc::PIC_)
         reportError("invalid relocation model, AIX only supports PIC",
                     InputFilename);
 
@@ -589,7 +589,7 @@ static int compileModule(char **argv, LLVMContext &Context) {
 
     // On AIX, setting the relocation model to anything other than PIC is
     // considered a user error.
-    if (TheTriple.isOSAIX() && RM.hasValue() && *RM != Reloc::PIC_) {
+    if (TheTriple.isOSAIX() && RM && *RM != Reloc::PIC_) {
       WithColor::error(errs(), argv[0])
           << "invalid relocation model, AIX only supports PIC.\n";
       return 1;

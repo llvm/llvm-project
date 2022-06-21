@@ -1039,7 +1039,7 @@ public:
     // If we've already analyzed a Module or set of Modules, so we must clear
     // the SimilarityCandidates to make sure we do not have only old values
     // hanging around.
-    if (SimilarityCandidates.hasValue())
+    if (SimilarityCandidates)
       SimilarityCandidates->clear();
     else
       SimilarityCandidates = SimilarityGroupList();

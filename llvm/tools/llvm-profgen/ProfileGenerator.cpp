@@ -824,7 +824,7 @@ void CSProfileGenerator::populateBodySamplesForFunction(
     do {
       uint64_t Offset = Binary->virtualAddrToOffset(IP.Address);
       auto LeafLoc = Binary->getInlineLeafFrameLoc(Offset);
-      if (LeafLoc.hasValue()) {
+      if (LeafLoc) {
         // Recording body sample for this specific context
         updateBodySamplesforFunctionProfile(FunctionProfile, *LeafLoc, Count);
         FunctionProfile.addTotalSamples(Count);
@@ -853,7 +853,7 @@ void CSProfileGenerator::populateBoundarySamplesForFunction(
              "CallerProfile is null only if ContextId is empty");
       // Record called target sample and its count
       auto LeafLoc = Binary->getInlineLeafFrameLoc(SourceOffset);
-      if (LeafLoc.hasValue()) {
+      if (LeafLoc) {
         CallerProfile->addCalledTargetSamples(
             LeafLoc->Location.LineOffset,
             getBaseDiscriminator(LeafLoc->Location.Discriminator), CalleeName,

@@ -87,7 +87,7 @@ BytesOutputStyle::BytesOutputStyle(PDBFile &File)
 
 Error BytesOutputStyle::dump() {
 
-  if (opts::bytes::DumpBlockRange.hasValue()) {
+  if (opts::bytes::DumpBlockRange) {
     auto &R = *opts::bytes::DumpBlockRange;
     uint32_t Max = R.Max.value_or(R.Min);
 
@@ -104,7 +104,7 @@ Error BytesOutputStyle::dump() {
     P.NewLine();
   }
 
-  if (opts::bytes::DumpByteRange.hasValue()) {
+  if (opts::bytes::DumpByteRange) {
     auto &R = *opts::bytes::DumpByteRange;
     uint32_t Max = R.Max.value_or(File.getFileSize());
 

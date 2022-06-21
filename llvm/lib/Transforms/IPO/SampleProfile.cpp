@@ -2180,7 +2180,7 @@ bool SampleProfileLoader::runOnFunction(Function &F, ModuleAnalysisManager *AM) 
 
   // Initialize entry count when the function has no existing entry
   // count value.
-  if (!F.getEntryCount().hasValue())
+  if (!F.getEntryCount())
     F.setEntryCount(ProfileCount(initialEntryCount, Function::PCT_Real));
   std::unique_ptr<OptimizationRemarkEmitter> OwnedORE;
   if (AM) {

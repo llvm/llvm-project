@@ -335,7 +335,7 @@ bool llvm::isAllocRemovable(const CallBase *CB, const TargetLibraryInfo *TLI) {
 Value *llvm::getAllocAlignment(const CallBase *V,
                                const TargetLibraryInfo *TLI) {
   const Optional<AllocFnsTy> FnData = getAllocationData(V, AnyAlloc, TLI);
-  if (FnData.hasValue() && FnData->AlignParam >= 0) {
+  if (FnData && FnData->AlignParam >= 0) {
     return V->getOperand(FnData->AlignParam);
   }
   return V->getArgOperandWithAttribute(Attribute::AllocAlign);

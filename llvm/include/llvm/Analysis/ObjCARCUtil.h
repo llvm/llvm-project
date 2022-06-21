@@ -59,7 +59,7 @@ inline bool isRetainOrClaimRV(ARCInstKind Kind) {
 /// or UnsafeClaimRV.
 inline ARCInstKind getAttachedARCFunctionKind(const CallBase *CB) {
   Optional<Function *> Fn = getAttachedARCFunction(CB);
-  if (!Fn.hasValue())
+  if (!Fn)
     return ARCInstKind::None;
   auto FnClass = GetFunctionClass(*Fn);
   assert(isRetainOrClaimRV(FnClass) && "unexpected ARC runtime function");

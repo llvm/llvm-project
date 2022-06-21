@@ -33,7 +33,7 @@ void yaml::AArch64FunctionInfo::mappingImpl(yaml::IO &YamlIO) {
 
 void AArch64FunctionInfo::initializeBaseYamlFields(
     const yaml::AArch64FunctionInfo &YamlMFI) {
-  if (YamlMFI.HasRedZone.hasValue())
+  if (YamlMFI.HasRedZone)
     HasRedZone = YamlMFI.HasRedZone;
 }
 

@@ -551,7 +551,7 @@ static void clampReturnedValueStates(
     LLVM_DEBUG(dbgs() << "[Attributor] RV: " << RV << " AA: " << AA.getAsStr()
                       << " @ " << RVPos << "\n");
     const StateType &AAS = AA.getState();
-    if (!T.hasValue())
+    if (!T)
       T = StateType::getBestState(AAS);
     *T &= AAS;
     LLVM_DEBUG(dbgs() << "[Attributor] AA State: " << AAS << " RV State: " << T
@@ -561,7 +561,7 @@ static void clampReturnedValueStates(
 
   if (!A.checkForAllReturnedValues(CheckReturnValue, QueryingAA))
     S.indicatePessimisticFixpoint();
-  else if (T.hasValue())
+  else if (T)
     S ^= *T;
 }
 
@@ -617,7 +617,7 @@ static void clampCallSiteArgumentStates(Attributor &A, const AAType &QueryingAA,
     LLVM_DEBUG(dbgs() << "[Attributor] ACS: " << *ACS.getInstruction()
                       << " AA: " << AA.getAsStr() << " @" << ACSArgPos << "\n");
     const StateType &AAS = AA.getState();
-    if (!T.hasValue())
+    if (!T)
       T = StateType::getBestState(AAS);
     *T &= AAS;
     LLVM_DEBUG(dbgs() << "[Attributor] AA State: " << AAS << " CSA State: " << T
@@ -629,7 +629,7 @@ static void clampCallSiteArgumentStates(Attributor &A, const AAType &QueryingAA,
   if (!A.checkForAllCallSites(CallSiteCheck, QueryingAA, true,
                               UsedAssumedInformation))
     S.indicatePessimisticFixpoint();
-  else if (T.hasValue())
+  else if (T)
     S ^= *T;
 }
 
@@ -2667,7 +2667,7 @@ struct AAUndefinedBehaviorImpl : public AAUndefinedBehavior {
       // or we got back a simplified value to continue.
       Optional<Value *> SimplifiedCond =
           stopOnUndefOrAssumed(A, BrInst->getCondition(), BrInst);
-      if (!SimplifiedCond.hasValue() || !SimplifiedCond.getValue())
+      if (!SimplifiedCond || !*SimplifiedCond)
         return true;
       AssumedNoUBInsts.insert(&I);
       return true;
@@ -2737,7 +2737,7 @@ struct AAUndefinedBehaviorImpl : public AAUndefinedBehavior {
       // or we got back a simplified return value to continue.
       Optional<Value *> SimplifiedRetValue =
           stopOnUndefOrAssumed(A, RI.getReturnValue(), &I);
-      if (!SimplifiedRetValue.hasValue() || !SimplifiedRetValue.getValue())
+      if (!SimplifiedRetValue || !*SimplifiedRetValue)
         return true;
 
       // Check if a return instruction always cause UB or not
@@ -2886,7 +2886,7 @@ private:
         IRPosition::value(*V), *this, UsedAssumedInformation);
     if (!UsedAssumedInformation) {
       // Don't depend on assumed values.
-      if (!SimplifiedV.hasValue()) {
+      if (!SimplifiedV) {
         // If it is known (which we tested above) but it doesn't have a value,
         // then we can assume `undef` and hence the instruction is UB.
         KnownUBInsts.insert(I);
@@ -3529,7 +3529,7 @@ struct AAIsDeadValueImpl : public AAIsDead {
       bool UsedAssumedInformation = false;
       Optional<Constant *> C =
           A.getAssumedConstant(V, *this, UsedAssumedInformation);
-      if (!C.hasValue() || *C)
+      if (!C || *C)
         return true;
     }
 
@@ -4036,7 +4036,7 @@ identifyAliveSuccessors(Attributor &A, const BranchInst &BI,
   } else {
     Optional<Constant *> C =
         A.getAssumedConstant(*BI.getCondition(), AA, UsedAssumedInformation);
-    if (!C.hasValue() || isa_and_nonnull<UndefValue>(C.getValue())) {
+    if (!C || isa_and_nonnull<UndefValue>(*C)) {
       // No value yet, assume both edges are dead.
     } else if (isa_and_nonnull<ConstantInt>(*C)) {
       const BasicBlock *SuccBB =
@@ -5374,7 +5374,7 @@ bool ValueSimplifyStateType::unionAssumed(Optional<Value *> Other) {
     return false;
 
   LLVM_DEBUG({
-    if (SimplifiedAssociatedValue.hasValue())
+    if (SimplifiedAssociatedValue)
       dbgs() << "[ValueSimplify] is assumed to be "
              << **SimplifiedAssociatedValue << "\n";
     else
@@ -5535,7 +5535,7 @@ struct AAValueSimplifyImpl : AAValueSimplify {
 
     Optional<Constant *> COpt = AA.getAssumedConstant(A);
 
-    if (!COpt.hasValue()) {
+    if (!COpt) {
       SimplifiedAssociatedValue = llvm::None;
       A.recordDependence(AA, *this, DepClassTy::OPTIONAL);
       return true;
@@ -6228,7 +6228,7 @@ struct AAHeapToStackFunction final : public AAHeapToStack {
       const DataLayout &DL = A.getInfoCache().getDL();
       Value *Size;
       Optional<APInt> SizeAPI = getSize(A, *this, AI);
-      if (SizeAPI.hasValue()) {
+      if (SizeAPI) {
         Size = ConstantInt::get(AI.CB->getContext(), *SizeAPI);
       } else {
         LLVMContext &Ctx = AI.CB->getContext();

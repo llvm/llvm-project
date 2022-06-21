@@ -48,7 +48,7 @@ public:
   }
 
   uint64_t getLength() const {
-    if (Length.hasValue())
+    if (Length)
       return *Length;
 
     return BorrowedImpl ? (BorrowedImpl->getLength() - ViewOffset) : 0;
@@ -67,7 +67,7 @@ public:
       return Result;
 
     Result.ViewOffset += N;
-    if (Result.Length.hasValue())
+    if (Result.Length)
       *Result.Length -= N;
     return Result;
   }
@@ -87,7 +87,7 @@ public:
 
     // Since we're dropping non-zero bytes from the end, stop length-tracking
     // by setting the length of the resulting StreamRef to an explicit value.
-    if (!Result.Length.hasValue())
+    if (!Result.Length)
       Result.Length = getLength();
 
     *Result.Length -= N;

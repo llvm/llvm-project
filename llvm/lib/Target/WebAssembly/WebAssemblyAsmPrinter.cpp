@@ -211,7 +211,7 @@ MCSymbol *WebAssemblyAsmPrinter::getOrCreateWasmSymbol(StringRef Name) {
   auto *WasmSym = cast<MCSymbolWasm>(GetExternalSymbolSymbol(Name));
 
   // May be called multiple times, so early out.
-  if (WasmSym->getType().hasValue())
+  if (WasmSym->getType())
     return WasmSym;
 
   const WebAssemblySubtarget &Subtarget = getSubtarget();
