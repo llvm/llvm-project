@@ -267,6 +267,47 @@ void glrReduce(std::vector<const GSS::Node *> &Heads, SymbolID Lookahead,
   // We treat Heads as a queue of Pop operations still to be performed.
   // NextPopHead is our position within it.
   unsigned NextPopHead = 0;
+  // In general we split a reduce into a pop/push, so concurrently-available
+  // reductions can run in the correct order. The data structures are expensive.
+  //
+  // When only one reduction is possible at a time, we can skip this:
+  // we pop and immediately push, as an LR parser (as opposed to GLR) would.
+  // This is valid whenever there's only one concurrent PushSpec.
+  //
+  // This function handles a trivial but common subset of these cases:
+  //  - there must be no pending pushes, and only one poppable head
+  //  - the head must have only one reduction rule
+  //  - the reduction path must be a straight line (no multiple parents)
+  // (Roughly this means there's no local ambiguity, so the LR algorithm works).
+  auto PopAndPushTrivial = [&]() -> bool {
+    if (!Sequences.empty() || Heads.size() != NextPopHead + 1)
+      return false;
+    const GSS::Node *Head = Heads.back();
+    llvm::Optional<RuleID> RID;
+    for (auto &A : Params.Table.getActions(Head->State, Lookahead)) {
+      if (A.kind() != LRTable::Action::Reduce)
+        continue;
+      if (RID.hasValue())
+        return false;
+      RID = A.getReduceRule();
+    }
+    if (!RID.hasValue())
+      return false;
+    const auto &Rule = Params.G.lookupRule(*RID);
+    const GSS::Node *Base = Head;
+    TempSequence.resize_for_overwrite(Rule.Size);
+    for (unsigned I = 0; I < Rule.Size; ++I) {
+      if (Base->parents().size() != 1)
+        return false;
+      TempSequence[Rule.Size - 1 - I] = Base->Payload;
+      Base = Base->parents().front();
+    }
+    const ForestNode *Parsed =
+        &Params.Forest.createSequence(Rule.Target, *RID, TempSequence);
+    StateID NextState = Params.Table.getGoToState(Base->State, Rule.Target);
+    Heads.push_back(Params.GSStack.addNode(NextState, Parsed, {Base}));
+    return true;
+  };
   // Pop walks up the parent chain(s) for a reduction from Head by to Rule.
   // Once we reach the end, record the bases and sequences.
   auto Pop = [&](const GSS::Node *Head, RuleID RID) {
@@ -289,8 +330,9 @@ void glrReduce(std::vector<const GSS::Node *> &Heads, SymbolID Lookahead,
   };
   auto PopPending = [&] {
     for (; NextPopHead < Heads.size(); ++NextPopHead) {
-      // FIXME: if there's exactly one head in the queue, and the pop stage
-      // is trivial, we could pop + push without touching the expensive queues.
+      // In trivial cases, we perform the complete reduce here!
+      if (PopAndPushTrivial())
+        continue;
       for (const auto &A :
            Params.Table.getActions(Heads[NextPopHead]->State, Lookahead)) {
         if (A.kind() != LRTable::Action::Reduce)
