@@ -222,3 +222,43 @@ class TestGdbRemoteFork(gdbremote_testcase.GdbRemoteTestCaseBase):
             "send packet: $E44#00",
         ], True)
         self.expect_gdbremote_sequence()
+
+    @add_test_categories(["fork"])
+    def test_detach_all(self):
+        self.build()
+        self.prep_debug_monitor_and_inferior(inferior_args=["fork"])
+        self.add_qSupported_packets(["multiprocess+",
+                                     "fork-events+"])
+        ret = self.expect_gdbremote_sequence()
+        self.assertIn("fork-events+", ret["qSupported_response"])
+        self.reset_test_sequence()
+
+        # continue and expect fork
+        self.test_sequence.add_log_lines([
+            "read packet: $c#00",
+            {"direction": "send", "regex": self.fork_regex.format("fork"),
+             "capture": self.fork_capture},
+        ], True)
+        ret = self.expect_gdbremote_sequence()
+        parent_pid = ret["parent_pid"]
+        parent_tid = ret["parent_tid"]
+        child_pid = ret["child_pid"]
+        child_tid = ret["child_tid"]
+        self.reset_test_sequence()
+
+        self.test_sequence.add_log_lines([
+            # double-check our PIDs
+            "read packet: $Hgp{}.{}#00".format(parent_pid, parent_tid),
+            "send packet: $OK#00",
+            "read packet: $Hgp{}.{}#00".format(child_pid, child_tid),
+            "send packet: $OK#00",
+            # detach all processes
+            "read packet: $D#00",
+            "send packet: $OK#00",
+            # verify that both PIDs are invalid now
+            "read packet: $Hgp{}.{}#00".format(parent_pid, parent_tid),
+            "send packet: $Eff#00",
+            "read packet: $Hgp{}.{}#00".format(child_pid, child_tid),
+            "send packet: $Eff#00",
+        ], True)
+        self.expect_gdbremote_sequence()
