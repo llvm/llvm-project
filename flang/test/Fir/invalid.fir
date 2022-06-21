@@ -287,17 +287,17 @@ func.func @test_coordinate_of(%arr : !fir.ref<!fir.array<*:f32>>) {
 
 func.func @test_coordinate_of(%arr : !fir.ref<!fir.char<10>>) {
   %1 = arith.constant 10 : i32
-  // expected-error@+1 {{'fir.coordinate_of' op cannot apply coordinate_of to this type}}
-  %2 = fir.coordinate_of %arr, %1 : (!fir.ref<!fir.char<10>>, i32) -> !fir.ref<f32>
+  // expected-error@+1 {{'fir.coordinate_of' op cannot apply to this element type}}
+  %2 = fir.coordinate_of %arr, %1 : (!fir.ref<!fir.char<10>>, i32) -> !fir.ref<!fir.char<10>>
   return
 }
 
 // -----
 
-func.func @test_coordinate_of(%arr : !fir.ref<!fir.char<10, 1>>) {
+func.func @test_coordinate_of(%arr : !fir.ref<!fir.char<10, 2>>) {
   %1 = arith.constant 10 : i32
-  // expected-error@+1 {{'fir.coordinate_of' op cannot apply coordinate_of to this type}}
-  %2 = fir.coordinate_of %arr, %1 : (!fir.ref<!fir.char<10, 1>>, i32) -> !fir.ref<f32>
+  // expected-error@+1 {{'fir.coordinate_of' op cannot apply to character singleton}}
+  %2 = fir.coordinate_of %arr, %1, %1 : (!fir.ref<!fir.char<10, 2>>, i32, i32) -> !fir.ref<!fir.char<10>>
   return
 }
 
