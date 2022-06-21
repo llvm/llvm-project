@@ -70,10 +70,13 @@ if (CAN_USE_ASSEMBLER)
         blake3_avx2_x86-64_unix.S
         blake3_avx512_x86-64_unix.S
       )
-      # Clang-6 needs this flag. We also suppress '-Wunused-command-line-argument'
-      # in case the file is included with arm architecture.
-      set_source_files_properties(blake3_avx512_x86-64_unix.S
-        PROPERTIES COMPILE_OPTIONS "-mavx512vl;-Wno-unused-command-line-argument")
+      check_c_compiler_flag("-mavx512vl" SUPPORTS_avx512vl)
+      if (SUPPORTS_avx512vl)
+        # Clang-6 needs this flag. We also suppress '-Wunused-command-line-argument'
+        # in case the file is included with arm architecture.
+        set_source_files_properties(blake3_avx512_x86-64_unix.S
+          PROPERTIES COMPILE_OPTIONS "-mavx512vl;-Wno-unused-command-line-argument")
+      endif()
     endif()
   endif()
 else()
