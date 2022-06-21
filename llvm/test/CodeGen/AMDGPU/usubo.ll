@@ -135,7 +135,7 @@ define amdgpu_kernel void @v_usubo_i64(i64 addrspace(1)* %out, i1 addrspace(1)* 
 }
 
 ; FUNC-LABEL: {{^}}v_usubo_i16:
-; SI: v_subrev_i32_e32
+; SI: v_sub_i32_e32
 ; SI: v_and_b32
 ; SI: v_cmp_ne_u32_e32
 

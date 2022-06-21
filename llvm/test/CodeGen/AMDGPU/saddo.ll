@@ -251,7 +251,7 @@ define amdgpu_kernel void @v_saddo_i32(i32 addrspace(1)* %out, i1 addrspace(1)* 
 ; SI-NEXT:    s_mov_b32 s4, s2
 ; SI-NEXT:    s_mov_b32 s5, s3
 ; SI-NEXT:    s_waitcnt vmcnt(0)
-; SI-NEXT:    v_add_i32_e32 v2, vcc, v1, v0
+; SI-NEXT:    v_add_i32_e32 v2, vcc, v0, v1
 ; SI-NEXT:    v_cmp_gt_i32_e32 vcc, 0, v1
 ; SI-NEXT:    v_cmp_lt_i32_e64 s[0:1], v2, v0
 ; SI-NEXT:    s_xor_b64 s[0:1], vcc, s[0:1]
@@ -275,7 +275,7 @@ define amdgpu_kernel void @v_saddo_i32(i32 addrspace(1)* %out, i1 addrspace(1)* 
 ; VI-NEXT:    v_mov_b32_e32 v2, s2
 ; VI-NEXT:    v_mov_b32_e32 v3, s3
 ; VI-NEXT:    s_waitcnt vmcnt(0)
-; VI-NEXT:    v_add_u32_e32 v6, vcc, v5, v4
+; VI-NEXT:    v_add_u32_e32 v6, vcc, v4, v5
 ; VI-NEXT:    v_cmp_gt_i32_e32 vcc, 0, v5
 ; VI-NEXT:    v_cmp_lt_i32_e64 s[0:1], v6, v4
 ; VI-NEXT:    s_xor_b64 s[0:1], vcc, s[0:1]
