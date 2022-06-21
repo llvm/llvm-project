@@ -983,7 +983,6 @@ define void @swifterror_isel(%swift.refcounted*) {
 ; CHECK-O0-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %r13 ## 8-byte Reload
 ; CHECK-O0-NEXT:    ## implicit-def: $edi
 ; CHECK-O0-NEXT:    movw %ax, %di
-; CHECK-O0-NEXT:    movl %edi, {{[-0-9]+}}(%r{{[sb]}}p) ## 4-byte Spill
 ; CHECK-O0-NEXT:    ## implicit-def: $rax
 ; CHECK-O0-NEXT:    callq *%rax
 ; CHECK-O0-NEXT:    ## implicit-def: $rax

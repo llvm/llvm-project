@@ -114,6 +114,9 @@ void fuchsia::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     CmdArgs.push_back(Args.MakeArgString(Dyld));
   }
 
+  if (ToolChain.getArch() == llvm::Triple::riscv64)
+    CmdArgs.push_back("-X");
+
   CmdArgs.push_back("-o");
   CmdArgs.push_back(Output.getFilename());
 

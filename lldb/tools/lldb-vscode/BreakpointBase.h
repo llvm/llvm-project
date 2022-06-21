@@ -20,6 +20,8 @@ namespace lldb_vscode {
 struct BreakpointBase {
   // logMessage part can be either a raw text or an expression.
   struct LogMessagePart {
+    LogMessagePart(llvm::StringRef text, bool is_expr)
+        : text(text), is_expr(is_expr) {}
     llvm::StringRef text;
     bool is_expr;
   };
