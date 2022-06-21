@@ -12,6 +12,8 @@ from lldbsuite.test import lldbutil
 
 class FoundationTestCase2(TestBase):
 
+    NO_DEBUG_INFO_TESTCASE = True
+
     def test_expr_commands(self):
         """More expression commands for objective-c."""
         self.build()
