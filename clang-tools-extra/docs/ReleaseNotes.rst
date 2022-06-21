@@ -166,7 +166,7 @@ Changes in existing checks
   the check would try to create another initializer for the same member.
 
 - Fixed a false positive in :doc:`cppcoreguidelines-virtual-class-destructor
-  <clang-tidy/checks/cppcoreguidelines-virtual-class-destructor>` involving
+  <clang-tidy/checks/cppcoreguidelines/virtual-class-destructor>` involving
   ``final`` classes. The check will not diagnose classes marked ``final``, since
   those cannot be used as base classes, consequently, they can not violate the
   rule.
