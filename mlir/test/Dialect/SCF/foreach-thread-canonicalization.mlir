@@ -26,9 +26,8 @@ func.func @reduce() -> tensor<128xf32> {
       linalg.yield %14 : f32
     } -> tensor<?xf32>
 
-    // TODO: canonicalize this cast away.
-    // CHECK: %[[dyn_casted:.*]] = tensor.cast %{{.*}} : tensor<64xf32> to tensor<?xf32>
-    // CHECK: scf.foreach_thread.parallel_insert_slice %[[dyn_casted:.*]] into %{{.*}}[%{{.*}}] [64] [1] : tensor<?xf32> into tensor<128xf32>
+    // CHECK-NOT: tensor.cast
+    // CHECK: scf.foreach_thread.parallel_insert_slice %{{.*}} into %{{.*}}[%{{.*}}] [64] [1] : tensor<64xf32> into tensor<128xf32>
     scf.foreach_thread.perform_concurrently {
       scf.foreach_thread.parallel_insert_slice %13 into %3[%9] [%10] [1] : tensor<?xf32> into tensor<128xf32>
     }
