@@ -497,7 +497,7 @@ void ForOp::getSuccessorRegions(Optional<unsigned> index,
   }
 
   // Otherwise, the loop may branch back to itself or the parent operation.
-  assert(index.getValue() == 0 && "expected loop region");
+  assert(*index == 0 && "expected loop region");
   regions.push_back(RegionSuccessor(&getLoopBody(), getRegionIterArgs()));
   regions.push_back(RegionSuccessor(getResults()));
 }

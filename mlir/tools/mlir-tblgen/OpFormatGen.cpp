@@ -1043,7 +1043,7 @@ static void genEnumAttrParser(const NamedAttribute *var, MethodBody &body,
   {
     llvm::raw_string_ostream os(attrBuilderStr);
     os << tgfmt(enumAttr.getConstBuilderTemplate(), &attrTypeCtx,
-                "attrOptional.getValue()");
+                "attrOptional.value()");
   }
 
   // Build a string containing the cases that can be formatted as a keyword.

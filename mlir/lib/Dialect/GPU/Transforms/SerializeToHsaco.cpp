@@ -292,7 +292,7 @@ SerializeToHsacoPass::translateToLLVMIR(llvm::LLVMContext &llvmContext) {
   }
 
   llvm::Linker linker(*ret);
-  for (std::unique_ptr<llvm::Module> &libModule : mbModules.getValue()) {
+  for (std::unique_ptr<llvm::Module> &libModule : *mbModules) {
     // This bitcode linking code is substantially similar to what is used in
     // hip-clang It imports the library functions into the module, allowing LLVM
     // optimization passes (which must run after linking) to optimize across the

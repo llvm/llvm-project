@@ -143,7 +143,7 @@ Serializer::processSpecConstantOperationOp(spirv::SpecConstantOperationOp op) {
     return failure();
   }
 
-  operands.push_back(static_cast<uint32_t>(enclosedOpcode.getValue()));
+  operands.push_back(static_cast<uint32_t>(*enclosedOpcode));
 
   // Append operands to the enclosed op to the list of operands.
   for (Value operand : enclosedOp.getOperands()) {
@@ -332,7 +332,7 @@ Serializer::processGlobalVariableOp(spirv::GlobalVariableOp varOp) {
 
   // Encode initialization.
   if (auto initializer = varOp.initializer()) {
-    auto initializerID = getVariableID(initializer.getValue());
+    auto initializerID = getVariableID(*initializer);
     if (!initializerID) {
       return emitError(varOp.getLoc(),
                        "invalid usage of undefined variable as initializer");

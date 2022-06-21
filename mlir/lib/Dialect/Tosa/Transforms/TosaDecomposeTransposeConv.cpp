@@ -134,8 +134,7 @@ public:
       conv2d = rewriter.create<tosa::Conv2DOp>(
           loc, resultTy, input, reverse2, bias,
           rewriter.getI64ArrayAttr(convPad), rewriter.getI64ArrayAttr(stride),
-          rewriter.getI64ArrayAttr(dilation),
-          op.quantization_info().getValue());
+          rewriter.getI64ArrayAttr(dilation), *op.quantization_info());
     } else {
       conv2d = rewriter.create<tosa::Conv2DOp>(
           loc, resultTy, input, reverse2, bias,
@@ -304,7 +303,7 @@ public:
                    /*pad=*/rewriter.getI64ArrayAttr({0, 0, 0, 0}),
                    /*stride=*/rewriter.getI64ArrayAttr({1, 1}),
                    /*dilation=*/rewriter.getI64ArrayAttr({1, 1}),
-                   op.quantization_info().getValue())
+                   *op.quantization_info())
                    .getResult();
     } else {
       conv2d = createOpAndInfer<tosa::Conv2DOp>(

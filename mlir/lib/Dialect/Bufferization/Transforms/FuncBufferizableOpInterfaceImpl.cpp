@@ -246,8 +246,7 @@ struct CallOpInterface
           getAliasingOpOperand(op, opResult, state);
       assert(aliasingOpOperands.size() == 1 &&
              "expected exactly 1 aliasing OpOperand");
-      assert(aliasingOpOperands.front()->getOperandNumber() ==
-                 maybeEquiv.getValue() &&
+      assert(aliasingOpOperands.front()->getOperandNumber() == *maybeEquiv &&
              "inconsistent analysis state");
 #endif
       return BufferRelation::Equivalent;

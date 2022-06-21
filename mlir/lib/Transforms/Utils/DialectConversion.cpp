@@ -1337,7 +1337,7 @@ FailureOr<Block *> ConversionPatternRewriterImpl::convertBlockSignature(
                                                  argReplacements);
   if (failed(result))
     return failure();
-  if (Block *newBlock = result.getValue()) {
+  if (Block *newBlock = *result) {
     if (newBlock != block)
       blockActions.push_back(BlockAction::getTypeConversion(newBlock));
   }
@@ -3044,7 +3044,7 @@ Value TypeConverter::materializeConversion(
     OpBuilder &builder, Location loc, Type resultType, ValueRange inputs) {
   for (MaterializationCallbackFn &fn : llvm::reverse(materializations))
     if (Optional<Value> result = fn(builder, resultType, inputs, loc))
-      return result.getValue();
+      return *result;
   return nullptr;
 }
 

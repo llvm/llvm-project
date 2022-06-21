@@ -402,7 +402,7 @@ private:
     // Take advantage if index is constant.
     MemRefType memRefType = operandType.cast<MemRefType>();
     if (Optional<int64_t> index = getConstantDimIndex(dimOp)) {
-      int64_t i = index.getValue();
+      int64_t i = *index;
       if (memRefType.isDynamicDim(i)) {
         // extract dynamic size from the memref descriptor.
         MemRefDescriptor descriptor(adaptor.source());

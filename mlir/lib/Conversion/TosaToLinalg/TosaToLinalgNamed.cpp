@@ -540,7 +540,7 @@ public:
       return success();
     }
 
-    auto quantizationInfo = op.quantization_info().getValue();
+    auto quantizationInfo = *op.quantization_info();
     auto aZp = rewriter.create<arith::ConstantOp>(
         loc, rewriter.getI32IntegerAttr(quantizationInfo.getAZp()));
     auto bZp = rewriter.create<arith::ConstantOp>(
@@ -650,7 +650,7 @@ public:
       return success();
     }
 
-    auto quantizationInfo = op.quantization_info().getValue();
+    auto quantizationInfo = *op.quantization_info();
     auto inputZp = rewriter.create<arith::ConstantOp>(
         loc, rewriter.getI32IntegerAttr(quantizationInfo.getInputZp()));
     auto outputZp = rewriter.create<arith::ConstantOp>(
@@ -890,7 +890,7 @@ public:
             // If we have quantization information we need to apply an offset
             // for the input zp value.
             if (op.quantization_info()) {
-              auto quantizationInfo = op.quantization_info().getValue();
+              auto quantizationInfo = *op.quantization_info();
               auto inputZp = rewriter.create<arith::ConstantOp>(
                   loc, b.getIntegerAttr(accETy, quantizationInfo.getInputZp()));
               Value offset =
@@ -926,7 +926,7 @@ public:
             // If we have quantization information we need to apply output
             // zeropoint.
             if (op.quantization_info()) {
-              auto quantizationInfo = op.quantization_info().getValue();
+              auto quantizationInfo = *op.quantization_info();
               auto outputZp = rewriter.create<arith::ConstantOp>(
                   loc, b.getIntegerAttr(scaled.getType(),
                                         quantizationInfo.getOutputZp()));

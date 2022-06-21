@@ -303,7 +303,7 @@ ExecutionEngine::create(ModuleOp m, const ExecutionEngineOptions &options) {
   auto compileFunctionCreator = [&](JITTargetMachineBuilder jtmb)
       -> Expected<std::unique_ptr<IRCompileLayer::IRCompiler>> {
     if (options.jitCodeGenOptLevel)
-      jtmb.setCodeGenOptLevel(options.jitCodeGenOptLevel.getValue());
+      jtmb.setCodeGenOptLevel(*options.jitCodeGenOptLevel);
     auto tm = jtmb.createTargetMachine();
     if (!tm)
       return tm.takeError();

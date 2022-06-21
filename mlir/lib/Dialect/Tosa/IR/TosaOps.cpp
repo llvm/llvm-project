@@ -347,7 +347,7 @@ struct MaterializePadValue : public OpRewritePattern<tosa::PadOp> {
     } else if (elementTy.isa<IntegerType>() && !op.quantization_info()) {
       constantAttr = rewriter.getIntegerAttr(elementTy, 0);
     } else if (elementTy.isa<IntegerType>() && op.quantization_info()) {
-      auto value = op.quantization_info().getValue().getInputZp();
+      auto value = op.quantization_info()->getInputZp();
       constantAttr = rewriter.getIntegerAttr(elementTy, value);
     }
 

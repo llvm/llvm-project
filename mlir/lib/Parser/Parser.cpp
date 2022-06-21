@@ -776,7 +776,7 @@ ParseResult OperationParser::parseSSAUse(UnresolvedOperand &result,
       return emitError("result number not allowed in argument list");
 
     if (auto value = getToken().getHashIdentifierNumber())
-      result.number = value.getValue();
+      result.number = *value;
     else
       return emitError("invalid SSA value result number");
     consumeToken(Token::hash_identifier);
