@@ -698,8 +698,7 @@ SymbolFileBreakpad::ParseWinUnwindPlan(const Bookmark &bookmark,
 
   LineIterator It(*m_objfile_sp, Record::StackWin, bookmark);
   llvm::Optional<StackWinRecord> record = StackWinRecord::parse(*It);
-  assert(record.hasValue() &&
-         "Record already parsed successfully in ParseUnwindData!");
+  assert(record && "Record already parsed successfully in ParseUnwindData!");
 
   auto plan_sp = std::make_shared<UnwindPlan>(lldb::eRegisterKindLLDB);
   plan_sp->SetSourceName("breakpad STACK WIN");

@@ -3284,8 +3284,7 @@ class OffloadingActionBuilder final {
               DDep, CudaDeviceActions[I]->getType());
         }
 
-        if (!CompileDeviceOnly || !BundleOutput.hasValue() ||
-            BundleOutput.getValue()) {
+        if (!CompileDeviceOnly || !BundleOutput || *BundleOutput) {
           // Create HIP fat binary with a special "link" action.
           CudaFatBinary = C.MakeAction<LinkJobAction>(CudaDeviceActions,
                                                       types::TY_HIP_FATBIN);
@@ -3385,8 +3384,7 @@ class OffloadingActionBuilder final {
       // in a fat binary for mixed host-device compilation. For device-only
       // compilation, creates a fat binary.
       OffloadAction::DeviceDependences DDeps;
-      if (!CompileDeviceOnly || !BundleOutput.hasValue() ||
-          BundleOutput.getValue()) {
+      if (!CompileDeviceOnly || !BundleOutput || *BundleOutput) {
         auto *TopDeviceLinkAction = C.MakeAction<LinkJobAction>(
             Actions,
             CompileDeviceOnly ? types::TY_HIP_FATBIN : types::TY_Object);
