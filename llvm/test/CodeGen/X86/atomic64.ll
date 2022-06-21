@@ -273,7 +273,6 @@ define void @atomic_fetch_nand64(i64 %x) nounwind {
 ; X64-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rdx # 8-byte Reload
 ; X64-NEXT:    movq %rax, %rcx
 ; X64-NEXT:    andq %rdx, %rcx
-; X64-NEXT:    movq %rcx, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
 ; X64-NEXT:    notq %rcx
 ; X64-NEXT:    lock cmpxchgq %rcx, sc64(%rip)
 ; X64-NEXT:    sete %cl
@@ -313,7 +312,6 @@ define void @atomic_fetch_max64(i64 %x) nounwind {
 ; X64-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rcx # 8-byte Reload
 ; X64-NEXT:    movq %rax, %rdx
 ; X64-NEXT:    subq %rcx, %rdx
-; X64-NEXT:    movq %rdx, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
 ; X64-NEXT:    cmovgq %rax, %rcx
 ; X64-NEXT:    lock cmpxchgq %rcx, sc64(%rip)
 ; X64-NEXT:    sete %cl
@@ -406,7 +404,6 @@ define void @atomic_fetch_min64(i64 %x) nounwind {
 ; X64-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rcx # 8-byte Reload
 ; X64-NEXT:    movq %rax, %rdx
 ; X64-NEXT:    subq %rcx, %rdx
-; X64-NEXT:    movq %rdx, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
 ; X64-NEXT:    cmovleq %rax, %rcx
 ; X64-NEXT:    lock cmpxchgq %rcx, sc64(%rip)
 ; X64-NEXT:    sete %cl
@@ -499,7 +496,6 @@ define void @atomic_fetch_umax64(i64 %x) nounwind {
 ; X64-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rcx # 8-byte Reload
 ; X64-NEXT:    movq %rax, %rdx
 ; X64-NEXT:    subq %rcx, %rdx
-; X64-NEXT:    movq %rdx, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
 ; X64-NEXT:    cmovaq %rax, %rcx
 ; X64-NEXT:    lock cmpxchgq %rcx, sc64(%rip)
 ; X64-NEXT:    sete %cl
@@ -592,7 +588,6 @@ define void @atomic_fetch_umin64(i64 %x) nounwind {
 ; X64-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rcx # 8-byte Reload
 ; X64-NEXT:    movq %rax, %rdx
 ; X64-NEXT:    subq %rcx, %rdx
-; X64-NEXT:    movq %rdx, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
 ; X64-NEXT:    cmovbeq %rax, %rcx
 ; X64-NEXT:    lock cmpxchgq %rcx, sc64(%rip)
 ; X64-NEXT:    sete %cl

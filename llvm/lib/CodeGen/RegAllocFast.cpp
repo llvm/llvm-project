@@ -359,7 +359,16 @@ bool RegAllocFast::mayLiveOut(Register VirtReg) {
   // If this block loops back to itself, it is necessary to check whether the
   // use comes after the def.
   if (MBB->isSuccessor(MBB)) {
-    SelfLoopDef = MRI->getUniqueVRegDef(VirtReg);
+    // Find the first def in the self loop MBB.
+    for (const MachineInstr &DefInst : MRI->def_instructions(VirtReg)) {
+      if (DefInst.getParent() != MBB) {
+        MayLiveAcrossBlocks.set(Register::virtReg2Index(VirtReg));
+        return true;
+      } else {
+        if (!SelfLoopDef || dominates(*MBB, DefInst.getIterator(), SelfLoopDef))
+          SelfLoopDef = &DefInst;
+      }
+    }
     if (!SelfLoopDef) {
       MayLiveAcrossBlocks.set(Register::virtReg2Index(VirtReg));
       return true;
