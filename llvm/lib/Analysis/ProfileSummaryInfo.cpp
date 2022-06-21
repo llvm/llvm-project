@@ -124,7 +124,7 @@ bool ProfileSummaryInfo::isFunctionHotInCallGraph(
       for (const auto &I : BB)
         if (isa<CallInst>(I) || isa<InvokeInst>(I))
           if (auto CallCount = getProfileCount(cast<CallBase>(I), nullptr))
-            TotalCallCount += CallCount.getValue();
+            TotalCallCount += *CallCount;
     if (isHotCount(TotalCallCount))
       return true;
   }
@@ -153,7 +153,7 @@ bool ProfileSummaryInfo::isFunctionColdInCallGraph(
       for (const auto &I : BB)
         if (isa<CallInst>(I) || isa<InvokeInst>(I))
           if (auto CallCount = getProfileCount(cast<CallBase>(I), nullptr))
-            TotalCallCount += CallCount.getValue();
+            TotalCallCount += *CallCount;
     if (!isColdCount(TotalCallCount))
       return false;
   }
@@ -187,7 +187,7 @@ bool ProfileSummaryInfo::isFunctionHotOrColdInCallGraphNthPercentile(
       for (const auto &I : BB)
         if (isa<CallInst>(I) || isa<InvokeInst>(I))
           if (auto CallCount = getProfileCount(cast<CallBase>(I), nullptr))
-            TotalCallCount += CallCount.getValue();
+            TotalCallCount += *CallCount;
     if (isHot && isHotCountNthPercentile(PercentileCutoff, TotalCallCount))
       return true;
     if (!isHot && !isColdCountNthPercentile(PercentileCutoff, TotalCallCount))

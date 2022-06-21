@@ -1618,7 +1618,7 @@ bool MIParser::assignRegisterTies(MachineInstr &MI,
       continue;
     // The parser ensures that this operand is a register use, so we just have
     // to check the tied-def operand.
-    unsigned DefIdx = Operands[I].TiedDefIdx.getValue();
+    unsigned DefIdx = *Operands[I].TiedDefIdx;
     if (DefIdx >= E)
       return error(Operands[I].Begin,
                    Twine("use of invalid tied-def operand index '" +

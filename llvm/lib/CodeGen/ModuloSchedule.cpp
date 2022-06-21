@@ -1431,7 +1431,7 @@ Register KernelRewriter::remapUse(Register Reg, MachineInstr &MI) {
     Register R = MRI.createVirtualRegister(RC);
     MachineInstr *IllegalPhi =
         BuildMI(*BB, MI, DebugLoc(), TII->get(TargetOpcode::PHI), R)
-            .addReg(IllegalPhiDefault.getValue())
+            .addReg(*IllegalPhiDefault)
             .addMBB(PreheaderBB) // Block choice is arbitrary and has no effect.
             .addReg(LoopReg)
             .addMBB(BB); // Block choice is arbitrary and has no effect.

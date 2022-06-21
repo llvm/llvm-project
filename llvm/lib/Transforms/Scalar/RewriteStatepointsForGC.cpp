@@ -304,7 +304,7 @@ static ArrayRef<Use> GetDeoptBundleOperands(const CallBase *Call) {
     return None;
   }
 
-  return DeoptBundle.getValue().Inputs;
+  return DeoptBundle->Inputs;
 }
 
 /// Compute the live-in set for every basic block in the function

@@ -193,7 +193,7 @@ Expected<std::unique_ptr<IFSStub>> ifs::readIFSFromBuffer(StringRef Buf) {
         std::make_error_code(std::errc::invalid_argument));
   if (Stub->Target.ArchString) {
     Stub->Target.Arch =
-        ELF::convertArchNameToEMachine(Stub->Target.ArchString.getValue());
+        ELF::convertArchNameToEMachine(*Stub->Target.ArchString);
   }
   return std::move(Stub);
 }
@@ -266,7 +266,7 @@ Error ifs::validateIFSTarget(IFSStub &Stub, bool ParseTriple) {
           ValidationEC);
     }
     if (ParseTriple) {
-      IFSTarget TargetFromTriple = parseTriple(Stub.Target.Triple.getValue());
+      IFSTarget TargetFromTriple = parseTriple(*Stub.Target.Triple);
       Stub.Target.Arch = TargetFromTriple.Arch;
       Stub.Target.BitWidth = TargetFromTriple.BitWidth;
       Stub.Target.Endianness = TargetFromTriple.Endianness;

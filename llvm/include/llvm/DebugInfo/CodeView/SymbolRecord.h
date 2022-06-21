@@ -196,7 +196,7 @@ struct BinaryAnnotationIterator
 
   const DecodedAnnotation &operator*() {
     ParseCurrentAnnotation();
-    return Current.getValue();
+    return *Current;
   }
 
 private:

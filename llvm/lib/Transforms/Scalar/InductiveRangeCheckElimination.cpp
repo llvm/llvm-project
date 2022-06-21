@@ -1414,7 +1414,7 @@ bool LoopConstrainer::run() {
     return false;
   }
 
-  SubRanges SR = MaybeSR.getValue();
+  SubRanges SR = *MaybeSR;
   bool Increasing = MainLoopStructure.IndVarIncreasing;
   IntegerType *IVTy =
       cast<IntegerType>(Range.getBegin()->getType());
@@ -1927,7 +1927,7 @@ bool InductiveRangeCheckElimination::run(
                       << FailureReason << "\n";);
     return false;
   }
-  LoopStructure LS = MaybeLoopStructure.getValue();
+  LoopStructure LS = *MaybeLoopStructure;
   if (!isProfitableToTransform(*L, LS))
     return false;
   const SCEVAddRecExpr *IndVar =

@@ -578,8 +578,7 @@ const char *InlineAdvisor::getAnnotatedInlinePassName() {
 
   // IC is constant and initialized in constructor, so compute the annotated
   // name only once.
-  static const std::string PassName =
-      llvm::AnnotateInlinePassName(IC.getValue());
+  static const std::string PassName = llvm::AnnotateInlinePassName(*IC);
 
   return PassName.c_str();
 }

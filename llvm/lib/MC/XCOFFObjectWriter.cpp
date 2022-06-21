@@ -448,7 +448,7 @@ void XCOFFObjectWriter::executePostLayoutBinding(MCAssembler &Asm,
       SectionMap[MCSec] = DwarfSec.get();
 
       DwarfSectionEntry SecEntry(MCSec->getName(),
-                                 MCSec->getDwarfSubtypeFlags().getValue(),
+                                 *MCSec->getDwarfSubtypeFlags(),
                                  std::move(DwarfSec));
       DwarfSections.push_back(std::move(SecEntry));
     } else

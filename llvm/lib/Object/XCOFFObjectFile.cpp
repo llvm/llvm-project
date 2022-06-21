@@ -1342,7 +1342,7 @@ XCOFFTracebackTable::XCOFFTracebackTable(const uint8_t *Ptr, uint64_t &Size,
     NumOfCtlAnchors = DE.getU32(Cur);
     if (Cur && NumOfCtlAnchors) {
       SmallVector<uint32_t, 8> Disp;
-      Disp.reserve(NumOfCtlAnchors.getValue());
+      Disp.reserve(*NumOfCtlAnchors);
       for (uint32_t I = 0; I < NumOfCtlAnchors && Cur; ++I)
         Disp.push_back(DE.getU32(Cur));
       if (Cur)
@@ -1369,7 +1369,7 @@ XCOFFTracebackTable::XCOFFTracebackTable(const uint8_t *Ptr, uint64_t &Size,
         return;
       }
       VecExt = TBVecExtOrErr.get();
-      VectorParmsNum = VecExt.getValue().getNumberOfVectorParms();
+      VectorParmsNum = VecExt->getNumberOfVectorParms();
     }
   }
 

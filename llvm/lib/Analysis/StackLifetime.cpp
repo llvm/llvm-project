@@ -70,7 +70,7 @@ static const AllocaInst *findMatchingAlloca(const IntrinsicInst &II,
   auto AllocaSizeInBits = AI->getAllocationSizeInBits(DL);
   if (!AllocaSizeInBits)
     return nullptr;
-  int64_t AllocaSize = AllocaSizeInBits.getValue() / 8;
+  int64_t AllocaSize = *AllocaSizeInBits / 8;
 
   auto *Size = dyn_cast<ConstantInt>(II.getArgOperand(0));
   if (!Size)

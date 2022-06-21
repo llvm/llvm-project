@@ -596,7 +596,7 @@ unsigned ELFState<ELFT>::toSectionIndex(StringRef S, StringRef LocSec,
   const ELFYAML::SectionHeaderTable &SectionHeaders =
       Doc.getSectionHeaderTable();
   if (SectionHeaders.IsImplicit ||
-      (SectionHeaders.NoHeaders && !SectionHeaders.NoHeaders.getValue()) ||
+      (SectionHeaders.NoHeaders && !*SectionHeaders.NoHeaders) ||
       SectionHeaders.isDefault())
     return Index;
 

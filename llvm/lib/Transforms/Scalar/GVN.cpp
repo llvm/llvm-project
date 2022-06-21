@@ -1188,9 +1188,7 @@ bool GVNPass::AnalyzeLoadAvailability(LoadInst *Load, MemDepResult DepInfo,
             canCoerceMustAliasedValueToLoad(DepLoad, LoadType, DL)) {
           const auto ClobberOff = MD->getClobberOffset(DepLoad);
           // GVN has no deal with a negative offset.
-          Offset = (ClobberOff == None || ClobberOff.getValue() < 0)
-                       ? -1
-                       : ClobberOff.getValue();
+          Offset = (ClobberOff == None || *ClobberOff < 0) ? -1 : *ClobberOff;
         }
         if (Offset == -1)
           Offset =

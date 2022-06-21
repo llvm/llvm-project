@@ -9951,7 +9951,7 @@ ScalarEvolution::howFarToZero(const SCEV *V, const Loop *L, bool ControlsExit,
     // value at this index.  When solving for "X*X != 5", for example, we
     // should not accept a root of 2.
     if (auto S = SolveQuadraticAddRecExact(AddRec, *this)) {
-      const auto *R = cast<SCEVConstant>(getConstant(S.getValue()));
+      const auto *R = cast<SCEVConstant>(getConstant(*S));
       return ExitLimit(R, R, false, Predicates);
     }
     return getCouldNotCompute();
@@ -12781,7 +12781,7 @@ const SCEV *SCEVAddRecExpr::getNumIterationsInRange(const ConstantRange &Range,
 
   if (isQuadratic()) {
     if (auto S = SolveQuadraticAddRecRange(this, Range, SE))
-      return SE.getConstant(S.getValue());
+      return SE.getConstant(*S);
   }
 
   return SE.getCouldNotCompute();

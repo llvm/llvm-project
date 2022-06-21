@@ -777,7 +777,7 @@ static void findConstants(IRSimilarityCandidate &C, DenseSet<unsigned> &NotSame,
     for (Value *V : (*IDIt).OperVals) {
       // Since these are stored before any outlining, they will be in the
       // global value numbering.
-      unsigned GVN = C.getGVN(V).getValue();
+      unsigned GVN = *C.getGVN(V);
       if (isa<Constant>(V))
         if (NotSame.contains(GVN) && !Seen.contains(GVN)) {
           Inputs.push_back(GVN);
@@ -1194,7 +1194,7 @@ static Optional<unsigned> getGVNForPHINode(OutlinableRegion &Region,
       continue;
 
     // Collect the canonical numbers of the values in the PHINode.
-    unsigned GVN = OGVN.getValue();
+    unsigned GVN = *OGVN;
     OGVN = Cand.getCanonicalNum(GVN);
     assert(OGVN && "No GVN found for incoming value?");
     PHIGVNs.push_back(*OGVN);
@@ -1223,7 +1223,7 @@ static Optional<unsigned> getGVNForPHINode(OutlinableRegion &Region,
       assert(PrevBlock && "Expected a predecessor not in the reigon!");
       OGVN = Cand.getGVN(PrevBlock);
     }
-    GVN = OGVN.getValue();
+    GVN = *OGVN;
     OGVN = Cand.getCanonicalNum(GVN);
     assert(OGVN && "No GVN found for incoming block?");
     PHIGVNs.push_back(*OGVN);

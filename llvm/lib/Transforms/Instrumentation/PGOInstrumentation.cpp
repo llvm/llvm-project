@@ -1619,7 +1619,7 @@ static void fixFuncEntryCount(PGOUseFunc &Func, LoopInfo &LI,
       continue;
     auto BFICount = NBFI.getBlockProfileCount(&BBI);
     CountValue = Func.getBBInfo(&BBI).CountValue;
-    BFICountValue = BFICount.getValue();
+    BFICountValue = *BFICount;
     SumCount.add(APFloat(CountValue * 1.0), APFloat::rmNearestTiesToEven);
     SumBFICount.add(APFloat(BFICountValue * 1.0), APFloat::rmNearestTiesToEven);
   }
@@ -1672,7 +1672,7 @@ static void verifyFuncBFI(PGOUseFunc &Func, LoopInfo &LI,
       NonZeroBBNum++;
     auto BFICount = NBFI.getBlockProfileCount(&BBI);
     if (BFICount)
-      BFICountValue = BFICount.getValue();
+      BFICountValue = *BFICount;
 
     if (HotBBOnly) {
       bool rawIsHot = CountValue >= HotCountThreshold;

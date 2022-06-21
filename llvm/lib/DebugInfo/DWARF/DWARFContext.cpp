@@ -389,7 +389,7 @@ void DWARFContext::dump(
     OS << '\n' << Name << " contents:\n";
     if (auto DumpOffset = DumpOffsets[DIDT_ID_DebugInfo])
       for (const auto &U : Units)
-        U->getDIEForOffset(DumpOffset.getValue())
+        U->getDIEForOffset(*DumpOffset)
             .dump(OS, 0, DumpOpts.noImplicitRecursion());
     else
       for (const auto &U : Units)

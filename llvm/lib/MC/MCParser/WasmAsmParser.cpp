@@ -188,7 +188,7 @@ public:
 
     // TODO: Parse UniqueID
     MCSectionWasm *WS = getContext().getWasmSection(
-        Name, Kind.getValue(), Flags, GroupName, MCContext::GenericSectionID);
+        Name, *Kind, Flags, GroupName, MCContext::GenericSectionID);
 
     if (WS->getSegmentFlags() != Flags)
       Parser->Error(loc, "changed section flags for " + Name +

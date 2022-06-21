@@ -387,7 +387,7 @@ VPInstruction *VPlanSlp::buildGraph(ArrayRef<VPValue *> Values) {
     return markFailed();
 
   assert(getOpcode(Values) && "Opcodes for all values must match");
-  unsigned ValuesOpcode = getOpcode(Values).getValue();
+  unsigned ValuesOpcode = *getOpcode(Values);
 
   SmallVector<VPValue *, 4> CombinedOperands;
   if (areCommutative(Values)) {

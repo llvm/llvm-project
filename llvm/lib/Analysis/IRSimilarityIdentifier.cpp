@@ -1205,7 +1205,7 @@ SimilarityGroupList &IRSimilarityIdentifier::findSimilarity(
   populateMapper(Modules, InstrList, IntegerMapping);
   findCandidates(InstrList, IntegerMapping);
 
-  return SimilarityCandidates.getValue();
+  return *SimilarityCandidates;
 }
 
 SimilarityGroupList &IRSimilarityIdentifier::findSimilarity(Module &M) {
@@ -1222,7 +1222,7 @@ SimilarityGroupList &IRSimilarityIdentifier::findSimilarity(Module &M) {
   populateMapper(M, InstrList, IntegerMapping);
   findCandidates(InstrList, IntegerMapping);
 
-  return SimilarityCandidates.getValue();
+  return *SimilarityCandidates;
 }
 
 INITIALIZE_PASS(IRSimilarityIdentifierWrapperPass, "ir-similarity-identifier",
