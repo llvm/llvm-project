@@ -1037,6 +1037,154 @@ define <vscale x 2 x double> @fsub_d_immone(<vscale x 2 x double> %a) #0 {
   ret <vscale x 2 x double> %out
 }
 
+;
+; FSUBR
+;
+
+define <vscale x 8 x half> @fsubr_h_immhalf(<vscale x 8 x half> %a) #0 {
+; CHECK-LABEL: fsubr_h_immhalf:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.h
+; CHECK-NEXT:    fsubr z0.h, p0/m, z0.h, #0.5
+; CHECK-NEXT:    ret
+  %elt   = insertelement <vscale x 8 x half> undef, half 0.500000e+00, i32 0
+  %splat = shufflevector <vscale x 8 x half> %elt, <vscale x 8 x half> undef, <vscale x 8 x i32> zeroinitializer
+  %out = fsub <vscale x 8 x half> %splat, %a
+  ret <vscale x 8 x half> %out
+}
+
+define <vscale x 8 x half> @fsubr_h_immone(<vscale x 8 x half> %a) #0 {
+; CHECK-LABEL: fsubr_h_immone:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.h
+; CHECK-NEXT:    fsubr z0.h, p0/m, z0.h, #1.0
+; CHECK-NEXT:    ret
+  %elt   = insertelement <vscale x 8 x half> undef, half 1.000000e+00, i32 0
+  %splat = shufflevector <vscale x 8 x half> %elt, <vscale x 8 x half> undef, <vscale x 8 x i32> zeroinitializer
+  %out = fsub <vscale x 8 x half> %splat, %a
+  ret <vscale x 8 x half> %out
+}
+
+define <vscale x 4 x half> @fsubr_4h_immhalf(<vscale x 4 x half> %a) #0 {
+; CHECK-LABEL: fsubr_4h_immhalf:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.s
+; CHECK-NEXT:    fsubr z0.h, p0/m, z0.h, #0.5
+; CHECK-NEXT:    ret
+  %elt   = insertelement <vscale x 4 x half> undef, half 0.500000e+00, i32 0
+  %splat = shufflevector <vscale x 4 x half> %elt, <vscale x 4 x half> undef, <vscale x 4 x i32> zeroinitializer
+  %out = fsub <vscale x 4 x half> %splat, %a
+  ret <vscale x 4 x half> %out
+}
+
+define <vscale x 4 x half> @fsubr_4h_immone(<vscale x 4 x half> %a) #0 {
+; CHECK-LABEL: fsubr_4h_immone:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.s
+; CHECK-NEXT:    fsubr z0.h, p0/m, z0.h, #1.0
+; CHECK-NEXT:    ret
+  %elt   = insertelement <vscale x 4 x half> undef, half 1.000000e+00, i32 0
+  %splat = shufflevector <vscale x 4 x half> %elt, <vscale x 4 x half> undef, <vscale x 4 x i32> zeroinitializer
+  %out = fsub <vscale x 4 x half> %splat, %a
+  ret <vscale x 4 x half> %out
+}
+
+define <vscale x 2 x half> @fsubr_2h_immhalf(<vscale x 2 x half> %a) #0 {
+; CHECK-LABEL: fsubr_2h_immhalf:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    fsubr z0.h, p0/m, z0.h, #0.5
+; CHECK-NEXT:    ret
+  %elt   = insertelement <vscale x 2 x half> undef, half 0.500000e+00, i32 0
+  %splat = shufflevector <vscale x 2 x half> %elt, <vscale x 2 x half> undef, <vscale x 2 x i32> zeroinitializer
+  %out = fsub <vscale x 2 x half> %splat, %a
+  ret <vscale x 2 x half> %out
+}
+
+define <vscale x 2 x half> @fsubr_2h_immone(<vscale x 2 x half> %a) #0 {
+; CHECK-LABEL: fsubr_2h_immone:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    fsubr z0.h, p0/m, z0.h, #1.0
+; CHECK-NEXT:    ret
+  %elt   = insertelement <vscale x 2 x half> undef, half 1.000000e+00, i32 0
+  %splat = shufflevector <vscale x 2 x half> %elt, <vscale x 2 x half> undef, <vscale x 2 x i32> zeroinitializer
+  %out = fsub <vscale x 2 x half> %splat, %a
+  ret <vscale x 2 x half> %out
+}
+
+define <vscale x 4 x float> @fsubr_s_immhalf(<vscale x 4 x float> %a) #0 {
+; CHECK-LABEL: fsubr_s_immhalf:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.s
+; CHECK-NEXT:    fsubr z0.s, p0/m, z0.s, #0.5
+; CHECK-NEXT:    ret
+  %elt   = insertelement <vscale x 4 x float> undef, float 0.500000e+00, i32 0
+  %splat = shufflevector <vscale x 4 x float> %elt, <vscale x 4 x float> undef, <vscale x 4 x i32> zeroinitializer
+  %out = fsub <vscale x 4 x float> %splat, %a
+  ret <vscale x 4 x float> %out
+}
+
+define <vscale x 4 x float> @fsubr_s_immone(<vscale x 4 x float> %a) #0 {
+; CHECK-LABEL: fsubr_s_immone:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.s
+; CHECK-NEXT:    fsubr z0.s, p0/m, z0.s, #1.0
+; CHECK-NEXT:    ret
+  %elt   = insertelement <vscale x 4 x float> undef, float 1.000000e+00, i32 0
+  %splat = shufflevector <vscale x 4 x float> %elt, <vscale x 4 x float> undef, <vscale x 4 x i32> zeroinitializer
+  %out = fsub <vscale x 4 x float> %splat, %a
+  ret <vscale x 4 x float> %out
+}
+
+define <vscale x 2 x float> @fsubr_2s_immhalf(<vscale x 2 x float> %a) #0 {
+; CHECK-LABEL: fsubr_2s_immhalf:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    fsubr z0.s, p0/m, z0.s, #0.5
+; CHECK-NEXT:    ret
+  %elt   = insertelement <vscale x 2 x float> undef, float 0.500000e+00, i32 0
+  %splat = shufflevector <vscale x 2 x float> %elt, <vscale x 2 x float> undef, <vscale x 2 x i32> zeroinitializer
+  %out = fsub <vscale x 2 x float> %splat, %a
+  ret <vscale x 2 x float> %out
+}
+
+define <vscale x 2 x float> @fsubr_2s_immone(<vscale x 2 x float> %a) #0 {
+; CHECK-LABEL: fsubr_2s_immone:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    fsubr z0.s, p0/m, z0.s, #1.0
+; CHECK-NEXT:    ret
+  %elt   = insertelement <vscale x 2 x float> undef, float 1.000000e+00, i32 0
+  %splat = shufflevector <vscale x 2 x float> %elt, <vscale x 2 x float> undef, <vscale x 2 x i32> zeroinitializer
+  %out = fsub <vscale x 2 x float> %splat, %a
+  ret <vscale x 2 x float> %out
+}
+
+define <vscale x 2 x double> @fsubr_d_immhalf(<vscale x 2 x double> %a) #0 {
+; CHECK-LABEL: fsubr_d_immhalf:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    fsubr z0.d, p0/m, z0.d, #0.5
+; CHECK-NEXT:    ret
+  %elt   = insertelement <vscale x 2 x double> undef, double 0.500000e+00, i32 0
+  %splat = shufflevector <vscale x 2 x double> %elt, <vscale x 2 x double> undef, <vscale x 2 x i32> zeroinitializer
+  %out = fsub <vscale x 2 x double> %splat, %a
+  ret <vscale x 2 x double> %out
+}
+
+define <vscale x 2 x double> @fsubr_d_immone(<vscale x 2 x double> %a) #0 {
+; CHECK-LABEL: fsubr_d_immone:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    fsubr z0.d, p0/m, z0.d, #1.0
+; CHECK-NEXT:    ret
+  %elt   = insertelement <vscale x 2 x double> undef, double 1.000000e+00, i32 0
+  %splat = shufflevector <vscale x 2 x double> %elt, <vscale x 2 x double> undef, <vscale x 2 x i32> zeroinitializer
+  %out = fsub <vscale x 2 x double> %splat, %a
+  ret <vscale x 2 x double> %out
+}
+
 ;; Arithmetic intrinsic declarations
 
 declare <vscale x 8 x half> @llvm.maximum.nxv8f16(<vscale x 8 x half>, <vscale x 8 x half>)
