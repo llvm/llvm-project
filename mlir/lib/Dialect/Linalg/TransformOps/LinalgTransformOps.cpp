@@ -76,7 +76,8 @@ static FailureOr<LinalgOp> tryApply(Operation *operation, Args &&...args) {
 // DecomposeOp
 //===----------------------------------------------------------------------===//
 
-FailureOr<LinalgOp> transform::DecomposeOp::applyToOne(LinalgOp target) {
+FailureOr<LinalgOp> transform::DecomposeOp::applyToOne(LinalgOp target,
+                                                       TransformState &state) {
   FailureOr<LinalgOp> windowed =
       tryApply<DownscaleSizeOneWindowed2DConvolution>(target);
   if (succeeded(windowed))
@@ -220,7 +221,8 @@ LogicalResult transform::FuseOp::verify() {
 // GeneralizeOp
 //===----------------------------------------------------------------------===//
 
-FailureOr<LinalgOp> transform::GeneralizeOp::applyToOne(LinalgOp target) {
+FailureOr<LinalgOp> transform::GeneralizeOp::applyToOne(LinalgOp target,
+                                                        TransformState &state) {
   // Exit early if no transformation is needed.
   if (isa<GenericOp>(target))
     return target;
@@ -236,7 +238,8 @@ FailureOr<LinalgOp> transform::GeneralizeOp::applyToOne(LinalgOp target) {
 // InterchangeOp
 //===----------------------------------------------------------------------===//
 
-FailureOr<LinalgOp> transform::InterchangeOp::applyToOne(LinalgOp target) {
+FailureOr<LinalgOp>
+transform::InterchangeOp::applyToOne(LinalgOp target, TransformState &state) {
   SmallVector<unsigned> interchangeVector =
       extractUIntArray(getIteratorInterchange());
   // Exit early if no transformation is needed.
@@ -272,7 +275,8 @@ LogicalResult transform::InterchangeOp::verify() {
 // PadOp
 //===---------------------------------------------------------------------===//
 
-FailureOr<LinalgOp> transform::PadOp::applyToOne(LinalgOp target) {
+FailureOr<LinalgOp> transform::PadOp::applyToOne(LinalgOp target,
+                                                 TransformState &state) {
   // Convert the integer packing flags to booleans.
   SmallVector<bool> packPaddings;
   for (int64_t packPadding : extractI64Array(getPackPaddings()))
@@ -377,7 +381,8 @@ LogicalResult transform::PadOp::verify() {
 // ScalarizeOp
 //===----------------------------------------------------------------------===//
 
-FailureOr<LinalgOp> transform::ScalarizeOp::applyToOne(LinalgOp target) {
+FailureOr<LinalgOp> transform::ScalarizeOp::applyToOne(LinalgOp target,
+                                                       TransformState &state) {
   LinalgTilingOptions tilingOptions;
   tilingOptions.scalarizeDynamicDims();
   // Tiling with "scalarize_dyn_dims" actually sets the same lambda as the tile
@@ -399,7 +404,8 @@ FailureOr<LinalgOp> transform::ScalarizeOp::applyToOne(LinalgOp target) {
 //===----------------------------------------------------------------------===//
 
 FailureOr<SmallVector<Operation *>>
-transform::SplitReductionOp::applyToOne(LinalgOp target) {
+transform::SplitReductionOp::applyToOne(LinalgOp target,
+                                        TransformState &state) {
   ControlSplitReductionFn splitFn = [&](LinalgOp) {
     return std::pair<int64_t, unsigned>(getSplitFactor(),
                                         getInsertSplitDimension());
@@ -455,7 +461,8 @@ void TileOp::print(OpAsmPrinter &p) {
 // VectorizeOp
 //===----------------------------------------------------------------------===//
 
-FailureOr<Operation *> VectorizeOp::applyToOne(Operation *target) {
+FailureOr<Operation *> VectorizeOp::applyToOne(Operation *target,
+                                               TransformState &state) {
   if (!target->hasTrait<OpTrait::IsIsolatedFromAbove>()) {
     InFlightDiagnostic diag = emitOpError()
                               << "applies only to isolated-from-above targets";
