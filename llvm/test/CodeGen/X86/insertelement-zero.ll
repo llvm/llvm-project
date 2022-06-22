@@ -572,7 +572,7 @@ define <8 x float> @PR41512_v8f32(float %x, float %y) {
   ret <8 x float> %r
 }
 
-define <4 x i32> @PR41512_loads(i32* %p1, i32* %p2) {
+define <4 x i32> @PR41512_loads(ptr %p1, ptr %p2) {
 ; SSE-LABEL: PR41512_loads:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
@@ -586,8 +586,8 @@ define <4 x i32> @PR41512_loads(i32* %p1, i32* %p2) {
 ; AVX-NEXT:    vmovss {{.*#+}} xmm1 = mem[0],zero,zero,zero
 ; AVX-NEXT:    vmovlhps {{.*#+}} xmm0 = xmm0[0],xmm1[0]
 ; AVX-NEXT:    retq
-  %x = load i32, i32* %p1
-  %y = load i32, i32* %p2
+  %x = load i32, ptr %p1
+  %y = load i32, ptr %p2
   %ins1 = insertelement <4 x i32> <i32 undef, i32 0, i32 undef, i32 undef>, i32 %x, i32 0
   %ins2 = insertelement <4 x i32> <i32 undef, i32 0, i32 undef, i32 undef>, i32 %y, i32 0
   %r = shufflevector <4 x i32> %ins1, <4 x i32> %ins2, <4 x i32> <i32 0, i32 1, i32 4, i32 5>

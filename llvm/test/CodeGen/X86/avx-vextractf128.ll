@@ -21,7 +21,7 @@ entry:
   ret <4 x double> %shuffle
 }
 
-define void @t0(float* nocapture %addr, <8 x float> %a) nounwind uwtable ssp {
+define void @t0(ptr nocapture %addr, <8 x float> %a) nounwind uwtable ssp {
 ; CHECK-LABEL: t0:
 ; CHECK:       ## %bb.0: ## %entry
 ; CHECK-NEXT:    vextractf128 $1, %ymm0, (%rdi)
@@ -29,12 +29,11 @@ define void @t0(float* nocapture %addr, <8 x float> %a) nounwind uwtable ssp {
 ; CHECK-NEXT:    retq
 entry:
   %0 = tail call <4 x float> @llvm.x86.avx.vextractf128.ps.256(<8 x float> %a, i8 1)
-  %1 = bitcast float* %addr to <4 x float>*
-  store <4 x float> %0, <4 x float>* %1, align 16
+  store <4 x float> %0, ptr %addr, align 16
   ret void
 }
 
-define void @t2(double* nocapture %addr, <4 x double> %a) nounwind uwtable ssp {
+define void @t2(ptr nocapture %addr, <4 x double> %a) nounwind uwtable ssp {
 ; CHECK-LABEL: t2:
 ; CHECK:       ## %bb.0: ## %entry
 ; CHECK-NEXT:    vextractf128 $1, %ymm0, (%rdi)
@@ -42,12 +41,11 @@ define void @t2(double* nocapture %addr, <4 x double> %a) nounwind uwtable ssp {
 ; CHECK-NEXT:    retq
 entry:
   %0 = tail call <2 x double> @llvm.x86.avx.vextractf128.pd.256(<4 x double> %a, i8 1)
-  %1 = bitcast double* %addr to <2 x double>*
-  store <2 x double> %0, <2 x double>* %1, align 16
+  store <2 x double> %0, ptr %addr, align 16
   ret void
 }
 
-define void @t4(<2 x i64>* nocapture %addr, <4 x i64> %a) nounwind uwtable ssp {
+define void @t4(ptr nocapture %addr, <4 x i64> %a) nounwind uwtable ssp {
 ; CHECK-LABEL: t4:
 ; CHECK:       ## %bb.0: ## %entry
 ; CHECK-NEXT:    vextractf128 $1, %ymm0, (%rdi)
@@ -57,11 +55,11 @@ entry:
   %0 = bitcast <4 x i64> %a to <8 x i32>
   %1 = tail call <4 x i32> @llvm.x86.avx.vextractf128.si.256(<8 x i32> %0, i8 1)
   %2 = bitcast <4 x i32> %1 to <2 x i64>
-  store <2 x i64> %2, <2 x i64>* %addr, align 16
+  store <2 x i64> %2, ptr %addr, align 16
   ret void
 }
 
-define void @t5(float* nocapture %addr, <8 x float> %a) nounwind uwtable ssp {
+define void @t5(ptr nocapture %addr, <8 x float> %a) nounwind uwtable ssp {
 ; CHECK-LABEL: t5:
 ; CHECK:       ## %bb.0: ## %entry
 ; CHECK-NEXT:    vmovaps %xmm0, (%rdi)
@@ -69,12 +67,11 @@ define void @t5(float* nocapture %addr, <8 x float> %a) nounwind uwtable ssp {
 ; CHECK-NEXT:    retq
 entry:
   %0 = tail call <4 x float> @llvm.x86.avx.vextractf128.ps.256(<8 x float> %a, i8 0)
-  %1 = bitcast float* %addr to <4 x float>*
-  store <4 x float> %0, <4 x float>* %1, align 16
+  store <4 x float> %0, ptr %addr, align 16
   ret void
 }
 
-define void @t6(double* nocapture %addr, <4 x double> %a) nounwind uwtable ssp {
+define void @t6(ptr nocapture %addr, <4 x double> %a) nounwind uwtable ssp {
 ; CHECK-LABEL: t6:
 ; CHECK:       ## %bb.0: ## %entry
 ; CHECK-NEXT:    vmovaps %xmm0, (%rdi)
@@ -82,12 +79,11 @@ define void @t6(double* nocapture %addr, <4 x double> %a) nounwind uwtable ssp {
 ; CHECK-NEXT:    retq
 entry:
   %0 = tail call <2 x double> @llvm.x86.avx.vextractf128.pd.256(<4 x double> %a, i8 0)
-  %1 = bitcast double* %addr to <2 x double>*
-  store <2 x double> %0, <2 x double>* %1, align 16
+  store <2 x double> %0, ptr %addr, align 16
   ret void
 }
 
-define void @t7(<2 x i64>* nocapture %addr, <4 x i64> %a) nounwind uwtable ssp {
+define void @t7(ptr nocapture %addr, <4 x i64> %a) nounwind uwtable ssp {
 ; CHECK-LABEL: t7:
 ; CHECK:       ## %bb.0: ## %entry
 ; CHECK-NEXT:    vmovaps %xmm0, (%rdi)
@@ -97,11 +93,11 @@ entry:
   %0 = bitcast <4 x i64> %a to <8 x i32>
   %1 = tail call <4 x i32> @llvm.x86.avx.vextractf128.si.256(<8 x i32> %0, i8 0)
   %2 = bitcast <4 x i32> %1 to <2 x i64>
-  store <2 x i64> %2, <2 x i64>* %addr, align 16
+  store <2 x i64> %2, ptr %addr, align 16
   ret void
 }
 
-define void @t8(<2 x i64>* nocapture %addr, <4 x i64> %a) nounwind uwtable ssp {
+define void @t8(ptr nocapture %addr, <4 x i64> %a) nounwind uwtable ssp {
 ; CHECK-LABEL: t8:
 ; CHECK:       ## %bb.0: ## %entry
 ; CHECK-NEXT:    vmovups %xmm0, (%rdi)
@@ -111,25 +107,25 @@ entry:
   %0 = bitcast <4 x i64> %a to <8 x i32>
   %1 = tail call <4 x i32> @llvm.x86.avx.vextractf128.si.256(<8 x i32> %0, i8 0)
   %2 = bitcast <4 x i32> %1 to <2 x i64>
-  store <2 x i64> %2, <2 x i64>* %addr, align 1
+  store <2 x i64> %2, ptr %addr, align 1
   ret void
 }
 
 ; PR15462
-define void @t9(i64* %p) {
+define void @t9(ptr %p) {
 ; CHECK-LABEL: t9:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vxorps %xmm0, %xmm0, %xmm0
 ; CHECK-NEXT:    vmovups %ymm0, (%rdi)
 ; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    retq
- store i64 0, i64* %p
- %q = getelementptr i64, i64* %p, i64 1
- store i64 0, i64* %q
- %r = getelementptr i64, i64* %p, i64 2
- store i64 0, i64* %r
- %s = getelementptr i64, i64* %p, i64 3
- store i64 0, i64* %s
+ store i64 0, ptr %p
+ %q = getelementptr i64, ptr %p, i64 1
+ store i64 0, ptr %q
+ %r = getelementptr i64, ptr %p, i64 2
+ store i64 0, ptr %r
+ %s = getelementptr i64, ptr %p, i64 3
+ store i64 0, ptr %s
  ret void
 }
 

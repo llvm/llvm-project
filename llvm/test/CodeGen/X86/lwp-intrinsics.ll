@@ -10,7 +10,7 @@
 ; RUN: llc < %s -mtriple=x86_64-unknown -mcpu=bdver3 | FileCheck %s --check-prefix=X64
 ; RUN: llc < %s -mtriple=x86_64-unknown -mcpu=bdver4 | FileCheck %s --check-prefix=X64
 
-define void @test_llwpcb(i8 *%a0) nounwind {
+define void @test_llwpcb(ptr%a0) nounwind {
 ; X86-LABEL: test_llwpcb:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -21,11 +21,11 @@ define void @test_llwpcb(i8 *%a0) nounwind {
 ; X64:       # %bb.0:
 ; X64-NEXT:    llwpcb %rdi
 ; X64-NEXT:    retq
-  tail call void @llvm.x86.llwpcb(i8 *%a0)
+  tail call void @llvm.x86.llwpcb(ptr%a0)
   ret void
 }
 
-define i8* @test_slwpcb(i8 *%a0) nounwind {
+define ptr @test_slwpcb(ptr%a0) nounwind {
 ; X86-LABEL: test_slwpcb:
 ; X86:       # %bb.0:
 ; X86-NEXT:    slwpcb %eax
@@ -35,8 +35,8 @@ define i8* @test_slwpcb(i8 *%a0) nounwind {
 ; X64:       # %bb.0:
 ; X64-NEXT:    slwpcb %rax
 ; X64-NEXT:    retq
-  %1 = tail call i8* @llvm.x86.slwpcb()
-  ret i8 *%1
+  %1 = tail call ptr @llvm.x86.slwpcb()
+  ret ptr%1
 }
 
 define i8 @test_lwpins32_rri(i32 %a0, i32 %a1) nounwind {
@@ -96,7 +96,7 @@ define i8 @test_lwpins32_rri(i32 %a0, i32 %a1) nounwind {
   ret i8 %2
 }
 
-define i8 @test_lwpins32_rmi(i32 %a0, i32 *%p1) nounwind {
+define i8 @test_lwpins32_rmi(i32 %a0, ptr%p1) nounwind {
 ; X86-LABEL: test_lwpins32_rmi:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -110,7 +110,7 @@ define i8 @test_lwpins32_rmi(i32 %a0, i32 *%p1) nounwind {
 ; X64-NEXT:    lwpins $1985229328, (%rsi), %edi # imm = 0x76543210
 ; X64-NEXT:    setb %al
 ; X64-NEXT:    retq
-  %a1 = load i32, i32 *%p1
+  %a1 = load i32, ptr%p1
   %1 = tail call i8 @llvm.x86.lwpins32(i32 %a0, i32 %a1, i32 1985229328)
   ret i8 %1
 }
@@ -166,7 +166,7 @@ define void @test_lwpval32_rri(i32 %a0, i32 %a1) nounwind {
   ret void
 }
 
-define void @test_lwpval32_rmi(i32 %a0, i32 *%p1) nounwind {
+define void @test_lwpval32_rmi(i32 %a0, ptr%p1) nounwind {
 ; X86-LABEL: test_lwpval32_rmi:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -178,12 +178,12 @@ define void @test_lwpval32_rmi(i32 %a0, i32 *%p1) nounwind {
 ; X64:       # %bb.0:
 ; X64-NEXT:    lwpval $305419896, (%rsi), %edi # imm = 0x12345678
 ; X64-NEXT:    retq
-  %a1 = load i32, i32 *%p1
+  %a1 = load i32, ptr%p1
   tail call void @llvm.x86.lwpval32(i32 %a0, i32 %a1, i32 305419896)
   ret void
 }
 
-declare void @llvm.x86.llwpcb(i8*) nounwind
-declare i8* @llvm.x86.slwpcb() nounwind
+declare void @llvm.x86.llwpcb(ptr) nounwind
+declare ptr @llvm.x86.slwpcb() nounwind
 declare i8 @llvm.x86.lwpins32(i32, i32, i32) nounwind
 declare void @llvm.x86.lwpval32(i32, i32, i32) nounwind

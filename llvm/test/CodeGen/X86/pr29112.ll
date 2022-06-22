@@ -5,7 +5,7 @@ declare <4 x float> @foo(<4 x float>, <4 x float>, <4 x float>, <4 x float>, <4 
 
 ; Due to a bug in X86RegisterInfo::getLargestLegalSuperClass this test case was trying to use XMM16 and spill it without VLX support for the necessary store instruction. We briefly implemented the spill using VEXTRACTF32X4, but the bug in getLargestLegalSuperClass has now been fixed so we no longer use XMM16.
 
-define <4 x float> @bar(<4 x float>* %a1p, <4 x float>* %a2p, <4 x float> %a3, <4 x float> %a4, <16 x float>%c1, <16 x float>%c2) {
+define <4 x float> @bar(ptr %a1p, ptr %a2p, <4 x float> %a3, <4 x float> %a4, <16 x float>%c1, <16 x float>%c2) {
 ; CHECK-LABEL: bar:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    subq $72, %rsp

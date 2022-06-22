@@ -4,7 +4,7 @@
 @d = dso_local global i8 0, align 1
 @d64 = dso_local global i64 0
 
-define i32 @test1(i32 %X, i32* %y) nounwind {
+define i32 @test1(i32 %X, ptr %y) nounwind {
 ; CHECK-LABEL: test1:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    cmpl $0, (%rsi) # encoding: [0x83,0x3e,0x00]
@@ -17,7 +17,7 @@ define i32 @test1(i32 %X, i32* %y) nounwind {
 ; CHECK-NEXT:    xorl %eax, %eax # encoding: [0x31,0xc0]
 ; CHECK-NEXT:    retq # encoding: [0xc3]
 entry:
-  %tmp = load i32, i32* %y
+  %tmp = load i32, ptr %y
   %tmp.upgrd.1 = icmp eq i32 %tmp, 0
   br i1 %tmp.upgrd.1, label %ReturnBlock, label %cond_true
 
@@ -28,7 +28,7 @@ ReturnBlock:
   ret i32 0
 }
 
-define i32 @test2(i32 %X, i32* %y) nounwind {
+define i32 @test2(i32 %X, ptr %y) nounwind {
 ; CHECK-LABEL: test2:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    testl $536870911, (%rsi) # encoding: [0xf7,0x06,0xff,0xff,0xff,0x1f]
@@ -42,7 +42,7 @@ define i32 @test2(i32 %X, i32* %y) nounwind {
 ; CHECK-NEXT:    xorl %eax, %eax # encoding: [0x31,0xc0]
 ; CHECK-NEXT:    retq # encoding: [0xc3]
 entry:
-  %tmp = load i32, i32* %y
+  %tmp = load i32, ptr %y
   %tmp1 = shl i32 %tmp, 3
   %tmp1.upgrd.2 = icmp eq i32 %tmp1, 0
   br i1 %tmp1.upgrd.2, label %ReturnBlock, label %cond_true
@@ -54,7 +54,7 @@ ReturnBlock:
   ret i32 0
 }
 
-define i8 @test2b(i8 %X, i8* %y) nounwind {
+define i8 @test2b(i8 %X, ptr %y) nounwind {
 ; CHECK-LABEL: test2b:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    testb $31, (%rsi) # encoding: [0xf6,0x06,0x1f]
@@ -67,7 +67,7 @@ define i8 @test2b(i8 %X, i8* %y) nounwind {
 ; CHECK-NEXT:    xorl %eax, %eax # encoding: [0x31,0xc0]
 ; CHECK-NEXT:    retq # encoding: [0xc3]
 entry:
-  %tmp = load i8, i8* %y
+  %tmp = load i8, ptr %y
   %tmp1 = shl i8 %tmp, 3
   %tmp1.upgrd.2 = icmp eq i8 %tmp1, 0
   br i1 %tmp1.upgrd.2, label %ReturnBlock, label %cond_true
@@ -154,8 +154,8 @@ define i32 @test6() nounwind align 2 {
 ; CHECK-NEXT:    retq # encoding: [0xc3]
 entry:
   %A = alloca { i64, i64 }, align 8
-  %B = getelementptr inbounds { i64, i64 }, { i64, i64 }* %A, i64 0, i32 1
-  %C = load i64, i64* %B
+  %B = getelementptr inbounds { i64, i64 }, ptr %A, i64 0, i32 1
+  %C = load i64, ptr %B
   %D = icmp eq i64 %C, 0
   br i1 %D, label %T, label %F
 
@@ -356,7 +356,7 @@ define zeroext i1 @signbit_i32_i1(i32 %L) {
 }
 
 ; This test failed due to incorrect handling of "shift + icmp" sequence
-define void @test20(i32 %bf.load, i8 %x1, i8* %b_addr) {
+define void @test20(i32 %bf.load, i8 %x1, ptr %b_addr) {
 ; CHECK-LABEL: test20:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    xorl %eax, %eax # encoding: [0x31,0xc0]
@@ -379,10 +379,10 @@ define void @test20(i32 %bf.load, i8 %x1, i8* %b_addr) {
   %add = add nuw nsw i32 %conv, %conv6
   %tobool7 = icmp ne i32 %add, 0
   %frombool = zext i1 %tobool7 to i8
-  store i8 %frombool, i8* %b_addr, align 1
+  store i8 %frombool, ptr %b_addr, align 1
   %tobool14 = icmp ne i32 %bf.shl, 0
   %frombool15 = zext i1 %tobool14 to i8
-  store i8 %frombool15, i8* @d, align 1
+  store i8 %frombool15, ptr @d, align 1
   ret void
 }
 
@@ -641,7 +641,7 @@ define i1 @shifted_mask64_extra_use_const(i64 %a) {
 ; CHECK-NEXT:    retq # encoding: [0xc3]
   %v0 = and i64 %a, 287104476244869120  ; 0xff << 50
   %v1 = icmp ne i64 %v0, 0
-  store i64 287104476244869120, i64* @d64
+  store i64 287104476244869120, ptr @d64
   ret i1 %v1
 }
 
@@ -657,7 +657,7 @@ define i1 @shifted_mask64_extra_use_and(i64 %a) {
 ; CHECK-NEXT:    retq # encoding: [0xc3]
   %v0 = and i64 %a, 287104476244869120  ; 0xff << 50
   %v1 = icmp ne i64 %v0, 0
-  store i64 %v0, i64* @d64
+  store i64 %v0, ptr @d64
   ret i1 %v1
 }
 
@@ -685,7 +685,7 @@ define i1 @shifted_mask32_extra_use_const(i64 %a) {
 ; CHECK-NEXT:    retq # encoding: [0xc3]
   %v0 = and i64 %a, 66846720  ; 0xff << 18
   %v1 = icmp ne i64 %v0, 0
-  store i64 66846720, i64* @d64
+  store i64 66846720, ptr @d64
   ret i1 %v1
 }
 
@@ -700,7 +700,7 @@ define i1 @shifted_mask32_extra_use_and(i64 %a) {
 ; CHECK-NEXT:    retq # encoding: [0xc3]
   %v0 = and i64 %a, 66846720  ; 0xff << 50
   %v1 = icmp ne i64 %v0, 0
-  store i64 %v0, i64* @d64
+  store i64 %v0, ptr @d64
   ret i1 %v1
 }
 

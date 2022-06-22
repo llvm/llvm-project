@@ -2,7 +2,7 @@
 ; RUN: llc < %s -mcpu=corei7-avx -mtriple=x86_64-linux | FileCheck %s
 
 ; A test from pifft (after SLP-vectorization) that fails when we drop the chain on newly merged loads.
-define void @cftx020(double* nocapture %a) {
+define void @cftx020(ptr nocapture %a) {
 ; CHECK-LABEL: cftx020:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
@@ -16,26 +16,24 @@ define void @cftx020(double* nocapture %a) {
 ; CHECK-NEXT:    vmovupd %xmm0, 16(%rdi)
 ; CHECK-NEXT:    retq
 entry:
-  %0 = load double, double* %a, align 8
-  %arrayidx1 = getelementptr inbounds double, double* %a, i64 2
-  %1 = load double, double* %arrayidx1, align 8
-  %arrayidx2 = getelementptr inbounds double, double* %a, i64 1
-  %2 = load double, double* %arrayidx2, align 8
-  %arrayidx3 = getelementptr inbounds double, double* %a, i64 3
-  %3 = load double, double* %arrayidx3, align 8
+  %0 = load double, ptr %a, align 8
+  %arrayidx1 = getelementptr inbounds double, ptr %a, i64 2
+  %1 = load double, ptr %arrayidx1, align 8
+  %arrayidx2 = getelementptr inbounds double, ptr %a, i64 1
+  %2 = load double, ptr %arrayidx2, align 8
+  %arrayidx3 = getelementptr inbounds double, ptr %a, i64 3
+  %3 = load double, ptr %arrayidx3, align 8
   %4 = insertelement <2 x double> undef, double %0, i32 0
   %5 = insertelement <2 x double> %4, double %3, i32 1
   %6 = insertelement <2 x double> undef, double %1, i32 0
   %7 = insertelement <2 x double> %6, double %2, i32 1
   %8 = fadd <2 x double> %5, %7
-  %9 = bitcast double* %a to <2 x double>*
-  store <2 x double> %8, <2 x double>* %9, align 8
-  %10 = insertelement <2 x double> undef, double %0, i32 0
-  %11 = insertelement <2 x double> %10, double %2, i32 1
-  %12 = insertelement <2 x double> undef, double %1, i32 0
-  %13 = insertelement <2 x double> %12, double %3, i32 1
-  %14 = fsub <2 x double> %11, %13
-  %15 = bitcast double* %arrayidx1 to <2 x double>*
-  store <2 x double> %14, <2 x double>* %15, align 8
+  store <2 x double> %8, ptr %a, align 8
+  %9 = insertelement <2 x double> undef, double %0, i32 0
+  %10 = insertelement <2 x double> %9, double %2, i32 1
+  %11 = insertelement <2 x double> undef, double %1, i32 0
+  %12 = insertelement <2 x double> %11, double %3, i32 1
+  %13 = fsub <2 x double> %10, %12
+  store <2 x double> %13, ptr %arrayidx1, align 8
   ret void
 }

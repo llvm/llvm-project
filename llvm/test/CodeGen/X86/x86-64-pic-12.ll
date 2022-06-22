@@ -11,9 +11,9 @@ declare i32 @extbar()
 ; CHECK: callq _extbar
 ; CHECK: leaq _extbar(%rip),
 ; CHECK-NOT: @GOT
-define i8* @bar() {
+define ptr @bar() {
   call i32 @extbar()
-  ret i8* bitcast (i32 ()* @extbar to i8*)
+  ret ptr @extbar
 }
 
 ; CHECK-LABEL: foo:
@@ -21,7 +21,7 @@ define i8* @bar() {
 ; CHECK: movl _g(%rip),
 ; CHECK-NOT: @GOT
 define i32 @foo() {
-  call i8* @bar()
-  %gval = load i32, i32* @g, align 4
+  call ptr @bar()
+  %gval = load i32, ptr @g, align 4
   ret i32 %gval
 }

@@ -5,9 +5,9 @@
 
 define i32 @get_count_incremented() {
 entry:
-  %0 = load i32, i32* @get_count_incremented.count, align 4
+  %0 = load i32, ptr @get_count_incremented.count, align 4
   %inc = add i32 %0, 1
-  store i32 %inc, i32* @get_count_incremented.count, align 4
+  store i32 %inc, ptr @get_count_incremented.count, align 4
   ret i32 %inc
 }
 

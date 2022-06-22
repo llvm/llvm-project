@@ -4,17 +4,17 @@
 ; This testing case is reduced from 254.gap SyFgets function.
 ; We make sure a spill is hoisted to a cold BB inside the hotter outer loop.
 
-%struct.TMP.1 = type { %struct.TMP.2*, %struct.TMP.2*, [1024 x i8] }
-%struct.TMP.2 = type { i8*, i32, i32, i16, i16, %struct.TMP.3, i32, i8*, i32 (i8*)*, i32 (i8*, i8*, i32)*, i64 (i8*, i64, i32)*, i32 (i8*, i8*, i32)*, %struct.TMP.3, %struct.TMP.4*, i32, [3 x i8], [1 x i8], %struct.TMP.3, i32, i64 }
+%struct.TMP.1 = type { ptr, ptr, [1024 x i8] }
+%struct.TMP.2 = type { ptr, i32, i32, i16, i16, %struct.TMP.3, i32, ptr, ptr, ptr, ptr, ptr, %struct.TMP.3, ptr, i32, [3 x i8], [1 x i8], %struct.TMP.3, i32, i64 }
 %struct.TMP.4 = type opaque
-%struct.TMP.3 = type { i8*, i32 }
+%struct.TMP.3 = type { ptr, i32 }
 
 @syBuf = external global [16 x %struct.TMP.1], align 16
 @syHistory = external global [8192 x i8], align 16
 @SyFgets.yank = external global [512 x i8], align 16
 @syCTRO = external global i32, align 4
 
-define i8* @SyFgets(i8* %line, i64 %length, i64 %fid) {
+define ptr @SyFgets(ptr %line, i64 %length, i64 %fid) {
 ; CHECK-LABEL: SyFgets:
 ; CHECK:       ## %bb.0: ## %entry
 ; CHECK-NEXT:    pushq %rbp
@@ -310,9 +310,8 @@ define i8* @SyFgets(i8* %line, i64 %length, i64 %fid) {
 ; CHECK-NEXT:  LBB0_54: ## %if.then.i
 ; CHECK-NEXT:    ud2
 entry:
-  %sub.ptr.rhs.cast646 = ptrtoint i8* %line to i64
+  %sub.ptr.rhs.cast646 = ptrtoint ptr %line to i64
   %old = alloca [512 x i8], align 16
-  %0 = getelementptr inbounds [512 x i8], [512 x i8]* %old, i64 0, i64 0
   switch i64 %fid, label %if.then [
     i64 2, label %if.end
     i64 0, label %if.end
@@ -352,24 +351,24 @@ if.then.i2712:
   unreachable
 
 SyTime.exit2720:
-  %add.ptr = getelementptr [512 x i8], [512 x i8]* %old, i64 0, i64 512
-  %cmp293427 = icmp ult i8* %0, %add.ptr
+  %add.ptr = getelementptr [512 x i8], ptr %old, i64 0, i64 512
+  %cmp293427 = icmp ult ptr %old, %add.ptr
   br i1 %cmp293427, label %for.body.lr.ph, label %while.body.preheader
 
 for.body.lr.ph:
-  call void @llvm.memset.p0i8.i64(i8* align 16 undef, i8 32, i64 512, i1 false)
+  call void @llvm.memset.p0.i64(ptr align 16 undef, i8 32, i64 512, i1 false)
   br label %while.body.preheader
 
 while.body.preheader:
-  %add.ptr1603 = getelementptr [512 x i8], [512 x i8]* null, i64 0, i64 512
-  %echo.i3101 = getelementptr [16 x %struct.TMP.1], [16 x %struct.TMP.1]* @syBuf, i64 0, i64 %fid, i32 1
-  %1 = xor i64 %sub.ptr.rhs.cast646, -1
+  %add.ptr1603 = getelementptr [512 x i8], ptr null, i64 0, i64 512
+  %echo.i3101 = getelementptr [16 x %struct.TMP.1], ptr @syBuf, i64 0, i64 %fid, i32 1
+  %0 = xor i64 %sub.ptr.rhs.cast646, -1
   br label %do.body
 
 do.body:
   %ch2.0 = phi i32 [ 0, %while.body.preheader ], [ %ch.12.ch2.12, %do.body ]
   %rep.0 = phi i32 [ 1, %while.body.preheader ], [ %rep.6, %do.body ]
-  store i32 0, i32* @syCTRO, align 4, !tbaa !1
+  store i32 0, ptr @syCTRO, align 4, !tbaa !1
   %ch.0.ch2.0 = select i1 undef, i32 14, i32 %ch2.0
   %ch2.2 = select i1 undef, i32 0, i32 %ch.0.ch2.0
   %ch.2.ch2.2 = select i1 undef, i32 0, i32 %ch2.2
@@ -447,9 +446,9 @@ for.body643.us:
   br label %for.body643.us
 
 while.cond201.preheader:
-  %umax = select i1 false, i64 undef, i64 %1
-  %2 = xor i64 %umax, -1
-  %3 = inttoptr i64 %2 to i8*
+  %umax = select i1 false, i64 undef, i64 %0
+  %1 = xor i64 %umax, -1
+  %2 = inttoptr i64 %1 to ptr
   br label %while.cond197.backedge
 
 sw.bb206:
@@ -480,7 +479,7 @@ do.body479.preheader:
   br i1 %cmp4833314, label %if.end517, label %land.rhs485
 
 land.rhs485:
-  %incdec.ptr4803316 = phi i8* [ %incdec.ptr480, %do.body479.backedge.land.rhs485_crit_edge ], [ undef, %do.body479.preheader ]
+  %incdec.ptr4803316 = phi ptr [ %incdec.ptr480, %do.body479.backedge.land.rhs485_crit_edge ], [ undef, %do.body479.preheader ]
   %isascii.i.i27763151 = icmp sgt i8 undef, -1
   br i1 %isascii.i.i27763151, label %cond.true.i.i2780, label %cond.false.i.i2782
 
@@ -502,7 +501,7 @@ land.lhs.true504:
   br i1 undef, label %do.body479.backedge, label %if.end517
 
 do.body479.backedge:
-  %incdec.ptr480 = getelementptr i8, i8* %incdec.ptr4803316, i64 1
+  %incdec.ptr480 = getelementptr i8, ptr %incdec.ptr4803316, i64 1
   %cmp483 = icmp eq i8 undef, 0
   br i1 %cmp483, label %if.end517, label %do.body479.backedge.land.rhs485_crit_edge
 
@@ -510,7 +509,7 @@ do.body479.backedge.land.rhs485_crit_edge:
   br label %land.rhs485
 
 if.end517:
-  %q.4 = phi i8* [ undef, %sw.bb474 ], [ undef, %do.body479.preheader ], [ %incdec.ptr480, %do.body479.backedge ], [ %incdec.ptr4803316, %land.lhs.true504 ]
+  %q.4 = phi ptr [ undef, %sw.bb474 ], [ undef, %do.body479.preheader ], [ %incdec.ptr480, %do.body479.backedge ], [ %incdec.ptr4803316, %land.lhs.true504 ]
   switch i32 %last.13371, label %if.then532 [
     i32 383, label %for.cond534
     i32 356, label %for.cond534
@@ -520,7 +519,7 @@ if.end517:
   ]
 
 if.then532:
-  store i8 0, i8* getelementptr inbounds ([512 x i8], [512 x i8]* @SyFgets.yank, i64 0, i64 0), align 16, !tbaa !5
+  store i8 0, ptr @SyFgets.yank, align 16, !tbaa !5
   br label %for.cond534
 
 for.cond534:
@@ -534,11 +533,11 @@ for.body545:
   br i1 undef, label %for.end552, label %for.body545
 
 for.end552:
-  %s.2.lcssa = phi i8* [ undef, %for.cond542.preheader ], [ %q.4, %for.body545 ]
-  %sub.ptr.lhs.cast553 = ptrtoint i8* %s.2.lcssa to i64
+  %s.2.lcssa = phi ptr [ undef, %for.cond542.preheader ], [ %q.4, %for.body545 ]
+  %sub.ptr.lhs.cast553 = ptrtoint ptr %s.2.lcssa to i64
   %sub.ptr.sub555 = sub i64 %sub.ptr.lhs.cast553, 0
-  %arrayidx556 = getelementptr i8, i8* null, i64 %sub.ptr.sub555
-  store i8 0, i8* %arrayidx556, align 1, !tbaa !5
+  %arrayidx556 = getelementptr i8, ptr null, i64 %sub.ptr.sub555
+  store i8 0, ptr %arrayidx556, align 1, !tbaa !5
   br label %while.cond197.backedge
 
 sw.bb566:
@@ -600,9 +599,9 @@ for.cond1480.preheader:
   br i1 undef, label %for.body1606.lr.ph, label %for.end1609
 
 if.then1477:
-  %p.1.lcssa3539 = phi i8* [ null, %while.end1465 ], [ null, %while.end1465 ], [ null, %while.end1465 ], [ null, %while.end1465 ], [ %line, %while.body200 ]
-  %call1.i3057 = call i64 @"\01_write"(i32 undef, i8* undef, i64 1)
-  %sub.ptr.lhs.cast1717 = ptrtoint i8* %p.1.lcssa3539 to i64
+  %p.1.lcssa3539 = phi ptr [ null, %while.end1465 ], [ null, %while.end1465 ], [ null, %while.end1465 ], [ null, %while.end1465 ], [ %line, %while.body200 ]
+  %call1.i3057 = call i64 @"\01_write"(i32 undef, ptr undef, i64 1)
+  %sub.ptr.lhs.cast1717 = ptrtoint ptr %p.1.lcssa3539 to i64
   %sub.ptr.sub1719 = sub i64 %sub.ptr.lhs.cast1717, %sub.ptr.rhs.cast646
   %idx.neg1727 = sub i64 0, %sub.ptr.sub1719
   br label %for.body1723
@@ -617,7 +616,7 @@ land.lhs.true1614:
   br label %for.cond1659.preheader
 
 for.cond1659.preheader:
-  %cmp16623414 = icmp ult i8* undef, %add.ptr1603
+  %cmp16623414 = icmp ult ptr undef, %add.ptr1603
   br i1 %cmp16623414, label %for.body1664.lr.ph, label %while.body1703.lr.ph
 
 for.body1664.lr.ph:
@@ -632,8 +631,8 @@ while.cond1683.preheader:
 
 while.body1679:
   %oldc.43406 = phi i32 [ %inc, %syEchoch.exit3070 ], [ %oldc.1.lcssa, %for.body1664.lr.ph ]
-  %4 = load %struct.TMP.2*, %struct.TMP.2** %echo.i3101, align 8, !tbaa !6
-  %call.i3062 = call i32 @fileno(%struct.TMP.2* %4)
+  %3 = load ptr, ptr %echo.i3101, align 8, !tbaa !6
+  %call.i3062 = call i32 @fileno(ptr %3)
   br i1 undef, label %if.then.i3069, label %syEchoch.exit3070
 
 if.then.i3069:
@@ -652,20 +651,20 @@ while.end1693:
   unreachable
 
 for.body1723:
-  %q.303203 = phi i8* [ getelementptr inbounds ([8192 x i8], [8192 x i8]* @syHistory, i64 0, i64 8189), %if.then1477 ], [ %incdec.ptr1730, %for.body1723 ]
-  %add.ptr1728 = getelementptr i8, i8* %q.303203, i64 %idx.neg1727
-  %5 = load i8, i8* %add.ptr1728, align 1, !tbaa !5
-  %incdec.ptr1730 = getelementptr i8, i8* %q.303203, i64 -1
+  %q.303203 = phi ptr [ getelementptr inbounds ([8192 x i8], ptr @syHistory, i64 0, i64 8189), %if.then1477 ], [ %incdec.ptr1730, %for.body1723 ]
+  %add.ptr1728 = getelementptr i8, ptr %q.303203, i64 %idx.neg1727
+  %4 = load i8, ptr %add.ptr1728, align 1, !tbaa !5
+  %incdec.ptr1730 = getelementptr i8, ptr %q.303203, i64 -1
   br label %for.body1723
 
 cleanup:
-  ret i8* undef
+  ret ptr undef
 }
 
-declare i32 @fileno(%struct.TMP.2* nocapture)
-declare i64 @"\01_write"(i32, i8*, i64)
+declare i32 @fileno(ptr nocapture)
+declare i64 @"\01_write"(i32, ptr, i64)
 declare i32 @__maskrune(i32, i64)
-declare void @llvm.memset.p0i8.i64(i8* nocapture, i8, i64, i1)
+declare void @llvm.memset.p0.i64(ptr nocapture, i8, i64, i1)
 
 !llvm.ident = !{!0}
 

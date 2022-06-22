@@ -1,7 +1,7 @@
 ; RUN: llc -verify-loop-info -verify-dom-info -mtriple=x86_64-- < %s
 ; PR5243
 
-@.str96 = external constant [37 x i8], align 8    ; <[37 x i8]*> [#uses=1]
+@.str96 = external constant [37 x i8], align 8    ; <ptr> [#uses=1]
 
 define void @foo() nounwind {
 bb:
@@ -16,14 +16,14 @@ ybb1:                                              ; preds = %yybb13, %xbb6, %bb
   ]
 
 ybb2:                                              ; preds = %ybb1
-  %tmp = icmp eq i8** undef, null                 ; <i1> [#uses=1]
+  %tmp = icmp eq ptr undef, null                 ; <i1> [#uses=1]
   br i1 %tmp, label %bb3, label %xbb6
 
 bb3:                                              ; preds = %ybb2
   unreachable
 
 xbb4:                                              ; preds = %xbb6
-  store i32 0, i32* undef, align 8
+  store i32 0, ptr undef, align 8
   br i1 undef, label %xbb6, label %bb5
 
 bb5:                                              ; preds = %xbb4
@@ -35,12 +35,12 @@ xbb6:                                              ; preds = %xbb4, %ybb2
   br i1 %tmp7, label %xbb4, label %ybb1
 
 ybb8:                                              ; preds = %ybb1
-  %tmp9 = icmp eq i8** undef, null                ; <i1> [#uses=1]
+  %tmp9 = icmp eq ptr undef, null                ; <i1> [#uses=1]
   br i1 %tmp9, label %bb10, label %ybb12
 
 bb10:                                             ; preds = %ybb8
-  %tmp11 = load i8*, i8** undef, align 8               ; <i8*> [#uses=1]
-  call void (i8*, ...) @fatal(i8* getelementptr inbounds ([37 x i8], [37 x i8]* @.str96, i64 0, i64 0), i8* %tmp11) nounwind
+  %tmp11 = load ptr, ptr undef, align 8               ; <ptr> [#uses=1]
+  call void (ptr, ...) @fatal(ptr @.str96, ptr %tmp11) nounwind
   unreachable
 
 ybb12:                                             ; preds = %ybb8
@@ -51,7 +51,7 @@ ybb13:                                             ; preds = %ybb12
   br i1 %tmp14, label %bb16, label %ybb1
 
 bb15:                                             ; preds = %ybb12
-  call void (i8*, ...) @fatal(i8* getelementptr inbounds ([37 x i8], [37 x i8]* @.str96, i64 0, i64 0), i8* undef) nounwind
+  call void (ptr, ...) @fatal(ptr @.str96, ptr undef) nounwind
   unreachable
 
 bb16:                                             ; preds = %ybb13
@@ -67,6 +67,6 @@ bb19:                                             ; preds = %ybb1
   unreachable
 }
 
-declare void @fatal(i8*, ...)
+declare void @fatal(ptr, ...)
 
 declare fastcc void @decl_mode_check_failed() nounwind

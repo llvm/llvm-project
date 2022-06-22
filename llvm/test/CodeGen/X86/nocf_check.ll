@@ -27,17 +27,17 @@ entry:
 ; Ensure the notrack prefix is added before an indirect call using a pointer
 ; with ''nocf_check'' attribute. Also ensure a direct call to a function with
 ; the ''nocf_check'' attribute is correctly generated without notrack prefix.
-define void @NoCfCheckCall(void ()* %f) #1 {
+define void @NoCfCheckCall(ptr %f) #1 {
 ; CHECK-LABEL: NoCfCheckCall
 ; CHECK:       notrack call
 ; CHECK:       callq NoCfCheckFunc
 entry:
-  %f.addr = alloca void ()*, align 4
-  %p = alloca void ()*, align 4
-  store void ()* %f, void ()** %f.addr, align 4
-  %0 = load void ()*, void ()** %f.addr, align 4
-  store void ()* %0, void ()** %p, align 4
-  %1 = load void ()*, void ()** %p, align 4
+  %f.addr = alloca ptr, align 4
+  %p = alloca ptr, align 4
+  store ptr %f, ptr %f.addr, align 4
+  %0 = load ptr, ptr %f.addr, align 4
+  store ptr %0, ptr %p, align 4
+  %1 = load ptr, ptr %p, align 4
   call void %1() #2
 	call void @NoCfCheckFunc() #2
   ret void

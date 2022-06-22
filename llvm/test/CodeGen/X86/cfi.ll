@@ -8,7 +8,7 @@
 ; PIC: .cfi_lsda 27, .Lexception0
 
 
-define void @bar() personality i32 (...)* @__gxx_personality_v0 {
+define void @bar() personality ptr @__gxx_personality_v0 {
 entry:
   %call = invoke i32 @foo()
           to label %invoke.cont unwind label %lpad
@@ -17,8 +17,8 @@ invoke.cont:
   ret void
 
 lpad:
-  %exn = landingpad {i8*, i32}
-            catch i8* null
+  %exn = landingpad {ptr, i32}
+            catch ptr null
   ret void
 }
 

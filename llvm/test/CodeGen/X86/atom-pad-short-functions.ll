@@ -78,7 +78,7 @@ define void @test_call_others(i32 %x) nounwind
 
 ; CHECK: jmp external_function
 true.case:
-  tail call void bitcast (void (...)* @external_function to void ()*)() nounwind
+  tail call void @external_function() nounwind
   br label %if.end
 
 ; CHECK: nop

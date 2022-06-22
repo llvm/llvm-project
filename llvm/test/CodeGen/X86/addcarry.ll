@@ -18,29 +18,29 @@ entry:
   ret i128 %0
 }
 
-define void @add128_rmw(i128* %a, i128 %b) nounwind {
+define void @add128_rmw(ptr %a, i128 %b) nounwind {
 ; CHECK-LABEL: add128_rmw:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    addq %rsi, (%rdi)
 ; CHECK-NEXT:    adcq %rdx, 8(%rdi)
 ; CHECK-NEXT:    retq
 entry:
-  %0 = load i128, i128* %a
+  %0 = load i128, ptr %a
   %1 = add i128 %0, %b
-  store i128 %1, i128* %a
+  store i128 %1, ptr %a
   ret void
 }
 
-define void @add128_rmw2(i128 %a, i128* %b) nounwind {
+define void @add128_rmw2(i128 %a, ptr %b) nounwind {
 ; CHECK-LABEL: add128_rmw2:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    addq %rdi, (%rdx)
 ; CHECK-NEXT:    adcq %rsi, 8(%rdx)
 ; CHECK-NEXT:    retq
 entry:
-  %0 = load i128, i128* %b
+  %0 = load i128, ptr %b
   %1 = add i128 %a, %0
-  store i128 %1, i128* %b
+  store i128 %1, ptr %b
   ret void
 }
 
@@ -62,7 +62,7 @@ entry:
   ret i256 %0
 }
 
-define void @add256_rmw(i256* %a, i256 %b) nounwind {
+define void @add256_rmw(ptr %a, i256 %b) nounwind {
 ; CHECK-LABEL: add256_rmw:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    addq %rsi, (%rdi)
@@ -71,13 +71,13 @@ define void @add256_rmw(i256* %a, i256 %b) nounwind {
 ; CHECK-NEXT:    adcq %r8, 24(%rdi)
 ; CHECK-NEXT:    retq
 entry:
-  %0 = load i256, i256* %a
+  %0 = load i256, ptr %a
   %1 = add i256 %0, %b
-  store i256 %1, i256* %a
+  store i256 %1, ptr %a
   ret void
 }
 
-define void @add256_rmw2(i256 %a, i256* %b) nounwind {
+define void @add256_rmw2(i256 %a, ptr %b) nounwind {
 ; CHECK-LABEL: add256_rmw2:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    addq %rdi, (%r8)
@@ -86,13 +86,13 @@ define void @add256_rmw2(i256 %a, i256* %b) nounwind {
 ; CHECK-NEXT:    adcq %rcx, 24(%r8)
 ; CHECK-NEXT:    retq
 entry:
-  %0 = load i256, i256* %b
+  %0 = load i256, ptr %b
   %1 = add i256 %a, %0
-  store i256 %1, i256* %b
+  store i256 %1, ptr %b
   ret void
 }
 
-define void @a(i64* nocapture %s, i64* nocapture %t, i64 %a, i64 %b, i64 %c) nounwind {
+define void @a(ptr nocapture %s, ptr nocapture %t, i64 %a, i64 %b, i64 %c) nounwind {
 ; CHECK-LABEL: a:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    addq %rcx, %rdx
@@ -109,13 +109,13 @@ entry:
  %5 = add i128 %4, %2
  %6 = lshr i128 %5, 64
  %7 = trunc i128 %6 to i64
- store i64 %7, i64* %s, align 8
+ store i64 %7, ptr %s, align 8
  %8 = trunc i128 %2 to i64
- store i64 %8, i64* %t, align 8
+ store i64 %8, ptr %t, align 8
  ret void
 }
 
-define void @b(i32* nocapture %r, i64 %a, i64 %b, i32 %c) nounwind {
+define void @b(ptr nocapture %r, i64 %a, i64 %b, i32 %c) nounwind {
 ; CHECK-LABEL: b:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    addq %rdx, %rsi
@@ -130,11 +130,11 @@ entry:
  %4 = lshr i128 %3, 64
  %5 = add i128 %4, %2
  %6 = trunc i128 %5 to i32
- store i32 %6, i32* %r, align 4
+ store i32 %6, ptr %r, align 4
  ret void
 }
 
-define void @c(i16* nocapture %r, i64 %a, i64 %b, i16 %c) nounwind {
+define void @c(ptr nocapture %r, i64 %a, i64 %b, i16 %c) nounwind {
 ; CHECK-LABEL: c:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    addq %rdx, %rsi
@@ -149,11 +149,11 @@ entry:
  %4 = lshr i128 %3, 64
  %5 = add i128 %4, %2
  %6 = trunc i128 %5 to i16
- store i16 %6, i16* %r, align 4
+ store i16 %6, ptr %r, align 4
  ret void
 }
 
-define void @d(i8* nocapture %r, i64 %a, i64 %b, i8 %c) nounwind {
+define void @d(ptr nocapture %r, i64 %a, i64 %b, i8 %c) nounwind {
 ; CHECK-LABEL: d:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    addq %rdx, %rsi
@@ -168,11 +168,11 @@ entry:
  %4 = lshr i128 %3, 64
  %5 = add i128 %4, %2
  %6 = trunc i128 %5 to i8
- store i8 %6, i8* %r, align 4
+ store i8 %6, ptr %r, align 4
  ret void
 }
 
-define i8 @e(i32* nocapture %a, i32 %b) nounwind {
+define i8 @e(ptr nocapture %a, i32 %b) nounwind {
 ; CHECK-LABEL: e:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    # kill: def $esi killed $esi def $rsi
@@ -184,12 +184,12 @@ define i8 @e(i32* nocapture %a, i32 %b) nounwind {
 ; CHECK-NEXT:    movl %edx, (%rdi)
 ; CHECK-NEXT:    adcb $0, %al
 ; CHECK-NEXT:    retq
-  %1 = load i32, i32* %a, align 4
+  %1 = load i32, ptr %a, align 4
   %2 = add i32 %1, %b
   %3 = icmp ult i32 %2, %b
   %4 = zext i1 %3 to i8
   %5 = add i32 %2, %b
-  store i32 %5, i32* %a, align 4
+  store i32 %5, ptr %a, align 4
   %6 = icmp ult i32 %5, %b
   %7 = zext i1 %6 to i8
   %8 = add nuw nsw i8 %7, %4
@@ -198,7 +198,7 @@ define i8 @e(i32* nocapture %a, i32 %b) nounwind {
 
 %scalar = type { [4 x i64] }
 
-define %scalar @pr31719(%scalar* nocapture readonly %this, %scalar %arg.b) nounwind {
+define %scalar @pr31719(ptr nocapture readonly %this, %scalar %arg.b) nounwind {
 ; CHECK-LABEL: pr31719:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    movq %rdi, %rax
@@ -217,47 +217,46 @@ entry:
   %.elt24 = extractvalue [4 x i64] %0, 1
   %.elt26 = extractvalue [4 x i64] %0, 2
   %.elt28 = extractvalue [4 x i64] %0, 3
-  %1 = getelementptr inbounds %scalar , %scalar* %this, i64 0, i32 0, i64 0
-  %2 = load i64, i64* %1, align 8
-  %3 = zext i64 %2 to i128
-  %4 = zext i64 %.elt to i128
-  %5 = add nuw nsw i128 %3, %4
-  %6 = trunc i128 %5 to i64
-  %7 = lshr i128 %5, 64
-  %8 = getelementptr inbounds %scalar , %scalar * %this, i64 0, i32 0, i64 1
-  %9 = load i64, i64* %8, align 8
-  %10 = zext i64 %9 to i128
-  %11 = zext i64 %.elt24 to i128
-  %12 = add nuw nsw i128 %10, %11
-  %13 = add nuw nsw i128 %12, %7
-  %14 = trunc i128 %13 to i64
-  %15 = lshr i128 %13, 64
-  %16 = getelementptr inbounds %scalar , %scalar* %this, i64 0, i32 0, i64 2
-  %17 = load i64, i64* %16, align 8
-  %18 = zext i64 %17 to i128
-  %19 = zext i64 %.elt26 to i128
-  %20 = add nuw nsw i128 %18, %19
-  %21 = add nuw nsw i128 %20, %15
-  %22 = trunc i128 %21 to i64
-  %23 = lshr i128 %21, 64
-  %24 = getelementptr inbounds %scalar , %scalar* %this, i64 0, i32 0, i64 3
-  %25 = load i64, i64* %24, align 8
-  %26 = zext i64 %25 to i128
-  %27 = zext i64 %.elt28 to i128
-  %28 = add nuw nsw i128 %26, %27
-  %29 = add nuw nsw i128 %28, %23
-  %30 = trunc i128 %29 to i64
-  %31 = insertvalue [4 x i64] undef, i64 %6, 0
-  %32 = insertvalue [4 x i64] %31, i64 %14, 1
-  %33 = insertvalue [4 x i64] %32, i64 %22, 2
-  %34 = insertvalue [4 x i64] %33, i64 %30, 3
-  %35 = insertvalue %scalar undef, [4 x i64] %34, 0
-  ret %scalar %35
+  %1 = load i64, ptr %this, align 8
+  %2 = zext i64 %1 to i128
+  %3 = zext i64 %.elt to i128
+  %4 = add nuw nsw i128 %2, %3
+  %5 = trunc i128 %4 to i64
+  %6 = lshr i128 %4, 64
+  %7 = getelementptr inbounds %scalar , ptr %this, i64 0, i32 0, i64 1
+  %8 = load i64, ptr %7, align 8
+  %9 = zext i64 %8 to i128
+  %10 = zext i64 %.elt24 to i128
+  %11 = add nuw nsw i128 %9, %10
+  %12 = add nuw nsw i128 %11, %6
+  %13 = trunc i128 %12 to i64
+  %14 = lshr i128 %12, 64
+  %15 = getelementptr inbounds %scalar , ptr %this, i64 0, i32 0, i64 2
+  %16 = load i64, ptr %15, align 8
+  %17 = zext i64 %16 to i128
+  %18 = zext i64 %.elt26 to i128
+  %19 = add nuw nsw i128 %17, %18
+  %20 = add nuw nsw i128 %19, %14
+  %21 = trunc i128 %20 to i64
+  %22 = lshr i128 %20, 64
+  %23 = getelementptr inbounds %scalar , ptr %this, i64 0, i32 0, i64 3
+  %24 = load i64, ptr %23, align 8
+  %25 = zext i64 %24 to i128
+  %26 = zext i64 %.elt28 to i128
+  %27 = add nuw nsw i128 %25, %26
+  %28 = add nuw nsw i128 %27, %22
+  %29 = trunc i128 %28 to i64
+  %30 = insertvalue [4 x i64] undef, i64 %5, 0
+  %31 = insertvalue [4 x i64] %30, i64 %13, 1
+  %32 = insertvalue [4 x i64] %31, i64 %21, 2
+  %33 = insertvalue [4 x i64] %32, i64 %29, 3
+  %34 = insertvalue %scalar undef, [4 x i64] %33, 0
+  ret %scalar %34
 }
 
 %accumulator= type { i64, i64, i32 }
 
-define void @muladd(%accumulator* nocapture %this, i64 %arg.a, i64 %arg.b) nounwind {
+define void @muladd(ptr nocapture %this, i64 %arg.a, i64 %arg.b) nounwind {
 ; CHECK-LABEL: muladd:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    movq %rdx, %rax
@@ -270,26 +269,25 @@ entry:
   %0 = zext i64 %arg.a to i128
   %1 = zext i64 %arg.b to i128
   %2 = mul nuw i128 %1, %0
-  %3 = getelementptr inbounds %accumulator, %accumulator* %this, i64 0, i32 0
-  %4 = load i64, i64* %3, align 8
-  %5 = zext i64 %4 to i128
-  %6 = add i128 %5, %2
-  %7 = trunc i128 %6 to i64
-  store i64 %7, i64* %3, align 8
-  %8 = lshr i128 %6, 64
-  %9 = getelementptr inbounds %accumulator, %accumulator* %this, i64 0, i32 1
-  %10 = load i64, i64* %9, align 8
-  %11 = zext i64 %10 to i128
-  %12 = add nuw nsw i128 %8, %11
-  %13 = trunc i128 %12 to i64
-  store i64 %13, i64* %9, align 8
-  %14 = lshr i128 %12, 64
-  %15 = getelementptr inbounds %accumulator, %accumulator* %this, i64 0, i32 2
-  %16 = load i32, i32* %15, align 4
-  %17 = zext i32 %16 to i128
-  %18 = add nuw nsw i128 %14, %17
-  %19 = trunc i128 %18 to i32
-  store i32 %19, i32* %15, align 4
+  %3 = load i64, ptr %this, align 8
+  %4 = zext i64 %3 to i128
+  %5 = add i128 %4, %2
+  %6 = trunc i128 %5 to i64
+  store i64 %6, ptr %this, align 8
+  %7 = lshr i128 %5, 64
+  %8 = getelementptr inbounds %accumulator, ptr %this, i64 0, i32 1
+  %9 = load i64, ptr %8, align 8
+  %10 = zext i64 %9 to i128
+  %11 = add nuw nsw i128 %7, %10
+  %12 = trunc i128 %11 to i64
+  store i64 %12, ptr %8, align 8
+  %13 = lshr i128 %11, 64
+  %14 = getelementptr inbounds %accumulator, ptr %this, i64 0, i32 2
+  %15 = load i32, ptr %14, align 4
+  %16 = zext i32 %15 to i128
+  %17 = add nuw nsw i128 %13, %16
+  %18 = trunc i128 %17 to i32
+  store i32 %18, ptr %14, align 4
   ret void
 }
 
@@ -313,7 +311,7 @@ entry:
 
 %S = type { [4 x i64] }
 
-define %S @readd(%S* nocapture readonly %this, %S %arg.b) nounwind {
+define %S @readd(ptr nocapture readonly %this, %S %arg.b) nounwind {
 ; CHECK-LABEL: readd:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    movq %rdi, %rax
@@ -340,42 +338,41 @@ entry:
   %.elt8 = extractvalue [4 x i64] %0, 2
   %.elt10 = extractvalue [4 x i64] %0, 3
   %.elt = extractvalue [4 x i64] %0, 0
-  %1 = getelementptr inbounds %S, %S* %this, i64 0, i32 0, i64 0
-  %2 = load i64, i64* %1, align 8
-  %3 = zext i64 %2 to i128
-  %4 = zext i64 %.elt to i128
-  %5 = add nuw nsw i128 %3, %4
-  %6 = trunc i128 %5 to i64
-  %7 = lshr i128 %5, 64
-  %8 = getelementptr inbounds %S, %S* %this, i64 0, i32 0, i64 1
-  %9 = load i64, i64* %8, align 8
-  %10 = zext i64 %9 to i128
-  %11 = add nuw nsw i128 %7, %10
-  %12 = zext i64 %.elt6 to i128
-  %13 = add nuw nsw i128 %11, %12
-  %14 = trunc i128 %13 to i64
-  %15 = lshr i128 %13, 64
-  %16 = getelementptr inbounds %S, %S* %this, i64 0, i32 0, i64 2
-  %17 = load i64, i64* %16, align 8
-  %18 = zext i64 %17 to i128
-  %19 = add nuw nsw i128 %15, %18
-  %20 = zext i64 %.elt8 to i128
-  %21 = add nuw nsw i128 %19, %20
-  %22 = lshr i128 %21, 64
-  %23 = trunc i128 %21 to i64
-  %24 = getelementptr inbounds %S, %S* %this, i64 0,i32 0, i64 3
-  %25 = load i64, i64* %24, align 8
-  %26 = zext i64 %25 to i128
-  %27 = add nuw nsw i128 %22, %26
-  %28 = zext i64 %.elt10 to i128
-  %29 = add nuw nsw i128 %27, %28
-  %30 = trunc i128 %29 to i64
-  %31 = insertvalue [4 x i64] undef, i64 %6, 0
-  %32 = insertvalue [4 x i64] %31, i64 %14, 1
-  %33 = insertvalue [4 x i64] %32, i64 %23, 2
-  %34 = insertvalue [4 x i64] %33, i64 %30, 3
-  %35 = insertvalue %S undef, [4 x i64] %34, 0
-  ret %S %35
+  %1 = load i64, ptr %this, align 8
+  %2 = zext i64 %1 to i128
+  %3 = zext i64 %.elt to i128
+  %4 = add nuw nsw i128 %2, %3
+  %5 = trunc i128 %4 to i64
+  %6 = lshr i128 %4, 64
+  %7 = getelementptr inbounds %S, ptr %this, i64 0, i32 0, i64 1
+  %8 = load i64, ptr %7, align 8
+  %9 = zext i64 %8 to i128
+  %10 = add nuw nsw i128 %6, %9
+  %11 = zext i64 %.elt6 to i128
+  %12 = add nuw nsw i128 %10, %11
+  %13 = trunc i128 %12 to i64
+  %14 = lshr i128 %12, 64
+  %15 = getelementptr inbounds %S, ptr %this, i64 0, i32 0, i64 2
+  %16 = load i64, ptr %15, align 8
+  %17 = zext i64 %16 to i128
+  %18 = add nuw nsw i128 %14, %17
+  %19 = zext i64 %.elt8 to i128
+  %20 = add nuw nsw i128 %18, %19
+  %21 = lshr i128 %20, 64
+  %22 = trunc i128 %20 to i64
+  %23 = getelementptr inbounds %S, ptr %this, i64 0,i32 0, i64 3
+  %24 = load i64, ptr %23, align 8
+  %25 = zext i64 %24 to i128
+  %26 = add nuw nsw i128 %21, %25
+  %27 = zext i64 %.elt10 to i128
+  %28 = add nuw nsw i128 %26, %27
+  %29 = trunc i128 %28 to i64
+  %30 = insertvalue [4 x i64] undef, i64 %5, 0
+  %31 = insertvalue [4 x i64] %30, i64 %13, 1
+  %32 = insertvalue [4 x i64] %31, i64 %22, 2
+  %33 = insertvalue [4 x i64] %32, i64 %29, 3
+  %34 = insertvalue %S undef, [4 x i64] %33, 0
+  ret %S %34
 }
 
 define i128 @addcarry1_not(i128 %n) nounwind {
@@ -743,7 +740,7 @@ define { i64, i64, i1 } @addcarry_mixed_2x64(i64 %x0, i64 %x1, i64 %y0, i64 %y1)
 
 %struct.U320 = type { [5 x i64] }
 
-define i32 @add_U320_without_i128_add(%struct.U320* nocapture dereferenceable(40) %0, i64 %1, i64 %2, i64 %3, i64 %4, i64 %5) nounwind {
+define i32 @add_U320_without_i128_add(ptr nocapture dereferenceable(40) %0, i64 %1, i64 %2, i64 %3, i64 %4, i64 %5) nounwind {
 ; CHECK-LABEL: add_U320_without_i128_add:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    pushq %r14
@@ -779,56 +776,55 @@ define i32 @add_U320_without_i128_add(%struct.U320* nocapture dereferenceable(40
 ; CHECK-NEXT:    popq %rbx
 ; CHECK-NEXT:    popq %r14
 ; CHECK-NEXT:    retq
-  %7 = getelementptr inbounds %struct.U320, %struct.U320* %0, i64 0, i32 0, i64 0
-  %8 = load i64, i64* %7, align 8
-  %9 = getelementptr inbounds %struct.U320, %struct.U320* %0, i64 0, i32 0, i64 1
-  %10 = load i64, i64* %9, align 8
-  %11 = getelementptr inbounds %struct.U320, %struct.U320* %0, i64 0, i32 0, i64 2
-  %12 = load i64, i64* %11, align 8
-  %13 = getelementptr inbounds %struct.U320, %struct.U320* %0, i64 0, i32 0, i64 3
-  %14 = load i64, i64* %13, align 8
-  %15 = getelementptr inbounds %struct.U320, %struct.U320* %0, i64 0, i32 0, i64 4
-  %16 = load i64, i64* %15, align 8
-  %17 = add i64 %8, %1
-  %18 = add i64 %10, %2
-  %19 = icmp ult i64 %17, %1
-  %20 = zext i1 %19 to i64
-  %21 = add i64 %18, %20
-  %22 = add i64 %12, %3
-  %23 = icmp ult i64 %18, %10
-  %24 = zext i1 %23 to i64
-  %25 = icmp ult i64 %21, %18
-  %26 = zext i1 %25 to i64
-  %27 = add i64 %22, %24
-  %28 = add i64 %27, %26
-  %29 = add i64 %14, %4
-  %30 = icmp ult i64 %22, %12
-  %31 = zext i1 %30 to i64
-  %32 = icmp ult i64 %28, %22
-  %33 = zext i1 %32 to i64
-  %34 = add i64 %29, %31
-  %35 = add i64 %34, %33
-  %36 = add i64 %16, %5
-  %37 = icmp ult i64 %29, %14
-  %38 = zext i1 %37 to i64
-  %39 = icmp ult i64 %35, %29
-  %40 = zext i1 %39 to i64
-  %41 = add i64 %36, %38
-  %42 = add i64 %41, %40
-  store i64 %17, i64* %7, align 8
-  store i64 %21, i64* %9, align 8
-  store i64 %28, i64* %11, align 8
-  store i64 %35, i64* %13, align 8
-  store i64 %42, i64* %15, align 8
-  %43 = icmp ult i64 %36, %16
-  %44 = zext i1 %43 to i32
-  %45 = icmp ult i64 %42, %36
-  %46 = zext i1 %45 to i32
-  %47 = add nuw nsw i32 %46, %44
-  ret i32 %47
+  %7 = load i64, ptr %0, align 8
+  %8 = getelementptr inbounds %struct.U320, ptr %0, i64 0, i32 0, i64 1
+  %9 = load i64, ptr %8, align 8
+  %10 = getelementptr inbounds %struct.U320, ptr %0, i64 0, i32 0, i64 2
+  %11 = load i64, ptr %10, align 8
+  %12 = getelementptr inbounds %struct.U320, ptr %0, i64 0, i32 0, i64 3
+  %13 = load i64, ptr %12, align 8
+  %14 = getelementptr inbounds %struct.U320, ptr %0, i64 0, i32 0, i64 4
+  %15 = load i64, ptr %14, align 8
+  %16 = add i64 %7, %1
+  %17 = add i64 %9, %2
+  %18 = icmp ult i64 %16, %1
+  %19 = zext i1 %18 to i64
+  %20 = add i64 %17, %19
+  %21 = add i64 %11, %3
+  %22 = icmp ult i64 %17, %9
+  %23 = zext i1 %22 to i64
+  %24 = icmp ult i64 %20, %17
+  %25 = zext i1 %24 to i64
+  %26 = add i64 %21, %23
+  %27 = add i64 %26, %25
+  %28 = add i64 %13, %4
+  %29 = icmp ult i64 %21, %11
+  %30 = zext i1 %29 to i64
+  %31 = icmp ult i64 %27, %21
+  %32 = zext i1 %31 to i64
+  %33 = add i64 %28, %30
+  %34 = add i64 %33, %32
+  %35 = add i64 %15, %5
+  %36 = icmp ult i64 %28, %13
+  %37 = zext i1 %36 to i64
+  %38 = icmp ult i64 %34, %28
+  %39 = zext i1 %38 to i64
+  %40 = add i64 %35, %37
+  %41 = add i64 %40, %39
+  store i64 %16, ptr %0, align 8
+  store i64 %20, ptr %8, align 8
+  store i64 %27, ptr %10, align 8
+  store i64 %34, ptr %12, align 8
+  store i64 %41, ptr %14, align 8
+  %42 = icmp ult i64 %35, %15
+  %43 = zext i1 %42 to i32
+  %44 = icmp ult i64 %41, %35
+  %45 = zext i1 %44 to i32
+  %46 = add nuw nsw i32 %45, %43
+  ret i32 %46
 }
 
-define i32 @add_U320_without_i128_or(%struct.U320* nocapture dereferenceable(40) %0, i64 %1, i64 %2, i64 %3, i64 %4, i64 %5) nounwind {
+define i32 @add_U320_without_i128_or(ptr nocapture dereferenceable(40) %0, i64 %1, i64 %2, i64 %3, i64 %4, i64 %5) nounwind {
 ; CHECK-LABEL: add_U320_without_i128_or:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    addq %rsi, (%rdi)
@@ -839,52 +835,51 @@ define i32 @add_U320_without_i128_or(%struct.U320* nocapture dereferenceable(40)
 ; CHECK-NEXT:    setb %al
 ; CHECK-NEXT:    movzbl %al, %eax
 ; CHECK-NEXT:    retq
-  %7 = getelementptr inbounds %struct.U320, %struct.U320* %0, i64 0, i32 0, i64 0
-  %8 = load i64, i64* %7, align 8
-  %9 = getelementptr inbounds %struct.U320, %struct.U320* %0, i64 0, i32 0, i64 1
-  %10 = load i64, i64* %9, align 8
-  %11 = getelementptr inbounds %struct.U320, %struct.U320* %0, i64 0, i32 0, i64 2
-  %12 = load i64, i64* %11, align 8
-  %13 = getelementptr inbounds %struct.U320, %struct.U320* %0, i64 0, i32 0, i64 3
-  %14 = load i64, i64* %13, align 8
-  %15 = getelementptr inbounds %struct.U320, %struct.U320* %0, i64 0, i32 0, i64 4
-  %16 = load i64, i64* %15, align 8
-  %17 = add i64 %8, %1
-  %18 = add i64 %10, %2
-  %19 = icmp ult i64 %17, %1
-  %20 = zext i1 %19 to i64
-  %21 = add i64 %18, %20
-  %22 = add i64 %12, %3
-  %23 = icmp ult i64 %18, %10
-  %24 = icmp ult i64 %21, %18
-  %25 = or i1 %23, %24
-  %26 = zext i1 %25 to i64
-  %27 = add i64 %22, %26
-  %28 = add i64 %14, %4
-  %29 = icmp ult i64 %22, %12
-  %30 = icmp ult i64 %27, %22
-  %31 = or i1 %29, %30
-  %32 = zext i1 %31 to i64
-  %33 = add i64 %28, %32
-  %34 = add i64 %16, %5
-  %35 = icmp ult i64 %28, %14
-  %36 = icmp ult i64 %33, %28
-  %37 = or i1 %35, %36
-  %38 = zext i1 %37 to i64
-  %39 = add i64 %34, %38
-  store i64 %17, i64* %7, align 8
-  store i64 %21, i64* %9, align 8
-  store i64 %27, i64* %11, align 8
-  store i64 %33, i64* %13, align 8
-  store i64 %39, i64* %15, align 8
-  %40 = icmp ult i64 %34, %16
-  %41 = icmp ult i64 %39, %34
-  %42 = or i1 %40, %41
-  %43 = zext i1 %42 to i32
-  ret i32 %43
+  %7 = load i64, ptr %0, align 8
+  %8 = getelementptr inbounds %struct.U320, ptr %0, i64 0, i32 0, i64 1
+  %9 = load i64, ptr %8, align 8
+  %10 = getelementptr inbounds %struct.U320, ptr %0, i64 0, i32 0, i64 2
+  %11 = load i64, ptr %10, align 8
+  %12 = getelementptr inbounds %struct.U320, ptr %0, i64 0, i32 0, i64 3
+  %13 = load i64, ptr %12, align 8
+  %14 = getelementptr inbounds %struct.U320, ptr %0, i64 0, i32 0, i64 4
+  %15 = load i64, ptr %14, align 8
+  %16 = add i64 %7, %1
+  %17 = add i64 %9, %2
+  %18 = icmp ult i64 %16, %1
+  %19 = zext i1 %18 to i64
+  %20 = add i64 %17, %19
+  %21 = add i64 %11, %3
+  %22 = icmp ult i64 %17, %9
+  %23 = icmp ult i64 %20, %17
+  %24 = or i1 %22, %23
+  %25 = zext i1 %24 to i64
+  %26 = add i64 %21, %25
+  %27 = add i64 %13, %4
+  %28 = icmp ult i64 %21, %11
+  %29 = icmp ult i64 %26, %21
+  %30 = or i1 %28, %29
+  %31 = zext i1 %30 to i64
+  %32 = add i64 %27, %31
+  %33 = add i64 %15, %5
+  %34 = icmp ult i64 %27, %13
+  %35 = icmp ult i64 %32, %27
+  %36 = or i1 %34, %35
+  %37 = zext i1 %36 to i64
+  %38 = add i64 %33, %37
+  store i64 %16, ptr %0, align 8
+  store i64 %20, ptr %8, align 8
+  store i64 %26, ptr %10, align 8
+  store i64 %32, ptr %12, align 8
+  store i64 %38, ptr %14, align 8
+  %39 = icmp ult i64 %33, %15
+  %40 = icmp ult i64 %38, %33
+  %41 = or i1 %39, %40
+  %42 = zext i1 %41 to i32
+  ret i32 %42
 }
 
-define i32 @add_U320_without_i128_xor(%struct.U320* nocapture dereferenceable(40) %0, i64 %1, i64 %2, i64 %3, i64 %4, i64 %5) nounwind {
+define i32 @add_U320_without_i128_xor(ptr nocapture dereferenceable(40) %0, i64 %1, i64 %2, i64 %3, i64 %4, i64 %5) nounwind {
 ; CHECK-LABEL: add_U320_without_i128_xor:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    addq %rsi, (%rdi)
@@ -895,54 +890,53 @@ define i32 @add_U320_without_i128_xor(%struct.U320* nocapture dereferenceable(40
 ; CHECK-NEXT:    setb %al
 ; CHECK-NEXT:    movzbl %al, %eax
 ; CHECK-NEXT:    retq
-  %7 = getelementptr inbounds %struct.U320, %struct.U320* %0, i64 0, i32 0, i64 0
-  %8 = load i64, i64* %7, align 8
-  %9 = getelementptr inbounds %struct.U320, %struct.U320* %0, i64 0, i32 0, i64 1
-  %10 = load i64, i64* %9, align 8
-  %11 = getelementptr inbounds %struct.U320, %struct.U320* %0, i64 0, i32 0, i64 2
-  %12 = load i64, i64* %11, align 8
-  %13 = getelementptr inbounds %struct.U320, %struct.U320* %0, i64 0, i32 0, i64 3
-  %14 = load i64, i64* %13, align 8
-  %15 = getelementptr inbounds %struct.U320, %struct.U320* %0, i64 0, i32 0, i64 4
-  %16 = load i64, i64* %15, align 8
-  %17 = add i64 %8, %1
-  %18 = add i64 %10, %2
-  %19 = icmp ult i64 %17, %1
-  %20 = zext i1 %19 to i64
-  %21 = add i64 %18, %20
-  %22 = add i64 %12, %3
-  %23 = icmp ult i64 %18, %10
-  %24 = icmp ult i64 %21, %18
-  %25 = xor i1 %23, %24
-  %26 = zext i1 %25 to i64
-  %27 = add i64 %22, %26
-  %28 = add i64 %14, %4
-  %29 = icmp ult i64 %22, %12
-  %30 = icmp ult i64 %27, %22
-  %31 = xor i1 %29, %30
-  %32 = zext i1 %31 to i64
-  %33 = add i64 %28, %32
-  %34 = add i64 %16, %5
-  %35 = icmp ult i64 %28, %14
-  %36 = icmp ult i64 %33, %28
-  %37 = xor i1 %35, %36
-  %38 = zext i1 %37 to i64
-  %39 = add i64 %34, %38
-  store i64 %17, i64* %7, align 8
-  store i64 %21, i64* %9, align 8
-  store i64 %27, i64* %11, align 8
-  store i64 %33, i64* %13, align 8
-  store i64 %39, i64* %15, align 8
-  %40 = icmp ult i64 %34, %16
-  %41 = icmp ult i64 %39, %34
-  %42 = xor i1 %40, %41
-  %43 = zext i1 %42 to i32
-  ret i32 %43
+  %7 = load i64, ptr %0, align 8
+  %8 = getelementptr inbounds %struct.U320, ptr %0, i64 0, i32 0, i64 1
+  %9 = load i64, ptr %8, align 8
+  %10 = getelementptr inbounds %struct.U320, ptr %0, i64 0, i32 0, i64 2
+  %11 = load i64, ptr %10, align 8
+  %12 = getelementptr inbounds %struct.U320, ptr %0, i64 0, i32 0, i64 3
+  %13 = load i64, ptr %12, align 8
+  %14 = getelementptr inbounds %struct.U320, ptr %0, i64 0, i32 0, i64 4
+  %15 = load i64, ptr %14, align 8
+  %16 = add i64 %7, %1
+  %17 = add i64 %9, %2
+  %18 = icmp ult i64 %16, %1
+  %19 = zext i1 %18 to i64
+  %20 = add i64 %17, %19
+  %21 = add i64 %11, %3
+  %22 = icmp ult i64 %17, %9
+  %23 = icmp ult i64 %20, %17
+  %24 = xor i1 %22, %23
+  %25 = zext i1 %24 to i64
+  %26 = add i64 %21, %25
+  %27 = add i64 %13, %4
+  %28 = icmp ult i64 %21, %11
+  %29 = icmp ult i64 %26, %21
+  %30 = xor i1 %28, %29
+  %31 = zext i1 %30 to i64
+  %32 = add i64 %27, %31
+  %33 = add i64 %15, %5
+  %34 = icmp ult i64 %27, %13
+  %35 = icmp ult i64 %32, %27
+  %36 = xor i1 %34, %35
+  %37 = zext i1 %36 to i64
+  %38 = add i64 %33, %37
+  store i64 %16, ptr %0, align 8
+  store i64 %20, ptr %8, align 8
+  store i64 %26, ptr %10, align 8
+  store i64 %32, ptr %12, align 8
+  store i64 %38, ptr %14, align 8
+  %39 = icmp ult i64 %33, %15
+  %40 = icmp ult i64 %38, %33
+  %41 = xor i1 %39, %40
+  %42 = zext i1 %41 to i32
+  ret i32 %42
 }
 
 ; Either the primary addition can overflow or the addition of the carry, but
 ; they cannot both overflow.
-define i32 @bogus_add_U320_without_i128_and(%struct.U320* nocapture dereferenceable(40) %0, i64 %1, i64 %2, i64 %3, i64 %4, i64 %5) nounwind {
+define i32 @bogus_add_U320_without_i128_and(ptr nocapture dereferenceable(40) %0, i64 %1, i64 %2, i64 %3, i64 %4, i64 %5) nounwind {
 ; CHECK-LABEL: bogus_add_U320_without_i128_and:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    addq %rsi, (%rdi)
@@ -952,52 +946,51 @@ define i32 @bogus_add_U320_without_i128_and(%struct.U320* nocapture dereferencea
 ; CHECK-NEXT:    addq %r9, 32(%rdi)
 ; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    retq
-  %7 = getelementptr inbounds %struct.U320, %struct.U320* %0, i64 0, i32 0, i64 0
-  %8 = load i64, i64* %7, align 8
-  %9 = getelementptr inbounds %struct.U320, %struct.U320* %0, i64 0, i32 0, i64 1
-  %10 = load i64, i64* %9, align 8
-  %11 = getelementptr inbounds %struct.U320, %struct.U320* %0, i64 0, i32 0, i64 2
-  %12 = load i64, i64* %11, align 8
-  %13 = getelementptr inbounds %struct.U320, %struct.U320* %0, i64 0, i32 0, i64 3
-  %14 = load i64, i64* %13, align 8
-  %15 = getelementptr inbounds %struct.U320, %struct.U320* %0, i64 0, i32 0, i64 4
-  %16 = load i64, i64* %15, align 8
-  %17 = add i64 %8, %1
-  %18 = add i64 %10, %2
-  %19 = icmp ult i64 %17, %1
-  %20 = zext i1 %19 to i64
-  %21 = add i64 %18, %20
-  %22 = add i64 %12, %3
-  %23 = icmp ult i64 %18, %10
-  %24 = icmp ult i64 %21, %18
-  %25 = and i1 %23, %24
-  %26 = zext i1 %25 to i64
-  %27 = add i64 %22, %26
-  %28 = add i64 %14, %4
-  %29 = icmp ult i64 %22, %12
-  %30 = icmp ult i64 %27, %22
-  %31 = and i1 %29, %30
-  %32 = zext i1 %31 to i64
-  %33 = add i64 %28, %32
-  %34 = add i64 %16, %5
-  %35 = icmp ult i64 %28, %14
-  %36 = icmp ult i64 %33, %28
-  %37 = and i1 %35, %36
-  %38 = zext i1 %37 to i64
-  %39 = add i64 %34, %38
-  store i64 %17, i64* %7, align 8
-  store i64 %21, i64* %9, align 8
-  store i64 %27, i64* %11, align 8
-  store i64 %33, i64* %13, align 8
-  store i64 %39, i64* %15, align 8
-  %40 = icmp ult i64 %34, %16
-  %41 = icmp ult i64 %39, %34
-  %42 = and i1 %40, %41
-  %43 = zext i1 %42 to i32
-  ret i32 %43
+  %7 = load i64, ptr %0, align 8
+  %8 = getelementptr inbounds %struct.U320, ptr %0, i64 0, i32 0, i64 1
+  %9 = load i64, ptr %8, align 8
+  %10 = getelementptr inbounds %struct.U320, ptr %0, i64 0, i32 0, i64 2
+  %11 = load i64, ptr %10, align 8
+  %12 = getelementptr inbounds %struct.U320, ptr %0, i64 0, i32 0, i64 3
+  %13 = load i64, ptr %12, align 8
+  %14 = getelementptr inbounds %struct.U320, ptr %0, i64 0, i32 0, i64 4
+  %15 = load i64, ptr %14, align 8
+  %16 = add i64 %7, %1
+  %17 = add i64 %9, %2
+  %18 = icmp ult i64 %16, %1
+  %19 = zext i1 %18 to i64
+  %20 = add i64 %17, %19
+  %21 = add i64 %11, %3
+  %22 = icmp ult i64 %17, %9
+  %23 = icmp ult i64 %20, %17
+  %24 = and i1 %22, %23
+  %25 = zext i1 %24 to i64
+  %26 = add i64 %21, %25
+  %27 = add i64 %13, %4
+  %28 = icmp ult i64 %21, %11
+  %29 = icmp ult i64 %26, %21
+  %30 = and i1 %28, %29
+  %31 = zext i1 %30 to i64
+  %32 = add i64 %27, %31
+  %33 = add i64 %15, %5
+  %34 = icmp ult i64 %27, %13
+  %35 = icmp ult i64 %32, %27
+  %36 = and i1 %34, %35
+  %37 = zext i1 %36 to i64
+  %38 = add i64 %33, %37
+  store i64 %16, ptr %0, align 8
+  store i64 %20, ptr %8, align 8
+  store i64 %26, ptr %10, align 8
+  store i64 %32, ptr %12, align 8
+  store i64 %38, ptr %14, align 8
+  %39 = icmp ult i64 %33, %15
+  %40 = icmp ult i64 %38, %33
+  %41 = and i1 %39, %40
+  %42 = zext i1 %41 to i32
+  ret i32 %42
 }
 
-define void @add_U320_without_i128_or_no_ret(%struct.U320* nocapture dereferenceable(40) %0, i64 %1, i64 %2, i64 %3, i64 %4, i64 %5) nounwind {
+define void @add_U320_without_i128_or_no_ret(ptr nocapture dereferenceable(40) %0, i64 %1, i64 %2, i64 %3, i64 %4, i64 %5) nounwind {
 ; CHECK-LABEL: add_U320_without_i128_or_no_ret:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    addq %rsi, (%rdi)
@@ -1006,48 +999,47 @@ define void @add_U320_without_i128_or_no_ret(%struct.U320* nocapture dereference
 ; CHECK-NEXT:    adcq %r8, 24(%rdi)
 ; CHECK-NEXT:    adcq %r9, 32(%rdi)
 ; CHECK-NEXT:    retq
-  %7 = getelementptr inbounds %struct.U320, %struct.U320* %0, i64 0, i32 0, i64 0
-  %8 = load i64, i64* %7, align 8
-  %9 = getelementptr inbounds %struct.U320, %struct.U320* %0, i64 0, i32 0, i64 1
-  %10 = load i64, i64* %9, align 8
-  %11 = getelementptr inbounds %struct.U320, %struct.U320* %0, i64 0, i32 0, i64 2
-  %12 = load i64, i64* %11, align 8
-  %13 = getelementptr inbounds %struct.U320, %struct.U320* %0, i64 0, i32 0, i64 3
-  %14 = load i64, i64* %13, align 8
-  %15 = getelementptr inbounds %struct.U320, %struct.U320* %0, i64 0, i32 0, i64 4
-  %16 = load i64, i64* %15, align 8
-  %17 = add i64 %8, %1
-  %18 = add i64 %10, %2
-  %19 = icmp ult i64 %17, %1
-  %20 = zext i1 %19 to i64
-  %21 = add i64 %18, %20
-  %22 = add i64 %12, %3
-  %23 = icmp ult i64 %18, %10
-  %24 = icmp ult i64 %21, %18
-  %25 = or i1 %23, %24
-  %26 = zext i1 %25 to i64
-  %27 = add i64 %22, %26
-  %28 = add i64 %14, %4
-  %29 = icmp ult i64 %22, %12
-  %30 = icmp ult i64 %27, %22
-  %31 = or i1 %29, %30
-  %32 = zext i1 %31 to i64
-  %33 = add i64 %28, %32
-  %34 = add i64 %16, %5
-  %35 = icmp ult i64 %28, %14
-  %36 = icmp ult i64 %33, %28
-  %37 = or i1 %35, %36
-  %38 = zext i1 %37 to i64
-  %39 = add i64 %34, %38
-  store i64 %17, i64* %7, align 8
-  store i64 %21, i64* %9, align 8
-  store i64 %27, i64* %11, align 8
-  store i64 %33, i64* %13, align 8
-  store i64 %39, i64* %15, align 8
+  %7 = load i64, ptr %0, align 8
+  %8 = getelementptr inbounds %struct.U320, ptr %0, i64 0, i32 0, i64 1
+  %9 = load i64, ptr %8, align 8
+  %10 = getelementptr inbounds %struct.U320, ptr %0, i64 0, i32 0, i64 2
+  %11 = load i64, ptr %10, align 8
+  %12 = getelementptr inbounds %struct.U320, ptr %0, i64 0, i32 0, i64 3
+  %13 = load i64, ptr %12, align 8
+  %14 = getelementptr inbounds %struct.U320, ptr %0, i64 0, i32 0, i64 4
+  %15 = load i64, ptr %14, align 8
+  %16 = add i64 %7, %1
+  %17 = add i64 %9, %2
+  %18 = icmp ult i64 %16, %1
+  %19 = zext i1 %18 to i64
+  %20 = add i64 %17, %19
+  %21 = add i64 %11, %3
+  %22 = icmp ult i64 %17, %9
+  %23 = icmp ult i64 %20, %17
+  %24 = or i1 %22, %23
+  %25 = zext i1 %24 to i64
+  %26 = add i64 %21, %25
+  %27 = add i64 %13, %4
+  %28 = icmp ult i64 %21, %11
+  %29 = icmp ult i64 %26, %21
+  %30 = or i1 %28, %29
+  %31 = zext i1 %30 to i64
+  %32 = add i64 %27, %31
+  %33 = add i64 %15, %5
+  %34 = icmp ult i64 %27, %13
+  %35 = icmp ult i64 %32, %27
+  %36 = or i1 %34, %35
+  %37 = zext i1 %36 to i64
+  %38 = add i64 %33, %37
+  store i64 %16, ptr %0, align 8
+  store i64 %20, ptr %8, align 8
+  store i64 %26, ptr %10, align 8
+  store i64 %32, ptr %12, align 8
+  store i64 %38, ptr %14, align 8
   ret void
 }
 
-define i32 @add_U320_uaddo(%struct.U320* nocapture dereferenceable(40) %0, i64 %1, i64 %2, i64 %3, i64 %4, i64 %5) nounwind {
+define i32 @add_U320_uaddo(ptr nocapture dereferenceable(40) %0, i64 %1, i64 %2, i64 %3, i64 %4, i64 %5) nounwind {
 ; CHECK-LABEL: add_U320_uaddo:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    addq %rsi, (%rdi)
@@ -1058,63 +1050,62 @@ define i32 @add_U320_uaddo(%struct.U320* nocapture dereferenceable(40) %0, i64 %
 ; CHECK-NEXT:    setb %al
 ; CHECK-NEXT:    movzbl %al, %eax
 ; CHECK-NEXT:    retq
-  %7 = getelementptr inbounds %struct.U320, %struct.U320* %0, i64 0, i32 0, i64 0
-  %8 = load i64, i64* %7, align 8
-  %9 = getelementptr inbounds %struct.U320, %struct.U320* %0, i64 0, i32 0, i64 1
-  %10 = load i64, i64* %9, align 8
-  %11 = getelementptr inbounds %struct.U320, %struct.U320* %0, i64 0, i32 0, i64 2
-  %12 = load i64, i64* %11, align 8
-  %13 = getelementptr inbounds %struct.U320, %struct.U320* %0, i64 0, i32 0, i64 3
-  %14 = load i64, i64* %13, align 8
-  %15 = getelementptr inbounds %struct.U320, %struct.U320* %0, i64 0, i32 0, i64 4
-  %16 = load i64, i64* %15, align 8
-  %17 = tail call { i64, i1 } @llvm.uadd.with.overflow.i64(i64 %8, i64 %1)
-  %18 = extractvalue { i64, i1 } %17, 1
-  %19 = extractvalue { i64, i1 } %17, 0
-  %20 = zext i1 %18 to i64
-  %21 = tail call { i64, i1 } @llvm.uadd.with.overflow.i64(i64 %10, i64 %2)
-  %22 = extractvalue { i64, i1 } %21, 1
-  %23 = extractvalue { i64, i1 } %21, 0
-  %24 = tail call { i64, i1 } @llvm.uadd.with.overflow.i64(i64 %23, i64 %20)
-  %25 = extractvalue { i64, i1 } %24, 1
-  %26 = extractvalue { i64, i1 } %24, 0
-  %27 = or i1 %22, %25
-  %28 = zext i1 %27 to i64
-  %29 = tail call { i64, i1 } @llvm.uadd.with.overflow.i64(i64 %12, i64 %3)
-  %30 = extractvalue { i64, i1 } %29, 1
-  %31 = extractvalue { i64, i1 } %29, 0
-  %32 = tail call { i64, i1 } @llvm.uadd.with.overflow.i64(i64 %31, i64 %28)
-  %33 = extractvalue { i64, i1 } %32, 1
-  %34 = extractvalue { i64, i1 } %32, 0
-  %35 = or i1 %30, %33
-  %36 = zext i1 %35 to i64
-  %37 = tail call { i64, i1 } @llvm.uadd.with.overflow.i64(i64 %14, i64 %4)
-  %38 = extractvalue { i64, i1 } %37, 1
-  %39 = extractvalue { i64, i1 } %37, 0
-  %40 = tail call { i64, i1 } @llvm.uadd.with.overflow.i64(i64 %39, i64 %36)
-  %41 = extractvalue { i64, i1 } %40, 1
-  %42 = extractvalue { i64, i1 } %40, 0
-  %43 = or i1 %38, %41
-  %44 = zext i1 %43 to i64
-  %45 = tail call { i64, i1 } @llvm.uadd.with.overflow.i64(i64 %16, i64 %5)
-  %46 = extractvalue { i64, i1 } %45, 1
-  %47 = extractvalue { i64, i1 } %45, 0
-  %48 = tail call { i64, i1 } @llvm.uadd.with.overflow.i64(i64 %47, i64 %44)
-  %49 = extractvalue { i64, i1 } %48, 1
-  %50 = extractvalue { i64, i1 } %48, 0
-  %51 = or i1 %46, %49
-  store i64 %19, i64* %7, align 8
-  store i64 %26, i64* %9, align 8
-  store i64 %34, i64* %11, align 8
-  store i64 %42, i64* %13, align 8
-  store i64 %50, i64* %15, align 8
-  %52 = zext i1 %51 to i32
-  ret i32 %52
+  %7 = load i64, ptr %0, align 8
+  %8 = getelementptr inbounds %struct.U320, ptr %0, i64 0, i32 0, i64 1
+  %9 = load i64, ptr %8, align 8
+  %10 = getelementptr inbounds %struct.U320, ptr %0, i64 0, i32 0, i64 2
+  %11 = load i64, ptr %10, align 8
+  %12 = getelementptr inbounds %struct.U320, ptr %0, i64 0, i32 0, i64 3
+  %13 = load i64, ptr %12, align 8
+  %14 = getelementptr inbounds %struct.U320, ptr %0, i64 0, i32 0, i64 4
+  %15 = load i64, ptr %14, align 8
+  %16 = tail call { i64, i1 } @llvm.uadd.with.overflow.i64(i64 %7, i64 %1)
+  %17 = extractvalue { i64, i1 } %16, 1
+  %18 = extractvalue { i64, i1 } %16, 0
+  %19 = zext i1 %17 to i64
+  %20 = tail call { i64, i1 } @llvm.uadd.with.overflow.i64(i64 %9, i64 %2)
+  %21 = extractvalue { i64, i1 } %20, 1
+  %22 = extractvalue { i64, i1 } %20, 0
+  %23 = tail call { i64, i1 } @llvm.uadd.with.overflow.i64(i64 %22, i64 %19)
+  %24 = extractvalue { i64, i1 } %23, 1
+  %25 = extractvalue { i64, i1 } %23, 0
+  %26 = or i1 %21, %24
+  %27 = zext i1 %26 to i64
+  %28 = tail call { i64, i1 } @llvm.uadd.with.overflow.i64(i64 %11, i64 %3)
+  %29 = extractvalue { i64, i1 } %28, 1
+  %30 = extractvalue { i64, i1 } %28, 0
+  %31 = tail call { i64, i1 } @llvm.uadd.with.overflow.i64(i64 %30, i64 %27)
+  %32 = extractvalue { i64, i1 } %31, 1
+  %33 = extractvalue { i64, i1 } %31, 0
+  %34 = or i1 %29, %32
+  %35 = zext i1 %34 to i64
+  %36 = tail call { i64, i1 } @llvm.uadd.with.overflow.i64(i64 %13, i64 %4)
+  %37 = extractvalue { i64, i1 } %36, 1
+  %38 = extractvalue { i64, i1 } %36, 0
+  %39 = tail call { i64, i1 } @llvm.uadd.with.overflow.i64(i64 %38, i64 %35)
+  %40 = extractvalue { i64, i1 } %39, 1
+  %41 = extractvalue { i64, i1 } %39, 0
+  %42 = or i1 %37, %40
+  %43 = zext i1 %42 to i64
+  %44 = tail call { i64, i1 } @llvm.uadd.with.overflow.i64(i64 %15, i64 %5)
+  %45 = extractvalue { i64, i1 } %44, 1
+  %46 = extractvalue { i64, i1 } %44, 0
+  %47 = tail call { i64, i1 } @llvm.uadd.with.overflow.i64(i64 %46, i64 %43)
+  %48 = extractvalue { i64, i1 } %47, 1
+  %49 = extractvalue { i64, i1 } %47, 0
+  %50 = or i1 %45, %48
+  store i64 %18, ptr %0, align 8
+  store i64 %25, ptr %8, align 8
+  store i64 %33, ptr %10, align 8
+  store i64 %41, ptr %12, align 8
+  store i64 %49, ptr %14, align 8
+  %51 = zext i1 %50 to i32
+  ret i32 %51
 }
 
 %struct.U192 = type { [3 x i64] }
 
-define void @PR39464(%struct.U192* noalias nocapture sret(%struct.U192) %0, %struct.U192* nocapture readonly dereferenceable(24) %1, %struct.U192* nocapture readonly dereferenceable(24) %2) nounwind {
+define void @PR39464(ptr noalias nocapture sret(%struct.U192) %0, ptr nocapture readonly dereferenceable(24) %1, ptr nocapture readonly dereferenceable(24) %2) nounwind {
 ; CHECK-LABEL: PR39464:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movq %rdi, %rax
@@ -1128,45 +1119,42 @@ define void @PR39464(%struct.U192* noalias nocapture sret(%struct.U192) %0, %str
 ; CHECK-NEXT:    adcq 16(%rdx), %rcx
 ; CHECK-NEXT:    movq %rcx, 16(%rdi)
 ; CHECK-NEXT:    retq
-  %4 = getelementptr inbounds %struct.U192, %struct.U192* %1, i64 0, i32 0, i64 0
-  %5 = load i64, i64* %4, align 8
-  %6 = getelementptr inbounds %struct.U192, %struct.U192* %2, i64 0, i32 0, i64 0
-  %7 = load i64, i64* %6, align 8
-  %8 = tail call { i64, i1 } @llvm.uadd.with.overflow.i64(i64 %5, i64 %7)
-  %9 = extractvalue { i64, i1 } %8, 1
-  %10 = extractvalue { i64, i1 } %8, 0
-  %11 = zext i1 %9 to i64
-  %12 = getelementptr inbounds %struct.U192, %struct.U192* %0, i64 0, i32 0, i64 0
-  store i64 %10, i64* %12, align 8
-  %13 = getelementptr inbounds %struct.U192, %struct.U192* %1, i64 0, i32 0, i64 1
-  %14 = load i64, i64* %13, align 8
-  %15 = getelementptr inbounds %struct.U192, %struct.U192* %2, i64 0, i32 0, i64 1
-  %16 = load i64, i64* %15, align 8
-  %17 = tail call { i64, i1 } @llvm.uadd.with.overflow.i64(i64 %14, i64 %16)
+  %4 = load i64, ptr %1, align 8
+  %5 = load i64, ptr %2, align 8
+  %6 = tail call { i64, i1 } @llvm.uadd.with.overflow.i64(i64 %4, i64 %5)
+  %7 = extractvalue { i64, i1 } %6, 1
+  %8 = extractvalue { i64, i1 } %6, 0
+  %9 = zext i1 %7 to i64
+  store i64 %8, ptr %0, align 8
+  %10 = getelementptr inbounds %struct.U192, ptr %1, i64 0, i32 0, i64 1
+  %11 = load i64, ptr %10, align 8
+  %12 = getelementptr inbounds %struct.U192, ptr %2, i64 0, i32 0, i64 1
+  %13 = load i64, ptr %12, align 8
+  %14 = tail call { i64, i1 } @llvm.uadd.with.overflow.i64(i64 %11, i64 %13)
+  %15 = extractvalue { i64, i1 } %14, 1
+  %16 = extractvalue { i64, i1 } %14, 0
+  %17 = tail call { i64, i1 } @llvm.uadd.with.overflow.i64(i64 %16, i64 %9)
   %18 = extractvalue { i64, i1 } %17, 1
   %19 = extractvalue { i64, i1 } %17, 0
-  %20 = tail call { i64, i1 } @llvm.uadd.with.overflow.i64(i64 %19, i64 %11)
-  %21 = extractvalue { i64, i1 } %20, 1
-  %22 = extractvalue { i64, i1 } %20, 0
-  %23 = or i1 %18, %21
-  %24 = zext i1 %23 to i64
-  %25 = getelementptr inbounds %struct.U192, %struct.U192* %0, i64 0, i32 0, i64 1
-  store i64 %22, i64* %25, align 8
-  %26 = getelementptr inbounds %struct.U192, %struct.U192* %1, i64 0, i32 0, i64 2
-  %27 = load i64, i64* %26, align 8
-  %28 = getelementptr inbounds %struct.U192, %struct.U192* %2, i64 0, i32 0, i64 2
-  %29 = load i64, i64* %28, align 8
-  %30 = add i64 %27, %29
-  %31 = add i64 %30, %24
-  %32 = getelementptr inbounds %struct.U192, %struct.U192* %0, i64 0, i32 0, i64 2
-  store i64 %31, i64* %32, align 8
+  %20 = or i1 %15, %18
+  %21 = zext i1 %20 to i64
+  %22 = getelementptr inbounds %struct.U192, ptr %0, i64 0, i32 0, i64 1
+  store i64 %19, ptr %22, align 8
+  %23 = getelementptr inbounds %struct.U192, ptr %1, i64 0, i32 0, i64 2
+  %24 = load i64, ptr %23, align 8
+  %25 = getelementptr inbounds %struct.U192, ptr %2, i64 0, i32 0, i64 2
+  %26 = load i64, ptr %25, align 8
+  %27 = add i64 %24, %26
+  %28 = add i64 %27, %21
+  %29 = getelementptr inbounds %struct.U192, ptr %0, i64 0, i32 0, i64 2
+  store i64 %28, ptr %29, align 8
   ret void
 }
 
 
 %uint128 = type { i64, i64 }
 
-define zeroext i1 @uaddo_U128_without_i128_or(i64 %0, i64 %1, i64 %2, i64 %3, %uint128* nocapture %4) nounwind {
+define zeroext i1 @uaddo_U128_without_i128_or(i64 %0, i64 %1, i64 %2, i64 %3, ptr nocapture %4) nounwind {
 ; CHECK-LABEL: uaddo_U128_without_i128_or:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    addq %rdx, %rdi
@@ -1183,17 +1171,16 @@ define zeroext i1 @uaddo_U128_without_i128_or(i64 %0, i64 %1, i64 %2, i64 %3, %u
   %11 = add i64 %8, %10
   %12 = icmp ult i64 %11, %8
   %13 = or i1 %9, %12
-  %14 = getelementptr inbounds %uint128, %uint128* %4, i64 0, i32 0
-  store i64 %11, i64* %14, align 8
-  %15 = getelementptr inbounds %uint128, %uint128* %4, i64 0, i32 1
-  store i64 %6, i64* %15, align 8
+  store i64 %11, ptr %4, align 8
+  %14 = getelementptr inbounds %uint128, ptr %4, i64 0, i32 1
+  store i64 %6, ptr %14, align 8
   ret i1 %13
 }
 
 
 %uint192 = type { i64, i64, i64 }
 
-define void @add_U192_without_i128_or(%uint192* sret(%uint192) %0, i64 %1, i64 %2, i64 %3, i64 %4, i64 %5, i64 %6) nounwind {
+define void @add_U192_without_i128_or(ptr sret(%uint192) %0, i64 %1, i64 %2, i64 %3, i64 %4, i64 %5, i64 %6) nounwind {
 ; CHECK-LABEL: add_U192_without_i128_or:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movq %rdi, %rax
@@ -1215,12 +1202,11 @@ define void @add_U192_without_i128_or(%uint192* sret(%uint192) %0, i64 %1, i64 %
   %16 = add i64 %6, %3
   %17 = zext i1 %15 to i64
   %18 = add i64 %16, %17
-  %19 = getelementptr inbounds %uint192, %uint192* %0, i64 0, i32 0
-  store i64 %18, i64* %19, align 8
-  %20 = getelementptr inbounds %uint192, %uint192* %0, i64 0, i32 1
-  store i64 %13, i64* %20, align 8
-  %21 = getelementptr inbounds %uint192, %uint192* %0, i64 0, i32 2
-  store i64 %8, i64* %21, align 8
+  store i64 %18, ptr %0, align 8
+  %19 = getelementptr inbounds %uint192, ptr %0, i64 0, i32 1
+  store i64 %13, ptr %19, align 8
+  %20 = getelementptr inbounds %uint192, ptr %0, i64 0, i32 2
+  store i64 %8, ptr %20, align 8
   ret void
 }
 
@@ -1229,7 +1215,7 @@ define void @add_U192_without_i128_or(%uint192* sret(%uint192) %0, i64 %1, i64 %
 
 ; Classic unrolled 256-bit addition implementation using i64 as the word type.
 ; It starts by adding least significant words and propagates carry to additions of the higher words.
-define void @add_U256_without_i128_or_by_i64_words(%uint256* sret(%uint256) %0, %uint256* %1, %uint256* %2) nounwind {
+define void @add_U256_without_i128_or_by_i64_words(ptr sret(%uint256) %0, ptr %1, ptr %2) nounwind {
 ; CHECK-LABEL: add_U256_without_i128_or_by_i64_words:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movq %rdi, %rax
@@ -1246,53 +1232,50 @@ define void @add_U256_without_i128_or_by_i64_words(%uint256* sret(%uint256) %0, 
 ; CHECK-NEXT:    movq %rdi, 16(%rax)
 ; CHECK-NEXT:    movq %r8, 24(%rax)
 ; CHECK-NEXT:    retq
-  %4 = getelementptr inbounds %uint256, %uint256* %1, i64 0, i32 0, i32 0
-  %5 = load i64, i64* %4, align 8
-  %6 = getelementptr inbounds %uint256, %uint256* %2, i64 0, i32 0, i32 0
-  %7 = load i64, i64* %6, align 8
-  %8 = add i64 %7, %5
-  %9 = icmp ult i64 %8, %5
-  %10 = getelementptr inbounds %uint256, %uint256* %1, i64 0, i32 0, i32 1
-  %11 = load i64, i64* %10, align 8
-  %12 = getelementptr inbounds %uint256, %uint256* %2, i64 0, i32 0, i32 1
-  %13 = load i64, i64* %12, align 8
-  %14 = add i64 %13, %11
-  %15 = icmp ult i64 %14, %11
-  %16 = zext i1 %9 to i64
-  %17 = add i64 %14, %16
-  %18 = icmp ult i64 %17, %16
-  %19 = or i1 %15, %18
-  %20 = getelementptr inbounds %uint256, %uint256* %1, i64 0, i32 1, i32 0
-  %21 = load i64, i64* %20, align 8
-  %22 = getelementptr inbounds %uint256, %uint256* %2, i64 0, i32 1, i32 0
-  %23 = load i64, i64* %22, align 8
-  %24 = add i64 %23, %21
-  %25 = icmp ult i64 %24, %21
-  %26 = zext i1 %19 to i64
-  %27 = add i64 %24, %26
-  %28 = icmp ult i64 %27, %26
-  %29 = or i1 %25, %28
-  %30 = getelementptr inbounds %uint256, %uint256* %1, i64 0, i32 1, i32 1
-  %31 = load i64, i64* %30, align 8
-  %32 = getelementptr inbounds %uint256, %uint256* %2, i64 0, i32 1, i32 1
-  %33 = load i64, i64* %32, align 8
-  %34 = add i64 %33, %31
-  %35 = zext i1 %29 to i64
-  %36 = add i64 %34, %35
-  %37 = getelementptr inbounds %uint256, %uint256* %0, i64 0, i32 0, i32 0
-  store i64 %36, i64* %37, align 8
-  %38 = getelementptr inbounds %uint256, %uint256* %0, i64 0, i32 0, i32 1
-  store i64 %27, i64* %38, align 8
-  %39 = getelementptr inbounds %uint256, %uint256* %0, i64 0, i32 1, i32 0
-  store i64 %17, i64* %39, align 8
-  %40 = getelementptr inbounds %uint256, %uint256* %0, i64 0, i32 1, i32 1
-  store i64 %8, i64* %40, align 8
+  %4 = load i64, ptr %1, align 8
+  %5 = load i64, ptr %2, align 8
+  %6 = add i64 %5, %4
+  %7 = icmp ult i64 %6, %4
+  %8 = getelementptr inbounds %uint256, ptr %1, i64 0, i32 0, i32 1
+  %9 = load i64, ptr %8, align 8
+  %10 = getelementptr inbounds %uint256, ptr %2, i64 0, i32 0, i32 1
+  %11 = load i64, ptr %10, align 8
+  %12 = add i64 %11, %9
+  %13 = icmp ult i64 %12, %9
+  %14 = zext i1 %7 to i64
+  %15 = add i64 %12, %14
+  %16 = icmp ult i64 %15, %14
+  %17 = or i1 %13, %16
+  %18 = getelementptr inbounds %uint256, ptr %1, i64 0, i32 1, i32 0
+  %19 = load i64, ptr %18, align 8
+  %20 = getelementptr inbounds %uint256, ptr %2, i64 0, i32 1, i32 0
+  %21 = load i64, ptr %20, align 8
+  %22 = add i64 %21, %19
+  %23 = icmp ult i64 %22, %19
+  %24 = zext i1 %17 to i64
+  %25 = add i64 %22, %24
+  %26 = icmp ult i64 %25, %24
+  %27 = or i1 %23, %26
+  %28 = getelementptr inbounds %uint256, ptr %1, i64 0, i32 1, i32 1
+  %29 = load i64, ptr %28, align 8
+  %30 = getelementptr inbounds %uint256, ptr %2, i64 0, i32 1, i32 1
+  %31 = load i64, ptr %30, align 8
+  %32 = add i64 %31, %29
+  %33 = zext i1 %27 to i64
+  %34 = add i64 %32, %33
+  store i64 %34, ptr %0, align 8
+  %35 = getelementptr inbounds %uint256, ptr %0, i64 0, i32 0, i32 1
+  store i64 %25, ptr %35, align 8
+  %36 = getelementptr inbounds %uint256, ptr %0, i64 0, i32 1, i32 0
+  store i64 %15, ptr %36, align 8
+  %37 = getelementptr inbounds %uint256, ptr %0, i64 0, i32 1, i32 1
+  store i64 %6, ptr %37, align 8
   ret void
 }
 
 ; The 256-bit addition implementation using two inlined uaddo procedures for U128 type { i64, i64 }.
 ; This is similar to how LLVM legalize types in CodeGen.
-define void @add_U256_without_i128_or_recursive(%uint256* sret(%uint256) %0, %uint256* %1, %uint256* %2) nounwind {
+define void @add_U256_without_i128_or_recursive(ptr sret(%uint256) %0, ptr %1, ptr %2) nounwind {
 ; CHECK-LABEL: add_U256_without_i128_or_recursive:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movq %rdi, %rax
@@ -1309,48 +1292,45 @@ define void @add_U256_without_i128_or_recursive(%uint256* sret(%uint256) %0, %ui
 ; CHECK-NEXT:    movq %rcx, 16(%rax)
 ; CHECK-NEXT:    movq %rdx, 24(%rax)
 ; CHECK-NEXT:    retq
-  %4 = getelementptr inbounds %uint256, %uint256* %1, i64 0, i32 0, i32 0
-  %5 = load i64, i64* %4, align 8
-  %6 = getelementptr inbounds %uint256, %uint256* %1, i64 0, i32 0, i32 1
-  %7 = load i64, i64* %6, align 8
-  %8 = getelementptr inbounds %uint256, %uint256* %2, i64 0, i32 0, i32 0
-  %9 = load i64, i64* %8, align 8
-  %10 = getelementptr inbounds %uint256, %uint256* %2, i64 0, i32 0, i32 1
-  %11 = load i64, i64* %10, align 8
-  %12 = add i64 %9, %5
-  %13 = icmp ult i64 %12, %5
-  %14 = add i64 %11, %7
-  %15 = icmp ult i64 %14, %7
-  %16 = zext i1 %13 to i64
-  %17 = add i64 %14, %16
-  %18 = icmp ult i64 %17, %14
-  %19 = or i1 %15, %18
-  %20 = getelementptr inbounds %uint256, %uint256* %1, i64 0, i32 1, i32 0
-  %21 = load i64, i64* %20, align 8
-  %22 = getelementptr inbounds %uint256, %uint256* %1, i64 0, i32 1, i32 1
-  %23 = load i64, i64* %22, align 8
-  %24 = getelementptr inbounds %uint256, %uint256* %2, i64 0, i32 1, i32 0
-  %25 = load i64, i64* %24, align 8
-  %26 = getelementptr inbounds %uint256, %uint256* %2, i64 0, i32 1, i32 1
-  %27 = load i64, i64* %26, align 8
+  %4 = load i64, ptr %1, align 8
+  %5 = getelementptr inbounds %uint256, ptr %1, i64 0, i32 0, i32 1
+  %6 = load i64, ptr %5, align 8
+  %7 = load i64, ptr %2, align 8
+  %8 = getelementptr inbounds %uint256, ptr %2, i64 0, i32 0, i32 1
+  %9 = load i64, ptr %8, align 8
+  %10 = add i64 %7, %4
+  %11 = icmp ult i64 %10, %4
+  %12 = add i64 %9, %6
+  %13 = icmp ult i64 %12, %6
+  %14 = zext i1 %11 to i64
+  %15 = add i64 %12, %14
+  %16 = icmp ult i64 %15, %12
+  %17 = or i1 %13, %16
+  %18 = getelementptr inbounds %uint256, ptr %1, i64 0, i32 1, i32 0
+  %19 = load i64, ptr %18, align 8
+  %20 = getelementptr inbounds %uint256, ptr %1, i64 0, i32 1, i32 1
+  %21 = load i64, ptr %20, align 8
+  %22 = getelementptr inbounds %uint256, ptr %2, i64 0, i32 1, i32 0
+  %23 = load i64, ptr %22, align 8
+  %24 = getelementptr inbounds %uint256, ptr %2, i64 0, i32 1, i32 1
+  %25 = load i64, ptr %24, align 8
+  %26 = add i64 %23, %19
+  %27 = icmp ult i64 %26, %19
   %28 = add i64 %25, %21
-  %29 = icmp ult i64 %28, %21
-  %30 = add i64 %27, %23
-  %31 = zext i1 %29 to i64
-  %32 = add i64 %30, %31
-  %33 = zext i1 %19 to i64
-  %34 = add i64 %28, %33
-  %35 = icmp ult i64 %34, %28
-  %36 = zext i1 %35 to i64
-  %37 = add i64 %32, %36
-  %38 = getelementptr inbounds %uint256, %uint256* %0, i64 0, i32 0, i32 0
-  store i64 %12, i64* %38, align 8
-  %39 = getelementptr inbounds %uint256, %uint256* %0, i64 0, i32 0, i32 1
-  store i64 %17, i64* %39, align 8
-  %40 = getelementptr inbounds %uint256, %uint256* %0, i64 0, i32 1, i32 0
-  store i64 %34, i64* %40, align 8
-  %41 = getelementptr inbounds %uint256, %uint256* %0, i64 0, i32 1, i32 1
-  store i64 %37, i64* %41, align 8
+  %29 = zext i1 %27 to i64
+  %30 = add i64 %28, %29
+  %31 = zext i1 %17 to i64
+  %32 = add i64 %26, %31
+  %33 = icmp ult i64 %32, %26
+  %34 = zext i1 %33 to i64
+  %35 = add i64 %30, %34
+  store i64 %10, ptr %0, align 8
+  %36 = getelementptr inbounds %uint256, ptr %0, i64 0, i32 0, i32 1
+  store i64 %15, ptr %36, align 8
+  %37 = getelementptr inbounds %uint256, ptr %0, i64 0, i32 1, i32 0
+  store i64 %32, ptr %37, align 8
+  %38 = getelementptr inbounds %uint256, ptr %0, i64 0, i32 1, i32 1
+  store i64 %35, ptr %38, align 8
   ret void
 }
 

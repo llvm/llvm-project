@@ -9,7 +9,7 @@
 ; Function Attrs: nofree noinline norecurse nounwind uwtable writeonly
 define dso_local void @ext() local_unnamed_addr #0 {
 entry:
-  store i32 0, i32* @a, align 4
+  store i32 0, ptr @a, align 4
   ret void
 }
 
@@ -17,7 +17,7 @@ entry:
 define dso_local i32 @main() local_unnamed_addr #1 {
 entry:
   tail call fastcc void @foo()
-  %0 = load i32, i32* @a, align 4
+  %0 = load i32, ptr @a, align 4
   ret i32 %0
 }
 

@@ -18,7 +18,7 @@ exit:                                             ; preds = %entry
   ret x86_fp80 %fneg1
 }
 
-define dso_local void @test_f32(float *%p) {
+define dso_local void @test_f32(ptr%p) {
 ; CHECK-LABEL: test_f32:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    fldz
@@ -30,11 +30,11 @@ entry:
   br label %exit
 
 exit:                                             ; preds = %entry
-  store float %fneg1, float *%p
+  store float %fneg1, ptr%p
   ret void
 }
 
-define dso_local void @test_f64(double *%p) {
+define dso_local void @test_f64(ptr%p) {
 ; CHECK-LABEL: test_f64:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    fldz
@@ -46,6 +46,6 @@ entry:
   br label %exit
 
 exit:                                             ; preds = %entry
-  store double %fneg1, double *%p
+  store double %fneg1, ptr%p
   ret void
 }

@@ -36,11 +36,11 @@ define i32 @func_44(i16 signext %p_46) nounwind {
 ; SOURCE-SCHED-NEXT:    addl $28, %esp
 ; SOURCE-SCHED-NEXT:    retl
 entry:
-	%0 = load i32, i32* @g_5, align 4
+	%0 = load i32, ptr @g_5, align 4
 	%1 = ashr i32 %0, 1
 	%2 = icmp sgt i32 %1, 1
 	%3 = zext i1 %2 to i32
-	%4 = load i32, i32* @g_73, align 4
+	%4 = load i32, ptr @g_73, align 4
 	%5 = zext i16 %p_46 to i64
 	%6 = sub i64 0, %5
 	%7 = trunc i64 %6 to i8

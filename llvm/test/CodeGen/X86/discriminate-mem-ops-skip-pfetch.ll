@@ -11,18 +11,17 @@ source_filename = "test.cc"
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
 
-declare void @llvm.prefetch(i8 *, i32, i32, i32)
+declare void @llvm.prefetch(ptr, i32, i32, i32)
 ; Function Attrs: norecurse nounwind readonly uwtable
-define i32 @sum(i32* %arr, i32 %pos1, i32 %pos2) !dbg !7 {
+define i32 @sum(ptr %arr, i32 %pos1, i32 %pos2) !dbg !7 {
 entry:
   %idxprom = sext i32 %pos1 to i64, !dbg !9
-  %arrayidx = getelementptr inbounds i32, i32* %arr, i64 %idxprom, !dbg !9
-  %0 = load i32, i32* %arrayidx, align 4, !dbg !9, !tbaa !10
+  %arrayidx = getelementptr inbounds i32, ptr %arr, i64 %idxprom, !dbg !9
+  %0 = load i32, ptr %arrayidx, align 4, !dbg !9, !tbaa !10
   %idxprom1 = sext i32 %pos2 to i64, !dbg !14
-  %arrayidx2 = getelementptr inbounds i32, i32* %arr, i64 %idxprom1, !dbg !14
-  %addr = bitcast i32* %arrayidx2 to i8*
-  call void @llvm.prefetch(i8* %addr, i32 0, i32 3, i32 1)
-  %1 = load i32, i32* %arrayidx2, align 4, !dbg !14, !tbaa !10
+  %arrayidx2 = getelementptr inbounds i32, ptr %arr, i64 %idxprom1, !dbg !14
+  call void @llvm.prefetch(ptr %arrayidx2, i32 0, i32 3, i32 1)
+  %1 = load i32, ptr %arrayidx2, align 4, !dbg !14, !tbaa !10
   %add = add nsw i32 %1, %0, !dbg !15
   ret i32 %add, !dbg !16
 }

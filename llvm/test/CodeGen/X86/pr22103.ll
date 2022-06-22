@@ -14,6 +14,6 @@ define void @_Z1fv() {
 ; CHECK-NEXT: addq    a@GOTTPOFF(%rip), [[RAX]]
 ; CHECK-NEXT: callq *[[RAX]]
 entry:
-  call void bitcast (i64* @a to void ()*)()
+  call void @a()
   ret void
 }

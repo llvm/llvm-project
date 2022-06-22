@@ -5,17 +5,17 @@
 ;CHECK:       %latch
 ;CHECK:       %header
 ;CHECK:       %false
-define i32 @test1(i32* %p) {
+define i32 @test1(ptr %p) {
 entry:
   br label %header
 
 header:
   %x1 = phi i64 [0, %entry], [%x2, %latch]
   %count1 = phi i32 [0, %entry], [%count4, %latch]
-  %0 = ptrtoint i32* %p to i64
+  %0 = ptrtoint ptr %p to i64
   %1 = add i64 %0, %x1
-  %2 = inttoptr i64 %1 to i32*
-  %data = load i32, i32* %2
+  %2 = inttoptr i64 %1 to ptr
+  %data = load i32, ptr %2
   %3 = icmp eq i32 %data, 0
   br i1 %3, label %latch, label %false
 
@@ -39,17 +39,17 @@ exit:
 ;CHECK:       %latch
 ;CHECK:       %header
 ;CHECK:       %false
-define i32 @test2(i32* %p) {
+define i32 @test2(ptr %p) {
 entry:
   br label %header
 
 header:
   %x1 = phi i64 [0, %entry], [%x2, %latch]
   %count1 = phi i32 [0, %entry], [%count4, %latch]
-  %0 = ptrtoint i32* %p to i64
+  %0 = ptrtoint ptr %p to i64
   %1 = add i64 %0, %x1
-  %2 = inttoptr i64 %1 to i32*
-  %data = load i32, i32* %2
+  %2 = inttoptr i64 %1 to ptr
+  %data = load i32, ptr %2
   %3 = icmp eq i32 %data, 0
   br i1 %3, label %true, label %false
 
@@ -107,17 +107,17 @@ exit:
 ;CHECK:       %latch
 ;CHECK:       %header
 ;CHECK:       %false
-define i32 @test3(i32* %p) {
+define i32 @test3(ptr %p) {
 entry:
   br label %header
 
 header:
   %x1 = phi i64 [0, %entry], [%x2, %latch]
   %count1 = phi i32 [0, %entry], [%count12, %latch]
-  %0 = ptrtoint i32* %p to i64
+  %0 = ptrtoint ptr %p to i64
   %1 = add i64 %0, %x1
-  %2 = inttoptr i64 %1 to i32*
-  %data = load i32, i32* %2
+  %2 = inttoptr i64 %1 to ptr
+  %data = load i32, ptr %2
   %3 = icmp eq i32 %data, 0
   br i1 %3, label %true, label %false, !prof !3
 
@@ -175,17 +175,17 @@ exit:
 ;CHECK:       %latch
 ;CHECK:       %false
 ;CHECK:       %exit
-define i32 @test4(i32 %t, i32* %p) {
+define i32 @test4(i32 %t, ptr %p) {
 entry:
   br label %header
 
 header:
   %x1 = phi i64 [0, %entry], [%x2, %latch]
   %count1 = phi i32 [0, %entry], [%count4, %latch]
-  %0 = ptrtoint i32* %p to i64
+  %0 = ptrtoint ptr %p to i64
   %1 = add i64 %0, %x1
-  %2 = inttoptr i64 %1 to i32*
-  %data = load i32, i32* %2
+  %2 = inttoptr i64 %1 to ptr
+  %data = load i32, ptr %2
   %3 = icmp eq i32 %data, 0
   br i1 %3, label %true, label %false, !prof !1
 
@@ -216,16 +216,16 @@ exit:
 ;CHECK:       %entry
 ;CHECK:       %header
 ;CHECK:       %latch
-define void @test5(i32* %p) {
+define void @test5(ptr %p) {
 entry:
   br label %header
 
 header:
   %x1 = phi i64 [0, %entry], [%x1, %header], [%x2, %latch]
-  %0 = ptrtoint i32* %p to i64
+  %0 = ptrtoint ptr %p to i64
   %1 = add i64 %0, %x1
-  %2 = inttoptr i64 %1 to i32*
-  %data = load i32, i32* %2
+  %2 = inttoptr i64 %1 to ptr
+  %data = load i32, ptr %2
   %3 = icmp eq i32 %data, 0
   br i1 %3, label %latch, label %header
 

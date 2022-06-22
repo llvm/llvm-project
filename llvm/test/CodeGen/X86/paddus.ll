@@ -1519,7 +1519,7 @@ define <32 x i16> @test36(<32 x i16> %x) {
   ret <32 x i16> %3
 }
 
-define void @addus_v8i8(<8 x i8>* %p1, <8 x i8>* %p2) {
+define void @addus_v8i8(ptr %p1, ptr %p2) {
 ; SSE-LABEL: addus_v8i8:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    movq {{.*#+}} xmm0 = mem[0],zero
@@ -1535,16 +1535,16 @@ define void @addus_v8i8(<8 x i8>* %p1, <8 x i8>* %p2) {
 ; AVX-NEXT:    vpaddusb %xmm0, %xmm1, %xmm0
 ; AVX-NEXT:    vmovq %xmm0, (%rdi)
 ; AVX-NEXT:    retq
-  %ld1 = load <8 x i8>, <8 x i8>* %p1, align 8
-  %ld2 = load <8 x i8>, <8 x i8>* %p2, align 8
+  %ld1 = load <8 x i8>, ptr %p1, align 8
+  %ld2 = load <8 x i8>, ptr %p2, align 8
   %1 = add <8 x i8> %ld2, %ld1
   %2 = icmp ugt <8 x i8> %ld1, %1
   %sh3 = select <8 x i1> %2, <8 x i8> <i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1>, <8 x i8> %1
-  store <8 x i8> %sh3, <8 x i8>* %p1, align 8
+  store <8 x i8> %sh3, ptr %p1, align 8
   ret void
 }
 
-define void @addus_v4i8(<4 x i8>* %p1, <4 x i8>* %p2) {
+define void @addus_v4i8(ptr %p1, ptr %p2) {
 ; SSE-LABEL: addus_v4i8:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    movd {{.*#+}} xmm0 = mem[0],zero,zero,zero
@@ -1560,16 +1560,16 @@ define void @addus_v4i8(<4 x i8>* %p1, <4 x i8>* %p2) {
 ; AVX-NEXT:    vpaddusb %xmm0, %xmm1, %xmm0
 ; AVX-NEXT:    vmovd %xmm0, (%rdi)
 ; AVX-NEXT:    retq
-  %ld1 = load <4 x i8>, <4 x i8>* %p1, align 4
-  %ld2 = load <4 x i8>, <4 x i8>* %p2, align 4
+  %ld1 = load <4 x i8>, ptr %p1, align 4
+  %ld2 = load <4 x i8>, ptr %p2, align 4
   %1 = add <4 x i8> %ld2, %ld1
   %2 = icmp ugt <4 x i8> %ld1, %1
   %sh3 = select <4 x i1> %2, <4 x i8> <i8 -1, i8 -1, i8 -1, i8 -1>, <4 x i8> %1
-  store <4 x i8> %sh3, <4 x i8>* %p1, align 4
+  store <4 x i8> %sh3, ptr %p1, align 4
   ret void
 }
 
-define void @addus_v2i8(<2 x i8>* %p1, <2 x i8>* %p2) {
+define void @addus_v2i8(ptr %p1, ptr %p2) {
 ; SSE2-LABEL: addus_v2i8:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movzwl (%rdi), %eax
@@ -1611,16 +1611,16 @@ define void @addus_v2i8(<2 x i8>* %p1, <2 x i8>* %p2) {
 ; AVX-NEXT:    vpaddusb %xmm0, %xmm1, %xmm0
 ; AVX-NEXT:    vpextrw $0, %xmm0, (%rdi)
 ; AVX-NEXT:    retq
-  %ld1 = load <2 x i8>, <2 x i8>* %p1, align 2
-  %ld2 = load <2 x i8>, <2 x i8>* %p2, align 2
+  %ld1 = load <2 x i8>, ptr %p1, align 2
+  %ld2 = load <2 x i8>, ptr %p2, align 2
   %1 = add <2 x i8> %ld2, %ld1
   %2 = icmp ugt <2 x i8> %ld1, %1
   %sh3 = select <2 x i1> %2, <2 x i8> <i8 -1, i8 -1>, <2 x i8> %1
-  store <2 x i8> %sh3, <2 x i8>* %p1, align 2
+  store <2 x i8> %sh3, ptr %p1, align 2
   ret void
 }
 
-define void @addus_v4i16(<4 x i16>* %p1, <4 x i16>* %p2) {
+define void @addus_v4i16(ptr %p1, ptr %p2) {
 ; SSE-LABEL: addus_v4i16:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    movq {{.*#+}} xmm0 = mem[0],zero
@@ -1636,16 +1636,16 @@ define void @addus_v4i16(<4 x i16>* %p1, <4 x i16>* %p2) {
 ; AVX-NEXT:    vpaddusw %xmm0, %xmm1, %xmm0
 ; AVX-NEXT:    vmovq %xmm0, (%rdi)
 ; AVX-NEXT:    retq
-  %ld1 = load <4 x i16>, <4 x i16>* %p1, align 4
-  %ld2 = load <4 x i16>, <4 x i16>* %p2, align 4
+  %ld1 = load <4 x i16>, ptr %p1, align 4
+  %ld2 = load <4 x i16>, ptr %p2, align 4
   %1 = add <4 x i16> %ld2, %ld1
   %2 = icmp ugt <4 x i16> %ld1, %1
   %sh3 = select <4 x i1> %2, <4 x i16> <i16 -1, i16 -1, i16 -1, i16 -1>, <4 x i16> %1
-  store <4 x i16> %sh3, <4 x i16>* %p1, align 4
+  store <4 x i16> %sh3, ptr %p1, align 4
   ret void
 }
 
-define void @addus_v2i16(<2 x i16>* %p1, <2 x i16>* %p2) {
+define void @addus_v2i16(ptr %p1, ptr %p2) {
 ; SSE-LABEL: addus_v2i16:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    movd {{.*#+}} xmm0 = mem[0],zero,zero,zero
@@ -1661,11 +1661,11 @@ define void @addus_v2i16(<2 x i16>* %p1, <2 x i16>* %p2) {
 ; AVX-NEXT:    vpaddusw %xmm0, %xmm1, %xmm0
 ; AVX-NEXT:    vmovd %xmm0, (%rdi)
 ; AVX-NEXT:    retq
-  %ld1 = load <2 x i16>, <2 x i16>* %p1, align 2
-  %ld2 = load <2 x i16>, <2 x i16>* %p2, align 2
+  %ld1 = load <2 x i16>, ptr %p1, align 2
+  %ld2 = load <2 x i16>, ptr %p2, align 2
   %1 = add <2 x i16> %ld2, %ld1
   %2 = icmp ugt <2 x i16> %ld1, %1
   %sh3 = select <2 x i1> %2, <2 x i16> <i16 -1, i16 -1>, <2 x i16> %1
-  store <2 x i16> %sh3, <2 x i16>* %p1, align 2
+  store <2 x i16> %sh3, ptr %p1, align 2
   ret void
 }

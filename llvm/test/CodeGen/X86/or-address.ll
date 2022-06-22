@@ -9,7 +9,7 @@ target triple = "x86_64-apple-darwin10.3"
 ; CHECK:	movl	%{{.*}},  4(%rdi,[[R0]],4)
 ; CHECK:	movl	%{{.*}}, 12(%rdi,[[R0]],4)
 
-define void @test(i32* nocapture %array, i32 %r0) nounwind ssp noredzone {
+define void @test(ptr nocapture %array, i32 %r0) nounwind ssp noredzone {
 bb.nph:
   br label %bb
 
@@ -26,17 +26,17 @@ bb:                                               ; preds = %bb, %bb.nph
   %4 = add i8 %3, %iftmp.0.0                      ; <i8> [#uses=1]
   %5 = shl i8 %4, 2                               ; <i8> [#uses=1]
   %6 = zext i8 %5 to i64                          ; <i64> [#uses=4]
-  %7 = getelementptr inbounds i32, i32* %array, i64 %6 ; <i32*> [#uses=1]
-  store i32 %r0, i32* %7, align 4
+  %7 = getelementptr inbounds i32, ptr %array, i64 %6 ; <ptr> [#uses=1]
+  store i32 %r0, ptr %7, align 4
   %8 = or i64 %6, 2                               ; <i64> [#uses=1]
-  %9 = getelementptr inbounds i32, i32* %array, i64 %8 ; <i32*> [#uses=1]
-  store i32 %r0, i32* %9, align 4
+  %9 = getelementptr inbounds i32, ptr %array, i64 %8 ; <ptr> [#uses=1]
+  store i32 %r0, ptr %9, align 4
   %10 = or i64 %6, 1                              ; <i64> [#uses=1]
-  %11 = getelementptr inbounds i32, i32* %array, i64 %10 ; <i32*> [#uses=1]
-  store i32 %r0, i32* %11, align 4
+  %11 = getelementptr inbounds i32, ptr %array, i64 %10 ; <ptr> [#uses=1]
+  store i32 %r0, ptr %11, align 4
   %12 = or i64 %6, 3                              ; <i64> [#uses=1]
-  %13 = getelementptr inbounds i32, i32* %array, i64 %12 ; <i32*> [#uses=1]
-  store i32 %r0, i32* %13, align 4
+  %13 = getelementptr inbounds i32, ptr %array, i64 %12 ; <ptr> [#uses=1]
+  store i32 %r0, ptr %13, align 4
   %14 = add nsw i8 %j.010, 1                      ; <i8> [#uses=2]
   %15 = add i8 %iftmp.0.0, 1                      ; <i8> [#uses=1]
   %exitcond = icmp eq i8 %14, 32                  ; <i1> [#uses=1]
@@ -52,7 +52,7 @@ return:                                           ; preds = %bb
 ; CHECK:	movl	%{{.*}},  4(%[[RDI]],%[[RCX]],4)
 ; CHECK:	movl	%{{.*}}, 12(%[[RDI]],%[[RCX]],4)
 
-define void @test1(i32* nocapture %array, i32 %r0, i8 signext %k, i8 signext %i0) nounwind {
+define void @test1(ptr nocapture %array, i32 %r0, i8 signext %k, i8 signext %i0) nounwind {
 bb.nph:
   br label %for.body
 
@@ -69,17 +69,17 @@ for.body:                                         ; preds = %for.body, %bb.nph
   %mul22 = shl i8 %inc.k.addr.1, 4                ; <i8> [#uses=1]
   %add23 = add i8 %mul22, %mul                    ; <i8> [#uses=1]
   %idxprom = zext i8 %add23 to i64                ; <i64> [#uses=4]
-  %arrayidx = getelementptr inbounds i32, i32* %array, i64 %idxprom ; <i32*> [#uses=1]
-  store i32 %r0, i32* %arrayidx
+  %arrayidx = getelementptr inbounds i32, ptr %array, i64 %idxprom ; <ptr> [#uses=1]
+  store i32 %r0, ptr %arrayidx
   %add3356 = or i64 %idxprom, 2                   ; <i64> [#uses=1]
-  %arrayidx36 = getelementptr inbounds i32, i32* %array, i64 %add3356 ; <i32*> [#uses=1]
-  store i32 %r0, i32* %arrayidx36
+  %arrayidx36 = getelementptr inbounds i32, ptr %array, i64 %add3356 ; <ptr> [#uses=1]
+  store i32 %r0, ptr %arrayidx36
   %add4058 = or i64 %idxprom, 1                   ; <i64> [#uses=1]
-  %arrayidx43 = getelementptr inbounds i32, i32* %array, i64 %add4058 ; <i32*> [#uses=1]
-  store i32 %r0, i32* %arrayidx43
+  %arrayidx43 = getelementptr inbounds i32, ptr %array, i64 %add4058 ; <ptr> [#uses=1]
+  store i32 %r0, ptr %arrayidx43
   %add4760 = or i64 %idxprom, 3                   ; <i64> [#uses=1]
-  %arrayidx50 = getelementptr inbounds i32, i32* %array, i64 %add4760 ; <i32*> [#uses=1]
-  store i32 %r0, i32* %arrayidx50
+  %arrayidx50 = getelementptr inbounds i32, ptr %array, i64 %add4760 ; <ptr> [#uses=1]
+  store i32 %r0, ptr %arrayidx50
   %inc52 = add nsw i8 %j.065, 1                   ; <i8> [#uses=2]
   %add = add i8 %cond, 1                          ; <i8> [#uses=1]
   %exitcond = icmp eq i8 %inc52, 32               ; <i1> [#uses=1]

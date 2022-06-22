@@ -21,7 +21,7 @@
 ;    vcvtps2ph instructions
 
 
-define void @test1(float %src, i16* %dest) {
+define void @test1(float %src, ptr %dest) {
 ; LIBCALL-LABEL: test1:
 ; LIBCALL:       # %bb.0:
 ; LIBCALL-NEXT:    pushq %rbx
@@ -53,11 +53,11 @@ define void @test1(float %src, i16* %dest) {
 ; SOFTFLOAT-NEXT:    .cfi_def_cfa_offset 8
 ; SOFTFLOAT-NEXT:    retq
   %1 = tail call i16 @llvm.convert.to.fp16.f32(float %src)
-  store i16 %1, i16* %dest, align 2
+  store i16 %1, ptr %dest, align 2
   ret void
 }
 
-define float @test2(i16* nocapture %src) {
+define float @test2(ptr nocapture %src) {
 ; LIBCALL-LABEL: test2:
 ; LIBCALL:       # %bb.0:
 ; LIBCALL-NEXT:    pinsrw $0, (%rdi), %xmm0
@@ -79,7 +79,7 @@ define float @test2(i16* nocapture %src) {
 ; SOFTFLOAT-NEXT:    popq %rcx
 ; SOFTFLOAT-NEXT:    .cfi_def_cfa_offset 8
 ; SOFTFLOAT-NEXT:    retq
-  %1 = load i16, i16* %src, align 2
+  %1 = load i16, ptr %src, align 2
   %2 = tail call float @llvm.convert.from.fp16.f32(i16 %1)
   ret float %2
 }
@@ -118,7 +118,7 @@ define float @test3(float %src) nounwind uwtable readnone {
   ret float %2
 }
 
-define double @test4(i16* nocapture %src) {
+define double @test4(ptr nocapture %src) {
 ; LIBCALL-LABEL: test4:
 ; LIBCALL:       # %bb.0:
 ; LIBCALL-NEXT:    pushq %rax
@@ -149,7 +149,7 @@ define double @test4(i16* nocapture %src) {
 ; SOFTFLOAT-NEXT:    popq %rcx
 ; SOFTFLOAT-NEXT:    .cfi_def_cfa_offset 8
 ; SOFTFLOAT-NEXT:    retq
-  %1 = load i16, i16* %src, align 2
+  %1 = load i16, ptr %src, align 2
   %2 = tail call double @llvm.convert.from.fp16.f64(i16 %1)
   ret double %2
 }

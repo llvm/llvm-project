@@ -5,7 +5,7 @@
 ; 64-bit load/store on x86-32
 ; FIXME: The generated code can be substantially improved.
 
-define void @test1(i64* %ptr, i64 %val1) {
+define void @test1(ptr %ptr, i64 %val1) {
 ; SSE42-LABEL: test1:
 ; SSE42:       # %bb.0:
 ; SSE42-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -35,11 +35,11 @@ define void @test1(i64* %ptr, i64 %val1) {
 ; NOSSE-NEXT:    popl %ebp
 ; NOSSE-NEXT:    .cfi_def_cfa %esp, 4
 ; NOSSE-NEXT:    retl
-  store atomic i64 %val1, i64* %ptr seq_cst, align 8
+  store atomic i64 %val1, ptr %ptr seq_cst, align 8
   ret void
 }
 
-define i64 @test2(i64* %ptr) {
+define i64 @test2(ptr %ptr) {
 ; SSE42-LABEL: test2:
 ; SSE42:       # %bb.0:
 ; SSE42-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -66,12 +66,12 @@ define i64 @test2(i64* %ptr) {
 ; NOSSE-NEXT:    popl %ebp
 ; NOSSE-NEXT:    .cfi_def_cfa %esp, 4
 ; NOSSE-NEXT:    retl
-  %val = load atomic i64, i64* %ptr seq_cst, align 8
+  %val = load atomic i64, ptr %ptr seq_cst, align 8
   ret i64 %val
 }
 
 ; Same as test2, but with noimplicitfloat.
-define i64 @test3(i64* %ptr) noimplicitfloat {
+define i64 @test3(ptr %ptr) noimplicitfloat {
 ; CHECK-LABEL: test3:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    pushl %ebx
@@ -91,11 +91,11 @@ define i64 @test3(i64* %ptr) noimplicitfloat {
 ; CHECK-NEXT:    popl %ebx
 ; CHECK-NEXT:    .cfi_def_cfa_offset 4
 ; CHECK-NEXT:    retl
-  %val = load atomic i64, i64* %ptr seq_cst, align 8
+  %val = load atomic i64, ptr %ptr seq_cst, align 8
   ret i64 %val
 }
 
-define i64 @test4(i64* %ptr) {
+define i64 @test4(ptr %ptr) {
 ; SSE42-LABEL: test4:
 ; SSE42:       # %bb.0:
 ; SSE42-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -122,6 +122,6 @@ define i64 @test4(i64* %ptr) {
 ; NOSSE-NEXT:    popl %ebp
 ; NOSSE-NEXT:    .cfi_def_cfa %esp, 4
 ; NOSSE-NEXT:    retl
-  %val = load atomic volatile i64, i64* %ptr seq_cst, align 8
+  %val = load atomic volatile i64, ptr %ptr seq_cst, align 8
   ret i64 %val
 }

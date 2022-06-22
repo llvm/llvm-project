@@ -21,24 +21,24 @@ declare i32 @__gxx_personality_v0(...)
 ; CHECK: movb %dil, {{[0-9]+}}(%rbx)
 ; CHECK: movb {{[0-9]+}}(%rbx), %al
 
-define i32 @bar(i32 %a, i32 %b, i32 %c, i32 %d, ...) personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*) {
+define i32 @bar(i32 %a, i32 %b, i32 %c, i32 %d, ...) personality ptr @__gxx_personality_v0 {
   %mem = alloca i32, i32 %a, align 32   ; Force rbx to be used as a base pointer
   %b.tmp = lshr i32 %b, 8
   %b.arg = and i32 %b.tmp, 255
-  invoke void(i32, ...) @foo(i32 42, i32* %mem, i32 %c, i32 %d, i32 %b.arg) to label %success unwind label %fail
+  invoke void(i32, ...) @foo(i32 42, ptr %mem, i32 %c, i32 %d, i32 %b.arg) to label %success unwind label %fail
 
 success:
   ret i32 0
 fail:
-  %exc = landingpad { i8*, i32 } cleanup
-  %res = extractvalue { i8*, i32 } %exc, 1
+  %exc = landingpad { ptr, i32 } cleanup
+  %res = extractvalue { ptr, i32 } %exc, 1
   ret i32 %res
 }
 
 ; CHECK-LABEL: live:
 ; CHECK: movl {{%.*}}, %eax
 
-define i32 @live(i32 %a, i32 %b, i32 %c, i32 %d, ...) personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*) {
+define i32 @live(i32 %a, i32 %b, i32 %c, i32 %d, ...) personality ptr @__gxx_personality_v0 {
   %mem = alloca i32, i32 %a, align 32   ; Force rbx to be used as a base pointer
   %b.tmp = lshr i32 %b, 8
   %b.arg = and i32 %b.tmp, 255
@@ -47,7 +47,7 @@ define i32 @live(i32 %a, i32 %b, i32 %c, i32 %d, ...) personality i8* bitcast (i
 success:
   ret i32 0
 fail:
-  %exc = landingpad { i8*, i32 } cleanup
-  %res = extractvalue { i8*, i32 } %exc, 1
+  %exc = landingpad { ptr, i32 } cleanup
+  %res = extractvalue { ptr, i32 } %exc, 1
   ret i32 %b.arg
 }

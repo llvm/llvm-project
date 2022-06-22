@@ -23,7 +23,7 @@ declare {<4 x i24>, <4 x i1>} @llvm.usub.with.overflow.v4i24(<4 x i24>, <4 x i24
 declare {<4 x i1>, <4 x i1>} @llvm.usub.with.overflow.v4i1(<4 x i1>, <4 x i1>)
 declare {<2 x i128>, <2 x i1>} @llvm.usub.with.overflow.v2i128(<2 x i128>, <2 x i128>)
 
-define <1 x i32> @usubo_v1i32(<1 x i32> %a0, <1 x i32> %a1, <1 x i32>* %p2) nounwind {
+define <1 x i32> @usubo_v1i32(<1 x i32> %a0, <1 x i32> %a1, ptr %p2) nounwind {
 ; CHECK-LABEL: usubo_v1i32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    xorl %eax, %eax
@@ -35,11 +35,11 @@ define <1 x i32> @usubo_v1i32(<1 x i32> %a0, <1 x i32> %a1, <1 x i32>* %p2) noun
   %val = extractvalue {<1 x i32>, <1 x i1>} %t, 0
   %obit = extractvalue {<1 x i32>, <1 x i1>} %t, 1
   %res = sext <1 x i1> %obit to <1 x i32>
-  store <1 x i32> %val, <1 x i32>* %p2
+  store <1 x i32> %val, ptr %p2
   ret <1 x i32> %res
 }
 
-define <2 x i32> @usubo_v2i32(<2 x i32> %a0, <2 x i32> %a1, <2 x i32>* %p2) nounwind {
+define <2 x i32> @usubo_v2i32(<2 x i32> %a0, <2 x i32> %a1, ptr %p2) nounwind {
 ; SSE2-LABEL: usubo_v2i32:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movdqa {{.*#+}} xmm2 = [2147483648,2147483648,2147483648,2147483648]
@@ -97,11 +97,11 @@ define <2 x i32> @usubo_v2i32(<2 x i32> %a0, <2 x i32> %a1, <2 x i32>* %p2) noun
   %val = extractvalue {<2 x i32>, <2 x i1>} %t, 0
   %obit = extractvalue {<2 x i32>, <2 x i1>} %t, 1
   %res = sext <2 x i1> %obit to <2 x i32>
-  store <2 x i32> %val, <2 x i32>* %p2
+  store <2 x i32> %val, ptr %p2
   ret <2 x i32> %res
 }
 
-define <3 x i32> @usubo_v3i32(<3 x i32> %a0, <3 x i32> %a1, <3 x i32>* %p2) nounwind {
+define <3 x i32> @usubo_v3i32(<3 x i32> %a0, <3 x i32> %a1, ptr %p2) nounwind {
 ; SSE2-LABEL: usubo_v3i32:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movdqa {{.*#+}} xmm2 = [2147483648,2147483648,2147483648,2147483648]
@@ -166,11 +166,11 @@ define <3 x i32> @usubo_v3i32(<3 x i32> %a0, <3 x i32> %a1, <3 x i32>* %p2) noun
   %val = extractvalue {<3 x i32>, <3 x i1>} %t, 0
   %obit = extractvalue {<3 x i32>, <3 x i1>} %t, 1
   %res = sext <3 x i1> %obit to <3 x i32>
-  store <3 x i32> %val, <3 x i32>* %p2
+  store <3 x i32> %val, ptr %p2
   ret <3 x i32> %res
 }
 
-define <4 x i32> @usubo_v4i32(<4 x i32> %a0, <4 x i32> %a1, <4 x i32>* %p2) nounwind {
+define <4 x i32> @usubo_v4i32(<4 x i32> %a0, <4 x i32> %a1, ptr %p2) nounwind {
 ; SSE2-LABEL: usubo_v4i32:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movdqa {{.*#+}} xmm2 = [2147483648,2147483648,2147483648,2147483648]
@@ -228,11 +228,11 @@ define <4 x i32> @usubo_v4i32(<4 x i32> %a0, <4 x i32> %a1, <4 x i32>* %p2) noun
   %val = extractvalue {<4 x i32>, <4 x i1>} %t, 0
   %obit = extractvalue {<4 x i32>, <4 x i1>} %t, 1
   %res = sext <4 x i1> %obit to <4 x i32>
-  store <4 x i32> %val, <4 x i32>* %p2
+  store <4 x i32> %val, ptr %p2
   ret <4 x i32> %res
 }
 
-define <6 x i32> @usubo_v6i32(<6 x i32> %a0, <6 x i32> %a1, <6 x i32>* %p2) nounwind {
+define <6 x i32> @usubo_v6i32(<6 x i32> %a0, <6 x i32> %a1, ptr %p2) nounwind {
 ; SSE2-LABEL: usubo_v6i32:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movq %rdi, %rax
@@ -392,11 +392,11 @@ define <6 x i32> @usubo_v6i32(<6 x i32> %a0, <6 x i32> %a1, <6 x i32>* %p2) noun
   %val = extractvalue {<6 x i32>, <6 x i1>} %t, 0
   %obit = extractvalue {<6 x i32>, <6 x i1>} %t, 1
   %res = sext <6 x i1> %obit to <6 x i32>
-  store <6 x i32> %val, <6 x i32>* %p2
+  store <6 x i32> %val, ptr %p2
   ret <6 x i32> %res
 }
 
-define <8 x i32> @usubo_v8i32(<8 x i32> %a0, <8 x i32> %a1, <8 x i32>* %p2) nounwind {
+define <8 x i32> @usubo_v8i32(<8 x i32> %a0, <8 x i32> %a1, ptr %p2) nounwind {
 ; SSE2-LABEL: usubo_v8i32:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movdqa {{.*#+}} xmm4 = [2147483648,2147483648,2147483648,2147483648]
@@ -490,11 +490,11 @@ define <8 x i32> @usubo_v8i32(<8 x i32> %a0, <8 x i32> %a1, <8 x i32>* %p2) noun
   %val = extractvalue {<8 x i32>, <8 x i1>} %t, 0
   %obit = extractvalue {<8 x i32>, <8 x i1>} %t, 1
   %res = sext <8 x i1> %obit to <8 x i32>
-  store <8 x i32> %val, <8 x i32>* %p2
+  store <8 x i32> %val, ptr %p2
   ret <8 x i32> %res
 }
 
-define <16 x i32> @usubo_v16i32(<16 x i32> %a0, <16 x i32> %a1, <16 x i32>* %p2) nounwind {
+define <16 x i32> @usubo_v16i32(<16 x i32> %a0, <16 x i32> %a1, ptr %p2) nounwind {
 ; SSE2-LABEL: usubo_v16i32:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movdqa {{.*#+}} xmm8 = [2147483648,2147483648,2147483648,2147483648]
@@ -659,11 +659,11 @@ define <16 x i32> @usubo_v16i32(<16 x i32> %a0, <16 x i32> %a1, <16 x i32>* %p2)
   %val = extractvalue {<16 x i32>, <16 x i1>} %t, 0
   %obit = extractvalue {<16 x i32>, <16 x i1>} %t, 1
   %res = sext <16 x i1> %obit to <16 x i32>
-  store <16 x i32> %val, <16 x i32>* %p2
+  store <16 x i32> %val, ptr %p2
   ret <16 x i32> %res
 }
 
-define <16 x i32> @usubo_v16i8(<16 x i8> %a0, <16 x i8> %a1, <16 x i8>* %p2) nounwind {
+define <16 x i32> @usubo_v16i8(<16 x i8> %a0, <16 x i8> %a1, ptr %p2) nounwind {
 ; SSE2-LABEL: usubo_v16i8:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movdqa %xmm0, %xmm4
@@ -785,11 +785,11 @@ define <16 x i32> @usubo_v16i8(<16 x i8> %a0, <16 x i8> %a1, <16 x i8>* %p2) nou
   %val = extractvalue {<16 x i8>, <16 x i1>} %t, 0
   %obit = extractvalue {<16 x i8>, <16 x i1>} %t, 1
   %res = sext <16 x i1> %obit to <16 x i32>
-  store <16 x i8> %val, <16 x i8>* %p2
+  store <16 x i8> %val, ptr %p2
   ret <16 x i32> %res
 }
 
-define <8 x i32> @usubo_v8i16(<8 x i16> %a0, <8 x i16> %a1, <8 x i16>* %p2) nounwind {
+define <8 x i32> @usubo_v8i16(<8 x i16> %a0, <8 x i16> %a1, ptr %p2) nounwind {
 ; SSE2-LABEL: usubo_v8i16:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movdqa {{.*#+}} xmm2 = [32768,32768,32768,32768,32768,32768,32768,32768]
@@ -878,11 +878,11 @@ define <8 x i32> @usubo_v8i16(<8 x i16> %a0, <8 x i16> %a1, <8 x i16>* %p2) noun
   %val = extractvalue {<8 x i16>, <8 x i1>} %t, 0
   %obit = extractvalue {<8 x i16>, <8 x i1>} %t, 1
   %res = sext <8 x i1> %obit to <8 x i32>
-  store <8 x i16> %val, <8 x i16>* %p2
+  store <8 x i16> %val, ptr %p2
   ret <8 x i32> %res
 }
 
-define <2 x i32> @usubo_v2i64(<2 x i64> %a0, <2 x i64> %a1, <2 x i64>* %p2) nounwind {
+define <2 x i32> @usubo_v2i64(<2 x i64> %a0, <2 x i64> %a1, ptr %p2) nounwind {
 ; SSE-LABEL: usubo_v2i64:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    movdqa {{.*#+}} xmm2 = [9223372039002259456,9223372039002259456]
@@ -925,11 +925,11 @@ define <2 x i32> @usubo_v2i64(<2 x i64> %a0, <2 x i64> %a1, <2 x i64>* %p2) noun
   %val = extractvalue {<2 x i64>, <2 x i1>} %t, 0
   %obit = extractvalue {<2 x i64>, <2 x i1>} %t, 1
   %res = sext <2 x i1> %obit to <2 x i32>
-  store <2 x i64> %val, <2 x i64>* %p2
+  store <2 x i64> %val, ptr %p2
   ret <2 x i32> %res
 }
 
-define <4 x i32> @usubo_v4i24(<4 x i24> %a0, <4 x i24> %a1, <4 x i24>* %p2) nounwind {
+define <4 x i32> @usubo_v4i24(<4 x i24> %a0, <4 x i24> %a1, ptr %p2) nounwind {
 ; SSE2-LABEL: usubo_v4i24:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movdqa %xmm0, %xmm2
@@ -1109,11 +1109,11 @@ define <4 x i32> @usubo_v4i24(<4 x i24> %a0, <4 x i24> %a1, <4 x i24>* %p2) noun
   %val = extractvalue {<4 x i24>, <4 x i1>} %t, 0
   %obit = extractvalue {<4 x i24>, <4 x i1>} %t, 1
   %res = sext <4 x i1> %obit to <4 x i32>
-  store <4 x i24> %val, <4 x i24>* %p2
+  store <4 x i24> %val, ptr %p2
   ret <4 x i32> %res
 }
 
-define <4 x i32> @usubo_v4i1(<4 x i1> %a0, <4 x i1> %a1, <4 x i1>* %p2) nounwind {
+define <4 x i32> @usubo_v4i1(<4 x i1> %a0, <4 x i1> %a1, ptr %p2) nounwind {
 ; SSE-LABEL: usubo_v4i1:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    movdqa {{.*#+}} xmm2 = [1,1,1,1]
@@ -1179,11 +1179,11 @@ define <4 x i32> @usubo_v4i1(<4 x i1> %a0, <4 x i1> %a1, <4 x i1>* %p2) nounwind
   %val = extractvalue {<4 x i1>, <4 x i1>} %t, 0
   %obit = extractvalue {<4 x i1>, <4 x i1>} %t, 1
   %res = sext <4 x i1> %obit to <4 x i32>
-  store <4 x i1> %val, <4 x i1>* %p2
+  store <4 x i1> %val, ptr %p2
   ret <4 x i32> %res
 }
 
-define <2 x i32> @usubo_v2i128(<2 x i128> %a0, <2 x i128> %a1, <2 x i128>* %p2) nounwind {
+define <2 x i32> @usubo_v2i128(<2 x i128> %a0, <2 x i128> %a1, ptr %p2) nounwind {
 ; SSE2-LABEL: usubo_v2i128:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movq {{[0-9]+}}(%rsp), %r10
@@ -1287,6 +1287,6 @@ define <2 x i32> @usubo_v2i128(<2 x i128> %a0, <2 x i128> %a1, <2 x i128>* %p2) 
   %val = extractvalue {<2 x i128>, <2 x i1>} %t, 0
   %obit = extractvalue {<2 x i128>, <2 x i1>} %t, 1
   %res = sext <2 x i1> %obit to <2 x i32>
-  store <2 x i128> %val, <2 x i128>* %p2
+  store <2 x i128> %val, ptr %p2
   ret <2 x i32> %res
 }

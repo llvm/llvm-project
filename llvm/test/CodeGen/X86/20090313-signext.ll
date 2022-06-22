@@ -18,7 +18,7 @@ entry:
 	%0 = tail call signext i16 @h() nounwind
 	%1 = sext i16 %0 to i32
 	tail call void @g(i32 %1) nounwind
-	%2 = load i16, i16* @x, align 2
+	%2 = load i16, ptr @x, align 2
 	ret i16 %2
 }
 

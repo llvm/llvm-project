@@ -7,7 +7,7 @@
 ; Use h registers. On x86-64, codegen doesn't support general allocation
 ; of h registers yet, due to x86 encoding complications.
 
-define void @bar64(i64 inreg %x, i8* inreg %p) nounwind {
+define void @bar64(i64 inreg %x, ptr inreg %p) nounwind {
 ; X64-LABEL: bar64:
 ; X64:       # %bb.0:
 ; X64-NEXT:    shrq $8, %rdi
@@ -41,11 +41,11 @@ define void @bar64(i64 inreg %x, i8* inreg %p) nounwind {
   %t0 = lshr i64 %x, 8
   %t1 = trunc i64 %t0 to i8
   %t2 = add i8 %t1, 1
-  store i8 %t2, i8* %p
+  store i8 %t2, ptr %p
   ret void
 }
 
-define void @bar32(i32 inreg %x, i8* inreg %p) nounwind {
+define void @bar32(i32 inreg %x, ptr inreg %p) nounwind {
 ; X64-LABEL: bar32:
 ; X64:       # %bb.0:
 ; X64-NEXT:    shrl $8, %edi
@@ -77,11 +77,11 @@ define void @bar32(i32 inreg %x, i8* inreg %p) nounwind {
   %t0 = lshr i32 %x, 8
   %t1 = trunc i32 %t0 to i8
   %t2 = add i8 %t1, 1
-  store i8 %t2, i8* %p
+  store i8 %t2, ptr %p
   ret void
 }
 
-define void @bar16(i16 inreg %x, i8* inreg %p) nounwind {
+define void @bar16(i16 inreg %x, ptr inreg %p) nounwind {
 ; X64-LABEL: bar16:
 ; X64:       # %bb.0:
 ; X64-NEXT:    shrl $8, %edi
@@ -114,7 +114,7 @@ define void @bar16(i16 inreg %x, i8* inreg %p) nounwind {
   %t0 = lshr i16 %x, 8
   %t1 = trunc i16 %t0 to i8
   %t2 = add i8 %t1, 1
-  store i8 %t2, i8* %p
+  store i8 %t2, ptr %p
   ret void
 }
 

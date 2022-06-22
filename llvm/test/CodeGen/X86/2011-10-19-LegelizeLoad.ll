@@ -36,9 +36,9 @@ define dso_local i32 @main() nounwind uwtable {
 ; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    retq
 entry:
-  %0 = load <2 x i8>, <2 x i8>* @i, align 8
-  %1 = load <2 x i8>, <2 x i8>* @j, align 8
+  %0 = load <2 x i8>, ptr @i, align 8
+  %1 = load <2 x i8>, ptr @j, align 8
   %div = sdiv <2 x i8> %1, %0
-  store <2 x i8> %div, <2 x i8>* getelementptr inbounds (%union.anon, %union.anon* @res, i32 0, i32 0), align 8
+  store <2 x i8> %div, ptr @res, align 8
   ret i32 0
 }

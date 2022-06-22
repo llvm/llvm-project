@@ -54,9 +54,9 @@ define void @atomic_maxmin_i8() {
 ; CHECK-NEXT:    jne .LBB0_7
 ; CHECK-NEXT:  # %bb.8: # %atomicrmw.end13
 ; CHECK-NEXT:    retq
-  %1 = atomicrmw max  i8* @sc8, i8 5 acquire
-  %2 = atomicrmw min  i8* @sc8, i8 6 acquire
-  %3 = atomicrmw umax i8* @sc8, i8 7 acquire
-  %4 = atomicrmw umin i8* @sc8, i8 8 acquire
+  %1 = atomicrmw max  ptr @sc8, i8 5 acquire
+  %2 = atomicrmw min  ptr @sc8, i8 6 acquire
+  %3 = atomicrmw umax ptr @sc8, i8 7 acquire
+  %4 = atomicrmw umin ptr @sc8, i8 8 acquire
   ret void
 }

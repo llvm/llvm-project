@@ -101,7 +101,7 @@ define <4 x float> @test_x86_sse41_insertps(<4 x float> %a0, <4 x float> %a1) {
 declare <4 x float> @llvm.x86.sse41.insertps(<4 x float>, <4 x float>, i32) nounwind readnone
 
 
-define <2 x i64> @test_x86_sse41_movntdqa(<2 x i64>* %a0) {
+define <2 x i64> @test_x86_sse41_movntdqa(ptr %a0) {
 ; X86-SSE-LABEL: test_x86_sse41_movntdqa:
 ; X86-SSE:       ## %bb.0:
 ; X86-SSE-NEXT:    movl {{[0-9]+}}(%esp), %eax ## encoding: [0x8b,0x44,0x24,0x04]
@@ -134,11 +134,10 @@ define <2 x i64> @test_x86_sse41_movntdqa(<2 x i64>* %a0) {
 ; X64-AVX512:       ## %bb.0:
 ; X64-AVX512-NEXT:    vmovntdqa (%rdi), %xmm0 ## EVEX TO VEX Compression encoding: [0xc4,0xe2,0x79,0x2a,0x07]
 ; X64-AVX512-NEXT:    retq ## encoding: [0xc3]
-  %arg0 = bitcast <2 x i64>* %a0 to i8*
-  %res = call <2 x i64> @llvm.x86.sse41.movntdqa(i8* %arg0)
+  %res = call <2 x i64> @llvm.x86.sse41.movntdqa(ptr %a0)
   ret <2 x i64> %res
 }
-declare <2 x i64> @llvm.x86.sse41.movntdqa(i8*) nounwind readnone
+declare <2 x i64> @llvm.x86.sse41.movntdqa(ptr) nounwind readnone
 
 
 define <8 x i16> @test_x86_sse41_mpsadbw(<16 x i8> %a0, <16 x i8> %a1) {

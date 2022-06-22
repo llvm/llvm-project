@@ -230,7 +230,7 @@ define <8 x i16> @test9(<8 x i16> %a) {
   ret <8 x i16> %lshr
 }
 
-define <8 x i32> @test10(<8 x i32>* %a) {
+define <8 x i32> @test10(ptr %a) {
 ; SSE-LABEL: test10:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    movdqa (%rdi), %xmm0
@@ -248,7 +248,7 @@ define <8 x i32> @test10(<8 x i32>* %a) {
 ; AVX2-NEXT:    vmovdqa (%rdi), %ymm0
 ; AVX2-NEXT:    vpsrad $1, %ymm0, %ymm0
 ; AVX2-NEXT:    retq
-  %ld = load <8 x i32>, <8 x i32>* %a, align 32
+  %ld = load <8 x i32>, ptr %a, align 32
   %ashr = ashr <8 x i32> %ld, <i32 1, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
   ret <8 x i32> %ashr
 }

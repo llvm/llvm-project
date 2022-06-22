@@ -49,7 +49,7 @@ define <4 x float> @test_x86_sse_sqrt_ss(<4 x float> %a0) {
 declare <4 x float> @llvm.x86.sse.sqrt.ss(<4 x float>) nounwind readnone
 
 
-define void @test_x86_sse_storeu_ps(i8* %a0, <4 x float> %a1) {
+define void @test_x86_sse_storeu_ps(ptr %a0, <4 x float> %a1) {
 ; X86-SSE-LABEL: test_x86_sse_storeu_ps:
 ; X86-SSE:       ## %bb.0:
 ; X86-SSE-NEXT:    movl {{[0-9]+}}(%esp), %eax ## encoding: [0x8b,0x44,0x24,0x04]
@@ -82,10 +82,10 @@ define void @test_x86_sse_storeu_ps(i8* %a0, <4 x float> %a1) {
 ; X64-AVX512:       ## %bb.0:
 ; X64-AVX512-NEXT:    vmovups %xmm0, (%rdi) ## EVEX TO VEX Compression encoding: [0xc5,0xf8,0x11,0x07]
 ; X64-AVX512-NEXT:    retq ## encoding: [0xc3]
-  call void @llvm.x86.sse.storeu.ps(i8* %a0, <4 x float> %a1)
+  call void @llvm.x86.sse.storeu.ps(ptr %a0, <4 x float> %a1)
   ret void
 }
-declare void @llvm.x86.sse.storeu.ps(i8*, <4 x float>) nounwind
+declare void @llvm.x86.sse.storeu.ps(ptr, <4 x float>) nounwind
 
 
 define <4 x float> @test_x86_sse_add_ss(<4 x float> %a0, <4 x float> %a1) {

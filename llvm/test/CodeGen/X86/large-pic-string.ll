@@ -16,6 +16,6 @@ define void @pr38385() {
 ; CHECK-NEXT:    movb %cl, -{{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    retq
   %p = alloca i8, align 1
-  store i8 ptrtoint ([2 x i8]* @.str to i8), i8* %p, align 1
+  store i8 ptrtoint (ptr @.str to i8), ptr %p, align 1
   ret void
 }

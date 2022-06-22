@@ -10,6 +10,6 @@ define void @t2(i32 %m_task_id, i32 %start_x, i32 %end_x) nounwind {
 	trunc i64 %3 to i1		; <i1>:4 [#uses=1]
 	zext i1 %4 to i8		; <i8>:5 [#uses=1]
 	insertelement <2 x i8> zeroinitializer, i8 %5, i32 1		; <<2 x i8>>:6 [#uses=1]
-	store <2 x i8> %6, <2 x i8>* null
+	store <2 x i8> %6, ptr null
 	ret void
 }

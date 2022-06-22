@@ -40,13 +40,13 @@
 ; DONT_USE_BASE-NOT: movq %rsp, %rbx
 ; DONT_USE_BASE-NOT: movl %esp, %ebx
 ; DONT_USE_BASE: cmpxchg
-define i1 @cmp_and_swap16(i128 %a, i128 %b, i128* %addr, i32 %n) {
+define i1 @cmp_and_swap16(i128 %a, i128 %b, ptr %addr, i32 %n) {
   %dummy = alloca i32, i32 %n
 tail call void asm sideeffect "nop", "~{rax},~{rcx},~{rdx},~{rsi},~{rdi},~{rbp},~{r8},~{r9},~{r10},~{r11},~{r12},~{r13},~{r14},~{r15}"()
-  %cmp = cmpxchg i128* %addr, i128 %a, i128 %b seq_cst seq_cst
+  %cmp = cmpxchg ptr %addr, i128 %a, i128 %b seq_cst seq_cst
   %res = extractvalue { i128, i1 } %cmp, 1
-  %idx = getelementptr i32, i32* %dummy, i32 5
-  store i32 %n, i32* %idx
+  %idx = getelementptr i32, ptr %dummy, i32 5
+  store i32 %n, ptr %idx
   ret i1 %res
 }
 !llvm.module.flags = !{!0}

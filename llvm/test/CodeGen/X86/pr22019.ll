@@ -20,4 +20,4 @@ define void @pselect() {
 @var = global i32 0
 
 ; CHECK: .set alias, var
-@alias = alias i32, i32* @var
+@alias = alias i32, ptr @var

@@ -23,7 +23,7 @@ entry:
 
 declare i32 @llvm.x86.tbm.bextri.u32(i32, i32) nounwind readnone
 
-define i32 @test_x86_tbm_bextri_u32_m(i32* nocapture %a) nounwind readonly {
+define i32 @test_x86_tbm_bextri_u32_m(ptr nocapture %a) nounwind readonly {
 ; X86-LABEL: test_x86_tbm_bextri_u32_m:
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -35,7 +35,7 @@ define i32 @test_x86_tbm_bextri_u32_m(i32* nocapture %a) nounwind readonly {
 ; X64-NEXT:    bextrl $3841, (%rdi), %eax # imm = 0xF01
 ; X64-NEXT:    retq
 entry:
-  %tmp1 = load i32, i32* %a, align 4
+  %tmp1 = load i32, ptr %a, align 4
   %0 = tail call i32 @llvm.x86.tbm.bextri.u32(i32 %tmp1, i32 3841)
   ret i32 %0
 }

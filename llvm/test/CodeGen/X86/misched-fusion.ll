@@ -10,18 +10,18 @@ entry:
   br label %loop
 
 loop:
-  %var = phi i32* [ null, %entry ], [ %next.load, %loop1 ], [ %var, %loop2 ]
-  %next.ptr = phi i32** [ null, %entry ], [ %next.ptr, %loop1 ], [ %gep, %loop2 ]
+  %var = phi ptr [ null, %entry ], [ %next.load, %loop1 ], [ %var, %loop2 ]
+  %next.ptr = phi ptr [ null, %entry ], [ %next.ptr, %loop1 ], [ %gep, %loop2 ]
   br label %loop1
 
 loop1:
-  %cond = icmp eq i32* %var, null
-  %next.load = load i32*, i32** %next.ptr
+  %cond = icmp eq ptr %var, null
+  %next.load = load ptr, ptr %next.ptr
   br i1 %cond, label %loop, label %loop2
 
 loop2:                                           ; preds = %loop1
-  %gep = getelementptr inbounds i32*, i32** %next.ptr, i32 1
-  store i32* %next.load, i32** undef
+  %gep = getelementptr inbounds ptr, ptr %next.ptr, i32 1
+  store ptr %next.load, ptr undef
   br label %loop
 }
 
@@ -36,19 +36,19 @@ entry:
 
 loop:
   %var = phi i32 [ 0, %entry ], [ %next.var, %loop1 ], [ %var2, %loop2 ]
-  %next.ptr = phi i32** [ null, %entry ], [ %next.ptr, %loop1 ], [ %gep, %loop2 ]
+  %next.ptr = phi ptr [ null, %entry ], [ %next.ptr, %loop1 ], [ %gep, %loop2 ]
   br label %loop1
 
 loop1:
   %var2 = sub i32 %var, 1
   %cond = icmp eq i32 %var2, 0
-  %next.load = load i32*, i32** %next.ptr
-  %next.var = load i32, i32* %next.load
+  %next.load = load ptr, ptr %next.ptr
+  %next.var = load i32, ptr %next.load
   br i1 %cond, label %loop, label %loop2
 
 loop2:
-  %gep = getelementptr inbounds i32*, i32** %next.ptr, i32 1
-  store i32* %next.load, i32** undef
+  %gep = getelementptr inbounds ptr, ptr %next.ptr, i32 1
+  store ptr %next.load, ptr undef
   br label %loop
 }
 
@@ -64,19 +64,19 @@ entry:
 
 loop2a:                                           ; preds = %loop1, %body, %entry
   %var = phi i32 [ 0, %entry ], [ %next.var, %loop1 ], [ %var2, %loop2b ]
-  %next.ptr = phi i32** [ null, %entry ], [ %next.ptr, %loop1 ], [ %gep, %loop2b ]
+  %next.ptr = phi ptr [ null, %entry ], [ %next.ptr, %loop1 ], [ %gep, %loop2b ]
   br label %loop1
 
 loop1:                                            ; preds = %loop2a, %loop2b
   %var2 = sub i32 %var, 1
   %cond = icmp slt i32 %var2, 0
-  %next.load = load i32*, i32** %next.ptr
-  %next.var = load i32, i32* %next.load
+  %next.load = load ptr, ptr %next.ptr
+  %next.var = load i32, ptr %next.load
   br i1 %cond, label %loop2a, label %loop2b
 
 loop2b:                                           ; preds = %loop1
-  %gep = getelementptr inbounds i32*, i32** %next.ptr, i32 1
-  store i32* %next.load, i32** undef
+  %gep = getelementptr inbounds ptr, ptr %next.ptr, i32 1
+  store ptr %next.load, ptr undef
   br label %loop2a
 }
 
@@ -91,18 +91,18 @@ entry:
 
 loop2a:                                           ; preds = %loop1, %body, %entry
   %var = phi i32 [ 0, %entry ], [ %next.var, %loop1 ], [ %var2, %loop2b ]
-  %next.ptr = phi i32** [ null, %entry ], [ %next.ptr, %loop1 ], [ %gep, %loop2b ]
+  %next.ptr = phi ptr [ null, %entry ], [ %next.ptr, %loop1 ], [ %gep, %loop2b ]
   br label %loop1
 
 loop1:                                            ; preds = %loop2a, %loop2b
   %var2 = sub i32 %var, 1
   %cond = icmp ult i32 %var2, %n
-  %next.load = load i32*, i32** %next.ptr
-  %next.var = load i32, i32* %next.load
+  %next.load = load ptr, ptr %next.ptr
+  %next.var = load i32, ptr %next.load
   br i1 %cond, label %loop2a, label %loop2b
 
 loop2b:                                           ; preds = %loop1
-  %gep = getelementptr inbounds i32*, i32** %next.ptr, i32 1
-  store i32* %next.load, i32** undef
+  %gep = getelementptr inbounds ptr, ptr %next.ptr, i32 1
+  store ptr %next.load, ptr undef
   br label %loop2a
 }

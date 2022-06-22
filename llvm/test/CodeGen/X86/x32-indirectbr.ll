@@ -8,10 +8,10 @@
 
 define i8 @test1() nounwind ssp {
 entry:
-  %0 = select i1 undef,                           ; <i8*> [#uses=1]
-              i8* blockaddress(@test1, %bb),
-              i8* blockaddress(@test1, %bb6)
-  indirectbr i8* %0, [label %bb, label %bb6]
+  %0 = select i1 undef,                           ; <ptr> [#uses=1]
+              ptr blockaddress(@test1, %bb),
+              ptr blockaddress(@test1, %bb6)
+  indirectbr ptr %0, [label %bb, label %bb6]
 bb:                                               ; preds = %entry
   ret i8 1
 

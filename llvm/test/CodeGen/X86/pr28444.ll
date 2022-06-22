@@ -24,8 +24,8 @@ bb:
   br label %bb1
 
 bb1:
-  store volatile <1 x i1> %tmp3, <1 x i1>* undef
-  store volatile i1 %tmp6, i1* undef
+  store volatile <1 x i1> %tmp3, ptr undef
+  store volatile i1 %tmp6, ptr undef
   ret void
 }
 

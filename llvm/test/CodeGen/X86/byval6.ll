@@ -46,8 +46,8 @@ define i32 @main() nounwind  {
 ; CHECK-NEXT:    popl %ebx
 ; CHECK-NEXT:    retl
 entry:
-	tail call void (i32, ...) @bar( i32 3, %struct.W* byval(%struct.W) @.cpx ) nounwind
-	tail call void (i32, ...) @baz( i32 3, %struct.W* byval(%struct.W)  @B ) nounwind
+	tail call void (i32, ...) @bar( i32 3, ptr byval(%struct.W) @.cpx ) nounwind
+	tail call void (i32, ...) @baz( i32 3, ptr byval(%struct.W)  @B ) nounwind
 	ret i32 undef
 }
 

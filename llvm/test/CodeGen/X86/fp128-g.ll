@@ -12,13 +12,13 @@ source_filename = "fp128-g.c"
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64--linux-android"
 
-@ld_ptr = common dso_local local_unnamed_addr global fp128* null, align 8, !dbg !0
+@ld_ptr = common dso_local local_unnamed_addr global ptr null, align 8, !dbg !0
 
 ; Function Attrs: nounwind readonly uwtable
-define fp128 @test_return1(fp128* nocapture readonly %ptr) local_unnamed_addr #0 !dbg !12 {
+define fp128 @test_return1(ptr nocapture readonly %ptr) local_unnamed_addr #0 !dbg !12 {
 entry:
-  tail call void @llvm.dbg.value(metadata fp128* %ptr, i64 0, metadata !16, metadata !17), !dbg !18
-  %0 = load fp128, fp128* %ptr, align 16, !dbg !19, !tbaa !20
+  tail call void @llvm.dbg.value(metadata ptr %ptr, i64 0, metadata !16, metadata !17), !dbg !18
+  %0 = load fp128, ptr %ptr, align 16, !dbg !19, !tbaa !20
   ret fp128 %0, !dbg !24
 ; X64-LABEL: test_return1:
 ; X64:       .loc
@@ -28,10 +28,10 @@ entry:
 }
 
 ; Function Attrs: nounwind readonly uwtable
-define fp128 @test_return2(fp128* nocapture readonly %ptr) local_unnamed_addr #0 !dbg !25 {
+define fp128 @test_return2(ptr nocapture readonly %ptr) local_unnamed_addr #0 !dbg !25 {
 entry:
-  tail call void @llvm.dbg.value(metadata fp128* %ptr, i64 0, metadata !27, metadata !17), !dbg !29
-  %0 = load fp128, fp128* %ptr, align 16, !dbg !30, !tbaa !20
+  tail call void @llvm.dbg.value(metadata ptr %ptr, i64 0, metadata !27, metadata !17), !dbg !29
+  %0 = load fp128, ptr %ptr, align 16, !dbg !30, !tbaa !20
   tail call void @llvm.dbg.value(metadata fp128 %0, i64 0, metadata !28, metadata !17), !dbg !31
   ret fp128 %0, !dbg !32
 }
@@ -43,10 +43,10 @@ entry:
 ; X64:       retq
 ; Function Attrs: nounwind readonly uwtable
 
-define fp128 @test_return3(fp128* nocapture readonly %ptr) local_unnamed_addr #0 !dbg !33 {
+define fp128 @test_return3(ptr nocapture readonly %ptr) local_unnamed_addr #0 !dbg !33 {
 entry:
-  tail call void @llvm.dbg.value(metadata fp128* %ptr, i64 0, metadata !35, metadata !17), !dbg !36
-  %0 = load fp128, fp128* %ptr, align 16, !dbg !37, !tbaa !20
+  tail call void @llvm.dbg.value(metadata ptr %ptr, i64 0, metadata !35, metadata !17), !dbg !36
+  %0 = load fp128, ptr %ptr, align 16, !dbg !37, !tbaa !20
   %add = fadd fp128 %0, %0, !dbg !38
   ret fp128 %add, !dbg !39
 ; X64-LABEL: test_return3:
@@ -60,8 +60,8 @@ entry:
 ; Function Attrs: norecurse nounwind readonly uwtable
 define fp128 @test_return4() local_unnamed_addr #1 !dbg !40 {
 entry:
-  %0 = load fp128*, fp128** @ld_ptr, align 8, !dbg !43, !tbaa !44
-  %1 = load fp128, fp128* %0, align 16, !dbg !46, !tbaa !20
+  %0 = load ptr, ptr @ld_ptr, align 8, !dbg !43, !tbaa !44
+  %1 = load fp128, ptr %0, align 16, !dbg !46, !tbaa !20
   ret fp128 %1, !dbg !47
 ; X64-LABEL: test_return4:
 ; X64:       .loc
@@ -75,8 +75,8 @@ entry:
 ; Function Attrs: nounwind readonly uwtable
 define fp128 @test_return5() local_unnamed_addr #0 !dbg !48 {
 entry:
-  %0 = load fp128*, fp128** @ld_ptr, align 8, !dbg !51, !tbaa !44
-  %1 = load fp128, fp128* %0, align 16, !dbg !52, !tbaa !20
+  %0 = load ptr, ptr @ld_ptr, align 8, !dbg !51, !tbaa !44
+  %1 = load fp128, ptr %0, align 16, !dbg !52, !tbaa !20
   tail call void @llvm.dbg.value(metadata fp128 %1, i64 0, metadata !50, metadata !17), !dbg !53
   ret fp128 %1, !dbg !54
 ; X64-LABEL: test_return5:
@@ -91,8 +91,8 @@ entry:
 ; Function Attrs: norecurse nounwind readonly uwtable
 define fp128 @test_return6() local_unnamed_addr #1 !dbg !55 {
 entry:
-  %0 = load fp128*, fp128** @ld_ptr, align 8, !dbg !56, !tbaa !44
-  %1 = load fp128, fp128* %0, align 16, !dbg !57, !tbaa !20
+  %0 = load ptr, ptr @ld_ptr, align 8, !dbg !56, !tbaa !44
+  %1 = load fp128, ptr %0, align 16, !dbg !57, !tbaa !20
   %add = fadd fp128 %1, %1, !dbg !58
   ret fp128 %add, !dbg !59
 ; X64-LABEL: test_return6:

@@ -147,7 +147,7 @@ define <2 x i64>@test_int_x86_avx512_mask_cvt_ps2qq_128(<4 x float> %x0, <2 x i6
   ret <2 x i64> %res
 }
 
-define <2 x i64> @test_int_x86_avx512_cvt_ps2qq_128_load(<2 x float>* %p) {
+define <2 x i64> @test_int_x86_avx512_cvt_ps2qq_128_load(ptr %p) {
 ; X86-LABEL: test_int_x86_avx512_cvt_ps2qq_128_load:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax # encoding: [0x8b,0x44,0x24,0x04]
@@ -158,13 +158,13 @@ define <2 x i64> @test_int_x86_avx512_cvt_ps2qq_128_load(<2 x float>* %p) {
 ; X64:       # %bb.0:
 ; X64-NEXT:    vcvtps2qq (%rdi), %xmm0 # encoding: [0x62,0xf1,0x7d,0x08,0x7b,0x07]
 ; X64-NEXT:    retq # encoding: [0xc3]
-  %x0 = load <2 x float>, <2 x float>* %p
+  %x0 = load <2 x float>, ptr %p
   %x0b = shufflevector <2 x float> %x0, <2 x float> zeroinitializer, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
   %res = call <2 x i64> @llvm.x86.avx512.mask.cvtps2qq.128(<4 x float> %x0b, <2 x i64> undef, i8 -1)
   ret <2 x i64> %res
 }
 
-define <2 x i64> @test_int_x86_avx512_mask_cvt_ps2qq_128_load(<2 x float>* %p, <2 x i64> %passthru, i8 %mask) {
+define <2 x i64> @test_int_x86_avx512_mask_cvt_ps2qq_128_load(ptr %p, <2 x i64> %passthru, i8 %mask) {
 ; X86-LABEL: test_int_x86_avx512_mask_cvt_ps2qq_128_load:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax # encoding: [0x8b,0x44,0x24,0x04]
@@ -177,13 +177,13 @@ define <2 x i64> @test_int_x86_avx512_mask_cvt_ps2qq_128_load(<2 x float>* %p, <
 ; X64-NEXT:    kmovw %esi, %k1 # encoding: [0xc5,0xf8,0x92,0xce]
 ; X64-NEXT:    vcvtps2qq (%rdi), %xmm0 {%k1} # encoding: [0x62,0xf1,0x7d,0x09,0x7b,0x07]
 ; X64-NEXT:    retq # encoding: [0xc3]
-  %x0 = load <2 x float>, <2 x float>* %p
+  %x0 = load <2 x float>, ptr %p
   %x0b = shufflevector <2 x float> %x0, <2 x float> zeroinitializer, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
   %res = call <2 x i64> @llvm.x86.avx512.mask.cvtps2qq.128(<4 x float> %x0b, <2 x i64> %passthru, i8 %mask)
   ret <2 x i64> %res
 }
 
-define <2 x i64> @test_int_x86_avx512_maskz_cvt_ps2qq_128_load(<2 x float>* %p, i8 %mask) {
+define <2 x i64> @test_int_x86_avx512_maskz_cvt_ps2qq_128_load(ptr %p, i8 %mask) {
 ; X86-LABEL: test_int_x86_avx512_maskz_cvt_ps2qq_128_load:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax # encoding: [0x8b,0x44,0x24,0x04]
@@ -196,14 +196,14 @@ define <2 x i64> @test_int_x86_avx512_maskz_cvt_ps2qq_128_load(<2 x float>* %p, 
 ; X64-NEXT:    kmovw %esi, %k1 # encoding: [0xc5,0xf8,0x92,0xce]
 ; X64-NEXT:    vcvtps2qq (%rdi), %xmm0 {%k1} {z} # encoding: [0x62,0xf1,0x7d,0x89,0x7b,0x07]
 ; X64-NEXT:    retq # encoding: [0xc3]
-  %x0 = load <2 x float>, <2 x float>* %p
+  %x0 = load <2 x float>, ptr %p
   %x0b = shufflevector <2 x float> %x0, <2 x float> zeroinitializer, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
   %res = call <2 x i64> @llvm.x86.avx512.mask.cvtps2qq.128(<4 x float> %x0b, <2 x i64> zeroinitializer, i8 %mask)
   ret <2 x i64> %res
 }
 
 
-define <2 x i64> @test_int_x86_avx512_cvt_ps2qq_128_load_2(<2 x float>* %p) {
+define <2 x i64> @test_int_x86_avx512_cvt_ps2qq_128_load_2(ptr %p) {
 ; X86-LABEL: test_int_x86_avx512_cvt_ps2qq_128_load_2:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax # encoding: [0x8b,0x44,0x24,0x04]
@@ -214,13 +214,13 @@ define <2 x i64> @test_int_x86_avx512_cvt_ps2qq_128_load_2(<2 x float>* %p) {
 ; X64:       # %bb.0:
 ; X64-NEXT:    vcvtps2qq (%rdi), %xmm0 # encoding: [0x62,0xf1,0x7d,0x08,0x7b,0x07]
 ; X64-NEXT:    retq # encoding: [0xc3]
-  %x0 = load <2 x float>, <2 x float>* %p
+  %x0 = load <2 x float>, ptr %p
   %x0b = shufflevector <2 x float> %x0, <2 x float> undef, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
   %res = call <2 x i64> @llvm.x86.avx512.mask.cvtps2qq.128(<4 x float> %x0b, <2 x i64> undef, i8 -1)
   ret <2 x i64> %res
 }
 
-define <2 x i64> @test_int_x86_avx512_mask_cvt_ps2qq_128_load_2(<2 x float>* %p, <2 x i64> %passthru, i8 %mask) {
+define <2 x i64> @test_int_x86_avx512_mask_cvt_ps2qq_128_load_2(ptr %p, <2 x i64> %passthru, i8 %mask) {
 ; X86-LABEL: test_int_x86_avx512_mask_cvt_ps2qq_128_load_2:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax # encoding: [0x8b,0x44,0x24,0x04]
@@ -233,13 +233,13 @@ define <2 x i64> @test_int_x86_avx512_mask_cvt_ps2qq_128_load_2(<2 x float>* %p,
 ; X64-NEXT:    kmovw %esi, %k1 # encoding: [0xc5,0xf8,0x92,0xce]
 ; X64-NEXT:    vcvtps2qq (%rdi), %xmm0 {%k1} # encoding: [0x62,0xf1,0x7d,0x09,0x7b,0x07]
 ; X64-NEXT:    retq # encoding: [0xc3]
-  %x0 = load <2 x float>, <2 x float>* %p
+  %x0 = load <2 x float>, ptr %p
   %x0b = shufflevector <2 x float> %x0, <2 x float> undef, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
   %res = call <2 x i64> @llvm.x86.avx512.mask.cvtps2qq.128(<4 x float> %x0b, <2 x i64> %passthru, i8 %mask)
   ret <2 x i64> %res
 }
 
-define <2 x i64> @test_int_x86_avx512_maskz_cvt_ps2qq_128_load_2(<2 x float>* %p, i8 %mask) {
+define <2 x i64> @test_int_x86_avx512_maskz_cvt_ps2qq_128_load_2(ptr %p, i8 %mask) {
 ; X86-LABEL: test_int_x86_avx512_maskz_cvt_ps2qq_128_load_2:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax # encoding: [0x8b,0x44,0x24,0x04]
@@ -252,13 +252,13 @@ define <2 x i64> @test_int_x86_avx512_maskz_cvt_ps2qq_128_load_2(<2 x float>* %p
 ; X64-NEXT:    kmovw %esi, %k1 # encoding: [0xc5,0xf8,0x92,0xce]
 ; X64-NEXT:    vcvtps2qq (%rdi), %xmm0 {%k1} {z} # encoding: [0x62,0xf1,0x7d,0x89,0x7b,0x07]
 ; X64-NEXT:    retq # encoding: [0xc3]
-  %x0 = load <2 x float>, <2 x float>* %p
+  %x0 = load <2 x float>, ptr %p
   %x0b = shufflevector <2 x float> %x0, <2 x float> undef, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
   %res = call <2 x i64> @llvm.x86.avx512.mask.cvtps2qq.128(<4 x float> %x0b, <2 x i64> zeroinitializer, i8 %mask)
   ret <2 x i64> %res
 }
 
-define <2 x i64> @test_int_x86_avx512_cvt_ps2qq_128_load_3(<4 x float>* %p) {
+define <2 x i64> @test_int_x86_avx512_cvt_ps2qq_128_load_3(ptr %p) {
 ; X86-LABEL: test_int_x86_avx512_cvt_ps2qq_128_load_3:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax # encoding: [0x8b,0x44,0x24,0x04]
@@ -269,12 +269,12 @@ define <2 x i64> @test_int_x86_avx512_cvt_ps2qq_128_load_3(<4 x float>* %p) {
 ; X64:       # %bb.0:
 ; X64-NEXT:    vcvtps2qq (%rdi), %xmm0 # encoding: [0x62,0xf1,0x7d,0x08,0x7b,0x07]
 ; X64-NEXT:    retq # encoding: [0xc3]
-  %x0 = load <4 x float>, <4 x float>* %p
+  %x0 = load <4 x float>, ptr %p
   %res = call <2 x i64> @llvm.x86.avx512.mask.cvtps2qq.128(<4 x float> %x0, <2 x i64> undef, i8 -1)
   ret <2 x i64> %res
 }
 
-define <2 x i64> @test_int_x86_avx512_mask_cvt_ps2qq_128_load_3(<4 x float>* %p, <2 x i64> %passthru, i8 %mask) {
+define <2 x i64> @test_int_x86_avx512_mask_cvt_ps2qq_128_load_3(ptr %p, <2 x i64> %passthru, i8 %mask) {
 ; X86-LABEL: test_int_x86_avx512_mask_cvt_ps2qq_128_load_3:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax # encoding: [0x8b,0x44,0x24,0x04]
@@ -287,12 +287,12 @@ define <2 x i64> @test_int_x86_avx512_mask_cvt_ps2qq_128_load_3(<4 x float>* %p,
 ; X64-NEXT:    kmovw %esi, %k1 # encoding: [0xc5,0xf8,0x92,0xce]
 ; X64-NEXT:    vcvtps2qq (%rdi), %xmm0 {%k1} # encoding: [0x62,0xf1,0x7d,0x09,0x7b,0x07]
 ; X64-NEXT:    retq # encoding: [0xc3]
-  %x0 = load <4 x float>, <4 x float>* %p
+  %x0 = load <4 x float>, ptr %p
   %res = call <2 x i64> @llvm.x86.avx512.mask.cvtps2qq.128(<4 x float> %x0, <2 x i64> %passthru, i8 %mask)
   ret <2 x i64> %res
 }
 
-define <2 x i64> @test_int_x86_avx512_maskz_cvt_ps2qq_128_load_3(<4 x float>* %p, i8 %mask) {
+define <2 x i64> @test_int_x86_avx512_maskz_cvt_ps2qq_128_load_3(ptr %p, i8 %mask) {
 ; X86-LABEL: test_int_x86_avx512_maskz_cvt_ps2qq_128_load_3:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax # encoding: [0x8b,0x44,0x24,0x04]
@@ -305,7 +305,7 @@ define <2 x i64> @test_int_x86_avx512_maskz_cvt_ps2qq_128_load_3(<4 x float>* %p
 ; X64-NEXT:    kmovw %esi, %k1 # encoding: [0xc5,0xf8,0x92,0xce]
 ; X64-NEXT:    vcvtps2qq (%rdi), %xmm0 {%k1} {z} # encoding: [0x62,0xf1,0x7d,0x89,0x7b,0x07]
 ; X64-NEXT:    retq # encoding: [0xc3]
-  %x0 = load <4 x float>, <4 x float>* %p
+  %x0 = load <4 x float>, ptr %p
   %res = call <2 x i64> @llvm.x86.avx512.mask.cvtps2qq.128(<4 x float> %x0, <2 x i64> zeroinitializer, i8 %mask)
   ret <2 x i64> %res
 }
@@ -368,7 +368,7 @@ define <2 x i64>@test_int_x86_avx512_mask_cvt_ps2uqq_128(<4 x float> %x0, <2 x i
   ret <2 x i64> %res
 }
 
-define <2 x i64> @test_int_x86_avx512_cvt_ps2uqq_128_load(<2 x float>* %p) {
+define <2 x i64> @test_int_x86_avx512_cvt_ps2uqq_128_load(ptr %p) {
 ; X86-LABEL: test_int_x86_avx512_cvt_ps2uqq_128_load:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax # encoding: [0x8b,0x44,0x24,0x04]
@@ -379,13 +379,13 @@ define <2 x i64> @test_int_x86_avx512_cvt_ps2uqq_128_load(<2 x float>* %p) {
 ; X64:       # %bb.0:
 ; X64-NEXT:    vcvtps2uqq (%rdi), %xmm0 # encoding: [0x62,0xf1,0x7d,0x08,0x79,0x07]
 ; X64-NEXT:    retq # encoding: [0xc3]
-  %x0 = load <2 x float>, <2 x float>* %p
+  %x0 = load <2 x float>, ptr %p
   %x0b = shufflevector <2 x float> %x0, <2 x float> zeroinitializer, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
   %res = call <2 x i64> @llvm.x86.avx512.mask.cvtps2uqq.128(<4 x float> %x0b, <2 x i64> undef, i8 -1)
   ret <2 x i64> %res
 }
 
-define <2 x i64> @test_int_x86_avx512_mask_cvt_ps2uqq_128_load(<2 x float>* %p, <2 x i64> %passthru, i8 %mask) {
+define <2 x i64> @test_int_x86_avx512_mask_cvt_ps2uqq_128_load(ptr %p, <2 x i64> %passthru, i8 %mask) {
 ; X86-LABEL: test_int_x86_avx512_mask_cvt_ps2uqq_128_load:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax # encoding: [0x8b,0x44,0x24,0x04]
@@ -398,13 +398,13 @@ define <2 x i64> @test_int_x86_avx512_mask_cvt_ps2uqq_128_load(<2 x float>* %p, 
 ; X64-NEXT:    kmovw %esi, %k1 # encoding: [0xc5,0xf8,0x92,0xce]
 ; X64-NEXT:    vcvtps2uqq (%rdi), %xmm0 {%k1} # encoding: [0x62,0xf1,0x7d,0x09,0x79,0x07]
 ; X64-NEXT:    retq # encoding: [0xc3]
-  %x0 = load <2 x float>, <2 x float>* %p
+  %x0 = load <2 x float>, ptr %p
   %x0b = shufflevector <2 x float> %x0, <2 x float> zeroinitializer, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
   %res = call <2 x i64> @llvm.x86.avx512.mask.cvtps2uqq.128(<4 x float> %x0b, <2 x i64> %passthru, i8 %mask)
   ret <2 x i64> %res
 }
 
-define <2 x i64> @test_int_x86_avx512_maskz_cvt_ps2uqq_128_load(<2 x float>* %p, i8 %mask) {
+define <2 x i64> @test_int_x86_avx512_maskz_cvt_ps2uqq_128_load(ptr %p, i8 %mask) {
 ; X86-LABEL: test_int_x86_avx512_maskz_cvt_ps2uqq_128_load:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax # encoding: [0x8b,0x44,0x24,0x04]
@@ -417,13 +417,13 @@ define <2 x i64> @test_int_x86_avx512_maskz_cvt_ps2uqq_128_load(<2 x float>* %p,
 ; X64-NEXT:    kmovw %esi, %k1 # encoding: [0xc5,0xf8,0x92,0xce]
 ; X64-NEXT:    vcvtps2uqq (%rdi), %xmm0 {%k1} {z} # encoding: [0x62,0xf1,0x7d,0x89,0x79,0x07]
 ; X64-NEXT:    retq # encoding: [0xc3]
-  %x0 = load <2 x float>, <2 x float>* %p
+  %x0 = load <2 x float>, ptr %p
   %x0b = shufflevector <2 x float> %x0, <2 x float> zeroinitializer, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
   %res = call <2 x i64> @llvm.x86.avx512.mask.cvtps2uqq.128(<4 x float> %x0b, <2 x i64> zeroinitializer, i8 %mask)
   ret <2 x i64> %res
 }
 
-define <2 x i64> @test_int_x86_avx512_cvt_ps2uqq_128_load_2(<2 x float>* %p) {
+define <2 x i64> @test_int_x86_avx512_cvt_ps2uqq_128_load_2(ptr %p) {
 ; X86-LABEL: test_int_x86_avx512_cvt_ps2uqq_128_load_2:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax # encoding: [0x8b,0x44,0x24,0x04]
@@ -434,13 +434,13 @@ define <2 x i64> @test_int_x86_avx512_cvt_ps2uqq_128_load_2(<2 x float>* %p) {
 ; X64:       # %bb.0:
 ; X64-NEXT:    vcvtps2uqq (%rdi), %xmm0 # encoding: [0x62,0xf1,0x7d,0x08,0x79,0x07]
 ; X64-NEXT:    retq # encoding: [0xc3]
-  %x0 = load <2 x float>, <2 x float>* %p
+  %x0 = load <2 x float>, ptr %p
   %x0b = shufflevector <2 x float> %x0, <2 x float> undef, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
   %res = call <2 x i64> @llvm.x86.avx512.mask.cvtps2uqq.128(<4 x float> %x0b, <2 x i64> undef, i8 -1)
   ret <2 x i64> %res
 }
 
-define <2 x i64> @test_int_x86_avx512_mask_cvt_ps2uqq_128_load_2(<2 x float>* %p, <2 x i64> %passthru, i8 %mask) {
+define <2 x i64> @test_int_x86_avx512_mask_cvt_ps2uqq_128_load_2(ptr %p, <2 x i64> %passthru, i8 %mask) {
 ; X86-LABEL: test_int_x86_avx512_mask_cvt_ps2uqq_128_load_2:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax # encoding: [0x8b,0x44,0x24,0x04]
@@ -453,13 +453,13 @@ define <2 x i64> @test_int_x86_avx512_mask_cvt_ps2uqq_128_load_2(<2 x float>* %p
 ; X64-NEXT:    kmovw %esi, %k1 # encoding: [0xc5,0xf8,0x92,0xce]
 ; X64-NEXT:    vcvtps2uqq (%rdi), %xmm0 {%k1} # encoding: [0x62,0xf1,0x7d,0x09,0x79,0x07]
 ; X64-NEXT:    retq # encoding: [0xc3]
-  %x0 = load <2 x float>, <2 x float>* %p
+  %x0 = load <2 x float>, ptr %p
   %x0b = shufflevector <2 x float> %x0, <2 x float> undef, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
   %res = call <2 x i64> @llvm.x86.avx512.mask.cvtps2uqq.128(<4 x float> %x0b, <2 x i64> %passthru, i8 %mask)
   ret <2 x i64> %res
 }
 
-define <2 x i64> @test_int_x86_avx512_maskz_cvt_ps2uqq_128_load_2(<2 x float>* %p, i8 %mask) {
+define <2 x i64> @test_int_x86_avx512_maskz_cvt_ps2uqq_128_load_2(ptr %p, i8 %mask) {
 ; X86-LABEL: test_int_x86_avx512_maskz_cvt_ps2uqq_128_load_2:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax # encoding: [0x8b,0x44,0x24,0x04]
@@ -472,13 +472,13 @@ define <2 x i64> @test_int_x86_avx512_maskz_cvt_ps2uqq_128_load_2(<2 x float>* %
 ; X64-NEXT:    kmovw %esi, %k1 # encoding: [0xc5,0xf8,0x92,0xce]
 ; X64-NEXT:    vcvtps2uqq (%rdi), %xmm0 {%k1} {z} # encoding: [0x62,0xf1,0x7d,0x89,0x79,0x07]
 ; X64-NEXT:    retq # encoding: [0xc3]
-  %x0 = load <2 x float>, <2 x float>* %p
+  %x0 = load <2 x float>, ptr %p
   %x0b = shufflevector <2 x float> %x0, <2 x float> undef, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
   %res = call <2 x i64> @llvm.x86.avx512.mask.cvtps2uqq.128(<4 x float> %x0b, <2 x i64> zeroinitializer, i8 %mask)
   ret <2 x i64> %res
 }
 
-define <2 x i64> @test_int_x86_avx512_cvt_ps2uqq_128_load_3(<4 x float>* %p) {
+define <2 x i64> @test_int_x86_avx512_cvt_ps2uqq_128_load_3(ptr %p) {
 ; X86-LABEL: test_int_x86_avx512_cvt_ps2uqq_128_load_3:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax # encoding: [0x8b,0x44,0x24,0x04]
@@ -489,12 +489,12 @@ define <2 x i64> @test_int_x86_avx512_cvt_ps2uqq_128_load_3(<4 x float>* %p) {
 ; X64:       # %bb.0:
 ; X64-NEXT:    vcvtps2uqq (%rdi), %xmm0 # encoding: [0x62,0xf1,0x7d,0x08,0x79,0x07]
 ; X64-NEXT:    retq # encoding: [0xc3]
-  %x0 = load <4 x float>, <4 x float>* %p
+  %x0 = load <4 x float>, ptr %p
   %res = call <2 x i64> @llvm.x86.avx512.mask.cvtps2uqq.128(<4 x float> %x0, <2 x i64> undef, i8 -1)
   ret <2 x i64> %res
 }
 
-define <2 x i64> @test_int_x86_avx512_mask_cvt_ps2uqq_128_load_3(<4 x float>* %p, <2 x i64> %passthru, i8 %mask) {
+define <2 x i64> @test_int_x86_avx512_mask_cvt_ps2uqq_128_load_3(ptr %p, <2 x i64> %passthru, i8 %mask) {
 ; X86-LABEL: test_int_x86_avx512_mask_cvt_ps2uqq_128_load_3:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax # encoding: [0x8b,0x44,0x24,0x04]
@@ -507,12 +507,12 @@ define <2 x i64> @test_int_x86_avx512_mask_cvt_ps2uqq_128_load_3(<4 x float>* %p
 ; X64-NEXT:    kmovw %esi, %k1 # encoding: [0xc5,0xf8,0x92,0xce]
 ; X64-NEXT:    vcvtps2uqq (%rdi), %xmm0 {%k1} # encoding: [0x62,0xf1,0x7d,0x09,0x79,0x07]
 ; X64-NEXT:    retq # encoding: [0xc3]
-  %x0 = load <4 x float>, <4 x float>* %p
+  %x0 = load <4 x float>, ptr %p
   %res = call <2 x i64> @llvm.x86.avx512.mask.cvtps2uqq.128(<4 x float> %x0, <2 x i64> %passthru, i8 %mask)
   ret <2 x i64> %res
 }
 
-define <2 x i64> @test_int_x86_avx512_maskz_cvt_ps2uqq_128_load_3(<4 x float>* %p, i8 %mask) {
+define <2 x i64> @test_int_x86_avx512_maskz_cvt_ps2uqq_128_load_3(ptr %p, i8 %mask) {
 ; X86-LABEL: test_int_x86_avx512_maskz_cvt_ps2uqq_128_load_3:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax # encoding: [0x8b,0x44,0x24,0x04]
@@ -525,7 +525,7 @@ define <2 x i64> @test_int_x86_avx512_maskz_cvt_ps2uqq_128_load_3(<4 x float>* %
 ; X64-NEXT:    kmovw %esi, %k1 # encoding: [0xc5,0xf8,0x92,0xce]
 ; X64-NEXT:    vcvtps2uqq (%rdi), %xmm0 {%k1} {z} # encoding: [0x62,0xf1,0x7d,0x89,0x79,0x07]
 ; X64-NEXT:    retq # encoding: [0xc3]
-  %x0 = load <4 x float>, <4 x float>* %p
+  %x0 = load <4 x float>, ptr %p
   %res = call <2 x i64> @llvm.x86.avx512.mask.cvtps2uqq.128(<4 x float> %x0, <2 x i64> zeroinitializer, i8 %mask)
   ret <2 x i64> %res
 }
@@ -796,7 +796,7 @@ define <2 x i64>@test_int_x86_avx512_mask_cvtt_ps2qq_128(<4 x float> %x0, <2 x i
   ret <2 x i64> %res
 }
 
-define <2 x i64> @test_int_x86_avx512_cvtt_ps2qq_128_load(<2 x float>* %p) {
+define <2 x i64> @test_int_x86_avx512_cvtt_ps2qq_128_load(ptr %p) {
 ; X86-LABEL: test_int_x86_avx512_cvtt_ps2qq_128_load:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax # encoding: [0x8b,0x44,0x24,0x04]
@@ -807,13 +807,13 @@ define <2 x i64> @test_int_x86_avx512_cvtt_ps2qq_128_load(<2 x float>* %p) {
 ; X64:       # %bb.0:
 ; X64-NEXT:    vcvttps2qq (%rdi), %xmm0 # encoding: [0x62,0xf1,0x7d,0x08,0x7a,0x07]
 ; X64-NEXT:    retq # encoding: [0xc3]
-  %x0 = load <2 x float>, <2 x float>* %p
+  %x0 = load <2 x float>, ptr %p
   %x0b = shufflevector <2 x float> %x0, <2 x float> zeroinitializer, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
   %res = call <2 x i64> @llvm.x86.avx512.mask.cvttps2qq.128(<4 x float> %x0b, <2 x i64> undef, i8 -1)
   ret <2 x i64> %res
 }
 
-define <2 x i64> @test_int_x86_avx512_mask_cvtt_ps2qq_128_load(<2 x float>* %p, <2 x i64> %passthru, i8 %mask) {
+define <2 x i64> @test_int_x86_avx512_mask_cvtt_ps2qq_128_load(ptr %p, <2 x i64> %passthru, i8 %mask) {
 ; X86-LABEL: test_int_x86_avx512_mask_cvtt_ps2qq_128_load:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax # encoding: [0x8b,0x44,0x24,0x04]
@@ -826,13 +826,13 @@ define <2 x i64> @test_int_x86_avx512_mask_cvtt_ps2qq_128_load(<2 x float>* %p, 
 ; X64-NEXT:    kmovw %esi, %k1 # encoding: [0xc5,0xf8,0x92,0xce]
 ; X64-NEXT:    vcvttps2qq (%rdi), %xmm0 {%k1} # encoding: [0x62,0xf1,0x7d,0x09,0x7a,0x07]
 ; X64-NEXT:    retq # encoding: [0xc3]
-  %x0 = load <2 x float>, <2 x float>* %p
+  %x0 = load <2 x float>, ptr %p
   %x0b = shufflevector <2 x float> %x0, <2 x float> zeroinitializer, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
   %res = call <2 x i64> @llvm.x86.avx512.mask.cvttps2qq.128(<4 x float> %x0b, <2 x i64> %passthru, i8 %mask)
   ret <2 x i64> %res
 }
 
-define <2 x i64> @test_int_x86_avx512_maskz_cvtt_ps2qq_128_load(<2 x float>* %p, i8 %mask) {
+define <2 x i64> @test_int_x86_avx512_maskz_cvtt_ps2qq_128_load(ptr %p, i8 %mask) {
 ; X86-LABEL: test_int_x86_avx512_maskz_cvtt_ps2qq_128_load:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax # encoding: [0x8b,0x44,0x24,0x04]
@@ -845,14 +845,14 @@ define <2 x i64> @test_int_x86_avx512_maskz_cvtt_ps2qq_128_load(<2 x float>* %p,
 ; X64-NEXT:    kmovw %esi, %k1 # encoding: [0xc5,0xf8,0x92,0xce]
 ; X64-NEXT:    vcvttps2qq (%rdi), %xmm0 {%k1} {z} # encoding: [0x62,0xf1,0x7d,0x89,0x7a,0x07]
 ; X64-NEXT:    retq # encoding: [0xc3]
-  %x0 = load <2 x float>, <2 x float>* %p
+  %x0 = load <2 x float>, ptr %p
   %x0b = shufflevector <2 x float> %x0, <2 x float> zeroinitializer, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
   %res = call <2 x i64> @llvm.x86.avx512.mask.cvttps2qq.128(<4 x float> %x0b, <2 x i64> zeroinitializer, i8 %mask)
   ret <2 x i64> %res
 }
 
 
-define <2 x i64> @test_int_x86_avx512_cvtt_ps2qq_128_load_2(<2 x float>* %p) {
+define <2 x i64> @test_int_x86_avx512_cvtt_ps2qq_128_load_2(ptr %p) {
 ; X86-LABEL: test_int_x86_avx512_cvtt_ps2qq_128_load_2:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax # encoding: [0x8b,0x44,0x24,0x04]
@@ -863,13 +863,13 @@ define <2 x i64> @test_int_x86_avx512_cvtt_ps2qq_128_load_2(<2 x float>* %p) {
 ; X64:       # %bb.0:
 ; X64-NEXT:    vcvttps2qq (%rdi), %xmm0 # encoding: [0x62,0xf1,0x7d,0x08,0x7a,0x07]
 ; X64-NEXT:    retq # encoding: [0xc3]
-  %x0 = load <2 x float>, <2 x float>* %p
+  %x0 = load <2 x float>, ptr %p
   %x0b = shufflevector <2 x float> %x0, <2 x float> undef, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
   %res = call <2 x i64> @llvm.x86.avx512.mask.cvttps2qq.128(<4 x float> %x0b, <2 x i64> undef, i8 -1)
   ret <2 x i64> %res
 }
 
-define <2 x i64> @test_int_x86_avx512_mask_cvtt_ps2qq_128_load_2(<2 x float>* %p, <2 x i64> %passthru, i8 %mask) {
+define <2 x i64> @test_int_x86_avx512_mask_cvtt_ps2qq_128_load_2(ptr %p, <2 x i64> %passthru, i8 %mask) {
 ; X86-LABEL: test_int_x86_avx512_mask_cvtt_ps2qq_128_load_2:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax # encoding: [0x8b,0x44,0x24,0x04]
@@ -882,13 +882,13 @@ define <2 x i64> @test_int_x86_avx512_mask_cvtt_ps2qq_128_load_2(<2 x float>* %p
 ; X64-NEXT:    kmovw %esi, %k1 # encoding: [0xc5,0xf8,0x92,0xce]
 ; X64-NEXT:    vcvttps2qq (%rdi), %xmm0 {%k1} # encoding: [0x62,0xf1,0x7d,0x09,0x7a,0x07]
 ; X64-NEXT:    retq # encoding: [0xc3]
-  %x0 = load <2 x float>, <2 x float>* %p
+  %x0 = load <2 x float>, ptr %p
   %x0b = shufflevector <2 x float> %x0, <2 x float> undef, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
   %res = call <2 x i64> @llvm.x86.avx512.mask.cvttps2qq.128(<4 x float> %x0b, <2 x i64> %passthru, i8 %mask)
   ret <2 x i64> %res
 }
 
-define <2 x i64> @test_int_x86_avx512_maskz_cvtt_ps2qq_128_load_2(<2 x float>* %p, i8 %mask) {
+define <2 x i64> @test_int_x86_avx512_maskz_cvtt_ps2qq_128_load_2(ptr %p, i8 %mask) {
 ; X86-LABEL: test_int_x86_avx512_maskz_cvtt_ps2qq_128_load_2:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax # encoding: [0x8b,0x44,0x24,0x04]
@@ -901,13 +901,13 @@ define <2 x i64> @test_int_x86_avx512_maskz_cvtt_ps2qq_128_load_2(<2 x float>* %
 ; X64-NEXT:    kmovw %esi, %k1 # encoding: [0xc5,0xf8,0x92,0xce]
 ; X64-NEXT:    vcvttps2qq (%rdi), %xmm0 {%k1} {z} # encoding: [0x62,0xf1,0x7d,0x89,0x7a,0x07]
 ; X64-NEXT:    retq # encoding: [0xc3]
-  %x0 = load <2 x float>, <2 x float>* %p
+  %x0 = load <2 x float>, ptr %p
   %x0b = shufflevector <2 x float> %x0, <2 x float> undef, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
   %res = call <2 x i64> @llvm.x86.avx512.mask.cvttps2qq.128(<4 x float> %x0b, <2 x i64> zeroinitializer, i8 %mask)
   ret <2 x i64> %res
 }
 
-define <2 x i64> @test_int_x86_avx512_cvtt_ps2qq_128_load_3(<4 x float>* %p) {
+define <2 x i64> @test_int_x86_avx512_cvtt_ps2qq_128_load_3(ptr %p) {
 ; X86-LABEL: test_int_x86_avx512_cvtt_ps2qq_128_load_3:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax # encoding: [0x8b,0x44,0x24,0x04]
@@ -918,12 +918,12 @@ define <2 x i64> @test_int_x86_avx512_cvtt_ps2qq_128_load_3(<4 x float>* %p) {
 ; X64:       # %bb.0:
 ; X64-NEXT:    vcvttps2qq (%rdi), %xmm0 # encoding: [0x62,0xf1,0x7d,0x08,0x7a,0x07]
 ; X64-NEXT:    retq # encoding: [0xc3]
-  %x0 = load <4 x float>, <4 x float>* %p
+  %x0 = load <4 x float>, ptr %p
   %res = call <2 x i64> @llvm.x86.avx512.mask.cvttps2qq.128(<4 x float> %x0, <2 x i64> undef, i8 -1)
   ret <2 x i64> %res
 }
 
-define <2 x i64> @test_int_x86_avx512_mask_cvtt_ps2qq_128_load_3(<4 x float>* %p, <2 x i64> %passthru, i8 %mask) {
+define <2 x i64> @test_int_x86_avx512_mask_cvtt_ps2qq_128_load_3(ptr %p, <2 x i64> %passthru, i8 %mask) {
 ; X86-LABEL: test_int_x86_avx512_mask_cvtt_ps2qq_128_load_3:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax # encoding: [0x8b,0x44,0x24,0x04]
@@ -936,12 +936,12 @@ define <2 x i64> @test_int_x86_avx512_mask_cvtt_ps2qq_128_load_3(<4 x float>* %p
 ; X64-NEXT:    kmovw %esi, %k1 # encoding: [0xc5,0xf8,0x92,0xce]
 ; X64-NEXT:    vcvttps2qq (%rdi), %xmm0 {%k1} # encoding: [0x62,0xf1,0x7d,0x09,0x7a,0x07]
 ; X64-NEXT:    retq # encoding: [0xc3]
-  %x0 = load <4 x float>, <4 x float>* %p
+  %x0 = load <4 x float>, ptr %p
   %res = call <2 x i64> @llvm.x86.avx512.mask.cvttps2qq.128(<4 x float> %x0, <2 x i64> %passthru, i8 %mask)
   ret <2 x i64> %res
 }
 
-define <2 x i64> @test_int_x86_avx512_maskz_cvtt_ps2qq_128_load_3(<4 x float>* %p, i8 %mask) {
+define <2 x i64> @test_int_x86_avx512_maskz_cvtt_ps2qq_128_load_3(ptr %p, i8 %mask) {
 ; X86-LABEL: test_int_x86_avx512_maskz_cvtt_ps2qq_128_load_3:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax # encoding: [0x8b,0x44,0x24,0x04]
@@ -954,7 +954,7 @@ define <2 x i64> @test_int_x86_avx512_maskz_cvtt_ps2qq_128_load_3(<4 x float>* %
 ; X64-NEXT:    kmovw %esi, %k1 # encoding: [0xc5,0xf8,0x92,0xce]
 ; X64-NEXT:    vcvttps2qq (%rdi), %xmm0 {%k1} {z} # encoding: [0x62,0xf1,0x7d,0x89,0x7a,0x07]
 ; X64-NEXT:    retq # encoding: [0xc3]
-  %x0 = load <4 x float>, <4 x float>* %p
+  %x0 = load <4 x float>, ptr %p
   %res = call <2 x i64> @llvm.x86.avx512.mask.cvttps2qq.128(<4 x float> %x0, <2 x i64> zeroinitializer, i8 %mask)
   ret <2 x i64> %res
 }
@@ -1110,7 +1110,7 @@ define <2 x i64>@test_int_x86_avx512_mask_cvtt_ps2uqq_128(<4 x float> %x0, <2 x 
   ret <2 x i64> %res
 }
 
-define <2 x i64> @test_int_x86_avx512_cvtt_ps2uqq_128_load(<2 x float>* %p) {
+define <2 x i64> @test_int_x86_avx512_cvtt_ps2uqq_128_load(ptr %p) {
 ; X86-LABEL: test_int_x86_avx512_cvtt_ps2uqq_128_load:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax # encoding: [0x8b,0x44,0x24,0x04]
@@ -1121,13 +1121,13 @@ define <2 x i64> @test_int_x86_avx512_cvtt_ps2uqq_128_load(<2 x float>* %p) {
 ; X64:       # %bb.0:
 ; X64-NEXT:    vcvttps2uqq (%rdi), %xmm0 # encoding: [0x62,0xf1,0x7d,0x08,0x78,0x07]
 ; X64-NEXT:    retq # encoding: [0xc3]
-  %x0 = load <2 x float>, <2 x float>* %p
+  %x0 = load <2 x float>, ptr %p
   %x0b = shufflevector <2 x float> %x0, <2 x float> zeroinitializer, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
   %res = call <2 x i64> @llvm.x86.avx512.mask.cvttps2uqq.128(<4 x float> %x0b, <2 x i64> undef, i8 -1)
   ret <2 x i64> %res
 }
 
-define <2 x i64> @test_int_x86_avx512_mask_cvtt_ps2uqq_128_load(<2 x float>* %p, <2 x i64> %passthru, i8 %mask) {
+define <2 x i64> @test_int_x86_avx512_mask_cvtt_ps2uqq_128_load(ptr %p, <2 x i64> %passthru, i8 %mask) {
 ; X86-LABEL: test_int_x86_avx512_mask_cvtt_ps2uqq_128_load:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax # encoding: [0x8b,0x44,0x24,0x04]
@@ -1140,13 +1140,13 @@ define <2 x i64> @test_int_x86_avx512_mask_cvtt_ps2uqq_128_load(<2 x float>* %p,
 ; X64-NEXT:    kmovw %esi, %k1 # encoding: [0xc5,0xf8,0x92,0xce]
 ; X64-NEXT:    vcvttps2uqq (%rdi), %xmm0 {%k1} # encoding: [0x62,0xf1,0x7d,0x09,0x78,0x07]
 ; X64-NEXT:    retq # encoding: [0xc3]
-  %x0 = load <2 x float>, <2 x float>* %p
+  %x0 = load <2 x float>, ptr %p
   %x0b = shufflevector <2 x float> %x0, <2 x float> zeroinitializer, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
   %res = call <2 x i64> @llvm.x86.avx512.mask.cvttps2uqq.128(<4 x float> %x0b, <2 x i64> %passthru, i8 %mask)
   ret <2 x i64> %res
 }
 
-define <2 x i64> @test_int_x86_avx512_maskz_cvtt_ps2uqq_128_load(<2 x float>* %p, i8 %mask) {
+define <2 x i64> @test_int_x86_avx512_maskz_cvtt_ps2uqq_128_load(ptr %p, i8 %mask) {
 ; X86-LABEL: test_int_x86_avx512_maskz_cvtt_ps2uqq_128_load:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax # encoding: [0x8b,0x44,0x24,0x04]
@@ -1159,14 +1159,14 @@ define <2 x i64> @test_int_x86_avx512_maskz_cvtt_ps2uqq_128_load(<2 x float>* %p
 ; X64-NEXT:    kmovw %esi, %k1 # encoding: [0xc5,0xf8,0x92,0xce]
 ; X64-NEXT:    vcvttps2uqq (%rdi), %xmm0 {%k1} {z} # encoding: [0x62,0xf1,0x7d,0x89,0x78,0x07]
 ; X64-NEXT:    retq # encoding: [0xc3]
-  %x0 = load <2 x float>, <2 x float>* %p
+  %x0 = load <2 x float>, ptr %p
   %x0b = shufflevector <2 x float> %x0, <2 x float> zeroinitializer, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
   %res = call <2 x i64> @llvm.x86.avx512.mask.cvttps2uqq.128(<4 x float> %x0b, <2 x i64> zeroinitializer, i8 %mask)
   ret <2 x i64> %res
 }
 
 
-define <2 x i64> @test_int_x86_avx512_cvtt_ps2uqq_128_load_2(<2 x float>* %p) {
+define <2 x i64> @test_int_x86_avx512_cvtt_ps2uqq_128_load_2(ptr %p) {
 ; X86-LABEL: test_int_x86_avx512_cvtt_ps2uqq_128_load_2:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax # encoding: [0x8b,0x44,0x24,0x04]
@@ -1177,13 +1177,13 @@ define <2 x i64> @test_int_x86_avx512_cvtt_ps2uqq_128_load_2(<2 x float>* %p) {
 ; X64:       # %bb.0:
 ; X64-NEXT:    vcvttps2uqq (%rdi), %xmm0 # encoding: [0x62,0xf1,0x7d,0x08,0x78,0x07]
 ; X64-NEXT:    retq # encoding: [0xc3]
-  %x0 = load <2 x float>, <2 x float>* %p
+  %x0 = load <2 x float>, ptr %p
   %x0b = shufflevector <2 x float> %x0, <2 x float> undef, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
   %res = call <2 x i64> @llvm.x86.avx512.mask.cvttps2uqq.128(<4 x float> %x0b, <2 x i64> undef, i8 -1)
   ret <2 x i64> %res
 }
 
-define <2 x i64> @test_int_x86_avx512_mask_cvtt_ps2uqq_128_load_2(<2 x float>* %p, <2 x i64> %passthru, i8 %mask) {
+define <2 x i64> @test_int_x86_avx512_mask_cvtt_ps2uqq_128_load_2(ptr %p, <2 x i64> %passthru, i8 %mask) {
 ; X86-LABEL: test_int_x86_avx512_mask_cvtt_ps2uqq_128_load_2:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax # encoding: [0x8b,0x44,0x24,0x04]
@@ -1196,13 +1196,13 @@ define <2 x i64> @test_int_x86_avx512_mask_cvtt_ps2uqq_128_load_2(<2 x float>* %
 ; X64-NEXT:    kmovw %esi, %k1 # encoding: [0xc5,0xf8,0x92,0xce]
 ; X64-NEXT:    vcvttps2uqq (%rdi), %xmm0 {%k1} # encoding: [0x62,0xf1,0x7d,0x09,0x78,0x07]
 ; X64-NEXT:    retq # encoding: [0xc3]
-  %x0 = load <2 x float>, <2 x float>* %p
+  %x0 = load <2 x float>, ptr %p
   %x0b = shufflevector <2 x float> %x0, <2 x float> undef, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
   %res = call <2 x i64> @llvm.x86.avx512.mask.cvttps2uqq.128(<4 x float> %x0b, <2 x i64> %passthru, i8 %mask)
   ret <2 x i64> %res
 }
 
-define <2 x i64> @test_int_x86_avx512_maskz_cvtt_ps2uqq_128_load_2(<2 x float>* %p, i8 %mask) {
+define <2 x i64> @test_int_x86_avx512_maskz_cvtt_ps2uqq_128_load_2(ptr %p, i8 %mask) {
 ; X86-LABEL: test_int_x86_avx512_maskz_cvtt_ps2uqq_128_load_2:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax # encoding: [0x8b,0x44,0x24,0x04]
@@ -1215,13 +1215,13 @@ define <2 x i64> @test_int_x86_avx512_maskz_cvtt_ps2uqq_128_load_2(<2 x float>* 
 ; X64-NEXT:    kmovw %esi, %k1 # encoding: [0xc5,0xf8,0x92,0xce]
 ; X64-NEXT:    vcvttps2uqq (%rdi), %xmm0 {%k1} {z} # encoding: [0x62,0xf1,0x7d,0x89,0x78,0x07]
 ; X64-NEXT:    retq # encoding: [0xc3]
-  %x0 = load <2 x float>, <2 x float>* %p
+  %x0 = load <2 x float>, ptr %p
   %x0b = shufflevector <2 x float> %x0, <2 x float> undef, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
   %res = call <2 x i64> @llvm.x86.avx512.mask.cvttps2uqq.128(<4 x float> %x0b, <2 x i64> zeroinitializer, i8 %mask)
   ret <2 x i64> %res
 }
 
-define <2 x i64> @test_int_x86_avx512_cvtt_ps2uqq_128_load_3(<4 x float>* %p) {
+define <2 x i64> @test_int_x86_avx512_cvtt_ps2uqq_128_load_3(ptr %p) {
 ; X86-LABEL: test_int_x86_avx512_cvtt_ps2uqq_128_load_3:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax # encoding: [0x8b,0x44,0x24,0x04]
@@ -1232,12 +1232,12 @@ define <2 x i64> @test_int_x86_avx512_cvtt_ps2uqq_128_load_3(<4 x float>* %p) {
 ; X64:       # %bb.0:
 ; X64-NEXT:    vcvttps2uqq (%rdi), %xmm0 # encoding: [0x62,0xf1,0x7d,0x08,0x78,0x07]
 ; X64-NEXT:    retq # encoding: [0xc3]
-  %x0 = load <4 x float>, <4 x float>* %p
+  %x0 = load <4 x float>, ptr %p
   %res = call <2 x i64> @llvm.x86.avx512.mask.cvttps2uqq.128(<4 x float> %x0, <2 x i64> undef, i8 -1)
   ret <2 x i64> %res
 }
 
-define <2 x i64> @test_int_x86_avx512_mask_cvtt_ps2uqq_128_load_3(<4 x float>* %p, <2 x i64> %passthru, i8 %mask) {
+define <2 x i64> @test_int_x86_avx512_mask_cvtt_ps2uqq_128_load_3(ptr %p, <2 x i64> %passthru, i8 %mask) {
 ; X86-LABEL: test_int_x86_avx512_mask_cvtt_ps2uqq_128_load_3:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax # encoding: [0x8b,0x44,0x24,0x04]
@@ -1250,12 +1250,12 @@ define <2 x i64> @test_int_x86_avx512_mask_cvtt_ps2uqq_128_load_3(<4 x float>* %
 ; X64-NEXT:    kmovw %esi, %k1 # encoding: [0xc5,0xf8,0x92,0xce]
 ; X64-NEXT:    vcvttps2uqq (%rdi), %xmm0 {%k1} # encoding: [0x62,0xf1,0x7d,0x09,0x78,0x07]
 ; X64-NEXT:    retq # encoding: [0xc3]
-  %x0 = load <4 x float>, <4 x float>* %p
+  %x0 = load <4 x float>, ptr %p
   %res = call <2 x i64> @llvm.x86.avx512.mask.cvttps2uqq.128(<4 x float> %x0, <2 x i64> %passthru, i8 %mask)
   ret <2 x i64> %res
 }
 
-define <2 x i64> @test_int_x86_avx512_maskz_cvtt_ps2uqq_128_load_3(<4 x float>* %p, i8 %mask) {
+define <2 x i64> @test_int_x86_avx512_maskz_cvtt_ps2uqq_128_load_3(ptr %p, i8 %mask) {
 ; X86-LABEL: test_int_x86_avx512_maskz_cvtt_ps2uqq_128_load_3:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax # encoding: [0x8b,0x44,0x24,0x04]
@@ -1268,7 +1268,7 @@ define <2 x i64> @test_int_x86_avx512_maskz_cvtt_ps2uqq_128_load_3(<4 x float>* 
 ; X64-NEXT:    kmovw %esi, %k1 # encoding: [0xc5,0xf8,0x92,0xce]
 ; X64-NEXT:    vcvttps2uqq (%rdi), %xmm0 {%k1} {z} # encoding: [0x62,0xf1,0x7d,0x89,0x78,0x07]
 ; X64-NEXT:    retq # encoding: [0xc3]
-  %x0 = load <4 x float>, <4 x float>* %p
+  %x0 = load <4 x float>, ptr %p
   %res = call <2 x i64> @llvm.x86.avx512.mask.cvttps2uqq.128(<4 x float> %x0, <2 x i64> zeroinitializer, i8 %mask)
   ret <2 x i64> %res
 }

@@ -60,7 +60,7 @@ for.cond:                                         ; preds = %cleanup100, %for.en
   %t7.0 = phi i16 [ undef, %entry ], [ %t7.1, %for.end29 ], [ %t7.19, %cleanup100 ]
   %t9.0 = phi i32 [ undef, %entry ], [ %t9.1, %for.end29 ], [ 0, %cleanup100 ]
   %t2.0 = phi i32 [ undef, %entry ], [ undef, %for.end29 ], [ %t2.18, %cleanup100 ]
-  %tmp = load i32, i32* @r, align 4
+  %tmp = load i32, ptr @r, align 4
   br i1 undef, label %if.then, label %if.end7
 
 if.then:                                          ; preds = %for.cond
@@ -68,7 +68,7 @@ if.then:                                          ; preds = %for.cond
   %tobool1 = icmp ne i32 %t2.0, 0
   %tmp1 = and i1 %tobool1, %tobool
   %land.ext = zext i1 %tmp1 to i32
-  %tmp2 = load i32, i32* @k, align 4
+  %tmp2 = load i32, ptr @k, align 4
   %shr = lshr i32 %land.ext, %tmp2
   %tobool4 = icmp ne i32 %shr, 0
   %or.cond = and i1 false, %tobool4
@@ -83,8 +83,8 @@ for.cond10:                                       ; preds = %for.cond10, %if.end
   br label %for.cond10
 
 if.end11:                                         ; preds = %if.end7
-  %tmp3 = load i32, i32* @g, align 4
-  %tmp4 = load i16, i16* @a, align 2
+  %tmp3 = load i32, ptr @g, align 4
+  %tmp4 = load i16, ptr @a, align 2
   %conv = sext i16 %tmp4 to i32
   %div = sdiv i32 %tmp3, %conv
   %tobool12 = icmp eq i32 %div, 0
@@ -121,7 +121,7 @@ for.end29:                                        ; preds = %for.cond15
   br i1 undef, label %for.cond, label %for.cond32thread-pre-split
 
 for.cond32thread-pre-split:                       ; preds = %for.end29
-  %.pr = load i32, i32* @p, align 4
+  %.pr = load i32, ptr @p, align 4
   br label %for.cond32
 
 for.cond32:                                       ; preds = %for.inc94, %for.cond32thread-pre-split
@@ -137,12 +137,12 @@ for.body34:                                       ; preds = %for.cond32
   br i1 %tobool35, label %for.inc94, label %if.then36
 
 if.then36:                                        ; preds = %for.body34
-  %tmp5 = load i16, i16* @n, align 2
+  %tmp5 = load i16, ptr @n, align 2
   %tobool37 = icmp eq i32 undef, 0
   br i1 %tobool37, label %if.end78, label %if.then38
 
 if.then38:                                        ; preds = %if.then36
-  tail call void (i8*, ...) @printf(i8* getelementptr inbounds ([12 x i8], [12 x i8]* @.str, i32 0, i32 0), i64 undef)
+  tail call void (ptr, ...) @printf(ptr @.str, i64 undef)
   %tobool40 = icmp eq i32 undef, 0
   br i1 %tobool40, label %L3, label %cleanup100
 
@@ -154,7 +154,7 @@ L3:                                               ; preds = %while.end.split, %i
   br i1 %tobool43, label %if.end48, label %cleanup75
 
 if.end48:                                         ; preds = %L3
-  tail call void (i8*, ...) @printf(i8* getelementptr inbounds ([13 x i8], [13 x i8]* @.str.1, i32 0, i32 0), i64 %t3.5)
+  tail call void (ptr, ...) @printf(ptr @.str.1, i64 %t3.5)
   br i1 undef, label %if.end61, label %for.cond52.preheader
 
 for.cond52.preheader:                             ; preds = %if.end48
@@ -176,7 +176,7 @@ L5:                                               ; preds = %cleanup100.L5_crit_
   %t3.6 = phi i64 [ 0, %cleanup100.L5_crit_edge ], [ %t3.5, %if.then63 ], [ 2, %if.end11 ]
   %t9.8 = phi i32 [ 0, %cleanup100.L5_crit_edge ], [ undef, %if.then63 ], [ %t9.0, %if.end11 ]
   %t2.9 = phi i32 [ %t2.18, %cleanup100.L5_crit_edge ], [ %t2.8, %if.then63 ], [ %t2.1, %if.end11 ]
-  store i32 %t9.8, i32* @s, align 4
+  store i32 %t9.8, ptr @s, align 4
   br label %if.end67
 
 if.end67:                                         ; preds = %L5, %if.then63
@@ -208,7 +208,7 @@ if.end78:                                         ; preds = %cleanup75.thread128
   %t3.10 = phi i64 [ %t3.4, %if.then36 ], [ %t3.8, %cleanup75.thread128 ]
   %t9.12 = phi i32 [ %t9.6, %if.then36 ], [ undef, %cleanup75.thread128 ]
   %t2.13 = phi i32 [ %t2.7, %if.then36 ], [ undef, %cleanup75.thread128 ]
-  store i16 %t7.14, i16* @z, align 2
+  store i16 %t7.14, ptr @z, align 2
   br label %L6
 
 L6:                                               ; preds = %if.end78, %if.then
@@ -232,7 +232,7 @@ while.end.split:                                  ; preds = %while.condthread-pr
 for.inc94:                                        ; preds = %while.end.split, %L6, %for.body34
   %t7.17 = phi i16 [ %t7.6, %for.body34 ], [ %t7.15, %L6 ], [ %t7.15, %while.end.split ]
   %t2.16 = phi i32 [ %t2.7, %for.body34 ], [ %t2.14, %L6 ], [ %t2.14, %while.end.split ]
-  store i32 undef, i32* @p, align 4
+  store i32 undef, ptr @p, align 4
   br label %for.cond32
 
 for.end95:                                        ; preds = %cleanup75, %if.end67, %for.cond32
@@ -254,7 +254,7 @@ cleanup100:                                       ; preds = %for.end95, %if.then
   ]
 
 cleanup100.L5_crit_edge:                          ; preds = %cleanup100
-  %.pre.pre = load i32, i32* @r, align 4
+  %.pre.pre = load i32, ptr @r, align 4
   br label %L5
 
 unreachable:                                      ; preds = %cleanup100
@@ -262,7 +262,7 @@ unreachable:                                      ; preds = %cleanup100
 }
 
 ; Function Attrs: nounwind
-declare void @printf(i8* nocapture readonly, ...) #1
+declare void @printf(ptr nocapture readonly, ...) #1
 
 attributes #0 = { noreturn nounwind "disable-tail-calls"="false" "less-precise-fpmad"="false" "frame-pointer"="none" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="pentium4" "target-features"="+fxsr,+mmx,+sse,+sse2,+x87" "unsafe-fp-math"="false" "use-soft-float"="false" }
 attributes #1 = { nounwind "disable-tail-calls"="false" "less-precise-fpmad"="false" "frame-pointer"="none" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="pentium4" "target-features"="+fxsr,+mmx,+sse,+sse2,+x87" "unsafe-fp-math"="false" "use-soft-float"="false" }

@@ -5,7 +5,7 @@
 declare {i16, i32} @llvm.x86.rdseed.16()
 declare {i32, i32} @llvm.x86.rdseed.32()
 
-define i32 @_rdseed16_step(i16* %random_val) {
+define i32 @_rdseed16_step(ptr %random_val) {
 ; X86-LABEL: _rdseed16_step:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
@@ -26,12 +26,12 @@ define i32 @_rdseed16_step(i16* %random_val) {
 ; X64-NEXT:    retq
   %call = call {i16, i32} @llvm.x86.rdseed.16()
   %randval = extractvalue {i16, i32} %call, 0
-  store i16 %randval, i16* %random_val
+  store i16 %randval, ptr %random_val
   %isvalid = extractvalue {i16, i32} %call, 1
   ret i32 %isvalid
 }
 
-define i32 @_rdseed32_step(i32* %random_val) {
+define i32 @_rdseed32_step(ptr %random_val) {
 ; X86-LABEL: _rdseed32_step:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
@@ -50,7 +50,7 @@ define i32 @_rdseed32_step(i32* %random_val) {
 ; X64-NEXT:    retq
   %call = call {i32, i32} @llvm.x86.rdseed.32()
   %randval = extractvalue {i32, i32} %call, 0
-  store i32 %randval, i32* %random_val
+  store i32 %randval, ptr %random_val
   %isvalid = extractvalue {i32, i32} %call, 1
   ret i32 %isvalid
 }

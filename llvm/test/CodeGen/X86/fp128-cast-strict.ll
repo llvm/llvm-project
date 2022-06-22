@@ -59,9 +59,9 @@ define dso_local void @TestFPExtF16_F128() nounwind strictfp {
 ; X86-NEXT:    popl %esi
 ; X86-NEXT:    retl
 entry:
-  %0 = load half, half* @vf16, align 2
+  %0 = load half, ptr @vf16, align 2
   %conv = call fp128 @llvm.experimental.constrained.fpext.f128.f16(half %0, metadata !"fpexcept.strict") #0
-  store fp128 %conv, fp128* @vf128, align 16
+  store fp128 %conv, ptr @vf128, align 16
   ret void
 }
 
@@ -107,9 +107,9 @@ define dso_local void @TestFPExtF32_F128() nounwind strictfp {
 ; X86-NEXT:    popl %esi
 ; X86-NEXT:    retl
 entry:
-  %0 = load float, float* @vf32, align 4
+  %0 = load float, ptr @vf32, align 4
   %conv = call fp128 @llvm.experimental.constrained.fpext.f128.f32(float %0, metadata !"fpexcept.strict") #0
-  store fp128 %conv, fp128* @vf128, align 16
+  store fp128 %conv, ptr @vf128, align 16
   ret void
 }
 
@@ -155,9 +155,9 @@ define dso_local void @TestFPExtF64_F128() nounwind strictfp {
 ; X86-NEXT:    popl %esi
 ; X86-NEXT:    retl
 entry:
-  %0 = load double, double* @vf64, align 8
+  %0 = load double, ptr @vf64, align 8
   %conv = call fp128 @llvm.experimental.constrained.fpext.f128.f64(double %0, metadata !"fpexcept.strict") #0
-  store fp128 %conv, fp128* @vf128, align 16
+  store fp128 %conv, ptr @vf128, align 16
   ret void
 }
 
@@ -207,9 +207,9 @@ define dso_local void @TestFPExtF80_F128() nounwind strictfp {
 ; X86-NEXT:    popl %esi
 ; X86-NEXT:    retl
 entry:
-  %0 = load x86_fp80, x86_fp80* @vf80, align 8
+  %0 = load x86_fp80, ptr @vf80, align 8
   %conv = call fp128 @llvm.experimental.constrained.fpext.f128.f80(x86_fp80 %0, metadata !"fpexcept.strict") #0
-  store fp128 %conv, fp128* @vf128, align 16
+  store fp128 %conv, ptr @vf128, align 16
   ret void
 }
 
@@ -246,9 +246,9 @@ define dso_local void @TestFPTruncF128_F16() nounwind strictfp {
 ; X86-NEXT:    addl $12, %esp
 ; X86-NEXT:    retl
 entry:
-  %0 = load fp128, fp128* @vf128, align 16
+  %0 = load fp128, ptr @vf128, align 16
   %conv = call half @llvm.experimental.constrained.fptrunc.f16.f128(fp128 %0, metadata !"round.dynamic", metadata !"fpexcept.strict") #0
-  store half %conv, half* @vf16, align 2
+  store half %conv, ptr @vf16, align 2
   ret void
 }
 
@@ -285,9 +285,9 @@ define dso_local void @TestFPTruncF128_F32() nounwind strictfp {
 ; X86-NEXT:    addl $12, %esp
 ; X86-NEXT:    retl
 entry:
-  %0 = load fp128, fp128* @vf128, align 16
+  %0 = load fp128, ptr @vf128, align 16
   %conv = call float @llvm.experimental.constrained.fptrunc.f32.f128(fp128 %0, metadata !"round.dynamic", metadata !"fpexcept.strict") #0
-  store float %conv, float* @vf32, align 4
+  store float %conv, ptr @vf32, align 4
   ret void
 }
 
@@ -324,9 +324,9 @@ define dso_local void @TestFPTruncF128_F64() nounwind strictfp {
 ; X86-NEXT:    addl $12, %esp
 ; X86-NEXT:    retl
 entry:
-  %0 = load fp128, fp128* @vf128, align 16
+  %0 = load fp128, ptr @vf128, align 16
   %conv = call double @llvm.experimental.constrained.fptrunc.f64.f128(fp128 %0, metadata !"round.dynamic", metadata !"fpexcept.strict") #0
-  store double %conv, double* @vf64, align 8
+  store double %conv, ptr @vf64, align 8
   ret void
 }
 
@@ -365,9 +365,9 @@ define dso_local void @TestFPTruncF128_F80() nounwind strictfp {
 ; X86-NEXT:    addl $12, %esp
 ; X86-NEXT:    retl
 entry:
-  %0 = load fp128, fp128* @vf128, align 16
+  %0 = load fp128, ptr @vf128, align 16
   %conv = call x86_fp80 @llvm.experimental.constrained.fptrunc.f80.f128(fp128 %0, metadata !"round.dynamic", metadata !"fpexcept.strict") #0
-  store x86_fp80 %conv, x86_fp80* @vf80, align 8
+  store x86_fp80 %conv, ptr @vf80, align 8
   ret void
 }
 

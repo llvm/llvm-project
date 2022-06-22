@@ -10,7 +10,7 @@
 ; CHECK: movl $2, %ecx
 define i32 @fn4(i32 %i) #0 {
 entry:
-  %0 = load i32, i32* @d, align 4
+  %0 = load i32, ptr @d, align 4
   %shr = ashr i32 %i, %0
   tail call fastcc void @fn3(i32 2, i32 5, i32 %shr, i32 %i)
   %cmp = icmp slt i32 %shr, 1

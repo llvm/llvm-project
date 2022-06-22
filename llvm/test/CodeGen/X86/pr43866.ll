@@ -29,9 +29,8 @@ define dso_local void @test()  {
 ; CHECK-NEXT:    retq
 entry:
   %v8_0 = alloca <8 x i32>, align 32
-  %v8_0.0.v8_0.0..sroa_cast = bitcast <8 x i32>* %v8_0 to i8*
-  %0 = load <2 x i32>, <2 x i32>* @v2_0, align 8
+  %0 = load <2 x i32>, ptr @v2_0, align 8
   %shuffle = shufflevector <2 x i32> %0, <2 x i32> <i32 -1, i32 -1>, <8 x i32> <i32 1, i32 3, i32 0, i32 0, i32 3, i32 3, i32 2, i32 2>
-  store volatile <8 x i32> %shuffle, <8 x i32>* %v8_0, align 32
+  store volatile <8 x i32> %shuffle, ptr %v8_0, align 32
   ret void
 }

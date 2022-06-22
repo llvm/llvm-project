@@ -33,7 +33,7 @@ define i64 @adder_constexpr(i64 %lhs, i64 %rhs) {
 ; CHECK-NEXT:    retq
   %res = call { i64, i1 } @llvm.sadd.with.overflow.i64(i64 %lhs, i64 %rhs)
   %errorbit = extractvalue { i64, i1 } %res, 1
-  %errorval = select i1 %errorbit, i64 148, i64 add (i64 ptrtoint (i32* @a to i64), i64 5)
+  %errorval = select i1 %errorbit, i64 148, i64 add (i64 ptrtoint (ptr @a to i64), i64 5)
   ret i64 %errorval
 }
 

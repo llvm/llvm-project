@@ -2,7 +2,7 @@
 ; RUN: llc -mtriple=x86_64-darwin-unknown < %s | FileCheck %s --check-prefix=X64
 ; RUN: llc -mtriple=i686-darwin-unknown < %s | FileCheck %s --check-prefix=X86
 
-define zeroext i1 @smuloi128(i128 %v1, i128 %v2, i128* %res) {
+define zeroext i1 @smuloi128(i128 %v1, i128 %v2, ptr %res) {
 ; X64-LABEL: smuloi128:
 ; X64:       ## %bb.0:
 ; X64-NEXT:    pushq %r15
@@ -348,11 +348,11 @@ define zeroext i1 @smuloi128(i128 %v1, i128 %v2, i128* %res) {
   %t = call {i128, i1} @llvm.smul.with.overflow.i128(i128 %v1, i128 %v2)
   %val = extractvalue {i128, i1} %t, 0
   %obit = extractvalue {i128, i1} %t, 1
-  store i128 %val, i128* %res
+  store i128 %val, ptr %res
   ret i1 %obit
 }
 
-define zeroext i1 @smuloi256(i256 %v1, i256 %v2, i256* %res) {
+define zeroext i1 @smuloi256(i256 %v1, i256 %v2, ptr %res) {
 ; X64-LABEL: smuloi256:
 ; X64:       ## %bb.0:
 ; X64-NEXT:    pushq %rbp
@@ -1586,7 +1586,7 @@ define zeroext i1 @smuloi256(i256 %v1, i256 %v2, i256* %res) {
   %t = call {i256, i1} @llvm.smul.with.overflow.i256(i256 %v1, i256 %v2)
   %val = extractvalue {i256, i1} %t, 0
   %obit = extractvalue {i256, i1} %t, 1
-  store i256 %val, i256* %res
+  store i256 %val, ptr %res
   ret i1 %obit
 }
 

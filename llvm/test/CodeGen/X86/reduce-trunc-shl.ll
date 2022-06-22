@@ -2,7 +2,7 @@
 ; RUN: llc < %s -mtriple=x86_64-unknown-linux-gnu -mattr=+sse2 | FileCheck %s --check-prefix=SSE2
 ; RUN: llc < %s -mtriple=x86_64-unknown-linux-gnu -mattr=+avx2 | FileCheck %s --check-prefix=AVX2
 
-define void @trunc_shl_7_v4i32_v4i64(<4 x i32> addrspace(1)* %out, <4 x i64> addrspace(1)* %in) {
+define void @trunc_shl_7_v4i32_v4i64(ptr addrspace(1) %out, ptr addrspace(1) %in) {
 ; SSE2-LABEL: trunc_shl_7_v4i32_v4i64:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movaps (%rsi), %xmm0
@@ -18,10 +18,10 @@ define void @trunc_shl_7_v4i32_v4i64(<4 x i32> addrspace(1)* %out, <4 x i64> add
 ; AVX2-NEXT:    vpslld $7, %xmm0, %xmm0
 ; AVX2-NEXT:    vmovdqa %xmm0, (%rdi)
 ; AVX2-NEXT:    retq
-  %val = load <4 x i64>, <4 x i64> addrspace(1)* %in
+  %val = load <4 x i64>, ptr addrspace(1) %in
   %shl = shl <4 x i64> %val, <i64 7, i64 7, i64 7, i64 7>
   %trunc = trunc <4 x i64> %shl to <4 x i32>
-  store <4 x i32> %trunc, <4 x i32> addrspace(1)* %out
+  store <4 x i32> %trunc, ptr addrspace(1) %out
   ret void
 }
 
@@ -78,7 +78,7 @@ define <8 x i16> @trunc_shl_17_v8i16_v8i32(<8 x i32> %a) {
   ret <8 x i16> %conv
 }
 
-define void @trunc_shl_31_i32_i64(i32* %out, i64* %in) {
+define void @trunc_shl_31_i32_i64(ptr %out, ptr %in) {
 ; SSE2-LABEL: trunc_shl_31_i32_i64:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movl (%rsi), %eax
@@ -92,14 +92,14 @@ define void @trunc_shl_31_i32_i64(i32* %out, i64* %in) {
 ; AVX2-NEXT:    shll $31, %eax
 ; AVX2-NEXT:    movl %eax, (%rdi)
 ; AVX2-NEXT:    retq
-  %val = load i64, i64* %in
+  %val = load i64, ptr %in
   %shl = shl i64 %val, 31
   %trunc = trunc i64 %shl to i32
-  store i32 %trunc, i32* %out
+  store i32 %trunc, ptr %out
   ret void
 }
 
-define void @trunc_shl_32_i32_i64(i32* %out, i64* %in) {
+define void @trunc_shl_32_i32_i64(ptr %out, ptr %in) {
 ; SSE2-LABEL: trunc_shl_32_i32_i64:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movl $0, (%rdi)
@@ -109,14 +109,14 @@ define void @trunc_shl_32_i32_i64(i32* %out, i64* %in) {
 ; AVX2:       # %bb.0:
 ; AVX2-NEXT:    movl $0, (%rdi)
 ; AVX2-NEXT:    retq
-  %val = load i64, i64* %in
+  %val = load i64, ptr %in
   %shl = shl i64 %val, 32
   %trunc = trunc i64 %shl to i32
-  store i32 %trunc, i32* %out
+  store i32 %trunc, ptr %out
   ret void
 }
 
-define void @trunc_shl_15_i16_i64(i16* %out, i64* %in) {
+define void @trunc_shl_15_i16_i64(ptr %out, ptr %in) {
 ; SSE2-LABEL: trunc_shl_15_i16_i64:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movl (%rsi), %eax
@@ -130,14 +130,14 @@ define void @trunc_shl_15_i16_i64(i16* %out, i64* %in) {
 ; AVX2-NEXT:    shll $15, %eax
 ; AVX2-NEXT:    movw %ax, (%rdi)
 ; AVX2-NEXT:    retq
-  %val = load i64, i64* %in
+  %val = load i64, ptr %in
   %shl = shl i64 %val, 15
   %trunc = trunc i64 %shl to i16
-  store i16 %trunc, i16* %out
+  store i16 %trunc, ptr %out
   ret void
 }
 
-define void @trunc_shl_16_i16_i64(i16* %out, i64* %in) {
+define void @trunc_shl_16_i16_i64(ptr %out, ptr %in) {
 ; SSE2-LABEL: trunc_shl_16_i16_i64:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movw $0, (%rdi)
@@ -147,14 +147,14 @@ define void @trunc_shl_16_i16_i64(i16* %out, i64* %in) {
 ; AVX2:       # %bb.0:
 ; AVX2-NEXT:    movw $0, (%rdi)
 ; AVX2-NEXT:    retq
-  %val = load i64, i64* %in
+  %val = load i64, ptr %in
   %shl = shl i64 %val, 16
   %trunc = trunc i64 %shl to i16
-  store i16 %trunc, i16* %out
+  store i16 %trunc, ptr %out
   ret void
 }
 
-define void @trunc_shl_7_i8_i64(i8* %out, i64* %in) {
+define void @trunc_shl_7_i8_i64(ptr %out, ptr %in) {
 ; SSE2-LABEL: trunc_shl_7_i8_i64:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movb (%rsi), %al
@@ -168,14 +168,14 @@ define void @trunc_shl_7_i8_i64(i8* %out, i64* %in) {
 ; AVX2-NEXT:    shlb $7, %al
 ; AVX2-NEXT:    movb %al, (%rdi)
 ; AVX2-NEXT:    retq
-  %val = load i64, i64* %in
+  %val = load i64, ptr %in
   %shl = shl i64 %val, 7
   %trunc = trunc i64 %shl to i8
-  store i8 %trunc, i8* %out
+  store i8 %trunc, ptr %out
   ret void
 }
 
-define void @trunc_shl_8_i8_i64(i8* %out, i64* %in) {
+define void @trunc_shl_8_i8_i64(ptr %out, ptr %in) {
 ; SSE2-LABEL: trunc_shl_8_i8_i64:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movb $0, (%rdi)
@@ -185,9 +185,9 @@ define void @trunc_shl_8_i8_i64(i8* %out, i64* %in) {
 ; AVX2:       # %bb.0:
 ; AVX2-NEXT:    movb $0, (%rdi)
 ; AVX2-NEXT:    retq
-  %val = load i64, i64* %in
+  %val = load i64, ptr %in
   %shl = shl i64 %val, 8
   %trunc = trunc i64 %shl to i8
-  store i8 %trunc, i8* %out
+  store i8 %trunc, ptr %out
   ret void
 }

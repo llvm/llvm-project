@@ -25,7 +25,7 @@ entry:
 if:
   br i1 %c2, label %end, label %end2
 end:
-  %phi = phi <1 x i64> [ zeroinitializer, %entry ], [ <i64 srem (i64 1, i64 ptrtoint (i32* @g to i64))>, %if ]
+  %phi = phi <1 x i64> [ zeroinitializer, %entry ], [ <i64 srem (i64 1, i64 ptrtoint (ptr @g to i64))>, %if ]
   ret <1 x i64> %phi
 
 end2:

@@ -63,7 +63,7 @@
 ; RUN: llc < %s -mtriple=i386-unknown-unknown -mattr=sse4.2       2>&1 | FileCheck %s --check-prefix=FAST
 ; RUN: llc < %s -mtriple=i386-unknown-unknown -mattr=sse4a        2>&1 | FileCheck %s --check-prefix=FAST
 
-define void @store_zeros(i8* %a) {
+define void @store_zeros(ptr %a) {
 ; SLOW-NOT: not a recognized processor
 ; SLOW-LABEL: store_zeros:
 ; SLOW:       # %bb.0:
@@ -90,9 +90,9 @@ define void @store_zeros(i8* %a) {
 ; FAST:       # %bb.0:
 ; FAST-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; FAST-NOT:     movl
-  call void @llvm.memset.p0i8.i64(i8* %a, i8 0, i64 64, i1 false)
+  call void @llvm.memset.p0.i64(ptr %a, i8 0, i64 64, i1 false)
   ret void
 }
 
-declare void @llvm.memset.p0i8.i64(i8* nocapture, i8, i64, i1)
+declare void @llvm.memset.p0.i64(ptr nocapture, i8, i64, i1)
 

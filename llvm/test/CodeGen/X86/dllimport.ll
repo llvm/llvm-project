@@ -45,13 +45,13 @@ define void @use() nounwind {
 ; available_externally uses go away
 ; OPT-NOT: call void @inline1()
 ; OPT-NOT: call void @inline2()
-; OPT-NOT: load i32, i32* @Var2
+; OPT-NOT: load i32, ptr @Var2
 ; OPT: call void (...) @dummy(i32 %1, i32 1)
 
 ; CHECK-DAG: movl __imp__Var1, [[R1:%[a-z]{3}]]
 ; CHECK-DAG: movl __imp__Var2, [[R2:%[a-z]{3}]]
-  %1 = load i32, i32* @Var1
-  %2 = load i32, i32* @Var2
+  %1 = load i32, ptr @Var1
+  %2 = load i32, ptr @Var2
   call void(...) @dummy(i32 %1, i32 %2)
 
   ret void
@@ -59,4 +59,4 @@ define void @use() nounwind {
 
 ; CHECK: _fp:
 ; CHECK-NEXT: .long _fun
-@fp = constant void ()* @fun
+@fp = constant ptr @fun

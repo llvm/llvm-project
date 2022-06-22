@@ -41,8 +41,8 @@ define void @t1() #0 {
 ; X86PIC: error: Don't use 2 or more regs for mem offset in PIC model
 
 entry:
-  call void asm sideeffect inteldialect "add ecx, dword ptr ${2:P}[eax + ecx * $$4 + $$4590]\0A\09add dword ptr ${0:P}[eax + ecx * $$8 + $$73], ecx\0A\09add ${1:P}[ecx + ebx + $$7], eax", "=*m,=*m,*m,~{eax},~{ecx},~{flags},~{dirflag},~{fpsr},~{flags}"(i32* elementtype(i32) @gVar, i32* elementtype(i32) @gVar, i32* elementtype(i32) @gVar) #1
-  store i32 3, i32* @gVar, align 4
+  call void asm sideeffect inteldialect "add ecx, dword ptr ${2:P}[eax + ecx * $$4 + $$4590]\0A\09add dword ptr ${0:P}[eax + ecx * $$8 + $$73], ecx\0A\09add ${1:P}[ecx + ebx + $$7], eax", "=*m,=*m,*m,~{eax},~{ecx},~{flags},~{dirflag},~{fpsr},~{flags}"(ptr elementtype(i32) @gVar, ptr elementtype(i32) @gVar, ptr elementtype(i32) @gVar) #1
+  store i32 3, ptr @gVar, align 4
   ret void
 }
 

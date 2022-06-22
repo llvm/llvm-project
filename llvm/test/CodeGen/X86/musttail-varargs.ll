@@ -9,11 +9,11 @@
 ; pack. Doing a normal call will clobber all argument registers, and we will
 ; spill around it. A simple adjustment should not require any XMM spills.
 
-declare void @llvm.va_start(i8*) nounwind
+declare void @llvm.va_start(ptr) nounwind
 
-declare void(i8*, ...)* @get_f(i8* %this)
+declare ptr @get_f(ptr %this)
 
-define void @f_thunk(i8* %this, ...) {
+define void @f_thunk(ptr %this, ...) {
   ; Use va_start so that we exercise the combination.
 ; LINUX-LABEL: f_thunk:
 ; LINUX:       # %bb.0:
@@ -279,12 +279,11 @@ define void @f_thunk(i8* %this, ...) {
 ; X86-SSE-NEXT:    popl %esi
 ; X86-SSE-NEXT:    popl %ebp
 ; X86-SSE-NEXT:    jmpl *%eax # TAILCALL
-  %ap = alloca [4 x i8*], align 16
-  %ap_i8 = bitcast [4 x i8*]* %ap to i8*
-  call void @llvm.va_start(i8* %ap_i8)
+  %ap = alloca [4 x ptr], align 16
+  call void @llvm.va_start(ptr %ap)
 
-  %fptr = call void(i8*, ...)*(i8*) @get_f(i8* %this)
-  musttail call void (i8*, ...) %fptr(i8* %this, ...)
+  %fptr = call ptr(ptr) @get_f(ptr %this)
+  musttail call void (ptr, ...) %fptr(ptr %this, ...)
   ret void
 }
 
@@ -295,7 +294,7 @@ define void @f_thunk(i8* %this, ...) {
 ; This thunk shouldn't require any spills and reloads, assuming the register
 ; allocator knows what it's doing.
 
-define void @g_thunk(i8* %fptr_i8, ...) {
+define void @g_thunk(ptr %fptr_i8, ...) {
 ; LINUX-LABEL: g_thunk:
 ; LINUX:       # %bb.0:
 ; LINUX-NEXT:    jmpq *%rdi # TAILCALL
@@ -313,18 +312,17 @@ define void @g_thunk(i8* %fptr_i8, ...) {
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl %eax, {{[0-9]+}}(%esp)
 ; X86-NEXT:    jmpl *%eax # TAILCALL
-  %fptr = bitcast i8* %fptr_i8 to void (i8*, ...)*
-  musttail call void (i8*, ...) %fptr(i8* %fptr_i8, ...)
+  musttail call void (ptr, ...) %fptr_i8(ptr %fptr_i8, ...)
   ret void
 }
 
 ; Do a simple multi-exit multi-bb test.
 
-%struct.Foo = type { i1, i8*, i8* }
+%struct.Foo = type { i1, ptr, ptr }
 
 @g = external dso_local global i32
 
-define void @h_thunk(%struct.Foo* %this, ...) {
+define void @h_thunk(ptr %this, ...) {
 ; LINUX-LABEL: h_thunk:
 ; LINUX:       # %bb.0:
 ; LINUX-NEXT:    cmpb $1, (%rdi)
@@ -377,22 +375,19 @@ define void @h_thunk(%struct.Foo* %this, ...) {
 ; X86-NEXT:    movl $42, _g
 ; X86-NEXT:    movl %eax, {{[0-9]+}}(%esp)
 ; X86-NEXT:    jmpl *%ecx # TAILCALL
-  %cond_p = getelementptr %struct.Foo, %struct.Foo* %this, i32 0, i32 0
-  %cond = load i1, i1* %cond_p
+  %cond = load i1, ptr %this
   br i1 %cond, label %then, label %else
 
 then:
-  %a_p = getelementptr %struct.Foo, %struct.Foo* %this, i32 0, i32 1
-  %a_i8 = load i8*, i8** %a_p
-  %a = bitcast i8* %a_i8 to void (%struct.Foo*, ...)*
-  musttail call void (%struct.Foo*, ...) %a(%struct.Foo* %this, ...)
+  %a_p = getelementptr %struct.Foo, ptr %this, i32 0, i32 1
+  %a_i8 = load ptr, ptr %a_p
+  musttail call void (ptr, ...) %a_i8(ptr %this, ...)
   ret void
 
 else:
-  %b_p = getelementptr %struct.Foo, %struct.Foo* %this, i32 0, i32 2
-  %b_i8 = load i8*, i8** %b_p
-  %b = bitcast i8* %b_i8 to void (%struct.Foo*, ...)*
-  store i32 42, i32* @g
-  musttail call void (%struct.Foo*, ...) %b(%struct.Foo* %this, ...)
+  %b_p = getelementptr %struct.Foo, ptr %this, i32 0, i32 2
+  %b_i8 = load ptr, ptr %b_p
+  store i32 42, ptr @g
+  musttail call void (ptr, ...) %b_i8(ptr %this, ...)
   ret void
 }

@@ -158,8 +158,8 @@ define i32 @test6() {
 ; CHECK-NEXT:    retl
   %x = alloca i32, align 4
   %t = alloca i64, align 8
-  store volatile i32 1, i32* %x, align 4
-  %load = load volatile i32, i32* %x, align 4
+  store volatile i32 1, ptr %x, align 4
+  %load = load volatile i32, ptr %x, align 4
   %shl = shl i32 %load, 8
   %add = add i32 %shl, -224
   %sh_prom = zext i32 %add to i64

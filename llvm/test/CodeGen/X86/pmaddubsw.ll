@@ -7,7 +7,7 @@
 
 ; NOTE: We're testing with loads because ABI lowering creates a concat_vectors that extract_vector_elt creation can see through.
 ; This would require the combine to recreate the concat_vectors.
-define <8 x i16> @pmaddubsw_128(<16 x i8>* %Aptr, <16 x i8>* %Bptr) {
+define <8 x i16> @pmaddubsw_128(ptr %Aptr, ptr %Bptr) {
 ; SSE-LABEL: pmaddubsw_128:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    movdqa (%rsi), %xmm0
@@ -19,8 +19,8 @@ define <8 x i16> @pmaddubsw_128(<16 x i8>* %Aptr, <16 x i8>* %Bptr) {
 ; AVX-NEXT:    vmovdqa (%rsi), %xmm0
 ; AVX-NEXT:    vpmaddubsw (%rdi), %xmm0, %xmm0
 ; AVX-NEXT:    retq
-  %A = load <16 x i8>, <16 x i8>* %Aptr
-  %B = load <16 x i8>, <16 x i8>* %Bptr
+  %A = load <16 x i8>, ptr %Aptr
+  %B = load <16 x i8>, ptr %Bptr
   %A_even = shufflevector <16 x i8> %A, <16 x i8> undef, <8 x i32> <i32 0, i32 2, i32 4, i32 6, i32 8, i32 10, i32 12, i32 14>
   %A_odd = shufflevector <16 x i8> %A, <16 x i8> undef, <8 x i32> <i32 1, i32 3, i32 5, i32 7, i32 9, i32 11, i32 13, i32 15>
   %B_even = shufflevector <16 x i8> %B, <16 x i8> undef, <8 x i32> <i32 0, i32 2, i32 4, i32 6, i32 8, i32 10, i32 12, i32 14>
@@ -40,7 +40,7 @@ define <8 x i16> @pmaddubsw_128(<16 x i8>* %Aptr, <16 x i8>* %Bptr) {
   ret <8 x i16> %trunc
 }
 
-define <16 x i16> @pmaddubsw_256(<32 x i8>* %Aptr, <32 x i8>* %Bptr) {
+define <16 x i16> @pmaddubsw_256(ptr %Aptr, ptr %Bptr) {
 ; SSE-LABEL: pmaddubsw_256:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    movdqa (%rsi), %xmm0
@@ -63,8 +63,8 @@ define <16 x i16> @pmaddubsw_256(<32 x i8>* %Aptr, <32 x i8>* %Bptr) {
 ; AVX256-NEXT:    vmovdqa (%rsi), %ymm0
 ; AVX256-NEXT:    vpmaddubsw (%rdi), %ymm0, %ymm0
 ; AVX256-NEXT:    retq
-  %A = load <32 x i8>, <32 x i8>* %Aptr
-  %B = load <32 x i8>, <32 x i8>* %Bptr
+  %A = load <32 x i8>, ptr %Aptr
+  %B = load <32 x i8>, ptr %Bptr
   %A_even = shufflevector <32 x i8> %A, <32 x i8> undef, <16 x i32> <i32 0, i32 2, i32 4, i32 6, i32 8, i32 10, i32 12, i32 14, i32 16, i32 18, i32 20, i32 22, i32 24, i32 26, i32 28, i32 30>
   %A_odd = shufflevector <32 x i8> %A, <32 x i8> undef, <16 x i32> <i32 1, i32 3, i32 5, i32 7, i32 9, i32 11, i32 13, i32 15, i32 17, i32 19, i32 21, i32 23, i32 25, i32 27, i32 29, i32 31>
   %B_even = shufflevector <32 x i8> %B, <32 x i8> undef, <16 x i32> <i32 0, i32 2, i32 4, i32 6, i32 8, i32 10, i32 12, i32 14, i32 16, i32 18, i32 20, i32 22, i32 24, i32 26, i32 28, i32 30>
@@ -84,7 +84,7 @@ define <16 x i16> @pmaddubsw_256(<32 x i8>* %Aptr, <32 x i8>* %Bptr) {
   ret <16 x i16> %trunc
 }
 
-define <64 x i16> @pmaddubsw_512(<128 x i8>* %Aptr, <128 x i8>* %Bptr) {
+define <64 x i16> @pmaddubsw_512(ptr %Aptr, ptr %Bptr) {
 ; SSE-LABEL: pmaddubsw_512:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    movq %rdi, %rax
@@ -171,8 +171,8 @@ define <64 x i16> @pmaddubsw_512(<128 x i8>* %Aptr, <128 x i8>* %Bptr) {
 ; AVX512BW-NEXT:    vpmaddubsw (%rdi), %zmm0, %zmm0
 ; AVX512BW-NEXT:    vpmaddubsw 64(%rdi), %zmm1, %zmm1
 ; AVX512BW-NEXT:    retq
-  %A = load <128 x i8>, <128 x i8>* %Aptr
-  %B = load <128 x i8>, <128 x i8>* %Bptr
+  %A = load <128 x i8>, ptr %Aptr
+  %B = load <128 x i8>, ptr %Bptr
   %A_even = shufflevector <128 x i8> %A, <128 x i8> undef, <64 x i32> <i32 0, i32 2, i32 4, i32 6, i32 8, i32 10, i32 12, i32 14, i32 16, i32 18, i32 20, i32 22, i32 24, i32 26, i32 28, i32 30, i32 32, i32 34, i32 36, i32 38, i32 40, i32 42, i32 44, i32 46, i32 48, i32 50, i32 52, i32 54, i32 56, i32 58, i32 60, i32 62, i32 64, i32 66, i32 68, i32 70, i32 72, i32 74, i32 76, i32 78, i32 80, i32 82, i32 84, i32 86, i32 88, i32 90, i32 92, i32 94, i32 96, i32 98, i32 100, i32 102, i32 104, i32 106, i32 108, i32 110, i32 112, i32 114, i32 116, i32 118, i32 120, i32 122, i32 124, i32 126>
   %A_odd = shufflevector <128 x i8> %A, <128 x i8> undef, <64 x i32> <i32 1, i32 3, i32 5, i32 7, i32 9, i32 11, i32 13, i32 15, i32 17, i32 19, i32 21, i32 23, i32 25, i32 27, i32 29, i32 31, i32 33, i32 35, i32 37, i32 39, i32 41, i32 43, i32 45, i32 47, i32 49, i32 51, i32 53, i32 55, i32 57, i32 59, i32 61, i32 63, i32 65, i32 67, i32 69, i32 71, i32 73, i32 75, i32 77, i32 79, i32 81, i32 83, i32 85, i32 87, i32 89, i32 91, i32 93, i32 95, i32 97, i32 99, i32 101, i32 103, i32 105, i32 107, i32 109, i32 111, i32 113, i32 115, i32 117, i32 119, i32 121, i32 123, i32 125, i32 127>
   %B_even = shufflevector <128 x i8> %B, <128 x i8> undef, <64 x i32> <i32 0, i32 2, i32 4, i32 6, i32 8, i32 10, i32 12, i32 14, i32 16, i32 18, i32 20, i32 22, i32 24, i32 26, i32 28, i32 30, i32 32, i32 34, i32 36, i32 38, i32 40, i32 42, i32 44, i32 46, i32 48, i32 50, i32 52, i32 54, i32 56, i32 58, i32 60, i32 62, i32 64, i32 66, i32 68, i32 70, i32 72, i32 74, i32 76, i32 78, i32 80, i32 82, i32 84, i32 86, i32 88, i32 90, i32 92, i32 94, i32 96, i32 98, i32 100, i32 102, i32 104, i32 106, i32 108, i32 110, i32 112, i32 114, i32 116, i32 118, i32 120, i32 122, i32 124, i32 126>
@@ -192,7 +192,7 @@ define <64 x i16> @pmaddubsw_512(<128 x i8>* %Aptr, <128 x i8>* %Bptr) {
   ret <64 x i16> %trunc
 }
 
-define <8 x i16> @pmaddubsw_swapped_indices(<16 x i8>* %Aptr, <16 x i8>* %Bptr) {
+define <8 x i16> @pmaddubsw_swapped_indices(ptr %Aptr, ptr %Bptr) {
 ; SSE-LABEL: pmaddubsw_swapped_indices:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    movdqa (%rsi), %xmm0
@@ -204,8 +204,8 @@ define <8 x i16> @pmaddubsw_swapped_indices(<16 x i8>* %Aptr, <16 x i8>* %Bptr) 
 ; AVX-NEXT:    vmovdqa (%rsi), %xmm0
 ; AVX-NEXT:    vpmaddubsw (%rdi), %xmm0, %xmm0
 ; AVX-NEXT:    retq
-  %A = load <16 x i8>, <16 x i8>* %Aptr
-  %B = load <16 x i8>, <16 x i8>* %Bptr
+  %A = load <16 x i8>, ptr %Aptr
+  %B = load <16 x i8>, ptr %Bptr
   %A_even = shufflevector <16 x i8> %A, <16 x i8> undef, <8 x i32> <i32 1, i32 2, i32 5, i32 6, i32 9, i32 10, i32 13, i32 14> ;indices aren't all even
   %A_odd = shufflevector <16 x i8> %A, <16 x i8> undef, <8 x i32> <i32 0, i32 3, i32 4, i32 7, i32 8, i32 11, i32 12, i32 15> ;indices aren't all odd
   %B_even = shufflevector <16 x i8> %B, <16 x i8> undef, <8 x i32> <i32 1, i32 2, i32 5, i32 6, i32 9, i32 10, i32 13, i32 14> ;same indices as A
@@ -225,7 +225,7 @@ define <8 x i16> @pmaddubsw_swapped_indices(<16 x i8>* %Aptr, <16 x i8>* %Bptr) 
   ret <8 x i16> %trunc
 }
 
-define <8 x i16> @pmaddubsw_swapped_extend(<16 x i8>* %Aptr, <16 x i8>* %Bptr) {
+define <8 x i16> @pmaddubsw_swapped_extend(ptr %Aptr, ptr %Bptr) {
 ; SSE-LABEL: pmaddubsw_swapped_extend:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    movdqa (%rdi), %xmm0
@@ -237,8 +237,8 @@ define <8 x i16> @pmaddubsw_swapped_extend(<16 x i8>* %Aptr, <16 x i8>* %Bptr) {
 ; AVX-NEXT:    vmovdqa (%rdi), %xmm0
 ; AVX-NEXT:    vpmaddubsw (%rsi), %xmm0, %xmm0
 ; AVX-NEXT:    retq
-  %A = load <16 x i8>, <16 x i8>* %Aptr
-  %B = load <16 x i8>, <16 x i8>* %Bptr
+  %A = load <16 x i8>, ptr %Aptr
+  %B = load <16 x i8>, ptr %Bptr
   %A_even = shufflevector <16 x i8> %A, <16 x i8> undef, <8 x i32> <i32 0, i32 2, i32 4, i32 6, i32 8, i32 10, i32 12, i32 14>
   %A_odd = shufflevector <16 x i8> %A, <16 x i8> undef, <8 x i32> <i32 1, i32 3, i32 5, i32 7, i32 9, i32 11, i32 13, i32 15>
   %B_even = shufflevector <16 x i8> %B, <16 x i8> undef, <8 x i32> <i32 0, i32 2, i32 4, i32 6, i32 8, i32 10, i32 12, i32 14>
@@ -258,7 +258,7 @@ define <8 x i16> @pmaddubsw_swapped_extend(<16 x i8>* %Aptr, <16 x i8>* %Bptr) {
   ret <8 x i16> %trunc
 }
 
-define <8 x i16> @pmaddubsw_commuted_mul(<16 x i8>* %Aptr, <16 x i8>* %Bptr) {
+define <8 x i16> @pmaddubsw_commuted_mul(ptr %Aptr, ptr %Bptr) {
 ; SSE-LABEL: pmaddubsw_commuted_mul:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    movdqa (%rsi), %xmm0
@@ -270,8 +270,8 @@ define <8 x i16> @pmaddubsw_commuted_mul(<16 x i8>* %Aptr, <16 x i8>* %Bptr) {
 ; AVX-NEXT:    vmovdqa (%rsi), %xmm0
 ; AVX-NEXT:    vpmaddubsw (%rdi), %xmm0, %xmm0
 ; AVX-NEXT:    retq
-  %A = load <16 x i8>, <16 x i8>* %Aptr
-  %B = load <16 x i8>, <16 x i8>* %Bptr
+  %A = load <16 x i8>, ptr %Aptr
+  %B = load <16 x i8>, ptr %Bptr
   %A_even = shufflevector <16 x i8> %A, <16 x i8> undef, <8 x i32> <i32 0, i32 2, i32 4, i32 6, i32 8, i32 10, i32 12, i32 14>
   %A_odd = shufflevector <16 x i8> %A, <16 x i8> undef, <8 x i32> <i32 1, i32 3, i32 5, i32 7, i32 9, i32 11, i32 13, i32 15>
   %B_even = shufflevector <16 x i8> %B, <16 x i8> undef, <8 x i32> <i32 0, i32 2, i32 4, i32 6, i32 8, i32 10, i32 12, i32 14>
@@ -292,7 +292,7 @@ define <8 x i16> @pmaddubsw_commuted_mul(<16 x i8>* %Aptr, <16 x i8>* %Bptr) {
 }
 
 ; If the extensions don't match see if we can use PMADDWD instead.
-define <8 x i16> @pmaddubsw_bad_extend(<16 x i8>* %Aptr, <16 x i8>* %Bptr) {
+define <8 x i16> @pmaddubsw_bad_extend(ptr %Aptr, ptr %Bptr) {
 ; SSE-LABEL: pmaddubsw_bad_extend:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    movdqa (%rdi), %xmm1
@@ -365,8 +365,8 @@ define <8 x i16> @pmaddubsw_bad_extend(<16 x i8>* %Aptr, <16 x i8>* %Bptr) {
 ; AVX256-NEXT:    vpackssdw %xmm1, %xmm0, %xmm0
 ; AVX256-NEXT:    vzeroupper
 ; AVX256-NEXT:    retq
-  %A = load <16 x i8>, <16 x i8>* %Aptr
-  %B = load <16 x i8>, <16 x i8>* %Bptr
+  %A = load <16 x i8>, ptr %Aptr
+  %B = load <16 x i8>, ptr %Bptr
   %A_even = shufflevector <16 x i8> %A, <16 x i8> undef, <8 x i32> <i32 0, i32 2, i32 4, i32 6, i32 8, i32 10, i32 12, i32 14>
   %A_odd = shufflevector <16 x i8> %A, <16 x i8> undef, <8 x i32> <i32 1, i32 3, i32 5, i32 7, i32 9, i32 11, i32 13, i32 15>
   %B_even = shufflevector <16 x i8> %B, <16 x i8> undef, <8 x i32> <i32 0, i32 2, i32 4, i32 6, i32 8, i32 10, i32 12, i32 14>
@@ -386,7 +386,7 @@ define <8 x i16> @pmaddubsw_bad_extend(<16 x i8>* %Aptr, <16 x i8>* %Bptr) {
   ret <8 x i16> %trunc
 }
 
-define <8 x i16> @pmaddubsw_bad_indices(<16 x i8>* %Aptr, <16 x i8>* %Bptr) {
+define <8 x i16> @pmaddubsw_bad_indices(ptr %Aptr, ptr %Bptr) {
 ; SSE-LABEL: pmaddubsw_bad_indices:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    movdqa (%rdi), %xmm1
@@ -449,8 +449,8 @@ define <8 x i16> @pmaddubsw_bad_indices(<16 x i8>* %Aptr, <16 x i8>* %Bptr) {
 ; AVX256-NEXT:    vpackssdw %xmm1, %xmm0, %xmm0
 ; AVX256-NEXT:    vzeroupper
 ; AVX256-NEXT:    retq
-  %A = load <16 x i8>, <16 x i8>* %Aptr
-  %B = load <16 x i8>, <16 x i8>* %Bptr
+  %A = load <16 x i8>, ptr %Aptr
+  %B = load <16 x i8>, ptr %Bptr
   %A_even = shufflevector <16 x i8> %A, <16 x i8> undef, <8 x i32> <i32 1, i32 2, i32 5, i32 6, i32 9, i32 10, i32 13, i32 14> ;indices aren't all even
   %A_odd = shufflevector <16 x i8> %A, <16 x i8> undef, <8 x i32> <i32 0, i32 3, i32 4, i32 7, i32 8, i32 11, i32 12, i32 15> ;indices aren't all odd
   %B_even = shufflevector <16 x i8> %B, <16 x i8> undef, <8 x i32> <i32 0, i32 2, i32 4, i32 6, i32 8, i32 10, i32 12, i32 14> ;different than A

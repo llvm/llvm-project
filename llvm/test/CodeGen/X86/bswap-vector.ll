@@ -58,7 +58,7 @@ define <4 x i32> @test2(<4 x i32> %v) {
   ret <4 x i32> %r
 }
 
-define <4 x i32> @or_bswap(<4 x i32> %x, <4 x i32> %y, <4 x i32>* %p1, <4 x i32>* %p2) {
+define <4 x i32> @or_bswap(<4 x i32> %x, <4 x i32> %y, ptr %p1, ptr %p2) {
 ; CHECK-NOSSSE3-LABEL: or_bswap:
 ; CHECK-NOSSSE3:       # %bb.0:
 ; CHECK-NOSSSE3-NEXT:    por %xmm1, %xmm0

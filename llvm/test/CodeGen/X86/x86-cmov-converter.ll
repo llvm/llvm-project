@@ -35,7 +35,7 @@
 ;;void CmovInHotPath(int n, int a, int b, int *c, int *d) {
 ;;  for (int i = 0; i < n; i++) {
 ;;    int t = c[i] + 1;
-;;    if (c[i] * a > b)
+;;    if (cptr a > b)
 ;;      t = 10;
 ;;    c[i] = (c[i] + 1) * t;
 ;;  }
@@ -45,7 +45,7 @@
 ;;void CmovNotInHotPath(int n, int a, int b, int *c, int *d) {
 ;;  for (int i = 0; i < n; i++) {
 ;;    int t = c[i];
-;;    if (c[i] * a > b)
+;;    if (cptr a > b)
 ;;      t = 10;
 ;;    c[i] = t;
 ;;    d[i] /= b;
@@ -94,16 +94,16 @@
 ;;void SmallGainPerLoop(int n, int a, int b, int *c, int *d) {
 ;;  for (int i = 0; i < n; i++) {
 ;;    int t = c[i];
-;;    if (c[i] * a > b)
+;;    if (cptr a > b)
 ;;      t = 10;
 ;;    c[i] = t;
 ;;  }
 ;;}
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-%struct.Node = type { i32, %struct.Node*, %struct.Node* }
+%struct.Node = type { i32, ptr, ptr }
 
-define void @CmovInHotPath(i32 %n, i32 %a, i32 %b, i32* nocapture %c, i32* nocapture readnone %d) #0 {
+define void @CmovInHotPath(i32 %n, i32 %a, i32 %b, ptr nocapture %c, ptr nocapture readnone %d) #0 {
 ; CHECK-LABEL: CmovInHotPath:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    testl %edi, %edi
@@ -172,20 +172,20 @@ for.cond.cleanup:                                 ; preds = %for.body, %entry
 
 for.body:                                         ; preds = %for.body.preheader, %for.body
   %indvars.iv = phi i64 [ %indvars.iv.next, %for.body ], [ 0, %for.body.preheader ]
-  %arrayidx = getelementptr inbounds i32, i32* %c, i64 %indvars.iv
-  %0 = load i32, i32* %arrayidx, align 4
+  %arrayidx = getelementptr inbounds i32, ptr %c, i64 %indvars.iv
+  %0 = load i32, ptr %arrayidx, align 4
   %add = add nsw i32 %0, 1
   %mul = mul nsw i32 %0, %a
   %cmp3 = icmp sgt i32 %mul, %b
   %. = select i1 %cmp3, i32 10, i32 %add
   %mul7 = mul nsw i32 %., %add
-  store i32 %mul7, i32* %arrayidx, align 4
+  store i32 %mul7, ptr %arrayidx, align 4
   %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
   %exitcond = icmp eq i64 %indvars.iv.next, %wide.trip.count
   br i1 %exitcond, label %for.cond.cleanup, label %for.body
 }
 
-define void @CmovNotInHotPath(i32 %n, i32 %a, i32 %b, i32* nocapture %c, i32* nocapture %d) #0 {
+define void @CmovNotInHotPath(i32 %n, i32 %a, i32 %b, ptr nocapture %c, ptr nocapture %d) #0 {
 ; CHECK-LABEL: CmovNotInHotPath:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    testl %edi, %edi
@@ -257,22 +257,22 @@ for.cond.cleanup:                                 ; preds = %for.body, %entry
 
 for.body:                                         ; preds = %for.body.preheader, %for.body
   %indvars.iv = phi i64 [ %indvars.iv.next, %for.body ], [ 0, %for.body.preheader ]
-  %arrayidx = getelementptr inbounds i32, i32* %c, i64 %indvars.iv
-  %0 = load i32, i32* %arrayidx, align 4
+  %arrayidx = getelementptr inbounds i32, ptr %c, i64 %indvars.iv
+  %0 = load i32, ptr %arrayidx, align 4
   %mul = mul nsw i32 %0, %a
   %cmp3 = icmp sgt i32 %mul, %b
   %. = select i1 %cmp3, i32 10, i32 %0
-  store i32 %., i32* %arrayidx, align 4
-  %arrayidx7 = getelementptr inbounds i32, i32* %d, i64 %indvars.iv
-  %1 = load i32, i32* %arrayidx7, align 4
+  store i32 %., ptr %arrayidx, align 4
+  %arrayidx7 = getelementptr inbounds i32, ptr %d, i64 %indvars.iv
+  %1 = load i32, ptr %arrayidx7, align 4
   %div = sdiv i32 %1, %b
-  store i32 %div, i32* %arrayidx7, align 4
+  store i32 %div, ptr %arrayidx7, align 4
   %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
   %exitcond = icmp eq i64 %indvars.iv.next, %wide.trip.count
   br i1 %exitcond, label %for.cond.cleanup, label %for.body
 }
 
-define i32 @MaxIndex(i32 %n, i32* nocapture readonly %a) #0 {
+define i32 @MaxIndex(i32 %n, ptr nocapture readonly %a) #0 {
 ; CHECK-LABEL: MaxIndex:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    xorl %eax, %eax
@@ -343,11 +343,11 @@ for.cond.cleanup:                                 ; preds = %for.body, %entry
 for.body:                                         ; preds = %for.body.preheader, %for.body
   %indvars.iv = phi i64 [ %indvars.iv.next, %for.body ], [ 1, %for.body.preheader ]
   %t.015 = phi i32 [ %i.0.t.0, %for.body ], [ 0, %for.body.preheader ]
-  %arrayidx = getelementptr inbounds i32, i32* %a, i64 %indvars.iv
-  %0 = load i32, i32* %arrayidx, align 4
+  %arrayidx = getelementptr inbounds i32, ptr %a, i64 %indvars.iv
+  %0 = load i32, ptr %arrayidx, align 4
   %idxprom1 = sext i32 %t.015 to i64
-  %arrayidx2 = getelementptr inbounds i32, i32* %a, i64 %idxprom1
-  %1 = load i32, i32* %arrayidx2, align 4
+  %arrayidx2 = getelementptr inbounds i32, ptr %a, i64 %idxprom1
+  %1 = load i32, ptr %arrayidx2, align 4
   %cmp3 = icmp sgt i32 %0, %1
   %2 = trunc i64 %indvars.iv to i32
   %i.0.t.0 = select i1 %cmp3, i32 %2, i32 %t.015
@@ -357,7 +357,7 @@ for.body:                                         ; preds = %for.body.preheader,
 }
 
 ; TODO: If cmov instruction is marked as unpredicatable, do not convert it to branch.
-define i32 @MaxIndex_unpredictable(i32 %n, i32* nocapture readonly %a) #0 {
+define i32 @MaxIndex_unpredictable(i32 %n, ptr nocapture readonly %a) #0 {
 ; CHECK-LABEL: MaxIndex_unpredictable:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    xorl %eax, %eax
@@ -428,11 +428,11 @@ for.cond.cleanup:                                 ; preds = %for.body, %entry
 for.body:                                         ; preds = %for.body.preheader, %for.body
   %indvars.iv = phi i64 [ %indvars.iv.next, %for.body ], [ 1, %for.body.preheader ]
   %t.015 = phi i32 [ %i.0.t.0, %for.body ], [ 0, %for.body.preheader ]
-  %arrayidx = getelementptr inbounds i32, i32* %a, i64 %indvars.iv
-  %0 = load i32, i32* %arrayidx, align 4
+  %arrayidx = getelementptr inbounds i32, ptr %a, i64 %indvars.iv
+  %0 = load i32, ptr %arrayidx, align 4
   %idxprom1 = sext i32 %t.015 to i64
-  %arrayidx2 = getelementptr inbounds i32, i32* %a, i64 %idxprom1
-  %1 = load i32, i32* %arrayidx2, align 4
+  %arrayidx2 = getelementptr inbounds i32, ptr %a, i64 %idxprom1
+  %1 = load i32, ptr %arrayidx2, align 4
   %cmp3 = icmp sgt i32 %0, %1
   %2 = trunc i64 %indvars.iv to i32
   %i.0.t.0 = select i1 %cmp3, i32 %2, i32 %t.015, !unpredictable !0
@@ -441,7 +441,7 @@ for.body:                                         ; preds = %for.body.preheader,
   br i1 %exitcond, label %for.cond.cleanup, label %for.body
 }
 
-define i32 @MaxValue(i32 %n, i32* nocapture readonly %a) #0 {
+define i32 @MaxValue(i32 %n, ptr nocapture readonly %a) #0 {
 ; CHECK-LABEL: MaxValue:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    movl (%rsi), %eax
@@ -489,7 +489,7 @@ define i32 @MaxValue(i32 %n, i32* nocapture readonly %a) #0 {
 ; CHECK-FORCEALL-NEXT:    je .LBB4_2
 ; CHECK-FORCEALL-NEXT:    jmp .LBB4_4
 entry:
-  %0 = load i32, i32* %a, align 4
+  %0 = load i32, ptr %a, align 4
   %cmp13 = icmp sgt i32 %n, 1
   br i1 %cmp13, label %for.body.preheader, label %for.cond.cleanup
 
@@ -504,8 +504,8 @@ for.cond.cleanup:                                 ; preds = %for.body, %entry
 for.body:                                         ; preds = %for.body.preheader, %for.body
   %indvars.iv = phi i64 [ %indvars.iv.next, %for.body ], [ 1, %for.body.preheader ]
   %t.014 = phi i32 [ %.t.0, %for.body ], [ %0, %for.body.preheader ]
-  %arrayidx1 = getelementptr inbounds i32, i32* %a, i64 %indvars.iv
-  %1 = load i32, i32* %arrayidx1, align 4
+  %arrayidx1 = getelementptr inbounds i32, ptr %a, i64 %indvars.iv
+  %1 = load i32, ptr %arrayidx1, align 4
   %cmp2 = icmp sgt i32 %1, %t.014
   %.t.0 = select i1 %cmp2, i32 %1, i32 %t.014
   %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
@@ -513,7 +513,7 @@ for.body:                                         ; preds = %for.body.preheader,
   br i1 %exitcond, label %for.cond.cleanup, label %for.body
 }
 
-define i32 @BinarySearch(i32 %Mask, %struct.Node* nocapture readonly %Curr, %struct.Node* nocapture readonly %Next) #0 {
+define i32 @BinarySearch(i32 %Mask, ptr nocapture readonly %Curr, ptr nocapture readonly %Next) #0 {
 ; CHECK-LABEL: BinarySearch:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    movl (%rsi), %eax
@@ -552,25 +552,22 @@ define i32 @BinarySearch(i32 %Mask, %struct.Node* nocapture readonly %Curr, %str
 ; CHECK-FORCEALL-NEXT:  # %bb.3: # %while.end
 ; CHECK-FORCEALL-NEXT:    retq
 entry:
-  %Val8 = getelementptr inbounds %struct.Node, %struct.Node* %Curr, i64 0, i32 0
-  %0 = load i32, i32* %Val8, align 8
-  %Val19 = getelementptr inbounds %struct.Node, %struct.Node* %Next, i64 0, i32 0
-  %1 = load i32, i32* %Val19, align 8
+  %0 = load i32, ptr %Curr, align 8
+  %1 = load i32, ptr %Next, align 8
   %cmp10 = icmp ugt i32 %0, %1
   br i1 %cmp10, label %while.body, label %while.end
 
 while.body:                                       ; preds = %entry, %while.body
   %2 = phi i32 [ %4, %while.body ], [ %1, %entry ]
-  %Next.addr.011 = phi %struct.Node* [ %3, %while.body ], [ %Next, %entry ]
+  %Next.addr.011 = phi ptr [ %3, %while.body ], [ %Next, %entry ]
   %shl = shl i32 1, %2
   %and = and i32 %shl, %Mask
   %tobool = icmp eq i32 %and, 0
-  %Left = getelementptr inbounds %struct.Node, %struct.Node* %Next.addr.011, i64 0, i32 2
-  %Right = getelementptr inbounds %struct.Node, %struct.Node* %Next.addr.011, i64 0, i32 1
-  %Left.sink = select i1 %tobool, %struct.Node** %Left, %struct.Node** %Right
-  %3 = load %struct.Node*, %struct.Node** %Left.sink, align 8
-  %Val1 = getelementptr inbounds %struct.Node, %struct.Node* %3, i64 0, i32 0
-  %4 = load i32, i32* %Val1, align 8
+  %Left = getelementptr inbounds %struct.Node, ptr %Next.addr.011, i64 0, i32 2
+  %Right = getelementptr inbounds %struct.Node, ptr %Next.addr.011, i64 0, i32 1
+  %Left.sink = select i1 %tobool, ptr %Left, ptr %Right
+  %3 = load ptr, ptr %Left.sink, align 8
+  %4 = load i32, ptr %3, align 8
   %cmp = icmp ugt i32 %2, %4
   br i1 %cmp, label %while.body, label %while.end
 
@@ -607,7 +604,7 @@ while.end:                                        ; preds = %while.body, %entry
 ;;                                          ; previous Phi instruction result
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-define void @Transform(i32 *%arr, i32 *%arr2, i32 %a, i32 %b, i32 %c, i32 %n) #0 {
+define void @Transform(ptr%arr, ptr%arr2, i32 %a, i32 %b, i32 %c, i32 %n) #0 {
 ; CHECK-LABEL: Transform:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    movb $1, %al
@@ -681,15 +678,15 @@ entry:
 
 while.body:                                       ; preds = %entry, %while.body
   %i = phi i32 [ %i_inc, %while.body ], [ 0, %entry ]
-  %arr_i = getelementptr inbounds i32, i32* %arr, i32 %i
-  %x = load i32, i32* %arr_i, align 4
+  %arr_i = getelementptr inbounds i32, ptr %arr, i32 %i
+  %x = load i32, ptr %arr_i, align 4
   %div = udiv i32 %x, %a
   %cond = icmp ugt i32 %div, %a
   %condOpp = icmp ule i32 %div, %a
   %s1 = select i1 %cond, i32 11, i32 22
   %s2 = select i1 %condOpp, i32 %s1, i32 %a
   %sum = urem i32 %s1, %s2
-  store i32 %sum, i32* %arr_i, align 4
+  store i32 %sum, ptr %arr_i, align 4
   %i_inc = add i32 %i, 1
   %cmp = icmp ugt i32 %i_inc, %n
   br i1 %cmp, label %while.body, label %while.end
@@ -700,7 +697,7 @@ while.end:                                        ; preds = %while.body, %entry
 
 ; Test that we always will convert a cmov with a memory operand into a branch,
 ; even outside of a loop.
-define i32 @test_cmov_memoperand(i32 %a, i32 %b, i32 %x, i32* %y) #0 {
+define i32 @test_cmov_memoperand(i32 %a, i32 %b, i32 %x, ptr %y) #0 {
 ; CHECK-LABEL: test_cmov_memoperand:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    movl %edx, %eax
@@ -722,13 +719,13 @@ define i32 @test_cmov_memoperand(i32 %a, i32 %b, i32 %x, i32* %y) #0 {
 ; CHECK-FORCEALL-NEXT:    retq
 entry:
   %cond = icmp ugt i32 %a, %b
-  %load = load i32, i32* %y
+  %load = load i32, ptr %y
   %z = select i1 %cond, i32 %x, i32 %load
   ret i32 %z
 }
 
 ; TODO: If cmov instruction is marked as unpredicatable, do not convert it to branch.
-define i32 @test_cmov_memoperand_unpredictable(i32 %a, i32 %b, i32 %x, i32* %y) #0 {
+define i32 @test_cmov_memoperand_unpredictable(i32 %a, i32 %b, i32 %x, ptr %y) #0 {
 ; CHECK-LABEL: test_cmov_memoperand_unpredictable:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    movl %edx, %eax
@@ -750,14 +747,14 @@ define i32 @test_cmov_memoperand_unpredictable(i32 %a, i32 %b, i32 %x, i32* %y) 
 ; CHECK-FORCEALL-NEXT:    retq
 entry:
   %cond = icmp ugt i32 %a, %b
-  %load = load i32, i32* %y
+  %load = load i32, ptr %y
   %z = select i1 %cond, i32 %x, i32 %load, !unpredictable !0
   ret i32 %z
 }
 
 ; Test that we can convert a group of cmovs where only one has a memory
 ; operand.
-define i32 @test_cmov_memoperand_in_group(i32 %a, i32 %b, i32 %x, i32* %y.ptr) #0 {
+define i32 @test_cmov_memoperand_in_group(i32 %a, i32 %b, i32 %x, ptr %y.ptr) #0 {
 ; CHECK-LABEL: test_cmov_memoperand_in_group:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    movl %edx, %eax
@@ -789,7 +786,7 @@ define i32 @test_cmov_memoperand_in_group(i32 %a, i32 %b, i32 %x, i32* %y.ptr) #
 ; CHECK-FORCEALL-NEXT:    retq
 entry:
   %cond = icmp ugt i32 %a, %b
-  %y = load i32, i32* %y.ptr
+  %y = load i32, ptr %y.ptr
   %z1 = select i1 %cond, i32 %x, i32 %a
   %z2 = select i1 %cond, i32 %x, i32 %y
   %z3 = select i1 %cond, i32 %x, i32 %b
@@ -799,7 +796,7 @@ entry:
 }
 
 ; Same as before but with operands reversed in the select with a load.
-define i32 @test_cmov_memoperand_in_group2(i32 %a, i32 %b, i32 %x, i32* %y.ptr) #0 {
+define i32 @test_cmov_memoperand_in_group2(i32 %a, i32 %b, i32 %x, ptr %y.ptr) #0 {
 ; CHECK-LABEL: test_cmov_memoperand_in_group2:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    movl %edx, %eax
@@ -831,7 +828,7 @@ define i32 @test_cmov_memoperand_in_group2(i32 %a, i32 %b, i32 %x, i32* %y.ptr) 
 ; CHECK-FORCEALL-NEXT:    retq
 entry:
   %cond = icmp ugt i32 %a, %b
-  %y = load i32, i32* %y.ptr
+  %y = load i32, ptr %y.ptr
   %z2 = select i1 %cond, i32 %a, i32 %x
   %z1 = select i1 %cond, i32 %y, i32 %x
   %z3 = select i1 %cond, i32 %b, i32 %x
@@ -842,7 +839,7 @@ entry:
 
 ; Test that we don't convert a group of cmovs with conflicting directions of
 ; loads.
-define i32 @test_cmov_memoperand_conflicting_dir(i32 %a, i32 %b, i32 %x, i32* %y1.ptr, i32* %y2.ptr) #0 {
+define i32 @test_cmov_memoperand_conflicting_dir(i32 %a, i32 %b, i32 %x, ptr %y1.ptr, ptr %y2.ptr) #0 {
 ; CHECK-LABEL: test_cmov_memoperand_conflicting_dir:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    cmpl %esi, %edi
@@ -862,8 +859,8 @@ define i32 @test_cmov_memoperand_conflicting_dir(i32 %a, i32 %b, i32 %x, i32* %y
 ; CHECK-FORCEALL-NEXT:    retq
 entry:
   %cond = icmp ugt i32 %a, %b
-  %y1 = load i32, i32* %y1.ptr
-  %y2 = load i32, i32* %y2.ptr
+  %y1 = load i32, ptr %y1.ptr
+  %y2 = load i32, ptr %y2.ptr
   %z1 = select i1 %cond, i32 %x, i32 %y1
   %z2 = select i1 %cond, i32 %y2, i32 %x
   %s1 = add i32 %z1, %z2
@@ -873,7 +870,7 @@ entry:
 ; Test that we can convert a group of cmovs where only one has a memory
 ; operand and where that memory operand's registers come from a prior cmov in
 ; the group.
-define i32 @test_cmov_memoperand_in_group_reuse_for_addr(i32 %a, i32 %b, i32* %x, i32* %y) #0 {
+define i32 @test_cmov_memoperand_in_group_reuse_for_addr(i32 %a, i32 %b, ptr %x, ptr %y) #0 {
 ; CHECK-LABEL: test_cmov_memoperand_in_group_reuse_for_addr:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    movl %edi, %eax
@@ -895,15 +892,15 @@ define i32 @test_cmov_memoperand_in_group_reuse_for_addr(i32 %a, i32 %b, i32* %x
 ; CHECK-FORCEALL-NEXT:    retq
 entry:
   %cond = icmp ugt i32 %a, %b
-  %p = select i1 %cond, i32* %x, i32* %y
-  %load = load i32, i32* %p
+  %p = select i1 %cond, ptr %x, ptr %y
+  %load = load i32, ptr %p
   %z = select i1 %cond, i32 %a, i32 %load
   ret i32 %z
 }
 
 ; Test that we can convert a group of two cmovs with memory operands where one
 ; uses the result of the other as part of the address.
-define i32 @test_cmov_memoperand_in_group_reuse_for_addr2(i32 %a, i32 %b, i32* %x, i32** %y) #0 {
+define i32 @test_cmov_memoperand_in_group_reuse_for_addr2(i32 %a, i32 %b, ptr %x, ptr %y) #0 {
 ; CHECK-LABEL: test_cmov_memoperand_in_group_reuse_for_addr2:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    movl %edi, %eax
@@ -927,9 +924,9 @@ define i32 @test_cmov_memoperand_in_group_reuse_for_addr2(i32 %a, i32 %b, i32* %
 ; CHECK-FORCEALL-NEXT:    retq
 entry:
   %cond = icmp ugt i32 %a, %b
-  %load1 = load i32*, i32** %y
-  %p = select i1 %cond, i32* %x, i32* %load1
-  %load2 = load i32, i32* %p
+  %load1 = load ptr, ptr %y
+  %p = select i1 %cond, ptr %x, ptr %load1
+  %load2 = load i32, ptr %p
   %z = select i1 %cond, i32 %a, i32 %load2
   ret i32 %z
 }
@@ -937,7 +934,7 @@ entry:
 ; Test that we can convert a group of cmovs where only one has a memory
 ; operand and where that memory operand's registers come from a prior cmov and
 ; where that cmov gets *its* input from a prior cmov in the group.
-define i32 @test_cmov_memoperand_in_group_reuse_for_addr3(i32 %a, i32 %b, i32* %x, i32* %y, i32* %z) #0 {
+define i32 @test_cmov_memoperand_in_group_reuse_for_addr3(i32 %a, i32 %b, ptr %x, ptr %y, ptr %z) #0 {
 ; CHECK-LABEL: test_cmov_memoperand_in_group_reuse_for_addr3:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    movl %edi, %eax
@@ -959,15 +956,15 @@ define i32 @test_cmov_memoperand_in_group_reuse_for_addr3(i32 %a, i32 %b, i32* %
 ; CHECK-FORCEALL-NEXT:    retq
 entry:
   %cond = icmp ugt i32 %a, %b
-  %p = select i1 %cond, i32* %x, i32* %y
-  %p2 = select i1 %cond, i32* %z, i32* %p
-  %load = load i32, i32* %p2
+  %p = select i1 %cond, ptr %x, ptr %y
+  %p2 = select i1 %cond, ptr %z, ptr %p
+  %load = load i32, ptr %p2
   %r = select i1 %cond, i32 %a, i32 %load
   ret i32 %r
 }
 
-@begin = external global i32*
-@end = external global i32*
+@begin = external global ptr
+@end = external global ptr
 
 define void @test_memoperand_loop(i32 %data) #0 {
 ; CHECK-LABEL: test_memoperand_loop:
@@ -1038,21 +1035,21 @@ define void @test_memoperand_loop(i32 %data) #0 {
 ; CHECK-FORCEALL-NEXT:  # %bb.6: # %exit
 ; CHECK-FORCEALL-NEXT:    retq
 entry:
-  %begin = load i32*, i32** @begin, align 8
-  %end = load i32*, i32** @end, align 8
+  %begin = load ptr, ptr @begin, align 8
+  %end = load ptr, ptr @end, align 8
   br label %loop.body
 loop.body:
   %phi.iv = phi i32 [ 0, %entry ], [ %iv.next, %loop.body ]
-  %phi.ptr = phi i32* [ %begin, %entry ], [ %dst2, %loop.body ]
-  %gep1 = getelementptr inbounds i32, i32 *%phi.ptr, i64 2
-  %cmp1 = icmp ugt i32* %gep1, %end
-  %begin_dup = load i32*, i32** @begin, align 8
-  %dst1 = select i1 %cmp1, i32* %gep1, i32* %begin_dup
-  store i32 %data, i32 *%dst1, align 4
-  %gep2 = getelementptr inbounds i32, i32 *%dst1, i64 2
-  %cmp2 = icmp ugt i32* %gep2, %end
-  %dst2 = select i1 %cmp2, i32* %gep2, i32* %begin
-  store i32 %data, i32 *%dst2, align 4
+  %phi.ptr = phi ptr [ %begin, %entry ], [ %dst2, %loop.body ]
+  %gep1 = getelementptr inbounds i32, ptr%phi.ptr, i64 2
+  %cmp1 = icmp ugt ptr %gep1, %end
+  %begin_dup = load ptr, ptr @begin, align 8
+  %dst1 = select i1 %cmp1, ptr %gep1, ptr %begin_dup
+  store i32 %data, ptr%dst1, align 4
+  %gep2 = getelementptr inbounds i32, ptr%dst1, i64 2
+  %cmp2 = icmp ugt ptr %gep2, %end
+  %dst2 = select i1 %cmp2, ptr %gep2, ptr %begin
+  store i32 %data, ptr%dst2, align 4
   %iv.next = add i32 %phi.iv, 1
   %cond = icmp slt i32 %iv.next, 1024
   br i1 %cond, label %loop.body, label %exit

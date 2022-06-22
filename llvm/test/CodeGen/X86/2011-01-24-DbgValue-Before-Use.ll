@@ -60,8 +60,8 @@ cond.end:                                         ; preds = %entry, %cond.true
   br i1 %cmp7, label %return, label %if.then, !dbg !26
 
 if.then:                                          ; preds = %cond.end
-  %puts = tail call i32 @puts(i8* getelementptr inbounds ([21 x i8], [21 x i8]* @str, i64 0, i64 0))
-  %call12 = tail call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([14 x i8], [14 x i8]* @.str1, i64 0, i64 0), i32 %call, i32 %cond) nounwind optsize, !dbg !26
+  %puts = tail call i32 @puts(ptr @str)
+  %call12 = tail call i32 (ptr, ...) @printf(ptr @.str1, i32 %call, i32 %cond) nounwind optsize, !dbg !26
   ret i32 1, !dbg !27
 
 return:                                           ; preds = %cond.end
@@ -70,11 +70,11 @@ return:                                           ; preds = %cond.end
 
 declare i32 @rand() optsize
 
-declare i32 @printf(i8* nocapture, ...) nounwind optsize
+declare i32 @printf(ptr nocapture, ...) nounwind optsize
 
 declare void @llvm.dbg.value(metadata, i64, metadata, metadata) nounwind readnone
 
-declare i32 @puts(i8* nocapture) nounwind
+declare i32 @puts(ptr nocapture) nounwind
 
 !llvm.dbg.cu = !{!2}
 !llvm.module.flags = !{!33}

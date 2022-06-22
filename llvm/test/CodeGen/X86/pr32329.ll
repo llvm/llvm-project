@@ -91,34 +91,34 @@ define void @foo() local_unnamed_addr {
 ; X64-NEXT:    movb %dil, var_218(%rip)
 ; X64-NEXT:    retq
   entry:
-  %bf.load = load i32, i32* bitcast (%struct.AA* @obj to i32*), align 8
+  %bf.load = load i32, ptr @obj, align 8
   %bf.clear = shl i32 %bf.load, 1
   %add = and i32 %bf.clear, 8388606
-  %0 = load i8, i8* @var_27, align 1
+  %0 = load i8, ptr @var_27, align 1
   %conv5 = sext i8 %0 to i32
   %sub = sub nsw i32 %add, %conv5
-  %1 = load i16, i16* @var_2, align 2
+  %1 = load i16, ptr @var_2, align 2
   %conv6 = zext i16 %1 to i32
   %sub7 = sub nsw i32 %sub, %conv6
   %conv8 = sext i32 %sub7 to i64
-  %2 = load i64, i64* @var_24, align 8
-  %3 = load i64, i64* @var_310, align 8
+  %2 = load i64, ptr @var_24, align 8
+  %3 = load i64, ptr @var_310, align 8
   %conv9 = sext i8 %0 to i64
   %mul = mul i64 %3, %conv9
   %add10 = add i64 %mul, %2
   %mul11 = mul i64 %add10, %conv8
   %sub12 = add i64 %mul11, 8662905354777116273
   %shl = shl i64 9, %sub12
-  store i64 %shl, i64* @var_50, align 8
+  store i64 %shl, ptr @var_50, align 8
   %bf.clear14 = and i32 %bf.load, 4194303
   %add21 = shl nuw nsw i32 %bf.clear14, 1
   %sub23 = sub nsw i32 %add21, %conv5
   %sub25 = sub nsw i32 %sub23, %conv6
   %cmp = icmp sge i32 %sub25, %bf.clear14
   %conv30 = zext i1 %cmp to i8
-  store i8 %conv30, i8* @var_205, align 1
+  store i8 %conv30, ptr @var_205, align 1
   %mul43 = mul nsw i32 %sub, %conv5
   %conv44 = trunc i32 %mul43 to i8
-  store i8 %conv44, i8* @var_218, align 1
+  store i8 %conv44, ptr @var_218, align 1
   ret void
 }

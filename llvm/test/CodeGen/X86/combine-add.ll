@@ -225,7 +225,7 @@ define <4 x i32> @combine_vec_add_sub_sub(<4 x i32> %a, <4 x i32> %b, <4 x i32> 
 }
 
 ; Check for oneuse limit on fold
-define void @PR52039(<8 x i32>* %pa, <8 x i32>* %pb) {
+define void @PR52039(ptr %pa, ptr %pb) {
 ; SSE-LABEL: PR52039:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    movdqu (%rdi), %xmm0
@@ -268,11 +268,11 @@ define void @PR52039(<8 x i32>* %pa, <8 x i32>* %pb) {
 ; AVX2-NEXT:    vmovdqu %ymm1, (%rdi)
 ; AVX2-NEXT:    vzeroupper
 ; AVX2-NEXT:    retq
-  %load = load <8 x i32>, <8 x i32>* %pa, align 4
+  %load = load <8 x i32>, ptr %pa, align 4
   %sub = sub nsw <8 x i32> <i32 10, i32 10, i32 10, i32 10, i32 10, i32 10, i32 10, i32 10>, %load
   %mul = mul nsw <8 x i32> %sub, <i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3>
-  store <8 x i32> %sub, <8 x i32>* %pb, align 4
-  store <8 x i32> %mul, <8 x i32>* %pa, align 4
+  store <8 x i32> %sub, ptr %pb, align 4
+  store <8 x i32> %mul, ptr %pa, align 4
   ret void
 }
 
@@ -452,7 +452,7 @@ define i32 @combine_add_adc_constant(i32 %x, i32 %y, i32 %z) {
 
 declare {i32, i1} @llvm.sadd.with.overflow.i32(i32 %a, i32 %b)
 
-define i1 @sadd_add(i32 %a, i32 %b, i32* %p) {
+define i1 @sadd_add(i32 %a, i32 %b, ptr %p) {
 ; CHECK-LABEL: sadd_add:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    # kill: def $edi killed $edi def $rdi
@@ -467,13 +467,13 @@ define i1 @sadd_add(i32 %a, i32 %b, i32* %p) {
   %e0 = extractvalue {i32, i1} %a0, 0
   %e1 = extractvalue {i32, i1} %a0, 1
   %res = add i32 %e0, 1
-  store i32 %res, i32* %p
+  store i32 %res, ptr %p
   ret i1 %e1
 }
 
 declare {i8, i1} @llvm.uadd.with.overflow.i8(i8 %a, i8 %b)
 
-define i1 @uadd_add(i8 %a, i8 %b, i8* %p) {
+define i1 @uadd_add(i8 %a, i8 %b, ptr %p) {
 ; CHECK-LABEL: uadd_add:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    notb %dil
@@ -487,7 +487,7 @@ define i1 @uadd_add(i8 %a, i8 %b, i8* %p) {
   %e0 = extractvalue {i8, i1} %a0, 0
   %e1 = extractvalue {i8, i1} %a0, 1
   %res = add i8 %e0, 1
-  store i8 %res, i8* %p
+  store i8 %res, ptr %p
   ret i1 %e1
 }
 

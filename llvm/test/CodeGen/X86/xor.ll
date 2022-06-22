@@ -452,7 +452,7 @@ define i32 @test11(i32 %b) {
 %struct.ref_s = type { %union.v, i16, i16 }
 %union.v = type { i64 }
 
-define %struct.ref_s* @test12(%struct.ref_s* %op, i64 %osbot, i64 %intval) {
+define ptr @test12(ptr %op, i64 %osbot, i64 %intval) {
 ; X86-LABEL: test12:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -480,11 +480,11 @@ define %struct.ref_s* @test12(%struct.ref_s* %op, i64 %osbot, i64 %intval) {
   %neg = shl i64 %intval, 32
   %sext = xor i64 %neg, -4294967296
   %idx.ext = ashr exact i64 %sext, 32
-  %add.ptr = getelementptr inbounds %struct.ref_s, %struct.ref_s* %op, i64 %idx.ext
-  ret %struct.ref_s* %add.ptr
+  %add.ptr = getelementptr inbounds %struct.ref_s, ptr %op, i64 %idx.ext
+  ret ptr %add.ptr
 }
 
-define i32 @PR39657(i8* %p, i64 %x) {
+define i32 @PR39657(ptr %p, i64 %x) {
 ; X86-LABEL: PR39657:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -506,9 +506,8 @@ define i32 @PR39657(i8* %p, i64 %x) {
 ; X64-WIN-NEXT:    retq
   %sh = shl i64 %x, 2
   %mul = xor i64 %sh, -4
-  %add.ptr = getelementptr inbounds i8, i8* %p, i64 %mul
-  %bc = bitcast i8* %add.ptr to i32*
-  %load = load i32, i32* %bc, align 4
+  %add.ptr = getelementptr inbounds i8, ptr %p, i64 %mul
+  %load = load i32, ptr %add.ptr, align 4
   ret i32 %load
 }
 

@@ -16,7 +16,7 @@
 
 define zeroext i1 @unsigned_i1() {
 entry:
-  %0 = load i32, i32* @x
+  %0 = load i32, ptr @x
   %cmp = icmp eq i32 %0, 42
   ret i1 %cmp
 
@@ -29,7 +29,7 @@ entry:
 
 define zeroext i8 @unsigned_i8() {
 entry:
-  %0 = load i32, i32* @x
+  %0 = load i32, ptr @x
   %cmp = icmp eq i32 %0, 42
   %retval = zext i1 %cmp to i8
   ret i8 %retval
@@ -50,7 +50,7 @@ entry:
 
 define signext i8 @signed_i8() {
 entry:
-  %0 = load i32, i32* @x
+  %0 = load i32, ptr @x
   %cmp = icmp eq i32 %0, 42
   %retval = zext i1 %cmp to i8
   ret i8 %retval
@@ -73,8 +73,8 @@ entry:
 @b = common global i16 0
 define zeroext i16 @unsigned_i16() {
 entry:
-  %0 = load i16, i16* @a
-  %1 = load i16, i16* @b
+  %0 = load i16, ptr @a
+  %1 = load i16, ptr @b
   %add = add i16 %1, %0
   ret i16 %add
 

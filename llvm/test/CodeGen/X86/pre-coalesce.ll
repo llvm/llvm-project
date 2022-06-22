@@ -17,15 +17,15 @@
 ;
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 
-@b = common local_unnamed_addr global i8* null, align 8
+@b = common local_unnamed_addr global ptr null, align 8
 @a = common local_unnamed_addr global i32 0, align 4
 
 define i32 @foo() local_unnamed_addr {
 entry:
-  %t0 = load i8*, i8** @b, align 8
-  %t1 = load i8, i8* %t0, align 1
+  %t0 = load ptr, ptr @b, align 8
+  %t1 = load i8, ptr %t0, align 1
   %cmp4 = icmp eq i8 %t1, 0
-  %t2 = load i32, i32* @a, align 4
+  %t2 = load i32, ptr @a, align 4
   br i1 %cmp4, label %while.end, label %while.body.preheader
 
 while.body.preheader:                             ; preds = %entry
@@ -37,8 +37,8 @@ while.body:                                       ; preds = %while.body.preheade
   %conv = sext i8 %t4 to i32
   %add = mul i32 %t3, 33
   %add3 = add nsw i32 %add, %conv
-  store i32 %add3, i32* @a, align 4
-  %t5 = load i8, i8* %t0, align 1
+  store i32 %add3, ptr @a, align 4
+  %t5 = load i8, ptr %t0, align 1
   %cmp = icmp eq i8 %t5, 0
   br i1 %cmp, label %while.end.loopexit, label %while.body
 

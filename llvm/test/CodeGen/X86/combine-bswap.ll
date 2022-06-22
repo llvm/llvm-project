@@ -171,7 +171,7 @@ define i32 @test_demandedbits_bswap(i32 %a0) nounwind {
   ret i32 %d
 }
 
-define void @demand_one_loaded_byte(i64* %xp, i32* %yp) {
+define void @demand_one_loaded_byte(ptr %xp, ptr %yp) {
 ; X86-LABEL: demand_one_loaded_byte:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -185,15 +185,15 @@ define void @demand_one_loaded_byte(i64* %xp, i32* %yp) {
 ; X64-NEXT:    movb 4(%rdi), %al
 ; X64-NEXT:    movb %al, (%rsi)
 ; X64-NEXT:    retq
-  %x = load i64, i64* %xp, align 8
+  %x = load i64, ptr %xp, align 8
   %x_zzzz7654 = lshr i64 %x, 32
   %x_z7654zzz = shl nuw nsw i64 %x_zzzz7654, 24
   %x_4zzz = trunc i64 %x_z7654zzz to i32
-  %y = load i32, i32* %yp, align 4
+  %y = load i32, ptr %yp, align 4
   %y_321z = and i32 %y, -256
   %x_zzz4 = call i32 @llvm.bswap.i32(i32 %x_4zzz)
   %r = or i32 %x_zzz4, %y_321z
-  store i32 %r, i32* %yp, align 4
+  store i32 %r, ptr %yp, align 4
   ret void
 }
 
@@ -279,7 +279,7 @@ define i64 @test_bswap64_shift17(i64 %a0) {
 }
 
 ; negative test
-define i64 @test_bswap64_shift48_multiuse(i64 %a0, i64* %a1) {
+define i64 @test_bswap64_shift48_multiuse(i64 %a0, ptr %a1) {
 ; X86-LABEL: test_bswap64_shift48_multiuse:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
@@ -302,6 +302,6 @@ define i64 @test_bswap64_shift48_multiuse(i64 %a0, i64* %a1) {
   %s = shl i64 %a0, 48
   %b = call i64 @llvm.bswap.i64(i64 %s)
   %a = add i64 %s, %b
-  store i64 %a, i64* %a1
+  store i64 %a, ptr %a1
   ret i64 %b
 }

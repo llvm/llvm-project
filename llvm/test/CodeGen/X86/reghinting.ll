@@ -13,7 +13,7 @@
 ; CHECK-NEXT: cvtss2sd
 ; CHECK-NEXT: finit
 
-define i32 @pr10221(float %x, float %y, i8** nocapture %_retval) nounwind uwtable ssp {
+define i32 @pr10221(float %x, float %y, ptr nocapture %_retval) nounwind uwtable ssp {
 entry:
   %add = fadd float %x, %y
   %conv = fpext float %add to double

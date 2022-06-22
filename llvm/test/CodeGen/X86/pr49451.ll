@@ -94,12 +94,12 @@ cond.false1514:                                   ; preds = %if.end1510
 cond.end1528:                                     ; preds = %cond.false1514, %if.end1510
   %cond1529 = phi i64 [ %add1526, %cond.false1514 ], [ undef, %if.end1510 ]
   %conv1532 = add i16 %i1, %i
-  store i16 %conv1532, i16* @s_2, align 2
+  store i16 %conv1532, ptr @s_2, align 2
   br label %for.inc1677
 
 for.inc1677:                                      ; preds = %cond.end1528
   %add1679 = add i16 %i2, 1
-  store i16 %add1679, i16* @s_0, align 2
+  store i16 %add1679, ptr @s_0, align 2
   %cmp610 = icmp slt i16 %add1679, 73
   br i1 %cmp610, label %for.body612, label %for.body1703
 

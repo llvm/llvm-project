@@ -1087,16 +1087,15 @@ entry:
   ret i64 %5
 }
 
-declare void @llvm.x86.mmx.movnt.dq(x86_mmx*, x86_mmx) nounwind
+declare void @llvm.x86.mmx.movnt.dq(ptr, x86_mmx) nounwind
 
-define void @test25(<1 x i64>* %p, <1 x i64> %a) nounwind optsize ssp {
+define void @test25(ptr %p, <1 x i64> %a) nounwind optsize ssp {
 ; ALL-LABEL: @test25
 ; ALL: movntq
 entry:
-  %mmx_ptr_var.i = bitcast <1 x i64>* %p to x86_mmx*
   %0 = extractelement <1 x i64> %a, i32 0
   %mmx_var.i = bitcast i64 %0 to x86_mmx
-  tail call void @llvm.x86.mmx.movnt.dq(x86_mmx* %mmx_ptr_var.i, x86_mmx %mmx_var.i) nounwind
+  tail call void @llvm.x86.mmx.movnt.dq(ptr %p, x86_mmx %mmx_var.i) nounwind
   ret void
 }
 
@@ -1112,9 +1111,9 @@ entry:
   ret i32 %1
 }
 
-declare void @llvm.x86.mmx.maskmovq(x86_mmx, x86_mmx, i8*) nounwind
+declare void @llvm.x86.mmx.maskmovq(x86_mmx, x86_mmx, ptr) nounwind
 
-define void @test23(<1 x i64> %d, <1 x i64> %n, i8* %p) nounwind optsize ssp {
+define void @test23(<1 x i64> %d, <1 x i64> %n, ptr %p) nounwind optsize ssp {
 ; ALL-LABEL: @test23
 ; ALL: maskmovq
 entry:
@@ -1122,7 +1121,7 @@ entry:
   %1 = bitcast <1 x i64> %d to <8 x i8>
   %mmx_var.i = bitcast <8 x i8> %1 to x86_mmx
   %mmx_var1.i = bitcast <8 x i8> %0 to x86_mmx
-  tail call void @llvm.x86.mmx.maskmovq(x86_mmx %mmx_var.i, x86_mmx %mmx_var1.i, i8* %p) nounwind
+  tail call void @llvm.x86.mmx.maskmovq(x86_mmx %mmx_var.i, x86_mmx %mmx_var1.i, ptr %p) nounwind
   ret void
 }
 

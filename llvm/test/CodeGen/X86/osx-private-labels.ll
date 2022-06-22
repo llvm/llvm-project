@@ -16,8 +16,8 @@
 
 ; There is no dedicated 4 byte strings on MachO.
 
-%struct.NSConstantString = type { i32*, i32, i8*, i32 }
-@private3 = private constant %struct.NSConstantString { i32* null, i32 1992, i8* null, i32 0 }, section "__DATA,__cfstring"
+%struct.NSConstantString = type { ptr, i32, ptr, i32 }
+@private3 = private constant %struct.NSConstantString { ptr null, i32 1992, ptr null, i32 0 }, section "__DATA,__cfstring"
 ; CHECK: .section	__DATA,__cfstring
 ; CHECK-NEXT: .p2align	4
 ; CHECK-NEXT: L_private3:
@@ -39,33 +39,33 @@
 ; CHECK-NEXT: .p2align	3
 ; CHECK-NEXT: L_private6:
 
-%struct._objc_class = type { i8* }
-@private7 = private global %struct._objc_class* null, section "__OBJC,__cls_refs,literal_pointers,no_dead_strip"
+%struct._objc_class = type { ptr }
+@private7 = private global ptr null, section "__OBJC,__cls_refs,literal_pointers,no_dead_strip"
 ; CHECK: .section	__OBJC,__cls_refs,literal_pointers,no_dead_strip
 ; CHECK: .p2align	3
 ; CHECK: L_private7:
 
-@private8 = private global i32* null, section "__DATA,__nl_symbol_ptr,non_lazy_symbol_pointers"
+@private8 = private global ptr null, section "__DATA,__nl_symbol_ptr,non_lazy_symbol_pointers"
 ; CHECK: .section	__DATA,__nl_symbol_ptr,non_lazy_symbol_pointers
 ; CHECK-NEXT: .p2align	3
 ; CHECK-NEXT: L_private8:
 
-@private9 = private global i32* null, section "__DATA,__la_symbol_ptr,lazy_symbol_pointers"
+@private9 = private global ptr null, section "__DATA,__la_symbol_ptr,lazy_symbol_pointers"
 ; CHECK: .section	__DATA,__la_symbol_ptr,lazy_symbol_pointers
 ; CHECK-NEXT: .p2align	3
 ; CHECK-NEXT: L_private9:
 
-@private10 = private global i32* null, section "__DATA,__mod_init_func,mod_init_funcs"
+@private10 = private global ptr null, section "__DATA,__mod_init_func,mod_init_funcs"
 ; CHECK: .section	__DATA,__mod_init_func,mod_init_funcs
 ; CHECK-NEXT: .p2align	3
 ; CHECK-NEXT: L_private10:
 
-@private11 = private global i32* null, section "__DATA,__mod_term_func,mod_term_funcs"
+@private11 = private global ptr null, section "__DATA,__mod_term_func,mod_term_funcs"
 ; CHECK: .section	__DATA,__mod_term_func,mod_term_funcs
 ; CHECK-NEXT: .p2align	3
 ; CHECK-NEXT: L_private11:
 
-@private12 = private global i32* null, section "__DATA,__foobar,interposing"
+@private12 = private global ptr null, section "__DATA,__foobar,interposing"
 ; CHECK: .section	__DATA,__foobar,interposing
 ; CHECK-NEXT: .p2align	3
 ; CHECK-NEXT: L_private12:

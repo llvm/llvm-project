@@ -22,14 +22,14 @@ entry:
   %a1 = alloca i32
   %a2 = alloca i32
   %a3 = alloca i32
-  store i32 %b, i32* %a1
-  store i32 %d, i32* %a3
-  store i32 %a, i32* %a0
-  store i32 %c, i32* %a2
-  %l0 = load i32, i32* %a0
-  %l1 = load i32, i32* %a1
-  %l2 = load i32, i32* %a2
-  %l3 = load i32, i32* %a3
+  store i32 %b, ptr %a1
+  store i32 %d, ptr %a3
+  store i32 %a, ptr %a0
+  store i32 %c, ptr %a2
+  %l0 = load i32, ptr %a0
+  %l1 = load i32, ptr %a1
+  %l2 = load i32, ptr %a2
+  %l3 = load i32, ptr %a3
   %add0 = add nsw i32 %l0, %l1
   %add1 = add nsw i32 %add0, %l2
   %add2 = add nsw i32 %add1, %l3

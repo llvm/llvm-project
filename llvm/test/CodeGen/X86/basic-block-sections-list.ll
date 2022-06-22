@@ -8,8 +8,8 @@ define i32 @_Z3foob(i1 zeroext %0) nounwind {
   %2 = alloca i32, align 4
   %3 = alloca i8, align 1
   %4 = zext i1 %0 to i8
-  store i8 %4, i8* %3, align 1
-  %5 = load i8, i8* %3, align 1
+  store i8 %4, ptr %3, align 1
+  %5 = load i8, ptr %3, align 1
   %6 = trunc i8 %5 to i1
   %7 = zext i1 %6 to i32
   %8 = icmp sgt i32 %7, 0
@@ -17,16 +17,16 @@ define i32 @_Z3foob(i1 zeroext %0) nounwind {
 
 9:                                                ; preds = %1
   %10 = call i32 @_Z3barv()
-  store i32 %10, i32* %2, align 4
+  store i32 %10, ptr %2, align 4
   br label %13
 
 11:                                               ; preds = %1
   %12 = call i32 @_Z3bazv()
-  store i32 %12, i32* %2, align 4
+  store i32 %12, ptr %2, align 4
   br label %13
 
 13:                                               ; preds = %11, %9
-  %14 = load i32, i32* %2, align 4
+  %14 = load i32, ptr %2, align 4
   ret i32 %14
 }
 
@@ -37,8 +37,8 @@ define i32 @_Z3zipb(i1 zeroext %0) nounwind {
   %2 = alloca i32, align 4
   %3 = alloca i8, align 1
   %4 = zext i1 %0 to i8
-  store i8 %4, i8* %3, align 1
-  %5 = load i8, i8* %3, align 1
+  store i8 %4, ptr %3, align 1
+  %5 = load i8, ptr %3, align 1
   %6 = trunc i8 %5 to i1
   %7 = zext i1 %6 to i32
   %8 = icmp sgt i32 %7, 0
@@ -46,16 +46,16 @@ define i32 @_Z3zipb(i1 zeroext %0) nounwind {
 
 9:                                                ; preds = %1
   %10 = call i32 @_Z3barv()
-  store i32 %10, i32* %2, align 4
+  store i32 %10, ptr %2, align 4
   br label %13
 
 11:                                               ; preds = %1
   %12 = call i32 @_Z3bazv()
-  store i32 %12, i32* %2, align 4
+  store i32 %12, ptr %2, align 4
   br label %13
 
 13:                                               ; preds = %11, %9
-  %14 = load i32, i32* %2, align 4
+  %14 = load i32, ptr %2, align 4
   ret i32 %14
 }
 

@@ -42,7 +42,7 @@ define <8 x float> @blendvb_fallback_v8f32(<8 x i1> %mask, <8 x float> %x, <8 x 
 
 declare <4 x float> @llvm.x86.sse41.insertps(<4 x float>, <4 x float>, i32) nounwind readnone
 
-define <4 x float> @insertps_from_vector_load(<4 x float> %a, <4 x float>* nocapture readonly %pb) {
+define <4 x float> @insertps_from_vector_load(<4 x float> %a, ptr nocapture readonly %pb) {
 ; X86-LABEL: insertps_from_vector_load:
 ; X86:       ## %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -53,13 +53,13 @@ define <4 x float> @insertps_from_vector_load(<4 x float> %a, <4 x float>* nocap
 ; X64:       ## %bb.0:
 ; X64-NEXT:    vinsertps $48, (%rdi), %xmm0, %xmm0 ## xmm0 = xmm0[0,1,2],mem[0]
 ; X64-NEXT:    retq
-  %1 = load <4 x float>, <4 x float>* %pb, align 16
+  %1 = load <4 x float>, ptr %pb, align 16
   %2 = tail call <4 x float> @llvm.x86.sse41.insertps(<4 x float> %a, <4 x float> %1, i32 48)
   ret <4 x float> %2
 }
 
 ;; Use a non-zero CountS for insertps
-define <4 x float> @insertps_from_vector_load_offset(<4 x float> %a, <4 x float>* nocapture readonly %pb) {
+define <4 x float> @insertps_from_vector_load_offset(<4 x float> %a, ptr nocapture readonly %pb) {
 ; X86-LABEL: insertps_from_vector_load_offset:
 ; X86:       ## %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -70,12 +70,12 @@ define <4 x float> @insertps_from_vector_load_offset(<4 x float> %a, <4 x float>
 ; X64:       ## %bb.0:
 ; X64-NEXT:    vinsertps $32, 4(%rdi), %xmm0, %xmm0 ## xmm0 = xmm0[0,1],mem[0],xmm0[3]
 ; X64-NEXT:    retq
-  %1 = load <4 x float>, <4 x float>* %pb, align 16
+  %1 = load <4 x float>, ptr %pb, align 16
   %2 = tail call <4 x float> @llvm.x86.sse41.insertps(<4 x float> %a, <4 x float> %1, i32 96)
   ret <4 x float> %2
 }
 
-define <4 x float> @insertps_from_vector_load_offset_2(<4 x float> %a, <4 x float>* nocapture readonly %pb, i64 %index) {
+define <4 x float> @insertps_from_vector_load_offset_2(<4 x float> %a, ptr nocapture readonly %pb, i64 %index) {
 ; X86-LABEL: insertps_from_vector_load_offset_2:
 ; X86:       ## %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -89,13 +89,13 @@ define <4 x float> @insertps_from_vector_load_offset_2(<4 x float> %a, <4 x floa
 ; X64-NEXT:    shlq $4, %rsi
 ; X64-NEXT:    vinsertps $0, 12(%rdi,%rsi), %xmm0, %xmm0 ## xmm0 = mem[0],xmm0[1,2,3]
 ; X64-NEXT:    retq
-  %1 = getelementptr inbounds <4 x float>, <4 x float>* %pb, i64 %index
-  %2 = load <4 x float>, <4 x float>* %1, align 16
+  %1 = getelementptr inbounds <4 x float>, ptr %pb, i64 %index
+  %2 = load <4 x float>, ptr %1, align 16
   %3 = tail call <4 x float> @llvm.x86.sse41.insertps(<4 x float> %a, <4 x float> %2, i32 192)
   ret <4 x float> %3
 }
 
-define <4 x float> @insertps_from_broadcast_loadf32(<4 x float> %a, float* nocapture readonly %fb, i64 %index) {
+define <4 x float> @insertps_from_broadcast_loadf32(<4 x float> %a, ptr nocapture readonly %fb, i64 %index) {
 ; X86-LABEL: insertps_from_broadcast_loadf32:
 ; X86:       ## %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -107,8 +107,8 @@ define <4 x float> @insertps_from_broadcast_loadf32(<4 x float> %a, float* nocap
 ; X64:       ## %bb.0:
 ; X64-NEXT:    vinsertps $48, (%rdi,%rsi,4), %xmm0, %xmm0 ## xmm0 = xmm0[0,1,2],mem[0]
 ; X64-NEXT:    retq
-  %1 = getelementptr inbounds float, float* %fb, i64 %index
-  %2 = load float, float* %1, align 4
+  %1 = getelementptr inbounds float, ptr %fb, i64 %index
+  %2 = load float, ptr %1, align 4
   %3 = insertelement <4 x float> undef, float %2, i32 0
   %4 = insertelement <4 x float> %3, float %2, i32 1
   %5 = insertelement <4 x float> %4, float %2, i32 2
@@ -117,7 +117,7 @@ define <4 x float> @insertps_from_broadcast_loadf32(<4 x float> %a, float* nocap
   ret <4 x float> %7
 }
 
-define <4 x float> @insertps_from_broadcast_loadv4f32(<4 x float> %a, <4 x float>* nocapture readonly %b) {
+define <4 x float> @insertps_from_broadcast_loadv4f32(<4 x float> %a, ptr nocapture readonly %b) {
 ; X86-LABEL: insertps_from_broadcast_loadv4f32:
 ; X86:       ## %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -128,7 +128,7 @@ define <4 x float> @insertps_from_broadcast_loadv4f32(<4 x float> %a, <4 x float
 ; X64:       ## %bb.0:
 ; X64-NEXT:    vinsertps $48, (%rdi), %xmm0, %xmm0 ## xmm0 = xmm0[0,1,2],mem[0]
 ; X64-NEXT:    retq
-  %1 = load <4 x float>, <4 x float>* %b, align 4
+  %1 = load <4 x float>, ptr %b, align 4
   %2 = extractelement <4 x float> %1, i32 0
   %3 = insertelement <4 x float> undef, float %2, i32 0
   %4 = insertelement <4 x float> %3, float %2, i32 1
@@ -138,7 +138,7 @@ define <4 x float> @insertps_from_broadcast_loadv4f32(<4 x float> %a, <4 x float
   ret <4 x float> %7
 }
 
-define <4 x float> @insertps_from_broadcast_multiple_use(<4 x float> %a, <4 x float> %b, <4 x float> %c, <4 x float> %d, float* nocapture readonly %fb, i64 %index) {
+define <4 x float> @insertps_from_broadcast_multiple_use(<4 x float> %a, <4 x float> %b, <4 x float> %c, <4 x float> %d, ptr nocapture readonly %fb, i64 %index) {
 ; X86-LABEL: insertps_from_broadcast_multiple_use:
 ; X86:       ## %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -164,8 +164,8 @@ define <4 x float> @insertps_from_broadcast_multiple_use(<4 x float> %a, <4 x fl
 ; X64-NEXT:    vaddps %xmm2, %xmm1, %xmm1
 ; X64-NEXT:    vaddps %xmm1, %xmm0, %xmm0
 ; X64-NEXT:    retq
-  %1 = getelementptr inbounds float, float* %fb, i64 %index
-  %2 = load float, float* %1, align 4
+  %1 = getelementptr inbounds float, ptr %fb, i64 %index
+  %2 = load float, ptr %1, align 4
   %3 = insertelement <4 x float> undef, float %2, i32 0
   %4 = insertelement <4 x float> %3, float %2, i32 1
   %5 = insertelement <4 x float> %4, float %2, i32 2

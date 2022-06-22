@@ -7,7 +7,7 @@
 declare dso_local void @bar(i32)
 
 ; Test a simple indirect call and tail call.
-define void @icall_reg(void (i32)* %fp, i32 %x) #0 {
+define void @icall_reg(ptr %fp, i32 %x) #0 {
 entry:
   tail call void @bar(i32 %x)
   tail call void %fp(i32 %x)
@@ -58,13 +58,13 @@ entry:
 ; X86FAST:       calll __x86_indirect_thunk_eax
 
 
-@global_fp = external dso_local global void (i32)*
+@global_fp = external dso_local global ptr
 
 ; Test an indirect call through a global variable.
-define void @icall_global_fp(i32 %x, void (i32)** %fpp) #0 {
-  %fp1 = load void (i32)*, void (i32)** @global_fp
+define void @icall_global_fp(i32 %x, ptr %fpp) #0 {
+  %fp1 = load ptr, ptr @global_fp
   call void %fp1(i32 %x)
-  %fp2 = load void (i32)*, void (i32)** @global_fp
+  %fp2 = load ptr, ptr @global_fp
   tail call void %fp2(i32 %x)
   ret void
 }
@@ -96,16 +96,15 @@ define void @icall_global_fp(i32 %x, void (i32)** %fpp) #0 {
 ; X86FAST:       jmp __x86_indirect_thunk_eax # TAILCALL
 
 
-%struct.Foo = type { void (%struct.Foo*)** }
+%struct.Foo = type { ptr }
 
 ; Test an indirect call through a vtable.
-define void @vcall(%struct.Foo* %obj) #0 {
-  %vptr_field = getelementptr %struct.Foo, %struct.Foo* %obj, i32 0, i32 0
-  %vptr = load void (%struct.Foo*)**, void (%struct.Foo*)*** %vptr_field
-  %vslot = getelementptr void(%struct.Foo*)*, void(%struct.Foo*)** %vptr, i32 1
-  %fp = load void(%struct.Foo*)*, void(%struct.Foo*)** %vslot
-  tail call void %fp(%struct.Foo* %obj)
-  tail call void %fp(%struct.Foo* %obj)
+define void @vcall(ptr %obj) #0 {
+  %vptr = load ptr, ptr %obj
+  %vslot = getelementptr ptr, ptr %vptr, i32 1
+  %fp = load ptr, ptr %vslot
+  tail call void %fp(ptr %obj)
+  tail call void %fp(ptr %obj)
   ret void
 }
 

@@ -5,7 +5,7 @@ target triple = "i386-unknown-linux-code16"
 ; Function Attrs: nounwind
 define i32 @main() #0 {
   %retval = alloca i32, align 4
-  store i32 0, i32* %retval, align 4
+  store i32 0, ptr %retval, align 4
   ret i32 0
 }
 

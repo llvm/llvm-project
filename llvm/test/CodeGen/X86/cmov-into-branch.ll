@@ -2,14 +2,14 @@
 ; RUN: llc -mtriple=x86_64-unknown-unknown < %s | FileCheck %s
 
 ; cmp with single-use load, should not form branch.
-define i32 @test1(double %a, double* nocapture %b, i32 %x, i32 %y)  {
+define i32 @test1(double %a, ptr nocapture %b, i32 %x, i32 %y)  {
 ; CHECK-LABEL: test1:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movl %esi, %eax
 ; CHECK-NEXT:    ucomisd (%rdi), %xmm0
 ; CHECK-NEXT:    cmovbel %edx, %eax
 ; CHECK-NEXT:    retq
-  %load = load double, double* %b, align 8
+  %load = load double, ptr %b, align 8
   %cmp = fcmp olt double %load, %a
   %cond = select i1 %cmp, i32 %x, i32 %y
   ret i32 %cond
@@ -29,7 +29,7 @@ define i32 @test2(double %a, double %b, i32 %x, i32 %y)  {
 }
 
 ; Multiple uses of the load.
-define i32 @test4(i32 %a, i32* nocapture %b, i32 %x, i32 %y)  {
+define i32 @test4(i32 %a, ptr nocapture %b, i32 %x, i32 %y)  {
 ; CHECK-LABEL: test4:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movl (%rsi), %eax
@@ -37,7 +37,7 @@ define i32 @test4(i32 %a, i32* nocapture %b, i32 %x, i32 %y)  {
 ; CHECK-NEXT:    cmovael %ecx, %edx
 ; CHECK-NEXT:    addl %edx, %eax
 ; CHECK-NEXT:    retq
-  %load = load i32, i32* %b, align 4
+  %load = load i32, ptr %b, align 4
   %cmp = icmp ult i32 %load, %a
   %cond = select i1 %cmp, i32 %x, i32 %y
   %add = add i32 %cond, %load
@@ -45,7 +45,7 @@ define i32 @test4(i32 %a, i32* nocapture %b, i32 %x, i32 %y)  {
 }
 
 ; Multiple uses of the cmp.
-define i32 @test5(i32 %a, i32* nocapture %b, i32 %x, i32 %y) {
+define i32 @test5(i32 %a, ptr nocapture %b, i32 %x, i32 %y) {
 ; CHECK-LABEL: test5:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movl %ecx, %eax
@@ -53,7 +53,7 @@ define i32 @test5(i32 %a, i32* nocapture %b, i32 %x, i32 %y) {
 ; CHECK-NEXT:    cmoval %edi, %eax
 ; CHECK-NEXT:    cmovael %edx, %eax
 ; CHECK-NEXT:    retq
-  %load = load i32, i32* %b, align 4
+  %load = load i32, ptr %b, align 4
   %cmp = icmp ult i32 %load, %a
   %cmp1 = icmp ugt i32 %load, %a
   %cond = select i1 %cmp1, i32 %a, i32 %y
@@ -62,7 +62,7 @@ define i32 @test5(i32 %a, i32* nocapture %b, i32 %x, i32 %y) {
 }
 
 ; Zero-extended select.
-define void @test6(i32 %a, i32 %x, i32* %y.ptr, i64* %z.ptr) {
+define void @test6(i32 %a, i32 %x, ptr %y.ptr, ptr %z.ptr) {
 ; CHECK-LABEL: test6:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    # kill: def $esi killed $esi def $rsi
@@ -71,11 +71,11 @@ define void @test6(i32 %a, i32 %x, i32* %y.ptr, i64* %z.ptr) {
 ; CHECK-NEXT:    movq %rsi, (%rcx)
 ; CHECK-NEXT:    retq
 entry:
-  %y = load i32, i32* %y.ptr
+  %y = load i32, ptr %y.ptr
   %cmp = icmp slt i32 %a, 0
   %z = select i1 %cmp, i32 %x, i32 %y
   %z.ext = zext i32 %z to i64
-  store i64 %z.ext, i64* %z.ptr
+  store i64 %z.ext, ptr %z.ptr
   ret void
 }
 

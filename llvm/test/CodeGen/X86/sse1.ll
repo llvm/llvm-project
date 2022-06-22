@@ -41,7 +41,7 @@ entry:
 ; condition operand and widening the resulting vselect for the v4f32 result.
 ; PR18036
 
-define <4 x float> @vselect(<4 x float>*%p, <4 x i32> %q) {
+define <4 x float> @vselect(ptr%p, <4 x i32> %q) {
 ; X86-LABEL: vselect:
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    cmpl $0, {{[0-9]+}}(%esp)

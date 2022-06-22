@@ -143,24 +143,22 @@ define void @_Z1fe(x86_fp80 %z) local_unnamed_addr #0 {
 ; AVX-NEXT:    retq
 entry:
   %tx = alloca [3 x double], align 16
-  %0 = bitcast [3 x double]* %tx to i8*
   %conv = fptosi x86_fp80 %z to i32
   %conv1 = sitofp i32 %conv to double
-  %arrayidx = getelementptr inbounds [3 x double], [3 x double]* %tx, i64 0, i64 0
-  store double %conv1, double* %arrayidx, align 16
+  store double %conv1, ptr %tx, align 16
   %conv4 = fpext double %conv1 to x86_fp80
   %sub = fsub x86_fp80 %z, %conv4
   %mul = fmul x86_fp80 %sub, 0xK40178000000000000000
   %conv.1 = fptosi x86_fp80 %mul to i32
   %conv1.1 = sitofp i32 %conv.1 to double
-  %arrayidx.1 = getelementptr inbounds [3 x double], [3 x double]* %tx, i64 0, i64 1
-  store double %conv1.1, double* %arrayidx.1, align 8
+  %arrayidx.1 = getelementptr inbounds [3 x double], ptr %tx, i64 0, i64 1
+  store double %conv1.1, ptr %arrayidx.1, align 8
   %conv4.1 = fpext double %conv1.1 to x86_fp80
   %sub.1 = fsub x86_fp80 %mul, %conv4.1
   %mul.1 = fmul x86_fp80 %sub.1, 0xK40178000000000000000
   %conv5 = fptrunc x86_fp80 %mul.1 to double
-  %arrayidx6 = getelementptr inbounds [3 x double], [3 x double]* %tx, i64 0, i64 2
-  store double %conv5, double* %arrayidx6, align 16
+  %arrayidx6 = getelementptr inbounds [3 x double], ptr %tx, i64 0, i64 2
+  store double %conv5, ptr %arrayidx6, align 16
   ret void
 }
 

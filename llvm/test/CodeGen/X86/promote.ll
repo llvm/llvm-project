@@ -2,7 +2,7 @@
 ; RUN: llc < %s -mtriple=i686-unknown-linux-gnu -mcpu=corei7 | FileCheck %s --check-prefixes=CHECK,X86
 ; RUN: llc < %s -mtriple=x86_64-unknown-linux-gnu -mcpu=corei7 | FileCheck %s --check-prefixes=CHECK,X64
 
-define i32 @mul_f(<4 x i8>* %A) {
+define i32 @mul_f(ptr %A) {
 ; X86-LABEL: mul_f:
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -23,13 +23,13 @@ define i32 @mul_f(<4 x i8>* %A) {
 ; X64-NEXT:    xorl %eax, %eax
 ; X64-NEXT:    retq
 entry:
-  %0 = load <4 x i8>, <4 x i8>* %A, align 8
+  %0 = load <4 x i8>, ptr %A, align 8
   %mul = mul <4 x i8> %0, %0
-  store <4 x i8> %mul, <4 x i8>* undef
+  store <4 x i8> %mul, ptr undef
   ret i32 0
 }
 
-define i32 @shuff_f(<4 x i8>* %A) {
+define i32 @shuff_f(ptr %A) {
 ; X86-LABEL: shuff_f:
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -47,9 +47,9 @@ define i32 @shuff_f(<4 x i8>* %A) {
 ; X64-NEXT:    xorl %eax, %eax
 ; X64-NEXT:    retq
 entry:
-  %0 = load <4 x i8>, <4 x i8>* %A, align 8
+  %0 = load <4 x i8>, ptr %A, align 8
   %add = add <4 x i8> %0, %0
-  store <4 x i8> %add, <4 x i8>* undef
+  store <4 x i8> %add, ptr undef
   ret i32 0
 }
 

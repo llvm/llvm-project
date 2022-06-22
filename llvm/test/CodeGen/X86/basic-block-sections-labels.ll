@@ -3,7 +3,7 @@
 ; RUN: llc < %s -mtriple=x86_64 -function-sections -unique-section-names=false -basic-block-sections=labels | FileCheck %s --check-prefixes=CHECK,NOUNIQ
 ; RUN: llc < %s -mtriple=x86_64 -function-sections -unique-section-names=true -basic-block-sections=labels -split-machine-functions | FileCheck %s --check-prefixes=CHECK,UNIQ
 
-define void @_Z3bazb(i1 zeroext) personality i32 (...)* @__gxx_personality_v0 {
+define void @_Z3bazb(i1 zeroext) personality ptr @__gxx_personality_v0 {
   br i1 %0, label %2, label %7
 
 2:
@@ -12,8 +12,8 @@ define void @_Z3bazb(i1 zeroext) personality i32 (...)* @__gxx_personality_v0 {
   br label %9
 
 5:
-  landingpad { i8*, i32 }
-          catch i8* null
+  landingpad { ptr, i32 }
+          catch ptr null
   br label %9
 
 7:

@@ -5,7 +5,7 @@
 ; RUN: llc < %s -mtriple=x86_64-- -mattr=avx2    | FileCheck %s --check-prefixes=AVX,AVX2
 ; RUN: llc < %s -mtriple=x86_64-- -mattr=avx512f | FileCheck %s --check-prefixes=AVX,AVX512F
 
-define void @foo(<4 x float> %in, <4 x i8>* %out) {
+define void @foo(<4 x float> %in, ptr %out) {
 ; SSE2-LABEL: foo:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    cvttps2dq %xmm0, %xmm0
@@ -44,7 +44,7 @@ define void @foo(<4 x float> %in, <4 x i8>* %out) {
   %t3 = trunc <8 x i16> %t2 to <8 x i8>
   %t4 = shufflevector <8 x i8> %t3, <8 x i8> undef, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
   %t5 = insertelement <4 x i8> %t4, i8 -1, i32 3
-  store <4 x i8> %t5, <4 x i8>* %out
+  store <4 x i8> %t5, ptr %out
   ret void
 }
 
@@ -101,7 +101,7 @@ define <16 x i64> @catcat(<4 x i64> %x) {
   ret  <16 x i64> %r
 }
 
-define <16 x i64> @load_catcat(<4 x i64>* %p) {
+define <16 x i64> @load_catcat(ptr %p) {
 ; SSE-LABEL: load_catcat:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    movq %rdi, %rax
@@ -145,7 +145,7 @@ define <16 x i64> @load_catcat(<4 x i64>* %p) {
 ; AVX512F-NEXT:    vmovdqa64 {{.*#+}} zmm2 = [2,6,2,6,3,7,3,7]
 ; AVX512F-NEXT:    vpermq %zmm1, %zmm2, %zmm1
 ; AVX512F-NEXT:    retq
-  %x = load <4 x i64>, <4 x i64>* %p
+  %x = load <4 x i64>, ptr %p
   %cat1 = shufflevector <4 x i64> %x, <4 x i64> undef, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 0, i32 1, i32 2, i32 3>
   %cat2 = shufflevector <8 x i64> %cat1, <8 x i64> undef, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
   %r = shufflevector <16 x i64> %cat2, <16 x i64> undef, <16 x i32> <i32 0, i32 4, i32 8, i32 12, i32 1, i32 5, i32 9, i32 13, i32 2, i32 6, i32 10, i32 14, i32 3, i32 7, i32 11, i32 15>
@@ -155,7 +155,7 @@ define <16 x i64> @load_catcat(<4 x i64>* %p) {
 ; Use weird types to make sure we do not miscompile a case where
 ; the source ops are not an even multiple size of the result.
 
-define <4 x i32> @cat_ext_straddle(<6 x i32>* %px, <6 x i32>* %py) {
+define <4 x i32> @cat_ext_straddle(ptr %px, ptr %py) {
 ; SSE-LABEL: cat_ext_straddle:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    movaps 16(%rdi), %xmm0
@@ -167,8 +167,8 @@ define <4 x i32> @cat_ext_straddle(<6 x i32>* %px, <6 x i32>* %py) {
 ; AVX-NEXT:    vmovaps 16(%rdi), %xmm0
 ; AVX-NEXT:    vunpcklpd {{.*#+}} xmm0 = xmm0[0],mem[0]
 ; AVX-NEXT:    retq
-  %x = load <6 x i32>, <6 x i32>* %px
-  %y = load <6 x i32>, <6 x i32>* %py
+  %x = load <6 x i32>, ptr %px
+  %y = load <6 x i32>, ptr %py
   %cat = shufflevector <6 x i32> %x, <6 x i32> %y, <12 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11>
   %ext = shufflevector <12 x i32> %cat, <12 x i32> undef, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
   ret <4 x i32> %ext

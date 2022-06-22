@@ -6,12 +6,12 @@ target triple = "x86_64--"
 ; CHECK: error: couldn't allocate input reg for constraint 'x'
 define i32 @main() {
 entry:
-  %0 = load i32, i32* @a, align 4
+  %0 = load i32, ptr @a, align 4
   %cmp = icmp ne i32 %0, 0
   %1 = call { i32, i32 } asm "", "={ax},={dx},x,~{dirflag},~{fpsr},~{flags}"(i1 %cmp)
   %asmresult = extractvalue { i32, i32 } %1, 0
   %asmresult1 = extractvalue { i32, i32 } %1, 1
-  store i32 %asmresult, i32* @a, align 4
-  store i32 %asmresult1, i32* @a, align 4
+  store i32 %asmresult, ptr @a, align 4
+  store i32 %asmresult1, ptr @a, align 4
   ret i32 0
 }

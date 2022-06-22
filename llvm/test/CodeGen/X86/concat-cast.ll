@@ -404,7 +404,7 @@ define <4 x float> @mismatch_tofp_v4i32_v4f32(<2 x i32> %x, <2 x i32> %y) {
 
 ; Negative test
 
-define <4 x float> @sitofp_v4i32_v4f32_extra_use(<2 x i32> %x, <2 x i32> %y, <2 x float>* %p) {
+define <4 x float> @sitofp_v4i32_v4f32_extra_use(<2 x i32> %x, <2 x i32> %y, ptr %p) {
 ; SSE-LABEL: sitofp_v4i32_v4f32_extra_use:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    cvtdq2ps %xmm0, %xmm0
@@ -422,7 +422,7 @@ define <4 x float> @sitofp_v4i32_v4f32_extra_use(<2 x i32> %x, <2 x i32> %y, <2 
 ; AVX-NEXT:    retq
   %s0 = sitofp <2 x i32> %x to <2 x float>
   %s1 = sitofp <2 x i32> %y to <2 x float>
-  store <2 x float> %s1, <2 x float>* %p
+  store <2 x float> %s1, ptr %p
   %r = shufflevector <2 x float> %s0, <2 x float> %s1, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
   ret <4 x float> %r
 }

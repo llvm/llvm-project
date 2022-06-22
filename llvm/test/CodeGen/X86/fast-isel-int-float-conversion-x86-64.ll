@@ -19,7 +19,7 @@ entry:
   ret double %0
 }
 
-define double @long_to_double_rm(i64* %a) {
+define double @long_to_double_rm(ptr %a) {
 ; SSE2-LABEL: long_to_double_rm:
 ; SSE2:       # %bb.0: # %entry
 ; SSE2-NEXT:    cvtsi2sdq (%rdi), %xmm0
@@ -30,12 +30,12 @@ define double @long_to_double_rm(i64* %a) {
 ; AVX-NEXT:    vcvtsi2sdq (%rdi), %xmm0, %xmm0
 ; AVX-NEXT:    retq
 entry:
-  %0 = load i64, i64* %a
+  %0 = load i64, ptr %a
   %1 = sitofp i64 %0 to double
   ret double %1
 }
 
-define double @long_to_double_rm_optsize(i64* %a) optsize {
+define double @long_to_double_rm_optsize(ptr %a) optsize {
 ; SSE2-LABEL: long_to_double_rm_optsize:
 ; SSE2:       # %bb.0: # %entry
 ; SSE2-NEXT:    cvtsi2sdq (%rdi), %xmm0
@@ -46,7 +46,7 @@ define double @long_to_double_rm_optsize(i64* %a) optsize {
 ; AVX-NEXT:    vcvtsi2sdq (%rdi), %xmm0, %xmm0
 ; AVX-NEXT:    retq
 entry:
-  %0 = load i64, i64* %a
+  %0 = load i64, ptr %a
   %1 = sitofp i64 %0 to double
   ret double %1
 }
@@ -66,7 +66,7 @@ entry:
   ret float %0
 }
 
-define float @long_to_float_rm(i64* %a) {
+define float @long_to_float_rm(ptr %a) {
 ; SSE2-LABEL: long_to_float_rm:
 ; SSE2:       # %bb.0: # %entry
 ; SSE2-NEXT:    cvtsi2ssq (%rdi), %xmm0
@@ -77,12 +77,12 @@ define float @long_to_float_rm(i64* %a) {
 ; AVX-NEXT:    vcvtsi2ssq (%rdi), %xmm0, %xmm0
 ; AVX-NEXT:    retq
 entry:
-  %0 = load i64, i64* %a
+  %0 = load i64, ptr %a
   %1 = sitofp i64 %0 to float
   ret float %1
 }
 
-define float @long_to_float_rm_optsize(i64* %a) optsize {
+define float @long_to_float_rm_optsize(ptr %a) optsize {
 ; SSE2-LABEL: long_to_float_rm_optsize:
 ; SSE2:       # %bb.0: # %entry
 ; SSE2-NEXT:    cvtsi2ssq (%rdi), %xmm0
@@ -93,7 +93,7 @@ define float @long_to_float_rm_optsize(i64* %a) optsize {
 ; AVX-NEXT:    vcvtsi2ssq (%rdi), %xmm0, %xmm0
 ; AVX-NEXT:    retq
 entry:
-  %0 = load i64, i64* %a
+  %0 = load i64, ptr %a
   %1 = sitofp i64 %0 to float
   ret float %1
 }

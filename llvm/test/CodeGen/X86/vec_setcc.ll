@@ -200,7 +200,7 @@ define <2 x i64> @test_setcc_constfold_vi64(<2 x i64> %l, <2 x i64> %r) {
 
 ; This asserted in type legalization for v3i1 setcc after v3i16 was made
 ; a simple value type.
-define <3 x i1> @test_setcc_v3i1_v3i16(<3 x i16>* %a) nounwind {
+define <3 x i1> @test_setcc_v3i1_v3i16(ptr %a) nounwind {
 ; SSE2-LABEL: test_setcc_v3i1_v3i16:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movq {{.*#+}} xmm0 = mem[0],zero
@@ -238,7 +238,7 @@ define <3 x i1> @test_setcc_v3i1_v3i16(<3 x i16>* %a) nounwind {
 ; AVX-NEXT:    # kill: def $dl killed $dl killed $edx
 ; AVX-NEXT:    # kill: def $cl killed $cl killed $ecx
 ; AVX-NEXT:    retq
-  %b = load <3 x i16>, <3 x i16>* %a
+  %b = load <3 x i16>, ptr %a
   %cmp = icmp eq <3 x i16> %b, <i16 0, i16 0, i16 0>
   ret <3 x i1> %cmp
 }

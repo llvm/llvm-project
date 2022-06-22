@@ -6,7 +6,7 @@
 ; RUNX: llc -mtriple=x86_64-pc-linux-gnux32 < %s | FileCheck -check-prefix=X32ABI %s
 
 ; This used to crash due to topological sorting issues in selection DAG.
-define void @foo(i32* sret(i32) %agg.result, i32, i32, i32, i32, i32, void (i32)* %pred) {
+define void @foo(ptr sret(i32) %agg.result, i32, i32, i32, i32, i32, ptr %pred) {
 entry:
   call void %pred(i32 undef)
   ret void

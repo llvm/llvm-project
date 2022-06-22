@@ -8,20 +8,20 @@ entry:
   br i1 undef, label %loop, label %for.end597
 
 loop:
-  %0 = load i16, i16* null, align 4
-  %1 = load i16, i16* undef, align 4
+  %0 = load i16, ptr null, align 4
+  %1 = load i16, ptr undef, align 4
   %or1 = or i16 %1, %0
   %or2 = trunc i16 %or1 to i8
-  store i8 %or2, i8* undef, align 4
+  store i8 %or2, ptr undef, align 4
   %2 = or i16 %1, %0
   %or3 = lshr i16 %2, 8
   %or4 = trunc i16 %or3 to i8
-  store i8 %or4, i8* undef, align 1
-  %3 = load i32, i32* undef, align 4
-  %4 = load i32, i32* undef, align 4
+  store i8 %or4, ptr undef, align 1
+  %3 = load i32, ptr undef, align 4
+  %4 = load i32, ptr undef, align 4
   %or5 = or i32 %4, %3
-  store i32 %or5, i32* undef, align 4
-  store i32 0, i32* undef, align 4
+  store i32 %or5, ptr undef, align 4
+  store i32 0, ptr undef, align 4
   br label %loop
 
 for.end597:

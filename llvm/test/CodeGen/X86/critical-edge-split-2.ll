@@ -8,7 +8,7 @@
 @g_4 = dso_local global %1 zeroinitializer, align 4
 
 ; PR8642
-define i16 @test1(i1 zeroext %C, i8** nocapture %argv) nounwind ssp {
+define i16 @test1(i1 zeroext %C, ptr nocapture %argv) nounwind ssp {
 ; CHECK-LABEL: test1:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    movw $1, %ax
@@ -34,7 +34,7 @@ cond.false.i:
   br label %cond.end.i
 
 cond.end.i:
-  %call1 = phi i16 [ trunc (i32 srem (i32 1, i32 zext (i1 icmp eq (%1* bitcast (i8* getelementptr inbounds (%0, %0* @g_2, i64 0, i32 1, i32 0) to %1*), %1* @g_4) to i32)) to i16), %cond.false.i ], [ 1, %entry ]
+  %call1 = phi i16 [ trunc (i32 srem (i32 1, i32 zext (i1 icmp eq (ptr getelementptr inbounds (%0, ptr @g_2, i64 0, i32 1, i32 0), ptr @g_4) to i32)) to i16), %cond.false.i ], [ 1, %entry ]
   ret i16 %call1
 }
 

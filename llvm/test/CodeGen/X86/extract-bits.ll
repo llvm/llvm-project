@@ -229,7 +229,7 @@ define i32 @bextr32_a1_indexzext(i32 %val, i8 zeroext %numskipbits, i8 zeroext %
   ret i32 %masked
 }
 
-define i32 @bextr32_a2_load(i32* %w, i32 %numskipbits, i32 %numlowbits) nounwind {
+define i32 @bextr32_a2_load(ptr %w, i32 %numskipbits, i32 %numlowbits) nounwind {
 ; X86-NOBMI-LABEL: bextr32_a2_load:
 ; X86-NOBMI:       # %bb.0:
 ; X86-NOBMI-NEXT:    pushl %esi
@@ -291,7 +291,7 @@ define i32 @bextr32_a2_load(i32* %w, i32 %numskipbits, i32 %numlowbits) nounwind
 ; X64-BMI2-NEXT:    shrxl %esi, (%rdi), %eax
 ; X64-BMI2-NEXT:    bzhil %edx, %eax, %eax
 ; X64-BMI2-NEXT:    retq
-  %val = load i32, i32* %w
+  %val = load i32, ptr %w
   %shifted = lshr i32 %val, %numskipbits
   %onebit = shl i32 1, %numlowbits
   %mask = add nsw i32 %onebit, -1
@@ -299,7 +299,7 @@ define i32 @bextr32_a2_load(i32* %w, i32 %numskipbits, i32 %numlowbits) nounwind
   ret i32 %masked
 }
 
-define i32 @bextr32_a3_load_indexzext(i32* %w, i8 zeroext %numskipbits, i8 zeroext %numlowbits) nounwind {
+define i32 @bextr32_a3_load_indexzext(ptr %w, i8 zeroext %numskipbits, i8 zeroext %numlowbits) nounwind {
 ; X86-NOBMI-LABEL: bextr32_a3_load_indexzext:
 ; X86-NOBMI:       # %bb.0:
 ; X86-NOBMI-NEXT:    pushl %esi
@@ -361,7 +361,7 @@ define i32 @bextr32_a3_load_indexzext(i32* %w, i8 zeroext %numskipbits, i8 zeroe
 ; X64-BMI2-NEXT:    shrxl %esi, (%rdi), %eax
 ; X64-BMI2-NEXT:    bzhil %edx, %eax, %eax
 ; X64-BMI2-NEXT:    retq
-  %val = load i32, i32* %w
+  %val = load i32, ptr %w
   %skip = zext i8 %numskipbits to i32
   %shifted = lshr i32 %val, %skip
   %conv = zext i8 %numlowbits to i32
@@ -975,7 +975,7 @@ define i64 @bextr64_a1_indexzext(i64 %val, i8 zeroext %numskipbits, i8 zeroext %
   ret i64 %masked
 }
 
-define i64 @bextr64_a2_load(i64* %w, i64 %numskipbits, i64 %numlowbits) nounwind {
+define i64 @bextr64_a2_load(ptr %w, i64 %numskipbits, i64 %numlowbits) nounwind {
 ; X86-NOBMI-LABEL: bextr64_a2_load:
 ; X86-NOBMI:       # %bb.0:
 ; X86-NOBMI-NEXT:    pushl %edi
@@ -1114,7 +1114,7 @@ define i64 @bextr64_a2_load(i64* %w, i64 %numskipbits, i64 %numlowbits) nounwind
 ; X64-BMI2-NEXT:    shrxq %rsi, (%rdi), %rax
 ; X64-BMI2-NEXT:    bzhiq %rdx, %rax, %rax
 ; X64-BMI2-NEXT:    retq
-  %val = load i64, i64* %w
+  %val = load i64, ptr %w
   %shifted = lshr i64 %val, %numskipbits
   %onebit = shl i64 1, %numlowbits
   %mask = add nsw i64 %onebit, -1
@@ -1122,7 +1122,7 @@ define i64 @bextr64_a2_load(i64* %w, i64 %numskipbits, i64 %numlowbits) nounwind
   ret i64 %masked
 }
 
-define i64 @bextr64_a3_load_indexzext(i64* %w, i8 zeroext %numskipbits, i8 zeroext %numlowbits) nounwind {
+define i64 @bextr64_a3_load_indexzext(ptr %w, i8 zeroext %numskipbits, i8 zeroext %numlowbits) nounwind {
 ; X86-NOBMI-LABEL: bextr64_a3_load_indexzext:
 ; X86-NOBMI:       # %bb.0:
 ; X86-NOBMI-NEXT:    pushl %edi
@@ -1263,7 +1263,7 @@ define i64 @bextr64_a3_load_indexzext(i64* %w, i8 zeroext %numskipbits, i8 zeroe
 ; X64-BMI2-NEXT:    shrxq %rsi, (%rdi), %rax
 ; X64-BMI2-NEXT:    bzhiq %rdx, %rax, %rax
 ; X64-BMI2-NEXT:    retq
-  %val = load i64, i64* %w
+  %val = load i64, ptr %w
   %skip = zext i8 %numskipbits to i64
   %shifted = lshr i64 %val, %skip
   %conv = zext i8 %numlowbits to i64
@@ -2346,7 +2346,7 @@ define i32 @bextr32_b1_indexzext(i32 %val, i8 zeroext %numskipbits, i8 zeroext %
   ret i32 %masked
 }
 
-define i32 @bextr32_b2_load(i32* %w, i32 %numskipbits, i32 %numlowbits) nounwind {
+define i32 @bextr32_b2_load(ptr %w, i32 %numskipbits, i32 %numlowbits) nounwind {
 ; X86-NOBMI-LABEL: bextr32_b2_load:
 ; X86-NOBMI:       # %bb.0:
 ; X86-NOBMI-NEXT:    pushl %esi
@@ -2408,7 +2408,7 @@ define i32 @bextr32_b2_load(i32* %w, i32 %numskipbits, i32 %numlowbits) nounwind
 ; X64-BMI2-NEXT:    shrxl %esi, (%rdi), %eax
 ; X64-BMI2-NEXT:    bzhil %edx, %eax, %eax
 ; X64-BMI2-NEXT:    retq
-  %val = load i32, i32* %w
+  %val = load i32, ptr %w
   %shifted = lshr i32 %val, %numskipbits
   %notmask = shl i32 -1, %numlowbits
   %mask = xor i32 %notmask, -1
@@ -2416,7 +2416,7 @@ define i32 @bextr32_b2_load(i32* %w, i32 %numskipbits, i32 %numlowbits) nounwind
   ret i32 %masked
 }
 
-define i32 @bextr32_b3_load_indexzext(i32* %w, i8 zeroext %numskipbits, i8 zeroext %numlowbits) nounwind {
+define i32 @bextr32_b3_load_indexzext(ptr %w, i8 zeroext %numskipbits, i8 zeroext %numlowbits) nounwind {
 ; X86-NOBMI-LABEL: bextr32_b3_load_indexzext:
 ; X86-NOBMI:       # %bb.0:
 ; X86-NOBMI-NEXT:    pushl %esi
@@ -2478,7 +2478,7 @@ define i32 @bextr32_b3_load_indexzext(i32* %w, i8 zeroext %numskipbits, i8 zeroe
 ; X64-BMI2-NEXT:    shrxl %esi, (%rdi), %eax
 ; X64-BMI2-NEXT:    bzhil %edx, %eax, %eax
 ; X64-BMI2-NEXT:    retq
-  %val = load i32, i32* %w
+  %val = load i32, ptr %w
   %skip = zext i8 %numskipbits to i32
   %shifted = lshr i32 %val, %skip
   %conv = zext i8 %numlowbits to i32
@@ -2938,7 +2938,7 @@ define i64 @bextr64_b1_indexzext(i64 %val, i8 zeroext %numskipbits, i8 zeroext %
   ret i64 %masked
 }
 
-define i64 @bextr64_b2_load(i64* %w, i64 %numskipbits, i64 %numlowbits) nounwind {
+define i64 @bextr64_b2_load(ptr %w, i64 %numskipbits, i64 %numlowbits) nounwind {
 ; X86-NOBMI-LABEL: bextr64_b2_load:
 ; X86-NOBMI:       # %bb.0:
 ; X86-NOBMI-NEXT:    pushl %ebx
@@ -3073,7 +3073,7 @@ define i64 @bextr64_b2_load(i64* %w, i64 %numskipbits, i64 %numlowbits) nounwind
 ; X64-BMI2-NEXT:    shrxq %rsi, (%rdi), %rax
 ; X64-BMI2-NEXT:    bzhiq %rdx, %rax, %rax
 ; X64-BMI2-NEXT:    retq
-  %val = load i64, i64* %w
+  %val = load i64, ptr %w
   %shifted = lshr i64 %val, %numskipbits
   %notmask = shl i64 -1, %numlowbits
   %mask = xor i64 %notmask, -1
@@ -3081,7 +3081,7 @@ define i64 @bextr64_b2_load(i64* %w, i64 %numskipbits, i64 %numlowbits) nounwind
   ret i64 %masked
 }
 
-define i64 @bextr64_b3_load_indexzext(i64* %w, i8 zeroext %numskipbits, i8 zeroext %numlowbits) nounwind {
+define i64 @bextr64_b3_load_indexzext(ptr %w, i8 zeroext %numskipbits, i8 zeroext %numlowbits) nounwind {
 ; X86-NOBMI-LABEL: bextr64_b3_load_indexzext:
 ; X86-NOBMI:       # %bb.0:
 ; X86-NOBMI-NEXT:    pushl %ebx
@@ -3218,7 +3218,7 @@ define i64 @bextr64_b3_load_indexzext(i64* %w, i8 zeroext %numskipbits, i8 zeroe
 ; X64-BMI2-NEXT:    shrxq %rsi, (%rdi), %rax
 ; X64-BMI2-NEXT:    bzhiq %rdx, %rax, %rax
 ; X64-BMI2-NEXT:    retq
-  %val = load i64, i64* %w
+  %val = load i64, ptr %w
   %skip = zext i8 %numskipbits to i64
   %shifted = lshr i64 %val, %skip
   %conv = zext i8 %numlowbits to i64
@@ -4285,7 +4285,7 @@ define i32 @bextr32_c1_indexzext(i32 %val, i8 %numskipbits, i8 %numlowbits) noun
   ret i32 %masked
 }
 
-define i32 @bextr32_c2_load(i32* %w, i32 %numskipbits, i32 %numlowbits) nounwind {
+define i32 @bextr32_c2_load(ptr %w, i32 %numskipbits, i32 %numlowbits) nounwind {
 ; X86-NOBMI-LABEL: bextr32_c2_load:
 ; X86-NOBMI:       # %bb.0:
 ; X86-NOBMI-NEXT:    pushl %edi
@@ -4414,7 +4414,7 @@ define i32 @bextr32_c2_load(i32* %w, i32 %numskipbits, i32 %numlowbits) nounwind
 ; X64-BMI2-NEXT:    popq %rbx
 ; X64-BMI2-NEXT:    popq %rbp
 ; X64-BMI2-NEXT:    retq
-  %val = load i32, i32* %w
+  %val = load i32, ptr %w
   %shifted = lshr i32 %val, %numskipbits
   %numhighbits = sub i32 32, %numlowbits
   %mask = lshr i32 -1, %numhighbits
@@ -4423,7 +4423,7 @@ define i32 @bextr32_c2_load(i32* %w, i32 %numskipbits, i32 %numlowbits) nounwind
   ret i32 %masked
 }
 
-define i32 @bextr32_c3_load_indexzext(i32* %w, i8 %numskipbits, i8 %numlowbits) nounwind {
+define i32 @bextr32_c3_load_indexzext(ptr %w, i8 %numskipbits, i8 %numlowbits) nounwind {
 ; X86-NOBMI-LABEL: bextr32_c3_load_indexzext:
 ; X86-NOBMI:       # %bb.0:
 ; X86-NOBMI-NEXT:    pushl %edi
@@ -4552,7 +4552,7 @@ define i32 @bextr32_c3_load_indexzext(i32* %w, i8 %numskipbits, i8 %numlowbits) 
 ; X64-BMI2-NEXT:    popq %rbx
 ; X64-BMI2-NEXT:    popq %rbp
 ; X64-BMI2-NEXT:    retq
-  %val = load i32, i32* %w
+  %val = load i32, ptr %w
   %skip = zext i8 %numskipbits to i32
   %shifted = lshr i32 %val, %skip
   %numhighbits = sub i8 32, %numlowbits
@@ -5272,7 +5272,7 @@ define i64 @bextr64_c1_indexzext(i64 %val, i8 %numskipbits, i8 %numlowbits) noun
   ret i64 %masked
 }
 
-define i64 @bextr64_c2_load(i64* %w, i64 %numskipbits, i64 %numlowbits) nounwind {
+define i64 @bextr64_c2_load(ptr %w, i64 %numskipbits, i64 %numlowbits) nounwind {
 ; X86-NOBMI-LABEL: bextr64_c2_load:
 ; X86-NOBMI:       # %bb.0:
 ; X86-NOBMI-NEXT:    pushl %ebp
@@ -5473,7 +5473,7 @@ define i64 @bextr64_c2_load(i64* %w, i64 %numskipbits, i64 %numlowbits) nounwind
 ; X64-BMI2-NEXT:    popq %rbx
 ; X64-BMI2-NEXT:    popq %r14
 ; X64-BMI2-NEXT:    retq
-  %val = load i64, i64* %w
+  %val = load i64, ptr %w
   %shifted = lshr i64 %val, %numskipbits
   %numhighbits = sub i64 64, %numlowbits
   %mask = lshr i64 -1, %numhighbits
@@ -5482,7 +5482,7 @@ define i64 @bextr64_c2_load(i64* %w, i64 %numskipbits, i64 %numlowbits) nounwind
   ret i64 %masked
 }
 
-define i64 @bextr64_c3_load_indexzext(i64* %w, i8 %numskipbits, i8 %numlowbits) nounwind {
+define i64 @bextr64_c3_load_indexzext(ptr %w, i8 %numskipbits, i8 %numlowbits) nounwind {
 ; X86-NOBMI-LABEL: bextr64_c3_load_indexzext:
 ; X86-NOBMI:       # %bb.0:
 ; X86-NOBMI-NEXT:    pushl %ebp
@@ -5684,7 +5684,7 @@ define i64 @bextr64_c3_load_indexzext(i64* %w, i8 %numskipbits, i8 %numlowbits) 
 ; X64-BMI2-NEXT:    popq %rbx
 ; X64-BMI2-NEXT:    popq %r14
 ; X64-BMI2-NEXT:    retq
-  %val = load i64, i64* %w
+  %val = load i64, ptr %w
   %skip = zext i8 %numskipbits to i64
   %shifted = lshr i64 %val, %skip
   %numhighbits = sub i8 64, %numlowbits
@@ -6702,7 +6702,7 @@ define i32 @bextr32_d1_indexzext(i32 %val, i8 %numskipbits, i8 %numlowbits) noun
   ret i32 %masked
 }
 
-define i32 @bextr32_d2_load(i32* %w, i32 %numskipbits, i32 %numlowbits) nounwind {
+define i32 @bextr32_d2_load(ptr %w, i32 %numskipbits, i32 %numlowbits) nounwind {
 ; X86-NOBMI-LABEL: bextr32_d2_load:
 ; X86-NOBMI:       # %bb.0:
 ; X86-NOBMI-NEXT:    movb {{[0-9]+}}(%esp), %cl
@@ -6760,7 +6760,7 @@ define i32 @bextr32_d2_load(i32* %w, i32 %numskipbits, i32 %numlowbits) nounwind
 ; X64-BMI2-NEXT:    shrxl %esi, (%rdi), %eax
 ; X64-BMI2-NEXT:    bzhil %edx, %eax, %eax
 ; X64-BMI2-NEXT:    retq
-  %val = load i32, i32* %w
+  %val = load i32, ptr %w
   %shifted = lshr i32 %val, %numskipbits
   %numhighbits = sub i32 32, %numlowbits
   %highbitscleared = shl i32 %shifted, %numhighbits
@@ -6768,7 +6768,7 @@ define i32 @bextr32_d2_load(i32* %w, i32 %numskipbits, i32 %numlowbits) nounwind
   ret i32 %masked
 }
 
-define i32 @bextr32_d3_load_indexzext(i32* %w, i8 %numskipbits, i8 %numlowbits) nounwind {
+define i32 @bextr32_d3_load_indexzext(ptr %w, i8 %numskipbits, i8 %numlowbits) nounwind {
 ; X86-NOBMI-LABEL: bextr32_d3_load_indexzext:
 ; X86-NOBMI:       # %bb.0:
 ; X86-NOBMI-NEXT:    movb {{[0-9]+}}(%esp), %cl
@@ -6826,7 +6826,7 @@ define i32 @bextr32_d3_load_indexzext(i32* %w, i8 %numskipbits, i8 %numlowbits) 
 ; X64-BMI2-NEXT:    shrxl %esi, (%rdi), %eax
 ; X64-BMI2-NEXT:    bzhil %edx, %eax, %eax
 ; X64-BMI2-NEXT:    retq
-  %val = load i32, i32* %w
+  %val = load i32, ptr %w
   %skip = zext i8 %numskipbits to i32
   %shifted = lshr i32 %val, %skip
   %numhighbits = sub i8 32, %numlowbits
@@ -7282,7 +7282,7 @@ define i64 @bextr64_d1_indexzext(i64 %val, i8 %numskipbits, i8 %numlowbits) noun
   ret i64 %masked
 }
 
-define i64 @bextr64_d2_load(i64* %w, i64 %numskipbits, i64 %numlowbits) nounwind {
+define i64 @bextr64_d2_load(ptr %w, i64 %numskipbits, i64 %numlowbits) nounwind {
 ; X86-NOBMI-LABEL: bextr64_d2_load:
 ; X86-NOBMI:       # %bb.0:
 ; X86-NOBMI-NEXT:    pushl %ebx
@@ -7448,7 +7448,7 @@ define i64 @bextr64_d2_load(i64* %w, i64 %numskipbits, i64 %numlowbits) nounwind
 ; X64-BMI2-NEXT:    shrxq %rsi, (%rdi), %rax
 ; X64-BMI2-NEXT:    bzhiq %rdx, %rax, %rax
 ; X64-BMI2-NEXT:    retq
-  %val = load i64, i64* %w
+  %val = load i64, ptr %w
   %shifted = lshr i64 %val, %numskipbits
   %numhighbits = sub i64 64, %numlowbits
   %highbitscleared = shl i64 %shifted, %numhighbits
@@ -7456,7 +7456,7 @@ define i64 @bextr64_d2_load(i64* %w, i64 %numskipbits, i64 %numlowbits) nounwind
   ret i64 %masked
 }
 
-define i64 @bextr64_d3_load_indexzext(i64* %w, i8 %numskipbits, i8 %numlowbits) nounwind {
+define i64 @bextr64_d3_load_indexzext(ptr %w, i8 %numskipbits, i8 %numlowbits) nounwind {
 ; X86-NOBMI-LABEL: bextr64_d3_load_indexzext:
 ; X86-NOBMI:       # %bb.0:
 ; X86-NOBMI-NEXT:    pushl %ebx
@@ -7624,7 +7624,7 @@ define i64 @bextr64_d3_load_indexzext(i64* %w, i8 %numskipbits, i8 %numlowbits) 
 ; X64-BMI2-NEXT:    shrxq %rsi, (%rdi), %rax
 ; X64-BMI2-NEXT:    bzhiq %rdx, %rax, %rax
 ; X64-BMI2-NEXT:    retq
-  %val = load i64, i64* %w
+  %val = load i64, ptr %w
   %skip = zext i8 %numskipbits to i64
   %shifted = lshr i64 %val, %skip
   %numhighbits = sub i8 64, %numlowbits
@@ -8100,7 +8100,7 @@ define i32 @bextr64_32_d1(i64 %val, i64 %numskipbits, i32 %numlowbits) nounwind 
 ; ---------------------------------------------------------------------------- ;
 
 ; https://bugs.llvm.org/show_bug.cgi?id=38938
-define void @pr38938(i32* %a0, i64* %a1) nounwind {
+define void @pr38938(ptr %a0, ptr %a1) nounwind {
 ; X86-NOBMI-LABEL: pr38938:
 ; X86-NOBMI:       # %bb.0:
 ; X86-NOBMI-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -8148,13 +8148,13 @@ define void @pr38938(i32* %a0, i64* %a1) nounwind {
 ; X64-BMITBM-NEXT:    bextrq $2581, (%rsi), %rax # imm = 0xA15
 ; X64-BMITBM-NEXT:    incl (%rdi,%rax,4)
 ; X64-BMITBM-NEXT:    retq
-  %tmp = load i64, i64* %a1, align 8
+  %tmp = load i64, ptr %a1, align 8
   %tmp1 = lshr i64 %tmp, 21
   %tmp2 = and i64 %tmp1, 1023
-  %tmp3 = getelementptr inbounds i32, i32* %a0, i64 %tmp2
-  %tmp4 = load i32, i32* %tmp3, align 4
+  %tmp3 = getelementptr inbounds i32, ptr %a0, i64 %tmp2
+  %tmp4 = load i32, ptr %tmp3, align 4
   %tmp5 = add nsw i32 %tmp4, 1
-  store i32 %tmp5, i32* %tmp3, align 4
+  store i32 %tmp5, ptr %tmp3, align 4
   ret void
 }
 
@@ -8379,7 +8379,7 @@ define i64 @c4_i64_bad(i64 %arg) nounwind {
 ; i32
 
 ; The most canonical variant
-define void @c5_i32(i32 %arg, i32* %ptr) nounwind {
+define void @c5_i32(i32 %arg, ptr %ptr) nounwind {
 ; X86-NOBMI-LABEL: c5_i32:
 ; X86-NOBMI:       # %bb.0:
 ; X86-NOBMI-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -8425,12 +8425,12 @@ define void @c5_i32(i32 %arg, i32* %ptr) nounwind {
 ; X64-BMITBM-NEXT:    retq
   %tmp0 = lshr i32 %arg, 19
   %tmp1 = and i32 %tmp0, 1023
-  store i32 %tmp1, i32* %ptr
+  store i32 %tmp1, ptr %ptr
   ret void
 }
 
 ; Should be still fine, but the mask is shifted
-define void @c6_i32(i32 %arg, i32* %ptr) nounwind {
+define void @c6_i32(i32 %arg, ptr %ptr) nounwind {
 ; X86-NOBMI-LABEL: c6_i32:
 ; X86-NOBMI:       # %bb.0:
 ; X86-NOBMI-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -8476,12 +8476,12 @@ define void @c6_i32(i32 %arg, i32* %ptr) nounwind {
 ; X64-BMITBM-NEXT:    retq
   %tmp0 = lshr i32 %arg, 19
   %tmp1 = and i32 %tmp0, 4095
-  store i32 %tmp1, i32* %ptr
+  store i32 %tmp1, ptr %ptr
   ret void
 }
 
 ; Should be still fine, but the result is shifted left afterwards
-define void @c7_i32(i32 %arg, i32* %ptr) nounwind {
+define void @c7_i32(i32 %arg, ptr %ptr) nounwind {
 ; X86-LABEL: c7_i32:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -8500,14 +8500,14 @@ define void @c7_i32(i32 %arg, i32* %ptr) nounwind {
   %tmp0 = lshr i32 %arg, 19
   %tmp1 = and i32 %tmp0, 1023
   %tmp2 = shl i32 %tmp1, 2
-  store i32 %tmp2, i32* %ptr
+  store i32 %tmp2, ptr %ptr
   ret void
 }
 
 ; i64
 
 ; The most canonical variant
-define void @c5_i64(i64 %arg, i64* %ptr) nounwind {
+define void @c5_i64(i64 %arg, ptr %ptr) nounwind {
 ; X86-NOBMI-LABEL: c5_i64:
 ; X86-NOBMI:       # %bb.0:
 ; X86-NOBMI-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -8556,12 +8556,12 @@ define void @c5_i64(i64 %arg, i64* %ptr) nounwind {
 ; X64-BMITBM-NEXT:    retq
   %tmp0 = lshr i64 %arg, 51
   %tmp1 = and i64 %tmp0, 1023
-  store i64 %tmp1, i64* %ptr
+  store i64 %tmp1, ptr %ptr
   ret void
 }
 
 ; Should be still fine, but the mask is shifted
-define void @c6_i64(i64 %arg, i64* %ptr) nounwind {
+define void @c6_i64(i64 %arg, ptr %ptr) nounwind {
 ; X86-NOBMI-LABEL: c6_i64:
 ; X86-NOBMI:       # %bb.0:
 ; X86-NOBMI-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -8610,12 +8610,12 @@ define void @c6_i64(i64 %arg, i64* %ptr) nounwind {
 ; X64-BMITBM-NEXT:    retq
   %tmp0 = lshr i64 %arg, 51
   %tmp1 = and i64 %tmp0, 4095
-  store i64 %tmp1, i64* %ptr
+  store i64 %tmp1, ptr %ptr
   ret void
 }
 
 ; Should be still fine, but the result is shifted left afterwards
-define void @c7_i64(i64 %arg, i64* %ptr) nounwind {
+define void @c7_i64(i64 %arg, ptr %ptr) nounwind {
 ; X86-LABEL: c7_i64:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -8635,6 +8635,6 @@ define void @c7_i64(i64 %arg, i64* %ptr) nounwind {
   %tmp0 = lshr i64 %arg, 51
   %tmp1 = and i64 %tmp0, 1023
   %tmp2 = shl i64 %tmp1, 2
-  store i64 %tmp2, i64* %ptr
+  store i64 %tmp2, ptr %ptr
   ret void
 }

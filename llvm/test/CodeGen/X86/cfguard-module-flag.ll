@@ -11,9 +11,9 @@ declare void @target_func()
 
 define void @func_in_module_without_cfguard() #0 {
 entry:
-  %func_ptr = alloca void ()*, align 8
-  store void ()* @target_func, void ()** %func_ptr, align 8
-  %0 = load void ()*, void ()** %func_ptr, align 8
+  %func_ptr = alloca ptr, align 8
+  store ptr @target_func, ptr %func_ptr, align 8
+  %0 = load ptr, ptr %func_ptr, align 8
 
   call void %0()
   ret void

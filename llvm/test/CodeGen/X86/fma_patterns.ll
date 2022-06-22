@@ -514,7 +514,7 @@ define <4 x double> @test_4f64_fnmsub(<4 x double> %a0, <4 x double> %a1, <4 x d
 ; Load Folding Patterns
 ;
 
-define <4 x float> @test_4f32_fmadd_load(<4 x float>* %a0, <4 x float> %a1, <4 x float> %a2) {
+define <4 x float> @test_4f32_fmadd_load(ptr %a0, <4 x float> %a1, <4 x float> %a2) {
 ; FMA-LABEL: test_4f32_fmadd_load:
 ; FMA:       # %bb.0:
 ; FMA-NEXT:    vfmadd132ps {{.*#+}} xmm0 = (xmm0 * mem) + xmm1
@@ -529,13 +529,13 @@ define <4 x float> @test_4f32_fmadd_load(<4 x float>* %a0, <4 x float> %a1, <4 x
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    vfmadd132ps {{.*#+}} xmm0 = (xmm0 * mem) + xmm1
 ; AVX512-NEXT:    retq
-  %x = load <4 x float>, <4 x float>* %a0
+  %x = load <4 x float>, ptr %a0
   %y = fmul <4 x float> %x, %a1
   %res = fadd <4 x float> %y, %a2
   ret <4 x float> %res
 }
 
-define <2 x double> @test_2f64_fmsub_load(<2 x double>* %a0, <2 x double> %a1, <2 x double> %a2) {
+define <2 x double> @test_2f64_fmsub_load(ptr %a0, <2 x double> %a1, <2 x double> %a2) {
 ; FMA-LABEL: test_2f64_fmsub_load:
 ; FMA:       # %bb.0:
 ; FMA-NEXT:    vfmsub132pd {{.*#+}} xmm0 = (xmm0 * mem) - xmm1
@@ -550,7 +550,7 @@ define <2 x double> @test_2f64_fmsub_load(<2 x double>* %a0, <2 x double> %a1, <
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    vfmsub132pd {{.*#+}} xmm0 = (xmm0 * mem) - xmm1
 ; AVX512-NEXT:    retq
-  %x = load <2 x double>, <2 x double>* %a0
+  %x = load <2 x double>, ptr %a0
   %y = fmul <2 x double> %x, %a1
   %res = fsub <2 x double> %y, %a2
   ret <2 x double> %res
@@ -1921,7 +1921,7 @@ define <2 x double> @fadd_fma_fmul_3(<2 x double> %x1, <2 x double> %x2, <2 x do
 
 ; negative test
 
-define float @fadd_fma_fmul_extra_use_1(float %a, float %b, float %c, float %d, float %n0, float* %p) nounwind {
+define float @fadd_fma_fmul_extra_use_1(float %a, float %b, float %c, float %d, float %n0, ptr %p) nounwind {
 ; FMA-LABEL: fadd_fma_fmul_extra_use_1:
 ; FMA:       # %bb.0:
 ; FMA-NEXT:    vmulss %xmm1, %xmm0, %xmm0
@@ -1946,7 +1946,7 @@ define float @fadd_fma_fmul_extra_use_1(float %a, float %b, float %c, float %d, 
 ; AVX512-NEXT:    vaddss %xmm2, %xmm4, %xmm0
 ; AVX512-NEXT:    retq
   %m1 = fmul fast float %a, %b
-  store float %m1, float* %p
+  store float %m1, ptr %p
   %m2 = fmul fast float %c, %d
   %a1 = fadd fast float %m1, %m2
   %a2 = fadd fast float %n0, %a1
@@ -1955,7 +1955,7 @@ define float @fadd_fma_fmul_extra_use_1(float %a, float %b, float %c, float %d, 
 
 ; negative test
 
-define float @fadd_fma_fmul_extra_use_2(float %a, float %b, float %c, float %d, float %n0, float* %p) nounwind {
+define float @fadd_fma_fmul_extra_use_2(float %a, float %b, float %c, float %d, float %n0, ptr %p) nounwind {
 ; FMA-LABEL: fadd_fma_fmul_extra_use_2:
 ; FMA:       # %bb.0:
 ; FMA-NEXT:    vmulss %xmm3, %xmm2, %xmm2
@@ -1981,7 +1981,7 @@ define float @fadd_fma_fmul_extra_use_2(float %a, float %b, float %c, float %d, 
 ; AVX512-NEXT:    retq
   %m1 = fmul fast float %a, %b
   %m2 = fmul fast float %c, %d
-  store float %m2, float* %p
+  store float %m2, ptr %p
   %a1 = fadd fast float %m1, %m2
   %a2 = fadd fast float %n0, %a1
   ret float %a2
@@ -1989,7 +1989,7 @@ define float @fadd_fma_fmul_extra_use_2(float %a, float %b, float %c, float %d, 
 
 ; negative test
 
-define float @fadd_fma_fmul_extra_use_3(float %a, float %b, float %c, float %d, float %n0, float* %p) nounwind {
+define float @fadd_fma_fmul_extra_use_3(float %a, float %b, float %c, float %d, float %n0, ptr %p) nounwind {
 ; FMA-LABEL: fadd_fma_fmul_extra_use_3:
 ; FMA:       # %bb.0:
 ; FMA-NEXT:    vmulss %xmm3, %xmm2, %xmm2
@@ -2016,7 +2016,7 @@ define float @fadd_fma_fmul_extra_use_3(float %a, float %b, float %c, float %d, 
   %m1 = fmul fast float %a, %b
   %m2 = fmul fast float %c, %d
   %a1 = fadd fast float %m1, %m2
-  store float %a1, float* %p
+  store float %a1, ptr %p
   %a2 = fadd fast float %n0, %a1
   ret float %a2
 }

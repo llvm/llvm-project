@@ -313,7 +313,7 @@ define void @trunc8i64_8i8(<8 x i64> %a) {
 ; AVX512-NEXT:    retq
 entry:
   %0 = trunc <8 x i64> %a to <8 x i8>
-  store <8 x i8> %0, <8 x i8>* undef, align 4
+  store <8 x i8> %0, ptr undef, align 4
   ret void
 }
 
@@ -619,7 +619,7 @@ define void @trunc8i32_8i8(<8 x i32> %a) {
 ; AVX512BWVL-NEXT:    retq
 entry:
   %0 = trunc <8 x i32> %a to <8 x i8>
-  store <8 x i8> %0, <8 x i8>* undef, align 4
+  store <8 x i8> %0, ptr undef, align 4
   ret void
 }
 
@@ -701,7 +701,7 @@ define void @trunc16i32_16i16(<16 x i32> %a) {
 ; AVX512-NEXT:    retq
 entry:
   %0 = trunc <16 x i32> %a to <16 x i16>
-  store <16 x i16> %0, <16 x i16>* undef, align 4
+  store <16 x i16> %0, ptr undef, align 4
   ret void
 }
 
@@ -776,7 +776,7 @@ define void @trunc16i32_16i16_ashr(<16 x i32> %a) {
 entry:
   %0 = ashr <16 x i32> %a, <i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16>
   %1 = trunc <16 x i32> %0 to <16 x i16>
-  store <16 x i16> %1, <16 x i16>* undef, align 4
+  store <16 x i16> %1, ptr undef, align 4
   ret void
 }
 
@@ -851,7 +851,7 @@ define void @trunc16i32_16i16_lshr(<16 x i32> %a) {
 entry:
   %0 = lshr <16 x i32> %a, <i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16>
   %1 = trunc <16 x i32> %0 to <16 x i16>
-  store <16 x i16> %1, <16 x i16>* undef, align 4
+  store <16 x i16> %1, ptr undef, align 4
   ret void
 }
 
@@ -929,7 +929,7 @@ define void @trunc16i32_16i8(<16 x i32> %a) {
 ; AVX512-NEXT:    retq
 entry:
   %0 = trunc <16 x i32> %a to <16 x i8>
-  store <16 x i8> %0, <16 x i8>* undef, align 4
+  store <16 x i8> %0, ptr undef, align 4
   ret void
 }
 
@@ -1006,7 +1006,7 @@ define void @trunc16i32_16i8_ashr(<16 x i32> %a) {
 entry:
   %0 = ashr <16 x i32> %a, <i32 24, i32 24, i32 24, i32 24, i32 24, i32 24, i32 24, i32 24, i32 24, i32 24, i32 24, i32 24, i32 24, i32 24, i32 24, i32 24>
   %1 = trunc <16 x i32> %0 to <16 x i8>
-  store <16 x i8> %1, <16 x i8>* undef, align 4
+  store <16 x i8> %1, ptr undef, align 4
   ret void
 }
 
@@ -1083,7 +1083,7 @@ define void @trunc16i32_16i8_lshr(<16 x i32> %a) {
 entry:
   %0 = lshr <16 x i32> %a, <i32 24, i32 24, i32 24, i32 24, i32 24, i32 24, i32 24, i32 24, i32 24, i32 24, i32 24, i32 24, i32 24, i32 24, i32 24, i32 24>
   %1 = trunc <16 x i32> %0 to <16 x i8>
-  store <16 x i8> %1, <16 x i8>* undef, align 4
+  store <16 x i8> %1, ptr undef, align 4
   ret void
 }
 
@@ -1145,7 +1145,7 @@ define void @trunc16i16_16i8(<16 x i16> %a) {
 ; AVX512BWVL-NEXT:    retq
 entry:
   %0 = trunc <16 x i16> %a to <16 x i8>
-  store <16 x i8> %0, <16 x i8>* undef, align 4
+  store <16 x i8> %0, ptr undef, align 4
   ret void
 }
 
@@ -1210,7 +1210,7 @@ define void @trunc16i16_16i8_ashr(<16 x i16> %a) {
 entry:
   %0 = ashr <16 x i16> %a, <i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8>
   %1 = trunc <16 x i16> %0 to <16 x i8>
-  store <16 x i8> %1, <16 x i8>* undef, align 4
+  store <16 x i8> %1, ptr undef, align 4
   ret void
 }
 
@@ -1275,7 +1275,7 @@ define void @trunc16i16_16i8_lshr(<16 x i16> %a) {
 entry:
   %0 = lshr <16 x i16> %a, <i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8>
   %1 = trunc <16 x i16> %0 to <16 x i8>
-  store <16 x i8> %1, <16 x i8>* undef, align 4
+  store <16 x i8> %1, ptr undef, align 4
   ret void
 }
 
@@ -1351,7 +1351,7 @@ define void @trunc32i16_32i8(<32 x i16> %a) {
 ; AVX512BWVL-NEXT:    retq
 entry:
   %0 = trunc <32 x i16> %a to <32 x i8>
-  store <32 x i8> %0, <32 x i8>* undef, align 4
+  store <32 x i8> %0, ptr undef, align 4
   ret void
 }
 
@@ -1941,7 +1941,7 @@ define <8 x i16> @PR32160(<8 x i32> %x) {
   ret <8 x i16> %trunc
 }
 
-define void @PR34773(i16* %a0, i8* %a1) {
+define void @PR34773(ptr %a0, ptr %a1) {
 ; SSE-LABEL: PR34773:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    movdqu (%rdi), %xmm0
@@ -2036,26 +2036,22 @@ define void @PR34773(i16* %a0, i8* %a1) {
 ; AVX512BWVL-NEXT:    vpmovwb %ymm1, 16(%rsi)
 ; AVX512BWVL-NEXT:    vzeroupper
 ; AVX512BWVL-NEXT:    retq
-  %1  = getelementptr i16, i16* %a0, i64 16
-  %2  = getelementptr i8, i8* %a1, i64 16
-  %3  = bitcast i16* %a0 to <16 x i16>*
-  %4  = bitcast i16* %1 to <16 x i16>*
-  %5  = bitcast i8* %a1 to <16 x i8>*
-  %6  = bitcast i8* %2 to <16 x i8>*
-  %7  = load <16 x i16>, <16 x i16>* %3, align 2
-  %8  = load <16 x i16>, <16 x i16>* %4, align 2
-  %9  = lshr <16 x i16> %7, <i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8>
-  %10 = lshr <16 x i16> %8, <i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8>
-  %11 = trunc <16 x i16> %9  to <16 x i8>
-  %12 = trunc <16 x i16> %10 to <16 x i8>
-  store <16 x i8> %11, <16 x i8>* %5, align 1
-  store <16 x i8> %12, <16 x i8>* %6, align 1
+  %1  = getelementptr i16, ptr %a0, i64 16
+  %2  = getelementptr i8, ptr %a1, i64 16
+  %3  = load <16 x i16>, ptr %a0, align 2
+  %4  = load <16 x i16>, ptr %1, align 2
+  %5  = lshr <16 x i16> %3, <i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8>
+  %6 = lshr <16 x i16> %4, <i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8>
+  %7 = trunc <16 x i16> %5  to <16 x i8>
+  %8 = trunc <16 x i16> %6 to <16 x i8>
+  store <16 x i8> %7, ptr %a1, align 1
+  store <16 x i8> %8, ptr %2, align 1
   ret void
 }
 
 ; Store merging must not infinitely fight store splitting.
 
-define void @store_merge_split(<8 x i32> %w1, <8 x i32> %w2, i64 %idx, <8 x i16>* %p) align 2 {
+define void @store_merge_split(<8 x i32> %w1, <8 x i32> %w2, i64 %idx, ptr %p) align 2 {
 ; SSE2-LABEL: store_merge_split:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    pslld $16, %xmm1
@@ -2170,9 +2166,9 @@ define void @store_merge_split(<8 x i32> %w1, <8 x i32> %w2, i64 %idx, <8 x i16>
 ; AVX512BWVL-NEXT:    retq
   %t1 = trunc <8 x i32> %w1 to <8 x i16>
   %t2 = trunc <8 x i32> %w2 to <8 x i16>
-  %g1 = getelementptr inbounds <8 x i16>, <8 x i16>* %p, i64 %idx
-  %g2 = getelementptr inbounds <8 x i16>, <8 x i16>* %g1, i64 1
-  store <8 x i16> %t1, <8 x i16>* %g1, align 2
-  store <8 x i16> %t2, <8 x i16>* %g2, align 2
+  %g1 = getelementptr inbounds <8 x i16>, ptr %p, i64 %idx
+  %g2 = getelementptr inbounds <8 x i16>, ptr %g1, i64 1
+  store <8 x i16> %t1, ptr %g1, align 2
+  store <8 x i16> %t2, ptr %g2, align 2
   ret void
 }
