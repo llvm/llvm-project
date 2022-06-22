@@ -90,7 +90,6 @@ void __kmpc_parallel_51(IdentTy *ident, int32_t, int32_t if_expr,
     state::DateEnvironmentRAII DERAII(ident);
     ++icv::Level;
     invokeMicrotask(TId, 0, fn, args, nargs);
-    state::exitDataEnvironment();
     return;
   }
 
