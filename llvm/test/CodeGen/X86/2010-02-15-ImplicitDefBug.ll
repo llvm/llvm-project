@@ -6,12 +6,12 @@ target triple = "i386-pc-linux-gnu"
 ; When the "154" loops back onto itself, it defines a register after using it.
 ; The first value of the register is implicit-def.
 
-%"struct location_chain_def" = type { %"struct location_chain_def"*, %"struct rtx_def"*, %"struct rtx_def"*, i32 }
+%"struct location_chain_def" = type { ptr, ptr, ptr, i32 }
 %"struct real_value" = type { i32, [5 x i32] }
 %"struct rtx_def" = type { i16, i8, i8, %"union u" }
 %"union u" = type { %"struct real_value" }
 
-define i32 @variable_union(i8** nocapture %slot, i8* nocapture %data) nounwind {
+define i32 @variable_union(ptr nocapture %slot, ptr nocapture %data) nounwind {
 entry:
   br i1 undef, label %"4.thread", label %"3"
 
@@ -67,9 +67,8 @@ bb.nph46:                                         ; preds = %"153"
   br label %"154"
 
 "154":                                            ; preds = %"154", %bb.nph46
-  %0 = phi %"struct location_chain_def"** [ undef, %bb.nph46 ], [ %1, %"154" ] ; <%"struct location_chain_def"**> [#uses=1]
-  %1 = bitcast i8* undef to %"struct location_chain_def"** ; <%"struct location_chain_def"**> [#uses=1]
-  store %"struct location_chain_def"* undef, %"struct location_chain_def"** %0, align 4
+  %0 = phi ptr [ undef, %bb.nph46 ], [ undef, %"154" ] ; <ptr> [#uses=1]
+  store ptr undef, ptr %0, align 4
   br i1 undef, label %"160", label %"154"
 
 "160":                                            ; preds = %"154", %"153"

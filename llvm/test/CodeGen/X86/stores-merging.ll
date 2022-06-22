@@ -51,7 +51,7 @@ define dso_local void @overlapping_stores_merging() {
 ; CHECK-NEXT:    retq
   store i16 0, ptr getelementptr inbounds ([8 x i8], ptr @b, i64 0, i64 2), align 2
   store i16 2, ptr getelementptr inbounds ([8 x i8], ptr @b, i64 0, i64 3), align 1
-  store i16 1, ptr getelementptr inbounds ([8 x i8], ptr @b, i64 0, i64 0), align 2
+  store i16 1, ptr @b, align 2
   ret void
 }
 
