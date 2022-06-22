@@ -336,6 +336,10 @@ New Pragmas in Clang
 - Added support for MSVC's ``#pragma alloc_text``. The pragma names the code
   section functions are placed in. The pragma only applies to functions with
   C linkage.
+- Added support for an empty optimization list for MSVC's ``#pragma optimize``.
+  The pragma takes a list of optimizations to turn on or off which applies to
+  all functions following the pragma. At the moment, only an empty list is
+  supported.
 
 - ...
 
