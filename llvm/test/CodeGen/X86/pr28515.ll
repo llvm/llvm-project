@@ -7,7 +7,7 @@
 ; CHECK-NEXT: retq
 define void @foo(ptr %p, i32 %v, <8 x i1> %mask) {
   store i32 %v, ptr %p
-  %wide.masked.load = call <8 x i32> @llvm.masked.load.v8i32.p0(ptr getelementptr ([8 x i32], ptr @0, i64 0, i64 0), i32 4, <8 x i1> %mask, <8 x i32> undef)  
+  %wide.masked.load = call <8 x i32> @llvm.masked.load.v8i32.p0(ptr @0, i32 4, <8 x i1> %mask, <8 x i32> undef)  
   ret void
 }
 
