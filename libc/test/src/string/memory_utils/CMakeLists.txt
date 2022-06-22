@@ -4,6 +4,7 @@ add_libc_unittest(
     libc_string_unittests
   SRCS
     address_test.cpp
+    algorithm_test.cpp
     backend_test.cpp
     elements_test.cpp
     memory_access_test.cpp

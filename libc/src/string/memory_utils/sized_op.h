@@ -33,6 +33,9 @@ namespace __llvm_libc {
 
 template <typename Backend, size_t Size> struct SizedOp {
   static constexpr size_t SIZE = Size;
+  // Define instantiations of SizedOp as a fixed size operation.
+  // i.e. an operation that is composable by types in algorithm.h
+  static constexpr bool IS_FIXED_SIZE = true;
 
 private:
   static_assert(Backend::IS_BACKEND_TYPE);
