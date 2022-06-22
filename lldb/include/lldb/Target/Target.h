@@ -71,6 +71,13 @@ enum ImportStdModule {
   eImportStdModuleTrue,
 };
 
+enum DynamicClassInfoHelper {
+  eDynamicClassInfoHelperAuto,
+  eDynamicClassInfoHelperRealizedClassesStruct,
+  eDynamicClassInfoHelperCopyRealizedClassList,
+  eDynamicClassInfoHelperGetRealizedClassList,
+};
+
 class TargetExperimentalProperties : public Properties {
 public:
   TargetExperimentalProperties();
@@ -151,6 +158,8 @@ public:
   bool GetEnableAutoImportClangModules() const;
 
   ImportStdModule GetImportStdModule() const;
+
+  DynamicClassInfoHelper GetDynamicClassInfoHelper() const;
 
   bool GetEnableAutoApplyFixIts() const;
 
