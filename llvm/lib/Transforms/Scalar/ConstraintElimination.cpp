@@ -160,6 +160,12 @@ public:
     return getConstraint(Cmp->getPredicate(), Cmp->getOperand(0),
                          Cmp->getOperand(1), NewIndices);
   }
+
+  /// Try to add information from \p A \p Pred \p B to the unsigned/signed
+  /// system if \p Pred is signed/unsigned.
+  void transferToOtherSystem(CmpInst::Predicate Pred, Value *A, Value *B,
+                             bool IsNegated, unsigned NumIn, unsigned NumOut,
+                             SmallVectorImpl<StackEntry> &DFSInStack);
 };
 
 } // namespace
@@ -382,6 +388,27 @@ bool ConstraintInfo::doesHold(CmpInst::Predicate Pred, Value *A,
   return NewIndices.empty() && R.Preconditions.empty() && !R.IsEq &&
          !R.empty() &&
          getCS(CmpInst::isSigned(Pred)).isConditionImplied(R.Coefficients);
+}
+
+void ConstraintInfo::transferToOtherSystem(
+    CmpInst::Predicate Pred, Value *A, Value *B, bool IsNegated, unsigned NumIn,
+    unsigned NumOut, SmallVectorImpl<StackEntry> &DFSInStack) {
+  // Check if we can combine facts from the signed and unsigned systems to
+  // derive additional facts.
+  if (!A->getType()->isIntegerTy())
+    return;
+  // FIXME: This currently depends on the order we add facts. Ideally we
+  // would first add all known facts and only then try to add additional
+  // facts.
+  switch (Pred) {
+  default:
+    break;
+  case CmpInst::ICMP_SGE:
+    if (doesHold(CmpInst::ICMP_SGE, B, ConstantInt::get(B->getType(), 0))) {
+      addFact(CmpInst::ICMP_UGE, A, B, IsNegated, NumIn, NumOut, DFSInStack);
+    }
+    break;
+  }
 }
 
 namespace {
@@ -766,6 +793,8 @@ static bool eliminateConstraints(Function &F, DominatorTree &DT) {
       // Otherwise, add the condition to the system and stack, if we can
       // transform it into a constraint.
       Info.addFact(Pred, A, B, CB.Not, CB.NumIn, CB.NumOut, DFSInStack);
+      Info.transferToOtherSystem(Pred, A, B, CB.Not, CB.NumIn, CB.NumOut,
+                                 DFSInStack);
     }
   }
 
