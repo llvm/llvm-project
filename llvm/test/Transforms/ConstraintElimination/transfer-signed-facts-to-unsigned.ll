@@ -275,7 +275,7 @@ define i1 @cnt_positive_sge_against_base_with_zext(ptr %p, i32 %cnt) {
 ; CHECK-NEXT:    [[EXT:%.*]] = zext i32 [[CNT]] to i64
 ; CHECK-NEXT:    [[ADD_PTR:%.*]] = getelementptr inbounds i32, ptr [[P:%.*]], i64 [[EXT]]
 ; CHECK-NEXT:    [[CMP_1:%.*]] = icmp uge ptr [[ADD_PTR]], [[P]]
-; CHECK-NEXT:    br i1 [[CMP_1]], label [[THEN:%.*]], label [[ELSE:%.*]]
+; CHECK-NEXT:    br i1 true, label [[THEN:%.*]], label [[ELSE:%.*]]
 ; CHECK:       then:
 ; CHECK-NEXT:    ret i1 false
 ; CHECK:       else:
@@ -497,11 +497,11 @@ define i1 @sge_2(i8 %idx) {
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP]])
 ; CHECK-NEXT:    [[T_1:%.*]] = icmp uge i8 [[IDX]], 2
 ; CHECK-NEXT:    [[T_2:%.*]] = icmp uge i8 [[IDX]], 1
-; CHECK-NEXT:    [[RES_1:%.*]] = xor i1 [[T_1]], [[T_2]]
+; CHECK-NEXT:    [[RES_1:%.*]] = xor i1 true, true
 ; CHECK-NEXT:    [[C_1:%.*]] = icmp uge i8 [[IDX]], 3
 ; CHECK-NEXT:    [[RES_2:%.*]] = xor i1 [[RES_1]], [[C_1]]
 ; CHECK-NEXT:    [[F_1:%.*]] = icmp ult i8 [[IDX]], 2
-; CHECK-NEXT:    [[RES_3:%.*]] = xor i1 [[RES_2]], [[F_1]]
+; CHECK-NEXT:    [[RES_3:%.*]] = xor i1 [[RES_2]], false
 ; CHECK-NEXT:    ret i1 [[RES_3]]
 ;
 entry:
