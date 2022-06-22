@@ -292,7 +292,8 @@ public:
   Value *tagPointer(IRBuilder<> &IRB, Type *Ty, Value *PtrLong, Value *Tag);
   Value *untagPointer(IRBuilder<> &IRB, Value *PtrLong);
   bool instrumentStack(memtag::StackInfo &Info, Value *StackTag,
-                       const DominatorTree &DT, const PostDominatorTree &PDT);
+                       const DominatorTree &DT, const PostDominatorTree &PDT,
+                       const LoopInfo &LI);
   Value *readRegister(IRBuilder<> &IRB, StringRef Name);
   bool instrumentLandingPads(SmallVectorImpl<Instruction *> &RetVec);
   Value *getNextTagWithCall(IRBuilder<> &IRB);
@@ -1217,7 +1218,8 @@ static bool isLifetimeIntrinsic(Value *V) {
 bool HWAddressSanitizer::instrumentStack(memtag::StackInfo &SInfo,
                                          Value *StackTag,
                                          const DominatorTree &DT,
-                                         const PostDominatorTree &PDT) {
+                                         const PostDominatorTree &PDT,
+                                         const LoopInfo &LI) {
   // Ideally, we want to calculate tagged stack base pointer, and rewrite all
   // alloca addresses using that. Unfortunately, offsets are not known yet
   // (unless we use ASan-style mega-alloca). Instead we keep the base tag in a
@@ -1294,13 +1296,13 @@ bool HWAddressSanitizer::instrumentStack(memtag::StackInfo &SInfo,
     bool StandardLifetime =
         SInfo.UnrecognizedLifetimes.empty() &&
         memtag::isStandardLifetime(Info.LifetimeStart, Info.LifetimeEnd, &DT,
-                                   ClMaxLifetimes) &&
+                                   &LI, ClMaxLifetimes) &&
         !SInfo.CallsReturnTwice;
     if (DetectUseAfterScope && StandardLifetime) {
       IntrinsicInst *Start = Info.LifetimeStart[0];
       IRB.SetInsertPoint(Start->getNextNode());
       tagAlloca(IRB, AI, Tag, Size);
-      if (!memtag::forAllReachableExits(DT, PDT, Start, Info.LifetimeEnd,
+      if (!memtag::forAllReachableExits(DT, PDT, LI, Start, Info.LifetimeEnd,
                                         SInfo.RetVec, TagEnd)) {
         for (auto *End : Info.LifetimeEnd)
           End->eraseFromParent();
@@ -1405,9 +1407,10 @@ bool HWAddressSanitizer::sanitizeFunction(Function &F,
   if (!SInfo.AllocasToInstrument.empty()) {
     const DominatorTree &DT = FAM.getResult<DominatorTreeAnalysis>(F);
     const PostDominatorTree &PDT = FAM.getResult<PostDominatorTreeAnalysis>(F);
+    const LoopInfo &LI = FAM.getResult<LoopAnalysis>(F);
     Value *StackTag =
         ClGenerateTagsWithCalls ? nullptr : getStackBaseTag(EntryIRB);
-    instrumentStack(SInfo, StackTag, DT, PDT);
+    instrumentStack(SInfo, StackTag, DT, PDT, LI);
   }
 
   // If we split the entry block, move any allocas that were originally in the
