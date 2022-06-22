@@ -89,7 +89,7 @@ declare i32 @bar_extern(i32*)
 ; CHECKSYM:       Symbols [
 ; CHECKSYM-NEXT:   Symbol {
 ; CHECKSYM-NEXT:     Index: 0
-; CHECKSYM-NEXT:     Name: .file
+; CHECKSYM-NEXT:     Name: <stdin>
 ; CHECKSYM-NEXT:     Value (SymbolTableIndex): 0x0
 ; CHECKSYM-NEXT:     Section: N_DEBUG
 ; CHECKSYM-NEXT:     Source Language ID: TB_C (0x0)
