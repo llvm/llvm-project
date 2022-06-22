@@ -633,6 +633,39 @@ Constant *FoldReinterpretLoadFromConst(Constant *C, Type *LoadTy,
   return ConstantInt::get(IntType->getContext(), ResultVal);
 }
 
+} // anonymous namespace
+
+// If GV is a constant with an initializer read its representation starting
+// at Offset and return it as a constant array of unsigned char.  Otherwise
+// return null.
+Constant *llvm::ReadByteArrayFromGlobal(const GlobalVariable *GV,
+                                        uint64_t Offset) {
+  if (!GV->isConstant() || !GV->hasDefinitiveInitializer())
+    return nullptr;
+
+  const DataLayout &DL = GV->getParent()->getDataLayout();
+  Constant *Init = const_cast<Constant *>(GV->getInitializer());
+  TypeSize InitSize = DL.getTypeAllocSize(Init->getType());
+  if (InitSize < Offset)
+    return nullptr;
+
+  uint64_t NBytes = InitSize - Offset;
+  if (NBytes > UINT16_MAX)
+    // Bail for large initializers in excess of 64K to avoid allocating
+    // too much memory.
+    // Offset is assumed to be less than or equal than InitSize (this
+    // is enforced in ReadDataFromGlobal).
+    return nullptr;
+
+  SmallVector<unsigned char, 256> RawBytes(static_cast<size_t>(NBytes));
+  unsigned char *CurPtr = RawBytes.data();
+
+  if (!ReadDataFromGlobal(Init, Offset, CurPtr, NBytes, DL))
+    return nullptr;
+
+  return ConstantDataArray::get(GV->getContext(), RawBytes);
+}
+
 /// If this Offset points exactly to the start of an aggregate element, return
 /// that element, otherwise return nullptr.
 Constant *getConstantAtOffset(Constant *Base, APInt Offset,
@@ -660,8 +693,6 @@ Constant *getConstantAtOffset(Constant *Base, APInt Offset,
 
   return C;
 }
-
-} // end anonymous namespace
 
 Constant *llvm::ConstantFoldLoadFromConst(Constant *C, Type *Ty,
                                           const APInt &Offset,

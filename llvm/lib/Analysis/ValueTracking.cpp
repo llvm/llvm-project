@@ -26,6 +26,7 @@
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/AssumeBundleQueries.h"
 #include "llvm/Analysis/AssumptionCache.h"
+#include "llvm/Analysis/ConstantFolding.h"
 #include "llvm/Analysis/EHPersonalities.h"
 #include "llvm/Analysis/GuardUtils.h"
 #include "llvm/Analysis/InstructionSimplify.h"
@@ -4174,6 +4175,10 @@ bool llvm::isGEPBasedOnPointerToString(const GEPOperator *GEP,
   return true;
 }
 
+// If V refers to an initialized global constant, set Slice either to
+// its initializer if the size of its elements equals ElementSize, or,
+// for ElementSize == 8, to its representation as an array of unsiged
+// char. Return true on success.
 bool llvm::getConstantDataArrayInfo(const Value *V,
                                     ConstantDataArraySlice &Slice,
                                     unsigned ElementSize, uint64_t Offset) {
@@ -4185,21 +4190,29 @@ bool llvm::getConstantDataArrayInfo(const Value *V,
   // If the value is a GEP instruction or constant expression, treat it as an
   // offset.
   if (const GEPOperator *GEP = dyn_cast<GEPOperator>(V)) {
-    // The GEP operator should be based on a pointer to string constant, and is
-    // indexing into the string constant.
-    if (!isGEPBasedOnPointerToString(GEP, ElementSize))
+    // Fail if the first GEP operand is not a constant zero and we're
+    // not indexing into the initializer.
+    const ConstantInt *FirstIdx = dyn_cast<ConstantInt>(GEP->getOperand(1));
+    if (!FirstIdx || !FirstIdx->isZero())
       return false;
 
-    // If the second index isn't a ConstantInt, then this is a variable index
-    // into the array.  If this occurs, we can't say anything meaningful about
-    // the string.
-    uint64_t StartIdx = 0;
-    if (const ConstantInt *CI = dyn_cast<ConstantInt>(GEP->getOperand(2)))
-      StartIdx = CI->getZExtValue();
-    else
+    Value *Op0 = GEP->getOperand(0);
+    const GlobalVariable *GV = dyn_cast<GlobalVariable>(Op0);
+    if (!GV)
       return false;
-    return getConstantDataArrayInfo(GEP->getOperand(0), Slice, ElementSize,
-                                    StartIdx + Offset);
+
+    // Fail if the offset into the initializer is not constant.
+    const DataLayout &DL = GV->getParent()->getDataLayout();
+    APInt Off(DL.getIndexSizeInBits(GEP->getPointerAddressSpace()), 0);
+    if (!GEP->accumulateConstantOffset(DL, Off))
+      return false;
+
+    // Fail if the constant offset is excessive.
+    uint64_t StartIdx = Off.getLimitedValue();
+    if (StartIdx == UINT64_MAX)
+      return false;
+
+    return getConstantDataArrayInfo(Op0, Slice, ElementSize, StartIdx + Offset);
   }
 
   // The GEP instruction, constant or instruction, must reference a global
@@ -4209,34 +4222,51 @@ bool llvm::getConstantDataArrayInfo(const Value *V,
   if (!GV || !GV->isConstant() || !GV->hasDefinitiveInitializer())
     return false;
 
-  const ConstantDataArray *Array;
-  ArrayType *ArrayTy;
+  const DataLayout &DL = GV->getParent()->getDataLayout();
+  ConstantDataArray *Array = nullptr;
+  ArrayType *ArrayTy = nullptr;
+
   if (GV->getInitializer()->isNullValue()) {
     Type *GVTy = GV->getValueType();
-    if ( (ArrayTy = dyn_cast<ArrayType>(GVTy)) ) {
-      // A zeroinitializer for the array; there is no ConstantDataArray.
-      Array = nullptr;
-    } else {
-      const DataLayout &DL = GV->getParent()->getDataLayout();
-      uint64_t SizeInBytes = DL.getTypeStoreSize(GVTy).getFixedSize();
-      uint64_t Length = SizeInBytes / (ElementSize / 8);
-      if (Length <= Offset)
-        return false;
-
-      Slice.Array = nullptr;
-      Slice.Offset = 0;
-      Slice.Length = Length - Offset;
-      return true;
-    }
-  } else {
-    // This must be a ConstantDataArray.
-    Array = dyn_cast<ConstantDataArray>(GV->getInitializer());
-    if (!Array)
+    uint64_t SizeInBytes = DL.getTypeStoreSize(GVTy).getFixedSize();
+    uint64_t Length = SizeInBytes / (ElementSize / 8);
+    if (Length <= Offset)
+      // Bail on undersized constants to let sanitizers detect library
+      // calls with them as arguments.
       return false;
-    ArrayTy = Array->getType();
+
+    Slice.Array = nullptr;
+    Slice.Offset = 0;
+    Slice.Length = Length - Offset;
+    return true;
   }
-  if (!ArrayTy->getElementType()->isIntegerTy(ElementSize))
-    return false;
+
+  auto *Init = const_cast<Constant *>(GV->getInitializer());
+  if (auto *ArrayInit = dyn_cast<ConstantDataArray>(Init)) {
+    Type *InitElTy = ArrayInit->getElementType();
+    if (InitElTy->isIntegerTy(ElementSize)) {
+      // If Init is an initializer for an array of the expected type
+      // and size, use it as is.
+      Array = ArrayInit;
+      ArrayTy = ArrayInit->getType();
+    }
+  }
+
+  if (!Array) {
+    if (ElementSize != 8)
+      // TODO: Handle conversions to larger integral types.
+      return false;
+
+    // Otherwise extract the portion of the initializer starting
+    // at Offset as an array of bytes, and reset Offset.
+    Init = ReadByteArrayFromGlobal(GV, Offset);
+    if (!Init)
+      return false;
+
+    Offset = 0;
+    Array = dyn_cast<ConstantDataArray>(Init);
+    ArrayTy = dyn_cast<ArrayType>(Init->getType());
+  }
 
   uint64_t NumElts = ArrayTy->getArrayNumElements();
   if (Offset > NumElts)

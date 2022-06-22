@@ -5,31 +5,27 @@ target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:32:64-f3
 define <4 x i1> @vector_bitcast() {
 ; CHECK-LABEL: @vector_bitcast(
 ; CHECK-NEXT:    [[A:%.*]] = alloca <3 x i1>, align 1
-; CHECK-NEXT:    store <3 x i1> <i1 true, i1 false, i1 true>, <3 x i1>* [[A]], align 1
-; CHECK-NEXT:    [[A_0_CAST_SROA_CAST:%.*]] = bitcast <3 x i1>* [[A]] to <4 x i1>*
-; CHECK-NEXT:    [[A_0_VEC:%.*]] = load <4 x i1>, <4 x i1>* [[A_0_CAST_SROA_CAST]], align 1
+; CHECK-NEXT:    store <3 x i1> <i1 true, i1 false, i1 true>, ptr [[A]], align 1
+; CHECK-NEXT:    [[A_0_VEC:%.*]] = load <4 x i1>, ptr [[A]], align 1
 ; CHECK-NEXT:    ret <4 x i1> [[A_0_VEC]]
 ;
 
   %a = alloca <3 x i1>
-  store <3 x i1> <i1 1,i1 0,i1 1>, <3 x i1>* %a
-  %cast = bitcast <3 x i1>* %a to <4 x i1>*
-  %vec = load <4 x i1>, <4 x i1>* %cast
+  store <3 x i1> <i1 1,i1 0,i1 1>, ptr %a
+  %vec = load <4 x i1>, ptr %a
   ret <4 x i1> %vec
 }
 
 define <64 x i16> @vector_bitcast_2(<32 x i16> %v) {
 ; CHECK-LABEL: @vector_bitcast_2(
 ; CHECK-NEXT:    [[P:%.*]] = alloca <32 x i16>, align 64
-; CHECK-NEXT:    store <32 x i16> [[V:%.*]], <32 x i16>* [[P]], align 64
-; CHECK-NEXT:    [[P_0_Q_SROA_CAST:%.*]] = bitcast <32 x i16>* [[P]] to <64 x i16>*
-; CHECK-NEXT:    [[P_0_LOAD:%.*]] = load <64 x i16>, <64 x i16>* [[P_0_Q_SROA_CAST]], align 64
+; CHECK-NEXT:    store <32 x i16> [[V:%.*]], ptr [[P]], align 64
+; CHECK-NEXT:    [[P_0_LOAD:%.*]] = load <64 x i16>, ptr [[P]], align 64
 ; CHECK-NEXT:    ret <64 x i16> [[P_0_LOAD]]
 ;
 
   %p = alloca <32 x i16>
-  store <32 x i16> %v, <32 x i16>* %p
-  %q = bitcast <32 x i16>* %p to <64 x i16>*
-  %load = load <64 x i16>, <64 x i16>* %q
+  store <32 x i16> %v, ptr %p
+  %load = load <64 x i16>, ptr %p
   ret <64 x i16> %load
 }

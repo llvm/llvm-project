@@ -23,10 +23,14 @@
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/LEB128.h"
 #include "llvm/Support/Path.h"
-#include "llvm/Support/SHA256.h"
 
 #if defined(__APPLE__)
 #include <sys/mman.h>
+
+#define COMMON_DIGEST_FOR_OPENSSL
+#include <CommonCrypto/CommonDigest.h>
+#else
+#include "llvm/Support/SHA256.h"
 #endif
 
 #ifdef LLVM_HAVE_LIBXAR
@@ -42,6 +46,20 @@ using namespace llvm::support;
 using namespace llvm::support::endian;
 using namespace lld;
 using namespace lld::macho;
+
+// Reads `len` bytes at data and writes the 32-byte SHA256 checksum to `output`.
+static void sha256(const uint8_t *data, size_t len, uint8_t *output) {
+#if defined(__APPLE__)
+  // FIXME: Make LLVM's SHA256 faster and use it unconditionally. See PR56121
+  // for some notes on this.
+  CC_SHA256(data, len, output);
+#else
+  ArrayRef<uint8_t> block(data, len);
+  std::array<uint8_t, 32> hash = SHA256::hash(block);
+  assert(hash.size() == CodeSignatureSection::hashSize);
+  memcpy(output, hash.data(), hash.size());
+#endif
+}
 
 InStruct macho::in;
 std::vector<SyntheticSection *> macho::syntheticSections;
@@ -1239,13 +1257,8 @@ void CodeSignatureSection::writeHashes(uint8_t *buf) const {
   uint8_t *codeEnd = buf + fileOff;
   uint8_t *hashes = codeEnd + allHeadersSize;
   while (code < codeEnd) {
-    StringRef block(reinterpret_cast<char *>(code),
-                    std::min(codeEnd - code, static_cast<ssize_t>(blockSize)));
-    SHA256 hasher;
-    hasher.update(block);
-    std::array<uint8_t, 32> hash = hasher.final();
-    assert(hash.size() == hashSize);
-    memcpy(hashes, hash.data(), hashSize);
+    sha256(code, std::min(static_cast<size_t>(codeEnd - code), blockSize),
+           hashes);
     code += blockSize;
     hashes += hashSize;
   }

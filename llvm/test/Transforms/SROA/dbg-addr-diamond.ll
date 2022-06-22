@@ -13,33 +13,30 @@ target triple = "x86_64-pc-windows-msvc19.0.24215"
 define void @if_else(i32 %cond, i32 %a, i32 %b) !dbg !8 {
 entry:
   %p = alloca %struct.Pair, align 4
-  %0 = bitcast %struct.Pair* %p to i8*, !dbg !25
-  call void @llvm.dbg.addr(metadata %struct.Pair* %p, metadata !20, metadata !DIExpression()), !dbg !26
-  %x = getelementptr inbounds %struct.Pair, %struct.Pair* %p, i32 0, i32 0, !dbg !27
-  store i32 %a, i32* %x, align 4, !dbg !28
-  %y = getelementptr inbounds %struct.Pair, %struct.Pair* %p, i32 0, i32 1, !dbg !34
-  store i32 %b, i32* %y, align 4, !dbg !35
+  %0 = bitcast ptr %p to ptr, !dbg !25
+  call void @llvm.dbg.addr(metadata ptr %p, metadata !20, metadata !DIExpression()), !dbg !26
+  store i32 %a, ptr %p, align 4, !dbg !28
+  %y = getelementptr inbounds %struct.Pair, ptr %p, i32 0, i32 1, !dbg !34
+  store i32 %b, ptr %y, align 4, !dbg !35
   %tobool = icmp ne i32 %cond, 0, !dbg !37
   br i1 %tobool, label %if.then, label %if.else, !dbg !39
 
 if.then:                                          ; preds = %entry
-  %x1 = getelementptr inbounds %struct.Pair, %struct.Pair* %p, i32 0, i32 0, !dbg !40
-  store i32 0, i32* %x1, align 4, !dbg !42
-  %y2 = getelementptr inbounds %struct.Pair, %struct.Pair* %p, i32 0, i32 1, !dbg !43
-  store i32 %a, i32* %y2, align 4, !dbg !44
+  store i32 0, ptr %p, align 4, !dbg !42
+  %y2 = getelementptr inbounds %struct.Pair, ptr %p, i32 0, i32 1, !dbg !43
+  store i32 %a, ptr %y2, align 4, !dbg !44
   br label %if.end, !dbg !45
 
 if.else:                                          ; preds = %entry
-  %x3 = getelementptr inbounds %struct.Pair, %struct.Pair* %p, i32 0, i32 0, !dbg !46
-  store i32 %b, i32* %x3, align 4, !dbg !48
-  %y4 = getelementptr inbounds %struct.Pair, %struct.Pair* %p, i32 0, i32 1, !dbg !49
-  store i32 0, i32* %y4, align 4, !dbg !50
+  store i32 %b, ptr %p, align 4, !dbg !48
+  %y4 = getelementptr inbounds %struct.Pair, ptr %p, i32 0, i32 1, !dbg !49
+  store i32 0, ptr %y4, align 4, !dbg !50
   br label %if.end
 
 if.end:                                           ; preds = %if.else, %if.then
-  %1 = bitcast %struct.Pair* %p to i8*, !dbg !51
-  %2 = bitcast %struct.Pair* @pair to i8*, !dbg !51
-  call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 4 %2, i8* align 4 %1, i64 8, i1 false), !dbg !51
+  %1 = bitcast ptr %p to ptr, !dbg !51
+  %2 = bitcast ptr @pair to ptr, !dbg !51
+  call void @llvm.memcpy.p0.p0.i64(ptr align 4 %2, ptr align 4 %1, i64 8, i1 false), !dbg !51
   ret void
 }
 
@@ -62,7 +59,7 @@ if.end:                                           ; preds = %if.else, %if.then
 ; CHECK: ![[PVAR]] = !DILocalVariable(name: "p", {{.*}})
 
 ; Function Attrs: argmemonly nounwind
-declare void @llvm.memcpy.p0i8.p0i8.i64(i8* nocapture writeonly, i8* nocapture readonly, i64, i1) #2
+declare void @llvm.memcpy.p0.p0.i64(ptr nocapture writeonly, ptr nocapture readonly, i64, i1) #2
 
 ; Function Attrs: nounwind readnone speculatable
 declare void @llvm.dbg.addr(metadata, metadata, metadata)
