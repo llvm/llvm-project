@@ -69,7 +69,7 @@ define i64 @add_nsw_sext(i32 %i, i64 %x) {
 
 ; The typical use case: a 64-bit system where an 'int' is used as an index into an array.
 
-define i8* @gep8(i32 %i, i8* %x) {
+define ptr @gep8(i32 %i, ptr %x) {
 ; CHECK-LABEL: gep8:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movslq %edi, %rax
@@ -78,11 +78,11 @@ define i8* @gep8(i32 %i, i8* %x) {
 
   %add = add nsw i32 %i, 5
   %ext = sext i32 %add to i64
-  %idx = getelementptr i8, i8* %x, i64 %ext
-  ret i8* %idx
+  %idx = getelementptr i8, ptr %x, i64 %ext
+  ret ptr %idx
 }
 
-define i16* @gep16(i32 %i, i16* %x) {
+define ptr @gep16(i32 %i, ptr %x) {
 ; CHECK-LABEL: gep16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movslq %edi, %rax
@@ -91,11 +91,11 @@ define i16* @gep16(i32 %i, i16* %x) {
 
   %add = add nsw i32 %i, -5
   %ext = sext i32 %add to i64
-  %idx = getelementptr i16, i16* %x, i64 %ext
-  ret i16* %idx
+  %idx = getelementptr i16, ptr %x, i64 %ext
+  ret ptr %idx
 }
 
-define i32* @gep32(i32 %i, i32* %x) {
+define ptr @gep32(i32 %i, ptr %x) {
 ; CHECK-LABEL: gep32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movslq %edi, %rax
@@ -104,11 +104,11 @@ define i32* @gep32(i32 %i, i32* %x) {
 
   %add = add nsw i32 %i, 5
   %ext = sext i32 %add to i64
-  %idx = getelementptr i32, i32* %x, i64 %ext
-  ret i32* %idx
+  %idx = getelementptr i32, ptr %x, i64 %ext
+  ret ptr %idx
 }
 
-define i64* @gep64(i32 %i, i64* %x) {
+define ptr @gep64(i32 %i, ptr %x) {
 ; CHECK-LABEL: gep64:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movslq %edi, %rax
@@ -117,13 +117,13 @@ define i64* @gep64(i32 %i, i64* %x) {
 
   %add = add nsw i32 %i, -5
   %ext = sext i32 %add to i64
-  %idx = getelementptr i64, i64* %x, i64 %ext
-  ret i64* %idx
+  %idx = getelementptr i64, ptr %x, i64 %ext
+  ret ptr %idx
 }
 
 ; LEA can't scale by 16, but the adds can still be combined into an LEA.
 
-define i128* @gep128(i32 %i, i128* %x) {
+define ptr @gep128(i32 %i, ptr %x) {
 ; CHECK-LABEL: gep128:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movslq %edi, %rax
@@ -133,15 +133,15 @@ define i128* @gep128(i32 %i, i128* %x) {
 
   %add = add nsw i32 %i, 5
   %ext = sext i32 %add to i64
-  %idx = getelementptr i128, i128* %x, i64 %ext
-  ret i128* %idx
+  %idx = getelementptr i128, ptr %x, i64 %ext
+  ret ptr %idx
 }
 
 ; A bigger win can be achieved when there is more than one use of the
 ; sign extended value. In this case, we can eliminate sign extension
 ; instructions plus use more efficient addressing modes for memory ops.
 
-define void @PR20134(i32* %a, i32 %i) {
+define void @PR20134(ptr %a, i32 %i) {
 ; CHECK-LABEL: PR20134:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movslq %esi, %rax
@@ -152,23 +152,23 @@ define void @PR20134(i32* %a, i32 %i) {
 
   %add1 = add nsw i32 %i, 1
   %idx1 = sext i32 %add1 to i64
-  %gep1 = getelementptr i32, i32* %a, i64 %idx1
-  %load1 = load i32, i32* %gep1, align 4
+  %gep1 = getelementptr i32, ptr %a, i64 %idx1
+  %load1 = load i32, ptr %gep1, align 4
 
   %add2 = add nsw i32 %i, 2
   %idx2 = sext i32 %add2 to i64
-  %gep2 = getelementptr i32, i32* %a, i64 %idx2
-  %load2 = load i32, i32* %gep2, align 4
+  %gep2 = getelementptr i32, ptr %a, i64 %idx2
+  %load2 = load i32, ptr %gep2, align 4
 
   %add3 = add i32 %load1, %load2
   %idx3 = sext i32 %i to i64
-  %gep3 = getelementptr i32, i32* %a, i64 %idx3
-  store i32 %add3, i32* %gep3, align 4
+  %gep3 = getelementptr i32, ptr %a, i64 %idx3
+  store i32 %add3, ptr %gep3, align 4
   ret void
 }
 
 ; The same as @PR20134 but sign extension is replaced with zero extension
-define void @PR20134_zext(i32* %a, i32 %i) {
+define void @PR20134_zext(ptr %a, i32 %i) {
 ; CHECK-LABEL: PR20134_zext:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movl %esi, %eax
@@ -179,17 +179,17 @@ define void @PR20134_zext(i32* %a, i32 %i) {
 
   %add1 = add nuw i32 %i, 1
   %idx1 = zext i32 %add1 to i64
-  %gep1 = getelementptr i32, i32* %a, i64 %idx1
-  %load1 = load i32, i32* %gep1, align 4
+  %gep1 = getelementptr i32, ptr %a, i64 %idx1
+  %load1 = load i32, ptr %gep1, align 4
 
   %add2 = add nuw i32 %i, 2
   %idx2 = zext i32 %add2 to i64
-  %gep2 = getelementptr i32, i32* %a, i64 %idx2
-  %load2 = load i32, i32* %gep2, align 4
+  %gep2 = getelementptr i32, ptr %a, i64 %idx2
+  %load2 = load i32, ptr %gep2, align 4
 
   %add3 = add i32 %load1, %load2
   %idx3 = zext i32 %i to i64
-  %gep3 = getelementptr i32, i32* %a, i64 %idx3
-  store i32 %add3, i32* %gep3, align 4
+  %gep3 = getelementptr i32, ptr %a, i64 %idx3
+  store i32 %add3, ptr %gep3, align 4
   ret void
 }

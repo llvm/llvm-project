@@ -10,7 +10,7 @@ define void @test() {
 ; CHECK-NEXT:    mov %gs:72, %eax
 ; CHECK-NEXT:    ## InlineAsm End
 ; CHECK-NEXT:    retl
-	%tmp1 = tail call i32* asm sideeffect "mov %gs:${1:P}, $0", "=r,i,~{dirflag},~{fpsr},~{flags}"( i32 72 )		; <%struct._pthread*> [#uses=1]
+	%tmp1 = tail call ptr asm sideeffect "mov %gs:${1:P}, $0", "=r,i,~{dirflag},~{fpsr},~{flags}"( i32 72 )		; <ptr> [#uses=1]
 	ret void
 }
 

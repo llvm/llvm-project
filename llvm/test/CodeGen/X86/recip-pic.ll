@@ -18,7 +18,7 @@ define fastcc float @foo(float %x) unnamed_addr #0 {
 ; CHECK-NEXT:    retl
 entry:
   %div = fdiv fast float 3.0, %x
-  store float %div, float* undef, align 4
+  store float %div, ptr undef, align 4
   ret float %div
 }
 

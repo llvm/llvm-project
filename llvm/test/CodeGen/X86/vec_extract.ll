@@ -2,7 +2,7 @@
 ; RUN: llc < %s -mtriple=i686-unknown-linux-gnu -mattr=+sse2,-sse4.1 | FileCheck %s --check-prefix=X32
 ; RUN: llc < %s -mtriple=x86_64-unknown-linux-gnu -mattr=+sse2,-sse4.1 | FileCheck %s --check-prefix=X64
 
-define void @test1(<4 x float>* %F, float* %f) nounwind {
+define void @test1(ptr %F, ptr %f) nounwind {
 ; X32-LABEL: test1:
 ; X32:       # %bb.0: # %entry
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -19,14 +19,14 @@ define void @test1(<4 x float>* %F, float* %f) nounwind {
 ; X64-NEXT:    movss %xmm0, (%rsi)
 ; X64-NEXT:    retq
 entry:
-  %tmp = load <4 x float>, <4 x float>* %F
+  %tmp = load <4 x float>, ptr %F
   %tmp7 = fadd <4 x float> %tmp, %tmp
   %tmp2 = extractelement <4 x float> %tmp7, i32 0
-  store float %tmp2, float* %f
+  store float %tmp2, ptr %f
   ret void
 }
 
-define float @test2(<4 x float>* %F, float* %f) nounwind {
+define float @test2(ptr %F, ptr %f) nounwind {
 ; X32-LABEL: test2:
 ; X32:       # %bb.0: # %entry
 ; X32-NEXT:    pushl %eax
@@ -46,13 +46,13 @@ define float @test2(<4 x float>* %F, float* %f) nounwind {
 ; X64-NEXT:    movhlps {{.*#+}} xmm0 = xmm0[1,1]
 ; X64-NEXT:    retq
 entry:
-  %tmp = load <4 x float>, <4 x float>* %F
+  %tmp = load <4 x float>, ptr %F
   %tmp7 = fadd <4 x float> %tmp, %tmp
   %tmp2 = extractelement <4 x float> %tmp7, i32 2
   ret float %tmp2
 }
 
-define void @test3(float* %R, <4 x float>* %P1) nounwind {
+define void @test3(ptr %R, ptr %P1) nounwind {
 ; X32-LABEL: test3:
 ; X32:       # %bb.0: # %entry
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -69,9 +69,9 @@ define void @test3(float* %R, <4 x float>* %P1) nounwind {
 ; X64-NEXT:    movss %xmm0, (%rdi)
 ; X64-NEXT:    retq
 entry:
-  %X = load <4 x float>, <4 x float>* %P1
+  %X = load <4 x float>, ptr %P1
   %tmp = extractelement <4 x float> %X, i32 3
-  store float %tmp, float* %R
+  store float %tmp, ptr %R
   ret void
 }
 
@@ -106,7 +106,7 @@ declare <2 x double> @foo()
 
 ; OSS-Fuzz #15662
 ; https://bugs.chromium.org/p/oss-fuzz/issues/detail?id=15662
-define <4 x i32> @ossfuzz15662(<4 x i32*>* %in) {
+define <4 x i32> @ossfuzz15662(ptr %in) {
 ; X32-LABEL: ossfuzz15662:
 ; X32:       # %bb.0:
 ; X32-NEXT:    xorps %xmm0, %xmm0
@@ -120,6 +120,6 @@ define <4 x i32> @ossfuzz15662(<4 x i32*>* %in) {
    %C3 = icmp ule i1 true, undef
    %B = sdiv i1 %C10, %C3
    %I = insertelement <4 x i32> zeroinitializer, i32 0, i1 %B
-   store <4 x i32> %I, <4 x i32>* undef
+   store <4 x i32> %I, ptr undef
    ret <4 x i32> zeroinitializer
 }

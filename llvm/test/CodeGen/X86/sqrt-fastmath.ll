@@ -995,7 +995,7 @@ define <2 x double> @sqrt_fdiv_common_operand_vec(<2 x double> %x) nounwind {
   ret <2 x double> %r
 }
 
-define double @sqrt_fdiv_common_operand_extra_use(double %x, double* %p) nounwind {
+define double @sqrt_fdiv_common_operand_extra_use(double %x, ptr %p) nounwind {
 ; SSE-LABEL: sqrt_fdiv_common_operand_extra_use:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    sqrtsd %xmm0, %xmm0
@@ -1008,12 +1008,12 @@ define double @sqrt_fdiv_common_operand_extra_use(double %x, double* %p) nounwin
 ; AVX-NEXT:    vmovsd %xmm0, (%rdi)
 ; AVX-NEXT:    retq
   %sqrt = call fast double @llvm.sqrt.f64(double %x)
-  store double %sqrt, double* %p
+  store double %sqrt, ptr %p
   %r = fdiv fast double %x, %sqrt
   ret double %r
 }
 
-define double @sqrt_simplify_before_recip(double %x, double* %p) nounwind {
+define double @sqrt_simplify_before_recip(double %x, ptr %p) nounwind {
 ; SSE-LABEL: sqrt_simplify_before_recip:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    sqrtsd %xmm0, %xmm0
@@ -1032,11 +1032,11 @@ define double @sqrt_simplify_before_recip(double %x, double* %p) nounwind {
   %sqrt = tail call fast double @llvm.sqrt.f64(double %x)
   %rsqrt = fdiv fast double 1.0, %sqrt
   %sqrt_fast = fdiv fast double %x, %sqrt
-  store double %rsqrt, double* %p, align 8
+  store double %rsqrt, ptr %p, align 8
   ret double %sqrt_fast
 }
 
-define <2 x double> @sqrt_simplify_before_recip_vec(<2 x double> %x, <2 x double>* %p) nounwind {
+define <2 x double> @sqrt_simplify_before_recip_vec(<2 x double> %x, ptr %p) nounwind {
 ; SSE-LABEL: sqrt_simplify_before_recip_vec:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    sqrtpd %xmm0, %xmm0
@@ -1055,11 +1055,11 @@ define <2 x double> @sqrt_simplify_before_recip_vec(<2 x double> %x, <2 x double
   %sqrt = tail call fast <2 x double> @llvm.sqrt.v2f64(<2 x double> %x)
   %rsqrt = fdiv fast <2 x double> <double 1.0, double 1.0>, %sqrt
   %sqrt_fast = fdiv fast <2 x double> %x, %sqrt
-  store <2 x double> %rsqrt, <2 x double>* %p, align 8
+  store <2 x double> %rsqrt, ptr %p, align 8
   ret <2 x double> %sqrt_fast
 }
 
-define double @sqrt_simplify_before_recip_order(double %x, double* %p) nounwind {
+define double @sqrt_simplify_before_recip_order(double %x, ptr %p) nounwind {
 ; SSE-LABEL: sqrt_simplify_before_recip_order:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    sqrtsd %xmm0, %xmm0
@@ -1078,7 +1078,7 @@ define double @sqrt_simplify_before_recip_order(double %x, double* %p) nounwind 
   %sqrt = tail call fast double @llvm.sqrt.f64(double %x)
   %sqrt_fast = fdiv fast double %x, %sqrt
   %rsqrt = fdiv fast double 42.0, %sqrt
-  store double %rsqrt, double* %p, align 8
+  store double %rsqrt, ptr %p, align 8
   ret double %sqrt_fast
 }
 

@@ -4,7 +4,7 @@
 ; RUN: llc < %s -mtriple=x86_64-unknown -mattr=+sse4.1 | FileCheck %s --check-prefix=X64-SSE
 ; RUN: llc < %s -mtriple=x86_64-unknown -mattr=+avx | FileCheck %s --check-prefix=X64-AVX
 
-define void @fptrunc_frommem2(<2 x double>* %in, <2 x float>* %out) {
+define void @fptrunc_frommem2(ptr %in, ptr %out) {
 ; X32-SSE-LABEL: fptrunc_frommem2:
 ; X32-SSE:       # %bb.0: # %entry
 ; X32-SSE-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -33,13 +33,13 @@ define void @fptrunc_frommem2(<2 x double>* %in, <2 x float>* %out) {
 ; X64-AVX-NEXT:    vmovlpd %xmm0, (%rsi)
 ; X64-AVX-NEXT:    retq
 entry:
-  %0 = load <2 x double>, <2 x double>* %in
+  %0 = load <2 x double>, ptr %in
   %1 = fptrunc <2 x double> %0 to <2 x float>
-  store <2 x float> %1, <2 x float>* %out, align 1
+  store <2 x float> %1, ptr %out, align 1
   ret void
 }
 
-define void @fptrunc_frommem4(<4 x double>* %in, <4 x float>* %out) {
+define void @fptrunc_frommem4(ptr %in, ptr %out) {
 ; X32-SSE-LABEL: fptrunc_frommem4:
 ; X32-SSE:       # %bb.0: # %entry
 ; X32-SSE-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -72,13 +72,13 @@ define void @fptrunc_frommem4(<4 x double>* %in, <4 x float>* %out) {
 ; X64-AVX-NEXT:    vmovupd %xmm0, (%rsi)
 ; X64-AVX-NEXT:    retq
 entry:
-  %0 = load <4 x double>, <4 x double>* %in
+  %0 = load <4 x double>, ptr %in
   %1 = fptrunc <4 x double> %0 to <4 x float>
-  store <4 x float> %1, <4 x float>* %out, align 1
+  store <4 x float> %1, ptr %out, align 1
   ret void
 }
 
-define void @fptrunc_frommem8(<8 x double>* %in, <8 x float>* %out) {
+define void @fptrunc_frommem8(ptr %in, ptr %out) {
 ; X32-SSE-LABEL: fptrunc_frommem8:
 ; X32-SSE:       # %bb.0: # %entry
 ; X32-SSE-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -123,13 +123,13 @@ define void @fptrunc_frommem8(<8 x double>* %in, <8 x float>* %out) {
 ; X64-AVX-NEXT:    vmovupd %xmm0, (%rsi)
 ; X64-AVX-NEXT:    retq
 entry:
-  %0 = load <8 x double>, <8 x double>* %in
+  %0 = load <8 x double>, ptr %in
   %1 = fptrunc <8 x double> %0 to <8 x float>
-  store <8 x float> %1, <8 x float>* %out, align 1
+  store <8 x float> %1, ptr %out, align 1
   ret void
 }
 
-define <4 x float> @fptrunc_frommem2_zext(<2 x double> * %ld) {
+define <4 x float> @fptrunc_frommem2_zext(ptr %ld) {
 ; X32-SSE-LABEL: fptrunc_frommem2_zext:
 ; X32-SSE:       # %bb.0:
 ; X32-SSE-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -151,7 +151,7 @@ define <4 x float> @fptrunc_frommem2_zext(<2 x double> * %ld) {
 ; X64-AVX:       # %bb.0:
 ; X64-AVX-NEXT:    vcvtpd2psx (%rdi), %xmm0
 ; X64-AVX-NEXT:    retq
-  %arg = load <2 x double>, <2 x double> * %ld, align 16
+  %arg = load <2 x double>, ptr %ld, align 16
   %cvt = fptrunc <2 x double> %arg to <2 x float>
   %ret = shufflevector <2 x float> %cvt, <2 x float> zeroinitializer, <4 x i32> <i32 0, i32 1, i32 2, i32 2>
   ret <4 x float> %ret

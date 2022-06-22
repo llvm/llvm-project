@@ -33,7 +33,7 @@ define i32 @shl32i(i32 %x) nounwind uwtable readnone {
   ret i32 %shl
 }
 
-define i32 @shl32p(i32* %p, i32 %shamt) nounwind uwtable readnone {
+define i32 @shl32p(ptr %p, i32 %shamt) nounwind uwtable readnone {
 ; BMI2-LABEL: shl32p:
 ; BMI2:       # %bb.0:
 ; BMI2-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -45,12 +45,12 @@ define i32 @shl32p(i32* %p, i32 %shamt) nounwind uwtable readnone {
 ; BMI264:       # %bb.0:
 ; BMI264-NEXT:    shlxl %esi, (%rdi), %eax
 ; BMI264-NEXT:    retq
-  %x = load i32, i32* %p
+  %x = load i32, ptr %p
   %shl = shl i32 %x, %shamt
   ret i32 %shl
 }
 
-define i32 @shl32pi(i32* %p) nounwind uwtable readnone {
+define i32 @shl32pi(ptr %p) nounwind uwtable readnone {
 ; BMI2-LABEL: shl32pi:
 ; BMI2:       # %bb.0:
 ; BMI2-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -63,7 +63,7 @@ define i32 @shl32pi(i32* %p) nounwind uwtable readnone {
 ; BMI264-NEXT:    movl (%rdi), %eax
 ; BMI264-NEXT:    shll $5, %eax
 ; BMI264-NEXT:    retq
-  %x = load i32, i32* %p
+  %x = load i32, ptr %p
   %shl = shl i32 %x, 5
   ret i32 %shl
 }
@@ -113,7 +113,7 @@ define i64 @shl64i(i64 %x) nounwind uwtable readnone {
   ret i64 %shl
 }
 
-define i64 @shl64p(i64* %p, i64 %shamt) nounwind uwtable readnone {
+define i64 @shl64p(ptr %p, i64 %shamt) nounwind uwtable readnone {
 ; BMI2-LABEL: shl64p:
 ; BMI2:       # %bb.0:
 ; BMI2-NEXT:    pushl %esi
@@ -137,12 +137,12 @@ define i64 @shl64p(i64* %p, i64 %shamt) nounwind uwtable readnone {
 ; BMI264:       # %bb.0:
 ; BMI264-NEXT:    shlxq %rsi, (%rdi), %rax
 ; BMI264-NEXT:    retq
-  %x = load i64, i64* %p
+  %x = load i64, ptr %p
   %shl = shl i64 %x, %shamt
   ret i64 %shl
 }
 
-define i64 @shl64pi(i64* %p) nounwind uwtable readnone {
+define i64 @shl64pi(ptr %p) nounwind uwtable readnone {
 ; BMI2-LABEL: shl64pi:
 ; BMI2:       # %bb.0:
 ; BMI2-NEXT:    movl {{[0-9]+}}(%esp), %ecx
@@ -157,7 +157,7 @@ define i64 @shl64pi(i64* %p) nounwind uwtable readnone {
 ; BMI264-NEXT:    movq (%rdi), %rax
 ; BMI264-NEXT:    shlq $7, %rax
 ; BMI264-NEXT:    retq
-  %x = load i64, i64* %p
+  %x = load i64, ptr %p
   %shl = shl i64 %x, 7
   ret i64 %shl
 }
@@ -177,7 +177,7 @@ define i32 @lshr32(i32 %x, i32 %shamt) nounwind uwtable readnone {
   ret i32 %shl
 }
 
-define i32 @lshr32p(i32* %p, i32 %shamt) nounwind uwtable readnone {
+define i32 @lshr32p(ptr %p, i32 %shamt) nounwind uwtable readnone {
 ; BMI2-LABEL: lshr32p:
 ; BMI2:       # %bb.0:
 ; BMI2-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -189,7 +189,7 @@ define i32 @lshr32p(i32* %p, i32 %shamt) nounwind uwtable readnone {
 ; BMI264:       # %bb.0:
 ; BMI264-NEXT:    shrxl %esi, (%rdi), %eax
 ; BMI264-NEXT:    retq
-  %x = load i32, i32* %p
+  %x = load i32, ptr %p
   %shl = lshr i32 %x, %shamt
   ret i32 %shl
 }
@@ -221,7 +221,7 @@ define i64 @lshr64(i64 %x, i64 %shamt) nounwind uwtable readnone {
   ret i64 %shl
 }
 
-define i64 @lshr64p(i64* %p, i64 %shamt) nounwind uwtable readnone {
+define i64 @lshr64p(ptr %p, i64 %shamt) nounwind uwtable readnone {
 ; BMI2-LABEL: lshr64p:
 ; BMI2:       # %bb.0:
 ; BMI2-NEXT:    pushl %esi
@@ -245,7 +245,7 @@ define i64 @lshr64p(i64* %p, i64 %shamt) nounwind uwtable readnone {
 ; BMI264:       # %bb.0:
 ; BMI264-NEXT:    shrxq %rsi, (%rdi), %rax
 ; BMI264-NEXT:    retq
-  %x = load i64, i64* %p
+  %x = load i64, ptr %p
   %shl = lshr i64 %x, %shamt
   ret i64 %shl
 }
@@ -265,7 +265,7 @@ define i32 @ashr32(i32 %x, i32 %shamt) nounwind uwtable readnone {
   ret i32 %shl
 }
 
-define i32 @ashr32p(i32* %p, i32 %shamt) nounwind uwtable readnone {
+define i32 @ashr32p(ptr %p, i32 %shamt) nounwind uwtable readnone {
 ; BMI2-LABEL: ashr32p:
 ; BMI2:       # %bb.0:
 ; BMI2-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -277,7 +277,7 @@ define i32 @ashr32p(i32* %p, i32 %shamt) nounwind uwtable readnone {
 ; BMI264:       # %bb.0:
 ; BMI264-NEXT:    sarxl %esi, (%rdi), %eax
 ; BMI264-NEXT:    retq
-  %x = load i32, i32* %p
+  %x = load i32, ptr %p
   %shl = ashr i32 %x, %shamt
   ret i32 %shl
 }
@@ -309,7 +309,7 @@ define i64 @ashr64(i64 %x, i64 %shamt) nounwind uwtable readnone {
   ret i64 %shl
 }
 
-define i64 @ashr64p(i64* %p, i64 %shamt) nounwind uwtable readnone {
+define i64 @ashr64p(ptr %p, i64 %shamt) nounwind uwtable readnone {
 ; BMI2-LABEL: ashr64p:
 ; BMI2:       # %bb.0:
 ; BMI2-NEXT:    pushl %esi
@@ -333,7 +333,7 @@ define i64 @ashr64p(i64* %p, i64 %shamt) nounwind uwtable readnone {
 ; BMI264:       # %bb.0:
 ; BMI264-NEXT:    sarxq %rsi, (%rdi), %rax
 ; BMI264-NEXT:    retq
-  %x = load i64, i64* %p
+  %x = load i64, ptr %p
   %shl = ashr i64 %x, %shamt
   ret i64 %shl
 }

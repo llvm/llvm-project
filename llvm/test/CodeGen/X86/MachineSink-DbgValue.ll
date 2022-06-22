@@ -3,10 +3,10 @@
 target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f32:32:32-f64:64:64-v64:64:64-v128:128:128-a0:0:64-s0:64:64-f80:128:128-n8:16:32:64"
 target triple = "x86_64-apple-macosx10.7.0"
 
-define i32 @foo(i32 %i, i32* nocapture %c) nounwind uwtable readonly ssp !dbg !1 {
+define i32 @foo(i32 %i, ptr nocapture %c) nounwind uwtable readonly ssp !dbg !1 {
   tail call void @llvm.dbg.value(metadata i32 %i, i64 0, metadata !6, metadata !DIExpression()), !dbg !12
-  %ab = load i32, i32* %c, align 1, !dbg !14
-  tail call void @llvm.dbg.value(metadata i32* %c, i64 0, metadata !7, metadata !DIExpression()), !dbg !13
+  %ab = load i32, ptr %c, align 1, !dbg !14
+  tail call void @llvm.dbg.value(metadata ptr %c, i64 0, metadata !7, metadata !DIExpression()), !dbg !13
   tail call void @llvm.dbg.value(metadata i32 %ab, i64 0, metadata !10, metadata !DIExpression()), !dbg !14
   %cd = icmp eq i32 %i, 42, !dbg !15
   br i1 %cd, label %bb1, label %bb2, !dbg !15

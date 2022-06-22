@@ -4,21 +4,21 @@
 ; RUN: llc < %s -mtriple=x86_64-unknown-linux-gnu -mattr=avx,-avx512f | FileCheck %s --check-prefixes=GPR,AVX
 ; RUN: llc < %s -mtriple=x86_64-unknown-linux-gnu -mattr=avx512f      | FileCheck %s --check-prefixes=GPR,AVX512
 
-declare void @llvm.memset.p0i8.i64(i8* nocapture, i8, i64, i1) nounwind
-declare void @llvm.memset.inline.p0i8.i64(i8* nocapture, i8, i64, i1) nounwind
+declare void @llvm.memset.p0.i64(ptr nocapture, i8, i64, i1) nounwind
+declare void @llvm.memset.inline.p0.i64(ptr nocapture, i8, i64, i1) nounwind
 
 ; /////////////////////////////////////////////////////////////////////////////
 
-define void @memset_1(i8* %a, i8 %value) nounwind {
+define void @memset_1(ptr %a, i8 %value) nounwind {
 ; GPR-LABEL: memset_1:
 ; GPR:       # %bb.0:
 ; GPR-NEXT:    movb %sil, (%rdi)
 ; GPR-NEXT:    retq
-  tail call void @llvm.memset.inline.p0i8.i64(i8* %a, i8 %value, i64 1, i1 0)
+  tail call void @llvm.memset.inline.p0.i64(ptr %a, i8 %value, i64 1, i1 0)
   ret void
 }
 
-define void @memset_2(i8* %a, i8 %value) nounwind {
+define void @memset_2(ptr %a, i8 %value) nounwind {
 ; GPR-LABEL: memset_2:
 ; GPR:       # %bb.0:
 ; GPR-NEXT:    movzbl %sil, %eax
@@ -26,22 +26,22 @@ define void @memset_2(i8* %a, i8 %value) nounwind {
 ; GPR-NEXT:    orl %esi, %eax
 ; GPR-NEXT:    movw %ax, (%rdi)
 ; GPR-NEXT:    retq
-  tail call void @llvm.memset.inline.p0i8.i64(i8* %a, i8 %value, i64 2, i1 0)
+  tail call void @llvm.memset.inline.p0.i64(ptr %a, i8 %value, i64 2, i1 0)
   ret void
 }
 
-define void @memset_4(i8* %a, i8 %value) nounwind {
+define void @memset_4(ptr %a, i8 %value) nounwind {
 ; GPR-LABEL: memset_4:
 ; GPR:       # %bb.0:
 ; GPR-NEXT:    movzbl %sil, %eax
 ; GPR-NEXT:    imull $16843009, %eax, %eax # imm = 0x1010101
 ; GPR-NEXT:    movl %eax, (%rdi)
 ; GPR-NEXT:    retq
-  tail call void @llvm.memset.inline.p0i8.i64(i8* %a, i8 %value, i64 4, i1 0)
+  tail call void @llvm.memset.inline.p0.i64(ptr %a, i8 %value, i64 4, i1 0)
   ret void
 }
 
-define void @memset_8(i8* %a, i8 %value) nounwind {
+define void @memset_8(ptr %a, i8 %value) nounwind {
 ; GPR-LABEL: memset_8:
 ; GPR:       # %bb.0:
 ; GPR-NEXT:    # kill: def $esi killed $esi def $rsi
@@ -50,11 +50,11 @@ define void @memset_8(i8* %a, i8 %value) nounwind {
 ; GPR-NEXT:    imulq %rax, %rcx
 ; GPR-NEXT:    movq %rcx, (%rdi)
 ; GPR-NEXT:    retq
-  tail call void @llvm.memset.inline.p0i8.i64(i8* %a, i8 %value, i64 8, i1 0)
+  tail call void @llvm.memset.inline.p0.i64(ptr %a, i8 %value, i64 8, i1 0)
   ret void
 }
 
-define void @memset_16(i8* %a, i8 %value) nounwind {
+define void @memset_16(ptr %a, i8 %value) nounwind {
 ; SSE2-LABEL: memset_16:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    # kill: def $esi killed $esi def $rsi
@@ -87,11 +87,11 @@ define void @memset_16(i8* %a, i8 %value) nounwind {
 ; AVX512-NEXT:    vpbroadcastb %xmm0, %xmm0
 ; AVX512-NEXT:    vmovdqu %xmm0, (%rdi)
 ; AVX512-NEXT:    retq
-  tail call void @llvm.memset.inline.p0i8.i64(i8* %a, i8 %value, i64 16, i1 0)
+  tail call void @llvm.memset.inline.p0.i64(ptr %a, i8 %value, i64 16, i1 0)
   ret void
 }
 
-define void @memset_32(i8* %a, i8 %value) nounwind {
+define void @memset_32(ptr %a, i8 %value) nounwind {
 ; SSE2-LABEL: memset_32:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    # kill: def $esi killed $esi def $rsi
@@ -129,11 +129,11 @@ define void @memset_32(i8* %a, i8 %value) nounwind {
 ; AVX512-NEXT:    vmovdqu %ymm0, (%rdi)
 ; AVX512-NEXT:    vzeroupper
 ; AVX512-NEXT:    retq
-  tail call void @llvm.memset.inline.p0i8.i64(i8* %a, i8 %value, i64 32, i1 0)
+  tail call void @llvm.memset.inline.p0.i64(ptr %a, i8 %value, i64 32, i1 0)
   ret void
 }
 
-define void @memset_64(i8* %a, i8 %value) nounwind {
+define void @memset_64(ptr %a, i8 %value) nounwind {
 ; SSE2-LABEL: memset_64:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    # kill: def $esi killed $esi def $rsi
@@ -180,13 +180,13 @@ define void @memset_64(i8* %a, i8 %value) nounwind {
 ; AVX512-NEXT:    vmovdqu64 %zmm0, (%rdi)
 ; AVX512-NEXT:    vzeroupper
 ; AVX512-NEXT:    retq
-  tail call void @llvm.memset.inline.p0i8.i64(i8* %a, i8 %value, i64 64, i1 0)
+  tail call void @llvm.memset.inline.p0.i64(ptr %a, i8 %value, i64 64, i1 0)
   ret void
 }
 
 ; /////////////////////////////////////////////////////////////////////////////
 
-define void @aligned_memset_16(i8* align 16 %a, i8 %value) nounwind {
+define void @aligned_memset_16(ptr align 16 %a, i8 %value) nounwind {
 ; SSE2-LABEL: aligned_memset_16:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movd %esi, %xmm0
@@ -218,11 +218,11 @@ define void @aligned_memset_16(i8* align 16 %a, i8 %value) nounwind {
 ; AVX512-NEXT:    vpbroadcastb %xmm0, %xmm0
 ; AVX512-NEXT:    vmovdqa %xmm0, (%rdi)
 ; AVX512-NEXT:    retq
-  tail call void @llvm.memset.inline.p0i8.i64(i8* align 16 %a, i8 %value, i64 16, i1 0)
+  tail call void @llvm.memset.inline.p0.i64(ptr align 16 %a, i8 %value, i64 16, i1 0)
   ret void
 }
 
-define void @aligned_memset_32(i8* align 32 %a, i8 %value) nounwind {
+define void @aligned_memset_32(ptr align 32 %a, i8 %value) nounwind {
 ; SSE2-LABEL: aligned_memset_32:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movd %esi, %xmm0
@@ -258,11 +258,11 @@ define void @aligned_memset_32(i8* align 32 %a, i8 %value) nounwind {
 ; AVX512-NEXT:    vmovdqa %ymm0, (%rdi)
 ; AVX512-NEXT:    vzeroupper
 ; AVX512-NEXT:    retq
-  tail call void @llvm.memset.inline.p0i8.i64(i8* align 32 %a, i8 %value, i64 32, i1 0)
+  tail call void @llvm.memset.inline.p0.i64(ptr align 32 %a, i8 %value, i64 32, i1 0)
   ret void
 }
 
-define void @aligned_memset_64(i8* align 64 %a, i8 %value) nounwind {
+define void @aligned_memset_64(ptr align 64 %a, i8 %value) nounwind {
 ; SSE2-LABEL: aligned_memset_64:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movd %esi, %xmm0
@@ -305,49 +305,49 @@ define void @aligned_memset_64(i8* align 64 %a, i8 %value) nounwind {
 ; AVX512-NEXT:    vmovdqa64 %zmm0, (%rdi)
 ; AVX512-NEXT:    vzeroupper
 ; AVX512-NEXT:    retq
-  tail call void @llvm.memset.inline.p0i8.i64(i8* align 64 %a, i8 %value, i64 64, i1 0)
+  tail call void @llvm.memset.inline.p0.i64(ptr align 64 %a, i8 %value, i64 64, i1 0)
   ret void
 }
 
 ; /////////////////////////////////////////////////////////////////////////////
 
-define void @bzero_1(i8* %a) nounwind {
+define void @bzero_1(ptr %a) nounwind {
 ; GPR-LABEL: bzero_1:
 ; GPR:       # %bb.0:
 ; GPR-NEXT:    movb $0, (%rdi)
 ; GPR-NEXT:    retq
-  tail call void @llvm.memset.inline.p0i8.i64(i8* %a, i8 0, i64 1, i1 0)
+  tail call void @llvm.memset.inline.p0.i64(ptr %a, i8 0, i64 1, i1 0)
   ret void
 }
 
-define void @bzero_2(i8* %a) nounwind {
+define void @bzero_2(ptr %a) nounwind {
 ; GPR-LABEL: bzero_2:
 ; GPR:       # %bb.0:
 ; GPR-NEXT:    movw $0, (%rdi)
 ; GPR-NEXT:    retq
-  tail call void @llvm.memset.inline.p0i8.i64(i8* %a, i8 0, i64 2, i1 0)
+  tail call void @llvm.memset.inline.p0.i64(ptr %a, i8 0, i64 2, i1 0)
   ret void
 }
 
-define void @bzero_4(i8* %a) nounwind {
+define void @bzero_4(ptr %a) nounwind {
 ; GPR-LABEL: bzero_4:
 ; GPR:       # %bb.0:
 ; GPR-NEXT:    movl $0, (%rdi)
 ; GPR-NEXT:    retq
-  tail call void @llvm.memset.inline.p0i8.i64(i8* %a, i8 0, i64 4, i1 0)
+  tail call void @llvm.memset.inline.p0.i64(ptr %a, i8 0, i64 4, i1 0)
   ret void
 }
 
-define void @bzero_8(i8* %a) nounwind {
+define void @bzero_8(ptr %a) nounwind {
 ; GPR-LABEL: bzero_8:
 ; GPR:       # %bb.0:
 ; GPR-NEXT:    movq $0, (%rdi)
 ; GPR-NEXT:    retq
-  tail call void @llvm.memset.inline.p0i8.i64(i8* %a, i8 0, i64 8, i1 0)
+  tail call void @llvm.memset.inline.p0.i64(ptr %a, i8 0, i64 8, i1 0)
   ret void
 }
 
-define void @bzero_16(i8* %a) nounwind {
+define void @bzero_16(ptr %a) nounwind {
 ; SSE2-LABEL: bzero_16:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movq $0, 8(%rdi)
@@ -371,11 +371,11 @@ define void @bzero_16(i8* %a) nounwind {
 ; AVX512-NEXT:    vxorps %xmm0, %xmm0, %xmm0
 ; AVX512-NEXT:    vmovups %xmm0, (%rdi)
 ; AVX512-NEXT:    retq
-  tail call void @llvm.memset.inline.p0i8.i64(i8* %a, i8 0, i64 16, i1 0)
+  tail call void @llvm.memset.inline.p0.i64(ptr %a, i8 0, i64 16, i1 0)
   ret void
 }
 
-define void @bzero_32(i8* %a) nounwind {
+define void @bzero_32(ptr %a) nounwind {
 ; SSE2-LABEL: bzero_32:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movq $0, 24(%rdi)
@@ -404,11 +404,11 @@ define void @bzero_32(i8* %a) nounwind {
 ; AVX512-NEXT:    vmovups %ymm0, (%rdi)
 ; AVX512-NEXT:    vzeroupper
 ; AVX512-NEXT:    retq
-  tail call void @llvm.memset.inline.p0i8.i64(i8* %a, i8 0, i64 32, i1 0)
+  tail call void @llvm.memset.inline.p0.i64(ptr %a, i8 0, i64 32, i1 0)
   ret void
 }
 
-define void @bzero_64(i8* %a) nounwind {
+define void @bzero_64(ptr %a) nounwind {
 ; SSE2-LABEL: bzero_64:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movq $0, 56(%rdi)
@@ -444,13 +444,13 @@ define void @bzero_64(i8* %a) nounwind {
 ; AVX512-NEXT:    vmovups %zmm0, (%rdi)
 ; AVX512-NEXT:    vzeroupper
 ; AVX512-NEXT:    retq
-  tail call void @llvm.memset.inline.p0i8.i64(i8* %a, i8 0, i64 64, i1 0)
+  tail call void @llvm.memset.inline.p0.i64(ptr %a, i8 0, i64 64, i1 0)
   ret void
 }
 
 ; /////////////////////////////////////////////////////////////////////////////
 
-define void @aligned_bzero_16(i8* %a) nounwind {
+define void @aligned_bzero_16(ptr %a) nounwind {
 ; SSE2-LABEL: aligned_bzero_16:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    xorps %xmm0, %xmm0
@@ -474,11 +474,11 @@ define void @aligned_bzero_16(i8* %a) nounwind {
 ; AVX512-NEXT:    vxorps %xmm0, %xmm0, %xmm0
 ; AVX512-NEXT:    vmovaps %xmm0, (%rdi)
 ; AVX512-NEXT:    retq
-  tail call void @llvm.memset.inline.p0i8.i64(i8* align 16 %a, i8 0, i64 16, i1 0)
+  tail call void @llvm.memset.inline.p0.i64(ptr align 16 %a, i8 0, i64 16, i1 0)
   ret void
 }
 
-define void @aligned_bzero_32(i8* %a) nounwind {
+define void @aligned_bzero_32(ptr %a) nounwind {
 ; SSE2-LABEL: aligned_bzero_32:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    xorps %xmm0, %xmm0
@@ -506,11 +506,11 @@ define void @aligned_bzero_32(i8* %a) nounwind {
 ; AVX512-NEXT:    vmovaps %ymm0, (%rdi)
 ; AVX512-NEXT:    vzeroupper
 ; AVX512-NEXT:    retq
-  tail call void @llvm.memset.inline.p0i8.i64(i8* align 32 %a, i8 0, i64 32, i1 0)
+  tail call void @llvm.memset.inline.p0.i64(ptr align 32 %a, i8 0, i64 32, i1 0)
   ret void
 }
 
-define void @aligned_bzero_64(i8* %a) nounwind {
+define void @aligned_bzero_64(ptr %a) nounwind {
 ; SSE2-LABEL: aligned_bzero_64:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    xorps %xmm0, %xmm0
@@ -543,6 +543,6 @@ define void @aligned_bzero_64(i8* %a) nounwind {
 ; AVX512-NEXT:    vmovaps %zmm0, (%rdi)
 ; AVX512-NEXT:    vzeroupper
 ; AVX512-NEXT:    retq
-  tail call void @llvm.memset.inline.p0i8.i64(i8* align 64 %a, i8 0, i64 64, i1 0)
+  tail call void @llvm.memset.inline.p0.i64(ptr align 64 %a, i8 0, i64 64, i1 0)
   ret void
 }

@@ -5,7 +5,7 @@
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx512f | FileCheck %s --check-prefix=AVX --check-prefix=AVX512 --check-prefix=AVX512F
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx512bw | FileCheck %s --check-prefix=AVX --check-prefix=AVX512 --check-prefix=AVX512BW
 
-define void @avg_v4i8(<4 x i8>* %a, <4 x i8>* %b) nounwind {
+define void @avg_v4i8(ptr %a, ptr %b) nounwind {
 ; SSE2-LABEL: avg_v4i8:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movd {{.*#+}} xmm0 = mem[0],zero,zero,zero
@@ -21,19 +21,19 @@ define void @avg_v4i8(<4 x i8>* %a, <4 x i8>* %b) nounwind {
 ; AVX-NEXT:    vpavgb %xmm0, %xmm1, %xmm0
 ; AVX-NEXT:    vmovd %xmm0, (%rax)
 ; AVX-NEXT:    retq
-  %1 = load <4 x i8>, <4 x i8>* %a
-  %2 = load <4 x i8>, <4 x i8>* %b
+  %1 = load <4 x i8>, ptr %a
+  %2 = load <4 x i8>, ptr %b
   %3 = zext <4 x i8> %1 to <4 x i32>
   %4 = zext <4 x i8> %2 to <4 x i32>
   %5 = add nuw nsw <4 x i32> %3, <i32 1, i32 1, i32 1, i32 1>
   %6 = add nuw nsw <4 x i32> %5, %4
   %7 = lshr <4 x i32> %6, <i32 1, i32 1, i32 1, i32 1>
   %8 = trunc <4 x i32> %7 to <4 x i8>
-  store <4 x i8> %8, <4 x i8>* undef, align 4
+  store <4 x i8> %8, ptr undef, align 4
   ret void
 }
 
-define void @avg_v8i8(<8 x i8>* %a, <8 x i8>* %b) nounwind {
+define void @avg_v8i8(ptr %a, ptr %b) nounwind {
 ; SSE2-LABEL: avg_v8i8:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movq {{.*#+}} xmm0 = mem[0],zero
@@ -49,19 +49,19 @@ define void @avg_v8i8(<8 x i8>* %a, <8 x i8>* %b) nounwind {
 ; AVX-NEXT:    vpavgb %xmm0, %xmm1, %xmm0
 ; AVX-NEXT:    vmovq %xmm0, (%rax)
 ; AVX-NEXT:    retq
-  %1 = load <8 x i8>, <8 x i8>* %a
-  %2 = load <8 x i8>, <8 x i8>* %b
+  %1 = load <8 x i8>, ptr %a
+  %2 = load <8 x i8>, ptr %b
   %3 = zext <8 x i8> %1 to <8 x i32>
   %4 = zext <8 x i8> %2 to <8 x i32>
   %5 = add nuw nsw <8 x i32> %3, <i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
   %6 = add nuw nsw <8 x i32> %5, %4
   %7 = lshr <8 x i32> %6, <i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
   %8 = trunc <8 x i32> %7 to <8 x i8>
-  store <8 x i8> %8, <8 x i8>* undef, align 4
+  store <8 x i8> %8, ptr undef, align 4
   ret void
 }
 
-define void @avg_v16i8(<16 x i8>* %a, <16 x i8>* %b) nounwind {
+define void @avg_v16i8(ptr %a, ptr %b) nounwind {
 ; SSE2-LABEL: avg_v16i8:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movdqa (%rdi), %xmm0
@@ -75,19 +75,19 @@ define void @avg_v16i8(<16 x i8>* %a, <16 x i8>* %b) nounwind {
 ; AVX-NEXT:    vpavgb (%rsi), %xmm0, %xmm0
 ; AVX-NEXT:    vmovdqu %xmm0, (%rax)
 ; AVX-NEXT:    retq
-  %1 = load <16 x i8>, <16 x i8>* %a
-  %2 = load <16 x i8>, <16 x i8>* %b
+  %1 = load <16 x i8>, ptr %a
+  %2 = load <16 x i8>, ptr %b
   %3 = zext <16 x i8> %1 to <16 x i32>
   %4 = zext <16 x i8> %2 to <16 x i32>
   %5 = add nuw nsw <16 x i32> %3, <i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
   %6 = add nuw nsw <16 x i32> %5, %4
   %7 = lshr <16 x i32> %6, <i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
   %8 = trunc <16 x i32> %7 to <16 x i8>
-  store <16 x i8> %8, <16 x i8>* undef, align 4
+  store <16 x i8> %8, ptr undef, align 4
   ret void
 }
 
-define void @avg_v24i8(<24 x i8>* %a, <24 x i8>* %b) nounwind {
+define void @avg_v24i8(ptr %a, ptr %b) nounwind {
 ; SSE2-LABEL: avg_v24i8:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movdqa (%rsi), %xmm0
@@ -127,19 +127,19 @@ define void @avg_v24i8(<24 x i8>* %a, <24 x i8>* %b) nounwind {
 ; AVX512-NEXT:    vmovdqu %xmm0, (%rax)
 ; AVX512-NEXT:    vzeroupper
 ; AVX512-NEXT:    retq
-  %1 = load <24 x i8>, <24 x i8>* %a
-  %2 = load <24 x i8>, <24 x i8>* %b
+  %1 = load <24 x i8>, ptr %a
+  %2 = load <24 x i8>, ptr %b
   %3 = zext <24 x i8> %1 to <24 x i32>
   %4 = zext <24 x i8> %2 to <24 x i32>
   %5 = add nuw nsw <24 x i32> %3, <i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
   %6 = add nuw nsw <24 x i32> %5, %4
   %7 = lshr <24 x i32> %6, <i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
   %8 = trunc <24 x i32> %7 to <24 x i8>
-  store <24 x i8> %8, <24 x i8>* undef, align 4
+  store <24 x i8> %8, ptr undef, align 4
   ret void
 }
 
-define void @avg_v32i8(<32 x i8>* %a, <32 x i8>* %b) nounwind {
+define void @avg_v32i8(ptr %a, ptr %b) nounwind {
 ; SSE2-LABEL: avg_v32i8:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movdqa (%rsi), %xmm0
@@ -175,19 +175,19 @@ define void @avg_v32i8(<32 x i8>* %a, <32 x i8>* %b) nounwind {
 ; AVX512-NEXT:    vmovdqu %ymm0, (%rax)
 ; AVX512-NEXT:    vzeroupper
 ; AVX512-NEXT:    retq
-  %1 = load <32 x i8>, <32 x i8>* %a
-  %2 = load <32 x i8>, <32 x i8>* %b
+  %1 = load <32 x i8>, ptr %a
+  %2 = load <32 x i8>, ptr %b
   %3 = zext <32 x i8> %1 to <32 x i32>
   %4 = zext <32 x i8> %2 to <32 x i32>
   %5 = add nuw nsw <32 x i32> %3, <i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
   %6 = add nuw nsw <32 x i32> %5, %4
   %7 = lshr <32 x i32> %6, <i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
   %8 = trunc <32 x i32> %7 to <32 x i8>
-  store <32 x i8> %8, <32 x i8>* undef, align 4
+  store <32 x i8> %8, ptr undef, align 4
   ret void
 }
 
-define void @avg_v48i8(<48 x i8>* %a, <48 x i8>* %b) nounwind {
+define void @avg_v48i8(ptr %a, ptr %b) nounwind {
 ; SSE2-LABEL: avg_v48i8:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movdqa (%rsi), %xmm0
@@ -244,19 +244,19 @@ define void @avg_v48i8(<48 x i8>* %a, <48 x i8>* %b) nounwind {
 ; AVX512BW-NEXT:    vmovdqu %ymm0, (%rax)
 ; AVX512BW-NEXT:    vzeroupper
 ; AVX512BW-NEXT:    retq
-  %1 = load <48 x i8>, <48 x i8>* %a
-  %2 = load <48 x i8>, <48 x i8>* %b
+  %1 = load <48 x i8>, ptr %a
+  %2 = load <48 x i8>, ptr %b
   %3 = zext <48 x i8> %1 to <48 x i32>
   %4 = zext <48 x i8> %2 to <48 x i32>
   %5 = add nuw nsw <48 x i32> %3, <i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
   %6 = add nuw nsw <48 x i32> %5, %4
   %7 = lshr <48 x i32> %6, <i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
   %8 = trunc <48 x i32> %7 to <48 x i8>
-  store <48 x i8> %8, <48 x i8>* undef, align 4
+  store <48 x i8> %8, ptr undef, align 4
   ret void
 }
 
-define void @avg_v64i8(<64 x i8>* %a, <64 x i8>* %b) nounwind {
+define void @avg_v64i8(ptr %a, ptr %b) nounwind {
 ; SSE2-LABEL: avg_v64i8:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movdqa (%rsi), %xmm0
@@ -318,19 +318,19 @@ define void @avg_v64i8(<64 x i8>* %a, <64 x i8>* %b) nounwind {
 ; AVX512BW-NEXT:    vmovdqu64 %zmm0, (%rax)
 ; AVX512BW-NEXT:    vzeroupper
 ; AVX512BW-NEXT:    retq
-  %1 = load <64 x i8>, <64 x i8>* %a
-  %2 = load <64 x i8>, <64 x i8>* %b
+  %1 = load <64 x i8>, ptr %a
+  %2 = load <64 x i8>, ptr %b
   %3 = zext <64 x i8> %1 to <64 x i32>
   %4 = zext <64 x i8> %2 to <64 x i32>
   %5 = add nuw nsw <64 x i32> %3, <i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
   %6 = add nuw nsw <64 x i32> %5, %4
   %7 = lshr <64 x i32> %6, <i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
   %8 = trunc <64 x i32> %7 to <64 x i8>
-  store <64 x i8> %8, <64 x i8>* undef, align 4
+  store <64 x i8> %8, ptr undef, align 4
   ret void
 }
 
-define void @avg_v4i16(<4 x i16>* %a, <4 x i16>* %b) nounwind {
+define void @avg_v4i16(ptr %a, ptr %b) nounwind {
 ; SSE2-LABEL: avg_v4i16:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movq {{.*#+}} xmm0 = mem[0],zero
@@ -346,19 +346,19 @@ define void @avg_v4i16(<4 x i16>* %a, <4 x i16>* %b) nounwind {
 ; AVX-NEXT:    vpavgw %xmm0, %xmm1, %xmm0
 ; AVX-NEXT:    vmovq %xmm0, (%rax)
 ; AVX-NEXT:    retq
-  %1 = load <4 x i16>, <4 x i16>* %a
-  %2 = load <4 x i16>, <4 x i16>* %b
+  %1 = load <4 x i16>, ptr %a
+  %2 = load <4 x i16>, ptr %b
   %3 = zext <4 x i16> %1 to <4 x i32>
   %4 = zext <4 x i16> %2 to <4 x i32>
   %5 = add nuw nsw <4 x i32> %3, <i32 1, i32 1, i32 1, i32 1>
   %6 = add nuw nsw <4 x i32> %5, %4
   %7 = lshr <4 x i32> %6, <i32 1, i32 1, i32 1, i32 1>
   %8 = trunc <4 x i32> %7 to <4 x i16>
-  store <4 x i16> %8, <4 x i16>* undef, align 4
+  store <4 x i16> %8, ptr undef, align 4
   ret void
 }
 
-define void @avg_v8i16(<8 x i16>* %a, <8 x i16>* %b) nounwind {
+define void @avg_v8i16(ptr %a, ptr %b) nounwind {
 ; SSE2-LABEL: avg_v8i16:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movdqa (%rdi), %xmm0
@@ -372,19 +372,19 @@ define void @avg_v8i16(<8 x i16>* %a, <8 x i16>* %b) nounwind {
 ; AVX-NEXT:    vpavgw (%rsi), %xmm0, %xmm0
 ; AVX-NEXT:    vmovdqu %xmm0, (%rax)
 ; AVX-NEXT:    retq
-  %1 = load <8 x i16>, <8 x i16>* %a
-  %2 = load <8 x i16>, <8 x i16>* %b
+  %1 = load <8 x i16>, ptr %a
+  %2 = load <8 x i16>, ptr %b
   %3 = zext <8 x i16> %1 to <8 x i32>
   %4 = zext <8 x i16> %2 to <8 x i32>
   %5 = add nuw nsw <8 x i32> %3, <i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
   %6 = add nuw nsw <8 x i32> %5, %4
   %7 = lshr <8 x i32> %6, <i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
   %8 = trunc <8 x i32> %7 to <8 x i16>
-  store <8 x i16> %8, <8 x i16>* undef, align 4
+  store <8 x i16> %8, ptr undef, align 4
   ret void
 }
 
-define void @avg_v16i16(<16 x i16>* %a, <16 x i16>* %b) nounwind {
+define void @avg_v16i16(ptr %a, ptr %b) nounwind {
 ; SSE2-LABEL: avg_v16i16:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movdqa (%rsi), %xmm0
@@ -420,19 +420,19 @@ define void @avg_v16i16(<16 x i16>* %a, <16 x i16>* %b) nounwind {
 ; AVX512-NEXT:    vmovdqu %ymm0, (%rax)
 ; AVX512-NEXT:    vzeroupper
 ; AVX512-NEXT:    retq
-  %1 = load <16 x i16>, <16 x i16>* %a
-  %2 = load <16 x i16>, <16 x i16>* %b
+  %1 = load <16 x i16>, ptr %a
+  %2 = load <16 x i16>, ptr %b
   %3 = zext <16 x i16> %1 to <16 x i32>
   %4 = zext <16 x i16> %2 to <16 x i32>
   %5 = add nuw nsw <16 x i32> %3, <i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
   %6 = add nuw nsw <16 x i32> %5, %4
   %7 = lshr <16 x i32> %6, <i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
   %8 = trunc <16 x i32> %7 to <16 x i16>
-  store <16 x i16> %8, <16 x i16>* undef, align 4
+  store <16 x i16> %8, ptr undef, align 4
   ret void
 }
 
-define void @avg_v32i16(<32 x i16>* %a, <32 x i16>* %b) nounwind {
+define void @avg_v32i16(ptr %a, ptr %b) nounwind {
 ; SSE2-LABEL: avg_v32i16:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movdqa (%rsi), %xmm0
@@ -494,19 +494,19 @@ define void @avg_v32i16(<32 x i16>* %a, <32 x i16>* %b) nounwind {
 ; AVX512BW-NEXT:    vmovdqu64 %zmm0, (%rax)
 ; AVX512BW-NEXT:    vzeroupper
 ; AVX512BW-NEXT:    retq
-  %1 = load <32 x i16>, <32 x i16>* %a
-  %2 = load <32 x i16>, <32 x i16>* %b
+  %1 = load <32 x i16>, ptr %a
+  %2 = load <32 x i16>, ptr %b
   %3 = zext <32 x i16> %1 to <32 x i32>
   %4 = zext <32 x i16> %2 to <32 x i32>
   %5 = add nuw nsw <32 x i32> %3, <i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
   %6 = add nuw nsw <32 x i32> %5, %4
   %7 = lshr <32 x i32> %6, <i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
   %8 = trunc <32 x i32> %7 to <32 x i16>
-  store <32 x i16> %8, <32 x i16>* undef, align 4
+  store <32 x i16> %8, ptr undef, align 4
   ret void
 }
 
-define void @avg_v40i16(<40 x i16>* %a, <40 x i16>* %b) nounwind {
+define void @avg_v40i16(ptr %a, ptr %b) nounwind {
 ; SSE2-LABEL: avg_v40i16:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movdqa (%rsi), %xmm0
@@ -583,19 +583,19 @@ define void @avg_v40i16(<40 x i16>* %a, <40 x i16>* %b) nounwind {
 ; AVX512BW-NEXT:    vmovdqu64 %zmm0, (%rax)
 ; AVX512BW-NEXT:    vzeroupper
 ; AVX512BW-NEXT:    retq
-  %1 = load <40 x i16>, <40 x i16>* %a
-  %2 = load <40 x i16>, <40 x i16>* %b
+  %1 = load <40 x i16>, ptr %a
+  %2 = load <40 x i16>, ptr %b
   %3 = zext <40 x i16> %1 to <40 x i32>
   %4 = zext <40 x i16> %2 to <40 x i32>
   %5 = add nuw nsw <40 x i32> %3, <i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
   %6 = add nuw nsw <40 x i32> %5, %4
   %7 = lshr <40 x i32> %6, <i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
   %8 = trunc <40 x i32> %7 to <40 x i16>
-  store <40 x i16> %8, <40 x i16>* undef, align 4
+  store <40 x i16> %8, ptr undef, align 4
   ret void
 }
 
-define void @avg_v4i8_2(<4 x i8>* %a, <4 x i8>* %b) nounwind {
+define void @avg_v4i8_2(ptr %a, ptr %b) nounwind {
 ; SSE2-LABEL: avg_v4i8_2:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movd {{.*#+}} xmm0 = mem[0],zero,zero,zero
@@ -611,19 +611,19 @@ define void @avg_v4i8_2(<4 x i8>* %a, <4 x i8>* %b) nounwind {
 ; AVX-NEXT:    vpavgb %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    vmovd %xmm0, (%rax)
 ; AVX-NEXT:    retq
-  %1 = load <4 x i8>, <4 x i8>* %a
-  %2 = load <4 x i8>, <4 x i8>* %b
+  %1 = load <4 x i8>, ptr %a
+  %2 = load <4 x i8>, ptr %b
   %3 = zext <4 x i8> %1 to <4 x i32>
   %4 = zext <4 x i8> %2 to <4 x i32>
   %5 = add nuw nsw <4 x i32> %3, %4
   %6 = add nuw nsw <4 x i32> %5, <i32 1, i32 1, i32 1, i32 1>
   %7 = lshr <4 x i32> %6, <i32 1, i32 1, i32 1, i32 1>
   %8 = trunc <4 x i32> %7 to <4 x i8>
-  store <4 x i8> %8, <4 x i8>* undef, align 4
+  store <4 x i8> %8, ptr undef, align 4
   ret void
 }
 
-define void @avg_v8i8_2(<8 x i8>* %a, <8 x i8>* %b) nounwind {
+define void @avg_v8i8_2(ptr %a, ptr %b) nounwind {
 ; SSE2-LABEL: avg_v8i8_2:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movq {{.*#+}} xmm0 = mem[0],zero
@@ -639,19 +639,19 @@ define void @avg_v8i8_2(<8 x i8>* %a, <8 x i8>* %b) nounwind {
 ; AVX-NEXT:    vpavgb %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    vmovq %xmm0, (%rax)
 ; AVX-NEXT:    retq
-  %1 = load <8 x i8>, <8 x i8>* %a
-  %2 = load <8 x i8>, <8 x i8>* %b
+  %1 = load <8 x i8>, ptr %a
+  %2 = load <8 x i8>, ptr %b
   %3 = zext <8 x i8> %1 to <8 x i32>
   %4 = zext <8 x i8> %2 to <8 x i32>
   %5 = add nuw nsw <8 x i32> %3, %4
   %6 = add nuw nsw <8 x i32> %5, <i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
   %7 = lshr <8 x i32> %6, <i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
   %8 = trunc <8 x i32> %7 to <8 x i8>
-  store <8 x i8> %8, <8 x i8>* undef, align 4
+  store <8 x i8> %8, ptr undef, align 4
   ret void
 }
 
-define void @avg_v16i8_2(<16 x i8>* %a, <16 x i8>* %b) nounwind {
+define void @avg_v16i8_2(ptr %a, ptr %b) nounwind {
 ; SSE2-LABEL: avg_v16i8_2:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movdqa (%rdi), %xmm0
@@ -665,19 +665,19 @@ define void @avg_v16i8_2(<16 x i8>* %a, <16 x i8>* %b) nounwind {
 ; AVX-NEXT:    vpavgb (%rsi), %xmm0, %xmm0
 ; AVX-NEXT:    vmovdqu %xmm0, (%rax)
 ; AVX-NEXT:    retq
-  %1 = load <16 x i8>, <16 x i8>* %a
-  %2 = load <16 x i8>, <16 x i8>* %b
+  %1 = load <16 x i8>, ptr %a
+  %2 = load <16 x i8>, ptr %b
   %3 = zext <16 x i8> %1 to <16 x i32>
   %4 = zext <16 x i8> %2 to <16 x i32>
   %5 = add nuw nsw <16 x i32> %3, %4
   %6 = add nuw nsw <16 x i32> %5, <i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
   %7 = lshr <16 x i32> %6, <i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
   %8 = trunc <16 x i32> %7 to <16 x i8>
-  store <16 x i8> %8, <16 x i8>* undef, align 4
+  store <16 x i8> %8, ptr undef, align 4
   ret void
 }
 
-define void @avg_v32i8_2(<32 x i8>* %a, <32 x i8>* %b) nounwind {
+define void @avg_v32i8_2(ptr %a, ptr %b) nounwind {
 ; SSE2-LABEL: avg_v32i8_2:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movdqa (%rdi), %xmm0
@@ -713,19 +713,19 @@ define void @avg_v32i8_2(<32 x i8>* %a, <32 x i8>* %b) nounwind {
 ; AVX512-NEXT:    vmovdqu %ymm0, (%rax)
 ; AVX512-NEXT:    vzeroupper
 ; AVX512-NEXT:    retq
-  %1 = load <32 x i8>, <32 x i8>* %a
-  %2 = load <32 x i8>, <32 x i8>* %b
+  %1 = load <32 x i8>, ptr %a
+  %2 = load <32 x i8>, ptr %b
   %3 = zext <32 x i8> %1 to <32 x i32>
   %4 = zext <32 x i8> %2 to <32 x i32>
   %5 = add nuw nsw <32 x i32> %3, %4
   %6 = add nuw nsw <32 x i32> %5, <i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
   %7 = lshr <32 x i32> %6, <i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
   %8 = trunc <32 x i32> %7 to <32 x i8>
-  store <32 x i8> %8, <32 x i8>* undef, align 4
+  store <32 x i8> %8, ptr undef, align 4
   ret void
 }
 
-define void @avg_v64i8_2(<64 x i8>* %a, <64 x i8>* %b) nounwind {
+define void @avg_v64i8_2(ptr %a, ptr %b) nounwind {
 ; SSE2-LABEL: avg_v64i8_2:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movdqa (%rsi), %xmm0
@@ -787,20 +787,20 @@ define void @avg_v64i8_2(<64 x i8>* %a, <64 x i8>* %b) nounwind {
 ; AVX512BW-NEXT:    vmovdqu64 %zmm0, (%rax)
 ; AVX512BW-NEXT:    vzeroupper
 ; AVX512BW-NEXT:    retq
-  %1 = load <64 x i8>, <64 x i8>* %a
-  %2 = load <64 x i8>, <64 x i8>* %b
+  %1 = load <64 x i8>, ptr %a
+  %2 = load <64 x i8>, ptr %b
   %3 = zext <64 x i8> %1 to <64 x i32>
   %4 = zext <64 x i8> %2 to <64 x i32>
   %5 = add nuw nsw <64 x i32> %4, %4
   %6 = add nuw nsw <64 x i32> %5, <i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
   %7 = lshr <64 x i32> %6, <i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
   %8 = trunc <64 x i32> %7 to <64 x i8>
-  store <64 x i8> %8, <64 x i8>* undef, align 4
+  store <64 x i8> %8, ptr undef, align 4
   ret void
 }
 
 
-define void @avg_v4i16_2(<4 x i16>* %a, <4 x i16>* %b) nounwind {
+define void @avg_v4i16_2(ptr %a, ptr %b) nounwind {
 ; SSE2-LABEL: avg_v4i16_2:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movq {{.*#+}} xmm0 = mem[0],zero
@@ -816,19 +816,19 @@ define void @avg_v4i16_2(<4 x i16>* %a, <4 x i16>* %b) nounwind {
 ; AVX-NEXT:    vpavgw %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    vmovq %xmm0, (%rax)
 ; AVX-NEXT:    retq
-  %1 = load <4 x i16>, <4 x i16>* %a
-  %2 = load <4 x i16>, <4 x i16>* %b
+  %1 = load <4 x i16>, ptr %a
+  %2 = load <4 x i16>, ptr %b
   %3 = zext <4 x i16> %1 to <4 x i32>
   %4 = zext <4 x i16> %2 to <4 x i32>
   %5 = add nuw nsw <4 x i32> %3, %4
   %6 = add nuw nsw <4 x i32> %5, <i32 1, i32 1, i32 1, i32 1>
   %7 = lshr <4 x i32> %6, <i32 1, i32 1, i32 1, i32 1>
   %8 = trunc <4 x i32> %7 to <4 x i16>
-  store <4 x i16> %8, <4 x i16>* undef, align 4
+  store <4 x i16> %8, ptr undef, align 4
   ret void
 }
 
-define void @avg_v8i16_2(<8 x i16>* %a, <8 x i16>* %b) nounwind {
+define void @avg_v8i16_2(ptr %a, ptr %b) nounwind {
 ; SSE2-LABEL: avg_v8i16_2:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movdqa (%rdi), %xmm0
@@ -842,19 +842,19 @@ define void @avg_v8i16_2(<8 x i16>* %a, <8 x i16>* %b) nounwind {
 ; AVX-NEXT:    vpavgw (%rsi), %xmm0, %xmm0
 ; AVX-NEXT:    vmovdqu %xmm0, (%rax)
 ; AVX-NEXT:    retq
-  %1 = load <8 x i16>, <8 x i16>* %a
-  %2 = load <8 x i16>, <8 x i16>* %b
+  %1 = load <8 x i16>, ptr %a
+  %2 = load <8 x i16>, ptr %b
   %3 = zext <8 x i16> %1 to <8 x i32>
   %4 = zext <8 x i16> %2 to <8 x i32>
   %5 = add nuw nsw <8 x i32> %3, %4
   %6 = add nuw nsw <8 x i32> %5, <i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
   %7 = lshr <8 x i32> %6, <i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
   %8 = trunc <8 x i32> %7 to <8 x i16>
-  store <8 x i16> %8, <8 x i16>* undef, align 4
+  store <8 x i16> %8, ptr undef, align 4
   ret void
 }
 
-define void @avg_v16i16_2(<16 x i16>* %a, <16 x i16>* %b) nounwind {
+define void @avg_v16i16_2(ptr %a, ptr %b) nounwind {
 ; SSE2-LABEL: avg_v16i16_2:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movdqa (%rdi), %xmm0
@@ -890,19 +890,19 @@ define void @avg_v16i16_2(<16 x i16>* %a, <16 x i16>* %b) nounwind {
 ; AVX512-NEXT:    vmovdqu %ymm0, (%rax)
 ; AVX512-NEXT:    vzeroupper
 ; AVX512-NEXT:    retq
-  %1 = load <16 x i16>, <16 x i16>* %a
-  %2 = load <16 x i16>, <16 x i16>* %b
+  %1 = load <16 x i16>, ptr %a
+  %2 = load <16 x i16>, ptr %b
   %3 = zext <16 x i16> %1 to <16 x i32>
   %4 = zext <16 x i16> %2 to <16 x i32>
   %5 = add nuw nsw <16 x i32> %3, %4
   %6 = add nuw nsw <16 x i32> %5, <i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
   %7 = lshr <16 x i32> %6, <i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
   %8 = trunc <16 x i32> %7 to <16 x i16>
-  store <16 x i16> %8, <16 x i16>* undef, align 4
+  store <16 x i16> %8, ptr undef, align 4
   ret void
 }
 
-define void @avg_v32i16_2(<32 x i16>* %a, <32 x i16>* %b) nounwind {
+define void @avg_v32i16_2(ptr %a, ptr %b) nounwind {
 ; SSE2-LABEL: avg_v32i16_2:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movdqa (%rdi), %xmm0
@@ -964,19 +964,19 @@ define void @avg_v32i16_2(<32 x i16>* %a, <32 x i16>* %b) nounwind {
 ; AVX512BW-NEXT:    vmovdqu64 %zmm0, (%rax)
 ; AVX512BW-NEXT:    vzeroupper
 ; AVX512BW-NEXT:    retq
-  %1 = load <32 x i16>, <32 x i16>* %a
-  %2 = load <32 x i16>, <32 x i16>* %b
+  %1 = load <32 x i16>, ptr %a
+  %2 = load <32 x i16>, ptr %b
   %3 = zext <32 x i16> %1 to <32 x i32>
   %4 = zext <32 x i16> %2 to <32 x i32>
   %5 = add nuw nsw <32 x i32> %3, %4
   %6 = add nuw nsw <32 x i32> %5, <i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
   %7 = lshr <32 x i32> %6, <i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
   %8 = trunc <32 x i32> %7 to <32 x i16>
-  store <32 x i16> %8, <32 x i16>* undef, align 4
+  store <32 x i16> %8, ptr undef, align 4
   ret void
 }
 
-define void @avg_v4i8_const(<4 x i8>* %a) nounwind {
+define void @avg_v4i8_const(ptr %a) nounwind {
 ; SSE2-LABEL: avg_v4i8_const:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movd {{.*#+}} xmm0 = mem[0],zero,zero,zero
@@ -990,16 +990,16 @@ define void @avg_v4i8_const(<4 x i8>* %a) nounwind {
 ; AVX-NEXT:    vpavgb {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; AVX-NEXT:    vmovd %xmm0, (%rax)
 ; AVX-NEXT:    retq
-  %1 = load <4 x i8>, <4 x i8>* %a
+  %1 = load <4 x i8>, ptr %a
   %2 = zext <4 x i8> %1 to <4 x i32>
   %3 = add nuw nsw <4 x i32> %2, <i32 1, i32 2, i32 3, i32 4>
   %4 = lshr <4 x i32> %3, <i32 1, i32 1, i32 1, i32 1>
   %5 = trunc <4 x i32> %4 to <4 x i8>
-  store <4 x i8> %5, <4 x i8>* undef, align 4
+  store <4 x i8> %5, ptr undef, align 4
   ret void
 }
 
-define void @avg_v8i8_const(<8 x i8>* %a) nounwind {
+define void @avg_v8i8_const(ptr %a) nounwind {
 ; SSE2-LABEL: avg_v8i8_const:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movq {{.*#+}} xmm0 = mem[0],zero
@@ -1013,16 +1013,16 @@ define void @avg_v8i8_const(<8 x i8>* %a) nounwind {
 ; AVX-NEXT:    vpavgb {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; AVX-NEXT:    vmovq %xmm0, (%rax)
 ; AVX-NEXT:    retq
-  %1 = load <8 x i8>, <8 x i8>* %a
+  %1 = load <8 x i8>, ptr %a
   %2 = zext <8 x i8> %1 to <8 x i32>
   %3 = add nuw nsw <8 x i32> %2, <i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8>
   %4 = lshr <8 x i32> %3, <i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
   %5 = trunc <8 x i32> %4 to <8 x i8>
-  store <8 x i8> %5, <8 x i8>* undef, align 4
+  store <8 x i8> %5, ptr undef, align 4
   ret void
 }
 
-define void @avg_v16i8_const(<16 x i8>* %a) nounwind {
+define void @avg_v16i8_const(ptr %a) nounwind {
 ; SSE2-LABEL: avg_v16i8_const:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movdqa (%rdi), %xmm0
@@ -1036,16 +1036,16 @@ define void @avg_v16i8_const(<16 x i8>* %a) nounwind {
 ; AVX-NEXT:    vpavgb {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; AVX-NEXT:    vmovdqu %xmm0, (%rax)
 ; AVX-NEXT:    retq
-  %1 = load <16 x i8>, <16 x i8>* %a
+  %1 = load <16 x i8>, ptr %a
   %2 = zext <16 x i8> %1 to <16 x i32>
   %3 = add nuw nsw <16 x i32> %2, <i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8>
   %4 = lshr <16 x i32> %3, <i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
   %5 = trunc <16 x i32> %4 to <16 x i8>
-  store <16 x i8> %5, <16 x i8>* undef, align 4
+  store <16 x i8> %5, ptr undef, align 4
   ret void
 }
 
-define void @avg_v32i8_const(<32 x i8>* %a) nounwind {
+define void @avg_v32i8_const(ptr %a) nounwind {
 ; SSE2-LABEL: avg_v32i8_const:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movdqa {{.*#+}} xmm0 = [0,1,2,3,4,5,6,7,0,1,2,3,4,5,6,7]
@@ -1081,16 +1081,16 @@ define void @avg_v32i8_const(<32 x i8>* %a) nounwind {
 ; AVX512-NEXT:    vmovdqu %ymm0, (%rax)
 ; AVX512-NEXT:    vzeroupper
 ; AVX512-NEXT:    retq
-  %1 = load <32 x i8>, <32 x i8>* %a
+  %1 = load <32 x i8>, ptr %a
   %2 = zext <32 x i8> %1 to <32 x i32>
   %3 = add nuw nsw <32 x i32> %2, <i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8>
   %4 = lshr <32 x i32> %3, <i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
   %5 = trunc <32 x i32> %4 to <32 x i8>
-  store <32 x i8> %5, <32 x i8>* undef, align 4
+  store <32 x i8> %5, ptr undef, align 4
   ret void
 }
 
-define void @avg_v64i8_const(<64 x i8>* %a) nounwind {
+define void @avg_v64i8_const(ptr %a) nounwind {
 ; SSE2-LABEL: avg_v64i8_const:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movdqa {{.*#+}} xmm0 = [0,1,2,3,4,5,6,7,0,1,2,3,4,5,6,7]
@@ -1148,16 +1148,16 @@ define void @avg_v64i8_const(<64 x i8>* %a) nounwind {
 ; AVX512BW-NEXT:    vmovdqu64 %zmm0, (%rax)
 ; AVX512BW-NEXT:    vzeroupper
 ; AVX512BW-NEXT:    retq
-  %1 = load <64 x i8>, <64 x i8>* %a
+  %1 = load <64 x i8>, ptr %a
   %2 = zext <64 x i8> %1 to <64 x i32>
   %3 = add nuw nsw <64 x i32> %2, <i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8>
   %4 = lshr <64 x i32> %3, <i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
   %5 = trunc <64 x i32> %4 to <64 x i8>
-  store <64 x i8> %5, <64 x i8>* undef, align 4
+  store <64 x i8> %5, ptr undef, align 4
   ret void
 }
 
-define void @avg_v4i16_const(<4 x i16>* %a) nounwind {
+define void @avg_v4i16_const(ptr %a) nounwind {
 ; SSE2-LABEL: avg_v4i16_const:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movq {{.*#+}} xmm0 = mem[0],zero
@@ -1171,16 +1171,16 @@ define void @avg_v4i16_const(<4 x i16>* %a) nounwind {
 ; AVX-NEXT:    vpavgw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; AVX-NEXT:    vmovq %xmm0, (%rax)
 ; AVX-NEXT:    retq
-  %1 = load <4 x i16>, <4 x i16>* %a
+  %1 = load <4 x i16>, ptr %a
   %2 = zext <4 x i16> %1 to <4 x i32>
   %3 = add nuw nsw <4 x i32> %2, <i32 1, i32 2, i32 3, i32 4>
   %4 = lshr <4 x i32> %3, <i32 1, i32 1, i32 1, i32 1>
   %5 = trunc <4 x i32> %4 to <4 x i16>
-  store <4 x i16> %5, <4 x i16>* undef, align 4
+  store <4 x i16> %5, ptr undef, align 4
   ret void
 }
 
-define void @avg_v8i16_const(<8 x i16>* %a) nounwind {
+define void @avg_v8i16_const(ptr %a) nounwind {
 ; SSE2-LABEL: avg_v8i16_const:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movdqa (%rdi), %xmm0
@@ -1194,16 +1194,16 @@ define void @avg_v8i16_const(<8 x i16>* %a) nounwind {
 ; AVX-NEXT:    vpavgw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; AVX-NEXT:    vmovdqu %xmm0, (%rax)
 ; AVX-NEXT:    retq
-  %1 = load <8 x i16>, <8 x i16>* %a
+  %1 = load <8 x i16>, ptr %a
   %2 = zext <8 x i16> %1 to <8 x i32>
   %3 = add nuw nsw <8 x i32> %2, <i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8>
   %4 = lshr <8 x i32> %3, <i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
   %5 = trunc <8 x i32> %4 to <8 x i16>
-  store <8 x i16> %5, <8 x i16>* undef, align 4
+  store <8 x i16> %5, ptr undef, align 4
   ret void
 }
 
-define void @avg_v16i16_const(<16 x i16>* %a) nounwind {
+define void @avg_v16i16_const(ptr %a) nounwind {
 ; SSE2-LABEL: avg_v16i16_const:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movdqa {{.*#+}} xmm0 = [0,1,2,3,4,5,6,7]
@@ -1238,16 +1238,16 @@ define void @avg_v16i16_const(<16 x i16>* %a) nounwind {
 ; AVX512-NEXT:    vmovdqu %ymm0, (%rax)
 ; AVX512-NEXT:    vzeroupper
 ; AVX512-NEXT:    retq
-  %1 = load <16 x i16>, <16 x i16>* %a
+  %1 = load <16 x i16>, ptr %a
   %2 = zext <16 x i16> %1 to <16 x i32>
   %3 = add nuw nsw <16 x i32> %2, <i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8>
   %4 = lshr <16 x i32> %3, <i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
   %5 = trunc <16 x i32> %4 to <16 x i16>
-  store <16 x i16> %5, <16 x i16>* undef, align 4
+  store <16 x i16> %5, ptr undef, align 4
   ret void
 }
 
-define void @avg_v32i16_const(<32 x i16>* %a) nounwind {
+define void @avg_v32i16_const(ptr %a) nounwind {
 ; SSE2-LABEL: avg_v32i16_const:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movdqa {{.*#+}} xmm0 = [0,1,2,3,4,5,6,7]
@@ -1306,12 +1306,12 @@ define void @avg_v32i16_const(<32 x i16>* %a) nounwind {
 ; AVX512BW-NEXT:    vmovdqu64 %zmm0, (%rax)
 ; AVX512BW-NEXT:    vzeroupper
 ; AVX512BW-NEXT:    retq
-  %1 = load <32 x i16>, <32 x i16>* %a
+  %1 = load <32 x i16>, ptr %a
   %2 = zext <32 x i16> %1 to <32 x i32>
   %3 = add nuw nsw <32 x i32> %2, <i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8>
   %4 = lshr <32 x i32> %3, <i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
   %5 = trunc <32 x i32> %4 to <32 x i16>
-  store <32 x i16> %5, <32 x i16>* undef, align 4
+  store <32 x i16> %5, ptr undef, align 4
   ret void
 }
 
@@ -1755,7 +1755,7 @@ define <512 x i8> @avg_v512i8_3(<512 x i8> %a, <512 x i8> %b) nounwind {
 
 ; This is not an avg, but its structurally similar and previously caused a crash
 ; because the constants can't be read with APInt::getZExtValue.
-define void @not_avg_v16i8_wide_constants(<16 x i8>* %a, <16 x i8>* %b) nounwind {
+define void @not_avg_v16i8_wide_constants(ptr %a, ptr %b) nounwind {
 ; SSE2-LABEL: not_avg_v16i8_wide_constants:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    pushq %rbp
@@ -2524,15 +2524,15 @@ define void @not_avg_v16i8_wide_constants(<16 x i8>* %a, <16 x i8>* %b) nounwind
 ; AVX512-NEXT:    popq %rbp
 ; AVX512-NEXT:    vzeroupper
 ; AVX512-NEXT:    retq
-  %1 = load <16 x i8>, <16 x i8>* %a
-  %2 = load <16 x i8>, <16 x i8>* %b
+  %1 = load <16 x i8>, ptr %a
+  %2 = load <16 x i8>, ptr %b
   %3 = zext <16 x i8> %1 to <16 x i128>
   %4 = zext <16 x i8> %2 to <16 x i128>
   %5 = add <16 x i128> %3, <i128 -1, i128 -1, i128 -1, i128 -1, i128 -1, i128 -1, i128 -1, i128 -1, i128 -1, i128 -1, i128 -1, i128 -1, i128 -1, i128 -1, i128 -1, i128 -1>
   %6 = add <16 x i128> %5, %4
   %7 = lshr <16 x i128> %6, <i128 1, i128 1, i128 1, i128 1, i128 1, i128 1, i128 1, i128 1, i128 1, i128 1, i128 1, i128 1, i128 1, i128 1, i128 1, i128 1>
   %8 = trunc <16 x i128> %7 to <16 x i8>
-  store <16 x i8> %8, <16 x i8>* undef, align 4
+  store <16 x i8> %8, ptr undef, align 4
   ret void
 }
 

@@ -21,9 +21,9 @@ bb22:		; preds = %bb4
 bb4.i:		; preds = %bb22
 	ret i32 0
 walkExprTree.exit:		; preds = %bb22
-	%tmp83 = load i16, i16* null, align 4		; <i16> [#uses=1]
+	%tmp83 = load i16, ptr null, align 4		; <i16> [#uses=1]
 	%tmp84 = or i16 %tmp83, 2		; <i16> [#uses=2]
-	store i16 %tmp84, i16* null, align 4
+	store i16 %tmp84, ptr null, align 4
 	%tmp98993 = zext i16 %tmp84 to i32		; <i32> [#uses=1]
 	%tmp1004 = lshr i32 %tmp98993, 3		; <i32> [#uses=1]
 	%tmp100.lobit5 = and i32 %tmp1004, 1		; <i32> [#uses=1]

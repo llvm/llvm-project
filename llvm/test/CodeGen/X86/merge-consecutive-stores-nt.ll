@@ -11,7 +11,7 @@
 ; PR42123
 ;
 
-define void @merge_2_v4f32_align32(<4 x float>* %a0, <4 x float>* %a1) nounwind {
+define void @merge_2_v4f32_align32(ptr %a0, ptr %a1) nounwind {
 ; X86-LABEL: merge_2_v4f32_align32:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -60,19 +60,17 @@ define void @merge_2_v4f32_align32(<4 x float>* %a0, <4 x float>* %a1) nounwind 
 ; X64-AVX2-NEXT:    vmovntdq %ymm0, (%rsi)
 ; X64-AVX2-NEXT:    vzeroupper
 ; X64-AVX2-NEXT:    retq
-  %1 = getelementptr inbounds <4 x float>, <4 x float>* %a0, i64 1, i64 0
-  %2 = bitcast float* %1 to <4 x float>*
-  %3 = load <4 x float>, <4 x float>* %a0, align 32, !nontemporal !0
-  %4 = load <4 x float>, <4 x float>* %2, align 16, !nontemporal !0
-  %5 = getelementptr inbounds <4 x float>, <4 x float>* %a1, i64 1, i64 0
-  %6 = bitcast float* %5 to <4 x float>*
-  store <4 x float> %3, <4 x float>* %a1, align 32, !nontemporal !0
-  store <4 x float> %4, <4 x float>* %6, align 16, !nontemporal !0
+  %1 = getelementptr inbounds <4 x float>, ptr %a0, i64 1, i64 0
+  %2 = load <4 x float>, ptr %a0, align 32, !nontemporal !0
+  %3 = load <4 x float>, ptr %1, align 16, !nontemporal !0
+  %4 = getelementptr inbounds <4 x float>, ptr %a1, i64 1, i64 0
+  store <4 x float> %2, ptr %a1, align 32, !nontemporal !0
+  store <4 x float> %3, ptr %4, align 16, !nontemporal !0
   ret void
 }
 
 ; Don't merge nt and non-nt loads even if aligned.
-define void @merge_2_v4f32_align32_mix_ntload(<4 x float>* %a0, <4 x float>* %a1) nounwind {
+define void @merge_2_v4f32_align32_mix_ntload(ptr %a0, ptr %a1) nounwind {
 ; X86-LABEL: merge_2_v4f32_align32_mix_ntload:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -114,19 +112,17 @@ define void @merge_2_v4f32_align32_mix_ntload(<4 x float>* %a0, <4 x float>* %a1
 ; X64-AVX-NEXT:    vmovdqa %xmm0, (%rsi)
 ; X64-AVX-NEXT:    vmovaps %xmm1, 16(%rsi)
 ; X64-AVX-NEXT:    retq
-  %1 = getelementptr inbounds <4 x float>, <4 x float>* %a0, i64 1, i64 0
-  %2 = bitcast float* %1 to <4 x float>*
-  %3 = load <4 x float>, <4 x float>* %a0, align 32, !nontemporal !0
-  %4 = load <4 x float>, <4 x float>* %2, align 16
-  %5 = getelementptr inbounds <4 x float>, <4 x float>* %a1, i64 1, i64 0
-  %6 = bitcast float* %5 to <4 x float>*
-  store <4 x float> %3, <4 x float>* %a1, align 32
-  store <4 x float> %4, <4 x float>* %6, align 16
+  %1 = getelementptr inbounds <4 x float>, ptr %a0, i64 1, i64 0
+  %2 = load <4 x float>, ptr %a0, align 32, !nontemporal !0
+  %3 = load <4 x float>, ptr %1, align 16
+  %4 = getelementptr inbounds <4 x float>, ptr %a1, i64 1, i64 0
+  store <4 x float> %2, ptr %a1, align 32
+  store <4 x float> %3, ptr %4, align 16
   ret void
 }
 
 ; Don't merge nt and non-nt stores even if aligned.
-define void @merge_2_v4f32_align32_mix_ntstore(<4 x float>* %a0, <4 x float>* %a1) nounwind {
+define void @merge_2_v4f32_align32_mix_ntstore(ptr %a0, ptr %a1) nounwind {
 ; X86-LABEL: merge_2_v4f32_align32_mix_ntstore:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -152,20 +148,18 @@ define void @merge_2_v4f32_align32_mix_ntstore(<4 x float>* %a0, <4 x float>* %a
 ; X64-AVX-NEXT:    vmovntps %xmm0, (%rsi)
 ; X64-AVX-NEXT:    vmovaps %xmm1, 16(%rsi)
 ; X64-AVX-NEXT:    retq
-  %1 = getelementptr inbounds <4 x float>, <4 x float>* %a0, i64 1, i64 0
-  %2 = bitcast float* %1 to <4 x float>*
-  %3 = load <4 x float>, <4 x float>* %a0, align 32
-  %4 = load <4 x float>, <4 x float>* %2, align 16
-  %5 = getelementptr inbounds <4 x float>, <4 x float>* %a1, i64 1, i64 0
-  %6 = bitcast float* %5 to <4 x float>*
-  store <4 x float> %3, <4 x float>* %a1, align 32, !nontemporal !0
-  store <4 x float> %4, <4 x float>* %6, align 16
+  %1 = getelementptr inbounds <4 x float>, ptr %a0, i64 1, i64 0
+  %2 = load <4 x float>, ptr %a0, align 32
+  %3 = load <4 x float>, ptr %1, align 16
+  %4 = getelementptr inbounds <4 x float>, ptr %a1, i64 1, i64 0
+  store <4 x float> %2, ptr %a1, align 32, !nontemporal !0
+  store <4 x float> %3, ptr %4, align 16
   ret void
 }
 
 ; AVX2 can't perform NT-load-ymm on 16-byte aligned memory.
 ; Must be kept seperate as VMOVNTDQA xmm.
-define void @merge_2_v4f32_align16_ntload(<4 x float>* %a0, <4 x float>* %a1) nounwind {
+define void @merge_2_v4f32_align16_ntload(ptr %a0, ptr %a1) nounwind {
 ; X86-LABEL: merge_2_v4f32_align16_ntload:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -207,20 +201,18 @@ define void @merge_2_v4f32_align16_ntload(<4 x float>* %a0, <4 x float>* %a1) no
 ; X64-AVX-NEXT:    vmovdqa %xmm0, (%rsi)
 ; X64-AVX-NEXT:    vmovdqa %xmm1, 16(%rsi)
 ; X64-AVX-NEXT:    retq
-  %1 = getelementptr inbounds <4 x float>, <4 x float>* %a0, i64 1, i64 0
-  %2 = bitcast float* %1 to <4 x float>*
-  %3 = load <4 x float>, <4 x float>* %a0, align 16, !nontemporal !0
-  %4 = load <4 x float>, <4 x float>* %2, align 16, !nontemporal !0
-  %5 = getelementptr inbounds <4 x float>, <4 x float>* %a1, i64 1, i64 0
-  %6 = bitcast float* %5 to <4 x float>*
-  store <4 x float> %3, <4 x float>* %a1, align 16
-  store <4 x float> %4, <4 x float>* %6, align 16
+  %1 = getelementptr inbounds <4 x float>, ptr %a0, i64 1, i64 0
+  %2 = load <4 x float>, ptr %a0, align 16, !nontemporal !0
+  %3 = load <4 x float>, ptr %1, align 16, !nontemporal !0
+  %4 = getelementptr inbounds <4 x float>, ptr %a1, i64 1, i64 0
+  store <4 x float> %2, ptr %a1, align 16
+  store <4 x float> %3, ptr %4, align 16
   ret void
 }
 
 ; AVX can't perform NT-store-ymm on 16-byte aligned memory.
 ; Must be kept seperate as VMOVNTPS xmm.
-define void @merge_2_v4f32_align16_ntstore(<4 x float>* %a0, <4 x float>* %a1) nounwind {
+define void @merge_2_v4f32_align16_ntstore(ptr %a0, ptr %a1) nounwind {
 ; X86-LABEL: merge_2_v4f32_align16_ntstore:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -246,20 +238,18 @@ define void @merge_2_v4f32_align16_ntstore(<4 x float>* %a0, <4 x float>* %a1) n
 ; X64-AVX-NEXT:    vmovntps %xmm0, (%rsi)
 ; X64-AVX-NEXT:    vmovntps %xmm1, 16(%rsi)
 ; X64-AVX-NEXT:    retq
-  %1 = getelementptr inbounds <4 x float>, <4 x float>* %a0, i64 1, i64 0
-  %2 = bitcast float* %1 to <4 x float>*
-  %3 = load <4 x float>, <4 x float>* %a0, align 16
-  %4 = load <4 x float>, <4 x float>* %2, align 16
-  %5 = getelementptr inbounds <4 x float>, <4 x float>* %a1, i64 1, i64 0
-  %6 = bitcast float* %5 to <4 x float>*
-  store <4 x float> %3, <4 x float>* %a1, align 16, !nontemporal !0
-  store <4 x float> %4, <4 x float>* %6, align 16, !nontemporal !0
+  %1 = getelementptr inbounds <4 x float>, ptr %a0, i64 1, i64 0
+  %2 = load <4 x float>, ptr %a0, align 16
+  %3 = load <4 x float>, ptr %1, align 16
+  %4 = getelementptr inbounds <4 x float>, ptr %a1, i64 1, i64 0
+  store <4 x float> %2, ptr %a1, align 16, !nontemporal !0
+  store <4 x float> %3, ptr %4, align 16, !nontemporal !0
   ret void
 }
 
 ; Nothing can perform NT-load-vector on 1-byte aligned memory.
 ; Just perform regular loads.
-define void @merge_2_v4f32_align1_ntload(<4 x float>* %a0, <4 x float>* %a1) nounwind {
+define void @merge_2_v4f32_align1_ntload(ptr %a0, ptr %a1) nounwind {
 ; X86-LABEL: merge_2_v4f32_align1_ntload:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -284,20 +274,18 @@ define void @merge_2_v4f32_align1_ntload(<4 x float>* %a0, <4 x float>* %a1) nou
 ; X64-AVX-NEXT:    vmovups %ymm0, (%rsi)
 ; X64-AVX-NEXT:    vzeroupper
 ; X64-AVX-NEXT:    retq
-  %1 = getelementptr inbounds <4 x float>, <4 x float>* %a0, i64 1, i64 0
-  %2 = bitcast float* %1 to <4 x float>*
-  %3 = load <4 x float>, <4 x float>* %a0, align 1, !nontemporal !0
-  %4 = load <4 x float>, <4 x float>* %2, align 1, !nontemporal !0
-  %5 = getelementptr inbounds <4 x float>, <4 x float>* %a1, i64 1, i64 0
-  %6 = bitcast float* %5 to <4 x float>*
-  store <4 x float> %3, <4 x float>* %a1, align 1
-  store <4 x float> %4, <4 x float>* %6, align 1
+  %1 = getelementptr inbounds <4 x float>, ptr %a0, i64 1, i64 0
+  %2 = load <4 x float>, ptr %a0, align 1, !nontemporal !0
+  %3 = load <4 x float>, ptr %1, align 1, !nontemporal !0
+  %4 = getelementptr inbounds <4 x float>, ptr %a1, i64 1, i64 0
+  store <4 x float> %2, ptr %a1, align 1
+  store <4 x float> %3, ptr %4, align 1
   ret void
 }
 
 ; Nothing can perform NT-store-vector on 1-byte aligned memory.
 ; Must be scalarized to use MOVTNI/MOVNTSD.
-define void @merge_2_v4f32_align1_ntstore(<4 x float>* %a0, <4 x float>* %a1) nounwind {
+define void @merge_2_v4f32_align1_ntstore(ptr %a0, ptr %a1) nounwind {
 ; X86-SSE2-LABEL: merge_2_v4f32_align1_ntstore:
 ; X86-SSE2:       # %bb.0:
 ; X86-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -397,20 +385,18 @@ define void @merge_2_v4f32_align1_ntstore(<4 x float>* %a0, <4 x float>* %a1) no
 ; X64-AVX-NEXT:    vmovq %xmm1, %rax
 ; X64-AVX-NEXT:    movntiq %rax, 16(%rsi)
 ; X64-AVX-NEXT:    retq
-  %1 = getelementptr inbounds <4 x float>, <4 x float>* %a0, i64 1, i64 0
-  %2 = bitcast float* %1 to <4 x float>*
-  %3 = load <4 x float>, <4 x float>* %a0, align 1
-  %4 = load <4 x float>, <4 x float>* %2, align 1
-  %5 = getelementptr inbounds <4 x float>, <4 x float>* %a1, i64 1, i64 0
-  %6 = bitcast float* %5 to <4 x float>*
-  store <4 x float> %3, <4 x float>* %a1, align 1, !nontemporal !0
-  store <4 x float> %4, <4 x float>* %6, align 1, !nontemporal !0
+  %1 = getelementptr inbounds <4 x float>, ptr %a0, i64 1, i64 0
+  %2 = load <4 x float>, ptr %a0, align 1
+  %3 = load <4 x float>, ptr %1, align 1
+  %4 = getelementptr inbounds <4 x float>, ptr %a1, i64 1, i64 0
+  store <4 x float> %2, ptr %a1, align 1, !nontemporal !0
+  store <4 x float> %3, ptr %4, align 1, !nontemporal !0
   ret void
 }
 
 ; Nothing can perform NT-load-vector on 1-byte aligned memory.
 ; Just perform regular loads and scalarize NT-stores.
-define void @merge_2_v4f32_align1(<4 x float>* %a0, <4 x float>* %a1) nounwind {
+define void @merge_2_v4f32_align1(ptr %a0, ptr %a1) nounwind {
 ; X86-SSE2-LABEL: merge_2_v4f32_align1:
 ; X86-SSE2:       # %bb.0:
 ; X86-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -510,14 +496,12 @@ define void @merge_2_v4f32_align1(<4 x float>* %a0, <4 x float>* %a1) nounwind {
 ; X64-AVX-NEXT:    vmovq %xmm1, %rax
 ; X64-AVX-NEXT:    movntiq %rax, 16(%rsi)
 ; X64-AVX-NEXT:    retq
-  %1 = getelementptr inbounds <4 x float>, <4 x float>* %a0, i64 1, i64 0
-  %2 = bitcast float* %1 to <4 x float>*
-  %3 = load <4 x float>, <4 x float>* %a0, align 1, !nontemporal !0
-  %4 = load <4 x float>, <4 x float>* %2, align 1, !nontemporal !0
-  %5 = getelementptr inbounds <4 x float>, <4 x float>* %a1, i64 1, i64 0
-  %6 = bitcast float* %5 to <4 x float>*
-  store <4 x float> %3, <4 x float>* %a1, align 1, !nontemporal !0
-  store <4 x float> %4, <4 x float>* %6, align 1, !nontemporal !0
+  %1 = getelementptr inbounds <4 x float>, ptr %a0, i64 1, i64 0
+  %2 = load <4 x float>, ptr %a0, align 1, !nontemporal !0
+  %3 = load <4 x float>, ptr %1, align 1, !nontemporal !0
+  %4 = getelementptr inbounds <4 x float>, ptr %a1, i64 1, i64 0
+  store <4 x float> %2, ptr %a1, align 1, !nontemporal !0
+  store <4 x float> %3, ptr %4, align 1, !nontemporal !0
   ret void
 }
 

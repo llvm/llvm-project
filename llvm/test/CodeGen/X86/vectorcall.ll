@@ -99,59 +99,58 @@ define x86_vectorcallcc <4 x float> @test_mixed_1(i32 %a, %struct.HVA4 inreg %bb
 ; CHECK:       ret{{q|l}}
 entry:
   %b = alloca %struct.HVA4, align 16
-  store %struct.HVA4 %bb, %struct.HVA4* %b, align 16
-  %w1 = getelementptr inbounds %struct.HVA4, %struct.HVA4* %b, i32 0, i32 1
-  %0 = load <4 x float>, <4 x float>* %w1, align 16
+  store %struct.HVA4 %bb, ptr %b, align 16
+  %w1 = getelementptr inbounds %struct.HVA4, ptr %b, i32 0, i32 1
+  %0 = load <4 x float>, ptr %w1, align 16
   ret <4 x float> %0
 }
 
-define x86_vectorcallcc <4 x float> @test_mixed_2(%struct.HVA4 inreg %a, %struct.HVA4* %b, <4 x float> %c) {
+define x86_vectorcallcc <4 x float> @test_mixed_2(%struct.HVA4 inreg %a, ptr %b, <4 x float> %c) {
 ; CHECK-LABEL: test_mixed_2
 ; X86:         movaps  %xmm0, (%esp)
 ; X64:         movaps  %xmm2, %xmm0
 ; CHECK:       ret{{[ql]}}
 entry:
   %c.addr = alloca <4 x float>, align 16
-  store <4 x float> %c, <4 x float>* %c.addr, align 16
-  %0 = load <4 x float>, <4 x float>* %c.addr, align 16
+  store <4 x float> %c, ptr %c.addr, align 16
+  %0 = load <4 x float>, ptr %c.addr, align 16
   ret <4 x float> %0
 }
 
-define x86_vectorcallcc <4 x float> @test_mixed_3(<4 x float> %a, <4 x float> %b, <4 x float> %c, <4 x float> %d, <4 x float> %e, %struct.HVA2* %f) {
+define x86_vectorcallcc <4 x float> @test_mixed_3(<4 x float> %a, <4 x float> %b, <4 x float> %c, <4 x float> %d, <4 x float> %e, ptr %f) {
 ; CHECK-LABEL: test_mixed_3
 ; CHECK:       movaps	(%{{[re][ac]}}x), %xmm0
 ; CHECK:       ret{{[ql]}}
 entry:
-  %x = getelementptr inbounds %struct.HVA2, %struct.HVA2* %f, i32 0, i32 0
-  %0 = load <4 x float>, <4 x float>* %x, align 16
+  %0 = load <4 x float>, ptr %f, align 16
   ret <4 x float> %0
 }
 
-define x86_vectorcallcc <4 x float> @test_mixed_4(%struct.HVA4 inreg %a, %struct.HVA2* %bb, <4 x float> %c) {
+define x86_vectorcallcc <4 x float> @test_mixed_4(%struct.HVA4 inreg %a, ptr %bb, <4 x float> %c) {
 ; CHECK-LABEL: test_mixed_4
 ; X86:         movaps	16(%eax), %xmm0
 ; X64:         movaps	16(%rdx), %xmm0
 ; CHECK:       ret{{[ql]}}
 entry:
-  %y4 = getelementptr inbounds %struct.HVA2, %struct.HVA2* %bb, i32 0, i32 1
-  %0 = load <4 x float>, <4 x float>* %y4, align 16
+  %y4 = getelementptr inbounds %struct.HVA2, ptr %bb, i32 0, i32 1
+  %0 = load <4 x float>, ptr %y4, align 16
   ret <4 x float> %0
 }
 
-define x86_vectorcallcc <4 x float> @test_mixed_5(%struct.HVA3 inreg %a, %struct.HVA3* %b, <4 x float> %c, %struct.HVA2 inreg %dd) {
+define x86_vectorcallcc <4 x float> @test_mixed_5(%struct.HVA3 inreg %a, ptr %b, <4 x float> %c, %struct.HVA2 inreg %dd) {
 ; CHECK-LABEL: test_mixed_5
 ; CHECK-DAG:   movaps	%xmm{{[0,5]}}, 16(%{{(e|r)}}sp)
 ; CHECK-DAG:   movaps	%xmm5, %xmm0
 ; CHECK:       ret{{[ql]}}
 entry:
   %d = alloca %struct.HVA2, align 16
-  store %struct.HVA2 %dd, %struct.HVA2* %d, align 16
-  %y5 = getelementptr inbounds %struct.HVA2, %struct.HVA2* %d, i32 0, i32 1
-  %0 = load <4 x float>, <4 x float>* %y5, align 16
+  store %struct.HVA2 %dd, ptr %d, align 16
+  %y5 = getelementptr inbounds %struct.HVA2, ptr %d, i32 0, i32 1
+  %0 = load <4 x float>, ptr %y5, align 16
   ret <4 x float> %0
 }
 
-define x86_vectorcallcc %struct.HVA4 @test_mixed_6(%struct.HVA4 inreg %a, %struct.HVA4* %b) {
+define x86_vectorcallcc %struct.HVA4 @test_mixed_6(%struct.HVA4 inreg %a, ptr %b) {
 ; CHECK-LABEL: test_mixed_6
 ; CHECK:       movaps	(%{{[re]}}sp), %xmm0
 ; CHECK:       movaps	16(%{{[re]}}sp), %xmm1
@@ -160,18 +159,16 @@ define x86_vectorcallcc %struct.HVA4 @test_mixed_6(%struct.HVA4 inreg %a, %struc
 ; CHECK:       ret{{[ql]}}
 entry:
   %retval = alloca %struct.HVA4, align 16
-  %0 = bitcast %struct.HVA4* %retval to i8*
-  %1 = bitcast %struct.HVA4* %b to i8*
-  call void @llvm.memcpy.p0i8.p0i8.i32(i8* align 16 %0, i8* align 16 %1, i32 64, i1 false)
-  %2 = load %struct.HVA4, %struct.HVA4* %retval, align 16
-  ret %struct.HVA4 %2
+  call void @llvm.memcpy.p0.p0.i32(ptr align 16 %retval, ptr align 16 %b, i32 64, i1 false)
+  %0 = load %struct.HVA4, ptr %retval, align 16
+  ret %struct.HVA4 %0
 }
 
-declare void @llvm.memset.p0i8.i64(i8* nocapture writeonly, i8, i64, i1)
-declare void @llvm.memcpy.p0i8.p0i8.i64(i8* nocapture writeonly, i8* nocapture readonly, i64, i1)
-declare void @llvm.memcpy.p0i8.p0i8.i32(i8* nocapture writeonly, i8* nocapture readonly, i32, i1)
+declare void @llvm.memset.p0.i64(ptr nocapture writeonly, i8, i64, i1)
+declare void @llvm.memcpy.p0.p0.i64(ptr nocapture writeonly, ptr nocapture readonly, i64, i1)
+declare void @llvm.memcpy.p0.p0.i32(ptr nocapture writeonly, ptr nocapture readonly, i32, i1)
 
-define x86_vectorcallcc void @test_mixed_7(%struct.HVA5* noalias sret(%struct.HVA5) %agg.result) {
+define x86_vectorcallcc void @test_mixed_7(ptr noalias sret(%struct.HVA5) %agg.result) {
 ; CHECK-LABEL: test_mixed_7@@0
 ; X64:         mov{{[ql]}}	%rcx, %rax
 ; CHECK:       movaps	%xmm{{[0-9]}}, 64(%{{rcx|eax}})
@@ -182,11 +179,8 @@ define x86_vectorcallcc void @test_mixed_7(%struct.HVA5* noalias sret(%struct.HV
 ; CHECK:       ret{{[ql]}}
 entry:
   %a = alloca %struct.HVA5, align 16
-  %0 = bitcast %struct.HVA5* %a to i8*
-  call void @llvm.memset.p0i8.i64(i8* align 16 %0, i8 0, i64 80, i1 false)
-  %1 = bitcast %struct.HVA5* %agg.result to i8*
-  %2 = bitcast %struct.HVA5* %a to i8*
-  call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 16 %1, i8* align 16 %2, i64 80, i1 false)
+  call void @llvm.memset.p0.i64(ptr align 16 %a, i8 0, i64 80, i1 false)
+  call void @llvm.memcpy.p0.p0.i64(ptr align 16 %agg.result, ptr align 16 %a, i64 80, i1 false)
   ret void
 }
 
@@ -197,8 +191,8 @@ define x86_vectorcallcc <4 x float> @test_mixed_8(<4 x float> %a, <4 x float> %b
 ; CHECK:       ret{{[ql]}}
 entry:
   %f.addr = alloca <4 x float>, align 16
-  store <4 x float> %f, <4 x float>* %f.addr, align 16
-  %0 = load <4 x float>, <4 x float>* %f.addr, align 16
+  store <4 x float> %f, ptr %f.addr, align 16
+  %0 = load <4 x float>, ptr %f.addr, align 16
   ret <4 x float> %0
 }
 

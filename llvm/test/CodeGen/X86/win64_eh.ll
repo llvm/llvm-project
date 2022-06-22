@@ -55,27 +55,27 @@ entry:
   %d = alloca i32
   %e = alloca i32
   %f = alloca i32
-  store i32 %a_arg, i32* %a
-  store i32 %b_arg, i32* %b
-  store i32 %c_arg, i32* %c
-  store i32 %d_arg, i32* %d
-  store i32 %e_arg, i32* %e
-  store i32 %f_arg, i32* %f
-  %tmp = load i32, i32* %a
+  store i32 %a_arg, ptr %a
+  store i32 %b_arg, ptr %b
+  store i32 %c_arg, ptr %c
+  store i32 %d_arg, ptr %d
+  store i32 %e_arg, ptr %e
+  store i32 %f_arg, ptr %f
+  %tmp = load i32, ptr %a
   %tmp1 = mul i32 %tmp, 2
-  %tmp2 = load i32, i32* %b
+  %tmp2 = load i32, ptr %b
   %tmp3 = mul i32 %tmp2, 3
   %tmp4 = add i32 %tmp1, %tmp3
-  %tmp5 = load i32, i32* %c
+  %tmp5 = load i32, ptr %c
   %tmp6 = mul i32 %tmp5, 5
   %tmp7 = add i32 %tmp4, %tmp6
-  %tmp8 = load i32, i32* %d
+  %tmp8 = load i32, ptr %d
   %tmp9 = mul i32 %tmp8, 7
   %tmp10 = add i32 %tmp7, %tmp9
-  %tmp11 = load i32, i32* %e
+  %tmp11 = load i32, ptr %e
   %tmp12 = mul i32 %tmp11, 11
   %tmp13 = add i32 %tmp10, %tmp12
-  %tmp14 = load i32, i32* %f
+  %tmp14 = load i32, ptr %f
   %tmp15 = mul i32 %tmp14, 13
   %tmp16 = add i32 %tmp13, %tmp15
   ret i32 %tmp16
@@ -92,34 +92,34 @@ entry:
 
 
 ; Check emission of eh handler and handler data
-declare i32 @_d_eh_personality(i32, i32, i64, i8*, i8*)
-declare void @_d_eh_resume_unwind(i8*)
+declare i32 @_d_eh_personality(i32, i32, i64, ptr, ptr)
+declare void @_d_eh_resume_unwind(ptr)
 
 declare i32 @bar()
 
-define i32 @foo4() #0 personality i32 (i32, i32, i64, i8*, i8*)* @_d_eh_personality {
+define i32 @foo4() #0 personality ptr @_d_eh_personality {
 entry:
   %step = alloca i32, align 4
-  store i32 0, i32* %step
-  %tmp = load i32, i32* %step
+  store i32 0, ptr %step
+  %tmp = load i32, ptr %step
 
   %tmp1 = invoke i32 @bar()
           to label %finally unwind label %landingpad
 
 finally:
-  store i32 1, i32* %step
+  store i32 1, ptr %step
   br label %endtryfinally
 
 landingpad:
-  %landing_pad = landingpad { i8*, i32 }
+  %landing_pad = landingpad { ptr, i32 }
           cleanup
-  %tmp3 = extractvalue { i8*, i32 } %landing_pad, 0
-  store i32 2, i32* %step
-  call void @_d_eh_resume_unwind(i8* %tmp3)
+  %tmp3 = extractvalue { ptr, i32 } %landing_pad, 0
+  store i32 2, ptr %step
+  call void @_d_eh_resume_unwind(ptr %tmp3)
   unreachable
 
 endtryfinally:
-  %tmp10 = load i32, i32* %step
+  %tmp10 = load i32, ptr %step
   ret i32 %tmp10
 }
 ; WIN64-LABEL: foo4:
