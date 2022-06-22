@@ -95,12 +95,10 @@ entry:
   br i1 undef, label %if.then274, label %for.cond404
 
 if.then274:                                       ; preds = %if.end256
-  %0 = bitcast ptr %exl.i to ptr
   %arrayidx.i = getelementptr inbounds [5 x i32], ptr %exl.i, i64 0, i64 1
   %arrayidx1.i = getelementptr inbounds [5 x i32], ptr %exl.i, i64 0, i64 2
   %arrayidx2.i = getelementptr inbounds [5 x i32], ptr %exl.i, i64 0, i64 3
   %arrayidx3.i = getelementptr inbounds [5 x i32], ptr %exl.i, i64 0, i64 4
-  %1 = bitcast ptr %exl.i to ptr
   %arrayidx.i1034 = getelementptr inbounds [5 x i32], ptr %exl.i, i64 0, i64 1
   %arrayidx1.i1035 = getelementptr inbounds [5 x i32], ptr %exl.i, i64 0, i64 2
   %arrayidx2.i1036 = getelementptr inbounds [5 x i32], ptr %exl.i, i64 0, i64 3
@@ -108,7 +106,6 @@ if.then274:                                       ; preds = %if.end256
   unreachable
 
 for.cond404:                                      ; preds = %if.end256
-  %2 = bitcast ptr %exl.i to ptr
   %arrayidx.i960 = getelementptr inbounds [5 x i32], ptr %exl.i, i64 0, i64 1
   %arrayidx1.i961 = getelementptr inbounds [5 x i32], ptr %exl.i, i64 0, i64 2
   %arrayidx2.i962 = getelementptr inbounds [5 x i32], ptr %exl.i, i64 0, i64 3
@@ -117,14 +114,13 @@ for.cond404:                                      ; preds = %if.end256
   %arrayidx3.i963 = getelementptr inbounds [5 x i32], ptr %exl.i, i64 0, i64 4
 
   ; MemoryUse(LoE)
-  %3 = load ptr, ptr @gnodeArray, align 8
-  %arrayidx6.i968 = getelementptr inbounds ptr, ptr %3, i64 undef
+  %0 = load ptr, ptr @gnodeArray, align 8
+  %arrayidx6.i968 = getelementptr inbounds ptr, ptr %0, i64 undef
   ; MemoryUse(1) MayAlias
-  %4 = load ptr, ptr %arrayidx6.i968, align 8
+  %1 = load ptr, ptr %arrayidx6.i968, align 8
   br i1 undef, label %for.cond26.preheader.i974, label %if.then20.for.body_crit_edge.i999
 
 for.cond26.preheader.i974:                        ; preds = %if.then20.i996
-  %5 = bitcast ptr %exl.i to ptr
   %arrayidx.i924 = getelementptr inbounds [5 x i32], ptr %exl.i, i64 0, i64 1
   %arrayidx1.i925 = getelementptr inbounds [5 x i32], ptr %exl.i, i64 0, i64 2
   %arrayidx2.i926 = getelementptr inbounds [5 x i32], ptr %exl.i, i64 0, i64 3

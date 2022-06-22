@@ -12,14 +12,13 @@ define void @foo(ptr) #1 align 2 {
 
 ; <label>:2:
   %3 = tail call ptr @_Znwm(i64 56) #10
-  %4 = bitcast ptr %3 to ptr
   %p = load ptr, ptr undef, align 8
-  %5 = icmp eq ptr %p, %4
-  br i1 %5, label %exit, label %6
+  %4 = icmp eq ptr %p, %3
+  br i1 %4, label %exit, label %5
 
 ; <label>:6:
-  %7 = icmp eq ptr %p, null
-  br i1 %7, label %exit, label %8
+  %6 = icmp eq ptr %p, null
+  br i1 %6, label %exit, label %7
 
 ; <label>:8:
   br label %exit
