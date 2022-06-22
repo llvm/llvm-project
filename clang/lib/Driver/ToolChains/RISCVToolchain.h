@@ -22,6 +22,7 @@ public:
                  const llvm::opt::ArgList &Args);
 
   static bool hasGCCToolchain(const Driver &D, const llvm::opt::ArgList &Args);
+  bool IsIntegratedAssemblerDefault() const override;
   void addClangTargetOptions(const llvm::opt::ArgList &DriverArgs,
                              llvm::opt::ArgStringList &CC1Args,
                              Action::OffloadKind) const override;

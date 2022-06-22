@@ -26,6 +26,8 @@ public:
 
   const MCExpr *getExprForFDESymbol(const MCSymbol *Sym, unsigned Encoding,
                                     MCStreamer &Streamer) const override;
+  /// Set whether assembly (inline or otherwise) should be parsed.
+  void setUseIntegratedAssembler(bool Value) override;
 };
 
 } // namespace llvm

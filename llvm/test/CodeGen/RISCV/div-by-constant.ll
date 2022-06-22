@@ -62,7 +62,7 @@ define i32 @udiv_constant_add(i32 %a) nounwind {
 ;
 ; RV64IMZB-LABEL: udiv_constant_add:
 ; RV64IMZB:       # %bb.0:
-; RV64IMZB-NEXT:    zext.w a1, a0
+; RV64IMZB-NEXT:    add.uw a1, a0, zero
 ; RV64IMZB-NEXT:    lui a2, 149797
 ; RV64IMZB-NEXT:    addiw a2, a2, -1755
 ; RV64IMZB-NEXT:    mul a1, a1, a2

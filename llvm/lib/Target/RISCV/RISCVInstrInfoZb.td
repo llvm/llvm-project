@@ -427,7 +427,7 @@ def UNZIP_RV32 : Unary_r<0b000010001111, 0b101, "unzip">,
 // Pseudo Instructions
 //===----------------------------------------------------------------------===//
 
-let Predicates = [HasStdExtZba, IsRV64] in {
+let Predicates = [HasStdExtZba, IsRV64], EmitPriority = 0 in {
 def : InstAlias<"zext.w $rd, $rs", (ADD_UW GPR:$rd, GPR:$rs, X0)>;
 } // Predicates = [HasStdExtZba, IsRV64]
 

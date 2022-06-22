@@ -1690,8 +1690,8 @@ define zeroext i1 @umulo.i32(i32 signext %v1, i32 signext %v2, ptr %res) {
 ;
 ; RV64ZBA-LABEL: umulo.i32:
 ; RV64ZBA:       # %bb.0: # %entry
-; RV64ZBA-NEXT:    zext.w a1, a1
-; RV64ZBA-NEXT:    zext.w a0, a0
+; RV64ZBA-NEXT:    add.uw a1, a1, zero
+; RV64ZBA-NEXT:    add.uw a0, a0, zero
 ; RV64ZBA-NEXT:    mul a1, a0, a1
 ; RV64ZBA-NEXT:    srli a0, a1, 32
 ; RV64ZBA-NEXT:    snez a0, a0
@@ -1759,7 +1759,7 @@ define zeroext i1 @umulo2.i32(i32 signext %v1, ptr %res) {
 ;
 ; RV64ZBA-LABEL: umulo2.i32:
 ; RV64ZBA:       # %bb.0: # %entry
-; RV64ZBA-NEXT:    zext.w a2, a0
+; RV64ZBA-NEXT:    add.uw a2, a0, zero
 ; RV64ZBA-NEXT:    sh1add.uw a0, a0, a2
 ; RV64ZBA-NEXT:    sh2add a2, a0, a2
 ; RV64ZBA-NEXT:    srli a0, a2, 32
@@ -1828,8 +1828,8 @@ define signext i32 @umulo3.i32(i32 signext %0, i32 signext %1, ptr %2) {
 ;
 ; RV64ZBA-LABEL: umulo3.i32:
 ; RV64ZBA:       # %bb.0:
-; RV64ZBA-NEXT:    zext.w a1, a1
-; RV64ZBA-NEXT:    zext.w a0, a0
+; RV64ZBA-NEXT:    add.uw a1, a1, zero
+; RV64ZBA-NEXT:    add.uw a0, a0, zero
 ; RV64ZBA-NEXT:    mul a3, a0, a1
 ; RV64ZBA-NEXT:    srli a3, a3, 32
 ; RV64ZBA-NEXT:    snez a3, a3
@@ -3748,8 +3748,8 @@ define i32 @umulo.select.i32(i32 signext %v1, i32 signext %v2) {
 ;
 ; RV64ZBA-LABEL: umulo.select.i32:
 ; RV64ZBA:       # %bb.0: # %entry
-; RV64ZBA-NEXT:    zext.w a2, a1
-; RV64ZBA-NEXT:    zext.w a3, a0
+; RV64ZBA-NEXT:    add.uw a2, a1, zero
+; RV64ZBA-NEXT:    add.uw a3, a0, zero
 ; RV64ZBA-NEXT:    mul a2, a3, a2
 ; RV64ZBA-NEXT:    srli a2, a2, 32
 ; RV64ZBA-NEXT:    bnez a2, .LBB48_2
@@ -3807,8 +3807,8 @@ define i1 @umulo.not.i32(i32 signext %v1, i32 signext %v2) {
 ;
 ; RV64ZBA-LABEL: umulo.not.i32:
 ; RV64ZBA:       # %bb.0: # %entry
-; RV64ZBA-NEXT:    zext.w a1, a1
-; RV64ZBA-NEXT:    zext.w a0, a0
+; RV64ZBA-NEXT:    add.uw a1, a1, zero
+; RV64ZBA-NEXT:    add.uw a0, a0, zero
 ; RV64ZBA-NEXT:    mul a0, a0, a1
 ; RV64ZBA-NEXT:    srli a0, a0, 32
 ; RV64ZBA-NEXT:    seqz a0, a0
@@ -5323,8 +5323,8 @@ define zeroext i1 @umulo.br.i32(i32 signext %v1, i32 signext %v2) {
 ;
 ; RV64ZBA-LABEL: umulo.br.i32:
 ; RV64ZBA:       # %bb.0: # %entry
-; RV64ZBA-NEXT:    zext.w a1, a1
-; RV64ZBA-NEXT:    zext.w a0, a0
+; RV64ZBA-NEXT:    add.uw a1, a1, zero
+; RV64ZBA-NEXT:    add.uw a0, a0, zero
 ; RV64ZBA-NEXT:    mul a0, a0, a1
 ; RV64ZBA-NEXT:    srli a0, a0, 32
 ; RV64ZBA-NEXT:    beqz a0, .LBB63_2

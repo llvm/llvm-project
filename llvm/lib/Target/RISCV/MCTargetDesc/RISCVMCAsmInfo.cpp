@@ -45,3 +45,11 @@ const MCExpr *RISCVMCAsmInfo::getExprForFDESymbol(const MCSymbol *Sym,
   assert(Encoding & dwarf::DW_EH_PE_sdata4 && "Unexpected encoding");
   return RISCVMCExpr::create(ME, RISCVMCExpr::VK_RISCV_32_PCREL, Ctx);
 }
+
+void RISCVMCAsmInfo::setUseIntegratedAssembler(bool Value) {
+  UseIntegratedAssembler = Value;
+  if (!UseIntegratedAssembler) {
+    // gas doesn't handle non-constant <u>leb128
+    HasLEB128Directives = false;
+  }
+}

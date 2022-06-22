@@ -93,7 +93,7 @@ define i64 @zextw_i64(i64 %a) nounwind {
 ;
 ; RV64ZBA-LABEL: zextw_i64:
 ; RV64ZBA:       # %bb.0:
-; RV64ZBA-NEXT:    zext.w a0, a0
+; RV64ZBA-NEXT:    add.uw a0, a0, zero
 ; RV64ZBA-NEXT:    ret
   %and = and i64 %a, 4294967295
   ret i64 %and
@@ -112,7 +112,7 @@ define i64 @zextw_demandedbits_i64(i64 %0) {
 ; RV64ZBA-LABEL: zextw_demandedbits_i64:
 ; RV64ZBA:       # %bb.0:
 ; RV64ZBA-NEXT:    ori a0, a0, 1
-; RV64ZBA-NEXT:    zext.w a0, a0
+; RV64ZBA-NEXT:    add.uw a0, a0, zero
 ; RV64ZBA-NEXT:    ret
   %2 = and i64 %0, 4294967294
   %3 = or i64 %2, 1
@@ -1177,7 +1177,7 @@ define i64 @adduw_imm(i32 signext %0) nounwind {
 ;
 ; RV64ZBA-LABEL: adduw_imm:
 ; RV64ZBA:       # %bb.0:
-; RV64ZBA-NEXT:    zext.w a0, a0
+; RV64ZBA-NEXT:    add.uw a0, a0, zero
 ; RV64ZBA-NEXT:    addi a0, a0, 5
 ; RV64ZBA-NEXT:    ret
   %a = zext i32 %0 to i64
@@ -1244,7 +1244,7 @@ define i64 @imm_zextw() nounwind {
 ; RV64ZBA-LABEL: imm_zextw:
 ; RV64ZBA:       # %bb.0:
 ; RV64ZBA-NEXT:    li a0, -2
-; RV64ZBA-NEXT:    zext.w a0, a0
+; RV64ZBA-NEXT:    add.uw a0, a0, zero
 ; RV64ZBA-NEXT:    ret
   ret i64 4294967294 ; -2 in 32 bits.
 }

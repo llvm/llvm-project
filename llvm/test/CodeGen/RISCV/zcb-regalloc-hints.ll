@@ -76,7 +76,7 @@ define i64 @c_zext_h(i64 %x, i16 %y) {
 define i64 @c_zext_w(i64 %x, i32 %y) {
 ; CHECK-LABEL: c_zext_w:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    zext.w a1, a1
+; CHECK-NEXT:    add.uw a1, a1, zero
 ; CHECK-NEXT:    li a0, 1234
 ; CHECK-NEXT:    mul a0, a0, a1
 ; CHECK-NEXT:    ret
