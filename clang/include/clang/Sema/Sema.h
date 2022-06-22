@@ -2258,6 +2258,11 @@ private:
   /// Namespace definitions that we will export when they finish.
   llvm::SmallPtrSet<const NamespaceDecl*, 8> DeferredExportedNamespaces;
 
+  /// In a C++ standard module, inline declarations require a definition to be
+  /// present at the end of a definition domain.  This set holds the decls to
+  /// be checked at the end of the TU.
+  llvm::SmallPtrSet<const FunctionDecl *, 8> PendingInlineFuncDecls;
+
   /// Helper function to judge if we are in module purview.
   /// Return false if we are not in a module.
   bool isCurrentModulePurview() const {

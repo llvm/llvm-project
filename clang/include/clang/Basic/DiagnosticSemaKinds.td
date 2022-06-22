@@ -11141,6 +11141,8 @@ def err_export_using_internal : Error<
 def err_export_not_in_module_interface : Error<
   "export declaration can only be used within a module interface unit"
   "%select{ after the module declaration|}0">;
+def err_export_inline_not_defined : Error<
+  "inline function not defined%select{| before the private module fragment}0">;
 def err_export_partition_impl : Error<
   "module partition implementations cannot be exported">;
 def err_export_in_private_module_fragment : Error<
