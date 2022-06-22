@@ -1781,7 +1781,8 @@ struct SymbolVisitor {
     return false;
   }
 
-  void visitExpr(const Fortran::lower::SomeExpr &expr) {
+  template <typename T>
+  void visitExpr(const Fortran::evaluate::Expr<T> &expr) {
     for (const semantics::Symbol &symbol :
          Fortran::evaluate::CollectSymbols(expr))
       visitSymbol(symbol);
@@ -1789,11 +1790,47 @@ struct SymbolVisitor {
 
   void visitSymbol(const Fortran::semantics::Symbol &symbol) {
     callBack(symbol);
-    // Visit statement function body since it will be inlined in lowering.
+    // - Visit statement function body since it will be inlined in lowering.
+    // - Visit function results specification expressions because allocations
+    //   happens on the caller side.
     if (const auto *subprogramDetails =
-            symbol.detailsIf<Fortran::semantics::SubprogramDetails>())
-      if (const auto &maybeExpr = subprogramDetails->stmtFunction())
+            symbol.detailsIf<Fortran::semantics::SubprogramDetails>()) {
+      if (const auto &maybeExpr = subprogramDetails->stmtFunction()) {
         visitExpr(*maybeExpr);
+      } else {
+        if (subprogramDetails->isFunction()) {
+          // Visit result extents expressions that are explicit.
+          const Fortran::semantics::Symbol &result =
+              subprogramDetails->result();
+          if (const auto *objectDetails =
+                  result.detailsIf<Fortran::semantics::ObjectEntityDetails>())
+            if (objectDetails->shape().IsExplicitShape())
+              for (const Fortran::semantics::ShapeSpec &shapeSpec :
+                   objectDetails->shape()) {
+                visitExpr(shapeSpec.lbound().GetExplicit().value());
+                visitExpr(shapeSpec.ubound().GetExplicit().value());
+              }
+        }
+      }
+    }
+    if (Fortran::semantics::IsProcedure(symbol)) {
+      if (auto dynamicType = Fortran::evaluate::DynamicType::From(symbol)) {
+        // Visit result length specification expressions that are explicit.
+        if (dynamicType->category() ==
+            Fortran::common::TypeCategory::Character) {
+          if (std::optional<Fortran::evaluate::ExtentExpr> length =
+                  dynamicType->GetCharLength())
+            visitExpr(*length);
+        } else if (dynamicType->category() == common::TypeCategory::Derived) {
+          const Fortran::semantics::DerivedTypeSpec &derivedTypeSpec =
+              dynamicType->GetDerivedTypeSpec();
+          for (const auto &[_, param] : derivedTypeSpec.parameters())
+            if (const Fortran::semantics::MaybeIntExpr &expr =
+                    param.GetExplicit())
+              visitExpr(expr.value());
+        }
+      }
+    }
   }
 
   template <typename A>
