@@ -7,6 +7,7 @@ add_mlir_unittest(MLIRPresburgerTests
   PresburgerSpaceTest.cpp
   PWMAFunctionTest.cpp
   SimplexTest.cpp
+  SlowMPIntTest.cpp
   ../../Dialect/Affine/Analysis/AffineStructuresParser.cpp
 )
 
