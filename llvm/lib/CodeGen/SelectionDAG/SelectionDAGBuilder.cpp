@@ -5346,38 +5346,36 @@ static SDValue expandPow(const SDLoc &dl, SDValue LHS, SDValue RHS,
 /// ExpandPowI - Expand a llvm.powi intrinsic.
 static SDValue ExpandPowI(const SDLoc &DL, SDValue LHS, SDValue RHS,
                           SelectionDAG &DAG) {
-  // If RHS is a constant, we can expand this out to a multiplication tree,
-  // otherwise we end up lowering to a call to __powidf2 (for example).  When
-  // optimizing for size, we only want to do this if the expansion would produce
-  // a small number of multiplies, otherwise we do the full expansion.
+  // If RHS is a constant, we can expand this out to a multiplication tree if
+  // it's beneficial on the target, otherwise we end up lowering to a call to
+  // __powidf2 (for example).
   if (ConstantSDNode *RHSC = dyn_cast<ConstantSDNode>(RHS)) {
-    // Get the exponent as a positive value.
     unsigned Val = RHSC->getSExtValue();
-    if ((int)Val < 0) Val = -Val;
 
     // powi(x, 0) -> 1.0
     if (Val == 0)
       return DAG.getConstantFP(1.0, DL, LHS.getValueType());
 
-    bool OptForSize = DAG.shouldOptForSize();
-    if (!OptForSize ||
-        // If optimizing for size, don't insert too many multiplies.
-        // This inserts up to 5 multiplies.
-        countPopulation(Val) + Log2_32(Val) < 7) {
+    if (DAG.getTargetLoweringInfo().isBeneficialToExpandPowI(
+            Val, DAG.shouldOptForSize())) {
+      // Get the exponent as a positive value.
+      if ((int)Val < 0)
+        Val = -Val;
       // We use the simple binary decomposition method to generate the multiply
       // sequence.  There are more optimal ways to do this (for example,
       // powi(x,15) generates one more multiply than it should), but this has
       // the benefit of being both really simple and much better than a libcall.
-      SDValue Res;  // Logically starts equal to 1.0
+      SDValue Res; // Logically starts equal to 1.0
       SDValue CurSquare = LHS;
       // TODO: Intrinsics should have fast-math-flags that propagate to these
       // nodes.
       while (Val) {
         if (Val & 1) {
           if (Res.getNode())
-            Res = DAG.getNode(ISD::FMUL, DL,Res.getValueType(), Res, CurSquare);
+            Res =
+                DAG.getNode(ISD::FMUL, DL, Res.getValueType(), Res, CurSquare);
           else
-            Res = CurSquare;  // 1.0*CurSquare.
+            Res = CurSquare; // 1.0*CurSquare.
         }
 
         CurSquare = DAG.getNode(ISD::FMUL, DL, CurSquare.getValueType(),
