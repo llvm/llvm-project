@@ -199,7 +199,7 @@ __lldb_apple_objc_v2_get_dynamic_class_info2(void *gdb_objc_realized_classes_ptr
     DEBUG_PRINTF ("count = %u\n", count);
 
     uint32_t idx = 0;
-    for (uint32_t i=0; i<=count; ++i)
+    for (uint32_t i=0; i<count; ++i)
     {
         if (idx < max_class_infos)
         {
@@ -273,7 +273,7 @@ __lldb_apple_objc_v2_get_dynamic_class_info3(void *gdb_objc_realized_classes_ptr
     DEBUG_PRINTF ("count = %u\n", count);
 
     uint32_t idx = 0;
-    for (uint32_t i=0; i<=count; ++i)
+    for (uint32_t i=0; i<count; ++i)
     {
         if (idx < max_class_infos)
         {
