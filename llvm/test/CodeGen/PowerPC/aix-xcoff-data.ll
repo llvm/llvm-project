@@ -208,7 +208,7 @@
 ; SYMS:      Symbols [
 ; SYMS-NEXT:   Symbol {
 ; SYMS-NEXT:     Index: 0
-; SYMS-NEXT:     Name: .file
+; SYMS-NEXT:     Name: <stdin>
 ; SYMS-NEXT:     Value (SymbolTableIndex): 0x0
 ; SYMS-NEXT:     Section: N_DEBUG
 ; SYMS-NEXT:     Source Language ID: TB_C (0x0)

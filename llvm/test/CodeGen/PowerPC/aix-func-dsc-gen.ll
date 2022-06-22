@@ -13,7 +13,7 @@ entry:
 ; CHECK-NEXT: AddressSize: 32bit
 ; CHECK:        Symbol {
 ; CHECK-NEXT:     Index: 0
-; CHECK-NEXT:     Name: .file
+; CHECK-NEXT:     Name: <stdin>
 ; CHECK-NEXT:     Value (SymbolTableIndex): 0x0
 ; CHECK-NEXT:     Section: N_DEBUG
 ; CHECK-NEXT:     Source Language ID: TB_C (0x0)

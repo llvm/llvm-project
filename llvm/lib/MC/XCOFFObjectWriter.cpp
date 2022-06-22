@@ -201,6 +201,7 @@ class XCOFFObjectWriter : public MCObjectWriter {
   uint16_t SectionCount = 0;
   uint64_t RelocationEntryOffset = 0;
   StringRef SourceFileName = ".file";
+  std::vector<std::pair<std::string, size_t>> FileNames;
 
   support::endian::Writer W;
   std::unique_ptr<MCXCOFFObjectTargetWriter> TargetObjectWriter;
@@ -494,9 +495,14 @@ void XCOFFObjectWriter::executePostLayoutBinding(MCAssembler &Asm,
       Strings.add(XSym->getSymbolTableName());
   }
 
-  // The first symbol entry is for the source file's name.
-  if (nameShouldBeInStringTable(SourceFileName))
-    Strings.add(SourceFileName);
+  FileNames = Asm.getFileNames();
+  // Emit ".file" as the source file name when there is no file name.
+  if (FileNames.empty())
+    FileNames.emplace_back(".file", 0);
+  for (const std::pair<std::string, size_t> &F : FileNames) {
+    if (nameShouldBeInStringTable(F.first))
+      Strings.add(F.first);
+  }
 
   Strings.finalize();
   assignAddressesAndIndices(Layout);
@@ -853,15 +859,14 @@ void XCOFFObjectWriter::writeRelocations() {
 }
 
 void XCOFFObjectWriter::writeSymbolTable(const MCAsmLayout &Layout) {
-  // Write symbol 0 as C_FILE.
+  // Write C_FILE symbols.
   // The n_name of a C_FILE symbol is the source file's name when no auxiliary
-  // entries are present. The source file's name is alternatively provided by an
-  // auxiliary entry, in which case the n_name of the C_FILE symbol is `.file`.
-  // FIXME: add the real source file's name.
-  writeSymbolEntry(SourceFileName, /*Value=*/0,
-                   XCOFF::ReservedSectionNum::N_DEBUG,
-                   /*SymbolType=*/0, XCOFF::C_FILE,
-                   /*NumberOfAuxEntries=*/0);
+  // entries are present.
+  for (const std::pair<std::string, size_t> &F : FileNames) {
+    writeSymbolEntry(F.first, /*Value=*/0, XCOFF::ReservedSectionNum::N_DEBUG,
+                     /*SymbolType=*/0, XCOFF::C_FILE,
+                     /*NumberOfAuxEntries=*/0);
+  }
 
   for (const auto &Csect : UndefinedCsects) {
     writeSymbolEntryForControlSection(Csect, XCOFF::ReservedSectionNum::N_UNDEF,
@@ -957,8 +962,8 @@ void XCOFFObjectWriter::finalizeSectionInfo() {
 }
 
 void XCOFFObjectWriter::assignAddressesAndIndices(const MCAsmLayout &Layout) {
-  // The first symbol table entry (at index 0) is for the file name.
-  uint32_t SymbolTableIndex = 1;
+  // The symbol table starts with all the C_FILE symbols.
+  uint32_t SymbolTableIndex = FileNames.size();
 
   // Calculate indices for undefined symbols.
   for (auto &Csect : UndefinedCsects) {
