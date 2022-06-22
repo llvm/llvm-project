@@ -29,6 +29,7 @@ VERS1.0 {
     __kmpc_push_target_tripcount;
     __kmpc_push_target_tripcount_mapper;
     omp_get_num_devices;
+    omp_get_device_num;
     omp_get_initial_device;
     omp_target_alloc;
     omp_target_free;
