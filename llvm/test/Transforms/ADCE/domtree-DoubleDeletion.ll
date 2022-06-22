@@ -11,13 +11,13 @@
 define i32 @main() {
 entry:
   %retval = alloca i32, align 4
-  store i32 0, i32* %retval, align 4
-  %0 = load i32, i32* @a, align 4
+  store i32 0, ptr %retval, align 4
+  %0 = load i32, ptr @a, align 4
   %cmp = icmp ne i32 %0, 1
   br i1 %cmp, label %land.rhs, label %land.end4
 
 land.rhs:                                         ; preds = %entry
-  %1 = load i32, i32* @a, align 4
+  %1 = load i32, ptr @a, align 4
   %tobool = icmp ne i32 %1, 0
   br i1 %tobool, label %land.rhs1, label %land.end
 
