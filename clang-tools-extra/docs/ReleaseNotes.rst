@@ -110,9 +110,6 @@ Improvements to clang-tidy
   from suppressing diagnostics associated with macro arguments. This fixes
   `Issue 55134 <https://github.com/llvm/llvm-project/issues/55134>`_.
 
-- Invalid parameters are no longer treated as being implicitly unused for the
-  `-misc-unused-parameters` check. This fixes `Issue 56152 <https://github.com/llvm/llvm-project/issues/56152>`_.
-
 New checks
 ^^^^^^^^^^
 
@@ -182,13 +179,18 @@ Changes in existing checks
   <clang-tidy/checks/llvmlibc/callee-namespace>` when executing for C++ code
   that contain calls to advanced constructs, e.g. overloaded operators.
 
-- Fixed a false positive in :doc:`misc-redundant-expression
-  <clang-tidy/checks/misc/redundant-expression>` involving overloaded
-  comparison operators.
+- Fixed false positives in :doc:`misc-redundant-expression
+  <clang-tidy/checks/misc/redundant-expression>`:
 
-- Fixed a false positive in :doc:`misc-redundant-expression
-  <clang-tidy/checks/misc/redundant-expression>` involving assignments in
-  conditions. This fixes `Issue 35853 <https://github.com/llvm/llvm-project/issues/35853>`_.
+  - Fixed a false positive involving overloaded comparison operators.
+
+  - Fixed a false positive involving assignments in
+    conditions. This fixes `Issue 35853 <https://github.com/llvm/llvm-project/issues/35853>`_.
+
+- Fixed a false positive in :doc:`misc-unused-parameters
+  <clang-tidy/checks/misc/unused-parameters>`
+  where invalid parameters were implicitly being treated as being unused. 
+  This fixes `Issue 56152 <https://github.com/llvm/llvm-project/issues/56152>`_.
 
 - Fixed a false positive in :doc:`modernize-deprecated-headers
   <clang-tidy/checks/modernize/deprecated-headers>` involving including
