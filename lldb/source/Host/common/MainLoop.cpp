@@ -347,6 +347,10 @@ MainLoop::RegisterSignal(int signo, const Callback &callback, Status &error) {
 #endif
 }
 
+void MainLoop::AddPendingCallback(const Callback &callback) {
+  m_pending_callbacks.push_back(callback);
+}
+
 void MainLoop::UnregisterReadObject(IOObject::WaitableHandle handle) {
   bool erased = m_read_fds.erase(handle);
   UNUSED_IF_ASSERT_DISABLED(erased);
@@ -401,6 +405,10 @@ Status MainLoop::Run() {
       return error;
 
     impl.ProcessEvents();
+
+    for (const Callback &callback : m_pending_callbacks)
+      callback(*this);
+    m_pending_callbacks.clear();
   }
   return Status();
 }

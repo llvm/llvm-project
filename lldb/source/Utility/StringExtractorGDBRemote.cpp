@@ -150,6 +150,11 @@ StringExtractorGDBRemote::GetServerPacketType() const {
         return eServerPacketType_QMemTags;
       break;
 
+    case 'N':
+      if (PACKET_STARTS_WITH("QNonStop:"))
+        return eServerPacketType_QNonStop;
+      break;
+
     case 'R':
       if (PACKET_STARTS_WITH("QRestoreRegisterState:"))
         return eServerPacketType_QRestoreRegisterState;
@@ -369,6 +374,12 @@ StringExtractorGDBRemote::GetServerPacketType() const {
         return eServerPacketType_vCont_actions;
       if (PACKET_STARTS_WITH("vRun;"))
         return eServerPacketType_vRun;
+      if (PACKET_MATCHES("vStopped"))
+        return eServerPacketType_vStopped;
+      if (PACKET_MATCHES("vCtrlC"))
+        return eServerPacketType_vCtrlC;
+      break;
+
     }
     break;
   case '_':

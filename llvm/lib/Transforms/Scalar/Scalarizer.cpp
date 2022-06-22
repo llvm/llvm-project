@@ -229,6 +229,7 @@ public:
 private:
   Scatterer scatter(Instruction *Point, Value *V, Type *PtrElemTy = nullptr);
   void gather(Instruction *Op, const ValueVector &CV);
+  void replaceUses(Instruction *Op, Value *CV);
   bool canTransferMetadata(unsigned Kind);
   void transferMetadataAndIRFlags(Instruction *Op, const ValueVector &CV);
   Optional<VectorLayout> getVectorLayout(Type *Ty, Align Alignment,
@@ -242,6 +243,7 @@ private:
 
   ScatterMap Scattered;
   GatherList Gathered;
+  bool Scalarized;
 
   SmallVector<WeakTrackingVH, 32> PotentiallyDeadInstrs;
 
@@ -361,6 +363,8 @@ FunctionPass *llvm::createScalarizerPass() {
 bool ScalarizerVisitor::visit(Function &F) {
   assert(Gathered.empty() && Scattered.empty());
 
+  Scalarized = false;
+
   // To ensure we replace gathered components correctly we need to do an ordered
   // traversal of the basic blocks in the function.
   ReversePostOrderTraversal<BasicBlock *> RPOT(&F.getEntryBlock());
@@ -434,6 +438,15 @@ void ScalarizerVisitor::gather(Instruction *Op, const ValueVector &CV) {
   }
   SV = CV;
   Gathered.push_back(GatherList::value_type(Op, &SV));
+}
+
+// Replace Op with CV and collect Op has a potentially dead instruction.
+void ScalarizerVisitor::replaceUses(Instruction *Op, Value *CV) {
+  if (CV != Op) {
+    Op->replaceAllUsesWith(CV);
+    PotentiallyDeadInstrs.emplace_back(Op);
+    Scalarized = true;
+  }
 }
 
 // Return true if it is safe to transfer the given metadata tag from
@@ -828,7 +841,7 @@ bool ScalarizerVisitor::visitExtractElementInst(ExtractElementInst &EEI) {
 
   if (auto *CI = dyn_cast<ConstantInt>(ExtIdx)) {
     Value *Res = Op0[CI->getValue().getZExtValue()];
-    gather(&EEI, {Res});
+    replaceUses(&EEI, Res);
     return true;
   }
 
@@ -844,7 +857,7 @@ bool ScalarizerVisitor::visitExtractElementInst(ExtractElementInst &EEI) {
     Res = Builder.CreateSelect(ShouldExtract, Elt, Res,
                                EEI.getName() + ".upto" + Twine(I));
   }
-  gather(&EEI, {Res});
+  replaceUses(&EEI, Res);
   return true;
 }
 
@@ -959,7 +972,7 @@ bool ScalarizerVisitor::visitCallInst(CallInst &CI) {
 bool ScalarizerVisitor::finish() {
   // The presence of data in Gathered or Scattered indicates changes
   // made to the Function.
-  if (Gathered.empty() && Scattered.empty())
+  if (Gathered.empty() && Scattered.empty() && !Scalarized)
     return false;
   for (const auto &GMI : Gathered) {
     Instruction *Op = GMI.first;
@@ -990,6 +1003,7 @@ bool ScalarizerVisitor::finish() {
   }
   Gathered.clear();
   Scattered.clear();
+  Scalarized = false;
 
   RecursivelyDeleteTriviallyDeadInstructionsPermissive(PotentiallyDeadInstrs);
 
