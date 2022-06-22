@@ -1426,10 +1426,10 @@ Function *Intrinsic::getDeclaration(Module *M, ID id, ArrayRef<Type*> Tys) {
           .getCallee());
 }
 
-// This defines the "Intrinsic::getIntrinsicForGCCBuiltin()" method.
-#define GET_LLVM_INTRINSIC_FOR_GCC_BUILTIN
+// This defines the "Intrinsic::getIntrinsicForClangBuiltin()" method.
+#define GET_LLVM_INTRINSIC_FOR_CLANG_BUILTIN
 #include "llvm/IR/IntrinsicImpl.inc"
-#undef GET_LLVM_INTRINSIC_FOR_GCC_BUILTIN
+#undef GET_LLVM_INTRINSIC_FOR_CLANG_BUILTIN
 
 // This defines the "Intrinsic::getIntrinsicForMSBuiltin()" method.
 #define GET_LLVM_INTRINSIC_FOR_MS_BUILTIN
