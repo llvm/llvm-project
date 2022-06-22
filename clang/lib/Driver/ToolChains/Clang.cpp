@@ -26,6 +26,7 @@
 #include "clang/Basic/CLWarnings.h"
 #include "clang/Basic/CharInfo.h"
 #include "clang/Basic/CodeGenOptions.h"
+#include "clang/Basic/DebugInfoOptions.h"
 #include "clang/Basic/LangOptions.h"
 #include "clang/Basic/ObjCRuntime.h"
 #include "clang/Basic/Version.h"
@@ -525,7 +526,7 @@ static codegenoptions::DebugInfoKind DebugLevelToInfoKind(const Arg &A) {
     return codegenoptions::DebugLineTablesOnly;
   if (A.getOption().matches(options::OPT_gline_directives_only))
     return codegenoptions::DebugDirectivesOnly;
-  return codegenoptions::DebugInfoConstructor;
+  return codegenoptions::LimitedDebugInfo;
 }
 
 static bool mustUseNonLeafFramePointerForTarget(const llvm::Triple &Triple) {
@@ -1085,9 +1086,6 @@ static void RenderDebugEnablingArgs(const ArgList &Args, ArgStringList &CmdArgs,
     break;
   case codegenoptions::DebugLineTablesOnly:
     CmdArgs.push_back("-debug-info-kind=line-tables-only");
-    break;
-  case codegenoptions::DebugInfoConstructor:
-    CmdArgs.push_back("-debug-info-kind=constructor");
     break;
   case codegenoptions::LimitedDebugInfo:
     CmdArgs.push_back("-debug-info-kind=limited");
@@ -2670,7 +2668,7 @@ static void CollectArgsForIntegratedAssembler(Compilation &C,
           CmdArgs.push_back(Value.data());
         } else {
           RenderDebugEnablingArgs(Args, CmdArgs,
-                                  codegenoptions::DebugInfoConstructor,
+                                  codegenoptions::LimitedDebugInfo,
                                   DwarfVersion, llvm::DebuggerKind::Default);
         }
       } else if (Value.startswith("-mcpu") || Value.startswith("-mfpu") ||
@@ -4096,7 +4094,7 @@ static void renderDebugOptions(const ToolChain &TC, const Driver &D,
     }
   }
   if (const Arg *A = Args.getLastArg(options::OPT_g_Group)) {
-    DebugInfoKind = codegenoptions::DebugInfoConstructor;
+    DebugInfoKind = codegenoptions::LimitedDebugInfo;
 
     // If the last option explicitly specified a debug-info level, use it.
     if (checkDebugInfoOption(A, Args, D, TC) &&
@@ -4218,7 +4216,7 @@ static void renderDebugOptions(const ToolChain &TC, const Driver &D,
     if (checkDebugInfoOption(A, Args, D, TC)) {
       if (DebugInfoKind != codegenoptions::DebugLineTablesOnly &&
           DebugInfoKind != codegenoptions::DebugDirectivesOnly) {
-        DebugInfoKind = codegenoptions::DebugInfoConstructor;
+        DebugInfoKind = codegenoptions::LimitedDebugInfo;
         CmdArgs.push_back("-dwarf-ext-refs");
         CmdArgs.push_back("-fmodule-format=obj");
       }
@@ -4239,8 +4237,7 @@ static void renderDebugOptions(const ToolChain &TC, const Driver &D,
   if (const Arg *A = Args.getLastArg(options::OPT_fstandalone_debug))
     (void)checkDebugInfoOption(A, Args, D, TC);
 
-  if (DebugInfoKind == codegenoptions::LimitedDebugInfo ||
-      DebugInfoKind == codegenoptions::DebugInfoConstructor) {
+  if (DebugInfoKind == codegenoptions::LimitedDebugInfo) {
     if (Args.hasFlag(options::OPT_fno_eliminate_unused_debug_types,
                      options::OPT_feliminate_unused_debug_types, false))
       DebugInfoKind = codegenoptions::UnusedTypeInfo;
@@ -5438,7 +5435,7 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   // This controls whether or not we perform JustMyCode instrumentation.
   if (Args.hasFlag(options::OPT_fjmc, options::OPT_fno_jmc, false)) {
     if (TC.getTriple().isOSBinFormatELF()) {
-      if (DebugInfoKind >= codegenoptions::DebugInfoConstructor)
+      if (DebugInfoKind >= codegenoptions::LimitedDebugInfo)
         CmdArgs.push_back("-fjmc");
       else
         D.Diag(clang::diag::warn_drv_jmc_requires_debuginfo) << "-fjmc"
@@ -7561,7 +7558,7 @@ void Clang::AddClangCLArgs(const ArgList &Args, types::ID InputType,
                                           options::OPT_gline_tables_only)) {
     *EmitCodeView = true;
     if (DebugInfoArg->getOption().matches(options::OPT__SLASH_Z7))
-      *DebugInfoKind = codegenoptions::DebugInfoConstructor;
+      *DebugInfoKind = codegenoptions::LimitedDebugInfo;
     else
       *DebugInfoKind = codegenoptions::DebugLineTablesOnly;
   } else {
@@ -7573,7 +7570,7 @@ void Clang::AddClangCLArgs(const ArgList &Args, types::ID InputType,
   // This controls whether or not we perform JustMyCode instrumentation.
   if (Args.hasFlag(options::OPT__SLASH_JMC, options::OPT__SLASH_JMC_,
                    /*Default=*/false)) {
-    if (*EmitCodeView && *DebugInfoKind >= codegenoptions::DebugInfoConstructor)
+    if (*EmitCodeView && *DebugInfoKind >= codegenoptions::LimitedDebugInfo)
       CmdArgs.push_back("-fjmc");
     else
       D.Diag(clang::diag::warn_drv_jmc_requires_debuginfo) << "/JMC"
@@ -7898,7 +7895,7 @@ void ClangAs::ConstructJob(Compilation &C, const JobAction &JA,
     // the guard for source type, however there is a test which asserts
     // that some assembler invocation receives no -debug-info-kind,
     // and it's not clear whether that test is just overly restrictive.
-    DebugInfoKind = (WantDebug ? codegenoptions::DebugInfoConstructor
+    DebugInfoKind = (WantDebug ? codegenoptions::LimitedDebugInfo
                                : codegenoptions::NoDebugInfo);
 
     addDebugPrefixMapArg(getToolChain().getDriver(), getToolChain(), Args,

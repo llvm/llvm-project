@@ -1360,9 +1360,6 @@ void CompilerInvocation::GenerateCodeGenArgs(
   case codegenoptions::DebugDirectivesOnly:
     DebugInfoVal = "line-directives-only";
     break;
-  case codegenoptions::DebugInfoConstructor:
-    DebugInfoVal = "constructor";
-    break;
   case codegenoptions::LimitedDebugInfo:
     DebugInfoVal = "limited";
     break;
@@ -1637,7 +1634,6 @@ bool CompilerInvocation::ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args,
         llvm::StringSwitch<unsigned>(A->getValue())
             .Case("line-tables-only", codegenoptions::DebugLineTablesOnly)
             .Case("line-directives-only", codegenoptions::DebugDirectivesOnly)
-            .Case("constructor", codegenoptions::DebugInfoConstructor)
             .Case("limited", codegenoptions::LimitedDebugInfo)
             .Case("standalone", codegenoptions::FullDebugInfo)
             .Case("unused-types", codegenoptions::UnusedTypeInfo)
@@ -1647,18 +1643,6 @@ bool CompilerInvocation::ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args,
                                                 << A->getValue();
     else
       Opts.setDebugInfo(static_cast<codegenoptions::DebugInfoKind>(Val));
-  }
-
-  // If -fuse-ctor-homing is set and limited debug info is already on, then use
-  // constructor homing, and vice versa for -fno-use-ctor-homing.
-  if (const Arg *A =
-          Args.getLastArg(OPT_fuse_ctor_homing, OPT_fno_use_ctor_homing)) {
-    if (A->getOption().matches(OPT_fuse_ctor_homing) &&
-        Opts.getDebugInfo() == codegenoptions::LimitedDebugInfo)
-      Opts.setDebugInfo(codegenoptions::DebugInfoConstructor);
-    if (A->getOption().matches(OPT_fno_use_ctor_homing) &&
-        Opts.getDebugInfo() == codegenoptions::DebugInfoConstructor)
-      Opts.setDebugInfo(codegenoptions::LimitedDebugInfo);
   }
 
   for (const auto &Arg : Args.getAllArgValues(OPT_fdebug_prefix_map_EQ)) {

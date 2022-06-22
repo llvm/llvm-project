@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple i686-w64-windows-gnu -o - -emit-llvm -debug-info-kind=constructor %s | FileCheck %s
+// RUN: %clang_cc1 -triple i686-w64-windows-gnu -o - -emit-llvm -debug-info-kind=limited %s | FileCheck %s
 
 enum nsresult {};
 
