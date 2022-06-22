@@ -148,6 +148,10 @@ API Changes
   will be removed in LLVM 17. You can disable the deprecation warnings by defining
   ``_LIBCPP_NO_EXPERIMENTAL_DEPRECATION_WARNING_SEARCHERS``.
 
+- ``std::function`` has been removed in C++03. If you are using it, please remove usages
+  or upgrade to C++11 or later. It is possible to re-enable ``std::function`` in C++03 by defining
+  ``_LIBCPP_ENABLE_CXX03_FUNCTION``. This option it will be removed in LLVM 16.
+
 ABI Changes
 -----------
 
