@@ -318,15 +318,15 @@ define arm_aapcs_vfpcc <4 x i32> @scaled_i32_i32_2gep2(i32* %base) {
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    adr r1, .LCPI21_0
 ; CHECK-NEXT:    vldrw.u32 q1, [r1]
-; CHECK-NEXT:    vldrw.u32 q0, [r0, q1, uxtw #2]
+; CHECK-NEXT:    vldrw.u32 q0, [r0, q1]
 ; CHECK-NEXT:    bx lr
 ; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  @ %bb.1:
 ; CHECK-NEXT:  .LCPI21_0:
-; CHECK-NEXT:    .long 5 @ 0x5
-; CHECK-NEXT:    .long 8 @ 0x8
-; CHECK-NEXT:    .long 11 @ 0xb
-; CHECK-NEXT:    .long 14 @ 0xe
+; CHECK-NEXT:    .long 20 @ 0x14
+; CHECK-NEXT:    .long 32 @ 0x20
+; CHECK-NEXT:    .long 44 @ 0x2c
+; CHECK-NEXT:    .long 56 @ 0x38
 entry:
   %ptrs = getelementptr inbounds i32, i32* %base, <4 x i32> <i32 0, i32 3, i32 6, i32 9>
   %ptrs2 = getelementptr inbounds i32, <4 x i32*> %ptrs, i32 5

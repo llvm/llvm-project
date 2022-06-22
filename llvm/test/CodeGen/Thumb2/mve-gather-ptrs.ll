@@ -856,15 +856,15 @@ define arm_aapcs_vfpcc <4 x i32> @gepconstoff_i8(i8* %base) {
 ; CHECK-OPAQ:       @ %bb.0:
 ; CHECK-OPAQ-NEXT:    adr r1, .LCPI31_0
 ; CHECK-OPAQ-NEXT:    vldrw.u32 q1, [r1]
-; CHECK-OPAQ-NEXT:    vldrw.u32 q0, [r0, q1, uxtw #2]
+; CHECK-OPAQ-NEXT:    vldrw.u32 q0, [r0, q1]
 ; CHECK-OPAQ-NEXT:    bx lr
 ; CHECK-OPAQ-NEXT:    .p2align 4
 ; CHECK-OPAQ-NEXT:  @ %bb.1:
 ; CHECK-OPAQ-NEXT:  .LCPI31_0:
-; CHECK-OPAQ-NEXT:    .long 4294967295 @ 0xffffffff
-; CHECK-OPAQ-NEXT:    .long 15 @ 0xf
-; CHECK-OPAQ-NEXT:    .long 31 @ 0x1f
-; CHECK-OPAQ-NEXT:    .long 47 @ 0x2f
+; CHECK-OPAQ-NEXT:    .long 4294967292 @ 0xfffffffc
+; CHECK-OPAQ-NEXT:    .long 12 @ 0xc
+; CHECK-OPAQ-NEXT:    .long 28 @ 0x1c
+; CHECK-OPAQ-NEXT:    .long 44 @ 0x2c
   %a = getelementptr i8, i8* %base, <4 x i32> <i32 0, i32 16, i32 32, i32 48>
   %b = bitcast <4 x i8*> %a to <4 x i32*>
   %c = getelementptr inbounds i32, <4 x i32*> %b, i32 -1
@@ -892,15 +892,15 @@ define arm_aapcs_vfpcc <4 x i32> @gepconstoff3_i16(i16* %base) {
 ; CHECK-OPAQ:       @ %bb.0:
 ; CHECK-OPAQ-NEXT:    adr r1, .LCPI32_0
 ; CHECK-OPAQ-NEXT:    vldrw.u32 q1, [r1]
-; CHECK-OPAQ-NEXT:    vldrw.u32 q0, [r0, q1, uxtw #2]
+; CHECK-OPAQ-NEXT:    vldrw.u32 q0, [r0, q1]
 ; CHECK-OPAQ-NEXT:    bx lr
 ; CHECK-OPAQ-NEXT:    .p2align 4
 ; CHECK-OPAQ-NEXT:  @ %bb.1:
 ; CHECK-OPAQ-NEXT:  .LCPI32_0:
-; CHECK-OPAQ-NEXT:    .long 15 @ 0xf
-; CHECK-OPAQ-NEXT:    .long 5 @ 0x5
-; CHECK-OPAQ-NEXT:    .long 29 @ 0x1d
-; CHECK-OPAQ-NEXT:    .long 235 @ 0xeb
+; CHECK-OPAQ-NEXT:    .long 12 @ 0xc
+; CHECK-OPAQ-NEXT:    .long 18 @ 0x12
+; CHECK-OPAQ-NEXT:    .long 58 @ 0x3a
+; CHECK-OPAQ-NEXT:    .long 280 @ 0x118
   %a = getelementptr i16, i16* %base, <4 x i32> <i32 0, i32 16, i32 32, i32 48>
   %b = bitcast <4 x i16*> %a to <4 x i8*>
   %c = getelementptr i8, <4 x i8*> %b, <4 x i32> <i32 16, i32 -10, i32 -2, i32 188>

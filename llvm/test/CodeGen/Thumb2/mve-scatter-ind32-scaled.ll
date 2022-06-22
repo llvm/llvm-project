@@ -258,15 +258,15 @@ define arm_aapcs_vfpcc void @ext_scaled_i16_i32_2gep2(i16* %base, <4 x i32>* %of
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    adr r1, .LCPI16_0
 ; CHECK-NEXT:    vldrw.u32 q1, [r1]
-; CHECK-NEXT:    vstrh.32 q0, [r0, q1, uxtw #1]
+; CHECK-NEXT:    vstrh.32 q0, [r0, q1]
 ; CHECK-NEXT:    bx lr
 ; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  @ %bb.1:
 ; CHECK-NEXT:  .LCPI16_0:
-; CHECK-NEXT:    .long 5 @ 0x5
-; CHECK-NEXT:    .long 8 @ 0x8
-; CHECK-NEXT:    .long 11 @ 0xb
-; CHECK-NEXT:    .long 14 @ 0xe
+; CHECK-NEXT:    .long 10 @ 0xa
+; CHECK-NEXT:    .long 16 @ 0x10
+; CHECK-NEXT:    .long 22 @ 0x16
+; CHECK-NEXT:    .long 28 @ 0x1c
 entry:
   %ptrs = getelementptr inbounds i16, i16* %base, <4 x i16> <i16 0, i16 3, i16 6, i16 9>
   %ptrs2 = getelementptr inbounds i16, <4 x i16*> %ptrs, i16 5
