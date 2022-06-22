@@ -123,8 +123,12 @@ New checks
 - New :doc:`bugprone-unchecked-optional-access
   <clang-tidy/checks/bugprone/unchecked-optional-access>` check.
 
-   Warns when the code is unwrapping a `std::optional<T>`, `absl::optional<T>`,
-   or `base::Optional<T>` object without assuring that it contains a value.
+  Warns when the code is unwrapping a `std::optional<T>`, `absl::optional<T>`,
+  or `base::Optional<T>` object without assuring that it contains a value.
+
+- New :doc:`misc-confusable-identifiers <clang-tidy/checks/misc/confusable-identifiers>` check.
+
+  Detects confusable Unicode identifiers.
 
 - New :doc:`modernize-macro-to-enum
   <clang-tidy/checks/modernize/macro-to-enum>` check.
@@ -138,10 +142,6 @@ New checks
   ``std::allocator<const T>``. They do not compile with libstdc++ or MSVC.
   Future libc++ will remove the extension (`D120996
   <https://reviews.llvm.org/D120996>`).
-
-- New :doc:`misc-confusable-identifiers <clang-tidy/checks/misc-confusable-identifiers` check.
-
-  Detects confusable Unicode identifiers.
 
 New check aliases
 ^^^^^^^^^^^^^^^^^
