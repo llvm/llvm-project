@@ -43,8 +43,8 @@ Implemented Papers
 - P0674R1 (Support arrays in ``make_shared`` and ``allocate_shared``)
 - P0980R1 (Making ``std::string`` constexpr)
 - P2216R3 (std::format improvements)
-
-- Implemented P0174R2 (Deprecating Vestigial Library Parts in C++17)
+- P0174R2 (Deprecating Vestigial Library Parts in C++17)
+- N4190 (Removing auto_ptr, random_shuffle(), And Old <functional> Stuff)
 
 - Marked the following papers as "Complete" (note that some of those might have
   been implemented in a previous release but not marked as such):
@@ -151,6 +151,12 @@ API Changes
 - ``std::function`` has been removed in C++03. If you are using it, please remove usages
   or upgrade to C++11 or later. It is possible to re-enable ``std::function`` in C++03 by defining
   ``_LIBCPP_ENABLE_CXX03_FUNCTION``. This option it will be removed in LLVM 16.
+
+- ``unary_function`` and ``binary_function`` are no longer available in C++17 and C++20.
+  They can be re-enabled by defining ``_LIBCPP_ENABLE_CXX17_REMOVED_UNARY_BINARY_FUNCTION``.
+  They are also marked as ``[[deprecated]]`` in C++11 and later. To disable deprecation warnings
+  you have to define ``_LIBCPP_DISABLE_DEPRECATION_WARNINGS``. Note that this disables
+  all deprecation warnings.
 
 ABI Changes
 -----------
