@@ -45,6 +45,7 @@ Implemented Papers
 - P2216R3 (std::format improvements)
 - P0174R2 (Deprecating Vestigial Library Parts in C++17)
 - N4190 (Removing auto_ptr, random_shuffle(), And Old <functional> Stuff)
+- P0154R1 (Hardware inference size)
 
 - Marked the following papers as "Complete" (note that some of those might have
   been implemented in a previous release but not marked as such):

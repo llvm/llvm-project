@@ -58,16 +58,16 @@
 #   error "__cpp_lib_destroying_delete should not be defined before c++20"
 # endif
 
-# if !defined(_LIBCPP_VERSION)
+# if defined(__GCC_DESTRUCTIVE_SIZE) && defined(__GCC_CONSTRUCTIVE_SIZE)
 #   ifndef __cpp_lib_hardware_interference_size
 #     error "__cpp_lib_hardware_interference_size should be defined in c++17"
 #   endif
 #   if __cpp_lib_hardware_interference_size != 201703L
 #     error "__cpp_lib_hardware_interference_size should have the value 201703L in c++17"
 #   endif
-# else // _LIBCPP_VERSION
+# else
 #   ifdef __cpp_lib_hardware_interference_size
-#     error "__cpp_lib_hardware_interference_size should not be defined because it is unimplemented in libc++!"
+#     error "__cpp_lib_hardware_interference_size should not be defined when defined(__GCC_DESTRUCTIVE_SIZE) && defined(__GCC_CONSTRUCTIVE_SIZE) is not defined!"
 #   endif
 # endif
 
@@ -93,16 +93,16 @@
 #   endif
 # endif
 
-# if !defined(_LIBCPP_VERSION)
+# if defined(__GCC_DESTRUCTIVE_SIZE) && defined(__GCC_CONSTRUCTIVE_SIZE)
 #   ifndef __cpp_lib_hardware_interference_size
 #     error "__cpp_lib_hardware_interference_size should be defined in c++20"
 #   endif
 #   if __cpp_lib_hardware_interference_size != 201703L
 #     error "__cpp_lib_hardware_interference_size should have the value 201703L in c++20"
 #   endif
-# else // _LIBCPP_VERSION
+# else
 #   ifdef __cpp_lib_hardware_interference_size
-#     error "__cpp_lib_hardware_interference_size should not be defined because it is unimplemented in libc++!"
+#     error "__cpp_lib_hardware_interference_size should not be defined when defined(__GCC_DESTRUCTIVE_SIZE) && defined(__GCC_CONSTRUCTIVE_SIZE) is not defined!"
 #   endif
 # endif
 
@@ -128,16 +128,16 @@
 #   endif
 # endif
 
-# if !defined(_LIBCPP_VERSION)
+# if defined(__GCC_DESTRUCTIVE_SIZE) && defined(__GCC_CONSTRUCTIVE_SIZE)
 #   ifndef __cpp_lib_hardware_interference_size
 #     error "__cpp_lib_hardware_interference_size should be defined in c++2b"
 #   endif
 #   if __cpp_lib_hardware_interference_size != 201703L
 #     error "__cpp_lib_hardware_interference_size should have the value 201703L in c++2b"
 #   endif
-# else // _LIBCPP_VERSION
+# else
 #   ifdef __cpp_lib_hardware_interference_size
-#     error "__cpp_lib_hardware_interference_size should not be defined because it is unimplemented in libc++!"
+#     error "__cpp_lib_hardware_interference_size should not be defined when defined(__GCC_DESTRUCTIVE_SIZE) && defined(__GCC_CONSTRUCTIVE_SIZE) is not defined!"
 #   endif
 # endif
 
