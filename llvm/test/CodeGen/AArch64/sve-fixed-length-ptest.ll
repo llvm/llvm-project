@@ -112,8 +112,7 @@ define i1 @ptest_and_v16i1_512bit_sve(float* %a, float * %b) vscale_range(4, 4) 
 ; CHECK-NEXT:    ld1w { z0.s }, p0/z, [x0]
 ; CHECK-NEXT:    ld1w { z1.s }, p0/z, [x1]
 ; CHECK-NEXT:    fcmne p0.s, p0/z, z0.s, #0.0
-; CHECK-NEXT:    mov z0.s, #0 // =0x0
-; CHECK-NEXT:    fcmne p0.s, p0/z, z1.s, z0.s
+; CHECK-NEXT:    fcmne p0.s, p0/z, z1.s, #0.0
 ; CHECK-NEXT:    mov z0.s, p0/z, #-1 // =0xffffffffffffffff
 ; CHECK-NEXT:    ptrue p0.b, vl16
 ; CHECK-NEXT:    uzp1 z0.h, z0.h, z0.h
