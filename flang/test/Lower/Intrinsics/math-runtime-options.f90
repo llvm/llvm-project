@@ -1,7 +1,11 @@
-! RUN: bbc -emit-fir --math-runtime=fast %s -o - | FileCheck %s --check-prefixes="FIR,FAST"
-! RUN: bbc -emit-fir --math-runtime=relaxed %s -o - | FileCheck %s --check-prefixes="FIR,RELAXED"
-! RUN: bbc -emit-fir --math-runtime=precise %s -o - | FileCheck %s --check-prefixes="FIR,PRECISE"
-! RUN: bbc -emit-fir --math-runtime=llvm %s -o - | FileCheck %s --check-prefixes="FIR,LLVM"
+! RUN: bbc -emit-fir --math-runtime=fast -outline-intrinsics %s -o - | FileCheck %s --check-prefixes="FIR,FAST"
+! RUN: %flang_fc1 -emit-fir -mllvm -math-runtime=fast -mllvm -outline-intrinsics %s -o - | FileCheck %s --check-prefixes="FIR,FAST"
+! RUN: bbc -emit-fir --math-runtime=relaxed -outline-intrinsics %s -o - | FileCheck %s --check-prefixes="FIR,RELAXED"
+! RUN: %flang_fc1 -emit-fir -mllvm -math-runtime=relaxed -mllvm -outline-intrinsics %s -o - | FileCheck %s --check-prefixes="FIR,RELAXED"
+! RUN: bbc -emit-fir --math-runtime=precise -outline-intrinsics %s -o - | FileCheck %s --check-prefixes="FIR,PRECISE"
+! RUN: %flang_fc1 -emit-fir -mllvm -math-runtime=precise -mllvm -outline-intrinsics %s -o - | FileCheck %s --check-prefixes="FIR,PRECISE"
+! RUN: bbc -emit-fir --math-runtime=llvm -outline-intrinsics %s -o - | FileCheck %s --check-prefixes="FIR,LLVM"
+! RUN: %flang_fc1 -emit-fir -mllvm -math-runtime=llvm -mllvm -outline-intrinsics %s -o - | FileCheck %s --check-prefixes="FIR,LLVM"
 
 ! CHECK-LABEL: cos_testr
 subroutine cos_testr(a, b)

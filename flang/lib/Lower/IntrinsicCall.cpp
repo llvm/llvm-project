@@ -35,6 +35,7 @@
 #include "flang/Optimizer/Dialect/FIROpsSupport.h"
 #include "flang/Optimizer/Support/FatalError.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
+#include "mlir/Dialect/Math/IR/Math.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 
@@ -960,8 +961,23 @@ static llvm::cl::opt<bool> outlineAllIntrinsics(
 // Math runtime description and matching utility
 //===----------------------------------------------------------------------===//
 
-/// Command line option to modify math runtime version used to implement
-/// intrinsics.
+/// Command line option to control how math operations are lowered
+/// into MLIR.
+/// Going forward, most of the math operations have to be lowered
+/// to some MLIR dialect operations or libm calls, if the corresponding
+/// MLIR operation is not available or not reasonable to create
+/// (e.g. there are no known optimization opportunities for the math
+/// operation in MLIR).
+///
+/// In general, exposing MLIR operations early can potentially enable more
+/// MLIR optimizations.
+llvm::cl::opt<bool> lowerEarlyToLibCall(
+    "lower-math-early",
+    llvm::cl::desc("Controls when to lower Math intrinsics to library calls"),
+    llvm::cl::init(true));
+
+/// Command line option to modify math runtime behavior used to implement
+/// intrinsics. This option applies both to early and late math-lowering modes.
 enum MathRuntimeVersion {
   fastVersion,
   relaxedVersion,
@@ -969,11 +985,11 @@ enum MathRuntimeVersion {
   llvmOnly
 };
 llvm::cl::opt<MathRuntimeVersion> mathRuntimeVersion(
-    "math-runtime", llvm::cl::desc("Select math runtime version:"),
+    "math-runtime", llvm::cl::desc("Select math operations' runtime behavior:"),
     llvm::cl::values(
-        clEnumValN(fastVersion, "fast", "use pgmath fast runtime"),
-        clEnumValN(relaxedVersion, "relaxed", "use pgmath relaxed runtime"),
-        clEnumValN(preciseVersion, "precise", "use pgmath precise runtime"),
+        clEnumValN(fastVersion, "fast", "use fast runtime behavior"),
+        clEnumValN(relaxedVersion, "relaxed", "use relaxed runtime behavior"),
+        clEnumValN(preciseVersion, "precise", "use precise runtime behavior"),
         clEnumValN(llvmOnly, "llvm",
                    "only use LLVM intrinsics (may be incomplete)")),
     llvm::cl::init(fastVersion));
@@ -984,6 +1000,8 @@ struct RuntimeFunction {
   // Needed for implicit compare with keys.
   constexpr operator Key() const { return key; }
   Key key; // intrinsic name
+
+  // Name of a runtime function that implements the operation.
   llvm::StringRef symbol;
   fir::runtime::FuncTypeBuilderFunc typeGenerator;
 };
@@ -1050,9 +1068,168 @@ static mlir::FunctionType genIntF32FuncType(mlir::MLIRContext *context) {
   return mlir::FunctionType::get(context, {t}, {r});
 }
 
-// TODO : Fill-up this table with more intrinsic.
+template <int Bits>
+static mlir::FunctionType genF64F64IntFuncType(mlir::MLIRContext *context) {
+  auto ftype = mlir::FloatType::getF64(context);
+  auto itype = mlir::IntegerType::get(context, Bits);
+  return mlir::FunctionType::get(context, {ftype, itype}, {ftype});
+}
+
+template <int Bits>
+static mlir::FunctionType genF32F32IntFuncType(mlir::MLIRContext *context) {
+  auto ftype = mlir::FloatType::getF32(context);
+  auto itype = mlir::IntegerType::get(context, Bits);
+  return mlir::FunctionType::get(context, {ftype, itype}, {ftype});
+}
+
+/// Callback type for generating lowering for a math operation.
+using MathGeneratorTy = mlir::Value (*)(fir::FirOpBuilder &, mlir::Location,
+                                        llvm::StringRef, mlir::FunctionType,
+                                        llvm::ArrayRef<mlir::Value>);
+
+struct MathOperation {
+  // llvm::StringRef comparison operator are not constexpr, so use string_view.
+  using Key = std::string_view;
+  // Needed for implicit compare with keys.
+  constexpr operator Key() const { return key; }
+  // Intrinsic name.
+  Key key;
+
+  // Name of a runtime function that implements the operation.
+  llvm::StringRef runtimeFunc;
+  fir::runtime::FuncTypeBuilderFunc typeGenerator;
+
+  // A callback to generate FIR for the intrinsic defined by 'key'.
+  // A callback may generate either dedicated MLIR operation(s) or
+  // a function call to a runtime function with name defined by
+  // 'runtimeFunc'.
+  MathGeneratorTy funcGenerator;
+};
+
+static mlir::Value genLibCall(fir::FirOpBuilder &builder, mlir::Location loc,
+                              llvm::StringRef libFuncName,
+                              mlir::FunctionType libFuncType,
+                              llvm::ArrayRef<mlir::Value> args) {
+  LLVM_DEBUG(llvm::dbgs() << "Generating '" << libFuncName
+                          << "' call with type ";
+             libFuncType.dump(); llvm::dbgs() << "\n");
+  mlir::func::FuncOp funcOp =
+      builder.addNamedFunction(loc, libFuncName, libFuncType);
+  // TODO: ensure 'strictfp' setting on the call for "precise/strict"
+  //       FP mode. Set appropriate Fast-Math Flags otherwise.
+  // TODO: we should also mark as many libm function as possible
+  //       with 'pure' attribute (of course, not in strict FP mode).
+  auto libCall = builder.create<fir::CallOp>(loc, funcOp, args);
+  LLVM_DEBUG(libCall.dump(); llvm::dbgs() << "\n");
+  return libCall.getResult(0);
+}
+
+template <typename T>
+static mlir::Value genMathOp(fir::FirOpBuilder &builder, mlir::Location loc,
+                             llvm::StringRef mathLibFuncName,
+                             mlir::FunctionType mathLibFuncType,
+                             llvm::ArrayRef<mlir::Value> args) {
+  // TODO: we have to annotate the math operations with flags
+  //       that will allow to define FP accuracy/exception
+  //       behavior per operation, so that after early multi-module
+  //       MLIR inlining we can distiguish operation that were
+  //       compiled with different settings.
+  //       Suggestion:
+  //         * For "relaxed" FP mode set all Fast-Math Flags
+  //           (see "[RFC] FastMath flags support in MLIR (arith dialect)"
+  //           topic at discourse.llvm.org).
+  //         * For "fast" FP mode set all Fast-Math Flags except 'afn'.
+  //         * For "precise/strict" FP mode generate fir.calls to libm
+  //           entries and annotate them with an attribute that will
+  //           end up transformed into 'strictfp' LLVM attribute (TBD).
+  //           Elsewhere, "precise/strict" FP mode should also set
+  //           'strictfp' for all user functions and calls so that
+  //           LLVM backend does the right job.
+  //         * Operations that cannot be reasonably optimized in MLIR
+  //           can be also lowered to libm calls for "fast" and "relaxed"
+  //           modes.
+  mlir::Value result;
+  if (mathRuntimeVersion == preciseVersion) {
+    result = genLibCall(builder, loc, mathLibFuncName, mathLibFuncType, args);
+  } else {
+    LLVM_DEBUG(llvm::dbgs() << "Generating '" << mathLibFuncName
+                            << "' operation with type ";
+               mathLibFuncType.dump(); llvm::dbgs() << "\n");
+    result = builder.create<T>(loc, args);
+  }
+  LLVM_DEBUG(result.dump(); llvm::dbgs() << "\n");
+  return result;
+}
+
+/// Mapping between mathematical intrinsic operations and MLIR operations
+/// of some appropriate dialect (math, complex, etc.) or libm calls.
+/// TODO: support remaining Fortran math intrinsics.
+///       See https://gcc.gnu.org/onlinedocs/gcc-12.1.0/gfortran/\
+///       Intrinsic-Procedures.html for a reference.
+static constexpr MathOperation mathOperations[] = {
+    {"abs", "fabsf", genF32F32FuncType, genMathOp<mlir::math::AbsOp>},
+    {"abs", "fabs", genF64F64FuncType, genMathOp<mlir::math::AbsOp>},
+    // llvm.trunc behaves the same way as libm's trunc.
+    {"aint", "llvm.trunc.f32", genF32F32FuncType, genLibCall},
+    {"aint", "llvm.trunc.f64", genF64F64FuncType, genLibCall},
+    // llvm.round behaves the same way as libm's round.
+    {"anint", "llvm.round.f32", genF32F32FuncType,
+     genMathOp<mlir::LLVM::RoundOp>},
+    {"anint", "llvm.round.f64", genF64F64FuncType,
+     genMathOp<mlir::LLVM::RoundOp>},
+    {"atan", "atanf", genF32F32FuncType, genMathOp<mlir::math::AtanOp>},
+    {"atan", "atan", genF64F64FuncType, genMathOp<mlir::math::AtanOp>},
+    {"atan2", "atan2f", genF32F32F32FuncType, genMathOp<mlir::math::Atan2Op>},
+    {"atan2", "atan2", genF64F64F64FuncType, genMathOp<mlir::math::Atan2Op>},
+    // math::CeilOp returns a real, while Fortran CEILING returns integer.
+    {"ceil", "ceilf", genF32F32FuncType, genMathOp<mlir::math::CeilOp>},
+    {"ceil", "ceil", genF64F64FuncType, genMathOp<mlir::math::CeilOp>},
+    {"cos", "cosf", genF32F32FuncType, genMathOp<mlir::math::CosOp>},
+    {"cos", "cos", genF64F64FuncType, genMathOp<mlir::math::CosOp>},
+    {"erf", "erff", genF32F32FuncType, genMathOp<mlir::math::ErfOp>},
+    {"erf", "erf", genF64F64FuncType, genMathOp<mlir::math::ErfOp>},
+    {"exp", "expf", genF32F32FuncType, genMathOp<mlir::math::ExpOp>},
+    {"exp", "exp", genF64F64FuncType, genMathOp<mlir::math::ExpOp>},
+    // math::FloorOp returns a real, while Fortran FLOOR returns integer.
+    {"floor", "floorf", genF32F32FuncType, genMathOp<mlir::math::FloorOp>},
+    {"floor", "floor", genF64F64FuncType, genMathOp<mlir::math::FloorOp>},
+    {"hypot", "hypotf", genF32F32F32FuncType, genLibCall},
+    {"hypot", "hypot", genF64F64F64FuncType, genLibCall},
+    {"log", "logf", genF32F32FuncType, genMathOp<mlir::math::LogOp>},
+    {"log", "log", genF64F64FuncType, genMathOp<mlir::math::LogOp>},
+    {"log10", "log10f", genF32F32FuncType, genMathOp<mlir::math::Log10Op>},
+    {"log10", "log10", genF64F64FuncType, genMathOp<mlir::math::Log10Op>},
+    // llvm.lround behaves the same way as libm's lround.
+    {"nint", "llvm.lround.i64.f64", genIntF64FuncType<64>, genLibCall},
+    {"nint", "llvm.lround.i64.f32", genIntF32FuncType<64>, genLibCall},
+    {"nint", "llvm.lround.i32.f64", genIntF64FuncType<32>, genLibCall},
+    {"nint", "llvm.lround.i32.f32", genIntF32FuncType<32>, genLibCall},
+    {"pow", "powf", genF32F32F32FuncType, genMathOp<mlir::math::PowFOp>},
+    {"pow", "pow", genF64F64F64FuncType, genMathOp<mlir::math::PowFOp>},
+    // TODO: add PowIOp in math and complex dialects.
+    {"pow", "llvm.powi.f32.i32", genF32F32IntFuncType<32>, genLibCall},
+    {"pow", "llvm.powi.f64.i32", genF64F64IntFuncType<32>, genLibCall},
+    {"sign", "copysignf", genF32F32F32FuncType,
+     genMathOp<mlir::math::CopySignOp>},
+    {"sign", "copysign", genF64F64F64FuncType,
+     genMathOp<mlir::math::CopySignOp>},
+    {"sin", "sinf", genF32F32FuncType, genMathOp<mlir::math::SinOp>},
+    {"sin", "sin", genF64F64FuncType, genMathOp<mlir::math::SinOp>},
+    {"sqrt", "sqrtf", genF32F32FuncType, genMathOp<mlir::math::SqrtOp>},
+    {"sqrt", "sqrt", genF64F64FuncType, genMathOp<mlir::math::SqrtOp>},
+    {"tanh", "tanhf", genF32F32FuncType, genMathOp<mlir::math::TanhOp>},
+    {"tanh", "tanh", genF64F64FuncType, genMathOp<mlir::math::TanhOp>},
+};
+
 // Note: These are also defined as operations in LLVM dialect. See if this
 // can be use and has advantages.
+// TODO: remove this table, since the late math lowering should
+//       replace it and generate proper MLIR operations rather
+//       than llvm intrinsic calls, which still look like generic
+//       calls to MLIR and do not enable many optimizations.
+//       When late math lowering is able to handle all math operations
+//       described in pgmath.h.inc and in the table below, we can
+//       switch to it by default.
 static constexpr RuntimeFunction llvmIntrinsics[] = {
     {"abs", "llvm.fabs.f32", genF32F32FuncType},
     {"abs", "llvm.fabs.f64", genF64F64FuncType},
@@ -1251,7 +1428,7 @@ static mlir::func::FuncOp getFuncOp(mlir::Location loc,
 /// function type and that will not imply narrowing arguments or extending the
 /// result.
 /// If nothing is found, the mlir::func::FuncOp will contain a nullptr.
-mlir::func::FuncOp searchFunctionInLibrary(
+static mlir::func::FuncOp searchFunctionInLibrary(
     mlir::Location loc, fir::FirOpBuilder &builder,
     const Fortran::common::StaticMultimapView<RuntimeFunction> &lib,
     llvm::StringRef name, mlir::FunctionType funcType,
@@ -1274,6 +1451,77 @@ mlir::func::FuncOp searchFunctionInLibrary(
   return {};
 }
 
+using RtMap = Fortran::common::StaticMultimapView<MathOperation>;
+static constexpr RtMap mathOps(mathOperations);
+static_assert(mathOps.Verify() && "map must be sorted");
+
+/// Look for a MathOperation entry specifying how to lower a mathematical
+/// operation defined by \p name with its result' and operands' types
+/// specified in the form of a FunctionType \p funcType.
+/// If exact match for the given types is found, then the function
+/// returns a pointer to the corresponding MathOperation.
+/// Otherwise, the function returns nullptr.
+/// If there is a MathOperation that can be used with additional
+/// type casts for the operands or/and result (non-exact match),
+/// then it is returned via \p bestNearMatch argument, and
+/// \p bestMatchDistance specifies the FunctionDistance between
+/// the requested operation and the non-exact match.
+static const MathOperation *
+searchMathOperation(fir::FirOpBuilder &builder, llvm::StringRef name,
+                    mlir::FunctionType funcType,
+                    const MathOperation **bestNearMatch,
+                    FunctionDistance &bestMatchDistance) {
+  auto range = mathOps.equal_range(name);
+  for (auto iter = range.first; iter != range.second && iter; ++iter) {
+    const auto &impl = *iter;
+    auto implType = impl.typeGenerator(builder.getContext());
+    if (funcType == implType)
+      return &impl; // exact match
+
+    FunctionDistance distance(funcType, implType);
+    if (distance.isSmallerThan(bestMatchDistance)) {
+      *bestNearMatch = &impl;
+      bestMatchDistance = std::move(distance);
+    }
+  }
+  return nullptr;
+}
+
+/// Implementation of the operation defined by \p name with type
+/// \p funcType is not precise, and the actual available implementation
+/// is \p distance away from the requested. If using the available
+/// implementation results in a precision loss, emit an error message
+/// with the given code location \p loc.
+static void checkPrecisionLoss(llvm::StringRef name,
+                               mlir::FunctionType funcType,
+                               const FunctionDistance &distance,
+                               mlir::Location loc) {
+  if (!distance.isLosingPrecision())
+    return;
+
+  // Using this runtime version requires narrowing the arguments
+  // or extending the result. It is not numerically safe. There
+  // is currently no quad math library that was described in
+  // lowering and could be used here. Emit an error and continue
+  // generating the code with the narrowing cast so that the user
+  // can get a complete list of the problematic intrinsic calls.
+  std::string message("TODO: no math runtime available for '");
+  llvm::raw_string_ostream sstream(message);
+  if (name == "pow") {
+    assert(funcType.getNumInputs() == 2 && "power operator has two arguments");
+    sstream << funcType.getInput(0) << " ** " << funcType.getInput(1);
+  } else {
+    sstream << name << "(";
+    if (funcType.getNumInputs() > 0)
+      sstream << funcType.getInput(0);
+    for (mlir::Type argType : funcType.getInputs().drop_front())
+      sstream << ", " << argType;
+    sstream << ")";
+  }
+  sstream << "'";
+  mlir::emitError(loc, message);
+}
+
 /// Search runtime for the best runtime function given an intrinsic name
 /// and interface. The interface may not be a perfect match in which case
 /// the caller is responsible to insert argument and return value conversions.
@@ -1292,6 +1540,7 @@ static mlir::func::FuncOp getRuntimeFunction(mlir::Location loc,
   static_assert(pgmathR.Verify() && "map must be sorted");
   static constexpr RtMap pgmathP(pgmathPrecise);
   static_assert(pgmathP.Verify() && "map must be sorted");
+
   if (mathRuntimeVersion == fastVersion) {
     match = searchFunctionInLibrary(loc, builder, pgmathF, name, funcType,
                                     &bestNearMatch, bestMatchDistance);
@@ -1317,30 +1566,7 @@ static mlir::func::FuncOp getRuntimeFunction(mlir::Location loc,
     return exactMatch;
 
   if (bestNearMatch != nullptr) {
-    if (bestMatchDistance.isLosingPrecision()) {
-      // Using this runtime version requires narrowing the arguments
-      // or extending the result. It is not numerically safe. There
-      // is currently no quad math library that was described in
-      // lowering and could be used here. Emit an error and continue
-      // generating the code with the narrowing cast so that the user
-      // can get a complete list of the problematic intrinsic calls.
-      std::string message("TODO: no math runtime available for '");
-      llvm::raw_string_ostream sstream(message);
-      if (name == "pow") {
-        assert(funcType.getNumInputs() == 2 &&
-               "power operator has two arguments");
-        sstream << funcType.getInput(0) << " ** " << funcType.getInput(1);
-      } else {
-        sstream << name << "(";
-        if (funcType.getNumInputs() > 0)
-          sstream << funcType.getInput(0);
-        for (mlir::Type argType : funcType.getInputs().drop_front())
-          sstream << ", " << argType;
-        sstream << ")";
-      }
-      sstream << "'";
-      mlir::emitError(loc, message);
-    }
+    checkPrecisionLoss(name, funcType, bestMatchDistance, loc);
     return getFuncOp(loc, builder, *bestNearMatch);
   }
   return {};
@@ -1578,7 +1804,7 @@ IntrinsicLibrary::genIntrinsicCall(llvm::StringRef specificName,
   IntrinsicLibrary::RuntimeCallGenerator runtimeCallGenerator =
       getRuntimeCallGenerator(name, soughtFuncType);
   return genElementalCall(runtimeCallGenerator, name, *resultType, args,
-                          /* outline */ true);
+                          /*outline=*/outlineAllIntrinsics);
 }
 
 mlir::Value
@@ -1730,29 +1956,58 @@ fir::ExtendedValue IntrinsicLibrary::outlineInExtendedWrapper(
 IntrinsicLibrary::RuntimeCallGenerator
 IntrinsicLibrary::getRuntimeCallGenerator(llvm::StringRef name,
                                           mlir::FunctionType soughtFuncType) {
-  mlir::func::FuncOp funcOp =
-      getRuntimeFunction(loc, builder, name, soughtFuncType);
-  if (!funcOp) {
+  mlir::func::FuncOp funcOp;
+  mlir::FunctionType actualFuncType;
+  const MathOperation *mathOp = nullptr;
+  if (!lowerEarlyToLibCall) {
+    // Look for a dedicated math operation generator, which
+    // normally produces a single MLIR operation implementing
+    // the math operation.
+    // If not found fall back to a runtime function lookup.
+    const MathOperation *bestNearMatch = nullptr;
+    FunctionDistance bestMatchDistance;
+    mathOp = searchMathOperation(builder, name, soughtFuncType, &bestNearMatch,
+                                 bestMatchDistance);
+    if (!mathOp && bestNearMatch) {
+      // Use the best near match, optionally issuing an error,
+      // if types conversions cause precision loss.
+      checkPrecisionLoss(name, soughtFuncType, bestMatchDistance, loc);
+      mathOp = bestNearMatch;
+    }
+    if (mathOp)
+      actualFuncType = mathOp->typeGenerator(builder.getContext());
+  }
+  if (!mathOp)
+    if ((funcOp = getRuntimeFunction(loc, builder, name, soughtFuncType)))
+      actualFuncType = funcOp.getFunctionType();
+
+  if (!mathOp && !funcOp) {
     std::string nameAndType;
     llvm::raw_string_ostream sstream(nameAndType);
     sstream << name << "\nrequested type: " << soughtFuncType;
     crashOnMissingIntrinsic(loc, nameAndType);
   }
 
-  mlir::FunctionType actualFuncType = funcOp.getFunctionType();
   assert(actualFuncType.getNumResults() == soughtFuncType.getNumResults() &&
          actualFuncType.getNumInputs() == soughtFuncType.getNumInputs() &&
          actualFuncType.getNumResults() == 1 && "Bad intrinsic match");
 
-  return [funcOp, actualFuncType,
+  return [funcOp, actualFuncType, mathOp,
           soughtFuncType](fir::FirOpBuilder &builder, mlir::Location loc,
                           llvm::ArrayRef<mlir::Value> args) {
     llvm::SmallVector<mlir::Value> convertedArguments;
     for (auto [fst, snd] : llvm::zip(actualFuncType.getInputs(), args))
       convertedArguments.push_back(builder.createConvert(loc, fst, snd));
-    auto call = builder.create<fir::CallOp>(loc, funcOp, convertedArguments);
+    mlir::Value result;
+    // Use math operation generator, if available.
+    if (mathOp)
+      result = mathOp->funcGenerator(builder, loc, mathOp->runtimeFunc,
+                                     actualFuncType, convertedArguments);
+    else
+      result = builder.create<fir::CallOp>(loc, funcOp, convertedArguments)
+                   .getResult(0);
     mlir::Type soughtType = soughtFuncType.getResult(0);
-    return builder.createConvert(loc, soughtType, call.getResult(0));
+    return builder.createConvert(loc, soughtType, result);
   };
 }
 
@@ -1918,7 +2173,7 @@ mlir::Value IntrinsicLibrary::genAimag(mlir::Type resultType,
                                        llvm::ArrayRef<mlir::Value> args) {
   assert(args.size() == 1);
   return fir::factory::Complex{builder, loc}.extractComplexPart(
-      args[0], true /* isImagPart */);
+      args[0], /*isImagPart=*/true);
 }
 
 // AINT
@@ -4032,6 +4287,13 @@ mlir::Value Fortran::lower::genMin(fir::FirOpBuilder &builder,
 mlir::Value Fortran::lower::genPow(fir::FirOpBuilder &builder,
                                    mlir::Location loc, mlir::Type type,
                                    mlir::Value x, mlir::Value y) {
+  // TODO: since there is no libm version of pow with integer exponent,
+  //       we have to provide an alternative implementation for
+  //       "precise/strict" FP mode and (!lowerEarlyToLibCall).
+  //       One option is to generate internal function with inlined
+  //       implementation and mark it 'strictfp'.
+  //       Another option is to implement it in Fortran runtime library
+  //       (just like matmul).
   return IntrinsicLibrary{builder, loc}.genRuntimeCall("pow", type, {x, y});
 }
 
