@@ -2128,6 +2128,10 @@ public:
           m_count = count;
         break;
       }
+      case 'a': {
+        m_count = std::numeric_limits<decltype(m_count)>::max();
+        break;
+      }
       case 's': {
         int32_t skip;
         if (option_arg.empty() || option_arg.getAsInteger(0, skip) || skip < 0)
@@ -2148,6 +2152,10 @@ public:
           m_dumper_options.id = id;
         break;
       }
+      case 'F': {
+        m_output_file.emplace(option_arg);
+        break;
+      }
       case 'r': {
         m_dumper_options.raw = true;
         break;
@@ -2164,6 +2172,15 @@ public:
         m_dumper_options.show_events = true;
         break;
       }
+      case 'j': {
+        m_dumper_options.json = true;
+        break;
+      }
+      case 'J': {
+        m_dumper_options.pretty_print_json = true;
+        m_dumper_options.json = true;
+        break;
+      }
       case 'C': {
         m_continue = true;
         break;
@@ -2177,6 +2194,7 @@ public:
     void OptionParsingStarting(ExecutionContext *execution_context) override {
       m_count = kDefaultCount;
       m_continue = false;
+      m_output_file = llvm::None;
       m_dumper_options = {};
     }
 
@@ -2189,6 +2207,7 @@ public:
     // Instance variables to hold the values for command options.
     size_t m_count;
     size_t m_continue;
+    llvm::Optional<FileSpec> m_output_file;
     TraceInstructionDumperOptions m_dumper_options;
   };
 
@@ -2238,27 +2257,44 @@ protected:
 
   bool DoExecute(Args &args, CommandReturnObject &result) override {
     ThreadSP thread_sp = GetThread(args, result);
-    if (!thread_sp)
+    if (!thread_sp) {
+      result.AppendError("invalid thread\n");
       return false;
+    }
 
-    Stream &s = result.GetOutputStream();
-    s.Printf("thread #%u: tid = %" PRIu64 "\n", thread_sp->GetIndexID(),
-             thread_sp->GetID());
-
-    if (m_options.m_continue) {
-      if (!m_last_id) {
-        result.AppendMessage("    no more data\n");
-        return true;
-      }
+    if (m_options.m_continue && m_last_id) {
       // We set up the options to continue one instruction past where
       // the previous iteration stopped.
       m_options.m_dumper_options.skip = 1;
       m_options.m_dumper_options.id = m_last_id;
     }
 
-    const TraceSP &trace_sp = m_exe_ctx.GetTargetSP()->GetTrace();
-    TraceInstructionDumper dumper(trace_sp->GetCursor(*thread_sp), s,
-                                  m_options.m_dumper_options);
+    TraceCursorUP cursor_up =
+        m_exe_ctx.GetTargetSP()->GetTrace()->GetCursor(*thread_sp);
+
+    if (m_options.m_dumper_options.id &&
+        !cursor_up->HasId(*m_options.m_dumper_options.id)) {
+      result.AppendError("invalid instruction id\n");
+      return false;
+    }
+
+    llvm::Optional<StreamFile> out_file;
+    if (m_options.m_output_file) {
+      out_file.emplace(m_options.m_output_file->GetPath().c_str(),
+                       File::eOpenOptionWriteOnly | File::eOpenOptionCanCreate,
+                       lldb::eFilePermissionsFileDefault);
+    }
+
+    TraceInstructionDumper dumper(
+        std::move(cursor_up), out_file ? *out_file : result.GetOutputStream(),
+        m_options.m_dumper_options);
+
+    if (m_options.m_continue && !m_last_id) {
+      // We need to tell the dumper to stop processing data when
+      // we already ran out of instructions in a previous command
+      dumper.SetNoMoreData();
+    }
+
     m_last_id = dumper.DumpInstructions(m_options.m_count);
     return true;
   }
