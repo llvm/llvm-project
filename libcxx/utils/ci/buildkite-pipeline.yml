@@ -127,7 +127,7 @@ steps:
           limit: 2
     timeout_in_minutes: 120
 
-  - label: "GCC 11 / C++latest"
+  - label: "GCC 12 / C++latest"
     command: "libcxx/utils/ci/run-buildbot generic-gcc"
     artifact_paths:
       - "**/test-results.xml"
@@ -189,7 +189,7 @@ steps:
     timeout_in_minutes: 120
 
   # Tests with the supported compilers.
-  - label: "GCC 11 / C++11"
+  - label: "GCC 12 / C++11"
     command: "libcxx/utils/ci/run-buildbot generic-gcc-cxx11"
     artifact_paths:
       - "**/test-results.xml"
