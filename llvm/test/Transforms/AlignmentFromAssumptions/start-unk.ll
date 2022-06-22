@@ -74,19 +74,17 @@ if.end123:                                        ; preds = %for.end
   br i1 undef, label %if.end150, label %if.then126
 
 if.then126:                                       ; preds = %if.end123
-  %ptrint.i.i185 = ptrtoint %type1* undef to i64
+  %ptrint.i.i185 = ptrtoint ptr undef to i64
   %maskedptr.i.i186 = and i64 %ptrint.i.i185, 1
   %maskcond.i.i187 = icmp eq i64 %maskedptr.i.i186, 0
   tail call void @llvm.assume(i1 %maskcond.i.i187) #0
-  %ret.0..sroa_cast.i.i188 = bitcast %type1* undef to i32*
-  %ret.0.copyload.i.i189 = load i32, i32* %ret.0..sroa_cast.i.i188, align 2
+  %ret.0.copyload.i.i189 = load i32, ptr undef, align 2
 
 ; CHECK: load {{.*}} align 2
 
   %0 = tail call i32 @llvm.bswap.i32(i32 %ret.0.copyload.i.i189) #0
   %conv131 = zext i32 %0 to i64
-  %add.ptr132 = getelementptr inbounds i8, i8* undef, i64 %conv131
-  %1 = bitcast i8* %add.ptr132 to %type1*
+  %add.ptr132 = getelementptr inbounds i8, ptr undef, i64 %conv131
   br i1 undef, label %if.end150, label %if.end.i173
 
 if.end.i173:                                      ; preds = %if.then126
@@ -108,16 +106,15 @@ for.body137.lr.ph:                                ; preds = %test1a.exit
   br label %for.body137
 
 for.body137:                                      ; preds = %test1b.exit, %for.body137.lr.ph
-  %ShndxTable.0309 = phi %type1* [ %1, %for.body137.lr.ph ], [ %incdec.ptr, %test1b.exit ]
-  %ret.0..sroa_cast.i.i106 = bitcast %type1* %ShndxTable.0309 to i32*
+  %ShndxTable.0309 = phi ptr [ %add.ptr132, %for.body137.lr.ph ], [ %incdec.ptr, %test1b.exit ]
   br i1 undef, label %for.body137.if.end146_crit_edge, label %if.then140
 
 for.body137.if.end146_crit_edge:                  ; preds = %for.body137
-  %incdec.ptr = getelementptr inbounds %type1, %type1* %ShndxTable.0309, i64 1
+  %incdec.ptr = getelementptr inbounds %type1, ptr %ShndxTable.0309, i64 1
   br i1 undef, label %cond.false.i70, label %cond.end.i
 
 if.then140:                                       ; preds = %for.body137
-  %ret.0.copyload.i.i102 = load i32, i32* %ret.0..sroa_cast.i.i106, align 2
+  %ret.0.copyload.i.i102 = load i32, ptr %ShndxTable.0309, align 2
 
 ; CHECK: load {{.*}} align 2
 
