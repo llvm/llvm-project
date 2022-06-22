@@ -291,6 +291,12 @@ static std::unique_ptr<MachineFunction> cloneMF(MachineFunction *SrcMF,
     }
   }
 
+  DenseSet<const uint32_t *> ConstRegisterMasks;
+
+  // Track predefined/named regmasks which we ignore.
+  for (const uint32_t *Mask : TRI->getRegMasks())
+    ConstRegisterMasks.insert(Mask);
+
   // Clone instructions.
   for (auto &SrcMBB : *SrcMF) {
     auto *DstMBB = Src2DstMBB[&SrcMBB];
@@ -309,8 +315,17 @@ static std::unique_ptr<MachineFunction> cloneMF(MachineFunction *SrcMF,
         // Update MBB.
         if (DstMO.isMBB())
           DstMO.setMBB(Src2DstMBB[DstMO.getMBB()]);
-        else if (DstMO.isRegMask())
+        else if (DstMO.isRegMask()) {
           DstMRI->addPhysRegsUsedFromRegMask(DstMO.getRegMask());
+
+          if (!ConstRegisterMasks.count(DstMO.getRegMask())) {
+            uint32_t *DstMask = DstMF->allocateRegMask();
+            std::memcpy(DstMask, SrcMO.getRegMask(),
+                        sizeof(*DstMask) *
+                            MachineOperand::getRegMaskSize(TRI->getNumRegs()));
+            DstMO.setRegMask(DstMask);
+          }
+        }
 
         DstMI->addOperand(DstMO);
       }
