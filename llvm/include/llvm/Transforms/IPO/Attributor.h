@@ -1424,10 +1424,9 @@ struct Attributor {
       return AA;
     }
 
-    // If this is queried in the manifest or cleanup stage, we force the AA to
-    // indicate pessimistic fixpoint immediately.
-    if (Phase == AttributorPhase::MANIFEST ||
-        Phase == AttributorPhase::CLEANUP) {
+    // If this is queried in the manifest stage, we force the AA to indicate
+    // pessimistic fixpoint immediately.
+    if (Phase == AttributorPhase::MANIFEST) {
       AA.getState().indicatePessimisticFixpoint();
       return AA;
     }
