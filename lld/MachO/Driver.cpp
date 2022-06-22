@@ -1073,6 +1073,7 @@ static void gatherInputSections() {
 }
 
 static void foldIdenticalLiterals() {
+  TimeTraceScope timeScope("Fold identical literals");
   // We always create a cStringSection, regardless of whether dedupLiterals is
   // true. If it isn't, we simply create a non-deduplicating CStringSection.
   // Either way, we must unconditionally finalize it here.
