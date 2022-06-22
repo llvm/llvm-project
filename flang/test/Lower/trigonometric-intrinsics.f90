@@ -1,5 +1,5 @@
-! RUN: bbc -emit-fir %s -o - | FileCheck %s
-! RUN: %flang_fc1 -emit-fir %s -o - | FileCheck %s
+! RUN: bbc -emit-fir -outline-intrinsics %s -o - | FileCheck %s
+! RUN: %flang_fc1 -emit-fir -mllvm -outline-intrinsics %s -o - | FileCheck %s
 
 ! CHECK-LABEL: atan_testr
 subroutine atan_testr(a, b)

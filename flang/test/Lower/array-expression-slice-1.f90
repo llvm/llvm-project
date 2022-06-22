@@ -1,4 +1,4 @@
-! RUN: bbc -o - %s | FileCheck %s
+! RUN: bbc -o - --outline-intrinsics %s | FileCheck %s
 
 ! CHECK-LABEL: func @_QQmain() {
 ! CHECK-DAG:         %[[VAL_0:.*]] = arith.constant 10 : index
