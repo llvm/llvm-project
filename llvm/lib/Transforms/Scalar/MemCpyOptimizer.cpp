@@ -773,7 +773,7 @@ bool MemCpyOptPass::processStore(StoreInst *SI, BasicBlock::iterator &BBI) {
           LI, SI, SI->getPointerOperand()->stripPointerCasts(),
           LI->getPointerOperand()->stripPointerCasts(),
           DL.getTypeStoreSize(SI->getOperand(0)->getType()),
-          commonAlignment(SI->getAlign(), LI->getAlign()), GetCall);
+          std::min(SI->getAlign(), LI->getAlign()), GetCall);
       if (changed) {
         eraseInstruction(SI);
         eraseInstruction(LI);
