@@ -341,7 +341,7 @@ private:
     /// must use gdb_objc_realized_classes. Otherwise, we prefer
     /// objc_getRealizedClassList_trylock and objc_copyRealizedClassList
     /// respectively, depending on availability.
-    Helper ComputeHelper() const;
+    Helper ComputeHelper(ExecutionContext &exe_ctx) const;
 
     UtilityFunction *GetClassInfoUtilityFunction(ExecutionContext &exe_ctx,
                                                  Helper helper);
