@@ -150,7 +150,7 @@ API Changes
 
 - ``std::function`` has been removed in C++03. If you are using it, please remove usages
   or upgrade to C++11 or later. It is possible to re-enable ``std::function`` in C++03 by defining
-  ``_LIBCPP_ENABLE_CXX03_FUNCTION``. This option it will be removed in LLVM 16.
+  ``_LIBCPP_ENABLE_CXX03_FUNCTION``. This option will be removed in LLVM 16.
 
 - ``unary_function`` and ``binary_function`` are no longer available in C++17 and C++20.
   They can be re-enabled by defining ``_LIBCPP_ENABLE_CXX17_REMOVED_UNARY_BINARY_FUNCTION``.
