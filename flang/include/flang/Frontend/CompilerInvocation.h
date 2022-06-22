@@ -30,8 +30,7 @@ namespace Fortran::frontend {
 /// When errors are encountered, return false and, if Diags is non-null,
 /// report the error(s).
 bool parseDiagnosticArgs(clang::DiagnosticOptions &opts,
-                         llvm::opt::ArgList &args,
-                         bool defaultDiagColor = true);
+                         llvm::opt::ArgList &args);
 
 class CompilerInvocationBase {
 public:
