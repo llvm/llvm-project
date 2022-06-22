@@ -78,6 +78,22 @@ Fortran::lower::mangle::mangleName(const Fortran::semantics::Symbol &symbol,
   const auto &ultimateSymbol = symbol.GetUltimate();
   auto symbolName = toStringRef(ultimateSymbol.name());
 
+  // The Fortran and BIND(C) namespaces are counterintuitive. A
+  // BIND(C) name is substituted early having precedence over the
+  // Fortran name of the subprogram. By side-effect, this allows
+  // multiple subprocedures with identical Fortran names to be legally
+  // present in the program. Assume the BIND(C) name is unique.
+  if (auto *overrideName = ultimateSymbol.GetBindName())
+    return *overrideName;
+  // TODO: the case of procedure that inherits the BIND(C) through another
+  // interface (procedure(iface)), should be dealt within GetBindName()
+  // directly, or some semantics wrapper.
+  if (!Fortran::semantics::IsPointer(ultimateSymbol) &&
+      Fortran::semantics::IsBindCProcedure(ultimateSymbol) &&
+      Fortran::semantics::ClassifyProcedure(symbol) !=
+          Fortran::semantics::ProcedureDefinitionClass::Internal)
+    return ultimateSymbol.name().ToString();
+
   return std::visit(
       Fortran::common::visitors{
           [&](const Fortran::semantics::MainProgramDetails &) {
