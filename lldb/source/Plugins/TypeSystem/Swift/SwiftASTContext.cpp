@@ -3413,7 +3413,7 @@ bool SwiftASTContext::ReportModuleLoadingProgress(llvm::StringRef module_name,
                                                   bool is_overlay) {
   Progress progress(llvm::formatv(is_overlay ? "Importing overlay module {0}"
                                              : "Importing module {0}",
-                                  module_name.data())
+                                  module_name)
                         .str());
   return true;
 }
