@@ -279,11 +279,6 @@ public:
 
   bool isLegalMaskedCompressStore(Type *DataType) const { return false; }
 
-  bool isLegalAltInstr(VectorType *VecTy, unsigned Opcode0, unsigned Opcode1,
-                       const SmallBitVector &OpcodeMask) const {
-    return false;
-  }
-
   bool isLegalMaskedExpandLoad(Type *DataType) const { return false; }
 
   bool enableOrderedReductions() const { return false; }
