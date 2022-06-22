@@ -91,14 +91,15 @@ static bool brokenVolatile(Instruction *I) {
 
 namespace {
 class X86PreAMXConfig {
+  using PosAndShapesMap = MapVector<Instruction *, SmallVector<Value *, 8>>;
+
   Function &F;
 
 public:
   X86PreAMXConfig(Function &Func) : F(Func) {}
   bool preTileConfig();
   bool addTileConfig(Instruction *ModelStart, SmallVector<Value *, 8> &Shapes);
-  bool findConfigShapes(
-      DenseMap<Instruction *, SmallVector<Value *, 8>> &PosAndShapes);
+  bool findConfigShapes(PosAndShapesMap &PosAndShapes);
   bool getKeyAMXShapes(IntrinsicInst *KeyAMX, SmallVector<Value *, 8> &Shapes);
   bool preWriteTileCfg(Value *I8Ptr, Instruction *Pos,
                        SmallVector<Value *, 8> &Shapes);
@@ -315,8 +316,7 @@ X86PreAMXConfig::getShapesAndConfigPosEnd(BasicBlock::iterator Iter,
 // %td = call x86_amx @llvm.x86.tdpbssd.internal(...t1, t2, t3)    (m,k)(k,n)
 // call void @llvm.x86.tilestored64.internal(m, n,... td)          (m,n)(m,n)
 // --------------------------------------------------------------------------
-bool X86PreAMXConfig::findConfigShapes(
-    DenseMap<Instruction *, SmallVector<Value *, 8>> &PosAndShapes) {
+bool X86PreAMXConfig::findConfigShapes(PosAndShapesMap &PosAndShapes) {
   bool Find = false;
   for (BasicBlock &BB : F) {
     for (BasicBlock::iterator I = BB.begin(), E = BB.end(); I != E; ++I) {
@@ -365,7 +365,7 @@ bool X86PreAMXConfig::findConfigShapes(
 // call void @llvm.x86.tilestored64.internal(... td)                     area
 // --------------------------------------------------------------------------
 bool X86PreAMXConfig::preTileConfig() {
-  DenseMap<Instruction *, SmallVector<Value *, 8>> PosAndShapes;
+  PosAndShapesMap PosAndShapes;
   bool NeedCfg = findConfigShapes(PosAndShapes);
   if (!NeedCfg)
     return false;
