@@ -1250,7 +1250,8 @@ void CodeSignatureSection::writeHashes(uint8_t *buf) const {
   uint8_t *hashes = buf + fileOff + allHeadersSize;
   parallelFor(0, getBlockCount(), [&](size_t i) {
     sha256(buf + i * blockSize,
-           std::min(static_cast<size_t>(fileOff - i * blockSize), blockSize),
+           std::min(static_cast<size_t>(fileOff - i * blockSize),
+                    static_cast<size_t>(blockSize)),
            hashes + i * hashSize);
   });
 #if defined(__APPLE__)
