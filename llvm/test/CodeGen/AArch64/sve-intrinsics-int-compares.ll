@@ -1096,6 +1096,126 @@ define <vscale x 4 x i1> @predicated_icmp_unknown_rhs(<vscale x 4 x i1> %a, <vsc
   ret <vscale x 4 x i1> %and
 }
 
+define <vscale x 16 x i1> @predicated_icmp_eq_imm(<vscale x 16 x i1> %a, <vscale x 16 x i8> %b) {
+; CHECK-LABEL: predicated_icmp_eq_imm:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov z1.b, #0 // =0x0
+; CHECK-NEXT:    cmpeq p0.b, p0/z, z0.b, z1.b
+; CHECK-NEXT:    ret
+  %imm = shufflevector <vscale x 16 x i8> insertelement (<vscale x 16 x i8> undef, i8 0, i64 0), <vscale x 16 x i8> undef, <vscale x 16 x i32> zeroinitializer
+  %icmp = icmp eq <vscale x 16 x i8> %b, %imm
+  %and = and <vscale x 16 x i1> %a, %icmp
+  ret <vscale x 16 x i1> %and
+}
+
+define <vscale x 8 x i1> @predicated_icmp_ne_imm(<vscale x 8 x i1> %a, <vscale x 8 x i16> %b) {
+; CHECK-LABEL: predicated_icmp_ne_imm:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov z1.h, #-16 // =0xfffffffffffffff0
+; CHECK-NEXT:    cmpne p0.h, p0/z, z0.h, z1.h
+; CHECK-NEXT:    ret
+  %imm = shufflevector <vscale x 8 x i16> insertelement (<vscale x 8 x i16> undef, i16 -16, i64 0), <vscale x 8 x i16> undef, <vscale x 8 x i32> zeroinitializer
+  %icmp = icmp ne <vscale x 8 x i16> %b, %imm
+  %and = and <vscale x 8 x i1> %a, %icmp
+  ret <vscale x 8 x i1> %and
+}
+
+define <vscale x 4 x i1> @predicated_icmp_sge_imm(<vscale x 4 x i1> %a, <vscale x 4 x i32> %b) {
+; CHECK-LABEL: predicated_icmp_sge_imm:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov z1.s, #1 // =0x1
+; CHECK-NEXT:    cmpge p0.s, p0/z, z0.s, z1.s
+; CHECK-NEXT:    ret
+  %imm = shufflevector <vscale x 4 x i32> insertelement (<vscale x 4 x i32> undef, i32 1, i64 0), <vscale x 4 x i32> undef, <vscale x 4 x i32> zeroinitializer
+  %icmp = icmp sge <vscale x 4 x i32> %b, %imm
+  %and = and <vscale x 4 x i1> %a, %icmp
+  ret <vscale x 4 x i1> %and
+}
+
+define <vscale x 2 x i1> @predicated_icmp_sgt_imm(<vscale x 2 x i1> %a, <vscale x 2 x i64> %b) {
+; CHECK-LABEL: predicated_icmp_sgt_imm:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov z1.d, #2 // =0x2
+; CHECK-NEXT:    cmpgt p0.d, p0/z, z0.d, z1.d
+; CHECK-NEXT:    ret
+  %imm = shufflevector <vscale x 2 x i64> insertelement (<vscale x 2 x i64> undef, i64 2, i64 0), <vscale x 2 x i64> undef, <vscale x 2 x i32> zeroinitializer
+  %icmp = icmp sgt <vscale x 2 x i64> %b, %imm
+  %and = and <vscale x 2 x i1> %a, %icmp
+  ret <vscale x 2 x i1> %and
+}
+
+define <vscale x 16 x i1> @predicated_icmp_sle_imm(<vscale x 16 x i1> %a, <vscale x 16 x i8> %b) {
+; CHECK-LABEL: predicated_icmp_sle_imm:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov z1.b, #-1 // =0xffffffffffffffff
+; CHECK-NEXT:    cmpge p0.b, p0/z, z1.b, z0.b
+; CHECK-NEXT:    ret
+  %imm = shufflevector <vscale x 16 x i8> insertelement (<vscale x 16 x i8> undef, i8 -1, i64 0), <vscale x 16 x i8> undef, <vscale x 16 x i32> zeroinitializer
+  %icmp = icmp sle <vscale x 16 x i8> %b, %imm
+  %and = and <vscale x 16 x i1> %a, %icmp
+  ret <vscale x 16 x i1> %and
+}
+
+define <vscale x 8 x i1> @predicated_icmp_slt_imm(<vscale x 8 x i1> %a, <vscale x 8 x i16> %b) {
+; CHECK-LABEL: predicated_icmp_slt_imm:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov z1.h, #-2 // =0xfffffffffffffffe
+; CHECK-NEXT:    cmpgt p0.h, p0/z, z1.h, z0.h
+; CHECK-NEXT:    ret
+  %imm = shufflevector <vscale x 8 x i16> insertelement (<vscale x 8 x i16> undef, i16 -2, i64 0), <vscale x 8 x i16> undef, <vscale x 8 x i32> zeroinitializer
+  %icmp = icmp slt <vscale x 8 x i16> %b, %imm
+  %and = and <vscale x 8 x i1> %a, %icmp
+  ret <vscale x 8 x i1> %and
+}
+
+define <vscale x 4 x i1> @predicated_icmp_uge_imm(<vscale x 4 x i1> %a, <vscale x 4 x i32> %b) {
+; CHECK-LABEL: predicated_icmp_uge_imm:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov z1.s, #1 // =0x1
+; CHECK-NEXT:    cmphs p0.s, p0/z, z0.s, z1.s
+; CHECK-NEXT:    ret
+  %imm = shufflevector <vscale x 4 x i32> insertelement (<vscale x 4 x i32> undef, i32 1, i64 0), <vscale x 4 x i32> undef, <vscale x 4 x i32> zeroinitializer
+  %icmp = icmp uge <vscale x 4 x i32> %b, %imm
+  %and = and <vscale x 4 x i1> %a, %icmp
+  ret <vscale x 4 x i1> %and
+}
+
+define <vscale x 2 x i1> @predicated_icmp_ugt_imm(<vscale x 2 x i1> %a, <vscale x 2 x i64> %b) {
+; CHECK-LABEL: predicated_icmp_ugt_imm:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov z1.d, #2 // =0x2
+; CHECK-NEXT:    cmphi p0.d, p0/z, z0.d, z1.d
+; CHECK-NEXT:    ret
+  %imm = shufflevector <vscale x 2 x i64> insertelement (<vscale x 2 x i64> undef, i64 2, i64 0), <vscale x 2 x i64> undef, <vscale x 2 x i32> zeroinitializer
+  %icmp = icmp ugt <vscale x 2 x i64> %b, %imm
+  %and = and <vscale x 2 x i1> %a, %icmp
+  ret <vscale x 2 x i1> %and
+}
+
+define <vscale x 16 x i1> @predicated_icmp_ule_imm(<vscale x 16 x i1> %a, <vscale x 16 x i8> %b) {
+; CHECK-LABEL: predicated_icmp_ule_imm:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov z1.b, #3 // =0x3
+; CHECK-NEXT:    cmphs p0.b, p0/z, z1.b, z0.b
+; CHECK-NEXT:    ret
+  %imm = shufflevector <vscale x 16 x i8> insertelement (<vscale x 16 x i8> undef, i8 3, i64 0), <vscale x 16 x i8> undef, <vscale x 16 x i32> zeroinitializer
+  %icmp = icmp ule <vscale x 16 x i8> %b, %imm
+  %and = and <vscale x 16 x i1> %a, %icmp
+  ret <vscale x 16 x i1> %and
+}
+
+define <vscale x 8 x i1> @predicated_icmp_ult_imm(<vscale x 8 x i1> %a, <vscale x 8 x i16> %b) {
+; CHECK-LABEL: predicated_icmp_ult_imm:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov z1.h, #127 // =0x7f
+; CHECK-NEXT:    cmphi p0.h, p0/z, z1.h, z0.h
+; CHECK-NEXT:    ret
+  %imm = shufflevector <vscale x 8 x i16> insertelement (<vscale x 8 x i16> undef, i16 127, i64 0), <vscale x 8 x i16> undef, <vscale x 8 x i32> zeroinitializer
+  %icmp = icmp ult <vscale x 8 x i16> %b, %imm
+  %and = and <vscale x 8 x i1> %a, %icmp
+  ret <vscale x 8 x i1> %and
+}
+
 declare <vscale x 16 x i1> @llvm.aarch64.sve.cmpeq.nxv16i8(<vscale x 16 x i1>, <vscale x 16 x i8>, <vscale x 16 x i8>)
 declare <vscale x 8 x i1> @llvm.aarch64.sve.cmpeq.nxv8i16(<vscale x 8 x i1>, <vscale x 8 x i16>, <vscale x 8 x i16>)
 declare <vscale x 4 x i1> @llvm.aarch64.sve.cmpeq.nxv4i32(<vscale x 4 x i1>, <vscale x 4 x i32>, <vscale x 4 x i32>)
