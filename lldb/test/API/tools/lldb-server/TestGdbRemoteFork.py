@@ -12,36 +12,9 @@ class TestGdbRemoteFork(gdbremote_testcase.GdbRemoteTestCaseBase):
     fork_capture = {1: "parent_pid", 2: "parent_tid",
                     3: "child_pid", 4: "child_tid"}
 
-    @add_test_categories(["fork"])
-    def test_fork_multithreaded(self):
+    def start_fork_test(self, args, variant="fork"):
         self.build()
-        self.prep_debug_monitor_and_inferior(inferior_args=["thread:new"]*2 + ["fork"])
-        self.add_qSupported_packets(["multiprocess+", "fork-events+"])
-        ret = self.expect_gdbremote_sequence()
-        self.assertIn("fork-events+", ret["qSupported_response"])
-        self.reset_test_sequence()
-
-        # continue and expect fork
-        self.test_sequence.add_log_lines([
-            "read packet: $c#00",
-            {"direction": "send", "regex": self.fork_regex.format("fork"),
-             "capture": self.fork_capture},
-        ], True)
-        ret = self.expect_gdbremote_sequence()
-        child_pid = ret["child_pid"]
-        self.reset_test_sequence()
-
-        # detach the forked child
-        self.test_sequence.add_log_lines([
-            "read packet: $D;{}#00".format(child_pid),
-            "send packet: $OK#00",
-            "read packet: $k#00",
-        ], True)
-        self.expect_gdbremote_sequence()
-
-    def fork_and_detach_test(self, variant):
-        self.build()
-        self.prep_debug_monitor_and_inferior(inferior_args=[variant])
+        self.prep_debug_monitor_and_inferior(inferior_args=args)
         self.add_qSupported_packets(["multiprocess+",
                                      "{}-events+".format(variant)])
         ret = self.expect_gdbremote_sequence()
@@ -55,11 +28,26 @@ class TestGdbRemoteFork(gdbremote_testcase.GdbRemoteTestCaseBase):
              "capture": self.fork_capture},
         ], True)
         ret = self.expect_gdbremote_sequence()
-        parent_pid = ret["parent_pid"]
-        parent_tid = ret["parent_tid"]
-        child_pid = ret["child_pid"]
-        child_tid = ret["child_tid"]
         self.reset_test_sequence()
+
+        return tuple(ret[x] for x in ("parent_pid", "parent_tid",
+                                      "child_pid", "child_tid"))
+
+    @add_test_categories(["fork"])
+    def test_fork_multithreaded(self):
+        _, _, child_pid, _ = self.start_fork_test(["thread:new"]*2 + ["fork"])
+
+        # detach the forked child
+        self.test_sequence.add_log_lines([
+            "read packet: $D;{}#00".format(child_pid),
+            "send packet: $OK#00",
+            "read packet: $k#00",
+        ], True)
+        self.expect_gdbremote_sequence()
+
+    def fork_and_detach_test(self, variant):
+        parent_pid, parent_tid, child_pid, child_tid = (
+            self.start_fork_test([variant], variant))
 
         # detach the forked child
         self.test_sequence.add_log_lines([
@@ -106,26 +94,8 @@ class TestGdbRemoteFork(gdbremote_testcase.GdbRemoteTestCaseBase):
         self.expect_gdbremote_sequence()
 
     def fork_and_follow_test(self, variant):
-        self.build()
-        self.prep_debug_monitor_and_inferior(inferior_args=[variant])
-        self.add_qSupported_packets(["multiprocess+",
-                                     "{}-events+".format(variant)])
-        ret = self.expect_gdbremote_sequence()
-        self.assertIn("{}-events+".format(variant), ret["qSupported_response"])
-        self.reset_test_sequence()
-
-        # continue and expect fork
-        self.test_sequence.add_log_lines([
-            "read packet: $c#00",
-            {"direction": "send", "regex": self.fork_regex.format(variant),
-             "capture": self.fork_capture},
-        ], True)
-        ret = self.expect_gdbremote_sequence()
-        parent_pid = ret["parent_pid"]
-        parent_tid = ret["parent_tid"]
-        child_pid = ret["child_pid"]
-        child_tid = ret["child_tid"]
-        self.reset_test_sequence()
+        parent_pid, parent_tid, child_pid, child_tid = (
+            self.start_fork_test([variant], variant))
 
         # switch to the forked child
         self.test_sequence.add_log_lines([
@@ -223,26 +193,8 @@ class TestGdbRemoteFork(gdbremote_testcase.GdbRemoteTestCaseBase):
 
     @add_test_categories(["fork"])
     def test_detach_all(self):
-        self.build()
-        self.prep_debug_monitor_and_inferior(inferior_args=["fork"])
-        self.add_qSupported_packets(["multiprocess+",
-                                     "fork-events+"])
-        ret = self.expect_gdbremote_sequence()
-        self.assertIn("fork-events+", ret["qSupported_response"])
-        self.reset_test_sequence()
-
-        # continue and expect fork
-        self.test_sequence.add_log_lines([
-            "read packet: $c#00",
-            {"direction": "send", "regex": self.fork_regex.format("fork"),
-             "capture": self.fork_capture},
-        ], True)
-        ret = self.expect_gdbremote_sequence()
-        parent_pid = ret["parent_pid"]
-        parent_tid = ret["parent_tid"]
-        child_pid = ret["child_pid"]
-        child_tid = ret["child_tid"]
-        self.reset_test_sequence()
+        parent_pid, parent_tid, child_pid, child_tid = (
+            self.start_fork_test(["fork"]))
 
         self.test_sequence.add_log_lines([
             # double-check our PIDs
@@ -263,24 +215,7 @@ class TestGdbRemoteFork(gdbremote_testcase.GdbRemoteTestCaseBase):
 
     @add_test_categories(["fork"])
     def test_kill_all(self):
-        self.build()
-        self.prep_debug_monitor_and_inferior(inferior_args=["fork"])
-        self.add_qSupported_packets(["multiprocess+",
-                                     "fork-events+"])
-        ret = self.expect_gdbremote_sequence()
-        self.assertIn("fork-events+", ret["qSupported_response"])
-        self.reset_test_sequence()
-
-        # continue and expect fork
-        self.test_sequence.add_log_lines([
-            "read packet: $c#00",
-            {"direction": "send", "regex": self.fork_regex.format("fork"),
-             "capture": self.fork_capture},
-        ], True)
-        ret = self.expect_gdbremote_sequence()
-        parent_pid = ret["parent_pid"]
-        child_pid = ret["child_pid"]
-        self.reset_test_sequence()
+        parent_pid, _, child_pid, _ = self.start_fork_test(["fork"])
 
         exit_regex = "[$]X09;process:([0-9a-f]+)#.*"
         self.test_sequence.add_log_lines([
@@ -297,26 +232,8 @@ class TestGdbRemoteFork(gdbremote_testcase.GdbRemoteTestCaseBase):
 
     def vkill_test(self, kill_parent=False, kill_child=False):
         assert kill_parent or kill_child
-        self.build()
-        self.prep_debug_monitor_and_inferior(inferior_args=["fork"])
-        self.add_qSupported_packets(["multiprocess+",
-                                     "fork-events+"])
-        ret = self.expect_gdbremote_sequence()
-        self.assertIn("fork-events+", ret["qSupported_response"])
-        self.reset_test_sequence()
-
-        # continue and expect fork
-        self.test_sequence.add_log_lines([
-            "read packet: $c#00",
-            {"direction": "send", "regex": self.fork_regex.format("fork"),
-             "capture": self.fork_capture},
-        ], True)
-        ret = self.expect_gdbremote_sequence()
-        parent_pid = ret["parent_pid"]
-        parent_tid = ret["parent_tid"]
-        child_pid = ret["child_pid"]
-        child_tid = ret["child_tid"]
-        self.reset_test_sequence()
+        parent_pid, parent_tid, child_pid, child_tid = (
+            self.start_fork_test(["fork"]))
 
         if kill_parent:
             self.test_sequence.add_log_lines([
@@ -353,26 +270,8 @@ class TestGdbRemoteFork(gdbremote_testcase.GdbRemoteTestCaseBase):
         self.vkill_test(kill_parent=True, kill_child=True)
 
     def resume_one_test(self, run_order, use_vCont=False):
-        self.build()
-        self.prep_debug_monitor_and_inferior(inferior_args=["fork", "trap"])
-        self.add_qSupported_packets(["multiprocess+",
-                                     "fork-events+"])
-        ret = self.expect_gdbremote_sequence()
-        self.assertIn("fork-events+", ret["qSupported_response"])
-        self.reset_test_sequence()
-
-        # continue and expect fork
-        self.test_sequence.add_log_lines([
-            "read packet: $c#00",
-            {"direction": "send", "regex": self.fork_regex.format("fork"),
-             "capture": self.fork_capture},
-        ], True)
-        ret = self.expect_gdbremote_sequence()
-        parent_pid = ret["parent_pid"]
-        parent_tid = ret["parent_tid"]
-        child_pid = ret["child_pid"]
-        child_tid = ret["child_tid"]
-        self.reset_test_sequence()
+        parent_pid, parent_tid, child_pid, child_tid = (
+            self.start_fork_test(["fork", "trap"]))
 
         parent_expect = [
             "[$]T05thread:p{}.{};.*".format(parent_pid, parent_tid),
@@ -463,26 +362,8 @@ class TestGdbRemoteFork(gdbremote_testcase.GdbRemoteTestCaseBase):
 
     @add_test_categories(["fork"])
     def test_vCont_two_processes(self):
-        self.build()
-        self.prep_debug_monitor_and_inferior(inferior_args=["fork", "trap"])
-        self.add_qSupported_packets(["multiprocess+",
-                                     "fork-events+"])
-        ret = self.expect_gdbremote_sequence()
-        self.assertIn("fork-events+", ret["qSupported_response"])
-        self.reset_test_sequence()
-
-        # continue and expect fork
-        self.test_sequence.add_log_lines([
-            "read packet: $c#00",
-            {"direction": "send", "regex": self.fork_regex.format("fork"),
-             "capture": self.fork_capture},
-        ], True)
-        ret = self.expect_gdbremote_sequence()
-        parent_pid = ret["parent_pid"]
-        parent_tid = ret["parent_tid"]
-        child_pid = ret["child_pid"]
-        child_tid = ret["child_tid"]
-        self.reset_test_sequence()
+        parent_pid, parent_tid, child_pid, child_tid = (
+            self.start_fork_test(["fork", "trap"]))
 
         self.test_sequence.add_log_lines([
             # try to resume both processes
@@ -494,26 +375,7 @@ class TestGdbRemoteFork(gdbremote_testcase.GdbRemoteTestCaseBase):
 
     @add_test_categories(["fork"])
     def test_vCont_all_processes_explicit(self):
-        self.build()
-        self.prep_debug_monitor_and_inferior(inferior_args=["fork", "trap"])
-        self.add_qSupported_packets(["multiprocess+",
-                                     "fork-events+"])
-        ret = self.expect_gdbremote_sequence()
-        self.assertIn("fork-events+", ret["qSupported_response"])
-        self.reset_test_sequence()
-
-        # continue and expect fork
-        self.test_sequence.add_log_lines([
-            "read packet: $c#00",
-            {"direction": "send", "regex": self.fork_regex.format("fork"),
-             "capture": self.fork_capture},
-        ], True)
-        ret = self.expect_gdbremote_sequence()
-        parent_pid = ret["parent_pid"]
-        parent_tid = ret["parent_tid"]
-        child_pid = ret["child_pid"]
-        child_tid = ret["child_tid"]
-        self.reset_test_sequence()
+        self.start_fork_test(["fork", "trap"])
 
         self.test_sequence.add_log_lines([
             # try to resume all processes implicitly
@@ -524,26 +386,7 @@ class TestGdbRemoteFork(gdbremote_testcase.GdbRemoteTestCaseBase):
 
     @add_test_categories(["fork"])
     def test_vCont_all_processes_implicit(self):
-        self.build()
-        self.prep_debug_monitor_and_inferior(inferior_args=["fork", "trap"])
-        self.add_qSupported_packets(["multiprocess+",
-                                     "fork-events+"])
-        ret = self.expect_gdbremote_sequence()
-        self.assertIn("fork-events+", ret["qSupported_response"])
-        self.reset_test_sequence()
-
-        # continue and expect fork
-        self.test_sequence.add_log_lines([
-            "read packet: $c#00",
-            {"direction": "send", "regex": self.fork_regex.format("fork"),
-             "capture": self.fork_capture},
-        ], True)
-        ret = self.expect_gdbremote_sequence()
-        parent_pid = ret["parent_pid"]
-        parent_tid = ret["parent_tid"]
-        child_pid = ret["child_pid"]
-        child_tid = ret["child_tid"]
-        self.reset_test_sequence()
+        self.start_fork_test(["fork", "trap"])
 
         self.test_sequence.add_log_lines([
             # try to resume all processes implicitly
@@ -554,30 +397,15 @@ class TestGdbRemoteFork(gdbremote_testcase.GdbRemoteTestCaseBase):
 
     @add_test_categories(["fork"])
     def test_threadinfo(self):
-        self.build()
-        self.prep_debug_monitor_and_inferior(
-            inferior_args=["fork",
-                           "thread:new",
-                           "trap",
-                           ])
-        self.add_qSupported_packets(["multiprocess+",
-                                     "fork-events+"])
-        ret = self.expect_gdbremote_sequence()
-        self.assertIn("fork-events+", ret["qSupported_response"])
-        self.reset_test_sequence()
+        parent_pid, parent_tid, child_pid, child_tid = (
+            self.start_fork_test(["fork", "thread:new", "trap"]))
+        pidtids = [
+            (parent_pid, parent_tid),
+            (child_pid, child_tid),
+        ]
 
-        # continue and expect fork
-        self.test_sequence.add_log_lines([
-            "read packet: $c#00",
-            {"direction": "send", "regex": self.fork_regex.format("fork"),
-             "capture": self.fork_capture},
-        ], True)
         self.add_threadinfo_collection_packets()
         ret = self.expect_gdbremote_sequence()
-        pidtids = [
-            (ret["parent_pid"], ret["parent_tid"]),
-            (ret["child_pid"], ret["child_tid"]),
-        ]
         prev_pidtids = set(self.parse_threadinfo_packets(ret))
         self.assertEqual(prev_pidtids,
                          frozenset((int(pid, 16), int(tid, 16))
@@ -701,31 +529,12 @@ class TestGdbRemoteFork(gdbremote_testcase.GdbRemoteTestCaseBase):
 
     @add_test_categories(["fork"])
     def test_register_read_write(self):
-        self.build()
-        self.prep_debug_monitor_and_inferior(
-            inferior_args=["fork",
-                           "thread:new",
-                           "trap",
-                           ])
-        self.add_qSupported_packets(["multiprocess+",
-                                     "fork-events+"])
-        ret = self.expect_gdbremote_sequence()
-        self.assertIn("fork-events+", ret["qSupported_response"])
-        self.reset_test_sequence()
-
-        # continue and expect fork
-        self.test_sequence.add_log_lines([
-            "read packet: $c#00",
-            {"direction": "send", "regex": self.fork_regex.format("fork"),
-             "capture": self.fork_capture},
-        ], True)
-        self.add_threadinfo_collection_packets()
-        ret = self.expect_gdbremote_sequence()
+        parent_pid, parent_tid, child_pid, child_tid = (
+            self.start_fork_test(["fork", "thread:new", "trap"]))
         pidtids = [
-            (ret["parent_pid"], ret["parent_tid"]),
-            (ret["child_pid"], ret["child_tid"]),
+            (parent_pid, parent_tid),
+            (child_pid, child_tid),
         ]
-        self.reset_test_sequence()
 
         for pidtid in pidtids:
             self.test_sequence.add_log_lines(
@@ -816,31 +625,12 @@ class TestGdbRemoteFork(gdbremote_testcase.GdbRemoteTestCaseBase):
 
     @add_test_categories(["fork"])
     def test_qC(self):
-        self.build()
-        self.prep_debug_monitor_and_inferior(
-            inferior_args=["fork",
-                           "thread:new",
-                           "trap",
-                           ])
-        self.add_qSupported_packets(["multiprocess+",
-                                     "fork-events+"])
-        ret = self.expect_gdbremote_sequence()
-        self.assertIn("fork-events+", ret["qSupported_response"])
-        self.reset_test_sequence()
-
-        # continue and expect fork
-        self.test_sequence.add_log_lines([
-            "read packet: $c#00",
-            {"direction": "send", "regex": self.fork_regex.format("fork"),
-             "capture": self.fork_capture},
-        ], True)
-        self.add_threadinfo_collection_packets()
-        ret = self.expect_gdbremote_sequence()
+        parent_pid, parent_tid, child_pid, child_tid = (
+            self.start_fork_test(["fork", "thread:new", "trap"]))
         pidtids = [
-            (ret["parent_pid"], ret["parent_tid"]),
-            (ret["child_pid"], ret["child_tid"]),
+            (parent_pid, parent_tid),
+            (child_pid, child_tid),
         ]
-        self.reset_test_sequence()
 
         for pidtid in pidtids:
             self.test_sequence.add_log_lines(
@@ -869,31 +659,12 @@ class TestGdbRemoteFork(gdbremote_testcase.GdbRemoteTestCaseBase):
 
     @add_test_categories(["fork"])
     def test_T(self):
-        self.build()
-        self.prep_debug_monitor_and_inferior(
-            inferior_args=["fork",
-                           "thread:new",
-                           "trap",
-                           ])
-        self.add_qSupported_packets(["multiprocess+",
-                                     "fork-events+"])
-        ret = self.expect_gdbremote_sequence()
-        self.assertIn("fork-events+", ret["qSupported_response"])
-        self.reset_test_sequence()
-
-        # continue and expect fork
-        self.test_sequence.add_log_lines([
-            "read packet: $c#00",
-            {"direction": "send", "regex": self.fork_regex.format("fork"),
-             "capture": self.fork_capture},
-        ], True)
-        self.add_threadinfo_collection_packets()
-        ret = self.expect_gdbremote_sequence()
+        parent_pid, parent_tid, child_pid, child_tid = (
+            self.start_fork_test(["fork", "thread:new", "trap"]))
         pidtids = [
-            (ret["parent_pid"], ret["parent_tid"]),
-            (ret["child_pid"], ret["child_tid"]),
+            (parent_pid, parent_tid),
+            (child_pid, child_tid),
         ]
-        self.reset_test_sequence()
 
         for pidtid in pidtids:
             self.test_sequence.add_log_lines(
