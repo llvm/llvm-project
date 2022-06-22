@@ -595,9 +595,12 @@ protected:
       
       Target *target = m_exe_ctx.GetTargetPtr();
       BreakpointIDList run_to_bkpt_ids;
-      CommandObjectMultiwordBreakpoint::VerifyBreakpointOrLocationIDs(
-          m_options.m_run_to_bkpt_args, target, result, &run_to_bkpt_ids, 
-          BreakpointName::Permissions::disablePerm);
+      // Don't pass an empty run_to_breakpoint list, as Verify will look for the
+      // default breakpoint.
+      if (m_options.m_run_to_bkpt_args.GetArgumentCount() > 0)
+        CommandObjectMultiwordBreakpoint::VerifyBreakpointOrLocationIDs(
+            m_options.m_run_to_bkpt_args, target, result, &run_to_bkpt_ids, 
+            BreakpointName::Permissions::disablePerm);
       if (!result.Succeeded()) {
         return false;
       }
