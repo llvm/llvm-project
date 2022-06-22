@@ -151,7 +151,7 @@ static StringRef Sysroot = "";
 static std::string CudaBinaryPath;
 
 /// Temporary files created by the linker wrapper.
-static SmallVector<std::string, 16> TempFiles;
+static std::list<SmallString<128>> TempFiles;
 
 /// Codegen flags for LTO backend.
 static codegen::RegisterCodeGenFlags CodeGenFlags;
@@ -255,19 +255,18 @@ std::string getMainExecutable(const char *Name) {
 }
 
 /// Get a temporary filename suitable for output.
-Error createOutputFile(const Twine &Prefix, StringRef Extension,
-                       SmallString<128> &NewFilename) {
-  if (!SaveTemps) {
-    if (std::error_code EC =
-            sys::fs::createTemporaryFile(Prefix, Extension, NewFilename))
-      return createFileError(NewFilename, EC);
-    TempFiles.push_back(static_cast<std::string>(NewFilename));
+Expected<StringRef> createOutputFile(const Twine &Prefix, StringRef Extension) {
+  SmallString<128> OutputFile;
+  if (SaveTemps) {
+    (Prefix + "." + Extension).toNullTerminatedStringRef(OutputFile);
   } else {
-    const Twine &Filename = Prefix + "." + Extension;
-    Filename.toNullTerminatedStringRef(NewFilename);
+    if (std::error_code EC =
+            sys::fs::createTemporaryFile(Prefix, Extension, OutputFile))
+      return createFileError(OutputFile, EC);
   }
 
-  return Error::success();
+  TempFiles.push_back(OutputFile);
+  return TempFiles.back();
 }
 
 /// Execute the command \p ExecutablePath with the arguments \p Args.
@@ -296,13 +295,12 @@ Expected<std::string> findProgram(StringRef Name, ArrayRef<StringRef> Paths) {
   return *Path;
 }
 
-Error runLinker(std::string &LinkerPath, SmallVectorImpl<std::string> &Args) {
-  std::vector<StringRef> LinkerArgs;
-  LinkerArgs.push_back(LinkerPath);
-  for (auto &Arg : Args)
-    LinkerArgs.push_back(Arg);
+Error runLinker(StringRef LinkerPath, ArrayRef<StringRef> LinkerArgs) {
 
-  if (Error Err = executeCommands(LinkerPath, LinkerArgs))
+  SmallVector<StringRef> Args({LinkerPath});
+  for (StringRef Arg : LinkerArgs)
+    Args.push_back(Arg);
+  if (Error Err = executeCommands(LinkerPath, Args))
     return Err;
   return Error::success();
 }
@@ -451,20 +449,20 @@ Error extractFromBuffer(std::unique_ptr<MemoryBuffer> Buffer,
 }
 
 namespace nvptx {
-Expected<std::string> assemble(StringRef InputFile, Triple TheTriple,
-                               StringRef Arch, bool RDC = true) {
+Expected<StringRef> assemble(StringRef InputFile, Triple TheTriple,
+                             StringRef Arch, bool RDC = true) {
   // NVPTX uses the ptxas binary to create device object files.
   Expected<std::string> PtxasPath = findProgram("ptxas", {CudaBinaryPath});
   if (!PtxasPath)
     return PtxasPath.takeError();
 
   // Create a new file to write the linked device image to.
-  SmallString<128> TempFile;
-  if (Error Err =
-          createOutputFile(sys::path::filename(ExecutableName) + "-device-" +
-                               TheTriple.getArchName() + "-" + Arch,
-                           "cubin", TempFile))
-    return std::move(Err);
+  auto TempFileOrErr =
+      createOutputFile(sys::path::filename(ExecutableName) + "-device-" +
+                           TheTriple.getArchName() + "-" + Arch,
+                       "cubin");
+  if (!TempFileOrErr)
+    return TempFileOrErr.takeError();
 
   SmallVector<StringRef, 16> CmdArgs;
   std::string Opt = "-" + OptLevel;
@@ -479,7 +477,7 @@ Expected<std::string> assemble(StringRef InputFile, Triple TheTriple,
   for (auto &Arg : PtxasArgs)
     CmdArgs.push_back(Arg);
   CmdArgs.push_back("-o");
-  CmdArgs.push_back(TempFile);
+  CmdArgs.push_back(*TempFileOrErr);
   CmdArgs.push_back(Opt);
   CmdArgs.push_back("--gpu-name");
   CmdArgs.push_back(Arch);
@@ -491,23 +489,23 @@ Expected<std::string> assemble(StringRef InputFile, Triple TheTriple,
   if (Error Err = executeCommands(*PtxasPath, CmdArgs))
     return std::move(Err);
 
-  return static_cast<std::string>(TempFile);
+  return *TempFileOrErr;
 }
 
-Expected<std::string> link(ArrayRef<std::string> InputFiles, Triple TheTriple,
-                           StringRef Arch) {
+Expected<StringRef> link(ArrayRef<StringRef> InputFiles, Triple TheTriple,
+                         StringRef Arch) {
   // NVPTX uses the nvlink binary to link device object files.
   Expected<std::string> NvlinkPath = findProgram("nvlink", {CudaBinaryPath});
   if (!NvlinkPath)
     return NvlinkPath.takeError();
 
   // Create a new file to write the linked device image to.
-  SmallString<128> TempFile;
-  if (Error Err =
-          createOutputFile(sys::path::filename(ExecutableName) + "-device-" +
-                               TheTriple.getArchName() + "-" + Arch,
-                           "out", TempFile))
-    return std::move(Err);
+  auto TempFileOrErr =
+      createOutputFile(sys::path::filename(ExecutableName) + "-device-" +
+                           TheTriple.getArchName() + "-" + Arch,
+                       "out");
+  if (!TempFileOrErr)
+    return TempFileOrErr.takeError();
 
   SmallVector<StringRef, 16> CmdArgs;
   CmdArgs.push_back(*NvlinkPath);
@@ -517,7 +515,7 @@ Expected<std::string> link(ArrayRef<std::string> InputFiles, Triple TheTriple,
   if (DebugInfo != NoDebugInfo)
     CmdArgs.push_back("-g");
   CmdArgs.push_back("-o");
-  CmdArgs.push_back(TempFile);
+  CmdArgs.push_back(*TempFileOrErr);
   CmdArgs.push_back("-arch");
   CmdArgs.push_back(Arch);
 
@@ -529,10 +527,10 @@ Expected<std::string> link(ArrayRef<std::string> InputFiles, Triple TheTriple,
   if (Error Err = executeCommands(*NvlinkPath, CmdArgs))
     return std::move(Err);
 
-  return static_cast<std::string>(TempFile);
+  return *TempFileOrErr;
 }
 
-Expected<std::string>
+Expected<StringRef>
 fatbinary(ArrayRef<std::pair<StringRef, StringRef>> InputFiles,
           Triple TheTriple) {
   // NVPTX uses the fatbinary program to bundle the linked images.
@@ -542,11 +540,12 @@ fatbinary(ArrayRef<std::pair<StringRef, StringRef>> InputFiles,
     return FatBinaryPath.takeError();
 
   // Create a new file to write the linked device image to.
-  SmallString<128> TempFile;
-  if (Error Err = createOutputFile(sys::path::filename(ExecutableName) +
-                                       "-device-" + TheTriple.getArchName(),
-                                   "fatbin", TempFile))
-    return std::move(Err);
+  auto TempFileOrErr =
+      createOutputFile(sys::path::filename(ExecutableName) + "-device-" +
+                           TheTriple.getArchName(),
+                       "fatbin");
+  if (!TempFileOrErr)
+    return TempFileOrErr.takeError();
 
   BumpPtrAllocator Alloc;
   StringSaver Saver(Alloc);
@@ -555,7 +554,7 @@ fatbinary(ArrayRef<std::pair<StringRef, StringRef>> InputFiles,
   CmdArgs.push_back(*FatBinaryPath);
   CmdArgs.push_back(TheTriple.isArch64Bit() ? "-64" : "-32");
   CmdArgs.push_back("--create");
-  CmdArgs.push_back(TempFile);
+  CmdArgs.push_back(*TempFileOrErr);
   for (const auto &FileAndArch : InputFiles)
     CmdArgs.push_back(Saver.save("--image=profile=" + std::get<1>(FileAndArch) +
                                  ",file=" + std::get<0>(FileAndArch)));
@@ -563,12 +562,12 @@ fatbinary(ArrayRef<std::pair<StringRef, StringRef>> InputFiles,
   if (Error Err = executeCommands(*FatBinaryPath, CmdArgs))
     return std::move(Err);
 
-  return static_cast<std::string>(TempFile);
+  return *TempFileOrErr;
 }
 } // namespace nvptx
 namespace amdgcn {
-Expected<std::string> link(ArrayRef<std::string> InputFiles, Triple TheTriple,
-                           StringRef Arch) {
+Expected<StringRef> link(ArrayRef<StringRef> InputFiles, Triple TheTriple,
+                         StringRef Arch) {
   // AMDGPU uses lld to link device object files.
   Expected<std::string> LLDPath =
       findProgram("lld", {getMainExecutable("lld")});
@@ -576,11 +575,12 @@ Expected<std::string> link(ArrayRef<std::string> InputFiles, Triple TheTriple,
     return LLDPath.takeError();
 
   // Create a new file to write the linked device image to.
-  SmallString<128> TempFile;
-  if (Error Err = createOutputFile(sys::path::filename(ExecutableName) + "-" +
-                                       TheTriple.getArchName() + "-" + Arch,
-                                   "out", TempFile))
-    return std::move(Err);
+  auto TempFileOrErr =
+      createOutputFile(sys::path::filename(ExecutableName) + "-" +
+                           TheTriple.getArchName() + "-" + Arch,
+                       "out");
+  if (!TempFileOrErr)
+    return TempFileOrErr.takeError();
 
   SmallVector<StringRef, 16> CmdArgs;
   CmdArgs.push_back(*LLDPath);
@@ -589,7 +589,7 @@ Expected<std::string> link(ArrayRef<std::string> InputFiles, Triple TheTriple,
   CmdArgs.push_back("--no-undefined");
   CmdArgs.push_back("-shared");
   CmdArgs.push_back("-o");
-  CmdArgs.push_back(TempFile);
+  CmdArgs.push_back(*TempFileOrErr);
 
   // Add extracted input files.
   for (StringRef Input : InputFiles)
@@ -599,7 +599,7 @@ Expected<std::string> link(ArrayRef<std::string> InputFiles, Triple TheTriple,
   if (Error Err = executeCommands(*LLDPath, CmdArgs))
     return std::move(Err);
 
-  return static_cast<std::string>(TempFile);
+  return *TempFileOrErr;
 }
 } // namespace amdgcn
 
@@ -630,14 +630,15 @@ const char *getLDMOption(const llvm::Triple &T) {
   }
 }
 
-Expected<std::string> link(ArrayRef<std::string> InputFiles, Triple TheTriple,
-                           StringRef Arch) {
+Expected<StringRef> link(ArrayRef<StringRef> InputFiles, Triple TheTriple,
+                         StringRef Arch) {
   // Create a new file to write the linked device image to.
-  SmallString<128> TempFile;
-  if (Error Err = createOutputFile(sys::path::filename(ExecutableName) + "-" +
-                                       TheTriple.getArchName() + "-" + Arch,
-                                   "out", TempFile))
-    return std::move(Err);
+  auto TempFileOrErr =
+      createOutputFile(sys::path::filename(ExecutableName) + "-" +
+                           TheTriple.getArchName() + "-" + Arch,
+                       "out");
+  if (!TempFileOrErr)
+    return TempFileOrErr.takeError();
 
   // Use the host linker to perform generic offloading. Use the same libraries
   // and paths as the host application does.
@@ -667,7 +668,7 @@ Expected<std::string> link(ArrayRef<std::string> InputFiles, Triple TheTriple,
   }
   CmdArgs.push_back("-Bsymbolic");
   CmdArgs.push_back("-o");
-  CmdArgs.push_back(TempFile);
+  CmdArgs.push_back(*TempFileOrErr);
 
   // Add extracted input files.
   for (StringRef Input : InputFiles)
@@ -677,12 +678,12 @@ Expected<std::string> link(ArrayRef<std::string> InputFiles, Triple TheTriple,
   if (Error Err = executeCommands(LinkerUserPath, CmdArgs))
     return std::move(Err);
 
-  return static_cast<std::string>(TempFile);
+  return *TempFileOrErr;
 }
 } // namespace generic
 
-Expected<std::string> linkDevice(ArrayRef<std::string> InputFiles,
-                                 Triple TheTriple, StringRef Arch) {
+Expected<StringRef> linkDevice(ArrayRef<StringRef> InputFiles, Triple TheTriple,
+                               StringRef Arch) {
   switch (TheTriple.getArch()) {
   case Triple::nvptx:
   case Triple::nvptx64:
@@ -782,15 +783,15 @@ std::unique_ptr<lto::LTO> createLTO(
       exit(1);
     };
     Conf.PostInternalizeModuleHook = [&, Arch](size_t, const Module &M) {
-      SmallString<128> TempFile;
-      if (Error Err =
-              createOutputFile(sys::path::filename(ExecutableName) + "-" +
-                                   TheTriple.getTriple() + "-" + Arch,
-                               "bc", TempFile))
-        HandleError(std::move(Err));
+      auto TempFileOrErr =
+          createOutputFile(sys::path::filename(ExecutableName) + "-" +
+                               TheTriple.getTriple() + "-" + Arch,
+                           "bc");
+      if (!TempFileOrErr)
+        HandleError(TempFileOrErr.takeError());
 
       std::error_code EC;
-      raw_fd_ostream LinkedBitcode(TempFile, EC, sys::fs::OF_None);
+      raw_fd_ostream LinkedBitcode(*TempFileOrErr, EC, sys::fs::OF_None);
       if (EC)
         HandleError(errorCodeToError(EC));
       WriteBitcodeToFile(M, LinkedBitcode);
@@ -818,7 +819,7 @@ bool isValidCIdentifier(StringRef S) {
 }
 
 Error linkBitcodeFiles(SmallVectorImpl<OffloadFile> &InputFiles,
-                       SmallVectorImpl<std::string> &OutputFiles,
+                       SmallVectorImpl<StringRef> &OutputFiles,
                        const Triple &TheTriple, StringRef Arch) {
   SmallVector<OffloadFile, 4> BitcodeInputFiles;
   DenseSet<StringRef> UsedInRegularObj;
@@ -883,20 +884,20 @@ Error linkBitcodeFiles(SmallVectorImpl<OffloadFile> &InputFiles,
   };
 
   // LTO Module hook to output bitcode without running the backend.
-  SmallVector<std::string, 4> BitcodeOutput;
+  SmallVector<StringRef, 4> BitcodeOutput;
   auto OutputBitcode = [&](size_t Task, const Module &M) {
-    SmallString<128> TempFile;
-    if (Error Err = createOutputFile(sys::path::filename(ExecutableName) +
-                                         "-jit-" + TheTriple.getTriple(),
-                                     "bc", TempFile))
-      HandleError(std::move(Err));
+    auto TempFileOrErr = createOutputFile(sys::path::filename(ExecutableName) +
+                                              "-jit-" + TheTriple.getTriple(),
+                                          "bc");
+    if (!TempFileOrErr)
+      HandleError(TempFileOrErr.takeError());
 
     std::error_code EC;
-    raw_fd_ostream LinkedBitcode(TempFile, EC, sys::fs::OF_None);
+    raw_fd_ostream LinkedBitcode(*TempFileOrErr, EC, sys::fs::OF_None);
     if (EC)
       HandleError(errorCodeToError(EC));
     WriteBitcodeToFile(M, LinkedBitcode);
-    BitcodeOutput.push_back(static_cast<std::string>(TempFile));
+    BitcodeOutput.push_back(*TempFileOrErr);
     return false;
   };
 
@@ -967,15 +968,18 @@ Error linkBitcodeFiles(SmallVectorImpl<OffloadFile> &InputFiles,
 
   // Run the LTO job to compile the bitcode.
   size_t MaxTasks = LTOBackend->getMaxTasks();
-  std::vector<SmallString<128>> Files(MaxTasks);
+  SmallVector<StringRef> Files(MaxTasks);
   auto AddStream = [&](size_t Task) -> std::unique_ptr<CachedFileStream> {
     int FD = -1;
     auto &TempFile = Files[Task];
     StringRef Extension = (TheTriple.isNVPTX()) ? "s" : "o";
-    if (Error Err = createOutputFile(sys::path::filename(ExecutableName) +
-                                         "-device-" + TheTriple.getTriple(),
-                                     Extension, TempFile))
-      HandleError(std::move(Err));
+    auto TempFileOrErr =
+        createOutputFile(sys::path::filename(ExecutableName) + "-device-" +
+                             TheTriple.getTriple(),
+                         Extension);
+    if (!TempFileOrErr)
+      HandleError(TempFileOrErr.takeError());
+    TempFile = *TempFileOrErr;
     if (std::error_code EC = sys::fs::openFileForWrite(TempFile, FD))
       HandleError(errorCodeToError(EC));
     return std::make_unique<CachedFileStream>(
@@ -996,7 +1000,7 @@ Error linkBitcodeFiles(SmallVectorImpl<OffloadFile> &InputFiles,
 
   // Is we are compiling for NVPTX we need to run the assembler first.
   if (TheTriple.isNVPTX()) {
-    for (auto &File : Files) {
+    for (StringRef &File : Files) {
       auto FileOrErr = nvptx::assemble(File, TheTriple, Arch, !WholeProgram);
       if (!FileOrErr)
         return FileOrErr.takeError();
@@ -1005,27 +1009,26 @@ Error linkBitcodeFiles(SmallVectorImpl<OffloadFile> &InputFiles,
   }
 
   // Append the new inputs to the device linker input.
-  for (auto &File : Files)
-    OutputFiles.push_back(static_cast<std::string>(File));
+  for (StringRef File : Files)
+    OutputFiles.push_back(File);
 
   return Error::success();
 }
 
-Expected<std::string> writeOffloadFile(const OffloadFile &File) {
+Expected<StringRef> writeOffloadFile(const OffloadFile &File) {
   const OffloadBinary &Binary = *File.getBinary();
 
   StringRef Prefix =
       sys::path::stem(Binary.getMemoryBufferRef().getBufferIdentifier());
   StringRef Suffix = getImageKindName(Binary.getImageKind());
 
-  SmallString<128> TempFile;
-  if (Error Err = createOutputFile(Prefix + "-" + Binary.getTriple() + "-" +
-                                       Binary.getArch(),
-                                   Suffix, TempFile))
-    return std::move(Err);
+  auto TempFileOrErr = createOutputFile(
+      Prefix + "-" + Binary.getTriple() + "-" + Binary.getArch(), Suffix);
+  if (!TempFileOrErr)
+    return TempFileOrErr.takeError();
 
   Expected<std::unique_ptr<FileOutputBuffer>> OutputOrErr =
-      FileOutputBuffer::create(TempFile, Binary.getImage().size());
+      FileOutputBuffer::create(*TempFileOrErr, Binary.getImage().size());
   if (!OutputOrErr)
     return OutputOrErr.takeError();
   std::unique_ptr<FileOutputBuffer> Output = std::move(*OutputOrErr);
@@ -1034,12 +1037,12 @@ Expected<std::string> writeOffloadFile(const OffloadFile &File) {
   if (Error E = Output->commit())
     return std::move(E);
 
-  return static_cast<std::string>(TempFile);
+  return *TempFileOrErr;
 }
 
 // Compile the module to an object file using the appropriate target machine for
 // the host triple.
-Expected<std::string> compileModule(Module &M) {
+Expected<StringRef> compileModule(Module &M) {
   std::string Msg;
   const Target *T = TargetRegistry::lookupTarget(M.getTargetTriple(), Msg);
   if (!T)
@@ -1055,12 +1058,12 @@ Expected<std::string> compileModule(Module &M) {
   if (M.getDataLayout().isDefault())
     M.setDataLayout(TM->createDataLayout());
 
-  SmallString<128> ObjectFile;
   int FD = -1;
-  if (Error Err = createOutputFile(
-          sys::path::filename(ExecutableName) + "-wrapper", "o", ObjectFile))
-    return std::move(Err);
-  if (std::error_code EC = sys::fs::openFileForWrite(ObjectFile, FD))
+  auto TempFileOrErr =
+      createOutputFile(sys::path::filename(ExecutableName) + "-wrapper", "o");
+  if (!TempFileOrErr)
+    return TempFileOrErr.takeError();
+  if (std::error_code EC = sys::fs::openFileForWrite(*TempFileOrErr, FD))
     return errorCodeToError(EC);
 
   auto OS = std::make_unique<llvm::raw_fd_ostream>(FD, true);
@@ -1073,12 +1076,12 @@ Expected<std::string> compileModule(Module &M) {
                              "Failed to execute host backend");
   CodeGenPasses.run(M);
 
-  return static_cast<std::string>(ObjectFile);
+  return *TempFileOrErr;
 }
 
 /// Creates the object file containing the device image and runtime
 /// registration code from the device images stored in \p Images.
-Expected<std::string>
+Expected<StringRef>
 wrapDeviceImages(ArrayRef<std::unique_ptr<MemoryBuffer>> Buffers,
                  OffloadKind Kind) {
   SmallVector<ArrayRef<char>, 4> BuffersToWrap;
@@ -1165,7 +1168,7 @@ bundleLinkedOutput(ArrayRef<OffloadingImage> Images, OffloadKind Kind) {
 
 /// Transforms all the extracted offloading input files into an image that can
 /// be registered by the runtime.
-Expected<SmallVector<std::string>>
+Expected<SmallVector<StringRef>>
 linkAndWrapDeviceFiles(SmallVectorImpl<OffloadFile> &LinkerInputFiles) {
   DenseMap<OffloadFile::TargetID, SmallVector<OffloadFile, 4>> InputsForTarget;
   for (auto &File : LinkerInputFiles)
@@ -1186,7 +1189,7 @@ linkAndWrapDeviceFiles(SmallVectorImpl<OffloadFile> &LinkerInputFiles) {
       ActiveOffloadKinds.insert(File.getBinary()->getOffloadKind());
 
     // First link and remove all the input files containing bitcode.
-    SmallVector<std::string> InputFiles;
+    SmallVector<StringRef> InputFiles;
     if (Error Err = linkBitcodeFiles(Input, InputFiles, Triple, Arch))
       return std::move(Err);
 
@@ -1224,7 +1227,7 @@ linkAndWrapDeviceFiles(SmallVectorImpl<OffloadFile> &LinkerInputFiles) {
 
   // Create a binary image of each offloading image and embed it into a new
   // object file.
-  SmallVector<std::string> WrappedOutput;
+  SmallVector<StringRef> WrappedOutput;
   for (const auto &KindAndImages : Images) {
     OffloadKind Kind = KindAndImages.first;
     auto BundledImagesOrErr =
@@ -1324,8 +1327,8 @@ int main(int argc, const char **argv) {
     Sysroot = StringRef(*RootIt).split('=').second;
 
   ExecutableName = *std::next(llvm::find(HostLinkerArgs, "-o"));
-  SmallVector<std::string, 16> LinkerArgs;
-  for (const std::string &Arg : HostLinkerArgs)
+  SmallVector<StringRef, 16> LinkerArgs;
+  for (StringRef Arg : HostLinkerArgs)
     LinkerArgs.push_back(Arg);
 
   SmallVector<StringRef, 16> LibraryPaths;
@@ -1406,9 +1409,10 @@ int main(int argc, const char **argv) {
     return reportError(std::move(Err));
 
   // Remove the temporary files created.
-  for (const auto &TempFile : TempFiles)
-    if (std::error_code EC = sys::fs::remove(TempFile))
-      reportError(createFileError(TempFile, EC));
+  if (!SaveTemps)
+    for (const auto &TempFile : TempFiles)
+      if (std::error_code EC = sys::fs::remove(TempFile))
+        reportError(createFileError(TempFile, EC));
 
   return EXIT_SUCCESS;
 }
