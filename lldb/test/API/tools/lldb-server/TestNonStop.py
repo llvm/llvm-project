@@ -9,6 +9,7 @@ class LldbGdbServerTestCase(gdbremote_testcase.GdbRemoteTestCaseBase):
     mydir = TestBase.compute_mydir(__file__)
 
     @skipIfWindows  # no SIGSEGV support
+    @add_test_categories(["llgs"])
     def test_run(self):
         self.build()
         self.set_inferior_startup_launch()
@@ -116,6 +117,7 @@ class LldbGdbServerTestCase(gdbremote_testcase.GdbRemoteTestCaseBase):
         # finally, verify that all threads have started
         self.assertEqual(len(all_threads), thread_num + 1)
 
+    @add_test_categories(["llgs"])
     def test_vCtrlC(self):
         self.build()
         self.set_inferior_startup_launch()
@@ -134,6 +136,7 @@ class LldbGdbServerTestCase(gdbremote_testcase.GdbRemoteTestCaseBase):
              ], True)
         self.expect_gdbremote_sequence()
 
+    @add_test_categories(["llgs"])
     def test_exit(self):
         self.build()
         self.set_inferior_startup_launch()
@@ -150,6 +153,7 @@ class LldbGdbServerTestCase(gdbremote_testcase.GdbRemoteTestCaseBase):
         self.expect_gdbremote_sequence()
 
     @skipIfWindows  # no clue, the result makes zero sense
+    @add_test_categories(["llgs"])
     def test_exit_query(self):
         self.build()
         self.set_inferior_startup_launch()
