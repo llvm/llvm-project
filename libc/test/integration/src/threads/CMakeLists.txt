@@ -1,11 +1,47 @@
-add_libc_testsuite(libc_threads_unittests)
+add_libc_integration_test_suite(libc-threads-integration-tests)
 
-add_libc_unittest(
+add_integration_test(
+  mtx_test
+  SUITE
+    libc-threads-integration-tests
+  SRCS
+    mtx_test.cpp
+  LOADER
+    libc.loader.linux.crt1
+  DEPENDS
+    libc.include.threads
+    libc.src.errno.errno
+    libc.src.threads.mtx_destroy
+    libc.src.threads.mtx_init
+    libc.src.threads.mtx_lock
+    libc.src.threads.mtx_unlock
+    libc.src.threads.thrd_create
+    libc.src.threads.thrd_join
+)
+
+add_integration_test(
+  thrd_test
+  SUITE
+    libc-threads-integration-tests
+  SRCS
+    thrd_test.cpp
+  LOADER
+    libc.loader.linux.crt1
+  DEPENDS
+    libc.include.threads
+    libc.src.errno.errno
+    libc.src.threads.thrd_create
+    libc.src.threads.thrd_join
+)
+
+add_integration_test(
   call_once_test
   SUITE
-    libc_threads_unittests
+    libc-threads-integration-tests
   SRCS
     call_once_test.cpp
+  LOADER
+    libc.loader.linux.crt1
   DEPENDS
     libc.include.threads
     libc.src.threads.call_once
@@ -18,42 +54,14 @@ add_libc_unittest(
     libc.src.__support.CPP.atomic
 )
 
-add_libc_unittest(
-  thrd_test
-  SUITE
-    libc_threads_unittests
-  SRCS
-    thrd_test.cpp
-  DEPENDS
-    libc.include.threads
-    libc.src.errno.errno
-    libc.src.threads.thrd_create
-    libc.src.threads.thrd_join
-)
-
-add_libc_unittest(
-  mtx_test
-  SUITE
-    libc_threads_unittests
-  SRCS
-    mtx_test.cpp
-  DEPENDS
-    libc.include.threads
-    libc.src.errno.errno
-    libc.src.threads.mtx_destroy
-    libc.src.threads.mtx_init
-    libc.src.threads.mtx_lock
-    libc.src.threads.mtx_unlock
-    libc.src.threads.thrd_create
-    libc.src.threads.thrd_join
-)
-
-add_libc_unittest(
+add_integration_test(
   cnd_test
   SUITE
-    libc_threads_unittests
+    libc-threads-integration-tests
   SRCS
     cnd_test.cpp
+  LOADER
+    libc.loader.linux.crt1
   DEPENDS
     libc.include.threads
     libc.src.threads.cnd_init

@@ -1,4 +1,4 @@
-//===-- Unittests for mtx_t -----------------------------------------------===//
+//===-- Tests for mtx_t operations ----------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,14 +6,16 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "include/threads.h"
 #include "src/threads/mtx_destroy.h"
 #include "src/threads/mtx_init.h"
 #include "src/threads/mtx_lock.h"
 #include "src/threads/mtx_unlock.h"
 #include "src/threads/thrd_create.h"
 #include "src/threads/thrd_join.h"
-#include "utils/UnitTest/Test.h"
+
+#include "utils/IntegrationTest/test.h"
+
+#include <threads.h>
 
 constexpr int START = 0;
 constexpr int MAX = 10000;
@@ -36,7 +38,7 @@ int counter(void *arg) {
   return 0;
 }
 
-TEST(LlvmLibcMutexTest, RelayCounter) {
+void relay_counter() {
   ASSERT_EQ(__llvm_libc::mtx_init(&mutex, mtx_plain),
             static_cast<int>(thrd_success));
 
@@ -82,7 +84,7 @@ int stepper(void *arg) {
   return 0;
 }
 
-TEST(LlvmLibcMutexTest, WaitAndStep) {
+void wait_and_step() {
   ASSERT_EQ(__llvm_libc::mtx_init(&start_lock, mtx_plain),
             static_cast<int>(thrd_success));
   ASSERT_EQ(__llvm_libc::mtx_init(&step_lock, mtx_plain),
@@ -156,7 +158,7 @@ int waiter_func(void *) {
   return 0;
 }
 
-TEST(LlvmLibcMutexTest, MultipleWaiters) {
+void multiple_waiters() {
   __llvm_libc::mtx_init(&multiple_waiter_lock, mtx_plain);
   __llvm_libc::mtx_init(&counter_lock, mtx_plain);
 
@@ -188,4 +190,11 @@ TEST(LlvmLibcMutexTest, MultipleWaiters) {
 
   __llvm_libc::mtx_destroy(&multiple_waiter_lock);
   __llvm_libc::mtx_destroy(&counter_lock);
+}
+
+int main() {
+  relay_counter();
+  wait_and_step();
+  multiple_waiters();
+  return 0;
 }

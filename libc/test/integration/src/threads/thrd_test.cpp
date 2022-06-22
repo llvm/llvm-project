@@ -1,4 +1,4 @@
-//===-- Unittests for thrd_t ----------------------------------------------===//
+//===-- Tests for thrd_t creation and joining -----------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,10 +6,12 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "include/threads.h"
 #include "src/threads/thrd_create.h"
 #include "src/threads/thrd_join.h"
-#include "utils/UnitTest/Test.h"
+
+#include "utils/IntegrationTest/test.h"
+
+#include <threads.h>
 
 static constexpr int thread_count = 1000;
 static int counter = 0;
@@ -18,7 +20,7 @@ static int thread_func(void *) {
   return 0;
 }
 
-TEST(LlvmLibcThreadTest, CreateAndJoin) {
+void create_and_join() {
   for (counter = 0; counter <= thread_count;) {
     thrd_t thread;
     int old_counter_val = counter;
@@ -33,7 +35,7 @@ TEST(LlvmLibcThreadTest, CreateAndJoin) {
 
 static int return_arg(void *arg) { return *reinterpret_cast<int *>(arg); }
 
-TEST(LlvmLibcThreadTest, SpawnAndJoin) {
+void spawn_and_join() {
   thrd_t thread_list[thread_count];
   int args[thread_count];
 
@@ -49,4 +51,9 @@ TEST(LlvmLibcThreadTest, SpawnAndJoin) {
               (int)thrd_success);
     ASSERT_EQ(retval, i);
   }
+}
+
+int main() {
+  create_and_join();
+  spawn_and_join();
 }
