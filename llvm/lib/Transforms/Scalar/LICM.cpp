@@ -538,7 +538,7 @@ bool llvm::sinkRegion(DomTreeNode *N, AAResults *AA, LoopInfo *LI,
          CurLoop != nullptr && SafetyInfo != nullptr &&
          "Unexpected input to sinkRegion.");
 
-  // We want to visit children before parents. We will enque all the parents
+  // We want to visit children before parents. We will enqueue all the parents
   // before their children in the worklist and process the worklist in reverse
   // order.
   SmallVector<DomTreeNode *, 16> Worklist = collectChildrenInLoop(N, CurLoop);
