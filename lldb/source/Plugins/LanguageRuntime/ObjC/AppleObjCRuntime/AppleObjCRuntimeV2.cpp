@@ -1708,11 +1708,11 @@ AppleObjCRuntimeV2::DynamicClassInfoExtractor::GetClassInfoUtilityFunction(
   }
   case objc_getRealizedClassList_trylock: {
     if (!m_objc_getRealizedClassList_trylock_helper.utility_function)
-      m_objc_copyRealizedClassList_helper.utility_function =
+      m_objc_getRealizedClassList_trylock_helper.utility_function =
           GetClassInfoUtilityFunctionImpl(exe_ctx, helper,
                                           g_get_dynamic_class_info3_body,
                                           g_get_dynamic_class_info3_name);
-    return m_objc_copyRealizedClassList_helper.utility_function.get();
+    return m_objc_getRealizedClassList_trylock_helper.utility_function.get();
   }
   }
   llvm_unreachable("Unexpected helper");
