@@ -218,18 +218,6 @@ inline Align commonAlignment(Align A, uint64_t Offset) {
   return Align(MinAlign(A.value(), Offset));
 }
 
-/// Returns the alignment that satisfies both alignments.
-/// Same semantic as MinAlign.
-inline MaybeAlign commonAlignment(MaybeAlign A, MaybeAlign B) {
-  return A && B ? commonAlignment(*A, *B) : A ? A : B;
-}
-
-/// Returns the alignment that satisfies both alignments.
-/// Same semantic as MinAlign.
-inline MaybeAlign commonAlignment(MaybeAlign A, uint64_t Offset) {
-  return MaybeAlign(MinAlign((*A).value(), Offset));
-}
-
 /// Returns a representation of the alignment that encodes undefined as 0.
 inline unsigned encode(MaybeAlign A) { return A ? A->ShiftValue + 1 : 0; }
 
