@@ -19,7 +19,6 @@
 #include "llvm/ExecutionEngine/JITLink/aarch64.h"
 #include "llvm/Object/ELFObjectFile.h"
 #include "llvm/Support/Endian.h"
-#include "llvm/Support/MathExtras.h"
 
 #define DEBUG_TYPE "jitlink"
 

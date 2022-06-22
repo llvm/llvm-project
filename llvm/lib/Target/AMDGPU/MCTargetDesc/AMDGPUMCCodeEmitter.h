@@ -16,7 +16,6 @@
 
 #include "llvm/ADT/APInt.h"
 #include "llvm/MC/MCCodeEmitter.h"
-#include <cstdint>
 
 namespace llvm {
 
