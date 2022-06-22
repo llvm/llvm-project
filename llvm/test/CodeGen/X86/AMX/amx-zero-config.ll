@@ -6,7 +6,7 @@
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+amx-int8 -mattr=+avx2 -O0 | FileCheck %s --check-prefix=AVX2-O0
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+amx-int8 -O0 | FileCheck %s --check-prefix=SSE2-O0
 
-define void @foo(i8 *%buf) nounwind {
+define void @foo(ptr %buf) nounwind {
 ; AVX512-LABEL: foo:
 ; AVX512:       # %bb.0: # %entry
 ; AVX512-NEXT:    vxorps %xmm0, %xmm0, %xmm0
@@ -70,7 +70,6 @@ define void @foo(i8 *%buf) nounwind {
 ; AVX512-O0-NEXT:    vxorps %xmm0, %xmm0, %xmm0
 ; AVX512-O0-NEXT:    vmovups %zmm0, {{[0-9]+}}(%rsp)
 ; AVX512-O0-NEXT:    movb $1, {{[0-9]+}}(%rsp)
-; AVX512-O0-NEXT:    leaq {{[0-9]+}}(%rsp), %rdx
 ; AVX512-O0-NEXT:    movw $32, %cx
 ; AVX512-O0-NEXT:    movw $8, %ax
 ; AVX512-O0-NEXT:    # implicit-def: $al
@@ -79,10 +78,12 @@ define void @foo(i8 *%buf) nounwind {
 ; AVX512-O0-NEXT:    ldtilecfg {{[0-9]+}}(%rsp)
 ; AVX512-O0-NEXT:    tilezero %tmm0
 ; AVX512-O0-NEXT:    movl $64, %esi
+; AVX512-O0-NEXT:    leaq {{[0-9]+}}(%rsp), %rdx
 ; AVX512-O0-NEXT:    movw $32, %cx
 ; AVX512-O0-NEXT:    movw $8, %ax
 ; AVX512-O0-NEXT:    tilestored %tmm0, (%rdx,%rsi)
 ; AVX512-O0-NEXT:    movl $64, %esi
+; AVX512-O0-NEXT:    leaq {{[0-9]+}}(%rsp), %rdx
 ; AVX512-O0-NEXT:    movw $32, %cx
 ; AVX512-O0-NEXT:    movw $8, %ax
 ; AVX512-O0-NEXT:    # implicit-def: $al
@@ -110,7 +111,6 @@ define void @foo(i8 *%buf) nounwind {
 ; AVX2-O0-NEXT:    vmovups %ymm0, {{[0-9]+}}(%rsp)
 ; AVX2-O0-NEXT:    vmovups %ymm0, {{[0-9]+}}(%rsp)
 ; AVX2-O0-NEXT:    movb $1, {{[0-9]+}}(%rsp)
-; AVX2-O0-NEXT:    leaq {{[0-9]+}}(%rsp), %rdx
 ; AVX2-O0-NEXT:    movw $32, %cx
 ; AVX2-O0-NEXT:    movw $8, %ax
 ; AVX2-O0-NEXT:    # implicit-def: $al
@@ -119,10 +119,12 @@ define void @foo(i8 *%buf) nounwind {
 ; AVX2-O0-NEXT:    ldtilecfg {{[0-9]+}}(%rsp)
 ; AVX2-O0-NEXT:    tilezero %tmm0
 ; AVX2-O0-NEXT:    movl $64, %esi
+; AVX2-O0-NEXT:    leaq {{[0-9]+}}(%rsp), %rdx
 ; AVX2-O0-NEXT:    movw $32, %cx
 ; AVX2-O0-NEXT:    movw $8, %ax
 ; AVX2-O0-NEXT:    tilestored %tmm0, (%rdx,%rsi)
 ; AVX2-O0-NEXT:    movl $64, %esi
+; AVX2-O0-NEXT:    leaq {{[0-9]+}}(%rsp), %rdx
 ; AVX2-O0-NEXT:    movw $32, %cx
 ; AVX2-O0-NEXT:    movw $8, %ax
 ; AVX2-O0-NEXT:    # implicit-def: $al
@@ -152,7 +154,6 @@ define void @foo(i8 *%buf) nounwind {
 ; SSE2-O0-NEXT:    movups %xmm0, {{[0-9]+}}(%rsp)
 ; SSE2-O0-NEXT:    movups %xmm0, {{[0-9]+}}(%rsp)
 ; SSE2-O0-NEXT:    movb $1, {{[0-9]+}}(%rsp)
-; SSE2-O0-NEXT:    leaq {{[0-9]+}}(%rsp), %rdx
 ; SSE2-O0-NEXT:    movw $32, %cx
 ; SSE2-O0-NEXT:    movw $8, %ax
 ; SSE2-O0-NEXT:    # implicit-def: $al
@@ -161,10 +162,12 @@ define void @foo(i8 *%buf) nounwind {
 ; SSE2-O0-NEXT:    ldtilecfg {{[0-9]+}}(%rsp)
 ; SSE2-O0-NEXT:    tilezero %tmm0
 ; SSE2-O0-NEXT:    movl $64, %esi
+; SSE2-O0-NEXT:    leaq {{[0-9]+}}(%rsp), %rdx
 ; SSE2-O0-NEXT:    movw $32, %cx
 ; SSE2-O0-NEXT:    movw $8, %ax
 ; SSE2-O0-NEXT:    tilestored %tmm0, (%rdx,%rsi)
 ; SSE2-O0-NEXT:    movl $64, %esi
+; SSE2-O0-NEXT:    leaq {{[0-9]+}}(%rsp), %rdx
 ; SSE2-O0-NEXT:    movw $32, %cx
 ; SSE2-O0-NEXT:    movw $8, %ax
 ; SSE2-O0-NEXT:    # implicit-def: $al
@@ -182,9 +185,9 @@ define void @foo(i8 *%buf) nounwind {
 ; SSE2-O0-NEXT:    retq
 entry:
   %t = call x86_amx @llvm.x86.tilezero.internal(i16 8, i16 32)
-  call void @llvm.x86.tilestored64.internal(i16 8, i16 32, i8* %buf, i64 1024, x86_amx %t)
+  call void @llvm.x86.tilestored64.internal(i16 8, i16 32, ptr %buf, i64 1024, x86_amx %t)
   ret void
 }
 
 declare x86_amx @llvm.x86.tilezero.internal(i16, i16)
-declare void @llvm.x86.tilestored64.internal(i16, i16, i8*, i64, x86_amx)
+declare void @llvm.x86.tilestored64.internal(i16, i16, ptr, i64, x86_amx)
