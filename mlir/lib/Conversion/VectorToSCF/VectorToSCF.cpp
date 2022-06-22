@@ -163,7 +163,7 @@ static Value generateInBoundsCheck(
   Value cond; // Condition to be built...
 
   // Condition check 1: Access in-bounds?
-  bool isBroadcast = !dim.hasValue(); // No in-bounds check for broadcasts.
+  bool isBroadcast = !dim; // No in-bounds check for broadcasts.
   Location loc = xferOp.getLoc();
   ImplicitLocOpBuilder lb(xferOp.getLoc(), b);
   if (!xferOp.isDimInBounds(0) && !isBroadcast) {
@@ -171,7 +171,7 @@ static Value generateInBoundsCheck(
         vector::createOrFoldDimOp(b, loc, xferOp.getSource(), *dim);
     AffineExpr d0, d1;
     bindDims(xferOp.getContext(), d0, d1);
-    Value base = xferOp.getIndices()[dim.getValue()];
+    Value base = xferOp.getIndices()[*dim];
     Value memrefIdx = makeComposedAffineApply(b, loc, d0 + d1, {base, iv});
     cond = lb.create<arith::CmpIOp>(arith::CmpIPredicate::sgt, memrefDim,
                                     memrefIdx);

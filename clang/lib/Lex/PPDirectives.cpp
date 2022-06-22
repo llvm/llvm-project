@@ -462,7 +462,7 @@ void Preprocessor::SuggestTypoedDirective(const Token &Tok,
     CharSourceRange DirectiveRange = CharSourceRange::getCharRange(
         Tok.getLocation(),
         Tok.getLocation().getLocWithOffset(Directive.size()));
-    StringRef SuggValue = Sugg.getValue();
+    StringRef SuggValue = *Sugg;
 
     auto Hint = FixItHint::CreateReplacement(DirectiveRange, SuggValue);
     Diag(Tok, diag::warn_pp_invalid_directive) << 1 << SuggValue << Hint;

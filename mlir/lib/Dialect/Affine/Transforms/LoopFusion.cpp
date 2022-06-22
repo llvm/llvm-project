@@ -639,7 +639,7 @@ static bool canRemoveSrcNodeAfterFusion(
       return false;
     }
 
-    if (!isMaximal.getValue()) {
+    if (!*isMaximal) {
       LLVM_DEBUG(llvm::dbgs()
                  << "Src loop can't be removed: fusion is not maximal\n");
       return false;
@@ -1247,7 +1247,7 @@ static bool isFusionProfitable(Operation *srcOpInst, Operation *srcStoreOpInst,
   }
 
   // Set dstLoopDepth based on best values from search.
-  *dstLoopDepth = bestDstLoopDepth.getValue();
+  *dstLoopDepth = *bestDstLoopDepth;
 
   LLVM_DEBUG(
       llvm::dbgs() << " LoopFusion fusion stats:"
@@ -1297,9 +1297,7 @@ static bool isFusionProfitable(Operation *srcOpInst, Operation *srcStoreOpInst,
     msg << " fusion is most profitable at depth " << *dstLoopDepth << " with "
         << std::setprecision(2) << additionalComputeFraction
         << "% redundant computation and a ";
-    msg << (storageReduction.hasValue()
-                ? std::to_string(storageReduction.getValue())
-                : "<unknown>");
+    msg << (storageReduction ? std::to_string(*storageReduction) : "<unknown>");
     msg << "% storage reduction.\n";
     llvm::dbgs() << msg.str();
   });

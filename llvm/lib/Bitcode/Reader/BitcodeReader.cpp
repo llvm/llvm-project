@@ -3331,7 +3331,7 @@ Error BitcodeReader::globalCleanup() {
       // Some types could be renamed during loading if several modules are
       // loaded in the same LLVMContext (LTO scenario). In this case we should
       // remangle intrinsics names as well.
-      RemangledIntrinsics[&F] = Remangled.getValue();
+      RemangledIntrinsics[&F] = *Remangled;
     // Look for functions that rely on old function attribute behavior.
     UpgradeFunctionAttributes(F);
   }

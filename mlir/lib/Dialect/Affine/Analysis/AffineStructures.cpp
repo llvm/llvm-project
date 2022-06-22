@@ -1341,7 +1341,7 @@ bool FlatAffineValueConstraints::findId(Value val, unsigned *pos) const {
 
 bool FlatAffineValueConstraints::containsId(Value val) const {
   return llvm::any_of(values, [&](const Optional<Value> &mayBeId) {
-    return mayBeId.hasValue() && mayBeId.getValue() == val;
+    return mayBeId && *mayBeId == val;
   });
 }
 

@@ -2469,23 +2469,9 @@ SDValue SelectionDAG::GetDemandedBits(SDValue V, const APInt &DemandedBits) {
   if (VT.isScalableVector())
     return SDValue();
 
-  APInt DemandedElts = VT.isVector()
-                           ? APInt::getAllOnes(VT.getVectorNumElements())
-                           : APInt(1, 1);
-  return GetDemandedBits(V, DemandedBits, DemandedElts);
-}
-
-/// See if the specified operand can be simplified with the knowledge that only
-/// the bits specified by DemandedBits are used in the elements specified by
-/// DemandedElts.
-/// TODO: really we should be making this into the DAG equivalent of
-/// SimplifyMultipleUseDemandedBits and not generate any new nodes.
-SDValue SelectionDAG::GetDemandedBits(SDValue V, const APInt &DemandedBits,
-                                      const APInt &DemandedElts) {
   switch (V.getOpcode()) {
   default:
-    return TLI->SimplifyMultipleUseDemandedBits(V, DemandedBits, DemandedElts,
-                                                *this);
+    return TLI->SimplifyMultipleUseDemandedBits(V, DemandedBits, *this);
   case ISD::Constant: {
     const APInt &CVal = cast<ConstantSDNode>(V)->getAPIntValue();
     APInt NewVal = CVal & DemandedBits;
@@ -5543,7 +5529,7 @@ SDValue SelectionDAG::FoldConstantArithmetic(unsigned Opcode, const SDLoc &DL,
         if (!FoldAttempt)
           return SDValue();
 
-        SDValue Folded = getConstant(FoldAttempt.getValue(), DL, VT);
+        SDValue Folded = getConstant(*FoldAttempt, DL, VT);
         assert((!Folded || !VT.isVector()) &&
                "Can't fold vectors ops with scalar operands");
         return Folded;
@@ -5588,7 +5574,7 @@ SDValue SelectionDAG::FoldConstantArithmetic(unsigned Opcode, const SDLoc &DL,
           Optional<APInt> Fold = FoldValue(Opcode, RawBits1[I], RawBits2[I]);
           if (!Fold)
             break;
-          RawBits.push_back(Fold.getValue());
+          RawBits.push_back(*Fold);
         }
         if (RawBits.size() == NumElts.getFixedValue()) {
           // We have constant folded, but we need to cast this again back to

@@ -333,7 +333,7 @@ uint32_t AppleObjCRuntime::GetFoundationVersion() {
     }
     return LLDB_INVALID_MODULE_VERSION;
   } else
-    return m_Foundation_major.getValue();
+    return *m_Foundation_major;
 }
 
 void AppleObjCRuntime::GetValuesForGlobalCFBooleans(lldb::addr_t &cf_true,

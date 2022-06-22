@@ -1201,7 +1201,7 @@ lookupRuntimeDefinition(const ObjCInterfaceDecl *Interface,
     }
   }
 
-  return Val.getValue();
+  return *Val;
 }
 
 RuntimeDefinition ObjCMethodCall::getRuntimeDefinition() const {
@@ -1406,7 +1406,7 @@ CallEventManager::getCaller(const StackFrameContext *CalleeCtx,
     Trigger = Dtor->getBody();
 
   return getCXXDestructorCall(Dtor, Trigger, ThisVal.getAsRegion(),
-                              E.getAs<CFGBaseDtor>().hasValue(), State,
+                              E.getAs<CFGBaseDtor>().has_value(), State,
                               CallerCtx);
 }
 

@@ -121,7 +121,7 @@ collectContributionData(DWARFContext::unit_iterator_range Units) {
                 const Optional<StrOffsetsContributionDescriptor> &R) {
                if (L && R)
                  return L->Base < R->Base;
-               return R.hasValue();
+               return R.has_value();
              });
 
   // Uniquify contributions, as it is possible that units (specifically
@@ -389,7 +389,7 @@ void DWARFContext::dump(
     OS << '\n' << Name << " contents:\n";
     if (auto DumpOffset = DumpOffsets[DIDT_ID_DebugInfo])
       for (const auto &U : Units)
-        U->getDIEForOffset(DumpOffset.getValue())
+        U->getDIEForOffset(*DumpOffset)
             .dump(OS, 0, DumpOpts.noImplicitRecursion());
     else
       for (const auto &U : Units)

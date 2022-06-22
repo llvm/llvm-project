@@ -160,7 +160,7 @@ bool X86DiscriminateMemOps::runOnMachineFunction(MachineFunction &MF) {
         }
         // Since we were able to encode, bump the MemOpDiscriminators.
         ++MemOpDiscriminators[L];
-        DI = DI->cloneWithDiscriminator(EncodedDiscriminator.getValue());
+        DI = DI->cloneWithDiscriminator(*EncodedDiscriminator);
         assert(DI && "DI should not be nullptr");
         updateDebugInfo(&MI, DI);
         Changed = true;

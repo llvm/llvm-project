@@ -1532,6 +1532,8 @@ void request_initialize(const llvm::json::Object &request) {
   body.try_emplace("supportsLoadedSourcesRequest", false);
   // The debug adapter supports sending progress reporting events.
   body.try_emplace("supportsProgressReporting", true);
+  // The debug adapter supports 'logMessage' in breakpoint.
+  body.try_emplace("supportsLogPoints", true);
 
   response.try_emplace("body", std::move(body));
   g_vsc.SendJSON(llvm::json::Value(std::move(response)));
@@ -2079,9 +2081,10 @@ void request_setBreakpoints(const llvm::json::Object &request) {
           }
         }
         // At this point the breakpoint is new
-        src_bp.SetBreakpoint(path.data());
-        AppendBreakpoint(src_bp.bp, response_breakpoints, path, src_bp.line);
-        g_vsc.source_breakpoints[path][src_bp.line] = std::move(src_bp);
+        g_vsc.source_breakpoints[path][src_bp.line] = src_bp;
+        SourceBreakpoint &new_bp = g_vsc.source_breakpoints[path][src_bp.line];
+        new_bp.SetBreakpoint(path.data());
+        AppendBreakpoint(new_bp.bp, response_breakpoints, path, new_bp.line);
       }
     }
   }
@@ -2304,10 +2307,11 @@ void request_setFunctionBreakpoints(const llvm::json::Object &request) {
   // Any breakpoints that are left in "request_bps" are breakpoints that
   // need to be set.
   for (auto &pair : request_bps) {
-    pair.second.SetBreakpoint();
     // Add this breakpoint info to the response
-    AppendBreakpoint(pair.second.bp, response_breakpoints);
     g_vsc.function_breakpoints[pair.first()] = std::move(pair.second);
+    FunctionBreakpoint &new_bp = g_vsc.function_breakpoints[pair.first()];
+    new_bp.SetBreakpoint();
+    AppendBreakpoint(new_bp.bp, response_breakpoints);
   }
 
   llvm::json::Object body;

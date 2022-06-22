@@ -268,7 +268,7 @@ static LogicalResult parseOptionalArrayStride(const SPIRVDialect &dialect,
   if (!optStride)
     return failure();
 
-  if (!(stride = optStride.getValue())) {
+  if (!(stride = *optStride)) {
     parser.emitError(strideLoc, "ArrayStride must be greater than zero");
     return failure();
   }
@@ -507,7 +507,7 @@ template <typename ParseType> struct ParseCommaSeparatedList<ParseType> {
   Optional<std::tuple<ParseType>> operator()(SPIRVDialect const &dialect,
                                              DialectAsmParser &parser) const {
     if (auto value = parseAndVerify<ParseType>(dialect, parser))
-      return std::tuple<ParseType>(value.getValue());
+      return std::tuple<ParseType>(*value);
     return llvm::None;
   }
 };
@@ -542,7 +542,7 @@ static Type parseImageType(SPIRVDialect const &dialect,
 
   if (parser.parseGreater())
     return Type();
-  return ImageType::get(value.getValue());
+  return ImageType::get(*value);
 }
 
 // sampledImage-type :: = `!spv.sampledImage<` image-type `>`

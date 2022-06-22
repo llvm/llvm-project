@@ -52,17 +52,16 @@ class ConstraintInfo;
 struct StackEntry {
   unsigned NumIn;
   unsigned NumOut;
-  Instruction *Condition;
   bool IsNot;
   bool IsSigned = false;
   /// Variables that can be removed from the system once the stack entry gets
   /// removed.
   SmallVector<Value *, 2> ValuesToRelease;
 
-  StackEntry(unsigned NumIn, unsigned NumOut, CmpInst *Condition, bool IsNot,
-             bool IsSigned, SmallVector<Value *, 2> ValuesToRelease)
-      : NumIn(NumIn), NumOut(NumOut), Condition(Condition), IsNot(IsNot),
-        IsSigned(IsSigned), ValuesToRelease(ValuesToRelease) {}
+  StackEntry(unsigned NumIn, unsigned NumOut, bool IsNot, bool IsSigned,
+             SmallVector<Value *, 2> ValuesToRelease)
+      : NumIn(NumIn), NumOut(NumOut), IsNot(IsNot), IsSigned(IsSigned),
+        ValuesToRelease(ValuesToRelease) {}
 };
 
 /// Struct to express a pre-condition of the form %Op0 Pred %Op1.
@@ -140,6 +139,8 @@ public:
   void popLastNVariables(bool Signed, unsigned N) {
     getCS(Signed).popLastNVariables(N);
   }
+
+  bool doesHold(CmpInst::Predicate Pred, Value *A, Value *B) const;
 
   void addFact(CmpInst *Condition, bool IsNegated, unsigned NumIn,
                unsigned NumOut, SmallVectorImpl<StackEntry> &DFSInStack);
@@ -364,14 +365,22 @@ ConstraintInfo::getConstraint(CmpInst::Predicate Pred, Value *Op0, Value *Op1,
 bool ConstraintTy::isValid(const ConstraintInfo &Info) const {
   return Coefficients.size() > 0 &&
          all_of(Preconditions, [&Info](const PreconditionTy &C) {
-           DenseMap<Value *, unsigned> NewIndices;
-           auto R = Info.getConstraint(C.Pred, C.Op0, C.Op1, NewIndices);
-           // TODO: properly check NewIndices.
-           return NewIndices.empty() && R.Preconditions.empty() && !R.IsEq &&
-                  R.size() >= 1 &&
-                  Info.getCS(CmpInst::isSigned(C.Pred))
-                      .isConditionImplied(R.Coefficients);
+           return Info.doesHold(C.Pred, C.Op0, C.Op1);
          });
+}
+
+bool ConstraintInfo::doesHold(CmpInst::Predicate Pred, Value *A,
+                              Value *B) const {
+  DenseMap<Value *, unsigned> NewIndices;
+  auto R = getConstraint(Pred, A, B, NewIndices);
+
+  if (!NewIndices.empty())
+    return false;
+
+  // TODO: properly check NewIndices.
+  return NewIndices.empty() && R.Preconditions.empty() && !R.IsEq &&
+         !R.empty() &&
+         getCS(CmpInst::isSigned(Pred)).isConditionImplied(R.Coefficients);
 }
 
 namespace {
@@ -425,15 +434,20 @@ struct State {
 } // namespace
 
 #ifndef NDEBUG
-static void dumpWithNames(ConstraintTy &C,
+static void dumpWithNames(const ConstraintSystem &CS,
                           DenseMap<Value *, unsigned> &Value2Index) {
   SmallVector<std::string> Names(Value2Index.size(), "");
   for (auto &KV : Value2Index) {
     Names[KV.second - 1] = std::string("%") + KV.first->getName().str();
   }
-  ConstraintSystem CS;
-  CS.addVariableRowFill(C.Coefficients);
   CS.dump(Names);
+}
+
+static void dumpWithNames(ArrayRef<int64_t> C,
+                          DenseMap<Value *, unsigned> &Value2Index) {
+  ConstraintSystem CS;
+  CS.addVariableRowFill(C);
+  dumpWithNames(CS, Value2Index);
 }
 #endif
 
@@ -543,10 +557,10 @@ void ConstraintInfo::addFact(CmpInst *Condition, bool IsNegated, unsigned NumIn,
 
     LLVM_DEBUG({
       dbgs() << "  constraint: ";
-      dumpWithNames(R, getValue2Index(R.IsSigned));
+      dumpWithNames(R.Coefficients, getValue2Index(R.IsSigned));
     });
 
-    DFSInStack.emplace_back(NumIn, NumOut, Condition, IsNegated, R.IsSigned,
+    DFSInStack.emplace_back(NumIn, NumOut, IsNegated, R.IsSigned,
                             ValuesToRelease);
 
     if (R.IsEq) {
@@ -555,7 +569,7 @@ void ConstraintInfo::addFact(CmpInst *Condition, bool IsNegated, unsigned NumIn,
         Coeff *= -1;
       CSToUse.addVariableRowFill(R.Coefficients);
 
-      DFSInStack.emplace_back(NumIn, NumOut, Condition, IsNegated, R.IsSigned,
+      DFSInStack.emplace_back(NumIn, NumOut, IsNegated, R.IsSigned,
                               SmallVector<Value *, 2>());
     }
   }
@@ -647,8 +661,13 @@ static bool eliminateConstraints(Function &F, DominatorTree &DT) {
       assert(E.NumIn <= CB.NumIn);
       if (CB.NumOut <= E.NumOut)
         break;
-      LLVM_DEBUG(dbgs() << "Removing " << *E.Condition << " " << E.IsNot
-                        << "\n");
+      LLVM_DEBUG({
+        dbgs() << "Removing ";
+        dumpWithNames(Info.getCS(E.IsSigned).getLastConstraint(),
+                      Info.getValue2Index(E.IsSigned));
+        dbgs() << "\n";
+      });
+
       Info.popLastConstraint(E.IsSigned);
       // Remove variables in the system that went out of scope.
       auto &Mapping = Info.getValue2Index(E.IsSigned);
@@ -690,11 +709,10 @@ static bool eliminateConstraints(Function &F, DominatorTree &DT) {
           if (!DebugCounter::shouldExecute(EliminatedCounter))
             continue;
 
-          LLVM_DEBUG(dbgs() << "Condition " << *Cmp
-                            << " implied by dominating constraints\n");
           LLVM_DEBUG({
-            for (auto &E : reverse(DFSInStack))
-              dbgs() << "   C " << *E.Condition << " " << E.IsNot << "\n";
+            dbgs() << "Condition " << *Cmp
+                   << " implied by dominating constraints\n";
+            dumpWithNames(CSToUse, Info.getValue2Index(R.IsSigned));
           });
           Cmp->replaceUsesWithIf(
               ConstantInt::getTrue(F.getParent()->getContext()), [](Use &U) {
@@ -711,11 +729,10 @@ static bool eliminateConstraints(Function &F, DominatorTree &DT) {
           if (!DebugCounter::shouldExecute(EliminatedCounter))
             continue;
 
-          LLVM_DEBUG(dbgs() << "Condition !" << *Cmp
-                            << " implied by dominating constraints\n");
           LLVM_DEBUG({
-            for (auto &E : reverse(DFSInStack))
-              dbgs() << "   C " << *E.Condition << " " << E.IsNot << "\n";
+            dbgs() << "Condition !" << *Cmp
+                   << " implied by dominating constraints\n";
+            dumpWithNames(CSToUse, Info.getValue2Index(R.IsSigned));
           });
           Cmp->replaceAllUsesWith(
               ConstantInt::getFalse(F.getParent()->getContext()));

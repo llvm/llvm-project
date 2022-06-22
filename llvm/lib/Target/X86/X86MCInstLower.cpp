@@ -501,7 +501,7 @@ void X86MCInstLower::Lower(const MachineInstr *MI, MCInst &OutMI) const {
 
   for (const MachineOperand &MO : MI->operands())
     if (auto MaybeMCOp = LowerMachineOperand(MI, MO))
-      OutMI.addOperand(MaybeMCOp.getValue());
+      OutMI.addOperand(*MaybeMCOp);
 
   // Handle a few special cases to eliminate operand modifiers.
   switch (OutMI.getOpcode()) {
@@ -1317,7 +1317,7 @@ void X86AsmPrinter::LowerFAULTING_OP(const MachineInstr &FaultingMI,
             E = FaultingMI.operands_end();
        I != E; ++I)
     if (auto MaybeOperand = MCIL.LowerMachineOperand(&FaultingMI, *I))
-      MI.addOperand(MaybeOperand.getValue());
+      MI.addOperand(*MaybeOperand);
 
   OutStreamer->AddComment("on-fault: " + HandlerLabel->getName());
   OutStreamer->emitInstruction(MI, getSubtargetInfo());
@@ -1382,7 +1382,7 @@ void X86AsmPrinter::LowerPATCHABLE_OP(const MachineInstr &MI,
   MCI.setOpcode(Opcode);
   for (auto &MO : drop_begin(MI.operands(), 2))
     if (auto MaybeOperand = MCIL.LowerMachineOperand(&MI, MO))
-      MCI.addOperand(MaybeOperand.getValue());
+      MCI.addOperand(*MaybeOperand);
 
   SmallString<256> Code;
   SmallVector<MCFixup, 4> Fixups;
@@ -1758,7 +1758,7 @@ void X86AsmPrinter::LowerPATCHABLE_RET(const MachineInstr &MI,
   Ret.setOpcode(OpCode);
   for (auto &MO : drop_begin(MI.operands()))
     if (auto MaybeOperand = MCIL.LowerMachineOperand(&MI, MO))
-      Ret.addOperand(MaybeOperand.getValue());
+      Ret.addOperand(*MaybeOperand);
   OutStreamer->emitInstruction(Ret, getSubtargetInfo());
   emitX86Nops(*OutStreamer, 10, Subtarget);
   recordSled(CurSled, MI, SledKind::FUNCTION_EXIT, 2);
@@ -1797,7 +1797,7 @@ void X86AsmPrinter::LowerPATCHABLE_TAIL_CALL(const MachineInstr &MI,
   OutStreamer->AddComment("TAILCALL");
   for (auto &MO : drop_begin(MI.operands()))
     if (auto MaybeOperand = MCIL.LowerMachineOperand(&MI, MO))
-      TC.addOperand(MaybeOperand.getValue());
+      TC.addOperand(*MaybeOperand);
   OutStreamer->emitInstruction(TC, getSubtargetInfo());
 }
 

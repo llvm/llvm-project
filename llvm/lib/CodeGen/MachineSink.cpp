@@ -1177,7 +1177,7 @@ bool MachineSinking::hasStoreBetween(MachineBasicBlock *From,
 
       // If this BB is too big or the block number in straight line between From
       // and To is too big, stop searching to save compiling time.
-      if (BB->size() > SinkLoadInstsPerBlockThreshold ||
+      if (BB->sizeWithoutDebugLargerThan(SinkLoadInstsPerBlockThreshold) ||
           HandledDomBlocks.size() > SinkLoadBlocksThreshold) {
         for (auto *DomBB : HandledDomBlocks) {
           if (DomBB != BB && DT->dominates(DomBB, BB))
@@ -1279,7 +1279,7 @@ bool MachineSinking::SinkIntoCycle(MachineCycle *Cycle, MachineInstr &I) {
         dbgs() << "CycleSink: Not sinking, sink block is the preheader\n");
     return false;
   }
-  if (SinkBlock->size() > SinkLoadInstsPerBlockThreshold) {
+  if (SinkBlock->sizeWithoutDebugLargerThan(SinkLoadInstsPerBlockThreshold)) {
     LLVM_DEBUG(
         dbgs() << "CycleSink: Not Sinking, block too large to analyse.\n");
     return false;

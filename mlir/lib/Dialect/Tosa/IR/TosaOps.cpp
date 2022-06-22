@@ -33,7 +33,7 @@ using namespace mlir::tosa;
 #include "mlir/Dialect/Tosa/IR/TosaOpsDialect.cpp.inc"
 
 //===----------------------------------------------------------------------===//
-// Tosa dialect structs and interface includes.
+// Tosa dialect interface includes.
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Dialect/Tosa/IR/TosaInterfaces.cpp.inc"
@@ -347,7 +347,7 @@ struct MaterializePadValue : public OpRewritePattern<tosa::PadOp> {
     } else if (elementTy.isa<IntegerType>() && !op.quantization_info()) {
       constantAttr = rewriter.getIntegerAttr(elementTy, 0);
     } else if (elementTy.isa<IntegerType>() && op.quantization_info()) {
-      auto value = op.quantization_info().getValue().getInputZp();
+      auto value = op.quantization_info()->getInputZp();
       constantAttr = rewriter.getIntegerAttr(elementTy, value);
     }
 

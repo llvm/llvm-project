@@ -1750,8 +1750,7 @@ protected:
             result.AppendMessageWithFormat(", ");
           else
             print_comma = true;
-          result.AppendMessageWithFormat("0x%" PRIx64,
-                                         dirty_page_list.getValue()[i]);
+          result.AppendMessageWithFormat("0x%" PRIx64, (*dirty_page_list)[i]);
         }
         result.AppendMessageWithFormat(".\n");
       }

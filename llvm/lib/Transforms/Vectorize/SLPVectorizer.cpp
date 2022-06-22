@@ -1597,7 +1597,7 @@ public:
       }
 
       if (BestOp.Idx) {
-        getData(BestOp.Idx.getValue(), Lane).IsUsed = IsUsed;
+        getData(*BestOp.Idx, Lane).IsUsed = IsUsed;
         return BestOp.Idx;
       }
       // If we could not find a good match return None.
@@ -1938,7 +1938,7 @@ public:
               if (BestIdx) {
                 // Swap the current operand with the one returned by
                 // getBestOperand().
-                swap(OpIdx, BestIdx.getValue(), Lane);
+                swap(OpIdx, *BestIdx, Lane);
               } else {
                 // We failed to find a best operand, set mode to 'Failed'.
                 ReorderingModes[OpIdx] = ReorderingMode::Failed;
@@ -2557,7 +2557,7 @@ private:
         ScalarToTreeEntry[V] = Last;
       }
       // Update the scheduler bundle to point to this TreeEntry.
-      ScheduleData *BundleMember = Bundle.getValue();
+      ScheduleData *BundleMember = *Bundle;
       assert((BundleMember || isa<PHINode>(S.MainOp) ||
               isVectorLikeInstWithConstOps(S.MainOp) ||
               doesNotNeedToSchedule(VL)) &&
@@ -4620,10 +4620,10 @@ void BoUpSLP::buildTree_rec(ArrayRef<Value *> VL, unsigned Depth,
     for (int Op = 0, E = S.MainOp->getNumOperands(); Op < E; ++Op)
       Candidates.emplace_back().emplace_back(I1->getOperand(Op),
                                              I2->getOperand(Op));
-    if (count_if(
+    if (static_cast<unsigned>(count_if(
             Candidates, [this](ArrayRef<std::pair<Value *, Value *>> Cand) {
               return findBestRootPair(Cand, LookAheadHeuristics::ScoreSplat);
-            }) >= S.MainOp->getNumOperands() / 2)
+            })) >= S.MainOp->getNumOperands() / 2)
       return false;
     if (S.MainOp->getNumOperands() > 2)
       return true;
@@ -6134,6 +6134,16 @@ InstructionCost BoUpSLP::getEntryCost(const TreeEntry *E,
           PowerOf2Ceil(OffsetEnd - OffsetBeg + 1),
           ((OffsetEnd - OffsetBeg + VecScalarsSz) / VecScalarsSz) *
               VecScalarsSz);
+      bool IsWholeSubvector =
+          OffsetBeg == Offset && ((OffsetEnd + 1) % VecScalarsSz == 0);
+      // Check if we can safely insert a subvector. If it is not possible, just
+      // generate a whole-sized vector and shuffle the source vector and the new
+      // subvector.
+      if (OffsetBeg + InsertVecSz > VecSz) {
+        // Align OffsetBeg to generate correct mask.
+        OffsetBeg = alignDown(OffsetBeg, VecSz, Offset);
+        InsertVecSz = VecSz;
+      }
 
       APInt DemandedElts = APInt::getZero(NumElts);
       // TODO: Add support for Instruction::InsertValue.
@@ -6177,7 +6187,7 @@ InstructionCost BoUpSLP::getEntryCost(const TreeEntry *E,
       // TODO: Implement the analysis of the FirstInsert->getOperand(0)
       // subvector of ActualVecTy.
       if (!isUndefVector(FirstInsert->getOperand(0)) && NumScalars != NumElts &&
-          (Offset != OffsetBeg || (OffsetEnd + 1) % VecScalarsSz != 0)) {
+          !IsWholeSubvector) {
         if (InsertVecSz != VecSz) {
           auto *ActualVecTy =
               FixedVectorType::get(SrcVecTy->getElementType(), VecSz);

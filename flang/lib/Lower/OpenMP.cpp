@@ -84,6 +84,7 @@ static void privatizeVars(Fortran::lower::AbstractConverter &converter,
   fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
   auto insPt = firOpBuilder.saveInsertionPoint();
   firOpBuilder.setInsertionPointToStart(firOpBuilder.getAllocaBlock());
+  bool hasFirstPrivateOp = false;
   for (const Fortran::parser::OmpClause &clause : opClauseList.v) {
     if (const auto &privateClause =
             std::get_if<Fortran::parser::OmpClause::Private>(&clause.u)) {
@@ -92,8 +93,11 @@ static void privatizeVars(Fortran::lower::AbstractConverter &converter,
                    std::get_if<Fortran::parser::OmpClause::Firstprivate>(
                        &clause.u)) {
       createPrivateVarSyms(converter, firstPrivateClause);
+      hasFirstPrivateOp = true;
     }
   }
+  if (hasFirstPrivateOp)
+    firOpBuilder.create<mlir::omp::BarrierOp>(converter.getCurrentLocation());
   firOpBuilder.restoreInsertionPoint(insPt);
 }
 

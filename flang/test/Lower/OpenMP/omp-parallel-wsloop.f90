@@ -71,6 +71,11 @@ subroutine parallel_do_with_clauses(nt)
   !$OMP END PARALLEL DO
 end subroutine
 
+!===============================================================================
+! Checking for the following construct:
+!   !$omp parallel do private(...) firstprivate(...)
+!===============================================================================
+
 ! CHECK-LABEL: func @_QPparallel_do_with_privatisation_clauses
 ! CHECK-SAME: %[[COND_REF:.*]]: !fir.ref<!fir.logical<4>> {fir.bindc_name = "cond"}, %[[NT_REF:.*]]: !fir.ref<i32> {fir.bindc_name = "nt"}
 subroutine parallel_do_with_privatisation_clauses(cond,nt)
@@ -82,6 +87,7 @@ subroutine parallel_do_with_privatisation_clauses(cond,nt)
   ! CHECK:    %[[PRIVATE_NT_REF:.*]] = fir.alloca i32 {bindc_name = "nt", pinned, uniq_name = "_QFparallel_do_with_privatisation_clausesEnt"}
   ! CHECK:    %[[NT_VAL:.*]] = fir.load %[[NT_REF]] : !fir.ref<i32>
   ! CHECK:    fir.store %[[NT_VAL]] to %[[PRIVATE_NT_REF]] : !fir.ref<i32>
+  ! CHECK:    omp.barrier
   ! CHECK:    %[[WS_LB:.*]] = arith.constant 1 : i32
   ! CHECK:    %[[WS_UB:.*]] = arith.constant 9 : i32
   ! CHECK:    %[[WS_STEP:.*]] = arith.constant 1 : i32
@@ -102,3 +108,178 @@ subroutine parallel_do_with_privatisation_clauses(cond,nt)
   ! CHECK:    omp.terminator
   !$OMP END PARALLEL DO
 end subroutine
+
+!===============================================================================
+! Checking for the following construct
+!   !$omp parallel private(...) firstprivate(...)
+!   !$omp do
+!===============================================================================
+
+subroutine parallel_private_do(cond,nt)
+logical :: cond
+  integer :: nt
+  integer :: i
+  !$OMP PARALLEL PRIVATE(cond) FIRSTPRIVATE(nt)
+  !$OMP DO
+  do i=1, 9
+    call foo(i, cond, nt)
+  end do
+  !$OMP END DO
+  !$OMP END PARALLEL
+end subroutine parallel_private_do
+
+! CHECK-LABEL:   func.func @_QPparallel_private_do(
+! CHECK-SAME:                                      %[[VAL_0:.*]]: !fir.ref<!fir.logical<4>> {fir.bindc_name = "cond"},
+! CHECK-SAME:                                      %[[VAL_1:.*]]: !fir.ref<i32> {fir.bindc_name = "nt"}) {
+! CHECK:           %[[I:.*]] = fir.alloca i32 {bindc_name = "i", uniq_name = "_QFparallel_private_doEi"}
+! CHECK:           omp.parallel   {
+! CHECK:             %[[I_PRIV:.*]] = fir.alloca i32 {adapt.valuebyref, pinned}
+! CHECK:             %[[COND_ADDR:.*]] = fir.alloca !fir.logical<4> {bindc_name = "cond", pinned, uniq_name = "_QFparallel_private_doEcond"}
+! CHECK:             %[[NT_ADDR:.*]] = fir.alloca i32 {bindc_name = "nt", pinned, uniq_name = "_QFparallel_private_doEnt"}
+! CHECK:             %[[NT:.*]] = fir.load %[[VAL_1]] : !fir.ref<i32>
+! CHECK:             fir.store %[[NT]] to %[[NT_ADDR]] : !fir.ref<i32>
+! CHECK:             omp.barrier
+! CHECK:             %[[VAL_7:.*]] = arith.constant 1 : i32
+! CHECK:             %[[VAL_8:.*]] = arith.constant 9 : i32
+! CHECK:             %[[VAL_9:.*]] = arith.constant 1 : i32
+! CHECK:             omp.wsloop   for  (%[[I:.*]]) : i32 = (%[[VAL_7]]) to (%[[VAL_8]]) inclusive step (%[[VAL_9]]) {
+! CHECK:               fir.store %[[I]] to %[[I_PRIV]] : !fir.ref<i32>
+! CHECK:               fir.call @_QPfoo(%[[I_PRIV]], %[[COND_ADDR]], %[[NT_ADDR]]) : (!fir.ref<i32>, !fir.ref<!fir.logical<4>>, !fir.ref<i32>) -> ()
+! CHECK:               omp.yield
+! CHECK:             }
+! CHECK:             omp.terminator
+! CHECK:           }
+! CHECK:           return
+! CHECK:         }
+
+!===============================================================================
+! Checking for the following construct - multiple firstprivate clauses must emit
+! only one barrier
+!   !$omp parallel
+!   !$omp do firstprivate(...) firstprivate(...)
+!===============================================================================
+
+subroutine omp_parallel_multiple_firstprivate_do(a, b)
+  integer::a, b
+  !$OMP PARALLEL FIRSTPRIVATE(a) FIRSTPRIVATE(b)
+  !$OMP DO
+  do i=1, 10
+    call bar(i, a)
+  end do
+  !$OMP END DO
+  !$OMP END PARALLEL
+end subroutine omp_parallel_multiple_firstprivate_do
+
+! CHECK-LABEL:   func.func @_QPomp_parallel_multiple_firstprivate_do(
+! CHECK-SAME:                                                        %[[A_ADDR:.*]]: !fir.ref<i32> {fir.bindc_name = "a"},
+! CHECK-SAME:                                                        %[[B_ADDR:.*]]: !fir.ref<i32> {fir.bindc_name = "b"}) {
+! CHECK:           %[[I_ADDR:.*]] = fir.alloca i32 {bindc_name = "i", uniq_name = "_QFomp_parallel_multiple_firstprivate_doEi"}
+! CHECK:           omp.parallel   {
+! CHECK:             %[[I_PRIV_ADDR:.*]] = fir.alloca i32 {adapt.valuebyref, pinned}
+! CHECK:             %[[A_PRIV_ADDR:.*]] = fir.alloca i32 {bindc_name = "a", pinned, uniq_name = "_QFomp_parallel_multiple_firstprivate_doEa"}
+! CHECK:             %[[A:.*]] = fir.load %[[A_ADDR]] : !fir.ref<i32>
+! CHECK:             fir.store %[[A]] to %[[A_PRIV_ADDR]] : !fir.ref<i32>
+! CHECK:             %[[B_PRIV_ADDR:.*]] = fir.alloca i32 {bindc_name = "b", pinned, uniq_name = "_QFomp_parallel_multiple_firstprivate_doEb"}
+! CHECK:             %[[B:.*]] = fir.load %[[B_ADDR]] : !fir.ref<i32>
+! CHECK:             fir.store %[[B]] to %[[B_PRIV_ADDR]] : !fir.ref<i32>
+! CHECK:             omp.barrier
+! CHECK:             %[[VAL_8:.*]] = arith.constant 1 : i32
+! CHECK:             %[[VAL_9:.*]] = arith.constant 10 : i32
+! CHECK:             %[[VAL_10:.*]] = arith.constant 1 : i32
+! CHECK:             omp.wsloop   for  (%[[I:.*]]) : i32 = (%[[VAL_8]]) to (%[[VAL_9]]) inclusive step (%[[VAL_10]]) {
+! CHECK:               fir.store %[[I]] to %[[I_PRIV_ADDR]] : !fir.ref<i32>
+! CHECK:               fir.call @_QPbar(%[[I_PRIV_ADDR]], %[[A_PRIV_ADDR]]) : (!fir.ref<i32>, !fir.ref<i32>) -> ()
+! CHECK:               omp.yield
+! CHECK:             }
+! CHECK:             omp.terminator
+! CHECK:           }
+! CHECK:           return
+! CHECK:         }
+
+!===============================================================================
+! Checking for the following construct
+!   !$omp parallel
+!   !$omp do private(...) firstprivate(...)
+!===============================================================================
+
+subroutine parallel_do_private(cond,nt)
+logical :: cond
+  integer :: nt
+  integer :: i
+  !$OMP PARALLEL
+  !$OMP DO PRIVATE(cond) FIRSTPRIVATE(nt)
+  do i=1, 9
+    call foo(i, cond, nt)
+  end do
+  !$OMP END DO
+  !$OMP END PARALLEL
+end subroutine parallel_do_private
+
+! CHECK-LABEL:   func.func @_QPparallel_do_private(
+! CHECK-SAME:                                      %[[VAL_0:.*]]: !fir.ref<!fir.logical<4>> {fir.bindc_name = "cond"},
+! CHECK-SAME:                                      %[[VAL_1:.*]]: !fir.ref<i32> {fir.bindc_name = "nt"}) {
+! CHECK:           %[[I_ADDR:.*]] = fir.alloca i32 {bindc_name = "i", uniq_name = "_QFparallel_do_privateEi"}
+! CHECK:           omp.parallel   {
+! CHECK:             %[[COND_ADDR:.*]] = fir.alloca !fir.logical<4> {bindc_name = "cond", pinned, uniq_name = "_QFparallel_do_privateEcond"}
+! CHECK:             %[[NT_ADDR:.*]] = fir.alloca i32 {bindc_name = "nt", pinned, uniq_name = "_QFparallel_do_privateEnt"}
+! CHECK:             %[[NT:.*]] = fir.load %[[VAL_1]] : !fir.ref<i32>
+! CHECK:             fir.store %[[NT]] to %[[NT_ADDR]] : !fir.ref<i32>
+! CHECK:             omp.barrier
+! CHECK:             %[[I_PRIV_ADDR:.*]] = fir.alloca i32 {adapt.valuebyref, pinned}
+! CHECK:             %[[VAL_7:.*]] = arith.constant 1 : i32
+! CHECK:             %[[VAL_8:.*]] = arith.constant 9 : i32
+! CHECK:             %[[VAL_9:.*]] = arith.constant 1 : i32
+! CHECK:             omp.wsloop   for  (%[[I:.*]]) : i32 = (%[[VAL_7]]) to (%[[VAL_8]]) inclusive step (%[[VAL_9]]) {
+! CHECK:               fir.store %[[I]] to %[[I_PRIV_ADDR]] : !fir.ref<i32>
+! CHECK:               fir.call @_QPfoo(%[[I_PRIV_ADDR]], %[[COND_ADDR]], %[[NT_ADDR]]) : (!fir.ref<i32>, !fir.ref<!fir.logical<4>>, !fir.ref<i32>) -> ()
+! CHECK:               omp.yield
+! CHECK:             }
+! CHECK:             omp.terminator
+! CHECK:           }
+! CHECK:           return
+! CHECK:         }
+
+!===============================================================================
+! Checking for the following construct - multiple firstprivate clauses must emit
+! only one barrier
+!   !$omp parallel
+!   !$omp do firstprivate(...) firstprivate(...)
+!===============================================================================
+
+subroutine omp_parallel_do_multiple_firstprivate(a, b)
+  integer::a, b
+  !$OMP PARALLEL
+  !$OMP DO FIRSTPRIVATE(a) FIRSTPRIVATE(b)
+  do i=1, 10
+    call bar(i, a)
+  end do
+  !$OMP END DO
+  !$OMP END PARALLEL
+end subroutine omp_parallel_do_multiple_firstprivate
+
+! CHECK-LABEL:   func.func @_QPomp_parallel_do_multiple_firstprivate(
+! CHECK-SAME:                                                        %[[A_ADDR:.*]]: !fir.ref<i32> {fir.bindc_name = "a"},
+! CHECK-SAME:                                                        %[[B_ADDR:.*]]: !fir.ref<i32> {fir.bindc_name = "b"}) {
+! CHECK:           %[[I_ADDR:.*]] = fir.alloca i32 {bindc_name = "i", uniq_name = "_QFomp_parallel_do_multiple_firstprivateEi"}
+! CHECK:           omp.parallel   {
+! CHECK:             %[[A_PRIV_ADDR:.*]] = fir.alloca i32 {bindc_name = "a", pinned, uniq_name = "_QFomp_parallel_do_multiple_firstprivateEa"}
+! CHECK:             %[[A:.*]] = fir.load %[[A_ADDR]] : !fir.ref<i32>
+! CHECK:             fir.store %[[A]] to %[[A_PRIV_ADDR]] : !fir.ref<i32>
+! CHECK:             %[[B_PRIV_ADDR:.*]] = fir.alloca i32 {bindc_name = "b", pinned, uniq_name = "_QFomp_parallel_do_multiple_firstprivateEb"}
+! CHECK:             %[[B:.*]] = fir.load %[[B_ADDR]] : !fir.ref<i32>
+! CHECK:             fir.store %[[B]] to %[[B_PRIV_ADDR]] : !fir.ref<i32>
+! CHECK:             omp.barrier
+! CHECK-NOT:         omp.barrier
+! CHECK:             %[[I_PRIV_ADDR:.*]] = fir.alloca i32 {adapt.valuebyref, pinned}
+! CHECK:             %[[VAL_8:.*]] = arith.constant 1 : i32
+! CHECK:             %[[VAL_9:.*]] = arith.constant 10 : i32
+! CHECK:             %[[VAL_10:.*]] = arith.constant 1 : i32
+! CHECK:             omp.wsloop   for  (%[[I:.*]]) : i32 = (%[[VAL_8]]) to (%[[VAL_9]]) inclusive step (%[[VAL_10]]) {
+! CHECK:               fir.store %[[I]] to %[[I_PRIV_ADDR]] : !fir.ref<i32>
+! CHECK:               fir.call @_QPbar(%[[I_PRIV_ADDR]], %[[A_PRIV_ADDR]]) : (!fir.ref<i32>, !fir.ref<i32>) -> ()
+! CHECK:               omp.yield
+! CHECK:             }
+! CHECK:             omp.terminator
+! CHECK:           }
+! CHECK:           return
+! CHECK:         }

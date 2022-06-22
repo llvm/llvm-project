@@ -729,6 +729,14 @@ LogicalResult TaskOp::verify() {
 }
 
 //===----------------------------------------------------------------------===//
+// TaskGroupOp
+//===----------------------------------------------------------------------===//
+LogicalResult TaskGroupOp::verify() {
+  return verifyReductionVarList(*this, task_reductions(),
+                                task_reduction_vars());
+}
+
+//===----------------------------------------------------------------------===//
 // WsLoopOp
 //===----------------------------------------------------------------------===//
 
@@ -783,8 +791,7 @@ LogicalResult OrderedOp::verify() {
                          << "nested inside a worksharing-loop with ordered "
                          << "clause with parameter present";
 
-  if (container.ordered_valAttr().getInt() !=
-      (int64_t)num_loops_val().getValue())
+  if (container.ordered_valAttr().getInt() != (int64_t)*num_loops_val())
     return emitOpError() << "number of variables in depend clause does not "
                          << "match number of iteration variables in the "
                          << "doacross loop";

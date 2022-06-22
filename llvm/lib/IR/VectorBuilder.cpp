@@ -64,7 +64,7 @@ Value *VectorBuilder::createVectorInstruction(unsigned Opcode, Type *ReturnTy,
   auto VLenPosOpt = VPIntrinsic::getVectorLengthParamPos(VPID);
   size_t NumInstParams = InstOpArray.size();
   size_t NumVPParams =
-      NumInstParams + MaskPosOpt.hasValue() + VLenPosOpt.hasValue();
+      NumInstParams + MaskPosOpt.has_value() + VLenPosOpt.has_value();
 
   SmallVector<Value *, 6> IntrinParams;
 

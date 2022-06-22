@@ -1847,7 +1847,7 @@ public:
       } else if (elementTy.isa<IntegerType>() && !padOp.quantization_info()) {
         constantAttr = rewriter.getIntegerAttr(elementTy, 0);
       } else if (elementTy.isa<IntegerType>() && padOp.quantization_info()) {
-        int64_t value = padOp.quantization_info().getValue().getInputZp();
+        int64_t value = padOp.quantization_info()->getInputZp();
         constantAttr = rewriter.getIntegerAttr(elementTy, value);
       }
       if (constantAttr)

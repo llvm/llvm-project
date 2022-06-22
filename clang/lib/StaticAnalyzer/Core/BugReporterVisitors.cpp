@@ -258,7 +258,7 @@ static bool isVarAnInterestingCondition(const Expr *CondVarExpr,
 static bool isInterestingExpr(const Expr *E, const ExplodedNode *N,
                               const PathSensitiveBugReport *B) {
   if (Optional<SVal> V = getSValForVar(E, N))
-    return B->getInterestingnessKind(*V).hasValue();
+    return B->getInterestingnessKind(*V).has_value();
   return false;
 }
 
@@ -2355,7 +2355,7 @@ public:
       // well. Try to use the correct type when looking up the value.
       SVal RVal;
       if (ExplodedGraph::isInterestingLValueExpr(Inner))
-        RVal = LVState->getRawSVal(L.getValue(), Inner->getType());
+        RVal = LVState->getRawSVal(*L, Inner->getType());
       else if (CanDereference)
         RVal = LVState->getSVal(L->getRegion());
 

@@ -5831,7 +5831,7 @@ bool AArch64InstructionSelector::selectIntrinsic(MachineInstr &I,
     uint64_t Key = I.getOperand(3).getImm();
     Register DiscReg = I.getOperand(4).getReg();
     auto DiscVal = getIConstantVRegVal(DiscReg, MRI);
-    bool IsDiscZero = DiscVal.hasValue() && DiscVal->isNullValue();
+    bool IsDiscZero = DiscVal && DiscVal->isNullValue();
 
     if (Key > 3)
       return false;
@@ -6743,7 +6743,7 @@ void AArch64InstructionSelector::renderTruncImm(MachineInstrBuilder &MIB,
   Optional<int64_t> CstVal =
       getIConstantVRegSExtVal(MI.getOperand(0).getReg(), MRI);
   assert(CstVal && "Expected constant value");
-  MIB.addImm(CstVal.getValue());
+  MIB.addImm(*CstVal);
 }
 
 void AArch64InstructionSelector::renderLogicalImm32(

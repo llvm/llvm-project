@@ -634,7 +634,7 @@ Optional<int64_t> MemRefRegion::getRegionSize() {
     LLVM_DEBUG(llvm::dbgs() << "Dynamic shapes not yet supported\n");
     return None;
   }
-  return getMemRefEltSizeInBytes(memRefType) * numElements.getValue();
+  return getMemRefEltSizeInBytes(memRefType) * *numElements;
 }
 
 /// Returns the size of memref data in bytes if it's statically shaped, None
@@ -964,7 +964,7 @@ mlir::computeSliceUnion(ArrayRef<Operation *> opsA, ArrayRef<Operation *> opsB,
     LLVM_DEBUG(llvm::dbgs() << "Cannot determine if the slice is valid\n");
     return SliceComputationResult::GenericFailure;
   }
-  if (!isSliceValid.getValue())
+  if (!*isSliceValid)
     return SliceComputationResult::IncorrectSliceFailure;
 
   return SliceComputationResult::Success;
@@ -1134,8 +1134,7 @@ void mlir::getComputationSliceState(
     //    3. Is being inserted at the innermost insertion point.
     Optional<bool> isMaximal = sliceState->isMaximal();
     if (isLoopParallelAndContainsReduction(getSliceLoop(i)) &&
-        isInnermostInsertion() && srcIsUnitSlice() && isMaximal.hasValue() &&
-        isMaximal.getValue())
+        isInnermostInsertion() && srcIsUnitSlice() && isMaximal && *isMaximal)
       continue;
     for (unsigned j = i; j < numSliceLoopIVs; ++j) {
       sliceState->lbs[j] = AffineMap();

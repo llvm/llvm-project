@@ -442,7 +442,7 @@ class CollectReachableCallees {
         continue;
 
       for (const auto &GI : *CGN) {
-        auto *RCB = cast<CallBase>(GI.first.getValue());
+        auto *RCB = cast<CallBase>(*GI.first);
         auto *RCGN = GI.second;
 
         if (auto *DCallee = RCGN->getFunction()) {
