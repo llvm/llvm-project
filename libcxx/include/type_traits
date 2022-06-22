@@ -517,6 +517,7 @@ namespace std
 #include <__type_traits/void_t.h>
 #include <__utility/declval.h>
 #include <cstddef>
+#include <cstdint>
 #include <version>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
@@ -1019,6 +1020,29 @@ typename make_unsigned<_Tp>::type __to_unsigned_like(_Tp __x) noexcept {
     return static_cast<typename make_unsigned<_Tp>::type>(__x);
 }
 #endif
+
+template <class _Tp, class _Up>
+using __copy_unsigned_t = __conditional_t<is_unsigned<_Tp>::value, typename make_unsigned<_Up>::type, _Up>;
+
+/// Helper to promote an integral to smallest 32, 64, or 128 bit representation.
+///
+/// The restriction is the same as the integral version of to_char.
+template <class _Tp>
+#if _LIBCPP_STD_VER > 17
+  requires (is_signed_v<_Tp> || is_unsigned_v<_Tp> || is_same_v<_Tp, char>)
+#endif
+using __make_32_64_or_128_bit_t =
+  __copy_unsigned_t<_Tp,
+    __conditional_t<sizeof(_Tp) <= sizeof(int32_t),    int32_t,
+    __conditional_t<sizeof(_Tp) <= sizeof(int64_t),    int64_t,
+#ifndef _LIBCPP_HAS_NO_INT128
+    __conditional_t<sizeof(_Tp) <= sizeof(__int128_t), __int128_t,
+    /* else */                                         void>
+#else
+    /* else */                                         void
+#endif
+    > >
+  >;
 
 #if _LIBCPP_STD_VER > 17
 // Let COND_RES(X, Y) be:
