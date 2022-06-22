@@ -23,7 +23,7 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 
 template <class _Arg, class _Result>
 class _LIBCPP_TEMPLATE_VIS _LIBCPP_DEPRECATED_IN_CXX11 pointer_to_unary_function
-    : public unary_function<_Arg, _Result>
+    : public __unary_function<_Arg, _Result>
 {
     _Result (*__f_)(_Arg);
 public:

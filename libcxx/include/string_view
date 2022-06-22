@@ -914,14 +914,13 @@ operator<<(basic_ostream<_CharT, _Traits>& __os,
 // [string.view.hash]
 template<class _CharT>
 struct _LIBCPP_TEMPLATE_VIS hash<basic_string_view<_CharT, char_traits<_CharT> > >
-    : public unary_function<basic_string_view<_CharT, char_traits<_CharT> >, size_t>
+    : public __unary_function<basic_string_view<_CharT, char_traits<_CharT> >, size_t>
 {
     _LIBCPP_INLINE_VISIBILITY
     size_t operator()(const basic_string_view<_CharT, char_traits<_CharT> > __val) const _NOEXCEPT {
         return __do_string_hash(__val.data(), __val.data() + __val.size());
     }
 };
-
 
 #if _LIBCPP_STD_VER > 11
 inline namespace literals

@@ -264,10 +264,7 @@ __apply_functor(_Fp& __f, _BoundArgs& __bound_args, __tuple_indices<_Indx...>,
 }
 
 template<class _Fp, class ..._BoundArgs>
-class __bind
-#if _LIBCPP_STD_VER <= 17 || !defined(_LIBCPP_ABI_NO_BINDER_BASES)
-    : public __weak_result_type<typename decay<_Fp>::type>
-#endif
+class __bind : public __weak_result_type<typename decay<_Fp>::type>
 {
 protected:
     typedef typename decay<_Fp>::type _Fd;

@@ -10,7 +10,6 @@
 
 // template <class T>
 // struct hash
-//     : public unary_function<T, size_t>
 // {
 //     size_t operator()(T val) const;
 // };
@@ -27,8 +26,10 @@ test()
 {
     typedef std::bitset<N> T;
     typedef std::hash<T> H;
+#if TEST_STD_VER <= 14
     static_assert((std::is_same<typename H::argument_type, T>::value), "" );
     static_assert((std::is_same<typename H::result_type, std::size_t>::value), "" );
+#endif
     ASSERT_NOEXCEPT(H()(T()));
 
     H h;

@@ -24,10 +24,7 @@
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 template <class _Tp>
-class __mem_fn
-#if _LIBCPP_STD_VER <= 17 || !defined(_LIBCPP_ABI_NO_BINDER_BASES)
-    : public __weak_result_type<_Tp>
-#endif
+class __mem_fn : public __weak_result_type<_Tp>
 {
 public:
     // types
@@ -42,6 +39,7 @@ public:
     // invoke
     template <class... _ArgTypes>
     _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX17
+
     typename __invoke_return<type, _ArgTypes...>::type
     operator() (_ArgTypes&&... __args) const {
         return std::__invoke(__f_, std::forward<_ArgTypes>(__args)...);
