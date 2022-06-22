@@ -3,11 +3,11 @@
 target datalayout = "e-m:e-p:32:32-i64:64-v128:64:128-a:0:32-n32-S64"
 target triple = "thumbv6m-arm-linux-gnueabi"
 
-@fn1.a = private unnamed_addr constant [4 x i16] [i16 6, i16 0, i16 0, i16 0], align 2
+@fn1.a = private unnamed_addr global [4 x i16] [i16 6, i16 0, i16 0, i16 0], align 2
 
 ; We must not try and emit this bad instruction: "ldrh r1, .LCPI0_0"
 ; CHECK-LABEL: fn1:
-; CHECK: adr [[base:r[0-9]+]], .LCPI0_0
+; CHECK: ldr [[base:r[0-9]+]], .LCPI0_0
 ; CHECK-NOT: ldrh {{r[0-9]+}}, .LCPI0_0
 ; CHECK: ldrh r{{[0-9]+}}, [[[base]]]
 define hidden i32 @fn1() #0 {

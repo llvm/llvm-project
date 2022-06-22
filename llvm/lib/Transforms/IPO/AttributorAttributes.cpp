@@ -1272,33 +1272,36 @@ struct AAPointerInfoImpl
     return true;
   }
 
-  ChangeStatus translateAndAddCalleeState(Attributor &A,
-                                          const AAPointerInfo &CalleeAA,
-                                          int64_t CallArgOffset, CallBase &CB) {
+  ChangeStatus translateAndAddState(Attributor &A, const AAPointerInfo &OtherAA,
+                                    int64_t Offset, CallBase &CB,
+                                    bool FromCallee = false) {
     using namespace AA::PointerInfo;
-    if (!CalleeAA.getState().isValidState() || !isValidState())
+    if (!OtherAA.getState().isValidState() || !isValidState())
       return indicatePessimisticFixpoint();
 
-    const auto &CalleeImplAA = static_cast<const AAPointerInfoImpl &>(CalleeAA);
-    bool IsByval = CalleeImplAA.getAssociatedArgument()->hasByValAttr();
+    const auto &OtherAAImpl = static_cast<const AAPointerInfoImpl &>(OtherAA);
+    bool IsByval =
+        FromCallee && OtherAAImpl.getAssociatedArgument()->hasByValAttr();
 
     // Combine the accesses bin by bin.
     ChangeStatus Changed = ChangeStatus::UNCHANGED;
-    for (auto &It : CalleeImplAA.getState()) {
+    for (auto &It : OtherAAImpl.getState()) {
       OffsetAndSize OAS = OffsetAndSize::getUnknown();
-      if (CallArgOffset != OffsetAndSize::Unknown)
-        OAS = OffsetAndSize(It.first.getOffset() + CallArgOffset,
-                            It.first.getSize());
-      Accesses *Bin = AccessBins[OAS];
+      if (Offset != OffsetAndSize::Unknown)
+        OAS = OffsetAndSize(It.first.getOffset() + Offset, It.first.getSize());
+      Accesses *Bin = AccessBins.lookup(OAS);
       for (const AAPointerInfo::Access &RAcc : *It.second) {
         if (IsByval && !RAcc.isRead())
           continue;
         bool UsedAssumedInformation = false;
-        Optional<Value *> Content = A.translateArgumentToCallSiteContent(
-            RAcc.getContent(), CB, *this, UsedAssumedInformation);
-        AccessKind AK =
-            AccessKind(RAcc.getKind() & (IsByval ? AccessKind::AK_READ
-                                                 : AccessKind::AK_READ_WRITE));
+        AccessKind AK = RAcc.getKind();
+        Optional<Value *> Content = RAcc.getContent();
+        if (FromCallee) {
+          Content = A.translateArgumentToCallSiteContent(
+              RAcc.getContent(), CB, *this, UsedAssumedInformation);
+          AK = AccessKind(
+              AK & (IsByval ? AccessKind::AK_READ : AccessKind::AK_READ_WRITE));
+        }
         Changed =
             Changed | addAccess(A, OAS.getOffset(), OAS.getSize(), CB, Content,
                                 AK, RAcc.getType(), RAcc.getRemoteInst(), Bin);
@@ -1493,8 +1496,8 @@ struct AAPointerInfoFloating : public AAPointerInfoImpl {
           const auto &CSArgPI = A.getAAFor<AAPointerInfo>(
               *this, IRPosition::callsite_argument(*CB, ArgNo),
               DepClassTy::REQUIRED);
-          Changed = translateAndAddCalleeState(
-                        A, CSArgPI, OffsetInfoMap[CurPtr].Offset, *CB) |
+          Changed = translateAndAddState(A, CSArgPI,
+                                         OffsetInfoMap[CurPtr].Offset, *CB) |
                     Changed;
           return true;
         }
@@ -1623,7 +1626,8 @@ struct AAPointerInfoCallSiteArgument final : AAPointerInfoFloating {
     const IRPosition &ArgPos = IRPosition::argument(*Arg);
     auto &ArgAA =
         A.getAAFor<AAPointerInfo>(*this, ArgPos, DepClassTy::REQUIRED);
-    return translateAndAddCalleeState(A, ArgAA, 0, *cast<CallBase>(getCtxI()));
+    return translateAndAddState(A, ArgAA, 0, *cast<CallBase>(getCtxI()),
+                                /* FromCallee */ true);
   }
 
   /// See AbstractAttribute::trackStatistics()

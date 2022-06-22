@@ -222,9 +222,7 @@ define <4 x i1> @p6_vector_urem_by_const__nonsplat_undef0(<4 x i32> %x, <4 x i32
 ; AVX2-NEXT:    vpand %xmm1, %xmm0, %xmm0
 ; AVX2-NEXT:    vpbroadcastd {{.*#+}} xmm1 = [2863311531,2863311531,2863311531,2863311531]
 ; AVX2-NEXT:    vpmulld %xmm1, %xmm0, %xmm0
-; AVX2-NEXT:    vpsrld $1, %xmm0, %xmm1
-; AVX2-NEXT:    vpslld $31, %xmm0, %xmm0
-; AVX2-NEXT:    vpor %xmm1, %xmm0, %xmm0
+; AVX2-NEXT:    vpsrld $1, %xmm0, %xmm0
 ; AVX2-NEXT:    vpbroadcastd {{.*#+}} xmm1 = [715827882,715827882,715827882,715827882]
 ; AVX2-NEXT:    vpminud %xmm1, %xmm0, %xmm1
 ; AVX2-NEXT:    vpcmpeqd %xmm1, %xmm0, %xmm0

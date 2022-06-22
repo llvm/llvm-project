@@ -49,15 +49,17 @@ define i1 @memcmp_4bytes_unaligned_constant_i16(i8* align 4 %x) {
   ret i1 %cmpeq0
 }
 
-; TODO: Any memcmp where all arguments are constants should be constant folded. Currently, we only handle i8 array constants.
+; Verif that a memcmp call where all arguments are constants is constant
+; folded even for arrays of other types than i8.
 
 @intbuf = private unnamed_addr constant [2 x i32] [i32 0, i32 1], align 4
 
 define i1 @memcmp_3bytes_aligned_constant_i32(i8* align 4 %x) {
-; ALL-LABEL: @memcmp_3bytes_aligned_constant_i32(
-; ALL-NEXT:    [[CALL:%.*]] = tail call i32 @memcmp(i8* noundef nonnull dereferenceable(3) bitcast (i32* getelementptr inbounds ([2 x i32], [2 x i32]* @intbuf, i64 0, i64 1) to i8*), i8* noundef nonnull dereferenceable(3) bitcast ([2 x i32]* @intbuf to i8*), i64 3)
-; ALL-NEXT:    [[CMPEQ0:%.*]] = icmp eq i32 [[CALL]], 0
-; ALL-NEXT:    ret i1 [[CMPEQ0]]
+; LE-LABEL: @memcmp_3bytes_aligned_constant_i32(
+; LE-NEXT:    ret i1 false
+;
+; BE-LABEL: @memcmp_3bytes_aligned_constant_i32(
+; BE-NEXT:    ret i1 true
 ;
   %call = tail call i32 @memcmp(i8* bitcast (i32* getelementptr inbounds ([2 x i32], [2 x i32]* @intbuf, i64 0, i64 1) to i8*), i8* bitcast (i32* getelementptr inbounds ([2 x i32], [2 x i32]* @intbuf, i64 0, i64 0) to i8*), i64 3)
   %cmpeq0 = icmp eq i32 %call, 0

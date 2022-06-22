@@ -570,7 +570,7 @@ def TaskGroupOp : OpenMP_Op<"taskgroup", [AttrSizedOperandSegments,
     participating in the reduction. After the end of the region, the original
     list item contains the result of the reduction.
 
-    The `allocators_vars` and `allocate_vars` parameters are a variadic list of
+    The `allocators_vars` and `allocate_vars` arguments are a variadic list of
     values that specify the memory allocator to be used to obtain storage for
     private values.
   }];
