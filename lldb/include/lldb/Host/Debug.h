@@ -130,12 +130,8 @@ protected:
 
 struct ThreadStopInfo {
   lldb::StopReason reason;
+  uint32_t signo;
   union {
-    // eStopReasonSignal
-    struct {
-      uint32_t signo;
-    } signal;
-
     // eStopReasonException
     struct {
       uint64_t type;
