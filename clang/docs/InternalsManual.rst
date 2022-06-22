@@ -2920,7 +2920,7 @@ that is named after the attribute being documented.
 
 If the attribute is not for public consumption, or is an implicitly-created
 attribute that has no visible spelling, the documentation list can specify the
-``Undocumented`` object. Otherwise, the attribute should have its documentation
+``InternalOnly`` object. Otherwise, the attribute should have its documentation
 added to AttrDocs.td.
 
 Documentation derives from the ``Documentation`` tablegen type. All derived
