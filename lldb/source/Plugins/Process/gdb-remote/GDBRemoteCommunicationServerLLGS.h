@@ -273,6 +273,9 @@ protected:
   // in non-stop mode, no response otherwise.
   PacketResult SendContinueSuccessResponse();
 
+  void AppendThreadIDToResponse(Stream &response, lldb::pid_t pid,
+                                lldb::tid_t tid);
+
 private:
   llvm::Expected<std::unique_ptr<llvm::MemoryBuffer>> BuildTargetXml();
 

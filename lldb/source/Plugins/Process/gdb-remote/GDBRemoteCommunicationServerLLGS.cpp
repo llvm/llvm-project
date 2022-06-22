@@ -826,10 +826,8 @@ GDBRemoteCommunicationServerLLGS::PrepareStopReplyPacketForThread(
 
   // Include the (pid and) tid.
   response.PutCString("thread:");
-  if (bool(m_extensions_supported &
-           NativeProcessProtocol::Extension::multiprocess))
-    response.Format("p{0:x-}.", process.GetID());
-  response.Format("{0:x-};", thread.GetID());
+  AppendThreadIDToResponse(response, process.GetID(), thread.GetID());
+  response.PutChar(';');
 
   // Include the thread name if there is one.
   const std::string thread_name = thread.GetName();
@@ -1425,9 +1423,8 @@ GDBRemoteCommunicationServerLLGS::Handle_qC(StringExtractorGDBRemote &packet) {
 
   StreamString response;
   response.PutCString("QC");
-  if (bool(m_extensions_supported & NativeProcessProtocol::Extension::multiprocess))
-    response.Format("p{0:x-}.", m_current_process->GetID());
-  response.Format("{0:x-}", thread->GetID());
+  AppendThreadIDToResponse(response, m_current_process->GetID(),
+                           thread->GetID());
 
   return SendPacketNoLock(response.GetString());
 }
@@ -1996,10 +1993,7 @@ void GDBRemoteCommunicationServerLLGS::AddProcessThreads(
     LLDB_LOG(log, "iterated thread {0} (tid={1})", thread_index,
              thread->GetID());
     response.PutChar(had_any ? ',' : 'm');
-    if (bool(m_extensions_supported &
-             NativeProcessProtocol::Extension::multiprocess))
-      response.Format("p{0:x-}.", pid);
-    response.Format("{0:x-}", thread->GetID());
+    AppendThreadIDToResponse(response, pid, thread->GetID());
     had_any = true;
   }
 }
@@ -4141,6 +4135,14 @@ GDBRemoteCommunicationServerLLGS::SendContinueSuccessResponse() {
   // TODO: how to handle forwarding in non-stop mode?
   StartSTDIOForwarding();
   return m_non_stop ? SendOKResponse() : PacketResult::Success;
+}
+
+void GDBRemoteCommunicationServerLLGS::AppendThreadIDToResponse(
+    Stream &response, lldb::pid_t pid, lldb::tid_t tid) {
+  if (bool(m_extensions_supported &
+           NativeProcessProtocol::Extension::multiprocess))
+    response.Format("p{0:x-}.", pid);
+  response.Format("{0:x-}", tid);
 }
 
 std::string
