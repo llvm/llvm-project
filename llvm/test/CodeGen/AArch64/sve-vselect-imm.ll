@@ -308,6 +308,66 @@ define <vscale x 2 x i64> @sel_merge_64_zero(<vscale x 2 x i1> %p, <vscale x 2 x
   ret <vscale x 2 x i64> %sel
 }
 
+define <vscale x 8 x half> @sel_merge_nxv8f16_zero(<vscale x 8 x i1> %p, <vscale x 8 x half> %in) {
+; CHECK-LABEL: sel_merge_nxv8f16_zero:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov z1.h, #0 // =0x0
+; CHECK-NEXT:    mov z0.h, p0/m, z1.h
+; CHECK-NEXT:    ret
+%sel = select <vscale x 8 x i1> %p, <vscale x 8 x half> zeroinitializer, <vscale x 8 x half> %in
+ret <vscale x 8 x half> %sel
+}
+
+define <vscale x 4 x half> @sel_merge_nx4f16_zero(<vscale x 4 x i1> %p, <vscale x 4 x half> %in) {
+; CHECK-LABEL: sel_merge_nx4f16_zero:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov z1.h, #0 // =0x0
+; CHECK-NEXT:    mov z0.s, p0/m, z1.s
+; CHECK-NEXT:    ret
+%sel = select <vscale x 4 x i1> %p, <vscale x 4 x half> zeroinitializer, <vscale x 4 x half> %in
+ret <vscale x 4 x half> %sel
+}
+
+define <vscale x 2 x half> @sel_merge_nx2f16_zero(<vscale x 2 x i1> %p, <vscale x 2 x half> %in) {
+; CHECK-LABEL: sel_merge_nx2f16_zero:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov z1.h, #0 // =0x0
+; CHECK-NEXT:    mov z0.d, p0/m, z1.d
+; CHECK-NEXT:    ret
+%sel = select <vscale x 2 x i1> %p, <vscale x 2 x half> zeroinitializer, <vscale x 2 x half> %in
+ret <vscale x 2 x half> %sel
+}
+
+define <vscale x 4 x float> @sel_merge_nx4f32_zero(<vscale x 4 x i1> %p, <vscale x 4 x float> %in) {
+; CHECK-LABEL: sel_merge_nx4f32_zero:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov z1.s, #0 // =0x0
+; CHECK-NEXT:    mov z0.s, p0/m, z1.s
+; CHECK-NEXT:    ret
+%sel = select <vscale x 4 x i1> %p, <vscale x 4 x float> zeroinitializer, <vscale x 4 x float> %in
+ret <vscale x 4 x float> %sel
+}
+
+define <vscale x 2 x float> @sel_merge_nx2f32_zero(<vscale x 2 x i1> %p, <vscale x 2 x float> %in) {
+; CHECK-LABEL: sel_merge_nx2f32_zero:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov z1.s, #0 // =0x0
+; CHECK-NEXT:    mov z0.d, p0/m, z1.d
+; CHECK-NEXT:    ret
+%sel = select <vscale x 2 x i1> %p, <vscale x 2 x float> zeroinitializer, <vscale x 2 x float> %in
+ret <vscale x 2 x float> %sel
+}
+
+define <vscale x 2 x double> @sel_merge_nx2f64_zero(<vscale x 2 x i1> %p, <vscale x 2 x double> %in) {
+; CHECK-LABEL: sel_merge_nx2f64_zero:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov z1.d, #0 // =0x0
+; CHECK-NEXT:    mov z0.d, p0/m, z1.d
+; CHECK-NEXT:    ret
+%sel = select <vscale x 2 x i1> %p, <vscale x 2 x double> zeroinitializer, <vscale x 2 x double> %in
+ret <vscale x 2 x double> %sel
+}
+
 define <vscale x 8 x i16> @sel_merge_16_shifted(<vscale x 8 x i1> %p, <vscale x 8 x i16> %in) {
 ; CHECK-LABEL: sel_merge_16_shifted:
 ; CHECK:       // %bb.0:
