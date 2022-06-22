@@ -1047,6 +1047,7 @@ private:
   // Set when walking DATA & array constructor implied DO loop bounds
   // to warn about use of the implied DO intex therein.
   std::optional<SourceName> checkIndexUseInOwnBounds_;
+  bool hasBindCName_{false};
 
   bool HandleAttributeStmt(Attr, const std::list<parser::Name> &);
   Symbol &HandleAttributeStmt(Attr, const parser::Name &);
@@ -4679,12 +4680,22 @@ void DeclarationVisitor::Post(const parser::FillDecl &x) {
   }
   ClearArraySpec();
 }
-bool DeclarationVisitor::Pre(const parser::ProcedureDeclarationStmt &) {
+bool DeclarationVisitor::Pre(const parser::ProcedureDeclarationStmt &x) {
   CHECK(!interfaceName_);
+  const auto &procAttrSpec{std::get<std::list<parser::ProcAttrSpec>>(x.t)};
+  for (const parser::ProcAttrSpec &procAttr : procAttrSpec) {
+    if (auto *bindC{std::get_if<parser::LanguageBindingSpec>(&procAttr.u)}) {
+      if (bindC->v.has_value()) {
+        hasBindCName_ = true;
+        break;
+      }
+    }
+  }
   return BeginDecl();
 }
 void DeclarationVisitor::Post(const parser::ProcedureDeclarationStmt &) {
   interfaceName_ = nullptr;
+  hasBindCName_ = false;
   EndDecl();
 }
 bool DeclarationVisitor::Pre(const parser::DataComponentDefStmt &x) {
@@ -4751,6 +4762,10 @@ void DeclarationVisitor::Post(const parser::ProcDecl &x) {
   symbol.ReplaceName(name.source);
   if (dtDetails) {
     dtDetails->add_component(symbol);
+  }
+  if (hasBindCName_ && (IsPointer(symbol) || IsDummy(symbol))) {
+    Say(symbol.name(),
+        "BIND(C) procedure with NAME= specified can neither have POINTER attribute nor be a dummy procedure"_err_en_US);
   }
 }
 
