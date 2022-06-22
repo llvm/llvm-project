@@ -1,4 +1,4 @@
-//===-- Unittests for call_once -------------------------------------------===//
+//===-- Tests for call_once -----------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,7 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "include/threads.h"
 #include "src/__support/CPP/atomic.h"
 #include "src/threads/call_once.h"
 #include "src/threads/mtx_destroy.h"
@@ -15,7 +14,10 @@
 #include "src/threads/mtx_unlock.h"
 #include "src/threads/thrd_create.h"
 #include "src/threads/thrd_join.h"
-#include "utils/UnitTest/Test.h"
+
+#include "utils/IntegrationTest/test.h"
+
+#include <threads.h>
 
 static constexpr unsigned int NUM_THREADS = 5;
 static __llvm_libc::cpp::Atomic<unsigned int> thread_count;
@@ -32,7 +34,7 @@ static int func(void *) {
   return 0;
 }
 
-TEST(LlvmLibcCallOnceTest, CallFrom5Threads) {
+void call_from_5_threads() {
   // Ensure the call count and thread count are 0 to begin with.
   call_count = 0;
   thread_count = 0;
@@ -73,7 +75,7 @@ static int once_func_caller(void *) {
 // Test the synchronization aspect of the call_once function.
 // This is not a fool proof test, but something which might be
 // useful when we add a flakiness detection scheme to UnitTest.
-TEST(LlvmLibcCallOnceTest, TestSynchronization) {
+void test_synchronization() {
   start_count = 0;
   done_count = 0;
 
@@ -110,4 +112,10 @@ TEST(LlvmLibcCallOnceTest, TestSynchronization) {
   ASSERT_EQ(done_count.val, 2U);
 
   __llvm_libc::mtx_destroy(&once_func_blocker);
+}
+
+int main() {
+  call_from_5_threads();
+  test_synchronization();
+  return 0;
 }

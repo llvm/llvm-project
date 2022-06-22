@@ -13,7 +13,7 @@
 #include "src/__support/OSUtil/quick_exit.h"
 
 #define __AS_STRING(val) #val
-#define __CHECK(file, line, val, should_exit)                                  \
+#define __CHECK_TRUE(file, line, val, should_exit)                             \
   if (!(val)) {                                                                \
     __llvm_libc::write_to_stderr(file ":" __AS_STRING(                         \
         line) ": Expected '" #val "' to be true, but is false\n");             \
@@ -21,17 +21,41 @@
       __llvm_libc::quick_exit(127);                                            \
   }
 
-#define __CHECK_NE(file, line, val, should_exit)                               \
-  if ((val)) {                                                                 \
+#define __CHECK_FALSE(file, line, val, should_exit)                            \
+  if (val) {                                                                   \
     __llvm_libc::write_to_stderr(file ":" __AS_STRING(                         \
         line) ": Expected '" #val "' to be false, but is true\n");             \
     if (should_exit)                                                           \
       __llvm_libc::quick_exit(127);                                            \
   }
 
-#define EXPECT_TRUE(val) __CHECK(__FILE__, __LINE__, val, false)
-#define ASSERT_TRUE(val) __CHECK(__FILE__, __LINE__, val, true)
-#define EXPECT_FALSE(val) __CHECK_NE(__FILE__, __LINE__, val, false)
-#define ASSERT_FALSE(val) __CHECK_NE(__FILE__, __LINE__, val, true)
+#define __CHECK_EQ(file, line, val1, val2, should_exit)                        \
+  if ((val1) != (val2)) {                                                      \
+    __llvm_libc::write_to_stderr(file ":" __AS_STRING(                         \
+        line) ": Expected '" #val1 "' to be equal to '" #val2 "'\n");          \
+    if (should_exit)                                                           \
+      __llvm_libc::quick_exit(127);                                            \
+  }
+
+#define __CHECK_NE(file, line, val1, val2, should_exit)                        \
+  if ((val1) == (val2)) {                                                      \
+    __llvm_libc::write_to_stderr(file ":" __AS_STRING(                         \
+        line) ": Expected '" #val1 "' to not be equal to '" #val2 "'\n");      \
+    if (should_exit)                                                           \
+      __llvm_libc::quick_exit(127);                                            \
+  }
+
+#define EXPECT_TRUE(val) __CHECK_TRUE(__FILE__, __LINE__, val, false)
+#define ASSERT_TRUE(val) __CHECK_TRUE(__FILE__, __LINE__, val, true)
+#define EXPECT_FALSE(val) __CHECK_FALSE(__FILE__, __LINE__, val, false)
+#define ASSERT_FALSE(val) __CHECK_FALSE(__FILE__, __LINE__, val, true)
+#define EXPECT_EQ(val1, val2)                                                  \
+  __CHECK_EQ(__FILE__, __LINE__, (val1), (val2), false)
+#define ASSERT_EQ(val1, val2)                                                  \
+  __CHECK_EQ(__FILE__, __LINE__, (val1), (val2), true)
+#define EXPECT_NE(val1, val2)                                                  \
+  __CHECK_NE(__FILE__, __LINE__, (val1), (val2), false)
+#define ASSERT_NE(val1, val2)                                                  \
+  __CHECK_NE(__FILE__, __LINE__, (val1), (val2), true)
 
 #endif // LLVM_LIBC_UTILS_INTEGRATION_TEST_TEST_H
