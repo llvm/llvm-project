@@ -115,6 +115,21 @@ TEST(AlignmentTest, Log2) {
   }
 }
 
+TEST(AlignmentTest, MinAlign) {
+  struct {
+    uint64_t A;
+    uint64_t B;
+    uint64_t MinAlign;
+  } kTests[] = {
+      {1, 2, 1},
+      {8, 4, 4},
+  };
+  for (const auto &T : kTests) {
+    EXPECT_EQ(MinAlign(T.A, T.B), T.MinAlign);
+    EXPECT_EQ(commonAlignment(Align(T.A), Align(T.B)), T.MinAlign);
+  }
+}
+
 TEST(AlignmentTest, Encode_Decode) {
   for (uint64_t Value : getValidAlignments()) {
     {
